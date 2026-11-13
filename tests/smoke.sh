@@ -7,6 +7,7 @@
 #   4. tests/fixes.mjs: one check per playtest bug fixed (colonist, prompt box, toasts, ramming, insurance fee)
 #   4b. tests/outpostmap.mjs: the Tab map shows Kestrel Outpost and its legend row
 #   4c. tests/bounty.mjs: pirate bounty per type, the BOUNTY +N text, the HUD glow, the dock summary
+#   4d. tests/credits.mjs: the gold coin and CR readout in the HUD strip and on the board, shop, map and pause panels, +N / -N floats
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #      their failure paths, with the game clock stepped by hand
 # Needs Google Chrome and Node 22+. Uses throwaway Chrome profiles, never your own. Chrome runs with
@@ -35,6 +36,9 @@ if node tests/outpostmap.mjs; then :; else fail=1; fi
 
 echo "== 4c. pirate bounty you can see (tests/bounty.mjs)"
 if node tests/bounty.mjs; then :; else fail=1; fi
+
+echo "== 4d. credits unmistakable (tests/credits.mjs)"
+if node tests/credits.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
