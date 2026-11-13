@@ -54,9 +54,8 @@ class Surface extends Phaser.Scene {
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,UP,DOWN,LEFT,RIGHT');
     this.nextFire = 0; this.tmp = new Phaser.Math.Vector2();
     this.prompt = floatPrompt(this, this.player); // key cap above you instead of a strip at the bottom (src/ui.js)
-    this.add.text(24, H - 44, 'WASD walk   aim with mouse   click fire   E interact', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92'
-    }).setScrollFactor(0).setDepth(100);
+    surfaceControls(this); // controls panel on arrival (fades; C brings it back) and the aim line and cursor, both below
+    surfaceAimInit(this);
     toast(this, missionActive('rescue') ? 'Landed. Find the colonist. The pod is to the east.' : 'Landed on Kepler-4b. Nobody needs you here yet.', '#9fe9ff');
     feelInstall(this); // src/feel.js: hit cues, muzzle flash, landing zoom
   }
@@ -64,7 +63,7 @@ class Surface extends Phaser.Scene {
   update(time, dt) {
     guideTick(this);
     const k = this.k, p = this.player, JD = Phaser.Input.Keyboard.JustDown, col = this.col;
-    if (this.leaving) { feelFrame(this, time, dt); return; } // lift-off move is playing (feel.js)
+    if (this.leaving) { this.aimG.clear(); this.reticle.clear(); feelFrame(this, time, dt); return; } // lift-off move is playing (feel.js)
     const dx = (k.D.isDown || k.RIGHT.isDown ? 1 : 0) - (k.A.isDown || k.LEFT.isDown ? 1 : 0);
     const dy = (k.S.isDown || k.DOWN.isDown ? 1 : 0) - (k.W.isDown || k.UP.isDown ? 1 : 0);
     const v = new Phaser.Math.Vector2(dx, dy).normalize().scale(210);
@@ -72,6 +71,7 @@ class Surface extends Phaser.Scene {
     const ptr = this.input.activePointer; ptr.positionToCamera(this.cameras.main, this.tmp);
     const aim = Phaser.Math.Angle.Between(p.x, p.y, this.tmp.x, this.tmp.y);
     p.rotation = aim;
+    surfaceAimDraw(this, ptr, aim);
     if (ptr.isDown && time > this.nextFire) {
       this.nextFire = time + 200;
       const b = this.pb.get(p.x, p.y);
@@ -149,4 +149,84 @@ class Surface extends Phaser.Scene {
     hudTick(this); // src/hud.js
     feelFrame(this, time, dt); // src/feel.js: hit cues, muzzle flash, low-health pulse
   }
+}
+
+// ---------- controls panel: on arrival it shows WASD move, mouse aim, click fire, E interact, then fades; C brings it back ----------
+function surfaceControls(s) {
+  const items = [
+    { keys: ['W', 'A', 'S', 'D'], text: 'Move' },
+    { mouse: 'aim', text: 'Aim' },
+    { mouse: 'fire', text: 'Fire' },
+    { keys: ['E'], text: 'Interact' }
+  ];
+  const parts = [], made = items.map(it => {
+    const label = s.add.text(0, 0, it.text, uiFont(16, '#ffffff')).setOrigin(0, 0.5);
+    let icon, iw;
+    if (it.keys) { // a row of key caps
+      icon = it.keys.map(k => keyCap(s, k, AMBER)); iw = icon.reduce((a, c) => a + c.kw, 0) + 4 * (icon.length - 1);
+    } else { // a mouse: the whole body to aim, the left button lit to fire
+      const g = s.add.graphics(), lit = it.mouse === 'fire';
+      g.fillStyle(0x0b2236, 1); g.fillRoundedRect(-10, -15, 20, 30, 9);
+      if (lit) { g.fillStyle(AMBER, 1); g.beginPath(); g.moveTo(-10, -6); g.lineTo(-10, -6); g.arc(0, -6, 10, Math.PI, 1.5 * Math.PI); g.lineTo(0, -6); g.closePath(); g.fillPath(); }
+      g.lineStyle(2, CYAN, 1); g.strokeRoundedRect(-10, -15, 20, 30, 9); g.lineBetween(-10, -6, 10, -6); g.lineBetween(0, -15, 0, -6);
+      if (!lit) { g.lineStyle(2, AMBER, 1); g.lineBetween(-3, 5, 3, 5); g.lineBetween(0, 2, 0, 8); } // a little cross: it follows the mouse
+      icon = [g]; iw = 20;
+    }
+    return { icon, iw, label, w: iw + 9 + label.width };
+  });
+  const gap = 34, total = made.reduce((a, m) => a + m.w, 0) + gap * (made.length - 1), w = total + 44, h = 54;
+  const bg = s.add.graphics();
+  bg.fillStyle(0x04101c, 0.92); bg.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
+  bg.lineStyle(1, CYAN, 0.8); bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 8);
+  const box = s.add.container(W / 2, H - 196, [bg]).setScrollFactor(0).setDepth(125);
+  let x = -total / 2;
+  made.forEach(m => {
+    let cx = x;
+    m.icon.forEach(o => { const ow = o.kw || 20; o.setPosition(cx + ow / 2, 0); box.add(o); cx += ow + 4; });
+    m.label.setPosition(x + m.iw + 9, 0); box.add(m.label);
+    x += m.w + gap;
+  });
+  const hint = s.add.text(24, H - 44, 'C  show controls', uiFont(14, '#7fa6c2')).setScrollFactor(0).setDepth(100);
+  const ctl = s.ctl = { box, hint, timer: null };
+  ctl.show = secs => { // fade in, hold, fade out
+    s.tweens.killTweensOf(box); if (ctl.timer) ctl.timer.remove(false);
+    box.setVisible(true).setAlpha(0);
+    s.tweens.add({ targets: box, alpha: 1, duration: 220 });
+    ctl.timer = s.time.delayedCall(secs * 1000, () => s.tweens.add({ targets: box, alpha: 0, duration: 700, onComplete: () => box.setVisible(false) }));
+  };
+  s._cKey = s.input.keyboard.addKey('C'); // polled in surfaceAimDraw each frame
+  ctl.show(7);
+}
+
+// ---------- aim line and cursor: a dashed line from you toward the mouse (as far as a shot flies) and a reticle on the mouse ----------
+function surfaceAimInit(s) {
+  s.sawMouse = false;
+  s.aimG = s.add.graphics().setDepth(6);
+  s.reticle = s.add.graphics().setScrollFactor(0).setDepth(130); // screen space, so it sits exactly on the mouse
+  const cursor = c => s.input.setDefaultCursor(c);
+  s.input.on('pointermove', () => { if (!s.sawMouse) { s.sawMouse = true; cursor('none'); } }); // the reticle is the cursor once the mouse has moved
+  const onPause = () => cursor('default'), onResume = () => { if (s.sawMouse) cursor('none'); };
+  s.events.on('pause', onPause); s.events.on('resume', onResume); // this scene object is reused on every landing, so take the listeners off again
+  s.events.once('shutdown', () => { cursor('default'); s.events.off('pause', onPause); s.events.off('resume', onResume); });
+}
+
+function surfaceAimDraw(s, ptr, aim) {
+  if (s._cKey && Phaser.Input.Keyboard.JustDown(s._cKey)) s.ctl.show(6); // C: show the controls again
+  const g = s.aimG, r = s.reticle; g.clear(); r.clear();
+  if (!s.sawMouse || s.leaving) return;
+  const p = s.player, d = Math.min(Phaser.Math.Distance.Between(p.x, p.y, s.tmp.x, s.tmp.y), 640); // a shot flies about 650 px
+  const cx = Math.cos(aim), cy = Math.sin(aim);
+  for (let t = 26; t < d - 14; t += 18) { // dashes that thin out a little with distance
+    const a = 0.95 - 0.5 * t / 640;
+    g.lineStyle(5, 0x000000, a * 0.4); g.lineBetween(p.x + cx * t, p.y + cy * t, p.x + cx * (t + 10), p.y + cy * (t + 10));
+    g.lineStyle(3, 0xfff1a8, a); g.lineBetween(p.x + cx * t, p.y + cy * t, p.x + cx * (t + 10), p.y + cy * (t + 10));
+  }
+  const fire = ptr.isDown, rad = fire ? 9 : 13, col = fire ? 0xff6b6b : 0xfff1a8; // the ring closes in while you fire
+  r.lineStyle(5, 0x000000, 0.45); r.strokeCircle(ptr.x, ptr.y, rad);
+  r.lineStyle(2, col, 1); r.strokeCircle(ptr.x, ptr.y, rad);
+  [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([ux, uy]) => {
+    r.lineStyle(4, 0x000000, 0.45); r.lineBetween(ptr.x + ux * (rad + 6), ptr.y + uy * (rad + 6), ptr.x + ux * (rad - 4), ptr.y + uy * (rad - 4));
+    r.lineStyle(2, col, 1); r.lineBetween(ptr.x + ux * (rad + 5), ptr.y + uy * (rad + 5), ptr.x + ux * (rad - 3), ptr.y + uy * (rad - 3));
+  });
+  r.fillStyle(col, 1); r.fillCircle(ptr.x, ptr.y, 2);
 }
