@@ -197,6 +197,7 @@ function shipRefresh(scene) {
   SHIPS.nozzles.ship = (u.booster | 0) >= 2 ? [[-14, -5.5, 0.9], [-14, 5.5, 0.9]] : [[-14, 0, (u.booster | 0) ? 1.3 : 1]];
   if (scene.shipImg && scene.shipImg.active) scene.shipImg.setTexture('ship');
   if (scene.ship && scene.ship.active) scene.ship.setTexture('ship');
+  if (scene.in && scene.in.shipShadow && scene.in.shipShadow.active) scene.in.shipShadow.setTexture('ship'); // interior.js: the hangar shadow image shares the texture
   return true;
 }
 function shipDraw(g, armor, rapid, booster) {
