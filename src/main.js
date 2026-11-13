@@ -6,3 +6,4 @@ const game = new Phaser.Game({
   scene: [Boot, Station, Space, Surface, Pause]
 });
 installMeta(game); // Esc pause, M mute, autosave
+installAudio(game); // ambient pads, engine hum (audio.js)

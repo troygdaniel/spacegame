@@ -68,7 +68,7 @@ class Station extends Phaser.Scene {
 
     if (this.arrive && G.mission === 'rescued') {
       G.credits += REWARD; G.mission = 'none';
-      toast(this, 'Colonist delivered safely. +' + REWARD + ' cr', '#6dff9c'); beep(660, 0.25, 'triangle', 0.05, 440);
+      toast(this, 'Colonist delivered safely. +' + REWARD + ' cr', '#6dff9c'); sfx('chime');
     } else if (this.arrive) {
       toast(this, 'Docked.', '#9fe9ff');
     }
@@ -120,7 +120,7 @@ class Station extends Phaser.Scene {
         if (G.hull >= G.maxHull) toast(this, 'Hull is already perfect.', '#9fe9ff');
         else if (G.credits < cost) toast(this, 'Repair costs ' + cost + ' cr. You have ' + G.credits + '.', '#ff4d6d');
         else { G.credits -= cost; G.hull = G.maxHull; beep(400, 0.2, 'triangle', 0.05, 300); toast(this, 'Hull repaired (-' + cost + ' cr).', '#6dff9c'); }
-      } else if (near.key === 'ship') { beep(200, 0.4, 'sawtooth', 0.04, 500); go(this, 'Space', { from: 'station' }); }
+      } else if (near.key === 'ship') { sfx('thrusters'); go(this, 'Space', { from: 'station' }); }
     }
   }
 }
