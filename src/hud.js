@@ -319,7 +319,9 @@ function hudMarker(h, s, o, now) {
       const x = sx + ax * o.hw, y = sy + ay * o.hh;
       g.beginPath(); g.moveTo(x, y - ay * k); g.lineTo(x, y); g.lineTo(x - ax * k, y); g.strokePath();
     });
-    const y0 = o.below ? sy + o.hh + 14 : sy - o.hh - 24; // a terminal already has its own label above it
+    let y0 = o.below ? sy + o.hh + 14 : sy - o.hh - 24; // a terminal already has its own label above it
+    const pz = h.pz, tw = Math.max(o.name.length * 7.8, dist.length * 7.2) / 2 + 6; // the floating key cap prompt (ui.js) owns the space above you
+    if (pz && sx + tw > pz.x0 && sx - tw < pz.x1 && y0 + 24 > pz.y0 && y0 - 9 < pz.y1) y0 = o.below ? sy - o.hh - 24 : sy + o.hh + 14;
     hudPut(h, 'on', sx, y0, o.name, Object.assign({ ox: 0.5 }, name));
     hudPut(h, 'od', sx, y0 + 15, dist, Object.assign({ ox: 0.5 }, far));
     return;
@@ -392,6 +394,9 @@ function hudTick(s) {
     if (o.depth < 299 || !o.visible || o.alpha < 0.05 || (o.type !== 'Text' && o.type !== 'Rectangle')) return;
     const b = o.getBounds(h.box); h.zones.push({ x0: b.x, y0: b.y, x1: b.right, y1: b.bottom });
   });
+  const pr = s.prompt && s.prompt.box && s.prompt.box.visible ? s.prompt : null; // the floating key cap prompt (ui.js)
+  h.pz = pr ? { x0: pr.box.x - pr.pw / 2 - 6, y0: pr.box.y - 22, x1: pr.box.x + pr.pw / 2 + 6, y1: pr.box.y + 22 } : null;
+  if (h.pz) h.zones.push(h.pz);
   hudFade(h, s);
   if (obj) hudMarker(h, s, obj, now);
 
