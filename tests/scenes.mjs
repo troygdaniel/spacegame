@@ -3,7 +3,7 @@
 // Uses the DevTools route rather than chrome --screenshot: that one hangs at random when the Mac is busy.
 import { launch, sleep } from './cdp.mjs';
 
-const SCENES = [['scene-station', '#station', 'Station'], ['scene-space', '#space', 'Space'], ['scene-surface', '#surface', 'Surface']];
+const SCENES = [['scene-title', '', 'Title'], ['scene-station', '#station', 'Station'], ['scene-space', '#space', 'Space'], ['scene-surface', '#surface', 'Surface']];
 let failed = false;
 for (const [name, hash, scene] of SCENES) {
   const t = await launch(hash);

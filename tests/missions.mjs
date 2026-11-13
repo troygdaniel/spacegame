@@ -3,7 +3,7 @@
 // port, throwaway Chrome profile, console errors caught). Run: node tests/missions.mjs   (exit code 1 on any failure)
 import { launch } from './cdp.mjs';
 
-const t = await launch();
+const t = await launch('#station'); // no hash would open the title screen
 const S = k => `game.scene.getScene('${k}')`;
 const x = code => t.ev(`(() => { ${code}; return 1; })()`); // run statements
 const G = async () => JSON.parse(await t.ev('JSON.stringify(G)'));

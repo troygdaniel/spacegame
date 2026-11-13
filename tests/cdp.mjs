@@ -18,6 +18,14 @@ const KEYS = {
 
 // Launch a throwaway headless Chrome (own profile, so it never touches your real Chrome) and return a session.
 export async function launch(hash = '') {
+  // starting Chrome can fail when the Mac is busy (load average 25 from other agents): one retry before giving up
+  try { return await launchOnce(hash); } catch (e) {
+    console.log('  (Chrome did not start cleanly, trying once more: ' + e.message + ')');
+    return await launchOnce(hash);
+  }
+}
+
+async function launchOnce(hash) {
   const profile = mkdtempSync(join(tmpdir(), 'longhaul-'));
   const chrome = spawn(CHROME, [
     '--headless=new', '--disable-gpu', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
@@ -26,8 +34,8 @@ export async function launch(hash = '') {
     '--no-default-browser-check', 'about:blank'
   ], { stdio: 'ignore' });
   const portFile = join(profile, 'DevToolsActivePort');
-  for (let i = 0; i < 150 && !existsSync(portFile); i++) await sleep(100);
-  if (!existsSync(portFile)) { chrome.kill(); throw new Error('Chrome did not start'); }
+  for (let i = 0; i < 300 && !existsSync(portFile); i++) await sleep(100);
+  if (!existsSync(portFile)) { chrome.kill('SIGKILL'); rmSync(profile, { recursive: true, force: true }); throw new Error('Chrome did not start'); }
   const port = readFileSync(portFile, 'utf8').split('\n')[0];
   let page = null;
   for (let i = 0; i < 50 && !page; i++) {
