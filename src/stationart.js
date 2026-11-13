@@ -302,7 +302,8 @@ const STATION_LOOKS = {
 
 // a docking bay on the +x side of a look whose centre is (c, c): housing, a lit mouth, hazard stripes on both lips.
 // hull: [dark, light] steel; edge: css colour of the outline; mouth: [bright, mid, dark]; glow: 'r,g,b' of the light spilling out
-function saLookBay(ctx, c, xi, xo, hw, hull, edge, mouth, glow) {
+function saLookBay(ctx, c, xi, xo, hw, hull, edge, mouth, glow, o) {
+  o = o || {}; // o.stripe: colour of the lip stripes, o.line: the bright line down the mouth
   ctx.save(); ctx.translate(c, c);
   saGlow(ctx, xo - 2, 0, hw * 1.8, glow, 0.3);
   ctx.beginPath(); ctx.moveTo(xi, -hw); ctx.lineTo(xo - 11, -hw); ctx.lineTo(xo, -hw + 7); ctx.lineTo(xo, hw - 7); ctx.lineTo(xo - 11, hw); ctx.lineTo(xi, hw); ctx.closePath();
@@ -312,10 +313,10 @@ function saLookBay(ctx, c, xi, xo, hw, hull, edge, mouth, glow) {
   const mh = hw * 0.46; // the mouth: a hot floor between dark walls
   ctx.beginPath(); ctx.moveTo(xi + 12, -mh); ctx.lineTo(xo, -mh - 2); ctx.lineTo(xo, mh + 2); ctx.lineTo(xi + 12, mh); ctx.closePath();
   g = ctx.createLinearGradient(xi + 12, 0, xo, 0); g.addColorStop(0, mouth[0]); g.addColorStop(0.5, mouth[1]); g.addColorStop(1, mouth[2]);
-  ctx.fillStyle = g; ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(xi + 14, -1, xo - xi - 14, 2);
+  ctx.fillStyle = g; ctx.fill(); ctx.fillStyle = o.line || 'rgba(255,255,255,0.85)'; ctx.fillRect(xi + 14, -1, xo - xi - 14, 2);
   [[-hw + 3, -mh - 4], [mh + 4, hw - 3]].forEach(([ya, yb]) => { // hazard stripes on both lips
     ctx.save(); ctx.beginPath(); ctx.rect(xi + 16, ya, xo - xi - 18, yb - ya); ctx.clip();
-    ctx.fillStyle = '#120a05'; ctx.fillRect(xi + 16, ya, xo - xi - 18, yb - ya); ctx.strokeStyle = edge === '#ff4d6d' ? '#ff4d6d' : '#ffb454'; ctx.lineWidth = 2.4;
+    ctx.fillStyle = '#120a05'; ctx.fillRect(xi + 16, ya, xo - xi - 18, yb - ya); ctx.strokeStyle = o.stripe || '#ffb454'; ctx.lineWidth = 2.4;
     for (let x = xi + 6; x < xo + 10; x += 6) { ctx.beginPath(); ctx.moveTo(x, yb); ctx.lineTo(x + 6, ya); ctx.stroke(); }
     ctx.restore();
   });
@@ -449,6 +450,115 @@ function saDrawFoundryLook(scene) {
   }
 }
 
+// ---- nest: a pirate dock cut into an asteroid. Jagged rock, welded plates, spikes, turrets, red lights, a mouth full of teeth ----
+function saDrawNestLook(scene) {
+  const S = 480, c = 240, rng = saRng(61);
+  const { tex, ctx } = saCanvas(scene, 'sl-nest', S, S);
+  saGlow(ctx, c, c, 236, '255,60,60', 0.12);
+  // the rock outline: a ragged circle from a few sine waves and per-point noise, with the east side kept open for the bay
+  const pts = [], N = 72, ph = [rng() * 6, rng() * 6, rng() * 6];
+  for (let i = 0; i < N; i++) {
+    const a = i / N * SA_TAU, r = 150 + 16 * Math.sin(a * 3 + ph[0]) + 10 * Math.sin(a * 5 + ph[1]) + 7 * Math.sin(a * 9 + ph[2]) + (rng() - 0.5) * 12;
+    pts.push([c + Math.cos(a) * r, c + Math.sin(a) * r]);
+  }
+  const path = () => { ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); };
+  // spikes: steel spines poking out of the rock (not at the bay)
+  [[-2.2, 38], [-1.3, 44], [-0.55, 30], [0.75, 34], [1.5, 46], [2.3, 36], [3.0, 30]].forEach(([a, len]) => {
+    const r0 = 150, x0 = c + Math.cos(a) * r0, y0 = c + Math.sin(a) * r0;
+    ctx.save(); ctx.translate(x0, y0); ctx.rotate(a); ctx.fillStyle = '#2a2326'; ctx.strokeStyle = 'rgba(255,90,90,0.8)'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(-6, -10); ctx.lineTo(len, 0); ctx.lineTo(-6, 10); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,80,80,0.9)'; ctx.fillRect(len - 9, -1, 6, 2); ctx.restore();
+  });
+  path(); let g = ctx.createRadialGradient(c - 40, c - 40, 20, c, c, 180); g.addColorStop(0, '#4a3e3c'); g.addColorStop(0.6, '#2e2626'); g.addColorStop(1, '#171212');
+  ctx.fillStyle = g; ctx.fill(); ctx.save(); path(); ctx.clip();
+  for (let i = 0; i < 160; i++) { const x = c - 170 + rng() * 340, y = c - 170 + rng() * 340, r = 2 + rng() * 14, v = rng(); ctx.fillStyle = v < 0.5 ? `rgba(255,200,180,${(0.02 + v * 0.07).toFixed(3)})` : `rgba(0,0,0,${(0.1 + (v - 0.5) * 0.3).toFixed(3)})`; ctx.beginPath(); ctx.arc(x, y, r, 0, SA_TAU); ctx.fill(); }
+  // welded plates: dull steel slabs, rust, red stripes, rivets
+  for (let i = 0; i < 16; i++) {
+    const a = rng() * SA_TAU, d = 30 + rng() * 105, x = c + Math.cos(a) * d, y = c + Math.sin(a) * d, w = 26 + rng() * 44, h = 18 + rng() * 30;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rng() * 3);
+    ctx.fillStyle = rng() < 0.3 ? '#5a2a26' : rng() < 0.6 ? '#4b4750' : '#38343a'; ctx.fillRect(-w / 2, -h / 2, w, h);
+    if (rng() < 0.4) { ctx.save(); ctx.beginPath(); ctx.rect(-w / 2, -h / 2, w, h); ctx.clip(); ctx.strokeStyle = 'rgba(255,60,60,0.85)'; ctx.lineWidth = 3; for (let k = -w; k < w; k += 9) { ctx.beginPath(); ctx.moveTo(k, h / 2); ctx.lineTo(k + 9, -h / 2); ctx.stroke(); } ctx.restore(); }
+    ctx.strokeStyle = 'rgba(0,0,0,0.75)'; ctx.lineWidth = 1.2; ctx.strokeRect(-w / 2, -h / 2, w, h);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => ctx.fillRect(sx * (w / 2 - 3) - 0.8, sy * (h / 2 - 3) - 0.8, 1.6, 1.6));
+    ctx.restore();
+  }
+  // the emblem: a red ring cut by a blade, painted on the biggest slab
+  ctx.save(); ctx.translate(c - 30, c - 4); ctx.rotate(-0.4); ctx.strokeStyle = 'rgba(255,60,70,0.9)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, 0, 30, 0, SA_TAU); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,60,70,0.95)'; ctx.beginPath(); ctx.moveTo(-44, 5); ctx.lineTo(44, -9); ctx.lineTo(40, -2); ctx.lineTo(-40, 12); ctx.closePath(); ctx.fill(); ctx.restore();
+  ctx.restore();
+  ctx.save(); ctx.shadowColor = '#ff3b3b'; ctx.shadowBlur = 10; ctx.strokeStyle = 'rgba(255,80,80,0.75)'; ctx.lineWidth = 2; path(); ctx.stroke(); ctx.restore();
+  // masts and floodlight gantries
+  [[-90, -118, -110, -178], [60, -130, 84, -190], [-40, 128, -58, 184]].forEach(([x0, y0, x1, y1]) => {
+    ctx.strokeStyle = '#3a3036'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(c + x0, c + y0); ctx.lineTo(c + x1, c + y1); ctx.stroke();
+    ctx.fillStyle = '#ff4d4d'; ctx.beginPath(); ctx.arc(c + x1, c + y1, 2.6, 0, SA_TAU); ctx.fill();
+  });
+  // turret mounts (the guns themselves are separate images that turn)
+  [[-26, -104], [76, 70], [-84, 82]].forEach(([x, y]) => {
+    g = ctx.createRadialGradient(c + x, c + y, 2, c + x, c + y, 15); g.addColorStop(0, '#6a5a5e'); g.addColorStop(1, '#241c20');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c + x, c + y, 15, 0, SA_TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,80,80,0.85)'; ctx.lineWidth = 1.4; ctx.stroke();
+  });
+  // the mouth: a bay with a hard red glow
+  saLookBay(ctx, c, 140, 205, 26, ['#120c0e', '#4a3c42', ''], '#ff4d6d', ['#ffe0d0', '#ff6a50', '#8a1818'], '255,70,60', { stripe: '#ff4d6d' });
+  // teeth: two rows of steel fangs round the lips
+  ctx.fillStyle = '#6a6068'; ctx.strokeStyle = '#120c0e'; ctx.lineWidth = 1;
+  [-1, 1].forEach(sy => { for (let k = 0; k < 5; k++) { const x = 170 + k * 7 + c; ctx.beginPath(); ctx.moveTo(x, c + sy * 28); ctx.lineTo(x + 3.5, c + sy * 40); ctx.lineTo(x + 7, c + sy * 28); ctx.closePath(); ctx.fill(); ctx.stroke(); } });
+  tex.refresh();
+  { // a gun: a short barrel on a hub, turned toward you
+    const { tex: gt, ctx: w } = saCanvas(scene, 'sl-nest-gun', 56, 24);
+    w.fillStyle = '#4a3e44'; w.fillRect(10, 8, 40, 8); w.strokeStyle = 'rgba(255,80,80,0.9)'; w.lineWidth = 1.2; w.strokeRect(10, 8, 40, 8);
+    w.fillStyle = '#ff5a4a'; w.fillRect(46, 10, 5, 4); w.fillStyle = '#2a2024'; w.beginPath(); w.arc(12, 12, 8, 0, SA_TAU); w.fill(); w.stroke(); gt.refresh();
+  }
+}
+
+// ---- derelict: a dead ring station. Torn spokes, a ring with chunks missing, dark windows, scorch marks, a dark bay ----
+function saDrawDerelictLook(scene) {
+  const S = 460, c = 230, rng = saRng(83);
+  const { tex, ctx } = saCanvas(scene, 'sl-derelict', S, S);
+  const R0 = 146, R1 = 170, N = 32, gone = i => (i >= 4 && i <= 9) || (i >= 21 && i <= 24); // two chunks of the ring are missing
+  // spokes: one whole, two snapped part way, one gone but its stump
+  [[0, 176], [Math.PI / 2, 92], [Math.PI, 126], [-Math.PI / 2, 52]].forEach(([ang, len]) => {
+    ctx.save(); ctx.translate(c, c); ctx.rotate(ang);
+    saLookTruss(ctx, 40, len, 6, '#0b0e12', '#3a4654', 'rgba(130,150,170,0.5)', null);
+    ctx.fillStyle = '#05070a'; ctx.beginPath(); ctx.moveTo(len, -6); ctx.lineTo(len + 5, -2); ctx.lineTo(len + 2, 2); ctx.lineTo(len + 6, 6); ctx.lineTo(len, 6); ctx.closePath(); ctx.fill(); // the torn end
+    ctx.restore();
+  });
+  for (let i = 0; i < N; i++) { // the ring, plate by plate
+    if (gone(i)) continue;
+    const a0 = i / N * SA_TAU, a1 = (i + 1) / N * SA_TAU, v = rng();
+    ctx.beginPath(); ctx.arc(c, c, R1, a0, a1); ctx.arc(c, c, R0, a1, a0, true); ctx.closePath();
+    ctx.fillStyle = v < 0.3 ? '#242c36' : v < 0.7 ? '#2f3a46' : '#3a4654'; ctx.fill();
+    ctx.strokeStyle = 'rgba(2,4,8,0.9)'; ctx.lineWidth = 1.6; ctx.stroke();
+    for (let k = 0; k < 4; k++) { const aa = a0 + (k + 0.5) / 4 * (a1 - a0), r = k % 2 ? 153 : 163; ctx.fillStyle = rng() < 0.06 ? '#ffb454' : 'rgba(4,8,14,0.9)'; ctx.fillRect(c + Math.cos(aa) * r - 1.4, c + Math.sin(aa) * r - 1, 2.8, 2); } // windows: nearly all dark
+    if (i === 3 || i === 10 || i === 20 || i === 25) { // the plate next to a break is blackened and torn
+      ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill(); ctx.strokeStyle = 'rgba(180,90,40,0.5)'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); const e = (i === 3 || i === 20) ? a1 : a0; ctx.moveTo(c + Math.cos(e) * R0, c + Math.sin(e) * R0); ctx.lineTo(c + Math.cos(e) * R1, c + Math.sin(e) * R1); ctx.stroke();
+    }
+  }
+  ctx.save(); ctx.strokeStyle = 'rgba(120,140,160,0.5)'; ctx.lineWidth = 1.4; ctx.beginPath(); // the ring's cold edge lines, only where it still exists
+  for (let i = 0; i < N; i++) if (!gone(i)) { ctx.beginPath(); ctx.arc(c, c, R1 + 0.5, i / N * SA_TAU, (i + 1) / N * SA_TAU); ctx.stroke(); }
+  ctx.restore();
+  for (let i = 0; i < 40; i++) { // scorch streaks and rust running off the ring
+    const a = rng() * SA_TAU, r = R0 + rng() * 24; if (gone(Math.floor(a / SA_TAU * N))) continue;
+    ctx.strokeStyle = rng() < 0.5 ? 'rgba(0,0,0,0.45)' : 'rgba(150,80,40,0.25)'; ctx.lineWidth = 1 + rng() * 2; ctx.beginPath(); ctx.moveTo(c + Math.cos(a) * r, c + Math.sin(a) * r); ctx.lineTo(c + Math.cos(a + 0.06 * (rng() - 0.5)) * (r - 10 - rng() * 22), c + Math.sin(a) * (r - 10 - rng() * 22)); ctx.stroke();
+  }
+  saLookBay(ctx, c, 136, 192, 22, ['#06080b', '#222c36', ''], 'rgba(110,130,150,0.7)', ['#2a1a18', '#1a0f0e', '#0a0505'], '120,30,20', { stripe: '#4a4234', line: 'rgba(110,50,40,0.5)' }); // a dark bay, its glow nearly out
+  // the hub: dull steel with a breach
+  const hg = ctx.createRadialGradient(c - 8, c - 8, 2, c, c, 46); hg.addColorStop(0, '#46566a'); hg.addColorStop(0.6, '#1f2a36'); hg.addColorStop(1, '#0a0e14');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(c, c, 44, 0, SA_TAU); ctx.fill(); ctx.strokeStyle = 'rgba(120,140,160,0.6)'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = '#020305'; ctx.beginPath(); ctx.moveTo(c + 4, c - 20); ctx.lineTo(c + 22, c - 6); ctx.lineTo(c + 12, c + 4); ctx.lineTo(c + 18, c + 20); ctx.lineTo(c - 2, c + 8); ctx.lineTo(c + 2, c - 4); ctx.closePath(); ctx.fill(); // the breach
+  ctx.strokeStyle = 'rgba(190,100,50,0.6)'; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(c - 30, c - 12); ctx.lineTo(c - 8, c - 2); ctx.lineTo(c - 14, c + 14); ctx.stroke(); // cracks
+  tex.refresh();
+  { // three chunks of wreckage that drift round it
+    for (let k = 0; k < 3; k++) {
+      const { tex: dt, ctx: w } = saCanvas(scene, 'sl-derelict-debris-' + k, 48, 36), r2 = saRng(200 + k);
+      w.beginPath(); for (let i = 0; i < 7; i++) { const a = i / 7 * SA_TAU, r = 10 + r2() * 11; w.lineTo(24 + Math.cos(a) * r * 1.3, 18 + Math.sin(a) * r * 0.9); } w.closePath();
+      w.fillStyle = ['#2f3a46', '#3a4654', '#242c36'][k]; w.fill(); w.strokeStyle = 'rgba(130,150,170,0.55)'; w.lineWidth = 1.2; w.stroke();
+      w.strokeStyle = 'rgba(0,0,0,0.6)'; w.beginPath(); w.moveTo(12, 14); w.lineTo(34, 22); w.stroke(); dt.refresh();
+    }
+  }
+}
+
 // ---- the animated parts of each look: each returns the function that runs every frame (time in ms) ----
 const SA_LOOK_FX = {
   hub(s, c, glow) {
@@ -488,7 +598,33 @@ const SA_LOOK_FX = {
     };
   }
 };
-const SA_LOOK_DRAW = { hub: saDrawHubLook, foundry: saDrawFoundryLook };
+SA_LOOK_FX.nest = (s, c, glow) => {
+  const guns = [[-26, -104], [76, 70], [-84, 82]].map(([x, y], i) => { const im = s.add.image(x, y, 'sl-nest-gun').setOrigin(12 / 56, 0.5); c.add(im); return { im, i }; });
+  const beam = s.add.image(-26, -104, 'station-beam').setOrigin(0, 0.5).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.45).setTint(0xff3b3b); c.add(beam);
+  const strobes = [[-110, -178], [84, -190], [-58, 184], [150, -80], [150, 80], [-150, 10]].map(([x, y], i) => ({ im: glow('r', x, y, 0.65), i }));
+  const flood = [glow('a', 180, -34, 1.2), glow('a', 180, 34, 1.2)];
+  const bay = [glow('r', 212, -22, 0.6), glow('r', 212, 22, 0.6), glow('r', 190, 0, 1.4)];
+  return time => {
+    beam.rotation = time * 0.0009; // a red searchlight sweeping
+    guns.forEach(({ im, i }) => { im.rotation = 0.7 * Math.sin(time / (2300 + i * 700) + i * 2) + (i === 0 ? -1.9 : i === 1 ? 0.5 : 2.4); }); // the guns look about
+    strobes.forEach(({ im, i }) => { const p = (time + i * 370) % 1500; im.setAlpha(p < 80 || (p > 160 && p < 230) ? 1 : 0.05); });
+    flood.forEach((im, i) => im.setAlpha(0.25 + 0.3 * Math.abs(Math.sin(time / 90 + i * 2) * Math.sin(time / 310 + i)))); // flickering floodlights
+    bay[0].setAlpha(((time % 900) < 450) ? 1 : 0.1); bay[1].setAlpha(((time % 900) < 450) ? 0.1 : 1);
+    bay[2].setAlpha(0.3 + 0.25 * Math.sin(time / 200));
+  };
+};
+SA_LOOK_FX.derelict = (s, c, glow) => {
+  const lights = [[160, 40], [-150, -60], [30, 158], [-20, -166]].map(([x, y], i) => ({ im: glow('r', x, y, 0.5), i })); // emergency lights that mostly do not work
+  const sparks = [[142, -52], [-136, 76], [10, 96]].map(([x, y], i) => ({ im: glow('w', x, y, 0.55), i, per: 3100 + i * 1300 }));
+  const debris = [0, 1, 2, 0, 1].map((k, i) => { const im = s.add.image(0, 0, 'sl-derelict-debris-' + k).setAlpha(0.9).setScale(0.8); c.add(im); return { im, i, r: 215 + i * 17, sp: (i % 2 ? -1 : 1) * (0.00006 + i * 0.000015) }; });
+  return time => {
+    c.rotation = time * 0.00003; // the wreck tumbles very slowly
+    lights.forEach(({ im, i }) => { const v = Math.sin(time / 137 + i * 2.2) * Math.sin(time / 53 + i * 5.1) * Math.sin(time / 911 + i); im.setAlpha(v > 0.55 ? 0.9 : 0.04); });
+    sparks.forEach(({ im, per, i }) => { const p = (time + i * 777) % per; im.setAlpha(p < 60 ? 1 : p < 140 && p > 90 ? 0.6 : 0); });
+    debris.forEach(({ im, i, r, sp }) => { const a = time * sp + i * 1.3; im.setPosition(Math.cos(a) * r, Math.sin(a) * r).setRotation(time * 0.0002 * (i + 1)); });
+  };
+};
+const SA_LOOK_DRAW = { hub: saDrawHubLook, foundry: saDrawFoundryLook, nest: saDrawNestLook, derelict: saDrawDerelictLook };
 
 function stationLook(scene, art) {
   if (!STATION_LOOKS[art]) art = 'hub';
