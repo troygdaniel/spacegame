@@ -25,10 +25,17 @@ function beep(f = 440, d = 0.08, type = 'square', v = 0.03, slide = 0) {
 window.addEventListener('keydown', () => { if (AC && AC.state === 'suspended') AC.resume(); });
 
 function toast(s, msg, color = '#ffd37a') {
-  const t = s.add.text(W / 2, 96, msg, {
+  // two toasts at once used to draw on top of each other: each takes the first free slot, 44 px apart, three at most
+  const Y0 = 96, STEP = 44;
+  s.toasts = (s.toasts || []).filter(o => o.active);
+  let slot = 0;
+  while (s.toasts.some(o => o.y === Y0 + slot * STEP)) slot++;
+  if (slot >= 3) { const old = s.toasts.shift(); slot = Math.round((old.y - Y0) / STEP); old.destroy(); }
+  const t = s.add.text(W / 2, Y0 + slot * STEP, msg, {
     fontFamily: 'monospace', fontSize: '20px', color, align: 'center',
     backgroundColor: '#000000bb', padding: { x: 14, y: 8 }
   }).setOrigin(0.5).setScrollFactor(0).setDepth(300);
+  s.toasts.push(t);
   s.tweens.add({ targets: t, alpha: 0, delay: 2800, duration: 600, onComplete: () => t.destroy() });
 }
 
