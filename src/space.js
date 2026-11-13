@@ -3,7 +3,8 @@ class Space extends Phaser.Scene {
   constructor() { super('Space'); }
   init(d) { this.from = (d && d.from) || 'station'; }
   create() {
-    this.leaving = false; this.dead = false; this.rammedAt = 0;
+    this.leaving = false; this.dead = false; this.rammedAt = 0; this.ironUntil = 0;
+    this.launchAt = this.time.now; this.aggro = 0; this.graceOver = false; // enemies.js: launch grace and first-wave cap
     shipRefresh(this); // src/ships.js: the ship texture shows the upgrade tiers you own
     const WS = 8000; this.WS = WS;
     this.physics.world.setBounds(0, 0, WS, WS);
@@ -41,14 +42,15 @@ class Space extends Phaser.Scene {
       const a = i / 6 * Math.PI * 2, r = 520 + Math.random() * 220;
       this.spawnDrone(this.planet.x + Math.cos(a) * r, this.planet.y + Math.sin(a) * r);
     }
-    [[5000, 3100], [5100, 3500], [3300, 2500]].forEach(([x, y]) => this.spawnDrone(x, y));
+    // the station-side pirates sit on the way to Kepler-4b, over 2000 px out: outside the police zone and well past engage range
+    [[5700, 2700], [6000, 3500], [2500, 2200]].forEach(([x, y]) => this.spawnDrone(x, y));
     this.time.addEvent({
       delay: 15000, loop: true, callback: () => {
-        if (this.dead || this.enemies.countActive() >= 8) return;
+        if (this.dead || this.enemies.countActive() >= 8 || pirateCap(this, this.time.now) === 0) return; // quiet during the launch grace
         const a = Math.random() * Math.PI * 2;
-        const x = Phaser.Math.Clamp(this.ship.x + Math.cos(a) * 1100, 100, WS - 100);
-        const y = Phaser.Math.Clamp(this.ship.y + Math.sin(a) * 1100, 100, WS - 100);
-        if (Phaser.Math.Distance.Between(x, y, this.station.x, this.station.y) > 1000) this.spawnDrone(x, y);
+        const x = Phaser.Math.Clamp(this.ship.x + Math.cos(a) * SPAWN_DIST, 100, WS - 100);
+        const y = Phaser.Math.Clamp(this.ship.y + Math.sin(a) * SPAWN_DIST, 100, WS - 100);
+        if (Phaser.Math.Distance.Between(x, y, this.station.x, this.station.y) > SPAWN_KEEP_OUT) this.spawnDrone(x, y);
       }
     });
 
@@ -101,7 +103,8 @@ class Space extends Phaser.Scene {
   }
 
   hurt(n, fromX, fromY) {
-    if (this.dead || this.leaving) return;
+    if (this.dead || this.leaving || this.time.now < this.ironUntil) return; // brief invulnerability after each hit; the shield flash (ships.js) shows it
+    this.ironUntil = this.time.now + HIT_IRON;
     G.hull -= n; this.cameras.main.shake(120, 0.006); sfx('hit'); feelHit(this, fromX, fromY, n); shipsHit(this, this.ship, fromX, fromY);
     if (G.hull <= 0) this.die();
   }
@@ -145,6 +148,8 @@ class Space extends Phaser.Scene {
     this.pb.getChildren().forEach(b => { if (b.active && time - b.born > 900) b.disableBody(true, true); });
     this.eb.getChildren().forEach(b => { if (b.active && time - b.born > 1800) b.disableBody(true, true); });
 
+    if (!this.graceOver && pirateCap(this, time) > 0) { this.graceOver = true; toast(this, 'Patrol cover ends here. Pirates about.', '#ffd37a'); }
+    this.aggro = 0; // how many pirates have engaged you this frame (enemies.js caps it while the first wave ramps up)
     this.enemies.getChildren().forEach(d => pirateAI(this, d, ship, time)); // src/enemies.js: chase, strafe, shoot
     enemiesUpdate(this, time); // salvage pods drift and expire
 

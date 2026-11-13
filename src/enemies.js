@@ -13,6 +13,25 @@ const PIRATES = {
              engage: 1000, speed: 170, max: 150, turn: 0.022, hold: 430, range: 780, aim: 0.5, shot: [1500, 2100], bullet: 380, dmg: 10, spread: 3 }
 };
 
+// A fair launch (Troy's playtest, 2026-11-13: he died right after undocking, not while exploring).
+//   For LAUNCH_GRACE after the ship appears no pirate hunting you engages and the timed spawner stays quiet;
+//   then the first wave ramps: for 40 s one pirate at a time may come at you, for the next 40 s two, then any number.
+//   Pirates hunting the escort freighter and bosses are not held back. HIT_IRON is the invulnerability after each hit.
+const LAUNCH_GRACE = 20000, FIRST_WAVE = [[40000, 1], [80000, 2]], HIT_IRON = 450;
+const SPAWN_DIST = 1600, SPAWN_KEEP_OUT = 1800; // the timed spawner: how far from you a pirate appears, and how close to Halcyon it never does
+function pirateCap(s, time) { // how many pirates may engage you right now
+  const t = time - s.launchAt - LAUNCH_GRACE;
+  if (t < 0) return 0;
+  for (const [until, n] of FIRST_WAVE) if (t < until) return n;
+  return Infinity;
+}
+// true when this pirate must hold off: space.js resets s.aggro to 0 every frame before the pirates think
+function pirateHeld(s, dist, def, time) {
+  if (dist >= def.engage) return false;
+  if (s.aggro >= pirateCap(s, time)) return true;
+  s.aggro++; return false;
+}
+
 // which type turns up at a spot: raiders prowl the station lanes, gunships hold the planet side
 function pirateTypeFor(s, x, y) {
   const d = Phaser.Math.Distance.Between(x, y, s.station.x, s.station.y), r = Math.random();
@@ -38,7 +57,8 @@ function pirateAI(s, d, ship, time) {
   if (def.ai) return def.ai(s, d, ship, time); // a boss brings its own brain
   const tgt = d.prey && d.prey.active ? d.prey : ship;
   const ddx = tgt.x - d.x, ddy = tgt.y - d.y, dist = Math.hypot(ddx, ddy);
-  if (dist >= def.engage) { d.body.setAcceleration(0, 0); d.rotation += 0.003; return; }
+  d.calm = tgt === ship && pirateHeld(s, dist, def, time); // held back by the launch grace or the first-wave cap
+  if (dist >= def.engage || d.calm) { d.body.setAcceleration(0, 0); d.rotation += 0.003; return; }
   const target = Math.atan2(ddy, ddx);
   d.rotation = Phaser.Math.Angle.RotateTo(d.rotation, target, def.turn);
   if (def.strafe) {
