@@ -231,9 +231,10 @@ function keyStrip(sc) { // "Tab map  H help", gone after the first minute of pla
   if (!MAPUI.t0) MAPUI.t0 = performance.now();
   const age = performance.now() - MAPUI.t0;
   if (age >= STRIP_MS) return;
-  const t = sc.add.text(W / 2, 12, 'Tab map     H help', {
+  // bottom right, level with the controls line on the left: the top centre belongs to the HUD credits strip (hud.js)
+  const t = sc.add.text(W - 24, H - 48, 'Tab map     H help', {
     fontFamily: 'monospace', fontSize: '14px', color: '#9fe9ff', backgroundColor: '#000000aa', padding: { x: 10, y: 4 }
-  }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(250).setAlpha(0.8);
+  }).setOrigin(1, 0).setScrollFactor(0).setDepth(250).setAlpha(0.8);
   sc.tweens.add({ targets: t, alpha: 0, delay: STRIP_MS - age, duration: 2500, onComplete: () => t.destroy() });
 }
 
