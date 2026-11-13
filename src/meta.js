@@ -4,7 +4,7 @@
 
 const SAVE_KEY = 'longhaul.save.v1';
 const GAMEPLAY = ['Station', 'Space', 'Surface'];
-const DEV_HASH = /^#(space|surface)$/.test(location.hash); // dev jumps neither load nor overwrite a save
+const DEV_HASH = /^#(space|surface|escort|patrol)$/.test(location.hash); // dev jumps neither load nor overwrite a save
 let lastSaved = '';
 
 const HELP = {
@@ -34,6 +34,7 @@ const HELP = {
 function snapshot() {
   return {
     v: 1, credits: Math.floor(G.credits), hull: Math.round(G.hull), maxHull: Math.round(G.maxHull), mission: G.mission,
+    missionId: G.missionId || null, missionProgress: Math.floor(G.missionProgress || 0), // missions.js: which call, kills so far
     upgrades: Object.assign({}, G.upgrades),
     volume: Math.round(G.volume * 10) / 10, muted: !!G.muted,
     ...guideSnapshot() // first-run guide, run stats, ending card (guide.js)
@@ -72,6 +73,11 @@ function loadGame() {
     if (Number.isFinite(s.hull)) G.hull = Math.min(G.maxHull, Math.max(1, s.hull));
     if (['none', 'accepted', 'rescued', 'failed'].includes(s.mission)) G.mission = s.mission;
     if (G.mission === 'rescued') G.mission = 'accepted'; // you always wake up at the station, colonist or not
+    // which call it is (missions.js). A save from before missions.js has no id: back then the only call was the rescue.
+    const ids = typeof MISSIONS !== 'undefined' ? MISSIONS.map(m => m.id) : ['rescue'];
+    G.missionId = ids.includes(s.missionId) ? s.missionId : (s.missionId === undefined && G.mission !== 'none' ? 'rescue' : null);
+    G.missionProgress = Number.isFinite(s.missionProgress) ? Math.max(0, Math.floor(s.missionProgress)) : 0;
+    if (!G.missionId && G.mission !== 'none') { G.mission = 'none'; G.missionProgress = 0; } // unknown call: no mission
     if (Number.isFinite(s.volume)) G.volume = Math.min(1, Math.max(0, s.volume));
     if (typeof s.muted === 'boolean') G.muted = s.muted;
     guideRestore(s); // guide.js: tips done, stats, ending seen
@@ -86,7 +92,7 @@ function clearSave() {
 }
 
 function newGameState() {
-  G.credits = 0; G.maxHull = 100; G.hull = 100; G.mission = 'none';
+  G.credits = 0; G.maxHull = 100; G.hull = 100; G.mission = 'none'; G.missionId = null; G.missionProgress = 0;
   Object.keys(G.upgrades).forEach(k => { G.upgrades[k] = 0; });
   guideReset(); // guide.js: tips and stats start over
 }
