@@ -86,7 +86,7 @@ class Space extends Phaser.Scene {
     dropSalvage(this, e); // src/enemies.js
     this.boom.explode(28, e.x, e.y); e.destroy(); G.credits += cr; G.stats.drones++; sfx('boom');
     feelNumber(this, e.x, e.y - 48, '+' + cr + ' cr', '#ffb454', 18);
-    if (wanted) missionKill(this);
+    if (wanted || e.boss) missionKill(this, e);
   }
 
   spawnDrone(x, y) { return spawnPirate(this, x, y); } // src/enemies.js picks raider, drone or gunship by the spot

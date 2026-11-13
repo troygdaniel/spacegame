@@ -73,7 +73,9 @@ class Station extends Phaser.Scene {
   openPanel() {
     this.panel = true; this.panelBox.setVisible(true); this.canAccept = false; this.prompt.setText('');
     const busy = () => G.mission === 'accepted' || G.mission === 'rescued';
-    const RISK = { rescue: ['MEDIUM', 2, '#ffb454'], escort: ['HIGH', 3, '#ff4d6d'], patrol: ['MEDIUM', 2, '#ffb454'] };
+    const RISK = { rescue: ['MEDIUM', 2, '#ffb454'], escort: ['HIGH', 3, '#ff4d6d'], patrol: ['MEDIUM', 2, '#ffb454'], bounty: ['EXTREME', 3, '#ff2a4a'] };
+    const OFFERS = missionsOffered(); // the bounty call appears once a patrol has been finished (missions.js)
+    const GAP = Math.min(288, Math.floor(1120 / OFFERS.length)), CW = Math.min(270, GAP - 14);
     const clear = () => { this.boardObjs.forEach(o => o.destroy()); this.boardObjs = []; };
     const add = o => { this.panelBox.add(o); this.boardObjs.push(o); return o; };
     const txt = (x, y, str, size, color, o = {}) => add(this.add.text(x, y, str, uiFont(size, color, o.style)).setOrigin(o.ox === undefined ? 0 : o.ox, o.oy === undefined ? 0.5 : o.oy));
@@ -113,16 +115,16 @@ class Station extends Phaser.Scene {
         this.ui.setHints([['X', 'Drop the mission'], ['Esc', 'Close']]); return;
       }
       this.ui.titleText.setText('MISSION BOARD  -  HALCYON STATION');
-      MISSIONS.forEach((m, i) => {
-        const z = card(m, i, (i - (MISSIONS.length - 1) / 2) * 288, -75, 270, 220, i === sel);
+      OFFERS.forEach((m, i) => {
+        const z = card(m, i, (i - (OFFERS.length - 1) / 2) * GAP, -75, CW, 220, i === sel);
         z.on('pointerdown', () => { if (sel === i) acceptSel(); else choose(i); });
       });
       txt(-420, 52, 'BRIEFING', 11, '#5b7a92');
-      txt(-420, 66, MISSIONS[sel].offer, 14, '#cfefff', { oy: 0, style: { lineSpacing: 4 } });
-      this.ui.setHints([['E', 'Accept'], ['1-3', 'Choose'], ['Esc', 'Close']]);
+      txt(-420, 66, OFFERS[sel].offer, 14, '#cfefff', { oy: 0, style: { lineSpacing: 4 } });
+      this.ui.setHints([['E', 'Accept'], ['1-' + OFFERS.length, 'Choose'], ['Esc', 'Close']]);
     };
     const choose = (i, quiet) => {
-      sel = Phaser.Math.Wrap(i, 0, MISSIONS.length); pickMission(MISSIONS[sel].id); this.canAccept = true;
+      sel = Phaser.Math.Wrap(i, 0, OFFERS.length); pickMission(OFFERS[sel].id); this.canAccept = true;
       if (!quiet) beep(600, 0.05, 'square', 0.02);
       render();
     };
@@ -144,13 +146,13 @@ class Station extends Phaser.Scene {
         }
         return;
       }
-      const i = MISSIONS.findIndex(x => x.key === key);
+      const i = OFFERS.findIndex(x => x.key === key);
       if (i >= 0) choose(i);
       else if (key === 'arrowright') choose(sel + 1);
       else if (key === 'arrowleft') choose(sel - 1);
     };
     kb.on('keydown', this.boardKeys);
-    if (busy()) render(); else choose(Math.max(0, MISSIONS.findIndex(m => m.id === G.missionId)), true);
+    if (busy()) render(); else choose(Math.max(0, OFFERS.findIndex(m => m.id === G.missionId)), true);
   }
   closePanel() { this.panel = false; this.panelBox.setVisible(false); this.boardObjs.forEach(o => o.destroy()); this.boardObjs = []; }
 

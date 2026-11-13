@@ -36,6 +36,7 @@ function snapshot() {
   return {
     v: 1, credits: Math.floor(G.credits), hull: Math.round(G.hull), maxHull: Math.round(G.maxHull), mission: G.mission,
     missionId: G.missionId || null, missionProgress: Math.floor(G.missionProgress || 0), // missions.js: which call, kills so far
+    patrolsDone: G.patrolsDone | 0, // missions.js: unlocks the bounty call
     upgrades: Object.assign({}, G.upgrades), ore: G.ore | 0, // ore in the hold (asteroids.js)
     volume: Math.round(G.volume * 10) / 10, muted: !!G.muted,
     ...guideSnapshot(), // first-run guide, run stats, ending card (guide.js)
@@ -80,6 +81,7 @@ function loadGame() {
     G.missionId = ids.includes(s.missionId) ? s.missionId : (s.missionId === undefined && G.mission !== 'none' ? 'rescue' : null);
     G.missionProgress = Number.isFinite(s.missionProgress) ? Math.max(0, Math.floor(s.missionProgress)) : 0;
     if (!G.missionId && G.mission !== 'none') { G.mission = 'none'; G.missionProgress = 0; } // unknown call: no mission
+    G.patrolsDone = Number.isFinite(s.patrolsDone) ? Math.max(0, Math.floor(s.patrolsDone)) : 0;
     if (Number.isFinite(s.volume)) G.volume = Math.min(1, Math.max(0, s.volume));
     if (typeof s.muted === 'boolean') G.muted = s.muted;
     G.ore = Number.isFinite(s.ore) ? Math.min(ORE_CAP, Math.max(0, Math.floor(s.ore))) : 0; // asteroids.js
@@ -96,7 +98,7 @@ function clearSave() {
 }
 
 function newGameState() {
-  G.credits = 0; G.maxHull = 100; G.hull = 100; G.mission = 'none'; G.missionId = null; G.missionProgress = 0;
+  G.credits = 0; G.maxHull = 100; G.hull = 100; G.mission = 'none'; G.missionId = null; G.missionProgress = 0; G.patrolsDone = 0;
   Object.keys(G.upgrades).forEach(k => { G.upgrades[k] = 0; });
   G.ore = 0; guideReset(); // guide.js: tips and stats start over
   poiReset(); // poi.js: every site can be salvaged again
