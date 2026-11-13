@@ -26,7 +26,7 @@ export async function launch(hash = '') {
 }
 
 async function launchOnce(hash) {
-  const profile = mkdtempSync(join(tmpdir(), 'longhaul-'));
+  const profile = mkdtempSync(join(tmpdir(), `longhaul-${process.pid}-`)) // pid in the name: cleanup can target only this run;
   const chrome = spawn(CHROME, [
     '--headless=new', '--disable-gpu', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
     '--allow-file-access-from-files', '--remote-debugging-port=0', '--remote-allow-origins=*',
@@ -43,7 +43,7 @@ async function launchOnce(hash) {
     if (!page) await sleep(100);
   }
   const ws = new WebSocket(page.webSocketDebuggerUrl);
-  await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
+  await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; setTimeout(() => rej(new Error('DevTools socket did not open')), 20000); });
   let id = 0; const pending = new Map(); const errors = [];
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
@@ -56,8 +56,10 @@ async function launchOnce(hash) {
       errors.push('console.error: ' + m.params.args.map(a => a.value ?? a.description).join(' '));
     }
   };
+  // every DevTools call has a 30 s limit, so a stuck Chrome fails the test instead of hanging it forever
   const send = (method, params = {}) => new Promise((res, rej) => {
     const i = ++id; pending.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params }));
+    setTimeout(() => { if (pending.delete(i)) rej(new Error('DevTools call timed out: ' + method)); }, 30000);
   });
   // Phaser objects cannot be sent back by value ("object reference chain is too long"), so only plain values,
   // arrays and plain objects come back; anything else (a sprite from setPosition, say) comes back as null.
