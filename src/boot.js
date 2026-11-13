@@ -79,27 +79,7 @@ class Boot extends Phaser.Scene {
       g.lineStyle(4, 0xffd9a0, 0.45); g.beginPath(); g.arc(C, C, R - 2, Phaser.Math.DegToRad(185), Phaser.Math.DegToRad(265)); g.strokePath();
       g.lineStyle(3, AMBER, 0.55); g.strokeCircle(C, C, R + 1);
     });
-    mk('station', 440, 440, g => {
-      for (let i = 0; i < 6; i++) { g.lineStyle(4, CYAN, 0.05); g.strokeCircle(220, 220, 200 + i * 3); } // outer glow
-      halo(g, 220, 220, CYAN, [74, 62, 52], 0.03);                                                        // hub glow
-      g.lineStyle(14, 0x1d3b5c, 1); g.strokeCircle(220, 220, 190);
-      g.lineStyle(3, 0x2a6a9a, 0.8); g.strokeCircle(220, 220, 190);
-      g.lineStyle(3, CYAN, 0.9); g.strokeCircle(220, 220, 198); g.strokeCircle(220, 220, 182);
-      g.lineStyle(10, 0x1d3b5c, 1);
-      g.lineBetween(220, 30, 220, 410); g.lineBetween(30, 220, 410, 220);
-      g.lineStyle(2, 0x2a6a9a, 0.8); g.lineBetween(220, 30, 220, 410); g.lineBetween(30, 220, 410, 220);
-      g.fillStyle(0x0b2236, 1); g.fillCircle(220, 220, 46);
-      g.lineStyle(3, CYAN, 1); g.strokeCircle(220, 220, 46);
-      g.lineStyle(2, AMBER, 0.5); g.strokeCircle(220, 220, 30);
-      g.fillStyle(CYAN, 0.9); g.fillCircle(220, 220, 9); g.fillStyle(0xffffff, 1); g.fillCircle(220, 220, 3);
-      halo(g, 419, 220, AMBER, [26, 20, 14], 0.04);                                                       // dock bay glow
-      g.fillStyle(AMBER, 1); g.fillRect(404, 200, 30, 40);
-      g.fillStyle(0xfff1a8, 1); g.fillRect(404, 217, 30, 6);
-      for (let i = 0; i < 16; i++) {
-        const a = i / 16 * Math.PI * 2, col = i % 2 ? AMBER : CYAN, x = 220 + Math.cos(a) * 190, y = 220 + Math.sin(a) * 190;
-        g.fillStyle(col, 0.18); g.fillCircle(x, y, 8); g.fillStyle(col, 1); g.fillCircle(x, y, 4);
-      }
-    });
+    stationArt(this); // src/stationart.js: Halcyon Station, its ring, hub, shade and lane, Kestrel Outpost, glow dots
     mk('walker', 22, 22, g => {
       g.fillStyle(0x0b2236, 1); g.lineStyle(2, CYAN, 1); g.fillCircle(10, 11, 8); g.strokeCircle(10, 11, 8);
       g.fillStyle(CYAN, 1); g.fillRect(15, 9, 7, 4);
