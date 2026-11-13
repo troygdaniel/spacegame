@@ -153,7 +153,7 @@ class Surface extends Phaser.Scene {
         }
       }
     }
-    this.prompt.setText(msg);
+    this.prompt.setText(msg).setVisible(msg !== '');
 
     // HUD
     const g = this.hud; g.clear();

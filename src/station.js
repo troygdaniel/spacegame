@@ -113,7 +113,7 @@ class Station extends Phaser.Scene {
       const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, sp.x, sp.y);
       if (d < nearD) { near = sp; nearD = d; }
     });
-    this.prompt.setText(near ? 'E  ' + (near.prompt || { missions: 'Check the mission board', repair: 'Repair hull', ship: 'Board ship and launch' }[near.key]) : '');
+    this.prompt.setText(near ? 'E  ' + (near.prompt || { missions: 'Check the mission board', repair: 'Repair hull', ship: 'Board ship and launch' }[near.key]) : '').setVisible(!!near);
     if (near && JD(k.E) && !spotInteract(this, near)) {
       if (near.key === 'missions') this.openPanel();
       else if (near.key === 'repair') {

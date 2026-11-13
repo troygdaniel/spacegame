@@ -169,7 +169,7 @@ class Space extends Phaser.Scene {
       if (spd < 170) { msg = 'L  Land on Kepler-4b'; if (JD(k.L)) { beep(300, 0.5, 'triangle', 0.05, -150); go(this, 'Surface'); } }
       else msg = 'Too fast to land. Hold S to brake';
     }
-    this.prompt.setText(msg);
+    this.prompt.setText(msg).setVisible(msg !== '');
 
     // HUD
     const g = this.hud; g.clear();
