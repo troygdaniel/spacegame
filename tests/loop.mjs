@@ -1,5 +1,5 @@
 // Scripted playthrough of the whole rescue loop through the real game code (real key presses over DevTools).
-// Station: take the call -> Space: land on Kepler-4b -> Surface: wake the colonist, board -> Space: dock -> payout.
+// Station: take the Rescue call (E opens the board, 1 picks Rescue, E accepts) -> Space: land on Kepler-4b -> Surface: wake the colonist, board -> Space: dock -> payout.
 // Asserts credits go up by exactly REWARD (500). Drones and crawlers are removed so the run is deterministic;
 // tests/probe.mjs measures what they do. Run: node tests/loop.mjs   (exit code 1 on any failure)
 import { launch, sleep } from './cdp.mjs';
@@ -16,9 +16,11 @@ try {
   // 1. take the rescue call (stand at the MISSIONS terminal, E to open, E to accept)
   await t.ev(`${ST}.player.setPosition(200, 200)`); await sleep(250);
   await t.press('E');
-  await ok('mission panel opens', `${ST}.panel === true`);
+  await ok('mission board opens', `${ST}.panel === true`);
+  await t.press('1'); // the board lists the calls: 1 Rescue, 2 Escort, 3 Patrol
+  await ok('rescue offer shown', `${ST}.canAccept === true`);
   await t.press('E');
-  await ok('mission accepted', "G.mission === 'accepted'");
+  await ok('mission accepted', "G.mission === 'accepted' && G.missionId === 'rescue'");
 
   // 2. board the ship and launch
   await t.ev(`${ST}.player.setPosition(1090, 360)`); await sleep(250);

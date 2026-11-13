@@ -33,3 +33,4 @@ Measured in the running game, one line each with a value to try.
 - `bash tests/smoke.sh` : syntax check, one screenshot per scene in `tests/out/`, then the scripted rescue (asserts +500 credits). Exit code 1 on any failure.
 - `node tests/loop.mjs` : only the scripted rescue. It removes drones and crawlers so it is deterministic, which also means it does not see bug 1.
 - `node tests/probe.mjs` : prints the numbers in this file.
+- `node tests/missions.mjs` (or `FULL=1 bash tests/smoke.sh`) : the mission board, Rescue, Escort, Police patrol and their failure paths, game clock stepped by hand, about 2 minutes. Ported from BuildBot's drive.mjs.
