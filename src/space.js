@@ -55,18 +55,19 @@ class Space extends Phaser.Scene {
 
     this.physics.add.overlap(this.pb, this.enemies, (b, e) => {
       if (!b.active || !e.active) return;
-      b.disableBody(true, true); e.hp -= 15; this.boom.explode(4, b.x, b.y); sfx('tick');
+      b.disableBody(true, true); e.hp -= 15; this.boom.explode(4, b.x, b.y); sfx('tick'); feelNumber(this, e.x, e.y - 18, '15');
       if (e.hp <= 0) {
         const wanted = e.wanted;
         this.boom.explode(28, e.x, e.y); e.destroy(); G.credits += 25; G.stats.drones++; sfx('boom');
-        if (wanted) missionKill(this); else toast(this, 'Drone down  +25 cr', '#ffb454');
+        feelNumber(this, e.x, e.y - 48, '+25 cr', '#ffb454', 18);
+        if (wanted) missionKill(this);
       }
     });
     this.physics.add.overlap(this.ship, this.eb, (s, b) => {
-      if (!b.active) return; b.disableBody(true, true); this.hurt(8);
+      if (!b.active) return; b.disableBody(true, true); this.hurt(8, b.x, b.y);
     });
     this.physics.add.overlap(this.ship, this.enemies, (s, e) => {
-      if (this.time.now < this.rammedAt) return; this.rammedAt = this.time.now + 600; e.hp -= 10; this.hurt(12);
+      if (this.time.now < this.rammedAt) return; this.rammedAt = this.time.now + 600; e.hp -= 10; this.hurt(12, e.x, e.y);
     });
 
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,L,SPACE,SHIFT,UP,DOWN,LEFT,RIGHT');
@@ -77,6 +78,7 @@ class Space extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(100);
     if (this.from === 'station') toast(this, 'Launch clear. Kepler-4b is to the north-east.', '#9fe9ff');
     missionSpaceSetup(this); // src/missions.js: escort freighter, wanted pirates
+    feelInstall(this); // src/feel.js: hit flashes, flame, approach rings, arrival zoom
   }
 
   spawnDrone(x, y) {
@@ -95,9 +97,9 @@ class Space extends Phaser.Scene {
     this.physics.velocityFromRotation(rot, speed, b.body.velocity);
   }
 
-  hurt(n) {
+  hurt(n, fromX, fromY) {
     if (this.dead || this.leaving) return;
-    G.hull -= n; this.cameras.main.shake(120, 0.006); sfx('hit');
+    G.hull -= n; this.cameras.main.shake(120, 0.006); sfx('hit'); feelHit(this, fromX, fromY, n);
     if (G.hull <= 0) this.die();
   }
 
@@ -116,6 +118,7 @@ class Space extends Phaser.Scene {
     this.s1.tilePositionX = this.cameras.main.scrollX * 0.25; this.s1.tilePositionY = this.cameras.main.scrollY * 0.25;
     this.s2.tilePositionX = this.cameras.main.scrollX * 0.6; this.s2.tilePositionY = this.cameras.main.scrollY * 0.6;
     if (this.dead) return;
+    if (this.leaving) { feelFrame(this, time, dt); return; } // docking or landing move is playing (feel.js)
     const locked = time < this.lockUntil;
     const left = k.A.isDown || k.LEFT.isDown, right = k.D.isDown || k.RIGHT.isDown;
     const up = k.W.isDown || k.UP.isDown, brake = k.S.isDown || k.DOWN.isDown, boost = k.SHIFT.isDown;
@@ -132,7 +135,7 @@ class Space extends Phaser.Scene {
     if (!locked && (k.SPACE.isDown || this.input.activePointer.isDown) && time > this.nextFire) {
       this.nextFire = time + fireDelay();
       this.shoot(this.pb, ship.x + Math.cos(ship.rotation) * 24, ship.y + Math.sin(ship.rotation) * 24, ship.rotation, 950, time);
-      sfx('laser');
+      sfx('laser'); feelShot(this, ship.x + Math.cos(ship.rotation) * 26, ship.y + Math.sin(ship.rotation) * 26, ship.rotation);
     }
     this.pb.getChildren().forEach(b => { if (b.active && time - b.born > 900) b.disableBody(true, true); });
     this.eb.getChildren().forEach(b => { if (b.active && time - b.born > 1800) b.disableBody(true, true); });
@@ -158,15 +161,16 @@ class Space extends Phaser.Scene {
     const spd = ship.body.speed;
     let msg = '';
     if (dS < 320) {
-      if (spd < 150) { msg = 'L  Dock at Halcyon Station'; if (JD(k.L)) { missionLeaveSpace(this); sfx('dock'); go(this, 'Station', { arrive: true }); } }
+      if (spd < 150) { msg = 'L  Dock at Halcyon Station'; if (JD(k.L)) { missionLeaveSpace(this); sfx('dock'); feelDescend(this, this.station, () => go(this, 'Station', { arrive: true })); } }
       else msg = 'Too fast to dock. Hold S to brake';
     } else if (dP < this.planetR + 150) {
-      if (spd < 170) { msg = 'L  Land on Kepler-4b'; if (JD(k.L)) { missionLeaveSpace(this); sfx('thrusters'); go(this, 'Surface'); } }
+      if (spd < 170) { msg = 'L  Land on Kepler-4b'; if (JD(k.L)) { missionLeaveSpace(this); sfx('thrusters'); feelDescend(this, this.planet, () => go(this, 'Surface')); } }
       else msg = 'Too fast to land. Hold S to brake';
     }
     this.prompt.setText(msg);
 
     missionSpaceUpdate(this, time, dt); // queues the freighter bar and radar dots for the HUD
     hudTick(this); // src/hud.js: gauges, checklist, radar, objective marker
+    feelFrame(this, time, dt); // src/feel.js: flame, velocity line, approach rings, hit cues
   }
 }
