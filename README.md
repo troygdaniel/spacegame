@@ -5,12 +5,13 @@ Browser 2D top-down space game, Elite Dangerous flavoured. Phaser 3.80.1 (vendor
 Run: open index.html in a browser (or `python3 -m http.server` here). Dev shortcuts: `index.html#space` and `index.html#surface` jump straight to that scene with the rescue mission accepted.
 
 ## The loop (v0.1)
-Station (walk, take the rescue call, board ship) -> Space (fly, fight drones, dock/land with L) -> Surface (walk, find the colonist, protect them, return to ship) -> fly home, dock, get paid.
+Station (walk, take the rescue call, board ship) -> Ship bay (look the ship over, read the mission and the controls, Enter to launch, Esc to go back) -> Space (fly, fight drones, dock/land with L) -> Surface (walk, find the colonist, protect them, return to ship) -> fly home, dock, get paid.
 
 ## Files and who owns them
 - src/common.js  shared helpers, global state G, beep(), toast(), go()
 - src/boot.js    every texture is drawn here with shapes (no image files)
 - src/station.js station interior scene
+- src/shipmode.js the Ship bay scene between boarding and flight: the ship, its status, the mission, the controls guide, LAUNCH; tests/shipmode.mjs checks it. It is also where the hangar terminal of docs/UNIVERSE.md will live (see the comment at the top of the file)
 - src/space.js   flight, combat, dock/land
 - src/surface.js planet surface, colonist escort
 - src/hud.js, src/ui.js credits are one look everywhere: a gold coin and "N CR" (hudStrip and hudCoin in hud.js, crTag for the panels in ui.js; +N green and -N red float on every change); tests/credits.mjs checks it
