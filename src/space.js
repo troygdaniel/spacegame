@@ -110,12 +110,14 @@ class Space extends Phaser.Scene {
   }
 
   die() {
-    this.dead = true; G.hull = G.maxHull;
+    this.dead = true;
     this.boom.explode(70, this.ship.x, this.ship.y);
     this.ship.setVisible(false); this.ship.body.enable = false;
-    G.credits = Math.floor(G.credits * 0.8);
+    // insurance fee: 20% of your credits, never less than 50; too poor to cover it and the ship is rebuilt at half hull
+    const owed = Math.max(50, Math.floor(G.credits * 0.2)), fee = Math.min(owed, G.credits);
+    G.credits -= fee; G.hull = fee < owed ? Math.ceil(G.maxHull / 2) : G.maxHull;
     if (G.mission === 'rescued') { G.mission = 'failed'; toast(this, 'Ship destroyed. The colonist was lost. Mission failed.', '#ff4d6d'); }
-    else toast(this, 'Ship destroyed. Insurance paid out (-20% credits).', '#ff4d6d');
+    else toast(this, fee < owed ? 'Ship destroyed. You could only pay ' + fee + ' cr: rebuilt at half hull.' : 'Ship destroyed. Insurance fee -' + fee + ' cr.', '#ff4d6d');
     this.time.delayedCall(2200, () => go(this, 'Station', { arrive: false }));
   }
 
