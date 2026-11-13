@@ -71,7 +71,14 @@ export async function launch(hash = '') {
     const r = await send('Page.captureScreenshot', { format: 'png' });
     writeFileSync(join(OUT, name + '.png'), Buffer.from(r.data, 'base64'));
   };
-  const close = async () => { try { ws.close(); } catch (e) { /* already closed */ } chrome.kill(); await sleep(300); rmSync(profile, { recursive: true, force: true }); };
+  const close = async () => {
+    try { ws.close(); } catch (e) { /* already closed */ }
+    const exited = new Promise(r => chrome.once('exit', r));
+    chrome.kill('SIGTERM');
+    await Promise.race([exited, sleep(4000)]);
+    if (chrome.exitCode === null) { chrome.kill('SIGKILL'); await sleep(500); } // a loaded machine can ignore SIGTERM for a while
+    rmSync(profile, { recursive: true, force: true });
+  };
   await send('Page.enable'); await send('Runtime.enable');
   await send('Page.navigate', { url: 'file://' + ROOT + '/index.html' + hash });
   return { send, ev, waitFor, press, shot, close, errors };
