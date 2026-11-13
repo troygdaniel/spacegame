@@ -46,6 +46,11 @@ function saveGame(force) {
   try { localStorage.setItem(SAVE_KEY, s); lastSaved = s; } catch (e) { /* storage is optional */ }
 }
 
+function maxTier(key) { // the highest tier the shop sells for this upgrade (2 if shop.js is missing)
+  const u = typeof UPGRADES !== 'undefined' && UPGRADES.find(x => x.key === key);
+  return u ? u.prices.length : 2;
+}
+
 function loadGame() {
   if (DEV_HASH) return false;
   try {
@@ -53,10 +58,16 @@ function loadGame() {
     if (!raw) return false;
     const s = JSON.parse(raw);
     if (Number.isFinite(s.credits)) G.credits = Math.max(0, Math.floor(s.credits));
-    if (Number.isFinite(s.maxHull)) G.maxHull = Math.min(200, Math.max(100, s.maxHull)); // armor raises it above 100
     if (s.upgrades && typeof s.upgrades === 'object') {
-      Object.keys(G.upgrades).forEach(k => { G.upgrades[k] = s.upgrades[k] === true; });
+      // G.upgrades[key] is a tier 0..max (shop.js). An old save may hold true/false: true is tier 1.
+      Object.keys(G.upgrades).forEach(k => {
+        const t = s.upgrades[k] === true ? 1 : Math.floor(Number(s.upgrades[k]));
+        G.upgrades[k] = Number.isFinite(t) ? Math.min(maxTier(k), Math.max(0, t)) : 0;
+      });
     }
+    // max hull is 100 + 20 per armor tier; a saved value is kept if it fits, else it comes from the armor tier
+    const hullCap = 100 + 20 * maxTier('armor');
+    G.maxHull = Number.isFinite(s.maxHull) ? Math.min(hullCap, Math.max(100, s.maxHull)) : 100 + 20 * G.upgrades.armor;
     if (Number.isFinite(s.hull)) G.hull = Math.min(G.maxHull, Math.max(1, s.hull));
     if (['none', 'accepted', 'rescued', 'failed'].includes(s.mission)) G.mission = s.mission;
     if (G.mission === 'rescued') G.mission = 'accepted'; // you always wake up at the station, colonist or not
@@ -74,7 +85,7 @@ function clearSave() {
 
 function newGameState() {
   G.credits = 0; G.maxHull = 100; G.hull = 100; G.mission = 'none';
-  Object.keys(G.upgrades).forEach(k => { G.upgrades[k] = false; });
+  Object.keys(G.upgrades).forEach(k => { G.upgrades[k] = 0; });
 }
 
 // ---------- window hooks ----------
