@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Long Haul smoke test. Run from anywhere: bash tests/smoke.sh   (exit code 1 if anything fails)
 #   1. node --check on every src file
+#   1b. tests/hygiene.mjs: fails on a key, token, email address, phone number or /Users path in a tracked file or in content/
 #   2. tests/scenes.mjs: load index.html, index.html#space, index.html#surface in headless Chrome, fail on a console
 #      error, save a screenshot of each to tests/out/ (gitignored)
 #   3. tests/loop.mjs: scripted rescue from station to payout, asserts +500 credits
@@ -24,6 +25,9 @@ echo "== 1. node --check"
 for f in src/*.js tests/*.mjs; do
   if node --check "$f"; then echo "  ok  $f"; else echo "  FAIL $f"; fail=1; fi
 done
+
+echo "== 1b. hygiene: no keys, emails, phone numbers or personal paths in anything we publish (tests/hygiene.mjs)"
+if node tests/hygiene.mjs; then :; else fail=1; fi
 
 echo "== 2. headless Chrome, one screenshot per scene"
 if node tests/scenes.mjs; then :; else fail=1; fi
