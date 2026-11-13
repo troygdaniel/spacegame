@@ -3,7 +3,7 @@ window.game = new Phaser.Game({
   type: Phaser.AUTO, width: W, height: H, parent: 'game', backgroundColor: '#05070f',
   physics: { default: 'arcade', arcade: { debug: false } },
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [Boot, Title, Station, Space, Surface, Pause, Overlay]
+  scene: [Boot, Title, Station, Space, Surface, Pause, Overlay, Hyper]
 });
 installMeta(window.game); // Esc pause, M mute, autosave
 installAudio(window.game); // ambient pads, engine hum (audio.js)

@@ -427,7 +427,7 @@ function interiorBuild(s) {
   // the ship: a shadow, engine and cockpit glow. station.js owns the sprite (s.shipImg) and feelLaunch moves it.
   if (s.shipImg) {
     s.shipImg.setDepth(2.8);
-    I.shipShadow = s.add.image(0, 0, 'ship').setTint(0x000000).setAlpha(0.45).setScale(3).setDepth(2.7);
+    I.shipShadow = s.add.image(0, 0, 'in-shadow').setAlpha(0.7).setScale(3.4, 3.6).setDepth(2.7); // a soft oval, not a copy of the 'ship' texture: shipRefresh (ships.js) rebuilds that texture when you buy an upgrade and a copy would break
     I.shipFx = [glow(0, 0, 40, AMBER, 0.5, { depth: 2.9, pulse: 900 }), glow(0, 0, 26, CYAN, 0.35, { depth: 2.9, pulse: 1400 })];
   }
 

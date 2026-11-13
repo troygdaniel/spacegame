@@ -10,7 +10,8 @@
 #       and cursor (card space-game-planet-audio-hints)
 #   4d. tests/bounty.mjs: pirate bounty per type, the BOUNTY +N text, the HUD glow, the dock summary
 #   4e. tests/credits.mjs: the gold coin and CR readout in the HUD strip and on the board, shop, map and pause panels, +N / -N floats
-#   4f. tests/systemart.mjs: planet kinds, star types and the four station looks for other systems (not used by the game yet)
+#   4f. tests/hyper.mjs: the hyperspace tunnel demo (#hyper), its timing, readout and colour; no save written
+#   4g. tests/systemart.mjs: planet kinds, star types and the four station looks for other systems (not used by the game yet)
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #      their failure paths, with the game clock stepped by hand
 # Needs Google Chrome and Node 22+. Uses throwaway Chrome profiles, never your own. Chrome runs with
@@ -47,7 +48,10 @@ if node tests/bounty.mjs; then :; else fail=1; fi
 echo "== 4e. credits unmistakable (tests/credits.mjs)"
 if node tests/credits.mjs; then :; else fail=1; fi
 
-echo "== 4f. art for other star systems (tests/systemart.mjs)"
+echo "== 4f. hyperspace tunnel demo (tests/hyper.mjs: #hyper, #hyper24, #hyper2)"
+if node tests/hyper.mjs; then :; else fail=1; fi
+
+echo "== 4g. art for other star systems (tests/systemart.mjs)"
 if node tests/systemart.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
