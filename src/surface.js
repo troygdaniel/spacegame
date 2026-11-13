@@ -7,15 +7,11 @@ class Surface extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, SW, SH);
     this.cameras.main.setBounds(0, 0, SW, SH).fadeIn(300, 0, 0, 0);
     this.add.tileSprite(0, 0, SW, SH, 'ground').setOrigin(0);
-    const pg = this.add.graphics();
-    pg.lineStyle(4, AMBER, 0.9); pg.strokeCircle(this.pad.x, this.pad.y, 100);
-    pg.lineStyle(2, AMBER, 0.4); pg.strokeCircle(this.pad.x, this.pad.y, 116);
+    this.pod = { x: 2100, y: 700 };
+    surfaceDress(this); // src/art_world.js: terrain colour, landing pad, wreck, smoke, dust, vignette, beacon
     this.add.image(this.pad.x, this.pad.y, 'ship').setScale(1.8).setRotation(-Math.PI / 2).setDepth(1);
     label(this, this.pad.x, this.pad.y + 130, 'YOUR SHIP', '#ffb454');
 
-    this.pod = { x: 2100, y: 700 };
-    pg.fillStyle(0x24262b, 1); pg.fillCircle(this.pod.x, this.pod.y, 34);
-    pg.lineStyle(3, AMBER, 0.9); pg.strokeCircle(this.pod.x, this.pod.y, 34);
     label(this, this.pod.x, this.pod.y - 56, 'CRASHED POD', '#ffb454');
 
     this.rocks = this.physics.add.staticGroup();
@@ -46,10 +42,7 @@ class Surface extends Phaser.Scene {
 
     this.pb = this.physics.add.group({ defaultKey: 'bullet', maxSize: 40 });
     this.physics.add.collider(this.pb, this.rocks, b => { if (b.active) b.disableBody(true, true); });
-    this.boom = this.add.particles(0, 0, 'spark', {
-      lifespan: 500, speed: { min: 40, max: 200 }, scale: { start: 1.8, end: 0 }, alpha: { start: 1, end: 0 },
-      tint: [GREEN, 0xfff1a8], blendMode: 'ADD', emitting: false
-    }).setDepth(6);
+    this.boom = fxBoom(this, { spark: [GREEN, 0xfff1a8], ember: [0x6dff9c, 0xb6ffd0, 0xfff1a8], flash: 0xb6ffd0, ring: 0x8affb4 }); // src/art_world.js
     this.physics.add.overlap(this.pb, this.crawlers, (b, c) => {
       if (!b.active || !c.active) return;
       b.disableBody(true, true); c.hp -= 12; c.setTint(0xffffff); this.time.delayedCall(70, () => c.active && c.clearTint());
@@ -151,6 +144,7 @@ class Surface extends Phaser.Scene {
     }
     this.prompt.setText(msg);
 
+    surfaceTick(this, time); // src/art_world.js: crawler legs, colonist beacon
     hudTick(this); // src/hud.js
     feelFrame(this, time, dt); // src/feel.js: hit cues, muzzle flash, low-health pulse
   }

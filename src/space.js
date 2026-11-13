@@ -7,8 +7,7 @@ class Space extends Phaser.Scene {
     const WS = 8000; this.WS = WS;
     this.physics.world.setBounds(0, 0, WS, WS);
     this.cameras.main.fadeIn(300, 0, 0, 0).setBounds(0, 0, WS, WS);
-    this.s1 = this.add.tileSprite(0, 0, W, H, 'stars1').setOrigin(0).setScrollFactor(0).setDepth(-10);
-    this.s2 = this.add.tileSprite(0, 0, W, H, 'stars2').setOrigin(0).setScrollFactor(0).setDepth(-9);
+    spaceBackdrop(this); // src/art_world.js: nebula, parallax star layers, distant sun, giant and moon
 
     this.station = this.add.image(4000, 4000, 'station');
     this.tweens.add({ targets: this.station, angle: 360, duration: 180000, repeat: -1 });
@@ -34,10 +33,7 @@ class Space extends Phaser.Scene {
       lifespan: 380, speed: { min: 20, max: 70 }, scale: { start: 1.3, end: 0 }, alpha: { start: 0.9, end: 0 },
       tint: CYAN, blendMode: 'ADD', emitting: false
     }).setDepth(3);
-    this.boom = this.add.particles(0, 0, 'spark', {
-      lifespan: 700, speed: { min: 60, max: 300 }, scale: { start: 2.4, end: 0 }, alpha: { start: 1, end: 0 },
-      tint: [AMBER, RED, 0xfff1a8], blendMode: 'ADD', emitting: false
-    }).setDepth(6);
+    this.boom = fxBoom(this); // src/art_world.js: sparks, flash, embers, shockwave, shards, smoke, scaled by the count
 
     for (let i = 0; i < 6; i++) {
       const a = i / 6 * Math.PI * 2, r = 520 + Math.random() * 220;
@@ -121,8 +117,7 @@ class Space extends Phaser.Scene {
   update(time, dt) {
     guideTick(this);
     const k = this.k, ship = this.ship, JD = Phaser.Input.Keyboard.JustDown;
-    this.s1.tilePositionX = this.cameras.main.scrollX * 0.25; this.s1.tilePositionY = this.cameras.main.scrollY * 0.25;
-    this.s2.tilePositionX = this.cameras.main.scrollX * 0.6; this.s2.tilePositionY = this.cameras.main.scrollY * 0.6;
+    spaceBackdropTick(this); // parallax layers follow the camera
     if (this.dead) return;
     if (this.leaving) { feelFrame(this, time, dt); return; } // docking or landing move is playing (feel.js)
     const locked = time < this.lockUntil;

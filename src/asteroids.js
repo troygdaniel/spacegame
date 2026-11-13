@@ -40,7 +40,7 @@ function asteroidsSetup(s) {
 }
 
 function spawnRock(s, x, y, size, vx, vy) {
-  const r = s.ast.rocks.create(x, y, 'asteroid').setDepth(2).setScale(ROCK_SCALE[size]).setRotation(Math.random() * 6.28);
+  const r = s.ast.rocks.create(x, y, ['asteroid', 'asteroid2', 'asteroid3'][Math.floor(Math.random() * 3)]).setDepth(2).setScale(ROCK_SCALE[size]).setRotation(Math.random() * 6.28);
   r.size = size; r.hp = ROCK_HP[size]; r.spin = Phaser.Math.FloatBetween(-0.0006, 0.0006);
   r.body.setCircle(26, 6, 6).setImmovable(true);
   r.setVelocity(vx !== undefined ? vx : Phaser.Math.Between(-9, 9), vy !== undefined ? vy : Phaser.Math.Between(-9, 9));
@@ -49,7 +49,7 @@ function spawnRock(s, x, y, size, vx, vy) {
 
 function breakRock(s, r) {
   const a = s.ast, size = r.size, x = r.x, y = r.y;
-  s.boom.explode(10 + size * 6, x, y); sfx('hit');
+  s.boom.explode(10 + size * 6, x, y); sfx('hit'); fxDebris(s, x, y, size); // src/art_world.js
   r.destroy();
   if (size > 1) { // two smaller rocks fly apart
     const ang = Math.random() * Math.PI * 2;
@@ -85,7 +85,7 @@ function asteroidsUpdate(s, time, dt) {
     img.x += o.vx * sec; img.y += o.vy * sec;
     if (d < 30) {
       if (G.ore < ORE_CAP) {
-        G.ore++; img.destroy(); a.ore.splice(i, 1); beep(900 + G.ore * 40, 0.06, 'triangle', 0.03);
+        G.ore++; fxPickup(s, img.x, img.y, 0xffb454); img.destroy(); a.ore.splice(i, 1); beep(900 + G.ore * 40, 0.06, 'triangle', 0.03);
         if (G.ore === ORE_CAP) toast(s, 'Cargo hold full: ' + ORE_CAP + ' ore. Sell it at Halcyon Station.', '#ffd37a');
       } else if (time > a.fullAt) { a.fullAt = time + 4000; toast(s, 'Cargo hold full. Sell the ore at Halcyon Station.', '#ffd37a'); }
     }

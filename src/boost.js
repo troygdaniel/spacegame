@@ -42,7 +42,7 @@ function boostFrame(s, time, dt, locked, thrusting) {
       s.dashDir = dir; s.dashLeft = BOOST.dashMs; s.dashReady = time + BOOST.dashCool;
       s.ship.body.velocity.x += Math.cos(a) * BOOST.dashDrift; s.ship.body.velocity.y += Math.sin(a) * BOOST.dashDrift;
       s.trail.emitParticleAt(s.ship.x - Math.cos(a) * 14, s.ship.y - Math.sin(a) * 14, 12); // a puff on the side you pushed off from
-      sfx('dash');
+      sfx('dash'); fxDash(s, a); // src/art_world.js
     } else sfx('empty');
   }
   if (s.dashLeft > 0) { // counted in frame time, so the slide is the same 180 px at any frame rate
