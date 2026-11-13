@@ -12,6 +12,7 @@ class Space extends Phaser.Scene {
     this.station = this.add.image(4000, 4000, 'station');
     this.tweens.add({ targets: this.station, angle: 360, duration: 180000, repeat: -1 });
     label(this, 4000, 3740, 'HALCYON STATION', '#38e1ff', 18);
+    stationFx(this); // src/stationart.js: spinning hub and ring, beacons, docking lane, Kestrel Outpost
     this.planet = this.add.image(6200, 2000, 'planet'); this.planetR = 316;
     label(this, 6200, 1620, 'KEPLER-4B', '#ffb454', 18);
 

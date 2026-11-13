@@ -13,6 +13,7 @@ Station (walk, take the rescue call, board ship) -> Space (fly, fight drones, do
 - src/station.js station interior scene
 - src/space.js   flight, combat, dock/land
 - src/surface.js planet surface, colonist escort
+- src/stationart.js Halcyon Station and Kestrel Outpost art (canvas gradients, drawn in code) and their animation: spinning hub and ring, beacons, docking lane
 - src/main.js    Phaser config and scene list
 New files get their own script tag in index.html. Keep edits inside the files your card names.
 
