@@ -287,37 +287,53 @@ function hudTracker(h, m, meter, now, open) {
   const g = h.g, P = HUD_FRAME, px = P.x, py = P.y, steps = m.steps || [], bad = m.kind === 'failed', edge = bad ? RED : CYAN;
   if (!open) { // slim: the step you are on, and the key that opens it
     const cur = m.steps ? m.steps[m.cur].text : m.head, txt = cur.length > 29 ? cur.slice(0, 28) + '…' : cur;
-    hudPanel(g, px, py, P.w, 30, 8, 0.72, edge);
-    if (m.steps) { g.lineStyle(2, AMBER, 1); g.strokeRect(px + 14, py + 9, 12, 12); g.fillStyle(AMBER, 0.55 + 0.45 * Math.sin(now / 260)); g.fillRect(px + 17, py + 12, 6, 6); }
-    else hudDiamond(g, px + 20, py + 15, 5, bad ? RED : CYAN);
-    hudPut(h, 'tc', px + 38, py + 16, txt, { size: 12, color: bad ? '#ff4d6d' : m.kind === 'none' ? '#9fe9ff' : '#ffd37a' });
+    hudPanel(g, px, py, P.w, 30, 8, 0.78, edge);
+    hudSpine(g, px, py, 30, bad ? RED : AMBER, 0.85);
+    if (m.steps) { g.lineStyle(2, AMBER, 1); g.strokeRect(px + 20, py + 9, 12, 12); g.fillStyle(AMBER, 0.55 + 0.45 * Math.sin(now / 260)); g.fillRect(px + 23, py + 12, 6, 6); }
+    else hudDiamond(g, px + 26, py + 15, 5, bad ? RED : CYAN);
+    hudPut(h, 'tc', px + 44, py + 16, txt, { size: 12, color: bad ? '#ff4d6d' : m.kind === 'none' ? '#9fe9ff' : '#ffd37a' });
     hudKeycap(h, 'tk', px + P.w - 24, py + 15, 'T');
-    if (meter) { hudPanel(g, px, py + 34, P.w, 22, 6, 0.72, AMBER); hudMeterRow(h, px + 14, py + 45, P.w - 28, meter); return meter ? 56 : 30; }
+    if (meter) { hudPanel(g, px, py + 34, P.w, 22, 6, 0.78, AMBER); hudMeterRow(h, px + 14, py + 45, P.w - 28, meter); return meter ? 56 : 30; }
     return 30;
   }
-  const nextLines = Math.max(1, Math.ceil(m.next.length * 7.3 / (P.w - 28)));
-  const nextY = py + (m.steps ? 62 + steps.length * 22 + 4 : 56);
+  const nextLines = Math.max(1, Math.ceil(m.next.length * 7.3 / (P.w - 34)));
+  const nextY = py + (m.steps ? 70 + steps.length * 22 + 4 : 56);
   const ht = (nextY - py) + nextLines * 15 + 10 + (meter ? 24 : 0);
-  hudPanel(g, px, py, P.w, ht, 10, 0.72, edge);
-  hudPut(h, 'tl', px + 14, py + 14, 'MISSION', { size: 11, color: HUD_DIM, spacing: 3 });
-  hudPut(h, 'tk', px + 92, py + 14, 'T  hide', { size: 10, color: HUD_DIM });
-  if (m.reward) hudPut(h, 'tr', px + P.w - 14, py + 14, '+' + m.reward + ' cr', { size: 12, bold: true, color: '#ffb454', ox: 1 });
-  hudPut(h, 'th', px + 14, py + 36, m.head, { size: 15, bold: true, color: bad ? '#ff4d6d' : m.kind === 'none' ? '#9fe9ff' : '#ffd37a' });
-  if (m.sub) hudPut(h, 'tsub', px + P.w - 14, py + 37, m.sub, { size: 11, color: HUD_DIM, ox: 1 });
+  hudPanel(g, px, py, P.w, ht, 10, 0.78, edge);
+  hudSpine(g, px, py, ht, bad ? RED : AMBER, 0.85);
+  hudPut(h, 'tl', px + 20, py + 14, 'MISSION', { size: HT.label, color: HUD_DIM, spacing: 3 });
+  hudPut(h, 'tk', px + 98, py + 14, 'T  hide', { size: HT.tag, color: HUD_DIM });
+  if (m.reward) hudPut(h, 'tr', px + P.w - 14, py + 14, '+' + m.reward + ' cr', { size: 12, bold: true, color: '#ffb454', ox: 1, glow: 6 });
+  hudPut(h, 'th', px + 20, py + 36, m.head, { size: HT.head, bold: true, color: bad ? '#ff4d6d' : m.kind === 'none' ? '#9fe9ff' : '#ffd37a', glow: 6 });
+  if (m.sub) hudPut(h, 'tsub', px + P.w - 14, py + 37, m.sub, { size: HT.label, color: HUD_DIM, ox: 1 });
+  if (m.steps) { // progress: one cell a step, the steps done so far lit green and the one you are on beating amber
+    const n = steps.length, gap = 3, cw = (P.w - 34 - gap * (n - 1)) / n;
+    steps.forEach((st, i) => {
+      const x = px + 20 + i * (cw + gap), col = st.state === 'done' ? GREEN : st.state === 'cur' ? AMBER : HUD_OFF;
+      if (st.state !== 'todo') { g.fillStyle(col, 0.16); g.fillRect(x - 1, py + 50, cw + 2, 7); }
+      g.fillStyle(col, st.state === 'cur' ? 0.6 + 0.4 * Math.sin(now / 260) : 1); g.fillRect(x, py + 51, cw, 4);
+    });
+  }
   steps.forEach((st, i) => {
-    const y = py + 66 + i * 22, bx = px + 14;
+    const y = py + 74 + i * 22, bx = px + 20;
+    if (i > 0) { g.lineStyle(1, st.state === 'todo' ? HUD_LINE : GREEN, st.state === 'todo' ? 0.7 : 0.55); g.lineBetween(bx + 6, y - 16, bx + 6, y - 7); } // the thread between steps
     if (st.state === 'done') {
-      g.fillStyle(GREEN, 0.9); g.fillRect(bx, y - 6, 12, 12);
+      g.fillStyle(GREEN, 0.2); g.fillRect(bx - 2, y - 8, 16, 16);
+      g.fillStyle(GREEN, 0.95); g.fillRect(bx, y - 6, 12, 12);
       g.lineStyle(2, HUD_BG, 1); g.beginPath(); g.moveTo(bx + 3, y); g.lineTo(bx + 5.5, y + 3); g.lineTo(bx + 9.5, y - 3); g.strokePath();
     } else if (st.state === 'cur') {
+      const k = 0.55 + 0.45 * Math.sin(now / 260);
+      g.fillStyle(AMBER, 0.12 + 0.12 * k); g.fillRect(bx - 4, y - 10, P.w - 30, 20); // the row you are on has a warm wash
       g.lineStyle(2, AMBER, 1); g.strokeRect(bx, y - 6, 12, 12);
-      g.fillStyle(AMBER, 0.55 + 0.45 * Math.sin(now / 260)); g.fillRect(bx + 3, y - 3, 6, 6);
+      g.fillStyle(AMBER, k); g.fillRect(bx + 3, y - 3, 6, 6);
+      const sl = (now / 1400) % 1, sx = bx + 24 + sl * (P.w - 70); // a bright dash runs along the foot of the row
+      g.lineStyle(1, AMBER, 0.7 * Math.sin(sl * Math.PI)); g.lineBetween(sx, y + 9, Math.min(sx + 36, px + P.w - 14), y + 9);
     } else {
-      g.lineStyle(1, 0x3a566e, 1); g.strokeRect(bx + 0.5, y - 5.5, 11, 11);
+      g.lineStyle(1, HUD_LINE, 1); g.strokeRect(bx + 0.5, y - 5.5, 11, 11);
     }
-    hudPut(h, 'ts' + i, bx + 24, y, st.text, { size: 13, color: st.state === 'done' ? '#58b57d' : st.state === 'cur' ? '#ffd37a' : HUD_DIM });
+    hudPut(h, 'ts' + i, bx + 24, y, st.text, { size: HT.body, color: st.state === 'done' ? '#58b57d' : st.state === 'cur' ? '#ffd37a' : HUD_DIM });
   });
-  hudPut(h, 'tn', px + 14, nextY, m.next, { size: 12, color: bad ? '#ff9aa9' : '#9fe9ff', oy: 0, wrap: P.w - 28 });
+  hudPut(h, 'tn', px + 20, nextY, m.next, { size: 12, color: bad ? '#ff9aa9' : '#9fe9ff', oy: 0, wrap: P.w - 34 });
   if (meter) hudMeterRow(h, px + 14, py + ht - 17, P.w - 28, meter);
   return ht;
 }
@@ -339,7 +355,7 @@ function hudHit(h, s, x, y, w, ht) {
 // ---- Station: one line under the strip (the checklist would sit on the terminals) ----
 function hudCompact(h, m) {
   const g = h.g, bad = m.kind === 'failed';
-  hudPanel(g, 420, 46, 440, 28, 8, 0.72, bad ? RED : CYAN);
+  hudPanel(g, 420, 46, 440, 28, 8, 0.78, bad ? RED : CYAN);
   const tag = m.kind === 'active' && m.steps ? 'STEP ' + m.cur + '/' + (m.steps.length - 1) : bad ? 'FAILED' : 'MISSION';
   hudPut(h, 'cl', 436, 61, tag, { size: 11, color: HUD_DIM, spacing: 2 });
   hudDiamond(g, 505, 60, 4, bad ? RED : AMBER);
@@ -356,6 +372,7 @@ function hudRadar(h, s, key, obj, now) {
   let n = 0, near = Infinity;
   foes.forEach(e => { if (!e.active) return; const d = Math.hypot(e.x - ox, e.y - oy); if (d <= range) { n++; if (d < near) near = d; } });
   const hot = near < engage, rim = hot ? RED : CYAN, beat = hot ? 0.6 + 0.4 * Math.sin(now / 120) : 1;
+  h.near = near; h.engage = engage; // hudWarn reads these
   // the plate, the rings (dashed), the cross hairs, and a bezel with a tick every 15 degrees and a marker at north
   g.fillStyle(HUD_BG, 0.8); g.fillCircle(cx, cy, R + 4);
   g.fillStyle(rim, 0.05); g.fillCircle(cx, cy, R);
@@ -485,6 +502,46 @@ function hudTargets(h, s, now) {
   }
 }
 
+// ---- warnings: banners low in the middle, one per live problem, and a red pulse round the screen edge while the hull is
+// critical. Some stay for as long as the problem does (hull, boost, colonist); some are an event and show for a few seconds
+// (first contact, hold full). Each banner is a zone, so world labels fade under it. ----
+function hudWarn(h, s, now, key, near, engage) {
+  const g = h.g, list = [], space = key === 'Space', surf = key === 'Surface';
+  const hullF = surf ? s.hp / 100 : G.hull / G.maxHull;
+  if ((space || surf) && hullF <= 0.3) list.push({ id: 'hull', text: surf ? 'HEALTH CRITICAL' : 'HULL CRITICAL', sub: Math.max(0, Math.round(hullF * 100)) + '%  BREAK OFF', color: RED, crit: true });
+  if (surf && s.col && s.col.state !== 'dead' && s.col.hp / 60 <= 0.3) list.push({ id: 'col', text: 'COLONIST IN DANGER', sub: Math.max(0, Math.round(s.col.hp)) + ' HP', color: AMBER, crit: true });
+  if (space && s.boostLocked) list.push({ id: 'bst', text: 'BOOST EMPTY', sub: 'RECHARGING', color: AMBER });
+  const hot = near < engage; // first contact: a banner for 2.5 s when something comes into attack range
+  if (hot && !h.hotWas) h.contact = now + 2500;
+  h.hotWas = hot;
+  if (now < (h.contact || 0)) list.push({ id: 'hos', text: 'HOSTILE CONTACT', sub: Math.round(near * 0.1) + (space ? ' KM' : ' M'), color: RED });
+  const full = space && (G.ore | 0) >= ORE_CAP;
+  if (full && !h.fullWas) h.holdFull = now + 3000;
+  h.fullWas = full;
+  if (now < (h.holdFull || 0)) list.push({ id: 'ore', text: 'CARGO HOLD FULL', sub: 'SELL AT THE STATION', color: AMBER });
+
+  if (hullF <= 0.3 && (space || surf)) { // the edge pulse: four strips that fade inward
+    const a = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(now / 240)), d = 110;
+    g.fillGradientStyle(RED, RED, RED, RED, a, a, 0, 0); g.fillRect(0, 0, W, d);
+    g.fillGradientStyle(RED, RED, RED, RED, 0, 0, a, a); g.fillRect(0, H - d, W, d);
+    g.fillGradientStyle(RED, RED, RED, RED, a, 0, a, 0); g.fillRect(0, 0, d, H);
+    g.fillGradientStyle(RED, RED, RED, RED, 0, a, 0, a); g.fillRect(W - d, 0, d, H);
+  }
+  list.slice(0, 3).forEach((w, i) => { // three at most, so the stack never reaches the ship
+    const bw = 280, bh = 34, x = W / 2 - bw / 2, y = H - 214 - i * 40, beat = w.crit ? 0.72 + 0.28 * Math.sin(now / 110) : 1;
+    hudPanel(g, x, y, bw, bh, 10, 0.88, w.color);
+    g.fillStyle(w.color, 0.1 + 0.08 * beat); g.fillRect(x + 12, y + 3, bw - 24, bh - 6);
+    for (let k = 0; k < 3; k++) { // chevrons stream in toward the words from both sides
+      const ph = ((now / 500) + k / 3) % 1, al = Math.sin(ph * Math.PI) * 0.9, cx = x + 16 + ph * 26, cy = y + bh / 2;
+      g.fillStyle(w.color, al); g.fillTriangle(cx, cy - 6, cx + 6, cy, cx, cy + 6);
+      g.fillTriangle(x + bw - (cx - x), cy - 6, x + bw - (cx - x) - 6, cy, x + bw - (cx - x), cy + 6);
+    }
+    hudPut(h, 'w' + i + 't', W / 2, y + 13, w.text, { size: HT.head, bold: true, color: hudCss(w.color), ox: 0.5, spacing: 2, glow: 8, alpha: beat });
+    hudPut(h, 'w' + i + 's', W / 2, y + 27, w.sub, { size: HT.tag, color: '#9fe9ff', ox: 0.5, spacing: 2 });
+    h.zones.push({ x0: x, y0: y, x1: x + bw, y1: y + bh });
+  });
+}
+
 // ---- the objective: where to go, and how far ----
 function hudObjective(s, key) {
   if (key === 'Space') {
@@ -602,6 +659,7 @@ function hudTick(s) {
   if (space) hudLock(h, s, now); // before the radar, which brackets the target's blip too
   if (space || surf) { h.zones.push({ x0: W - 230, y0: 0, x1: W, y1: 250 }); hudRadar(h, s, key, obj, now); }
   if (space) hudTargets(h, s, now);
+  if (space || surf) hudWarn(h, s, now, key, h.near, h.engage);
   h.zones.push({ x0: 430, y0: 0, x1: 850, y1: 50 });
   // toasts (depth 299 and up) are zones too, for as long as they are up
   s.children.list.forEach(o => {
