@@ -67,7 +67,7 @@ class Station extends Phaser.Scene {
     this.panelBox.add([this.panelBg, this.panelText]);
 
     if (this.arrive && G.mission === 'rescued') {
-      G.credits += REWARD; G.mission = 'none';
+      G.credits += REWARD; G.mission = 'none'; G.stats.missions++;
       toast(this, 'Colonist delivered safely. +' + REWARD + ' cr', '#6dff9c'); beep(660, 0.25, 'triangle', 0.05, 440);
     } else if (this.arrive) {
       toast(this, 'Docked.', '#9fe9ff');
@@ -88,6 +88,7 @@ class Station extends Phaser.Scene {
   closePanel() { this.panel = false; this.panelBox.setVisible(false); }
 
   update() {
+    guideTick(this);
     const JD = Phaser.Input.Keyboard.JustDown, k = this.k;
     this.hud1.setText('CREDITS ' + G.credits + '    HULL ' + Math.round(G.hull) + '/' + G.maxHull);
     this.hud2.setText(missionLine());

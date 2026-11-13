@@ -57,7 +57,7 @@ class Space extends Phaser.Scene {
       if (!b.active || !e.active) return;
       b.disableBody(true, true); e.hp -= 15; this.boom.explode(4, b.x, b.y); beep(300, 0.06, 'square', 0.02, -150);
       if (e.hp <= 0) {
-        this.boom.explode(28, e.x, e.y); e.destroy(); G.credits += 25; beep(120, 0.3, 'sawtooth', 0.05, -80);
+        this.boom.explode(28, e.x, e.y); e.destroy(); G.credits += 25; G.stats.drones++; beep(120, 0.3, 'sawtooth', 0.05, -80);
         toast(this, 'Drone down  +25 cr', '#ffb454');
       }
     });
@@ -117,6 +117,7 @@ class Space extends Phaser.Scene {
   }
 
   update(time, dt) {
+    guideTick(this);
     const k = this.k, ship = this.ship, JD = Phaser.Input.Keyboard.JustDown;
     this.s1.tilePositionX = this.cameras.main.scrollX * 0.25; this.s1.tilePositionY = this.cameras.main.scrollY * 0.25;
     this.s2.tilePositionX = this.cameras.main.scrollX * 0.6; this.s2.tilePositionY = this.cameras.main.scrollY * 0.6;

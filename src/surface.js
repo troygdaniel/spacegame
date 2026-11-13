@@ -73,6 +73,7 @@ class Surface extends Phaser.Scene {
   }
 
   update(time, dt) {
+    guideTick(this);
     const k = this.k, p = this.player, JD = Phaser.Input.Keyboard.JustDown, col = this.col;
     const dx = (k.D.isDown || k.RIGHT.isDown ? 1 : 0) - (k.A.isDown || k.LEFT.isDown ? 1 : 0);
     const dy = (k.S.isDown || k.DOWN.isDown ? 1 : 0) - (k.W.isDown || k.UP.isDown ? 1 : 0);
