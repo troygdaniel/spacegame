@@ -295,7 +295,7 @@ End state, in later cards: once a table is fully migrated and pinned, the in-cod
 
 ## 9. The cards
 
-IDs start `space-game-m-`. Owners are suggestions: **TM** a TaskMaster (parser, tests, tools, docs), **BB** BuildBot (game wiring), **DB** DreamBot (the screens). All cards: own worktree off the latest main, `bash tests/smoke.sh` passes, update subtasks as you go, never push. "Needs" lists cards that must merge first.
+IDs start `space-game-m`, for example `space-game-m1-parser-schema`; each is a top-level Todo card with `--blocked-by` for its "Needs" (the same way the universe cards are), not a subtask, so ORCH can assign them one by one. Owners are suggestions: **TM** a TaskMaster (parser, tests, tools, docs), **BB** BuildBot (game wiring), **DB** DreamBot (the screens). All cards: own worktree off the latest main, `bash tests/smoke.sh` passes, update subtasks as you go, never push. "Needs" lists cards that must merge first.
 
 | Card | Owner | Size | Needs | What and where |
 |---|---|---|---|---|
