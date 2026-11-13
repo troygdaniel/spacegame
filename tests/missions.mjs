@@ -49,11 +49,11 @@ try {
   check('5 wanted pirates near the station', wanted === 5, 'wanted=' + wanted);
   check('arrow points at a wanted pirate', (await t.ev(`missionTarget(${S('Space')}).name`)) === 'Wanted pirate');
   const creditsBefore = (await G()).credits;
-  await x(`const s = ${S('Space')}; s.enemies.getChildren().filter(d => d.wanted).slice(0, 4).forEach(d => { d.destroy(); G.credits += 25; missionKill(s); })`);
+  await x(`const s = ${S('Space')}; s.enemies.getChildren().filter(d => d.wanted).slice(0, 4).forEach(d => { d.destroy(); G.credits += 25; missionKill(s, d); })`); // missionKill takes the enemy since the Reaver bounty
   await run(100); g = await G();
   check('patrol counts 4 of 5', g.missionProgress === 4 && g.mission === 'accepted', JSON.stringify(g));
   check('HUD line shows 4 of 5', (await t.ev('missionLine()')).includes('4 of 5'));
-  await x(`const s = ${S('Space')}; const d = s.enemies.getChildren().find(d => d.wanted && d.active); d.destroy(); G.credits += 25; missionKill(s)`);
+  await x(`const s = ${S('Space')}; const d = s.enemies.getChildren().find(d => d.wanted && d.active); d.destroy(); G.credits += 25; missionKill(s, d)`);
   await run(100); g = await G();
   check('patrol pays 600 + 125 and clears', g.mission === 'none' && g.missionId === null && g.credits === creditsBefore + 600 + 125, JSON.stringify(g));
   check('mission line back to none', (await t.ev('missionLine()')).includes('None'));
