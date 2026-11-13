@@ -34,11 +34,14 @@ class Station extends Phaser.Scene {
       label(this, sp.x, sp.y - 40, sp.text, sp.color);
     });
 
-    // ambience: a few civilians wander the lower deck
-    for (let i = 0; i < 3; i++) {
-      const n = this.add.image(Phaser.Math.Between(120, 800), Phaser.Math.Between(480, 660), 'walker').setTint(0x7a8ca0);
+    // the lower deck is the bar (src/shop.js) and the hangar gets the upgrade shop terminal
+    buildBar(this); buildShop(this);
+
+    // ambience: a couple of civilians drift through the bar's open floor
+    for (let i = 0; i < 2; i++) {
+      const n = this.add.image(Phaser.Math.Between(460, 820), Phaser.Math.Between(570, 680), 'walker').setTint(0x7a8ca0);
       const wander = () => this.tweens.add({
-        targets: n, x: Phaser.Math.Between(100, 820), y: Phaser.Math.Between(470, 670),
+        targets: n, x: Phaser.Math.Between(450, 820), y: Phaser.Math.Between(560, 680),
         duration: Phaser.Math.Between(3500, 7000), onUpdate: () => {}, onComplete: wander
       });
       wander();
@@ -86,8 +89,9 @@ class Station extends Phaser.Scene {
 
   update() {
     const JD = Phaser.Input.Keyboard.JustDown, k = this.k;
-    this.hud1.setText('CREDITS ' + G.credits + '    HULL ' + Math.round(G.hull) + '%');
+    this.hud1.setText('CREDITS ' + G.credits + '    HULL ' + Math.round(G.hull) + '/' + G.maxHull);
     this.hud2.setText(missionLine());
+    if (shopFrame(this)) return; // upgrade shop panel is open
     if (this.panel) {
       this.player.setVelocity(0, 0);
       if (JD(k.ESC)) this.closePanel();
@@ -103,18 +107,19 @@ class Station extends Phaser.Scene {
     this.player.setVelocity(v.x, v.y);
     if (dx || dy) this.player.rotation = Math.atan2(dy, dx);
 
-    let near = null;
+    let near = null, nearD = 90;
     this.spots.forEach(sp => {
-      if (Phaser.Math.Distance.Between(this.player.x, this.player.y, sp.x, sp.y) < 90) near = sp;
+      const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, sp.x, sp.y);
+      if (d < nearD) { near = sp; nearD = d; }
     });
-    this.prompt.setText(near ? 'E  ' + ({ missions: 'Check the mission board', repair: 'Repair hull', ship: 'Board ship and launch' }[near.key]) : '');
-    if (near && JD(k.E)) {
+    this.prompt.setText(near ? 'E  ' + (near.prompt || { missions: 'Check the mission board', repair: 'Repair hull', ship: 'Board ship and launch' }[near.key]) : '');
+    if (near && JD(k.E) && !spotInteract(this, near)) {
       if (near.key === 'missions') this.openPanel();
       else if (near.key === 'repair') {
-        const cost = Math.ceil((100 - G.hull) * 2);
-        if (G.hull >= 100) toast(this, 'Hull is already perfect.', '#9fe9ff');
+        const cost = Math.ceil((G.maxHull - G.hull) * 2);
+        if (G.hull >= G.maxHull) toast(this, 'Hull is already perfect.', '#9fe9ff');
         else if (G.credits < cost) toast(this, 'Repair costs ' + cost + ' cr. You have ' + G.credits + '.', '#ff4d6d');
-        else { G.credits -= cost; G.hull = 100; beep(400, 0.2, 'triangle', 0.05, 300); toast(this, 'Hull repaired (-' + cost + ' cr).', '#6dff9c'); }
+        else { G.credits -= cost; G.hull = G.maxHull; beep(400, 0.2, 'triangle', 0.05, 300); toast(this, 'Hull repaired (-' + cost + ' cr).', '#6dff9c'); }
       } else if (near.key === 'ship') { beep(200, 0.4, 'sawtooth', 0.04, 500); go(this, 'Space', { from: 'station' }); }
     }
   }
