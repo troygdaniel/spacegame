@@ -83,6 +83,26 @@ function hudPut(h, key, x, y, str, o) {
 
 const HUD_PAD = 8; // padding round glowing text
 
+// Round shapes as short polylines. Phaser's own arc, strokeCircle and fillCircle step 0.01 rad (628 points for a circle, even
+// for a 2 px blip); about 0.1 rad is not visible and costs a tenth. The HUD draws a few hundred of these a frame.
+function hudArc(g, cx, cy, r, a0, a1) {
+  const n = Math.max(1, Math.ceil(Math.abs(a1 - a0) / 0.1)), st = (a1 - a0) / n;
+  g.beginPath(); g.moveTo(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r);
+  for (let i = 1; i <= n; i++) g.lineTo(cx + Math.cos(a0 + st * i) * r, cy + Math.sin(a0 + st * i) * r);
+  g.strokePath();
+}
+function hudRing(g, cx, cy, r) {
+  const n = Math.max(12, Math.min(64, Math.ceil(r * 0.6)));
+  g.beginPath(); g.moveTo(cx + r, cy);
+  for (let i = 1; i < n; i++) g.lineTo(cx + Math.cos(TAU * i / n) * r, cy + Math.sin(TAU * i / n) * r);
+  g.closePath(); g.strokePath();
+}
+function hudDisc(g, cx, cy, r) {
+  const n = Math.max(8, Math.min(48, Math.ceil(r * 1.2))), pts = [];
+  for (let i = 0; i < n; i++) pts.push({ x: cx + Math.cos(TAU * i / n) * r, y: cy + Math.sin(TAU * i / n) * r });
+  g.fillPoints(pts, true);
+}
+
 // a path stroked three times, wide and faint then thin and bright: the glow Graphics cannot blur. pts: [[x, y], ...]
 function hudGlowPath(g, pts, color, a, closed, w) {
   w = w || 1.5;
@@ -161,30 +181,30 @@ function hudGauge(h, id, cx, cy, r, frac, color, big, small, tick, warn) {
   const g = h.g, now = h.now, a0 = Math.PI * 0.75, span = Math.PI * 1.5, n = 30, R = r + 12;
   frac = Phaser.Math.Clamp(frac, 0, 1);
   const rim = warn ? RED : CYAN, beat = warn ? 0.55 + 0.45 * Math.sin(now / 130) : 1;
-  g.fillStyle(HUD_BG, 0.78); g.fillCircle(cx, cy, R);
-  g.fillStyle(color, 0.06); g.fillCircle(cx, cy, r - 8);                       // a faint glow of the state colour on the glass
-  [[6.5, 0.07], [3.5, 0.17], [1.5, 0.8]].forEach(([lw, k]) => { g.lineStyle(lw, rim, k * beat); g.strokeCircle(cx, cy, R); });
-  g.lineStyle(1, rim, 0.18); g.strokeCircle(cx, cy, r - 7);
+  g.fillStyle(HUD_BG, 0.78); hudDisc(g, cx, cy, R);
+  g.fillStyle(color, 0.06); hudDisc(g, cx, cy, r - 8);                       // a faint glow of the state colour on the glass
+  [[6.5, 0.07], [3.5, 0.17], [1.5, 0.8]].forEach(([lw, k]) => { g.lineStyle(lw, rim, k * beat); hudRing(g, cx, cy, R); });
+  g.lineStyle(1, rim, 0.18); hudRing(g, cx, cy, r - 7);
   for (let i = 0; i <= 10; i++) {                                              // ticks outside the segments: long at 0, half and full
     const a = a0 + span * i / 10, long = i % 5 === 0, r0 = r + 5, r1 = r + (long ? 10 : 8);
     g.lineStyle(long ? 2 : 1, rim, long ? 0.85 : 0.4);
     g.lineBetween(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
   }
-  if (frac > 0.02) { g.lineStyle(12, color, 0.13); g.beginPath(); g.arc(cx, cy, r, a0, a0 + span * frac, false); g.strokePath(); }
+  if (frac > 0.02) { g.lineStyle(12, color, 0.13); hudArc(g, cx, cy, r, a0, a0 + span * frac); }
   const lead = Math.min(n - 1, Math.max(0, Math.ceil(frac * n - 0.5) - 1));
   for (let i = 0; i < n; i++) {
     const lit = (i + 0.5) / n <= frac || (i === 0 && frac > 0.01);
     g.lineStyle(7, lit ? color : HUD_OFF, 1);
-    g.beginPath(); g.arc(cx, cy, r, a0 + span * (i + 0.14) / n, a0 + span * (i + 0.86) / n, false); g.strokePath();
-    if (lit && i === lead) { g.lineStyle(3, 0xffffff, 0.45 + 0.4 * Math.sin(now / 160)); g.beginPath(); g.arc(cx, cy, r, a0 + span * (i + 0.14) / n, a0 + span * (i + 0.86) / n, false); g.strokePath(); }
+    hudArc(g, cx, cy, r, a0 + span * (i + 0.14) / n, a0 + span * (i + 0.86) / n);
+    if (lit && i === lead) { g.lineStyle(3, 0xffffff, 0.45 + 0.4 * Math.sin(now / 160)); hudArc(g, cx, cy, r, a0 + span * (i + 0.14) / n, a0 + span * (i + 0.86) / n); }
   }
   if (tick != null) {
     const a = a0 + span * tick;
     g.lineStyle(2, GREEN, 1); g.lineBetween(cx + Math.cos(a) * (r - 7), cy + Math.sin(a) * (r - 7), cx + Math.cos(a) * (r + 10), cy + Math.sin(a) * (r + 10));
-    g.fillStyle(GREEN, 1); g.fillCircle(cx + Math.cos(a) * (r + 13), cy + Math.sin(a) * (r + 13), 1.8);
+    g.fillStyle(GREEN, 1); hudDisc(g, cx + Math.cos(a) * (r + 13), cy + Math.sin(a) * (r + 13), 1.8);
   }
   const sa = now / 1100 + cx;                                                  // the scanner: a short bright arc on the bezel, once round in seven seconds
-  g.lineStyle(2, rim, 0.5 * beat); g.beginPath(); g.arc(cx, cy, R, sa, sa + 0.35, false); g.strokePath();
+  g.lineStyle(2, rim, 0.5 * beat); hudArc(g, cx, cy, R, sa, sa + 0.35);
   hudPut(h, id + 'n', cx, cy - 2, big, { size: HT.num, bold: true, color: hudCss(color), ox: 0.5, glow: 9 });
   hudPut(h, id + 'l', cx, cy + 27, small, { size: small.length > 6 ? 9 : HT.tag, color: warn ? '#ff4d6d' : HUD_DIM, ox: 0.5, spacing: 1 });
 }
@@ -193,27 +213,27 @@ function hudGauge(h, id, cx, cy, r, frac, color, big, small, tick, warn) {
 function hudEnergy(h, s, now) {
   const g = h.g, cx = 186, cy = 80, r = 30, a0 = Math.PI * 0.75, span = Math.PI * 1.5;
   const f = Phaser.Math.Clamp(s.en / s.enMax, 0, 1), low = s.boostLocked || f < 0.25;
-  g.lineStyle(3, HUD_OFF, 1); g.beginPath(); g.arc(cx, cy, r, a0, a0 + span, false); g.strokePath();
+  g.lineStyle(3, HUD_OFF, 1); hudArc(g, cx, cy, r, a0, a0 + span);
   if (f > 0.01) {
     const col = low ? AMBER : 0xe6f7ff, pulse = s.boostLocked ? 0.55 + 0.45 * Math.sin(now / 90) : 1;
-    g.lineStyle(7, col, 0.14 * pulse); g.beginPath(); g.arc(cx, cy, r, a0, a0 + span * f, false); g.strokePath(); // halo
-    g.lineStyle(3, col, pulse); g.beginPath(); g.arc(cx, cy, r, a0, a0 + span * f, false); g.strokePath();
+    g.lineStyle(7, col, 0.14 * pulse); hudArc(g, cx, cy, r, a0, a0 + span * f); // halo
+    g.lineStyle(3, col, pulse); hudArc(g, cx, cy, r, a0, a0 + span * f);
   }
   // a hot flare at the end of the ring while the boost is burning
-  if (s.boosting && f > 0.02) { const a = a0 + span * f; g.fillStyle(0xffffff, 0.8); g.fillCircle(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 2.6); }
+  if (s.boosting && f > 0.02) { const a = a0 + span * f; g.fillStyle(0xffffff, 0.8); hudDisc(g, cx + Math.cos(a) * r, cy + Math.sin(a) * r, 2.6); }
   // dash dial: fills as the cooldown runs, green and ringing when ready; a ring flies out the moment it is ready again
   const px = 268, py = 80, rd = 12, ready = now >= s.dashReady, prog = ready ? 1 : 1 - (s.dashReady - now) / s.dashCool;
   if (ready && h.dashWas === false) h.dashPing = now;
   h.dashWas = ready;
-  g.fillStyle(HUD_BG, 0.78); g.fillCircle(px, py, rd + 8);
-  [[6, 0.07], [3, 0.17], [1.3, 0.8]].forEach(([lw, k]) => { g.lineStyle(lw, ready ? GREEN : CYAN, k); g.strokeCircle(px, py, rd + 8); });
-  g.lineStyle(4, HUD_OFF, 1); g.strokeCircle(px, py, rd);
+  g.fillStyle(HUD_BG, 0.78); hudDisc(g, px, py, rd + 8);
+  [[6, 0.07], [3, 0.17], [1.3, 0.8]].forEach(([lw, k]) => { g.lineStyle(lw, ready ? GREEN : CYAN, k); hudRing(g, px, py, rd + 8); });
+  g.lineStyle(4, HUD_OFF, 1); hudRing(g, px, py, rd);
   if (prog > 0.01) {
-    g.lineStyle(8, ready ? GREEN : AMBER, 0.14); g.beginPath(); g.arc(px, py, rd, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * prog, false); g.strokePath();
-    g.lineStyle(4, ready ? GREEN : AMBER, 1); g.beginPath(); g.arc(px, py, rd, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * prog, false); g.strokePath();
+    g.lineStyle(8, ready ? GREEN : AMBER, 0.14); hudArc(g, px, py, rd, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * prog);
+    g.lineStyle(4, ready ? GREEN : AMBER, 1); hudArc(g, px, py, rd, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * prog);
   }
   const ping = h.dashPing != null ? (now - h.dashPing) / 450 : 1;
-  if (ping < 1) { g.lineStyle(2, GREEN, 0.8 * (1 - ping)); g.strokeCircle(px, py, rd + 8 + 12 * ping); }
+  if (ping < 1) { g.lineStyle(2, GREEN, 0.8 * (1 - ping)); hudRing(g, px, py, rd + 8 + 12 * ping); }
   hudPut(h, 'dk', px, py + 1, 'Q E', { size: 9, bold: true, color: ready ? '#6dff9c' : HUD_DIM, ox: 0.5 });
   hudPut(h, 'dl', px, py + 29, 'DASH', { size: 9, color: HUD_DIM, ox: 0.5, spacing: 1 });
 }
@@ -374,10 +394,10 @@ function hudRadar(h, s, key, obj, now) {
   const hot = near < engage, rim = hot ? RED : CYAN, beat = hot ? 0.6 + 0.4 * Math.sin(now / 120) : 1;
   h.near = near; h.engage = engage; // hudWarn reads these
   // the plate, the rings (dashed), the cross hairs, and a bezel with a tick every 15 degrees and a marker at north
-  g.fillStyle(HUD_BG, 0.8); g.fillCircle(cx, cy, R + 4);
-  g.fillStyle(rim, 0.05); g.fillCircle(cx, cy, R);
-  [[6.5, 0.07], [3.5, 0.17], [1.5, 0.85]].forEach(([lw, k]) => { g.lineStyle(lw, rim, k * beat); g.strokeCircle(cx, cy, R + 4); });
-  [R / 3, R * 2 / 3].forEach(rr => { g.lineStyle(1, CYAN, 0.28); for (let i = 0; i < 28; i++) { const a = i * Math.PI / 14; g.beginPath(); g.arc(cx, cy, rr, a, a + 0.1, false); g.strokePath(); } });
+  g.fillStyle(HUD_BG, 0.8); hudDisc(g, cx, cy, R + 4);
+  g.fillStyle(rim, 0.05); hudDisc(g, cx, cy, R);
+  [[6.5, 0.07], [3.5, 0.17], [1.5, 0.85]].forEach(([lw, k]) => { g.lineStyle(lw, rim, k * beat); hudRing(g, cx, cy, R + 4); });
+  [R / 3, R * 2 / 3].forEach(rr => { g.lineStyle(1, CYAN, 0.28); for (let i = 0; i < 28; i++) { const a = i * Math.PI / 14; hudArc(g, cx, cy, rr, a, a + 0.1); } });
   g.lineStyle(1, CYAN, 0.14); g.lineBetween(cx - R, cy, cx + R, cy); g.lineBetween(cx, cy - R, cx, cy + R);
   for (let i = 0; i < 24; i++) {
     const a = i * Math.PI / 12, q = i % 6 === 0, r0 = R - (q ? 9 : 5);
@@ -393,7 +413,7 @@ function hudRadar(h, s, key, obj, now) {
   }
   g.lineStyle(2, rim, 0.85); g.lineBetween(cx, cy, cx + Math.cos(sw) * R, cy + Math.sin(sw) * R);
   const pg = (now % 3000) / 1500;
-  if (pg < 1) { g.lineStyle(1, CYAN, 0.35 * (1 - pg)); g.strokeCircle(cx, cy, R * pg); }
+  if (pg < 1) { g.lineStyle(1, CYAN, 0.35 * (1 - pg)); hudRing(g, cx, cy, R * pg); }
   hudPut(h, 'rt', cx, cy + R + 32, n ? n + ' HOSTILE  ' + Math.round(near * 0.1) + ' ' + unit : 'CLEAR',
     { size: HT.label, bold: hot, color: hot ? '#ff4d6d' : n ? '#ffb454' : '#58b57d', ox: 0.5, spacing: 1, alpha: hot ? 0.7 + 0.3 * Math.sin(now / 120) : 1 });
   hudPut(h, 'rl', cx, cy + R + 16, 'RADAR  ' + (key === 'Space' ? (range / 10) + ' km' : (range / 10) + ' m'), { size: HT.label, color: HUD_DIM, ox: 0.5, spacing: 1 });
@@ -409,13 +429,13 @@ function hudRadar(h, s, key, obj, now) {
   const dot = (wx, wy, color, r) => {
     const p = pt(wx, wy, false); if (!p) return;
     const age = (((sw - p.a) % TAU) + TAU) % TAU / TAU, k = 0.55 + 0.45 * Math.pow(1 - age, 2);
-    g.fillStyle(color, 0.22 * k); g.fillCircle(p.x, p.y, r * 2.4);
-    g.fillStyle(color, k); g.fillCircle(p.x, p.y, r);
+    g.fillStyle(color, 0.22 * k); hudDisc(g, p.x, p.y, r * 2.4);
+    g.fillStyle(color, k); hudDisc(g, p.x, p.y, r);
   };
 
   if (key === 'Space') {
     mark(pt(s.station.x, s.station.y, true), CYAN, p => hudDiamond(g, p.x, p.y, 5, CYAN));
-    mark(pt(s.planet.x, s.planet.y, true), AMBER, p => { g.fillStyle(AMBER, 1); g.fillCircle(p.x, p.y, 5); });
+    mark(pt(s.planet.x, s.planet.y, true), AMBER, p => { g.fillStyle(AMBER, 1); hudDisc(g, p.x, p.y, 5); });
     s.enemies.getChildren().forEach(d => { if (d.active) dot(d.x, d.y, d.wanted ? AMBER : (d.def && d.def.radar) || RED, d.wanted ? 3 : d.def && d.def.key === 'gunship' ? 3 : 2.2); });
   } else {
     mark(pt(s.pad.x, s.pad.y, true), AMBER, p => hudDiamond(g, p.x, p.y, 5, AMBER));
@@ -427,7 +447,7 @@ function hudRadar(h, s, key, obj, now) {
   if (obj) { // ring the objective; off the radar it is the arrow on the rim
     const p = pt(obj.x, obj.y, true);
     g.lineStyle(2, AMBER, 0.6 + 0.4 * Math.sin(now / 200));
-    if (p.out) hudTri(g, p.x, p.y, p.a, 7, AMBER, 0.9); else g.strokeCircle(p.x, p.y, 8 + Math.sin(now / 200));
+    if (p.out) hudTri(g, p.x, p.y, p.a, 7, AMBER, 0.9); else hudRing(g, p.x, p.y, 8 + Math.sin(now / 200));
   }
   if (h.lock && h.lock.active) { // the locked target: four brackets round its blip (src/hud.js hudLock)
     const p = pt(h.lock.x, h.lock.y, false);
@@ -489,8 +509,8 @@ function hudTargets(h, s, now) {
   if (t >= 1) { // locked: a dashed ring turns slowly round it
     const r = half + 7, spin = now / 900;
     g.lineStyle(1.5, c, 0.55);
-    for (let i = 0; i < 4; i++) { const a = spin + i * Math.PI / 2; g.beginPath(); g.arc(x, y, r, a, a + 0.9, false); g.strokePath(); }
-    g.fillStyle(c, 0.9); g.fillCircle(x, y, 1.8);
+    for (let i = 0; i < 4; i++) { const a = spin + i * Math.PI / 2; hudArc(g, x, y, r, a, a + 0.9); }
+    g.fillStyle(c, 0.9); hudDisc(g, x, y, 1.8);
   }
   const d = Math.round(Math.hypot(lock.x - me.x, lock.y - me.y) * 0.1), right = x < W - 230, tx = right ? x + half + 12 : x - half - 12, ox = right ? 0 : 1;
   const name = lock.wanted ? 'WANTED' : lock.def && lock.def.boss ? 'THE REAVER' : ((lock.def && lock.def.key) || 'hostile').toUpperCase();
