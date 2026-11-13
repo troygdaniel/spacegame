@@ -1,0 +1,4 @@
+---
+type: ship
+name: Lost
+---
