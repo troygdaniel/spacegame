@@ -135,7 +135,7 @@ function buyUpgrade(s, i) {
   else {
     G.credits -= price; G.upgrades[u.key] = t + 1;
     if (u.key === 'armor') { G.maxHull += 20; G.hull += 20; }
-    say(u.name + TIER_NAME[t + 1] + ' installed (-' + price + ' cr).', '#6dff9c'); beep(660, 0.2, 'triangle', 0.05, 440);
+    say(u.name + TIER_NAME[t + 1] + ' installed (-' + price + ' cr).', '#6dff9c'); sfx('chime');
   }
   refreshShop(s);
 }
