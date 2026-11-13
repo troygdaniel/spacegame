@@ -6,6 +6,7 @@
 #   3. tests/loop.mjs: scripted rescue from station to payout, asserts +500 credits
 #   4. tests/fixes.mjs: one check per playtest bug fixed (colonist, prompt box, toasts, ramming, insurance fee)
 #   4b. tests/outpostmap.mjs: the Tab map shows Kestrel Outpost and its legend row
+#   4c. tests/hyper.mjs: the hyperspace tunnel demo (#hyper), its timing, readout and colour; no save written
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #      their failure paths, with the game clock stepped by hand
 # Needs Google Chrome and Node 22+. Uses throwaway Chrome profiles, never your own. Chrome runs with
@@ -31,6 +32,9 @@ if node tests/fixes.mjs; then :; else fail=1; fi
 
 echo "== 4b. Kestrel Outpost on the Tab map (tests/outpostmap.mjs)"
 if node tests/outpostmap.mjs; then :; else fail=1; fi
+
+echo "== 4c. hyperspace tunnel demo (tests/hyper.mjs: #hyper, #hyper24, #hyper2)"
+if node tests/hyper.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then

@@ -4,7 +4,7 @@
 
 const SAVE_KEY = 'longhaul.save.v1';
 const GAMEPLAY = ['Station', 'Space', 'Surface'];
-const DEV_HASH = /^#(space|surface|escort|patrol)$/.test(location.hash); // dev jumps neither load nor overwrite a save
+const DEV_HASH = /^#(space|surface|escort|patrol|hyper\d{0,2})$/.test(location.hash); // dev jumps neither load nor overwrite a save
 let lastSaved = '';
 
 const HELP = {
