@@ -5,7 +5,7 @@
 import { launch, sleep } from './cdp.mjs';
 
 const SP = "game.scene.getScene('Space')", SF = "game.scene.getScene('Surface')", ST = "game.scene.getScene('Station')";
-const t = await launch();
+const t = await launch('#station');
 let step = 'start';
 const ok = async (name, expr, ms) => { step = name; await t.waitFor(expr, ms, name); console.log('  ok  ' + name); };
 try {
