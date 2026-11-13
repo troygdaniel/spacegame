@@ -79,6 +79,7 @@ class Space extends Phaser.Scene {
     if (this.from === 'station') toast(this, 'Launch clear. Kepler-4b is to the north-east.', '#9fe9ff');
     missionSpaceSetup(this); // src/missions.js: escort freighter, wanted pirates
     trafficSetup(this); // src/traffic.js: civilian ships and the station police
+    asteroidsSetup(this); // src/asteroids.js: the Kepler belt
     feelInstall(this); // src/feel.js: hit flashes, flame, approach rings, arrival zoom
   }
 
@@ -172,6 +173,7 @@ class Space extends Phaser.Scene {
 
     missionSpaceUpdate(this, time, dt); // queues the freighter bar and radar dots for the HUD
     trafficUpdate(this, time, dt); // src/traffic.js
+    asteroidsUpdate(this, time, dt); // src/asteroids.js: rocks, ore, cargo
     hudTick(this); // src/hud.js: gauges, checklist, radar, objective marker
     feelFrame(this, time, dt); // src/feel.js: flame, velocity line, approach rings, hit cues
   }

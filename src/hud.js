@@ -127,6 +127,14 @@ function hudStrip(h, now) {
       if (tier > j) { g.fillStyle(CYAN, 1); g.fillRect(x, 21, 9, 9); } else { g.lineStyle(1, 0x3a566e, 1); g.strokeRect(x + 0.5, 21.5, 8, 8); }
     }
   });
+  // cargo hold: ten pips, amber as they fill, red when it is full (asteroids.js)
+  const ore = G.ore | 0, full = ore >= ORE_CAP;
+  hudPanel(g, 856, 10, 134, 30, 8, 0.72);
+  hudPut(h, 'orl', 872, 25, 'ORE', { size: 11, color: full ? '#ff4d6d' : HUD_DIM, spacing: 2 });
+  for (let j = 0; j < ORE_CAP; j++) {
+    const x = 902 + j * 8;
+    if (j < ore) { g.fillStyle(full ? RED : AMBER, 1); g.fillRect(x, 20, 6, 11); } else { g.lineStyle(1, 0x3a566e, 1); g.strokeRect(x + 0.5, 20.5, 5, 10); }
+  }
 }
 
 // ---- the mission as the checklist wants it ----
