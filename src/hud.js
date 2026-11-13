@@ -284,7 +284,7 @@ function hudRadar(h, s, key, obj, now) {
   if (key === 'Space') {
     mark(pt(s.station.x, s.station.y, true), CYAN, p => hudDiamond(g, p.x, p.y, 5, CYAN));
     mark(pt(s.planet.x, s.planet.y, true), AMBER, p => { g.fillStyle(AMBER, 1); g.fillCircle(p.x, p.y, 5); });
-    s.enemies.getChildren().forEach(d => { if (d.active) dot(d.x, d.y, d.wanted ? AMBER : RED, d.wanted ? 3 : 2.2); });
+    s.enemies.getChildren().forEach(d => { if (d.active) dot(d.x, d.y, d.wanted ? AMBER : (d.def && d.def.radar) || RED, d.wanted ? 3 : d.def && d.def.key === 'gunship' ? 3 : 2.2); });
   } else {
     mark(pt(s.pad.x, s.pad.y, true), AMBER, p => hudDiamond(g, p.x, p.y, 5, AMBER));
     mark(pt(s.pod.x, s.pod.y, true), 0x8b95a1, p => { g.fillStyle(0x8b95a1, 1); g.fillRect(p.x - 3, p.y - 3, 6, 6); });

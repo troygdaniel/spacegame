@@ -31,6 +31,30 @@ class Boot extends Phaser.Scene {
       g.fillStyle(RED, 1); g.fillCircle(17, 5, 2); g.fillCircle(17, 29, 2);
       g.fillCircle(24, 17, 4); g.fillStyle(0xffffff, 1); g.fillCircle(24.5, 17, 1.5);
     });
+    mk('raider', 30, 22, g => { // pirate raider: a thin fast dart (enemies.js)
+      halo(g, 15, 11, RED, [11, 8, 5], 0.05);
+      g.fillStyle(0x2a0b14, 1); g.lineStyle(2, 0xff6b8a, 1);
+      g.beginPath(); g.moveTo(29, 11); g.lineTo(4, 3); g.lineTo(9, 11); g.lineTo(4, 19); g.closePath(); g.fillPath(); g.strokePath();
+      g.fillStyle(0xff6b8a, 1); g.fillCircle(19, 11, 2.5); g.fillStyle(0xffffff, 1); g.fillCircle(19.5, 11, 1);
+    });
+    mk('gunship', 48, 40, g => { // pirate gunship: a wide orange hull with two gun pods (enemies.js)
+      const OR = 0xff8c3a;
+      halo(g, 24, 20, OR, [21, 15, 9], 0.05);
+      g.fillStyle(0x2e1608, 1); g.lineStyle(2, OR, 1);
+      g.beginPath(); g.moveTo(46, 20); g.lineTo(30, 4); g.lineTo(6, 8); g.lineTo(2, 20); g.lineTo(6, 32); g.lineTo(30, 36); g.closePath();
+      g.fillPath(); g.strokePath();
+      g.fillStyle(0x4a2410, 1); g.fillRect(14, 2, 18, 7); g.fillRect(14, 31, 18, 7);
+      g.lineStyle(1, OR, 0.9); g.strokeRect(14, 2, 18, 7); g.strokeRect(14, 31, 18, 7);
+      g.fillStyle(OR, 1); g.fillRect(31, 3, 7, 4); g.fillRect(31, 33, 7, 4); // gun muzzles
+      g.fillCircle(34, 20, 5); g.fillStyle(0xffffff, 1); g.fillCircle(35, 20, 1.8);
+    });
+    mk('pod', 18, 18, g => { // salvage pod a dead pirate leaves behind (enemies.js)
+      g.fillStyle(0x3a2a0c, 1); g.lineStyle(2, AMBER, 1);
+      g.beginPath();
+      for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, x = 9 + Math.cos(a) * 7.5, y = 9 + Math.sin(a) * 7.5; if (i) g.lineTo(x, y); else g.moveTo(x, y); }
+      g.closePath(); g.fillPath(); g.strokePath();
+      g.fillStyle(0xfff1a8, 1); g.fillCircle(9, 9, 2.5);
+    });
     mk('freighter', 64, 28, g => { // the escort mission's MULE
       g.fillStyle(0x2a2210, 1); g.lineStyle(2, AMBER, 1);
       g.fillRoundedRect(2, 4, 60, 20, 4); g.strokeRoundedRect(2, 4, 60, 20, 4);

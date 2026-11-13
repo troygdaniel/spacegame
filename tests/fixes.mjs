@@ -56,10 +56,11 @@ const active = (t, scene) => t.waitFor(`!!(window.game && game.scene.isActive('$
 
     console.log('bug 4: ramming finishes a drone');
     const c0 = await t.ev('G.credits'); // read before the spawn: the ram can finish the drone within one frame
-    await t.ev(`(() => { const s = ${SP}; s.ship.setPosition(1000, 1000); s.ship.setVelocity(0, 0); s.spawnDrone(1000, 1000).hp = 10; })()`);
+    const bounty = await t.ev(`(() => { const s = ${SP}; s.ship.setPosition(1000, 1000); s.ship.setVelocity(0, 0); const d = s.spawnDrone(1000, 1000); d.hp = 10; return d.def ? d.def.credits : 25; })()`);
     await t.waitFor(`${SP}.enemies.countActive() === 0`, 4000, 'drone destroyed by ramming').catch(() => {});
     check('the drone is gone after ramming', (await t.ev(`${SP}.enemies.countActive()`)) === 0);
-    check('ramming pays the 25 cr bounty', (await t.ev('G.credits')) === c0 + 25, `credits ${c0} -> ${await t.ev('G.credits')}`);
+    // at least the bounty: the wreck drops a salvage pod and the ship is sitting on it, so it may pick up more
+    check(`ramming pays at least the ${bounty} cr bounty`, (await t.ev('G.credits')) >= c0 + bounty, `credits ${c0} -> ${await t.ev('G.credits')}`);
     await t.ev('G.hull = G.maxHull');
 
     console.log('bug 5: dying costs an insurance fee of at least 50 cr');
