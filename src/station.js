@@ -4,6 +4,7 @@ class Station extends Phaser.Scene {
   init(d) { this.arrive = !!(d && d.arrive); }
   create() {
     this.leaving = false; this.panel = false;
+    shipRefresh(this); // src/ships.js: the hangar ship shows the upgrade tiers you own
     this.cameras.main.fadeIn(300, 0, 0, 0);
     this.add.tileSprite(0, 0, W, H, 'tile').setOrigin(0);
     this.add.rectangle(1070, 360, 380, 680, 0x0f2438, 0.9);
@@ -186,10 +187,14 @@ class Station extends Phaser.Scene {
     if (near && JD(k.E) && !spotInteract(this, near)) {
       if (near.key === 'missions') this.openPanel();
       else if (near.key === 'repair') {
-        const cost = Math.ceil((G.maxHull - G.hull) * 2);
-        if (G.hull >= G.maxHull) toast(this, 'Hull is already perfect.', '#9fe9ff');
-        else if (G.credits < cost) toast(this, 'Repair costs ' + cost + ' cr. You have ' + G.credits + '.', '#ff4d6d');
-        else { G.credits -= cost; G.hull = G.maxHull; beep(400, 0.2, 'triangle', 0.05, 300); toast(this, 'Hull repaired (-' + cost + ' cr).', '#6dff9c'); }
+        // half a credit a point; too poor for a full repair and it mends as much as you can pay for
+        const missing = G.maxHull - G.hull, cost = Math.ceil(missing * 0.5);
+        if (missing <= 0) toast(this, 'Hull is already perfect.', '#9fe9ff');
+        else if (G.credits <= 0) toast(this, 'Repair costs ' + cost + ' cr. You have 0.', '#ff4d6d');
+        else {
+          const pay = Math.min(cost, G.credits);
+          G.credits -= pay; G.hull = pay < cost ? Math.min(G.maxHull, G.hull + pay * 2) : G.maxHull;
+          beep(400, 0.2, 'triangle', 0.05, 300); toast(this, (pay < cost ? 'Partly repaired' : 'Hull repaired') + ' (-' + pay + ' cr).', '#6dff9c'); }
       } else if (near.key === 'ship') { sfx('thrusters'); feelLaunch(this, () => go(this, 'Space', { from: 'station' })); }
     }
   }

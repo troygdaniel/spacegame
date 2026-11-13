@@ -4,6 +4,7 @@ class Space extends Phaser.Scene {
   init(d) { this.from = (d && d.from) || 'station'; }
   create() {
     this.leaving = false; this.dead = false; this.rammedAt = 0;
+    shipRefresh(this); // src/ships.js: the ship texture shows the upgrade tiers you own
     const WS = 8000; this.WS = WS;
     this.physics.world.setBounds(0, 0, WS, WS);
     this.cameras.main.fadeIn(300, 0, 0, 0).setBounds(0, 0, WS, WS);
@@ -20,7 +21,7 @@ class Space extends Phaser.Scene {
     if (this.from === 'surface') { sx = this.planet.x - 460; sy = this.planet.y + 120; rot = Math.PI; }
     else { sx = this.station.x + 250; sy = this.station.y; rot = 0; }
     this.ship = this.physics.add.sprite(sx, sy, 'ship').setDepth(5).setCollideWorldBounds(true);
-    this.ship.body.setCircle(12, 10, 3).setDamping(true).setDrag(0.55).setMaxSpeed(480);
+    this.ship.body.setCircle(12, 16, 8).setDamping(true).setDrag(0.55).setMaxSpeed(480); // the 56x40 texture has a glow margin (ships.js)
     this.ship.rotation = rot;
     this.ship.setVelocity(Math.cos(rot) * 140, Math.sin(rot) * 140);
     this.lockUntil = this.time.now + 1300;
@@ -53,7 +54,7 @@ class Space extends Phaser.Scene {
 
     this.physics.add.overlap(this.pb, this.enemies, (b, e) => {
       if (!b.active || !e.active) return;
-      b.disableBody(true, true); e.hp -= 15; this.boom.explode(4, b.x, b.y); sfx('tick'); feelNumber(this, e.x, e.y - 18, '15');
+      b.disableBody(true, true); e.hp -= 15; this.boom.explode(4, b.x, b.y); sfx('tick'); feelNumber(this, e.x, e.y - 18, '15'); shipsHit(this, e, b.x, b.y);
       if (e.hp <= 0) this.killDrone(e);
     });
     this.physics.add.overlap(this.ship, this.eb, (s, b) => {
@@ -76,6 +77,7 @@ class Space extends Phaser.Scene {
     trafficSetup(this); // src/traffic.js: civilian ships and the station police
     asteroidsSetup(this); // src/asteroids.js: the Kepler belt
     feelInstall(this); // src/feel.js: hit flashes, flame, approach rings, arrival zoom
+    shipsInstall(this); // src/ships.js: flames, trails, shield flash, smoke and sparks on every ship
   }
 
   killDrone(e) { // one place for bullets and ramming to finish an enemy
@@ -100,7 +102,7 @@ class Space extends Phaser.Scene {
 
   hurt(n, fromX, fromY) {
     if (this.dead || this.leaving) return;
-    G.hull -= n; this.cameras.main.shake(120, 0.006); sfx('hit'); feelHit(this, fromX, fromY, n);
+    G.hull -= n; this.cameras.main.shake(120, 0.006); sfx('hit'); feelHit(this, fromX, fromY, n); shipsHit(this, this.ship, fromX, fromY);
     if (G.hull <= 0) this.die();
   }
 

@@ -13,6 +13,7 @@ Station (walk, take the rescue call, board ship) -> Space (fly, fight drones, do
 - src/station.js station interior scene
 - src/space.js   flight, combat, dock/land
 - src/surface.js planet surface, colonist escort
+- src/ships.js   every ship texture (player with upgrade tiers, pirates, Reaver, MULE, civilian, police) and their flames, trails, shield flash, smoke and sparks
 - src/stationart.js Halcyon Station and Kestrel Outpost art (canvas gradients, drawn in code) and their animation: spinning hub and ring, beacons, docking lane
 - src/art_world.js the world art, drawn in code on 2D canvases (seeded, same every boot): nebula and parallax star layers, distant sun, ringed giant and moon, Kepler-4b, asteroids and ore, the surface (ground, terrain, boulders, pad, crash site, colonist, crawlers) and the effects fxBoom (every s.boom), fxDash, fxPickup, fxDebris
 - src/main.js    Phaser config and scene list

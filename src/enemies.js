@@ -5,11 +5,11 @@
 //   Drone    the v0.1 pirate, 30 hp, circles in and pecks; everywhere
 //   Gunship  slow and wide, 80 hp, a 3-shot spread that hurts; common out by Kepler-4b
 const PIRATES = {
-  raider:  { key: 'raider',  tex: 'raider',  hp: 20, credits: 35, ram: 8,  radar: 0xff6b8a, body: [10, 5, 1],
+  raider:  { key: 'raider',  tex: 'raider',  hp: 20, credits: 35, ram: 8,  radar: 0xff6b8a, body: [10, 10, 5], // body: circle radius and offset in the texture, which has a glow margin (ships.js)
              engage: 1000, speed: 520, max: 430, turn: 0.07, hold: 460, strafe: true, range: 520, aim: 0.4, shot: [550, 950], bullet: 540, dmg: 6 },
-  drone:   { key: 'drone',   tex: 'drone',   hp: 30, credits: 25, ram: 12, radar: RED,      body: [14, 3, 3],
+  drone:   { key: 'drone',   tex: 'drone',   hp: 30, credits: 25, ram: 12, radar: RED,      body: [14, 8, 8],
              engage: 900, speed: 300, max: 260, turn: 0.035, hold: 280, range: 650, aim: 0.25, shot: [900, 1500], bullet: 420, dmg: 8 },
-  gunship: { key: 'gunship', tex: 'gunship', hp: 80, credits: 70, ram: 18, radar: 0xff8c3a, body: [19, 5, 1],
+  gunship: { key: 'gunship', tex: 'gunship', hp: 80, credits: 70, ram: 18, radar: 0xff8c3a, body: [19, 11, 6],
              engage: 1000, speed: 170, max: 150, turn: 0.022, hold: 430, range: 780, aim: 0.5, shot: [1500, 2100], bullet: 380, dmg: 10, spread: 3 }
 };
 
