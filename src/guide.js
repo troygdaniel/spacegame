@@ -8,7 +8,7 @@ Object.assign(G, { earned: 0, guideDone: false, endingSeen: false, stats: { dron
 function guideSnapshot() {
   return {
     earned: Math.floor(G.earned), guideDone: !!G.guideDone, endingSeen: !!G.endingSeen,
-    stats: { drones: G.stats.drones | 0, missions: G.stats.missions | 0, time: Math.floor(G.stats.time) }
+    stats: { drones: G.stats.drones | 0, missions: G.stats.missions | 0, time: Math.floor(G.stats.time / 10000) * 10000 } // time to 10 s: autosave then writes every 10 s, not every second
   };
 }
 

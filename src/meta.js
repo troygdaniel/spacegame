@@ -35,7 +35,8 @@ function snapshot() {
   return {
     v: 1, credits: Math.floor(G.credits), hull: Math.round(G.hull), maxHull: Math.round(G.maxHull), mission: G.mission,
     upgrades: Object.assign({}, G.upgrades),
-    volume: Math.round(G.volume * 10) / 10, muted: !!G.muted
+    volume: Math.round(G.volume * 10) / 10, muted: !!G.muted,
+    ...guideSnapshot() // first-run guide, run stats, ending card (guide.js)
   };
 }
 
@@ -73,6 +74,7 @@ function loadGame() {
     if (G.mission === 'rescued') G.mission = 'accepted'; // you always wake up at the station, colonist or not
     if (Number.isFinite(s.volume)) G.volume = Math.min(1, Math.max(0, s.volume));
     if (typeof s.muted === 'boolean') G.muted = s.muted;
+    guideRestore(s); // guide.js: tips done, stats, ending seen
     lastSaved = JSON.stringify(snapshot());
     return true;
   } catch (e) { return false; }
@@ -86,6 +88,7 @@ function clearSave() {
 function newGameState() {
   G.credits = 0; G.maxHull = 100; G.hull = 100; G.mission = 'none';
   Object.keys(G.upgrades).forEach(k => { G.upgrades[k] = 0; });
+  guideReset(); // guide.js: tips and stats start over
 }
 
 // ---------- window hooks ----------
