@@ -14,6 +14,7 @@
 // look: dark glass panels with a thin glowing edge, one type scale, one spacing step (8 px). Graphics cannot blur, so a "glow"
 // is the same path drawn wide and faint, then thin and bright (hudGlowPath).
 const HUD_BG = 0x07101c, HUD_OFF = 0x16293d, HUD_LINE = 0x3a566e, HUD_DIM = '#5b7a92', HUD_RANGE = { Space: 2400, Surface: 900 }; // radar range, world units
+const TAU = Math.PI * 2;
 const HT = { tag: 10, label: 11, body: 13, head: 15, num: 22 }; // type scale in px: tags and units, labels, lines of text, panel titles, gauge numbers
 const HUD_GEAR = { armor: 'ARM', rapid: 'RPD', booster: 'BST' };                                       // gear abbreviations on the strip
 const HUD_FRAME = { x: 20, y: 148, w: 296 };                                                               // checklist panel (Space, Surface)
@@ -350,23 +351,35 @@ function hudCompact(h, m) {
 function hudRadar(h, s, key, obj, now) {
   const g = h.g, R = 84, cx = W - 110, cy = 112, range = HUD_RANGE[key], sc = R / range;
   const me = key === 'Space' ? s.ship : s.player, ox = me.x, oy = me.y;
-  g.fillStyle(HUD_BG, 0.72); g.fillCircle(cx, cy, R + 4);
-  g.lineStyle(1, CYAN, 0.25); g.strokeCircle(cx, cy, R / 3); g.strokeCircle(cx, cy, R * 2 / 3);
-  g.lineStyle(1, CYAN, 0.14); g.lineBetween(cx - R, cy, cx + R, cy); g.lineBetween(cx, cy - R, cx, cy + R);
-  const sw = (now / 1500) % (Math.PI * 2);
-  for (let i = 0; i < 9; i++) {
-    g.lineStyle(2, CYAN, 0.2 * (1 - i / 9));
-    g.lineBetween(cx, cy, cx + Math.cos(sw - i * 0.07) * R, cy + Math.sin(sw - i * 0.07) * R);
-  }
   // what is hostile and how close: the rim and the line under the radar turn red once something is near enough to attack
   const foes = key === 'Space' ? s.enemies.getChildren() : s.crawlers.getChildren(), engage = key === 'Space' ? 900 : 380, unit = key === 'Space' ? 'km' : 'm';
   let n = 0, near = Infinity;
   foes.forEach(e => { if (!e.active) return; const d = Math.hypot(e.x - ox, e.y - oy); if (d <= range) { n++; if (d < near) near = d; } });
-  const hot = near < engage;
-  g.lineStyle(2, hot ? RED : CYAN, hot ? 0.65 + 0.35 * Math.sin(now / 120) : 0.7); g.strokeCircle(cx, cy, R);
+  const hot = near < engage, rim = hot ? RED : CYAN, beat = hot ? 0.6 + 0.4 * Math.sin(now / 120) : 1;
+  // the plate, the rings (dashed), the cross hairs, and a bezel with a tick every 15 degrees and a marker at north
+  g.fillStyle(HUD_BG, 0.8); g.fillCircle(cx, cy, R + 4);
+  g.fillStyle(rim, 0.05); g.fillCircle(cx, cy, R);
+  [[6.5, 0.07], [3.5, 0.17], [1.5, 0.85]].forEach(([lw, k]) => { g.lineStyle(lw, rim, k * beat); g.strokeCircle(cx, cy, R + 4); });
+  [R / 3, R * 2 / 3].forEach(rr => { g.lineStyle(1, CYAN, 0.28); for (let i = 0; i < 28; i++) { const a = i * Math.PI / 14; g.beginPath(); g.arc(cx, cy, rr, a, a + 0.1, false); g.strokePath(); } });
+  g.lineStyle(1, CYAN, 0.14); g.lineBetween(cx - R, cy, cx + R, cy); g.lineBetween(cx, cy - R, cx, cy + R);
+  for (let i = 0; i < 24; i++) {
+    const a = i * Math.PI / 12, q = i % 6 === 0, r0 = R - (q ? 9 : 5);
+    g.lineStyle(q ? 2 : 1, rim, q ? 0.9 : 0.4); g.lineBetween(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0, cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+  }
+  g.fillStyle(AMBER, 1); g.fillTriangle(cx, cy - R - 9, cx - 4, cy - R - 2, cx + 4, cy - R - 2);
+  // the sweep: a wedge that fades behind a bright leading line; a ping ring leaves the centre every three seconds
+  const sw = (now / 1500) % (Math.PI * 2);
+  for (let i = 0; i < 18; i++) {
+    const a0 = sw - (i + 1) * 0.06, a1 = sw - i * 0.06;
+    g.fillStyle(rim, 0.24 * Math.pow(1 - i / 18, 1.6));
+    g.fillTriangle(cx, cy, cx + Math.cos(a0) * R, cy + Math.sin(a0) * R, cx + Math.cos(a1) * R, cy + Math.sin(a1) * R);
+  }
+  g.lineStyle(2, rim, 0.85); g.lineBetween(cx, cy, cx + Math.cos(sw) * R, cy + Math.sin(sw) * R);
+  const pg = (now % 3000) / 1500;
+  if (pg < 1) { g.lineStyle(1, CYAN, 0.35 * (1 - pg)); g.strokeCircle(cx, cy, R * pg); }
   hudPut(h, 'rt', cx, cy + R + 32, n ? n + ' HOSTILE  ' + Math.round(near * 0.1) + ' ' + unit : 'CLEAR',
-    { size: 11, bold: hot, color: hot ? '#ff4d6d' : n ? '#ffb454' : '#58b57d', ox: 0.5, spacing: 1 });
-  hudPut(h, 'rl', cx, cy + R + 16, 'RADAR  ' + (key === 'Space' ? (range / 10) + ' km' : (range / 10) + ' m'), { size: 11, color: HUD_DIM, ox: 0.5, spacing: 1 });
+    { size: HT.label, bold: hot, color: hot ? '#ff4d6d' : n ? '#ffb454' : '#58b57d', ox: 0.5, spacing: 1, alpha: hot ? 0.7 + 0.3 * Math.sin(now / 120) : 1 });
+  hudPut(h, 'rl', cx, cy + R + 16, 'RADAR  ' + (key === 'Space' ? (range / 10) + ' km' : (range / 10) + ' m'), { size: HT.label, color: HUD_DIM, ox: 0.5, spacing: 1 });
 
   const pt = (wx, wy, keep) => { // world point -> radar point; off the radar it is clamped to the rim when keep, else null
     let dx = (wx - ox) * sc, dy = (wy - oy) * sc;
@@ -375,7 +388,13 @@ function hudRadar(h, s, key, obj, now) {
     return { x: cx + dx, y: cy + dy, out, a: Math.atan2(dy, dx) };
   };
   const mark = (p, color, draw) => { if (p.out) hudTri(g, p.x, p.y, p.a, 5, color); else draw(p); };
-  const dot = (wx, wy, color, r) => { const p = pt(wx, wy, false); if (p) { g.fillStyle(color, 1); g.fillCircle(p.x, p.y, r); } };
+  // a blip is brightest just after the sweep passes it and settles back to half; each has a halo
+  const dot = (wx, wy, color, r) => {
+    const p = pt(wx, wy, false); if (!p) return;
+    const age = (((sw - p.a) % TAU) + TAU) % TAU / TAU, k = 0.55 + 0.45 * Math.pow(1 - age, 2);
+    g.fillStyle(color, 0.22 * k); g.fillCircle(p.x, p.y, r * 2.4);
+    g.fillStyle(color, k); g.fillCircle(p.x, p.y, r);
+  };
 
   if (key === 'Space') {
     mark(pt(s.station.x, s.station.y, true), CYAN, p => hudDiamond(g, p.x, p.y, 5, CYAN));
@@ -393,6 +412,17 @@ function hudRadar(h, s, key, obj, now) {
     g.lineStyle(2, AMBER, 0.6 + 0.4 * Math.sin(now / 200));
     if (p.out) hudTri(g, p.x, p.y, p.a, 7, AMBER, 0.9); else g.strokeCircle(p.x, p.y, 8 + Math.sin(now / 200));
   }
+  if (h.lock && h.lock.active) { // the locked target: four brackets round its blip (src/hud.js hudLock)
+    const p = pt(h.lock.x, h.lock.y, false);
+    if (p) {
+      const k = 7 + 1.2 * Math.sin(now / 130), c = 3.5;
+      g.lineStyle(1.5, h.lockColor, 1);
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([ax, ay]) => {
+        g.beginPath(); g.moveTo(p.x + ax * k, p.y + ay * (k - c)); g.lineTo(p.x + ax * k, p.y + ay * k); g.lineTo(p.x + ax * (k - c), p.y + ay * k); g.strokePath();
+      });
+    }
+  }
+  g.lineStyle(1, 0xffffff, 0.45); g.lineBetween(cx, cy, cx + Math.cos(me.rotation) * R * 0.3, cy + Math.sin(me.rotation) * R * 0.3); // where you are pointing
   tri(g, cx, cy, me.rotation, 5, 0xffffff);
 }
 
