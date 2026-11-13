@@ -12,12 +12,12 @@ async function space() {
     await t.waitFor("!!(window.game && game.scene.isActive('Space'))", 30000, 'Space active');
     const ms = await t.ev('window.waMs'); note(ms < 4000, `textures painted in ${ms} ms`);
     const at = async (name, x, y, extra = '') => {
-      await t.ev(`(() => { const s = game.scene.getScene('Space'); s.ship.body.reset(${x}, ${y}); s.lockUntil = 0; ${extra}; return 1; })()`);
+      await t.ev(`(() => { const s = game.scene.getScene('Space'); s.ship.body.reset(${x}, ${y}); s.cameras.main.centerOn(${x}, ${y}); s.lockUntil = 0; ${extra}; return 1; })()`);
       await sleep(1600); await t.shot(name); console.log('  --  ' + name);
     };
     await sleep(1500); await t.shot('world-space-station');
     await at('world-space-planet', 5760, 2060);
-    await at('world-space-belt', 5300, 1500);
+    await at('world-space-belt', 5300, 1500, 'dropOre(s, 5360, 1460); dropOre(s, 5240, 1540)'); // two ore chunks beside the ship
     await at('world-space-deep', 1800, 6200);
     // effects: step the clock by hand so the picture is taken a known time after the blast
     await t.clock();

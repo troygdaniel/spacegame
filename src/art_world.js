@@ -124,7 +124,6 @@ function waSpaceArt(sc) {
   });
   waCanvas(sc, 'stars2', 512, 512, (ctx, S) => waStars(ctx, rnd, S, 80, 0.5, 1.5, 0.35, 0.95, 0.04, 22));
   waCanvas(sc, 'stars3', 1024, 1024, (ctx, S) => waStars(ctx, rnd, S, 26, 1.1, 2.6, 0.7, 1, 0.55, 44));
-  waCanvas(sc, 'motes', 512, 512, (ctx, S) => waStars(ctx, rnd, S, 34, 0.9, 2.2, 0.1, 0.3, 0, 12));
 
   waCanvas(sc, 'sun', 512, 512, (ctx, S) => { // a distant sun: wide corona, rays, a hot core
     const C = S / 2;
@@ -184,7 +183,7 @@ function waSpaceArt(sc) {
 function spaceBackdrop(s) {
   s.cameras.main.setBackgroundColor(0x02050e);
   const layer = (key, depth, f, a) => { const t = s.add.tileSprite(0, 0, W, H, key).setOrigin(0).setScrollFactor(0).setDepth(depth).setAlpha(a); t.par = f; return t; };
-  s.bgLayers = [layer('stars1', -10, 0.2, 1), layer('stars2', -9, 0.45, 1), layer('stars3', -8, 0.8, 1), layer('motes', -7, 1.35, 1)];
+  s.bgLayers = [layer('stars1', -10, 0.2, 1), layer('stars2', -9, 0.45, 1), layer('stars3', -8, 0.85, 1)]; // three full-screen layers: each one costs fill rate
   // distant bodies drift slower than the world: an image with scroll factor f sits at (anchor + f * reference scroll), so each
   // one is placed where it should appear when you launch from the station
   const REF = { x: 3360, y: 3640 };
@@ -192,7 +191,7 @@ function spaceBackdrop(s) {
   const sun = far('sun', 150, 620, 0.03, -6.5, 1.15);
   s.tweens.add({ targets: sun, scale: 1.22, duration: 5200, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
   far('giant', 1010, 520, 0.07, -6, 0.62);
-  far('moon', 560, 90, 0.11, -5.5, 0.55);
+  far('moon', 560, 90, 0.11, -5.5, 0.42, 0.7); // dim and small so it never reads as a rock to shoot
   s.tweens.add({ targets: s.bgLayers[2], alpha: 0.78, duration: 3400, yoyo: true, repeat: -1, ease: 'Sine.inOut' }); // the bright stars breathe a little
 }
 function spaceBackdropTick(s) {
@@ -208,14 +207,14 @@ function waPlanetArt(sc) {
     const halo = (ox, oy, a) => { const g = ctx.createRadialGradient(C + ox, C + oy, R * 0.92, C + ox, C + oy, R + 92); g.addColorStop(0, `rgba(255,170,90,${a})`); g.addColorStop(0.2, `rgba(255,140,70,${a * 0.42})`); g.addColorStop(1, 'rgba(255,120,60,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, S, S); };
     halo(0, 0, 0.5); halo(-26, 18, 0.28);
     const hf = waFbm(rnd, 4, 5), cl = waFbm(rnd, 3, 4), lights = waFbm(rnd, 24, 2);
-    const ramp = [[48, 22, 22], [112, 54, 36], [180, 94, 56], [226, 148, 94], [244, 190, 134]];
+    const ramp = [[44, 20, 20], [104, 50, 34], [160, 82, 50], [200, 118, 74], [224, 148, 98]];
     const L = (() => { const l = Math.hypot(-0.66, 0.42, 0.62); return [-0.66 / l, 0.42 / l, 0.62 / l]; })();
-    waSphere(ctx, C, C, R, { L, amb: 0.06, rim: [255, 150, 70], rimA: 0.9, term: [255, 120, 60], termA: 0.22 }, (lon, lat, dx, dy, nz, diff, c) => {
+    waSphere(ctx, C, C, R, { L, amb: 0.06, rim: [255, 140, 64], rimA: 0.6, term: [255, 120, 60], termA: 0.2 }, (lon, lat, dx, dy, nz, diff, c) => {
       const h = hf(lon, lat * 0.9 + 0.05), t = waClamp((h - 0.32) / 0.4) * (ramp.length - 1), i = Math.min(ramp.length - 2, Math.floor(t));
       let col = waMix(ramp[i], ramp[i + 1], t - i);
       const dune = 0.92 + 0.08 * Math.sin(lat * 60 + h * 9); col = [col[0] * dune, col[1] * dune, col[2] * dune];
-      const pole = waSmooth(0.84, 0.96, Math.abs(lat - 0.5) * 2 + (h - 0.5) * 0.25); col = waMix(col, [240, 226, 208], pole);
-      const cloud = waSmooth(0.54, 0.74, cl(lon * 0.9 + lat * 0.25, lat * 2.2)) * 0.62; col = waMix(col, [255, 232, 210], cloud);
+      const pole = waSmooth(0.8, 1.0, Math.abs(lat - 0.5) * 2 + (h - 0.5) * 0.12); col = waMix(col, [212, 190, 170], pole * 0.85);
+      const cloud = waSmooth(0.56, 0.78, cl(lon * 0.9 + lat * 0.25, lat * 2.2)) * 0.42; col = waMix(col, [236, 190, 160], cloud);
       c[0] = col[0]; c[1] = col[1]; c[2] = col[2];
       c[3] = waSmooth(0.64, 0.8, lights(lon, lat)) * (h > 0.45 ? 1 : 0.25) * waSmooth(0.15, 0.4, nz); // colony lights on the night side
     });
