@@ -61,6 +61,22 @@ function panel(s, o) {
   };
 }
 
+// the credits tag in a panel's title band: a gold coin and "N CR". Pass animate = true when this panel just changed the figure (a
+// purchase): the tag pops and flashes and a +N or -N floats up from it. A panel that only shows the figure leaves animate off.
+function crTag(s, ui, n, animate) {
+  const t = ui.tagText, d = ui.crLast === undefined ? 0 : n - ui.crLast; ui.crLast = n;
+  if (!ui.coin) { ui.coin = s.add.graphics(); ui.box.add(ui.coin); t.setFontSize(20).setFontStyle('bold').setColor(GOLD_S); }
+  t.setText(hudFmt(n) + ' CR');
+  ui.coin.clear(); hudCoin(ui.coin, t.x - t.width - 18, t.y, 0.85, 0);
+  if (!animate || !d) return;
+  t.setColor(d > 0 ? '#ffffff' : '#ff4d6d'); s.time.delayedCall(450, () => { if (t.active) t.setColor(GOLD_S); });
+  s.tweens.add({ targets: t, scale: { from: 1.3, to: 1 }, duration: 380, ease: 'Cubic.easeOut' });
+  const f = s.add.text(t.x, t.y + 6, (d > 0 ? '+' : '-') + hudFmt(Math.abs(d)), uiFont(18, d > 0 ? '#6dff9c' : '#ff4d6d', { fontStyle: 'bold' })).setOrigin(1, 0.5).setStroke('#02060d', 3);
+  ui.box.add(f);
+  s.tweens.add({ targets: f, y: t.y - 22, duration: 1100, ease: 'Cubic.easeOut' });
+  s.tweens.add({ targets: f, alpha: 0, delay: 600, duration: 500, onComplete: () => f.destroy() }); // stays solid, then fades
+}
+
 // small filled/empty squares, e.g. upgrade tiers or risk; returns the Graphics (add it to a container)
 function pips(s, x, y, n, of, color) {
   const g = s.add.graphics();

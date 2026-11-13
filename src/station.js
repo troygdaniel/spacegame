@@ -102,7 +102,7 @@ class Station extends Phaser.Scene {
     };
 
     const render = () => {
-      clear(); this.ui.tagText.setText('CREDITS ' + G.credits);
+      clear(); crTag(this, this.ui, G.credits); // src/ui.js: coin and gold N CR
       if (busy()) {
         const m = missionDef(), r = risk(m), cy = -70;
         this.ui.titleText.setText('MISSION BOARD  -  UNDER WAY');

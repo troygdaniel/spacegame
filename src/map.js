@@ -51,7 +51,8 @@ class Overlay extends Phaser.Scene {
     this.lbGate = m(mapText(this, 0, 0, 'PERSEUS GATE', 13, '#ffb454').setOrigin(0.5, 1));
     this.lbShip = m(mapText(this, 0, 0, 'YOU', 13, '#ffffff').setOrigin(0.5, 0));
     this.lbMule = m(mapText(this, 0, 0, 'MULE', 12, '#6dff9c').setOrigin(0.5, 0));
-    this.tHud = m(mapText(this, SX, 100, '', 16, '#9fe9ff'));
+    this.tCr = m(mapText(this, SX + 30, 98, '', 20, GOLD_S).setFontStyle('bold')); // credits: a gold coin (drawn in update) and N CR
+    this.tHud = m(mapText(this, SX + 250, 101, '', 16, '#9fe9ff'));
     this.tMissionH = m(mapText(this, SX, 142, 'MISSION', 13, '#5b7a92'));
     this.tMission = m(mapText(this, SX, 162, '', 18, '#ffd37a', 470));
     this.tObjH = m(mapText(this, SX, 250, 'OBJECTIVE', 13, '#5b7a92'));
@@ -209,7 +210,8 @@ class Overlay extends Phaser.Scene {
     tri(g, ox, oy, ship.rot, 9, 0xffffff);
     this.lbShip.setText(ship.tag).setPosition(ox, oy + 12);
 
-    this.tHud.setText('CREDITS ' + G.credits + '    HULL ' + Math.round(G.hull) + '/' + G.maxHull);
+    this.tCr.setText(hudFmt(G.credits) + ' CR'); hudCoin(g, this.SX + 10, 110, 0.85, 0);
+    this.tHud.setText('HULL ' + Math.round(G.hull) + '/' + G.maxHull);
     this.tMission.setText(typeof missionLine === 'function' ? missionLine().replace(/^MISSION\s+/, '') : '');
     this.tObj.setText(objLine);
     this.drawLegend(g);
