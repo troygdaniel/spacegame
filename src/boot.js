@@ -33,6 +33,9 @@ class Boot extends Phaser.Scene {
     const hash = location.hash.slice(1);
     const quick = { space: 'rescue', surface: 'rescue', escort: 'escort', patrol: 'patrol', bounty: 'bounty' }[hash];
     if (quick) { G.mission = 'accepted'; G.missionId = quick; }
+    // #hyper or #hyper<ly> opens the hyperspace tunnel demo (hyperspace.js), the only way into that scene for now
+    const hy = /^hyper(\d{1,2})?$/.exec(hash);
+    if (hy) { this.scene.start('Hyper', hyperDemo(hy[1])); return; }
     // no hash: the title screen first; #station jumps straight to the station
     this.scene.start(hash === 'surface' ? 'Surface' : quick ? 'Space' : hash === 'station' ? 'Station' : 'Title');
   }
