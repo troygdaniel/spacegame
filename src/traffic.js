@@ -16,7 +16,7 @@ function trafficSetup(s) {
   t.bullets = s.physics.add.group({ defaultKey: 'bullet', maxSize: 24 });
   s.physics.add.overlap(t.bullets, s.enemies, (b, e) => {
     if (!b.active || !e.active || e.wanted) return; // the wanted pirates of the patrol mission are yours to catch
-    b.disableBody(true, true); e.hp -= 10; s.boom.explode(3, b.x, b.y);
+    b.disableBody(true, true); e.hp -= 10; s.boom.explode(3, b.x, b.y); shipsHit(s, e, b.x, b.y);
     if (e.hp <= 0) { s.boom.explode(24, e.x, e.y); e.destroy(); } // no credits, no mission progress: the police just clear the lane
   });
   [[0.5, 620, 0.00034], [3.6, 820, -0.00028]].forEach(([a, r, w]) => {
