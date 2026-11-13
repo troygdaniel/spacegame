@@ -24,3 +24,6 @@ New files get their own script tag in index.html. Keep edits inside the files yo
 
 ## New work found along the way
 Agents may add cards for new work they find: `agentboard add --status todo --id space-game-<name> "title" -d "what and which files"`, then tell ORCH in one line (agentboard chat send --name <you> --to ORCH). Do not claim it yourself; ORCH assigns it so the load stays even. Keep each card small enough for one sitting and name the files it touches.
+
+## Progress on the board
+Update each subtask the moment you finish it, not at the end: `agentboard update <subtask id> 50 "what you are doing"` when you start it, `... 100 "result"` when it is done. Troy watches the card fill up. Do not mark all subtasks 100 in one go when you send the card to review.

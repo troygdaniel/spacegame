@@ -43,6 +43,19 @@ class Boot extends Phaser.Scene {
       g.fillStyle(0x1a2a40, 1); g.fillRect(46, 9, 12, 10);
       g.fillStyle(0xffffff, 1); g.fillRect(2, 10, 5, 8);
     });
+    mk('asteroid', 64, 64, g => { // a lumpy grey boulder; scaled for small, medium and large
+      const pts = []; for (let i = 0; i < 11; i++) { const a = i / 11 * Math.PI * 2, r = Phaser.Math.Between(21, 29); pts.push([32 + Math.cos(a) * r, 32 + Math.sin(a) * r]); }
+      g.fillStyle(0x4a4452, 1); g.lineStyle(2, 0x8a809c, 1);
+      g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(p => g.lineTo(p[0], p[1])); g.closePath(); g.fillPath(); g.strokePath();
+      g.fillStyle(0x363040, 1); g.fillCircle(24, 38, 6); g.fillCircle(41, 24, 4.5); g.fillCircle(40, 42, 3.5);
+      g.fillStyle(0x6a6078, 0.8); g.fillCircle(26, 22, 7);
+      g.lineStyle(1, 0xffb454, 0.35); g.lineBetween(30, 30, 40, 36); g.lineBetween(36, 33, 44, 33); // a faint ore vein
+    });
+    mk('ore', 16, 16, g => { // a glowing ore chunk
+      halo(g, 8, 8, AMBER, [8, 6, 4], 0.07);
+      g.fillStyle(0xffb454, 1); g.beginPath(); g.moveTo(8, 2); g.lineTo(13, 8); g.lineTo(8, 14); g.lineTo(3, 8); g.closePath(); g.fillPath();
+      g.fillStyle(0xfff1a8, 1); g.fillCircle(7, 7, 2);
+    });
     mk('police', 44, 30, g => { // a Halcyon patrol ship: blue and white
       halo(g, 22, 15, 0x3a8dff, [14, 10, 6], 0.05);
       g.fillStyle(0x0d1c34, 1); g.lineStyle(2, 0x3a8dff, 1);
