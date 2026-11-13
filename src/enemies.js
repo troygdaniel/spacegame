@@ -21,8 +21,9 @@ function pirateTypeFor(s, x, y) {
   return r < 0.4 ? 'gunship' : r < 0.65 ? 'raider' : 'drone';
 }
 
+// type: a PIRATES key, a whole def (the Reaver in missions.js), or nothing to pick by distance
 function spawnPirate(s, x, y, type) {
-  const def = PIRATES[type] || PIRATES[pirateTypeFor(s, x, y)];
+  const def = typeof type === 'object' && type ? type : PIRATES[type] || PIRATES[pirateTypeFor(s, x, y)];
   const d = s.enemies.create(x, y, def.tex).setDepth(4);
   d.def = def; d.hp = def.hp; d.nextShot = 0; d.rotation = Math.random() * 6.28;
   d.side = Math.random() < 0.5 ? -1 : 1; d.flipAt = 0;
@@ -34,6 +35,7 @@ function spawnPirate(s, x, y, type) {
 function pirateAI(s, d, ship, time) {
   if (!d.active || !d.body) return;
   const def = d.def || PIRATES.drone;
+  if (def.ai) return def.ai(s, d, ship, time); // a boss brings its own brain
   const tgt = d.prey && d.prey.active ? d.prey : ship;
   const ddx = tgt.x - d.x, ddy = tgt.y - d.y, dist = Math.hypot(ddx, ddy);
   if (dist >= def.engage) { d.body.setAcceleration(0, 0); d.rotation += 0.003; return; }

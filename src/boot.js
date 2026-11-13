@@ -55,6 +55,17 @@ class Boot extends Phaser.Scene {
       g.closePath(); g.fillPath(); g.strokePath();
       g.fillStyle(0xfff1a8, 1); g.fillCircle(9, 9, 2.5);
     });
+    mk('reaver', 96, 76, g => { // the bounty boss (missions.js): a broad dark warship with four gun pods and a red eye
+      const RR = 0xff2a4a;
+      halo(g, 48, 38, RR, [40, 30, 20], 0.05);
+      g.fillStyle(0x1c0810, 1); g.lineStyle(3, RR, 1);
+      g.beginPath(); g.moveTo(94, 38); g.lineTo(66, 6); g.lineTo(18, 12); g.lineTo(3, 38); g.lineTo(18, 64); g.lineTo(66, 70); g.closePath();
+      g.fillPath(); g.strokePath();
+      g.lineStyle(1, RR, 0.5); g.lineBetween(18, 12, 66, 38); g.lineBetween(18, 64, 66, 38); g.lineBetween(3, 38, 66, 38);
+      [[26, 3], [50, 1], [26, 65], [50, 67]].forEach(([x, y]) => { g.fillStyle(0x3a0f1a, 1); g.fillRect(x, y, 18, 8); g.lineStyle(1, RR, 0.9); g.strokeRect(x, y, 18, 8); g.fillStyle(RR, 1); g.fillRect(x + 16, y + 2, 6, 4); });
+      g.fillStyle(RR, 1); g.fillCircle(68, 38, 8); g.fillStyle(0xffffff, 1); g.fillCircle(70, 38, 3);
+      g.fillStyle(AMBER, 0.9); g.fillRect(4, 30, 6, 16); // engine glow at the tail
+    });
     mk('freighter', 64, 28, g => { // the escort mission's MULE
       g.fillStyle(0x2a2210, 1); g.lineStyle(2, AMBER, 1);
       g.fillRoundedRect(2, 4, 60, 20, 4); g.strokeRoundedRect(2, 4, 60, 20, 4);
@@ -197,7 +208,7 @@ class Boot extends Phaser.Scene {
     // dev shortcut: index.html#space or #surface jumps straight to that scene with the rescue accepted;
     // #escort and #patrol start in space with that mission accepted
     const hash = location.hash.slice(1);
-    const quick = { space: 'rescue', surface: 'rescue', escort: 'escort', patrol: 'patrol' }[hash];
+    const quick = { space: 'rescue', surface: 'rescue', escort: 'escort', patrol: 'patrol', bounty: 'bounty' }[hash];
     if (quick) { G.mission = 'accepted'; G.missionId = quick; }
     // no hash: the title screen first; #station jumps straight to the station
     this.scene.start(hash === 'surface' ? 'Surface' : quick ? 'Space' : hash === 'station' ? 'Station' : 'Title');

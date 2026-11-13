@@ -2,9 +2,10 @@
 // G.missionId names a row of MISSIONS; G.mission is its state: none | accepted | rescued | failed.
 // Rescue plays out in surface.js (land, find the colonist) and pays on docking (station.js), as in v0.1.
 // Escort and Police patrol live entirely in space (hooks below) and pay the moment they are done.
-G.missionId = null; G.missionProgress = 0;
+G.missionId = null; G.missionProgress = 0; G.patrolsDone = 0; // patrolsDone unlocks the bounty call (saved by meta.js)
 
 const GATE = { x: 1800, y: 6200 };
+const REAVER_HP = 300;
 
 const MISSIONS = [
   {
@@ -33,10 +34,21 @@ const MISSIONS = [
     progress: () => 'Wanted pirates destroyed: ' + G.missionProgress + ' of 5.\nThey wait on the approach to the station.',
     failOnDeath: [], deathMsg: '',
     space: { setup: patrolSetup, update: patrolUpdate, target: patrolTarget }
+  },
+  {
+    id: 'bounty', key: '4', title: 'Bounty', where: 'The Reaver, off Kepler-4b', reward: 1200,
+    unlock: () => G.patrolsDone > 0, // the board offers it once a police patrol has been finished
+    offer: 'The pirate warlord they call the Reaver holds\nthe dark side of Kepler-4b with two escorts.\nA warship three times a drone: spread guns and\na ramming charge it telegraphs with a flash.\nHalcyon pays 1200 cr for the wreck.',
+    line: st => st === 'failed' ? 'Failed. The Reaver got away'
+      : 'Bounty: the Reaver  hull ' + Math.round(100 * Math.max(0, REAVER_HP - G.missionProgress) / REAVER_HP) + '%',
+    progress: () => 'The Reaver waits south-west of Kepler-4b.\nIts hull is at ' + Math.round(100 * Math.max(0, REAVER_HP - G.missionProgress) / REAVER_HP) + '%.\nDock whenever you like; it will still be there.',
+    failOnDeath: ['accepted'], deathMsg: 'Ship destroyed. The Reaver got away. Mission failed.',
+    space: { setup: bountySetup, update: bountyUpdate, target: bountyTarget }
   }
 ];
 
 function missionDef() { return MISSIONS.find(m => m.id === G.missionId) || null; }
+function missionsOffered() { return MISSIONS.filter(m => !m.unlock || m.unlock()); } // what the board shows today
 function missionActive(id) { return G.mission === 'accepted' && G.missionId === id; }
 // the board calls this when Troy reads a call; pressing E in station.js then sets G.mission = 'accepted'
 function pickMission(id) { G.missionId = id; G.missionProgress = 0; }
@@ -79,11 +91,15 @@ function missionTarget(s) {
   if (missionActive('rescue')) return { x: s.planet.x, y: s.planet.y, name: 'Kepler-4b' };
   return { x: s.station.x, y: s.station.y, name: 'Halcyon Station' };
 }
-// a wanted pirate went down
-function missionKill(s) {
-  if (!missionActive('patrol')) return;
+// a pirate went down: a wanted one counts for the patrol, the Reaver ends the bounty
+function missionKill(s, e) {
+  if (e && e.boss) {
+    if (missionActive('bounty')) { s.cameras.main.shake(600, 0.012); completeMission(s, 'The Reaver is wreckage. Bounty paid.'); }
+    return;
+  }
+  if (!e || !e.wanted || !missionActive('patrol')) return;
   const m = missionDef(); G.missionProgress++;
-  if (G.missionProgress >= m.count) completeMission(s, 'Patrol complete. All wanted pirates destroyed.');
+  if (G.missionProgress >= m.count) { G.patrolsDone++; completeMission(s, 'Patrol complete. All wanted pirates destroyed.'); }
   else toast(s, 'Wanted pirate down  ' + G.missionProgress + ' of ' + m.count, '#ffb454');
 }
 function radarDot(s, x, y, color, r) { hudBlip(s, x, y, color, r); } // the HUD radar (src/hud.js) draws it this frame
@@ -171,4 +187,71 @@ function patrolTarget(s) {
     if (dd < bd) { bd = dd; best = d; }
   });
   return best ? { x: best.x, y: best.y, name: 'Wanted pirate' } : null;
+}
+
+// ---- Bounty: the Reaver, a warship with two escorts on the dark side of Kepler-4b ----
+// It is a pirate in s.enemies like the others (your guns, salvage and the radar all work on it), with its own AI.
+const REAVER = {
+  key: 'reaver', tex: 'reaver', hp: REAVER_HP, credits: 150, ram: 25, radar: 0xff2a4a, body: [30, 6, 6],
+  engage: 1400, speed: 220, max: 190, turn: 0.02, hold: 380, range: 820, aim: 0.5, shot: [1200, 1800], bullet: 400, dmg: 10, spread: 3,
+  boss: true, ai: (s, d, ship, time) => reaverAI(s, d, ship, time)
+};
+function bountySetup(s) {
+  const bx = s.planet.x - 1100, by = s.planet.y + 650;
+  const d = spawnPirate(s, bx, by, REAVER);
+  d.boss = true; d.hp = Math.max(1, REAVER_HP - G.missionProgress); d.phase = 1; d.chargeAt = s.time.now + 6000; d.tele = 0; d.chargeEnd = 0;
+  s.mx.boss = d;
+  spawnPirate(s, bx + 180, by - 140, 'raider'); spawnPirate(s, bx - 160, by + 160, 'gunship'); // the two escorts
+  s.mx.mark = s.add.graphics().setDepth(3);
+  s.time.delayedCall(3600, () => { if (!s.leaving && d.active) toast(s, 'The Reaver is south-west of Kepler-4b. Watch for the flash before it charges.', '#ffd37a'); });
+}
+function reaverAI(s, d, ship, time) {
+  const def = d.def, dist = Phaser.Math.Distance.Between(d.x, d.y, ship.x, ship.y);
+  // phases: below two thirds and one third it speeds up and calls two raiders
+  const phase = d.hp > REAVER_HP * 2 / 3 ? 1 : d.hp > REAVER_HP / 3 ? 2 : 3;
+  if (phase > d.phase) {
+    d.phase = phase; s.cameras.main.shake(300, 0.006);
+    toast(s, phase === 2 ? 'The Reaver calls in its wing.' : 'The Reaver is burning. It fights harder.', '#ff4d6d');
+    for (let i = 0; i < 2; i++) spawnPirate(s, d.x + Phaser.Math.Between(-200, 200), d.y + Phaser.Math.Between(-200, 200), 'raider');
+  }
+  const mult = [1, 1, 1.25, 1.5][phase];
+  if (dist >= def.engage) { d.body.setAcceleration(0, 0); d.body.setMaxSpeed(def.max); d.rotation += 0.002; return; }
+  const target = Phaser.Math.Angle.Between(d.x, d.y, ship.x, ship.y);
+  // the ram: a white flash for 800 ms, then a 600 ms charge straight at where you are
+  if (time > d.chargeEnd && d.charging) { d.charging = false; d.body.setMaxSpeed(def.max * mult); d.chargeAt = time + [0, 8000, 6500, 5000][phase]; }
+  if (!d.charging && !d.tele && time > d.chargeAt) d.tele = time + 800;
+  if (d.tele && time < d.tele) { // telegraph
+    d.setTint(Math.floor(time / 90) % 2 ? 0xffffff : 0xff2a4a); d.body.setAcceleration(0, 0); d.body.setVelocity(d.body.velocity.x * 0.9, d.body.velocity.y * 0.9);
+    d.rotation = Phaser.Math.Angle.RotateTo(d.rotation, target, 0.12);
+    return;
+  }
+  if (d.tele && time >= d.tele) { // charge
+    d.tele = 0; d.charging = true; d.chargeEnd = time + 600; d.clearTint();
+    d.body.setMaxSpeed(900); d.body.setAcceleration(0, 0); s.physics.velocityFromRotation(d.rotation, 850, d.body.velocity);
+    beep(90, 0.5, 'sawtooth', 0.06, -40);
+  }
+  if (d.charging) return;
+  d.rotation = Phaser.Math.Angle.RotateTo(d.rotation, target, def.turn * mult);
+  if (dist > def.hold) s.physics.velocityFromRotation(d.rotation, def.speed * mult, d.body.acceleration);
+  else d.body.setAcceleration(0, 0);
+  if (dist < def.range && time > d.nextShot && Math.abs(Phaser.Math.Angle.Wrap(target - d.rotation)) < def.aim) {
+    d.nextShot = time + Phaser.Math.Between(def.shot[0], def.shot[1]) / mult;
+    const n = phase === 3 ? 5 : 3;
+    for (let i = 0; i < n; i++) {
+      const b = s.shoot(s.eb, d.x, d.y, d.rotation + (i - (n - 1) / 2) * 0.17, def.bullet, time);
+      if (b) b.dmg = def.dmg;
+    }
+  }
+}
+function bountyUpdate(s) {
+  const d = s.mx.boss; if (!d || !d.active) return;
+  G.missionProgress = REAVER_HP - Math.max(0, d.hp); // damage dealt so far; survives docking and reloads
+  hudMeter(s, 'REAVER', d.hp / REAVER_HP, RED);
+  radarDot(s, d.x, d.y, 0xff2a4a, 4);
+  const g = s.mx.mark; g.clear();
+  g.lineStyle(2, d.tele ? 0xffffff : RED, d.tele ? 0.9 : 0.5); g.strokeCircle(d.x, d.y, 48 + (d.tele ? 6 * Math.sin(s.time.now / 60) : 0));
+}
+function bountyTarget(s) {
+  const d = s.mx.boss;
+  return d && d.active ? { x: d.x, y: d.y, name: 'The Reaver' } : null;
 }
