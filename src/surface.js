@@ -30,7 +30,7 @@ class Surface extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
 
     this.col = null;
-    if (G.mission === 'accepted') {
+    if (missionActive('rescue')) {
       const s = this.physics.add.sprite(this.pod.x - 50, this.pod.y + 20, 'colonist').setDepth(4);
       s.body.setCircle(8, 3, 3);
       this.physics.add.collider(s, this.rocks);
@@ -69,7 +69,7 @@ class Surface extends Phaser.Scene {
     this.add.text(24, H - 44, 'WASD walk   aim with mouse   click fire   E interact', {
       fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92'
     }).setScrollFactor(0).setDepth(100);
-    toast(this, G.mission === 'accepted' ? 'Landed. Find the colonist. The pod is to the east.' : 'Landed on Kepler-4b. Nobody needs you here yet.', '#9fe9ff');
+    toast(this, missionActive('rescue') ? 'Landed. Find the colonist. The pod is to the east.' : 'Landed on Kepler-4b. Nobody needs you here yet.', '#9fe9ff');
   }
 
   update(time, dt) {

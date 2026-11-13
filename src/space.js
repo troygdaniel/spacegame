@@ -57,8 +57,9 @@ class Space extends Phaser.Scene {
       if (!b.active || !e.active) return;
       b.disableBody(true, true); e.hp -= 15; this.boom.explode(4, b.x, b.y); beep(300, 0.06, 'square', 0.02, -150);
       if (e.hp <= 0) {
+        const wanted = e.wanted;
         this.boom.explode(28, e.x, e.y); e.destroy(); G.credits += 25; beep(120, 0.3, 'sawtooth', 0.05, -80);
-        toast(this, 'Drone down  +25 cr', '#ffb454');
+        if (wanted) missionKill(this); else toast(this, 'Drone down  +25 cr', '#ffb454');
       }
     });
     this.physics.add.overlap(this.ship, this.eb, (s, b) => {
@@ -82,6 +83,7 @@ class Space extends Phaser.Scene {
       fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92'
     }).setScrollFactor(0).setDepth(100);
     if (this.from === 'station') toast(this, 'Launch clear. Kepler-4b is to the north-east.', '#9fe9ff');
+    missionSpaceSetup(this); // src/missions.js: escort freighter, wanted pirates
   }
 
   spawnDrone(x, y) {
@@ -111,8 +113,7 @@ class Space extends Phaser.Scene {
     this.boom.explode(70, this.ship.x, this.ship.y);
     this.ship.setVisible(false); this.ship.body.enable = false;
     G.credits = Math.floor(G.credits * 0.8);
-    if (G.mission === 'rescued') { G.mission = 'failed'; toast(this, 'Ship destroyed. The colonist was lost. Mission failed.', '#ff4d6d'); }
-    else toast(this, 'Ship destroyed. Insurance paid out (-20% credits).', '#ff4d6d');
+    if (!missionDeath(this)) toast(this, 'Ship destroyed. Insurance paid out (-20% credits).', '#ff4d6d');
     this.time.delayedCall(2200, () => go(this, 'Station', { arrive: false }));
   }
 
@@ -143,7 +144,8 @@ class Space extends Phaser.Scene {
     this.eb.getChildren().forEach(b => { if (b.active && time - b.born > 1800) b.disableBody(true, true); });
 
     this.enemies.getChildren().forEach(d => {
-      const ddx = ship.x - d.x, ddy = ship.y - d.y, dist = Math.hypot(ddx, ddy);
+      const tgt = d.prey && d.prey.active ? d.prey : ship; // escort pirates hunt the freighter
+      const ddx = tgt.x - d.x, ddy = tgt.y - d.y, dist = Math.hypot(ddx, ddy);
       if (dist < 900) {
         const target = Math.atan2(ddy, ddx);
         d.rotation = Phaser.Math.Angle.RotateTo(d.rotation, target, 0.035);
@@ -162,10 +164,10 @@ class Space extends Phaser.Scene {
     const spd = ship.body.speed;
     let msg = '';
     if (dS < 320) {
-      if (spd < 150) { msg = 'L  Dock at Halcyon Station'; if (JD(k.L)) { beep(300, 0.4, 'triangle', 0.05, 200); go(this, 'Station', { arrive: true }); } }
+      if (spd < 150) { msg = 'L  Dock at Halcyon Station'; if (JD(k.L)) { missionLeaveSpace(this); beep(300, 0.4, 'triangle', 0.05, 200); go(this, 'Station', { arrive: true }); } }
       else msg = 'Too fast to dock. Hold S to brake';
     } else if (dP < this.planetR + 150) {
-      if (spd < 170) { msg = 'L  Land on Kepler-4b'; if (JD(k.L)) { beep(300, 0.5, 'triangle', 0.05, -150); go(this, 'Surface'); } }
+      if (spd < 170) { msg = 'L  Land on Kepler-4b'; if (JD(k.L)) { missionLeaveSpace(this); beep(300, 0.5, 'triangle', 0.05, -150); go(this, 'Surface'); } }
       else msg = 'Too fast to land. Hold S to brake';
     }
     this.prompt.setText(msg);
@@ -178,10 +180,7 @@ class Space extends Phaser.Scene {
     this.hudSpd.setText('HULL ' + Math.round(G.hull) + '%   SPD ' + Math.round(spd));
     this.hudSpd.y = 92;
     // objective arrow
-    let tgt = null, name = '';
-    if (G.mission === 'accepted') { tgt = this.planet; name = 'Kepler-4b'; }
-    else if (G.mission === 'rescued') { tgt = this.station; name = 'Halcyon Station'; }
-    else { tgt = this.station; name = 'Halcyon Station'; }
+    const tgt = missionTarget(this), name = tgt.name;
     const a = Phaser.Math.Angle.Between(ship.x, ship.y, tgt.x, tgt.y);
     const sx = ship.x - this.cameras.main.scrollX, sy = ship.y - this.cameras.main.scrollY;
     tri(g, sx + Math.cos(a) * 80, sy + Math.sin(a) * 80, a, 11, AMBER);
@@ -192,7 +191,8 @@ class Space extends Phaser.Scene {
     g.fillStyle(CYAN, 1); g.fillCircle(rx + this.station.x * sc, ry + this.station.y * sc, 4);
     g.fillStyle(AMBER, 1); g.fillCircle(rx + this.planet.x * sc, ry + this.planet.y * sc, 5);
     g.fillStyle(RED, 1);
-    this.enemies.getChildren().forEach(d => g.fillRect(rx + d.x * sc - 1, ry + d.y * sc - 1, 3, 3));
+    this.enemies.getChildren().forEach(d => { if (!d.wanted) g.fillRect(rx + d.x * sc - 1, ry + d.y * sc - 1, 3, 3); });
     g.fillStyle(0xffffff, 1); g.fillCircle(rx + ship.x * sc, ry + ship.y * sc, 3);
+    missionSpaceUpdate(this, time, dt); // after the HUD: it draws the freighter bar and radar marks
   }
 }

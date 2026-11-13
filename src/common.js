@@ -47,12 +47,9 @@ function hudText(s, x, y, color = '#9fe9ff', size = 16) {
 }
 
 function missionLine() {
-  switch (G.mission) {
-    case 'accepted': return 'MISSION  Rescue the colonist on Kepler-4b';
-    case 'rescued': return 'MISSION  Colonist aboard: dock at the station';
-    case 'failed': return 'MISSION  Failed. Ask the station for another call';
-    default: return 'MISSION  None. Take a call at the MISSIONS terminal';
-  }
+  const m = missionDef(); // src/missions.js
+  if (!m || G.mission === 'none') return 'MISSION  None. Take a call at the MISSIONS terminal';
+  return 'MISSION  ' + m.line(G.mission);
 }
 
 function bar(g, x, y, w, h, frac, color) {
