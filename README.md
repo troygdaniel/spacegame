@@ -21,3 +21,6 @@ New files get their own script tag in index.html. Keep edits inside the files yo
 - Small commits on your branch. Do not push. ORCH fast-forward merges after you send the card to review.
 - Smoke test before review: `node --check src/*.js`, then load in headless Chrome (see tests/ once TaskMaster-1 lands it) and look at a screenshot.
 - Keep it one evening: simple shapes, no image assets, no new libraries.
+
+## New work found along the way
+Agents may add cards for new work they find: `agentboard add --status todo --id space-game-<name> "title" -d "what and which files"`, then tell ORCH in one line (agentboard chat send --name <you> --to ORCH). Do not claim it yourself; ORCH assigns it so the load stays even. Keep each card small enough for one sitting and name the files it touches.
