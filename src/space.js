@@ -72,7 +72,7 @@ class Space extends Phaser.Scene {
     this.add.text(24, H - 44, 'W thrust  A/D turn  S brake  Shift boost  Q/E dash  Space or click fire  L land/dock', {
       fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92'
     }).setScrollFactor(0).setDepth(100);
-    if (this.from === 'station') toast(this, 'Launch clear. Kepler-4b is to the north-east.', '#9fe9ff');
+    if (this.from === 'station') { bountyReset(); toast(this, 'Launch clear. Kepler-4b is to the north-east.', '#9fe9ff'); } // enemies.js: a new flight's bounty count starts at 0
     missionSpaceSetup(this); // src/missions.js: escort freighter, wanted pirates
     trafficSetup(this); // src/traffic.js: civilian ships and the station police
     asteroidsSetup(this); // src/asteroids.js: the Kepler belt
@@ -81,10 +81,10 @@ class Space extends Phaser.Scene {
   }
 
   killDrone(e) { // one place for bullets and ramming to finish an enemy
-    const wanted = e.wanted, cr = e.def ? e.def.credits : 25;
+    const wanted = e.wanted, x = e.x, y = e.y, def = e.def;
     dropSalvage(this, e); // src/enemies.js
-    this.boom.explode(28, e.x, e.y); e.destroy(); G.credits += cr; G.stats.drones++; sfx('boom');
-    feelNumber(this, e.x, e.y - 48, '+' + cr + ' cr', '#ffb454', 18);
+    this.boom.explode(28, x, y); e.destroy(); G.stats.drones++; sfx('boom');
+    bountyPay(this, x, y, def); // src/enemies.js: the credits, the gold BOUNTY +N, coins, HUD glow, chime
     if (wanted || e.boss) missionKill(this, e);
   }
 

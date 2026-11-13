@@ -249,6 +249,8 @@ function hudStrip(h, now) {
   if (h.crShow == null) h.crShow = G.credits;
   h.crShow += (G.credits - h.crShow) * 0.14; if (Math.abs(G.credits - h.crShow) < 1) h.crShow = G.credits;
   hudPanel(g, 440, 10, 400, 30, 8, 0.78);
+  const pulse = h.pulse > now ? (h.pulse - now) / 650 : 0; // a bounty just landed (enemies.js sets h.pulse): the strip lights amber and fades
+  if (pulse > 0) { g.fillStyle(AMBER, 0.16 * pulse); g.fillRect(442, 12, 396 - 8, 26); g.lineStyle(2, 0xffd37a, 0.9 * pulse); g.strokeRect(440, 10, 400, 30); }
   hudSpine(g, 440, 10, 30, AMBER, 0.8);
   hudPut(h, 'crl', 460, 25, 'CR', { size: HT.label, color: HUD_DIM, spacing: 2 });
   const cv = hudPut(h, 'crv', 484, 25, hudFmt(h.crShow), { size: 17, bold: true, color: now < h.flash ? '#ffffff' : '#ffb454', glow: 7 });
