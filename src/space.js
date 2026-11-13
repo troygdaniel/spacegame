@@ -56,16 +56,14 @@ class Space extends Phaser.Scene {
     this.physics.add.overlap(this.pb, this.enemies, (b, e) => {
       if (!b.active || !e.active) return;
       b.disableBody(true, true); e.hp -= 15; this.boom.explode(4, b.x, b.y); beep(300, 0.06, 'square', 0.02, -150);
-      if (e.hp <= 0) {
-        this.boom.explode(28, e.x, e.y); e.destroy(); G.credits += 25; G.stats.drones++; beep(120, 0.3, 'sawtooth', 0.05, -80);
-        toast(this, 'Drone down  +25 cr', '#ffb454');
-      }
+      if (e.hp <= 0) this.killDrone(e);
     });
     this.physics.add.overlap(this.ship, this.eb, (s, b) => {
       if (!b.active) return; b.disableBody(true, true); this.hurt(8);
     });
     this.physics.add.overlap(this.ship, this.enemies, (s, e) => {
       if (this.time.now < this.rammedAt) return; this.rammedAt = this.time.now + 600; e.hp -= 10; this.hurt(12);
+      if (e.hp <= 0) this.killDrone(e); // ramming used to take hp off a drone but never finish it
     });
 
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,L,SPACE,SHIFT,UP,DOWN,LEFT,RIGHT');
@@ -82,6 +80,11 @@ class Space extends Phaser.Scene {
       fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92'
     }).setScrollFactor(0).setDepth(100);
     if (this.from === 'station') toast(this, 'Launch clear. Kepler-4b is to the north-east.', '#9fe9ff');
+  }
+
+  killDrone(e) {
+    this.boom.explode(28, e.x, e.y); e.destroy(); G.credits += 25; G.stats.drones++; beep(120, 0.3, 'sawtooth', 0.05, -80);
+    toast(this, 'Drone down  +25 cr', '#ffb454');
   }
 
   spawnDrone(x, y) {
