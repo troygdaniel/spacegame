@@ -2,7 +2,7 @@
 // Edit the lines and prices here. Keep each NPC line to two sentences.
 const NPCS = [
   {
-    name: 'JUNO', role: 'bartender', color: AMBER, css: '#ffb454', x: 255, y: 652,
+    name: 'JUNO', role: 'bartender', color: AMBER, css: '#ffb454', x: 255, y: 652, face: -Math.PI / 2,
     lines: [
       'Welcome to the Drift. The drinks are synthetic, but the gossip is genuine.',
       'Halcyon turns once every three minutes. If your drink slides toward the hangar, you are not drunk, just late.',
@@ -13,7 +13,7 @@ const NPCS = [
       : G.credits >= 800 ? 'You are carrying a lot of credits. The hangar shop would love to meet them.' : null
   },
   {
-    name: 'TAMSIN', role: 'ex-freighter pilot', color: RED, css: '#ff4d6d', x: 668, y: 520,
+    name: 'TAMSIN', role: 'ex-freighter pilot', color: RED, css: '#ff4d6d', x: 668, y: 520, face: Math.PI,
     lines: [
       'Those drones around Kepler-4b used to be survey rigs. Somebody rewired them to shoot first and never ask.',
       'Word is the drones answer to a pirate captain out past the rim. Nobody I know has seen the captain and lived to tell it.',
@@ -23,7 +23,7 @@ const NPCS = [
       : G.upgrades.rapid ? 'That is a rapid-fire rig on your ship. Faster rounds mean the drones drop before they finish turning.' : null
   },
   {
-    name: 'DEX', role: 'survey tech', color: GREEN, css: '#6dff9c', x: 140, y: 490,
+    name: 'DEX', role: 'survey tech', color: GREEN, css: '#6dff9c', x: 140, y: 490, face: 0,
     lines: [
       'I charted Kepler-4b last year. Red dust, thin air, and crawlers that hunt by heat.',
       'That survey pod is still pinging its beacon. Whoever takes the call has to be quick and quiet.',
@@ -54,25 +54,18 @@ function ownedLine() {
 
 // ---------- scene pieces (called from Station.create) ----------
 function buildBar(s) {
-  s.talk = null; s.npcSprites = [];
+  interiorTextures(s); s.talk = null; s.npcSprites = [];
   const wall = (x, y, w, h, fill, stroke) => { const r = rectWall(s, x, y, w, h, fill, stroke); s.walls.push(r); return r; };
 
-  // the lower deck becomes THE DRIFT: warm floor, doorway posts, signs
-  s.add.rectangle(440, 570, 840, 260, 0x2a1608, 0.4);
-  [404, 516].forEach(x => s.add.rectangle(x, 430, 8, 30, AMBER, 0.95).setDepth(1));
-  label(s, 460, 400, 'THE DRIFT  BAR', '#ffb454', 16).setDepth(1);
-  label(s, 460, 468, '~ THE DRIFT ~', '#ffb454', 14).setAlpha(0.8);
-
-  // counter, bottles, stools, two tables
+  // the bar's look (floor, counter, stools, signs) is drawn in src/interior.js; this keeps only the solid boxes
+  // counter and two tables (solid)
   wall(90, 596, 330, 26, 0x3a2208, AMBER);
-  for (let i = 0; i < 6; i++) s.add.rectangle(120 + i * 52, 604, 8, 14, [AMBER, CYAN, GREEN][i % 3]).setDepth(1).setAlpha(0.9);
-  for (let i = 0; i < 5; i++) s.add.circle(130 + i * 70, 570, 9, 0x2a1b0c).setStrokeStyle(2, AMBER, 0.8);
   wall(598, 498, 44, 44, 0x3a2208, AMBER);
   wall(178, 478, 44, 44, 0x3a2208, AMBER);
 
   // NPCs: solid, face you when you talk to them
   NPCS.forEach((n, i) => {
-    const sp = s.add.image(n.x, n.y, 'walker').setTint(n.color).setDepth(4);
+    const sp = s.add.image(n.x, n.y, 'in-' + n.name.toLowerCase() + '0').setRotation(n.face || 0).setDepth(4);
     s.physics.add.existing(sp, true); s.walls.push(sp);
     s.tweens.add({ targets: sp, scale: 1.08, yoyo: true, repeat: -1, duration: 1100 + i * 250 });
     label(s, n.x, n.y - 24, n.name, n.css, 12).setDepth(4);
@@ -95,7 +88,7 @@ function buildShop(s) {
 
   // terminal in the hangar
   const r = rectWall(s, 950, 148, 100, 44, 0x0d2a3f, AMBER); s.walls.push(r);
-  label(s, 1000, 128, 'UPGRADE SHOP', '#ffb454');
+  label(s, 1000, 186, 'UPGRADE SHOP', '#ffb454', 11);
   s.spots.push({ x: 1000, y: 170, text: 'UPGRADE SHOP', key: 'shop', prompt: 'Open the upgrade shop', color: '#ffb454', dy: 74 });
 
   s.shopUI = panel(s, { w: 900, h: 420, title: 'UPGRADE SHOP  -  HANGAR', color: AMBER, dim: true, depth: 160 });
