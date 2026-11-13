@@ -11,6 +11,7 @@ const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 const SCENE_TIPS = {
   Station: 'Walk up to a terminal, the bar or the hangar shop and press E. Board your ship in the hangar to launch.',
   Space: 'The amber arrow points at your objective and the radar is top right. Slow down near the station or the planet, then press L.',
+  Ship: 'Look your ship over, then press Enter to launch. Esc goes back to the station to take a mission or repair first.',
   Surface: 'Aim with the mouse and click to fire. Walk back to the landing pad and press E to lift off.'
 };
 
@@ -274,7 +275,7 @@ function toggleOverlay(game, mode) {
     if (ov.mode === mode) ov.close(); else ov.setMode(mode);
     return;
   }
-  const s = game.scene.getScenes(true).find(sc => GAMEPLAY.includes(sc.scene.key));
+  const s = game.scene.getScenes(true).find(sc => SCREENS.includes(sc.scene.key));
   if (!s || s.leaving || s.dead || s.panel || s.talk || s.shopOpen) return; // fading out, wrecked, or a panel owns the keys
   if (mode === 'help' && !G.guideDone && s._gh && s._gh.visible) return;   // first-run tips: H still hides them
   s.scene.pause();
