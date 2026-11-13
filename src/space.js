@@ -127,7 +127,7 @@ class Space extends Phaser.Scene {
 
     if (!locked) ship.rotation += ((right ? 1 : 0) - (left ? 1 : 0)) * 0.0036 * dt;
     ship.body.setDrag(brake && !locked ? 0.12 : 0.55);
-    ship.body.setMaxSpeed(boost ? (G.upgrades.booster ? 1000 : 800) : 480);
+    ship.body.setMaxSpeed(boost ? boostMax() : 480);
     const thrust = locked ? 600 : (up ? (boost ? 1500 : 720) : 0);
     this.physics.velocityFromRotation(ship.rotation, thrust, ship.body.acceleration);
     if (thrust) {
@@ -135,7 +135,7 @@ class Space extends Phaser.Scene {
       this.trail.emitParticleAt(tx, ty, boost ? 3 : 2);
     }
     if (!locked && (k.SPACE.isDown || this.input.activePointer.isDown) && time > this.nextFire) {
-      this.nextFire = time + (G.upgrades.rapid ? 100 : 160);
+      this.nextFire = time + fireDelay();
       this.shoot(this.pb, ship.x + Math.cos(ship.rotation) * 24, ship.y + Math.sin(ship.rotation) * 24, ship.rotation, 950, time);
       beep(880, 0.05, 'square', 0.015, -400);
     }

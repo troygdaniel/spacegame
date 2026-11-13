@@ -1,7 +1,7 @@
 // LONG HAUL (working title) - station, rescue mission, planet landing. MVP v0.1.
 const W = 1280, H = 720;
 const CYAN = 0x38e1ff, AMBER = 0xffb454, RED = 0xff4d6d, GREEN = 0x6dff9c;
-const G = { credits: 0, hull: 100, maxHull: 100, mission: 'none', upgrades: { armor: false, rapid: false, booster: false }, volume: 1, muted: false }; // mission: none | accepted | rescued | failed; volume 0..1
+const G = { credits: 0, hull: 100, maxHull: 100, mission: 'none', upgrades: { armor: 0, rapid: 0, booster: 0 }, volume: 1, muted: false }; // mission: none | accepted | rescued | failed; volume 0..1
 const REWARD = 500;
 
 // ---------- helpers ----------
