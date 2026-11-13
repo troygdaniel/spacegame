@@ -11,7 +11,10 @@
 // on the scenery; T or a click on it pins it open or shut. World labels (label() in common.js registers them in s._wl) fade
 // while a panel, the radar or a toast is on top of them.
 
-const HUD_BG = 0x07101c, HUD_OFF = 0x16293d, HUD_DIM = '#5b7a92', HUD_RANGE = { Space: 2400, Surface: 900 }; // radar range, world units
+// look: dark glass panels with a thin glowing edge, one type scale, one spacing step (8 px). Graphics cannot blur, so a "glow"
+// is the same path drawn wide and faint, then thin and bright (hudGlowPath).
+const HUD_BG = 0x07101c, HUD_OFF = 0x16293d, HUD_LINE = 0x3a566e, HUD_DIM = '#5b7a92', HUD_RANGE = { Space: 2400, Surface: 900 }; // radar range, world units
+const HT = { tag: 10, label: 11, body: 13, head: 15, num: 22 }; // type scale in px: tags and units, labels, lines of text, panel titles, gauge numbers
 const HUD_GEAR = { armor: 'ARM', rapid: 'RPD', booster: 'BST' };                                       // gear abbreviations on the strip
 const HUD_FRAME = { x: 20, y: 148, w: 296 };                                                               // checklist panel (Space, Surface)
 const HUDUI = { mode: 'auto', until: 0, base: null }; // checklist: auto (open until the timer runs out) | open | closed; shared by all scenes
@@ -61,21 +64,70 @@ function hudPut(h, key, x, y, str, o) {
     if (o.spacing) st.letterSpacing = o.spacing;
     if (o.wrap) st.wordWrap = { width: o.wrap };
     t = h.t[key] = h.s.add.text(0, 0, '', st).setScrollFactor(0).setDepth(101);
+    if (o.glow) t.setPadding(HUD_PAD);   // room for the glow, or the texture clips it; the origin below allows for it
     t._hc = color;
   }
   h.seen[key] = true;
   if (t._hc !== color) { t._hc = color; t.setColor(color); }
+  if (o.glow && t._hg !== color) { t._hg = color; t.setShadow(0, 0, color, o.glow, false, true); }
   if (t.text !== str) t.setText(str);
-  t.setOrigin(o.ox == null ? 0 : o.ox, o.oy == null ? 0.5 : o.oy).setPosition(Math.round(x), Math.round(y)).setAlpha(o.alpha == null ? 1 : o.alpha).setVisible(true);
+  const ox = o.ox == null ? 0 : o.ox, oy = o.oy == null ? 0.5 : o.oy;
+  if (o.glow) { // origin measured on the words, not on the padded texture
+    const p = HUD_PAD, tw = Math.max(1, t.width - 2 * p), th = Math.max(1, t.height - 2 * p);
+    t.setOrigin((p + ox * tw) / t.width, (p + oy * th) / t.height);
+  } else t.setOrigin(ox, oy);
+  t.setPosition(Math.round(x), Math.round(y)).setAlpha(o.alpha == null ? 1 : o.alpha).setVisible(true);
   return t;
 }
 
-// a panel with two cut corners (top right, bottom left)
+const HUD_PAD = 8; // padding round glowing text
+
+// a path stroked three times, wide and faint then thin and bright: the glow Graphics cannot blur. pts: [[x, y], ...]
+function hudGlowPath(g, pts, color, a, closed, w) {
+  w = w || 1.5;
+  [[w * 4.5, 0.07], [w * 2.4, 0.17], [w, 1]].forEach(([lw, k]) => {
+    g.lineStyle(lw, color, a * k); g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+    if (closed) g.closePath();
+    g.strokePath();
+  });
+}
+
+// a panel of dark glass with two cut corners (top right, bottom left): a glowing edge, an inner line, a sheen along the top
+// that fades out, bright brackets on the two square corners, and a dot on each cut. edge is the accent colour.
 function hudPanel(g, x, y, w, ht, cut, alpha, edge) {
+  edge = edge || CYAN;
   const p = [[x, y], [x + w - cut, y], [x + w, y + cut], [x + w, y + ht], [x + cut, y + ht], [x, y + ht - cut]];
-  g.fillStyle(HUD_BG, alpha); g.lineStyle(1, edge || CYAN, 0.55);
-  g.beginPath(); g.moveTo(p[0][0], p[0][1]); for (let i = 1; i < p.length; i++) g.lineTo(p[i][0], p[i][1]);
-  g.closePath(); g.fillPath(); g.strokePath();
+  g.fillStyle(HUD_BG, alpha); g.beginPath(); g.moveTo(p[0][0], p[0][1]); for (let i = 1; i < p.length; i++) g.lineTo(p[i][0], p[i][1]);
+  g.closePath(); g.fillPath();
+  g.fillGradientStyle(edge, edge, edge, edge, 0.16, 0.16, 0, 0); // the sheen stops short of the top right cut and sits above the bottom left one
+  g.fillRect(x + 1, y + 1, w - cut - 2, Math.min(ht * 0.5, 30));
+  hudGlowPath(g, p, edge, 0.8, true, 1);
+  const i = 4, q = [[x + i, y + i], [x + w - cut - 1, y + i], [x + w - i, y + cut + 1], [x + w - i, y + ht - i], [x + cut + 1, y + ht - i], [x + i, y + ht - cut - 1]];
+  g.lineStyle(1, edge, 0.14); g.beginPath(); g.moveTo(q[0][0], q[0][1]); for (let k = 1; k < q.length; k++) g.lineTo(q[k][0], q[k][1]); g.closePath(); g.strokePath();
+  const b = Math.min(14, ht / 2 - 2);
+  g.lineStyle(2, edge, 1);
+  g.beginPath(); g.moveTo(x, y + b); g.lineTo(x, y); g.lineTo(x + b, y); g.strokePath();
+  g.beginPath(); g.moveTo(x + w, y + ht - b); g.lineTo(x + w, y + ht); g.lineTo(x + w - b, y + ht); g.strokePath();
+  g.fillStyle(edge, 1); g.fillRect(x + w - cut - 1, y - 1, 3, 3); g.fillRect(x - 1, y + ht - cut - 1, 3, 3);
+}
+
+// a thin accent bar down the left of a panel, the colour of the state it shows
+function hudSpine(g, x, y, ht, color, a) { g.fillStyle(color, a == null ? 0.9 : a); g.fillRect(x + 7, y + 10, 2, ht - 20); }
+
+// a segmented bar: n cells, lit up to frac, each lit cell with a faint halo; the leading cell is the bright one and pulses
+// when pulse is set. Used by the cargo hold, the freighter and boss meters, the mission progress.
+function hudBar(g, x, y, w, ht, frac, color, n, pulse) {
+  frac = Phaser.Math.Clamp(frac, 0, 1);
+  const gap = 2, cw = (w - gap * (n - 1)) / n, lit = frac <= 0 ? 0 : Math.max(1, Math.round(frac * n)); // a sliver still lights one cell
+  for (let i = 0; i < n; i++) {
+    const cx = x + i * (cw + gap), on = i < lit, lead = on && i === lit - 1;
+    if (on) {
+      g.fillStyle(color, 0.16); g.fillRect(cx - 1.5, y - 1.5, cw + 3, ht + 3);
+      g.fillStyle(color, lead && pulse != null ? pulse : 1); g.fillRect(cx, y, cw, ht);
+      g.fillStyle(0xffffff, 0.22); g.fillRect(cx, y, cw, Math.max(1, Math.floor(ht / 3)));
+    } else { g.fillStyle(HUD_OFF, 1); g.fillRect(cx, y, cw, ht); }
+  }
 }
 
 function hudTri(g, x, y, a, size, color, alpha) {
@@ -88,13 +140,16 @@ function hudDiamond(g, x, y, r, color) {
 }
 
 // ---- the frame: cut corners in the four screen corners ----
-function hudFrame(g) {
-  g.lineStyle(2, CYAN, 0.4);
-  const c = (x, y, sx, sy) => {
-    g.beginPath(); g.moveTo(x, y + sy * 60); g.lineTo(x, y + sy * 18); g.lineTo(x + sx * 18, y); g.lineTo(x + sx * 60, y); g.strokePath();
-  };
+function hudFrame(g, now) {
+  const c = (x, y, sx, sy) => hudGlowPath(g, [[x, y + sy * 64], [x, y + sy * 20], [x + sx * 20, y], [x + sx * 64, y]], CYAN, 0.5, false, 1.5);
   c(8, 8, 1, 1); c(W - 8, 8, -1, 1); c(8, H - 8, 1, -1); c(W - 8, H - 8, -1, -1);
-  g.fillStyle(AMBER, 0.7);
+  // a second, shorter line inside each corner, and rails with ticks down the sides, like the canopy struts
+  const d = (x, y, sx, sy) => { g.lineStyle(1, CYAN, 0.22); g.beginPath(); g.moveTo(x, y + sy * 34); g.lineTo(x, y + sy * 24); g.lineTo(x + sx * 24, y); g.lineTo(x + sx * 34, y); g.strokePath(); };
+  d(15, 15, 1, 1); d(W - 15, 15, -1, 1); d(15, H - 15, 1, -1); d(W - 15, H - 15, -1, -1);
+  g.lineStyle(1, CYAN, 0.12);
+  g.lineBetween(8, 150, 8, H - 150); g.lineBetween(W - 8, 270, W - 8, H - 150);
+  for (let y = 160; y < H - 150; y += 24) { g.lineBetween(8, y, y % 72 === 40 ? 16 : 12, y); if (y > 270) g.lineBetween(W - 8, y, y % 72 === 40 ? W - 16 : W - 12, y); }
+  g.fillStyle(AMBER, 0.75);
   g.fillRect(6, 62, 4, 10); g.fillRect(W - 10, 62, 4, 10); g.fillRect(6, H - 72, 4, 10); g.fillRect(W - 10, H - 72, 4, 10);
 }
 
@@ -384,7 +439,7 @@ function hudTick(s) {
   if (!h || !h.g.active) h = s._hud = { s, g: s.add.graphics().setScrollFactor(0).setDepth(100), t: {}, seen: {}, zones: [], cr: G.credits, flash: 0, open: true, box: new Phaser.Geom.Rectangle() };
   const g = h.g, key = s.scene.key, now = s.time.now, space = key === 'Space', surf = key === 'Surface';
   g.clear(); h.seen = {}; h.zones = [];
-  hudFrame(g);
+  hudFrame(g, now);
 
   // gauges, top left: hull (health on foot), then speed in space or the colonist on foot
   const hullFrac = surf ? s.hp / 100 : G.hull / G.maxHull;
