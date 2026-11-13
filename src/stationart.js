@@ -645,7 +645,8 @@ function stationLookFx(s, art, x, y, opts) {
   s.events.on('update', fx);
   const off = () => s.events.off('update', fx);
   s.events.once('shutdown', off);
-  return { c, radius: look.radius, bay: look.bay, accent: look.accent, destroy() { off(); c.destroy(); } };
+  c.once('destroy', off); // destroying the container by hand (or the scene doing it) takes the hook away too
+  return { c, radius: look.radius, bay: look.bay, accent: look.accent, destroy() { c.destroy(); } };
 }
 
 function stationArt(scene) {
