@@ -55,6 +55,7 @@ class Station extends Phaser.Scene {
       toast(this, 'Docked.', '#9fe9ff');
     }
     if (this.arrive) sellOre(this); // asteroids.js: ore in the hold is sold on docking
+    if (this.arrive) bountyDock(this); // enemies.js: what this flight's pirate kills paid
     if (this.arrive) feelArrive(this); // feel.js: a short settle-in zoom after docking
   }
 

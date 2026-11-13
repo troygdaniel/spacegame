@@ -8,6 +8,7 @@
 #   4b. tests/outpostmap.mjs: the Tab map shows Kestrel Outpost and its legend row
 #   4c. tests/audiolevels.mjs and tests/surface.mjs: the planet wind sits under the effects; the surface controls panel, aim line
 #       and cursor (card space-game-planet-audio-hints)
+#   4d. tests/bounty.mjs: pirate bounty per type, the BOUNTY +N text, the HUD glow, the dock summary
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #      their failure paths, with the game clock stepped by hand
 # Needs Google Chrome and Node 22+. Uses throwaway Chrome profiles, never your own. Chrome runs with
@@ -37,6 +38,9 @@ if node tests/outpostmap.mjs; then :; else fail=1; fi
 echo "== 4c. planet wind level and surface controls (tests/audiolevels.mjs, tests/surface.mjs)"
 if node tests/audiolevels.mjs; then :; else fail=1; fi
 if node tests/surface.mjs; then :; else fail=1; fi
+
+echo "== 4d. pirate bounty you can see (tests/bounty.mjs)"
+if node tests/bounty.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then

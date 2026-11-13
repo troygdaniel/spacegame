@@ -179,6 +179,8 @@ const SFX = {
   thrusters(t) { burst(t, 0.9, 0.14, 'bandpass', 300, 1200, 0.9, 0.25); tone(t, 'sine', 70, 110, 0.8, 0.07); },
   dash(t) { burst(t, 0.22, 0.13, 'bandpass', 700, 2800, 0.9, 0.2); tone(t, 'sine', 260, 820, 0.18, 0.05); },
   empty(t) { tone(t, 'square', 190, 120, 0.1, 0.035); },
+  // bounty: two bright coin pings, the second higher and longer, with a thin shimmer on top (plays just after the boom)
+  bounty(t) { tone(t, 'triangle', 988, 975, 0.1, 0.06); tone(t + 0.075, 'triangle', 1319, 1300, 0.26, 0.06); tone(t + 0.075, 'sine', 2637, 2620, 0.2, 0.022); },
   chime(t) { [660, 880, 1320].forEach((f, i) => tone(t + i * 0.07, 'triangle', f, f * 0.995, 0.35, 0.05)); tone(t + 0.21, 'sine', 1760, 1750, 0.3, 0.025); }
 };
 
