@@ -64,6 +64,7 @@ class Station extends Phaser.Scene {
     } else if (this.arrive) {
       toast(this, 'Docked.', '#9fe9ff');
     }
+    if (this.arrive) feelArrive(this); // feel.js: a short settle-in zoom after docking
   }
 
   // The mission board: offer cards you pick between, then E accepts. Offers come from MISSIONS in src/missions.js.
@@ -186,7 +187,7 @@ class Station extends Phaser.Scene {
         if (G.hull >= G.maxHull) toast(this, 'Hull is already perfect.', '#9fe9ff');
         else if (G.credits < cost) toast(this, 'Repair costs ' + cost + ' cr. You have ' + G.credits + '.', '#ff4d6d');
         else { G.credits -= cost; G.hull = G.maxHull; beep(400, 0.2, 'triangle', 0.05, 300); toast(this, 'Hull repaired (-' + cost + ' cr).', '#6dff9c'); }
-      } else if (near.key === 'ship') { sfx('thrusters'); go(this, 'Space', { from: 'station' }); }
+      } else if (near.key === 'ship') { sfx('thrusters'); feelLaunch(this, () => go(this, 'Space', { from: 'station' })); }
     }
   }
 }
