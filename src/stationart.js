@@ -7,7 +7,6 @@
 // Nothing here changes how docking works: the dock check in space.js still uses the station's centre and radius.
 
 const SA_TAU = Math.PI * 2, SA_D2R = Math.PI / 180;
-const SA_OUTPOST = { x: 2000, y: 5800 }; // clear of the belt, the wrecks, the planet and the dock lane
 
 function saRng(seed) { let s = seed >>> 0; return () => (s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296; }
 
@@ -308,13 +307,16 @@ function stationFx(s) {
   for (let j = 0; j < 7; j++) { const im = s.add.image(272 + j * 58, 0, 'station-chev').setBlendMode(ADD).setScale(0.85); local.add(im); chevs.push(im); }
   const lights = saStationLights().map(L => ({ L, im: glow(L.col, L.x, L.y, L.s) }));
 
-  // Kestrel Outpost: small, quiet, no docking services; just somewhere else to look at
-  const op = s.add.container(SA_OUTPOST.x, SA_OUTPOST.y).setDepth(1);
-  op.add(s.add.image(0, 0, 'outpost'));
-  const opLights = [[-132, 0, 'r'], [132, 0, 'g'], [0, -70, 'a'], [34, 34, 'c'], [-34, -34, 'c']].map(([x, y, col], i) => {
-    const im = s.add.image(x, y, 'glow-' + col).setBlendMode(ADD).setScale(0.55); op.add(im); return { im, i };
+  // Kestrel Outpost: small, quiet, no docking services; just somewhere else to look at (scenery bodies in the system data)
+  const ops = sysBodies('scenery').filter(b => b.art === 'outpost').map(def => { // src/universe.js
+    const op = s.add.container(def.x, def.y).setDepth(1);
+    op.add(s.add.image(0, 0, def.art));
+    const lights = [[-132, 0, 'r'], [132, 0, 'g'], [0, -70, 'a'], [34, 34, 'c'], [-34, -34, 'c']].map(([x, y, col], i) => {
+      const im = s.add.image(x, y, 'glow-' + col).setBlendMode(ADD).setScale(0.55); op.add(im); return { im, i };
+    });
+    label(s, def.x, def.y + def.labelDy, def.name.toUpperCase(), '#6dff9c', 16);
+    return { op, lights };
   });
-  label(s, SA_OUTPOST.x, SA_OUTPOST.y - 175, 'KESTREL OUTPOST', '#6dff9c', 16);
 
   const fx = time => {
     if (!st.active) return;
@@ -331,8 +333,10 @@ function stationFx(s) {
     const ph = time / 130; // the lane pulse: ten steps, running from the far end in toward the bay
     rails.forEach(r => { const d = (((ph - (9 - r.k)) % 10) + 10) % 10, a = 0.3 + 0.7 * Math.max(0, 1 - d / 2.2); r.a.setAlpha(a); r.b.setAlpha(a); });
     chevs.forEach((im, j) => { const d = (((ph * 0.7 - (6 - j)) % 7) + 7) % 7; im.setAlpha(0.18 + 0.82 * Math.max(0, 1 - d / 1.8)); });
-    op.rotation = time * 0.000026;
-    opLights.forEach(({ im, i }) => im.setAlpha(0.3 + 0.7 * (0.5 + 0.5 * Math.sin(time / 900 + i * 1.7))));
+    ops.forEach(({ op, lights }) => {
+      op.rotation = time * 0.000026;
+      lights.forEach(({ im, i }) => im.setAlpha(0.3 + 0.7 * (0.5 + 0.5 * Math.sin(time / 900 + i * 1.7))));
+    });
   };
   s.events.on('update', fx);
   s.events.once('shutdown', () => s.events.off('update', fx));
