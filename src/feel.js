@@ -121,7 +121,7 @@ function feelRing(s, f, now, sx, sy, t, R, vmax, name) {
   }
   if (!inside || s.leaving) return;
   f.read.setVisible(true).setPosition(sx, sy + 46).setColor(slow ? '#6dff9c' : '#ffb454')
-    .setText(slow ? 'L  ' + name + '    SPD ' + Math.round(sp) : 'SLOW DOWN    SPD ' + Math.round(sp) + '  >  ' + vmax);
+    .setText(slow ? name + ' SPEED OK    SPD ' + Math.round(sp) : 'SLOW DOWN    SPD ' + Math.round(sp) + '  >  ' + vmax);
 }
 
 // ---- scene changes ----
