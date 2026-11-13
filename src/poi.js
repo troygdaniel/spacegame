@@ -50,56 +50,113 @@ function poiTextures(sc) {
 }
 
 // ---------- one Space run ----------
+const SIGNAL_MAX = 2;          // random signals on the radar at once
+const SIGNAL_LIFE = 240000;    // each one fades after four minutes if you ignore it
+const SIGNAL_FIRST = 20000;    // the first call comes 20 s into a flight, then every 45 to 75 s
+const SIGNAL_TYPES = [
+  { kind: 'beacon', name: 'Distress call', note: 'A stranded crew sent their thanks, and a payment.', credits: [100, 200], guardChance: 0.5 },
+  { kind: 'wreck', name: 'Drifting derelict', note: 'Scrap and spares recovered.', credits: [80, 160], hullChance: 0.4, hull: 30 }
+];
+let POIRUN = null;             // the current Space run: { sig: [signals], objs: {id: display objects}, nextAt, n, prompt }
+
+const siteState = p => p.sig ? p.state : (G.poi[p.id] || 0);
+const setSiteState = (p, v) => { if (p.sig) p.state = v; else G.poi[p.id] = v; };
+const liveSites = () => POI.concat(POIRUN ? POIRUN.sig.filter(q => q.state === 1) : []);
+
+function makeSite(sc, p, done) { // sprite, name label, and a pulsing ring on beacons
+  const spr = sc.add.image(p.x, p.y, p.kind === 'wreck' ? 'poi-wreck' : 'poi-beacon').setDepth(3);
+  const o = { spr, label: label(sc, p.x, p.y + 52, p.name, '#6dff9c', 13).setVisible(false) };
+  if (p.kind === 'wreck') {
+    spr.setAngle(Phaser.Math.Between(-30, 30));
+    o.drift = sc.tweens.add({ targets: spr, angle: spr.angle + 12, yoyo: true, repeat: -1, duration: Phaser.Math.Between(6000, 9000), ease: 'Sine.easeInOut' });
+  } else if (!done) {
+    o.ring = sc.add.circle(p.x, p.y - 20, 16).setStrokeStyle(2, GREEN, 0.9).setDepth(3);
+    o.pulse = sc.tweens.add({ targets: o.ring, scale: 4, alpha: 0, duration: 1500, repeat: -1 });
+  }
+  if (done) spr.setTint(0x445566).setAlpha(0.55);
+  return o;
+}
+
+function removeSite(sc, p) { // a signal that faded or was salvaged and has finished fading
+  const o = POIRUN && POIRUN.objs[p.id];
+  if (!o) return;
+  [o.drift, o.pulse].forEach(t => t && t.stop());
+  [o.spr, o.label, o.ring].forEach(x => x && x.destroy());
+  delete POIRUN.objs[p.id];
+}
+
+function poiSpawnSignal(sc, typeIndex) { // a new random signal 1400 to 2200 units from you, so it shows on the 2400 radar
+  const R = POIRUN, ship = sc.ship;
+  if (!R || !ship || R.sig.filter(q => q.state === 1).length >= SIGNAL_MAX) return null;
+  const ws = sc.WS || SECTOR.size, d = (x, y, o) => Phaser.Math.Distance.Between(x, y, o.x, o.y);
+  let x = 0, y = 0, ok = false;
+  for (let i = 0; i < 25 && !ok; i++) {
+    const a = Math.random() * Math.PI * 2, r = Phaser.Math.Between(1400, 2200);
+    x = ship.x + Math.cos(a) * r; y = ship.y + Math.sin(a) * r;
+    ok = x > 400 && x < ws - 400 && y > 400 && y < ws - 400
+      && d(x, y, sc.station) > 1000 && d(x, y, sc.planet) > 900
+      && liveSites().every(q => d(x, y, q) > 600);
+  }
+  if (!ok) return null;
+  const t = SIGNAL_TYPES[typeIndex === undefined ? Math.floor(Math.random() * SIGNAL_TYPES.length) : typeIndex];
+  const p = { sig: true, id: 'sig-' + (++R.n), kind: t.kind, x, y, name: t.name, note: t.note, state: 1, born: sc.time.now };
+  if (t.hullChance && Math.random() < t.hullChance) p.hull = t.hull; else p.credits = Phaser.Math.Between(t.credits[0], t.credits[1]);
+  if (t.guardChance && Math.random() < t.guardChance) sc.spawnDrone(x + 260, y); // pirates followed the signal
+  R.sig.push(p); R.objs[p.id] = makeSite(sc, p, false);
+  toast(sc, 'New signal on the radar: ' + p.name, '#9fe9ff'); sfx('tick');
+  return p;
+}
+
 function poiSetup(sc) {
   poiTextures(sc);
-  const objs = {};
-  const prompt = floatPrompt(sc, null);
+  const R = POIRUN = { sig: [], objs: {}, nextAt: 0, n: 0, prompt: floatPrompt(sc, null) };
   POI.forEach(p => {
     const done = G.poi[p.id] === 2;
-    const spr = sc.add.image(p.x, p.y, p.kind === 'wreck' ? 'poi-wreck' : 'poi-beacon').setDepth(3);
-    const o = { spr, label: label(sc, p.x, p.y + 52, p.name, '#6dff9c', 13).setVisible(false) };
-    if (p.kind === 'wreck') {
-      spr.setAngle(Phaser.Math.Between(-30, 30));
-      sc.tweens.add({ targets: spr, angle: spr.angle + 12, yoyo: true, repeat: -1, duration: Phaser.Math.Between(6000, 9000), ease: 'Sine.easeInOut' });
-    } else if (!done) {
-      o.ring = sc.add.circle(p.x, p.y - 20, 16).setStrokeStyle(2, GREEN, 0.9).setDepth(3);
-      sc.tweens.add({ targets: o.ring, scale: 4, alpha: 0, duration: 1500, repeat: -1 });
-    }
-    if (done) spr.setTint(0x445566).setAlpha(0.55);
-    else if (p.guard) { // pirates lie in wait around the unsalvaged guarded sites
+    R.objs[p.id] = makeSite(sc, p, done);
+    if (!done && p.guard) { // pirates lie in wait around the unsalvaged guarded sites
       for (let i = 0; i < p.guard; i++) {
         const a = i / p.guard * Math.PI * 2 + 0.6;
         sc.spawnDrone(p.x + Math.cos(a) * 240, p.y + Math.sin(a) * 240);
       }
     }
-    objs[p.id] = o;
   });
-  const JD = Phaser.Input.Keyboard.JustDown;
+  const JD = Phaser.Input.Keyboard.JustDown, prompt = R.prompt;
   const tick = () => {
     const pressed = sc.k && sc.k.E ? JD(sc.k.E) : false; // read every frame so an old press never counts later
     if (!sc.ship || !sc.ship.body || sc.dead || sc.leaving) { prompt.setText(''); return; }
-    const ship = sc.ship, cam = sc.cameras.main, spd = ship.body.speed;
+    const ship = sc.ship, cam = sc.cameras.main, spd = ship.body.speed, now = sc.time.now;
+
+    // random signals: one now and then, and the old ones fade
+    if (!R.nextAt) R.nextAt = now + SIGNAL_FIRST;
+    if (now >= R.nextAt) R.nextAt = now + (poiSpawnSignal(sc) ? Phaser.Math.Between(45000, 75000) : 15000);
+    R.sig.forEach(q => {
+      if (q.state === 1 && now > q.born + SIGNAL_LIFE) {
+        q.state = 0; removeSite(sc, q); toast(sc, 'Signal lost: ' + q.name, '#5b7a92');
+      }
+    });
+
     let near = null;
-    POI.forEach(p => {
-      const d = Phaser.Math.Distance.Between(ship.x, ship.y, p.x, p.y), o = objs[p.id];
-      if (!G.poi[p.id] && d <= POI_FIND) { G.poi[p.id] = 1; toast(sc, 'Signal found: ' + p.name, '#9fe9ff'); sfx('tick'); }
-      if (G.poi[p.id] === 1) hudBlip(sc, p.x, p.y, GREEN, 4);
+    liveSites().forEach(p => {
+      const d = Phaser.Math.Distance.Between(ship.x, ship.y, p.x, p.y), o = R.objs[p.id];
+      if (!o) return;
+      if (!siteState(p) && d <= POI_FIND) { setSiteState(p, 1); toast(sc, 'Signal found: ' + p.name, '#9fe9ff'); sfx('tick'); }
+      if (siteState(p) === 1) hudBlip(sc, p.x, p.y, GREEN, 4);
       o.label.setVisible(d < 900);
-      if (G.poi[p.id] !== 2 && d < POI_RANGE && (!near || d < near.d)) near = { p, d, o };
+      if (siteState(p) === 1 && d < POI_RANGE && (!near || d < near.d)) near = { p, d, o };
     });
     if (!near) { prompt.setText(''); return; }
-    const px = near.p.x - cam.scrollX, py = near.p.y - cam.scrollY - 70;
-    prompt.at(px, py);
+    prompt.at(near.p.x - cam.scrollX, near.p.y - cam.scrollY - 70);
     if (spd > POI_SPEED) { prompt.setText('Too fast to salvage. Hold S to brake'); return; }
     prompt.setText('E  Salvage ' + near.p.name);
     if (pressed) poiSalvage(sc, near.p, near.o, prompt);
   };
-  sc._poi = { objs, tick, prompt };
+  R.tick = tick;
+  sc._poi = R;
   sc.events.on('update', tick);
 }
 
 function poiSalvage(sc, p, o, prompt) {
-  G.poi[p.id] = 2;
+  setSiteState(p, 2);
   const gains = [];
   if (p.credits) { G.credits += p.credits; gains.push('+' + p.credits + ' cr'); }
   if (p.hull) { G.hull = Math.min(G.maxHull, G.hull + p.hull); gains.push('hull +' + p.hull); }
@@ -107,15 +164,17 @@ function poiSalvage(sc, p, o, prompt) {
   toast(sc, p.name + ': ' + p.note + '\n' + gains.join('   '), '#6dff9c');
   if (typeof feelNumber === 'function') feelNumber(sc, p.x, p.y - 40, gains.join('  '), '#ffb454', 18);
   o.spr.setTint(0x445566).setAlpha(0.55);
-  if (o.ring) { sc.tweens.killTweensOf(o.ring); o.ring.destroy(); o.ring = null; }
+  if (o.ring) { if (o.pulse) o.pulse.stop(); o.ring.destroy(); o.ring = null; }
+  if (p.sig) sc.tweens.add({ targets: [o.spr, o.label], alpha: 0, delay: 1500, duration: 1500, onComplete: () => removeSite(sc, p) }); // a signal is used up
   prompt.setText('');
 }
 
 // ---------- the Tab map (map.js calls this with its drawing helpers and a pool of text labels) ----------
 function poiMapMarks(g, X, Y, labels) {
-  POI.forEach((p, i) => {
-    const lb = labels && labels[i], st = G.poi[p.id] || 0;
-    if (lb) lb.setVisible(false);
+  const list = POI.concat(POIRUN ? POIRUN.sig.filter(q => q.state === 1) : []);
+  (labels || []).forEach(lb => lb.setVisible(false));
+  list.forEach((p, i) => {
+    const lb = labels && labels[i], st = siteState(p);
     if (!st) return;
     const x = X(p.x), y = Y(p.y), done = st === 2;
     g.lineStyle(2, done ? 0x5b7a92 : GREEN, done ? 0.7 : 1); g.strokeCircle(x, y, 6);
@@ -129,7 +188,7 @@ function installPoi(game) {
   const hook = sc => {
     if (sc.scene.key !== 'Space') return;
     sc.events.on('create', () => poiSetup(sc));
-    sc.events.on('shutdown', () => { if (sc._poi) { sc.events.off('update', sc._poi.tick); sc._poi = null; } });
+    sc.events.on('shutdown', () => { if (sc._poi) { sc.events.off('update', sc._poi.tick); sc._poi = null; } POIRUN = null; });
   };
   const wire = () => game.scene.scenes.forEach(hook);
   if (game.scene.scenes.length) wire(); else game.events.once('ready', wire);
