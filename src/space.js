@@ -29,6 +29,7 @@ class Space extends Phaser.Scene {
     this.pb = this.physics.add.group({ defaultKey: 'bullet', maxSize: 60 });
     this.eb = this.physics.add.group({ defaultKey: 'ebullet', maxSize: 60 });
     this.enemies = this.physics.add.group();
+    enemiesSetup(this); // src/enemies.js: salvage pods and their pickup
     this.trail = this.add.particles(0, 0, 'spark', {
       lifespan: 380, speed: { min: 20, max: 70 }, scale: { start: 1.3, end: 0 }, alpha: { start: 0.9, end: 0 },
       tint: CYAN, blendMode: 'ADD', emitting: false
@@ -57,17 +58,18 @@ class Space extends Phaser.Scene {
       if (!b.active || !e.active) return;
       b.disableBody(true, true); e.hp -= 15; this.boom.explode(4, b.x, b.y); sfx('tick'); feelNumber(this, e.x, e.y - 18, '15');
       if (e.hp <= 0) {
-        const wanted = e.wanted;
-        this.boom.explode(28, e.x, e.y); e.destroy(); G.credits += 25; G.stats.drones++; sfx('boom');
-        feelNumber(this, e.x, e.y - 48, '+25 cr', '#ffb454', 18);
+        const wanted = e.wanted, cr = e.def ? e.def.credits : 25;
+        dropSalvage(this, e); // src/enemies.js
+        this.boom.explode(28, e.x, e.y); e.destroy(); G.credits += cr; G.stats.drones++; sfx('boom');
+        feelNumber(this, e.x, e.y - 48, '+' + cr + ' cr', '#ffb454', 18);
         if (wanted) missionKill(this);
       }
     });
     this.physics.add.overlap(this.ship, this.eb, (s, b) => {
-      if (!b.active) return; b.disableBody(true, true); this.hurt(8, b.x, b.y);
+      if (!b.active) return; b.disableBody(true, true); this.hurt(b.dmg || 8, b.x, b.y);
     });
     this.physics.add.overlap(this.ship, this.enemies, (s, e) => {
-      if (this.time.now < this.rammedAt) return; this.rammedAt = this.time.now + 600; e.hp -= 10; this.hurt(12, e.x, e.y);
+      if (this.time.now < this.rammedAt) return; this.rammedAt = this.time.now + 600; e.hp -= 10; this.hurt(e.def ? e.def.ram : 12, e.x, e.y);
     });
 
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,Q,L,SPACE,SHIFT,UP,DOWN,LEFT,RIGHT');
@@ -84,20 +86,16 @@ class Space extends Phaser.Scene {
     feelInstall(this); // src/feel.js: hit flashes, flame, approach rings, arrival zoom
   }
 
-  spawnDrone(x, y) {
-    const d = this.enemies.create(x, y, 'drone').setDepth(4);
-    d.hp = 30; d.nextShot = 0; d.rotation = Math.random() * 6.28;
-    d.body.setCircle(14, 3, 3).setDamping(true).setDrag(0.5).setMaxSpeed(260);
-    return d;
-  }
+  spawnDrone(x, y) { return spawnPirate(this, x, y); } // src/enemies.js picks raider, drone or gunship by the spot
 
   shoot(group, x, y, rot, speed, now) {
     const b = group.get(x, y);
-    if (!b) return;
+    if (!b) return null;
     b.enableBody(true, x, y, true, true);
     b.setRotation(rot).setDepth(4);
-    b.born = now;
+    b.born = now; b.dmg = 0;
     this.physics.velocityFromRotation(rot, speed, b.body.velocity);
+    return b;
   }
 
   hurt(n, fromX, fromY) {
@@ -144,20 +142,8 @@ class Space extends Phaser.Scene {
     this.pb.getChildren().forEach(b => { if (b.active && time - b.born > 900) b.disableBody(true, true); });
     this.eb.getChildren().forEach(b => { if (b.active && time - b.born > 1800) b.disableBody(true, true); });
 
-    this.enemies.getChildren().forEach(d => {
-      const tgt = d.prey && d.prey.active ? d.prey : ship; // escort pirates hunt the freighter
-      const ddx = tgt.x - d.x, ddy = tgt.y - d.y, dist = Math.hypot(ddx, ddy);
-      if (dist < 900) {
-        const target = Math.atan2(ddy, ddx);
-        d.rotation = Phaser.Math.Angle.RotateTo(d.rotation, target, 0.035);
-        if (dist > 280) this.physics.velocityFromRotation(d.rotation, 300, d.body.acceleration);
-        else d.body.setAcceleration(0, 0);
-        if (dist < 650 && time > d.nextShot && Math.abs(Phaser.Math.Angle.Wrap(target - d.rotation)) < 0.25) {
-          d.nextShot = time + Phaser.Math.Between(900, 1500);
-          this.shoot(this.eb, d.x, d.y, d.rotation, 420, time);
-        }
-      } else { d.body.setAcceleration(0, 0); d.rotation += 0.003; }
-    });
+    this.enemies.getChildren().forEach(d => pirateAI(this, d, ship, time)); // src/enemies.js: chase, strafe, shoot
+    enemiesUpdate(this, time); // salvage pods drift and expire
 
     // dock / land
     const dS = Phaser.Math.Distance.Between(ship.x, ship.y, this.station.x, this.station.y);
