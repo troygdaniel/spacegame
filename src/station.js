@@ -24,9 +24,9 @@ class Station extends Phaser.Scene {
 
     // interactables: [x, y, label, key]
     this.spots = [
-      { x: 200, y: 200, text: 'MISSIONS', key: 'missions', color: '#38e1ff' },
-      { x: 640, y: 200, text: 'REPAIR BAY', key: 'repair', color: '#6dff9c' },
-      { x: 1090, y: 360, text: 'YOUR SHIP', key: 'ship', color: '#ffb454' }
+      { x: 200, y: 200, text: 'MISSIONS', key: 'missions', color: '#38e1ff', dy: 74 },
+      { x: 640, y: 200, text: 'REPAIR BAY', key: 'repair', color: '#6dff9c', dy: 74 },
+      { x: 1090, y: 360, text: 'YOUR SHIP', key: 'ship', color: '#ffb454', dy: 76 }
     ];
     [this.spots[0], this.spots[1]].forEach(sp => {
       const r = rectWall(this, sp.x - 50, sp.y - 22, 100, 44, 0x0d2a3f, sp.key === 'repair' ? GREEN : CYAN);
@@ -52,46 +52,112 @@ class Station extends Phaser.Scene {
     this.walls.forEach(w => this.physics.add.collider(this.player, w));
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,ESC,UP,DOWN,LEFT,RIGHT');
 
-    this.hud1 = hudText(this, 24, 22);
-    this.hud2 = hudText(this, 24, 46, '#ffd37a');
-    this.prompt = this.add.text(W / 2, H - 56, '', {
-      fontFamily: 'monospace', fontSize: '20px', color: '#ffffff', backgroundColor: '#000000bb', padding: { x: 12, y: 6 }
-    }).setOrigin(0.5).setDepth(100);
+    this.prompt = floatPrompt(this, this.player); // key cap above whatever you can use (src/ui.js)
     this.add.text(24, H - 44, 'WASD walk   E interact', { fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92' }).setDepth(100);
 
-    this.panelBox = this.add.container(W / 2, H / 2).setDepth(150).setVisible(false);
-    this.panelBg = this.add.rectangle(0, 0, 620, 340, 0x07101c, 0.96).setStrokeStyle(2, CYAN, 1);
-    this.panelText = this.add.text(0, 0, '', {
-      fontFamily: 'monospace', fontSize: '18px', color: '#cfefff', align: 'center', lineSpacing: 6
-    }).setOrigin(0.5);
-    this.panelBox.add([this.panelBg, this.panelText]);
+    this.ui = panel(this, { w: 900, h: 480, title: 'MISSION BOARD  -  HALCYON STATION', dim: true }); // src/ui.js
+    this.panelBox = this.ui.box.setVisible(false); this.boardObjs = [];
 
     if (this.arrive && G.mission === 'rescued') {
       G.credits += REWARD; G.mission = 'none'; G.stats.missions++;
-      toast(this, 'Colonist delivered safely. +' + REWARD + ' cr', '#6dff9c'); beep(660, 0.25, 'triangle', 0.05, 440);
+      toast(this, 'Colonist delivered safely. +' + REWARD + ' cr', '#6dff9c'); sfx('chime');
     } else if (this.arrive) {
       toast(this, 'Docked.', '#9fe9ff');
     }
+    if (this.arrive) sellOre(this); // asteroids.js: ore in the hold is sold on docking
+    if (this.arrive) feelArrive(this); // feel.js: a short settle-in zoom after docking
   }
 
+  // The mission board: offer cards you pick between, then E accepts. Offers come from MISSIONS in src/missions.js.
+  // 1-3 or the arrow keys choose a call, E accepts it, X drops the one under way, Esc closes.
   openPanel() {
-    this.panel = true; this.panelBox.setVisible(true);
-    if (G.mission === 'accepted') {
-      this.panelText.setText('RESCUE IN PROGRESS\n\nFind the colonist on Kepler-4b and\nbring them back alive.\n\n[Esc] Close');
-      this.canAccept = false;
-    } else {
-      this.panelText.setText(
-        'RESCUE CALL  -  KEPLER-4B\n\nA survey pod went down on the surface.\nPirate drones circle the planet and\ncrawlers roam the ground.\nLand, find the colonist, keep them alive,\nwalk them back to your ship, bring them home.\n\nReward: ' + REWARD + ' cr\n\n[E] Accept        [Esc] Close');
-      this.canAccept = true;
-    }
+    this.panel = true; this.panelBox.setVisible(true); this.canAccept = false; this.prompt.setText('');
+    const busy = () => G.mission === 'accepted' || G.mission === 'rescued';
+    const RISK = { rescue: ['MEDIUM', 2, '#ffb454'], escort: ['HIGH', 3, '#ff4d6d'], patrol: ['MEDIUM', 2, '#ffb454'] };
+    const clear = () => { this.boardObjs.forEach(o => o.destroy()); this.boardObjs = []; };
+    const add = o => { this.panelBox.add(o); this.boardObjs.push(o); return o; };
+    const txt = (x, y, str, size, color, o = {}) => add(this.add.text(x, y, str, uiFont(size, color, o.style)).setOrigin(o.ox === undefined ? 0 : o.ox, o.oy === undefined ? 0.5 : o.oy));
+    const risk = m => RISK[m.id] || ['UNKNOWN', 1, '#9fe9ff'];
+    let sel = 0;
+
+    const card = (m, i, cx, cy, w, h, selected) => {
+      const g = add(this.add.graphics());
+      g.fillStyle(selected ? 0x10283d : 0x0a1b2c, 1); g.fillRect(cx - w / 2, cy - h / 2, w, h);
+      g.lineStyle(selected ? 3 : 1, selected ? AMBER : CYAN, selected ? 1 : 0.5); g.strokeRect(cx - w / 2, cy - h / 2, w, h);
+      if (selected) { g.fillStyle(AMBER, 1); g.fillRect(cx - w / 2, cy - h / 2, w, 4); }
+      const L = cx - w / 2 + 16, cap = keyCap(this, m.key, selected ? AMBER : CYAN); cap.setPosition(L + cap.kw / 2, cy - h / 2 + 30); add(cap);
+      txt(L + cap.kw + 10, cy - h / 2 + 30, m.title.toUpperCase(), 17, selected ? '#ffd37a' : '#9fe9ff', { style: { fontStyle: 'bold' } });
+      txt(L, cy - h / 2 + 58, m.where, 13, '#8fb4c9');
+      txt(L, cy - h / 2 + 90, 'REWARD', 11, '#5b7a92'); txt(L, cy - h / 2 + 112, m.reward + ' cr', 28, '#ffb454', { style: { fontStyle: 'bold' } });
+      const r = risk(m);
+      txt(L, cy - h / 2 + 144, 'RISK', 11, '#5b7a92');
+      const pg = add(pips(this, L, cy - h / 2 + 157, r[1], 3, Phaser.Display.Color.HexStringToColor(r[2]).color));
+      txt(L + 58, cy - h / 2 + 161, r[0], 13, r[2], { style: { fontStyle: 'bold' } });
+      txt(L, cy - h / 2 + 178, m.offer.split('\n')[0], 13, '#cfefff', { oy: 0, style: { wordWrap: { width: w - 32 }, lineSpacing: 2 } });
+      return add(this.add.rectangle(cx, cy, w, h, 0x000000, 0.001).setInteractive({ useHandCursor: true }));
+    };
+
+    const render = () => {
+      clear(); this.ui.tagText.setText('CREDITS ' + G.credits);
+      if (busy()) {
+        const m = missionDef(), r = risk(m), cy = -70;
+        this.ui.titleText.setText('MISSION BOARD  -  UNDER WAY');
+        const g = add(this.add.graphics());
+        g.fillStyle(0x10283d, 1); g.fillRect(-300, cy - 110, 600, 220); g.lineStyle(3, AMBER, 1); g.strokeRect(-300, cy - 110, 600, 220);
+        g.fillStyle(AMBER, 1); g.fillRect(-300, cy - 110, 600, 4);
+        txt(-276, cy - 78, m.title.toUpperCase(), 22, '#ffd37a', { style: { fontStyle: 'bold' } });
+        txt(276, cy - 78, 'IN PROGRESS', 15, '#6dff9c', { ox: 1 });
+        txt(-276, cy - 44, m.where, 14, '#8fb4c9');
+        txt(-276, cy - 8, m.progress(), 17, '#e8f6ff', { oy: 0, style: { lineSpacing: 6 } });
+        txt(-276, cy + 84, 'PAYS ' + m.reward + ' cr', 16, '#ffb454', { style: { fontStyle: 'bold' } });
+        this.ui.setHints([['X', 'Drop the mission'], ['Esc', 'Close']]); return;
+      }
+      this.ui.titleText.setText('MISSION BOARD  -  HALCYON STATION');
+      MISSIONS.forEach((m, i) => {
+        const z = card(m, i, (i - (MISSIONS.length - 1) / 2) * 288, -75, 270, 220, i === sel);
+        z.on('pointerdown', () => { if (sel === i) acceptSel(); else choose(i); });
+      });
+      txt(-420, 52, 'BRIEFING', 11, '#5b7a92');
+      txt(-420, 66, MISSIONS[sel].offer, 14, '#cfefff', { oy: 0, style: { lineSpacing: 4 } });
+      this.ui.setHints([['E', 'Accept'], ['1-3', 'Choose'], ['Esc', 'Close']]);
+    };
+    const choose = (i, quiet) => {
+      sel = Phaser.Math.Wrap(i, 0, MISSIONS.length); pickMission(MISSIONS[sel].id); this.canAccept = true;
+      if (!quiet) beep(600, 0.05, 'square', 0.02);
+      render();
+    };
+    const acceptSel = () => { // same as pressing E in update()
+      if (!this.canAccept) return;
+      G.mission = 'accepted'; this.closePanel(); beep(520, 0.15, 'triangle', 0.05, 300);
+      toast(this, 'Mission accepted. Board your ship in the hangar.');
+    };
+
+    const kb = this.input.keyboard;
+    if (this.boardKeys) kb.off('keydown', this.boardKeys);
+    this.boardKeys = e => {
+      if (!this.panel) { kb.off('keydown', this.boardKeys); this.boardKeys = null; return; }
+      const key = e.key.toLowerCase();
+      if (busy()) {
+        if (key === 'x') {
+          abandonMission(); this.closePanel(); beep(200, 0.2, 'sawtooth', 0.04, -100);
+          toast(this, 'Mission dropped. The board has other calls.', '#ffd37a');
+        }
+        return;
+      }
+      const i = MISSIONS.findIndex(x => x.key === key);
+      if (i >= 0) choose(i);
+      else if (key === 'arrowright') choose(sel + 1);
+      else if (key === 'arrowleft') choose(sel - 1);
+    };
+    kb.on('keydown', this.boardKeys);
+    if (busy()) render(); else choose(Math.max(0, MISSIONS.findIndex(m => m.id === G.missionId)), true);
   }
-  closePanel() { this.panel = false; this.panelBox.setVisible(false); }
+  closePanel() { this.panel = false; this.panelBox.setVisible(false); this.boardObjs.forEach(o => o.destroy()); this.boardObjs = []; }
 
   update() {
     guideTick(this);
     const JD = Phaser.Input.Keyboard.JustDown, k = this.k;
-    this.hud1.setText('CREDITS ' + G.credits + '    HULL ' + Math.round(G.hull) + '/' + G.maxHull);
-    this.hud2.setText(missionLine());
+    hudTick(this); // src/hud.js
     if (shopFrame(this)) return; // upgrade shop panel is open
     if (this.panel) {
       this.player.setVelocity(0, 0);
@@ -113,7 +179,8 @@ class Station extends Phaser.Scene {
       const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, sp.x, sp.y);
       if (d < nearD) { near = sp; nearD = d; }
     });
-    this.prompt.setText(near ? 'E  ' + (near.prompt || { missions: 'Check the mission board', repair: 'Repair hull', ship: 'Board ship and launch' }[near.key]) : '').setVisible(!!near);
+    if (near) this.prompt.at(near.x, near.y - (near.dy || 56));
+    this.prompt.setText(near && !this.talk ? 'E  ' + (near.prompt || { missions: 'Check the mission board', repair: 'Repair hull', ship: 'Board ship and launch' }[near.key]) : '');
     if (near && JD(k.E) && !spotInteract(this, near)) {
       if (near.key === 'missions') this.openPanel();
       else if (near.key === 'repair') {
@@ -121,7 +188,7 @@ class Station extends Phaser.Scene {
         if (G.hull >= G.maxHull) toast(this, 'Hull is already perfect.', '#9fe9ff');
         else if (G.credits < cost) toast(this, 'Repair costs ' + cost + ' cr. You have ' + G.credits + '.', '#ff4d6d');
         else { G.credits -= cost; G.hull = G.maxHull; beep(400, 0.2, 'triangle', 0.05, 300); toast(this, 'Hull repaired (-' + cost + ' cr).', '#6dff9c'); }
-      } else if (near.key === 'ship') { beep(200, 0.4, 'sawtooth', 0.04, 500); go(this, 'Space', { from: 'station' }); }
+      } else if (near.key === 'ship') { sfx('thrusters'); feelLaunch(this, () => go(this, 'Space', { from: 'station' })); }
     }
   }
 }

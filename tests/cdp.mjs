@@ -11,20 +11,31 @@ mkdirSync(OUT, { recursive: true });
 const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 export const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-const KEYS = { E: [69, 'KeyE', 'e'], L: [76, 'KeyL', 'l'], W: [87, 'KeyW', 'w'], S: [83, 'KeyS', 's'], ESC: [27, 'Escape', 'Escape'] };
+const KEYS = {
+  E: [69, 'KeyE', 'e'], L: [76, 'KeyL', 'l'], W: [87, 'KeyW', 'w'], S: [83, 'KeyS', 's'], X: [88, 'KeyX', 'x'],
+  1: [49, 'Digit1', '1'], 2: [50, 'Digit2', '2'], 3: [51, 'Digit3', '3'], ESC: [27, 'Escape', 'Escape']
+};
 
 // Launch a throwaway headless Chrome (own profile, so it never touches your real Chrome) and return a session.
 export async function launch(hash = '') {
-  const profile = mkdtempSync(join(tmpdir(), 'longhaul-'));
+  // starting Chrome can fail when the Mac is busy (load average 25 from other agents): one retry before giving up
+  try { return await launchOnce(hash); } catch (e) {
+    console.log('  (Chrome did not start cleanly, trying once more: ' + e.message + ')');
+    return await launchOnce(hash);
+  }
+}
+
+async function launchOnce(hash) {
+  const profile = mkdtempSync(join(tmpdir(), `longhaul-${process.pid}-`)) // pid in the name: cleanup can target only this run;
   const chrome = spawn(CHROME, [
-    '--headless=new', '--disable-gpu', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
+    '--headless=new', '--mute-audio', '--disable-gpu', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
     '--allow-file-access-from-files', '--remote-debugging-port=0', '--remote-allow-origins=*',
     `--user-data-dir=${profile}`, '--window-size=1280,720', '--hide-scrollbars', '--no-first-run',
     '--no-default-browser-check', 'about:blank'
   ], { stdio: 'ignore' });
   const portFile = join(profile, 'DevToolsActivePort');
-  for (let i = 0; i < 150 && !existsSync(portFile); i++) await sleep(100);
-  if (!existsSync(portFile)) { chrome.kill(); throw new Error('Chrome did not start'); }
+  for (let i = 0; i < 300 && !existsSync(portFile); i++) await sleep(100);
+  if (!existsSync(portFile)) { chrome.kill('SIGKILL'); rmSync(profile, { recursive: true, force: true }); throw new Error('Chrome did not start'); }
   const port = readFileSync(portFile, 'utf8').split('\n')[0];
   let page = null;
   for (let i = 0; i < 50 && !page; i++) {
@@ -32,7 +43,7 @@ export async function launch(hash = '') {
     if (!page) await sleep(100);
   }
   const ws = new WebSocket(page.webSocketDebuggerUrl);
-  await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
+  await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; setTimeout(() => rej(new Error('DevTools socket did not open')), 20000); });
   let id = 0; const pending = new Map(); const errors = [];
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
@@ -45,8 +56,10 @@ export async function launch(hash = '') {
       errors.push('console.error: ' + m.params.args.map(a => a.value ?? a.description).join(' '));
     }
   };
+  // every DevTools call has a 30 s limit, so a stuck Chrome fails the test instead of hanging it forever
   const send = (method, params = {}) => new Promise((res, rej) => {
     const i = ++id; pending.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params }));
+    setTimeout(() => { if (pending.delete(i)) rej(new Error('DevTools call timed out: ' + method)); }, 30000);
   });
   // Phaser objects cannot be sent back by value ("object reference chain is too long"), so only plain values,
   // arrays and plain objects come back; anything else (a sprite from setPosition, say) comes back as null.
@@ -67,9 +80,28 @@ export async function launch(hash = '') {
     await sleep(hold);
     await send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: vk, code, key });
   };
+  // Stepped clock (idea from BuildBot's drive.mjs): headless Chrome can stall or slow animation frames when the Mac is
+  // busy, so a test that needs the game to run for an exact time stops Phaser's own loop and steps it by hand,
+  // 16.67 ms a frame. After clock(), use run(ms) and key(k) (not press): real time no longer moves the game.
+  const clock = () => ev('(() => { game.loop.stop(); window.__t = performance.now(); window.tick = n => { for (let i = 0; i < n; i++) { __t += 16.67; game.step(__t, 16.67); } }; return 1; })()');
+  const run = async ms => { // in slices of 120 frames (2 s of game time) so no single DevTools call runs for long
+    for (let left = Math.ceil(ms / 16.67); left > 0; left -= 120) await ev(`(() => { tick(${Math.min(left, 120)}); return 1; })()`);
+  };
+  const key = async k => {
+    const [vk, code, key] = KEYS[k];
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, code, key });
+    await run(50);
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, code, key });
+    await run(100);
+  };
+  // A screenshot can hang on a busy Mac (software GL). It returns true or false instead of throwing, so a test that
+  // only wants a picture goes on; tests/scenes.mjs, where the picture is the point, fails on false.
   const shot = async name => {
-    const r = await send('Page.captureScreenshot', { format: 'png' });
-    writeFileSync(join(OUT, name + '.png'), Buffer.from(r.data, 'base64'));
+    try {
+      const r = await send('Page.captureScreenshot', { format: 'png' });
+      writeFileSync(join(OUT, name + '.png'), Buffer.from(r.data, 'base64'));
+      return true;
+    } catch (e) { console.log(`  (screenshot ${name} skipped: ${e.message})`); return false; }
   };
   const close = async () => {
     try { ws.close(); } catch (e) { /* already closed */ }
@@ -81,5 +113,5 @@ export async function launch(hash = '') {
   };
   await send('Page.enable'); await send('Runtime.enable');
   await send('Page.navigate', { url: 'file://' + ROOT + '/index.html' + hash });
-  return { send, ev, waitFor, press, shot, close, errors };
+  return { send, ev, waitFor, press, clock, run, key, shot, close, errors };
 }

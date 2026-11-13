@@ -5,6 +5,8 @@
 #      error, save a screenshot of each to tests/out/ (gitignored)
 #   3. tests/loop.mjs: scripted rescue from station to payout, asserts +500 credits
 #   4. tests/fixes.mjs: one check per playtest bug fixed (colonist, prompt box, toasts, ramming, insurance fee)
+#   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
+#      their failure paths, with the game clock stepped by hand
 # Needs Google Chrome and Node 22+. Uses throwaway Chrome profiles, never your own. Chrome runs with
 # --headless=new --disable-gpu --use-angle=swiftshader --enable-unsafe-swiftshader --allow-file-access-from-files.
 # (The plain chrome --screenshot route hung at random when the Mac was busy, so the scenes go over DevTools too.)
@@ -25,6 +27,13 @@ if node tests/loop.mjs; then :; else fail=1; fi
 
 echo "== 4. one check per fixed bug"
 if node tests/fixes.mjs; then :; else fail=1; fi
+
+echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
+if [ "${FULL:-0}" = 1 ]; then
+  if node tests/missions.mjs; then :; else fail=1; fi
+else
+  echo "  skipped: run FULL=1 bash tests/smoke.sh to include tests/missions.mjs"
+fi
 
 echo
 if [ "$fail" = 0 ]; then echo "SMOKE PASS"; else echo "SMOKE FAIL"; fi

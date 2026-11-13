@@ -23,18 +23,19 @@ const active = (t, scene) => t.waitFor(`!!(window.game && game.scene.isActive('$
 
     console.log('bug 2: the prompt box is hidden when there is nothing to say');
     await t.ev(`${SF}.player.setPosition(1200, 300)`); await sleep(400);
-    check('surface: prompt hidden away from the pad', (await t.ev(`${SF}.prompt.visible`)) === false);
+    check('surface: prompt hidden away from the pad', (await t.ev(`${SF}.prompt.box.visible`)) === false);
     await t.ev(`(() => { const s = ${SF}; s.col.state = 'dead'; s.player.setPosition(s.pad.x + 50, s.pad.y); })()`); await sleep(400);
-    check('surface: prompt shown on the pad', (await t.ev(`${SF}.prompt.visible`)) === true && (await t.ev(`${SF}.prompt.text`)) !== '');
+    check('surface: prompt shown on the pad', (await t.ev(`${SF}.prompt.box.visible`)) === true && (await t.ev(`${SF}.prompt.text`)) !== '');
 
     console.log('bug 3: toasts stack instead of overlapping');
     await sleep(3500); // let the landing toast fade
     await t.ev("(() => { toast(game.scene.getScene('Surface'), 'one'); toast(game.scene.getScene('Surface'), 'two'); toast(game.scene.getScene('Surface'), 'three'); })()");
-    const ys = await t.ev(`${SF}.toasts.map(o => o.y)`);
-    check('three toasts sit 44 px apart', ys.length === 3 && ys[1] - ys[0] === 44 && ys[2] - ys[1] === 44, JSON.stringify(ys));
+    const rec = await t.ev(`${SF}.toasts.map(o => ({ y: o.y, h: o.h })).sort((a, b) => a.y - b.y)`);
+    const apart = rec.length === 3 && [1, 2].every(i => rec[i].y - rec[i - 1].y >= (rec[i].h + rec[i - 1].h) / 2 + 5);
+    check('three toasts stack with a gap, none on top of another', apart, JSON.stringify(rec));
     await t.shot('fix-3-toasts');
     await t.ev("toast(game.scene.getScene('Surface'), 'four')");
-    const after = await t.ev(`${SF}.toasts.map(o => o.text)`);
+    const after = await t.ev(`${SF}.toasts.map(o => o.t.text)`);
     check('a fourth replaces the oldest, never more than three', after.length === 3 && !after.includes('one') && after.includes('four'), JSON.stringify(after));
     check('no console errors (surface)', t.errors.length === 0, t.errors.join(' | '));
   } catch (e) { console.error('  FAIL surface checks: ' + e.message); failed++; } finally { await t.close(); }
@@ -49,9 +50,9 @@ const active = (t, scene) => t.waitFor(`!!(window.game && game.scene.isActive('$
     await t.ev(`${SP}.enemies.clear(true, true)`);
     console.log('bug 2: space prompt');
     await t.ev(`(() => { const s = ${SP}; s.ship.setPosition(1000, 1000); s.ship.setVelocity(0, 0); })()`); await sleep(400);
-    check('space: prompt hidden in open space', (await t.ev(`${SP}.prompt.visible`)) === false);
+    check('space: prompt hidden in open space', (await t.ev(`${SP}.prompt.box.visible`)) === false);
     await t.ev(`(() => { const s = ${SP}; s.ship.setPosition(s.station.x + 250, s.station.y); s.ship.setVelocity(0, 0); })()`); await sleep(400);
-    check('space: prompt shown at the station', (await t.ev(`${SP}.prompt.visible`)) === true);
+    check('space: prompt shown at the station', (await t.ev(`${SP}.prompt.box.visible`)) === true);
 
     console.log('bug 4: ramming finishes a drone');
     const c0 = await t.ev('G.credits'); // read before the spawn: the ram can finish the drone within one frame
@@ -77,14 +78,14 @@ const active = (t, scene) => t.waitFor(`!!(window.game && game.scene.isActive('$
 
 // ---- Station: bug 2 (prompt) ----
 {
-  const t = await launch('');
+  const t = await launch('#station'); // no hash opens the title screen
   try {
     await active(t, 'Station');
     await sleep(800);
     console.log('bug 2: station prompt');
-    check('station: prompt hidden when nothing is near', (await t.ev(`${ST}.prompt.visible`)) === false);
+    check('station: prompt hidden when nothing is near', (await t.ev(`${ST}.prompt.box.visible`)) === false);
     await t.ev(`${ST}.player.setPosition(200, 200)`); await sleep(400);
-    check('station: prompt shown at the MISSIONS terminal', (await t.ev(`${ST}.prompt.visible`)) === true);
+    check('station: prompt shown at the MISSIONS terminal', (await t.ev(`${ST}.prompt.box.visible`)) === true);
     check('no console errors (station)', t.errors.length === 0, t.errors.join(' | '));
   } catch (e) { console.error('  FAIL station checks: ' + e.message); failed++; } finally { await t.close(); }
 }

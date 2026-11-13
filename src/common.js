@@ -25,18 +25,23 @@ function beep(f = 440, d = 0.08, type = 'square', v = 0.03, slide = 0) {
 window.addEventListener('keydown', () => { if (AC && AC.state === 'suspended') AC.resume(); });
 
 function toast(s, msg, color = '#ffd37a') {
-  // two toasts at once used to draw on top of each other: each takes the first free slot, 44 px apart, three at most
-  const Y0 = 96, STEP = 44;
-  s.toasts = (s.toasts || []).filter(o => o.active);
-  let slot = 0;
-  while (s.toasts.some(o => o.y === Y0 + slot * STEP)) slot++;
-  if (slot >= 3) { const old = s.toasts.shift(); slot = Math.round((old.y - Y0) / STEP); old.destroy(); }
-  const t = s.add.text(W / 2, Y0 + slot * STEP, msg, {
-    fontFamily: 'monospace', fontSize: '20px', color, align: 'center',
-    backgroundColor: '#000000bb', padding: { x: 14, y: 8 }
+  const t = s.add.text(W / 2, 96, msg, {
+    fontFamily: 'monospace', fontSize: '20px', color, align: 'center', wordWrap: { width: 700 } // a long one wraps instead of reaching the HUD panels
   }).setOrigin(0.5).setScrollFactor(0).setDepth(300);
-  s.toasts.push(t);
-  s.tweens.add({ targets: t, alpha: 0, delay: 2800, duration: 600, onComplete: () => t.destroy() });
+  const edge = Phaser.Display.Color.HexStringToColor(color).color; // thin frame in the message colour, amber tab on the left
+  const h = t.height + 16;
+  const bg = s.add.rectangle(W / 2, 96, t.width + 32, h, 0x04101c, 0.92).setStrokeStyle(1, edge, 0.9).setScrollFactor(0).setDepth(299);
+  const tab = s.add.rectangle(W / 2 - (t.width + 32) / 2 + 2, 96, 3, h, AMBER, 1).setScrollFactor(0).setDepth(299);
+  // two toasts at once used to draw on top of each other: stack each new one below those still showing, three at most
+  s.toasts = (s.toasts || []).filter(o => o.t.active);
+  if (s.toasts.length >= 3) { const old = s.toasts.shift(); old.t.destroy(); old.bg.destroy(); old.tab.destroy(); }
+  let y = 96;
+  [...s.toasts].sort((a, b) => a.y - b.y).forEach(o => {
+    if (y + h / 2 + 6 > o.y - o.h / 2 && y - h / 2 - 6 < o.y + o.h / 2) y = o.y + o.h / 2 + 6 + h / 2;
+  });
+  t.y = bg.y = tab.y = y;
+  s.toasts.push({ t, bg, tab, y, h });
+  s.tweens.add({ targets: [t, bg, tab], alpha: 0, delay: 2800, duration: 600, onComplete: () => { t.destroy(); bg.destroy(); tab.destroy(); } });
 }
 
 function go(s, key, data) {
@@ -47,34 +52,43 @@ function go(s, key, data) {
 }
 
 function label(s, x, y, text, color = '#9fe9ff', size = 14) {
-  return s.add.text(x, y, text, { fontFamily: 'monospace', fontSize: size + 'px', color }).setOrigin(0.5);
+  const t = s.add.text(x, y, text, { fontFamily: 'monospace', fontSize: size + 'px', color })
+    .setOrigin(0.5).setPadding(8).setShadow(0, 0, color, 6, false, true); // soft neon glow (padding keeps the glow from being clipped)
+  (s._wl = s._wl || []).push(t); // hud.js fades world labels that sit under a HUD panel
+  return t;
 }
 
 function hudText(s, x, y, color = '#9fe9ff', size = 16) {
   return s.add.text(x, y, '', { fontFamily: 'monospace', fontSize: size + 'px', color })
-    .setScrollFactor(0).setDepth(100);
+    .setStroke('#02060d', 3).setScrollFactor(0).setDepth(100); // dark outline keeps it readable over stars and ground
 }
 
 function missionLine() {
-  switch (G.mission) {
-    case 'accepted': return 'MISSION  Rescue the colonist on Kepler-4b';
-    case 'rescued': return 'MISSION  Colonist aboard: dock at the station';
-    case 'failed': return 'MISSION  Failed. Ask the station for another call';
-    default: return 'MISSION  None. Take a call at the MISSIONS terminal';
-  }
+  const m = missionDef(); // src/missions.js
+  if (!m || G.mission === 'none') return 'MISSION  None. Take a call at the MISSIONS terminal';
+  return 'MISSION  ' + m.line(G.mission);
 }
 
 function bar(g, x, y, w, h, frac, color) {
-  g.fillStyle(0x000000, 0.55); g.fillRect(x, y, w, h);
-  g.fillStyle(color, 1); g.fillRect(x, y, Math.max(0, w * Phaser.Math.Clamp(frac, 0, 1)), h);
-  g.lineStyle(1, color, 0.8); g.strokeRect(x, y, w, h);
+  const f = Phaser.Math.Clamp(frac, 0, 1), fw = Math.max(0, w * f);
+  g.fillStyle(0x02101c, 0.8); g.fillRect(x, y, w, h);
+  g.fillStyle(color, 0.9); g.fillRect(x, y, fw, h);
+  g.fillStyle(0xffffff, 0.2); g.fillRect(x, y, fw, Math.max(1, h * 0.3)); // sheen along the top
+  g.lineStyle(1, 0x02101c, 0.5);
+  for (let i = 1; i < 10; i++) g.lineBetween(x + w * i / 10, y, x + w * i / 10, y + h); // a tick every 10 percent
+  g.lineStyle(1, CYAN, 0.6); g.strokeRect(x - 1.5, y - 1.5, w + 3, h + 3);             // thin cyan frame
+  g.fillStyle(AMBER, 1); g.fillRect(x - 4, y - 1, 2, h + 2);                              // amber tab on the left
 }
 
-// small triangle pointing along angle a
+// small triangle pointing along angle a, with a soft halo and a dark edge
 function tri(g, x, y, a, size, color) {
   const p = (ang, r) => [x + Math.cos(a + ang) * r, y + Math.sin(a + ang) * r];
-  const [x1, y1] = p(0, size), [x2, y2] = p(2.5, size * 0.8), [x3, y3] = p(-2.5, size * 0.8);
+  const pts = k => [p(0, size * k), p(2.5, size * 0.8 * k), p(-2.5, size * 0.8 * k)];
+  let [[x1, y1], [x2, y2], [x3, y3]] = pts(1.6);
+  g.fillStyle(color, 0.2); g.fillTriangle(x1, y1, x2, y2, x3, y3);
+  [[x1, y1], [x2, y2], [x3, y3]] = pts(1);
   g.fillStyle(color, 1); g.fillTriangle(x1, y1, x2, y2, x3, y3);
+  g.lineStyle(1, 0x02060d, 0.9); g.strokeTriangle(x1, y1, x2, y2, x3, y3);
 }
 
 function rectWall(s, x, y, w, h, fill = 0x13263d, stroke = CYAN) {

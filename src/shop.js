@@ -40,11 +40,12 @@ const NPC_REACT = NPCS.map(() => ''); // the last reaction line each NPC said, s
 const UPGRADES = [
   { key: 'armor', name: 'ARMOR PLATING', descs: ['+20 max hull', '+20 more max hull'], prices: [300, 500] },
   { key: 'rapid', name: 'RAPID FIRE', descs: ['faster guns', 'even faster guns'], prices: [400, 600] },
-  { key: 'booster', name: 'BOOSTER', descs: ['higher boost speed', 'even higher boost'], prices: [350, 550] }
+  { key: 'booster', name: 'BOOSTER', descs: ['longer boost, higher speed', 'longest boost, top speed'], prices: [350, 550] }
 ];
 const TIER_NAME = ['', '', ' II'];
 function fireDelay() { return [160, 100, 70][G.upgrades.rapid | 0]; }       // ms between shots
 function boostMax() { return [800, 1000, 1150][G.upgrades.booster | 0]; }  // top speed while boosting
+function boostEnergy() { const t = G.upgrades.booster | 0; return { max: [100, 130, 165][t], regen: [17, 24, 32][t] }; } // boost tank (4 s at tier 0) and refill per second (src/boost.js)
 
 function ownedLine() {
   const have = UPGRADES.filter(u => G.upgrades[u.key]).map(u => u.name + TIER_NAME[G.upgrades[u.key]]);
@@ -79,53 +80,75 @@ function buildBar(s) {
     s.spots.push({ x: n.x, y: n.y, text: n.name, key: 'npc' + i, npc: i, prompt: 'Talk to ' + n.name, color: n.css });
   });
 
-  // dialogue bubble
-  s.talkBox = s.add.container(W / 2, H - 150).setDepth(120).setVisible(false);
-  s.talkBg = s.add.rectangle(0, 0, 880, 100, 0x07101c, 0.95).setStrokeStyle(2, AMBER, 1);
-  s.talkName = s.add.text(-420, -42, '', { fontFamily: 'monospace', fontSize: '16px', color: '#ffb454' });
-  s.talkText = s.add.text(-420, -18, '', {
-    fontFamily: 'monospace', fontSize: '18px', color: '#e8f6ff', wordWrap: { width: 840 }, lineSpacing: 4
-  });
-  const more = s.add.text(420, 34, '[E] more', { fontFamily: 'monospace', fontSize: '12px', color: '#5b7a92' }).setOrigin(1, 0);
-  s.talkBox.add([s.talkBg, s.talkName, s.talkText, more]);
+  // dialogue box at the bottom: speaker in the title bar, typewriter text (src/ui.js)
+  s.talkUI = panel(s, { w: 900, h: 130, y: H - 85, depth: 120, color: AMBER, foot: false });
+  s.talkBox = s.talkUI.box.setVisible(false);
+  s.talkName = s.talkUI.titleText;
+  s.talkText = s.add.text(-420, -10, '', uiFont(18, '#e8f6ff', { wordWrap: { width: 840 }, lineSpacing: 4 })).setOrigin(0, 0);
+  s.talkBox.add(s.talkText);
+  layoutHints(s, s.talkBox, [['E', 'Next'], ['Esc', 'Close']], 48).forEach(o => { o.x += 320; });
 }
 
 function buildShop(s) {
   s.shopOpen = false;
   s.shopKeys = s.input.keyboard.addKeys('ONE,TWO,THREE,ESC');
-  s.hud3 = hudText(s, 24, 70, '#6dff9c');
 
   // terminal in the hangar
   const r = rectWall(s, 950, 148, 100, 44, 0x0d2a3f, AMBER); s.walls.push(r);
   label(s, 1000, 128, 'UPGRADE SHOP', '#ffb454');
-  s.spots.push({ x: 1000, y: 170, text: 'UPGRADE SHOP', key: 'shop', prompt: 'Open the upgrade shop', color: '#ffb454' });
+  s.spots.push({ x: 1000, y: 170, text: 'UPGRADE SHOP', key: 'shop', prompt: 'Open the upgrade shop', color: '#ffb454', dy: 74 });
 
-  s.shopBox = s.add.container(W / 2, H / 2).setDepth(160).setVisible(false);
-  const bg = s.add.rectangle(0, 0, 620, 340, 0x07101c, 0.96).setStrokeStyle(2, AMBER, 1);
-  const mono = (size, color) => ({ fontFamily: 'monospace', fontSize: size + 'px', color, align: 'center' });
-  s.shopHead = s.add.text(0, -130, '', mono(18, '#9fe9ff')).setOrigin(0.5);
-  s.shopRows = UPGRADES.map((u, i) => s.add.text(0, -55 + i * 40, '', mono(18, '#cfefff')).setOrigin(0.5));
-  s.shopMsgText = s.add.text(0, 80, '', mono(16, '#ffd37a')).setOrigin(0.5);
-  const foot = s.add.text(0, 135, '[1-3] Buy      [Esc] Close', mono(16, '#5b7a92')).setOrigin(0.5);
-  s.shopBox.add([bg, s.shopHead, ...s.shopRows, s.shopMsgText, foot]);
+  s.shopUI = panel(s, { w: 900, h: 420, title: 'UPGRADE SHOP  -  HANGAR', color: AMBER, dim: true, depth: 160 });
+  s.shopBox = s.shopUI.box.setVisible(false); s.shopObjs = [];
+  s.shopMsgText = s.add.text(0, 100, '', uiFont(16, '#ffd37a')).setOrigin(0.5);
+  s.shopBox.add(s.shopMsgText);
+  s.shopUI.setHints([['1-3', 'Buy'], ['Esc', 'Close']]);
+}
+
+// the little shape on each tile: shield, chevrons, flame
+function upgradeIcon(g, key, x, y, color) {
+  g.lineStyle(3, color, 1);
+  if (key === 'armor') { g.beginPath(); g.moveTo(x - 14, y - 14); g.lineTo(x + 14, y - 14); g.lineTo(x + 14, y + 2); g.lineTo(x, y + 16); g.lineTo(x - 14, y + 2); g.closePath(); g.strokePath(); }
+  else if (key === 'rapid') { [-12, 0, 12].forEach(dx => { g.beginPath(); g.moveTo(x + dx - 6, y - 12); g.lineTo(x + dx + 4, y); g.lineTo(x + dx - 6, y + 12); g.strokePath(); }); }
+  else { g.beginPath(); g.moveTo(x - 14, y + 14); g.lineTo(x, y - 16); g.lineTo(x + 14, y + 14); g.closePath(); g.strokePath(); g.fillStyle(color, 0.6); g.fillTriangle(x - 7, y + 14, x, y - 2, x + 7, y + 14); }
 }
 
 function refreshShop(s) {
-  s.shopHead.setText('UPGRADE SHOP  -  HANGAR\nCREDITS ' + G.credits);
+  s.shopObjs.forEach(o => o.destroy()); s.shopObjs = [];
+  s.shopUI.tagText.setText('CREDITS ' + G.credits);
+  const add = o => { s.shopBox.add(o); s.shopObjs.push(o); return o; };
+  const txt = (x, y, str, size, color, style) => add(s.add.text(x, y, str, uiFont(size, color, style)).setOrigin(0, 0.5));
   UPGRADES.forEach((u, i) => {
-    const t = G.upgrades[u.key] | 0, maxed = t >= u.prices.length;
-    const name = u.name + TIER_NAME[maxed ? t : t + 1];
-    s.shopRows[i].setText('[' + (i + 1) + '] ' + name.padEnd(18) + (maxed ? 'MAXED' : u.descs[t].padEnd(19) + u.prices[t] + ' cr'));
-    s.shopRows[i].setColor(maxed ? '#6dff9c' : G.credits >= u.prices[t] ? '#e8f6ff' : '#6b8296');
+    const t = G.upgrades[u.key] | 0, maxed = t >= u.prices.length, price = maxed ? 0 : u.prices[t], can = !maxed && G.credits >= price;
+    const cx = (i - 1) * 288, cy = -30, w = 270, h = 210, L = cx - w / 2 + 16;
+    const edge = maxed ? GREEN : can ? AMBER : 0x3a5a78, dim = !maxed && !can;
+    const g = add(s.add.graphics());
+    g.fillStyle(0x0a1b2c, 1); g.fillRect(cx - w / 2, cy - h / 2, w, h);
+    g.lineStyle(can ? 2 : 1, edge, can ? 1 : 0.7); g.strokeRect(cx - w / 2, cy - h / 2, w, h);
+    if (can) { g.fillStyle(AMBER, 1); g.fillRect(cx - w / 2, cy - h / 2, w, 4); }
+    const cap = keyCap(s, String(i + 1), can ? AMBER : CYAN); cap.setPosition(L + cap.kw / 2, cy - h / 2 + 28); add(cap);
+    upgradeIcon(g, u.key, cx + w / 2 - 38, cy - h / 2 + 34, maxed ? GREEN : can ? AMBER : 0x5b7a92);
+    txt(L, cy - h / 2 + 62, u.name + TIER_NAME[maxed ? t : t + 1], 16, maxed ? '#6dff9c' : dim ? '#6b8296' : '#ffd37a', { fontStyle: 'bold' });
+    txt(L, cy - h / 2 + 90, 'TIER', 11, '#5b7a92');
+    add(pips(s, L + 38, cy - h / 2 + 86, t, u.prices.length, GREEN));
+    txt(L, cy - h / 2 + 118, maxed ? 'Fully upgraded' : u.descs[t], 14, dim ? '#6b8296' : '#cfefff');
+    if (maxed) txt(L, cy - h / 2 + 168, 'MAXED', 24, '#6dff9c', { fontStyle: 'bold' });
+    else {
+      txt(L, cy - h / 2 + 160, price + ' cr', 28, can ? '#ffb454' : '#ff4d6d', { fontStyle: 'bold' });
+      if (!can) txt(L, cy - h / 2 + 190, 'Need ' + (price - G.credits) + ' more', 12, '#ff4d6d');
+    }
+    if (dim) { g.fillStyle(0x05070f, 0.4); g.fillRect(cx - w / 2 + 1, cy - h / 2 + 1, w - 2, h - 2); } // greyed out
+    const z = add(s.add.rectangle(cx, cy, w, h, 0x000000, 0.001).setInteractive({ useHandCursor: true }));
+    z.on('pointerdown', () => buyUpgrade(s, i));
   });
 }
 
 function openShop(s) {
-  hideTalk(s); s.shopOpen = true; s.panel = true; s.shopBox.setVisible(true); // s.panel: the pause menu ignores Esc while a terminal is open
+  hideTalk(s); s.prompt.setText(''); s.shopOpen = true; s.panel = true; s.shopBox.setVisible(true); // s.panel: the pause menu ignores Esc while a terminal is open
   s.shopMsgText.setText('Pick an upgrade. Fitted instantly.').setColor('#ffd37a');
   refreshShop(s); beep(480, 0.08, 'triangle', 0.03, 200);
 }
-function closeShop(s) { s.shopOpen = false; s.panel = false; s.shopBox.setVisible(false); }
+function closeShop(s) { s.shopOpen = false; s.panel = false; s.shopBox.setVisible(false); s.shopObjs.forEach(o => o.destroy()); s.shopObjs = []; }
 
 function buyUpgrade(s, i) {
   const u = UPGRADES[i], t = G.upgrades[u.key] | 0, say = (m, c) => s.shopMsgText.setText(m).setColor(c);
@@ -135,24 +158,23 @@ function buyUpgrade(s, i) {
   else {
     G.credits -= price; G.upgrades[u.key] = t + 1;
     if (u.key === 'armor') { G.maxHull += 20; G.hull += 20; }
-    say(u.name + TIER_NAME[t + 1] + ' installed (-' + price + ' cr).', '#6dff9c'); beep(660, 0.2, 'triangle', 0.05, 440);
+    say(u.name + TIER_NAME[t + 1] + ' installed (-' + price + ' cr).', '#6dff9c'); sfx('chime');
   }
   refreshShop(s);
 }
 
 function talkTo(s, i) {
-  const n = NPCS[i], r = n.react ? n.react() : null;
+  const n = NPCS[i];
+  if (s.talk && s.talk.i === i && s.talk.tw && !s.talk.tw.done) { s.talk.tw.skip(); s.talk.until = s.time.now + 9000; return; } // E while typing shows the whole line
+  const r = n.react ? n.react() : null;
   let line;
   if (r && r !== NPC_REACT[i]) { line = r; NPC_REACT[i] = r; }   // new situation: comment on it once
   else { line = n.lines[NPC_IDX[i] % n.lines.length]; NPC_IDX[i]++; }
-  s.talk = { i, until: s.time.now + 9000 };
   s.talkName.setText(n.name + '  -  ' + n.role).setColor(n.css);
-  s.talkText.setText('"' + line + '"');
-  s.talkBg.setStrokeStyle(2, n.color, 1);
-  s.talkBox.setVisible(true);
-  beep(520 + i * 70, 0.05, 'triangle', 0.02);
+  s.talkUI.box.setVisible(true);
+  s.talk = { i, until: s.time.now + 9000, tw: typewrite(s, s.talkText, '"' + line + '"', 75) };
 }
-function hideTalk(s) { s.talk = null; s.talkBox.setVisible(false); }
+function hideTalk(s) { if (s.talk && s.talk.tw) s.talk.tw.stop(); s.talk = null; s.talkBox.setVisible(false); }
 
 // E on a spot: true when the bar or shop handled it, false to let station.js carry on
 function spotInteract(s, sp) {
@@ -163,7 +185,6 @@ function spotInteract(s, sp) {
 
 // once per frame from Station.update; true = the shop panel owns this frame
 function shopFrame(s) {
-  s.hud3.setText(ownedLine());
   const JD = Phaser.Input.Keyboard.JustDown, k = s.shopKeys;
   if (s.shopOpen) {
     s.player.setVelocity(0, 0);

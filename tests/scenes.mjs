@@ -3,14 +3,14 @@
 // Uses the DevTools route rather than chrome --screenshot: that one hangs at random when the Mac is busy.
 import { launch, sleep } from './cdp.mjs';
 
-const SCENES = [['scene-station', '', 'Station'], ['scene-space', '#space', 'Space'], ['scene-surface', '#surface', 'Surface']];
+const SCENES = [['scene-title', '', 'Title'], ['scene-station', '#station', 'Station'], ['scene-space', '#space', 'Space'], ['scene-surface', '#surface', 'Surface']];
 let failed = false;
 for (const [name, hash, scene] of SCENES) {
   const t = await launch(hash);
   try {
     await t.waitFor(`!!(window.game && game.scene.isActive('${scene}'))`, 20000, scene + ' scene active');
     await sleep(1500); // let the fade-in finish and a few frames draw
-    await t.shot(name);
+    if (!(await t.shot(name))) throw new Error('could not take the screenshot');
     if (t.errors.length) throw new Error('console errors: ' + t.errors.join(' | '));
     console.log(`  ok  ${name} -> tests/out/${name}.png`);
   } catch (e) {

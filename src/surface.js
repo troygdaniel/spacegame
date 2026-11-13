@@ -30,7 +30,7 @@ class Surface extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
 
     this.col = null;
-    if (G.mission === 'accepted') {
+    if (missionActive('rescue')) {
       const s = this.physics.add.sprite(this.pod.x - 50, this.pod.y + 20, 'colonist').setDepth(4);
       s.body.setCircle(8, 3, 3);
       this.physics.add.collider(s, this.rocks);
@@ -53,28 +53,24 @@ class Surface extends Phaser.Scene {
     this.physics.add.overlap(this.pb, this.crawlers, (b, c) => {
       if (!b.active || !c.active) return;
       b.disableBody(true, true); c.hp -= 12; c.setTint(0xffffff); this.time.delayedCall(70, () => c.active && c.clearTint());
-      this.boom.explode(5, b.x, b.y); beep(260, 0.06, 'square', 0.02, -120);
-      if (c.hp <= 0) { this.boom.explode(22, c.x, c.y); c.destroy(); beep(110, 0.2, 'sawtooth', 0.04, -60); }
+      this.boom.explode(5, b.x, b.y); sfx('tick'); feelNumber(this, c.x, c.y - 16, '12');
+      if (c.hp <= 0) { this.boom.explode(22, c.x, c.y); c.destroy(); sfx('boom'); }
     });
 
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,UP,DOWN,LEFT,RIGHT');
     this.nextFire = 0; this.tmp = new Phaser.Math.Vector2();
-    this.hud = this.add.graphics().setScrollFactor(0).setDepth(100);
-    this.hudL1 = hudText(this, 24, 22);
-    this.hudL2 = hudText(this, 24, 46, '#ffd37a');
-    this.objText = hudText(this, W / 2, 128, '#ffd37a', 14).setOrigin(0.5);
-    this.prompt = this.add.text(W / 2, H - 56, '', {
-      fontFamily: 'monospace', fontSize: '20px', color: '#ffffff', backgroundColor: '#000000bb', padding: { x: 12, y: 6 }
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
+    this.prompt = floatPrompt(this, this.player); // key cap above you instead of a strip at the bottom (src/ui.js)
     this.add.text(24, H - 44, 'WASD walk   aim with mouse   click fire   E interact', {
       fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92'
     }).setScrollFactor(0).setDepth(100);
-    toast(this, G.mission === 'accepted' ? 'Landed. Find the colonist. The pod is to the east.' : 'Landed on Kepler-4b. Nobody needs you here yet.', '#9fe9ff');
+    toast(this, missionActive('rescue') ? 'Landed. Find the colonist. The pod is to the east.' : 'Landed on Kepler-4b. Nobody needs you here yet.', '#9fe9ff');
+    feelInstall(this); // src/feel.js: hit cues, muzzle flash, landing zoom
   }
 
   update(time, dt) {
     guideTick(this);
     const k = this.k, p = this.player, JD = Phaser.Input.Keyboard.JustDown, col = this.col;
+    if (this.leaving) { feelFrame(this, time, dt); return; } // lift-off move is playing (feel.js)
     const dx = (k.D.isDown || k.RIGHT.isDown ? 1 : 0) - (k.A.isDown || k.LEFT.isDown ? 1 : 0);
     const dy = (k.S.isDown || k.DOWN.isDown ? 1 : 0) - (k.W.isDown || k.UP.isDown ? 1 : 0);
     const v = new Phaser.Math.Vector2(dx, dy).normalize().scale(210);
@@ -89,7 +85,7 @@ class Surface extends Phaser.Scene {
         b.enableBody(true, p.x + Math.cos(aim) * 14, p.y + Math.sin(aim) * 14, true, true);
         b.setRotation(aim).setDepth(4); b.born = time;
         this.physics.velocityFromRotation(aim, 820, b.body.velocity);
-        beep(700, 0.05, 'square', 0.015, -300);
+        sfx('laser'); feelShot(this, p.x + Math.cos(aim) * 16, p.y + Math.sin(aim) * 16, aim);
       }
     }
     this.pb.getChildren().forEach(b => { if (b.active && time - b.born > 800) b.disableBody(true, true); });
@@ -113,7 +109,7 @@ class Surface extends Phaser.Scene {
         this.physics.moveToObject(c, tgt, 100);
         c.rotation = Phaser.Math.Angle.Between(c.x, c.y, tgt.x, tgt.y);
         if (best < 28) {
-          if (tgt === p) this.hp -= dt * 0.02;
+          if (tgt === p) { this.hp -= dt * 0.02; feelBite(this, c.x, c.y); }
           else col.hp -= dt * 0.012;
         }
       } else {
@@ -149,26 +145,13 @@ class Surface extends Phaser.Scene {
         if (c2 && c2.state === 'following' && !withMe) toast(this, 'The colonist is still on the way.', '#ffd37a');
         else {
           if (withMe) { G.mission = 'rescued'; toast(this, 'Colonist aboard. Take them home.', '#6dff9c'); }
-          beep(200, 0.5, 'sawtooth', 0.04, 500); go(this, 'Space', { from: 'surface' });
+          sfx('thrusters'); feelLiftoff(this, () => go(this, 'Space', { from: 'surface' }));
         }
       }
     }
-    this.prompt.setText(msg).setVisible(msg !== '');
+    this.prompt.setText(msg);
 
-    // HUD
-    const g = this.hud; g.clear();
-    this.hudL1.setText('CREDITS ' + G.credits + '    HEALTH ' + Math.round(this.hp));
-    this.hudL2.setText(missionLine());
-    bar(g, 24, 74, 220, 12, this.hp / 100, this.hp > 35 ? CYAN : RED);
-    let tgt = null, txt = '';
-    if (this.col && this.col.state === 'waiting') { tgt = this.pod; txt = 'Find the colonist at the crashed pod'; }
-    else if (this.col && this.col.state === 'following') {
-      tgt = this.pad; txt = 'Escort the colonist back to the ship';
-      bar(g, 24, 92, 220, 8, this.col.hp / 60, AMBER);
-    } else { tgt = this.pad; txt = 'Return to the ship'; }
-    const a = Phaser.Math.Angle.Between(p.x, p.y, tgt.x, tgt.y);
-    const sx = p.x - this.cameras.main.scrollX, sy = p.y - this.cameras.main.scrollY;
-    tri(g, sx + Math.cos(a) * 60, sy + Math.sin(a) * 60, a, 9, AMBER);
-    this.objText.setText(txt);
+    hudTick(this); // src/hud.js
+    feelFrame(this, time, dt); // src/feel.js: hit cues, muzzle flash, low-health pulse
   }
 }

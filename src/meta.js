@@ -4,7 +4,7 @@
 
 const SAVE_KEY = 'longhaul.save.v1';
 const GAMEPLAY = ['Station', 'Space', 'Surface'];
-const DEV_HASH = /^#(space|surface)$/.test(location.hash); // dev jumps neither load nor overwrite a save
+const DEV_HASH = /^#(space|surface|escort|patrol)$/.test(location.hash); // dev jumps neither load nor overwrite a save
 let lastSaved = '';
 
 const HELP = {
@@ -17,7 +17,8 @@ const HELP = {
   Space: [
     'A D / left right   turn',
     'W / up   thrust        S / down   brake',
-    'Shift   boost (hold with thrust)',
+    'Shift   boost with thrust (energy: inner ring)',
+    'Q / E   dash left or right (cooldown)',
     'Space or mouse   fire',
     'L   dock or land (fly slowly, close in)',
     'Esc   pause        M   mute sound'
@@ -34,8 +35,11 @@ const HELP = {
 function snapshot() {
   return {
     v: 1, credits: Math.floor(G.credits), hull: Math.round(G.hull), maxHull: Math.round(G.maxHull), mission: G.mission,
-    upgrades: Object.assign({}, G.upgrades),
-    volume: Math.round(G.volume * 10) / 10, muted: !!G.muted
+    missionId: G.missionId || null, missionProgress: Math.floor(G.missionProgress || 0), // missions.js: which call, kills so far
+    upgrades: Object.assign({}, G.upgrades), ore: G.ore | 0, // ore in the hold (asteroids.js)
+    volume: Math.round(G.volume * 10) / 10, muted: !!G.muted,
+    ...guideSnapshot(), // first-run guide, run stats, ending card (guide.js)
+    ...poiSnapshot() // salvage sites found and salvaged (poi.js)
   };
 }
 
@@ -71,8 +75,16 @@ function loadGame() {
     if (Number.isFinite(s.hull)) G.hull = Math.min(G.maxHull, Math.max(1, s.hull));
     if (['none', 'accepted', 'rescued', 'failed'].includes(s.mission)) G.mission = s.mission;
     if (G.mission === 'rescued') G.mission = 'accepted'; // you always wake up at the station, colonist or not
+    // which call it is (missions.js). A save from before missions.js has no id: back then the only call was the rescue.
+    const ids = typeof MISSIONS !== 'undefined' ? MISSIONS.map(m => m.id) : ['rescue'];
+    G.missionId = ids.includes(s.missionId) ? s.missionId : (s.missionId === undefined && G.mission !== 'none' ? 'rescue' : null);
+    G.missionProgress = Number.isFinite(s.missionProgress) ? Math.max(0, Math.floor(s.missionProgress)) : 0;
+    if (!G.missionId && G.mission !== 'none') { G.mission = 'none'; G.missionProgress = 0; } // unknown call: no mission
     if (Number.isFinite(s.volume)) G.volume = Math.min(1, Math.max(0, s.volume));
     if (typeof s.muted === 'boolean') G.muted = s.muted;
+    G.ore = Number.isFinite(s.ore) ? Math.min(ORE_CAP, Math.max(0, Math.floor(s.ore))) : 0; // asteroids.js
+    guideRestore(s); // guide.js: tips done, stats, ending seen
+    poiRestore(s); // poi.js: salvage sites found and salvaged
     lastSaved = JSON.stringify(snapshot());
     return true;
   } catch (e) { return false; }
@@ -84,8 +96,10 @@ function clearSave() {
 }
 
 function newGameState() {
-  G.credits = 0; G.maxHull = 100; G.hull = 100; G.mission = 'none';
+  G.credits = 0; G.maxHull = 100; G.hull = 100; G.mission = 'none'; G.missionId = null; G.missionProgress = 0;
   Object.keys(G.upgrades).forEach(k => { G.upgrades[k] = 0; });
+  G.ore = 0; guideReset(); // guide.js: tips and stats start over
+  poiReset(); // poi.js: every site can be salvaged again
 }
 
 // ---------- window hooks ----------
@@ -129,8 +143,9 @@ class Pause extends Phaser.Scene {
   create() {
     const cx = W / 2, cy = H / 2;
     this.add.rectangle(cx, cy, W, H, 0x02050c, 0.72).setInteractive(); // swallows clicks
-    this.add.rectangle(cx, cy, 560, 470, 0x07101c, 0.97).setStrokeStyle(2, CYAN, 1);
-    this.title = this.add.text(cx, cy - 196, 'PAUSED', { fontFamily: 'monospace', fontSize: '30px', color: '#38e1ff' }).setOrigin(0.5);
+    this.ui = panel(this, { w: 560, h: 470, title: 'PAUSED', depth: 0 }); // the shared panel style (src/ui.js)
+    this.ui.tagText.setText('AUTOSAVE ON');
+    this.title = this.ui.titleText;
     this.rows = []; this.zones = [];
     for (let i = 0; i < 6; i++) {
       const y = cy - 118 + i * 50;
@@ -143,7 +158,6 @@ class Pause extends Phaser.Scene {
     this.help = this.add.text(cx, cy - 10, '', {
       fontFamily: 'monospace', fontSize: '19px', color: '#cfefff', align: 'left', lineSpacing: 12
     }).setOrigin(0.5).setVisible(false);
-    this.foot = this.add.text(cx, cy + 200, '', { fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92', align: 'center', lineSpacing: 4 }).setOrigin(0.5);
     this.input.on('pointerdown', () => { if (this.view === 'controls' && performance.now() - this.viewAt > 250) this.setView('menu'); });
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,ENTER,SPACE,ESC,UP,DOWN,LEFT,RIGHT');
     this.refresh();
@@ -170,9 +184,7 @@ class Pause extends Phaser.Scene {
       this.zones[i].input.enabled = menu;
     });
     this.help.setVisible(!menu).setText((HELP[this.from] || HELP.Station).join('\n'));
-    this.foot.setText(menu
-      ? 'Up/Down choose   Enter select   Left/Right volume\nEsc resume   Autosaves as you play'
-      : 'Esc, Enter or click: back');
+    this.ui.setHints(menu ? [['↑↓', 'Choose'], ['Enter', 'Select'], ['←→', 'Volume'], ['Esc', 'Resume']] : [['Esc', 'Back']]);
   }
 
   adjustVolume(dir) {
