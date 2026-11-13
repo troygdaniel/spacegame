@@ -36,6 +36,22 @@ class Boot extends Phaser.Scene {
       g.fillRoundedRect(2, 4, 60, 20, 4); g.strokeRoundedRect(2, 4, 60, 20, 4);
       g.fillStyle(0x0b2236, 1); g.fillRect(8, 9, 28, 10); g.fillStyle(AMBER, 1); g.fillRect(52, 11, 6, 6);
     });
+    mk('civilian', 64, 28, g => { // same shape as the MULE but a pale hull, so each civilian's tint shows as a clear colour
+      g.fillStyle(0xc4d0e0, 1); g.lineStyle(2, 0xffffff, 0.9);
+      g.fillRoundedRect(2, 4, 60, 20, 4); g.strokeRoundedRect(2, 4, 60, 20, 4);
+      g.lineStyle(2, 0x6a7a90, 0.9); [16, 26, 36].forEach(x => g.lineBetween(x, 6, x, 22));
+      g.fillStyle(0x1a2a40, 1); g.fillRect(46, 9, 12, 10);
+      g.fillStyle(0xffffff, 1); g.fillRect(2, 10, 5, 8);
+    });
+    mk('police', 44, 30, g => { // a Halcyon patrol ship: blue and white
+      halo(g, 22, 15, 0x3a8dff, [14, 10, 6], 0.05);
+      g.fillStyle(0x0d1c34, 1); g.lineStyle(2, 0x3a8dff, 1);
+      g.beginPath(); g.moveTo(42, 15); g.lineTo(3, 3); g.lineTo(12, 15); g.lineTo(3, 27); g.closePath(); g.fillPath(); g.strokePath();
+      g.fillStyle(0xdfefff, 1); g.beginPath(); g.moveTo(38, 15); g.lineTo(15, 11); g.lineTo(12, 15); g.lineTo(15, 19); g.closePath(); g.fillPath();
+      g.lineStyle(2, 0xffffff, 0.9); g.lineBetween(8, 15, 30, 15);
+      g.fillStyle(0x9fd0ff, 1); g.fillRect(8, 13, 4, 4);
+      g.fillStyle(0x3a8dff, 1); g.fillCircle(24, 15, 3); g.fillStyle(0xffffff, 1); g.fillCircle(24.5, 15, 1.2);
+    });
     mk('bullet', 14, 4, g => { g.fillStyle(0xfff1a8, 1); g.fillRect(0, 0, 14, 4); });
     mk('ebullet', 14, 4, g => { g.fillStyle(RED, 1); g.fillRect(0, 0, 14, 4); });
     mk('spark', 6, 6, g => { g.fillStyle(0xffffff, 1); g.fillCircle(3, 3, 3); });

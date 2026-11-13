@@ -77,6 +77,7 @@ class Space extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(100);
     if (this.from === 'station') toast(this, 'Launch clear. Kepler-4b is to the north-east.', '#9fe9ff');
     missionSpaceSetup(this); // src/missions.js: escort freighter, wanted pirates
+    trafficSetup(this); // src/traffic.js: civilian ships and the station police
   }
 
   spawnDrone(x, y) {
@@ -167,6 +168,7 @@ class Space extends Phaser.Scene {
     this.prompt.setText(msg);
 
     missionSpaceUpdate(this, time, dt); // queues the freighter bar and radar dots for the HUD
+    trafficUpdate(this, time, dt); // src/traffic.js
     hudTick(this); // src/hud.js: gauges, checklist, radar, objective marker
   }
 }
