@@ -10,7 +10,7 @@ for (const [name, hash, scene] of SCENES) {
   try {
     await t.waitFor(`!!(window.game && game.scene.isActive('${scene}'))`, 20000, scene + ' scene active');
     await sleep(1500); // let the fade-in finish and a few frames draw
-    await t.shot(name);
+    if (!(await t.shot(name))) throw new Error('could not take the screenshot');
     if (t.errors.length) throw new Error('console errors: ' + t.errors.join(' | '));
     console.log(`  ok  ${name} -> tests/out/${name}.png`);
   } catch (e) {

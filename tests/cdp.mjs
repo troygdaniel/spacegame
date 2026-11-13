@@ -84,7 +84,9 @@ async function launchOnce(hash) {
   // busy, so a test that needs the game to run for an exact time stops Phaser's own loop and steps it by hand,
   // 16.67 ms a frame. After clock(), use run(ms) and key(k) (not press): real time no longer moves the game.
   const clock = () => ev('(() => { game.loop.stop(); window.__t = performance.now(); window.tick = n => { for (let i = 0; i < n; i++) { __t += 16.67; game.step(__t, 16.67); } }; return 1; })()');
-  const run = ms => ev(`(() => { tick(${Math.ceil(ms / 16.67)}); return 1; })()`);
+  const run = async ms => { // in slices of 120 frames (2 s of game time) so no single DevTools call runs for long
+    for (let left = Math.ceil(ms / 16.67); left > 0; left -= 120) await ev(`(() => { tick(${Math.min(left, 120)}); return 1; })()`);
+  };
   const key = async k => {
     const [vk, code, key] = KEYS[k];
     await send('Input.dispatchKeyEvent', { type: 'keyDown', windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, code, key });
@@ -92,9 +94,14 @@ async function launchOnce(hash) {
     await send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, code, key });
     await run(100);
   };
+  // A screenshot can hang on a busy Mac (software GL). It returns true or false instead of throwing, so a test that
+  // only wants a picture goes on; tests/scenes.mjs, where the picture is the point, fails on false.
   const shot = async name => {
-    const r = await send('Page.captureScreenshot', { format: 'png' });
-    writeFileSync(join(OUT, name + '.png'), Buffer.from(r.data, 'base64'));
+    try {
+      const r = await send('Page.captureScreenshot', { format: 'png' });
+      writeFileSync(join(OUT, name + '.png'), Buffer.from(r.data, 'base64'));
+      return true;
+    } catch (e) { console.log(`  (screenshot ${name} skipped: ${e.message})`); return false; }
   };
   const close = async () => {
     try { ws.close(); } catch (e) { /* already closed */ }

@@ -67,9 +67,9 @@ try {
   check('freighter is moving toward the gate', fx < 3930, 'x=' + fx);
   check('objective arrow points at the MULE', (await t.ev(`missionTarget(${S('Space')}).name`)) === 'Freighter MULE');
   await x(`freighterHurt(${S('Space')}, 30)`);
-  check('freighter hull drops', await t.ev(`${S('Space')}.mx.freighter.hp === ${S('Space')}.mx.freighter.maxHp - 30`));
+  check('freighter hull drops', await t.ev(`${S('Space')}.mx.freighter.hp <= ${S('Space')}.mx.freighter.maxHp - 30`)); // at most: pirates may already have hit her
   await x(`${S('Space')}.ship.setPosition(${S('Space')}.mx.freighter.x, ${S('Space')}.mx.freighter.y - 150)`);
-  await run(20000); await t.shot('missions-space-escort-20s');
+  await run(20000); // no screenshot here: after a 20 s run the GL readback hung on a busy Mac
   const hp20 = await t.ev(`${S('Space')}.mx.freighter.active ? ${S('Space')}.mx.freighter.hp : -1`);
   // information only: with the player parked and not shooting, the pirates usually kill the MULE before the gate
   console.log('       MULE after 20 s with the player idle next to her:', hp20 > 0 ? 'hull ' + hp20 : 'destroyed', ' mission', (await G()).mission);
