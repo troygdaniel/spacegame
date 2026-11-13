@@ -4,6 +4,8 @@ Found by TaskMaster-1 with `bash tests/smoke.sh` (loads every scene, plays the w
 
 ## Bugs, worst first
 
+All five are fixed on branch `space-game-bugs` (one commit each, 3f326f8 to b71d83a), each guarded by a check in `tests/fixes.mjs`. Bug 5 has one addition: a player too poor to pay the fee gets the ship rebuilt at half hull instead of a free full repair.
+
 | # | Where | What happens | Suggested fix |
 |---|-------|--------------|---------------|
 | 1 | surface.js, crawler AI | **The colonist dies before you can reach the pod.** Crawlers hunt the colonist from the moment the scene loads. Measured with the player idle at the ship: colonist hp 60 at 0 s, 36 at 4 s, dead by 6 s. Walking to the pod is about 1800 px at 210 px/s, so 9 s or more. The rescue fails almost every time. | Crawlers ignore the colonist while its state is `waiting`, and only chase it once it is `following` (or once the player is within 500 px). |

@@ -4,6 +4,7 @@
 #   2. tests/scenes.mjs: load index.html, index.html#space, index.html#surface in headless Chrome, fail on a console
 #      error, save a screenshot of each to tests/out/ (gitignored)
 #   3. tests/loop.mjs: scripted rescue from station to payout, asserts +500 credits
+#   4. tests/fixes.mjs: one check per playtest bug fixed (colonist, prompt box, toasts, ramming, insurance fee)
 # Needs Google Chrome and Node 22+. Uses throwaway Chrome profiles, never your own. Chrome runs with
 # --headless=new --disable-gpu --use-angle=swiftshader --enable-unsafe-swiftshader --allow-file-access-from-files.
 # (The plain chrome --screenshot route hung at random when the Mac was busy, so the scenes go over DevTools too.)
@@ -21,6 +22,9 @@ if node tests/scenes.mjs; then :; else fail=1; fi
 
 echo "== 3. scripted rescue loop"
 if node tests/loop.mjs; then :; else fail=1; fi
+
+echo "== 4. one check per fixed bug"
+if node tests/fixes.mjs; then :; else fail=1; fi
 
 echo
 if [ "$fail" = 0 ]; then echo "SMOKE PASS"; else echo "SMOKE FAIL"; fi
