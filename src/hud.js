@@ -154,22 +154,38 @@ function hudFrame(g, now) {
 }
 
 // ---- a 270 degree gauge of 30 segments; tick (0..1) marks a threshold on the scale ----
-function hudGauge(h, id, cx, cy, r, frac, color, big, small, tick) {
-  const g = h.g, a0 = Math.PI * 0.75, span = Math.PI * 1.5, n = 30;
+// A round plate with a glowing bezel and ten ticks, the segments with a halo under the lit ones and a bright leading cell,
+// a scanner arc that circles the bezel, the number with a glow, and the label. warn turns the bezel red and makes it beat.
+function hudGauge(h, id, cx, cy, r, frac, color, big, small, tick, warn) {
+  const g = h.g, now = h.now, a0 = Math.PI * 0.75, span = Math.PI * 1.5, n = 30, R = r + 12;
   frac = Phaser.Math.Clamp(frac, 0, 1);
-  g.fillStyle(HUD_BG, 0.72); g.fillCircle(cx, cy, r + 11);
-  g.lineStyle(1, CYAN, 0.35); g.strokeCircle(cx, cy, r + 11);
+  const rim = warn ? RED : CYAN, beat = warn ? 0.55 + 0.45 * Math.sin(now / 130) : 1;
+  g.fillStyle(HUD_BG, 0.78); g.fillCircle(cx, cy, R);
+  g.fillStyle(color, 0.06); g.fillCircle(cx, cy, r - 8);                       // a faint glow of the state colour on the glass
+  [[6.5, 0.07], [3.5, 0.17], [1.5, 0.8]].forEach(([lw, k]) => { g.lineStyle(lw, rim, k * beat); g.strokeCircle(cx, cy, R); });
+  g.lineStyle(1, rim, 0.18); g.strokeCircle(cx, cy, r - 7);
+  for (let i = 0; i <= 10; i++) {                                              // ticks outside the segments: long at 0, half and full
+    const a = a0 + span * i / 10, long = i % 5 === 0, r0 = r + 5, r1 = r + (long ? 10 : 8);
+    g.lineStyle(long ? 2 : 1, rim, long ? 0.85 : 0.4);
+    g.lineBetween(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+  }
+  if (frac > 0.02) { g.lineStyle(12, color, 0.13); g.beginPath(); g.arc(cx, cy, r, a0, a0 + span * frac, false); g.strokePath(); }
+  const lead = Math.min(n - 1, Math.max(0, Math.ceil(frac * n - 0.5) - 1));
   for (let i = 0; i < n; i++) {
-    const lit = (i + 0.5) / n <= frac;
+    const lit = (i + 0.5) / n <= frac || (i === 0 && frac > 0.01);
     g.lineStyle(7, lit ? color : HUD_OFF, 1);
     g.beginPath(); g.arc(cx, cy, r, a0 + span * (i + 0.14) / n, a0 + span * (i + 0.86) / n, false); g.strokePath();
+    if (lit && i === lead) { g.lineStyle(3, 0xffffff, 0.45 + 0.4 * Math.sin(now / 160)); g.beginPath(); g.arc(cx, cy, r, a0 + span * (i + 0.14) / n, a0 + span * (i + 0.86) / n, false); g.strokePath(); }
   }
   if (tick != null) {
     const a = a0 + span * tick;
-    g.lineStyle(2, GREEN, 1); g.lineBetween(cx + Math.cos(a) * (r - 7), cy + Math.sin(a) * (r - 7), cx + Math.cos(a) * (r + 9), cy + Math.sin(a) * (r + 9));
+    g.lineStyle(2, GREEN, 1); g.lineBetween(cx + Math.cos(a) * (r - 7), cy + Math.sin(a) * (r - 7), cx + Math.cos(a) * (r + 10), cy + Math.sin(a) * (r + 10));
+    g.fillStyle(GREEN, 1); g.fillCircle(cx + Math.cos(a) * (r + 13), cy + Math.sin(a) * (r + 13), 1.8);
   }
-  hudPut(h, id + 'n', cx, cy - 2, big, { size: 21, bold: true, color: hudCss(color), ox: 0.5 });
-  hudPut(h, id + 'l', cx, cy + 27, small, { size: small.length > 6 ? 9 : 10, color: HUD_DIM, ox: 0.5, spacing: 1 });
+  const sa = now / 1100 + cx;                                                  // the scanner: a short bright arc on the bezel, once round in seven seconds
+  g.lineStyle(2, rim, 0.5 * beat); g.beginPath(); g.arc(cx, cy, R, sa, sa + 0.35, false); g.strokePath();
+  hudPut(h, id + 'n', cx, cy - 2, big, { size: HT.num, bold: true, color: hudCss(color), ox: 0.5, glow: 9 });
+  hudPut(h, id + 'l', cx, cy + 27, small, { size: small.length > 6 ? 9 : HT.tag, color: warn ? '#ff4d6d' : HUD_DIM, ox: 0.5, spacing: 1 });
 }
 
 // ---- Space: the boost energy ring inside the speed gauge, and the dash dial beside it (state from boost.js) ----
@@ -178,41 +194,63 @@ function hudEnergy(h, s, now) {
   const f = Phaser.Math.Clamp(s.en / s.enMax, 0, 1), low = s.boostLocked || f < 0.25;
   g.lineStyle(3, HUD_OFF, 1); g.beginPath(); g.arc(cx, cy, r, a0, a0 + span, false); g.strokePath();
   if (f > 0.01) {
-    g.lineStyle(3, low ? AMBER : 0xe6f7ff, s.boostLocked ? 0.55 + 0.45 * Math.sin(now / 90) : 1);
-    g.beginPath(); g.arc(cx, cy, r, a0, a0 + span * f, false); g.strokePath();
+    const col = low ? AMBER : 0xe6f7ff, pulse = s.boostLocked ? 0.55 + 0.45 * Math.sin(now / 90) : 1;
+    g.lineStyle(7, col, 0.14 * pulse); g.beginPath(); g.arc(cx, cy, r, a0, a0 + span * f, false); g.strokePath(); // halo
+    g.lineStyle(3, col, pulse); g.beginPath(); g.arc(cx, cy, r, a0, a0 + span * f, false); g.strokePath();
   }
-  // dash dial: fills as the cooldown runs, green and ringing when ready
+  // a hot flare at the end of the ring while the boost is burning
+  if (s.boosting && f > 0.02) { const a = a0 + span * f; g.fillStyle(0xffffff, 0.8); g.fillCircle(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 2.6); }
+  // dash dial: fills as the cooldown runs, green and ringing when ready; a ring flies out the moment it is ready again
   const px = 268, py = 80, rd = 12, ready = now >= s.dashReady, prog = ready ? 1 : 1 - (s.dashReady - now) / s.dashCool;
-  g.fillStyle(HUD_BG, 0.72); g.fillCircle(px, py, rd + 7); g.lineStyle(1, CYAN, 0.35); g.strokeCircle(px, py, rd + 7);
+  if (ready && h.dashWas === false) h.dashPing = now;
+  h.dashWas = ready;
+  g.fillStyle(HUD_BG, 0.78); g.fillCircle(px, py, rd + 8);
+  [[6, 0.07], [3, 0.17], [1.3, 0.8]].forEach(([lw, k]) => { g.lineStyle(lw, ready ? GREEN : CYAN, k); g.strokeCircle(px, py, rd + 8); });
   g.lineStyle(4, HUD_OFF, 1); g.strokeCircle(px, py, rd);
-  g.lineStyle(4, ready ? GREEN : AMBER, 1); g.beginPath(); g.arc(px, py, rd, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * prog, false); g.strokePath();
+  if (prog > 0.01) {
+    g.lineStyle(8, ready ? GREEN : AMBER, 0.14); g.beginPath(); g.arc(px, py, rd, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * prog, false); g.strokePath();
+    g.lineStyle(4, ready ? GREEN : AMBER, 1); g.beginPath(); g.arc(px, py, rd, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * prog, false); g.strokePath();
+  }
+  const ping = h.dashPing != null ? (now - h.dashPing) / 450 : 1;
+  if (ping < 1) { g.lineStyle(2, GREEN, 0.8 * (1 - ping)); g.strokeCircle(px, py, rd + 8 + 12 * ping); }
   hudPut(h, 'dk', px, py + 1, 'Q E', { size: 9, bold: true, color: ready ? '#6dff9c' : HUD_DIM, ox: 0.5 });
-  hudPut(h, 'dl', px, py + 28, 'DASH', { size: 9, color: HUD_DIM, ox: 0.5, spacing: 1 });
+  hudPut(h, 'dl', px, py + 29, 'DASH', { size: 9, color: HUD_DIM, ox: 0.5, spacing: 1 });
 }
 
 // ---- credits and gear strip, top centre ----
 function hudStrip(h, now) {
   const g = h.g;
-  if (G.credits !== h.cr) { if (G.credits > h.cr) h.flash = now + 700; h.cr = G.credits; }
-  hudPanel(g, 440, 10, 400, 30, 8, 0.72);
-  hudPut(h, 'crl', 458, 25, 'CR', { size: 11, color: HUD_DIM, spacing: 2 });
-  hudPut(h, 'crv', 482, 25, hudFmt(G.credits), { size: 17, bold: true, color: now < h.flash ? '#ffffff' : '#ffb454' });
+  // credits count up to the real figure; a gain flashes white and floats a +N beside it (a loss just snaps down)
+  if (G.credits !== h.cr) {
+    if (G.credits > h.cr) { h.flash = now + 700; h.gain = { v: G.credits - h.cr, t: now }; } else h.crShow = G.credits;
+    h.cr = G.credits;
+  }
+  if (h.crShow == null) h.crShow = G.credits;
+  h.crShow += (G.credits - h.crShow) * 0.14; if (Math.abs(G.credits - h.crShow) < 1) h.crShow = G.credits;
+  hudPanel(g, 440, 10, 400, 30, 8, 0.78);
+  hudSpine(g, 440, 10, 30, AMBER, 0.8);
+  hudPut(h, 'crl', 460, 25, 'CR', { size: HT.label, color: HUD_DIM, spacing: 2 });
+  const cv = hudPut(h, 'crv', 484, 25, hudFmt(h.crShow), { size: 17, bold: true, color: now < h.flash ? '#ffffff' : '#ffb454', glow: 7 });
+  const gain = h.gain && now - h.gain.t < 1300 ? h.gain : null;
+  hudPut(h, 'crd', 484 + cv.width - 2 * HUD_PAD + 8, 25 - 8 * Math.min(1, (gain ? now - gain.t : 0) / 400), gain ? '+' + hudFmt(gain.v) : '',
+    { size: HT.label, bold: true, color: '#6dff9c', alpha: gain ? 1 - Math.pow((now - gain.t) / 1300, 2) : 0 });
+  g.lineStyle(1, CYAN, 0.2); g.lineBetween(596, 17, 596, 33);
   UPGRADES.forEach((u, i) => {
     const gx = 612 + i * 74, tier = G.upgrades[u.key] | 0;
-    hudPut(h, 'up' + i, gx, 25, HUD_GEAR[u.key] || u.key.slice(0, 3).toUpperCase(), { size: 11, color: HUD_DIM, spacing: 1 });
-    for (let j = 0; j < 2; j++) {
-      const x = gx + 30 + j * 13;
-      if (tier > j) { g.fillStyle(CYAN, 1); g.fillRect(x, 21, 9, 9); } else { g.lineStyle(1, 0x3a566e, 1); g.strokeRect(x + 0.5, 21.5, 8, 8); }
+    hudPut(h, 'up' + i, gx, 25, HUD_GEAR[u.key] || u.key.slice(0, 3).toUpperCase(), { size: HT.label, color: tier ? '#9fe9ff' : HUD_DIM, spacing: 1 });
+    for (let j = 0; j < 2; j++) { // a pip is a small slanted chip: lit ones have a halo
+      const x = gx + 30 + j * 13, p = [[x + 3, 21], [x + 10, 21], [x + 7, 30], [x, 30]];
+      if (tier > j) {
+        g.fillStyle(CYAN, 0.2); g.fillRect(x - 1, 19, 14, 13);
+        g.fillStyle(CYAN, 1); g.beginPath(); g.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.closePath(); g.fillPath();
+      } else { g.lineStyle(1, HUD_LINE, 1); g.beginPath(); g.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.closePath(); g.strokePath(); }
     }
   });
-  // cargo hold: ten pips, amber as they fill, red when it is full (asteroids.js)
+  // cargo hold: ten cells, amber as they fill, red and beating when it is full (asteroids.js)
   const ore = G.ore | 0, full = ore >= ORE_CAP;
-  hudPanel(g, 856, 10, 134, 30, 8, 0.72);
-  hudPut(h, 'orl', 872, 25, 'ORE', { size: 11, color: full ? '#ff4d6d' : HUD_DIM, spacing: 2 });
-  for (let j = 0; j < ORE_CAP; j++) {
-    const x = 902 + j * 8;
-    if (j < ore) { g.fillStyle(full ? RED : AMBER, 1); g.fillRect(x, 20, 6, 11); } else { g.lineStyle(1, 0x3a566e, 1); g.strokeRect(x + 0.5, 20.5, 5, 10); }
-  }
+  hudPanel(g, 856, 10, 134, 30, 8, 0.78, full ? RED : CYAN);
+  hudPut(h, 'orl', 872, 25, 'ORE', { size: HT.label, color: full ? '#ff4d6d' : HUD_DIM, spacing: 2 });
+  hudBar(g, 902, 19, 78, 12, ore / ORE_CAP, full ? RED : AMBER, ORE_CAP, full ? 0.55 + 0.45 * Math.sin(now / 120) : null);
 }
 
 // ---- the mission as the checklist wants it ----
@@ -237,12 +275,10 @@ function hudKeycap(h, id, x, y, str) {
 
 // a labelled bar: the freighter's hull, say
 function hudMeterRow(h, x, y, w, meter) {
-  const g = h.g;
-  hudPut(h, 'tm', x, y, meter.name, { size: 11, color: HUD_DIM, spacing: 2 });
+  const g = h.g, f = Phaser.Math.Clamp(meter.frac, 0, 1), low = f < 0.3;
+  hudPut(h, 'tm', x, y, meter.name, { size: HT.label, color: HUD_DIM, spacing: 2 });
   const bx = x + 86, bw = w - 86;
-  g.fillStyle(HUD_OFF, 1); g.fillRect(bx, y - 4, bw, 8);
-  g.fillStyle(meter.color, 1); g.fillRect(bx, y - 4, bw * Phaser.Math.Clamp(meter.frac, 0, 1), 8);
-  g.lineStyle(1, meter.color, 0.7); g.strokeRect(bx, y - 4, bw, 8);
+  hudBar(g, bx, y - 5, bw, 10, f, meter.color, 20, low ? 0.5 + 0.5 * Math.sin(h.now / 110) : null); // the last cell beats when it is nearly gone
 }
 
 // ---- Space and Surface: the checklist panel under the gauges; returns its height ----
@@ -438,12 +474,12 @@ function hudTick(s) {
   let h = s._hud;
   if (!h || !h.g.active) h = s._hud = { s, g: s.add.graphics().setScrollFactor(0).setDepth(100), t: {}, seen: {}, zones: [], cr: G.credits, flash: 0, open: true, box: new Phaser.Geom.Rectangle() };
   const g = h.g, key = s.scene.key, now = s.time.now, space = key === 'Space', surf = key === 'Surface';
-  g.clear(); h.seen = {}; h.zones = [];
+  g.clear(); h.seen = {}; h.zones = []; h.now = now;
   hudFrame(g, now);
 
   // gauges, top left: hull (health on foot), then speed in space or the colonist on foot
   const hullFrac = surf ? s.hp / 100 : G.hull / G.maxHull;
-  hudGauge(h, 'g1', 70, 80, 40, hullFrac, hullFrac > 0.5 ? CYAN : hullFrac > 0.3 ? AMBER : RED, String(Math.max(0, Math.round(surf ? s.hp : G.hull))), surf ? 'HEALTH' : 'HULL');
+  hudGauge(h, 'g1', 70, 80, 40, hullFrac, hullFrac > 0.5 ? CYAN : hullFrac > 0.3 ? AMBER : RED, String(Math.max(0, Math.round(surf ? s.hp : G.hull))), surf ? 'HEALTH' : 'HULL', null, hullFrac <= 0.3);
   if (space) {
     const spd = s.ship.body.speed, top = boostMax();
     hudGauge(h, 'g2', 186, 80, 40, spd / top, spd > 480 ? AMBER : CYAN, String(Math.round(spd)), s.boostLocked ? 'NO BOOST' : 'SPEED', 150 / top);
