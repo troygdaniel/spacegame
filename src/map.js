@@ -20,6 +20,12 @@ function mapText(s, x, y, str, size, color, wrap) {
   return t;
 }
 
+const MAP_LEG_Y = 380, MAP_LEG_STEP = 27; // legend rows: 9 of them still end above the footer line
+function mapHex(g, x, y, r) { // Kestrel Outpost mark: a hexagon, so it is not mistaken for a salvage circle
+  const p = []; for (let i = 0; i < 6; i++) p.push({ x: x + Math.cos(i * Math.PI / 3 + Math.PI / 6) * r, y: y + Math.sin(i * Math.PI / 3 + Math.PI / 6) * r });
+  g.fillStyle(GREEN, 0.3); g.lineStyle(2, GREEN, 1); g.fillPoints(p, true); g.strokePoints(p, true);
+}
+
 // ---------- the overlay scene ----------
 class Overlay extends Phaser.Scene {
   constructor() { super('Overlay'); }
@@ -41,6 +47,7 @@ class Overlay extends Phaser.Scene {
     const m = o => { this.mapObjs.push(o); return o; };
     this.lbPlanet = m(mapText(this, 0, 0, 'KEPLER-4B', 13, '#ffb454').setOrigin(0.5, 1));
     this.lbStation = m(mapText(this, 0, 0, 'HALCYON STATION', 13, '#38e1ff').setOrigin(0.5, 1));
+    this.lbOutpost = m(mapText(this, 0, 0, 'KESTREL OUTPOST', 13, '#6dff9c').setOrigin(0.5, 1));
     this.lbGate = m(mapText(this, 0, 0, 'PERSEUS GATE', 13, '#ffb454').setOrigin(0.5, 1));
     this.lbShip = m(mapText(this, 0, 0, 'YOU', 13, '#ffffff').setOrigin(0.5, 0));
     this.lbMule = m(mapText(this, 0, 0, 'MULE', 12, '#6dff9c').setOrigin(0.5, 0));
@@ -51,10 +58,10 @@ class Overlay extends Phaser.Scene {
     this.tObj = m(mapText(this, SX, 270, '', 18, '#ffb454', 470));
     this.tLegH = m(mapText(this, SX, 352, 'LEGEND', 13, '#5b7a92'));
     this.legend = [
-      ['you', 'ship'], ['Halcyon Station', 'station'], ['Kepler-4b', 'planet'], ['objective', 'target'],
+      ['you', 'ship'], ['Halcyon Station', 'station'], ['Kestrel Outpost', 'outpost'], ['Kepler-4b', 'planet'], ['objective', 'target'],
       ['drone in sensor range', 'live'], ['drone, where you last saw it', 'stale'], ['wanted pirate', 'wanted'], ['salvage site', 'poi']
     ];
-    this.legend.forEach(([name], i) => m(mapText(this, SX + 40, 380 + i * 30, name, 15, '#cfefff')));
+    this.legend.forEach(([name], i) => m(mapText(this, SX + 40, MAP_LEG_Y + i * MAP_LEG_STEP, name, 15, '#cfefff')));
 
     this.poiLabels = []; // names of salvage sites you have found (poi.js fills them in)
     for (let i = 0; i < (typeof POI !== 'undefined' ? POI.length + SIGNAL_MAX : 0); i++) this.poiLabels.push(m(mapText(this, 0, 0, '', 12, '#6dff9c').setOrigin(0.5, 0)));
@@ -142,6 +149,9 @@ class Overlay extends Phaser.Scene {
     g.fillPoints([{ x: sx, y: sy - 9 }, { x: sx + 9, y: sy }, { x: sx, y: sy + 9 }, { x: sx - 9, y: sy }], true);
     g.strokePoints([{ x: sx, y: sy - 9 }, { x: sx + 9, y: sy }, { x: sx, y: sy + 9 }, { x: sx - 9, y: sy }], true);
     this.lbStation.setPosition(sx, sy - 14);
+    if (typeof SA_OUTPOST !== 'undefined') { // src/stationart.js: scenery, no docking, but worth finding
+      const ox = X(SA_OUTPOST.x), oy = Y(SA_OUTPOST.y); mapHex(g, ox, oy, 8); this.lbOutpost.setPosition(ox, oy - 12);
+    } else this.lbOutpost.setVisible(false);
 
     // the Perseus gate, only while an escort is on
     const gate = typeof missionActive === 'function' && missionActive('escort') && typeof GATE !== 'undefined';
@@ -198,12 +208,13 @@ class Overlay extends Phaser.Scene {
   drawLegend(g) {
     const x = this.SX + 14;
     this.legend.forEach(([, kind], i) => {
-      const y = 380 + i * 30 + 9;
+      const y = MAP_LEG_Y + i * MAP_LEG_STEP + 9;
       if (kind === 'ship') tri(g, x, y, -Math.PI / 2, 8, 0xffffff);
       else if (kind === 'station') {
         g.fillStyle(CYAN, 0.3); g.lineStyle(2, CYAN, 1);
         const p = [{ x, y: y - 8 }, { x: x + 8, y }, { x, y: y + 8 }, { x: x - 8, y }];
         g.fillPoints(p, true); g.strokePoints(p, true);
+      } else if (kind === 'outpost') { mapHex(g, x, y, 8);
       } else if (kind === 'planet') { g.fillStyle(AMBER, 0.85); g.fillCircle(x, y, 7); }
       else if (kind === 'target') { g.lineStyle(2, AMBER, 0.95); g.strokeCircle(x, y, 8); }
       else if (kind === 'live') { g.fillStyle(RED, 1); g.fillRect(x - 3, y - 3, 6, 6); }
