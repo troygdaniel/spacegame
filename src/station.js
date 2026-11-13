@@ -52,8 +52,6 @@ class Station extends Phaser.Scene {
     this.walls.forEach(w => this.physics.add.collider(this.player, w));
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,ESC,UP,DOWN,LEFT,RIGHT');
 
-    this.hud1 = hudText(this, 24, 22);
-    this.hud2 = hudText(this, 24, 46, '#ffd37a');
     this.prompt = this.add.text(W / 2, H - 56, '', {
       fontFamily: 'monospace', fontSize: '20px', color: '#ffffff', backgroundColor: '#000000bb', padding: { x: 12, y: 6 }
     }).setOrigin(0.5).setDepth(100);
@@ -113,8 +111,7 @@ class Station extends Phaser.Scene {
   update() {
     guideTick(this);
     const JD = Phaser.Input.Keyboard.JustDown, k = this.k;
-    this.hud1.setText('CREDITS ' + G.credits + '    HULL ' + Math.round(G.hull) + '/' + G.maxHull);
-    this.hud2.setText(missionLine());
+    hudTick(this); // src/hud.js
     if (shopFrame(this)) return; // upgrade shop panel is open
     if (this.panel) {
       this.player.setVelocity(0, 0);

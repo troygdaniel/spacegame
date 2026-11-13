@@ -71,11 +71,6 @@ class Space extends Phaser.Scene {
 
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,L,SPACE,SHIFT,UP,DOWN,LEFT,RIGHT');
     this.nextFire = 0;
-    this.hud = this.add.graphics().setScrollFactor(0).setDepth(100);
-    this.hudL1 = hudText(this, 24, 22);
-    this.hudL2 = hudText(this, 24, 46, '#ffd37a');
-    this.hudSpd = hudText(this, 24, 100);
-    this.objText = hudText(this, W / 2, 128, '#ffd37a', 14).setOrigin(0.5);
     this.prompt = this.add.text(W / 2, H - 56, '', {
       fontFamily: 'monospace', fontSize: '20px', color: '#ffffff', backgroundColor: '#000000bb', padding: { x: 12, y: 6 }
     }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
@@ -173,27 +168,7 @@ class Space extends Phaser.Scene {
     }
     this.prompt.setText(msg);
 
-    // HUD
-    const g = this.hud; g.clear();
-    this.hudL1.setText('CREDITS ' + G.credits);
-    this.hudL2.setText(missionLine());
-    bar(g, 24, 74, 220, 12, G.hull / G.maxHull, G.hull > G.maxHull * 0.35 ? CYAN : RED);
-    this.hudSpd.setText('HULL ' + Math.round(G.hull) + '/' + G.maxHull + '   SPD ' + Math.round(spd));
-    this.hudSpd.y = 92;
-    // objective arrow
-    const tgt = missionTarget(this), name = tgt.name;
-    const a = Phaser.Math.Angle.Between(ship.x, ship.y, tgt.x, tgt.y);
-    const sx = ship.x - this.cameras.main.scrollX, sy = ship.y - this.cameras.main.scrollY;
-    tri(g, sx + Math.cos(a) * 80, sy + Math.sin(a) * 80, a, 11, AMBER);
-    this.objText.setText(name + '  ' + (Phaser.Math.Distance.Between(ship.x, ship.y, tgt.x, tgt.y) / 10 | 0) + ' km');
-    // radar
-    const rx = W - 184, ry = 24, rs = 160, sc = rs / this.WS;
-    g.fillStyle(0x000000, 0.55); g.fillRect(rx, ry, rs, rs); g.lineStyle(1, CYAN, 0.7); g.strokeRect(rx, ry, rs, rs);
-    g.fillStyle(CYAN, 1); g.fillCircle(rx + this.station.x * sc, ry + this.station.y * sc, 4);
-    g.fillStyle(AMBER, 1); g.fillCircle(rx + this.planet.x * sc, ry + this.planet.y * sc, 5);
-    g.fillStyle(RED, 1);
-    this.enemies.getChildren().forEach(d => { if (!d.wanted) g.fillRect(rx + d.x * sc - 1, ry + d.y * sc - 1, 3, 3); });
-    g.fillStyle(0xffffff, 1); g.fillCircle(rx + ship.x * sc, ry + ship.y * sc, 3);
-    missionSpaceUpdate(this, time, dt); // after the HUD: it draws the freighter bar and radar marks
+    missionSpaceUpdate(this, time, dt); // queues the freighter bar and radar dots for the HUD
+    hudTick(this); // src/hud.js: gauges, checklist, radar, objective marker
   }
 }

@@ -59,10 +59,6 @@ class Surface extends Phaser.Scene {
 
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,UP,DOWN,LEFT,RIGHT');
     this.nextFire = 0; this.tmp = new Phaser.Math.Vector2();
-    this.hud = this.add.graphics().setScrollFactor(0).setDepth(100);
-    this.hudL1 = hudText(this, 24, 22);
-    this.hudL2 = hudText(this, 24, 46, '#ffd37a');
-    this.objText = hudText(this, W / 2, 128, '#ffd37a', 14).setOrigin(0.5);
     this.prompt = this.add.text(W / 2, H - 56, '', {
       fontFamily: 'monospace', fontSize: '20px', color: '#ffffff', backgroundColor: '#000000bb', padding: { x: 12, y: 6 }
     }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
@@ -155,20 +151,6 @@ class Surface extends Phaser.Scene {
     }
     this.prompt.setText(msg);
 
-    // HUD
-    const g = this.hud; g.clear();
-    this.hudL1.setText('CREDITS ' + G.credits + '    HEALTH ' + Math.round(this.hp));
-    this.hudL2.setText(missionLine());
-    bar(g, 24, 74, 220, 12, this.hp / 100, this.hp > 35 ? CYAN : RED);
-    let tgt = null, txt = '';
-    if (this.col && this.col.state === 'waiting') { tgt = this.pod; txt = 'Find the colonist at the crashed pod'; }
-    else if (this.col && this.col.state === 'following') {
-      tgt = this.pad; txt = 'Escort the colonist back to the ship';
-      bar(g, 24, 92, 220, 8, this.col.hp / 60, AMBER);
-    } else { tgt = this.pad; txt = 'Return to the ship'; }
-    const a = Phaser.Math.Angle.Between(p.x, p.y, tgt.x, tgt.y);
-    const sx = p.x - this.cameras.main.scrollX, sy = p.y - this.cameras.main.scrollY;
-    tri(g, sx + Math.cos(a) * 60, sy + Math.sin(a) * 60, a, 9, AMBER);
-    this.objText.setText(txt);
+    hudTick(this); // src/hud.js
   }
 }

@@ -93,7 +93,6 @@ function buildBar(s) {
 function buildShop(s) {
   s.shopOpen = false;
   s.shopKeys = s.input.keyboard.addKeys('ONE,TWO,THREE,ESC');
-  s.hud3 = hudText(s, 24, 70, '#6dff9c');
 
   // terminal in the hangar
   const r = rectWall(s, 950, 148, 100, 44, 0x0d2a3f, AMBER); s.walls.push(r);
@@ -163,7 +162,6 @@ function spotInteract(s, sp) {
 
 // once per frame from Station.update; true = the shop panel owns this frame
 function shopFrame(s) {
-  s.hud3.setText(ownedLine());
   const JD = Phaser.Input.Keyboard.JustDown, k = s.shopKeys;
   if (s.shopOpen) {
     s.player.setVelocity(0, 0);

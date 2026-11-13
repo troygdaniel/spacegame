@@ -86,10 +86,7 @@ function missionKill(s) {
   if (G.missionProgress >= m.count) completeMission(s, 'Patrol complete. All wanted pirates destroyed.');
   else toast(s, 'Wanted pirate down  ' + G.missionProgress + ' of ' + m.count, '#ffb454');
 }
-function radarDot(s, x, y, color, r) {
-  const sc = 160 / s.WS;
-  s.hud.fillStyle(color, 1); s.hud.fillCircle(W - 184 + x * sc, 24 + y * sc, r);
-}
+function radarDot(s, x, y, color, r) { hudBlip(s, x, y, color, r); } // the HUD radar (src/hud.js) draws it this frame
 
 // ---- Escort: the MULE flies station -> gate; pirates lie in wait along the route ----
 function escortSetup(s) {
@@ -141,7 +138,7 @@ function escortUpdate(s) {
   const behind = Phaser.Math.Distance.Between(f.x, f.y, s.ship.x, s.ship.y) > 700;
   s.physics.moveTo(f, GATE.x, GATE.y, threat ? 50 : behind ? 70 : 130);
   f.rotation = Phaser.Math.Angle.RotateTo(f.rotation, Phaser.Math.Angle.Between(f.x, f.y, GATE.x, GATE.y), 0.02);
-  bar(s.hud, 24, 112, 220, 8, f.hp / f.maxHp, AMBER);
+  hudMeter(s, 'MULE', f.hp / f.maxHp, AMBER);
   radarDot(s, f.x, f.y, 0xffd37a, 3); radarDot(s, GATE.x, GATE.y, AMBER, 2);
 }
 function escortTarget(s) {
