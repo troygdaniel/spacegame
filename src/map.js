@@ -57,7 +57,7 @@ class Overlay extends Phaser.Scene {
     this.legend.forEach(([name], i) => m(mapText(this, SX + 40, 380 + i * 30, name, 15, '#cfefff')));
 
     this.poiLabels = []; // names of salvage sites you have found (poi.js fills them in)
-    for (let i = 0; i < (typeof POI !== 'undefined' ? POI.length : 0); i++) this.poiLabels.push(m(mapText(this, 0, 0, '', 12, '#6dff9c').setOrigin(0.5, 0)));
+    for (let i = 0; i < (typeof POI !== 'undefined' ? POI.length + SIGNAL_MAX : 0); i++) this.poiLabels.push(m(mapText(this, 0, 0, '', 12, '#6dff9c').setOrigin(0.5, 0)));
 
     // help mode
     this.helpObjs = [];
