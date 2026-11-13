@@ -59,9 +59,7 @@ class Surface extends Phaser.Scene {
 
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,UP,DOWN,LEFT,RIGHT');
     this.nextFire = 0; this.tmp = new Phaser.Math.Vector2();
-    this.prompt = this.add.text(W / 2, H - 56, '', {
-      fontFamily: 'monospace', fontSize: '20px', color: '#ffffff', backgroundColor: '#000000bb', padding: { x: 12, y: 6 }
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
+    this.prompt = floatPrompt(this, this.player); // key cap above you instead of a strip at the bottom (src/ui.js)
     this.add.text(24, H - 44, 'WASD walk   aim with mouse   click fire   E interact', {
       fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92'
     }).setScrollFactor(0).setDepth(100);

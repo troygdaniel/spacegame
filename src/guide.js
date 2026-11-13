@@ -116,9 +116,10 @@ class Ending extends Phaser.Scene {
   create() {
     const cx = W / 2, cy = H / 2, mono = (size, color) => ({ fontFamily: 'monospace', fontSize: size + 'px', color });
     this.add.rectangle(cx, cy, W, H, 0x02050c, 0.8).setInteractive(); // swallows clicks
-    this.add.rectangle(cx, cy, 600, 430, 0x07101c, 0.97).setStrokeStyle(2, AMBER, 1);
-    this.add.text(cx, cy - 165, 'YOU MADE IT', mono(40, '#ffb454')).setOrigin(0.5);
-    this.add.text(cx, cy - 115, GOAL + ' credits earned on the Long Haul', mono(18, '#9fe9ff')).setOrigin(0.5);
+    const ui = panel(this, { w: 600, h: 460, title: 'LONG HAUL  -  RESULTS', color: AMBER, depth: 0 }); // the shared panel style (src/ui.js)
+    ui.setHints([['Enter', 'Continue']]); ui.tagText.setText('ENDING');
+    this.add.text(cx, cy - 148, 'YOU MADE IT', mono(40, '#ffb454')).setOrigin(0.5);
+    this.add.text(cx, cy - 100, GOAL + ' credits earned  -  you can keep playing', mono(16, '#9fe9ff')).setOrigin(0.5);
     const rows = [
       ['DRONES DESTROYED', G.stats.drones], ['MISSIONS DONE', G.stats.missions],
       ['TIME PLAYED', clock(G.stats.time)], ['CREDITS EARNED', Math.floor(G.earned)]
@@ -131,7 +132,6 @@ class Ending extends Phaser.Scene {
     });
     const btn = this.add.rectangle(cx, cy + 150, 240, 50, 0x0d2a3f).setStrokeStyle(2, CYAN, 1).setInteractive({ useHandCursor: true });
     this.add.text(cx, cy + 150, 'CONTINUE', mono(22, '#38e1ff')).setOrigin(0.5);
-    this.add.text(cx, cy + 190, 'Enter or click   You can keep playing', mono(13, '#5b7a92')).setOrigin(0.5);
     btn.on('pointerover', () => btn.setFillStyle(0x14405e)).on('pointerout', () => btn.setFillStyle(0x0d2a3f));
     btn.on('pointerdown', () => this.finish());
     this.k = this.input.keyboard.addKeys('ENTER,SPACE');

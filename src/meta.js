@@ -138,8 +138,9 @@ class Pause extends Phaser.Scene {
   create() {
     const cx = W / 2, cy = H / 2;
     this.add.rectangle(cx, cy, W, H, 0x02050c, 0.72).setInteractive(); // swallows clicks
-    this.add.rectangle(cx, cy, 560, 470, 0x07101c, 0.97).setStrokeStyle(2, CYAN, 1);
-    this.title = this.add.text(cx, cy - 196, 'PAUSED', { fontFamily: 'monospace', fontSize: '30px', color: '#38e1ff' }).setOrigin(0.5);
+    this.ui = panel(this, { w: 560, h: 470, title: 'PAUSED', depth: 0 }); // the shared panel style (src/ui.js)
+    this.ui.tagText.setText('AUTOSAVE ON');
+    this.title = this.ui.titleText;
     this.rows = []; this.zones = [];
     for (let i = 0; i < 6; i++) {
       const y = cy - 118 + i * 50;
@@ -152,7 +153,6 @@ class Pause extends Phaser.Scene {
     this.help = this.add.text(cx, cy - 10, '', {
       fontFamily: 'monospace', fontSize: '19px', color: '#cfefff', align: 'left', lineSpacing: 12
     }).setOrigin(0.5).setVisible(false);
-    this.foot = this.add.text(cx, cy + 200, '', { fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92', align: 'center', lineSpacing: 4 }).setOrigin(0.5);
     this.input.on('pointerdown', () => { if (this.view === 'controls' && performance.now() - this.viewAt > 250) this.setView('menu'); });
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,ENTER,SPACE,ESC,UP,DOWN,LEFT,RIGHT');
     this.refresh();
@@ -179,9 +179,7 @@ class Pause extends Phaser.Scene {
       this.zones[i].input.enabled = menu;
     });
     this.help.setVisible(!menu).setText((HELP[this.from] || HELP.Station).join('\n'));
-    this.foot.setText(menu
-      ? 'Up/Down choose   Enter select   Left/Right volume\nEsc resume   Autosaves as you play'
-      : 'Esc, Enter or click: back');
+    this.ui.setHints(menu ? [['↑↓', 'Choose'], ['Enter', 'Select'], ['←→', 'Volume'], ['Esc', 'Resume']] : [['Esc', 'Back']]);
   }
 
   adjustVolume(dir) {
