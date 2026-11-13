@@ -6,7 +6,7 @@ const NPCS = [
     lines: [
       'Welcome to the Drift. The drinks are synthetic, but the gossip is genuine.',
       'Halcyon turns once every three minutes. If your drink slides toward the hangar, you are not drunk, just late.',
-      'The repair bay on the main deck charges two credits a point of hull. It is the only honest price on this station.'
+      'The repair bay on the main deck charges half a credit a point of hull. It is the only honest price on this station.'
     ],
     react: () => G.mission === 'failed' ? 'Heard you lost the colonist out there. It happens to every pilot once, so sit, drink, and go again.'
       : G.upgrades.armor ? 'Nice plating on that ship. Try not to scratch my doorframe.'
