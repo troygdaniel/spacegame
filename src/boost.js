@@ -11,11 +11,12 @@ function boostInit(s) {
   const e = boostEnergy();
   s.enMax = e.max; s.en = e.max; s.enPause = 0; s.boostLocked = false; s.boosting = false; s.dry = false;
   s.dashReady = 0; s.dashLeft = 0; s.dashDir = 0; s.dashCool = BOOST.dashCool; s.vmax = 480;
+  s.lastE = s.k.E.timeDown; s.lastQ = s.k.Q.timeDown; // a press is a new timeDown: read from here, so poi.js eating the E press does not hide it
 }
 
 // once per frame; returns true while the boost is on (the old "Shift is down", now with a tank)
 function boostFrame(s, time, dt, locked, thrusting) {
-  const k = s.k, sec = dt / 1000, e = boostEnergy(), JD = Phaser.Input.Keyboard.JustDown;
+  const k = s.k, sec = dt / 1000, e = boostEnergy();
   s.enMax = e.max; if (s.en > s.enMax) s.en = s.enMax; // a tier bought mid-flight is not possible, but a load is
   const shift = k.SHIFT.isDown && !locked;
   const ok = shift && !s.boostLocked && s.en > 0;
@@ -30,11 +31,14 @@ function boostFrame(s, time, dt, locked, thrusting) {
   if (!shift) s.dry = false;
   else if (s.boostLocked && thrusting && !s.dry) { s.dry = true; sfx('empty'); } // one dry click per press, not a buzz
 
-  // dash: the key press is always read, so a press during the cooldown is lost rather than saved up
-  const pe = JD(k.E), pq = JD(k.Q);
-  if ((pe || pq) && !locked && !s.leaving) {
+  // dash: a press during the cooldown is lost rather than saved up. E also salvages at a signal (poi.js): while its
+  // prompt says E, the press belongs to the salvage and does not dash.
+  const pe = k.E.timeDown !== s.lastE, pq = k.Q.timeDown !== s.lastQ;
+  s.lastE = k.E.timeDown; s.lastQ = k.Q.timeDown;
+  const salvage = typeof POIRUN !== 'undefined' && POIRUN && POIRUN.prompt && /^E\s/.test(POIRUN.prompt.text || '');
+  if (((pe && !salvage) || pq) && !locked && !s.leaving) {
     if (time >= s.dashReady) {
-      const dir = pe ? 1 : -1, a = s.ship.rotation + dir * Math.PI / 2;
+      const dir = pe && !salvage ? 1 : -1, a = s.ship.rotation + dir * Math.PI / 2;
       s.dashDir = dir; s.dashLeft = BOOST.dashMs; s.dashReady = time + BOOST.dashCool;
       s.ship.body.velocity.x += Math.cos(a) * BOOST.dashDrift; s.ship.body.velocity.y += Math.sin(a) * BOOST.dashDrift;
       s.trail.emitParticleAt(s.ship.x - Math.cos(a) * 14, s.ship.y - Math.sin(a) * 14, 12); // a puff on the side you pushed off from
