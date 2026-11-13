@@ -123,9 +123,7 @@ function refreshShop(s) {
     const cx = (i - 1) * 288, cy = -30, w = 270, h = 210, L = cx - w / 2 + 16;
     const edge = maxed ? GREEN : can ? AMBER : 0x3a5a78, dim = !maxed && !can;
     const g = add(s.add.graphics());
-    g.fillStyle(0x0a1b2c, 1); g.fillRect(cx - w / 2, cy - h / 2, w, h);
-    g.lineStyle(can ? 2 : 1, edge, can ? 1 : 0.7); g.strokeRect(cx - w / 2, cy - h / 2, w, h);
-    if (can) { g.fillStyle(AMBER, 1); g.fillRect(cx - w / 2, cy - h / 2, w, 4); }
+    hudPanel(g, cx - w / 2, cy - h / 2, w, h, 14, 1, edge); // src/hud.js: the HUD's glass card; amber and glowing when you can buy it, green when maxed, dim otherwise
     const cap = keyCap(s, String(i + 1), can ? AMBER : CYAN); cap.setPosition(L + cap.kw / 2, cy - h / 2 + 28); add(cap);
     upgradeIcon(g, u.key, cx + w / 2 - 38, cy - h / 2 + 34, maxed ? GREEN : can ? AMBER : 0x5b7a92);
     txt(L, cy - h / 2 + 62, u.name + TIER_NAME[maxed ? t : t + 1], 16, maxed ? '#6dff9c' : dim ? '#6b8296' : '#ffd37a', { fontStyle: 'bold' });

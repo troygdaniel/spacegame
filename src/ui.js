@@ -37,16 +37,16 @@ function panel(s, o) {
   const parts = [];
   if (o.dim) parts.push(s.add.rectangle(0, 0, W * 2, H * 2, 0x02050c, 0.55).setInteractive()); // dims the game and swallows clicks
   const g = s.add.graphics();
-  g.fillStyle(UI_BG, 0.97); g.fillRect(-w / 2, -h / 2, w, h);
-  g.fillStyle(0x0d2a3f, 1); g.fillRect(-w / 2, -h / 2, w, 40);
+  hudPanel(g, -w / 2, -h / 2, w, h, 16, 0.97, c); // src/hud.js: the same dark glass, glowing edge, sheen and corner brackets as the HUD
+  g.fillGradientStyle(0x1a4a6a, 0x1a4a6a, 0x0a1d2e, 0x0a1d2e, 0.9, 0.9, 0.9, 0.9); g.fillRect(-w / 2 + 1, -h / 2 + 1, w - 18, 39); // the title band, stopping short of the cut corner
   g.lineStyle(1, c, 0.4); g.lineBetween(-w / 2, -h / 2 + 40, w / 2, -h / 2 + 40);
   if (o.foot !== false) g.lineBetween(-w / 2, h / 2 - 44, w / 2, h / 2 - 44); // footer line above the key hints (foot: false leaves it out)
-  g.lineStyle(2, c, 1); g.strokeRect(-w / 2, -h / 2, w, h);
-  g.lineStyle(3, AMBER, 1); // amber corner brackets
-  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
+  g.lineStyle(3, AMBER, 1); // amber corner brackets on the two square corners
+  [[-1, -1], [1, 1]].forEach(([sx, sy]) => {
     const x = sx * w / 2, y = sy * h / 2; g.lineBetween(x, y, x - sx * 18, y); g.lineBetween(x, y, x, y - sy * 18);
   });
-  const title = s.add.text(-w / 2 + 18, -h / 2 + 20, o.title || '', uiFont(18, '#38e1ff')).setOrigin(0, 0.5);
+  g.fillStyle(AMBER, 1); g.fillTriangle(-w / 2 + 14, -h / 2 + 13, -w / 2 + 14, -h / 2 + 27, -w / 2 + 23, -h / 2 + 20); // a marker before the title
+  const title = s.add.text(-w / 2 + 34, -h / 2 + 20, o.title || '', uiFont(18, '#38e1ff', { letterSpacing: 2 })).setOrigin(0, 0.5);
   const tag = s.add.text(w / 2 - 18, -h / 2 + 20, '', uiFont(16, '#ffb454')).setOrigin(1, 0.5);
   box.add([...parts, g, title, tag]);
   return {
