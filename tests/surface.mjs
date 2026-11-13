@@ -7,6 +7,14 @@ const SF = "game.scene.getScene('Surface')";
 let failed = 0;
 const check = (name, cond, detail = '') => { console.log(`  ${cond ? 'ok  ' : 'FAIL'} ${name}${detail ? '  (' + detail + ')' : ''}`); if (!cond) failed++; };
 
+// the long waits below do not need pictures: with the scene hidden Phaser still updates it but skips drawing, which keeps a
+// 450-frame run under the 30 s DevTools limit when the Mac is busy
+const waitHidden = async (t, ms) => {
+  await t.ev(`(() => { ${SF}.sys.settings.visible = false; return 1; })()`);
+  await t.run(ms);
+  await t.ev(`(() => { ${SF}.sys.settings.visible = true; return 1; })()`);
+};
+
 const t = await launch('#surface');
 try {
   await t.waitFor("!!(window.game && game.scene.isActive('Surface'))", 30000, 'Surface active');
@@ -24,12 +32,12 @@ try {
   await t.shot('surface-hint-arrival');
 
   console.log('it fades after a few seconds, and C brings it back');
-  await t.run(8500);
+  await waitHidden(t, 8500);
   check('panel gone after 8.5 s', (await t.ev(`${SF}.ctl.box.visible`)) === false);
   check('a "C  show controls" reminder stays on screen', (await t.ev(`${SF}.ctl.hint.visible && ${SF}.ctl.hint.text`)) === 'C  show controls');
   await t.key('C'); await t.run(300);
   check('C shows the panel again', (await t.ev(`${SF}.ctl.box.visible && ${SF}.ctl.box.alpha > 0.9`)) === true);
-  await t.run(7500);
+  await waitHidden(t, 7500);
   check('and it fades out again', (await t.ev(`${SF}.ctl.box.visible`)) === false);
 
   console.log('aim line and reticle');
