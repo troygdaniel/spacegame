@@ -26,7 +26,7 @@ window.addEventListener('keydown', () => { if (AC && AC.state === 'suspended') A
 
 function toast(s, msg, color = '#ffd37a') {
   const t = s.add.text(W / 2, 96, msg, {
-    fontFamily: 'monospace', fontSize: '20px', color, align: 'center'
+    fontFamily: 'monospace', fontSize: '20px', color, align: 'center', wordWrap: { width: 700 } // a long one wraps instead of reaching the HUD panels
   }).setOrigin(0.5).setScrollFactor(0).setDepth(300);
   const edge = Phaser.Display.Color.HexStringToColor(color).color; // thin frame in the message colour, amber tab on the left
   const bg = s.add.rectangle(W / 2, 96, t.width + 32, t.height + 16, 0x04101c, 0.92).setStrokeStyle(1, edge, 0.9).setScrollFactor(0).setDepth(299);
@@ -42,8 +42,10 @@ function go(s, key, data) {
 }
 
 function label(s, x, y, text, color = '#9fe9ff', size = 14) {
-  return s.add.text(x, y, text, { fontFamily: 'monospace', fontSize: size + 'px', color })
+  const t = s.add.text(x, y, text, { fontFamily: 'monospace', fontSize: size + 'px', color })
     .setOrigin(0.5).setPadding(8).setShadow(0, 0, color, 6, false, true); // soft neon glow (padding keeps the glow from being clipped)
+  (s._wl = s._wl || []).push(t); // hud.js fades world labels that sit under a HUD panel
+  return t;
 }
 
 function hudText(s, x, y, color = '#9fe9ff', size = 16) {
