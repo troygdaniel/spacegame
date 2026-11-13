@@ -11,7 +11,11 @@
 // on the scenery; T or a click on it pins it open or shut. World labels (label() in common.js registers them in s._wl) fade
 // while a panel, the radar or a toast is on top of them.
 
-const HUD_BG = 0x07101c, HUD_OFF = 0x16293d, HUD_DIM = '#5b7a92', HUD_RANGE = { Space: 2400, Surface: 900 }; // radar range, world units
+// look: dark glass panels with a thin glowing edge, one type scale, one spacing step (8 px). Graphics cannot blur, so a "glow"
+// is the same path drawn wide and faint, then thin and bright (hudGlowPath).
+const HUD_BG = 0x07101c, HUD_OFF = 0x16293d, HUD_LINE = 0x3a566e, HUD_DIM = '#5b7a92', HUD_RANGE = { Space: 2400, Surface: 900 }; // radar range, world units
+const TAU = Math.PI * 2;
+const HT = { tag: 10, label: 11, body: 13, head: 15, num: 22 }; // type scale in px: tags and units, labels, lines of text, panel titles, gauge numbers
 const HUD_GEAR = { armor: 'ARM', rapid: 'RPD', booster: 'BST' };                                       // gear abbreviations on the strip
 const HUD_FRAME = { x: 20, y: 148, w: 296 };                                                               // checklist panel (Space, Surface)
 const HUDUI = { mode: 'auto', until: 0, base: null }; // checklist: auto (open until the timer runs out) | open | closed; shared by all scenes
@@ -61,21 +65,90 @@ function hudPut(h, key, x, y, str, o) {
     if (o.spacing) st.letterSpacing = o.spacing;
     if (o.wrap) st.wordWrap = { width: o.wrap };
     t = h.t[key] = h.s.add.text(0, 0, '', st).setScrollFactor(0).setDepth(101);
+    if (o.glow) t.setPadding(HUD_PAD);   // room for the glow, or the texture clips it; the origin below allows for it
     t._hc = color;
   }
   h.seen[key] = true;
   if (t._hc !== color) { t._hc = color; t.setColor(color); }
+  if (o.glow && t._hg !== color) { t._hg = color; t.setShadow(0, 0, color, o.glow, false, true); }
   if (t.text !== str) t.setText(str);
-  t.setOrigin(o.ox == null ? 0 : o.ox, o.oy == null ? 0.5 : o.oy).setPosition(Math.round(x), Math.round(y)).setAlpha(o.alpha == null ? 1 : o.alpha).setVisible(true);
+  const ox = o.ox == null ? 0 : o.ox, oy = o.oy == null ? 0.5 : o.oy;
+  if (o.glow) { // origin measured on the words, not on the padded texture
+    const p = HUD_PAD, tw = Math.max(1, t.width - 2 * p), th = Math.max(1, t.height - 2 * p);
+    t.setOrigin((p + ox * tw) / t.width, (p + oy * th) / t.height);
+  } else t.setOrigin(ox, oy);
+  t.setPosition(Math.round(x), Math.round(y)).setAlpha(o.alpha == null ? 1 : o.alpha).setVisible(true);
   return t;
 }
 
-// a panel with two cut corners (top right, bottom left)
+const HUD_PAD = 8; // padding round glowing text
+
+// Round shapes as short polylines. Phaser's own arc, strokeCircle and fillCircle step 0.01 rad (628 points for a circle, even
+// for a 2 px blip); about 0.1 rad is not visible and costs a tenth. The HUD draws a few hundred of these a frame.
+function hudArc(g, cx, cy, r, a0, a1) {
+  const n = Math.max(1, Math.ceil(Math.abs(a1 - a0) / 0.1)), st = (a1 - a0) / n;
+  g.beginPath(); g.moveTo(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r);
+  for (let i = 1; i <= n; i++) g.lineTo(cx + Math.cos(a0 + st * i) * r, cy + Math.sin(a0 + st * i) * r);
+  g.strokePath();
+}
+function hudRing(g, cx, cy, r) {
+  const n = Math.max(12, Math.min(64, Math.ceil(r * 0.6)));
+  g.beginPath(); g.moveTo(cx + r, cy);
+  for (let i = 1; i < n; i++) g.lineTo(cx + Math.cos(TAU * i / n) * r, cy + Math.sin(TAU * i / n) * r);
+  g.closePath(); g.strokePath();
+}
+function hudDisc(g, cx, cy, r) {
+  const n = Math.max(8, Math.min(48, Math.ceil(r * 1.2))), pts = [];
+  for (let i = 0; i < n; i++) pts.push({ x: cx + Math.cos(TAU * i / n) * r, y: cy + Math.sin(TAU * i / n) * r });
+  g.fillPoints(pts, true);
+}
+
+// a path stroked three times, wide and faint then thin and bright: the glow Graphics cannot blur. pts: [[x, y], ...]
+function hudGlowPath(g, pts, color, a, closed, w) {
+  w = w || 1.5;
+  [[w * 4.5, 0.07], [w * 2.4, 0.17], [w, 1]].forEach(([lw, k]) => {
+    g.lineStyle(lw, color, a * k); g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+    if (closed) g.closePath();
+    g.strokePath();
+  });
+}
+
+// a panel of dark glass with two cut corners (top right, bottom left): a glowing edge, an inner line, a sheen along the top
+// that fades out, bright brackets on the two square corners, and a dot on each cut. edge is the accent colour.
 function hudPanel(g, x, y, w, ht, cut, alpha, edge) {
+  edge = edge || CYAN;
   const p = [[x, y], [x + w - cut, y], [x + w, y + cut], [x + w, y + ht], [x + cut, y + ht], [x, y + ht - cut]];
-  g.fillStyle(HUD_BG, alpha); g.lineStyle(1, edge || CYAN, 0.55);
-  g.beginPath(); g.moveTo(p[0][0], p[0][1]); for (let i = 1; i < p.length; i++) g.lineTo(p[i][0], p[i][1]);
-  g.closePath(); g.fillPath(); g.strokePath();
+  g.fillStyle(HUD_BG, alpha); g.beginPath(); g.moveTo(p[0][0], p[0][1]); for (let i = 1; i < p.length; i++) g.lineTo(p[i][0], p[i][1]);
+  g.closePath(); g.fillPath();
+  g.fillGradientStyle(edge, edge, edge, edge, 0.16, 0.16, 0, 0); // the sheen stops short of the top right cut and sits above the bottom left one
+  g.fillRect(x + 1, y + 1, w - cut - 2, Math.min(ht * 0.5, 30));
+  hudGlowPath(g, p, edge, 0.8, true, 1);
+  const i = 4, q = [[x + i, y + i], [x + w - cut - 1, y + i], [x + w - i, y + cut + 1], [x + w - i, y + ht - i], [x + cut + 1, y + ht - i], [x + i, y + ht - cut - 1]];
+  g.lineStyle(1, edge, 0.14); g.beginPath(); g.moveTo(q[0][0], q[0][1]); for (let k = 1; k < q.length; k++) g.lineTo(q[k][0], q[k][1]); g.closePath(); g.strokePath();
+  const b = Math.min(14, ht / 2 - 2);
+  g.lineStyle(2, edge, 1);
+  g.beginPath(); g.moveTo(x, y + b); g.lineTo(x, y); g.lineTo(x + b, y); g.strokePath();
+  g.beginPath(); g.moveTo(x + w, y + ht - b); g.lineTo(x + w, y + ht); g.lineTo(x + w - b, y + ht); g.strokePath();
+  g.fillStyle(edge, 1); g.fillRect(x + w - cut - 1, y - 1, 3, 3); g.fillRect(x - 1, y + ht - cut - 1, 3, 3);
+}
+
+// a thin accent bar down the left of a panel, the colour of the state it shows
+function hudSpine(g, x, y, ht, color, a) { g.fillStyle(color, a == null ? 0.9 : a); g.fillRect(x + 7, y + 10, 2, ht - 20); }
+
+// a segmented bar: n cells, lit up to frac, each lit cell with a faint halo; the leading cell is the bright one and pulses
+// when pulse is set. Used by the cargo hold, the freighter and boss meters, the mission progress.
+function hudBar(g, x, y, w, ht, frac, color, n, pulse) {
+  frac = Phaser.Math.Clamp(frac, 0, 1);
+  const gap = 2, cw = (w - gap * (n - 1)) / n, lit = frac <= 0 ? 0 : Math.max(1, Math.round(frac * n)); // a sliver still lights one cell
+  for (let i = 0; i < n; i++) {
+    const cx = x + i * (cw + gap), on = i < lit, lead = on && i === lit - 1;
+    if (on) {
+      g.fillStyle(color, 0.16); g.fillRect(cx - 1.5, y - 1.5, cw + 3, ht + 3);
+      g.fillStyle(color, lead && pulse != null ? pulse : 1); g.fillRect(cx, y, cw, ht);
+      g.fillStyle(0xffffff, 0.22); g.fillRect(cx, y, cw, Math.max(1, Math.floor(ht / 3)));
+    } else { g.fillStyle(HUD_OFF, 1); g.fillRect(cx, y, cw, ht); }
+  }
 }
 
 function hudTri(g, x, y, a, size, color, alpha) {
@@ -88,76 +161,117 @@ function hudDiamond(g, x, y, r, color) {
 }
 
 // ---- the frame: cut corners in the four screen corners ----
-function hudFrame(g) {
-  g.lineStyle(2, CYAN, 0.4);
-  const c = (x, y, sx, sy) => {
-    g.beginPath(); g.moveTo(x, y + sy * 60); g.lineTo(x, y + sy * 18); g.lineTo(x + sx * 18, y); g.lineTo(x + sx * 60, y); g.strokePath();
-  };
+function hudFrame(g, now) {
+  const c = (x, y, sx, sy) => hudGlowPath(g, [[x, y + sy * 64], [x, y + sy * 20], [x + sx * 20, y], [x + sx * 64, y]], CYAN, 0.5, false, 1.5);
   c(8, 8, 1, 1); c(W - 8, 8, -1, 1); c(8, H - 8, 1, -1); c(W - 8, H - 8, -1, -1);
-  g.fillStyle(AMBER, 0.7);
+  // a second, shorter line inside each corner, and rails with ticks down the sides, like the canopy struts
+  const d = (x, y, sx, sy) => { g.lineStyle(1, CYAN, 0.22); g.beginPath(); g.moveTo(x, y + sy * 34); g.lineTo(x, y + sy * 24); g.lineTo(x + sx * 24, y); g.lineTo(x + sx * 34, y); g.strokePath(); };
+  d(15, 15, 1, 1); d(W - 15, 15, -1, 1); d(15, H - 15, 1, -1); d(W - 15, H - 15, -1, -1);
+  g.lineStyle(1, CYAN, 0.12);
+  g.lineBetween(8, 150, 8, H - 150); g.lineBetween(W - 8, 270, W - 8, H - 150);
+  for (let y = 160; y < H - 150; y += 24) { g.lineBetween(8, y, y % 72 === 40 ? 16 : 12, y); if (y > 270) g.lineBetween(W - 8, y, y % 72 === 40 ? W - 16 : W - 12, y); }
+  g.fillStyle(AMBER, 0.75);
   g.fillRect(6, 62, 4, 10); g.fillRect(W - 10, 62, 4, 10); g.fillRect(6, H - 72, 4, 10); g.fillRect(W - 10, H - 72, 4, 10);
 }
 
 // ---- a 270 degree gauge of 30 segments; tick (0..1) marks a threshold on the scale ----
-function hudGauge(h, id, cx, cy, r, frac, color, big, small, tick) {
-  const g = h.g, a0 = Math.PI * 0.75, span = Math.PI * 1.5, n = 30;
+// A round plate with a glowing bezel and ten ticks, the segments with a halo under the lit ones and a bright leading cell,
+// a scanner arc that circles the bezel, the number with a glow, and the label. warn turns the bezel red and makes it beat.
+function hudGauge(h, id, cx, cy, r, frac, color, big, small, tick, warn) {
+  const g = h.g, now = h.now, a0 = Math.PI * 0.75, span = Math.PI * 1.5, n = 30, R = r + 12;
   frac = Phaser.Math.Clamp(frac, 0, 1);
-  g.fillStyle(HUD_BG, 0.72); g.fillCircle(cx, cy, r + 11);
-  g.lineStyle(1, CYAN, 0.35); g.strokeCircle(cx, cy, r + 11);
+  const rim = warn ? RED : CYAN, beat = warn ? 0.55 + 0.45 * Math.sin(now / 130) : 1;
+  g.fillStyle(HUD_BG, 0.78); hudDisc(g, cx, cy, R);
+  g.fillStyle(color, 0.06); hudDisc(g, cx, cy, r - 8);                       // a faint glow of the state colour on the glass
+  [[6.5, 0.07], [3.5, 0.17], [1.5, 0.8]].forEach(([lw, k]) => { g.lineStyle(lw, rim, k * beat); hudRing(g, cx, cy, R); });
+  g.lineStyle(1, rim, 0.18); hudRing(g, cx, cy, r - 7);
+  for (let i = 0; i <= 10; i++) {                                              // ticks outside the segments: long at 0, half and full
+    const a = a0 + span * i / 10, long = i % 5 === 0, r0 = r + 5, r1 = r + (long ? 10 : 8);
+    g.lineStyle(long ? 2 : 1, rim, long ? 0.85 : 0.4);
+    g.lineBetween(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+  }
+  if (frac > 0.02) { g.lineStyle(12, color, 0.13); hudArc(g, cx, cy, r, a0, a0 + span * frac); }
+  const lead = Math.min(n - 1, Math.max(0, Math.ceil(frac * n - 0.5) - 1));
   for (let i = 0; i < n; i++) {
-    const lit = (i + 0.5) / n <= frac;
+    const lit = (i + 0.5) / n <= frac || (i === 0 && frac > 0.01);
     g.lineStyle(7, lit ? color : HUD_OFF, 1);
-    g.beginPath(); g.arc(cx, cy, r, a0 + span * (i + 0.14) / n, a0 + span * (i + 0.86) / n, false); g.strokePath();
+    hudArc(g, cx, cy, r, a0 + span * (i + 0.14) / n, a0 + span * (i + 0.86) / n);
+    if (lit && i === lead) { g.lineStyle(3, 0xffffff, 0.45 + 0.4 * Math.sin(now / 160)); hudArc(g, cx, cy, r, a0 + span * (i + 0.14) / n, a0 + span * (i + 0.86) / n); }
   }
   if (tick != null) {
     const a = a0 + span * tick;
-    g.lineStyle(2, GREEN, 1); g.lineBetween(cx + Math.cos(a) * (r - 7), cy + Math.sin(a) * (r - 7), cx + Math.cos(a) * (r + 9), cy + Math.sin(a) * (r + 9));
+    g.lineStyle(2, GREEN, 1); g.lineBetween(cx + Math.cos(a) * (r - 7), cy + Math.sin(a) * (r - 7), cx + Math.cos(a) * (r + 10), cy + Math.sin(a) * (r + 10));
+    g.fillStyle(GREEN, 1); hudDisc(g, cx + Math.cos(a) * (r + 13), cy + Math.sin(a) * (r + 13), 1.8);
   }
-  hudPut(h, id + 'n', cx, cy - 2, big, { size: 21, bold: true, color: hudCss(color), ox: 0.5 });
-  hudPut(h, id + 'l', cx, cy + 27, small, { size: small.length > 6 ? 9 : 10, color: HUD_DIM, ox: 0.5, spacing: 1 });
+  const sa = now / 1100 + cx;                                                  // the scanner: a short bright arc on the bezel, once round in seven seconds
+  g.lineStyle(2, rim, 0.5 * beat); hudArc(g, cx, cy, R, sa, sa + 0.35);
+  hudPut(h, id + 'n', cx, cy - 2, big, { size: HT.num, bold: true, color: hudCss(color), ox: 0.5, glow: 9 });
+  hudPut(h, id + 'l', cx, cy + 27, small, { size: small.length > 6 ? 9 : HT.tag, color: warn ? '#ff4d6d' : HUD_DIM, ox: 0.5, spacing: 1 });
 }
 
 // ---- Space: the boost energy ring inside the speed gauge, and the dash dial beside it (state from boost.js) ----
 function hudEnergy(h, s, now) {
   const g = h.g, cx = 186, cy = 80, r = 30, a0 = Math.PI * 0.75, span = Math.PI * 1.5;
   const f = Phaser.Math.Clamp(s.en / s.enMax, 0, 1), low = s.boostLocked || f < 0.25;
-  g.lineStyle(3, HUD_OFF, 1); g.beginPath(); g.arc(cx, cy, r, a0, a0 + span, false); g.strokePath();
+  g.lineStyle(3, HUD_OFF, 1); hudArc(g, cx, cy, r, a0, a0 + span);
   if (f > 0.01) {
-    g.lineStyle(3, low ? AMBER : 0xe6f7ff, s.boostLocked ? 0.55 + 0.45 * Math.sin(now / 90) : 1);
-    g.beginPath(); g.arc(cx, cy, r, a0, a0 + span * f, false); g.strokePath();
+    const col = low ? AMBER : 0xe6f7ff, pulse = s.boostLocked ? 0.55 + 0.45 * Math.sin(now / 90) : 1;
+    g.lineStyle(7, col, 0.14 * pulse); hudArc(g, cx, cy, r, a0, a0 + span * f); // halo
+    g.lineStyle(3, col, pulse); hudArc(g, cx, cy, r, a0, a0 + span * f);
   }
-  // dash dial: fills as the cooldown runs, green and ringing when ready
+  // a hot flare at the end of the ring while the boost is burning
+  if (s.boosting && f > 0.02) { const a = a0 + span * f; g.fillStyle(0xffffff, 0.8); hudDisc(g, cx + Math.cos(a) * r, cy + Math.sin(a) * r, 2.6); }
+  // dash dial: fills as the cooldown runs, green and ringing when ready; a ring flies out the moment it is ready again
   const px = 268, py = 80, rd = 12, ready = now >= s.dashReady, prog = ready ? 1 : 1 - (s.dashReady - now) / s.dashCool;
-  g.fillStyle(HUD_BG, 0.72); g.fillCircle(px, py, rd + 7); g.lineStyle(1, CYAN, 0.35); g.strokeCircle(px, py, rd + 7);
-  g.lineStyle(4, HUD_OFF, 1); g.strokeCircle(px, py, rd);
-  g.lineStyle(4, ready ? GREEN : AMBER, 1); g.beginPath(); g.arc(px, py, rd, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * prog, false); g.strokePath();
+  if (ready && h.dashWas === false) h.dashPing = now;
+  h.dashWas = ready;
+  g.fillStyle(HUD_BG, 0.78); hudDisc(g, px, py, rd + 8);
+  [[6, 0.07], [3, 0.17], [1.3, 0.8]].forEach(([lw, k]) => { g.lineStyle(lw, ready ? GREEN : CYAN, k); hudRing(g, px, py, rd + 8); });
+  g.lineStyle(4, HUD_OFF, 1); hudRing(g, px, py, rd);
+  if (prog > 0.01) {
+    g.lineStyle(8, ready ? GREEN : AMBER, 0.14); hudArc(g, px, py, rd, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * prog);
+    g.lineStyle(4, ready ? GREEN : AMBER, 1); hudArc(g, px, py, rd, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * prog);
+  }
+  const ping = h.dashPing != null ? (now - h.dashPing) / 450 : 1;
+  if (ping < 1) { g.lineStyle(2, GREEN, 0.8 * (1 - ping)); hudRing(g, px, py, rd + 8 + 12 * ping); }
   hudPut(h, 'dk', px, py + 1, 'Q E', { size: 9, bold: true, color: ready ? '#6dff9c' : HUD_DIM, ox: 0.5 });
-  hudPut(h, 'dl', px, py + 28, 'DASH', { size: 9, color: HUD_DIM, ox: 0.5, spacing: 1 });
+  hudPut(h, 'dl', px, py + 29, 'DASH', { size: 9, color: HUD_DIM, ox: 0.5, spacing: 1 });
 }
 
 // ---- credits and gear strip, top centre ----
 function hudStrip(h, now) {
   const g = h.g;
-  if (G.credits !== h.cr) { if (G.credits > h.cr) h.flash = now + 700; h.cr = G.credits; }
-  hudPanel(g, 440, 10, 400, 30, 8, 0.72);
-  hudPut(h, 'crl', 458, 25, 'CR', { size: 11, color: HUD_DIM, spacing: 2 });
-  hudPut(h, 'crv', 482, 25, hudFmt(G.credits), { size: 17, bold: true, color: now < h.flash ? '#ffffff' : '#ffb454' });
+  // credits count up to the real figure; a gain flashes white and floats a +N beside it (a loss just snaps down)
+  if (G.credits !== h.cr) {
+    if (G.credits > h.cr) { h.flash = now + 700; h.gain = { v: G.credits - h.cr, t: now }; } else h.crShow = G.credits;
+    h.cr = G.credits;
+  }
+  if (h.crShow == null) h.crShow = G.credits;
+  h.crShow += (G.credits - h.crShow) * 0.14; if (Math.abs(G.credits - h.crShow) < 1) h.crShow = G.credits;
+  hudPanel(g, 440, 10, 400, 30, 8, 0.78);
+  hudSpine(g, 440, 10, 30, AMBER, 0.8);
+  hudPut(h, 'crl', 460, 25, 'CR', { size: HT.label, color: HUD_DIM, spacing: 2 });
+  const cv = hudPut(h, 'crv', 484, 25, hudFmt(h.crShow), { size: 17, bold: true, color: now < h.flash ? '#ffffff' : '#ffb454', glow: 7 });
+  const gain = h.gain && now - h.gain.t < 1300 ? h.gain : null;
+  hudPut(h, 'crd', 484 + cv.width - 2 * HUD_PAD + 8, 25 - 8 * Math.min(1, (gain ? now - gain.t : 0) / 400), gain ? '+' + hudFmt(gain.v) : '',
+    { size: HT.label, bold: true, color: '#6dff9c', alpha: gain ? 1 - Math.pow((now - gain.t) / 1300, 2) : 0 });
+  g.lineStyle(1, CYAN, 0.2); g.lineBetween(596, 17, 596, 33);
   UPGRADES.forEach((u, i) => {
     const gx = 612 + i * 74, tier = G.upgrades[u.key] | 0;
-    hudPut(h, 'up' + i, gx, 25, HUD_GEAR[u.key] || u.key.slice(0, 3).toUpperCase(), { size: 11, color: HUD_DIM, spacing: 1 });
-    for (let j = 0; j < 2; j++) {
-      const x = gx + 30 + j * 13;
-      if (tier > j) { g.fillStyle(CYAN, 1); g.fillRect(x, 21, 9, 9); } else { g.lineStyle(1, 0x3a566e, 1); g.strokeRect(x + 0.5, 21.5, 8, 8); }
+    hudPut(h, 'up' + i, gx, 25, HUD_GEAR[u.key] || u.key.slice(0, 3).toUpperCase(), { size: HT.label, color: tier ? '#9fe9ff' : HUD_DIM, spacing: 1 });
+    for (let j = 0; j < 2; j++) { // a pip is a small slanted chip: lit ones have a halo
+      const x = gx + 30 + j * 13, p = [[x + 3, 21], [x + 10, 21], [x + 7, 30], [x, 30]];
+      if (tier > j) {
+        g.fillStyle(CYAN, 0.2); g.fillRect(x - 1, 19, 14, 13);
+        g.fillStyle(CYAN, 1); g.beginPath(); g.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.closePath(); g.fillPath();
+      } else { g.lineStyle(1, HUD_LINE, 1); g.beginPath(); g.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.closePath(); g.strokePath(); }
     }
   });
-  // cargo hold: ten pips, amber as they fill, red when it is full (asteroids.js)
+  // cargo hold: ten cells, amber as they fill, red and beating when it is full (asteroids.js)
   const ore = G.ore | 0, full = ore >= ORE_CAP;
-  hudPanel(g, 856, 10, 134, 30, 8, 0.72);
-  hudPut(h, 'orl', 872, 25, 'ORE', { size: 11, color: full ? '#ff4d6d' : HUD_DIM, spacing: 2 });
-  for (let j = 0; j < ORE_CAP; j++) {
-    const x = 902 + j * 8;
-    if (j < ore) { g.fillStyle(full ? RED : AMBER, 1); g.fillRect(x, 20, 6, 11); } else { g.lineStyle(1, 0x3a566e, 1); g.strokeRect(x + 0.5, 20.5, 5, 10); }
-  }
+  hudPanel(g, 856, 10, 134, 30, 8, 0.78, full ? RED : CYAN);
+  hudPut(h, 'orl', 872, 25, 'ORE', { size: HT.label, color: full ? '#ff4d6d' : HUD_DIM, spacing: 2 });
+  hudBar(g, 902, 19, 78, 12, ore / ORE_CAP, full ? RED : AMBER, ORE_CAP, full ? 0.55 + 0.45 * Math.sin(now / 120) : null);
 }
 
 // ---- the mission as the checklist wants it ----
@@ -182,12 +296,10 @@ function hudKeycap(h, id, x, y, str) {
 
 // a labelled bar: the freighter's hull, say
 function hudMeterRow(h, x, y, w, meter) {
-  const g = h.g;
-  hudPut(h, 'tm', x, y, meter.name, { size: 11, color: HUD_DIM, spacing: 2 });
+  const g = h.g, f = Phaser.Math.Clamp(meter.frac, 0, 1), low = f < 0.3;
+  hudPut(h, 'tm', x, y, meter.name, { size: HT.label, color: HUD_DIM, spacing: 2 });
   const bx = x + 86, bw = w - 86;
-  g.fillStyle(HUD_OFF, 1); g.fillRect(bx, y - 4, bw, 8);
-  g.fillStyle(meter.color, 1); g.fillRect(bx, y - 4, bw * Phaser.Math.Clamp(meter.frac, 0, 1), 8);
-  g.lineStyle(1, meter.color, 0.7); g.strokeRect(bx, y - 4, bw, 8);
+  hudBar(g, bx, y - 5, bw, 10, f, meter.color, 20, low ? 0.5 + 0.5 * Math.sin(h.now / 110) : null); // the last cell beats when it is nearly gone
 }
 
 // ---- Space and Surface: the checklist panel under the gauges; returns its height ----
@@ -195,37 +307,53 @@ function hudTracker(h, m, meter, now, open) {
   const g = h.g, P = HUD_FRAME, px = P.x, py = P.y, steps = m.steps || [], bad = m.kind === 'failed', edge = bad ? RED : CYAN;
   if (!open) { // slim: the step you are on, and the key that opens it
     const cur = m.steps ? m.steps[m.cur].text : m.head, txt = cur.length > 29 ? cur.slice(0, 28) + '…' : cur;
-    hudPanel(g, px, py, P.w, 30, 8, 0.72, edge);
-    if (m.steps) { g.lineStyle(2, AMBER, 1); g.strokeRect(px + 14, py + 9, 12, 12); g.fillStyle(AMBER, 0.55 + 0.45 * Math.sin(now / 260)); g.fillRect(px + 17, py + 12, 6, 6); }
-    else hudDiamond(g, px + 20, py + 15, 5, bad ? RED : CYAN);
-    hudPut(h, 'tc', px + 38, py + 16, txt, { size: 12, color: bad ? '#ff4d6d' : m.kind === 'none' ? '#9fe9ff' : '#ffd37a' });
+    hudPanel(g, px, py, P.w, 30, 8, 0.78, edge);
+    hudSpine(g, px, py, 30, bad ? RED : AMBER, 0.85);
+    if (m.steps) { g.lineStyle(2, AMBER, 1); g.strokeRect(px + 20, py + 9, 12, 12); g.fillStyle(AMBER, 0.55 + 0.45 * Math.sin(now / 260)); g.fillRect(px + 23, py + 12, 6, 6); }
+    else hudDiamond(g, px + 26, py + 15, 5, bad ? RED : CYAN);
+    hudPut(h, 'tc', px + 44, py + 16, txt, { size: 12, color: bad ? '#ff4d6d' : m.kind === 'none' ? '#9fe9ff' : '#ffd37a' });
     hudKeycap(h, 'tk', px + P.w - 24, py + 15, 'T');
-    if (meter) { hudPanel(g, px, py + 34, P.w, 22, 6, 0.72, AMBER); hudMeterRow(h, px + 14, py + 45, P.w - 28, meter); return meter ? 56 : 30; }
+    if (meter) { hudPanel(g, px, py + 34, P.w, 22, 6, 0.78, AMBER); hudMeterRow(h, px + 14, py + 45, P.w - 28, meter); return meter ? 56 : 30; }
     return 30;
   }
-  const nextLines = Math.max(1, Math.ceil(m.next.length * 7.3 / (P.w - 28)));
-  const nextY = py + (m.steps ? 62 + steps.length * 22 + 4 : 56);
+  const nextLines = Math.max(1, Math.ceil(m.next.length * 7.3 / (P.w - 34)));
+  const nextY = py + (m.steps ? 70 + steps.length * 22 + 4 : 56);
   const ht = (nextY - py) + nextLines * 15 + 10 + (meter ? 24 : 0);
-  hudPanel(g, px, py, P.w, ht, 10, 0.72, edge);
-  hudPut(h, 'tl', px + 14, py + 14, 'MISSION', { size: 11, color: HUD_DIM, spacing: 3 });
-  hudPut(h, 'tk', px + 92, py + 14, 'T  hide', { size: 10, color: HUD_DIM });
-  if (m.reward) hudPut(h, 'tr', px + P.w - 14, py + 14, '+' + m.reward + ' cr', { size: 12, bold: true, color: '#ffb454', ox: 1 });
-  hudPut(h, 'th', px + 14, py + 36, m.head, { size: 15, bold: true, color: bad ? '#ff4d6d' : m.kind === 'none' ? '#9fe9ff' : '#ffd37a' });
-  if (m.sub) hudPut(h, 'tsub', px + P.w - 14, py + 37, m.sub, { size: 11, color: HUD_DIM, ox: 1 });
+  hudPanel(g, px, py, P.w, ht, 10, 0.78, edge);
+  hudSpine(g, px, py, ht, bad ? RED : AMBER, 0.85);
+  hudPut(h, 'tl', px + 20, py + 14, 'MISSION', { size: HT.label, color: HUD_DIM, spacing: 3 });
+  hudPut(h, 'tk', px + 98, py + 14, 'T  hide', { size: HT.tag, color: HUD_DIM });
+  if (m.reward) hudPut(h, 'tr', px + P.w - 14, py + 14, '+' + m.reward + ' cr', { size: 12, bold: true, color: '#ffb454', ox: 1, glow: 6 });
+  hudPut(h, 'th', px + 20, py + 36, m.head, { size: HT.head, bold: true, color: bad ? '#ff4d6d' : m.kind === 'none' ? '#9fe9ff' : '#ffd37a', glow: 6 });
+  if (m.sub) hudPut(h, 'tsub', px + P.w - 14, py + 37, m.sub, { size: HT.label, color: HUD_DIM, ox: 1 });
+  if (m.steps) { // progress: one cell a step, the steps done so far lit green and the one you are on beating amber
+    const n = steps.length, gap = 3, cw = (P.w - 34 - gap * (n - 1)) / n;
+    steps.forEach((st, i) => {
+      const x = px + 20 + i * (cw + gap), col = st.state === 'done' ? GREEN : st.state === 'cur' ? AMBER : HUD_OFF;
+      if (st.state !== 'todo') { g.fillStyle(col, 0.16); g.fillRect(x - 1, py + 50, cw + 2, 7); }
+      g.fillStyle(col, st.state === 'cur' ? 0.6 + 0.4 * Math.sin(now / 260) : 1); g.fillRect(x, py + 51, cw, 4);
+    });
+  }
   steps.forEach((st, i) => {
-    const y = py + 66 + i * 22, bx = px + 14;
+    const y = py + 74 + i * 22, bx = px + 20;
+    if (i > 0) { g.lineStyle(1, st.state === 'todo' ? HUD_LINE : GREEN, st.state === 'todo' ? 0.7 : 0.55); g.lineBetween(bx + 6, y - 16, bx + 6, y - 7); } // the thread between steps
     if (st.state === 'done') {
-      g.fillStyle(GREEN, 0.9); g.fillRect(bx, y - 6, 12, 12);
+      g.fillStyle(GREEN, 0.2); g.fillRect(bx - 2, y - 8, 16, 16);
+      g.fillStyle(GREEN, 0.95); g.fillRect(bx, y - 6, 12, 12);
       g.lineStyle(2, HUD_BG, 1); g.beginPath(); g.moveTo(bx + 3, y); g.lineTo(bx + 5.5, y + 3); g.lineTo(bx + 9.5, y - 3); g.strokePath();
     } else if (st.state === 'cur') {
+      const k = 0.55 + 0.45 * Math.sin(now / 260);
+      g.fillStyle(AMBER, 0.12 + 0.12 * k); g.fillRect(bx - 4, y - 10, P.w - 30, 20); // the row you are on has a warm wash
       g.lineStyle(2, AMBER, 1); g.strokeRect(bx, y - 6, 12, 12);
-      g.fillStyle(AMBER, 0.55 + 0.45 * Math.sin(now / 260)); g.fillRect(bx + 3, y - 3, 6, 6);
+      g.fillStyle(AMBER, k); g.fillRect(bx + 3, y - 3, 6, 6);
+      const sl = (now / 1400) % 1, sx = bx + 24 + sl * (P.w - 70); // a bright dash runs along the foot of the row
+      g.lineStyle(1, AMBER, 0.7 * Math.sin(sl * Math.PI)); g.lineBetween(sx, y + 9, Math.min(sx + 36, px + P.w - 14), y + 9);
     } else {
-      g.lineStyle(1, 0x3a566e, 1); g.strokeRect(bx + 0.5, y - 5.5, 11, 11);
+      g.lineStyle(1, HUD_LINE, 1); g.strokeRect(bx + 0.5, y - 5.5, 11, 11);
     }
-    hudPut(h, 'ts' + i, bx + 24, y, st.text, { size: 13, color: st.state === 'done' ? '#58b57d' : st.state === 'cur' ? '#ffd37a' : HUD_DIM });
+    hudPut(h, 'ts' + i, bx + 24, y, st.text, { size: HT.body, color: st.state === 'done' ? '#58b57d' : st.state === 'cur' ? '#ffd37a' : HUD_DIM });
   });
-  hudPut(h, 'tn', px + 14, nextY, m.next, { size: 12, color: bad ? '#ff9aa9' : '#9fe9ff', oy: 0, wrap: P.w - 28 });
+  hudPut(h, 'tn', px + 20, nextY, m.next, { size: 12, color: bad ? '#ff9aa9' : '#9fe9ff', oy: 0, wrap: P.w - 34 });
   if (meter) hudMeterRow(h, px + 14, py + ht - 17, P.w - 28, meter);
   return ht;
 }
@@ -247,7 +375,7 @@ function hudHit(h, s, x, y, w, ht) {
 // ---- Station: one line under the strip (the checklist would sit on the terminals) ----
 function hudCompact(h, m) {
   const g = h.g, bad = m.kind === 'failed';
-  hudPanel(g, 420, 46, 440, 28, 8, 0.72, bad ? RED : CYAN);
+  hudPanel(g, 420, 46, 440, 28, 8, 0.78, bad ? RED : CYAN);
   const tag = m.kind === 'active' && m.steps ? 'STEP ' + m.cur + '/' + (m.steps.length - 1) : bad ? 'FAILED' : 'MISSION';
   hudPut(h, 'cl', 436, 61, tag, { size: 11, color: HUD_DIM, spacing: 2 });
   hudDiamond(g, 505, 60, 4, bad ? RED : AMBER);
@@ -259,23 +387,36 @@ function hudCompact(h, m) {
 function hudRadar(h, s, key, obj, now) {
   const g = h.g, R = 84, cx = W - 110, cy = 112, range = HUD_RANGE[key], sc = R / range;
   const me = key === 'Space' ? s.ship : s.player, ox = me.x, oy = me.y;
-  g.fillStyle(HUD_BG, 0.72); g.fillCircle(cx, cy, R + 4);
-  g.lineStyle(1, CYAN, 0.25); g.strokeCircle(cx, cy, R / 3); g.strokeCircle(cx, cy, R * 2 / 3);
-  g.lineStyle(1, CYAN, 0.14); g.lineBetween(cx - R, cy, cx + R, cy); g.lineBetween(cx, cy - R, cx, cy + R);
-  const sw = (now / 1500) % (Math.PI * 2);
-  for (let i = 0; i < 9; i++) {
-    g.lineStyle(2, CYAN, 0.2 * (1 - i / 9));
-    g.lineBetween(cx, cy, cx + Math.cos(sw - i * 0.07) * R, cy + Math.sin(sw - i * 0.07) * R);
-  }
   // what is hostile and how close: the rim and the line under the radar turn red once something is near enough to attack
   const foes = key === 'Space' ? s.enemies.getChildren() : s.crawlers.getChildren(), engage = key === 'Space' ? 900 : 380, unit = key === 'Space' ? 'km' : 'm';
   let n = 0, near = Infinity;
   foes.forEach(e => { if (!e.active) return; const d = Math.hypot(e.x - ox, e.y - oy); if (d <= range) { n++; if (d < near) near = d; } });
-  const hot = near < engage;
-  g.lineStyle(2, hot ? RED : CYAN, hot ? 0.65 + 0.35 * Math.sin(now / 120) : 0.7); g.strokeCircle(cx, cy, R);
+  const hot = near < engage, rim = hot ? RED : CYAN, beat = hot ? 0.6 + 0.4 * Math.sin(now / 120) : 1;
+  h.near = near; h.engage = engage; // hudWarn reads these
+  // the plate, the rings (dashed), the cross hairs, and a bezel with a tick every 15 degrees and a marker at north
+  g.fillStyle(HUD_BG, 0.8); hudDisc(g, cx, cy, R + 4);
+  g.fillStyle(rim, 0.05); hudDisc(g, cx, cy, R);
+  [[6.5, 0.07], [3.5, 0.17], [1.5, 0.85]].forEach(([lw, k]) => { g.lineStyle(lw, rim, k * beat); hudRing(g, cx, cy, R + 4); });
+  [R / 3, R * 2 / 3].forEach(rr => { g.lineStyle(1, CYAN, 0.28); for (let i = 0; i < 28; i++) { const a = i * Math.PI / 14; hudArc(g, cx, cy, rr, a, a + 0.1); } });
+  g.lineStyle(1, CYAN, 0.14); g.lineBetween(cx - R, cy, cx + R, cy); g.lineBetween(cx, cy - R, cx, cy + R);
+  for (let i = 0; i < 24; i++) {
+    const a = i * Math.PI / 12, q = i % 6 === 0, r0 = R - (q ? 9 : 5);
+    g.lineStyle(q ? 2 : 1, rim, q ? 0.9 : 0.4); g.lineBetween(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0, cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+  }
+  g.fillStyle(AMBER, 1); g.fillTriangle(cx, cy - R - 9, cx - 4, cy - R - 2, cx + 4, cy - R - 2);
+  // the sweep: a wedge that fades behind a bright leading line; a ping ring leaves the centre every three seconds
+  const sw = (now / 1500) % (Math.PI * 2);
+  for (let i = 0; i < 18; i++) {
+    const a0 = sw - (i + 1) * 0.06, a1 = sw - i * 0.06;
+    g.fillStyle(rim, 0.24 * Math.pow(1 - i / 18, 1.6));
+    g.fillTriangle(cx, cy, cx + Math.cos(a0) * R, cy + Math.sin(a0) * R, cx + Math.cos(a1) * R, cy + Math.sin(a1) * R);
+  }
+  g.lineStyle(2, rim, 0.85); g.lineBetween(cx, cy, cx + Math.cos(sw) * R, cy + Math.sin(sw) * R);
+  const pg = (now % 3000) / 1500;
+  if (pg < 1) { g.lineStyle(1, CYAN, 0.35 * (1 - pg)); hudRing(g, cx, cy, R * pg); }
   hudPut(h, 'rt', cx, cy + R + 32, n ? n + ' HOSTILE  ' + Math.round(near * 0.1) + ' ' + unit : 'CLEAR',
-    { size: 11, bold: hot, color: hot ? '#ff4d6d' : n ? '#ffb454' : '#58b57d', ox: 0.5, spacing: 1 });
-  hudPut(h, 'rl', cx, cy + R + 16, 'RADAR  ' + (key === 'Space' ? (range / 10) + ' km' : (range / 10) + ' m'), { size: 11, color: HUD_DIM, ox: 0.5, spacing: 1 });
+    { size: HT.label, bold: hot, color: hot ? '#ff4d6d' : n ? '#ffb454' : '#58b57d', ox: 0.5, spacing: 1, alpha: hot ? 0.7 + 0.3 * Math.sin(now / 120) : 1 });
+  hudPut(h, 'rl', cx, cy + R + 16, 'RADAR  ' + (key === 'Space' ? (range / 10) + ' km' : (range / 10) + ' m'), { size: HT.label, color: HUD_DIM, ox: 0.5, spacing: 1 });
 
   const pt = (wx, wy, keep) => { // world point -> radar point; off the radar it is clamped to the rim when keep, else null
     let dx = (wx - ox) * sc, dy = (wy - oy) * sc;
@@ -284,11 +425,17 @@ function hudRadar(h, s, key, obj, now) {
     return { x: cx + dx, y: cy + dy, out, a: Math.atan2(dy, dx) };
   };
   const mark = (p, color, draw) => { if (p.out) hudTri(g, p.x, p.y, p.a, 5, color); else draw(p); };
-  const dot = (wx, wy, color, r) => { const p = pt(wx, wy, false); if (p) { g.fillStyle(color, 1); g.fillCircle(p.x, p.y, r); } };
+  // a blip is brightest just after the sweep passes it and settles back to half; each has a halo
+  const dot = (wx, wy, color, r) => {
+    const p = pt(wx, wy, false); if (!p) return;
+    const age = (((sw - p.a) % TAU) + TAU) % TAU / TAU, k = 0.55 + 0.45 * Math.pow(1 - age, 2);
+    g.fillStyle(color, 0.22 * k); hudDisc(g, p.x, p.y, r * 2.4);
+    g.fillStyle(color, k); hudDisc(g, p.x, p.y, r);
+  };
 
   if (key === 'Space') {
     mark(pt(s.station.x, s.station.y, true), CYAN, p => hudDiamond(g, p.x, p.y, 5, CYAN));
-    mark(pt(s.planet.x, s.planet.y, true), AMBER, p => { g.fillStyle(AMBER, 1); g.fillCircle(p.x, p.y, 5); });
+    mark(pt(s.planet.x, s.planet.y, true), AMBER, p => { g.fillStyle(AMBER, 1); hudDisc(g, p.x, p.y, 5); });
     s.enemies.getChildren().forEach(d => { if (d.active) dot(d.x, d.y, d.wanted ? AMBER : (d.def && d.def.radar) || RED, d.wanted ? 3 : d.def && d.def.key === 'gunship' ? 3 : 2.2); });
   } else {
     mark(pt(s.pad.x, s.pad.y, true), AMBER, p => hudDiamond(g, p.x, p.y, 5, AMBER));
@@ -300,9 +447,119 @@ function hudRadar(h, s, key, obj, now) {
   if (obj) { // ring the objective; off the radar it is the arrow on the rim
     const p = pt(obj.x, obj.y, true);
     g.lineStyle(2, AMBER, 0.6 + 0.4 * Math.sin(now / 200));
-    if (p.out) hudTri(g, p.x, p.y, p.a, 7, AMBER, 0.9); else g.strokeCircle(p.x, p.y, 8 + Math.sin(now / 200));
+    if (p.out) hudTri(g, p.x, p.y, p.a, 7, AMBER, 0.9); else hudRing(g, p.x, p.y, 8 + Math.sin(now / 200));
   }
+  if (h.lock && h.lock.active) { // the locked target: four brackets round its blip (src/hud.js hudLock)
+    const p = pt(h.lock.x, h.lock.y, false);
+    if (p) {
+      const k = 7 + 1.2 * Math.sin(now / 130), c = 3.5;
+      g.lineStyle(1.5, h.lockColor, 1);
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([ax, ay]) => {
+        g.beginPath(); g.moveTo(p.x + ax * k, p.y + ay * (k - c)); g.lineTo(p.x + ax * k, p.y + ay * k); g.lineTo(p.x + ax * (k - c), p.y + ay * k); g.strokePath();
+      });
+    }
+  }
+  g.lineStyle(1, 0xffffff, 0.45); g.lineBetween(cx, cy, cx + Math.cos(me.rotation) * R * 0.3, cy + Math.sin(me.rotation) * R * 0.3); // where you are pointing
   tri(g, cx, cy, me.rotation, 5, 0xffffff);
+}
+
+// ---- Space: the lock. The nearest hostile on screen is the target; it keeps the lock until it is gone, leaves the screen or
+// another one is clearly closer (so it does not flicker between two at the same distance). Brackets close in on it, then a
+// ring turns round it; a tag gives its type, range and hull. Other hostiles in view get four small ticks. ----
+const HUD_LOCK_RANGE = 1500;
+function hudLock(h, s, now) {
+  const cam = s.cameras.main, me = s.ship;
+  const on = e => { const x = e.x - cam.scrollX, y = e.y - cam.scrollY; return x > 24 && x < W - 24 && y > 56 && y < H - 150; };
+  let best = null, bd = Infinity, cur = h.lock && h.lock.active && on(h.lock) ? h.lock : null;
+  h.view = [];
+  s.enemies.getChildren().forEach(e => {
+    if (!e.active || !on(e)) return;
+    const d = Math.hypot(e.x - me.x, e.y - me.y);
+    if (d > HUD_LOCK_RANGE) return;
+    h.view.push(e);
+    if (d < bd) { bd = d; best = e; }
+  });
+  if (cur && Math.hypot(cur.x - me.x, cur.y - me.y) > HUD_LOCK_RANGE) cur = null;
+  let next = cur || best;
+  if (cur && best && best !== cur && bd < 0.7 * Math.hypot(cur.x - me.x, cur.y - me.y)) next = best;
+  if (next !== h.lock) h.lockSince = now; // a new target: the brackets close in again
+  h.lock = next;
+  if (next) h.lockColor = next.wanted ? AMBER : next.def && next.def.boss ? 0xff2a4a : RED;
+}
+
+function hudBrackets(g, x, y, half, k, color, a, w) {
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([ax, ay]) => {
+    const bx = x + ax * half, by = y + ay * half;
+    g.lineStyle(w * 3, color, a * 0.14); g.beginPath(); g.moveTo(bx, by - ay * k); g.lineTo(bx, by); g.lineTo(bx - ax * k, by); g.strokePath();
+    g.lineStyle(w, color, a); g.beginPath(); g.moveTo(bx, by - ay * k); g.lineTo(bx, by); g.lineTo(bx - ax * k, by); g.strokePath();
+  });
+}
+
+function hudTargets(h, s, now) {
+  const g = h.g, cam = s.cameras.main, me = s.ship, lock = h.lock;
+  (h.view || []).forEach(e => { // the ones in view that are not the target: four small ticks
+    if (e === lock) return;
+    const x = e.x - cam.scrollX, y = e.y - cam.scrollY, half = Math.max(e.displayWidth, e.displayHeight) / 2 + 8;
+    hudBrackets(g, x, y, half, 4, e.wanted ? AMBER : RED, 0.4, 1);
+  });
+  if (!lock) return; // its tag texts are not used this frame, so hudTick hides them
+  const x = lock.x - cam.scrollX, y = lock.y - cam.scrollY, c = h.lockColor, t = Phaser.Math.Clamp((now - h.lockSince) / 380, 0, 1);
+  const half = Math.max(22, Math.max(lock.displayWidth, lock.displayHeight) / 2 + 12), open = Math.pow(1 - t, 2) * 70;
+  hudBrackets(g, x, y, half + open, 10 + 6 * (1 - t), c, 0.45 + 0.55 * t, 2);
+  if (t >= 1) { // locked: a dashed ring turns slowly round it
+    const r = half + 7, spin = now / 900;
+    g.lineStyle(1.5, c, 0.55);
+    for (let i = 0; i < 4; i++) { const a = spin + i * Math.PI / 2; hudArc(g, x, y, r, a, a + 0.9); }
+    g.fillStyle(c, 0.9); hudDisc(g, x, y, 1.8);
+  }
+  const d = Math.round(Math.hypot(lock.x - me.x, lock.y - me.y) * 0.1), right = x < W - 230, tx = right ? x + half + 12 : x - half - 12, ox = right ? 0 : 1;
+  const name = lock.wanted ? 'WANTED' : lock.def && lock.def.boss ? 'THE REAVER' : ((lock.def && lock.def.key) || 'hostile').toUpperCase();
+  hudPut(h, 'lkn', tx, y - half + 2, t < 1 ? 'LOCKING' : name, { size: HT.label, bold: true, color: hudCss(c), ox, spacing: 1, stroke: true, alpha: t < 1 ? 0.6 + 0.4 * Math.sin(now / 50) : 1 });
+  hudPut(h, 'lkd', tx, y - half + 17, d + ' km', { size: HT.label, color: '#9fe9ff', ox, stroke: true });
+  if (lock.def && lock.def.hp) { // its hull: eight cells
+    const bw = 64, bx = right ? tx : tx - bw, by = y - half + 28;
+    hudBar(g, bx, by, bw, 5, lock.hp / lock.def.hp, c, 8, null);
+  }
+}
+
+// ---- warnings: banners low in the middle, one per live problem, and a red pulse round the screen edge while the hull is
+// critical. Some stay for as long as the problem does (hull, boost, colonist); some are an event and show for a few seconds
+// (first contact, hold full). Each banner is a zone, so world labels fade under it. ----
+function hudWarn(h, s, now, key, near, engage) {
+  const g = h.g, list = [], space = key === 'Space', surf = key === 'Surface';
+  const hullF = surf ? s.hp / 100 : G.hull / G.maxHull;
+  if ((space || surf) && hullF <= 0.3) list.push({ id: 'hull', text: surf ? 'HEALTH CRITICAL' : 'HULL CRITICAL', sub: Math.max(0, Math.round(hullF * 100)) + '%  BREAK OFF', color: RED, crit: true });
+  if (surf && s.col && s.col.state !== 'dead' && s.col.hp / 60 <= 0.3) list.push({ id: 'col', text: 'COLONIST IN DANGER', sub: Math.max(0, Math.round(s.col.hp)) + ' HP', color: AMBER, crit: true });
+  if (space && s.boostLocked) list.push({ id: 'bst', text: 'BOOST EMPTY', sub: 'RECHARGING', color: AMBER });
+  const hot = near < engage; // first contact: a banner for 2.5 s when something comes into attack range
+  if (hot && !h.hotWas) h.contact = now + 2500;
+  h.hotWas = hot;
+  if (now < (h.contact || 0)) list.push({ id: 'hos', text: 'HOSTILE CONTACT', sub: Math.round(near * 0.1) + (space ? ' KM' : ' M'), color: RED });
+  const full = space && (G.ore | 0) >= ORE_CAP;
+  if (full && !h.fullWas) h.holdFull = now + 3000;
+  h.fullWas = full;
+  if (now < (h.holdFull || 0)) list.push({ id: 'ore', text: 'CARGO HOLD FULL', sub: 'SELL AT THE STATION', color: AMBER });
+
+  if (hullF <= 0.3 && (space || surf)) { // the edge pulse: four strips that fade inward
+    const a = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(now / 240)), d = 110;
+    g.fillGradientStyle(RED, RED, RED, RED, a, a, 0, 0); g.fillRect(0, 0, W, d);
+    g.fillGradientStyle(RED, RED, RED, RED, 0, 0, a, a); g.fillRect(0, H - d, W, d);
+    g.fillGradientStyle(RED, RED, RED, RED, a, 0, a, 0); g.fillRect(0, 0, d, H);
+    g.fillGradientStyle(RED, RED, RED, RED, 0, a, 0, a); g.fillRect(W - d, 0, d, H);
+  }
+  list.slice(0, 3).forEach((w, i) => { // three at most, so the stack never reaches the ship
+    const bw = 280, bh = 34, x = W / 2 - bw / 2, y = H - 214 - i * 40, beat = w.crit ? 0.72 + 0.28 * Math.sin(now / 110) : 1;
+    hudPanel(g, x, y, bw, bh, 10, 0.88, w.color);
+    g.fillStyle(w.color, 0.1 + 0.08 * beat); g.fillRect(x + 12, y + 3, bw - 24, bh - 6);
+    for (let k = 0; k < 3; k++) { // chevrons stream in toward the words from both sides
+      const ph = ((now / 500) + k / 3) % 1, al = Math.sin(ph * Math.PI) * 0.9, cx = x + 16 + ph * 26, cy = y + bh / 2;
+      g.fillStyle(w.color, al); g.fillTriangle(cx, cy - 6, cx + 6, cy, cx, cy + 6);
+      g.fillTriangle(x + bw - (cx - x), cy - 6, x + bw - (cx - x) - 6, cy, x + bw - (cx - x), cy + 6);
+    }
+    hudPut(h, 'w' + i + 't', W / 2, y + 13, w.text, { size: HT.head, bold: true, color: hudCss(w.color), ox: 0.5, spacing: 2, glow: 8, alpha: beat });
+    hudPut(h, 'w' + i + 's', W / 2, y + 27, w.sub, { size: HT.tag, color: '#9fe9ff', ox: 0.5, spacing: 2 });
+    h.zones.push({ x0: x, y0: y, x1: x + bw, y1: y + bh });
+  });
 }
 
 // ---- the objective: where to go, and how far ----
@@ -383,12 +640,12 @@ function hudTick(s) {
   let h = s._hud;
   if (!h || !h.g.active) h = s._hud = { s, g: s.add.graphics().setScrollFactor(0).setDepth(100), t: {}, seen: {}, zones: [], cr: G.credits, flash: 0, open: true, box: new Phaser.Geom.Rectangle() };
   const g = h.g, key = s.scene.key, now = s.time.now, space = key === 'Space', surf = key === 'Surface';
-  g.clear(); h.seen = {}; h.zones = [];
-  hudFrame(g);
+  g.clear(); h.seen = {}; h.zones = []; h.now = now;
+  hudFrame(g, now);
 
   // gauges, top left: hull (health on foot), then speed in space or the colonist on foot
   const hullFrac = surf ? s.hp / 100 : G.hull / G.maxHull;
-  hudGauge(h, 'g1', 70, 80, 40, hullFrac, hullFrac > 0.5 ? CYAN : hullFrac > 0.3 ? AMBER : RED, String(Math.max(0, Math.round(surf ? s.hp : G.hull))), surf ? 'HEALTH' : 'HULL');
+  hudGauge(h, 'g1', 70, 80, 40, hullFrac, hullFrac > 0.5 ? CYAN : hullFrac > 0.3 ? AMBER : RED, String(Math.max(0, Math.round(surf ? s.hp : G.hull))), surf ? 'HEALTH' : 'HULL', null, hullFrac <= 0.3);
   if (space) {
     const spd = s.ship.body.speed, top = boostMax();
     hudGauge(h, 'g2', 186, 80, 40, spd / top, spd > 480 ? AMBER : CYAN, String(Math.round(spd)), s.boostLocked ? 'NO BOOST' : 'SPEED', 150 / top);
@@ -419,7 +676,10 @@ function hudTick(s) {
   }
 
   const obj = hudObjective(s, key);
+  if (space) hudLock(h, s, now); // before the radar, which brackets the target's blip too
   if (space || surf) { h.zones.push({ x0: W - 230, y0: 0, x1: W, y1: 250 }); hudRadar(h, s, key, obj, now); }
+  if (space) hudTargets(h, s, now);
+  if (space || surf) hudWarn(h, s, now, key, h.near, h.engage);
   h.zones.push({ x0: 430, y0: 0, x1: 850, y1: 50 });
   // toasts (depth 299 and up) are zones too, for as long as they are up
   s.children.list.forEach(o => {

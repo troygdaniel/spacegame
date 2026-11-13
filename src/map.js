@@ -34,7 +34,7 @@ class Overlay extends Phaser.Scene {
     const cx = W / 2, cy = H / 2;
     this.MX = 100; this.MY = 100; this.MS = 560; this.SX = 706; // map square and the side column
     this.add.rectangle(cx, cy, W, H, 0x02050c, 0.78).setInteractive(); // swallows clicks
-    this.add.rectangle(cx, cy, 1140, 650, 0x07101c, 0.97).setStrokeStyle(2, CYAN, 1);
+    hudPanel(this.add.graphics(), cx - 570, cy - 325, 1140, 650, 20, 0.97, CYAN); // src/hud.js: the same glass panel as the HUD
     this.g = this.add.graphics();
     this.title = mapText(this, 100, 46, '', 26, '#38e1ff');
     const x = mapText(this, 1180, 50, 'Close  [x]', 15, '#9fe9ff').setOrigin(1, 0).setInteractive({ useHandCursor: true });
@@ -137,7 +137,17 @@ class Overlay extends Phaser.Scene {
     g.fillStyle(0x03070f, 1); g.fillRect(MX, MY, MS, MS);
     g.lineStyle(1, CYAN, 0.12);
     for (let i = 1; i < 8; i++) { g.lineBetween(X(i * 1000), MY, X(i * 1000), MY + MS); g.lineBetween(MX, Y(i * 1000), MX + MS, Y(i * 1000)); }
-    g.lineStyle(2, CYAN, 0.8); g.strokeRect(MX, MY, MS, MS);
+    // a scan band drifts down the map; the frame glows, has ticks on the grid lines and amber brackets outside its corners
+    const sy0 = MY + 30 + ((time / 4200) % 1) * (MS - 30);
+    g.fillGradientStyle(CYAN, CYAN, CYAN, CYAN, 0, 0, 0.09, 0.09); g.fillRect(MX, sy0 - 30, MS, 30);
+    hudGlowPath(g, [[MX, MY], [MX + MS, MY], [MX + MS, MY + MS], [MX, MY + MS]], CYAN, 0.85, true, 1.25);
+    g.lineStyle(1, CYAN, 0.55);
+    for (let i = 1; i < 8; i++) { g.lineBetween(X(i * 1000), MY - 6, X(i * 1000), MY); g.lineBetween(MX - 6, Y(i * 1000), MX, Y(i * 1000)); }
+    g.lineStyle(3, AMBER, 1);
+    [[0, 0, 1, 1], [MS, 0, -1, 1], [0, MS, 1, -1], [MS, MS, -1, -1]].forEach(([ox, oy, sx, sy]) => {
+      const x = MX + ox - sx * 6, y = MY + oy - sy * 6;
+      g.beginPath(); g.moveTo(x, y + sy * 20); g.lineTo(x, y); g.lineTo(x + sx * 20, y); g.strokePath();
+    });
 
     // planet and station
     const pr = Math.max(7, SECTOR.planet.r * sc);
