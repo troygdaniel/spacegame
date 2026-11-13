@@ -49,6 +49,9 @@ if node tests/credits.mjs; then :; else fail=1; fi
 echo "== 4f. hyperspace tunnel demo (tests/hyper.mjs: #hyper, #hyper24, #hyper2)"
 if node tests/hyper.mjs; then :; else fail=1; fi
 
+echo "== 4f. ship voice with a mocked fetch: no key, no call; nothing ever reaches Deepgram (tests/voice.mjs)"
+if node tests/voice.mjs; then :; else fail=1; fi
+
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
   if node tests/missions.mjs; then :; else fail=1; fi
