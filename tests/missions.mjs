@@ -23,13 +23,13 @@ try {
   await t.shot('missions-board-list');
   check('board open', await t.ev(`${S('Station')}.panel`));
   await key('2'); await run(100); await t.shot('missions-escort-offer');
-  check('offer text names the MULE', (await t.ev(`${S('Station')}.panelText.text`)).includes('MULE'));
+  check('offer text names the MULE', await t.ev("!!(missionDef() && missionDef().offer.includes('MULE'))")); // the board is cards now: no panelText
   await key('E'); await run(200);
   let g = await G();
   check('E accepts escort', g.mission === 'accepted' && g.missionId === 'escort', JSON.stringify(g));
   check('panel closed after accept', !(await t.ev(`${S('Station')}.panel`)));
   await key('E'); await run(200);
-  check('progress view shows the drop option', (await t.ev(`${S('Station')}.panelText.text`)).includes('[X] Drop'));
+  check('progress view shows the drop option', await t.ev(`${S('Station')}.ui.hintKey.includes('Drop the mission')`));
   await key('X'); await run(200);
   g = await G(); check('X drops the mission', g.mission === 'none' && g.missionId === null, JSON.stringify(g));
   await key('E'); await run(100); await key('3'); await run(100); await key('E'); await run(200);
@@ -39,8 +39,10 @@ try {
   check('no JS errors so far', t.errors.length === 0, t.errors.join(' | '));
 
   console.log('B. patrol in space');
-  await x(`${S('Station')}.player.setPosition(1010, 360)`);
-  await run(100); await key('E'); await run(1500);
+  await x(`${S('Station')}.player.setPosition(1090, 360)`);
+  // E at the ship now plays feelLaunch (a 1.1 s tween) before go(); that tween never finishes under the stepped
+  // clock, so go() is called directly. tests/loop.mjs presses E in real time and covers the animation.
+  await run(100); await x(`go(${S('Station')}, 'Space', { from: 'station' })`); await run(1500);
   check('launched into Space', (await scene()) === 'Space', await scene());
   await run(1500); await t.shot('missions-space-patrol');
   const wanted = await t.ev(`${S('Space')}.enemies.getChildren().filter(d => d.wanted && d.active).length`);
