@@ -105,7 +105,7 @@ class Surface extends Phaser.Scene {
       let tgt = null, best = 380;
       const dp = Phaser.Math.Distance.Between(c.x, c.y, p.x, p.y);
       if (dp < best) { best = dp; tgt = p; }
-      if (col && col.state !== 'dead') {
+      if (col && col.state === 'following') { // a colonist waiting at the pod is left alone until woken
         const dc = Phaser.Math.Distance.Between(c.x, c.y, col.s.x, col.s.y);
         if (dc < best) { best = dc; tgt = col.s; }
       }
