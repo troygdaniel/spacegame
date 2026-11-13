@@ -426,6 +426,65 @@ function hudRadar(h, s, key, obj, now) {
   tri(g, cx, cy, me.rotation, 5, 0xffffff);
 }
 
+// ---- Space: the lock. The nearest hostile on screen is the target; it keeps the lock until it is gone, leaves the screen or
+// another one is clearly closer (so it does not flicker between two at the same distance). Brackets close in on it, then a
+// ring turns round it; a tag gives its type, range and hull. Other hostiles in view get four small ticks. ----
+const HUD_LOCK_RANGE = 1500;
+function hudLock(h, s, now) {
+  const cam = s.cameras.main, me = s.ship;
+  const on = e => { const x = e.x - cam.scrollX, y = e.y - cam.scrollY; return x > 24 && x < W - 24 && y > 56 && y < H - 150; };
+  let best = null, bd = Infinity, cur = h.lock && h.lock.active && on(h.lock) ? h.lock : null;
+  h.view = [];
+  s.enemies.getChildren().forEach(e => {
+    if (!e.active || !on(e)) return;
+    const d = Math.hypot(e.x - me.x, e.y - me.y);
+    if (d > HUD_LOCK_RANGE) return;
+    h.view.push(e);
+    if (d < bd) { bd = d; best = e; }
+  });
+  if (cur && Math.hypot(cur.x - me.x, cur.y - me.y) > HUD_LOCK_RANGE) cur = null;
+  let next = cur || best;
+  if (cur && best && best !== cur && bd < 0.7 * Math.hypot(cur.x - me.x, cur.y - me.y)) next = best;
+  if (next !== h.lock) h.lockSince = now; // a new target: the brackets close in again
+  h.lock = next;
+  if (next) h.lockColor = next.wanted ? AMBER : next.def && next.def.boss ? 0xff2a4a : RED;
+}
+
+function hudBrackets(g, x, y, half, k, color, a, w) {
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([ax, ay]) => {
+    const bx = x + ax * half, by = y + ay * half;
+    g.lineStyle(w * 3, color, a * 0.14); g.beginPath(); g.moveTo(bx, by - ay * k); g.lineTo(bx, by); g.lineTo(bx - ax * k, by); g.strokePath();
+    g.lineStyle(w, color, a); g.beginPath(); g.moveTo(bx, by - ay * k); g.lineTo(bx, by); g.lineTo(bx - ax * k, by); g.strokePath();
+  });
+}
+
+function hudTargets(h, s, now) {
+  const g = h.g, cam = s.cameras.main, me = s.ship, lock = h.lock;
+  (h.view || []).forEach(e => { // the ones in view that are not the target: four small ticks
+    if (e === lock) return;
+    const x = e.x - cam.scrollX, y = e.y - cam.scrollY, half = Math.max(e.displayWidth, e.displayHeight) / 2 + 8;
+    hudBrackets(g, x, y, half, 4, e.wanted ? AMBER : RED, 0.4, 1);
+  });
+  if (!lock) return; // its tag texts are not used this frame, so hudTick hides them
+  const x = lock.x - cam.scrollX, y = lock.y - cam.scrollY, c = h.lockColor, t = Phaser.Math.Clamp((now - h.lockSince) / 380, 0, 1);
+  const half = Math.max(22, Math.max(lock.displayWidth, lock.displayHeight) / 2 + 12), open = Math.pow(1 - t, 2) * 70;
+  hudBrackets(g, x, y, half + open, 10 + 6 * (1 - t), c, 0.45 + 0.55 * t, 2);
+  if (t >= 1) { // locked: a dashed ring turns slowly round it
+    const r = half + 7, spin = now / 900;
+    g.lineStyle(1.5, c, 0.55);
+    for (let i = 0; i < 4; i++) { const a = spin + i * Math.PI / 2; g.beginPath(); g.arc(x, y, r, a, a + 0.9, false); g.strokePath(); }
+    g.fillStyle(c, 0.9); g.fillCircle(x, y, 1.8);
+  }
+  const d = Math.round(Math.hypot(lock.x - me.x, lock.y - me.y) * 0.1), right = x < W - 230, tx = right ? x + half + 12 : x - half - 12, ox = right ? 0 : 1;
+  const name = lock.wanted ? 'WANTED' : lock.def && lock.def.boss ? 'THE REAVER' : ((lock.def && lock.def.key) || 'hostile').toUpperCase();
+  hudPut(h, 'lkn', tx, y - half + 2, t < 1 ? 'LOCKING' : name, { size: HT.label, bold: true, color: hudCss(c), ox, spacing: 1, stroke: true, alpha: t < 1 ? 0.6 + 0.4 * Math.sin(now / 50) : 1 });
+  hudPut(h, 'lkd', tx, y - half + 17, d + ' km', { size: HT.label, color: '#9fe9ff', ox, stroke: true });
+  if (lock.def && lock.def.hp) { // its hull: eight cells
+    const bw = 64, bx = right ? tx : tx - bw, by = y - half + 28;
+    hudBar(g, bx, by, bw, 5, lock.hp / lock.def.hp, c, 8, null);
+  }
+}
+
 // ---- the objective: where to go, and how far ----
 function hudObjective(s, key) {
   if (key === 'Space') {
@@ -540,7 +599,9 @@ function hudTick(s) {
   }
 
   const obj = hudObjective(s, key);
+  if (space) hudLock(h, s, now); // before the radar, which brackets the target's blip too
   if (space || surf) { h.zones.push({ x0: W - 230, y0: 0, x1: W, y1: 250 }); hudRadar(h, s, key, obj, now); }
+  if (space) hudTargets(h, s, now);
   h.zones.push({ x0: 430, y0: 0, x1: 850, y1: 50 });
   // toasts (depth 299 and up) are zones too, for as long as they are up
   s.children.list.forEach(o => {
