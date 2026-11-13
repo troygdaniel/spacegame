@@ -52,9 +52,12 @@ class Overlay extends Phaser.Scene {
     this.tLegH = m(mapText(this, SX, 352, 'LEGEND', 13, '#5b7a92'));
     this.legend = [
       ['you', 'ship'], ['Halcyon Station', 'station'], ['Kepler-4b', 'planet'], ['objective', 'target'],
-      ['drone in sensor range', 'live'], ['drone, where you last saw it', 'stale'], ['wanted pirate', 'wanted']
+      ['drone in sensor range', 'live'], ['drone, where you last saw it', 'stale'], ['wanted pirate', 'wanted'], ['salvage site', 'poi']
     ];
     this.legend.forEach(([name], i) => m(mapText(this, SX + 40, 380 + i * 30, name, 15, '#cfefff')));
+
+    this.poiLabels = []; // names of salvage sites you have found (poi.js fills them in)
+    for (let i = 0; i < (typeof POI !== 'undefined' ? POI.length : 0); i++) this.poiLabels.push(m(mapText(this, 0, 0, '', 12, '#6dff9c').setOrigin(0.5, 0)));
 
     // help mode
     this.helpObjs = [];
@@ -158,6 +161,8 @@ class Overlay extends Phaser.Scene {
       if (o.wanted) { g.lineStyle(2, AMBER, live ? 0.95 : 0.5); g.strokeCircle(x, y, 8); }
     }
 
+    if (typeof poiMapMarks === 'function') poiMapMarks(g, X, Y, this.poiLabels);
+
     // the MULE in an escort
     const fr = S.live && S.sp.mx && S.sp.mx.freighter;
     const showMule = !!(fr && fr.active);
@@ -203,6 +208,7 @@ class Overlay extends Phaser.Scene {
       else if (kind === 'target') { g.lineStyle(2, AMBER, 0.95); g.strokeCircle(x, y, 8); }
       else if (kind === 'live') { g.fillStyle(RED, 1); g.fillRect(x - 3, y - 3, 6, 6); }
       else if (kind === 'stale') { g.lineStyle(1, RED, 0.55); g.strokeRect(x - 3, y - 3, 6, 6); }
+      else if (kind === 'poi') { g.lineStyle(2, GREEN, 1); g.strokeCircle(x, y, 6); g.fillStyle(GREEN, 1); g.fillCircle(x, y, 2); }
       else if (kind === 'wanted') { g.fillStyle(RED, 1); g.fillRect(x - 3, y - 3, 6, 6); g.lineStyle(2, AMBER, 0.95); g.strokeCircle(x, y, 8); }
     });
   }

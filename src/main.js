@@ -9,3 +9,4 @@ installMeta(window.game); // Esc pause, M mute, autosave
 installAudio(window.game); // ambient pads, engine hum (audio.js)
 installLookFx(window.game); // speed streaks while boosting (title.js)
 installMap(window.game); // Tab sector map, H help, key reminder (map.js)
+installPoi(window.game); // derelict wrecks and a distress beacon to salvage (poi.js)

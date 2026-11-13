@@ -37,7 +37,8 @@ function snapshot() {
     missionId: G.missionId || null, missionProgress: Math.floor(G.missionProgress || 0), // missions.js: which call, kills so far
     upgrades: Object.assign({}, G.upgrades), ore: G.ore | 0, // ore in the hold (asteroids.js)
     volume: Math.round(G.volume * 10) / 10, muted: !!G.muted,
-    ...guideSnapshot() // first-run guide, run stats, ending card (guide.js)
+    ...guideSnapshot(), // first-run guide, run stats, ending card (guide.js)
+    ...poiSnapshot() // salvage sites found and salvaged (poi.js)
   };
 }
 
@@ -82,6 +83,7 @@ function loadGame() {
     if (typeof s.muted === 'boolean') G.muted = s.muted;
     G.ore = Number.isFinite(s.ore) ? Math.min(ORE_CAP, Math.max(0, Math.floor(s.ore))) : 0; // asteroids.js
     guideRestore(s); // guide.js: tips done, stats, ending seen
+    poiRestore(s); // poi.js: salvage sites found and salvaged
     lastSaved = JSON.stringify(snapshot());
     return true;
   } catch (e) { return false; }
@@ -96,6 +98,7 @@ function newGameState() {
   G.credits = 0; G.maxHull = 100; G.hull = 100; G.mission = 'none'; G.missionId = null; G.missionProgress = 0;
   Object.keys(G.upgrades).forEach(k => { G.upgrades[k] = 0; });
   G.ore = 0; guideReset(); // guide.js: tips and stats start over
+  poiReset(); // poi.js: every site can be salvaged again
 }
 
 // ---------- window hooks ----------
