@@ -145,8 +145,8 @@ class Pause extends Phaser.Scene {
   create() {
     const cx = W / 2, cy = H / 2;
     this.add.rectangle(cx, cy, W, H, 0x02050c, 0.72).setInteractive(); // swallows clicks
-    this.ui = panel(this, { w: 560, h: 470, title: 'PAUSED', depth: 0 }); // the shared panel style (src/ui.js)
-    this.ui.tagText.setText('AUTOSAVE ON');
+    this.ui = panel(this, { w: 560, h: 470, title: 'PAUSED  -  AUTOSAVE ON', depth: 0 }); // the shared panel style (src/ui.js)
+    crTag(this, this.ui, G.credits); // src/ui.js: coin and gold N CR (the game is paused, so it cannot change here)
     this.title = this.ui.titleText;
     this.rows = []; this.zones = [];
     for (let i = 0; i < 6; i++) {
@@ -179,7 +179,7 @@ class Pause extends Phaser.Scene {
 
   refresh() {
     const menu = this.view === 'menu';
-    this.title.setText(menu ? 'PAUSED' : 'CONTROLS  -  ' + this.from.toUpperCase());
+    this.title.setText(menu ? 'PAUSED  -  AUTOSAVE ON' : 'CONTROLS  -  ' + this.from.toUpperCase());
     this.rows.forEach((r, i) => {
       r.setVisible(menu).setText((i === this.sel ? '> ' : '  ') + this.rowText(i))
         .setColor(i === this.sel ? (i === 5 && this.confirmNew ? '#ff4d6d' : '#ffd37a') : '#9fe9ff');

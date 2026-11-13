@@ -106,9 +106,9 @@ function upgradeIcon(g, key, x, y, color) {
   else { g.beginPath(); g.moveTo(x - 14, y + 14); g.lineTo(x, y - 16); g.lineTo(x + 14, y + 14); g.closePath(); g.strokePath(); g.fillStyle(color, 0.6); g.fillTriangle(x - 7, y + 14, x, y - 2, x + 7, y + 14); }
 }
 
-function refreshShop(s) {
+function refreshShop(s, bought) {
   s.shopObjs.forEach(o => o.destroy()); s.shopObjs = [];
-  s.shopUI.tagText.setText('CREDITS ' + G.credits);
+  crTag(s, s.shopUI, G.credits, bought); // src/ui.js: coin and gold N CR; after a purchase it pops and floats -N
   const add = o => { s.shopBox.add(o); s.shopObjs.push(o); return o; };
   const txt = (x, y, str, size, color, style) => add(s.add.text(x, y, str, uiFont(size, color, style)).setOrigin(0, 0.5));
   UPGRADES.forEach((u, i) => {
@@ -152,7 +152,7 @@ function buyUpgrade(s, i) {
     say(u.name + TIER_NAME[t + 1] + ' installed (-' + price + ' cr).', '#6dff9c'); sfx('chime');
     shipRefresh(s); // src/ships.js: the hangar ship shows the new plating, barrels or nozzles at once
   }
-  refreshShop(s);
+  refreshShop(s, true);
 }
 
 function talkTo(s, i) {
