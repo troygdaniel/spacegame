@@ -108,7 +108,7 @@ function radarDot(s, x, y, color, r) { hudBlip(s, x, y, color, r); } // the HUD 
 function escortSetup(s) {
   const st = s.station;
   const f = s.physics.add.sprite(st.x - 60, st.y + 260, 'freighter').setDepth(4);
-  f.body.setCircle(14, 18, 0).setMaxSpeed(130);
+  f.body.setCircle(14, 24, 6).setMaxSpeed(130); // offset in the 76x40 texture (ships.js)
   f.hp = 200; f.maxHp = 200; f.rammedAt = 0;
   f.rotation = Phaser.Math.Angle.Between(f.x, f.y, GATE.x, GATE.y);
   s.mx.freighter = f;
@@ -136,6 +136,7 @@ function escortSetup(s) {
 function freighterHurt(s, n) {
   const f = s.mx.freighter; if (!f || !f.active) return;
   f.hp -= n; f.setTint(0xffffff); s.time.delayedCall(70, () => f.active && f.clearTint());
+  if (s.sparks) s.sparks.explode(5, f.x, f.y); // ships.js
   beep(200, 0.08, 'square', 0.02, -100);
   if (f.hp <= 0) {
     s.boom.explode(50, f.x, f.y); f.destroy(); beep(90, 0.5, 'sawtooth', 0.05, -60);
@@ -192,7 +193,7 @@ function patrolTarget(s) {
 // ---- Bounty: the Reaver, a warship with two escorts on the dark side of Kepler-4b ----
 // It is a pirate in s.enemies like the others (your guns, salvage and the radar all work on it), with its own AI.
 const REAVER = {
-  key: 'reaver', tex: 'reaver', hp: REAVER_HP, credits: 150, ram: 25, radar: 0xff2a4a, body: [30, 6, 6],
+  key: 'reaver', tex: 'reaver', hp: REAVER_HP, credits: 150, ram: 25, radar: 0xff2a4a, body: [30, 14, 13], // offset in the 112x90 texture (ships.js)
   engage: 1400, speed: 220, max: 190, turn: 0.02, hold: 380, range: 820, aim: 0.5, shot: [1200, 1800], bullet: 400, dmg: 10, spread: 3,
   boss: true, ai: (s, d, ship, time) => reaverAI(s, d, ship, time)
 };

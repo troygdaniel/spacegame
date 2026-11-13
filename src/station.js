@@ -4,6 +4,7 @@ class Station extends Phaser.Scene {
   init(d) { this.arrive = !!(d && d.arrive); }
   create() {
     this.leaving = false; this.panel = false;
+    shipRefresh(this); // src/ships.js: the hangar ship shows the upgrade tiers you own
     this.cameras.main.fadeIn(300, 0, 0, 0);
     this.add.tileSprite(0, 0, W, H, 'tile').setOrigin(0);
     this.add.rectangle(1070, 360, 380, 680, 0x0f2438, 0.9);

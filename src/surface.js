@@ -3,6 +3,7 @@ class Surface extends Phaser.Scene {
   constructor() { super('Surface'); }
   create() {
     this.leaving = false;
+    shipRefresh(this); // src/ships.js: the parked ship shows the upgrade tiers you own
     const SW = 2400, SH = 1400; this.pad = { x: 200, y: 700 };
     this.physics.world.setBounds(0, 0, SW, SH);
     this.cameras.main.setBounds(0, 0, SW, SH).fadeIn(300, 0, 0, 0);

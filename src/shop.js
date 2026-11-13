@@ -159,6 +159,7 @@ function buyUpgrade(s, i) {
     G.credits -= price; G.upgrades[u.key] = t + 1;
     if (u.key === 'armor') { G.maxHull += 20; G.hull += 20; }
     say(u.name + TIER_NAME[t + 1] + ' installed (-' + price + ' cr).', '#6dff9c'); sfx('chime');
+    shipRefresh(s); // src/ships.js: the hangar ship shows the new plating, barrels or nozzles at once
   }
   refreshShop(s);
 }

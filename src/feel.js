@@ -49,6 +49,7 @@ function feelFrame(s, time, dt) {
   if (!p) return;
   const sx = (p.x - cam.worldView.x) * cam.zoom, sy = (p.y - cam.worldView.y) * cam.zoom; // player on screen
   if (s.scene.key === 'Space' && !s.dead) feelSpace(s, f, now, sx, sy);
+  if (s.scene.key === 'Space') shipsFrame(s, now, dt); // src/ships.js: every ship's flame, trail, shield, smoke
 
   // muzzle flashes live 70 ms
   f.shots = f.shots.filter(sh => now - sh.t < 70);
@@ -86,17 +87,7 @@ function feelFrame(s, time, dt) {
 function feelSpace(s, f, now, sx, sy) {
   const ship = s.ship, body = ship.body, g = f.mid;
   if (!ship.visible || !body) return;
-  // thruster flame, longer and whiter with throttle (idle 0, cruise 720, boost 1500)
-  const th = Math.min(1, body.acceleration.length() / 1500);
-  if (th > 0) {
-    const r = ship.rotation, bx = ship.x - Math.cos(r) * 14 * ship.scaleX, by = ship.y - Math.sin(r) * 14 * ship.scaleX;
-    const len = (14 + 36 * th) * (0.85 + Math.random() * 0.3) * ship.scaleX, wid = (4 + 5 * th) * ship.scaleX;
-    const side = (ang, d) => [bx + Math.cos(r + ang) * d, by + Math.sin(r + ang) * d];
-    const [ax, ay] = side(Math.PI / 2, wid), [cx, cy] = side(-Math.PI / 2, wid);
-    g.fillStyle(th > 0.6 ? 0x9fe9ff : AMBER, 0.85); g.fillTriangle(ax, ay, cx, cy, bx - Math.cos(r) * len, by - Math.sin(r) * len);
-    const [ix, iy] = side(Math.PI / 2, wid * 0.45), [jx, jy] = side(-Math.PI / 2, wid * 0.45);
-    g.fillStyle(0xffffff, 0.9); g.fillTriangle(ix, iy, jx, jy, bx - Math.cos(r) * len * 0.5, by - Math.sin(r) * len * 0.5);
-  }
+  // the thruster flame is drawn by shipsFrame (src/ships.js) with every other ship's
   // velocity vector: where you are actually going
   const v = body.velocity, sp = body.speed;
   if (sp > 30 && !s.leaving) {
