@@ -17,7 +17,7 @@ const KEYS = { E: [69, 'KeyE', 'e'], L: [76, 'KeyL', 'l'], W: [87, 'KeyW', 'w'],
 export async function launch(hash = '') {
   const profile = mkdtempSync(join(tmpdir(), 'longhaul-'));
   const chrome = spawn(CHROME, [
-    '--headless=new', '--disable-gpu', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
+    '--headless=new', '--mute-audio', '--disable-gpu', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
     '--allow-file-access-from-files', '--remote-debugging-port=0', '--remote-allow-origins=*',
     `--user-data-dir=${profile}`, '--window-size=1280,720', '--hide-scrollbars', '--no-first-run',
     '--no-default-browser-check', 'about:blank'
