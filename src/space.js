@@ -55,10 +55,10 @@ class Space extends Phaser.Scene {
 
     this.physics.add.overlap(this.pb, this.enemies, (b, e) => {
       if (!b.active || !e.active) return;
-      b.disableBody(true, true); e.hp -= 15; this.boom.explode(4, b.x, b.y); beep(300, 0.06, 'square', 0.02, -150);
+      b.disableBody(true, true); e.hp -= 15; this.boom.explode(4, b.x, b.y); sfx('tick');
       if (e.hp <= 0) {
         const wanted = e.wanted;
-        this.boom.explode(28, e.x, e.y); e.destroy(); G.credits += 25; G.stats.drones++; beep(120, 0.3, 'sawtooth', 0.05, -80);
+        this.boom.explode(28, e.x, e.y); e.destroy(); G.credits += 25; G.stats.drones++; sfx('boom');
         if (wanted) missionKill(this); else toast(this, 'Drone down  +25 cr', '#ffb454');
       }
     });
@@ -104,7 +104,7 @@ class Space extends Phaser.Scene {
 
   hurt(n) {
     if (this.dead || this.leaving) return;
-    G.hull -= n; this.cameras.main.shake(120, 0.006); beep(120, 0.12, 'sawtooth', 0.05, -60);
+    G.hull -= n; this.cameras.main.shake(120, 0.006); sfx('hit');
     if (G.hull <= 0) this.die();
   }
 
@@ -139,7 +139,7 @@ class Space extends Phaser.Scene {
     if (!locked && (k.SPACE.isDown || this.input.activePointer.isDown) && time > this.nextFire) {
       this.nextFire = time + fireDelay();
       this.shoot(this.pb, ship.x + Math.cos(ship.rotation) * 24, ship.y + Math.sin(ship.rotation) * 24, ship.rotation, 950, time);
-      beep(880, 0.05, 'square', 0.015, -400);
+      sfx('laser');
     }
     this.pb.getChildren().forEach(b => { if (b.active && time - b.born > 900) b.disableBody(true, true); });
     this.eb.getChildren().forEach(b => { if (b.active && time - b.born > 1800) b.disableBody(true, true); });
@@ -165,10 +165,10 @@ class Space extends Phaser.Scene {
     const spd = ship.body.speed;
     let msg = '';
     if (dS < 320) {
-      if (spd < 150) { msg = 'L  Dock at Halcyon Station'; if (JD(k.L)) { missionLeaveSpace(this); beep(300, 0.4, 'triangle', 0.05, 200); go(this, 'Station', { arrive: true }); } }
+      if (spd < 150) { msg = 'L  Dock at Halcyon Station'; if (JD(k.L)) { missionLeaveSpace(this); sfx('dock'); go(this, 'Station', { arrive: true }); } }
       else msg = 'Too fast to dock. Hold S to brake';
     } else if (dP < this.planetR + 150) {
-      if (spd < 170) { msg = 'L  Land on Kepler-4b'; if (JD(k.L)) { missionLeaveSpace(this); beep(300, 0.5, 'triangle', 0.05, -150); go(this, 'Surface'); } }
+      if (spd < 170) { msg = 'L  Land on Kepler-4b'; if (JD(k.L)) { missionLeaveSpace(this); sfx('thrusters'); go(this, 'Surface'); } }
       else msg = 'Too fast to land. Hold S to brake';
     }
     this.prompt.setText(msg);

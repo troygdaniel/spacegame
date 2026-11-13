@@ -53,8 +53,8 @@ class Surface extends Phaser.Scene {
     this.physics.add.overlap(this.pb, this.crawlers, (b, c) => {
       if (!b.active || !c.active) return;
       b.disableBody(true, true); c.hp -= 12; c.setTint(0xffffff); this.time.delayedCall(70, () => c.active && c.clearTint());
-      this.boom.explode(5, b.x, b.y); beep(260, 0.06, 'square', 0.02, -120);
-      if (c.hp <= 0) { this.boom.explode(22, c.x, c.y); c.destroy(); beep(110, 0.2, 'sawtooth', 0.04, -60); }
+      this.boom.explode(5, b.x, b.y); sfx('tick');
+      if (c.hp <= 0) { this.boom.explode(22, c.x, c.y); c.destroy(); sfx('boom'); }
     });
 
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,UP,DOWN,LEFT,RIGHT');
@@ -89,7 +89,7 @@ class Surface extends Phaser.Scene {
         b.enableBody(true, p.x + Math.cos(aim) * 14, p.y + Math.sin(aim) * 14, true, true);
         b.setRotation(aim).setDepth(4); b.born = time;
         this.physics.velocityFromRotation(aim, 820, b.body.velocity);
-        beep(700, 0.05, 'square', 0.015, -300);
+        sfx('laser');
       }
     }
     this.pb.getChildren().forEach(b => { if (b.active && time - b.born > 800) b.disableBody(true, true); });
@@ -149,7 +149,7 @@ class Surface extends Phaser.Scene {
         if (c2 && c2.state === 'following' && !withMe) toast(this, 'The colonist is still on the way.', '#ffd37a');
         else {
           if (withMe) { G.mission = 'rescued'; toast(this, 'Colonist aboard. Take them home.', '#6dff9c'); }
-          beep(200, 0.5, 'sawtooth', 0.04, 500); go(this, 'Space', { from: 'surface' });
+          sfx('thrusters'); go(this, 'Space', { from: 'surface' });
         }
       }
     }
