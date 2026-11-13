@@ -6,17 +6,14 @@ class Station extends Phaser.Scene {
     this.leaving = false; this.panel = false;
     shipRefresh(this); // src/ships.js: the hangar ship shows the upgrade tiers you own
     this.cameras.main.fadeIn(300, 0, 0, 0);
-    this.add.tileSprite(0, 0, W, H, 'tile').setOrigin(0);
-    this.add.rectangle(1070, 360, 380, 680, 0x0f2438, 0.9);
-    this.add.rectangle(1250, 360, 10, 200, AMBER, 0.8);
-    label(this, 1180, 40, 'HANGAR', '#ffb454');
+    interiorTextures(this); // src/interior.js: the floor, walls, props, lights and people are drawn there
     this.shipImg = this.add.image(1090, 360, 'ship').setScale(3);
-    label(this, 1090, 420, 'YOUR SHIP', '#9fe9ff');
+    label(this, 1090, 432, 'YOUR SHIP', '#9fe9ff');
 
     this.walls = [];
     const wall = (x, y, w, h) => { const r = rectWall(this, x, y, w, h); this.walls.push(r); return r; };
-    wall(0, 0, W, 20); wall(0, H - 20, W, 20); wall(0, 0, 20, H); wall(W - 20, 0, 20, H);
-    wall(860, 20, 20, 260); wall(860, 440, 20, 260);
+    wall(0, 0, W, IN_NORTH); wall(0, H - IN_SOUTH, W, IN_SOUTH); wall(0, 0, 20, H); wall(W - 20, 0, 20, H); // the top and bottom walls are thicker: interior.js draws them face-on
+    wall(860, IN_NORTH, 20, 280 - IN_NORTH); wall(860, 440, 20, 260 - (IN_SOUTH - 20));
     wall(20, 420, 380, 20); wall(520, 420, 340, 20);
     [[500, 100], [540, 100], [760, 320]].forEach(([x, y]) => {
       const c = this.add.rectangle(x, y, 40, 40, 0x3a2a14).setStrokeStyle(2, AMBER, 0.8);
@@ -32,29 +29,21 @@ class Station extends Phaser.Scene {
     [this.spots[0], this.spots[1]].forEach(sp => {
       const r = rectWall(this, sp.x - 50, sp.y - 22, 100, 44, 0x0d2a3f, sp.key === 'repair' ? GREEN : CYAN);
       this.walls.push(r);
-      label(this, sp.x, sp.y - 40, sp.text, sp.color);
+      label(this, sp.x, sp.y + 16, sp.text, sp.color, 11); // the nameplate on the front of the desk
     });
 
     // the lower deck is the bar (src/shop.js) and the hangar gets the upgrade shop terminal
     buildBar(this); buildShop(this);
 
-    // ambience: a couple of civilians drift through the bar's open floor
-    for (let i = 0; i < 2; i++) {
-      const n = this.add.image(Phaser.Math.Between(460, 820), Phaser.Math.Between(570, 680), 'walker').setTint(0x7a8ca0);
-      const wander = () => this.tweens.add({
-        targets: n, x: Phaser.Math.Between(450, 820), y: Phaser.Math.Between(560, 680),
-        duration: Phaser.Math.Between(3500, 7000), onUpdate: () => {}, onComplete: wander
-      });
-      wander();
-    }
+    interiorBuild(this); // lights, signs, hologram desks, patrons and wanderers (src/interior.js)
 
-    this.player = this.physics.add.sprite(960, 400, 'walker').setCollideWorldBounds(true).setDepth(5);
-    this.player.body.setCircle(8, 2, 3);
+    this.player = this.physics.add.sprite(960, 400, 'in-pilot0').setCollideWorldBounds(true).setDepth(5);
+    this.player.body.setCircle(9, 7, 7);
     this.walls.forEach(w => this.physics.add.collider(this.player, w));
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,ESC,UP,DOWN,LEFT,RIGHT');
 
     this.prompt = floatPrompt(this, this.player); // key cap above whatever you can use (src/ui.js)
-    this.add.text(24, H - 44, 'WASD walk   E interact', { fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92' }).setDepth(100);
+    this.add.text(24, H - IN_SOUTH - 28, 'WASD walk   E interact', { fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92' }).setDepth(100);
 
     this.ui = panel(this, { w: 900, h: 480, title: 'MISSION BOARD  -  HALCYON STATION', dim: true }); // src/ui.js
     this.panelBox = this.ui.box.setVisible(false); this.boardObjs = [];
@@ -158,7 +147,7 @@ class Station extends Phaser.Scene {
   closePanel() { this.panel = false; this.panelBox.setVisible(false); this.boardObjs.forEach(o => o.destroy()); this.boardObjs = []; }
 
   update() {
-    guideTick(this);
+    guideTick(this); interiorTick(this, this.time.now);
     const JD = Phaser.Input.Keyboard.JustDown, k = this.k;
     hudTick(this); // src/hud.js
     if (shopFrame(this)) return; // upgrade shop panel is open
@@ -195,7 +184,7 @@ class Station extends Phaser.Scene {
           const pay = Math.min(cost, G.credits);
           G.credits -= pay; G.hull = pay < cost ? Math.min(G.maxHull, G.hull + pay * 2) : G.maxHull;
           beep(400, 0.2, 'triangle', 0.05, 300); toast(this, (pay < cost ? 'Partly repaired' : 'Hull repaired') + ' (-' + pay + ' cr).', '#6dff9c'); }
-      } else if (near.key === 'ship') { sfx('thrusters'); feelLaunch(this, () => go(this, 'Space', { from: 'station' })); }
+      } else if (near.key === 'ship') { sfx('thrusters'); interiorLaunch(this); feelLaunch(this, () => go(this, 'Space', { from: 'station' })); }
     }
   }
 }
