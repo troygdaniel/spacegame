@@ -116,7 +116,7 @@ function startEngine(sc) {
     e.nextAt = time + 60; // retune about 16 times a second, not every frame
     const ship = sc.ship, now = AC.currentTime;
     const thrusting = ship && ship.body && !sc.dead && ship.body.acceleration.length() > 0 && !AUD.ducked;
-    const boost = thrusting && sc.k && sc.k.SHIFT && sc.k.SHIFT.isDown;
+    const boost = thrusting && sc.boosting; // boost.js: Shift held and the tank not empty
     e.level = thrusting ? (boost ? 1 : 0.55) : 0;
     const speed = ship && ship.body ? Math.min(1, ship.body.speed / 800) : 0;
     e.out.gain.setTargetAtTime(e.level * 0.2, now, 0.12);
@@ -172,6 +172,8 @@ const SFX = {
     tone(t + 0.28, 'square', 1800, 1500, 0.03, 0.03);
   },
   thrusters(t) { burst(t, 0.9, 0.14, 'bandpass', 300, 1200, 0.9, 0.25); tone(t, 'sine', 70, 110, 0.8, 0.07); },
+  dash(t) { burst(t, 0.22, 0.13, 'bandpass', 700, 2800, 0.9, 0.2); tone(t, 'sine', 260, 820, 0.18, 0.05); },
+  empty(t) { tone(t, 'square', 190, 120, 0.1, 0.035); },
   chime(t) { [660, 880, 1320].forEach((f, i) => tone(t + i * 0.07, 'triangle', f, f * 0.995, 0.35, 0.05)); tone(t + 0.21, 'sine', 1760, 1750, 0.3, 0.025); }
 };
 

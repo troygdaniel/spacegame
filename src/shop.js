@@ -40,11 +40,12 @@ const NPC_REACT = NPCS.map(() => ''); // the last reaction line each NPC said, s
 const UPGRADES = [
   { key: 'armor', name: 'ARMOR PLATING', descs: ['+20 max hull', '+20 more max hull'], prices: [300, 500] },
   { key: 'rapid', name: 'RAPID FIRE', descs: ['faster guns', 'even faster guns'], prices: [400, 600] },
-  { key: 'booster', name: 'BOOSTER', descs: ['higher boost speed', 'even higher boost'], prices: [350, 550] }
+  { key: 'booster', name: 'BOOSTER', descs: ['longer boost, higher speed', 'longest boost, top speed'], prices: [350, 550] }
 ];
 const TIER_NAME = ['', '', ' II'];
 function fireDelay() { return [160, 100, 70][G.upgrades.rapid | 0]; }       // ms between shots
 function boostMax() { return [800, 1000, 1150][G.upgrades.booster | 0]; }  // top speed while boosting
+function boostEnergy() { const t = G.upgrades.booster | 0; return { max: [100, 130, 165][t], regen: [17, 24, 32][t] }; } // boost tank (4 s at tier 0) and refill per second (src/boost.js)
 
 function ownedLine() {
   const have = UPGRADES.filter(u => G.upgrades[u.key]).map(u => u.name + TIER_NAME[G.upgrades[u.key]]);

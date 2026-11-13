@@ -112,6 +112,24 @@ function hudGauge(h, id, cx, cy, r, frac, color, big, small, tick) {
   hudPut(h, id + 'l', cx, cy + 27, small, { size: small.length > 6 ? 9 : 10, color: HUD_DIM, ox: 0.5, spacing: 1 });
 }
 
+// ---- Space: the boost energy ring inside the speed gauge, and the dash dial beside it (state from boost.js) ----
+function hudEnergy(h, s, now) {
+  const g = h.g, cx = 186, cy = 80, r = 30, a0 = Math.PI * 0.75, span = Math.PI * 1.5;
+  const f = Phaser.Math.Clamp(s.en / s.enMax, 0, 1), low = s.boostLocked || f < 0.25;
+  g.lineStyle(3, HUD_OFF, 1); g.beginPath(); g.arc(cx, cy, r, a0, a0 + span, false); g.strokePath();
+  if (f > 0.01) {
+    g.lineStyle(3, low ? AMBER : 0xe6f7ff, s.boostLocked ? 0.55 + 0.45 * Math.sin(now / 90) : 1);
+    g.beginPath(); g.arc(cx, cy, r, a0, a0 + span * f, false); g.strokePath();
+  }
+  // dash dial: fills as the cooldown runs, green and ringing when ready
+  const px = 268, py = 80, rd = 12, ready = now >= s.dashReady, prog = ready ? 1 : 1 - (s.dashReady - now) / s.dashCool;
+  g.fillStyle(HUD_BG, 0.72); g.fillCircle(px, py, rd + 7); g.lineStyle(1, CYAN, 0.35); g.strokeCircle(px, py, rd + 7);
+  g.lineStyle(4, HUD_OFF, 1); g.strokeCircle(px, py, rd);
+  g.lineStyle(4, ready ? GREEN : AMBER, 1); g.beginPath(); g.arc(px, py, rd, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * prog, false); g.strokePath();
+  hudPut(h, 'dk', px, py + 1, 'Q E', { size: 9, bold: true, color: ready ? '#6dff9c' : HUD_DIM, ox: 0.5 });
+  hudPut(h, 'dl', px, py + 28, 'DASH', { size: 9, color: HUD_DIM, ox: 0.5, spacing: 1 });
+}
+
 // ---- credits and gear strip, top centre ----
 function hudStrip(h, now) {
   const g = h.g;
@@ -360,7 +378,8 @@ function hudTick(s) {
   hudGauge(h, 'g1', 70, 80, 40, hullFrac, hullFrac > 0.5 ? CYAN : hullFrac > 0.3 ? AMBER : RED, String(Math.max(0, Math.round(surf ? s.hp : G.hull))), surf ? 'HEALTH' : 'HULL');
   if (space) {
     const spd = s.ship.body.speed, top = boostMax();
-    hudGauge(h, 'g2', 186, 80, 40, spd / top, spd > 480 ? AMBER : CYAN, String(Math.round(spd)), 'SPEED', 150 / top);
+    hudGauge(h, 'g2', 186, 80, 40, spd / top, spd > 480 ? AMBER : CYAN, String(Math.round(spd)), s.boostLocked ? 'NO BOOST' : 'SPEED', 150 / top);
+    if (s.enMax) hudEnergy(h, s, now);
   }
   if (surf && s.col && s.col.state !== 'dead') {
     const f = s.col.hp / 60;

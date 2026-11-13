@@ -70,10 +70,11 @@ class Space extends Phaser.Scene {
       if (this.time.now < this.rammedAt) return; this.rammedAt = this.time.now + 600; e.hp -= 10; this.hurt(12, e.x, e.y);
     });
 
-    this.k = this.input.keyboard.addKeys('W,A,S,D,E,L,SPACE,SHIFT,UP,DOWN,LEFT,RIGHT');
+    this.k = this.input.keyboard.addKeys('W,A,S,D,E,Q,L,SPACE,SHIFT,UP,DOWN,LEFT,RIGHT');
+    boostInit(this); // src/boost.js: boost energy and the Q/E dash
     this.nextFire = 0;
     this.prompt = floatPrompt(this, this.ship); // key cap above you instead of a strip at the bottom (src/ui.js)
-    this.add.text(24, H - 44, 'W thrust  A/D turn  S brake  Shift boost  Space or click fire  L land/dock', {
+    this.add.text(24, H - 44, 'W thrust  A/D turn  S brake  Shift boost  Q/E dash  Space or click fire  L land/dock', {
       fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92'
     }).setScrollFactor(0).setDepth(100);
     if (this.from === 'station') toast(this, 'Launch clear. Kepler-4b is to the north-east.', '#9fe9ff');
@@ -122,11 +123,12 @@ class Space extends Phaser.Scene {
     if (this.leaving) { feelFrame(this, time, dt); return; } // docking or landing move is playing (feel.js)
     const locked = time < this.lockUntil;
     const left = k.A.isDown || k.LEFT.isDown, right = k.D.isDown || k.RIGHT.isDown;
-    const up = k.W.isDown || k.UP.isDown, brake = k.S.isDown || k.DOWN.isDown, boost = k.SHIFT.isDown;
+    const up = k.W.isDown || k.UP.isDown, brake = k.S.isDown || k.DOWN.isDown;
+    const boost = boostFrame(this, time, dt, locked, up); // src/boost.js: Shift drains the energy ring, Q and E dash
 
     if (!locked) ship.rotation += ((right ? 1 : 0) - (left ? 1 : 0)) * 0.0036 * dt;
     ship.body.setDrag(brake && !locked ? 0.12 : 0.55);
-    ship.body.setMaxSpeed(boost ? boostMax() : 480);
+    ship.body.setMaxSpeed(boostCap(this, boost, dt));
     const thrust = locked ? 600 : (up ? (boost ? 1500 : 720) : 0);
     this.physics.velocityFromRotation(ship.rotation, thrust, ship.body.acceleration);
     if (thrust) {

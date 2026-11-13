@@ -62,7 +62,7 @@ function installLookFx(game) {
     const s = game.scene.getScene('Space');
     const live = !!(s && s.sys.isActive() && s.ship && s.ship.body && s.k && !s.dead);
     if (live && (!s._fx || !s._fx.active)) s._fx = s.add.graphics().setScrollFactor(0).setDepth(-8);
-    const boosting = live && s.k.SHIFT.isDown && (s.k.W.isDown || s.k.UP.isDown);
+    const boosting = live && s.boosting; // boost.js
     k += ((boosting ? Phaser.Math.Clamp((s.ship.body.speed - 450) / 300, 0, 1) : 0) - k) * 0.12;
     if (!s || !s._fx || !s._fx.active) return;
     const g = s._fx; g.clear();

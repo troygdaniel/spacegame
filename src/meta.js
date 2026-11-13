@@ -17,7 +17,8 @@ const HELP = {
   Space: [
     'A D / left right   turn',
     'W / up   thrust        S / down   brake',
-    'Shift   boost (hold with thrust)',
+    'Shift   boost with thrust (energy: inner ring)',
+    'Q / E   dash left or right (cooldown)',
     'Space or mouse   fire',
     'L   dock or land (fly slowly, close in)',
     'Esc   pause        M   mute sound'
