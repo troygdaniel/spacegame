@@ -16,6 +16,11 @@ class Boot extends Phaser.Scene {
       g.beginPath(); g.moveTo(32, 17); g.lineTo(17, 3); g.lineTo(2, 17); g.lineTo(17, 31); g.closePath();
       g.fillPath(); g.strokePath(); g.fillStyle(RED, 1); g.fillCircle(24, 17, 4);
     });
+    mk('freighter', 64, 28, g => { // the escort mission's MULE
+      g.fillStyle(0x2a2210, 1); g.lineStyle(2, AMBER, 1);
+      g.fillRoundedRect(2, 4, 60, 20, 4); g.strokeRoundedRect(2, 4, 60, 20, 4);
+      g.fillStyle(0x0b2236, 1); g.fillRect(8, 9, 28, 10); g.fillStyle(AMBER, 1); g.fillRect(52, 11, 6, 6);
+    });
     mk('bullet', 14, 4, g => { g.fillStyle(0xfff1a8, 1); g.fillRect(0, 0, 14, 4); });
     mk('ebullet', 14, 4, g => { g.fillStyle(RED, 1); g.fillRect(0, 0, 14, 4); });
     mk('spark', 6, 6, g => { g.fillStyle(0xffffff, 1); g.fillCircle(3, 3, 3); });
@@ -79,9 +84,11 @@ class Boot extends Phaser.Scene {
         g.fillCircle(Phaser.Math.Between(0, 127), Phaser.Math.Between(0, 127), Phaser.Math.Between(2, 7));
       }
     });
-    // dev shortcut: index.html#space or #surface jumps straight to that scene with the mission accepted
+    // dev shortcut: index.html#space or #surface jumps straight to that scene with the rescue accepted;
+    // #escort and #patrol start in space with that mission accepted
     const hash = location.hash.slice(1);
-    if (hash === 'space' || hash === 'surface') G.mission = 'accepted';
-    this.scene.start(hash === 'space' ? 'Space' : hash === 'surface' ? 'Surface' : 'Station');
+    const quick = { space: 'rescue', surface: 'rescue', escort: 'escort', patrol: 'patrol' }[hash];
+    if (quick) { G.mission = 'accepted'; G.missionId = quick; }
+    this.scene.start(hash === 'surface' ? 'Surface' : quick ? 'Space' : 'Station');
   }
 }

@@ -74,16 +74,39 @@ class Station extends Phaser.Scene {
     }
   }
 
+  // The mission board (BuildBot). Offers come from MISSIONS in src/missions.js.
+  // A number key opens a call; E in update() accepts it; X drops the one under way.
   openPanel() {
-    this.panel = true; this.panelBox.setVisible(true);
-    if (G.mission === 'accepted') {
-      this.panelText.setText('RESCUE IN PROGRESS\n\nFind the colonist on Kepler-4b and\nbring them back alive.\n\n[Esc] Close');
-      this.canAccept = false;
-    } else {
-      this.panelText.setText(
-        'RESCUE CALL  -  KEPLER-4B\n\nA survey pod went down on the surface.\nPirate drones circle the planet and\ncrawlers roam the ground.\nLand, find the colonist, keep them alive,\nwalk them back to your ship, bring them home.\n\nReward: ' + REWARD + ' cr\n\n[E] Accept        [Esc] Close');
-      this.canAccept = true;
-    }
+    this.panel = true; this.panelBox.setVisible(true); this.canAccept = false;
+    const busy = () => G.mission === 'accepted' || G.mission === 'rescued';
+    const showList = () => {
+      const rows = MISSIONS.map(m => '[' + m.key + '] ' + m.title.padEnd(14) + m.where.padEnd(24) + String(m.reward).padStart(4) + ' cr');
+      this.panelText.setText('MISSION BOARD  -  HALCYON STATION\n\n' + rows.join('\n') + '\n\nPress a number to read the call      [Esc] Close');
+    };
+    const showOffer = m => {
+      pickMission(m.id); this.canAccept = true;
+      this.panelText.setText((m.title + '  -  ' + m.where).toUpperCase() + '\n\n' + m.offer + '\n\nReward: ' + m.reward + ' cr\n\n[E] Accept    [1-' + MISSIONS.length + '] Other calls    [Esc] Close');
+    };
+    const showProgress = m => {
+      this.panelText.setText(m.title.toUpperCase() + ' IN PROGRESS\n\n' + m.progress() + '\n\n[X] Drop the mission        [Esc] Close');
+    };
+    const kb = this.input.keyboard;
+    if (this.boardKeys) kb.off('keydown', this.boardKeys);
+    this.boardKeys = e => {
+      if (!this.panel) { kb.off('keydown', this.boardKeys); this.boardKeys = null; return; }
+      const key = e.key.toLowerCase();
+      if (busy()) {
+        if (key === 'x') {
+          abandonMission(); this.closePanel(); beep(200, 0.2, 'sawtooth', 0.04, -100);
+          toast(this, 'Mission dropped. The board has other calls.', '#ffd37a');
+        }
+        return;
+      }
+      const m = MISSIONS.find(x => x.key === key);
+      if (m) { beep(600, 0.05, 'square', 0.02); showOffer(m); }
+    };
+    kb.on('keydown', this.boardKeys);
+    if (busy()) showProgress(missionDef()); else showList();
   }
   closePanel() { this.panel = false; this.panelBox.setVisible(false); }
 
