@@ -33,7 +33,8 @@ const HELP = {
 // ---------- save and load (localStorage is optional: every call is wrapped) ----------
 function snapshot() {
   return {
-    v: 1, credits: Math.floor(G.credits), hull: Math.round(G.hull), mission: G.mission,
+    v: 1, credits: Math.floor(G.credits), hull: Math.round(G.hull), maxHull: Math.round(G.maxHull), mission: G.mission,
+    upgrades: Object.assign({}, G.upgrades),
     volume: Math.round(G.volume * 10) / 10, muted: !!G.muted
   };
 }
@@ -52,7 +53,11 @@ function loadGame() {
     if (!raw) return false;
     const s = JSON.parse(raw);
     if (Number.isFinite(s.credits)) G.credits = Math.max(0, Math.floor(s.credits));
-    if (Number.isFinite(s.hull)) G.hull = Math.min(100, Math.max(1, s.hull));
+    if (Number.isFinite(s.maxHull)) G.maxHull = Math.min(200, Math.max(100, s.maxHull)); // armor raises it above 100
+    if (s.upgrades && typeof s.upgrades === 'object') {
+      Object.keys(G.upgrades).forEach(k => { G.upgrades[k] = s.upgrades[k] === true; });
+    }
+    if (Number.isFinite(s.hull)) G.hull = Math.min(G.maxHull, Math.max(1, s.hull));
     if (['none', 'accepted', 'rescued', 'failed'].includes(s.mission)) G.mission = s.mission;
     if (G.mission === 'rescued') G.mission = 'accepted'; // you always wake up at the station, colonist or not
     if (Number.isFinite(s.volume)) G.volume = Math.min(1, Math.max(0, s.volume));
@@ -68,7 +73,8 @@ function clearSave() {
 }
 
 function newGameState() {
-  G.credits = 0; G.hull = 100; G.mission = 'none';
+  G.credits = 0; G.maxHull = 100; G.hull = 100; G.mission = 'none';
+  Object.keys(G.upgrades).forEach(k => { G.upgrades[k] = false; });
 }
 
 // ---------- window hooks ----------
