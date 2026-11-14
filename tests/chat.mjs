@@ -185,7 +185,7 @@ const call = async (t, req = REQ) => {
     await t.ev(`openPause(game)`);
     await t.waitFor("game.scene.isActive('Pause')", 8000, 'pause menu');
     const rows = await t.ev(`game.scene.getScene('Pause').rows.map(r => r.text.trim()).join(' | ')`);
-    check('the pause menu lists NPC chat before New game', /NPC chat\s+NO KEY \| New game/.test(rows), rows);
+    check('the pause menu lists NPC chat before New game (the Journal row may sit between them)', /NPC chat\s+NO KEY \| (Journal[^|]*\| )?New game/.test(rows), rows);
     await t.ev(`(() => { const p = game.scene.getScene('Pause'); p.sel = 6; p.activate(6); return 1; })()`);
     await t.waitFor("game.scene.isActive('ChatSetup')", 8000, 'setup from pause');
     check('the NPC chat row opens the setup panel over the pause menu', (await t.ev("game.scene.isPaused('Pause')")) === true);
