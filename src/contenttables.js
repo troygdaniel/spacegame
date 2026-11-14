@@ -6,6 +6,8 @@
 // The proof set that is read today, one table each (cards m4, m5 add the rest):
 //   ship     the pirates in enemies.js PIRATES (raider, drone, gunship): the numbers and the radar colour
 //   mission  the rows of MISSIONS in missions.js (rescue today): title, where, reward, count, the board text, progress, steps, failure line
+//   text     the interface's words: the help screens, the scene tips and the toasts (key | text)
+//   station  the dock: its name and the repair and ore prices
 //   poi      the salvage sites (data_systems.js) and the random signal types (poi.js SIGNAL_TYPES): name, note, payout, guard
 //   npc      the characters of the bar in shop.js NPCS (juno today): look and place, lines, reactions, persona
 //   part     the tiers of PARTS in data_parts.js (shields-1 ... engine-3 today; tank and cargo read too): name, text, price and the tier's numbers
@@ -190,8 +192,63 @@ const CT_POI = {
   }
 };
 
+// ---- station: the dock (today one: Halcyon Station) ----
+// name is the station's name; repair is the credits a point of hull at the repair bay (station.js REPAIR_PRICE) and ore the credits an ore pays at the dock
+// (asteroids.js ORE_PRICE). Both prices are the game's today, because there is one dock; a second station will carry its own. welcome, shop, services and
+// bar sections and fuel are accepted but nothing reads them yet.
+const ctStationRow = id => { for (const k of Object.keys(SYSTEMS)) { const b = (SYSTEMS[k].bodies || []).find(x => x.type === 'station' && x.id === id); if (b) return { b, sys: k }; } return null; };
+const CT_STATION = {
+  canAdd: false,
+  has: id => !!ctStationRow(id),
+  get: (id, f) => { const r = ctStationRow(id); return !r ? undefined : f === 'name' ? r.b.name : f === 'system' ? r.sys : f === 'repair' ? REPAIR_PRICE : f === 'ore' ? ORE_PRICE : undefined; },
+  apply: (id, data) => {
+    const r = ctStationRow(id);
+    if (data.system !== undefined && data.system !== r.sys) throw new Error('system is "' + data.system + '" but ' + id + ' is in ' + r.sys);
+    if (data.name !== undefined) r.b.name = data.name;
+    if (data.repair !== undefined) REPAIR_PRICE = data.repair;
+    if (data.ore !== undefined) ORE_PRICE = data.ore;
+  }
+};
+
+// ---- text: the words the interface says (content/text/ui.md) ----
+// One table of key | text. A key is a string the game reads: help.<scene>.<line> (the H screen, src/meta.js HELP), tips.<scene> (src/map.js SCENE_TIPS) or
+// toast.<name> (the lines that pop up, UI_TEXT below, read through uiText()). Help lines and tips are plain text; a toast may use {placeholders}.
+// Copy text/ui.md to another file in text/ and change the text column to translate: a key the game does not read refuses the whole file.
+const UI_TEXT = {
+  'toast.docked': 'Docked.', 'toast.delivered': 'Colonist delivered safely. +{reward} cr', 'toast.accepted': 'Mission accepted. Board your ship in the hangar.',
+  'toast.dropped': 'Mission dropped. The board has other calls.',
+  'toast.patrol-down': 'Wanted pirate down  {progress} of {count}', 'toast.patrol-done': 'Patrol complete. All wanted pirates destroyed.',
+  'toast.mule-leaving': 'The MULE is leaving the hangar. Stay close to her.', 'toast.mule-left': 'You left the MULE behind. Mission failed.',
+  'toast.mule-lost': 'The MULE was destroyed. Mission failed.', 'toast.mule-arrived': 'The MULE made the Perseus gate.',
+  'toast.reaver-intro': 'The Reaver is south-west of Kepler-4b. Watch for the flash before it charges.', 'toast.reaver-wing': 'The Reaver calls in its wing.',
+  'toast.reaver-burning': 'The Reaver is burning. It fights harder.', 'toast.reaver-dead': 'The Reaver is wreckage. Bounty paid.',
+  'toast.signal-new': 'New signal on the radar: {name}', 'toast.signal-found': 'Signal found: {name}', 'toast.signal-lost': 'Signal lost: {name}'
+};
+function uiText(key, vars) { return contentFill(CT_HAS(UI_TEXT, key) ? UI_TEXT[key] : key, vars); }
+function ctTextKeys() { // every string the game reads: key -> { get, set }
+  const k = {};
+  Object.keys(HELP).forEach(sc => HELP[sc].forEach((x, i) => { k['help.' + sc.toLowerCase() + '.' + (i + 1)] = { get: () => HELP[sc][i], set: v => { HELP[sc][i] = v; } }; }));
+  Object.keys(SCENE_TIPS).forEach(sc => { k['tips.' + sc.toLowerCase()] = { get: () => SCENE_TIPS[sc], set: v => { SCENE_TIPS[sc] = v; } }; });
+  Object.keys(UI_TEXT).forEach(key => { k[key] = { get: () => UI_TEXT[key], set: v => { UI_TEXT[key] = v; } }; });
+  return k;
+}
+const CT_TEXT = {
+  canAdd: true, // any file in text/ is a set of strings (ui.md, or a translation)
+  has: () => true,
+  get: () => undefined,
+  apply: (id, data) => {
+    const keys = ctTextKeys(), rows = data.strings || [];
+    rows.forEach(r => { // all or nothing: one key the game does not read refuses the file, so a typo is seen
+      if (!CT_HAS(keys, r.key)) { const sg = typeof ContentLib !== 'undefined' ? ContentLib.suggest(r.key, Object.keys(keys)) : ''; throw new Error('the key "' + r.key + '" is not a string the game reads' + (sg ? '. Did you mean "' + sg + '"?' : '')); }
+    });
+    rows.forEach(r => keys[r.key].set(r.text));
+  }
+};
+
 CONTENT_TABLES.ship = CT_SHIP;
 CONTENT_TABLES.mission = CT_MISSION;
 CONTENT_TABLES.npc = CT_NPC;
 CONTENT_TABLES.part = CT_PART;
 CONTENT_TABLES.poi = CT_POI;
+CONTENT_TABLES.text = CT_TEXT;
+CONTENT_TABLES.station = CT_STATION;

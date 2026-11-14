@@ -182,6 +182,8 @@ One file a tier, named `<slot>-<tier>` (`shields-1`, `engine-3`; the name says w
 ### 6.4 `station`
 `name*`, `system*`, `accent` (colour), `fuel` (price per unit), `repair`, `ore` (buy price). Sections: `## Welcome` (text), `## Shop` (table: `item | price`), `## Services` (list), `## Bar` (list, the generic lines when no NPC is nearby).
 
+Read today (card `m5`): `name`, `repair` (credits a point of hull at the repair bay) and `ore` (credits an ore pays when you dock), for the one dock the game has, `halcyon-station`; `system` must be the system the code puts it in. There is one dock, so its two prices are the game's prices. `fuel` and the four sections are accepted and checked, but nothing in the game reads them yet: fuel comes with the fuel card, and the bar's generic lines and a welcome text need a place on screen first. A reference to a system or station the code defines (`system: halcyon`) needs no file of its own: the build reads the ids from `src/data_systems.js`.
+
 ### 6.5 `mission`
 `kind*` (from the closed list), `title*`, `where`, `reward*`, `count`, `unlock` (a condition), `system`. Sections:
 - `## Offer` text shown on the board.
@@ -200,7 +202,7 @@ This is exactly the shape of a row of `MISSIONS` plus its `HUD_MISSIONS` entry t
 `event*` (from the list in `docs/VOICE.md` once it lands). Section `## Lines`: a list; the ship picks one at random and never repeats the last.
 
 ### 6.8 `text`
-A table `key | text` of UI strings (`HELP`, scene tips, toasts), keys from an allow-list. This is also the way to translate: copy `text/ui.md` to a new file and change the text column.
+A table `key | text` of the words the interface says. The keys are the allow-list, and `text/ui.md` lists all of them: `help.<scene>.<line>` (the H screen, one key a line: `help.space.5`), `tips.<scene>` (the tip under it) and `toast.<name>` (the lines that pop up: docking, the call outcomes, signals). A toast may use `{placeholders}` (`{reward}`, `{progress}`, `{count}`, `{name}`); help lines and tips are plain text. This is also the way to translate: copy `text/ui.md` to a new file in `text/` and change the text column. A key the game does not read refuses that whole file, with a hint ("Did you mean ..."), so a typo is seen. More strings join as code sites move to `uiText(key)`.
 
 ### 6.9 Examples
 
@@ -286,12 +288,14 @@ Voice (`space-game-voice`) and chat (`space-game-npc-chat`) use the player's own
 
 ## 8. The proof: what moves to markdown first
 
-Nothing about play changes. Card `m4-proof` moved this set, and `tests/contentproof.mjs` (smoke step 4x) guards it:
+Nothing about play changes. Card `m4-proof` moved this set, and card `m5-more-types` the rest (below the list), and `tests/contentproof.mjs` (smoke step 4x) guards it:
 - **Two ships:** `raider` and `drone` (the pirate stat blocks of `PIRATES` in `enemies.js`; `gunship` follows with the rest). `name`, `role`, `side` and the description are read and checked, but nothing in the game shows them yet. When `space-game-u-a3-ship-models` merged, `wren` and `kite` did not move with them: a player ship file is refused until its adapter lands (card `m5`).
 - **One mission:** `rescue` (title, place, reward, offer, the three board lines, both progress texts, steps, failure line). The station pays what the file says.
 - **One NPC:** JUNO (look, place, voice, lines, reactions, persona). Her file leaves out `station:` because there is no `stations/halcyon-station.md` yet.
 - **Nine part tiers:** shields, weapons and engine, tiers 1 to 3 (what `armor`, `rapid` and `booster` became in `space-game-u-d1-parts`). The adapter reads all five slots; tank and cargo files join with `m5`.
 - **One system:** `halcyon`, once `space-game-u-a1-systems-data` merges (the table must exist first). Not part of `m4`.
+
+Card `m5-more-types` added, one type a commit: the other three calls (`escort`, `patrol`, `bounty`, with `{hull}` and `unlock`), the other five characters (with the conditions they needed), the salvage sites and random signals (`poi/`), the interface words (`text/ui.md`: help screens, scene tips and 17 toasts, through `uiText(key)`) and the one dock (`stations/halcyon-station.md`: name, repair and ore prices). Still in code, on purpose: player ships (`wren` and the other five), `gunship`, system files, a station's welcome, shop, services and bar sections, voice lines.
 
 How it works: `src/contenttables.js` registers one adapter per type in `CONTENT_TABLES` (`src/boot.js`); `contentApply()` hands it each valid file and it changes the in-code row **in place**, only the fields the file sets. A file that disagrees with the code (a part in the wrong slot, a call of another `kind`, a pirate that says `side: player`) is refused with a message and the row stays as it was. A file with an id the code has no row for is refused too ("cannot add new ones"); adding rows is card `m5`.
 

@@ -2,7 +2,7 @@
 // space.js calls asteroidsSetup(this) in create() and asteroidsUpdate(this, time, dt) in update();
 // station.js calls sellOre(this) when you dock; hud.js shows the hold on the strip; meta.js saves G.ore.
 const ORE_CAP = 10;       // the Wren's hold with no cargo part; the hold in use is holdCap() (src/fleet.js)
-const ORE_PRICE = 20;     // credits per ore, paid when you dock
+let ORE_PRICE = 20;       // credits per ore, paid when you dock (content/stations/halcyon-station.md can change it)
 const ROCK_HP = { 1: 15, 2: 30, 3: 60 }, ROCK_SCALE = { 1: 0.38, 2: 0.65, 3: 1 };
 
 G.ore = 0;

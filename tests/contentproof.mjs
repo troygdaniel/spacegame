@@ -59,6 +59,9 @@ const SNAP = `(() => {
   const probe = (id, over) => { setSt(Object.assign({}, base, over)); const r = NPCS.find(x => x.id === id).react(); return r === undefined ? null : r; };
   probes.sablePatrol = probe('sable', { pd: 1 }); probes.mossHurt = probe('moss', { hp: 40 }); probes.sableKills = probe('sable', { k: 12 });
   out.npcs = npcs; out.probes = probes;
+  G.missionId = 'patrol'; G.missionProgress = 2;
+  out.ui = { help: plain(HELP), tips: plain(SCENE_TIPS), raw: plain(UI_TEXT), said: Object.keys(UI_TEXT).map(k => uiText(k, { reward: 500, name: 'Wreck' })) };
+  out.station = { name: sysBody('station').name, ore: ORE_PRICE, repair: REPAIR_PRICE };
   out.poi = { sites: Object.keys(SYSTEMS).map(k => plain((SYSTEMS[k].bodies || []).filter(b => b.type === 'poi'))), signals: plain(SIGNAL_TYPES) };
   const rec = t => ({ model: 'wren', parts: { shields: t, weapons: t, engine: t, tank: t, cargo: t } }), tiers = [0, 1, 2, 3];
   const stats = {};
@@ -112,6 +115,9 @@ const EDITS = [
     ['bring them back alive.', 'bring them back alive. Done: {progress}.'],
     ['- Escort them to your ship\n- Dock at Halcyon Station', '- Dock and collect {reward} cr'],
     ['Mission failed.', 'Mission lost.']]],
+  ['text/ui.md', [['| help.station.1 | W A S D / arrows   walk |', '| help.station.1 | W A S D / arrows   move |'], ['| toast.docked | Docked. |', '| toast.docked | Docked. Welcome back. |'],
+    ['| toast.delivered | Colonist delivered safely. +{reward} cr |', '| toast.delivered | Colonist delivered safely. +{reward} cr and thanks |'], ['| tips.ship | Look your ship over,', '| tips.ship | Check your ship over,']]],
+  ['stations/halcyon-station.md', [['name: Halcyon Station', 'name: Halcyon Hub'], ['repair: 0.5', 'repair: 0.75'], ['ore: 20', 'ore: 25']]],
   ['poi/wreck-nw.md', [['credits: 120', 'credits: 130'], ['Strongbox recovered.', 'Strongbox pried open.']]],
   ['poi/wreck-s.md', [['guard: 2', 'guard: 3'], ['name: Cargo hulk', 'name: Cargo hulk, guarded']]],
   ['poi/signal-beacon.md', [['pays: [100, 200]', 'pays: [110, 210]']]],
@@ -132,7 +138,7 @@ try {
   // ---- A: the shipped pack, B: nothing at all ----
   console.log('A: the shipped pack');
   const A = await play(ROOT);
-  check('the loader applied the twenty-eight files of the shipped set, no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 28 && A.loader.state.modded === false, JSON.stringify(A.loader));
+  check('the loader applied the thirty files of the shipped set, no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 30 && A.loader.state.modded === false, JSON.stringify(A.loader));
   check('no console errors', A.errors.length === 0, A.errors.join(' | '));
 
   console.log('B: an empty pack (the code\'s own tables)');
@@ -146,6 +152,10 @@ try {
   same('the rescue call: title, place, reward, offer, the three board lines, both progress texts, the failure line, the checklist', A.snap.mission, B.snap.mission);
   same('the other calls: escort, patrol and bounty (title, place, reward, count, offer, objective lines, progress, checklist, the bounty unlock)', A.snap.calls, B.snap.calls);
   same('the six characters: look, place, voice, persona, lines, when they are in the bar, and what each says in 2304 situations', A.snap.npcs, B.snap.npcs);
+  same('the interface words: every help line, scene tip and toast, as the game says them', A.snap.ui, B.snap.ui);
+  check('and a toast says its numbers: the delivery pays 500 and the patrol toast counts 2 of 5', A.snap.ui.said.includes('Colonist delivered safely. +500 cr') && A.snap.ui.said.includes('Wanted pirate down  2 of 5'), JSON.stringify(A.snap.ui.said.slice(0, 6)));
+  same('the dock: the station name, the ore price and the repair price', A.snap.station, B.snap.station);
+  check('and they are the prices the game has always had: 20 an ore, half a credit a point of hull', B.snap.station.ore === 20 && B.snap.station.repair === 0.5 && B.snap.station.name === 'Halcyon Station', JSON.stringify(B.snap.station));
   same('the salvage sites and the two kinds of random signal (names, notes, payouts, hull, guards, chances)', A.snap.poi, B.snap.poi);
   same('three spot checks of the reaction rules', A.snap.probes, B.snap.probes);
   check('and the spot checks are what the rules say (a finished patrol, a hurt hull, twelve kills)', /finished a patrol/.test(A.snap.probes.sablePatrol) && /hanging on by habit/.test(A.snap.probes.mossHurt) && /12 pirates on your tally/.test(A.snap.probes.sableKills), JSON.stringify(A.snap.probes));
@@ -166,7 +176,7 @@ try {
   const cg = gameWith(join(pack, 'content'), realCore);
   check('the edited pack builds with no problems', cg.made.result.errors.length === 0, JSON.stringify(cg.made.result.errors));
   const C = await play(cg.dir);
-  check('the loader applied the thirty files (the shipped set and a tank and a hold part) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 30 && C.loader.state.modded === true, JSON.stringify(C.loader));
+  check('the loader applied the thirty-two files (the shipped set and a tank and a hold part) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 32 && C.loader.state.modded === true, JSON.stringify(C.loader));
   check('no console errors', C.errors.length === 0, C.errors.join(' | '));
   const want = JSON.parse(JSON.stringify(A.snap)); // what A says, with exactly the edited lines changed
   Object.assign(want.ships.raider, { hp: 22, bounty: 47, radar: 0x6dff9c, shot: [500, 900], strafe: false });
@@ -189,6 +199,11 @@ try {
   wj.lines[0] = wj.lines[0].replace('Welcome to the Drift.', 'Welcome aboard the Drift.');
   wj.texts = wj.texts.map(r => r.replace('Nice shielding', 'Shiny shielding'));
   const wt = want.npcs.tamsin; wt.x = 670; wt.lines[0] = wt.lines[0].replace('drones around', 'drones circling'); wt.texts = wt.texts.map(r => r.replace('Kepler call', 'Kepler run'));
+  const wu = want.ui; // the interface words: four cells edited
+  wu.help.Station[0] = 'W A S D / arrows   move'; wu.raw['toast.docked'] = 'Docked. Welcome back.'; wu.raw['toast.delivered'] = 'Colonist delivered safely. +{reward} cr and thanks';
+  wu.tips.Ship = wu.tips.Ship.replace('Look your ship over,', 'Check your ship over,');
+  wu.said = wu.said.map(t => t === 'Docked.' ? 'Docked. Welcome back.' : t === 'Colonist delivered safely. +500 cr' ? 'Colonist delivered safely. +500 cr and thanks' : t === 'Wanted pirate down  2 of 5' ? 'Wanted pirate down  2 of 6' : t); // the patrol file says count 6 in this copy
+  want.station = { name: 'Halcyon Hub', ore: 25, repair: 0.75 };
   const wp0 = want.poi.sites[0]; // the fixed sites of Halcyon, in the order of the system data
   const site = id => wp0.find(b => b.id === id);
   site('wreck-nw').credits = 130; site('wreck-nw').note = 'Strongbox pried open.'; site('wreck-s').guard = 3; site('wreck-s').name = 'Cargo hulk, guarded';
@@ -205,6 +220,8 @@ try {
   same('the rescue call changed exactly as its file says (title, reward, board line with {reward}, progress with {progress}, a shorter checklist, failure line)', C.snap.mission, want.mission);
   same('the other calls changed exactly as their files say (a reward, a line of progress, the patrol count in every line and in the checklist, the bounty reward in its offer, and when it unlocks)', C.snap.calls, want.calls);
   check('the rules edited in the files really changed what two characters say (a patrol rule that now needs two, a hurt hull at 30 percent)', C.snap.probes.sablePatrol === null && C.snap.probes.mossHurt === null && C.snap.probes.sableKills === A.snap.probes.sableKills, JSON.stringify(C.snap.probes));
+  same('the dock changed exactly as its file says (the name, 25 an ore, 0.75 a point of hull)', C.snap.station, want.station);
+  same('the interface words changed exactly as ui.md says (a help line, two toasts with their numbers, a tip)', C.snap.ui, want.ui);
   same('the salvage sites and signals changed exactly as their files say (a payout, a note, a guard count and name, a signal range and a chance)', C.snap.poi, want.poi);
   same('the characters changed exactly as their files say (JUNO: colour, place, a line, a reaction, persona; TAMSIN: place, a line, a reaction; IDA: body colour), the rest as before', Object.assign({}, C.snap.npcs, { sable: A.snap.npcs.sable, moss: A.snap.npcs.moss }), Object.assign({}, want.npcs, { sable: A.snap.npcs.sable, moss: A.snap.npcs.moss }));
   check('SABLE and MOSS now answer differently (their conditions were edited)', C.snap.npcs.sable.matrix !== A.snap.npcs.sable.matrix && C.snap.npcs.moss.matrix !== A.snap.npcs.moss.matrix);
@@ -222,10 +239,13 @@ try {
   put('missions/courier-1.md', '---\ntype: mission\nkind: courier\ntitle: New call\nreward: 100\n---\nA call the game does not have yet.\n');
   put('ships/gunship.md', '---\ntype: ship\nname: Gunship\nside: player\nhp: 1\n---\nA pirate cannot be a player ship.\n');
   put('ships/kite.md', '---\ntype: ship\nname: Kite\nhull: 70\n---\nNo pirate called kite.\n');
+  put('text/extra.md', '---\ntype: text\n---\n## Strings\n| key | text |\n|---|---|\n| toast.docked | Fine. |\n| help.stationn.1 | A typo in a key refuses the whole file. |\n');
+  put('stations/halcyon-station.md', '---\ntype: station\nname: Halcyon Station\nsystem: kestrel\nrepair: 9\nore: 99\n---\n');
+  put('stations/outpost.md', '---\ntype: station\nname: Outpost\nsystem: halcyon\n---\n');
   put('npcs/nobody.md', '---\ntype: npc\nname: NOBODY\n---\n## Lines\n- Hello.\n');
   const D = await play(gameWith(join(wrong, 'content')).dir);
   check('the game boots and plays, with no console errors', D.errors.length === 0, D.errors.join(' | '));
-  check('nothing was applied and every file was refused', D.loader.state.applied.length === 0 && D.loader.state.skipped === 9, JSON.stringify(D.loader.state));
+  check('nothing was applied and every file was refused', D.loader.state.applied.length === 0 && D.loader.state.skipped === 12, JSON.stringify(D.loader.state));
   const said = D.loader.errors.join('\n');
   check('the wrong slot is explained', /shields-1\.md\|could not be applied \(slot is "engine" but the file is called shields-1, so it must be the shields slot\)\. Kept the built-in values\./.test(said), said);
   check('the wrong tier is explained', /weapons-2\.md\|could not be applied \(tier is 1 but the file is called weapons-2, so it must be tier 2\)/.test(said));
@@ -234,6 +254,8 @@ try {
   check('a call the game does not have yet is refused', /courier-1\.md\|the game has no built-in mission called "courier-1" and cannot add new ones/.test(said));
   check('a player ship cannot replace a pirate', /gunship\.md\|could not be applied \(side is "player" but gunship is a pirate ship\)/.test(said));
   check('a ship with no row, and a character with no row, are refused', /kite\.md\|the game has no built-in ship called "kite"/.test(said) && /nobody\.md\|the game has no built-in npc called "nobody"/.test(said));
+  check('a text file with one key the game does not read is refused whole, with a hint', /extra\.md\|could not be applied \(the key "help\.stationn\.1" is not a string the game reads\. Did you mean "help\.station\.1"\?\)/.test(said), said);
+  check('a station in the wrong system is refused, and so is a station the game has no dock for', /halcyon-station\.md\|could not be applied \(system is "kestrel" but halcyon-station is in halcyon\)/.test(said) && /outpost\.md\|the game has no built-in station called "outpost"/.test(said), said);
   same('every table is exactly the default', D.snap, B.snap);
   check('docking pays the default 500 cr', D.pay === 500, String(D.pay));
 } catch (e) { check('the proof test ran: ' + e.message, false); } finally {
