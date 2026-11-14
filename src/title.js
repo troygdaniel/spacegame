@@ -38,14 +38,14 @@ class Title extends Phaser.Scene {
     this.add.text(W / 2, 372, 'HALCYON STATION   >   KEPLER-4B', mono(18, '#ffb454')).setOrigin(0.5).setPadding(16, 12, 16, 12).setShadow(0, 0, '#ffb454', 8, false, true);
     const any = this.add.text(W / 2, 520, 'PRESS ANY KEY', mono(26, '#ffffff')).setOrigin(0.5).setPadding(20, 14, 20, 14).setShadow(0, 0, '#ffffff', 10, false, true);
     this.tweens.add({ targets: any, alpha: 0.25, yoyo: true, repeat: -1, duration: 900, ease: 'Sine.easeInOut' });
-    this.add.text(W / 2, H - 34, 'W A S D move    E use    Esc pause    M mute    V ship voice (optional)', mono(14, '#5b7a92')).setOrigin(0.5);
+    this.add.text(W / 2, H - 34, 'W A S D move    E use    Esc pause    M mute    V ship voice    C NPC chat  (both optional)', mono(14, '#5b7a92')).setOrigin(0.5);
 
     const start = () => {
       if (this.leaving || performance.now() - this.born < 500) return;
       beep(520, 0.12, 'triangle', 0.05, 300); beep(780, 0.2, 'triangle', 0.04, 200);
       go(this, 'Station', { arrive: false });
     };
-    this.input.keyboard.on('keydown', e => { if (e.repeat) return; if (e.code === 'KeyV') voiceOpenSetup(this); else if (e.code !== 'KeyM') start(); }); // M still mutes; V opens the optional ship-voice setup (src/voice.js)
+    this.input.keyboard.on('keydown', e => { if (e.repeat) return; if (e.code === 'KeyV') voiceOpenSetup(this); else if (e.code === 'KeyC') chatOpenSetup(this); else if (e.code !== 'KeyM') start(); }); // M still mutes; V and C open the optional ship-voice (src/voice.js) and NPC-chat (src/chat.js) setups
     this.input.on('pointerdown', start);
   }
   update(time, dt) {

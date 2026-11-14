@@ -2,7 +2,8 @@
 // Hooks in from outside the scenes: loadGame() runs before the game boots, installMeta(game) after.
 // Esc and M are caught on the window, so station.js, space.js and surface.js need no edits.
 
-const SAVE_KEY = 'longhaul.save.v1';
+const SAVE_KEY = 'longhaul.save.v2';     // docs/UNIVERSE.md 8.2
+const SAVE_KEY_V1 = 'longhaul.save.v1';  // read when v2 is missing; never written, never deleted
 const GAMEPLAY = ['Station', 'Space', 'Surface'];
 const SCREENS = GAMEPLAY.concat('Ship'); // where Tab, H and M work too. The Ship scene (shipmode.js) uses Esc itself, so it is not in GAMEPLAY
 const DEV_HASH = /^#(space|surface|escort|patrol|hyper\d{0,2})$/.test(location.hash); // dev jumps neither load nor overwrite a save
@@ -38,13 +39,67 @@ const HELP = {
   ]
 };
 
+// ---------- the ship you fly: fleet records, and the old G fields over the active ship (docs/UNIVERSE.md 6.3, 8.4) ----------
+// One record per owned ship. You fly G.fleet[G.active]; its hull, hold and parts are what G.hull, G.maxHull, G.ore and
+// G.upgrades read and write, so no call site had to change. Only the Wren exists so far (src/fleet.js, card a3, brings the
+// models and takes this over). A record: { uid, model, name, at (a station id), hull, maxHull, fuel, ore, parts }.
+// maxHull is not saved: it is 100 + 20 per shields tier, as the shop has always made it (the parts card d1 replaces that).
+const SHIPREC = {
+  slots: ['engine', 'shields', 'weapons', 'tank', 'cargo'],            // section 7
+  oldKeys: { armor: 'shields', rapid: 'weapons', booster: 'engine' },   // the v1 upgrade keys, tier for tier
+  max: 6, fuel: 40, hull: 100                                           // fleet size, the Wren's tank and hull (section 6.1)
+};
+const homeDock = () => sysBodies('station', 'halcyon')[0].id; // src/universe.js: where a new game, and a save we cannot place, wakes
+
+function newShip(model, at) {
+  return {
+    uid: 1, model: model || 'wren', name: 'Wren', at: at || homeDock(),
+    hull: SHIPREC.hull, maxHull: SHIPREC.hull, fuel: SHIPREC.fuel, ore: 0,
+    parts: { engine: 0, shields: 0, weapons: 0, tank: 0, cargo: 0 }
+  };
+}
+function activeShip() { return G.fleet[G.active] || G.fleet[0]; }
+function modelKnown(id) { return typeof SHIP_MODELS !== 'undefined' ? !!SHIP_MODELS[id] : id === 'wren'; } // data_ships.js arrives with card a3
+
+G.lastDock = homeDock(); G.known = ['halcyon']; G.jumps = 0; G.charted = [];
+G.fleet = [newShip()]; G.active = 0;
+
+// G.upgrades: the old three keys, answering from the parts (armor is shields, rapid is weapons, booster is engine)
+function upgradesView(rec) {
+  if (!rec._up) {
+    const v = {};
+    Object.keys(SHIPREC.oldKeys).forEach(old => Object.defineProperty(v, old, {
+      enumerable: true, get: () => rec.parts[SHIPREC.oldKeys[old]], set: t => { rec.parts[SHIPREC.oldKeys[old]] = t; }
+    }));
+    Object.defineProperty(rec, '_up', { value: v }); // not enumerable, so it never reaches a save
+  }
+  return rec._up;
+}
+Object.defineProperties(G, {
+  hull: { enumerable: true, configurable: true, get: () => activeShip().hull, set: v => { activeShip().hull = v; } },
+  maxHull: { enumerable: true, configurable: true, get: () => activeShip().maxHull, set: v => { activeShip().maxHull = v; } },
+  ore: { enumerable: true, configurable: true, get: () => activeShip().ore, set: v => { activeShip().ore = v; } },
+  upgrades: {
+    enumerable: true, configurable: true, get: () => upgradesView(activeShip()),
+    set: u => { const v = upgradesView(activeShip()); Object.keys(v).forEach(k => { if (u && k in u) v[k] = u[k]; }); }
+  }
+});
+
 // ---------- save and load (localStorage is optional: every call is wrapped) ----------
+// Save v2 (docs/UNIVERSE.md 8.2). The v1 key is only ever read, and only when v2 is missing; it is never written or deleted,
+// so going back to an older build loses nothing. The first save after loading a v1 file writes v2.
+function shipSnapshot(r) {
+  const parts = {}; SHIPREC.slots.forEach(k => { parts[k] = r.parts[k] | 0; });
+  return { uid: r.uid | 0, model: r.model, name: r.name, at: r.at, hull: Math.round(r.hull), fuel: Math.round(r.fuel * 10) / 10, ore: r.ore | 0, parts };
+}
+
 function snapshot() {
   return {
-    v: 1, credits: Math.floor(G.credits), hull: Math.round(G.hull), maxHull: Math.round(G.maxHull), mission: G.mission,
+    v: 2, credits: Math.floor(G.credits), mission: G.mission,
     missionId: G.missionId || null, missionProgress: Math.floor(G.missionProgress || 0), // missions.js: which call, kills so far
     patrolsDone: G.patrolsDone | 0, // missions.js: unlocks the bounty call
-    upgrades: Object.assign({}, G.upgrades), ore: G.ore | 0, // ore in the hold (asteroids.js)
+    system: G.system, lastDock: G.lastDock, jumps: G.jumps | 0, known: G.known.slice(), charted: G.charted.slice(),
+    active: G.active, fleet: G.fleet.map(shipSnapshot), // hull, fuel, ore and parts live per ship
     volume: Math.round(G.volume * 10) / 10, muted: !!G.muted,
     ...guideSnapshot(), // first-run guide, run stats, ending card (guide.js)
     ...poiSnapshot() // salvage sites found and salvaged (poi.js)
@@ -62,52 +117,105 @@ function maxTier(key) { // the highest tier the shop sells for this upgrade (2 i
   const u = typeof UPGRADES !== 'undefined' && UPGRADES.find(x => x.key === key);
   return u ? u.prices.length : 2;
 }
+function slotCap(slot) { // the highest tier of a part slot this build can use: the shop's, or 3 where the shop has none yet
+  const old = Object.keys(SHIPREC.oldKeys).find(k => SHIPREC.oldKeys[k] === slot);
+  return old ? maxTier(old) : 3;
+}
+
+// A v1 save, turned into the v2 shape so one loader reads both (section 8.3): one Wren with the old upgrades as parts,
+// its tank full, the ore from the hold, parked at the station. Everything else (credits, mission, patrols, volume, muted,
+// poi, guide, stats) already has the same name and is copied across as it is.
+function v1ToV2(s) {
+  const up = s.upgrades && typeof s.upgrades === 'object' ? s.upgrades : {}, parts = {};
+  SHIPREC.slots.forEach(k => { parts[k] = 0; });
+  Object.keys(SHIPREC.oldKeys).forEach(old => { // an old save may hold true/false for a tier: true is tier 1
+    const t = up[old] === true ? 1 : Math.floor(Number(up[old]));
+    parts[SHIPREC.oldKeys[old]] = Number.isFinite(t) ? Math.min(maxTier(old), Math.max(0, t)) : 0;
+  });
+  const hullCap = 100 + 20 * maxTier('armor'); // a saved max hull is kept if it fits, else it comes from the armor tier
+  const maxHull = Number.isFinite(s.maxHull) ? Math.min(hullCap, Math.max(100, s.maxHull)) : 100 + 20 * parts.shields;
+  const out = Object.assign({}, s, {
+    v: 2, system: 'halcyon', lastDock: homeDock(), jumps: 0, known: ['halcyon'], charted: [], active: 0,
+    fleet: [{ uid: 1, model: 'wren', name: 'Wren', at: homeDock(), hull: s.hull, maxHull, fuel: SHIPREC.fuel, ore: s.ore, parts }]
+  });
+  ['hull', 'maxHull', 'ore'].forEach(k => { delete out[k]; }); // now per ship (upgrades stays: guideRestore reads it for saves from before the guide)
+  return out;
+}
+
+// one fleet record from a save; anything missing or unknown becomes the Wren's value, the rest is kept
+function shipFromSave(r, at) {
+  r = r && typeof r === 'object' ? r : {};
+  const rec = newShip('wren', at), p = r.parts && typeof r.parts === 'object' ? r.parts : {};
+  rec.uid = Number.isInteger(r.uid) && r.uid > 0 ? r.uid : 0; // made unique by the caller
+  rec.model = modelKnown(r.model) ? r.model : 'wren';
+  rec.name = typeof r.name === 'string' && r.name.trim() ? r.name.trim().slice(0, 24) : 'Wren';
+  if (typeof r.at === 'string' && r.at) rec.at = r.at;
+  SHIPREC.slots.forEach(k => {
+    const t = p[k] === true ? 1 : Math.floor(Number(p[k]));
+    rec.parts[k] = Number.isFinite(t) ? Math.min(slotCap(k), Math.max(0, t)) : 0;
+  });
+  rec.maxHull = Number.isFinite(r.maxHull) ? Math.min(100 + 20 * maxTier('armor'), Math.max(100, r.maxHull)) : 100 + 20 * rec.parts.shields;
+  rec.hull = Number.isFinite(r.hull) ? Math.min(rec.maxHull, Math.max(1, r.hull)) : rec.maxHull;
+  rec.fuel = Number.isFinite(r.fuel) ? Math.min(200, Math.max(0, r.fuel)) : SHIPREC.fuel;
+  rec.ore = Number.isFinite(r.ore) ? Math.min(ORE_CAP, Math.max(0, Math.floor(r.ore))) : 0; // asteroids.js
+  return rec;
+}
+
+function applySave(s) {
+  if (Number.isFinite(s.credits)) G.credits = Math.max(0, Math.floor(s.credits));
+  // You always wake docked at lastDock, so the system is the one that station is in. A station or system this build does
+  // not know (a later version's) falls back to Halcyon, and the rest of the save is kept.
+  const dockSys = Object.keys(SYSTEMS).find(id => sysBodies('station', id).some(b => b.id === s.lastDock));
+  G.system = dockSys || (SYSTEMS[s.system] ? s.system : 'halcyon');
+  G.lastDock = dockSys ? s.lastDock : (sysBodies('station', G.system)[0] || { id: homeDock() }).id;
+  const strs = a => Array.isArray(a) ? [...new Set(a.filter(x => typeof x === 'string' && x))] : [];
+  G.known = strs(s.known); if (!G.known.includes('halcyon')) G.known.unshift('halcyon');
+  G.charted = strs(s.charted);
+  G.jumps = Number.isFinite(s.jumps) ? Math.max(0, Math.floor(s.jumps)) : 0;
+
+  G.fleet = (Array.isArray(s.fleet) ? s.fleet.slice(0, SHIPREC.max) : []).map(r => shipFromSave(r, G.lastDock));
+  if (!G.fleet.length) G.fleet = [newShip('wren', G.lastDock)];
+  const seen = new Set(); let next = 1 + Math.max(0, ...G.fleet.map(r => r.uid));
+  G.fleet.forEach(r => { if (!r.uid || seen.has(r.uid)) r.uid = next++; seen.add(r.uid); });
+  G.active = Number.isInteger(s.active) && s.active >= 0 && s.active < G.fleet.length ? s.active : 0;
+
+  if (['none', 'accepted', 'rescued', 'failed'].includes(s.mission)) G.mission = s.mission;
+  if (G.mission === 'rescued') G.mission = 'accepted'; // you always wake up at the station, colonist or not
+  // which call it is (missions.js). A save from before missions.js has no id: back then the only call was the rescue.
+  const ids = typeof MISSIONS !== 'undefined' ? MISSIONS.map(m => m.id) : ['rescue'];
+  G.missionId = ids.includes(s.missionId) ? s.missionId : (s.missionId === undefined && G.mission !== 'none' ? 'rescue' : null);
+  G.missionProgress = Number.isFinite(s.missionProgress) ? Math.max(0, Math.floor(s.missionProgress)) : 0;
+  if (!G.missionId && G.mission !== 'none') { G.mission = 'none'; G.missionProgress = 0; } // unknown call: no mission
+  G.patrolsDone = Number.isFinite(s.patrolsDone) ? Math.max(0, Math.floor(s.patrolsDone)) : 0;
+  if (Number.isFinite(s.volume)) G.volume = Math.min(1, Math.max(0, s.volume));
+  if (typeof s.muted === 'boolean') G.muted = s.muted;
+  guideRestore(s); // guide.js: tips done, stats, ending seen
+  poiRestore(s); // poi.js: salvage sites found and salvaged (after G.system: the sites are the current system's)
+}
 
 function loadGame() {
   if (DEV_HASH) return false;
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return false;
-    const s = JSON.parse(raw);
-    if (Number.isFinite(s.credits)) G.credits = Math.max(0, Math.floor(s.credits));
-    if (s.upgrades && typeof s.upgrades === 'object') {
-      // G.upgrades[key] is a tier 0..max (shop.js). An old save may hold true/false: true is tier 1.
-      Object.keys(G.upgrades).forEach(k => {
-        const t = s.upgrades[k] === true ? 1 : Math.floor(Number(s.upgrades[k]));
-        G.upgrades[k] = Number.isFinite(t) ? Math.min(maxTier(k), Math.max(0, t)) : 0;
-      });
-    }
-    // max hull is 100 + 20 per armor tier; a saved value is kept if it fits, else it comes from the armor tier
-    const hullCap = 100 + 20 * maxTier('armor');
-    G.maxHull = Number.isFinite(s.maxHull) ? Math.min(hullCap, Math.max(100, s.maxHull)) : 100 + 20 * G.upgrades.armor;
-    if (Number.isFinite(s.hull)) G.hull = Math.min(G.maxHull, Math.max(1, s.hull));
-    if (['none', 'accepted', 'rescued', 'failed'].includes(s.mission)) G.mission = s.mission;
-    if (G.mission === 'rescued') G.mission = 'accepted'; // you always wake up at the station, colonist or not
-    // which call it is (missions.js). A save from before missions.js has no id: back then the only call was the rescue.
-    const ids = typeof MISSIONS !== 'undefined' ? MISSIONS.map(m => m.id) : ['rescue'];
-    G.missionId = ids.includes(s.missionId) ? s.missionId : (s.missionId === undefined && G.mission !== 'none' ? 'rescue' : null);
-    G.missionProgress = Number.isFinite(s.missionProgress) ? Math.max(0, Math.floor(s.missionProgress)) : 0;
-    if (!G.missionId && G.mission !== 'none') { G.mission = 'none'; G.missionProgress = 0; } // unknown call: no mission
-    G.patrolsDone = Number.isFinite(s.patrolsDone) ? Math.max(0, Math.floor(s.patrolsDone)) : 0;
-    if (Number.isFinite(s.volume)) G.volume = Math.min(1, Math.max(0, s.volume));
-    if (typeof s.muted === 'boolean') G.muted = s.muted;
-    G.ore = Number.isFinite(s.ore) ? Math.min(ORE_CAP, Math.max(0, Math.floor(s.ore))) : 0; // asteroids.js
-    guideRestore(s); // guide.js: tips done, stats, ending seen
-    poiRestore(s); // poi.js: salvage sites found and salvaged
+    let raw = localStorage.getItem(SAVE_KEY), s;
+    if (raw) s = JSON.parse(raw);                                   // v2 (or a later version, read the same way)
+    else if ((raw = localStorage.getItem(SAVE_KEY_V1))) s = v1ToV2(JSON.parse(raw)); // only v1 exists: migrate, never touch it
+    if (!s || typeof s !== 'object') return false;
+    applySave(s);
     lastSaved = JSON.stringify(snapshot());
     return true;
   } catch (e) { return false; }
 }
 
-function clearSave() {
+function clearSave() { // erases the v2 save. The v1 key stays untouched: new game writes a fresh v2 save straight after, so it is never read again
   lastSaved = '';
   try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* storage is optional */ }
 }
 
 function newGameState() {
-  G.credits = 0; G.maxHull = 100; G.hull = 100; G.mission = 'none'; G.missionId = null; G.missionProgress = 0; G.patrolsDone = 0;
-  Object.keys(G.upgrades).forEach(k => { G.upgrades[k] = 0; });
-  G.ore = 0; guideReset(); // guide.js: tips and stats start over
+  G.credits = 0; G.mission = 'none'; G.missionId = null; G.missionProgress = 0; G.patrolsDone = 0;
+  G.system = 'halcyon'; G.lastDock = homeDock(); G.known = ['halcyon']; G.charted = []; G.jumps = 0;
+  G.fleet = [newShip()]; G.active = 0; // hull, hold and parts are per ship: a new Wren starts them all over
+  guideReset(); // guide.js: tips and stats start over
   poiReset(); // poi.js: every site can be salvaged again
 }
 
@@ -152,12 +260,12 @@ class Pause extends Phaser.Scene {
   create() {
     const cx = W / 2, cy = H / 2;
     this.add.rectangle(cx, cy, W, H, 0x02050c, 0.72).setInteractive(); // swallows clicks
-    this.ui = panel(this, { w: 560, h: 470, title: 'PAUSED  -  AUTOSAVE ON', depth: 0 }); // the shared panel style (src/ui.js)
+    this.ui = panel(this, { w: 560, h: 520, title: 'PAUSED  -  AUTOSAVE ON', depth: 0 }); // the shared panel style (src/ui.js)
     crTag(this, this.ui, G.credits); // src/ui.js: coin and gold N CR (the game is paused, so it cannot change here)
     this.title = this.ui.titleText;
     this.rows = []; this.zones = [];
-    for (let i = 0; i < 7; i++) {
-      const y = cy - 126 + i * 44;
+    for (let i = 0; i < 8; i++) {
+      const y = cy - 150 + i * 44;
       this.rows.push(this.add.text(cx, y, '', { fontFamily: 'monospace', fontSize: '22px', color: '#9fe9ff' }).setOrigin(0.5));
       const z = this.add.rectangle(cx, y, 480, 40, 0x000000, 0.001).setInteractive({ useHandCursor: true });
       z.on('pointerover', () => { if (this.view === 'menu') this.sel = i; });
@@ -182,6 +290,7 @@ class Pause extends Phaser.Scene {
     if (i === 3) return 'Volume   <  ' + pct.padStart(4) + '  >';
     if (i === 4) return G.muted ? 'Sound    MUTED  (M)' : 'Sound    ON  (M)';
     if (i === 5) return 'Ship voice   ' + voiceStatus(); // src/voice.js: optional, needs the player's own Deepgram key
+    if (i === 6) return 'NPC chat   ' + chatStatus(); // src/chat.js: optional, needs the player's own OpenAI or Anthropic key
     return this.confirmNew ? 'Select again to erase the save' : 'New game';
   }
 
@@ -190,7 +299,7 @@ class Pause extends Phaser.Scene {
     this.title.setText(menu ? 'PAUSED  -  AUTOSAVE ON' : 'CONTROLS  -  ' + this.from.toUpperCase());
     this.rows.forEach((r, i) => {
       r.setVisible(menu).setText((i === this.sel ? '> ' : '  ') + this.rowText(i))
-        .setColor(i === this.sel ? (i === 6 && this.confirmNew ? '#ff4d6d' : '#ffd37a') : '#9fe9ff');
+        .setColor(i === this.sel ? (i === 7 && this.confirmNew ? '#ff4d6d' : '#ffd37a') : '#9fe9ff');
       this.zones[i].input.enabled = menu;
     });
     this.help.setVisible(!menu).setText((HELP[this.from] || HELP.Station).join('\n'));
@@ -215,7 +324,7 @@ class Pause extends Phaser.Scene {
   }
 
   activate(i, px) {
-    if (i !== 6) this.confirmNew = false;
+    if (i !== 7) this.confirmNew = false;
     if (i === 0) this.resume();
     else if (i === 1) {
       if (G.mission === 'rescued') G.mission = 'accepted'; // the colonist stays behind; the call is still open
@@ -224,7 +333,8 @@ class Pause extends Phaser.Scene {
     else if (i === 3) this.adjustVolume(px !== undefined && px < W / 2 ? -1 : 1);
     else if (i === 4) { G.muted = !G.muted; saveGame(); if (!G.muted) beep(660, 0.08, 'triangle', 0.05); }
     else if (i === 5) voiceOpenSetup(this);
-    else if (i === 6) {
+    else if (i === 6) chatOpenSetup(this);
+    else if (i === 7) {
       if (!this.confirmNew) { this.confirmNew = true; return; }
       clearSave(); newGameState(); saveGame(true); this.toStation();
     }
@@ -239,8 +349,8 @@ class Pause extends Phaser.Scene {
     if (this.view === 'controls') {
       if (JD(k.ENTER) || JD(k.SPACE) || JD(k.E)) this.setView('menu');
     } else {
-      if (JD(k.UP) || JD(k.W)) { this.sel = (this.sel + 6) % 7; this.confirmNew = false; }
-      if (JD(k.DOWN) || JD(k.S)) { this.sel = (this.sel + 1) % 7; this.confirmNew = false; }
+      if (JD(k.UP) || JD(k.W)) { this.sel = (this.sel + 7) % 8; this.confirmNew = false; }
+      if (JD(k.DOWN) || JD(k.S)) { this.sel = (this.sel + 1) % 8; this.confirmNew = false; }
       if (this.sel === 3) {
         if (JD(k.LEFT) || JD(k.A)) this.adjustVolume(-1);
         if (JD(k.RIGHT) || JD(k.D)) this.adjustVolume(1);

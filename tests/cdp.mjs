@@ -4,12 +4,15 @@ import { mkdtempSync, readFileSync, rmSync, mkdirSync, existsSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { acquire, release, cleanupOrphans } from './lock.mjs';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const OUT = join(ROOT, 'tests', 'out');
 mkdirSync(OUT, { recursive: true });
 const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 export const sleep = ms => new Promise(r => setTimeout(r, ms));
+// A DevTools call gets 120 s (it was 30: with seven agents running Chrome a call can take longer than that). DEVTOOLS_TIMEOUT_MS changes it.
+const CALL_MS = Number(process.env.DEVTOOLS_TIMEOUT_MS) || 120000;
 
 const KEYS = {
   C: [67, 'KeyC', 'c'], E: [69, 'KeyE', 'e'], L: [76, 'KeyL', 'l'], W: [87, 'KeyW', 'w'], S: [83, 'KeyS', 's'], X: [88, 'KeyX', 'x'],
@@ -19,12 +22,21 @@ const KEYS = {
 
 // Launch a throwaway headless Chrome (own profile, so it never touches your real Chrome) and return a session.
 // root: the folder whose index.html to open (default: this checkout; a test can pass a copy with another content.generated.js)
+// Only one headless Chrome runs at a time across every worktree (tests/lock.mjs): launch() waits for its turn, close() gives it back.
 export async function launch(hash = '', root = ROOT) {
-  // starting Chrome can fail when the Mac is busy (load average 25 from other agents): one retry before giving up
-  try { return await launchOnce(hash, root); } catch (e) {
-    console.log('  (Chrome did not start cleanly, trying once more: ' + e.message + ')');
-    return await launchOnce(hash, root);
-  }
+  await acquire();
+  try {
+    cleanupOrphans({ log: console.log }); // Chrome profiles whose driver died: nobody else is running Chrome now, so they are safe to remove
+    // starting Chrome can fail when the Mac is busy: one retry before giving up
+    let t;
+    try { t = await launchOnce(hash, root); } catch (e) {
+      console.log('  (Chrome did not start cleanly, trying once more: ' + e.message + ')');
+      t = await launchOnce(hash, root);
+    }
+    const close = t.close; let done = false;
+    t.close = async () => { try { await close(); } finally { if (!done) { done = true; release(); } } };
+    return t;
+  } catch (e) { release(); throw e; }
 }
 
 async function launchOnce(hash, root) {
@@ -58,16 +70,21 @@ async function launchOnce(hash, root) {
       errors.push('console.error: ' + m.params.args.map(a => a.value ?? a.description).join(' '));
     }
   };
-  // every DevTools call has a 30 s limit, so a stuck Chrome fails the test instead of hanging it forever
-  const send = (method, params = {}) => new Promise((res, rej) => {
-    const i = ++id; pending.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params }));
-    setTimeout(() => { if (pending.delete(i)) rej(new Error('DevTools call timed out: ' + method)); }, 30000);
-  });
+  // every DevTools call has a time limit (CALL_MS), so a stuck Chrome fails the test instead of hanging it forever.
+  // opts.retry sends a call that timed out once more. Only for calls that are safe to run twice (reads, screenshots): a
+  // timed-out call may still be running in the page, and running a step or an action twice would change the game.
+  const send = (method, params = {}, opts = {}) => {
+    const once = () => new Promise((res, rej) => {
+      const i = ++id; pending.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params }));
+      setTimeout(() => { if (pending.delete(i)) rej(new Error(`DevTools call timed out: ${method} (after ${CALL_MS / 1000} s)`)); }, CALL_MS);
+    });
+    return opts.retry ? once().catch(e => (/timed out/.test(e.message) ? once() : Promise.reject(e))) : once();
+  };
   // Phaser objects cannot be sent back by value ("object reference chain is too long"), so only plain values,
   // arrays and plain objects come back; anything else (a sprite from setPosition, say) comes back as null.
-  const ev = async expr => {
+  const ev = async (expr, opts) => { // ev(expr, { retry: true }) for an expression that is safe to run twice
     const wrapped = `(() => { const r = (${expr}); return (r && typeof r === 'object' && !Array.isArray(r) && Object.getPrototypeOf(r) !== Object.prototype) ? null : r; })()`;
-    const r = await send('Runtime.evaluate', { expression: wrapped, returnByValue: true });
+    const r = await send('Runtime.evaluate', { expression: wrapped, returnByValue: true }, opts);
     if (r.exceptionDetails) throw new Error('eval failed: ' + expr + ' -> ' + (r.exceptionDetails.exception?.description || r.exceptionDetails.text));
     return r.result.value;
   };
@@ -100,7 +117,7 @@ async function launchOnce(hash, root) {
   // only wants a picture goes on; tests/scenes.mjs, where the picture is the point, fails on false.
   const shot = async name => {
     try {
-      const r = await send('Page.captureScreenshot', { format: 'png' });
+      const r = await send('Page.captureScreenshot', { format: 'png' }, { retry: true });
       writeFileSync(join(OUT, name + '.png'), Buffer.from(r.data, 'base64'));
       return true;
     } catch (e) { console.log(`  (screenshot ${name} skipped: ${e.message})`); return false; }

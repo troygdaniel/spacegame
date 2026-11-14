@@ -95,7 +95,7 @@ try {
 
   console.log('E. the game follows the active model');
   for (const id of IDS) {
-    await t.ev(`(() => { window.activeShip = () => ({ model: '${id}' }); game.scene.stop('Sheet'); game.scene.stop('Ship'); game.scene.stop('Space'); game.scene.start('Station', { arrive: false }); return 1; })()`);
+    await t.ev(`(() => { G.fleet[G.active].model = '${id}'; game.scene.stop('Sheet'); /* the fleet record of save v2 (src/meta.js) says which hull you fly */ game.scene.stop('Ship'); game.scene.stop('Space'); game.scene.start('Station', { arrive: false }); return 1; })()`);
     await t.waitFor("game.scene.isActive('Station')", 10000, 'station');
     await sleep(500);
     const st = await J(`(() => { const s = game.scene.getScene('Station'), L = SHIP_LOOK['${id}'], im = game.textures.get('ship').getSourceImage();
@@ -113,7 +113,7 @@ try {
     check(id + ': the Ship bay names it', txt.includes((await t.ev(`SHIP_LOOK['${id}'].name.toUpperCase()`)) + '  -  ' + (await t.ev(`SHIP_LOOK['${id}'].role`))), txt.slice(0, 0));
     await t.shot('shipbay-' + id);
   }
-  await t.ev("(() => { delete window.activeShip; return 1; })()");
+  await t.ev("(() => { G.fleet[G.active].model = 'wren'; return 1; })()");
   check('no JS errors', t.errors.length === 0, t.errors.join(' | '));
 } catch (e) {
   console.log('  FAIL ' + e.message); fails++;
