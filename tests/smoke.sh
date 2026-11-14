@@ -25,13 +25,15 @@
 #   4q. tests/shipsheet.mjs: the six player ships (silhouettes, every upgrade slot, nozzles, physics circle, hangar, flight, Ship bay)
 #   4r. tests/cruise.mjs: Halcyon at 36000 px, the nav list (N) and cruise (C): speed profile, locks, cancel, nudge, frame cost
 #   4v. tests/interdict.mjs: pirates pull you out of cruise (forced roll, gates: 4000 px from a station, 90 s cooldown, two jumps) and the pirate tables per system
+#   4x. tests/contentproof.mjs: the proof set in markdown (raider, drone, rescue, JUNO, nine part tiers) over the code's tables changes nothing; edited files change exactly what they say; wrong files are refused
 #   4s. tests/journal.mjs: J opens the Journal in the station (people met, notes, facts, no key needed), Forget everything needs a second press, the Pause row
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #   4o. tests/chat.mjs: the NPC chat adapter and the chat box in the bar with a mocked fetch: no key means no call; OpenAI and Anthropic get the right URL,
 #   4t. tests/shipmodels.mjs: the six ship models against docs/UNIVERSE.md 6.1, and the Wren's speed, thrust, turn, boost and hull in the real Space scene
 #   4u. tests/parts.mjs: the five ship parts (shields, weapons, engine, tank, cargo): tables, every effect, shields in flight, shot rate and damage, the shop's five cards with fit and stock rules, the save
 #   4w. tests/fleet.mjs: buy, sell, switch, rename and transfer ships, the yard and the prices, per-ship state through a save, and dying (docs/UNIVERSE.md 6.3)
-#   4x. tests/hangar.mjs: the hangar terminal in the Ship bay: fleet, yard and controls tabs, buy and sell with a second press, board, move, rename, what the stage shows
+#   4y. tools/economy-sim.mjs check: the economy simulator still loads the real game data and every code line it pins (repair, insurance, MULE speed...) is still there (docs/ECONOMY.md; no browser)
+#   4z. tests/hangar.mjs: the hangar terminal in the Ship bay: fleet, yard and controls tabs, buy and sell with a second press, board, move, rename, what the stage shows
 #       header and body shape; the key is only ever in its header; 401 switches chat off; 429 waits; the setup panel saves a key
 #      their failure paths, with the game clock stepped by hand
 # Only one headless Chrome runs at a time on this Mac, whatever the worktree: cdp.mjs takes a lock in tests/lock.mjs, so a second
@@ -120,7 +122,11 @@ echo "== 4u. ship parts: shields, weapons, engine, tank, cargo (tests/parts.mjs)
 if node tests/parts.mjs; then :; else fail=1; fi
 echo "== 4w. the fleet: buy, sell, switch, rename, transfer (tests/fleet.mjs)"
 if node tests/fleet.mjs; then :; else fail=1; fi
-echo "== 4x. the hangar terminal in the Ship bay (tests/hangar.mjs)"
+echo "== 4x. the proof set in markdown: files over their defaults change nothing, edits change exactly what they say (tests/contentproof.mjs)"
+if node tests/contentproof.mjs; then :; else fail=1; fi
+echo "== 4y. economy simulator: real data loads, pinned code lines still there (tools/economy-sim.mjs check)"
+if node tools/economy-sim.mjs check; then :; else fail=1; fi
+echo "== 4z. the hangar terminal in the Ship bay (tests/hangar.mjs)"
 if node tests/hangar.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"

@@ -204,11 +204,11 @@ Object.assign(ShipBay.prototype, {
     if (p.id === 'launch') return this.launch();
     if (p.id === 'board') return this.hangarDone(fleetSwitch(v.rec.uid), 'board');
     if (p.id === 'move') return this.hangarDone(fleetTransfer(v.rec.uid), 'move');
-    if (!p.ok) return this.hangarDone(fleetBuy(v.model, false), 'buy'); // it fails, and says why
+    if (!p.ok) return this.hangarDone(fleetBuy(v.model), 'buy'); // it fails, and says why
     if (!viaEnter) return;
     if (!this.armed || this.armed.kind !== 'buy' || this.armed.id !== v.model) return this.hangarArm('buy', v.model);
     if (performance.now() - this.armed.at < HANGAR.confirmMin) return;
-    this.hangarDone(fleetBuy(v.model, false), 'buy');
+    this.hangarDone(fleetBuy(v.model), 'buy');
   },
   // what happened: a refusal says why, a success is drawn again
   hangarDone(res, what) {

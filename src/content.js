@@ -65,10 +65,15 @@
     },
     part: {
       folder: 'parts', placeholders: [],
+      // one file a tier, named <slot>-<tier> (shields-1 ... cargo-3): name is the tier's name in the shop, brief a short form for tight places,
+      // the text under the front matter the shop's one-line description, then the numbers that tier brings (src/data_parts.js PARTS):
+      // shields points, regen (points a second) and delay (ms without a hit before it recharges); weapons delay (ms between shots) and damage;
+      // engine speedPct (+% top speed), jump (+ly), boostAdd (+px/s boost speed), boostTank and boostRegen; tank fuelMult; cargo holdPlus
       fields: {
-        slot: P(SLOTS, true), tier: I(1, 3, true), name: T(40, true), key: T(20), price: I(0, 1000000),
-        speedPct: N(0, 100), jump: N(0, 20), boostTank: I(0, 500), boostRegen: I(0, 200), hullPlus: I(0, 500), points: I(0, 500), regen: N(0, 100),
-        delay: I(20, 1000), damage: I(1, 100), fuelMult: N(1, 5), holdPlus: I(0, 100)
+        slot: P(SLOTS, true), tier: I(1, 3, true), name: T(40, true), brief: T(40), key: T(20), price: I(0, 1000000),
+        points: I(0, 500), regen: N(0, 100), delay: I(20, 10000), damage: I(1, 100),
+        speedPct: N(0, 100), jump: N(0, 20), boostAdd: I(0, 2000), boostTank: I(0, 500), boostRegen: I(0, 200),
+        fuelMult: N(1, 5), holdPlus: I(0, 100)
       },
       sections: {}
     },
@@ -109,6 +114,7 @@
         offer: { heading: 'Offer', t: 'text', max: 600 },
         boardLine: { heading: 'Board line', t: 'kv', keys: ['active', 'rescued', 'failed'], max: LIMITS.line },
         progress: { heading: 'Progress', t: 'text', max: 400 },
+        progressRescued: { heading: 'Progress rescued', t: 'text', max: 400 }, // the progress text once the colonist is aboard (rescue calls)
         steps: { heading: 'Steps', t: 'list', max: 80 },
         failure: { heading: 'Failure', t: 'text', max: 240 }
       }

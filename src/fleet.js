@@ -104,7 +104,7 @@ function shipSync(rec) {
 //   credits  msg says how many are missing              gone     no ship with that uid       there    it is parked at another station
 //   active   it is the ship you fly                     name     the name is empty           station  not a station
 //   same     it is already at that station
-// Try it from the console: fleetList(), fleetBuy('kite'), fleetSwitch(1), fleetSell(2), fleetRename(1, 'Old Faithful'), fleetTransfer(2, 'some-station')
+// Try it from the console: fleetList(), fleetBuy('kite'), fleetSwitch(2), fleetSell(2), fleetRename(1, 'Old Faithful'), fleetTransfer(2, 'some-station')
 const FLEET = {
   sell: 0.6, sellParts: 0.5,   // selling pays this much of the model's base price plus this much of what is fitted (section 6.3)
   moveFee: 100, moveLy: 25,    // a transfer costs 100 cr plus 25 cr per light year between the two stations' systems
@@ -163,7 +163,8 @@ function fleetUniqueName(base) { // a second Kite is "Kite 2", a third "Kite 3"
 
 // ---------- the five things you can do at a hangar ----------
 // Buy a ship from this station's yard. The new one is rebuilt full (hull, tank), empty of ore and bare of parts, and parked here; the old
-// one is not touched and stays parked here. By default you fly the new one (fly = false leaves you in the ship you had).
+// one is not touched and you keep flying it: the new ship waits in the hangar and you switch to it there (fleetSwitch). fleetBuy(model, true)
+// puts you in the new ship at once.
 function fleetBuy(model, fly) {
   fleetSync();
   if (!modelKnown(model)) return fleetNo('model', 'No such ship.');
@@ -174,7 +175,7 @@ function fleetBuy(model, fly) {
   G.credits -= m.price;
   const rec = newShip(model, G.lastDock); rec.uid = fleetNextUid(); rec.name = fleetUniqueName(m.name);
   G.fleet.push(rec);
-  if (fly !== false) { G.active = G.fleet.length - 1; shipSync(rec); }
+  if (fly === true) { G.active = G.fleet.length - 1; shipSync(rec); }
   return { ok: true, ship: rec, price: m.price, flying: G.fleet[G.active] === rec };
 }
 
