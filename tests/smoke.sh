@@ -59,6 +59,8 @@ if node tests/hyper.mjs; then :; else fail=1; fi
 
 echo "== 4g. ship bay between boarding and launch (tests/shipmode.mjs)"
 if node tests/shipmode.mjs; then :; else fail=1; fi
+echo "== 4h. ship voice with a mocked fetch: no key, no call; nothing ever reaches Deepgram (tests/voice.mjs)"
+if node tests/voice.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
