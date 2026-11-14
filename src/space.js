@@ -4,7 +4,7 @@ class Space extends Phaser.Scene {
   init(d) { this.from = (d && d.from) || 'station'; }
   create() {
     this.leaving = false; this.dead = false; this.rammedAt = 0; this.ironUntil = 0;
-    this.launchAt = this.time.now; this.aggro = 0; this.graceOver = false; // enemies.js: launch grace and first-wave cap
+    this.launchAt = null; this.aggro = 0; this.graceOver = false; // enemies.js: launch grace and first-wave cap; launchAt is set on the first update (the scene clock is still 0 in create on a fresh page)
     shipRefresh(this); // src/ships.js: the ship texture shows the upgrade tiers you own
     const WS = sysDef().size; this.WS = WS; // src/universe.js: the current system, from src/data_systems.js
     this.physics.world.setBounds(0, 0, WS, WS);
@@ -158,6 +158,7 @@ class Space extends Phaser.Scene {
     this.pb.getChildren().forEach(b => { if (b.active && time - b.born > 900) b.disableBody(true, true); });
     this.eb.getChildren().forEach(b => { if (b.active && time - b.born > 1800) b.disableBody(true, true); });
 
+    if (this.launchAt === null) this.launchAt = time; // the first frame of flight starts the launch grace (playtest 2: time.now was 0 in create, so the first launch of a session had no grace)
     if (!this.graceOver && pirateCap(this, time) > 0) { this.graceOver = true; toast(this, 'Patrol cover ends here. Pirates about.', '#ffd37a'); }
     this.aggro = 0; // how many pirates have engaged you this frame (enemies.js caps it while the first wave ramps up)
     this.enemies.getChildren().forEach(d => pirateAI(this, d, ship, time)); // src/enemies.js: chase, strafe, shoot

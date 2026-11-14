@@ -14,6 +14,8 @@ try {
   await t.waitFor('window.game && game.scene.isActive("Space")', 15000, 'Space scene');
   await t.clock();
   await t.run(100);
+  // playtest 2 found the grace never started on the first launch of a session: the scene clock is 0 in create(), so launchAt was 0
+  check('launchAt is set from the first frame, not from create (it is not 0)', (await t.ev(`${S}.launchAt`)) > 0 && Math.abs((await t.ev(`${S}.time.now - ${S}.launchAt`))) < 5000, 'launchAt ' + await t.ev(`${S}.launchAt`) + ' now ' + await t.ev(`${S}.time.now`));
   // the scene was created in real time before the stepped clock took over (seconds, on a busy Mac): restart the grace now
   await t.ev(`(() => { const s = ${S}; s.launchAt = s.time.now; s.graceOver = false; return 1; })()`);
   const hull0 = await t.ev('G.hull');
