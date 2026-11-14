@@ -151,7 +151,7 @@ function openPump(s) {
   if (!s.pumpBox) return;
   hideTalk(s); s.prompt.setText(''); s.pumpOpen = true; s.panel = true; s.pumpBox.setVisible(true); // s.panel: the pause menu ignores Esc while a terminal is open
   s.pumpMsg.setText('Pay by the unit. It goes in at once.').setColor('#ffd37a');
-  refreshPump(s); beep(480, 0.08, 'triangle', 0.03, 200);
+  refreshPump(s); sfx('click');
 }
 function closePump(s) {
   s.pumpOpen = false; s.panel = false;
@@ -198,7 +198,7 @@ function buyFuel(s, mode) {
     else say('You have no credits for fuel.', '#ff4d6d');
     beep(r.why === 'full' ? 260 : 140, r.why === 'full' ? 0.08 : 0.15, r.why === 'full' ? 'square' : 'sawtooth', 0.03, r.why === 'full' ? 0 : -40);
   } else {
-    say((r.partial ? 'Partly filled: ' : 'Filled: ') + '+' + r.units.toFixed(1) + ' units (-' + r.cost + ' cr).', '#6dff9c'); sfx('chime');
+    say((r.partial ? 'Partly filled: ' : 'Filled: ') + '+' + r.units.toFixed(1) + ' units (-' + r.cost + ' cr).', '#6dff9c'); sfx('fuelPump');
   }
   refreshPump(s, r.ok && r.cost > 0);
 }

@@ -72,9 +72,10 @@ for (const f of fences.filter(x => x.path.startsWith('content/text/'))) {
   check(`every key of ${f.path} is one ui.md has`, mine.length > 0 && mine.every(x => keys.has(x.key)));
 }
 const tables = read('src/contenttables.js');
-check('only the text adapter in src/contenttables.js can add new ids (the guide says only text files can be added)', (tables.match(/canAdd:\s*true/g) || []).length === 1 && /const CT_TEXT = \{\s*canAdd: true/.test(tables), 'another adapter can add now: update the first sections, 7 and 8 of docs/MODS.md');
-const unread = Object.keys(C.SCHEMA).filter(t => !new RegExp('CONTENT_TABLES\\.' + t + ' =').test(tables));
-check('the types the game does not read yet are system and voice (section 7 of the guide)', same(unread, ['system', 'voice']), unread.join());
+const adds = read('src/contentadd.js');
+check('the adapters that can add new ids are text, system and station in src/contenttables.js (kept or read) and voice, ship, mission and npc in src/contentadd.js (the guide lists exactly those)', (tables.match(/canAdd:\s*true/g) || []).length === 3 && /const CT_TEXT = \{\s*canAdd: true/.test(tables) && ['VOICE', 'SHIP', 'MISSION', 'NPC'].every(n => new RegExp('const CA_' + n + ' = \\{\\s*canAdd: true').test(adds)) && (adds.match(/canAdd:\s*true/g) || []).length === 4, 'another adapter can add now: update the first sections, 6, 7 and 8 of docs/MODS.md');
+const unread = Object.keys(C.SCHEMA).filter(t => !new RegExp('CONTENT_TABLES\\.' + t + ' =').test(tables + adds));
+check('every type has an adapter (section 7 of the guide: system and station files are kept, nothing uses them yet)', same(unread, []), unread.join());
 
 console.log('3b. which files exist, and the lines the guide says to change');
 const list = dir => readdirSync(join(ROOT, 'content', dir)).filter(f => f.endsWith('.md')).sort().join();
@@ -84,7 +85,7 @@ check('content/ships: raider and drone only (the guide says gunship has no file)
 const partFiles = readdirSync(join(ROOT, 'content', 'parts')).filter(f => f.endsWith('.md'));
 check('content/parts has nine files, all shields, weapons or engine (the guide says tank and cargo have none)', partFiles.length === 9 && partFiles.every(f => /^(shields|weapons|engine)-[123]\.md$/.test(f)), partFiles.join());
 check('content/poi: five sites and two signals', list('poi') === 'beacon-e.md,signal-beacon.md,signal-wreck.md,wreck-nw.md,wreck-s.md,wreck-se.md,wreck-w.md', list('poi'));
-check('content/stations: halcyon-station only', list('stations') === 'halcyon-station.md', list('stations'));
+check('content/stations: the six docks (the guide says halcyon-station is the one the game uses)', list('stations') === 'brass-smelter.md,ember-foundry.md,halcyon-station.md,kestrel-outpost.md,meridian-exchange.md,roost-dock.md', list('stations'));
 check('content/text has ui.md', list('text').split(',').includes('ui.md'), list('text'));
 // [file, a line the guide tells the reader to change, a line the guide says it then reads]
 for (const [file, snippet] of [

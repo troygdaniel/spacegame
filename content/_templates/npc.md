@@ -1,5 +1,6 @@
 ---
-# Copy to content/npcs/<id>.md
+# Copy to content/npcs/<id>.md. A new id adds a character to the bar (at most 6): they need a name and a line. x and y are optional:
+# they stand on the nearest free spot of the floor.
 type: npc
 name: EXAMPLE
 role: bartender

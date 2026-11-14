@@ -332,7 +332,7 @@ class Settings extends Phaser.Scene {
     }
   }
   close() {
-    if (this.closing) return; this.closing = true; this.saveModel(); this.dropInputs();
+    if (this.closing) return; this.closing = true; sfx('uiClose'); this.saveModel(); this.dropInputs();
     const from = this.from, back = this.scene.get(from);
     if (back && back.k && back.k.ESC) Phaser.Input.Keyboard.JustDown(back.k.ESC); // clear the Esc that closed this, so the pause menu below does not take it too
     this.scene.stop(); this.scene.resume(from);
@@ -355,5 +355,5 @@ class Settings extends Phaser.Scene {
 // scene: the scene to pause and come back to (Pause or Title). section: sound, keys, controls, content or reset. focus: deepgram or chat (Keys only).
 function settingsOpen(scene, section, focus) {
   if (scene.scene.manager.isActive('Settings')) return;
-  scene.scene.pause(); scene.scene.launch('Settings', { from: scene.scene.key, section: section || 'sound', focus: focus || '' });
+  sfx('uiOpen'); scene.scene.pause(); scene.scene.launch('Settings', { from: scene.scene.key, section: section || 'sound', focus: focus || '' });
 }

@@ -50,7 +50,7 @@ class Station extends Phaser.Scene {
     this.panelBox = this.ui.box.setVisible(false); this.boardObjs = [];
 
     if (this.arrive && G.mission === 'rescued') {
-      const pay = (MISSIONS.find(m => m.id === 'rescue') || { reward: REWARD }).reward; // the rescue call's reward (content/missions/rescue.md)
+      const pay = (missionDef() || MISSIONS.find(m => m.id === 'rescue') || { reward: REWARD }).reward; // the rescue call you took: its reward (content/missions/*.md)
       G.credits += pay; G.mission = 'none'; G.stats.missions++;
       toast(this, uiText('toast.delivered', { reward: pay }), '#6dff9c'); sfx('chime');
     } else if (this.arrive) {
@@ -68,11 +68,13 @@ class Station extends Phaser.Scene {
     const busy = () => G.mission === 'accepted' || G.mission === 'rescued';
     const RISK = { rescue: ['MEDIUM', 2, '#ffb454'], escort: ['HIGH', 3, '#ff4d6d'], patrol: ['MEDIUM', 2, '#ffb454'], bounty: ['EXTREME', 3, '#ff2a4a'] };
     const OFFERS = missionsOffered(); // the bounty call appears once a patrol has been finished (missions.js)
-    const GAP = Math.min(288, Math.floor(1120 / OFFERS.length)), CW = Math.min(270, GAP - 14);
+    // four cards fit side by side; a pack that adds more calls than that scrolls: the window of four follows the call you choose
+    const VIS = 4, SHOWN = Math.min(OFFERS.length, VIS), GAP = Math.min(288, Math.floor(1120 / SHOWN)), CW = Math.min(270, GAP - 14);
+    let start = 0;
     const clear = () => { this.boardObjs.forEach(o => o.destroy()); this.boardObjs = []; };
     const add = o => { this.panelBox.add(o); this.boardObjs.push(o); return o; };
     const txt = (x, y, str, size, color, o = {}) => add(this.add.text(x, y, str, uiFont(size, color, o.style)).setOrigin(o.ox === undefined ? 0 : o.ox, o.oy === undefined ? 0.5 : o.oy));
-    const risk = m => RISK[m.id] || ['UNKNOWN', 1, '#9fe9ff'];
+    const risk = m => RISK[missionKind(m)] || ['UNKNOWN', 1, '#9fe9ff'];
     let sel = 0;
 
     const card = (m, i, cx, cy, w, h, selected) => {
@@ -108,16 +110,18 @@ class Station extends Phaser.Scene {
         this.ui.setHints([['X', 'Drop the mission'], ['Esc', 'Close']]); return;
       }
       this.ui.titleText.setText('MISSION BOARD  -  HALCYON STATION');
-      OFFERS.forEach((m, i) => {
-        const z = card(m, i, (i - (OFFERS.length - 1) / 2) * GAP, -75, CW, 220, i === sel);
+      OFFERS.slice(start, start + VIS).forEach((m, k) => {
+        const i = start + k, z = card(m, i, (k - (SHOWN - 1) / 2) * GAP, -75, CW, 220, i === sel);
         z.on('pointerdown', () => { if (sel === i) acceptSel(); else choose(i); });
       });
+      if (OFFERS.length > VIS) txt(420, 52, (start > 0 ? '<  ' : '') + 'CALLS ' + (start + 1) + '-' + (start + SHOWN) + ' OF ' + OFFERS.length + (start + VIS < OFFERS.length ? '  >' : ''), 11, '#5b7a92', { ox: 1 });
       txt(-420, 52, 'BRIEFING', 11, '#5b7a92');
       txt(-420, 66, OFFERS[sel].offer, 14, '#cfefff', { oy: 0, style: { lineSpacing: 4 } });
-      this.ui.setHints([['E', 'Accept'], ['1-' + OFFERS.length, 'Choose'], ['Esc', 'Close']]);
+      this.ui.setHints([['E', 'Accept'], OFFERS.length > VIS ? ['< >', 'Choose'] : ['1-' + OFFERS.length, 'Choose'], ['Esc', 'Close']]);
     };
     const choose = (i, quiet) => {
       sel = Phaser.Math.Wrap(i, 0, OFFERS.length); pickMission(OFFERS[sel].id); this.canAccept = true;
+      if (sel < start) start = sel; else if (sel >= start + VIS) start = sel - VIS + 1;
       if (!quiet) beep(600, 0.05, 'square', 0.02);
       render();
     };

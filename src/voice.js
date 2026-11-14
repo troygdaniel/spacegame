@@ -24,6 +24,20 @@ const VOICE_LINES = {
   ending: 'Two thousand credits earned. Well flown, pilot.',
   test: 'Ship voice online.'
 };
+// ---------- lines a content pack adds (content/voice/*.md, src/contentadd.js) ----------
+// VOICE_ADDED: file id -> { event, lines, replace }. The ship says one of its built-in line and the added ones for that event at random, and never
+// the one it said last for the event. A file with "replace: yes" drops the built-in line for its event. Events: docs/MODDING.md section 6.7.
+const VOICE_ADDED = new Map(), VOICE_LAST = {};
+function voiceLine(event, builtin) {
+  let pool = [], replace = false;
+  VOICE_ADDED.forEach(v => { if (v.event === event) { replace = replace || v.replace; v.lines.forEach(l => pool.push(l)); } });
+  if (builtin && !replace) pool.unshift(builtin);
+  if (!pool.length) return builtin || '';
+  const fresh = pool.length > 1 ? pool.filter(l => l !== VOICE_LAST[event]) : pool;
+  const pick = fresh[Math.floor(Math.random() * fresh.length)];
+  VOICE_LAST[event] = pick;
+  try { return typeof contentFill === 'function' ? contentFill(pick) : pick; } catch (e) { return pick; } // a {placeholder} the game cannot fill stays as written
+}
 const VOICE = { key: '', on: true, voice: VOICE_MODEL, bad: false, playing: false, queue: [], cache: new Map(), fails: 0, pauseUntil: 0, said: {}, calls: 0 };
 
 // ---------- the key (localStorage is optional: every call is wrapped) ----------
@@ -138,11 +152,11 @@ async function voiceTest(voice) {
 // ---------- the events ----------
 function voiceInstall(game) {
   voiceLoad();
-  const L = VOICE_LINES, st = { hullLow: false, hostile: false, hostileAt: -1e9, mission: G.mission, credits: G.credits, dead: false, ending: !!G.endingSeen };
+  const L = VOICE_LINES, st = { hullLow: false, fuelLow: false, hostile: false, hostileAt: -1e9, mission: G.mission, credits: G.credits, dead: false, ending: !!G.endingSeen };
   const wire = () => game.scene.scenes.forEach(sc => {
     const k = sc.scene.key;
-    if (k === 'Space') sc.events.on('create', () => { if (sc.from === 'station') voiceSay(L.launch, 1); });
-    else if (k === 'Station') sc.events.on('create', () => { if (sc.arrive) voiceSay(L.dock, 1); });
+    if (k === 'Space') sc.events.on('create', () => { if (sc.from === 'station') voiceSay(voiceLine('launch-clear', L.launch), 1); });
+    else if (k === 'Station') sc.events.on('create', () => { if (sc.arrive) voiceSay(voiceLine('docked', L.dock), 1); });
     else if (k === 'Surface') sc.events.on('create', () => voiceSay(L.land, 0));
   });
   if (game.scene.scenes.length) wire(); else game.events.once('ready', wire);
@@ -153,15 +167,17 @@ function voicePoll(game, st, now) {
   const inSpace = !!(sp && sp.sys.isActive() && sp.ship && sp.enemies), atStation = !!(st2 && st2.sys.isActive());
   if (inSpace) {
     const f = G.hull / Math.max(1, G.maxHull);
-    if (f < 0.3 && !st.hullLow) { st.hullLow = true; if (!sp.dead) voiceSay(L.hull, 2); } else if (f > 0.5) st.hullLow = false;
+    if (f < 0.3 && !st.hullLow) { st.hullLow = true; if (!sp.dead) voiceSay(voiceLine('hull-low', L.hull), 2); } else if (f > 0.5) st.hullLow = false;
     let near = 1e9; sp.enemies.getChildren().forEach(e => { if (e.active) near = Math.min(near, Phaser.Math.Distance.Between(e.x, e.y, sp.ship.x, sp.ship.y)); });
-    if (near < 750 && !st.hostile && now - st.hostileAt > 45000) { st.hostile = true; st.hostileAt = now; voiceSay(L.hostile, 1); } else if (near > 1300) st.hostile = false;
+    if (near < 750 && !st.hostile && now - st.hostileAt > 45000) { st.hostile = true; st.hostileAt = now; voiceSay(voiceLine('pirates-detected', L.hostile), 1); } else if (near > 1300) st.hostile = false;
     if (sp.dead && !st.dead) voiceSay(L.lost, 2);
+    const fs = typeof fuelState === 'function' ? fuelState() : 'ok'; // src/fuel.js
+    if (fs !== 'ok' && !st.fuelLow) { st.fuelLow = true; voiceSay(voiceLine('fuel-low', 'Warning. Fuel reserves low.'), 1); } else if (fs === 'ok' && fuelFrac() > 0.4) st.fuelLow = false;
     st.dead = !!sp.dead;
   } else st.dead = false;
   const dc = G.credits - st.credits;
-  if (dc >= 100) voiceSay(G.mission === 'none' && st.mission !== 'none' ? 'Mission complete. ' + Math.round(dc) + ' credits received.' : 'Payment received. ' + Math.round(dc) + ' credits.', 1);
-  if (G.mission === 'accepted' && (st.mission === 'none' || st.mission === 'failed') && atStation && L.accept[G.missionId]) voiceSay(L.accept[G.missionId], 1);
+  if (dc >= 100) voiceSay(voiceLine('credits-earned', G.mission === 'none' && st.mission !== 'none' ? 'Mission complete. ' + Math.round(dc) + ' credits received.' : 'Payment received. ' + Math.round(dc) + ' credits.'), 1);
+  if (G.mission === 'accepted' && (st.mission === 'none' || st.mission === 'failed') && atStation && (L.accept[G.missionId] || missionDef())) voiceSay(voiceLine('mission-accepted', L.accept[G.missionId] || 'Call accepted: ' + missionDef().title + '.'), 1);
   if (G.mission === 'failed' && st.mission !== 'failed' && st.mission !== 'none') voiceSay(L.failed, 1);
   if (G.endingSeen && !st.ending) voiceSay(L.ending, 1);
   st.mission = G.mission; st.credits = G.credits; st.ending = !!G.endingSeen;

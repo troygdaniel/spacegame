@@ -135,7 +135,7 @@
     },
     voice: {
       folder: 'voice', placeholders: PH,
-      fields: { event: P(VOICE_EVENTS, true) },
+      fields: { event: P(VOICE_EVENTS, true), replace: BOOL }, // replace: yes drops the built-in line for that event, so only the file's lines are said
       sections: { lines: { heading: 'Lines', t: 'list', max: LIMITS.line } }
     },
     text: {
@@ -657,13 +657,14 @@
         const path = clean(String(en.path || 'content')).slice(0, 200);
         if (!chk.data) { out.skipped++; return; }
         if (!table) { say('warn', path, '', 'this version of the game does not read ' + SCHEMA[en.type].folder + ' yet. Ignored the file.'); out.skipped++; return; }
+        let known = true; // what the table said about the id: a row the game had before this file, or one this file adds
         try {
-          const known = !!table.has(en.id);
+          known = !!table.has(en.id);
           if (!known && !table.canAdd) { say('error', path, '', 'the game has no built-in ' + en.type + ' called ' + quote(en.id) + ' and cannot add new ones. Skipped the file.'); out.skipped++; return; }
           table.apply(en.id, chk.data, !known);
           out.applied.push(en.type + ':' + en.id);
         } catch (e) {
-          say('error', path, '', 'could not be applied (' + clean(String(e && e.message || e)).slice(0, 100) + '). Kept the built-in values.'); out.skipped++;
+          say('error', path, '', 'could not be applied (' + clean(String(e && e.message || e)).slice(0, 220) + '). ' + (known ? 'Kept the built-in values.' : 'Skipped the file.')); out.skipped++;
         }
       });
     } catch (e) {

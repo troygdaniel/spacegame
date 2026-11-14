@@ -224,7 +224,7 @@ function chatOpen(s, i) {
   s.prompt.setText(''); s.panel = true; // s.panel: the pause menu and the mission board leave this frame alone
   s.chatUI.titleText.setText(n.name + '  -  ' + (n.role || '')).setColor(n.css || '#ffd37a');
   s.chatText.setText(''); s.chatNote.setText('');
-  s.chatBox.setVisible(true);
+  s.chatBox.setVisible(true); sfx('uiOpen');
   const el = chatMakeInput('text', 'say something', CHAT_LINE_MAX, () => chatSend(s), () => chatClose(s));
   s.chat = { i, n, el, turns: [{ role: 'user', content: CHAT_SEED }], sent: 0, replies: 0, busy: false, lastSend: 0, tw: null, focusAt: 0 };
   chatPlaceInput(s.game, el, -420, H / 2 - 100, 840, 40); // inside the panel (its centre is H - 130): 30 px under the middle line
@@ -275,7 +275,7 @@ function chatSay(s, text, note) { // the character's line types out; a note (gre
 }
 function chatClose(s, silent) {
   const c = s.chat; if (!c) return;
-  s.chat = null;
+  s.chat = null; if (!silent) sfx('uiClose');
   if (c.tw) c.tw.stop();
   try { c.el.remove(); } catch (e) { /* already gone */ }
   if (s.chatBox) s.chatBox.setVisible(false);
