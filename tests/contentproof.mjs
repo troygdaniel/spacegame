@@ -59,6 +59,7 @@ const SNAP = `(() => {
   const probe = (id, over) => { setSt(Object.assign({}, base, over)); const r = NPCS.find(x => x.id === id).react(); return r === undefined ? null : r; };
   probes.sablePatrol = probe('sable', { pd: 1 }); probes.mossHurt = probe('moss', { hp: 40 }); probes.sableKills = probe('sable', { k: 12 });
   out.npcs = npcs; out.probes = probes;
+  out.poi = { sites: Object.keys(SYSTEMS).map(k => plain((SYSTEMS[k].bodies || []).filter(b => b.type === 'poi'))), signals: plain(SIGNAL_TYPES) };
   const rec = t => ({ model: 'wren', parts: { shields: t, weapons: t, engine: t, tank: t, cargo: t } }), tiers = [0, 1, 2, 3];
   const stats = {};
   ['vmax', 'boost', 'range', 'tank', 'hold', 'shieldMax', 'shieldRegen', 'shieldDelay', 'fireDelay', 'damage', 'boostTank', 'boostRegen'].forEach(nm => { stats[nm] = tiers.map(t => shipStat(nm, rec(t))); });
@@ -111,6 +112,10 @@ const EDITS = [
     ['bring them back alive.', 'bring them back alive. Done: {progress}.'],
     ['- Escort them to your ship\n- Dock at Halcyon Station', '- Dock and collect {reward} cr'],
     ['Mission failed.', 'Mission lost.']]],
+  ['poi/wreck-nw.md', [['credits: 120', 'credits: 130'], ['Strongbox recovered.', 'Strongbox pried open.']]],
+  ['poi/wreck-s.md', [['guard: 2', 'guard: 3'], ['name: Cargo hulk', 'name: Cargo hulk, guarded']]],
+  ['poi/signal-beacon.md', [['pays: [100, 200]', 'pays: [110, 210]']]],
+  ['poi/signal-wreck.md', [['hullChance: 0.4', 'hullChance: 0.5']]],
   ['npcs/tamsin.md', [['x: 668', 'x: 670'], ['Those drones around Kepler-4b', 'Those drones circling Kepler-4b'], ['You took the Kepler call?', 'You took the Kepler run?']]],
   ['npcs/sable.md', [['patrols>=1 and !mission-id:bounty', 'patrols>=2 and !mission-id:bounty']]],
   ['npcs/moss.md', [['| hull<50 |', '| hull<30 |']]],
@@ -127,7 +132,7 @@ try {
   // ---- A: the shipped pack, B: nothing at all ----
   console.log('A: the shipped pack');
   const A = await play(ROOT);
-  check('the loader applied the twenty-one files of the shipped set, no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 21 && A.loader.state.modded === false, JSON.stringify(A.loader));
+  check('the loader applied the twenty-eight files of the shipped set, no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 28 && A.loader.state.modded === false, JSON.stringify(A.loader));
   check('no console errors', A.errors.length === 0, A.errors.join(' | '));
 
   console.log('B: an empty pack (the code\'s own tables)');
@@ -141,6 +146,7 @@ try {
   same('the rescue call: title, place, reward, offer, the three board lines, both progress texts, the failure line, the checklist', A.snap.mission, B.snap.mission);
   same('the other calls: escort, patrol and bounty (title, place, reward, count, offer, objective lines, progress, checklist, the bounty unlock)', A.snap.calls, B.snap.calls);
   same('the six characters: look, place, voice, persona, lines, when they are in the bar, and what each says in 2304 situations', A.snap.npcs, B.snap.npcs);
+  same('the salvage sites and the two kinds of random signal (names, notes, payouts, hull, guards, chances)', A.snap.poi, B.snap.poi);
   same('three spot checks of the reaction rules', A.snap.probes, B.snap.probes);
   check('and the spot checks are what the rules say (a finished patrol, a hurt hull, twelve kills)', /finished a patrol/.test(A.snap.probes.sablePatrol) && /hanging on by habit/.test(A.snap.probes.mossHurt) && /12 pirates on your tally/.test(A.snap.probes.sableKills), JSON.stringify(A.snap.probes));
   same('the parts: every name, short form, text, price and number of the five slots, and what a Wren gets from them at tiers 0 to 3', A.snap.parts, B.snap.parts);
@@ -160,7 +166,7 @@ try {
   const cg = gameWith(join(pack, 'content'), realCore);
   check('the edited pack builds with no problems', cg.made.result.errors.length === 0, JSON.stringify(cg.made.result.errors));
   const C = await play(cg.dir);
-  check('the loader applied the twenty-three files (the shipped set and a tank and a hold part) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 23 && C.loader.state.modded === true, JSON.stringify(C.loader));
+  check('the loader applied the thirty files (the shipped set and a tank and a hold part) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 30 && C.loader.state.modded === true, JSON.stringify(C.loader));
   check('no console errors', C.errors.length === 0, C.errors.join(' | '));
   const want = JSON.parse(JSON.stringify(A.snap)); // what A says, with exactly the edited lines changed
   Object.assign(want.ships.raider, { hp: 22, bounty: 47, radar: 0x6dff9c, shot: [500, 900], strafe: false });
@@ -183,6 +189,10 @@ try {
   wj.lines[0] = wj.lines[0].replace('Welcome to the Drift.', 'Welcome aboard the Drift.');
   wj.texts = wj.texts.map(r => r.replace('Nice shielding', 'Shiny shielding'));
   const wt = want.npcs.tamsin; wt.x = 670; wt.lines[0] = wt.lines[0].replace('drones around', 'drones circling'); wt.texts = wt.texts.map(r => r.replace('Kepler call', 'Kepler run'));
+  const wp0 = want.poi.sites[0]; // the fixed sites of Halcyon, in the order of the system data
+  const site = id => wp0.find(b => b.id === id);
+  site('wreck-nw').credits = 130; site('wreck-nw').note = 'Strongbox pried open.'; site('wreck-s').guard = 3; site('wreck-s').name = 'Cargo hulk, guarded';
+  want.poi.signals.find(t => t.kind === 'beacon').credits = [110, 210]; want.poi.signals.find(t => t.kind === 'wreck').hullChance = 0.5;
   const wi = want.npcs.ida; wi.color = 0xffb454; // label stays: only the body colour was edited
   const wp = want.parts, P = wp.parts; // the parts: tier 1 of shields, weapons and engine edited, tier 2 of the engine renamed, a tank and a hold part added
   P.shields.prices[0] = 310; P.shields.pts[1] = 30; P.shields.tiers[0] = 'LITE SHIELD'; P.weapons.delay[1] = 90;
@@ -195,6 +205,7 @@ try {
   same('the rescue call changed exactly as its file says (title, reward, board line with {reward}, progress with {progress}, a shorter checklist, failure line)', C.snap.mission, want.mission);
   same('the other calls changed exactly as their files say (a reward, a line of progress, the patrol count in every line and in the checklist, the bounty reward in its offer, and when it unlocks)', C.snap.calls, want.calls);
   check('the rules edited in the files really changed what two characters say (a patrol rule that now needs two, a hurt hull at 30 percent)', C.snap.probes.sablePatrol === null && C.snap.probes.mossHurt === null && C.snap.probes.sableKills === A.snap.probes.sableKills, JSON.stringify(C.snap.probes));
+  same('the salvage sites and signals changed exactly as their files say (a payout, a note, a guard count and name, a signal range and a chance)', C.snap.poi, want.poi);
   same('the characters changed exactly as their files say (JUNO: colour, place, a line, a reaction, persona; TAMSIN: place, a line, a reaction; IDA: body colour), the rest as before', Object.assign({}, C.snap.npcs, { sable: A.snap.npcs.sable, moss: A.snap.npcs.moss }), Object.assign({}, want.npcs, { sable: A.snap.npcs.sable, moss: A.snap.npcs.moss }));
   check('SABLE and MOSS now answer differently (their conditions were edited)', C.snap.npcs.sable.matrix !== A.snap.npcs.sable.matrix && C.snap.npcs.moss.matrix !== A.snap.npcs.moss.matrix);
   same('the parts changed exactly as the part files say (a price, shield points, a name, the fire delay, the engine speed, jump, boost and tank, a fuel tank and a hold)', C.snap.parts, want.parts);

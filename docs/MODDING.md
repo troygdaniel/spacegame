@@ -257,6 +257,9 @@ station: halcyon-station
 Warm, dry, sees everything from behind the bar. Knows every pilot's business and keeps most of it to herself.
 ```
 
+### 6.10 `poi`
+Salvage sites and random signals (`src/poi.js`). A file is named for the thing it describes: a fixed site of a star system (`wreck-nw`, `beacon-e`) or a kind of random signal (`signal-beacon`, `signal-wreck`). `kind*` (wreck or beacon; it must match the site) and `name*`; the text under the front matter is the line shown when you salvage it. A fixed site has `credits` (what it pays), `hull` (hull it repairs) and `guard` (pirates that guard it); where it is stays in the system's data. A random signal has `pays` (`[min, max]`), `guardChance`, `hullChance` and `hull`. A file for a site the game does not have is refused.
+
 ## 7. Open source basics
 
 Nothing here publishes anything. **Troy decides when and where the repo goes public**; this makes it ready to.

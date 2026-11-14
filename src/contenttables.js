@@ -6,6 +6,7 @@
 // The proof set that is read today, one table each (cards m4, m5 add the rest):
 //   ship     the pirates in enemies.js PIRATES (raider, drone, gunship): the numbers and the radar colour
 //   mission  the rows of MISSIONS in missions.js (rescue today): title, where, reward, count, the board text, progress, steps, failure line
+//   poi      the salvage sites (data_systems.js) and the random signal types (poi.js SIGNAL_TYPES): name, note, payout, guard
 //   npc      the characters of the bar in shop.js NPCS (juno today): look and place, lines, reactions, persona
 //   part     the tiers of PARTS in data_parts.js (shields-1 ... engine-3 today; tank and cargo read too): name, text, price and the tier's numbers
 // tests/contentproof.mjs pins that each file under content/ applied over its default changes nothing, and that editing one changes
@@ -161,7 +162,36 @@ const CT_PART = {
   }
 };
 
+// ---- poi: salvage sites and random signals (src/poi.js) ----
+// a fixed site is a body of type 'poi' in a system (data_systems.js); a random signal is a row of SIGNAL_TYPES. Where a site is stays in the system's data.
+const ctSite = id => { for (const k of Object.keys(SYSTEMS)) { const b = (SYSTEMS[k].bodies || []).find(x => x.type === 'poi' && x.id === id); if (b) return b; } return null; };
+const ctSignal = id => { const m = /^signal-([a-z]+)$/.exec(id); return m ? SIGNAL_TYPES.find(t => t.kind === m[1]) || null : null; };
+const CT_POI = {
+  canAdd: false,
+  has: id => !!(ctSite(id) || ctSignal(id)),
+  get: (id, f) => {
+    const sig = ctSignal(id), p = sig || ctSite(id); if (!p) return undefined;
+    return f === 'pays' ? (sig ? p.credits : undefined) : f === 'description' ? p.note : p[f];
+  },
+  apply: (id, data) => {
+    const sig = ctSignal(id), p = sig || ctSite(id);
+    if (data.kind !== undefined && data.kind !== p.kind) throw new Error('kind is "' + data.kind + '" but ' + id + ' is a ' + p.kind);
+    if (data.name !== undefined) p.name = data.name;
+    if (data.description !== undefined) p.note = data.description;
+    if (data.hull !== undefined) p.hull = data.hull;
+    if (sig) {
+      if (data.pays !== undefined) p.credits = data.pays.slice();
+      if (data.guardChance !== undefined) p.guardChance = data.guardChance;
+      if (data.hullChance !== undefined) p.hullChance = data.hullChance;
+    } else {
+      if (data.credits !== undefined) p.credits = data.credits;
+      if (data.guard !== undefined) p.guard = data.guard;
+    }
+  }
+};
+
 CONTENT_TABLES.ship = CT_SHIP;
 CONTENT_TABLES.mission = CT_MISSION;
 CONTENT_TABLES.npc = CT_NPC;
 CONTENT_TABLES.part = CT_PART;
+CONTENT_TABLES.poi = CT_POI;

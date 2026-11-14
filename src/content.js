@@ -142,6 +142,15 @@
       folder: 'text', placeholders: '*',
       fields: {},
       sections: { strings: { heading: 'Strings', t: 'table', required: ['key', 'text'], cols: { key: { t: 'textkey', req: true }, text: T(LIMITS.text, true) } } }
+    },
+    poi: { // salvage sites and random signals (src/poi.js): a fixed site's name, note and payout, and the kinds of signal that turn up
+      folder: 'poi', placeholders: [],
+      fields: {
+        kind: P(['wreck', 'beacon'], true), name: T(40, true),
+        credits: I(0, 100000), hull: I(0, 100), guard: I(0, 6),     // a fixed site (wreck-nw, beacon-e ...): what it pays, the hull it repairs, the pirates that guard it
+        pays: L('int', { len: 2, min: 0, max: 100000 }), guardChance: N(0, 1), hullChance: N(0, 1) // a random signal (signal-beacon, signal-wreck): what it pays as [min, max], how often it is guarded, how often it repairs
+      },
+      sections: {} // the text under the front matter is the line shown when you salvage it
     }
   };
   const FOLDERS = {};
