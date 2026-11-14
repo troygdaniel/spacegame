@@ -260,12 +260,12 @@ class Pause extends Phaser.Scene {
   create() {
     const cx = W / 2, cy = H / 2;
     this.add.rectangle(cx, cy, W, H, 0x02050c, 0.72).setInteractive(); // swallows clicks
-    this.ui = panel(this, { w: 560, h: 470, title: 'PAUSED  -  AUTOSAVE ON', depth: 0 }); // the shared panel style (src/ui.js)
+    this.ui = panel(this, { w: 560, h: 520, title: 'PAUSED  -  AUTOSAVE ON', depth: 0 }); // the shared panel style (src/ui.js)
     crTag(this, this.ui, G.credits); // src/ui.js: coin and gold N CR (the game is paused, so it cannot change here)
     this.title = this.ui.titleText;
     this.rows = []; this.zones = [];
-    for (let i = 0; i < 7; i++) {
-      const y = cy - 126 + i * 44;
+    for (let i = 0; i < 8; i++) {
+      const y = cy - 150 + i * 44;
       this.rows.push(this.add.text(cx, y, '', { fontFamily: 'monospace', fontSize: '22px', color: '#9fe9ff' }).setOrigin(0.5));
       const z = this.add.rectangle(cx, y, 480, 40, 0x000000, 0.001).setInteractive({ useHandCursor: true });
       z.on('pointerover', () => { if (this.view === 'menu') this.sel = i; });
@@ -290,6 +290,7 @@ class Pause extends Phaser.Scene {
     if (i === 3) return 'Volume   <  ' + pct.padStart(4) + '  >';
     if (i === 4) return G.muted ? 'Sound    MUTED  (M)' : 'Sound    ON  (M)';
     if (i === 5) return 'Ship voice   ' + voiceStatus(); // src/voice.js: optional, needs the player's own Deepgram key
+    if (i === 6) return 'NPC chat   ' + chatStatus(); // src/chat.js: optional, needs the player's own OpenAI or Anthropic key
     return this.confirmNew ? 'Select again to erase the save' : 'New game';
   }
 
@@ -298,7 +299,7 @@ class Pause extends Phaser.Scene {
     this.title.setText(menu ? 'PAUSED  -  AUTOSAVE ON' : 'CONTROLS  -  ' + this.from.toUpperCase());
     this.rows.forEach((r, i) => {
       r.setVisible(menu).setText((i === this.sel ? '> ' : '  ') + this.rowText(i))
-        .setColor(i === this.sel ? (i === 6 && this.confirmNew ? '#ff4d6d' : '#ffd37a') : '#9fe9ff');
+        .setColor(i === this.sel ? (i === 7 && this.confirmNew ? '#ff4d6d' : '#ffd37a') : '#9fe9ff');
       this.zones[i].input.enabled = menu;
     });
     this.help.setVisible(!menu).setText((HELP[this.from] || HELP.Station).join('\n'));
@@ -323,7 +324,7 @@ class Pause extends Phaser.Scene {
   }
 
   activate(i, px) {
-    if (i !== 6) this.confirmNew = false;
+    if (i !== 7) this.confirmNew = false;
     if (i === 0) this.resume();
     else if (i === 1) {
       if (G.mission === 'rescued') G.mission = 'accepted'; // the colonist stays behind; the call is still open
@@ -332,7 +333,8 @@ class Pause extends Phaser.Scene {
     else if (i === 3) this.adjustVolume(px !== undefined && px < W / 2 ? -1 : 1);
     else if (i === 4) { G.muted = !G.muted; saveGame(); if (!G.muted) beep(660, 0.08, 'triangle', 0.05); }
     else if (i === 5) voiceOpenSetup(this);
-    else if (i === 6) {
+    else if (i === 6) chatOpenSetup(this);
+    else if (i === 7) {
       if (!this.confirmNew) { this.confirmNew = true; return; }
       clearSave(); newGameState(); saveGame(true); this.toStation();
     }
@@ -347,8 +349,8 @@ class Pause extends Phaser.Scene {
     if (this.view === 'controls') {
       if (JD(k.ENTER) || JD(k.SPACE) || JD(k.E)) this.setView('menu');
     } else {
-      if (JD(k.UP) || JD(k.W)) { this.sel = (this.sel + 6) % 7; this.confirmNew = false; }
-      if (JD(k.DOWN) || JD(k.S)) { this.sel = (this.sel + 1) % 7; this.confirmNew = false; }
+      if (JD(k.UP) || JD(k.W)) { this.sel = (this.sel + 7) % 8; this.confirmNew = false; }
+      if (JD(k.DOWN) || JD(k.S)) { this.sel = (this.sel + 1) % 8; this.confirmNew = false; }
       if (this.sel === 3) {
         if (JD(k.LEFT) || JD(k.A)) this.adjustVolume(-1);
         if (JD(k.RIGHT) || JD(k.D)) this.adjustVolume(1);
