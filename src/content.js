@@ -130,7 +130,7 @@
     },
     voice: {
       folder: 'voice', placeholders: PH,
-      fields: { event: P(VOICE_EVENTS, true) },
+      fields: { event: P(VOICE_EVENTS, true), replace: BOOL }, // replace: yes drops the built-in line for that event, so only the file's lines are said
       sections: { lines: { heading: 'Lines', t: 'list', max: LIMITS.line } }
     },
     text: {

@@ -129,6 +129,8 @@ echo "== 4y. economy simulator: real data loads, pinned code lines still there (
 if node tools/economy-sim.mjs check; then :; else fail=1; fi
 echo "== 4z. the hangar terminal in the Ship bay (tests/hangar.mjs)"
 if node tests/hangar.mjs; then :; else fail=1; fi
+echo "== 4zb. adding new things from markdown: voice lines, NPCs, missions, ships (tests/contentadd.mjs)"
+if node tests/contentadd.mjs; then :; else fail=1; fi
 echo "== 4za. fuel: tank, jump cost, the pump terminal, the FUEL chip, the ranger (tests/fuel.mjs)"
 if node tests/fuel.mjs; then :; else fail=1; fi
 
