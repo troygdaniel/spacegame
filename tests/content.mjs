@@ -1,3 +1,4 @@
+// smoke: the markdown content parser, schema, validator and build script (no browser)
 // Tests for the markdown content parser, schema and build script (card space-game-m1-parser-schema, docs/MODDING.md).
 // No browser: it loads src/content.js with require(), like tools/build-content.mjs does. Run: node tests/content.mjs
 // Each check names what it guards. Exit code 1 if any fails.
@@ -278,7 +279,7 @@ section('build script and the generated file');
   check('the generated text is the same every time', again.text === good.text);
   const ctx = vm.createContext({}); vm.runInContext(good.text, ctx);
   const got = vm.runInContext('CONTENT', ctx);
-  check('the generated file is plain JavaScript that sets CONTENT', got && got.version === 1 && got.hash === good.result.hash && got.entries.length === 9 && Array.isArray(got.errors), good.text.slice(0, 200));
+  check('the generated file is plain JavaScript that sets CONTENT', got && got.version === 1 && got.core === 'sealed' && got.hash === undefined && got.entries.length === 9 && Array.isArray(got.errors), good.text.slice(0, 200));
   check('and CONTENT matches what the loader returned', JSON.stringify(got.entries) === JSON.stringify(good.result.entries));
   const bad = build({ dir: join(ROOT, 'tests/fixtures/content-bad'), prefix: 'content/', out: '/nonexistent/none.js', write: false });
   const errs = bad.result.errors.filter(e => e.level === 'error').length;

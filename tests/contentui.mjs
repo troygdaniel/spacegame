@@ -1,3 +1,4 @@
+// smoke: content on the Title screen: problems chip, panel, MODDED tag (nothing shows when all is well)
 // The Title screen's content chip, panel and MODDED tag (card space-game-m2b-content-ui, docs/MODDING.md 5.2; src/contentui.js).
 // Each case runs the real game in headless Chrome from a throwaway copy of the folder with its own content.generated.js:
 //   the real pack            nothing at all on the Title screen
@@ -6,14 +7,14 @@
 // Screenshots go to tests/out/content-*.png. Run: node tests/contentui.mjs   (one Chrome at a time; about 30 seconds)
 import { rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { build } from '../tools/build-content.mjs';
+import { build, shippedCore } from '../tools/build-content.mjs';
 import { chromePool, sleep } from './cdp.mjs';
 import { copyGame, ROOT } from './gamecopy.mjs';
 
 let failed = 0, n = 0;
 const pool = chromePool(); // every case shares one Chrome (one turn at the test lock), each starting on a clean profile (tests/cdp.mjs goto)
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok  ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + detail + ')' : ''}`); } };
-const REAL_CORE = /core: "([0-9a-f]+)"/.exec(readFileSync(join(ROOT, 'content.generated.js'), 'utf8'))[1];
+const REAL_CORE = shippedCore(); // the shipped pack's hash: the entries of the committed content.generated.js (its header says "sealed", docs/SMOKE.md 2)
 
 // the Title scene's texts that start with a word, and what the content UI says about itself
 const ui = t => t.ev(`(() => { const s = game.scene.getScene('Title'), u = s.contentUi, txt = s.children.list.filter(o => o.type === 'Text').map(o => o.text), open = u.isOpen(), pt = [];

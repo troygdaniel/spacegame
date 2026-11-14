@@ -9,9 +9,11 @@
 //   --dir content  --out content.generated.js   other places (tests use them)
 // Packs (docs/MODDING.md 13): every folder in mods/ is a pack, checked on its own and written, with its problems, into mods.generated.js.
 //   --mods mods  --mods-out mods.generated.js   other places (tests use them); with --dir or --out and no --mods the packs are left alone
-// The generated file carries two hashes: hash (what is in it now) and core (the shipped pack). A normal build keeps core as it
-// was, so after you edit content/ the two differ and the Title screen says MODDED. Only --seal moves core to the new hash,
-// which is for a change to the shipped content itself; tests/contentapply.mjs fails if the committed file is not sealed.
+// The seal (docs/SMOKE.md 2): the generated file's header says core: "sealed" when it is the shipped core pack as committed, the
+// same words in every sealed build, so two branches that both changed content/ never clash on a hash line. A normal build of
+// edited content writes core: "<hash of the entries it replaced>" instead (the shipped pack's hash), and the browser, which hashes
+// the entries itself, says MODDED. Only --seal writes "sealed" again, which is for a change to the shipped content itself;
+// tests/contentapply.mjs and --check fail if the committed file is not sealed or not what a build makes.
 // Needs Node 22+, no packages. The parser and schema are src/content.js, the same file the game uses.
 import { readdirSync, readFileSync, writeFileSync, existsSync, watch } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
@@ -36,7 +38,11 @@ export function readPack(dir, prefix = 'content/') {
   return files;
 }
 
-// the text of content.generated.js: one entry per line so a change in git is readable; the same input always gives the same text
+export const SEALED = 'sealed'; // the core value of the shipped pack as committed
+
+// the text of content.generated.js: one entry per line so a change in git is readable; the same input always gives the same text.
+// core: SEALED, or the shipped pack's hash when this content differs from it. No hash or file count in the header: the browser
+// hashes the entries itself, and a header that changes with the content is what made every merge of two content branches conflict.
 export function generate(result, core) {
   const lines = a => a.map(x => '  ' + JSON.stringify(x)).join(',\n');
   return [
@@ -44,7 +50,7 @@ export function generate(result, core) {
     '// change the markdown and run   node tools/build-content.mjs',
     '// The game loads this with a script tag (so it works from file://). It holds every valid entry and the problems found.',
     'var CONTENT = {',
-    '  version: 1, hash: ' + JSON.stringify(result.hash) + ', core: ' + JSON.stringify(core || result.hash) + ', files: ' + result.files + ',',
+    '  version: 1, core: ' + JSON.stringify(core || SEALED) + ',',
     '  entries: [' + (result.entries.length ? '\n' + lines(result.entries) + '\n  ' : '') + '],',
     '  errors: [' + (result.errors.length ? '\n' + lines(result.errors) + '\n  ' : '') + ']',
     '};',
@@ -114,18 +120,39 @@ export function buildMods({ dir = join(ROOT, 'mods'), out = join(ROOT, 'mods.gen
   return { packs, errors: found.errors, text, changed, wrote: write && changed };
 }
 
-// build once. write:false leaves the file alone (tests); returns the result, the text and whether the file on disk differs
-// core: the hash of the shipped pack. Given (tests), it is used as is; seal: true makes this build the shipped pack; otherwise the
-// core already in the file at out stays, and a first build seals itself.
+// what a generated file says about itself: { core: 'sealed' | '<hex>' | '', hash: the hash of the entries really in it, or '' }.
+// The entries are read by running the file in a bare vm, the way the browser does, and hashed the way ContentLib.loadAll does.
+export function readGenerated(text) {
+  const m = /\bcore:\s*"([0-9a-z]{1,16})"/.exec(text || '');
+  let hash = '';
+  try {
+    const c = vm.runInNewContext(String(text) + '\n;CONTENT', {});
+    if (c && Array.isArray(c.entries)) hash = ContentLib.hashOf(JSON.stringify(c.entries.map(e => (e && typeof e === 'object' ? [e.type, e.id, e.data] : e))));
+  } catch (e) { /* not a generated file: no hash */ }
+  return { core: m ? m[1] : '', hash };
+}
+// the shipped pack's hash: the entries of the committed content.generated.js (tests build a game copy that must read as MODDED against it)
+export function shippedCore(file = join(ROOT, 'content.generated.js')) {
+  return existsSync(file) ? readGenerated(readFileSync(file, 'utf8')).hash : '';
+}
+
+// build once. write:false leaves the file alone (tests); returns the result, the text and whether the file on disk differs.
+// core: given (tests), it is used as is. seal: true writes "sealed": this build is the shipped pack. Otherwise the file at out
+// decides: a sealed file whose entries this build changes gives core = the hash of those old entries (the shipped pack), so the
+// browser says MODDED; a hash already there stays; no file, or the same entries, means sealed.
 export function build({ dir = join(ROOT, 'content'), prefix = 'content/', out = join(ROOT, 'content.generated.js'), write = true, opts = {}, core, seal = false } = {}) {
   const result = ContentLib.loadAll(readPack(dir, prefix), Object.assign({ known: codeKnown }, opts));
   const old = existsSync(out) ? readFileSync(out, 'utf8') : null;
-  const kept = old && /\bcore:\s*"([0-9a-f]{1,16})"/.exec(old);
-  const sealed = seal ? result.hash : core || (kept && kept[1]) || result.hash;
+  const was = old ? readGenerated(old) : { core: '', hash: '' };
+  let sealed;
+  if (seal) sealed = SEALED;
+  else if (core) sealed = core;
+  else if (was.core === SEALED) sealed = was.hash && was.hash !== result.hash ? was.hash : SEALED;
+  else sealed = was.core || SEALED;
   const text = generate(result, sealed);
   const changed = old !== text;
   if (write && changed) writeFileSync(out, text);
-  return { result, text, changed, wrote: write && changed, core: sealed, modded: sealed !== result.hash };
+  return { result, text, changed, wrote: write && changed, core: sealed, modded: sealed !== SEALED && sealed !== result.hash };
 }
 
 function main() {
@@ -143,6 +170,7 @@ function main() {
       (has('--check') ? (b.changed ? '  -> content.generated.js is OUT OF DATE: run node tools/build-content.mjs' : '  -> content.generated.js is up to date')
         : '  -> ' + out.replace(ROOT + '/', '') + (b.wrote ? ' written' : ' unchanged')));
     if (b.modded) console.log('  note: this content differs from the shipped core pack (hash ' + b.result.hash + ', shipped ' + b.core + '), so the game will say MODDED. Maintainers changing the shipped content run with --seal.');
+    else if (has('--seal')) console.log('  sealed: this content is the shipped core pack (hash ' + b.result.hash + ').');
     let m = null, modErrors = [];
     if (modsToo) {
       m = buildMods({ dir: modsDir, out: modsOut, write: !has('--check'), coreEntries: b.result.entries });
