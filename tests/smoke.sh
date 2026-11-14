@@ -24,11 +24,12 @@
 #   4p. tests/contentui.mjs: the Title screen's content chip, problems panel and MODDED tag (nothing shows when all is well)
 #   4q. tests/shipsheet.mjs: the six player ships (silhouettes, every upgrade slot, nozzles, physics circle, hangar, flight, Ship bay)
 #   4r. tests/cruise.mjs: Halcyon at 36000 px, the nav list (N) and cruise (C): speed profile, locks, cancel, nudge, frame cost
-#   4t. tests/interdict.mjs: pirates pull you out of cruise (forced roll, gates: 4000 px from a station, 90 s cooldown, two jumps) and the pirate tables per system
+#   4v. tests/interdict.mjs: pirates pull you out of cruise (forced roll, gates: 4000 px from a station, 90 s cooldown, two jumps) and the pirate tables per system
 #   4s. tests/journal.mjs: J opens the Journal in the station (people met, notes, facts, no key needed), Forget everything needs a second press, the Pause row
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #   4o. tests/chat.mjs: the NPC chat adapter and the chat box in the bar with a mocked fetch: no key means no call; OpenAI and Anthropic get the right URL,
 #   4t. tests/shipmodels.mjs: the six ship models against docs/UNIVERSE.md 6.1, and the Wren's speed, thrust, turn, boost and hull in the real Space scene
+#   4u. tests/parts.mjs: the five ship parts (shields, weapons, engine, tank, cargo): tables, every effect, shields in flight, shot rate and damage, the shop's five cards with fit and stock rules, the save
 #       header and body shape; the key is only ever in its header; 401 switches chat off; 429 waits; the setup panel saves a key
 #      their failure paths, with the game clock stepped by hand
 # Only one headless Chrome runs at a time on this Mac, whatever the worktree: cdp.mjs takes a lock in tests/lock.mjs, so a second
@@ -112,8 +113,10 @@ if node tests/journal.mjs; then :; else fail=1; fi
 echo "== 4t. ship models and shipStat: the table pinned to the design, the Wren flies as before (tests/shipmodels.mjs)"
 if node tests/shipmodels.mjs; then :; else fail=1; fi
 
-echo "== 4t. interdiction in cruise and the pirate tables per system (tests/interdict.mjs)"
+echo "== 4v. interdiction in cruise and the pirate tables per system (tests/interdict.mjs)"
 if node tests/interdict.mjs; then :; else fail=1; fi
+echo "== 4u. ship parts: shields, weapons, engine, tank, cargo (tests/parts.mjs)"
+if node tests/parts.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then

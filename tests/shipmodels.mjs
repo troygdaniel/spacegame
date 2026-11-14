@@ -63,8 +63,8 @@ try {
   };
   await tiers('booster', [800, 1000, 1150], 'boost');
   check('boostMax() (shop.js) answers the same as shipStat("boost")', (await t.ev('(() => { G.upgrades.booster = 2; const ok = boostMax() === 1150 && boostMax() === shipStat("boost"); G.upgrades.booster = 0; return ok; })()')) === true);
-  await tiers('armor', [100, 120, 140], 'hull');
-  check('shipSync() sets the hull cap from the plating and trims a hull above it', (await t.ev('(() => { G.upgrades.armor = 2; shipSync(); const a = G.maxHull; G.upgrades.armor = 0; G.hull = 140; shipSync(); const b = [G.maxHull, G.hull]; return a === 140 && b[0] === 100 && b[1] === 100; })()')) === true);
+  await tiers('armor', [100, 100, 100], 'hull'); // card u-d1: shields are points of their own, no part adds hull any more
+  check('shipSync() sets the hull cap from the model (shields add none) and trims a hull above it', (await t.ev('(() => { G.upgrades.armor = 2; shipSync(); const a = G.maxHull; G.upgrades.armor = 0; G.hull = 140; shipSync(); const b = [G.maxHull, G.hull]; return a === 100 && b[0] === 100 && b[1] === 100; })()')) === true);
   check('the exact multiples: 720 x 5/6 is 600 and 720 x 25/12 is 1500', (await t.ev('shipStat("accel") * 5 / 6 === 600 && shipStat("accel") * 25 / 12 === 1500')) === true);
 
   console.log('flying: the numbers space.js really uses');
