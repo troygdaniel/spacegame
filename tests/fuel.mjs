@@ -128,6 +128,20 @@ try {
     await t.shot('fuel-hud-' + name);
   }
   check('no console errors after the chip', t.errors.length === 0, t.errors.join(' | '));
+
+  console.log('the fuel row in the Ship bay');
+  await ev('(() => { activeShip().fuel = 12.4; return 1; })()');
+  await is('bayShipInfo().fuel + "/" + bayShipInfo().fuelMax', '12/40', 'bayShipInfo gives the fuel in the tank and the tank size (rounded)');
+  await ev('(() => { const r = G.fleet[0]; r.fuel = 99; return 1; })()');
+  await is('bayShipInfo().fuel', 40, 'a tank figure above the tank size shows as a full tank');
+  await ev('(() => { activeShip().fuel = 12.4; return 1; })()');
+  await ev(`(() => { go(${ST}, 'Ship'); return 1; })()`);
+  await t.run(1500); // the clock is stepped by hand: the fade into the bay needs its time
+  check('the Ship scene is active', await ev("game.scene.isActive('Ship')") === true);
+  await is("game.scene.getScene('Ship').statusHeight() > 0 && bayShipInfo().fuelMax != null", true, 'the bay status panel counts the fuel row');
+  await is(`(() => { const out = []; const walk = o => { if (o.visible === false) return; if (o.type === 'Text') out.push(o.text); if (o.list) o.list.forEach(walk); }; game.scene.getScene('Ship').children.list.forEach(walk); return out.includes('FUEL') && out.includes('12 / 40'); })()`, true, 'the panel shows the FUEL label and 12 / 40');
+  await t.shot('fuel-bay');
+  check('no console errors in the bay', t.errors.length === 0, t.errors.join(' | '));
 } catch (e) { console.error('  FAIL ' + e.message); failed++; } finally { await t.close(); }
 
 console.log(failed ? `\nFUEL FAIL (${failed} of ${n} checks)` : `\nFUEL PASS (${n} checks)`);
