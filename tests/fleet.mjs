@@ -27,7 +27,7 @@ SYSTEMS.meridian = { id: 'meridian', name: 'Meridian', ly: [29, 24.5], bodies: [
 // a fresh game: the real scripts in the order index.html loads them, G is the real G
 function world() {
   const ctx = vm.createContext({ window: { addEventListener() {} }, console: { table() {}, log() {} } });
-  for (const f of ['common', 'data_systems', 'universe', 'data_ships', 'fleet']) vm.runInContext(src(f), ctx, { filename: f + '.js' });
+  for (const f of ['common', 'data_systems', 'universe', 'data_ships', 'data_parts', 'fleet']) vm.runInContext(src(f), ctx, { filename: f + '.js' });
   vm.runInContext(`const ORE_PRICE = ${ORE_PRICE}; G.lastDock = homeDock();` + MORE_SYSTEMS, ctx); // meta.js sets lastDock in the page
   const run = code => vm.runInContext(code, ctx);
   return { run, j: code => JSON.parse(run(`JSON.stringify(${code})`)) };
@@ -63,6 +63,7 @@ console.log('prices');
     w.run(`[fleetPartPrice('shields', 1, 'wren'), fleetPartPrice('shields', 2, 'wren'), fleetPartPrice('weapons', 1, 'wren'), fleetPartPrice('weapons', 2, 'wren'), fleetPartPrice('engine', 1, 'wren'), fleetPartPrice('engine', 2, 'wren')].join()`) === '300,500,400,600,350,550');
   check('tier 3 and the two new slots are in the table (1100, 1000, 1200, 900, 900)', w.run(`[fleetPartPrice('engine', 3, 'wren'), fleetPartPrice('shields', 3, 'wren'), fleetPartPrice('weapons', 3, 'wren'), fleetPartPrice('tank', 3, 'wren'), fleetPartPrice('cargo', 3, 'wren')].join()`) === '1100,1000,1200,900,900');
   check('the model scales it: a Kite engine tier 1 costs 280, tier 2 440; a Bastion cargo tier 3 costs 1620', w.run(`[fleetPartPrice('engine', 1, 'kite'), fleetPartPrice('engine', 2, 'kite'), fleetPartPrice('cargo', 3, 'bastion')].join()`) === '280,440,1620');
+  check('a part is priced at list: a station\'s own multiplier (the pirate nest\'s 1.25) is not in the sale value', w.run(`fleetPartPrice('weapons', 2, 'wren') === 600 && partPrice('weapons', 2, 'wren', { partMult: 1.25 }) === 750`));
   check('no price for tier 0, tier 4 or a slot that does not exist', w.run(`[fleetPartPrice('engine', 0, 'wren'), fleetPartPrice('engine', 4, 'wren'), fleetPartPrice('wings', 1, 'wren')].join()`) === '0,0,0');
   check('what is fitted counts every tier up to the one in the slot: Wren shields 2 is 800', w.run(`fleetPartsValue({ model: 'wren', parts: { shields: 2 } })`) === 800);
   check('Kite engine 2 and shields 1 are 280 + 440 + 240 = 960', w.run(`fleetPartsValue({ model: 'kite', parts: { engine: 2, shields: 1 } })`) === 960);

@@ -38,49 +38,68 @@ function voiceUsable() { return !!VOICE.key && VOICE.on && !VOICE.bad && !G.mute
 function voiceStatus() { return !VOICE.key ? 'NO KEY' : VOICE.bad ? 'KEY REJECTED' : VOICE.on ? 'ON' : 'OFF'; }
 
 // ---------- speaking ----------
-// One line at a time. A line that arrives while another plays is dropped, unless it is a warning (prio 1 or 2), which waits in a
-// queue of two for up to 6 seconds. The same line cannot repeat within 8 seconds.
-function voiceSay(text, prio = 0) {
+// One line at a time, whoever says it. A line that arrives while another plays is dropped, unless it is a warning or a character's
+// reply (prio 1 or 2), which waits in a queue of two for up to 6 seconds. The same words in the same voice cannot repeat within 8 seconds.
+// model is an Aura voice name: the ship computer uses VOICE_MODEL, each bar character has their own (the voice field of NPCS in
+// shop.js, docs/NPC-CHAT.md section 2). onStart runs when the audio begins to play.
+const VOICE_NAME = /^aura(-2)?-[a-z]{3,12}-en$/; // the name goes into a URL, so anything else falls back to the ship computer's voice
+const voiceModelOf = m => (typeof m === 'string' && VOICE_NAME.test(m) ? m : VOICE_MODEL);
+function voiceSay(text, prio = 0, model, onStart) {
   if (!voiceUsable()) return false;
-  const now = performance.now();
-  if (VOICE.said[text] && now - VOICE.said[text] < 8000) return false;
-  VOICE.said[text] = now;
+  const line = { text, voice: voiceModelOf(model), onStart, prio, at: performance.now() }, id = line.voice + '|' + text;
+  if (VOICE.said[id] && line.at - VOICE.said[id] < 8000) return false;
+  VOICE.said[id] = line.at;
   if (VOICE.playing) {
-    if (prio > 0) { VOICE.queue.push({ text, at: now, prio }); VOICE.queue.sort((a, b) => b.prio - a.prio); while (VOICE.queue.length > 2) VOICE.queue.pop(); return true; }
+    if (prio > 0) { VOICE.queue.push(line); VOICE.queue.sort((a, b) => b.prio - a.prio); while (VOICE.queue.length > 2) VOICE.queue.pop(); return true; }
     return false;
   }
-  voiceRun(text); return true;
+  voiceRun(line); return true;
 }
-async function voiceRun(text) {
+// For a caller that shows the words along with the voice (the NPC chat): start(how) runs once. 'audio' when the voice begins, 'timeout' after
+// 1.5 s if it has not arrived yet, 'silent' at once when there will be no voice (no key, off, muted, refused), so text never waits for nothing.
+function voiceSayThen(text, prio, model, start) {
+  let done = false, timer = null;
+  const go = how => { if (done) return; done = true; clearTimeout(timer); try { start(how); } catch (e) { /* the caller's trouble must not stop the voice */ } };
+  if (!voiceSay(text, prio == null ? 1 : prio, model, () => go('audio'))) { go('silent'); return false; }
+  timer = setTimeout(() => go('timeout'), 1500);
+  return true;
+}
+async function voiceRun(line) {
   VOICE.playing = true;
-  try { const buf = await voiceBuffer(text); if (buf && voiceUsable()) await voicePlay(buf); } catch (e) { /* the voice must never break the game */ }
+  try { const buf = await voiceBuffer(line.text, line.voice); if (buf && voiceUsable()) await voicePlay(buf, line.onStart); } catch (e) { /* the voice must never break the game */ }
   VOICE.playing = false;
   const now = performance.now(); let next = null;
   while (VOICE.queue.length && !next) { const q = VOICE.queue.shift(); if (now - q.at < 6000) next = q; }
-  if (next && voiceUsable()) voiceRun(next.text);
+  if (next && voiceUsable()) voiceRun(next);
 }
-// a line's audio: from the memory cache, or one call to Deepgram (the only network call in the game)
-async function voiceBuffer(text) {
-  if (VOICE.cache.has(text)) return VOICE.cache.get(text);
+// a line's audio: from the memory cache, or one call to Deepgram (the only network call in the game). Only the ship computer's lines are
+// cached: they repeat. A character's reply is free text and is spoken once.
+async function voiceBuffer(text, voice = VOICE_MODEL) {
+  const keep = voice === VOICE_MODEL;
+  if (keep && VOICE.cache.has(text)) return VOICE.cache.get(text);
   if (!audioReady()) return null; // audio.js: the shared AudioContext
   VOICE.calls++;
   let res;
   try {
-    res = await fetch(VOICE_URL + '?model=' + VOICE_MODEL + '&encoding=mp3', {
+    res = await fetch(VOICE_URL + '?model=' + encodeURIComponent(voice) + '&encoding=mp3', {
       method: 'POST', headers: { Authorization: 'Token ' + VOICE.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ text })
     });
   } catch (e) { voiceFailed(); return null; }
   if (res.status === 401 || res.status === 402 || res.status === 403) { voiceRejected(); return null; }
   if (!res.ok) { voiceFailed(); return null; }
   const buf = await AC.decodeAudioData(await res.arrayBuffer());
-  VOICE.fails = 0; VOICE.cache.set(text, buf);
-  if (VOICE.cache.size > 40) VOICE.cache.delete(VOICE.cache.keys().next().value);
+  VOICE.fails = 0;
+  if (keep) { VOICE.cache.set(text, buf); if (VOICE.cache.size > 40) VOICE.cache.delete(VOICE.cache.keys().next().value); }
   return buf;
 }
-function voicePlay(buf) { // through audio.js's master gain, so the volume and mute settings apply
+function voicePlay(buf, onStart) { // through audio.js's master gain, so the volume and mute settings apply
   return new Promise(res => {
     let done = false; const fin = () => { if (!done) { done = true; res(); } };
-    try { const src = AC.createBufferSource(); src.buffer = buf; src.connect(AUD.master || AC.destination); src.onended = fin; src.start(); } catch (e) { fin(); }
+    try {
+      const src = AC.createBufferSource(); src.buffer = buf; src.connect(AUD.master || AC.destination); src.onended = fin;
+      if (onStart) { try { onStart(); } catch (e) { /* the caller's trouble must not stop the voice */ } }
+      src.start();
+    } catch (e) { fin(); }
     setTimeout(fin, buf.duration * 1000 + 1500); // a suspended context never ends the line: do not wait forever
   });
 }

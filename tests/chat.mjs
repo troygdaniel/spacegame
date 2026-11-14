@@ -374,5 +374,78 @@ const call = async (t, req = REQ) => {
   finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
 }
 
+// ---- part 6: a voice per character (card space-game-npc-chat-voice): the reply starts typing with the audio ----
+{
+  const t = await launch('#station');
+  const ST = "game.scene.getScene('Station')";
+  const KEY_VOICE = 'TEST-KEY-NOT-REAL-' + 'ABCDEFGHIJ';
+  // Deepgram answers 0.1 s of silence (after __dgDelay ms); the chat provider calls still go to the mock above
+  const DG = `(() => {
+    const wav = new ArrayBuffer(44 + 1600), v = new DataView(wav), w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    w(0, 'RIFF'); v.setUint32(4, 36 + 1600, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 16000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, 1600, true);
+    const base = window.fetch; window.__dg = []; window.__dgDelay = 0;
+    window.fetch = (url, opts) => /deepgram/.test(String(url))
+      ? (__dg.push({ url: String(url), auth: opts.headers.Authorization, body: opts.body }), new Promise(r => setTimeout(r, __dgDelay)).then(() => new Response(wav.slice(0))))
+      : base(url, opts);
+    return 1;
+  })()`;
+  const elKey = async key => t.ev(`(() => { const el = document.querySelector('input'); if (!el) return 0; el.dispatchEvent(new KeyboardEvent('keydown', { key: '${key}', bubbles: true })); return 1; })()`);
+  const stand = async (x, y) => { await t.ev(`(() => { const s = ${ST}; s.player.setPosition(${x}, ${y}); s.player.setVelocity(0, 0); return 1; })()`); await sleep(250); };
+  const send = async line => {
+    await t.ev(`(() => { const el = document.querySelector('input'); el.value = ${JSON.stringify(line)}; return 1; })()`);
+    await t.ev(`(${ST}.chat.lastSend = 0, window.__t0 = performance.now(), 1)`);
+    await elKey('Enter');
+  };
+  try {
+    await t.waitFor("!!(window.game && game.scene.isActive('Station'))", 20000, 'station');
+    await t.ev(MOCK); await t.ev(DG);
+    await t.ev(`(chatSetKey('${KEY_OPENAI}'), chatSetProvider(''), chatSetModel(''), voiceSetKey('${KEY_VOICE}'), voiceSetOn(true), G.muted = false, G.volume = 1, 1)`);
+    check('with both keys the voice is usable', (await t.ev('voiceUsable()')) === true);
+
+    console.log('fast audio');
+    await stand(255, 572); await t.ev(`chatOpen(${ST}, 0)`);
+    await t.waitFor(`${ST}.chatText.text === 'Welcome to the Drift, pilot.'`, 15000, 'reply typed with the audio');
+    check('JUNO\'s reply went to Deepgram once, in her voice', (await t.ev('__dg.length')) === 1 && /^https:\/\/api\.deepgram\.com\/v1\/speak\?model=aura-luna-en&encoding=mp3$/.test(await t.ev('__dg[0].url')), await t.ev('__dg[0].url'));
+    check('what was spoken is the reply, the key only in the header', JSON.parse(await t.ev('__dg[0].body')).text === 'Welcome to the Drift, pilot.' && (await t.ev('__dg[0].auth')) === 'Token ' + KEY_VOICE && !(await t.ev('__dg[0].url')).includes(KEY_VOICE));
+    check('the chat provider was called once and nothing but the reply went to Deepgram', (await t.ev('__calls.length')) === 1);
+    await t.waitFor(`${ST}.chat.busy === false`, 10000, 'box open again');
+
+    console.log('slow audio');
+    await t.ev(`(__reply = 'Slow one.', __dgDelay = 5000, 1)`);
+    await send('Anything new?');
+    await t.waitFor('__calls.length === 2', 10000, 'second chat call'); await sleep(500);
+    check('while the audio is on its way the box is locked and the dots go on', (await t.ev(`${ST}.chat.busy === true && document.querySelector('input').disabled === true && /^[. ]*$/.test(${ST}.chatText.text)`)) === true, await t.ev(`${ST}.chatText.text`));
+    await t.waitFor(`${ST}.chatText.text.length > 0 && !/^[. ]*$/.test(${ST}.chatText.text)`, 10000, 'text starts without the audio');
+    const waited = Math.round(await t.ev('performance.now() - __t0'));
+    check('the reply starts typing after about 1.5 s, not 5', waited >= 1300 && waited <= 4500, waited + ' ms');
+    await t.waitFor(`${ST}.chat.busy === false`, 10000, 'box open again');
+    check('the box opens once the text is on screen', (await t.ev(`document.querySelector('input').disabled`)) === false);
+
+    console.log('no voice key');
+    await t.ev(`(voiceSetKey(''), __reply = 'No voice.', __dgDelay = 0, 1)`);
+    const dgBefore = await t.ev('__dg.length');
+    await send('And now?');
+    await t.waitFor(`${ST}.chatText.text === 'No voice.'`, 10000, 'text-only reply');
+    const quick = Math.round(await t.ev('performance.now() - __t0'));
+    check('without a voice key the reply types at once and nothing goes to Deepgram', quick < 1300 && (await t.ev('__dg.length')) === dgBefore, quick + ' ms');
+
+    console.log('another character');
+    await t.ev(`chatClose(${ST}, true)`);
+    await t.waitFor('VOICE.playing === false && VOICE.queue.length === 0', 20000, 'the slow line to finish'); // else DEX waits in the queue behind it (which is right, but a test cannot read the call yet)
+    await t.ev(`(voiceSetKey('${KEY_VOICE}'), __reply = 'Measured.', 1)`);
+    const before = await t.ev('__dg.length');
+    await stand(140, 520); await t.ev(`chatOpen(${ST}, 2)`);
+    await t.waitFor(`${ST}.chatText.text === 'Measured.'`, 15000, 'DEX reply');
+    await t.waitFor(`__dg.length === ${before + 1}`, 10000, 'DEX audio call');
+    check("DEX speaks in his own voice (his Aura name reaches the URL)", (await t.ev('__dg.length')) === before + 1 && new RegExp('model=' + (await t.ev('NPCS[2].voice')) + '&').test(await t.ev(`__dg[${before}].url`)), await t.ev(`__dg[${before}].url`));
+    check('the voice name is not the ship computer\'s', !/aura-athena-en/.test(await t.ev(`__dg[${before}].url`)) || (await t.ev('NPCS[2].voice')) === 'aura-athena-en');
+    check('the voice key is not in the page text or the console', !(await t.ev('document.body.innerText')).includes(KEY_VOICE) && !(await t.ev(`__log.join('\\n')`)).includes(KEY_VOICE));
+    await t.ev(`(chatSetKey(''), voiceSetKey(''), 1)`);
+    check('no console errors', t.errors.length === 0, t.errors.join(' | '));
+  } catch (e) { console.log('  FAIL voice: ' + e.message); failed++; }
+  finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
+}
+
 console.log(failed ? `CHAT FAIL (${failed})` : 'CHAT PASS');
 process.exitCode = failed ? 1 : 0;
