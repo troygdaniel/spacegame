@@ -5,7 +5,7 @@
 // Runs one headless Chrome at a time (the Mac is shared).
 import { launch, sleep } from './cdp.mjs';
 
-const KEY = 'test-key-0123456789abcdefTESTKEY';
+const KEY = 'TEST-KEY-NOT-REAL-ABCDEFGHIJKL'; // plainly fake, and no digits, so tests/hygiene.mjs does not take it for a real key
 let failed = 0;
 const check = (name, cond, detail = '') => { console.log(`  ${cond ? 'ok  ' : 'FAIL'} ${name}${detail ? '  (' + detail + ')' : ''}`); if (!cond) failed++; };
 
