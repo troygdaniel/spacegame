@@ -544,6 +544,7 @@ function hudWarn(h, s, now, key, near, engage) {
   const hullF = surf ? s.hp / 100 : G.hull / G.maxHull;
   if ((space || surf) && hullF <= 0.3) list.push({ id: 'hull', text: surf ? 'HEALTH CRITICAL' : 'HULL CRITICAL', sub: Math.max(0, Math.round(hullF * 100)) + '%  BREAK OFF', color: RED, crit: true });
   if (surf && s.col && s.col.state !== 'dead' && s.col.hp / 60 <= 0.3) list.push({ id: 'col', text: 'COLONIST IN DANGER', sub: Math.max(0, Math.round(s.col.hp)) + ' HP', color: AMBER, crit: true });
+  if (space && now < (h.interdictUntil || 0)) list.push({ id: 'int', text: 'INTERDICTED', sub: 'PIRATES AHEAD', color: RED, crit: true }); // pulled out of cruise (src/cruise.js)
   if (space && s.boostLocked) list.push({ id: 'bst', text: 'BOOST EMPTY', sub: 'RECHARGING', color: AMBER });
   const hot = near < engage; // first contact: a banner for 2.5 s when something comes into attack range
   if (hot && !h.hotWas) h.contact = now + 2500;
@@ -554,7 +555,7 @@ function hudWarn(h, s, now, key, near, engage) {
   h.fullWas = full;
   if (now < (h.holdFull || 0)) list.push({ id: 'ore', text: 'CARGO HOLD FULL', sub: 'SELL AT THE STATION', color: AMBER });
 
-  if (hullF <= 0.3 && (space || surf)) { // the edge pulse: four strips that fade inward
+  if ((hullF <= 0.3 || now < (h.interdictUntil || 0)) && (space || surf)) { // the edge pulse: four strips that fade inward
     const a = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(now / 240)), d = 110;
     g.fillGradientStyle(RED, RED, RED, RED, a, a, 0, 0); g.fillRect(0, 0, W, d);
     g.fillGradientStyle(RED, RED, RED, RED, 0, 0, a, a); g.fillRect(0, H - d, W, d);
