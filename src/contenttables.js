@@ -6,6 +6,9 @@
 // The proof set that is read today, one table each (cards m4, m5 add the rest):
 //   ship     the pirates in enemies.js PIRATES (raider, drone, gunship): the numbers and the radar colour
 //   mission  the rows of MISSIONS in missions.js (rescue today): title, where, reward, count, the board text, progress, steps, failure line
+//   text     the interface's words: the help screens, the scene tips and the toasts (key | text)
+//   station  the dock: its name and the repair and ore prices
+//   poi      the salvage sites (data_systems.js) and the random signal types (poi.js SIGNAL_TYPES): name, note, payout, guard
 //   npc      the characters of the bar in shop.js NPCS (juno today): look and place, lines, reactions, persona
 //   part     the tiers of PARTS in data_parts.js (shields-1 ... engine-3 today; tank and cargo read too): name, text, price and the tier's numbers
 // tests/contentproof.mjs pins that each file under content/ applied over its default changes nothing, and that editing one changes
@@ -22,8 +25,9 @@ function contentVars() {
   const m = safe(() => missionDef());
   return {
     reward: safe(() => m ? m.reward : ''), count: safe(() => m && m.count ? m.count : ''), progress: safe(() => G.missionProgress | 0),
-    credits: safe(() => G.credits | 0), ship: safe(() => activeShip().name), system: safe(() => sysDef().name),
-    station: safe(() => (sysBody('station') || {}).name)
+    credits: safe(() => G.credits | 0), kills: safe(() => G.stats.drones | 0), ship: safe(() => activeShip().name), system: safe(() => sysDef().name),
+    station: safe(() => (sysBody('station') || {}).name),
+    hull: safe(() => Math.round(100 * Math.max(0, REAVER_HP - G.missionProgress) / REAVER_HP)) // the bounty target's hull left, percent (missions.js)
   };
 }
 function contentFill(text, extra) {
@@ -31,22 +35,29 @@ function contentFill(text, extra) {
   return String(text).replace(/\{([a-z]+)\}/g, (all, k) => CT_HAS(v, k) ? String(v[k]) : all);
 }
 
-// the closed list of conditions a reaction line or an unlock rule may carry (docs/MODDING.md 3.4); anything unreadable is false
+// the closed list of conditions a reaction line, an unlock rule or an appears rule may carry (docs/MODDING.md 3.4). Several joined by " and " must all
+// hold, and ! in front of one means not. Anything unreadable is false.
 function contentWhen(cond) {
-  try {
-    const c = String(cond); let m;
-    if (c === 'always') return true;
-    if ((m = /^mission:(none|accepted|rescued|failed)$/.exec(c))) return G.mission === m[1];
-    if ((m = /^mission-id:(.+)$/.exec(c))) return G.missionId === m[1];
-    if ((m = /^credits>=(\d+)$/.exec(c))) return G.credits >= +m[1];
-    if ((m = /^credits<(\d+)$/.exec(c))) return G.credits < +m[1];
-    if ((m = /^upgrade:(.+)$/.exec(c))) { const k = m[1], t = CT_HAS(G.upgrades, k) ? G.upgrades[k] : activeShip().parts[k]; return (t | 0) > 0; } // a slot (shields) or an old v1 key (armor)
-    if ((m = /^patrols>=(\d+)$/.exec(c))) return (G.patrolsDone | 0) >= +m[1];
-    if ((m = /^system:(.+)$/.exec(c))) return G.system === m[1];
-    if ((m = /^ship:(.+)$/.exec(c))) return activeShip().model === m[1];
-  } catch (e) { /* a condition that cannot be read is false */ }
+  try { return String(cond).split(' and ').every(part => { const no = part[0] === '!', ok = ctOne(no ? part.slice(1) : part); return no ? !ok : ok; }); } catch (e) { return false; }
+}
+function ctOne(c) {
+  let m;
+  if (c === 'always') return true;
+  if ((m = /^mission:(none|accepted|rescued|failed)$/.exec(c))) return G.mission === m[1];
+  if ((m = /^mission-id:(.+)$/.exec(c))) return G.missionId === m[1];
+  if ((m = /^credits>=(\d+)$/.exec(c))) return G.credits >= +m[1];
+  if ((m = /^credits<(\d+)$/.exec(c))) return G.credits < +m[1];
+  if ((m = /^hull<(\d+)$/.exec(c))) return G.hull * 100 < G.maxHull * +m[1];
+  if ((m = /^kills>=(\d+)$/.exec(c))) return (G.stats.drones | 0) >= +m[1];
+  if ((m = /^missions>=(\d+)$/.exec(c))) return (G.stats.missions | 0) >= +m[1];
+  if ((m = /^upgrade:([a-z0-9-]+)>=(\d)$/.exec(c))) return ctTier(m[1]) >= +m[2];
+  if ((m = /^upgrade:([a-z0-9-]+)$/.exec(c))) return ctTier(m[1]) > 0;
+  if ((m = /^patrols>=(\d+)$/.exec(c))) return (G.patrolsDone | 0) >= +m[1];
+  if ((m = /^system:(.+)$/.exec(c))) return G.system === m[1];
+  if ((m = /^ship:(.+)$/.exec(c))) return activeShip().model === m[1];
   return false;
 }
+const ctTier = k => (CT_HAS(G.upgrades, k) ? G.upgrades[k] : activeShip().parts[k]) | 0; // a slot (shields) or an old v1 key (armor)
 
 // ---- ship: the pirates ----
 // content field -> PIRATES field, where the names differ. fireRange is the pirate's shooting range (a ship's own "range" is the jump range).
@@ -76,19 +87,22 @@ const CT_MISSION = {
     const m = MISSIONS.find(x => x.id === id);
     if (data.kind !== undefined && data.kind !== id) throw new Error('kind is "' + data.kind + '" but the file is called ' + id + ', so its kind must be ' + id);
     ['title', 'where', 'reward', 'count'].forEach(k => { if (data[k] !== undefined) m[k] = data[k]; });
-    // the board text and the failure line read as plain properties, so they are live getters (a text may hold {credits} or {progress})
-    const live = (prop, text) => { if (text !== undefined) Object.defineProperty(m, prop, { get: () => contentFill(text), configurable: true, enumerable: true }); };
+    if (data.unlock !== undefined) m.unlock = () => contentWhen(data.unlock); // the board offers the call while this holds
+    // {reward} and {count} in this call's own text are this call's, whichever call is open (the board shows them all); {progress}, {credits} and the rest are live
+    const fill = text => contentFill(text, { reward: m.reward, count: m.count === undefined ? '' : m.count });
+    // the board text and the failure line read as plain properties, so they are live getters
+    const live = (prop, text) => { if (text !== undefined) Object.defineProperty(m, prop, { get: () => fill(text), configurable: true, enumerable: true }); };
     live('offer', data.offer !== undefined ? data.offer : data.description);
     live('deathMsg', data.failure);
     if (data.boardLine) {
       const line0 = ctOrig(m, 'line'), bl = data.boardLine;
-      m.line = st => { const t = st === 'rescued' ? bl.rescued : st === 'failed' ? bl.failed : bl.active; return t === undefined ? line0(st) : contentFill(t); };
+      m.line = st => { const t = st === 'rescued' ? bl.rescued : st === 'failed' ? bl.failed : bl.active; return t === undefined ? line0(st) : fill(t); };
     }
     if (data.progress !== undefined || data.progressRescued !== undefined) {
       const progress0 = ctOrig(m, 'progress');
-      m.progress = () => { const t = G.mission === 'rescued' ? data.progressRescued : data.progress; return t === undefined ? progress0() : contentFill(t); };
+      m.progress = () => { const t = G.mission === 'rescued' ? data.progressRescued : data.progress; return t === undefined ? progress0() : fill(t); };
     }
-    if (data.steps && typeof HUD_MISSIONS !== 'undefined' && HUD_MISSIONS[id]) HUD_MISSIONS[id].steps = data.steps.map(t => /\{/.test(t) ? () => contentFill(t) : t);
+    if (data.steps && typeof HUD_MISSIONS !== 'undefined' && HUD_MISSIONS[id]) HUD_MISSIONS[id].steps = data.steps.map(t => /\{/.test(t) ? () => fill(t) : t);
   }
 };
 
@@ -101,7 +115,9 @@ const CT_NPC = {
     const n = NPCS.find(x => x.id === id);
     if (data.name !== undefined && data.name !== n.name && !n.sprite) n.sprite = n.name.toLowerCase(); // the bar's art is looked up by the old name
     ['name', 'role', 'voice', 'x', 'y', 'face', 'persona'].forEach(k => { if (data[k] !== undefined) n[k] = data[k]; });
-    if (data.color !== undefined) { n.css = data.color; n.color = ctHex(data.color); }
+    if (data.color !== undefined) { n.css = data.color; n.color = ctHex(data.color); } // the name above them is the same colour unless the file has a label
+    if (data.label !== undefined) n.css = data.label;
+    if (data.appears !== undefined) n.when = () => contentWhen(data.appears); // in the bar only while this holds
     if (data.lines !== undefined) n.lines.splice(0, n.lines.length, ...data.lines);
     if (data.reactions !== undefined) { // the first row whose condition holds is what they say; none, and they say nothing
       const rows = data.reactions.map(r => ({ when: r.when, line: r.line }));
@@ -148,7 +164,91 @@ const CT_PART = {
   }
 };
 
+// ---- poi: salvage sites and random signals (src/poi.js) ----
+// a fixed site is a body of type 'poi' in a system (data_systems.js); a random signal is a row of SIGNAL_TYPES. Where a site is stays in the system's data.
+const ctSite = id => { for (const k of Object.keys(SYSTEMS)) { const b = (SYSTEMS[k].bodies || []).find(x => x.type === 'poi' && x.id === id); if (b) return b; } return null; };
+const ctSignal = id => { const m = /^signal-([a-z]+)$/.exec(id); return m ? SIGNAL_TYPES.find(t => t.kind === m[1]) || null : null; };
+const CT_POI = {
+  canAdd: false,
+  has: id => !!(ctSite(id) || ctSignal(id)),
+  get: (id, f) => {
+    const sig = ctSignal(id), p = sig || ctSite(id); if (!p) return undefined;
+    return f === 'pays' ? (sig ? p.credits : undefined) : f === 'description' ? p.note : p[f];
+  },
+  apply: (id, data) => {
+    const sig = ctSignal(id), p = sig || ctSite(id);
+    if (data.kind !== undefined && data.kind !== p.kind) throw new Error('kind is "' + data.kind + '" but ' + id + ' is a ' + p.kind);
+    if (data.name !== undefined) p.name = data.name;
+    if (data.description !== undefined) p.note = data.description;
+    if (data.hull !== undefined) p.hull = data.hull;
+    if (sig) {
+      if (data.pays !== undefined) p.credits = data.pays.slice();
+      if (data.guardChance !== undefined) p.guardChance = data.guardChance;
+      if (data.hullChance !== undefined) p.hullChance = data.hullChance;
+    } else {
+      if (data.credits !== undefined) p.credits = data.credits;
+      if (data.guard !== undefined) p.guard = data.guard;
+    }
+  }
+};
+
+// ---- station: the dock (today one: Halcyon Station) ----
+// name is the station's name; repair is the credits a point of hull at the repair bay (station.js REPAIR_PRICE) and ore the credits an ore pays at the dock
+// (asteroids.js ORE_PRICE). Both prices are the game's today, because there is one dock; a second station will carry its own. welcome, shop, services and
+// bar sections and fuel are accepted but nothing reads them yet.
+const ctStationRow = id => { for (const k of Object.keys(SYSTEMS)) { const b = (SYSTEMS[k].bodies || []).find(x => x.type === 'station' && x.id === id); if (b) return { b, sys: k }; } return null; };
+const CT_STATION = {
+  canAdd: false,
+  has: id => !!ctStationRow(id),
+  get: (id, f) => { const r = ctStationRow(id); return !r ? undefined : f === 'name' ? r.b.name : f === 'system' ? r.sys : f === 'repair' ? REPAIR_PRICE : f === 'ore' ? ORE_PRICE : undefined; },
+  apply: (id, data) => {
+    const r = ctStationRow(id);
+    if (data.system !== undefined && data.system !== r.sys) throw new Error('system is "' + data.system + '" but ' + id + ' is in ' + r.sys);
+    if (data.name !== undefined) r.b.name = data.name;
+    if (data.repair !== undefined) REPAIR_PRICE = data.repair;
+    if (data.ore !== undefined) ORE_PRICE = data.ore;
+  }
+};
+
+// ---- text: the words the interface says (content/text/ui.md) ----
+// One table of key | text. A key is a string the game reads: help.<scene>.<line> (the H screen, src/meta.js HELP), tips.<scene> (src/map.js SCENE_TIPS) or
+// toast.<name> (the lines that pop up, UI_TEXT below, read through uiText()). Help lines and tips are plain text; a toast may use {placeholders}.
+// Copy text/ui.md to another file in text/ and change the text column to translate: a key the game does not read refuses the whole file.
+const UI_TEXT = {
+  'toast.docked': 'Docked.', 'toast.delivered': 'Colonist delivered safely. +{reward} cr', 'toast.accepted': 'Mission accepted. Board your ship in the hangar.',
+  'toast.dropped': 'Mission dropped. The board has other calls.',
+  'toast.patrol-down': 'Wanted pirate down  {progress} of {count}', 'toast.patrol-done': 'Patrol complete. All wanted pirates destroyed.',
+  'toast.mule-leaving': 'The MULE is leaving the hangar. Stay close to her.', 'toast.mule-left': 'You left the MULE behind. Mission failed.',
+  'toast.mule-lost': 'The MULE was destroyed. Mission failed.', 'toast.mule-arrived': 'The MULE made the Perseus gate.',
+  'toast.reaver-intro': 'The Reaver is south-west of Kepler-4b. Watch for the flash before it charges.', 'toast.reaver-wing': 'The Reaver calls in its wing.',
+  'toast.reaver-burning': 'The Reaver is burning. It fights harder.', 'toast.reaver-dead': 'The Reaver is wreckage. Bounty paid.',
+  'toast.signal-new': 'New signal on the radar: {name}', 'toast.signal-found': 'Signal found: {name}', 'toast.signal-lost': 'Signal lost: {name}'
+};
+function uiText(key, vars) { return contentFill(CT_HAS(UI_TEXT, key) ? UI_TEXT[key] : key, vars); }
+function ctTextKeys() { // every string the game reads: key -> { get, set }
+  const k = {};
+  Object.keys(HELP).forEach(sc => HELP[sc].forEach((x, i) => { k['help.' + sc.toLowerCase() + '.' + (i + 1)] = { get: () => HELP[sc][i], set: v => { HELP[sc][i] = v; } }; }));
+  Object.keys(SCENE_TIPS).forEach(sc => { k['tips.' + sc.toLowerCase()] = { get: () => SCENE_TIPS[sc], set: v => { SCENE_TIPS[sc] = v; } }; });
+  Object.keys(UI_TEXT).forEach(key => { k[key] = { get: () => UI_TEXT[key], set: v => { UI_TEXT[key] = v; } }; });
+  return k;
+}
+const CT_TEXT = {
+  canAdd: true, // any file in text/ is a set of strings (ui.md, or a translation)
+  has: () => true,
+  get: () => undefined,
+  apply: (id, data) => {
+    const keys = ctTextKeys(), rows = data.strings || [];
+    rows.forEach(r => { // all or nothing: one key the game does not read refuses the file, so a typo is seen
+      if (!CT_HAS(keys, r.key)) { const sg = typeof ContentLib !== 'undefined' ? ContentLib.suggest(r.key, Object.keys(keys)) : ''; throw new Error('the key "' + r.key + '" is not a string the game reads' + (sg ? '. Did you mean "' + sg + '"?' : '')); }
+    });
+    rows.forEach(r => keys[r.key].set(r.text));
+  }
+};
+
 CONTENT_TABLES.ship = CT_SHIP;
 CONTENT_TABLES.mission = CT_MISSION;
 CONTENT_TABLES.npc = CT_NPC;
 CONTENT_TABLES.part = CT_PART;
+CONTENT_TABLES.poi = CT_POI;
+CONTENT_TABLES.text = CT_TEXT;
+CONTENT_TABLES.station = CT_STATION;

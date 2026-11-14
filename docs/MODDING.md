@@ -93,11 +93,11 @@ Under a `## Heading` the body is one of three shapes, chosen by the schema:
 The text before the first `##` is the file's **description** (shown in the hangar, the shop, the mission board, depending on the type).
 
 ### 3.3 Placeholders
-Text may use `{name}` placeholders from a short list per type, filled by the game: `{reward}`, `{count}`, `{progress}`, `{station}`, `{system}`, `{credits}`, `{ship}`. An unknown placeholder is an error ("{rewrd} is not a known placeholder here; did you mean {reward}?"). There are no expressions, no conditions and no code in text.
+Text may use `{name}` placeholders from a short list per type, filled by the game: `{reward}`, `{count}`, `{progress}`, `{station}`, `{system}`, `{credits}`, `{ship}`, `{kills}` (pirates you have destroyed) and, in a mission, `{hull}` (the percent of hull the bounty target has left). In a mission's own text `{reward}` and `{count}` are that call's, whichever call is open. An unknown placeholder is an error ("{rewrd} is not a known placeholder here; did you mean {reward}?"). There are no expressions, no conditions and no code in text.
 
 ### 3.4 Conditions (the whole list)
 A reaction line or an unlock rule may carry a `when` from a closed list. A mod cannot invent new ones; a new one is a code contribution.
-`always`, `mission:none`, `mission:accepted`, `mission:rescued`, `mission:failed`, `mission-id:ID`, `credits>=N`, `credits<N`, `upgrade:SLOT`, `patrols>=N`, `system:ID`, `ship:ID` (ID, SLOT and N are what you fill in).
+`always`, `mission:none`, `mission:accepted`, `mission:rescued`, `mission:failed`, `mission-id:ID`, `credits>=N`, `credits<N`, `upgrade:SLOT` (anything fitted in that slot), `upgrade:SLOT>=N` (tier N or better), `hull<N` (less than N percent of the hull left), `kills>=N`, `missions>=N` (calls you have finished), `patrols>=N`, `system:ID`, `ship:ID` (ID, SLOT and N are what you fill in). Put `!` in front of one to mean not, and join up to four with ` and ` (all must hold): `credits>=800 and !upgrade:engine`. In a table the first row that holds is what is said.
 
 ## 4. The `file://` problem, and what we chose
 
@@ -182,6 +182,8 @@ One file a tier, named `<slot>-<tier>` (`shields-1`, `engine-3`; the name says w
 ### 6.4 `station`
 `name*`, `system*`, `accent` (colour), `fuel` (price per unit), `repair`, `ore` (buy price). Sections: `## Welcome` (text), `## Shop` (table: `item | price`), `## Services` (list), `## Bar` (list, the generic lines when no NPC is nearby).
 
+Read today (card `m5`): `name`, `repair` (credits a point of hull at the repair bay) and `ore` (credits an ore pays when you dock), for the one dock the game has, `halcyon-station`; `system` must be the system the code puts it in. There is one dock, so its two prices are the game's prices. `fuel` and the four sections are accepted and checked, but nothing in the game reads them yet: fuel comes with the fuel card, and the bar's generic lines and a welcome text need a place on screen first. A reference to a system or station the code defines (`system: halcyon`) needs no file of its own: the build reads the ids from `src/data_systems.js`.
+
 ### 6.5 `mission`
 `kind*` (from the closed list), `title*`, `where`, `reward*`, `count`, `unlock` (a condition), `system`. Sections:
 - `## Offer` text shown on the board.
@@ -194,13 +196,13 @@ One file a tier, named `<slot>-<tier>` (`shields-1`, `engine-3`; the name says w
 This is exactly the shape of a row of `MISSIONS` plus its `HUD_MISSIONS` entry today.
 
 ### 6.6 `npc`
-`name*`, `role`, `color`, `station`, `x`, `y`, `face`, `voice` (a Deepgram Aura voice name, optional). Sections: `## Lines` (list), `## Reactions` (table: `when | line`), `## Persona` (text, at most 600 characters, for chat).
+`name*`, `role`, `color`, `label` (the colour of the name above them, when it is not `color`), `appears` (a condition: they are in the bar only while it holds; IDA has `missions>=1`), `station`, `x`, `y`, `face`, `voice` (a Deepgram Aura voice name, optional). Sections: `## Lines` (list), `## Reactions` (table: `when | line`), `## Persona` (text, at most 600 characters, for chat).
 
 ### 6.7 `voice`
 `event*` (from the list in `docs/VOICE.md` once it lands). Section `## Lines`: a list; the ship picks one at random and never repeats the last.
 
 ### 6.8 `text`
-A table `key | text` of UI strings (`HELP`, scene tips, toasts), keys from an allow-list. This is also the way to translate: copy `text/ui.md` to a new file and change the text column.
+A table `key | text` of the words the interface says. The keys are the allow-list, and `text/ui.md` lists all of them: `help.<scene>.<line>` (the H screen, one key a line: `help.space.5`), `tips.<scene>` (the tip under it) and `toast.<name>` (the lines that pop up: docking, the call outcomes, signals). A toast may use `{placeholders}` (`{reward}`, `{progress}`, `{count}`, `{name}`); help lines and tips are plain text. This is also the way to translate: copy `text/ui.md` to a new file in `text/` and change the text column. A key the game does not read refuses that whole file, with a hint ("Did you mean ..."), so a typo is seen. More strings join as code sites move to `uiText(key)`.
 
 ### 6.9 Examples
 
@@ -257,6 +259,9 @@ station: halcyon-station
 Warm, dry, sees everything from behind the bar. Knows every pilot's business and keeps most of it to herself.
 ```
 
+### 6.10 `poi`
+Salvage sites and random signals (`src/poi.js`). A file is named for the thing it describes: a fixed site of a star system (`wreck-nw`, `beacon-e`) or a kind of random signal (`signal-beacon`, `signal-wreck`). `kind*` (wreck or beacon; it must match the site) and `name*`; the text under the front matter is the line shown when you salvage it. A fixed site has `credits` (what it pays), `hull` (hull it repairs) and `guard` (pirates that guard it); where it is stays in the system's data. A random signal has `pays` (`[min, max]`), `guardChance`, `hullChance` and `hull`. A file for a site the game does not have is refused.
+
 ## 7. Open source basics
 
 Nothing here publishes anything. **Troy decides when and where the repo goes public**; this makes it ready to.
@@ -283,12 +288,14 @@ Voice (`space-game-voice`) and chat (`space-game-npc-chat`) use the player's own
 
 ## 8. The proof: what moves to markdown first
 
-Nothing about play changes. Card `m4-proof` moved this set, and `tests/contentproof.mjs` (smoke step 4x) guards it:
+Nothing about play changes. Card `m4-proof` moved this set, and card `m5-more-types` the rest (below the list), and `tests/contentproof.mjs` (smoke step 4x) guards it:
 - **Two ships:** `raider` and `drone` (the pirate stat blocks of `PIRATES` in `enemies.js`; `gunship` follows with the rest). `name`, `role`, `side` and the description are read and checked, but nothing in the game shows them yet. When `space-game-u-a3-ship-models` merged, `wren` and `kite` did not move with them: a player ship file is refused until its adapter lands (card `m5`).
 - **One mission:** `rescue` (title, place, reward, offer, the three board lines, both progress texts, steps, failure line). The station pays what the file says.
 - **One NPC:** JUNO (look, place, voice, lines, reactions, persona). Her file leaves out `station:` because there is no `stations/halcyon-station.md` yet.
 - **Nine part tiers:** shields, weapons and engine, tiers 1 to 3 (what `armor`, `rapid` and `booster` became in `space-game-u-d1-parts`). The adapter reads all five slots; tank and cargo files join with `m5`.
 - **One system:** `halcyon`, once `space-game-u-a1-systems-data` merges (the table must exist first). Not part of `m4`.
+
+Card `m5-more-types` added, one type a commit: the other three calls (`escort`, `patrol`, `bounty`, with `{hull}` and `unlock`), the other five characters (with the conditions they needed), the salvage sites and random signals (`poi/`), the interface words (`text/ui.md`: help screens, scene tips and 17 toasts, through `uiText(key)`) and the one dock (`stations/halcyon-station.md`: name, repair and ore prices). Still in code, on purpose: player ships (`wren` and the other five), `gunship`, system files, a station's welcome, shop, services and bar sections, voice lines.
 
 How it works: `src/contenttables.js` registers one adapter per type in `CONTENT_TABLES` (`src/boot.js`); `contentApply()` hands it each valid file and it changes the in-code row **in place**, only the fields the file sets. A file that disagrees with the code (a part in the wrong slot, a call of another `kind`, a pirate that says `side: player`) is refused with a message and the row stays as it was. A file with an id the code has no row for is refused too ("cannot add new ones"); adding rows is card `m5`.
 
