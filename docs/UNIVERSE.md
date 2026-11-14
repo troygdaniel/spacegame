@@ -66,7 +66,7 @@ Systems become big: 36 000 px square by default (48 000 for empty wilds). Halcyo
 | What a jump costs | Halcyon to Kestrel (6.3 ly) is 6.3 units for the starter = 50 cr, about one rescue payout in ten |
 | Range of one tank | starter 40 units = about 6 jumps; explorer 90 units at 0.7 per ly = 128 ly |
 
-Why it is a real decision and not a tax: some systems have no pump (the Hollow, Lethe), so you plan the way out as well as the way in; heavy ships burn twice as much per ly; the nest charges double; a long hop can need more fuel than the cheap tank holds. If fuel runs out in a system with no pump you are not lost: a **fuel ranger** can be called (45 s, 10 units, three times the price, never more than all your credits). No soft locks.
+Why it is a real decision and not a tax: some systems have no pump (the Hollow, Lethe), so you plan the way out as well as the way in; heavy ships burn twice as much per ly; the nest charges double; a long hop can need more fuel than the cheap tank holds. If fuel runs out in a system with no pump you are not lost: a **fuel ranger** can be called (45 s, 10 units or the cheapest jump out of that system for your ship when that costs more, which a heavy ship needs; three times the price, never more than all your credits). No soft locks.
 
 The first two jumps of a new game cannot be interdicted, so the first look at the tunnel is always a calm one.
 
@@ -123,6 +123,8 @@ Every cruising second at danger d rolls `0.004 x d` (a 6.5 s leg in a danger-3 s
 
 ### 5.2 Pull-out in hyperspace
 Each jump rolls `0.02 + 0.01 x max(danger of the two systems)` (2 to 7%). When it fires the tunnel flickers, an alarm sounds, and the rings collapse at 40 to 70% of the way. You drop into **deep space**: the `Space` scene with an empty system definition (no bodies, a dark tint, no docking) and three to five pirates sized to the danger. Win and the tunnel resumes for the time that was left; the fuel was spent when you jumped. Die and the usual insurance flow runs: you wake at the last station you docked at, with the fee. Nests have pirates waiting at the entry point as well.
+
+*As built (card e2, `src/pullout.js`):* the roll is taken the moment the charge completes and rides with the tunnel (`pull: { at, danger }`); `G.deep` makes the current system an empty 16000 px "Deep space" (never saved: a reload docks you at the last station); the pirates number 3 at danger 1 to 2, 4 at 3 to 4, 5 at 5, all engaged at once; four seconds after the last one dies the tunnel starts again for the time that was left, from the same percentage; a death sets `G.system` to the system of `G.lastDock`. A nest's waiting pirates are 3, or a system's own `entry: n`. `index.html#pullout` plays the whole thing.
 
 ### 5.3 Pirates in a bigger world
 Spawn tables become per system: `maxActive` (3 at danger 1 to 12 at danger 5), spawn interval, weights of raider, drone and gunship (`pirateTypeFor` takes the system's weights; the distance rule stays near stations). The Reaver lives at the Roost. Police exist only where traffic is 2 or more.

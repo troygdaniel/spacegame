@@ -18,7 +18,8 @@ const HYPER = {
   gateEvery: 0.3, gateLife: 1.3,                   // a gate every 0.3 s; each crosses the screen in 1.3 s
   shake: 0.0015, ramp: 1.2, tail: 0.9,             // camera shake; seconds to build speed at the start and to slow down at the end
   fuelPerLy: 1, tank: 40,                          // demo numbers only: the real ones come with the jump card (B1, B4)
-  demo: { dest: 'KESTREL OUTPOST', ly: 6.3 }
+  demo: { dest: 'KESTREL OUTPOST', ly: 6.3 },
+  pull: { flicker: 1.1, collapse: 0.9, red: 0xff3b3b } // a pull-out (src/pullout.js): seconds of flicker and alarm, then of the rings collapsing; the alarm colour
 };
 const HYPER_QUIET = /HeadlessChrome/.test(navigator.userAgent); // no sound in headless runs
 
@@ -91,6 +92,8 @@ class Hyper extends Phaser.Scene {
     this.fuel = Math.min(d.fuel == null ? Math.round(this.ly * HYPER.fuelPerLy) : d.fuel, this.tank);
     this.tint = hyperTint(this.ly);
     this.t = 0; this.k = 0; this.gates = []; this.gateAcc = -0.3; this.arrived = false; this.leaving = false;
+    this.pull = d.pull || null; this.frac0 = d.frac0 || 0; // a pull-out to come at this fraction of the tunnel; or how far along a resumed tunnel starts (src/pullout.js)
+    this.pulled = false; this.pullT = 0; this.coll = 0;
   }
 
   create() {
@@ -137,10 +140,40 @@ class Hyper extends Phaser.Scene {
     const t = this.t, dur = this.dur;
     // k: how fast the tunnel runs, 0..1: builds up over the first 1.2 s, slows over the last 0.9 s
     const up = Phaser.Math.Clamp(t / HYPER.ramp, 0, 1), down = Phaser.Math.Clamp((dur - t) / HYPER.tail, 0, 1);
-    const ease = Phaser.Math.Easing.Sine.InOut, k = this.k = ease(up) * ease(down), v = 0.12 + 0.88 * k;
+    const ease = Phaser.Math.Easing.Sine.InOut;
+    let k = ease(up) * ease(down);
+    if (this.pull && !this.pulled && t / dur >= this.pull.at) this.pullBegin();
+    if (this.pulled) k = this.pullFrame(dt, k);
+    this.k = k; const v = 0.12 + 0.88 * k;
     this.drawTunnel(t, dt, k, v);
     this.drawHud(t);
-    if (t >= dur && !this.arrived) this.arrive();
+    if (t >= dur && !this.arrived && !this.pulled) this.arrive();
+  }
+
+  // ---- the pull-out (src/pullout.js; docs/UNIVERSE.md 5.2): the tunnel flickers, an alarm sounds, the rings collapse, and deep space takes over ----
+  pullBegin() {
+    this.pulled = true; this.pullT = 0;
+    this.tint = hyperMix(this.tint, HYPER.pull.red, 0.85); // every colour drawn from here on is the alarm's
+    [this.far, this.halo, this.flare].forEach(im => im.setTint(HYPER.pull.red));
+    this.cameras.main.shake(HYPER.pull.flicker * 1000, 0.01, true);
+    if (!HYPER_QUIET) sfx('interdict'); // the alarm (src/audio.js sound pass)
+  }
+  // one frame of it: returns the tunnel speed k to draw with. Flicker first (the speed stutters), then the collapse (it dies away and the gates shrink)
+  pullFrame(dt, k) {
+    const P = HYPER.pull;
+    this.pullT += dt;
+    if (this.pullT < P.flicker) return k * (Math.sin(this.pullT * 53) * Math.sin(this.pullT * 29 + 1) > -0.15 ? 1 : 0.15);
+    if (!this.pullEnding) { // the rings begin to collapse: the hum goes with them
+      this.pullEnding = true; hyperHumStop(this.hum); this.hum = null;
+    }
+    this.coll = Phaser.Math.Clamp((this.pullT - P.flicker) / P.collapse, 0, 1);
+    if (this.coll >= 1 && !this.leaving) this.pullGo();
+    return k * (1 - Phaser.Math.Easing.Cubic.Out(this.coll));
+  }
+  // the hand-over: a red flash, then the Space scene with the pirates (it reads the record pullRecord makes)
+  pullGo() {
+    this.cameras.main.flash(500, 255, 90, 90);
+    go(this, 'Space', { from: 'pullout', deep: pullRecord(this.d, this.pull, this.dur) });
   }
 
   drawTunnel(t, dt, k, v) {
@@ -182,9 +215,10 @@ class Hyper extends Phaser.Scene {
     }
     this.gates.forEach(u => {
       const x = W + 40 - (W + 120) * Math.pow(u, 1.6); // accelerates as it comes near
-      const ry = 60 + 380 * Math.pow(u, 1.3), rx = 5 + 15 * u;
+      const sh = 1 - 0.92 * this.coll; // a pull-out: the rings shrink to nothing
+      const ry = (60 + 380 * Math.pow(u, 1.3)) * sh, rx = (5 + 15 * u) * sh;
       const near = Math.exp(-Math.pow((x - this.cx) / 230, 2));
-      const a = Math.min(1, u / 0.08, (1 - u) / 0.1) * (0.2 + 0.8 * near);
+      const a = Math.min(1, u / 0.08, (1 - u) / 0.1) * (0.2 + 0.8 * near) * (1 - this.coll);
       const pts = [], poly = [], col = hyperMix(tint, 0xffffff, 0.3 + 0.55 * near);
       for (let i = 0; i < 36; i++) { const px = x + Math.cos(TAU * i / 36) * rx, py = cy + Math.sin(TAU * i / 36) * ry; pts.push([px, py]); poly.push({ x: px, y: py }); }
       g.fillStyle(col, 0.06 * near * a); g.fillPoints(poly, true);
@@ -208,7 +242,7 @@ class Hyper extends Phaser.Scene {
   }
 
   drawHud(t) {
-    const g = this.hg, h = this.h, left = Math.max(0, this.dur - t), frac = Phaser.Math.Clamp(t / this.dur, 0, 1);
+    const g = this.hg, h = this.h, left = Math.max(0, this.dur - t), frac = Phaser.Math.Clamp(this.frac0 + (1 - this.frac0) * t / this.dur, 0, 1); // a resumed tunnel (after a pull-out) starts where it was cut
     const tag = { size: HT.tag, color: HUD_DIM, spacing: 3 };
     g.clear();
 
@@ -234,7 +268,8 @@ class Hyper extends Phaser.Scene {
     hudBar(g, bx + 326, by + 38, 150, 12, (this.tank - this.fuel) / this.tank, CYAN, 20);
     hudPut(h, 'tank', bx + 326, by + 64, 'TANK ' + (this.tank - this.fuel) + ' / ' + this.tank, { size: HT.tag, color: HUD_DIM, spacing: 2 });
 
-    if (this.d.demo) hudPut(h, 'hint', 24, H - 24, 'TEST HASH #hyper  -  NO GAME EFFECT  -  ESC LEAVE  -  R REPLAY', { size: HT.tag, color: HUD_DIM, spacing: 2 });
+    if (this.pulled) hudPut(h, 'alarm', W / 2, 150, 'DRIVE FAULT  -  PULLED OUT OF HYPERSPACE', { size: 20, bold: true, color: '#ff6b6b', spacing: 4, ox: 0.5, glow: 8, alpha: Math.floor(this.pullT * 6) % 2 === 0 ? 1 : 0.15 }); // blinks at 3 Hz while the tunnel collapses
+    if (this.d.demo) hudPut(h, 'hint', 24, H - 24, (this.d.pull ? 'TEST HASH #pullout' : 'TEST HASH #hyper') + '  -  NO GAME EFFECT  -  ESC LEAVE  -  R REPLAY', { size: HT.tag, color: HUD_DIM, spacing: 2 });
   }
 
   // the end: a white flash, then back where the demo started (a real jump will hand over to the arrival scene)

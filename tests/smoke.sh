@@ -35,6 +35,10 @@
 #   4ze. tests/sfxlevels.mjs: the sound pass: each new effect rendered offline and measured (above the wind, under a laser shot, no clipping), the cruise rumble, mute and volume 0, and the real events calling the right sounds (cruise, shields, fuel, typing, Pause, Journal)
 #   4zf. tests/jump.mjs: the jump: G opens the galaxy map, Enter charges 4 s, Esc/S/a hit cancel, locked near a mass or a hostile, the fuel burns at the end, the Hyper tunnel, arrival in an empty Kestrel with 3 s of calm, the fuel ranger (docs/UNIVERSE.md 2.3)
 #   4zg. tests/worldat.mjs: worldAt(systemId) gives the code's Halcyon row and the other seven from their files; Halcyon built from its files alone equals the code's row; every field of the eight systems and six stations has a home; a pack of wrong files never blanks the game
+#   4zh. tests/pullout.mjs: the pull-out: the roll (2% + 1% x the higher danger, at 40 to 70% of the tunnel), the flicker and alarm and collapse, deep space (empty, dark, 3 to 5 pirates by danger, no dock, cruise or jump), clear them and the tunnel resumes for the time left, dying wakes you at the last dock, a nest's entry pirates, the #pullout demo (docs/UNIVERSE.md 5.2)
+#   4zq. tests/systems.mjs: the eight star systems (docs/UNIVERSE.md 4.2): the design table, which ship reaches which system, the layouts, every dock, every pirate table; the shipped files equal the code's rows; each system flown 4 s, each station docked at and launched from
+#   4zo. tests/perfart.mjs: the world art is pixel for pixel what it was before the speed-up (the noise against its first version, 47 textures against tests/fixtures/arthash.json)
+#   4zp. tests/perfleak.mjs: six trips round Station, Ship, Space, Surface leave no physics worlds, sprites or bodies behind (the Space die() wrapper used to stack at every launch)
 #   4u. tests/parts.mjs: the five ship parts (shields, weapons, engine, tank, cargo): tables, every effect, shields in flight, shot rate and damage, the shop's five cards with fit and stock rules, the save
 #   4w. tests/fleet.mjs: buy, sell, switch, rename and transfer ships, the yard and the prices, per-ship state through a save, and dying (docs/UNIVERSE.md 6.3)
 #   4zb. tests/modsdoc.mjs: docs/MODS.md, the modder guide, stays true: its field tables are written from the schema, its example files are valid, the ids and messages it names are in the code (no browser)
@@ -42,6 +46,7 @@
 #   4y. tools/economy-sim.mjs check: the economy simulator still loads the real game data and every code line it pins (repair, insurance, MULE speed...) is still there (docs/ECONOMY.md; no browser)
 #   4z. tests/hangar.mjs: the hangar terminal in the Ship bay: fleet, yard and controls tabs, buy and sell with a second press, board, move, rename, what the stage shows
 #   4zc. tests/galaxymap.mjs: the galaxy map overlay (opens only from #galaxy): the eight systems, ranges, the card, out of range and short of fuel, keys and clicks, onJump
+#   4zn. tests/settings.mjs: the Settings screen: sound, keys (paste, last four, Test and Forget with a mocked fetch), controls from the one table, content, reset; V C P S on the title; the Pause row
 #       header and body shape; the key is only ever in its header; 401 switches chat off; 429 waits; the setup panel saves a key
 #      their failure paths, with the game clock stepped by hand
 # Only one headless Chrome runs at a time on this Mac, whatever the worktree: cdp.mjs takes a lock in tests/lock.mjs, so a second
@@ -152,11 +157,19 @@ echo "== 4zm. mod packs and the Mods screen (tests/mods.mjs)"
 if node tests/mods.mjs; then :; else fail=1; fi
 echo "== 4zf. the jump: G, the charge, the tunnel, arrival, the fuel ranger (tests/jump.mjs)"
 if node tests/jump.mjs; then :; else fail=1; fi
+echo "== 4zh. the pull-out: the roll, the collapse, deep space, the way back into the tunnel, dying, a nest's entry pirates (tests/pullout.mjs)"
+if node tests/pullout.mjs; then :; else fail=1; fi
 
 echo "== 4zg. worldAt: the eight systems and six stations in one place; Halcyon from its files is the code's row (tests/worldat.mjs)"
 if node tests/worldat.mjs; then :; else fail=1; fi
+echo "== 4zn. the Settings screen: sound, keys with a mocked fetch, controls, content, reset (tests/settings.mjs)"
+if node tests/settings.mjs; then :; else fail=1; fi
+echo "== 4zo. the world art is unchanged by the speed-up: noise numbers and the pixels of 47 textures (tests/perfart.mjs)"
+if node tests/perfart.mjs; then :; else fail=1; fi
+echo "== 4zp. six trips round the scenes leave nothing behind: physics worlds, sprites, bodies, textures (tests/perfleak.mjs)"
+if node tests/perfleak.mjs; then :; else fail=1; fi
 
-echo "== 4zh. the eight star systems: the design table, who reaches what, the layouts, every dock; each one flown, drawn and docked at (tests/systems.mjs)"
+echo "== 4zq. the eight star systems: the design table, who reaches what, the layouts, every dock; each one flown, drawn and docked at (tests/systems.mjs)"
 if node tests/systems.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"

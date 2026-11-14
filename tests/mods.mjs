@@ -110,9 +110,9 @@ console.log('B1. the real game: off by default, the screen, the picker');
     w = await world(t);
     check('after a restart the pack is laid over the core: Rescue pays 650 and JUNO says the pack\'s line', w.packs.join() === 'example+2' && w.rescue === 650 && /^This line comes from/.test(w.juno), JSON.stringify(w));
     check('the Title says MODDED, with no problems', w.modded && w.errors.length === 0 && await t.ev('!!contentTitleUi && !!game.scene.getScene("Title").contentUi.tag'));
-    await keyEv(t, 'KeyP'); await sleep(400);
-    check('the content panel says which packs are on', await t.ev("(() => { const ui = game.scene.getScene('Title').contentUi; return ui.isOpen() && ui.panel.box.list.some(o => o.text && /packs on: example/.test(o.text)); })()"));
-    await keyEv(t, 'KeyP'); await sleep(300);
+    await keyEv(t, 'KeyP'); await sleep(500);
+    check('the Content section of Settings says which packs are on', await t.ev("(() => { if (!game.scene.isActive('Settings')) return false; const pt = []; const walk = o => { if (o.type === 'Text') pt.push(o.text); if (o.list) o.list.forEach(walk); }; game.scene.getScene('Settings').children.list.forEach(walk); return pt.some(x => /packs on: example/.test(x)); })()")); // P opens Settings at Content (src/settings.js); Esc closes it
+    await keyEv(t, 'Escape'); await sleep(400);
 
     // turn it off again in the screen and restart: back to the shipped game
     await keyEv(t, 'KeyO'); await sleep(500); await keyEv(t, 'Digit1'); await sleep(300); await keyEv(t, 'Escape'); await sleep(400);

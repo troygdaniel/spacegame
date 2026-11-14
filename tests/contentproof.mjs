@@ -115,7 +115,7 @@ const EDITS = [
     ['bring them back alive.', 'bring them back alive. Done: {progress}.'],
     ['- Escort them to your ship\n- Dock at Halcyon Station', '- Dock and collect {reward} cr'],
     ['Mission failed.', 'Mission lost.']]],
-  ['text/ui.md', [['| help.station.1 | W A S D / arrows   walk |', '| help.station.1 | W A S D / arrows   move |'], ['| toast.docked | Docked. |', '| toast.docked | Docked. Welcome back. |'],
+  ['text/ui.md', [['| help.station.1 | W A S D   walk (the arrow keys work too) |', '| help.station.1 | W A S D / arrows   move |'], ['| toast.docked | Docked. |', '| toast.docked | Docked. Welcome back. |'],
     ['| toast.delivered | Colonist delivered safely. +{reward} cr |', '| toast.delivered | Colonist delivered safely. +{reward} cr and thanks |'], ['| tips.ship | Look your ship over,', '| tips.ship | Check your ship over,']]],
   ['stations/halcyon-station.md', [['name: Halcyon Station', 'name: Halcyon Hub'], ['repair: 0.5', 'repair: 0.75'], ['ore: 20', 'ore: 25']]],
   ['poi/wreck-nw.md', [['credits: 120', 'credits: 130'], ['Strongbox recovered.', 'Strongbox pried open.']]],

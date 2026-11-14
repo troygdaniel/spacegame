@@ -14,19 +14,29 @@ const waSmooth = (a, b, x) => { const t = waClamp((x - a) / (b - a)); return t *
 const waMix = (c1, c2, t) => [waLerp(c1[0], c2[0], t), waLerp(c1[1], c2[1], t), waLerp(c1[2], c2[2], t)];
 
 // value noise that repeats every `period` lattice cells; fbm stacks octaves (u, v in 0..1, seamless across a tile)
+// The nebula, the ground, the terrain and every planet call this a million times at boot, so the octaves run in one loop over plain
+// arrays (no closure per octave). It must give exactly the same numbers as the first version: the lattice is filled in the same order
+// from the same generator, every float operation is the same in the same order, and 1 / 2^o is exact, so x * (1 / 2^o) equals x / 2^o.
+// (tests/perfart.mjs checks the pixels of every texture against hashes taken before the change.)
 function waFbm(rnd, base, octaves) {
-  const ns = [];
+  const gs = [], Ps = [], scale = [], inv = [];
   for (let o = 0; o < octaves; o++) {
     const P = base << o, g = new Float32Array(P * P); for (let i = 0; i < g.length; i++) g[i] = rnd();
-    ns.push((x, y) => {
-      const xi = Math.floor(x), yi = Math.floor(y); let fx = x - xi, fy = y - yi; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
-      const x0 = ((xi % P) + P) % P, y0 = ((yi % P) + P) % P, x1 = (x0 + 1) % P, y1 = (y0 + 1) % P;
-      const a = g[y0 * P + x0], b = g[y0 * P + x1], c = g[y1 * P + x0], d = g[y1 * P + x1];
-      return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
-    });
+    gs.push(g); Ps.push(P); scale.push(base << o); inv.push(1 / (1 << o));
   }
   let norm = 0; for (let o = 0; o < octaves; o++) norm += 1 / (1 << o);
-  return (u, v) => { let s = 0; for (let o = 0; o < octaves; o++) s += ns[o](u * (base << o), v * (base << o)) / (1 << o); return s / norm; };
+  return (u, v) => {
+    let s = 0;
+    for (let o = 0; o < octaves; o++) {
+      const P = Ps[o], g = gs[o], k = scale[o], x = u * k, y = v * k;
+      const xi = Math.floor(x), yi = Math.floor(y); let fx = x - xi, fy = y - yi; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+      let x0 = xi % P, y0 = yi % P; if (x0 < 0) x0 += P; if (y0 < 0) y0 += P; // negative inputs wrap too (a modulo that is never negative)
+      const x1 = x0 + 1 === P ? 0 : x0 + 1, y1 = y0 + 1 === P ? 0 : y0 + 1, r0 = y0 * P, r1 = y1 * P;
+      const a = g[r0 + x0], b = g[r0 + x1], c = g[r1 + x0], d = g[r1 + x1];
+      s += (a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy) * inv[o];
+    }
+    return s / norm;
+  };
 }
 
 function waCanvas(sc, key, w, h, fn) {
@@ -182,12 +192,14 @@ function waSpaceArt(sc) {
 // Backdrop for the Space scene: parallax star layers and distant bodies. spaceBackdropTick(s) runs every frame.
 // A system with a `star` ({ type, x, y }, src/data_systems.js) takes its sky from it: the star layers get the star type's tint (STAR_TYPES) and the sun in the sky is that
 // type's star (its size), placed by the system's seed so no two skies are alike; its far planets are the bodies you can fly to, so there is no giant or moon. Halcyon has no
-// `star` row, so its sky (the orange sun, the giant, the moon) is exactly what it always was.
-function spaceBackdrop(s) {
+// `star` row, so its sky (the orange sun, the giant, the moon) is exactly what it always was. deep: the empty space of a pull-out (src/pullout.js): the stars and nothing else.
+function spaceBackdrop(s, deep) {
   const sys = sysDef(), star = sys.star && STAR_TYPES[sys.star.type] ? sys.star.type : null; // src/universe.js
   s.cameras.main.setBackgroundColor(0x02050e);
   const layer = (key, depth, f, a) => { const t = s.add.tileSprite(0, 0, W, H, key).setOrigin(0).setScrollFactor(0).setDepth(depth).setAlpha(a); t.par = f; if (star) t.setTint(STAR_TYPES[star].tint); return t; };
   s.bgLayers = [layer('stars1', -10, 0.2, 1), layer('stars2', -9, 0.45, 1), layer('stars3', -8, 0.85, 1)]; // three full-screen layers: each one costs fill rate
+  s.tweens.add({ targets: s.bgLayers[2], alpha: 0.78, duration: 3400, yoyo: true, repeat: -1, ease: 'Sine.inOut' }); // the bright stars breathe a little
+  if (deep) return;
   // distant bodies drift slower than the world: an image with scroll factor f sits at (anchor + f * reference scroll), so each
   // one is placed where it should appear when you launch from the station
   const REF = { x: 3360, y: 3640 };
@@ -199,7 +211,6 @@ function spaceBackdrop(s) {
     far('giant', 1010, 520, 0.07, -6, 0.62);
     far('moon', 560, 90, 0.11, -5.5, 0.42, 0.7); // dim and small so it never reads as a rock to shoot
   }
-  s.tweens.add({ targets: s.bgLayers[2], alpha: 0.78, duration: 3400, yoyo: true, repeat: -1, ease: 'Sine.inOut' }); // the bright stars breathe a little
 }
 function spaceBackdropTick(s) {
   const c = s.cameras.main;
@@ -260,8 +271,10 @@ const WA_PLANETS = {
     waHalo(ctx, C, R, '190,200,215', 0.12, 40);
     waSphere(ctx, C, C, R, { L: WA_LIGHT, amb: 0.06, rim: [170, 180, 200], rimA: 0.2 }, (lon, lat, dx, dy, nz, diff, c) => {
       let v = 0.52 + 0.7 * (alb(lon, lat) - 0.5) + 0.22 * (ridge(lon, lat) - 0.5);
-      for (const [x, y, r, young] of cr) {
-        const d = Math.hypot(dx - x * 0.85, dy - y * 0.85) / r;
+      for (let k = 0; k < cr.length; k++) {
+        const x = cr[k][0], y = cr[k][1], r = cr[k][2], young = cr[k][3], ex = dx - x * 0.85, ey = dy - y * 0.85, lim = r * 1.25;
+        if (ex > lim || ex < -lim || ey > lim || ey < -lim) continue; // clearly outside 1.2 radii (it could change nothing), and it spares a Math.hypot, which is slow
+        const d = Math.hypot(ex, ey) / r;
         if (d < 1.2) {
           if (d < 0.92) v *= 0.62 + 0.38 * d * d;                                  // a dark floor
           else v *= 1 + (young ? 0.4 : 0.12) * (1 - Math.abs(d - 1) * 5);           // a bright rim

@@ -279,7 +279,7 @@ function cruiseFrame(s, time, dt) {
   if (G.interdictCool > 0) G.interdictCool = Math.max(0, G.interdictCool - dt / 1000); // counts flying time only
   if (s.dead || s.leaving) { if (cr.active) cruiseEnd(s, 'quiet'); if (cr.navOpen) cruiseNavClose(s); return ''; }
   const n = JD(k.N), c = JD(k.C), x = JD(k.X), enter = JD(k.ENTER), up = JD(k.UP) || JD(k.W), down = JD(k.DOWN) || JD(k.S);
-  if (s.jmp) return ''; // a jump is charging (src/jump.js): no nav list and no cruise until it is done or cancelled
+  if (s.jmp || G.deep) return ''; // a jump is charging (src/jump.js): no nav list and no cruise until it is done or cancelled; none in deep space after a pull-out either
   // a target that has gone (a random signal that faded) or that you have reached stops being a target
   const t = cr.target;
   if (t && !cr.active) {

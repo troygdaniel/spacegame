@@ -94,13 +94,15 @@ try {
   await wipe();
   await put('longhaul.save.v2', {
     v: 3, futureThing: { a: 1 }, credits: 700, system: 'zzz-9', lastDock: 'nowhere-dock', active: 7, volume: 0.3, known: ['kestrel', 5, 'kestrel'],
-    fleet: [{ uid: 5, model: 'dreadnought', name: 'Old Faithful', at: 'nowhere-dock', hull: 70, fuel: 12, ore: 3, parts: { engine: 9, shields: 1, weapons: 'x' } }]
+    fleet: [{ uid: 5, model: 'dreadnought', name: 'Old Faithful', at: 'nowhere-dock', hull: 70, fuel: 12, ore: 3, parts: { engine: 9, shields: 1, weapons: 'x' } },
+      { uid: 6, model: 'kite', name: 'Spare', at: 'lost-dock', hull: 70, fuel: 30, ore: 0, parts: {} }] // a parked ship at a station this build does not know
   });
   check('a later version\'s save loads', (await ev(`loadGame()`)) === true);
   const u = await json(`({ system: G.system, lastDock: G.lastDock, active: G.active, model: G.fleet[0].model, name: G.fleet[0].name, hull: G.hull, fuel: G.fleet[0].fuel, ore: G.ore, parts: G.fleet[0].parts, credits: G.credits, volume: G.volume, known: G.known, uid: G.fleet[0].uid })`);
   check('unknown system and station fall back to halcyon', u.system === 'halcyon' && u.lastDock === 'halcyon-station', JSON.stringify([u.system, u.lastDock]));
   check('unknown model falls back to the wren, the name and the rest of the ship are kept', u.model === 'wren' && u.name === 'Old Faithful' && u.hull === 70 && u.fuel === 12 && u.ore === 3 && u.uid === 5, JSON.stringify(u));
   check('a bad active index is 0; parts are clamped to what this build sells; junk is 0', u.active === 0 && u.parts.engine === 3 && u.parts.shields === 1 && u.parts.weapons === 0, JSON.stringify(u.parts)); // tier 9 comes down to 3, the highest tier of any part (card u-d1)
+  check('a parked ship at an unknown station waits at the station you wake in, not out of reach for ever', (await json(`[G.fleet[1].name, G.fleet[1].at, fleetTransferCost(G.fleet[1].at, G.lastDock)]`)).join() === 'Spare,halcyon-station,100', await ev(`JSON.stringify([G.fleet[1].at, G.lastDock])`)); // playtest 3: 'lost-dock' used to be kept, and the hangar said "out of reach" with no way to move it
   check('the rest of the save is kept (credits, volume, known systems, deduped, halcyon first)', u.credits === 700 && u.volume === 0.3 && u.known.join() === 'halcyon,kestrel', JSON.stringify([u.credits, u.volume, u.known]));
   await wipe();
   await put('longhaul.save.v2', { v: 2, credits: 10, fleet: [] });

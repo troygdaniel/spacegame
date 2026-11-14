@@ -12,11 +12,7 @@
 //   fuel row          shows by itself as soon as bayShipInfo() returns a fuel figure (card u-b1)
 
 const BAY = { shipX: 410, shipY: 272, scale: 5, padY: 458, sill: 400, grace: 350 }; // grace: ms of ignored input after arriving, so the E that boarded cannot launch
-const BAY_CONTROLS = [ // column by column, four rows each: [keys, what it does]
-  [['W'], 'Thrust'], [['A', 'D'], 'Turn'], [['S'], 'Brake'], [['Shift'], 'Boost with thrust'],
-  [['Q', 'E'], 'Dash left or right'], [['Space'], 'Fire (or click)'], [['L'], 'Dock or land'], [['T'], 'Mission panel'],
-  [['Tab'], 'Sector map'], [['H'], 'Help'], [['Esc'], 'Pause'], [['M'], 'Mute sound']
-];
+const BAY_CONTROLS = controlsBay(); // [[keys], what] for the twelve rows the table marks bay (src/data_controls.js), column by column, four rows each
 // part slots as callouts on the ship. anchor names the spot on the ship in SHIP_LOOK[model].anchors (src/shipmodels.js: the art calls the shields
 // spot 'armor', the engine 'booster' and the guns 'rapid'); lx, ly: the label; stock: what it says with nothing fitted. The tier names are PARTS[key].tiers.
 // Tank and cargo have no spot on the hull: they are rows of the status panel.

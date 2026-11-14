@@ -7,12 +7,12 @@ The ship computer can speak the key events of a run in a calm female voice. It i
 - Key events only, short lines, one voice.
 
 ## How it works (`src/voice.js`)
-- **Key:** typed or pasted in Pause > Ship voice (or `V` on the title screen). Stored only in this browser's `localStorage` (`longhaul.voice.key`, separate from the save file), inside try/catch. Never written to the repo, never logged, never put in an error message, sent only to `api.deepgram.com` in the `Authorization` header.
+- **Key:** typed or pasted in Settings > Keys (Pause > Settings, or `V` on the title screen, which opens Settings at the Deepgram key). Stored only in this browser's `localStorage` (`longhaul.voice.key`, separate from the save file), inside try/catch. Never written to the repo, never logged, never put in an error message, sent only to `api.deepgram.com` in the `Authorization` header.
 - **Speech:** `POST https://api.deepgram.com/v1/speak?model=aura-athena-en&encoding=mp3` with `{ "text": "..." }`. The mp3 is decoded with the game's own AudioContext and played through the master gain from `src/audio.js`, so the **volume slider and mute (M) apply** and the pads duck as usual.
 - **Queue:** one line plays at a time, lines never overlap. A line that arrives while another plays is dropped, unless it is a warning (hostiles, hull, ship lost), which waits in a queue of two and expires after 6 seconds.
 - **Cache:** every decoded line is kept in memory by its text, so a repeated line costs no second call. A line also has a cooldown so the same event cannot repeat within 8 seconds.
 - **Failure:** a rejected key (401/402/403) switches the voice off with one message; three network failures in a row pause it for a minute. The game never stops or throws because of the voice.
-- **Cost note:** the setup panel says, in plain words, that it uses the player's own account and may cost them money.
+- **Cost note:** Settings > Keys says, in plain words, that it uses the player's own account and may cost them money.
 - **Events come from watching the game, not from the scenes:** `voiceInstall(game)` (called from `main.js`) reads game state once a frame and hooks scene `create` events, like `installAudio`. The scenes have no voice code.
 
 ## The lines
@@ -44,3 +44,5 @@ The ship computer can speak the key events of a run in a calm female voice. It i
 
 ## Testing
 `tests/voice.mjs` mocks `fetch` in the page, so **no test ever calls Deepgram and nothing is spent.** It also checks the character voices: the voice name reaches the URL, a made-up name cannot, replies are not cached, a character waits behind the ship computer in order and never overlaps it, `voiceSayThen` starts the text with the audio, after 1.5 s when the audio is slow, and at once when there is no voice. It checks: no key = no call; with a key, the call goes to `api.deepgram.com` with the key only in the `Authorization` header; the cache stops a second call for the same line; lines do not overlap; a rejected key switches the voice off; the key is not in the page text or the console.
+
+- **Voice choice:** Settings > Sound picks the ship computer's voice from five Aura voices (`VOICE_CHOICES` in `src/voice.js`; Athena by default, kept in `localStorage` as `longhaul.voice.model`); a new choice drops the cached lines. Hear it makes one call, when pressed.

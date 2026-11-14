@@ -65,6 +65,8 @@ class Boot extends Phaser.Scene {
     // #hyper or #hyper<ly> opens the hyperspace tunnel demo (hyperspace.js), the only way into that scene for now
     const hy = /^hyper(\d{1,2})?$/.exec(hash);
     if (hy) { this.scene.start('Hyper', hyperDemo(hy[1])); return; }
+    // #pullout plays a hyperspace jump that is pulled out at 50% (pullout.js): the tunnel, deep space with its pirates, then the rest of the tunnel
+    if (hash === 'pullout') { this.scene.start('Hyper', pulloutDemo()); return; }
     // #galaxy opens the galaxy map (galaxymap.js) with five systems known: it lands dark, so this hash is the only way in until card u-b4 wires the G key
     if (hash === 'galaxy') { this.scene.start('Galaxy', galaxyDemo()); return; }
     // no hash: the title screen first; #station jumps straight to the station

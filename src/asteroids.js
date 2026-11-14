@@ -22,8 +22,11 @@ function asteroidsSetup(s) {
     label(s, belt.x, belt.y - belt.r - 70, belt.name.toUpperCase(), '#9fb4c9', 16);
   });
 
-  // a wrecked ship loses its cargo: wrap die() on this scene instance, so space.js needs no change
-  const die = s.die.bind(s);
+  // a wrecked ship loses its cargo: wrap die() on this scene instance, so space.js needs no change.
+  // The scene instance lives on and create() runs at every launch, so the wrapped method is the class's own die(), never the wrapper an
+  // earlier launch left: wrapping that one (s.die.bind) stacked a new layer per launch, and each layer kept the previous launch's rocks,
+  // bodies and physics world alive (tests/perfleak.mjs).
+  const die = Object.getPrototypeOf(s).die.bind(s);
   s.die = () => { if (G.ore > 0) { G.ore = 0; s.time.delayedCall(700, () => toast(s, 'Cargo lost with the ship.', '#ff4d6d')); } die(); };
 
   s.ship.body.setBounce(0.4); // rocks bump you back a little

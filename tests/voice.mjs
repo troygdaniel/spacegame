@@ -1,7 +1,7 @@
 // Ship voice (src/voice.js) with a MOCKED fetch: nothing here ever calls Deepgram, so nothing is spent. Run: node tests/voice.mjs
 // Checks: no key = no call; the call goes to api.deepgram.com with the key only in the Authorization header; the cache stops a
 // second call; lines never overlap and warnings queue; a rejected key switches the voice off; mute silences it; the key is not in
-// the save file, the page text or the console; the setup panel opens from the title screen and saves a key; a low hull in the real Space scene speaks.
+// the save file, the page text or the console; Settings opens from the title screen at the Deepgram key and saves it; a low hull in the real Space scene speaks.
 // Runs one headless Chrome at a time (the Mac is shared).
 import { launch, sleep } from './cdp.mjs';
 
@@ -125,7 +125,7 @@ const idle = t => t.waitFor('VOICE.playing === false && VOICE.queue.length === 0
   } finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
 }
 
-// ---- part 2: the setup panel opens from the title screen, saves a key, closes with Esc ----
+// ---- part 2: Settings opens from the title screen at the key (V), saves a key, closes with Esc ----
 {
   const t = await launch('');
   try {
@@ -135,20 +135,21 @@ const idle = t => t.waitFor('VOICE.playing === false && VOICE.queue.length === 0
     const frame = () => t.ev('game.loop.frame');
     const f0 = await frame();
     await t.press('V'); // the real key, as a player presses it (card space-game-bug-voice-panel-v-key-freezes); not a call to voiceOpenSetup()
-    await t.waitFor("game.scene.isActive('VoiceSetup')", 8000, 'setup panel');
+    await t.waitFor("game.scene.isActive('Settings')", 8000, 'setup panel');
     check('the setup panel opens, the title waits below', (await t.ev("game.scene.isPaused('Title')")) === true);
     const f1 = await frame(); await sleep(600); const f2 = await frame();
     check('the game loop keeps running while the panel is open', f2 > f1 && f1 > f0 && (await t.ev('document.hidden')) === false, `frames ${f0} -> ${f1} -> ${f2}, hidden ${await t.ev('document.hidden')}`);
     check('there is a real text box over the canvas', (await t.ev("!!document.querySelector('input[type=password]')")) === true);
-    check('the cost note is on screen', (await t.ev("game.scene.getScene('VoiceSetup').children.list.length > 0")) === true);
-    await t.ev(`(() => { const s = game.scene.getScene('VoiceSetup'); s.el.value = 'short'; s.saveKey(); return 1; })()`);
+    check('the cost note is on screen', (await t.ev("game.scene.getScene('Settings').children.list.length > 0")) === true);
+    await t.ev(`(() => { const s = game.scene.getScene('Settings'); s.inputs.deepgram.value = 'short'; s.saveKey('deepgram'); return 1; })()`);
     check('a too-short key is refused', (await t.ev('VOICE.key')) === '');
-    await t.ev(`(() => { const s = game.scene.getScene('VoiceSetup'); s.el.value = '${KEY}'; s.saveKey(); return 1; })()`);
+    await t.ev(`(() => { const s = game.scene.getScene('Settings'); s.inputs.deepgram.value = '${KEY}'; s.saveKey('deepgram'); return 1; })()`);
     check('a real-looking key is saved', (await t.ev('VOICE.key')) === KEY);
-    check('the box is cleared after saving', (await t.ev(`game.scene.getScene('VoiceSetup').el.value`)) === '');
-    check('the test button makes one call, to Deepgram', await (async () => { await t.ev(`game.scene.getScene('VoiceSetup').test()`); await t.waitFor('__calls.length === 1', 10000, 'test call'); return /api\.deepgram\.com/.test((await t.ev('__calls[0].url'))); })());
+    check('the box is cleared after saving', (await t.ev(`game.scene.getScene('Settings').inputs.deepgram.value`)) === '');
+    check('the test button makes one call, to Deepgram', await (async () => { await t.ev(`game.scene.getScene('Settings').testKey('deepgram')`); await t.waitFor('__calls.length === 1', 10000, 'test call'); return /api\.deepgram\.com/.test((await t.ev('__calls[0].url'))); })());
+    await t.press('ESC'); // the first Esc leaves the key box (the V key put the cursor there), the second closes the screen
     await t.press('ESC');
-    await t.waitFor("!game.scene.isActive('VoiceSetup')", 8000, 'setup closed');
+    await t.waitFor("!game.scene.isActive('Settings')", 8000, 'setup closed');
     check('Esc closes it and the title comes back', (await t.ev("game.scene.isActive('Title')")) === true);
     check('the title runs again, not paused', (await t.ev("game.scene.isPaused('Title')")) === false);
     const f3 = await frame(); await sleep(500);
