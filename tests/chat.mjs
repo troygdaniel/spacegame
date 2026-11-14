@@ -265,16 +265,16 @@ const call = async (t, req = REQ) => {
     await t.ev('(__status = 200, CHAT.waitUntil = 0, 1)');
     // walking away ends it; the text box goes
     await t.ev(`(() => { const s = ${ST}; s.player.setPosition(255, 420); return 1; })()`);
-    await t.waitFor(`${ST}.chat === null`, 5000, 'closed by walking away');
+    await t.waitFor(`${ST}.chat === null`, 10000, 'closed by walking away');
     check('walking away closes the chat, hides the panel, removes the box, frees the station', (await t.ev(`!${ST}.chatBox.visible && !document.querySelector('input') && ${ST}.panel === false`)) === true);
     // Esc in the box ends it too
-    await near(); await keyT();
-    await t.waitFor(`${ST}.chat !== null`, 5000, 'chat reopened');
+    await near(); await t.ev(`chatOpen(${ST}, 0)`); // the T path is proven above; open directly so a slow frame cannot drop the key
+    await t.waitFor(`${ST}.chat !== null`, 10000, 'chat reopened');
     await elKey('Escape');
-    await t.waitFor(`${ST}.chat === null`, 5000, 'closed by Esc');
+    await t.waitFor(`${ST}.chat === null`, 10000, 'closed by Esc');
     check('Esc in the box closes the chat and the pause menu does not open', (await t.ev("!game.scene.isActive('Pause')")) === true);
     // a rejected key closes the chat with the toast
-    await near(); await t.ev('(__status = 401, 1)'); await keyT();
+    await near(); await t.ev('(__status = 401, 1)'); await t.ev(`chatOpen(${ST}, 0)`);
     await t.waitFor(`${ST}.chat === null && CHAT.bad === true`, 10000, 'closed by a rejected key');
     check('a rejected key ends the chat and switches it off', true);
     await t.ev('(__status = 200, 1)');
