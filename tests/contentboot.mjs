@@ -38,7 +38,7 @@ try {
   await run('the real content pack', ROOT, '', 'Title', async (t, st) => {
     check('the loader read content.generated.js', st.state.loaded === true && typeof st.state.hash === 'string' && st.state.hash.length > 0, JSON.stringify(st.state));
     check('it lists no problems and applies the forty-three files of the shipped set (with eight systems and five more docks)', st.errors.length === 0 && st.state.applied.length === 43 && st.state.skipped === 0, JSON.stringify(st.errors) + ' ' + st.state.applied.join());
-    check('the eight systems and the six docks (Halcyon\'s too, for worldAt) are kept in CONTENT_WORLD, and the game has the same eight systems in the code (card u-b5), with the files' dock names applied and Halcyon's prices where they were', (await t.ev(`Object.keys(CONTENT_WORLD.system).length === 8 && Object.keys(CONTENT_WORLD.station).length === 6 && Object.keys(SYSTEMS).join() === 'halcyon,kestrel,meridian,brass,hollow,lethe,ember,roost' && SYSTEMS.kestrel.bodies.length === 5 && ORE_PRICE === 20 && REPAIR_PRICE === 0.5`)) === true);
+    check('the eight systems and the six docks (Halcyon\'s too, for worldAt) are kept in CONTENT_WORLD, and the game has the same eight systems in the code (card u-b5), with the dock names of the files applied and the prices of Halcyon where they were', (await t.ev(`Object.keys(CONTENT_WORLD.system).length === 8 && Object.keys(CONTENT_WORLD.station).length === 6 && Object.keys(SYSTEMS).join() === 'halcyon,kestrel,meridian,brass,hollow,lethe,ember,roost' && SYSTEMS.kestrel.bodies.length === 5 && ORE_PRICE === 20 && REPAIR_PRICE === 0.5`)) === true);
     check('the shipped pack is not MODDED', st.state.modded === false, JSON.stringify(st.state));
   });
 
