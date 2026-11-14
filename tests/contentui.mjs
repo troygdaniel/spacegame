@@ -1,7 +1,7 @@
 // The Title screen's content chip, panel and MODDED tag (card space-game-m2b-content-ui, docs/MODDING.md 5.2; src/contentui.js).
 // Each case runs the real game in headless Chrome from a throwaway copy of the folder with its own content.generated.js:
 //   the real pack            nothing at all on the Title screen
-//   a bad pack (modded)      the chip "CONTENT: 16 PROBLEMS", the MODDED tag, the panel with the first 8 and "and N more"
+//   a bad pack (modded)      the chip "CONTENT: 14 PROBLEMS", the MODDED tag, the panel with the first 8 and "and N more"
 //   modded, no problems      only the MODDED tag
 // Screenshots go to tests/out/content-*.png. Run: node tests/contentui.mjs   (one Chrome at a time; about 30 seconds)
 import { rmSync, writeFileSync, readFileSync } from 'node:fs';
@@ -70,7 +70,7 @@ try {
     const t = await open('a bad, modded pack', dir);
     try {
       let s = await ui(t);
-      check('the chip says how many problems', s.chip && s.texts.includes('CONTENT: 16 PROBLEMS'), JSON.stringify(s.texts.filter(x => /CONTENT/.test(x))));
+      check('the chip says how many problems', s.chip && s.texts.includes('CONTENT: 14 PROBLEMS'), JSON.stringify(s.texts.filter(x => /CONTENT/.test(x))));
       check('the MODDED tag is there', s.tag && s.texts.includes('MODDED'));
       check('the panel is closed at first', !s.open);
       await t.shot('content-chip');

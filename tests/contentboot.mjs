@@ -81,7 +81,7 @@ try {
     'not an entry', null, 7, { type: 'ship', id: '../../etc', path: 'x', data: { name: 'X' } }
   ];
   writeFileSync(join(edited, 'content.generated.js'), 'var CONTENT = ' + JSON.stringify({ version: 1, hash: 'beefbeef', files: 3, entries, errors: [{ level: 'warn', path: 'content/x.md', line: 2, message: 'from the build' }, 42, null] }) + ';\n');
-  await run('a hand-edited content.generated.js', edited, '', 'Title', (t, st) => {
+  await run('a hand-edited content.generated.js', edited, '', 'Title', async (t, st) => {
     check('every bad entry and field is reported, the game boots', st.state.loaded === true && st.errors.length >= 8, String(st.errors.length) + ' ' + JSON.stringify(st.errors));
     check('a problem the build recorded is passed on', st.errors.some(e => e === 'warn|content/x.md|from the build'), JSON.stringify(st.errors.slice(0, 2)));
     check('out-of-range and wrong-type fields are named', st.errors.some(e => e.includes('hp is 999999 but must be a whole number')) && st.errors.some(e => e.includes('speed is not a number')), JSON.stringify(st.errors));
