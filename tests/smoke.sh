@@ -72,6 +72,9 @@ if node tests/launch.mjs; then :; else fail=1; fi
 echo "== 4j. content loader: a bad, missing or broken content.generated.js never blanks the game (tests/contentboot.mjs)"
 if node tests/contentboot.mjs; then :; else fail=1; fi
 
+echo "== 4k. dev server: serves, refuses, rebuilds on change, R reloads (tests/serve.mjs)"
+if node tests/serve.mjs; then :; else fail=1; fi
+
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
   if node tests/missions.mjs; then :; else fail=1; fi

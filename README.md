@@ -8,7 +8,7 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 Station (walk, take the rescue call, board ship) -> Ship bay (look the ship over, read the mission and the controls, Enter to launch, Esc to go back) -> Space (fly, fight drones, dock/land with L) -> Surface (walk, find the colonist, protect them, return to ship) -> fly home, dock, get paid.
 ## Play
 
-Open `index.html` in a browser (Chrome is what it is tested in). Double-clicking the file works; if you prefer a server, run `python3 -m http.server` in this folder and open http://localhost:8000.
+Open `index.html` in a browser (Chrome is what it is tested in). Double-clicking the file works; if you prefer a server, run `python3 -m http.server` in this folder and open http://localhost:8000. If you are editing the markdown in `content/`, run `node tools/serve.mjs` instead: it rebuilds `content.generated.js` when you save and the page reloads on **R** (see `docs/MODDING.md` section 4).
 ## Files and who owns them
 - src/common.js  shared helpers, global state G, beep(), toast(), go()
 - src/boot.js    every texture is drawn here with shapes (no image files)
