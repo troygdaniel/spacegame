@@ -22,7 +22,7 @@ const same = (name, a, b) => { let ok = true, detail = ''; try { deepStrictEqual
 
 // everything the proof set reaches, read from the running game. G is put back as it was.
 const SNAP = `(() => {
-  const keep = { mission: G.mission, missionId: G.missionId, progress: G.missionProgress, credits: G.credits, parts: Object.assign({}, activeShip().parts) };
+  const keep = { mission: G.mission, missionId: G.missionId, progress: G.missionProgress, credits: G.credits, patrols: G.patrolsDone, parts: Object.assign({}, activeShip().parts) };
   const plain = o => JSON.parse(JSON.stringify(o));
   const out = { ships: { raider: plain(PIRATES.raider), drone: plain(PIRATES.drone), gunship: plain(PIRATES.gunship) } };
   const m = MISSIONS.find(x => x.id === 'rescue');
@@ -33,6 +33,15 @@ const SNAP = `(() => {
     steps: HUD_MISSIONS.rescue.steps.map(t => typeof t === 'function' ? t() : t),
     hud: ['accepted', 'rescued'].map(st => { G.mission = st; const h = hudMission({}, 'Space'); return { cur: h.cur, next: h.next, steps: h.steps.map(x => x.text + '/' + x.state) }; })
   };
+  const call = id => { // a call's words and numbers, as the board, the objective line, the progress view and the checklist show them
+    const c = MISSIONS.find(x => x.id === id), res = { title: c.title, where: c.where, reward: c.reward, count: c.count === undefined ? null : c.count, offer: c.offer, deathMsg: c.deathMsg };
+    G.missionId = id;
+    res.views = [[0, 'accepted'], [3, 'accepted'], [120, 'accepted'], [0, 'failed']].map(([pr, st]) => { G.missionProgress = pr; G.mission = st;
+      return { line: c.line(st), progress: st === 'accepted' ? c.progress() : null, steps: HUD_MISSIONS[id].steps.map(t => typeof t === 'function' ? t() : t) }; });
+    res.unlock = [0, 1, 2].map(n => { G.patrolsDone = n; return c.unlock ? !!c.unlock() : null; });
+    return res;
+  };
+  out.calls = { escort: call('escort'), patrol: call('patrol'), bounty: call('bounty') };
   const j = NPCS.find(x => x.id === 'juno'), react = [];
   ['none', 'accepted', 'failed'].forEach(ms => [0, 1].forEach(arm => [0, 900].forEach(cr => { G.mission = ms; activeShip().parts.shields = arm; G.credits = cr; react.push(j.react()); })));
   out.npc = { name: j.name, role: j.role, color: j.color, css: j.css, x: j.x, y: j.y, face: j.face, voice: j.voice, persona: j.persona, lines: j.lines.slice(), sprite: j.sprite === undefined ? null : j.sprite, react };
@@ -41,7 +50,7 @@ const SNAP = `(() => {
   ['vmax', 'boost', 'range', 'tank', 'hold', 'shieldMax', 'shieldRegen', 'shieldDelay', 'fireDelay', 'damage', 'boostTank', 'boostRegen'].forEach(nm => { stats[nm] = tiers.map(t => shipStat(nm, rec(t))); });
   const fit = tiers.map(t => { const r = activeShip(), was = Object.assign({}, r.parts); Object.assign(r.parts, { weapons: t, engine: t }); const v = { fire: fireDelay(), boost: boostEnergy(), top: boostMax() }; Object.assign(r.parts, was); return v; });
   out.parts = { parts: plain(PARTS), stats, fit };
-  G.mission = keep.mission; G.missionId = keep.missionId; G.missionProgress = keep.progress; G.credits = keep.credits;
+  G.mission = keep.mission; G.missionId = keep.missionId; G.missionProgress = keep.progress; G.credits = keep.credits; G.patrolsDone = keep.patrols;
   Object.assign(activeShip().parts, keep.parts);
   return JSON.stringify(out);
 })()`;
@@ -79,6 +88,9 @@ const realCore = /\bcore:\s*"([0-9a-f]+)"/.exec(readFileSync(join(ROOT, 'content
 const EDITS = [
   ['ships/raider.md', [['hp: 20', 'hp: 22'], ['bounty: 45', 'bounty: 47'], ['radar: #ff6b8a', 'radar: green'], ['shot: [550, 950]', 'shot: [500, 900]'], ['strafe: yes', 'strafe: no']]],
   ['ships/drone.md', [['fireRange: 650', 'fireRange: 700']]],
+  ['missions/escort.md', [['reward: 400', 'reward: 450'], ['Stay with her.', 'Stick with her.']]],
+  ['missions/patrol.md', [['count: 5', 'count: 6']]],
+  ['missions/bounty.md', [['reward: 1200', 'reward: 1500'], ['unlock: patrols>=1', 'unlock: patrols>=2']]],
   ['missions/rescue.md', [['reward: 500', 'reward: 650'], ['title: Rescue call', 'title: Rescue run'],
     ['active: Rescue the colonist on Kepler-4b', 'active: Bring them home from Kepler-4b for {reward} cr'],
     ['bring them back alive.', 'bring them back alive. Done: {progress}.'],
@@ -96,7 +108,7 @@ try {
   // ---- A: the shipped pack, B: nothing at all ----
   console.log('A: the shipped pack');
   const A = await play(ROOT);
-  check('the loader applied the thirteen files of the proof set, no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 13 && A.loader.state.modded === false, JSON.stringify(A.loader));
+  check('the loader applied the sixteen files of the proof set, no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 16 && A.loader.state.modded === false, JSON.stringify(A.loader));
   check('no console errors', A.errors.length === 0, A.errors.join(' | '));
 
   console.log('B: an empty pack (the code\'s own tables)');
@@ -108,6 +120,7 @@ try {
   console.log('the files over their defaults change nothing');
   same('the pirates: raider, drone and gunship (every number, the radar colour, the shot window)', A.snap.ships, B.snap.ships);
   same('the rescue call: title, place, reward, offer, the three board lines, both progress texts, the failure line, the checklist', A.snap.mission, B.snap.mission);
+  same('the other calls: escort, patrol and bounty (title, place, reward, count, offer, objective lines, progress, checklist, the bounty unlock)', A.snap.calls, B.snap.calls);
   same('JUNO: look, place, voice, persona, her three lines and every reaction in 12 situations', A.snap.npc, B.snap.npc);
   same('the parts: every name, short form, text, price and number of the five slots, and what a Wren gets from them at tiers 0 to 3', A.snap.parts, B.snap.parts);
   check('docking with the colonist pays the same, 500 cr', A.pay === 500 && B.pay === 500, A.pay + ' / ' + B.pay);
@@ -126,11 +139,16 @@ try {
   const cg = gameWith(join(pack, 'content'), realCore);
   check('the edited pack builds with no problems', cg.made.result.errors.length === 0, JSON.stringify(cg.made.result.errors));
   const C = await play(cg.dir);
-  check('the loader applied the fifteen files (the proof set and a tank and a hold part) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 15 && C.loader.state.modded === true, JSON.stringify(C.loader));
+  check('the loader applied the eighteen files (the shipped set and a tank and a hold part) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 18 && C.loader.state.modded === true, JSON.stringify(C.loader));
   check('no console errors', C.errors.length === 0, C.errors.join(' | '));
   const want = JSON.parse(JSON.stringify(A.snap)); // what A says, with exactly the edited lines changed
   Object.assign(want.ships.raider, { hp: 22, bounty: 47, radar: 0x6dff9c, shot: [500, 900], strafe: false });
   want.ships.drone.range = 700;
+  const mapStr = (o, f) => JSON.parse(JSON.stringify(o), (k, v) => typeof v === 'string' ? f(v) : v);
+  const wc = want.calls;
+  wc.escort.reward = 450; wc.escort = mapStr(wc.escort, t => t.replace('Stay with her.', 'Stick with her.')); wc.escort.reward = 450;
+  wc.patrol = mapStr(wc.patrol, t => t.replace(/ of 5/g, ' of 6').replace(/\/5$/, '/6')); wc.patrol.count = 6;
+  wc.bounty = mapStr(wc.bounty, t => t.replace('1200', '1500')); wc.bounty.reward = 1500; wc.bounty.unlock = [false, false, true];
   Object.assign(want.mission, {
     title: 'Rescue run', reward: 650, steps: ['Take the rescue call', 'Find the colonist', 'Dock and collect 650 cr'],
     progress: ['Find the colonist on Kepler-4b and\nbring them back alive. Done: 0.', want.mission.progress[1]],
@@ -151,6 +169,7 @@ try {
   wp.fit[1] = { fire: 90, boost: { max: 140, regen: 24 }, top: 1010 };
   same('the pirates changed exactly as the raider and drone files say', C.snap.ships, want.ships);
   same('the rescue call changed exactly as its file says (title, reward, board line with {reward}, progress with {progress}, a shorter checklist, failure line)', C.snap.mission, want.mission);
+  same('the other calls changed exactly as their files say (a reward, a line of progress, the patrol count in every line and in the checklist, the bounty reward in its offer, and when it unlocks)', C.snap.calls, want.calls);
   same('JUNO changed exactly as her file says (colour, place, first line, one reaction, persona)', C.snap.npc, want.npc);
   same('the parts changed exactly as the part files say (a price, shield points, a name, the fire delay, the engine speed, jump, boost and tank, a fuel tank and a hold)', C.snap.parts, want.parts);
   check('docking with the colonist pays the edited reward, 650 cr', C.pay === 650, String(C.pay));

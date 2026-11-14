@@ -43,6 +43,7 @@
   const L = (of, extra) => Object.assign({ t: 'list', of }, extra);
   const COLOR = { t: 'color' }, BOOL = { t: 'bool' }, COND = { t: 'cond' };
   const PH = ['reward', 'count', 'progress', 'station', 'system', 'credits', 'ship']; // placeholders the game can fill
+  const PH_MISSION = PH.concat('hull'); // a mission may also say {hull}: the percent of hull the bounty target has left
   const SHIP_ART = ['ship', 'raider', 'drone', 'gunship', 'reaver', 'freighter', 'civilian', 'police', 'wren', 'kite', 'ox', 'talon', 'pathfinder', 'bastion']; // the built-in textures; grows when new ship art lands
   const SLOTS = ['engine', 'shields', 'weapons', 'tank', 'cargo'];
   const VOICE_EVENTS = ['launch-clear', 'hull-low', 'pirates-detected', 'docked', 'mission-accepted', 'credits-earned', 'fuel-low']; // docs/VOICE.md grows this list
@@ -105,7 +106,7 @@
       }
     },
     mission: {
-      folder: 'missions', placeholders: PH,
+      folder: 'missions', placeholders: PH_MISSION,
       fields: {
         kind: P(['rescue', 'escort', 'patrol', 'bounty', 'courier', 'haul', 'salvage', 'survey'], true), title: T(40, true), where: T(60),
         reward: I(0, 1000000, true), count: I(1, 50), unlock: COND, system: R('system')

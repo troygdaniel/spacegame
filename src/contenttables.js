@@ -23,7 +23,8 @@ function contentVars() {
   return {
     reward: safe(() => m ? m.reward : ''), count: safe(() => m && m.count ? m.count : ''), progress: safe(() => G.missionProgress | 0),
     credits: safe(() => G.credits | 0), ship: safe(() => activeShip().name), system: safe(() => sysDef().name),
-    station: safe(() => (sysBody('station') || {}).name)
+    station: safe(() => (sysBody('station') || {}).name),
+    hull: safe(() => Math.round(100 * Math.max(0, REAVER_HP - G.missionProgress) / REAVER_HP)) // the bounty target's hull left, percent (missions.js)
   };
 }
 function contentFill(text, extra) {
@@ -76,19 +77,22 @@ const CT_MISSION = {
     const m = MISSIONS.find(x => x.id === id);
     if (data.kind !== undefined && data.kind !== id) throw new Error('kind is "' + data.kind + '" but the file is called ' + id + ', so its kind must be ' + id);
     ['title', 'where', 'reward', 'count'].forEach(k => { if (data[k] !== undefined) m[k] = data[k]; });
-    // the board text and the failure line read as plain properties, so they are live getters (a text may hold {credits} or {progress})
-    const live = (prop, text) => { if (text !== undefined) Object.defineProperty(m, prop, { get: () => contentFill(text), configurable: true, enumerable: true }); };
+    if (data.unlock !== undefined) m.unlock = () => contentWhen(data.unlock); // the board offers the call while this holds
+    // {reward} and {count} in this call's own text are this call's, whichever call is open (the board shows them all); {progress}, {credits} and the rest are live
+    const fill = text => contentFill(text, { reward: m.reward, count: m.count === undefined ? '' : m.count });
+    // the board text and the failure line read as plain properties, so they are live getters
+    const live = (prop, text) => { if (text !== undefined) Object.defineProperty(m, prop, { get: () => fill(text), configurable: true, enumerable: true }); };
     live('offer', data.offer !== undefined ? data.offer : data.description);
     live('deathMsg', data.failure);
     if (data.boardLine) {
       const line0 = ctOrig(m, 'line'), bl = data.boardLine;
-      m.line = st => { const t = st === 'rescued' ? bl.rescued : st === 'failed' ? bl.failed : bl.active; return t === undefined ? line0(st) : contentFill(t); };
+      m.line = st => { const t = st === 'rescued' ? bl.rescued : st === 'failed' ? bl.failed : bl.active; return t === undefined ? line0(st) : fill(t); };
     }
     if (data.progress !== undefined || data.progressRescued !== undefined) {
       const progress0 = ctOrig(m, 'progress');
-      m.progress = () => { const t = G.mission === 'rescued' ? data.progressRescued : data.progress; return t === undefined ? progress0() : contentFill(t); };
+      m.progress = () => { const t = G.mission === 'rescued' ? data.progressRescued : data.progress; return t === undefined ? progress0() : fill(t); };
     }
-    if (data.steps && typeof HUD_MISSIONS !== 'undefined' && HUD_MISSIONS[id]) HUD_MISSIONS[id].steps = data.steps.map(t => /\{/.test(t) ? () => contentFill(t) : t);
+    if (data.steps && typeof HUD_MISSIONS !== 'undefined' && HUD_MISSIONS[id]) HUD_MISSIONS[id].steps = data.steps.map(t => /\{/.test(t) ? () => fill(t) : t);
   }
 };
 
