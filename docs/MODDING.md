@@ -171,7 +171,7 @@ A mod is untrusted text, so the loader enforces limits even though the build scr
 Fields marked * are required. All numbers have ranges in the schema; the examples show the shapes, `src/content.js` has the full table. Everything the code tables hold today has a field here.
 
 ### 6.1 `ship` (player ships and pirate ships)
-`name*`, `role`, `art` (pick from built-in textures), `trim`/`color` (colour), `hull`, `speed`, `boost`, `accel`, `turn`, `tank`, `fuelPerLy`, `range`, `hold`, `guns`, `sensor`, `price`, `yard` (where it is sold), `side` (`player` or `pirate`). Pirates add `ai` numbers from `PIRATES` today (`engage`, `hold`, `range`, `shot`, `bullet`, `dmg`, `spread`, `bounty`). Section: `## Hangar line`. Matches `SHIP_MODELS` in `docs/UNIVERSE.md` section 6.1 and `PIRATES` in `enemies.js`.
+`name*`, `role`, `side` (`player` or `pirate`), `art` (pick from the built-in textures), `trim` and `color` (colours). Player ships: `hull`, `speed` (top speed), `boost`, `accel`, `turn` (a multiplier), `tank`, `fuelPerLy`, `range` (jump range in ly), `cargo` (the hold), `guns`, `sensor`, `price`, `yard` (the stations that sell it). Pirate ships keep the names of `PIRATES` in `enemies.js`: `hp`, `speed`, `max`, `turn`, `engage`, `hold` (stand-off distance), `aim`, `shot` (`[min, max]` ms), `bullet`, `dmg`, `spread`, `strafe`, `ram`, `bounty`, `credits`, `radar`; `fireRange` is their shooting range in px (it is `PIRATES.range`; a ship's own `range` is the jump range). Section: `## Hangar line`. Matches `SHIP_MODELS` in `docs/UNIVERSE.md` section 6.1 and `PIRATES` in `enemies.js`. The exact fields and ranges are the `SCHEMA` in `src/content.js`.
 
 ### 6.2 `part`
 `slot*` (engine, shields, weapons, tank, cargo), `tier*` (1 to 3), `name*`, `price`, and that slot's effect numbers (`speedPct`, `jump`, `boostTank`; `points`, `regen`, `delay`; `fuelMult`; `holdPlus`). Today's `UPGRADES` with their `descs` and `prices` are parts.
@@ -270,8 +270,8 @@ Nothing here publishes anything. **Troy decides when and where the repo goes pub
 
 ### 7.2 Audit of the repo today (main `6a605f3`, 2026-11-13)
 - **Working tree: no API keys, tokens, passwords, emails or phone numbers.** (Searched all text files except `phaser.min.js`.)
-- **One personal path:** a comment in `tests/ships.mjs` line 5 names `/Users/troydaniel/...`. Card `m3` replaces it.
-- **Git history: 87 commits are authored `Troy Daniel <troygdaniel@gmail.com>` and 18 `ORCH <orch@local>`.** Publishing the history publishes that email. Options for Troy: (a) publish a new repository with one fresh commit and leave this history private (recommended: nothing is rewritten, nothing breaks, all agent worktrees keep working); (b) rewrite authorship with `git filter-repo` to a no-reply address (changes every hash, breaks open worktrees, needs everyone to stop first); (c) accept the email in public. This is Troy's call and is not done here.
+- **One personal path:** a comment in `tests/ships.mjs` line 5 named a path inside the author's home folder. Card `m3` replaced it, and `tests/hygiene.mjs` now fails on any such path.
+- **Git history: 87 commits are authored by Troy Daniel with his personal email address, and 18 by `ORCH <orch@local>`.** Publishing the history publishes that address. Options for Troy: (a) publish a new repository with one fresh commit and leave this history private (recommended: nothing is rewritten, nothing breaks, all agent worktrees keep working); (b) rewrite authorship with `git filter-repo` to a no-reply address (changes every hash, breaks open worktrees, needs everyone to stop first); (c) accept the email in public. This is Troy's call and is not done here.
 - Agent names (ORCH, TaskMaster, BuildBot, DreamBot) and the first name Troy appear in `README.md`, `docs/*.md`, `tests/cdp.mjs`, `tests/missions.mjs`, comments in `src/missions.js` and two commit subjects. No private data; Troy decides if he wants them cleaned.
 
 ### 7.3 A hygiene test (card `m3`)

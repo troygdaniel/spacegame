@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Long Haul smoke test. Run from anywhere: bash tests/smoke.sh   (exit code 1 if anything fails)
 #   1. node --check on every src file
-#   1c. tests/locktest.mjs: the one-Chrome-at-a-time lock and the orphan Chrome profile cleanup (tests/lock.mjs; no browser)
+#   1b. tests/content.mjs: the markdown content parser, schema, validator and build script (no browser; docs/MODDING.md)
+#   1b2. tests/contentapply.mjs: the second look at content.generated.js and the merge by id over the built-in tables (no browser)
+#   1c. tests/hygiene.mjs: fails on a key, token, email address, phone number or /Users path in a tracked file or in content/
+#   1d. tests/locktest.mjs: the one-Chrome-at-a-time lock and the orphan Chrome profile cleanup (tests/lock.mjs; no browser)
 #   2. tests/scenes.mjs: load index.html, index.html#space, index.html#surface in headless Chrome, fail on a console
 #      error, save a screenshot of each to tests/out/ (gitignored)
 #   3. tests/loop.mjs: scripted rescue from station to payout, asserts +500 credits
@@ -12,6 +15,9 @@
 #   4d. tests/bounty.mjs: pirate bounty per type, the BOUNTY +N text, the HUD glow, the dock summary
 #   4e. tests/credits.mjs: the gold coin and CR readout in the HUD strip and on the board, shop, map and pause panels, +N / -N floats
 #   4f. tests/hyper.mjs: the hyperspace tunnel demo (#hyper), its timing, readout and colour; no save written
+#   4g. tests/shipmode.mjs: boarding opens the Ship bay instead of launching; Enter launches, Esc goes back, Tab opens the map over it
+#   4i. tests/launch.mjs: pirates fair at launch (20 s grace, one-at-a-time first wave, spawns kept out, hit invulnerability)
+#   4j. tests/contentboot.mjs: a bad, missing, broken or hand-edited content.generated.js never stops the game reaching Title and playing
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #      their failure paths, with the game clock stepped by hand
 # Only one headless Chrome runs at a time on this Mac, whatever the worktree: cdp.mjs takes a lock in tests/lock.mjs, so a second
@@ -24,11 +30,17 @@ cd "$(dirname "$0")/.." || exit 1
 fail=0
 
 echo "== 1. node --check"
-for f in src/*.js tests/*.mjs; do
+for f in src/*.js tests/*.mjs tools/*.mjs; do
   if node --check "$f"; then echo "  ok  $f"; else echo "  FAIL $f"; fail=1; fi
 done
 
-echo "== 1c. test lock and orphan profile cleanup (tests/locktest.mjs)"
+echo "== 1b. markdown content parser and build script (tests/content.mjs)"
+if node tests/content.mjs; then :; else fail=1; fi
+echo "== 1b2. content merge by id and the second look at content.generated.js (tests/contentapply.mjs)"
+if node tests/contentapply.mjs; then :; else fail=1; fi
+echo "== 1c. hygiene: no keys, emails, phone numbers or personal paths in anything we publish (tests/hygiene.mjs)"
+if node tests/hygiene.mjs; then :; else fail=1; fi
+echo "== 1d. test lock and orphan profile cleanup (tests/locktest.mjs)"
 if node tests/locktest.mjs; then :; else fail=1; fi
 
 echo "== 2. headless Chrome, one screenshot per scene"
@@ -54,6 +66,16 @@ echo "== 4e. credits unmistakable (tests/credits.mjs)"
 if node tests/credits.mjs; then :; else fail=1; fi
 echo "== 4f. hyperspace tunnel demo (tests/hyper.mjs: #hyper, #hyper24, #hyper2)"
 if node tests/hyper.mjs; then :; else fail=1; fi
+
+echo "== 4g. ship bay between boarding and launch (tests/shipmode.mjs)"
+if node tests/shipmode.mjs; then :; else fail=1; fi
+echo "== 4h. ship voice with a mocked fetch: no key, no call; nothing ever reaches Deepgram (tests/voice.mjs)"
+if node tests/voice.mjs; then :; else fail=1; fi
+
+echo "== 4i. fair launch: 20 s pirate grace, first-wave cap, distant spawns, hit invulnerability (tests/launch.mjs)"
+if node tests/launch.mjs; then :; else fail=1; fi
+echo "== 4j. content loader: a bad, missing or broken content.generated.js never blanks the game (tests/contentboot.mjs)"
+if node tests/contentboot.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then

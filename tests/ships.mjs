@@ -2,7 +2,7 @@
 //   ships-<name>.png         the gallery (player ship at each upgrade tier, pirates, the Reaver, MULE, civilian, police)
 //   ships-<name>-flight.png  the player thrusting with flame and trail, a hit on the shield, a smoking gunship
 // Run: node tests/ships.mjs            -> ships-after.png from this checkout
-//      NAME=before PAGE=file:///Users/troydaniel/dev/spacegame/index.html node tests/ships.mjs   -> the same from another checkout
+//      NAME=before PAGE=file:///path/to/other/checkout/index.html node tests/ships.mjs   -> the same from another checkout
 // Fails (exit 1) on a console error or an uncaught exception, so it doubles as a smoke test for src/ships.js.
 import { launch, sleep } from './cdp.mjs';
 

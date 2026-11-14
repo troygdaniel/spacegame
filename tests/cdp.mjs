@@ -16,20 +16,22 @@ const CALL_MS = Number(process.env.DEVTOOLS_TIMEOUT_MS) || 120000;
 
 const KEYS = {
   C: [67, 'KeyC', 'c'], E: [69, 'KeyE', 'e'], L: [76, 'KeyL', 'l'], W: [87, 'KeyW', 'w'], S: [83, 'KeyS', 's'], X: [88, 'KeyX', 'x'],
-  1: [49, 'Digit1', '1'], 2: [50, 'Digit2', '2'], 3: [51, 'Digit3', '3'], ESC: [27, 'Escape', 'Escape']
+  1: [49, 'Digit1', '1'], 2: [50, 'Digit2', '2'], 3: [51, 'Digit3', '3'], ESC: [27, 'Escape', 'Escape'],
+  ENTER: [13, 'Enter', 'Enter'], TAB: [9, 'Tab', 'Tab'], SPACE: [32, 'Space', ' ']
 };
 
 // Launch a throwaway headless Chrome (own profile, so it never touches your real Chrome) and return a session.
+// root: the folder whose index.html to open (default: this checkout; a test can pass a copy with another content.generated.js)
 // Only one headless Chrome runs at a time across every worktree (tests/lock.mjs): launch() waits for its turn, close() gives it back.
-export async function launch(hash = '') {
+export async function launch(hash = '', root = ROOT) {
   await acquire();
   try {
     cleanupOrphans({ log: console.log }); // Chrome profiles whose driver died: nobody else is running Chrome now, so they are safe to remove
     // starting Chrome can fail when the Mac is busy: one retry before giving up
     let t;
-    try { t = await launchOnce(hash); } catch (e) {
+    try { t = await launchOnce(hash, root); } catch (e) {
       console.log('  (Chrome did not start cleanly, trying once more: ' + e.message + ')');
-      t = await launchOnce(hash);
+      t = await launchOnce(hash, root);
     }
     const close = t.close; let done = false;
     t.close = async () => { try { await close(); } finally { if (!done) { done = true; release(); } } };
@@ -37,7 +39,7 @@ export async function launch(hash = '') {
   } catch (e) { release(); throw e; }
 }
 
-async function launchOnce(hash) {
+async function launchOnce(hash, root) {
   const profile = mkdtempSync(join(tmpdir(), `longhaul-${process.pid}-`)) // pid in the name: cleanup can target only this run;
   const chrome = spawn(CHROME, [
     '--headless=new', '--mute-audio', '--disable-gpu', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
@@ -129,6 +131,6 @@ async function launchOnce(hash) {
     rmSync(profile, { recursive: true, force: true });
   };
   await send('Page.enable'); await send('Runtime.enable');
-  await send('Page.navigate', { url: 'file://' + ROOT + '/index.html' + hash });
+  await send('Page.navigate', { url: 'file://' + root + '/index.html' + hash });
   return { send, ev, waitFor, press, clock, run, key, shot, close, errors };
 }

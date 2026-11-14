@@ -20,7 +20,7 @@ const SHIPS = {
     freighter: [[-30, -3.5, 0.8], [-30, 3.5, 0.8]], civilian: [[-29, -4, 0.6], [-29, 4, 0.6]]
   },
   flame: { ship: CYAN, police: 0x7fb8ff, raider: 0xff6b8a, drone: RED, gunship: 0xff8c3a, reaver: 0xff2a4a, freighter: AMBER, civilian: 0xdfefff },
-  ribbonMs: 420, shieldMs: 320, flashMs: 70
+  ribbonMs: 420, shieldMs: 450, flashMs: 70 // shieldMs matches HIT_IRON (enemies.js): the hex shield shows exactly how long you cannot be hurt again
 };
 
 // ---- drawing helpers (texture time) ----
@@ -197,6 +197,7 @@ function shipRefresh(scene) {
   SHIPS.nozzles.ship = (u.booster | 0) >= 2 ? [[-14, -5.5, 0.9], [-14, 5.5, 0.9]] : [[-14, 0, (u.booster | 0) ? 1.3 : 1]];
   if (scene.shipImg && scene.shipImg.active) scene.shipImg.setTexture('ship');
   if (scene.ship && scene.ship.active) scene.ship.setTexture('ship');
+  if (scene.in && scene.in.shipShadow && scene.in.shipShadow.active) scene.in.shipShadow.setTexture('ship'); // interior.js: the hangar shadow image shares the texture
   return true;
 }
 function shipDraw(g, armor, rapid, booster) {

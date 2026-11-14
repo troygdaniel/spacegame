@@ -173,7 +173,7 @@ class Station extends Phaser.Scene {
       if (d < nearD) { near = sp; nearD = d; }
     });
     if (near) this.prompt.at(near.x, near.y - (near.dy || 56));
-    this.prompt.setText(near && !this.talk ? 'E  ' + (near.prompt || { missions: 'Check the mission board', repair: 'Repair hull', ship: 'Board ship and launch' }[near.key]) : '');
+    this.prompt.setText(near && !this.talk ? 'E  ' + (near.prompt || { missions: 'Check the mission board', repair: 'Repair hull', ship: 'Board your ship' }[near.key]) : '');
     if (near && JD(k.E) && !spotInteract(this, near)) {
       if (near.key === 'missions') this.openPanel();
       else if (near.key === 'repair') {
@@ -185,7 +185,7 @@ class Station extends Phaser.Scene {
           const pay = Math.min(cost, G.credits);
           G.credits -= pay; G.hull = pay < cost ? Math.min(G.maxHull, G.hull + pay * 2) : G.maxHull;
           beep(400, 0.2, 'triangle', 0.05, 300); toast(this, (pay < cost ? 'Partly repaired' : 'Hull repaired') + ' (-' + pay + ' cr).', '#6dff9c'); }
-      } else if (near.key === 'ship') { sfx('thrusters'); interiorLaunch(this); feelLaunch(this, () => go(this, 'Space', { from: 'station' })); }
+      } else if (near.key === 'ship') { sfx('dock'); go(this, 'Ship'); } // src/shipmode.js: look the ship over, then Launch (Enter)
     }
   }
 }
