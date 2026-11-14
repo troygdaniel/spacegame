@@ -8,9 +8,20 @@
 
 G.system = 'halcyon';
 
-function sysDef(id) { return SYSTEMS[id || G.system] || SYSTEMS.halcyon; }
+G.deep = null; // the pull-out in progress (src/pullout.js), or null; never saved. While it is set the "current system" is the empty deep space below
+function sysDef(id) { if (!id && G.deep) return deepSystem(); return SYSTEMS[id || G.system] || SYSTEMS.halcyon; }
 function sysBodies(type, id) { const all = sysDef(id).bodies; return type ? all.filter(b => b.type === type) : all.slice(); }
 function sysBody(type, id) { return sysBodies(type, id)[0] || null; }
+
+// the system that holds a station (by the station's id), or null: you always wake docked at G.lastDock, so this is where a death or a load puts G.system
+function dockSystem(dockId) { return Object.keys(SYSTEMS).find(id => sysBodies('station', id).some(b => b.id === dockId)) || null; }
+// deep space (docs/UNIVERSE.md 5.2): what a jump that is pulled out of the tunnel drops you into. An empty system definition with no bodies, no traffic and
+// no timed pirates (max 0: the ambush is placed by hand, src/pullout.js); its danger is the higher of the two systems the jump joins
+const DEEP = { size: 16000 }; // world px, square: far smaller than a star system, nothing in it to fly to
+function deepSystem() {
+  const dp = G.deep;
+  return dp._sys || (dp._sys = { id: 'deep', name: 'Deep space', kind: 'deep', ly: null, size: DEEP.size, danger: dp.danger, traffic: 0, pirates: { max: 0, every: 60000 }, bodies: [] });
+}
 
 // ---------- Jumping: arriving in another system (docs/UNIVERSE.md 2.3; card u-b4) ----------
 // enterSystem(id, from) makes id the current system, marks it known, counts the jump and says where the ship appears: G.arrival is read once

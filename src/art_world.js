@@ -180,10 +180,12 @@ function waSpaceArt(sc) {
 }
 
 // Backdrop for the Space scene: parallax star layers and distant bodies. spaceBackdropTick(s) runs every frame.
-function spaceBackdrop(s) {
+function spaceBackdrop(s, deep) { // deep: the empty space of a pull-out (src/pullout.js): the stars and nothing else
   s.cameras.main.setBackgroundColor(0x02050e);
   const layer = (key, depth, f, a) => { const t = s.add.tileSprite(0, 0, W, H, key).setOrigin(0).setScrollFactor(0).setDepth(depth).setAlpha(a); t.par = f; return t; };
   s.bgLayers = [layer('stars1', -10, 0.2, 1), layer('stars2', -9, 0.45, 1), layer('stars3', -8, 0.85, 1)]; // three full-screen layers: each one costs fill rate
+  s.tweens.add({ targets: s.bgLayers[2], alpha: 0.78, duration: 3400, yoyo: true, repeat: -1, ease: 'Sine.inOut' }); // the bright stars breathe a little
+  if (deep) return;
   // distant bodies drift slower than the world: an image with scroll factor f sits at (anchor + f * reference scroll), so each
   // one is placed where it should appear when you launch from the station
   const REF = { x: 3360, y: 3640 };
@@ -192,7 +194,6 @@ function spaceBackdrop(s) {
   s.tweens.add({ targets: sun, scale: 1.22, duration: 5200, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
   far('giant', 1010, 520, 0.07, -6, 0.62);
   far('moon', 560, 90, 0.11, -5.5, 0.42, 0.7); // dim and small so it never reads as a rock to shoot
-  s.tweens.add({ targets: s.bgLayers[2], alpha: 0.78, duration: 3400, yoyo: true, repeat: -1, ease: 'Sine.inOut' }); // the bright stars breathe a little
 }
 function spaceBackdropTick(s) {
   const c = s.cameras.main;

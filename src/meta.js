@@ -118,8 +118,8 @@ function applySave(s) {
   if (Number.isFinite(s.credits)) G.credits = Math.max(0, Math.floor(s.credits));
   // You always wake docked at lastDock, so the system is the one that station is in. A station or system this build does
   // not know (a later version's) falls back to Halcyon, and the rest of the save is kept.
-  const dockSys = Object.keys(SYSTEMS).find(id => sysBodies('station', id).some(b => b.id === s.lastDock));
-  G.system = dockSys || (SYSTEMS[s.system] ? s.system : 'halcyon');
+  const dockSys = dockSystem(s.lastDock); // src/universe.js
+  G.system = dockSys || (SYSTEMS[s.system] ? s.system : 'halcyon'); G.deep = null; // a pull-out is never saved: a load puts you docked
   G.lastDock = dockSys ? s.lastDock : (sysBodies('station', G.system)[0] || { id: homeDock() }).id;
   const strs = a => Array.isArray(a) ? [...new Set(a.filter(x => typeof x === 'string' && x))] : [];
   G.known = strs(s.known); START_KNOWN.slice().reverse().forEach(id => { if (!G.known.includes(id)) G.known.unshift(id); }); // the start stars are always known, first
@@ -168,7 +168,7 @@ function clearSave() { // erases the v2 save. The v1 key stays untouched: new ga
 
 function newGameState() {
   G.credits = 0; G.mission = 'none'; G.missionId = null; G.missionProgress = 0; G.patrolsDone = 0;
-  G.system = 'halcyon'; G.lastDock = homeDock(); G.known = START_KNOWN.slice(); G.charted = []; G.jumps = 0;
+  G.system = 'halcyon'; G.deep = null; G.lastDock = homeDock(); G.known = START_KNOWN.slice(); G.charted = []; G.jumps = 0;
   G.fleet = [newShip()]; G.active = 0; // hull, hold and parts are per ship: a new Wren starts them all over
   guideReset(); // guide.js: tips and stats start over
   poiReset(); // poi.js: every site can be salvaged again

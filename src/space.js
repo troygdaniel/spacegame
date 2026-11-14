@@ -5,10 +5,12 @@
 const spaceNowhere = () => ({ x: -60000, y: -60000, nowhere: true, active: false });
 class Space extends Phaser.Scene {
   constructor() { super('Space'); }
-  // from: 'station' (the default), 'surface', or 'jump': the ship comes out of hyperspace (src/jump.js hands over { from: 'jump', to, origin })
+  // from: 'station' (the default), 'surface', 'jump' (the ship comes out of hyperspace: src/jump.js hands over { from: 'jump', to, origin }) or 'pullout'
+  // (the tunnel was cut short: src/hyperspace.js hands over { from: 'pullout', deep } and G.deep makes the current system an empty deep space, src/pullout.js)
   init(d) {
     this.from = (d && d.from) || 'station';
     this.jumped = this.from === 'jump';
+    G.deep = this.from === 'pullout' && d.deep ? d.deep : null;
     if (this.jumped && d.to && G.system !== d.to) enterSystem(d.to, d.origin || null); // src/universe.js: the system, G.known, G.jumps and where the ship appears
   }
   create() {
@@ -19,7 +21,8 @@ class Space extends Phaser.Scene {
     const WS = sysDef().size; this.WS = WS; // src/universe.js: the current system, from src/data_systems.js
     this.physics.world.setBounds(0, 0, WS, WS);
     this.cameras.main.fadeIn(300, 0, 0, 0).setBounds(0, 0, WS, WS);
-    spaceBackdrop(this); // src/art_world.js: nebula, parallax star layers, distant sun, giant and moon
+    spaceBackdrop(this, !!G.deep); // src/art_world.js: nebula, parallax star layers, distant sun, giant and moon (deep space has only stars)
+    this.events.once('shutdown', () => { G.deep = null; }); // a pull-out lives only as long as this scene shows it
 
     const stDef = sysBody('station'), plDef = sysBody('planet');
     if (stDef) {
@@ -44,7 +47,7 @@ class Space extends Phaser.Scene {
     this.ship.rotation = rot;
     const v0 = arr ? ARRIVE.speed : 140; // out of the tunnel at 500 px/s toward the middle (src/universe.js), off a launch pad at 140
     this.ship.setVelocity(Math.cos(rot) * v0, Math.sin(rot) * v0);
-    this.lockUntil = this.time.now + (arr ? 0 : 1300);
+    this.lockUntil = this.time.now + (arr || G.deep ? 0 : 1300); // no launch lock coming out of a tunnel, and none in deep space
     this.calmUntil = null; // set by the first frame of flight: no pirates engage and none spawn until then (a jump's 3 s of calm)
     if (this.jumped) G.arrival = null;
     this.cameras.main.startFollow(this.ship, true, 0.12, 0.12);
@@ -59,7 +62,7 @@ class Space extends Phaser.Scene {
     }).setDepth(3);
     this.boom = fxBoom(this); // src/art_world.js: sparks, flash, embers, shockwave, shards, smoke, scaled by the count
 
-    if (G.system === 'halcyon') { // the pirates round Kepler-4b and on the way to it are Halcyon's own (the other systems spawn from their table)
+    if (G.system === 'halcyon' && !G.deep) { // (G.system is still the system you left while deep space is up) the pirates round Kepler-4b and on the way to it are Halcyon's own (the other systems spawn from their table)
       for (let i = 0; i < 6; i++) {
         const a = i / 6 * Math.PI * 2, r = 520 + Math.random() * 220;
         this.spawnDrone(this.planet.x + Math.cos(a) * r, this.planet.y + Math.sin(a) * r);
@@ -107,6 +110,7 @@ class Space extends Phaser.Scene {
     shipsInstall(this); // src/ships.js: flames, trails, shield flash, smoke and sparks on every ship
     cruiseSetup(this); cruiseFarBodies(this); // src/cruise.js: N nav list, C cruise, and the bodies out in far space
     jumpSetup(this); // src/jump.js: the jump charge, and the F key for the fuel ranger
+    deepSetup(this); // src/pullout.js: the pirates of a pull-out in deep space, or a nest's entry pirates
   }
 
   killDrone(e) { // one place for bullets and ramming to finish an enemy
@@ -156,7 +160,10 @@ class Space extends Phaser.Scene {
     const owed = Math.max(50, Math.floor(G.credits * 0.2)), fee = Math.min(owed, G.credits);
     G.credits -= fee; G.hull = fee < owed ? Math.ceil(G.maxHull / 2) : G.maxHull;
     if (!missionDeath(this)) toast(this, fee < owed ? 'Ship destroyed. You could only pay ' + fee + ' cr: rebuilt at half hull.' : 'Ship destroyed. Insurance fee -' + fee + ' cr.', '#ff4d6d');
-    this.time.delayedCall(2200, () => go(this, 'Station', { arrive: false }));
+    this.time.delayedCall(2200, () => {
+      const home = dockSystem(G.lastDock); if (home) G.system = home; // you wake docked at the last station: its system is where you are (a jump or a pull-out left G.system elsewhere)
+      go(this, 'Station', { arrive: false });
+    });
   }
 
   update(time, dt) {
@@ -165,6 +172,7 @@ class Space extends Phaser.Scene {
     spaceBackdropTick(this); // parallax layers follow the camera
     if (this.dead) return;
     if (this.leaving) { feelFrame(this, time, dt); return; } // docking or landing move is playing (feel.js)
+    deepFrame(this); // src/pullout.js: the last pirate of a pull-out gone starts the way back into the tunnel
     jumpFrame(this, dt); // src/jump.js: the charge ring, and the jump when it is full
     if (this.leaving) { feelFrame(this, time, dt); return; } // the jump went
     const crs = cruiseFrame(this, time, dt); // src/cruise.js: 'cruise' = the ship flies itself, 'nav' = the nav list is open (no flight input)
@@ -205,6 +213,7 @@ class Space extends Phaser.Scene {
       this.launchAt = time;
       if (this.jumped) { this.calmUntil = time + ARRIVE.calm; this.launchAt = time - LAUNCH_GRACE + ARRIVE.calm; this.graceOver = true; } // a jump: 3 s of calm, then the first wave ramps as usual
     }
+    if (G.deep) this.graceOver = true; // no "patrol cover ends" notice in deep space: the pirates are already here
     if (!this.graceOver && pirateCap(this, time) > 0) { this.graceOver = true; toast(this, 'Patrol cover ends here. Pirates about.', '#ffd37a'); }
     this.aggro = 0; // how many pirates have engaged you this frame (enemies.js caps it while the first wave ramps up)
     this.enemies.getChildren().forEach(d => pirateAI(this, d, ship, time)); // src/enemies.js: chase, strafe, shoot

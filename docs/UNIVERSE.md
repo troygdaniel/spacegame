@@ -124,6 +124,8 @@ Every cruising second at danger d rolls `0.004 x d` (a 6.5 s leg in a danger-3 s
 ### 5.2 Pull-out in hyperspace
 Each jump rolls `0.02 + 0.01 x max(danger of the two systems)` (2 to 7%). When it fires the tunnel flickers, an alarm sounds, and the rings collapse at 40 to 70% of the way. You drop into **deep space**: the `Space` scene with an empty system definition (no bodies, a dark tint, no docking) and three to five pirates sized to the danger. Win and the tunnel resumes for the time that was left; the fuel was spent when you jumped. Die and the usual insurance flow runs: you wake at the last station you docked at, with the fee. Nests have pirates waiting at the entry point as well.
 
+*As built (card e2, `src/pullout.js`):* the roll is taken the moment the charge completes and rides with the tunnel (`pull: { at, danger }`); `G.deep` makes the current system an empty 16000 px "Deep space" (never saved: a reload docks you at the last station); the pirates number 3 at danger 1 to 2, 4 at 3 to 4, 5 at 5, all engaged at once; four seconds after the last one dies the tunnel starts again for the time that was left, from the same percentage; a death sets `G.system` to the system of `G.lastDock`. A nest's waiting pirates are 3, or a system's own `entry: n`. `index.html#pullout` plays the whole thing.
+
 ### 5.3 Pirates in a bigger world
 Spawn tables become per system: `maxActive` (3 at danger 1 to 12 at danger 5), spawn interval, weights of raider, drone and gunship (`pirateTypeFor` takes the system's weights; the distance rule stays near stations). The Reaver lives at the Roost. Police exist only where traffic is 2 or more.
 

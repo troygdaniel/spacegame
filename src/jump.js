@@ -17,7 +17,7 @@ const JUMP_WHY = { // what the toast says when a charge ends early
 
 // why the ship cannot start a charge right now, as the words the player reads, or null when it can
 function jumpLock(s) {
-  if (!s || s.dead || s.leaving || s.cruising) return 'not now';
+  if (!s || s.dead || s.leaving || s.cruising || G.deep) return 'not now';
   const near = sysBodies().find(b => (b.type === 'station' || b.type === 'planet') && Math.hypot(b.x - s.ship.x, b.y - s.ship.y) < JUMP.lockMass);
   if (near) return 'Too close to the mass: fly clear of ' + near.name + ' to jump.';
   const hostile = s.enemies.getChildren().some(e => e.active && Math.hypot(e.x - s.ship.x, e.y - s.ship.y) < JUMP.lockHostile);
@@ -29,6 +29,7 @@ function jumpMapOpen(game) {
   if (game.scene.isActive('Galaxy') || game.scene.isActive('Pause') || game.scene.isActive('Overlay') || performance.now() - JUMPST.closedAt < 250) return false;
   const s = game.scene.getScenes(true).find(sc => sc.scene.key === 'Space' || sc.scene.key === 'Station');
   if (!s || s.leaving || s.dead || s.panel || s.talk || s.cruising || (s.cr && s.cr.navOpen) || s.jmp) return false; // a terminal, the nav list, a charge or a fade is up: G waits
+  if (G.deep) { toast(s, 'The jump drive is spent. Clear the pirates and the tunnel re-forms.', '#ffb454'); return false; } // deep space after a pull-out (src/pullout.js)
   const key = s.scene.key;
   s.scene.pause();
   game.scene.run('Galaxy', { from: key, onJump: key === 'Space' ? (id, j) => jumpPick(s, id, j) : null });
@@ -62,6 +63,7 @@ function jumpSetup(s) {
 function rangerFrame(s) {
   const now = performance.now(), arrived = rangerTick(now);
   if (arrived) { toast(s, 'The fuel ranger is here: +' + fmtFuelUnits(arrived.units) + ' units' + (arrived.cost ? ', -' + arrived.cost + ' cr.' : ', no charge: you are out of credits.'), '#6dff9c'); sfx('chime'); }
+  if (G.deep) { s.rangerTxt.setText(''); return; } // deep space after a pull-out: no ranger comes for you here, and F means nothing
   let line = '';
   if (FUELST.rangerAt) line = 'FUEL RANGER ARRIVES IN ' + Math.ceil(Math.max(0, FUELST.rangerAt - now) / 1000) + ' S';
   else if (!fuelSystemHasPump(G.system) && fuelHave() < FUEL.ranger.units) { const q = rangerQuote(); line = 'F  CALL THE FUEL RANGER  (' + fmtFuelUnits(q.units) + ' UNITS, ' + q.cost + ' CR, 45 S)'; }
@@ -103,7 +105,8 @@ function jumpGo(s) {
   s.cameras.main.zoomTo(1, 100, 'Linear', true);
   fuelBurn(j.cost, rec); // src/fuel.js
   missionLeaveSpace(s); // src/missions.js: an escort that is left behind fails
-  go(s, 'Hyper', { dest: j.name.toUpperCase(), ly: j.ly, fuel: j.cost, tank: fuelTank(rec), next: 'Space', nextData: { from: 'jump', to: j.to, origin: from } });
+  const pull = pullRoll(from, j.to); // src/pullout.js: usually null; 2 to 7% of jumps are pulled out of the tunnel
+  go(s, 'Hyper', { dest: j.name.toUpperCase(), ly: j.ly, fuel: j.cost, tank: fuelTank(rec), next: 'Space', nextData: { from: 'jump', to: j.to, origin: from }, pull });
 }
 // meta.js asks before it opens the pause menu: Esc during a charge cancels the charge and nothing else
 function jumpEscape(game) {
