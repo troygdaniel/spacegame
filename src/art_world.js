@@ -227,6 +227,8 @@ function waPlanetArt(sc) {
 //   planetTexture(sc, kind, seed)  the key of an 800 px canvas 'planet-<kind>-<seed>'. Kinds: rock, ice, gas, lava, ringed.
 //                                  At most PLANET_CACHE_MAX of them are alive: asking for a new one drops the one asked for
 //                                  longest ago (a system has up to five planets, so a jump to the next system recycles them).
+//                                  A planet that a live image is showing is never dropped (the renderer would crash on it); if all
+//                                  are on show the cache just stays over the cap until a scene lets go of them.
 //   starTexture(sc, type)          the key of a 512 px canvas 'star-<type>'. Types M K G F A: STAR_TYPES says what each looks like
 //                                  and gives the size and the backdrop tint a system of that star uses.
 // The seed picks the palette and the markings, so the same (kind, seed) is the same planet on every boot.
@@ -339,8 +341,17 @@ function planetTexture(sc, kind, seed) {
   if (at >= 0 && sc.textures.exists(key)) { waPlanetCache.push(key); return key; }
   waCanvas(sc, key, 800, 800, (ctx, S) => WA_PLANETS[kind](ctx, S, waRng(Math.imul(seed, 2654435761) + PLANET_KINDS.indexOf(kind) * 104729)));
   waPlanetCache.push(key);
-  while (waPlanetCache.length > PLANET_CACHE_MAX) sc.textures.remove(waPlanetCache.shift());
+  while (waPlanetCache.length > PLANET_CACHE_MAX) {
+    const drop = waPlanetCache.find(k => !waOnShow(sc, k));
+    if (!drop) break; // every one is on show: keep them all
+    waPlanetCache.splice(waPlanetCache.indexOf(drop), 1); sc.textures.remove(drop);
+  }
   return key;
+}
+// is any live image, in any scene (or inside a container), using this texture?
+function waOnShow(sc, key) {
+  const has = list => list.some(o => (o.texture && o.texture.key === key) || (o.list && has(o.list)));
+  return sc.game.scene.scenes.some(s => s.children && has(s.children.list));
 }
 
 // star types: the colour of the sun in the sky and of the light on everything. size scales the sun image (1 is Halcyon's 'sun'),
