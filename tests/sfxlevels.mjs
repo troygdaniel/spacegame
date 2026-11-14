@@ -1,3 +1,4 @@
+// smoke: the sound pass: levels against the planet wind and a laser shot, mute and volume 0, and the wiring
 // Levels of the sound pass (card space-game-sfx-pass; src/audio.js). Run: node tests/sfxlevels.mjs
 // Nothing plays: every effect is rendered into an OfflineAudioContext (the page is only used for its code), like tests/audiolevels.mjs.
 // For each new effect and the cruise rumble loop it measures the loudest 50 ms stretch (RMS, dBFS) and checks:

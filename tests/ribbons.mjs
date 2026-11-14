@@ -1,3 +1,4 @@
+// smoke: ship ribbon bounds: a teleport, a clock that ran backwards, a huge scale and a NaN never draw a bar or a square
 // The ship ribbon's bounds (card space-game-bug-ribbon-zero-length-quad; src/ships.js shipsOne, SHIPS.ribMaxW, ribJump, shipsGuard).
 // Run: node tests/ribbons.mjs
 // Playtest 2 saw a tan rectangle 200 x 180 px ending at the player's nozzle and, once, a full-height bar through the ship: each one stroke

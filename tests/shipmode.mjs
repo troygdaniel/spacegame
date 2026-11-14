@@ -1,3 +1,4 @@
+// smoke: the Ship bay between boarding and launch: Enter launches, Esc goes back, Tab opens the map over it
 // Ship mode (src/shipmode.js): boarding the ship opens a prep screen instead of launching. Real key presses over DevTools, real time.
 //   E at YOUR SHIP -> Ship scene (no Space yet) -> look: status, mission, controls, LAUNCH -> Enter launches; Esc goes back; Tab opens
 //   the map over it and its Esc does not leave the bay; keys inside the first 350 ms (the E that boarded) are ignored.

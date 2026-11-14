@@ -1,3 +1,4 @@
+// not in the smoke: the playtest round 3 walk (docs/PLAYTEST3.md), run by hand: about 8 minutes
 // Playtest round 3 (card space-game-playtest-3): one scripted walk through the jump, fuel, fleet and hangar loop the way Troy would play it,
 // in headless Chrome, one Chrome at a time (tests/lock.mjs), --mute-audio. Every step saves a screenshot to tests/out/pt3-<step>.png, notes
 // the console errors it caused and how long 30 stepped frames took, and never stops the walk: a failed step is written down and the next one

@@ -1,3 +1,4 @@
+// smoke: the one-Chrome-at-a-time test lock and the orphan profile cleanup (no browser)
 // Tests for tests/lock.mjs: the one-Chrome-at-a-time lock and the orphan profile cleanup. No Chrome is started: other processes
 // stand in for lock holders and for Chrome. Uses its own lock directory, never the real one. Run: node tests/locktest.mjs
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync, utimesSync, statSync, readFileSync } from 'node:fs';

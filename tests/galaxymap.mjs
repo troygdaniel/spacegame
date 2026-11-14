@@ -1,3 +1,4 @@
+// smoke: the galaxy map overlay: the eight systems, ranges, the card, out of range and short of fuel, keys and clicks
 // The galaxy map overlay (src/galaxymap.js, card space-game-u-b2-galaxy-map; docs/UNIVERSE.md 4.3 and 9). Real key presses over DevTools, real time.
 // Checks: it opens with the test hash #galaxy, and with G (card u-b4: read only in the station); the eight systems of the stub against the design table; known stars drawn,
 // unknown ones near a known one as "?" and not pickable; the card for the pick (distance, fuel cost, time, pump, danger, what is there) and its

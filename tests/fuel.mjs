@@ -1,3 +1,4 @@
+// smoke: fuel: the tank per ship, the jump cost, the pump terminal, the FUEL chip, the ranger
 // Fuel (card space-game-u-b1-fuel, docs/UNIVERSE.md section 3): the tank per ship, the price of a jump, the pump terminal in the
 // station, the HUD chip and the fuel ranger. Nothing spends fuel in the game yet, so the numbers are checked directly in the page
 // and the terminal is driven with real key presses. Saves tests/out/fuel-*.png. Run: node tests/fuel.mjs

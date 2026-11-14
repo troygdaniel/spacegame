@@ -1,3 +1,4 @@
+// not in the smoke: the Chrome DevTools helper the tests import
 // Tiny Chrome DevTools helper for the Long Haul tests. No dependencies: needs Node 22+ (global WebSocket and fetch).
 import { spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync, mkdirSync, existsSync, writeFileSync } from 'node:fs';

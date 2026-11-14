@@ -1,3 +1,4 @@
+// not in the smoke: station screenshots, run by hand
 // Screenshots of the station exterior and Kestrel Outpost: node tests/stationshots.mjs [prefix]  -> tests/out/<prefix>-*.png
 // Fails (exit 1) on a console error or if the station textures are missing. Uses the stepped clock, so the animation
 // phase is the same every run. The camera is placed by hand; the zoom only lasts for this run.

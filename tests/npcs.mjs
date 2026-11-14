@@ -1,3 +1,4 @@
+// smoke: the Drift bar's six characters: persona cards, lines, reactions; IDA only after the first rescue is paid
 // The Drift bar's six characters (src/shop.js NPCS, sprites in src/interior.js): the data rules of docs/NPC-CHAT.md 3.1 and docs/MODDING.md 5.3,
 // IDA appearing only after the first rescue is paid, and a real talk with each new character. One headless Chrome, closed at the end.
 // Run: node tests/npcs.mjs   (exit code 1 on any failure)

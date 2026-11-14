@@ -1,3 +1,4 @@
+// smoke: scripted rescue loop from station to payout, +500 credits
 // Scripted playthrough of the whole rescue loop through the real game code (real key presses over DevTools).
 // Station: take the Rescue call (E opens the board, 1 picks Rescue, E accepts) -> Space: land on Kepler-4b -> Surface: wake the colonist, board -> Space: dock -> payout.
 // Asserts credits go up by exactly REWARD (500). Drones and crawlers are removed so the run is deterministic;

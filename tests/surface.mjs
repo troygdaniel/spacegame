@@ -1,3 +1,4 @@
+// smoke: planet surface controls panel, aim line and cursor
 // Planet surface controls (card space-game-planet-audio-hints): the controls panel on arrival, its fade and recall with C, the
 // aim line and the reticle that replaces the system cursor, and the cursor coming back when you leave. Saves tests/out/surface-*.png.
 // Run: node tests/surface.mjs   (exit code 1 if a check fails)

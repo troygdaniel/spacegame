@@ -1,3 +1,4 @@
+// smoke: Kestrel Outpost on the Tab map: hexagon, label, legend row
 // The Tab sector map shows Kestrel Outpost (hexagon, label, legend row) in flight and when docked: node tests/outpostmap.mjs
 // Saves tests/out/outpostmap-space.png and outpostmap-station.png. Exit code 1 on a failed check or a console error.
 import { launch, sleep } from './cdp.mjs';

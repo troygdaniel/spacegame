@@ -1,3 +1,4 @@
+// smoke: docs/MODS.md, the modder guide, stays true to the schema and the code (no browser)
 // docs/MODS.md, the ten-minute modder guide (card space-game-m8-modder-guide). No browser: it keeps the guide true.
 //   1. the field reference between the marker lines is what tools/mods-fields.mjs writes from the schema in src/content.js
 //   2. every example file in the guide (a fence marked  md file=content/...) is a whole, valid file with no problems

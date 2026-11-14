@@ -1,3 +1,4 @@
+// smoke: interdiction in cruise (forced roll, the gates, the cooldown) and the pirate tables per system
 // Interdiction in cruise (docs/UNIVERSE.md 5.1) and the pirate tables per system (5.3). Run: node tests/interdict.mjs
 // The roll is forced with CRUISE.rnd (src/cruise.js) and the game clock is stepped by hand, so the checks are exact: a cruising second rolls
 // 0.004 x danger; it never happens within 4000 px of a station, twice within 90 s of flying, or before two jumps; when it fires cruise

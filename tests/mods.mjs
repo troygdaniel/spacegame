@@ -1,3 +1,4 @@
+// smoke: mod packs and the Mods screen: built on their own, off until turned on, a later name wins, a tampered pack is refused
 // Mod packs (card space-game-m7-mod-packs, docs/MODDING.md 13): mods/<pack>/ laid over content/, each pack checked on its own, the example
 // pack, and the Mods screen with its folder picker. Two parts:
 //   A. no browser: the build writes each pack separately and its problems name the pack; the committed mods.generated.js is current
