@@ -22,7 +22,7 @@ function contentVars() {
   const m = safe(() => missionDef());
   return {
     reward: safe(() => m ? m.reward : ''), count: safe(() => m && m.count ? m.count : ''), progress: safe(() => G.missionProgress | 0),
-    credits: safe(() => G.credits | 0), ship: safe(() => activeShip().name), system: safe(() => sysDef().name),
+    credits: safe(() => G.credits | 0), kills: safe(() => G.stats.drones | 0), ship: safe(() => activeShip().name), system: safe(() => sysDef().name),
     station: safe(() => (sysBody('station') || {}).name),
     hull: safe(() => Math.round(100 * Math.max(0, REAVER_HP - G.missionProgress) / REAVER_HP)) // the bounty target's hull left, percent (missions.js)
   };
@@ -32,22 +32,29 @@ function contentFill(text, extra) {
   return String(text).replace(/\{([a-z]+)\}/g, (all, k) => CT_HAS(v, k) ? String(v[k]) : all);
 }
 
-// the closed list of conditions a reaction line or an unlock rule may carry (docs/MODDING.md 3.4); anything unreadable is false
+// the closed list of conditions a reaction line, an unlock rule or an appears rule may carry (docs/MODDING.md 3.4). Several joined by " and " must all
+// hold, and ! in front of one means not. Anything unreadable is false.
 function contentWhen(cond) {
-  try {
-    const c = String(cond); let m;
-    if (c === 'always') return true;
-    if ((m = /^mission:(none|accepted|rescued|failed)$/.exec(c))) return G.mission === m[1];
-    if ((m = /^mission-id:(.+)$/.exec(c))) return G.missionId === m[1];
-    if ((m = /^credits>=(\d+)$/.exec(c))) return G.credits >= +m[1];
-    if ((m = /^credits<(\d+)$/.exec(c))) return G.credits < +m[1];
-    if ((m = /^upgrade:(.+)$/.exec(c))) { const k = m[1], t = CT_HAS(G.upgrades, k) ? G.upgrades[k] : activeShip().parts[k]; return (t | 0) > 0; } // a slot (shields) or an old v1 key (armor)
-    if ((m = /^patrols>=(\d+)$/.exec(c))) return (G.patrolsDone | 0) >= +m[1];
-    if ((m = /^system:(.+)$/.exec(c))) return G.system === m[1];
-    if ((m = /^ship:(.+)$/.exec(c))) return activeShip().model === m[1];
-  } catch (e) { /* a condition that cannot be read is false */ }
+  try { return String(cond).split(' and ').every(part => { const no = part[0] === '!', ok = ctOne(no ? part.slice(1) : part); return no ? !ok : ok; }); } catch (e) { return false; }
+}
+function ctOne(c) {
+  let m;
+  if (c === 'always') return true;
+  if ((m = /^mission:(none|accepted|rescued|failed)$/.exec(c))) return G.mission === m[1];
+  if ((m = /^mission-id:(.+)$/.exec(c))) return G.missionId === m[1];
+  if ((m = /^credits>=(\d+)$/.exec(c))) return G.credits >= +m[1];
+  if ((m = /^credits<(\d+)$/.exec(c))) return G.credits < +m[1];
+  if ((m = /^hull<(\d+)$/.exec(c))) return G.hull * 100 < G.maxHull * +m[1];
+  if ((m = /^kills>=(\d+)$/.exec(c))) return (G.stats.drones | 0) >= +m[1];
+  if ((m = /^missions>=(\d+)$/.exec(c))) return (G.stats.missions | 0) >= +m[1];
+  if ((m = /^upgrade:([a-z0-9-]+)>=(\d)$/.exec(c))) return ctTier(m[1]) >= +m[2];
+  if ((m = /^upgrade:([a-z0-9-]+)$/.exec(c))) return ctTier(m[1]) > 0;
+  if ((m = /^patrols>=(\d+)$/.exec(c))) return (G.patrolsDone | 0) >= +m[1];
+  if ((m = /^system:(.+)$/.exec(c))) return G.system === m[1];
+  if ((m = /^ship:(.+)$/.exec(c))) return activeShip().model === m[1];
   return false;
 }
+const ctTier = k => (CT_HAS(G.upgrades, k) ? G.upgrades[k] : activeShip().parts[k]) | 0; // a slot (shields) or an old v1 key (armor)
 
 // ---- ship: the pirates ----
 // content field -> PIRATES field, where the names differ. fireRange is the pirate's shooting range (a ship's own "range" is the jump range).
@@ -105,7 +112,9 @@ const CT_NPC = {
     const n = NPCS.find(x => x.id === id);
     if (data.name !== undefined && data.name !== n.name && !n.sprite) n.sprite = n.name.toLowerCase(); // the bar's art is looked up by the old name
     ['name', 'role', 'voice', 'x', 'y', 'face', 'persona'].forEach(k => { if (data[k] !== undefined) n[k] = data[k]; });
-    if (data.color !== undefined) { n.css = data.color; n.color = ctHex(data.color); }
+    if (data.color !== undefined) { n.css = data.color; n.color = ctHex(data.color); } // the name above them is the same colour unless the file has a label
+    if (data.label !== undefined) n.css = data.label;
+    if (data.appears !== undefined) n.when = () => contentWhen(data.appears); // in the bar only while this holds
     if (data.lines !== undefined) n.lines.splice(0, n.lines.length, ...data.lines);
     if (data.reactions !== undefined) { // the first row whose condition holds is what they say; none, and they say nothing
       const rows = data.reactions.map(r => ({ when: r.when, line: r.line }));

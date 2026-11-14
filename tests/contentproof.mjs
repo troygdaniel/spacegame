@@ -42,9 +42,23 @@ const SNAP = `(() => {
     return res;
   };
   out.calls = { escort: call('escort'), patrol: call('patrol'), bounty: call('bounty') };
-  const j = NPCS.find(x => x.id === 'juno'), react = [];
-  ['none', 'accepted', 'failed'].forEach(ms => [0, 1].forEach(arm => [0, 900].forEach(cr => { G.mission = ms; activeShip().parts.shields = arm; G.credits = cr; react.push(j.react()); })));
-  out.npc = { name: j.name, role: j.role, color: j.color, css: j.css, x: j.x, y: j.y, face: j.face, voice: j.voice, persona: j.persona, lines: j.lines.slice(), sprite: j.sprite === undefined ? null : j.sprite, react };
+  // the bar's six characters: look, place, voice, persona, lines, when they are in the bar and what each says in 2304 situations
+  // (mission state and id, the three part slots, credits, hull, patrols done, kills and calls finished); a line is its index in texts
+  const base = { ms: 'none', mid: null, sh: 0, wp: 0, en: 0, cr: 0, hp: 100, pd: 0, k: 0 }, states = [];
+  ['none', 'accepted', 'failed'].forEach(ms => [null, 'rescue', 'patrol', 'bounty'].forEach(mid => [0, 1, 2].forEach(sh => [0, 1].forEach(wp => [0, 1].forEach(en => [0, 900].forEach(cr =>
+    [100, 40].forEach(hp => [0, 1].forEach(pd => [0, 12].forEach(k => states.push({ ms, mid, sh, wp, en, cr, hp, pd, k }))))))))));
+  const setSt = st => { G.mission = st.ms; G.missionId = st.mid; Object.assign(activeShip().parts, { shields: st.sh, weapons: st.wp, engine: st.en }); G.credits = st.cr; G.hull = G.maxHull * st.hp / 100; G.patrolsDone = st.pd; G.stats.drones = st.k; G.stats.missions = st.pd; };
+  const kept = { hull: G.hull, drones: G.stats.drones, missions: G.stats.missions };
+  const probes = {}, npcs = {};
+  NPCS.forEach(n => {
+    const texts = [], at = r => { if (r === null || r === undefined) return -1; let i = texts.indexOf(r); if (i < 0) i = texts.push(r) - 1; return i; };
+    const matrix = states.map(st => { setSt(st); return at(n.react()); }).join(',');
+    const here = [0, 1].map(m => { setSt(Object.assign({}, base, { pd: m })); return n.when ? !!n.when() : null; });
+    npcs[n.id] = { name: n.name, role: n.role, color: n.color, css: n.css, x: n.x, y: n.y, face: n.face, voice: n.voice, persona: n.persona, lines: n.lines.slice(), sprite: n.sprite === undefined ? null : n.sprite, here, texts, matrix };
+  });
+  const probe = (id, over) => { setSt(Object.assign({}, base, over)); const r = NPCS.find(x => x.id === id).react(); return r === undefined ? null : r; };
+  probes.sablePatrol = probe('sable', { pd: 1 }); probes.mossHurt = probe('moss', { hp: 40 }); probes.sableKills = probe('sable', { k: 12 });
+  out.npcs = npcs; out.probes = probes;
   const rec = t => ({ model: 'wren', parts: { shields: t, weapons: t, engine: t, tank: t, cargo: t } }), tiers = [0, 1, 2, 3];
   const stats = {};
   ['vmax', 'boost', 'range', 'tank', 'hold', 'shieldMax', 'shieldRegen', 'shieldDelay', 'fireDelay', 'damage', 'boostTank', 'boostRegen'].forEach(nm => { stats[nm] = tiers.map(t => shipStat(nm, rec(t))); });
@@ -52,6 +66,7 @@ const SNAP = `(() => {
   out.parts = { parts: plain(PARTS), stats, fit };
   G.mission = keep.mission; G.missionId = keep.missionId; G.missionProgress = keep.progress; G.credits = keep.credits; G.patrolsDone = keep.patrols;
   Object.assign(activeShip().parts, keep.parts);
+  G.hull = kept.hull; G.stats.drones = kept.drones; G.stats.missions = kept.missions;
   return JSON.stringify(out);
 })()`;
 
@@ -96,6 +111,10 @@ const EDITS = [
     ['bring them back alive.', 'bring them back alive. Done: {progress}.'],
     ['- Escort them to your ship\n- Dock at Halcyon Station', '- Dock and collect {reward} cr'],
     ['Mission failed.', 'Mission lost.']]],
+  ['npcs/tamsin.md', [['x: 668', 'x: 670'], ['Those drones around Kepler-4b', 'Those drones circling Kepler-4b'], ['You took the Kepler call?', 'You took the Kepler run?']]],
+  ['npcs/sable.md', [['patrols>=1 and !mission-id:bounty', 'patrols>=2 and !mission-id:bounty']]],
+  ['npcs/moss.md', [['| hull<50 |', '| hull<30 |']]],
+  ['npcs/ida.md', [['color: pink', 'color: amber']]],
   ['npcs/juno.md', [['color: amber', 'color: cyan'], ['x: 255', 'x: 260'], ['- Welcome to the Drift.', '- Welcome aboard the Drift.'],
     ['| upgrade:shields | Nice shielding on that ship.', '| upgrade:shields | Shiny shielding on that ship.'], ['Manner: warm,', 'Manner: cheerful,']]],
   ['parts/shields-1.md', [['price: 300', 'price: 310'], ['points: 25', 'points: 30'], ['name: LIGHT SHIELD', 'name: LITE SHIELD']]],
@@ -108,7 +127,7 @@ try {
   // ---- A: the shipped pack, B: nothing at all ----
   console.log('A: the shipped pack');
   const A = await play(ROOT);
-  check('the loader applied the sixteen files of the proof set, no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 16 && A.loader.state.modded === false, JSON.stringify(A.loader));
+  check('the loader applied the twenty-one files of the shipped set, no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 21 && A.loader.state.modded === false, JSON.stringify(A.loader));
   check('no console errors', A.errors.length === 0, A.errors.join(' | '));
 
   console.log('B: an empty pack (the code\'s own tables)');
@@ -121,7 +140,9 @@ try {
   same('the pirates: raider, drone and gunship (every number, the radar colour, the shot window)', A.snap.ships, B.snap.ships);
   same('the rescue call: title, place, reward, offer, the three board lines, both progress texts, the failure line, the checklist', A.snap.mission, B.snap.mission);
   same('the other calls: escort, patrol and bounty (title, place, reward, count, offer, objective lines, progress, checklist, the bounty unlock)', A.snap.calls, B.snap.calls);
-  same('JUNO: look, place, voice, persona, her three lines and every reaction in 12 situations', A.snap.npc, B.snap.npc);
+  same('the six characters: look, place, voice, persona, lines, when they are in the bar, and what each says in 2304 situations', A.snap.npcs, B.snap.npcs);
+  same('three spot checks of the reaction rules', A.snap.probes, B.snap.probes);
+  check('and the spot checks are what the rules say (a finished patrol, a hurt hull, twelve kills)', /finished a patrol/.test(A.snap.probes.sablePatrol) && /hanging on by habit/.test(A.snap.probes.mossHurt) && /12 pirates on your tally/.test(A.snap.probes.sableKills), JSON.stringify(A.snap.probes));
   same('the parts: every name, short form, text, price and number of the five slots, and what a Wren gets from them at tiers 0 to 3', A.snap.parts, B.snap.parts);
   check('docking with the colonist pays the same, 500 cr', A.pay === 500 && B.pay === 500, A.pay + ' / ' + B.pay);
   check('and the defaults really are what the game has always had', B.snap.mission.reward === 500 && B.snap.ships.raider.hp === 20 && B.snap.parts.stats.fireDelay.join() === '160,100,70,50' && B.snap.parts.stats.boost.join() === '800,1000,1150,1300' && B.snap.parts.stats.shieldMax.join() === '0,25,50,85' && B.snap.parts.stats.vmax.join() === '480,518,557,600');
@@ -139,7 +160,7 @@ try {
   const cg = gameWith(join(pack, 'content'), realCore);
   check('the edited pack builds with no problems', cg.made.result.errors.length === 0, JSON.stringify(cg.made.result.errors));
   const C = await play(cg.dir);
-  check('the loader applied the eighteen files (the shipped set and a tank and a hold part) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 18 && C.loader.state.modded === true, JSON.stringify(C.loader));
+  check('the loader applied the twenty-three files (the shipped set and a tank and a hold part) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 23 && C.loader.state.modded === true, JSON.stringify(C.loader));
   check('no console errors', C.errors.length === 0, C.errors.join(' | '));
   const want = JSON.parse(JSON.stringify(A.snap)); // what A says, with exactly the edited lines changed
   Object.assign(want.ships.raider, { hp: 22, bounty: 47, radar: 0x6dff9c, shot: [500, 900], strafe: false });
@@ -157,9 +178,12 @@ try {
   want.mission.hud = [ // three steps now: the checklist never points past the last, and the hint still follows the code's own step number
     { cur: 1, next: A.snap.mission.hud[0].next, steps: ['Take the rescue call/done', 'Find the colonist/cur', 'Dock and collect 650 cr/todo'] },
     { cur: 2, next: A.snap.mission.hud[1].next, steps: ['Take the rescue call/done', 'Find the colonist/done', 'Dock and collect 650 cr/cur'] }];
-  Object.assign(want.npc, { color: 0x38e1ff, css: '#38e1ff', x: 260, persona: A.snap.npc.persona.replace('Manner: warm,', 'Manner: cheerful,') });
-  want.npc.lines[0] = want.npc.lines[0].replace('Welcome to the Drift.', 'Welcome aboard the Drift.');
-  want.npc.react = want.npc.react.map(r => r && r.replace('Nice shielding', 'Shiny shielding'));
+  const wj = want.npcs.juno;
+  Object.assign(wj, { color: 0x38e1ff, css: '#38e1ff', x: 260, persona: wj.persona.replace('Manner: warm,', 'Manner: cheerful,') });
+  wj.lines[0] = wj.lines[0].replace('Welcome to the Drift.', 'Welcome aboard the Drift.');
+  wj.texts = wj.texts.map(r => r.replace('Nice shielding', 'Shiny shielding'));
+  const wt = want.npcs.tamsin; wt.x = 670; wt.lines[0] = wt.lines[0].replace('drones around', 'drones circling'); wt.texts = wt.texts.map(r => r.replace('Kepler call', 'Kepler run'));
+  const wi = want.npcs.ida; wi.color = 0xffb454; // label stays: only the body colour was edited
   const wp = want.parts, P = wp.parts; // the parts: tier 1 of shields, weapons and engine edited, tier 2 of the engine renamed, a tank and a hold part added
   P.shields.prices[0] = 310; P.shields.pts[1] = 30; P.shields.tiers[0] = 'LITE SHIELD'; P.weapons.delay[1] = 90;
   Object.assign(P.engine, { speed: [1, 1.1, 1.16, 1.25], range: [0, 2, 2, 3], boost: [0, 210, 350, 500], tank: [100, 140, 165, 200] }); P.engine.tiers[1] = 'TWIN NOZZLES MK2';
@@ -170,7 +194,9 @@ try {
   same('the pirates changed exactly as the raider and drone files say', C.snap.ships, want.ships);
   same('the rescue call changed exactly as its file says (title, reward, board line with {reward}, progress with {progress}, a shorter checklist, failure line)', C.snap.mission, want.mission);
   same('the other calls changed exactly as their files say (a reward, a line of progress, the patrol count in every line and in the checklist, the bounty reward in its offer, and when it unlocks)', C.snap.calls, want.calls);
-  same('JUNO changed exactly as her file says (colour, place, first line, one reaction, persona)', C.snap.npc, want.npc);
+  check('the rules edited in the files really changed what two characters say (a patrol rule that now needs two, a hurt hull at 30 percent)', C.snap.probes.sablePatrol === null && C.snap.probes.mossHurt === null && C.snap.probes.sableKills === A.snap.probes.sableKills, JSON.stringify(C.snap.probes));
+  same('the characters changed exactly as their files say (JUNO: colour, place, a line, a reaction, persona; TAMSIN: place, a line, a reaction; IDA: body colour), the rest as before', Object.assign({}, C.snap.npcs, { sable: A.snap.npcs.sable, moss: A.snap.npcs.moss }), Object.assign({}, want.npcs, { sable: A.snap.npcs.sable, moss: A.snap.npcs.moss }));
+  check('SABLE and MOSS now answer differently (their conditions were edited)', C.snap.npcs.sable.matrix !== A.snap.npcs.sable.matrix && C.snap.npcs.moss.matrix !== A.snap.npcs.moss.matrix);
   same('the parts changed exactly as the part files say (a price, shield points, a name, the fire delay, the engine speed, jump, boost and tank, a fuel tank and a hold)', C.snap.parts, want.parts);
   check('docking with the colonist pays the edited reward, 650 cr', C.pay === 650, String(C.pay));
 

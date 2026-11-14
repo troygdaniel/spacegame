@@ -37,7 +37,7 @@ try {
   // 1. the real pack: nothing wrong, nothing listed, the proof set (card m4: two ships, a call, a character, nine part tiers) applied
   await run('the real content pack', ROOT, '', 'Title', async (t, st) => {
     check('the loader read content.generated.js', st.state.loaded === true && typeof st.state.hash === 'string' && st.state.hash.length > 0, JSON.stringify(st.state));
-    check('it lists no problems and applies the sixteen files of the shipped set', st.errors.length === 0 && st.state.applied.length === 16 && st.state.skipped === 0, JSON.stringify(st.errors) + ' ' + st.state.applied.join());
+    check('it lists no problems and applies the twenty-one files of the shipped set', st.errors.length === 0 && st.state.applied.length === 21 && st.state.skipped === 0, JSON.stringify(st.errors) + ' ' + st.state.applied.join());
     check('the shipped pack is not MODDED', st.state.modded === false, JSON.stringify(st.state));
   });
 

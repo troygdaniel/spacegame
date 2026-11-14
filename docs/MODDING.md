@@ -93,11 +93,11 @@ Under a `## Heading` the body is one of three shapes, chosen by the schema:
 The text before the first `##` is the file's **description** (shown in the hangar, the shop, the mission board, depending on the type).
 
 ### 3.3 Placeholders
-Text may use `{name}` placeholders from a short list per type, filled by the game: `{reward}`, `{count}`, `{progress}`, `{station}`, `{system}`, `{credits}`, `{ship}`. An unknown placeholder is an error ("{rewrd} is not a known placeholder here; did you mean {reward}?"). There are no expressions, no conditions and no code in text.
+Text may use `{name}` placeholders from a short list per type, filled by the game: `{reward}`, `{count}`, `{progress}`, `{station}`, `{system}`, `{credits}`, `{ship}`, `{kills}` (pirates you have destroyed) and, in a mission, `{hull}` (the percent of hull the bounty target has left). In a mission's own text `{reward}` and `{count}` are that call's, whichever call is open. An unknown placeholder is an error ("{rewrd} is not a known placeholder here; did you mean {reward}?"). There are no expressions, no conditions and no code in text.
 
 ### 3.4 Conditions (the whole list)
 A reaction line or an unlock rule may carry a `when` from a closed list. A mod cannot invent new ones; a new one is a code contribution.
-`always`, `mission:none`, `mission:accepted`, `mission:rescued`, `mission:failed`, `mission-id:ID`, `credits>=N`, `credits<N`, `upgrade:SLOT`, `patrols>=N`, `system:ID`, `ship:ID` (ID, SLOT and N are what you fill in).
+`always`, `mission:none`, `mission:accepted`, `mission:rescued`, `mission:failed`, `mission-id:ID`, `credits>=N`, `credits<N`, `upgrade:SLOT` (anything fitted in that slot), `upgrade:SLOT>=N` (tier N or better), `hull<N` (less than N percent of the hull left), `kills>=N`, `missions>=N` (calls you have finished), `patrols>=N`, `system:ID`, `ship:ID` (ID, SLOT and N are what you fill in). Put `!` in front of one to mean not, and join up to four with ` and ` (all must hold): `credits>=800 and !upgrade:engine`. In a table the first row that holds is what is said.
 
 ## 4. The `file://` problem, and what we chose
 
@@ -194,7 +194,7 @@ One file a tier, named `<slot>-<tier>` (`shields-1`, `engine-3`; the name says w
 This is exactly the shape of a row of `MISSIONS` plus its `HUD_MISSIONS` entry today.
 
 ### 6.6 `npc`
-`name*`, `role`, `color`, `station`, `x`, `y`, `face`, `voice` (a Deepgram Aura voice name, optional). Sections: `## Lines` (list), `## Reactions` (table: `when | line`), `## Persona` (text, at most 600 characters, for chat).
+`name*`, `role`, `color`, `label` (the colour of the name above them, when it is not `color`), `appears` (a condition: they are in the bar only while it holds; IDA has `missions>=1`), `station`, `x`, `y`, `face`, `voice` (a Deepgram Aura voice name, optional). Sections: `## Lines` (list), `## Reactions` (table: `when | line`), `## Persona` (text, at most 600 characters, for chat).
 
 ### 6.7 `voice`
 `event*` (from the list in `docs/VOICE.md` once it lands). Section `## Lines`: a list; the ship picks one at random and never repeats the last.
