@@ -4,8 +4,8 @@
 //   3. a v2 round trip: save, wipe, load, and the save comes out byte for byte the same (a two-ship fleet, the second one active)
 //   4. v2 wins over v1; an unknown system, station, model or active index falls back and the rest of the save is kept
 //   5. a corrupt v2 save is a new game; clearSave erases v2 only
-// No clock stepping: it only calls the save functions in the page (with the page's own autosave off), so it is quick and does not depend on how busy the Mac is.
-import { launch } from './cdp.mjs';
+// No clock stepping: it only calls the save functions (tests/nodegame.mjs: the game's scripts in plain Node, no Chrome, no Phaser; the page's autosave never runs there), so it takes a second and does not depend on how busy the Mac is.
+import { nodeGame } from './nodegame.mjs'; // the game's scripts in plain Node: this test only calls the save functions, so it needs no Chrome
 
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
@@ -17,9 +17,8 @@ const V1 = {
   earned: 2310, guideDone: true, endingSeen: false, stats: { drones: 9, missions: 3, time: 120000 }, poi: { 'wreck-nw': 2, 'beacon-e': 1 }
 };
 
-const t = await launch('#station'); // not a dev jump, so the page loads a save: there is none in the throwaway profile
+const t = nodeGame(); // like the page at the start: loadGame() finds no save on a clean storage, then the content merge
 try {
-  await t.waitFor(`!!(window.game && game.scene.isActive('Station') && typeof loadGame === 'function')`, 30000, 'Station active');
   // The page autosaves every second (installMeta). That would write a v2 save between a test planting one file and reading it, so
   // the autosave is switched off here and the tests call the real saveGame by hand.
   await t.ev(`(() => { window.__realSave = saveGame; saveGame = () => {}; return 1; })()`);

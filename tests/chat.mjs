@@ -6,6 +6,7 @@
 // panel opens from the title screen, refuses a short key, saves a real-looking one, tests with one call, and closes with Esc.
 // Runs one headless Chrome at a time (the Mac is shared).
 import { launch, sleep } from './cdp.mjs';
+import { nodeGame } from './nodegame.mjs';
 
 // built at run time so the hygiene scan (tests/hygiene.mjs) never sees a key-shaped literal
 const KEY_OPENAI = 'sk-test-' + 'o'.repeat(28), KEY_ANTHROPIC = 'sk-ant-test-' + 'a'.repeat(28);
@@ -36,11 +37,10 @@ const call = async (t, req = REQ) => {
   return t.ev('__r');
 };
 
-// ---- part 1: the adapter itself, on the title screen ----
+// ---- part 1: the adapter itself (plain Node: no scene is needed) ----
 {
-  const t = await launch('');
+  const t = nodeGame(); // plain Node (tests/nodegame.mjs): the adapter is functions and a mocked fetch, it needs no scene, so no Chrome
   try {
-    await t.waitFor("!!(window.game && game.scene.isActive('Title'))", 20000, 'title');
     await t.ev(MOCK);
     await t.ev(`(chatSetKey(''), chatSetProvider(''), chatSetModel(''), 1)`); // a clean slate whatever this profile held
     check('no key: status says NO KEY', (await t.ev('chatStatus()')) === 'NO KEY');
@@ -127,8 +127,7 @@ const call = async (t, req = REQ) => {
     await t.ev('saveGame(true)');
     const save = (await t.ev(`localStorage.getItem(SAVE_KEY) || ''`));
     check('the key is not in the save file', !save.includes(KEY_OPENAI) && !save.includes(KEY_ANTHROPIC));
-    const page = await t.ev('document.body.innerText');
-    check('the key is not in the page text', !page.includes(KEY_OPENAI) && !page.includes(KEY_ANTHROPIC));
+    // (the page text: nothing is drawn here, the Title screen is a canvas with no text in the page; part 2 below checks it with the real key boxes open)
     const log = await t.ev(`__log.join('\\n')`);
     check('the key never reached the console', !log.includes(KEY_OPENAI) && !log.includes(KEY_ANTHROPIC));
     await t.ev(`(chatSetKey(''), 1)`);
