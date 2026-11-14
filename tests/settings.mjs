@@ -6,11 +6,12 @@
 // the content section; Reset and Forget all keys with a second press, from the title and from Pause; and that NOTHING is called except by
 // the Test and Hear it buttons (every call is counted, and any host that is not one of the three fails the run).
 // Runs one headless Chrome at a time (the Mac is shared).
-import { launch, sleep } from './cdp.mjs';
+import { chromePool, sleep } from './cdp.mjs';
 
 // built at run time so the hygiene scan (tests/hygiene.mjs) never sees a key-shaped literal
 const KEY_DG = 'TEST-KEY-NOT-REAL-ABCDEFGHIJKL', KEY_OA = 'sk-test-' + 'o'.repeat(28), KEY_AN = 'sk-ant-test-' + 'a'.repeat(28);
 let failed = 0;
+const pool = chromePool(); // every case shares one Chrome (one turn at the test lock), each starting on a clean profile (tests/cdp.mjs goto)
 const check = (name, cond, detail = '') => { console.log(`  ${cond ? 'ok  ' : 'FAIL'} ${name}${detail ? '  (' + detail + ')' : ''}`); if (!cond) failed++; };
 
 // a fetch that records every call and answers in the shape of whichever provider the URL names; any other host is recorded as stray
@@ -45,7 +46,7 @@ const open = async (t, press, key, section) => { await press(key); await t.waitF
 
 // ---- part 1: the title screen ----
 {
-  const t = await launch('');
+  const t = await pool.open('');
   const press = mk(t);
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Title'))", 20000, 'title');
@@ -209,7 +210,7 @@ const open = async (t, press, key, section) => { await press(key); await t.waitF
 
 // ---- part 2: from Pause, in the station ----
 {
-  const t = await launch('#station');
+  const t = await pool.open('#station');
   const press = mk(t);
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Station'))", 20000, 'station');
@@ -244,7 +245,7 @@ const open = async (t, press, key, section) => { await press(key); await t.waitF
 
 // ---- part 3: the old single chat key moves to its slot ----
 {
-  const t = await launch('');
+  const t = await pool.open('');
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Title'))", 20000, 'title');
     console.log('N. migration');
@@ -258,5 +259,6 @@ const open = async (t, press, key, section) => { await press(key); await t.waitF
 }
 
 function CHATKEY(v) { return v; }
+await pool.close();
 console.log(failed ? `SETTINGS FAIL (${failed})` : 'SETTINGS PASS');
 process.exit(failed ? 1 : 0);

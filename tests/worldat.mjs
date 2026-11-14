@@ -1,16 +1,16 @@
 // worldAt(systemId): one system the cards that jump, draw and dock can ask for (card space-game-systems-schema-gaps, docs/MODDING.md 6.3 and 6.4).
-// The real game in headless Chrome. What it pins:
+// The real game's scripts in plain Node (tests/nodegame.mjs: no Chrome, no Phaser; a game copy per case). What it pins:
 //   A. the shipped pack: worldAt gives the game's own Halcyon row; the row built from Halcyon's files alone says the same thing as the code's row (so every field
 //      the code has has a home in the files); every field of the eight systems and six stations ends up in the row worldAt gives; the docks drive the code's
 //      own part functions; and the code's eight rows (card u-b5) are what worldAt gives for every system (tests/systems.mjs pins them against their files).
 //   B. a pack full of wrong files: the game boots, the bad rows are left out, worldAt never throws and never gives a half-made row.
-// Run: node tests/worldat.mjs     (one game per case, one Chrome at a time)
+// Run: node tests/worldat.mjs     (one game per case, a second or two)
 import { createRequire } from 'node:module';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { build } from '../tools/build-content.mjs';
-import { launch, sleep } from './cdp.mjs';
+import { nodeGame } from './nodegame.mjs'; // the game's scripts in plain Node: worldAt and the tables need no scene, so no Chrome
 import { copyGame, ROOT } from './gamecopy.mjs';
 
 const C = createRequire(import.meta.url)('../src/content.js');
@@ -29,10 +29,8 @@ function diff(a, b, path = '') {
 }
 
 async function open(root, fn) {
-  const t = await launch('', root);
+  const t = nodeGame({ root });
   try {
-    await t.waitFor(`!!(window.game && game.scene.isActive('Title'))`, 30000, 'Title active');
-    await sleep(300);
     const ev = async e => JSON.parse(await t.ev(`JSON.stringify((${e}))`));
     await fn(t, ev);
     check('no console errors', t.errors.length === 0, t.errors.join(' | '));

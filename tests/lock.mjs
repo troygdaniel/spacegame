@@ -1,27 +1,41 @@
-// One headless Chrome at a time, across every worktree on this Mac (card space-game-test-load-proof).
+// One headless Chrome at a time, across every worktree on this Mac (card space-game-test-load-proof), in the order runs arrived
+// (card space-game-lock-two-at-a-time).
 // With seven agents each running Chrome the load average reaches 35-50 and DevTools calls time out. cdp.mjs takes this lock in
 // launch() and gives it back in close(), so a second run waits its turn instead of piling on.
 //
-// How: a lock directory in the OS temp dir (mkdir is atomic). Inside it, an "owner" file names the process that holds it, and the
+// The lock: a lock directory in the OS temp dir (mkdir is atomic). Inside it, an "owner" file names the process that holds it, and the
 // holder touches that file every 15 s (a heartbeat). A lock is stale, and taken over, when its owner process is gone, or its
 // heartbeat is more than 2 minutes old, or the directory has no owner file for 10 s (a crash between mkdir and the write).
 // The holder gives it back on exit, Ctrl+C and kill. In the same process it is re-entrant (a count).
 //
-//   import { acquire, release, cleanupOrphans } from './lock.mjs'
-//   env LONGHAUL_LOCK_DIR   another lock directory (tests/locktest.mjs uses it)
-//   env LONGHAUL_NO_LOCK=1  skip the lock (one run on a quiet machine)
-//   env LONGHAUL_BEAT_MS    heartbeat period (tests only)
+// The queue: a run that finds the lock taken writes a ticket (a small file named by arrival time and pid) into <lock>.queue and only
+// the OLDEST ticket tries for the lock, so runs get it in the order they came. Before this, every waiter polled at random and one run
+// waited 45 minutes and timed out while later runs passed it. A waiter refreshes its ticket each time round its loop; a ticket whose
+// process is gone, or that has not been refreshed for 15 s, is dropped by the others, so a dead or stuck waiter never blocks the line.
+//
+// Slots: LONGHAUL_LOCK_SLOTS=2 lets a second run in at once, but only while the one-minute load average is under LONGHAUL_LOCK_MAXLOAD
+// (default 12, a 10-core Mac). Slot 0 is the lock directory itself, so an older lock.mjs (no queue, no slots) still excludes this one
+// from slot 0; slot k is <lock>.<k>. The default is one slot: nothing changes for a run that does not ask.
+//
+//   import { acquire, release, cleanupOrphans, queueStatus } from './lock.mjs'
+//   node tests/lock.mjs status   who holds a slot and who waits, in order ("idle" when nobody does)
+//   env LONGHAUL_LOCK_DIR        another lock directory (tests/locktest.mjs uses it)
+//   env LONGHAUL_NO_LOCK=1       skip the lock (one run on a quiet machine)
+//   env LONGHAUL_LOCK_SLOTS      how many runs at once (default 1)
+//   env LONGHAUL_LOCK_MAXLOAD    a slot after the first is only given while the load is under this (default 12)
+//   env LONGHAUL_BEAT_MS, LONGHAUL_TICKET_STALE_MS, LONGHAUL_FAKE_LOAD   tests only
 import { mkdirSync, rmSync, readFileSync, writeFileSync, utimesSync, statSync, readdirSync, existsSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { tmpdir, loadavg } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 
 export const STALE_MS = 120000, NO_OWNER_MS = 10000;
 const beatMs = () => Number(process.env.LONGHAUL_BEAT_MS) || 15000; // env: tests/locktest.mjs speeds the heartbeat up
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 export const lockDir = () => process.env.LONGHAUL_LOCK_DIR || join(tmpdir(), 'longhaul-chrome.lock');
 
-let held = 0, beat = null, hooked = false;
+let held = 0, beat = null, hooked = false, mySlot = 0, myTicket = null;
 
 export function alive(pid) {
   try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } // EPERM: it exists but is not ours
@@ -38,46 +52,111 @@ export function staleReason(dir) {
   return null;
 }
 
+// ---- slots and the queue ----
+export const slots = () => Math.max(1, parseInt(process.env.LONGHAUL_LOCK_SLOTS, 10) || 1);
+const maxLoad = () => (process.env.LONGHAUL_LOCK_MAXLOAD !== undefined && process.env.LONGHAUL_LOCK_MAXLOAD !== '' ? Number(process.env.LONGHAUL_LOCK_MAXLOAD) : 12);
+const load1 = () => (process.env.LONGHAUL_FAKE_LOAD !== undefined && process.env.LONGHAUL_FAKE_LOAD !== '' ? Number(process.env.LONGHAUL_FAKE_LOAD) : loadavg()[0]);
+const ticketStaleMs = () => Number(process.env.LONGHAUL_TICKET_STALE_MS) || 15000;
+export const slotDir = k => (k === 0 ? lockDir() : lockDir() + '.' + k); // slot 0 is the old lock directory: an older lock.mjs still excludes this one
+export const queueDir = () => lockDir() + '.queue';
+
+function makeTicket() {
+  mkdirSync(queueDir(), { recursive: true });
+  const name = `${String(Date.now()).padStart(15, '0')}-${String(process.pid).padStart(7, '0')}-${Math.random().toString(36).slice(2, 6)}`;
+  writeFileSync(join(queueDir(), name), JSON.stringify({ pid: process.pid, cwd: process.cwd(), cmd: process.argv.slice(1).join(' '), since: Date.now() }));
+  return name;
+}
+const dropTicket = name => { if (name) try { rmSync(join(queueDir(), name), { force: true }); } catch (e) { /* gone already */ } };
+// the tickets in arrival order; a ticket whose process is gone, or that has not been refreshed lately, is dropped first
+function liveTickets() {
+  let names = [];
+  try { names = readdirSync(queueDir()).sort(); } catch (e) { return []; }
+  const out = [];
+  for (const name of names) {
+    const path = join(queueDir(), name); let o = null;
+    try { o = JSON.parse(readFileSync(path, 'utf8')); } catch (e) { o = null; }
+    if (!o && ageOf(path) < NO_OWNER_MS) { out.push({ name, pid: 0, cmd: '?', cwd: '?', since: Date.now() }); continue; } // just made, not written yet
+    if (!o || !alive(o.pid) || ageOf(path) > ticketStaleMs()) { try { rmSync(path, { force: true }); } catch (e) { /* another waiter did */ } continue; }
+    out.push({ name, ...o });
+  }
+  return out;
+}
+const touchTicket = name => { try { const t = new Date(); utimesSync(join(queueDir(), name), t, t); } catch (e) { /* dropped: the loop makes a new one */ } };
+
+// try for the slot directory k once: true when it is ours now. A stale lock found there is taken over (and the caller tries again).
+function takeSlot(k, log) {
+  const dir = slotDir(k);
+  try {
+    mkdirSync(dir);
+    writeFileSync(join(dir, 'owner'), JSON.stringify({ pid: process.pid, cwd: process.cwd(), cmd: process.argv.slice(1).join(' '), since: Date.now() }));
+    return 'taken';
+  } catch (e) { if (e.code !== 'EEXIST') throw e; }
+  const was = readOwner(dir), why = staleReason(dir);
+  if (why) {
+    // take it over only if it is still the owner we judged stale (another waiter may have done it first and taken the lock)
+    if (JSON.stringify(readOwner(dir)) === JSON.stringify(was) && staleReason(dir)) { log(`  (test lock: taking over a stale lock, ${why})`); rmSync(dir, { recursive: true, force: true }); return 'stale'; }
+  }
+  return 'busy';
+}
+
+// who holds a slot and who waits, in order. idle: nobody does.
+export function queueStatus() {
+  const holders = [];
+  for (let k = 0; k < Math.max(slots(), 4); k++) {
+    const o = readOwner(slotDir(k));
+    if (o && !staleReason(slotDir(k))) holders.push({ slot: k, pid: o.pid, cmd: o.cmd, cwd: o.cwd, runningS: Math.round((Date.now() - (o.since || Date.now())) / 1000) });
+  }
+  const waiting = liveTickets().map((t, i) => ({ place: i + 1, pid: t.pid, cmd: t.cmd, cwd: t.cwd, waitedS: Math.round((Date.now() - (t.since || Date.now())) / 1000) }));
+  return { holders, waiting, idle: !holders.length && !waiting.length };
+}
+
 function giveBack() {
-  const dir = lockDir(), o = readOwner(dir);
+  const dir = slotDir(mySlot), o = readOwner(dir);
   if (o && o.pid === process.pid) rmSync(dir, { recursive: true, force: true });
 }
 
 export async function acquire({ timeoutMs = 45 * 60000, log = console.log } = {}) {
   if (process.env.LONGHAUL_NO_LOCK === '1') return;
   if (held) { held++; return; }
-  const dir = lockDir(), t0 = Date.now();
-  let lastNote = 0;
-  for (;;) {
-    try {
-      mkdirSync(dir);
-      writeFileSync(join(dir, 'owner'), JSON.stringify({ pid: process.pid, cwd: process.cwd(), cmd: process.argv.slice(1).join(' '), since: Date.now() }));
-      break;
-    } catch (e) { if (e.code !== 'EEXIST') throw e; }
-    const was = readOwner(dir), why = staleReason(dir);
-    if (why) {
-      // take it over only if it is still the owner we judged stale (another waiter may have done it first and taken the lock)
-      if (JSON.stringify(readOwner(dir)) === JSON.stringify(was) && staleReason(dir)) { log(`  (test lock: taking over a stale lock, ${why})`); rmSync(dir, { recursive: true, force: true }); }
-      continue;
+  const t0 = Date.now();
+  let lastNote = 0, got = -1;
+  myTicket = null;
+  try {
+    myTicket = makeTicket();
+    for (;;) {
+      const line = liveTickets();
+      let at = line.findIndex(t => t.name === myTicket);
+      if (at < 0) { myTicket = makeTicket(); at = liveTickets().findIndex(t => t.name === myTicket); } // our ticket was dropped (a long stall): back of the line
+      if (at === 0) { // the head of the line is the only one that tries
+        for (let k = 0; k < slots(); k++) {
+          if (k > 0 && load1() >= maxLoad()) break; // a second run only while the Mac is quiet
+          let r = takeSlot(k, log);
+          if (r === 'stale') r = takeSlot(k, log);
+          if (r === 'taken') { got = k; break; }
+        }
+        if (got >= 0) break;
+      }
+      touchTicket(myTicket);
+      if (Date.now() - t0 > timeoutMs) {
+        const o = readOwner(slotDir(0)) || {};
+        throw new Error(`timed out after ${Math.round(timeoutMs / 1000)} s waiting for the test lock held by pid ${o.pid} (${o.cmd || '?'} in ${o.cwd || '?'}); delete ${slotDir(0)} if that run is dead`);
+      }
+      if (Date.now() - lastNote > 30000) {
+        const o = readOwner(slotDir(0)) || {};
+        log(`  (test lock: waiting for another Long Haul test run: pid ${o.pid}, ${o.cmd || '?'}, running ${Math.round((Date.now() - (o.since || Date.now())) / 1000)} s; you are ${at < 0 ? '?' : at + 1} in line)`);
+        lastNote = Date.now();
+      }
+      await sleep(250 + Math.random() * 200);
     }
-    if (Date.now() - t0 > timeoutMs) {
-      const o = readOwner(dir) || {};
-      throw new Error(`timed out after ${Math.round(timeoutMs / 1000)} s waiting for the test lock held by pid ${o.pid} (${o.cmd || '?'} in ${o.cwd || '?'}); delete ${dir} if that run is dead`);
-    }
-    if (Date.now() - lastNote > 30000) {
-      const o = readOwner(dir) || {};
-      log(`  (test lock: waiting for another Long Haul test run: pid ${o.pid}, ${o.cmd || '?'}, running ${Math.round((Date.now() - (o.since || Date.now())) / 1000)} s)`);
-      lastNote = Date.now();
-    }
-    await sleep(400 + Math.random() * 400);
-  }
-  held = 1;
+  } finally { dropTicket(myTicket); myTicket = null; } // got it, timed out or failed: the ticket is not needed
+  mySlot = got; held = 1;
+  const dir = slotDir(mySlot);
   beat = setInterval(() => { try { const t = new Date(); utimesSync(join(dir, 'owner'), t, t); } catch (e) { /* lock was removed: nothing to keep alive */ } }, beatMs());
   beat.unref();
   if (!hooked) { // give it back however this process ends
     hooked = true;
-    process.on('exit', () => { if (held) giveBack(); });
-    for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { if (held) giveBack(); process.exit(128 + ({ SIGINT: 2, SIGTERM: 15, SIGHUP: 1 })[sig]); });
+    process.on('exit', () => { if (held) giveBack(); dropTicket(myTicket); });
+    for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { if (held) giveBack(); dropTicket(myTicket); process.exit(128 + ({ SIGINT: 2, SIGTERM: 15, SIGHUP: 1 })[sig]); });
   }
 }
 
@@ -131,4 +210,14 @@ export function cleanupOrphans({ base = tmpdir(), log = () => {} } = {}) {
     try { rmSync(path, { recursive: true, force: true }); done.removed.push(n); log(`  (cleaned up the orphan Chrome profile ${n})`); } catch (e) { /* in use: next time */ }
   }
   return done;
+}
+
+// node tests/lock.mjs status: who is running Chrome tests and who is waiting
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href && process.argv[2] === 'status') {
+  const q = queueStatus();
+  if (q.idle) console.log('test lock: idle (nobody holds it, nobody waits)');
+  else {
+    q.holders.forEach(h => console.log(`holds slot ${h.slot}: pid ${h.pid} for ${h.runningS} s  ${h.cmd}  (${h.cwd})`));
+    q.waiting.forEach(w => console.log(`waiting #${w.place}: pid ${w.pid} for ${w.waitedS} s  ${w.cmd}  (${w.cwd})`));
+  }
 }

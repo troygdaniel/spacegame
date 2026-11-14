@@ -10,9 +10,10 @@
 import { rmSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { build } from '../tools/build-content.mjs';
-import { launch, sleep } from './cdp.mjs';
+import { chromePool, sleep } from './cdp.mjs';
 import { copyGame, ROOT } from './gamecopy.mjs';
 let failed = 0, n = 0;
+const pool = chromePool(); // every case shares one Chrome (one turn at the test lock), each starting on a clean profile (tests/cdp.mjs goto)
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok  ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + detail + ')' : ''}`); } };
 
 const state = t => t.ev(`JSON.stringify({ errors: CONTENT_ERRORS.map(e => e.level + '|' + e.path + '|' + e.message), state: CONTENT_STATE })`).then(JSON.parse);
@@ -20,7 +21,7 @@ const state = t => t.ev(`JSON.stringify({ errors: CONTENT_ERRORS.map(e => e.leve
 // open the copy, wait for a scene, hand back what the loader reported; extra(t, st) runs more checks while the page is up
 async function run(name, dir, hash, scene, extra, allowedErrors = []) {
   console.log(name);
-  const t = await launch(hash, dir);
+  const t = await pool.open(hash, dir);
   try {
     await t.waitFor(`!!(window.game && game.scene.isActive('${scene}'))`, 25000, scene + ' scene active');
     await sleep(800); // a few frames: a scene that boots and then crashes shows up here
@@ -92,5 +93,6 @@ try {
   tmp.forEach(d => rmSync(d, { recursive: true, force: true }));
 }
 
+await pool.close();
 console.log(failed ? `\nCONTENT BOOT FAIL: ${failed} of ${n} checks failed` : `\nCONTENT BOOT PASS: ${n} checks`);
 process.exitCode = failed ? 1 : 0;

@@ -1,19 +1,21 @@
 // The proof set in markdown (card space-game-m4-proof, docs/MODDING.md sections 8 and 10): the raider and drone, the rescue call, JUNO and
 // nine ship part tiers (shields, weapons, engine) live in content/*.md, and the code tables in enemies.js, missions.js, shop.js, data_parts.js
-// and hud.js read them through the adapters in src/contenttables.js. Each case runs the real game in headless Chrome from a throwaway COPY of this
-// folder with its own content.generated.js, then reads the tables the game plays from:
+// and hud.js read them through the adapters in src/contenttables.js. Each case is a throwaway COPY of this folder with its own content.generated.js. The
+// tables the game plays from are read from the game's scripts in plain Node (tests/nodegame.mjs: no Chrome, no Phaser); what the Station scene pays when
+// the colonist is delivered needs a scene, so ONE headless Chrome opens each copy in turn for that and for its console errors:
 //   A  the shipped pack          the game plays on what the files say
 //   B  an empty pack             the game plays on the code's own tables (the defaults)
 //      A equals B, field by field: each file applied over its default changes nothing (the two tables must never drift)
 //   C  a copy with edited files  exactly what each edited line says changes, and nothing else (and the Title says MODDED)
 //   D  wrong files               a part in the wrong slot, a call of another kind and so on are refused with a message; the tables stay as they were
-// Run: node tests/contentproof.mjs     (four games, one Chrome at a time; about a minute)
+// Run: node tests/contentproof.mjs     (four games; one Chrome, held once for all four)
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deepStrictEqual } from 'node:assert';
 import { build } from '../tools/build-content.mjs';
 import { launch, sleep } from './cdp.mjs';
+import { nodeGame } from './nodegame.mjs';
 import { copyGame, ROOT } from './gamecopy.mjs';
 
 let failed = 0, n = 0;
@@ -82,16 +84,23 @@ async function payout(t) {
   return t.ev(`G.credits - window.__c0`);
 }
 
-async function play(root) { // open the copy at Title; what the loader said, the tables, what docking pays
-  const t = await launch('', root);
-  try {
-    await t.waitFor(`!!(window.game && game.scene.isActive('Title'))`, 30000, 'Title active');
-    await sleep(500);
-    const loader = JSON.parse(await t.ev(`JSON.stringify({ errors: CONTENT_ERRORS.map(e => e.level + '|' + e.path + '|' + e.message), state: CONTENT_STATE })`));
-    const snap = JSON.parse(await t.ev(SNAP));
-    const pay = await payout(t);
-    return { loader, snap, pay, errors: t.errors.slice() };
-  } finally { await t.close(); }
+// the one Chrome of this test, opened by the first case and navigated to each copy in turn (one turn at the test lock instead of four)
+let page = null, pageSeen = 0;
+async function pageFor(root) { // what the Station scene pays in this copy, and the console errors the page gave while booting it
+  if (!page) page = await launch('', root);
+  else { await page.ev('window.__old = 1'); await page.send('Page.navigate', { url: 'file://' + root + '/index.html' }); }
+  await page.waitFor(`!window.__old && !!(window.game && game.scene.isActive('Title'))`, 30000, 'Title active');
+  await sleep(500);
+  const pay = await payout(page), errors = page.errors.slice(pageSeen); pageSeen = page.errors.length;
+  return { pay, errors };
+}
+
+async function play(root) { // what the loader said and the tables (plain Node), then what docking pays and the page's errors (Chrome)
+  const g = nodeGame({ root });
+  const loader = JSON.parse(await g.ev(`JSON.stringify({ errors: CONTENT_ERRORS.map(e => e.level + '|' + e.path + '|' + e.message), state: CONTENT_STATE })`));
+  const snap = JSON.parse(await g.ev(SNAP));
+  const { pay, errors } = await pageFor(root);
+  return { loader, snap, pay, errors: g.errors.concat(errors) };
 }
 
 const tmp = [];
@@ -259,6 +268,7 @@ try {
   same('every table is exactly the default', D.snap, B.snap);
   check('docking pays the default 500 cr', D.pay === 500, String(D.pay));
 } catch (e) { check('the proof test ran: ' + e.message, false); } finally {
+  if (page) await page.close();
   tmp.forEach(d => rmSync(d, { recursive: true, force: true }));
 }
 

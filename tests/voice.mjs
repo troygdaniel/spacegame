@@ -3,10 +3,11 @@
 // second call; lines never overlap and warnings queue; a rejected key switches the voice off; mute silences it; the key is not in
 // the save file, the page text or the console; Settings opens from the title screen at the Deepgram key and saves it; a low hull in the real Space scene speaks.
 // Runs one headless Chrome at a time (the Mac is shared).
-import { launch, sleep } from './cdp.mjs';
+import { chromePool, sleep } from './cdp.mjs';
 
 const KEY = 'TEST-KEY-NOT-REAL-ABCDEFGHIJKL'; // plainly fake, and no digits, so tests/hygiene.mjs does not take it for a real key
 let failed = 0;
+const pool = chromePool(); // every case shares one Chrome (one turn at the test lock), each starting on a clean profile (tests/cdp.mjs goto)
 const check = (name, cond, detail = '') => { console.log(`  ${cond ? 'ok  ' : 'FAIL'} ${name}${detail ? '  (' + detail + ')' : ''}`); if (!cond) failed++; };
 
 // installed in the page: a fetch that records the call and answers with 0.1 s of silence as a WAV (decodeAudioData needs real audio)
@@ -25,7 +26,7 @@ const idle = t => t.waitFor('VOICE.playing === false && VOICE.queue.length === 0
 
 // ---- part 1: the voice itself, on the title screen (no game events to interfere) ----
 {
-  const t = await launch('');
+  const t = await pool.open('');
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Title'))", 20000, 'title');
     await t.ev(MOCK);
@@ -127,7 +128,7 @@ const idle = t => t.waitFor('VOICE.playing === false && VOICE.queue.length === 0
 
 // ---- part 2: Settings opens from the title screen at the key (V), saves a key, closes with Esc ----
 {
-  const t = await launch('');
+  const t = await pool.open('');
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Title'))", 20000, 'title');
     await t.ev(MOCK);
@@ -161,7 +162,7 @@ const idle = t => t.waitFor('VOICE.playing === false && VOICE.queue.length === 0
 
 // ---- part 3: a real game event speaks: low hull in the Space scene ----
 {
-  const t = await launch('#space');
+  const t = await pool.open('#space');
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Space'))", 20000, 'space');
     await t.ev(MOCK);
@@ -175,5 +176,6 @@ const idle = t => t.waitFor('VOICE.playing === false && VOICE.queue.length === 0
   } finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
 }
 
+await pool.close();
 console.log(failed ? `VOICE FAIL (${failed})` : 'VOICE PASS');
 process.exitCode = failed ? 1 : 0;
