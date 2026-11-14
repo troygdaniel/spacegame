@@ -75,7 +75,8 @@ try {
     check(who + ': the prompt offers to talk', (await t.ev(`${ST}.prompt.text`)).includes('Talk to ' + (who === 'IDA' ? 'IDA KETTER' : who)), await t.ev(`${ST}.prompt.text`));
     await t.press('E'); await sleep(500);
     check(who + ': the dialogue box opens with the right title', (await t.ev(`${ST}.talkName.text`)) === title, await t.ev(`${ST}.talkName.text`));
-    await sleep(1800);
+    // the typewriter is a timer on the Station's own clock, and on a busy Mac that scene runs at a fraction of real speed: step the clock by hand instead of waiting for real seconds
+    await t.ev(`(() => { const s = ${ST}; for (let k = 0; k < 40; k++) s.time.update(s.time.now, 60); return 1; })()`);
     const said = await t.ev(`${ST}.talkText.text`);
     check(who + ': a line is spoken in quotes', said.length > 20 && said.startsWith('"'), said.slice(0, 50));
     if (who === 'SABLE') await t.shot('npcs-sable-talk');
