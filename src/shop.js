@@ -13,7 +13,7 @@ const NPCS = [
       'The repair bay on the main deck charges half a credit a point of hull. It is the only honest price on this station.'
     ],
     react: () => G.mission === 'failed' ? 'Heard you lost the colonist out there. It happens to every pilot once, so sit, drink, and go again.'
-      : G.upgrades.armor ? 'Nice plating on that ship. Try not to scratch my doorframe.'
+      : partTier('shields') ? 'Nice shielding on that ship. Try not to scratch my doorframe.'
       : G.credits >= 800 ? 'You are carrying a lot of credits. The hangar shop would love to meet them.' : null,
     persona: "Who: Juno, forty, has run the Drift for nine years; the bar is the one warm room on Halcyon.\nManner: warm, dry, short sentences, calls everyone \"pilot\" until she likes them, then by name.\nKnows: station gossip, who owes whom, the repair bay's prices, that pirates never come inside the police ring.\nWants: regulars who come back alive; a story she has not heard.\nWill not: talk about her sister on the mining crews, or badmouth the police where they can hear."
   },
@@ -25,7 +25,7 @@ const NPCS = [
       'Drones turn slowly. Keep circling and they never line up a shot.'
     ],
     react: () => G.mission === 'accepted' ? 'You took the Kepler call? Six drones ring that planet, so come in from the side and take them one at a time.'
-      : G.upgrades.rapid ? 'That is a rapid-fire rig on your ship. Faster rounds mean the drones drop before they finish turning.' : null,
+      : partTier('weapons') ? 'That is a rapid-fire rig on your ship. Faster rounds mean the drones drop before they finish turning.' : null,
     persona: "Who: Tamsin, fifty, flew freighters for twenty years until pirates took her ship out by the rim.\nManner: blunt, proud, short answers; warms up slowly and never says thanks out loud.\nKnows: how drones turn slowly and circle, where the gunships hold, the MULE's runs to the Perseus gate, who got out alive.\nWants: a pilot who finishes what they start; a ship of her own again, someday.\nWill not: talk about the crew she lost, or admit she misses flying."
   },
   {
@@ -36,22 +36,22 @@ const NPCS = [
       'Halcyon was a mining relay before the ore ran out. Now it is mostly mercenaries, mechanics and me.'
     ],
     react: () => G.mission === 'accepted' ? 'You took the rescue? Find the pod, keep the colonist close, and get them back to the ship. Crawlers hunt by heat, and a walking colonist is warm.'
-      : G.upgrades.booster ? 'Is that a booster on your ship? You can outrun the drones now, if you keep your nerve.' : null,
+      : partTier('engine') ? 'Is that a booster on your ship? You can outrun the drones now, if you keep your nerve.' : null,
     persona: "Who: Dex, thirty, the survey tech who charted Kepler-4b and has not slept properly since.\nManner: nervous, precise, answers in measurements, then apologises for rambling.\nKnows: Kepler-4b's red dust, thin air and heat-hunting crawlers, the survey pod's beacon, the salvage sites, Halcyon's mining past.\nWants: someone to bring the survey data home safely; one night without a crawler in his dreams.\nWill not: guess when he can measure, or go back down to the surface."
   },
   { // the repair bay mechanic, off shift, on a stool at the counter
     id: 'moss', voice: 'aura-arcas-en', name: 'MOSS', role: 'repair bay mechanic, off shift', color: CYAN, css: '#38e1ff', x: 340, y: 570, face: Math.PI / 2,
     lines: [
       'I am off shift, so you get half my attention and none of my tools. The repair bay charges half a credit a point of hull, and I stand by that price.',
-      'Armor plating adds twenty hull a tier, and it is the cheapest way to survive a mistake. Pilots buy guns first and plating after their first bad day.',
+      'A shield generator soaks up the first hits and then comes back by itself. Pilots buy guns first and shields after their first bad day.',
       'A booster does not make you faster so much as harder to hit. Boost, dash, and let the drones guess.'
     ],
     react: () => G.hull < G.maxHull * 0.5 ? 'That hull is hanging on by habit. The repair bay is two doors up, and I will not charge extra for the lecture.'
-      : G.upgrades.armor >= 2 ? 'Reinforced plating, nice. It costs the same to patch, but it is easier to like.'
-      : G.credits >= 800 && !G.upgrades.booster ? 'You are carrying enough credits for a booster and a bad idea. Buy the booster.'
-      : G.upgrades.rapid ? 'Rapid fire, nice. The guns are the easy part. Keep the hull to match.'
+      : partTier('shields') >= 2 ? 'A proper shield generator, nice. The hull behind it costs the same to patch, but you will need it less.'
+      : G.credits >= 800 && !partTier('engine') ? 'You are carrying enough credits for a booster and a bad idea. Buy the booster.'
+      : partTier('weapons') ? 'Rapid fire, nice. The guns are the easy part. Keep the hull to match.'
       : G.mission === 'accepted' ? 'You have a call open, so I will keep this short. Check your hull before you go, not after.' : null,
-    persona: "Who: Moss, fifties, runs the repair bay and is off shift, with grease still under the nails.\nManner: tired, kind, practical; says what a part costs before what it does; dry jokes at their own expense.\nKnows: hull damage, what armor plating, rapid fire and boosters really do, the shop prices, the bay's half a credit a point.\nWants: pilots who come back with all their hull; one full night's sleep.\nWill not: lie about what a repair costs, or touch a ship that is not theirs without asking."
+    persona: "Who: Moss, fifties, runs the repair bay and is off shift, with grease still under the nails.\nManner: tired, kind, practical; says what a part costs before what it does; dry jokes at their own expense.\nKnows: hull damage, what shields, rapid fire and engines really do, the shop prices, the bay's half a credit a point.\nWants: pilots who come back with all their hull; one full night's sleep.\nWill not: lie about what a repair costs, or touch a ship that is not theirs without asking."
   },
   { // the retired bounty hunter, alone in the east corner with a view of the door
     id: 'sable', voice: 'aura-stella-en', name: 'SABLE', role: 'retired bounty hunter', color: 0xc08cff, css: '#c08cff', x: 790, y: 600, face: -2.64,
@@ -83,28 +83,14 @@ const NPCS = [
 const NPC_IDX = NPCS.map(() => 0);    // which generic line each NPC says next; survives launching and docking
 const NPC_REACT = NPCS.map(() => ''); // the last reaction line each NPC said, so it is not repeated until the situation changes
 
-// G.upgrades[key] is the tier owned: 0, 1 or 2. prices[t] buys tier t + 1.
-const UPGRADES = [
-  { key: 'armor', name: 'ARMOR PLATING', descs: ['+20 max hull', '+20 more max hull'], prices: [300, 500] },
-  { key: 'rapid', name: 'RAPID FIRE', descs: ['faster guns', 'even faster guns'], prices: [400, 600] },
-  { key: 'booster', name: 'BOOSTER', descs: ['longer boost, higher speed', 'longest boost, top speed'], prices: [350, 550] }
-];
-const TIER_NAME = ['', '', ' II'];
-// What each upgrade tier does, by tier (index 0 = nothing bought). content/parts/*.md write the tiers you can buy (src/contenttables.js);
-// tier 3 is not for sale yet, so those entries only exist so a future ship can fit it.
-const UPGRADE_FX = {
-  hull: [0, 20, 40, 60],                    // armor plating: max hull it adds (src/fleet.js)
-  delay: [160, 100, 70],                    // rapid fire: ms between shots
-  boostTank: [100, 130, 165],               // booster: the boost tank (4 s at tier 0) (src/boost.js)
-  boostRegen: [17, 24, 32],                 // booster: refill per second (src/boost.js)
-  boostAdd: [0, 200, 350, 350]              // booster: px/s added to the ship's boost top speed (src/fleet.js)
-};
-function fireDelay() { return UPGRADE_FX.delay[G.upgrades.rapid | 0]; }       // ms between shots
-function boostMax() { return shipStat('boost'); }  // top speed while boosting: the model's, plus the booster tiers (src/fleet.js)
-function boostEnergy() { const t = G.upgrades.booster | 0; return { max: UPGRADE_FX.boostTank[t], regen: UPGRADE_FX.boostRegen[t] }; } // boost tank and refill per second (src/boost.js)
+// The five parts (shields, weapons, engine, tank, cargo) are in src/data_parts.js and the tier fitted in a slot is partTier(slot)
+// (src/fleet.js). What the rest of the game asks the shop file for:
+function fireDelay() { return shipStat('fireDelay'); }   // ms between shots
+function boostMax() { return shipStat('boost'); }        // top speed while boosting: the model's, plus the engine tier (src/fleet.js)
+function boostEnergy() { return { max: shipStat('boostTank'), regen: shipStat('boostRegen') }; } // boost tank and refill a second (src/boost.js)
 
 function ownedLine() {
-  const have = UPGRADES.filter(u => G.upgrades[u.key]).map(u => u.name + TIER_NAME[G.upgrades[u.key]]);
+  const have = PART_ORDER.filter(k => partTier(k)).map(k => PARTS[k].name + PART_TIER_NAME[partTier(k)]);
   return 'UPGRADES  ' + (have.length ? have.join('  ') : 'none  (shop is in the hangar)');
 }
 
@@ -142,26 +128,37 @@ function buildBar(s) {
 
 function buildShop(s) {
   s.shopOpen = false;
-  s.shopKeys = s.input.keyboard.addKeys('ONE,TWO,THREE,ESC');
+  s.shopKeys = s.input.keyboard.addKeys('ONE,TWO,THREE,FOUR,FIVE,ESC');
 
   // terminal in the hangar
   const r = rectWall(s, 950, 148, 100, 44, 0x0d2a3f, AMBER); s.walls.push(r);
   label(s, 1000, 186, 'UPGRADE SHOP', '#ffb454', 11);
   s.spots.push({ x: 1000, y: 170, text: 'UPGRADE SHOP', key: 'shop', prompt: 'Open the upgrade shop', color: '#ffb454', dy: 74 });
 
-  s.shopUI = panel(s, { w: 900, h: 420, title: 'UPGRADE SHOP  -  HANGAR', color: AMBER, dim: true, depth: 160 });
+  s.shopUI = panel(s, { w: 1060, h: 440, title: 'UPGRADE SHOP  -  HANGAR', color: AMBER, dim: true, depth: 160 });
   s.shopBox = s.shopUI.box.setVisible(false); s.shopObjs = [];
-  s.shopMsgText = s.add.text(0, 100, '', uiFont(16, '#ffd37a')).setOrigin(0.5);
+  s.shopMsgText = s.add.text(0, 136, '', uiFont(16, '#ffd37a')).setOrigin(0.5);
   s.shopBox.add(s.shopMsgText);
-  s.shopUI.setHints([['1-3', 'Buy'], ['Esc', 'Close']]);
+  s.shopUI.setHints([['1-5', 'Buy'], ['Esc', 'Close']]);
 }
 
-// the little shape on each tile: shield, chevrons, flame
+// the little shape on each tile: shield, chevrons, flame, tank, crate
 function upgradeIcon(g, key, x, y, color) {
   g.lineStyle(3, color, 1);
-  if (key === 'armor') { g.beginPath(); g.moveTo(x - 14, y - 14); g.lineTo(x + 14, y - 14); g.lineTo(x + 14, y + 2); g.lineTo(x, y + 16); g.lineTo(x - 14, y + 2); g.closePath(); g.strokePath(); }
-  else if (key === 'rapid') { [-12, 0, 12].forEach(dx => { g.beginPath(); g.moveTo(x + dx - 6, y - 12); g.lineTo(x + dx + 4, y); g.lineTo(x + dx - 6, y + 12); g.strokePath(); }); }
-  else { g.beginPath(); g.moveTo(x - 14, y + 14); g.lineTo(x, y - 16); g.lineTo(x + 14, y + 14); g.closePath(); g.strokePath(); g.fillStyle(color, 0.6); g.fillTriangle(x - 7, y + 14, x, y - 2, x + 7, y + 14); }
+  if (key === 'shields') { g.beginPath(); g.moveTo(x - 14, y - 14); g.lineTo(x + 14, y - 14); g.lineTo(x + 14, y + 2); g.lineTo(x, y + 16); g.lineTo(x - 14, y + 2); g.closePath(); g.strokePath(); }
+  else if (key === 'weapons') { [-12, 0, 12].forEach(dx => { g.beginPath(); g.moveTo(x + dx - 6, y - 12); g.lineTo(x + dx + 4, y); g.lineTo(x + dx - 6, y + 12); g.strokePath(); }); }
+  else if (key === 'engine') { g.beginPath(); g.moveTo(x - 14, y + 14); g.lineTo(x, y - 16); g.lineTo(x + 14, y + 14); g.closePath(); g.strokePath(); g.fillStyle(color, 0.6); g.fillTriangle(x - 7, y + 14, x, y - 2, x + 7, y + 14); }
+  else if (key === 'tank') { g.strokeRoundedRect(x - 10, y - 16, 20, 32, 6); g.fillStyle(color, 0.6); g.fillRoundedRect(x - 8, y + 2, 16, 12, 4); g.lineBetween(x - 10, y - 5, x + 10, y - 5); }
+  else { g.strokeRect(x - 15, y - 12, 30, 24); g.lineBetween(x - 15, y - 12, x + 15, y + 12); g.lineBetween(x + 15, y - 12, x - 15, y + 12); g.fillStyle(color, 0.35); g.fillRect(x - 15, y - 12, 30, 5); }
+}
+
+// what one card says about one slot of the ship you fly: its next tier, what it costs here, and why you cannot buy it if you cannot
+function partState(slot) {
+  const rec = activeShip(), t = rec.parts[slot] | 0, fit = shipMaxTier(rec.model, slot), stock = partStockCap(slot);
+  if (t >= 3) return { t, kind: 'maxed' };
+  if (t >= fit) return { t, kind: 'fit', fit };                           // this hull cannot take a bigger one
+  if (t >= stock) return { t, kind: 'stock' };                            // this station does not sell it
+  return { t, kind: 'buy', price: partPrice(slot, t + 1, rec.model) };
 }
 
 function refreshShop(s, bought) {
@@ -169,24 +166,27 @@ function refreshShop(s, bought) {
   crTag(s, s.shopUI, G.credits, bought); // src/ui.js: coin and gold N CR; after a purchase it pops and floats -N
   const add = o => { s.shopBox.add(o); s.shopObjs.push(o); return o; };
   const txt = (x, y, str, size, color, style) => add(s.add.text(x, y, str, uiFont(size, color, style)).setOrigin(0, 0.5));
-  UPGRADES.forEach((u, i) => {
-    const t = G.upgrades[u.key] | 0, maxed = t >= u.prices.length, price = maxed ? 0 : u.prices[t], can = !maxed && G.credits >= price;
-    const cx = (i - 1) * 288, cy = -30, w = 270, h = 210, L = cx - w / 2 + 16;
-    const edge = maxed ? GREEN : can ? AMBER : 0x3a5a78, dim = !maxed && !can;
+  const ship = activeShip();
+  PART_ORDER.forEach((slot, i) => {
+    const P = PARTS[slot], st = partState(slot), t = st.t, buy = st.kind === 'buy', can = buy && G.credits >= st.price, done = st.kind === 'maxed' || st.kind === 'fit';
+    const cx = (i - 2) * 206, cy = -30, w = 196, h = 230, L = cx - w / 2 + 14, T = cy - h / 2;
+    const edge = done ? GREEN : can ? AMBER : 0x3a5a78, dim = !done && !can;
     const g = add(s.add.graphics());
-    hudPanel(g, cx - w / 2, cy - h / 2, w, h, 14, 1, edge); // src/hud.js: the HUD's glass card; amber and glowing when you can buy it, green when maxed, dim otherwise
-    const cap = keyCap(s, String(i + 1), can ? AMBER : CYAN); cap.setPosition(L + cap.kw / 2, cy - h / 2 + 28); add(cap);
-    upgradeIcon(g, u.key, cx + w / 2 - 38, cy - h / 2 + 34, maxed ? GREEN : can ? AMBER : 0x5b7a92);
-    txt(L, cy - h / 2 + 62, u.name + TIER_NAME[maxed ? t : t + 1], 16, maxed ? '#6dff9c' : dim ? '#6b8296' : '#ffd37a', { fontStyle: 'bold' });
-    txt(L, cy - h / 2 + 90, 'TIER', 11, '#5b7a92');
-    add(pips(s, L + 38, cy - h / 2 + 86, t, u.prices.length, GREEN));
-    txt(L, cy - h / 2 + 118, maxed ? 'Fully upgraded' : u.descs[t], 14, dim ? '#6b8296' : '#cfefff');
-    if (maxed) txt(L, cy - h / 2 + 168, 'MAXED', 24, '#6dff9c', { fontStyle: 'bold' });
+    hudPanel(g, cx - w / 2, T, w, h, 14, 1, edge); // src/hud.js: the HUD's glass card; amber and glowing when you can buy it, green when there is nothing more to buy, dim otherwise
+    const cap = keyCap(s, String(i + 1), can ? AMBER : CYAN); cap.setPosition(L + cap.kw / 2, T + 26); add(cap);
+    upgradeIcon(g, slot, cx + w / 2 - 34, T + 32, done ? GREEN : can ? AMBER : 0x5b7a92);
+    txt(L, T + 62, P.name + PART_TIER_NAME[done ? t : t + 1], 14, done ? '#6dff9c' : dim ? '#6b8296' : '#ffd37a', { fontStyle: 'bold' });
+    txt(L, T + 86, 'TIER', 11, '#5b7a92');
+    add(pips(s, L + 38, T + 82, t, 3, GREEN));
+    const desc = add(s.add.text(L, T + 104, done ? P.descs[Math.max(0, t - 1)] : P.descs[t], uiFont(13, dim ? '#6b8296' : '#cfefff', { wordWrap: { width: w - 28 }, lineSpacing: 2 })).setOrigin(0, 0));
+    if (st.kind === 'maxed') txt(L, T + 188, 'MAXED', 24, '#6dff9c', { fontStyle: 'bold' });
+    else if (st.kind === 'fit') { txt(L, T + 180, 'FULL FIT', 22, '#6dff9c', { fontStyle: 'bold' }); txt(L, T + 206, 'a ' + shipModel(ship.model).name + ' takes no more', 12, '#6dff9c'); }
+    else if (st.kind === 'stock') { txt(L, T + 180, 'NOT SOLD HERE', 17, '#ffd37a', { fontStyle: 'bold' }); txt(L, T + 206, 'a bigger station sells it', 12, '#ffd37a'); }
     else {
-      txt(L, cy - h / 2 + 160, price + ' cr', 28, can ? '#ffb454' : '#ff4d6d', { fontStyle: 'bold' });
-      if (!can) txt(L, cy - h / 2 + 190, 'Need ' + (price - G.credits) + ' more', 12, '#ff4d6d');
+      txt(L, T + 186, st.price + ' cr', 26, can ? '#ffb454' : '#ff4d6d', { fontStyle: 'bold' });
+      if (!can) txt(L, T + 212, 'Need ' + (st.price - G.credits) + ' more', 12, '#ff4d6d');
     }
-    if (dim) { g.fillStyle(0x05070f, 0.4); g.fillRect(cx - w / 2 + 1, cy - h / 2 + 1, w - 2, h - 2); } // greyed out
+    if (dim) { g.fillStyle(0x05070f, 0.4); g.fillRect(cx - w / 2 + 1, T + 1, w - 2, h - 2); } // greyed out
     const z = add(s.add.rectangle(cx, cy, w, h, 0x000000, 0.001).setInteractive({ useHandCursor: true }));
     z.on('pointerdown', () => buyUpgrade(s, i));
   });
@@ -194,20 +194,20 @@ function refreshShop(s, bought) {
 
 function openShop(s) {
   hideTalk(s); s.prompt.setText(''); s.shopOpen = true; s.panel = true; s.shopBox.setVisible(true); // s.panel: the pause menu ignores Esc while a terminal is open
-  s.shopMsgText.setText('Pick an upgrade. Fitted instantly.').setColor('#ffd37a');
+  s.shopMsgText.setText('Pick a part for your ' + shipModel(activeShip().model).name + '. Fitted instantly.').setColor('#ffd37a');
   refreshShop(s); beep(480, 0.08, 'triangle', 0.03, 200);
 }
 function closeShop(s) { s.shopOpen = false; s.panel = false; s.shopBox.setVisible(false); s.shopObjs.forEach(o => o.destroy()); s.shopObjs = []; }
 
 function buyUpgrade(s, i) {
-  const u = UPGRADES[i], t = G.upgrades[u.key] | 0, say = (m, c) => s.shopMsgText.setText(m).setColor(c);
-  if (t >= u.prices.length) { say(u.name + ' is fully upgraded.', '#9fe9ff'); beep(260, 0.08, 'square', 0.02); return; }
-  const price = u.prices[t];
-  if (G.credits < price) { say('Need ' + (price - G.credits) + ' more credits for ' + u.name + TIER_NAME[t + 1] + '.', '#ff4d6d'); beep(140, 0.15, 'sawtooth', 0.04, -40); }
+  const slot = PART_ORDER[i], P = PARTS[slot], rec = activeShip(), say = (m, c) => s.shopMsgText.setText(m).setColor(c), st = partState(slot), t = st.t;
+  if (st.kind === 'maxed') { say(P.name + ' is fully upgraded.', '#9fe9ff'); beep(260, 0.08, 'square', 0.02); return; }
+  if (st.kind === 'fit') { say('A ' + shipModel(rec.model).name + ' cannot take a bigger ' + P.name.toLowerCase() + '.', '#9fe9ff'); beep(260, 0.08, 'square', 0.02); return; }
+  if (st.kind === 'stock') { say('This station does not sell ' + P.name + PART_TIER_NAME[t + 1] + '. A bigger one does.', '#ffd37a'); beep(260, 0.08, 'square', 0.02); return; }
+  if (G.credits < st.price) { say('Need ' + (st.price - G.credits) + ' more credits for ' + P.name + PART_TIER_NAME[t + 1] + '.', '#ff4d6d'); beep(140, 0.15, 'sawtooth', 0.04, -40); }
   else {
-    G.credits -= price; G.upgrades[u.key] = t + 1;
-    if (u.key === 'armor') { G.maxHull += 20; G.hull += 20; }
-    say(u.name + TIER_NAME[t + 1] + ' installed (-' + price + ' cr).', '#6dff9c'); sfx('chime');
+    G.credits -= st.price; rec.parts[slot] = t + 1;
+    say(P.name + PART_TIER_NAME[t + 1] + ' installed (-' + st.price + ' cr).', '#6dff9c'); sfx('chime');
     shipRefresh(s); // src/ships.js: the hangar ship shows the new plating, barrels or nozzles at once
   }
   refreshShop(s, true);
@@ -256,9 +256,7 @@ function shopFrame(s) {
   if (s.shopOpen) {
     s.player.setVelocity(0, 0);
     if (JD(k.ESC)) closeShop(s);
-    else if (JD(k.ONE)) buyUpgrade(s, 0);
-    else if (JD(k.TWO)) buyUpgrade(s, 1);
-    else if (JD(k.THREE)) buyUpgrade(s, 2);
+    else ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'].forEach((n, i) => { if (JD(k[n]) && s.shopOpen) buyUpgrade(s, i); });
     return true;
   }
   if (s.panel) { if (s.talk) hideTalk(s); return false; } // the mission panel owns the frame

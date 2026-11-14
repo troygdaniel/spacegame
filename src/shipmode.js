@@ -15,21 +15,22 @@ const BAY_CONTROLS = [ // column by column, four rows each: [keys, what it does]
   [['Q', 'E'], 'Dash left or right'], [['Space'], 'Fire (or click)'], [['L'], 'Dock or land'], [['T'], 'Mission panel'],
   [['Tab'], 'Sector map'], [['H'], 'Help'], [['Esc'], 'Pause'], [['M'], 'Mute sound']
 ];
-// part slots as callouts on the ship. The spot on the ship comes from SHIP_LOOK[model].anchors[key] (src/shipmodels.js); lx, ly: the label; tiers: what each tier is called
+// part slots as callouts on the ship. anchor names the spot on the ship in SHIP_LOOK[model].anchors (src/shipmodels.js: the art calls the shields
+// spot 'armor', the engine 'booster' and the guns 'rapid'); lx, ly: the label; stock: what it says with nothing fitted. The tier names are PARTS[key].tiers.
+// Tank and cargo have no spot on the hull: they are rows of the status panel.
 const BAY_SLOTS = [
-  { key: 'armor', title: 'ARMOR', stock: 'STOCK PLATING', tiers: ['PLATED', 'REINFORCED'], lx: 56, ly: 128, side: 'L' },
-  { key: 'booster', title: 'ENGINE', stock: 'STOCK DRIVE', tiers: ['BOOSTED', 'TWIN NOZZLES'], lx: 56, ly: 300, side: 'L' },
-  { key: 'rapid', title: 'WEAPONS', stock: 'STOCK GUNS', tiers: ['RAPID FIRE', 'RAPID FIRE II'], lx: 640, ly: 118, side: 'R' }
+  { key: 'shields', anchor: 'armor', title: 'SHIELDS', stock: 'NO SHIELD', lx: 56, ly: 128, side: 'L' },
+  { key: 'engine', anchor: 'booster', title: 'ENGINE', stock: 'STOCK DRIVE', lx: 56, ly: 300, side: 'L' },
+  { key: 'weapons', anchor: 'rapid', title: 'WEAPONS', stock: 'STOCK GUNS', lx: 640, ly: 118, side: 'R' }
 ];
 
 // what the bay shows about the ship you fly
 function bayShipInfo() {
-  const u = G.upgrades || {};
   return {
     name: shipLook().name, role: shipLook().role, hull: G.hull, maxHull: G.maxHull,
-    ore: Math.min(G.ore | 0, ORE_CAP), oreCap: ORE_CAP,
+    ore: Math.min(G.ore | 0, holdCap()), oreCap: holdCap(),
     fuel: null, fuelMax: null, // src/fuel.js (card u-b1) fills these in
-    parts: UPGRADES.map(p => ({ key: p.key, name: p.name, tier: u[p.key] | 0, max: p.prices.length, descs: p.descs }))
+    parts: PART_ORDER.map(k => ({ key: k, name: PARTS[k].name, tier: partTier(k), max: 3, descs: PARTS[k].brief, tiers: PARTS[k].tiers }))
   };
 }
 
@@ -130,8 +131,8 @@ class ShipBay extends Phaser.Scene {
     const list = [];
     BAY_SLOTS.forEach(sl => {
       const p = info.parts.find(q => q.key === sl.key); if (!p) return;
-      list.push({ title: sl.title, value: p.tier ? sl.tiers[Math.min(p.tier, sl.tiers.length) - 1] : sl.stock, n: p.tier, of: p.max,
-        desc: p.tier ? p.descs[p.tier - 1] : 'none fitted', pt: at(...L.anchors[sl.key]), lx: sl.lx, ly: sl.ly, side: sl.side });
+      list.push({ title: sl.title, value: p.tier ? p.tiers[p.tier - 1] : sl.stock, n: p.tier, of: p.max,
+        desc: p.tier ? p.descs[p.tier - 1] : 'none fitted', pt: at(...L.anchors[sl.anchor]), lx: sl.lx, ly: sl.ly, side: sl.side });
     });
     list.push({ title: 'HULL', value: Math.round(frac * 100) + '%', n: -1, desc: Math.round(info.hull) + ' of ' + Math.round(info.maxHull) + ' points', pt: at(...L.anchors.hull), lx: 640, ly: 300, side: 'R', color: hc });
     list.forEach(c => {
@@ -198,7 +199,7 @@ class ShipBay extends Phaser.Scene {
   }
 
   bayMission(top) {
-    const w = 420, h = 150, ui = panel(this, { x: 1045, y: top + h / 2, w, h, title: 'MISSION', depth: 20, foot: false }), box = ui.box;
+    const w = 420, h = 138, ui = panel(this, { x: 1045, y: top + h / 2, w, h, title: 'MISSION', depth: 20, foot: false }), box = ui.box;
     const m = missionDef(), live = m && (G.mission === 'accepted' || G.mission === 'rescued'), failed = m && G.mission === 'failed';
     if (live) {
       ui.tagText.setText('PAYS ' + m.reward + ' cr');

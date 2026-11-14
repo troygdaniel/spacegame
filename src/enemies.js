@@ -35,12 +35,32 @@ function pirateHeld(s, dist, def, time) {
   s.aggro++; return false;
 }
 
-// which type turns up at a spot: raiders prowl the station lanes, gunships hold the planet side
+// ---- pirate tables per system (docs/UNIVERSE.md 5.3) ----
+// max: how many pirates the timed spawner keeps alive; every: ms between spawns; weights: raider, drone and gunship, adding up to 1.
+// A system can set its own as `pirates` in src/data_systems.js (Halcyon does, to keep what it always did); every other one gets a table
+// from its danger: 3 pirates at danger 1 up to 12 at danger 5, a spawn every 15 s down to every 7 s, and more gunships the higher the danger.
+const PIRATE_WEIGHTS = { 1: [0.5, 0.4, 0.1], 2: [0.4, 0.4, 0.2], 3: [0.3, 0.4, 0.3], 4: [0.25, 0.35, 0.4], 5: [0.2, 0.3, 0.5] };
+function pirateTable(sys) {
+  sys = sys || sysDef();
+  const d = Phaser.Math.Clamp(sys.danger | 0, 1, 5), w = PIRATE_WEIGHTS[d], own = sys.pirates || {};
+  return {
+    max: own.max != null ? own.max : Math.round(3 + (d - 1) * 2.25),
+    every: own.every != null ? own.every : 15000 - (d - 1) * 2000,
+    weights: own.weights || { raider: w[0], drone: w[1], gunship: w[2] }
+  };
+}
+function pickPirateType(weights, r) { // r is 0 to 1; gunships first, then raiders, then drones
+  let acc = 0;
+  for (const k of ['gunship', 'raider', 'drone']) { acc += weights[k] || 0; if (r < acc) return k; }
+  return 'drone';
+}
+
+// which type turns up at a spot: raiders prowl the station lanes, the system's table decides further out
 function pirateTypeFor(s, x, y) {
   const d = Phaser.Math.Distance.Between(x, y, s.station.x, s.station.y), r = Math.random();
   if (d < 1800) return r < 0.5 ? 'raider' : 'drone';
   if (d < 3200) return r < 0.25 ? 'raider' : r < 0.8 ? 'drone' : 'gunship';
-  return r < 0.4 ? 'gunship' : r < 0.65 ? 'raider' : 'drone';
+  return pickPirateType(pirateTable().weights, r);
 }
 
 // type: a PIRATES key, a whole def (the Reaver in missions.js), or nothing to pick by distance
@@ -60,7 +80,7 @@ function pirateAI(s, d, ship, time) {
   if (def.ai) return def.ai(s, d, ship, time); // a boss brings its own brain
   const tgt = d.prey && d.prey.active ? d.prey : ship;
   const ddx = tgt.x - d.x, ddy = tgt.y - d.y, dist = Math.hypot(ddx, ddy);
-  d.calm = tgt === ship && pirateHeld(s, dist, def, time); // held back by the launch grace or the first-wave cap
+  d.calm = tgt === ship && !d.ambush && pirateHeld(s, dist, def, time); // held back by the launch grace or the first-wave cap (an interdiction ambush is not: src/cruise.js)
   if (dist >= def.engage || d.calm) { d.body.setAcceleration(0, 0); d.rotation += 0.003; return; }
   const target = Math.atan2(ddy, ddx);
   d.rotation = Phaser.Math.Angle.RotateTo(d.rotation, target, def.turn);

@@ -52,22 +52,39 @@ Object.defineProperties(G, {
 // ---------- ship numbers ----------
 // The names callers use (docs/UNIVERSE.md 8.1) against the field names in data_ships.js and content/ships/*.md.
 const STAT_FIELD = { vmax: 'speed', hold: 'cargo' };
-// What the fitted parts add today: the v1 upgrade tiers, tier for tier. Armor plating adds 20 hull a tier (the shop has always
-// done that) and the booster raises the boost speed from 800 to 1000 to 1150. Card u-d1 replaces this with the five part slots
-// of data_parts.js (section 7); until then a Wren with no parts has exactly the numbers the game always had.
-const PART_ADD = { // the numbers are UPGRADE_FX in shop.js, which content/parts/*.md can change
-  hull: rec => UPGRADE_FX.hull[Math.min(3, Math.max(0, rec.parts.shields | 0))],
-  boost: rec => UPGRADE_FX.boostAdd[Math.min(3, Math.max(0, rec.parts.engine | 0))]
+// What the fitted parts do to a model's number (src/data_parts.js has the tables): the engine multiplies the top speed and adds to the
+// boost speed and the jump range, the tank multiplies the fuel tank, the cargo part adds to the hold. A ship with no parts has its
+// model's numbers exactly, and the hull has no part at all: shields are points of their own (shieldMax), not extra hull.
+const PART_ADD = {
+  speed: (v, rec) => Math.round(v * partFx('engine', rec.parts.engine, 'speed')),
+  boost: (v, rec) => v + partFx('engine', rec.parts.engine, 'boost'),
+  range: (v, rec) => v + partFx('engine', rec.parts.engine, 'range'),
+  tank: (v, rec) => Math.round(v * partFx('tank', rec.parts.tank, 'mul')),
+  cargo: (v, rec) => v + partFx('cargo', rec.parts.cargo, 'add')
+};
+// numbers that come from the parts alone
+const PART_STAT = {
+  shieldMax: rec => partFx('shields', rec.parts.shields, 'pts'),         // points
+  shieldRegen: rec => partFx('shields', rec.parts.shields, 'regen'),     // points a second while it recharges
+  shieldDelay: rec => partFx('shields', rec.parts.shields, 'delay'),     // ms without a hit before it recharges
+  fireDelay: rec => partFx('weapons', rec.parts.weapons, 'delay'),       // ms between shots
+  damage: rec => partFx('weapons', rec.parts.weapons, 'damage'),         // one player shot
+  boostTank: rec => partFx('engine', rec.parts.engine, 'tank'),          // the boost energy ring (src/boost.js)
+  boostRegen: rec => partFx('engine', rec.parts.engine, 'regen')         // its refill a second
 };
 
 // shipStat('vmax') is the active ship's top speed in px/s. Names: hull, vmax (or speed), boost, accel, turn, tank, fuelPerLy,
-// range, hold (or cargo), guns, sensor, price. shipStat(name, rec) answers for another record. An unknown name is undefined.
+// range, hold (or cargo), guns, sensor, price, and from the parts shieldMax, shieldRegen, shieldDelay, fireDelay, damage, boostTank,
+// boostRegen. shipStat(name, rec) answers for another record. An unknown name is undefined.
 function shipStat(name, rec) {
   rec = rec || activeShip();
+  if (PART_STAT[name]) return PART_STAT[name](rec);
   const f = STAT_FIELD[name] || name, v = shipModel(rec.model)[f];
   if (typeof v !== 'number') return undefined;
-  return PART_ADD[f] ? v + PART_ADD[f](rec) : v;
+  return PART_ADD[f] ? PART_ADD[f](v, rec) : v;
 }
+const holdCap = rec => shipStat('hold', rec);                                   // the cargo hold in ore units: asteroids.js, hud.js, the save
+const partTier = (slot, rec) => ((rec || activeShip()).parts[slot] | 0);        // the tier fitted in a slot of the active ship
 
 // the highest tier of a part slot this hull can fit (data_ships.js)
 function shipMaxTier(model, slot) { const t = shipModel(model).maxTier; return t && t[slot] !== undefined ? t[slot] : 3; }

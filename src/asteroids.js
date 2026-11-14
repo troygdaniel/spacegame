@@ -1,7 +1,7 @@
 // ---------- Asteroid belt: shoot rocks into ore, collect it, sell it when you dock ----------
 // space.js calls asteroidsSetup(this) in create() and asteroidsUpdate(this, time, dt) in update();
 // station.js calls sellOre(this) when you dock; hud.js shows the hold on the strip; meta.js saves G.ore.
-const ORE_CAP = 10;       // the cargo hold
+const ORE_CAP = 10;       // the Wren's hold with no cargo part; the hold in use is holdCap() (src/fleet.js)
 const ORE_PRICE = 20;     // credits per ore, paid when you dock
 const ROCK_HP = { 1: 15, 2: 30, 3: 60 }, ROCK_SCALE = { 1: 0.38, 2: 0.65, 3: 1 };
 
@@ -34,7 +34,7 @@ function asteroidsSetup(s) {
   }, () => !s.cruising); // a cruising ship (6000 px/s) flies through the rocks without bumping them (src/cruise.js)
   s.physics.add.overlap(s.pb, a.rocks, (b, r) => {
     if (!b.active || !r.active) return;
-    b.disableBody(true, true); r.hp -= 15; s.boom.explode(3, b.x, b.y); sfx('tick');
+    b.disableBody(true, true); r.hp -= b.dmg || 15; s.boom.explode(3, b.x, b.y); sfx('tick');
     r.setTint(0xffffff); s.time.delayedCall(60, () => r.active && r.clearTint());
     if (r.hp <= 0) breakRock(s, r);
   });
@@ -80,15 +80,15 @@ function asteroidsUpdate(s, time, dt) {
     const d = Phaser.Math.Distance.Between(img.x, img.y, ship.x, ship.y);
     if (age > 60000) { img.destroy(); a.ore.splice(i, 1); continue; }
     if (age > 45000) img.setAlpha(0.4 + 0.3 * Math.sin(age / 90)); // about to vanish
-    if (d < 170 && G.ore < ORE_CAP) { // magnet
+    if (d < 170 && G.ore < holdCap()) { // magnet
       const ang = Phaser.Math.Angle.Between(img.x, img.y, ship.x, ship.y), pull = 120 + (170 - d) * 2.2;
       o.vx = Math.cos(ang) * pull; o.vy = Math.sin(ang) * pull;
     } else { o.vx *= 0.985; o.vy *= 0.985; }
     img.x += o.vx * sec; img.y += o.vy * sec;
     if (d < 30) {
-      if (G.ore < ORE_CAP) {
+      if (G.ore < holdCap()) {
         G.ore++; fxPickup(s, img.x, img.y, 0xffb454); img.destroy(); a.ore.splice(i, 1); beep(900 + G.ore * 40, 0.06, 'triangle', 0.03);
-        if (G.ore === ORE_CAP) toast(s, 'Cargo hold full: ' + ORE_CAP + ' ore. Sell it at Halcyon Station.', '#ffd37a');
+        if (G.ore === holdCap()) toast(s, 'Cargo hold full: ' + holdCap() + ' ore. Sell it at Halcyon Station.', '#ffd37a');
       } else if (time > a.fullAt) { a.fullAt = time + 4000; toast(s, 'Cargo hold full. Sell the ore at Halcyon Station.', '#ffd37a'); }
     }
   }

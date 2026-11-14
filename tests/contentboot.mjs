@@ -49,7 +49,7 @@ try {
     check('the loader read the file and lists every problem: the 12 from the build, the kite (no pirate or ship row to change) and a text file it does not read yet', st.state.loaded === true && st.errors.length === 14, String(st.errors.length));
     check('a message names the file, the line and what the game did', st.errors.some(e => e.includes('content/ships/kite.md, line 5: hull is "lots" but must be a whole number from 10 to 1000. Ignored.') || e.includes('hull is "lots"')), JSON.stringify(st.errors.slice(0, 3)));
     check('only what was valid in the bad pack is applied (the rescue call and TAMSIN), the rest is skipped', st.state.applied.join() === 'mission:rescue,npc:tamsin' && st.state.skipped === 2, JSON.stringify(st.state));
-    check('the ships and upgrades the bad pack could not change are untouched', await t.ev(`PIRATES.drone.hp === 30 && PIRATES.raider.hp === 20 && UPGRADES[0].prices[0] === 300`));
+    check('the ships and upgrades the bad pack could not change are untouched', await t.ev(`PIRATES.drone.hp === 30 && PIRATES.raider.hp === 20 && PARTS.shields.prices[0] === 300`));
   });
   await run('a bad content pack, then play (#space)', bad, '#space', 'Space', async (t) => {
     check('the player has a ship, full hull and the rescue accepted: the default game', await t.ev(`(() => { const s = game.scene.getScene('Space'); return !!(s.ship && s.ship.body) && G.hull === G.maxHull && G.mission === 'accepted'; })()`));

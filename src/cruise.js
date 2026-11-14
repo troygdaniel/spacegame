@@ -14,7 +14,38 @@ const CRUISE = {
   lockMass: 2500, lockHostile: 1500, abortHostile: 1100,        // px: no cruise this close to a station or planet, or to a hostile; a hostile this close ends it
   zoom: 0.85, minLeg: 1200                                      // camera zoom in cruise; a target within stop + minLeg is just flown to
 };
+// interdiction (docs/UNIVERSE.md 5.1): pirates can pull you out of cruise. Every cruising second rolls `rate x danger`; never within `safe` px of a
+// station, never twice within `cooldown` s of flying, never before the player has made `calm` jumps (so the first look at hyperspace is calm).
+// When it fires: the INTERDICTED banner and a siren, cruise drops to 150 px/s, two or three pirates (the system's table) appear `ahead` px in front.
+const INTERDICT = { rate: 0.004, safe: 4000, cooldown: 90, calm: 2, ahead: 900, spread: 170, warnMs: 1200 };
+G.interdictCool = 0; // seconds of flying left before the next one (not saved)
+CRUISE.rnd = Math.random; // tests replace this to force or forbid the roll
 const CRUISE_ROWS = 8, CRUISE_TYPES = { station: 'STATION', planet: 'PLANET', belt: 'BELT', scenery: 'OUTPOST', poi: 'SIGNAL' };
+
+// the chance that one frame of cruise (dt ms) in a system of this danger is interdicted
+function cruiseInterdictChance(danger, dt) { return INTERDICT.rate * danger * dt / 1000; }
+// may it happen at all right now: not too close to a station, not on cooldown, not before the calm jumps
+function cruiseInterdictOk(s) {
+  if (G.interdictCool > 0 || (G.jumps | 0) < INTERDICT.calm || !(sysDef().danger > 0)) return false;
+  return sysBodies('station').every(b => Math.hypot(b.x - s.ship.x, b.y - s.ship.y) >= INTERDICT.safe);
+}
+function cruiseInterdict(s) {
+  const cr = s.cr, ship = s.ship, sys = sysDef(), table = pirateTable(sys), ux = Math.cos(ship.rotation), uy = Math.sin(ship.rotation), WS = s.WS;
+  G.interdictCool = INTERDICT.cooldown;
+  cr.speed = Math.min(cr.speed, CRUISE.dropSpeed);
+  cruiseEnd(s, 'interdict');
+  const n = sys.danger >= 4 ? 3 : Phaser.Math.Between(2, 3);
+  for (let i = 0; i < n; i++) { // a loose line across your path, 900 px ahead, turned toward you
+    const off = (i - (n - 1) / 2) * INTERDICT.spread;
+    const x = Phaser.Math.Clamp(ship.x + ux * INTERDICT.ahead - uy * off, 100, WS - 100), y = Phaser.Math.Clamp(ship.y + uy * INTERDICT.ahead + ux * off, 100, WS - 100);
+    const d = spawnPirate(s, x, y, pickPirateType(table.weights, Math.random()));
+    d.ambush = true; d.rotation = Math.atan2(ship.y - y, ship.x - x); // not held back by the first-wave cap
+  }
+  cr.warnUntil = s.time.now + INTERDICT.warnMs;
+  if (s._hud) s._hud.interdictUntil = s.time.now + 2500; // hud.js: the INTERDICTED banner and the red edge
+  s.cameras.main.shake(500, 0.008); sfx('siren');
+  toast(s, 'Interdicted. Pirates ahead: fight, or fly away.', '#ff4d6d');
+}
 
 // seconds for a leg of this length, from rest, by the same speed rules the ship follows (plus 0.4 s to turn onto the heading)
 function cruiseEta(dist) {
@@ -143,7 +174,7 @@ function cruiseEnd(s, why) {
   const sp = Math.min(cr.speed, why === 'cut' ? shipStat('vmax') : CRUISE.dropSpeed);
   ship.body.setVelocity(Math.cos(ship.rotation) * sp, Math.sin(ship.rotation) * sp).setDrag(0.55);
   cr.speed = 0; cr.cancel = false; cr.nudge = 0; s.lockUntil = 0;
-  s.cameras.main.shake(220, 0.0035); sfx('cruiseOff');
+  if (why !== 'interdict') { s.cameras.main.shake(220, 0.0035); sfx('cruiseOff'); }
   if (why === 'arrived') toast(s, (t ? t.name : 'Destination') + ' ahead. Cruise ended.', '#6dff9c');
   else if (why === 'hostile') toast(s, 'Contact ahead: cruise dropped.', '#ff4d6d');
   else if (why === 'cut') toast(s, 'Cruise cancelled.', '#ffd37a');
@@ -153,6 +184,7 @@ function cruiseEnd(s, why) {
 function cruiseStep(s, time, dt) {
   const cr = s.cr, ship = s.ship, t = cr.target, k = s.k, dts = dt / 1000;
   if (s.enemies.getChildren().some(e => e.active && Math.hypot(e.x - ship.x, e.y - ship.y) < CRUISE.abortHostile)) { cr.speed = Math.min(cr.speed, CRUISE.dropSpeed); return cruiseEnd(s, 'hostile'); }
+  if (cruiseInterdictOk(s) && CRUISE.rnd() < cruiseInterdictChance(sysDef().danger, dt)) return cruiseInterdict(s);
   const dx = t.x - ship.x, dy = t.y - ship.y, dist = Math.hypot(dx, dy);
   if (k.S.isDown || k.DOWN.isDown) cr.cancel = true;
   const left = k.A.isDown || k.LEFT.isDown, right = k.D.isDown || k.RIGHT.isDown;
@@ -176,7 +208,7 @@ function cruiseLook(s, time, dt) {
   const cr = s.cr, cam = s.cameras.main, on = cr.active, e = Math.min(1, dt * 0.005);
   cr.lk += ((on ? Phaser.Math.Clamp(cr.speed / 2500, 0, 1) : 0) - cr.lk) * e;
   const k = cr.lk;
-  cr.vig.setVisible(k > 0.02).setAlpha(k).setScale(W / 320 / cam.zoom, H / 180 / cam.zoom); // zoom shrinks screen-fixed things too: scale it back to the edges
+  cr.vig.setTint(time < (cr.warnUntil || 0) ? 0xff4d6d : 0xffffff).setVisible(k > 0.02).setAlpha(k).setScale(W / 320 / cam.zoom, H / 180 / cam.zoom); // zoom shrinks screen-fixed things too: scale it back to the edges
   cr.fx.clear();
   if (k > 0.02) {
     const ship = s.ship, dx = Math.cos(ship.rotation), dy = Math.sin(ship.rotation), sp = Math.max(300, cr.speed) * 0.55, g = cr.fx, ds = dt / 1000;
@@ -210,6 +242,7 @@ function cruiseFrame(s, time, dt) {
   const cr = s.cr; if (!cr) return '';
   const JD = Phaser.Input.Keyboard.JustDown, k = cr.k, ship = s.ship;
   cruiseLook(s, time, dt);
+  if (G.interdictCool > 0) G.interdictCool = Math.max(0, G.interdictCool - dt / 1000); // counts flying time only
   if (s.dead || s.leaving) { if (cr.active) cruiseEnd(s, 'quiet'); if (cr.navOpen) cruiseNavClose(s); return ''; }
   const n = JD(k.N), c = JD(k.C), x = JD(k.X), enter = JD(k.ENTER), up = JD(k.UP) || JD(k.W), down = JD(k.DOWN) || JD(k.S);
   // a target that has gone (a random signal that faded) or that you have reached stops being a target
