@@ -5,6 +5,7 @@
 //   --port N        another port; 0 means any free port
 //   --root DIR      the folder to serve (default: this repo)
 //   --content DIR   the markdown to watch and build (default: content)
+//   --mods DIR      the packs to watch and build (default: mods; with --content or --out and no --mods the packs are left alone)
 //   --out FILE      where the built script goes (default: content.generated.js)
 //   --no-watch      build once and serve, do not watch
 // Needs Node 22+, no packages. It listens on 127.0.0.1 only, answers only GET and HEAD, and serves nothing outside --root and
@@ -15,7 +16,7 @@ import { readFileSync, realpathSync, statSync, createReadStream, watch, existsSy
 import { join, resolve, dirname, sep, extname } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { build } from './build-content.mjs';
+import { build, buildMods } from './build-content.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const ContentLib = createRequire(import.meta.url)('../src/content.js');
@@ -61,7 +62,9 @@ function parseArgs(argv) {
   return {
     port: Number.isInteger(port) && port >= 0 && port < 65536 ? port : 8787, portGiven: has('--port'),
     root: resolve(REPO, val('--root', '.')), content: resolve(REPO, val('--content', 'content')), out: resolve(REPO, val('--out', 'content.generated.js')),
-    watch: !has('--no-watch')
+    watch: !has('--no-watch'),
+    // packs (docs/MODDING.md 13): built and watched too, unless --content or --out point somewhere else (tests) and --mods does not say where the packs are
+    mods: resolve(REPO, val('--mods', 'mods')), modsOut: resolve(REPO, val('--mods-out', 'mods.generated.js')), modsToo: has('--mods') || (!has('--content') && !has('--out'))
   };
 }
 
@@ -91,13 +94,20 @@ export function startServer(opts) {
   const rebuild = (why) => {
     let b;
     try { b = build({ dir: o.content, out: o.out }); } catch (e) { console.log('  build failed: ' + e.message); return state; }
-    const errors = b.result.errors.filter(e => e.level === 'error');
-    state.at = Date.now(); state.problems = errors.length; state.warnings = b.result.errors.length - errors.length; state.files = b.result.files; state.entries = b.result.entries.length;
-    state.lines = b.result.errors.map(e => ContentLib.formatError(e));
+    let all = b.result.errors, wrote = b.wrote, packs = 0;
+    if (o.modsToo) { // the packs of mods/, each on its own; their problems count with the rest
+      try {
+        const m = buildMods({ dir: o.mods, out: o.modsOut, coreEntries: b.result.entries });
+        all = all.concat(m.errors, ...m.packs.map(p => p.errors)); wrote = wrote || m.wrote; packs = m.packs.length;
+      } catch (e) { console.log('  packs failed: ' + e.message); }
+    }
+    const errors = all.filter(e => e.level === 'error');
+    state.at = Date.now(); state.problems = errors.length; state.warnings = all.length - errors.length; state.files = b.result.files; state.entries = b.result.entries.length;
+    state.lines = all.map(e => ContentLib.formatError(e));
     state.lines.forEach(l => console.log('  ' + l));
     console.log(`${new Date(state.at).toLocaleTimeString()}  ${why}: ${state.files} files, ${state.entries} entries, ${state.problems} problem${state.problems === 1 ? '' : 's'}` +
-      (state.warnings ? `, ${state.warnings} warning${state.warnings === 1 ? '' : 's'}` : '') + (b.wrote ? '  -> ' + o.out.replace(REPO + sep, '') + ' written' : '  -> unchanged'));
-    const msg = 'event: rebuilt\ndata: ' + JSON.stringify({ at: state.at, problems: state.problems, warnings: state.warnings, files: state.files, entries: state.entries, wrote: b.wrote }) + '\n\n';
+      (state.warnings ? `, ${state.warnings} warning${state.warnings === 1 ? '' : 's'}` : '') + (packs ? `, ${packs} pack${packs === 1 ? '' : 's'}` : '') + (wrote ? '  -> ' + o.out.replace(REPO + sep, '') + (o.modsToo ? ' and ' + o.modsOut.replace(REPO + sep, '') : '') + ' written' : '  -> unchanged'));
+    const msg = 'event: rebuilt\ndata: ' + JSON.stringify({ at: state.at, problems: state.problems, warnings: state.warnings, files: state.files, entries: state.entries, wrote }) + '\n\n';
     clients.forEach(res => res.write(msg));
     return state;
   };
@@ -136,7 +146,7 @@ export function startServer(opts) {
   });
 
   const keepAlive = setInterval(() => clients.forEach(res => res.write(': still here\n\n')), 20000); keepAlive.unref();
-  let watcher = null, timer = null;
+  let watcher = null, modsWatcher = null, timer = null;
   const listen = (p, triesLeft) => new Promise((ok, fail) => {
     server.once('error', e => {
       if (e.code === 'EADDRINUSE' && !o.portGiven && triesLeft > 0) listen(p + 1, triesLeft - 1).then(ok, fail); else fail(e);
@@ -148,11 +158,12 @@ export function startServer(opts) {
     if (o.watch && existsSync(o.content)) {
       const on = () => { clearTimeout(timer); timer = setTimeout(() => rebuild('content changed'), 150); };
       try { watcher = watch(o.content, { recursive: true }, on); } catch (e) { watcher = watch(o.content, on); }
+      if (o.modsToo && existsSync(o.mods)) { try { modsWatcher = watch(o.mods, { recursive: true }, on); } catch (e) { modsWatcher = watch(o.mods, on); } }
     }
     return { port, url: 'http://127.0.0.1:' + port + '/' };
   });
   const close = () => new Promise(res => {
-    clearTimeout(timer); clearInterval(keepAlive); if (watcher) watcher.close();
+    clearTimeout(timer); clearInterval(keepAlive); if (watcher) watcher.close(); if (modsWatcher) modsWatcher.close();
     clients.forEach(r => r.end()); server.close(() => res()); server.closeAllConnections();
   });
   return { ready, close, state, server };
@@ -164,7 +175,7 @@ async function main() {
   try {
     const { url } = await s.ready;
     console.log(`Long Haul dev server: ${url}   (serving ${o.root.replace(REPO, '.') || '.'}; press R in the page to reload it; Ctrl+C stops)`);
-    console.log(o.watch ? `watching ${o.content.replace(REPO + sep, '')}/ and rebuilding ${o.out.replace(REPO + sep, '')} when it changes` : 'not watching: --no-watch');
+    console.log(o.watch ? `watching ${o.content.replace(REPO + sep, '')}/${o.modsToo ? ' and ' + o.mods.replace(REPO + sep, '') + '/' : ''} and rebuilding ${o.out.replace(REPO + sep, '')}${o.modsToo ? ' and ' + o.modsOut.replace(REPO + sep, '') : ''} when it changes` : 'not watching: --no-watch');
   } catch (e) {
     console.error(e.code === 'EADDRINUSE' ? `Port ${o.port} is already in use. Try --port ${o.port + 1}, or --port 0 for any free port.` : 'Could not start: ' + e.message);
     process.exit(1);

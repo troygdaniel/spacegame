@@ -110,6 +110,19 @@ for (const line of [...said(escortText.replace('reward: 400', 'rewrd: 400')), ..
   check(`the guide quotes "${line.slice(0, 70)}..." word for word`, doc.includes(line));
 }
 
+console.log('3c. the claims about packs (section 9 of the guide; tests/mods.mjs plays them in the game)');
+const ex = ['mods/example/_pack.md', 'mods/example/missions/rescue.md', 'mods/example/npcs/juno.md'];
+for (const f of ex) check(`${f} exists, and the guide names the example pack`, existsSync(join(ROOT, f)) && doc.includes('mods/example/'));
+check('the example pack makes Rescue pay 650, as the guide says', /reward: 650/.test(read('mods/example/missions/rescue.md')) && doc.includes('Rescue pays 650'));
+check('the guide names the label file, the generated file and the keys it tells the reader to press (O, F, R, 1)', doc.includes('_pack.md') && doc.includes('mods.generated.js') && ['**O**', '**F**', '**R**', '**1**'].every(k => doc.includes(k)));
+const titleJs = read('src/title.js'), modsJs = read('src/mods.js');
+check('O on the Title screen opens the Mods screen (src/title.js)', /KeyO'\)\s*modsOpenSetup/.test(titleJs));
+check('the Mods screen takes F (pick a folder), R (restart) and 1 to 6 (turn on or off) (src/mods.js)', /addKeys\('ESC,F,R,ONE,TWO,THREE,FOUR,FIVE,SIX'\)/.test(modsJs) && /this\.k\.F\)\) this\.pick\(\)/.test(modsJs) && /this\.k\.R\)\) this\.restart\(\)/.test(modsJs));
+check('the folder picker is an input with webkitdirectory (the guide says no Node is needed)', /setAttribute\('webkitdirectory'/.test(modsJs));
+check('packs are off until turned on and laid over in name order (the guide says so): modsAvailable sorts by name and only the on list is applied', /\.sort\(\(a, b\) => \(a\.name < b\.name/.test(modsJs) && /if \(!row\.on\) return;/.test(modsJs));
+const ign = read('.gitignore');
+check('.gitignore ignores mods/* except mods/example/ (the guide says your packs stay on your computer)', /^mods\/\*$/m.test(ign) && /^!mods\/example\/$/m.test(ign));
+
 console.log('4. what the guide quotes and names is still there');
 const code = read('src/content.js') + read('src/contenttables.js') + read('src/boot.js');
 // [a piece of a message the code says, whether the guide quotes it]
