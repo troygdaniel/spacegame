@@ -1,0 +1,175 @@
+// Optional dev server for Long Haul (docs/MODDING.md section 4). Nothing in the game needs it: index.html still opens by double-click.
+// It is for people who edit markdown in content/: it serves this folder, rebuilds content.generated.js the moment a file in
+// content/ changes, and tells the open page, which then reloads when you press R.
+//   node tools/serve.mjs                     http://127.0.0.1:8787/   (the next free port if that one is taken)
+//   --port N        another port; 0 means any free port
+//   --root DIR      the folder to serve (default: this repo)
+//   --content DIR   the markdown to watch and build (default: content)
+//   --out FILE      where the built script goes (default: content.generated.js)
+//   --no-watch      build once and serve, do not watch
+// Needs Node 22+, no packages. It listens on 127.0.0.1 only, answers only GET and HEAD, and serves nothing outside --root and
+// nothing whose path has a dot-name in it (.git, .env, .DS_Store). The R-to-reload script is added to HTML pages as they are
+// sent: the files themselves, and the game when you open it any other way, have no dev code in them.
+import { createServer } from 'node:http';
+import { readFileSync, realpathSync, statSync, createReadStream, watch, existsSync } from 'node:fs';
+import { join, resolve, dirname, sep, extname } from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { build } from './build-content.mjs';
+
+const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const ContentLib = createRequire(import.meta.url)('../src/content.js');
+const MIME = {
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8', '.md': 'text/plain; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.svg': 'image/svg+xml',
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.ico': 'image/x-icon',
+  '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.woff2': 'font/woff2', '.map': 'application/json; charset=utf-8'
+};
+
+// What the open page runs (sent as /__dev.js, and only to pages this server sends): a small chip that says what the server did,
+// and the R key. R does nothing while you type in a box, and Ctrl/Cmd+R is left to the browser.
+const DEV_CLIENT = `(function () {
+  var chip = document.createElement('div');
+  chip.style.cssText = 'position:fixed;left:10px;bottom:10px;z-index:2147483647;font:12px monospace;padding:6px 10px;border-radius:3px;cursor:pointer;background:#04101c;border:1px solid #38e1ff;color:#9fe9ff;opacity:0.92';
+  chip.title = 'Press R (or click) to reload the page';
+  var set = function (text, color) { chip.textContent = text; chip.style.borderColor = color; chip.style.color = color; };
+  var reload = function () { location.reload(); };
+  chip.addEventListener('click', reload);
+  (document.body || document.documentElement).appendChild(chip);
+  set('DEV SERVER  R reloads', '#38e1ff');
+  var say = function (d) {
+    var at = new Date(d.at).toLocaleTimeString();
+    if (d.problems) set('content rebuilt ' + at + ': ' + d.problems + ' problem' + (d.problems === 1 ? '' : 's') + ' (see the terminal)   R reloads', '#ffb454');
+    else set('content rebuilt ' + at + ': no problems   R reloads', '#6dff9c');
+  };
+  var es = new EventSource('/__events');
+  es.addEventListener('state', function (e) { var d = JSON.parse(e.data); if (d.problems) say(d); });
+  es.addEventListener('rebuilt', function (e) { say(JSON.parse(e.data)); });
+  es.onerror = function () { set('dev server stopped', '#ff4d6d'); };
+  window.addEventListener('keydown', function (e) {
+    if (e.code !== 'KeyR' || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    var t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    reload();
+  });
+})();
+`;
+
+function parseArgs(argv) {
+  const has = f => argv.includes(f), val = (f, d) => (argv.includes(f) ? argv[argv.indexOf(f) + 1] : d);
+  const port = Number(val('--port', 8787));
+  return {
+    port: Number.isInteger(port) && port >= 0 && port < 65536 ? port : 8787, portGiven: has('--port'),
+    root: resolve(REPO, val('--root', '.')), content: resolve(REPO, val('--content', 'content')), out: resolve(REPO, val('--out', 'content.generated.js')),
+    watch: !has('--no-watch')
+  };
+}
+
+// a request path to a real file inside root, or null. No .., no dot-names, no symlink out of the folder, no directory listing
+function resolveFile(root, urlPath) {
+  let p;
+  try { p = decodeURIComponent(urlPath); } catch (e) { return null; }
+  if (p.includes('\0') || p.includes('\\')) return null;
+  const parts = p.split('/').filter(Boolean); // split before anything tidies the path: a .. or any dot-name anywhere is refused, even one that arrived as %2f
+  if (parts.some(s => s[0] === '.')) return null;
+  let file = join(root, ...parts);
+  try {
+    if (statSync(file).isDirectory()) file = join(file, 'index.html');
+    const real = realpathSync(file), realRoot = realpathSync(root);
+    if (real !== realRoot && !real.startsWith(realRoot + sep)) return null;
+    return statSync(real).isFile() ? real : null;
+  } catch (e) { return null; }
+}
+
+export function startServer(opts) {
+  const o = Object.assign(parseArgs([]), opts);
+  const state = { at: Date.now(), problems: 0, warnings: 0, files: 0, entries: 0, lines: [] };
+  const clients = new Set();
+  let port = 0;
+
+  // build now and whenever content/ changes; report to the terminal and to open pages
+  const rebuild = (why) => {
+    let b;
+    try { b = build({ dir: o.content, out: o.out }); } catch (e) { console.log('  build failed: ' + e.message); return state; }
+    const errors = b.result.errors.filter(e => e.level === 'error');
+    state.at = Date.now(); state.problems = errors.length; state.warnings = b.result.errors.length - errors.length; state.files = b.result.files; state.entries = b.result.entries.length;
+    state.lines = b.result.errors.map(e => ContentLib.formatError(e));
+    state.lines.forEach(l => console.log('  ' + l));
+    console.log(`${new Date(state.at).toLocaleTimeString()}  ${why}: ${state.files} files, ${state.entries} entries, ${state.problems} problem${state.problems === 1 ? '' : 's'}` +
+      (state.warnings ? `, ${state.warnings} warning${state.warnings === 1 ? '' : 's'}` : '') + (b.wrote ? '  -> ' + o.out.replace(REPO + sep, '') + ' written' : '  -> unchanged'));
+    const msg = 'event: rebuilt\ndata: ' + JSON.stringify({ at: state.at, problems: state.problems, warnings: state.warnings, files: state.files, entries: state.entries, wrote: b.wrote }) + '\n\n';
+    clients.forEach(res => res.write(msg));
+    return state;
+  };
+
+  const send = (res, code, body, headers = {}) => {
+    res.writeHead(code, Object.assign({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Type': 'text/plain; charset=utf-8' }, headers));
+    res.end(body);
+  };
+  const server = createServer((req, res) => {
+    // a page on another site must not be able to talk to this server by pointing a hostname at 127.0.0.1
+    const host = String(req.headers.host || '').toLowerCase();
+    if (host !== '127.0.0.1:' + port && host !== 'localhost:' + port) return send(res, 403, 'Wrong Host header.\n');
+    if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Only GET and HEAD.\n', { Allow: 'GET, HEAD' });
+    let path;
+    try { path = new URL(req.url, 'http://x').pathname; } catch (e) { return send(res, 400, 'Bad request.\n'); }
+
+    if (path === '/__dev.js') return send(res, 200, DEV_CLIENT, { 'Content-Type': MIME['.js'] });
+    if (path === '/__events') {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
+      res.write('retry: 1000\nevent: state\ndata: ' + JSON.stringify({ at: state.at, problems: state.problems, warnings: state.warnings, files: state.files }) + '\n\n');
+      clients.add(res); req.on('close', () => clients.delete(res));
+      return;
+    }
+    const file = resolveFile(o.root, path === '/' ? '/index.html' : path);
+    if (!file) return send(res, 404, 'Not found.\n');
+    const type = MIME[extname(file).toLowerCase()] || 'application/octet-stream';
+    if (type.startsWith('text/html')) { // HTML gets the dev script just before </body>; the file on disk is not touched
+      let html = readFileSync(file, 'utf8');
+      const tag = '<script src="/__dev.js"></script>';
+      html = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, tag + '</body>') : html + tag;
+      return send(res, 200, req.method === 'HEAD' ? '' : html, { 'Content-Type': type });
+    }
+    res.writeHead(200, { 'Content-Type': type, 'Content-Length': statSync(file).size, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+    if (req.method === 'HEAD') return res.end();
+    createReadStream(file).on('error', () => res.destroy()).pipe(res);
+  });
+
+  const keepAlive = setInterval(() => clients.forEach(res => res.write(': still here\n\n')), 20000); keepAlive.unref();
+  let watcher = null, timer = null;
+  const listen = (p, triesLeft) => new Promise((ok, fail) => {
+    server.once('error', e => {
+      if (e.code === 'EADDRINUSE' && !o.portGiven && triesLeft > 0) listen(p + 1, triesLeft - 1).then(ok, fail); else fail(e);
+    });
+    server.listen(p, '127.0.0.1', () => { port = server.address().port; ok(port); });
+  });
+  const ready = listen(o.port, 20).then(() => {
+    rebuild('built');
+    if (o.watch && existsSync(o.content)) {
+      const on = () => { clearTimeout(timer); timer = setTimeout(() => rebuild('content changed'), 150); };
+      try { watcher = watch(o.content, { recursive: true }, on); } catch (e) { watcher = watch(o.content, on); }
+    }
+    return { port, url: 'http://127.0.0.1:' + port + '/' };
+  });
+  const close = () => new Promise(res => {
+    clearTimeout(timer); clearInterval(keepAlive); if (watcher) watcher.close();
+    clients.forEach(r => r.end()); server.close(() => res()); server.closeAllConnections();
+  });
+  return { ready, close, state, server };
+}
+
+async function main() {
+  const o = parseArgs(process.argv.slice(2));
+  const s = startServer(o);
+  try {
+    const { url } = await s.ready;
+    console.log(`Long Haul dev server: ${url}   (serving ${o.root.replace(REPO, '.') || '.'}; press R in the page to reload it; Ctrl+C stops)`);
+    console.log(o.watch ? `watching ${o.content.replace(REPO + sep, '')}/ and rebuilding ${o.out.replace(REPO + sep, '')} when it changes` : 'not watching: --no-watch');
+  } catch (e) {
+    console.error(e.code === 'EADDRINUSE' ? `Port ${o.port} is already in use. Try --port ${o.port + 1}, or --port 0 for any free port.` : 'Could not start: ' + e.message);
+    process.exit(1);
+  }
+  const stop = () => s.close().then(() => process.exit(0));
+  process.on('SIGINT', stop); process.on('SIGTERM', stop);
+}
+if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) main();
