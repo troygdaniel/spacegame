@@ -175,12 +175,12 @@ const CT_PART = {
 // ("does not read systems yet"), and so cards u-b5 and u-e5 have one place to read.
 // CONTENT_WORLD.poi holds the payouts of the fixed sites (content/poi/<id>.md), for worldAt to lay over the system's rows.
 const CONTENT_WORLD = { system: {}, station: {}, poi: {} };
-let ctBuilt = {}; // worldAt's cache: one def per system, dropped whenever any adapter takes a new file
+const ctBuilt = new Map(); // worldAt's cache: one def per system, dropped whenever any adapter takes a new file
 const ctWorld = type => ({
   canAdd: true,
   has: id => CT_HAS(CONTENT_WORLD[type], id),
   get: (id, f) => CT_HAS(CONTENT_WORLD[type], id) ? CONTENT_WORLD[type][id][f] : undefined,
-  apply: (id, data) => { CONTENT_WORLD[type][id] = JSON.parse(JSON.stringify(data)); ctBuilt = {}; }
+  apply: (id, data) => { CONTENT_WORLD[type][id] = JSON.parse(JSON.stringify(data)); ctBuilt.clear(); }
 });
 
 // ---- poi: salvage sites and random signals (src/poi.js) ----
@@ -207,7 +207,7 @@ const CT_POI = {
     } else {
       if (data.credits !== undefined) p.credits = data.credits;
       if (data.guard !== undefined) p.guard = data.guard;
-      CONTENT_WORLD.poi[id] = ctWorldCopy(data); ctBuilt = {};
+      CONTENT_WORLD.poi[id] = ctWorldCopy(data); ctBuilt.clear();
     }
   }
 };
@@ -230,13 +230,13 @@ const CT_STATION = {
     const r = ctStationRow(id);
     if (!r) { // a dock in a system the game has (Halcyon) must be a dock the game has; a dock in a system it does not have yet is kept
       if (CT_HAS(SYSTEMS, data.system)) throw new Error('the game has no built-in station called "' + id + '" in ' + data.system + ' and cannot add new ones');
-      CONTENT_WORLD.station[id] = ctWorldCopy(data); ctBuilt = {}; return;
+      CONTENT_WORLD.station[id] = ctWorldCopy(data); ctBuilt.clear(); return;
     }
     if (data.system !== undefined && data.system !== r.sys) throw new Error('system is "' + data.system + '" but ' + id + ' is in ' + r.sys);
     if (data.name !== undefined) r.b.name = data.name;
     if (data.repair !== undefined) REPAIR_PRICE = data.repair;
     if (data.ore !== undefined) ORE_PRICE = data.ore;
-    CONTENT_WORLD.station[id] = ctWorldCopy(data); ctBuilt = {}; // fuel, yard, parts, partMult, fee and the words are kept for worldAt; the game reads the three above
+    CONTENT_WORLD.station[id] = ctWorldCopy(data); ctBuilt.clear(); // fuel, yard, parts, partMult, fee and the words are kept for worldAt; the game reads the three above
   }
 };
 
@@ -296,8 +296,8 @@ function worldAt(id) {
   try {
     if (typeof id !== 'string') return null;
     if (CT_HAS(SYSTEMS, id)) return SYSTEMS[id];
-    if (!CT_HAS(ctBuilt, id)) ctBuilt[id] = worldFromFiles(id);
-    return ctBuilt[id];
+    if (!ctBuilt.has(id)) ctBuilt.set(id, worldFromFiles(id));
+    return ctBuilt.get(id);
   } catch (e) { return null; }
 }
 function worldIds() { // every system the game or a file has, the code's first

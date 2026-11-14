@@ -74,6 +74,14 @@ section('checkEntry: sections');
   check('table rows with a bad cell, a missing cell or no shape are dropped', r.data && J(r.data.reactions) === J([{ when: 'credits>=500', line: 'Rich.' }]) && r.errors.length >= 3, J(msgs(r.errors)));
   r = C.checkEntry({ type: 'system', id: 'brass', path: 'content/systems/brass.md', data: { name: 'Brass', kind: 'trade', bodies: Array.from({ length: 201 }, (_, i) => ({ id: 'b' + i, type: 'belt', x: 1, y: 1, r: 100, rocks: 5 })) } });
   check('a table longer than 200 rows keeps the first 200', r.data && r.data.bodies.length === 200, J(msgs(r.errors)));
+  // the second look runs the same row rules as the build: a hand-edited generated file cannot slip a planet with no kind, a gate with no radius or a made-up art into the world
+  r = C.checkEntry({ type: 'system', id: 'odd', path: 'content/systems/odd.md', data: { name: 'Odd', kind: 'wild', bodies: [
+    { id: 'a', type: 'planet', x: 1, y: 1, r: 50 }, { id: 'b', type: 'planet', x: 1, y: 1, r: 50, kind: 'rock', seed: 3 }, { id: 'c', type: 'poi', x: 1, y: 1, kind: 'rock' },
+    { id: 'd', type: 'scenery', x: 1, y: 1, name: 'D' }, { id: 'e', type: 'gate', x: 1, y: 1, r: 90, art: 'banana' }, { id: 'f', type: 'belt', x: 1, y: 1, r: 90 }],
+    pirates: [{ kind: 'bandit', weight: 0.5 }, { kind: 'raider', weight: 2 }, { kind: 'drone', weight: 0.5 }] } });
+  check('a system row that breaks its type rule is dropped in the browser too, a bad cell loses only the cell, a bad pirate row is dropped', r.data && J(r.data.bodies.map(b => b.id)) === J(['b', 'e']) && r.data.bodies[1].art === undefined && J(r.data.pirates) === J([{ kind: 'drone', weight: 0.5 }]) && r.errors.length >= 7, J(msgs(r.errors)));
+  r = C.checkEntry({ type: 'station', id: 'x', path: 'content/stations/x.md', data: { name: 'X', system: 'odd', yard: ['kite', 5, 'Bad Id'], partMult: 9, fee: 50, parts: [{ slot: 'tank', tier: 4 }, { slot: 'armor', tier: 1 }, { slot: 'cargo', tier: 2 }] } });
+  check('a station keeps its fee and the good part row; a yard with one bad id goes whole (like any list), so do the bad price factor, slot and tier', r.data && r.data.yard === undefined && r.data.partMult === undefined && r.data.fee === 50 && J(r.data.parts) === J([{ slot: 'cargo', tier: 2 }]), J(r.data) + ' ' + J(msgs(r.errors)));
   r = C.checkEntry(m({ description: 'x'.repeat(601) }));
   check('a description over 600 characters is dropped, the entry stays', r.data && r.data.description === undefined && r.data.title === 'Rescue');
 }
