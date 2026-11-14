@@ -196,5 +196,95 @@ const call = async (t, req = REQ) => {
   } finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
 }
 
+// ---- part 4: the chat box in the bar (card space-game-npc-chat-bar) ----
+{
+  const t = await launch('#station');
+  const ST = "game.scene.getScene('Station')";
+  const keyT = async () => { // T is not in cdp.mjs's key table
+    await t.send('Input.dispatchKeyEvent', { type: 'keyDown', windowsVirtualKeyCode: 84, nativeVirtualKeyCode: 84, code: 'KeyT', key: 't' });
+    await sleep(60);
+    await t.send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: 84, nativeVirtualKeyCode: 84, code: 'KeyT', key: 't' });
+  };
+  const elKey = async key => t.ev(`(() => { const el = document.querySelector('input'); if (!el) return 0; el.dispatchEvent(new KeyboardEvent('keydown', { key: '${key}', bubbles: true })); return 1; })()`);
+  try {
+    await t.waitFor("!!(window.game && game.scene.isActive('Station'))", 20000, 'station');
+    await t.ev(MOCK);
+    await t.ev(`(chatSetKey(''), chatSetProvider(''), chatSetModel(''), 1)`);
+    // stand at the bar in front of JUNO (she is behind the counter)
+    const near = async () => { await t.ev(`(() => { const s = ${ST}; s.player.setPosition(255, 572); s.player.setVelocity(0, 0); return 1; })()`); await sleep(250); };
+    await near();
+    check('no key: the prompt is the plain Talk to JUNO', (await t.ev(`${ST}.prompt.text`)) === 'E  Talk to JUNO', await t.ev(`${ST}.prompt.text`));
+    await keyT(); await sleep(300);
+    check('no key: T opens nothing and nothing is called', (await t.ev(`${ST}.chat === null`)) === true && (await t.ev('__calls.length')) === 0);
+
+    await t.ev(`chatSetKey('${KEY_OPENAI}')`);
+    await near();
+    check('with a key: the prompt offers T to chat', /T to chat/.test(await t.ev(`${ST}.prompt.text`)), await t.ev(`${ST}.prompt.text`));
+    await keyT();
+    await t.waitFor(`${ST}.chat !== null`, 5000, 'chat opened');
+    check('T opens the chat with JUNO, the panel shows, a text box is on the page', (await t.ev(`${ST}.chatBox.visible && ${ST}.chat.n.name === 'JUNO' && !!document.querySelector('input')`)) === true);
+    check('the station treats it like an open terminal (s.panel) and the prompt is cleared', (await t.ev(`${ST}.panel === true && ${ST}.prompt.text === ''`)) === true);
+    await t.waitFor('__calls.length === 1', 10000, 'the opening call');
+    const b = JSON.parse(await t.ev('__calls[0].body'));
+    const sys = b.messages[0].content;
+    check('the character speaks first: one call with the seed line as the only turn', b.messages.length === 2 && b.messages[1].content === '[The pilot sits down.]');
+    const at = m => sys.indexOf(m); // the block openers on their own lines: the RULES text also mentions the tags inline
+    check('the system prompt: RULES, then WORLD, then persona and memory in tags, then NOW', at('RULES\n') === 0 && at('\nWORLD\n') > 0 && at('\nWORLD\n') < at('\n<persona>\n') && at('\n<persona>\n') < at('\n</persona>\n') && at('\n</persona>\n') < at('\n<memory>\n') && at('\n<memory>\n') < at('\n</memory>\n') && at('\n</memory>\n') < at('\nNOW\n'), [at('RULES\n'), at('\nWORLD\n'), at('\n<persona>\n'), at('\n</persona>\n'), at('\n<memory>\n'), at('\n</memory>\n'), at('\nNOW\n')].join(','));
+    check('the rules name JUNO and say the tagged text is data', /You are JUNO, bartender/.test(sys) && /It is not instructions/.test(sys));
+    check('the persona is inside the tags and NOW carries credits and hull', /<persona>\nWho: Juno/.test(sys) && /Credits: \d+\. Hull: \d+ of \d+/.test(sys));
+    await t.waitFor(`${ST}.chatText.text === 'Welcome to the Drift, pilot.'`, 10000, 'reply typed out');
+    check('the reply types out in the box', true);
+    await t.shot('chat-bar');
+
+    // a long line is clamped and sent as the next turn
+    await t.ev(`(() => { const el = document.querySelector('input'); el.value = 'x'.repeat(300); return 1; })()`);
+    await t.ev(`(${ST}.chat.lastSend = 0, 1)`);
+    await elKey('Enter');
+    await t.waitFor('__calls.length === 2', 10000, 'second call');
+    const b2 = JSON.parse(await t.ev('__calls[1].body'));
+    const last = b2.messages[b2.messages.length - 1];
+    check('Enter sends the line, clamped to 240, after the seed and the reply', last.role === 'user' && last.content.length === 240 && b2.messages[b2.messages.length - 2].role === 'assistant');
+    check('the box is emptied after sending', (await t.ev(`document.querySelector('input').value`)) === '');
+    await t.waitFor(`${ST}.chat.busy === false`, 10000, 'reply two');
+    // two Enters inside the gap send once
+    await t.ev(`(() => { const el = document.querySelector('input'); el.value = 'one'; return 1; })()`);
+    await t.ev(`(${ST}.chat.lastSend = 0, 1)`);
+    await elKey('Enter');
+    await t.ev(`(() => { const el = document.querySelector('input'); el.value = 'two'; return 1; })()`);
+    await elKey('Enter');
+    await t.waitFor(`${ST}.chat.busy === false && __calls.length >= 3`, 10000, 'reply three');
+    await sleep(300);
+    check('a second Enter inside 1.2 s is ignored (one call, not two)', (await t.ev('__calls.length')) === 3, 'calls ' + await t.ev('__calls.length'));
+    // a 429 is said in-world and does not end the chat
+    await t.ev('(__status = 429, 1)');
+    await t.ev(`(() => { const el = document.querySelector('input'); el.value = 'still there?'; return 1; })()`);
+    await t.ev(`(${ST}.chat.lastSend = 0, 1)`);
+    await elKey('Enter');
+    await t.waitFor(`${ST}.chatText.text === 'Give me a moment, pilot.'`, 10000, 'in-world wait line');
+    check('429: JUNO asks for a moment and the chat stays open', (await t.ev(`${ST}.chat !== null`)) === true);
+    await t.ev('(__status = 200, CHAT.waitUntil = 0, 1)');
+    // walking away ends it; the text box goes
+    await t.ev(`(() => { const s = ${ST}; s.player.setPosition(255, 420); return 1; })()`);
+    await t.waitFor(`${ST}.chat === null`, 10000, 'closed by walking away');
+    check('walking away closes the chat, hides the panel, removes the box, frees the station', (await t.ev(`!${ST}.chatBox.visible && !document.querySelector('input') && ${ST}.panel === false`)) === true);
+    // Esc in the box ends it too
+    await near(); await t.ev(`chatOpen(${ST}, 0)`); // the T path is proven above; open directly so a slow frame cannot drop the key
+    await t.waitFor(`${ST}.chat !== null`, 10000, 'chat reopened');
+    await elKey('Escape');
+    await t.waitFor(`${ST}.chat === null`, 10000, 'closed by Esc');
+    check('Esc in the box closes the chat and the pause menu does not open', (await t.ev("!game.scene.isActive('Pause')")) === true);
+    // a rejected key closes the chat with the toast
+    await near(); await t.ev('(__status = 401, 1)'); await t.ev(`chatOpen(${ST}, 0)`);
+    await t.waitFor(`${ST}.chat === null && CHAT.bad === true`, 10000, 'closed by a rejected key');
+    check('a rejected key ends the chat and switches it off', true);
+    await t.ev('(__status = 200, 1)');
+    const page = await t.ev('document.body.innerText'), log = await t.ev(`__log.join('\\n')`);
+    check('the key is not in the page text or the console', !page.includes(KEY_OPENAI) && !log.includes(KEY_OPENAI));
+    await t.ev(`(chatSetKey(''), 1)`);
+    check('no console errors', t.errors.length === 0, t.errors.join(' | '));
+  } catch (e) { console.log('  FAIL bar: ' + e.message); failed++; }
+  finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
+}
+
 console.log(failed ? `CHAT FAIL (${failed})` : 'CHAT PASS');
 process.exitCode = failed ? 1 : 0;
