@@ -11,6 +11,9 @@
 //   poi      the salvage sites (data_systems.js) and the random signal types (poi.js SIGNAL_TYPES): name, note, payout, guard
 //   npc      the characters of the bar in shop.js NPCS (juno today): look and place, lines, reactions, persona
 //   part     the tiers of PARTS in data_parts.js (shields-1 ... engine-3 today; tank and cargo read too): name, text, price and the tier's numbers
+//   system   read and KEPT, not used yet: the validated fields of each file go into CONTENT_WORLD.system and nothing in the game reads them (so are the
+//            docks of the other stations, in CONTENT_WORLD.station).
+//            Cards u-b5 (the eight systems) and u-e5 (the Station scene) wire that table in; until then the files only prove they are well formed
 // tests/contentproof.mjs pins that each file under content/ applied over its default changes nothing, and that editing one changes
 // exactly what the file says.
 const CT_HAS = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
@@ -164,6 +167,19 @@ const CT_PART = {
   }
 };
 
+// ---- system, and the stations the game does not have yet (content/systems, content/stations): read and kept, not used ----
+// The game has no table to merge another star system into yet, so the adapter only keeps what each file says, by id, in CONTENT_WORLD.system, and
+// CT_STATION (below) does the same in CONTENT_WORLD.station for a dock that is not in data_systems.js (every one but Halcyon Station). The validated
+// fields, a copy. No scene, test hook or save reads it. It stands there so a shipped file of these types is accepted instead of warned about
+// ("does not read systems yet"), and so cards u-b5 and u-e5 have one place to read.
+const CONTENT_WORLD = { system: {}, station: {} };
+const ctWorld = type => ({
+  canAdd: true,
+  has: id => CT_HAS(CONTENT_WORLD[type], id),
+  get: (id, f) => CT_HAS(CONTENT_WORLD[type], id) ? CONTENT_WORLD[type][id][f] : undefined,
+  apply: (id, data) => { CONTENT_WORLD[type][id] = JSON.parse(JSON.stringify(data)); }
+});
+
 // ---- poi: salvage sites and random signals (src/poi.js) ----
 // a fixed site is a body of type 'poi' in a system (data_systems.js); a random signal is a row of SIGNAL_TYPES. Where a site is stays in the system's data.
 const ctSite = id => { for (const k of Object.keys(SYSTEMS)) { const b = (SYSTEMS[k].bodies || []).find(x => x.type === 'poi' && x.id === id); if (b) return b; } return null; };
@@ -197,12 +213,21 @@ const CT_POI = {
 // (asteroids.js ORE_PRICE). Both prices are the game's today, because there is one dock; a second station will carry its own. welcome, shop, services and
 // bar sections and fuel are accepted but nothing reads them yet.
 const ctStationRow = id => { for (const k of Object.keys(SYSTEMS)) { const b = (SYSTEMS[k].bodies || []).find(x => x.type === 'station' && x.id === id); if (b) return { b, sys: k }; } return null; };
+const ctWorldCopy = d => JSON.parse(JSON.stringify(d));
 const CT_STATION = {
-  canAdd: false,
-  has: id => !!ctStationRow(id),
-  get: (id, f) => { const r = ctStationRow(id); return !r ? undefined : f === 'name' ? r.b.name : f === 'system' ? r.sys : f === 'repair' ? REPAIR_PRICE : f === 'ore' ? ORE_PRICE : undefined; },
+  canAdd: true, // a dock in a system data_systems.js does not have yet is kept in CONTENT_WORLD.station (nothing reads it); the docks it has are applied below
+  has: id => !!ctStationRow(id) || CT_HAS(CONTENT_WORLD.station, id),
+  get: (id, f) => {
+    const r = ctStationRow(id);
+    if (!r) return CT_HAS(CONTENT_WORLD.station, id) ? CONTENT_WORLD.station[id][f] : undefined;
+    return f === 'name' ? r.b.name : f === 'system' ? r.sys : f === 'repair' ? REPAIR_PRICE : f === 'ore' ? ORE_PRICE : undefined;
+  },
   apply: (id, data) => {
     const r = ctStationRow(id);
+    if (!r) { // a dock in a system the game has (Halcyon) must be a dock the game has; a dock in a system it does not have yet is kept
+      if (CT_HAS(SYSTEMS, data.system)) throw new Error('the game has no built-in station called "' + id + '" in ' + data.system + ' and cannot add new ones');
+      CONTENT_WORLD.station[id] = ctWorldCopy(data); return;
+    }
     if (data.system !== undefined && data.system !== r.sys) throw new Error('system is "' + data.system + '" but ' + id + ' is in ' + r.sys);
     if (data.name !== undefined) r.b.name = data.name;
     if (data.repair !== undefined) REPAIR_PRICE = data.repair;
@@ -249,6 +274,7 @@ CONTENT_TABLES.ship = CT_SHIP;
 CONTENT_TABLES.mission = CT_MISSION;
 CONTENT_TABLES.npc = CT_NPC;
 CONTENT_TABLES.part = CT_PART;
+CONTENT_TABLES.system = ctWorld('system');
 CONTENT_TABLES.poi = CT_POI;
 CONTENT_TABLES.text = CT_TEXT;
 CONTENT_TABLES.station = CT_STATION;

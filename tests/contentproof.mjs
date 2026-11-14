@@ -138,7 +138,7 @@ try {
   // ---- A: the shipped pack, B: nothing at all ----
   console.log('A: the shipped pack');
   const A = await play(ROOT);
-  check('the loader applied the thirty files of the shipped set, no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 30 && A.loader.state.modded === false, JSON.stringify(A.loader));
+  check('the loader applied the forty-three files of the shipped set (with eight systems and five more docks), no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 43 && A.loader.state.modded === false, JSON.stringify(A.loader));
   check('no console errors', A.errors.length === 0, A.errors.join(' | '));
 
   console.log('B: an empty pack (the code\'s own tables)');
@@ -176,7 +176,7 @@ try {
   const cg = gameWith(join(pack, 'content'), realCore);
   check('the edited pack builds with no problems', cg.made.result.errors.length === 0, JSON.stringify(cg.made.result.errors));
   const C = await play(cg.dir);
-  check('the loader applied the thirty-two files (the shipped set and a tank and a hold part) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 32 && C.loader.state.modded === true, JSON.stringify(C.loader));
+  check('the loader applied the forty-five files (the shipped set, eight systems, five more docks, and a tank and a hold part) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 45 && C.loader.state.modded === true, JSON.stringify(C.loader));
   check('no console errors', C.errors.length === 0, C.errors.join(' | '));
   const want = JSON.parse(JSON.stringify(A.snap)); // what A says, with exactly the edited lines changed
   Object.assign(want.ships.raider, { hp: 22, bounty: 47, radar: 0x6dff9c, shot: [500, 900], strafe: false });
@@ -255,7 +255,7 @@ try {
   check('a player ship cannot replace a pirate', /gunship\.md\|could not be applied \(side is "player" but gunship is a pirate ship\)/.test(said));
   check('a ship with no row, and a character with no row, are refused', /kite\.md\|the game has no built-in ship called "kite"/.test(said) && /nobody\.md\|the game has no built-in npc called "nobody"/.test(said));
   check('a text file with one key the game does not read is refused whole, with a hint', /extra\.md\|could not be applied \(the key "help\.stationn\.1" is not a string the game reads\. Did you mean "help\.station\.1"\?\)/.test(said), said);
-  check('a station in the wrong system is refused, and so is a station the game has no dock for', /halcyon-station\.md\|could not be applied \(system is "kestrel" but halcyon-station is in halcyon\)/.test(said) && /outpost\.md\|the game has no built-in station called "outpost"/.test(said), said);
+  check('a station in the wrong system is refused, and so is a dock the game has not got in a system it has', /halcyon-station\.md\|could not be applied \(system is "kestrel" but halcyon-station is in halcyon\)/.test(said) && /outpost\.md\|could not be applied \(the game has no built-in station called "outpost" in halcyon and cannot add new ones\)/.test(said), said);
   same('every table is exactly the default', D.snap, B.snap);
   check('docking pays the default 500 cr', D.pay === 500, String(D.pay));
 } catch (e) { check('the proof test ran: ' + e.message, false); } finally {
