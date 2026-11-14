@@ -15,20 +15,31 @@ game's complaints. The design behind it is `docs/MODDING.md`; the full list of f
 | `ships/` | two of the three pirates, `raider` and `drone`; `gunship` has no file yet |
 | `parts/` | nine of the fifteen part tiers: shields, weapons and engine, tiers 1 to 3; `tank` and `cargo` have no file yet |
 | `poi/` | the five salvage sites (`wreck-nw`, `wreck-w`, `wreck-se`, `wreck-s`, `beacon-e`) and the two kinds of random signal (`signal-beacon`, `signal-wreck`) |
-| `stations/` | the dock, `halcyon-station`: its name and its prices |
+| `stations/` | the dock, `halcyon-station`: its name and its prices; and the five docks of the other systems, which the game keeps for later and does not use yet |
+| `systems/` | the eight star systems of the galaxy map: read and kept, and nothing in the game uses them yet (the systems card wires them in) |
 | `text/` | `ui.md`: the Help screens, the tip under them and the lines that pop up |
 
 To change something that has no file (the gunship, a tank or cargo tier), make a file for it with its name: it works the same way (section 5).
 
-**You can add new words, not new things.** A new file in `text/` (extra strings, or a translation) is read. A brand-new mission, character, ship, part, salvage site or station is not: a file whose name the
-game does not know is skipped, and the game says so:
+**You can add four kinds of new thing, and new words.** A file whose name the game does not know becomes a new row for these types:
+
+| New file in | Becomes | Needs | At most |
+|---|---|---|---|
+| `missions/` | a new call on the board, of one of the four kinds (`kind: rescue`, `escort`, `patrol` or `bounty`) | `kind`, `title`, `reward` | 4 |
+| `npcs/` | a new character in the bar | `name`, and at least one line | 6 |
+| `ships/` | a new player ship (the hull of one of the six built-in ships, borrowed) | `name` | 6 |
+| `voice/` | lines the ship computer says for an event | `event`, and at least one line | 40 files |
+| `text/` | extra strings, or a translation | the key and the text | |
+
+Everything else a file leaves out has a default, so a short file is enough; the limits and the details are in section 6 and in `docs/MODDING.md` section 12. **A new part, salvage site or station is not read:** a file whose
+name the game does not know for one of those types is skipped, and the game says so:
 
 ```
-content/missions/my-call.md: the game has no built-in mission called "my-call" and cannot add new ones. Skipped the file.
+content/parts/engine-4.md: the game has no built-in part called "engine-4" and cannot add new ones. Skipped the file.
 ```
 
-Adding new things is a later card. Player ships, star systems, ship-voice lines and a station's welcome, shop, services and bar sections are checked by the build but the game does not read them yet (it says
-"does not read ... yet. Ignored the file."). Section 7 has the exact list.
+New pirates, new kinds of call (courier, haul, salvage, survey) and new part slots wait for later cards. Star systems and the docks of other systems are read and kept, but nothing in the game uses them yet; a station's welcome, shop,
+services and bar sections are checked by the build and not read. Section 7 has the exact list.
 
 You need a text editor and Node.js 22 or newer (`node --version`). No packages. Playing never needs Node; only the build step in section 2 does.
 
@@ -185,20 +196,30 @@ Two of my own lines for the interface.
 
 A key the game does not read refuses the whole file, with a hint, so a typo is seen at once (next section).
 
+**Add something that is not there yet.** Copy a template from `content/_templates/` and give it a new name (a-z, 0-9 and dashes). Run the build, reload, and it is in the game:
+
+- `content/missions/convoy.md` with `kind: patrol`, `title: Convoy patrol`, `reward: 800`, `count: 3`: a second police patrol on the board, paying 800 for three pirates.
+- `content/npcs/ada.md` with `name: ADA`, `color: green` and a `## Lines` list: a new character in the bar, on the nearest free spot of the floor.
+- `content/ships/mule.md` with `name: Mule`, `art: ox`, `cargo: 30` and `price: 7000`: a new ship for sale at Halcyon, flying with the Ox's hull and labelled "(Ox hull)".
+- `content/voice/quips.md` with `event: hull-low` and a `## Lines` list: new things the ship says when the hull is low.
+
+A pack may add a limited number of each (the table at the top), a file with a mistake adds nothing and the message names it, and a save that uses something from a pack that is gone falls back (no call under way, the ship flies as a Wren).
+
 ## 7. What the game reads today, type by type
 
 Everything else in a file is checked by the build, then ignored.
 
 | Type | Ids the game knows | What changes in the game |
 |---|---|---|
-| `mission` | `rescue`, `escort`, `patrol`, `bounty` (the file's `kind` must equal its name) | `title`, `where`, `reward`, `count`, `unlock`, the description, `## Board line`, `## Progress`, `## Progress rescued`, `## Steps`, `## Failure` |
-| `npc` | `juno`, `tamsin`, `dex`, `moss`, `sable`, `ida` | `name`, `role`, `voice`, `color`, `label`, `appears`, `x`, `y`, `face`, `## Lines`, `## Reactions`, `## Persona` |
-| `ship` | the pirates `raider`, `drone`, `gunship` (side `pirate`) | the numbers, `radar`, `art`. `name`, `role` and the description are read; nothing shows them yet. Player ships are not read yet |
+| `mission` | `rescue`, `escort`, `patrol`, `bounty` (the file's `kind` must equal its name); a new id adds a call (`kind`, `title`, `reward` needed) | `title`, `where`, `reward`, `count`, `unlock`, the description, `## Board line`, `## Progress`, `## Progress rescued`, `## Steps`, `## Failure` |
+| `npc` | `juno`, `tamsin`, `dex`, `moss`, `sable`, `ida`; a new id adds a character (`name` and a line needed) | `name`, `role`, `voice`, `color`, `label`, `appears`, `x`, `y`, `face`, `## Lines`, `## Reactions`, `## Persona` |
+| `ship` | the pirates `raider`, `drone`, `gunship` (side `pirate`); a new id adds a player ship (`name` needed) | for a pirate the numbers, `radar`, `art` (`name`, `role` and the description are read; nothing shows them yet); for a new ship every number of the model, `art` (the hull it borrows), `yard`. The six built-in player ships and new pirates are refused |
 | `part` | `shields-1` to `shields-3`, and the same for `weapons`, `engine`, `tank`, `cargo` | `name`, `brief`, `price`, the description, the tier's numbers |
 | `poi` | the sites `wreck-nw`, `wreck-w`, `wreck-se`, `wreck-s`, `beacon-e`; the signals `signal-beacon`, `signal-wreck` | `name`, the description, `credits`, `hull`, `guard`; for a signal `pays`, `guardChance`, `hullChance`, `hull` |
-| `station` | `halcyon-station` (its `system` must be `halcyon`) | `name`, `repair`, `ore` |
-| `text` | any file in `text/`: new files are read, so this is the one type you can add | the strings whose key `ui.md` lists |
-| `system`, `voice` | none yet | nothing: the build checks the file, the game ignores it |
+| `station` | `halcyon-station` (its `system` must be `halcyon`); the docks of the other systems are kept, not used | `name`, `repair`, `ore` |
+| `voice` | none built in: a new id adds the lines of its `event` (`replace: yes` drops the ship's own line) | what the ship computer says for that event |
+| `text` | any file in `text/`: new files are read | the strings whose key `ui.md` lists |
+| `system` | the eight systems, kept | nothing yet: the game keeps what the files say and no scene reads it |
 
 ## 8. When it goes wrong (2 minutes)
 
@@ -212,7 +233,7 @@ content (the Title screen chip, or **P**): the build cannot know which ids and k
 | `content/missions/escort.md, line 6: reward is "lots" but must be a whole number from 0 to 1000000. Skipped the file.` | the value is the wrong kind or out of range; the reference says what each field takes |
 | `content/missions/escort.md, line 8: the description: "{rewrd}" is not a known placeholder here. Did you mean {reward}? Ignored.` | a `{placeholder}` the game does not know (here a typo in the line you added in section 3: `{rewrd}`). The line number is where the description starts, whichever of its lines has the typo |
 | `content/missions/escort.md: could not be applied (kind is "rescue" but the file is called escort, so its kind must be escort). Kept the built-in values.` | you copied the template and left `kind: rescue`. A file's `kind` must be its own name |
-| `content/missions/my-call.md: the game has no built-in mission called "my-call" and cannot add new ones. Skipped the file.` | the id is not one the game knows (section 7). You cannot add new ones yet |
+| `content/parts/engine-4.md: the game has no built-in part called "engine-4" and cannot add new ones. Skipped the file.` | the id is not one the game knows, and this type (parts, salvage sites, stations) cannot add new ones (section 7). A mission, character, ship or voice file with a new name is added instead |
 | `content/text/words.md: could not be applied (the key "toast.docekd" is not a string the game reads. Did you mean "toast.docked"?). Kept the built-in values.` | a key in a `text/` file that the game does not read (here a typo). The whole file is refused until every key is right |
 
 `node tools/build-content.mjs --strict` exits with a failure if there is any error, which is handy in a script. Warnings (a reference to something that has no file) do not count.
@@ -223,7 +244,7 @@ A file may be 32 KB at most and a text field 400 characters; the reference lists
 - Your edits show the **MODDED** tag on the Title screen, so a bug report says whether the game was modded. It is not an accusation: it is how the game tells a changed pack from the shipped one.
 - `node tools/build-content.mjs --seal` is for people changing the shipped content itself (it says "this is the core pack now"). A modder does not run it.
 - Content never holds keys. The optional ship voice (`docs/VOICE.md`) and NPC chat keys live only in the player's own browser, and a test fails if a content file looks like a key.
-- Mod packs in a folder of their own (`mods/<pack>/`), a Mods screen with a folder picker, and adding brand-new missions, characters and ships are later cards (`docs/MODDING.md` sections 9 and 11).
+- Mod packs in a folder of their own (`mods/<pack>/`) and a Mods screen with a folder picker are later cards (`docs/MODDING.md` sections 9 and 11).
 
 ## The field reference
 
@@ -444,6 +465,7 @@ Placeholders in its text: `{reward}`, `{count}`, `{progress}`, `{station}`, `{sy
 | Field | Takes | Meaning |
 |---|---|---|
 | `event`* | one of: `launch-clear`, `hull-low`, `pirates-detected`, `docked`, `mission-accepted`, `credits-earned`, `fuel-low` | which moment the lines are for |
+| `replace` | yes or no |  |
 
 Under `##` headings (the text before the first heading is the description, up to 600 characters):
 
