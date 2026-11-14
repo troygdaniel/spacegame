@@ -70,14 +70,17 @@ function completeMission(s, msg) {
 }
 
 // ---- hooks called from space.js ----
+// The three calls are Halcyon's: the gate, Kepler-4b and the Reaver's spot are places in that system. Until the calls belong to a system (card u-e3) a call under way sits
+// quiet in any other one: nothing is set up for it there, and it picks up again when you are back in Halcyon.
+const missionHere = () => G.system === 'halcyon';
 function missionSpaceSetup(s) {
   s.mx = {};
   const m = missionDef();
-  if (m && m.space && G.mission === 'accepted') m.space.setup(s);
+  if (m && m.space && G.mission === 'accepted' && missionHere()) m.space.setup(s);
 }
 function missionSpaceUpdate(s, time, dt) {
   const m = missionDef();
-  if (m && m.space && G.mission === 'accepted') m.space.update(s, time, dt);
+  if (m && m.space && G.mission === 'accepted' && missionHere()) m.space.update(s, time, dt);
 }
 function missionLeaveSpace(s) {
   const m = missionDef();
@@ -91,9 +94,9 @@ function missionDeath(s) {
 // where the objective arrow points
 function missionTarget(s) {
   const m = missionDef();
-  const t = m && m.space && m.space.target && G.mission === 'accepted' ? m.space.target(s) : null;
+  const t = m && m.space && m.space.target && G.mission === 'accepted' && missionHere() ? m.space.target(s) : null;
   if (t) return t;
-  if (missionActive('rescue') && sysBody('planet')) return { x: s.planet.x, y: s.planet.y, name: sysBody('planet').name };
+  if (missionActive('rescue') && missionHere() && sysBody('planet')) return { x: s.planet.x, y: s.planet.y, name: sysBody('planet').name };
   const st = sysBody('station'); // a system with no station (Kestrel until card u-b5) has nothing to point at
   return st ? { x: s.station.x, y: s.station.y, name: st.name } : null;
 }

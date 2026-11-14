@@ -97,7 +97,7 @@ function feelSpace(s, f, now, sx, sy) {
   }
   // approach rings: dim cyan far out, amber inside but too fast, green when L will work
   feelRing(s, f, now, sx, sy, s.station, 320, 150, 'DOCK');
-  feelRing(s, f, now, sx, sy, s.planet, s.planetR + 150, 170, 'LAND');
+  if (s.canLand) feelRing(s, f, now, sx, sy, s.planet, s.planetR + 150, 170, 'LAND'); // only where you can land (src/space.js)
 }
 
 function feelRing(s, f, now, sx, sy, t, R, vmax, name) {

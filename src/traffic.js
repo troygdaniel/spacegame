@@ -1,7 +1,7 @@
 // ---------- Traffic: civilian freighters that come and go, and the station police ----------
 // space.js calls trafficSetup(this) at the end of create() and trafficUpdate(this, time, dt) before hudTick().
 // Civilians and police are plain sprites moved by hand: you cannot hurt them, they cannot hurt you.
-const POLICE_ZONE = 900;   // police attack a pirate drone this close to Halcyon
+const POLICE_ZONE = 900;   // police attack a pirate drone this close to the station
 const CIV_TINTS = [0x7fc8ff, 0x9dffa8, 0xff9ec8, 0xc3a8ff, 0xffd36a]; // the civilian hull is pale, so these read as clear colours
 const CIV_FINE = 30;       // credits, if you shoot a civilian
 const RADIO = [
@@ -11,15 +11,19 @@ const RADIO = [
 ];
 let radioLast = -1;        // so the same line never plays twice in a row, even across visits
 
+// The system's traffic level (0 to 3, src/data_systems.js) says how busy it is: 0 is an empty sky (no police, no civilians; the Hollow, Lethe, the Roost), 1 one police cruiser and
+// one civilian at a time, 2 two of each (Halcyon, as it always was), 3 two police and three civilians (Meridian). A system with no station has none either.
 function trafficSetup(s) {
-  const t = s.tr = { police: [], civ: [], nextCiv: s.time.now + 7000, armed: s.from === 'surface', fineAt: 0 };
+  const level = sysDef().traffic | 0; // src/universe.js
+  const t = s.tr = { police: [], civ: [], nextCiv: s.time.now + 7000, armed: s.from === 'surface', fineAt: 0, cap: level, off: level < 1 || !!s.station.nowhere };
+  if (t.off) return;
   t.bullets = s.physics.add.group({ defaultKey: 'bullet', maxSize: 24 });
   s.physics.add.overlap(t.bullets, s.enemies, (b, e) => {
     if (!b.active || !e.active || e.wanted) return; // the wanted pirates of the patrol mission are yours to catch
     b.disableBody(true, true); e.hp -= 10; s.boom.explode(3, b.x, b.y); shipsHit(s, e, b.x, b.y);
     if (e.hp <= 0) { s.boom.explode(24, e.x, e.y); e.destroy(); } // no credits, no mission progress: the police just clear the lane
   });
-  [[0.5, 620, 0.00034], [3.6, 820, -0.00028]].forEach(([a, r, w]) => {
+  [[0.5, 620, 0.00034], [3.6, 820, -0.00028]].slice(0, Math.min(2, level)).forEach(([a, r, w]) => {
     const img = s.add.image(0, 0, 'police').setDepth(4);
     const l1 = s.add.image(0, 0, 'spark').setDepth(4).setBlendMode('ADD').setScale(1.6).setTint(0xff4d6d);
     const l2 = s.add.image(0, 0, 'spark').setDepth(4).setBlendMode('ADD').setScale(1.6).setTint(0x7fb8ff);
@@ -138,7 +142,7 @@ function trafficCheckFriendlyFire(s, time) {
       if (time > t.fineAt) {
         t.fineAt = time + 2000;
         const f = Math.min(G.credits, CIV_FINE); G.credits -= f;
-        toast(s, f ? 'Halcyon traffic control: that was a civilian. Fine: ' + f + ' cr' : 'Halcyon traffic control: that was a civilian. Logged.', '#ff4d6d');
+        toast(s, f ? sysDef().name + ' traffic control: that was a civilian. Fine: ' + f + ' cr' : sysDef().name + ' traffic control: that was a civilian. Logged.', '#ff4d6d');
         sfx('hit');
       }
       return;
@@ -154,17 +158,17 @@ function trafficRadio(s) {
     if (Phaser.Math.Distance.Between(ship.x, ship.y, p.img.x, p.img.y) > 600) continue;
     let v; do { v = Phaser.Math.Between(0, RADIO.length - 1); } while (v === radioLast);
     radioLast = v; t.armed = false;
-    toast(s, RADIO[v], '#9fe9ff'); sfx('tick');
+    toast(s, RADIO[v].replace('Halcyon', sysDef().name), '#9fe9ff'); sfx('tick');
     return;
   }
 }
 
 function trafficUpdate(s, time, dt) {
-  const t = s.tr; if (!t) return;
+  const t = s.tr; if (!t || t.off) return;
   dt = Math.min(dt, 100);
   trafficPoliceStep(s, dt, false);
   trafficCivilianStep(s, time, dt);
-  if (t.civ.length < 2 && time > t.nextCiv) { spawnCivilian(s, false); t.nextCiv = time + Phaser.Math.Between(14000, 26000); }
+  if (t.civ.length < t.cap && time > t.nextCiv) { spawnCivilian(s, false); t.nextCiv = time + Phaser.Math.Between(14000, 26000); }
   if (!s.dead) { trafficCheckFriendlyFire(s, time); trafficRadio(s); }
   t.police.forEach(p => hudBlip(s, p.img.x, p.img.y, 0x7fb8ff, 3));
   t.civ.forEach(c => hudBlip(s, c.img.x, c.img.y, 0x9fe9ff, 2));

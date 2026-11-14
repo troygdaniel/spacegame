@@ -23,13 +23,16 @@ class Space extends Phaser.Scene {
 
     const stDef = sysBody('station'), plDef = sysBody('planet');
     if (stDef) {
-      this.station = this.add.image(stDef.x, stDef.y, stDef.art);
-      this.tweens.add({ targets: this.station, angle: 360, duration: 180000, repeat: -1 });
-      label(this, stDef.x, stDef.y + stDef.labelDy, stDef.name.toUpperCase(), '#38e1ff', 18);
-      stationFx(this); // src/stationart.js: spinning hub and ring, beacons, docking lane, Kestrel Outpost
+      const built = stationBuild(this, stDef); // src/stationart.js: Halcyon's ring, a small outpost, or one of the looks, by the body's art
+      this.station = built.obj;
+      label(this, stDef.x, stDef.y + built.labelDy, stDef.name.toUpperCase(), '#38e1ff', 18);
+      if (stDef.art === 'station') stationFx(this); // src/stationart.js: Halcyon's spinning hub and ring, beacons, docking lane, Kestrel Outpost scenery
     } else this.station = spaceNowhere();
+    // you can land only where there is a surface to land on: the Surface scene is Kepler-4b's (a world of the Hollow gets its own later), so a planet is landable in Halcyon only
+    this.canLand = !!(plDef && plDef.landable && G.system === 'halcyon');
     if (plDef) {
-      this.planet = this.add.image(plDef.x, plDef.y, plDef.art); this.planetR = plDef.r;
+      this.planet = this.add.image(plDef.x, plDef.y, plDef.kind ? planetTexture(this, plDef.kind, plDef.seed) : plDef.art); this.planetR = plDef.r; // a planet of a kind and seed is made on first use (src/art_world.js)
+      if (plDef.kind) this.planet.setScale(plDef.r / (plDef.kind === 'ringed' ? 206 : 300)); // the globe is 300 px (ringed: 206) in its 800 px canvas
       label(this, plDef.x, plDef.y - plDef.r - 64, plDef.name.toUpperCase(), '#ffb454', 18);
     } else { this.planet = spaceNowhere(); this.planetR = 0; }
 
@@ -98,7 +101,7 @@ class Space extends Phaser.Scene {
     this.add.text(24, H - 44, 'W thrust  A/D turn  S brake  Shift boost  Q/E dash  Space or click fire  L land/dock', {
       fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92'
     }).setScrollFactor(0).setDepth(100);
-    if (this.from === 'station') { bountyReset(); toast(this, 'Launch clear. Kepler-4b is to the north-east.', '#9fe9ff'); } // enemies.js: a new flight's bounty count starts at 0
+    if (this.from === 'station') { bountyReset(); toast(this, G.system === 'halcyon' ? 'Launch clear. Kepler-4b is to the north-east.' : 'Launch clear.', '#9fe9ff'); } // enemies.js: a new flight's bounty count starts at 0
     else if (this.jumped) toast(this, 'Arrived in ' + sysDef().name + '.', '#9fe9ff');
     missionSpaceSetup(this); // src/missions.js: escort freighter, wanted pirates
     trafficSetup(this); // src/traffic.js: civilian ships and the station police
@@ -216,9 +219,9 @@ class Space extends Phaser.Scene {
     const spd = ship.body.speed;
     let msg = '';
     if (dS < 320) {
-      if (spd < 150) { msg = 'L  Dock at ' + sysBody('station').name; if (JD(k.L)) { missionLeaveSpace(this); sfx('dock'); feelDescend(this, this.station, () => go(this, 'Station', { arrive: true })); } }
+      if (spd < 150) { msg = 'L  Dock at ' + sysBody('station').name; if (JD(k.L)) { missionLeaveSpace(this); sfx('dock'); G.lastDock = sysBody('station').id; fleetSync(); feelDescend(this, this.station, () => go(this, 'Station', { arrive: true })); } } // lastDock: where the pump, the yard and the fleet are now (src/fleet.js)
       else msg = 'Too fast to dock. Hold S to brake';
-    } else if (dP < this.planetR + 150) {
+    } else if (this.canLand && dP < this.planetR + 150) {
       if (spd < 170) { msg = 'L  Land on ' + sysBody('planet').name; if (JD(k.L)) { missionLeaveSpace(this); sfx('thrusters'); feelDescend(this, this.planet, () => go(this, 'Surface')); } }
       else msg = 'Too fast to land. Hold S to brake';
     }

@@ -652,6 +652,40 @@ function stationArt(scene) {
   saDrawSmall(scene); saDrawStation(scene); saDrawRing2(scene); saDrawHubTex(scene); saDrawShade(scene); saDrawOutpost(scene);
 }
 
+// ---------- a small frontier dock (Universe B5) ----------
+// saOutpost(scene, def) puts the 'outpost' image at def.x, def.y on a slow turn with five blinking lights and keeps them moving; it returns the container. Halcyon has one as
+// scenery (stationFx below), Kestrel has one you can dock at (src/space.js stationBuild).
+function saOutpost(s, def) {
+  const ADD = Phaser.BlendModes.ADD;
+  const op = s.add.container(def.x, def.y).setDepth(1);
+  op.add(s.add.image(0, 0, def.art));
+  const lights = [[-132, 0, 'r'], [132, 0, 'g'], [0, -70, 'a'], [34, 34, 'c'], [-34, -34, 'c']].map(([x, y, col], i) => {
+    const im = s.add.image(x, y, 'glow-' + col).setBlendMode(ADD).setScale(0.55); op.add(im); return { im, i };
+  });
+  const fx = time => {
+    if (!op.active) return;
+    op.rotation = time * 0.000026;
+    lights.forEach(({ im, i }) => im.setAlpha(0.3 + 0.7 * (0.5 + 0.5 * Math.sin(time / 900 + i * 1.7))));
+  };
+  s.events.on('update', fx);
+  s.events.once('shutdown', () => s.events.off('update', fx));
+  op.once('destroy', () => s.events.off('update', fx));
+  return op;
+}
+
+// The station body of a system as an object with x and y (src/space.js create): { obj, labelDy }. art 'station' is Halcyon's ring, an image that turns (stationFx adds its
+// hub, lights and docking lane); 'outpost' a small frontier dock; the others are the looks above ('hub', 'foundry', 'nest', 'derelict'). labelDy is where the name goes, above the body.
+function stationBuild(s, def) {
+  if (def.art === 'station') {
+    const im = s.add.image(def.x, def.y, def.art);
+    s.tweens.add({ targets: im, angle: 360, duration: 180000, repeat: -1 });
+    return { obj: im, labelDy: def.labelDy !== undefined ? def.labelDy : -260 };
+  }
+  if (def.art === 'outpost') return { obj: saOutpost(s, def), labelDy: def.labelDy !== undefined ? def.labelDy : -175 };
+  const fx = stationLookFx(s, def.art, def.x, def.y);
+  return { obj: fx.c, labelDy: def.labelDy !== undefined ? def.labelDy : -(fx.radius + 30) };
+}
+
 // ---------- the animated parts, added to the Space scene ----------
 function stationFx(s) {
   const st = s.station;
@@ -673,15 +707,10 @@ function stationFx(s) {
   for (let j = 0; j < 7; j++) { const im = s.add.image(272 + j * 58, 0, 'station-chev').setBlendMode(ADD).setScale(0.85); local.add(im); chevs.push(im); }
   const lights = saStationLights().map(L => ({ L, im: glow(L.col, L.x, L.y, L.s) }));
 
-  // Kestrel Outpost: small, quiet, no docking services; just somewhere else to look at (scenery bodies in the system data)
-  const ops = sysBodies('scenery').filter(b => b.art === 'outpost').map(def => { // src/universe.js
-    const op = s.add.container(def.x, def.y).setDepth(1);
-    op.add(s.add.image(0, 0, def.art));
-    const lights = [[-132, 0, 'r'], [132, 0, 'g'], [0, -70, 'a'], [34, 34, 'c'], [-34, -34, 'c']].map(([x, y, col], i) => {
-      const im = s.add.image(x, y, 'glow-' + col).setBlendMode(ADD).setScale(0.55); op.add(im); return { im, i };
-    });
+  // Kestrel Outpost as scenery in Halcyon: small, quiet, no docking services; just somewhere else to look at (scenery bodies in the system data)
+  sysBodies('scenery').filter(b => b.art === 'outpost').forEach(def => { // src/universe.js
+    saOutpost(s, def);
     label(s, def.x, def.y + def.labelDy, def.name.toUpperCase(), '#6dff9c', 16);
-    return { op, lights };
   });
 
   const fx = time => {
@@ -699,10 +728,6 @@ function stationFx(s) {
     const ph = time / 130; // the lane pulse: ten steps, running from the far end in toward the bay
     rails.forEach(r => { const d = (((ph - (9 - r.k)) % 10) + 10) % 10, a = 0.3 + 0.7 * Math.max(0, 1 - d / 2.2); r.a.setAlpha(a); r.b.setAlpha(a); });
     chevs.forEach((im, j) => { const d = (((ph * 0.7 - (6 - j)) % 7) + 7) % 7; im.setAlpha(0.18 + 0.82 * Math.max(0, 1 - d / 1.8)); });
-    ops.forEach(({ op, lights }) => {
-      op.rotation = time * 0.000026;
-      lights.forEach(({ im, i }) => im.setAlpha(0.3 + 0.7 * (0.5 + 0.5 * Math.sin(time / 900 + i * 1.7))));
-    });
   };
   s.events.on('update', fx);
   s.events.once('shutdown', () => s.events.off('update', fx));

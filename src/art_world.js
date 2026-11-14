@@ -180,18 +180,25 @@ function waSpaceArt(sc) {
 }
 
 // Backdrop for the Space scene: parallax star layers and distant bodies. spaceBackdropTick(s) runs every frame.
+// A system with a `star` ({ type, x, y }, src/data_systems.js) takes its sky from it: the star layers get the star type's tint (STAR_TYPES) and the sun in the sky is that
+// type's star (its size), placed by the system's seed so no two skies are alike; its far planets are the bodies you can fly to, so there is no giant or moon. Halcyon has no
+// `star` row, so its sky (the orange sun, the giant, the moon) is exactly what it always was.
 function spaceBackdrop(s) {
+  const sys = sysDef(), star = sys.star && STAR_TYPES[sys.star.type] ? sys.star.type : null; // src/universe.js
   s.cameras.main.setBackgroundColor(0x02050e);
-  const layer = (key, depth, f, a) => { const t = s.add.tileSprite(0, 0, W, H, key).setOrigin(0).setScrollFactor(0).setDepth(depth).setAlpha(a); t.par = f; return t; };
+  const layer = (key, depth, f, a) => { const t = s.add.tileSprite(0, 0, W, H, key).setOrigin(0).setScrollFactor(0).setDepth(depth).setAlpha(a); t.par = f; if (star) t.setTint(STAR_TYPES[star].tint); return t; };
   s.bgLayers = [layer('stars1', -10, 0.2, 1), layer('stars2', -9, 0.45, 1), layer('stars3', -8, 0.85, 1)]; // three full-screen layers: each one costs fill rate
   // distant bodies drift slower than the world: an image with scroll factor f sits at (anchor + f * reference scroll), so each
   // one is placed where it should appear when you launch from the station
   const REF = { x: 3360, y: 3640 };
   const far = (key, ax, ay, f, depth, scale, alpha = 1) => s.add.image(ax + f * REF.x, ay + f * REF.y, key).setScrollFactor(f).setDepth(depth).setScale(scale).setAlpha(alpha);
-  const sun = far('sun', 150, 620, 0.03, -6.5, 1.15);
-  s.tweens.add({ targets: sun, scale: 1.22, duration: 5200, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-  far('giant', 1010, 520, 0.07, -6, 0.62);
-  far('moon', 560, 90, 0.11, -5.5, 0.42, 0.7); // dim and small so it never reads as a rock to shoot
+  const seed = sys.seed | 0, k = star ? STAR_TYPES[star].size : 1;
+  const sun = far(star ? starTexture(s, star) : 'sun', star ? 120 + (seed * 37) % 900 : 150, star ? 380 + (seed * 53) % 460 : 620, 0.03, -6.5, 1.15 * k);
+  s.tweens.add({ targets: sun, scale: 1.22 * k, duration: 5200, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+  if (!star) {
+    far('giant', 1010, 520, 0.07, -6, 0.62);
+    far('moon', 560, 90, 0.11, -5.5, 0.42, 0.7); // dim and small so it never reads as a rock to shoot
+  }
   s.tweens.add({ targets: s.bgLayers[2], alpha: 0.78, duration: 3400, yoyo: true, repeat: -1, ease: 'Sine.inOut' }); // the bright stars breathe a little
 }
 function spaceBackdropTick(s) {

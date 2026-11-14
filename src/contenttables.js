@@ -224,7 +224,8 @@ const CT_STATION = {
   get: (id, f) => {
     const r = ctStationRow(id);
     if (!r) return CT_HAS(CONTENT_WORLD.station, id) ? CONTENT_WORLD.station[id][f] : undefined;
-    return f === 'name' ? r.b.name : f === 'system' ? r.sys : f === 'repair' ? REPAIR_PRICE : f === 'ore' ? ORE_PRICE : undefined;
+    const home = r.b.id === homeDock(), d = r.b.dock || {}; // the game's one price of repair and of ore is Halcyon Station's; another station's are in its dock (read by card u-e4)
+    return f === 'name' ? r.b.name : f === 'system' ? r.sys : f === 'repair' ? (home ? REPAIR_PRICE : d.repair) : f === 'ore' ? (home ? ORE_PRICE : d.ore) : undefined;
   },
   apply: (id, data) => {
     const r = ctStationRow(id);
@@ -234,8 +235,8 @@ const CT_STATION = {
     }
     if (data.system !== undefined && data.system !== r.sys) throw new Error('system is "' + data.system + '" but ' + id + ' is in ' + r.sys);
     if (data.name !== undefined) r.b.name = data.name;
-    if (data.repair !== undefined) REPAIR_PRICE = data.repair;
-    if (data.ore !== undefined) ORE_PRICE = data.ore;
+    if (data.repair !== undefined && id === homeDock()) REPAIR_PRICE = data.repair; // the game has one price of each so far: Halcyon Station's. The other docks' prices are
+    if (data.ore !== undefined && id === homeDock()) ORE_PRICE = data.ore;          // in their rows of data_systems.js, where card u-e4 reads them; a file for one never moves Halcyon's
     CONTENT_WORLD.station[id] = ctWorldCopy(data); ctBuilt.clear(); // fuel, yard, parts, partMult, fee and the words are kept for worldAt; the game reads the three above
   }
 };

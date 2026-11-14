@@ -65,6 +65,7 @@ class Station extends Phaser.Scene {
   // 1-3 or the arrow keys choose a call, E accepts it, X drops the one under way, Esc closes.
   openPanel() {
     this.panel = true; this.panelBox.setVisible(true); this.canAccept = false; this.prompt.setText('');
+    if (G.lastDock !== homeDock()) return this.openEmptyBoard(); // src/fleet.js
     const busy = () => G.mission === 'accepted' || G.mission === 'rescued';
     const RISK = { rescue: ['MEDIUM', 2, '#ffb454'], escort: ['HIGH', 3, '#ff4d6d'], patrol: ['MEDIUM', 2, '#ffb454'], bounty: ['EXTREME', 3, '#ff2a4a'] };
     const OFFERS = missionsOffered(); // the bounty call appears once a patrol has been finished (missions.js)
@@ -150,6 +151,15 @@ class Station extends Phaser.Scene {
     };
     kb.on('keydown', this.boardKeys);
     if (busy()) render(); else choose(Math.max(0, OFFERS.findIndex(m => m.id === G.missionId)), true);
+  }
+  // Only Halcyon posts calls so far (the three of src/missions.js are places in that system; card u-e3 gives every station a board of its own): anywhere else the desk says so
+  openEmptyBoard() {
+    const name = fleetStationName(G.lastDock); // src/fleet.js
+    this.ui.titleText.setText('MISSION BOARD  -  ' + name.toUpperCase());
+    crTag(this, this.ui, G.credits); // src/ui.js
+    const o = this.add.text(0, -70, 'No calls are posted at ' + name + ' yet.\nThe board at Halcyon Station has work.', uiFont(18, '#cfefff', { align: 'center', lineSpacing: 8 })).setOrigin(0.5);
+    this.panelBox.add(o); this.boardObjs.push(o);
+    this.ui.setHints([['Esc', 'Close']]);
   }
   closePanel() { this.panel = false; this.panelBox.setVisible(false); this.boardObjs.forEach(o => o.destroy()); this.boardObjs = []; }
 
