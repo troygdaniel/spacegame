@@ -15,7 +15,8 @@ const SYSTEMS = {
     size: 36000,                  // world px, square (docs/UNIVERSE.md 2.2): the old 8000 px cluster stays in the north-west corner, the rest is far space
     danger: 1, traffic: 2,        // 0 to 5 and 0 to 3 (it has police, so traffic is 2 or more)
     bodies: [
-      { id: 'halcyon-station', type: 'station', art: 'station', name: 'Halcyon Station', x: 4000, y: 4000, labelDy: -260 },
+      { id: 'halcyon-station', type: 'station', art: 'station', name: 'Halcyon Station', x: 4000, y: 4000, labelDy: -260,
+        dock: { fuel: 8 } }, // dock: what the station offers; fuel is the price of a unit at its pump (src/fuel.js), a station without it has no pump
       { id: 'kepler-4b', type: 'planet', art: 'planet', name: 'Kepler-4b', x: 6200, y: 2000, r: 316, landable: true },
       { id: 'kepler-belt', type: 'belt', name: 'Kepler Belt', x: 5500, y: 1300, r: 700, rocks: 15 }, // north-west of Kepler-4b
 
