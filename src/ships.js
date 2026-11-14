@@ -21,8 +21,18 @@ const SHIPS = {
     freighter: [[-30, -3.5, 0.8], [-30, 3.5, 0.8]], civilian: [[-29, -4, 0.6], [-29, 4, 0.6]]
   },
   flame: { ship: CYAN, police: 0x7fb8ff, raider: 0xff6b8a, drone: RED, gunship: 0xff8c3a, reaver: 0xff2a4a, freighter: AMBER, civilian: 0xdfefff },
-  ribbonMs: 420, shieldMs: 450, flashMs: 70 // shieldMs matches HIT_IRON (enemies.js): the hex shield shows exactly how long you cannot be hurt again
+  ribbonMs: 420, shieldMs: 450, flashMs: 70, // shieldMs matches HIT_IRON (enemies.js): the hex shield shows exactly how long you cannot be hurt again
+  // bounds for the ribbon (card space-game-bug-ribbon-zero-length-quad): a real ribbon line is under 12 px wide and a frame moves a nozzle under 100 px
+  // (cruise, 6000 px/s: a slower frame may move it further, so a jump is judged against 7000 px/s times the time since the last point, never under ribJump). Playtest 2 saw a tan rectangle 200 x 180 px ending at the nozzle and a full-height bar through the ship, both one stroke of
+  // the ships layer with a width or length far outside that, cause not found. Anything outside these bounds is dropped, and the first time it happens
+  // of each kind a console.warn names it (SHIPS.guard keeps the count and the last values for a bug report).
+  ribMaxW: 24, ribJump: 220, guard: { n: 0, last: null, seen: {} }
 };
+// a value the ships layer refused to draw: counted, and named once per kind in the console
+function shipsGuard(what, value) {
+  const g = SHIPS.guard; g.n++; g.last = { what, value: String(value) };
+  if (!g.seen[what]) { g.seen[what] = 1; try { console.warn('[ships] refused to draw an out-of-range ' + what + ': ' + value); } catch (e) { /* a warning is optional */ } }
+}
 
 // ---- drawing helpers (texture time) ----
 function shPoly(g, pts) { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.closePath(); }
@@ -294,18 +304,28 @@ function shipsOne(s, g, o, key, th, frac, time, dt, color, boost) {
   const noz = SHIPS.nozzles[key] || SHIPS.nozzles.drone;
   if (o.flashUntil && time > o.flashUntil) { o.clearTint(); o.flashUntil = 0; }
   o.ribs = o.ribs || noz.map(() => []);
+  th = th > 0 ? Math.min(th, 2) : 0; // thrust is 0 to 1; anything else (NaN, a runaway) is not drawn as a flame ten times the size
   noz.forEach(([dx, dy, size], i) => {
     const x = o.x + (c * dx - n * dy) * sc, y = o.y + (n * dx + c * dy) * sc;
+    if (!isFinite(x) || !isFinite(y)) { shipsGuard('position', x + ', ' + y); return; }
     // ribbon: the last 420 ms of nozzle positions, fading and thinning toward the tail
     const rib = o.ribs[i] || (o.ribs[i] = []);
-    if (th > 0.05 || (o.body && o.body.speed > 60)) rib.push({ x, y, t: time, w: (2 + 4 * th) * size * sc * boost });
+    const last = rib[rib.length - 1];
+    if (last && Math.hypot(x - last.x, y - last.y) > Math.max(SHIPS.ribJump, 7000 * Math.max(0, time - last.t) / 1000)) { shipsGuard('jump', Math.round(Math.hypot(x - last.x, y - last.y)) + ' px'); rib.length = 0; } // a teleport (scene restart, launch, setPosition), not flight: a ribbon across the gap would be a bar through the screen
+    while (rib.length && rib[rib.length - 1].t > time) { shipsGuard('time', Math.round(rib[rib.length - 1].t - time) + ' ms ahead'); rib.pop(); } // the clock never runs backwards for a ribbon
+    if (th > 0.05 || (o.body && o.body.speed > 60)) {
+      const w = (2 + 4 * th) * size * sc * boost;
+      if (w > SHIPS.ribMaxW) shipsGuard('width', w.toFixed(1));
+      rib.push({ x, y, t: time, w: Math.min(w, SHIPS.ribMaxW) });
+    }
     while (rib.length && time - rib[0].t > SHIPS.ribbonMs) rib.shift();
     for (let j = 1; j < rib.length; j++) {
-      const k = 1 - (time - rib[j].t) / SHIPS.ribbonMs;
+      const k = 1 - (time - rib[j].t) / SHIPS.ribbonMs; // above 0 and at most 1: older points are gone, none come from the future
+      if (!(k > 0 && k <= 1)) { shipsGuard('fade', k); continue; }
       g.lineStyle(rib[j].w * k, color, 0.55 * k);
       g.lineBetween(rib[j - 1].x, rib[j - 1].y, rib[j].x, rib[j].y);
     }
-    if (th > 0.02) shipsFlame(g, x, y, r, th, size * sc, color, boost);
+    if (th > 0.02) shipsFlame(g, x, y, r, th, Math.min(size * sc, 4), color, boost);
   });
   // damage: smoke under 60% hull from the tail, sparks and a hull flicker under 30%
   if (frac < 0.6 && s.smoke) {

@@ -6,7 +6,7 @@ const SAVE_KEY = 'longhaul.save.v2';     // docs/UNIVERSE.md 8.2
 const SAVE_KEY_V1 = 'longhaul.save.v1';  // read when v2 is missing; never written, never deleted
 const GAMEPLAY = ['Station', 'Space', 'Surface'];
 const SCREENS = GAMEPLAY.concat('Ship'); // where Tab, H and M work too. The Ship scene (shipmode.js) uses Esc itself, so it is not in GAMEPLAY
-const DEV_HASH = /^#(space|surface|escort|patrol|hyper\d{0,2})$/.test(location.hash); // dev jumps neither load nor overwrite a save
+const DEV_HASH = /^#(space|surface|escort|patrol|hyper\d{0,2}|galaxy)$/.test(location.hash); // dev jumps neither load nor overwrite a save
 let lastSaved = '';
 
 const HELP = {

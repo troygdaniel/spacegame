@@ -51,9 +51,14 @@ export function loadGame(root) {
 }
 
 // ---------------------------------------------------------------- 2. PINNED: numbers that sit in a code line, not in a table
-// text must still be found in the file, or `check` says the pin is stale
+// text (one line of code, or a list of them) must still be found in the file, or `check` says the pin is stale
+// constant: a pin whose number is a one-line constant in its file (let NAME = 0.5;): the value is READ from the code, so a change to the
+// constant (a content file can change it) moves the pin with it, and `check` says so if that line is gone
+export const constIn = (file, name) => {
+  try { const m = new RegExp('\\b(?:let|const|var) ' + name + ' = (-?[0-9.]+);').exec(readFileSync(join(ROOT, file), 'utf8')); return m ? Number(m[1]) : null; } catch (e) { return null; }
+};
 export const PINS = {
-  repairPerPoint: { value: 0.5, file: 'src/station.js', text: 'Math.ceil(missing * 0.5)', what: 'repair bay: half a credit a point of hull' },
+  repairPerPoint: { get value() { return constIn('src/station.js', 'REPAIR_PRICE') ?? 0.5; }, constant: 'REPAIR_PRICE', file: 'src/station.js', text: ['Math.ceil(missing * REPAIR_PRICE)'], what: 'repair bay: credits a point of hull (the REPAIR_PRICE constant, 0.5 as shipped)' },
   insurancePct: { value: 0.2, file: 'src/space.js', text: 'Math.floor(G.credits * 0.2)', what: 'insurance fee: 20% of your credits' },
   insuranceMin: { value: 50, file: 'src/space.js', text: 'Math.max(50,', what: 'insurance fee: never less than 50' },
   muleSpeed: { value: [130, 70, 50], file: 'src/missions.js', text: 'threat ? 50 : behind ? 70 : 130', what: 'the MULE: free, you far behind, pirates close (px/s)' },
@@ -364,8 +369,10 @@ function tCheck(g) {
   let bad = 0;
   if (g.problems.length) { bad += g.problems.length; g.problems.forEach(p => console.log('  PROBLEM ' + p)); }
   for (const [k, p] of Object.entries(PINS)) {
-    const file = join(ROOT, p.file), ok = existsSync(file) && readFileSync(file, 'utf8').includes(p.text);
-    if (!ok) { bad++; console.log(`  STALE PIN ${k}: ${p.file} no longer has "${p.text}" (${p.what}). Read that code again and fix PINS.`); }
+    const file = join(ROOT, p.file), src = existsSync(file) ? readFileSync(file, 'utf8') : '';
+    const missing = [].concat(p.text).filter(t => !src.includes(t));
+    if (p.constant && constIn(p.file, p.constant) === null) missing.push('let ' + p.constant + ' = <number>;');
+    if (missing.length) { bad++; console.log(`  STALE PIN ${k}: ${p.file} no longer has ${missing.map(t => '"' + t + '"').join(' and ')} (${p.what}). Read that code again and fix PINS.`); }
   }
   console.log(bad ? `\ncheck: ${bad} problem${bad === 1 ? '' : 's'}` : `check: the game files loaded (${FILES.length} files, ${Object.keys(g.ships).length} ships, ${g.order.length} part slots, ${g.missions.length} calls) and all ${Object.keys(PINS).length} pinned code lines are still there`);
   return bad;
