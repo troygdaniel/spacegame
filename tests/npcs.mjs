@@ -63,7 +63,8 @@ try {
   check('no rescue paid: IDA is not in the bar (no sprite, no body, no label, no prompt spot)', !s0.vis && !s0.body && !s0.label && !s0.spot, JSON.stringify(s0));
   await t.ev(`${ST}.player.setPosition(272, 500)`); await sleep(300);
   check('standing where she would be offers no talk', !(await t.ev(`${ST}.prompt.text`)).includes('IDA'));
-  await t.ev("(() => { G.stats.missions = 1; return 1; })()"); await sleep(500);
+  await t.ev("(() => { G.stats.missions = 1; return 1; })()");
+  await t.waitFor(`${ST}.npcSprites[${IDX}].visible`, 10000, 'IDA appears'); await sleep(200);
   s0 = await state();
   check('first rescue paid: she is there at once', s0.vis && s0.body && s0.label && s0.spot, JSON.stringify(s0));
   await t.shot('npcs-ida-here');
@@ -75,9 +76,12 @@ try {
     check(who + ': the prompt offers to talk', (await t.ev(`${ST}.prompt.text`)).includes('Talk to ' + (who === 'IDA' ? 'IDA KETTER' : who)), await t.ev(`${ST}.prompt.text`));
     await t.press('E'); await sleep(500);
     check(who + ': the dialogue box opens with the right title', (await t.ev(`${ST}.talkName.text`)) === title, await t.ev(`${ST}.talkName.text`));
-    await sleep(1800);
+    // the typewriter types one character a frame, so a busy machine (a few frames a second) takes a minute for a line: press E again, which
+    // shows the whole line at once (that is what E does while it types), and wait for it to say it is done
+    await t.press('E');
+    await t.waitFor(`!!(${ST}.talk && ${ST}.talk.tw && ${ST}.talk.tw.done)`, 40000, who + ' line shown in full');
     const said = await t.ev(`${ST}.talkText.text`);
-    check(who + ': a line is spoken in quotes', said.length > 20 && said.startsWith('"'), said.slice(0, 50));
+    check(who + ': the whole line is spoken in quotes', said.length > 20 && said.startsWith('"') && said.endsWith('"'), said.slice(0, 40) + ' ... ' + said.slice(-12));
     if (who === 'SABLE') await t.shot('npcs-sable-talk');
   }
   await t.ev(`(() => { const s = ${ST}; hideTalk(s); s.player.setPosition(960, 400); return 1; })()`); await sleep(500);
