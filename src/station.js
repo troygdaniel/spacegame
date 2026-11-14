@@ -34,7 +34,7 @@ class Station extends Phaser.Scene {
     });
 
     // the lower deck is the bar (src/shop.js) and the hangar gets the upgrade shop terminal
-    buildBar(this); buildShop(this);
+    buildBar(this); buildShop(this); buildPump(this); // src/fuel.js: the fuel pump terminal, where the station has one
 
     interiorBuild(this); // lights, signs, hologram desks, patrons and wanderers (src/interior.js)
 
@@ -153,6 +153,7 @@ class Station extends Phaser.Scene {
     guideTick(this); interiorTick(this, this.time.now);
     const JD = Phaser.Input.Keyboard.JustDown, k = this.k;
     hudTick(this); // src/hud.js
+    if (pumpFrame(this)) return; // src/fuel.js: the fuel pump panel is open
     if (shopFrame(this)) return; // upgrade shop panel is open
     if (this.panel) {
       this.player.setVelocity(0, 0);
@@ -178,6 +179,7 @@ class Station extends Phaser.Scene {
     this.prompt.setText(near && !this.talk ? 'E  ' + (near.prompt || { missions: 'Check the mission board', repair: 'Repair hull', ship: 'Board your ship' }[near.key]) : '');
     if (near && JD(k.E) && !spotInteract(this, near)) {
       if (near.key === 'missions') this.openPanel();
+      else if (near.key === 'pump') openPump(this);
       else if (near.key === 'repair') {
         // half a credit a point; too poor for a full repair and it mends as much as you can pay for
         const missing = G.maxHull - G.hull, cost = Math.ceil(missing * REPAIR_PRICE);
