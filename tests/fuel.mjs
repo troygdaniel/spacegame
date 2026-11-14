@@ -92,8 +92,9 @@ try {
   await is('(() => { const r = rangerTick(45000); return [r.units, r.cost, G.credits, activeShip().fuel].join(); })()', '10,0,0,10', 'with 0 cr it still comes and brings 10 units: nobody is stranded');
   await ev('G.credits = 500; activeShip().fuel = 35; FUELST.rangerAt = 0;');
   await is("(() => { G.system = 'zz'; activeShip().fuel = 9; const r = rangerCall(0); FUELST.rangerAt = 0; return r.units; })()", 10, 'a ranger fills up to 10 or what fits');
-  // heavy ships (playtest 3): the ranger brings what the cheapest jump out costs when that is more than 10, so nobody is stranded
-  await ev("(() => { window.__known = G.known; G.known = ['halcyon', 'kestrel']; G.system = 'kestrel'; FUELST.rangerAt = 0; G.credits = 1000; activeShip().model = 'bastion'; activeShip().fuel = 0; return 1; })()");
+  // heavy ships (playtest 3): the ranger brings what the cheapest jump out costs when that is more than 10, so nobody is stranded.
+  // Card u-b5 gave Kestrel its outpost and its pump; the ranger is for a system with no pump, so Kestrel is emptied here (a copy, put back below)
+  await ev("(() => { window.__realKestrel = SYSTEMS.kestrel; SYSTEMS.kestrel = Object.assign({}, SYSTEMS.kestrel, { bodies: [] }); window.__known = G.known; G.known = ['halcyon', 'kestrel']; G.system = 'kestrel'; FUELST.rangerAt = 0; G.credits = 1000; activeShip().model = 'bastion'; activeShip().fuel = 0; return 1; })()");
   await is('rangerUnits()', 12.5, 'a Bastion (2 units a ly) in Kestrel: Halcyon is 6.3 ly, the jump home costs 12.5, so the ranger brings 12.5');
   const bcall = JSON.parse(await ev('JSON.stringify(rangerCall(1000))'));
   check('called with an empty tank: 12.5 units, 300 cr (12.5 x 24)', bcall.ok && bcall.units === 12.5 && bcall.cost === 300, JSON.stringify(bcall));
@@ -109,7 +110,7 @@ try {
     check('empty in Kestrel, one call, no credits: the ' + m + ' can jump home (and a second call is refused)', r[0] === true && r[2] === true && r[4] === 'enough', JSON.stringify(r));
   }
   await ev("(() => { activeShip().model = 'wren'; activeShip().fuel = 40; G.known = window.__known; G.credits = 500; FUELST.rangerAt = 0; return 1; })()");
-  await ev("(() => { G.system = 'halcyon'; FUELST.rangerAt = 0; return 1; })()");
+  await ev("(() => { SYSTEMS.kestrel = window.__realKestrel; G.system = 'halcyon'; FUELST.rangerAt = 0; return 1; })()");
 
   console.log('the terminal in the station');
   await ev('(() => { G.credits = 500; activeShip().fuel = 10; return 1; })()');
