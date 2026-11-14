@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Long Haul smoke test. Run from anywhere: bash tests/smoke.sh   (exit code 1 if anything fails)
 #   1. node --check on every src file
+#   1c. tests/locktest.mjs: the one-Chrome-at-a-time lock and the orphan Chrome profile cleanup (tests/lock.mjs; no browser)
 #   2. tests/scenes.mjs: load index.html, index.html#space, index.html#surface in headless Chrome, fail on a console
 #      error, save a screenshot of each to tests/out/ (gitignored)
 #   3. tests/loop.mjs: scripted rescue from station to payout, asserts +500 credits
@@ -13,6 +14,8 @@
 #   4f. tests/hyper.mjs: the hyperspace tunnel demo (#hyper), its timing, readout and colour; no save written
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #      their failure paths, with the game clock stepped by hand
+# Only one headless Chrome runs at a time on this Mac, whatever the worktree: cdp.mjs takes a lock in tests/lock.mjs, so a second
+# run prints "waiting for another Long Haul test run" and goes on when its turn comes (LONGHAUL_NO_LOCK=1 skips it).
 # Needs Google Chrome and Node 22+. Uses throwaway Chrome profiles, never your own. Chrome runs with
 # --headless=new --disable-gpu --use-angle=swiftshader --enable-unsafe-swiftshader --allow-file-access-from-files.
 # (The plain chrome --screenshot route hung at random when the Mac was busy, so the scenes go over DevTools too.)
@@ -24,6 +27,9 @@ echo "== 1. node --check"
 for f in src/*.js tests/*.mjs; do
   if node --check "$f"; then echo "  ok  $f"; else echo "  FAIL $f"; fail=1; fi
 done
+
+echo "== 1c. test lock and orphan profile cleanup (tests/locktest.mjs)"
+if node tests/locktest.mjs; then :; else fail=1; fi
 
 echo "== 2. headless Chrome, one screenshot per scene"
 if node tests/scenes.mjs; then :; else fail=1; fi

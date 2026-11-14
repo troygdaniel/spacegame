@@ -20,6 +20,7 @@ Station (walk, take the rescue call, board ship) -> Space (fly, fight drones, do
 - src/art_world.js the world art, drawn in code on 2D canvases (seeded, same every boot): nebula and parallax star layers, distant sun, ringed giant and moon, Kepler-4b, asteroids and ore, the surface (ground, terrain, boulders, pad, crash site, colonist, crawlers) and the effects fxBoom (every s.boom), fxDash, fxPickup, fxDebris
 - src/hyperspace.js the Hyper scene, the watched hyperspace tunnel (star streaks, gates, ribbons, nose bloom, readout). Dark: only index.html#hyper (or #hyper<ly>, e.g. #hyper24) opens it, no game effect yet
 - src/main.js    Phaser config and scene list
+- tests/cdp.mjs, tests/lock.mjs  the headless Chrome harness; lock.mjs lets only one Chrome run at a time across worktrees (a busy Mac made DevTools calls time out), waits its turn, and removes orphan longhaul-* Chrome profiles; tests/locktest.mjs checks it
 New files get their own script tag in index.html. Keep edits inside the files your card names.
 
 ## Rules for agents
