@@ -1,6 +1,6 @@
 // Adding new things from markdown (card space-game-m9-add-new, docs/MODDING.md section 12): a file with an id the code does not know
 // becomes a new voice line, bar character, mission, or ship. Each case runs the real game in headless Chrome from a throwaway COPY of this
-// folder whose content.generated.js is built from a small pack made here, then reads what the game plays from. Types so far: voice, ship.
+// folder whose content.generated.js is built from a small pack made here, then reads what the game plays from. Types so far: voice, ship, mission.
 // Run: node tests/contentadd.mjs     (one game per case, one Chrome at a time)
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -126,6 +126,71 @@ try {
   await play(fleet, async (t, ev) => {
     const L = await ev(LOADER);
     check('6 are added and 2 are refused with the limit named', L.applied.filter(k => k.startsWith('ship:')).length === 6 && L.errors.filter(e => /at most 6 ships/.test(e)).length === 2, JSON.stringify([L.applied.length, L.errors]));
+  });
+
+  // ---------- missions ----------
+  console.log('mission: new calls of the built-in kinds');
+  const missions = {
+    'missions/convoy-patrol.md': '---\ntype: mission\nkind: patrol\ntitle: Convoy patrol\nwhere: The outer ring\nreward: 800\ncount: 3\n---\nThree pirates are shadowing a convoy.\nClear them for {reward} cr.\n\n## Board line\nactive: Convoy: {progress} of {count} pirates down\nfailed: The convoy was left alone\n\n## Steps\n- Take the convoy call\n- Launch\n- Pirates down {progress}/{count}\n',
+    'missions/rescue-two.md': '---\ntype: mission\nkind: rescue\ntitle: Second pod\nwhere: Kepler-4b\nreward: 700\n---\nAnother pod went down on the same planet.\n',
+    'missions/escort-run.md': '---\ntype: mission\nkind: escort\ntitle: Escort run\nreward: 350\n---\n',
+    'missions/big-game.md': '---\ntype: mission\nkind: bounty\ntitle: Big game\nreward: 2000\nunlock: patrols>=2\n---\nA second look at the Reaver.\n',
+    'missions/zzz-over-the-cap.md': '---\ntype: mission\nkind: patrol\ntitle: One too many\nreward: 1\n---\n',
+    'missions/courier-run.md': '---\ntype: mission\nkind: courier\ntitle: Courier run\nreward: 100\n---\n',
+    'missions/no-reward.md': '---\ntype: mission\nkind: patrol\ntitle: No reward\n---\n'
+  };
+  await play(missions, async (t, ev) => {
+    const L = await ev(LOADER);
+    const mine = ['convoy-patrol', 'rescue-two', 'escort-run', 'big-game'].map(k => 'mission:' + k);
+    check('four calls are added', mine.every(k => L.applied.includes(k)), JSON.stringify(L.applied));
+    check('a courier call is refused and the kinds the game plays are named', L.errors.some(e => /courier-run\.md.*patrol|courier-run\.md.*courier/.test(e) && /rescue, escort, patrol, bounty/.test(e)), JSON.stringify(L.errors));
+    check('a call with no reward is refused with its file', L.errors.some(e => /no-reward\.md.*reward is required/.test(e)), JSON.stringify(L.errors));
+    check('the fifth is refused with the limit named', L.errors.some(e => /zzz-over-the-cap\.md.*at most 4 calls/.test(e)) || L.errors.some(e => /zzz-over-the-cap\.md/.test(e) && /at most 4/.test(e)), JSON.stringify(L.errors));
+    const rows = await ev(`MISSIONS.map(m => [m.id, missionKind(m), m.key, m.title, m.reward, m.count === undefined ? null : m.count, !!m.unlock])`);
+    check('the board has the four built-in calls then the four new ones, each with its own key', JSON.stringify(rows.map(r => r.slice(0, 3))) === JSON.stringify([['rescue', 'rescue', '1'], ['escort', 'escort', '2'], ['patrol', 'patrol', '3'], ['bounty', 'bounty', '4'], ['big-game', 'bounty', '5'], ['convoy-patrol', 'patrol', '6'], ['escort-run', 'escort', '7'], ['rescue-two', 'rescue', '8']]), JSON.stringify(rows));
+    check('titles, pay and count are the files\'', rows[5][3] === 'Convoy patrol' && rows[5][4] === 800 && rows[5][5] === 3 && rows[7][4] === 700 && rows[6][4] === 350, JSON.stringify(rows));
+    check('only the call with an unlock rule is locked: the built-in bounty and Big game', rows[3][6] === true && rows[4][6] === true && rows[5][6] === false && rows[6][6] === false && rows[7][6] === false);
+    const off = await ev(`(() => { G.patrolsDone = 0; const a = missionsOffered().map(m => m.id); G.patrolsDone = 2; const b = missionsOffered().map(m => m.id); G.patrolsDone = 0; return [a, b]; })()`);
+    check('Big game is offered only after two patrols', !off[0].includes('big-game') && off[1].includes('big-game') && off[0].length === 6, JSON.stringify(off));
+    const words = await ev(`(() => { const m = MISSIONS.find(x => x.id === 'convoy-patrol'); G.missionId = 'convoy-patrol'; G.mission = 'accepted'; G.missionProgress = 1; const o = [m.offer, m.line('accepted'), m.line('failed'), m.progress(), HUD_MISSIONS['convoy-patrol'].steps.map(t => typeof t === 'function' ? t() : t)]; G.mission = 'none'; G.missionId = null; return o; })()`);
+    check('the briefing says {reward} for this call, the board line and the steps count to 3', words[0] === 'Three pirates are shadowing a convoy.\nClear them for 800 cr.' && words[1] === 'Convoy: 1 of 3 pirates down' && words[2] === 'The convoy was left alone' && words[4][2] === 'Pirates down 1/3', JSON.stringify(words));
+    check('a text the file leaves out is the kind\'s own, rebuilt for this call: the progress counts to 3', /Wanted pirates destroyed: 1 of 3\./.test(words[3]), JSON.stringify(words[3]));
+    const kinds = await ev(`(() => { const r = {}; MISSIONS.forEach(m => { G.mission = 'accepted'; G.missionId = m.id; r[m.id] = ['rescue', 'escort', 'patrol', 'bounty'].filter(k => missionActive(k)); }); G.mission = 'none'; G.missionId = null; return r; })()`);
+    check('a call is active as its own kind and its own id, never as another kind', JSON.stringify(kinds['convoy-patrol']) === '["patrol"]' && JSON.stringify(kinds['rescue-two']) === '["rescue"]' && JSON.stringify(kinds['patrol']) === '["patrol"]' && JSON.stringify(kinds['escort-run']) === '["escort"]', JSON.stringify(kinds));
+    const keep = await ev(`(() => { const a = MISSIONS.length; ContentLib.apply(CONTENT, CONTENT_TABLES); return [a, MISSIONS.length]; })()`);
+    check('applying the pack again adds nothing twice', keep[0] === keep[1] && keep[0] === 8, JSON.stringify(keep));
+
+    // play the convoy patrol: three wanted pirates, the third pays 800
+    await ev(`(() => { G.mission = 'accepted'; G.missionId = 'convoy-patrol'; G.missionProgress = 0; G.patrolsDone = 0; G.credits = 0; game.scene.stop('Title'); game.scene.start('Space', { from: 'station' }); return 1; })()`);
+    await t.waitFor(`game.scene.isActive('Space')`, 15000, 'Space active'); await sleep(900);
+    const wanted = await ev(`(() => { const sp = game.scene.getScene('Space'); return sp.enemies.getChildren().filter(e => e.wanted).length; })()`);
+    check('the convoy patrol puts exactly 3 wanted pirates on the approach', wanted === 3, String(wanted));
+    const kills = await ev(`(() => { const sp = game.scene.getScene('Space'), out = []; for (let i = 0; i < 3; i++) { missionKill(sp, { wanted: true }); out.push([G.missionProgress, G.mission, G.credits, G.patrolsDone]); } return out; })()`);
+    check('three kills: 1, 2, then done: paid 800, no mission, one patrol counted', JSON.stringify(kills) === JSON.stringify([[1, 'accepted', 0, 0], [2, 'accepted', 0, 0], [0, 'none', 800, 1]]), JSON.stringify(kills));
+    // dock with the second pod's colonist aboard: the station pays that call's 700
+    await ev(`(() => { G.mission = 'rescued'; G.missionId = 'rescue-two'; window.__c0 = G.credits; game.scene.stop('Space'); game.scene.start('Station', { arrive: true }); return 1; })()`);
+    await t.waitFor(`game.scene.isActive('Station')`, 15000, 'Station active'); await sleep(500);
+    check('docking with the second pod\'s colonist pays 700, not the first call\'s 500', (await ev('G.credits - window.__c0')) === 700);
+    // the board: six calls offered, four cards at a time
+    await ev(`(() => { G.mission = 'none'; G.missionId = null; G.patrolsDone = 0; game.scene.getScene('Station').openPanel(); return 1; })()`);
+    await sleep(500);
+    const shownText = () => ev(`(() => { const out = []; const walk = o => { if (o.visible === false) return; if (o.type === 'Text') out.push(o.text); if (o.list) o.list.forEach(walk); }; game.scene.getScene('Station').panelBox.list.forEach(walk); return out.join('|'); })()`);
+    const first = await shownText();
+    check('the board shows four cards (Rescue call to Convoy patrol) and says "CALLS 1-4 OF 6 >"', /CALLS 1-4 OF 6\s+>/.test(first) && /RESCUE CALL/.test(first) && /CONVOY PATROL/.test(first) && !/ESCORT RUN/.test(first), first.slice(0, 300));
+    await t.shot('contentadd-board-1');
+    await ev(`(() => { const st = game.scene.getScene('Station'); for (let i = 0; i < 5; i++) st.boardKeys({ key: 'ArrowRight' }); return 1; })()`);
+    await sleep(300);
+    const last = await shownText();
+    check('five steps right scrolls the window: "< CALLS 3-6 OF 6" with Convoy patrol and Escort run on it', /<\s+CALLS 3-6 OF 6/.test(last) && /CONVOY PATROL/.test(last) && /ESCORT RUN/.test(last) && !/RESCUE CALL/.test(last), last.slice(0, 300));
+    await t.shot('contentadd-board-2');
+    await ev(`(() => { const st = game.scene.getScene('Station'); st.boardKeys({ key: '8' }); return 1; })()`);
+    check('the number key 8 picks Rescue two', (await ev('G.missionId')) === 'rescue-two');
+  });
+
+  console.log('mission: a save that names a call from a pack that is gone');
+  await play({}, async (t, ev) => {
+    const r = await ev(`(() => { try { applySave({ v: 2, mission: 'accepted', missionId: 'convoy-patrol', missionProgress: 2, active: 0, fleet: [{ uid: 1, model: 'mule', name: 'Mule', hull: 100, maxHull: 100, fuel: 40, ore: 0, parts: {}, at: homeDock() }] }); return { mission: G.mission, id: G.missionId, model: activeShip().model, look: shipActiveModel(), stat: shipStat('vmax'), hull: G.maxHull }; } catch (e) { return 'ERR ' + e.message; } })()`);
+    check('no mission, the Mule flies as a Wren (a ship the game does not know), no error', r && r.mission === 'none' && r.id === null && r.look === 'wren' && r.stat === 480, JSON.stringify(r));
   });
 } catch (e) { console.error('  FAIL ' + (e && e.stack || e)); failed++; } finally {
   tmp.forEach(d => { try { rmSync(d, { recursive: true, force: true }); } catch (e) { /* tmp */ } });

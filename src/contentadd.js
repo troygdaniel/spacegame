@@ -12,7 +12,9 @@
 //   voice    lines the ship computer says for an event (VOICE_ADDED in src/voice.js)
 //   ship     a new player ship: a row of SHIP_MODELS (src/data_ships.js) drawn with the hull of one of the six built-in ships, and listed
 //            in the yard of the stations its file names. New pirate ships and changes to the six built-in player ships are refused.
-const CA_MAX = { voice: 40, ship: 6 };
+//   mission  a new call of one of the four kinds the game plays (rescue, escort, patrol, bounty): a row of MISSIONS that plays as its kind
+//            and says what the file says, with its own entry in the HUD checklist (HUD_MISSIONS)
+const CA_MAX = { voice: 40, ship: 6, mission: 4 };
 const caHas = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
 // ---- voice: lines for an event ----
@@ -67,3 +69,43 @@ const CA_SHIP = {
   }
 };
 CONTENT_TABLES.ship = CA_SHIP;
+
+// ---- mission: new calls of the four kinds the game can play ----
+// What a call DOES (where the pod is, what the MULE flies past, which pirates are wanted, the Reaver) is the code of its kind in missions.js,
+// surface.js and hud.js; what it SAYS and PAYS is data. A file with kind: patrol and a new id is a second police patrol: its own title, its
+// own pay, its own count, its own words. It starts as a copy of the built-in call of that kind, so every text a file leaves out is the kind's
+// own, except those that carry a number of the original (the patrol's five), which are rebuilt from this call's count.
+// Not added: kinds that have no code yet (courier, haul, salvage, survey) are refused by name; their cards bring them.
+const CA_MISSION_KINDS = ['rescue', 'escort', 'patrol', 'bounty'];
+const CA_MISSION_KEYS = ['5', '6', '7', '8']; // the board's number keys for added calls (the four built-in ones use 1 to 4)
+const CA_MISSIONS = new Set();
+const CA_MISSION = {
+  canAdd: true,
+  has: id => CT_MISSION.has(id),
+  get: (id, f) => CT_MISSION.get(id, f),
+  apply: (id, data, isNew) => {
+    if (!isNew) return CT_MISSION.apply(id, data);          // a built-in call, or one of ours seen again: a change, as before
+    if (!CA_MISSION_KINDS.includes(data.kind)) throw new Error('kind is "' + data.kind + '" but the game plays only ' + CA_MISSION_KINDS.join(', ') + ' calls so far (courier, haul, salvage and survey need their own cards)');
+    if (CA_MISSIONS.size >= CA_MAX.mission) throw new Error('a pack may add at most ' + CA_MAX.mission + ' calls to the board and there are that many already');
+    if (!CA_MISSION_KEYS.some(k => !MISSIONS.some(m => m.key === k))) throw new Error('the board has no free number key left for another call');
+    const tmpl = MISSIONS.find(m => m.id === data.kind);   // the built-in call of this kind: its row is the pattern
+    const row = Object.assign({}, tmpl, {
+      id, kind: data.kind, key: CA_MISSION_KEYS.find(k => !MISSIONS.some(m => m.key === k)), added: true,
+      title: data.title, where: data.where !== undefined ? data.where : tmpl.where, reward: data.reward,
+      line: ctOrig(tmpl, 'line'), progress: ctOrig(tmpl, 'progress')   // the code's own functions of the kind, not a pack's wrapper round them (its {reward} is the pattern's)
+    });
+    delete row.unlock;                                     // the pattern's own lock (the bounty opens after a patrol) is not this call's
+    row.offer = row.title + ' - ' + row.where;             // until the file says better
+    if (data.kind === 'patrol') {
+      row.count = 5;
+      row.line = st => st === 'failed' ? 'Failed. The pirates got away' : row.title + ': ' + (G.missionProgress | 0) + ' of ' + row.count + ' wanted pirates down';
+      row.progress = () => 'Wanted pirates destroyed: ' + (G.missionProgress | 0) + ' of ' + row.count + '.\nThey wait on the approach to the station.';
+    }
+    const hud = typeof HUD_MISSIONS !== 'undefined' ? HUD_MISSIONS[data.kind] : null;
+    if (hud) HUD_MISSIONS[id] = Object.assign({}, hud, { steps: hud.steps.slice() });
+    MISSIONS.push(row); CA_MISSIONS.add(id);
+    try { CT_MISSION.apply(id, data); }                    // the title, the pay and every text of the file, the way a change says them
+    catch (e) { MISSIONS.splice(MISSIONS.indexOf(row), 1); CA_MISSIONS.delete(id); if (hud) delete HUD_MISSIONS[id]; throw e; } // all or nothing
+  }
+};
+CONTENT_TABLES.mission = CA_MISSION;
