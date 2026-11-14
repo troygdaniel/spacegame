@@ -14,10 +14,10 @@ starY: 18000
 A pirate nest cut into an asteroid. No police, a fee at the door, and the Reaver somewhere in the dark. Fuel costs double because they can.
 
 ## Bodies
-| id | type | name | x | y | art | r | rocks | landable | kind | credits |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| roost-dock | station |  | 18000 | 22000 | nest |  |  |  |  |  |
-| roost-rock | planet | Reaver's Rock | 8000 | 8500 |  | 280 |  | no | rock |  |
-| roost-belt | belt | Roost Belt | 27500 | 12000 |  | 900 | 35 |  |  |  |
-| wreck-r1 | poi | Raided freighter | 30500 | 28500 |  |  |  |  | wreck | 300 |
-| wreck-r2 | poi | Stripped patrol cutter | 7500 | 28500 |  |  |  |  | wreck | 250 |
+| id | type | name | x | y | art | r | rocks | landable | kind | credits | seed |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| roost-dock | station |  | 18000 | 22000 | nest |  |  |  |  |  |  |
+| roost-rock | planet | Reaver's Rock | 8000 | 8500 |  | 280 |  | no | rock |  | 71 |
+| roost-belt | belt | Roost Belt | 27500 | 12000 |  | 900 | 35 |  |  |  |  |
+| wreck-r1 | poi | Raided freighter | 30500 | 28500 |  |  |  |  | wreck | 300 |  |
+| wreck-r2 | poi | Stripped patrol cutter | 7500 | 28500 |  |  |  |  | wreck | 250 |  |

@@ -14,10 +14,10 @@ starY: 18000
 The trade hub of the cluster. Every lane runs through the Exchange, so the traffic is thick, the police are close, and the shop has everything.
 
 ## Bodies
-| id | type | name | x | y | art | r | rocks | landable | kind | credits |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| meridian-exchange | station |  | 17000 | 21000 | hub |  |  |  |  |  |
-| meridian-2 | planet | Meridian II | 8500 | 26500 |  | 300 |  | no | ice |  |
-| meridian-4 | planet | Meridian IV | 29500 | 28500 |  | 480 |  | no | gas |  |
-| meridian-belt | belt | Meridian Belt | 10500 | 8000 |  | 700 | 15 |  |  |  |
-| wreck-m | poi | Wrecked cargo barge | 31000 | 6500 |  |  |  |  | wreck | 200 |
+| id | type | name | x | y | art | r | rocks | landable | kind | credits | seed |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| meridian-exchange | station |  | 17000 | 21000 | hub |  |  |  |  |  |  |
+| meridian-2 | planet | Meridian II | 8500 | 26500 |  | 300 |  | no | ice |  | 21 |
+| meridian-4 | planet | Meridian IV | 29500 | 28500 |  | 480 |  | no | gas |  | 22 |
+| meridian-belt | belt | Meridian Belt | 10500 | 8000 |  | 700 | 15 |  |  |  |  |
+| wreck-m | poi | Wrecked cargo barge | 31000 | 6500 |  |  |  |  | wreck | 200 |  |
