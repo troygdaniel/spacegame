@@ -577,9 +577,9 @@ function hudWarn(h, s, now, key, near, engage) {
 }
 
 // ---- the objective: where to go, and how far ----
-function hudObjective(s, key) {
+function hudObjective(s, key, mission) { // mission: leave out the nav target (the radar arrow stays on the mission)
   if (key === 'Space') {
-    const t = missionTarget(s), big = t.name === 'Halcyon Station' || t.name === 'Kepler-4b';
+    const t = (!mission && s.cr && s.cr.target) || missionTarget(s), big = t.name === 'Halcyon Station' || t.name === 'Kepler-4b';
     return { x: t.x, y: t.y, name: t.name.toUpperCase(), from: s.ship, unit: 'km', k: 0.1, hw: big ? 46 : 28, hh: big ? 46 : 28 };
   }
   if (key === 'Surface') {
@@ -662,7 +662,8 @@ function hudTick(s) {
   hudGauge(h, 'g1', 70, 80, 40, hullFrac, hullFrac > 0.5 ? CYAN : hullFrac > 0.3 ? AMBER : RED, String(Math.max(0, Math.round(surf ? s.hp : G.hull))), surf ? 'HEALTH' : 'HULL', null, hullFrac <= 0.3);
   if (space) {
     const spd = s.ship.body.speed, top = boostMax();
-    hudGauge(h, 'g2', 186, 80, 40, spd / top, spd > 480 ? AMBER : CYAN, String(Math.round(spd)), s.boostLocked ? 'NO BOOST' : 'SPEED', 150 / top);
+    if (s.cruising) hudGauge(h, 'g2', 186, 80, 40, Math.min(1, spd / CRUISE.top), CYAN, hudFmt(spd / 10), 'KM/S', null); // cruise: the speed in km/s (src/cruise.js)
+    else hudGauge(h, 'g2', 186, 80, 40, spd / top, spd > 480 ? AMBER : CYAN, String(Math.round(spd)), s.boostLocked ? 'NO BOOST' : 'SPEED', 150 / top);
     if (s.enMax) hudEnergy(h, s, now);
   }
   if (surf && s.col && s.col.state !== 'dead') {
@@ -691,7 +692,10 @@ function hudTick(s) {
 
   const obj = hudObjective(s, key);
   if (space) hudLock(h, s, now); // before the radar, which brackets the target's blip too
-  if (space || surf) { h.zones.push({ x0: W - 230, y0: 0, x1: W, y1: 250 }); hudRadar(h, s, key, obj, now); }
+  if (space || surf) {
+    h.zones.push({ x0: W - 230, y0: 0, x1: W, y1: 250 }); hudRadar(h, s, key, space ? hudObjective(s, key, true) : obj, now);
+    if (space && s.cruising) { g.fillStyle(HUD_BG, 0.72); hudDisc(g, W - 110, 112, 88); } // cruise: nothing local matters, the radar dims
+  }
   if (space) hudTargets(h, s, now);
   if (space || surf) hudWarn(h, s, now, key, h.near, h.engage);
   h.zones.push({ x0: 430, y0: 0, x1: 850, y1: 50 });
