@@ -33,6 +33,7 @@
 #   4t. tests/shipmodels.mjs: the six ship models against docs/UNIVERSE.md 6.1, and the Wren's speed, thrust, turn, boost and hull in the real Space scene
 #   4u. tests/parts.mjs: the five ship parts (shields, weapons, engine, tank, cargo): tables, every effect, shields in flight, shot rate and damage, the shop's five cards with fit and stock rules, the save
 #   4w. tests/fleet.mjs: buy, sell, switch, rename and transfer ships, the yard and the prices, per-ship state through a save, and dying (docs/UNIVERSE.md 6.3)
+#   4zb. tests/modsdoc.mjs: docs/MODS.md, the modder guide, stays true: its field tables are written from the schema, its example files are valid, the ids and messages it names are in the code (no browser)
 #   4y. tools/economy-sim.mjs check: the economy simulator still loads the real game data and every code line it pins (repair, insurance, MULE speed...) is still there (docs/ECONOMY.md; no browser)
 #   4z. tests/hangar.mjs: the hangar terminal in the Ship bay: fleet, yard and controls tabs, buy and sell with a second press, board, move, rename, what the stage shows
 #       header and body shape; the key is only ever in its header; 401 switches chat off; 429 waits; the setup panel saves a key
@@ -131,6 +132,8 @@ echo "== 4z. the hangar terminal in the Ship bay (tests/hangar.mjs)"
 if node tests/hangar.mjs; then :; else fail=1; fi
 echo "== 4za. fuel: tank, jump cost, the pump terminal, the FUEL chip, the ranger (tests/fuel.mjs)"
 if node tests/fuel.mjs; then :; else fail=1; fi
+echo "== 4zb. the modder guide stays true (tests/modsdoc.mjs)"
+if node tests/modsdoc.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then

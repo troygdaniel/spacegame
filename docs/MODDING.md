@@ -1,5 +1,7 @@
 # Long Haul: content in markdown (design and build plan)
 
+> Making a mod? Start with the ten-minute guide, [`docs/MODS.md`](MODS.md). This page is the design behind it.
+
 Design by TaskMaster-1, 2026-11-13, for card `space-game-modding`. This is a plan, not code. It says what players and modders get, the file formats, how the game reads them, the answer to the `file://` problem, what has to be done before the repo can go public, and the cards that build it.
 
 Troy's goal: Long Haul is open source in spirit. The content lives in plain markdown files so a player can change a ship, a mission, a shop price or what a bartender says without touching code.
