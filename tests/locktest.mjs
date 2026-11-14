@@ -28,6 +28,17 @@ function holder(mode, extraEnv = {}) {
   const exited = new Promise(r => p.on('exit', (c, s) => r({ code: c, signal: s })));
   return { p, got, exited };
 }
+// a child that waits its turn, says so ("GOT <label>"), holds for 150 ms and gives the lock back (a short test run)
+function runner(label, extraEnv = {}) {
+  const code = `import { acquire, release } from ${JSON.stringify(LOCKJS)}; await acquire({ log: () => {} }); console.log('GOT ${label}'); await new Promise(r => setTimeout(r, 150)); release();`;
+  const p = spawn(process.execPath, ['--input-type=module', '-e', code], { env: { ...process.env, ...extraEnv }, stdio: ['ignore', 'pipe', 'inherit'] });
+  const got = new Promise(res => { p.stdout.on('data', d => { if (String(d).includes('GOT')) res(true); }); p.on('exit', () => res(false)); });
+  const exited = new Promise(r => p.on('exit', (c, s) => r({ code: c, signal: s })));
+  return { p, got, exited, label };
+}
+const waitFor = async (fn, ms = 6000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (fn()) return true; await sleep(40); } return false; };
+const within = (promise, ms) => Promise.race([promise.then(() => true, () => false), sleep(ms).then(() => false)]);
+const tickets = () => L.queueStatus().waiting.length;
 const deadPid = async () => { const p = spawn(process.execPath, ['-e', '0']); await new Promise(r => p.on('exit', r)); return p.pid; };
 
 console.log('basic');
@@ -113,6 +124,106 @@ console.log('heartbeat');
   L.release();
   delete process.env.LONGHAUL_BEAT_MS;
   check('stopped heartbeat: nothing left behind', !existsSync(dir()));
+}
+
+console.log('the queue: runs get the lock in the order they came (card space-game-lock-two-at-a-time)');
+{
+  const holderA = holder('hold'); await holderA.got;
+  const order = [], rs = [];
+  for (const label of ['w1', 'w2', 'w3', 'w4']) { // each is in the line before the next one starts
+    const r = runner(label); rs.push(r); r.got.then(ok => { if (ok) order.push(label); });
+    await waitFor(() => tickets() >= rs.length, 8000);
+  }
+  check('four runs wait behind a holder, in a line of four', tickets() === 4, 'tickets ' + tickets());
+  holderA.p.kill('SIGTERM'); await holderA.exited;
+  await Promise.all(rs.map(r => r.exited));
+  check('they get it in the order they arrived', order.join(',') === 'w1,w2,w3,w4', order.join(','));
+  check('and the line is empty afterwards, with nothing held', tickets() === 0 && !existsSync(dir()));
+}
+{
+  const h = holder('hold'); await h.got;
+  let err = null; try { await L.acquire({ ...quiet, timeoutMs: 700 }); } catch (e) { err = e; }
+  check('a run that times out takes its ticket with it', err && /timed out/.test(err.message) && tickets() === 0, 'tickets ' + tickets());
+  h.p.kill('SIGTERM'); await h.exited;
+  await L.acquire(quiet);
+  check('a run that gets the lock has no ticket either', tickets() === 0 && owner().pid === process.pid);
+  L.release();
+}
+{
+  // a waiter that is killed leaves its ticket behind: the next in line must not wait for it
+  const h = holder('hold'); await h.got;
+  const a = runner('dead'); await waitFor(() => tickets() >= 1);
+  a.p.kill('SIGKILL'); await a.exited;
+  const b = runner('after-dead'); await waitFor(() => existsSync(dir() + '.queue') && tickets() >= 1);
+  h.p.kill('SIGTERM'); await h.exited;
+  check('a waiter that was killed does not hold up the one behind it', await within(b.got, 8000));
+  await b.exited;
+  check('its dead ticket is dropped', tickets() === 0);
+}
+{
+  // a waiter that is alive but stuck (stopped) stops refreshing its ticket, and is dropped after the stale time
+  const env = { LONGHAUL_TICKET_STALE_MS: '1500' };
+  process.env.LONGHAUL_TICKET_STALE_MS = '1500';
+  const h = holder('hold', env); await h.got;
+  const a = runner('stuck', env); await waitFor(() => tickets() >= 1);
+  a.p.kill('SIGSTOP');
+  const b = runner('behind-stuck', env); await waitFor(() => tickets() >= 2);
+  h.p.kill('SIGTERM'); await h.exited;
+  check('a stopped waiter loses its place after the stale time, and the next run gets the lock', await within(b.got, 9000));
+  a.p.kill('SIGKILL'); await Promise.all([a.exited, b.exited]);
+  delete process.env.LONGHAUL_TICKET_STALE_MS;
+}
+{
+  const h = holder('hold'); await h.got;
+  const w = runner('waiter'); await waitFor(() => tickets() >= 1);
+  const q = L.queueStatus();
+  check('status names the holder and the run waiting behind it', q.holders.length === 1 && q.holders[0].pid === h.p.pid && q.waiting.length === 1 && q.waiting[0].place === 1 && !q.idle, JSON.stringify(q));
+  h.p.kill('SIGTERM'); await Promise.all([h.exited, w.exited]);
+  check('status says idle when nobody holds it or waits', L.queueStatus().idle === true, JSON.stringify(L.queueStatus()));
+}
+
+console.log('two slots (LONGHAUL_LOCK_SLOTS), the second only while the Mac is quiet');
+{
+  const h1 = holder('hold'); await h1.got;
+  const h2 = holder('hold'); h2.got.catch(() => {});
+  check('with the default of one slot, a second run waits', !(await within(h2.got, 1500)));
+  h2.p.kill('SIGKILL'); h1.p.kill('SIGTERM'); await Promise.all([h1.exited, h2.exited]); await sleep(100);
+}
+{
+  const two = { LONGHAUL_LOCK_SLOTS: '2', LONGHAUL_FAKE_LOAD: '3' };
+  const h1 = holder('hold', two); await h1.got;
+  const h2 = holder('hold', two);
+  check('two slots and a quiet Mac (load 3): a second run gets in at once', await within(h2.got, 4000));
+  check('and it holds the second slot', existsSync(dir() + '.1') && JSON.parse(readFileSync(join(dir() + '.1', 'owner'), 'utf8')).pid === h2.p.pid);
+  const h3 = holder('hold', two); h3.got.catch(() => {});
+  check('a third run waits: two is the limit', !(await within(h3.got, 1500)));
+  h2.p.kill('SIGTERM'); await h2.exited;
+  check('a slot given back is taken by the one waiting', await within(h3.got, 4000));
+  check('a run that stops gives its slot directory back', !existsSync(dir() + '.1') || JSON.parse(readFileSync(join(dir() + '.1', 'owner'), 'utf8')).pid === h3.p.pid);
+  h1.p.kill('SIGTERM'); h3.p.kill('SIGTERM'); await Promise.all([h1.exited, h3.exited]); await sleep(100);
+  check('everything is given back', L.queueStatus().idle === true && !existsSync(dir() + '.1'), JSON.stringify(L.queueStatus()));
+}
+{
+  const busy = { LONGHAUL_LOCK_SLOTS: '2', LONGHAUL_FAKE_LOAD: '50' };
+  const h1 = holder('hold', busy); await h1.got;
+  const h2 = holder('hold', busy); h2.got.catch(() => {});
+  check('two slots but a busy Mac (load 50 against a limit of 12): the second run waits', !(await within(h2.got, 1800)) && !existsSync(dir() + '.1'));
+  h2.p.kill('SIGKILL'); h1.p.kill('SIGTERM'); await Promise.all([h1.exited, h2.exited]); await sleep(100);
+  const high = { LONGHAUL_LOCK_SLOTS: '2', LONGHAUL_FAKE_LOAD: '50', LONGHAUL_LOCK_MAXLOAD: '100' };
+  const g1 = holder('hold', high); await g1.got;
+  const g2 = holder('hold', high);
+  check('LONGHAUL_LOCK_MAXLOAD raises that limit', await within(g2.got, 4000));
+  g1.p.kill('SIGTERM'); g2.p.kill('SIGTERM'); await Promise.all([g1.exited, g2.exited]); await sleep(100);
+}
+{
+  // slot 0 is the old lock directory: a holder from before the queue existed (plain mkdir and an owner file) is respected
+  const live = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)']);
+  mkdirSync(dir()); writeFileSync(join(dir(), 'owner'), JSON.stringify({ pid: live.pid, cmd: 'older lock.mjs', cwd: '/', since: Date.now() }));
+  const w = runner('after-old', { LONGHAUL_LOCK_SLOTS: '1' }); w.got.catch(() => {});
+  check('a run waits for a holder that uses the older lock format', !(await within(w.got, 1500)));
+  rmSync(dir(), { recursive: true, force: true });
+  check('and gets in when that one is gone', await within(w.got, 4000));
+  await w.exited; live.kill('SIGKILL');
 }
 
 console.log('orphan Chrome profiles');
