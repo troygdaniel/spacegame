@@ -46,8 +46,8 @@ class Space extends Phaser.Scene {
     // the station-side pirates sit on the way to Kepler-4b, over 2000 px out: outside the police zone and well past engage range
     [[5700, 2700], [6000, 3500], [2500, 2200]].forEach(([x, y]) => this.spawnDrone(x, y));
     this.time.addEvent({
-      delay: 15000, loop: true, callback: () => {
-        if (this.dead || this.cruising || this.enemies.countActive() >= 8 || pirateCap(this, this.time.now) === 0) return; // quiet during the launch grace
+      delay: pirateTable().every, loop: true, callback: () => { // src/enemies.js: the system's spawn table
+        if (this.dead || this.cruising || this.enemies.countActive() >= pirateTable().max || pirateCap(this, this.time.now) === 0) return; // quiet during the launch grace
         const a = Math.random() * Math.PI * 2;
         const x = Phaser.Math.Clamp(this.ship.x + Math.cos(a) * SPAWN_DIST, 100, WS - 100);
         const y = Phaser.Math.Clamp(this.ship.y + Math.sin(a) * SPAWN_DIST, 100, WS - 100);
