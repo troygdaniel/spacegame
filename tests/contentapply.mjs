@@ -4,7 +4,9 @@
 import { createRequire } from 'node:module';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readPack } from '../tools/build-content.mjs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { readPack, build } from '../tools/build-content.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const C = createRequire(import.meta.url)('../src/content.js');
@@ -98,7 +100,10 @@ section('apply: content that is missing or unreadable');
     check(`${what}: one error, the game plays on the defaults`, !r.loaded && r.applied.length === 0 && r.errors.length === 1
       && msgs(r.errors)[0] === 'content.generated.js: content.generated.js is missing: run node tools/build-content.mjs. Playing on the built-in values.', J(r));
   });
-  check('an empty pack is fine and says nothing', J(C.apply({ version: 1, hash: 'abc', files: 0, entries: [], errors: [] }, {})) === J({ loaded: true, hash: 'abc', files: 0, applied: [], skipped: 0, errors: [] }));
+  {
+  const empty = C.hashOf('[]'), r = C.apply({ version: 1, hash: empty, core: empty, files: 0, entries: [], errors: [] }, {});
+  check('an empty pack is fine and says nothing', J(r) === J({ loaded: true, hash: empty, core: empty, actual: empty, modded: false, files: 0, applied: [], skipped: 0, errors: [] }), J(r));
+}
 }
 
 section('apply: merge by id');
@@ -184,6 +189,44 @@ section('apply: garbage never throws');
   try { r = C.apply({ version: 1, hash: built.hash, files: built.files, entries: built.entries, errors: built.errors }, {}); } catch (e) { threw = e; }
   check('the bad fixture pack applies without throwing and the problems are listed', r && r.errors.length >= built.errors.length && r.errors.length > 5, r && r.errors.length);
   check('with no tables registered nothing is applied', r && r.applied.length === 0);
+}
+
+section('MODDED: the entries against the shipped core pack');
+{
+  const entries = [{ type: 'ship', id: 'kite', path: 'content/ships/kite.md', data: { name: 'Kite', hull: 70 } }];
+  const h = C.hashOf(J(entries.map(e => [e.type, e.id, e.data])));
+  const wrap = o => Object.assign({ version: 1, hash: h, core: h, files: 1, entries, errors: [] }, o);
+  const tables = { ship: { has: () => true, get: () => undefined, apply() {} } };
+  let r = C.apply(wrap(), tables);
+  check('entries that match the core hash are not modded', r.modded === false && r.actual === h && r.errors.length === 0, J(r));
+  r = C.apply(wrap({ core: 'deadbeef' }), {});
+  check('entries that differ from the core hash are modded', r.modded === true && r.core === 'deadbeef', J(r));
+  r = C.apply(wrap({ core: undefined }), {});
+  check('a file with no core hash (an old build) is not called modded', r.modded === false);
+  const edited = JSON.parse(J(entries)); edited[0].data.hull = 700;
+  r = C.apply(wrap({ entries: edited }), {});
+  check('a hand-edited file with the old hash is modded and says its hash does not match', r.modded === true && msgs(r.errors).some(m => m.includes('its entries do not match its own hash')), J(msgs(r.errors)));
+  check('a hash cannot hide a hand edit: the browser hashes the entries itself', r.actual !== h && r.hash === h);
+  r = C.apply({ entries: [null, 5, 'x'], core: 'abc' }, {});
+  check('odd entries still give an answer about modded', r.modded === true && typeof r.actual === 'string');
+}
+
+section('the build keeps the shipped core hash; only --seal moves it');
+{
+  const dir = join(ROOT, 'tests/fixtures/content-good'), tmp = mkdtempSync(join(tmpdir(), 'longhaul-seal-')), out = join(tmp, 'content.generated.js');
+  try {
+    let b = build({ dir, prefix: 'content/', out, write: true });
+    check('a first build seals itself: core equals hash, not modded', b.core === b.result.hash && b.modded === false);
+    writeFileSync(out, readFileSync(out, 'utf8').replace(/core: "[0-9a-f]+"/, 'core: "deadbeef"'));
+    b = build({ dir, prefix: 'content/', out, write: true });
+    check('a normal build keeps the core that was in the file, so the pack reads as modded', b.core === 'deadbeef' && b.modded === true && /core: "deadbeef"/.test(readFileSync(out, 'utf8')) && b.changed === false);
+    b = build({ dir, prefix: 'content/', out, write: true, seal: true });
+    check('--seal makes this content the shipped pack', b.core === b.result.hash && b.modded === false && !/deadbeef/.test(readFileSync(out, 'utf8')));
+    b = build({ dir, prefix: 'content/', out, write: false, core: 'cafe1234' });
+    check('an explicit core is used as is (tests)', b.core === 'cafe1234' && /core: "cafe1234"/.test(b.text));
+  } finally { rmSync(tmp, { recursive: true, force: true }); }
+  const shipped = readFileSync(join(ROOT, 'content.generated.js'), 'utf8'), hash = /hash: "([0-9a-f]+)"/.exec(shipped), core = /core: "([0-9a-f]+)"/.exec(shipped);
+  check('the committed content.generated.js is sealed (hash equals core); after changing content/ run node tools/build-content.mjs --seal', !!hash && !!core && hash[1] === core[1], J([hash && hash[1], core && core[1]]));
 }
 
 console.log(failed ? `\nCONTENT APPLY FAIL: ${failed} of ${n} checks failed` : `\nCONTENT APPLY PASS: ${n} checks`);

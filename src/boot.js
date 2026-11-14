@@ -7,10 +7,11 @@
 // values in place and fill CONTENT_ERRORS. Behaviour is unchanged until a table registers itself in CONTENT_TABLES (card m4).
 //   CONTENT_TABLES  type -> { has(id), get(id, field), apply(id, data, isNew), canAdd }; one adapter per table moved to markdown
 //   CONTENT_ERRORS  every problem found, { level: 'error' | 'warn', path, line, field, message }; the Title chip (card m2b) reads it
-//   CONTENT_STATE   { loaded, hash, files, applied, skipped }: what happened; applied lists the 'type:id' that changed something
+//   CONTENT_STATE   { loaded, hash, core, modded, files, applied, skipped }: what happened; applied lists the 'type:id' that changed something;
+//                   modded is true when the entries differ from the shipped core pack (the MODDED tag on the Title screen, src/contentui.js)
 const CONTENT_TABLES = {};
 const CONTENT_ERRORS = [];
-const CONTENT_STATE = { loaded: false, hash: '', files: 0, applied: [], skipped: 0 };
+const CONTENT_STATE = { loaded: false, hash: '', core: '', modded: false, files: 0, applied: [], skipped: 0 };
 function contentApply() {
   let r;
   try {
@@ -21,7 +22,7 @@ function contentApply() {
     r = { loaded: false, hash: '', files: 0, applied: [], skipped: 0, errors: [{ level: 'error', path: 'content', line: 0, field: '', message: 'content could not be read (' + String(e && e.message || e).slice(0, 100) + '). Playing on the built-in values.' }] };
   }
   CONTENT_ERRORS.length = 0; r.errors.forEach(e => CONTENT_ERRORS.push(e));
-  Object.assign(CONTENT_STATE, { loaded: r.loaded, hash: r.hash, files: r.files, applied: r.applied, skipped: r.skipped });
+  Object.assign(CONTENT_STATE, { loaded: r.loaded, hash: r.hash, core: r.core || '', modded: !!r.modded, files: r.files, applied: r.applied, skipped: r.skipped });
   CONTENT_ERRORS.forEach(e => { try { console.warn('[content] ' + (typeof ContentLib !== 'undefined' ? ContentLib.formatError(e) : e.path + ': ' + e.message)); } catch (x) { /* a warning is optional */ } });
 }
 

@@ -65,6 +65,7 @@ Developer shortcuts: `index.html#space`, `#surface`, `#escort` and `#patrol` jum
 | `src/missions.js`, `src/shop.js`, `src/poi.js`, `src/asteroids.js`, `src/guide.js` | the mission board and what each call does, the bar and upgrade shop, wrecks to salvage, asteroid mining, first-run hints and the ending card |
 | `src/enemies.js`, `src/traffic.js`, `src/boost.js`, `src/feel.js` | pirate types and their AI, civilian traffic and police, boost and dash, hit feedback and flight cues |
 | `src/ships.js`, `src/art_world.js`, `src/stationart.js`, `src/interior.js` | the art, all drawn in code: ships and their flames, the backdrop and planets, the stations, the station interior |
+| `src/content.js`, `src/contentui.js`, `content.generated.js` | markdown content (see `docs/MODDING.md`): the parser and checker, the Title screen's problems chip and MODDED tag, and the built file the game loads |
 | `src/hud.js`, `src/ui.js`, `src/map.js`, `src/meta.js`, `src/audio.js` | the cockpit HUD, the shared panel style, the Tab map and `H` help, the pause menu and save, synthesized sound |
 | `tests/` | headless-Chrome tests; `bash tests/smoke.sh` runs them (see `CONTRIBUTING.md`) |
 

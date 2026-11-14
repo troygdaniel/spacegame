@@ -599,10 +599,10 @@
   // content: the CONTENT object of content.generated.js (or anything, or nothing); tables: type -> a small adapter the game
   // registers for each table it has moved to markdown:
   //   { has(id) -> the code defines this id, get(id, field) -> its built-in value, apply(id, data, isNew), canAdd: true when a new id may be added }
-  // A type with no adapter is reported once per file and left alone. Returns { loaded, hash, files, applied: ['ship:raider'], skipped, errors }.
+  // A type with no adapter is reported once per file and left alone. Returns { loaded, hash, core, actual, modded, files, applied: ['ship:raider'], skipped, errors }.
   function apply(content, tables, opts) {
     opts = opts || {}; tables = isObj(tables) ? tables : {};
-    const out = { loaded: false, hash: '', files: 0, applied: [], skipped: 0, errors: [] };
+    const out = { loaded: false, hash: '', core: '', actual: '', modded: false, files: 0, applied: [], skipped: 0, errors: [] };
     const say = (level, path, field, msg) => err(out.errors, level, path, 0, field, msg);
     try {
       if (!isObj(content) || !Array.isArray(content.entries)) {
@@ -610,6 +610,11 @@
         return out;
       }
       out.loaded = true; out.hash = String(content.hash || '').slice(0, 16); out.files = +content.files || 0;
+      // MODDED: the hash of what is really in the entries (not the one the file claims) against the shipped core pack's hash
+      out.core = String(content.core || '').slice(0, 16);
+      try { out.actual = hashOf(JSON.stringify(content.entries.map(e => (isObj(e) ? [e.type, e.id, e.data] : e)))); } catch (e) { out.actual = ''; }
+      out.modded = !!out.core && out.actual !== out.core;
+      if (out.hash && out.actual && out.hash !== out.actual) say('warn', 'content.generated.js', '', 'its entries do not match its own hash, so it was edited by hand or is out of date: run node tools/build-content.mjs.');
       // what the build found
       (Array.isArray(content.errors) ? content.errors : []).slice(0, 500).forEach(e => {
         if (!isObj(e) || typeof e.message !== 'string') return;

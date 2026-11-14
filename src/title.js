@@ -45,8 +45,9 @@ class Title extends Phaser.Scene {
       beep(520, 0.12, 'triangle', 0.05, 300); beep(780, 0.2, 'triangle', 0.04, 200);
       go(this, 'Station', { arrive: false });
     };
-    this.input.keyboard.on('keydown', e => { if (e.repeat) return; if (e.code === 'KeyV') voiceOpenSetup(this); else if (e.code === 'KeyC') chatOpenSetup(this); else if (e.code !== 'KeyM') start(); }); // M still mutes; V and C open the optional ship-voice (src/voice.js) and NPC-chat (src/chat.js) setups
-    this.input.on('pointerdown', start);
+    this.contentUi = contentTitleUi(this); // src/contentui.js: the content problems chip, its panel and the MODDED tag (nothing when all is well)
+    this.input.keyboard.on('keydown', e => { if (e.repeat || this.contentUi.handleKey(e)) return; if (e.code === 'KeyV') voiceOpenSetup(this); else if (e.code === 'KeyC') chatOpenSetup(this); else if (e.code !== 'KeyM') start(); }); // P opens the content panel and while it is open nothing starts the game; M still mutes; V and C open the optional ship-voice (src/voice.js) and NPC-chat (src/chat.js) setups
+    this.input.on('pointerdown', (p, over) => { if (over && over.length) return; start(); }); // a click on the chip, the tag or the panel is theirs, not "press any key"
   }
   update(time, dt) {
     this.s1.tilePositionX += dt * 0.006; this.s1.tilePositionY += dt * 0.0015;
