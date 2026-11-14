@@ -93,30 +93,33 @@ console.log('buying');
   w.run('G.credits = 10000');
   const r = w.j(`fleetBuy('kite')`);
   check('buying a Kite works and charges 4500', r.ok === true && r.price === 4500 && w.run('G.credits') === 5500, JSON.stringify(r).slice(0, 120));
+  check('you keep flying the ship you had: still the Wren, G reads its hull 73 and 4 ore', r.flying === false && w.j('[G.active, G.hull, G.ore, G.fleet[G.active].model]').join() === '0,73,4,wren');
   const k = w.j('G.fleet[1]');
   check('the Kite is a new record: uid 2, named Kite, parked here', k.uid === 2 && k.name === 'Kite' && k.model === 'kite' && k.at === HOME);
   check('it comes rebuilt full: hull 70 of 70, tank 30, no ore, no parts', k.hull === 70 && k.maxHull === 70 && k.fuel === 30 && k.ore === 0 && Object.values(k.parts).every(t => t === 0), JSON.stringify(k));
-  check('you fly it: G reads the Kite (hull 70, max hull 70, no ore, top speed 580)', w.j('[G.active, G.hull, G.maxHull, G.ore, shipStat("vmax")]').join() === '1,70,70,0,580');
   const old = w.j('G.fleet[0]');
-  check('the old Wren is not touched: stays parked here with its hull 73, 4 ore and shields 1', old.at === HOME && old.hull === 73 && old.ore === 4 && old.parts.shields === 1 && old.model === 'wren', JSON.stringify(old));
-  const r2 = w.j(`fleetBuy('kite', false)`);
-  check('fly = false leaves you in the ship you had', r2.ok === true && r2.flying === false && w.run('G.active') === 1 && w.run('G.fleet.length') === 3);
-  check('a second Kite is named Kite 2, with the next uid', w.j('[G.fleet[2].name, G.fleet[2].uid]').join() === 'Kite 2,3');
+  check('the old Wren is not touched: still here with its hull 73, 4 ore and shields 1', old.at === HOME && old.hull === 73 && old.ore === 4 && old.parts.shields === 1 && old.model === 'wren', JSON.stringify(old));
+  const sw = w.j('fleetSwitch(2)');
+  check('you switch to the Kite at the hangar: G reads the Kite (hull 70, max hull 70, no ore, top speed 580)', sw.ok === true && w.j('[G.active, G.hull, G.maxHull, G.ore, shipStat("vmax")]').join() === '1,70,70,0,580');
+  w.run('fleetSwitch(1)');
+  const r2 = w.j(`fleetBuy('kite', true)`);
+  check('fleetBuy(model, true) puts you in the new ship at once', r2.ok === true && r2.flying === true && w.run('G.active') === 2 && w.run('G.fleet.length') === 3);
+  check('a second Kite is named Kite 2, with the next uid, and the other two stay parked here', w.j('[G.fleet[2].name, G.fleet[2].uid]').join() === 'Kite 2,3' && w.j('G.fleet.slice(0, 2).map(r => r.at)').join() === HOME + ',' + HOME);
   w.run('G.credits = 100000');
-  check('Kite 3 and Kite 4 follow', (w.run(`fleetBuy('kite', false)`), w.run(`fleetBuy('kite', false)`), w.j('G.fleet.map(r => r.name)').join()) === 'Wren,Kite,Kite 2,Kite 3,Kite 4');
-  check('six ships make a full hangar', (w.run(`fleetBuy('kite', false)`), w.run('G.fleet.length')) === 6);
+  check('Kite 3 and Kite 4 follow', (w.run(`fleetBuy('kite')`), w.run(`fleetBuy('kite')`), w.j('G.fleet.map(r => r.name)').join()) === 'Wren,Kite,Kite 2,Kite 3,Kite 4');
+  check('six ships make a full hangar', (w.run(`fleetBuy('kite')`), w.run('G.fleet.length')) === 6);
   const credits = w.run('G.credits');
   refused(w, 'a seventh ship', `fleetBuy('kite')`, 'full', '6 ships');
   check('and no credits were taken', w.run('G.credits') === credits);
   check('every uid is different', new Set(w.j('G.fleet.map(r => r.uid)')).size === 6);
   w.run('fleetSell(5)');
-  check('after a sale there is room again, with a uid nobody has', w.run(`fleetBuy('kite', false).ok`) === true && w.run('G.fleet.length') === 6 && w.j('G.fleet.map(r => r.uid)').join() === '1,2,3,4,6,7');
+  check('after a sale there is room again, with a uid nobody has', w.run(`fleetBuy('kite').ok`) === true && w.run('G.fleet.length') === 6 && w.j('G.fleet.map(r => r.uid)').join() === '1,2,3,4,6,7');
 }
 
 console.log('switching');
 {
   const w = world();
-  w.run(`G.credits = 99999; G.mission = 'accepted'; G.missionId = 'rescue'; G.hull = 73; G.ore = 4; G.upgrades.armor = 2; fleetBuy('kite');`); // flying the Kite, the Wren parked
+  w.run(`G.credits = 99999; G.mission = 'accepted'; G.missionId = 'rescue'; G.hull = 73; G.ore = 4; G.upgrades.armor = 2; fleetBuy('kite', true);`); // flying the Kite, the Wren parked
   w.run(`G.hull = 50; G.ore = 3; G.fleet[1].fuel = 11; G.fleet[1].parts.engine = 2;`);
   const credits = w.run('G.credits');
   const r = w.j('fleetSwitch(1)');
@@ -145,7 +148,7 @@ console.log('switching');
 console.log('selling');
 {
   const w = world();
-  w.run(`G.credits = 50000; G.upgrades.armor = 1; fleetBuy('kite'); G.fleet[1].parts.engine = 2; G.fleet[1].parts.shields = 1; G.fleet[1].ore = 3;`); // the Wren has plating 1; flying the Kite
+  w.run(`G.credits = 50000; G.upgrades.armor = 1; fleetBuy('kite', true); G.fleet[1].parts.engine = 2; G.fleet[1].parts.shields = 1; G.fleet[1].ore = 3;`); // the Wren has plating 1; flying the Kite
   refused(w, 'the ship you fly', 'fleetSell(2)', 'active', 'Switch');
   refused(w, 'a ship that does not exist', 'fleetSell(77)', 'gone');
   w.run(`fleetBuy('kite', false); fleetSwitch(1); G.fleet[1].at = '${KESTREL}'; G.fleet[2].at = '${KESTREL}'`);
@@ -240,7 +243,7 @@ try {
   await ev(`(() => { ${MORE_SYSTEMS}\n return 1; })()`);
   const rt = await json(`(() => {
     newGameState(); G.credits = 90000; G.hull = 61; G.ore = 2; G.upgrades.armor = 1;
-    fleetBuy('kite'); G.hull = 40; G.ore = 3; G.fleet[1].parts.engine = 2; G.fleet[1].fuel = 12.5; fleetRename(2, 'Quick Kite');
+    fleetBuy('kite', true); G.hull = 40; G.ore = 3; G.fleet[1].parts.engine = 2; G.fleet[1].fuel = 12.5; fleetRename(2, 'Quick Kite');
     fleetBuy('ox', false); // not sold at Halcyon: refused
     G.fleet.push(Object.assign(newShip('ox', '${KESTREL}'), { uid: 3, name: 'Far Ox', hull: 150 }));
     fleetSync();
@@ -262,7 +265,7 @@ try {
   // dying: the insurance flow stays, the ship you fly is rebuilt to ITS hull cap, the parked ships are untouched
   const dead = await json(`(() => {
     const sp = ${SP};
-    newGameState(); G.credits = 10000; fleetBuy('kite'); G.credits = 2000; G.hull = 30;                       // Kite flying, Wren parked
+    newGameState(); G.credits = 10000; fleetBuy('kite', true); G.credits = 2000; G.hull = 30;                       // Kite flying, Wren parked
     G.fleet[0].hull = 55; G.fleet[0].ore = 2; G.fleet[0].parts.shields = 2; G.fleet[0].fuel = 9;
     const parked = JSON.stringify(G.fleet[0]);
     sp.die();
