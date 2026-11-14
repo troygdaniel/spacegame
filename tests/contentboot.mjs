@@ -34,10 +34,11 @@ async function run(name, dir, hash, scene, extra, allowedErrors = []) {
 
 const tmp = [];
 try {
-  // 1. the real pack: nothing wrong, nothing listed, nothing applied
+  // 1. the real pack: nothing wrong, nothing listed, the proof set (card m4: two ships, a call, a character, six upgrade tiers) applied
   await run('the real content pack', ROOT, '', 'Title', async (t, st) => {
     check('the loader read content.generated.js', st.state.loaded === true && typeof st.state.hash === 'string' && st.state.hash.length > 0, JSON.stringify(st.state));
-    check('it lists no problems and applies nothing (no table is registered yet)', st.errors.length === 0 && st.state.applied.length === 0, JSON.stringify(st.errors));
+    check('it lists no problems and applies the ten files of the proof set', st.errors.length === 0 && st.state.applied.length === 10 && st.state.skipped === 0, JSON.stringify(st.errors) + ' ' + st.state.applied.join());
+    check('the shipped pack is not MODDED', st.state.modded === false, JSON.stringify(st.state));
   });
 
   // 2. a bad pack: the game boots, lists the problems, plays on the defaults
@@ -45,10 +46,10 @@ try {
   const made = build({ dir: join(ROOT, 'tests/fixtures/content-bad'), prefix: 'content/', out: join(bad, 'content.generated.js'), write: true });
   check('the bad pack builds with problems (12 found by the build)', made.result.errors.length === 12, String(made.result.errors.length));
   await run('a bad content pack', bad, '', 'Title', async (t, st) => {
-    check('the loader read the file and lists every problem: the 12 from the build and 4 files the game does not read yet', st.state.loaded === true && st.errors.length === 16, String(st.errors.length));
+    check('the loader read the file and lists every problem: the 12 from the build, the kite (no pirate or ship row to change) and a text file it does not read yet', st.state.loaded === true && st.errors.length === 14, String(st.errors.length));
     check('a message names the file, the line and what the game did', st.errors.some(e => e.includes('content/ships/kite.md, line 5: hull is "lots" but must be a whole number from 10 to 1000. Ignored.') || e.includes('hull is "lots"')), JSON.stringify(st.errors.slice(0, 3)));
-    check('nothing from the bad pack was applied', st.state.applied.length === 0 && st.state.skipped === 4, JSON.stringify(st.state));
-    check('the built-in tables are untouched', await t.ev(`PIRATES.drone.hp > 0 && typeof UPGRADES !== 'undefined'`));
+    check('only what was valid in the bad pack is applied (the rescue call and TAMSIN), the rest is skipped', st.state.applied.join() === 'mission:rescue,npc:tamsin' && st.state.skipped === 2, JSON.stringify(st.state));
+    check('the ships and upgrades the bad pack could not change are untouched', await t.ev(`PIRATES.drone.hp === 30 && PIRATES.raider.hp === 20 && UPGRADES[0].prices[0] === 300`));
   });
   await run('a bad content pack, then play (#space)', bad, '#space', 'Space', async (t) => {
     check('the player has a ship, full hull and the rescue accepted: the default game', await t.ev(`(() => { const s = game.scene.getScene('Space'); return !!(s.ship && s.ship.body) && G.hull === G.maxHull && G.mission === 'accepted'; })()`));
@@ -84,7 +85,7 @@ try {
     check('every bad entry and field is reported, the game boots', st.state.loaded === true && st.errors.length >= 8, String(st.errors.length) + ' ' + JSON.stringify(st.errors));
     check('a problem the build recorded is passed on', st.errors.some(e => e === 'warn|content/x.md|from the build'), JSON.stringify(st.errors.slice(0, 2)));
     check('out-of-range and wrong-type fields are named', st.errors.some(e => e.includes('hp is 999999 but must be a whole number')) && st.errors.some(e => e.includes('speed is not a number')), JSON.stringify(st.errors));
-    check('nothing was applied', st.state.applied.length === 0, JSON.stringify(st.state));
+    check('only the valid field (a name) of the raider was applied: its numbers are the built-in ones', st.state.applied.join() === 'ship:raider' && await t.ev(`PIRATES.raider.hp === 20 && PIRATES.raider.speed === 520`), JSON.stringify(st.state));
   });
 } finally {
   tmp.forEach(d => rmSync(d, { recursive: true, force: true }));

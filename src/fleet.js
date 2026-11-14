@@ -55,9 +55,9 @@ const STAT_FIELD = { vmax: 'speed', hold: 'cargo' };
 // What the fitted parts add today: the v1 upgrade tiers, tier for tier. Armor plating adds 20 hull a tier (the shop has always
 // done that) and the booster raises the boost speed from 800 to 1000 to 1150. Card u-d1 replaces this with the five part slots
 // of data_parts.js (section 7); until then a Wren with no parts has exactly the numbers the game always had.
-const PART_ADD = {
-  hull: rec => 20 * (rec.parts.shields | 0),
-  boost: rec => [0, 200, 350, 350][Math.min(3, Math.max(0, rec.parts.engine | 0))]
+const PART_ADD = { // the numbers are UPGRADE_FX in shop.js, which content/parts/*.md can change
+  hull: rec => UPGRADE_FX.hull[Math.min(3, Math.max(0, rec.parts.shields | 0))],
+  boost: rec => UPGRADE_FX.boostAdd[Math.min(3, Math.max(0, rec.parts.engine | 0))]
 };
 
 // shipStat('vmax') is the active ship's top speed in px/s. Names: hull, vmax (or speed), boost, accel, turn, tank, fuelPerLy,

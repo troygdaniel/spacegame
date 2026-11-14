@@ -90,9 +90,18 @@ const UPGRADES = [
   { key: 'booster', name: 'BOOSTER', descs: ['longer boost, higher speed', 'longest boost, top speed'], prices: [350, 550] }
 ];
 const TIER_NAME = ['', '', ' II'];
-function fireDelay() { return [160, 100, 70][G.upgrades.rapid | 0]; }       // ms between shots
+// What each upgrade tier does, by tier (index 0 = nothing bought). content/parts/*.md write the tiers you can buy (src/contenttables.js);
+// tier 3 is not for sale yet, so those entries only exist so a future ship can fit it.
+const UPGRADE_FX = {
+  hull: [0, 20, 40, 60],                    // armor plating: max hull it adds (src/fleet.js)
+  delay: [160, 100, 70],                    // rapid fire: ms between shots
+  boostTank: [100, 130, 165],               // booster: the boost tank (4 s at tier 0) (src/boost.js)
+  boostRegen: [17, 24, 32],                 // booster: refill per second (src/boost.js)
+  boostAdd: [0, 200, 350, 350]              // booster: px/s added to the ship's boost top speed (src/fleet.js)
+};
+function fireDelay() { return UPGRADE_FX.delay[G.upgrades.rapid | 0]; }       // ms between shots
 function boostMax() { return shipStat('boost'); }  // top speed while boosting: the model's, plus the booster tiers (src/fleet.js)
-function boostEnergy() { const t = G.upgrades.booster | 0; return { max: [100, 130, 165][t], regen: [17, 24, 32][t] }; } // boost tank (4 s at tier 0) and refill per second (src/boost.js)
+function boostEnergy() { const t = G.upgrades.booster | 0; return { max: UPGRADE_FX.boostTank[t], regen: UPGRADE_FX.boostRegen[t] }; } // boost tank and refill per second (src/boost.js)
 
 function ownedLine() {
   const have = UPGRADES.filter(u => G.upgrades[u.key]).map(u => u.name + TIER_NAME[G.upgrades[u.key]]);
