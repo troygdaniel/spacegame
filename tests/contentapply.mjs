@@ -199,6 +199,28 @@ section('apply: garbage never throws');
   check('with no tables registered nothing is applied', r && r.applied.length === 0);
 }
 
+section('apply: text files are read in name order and the last file to give a key wins (docs/MODDING.md, text)');
+{
+  // the rule content/text/ui.md and MODDING.md state: a file that sorts before ui.md (my-words.md, fr.md) loses to it; one that sorts after (words.md, words-fr.md) wins
+  const txt = rows => '---\ntype: text\n---\n## Strings\n| key | text |\n|---|---|\n' + rows.map(r => '| ' + r[0] + ' | ' + r[1] + ' |').join('\n') + '\n';
+  const files = [
+    { path: 'content/text/words.md', text: txt([['toast.docked', 'from words'], ['toast.dropped', 'from words']]) },
+    { path: 'content/text/ui.md', text: txt([['toast.docked', 'from ui'], ['toast.dropped', 'from ui'], ['toast.delivered', 'from ui']]) },
+    { path: 'content/text/my-words.md', text: txt([['toast.docked', 'from my-words'], ['toast.delivered', 'from my-words'], ['toast.mule-left', 'from my-words']]) },
+    { path: 'content/text/fr.md', text: txt([['toast.mule-left', 'from fr']]) }
+  ];
+  const built = C.loadAll(files);
+  check('the four text files build without problems', built.errors.length === 0 && built.entries.length === 4, J(msgs(built.errors)));
+  check('the entries come in name order whatever order the files were given', J(built.entries.map(e => e.path.slice(13))) === J(['fr.md', 'my-words.md', 'ui.md', 'words.md']), J(built.entries.map(e => e.path)));
+  const got = {};
+  const tables = { text: { canAdd: true, has: () => true, get: () => undefined, apply: (id, data) => (data.strings || []).forEach(r => { got[r.key] = r.text; }) } };
+  const r = C.apply({ version: 1, hash: built.hash, files: built.files, entries: built.entries, errors: built.errors }, tables);
+  check('all four were applied', r.applied.length === 4 && r.errors.length === 0, J(r));
+  check('words.md sorts after ui.md, so it wins both keys it shares with it', got['toast.docked'] === 'from words' && got['toast.dropped'] === 'from words', J(got));
+  check('my-words.md sorts before ui.md, so ui.md wins the key they share, and my-words.md keeps what ui.md does not say', got['toast.delivered'] === 'from ui' && got['toast.mule-left'] === 'from my-words', J(got));
+  check('fr.md sorts before ui.md: it only fills a key no later file gives, and my-words.md (after it) beats it', got['toast.mule-left'] !== 'from fr', J(got));
+}
+
 section('MODDED: the entries against the shipped core pack');
 {
   const entries = [{ type: 'ship', id: 'kite', path: 'content/ships/kite.md', data: { name: 'Kite', hull: 70 } }];
