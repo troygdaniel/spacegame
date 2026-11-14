@@ -40,9 +40,9 @@ function galaxySystems() {
   const out = GALAXY_STUB.map(s => {
     const r = typeof SYSTEMS !== 'undefined' ? SYSTEMS[s.id] : null;
     if (!r || !r.ly) return Object.assign({}, s);
-    const st = (r.bodies || []).find(b => b.type === 'station');
+    const st = (r.bodies || []).find(b => b.type === 'station'), bare = !(r.bodies || []).length; // a system with nothing in it yet (Kestrel until card u-b5) keeps the stub's pump, dock and note
     return { id: r.id, name: r.name || s.name, kind: GALAXY_KINDS[r.kind] ? r.kind : s.kind, ly: r.ly, danger: r.danger !== undefined ? r.danger : s.danger,
-      pump: st && st.dock && st.dock.fuel > 0 ? st.dock.fuel : 0, station: !!st, note: s.note };
+      pump: bare ? s.pump : st && st.dock && st.dock.fuel > 0 ? st.dock.fuel : 0, station: bare ? s.station : !!st, note: s.note };
   });
   if (typeof SYSTEMS !== 'undefined') Object.keys(SYSTEMS).forEach(id => { // a system a later card adds that the stub does not know: it still shows
     const r = SYSTEMS[id]; if (out.some(s => s.id === id) || !r.ly) return;

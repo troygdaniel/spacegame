@@ -1,5 +1,5 @@
 // The galaxy map overlay (src/galaxymap.js, card space-game-u-b2-galaxy-map; docs/UNIVERSE.md 4.3 and 9). Real key presses over DevTools, real time.
-// Checks: it lands dark (only the test hash #galaxy opens it, no key does); the eight systems of the stub against the design table; known stars drawn,
+// Checks: it opens with the test hash #galaxy, and with G (card u-b4: read only in the station); the eight systems of the stub against the design table; known stars drawn,
 // unknown ones near a known one as "?" and not pickable; the card for the pick (distance, fuel cost, time, pump, danger, what is there) and its
 // verdict (jump ready, out of range by so many ly, short by so many units); a courier reaches further; galaxyJump agrees with jumpCheck of src/fuel.js
 // where both know the systems; the arrow keys, Tab and a click choose; Enter calls onJump only for a jump the ship can make, and does nothing without one;
@@ -35,7 +35,7 @@ const texts = t => t.ev(`(() => { const out = []; const walk = o => { if (o.type
     check('the distances in the design table: Halcyon to Kestrel 6.3, to Meridian 9.3, to Brass 7.5, to the Hollow 7.9; Kestrel to Meridian 6.5; Meridian to Ember 8.2; Kestrel to the Roost 12.2',
       [await ly('halcyon', 'kestrel'), await ly('halcyon', 'meridian'), await ly('halcyon', 'brass'), await ly('halcyon', 'hollow'), await ly('kestrel', 'meridian'), await ly('meridian', 'ember'), await ly('kestrel', 'roost')].join() === '6.3,9.3,7.5,7.9,6.5,8.2,12.2');
 
-    console.log('B. it lands dark, and shows what is known');
+    console.log('B. it opens from the hash, and shows what is known');
     check('the scene is up from the hash, nothing was saved by it', await t.ev("game.scene.isActive('Galaxy') && !game.scene.isActive('Title') && DEV_HASH === true"));
     const s1 = await texts(t);
     ['GALAXY', 'HALCYON', 'KESTREL', 'MERIDIAN', 'BRASS REACH', 'THE HOLLOW', 'YOU', 'HOME', 'PIRATE NEST', 'in range of your ship', 'your jump range'].forEach(w => check('shows ' + w, s1.includes(w)));
@@ -47,7 +47,7 @@ const texts = t => t.ev(`(() => { const out = []; const walk = o => { if (o.type
     console.log('C. the card for the nearest star');
     check('Kestrel is picked first: the nearest known star', await t.ev(`${GM}.sel`) === 'kestrel');
     const c1 = await texts(t);
-    ['KESTREL', 'FRONTIER OUTPOST', 'DISTANCE', '6.3 ly', 'FUEL COST', '6.3 units', 'YOU HAVE', '40 / 40', 'TIME', '10 s', 'FUEL PUMP', '7 cr a unit', 'DANGER', 'LOW', 'JUMP READY', 'The jump comes with the G key.']
+    ['KESTREL', 'FRONTIER OUTPOST', 'DISTANCE', '6.3 ly', 'FUEL COST', '6.3 units', 'YOU HAVE', '40 / 40', 'TIME', '10 s', 'FUEL PUMP', '7 cr a unit', 'DANGER', 'LOW', 'JUMP READY', 'Jumps start from space: launch, then press G.']
       .forEach(w => check('card shows ' + w, c1.includes(w)));
     check('and the pick is ok', await t.ev(`${GM}.verdict`) === 'ok');
     await t.shot('galaxy-1-default');
@@ -130,17 +130,18 @@ const texts = t => t.ev(`(() => { const out = []; const walk = o => { if (o.type
   } finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
 }
 
-// ---- part 2: it lands dark: no key opens it in the game ----
+// ---- part 2: G opens it in the station, read only ----
 {
   const t = await launch('#station');
   const press = mk(t);
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Station'))", 20000, 'station');
     await sleep(600);
-    console.log('J. no key opens it');
-    for (const k of ['G', 'TAB', 'H']) { await press(k); await sleep(200); if (await t.ev("game.scene.isActive('Overlay')")) await press(k); }
-    check('G, Tab and H in the station never open the galaxy map', await t.ev("!game.scene.isActive('Galaxy')"));
-    check('the scene is registered but not running', await t.ev("!!game.scene.getScene('Galaxy') && !game.scene.isActive('Galaxy')"));
+    console.log('J. G opens it, read only, in the station (card u-b4); Tab and H do not');
+    for (const k of ['TAB', 'H']) { await press(k); await sleep(200); if (await t.ev("game.scene.isActive('Overlay')")) await press(k); }
+    check('Tab and H in the station never open the galaxy map', await t.ev("!game.scene.isActive('Galaxy')"));
+    await press('G'); await sleep(700);
+    check('G in the station opens it, with no onJump: it only shows', await t.ev("game.scene.isActive('Galaxy') && !game.scene.getScene('Galaxy').onJump"));
     check('no console errors', t.errors.length === 0, t.errors.join(' | '));
   } finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
 }
