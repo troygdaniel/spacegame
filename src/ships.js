@@ -11,7 +11,8 @@
 //   hits      -> shipsHit(s, obj, x, y)    white flash and sparks on the ship that was hit
 
 const SHIPS = {
-  sig: null,                 // the upgrade tiers the current 'ship' texture was drawn for
+  sig: null,                 // the model and upgrade tiers the current 'ship' texture was drawn for
+  model: 'wren', shieldR: 27, // the model it shows, and the radius of its hit bubble (set by shipRefresh from SHIP_LOOK)
   pad: { ship: [6, 5], police: [6, 5], drone: [5, 5], raider: [5, 4], gunship: [6, 5], reaver: [8, 7], freighter: [6, 6], civilian: [6, 6] },
   // engine nozzles per texture: [along (px behind the centre), across, size]; the flame and trail come out of these
   nozzles: {
@@ -185,22 +186,25 @@ function shipsTextures(scene) {
   mk('smoke', 24, 24, g => { for (let i = 4; i >= 1; i--) { g.fillStyle(0xffffff, 0.22); g.fillCircle(12, 12, 3 * i); } });
 }
 
-// the player ship: redrawn whenever the owned tiers change, so the plating, barrels and nozzles you bought show
+// the player ship: the active model (src/shipmodels.js) redrawn whenever the model or the owned tiers change, so the plating, barrels and
+// nozzles you bought show. The texture is always 'ship', so no other file needs to know which hull it is.
 function shipRefresh(scene) {
-  const u = G.upgrades || {}, sig = [u.armor | 0, u.rapid | 0, u.booster | 0].join('');
+  const model = shipActiveModel(), t = shipTiers(), sig = model + ':' + [t.plating, t.guns, t.engine].join('');
   if (SHIPS.sig === sig && scene.textures.exists('ship')) return false;
   if (scene.textures.exists('ship')) scene.textures.remove('ship');
-  const g = scene.make.graphics({ x: 0, y: 0, add: false });
-  shipDraw(g, u.armor | 0, u.rapid | 0, u.booster | 0);
-  g.generateTexture('ship', 56, 40); g.destroy();
-  SHIPS.sig = sig;
-  SHIPS.nozzles.ship = (u.booster | 0) >= 2 ? [[-14, -5.5, 0.9], [-14, 5.5, 0.9]] : [[-14, 0, (u.booster | 0) ? 1.3 : 1]];
+  const L = SHIP_LOOK[model], g = scene.make.graphics({ x: 0, y: 0, add: false });
+  shipDrawModel(g, model, t);
+  g.generateTexture('ship', L.w, L.h); g.destroy();
+  SHIPS.sig = sig; SHIPS.model = model; SHIPS.shieldR = L.shield;
+  SHIPS.nozzles.ship = L.nozzles(t);
   if (scene.shipImg && scene.shipImg.active) scene.shipImg.setTexture('ship');
   if (scene.ship && scene.ship.active) scene.ship.setTexture('ship');
   if (scene.in && scene.in.shipShadow && scene.in.shipShadow.active) scene.in.shipShadow.setTexture('ship'); // interior.js: the hangar shadow image shares the texture
   return true;
 }
-function shipDraw(g, armor, rapid, booster) {
+// the Wren, as it always was: three upgrade tiers in, a 56 x 40 picture out (tests/ships.mjs draws its tier sheet with this)
+function shipDraw(g, armor, rapid, booster) { shipDrawWren(g, armor, rapid, booster); }
+function shipDrawWren(g, armor, rapid, booster) {
   const cy = 20, STEEL = 0x7fb2cc;
   const hull = [[50, 20], [36, 12], [22, 9], [8, 5], [11, 13], [14, 16], [14, 24], [11, 27], [8, 35], [22, 31], [36, 28]];
   shHalo(g, 28, 20, CYAN, 16, 0.025);
@@ -259,7 +263,7 @@ function shipsFrame(s, time, dt) {
   const ship = s.ship;
   if (ship && ship.visible && ship.body && !s.dead) {
     const th = Math.min(1, ship.body.acceleration.length() / 1500);
-    shipsOne(s, g, ship, 'ship', th, G.hull / G.maxHull, time, dt, s.boosting ? 0x9fe9ff : (th > 0.6 ? 0x9fe9ff : AMBER), s.boosting ? 1.5 : 1);
+    shipsOne(s, g, ship, 'ship', th, G.hull / G.maxHull, time, dt, (s.boosting || th > 0.6) ? SHIP_LOOK[SHIPS.model].flame[1] : SHIP_LOOK[SHIPS.model].flame[0], s.boosting ? 1.5 : 1);
     shipsShield(s, g, ship, time);
   }
   if (s.enemies) s.enemies.getChildren().forEach(e => {
@@ -333,7 +337,7 @@ function shipsFlame(g, x, y, r, th, size, color, boost = 1) {
 function shipsShield(s, g, ship, time) {
   s.shield = s.shield.filter(h => time - h.t < SHIPS.shieldMs);
   if (!s.shield.length) return;
-  const R = 27 * (ship.scaleX || 1), pts = [];
+  const R = SHIPS.shieldR * (ship.scaleX || 1), pts = [];
   for (let i = 0; i < 6; i++) { const a = ship.rotation + i / 6 * Math.PI * 2; pts.push([ship.x + Math.cos(a) * R, ship.y + Math.sin(a) * R]); }
   s.shield.forEach(h => {
     const k = 1 - (time - h.t) / SHIPS.shieldMs;
