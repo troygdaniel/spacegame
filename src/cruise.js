@@ -140,7 +140,7 @@ function cruiseEngage(s) {
 function cruiseEnd(s, why) {
   const cr = s.cr, ship = s.ship, t = cr.target;
   cr.active = false; s.cruising = false;
-  const sp = Math.min(cr.speed, why === 'cut' ? 480 : CRUISE.dropSpeed);
+  const sp = Math.min(cr.speed, why === 'cut' ? shipStat('vmax') : CRUISE.dropSpeed);
   ship.body.setVelocity(Math.cos(ship.rotation) * sp, Math.sin(ship.rotation) * sp).setDrag(0.55);
   cr.speed = 0; cr.cancel = false; cr.nudge = 0; s.lockUntil = 0;
   s.cameras.main.shake(220, 0.0035); sfx('cruiseOff');
