@@ -15,18 +15,18 @@ const BAY_CONTROLS = [ // column by column, four rows each: [keys, what it does]
   [['Q', 'E'], 'Dash left or right'], [['Space'], 'Fire (or click)'], [['L'], 'Dock or land'], [['T'], 'Mission panel'],
   [['Tab'], 'Sector map'], [['H'], 'Help'], [['Esc'], 'Pause'], [['M'], 'Mute sound']
 ];
-// part slots as callouts on the ship. pt: the spot on the 56 x 40 ship texture; lx, ly: the label; tiers: what each tier is called
+// part slots as callouts on the ship. The spot on the ship comes from SHIP_LOOK[model].anchors[key] (src/shipmodels.js); lx, ly: the label; tiers: what each tier is called
 const BAY_SLOTS = [
-  { key: 'armor', title: 'ARMOR', stock: 'STOCK PLATING', tiers: ['PLATED', 'REINFORCED'], pt: [22, 9], lx: 56, ly: 128, side: 'L' },
-  { key: 'booster', title: 'ENGINE', stock: 'STOCK DRIVE', tiers: ['BOOSTED', 'TWIN NOZZLES'], pt: [8, 20], lx: 56, ly: 300, side: 'L' },
-  { key: 'rapid', title: 'WEAPONS', stock: 'STOCK GUNS', tiers: ['RAPID FIRE', 'RAPID FIRE II'], pt: [40, 10], lx: 640, ly: 118, side: 'R' }
+  { key: 'armor', title: 'ARMOR', stock: 'STOCK PLATING', tiers: ['PLATED', 'REINFORCED'], lx: 56, ly: 128, side: 'L' },
+  { key: 'booster', title: 'ENGINE', stock: 'STOCK DRIVE', tiers: ['BOOSTED', 'TWIN NOZZLES'], lx: 56, ly: 300, side: 'L' },
+  { key: 'rapid', title: 'WEAPONS', stock: 'STOCK GUNS', tiers: ['RAPID FIRE', 'RAPID FIRE II'], lx: 640, ly: 118, side: 'R' }
 ];
 
 // what the bay shows about the ship you fly
 function bayShipInfo() {
   const u = G.upgrades || {};
   return {
-    name: 'Wren', role: 'STARTER SHIP', hull: G.hull, maxHull: G.maxHull,
+    name: shipLook().name, role: shipLook().role, hull: G.hull, maxHull: G.maxHull,
     ore: Math.min(G.ore | 0, ORE_CAP), oreCap: ORE_CAP,
     fuel: null, fuelMax: null, // src/fuel.js (card u-b1) fills these in
     parts: UPGRADES.map(p => ({ key: p.key, name: p.name, tier: u[p.key] | 0, max: p.prices.length, descs: p.descs }))
@@ -105,16 +105,16 @@ class ShipBay extends Phaser.Scene {
 
   // ---- the ship: hovering over the pad, nozzle flames, a shadow that breathes with it ----
   bayShip() {
-    const { shipX: x, shipY: y, scale: K } = BAY;
+    const { shipX: x, shipY: y } = BAY, K = shipFitScale(BAY.scale), L = shipLook(); // the ship is always as wide as the Wren at 5x
     this.shadow = this.add.ellipse(x, BAY.padY + 6, 300, 38, 0x000000, 0.5).setDepth(5);
-    this.glow = this.add.image(x, y, 'glow-c').setScale(4.2).setAlpha(0.42).setBlendMode(Phaser.BlendModes.ADD).setDepth(9); // a soft halo behind the hull
+    this.glow = this.add.image(x, y, 'glow-c').setScale(4.2 * L.w / 56).setAlpha(0.42).setBlendMode(Phaser.BlendModes.ADD).setDepth(9); // a soft halo behind the hull
     this.tweens.add({ targets: this.glow, alpha: 0.28, duration: 2300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     this.shipImg = this.add.image(x, y, 'ship').setScale(K).setDepth(10);
     this.bob = this.tweens.add({
       targets: this.shipImg, y: y - 7, duration: 2300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
       onUpdate: () => { const k = (y - this.shipImg.y) / 7; this.shadow.setScale(1 - k * 0.07, 1 - k * 0.07).setAlpha(0.5 - k * 0.1); this.shipImg.setRotation(k * 0.012 - 0.006); }
     });
-    this.nozzles = (SHIPS.nozzles && SHIPS.nozzles.ship) || [[-14, 0, 1]];
+    this.K = K; this.nozzles = (SHIPS.nozzles && SHIPS.nozzles.ship) || [[-14, 0, 1]];
     this.flames = this.nozzles.map(([nx, ny, ns]) => this.add.particles(0, 0, 'spark', {
       lifespan: 440, speed: { min: 60, max: 150 }, angle: { min: 172, max: 188 }, scale: { start: 2.4 * ns, end: 0 },
       alpha: { start: 0.85, end: 0 }, tint: [CYAN, 0xcfefff], blendMode: 'ADD', frequency: 24
@@ -123,7 +123,7 @@ class ShipBay extends Phaser.Scene {
 
   // ---- labels on the ship: what you have fitted, with a line to the part ----
   bayCallouts() {
-    const SX = BAY.shipX, SY = BAY.shipY, K = BAY.scale, at = (px, py) => [SX + (px - 28) * K, SY + (py - 20) * K], info = this.info;
+    const SX = BAY.shipX, SY = BAY.shipY, K = shipFitScale(BAY.scale), L = shipLook(), at = (px, py) => [SX + (px - L.w / 2) * K, SY + (py - L.h / 2) * K], info = this.info;
     const layer = this.add.container(0, 0).setDepth(12); this.fadeSet.push(layer);
     const g = this.add.graphics(); layer.add(g);
     const frac = info.hull / info.maxHull, hc = frac > 0.6 ? GREEN : frac > 0.3 ? AMBER : RED;
@@ -131,9 +131,9 @@ class ShipBay extends Phaser.Scene {
     BAY_SLOTS.forEach(sl => {
       const p = info.parts.find(q => q.key === sl.key); if (!p) return;
       list.push({ title: sl.title, value: p.tier ? sl.tiers[Math.min(p.tier, sl.tiers.length) - 1] : sl.stock, n: p.tier, of: p.max,
-        desc: p.tier ? p.descs[p.tier - 1] : 'none fitted', pt: at(sl.pt[0], sl.pt[1]), lx: sl.lx, ly: sl.ly, side: sl.side });
+        desc: p.tier ? p.descs[p.tier - 1] : 'none fitted', pt: at(...L.anchors[sl.key]), lx: sl.lx, ly: sl.ly, side: sl.side });
     });
-    list.push({ title: 'HULL', value: Math.round(frac * 100) + '%', n: -1, desc: Math.round(info.hull) + ' of ' + Math.round(info.maxHull) + ' points', pt: at(34, 25), lx: 640, ly: 300, side: 'R', color: hc });
+    list.push({ title: 'HULL', value: Math.round(frac * 100) + '%', n: -1, desc: Math.round(info.hull) + ' of ' + Math.round(info.maxHull) + ' points', pt: at(...L.anchors.hull), lx: 640, ly: 300, side: 'R', color: hc });
     list.forEach(c => {
       const col = c.color || (c.n > 0 ? GREEN : CYAN), css = hudCss(col), uy = c.ly + 60, [ax, ay] = c.pt;
       const far = c.side === 'L' ? [c.lx + 190, uy] : [c.lx, uy];
@@ -296,7 +296,7 @@ class ShipBay extends Phaser.Scene {
     this.flames.forEach(e => e.setFrequency(5, 2));
     cam.shake(1000, 0.0025);
     this.tweens.add({
-      targets: img, x: img.x + 1000, scale: BAY.scale * 0.55, duration: 950, delay: 420, ease: 'Cubic.easeIn',
+      targets: img, x: img.x + 1000, scale: this.K * 0.55, duration: 950, delay: 420, ease: 'Cubic.easeIn',
       onComplete: () => { this.flames.forEach(e => e.destroy()); this.leaving = false; go(this, 'Space', { from: 'station' }); } // go() refuses while leaving is set
     });
   }
@@ -317,7 +317,7 @@ class ShipBay extends Phaser.Scene {
   }
 
   nozzleGlow(g, img) { // a soft glow at each nozzle, following the ship
-    const k = img.scaleX / BAY.scale;
+    const k = img.scaleX / this.K;
     this.nozzles.forEach(([nx, ny, ns]) => {
       const x = img.x + nx * img.scaleX, y = img.y + ny * img.scaleY;
       g.fillStyle(CYAN, 0.1); hudDisc(g, x, y, 34 * ns * k); g.fillStyle(CYAN, 0.18); hudDisc(g, x, y, 20 * ns * k); g.fillStyle(0xcfefff, 0.6); hudDisc(g, x, y, 7 * ns * k);

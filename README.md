@@ -13,6 +13,7 @@ Open `index.html` in a browser (Chrome is what it is tested in). Double-clicking
 - src/common.js  shared helpers, global state G, beep(), toast(), go()
 - src/boot.js    every texture is drawn here with shapes (no image files)
 - src/station.js station interior scene
+- src/shipmodels.js the six player ships (wren, kite, ox, talon, pathfinder, bastion): each hull drawn in code with its upgrade tiers, its physics circle, nozzles, flame colours and the anchors for the Ship bay callouts (table SHIP_LOOK); shipRefresh() in ships.js draws the active one into the texture 'ship'; tests/shipsheet.mjs makes the picture sheet and checks them
 - src/shipmode.js the Ship bay scene between boarding and flight: the ship, its status, the mission, the controls guide, LAUNCH; tests/shipmode.mjs checks it. It is also where the hangar terminal of docs/UNIVERSE.md will live (see the comment at the top of the file)
 - src/space.js   flight, combat, dock/land
 - src/surface.js planet surface, colonist escort

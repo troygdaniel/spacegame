@@ -7,7 +7,7 @@ class Station extends Phaser.Scene {
     shipRefresh(this); // src/ships.js: the hangar ship shows the upgrade tiers you own
     this.cameras.main.fadeIn(300, 0, 0, 0);
     interiorTextures(this); // src/interior.js: the floor, walls, props, lights and people are drawn there
-    this.shipImg = this.add.image(1090, 360, 'ship').setScale(3);
+    this.shipImg = this.add.image(1090, 360, 'ship').setScale(shipFitScale(3)); // src/shipmodels.js: the active model, 168 px wide on the pad
     label(this, 1090, 432, 'YOUR SHIP', '#9fe9ff');
 
     this.walls = [];
