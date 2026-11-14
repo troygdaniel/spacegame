@@ -433,7 +433,7 @@ function interiorBuild(s) {
   // the ship: a shadow, engine and cockpit glow. station.js owns the sprite (s.shipImg) and feelLaunch moves it.
   if (s.shipImg) {
     s.shipImg.setDepth(2.8);
-    I.shipShadow = s.add.image(0, 0, 'in-shadow').setAlpha(0.7).setScale(3.4, 3.6).setDepth(2.7); // a soft oval, not a copy of the 'ship' texture: shipRefresh (ships.js) rebuilds that texture when you buy an upgrade and a copy would break
+    I.shipShadow = s.add.image(0, 0, 'in-shadow').setAlpha(0.7).setScale(3.4 * shipFitScale(3) / 3, 3.6 * shipFitScale(3) / 3).setDepth(2.7); // a soft oval, not a copy of the 'ship' texture: shipRefresh (ships.js) rebuilds that texture when you buy an upgrade and a copy would break
     I.shipFx = [glow(0, 0, 40, AMBER, 0.5, { depth: 2.9, pulse: 900 }), glow(0, 0, 26, CYAN, 0.35, { depth: 2.9, pulse: 1400 })];
   }
 
@@ -479,7 +479,8 @@ function interiorTick(s, time) {
   I.pshadow.setPosition(s.player.x + 2, s.player.y + 6); I.plight.setPosition(s.player.x, s.player.y);
   if (s.shipImg && I.shipShadow) {
     const x = s.shipImg.x, y = s.shipImg.y; I.shipShadow.setPosition(x + 10, y + 14);
-    I.shipFx[0].setPosition(x - 26, y); I.shipFx[1].setPosition(x + 6, y);
+    const L = shipLook(), k = s.shipImg.scaleX; // src/shipmodels.js: where this hull's engine and cockpit are
+    I.shipFx[0].setPosition(x + L.fx[0] * k, y); I.shipFx[1].setPosition(x + L.fx[1] * k, y);
   }
   // the drone circles the pad
   { const a = time / 2600; I.drone.setPosition(1090 + Math.cos(a) * 150, 360 + Math.sin(a) * 105).setRotation(a + Math.PI / 2); I.droneShadow.setPosition(I.drone.x + 2, I.drone.y + 8); I.droneGlow.setPosition(I.drone.x, I.drone.y); }

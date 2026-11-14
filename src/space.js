@@ -24,7 +24,7 @@ class Space extends Phaser.Scene {
     if (this.from === 'surface') { sx = this.planet.x - 460; sy = this.planet.y + 120; rot = Math.PI; }
     else { sx = this.station.x + 250; sy = this.station.y; rot = 0; }
     this.ship = this.physics.add.sprite(sx, sy, 'ship').setDepth(5).setCollideWorldBounds(true);
-    this.ship.body.setCircle(12, 16, 8).setDamping(true).setDrag(0.55).setMaxSpeed(shipStat('vmax')); // the 56x40 texture has a glow margin (ships.js)
+    this.ship.body.setCircle(...shipLook().body).setDamping(true).setDrag(0.55).setMaxSpeed(shipStat('vmax')); // the 56x40 texture has a glow margin (ships.js); top speed from the model (fleet.js)
     this.ship.rotation = rot;
     this.ship.setVelocity(Math.cos(rot) * 140, Math.sin(rot) * 140);
     this.lockUntil = this.time.now + 1300;

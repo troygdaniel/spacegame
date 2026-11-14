@@ -7,23 +7,13 @@
 //   a broken script        content.generated.js that is not valid JavaScript
 //   a hand-edited file     valid JavaScript, but numbers out of range, text where a number belongs, a wrong shape
 // Run: node tests/contentboot.mjs        (one Chrome at a time; about 40 seconds)
-import { cpSync, mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { rmSync, writeFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { build } from '../tools/build-content.mjs';
 import { launch, sleep } from './cdp.mjs';
-
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+import { copyGame, ROOT } from './gamecopy.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok  ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + detail + ')' : ''}`); } };
-
-// a copy of the game that opens from file:// like the real one (the game folder only: no tests, no .git)
-function copyGame() {
-  const dir = mkdtempSync(join(tmpdir(), `longhaul-content-${process.pid}-`));
-  for (const f of ['index.html', 'phaser.min.js', 'src']) cpSync(join(ROOT, f), join(dir, f), { recursive: true });
-  return dir;
-}
 
 const state = t => t.ev(`JSON.stringify({ errors: CONTENT_ERRORS.map(e => e.level + '|' + e.path + '|' + e.message), state: CONTENT_STATE })`).then(JSON.parse);
 

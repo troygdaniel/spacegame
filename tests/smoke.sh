@@ -21,6 +21,8 @@
 #   4l. tests/npcs.mjs: the six bar characters (persona cards, lines, reactions), IDA only after the first rescue is paid, a talk with each new one
 #   4m. tests/systemart.mjs: planet kinds, star types and the four station looks for other systems (not used by the game yet)
 #   4n. tests/savemig.mjs: save v2 and the v1 migration; G.hull, G.maxHull, G.ore and G.upgrades over the active ship; unknown ids fall back
+#   4p. tests/contentui.mjs: the Title screen's content chip, problems panel and MODDED tag (nothing shows when all is well)
+#   4q. tests/shipsheet.mjs: the six player ships (silhouettes, every upgrade slot, nozzles, physics circle, hangar, flight, Ship bay)
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #   4p. tests/shipmodels.mjs: the six ship models against docs/UNIVERSE.md 6.1, and the Wren's speed, thrust, turn, boost and hull in the real Space scene
 #   4o. tests/chat.mjs: the NPC chat adapter with a mocked fetch: no key means no call; OpenAI and Anthropic get the right URL,
@@ -94,6 +96,11 @@ echo "== 4n. save v2, the v1 migration and the fleet accessors (tests/savemig.mj
 if node tests/savemig.mjs; then :; else fail=1; fi
 echo "== 4o. NPC chat adapter with a mocked fetch: no key, no call; the right host and header per provider; 401 and 429 (tests/chat.mjs)"
 if node tests/chat.mjs; then :; else fail=1; fi
+echo "== 4p. content on the Title screen: problems chip, panel, MODDED tag (tests/contentui.mjs)"
+if node tests/contentui.mjs; then :; else fail=1; fi
+
+echo "== 4q. the six player ships (tests/shipsheet.mjs)"
+if node tests/shipsheet.mjs; then :; else fail=1; fi
 
 echo "== 4p. ship models and shipStat: the table pinned to the design, the Wren flies as before (tests/shipmodels.mjs)"
 if node tests/shipmodels.mjs; then :; else fail=1; fi

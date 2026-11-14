@@ -153,7 +153,7 @@ content/ships/kite.md: type is "mission" but this folder takes "ship". Skipped t
 Where they show up:
 - The terminal: `build-content.mjs` prints all of them and a count; exit code 0 (warnings), or 1 with `--strict` (what the tests use for the core pack).
 - The browser: `console.warn` for each, and on the **Title** screen an amber chip "Content: 3 problems" that opens a panel (the first 8, then "and 4 more, see the browser console"), in the same glass style as the HUD. The game starts regardless.
-- A small "MODDED" tag on the Title screen whenever the loaded content differs from the shipped core pack (compared by a hash the build writes), so a bug report says whether the game was modded.
+- A small "MODDED" tag on the Title screen whenever the loaded content differs from the shipped core pack, so a bug report says whether the game was modded. How: `content.generated.js` carries two hashes, `hash` (the entries in it) and `core` (the shipped pack). A normal build keeps `core` as it was, so after you edit `content/` the two differ; only `node tools/build-content.mjs --seal` moves `core` to the new hash, which is for changing the shipped content itself (`tests/contentapply.mjs` fails if the committed file is not sealed). The browser hashes the entries itself rather than trusting the `hash` line, so a hand-edited generated file reads as modded too, with a warning that its hash does not match. The chip and the tag are in `src/contentui.js`; the panel opens with a click or `P` (`C` on the Title screen is NPC chat).
 
 ### 5.3 Limits and safety
 A mod is untrusted text, so the loader enforces limits even though the build script has already checked them:
