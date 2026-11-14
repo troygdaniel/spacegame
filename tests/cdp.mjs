@@ -18,15 +18,16 @@ const KEYS = {
 };
 
 // Launch a throwaway headless Chrome (own profile, so it never touches your real Chrome) and return a session.
-export async function launch(hash = '') {
+// root: the folder whose index.html to open (default: this checkout; a test can pass a copy with another content.generated.js)
+export async function launch(hash = '', root = ROOT) {
   // starting Chrome can fail when the Mac is busy (load average 25 from other agents): one retry before giving up
-  try { return await launchOnce(hash); } catch (e) {
+  try { return await launchOnce(hash, root); } catch (e) {
     console.log('  (Chrome did not start cleanly, trying once more: ' + e.message + ')');
-    return await launchOnce(hash);
+    return await launchOnce(hash, root);
   }
 }
 
-async function launchOnce(hash) {
+async function launchOnce(hash, root) {
   const profile = mkdtempSync(join(tmpdir(), `longhaul-${process.pid}-`)) // pid in the name: cleanup can target only this run;
   const chrome = spawn(CHROME, [
     '--headless=new', '--mute-audio', '--disable-gpu', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
@@ -113,6 +114,6 @@ async function launchOnce(hash) {
     rmSync(profile, { recursive: true, force: true });
   };
   await send('Page.enable'); await send('Runtime.enable');
-  await send('Page.navigate', { url: 'file://' + ROOT + '/index.html' + hash });
+  await send('Page.navigate', { url: 'file://' + root + '/index.html' + hash });
   return { send, ev, waitFor, press, clock, run, key, shot, close, errors };
 }
