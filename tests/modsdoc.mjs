@@ -105,7 +105,7 @@ const typoKey = C.loadAll([{ path: 'content/text/words.md', text: '---\ntype: te
 check('a text file with a key the game does not read is not a problem to the build (the game says it)', typoKey.errors.length === 0);
 // the three messages the build does print, word for word as the guide quotes them (made from the shipped Escort file)
 const said = text => C.loadAll([{ path: 'content/missions/escort.md', text }]).errors.map(e => C.formatError(e));
-for (const line of [...said(escortText.replace('reward: 400', 'rewrd: 400')), ...said(escortText.replace('reward: 400', 'reward: lots')), ...said(escortText.replace('The freighter MULE leaves', 'The freighter MULE {rewrd} leaves'))]) {
+for (const line of [...said(escortText.replace('reward: 400', 'rewrd: 400')), ...said(escortText.replace('reward: 400', 'reward: lots')), ...said(escortText.replace('She pays on arrival.', 'She pays {rewrd} cr on arrival.'))]) {
   check(`the guide quotes "${line.slice(0, 70)}..." word for word`, doc.includes(line));
 }
 

@@ -34,7 +34,7 @@ You need a text editor and Node.js 22 or newer (`node --version`). No packages. 
 
 ## 1. The shape of a file (1 minute)
 
-A content file is markdown. Between two `---` lines at the top are `key: value` lines; below them are the description and `##` sections. This is the shipped Rescue call, `content/missions/rescue.md`:
+A content file is markdown. Between two `---` lines at the top are `key: value` lines; below them are the description and `##` sections. This is the top of the shipped Rescue call, `content/missions/rescue.md` (the real file goes on with more `##` sections, section 3 names them):
 
 ```
 ---
@@ -77,7 +77,7 @@ To undo: put the file back (`git checkout content/` if you use git, or delete yo
 
 ## 3. Change a mission (2 minutes)
 
-Open `content/missions/rescue.md`. Change `reward: 500` to `reward: 700`, and rewrite only the first line of the story (the text under the `---`; the other five lines stay):
+Open `content/missions/rescue.md`. Change `reward: 500` to `reward: 700`, and rewrite only the first line of the story (the text under the `---`; the other four lines stay):
 
 ```
 reward: 700
@@ -85,11 +85,11 @@ reward: 700
 A survey pod went down on Kepler-4b. Bring them home.
 ```
 
-Save, build, reload, open the mission board in the station and read the Rescue call: it says REWARD 700 cr. The text under the front matter is what the board says; `## Board line` is the one-line
+Save, build, reload, walk up to the cyan MISSIONS terminal in the station, press **E**, and read the Rescue call: it says REWARD 700 cr. The text under the front matter is what the board says; `## Board line` is the one-line
 objective on the HUD; `## Progress`, `## Steps` and `## Failure` are the other texts. A text may use `{reward}`, `{count}` and `{progress}`: `She pays {reward} on arrival.`
 
-The other three calls work the same way. Open `content/missions/escort.md`, change `reward: 400` to `reward: 800`, and make the board say it: change `She pays on arrival.` to `She pays {reward} on arrival.`
-The board then shows "She pays 800 on arrival." A call can also hold back: `unlock` takes a condition, and the board offers the call only while it holds (`bounty.md` says `unlock: patrols>=1`, so the
+The other three calls work the same way. Open `content/missions/escort.md`, change `reward: 400` to `reward: 800`, and make the board say it: change `She pays on arrival.` to `She pays {reward} cr on arrival.`
+The board then shows "She pays 800 cr on arrival." A call can also hold back: `unlock` takes a condition, and the board offers the call only while it holds (`bounty.md` says `unlock: patrols>=1`, so the
 Reaver is offered once you have finished a police patrol). The whole list of conditions is in the reference. `kind` in a call's file must be its own name, and `count` is how many pirates a patrol wants.
 
 A file only changes what it says: a field it leaves out keeps the game's value, and the rest of the call (the freighter, the ambushes, the gate) is code. How much a call should pay
@@ -104,11 +104,12 @@ Open `content/npcs/juno.md` and add a line at the top of the list, as the first 
 - Mind the stools. They are bolted down for a reason.
 ```
 
-Walk to JUNO in the Drift bar and talk to her: she says her lines in order, so a line at the top of the list is the first thing she says. Under `## Reactions` a line says what she says when a condition holds; the first
-row that holds wins, and none holding means she says nothing. `## Persona` is the card the optional chat feature gives the model (600 characters at most, see `docs/NPC-CHAT.md`).
+Walk up to JUNO in the Drift bar and press **E** (the station's tip: walk up to a terminal, the bar or the hangar shop and press E). She says her lines in order, so a line at the top of the list is the first thing she
+says. Under `## Reactions` a line says what she says when a condition holds: if a row holds and is not what she last said about your situation, she says it once instead of the next ordinary line (the first row that holds
+wins, and none holding means she just carries on with her lines). If a reaction answers you first (`credits>=800` is true for you), talk to her again to reach the new line. `## Persona` is the card the optional chat feature gives the model (600 characters at most, see `docs/NPC-CHAT.md`).
 
 All six people have a file. Open `content/npcs/moss.md` and read the Reactions table: `hull<50` is "less than half the hull left", `upgrade:shields>=2` is "a tier 2 shield or better", and
-`credits>=800 and !upgrade:engine` joins two conditions (all must hold) with `!` for "not". Change the text after a `|` and MOSS says your line when that row is the first to hold. A character can
+`credits>=800 and !upgrade:engine` joins two conditions (all must hold) with `!` for "not". Change the text after the second `|` (the line column) and MOSS says your line when that row is the first to hold; to see `hull<50` take some damage before you dock. A character can
 turn up only sometimes: IDA has `appears: missions>=1`, so she is in the bar once you have finished a call.
 
 `{placeholders}` work in a mission's text and in an NPC's reaction lines, not in their ordinary lines.
@@ -158,14 +159,14 @@ Twenty more ore units of hold.
 ## 6. Change the world and the words (2 minutes)
 
 **A salvage site.** Open `content/poi/wreck-nw.md`: `credits: 120` is what the derelict freighter in the north-west pays for its strongbox. Make it 300. A site can also repair the hull (`hull`) and be guarded
-(`guard`, how many pirates), and the text under the front matter is the line shown when you salvage it. The random signals that turn up on the radar (`signal-beacon`, `signal-wreck`) take `pays: [80, 160]` (the
-least and the most), `guardChance` and `hullChance` instead. Where a site *is* stays in the star system's data, which is code.
+(`guard`, how many pirates), and the text under the front matter is the line shown when you salvage it. The random signals that turn up on the radar (`signal-beacon`, `signal-wreck`) have no `credits` or `guard`: they take
+`pays: [80, 160]` (the least and the most), `guardChance` and `hullChance`, and `hull` as well. Where a site *is* stays in the star system's data, which is code.
 
 **The dock.** Open `content/stations/halcyon-station.md`: `repair: 0.5` is the credits a point of hull costs at the repair bay, and `ore: 20` what an ore pays when you dock. Set `repair: 1` and the bay costs twice
-as much. There is one dock, so these are the game's prices; `fuel`, `accent` and the welcome, shop, services and bar sections are checked but not read yet.
+as much. There is one dock, so these are the game's prices; `fuel`, `accent` and the welcome, shop, services and bar sections are checked but not read yet. Numbers and words are separate: JUNO and MOSS still say "half a credit a point" after you change the price, so change their lines too if you want them to agree.
 
 **The words.** Open `content/text/ui.md`. It is a table of `key | text`: `help.space.5` is the fifth line of the flight Help screen, `tips.space` is the tip under it, `toast.docked` is the line that pops up when you dock.
-Change `toast.docked` to `Docked. Mind the stools.` and dock. A toast may use placeholders (`{reward}`, `{progress}`, `{count}`, `{name}`); help lines and tips are plain text. `ui.md` lists every key the game reads.
+Change `toast.docked` to `Docked. Mind the stools.` and dock; press **H** in flight to see the Help screen with `help.space.5` on it. A toast may use placeholders (`{reward}`, `{progress}`, `{count}`, `{name}`); help lines and tips are plain text. `ui.md` lists every key the game reads.
 A file need not hold them all: this whole file, `content/text/words.md`, changes just two lines. **Files are read in name order and the last one to say a key wins**, so your file has to sort after
 `ui.md` (`words.md` does; `my-words.md` would be overridden by `ui.md`). To translate, change the text column in `ui.md` itself, or copy it to a name that sorts after `ui` (`words-fr.md`) and delete the original.
 
@@ -209,7 +210,7 @@ content (the Title screen chip, or **P**): the build cannot know which ids and k
 | `content/missions/escort.md, line 6: unknown field "rewrd". Did you mean "reward"? Ignored.` | a typo in a field name. The game guesses what you meant; fix the spelling |
 | `content/missions/escort.md: reward is required but missing. Skipped the file.` | a required field (marked * in the reference) is not there; here it was the typo above |
 | `content/missions/escort.md, line 6: reward is "lots" but must be a whole number from 0 to 1000000. Skipped the file.` | the value is the wrong kind or out of range; the reference says what each field takes |
-| `content/missions/escort.md, line 8: the description: "{rewrd}" is not a known placeholder here. Did you mean {reward}? Ignored.` | a `{placeholder}` the game does not know |
+| `content/missions/escort.md, line 8: the description: "{rewrd}" is not a known placeholder here. Did you mean {reward}? Ignored.` | a `{placeholder}` the game does not know (here a typo in the line you added in section 3: `{rewrd}`). The line number is where the description starts, whichever of its lines has the typo |
 | `content/missions/escort.md: could not be applied (kind is "rescue" but the file is called escort, so its kind must be escort). Kept the built-in values.` | you copied the template and left `kind: rescue`. A file's `kind` must be its own name |
 | `content/missions/my-call.md: the game has no built-in mission called "my-call" and cannot add new ones. Skipped the file.` | the id is not one the game knows (section 7). You cannot add new ones yet |
 | `content/text/words.md: could not be applied (the key "toast.docekd" is not a string the game reads. Did you mean "toast.docked"?). Kept the built-in values.` | a key in a `text/` file that the game does not read (here a typo). The whole file is refused until every key is right |
@@ -226,8 +227,10 @@ A file may be 32 KB at most and a text field 400 characters; the reference lists
 
 ## The field reference
 
-Written by `node tools/mods-fields.mjs --write` from the schema in `src/content.js`, so it is what the game accepts. If you change the schema, run that command and commit the result:
+Written by `node tools/mods-fields.mjs --write` from the schema in `src/content.js`, so it is what the build accepts. If you change the schema, run that command and commit the result:
 `tests/modsdoc.mjs` (in the smoke test) fails when this page is out of date.
+
+Accepted is not the same as played. The `kind` of a call may be `courier`, `haul`, `salvage` or `survey` here, but only the ids of section 7 do anything in the game today.
 
 <!-- fields:start (written by node tools/mods-fields.mjs --write: do not edit between these lines) -->
 
@@ -347,7 +350,7 @@ No placeholders.
 | `name`* | text, up to 40 characters | the tier's name in the shop |
 | `brief` | text, up to 40 characters | a short form for tight places |
 | `key` | text, up to 20 characters |  |
-| `price` | whole number from 0 to 1000000 | credits, for a Wren (a ship scales it) |
+| `price` | whole number from 0 to 1000000 | credits, for the starting ship, the Wren (the other ships scale it) |
 | `points` | whole number from 0 to 500 | shields: points that take hits before the hull |
 | `regen` | number from 0 to 100 | shields: points a second once it recharges; engine: boost refill |
 | `delay` | whole number from 20 to 10000 | shields: ms without a hit before it recharges; weapons: ms between shots |
