@@ -64,7 +64,7 @@ const call = async (t, req = REQ) => {
     check('the call counter counts it', (await t.ev('CHAT.calls')) === 1);
 
     // Anthropic second
-    await t.ev(`chatSetKey('${KEY_ANTHROPIC}')`);
+    await t.ev(`(chatSetKey(''), chatSetKey('${KEY_ANTHROPIC}'), 1)`); // one key at a time here: the OpenAI one goes first, so Auto would still pick it
     check('an sk-ant- key picks Anthropic', (await t.ev('chatProvider()')) === 'anthropic');
     const r2 = await call(t);
     check('Anthropic: the reply text comes back', r2 && r2.text === 'Welcome to the Drift, pilot.', JSON.stringify(r2));
@@ -144,30 +144,33 @@ const call = async (t, req = REQ) => {
     await t.ev(MOCK);
     await t.ev(`(chatSetKey(''), chatSetProvider(''), chatSetModel(''), 1)`);
     await t.ev(`chatOpenSetup(game.scene.getScene('Title'))`);
-    await t.waitFor("game.scene.isActive('ChatSetup')", 8000, 'setup panel');
-    check('the setup panel opens, the title waits below', (await t.ev("game.scene.isPaused('Title')")) === true);
-    check('there is a real password box for the key and a text box for the model', (await t.ev("!!document.querySelector('input[type=password]') && document.querySelectorAll('input').length === 2")) === true);
-    const text = await t.ev(`game.scene.getScene('ChatSetup').ui.box.list.filter(o => o.text).map(o => o.text).join(' | ')`); // the texts sit inside the panel's container
+    await t.waitFor("game.scene.isActive('Settings')", 8000, 'setup panel');
+    const SE = "game.scene.getScene('Settings')";
+    check('Settings opens at the keys, the title waits below', (await t.ev("game.scene.isPaused('Title')")) === true && (await t.ev(`${SE}.section`)) === 'keys');
+    check('there are real boxes for the three keys and the model', (await t.ev("document.querySelectorAll('input[type=password]').length === 3 && document.querySelectorAll('input').length === 4")) === true);
+    const text = await t.ev(`(() => { const out = []; const walk = o => { if (o.type === 'Text') out.push(o.text); if (o.list) o.list.forEach(walk); }; ${SE}.children.list.forEach(walk); return out.join(' | '); })()`);
     check('the cost warning and the privacy line are on screen', /MAY COST YOU MONEY/.test(text) && /do not type anything private/.test(text));
-    check('the status tag reads NO KEY', (await t.ev(`game.scene.getScene('ChatSetup').ui.tagText.text`)) === 'NO KEY');
-    await t.ev(`(() => { const s = game.scene.getScene('ChatSetup'); s.el.value = 'short'; s.saveKey(); return 1; })()`);
+    check('the rail says no key is saved', /0 of 3/.test(text));
+    await t.ev(`(() => { const s = ${SE}; s.inputs.openai.value = 'short'; s.saveKey('openai'); return 1; })()`);
     check('a too-short key is refused', (await t.ev('CHAT.key')) === '');
-    await t.ev(`(() => { const s = game.scene.getScene('ChatSetup'); s.el.value = '${KEY_OPENAI}'; s.elModel.value = 'test-model'; s.saveKey(); return 1; })()`);
+    await t.ev(`(() => { const s = ${SE}; s.inputs.openai.value = '${KEY_OPENAI}'; s.inputs.model.value = 'test-model'; s.saveKey('openai'); return 1; })()`);
     check('a real-looking key is saved and the model with it', (await t.ev('CHAT.key')) === KEY_OPENAI && (await t.ev('CHAT.model')) === 'test-model');
-    check('the key box is cleared after saving', (await t.ev(`game.scene.getScene('ChatSetup').el.value`)) === '');
-    await t.shot('chat-setup'); // tests/out/chat-setup.png: the panel with a key saved
-    check('the status tag reads ON and the provider button says Auto: OpenAI', (await t.ev(`game.scene.getScene('ChatSetup').ui.tagText.text`)) === 'ON' && (await t.ev(`game.scene.getScene('ChatSetup').prov.text`)) === 'Auto: OpenAI');
-    await t.ev(`game.scene.getScene('ChatSetup').test()`);
+    check('the key box is cleared after saving', (await t.ev(`${SE}.inputs.openai.value`)) === '');
+    await t.shot('chat-setup'); // tests/out/chat-setup.png: the keys with one saved
+    const text2 = await t.ev(`(() => { const out = []; const walk = o => { if (o.type === 'Text') out.push(o.text); if (o.list) o.list.forEach(walk); }; ${SE}.children.list.forEach(walk); return out.join(' | '); })()`);
+    check('the row shows the last four only, and the provider button says Auto: OpenAI', /\*\*\*\* oooo/.test(text2) && !text2.includes(KEY_OPENAI) && /Auto: OpenAI/.test(text2));
+    await t.ev(`${SE}.testKey('openai')`);
     await t.waitFor('__calls.length === 1', 10000, 'test call');
     const c = await t.ev('__calls[0]');
-    check('Test chat makes one call, to OpenAI, with the typed model', /api\.openai\.com/.test(c.url) && JSON.parse(c.body).model === 'test-model');
-    await t.waitFor(`/^JUNO:/.test(game.scene.getScene('ChatSetup').status.text)`, 8000, 'JUNO line shown');
-    check('JUNO\'s hello is shown', /Welcome to the Drift/.test(await t.ev(`game.scene.getScene('ChatSetup').status.text`)));
-    check('the counter shows 1 call', /^1 call this session$/.test(await t.ev(`game.scene.getScene('ChatSetup').counter.text`)));
-    await t.ev(`(chatSetProvider('anthropic'), game.scene.getScene('ChatSetup').refresh(), 1)`);
-    check('the provider button shows the override', (await t.ev(`game.scene.getScene('ChatSetup').prov.text`)) === 'Anthropic');
+    check('Test makes one call, to OpenAI, with the typed model', /api\.openai\.com/.test(c.url) && JSON.parse(c.body).model === 'test-model');
+    await t.waitFor(`/^JUNO:/.test(${SE}.slots.status.text)`, 8000, 'JUNO line shown');
+    check('JUNO\'s hello is shown', /Welcome to the Drift/.test(await t.ev(`${SE}.slots.status.text`)));
+    check('the counter shows 1 call', /1 call this session$/.test(await t.ev(`${SE}.slots.counter.text`)));
+    await t.ev(`(chatSetProvider('anthropic'), ${SE}.keysRefresh(), 1)`);
+    check('the provider buttons show the override', (await t.ev(`${SE}.slots.provs.map(b => b.on).join()`)) === 'false,false,true');
+    await t.press('ESC'); // the first Esc leaves the key box (the C key put the cursor there), the second closes the screen
     await t.press('ESC');
-    await t.waitFor("!game.scene.isActive('ChatSetup')", 8000, 'setup closed');
+    await t.waitFor("!game.scene.isActive('Settings')", 8000, 'setup closed');
     check('Esc closes it and the title comes back', (await t.ev("game.scene.isActive('Title')")) === true);
     check('the text boxes are gone', (await t.ev("document.querySelectorAll('input').length")) === 0);
     check('the key is not in the page text', !(await t.ev('document.body.innerText')).includes(KEY_OPENAI));
@@ -176,7 +179,7 @@ const call = async (t, req = REQ) => {
   } finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
 }
 
-// ---- part 3: the pause menu has the row and opens the panel from the station ----
+// ---- part 3: the pause menu has the Settings row and opens it from the station ----
 {
   const t = await launch('#station');
   try {
@@ -185,12 +188,12 @@ const call = async (t, req = REQ) => {
     await t.ev(`openPause(game)`);
     await t.waitFor("game.scene.isActive('Pause')", 8000, 'pause menu');
     const rows = await t.ev(`game.scene.getScene('Pause').rows.map(r => r.text.trim()).join(' | ')`);
-    check('the pause menu lists NPC chat before New game (the Journal row may sit between them)', /NPC chat\s+NO KEY \| (Journal[^|]*\| )?New game/.test(rows), rows);
-    await t.ev(`(() => { const p = game.scene.getScene('Pause'); p.sel = 6; p.activate(6); return 1; })()`);
-    await t.waitFor("game.scene.isActive('ChatSetup')", 8000, 'setup from pause');
-    check('the NPC chat row opens the setup panel over the pause menu', (await t.ev("game.scene.isPaused('Pause')")) === true);
-    await t.ev(`game.scene.getScene('ChatSetup').close()`);
-    await t.waitFor("game.scene.isActive('Pause') && !game.scene.isActive('ChatSetup')", 8000, 'back to pause');
+    check('the pause menu lists Settings before New game (the Journal row may sit between them)', /Settings[^|]*\| (Journal[^|]*\| )?New game/.test(rows), rows);
+    await t.ev(`(() => { const p = game.scene.getScene('Pause'); p.sel = PAUSE_ROWS.indexOf('settings'); p.activate(p.sel); return 1; })()`);
+    await t.waitFor("game.scene.isActive('Settings')", 8000, 'settings from pause');
+    check('the Settings row opens Settings over the pause menu', (await t.ev("game.scene.isPaused('Pause')")) === true);
+    await t.ev(`game.scene.getScene('Settings').close()`);
+    await t.waitFor("game.scene.isActive('Pause') && !game.scene.isActive('Settings')", 8000, 'back to pause');
     check('closing it returns to the pause menu', true);
     check('no console errors', t.errors.length === 0, t.errors.join(' | '));
   } finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }

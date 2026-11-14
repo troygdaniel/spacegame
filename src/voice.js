@@ -1,10 +1,12 @@
 // ---------- Ship voice (optional): the ship computer speaks key events through Deepgram Aura text-to-speech ----------
-// OFF unless the player pastes their OWN Deepgram key (Pause > Ship voice, or V on the title screen). No key = the game is
+// OFF unless the player pastes their OWN Deepgram key (Settings > Keys, or V on the title screen). No key = the game is
 // exactly as before and nothing is sent anywhere. The key lives only in this browser's localStorage, never in the save file,
 // never in the repo, never logged or put in a message, and goes only to api.deepgram.com. See docs/VOICE.md.
 // Events come from watching the game once a frame (voiceInstall, called from main.js), so the scenes have no voice code.
-const VOICE_STORE = 'longhaul.voice.key', VOICE_FLAG = 'longhaul.voice.on';
-const VOICE_URL = 'https://api.deepgram.com/v1/speak', VOICE_MODEL = 'aura-athena-en'; // athena: a calm female voice
+const VOICE_STORE = 'longhaul.voice.key', VOICE_FLAG = 'longhaul.voice.on', VOICE_PICK = 'longhaul.voice.model';
+const VOICE_URL = 'https://api.deepgram.com/v1/speak', VOICE_MODEL = 'aura-athena-en'; // athena: a calm female voice, the ship computer's until you choose another
+// the voices the ship computer can have (Settings > Sound): [Aura name, shown name, a few words]
+const VOICE_CHOICES = [['aura-athena-en', 'ATHENA', 'calm, the default'], ['aura-asteria-en', 'ASTERIA', 'bright and clear'], ['aura-luna-en', 'LUNA', 'warm'], ['aura-orion-en', 'ORION', 'steady, male'], ['aura-helios-en', 'HELIOS', 'deep, male']];
 const VOICE_LINES = {
   launch: 'Launch clear. All systems nominal.',
   hull: 'Warning. Hull integrity critical.',
@@ -22,13 +24,24 @@ const VOICE_LINES = {
   ending: 'Two thousand credits earned. Well flown, pilot.',
   test: 'Ship voice online.'
 };
-const VOICE = { key: '', on: true, bad: false, playing: false, queue: [], cache: new Map(), fails: 0, pauseUntil: 0, said: {}, calls: 0 };
+const VOICE = { key: '', on: true, voice: VOICE_MODEL, bad: false, playing: false, queue: [], cache: new Map(), fails: 0, pauseUntil: 0, said: {}, calls: 0 };
 
 // ---------- the key (localStorage is optional: every call is wrapped) ----------
 function voiceLoad() {
-  try { VOICE.key = (localStorage.getItem(VOICE_STORE) || '').trim(); VOICE.on = localStorage.getItem(VOICE_FLAG) !== '0'; } catch (e) { /* storage is optional */ }
+  try {
+    VOICE.key = (localStorage.getItem(VOICE_STORE) || '').trim(); VOICE.on = localStorage.getItem(VOICE_FLAG) !== '0';
+    const pick = localStorage.getItem(VOICE_PICK); VOICE.voice = VOICE_CHOICES.some(c => c[0] === pick) ? pick : VOICE_MODEL;
+  } catch (e) { /* storage is optional */ }
   VOICE.bad = false;
 }
+// the ship computer's voice: one of VOICE_CHOICES; a new choice drops the cached lines, which were spoken in the old one
+function voiceSetVoice(m) {
+  if (!VOICE_CHOICES.some(c => c[0] === m)) return false;
+  VOICE.voice = m; VOICE.cache.clear();
+  try { localStorage.setItem(VOICE_PICK, m); } catch (e) { /* storage is optional */ }
+  return true;
+}
+const voiceShip = () => VOICE.voice;
 function voiceSetKey(k) {
   VOICE.key = String(k || '').trim(); VOICE.bad = false; VOICE.fails = 0; VOICE.pauseUntil = 0;
   try { if (VOICE.key) localStorage.setItem(VOICE_STORE, VOICE.key); else localStorage.removeItem(VOICE_STORE); } catch (e) { /* storage is optional */ }
@@ -40,10 +53,10 @@ function voiceStatus() { return !VOICE.key ? 'NO KEY' : VOICE.bad ? 'KEY REJECTE
 // ---------- speaking ----------
 // One line at a time, whoever says it. A line that arrives while another plays is dropped, unless it is a warning or a character's
 // reply (prio 1 or 2), which waits in a queue of two for up to 6 seconds. The same words in the same voice cannot repeat within 8 seconds.
-// model is an Aura voice name: the ship computer uses VOICE_MODEL, each bar character has their own (the voice field of NPCS in
+// model is an Aura voice name: the ship computer uses voiceShip(), each bar character has their own (the voice field of NPCS in
 // shop.js, docs/NPC-CHAT.md section 2). onStart runs when the audio begins to play.
 const VOICE_NAME = /^aura(-2)?-[a-z]{3,12}-en$/; // the name goes into a URL, so anything else falls back to the ship computer's voice
-const voiceModelOf = m => (typeof m === 'string' && VOICE_NAME.test(m) ? m : VOICE_MODEL);
+const voiceModelOf = m => (typeof m === 'string' && VOICE_NAME.test(m) ? m : voiceShip());
 function voiceSay(text, prio = 0, model, onStart) {
   if (!voiceUsable()) return false;
   const line = { text, voice: voiceModelOf(model), onStart, prio, at: performance.now() }, id = line.voice + '|' + text;
@@ -74,8 +87,8 @@ async function voiceRun(line) {
 }
 // a line's audio: from the memory cache, or one call to Deepgram (the only network call in the game). Only the ship computer's lines are
 // cached: they repeat. A character's reply is free text and is spoken once.
-async function voiceBuffer(text, voice = VOICE_MODEL) {
-  const keep = voice === VOICE_MODEL;
+async function voiceBuffer(text, voice = voiceShip()) {
+  const keep = voice === voiceShip();
   if (keep && VOICE.cache.has(text)) return VOICE.cache.get(text);
   if (!audioReady()) return null; // audio.js: the shared AudioContext
   VOICE.calls++;
@@ -107,15 +120,16 @@ function voiceFailed() { if (++VOICE.fails >= 3) { VOICE.fails = 0; VOICE.pauseU
 function voiceRejected() {
   const first = !VOICE.bad; VOICE.bad = true;
   const s = window.game && window.game.scene.getScenes(true).find(sc => GAMEPLAY.includes(sc.scene.key));
-  if (first && s) toast(s, 'Ship voice: Deepgram rejected the key. Check it in Pause > Ship voice.', '#ff4d6d');
+  if (first && s) toast(s, 'Ship voice: Deepgram rejected the key. Check it in Pause > Settings > Keys.', '#ff4d6d');
 }
-// the setup panel's Test button: speaks one line and says how it went (the player's own call, on their own key)
-async function voiceTest() {
+// the Settings screen's Test and Hear it buttons: speak one line (in this voice, the ship's by default) and say how it went. The player's
+// own call, on their own key, only when they press the button.
+async function voiceTest(voice) {
   if (!VOICE.key) return 'Paste a key first.';
-  if (G.muted || G.volume <= 0) return 'Sound is muted. Turn it on first (M, or Volume in the pause menu).';
+  if (G.muted || G.volume <= 0) return 'Sound is muted. Turn it on first (M, or Volume in Settings).';
   VOICE.bad = false; VOICE.pauseUntil = 0;
   try {
-    const buf = await voiceBuffer(VOICE_LINES.test);
+    const buf = await voiceBuffer(VOICE_LINES.test, voice || voiceShip());
     if (!buf) return VOICE.bad ? 'Deepgram rejected this key.' : 'Could not reach Deepgram.';
     await voicePlay(buf); return 'The voice works.';
   } catch (e) { return 'Could not play the voice.'; }
@@ -153,82 +167,5 @@ function voicePoll(game, st, now) {
   st.mission = G.mission; st.credits = G.credits; st.ending = !!G.endingSeen;
 }
 
-// ---------- the setup panel: paste the key, test it, switch the voice on or off ----------
-// Opened from the pause menu (meta.js) and from V on the title screen. The key goes into a real HTML input (so paste works) laid over the canvas.
-class VoiceSetup extends Phaser.Scene {
-  constructor() { super('VoiceSetup'); }
-  init(d) { this.from = (d && d.from) || 'Title'; this.closing = false; }
-  create() {
-    const cx = W / 2, cy = H / 2;
-    this.ui = panel(this, { w: 780, h: 510, title: 'SHIP VOICE  -  OPTIONAL', dim: true, depth: 0 });
-    const box = this.ui.box, add = o => { box.add(o); return o; };
-    const txt = (x, y, s, size, color, o = {}) => add(this.add.text(x, y, s, uiFont(size, color, o.style)).setOrigin(o.ox || 0, o.oy || 0));
-    txt(-360, -208, 'The ship computer speaks the key moments of a run in a calm voice: launch, hostiles, hull warnings, docking, missions and payments.', 16, '#cfefff', { style: { wordWrap: { width: 720 }, lineSpacing: 4 } });
-    const g = add(this.add.graphics());
-    g.fillStyle(0x2a1a06, 0.9); g.fillRect(-360, -142, 720, 112); g.lineStyle(2, AMBER, 1); g.strokeRect(-360, -142, 720, 112); g.fillStyle(AMBER, 1); g.fillRect(-360, -142, 5, 112);
-    txt(-342, -134, 'THIS USES YOUR OWN DEEPGRAM ACCOUNT AND MAY COST YOU MONEY', 16, '#ffd37a', { style: { fontStyle: 'bold' } });
-    txt(-342, -108, 'Each spoken line is sent to api.deepgram.com together with your key. Your key is kept in this browser only: never in the game files, never anywhere else. With no key the game stays silent, exactly as before.', 15, '#ffe9c0', { style: { wordWrap: { width: 690 }, lineSpacing: 4 } });
-    txt(-360, -10, 'DEEPGRAM API KEY', 13, '#5b7a92');
-    this.status = txt(0, 112, '', 16, '#9fe9ff', { ox: 0.5 });
-    this.btns = [];
-    const btn = (label, x, fn) => {
-      const w = 176, bg = add(this.add.rectangle(x, 160, w, 40, 0x0a1b2c, 1).setStrokeStyle(2, CYAN, 0.9).setInteractive({ useHandCursor: true }));
-      const t = txt(x, 160, label, 16, '#9fe9ff', { ox: 0.5, oy: 0.5 });
-      bg.on('pointerover', () => bg.setFillStyle(0x10283d)); bg.on('pointerout', () => bg.setFillStyle(0x0a1b2c)); bg.on('pointerdown', fn);
-      this.btns.push({ bg, t }); return t;
-    };
-    btn('Save key', -276, () => this.saveKey());
-    btn('Test voice', -92, () => this.test());
-    this.onoff = btn('', 92, () => { voiceSetOn(!VOICE.on); this.refresh(); });
-    btn('Remove key', 276, () => { voiceSetKey(''); this.input.value = ''; this.refresh('Key removed from this browser.'); });
-    this.ui.setHints([['Enter', 'Save key'], ['Esc', 'Back']]);
-
-    // the real text box
-    const el = this.el = document.createElement('input');
-    el.type = 'password'; el.placeholder = 'paste your Deepgram key here'; el.autocomplete = 'off'; el.spellcheck = false; el.maxLength = 200;
-    Object.assign(el.style, { position: 'fixed', zIndex: '20', boxSizing: 'border-box', background: '#04101c', color: '#ffd37a', border: '1px solid #ffb454', outline: 'none', fontFamily: 'monospace', padding: '0 10px' });
-    ['keydown', 'keyup', 'keypress'].forEach(ev => el.addEventListener(ev, e => e.stopPropagation())); // so Phaser and the M / Esc hooks do not see the typing
-    el.addEventListener('keydown', e => { if (e.key === 'Enter') this.saveKey(); else if (e.key === 'Escape') this.close(); });
-    document.body.appendChild(el);
-    this.events.once('shutdown', () => this.dropInput());
-    this.k = this.input.keyboard.addKeys('ESC');
-    this.born = performance.now();
-    this.refresh(VOICE.key ? 'A key is saved in this browser.' : 'No key yet: the game is silent.');
-    setTimeout(() => { try { el.focus(); } catch (e) { /* focus is a nicety */ } }, 50);
-  }
-  refresh(msg) {
-    this.ui.tagText.setText(voiceStatus());
-    this.onoff.setText(VOICE.on ? 'Turn voice off' : 'Turn voice on');
-    if (msg !== undefined) this.status.setText(msg).setColor('#9fe9ff');
-  }
-  saveKey() {
-    const v = this.el.value.trim();
-    if (!v) { this.refresh(VOICE.key ? 'The saved key is unchanged.' : 'Paste a key first.'); return; }
-    if (v.length < 16 || /\s/.test(v)) { this.refresh('That does not look like a Deepgram key.'); return; }
-    voiceSetKey(v); voiceSetOn(true); this.el.value = ''; this.refresh('Key saved in this browser. Press Test voice to hear it.');
-  }
-  async test() {
-    this.status.setText('Asking the ship to speak...').setColor('#ffd37a');
-    const r = await voiceTest();
-    if (this.scene.isActive()) { this.refresh(r); this.status.setColor(/works/.test(r) ? '#6dff9c' : '#ff4d6d'); }
-  }
-  dropInput() { if (this.el) { this.el.remove(); this.el = null; } }
-  close() {
-    if (this.closing) return; this.closing = true; this.dropInput();
-    const from = this.from, back = this.scene.get(from);
-    if (back && back.k && back.k.ESC) Phaser.Input.Keyboard.JustDown(back.k.ESC); // clear the Esc that closed this, so the pause menu below does not take it too
-    this.scene.stop(); this.scene.resume(from);
-  }
-  update() {
-    const JD = Phaser.Input.Keyboard.JustDown;
-    if (JD(this.k.ESC) && performance.now() - this.born > 200) { this.close(); return; }
-    if (!this.el) return;
-    const r = this.game.canvas.getBoundingClientRect(), k = r.width / W, cx = W / 2, cy = H / 2; // the box follows the canvas when the window is resized
-    Object.assign(this.el.style, { left: (r.left + (cx - 360) * k) + 'px', top: (r.top + (cy + 8) * k) + 'px', width: 720 * k + 'px', height: 40 * k + 'px', fontSize: 17 * k + 'px' });
-  }
-}
-
-function voiceOpenSetup(scene) { // scene: the scene to pause and come back to (Pause or Title)
-  if (scene.scene.manager.isActive('VoiceSetup')) return;
-  scene.scene.pause(); scene.scene.launch('VoiceSetup', { from: scene.scene.key });
-}
+// The setup screen is Settings (src/settings.js): V on the title and the old Pause row open it at the Deepgram key.
+function voiceOpenSetup(scene) { settingsOpen(scene, 'keys', 'deepgram'); } // scene: the scene to pause and come back to (Pause or Title)

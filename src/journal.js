@@ -125,7 +125,7 @@ class Journal extends Phaser.Scene {
   drawFoot(g, add, txt) {
     g.lineStyle(1, CYAN, 0.3); g.lineBetween(-430, 176, 430, 176);
     const st = typeof chatStatus === 'function' ? chatStatus() : 'NO KEY', prov = typeof chatProvider === 'function' && typeof CHAT_PROVIDERS !== 'undefined' && CHAT_PROVIDERS[chatProvider()] ? CHAT_PROVIDERS[chatProvider()].name : '';
-    const msg = st === 'ON' ? 'Chat ON (' + prov + ')' : st === 'KEY REJECTED' ? 'Chat off: the key was rejected. Pause > NPC chat' : st === 'OFF' ? 'Chat off. Pause > NPC chat' : 'Chat off: no key. Pause > NPC chat';
+    const msg = st === 'ON' ? 'Chat ON (' + prov + ')' : st === 'KEY REJECTED' ? 'Chat off: the key was rejected. Pause > Settings > Keys' : st === 'OFF' ? 'Chat off. Pause > Settings > Keys' : 'Chat off: no key. Pause > Settings > Keys';
     g.fillStyle(st === 'ON' ? GREEN : 0x5b7a92, 1); hudDisc(g, -424, 196, 4.5);
     txt(-412, 196, msg, 13, st === 'ON' ? '#6dff9c' : '#8fb4c9');
     // Forget everything: a second press erases

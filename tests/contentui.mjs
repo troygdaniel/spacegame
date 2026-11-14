@@ -1,7 +1,7 @@
 // The Title screen's content chip, panel and MODDED tag (card space-game-m2b-content-ui, docs/MODDING.md 5.2; src/contentui.js).
 // Each case runs the real game in headless Chrome from a throwaway copy of the folder with its own content.generated.js:
 //   the real pack            nothing at all on the Title screen
-//   a bad pack (modded)      the chip "CONTENT: 14 PROBLEMS", the MODDED tag, the panel with the first 8 and "and N more"
+//   a bad pack (modded)      the chip "CONTENT: 14 PROBLEMS", the MODDED tag, Settings at Content with the first 8 problems and "and N more"
 //   modded, no problems      only the MODDED tag
 // Screenshots go to tests/out/content-*.png. Run: node tests/contentui.mjs   (one Chrome at a time; about 30 seconds)
 import { rmSync, writeFileSync, readFileSync } from 'node:fs';
@@ -15,8 +15,9 @@ const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok  '
 const REAL_CORE = /core: "([0-9a-f]+)"/.exec(readFileSync(join(ROOT, 'content.generated.js'), 'utf8'))[1];
 
 // the Title scene's texts that start with a word, and what the content UI says about itself
-const ui = t => t.ev(`(() => { const s = game.scene.getScene('Title'), u = s.contentUi, txt = s.children.list.filter(o => o.type === 'Text').map(o => o.text);
-  return JSON.stringify({ chip: !!u.chip, tag: !!u.tag, open: u.isOpen(), texts: txt, panelTexts: u.panel ? u.panel.box.list.filter(o => o.type === 'Text').map(o => o.text) : [] }); })()`).then(JSON.parse);
+const ui = t => t.ev(`(() => { const s = game.scene.getScene('Title'), u = s.contentUi, txt = s.children.list.filter(o => o.type === 'Text').map(o => o.text), open = u.isOpen(), pt = [];
+  if (open) { const walk = o => { if (o.type === 'Text') pt.push(o.text); if (o.list) o.list.forEach(walk); }; game.scene.getScene('Settings').children.list.forEach(walk); } // the Content section of Settings (src/settings.js)
+  return JSON.stringify({ chip: !!u.chip, tag: !!u.tag, open, texts: txt, panelTexts: pt }); })()`).then(JSON.parse);
 // a real mouse click on a content-UI zone, found through the canvas (the page scales it to the window)
 async function click(t, which) {
   const p = await t.ev(`(() => { const r = game.canvas.getBoundingClientRect(), k = r.width / 1280, z = game.scene.getScene('Title').contentUi.${which}.zone; return { x: r.left + z.x * k, y: r.top + z.y * k }; })()`);
@@ -77,24 +78,23 @@ try {
 
       await click(t, 'chip');
       s = await ui(t);
-      check('a click on the chip opens the panel and does not start the game', s.open && (await isActive(t, 'Title')));
+      check('a click on the chip opens Settings at Content and does not start the game', s.open && (await isActive(t, 'Settings')) && !(await isActive(t, 'Station')));
       const rows = s.panelTexts.filter(x => /content\/|does not read/.test(x));
       check('the panel lists the first problems in plain words, one with a file, a line and what the game did', rows.length >= 4 && rows.length <= 8 && rows.some(x => x === 'content/missions/rescue.md, line 7: the description: "{rewrd}" is not a known placeholder here. Did you mean {reward}? Ignored.'), JSON.stringify(rows.slice(0, 3)));
       check('it says how many more there are, and where to see them', s.panelTexts.some(x => /^and \d+ more, see the browser console\.$/.test(x)), JSON.stringify(s.panelTexts.slice(-3)));
       check('it says MODDED and the game started anyway', s.panelTexts.some(x => x.includes('MODDED')) && s.panelTexts.some(x => x.includes('The game started anyway')));
       await t.shot('content-panel');
 
-      await press(t, 'W');
-      check('another key does not start the game while the panel is open', (await isActive(t, 'Title')) && (await ui(t)).open);
+      await press(t, 'P');
+      check('another key does not start the game while Settings is open', (await isActive(t, 'Settings')) && (await ui(t)).open && !(await isActive(t, 'Station')));
       await press(t, 'ESC');
-      check('Esc closes the panel', (await isActive(t, 'Title')) && !(await ui(t)).open);
+      check('Esc closes it and the title runs again', (await isActive(t, 'Title')) && !(await ui(t)).open);
       await press(t, 'P');
       check('P opens it again', (await ui(t)).open);
-      await clickAt(t, 100, 100);
-      check('a click outside the panel closes it, and still does not start the game', (await isActive(t, 'Title')) && !(await ui(t)).open);
+      await press(t, 'ESC');
       await click(t, 'tag');
-      check('the MODDED tag opens the panel too', (await ui(t)).open);
-      await press(t, 'P');
+      check('the MODDED tag opens it too', (await ui(t)).open);
+      await press(t, 'ESC');
       await clickAt(t, 640, 200);
       await t.waitFor(`game.scene.isActive('Station')`, 5000, 'Station after a click').then(() => check('a click on the empty title starts the game as before', true)).catch(() => check('a click on the empty title starts the game as before', false));
       check('no console errors', t.errors.length === 0, t.errors.join(' | '));

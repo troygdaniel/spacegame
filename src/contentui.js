@@ -1,10 +1,11 @@
-// ---------- Content on the Title screen: a problems chip, its panel and the MODDED tag (docs/MODDING.md 5.2) ----------
+// ---------- Content on the Title screen: a problems chip and the MODDED tag (docs/MODDING.md 5.2) ----------
 // Title.create calls contentTitleUi(this) once. It reads CONTENT_ERRORS and CONTENT_STATE (boot.js) and draws nothing at all
 // when the content pack has no problems and is the shipped core pack, so a normal player never sees any of it.
-//   chip   amber, bottom left: "[P] CONTENT: 3 PROBLEMS"; a click or P opens the panel
-//   tag    cyan, bottom right: "MODDED", when the loaded content is not the shipped core pack (CONTENT_STATE.modded); opens the panel too
-//   panel  the first 8 problems in plain words, then "and N more, see the browser console"; Esc, P, Enter or a click outside closes it
-// The game starts regardless of any of this; while the panel is open no key or click starts the game.
+//   chip   amber, bottom left: "[P] CONTENT: 3 PROBLEMS"; a click or P opens Settings at its Content section
+//   tag    cyan, bottom right: "MODDED", when the loaded content is not the shipped core pack (CONTENT_STATE.modded); opens it too
+//   body   contentBody() writes the Content section of Settings (src/settings.js): the first 8 problems in plain words, then "and N more,
+//          see the browser console"
+// The game starts regardless of any of this; while Settings is open no key or click starts the game (the title is paused behind it).
 // Returns { chip, tag, isOpen(), open(), close(), handleKey(e) }; Title routes its key presses through handleKey first.
 
 const CONTENT_UI = { rows: 8, width: 880, textMax: 220 };
@@ -17,12 +18,11 @@ function contentLine(e) { // one problem as a plain line: file, line, what is wr
 function contentTitleUi(s) {
   const errs = CONTENT_ERRORS, n = errs.length, st = CONTENT_STATE, modded = !!st.modded;
   const ui = {
-    chip: null, tag: null, panel: null,
-    isOpen() { return !!(this.panel && this.panel.box.visible); },
-    open() { if (!this.panel) this.panel = contentPanel(s, this); this.panel.box.setVisible(true); },
-    close() { if (this.panel) this.panel.box.setVisible(false); },
+    chip: null, tag: null,
+    isOpen() { return s.scene.manager.isActive('Settings') && s.scene.manager.getScene('Settings').section === 'content'; },
+    open() { settingsOpen(s, 'content'); },
+    close() { if (this.isOpen()) s.scene.manager.getScene('Settings').close(); },
     handleKey(e) { // true when the key was ours (the game must not start)
-      if (this.isOpen()) { if (['Escape', 'KeyP', 'Enter', 'Space'].includes(e.code)) this.close(); return true; }
       if (e.code === 'KeyP' && (n || modded)) { this.open(); return true; }
       return false;
     }
@@ -50,14 +50,18 @@ function contentTitleUi(s) {
   return ui;
 }
 
-// the panel: what is wrong, in the HUD glass of ui.js; texts are measured first so the panel is as tall as it needs to be
-function contentPanel(s, ui) {
-  const errs = CONTENT_ERRORS, n = errs.length, st = CONTENT_STATE, W_ = CONTENT_UI.width, lw = W_ - 96, color = n ? AMBER : CYAN;
-  const items = []; let y = 0;
+// The Content section of Settings: which pack is running and what it ignored, written into `parent` (a container) from (x, y0) down, `width` wide.
+// Texts are measured as they go, so the section is as tall as it needs to be; returns where it ends.
+function contentBody(s, parent, x, y0, width) {
+  const errs = CONTENT_ERRORS, n = errs.length, st = CONTENT_STATE, lw = width - 40, g = s.add.graphics(); parent.add(g);
+  let y = y0;
   const put = (str, size, col, gap, o = {}) => {
-    const t = s.add.text(0, 0, str, uiFont(size, col, Object.assign({ wordWrap: { width: lw }, lineSpacing: 3 }, o.style))).setOrigin(0, 0);
-    items.push({ t, y, mark: o.mark }); y += t.height + gap; return t;
+    const t = s.add.text(x + 28, y, str, uiFont(size, col, Object.assign({ wordWrap: { width: lw }, lineSpacing: 3 }, o.style))).setOrigin(0, 0);
+    parent.add(t);
+    if (o.mark) { g.fillStyle(o.mark, 1); g.fillRect(x + 8, y + 4, 6, 6); }
+    y += t.height + gap; return t;
   };
+  const head = s.add.text(x, y, 'CONTENT PACK', uiFont(11, '#5b7a92', { letterSpacing: 2 })).setOrigin(0, 0); parent.add(head); y += 26;
 
   // which pack is this
   if (!st.loaded) put('PACK   content.generated.js could not be read, so the game plays on its built-in values.', 14, '#ffd37a', 8);
@@ -66,26 +70,16 @@ function contentPanel(s, ui) {
     put('content ' + (st.hash || '?') + ', shipped ' + (st.core || '?') + '. Please say so in a bug report.', 13, '#5b7a92', 8);
   } else put('PACK   the shipped core pack (' + (st.hash || '?') + ').', 14, '#9fe9ff', 8);
   if (n) put('The game started anyway. What is listed here was ignored and the built-in value is used instead.', 13, '#cfefff', 12);
+  else put('No problems: every content file was read.', 13, '#6dff9c', 12);
 
   // the first problems, as many as fit (8 at most)
   const top = y, room = 330; let shown = 0;
   for (let i = 0; i < Math.min(CONTENT_UI.rows, n); i++) {
-    const e = errs[i], t = s.add.text(0, 0, contentLine(e), uiFont(13, e.level === 'warn' ? '#9fe9ff' : '#ffd37a', { wordWrap: { width: lw }, lineSpacing: 3 })).setOrigin(0, 0);
+    const e = errs[i], t = s.add.text(x + 28, 0, contentLine(e), uiFont(13, e.level === 'warn' ? '#9fe9ff' : '#ffd37a', { wordWrap: { width: lw }, lineSpacing: 3 })).setOrigin(0, 0);
     if (i > 0 && y - top + t.height > room) { t.destroy(); break; }
-    items.push({ t, y, mark: e.level === 'warn' ? CYAN : AMBER }); y += t.height + 9; shown++;
+    t.setY(y); parent.add(t); g.fillStyle(e.level === 'warn' ? CYAN : AMBER, 1); g.fillRect(x + 8, y + 4, 6, 6); y += t.height + 9; shown++;
   }
   if (n > shown) put('and ' + (n - shown) + ' more, see the browser console.', 13, '#5b7a92', 10);
   if (n) put('To fix: edit the file named above, run  node tools/build-content.mjs  and reload the page.', 13, '#5b7a92', 0);
-
-  const h = Math.min(680, 40 + 22 + y + 22 + 44), ui2 = panel(s, { w: W_, h, title: 'CONTENT', dim: true, depth: 150, color });
-  ui2.tagText.setText(n ? n + (n === 1 ? ' PROBLEM' : ' PROBLEMS') : 'MODDED').setColor(n ? '#ffb454' : '#38e1ff');
-  const box = ui2.box, g = s.add.graphics(); box.add(g);
-  items.forEach(({ t, y: ty, mark }) => {
-    const px = -W_ / 2 + 48, py = -h / 2 + 40 + 22 + ty;
-    t.setPosition(px, py); box.add(t);
-    if (mark) { g.fillStyle(mark, 1); g.fillRect(-W_ / 2 + 30, py + 4, 6, 6); }
-  });
-  ui2.setHints([['Esc', 'Back to the title']]);
-  const dim = box.list[0]; if (dim && dim.on) dim.on('pointerdown', () => ui.close()); // a click outside the panel closes it
-  return ui2;
+  return y;
 }

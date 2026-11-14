@@ -22,7 +22,7 @@ try {
   check('J opens the Journal over the station', await active('Journal') && !(await active('Station')));
   let s = await texts('Journal');
   check('it says nobody yet and where to start', s.includes('Nobody yet.') && s.includes('Talk to someone in the Drift (E).'), s.slice(0, 80));
-  check('the foot says chat is off and where it lives', s.includes('Chat off: no key. Pause > NPC chat'));
+  check('the foot says chat is off and where it lives', s.includes('Chat off: no key. Pause > Settings > Keys'));
   check('the Forget button is there', s.includes('FORGET EVERYTHING'));
   check('the title and the count are there', s.includes('JOURNAL') && s.includes('0 PEOPLE MET'));
   await t.shot('journal-empty');
@@ -93,7 +93,7 @@ try {
   await t.press('ESC'); await t.waitFor("game.scene.isActive('Pause')", 10000, 'pause opens'); await sleep(500);
   check('Pause has a Journal row', (await texts('Pause')).includes('Journal   (J in the station)'));
   check('New game is still the last row, after it', (await texts('Pause')).indexOf('Journal') < (await texts('Pause')).indexOf('New game'));
-  await t.ev("(() => { game.scene.getScene('Pause').sel = 7; return 1; })()"); await sleep(300);
+  await t.ev("(() => { game.scene.getScene('Pause').sel = PAUSE_ROWS.indexOf('journal'); return 1; })()"); await sleep(300);
   await t.press('ENTER'); await t.waitFor("game.scene.isActive('Journal')", 10000, 'journal from pause'); await sleep(500);
   s = await texts('Journal');
   check('it opens from Pause with DEX listed', s.includes('DEX') && s.includes('survey tech') && s.includes('1 PERSON MET'));

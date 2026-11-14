@@ -34,6 +34,7 @@
 #   4w. tests/fleet.mjs: buy, sell, switch, rename and transfer ships, the yard and the prices, per-ship state through a save, and dying (docs/UNIVERSE.md 6.3)
 #   4y. tools/economy-sim.mjs check: the economy simulator still loads the real game data and every code line it pins (repair, insurance, MULE speed...) is still there (docs/ECONOMY.md; no browser)
 #   4z. tests/hangar.mjs: the hangar terminal in the Ship bay: fleet, yard and controls tabs, buy and sell with a second press, board, move, rename, what the stage shows
+#   4zc. tests/settings.mjs: the Settings screen: sound, keys (paste, last four, Test and Forget with a mocked fetch), controls from the one table, content, reset; V C P S on the title; the Pause row
 #       header and body shape; the key is only ever in its header; 401 switches chat off; 429 waits; the setup panel saves a key
 #      their failure paths, with the game clock stepped by hand
 # Only one headless Chrome runs at a time on this Mac, whatever the worktree: cdp.mjs takes a lock in tests/lock.mjs, so a second
@@ -128,6 +129,8 @@ echo "== 4y. economy simulator: real data loads, pinned code lines still there (
 if node tools/economy-sim.mjs check; then :; else fail=1; fi
 echo "== 4z. the hangar terminal in the Ship bay (tests/hangar.mjs)"
 if node tests/hangar.mjs; then :; else fail=1; fi
+echo "== 4zc. the Settings screen: sound, keys with a mocked fetch, controls, content, reset (tests/settings.mjs)"
+if node tests/settings.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
