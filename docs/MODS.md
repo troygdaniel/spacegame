@@ -70,13 +70,13 @@ failed: Failed. Ask the station for another call
 - **The file name is the id.** `rescue.md` is the game's `rescue`. Ids are lower-case letters, digits and dashes.
 - **The folder says the type** (`missions/` takes `type: mission`), and a file in the wrong folder is refused.
 - **Markdown carries words and numbers; code carries behaviour.** A file can change what a call pays, never what it does. It cannot run code, read your save or hold a key.
-- A line starting with `#` in the front matter is a comment. The folder `content/_templates/` has one starting file for each type. Files and folders starting with `_` or `.` are never read.
+- A line starting with `#` in the front matter is a comment. The folder `content/_templates/` has one starting file for each type. Files and folders starting with `_` or `.` are never read as content (the one exception is a pack's `_pack.md` label, section 9).
 
 ## 2. The loop: edit, build, reload (1 minute)
 
 1. Edit a file under `content/` and save it.
 2. Run `node tools/build-content.mjs` in the game's folder. It checks every file, prints every problem in plain words and writes `content.generated.js`.
-   The build always ends with a note that your content "differs from the shipped core pack ... will say MODDED". That is normal: it is how the Title screen knows the game is modded. (It also builds the packs of section 9.)
+   The build always ends with a note that your content "differs from the shipped core pack ... will say MODDED". That is normal: it is how the Title screen knows the game is modded. That note is about editing `content/` itself. (The same command also builds the packs of section 9, and a build with only packs and no edits to `content/` prints no such note.)
 3. Reload `index.html` (double-click it, or press F5). The game opens from a file, which is why the build step exists: a browser will not let a page read other local files.
 
 Faster: `node tools/serve.mjs` serves the game at `http://127.0.0.1:8787/`, rebuilds the moment you save and prints the problems; press **R** in the page to reload. Nothing else needs it.
@@ -243,19 +243,24 @@ A file may be 32 KB at most and a text field 400 characters; the reference lists
 
 Editing `content/` changes the game for everyone who uses that folder. A **pack** is a folder of its own with the same layout, laid over the game when you turn it on: you can keep, switch and share changes without touching `content/`.
 
-1. Make `mods/my-pack/` (a name of lower-case letters, digits and dashes) and put files in it the way you do in `content/`, for example `mods/my-pack/missions/rescue.md`. A file needs only what you change plus the fields marked * in the reference (a Rescue file says `type`, `kind`, `title` and `reward`). `mods/example/` is a small working pack to copy: Rescue pays 650 and JUNO has one new line. An optional `mods/my-pack/_pack.md` (`title:`, `author:`, `about:`, one line each between two `---` lines) is the label the Mods screen shows.
-2. Run `node tools/build-content.mjs`. Each pack is checked on its own, and its problems name it (`mods/my-pack/missions/rescue.md, line 6: ...`). The folders of `mods/` are ignored by git, except `mods/example/`, so your packs stay on your computer. The build writes `mods.generated.js`; it changes when you add a pack, so commit it only if you changed `mods/example/`.
-3. Open the game and press **O** on the Title screen. The Mods screen lists the packs. Press **1** (or click the box) to turn the first one on, then **R** to restart the game. The Title says MODDED while a pack is on. Packs are **off until you turn them on**, so a new pack changes nothing by itself.
+1. Make `mods/my-pack/` (a name of lower-case letters, digits and dashes) and put files in it the way you do in `content/`, for example `mods/my-pack/missions/rescue.md`. A pack file says which thing it changes in the same way a file in `content/` does: its `type`, plus the fields marked * in the field reference at the end of this page. For a mission that is `type`, `kind`, `title` and `reward`; for a character, `type` and `name`; then only what you want to change.
+   `mods/example/` is a small working pack to copy: Rescue pays 650 and JUNO says one new line.
+   **What a pack file replaces.** It works field by field: a field or text you leave out keeps its normal value (the example's Rescue file has no story, no Board line and no Steps, so those stay as they are). A list or a table is replaced whole: the example's `## Lines` for JUNO replaces her three normal lines with its one, so copy the lines you want to keep. The same goes for `## Reactions` and `## Steps`.
+   An optional `mods/my-pack/_pack.md` (`title:`, `author:`, `about:`, one line each between two `---` lines) is the label the Mods screen shows. It is the only file starting with `_` that is read.
+2. Run `node tools/build-content.mjs` (the build step of section 2). Each pack is checked on its own, with the same rules as `content/`, and its problems name it (`mods/my-pack/missions/rescue.md, line 6: ...`). The folders of `mods/` other than `example` stay yours: if you use git it ignores them. The build also rewrites a file called `mods.generated.js`, which is how the game finds the packs; it changes when you add a pack, and you can ignore it unless you edited the example pack itself.
+3. Open the game and press **O** on the Title screen. The Mods screen lists every pack in name order, numbered, `example` among them (so yours may be 2). Press its number (or click the box) to turn it on, then **R** to restart the game. Packs are **off until you turn them on**, the example pack included, so a new pack changes nothing by itself. The Title says MODDED while a pack is on; with no pack on and no edits to `content/`, it does not.
 
-**No Node?** In the Mods screen press **F** (or click Pick a folder) and choose a pack folder. The game reads it with the same checker, keeps it in this browser, so you do not pick it again, and turns it on; restart to apply. REMOVE forgets it. Only `.md` files inside the folder are read; names starting with `_` or `.` are not, and a file over 32 KB is a problem.
+**No Node?** In the Mods screen press **F** (or click Pick a folder) and choose a pack folder. The game reads it with the same rules as the build, keeps it in this browser so you do not pick it again, and turns it on; restart to apply. Its `_pack.md` label shows too. REMOVE forgets it. Only `.md` files inside the folder are read; names starting with `_` or `.` are not (apart from `_pack.md`), and a file over 32 KB is a problem.
 
 **Order.** Packs that are on are laid over `content/` in name order, so where two say the same thing the **later name wins**: `aaa-balance` then `zz-my-tweaks` gives `zz-my-tweaks` the last word. A pack changes things the same way a file in `content/` does, so everything in sections 3 to 8 applies to it. A pack that is off costs nothing, and its problems are only counted on the screen.
+
+**What a pack cannot do yet.** Like `content/`, it changes what the game already has; it cannot add a brand-new mission, character or ship. A file such as `mods/my-pack/missions/mine.md` is skipped with a message ("the game has no built-in mission called "mine" and cannot add new ones", section 8).
 
 **Sharing.** Zip your `mods/my-pack/` folder and send it. Whoever gets it unzips it into `mods/` and builds, or unzips it anywhere and picks the folder in the Mods screen.
 
 ## 10. Rules
 
-- Your edits show the **MODDED** tag on the Title screen, so a bug report says whether the game was modded. It is not an accusation: it is how the game tells a changed pack from the shipped one.
+- Your edits show the **MODDED** tag on the Title screen, so a bug report says whether the game was modded. It is not an accusation: it is how the game tells a changed game from the shipped one. Editing `content/` and turning a pack on both do it.
 - `node tools/build-content.mjs --seal` is for people changing the shipped content itself (it says "this is the core pack now"). A modder does not run it.
 - Content never holds keys. The optional ship voice (`docs/VOICE.md`) and NPC chat keys live only in the player's own browser, and a test fails if a content file looks like a key.
 
