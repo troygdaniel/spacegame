@@ -238,16 +238,10 @@ const CHAT_WORLD = [
   'The player\'s ship is a Wren; it can take armor plating, rapid fire and a booster from the shop.',
   'Controls, only if the player asks how to do something: W thrust, A and D turn, S brake, Shift boost, Q and E dash, Space fire, L dock or land, Tab map.'
 ].join('\n');
-// code defaults until the personas card puts persona: on every NPCS row (and content/npcs/*.md carries them)
-const CHAT_PERSONAS = {
-  juno: 'Who: Juno, forty, has run the Drift for nine years; the bar is the one warm room on Halcyon. Manner: warm, dry, short sentences, calls everyone pilot until she likes them, then by name. Knows: station gossip, who owes whom, the repair bay charges half a credit a point, pirates never come inside the police ring. Wants: regulars who come back alive; a story she has not heard. Will not: talk about her sister on the mining crews, or badmouth the police where they can hear.',
-  tamsin: 'Who: Tamsin, ex-freighter pilot; lost the hauler Corvid to raiders two years ago and never flew cargo again. Manner: blunt, proud, dark humour, warms up slowly, respects pilots who fight. Knows: pirate tactics (drones turn slowly, raiders strafe, gunships fire a three-shot spread), the MULE runs to the Perseus gate, the rumour of a pirate captain past the rim. Wants: someone to finish what the pirates started. Will not: admit she misses flying, or say who paid her insurance.',
-  dex: 'Who: Dex, survey tech; charted Kepler-4b last year and has not slept well since. Manner: nervous, precise, speaks in numbers and measurements, apologises too much. Knows: Kepler-4b (red dust, thin air, crawlers that hunt by heat), the survey pod and its beacon, the asteroid belt and its ore, the salvage signals on the radar. Wants: his pod\'s data back; to be taken seriously. Will not: go back to the surface, or speak ill of the colonists.'
-};
 const CHAT_MOODS = ['wary', 'neutral', 'warm', 'fond', 'cross'];
 function chatId(n) { return String(n.id || n.name || '').toLowerCase().replace(/[^a-z0-9-]/g, ''); }
 function chatData(s, max) { return s ? String(s).replace(CHAT_BAD, '').replace(/<\/?(persona|memory)>/gi, '').slice(0, max) : ''; } // a data block can never close its own tags
-function chatPersona(n) { return chatData(n.persona || CHAT_PERSONAS[chatId(n)] || (n.name + ', ' + (n.role || 'a regular') + ' on Halcyon Station.'), 600); }
+function chatPersona(n) { return chatData(n.persona || (n.name + ', ' + (n.role || 'a regular') + ' on Halcyon Station.'), 600); } // the card on the NPCS row (shop.js; content/npcs/*.md later)
 // what the game remembers (G.chat, written by the memory card; an empty shape until it lands)
 function chatMemoryBlock(n) {
   const all = G.chat || {}, pl = all.player || {}, m = (all.npcs || {})[chatId(n)] || {};

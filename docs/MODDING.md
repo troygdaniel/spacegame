@@ -117,7 +117,7 @@ Why:
 - The build script and the game use the same `src/content.js`, so the errors a modder sees in the terminal are the errors the game shows. The build script also writes the errors into the generated file, so even a stale or hand-edited file is checked again in the browser.
 - `tests/content.mjs` rebuilds in memory and fails if the committed `content.generated.js` is stale, so it cannot drift.
 
-What the dev server adds (card `m6`): it serves the folder on `http://localhost:8765`, rebuilds on change, and lets the page reload with `R` (dev only). Nothing in the game requires it.
+**The dev server** (card `m6`, `tools/serve.mjs`). For a modder who edits a lot: `node tools/serve.mjs` serves the game at `http://127.0.0.1:8787/` (the next free port if that one is busy; `--port N` picks one), rebuilds `content.generated.js` the moment you save a file in `content/`, prints the problems in the terminal, and puts a small chip in the corner of the page. Press **R** in the page (or click the chip) to reload it and see the change; R does nothing while you type in a box, and Ctrl/Cmd+R stays the browser's own. The game saves when the page closes, so your run carries over. The chip and the R key are added to the HTML as the server sends it: the files on disk, and the game opened by double-click or from any other server, have no dev code in them. It listens on `127.0.0.1` only, serves only files inside the game folder (never a dot-name such as `.git`), and refuses anything but GET and HEAD. Nothing in the game needs it. (Port 8787, not 8765: that is the agentboard's.) `tests/serve.mjs` checks all of this.
 
 `README.md` changes one sentence: "no build step" becomes "no build step to play; one command to rebuild after you edit content".
 

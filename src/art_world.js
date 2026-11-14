@@ -222,6 +222,157 @@ function waPlanetArt(sc) {
   });
 }
 
+// ---------- planet kinds and star types for other star systems (Universe B6) ----------
+// Nothing calls these yet: the systems cards wire them in (docs/UNIVERSE.md 4.4, 9). Textures are made on first use and cached.
+//   planetTexture(sc, kind, seed)  the key of an 800 px canvas 'planet-<kind>-<seed>'. Kinds: rock, ice, gas, lava, ringed.
+//                                  At most PLANET_CACHE_MAX of them are alive: asking for a new one drops the one asked for
+//                                  longest ago (a system has up to five planets, so a jump to the next system recycles them).
+//   starTexture(sc, type)          the key of a 512 px canvas 'star-<type>'. Types M K G F A: STAR_TYPES says what each looks like
+//                                  and gives the size and the backdrop tint a system of that star uses.
+// The seed picks the palette and the markings, so the same (kind, seed) is the same planet on every boot.
+const WA_LIGHT = (() => { const l = Math.hypot(-0.66, 0.42, 0.62); return [-0.66 / l, 0.42 / l, 0.62 / l]; })(); // the sun is low on the left, as for Kepler-4b
+const PLANET_KINDS = ['rock', 'ice', 'gas', 'lava', 'ringed'];
+const PLANET_CACHE_MAX = 6;
+const waPlanetCache = []; // keys, the one asked for longest ago first
+
+function waHalo(ctx, C, R, rgb, a, reach = 90) { // atmosphere seen past the limb
+  const g = ctx.createRadialGradient(C, C, R * 0.92, C, C, R + reach);
+  g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(0.2, `rgba(${rgb},${a * 0.42})`); g.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+}
+const waPick = (rnd, list) => list[Math.floor(rnd() * list.length) % list.length];
+const waTint = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
+
+const WA_PLANETS = {
+  rock(ctx, S, rnd) { // airless and cratered: grey, tan or umber, with ridges and a few bright young craters
+    const C = S / 2, R = 300, base = waPick(rnd, [[158, 150, 140], [176, 152, 124], [132, 134, 144], [150, 120, 104]]);
+    const alb = waFbm(rnd, 4, 5), ridge = waFbm(rnd, 9, 3), cr = [];
+    for (let i = 0; i < 46; i++) cr.push([rnd() * 2 - 1, rnd() * 2 - 1, 0.03 + Math.pow(rnd(), 3) * 0.26, rnd() < 0.12]);
+    waHalo(ctx, C, R, '190,200,215', 0.12, 40);
+    waSphere(ctx, C, C, R, { L: WA_LIGHT, amb: 0.06, rim: [170, 180, 200], rimA: 0.2 }, (lon, lat, dx, dy, nz, diff, c) => {
+      let v = 0.52 + 0.7 * (alb(lon, lat) - 0.5) + 0.22 * (ridge(lon, lat) - 0.5);
+      for (const [x, y, r, young] of cr) {
+        const d = Math.hypot(dx - x * 0.85, dy - y * 0.85) / r;
+        if (d < 1.2) {
+          if (d < 0.92) v *= 0.62 + 0.38 * d * d;                                  // a dark floor
+          else v *= 1 + (young ? 0.4 : 0.12) * (1 - Math.abs(d - 1) * 5);           // a bright rim
+          if (young && d < 3.2 && d > 1.2) v *= 1 + 0.12 * (1 - (d - 1.2) / 2);     // ejecta
+        }
+      }
+      const col = waTint(base, waClamp(v, 0.15, 1.5)); c[0] = col[0]; c[1] = col[1]; c[2] = col[2];
+    });
+  },
+  ice(ctx, S, rnd) { // pale blue-white, cracked like a frozen sea, bright poles
+    const C = S / 2, R = 300, hue = waPick(rnd, [[200, 226, 244], [214, 232, 240], [186, 214, 246]]);
+    const alb = waFbm(rnd, 3, 5), cr1 = waFbm(rnd, 6, 4), cr2 = waFbm(rnd, 11, 3);
+    waHalo(ctx, C, R, '150,215,255', 0.42, 70);
+    waSphere(ctx, C, C, R, { L: WA_LIGHT, amb: 0.08, rim: [150, 215, 255], rimA: 0.65, term: [150, 190, 255], termA: 0.08 }, (lon, lat, dx, dy, nz, diff, c) => {
+      let col = waMix(hue, [236, 246, 255], waSmooth(0.35, 0.7, alb(lon, lat)));
+      const l1 = 1 - waSmooth(0, 0.035, Math.abs(cr1(lon, lat) - 0.5)), l2 = 1 - waSmooth(0, 0.02, Math.abs(cr2(lon, lat) - 0.5)); // thin lines where the noise crosses 0.5
+      col = waMix(col, [78, 128, 186], Math.max(l1 * 0.85, l2 * 0.55));
+      col = waMix(col, [250, 252, 255], waSmooth(0.74, 0.95, Math.abs(lat - 0.5) * 2) * 0.9); // polar caps
+      c[0] = col[0]; c[1] = col[1]; c[2] = col[2];
+    });
+  },
+  gas(ctx, S, rnd) { // bands of cloud, a storm, a thick bright limb
+    const C = S / 2, R = 300;
+    const pal = waPick(rnd, [
+      [[120, 62, 44], [178, 104, 64], [224, 172, 124], [150, 86, 56], [238, 208, 172]],      // rust and cream
+      [[40, 92, 112], [72, 142, 164], [152, 202, 208], [60, 112, 138], [214, 232, 226]],    // teal
+      [[96, 78, 120], [150, 126, 170], [214, 192, 214], [118, 96, 142], [236, 220, 230]],   // violet
+      [[134, 112, 60], [190, 164, 96], [232, 214, 156], [160, 132, 70], [242, 232, 196]]    // ochre
+    ]);
+    const band = waFbm(rnd, 2, 4), warp = waFbm(rnd, 4, 3), swirl = waFbm(rnd, 8, 3), n = 13 + Math.floor(rnd() * 9);
+    const storm = { lon: 0.3 + rnd() * 0.4, lat: 0.58 + rnd() * 0.14, rx: 0.07 + rnd() * 0.03, ry: 0.035 };
+    const rimRgb = waMix(pal[2], [255, 255, 255], 0.3).map(Math.round).join(',');
+    waHalo(ctx, C, R, rimRgb, 0.4, 80);
+    waSphere(ctx, C, C, R, { L: WA_LIGHT, amb: 0.08, rim: waMix(pal[2], [255, 255, 255], 0.3), rimA: 0.75, term: waMix(pal[3], [255, 140, 100], 0.4), termA: 0.1 }, (lon, lat, dx, dy, nz, diff, c) => {
+      const t = waClamp(0.5 + 0.5 * Math.sin((lat + (warp(lon, lat) - 0.5) * 0.09) * n + band(lon, lat) * 2.4 + swirl(lon * 2, lat * 6) * 0.9));
+      const k = t * (pal.length - 1), i = Math.min(pal.length - 2, Math.floor(k));
+      let col = waMix(pal[i], pal[i + 1], k - i);
+      const sd = Math.hypot((lon - storm.lon) / storm.rx, (lat - storm.lat) / storm.ry);
+      if (sd < 1.6) col = waMix(col, waMix(pal[0], [180, 60, 40], 0.5), (1 - waSmooth(0.7, 1.6, sd)) * 0.8);
+      c[0] = col[0]; c[1] = col[1]; c[2] = col[2];
+    });
+  },
+  lava(ctx, S, rnd) { // a black crust cut by glowing cracks that shine on the night side too
+    const C = S / 2, R = 300, crust = waPick(rnd, [[44, 30, 28], [36, 30, 34], [52, 34, 26]]);
+    const alb = waFbm(rnd, 4, 5), c1 = waFbm(rnd, 5, 5), c2 = waFbm(rnd, 9, 3), pool = waFbm(rnd, 3, 4);
+    waHalo(ctx, C, R, '255,110,50', 0.5, 84);
+    waSphere(ctx, C, C, R, { L: WA_LIGHT, amb: 0.1, rim: [255, 110, 50], rimA: 0.7, term: [255, 90, 40], termA: 0.16 }, (lon, lat, dx, dy, nz, diff, c) => {
+      const crack = Math.max(1 - waSmooth(0, 0.045, Math.abs(c1(lon, lat) - 0.5)), (1 - waSmooth(0, 0.025, Math.abs(c2(lon, lat) - 0.5))) * 0.6);
+      const sea = waSmooth(0.66, 0.78, pool(lon, lat));                                  // a few open lakes of lava
+      const glow = Math.max(crack, sea);
+      let col = waTint(crust, 0.7 + 0.8 * alb(lon, lat));
+      col = waMix(col, [255, 150, 50], glow * 0.95);
+      c[0] = col[0]; c[1] = col[1]; c[2] = col[2]; c[3] = glow * 0.9 * waSmooth(0.1, 0.4, nz);
+    });
+  },
+  ringed(ctx, S, rnd) { // a smaller pale giant with a wide ring system: the ring is drawn behind the planet, then in front
+    const C = S / 2, R = 206, tilt = (rnd() - 0.5) * 0.7, hue = waPick(rnd, [[[196, 176, 140], [226, 208, 170]], [[170, 180, 210], [214, 220, 238]], [[200, 160, 150], [232, 204, 190]]]);
+    const band = waFbm(rnd, 2, 4), warp = waFbm(rnd, 4, 3), ringBand = [];
+    for (let i = 0; i < 160; i++) ringBand.push(0.2 + 0.8 * waSmooth(0.15, 0.85, 0.5 + 0.5 * Math.sin(i * 0.43 + rnd() * 3) * rnd()));
+    const ring = front => {
+      ctx.save(); ctx.translate(C, C); ctx.rotate(tilt); ctx.scale(1, 0.26);
+      for (let r = 252, i = 0; r < 380; r += 1.7, i++) {
+        const gap = r > 318 && r < 330 ? 0.05 : r > 288 && r < 292 ? 0.3 : 1, f = (r - 252) / 128, a = ringBand[i % ringBand.length] * gap * (0.62 - 0.3 * f);
+        ctx.strokeStyle = r < 318 ? `rgba(${hue[1][0]},${hue[1][1]},${hue[1][2]},${a})` : `rgba(190,200,224,${a})`; ctx.lineWidth = 2.6;
+        ctx.beginPath(); ctx.arc(0, 0, r, front ? 0 : Math.PI, front ? Math.PI : Math.PI * 2); ctx.stroke();
+      }
+      ctx.restore();
+    };
+    waHalo(ctx, C, R, '230,220,200', 0.18, 50);
+    ring(false);
+    waSphere(ctx, C, C, R, { L: WA_LIGHT, amb: 0.1, rim: [220, 212, 200], rimA: 0.6, term: [255, 160, 120], termA: 0.1 }, (lon, lat, dx, dy, nz, diff, c) => {
+      const t = waClamp(0.5 + 0.5 * Math.sin((lat + (warp(lon, lat) - 0.5) * 0.08) * 19 + band(lon, lat) * 2));
+      const col = waMix(hue[0], hue[1], t); c[0] = col[0]; c[1] = col[1]; c[2] = col[2];
+    });
+    ring(true);
+  }
+};
+
+function planetTexture(sc, kind, seed) {
+  if (!PLANET_KINDS.includes(kind)) kind = 'rock';
+  seed = (seed | 0) || 1;
+  const key = 'planet-' + kind + '-' + seed, at = waPlanetCache.indexOf(key);
+  if (at >= 0) waPlanetCache.splice(at, 1);
+  if (at >= 0 && sc.textures.exists(key)) { waPlanetCache.push(key); return key; }
+  waCanvas(sc, key, 800, 800, (ctx, S) => WA_PLANETS[kind](ctx, S, waRng(Math.imul(seed, 2654435761) + PLANET_KINDS.indexOf(kind) * 104729)));
+  waPlanetCache.push(key);
+  while (waPlanetCache.length > PLANET_CACHE_MAX) sc.textures.remove(waPlanetCache.shift());
+  return key;
+}
+
+// star types: the colour of the sun in the sky and of the light on everything. size scales the sun image (1 is Halcyon's 'sun'),
+// tint is the colour the system's nebula layers are tinted with (Image.setTint) so a red dwarf's sky is warm and a blue star's is cold.
+const STAR_TYPES = {
+  M: { name: 'red dwarf',      core: [255, 226, 190], mid: [255, 150, 100], corona: [255, 96, 64],   rays: 0.9, size: 0.8,  tint: 0xff9a80 },
+  K: { name: 'orange dwarf',   core: [255, 240, 200], mid: [255, 196, 120], corona: [255, 150, 70],  rays: 1.0, size: 0.95, tint: 0xffbf85 },
+  G: { name: 'yellow star',    core: [255, 253, 244], mid: [255, 234, 176], corona: [255, 205, 120], rays: 1.0, size: 1.0,  tint: 0xfff0c8 },
+  F: { name: 'white star',     core: [255, 255, 255], mid: [236, 244, 255], corona: [205, 228, 255], rays: 1.1, size: 1.1,  tint: 0xe4eeff },
+  A: { name: 'blue-white star', core: [244, 250, 255], mid: [170, 206, 255], corona: [110, 160, 255], rays: 1.3, size: 1.2,  tint: 0xa8c8ff }
+};
+function starTexture(sc, type) {
+  const st = STAR_TYPES[type] || STAR_TYPES.G, key = 'star-' + (STAR_TYPES[type] ? type : 'G');
+  if (sc.textures.exists(key)) return key;
+  waCanvas(sc, key, 512, 512, (ctx, S) => { // the same recipe as 'sun': a wide corona, rays, a hot core
+    const C = S / 2, rgb = a => a.join(','), r2 = waRng('MKGFA'.indexOf(type) * 131 + 9);
+    waGlow(ctx, C, C, C, rgb(st.corona), 0.5, 0.2);
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 30; i++) {
+      const a = r2() * Math.PI * 2, len = (130 + r2() * 110) * st.rays, w = 2 + r2() * 5;
+      ctx.save(); ctx.translate(C, C); ctx.rotate(a);
+      const lg = ctx.createLinearGradient(30, 0, len, 0); lg.addColorStop(0, `rgba(${rgb(st.mid)},0.32)`); lg.addColorStop(1, `rgba(${rgb(st.corona)},0)`);
+      ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(30, -w); ctx.lineTo(len, 0); ctx.lineTo(30, w); ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    const g = ctx.createRadialGradient(C, C, 0, C, C, 46);
+    g.addColorStop(0, `rgb(${rgb(st.core)})`); g.addColorStop(0.55, `rgb(${rgb(st.mid)})`); g.addColorStop(0.9, `rgb(${rgb(st.corona)})`); g.addColorStop(1, `rgba(${rgb(st.corona)},0)`);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(C, C, 48, 0, 7); ctx.fill();
+  });
+  return key;
+}
+
 // ---------- asteroids and ore ----------
 function waAsteroid(ctx, rnd) { // a 64 x 64 boulder: lumpy outline, cratered, with glowing ore veins
   const N = 16, pts = [], ph = [rnd() * 6.28, rnd() * 6.28, rnd() * 6.28];
