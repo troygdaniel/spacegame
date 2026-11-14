@@ -77,6 +77,8 @@ export const PACE = {
   reaverSec: 40,       // the Reaver's charge and spread, on top of killing it and its two escorts
   oreSec: 3.5,         // per ore: line up a rock, fly through the pod, collect it
   pumpSec: 10,         // refuel at the fuel pump before a jump
+  arriveSec: 35,       // after a jump: fly from the arrival point to the station (cruise) and dock
+  leaveSec: 25,        // before a jump: undock and fly clear of the station to where the jump can start
   loadSec: 30,         // loading a haul at one end and unloading at the other
   surveySec: 150,      // a survey call: fly to the site and scan it
   bigWreckSec: 180,    // the 800 cr wreck at Lethe: its scavenger drones and the salvage
@@ -101,6 +103,8 @@ export const SYSTEM_ECON = {
 // the rule behind pay: 1 + 0.15 a danger step above 1, and a hub pays 0.1 more for its better board (Meridian). Parts: hub 0.9, an outpost far from
 // a yard 1.1, the nest 1.25 (UNIVERSE.md). Repair: the nest gouges (1.5), everywhere else the bay charges the same half credit.
 // planned new calls (UNIVERSE.md section 11): not built, priced here so E4 can see them next to the built ones
+// what this card proposes instead (docs/ECONOMY.md 8): about 1.3 times the rescue an hour, the fight and survey calls a little above
+export const PROPOSED_CALLS = { courierBase: 300, courierPerLy: 20, haulPerOreUnitPer5Ly: 11, survey: 900, salvageBig: 800 };
 const NEW_CALLS = { courierBase: 200, courierPerLy: 90, haulPerOreUnitPer5Ly: 20, survey: 600, salvageBig: 800 };
 
 // ---------------------------------------------------------------- helpers
@@ -201,6 +205,8 @@ function tIncome(g) {
   });
   table('INCOME: each loop on the starter Wren with no parts, at Halcyon (DATA rewards and bounties, PACE times)', ['loop', 'credits a run', 'time a run', 'cr/h flat out', 'cr/h at ' + PACE.efficiency * 100 + '%'], rows,
     `  mining: ${r0(L.mining.ore)} ore a run (the hold is ${stats(g, kit).hold}, the Kepler belt holds ${r1(L.mining.beltOre)}); free hunting is ${L.hunt.spawnLimited ? 'limited by the spawner' : 'limited by how fast you kill'}.`);
+  const typ = ['rescue', 'escort', 'patrol', 'bounty'].reduce((a, k) => a + perHour(L[k], 1), 0) / 4;
+  console.log(`  typical call (the mean of rescue, escort, patrol and bounty) flat out: ${money(typ)} cr/h. To read a real session: efficiency = credits an hour you really earned / ${r0(typ)}, then run: node tools/economy-sim.mjs tune --eff <that>.`);
   // what each ship earns on the same loops
   const ids = Object.keys(g.ships);
   table('INCOME by ship (cr/h flat out, no parts): a ship changes travel time, kill time and the hold', ['ship', ...Object.keys(names).map(k => k)],
@@ -304,16 +310,17 @@ function tPacing(g) {
 function tPlanned(g) {
   const wren = { model: 'wren', parts: {} }, rescue = loops(g, wren).rescue, base = rescue.credits / rescue.sec * 3600;
   const hyper = ly => Math.min(30, Math.max(6, ly * PINS.hyperSecPerLy.value)); // hyperspace.js: seconds in the tunnel
+  const trip = hop => PACE.dockSec + PACE.pumpSec + PACE.leaveSec + hyper(hop) + PACE.arriveSec; // one call from the board to the pay: dock, pump, fly clear, tunnel, arrive
   const ly = 6.3, rows = [];
   const add = (name, pay, sec) => rows.push([name, money(pay), r0(sec) + ' s', money(pay / sec * 3600), r1(pay / sec * 3600 / base) + 'x', money(base * sec / 3600), money(base * 1.3 * sec / 3600)]);
   add('Rescue (built, the baseline)', rescue.credits, rescue.sec);
-  add('Courier, ' + ly + ' ly', NEW_CALLS.courierBase + NEW_CALLS.courierPerLy * ly, PACE.dockSec + PACE.pumpSec + hyper(ly));
-  add('Courier, 12 ly (Kite)', NEW_CALLS.courierBase + NEW_CALLS.courierPerLy * 12, PACE.dockSec + PACE.pumpSec + hyper(12));
-  add('Haul, Ox full hold, ' + ly + ' ly', NEW_CALLS.haulPerOreUnitPer5Ly * g.ships.ox.cargo * ly / 5, PACE.dockSec + PACE.loadSec + PACE.pumpSec + hyper(ly));
-  add('Survey', NEW_CALLS.survey, PACE.dockSec + PACE.pumpSec + hyper(ly) + PACE.surveySec);
-  add('Big wreck at Lethe', NEW_CALLS.salvageBig, PACE.dockSec + 2 * (PACE.pumpSec + hyper(7.4)) + PACE.bigWreckSec);
+  add('Courier, ' + ly + ' ly', NEW_CALLS.courierBase + NEW_CALLS.courierPerLy * ly, trip(ly));
+  add('Courier, 12 ly (Kite)', NEW_CALLS.courierBase + NEW_CALLS.courierPerLy * 12, trip(12));
+  add('Haul, Ox full hold, ' + ly + ' ly', NEW_CALLS.haulPerOreUnitPer5Ly * g.ships.ox.cargo * ly / 5, trip(ly) + PACE.loadSec);
+  add('Survey', NEW_CALLS.survey, trip(ly) + PACE.surveySec);
+  add('Big wreck at Lethe (there and back)', NEW_CALLS.salvageBig, trip(7.4) + trip(7.4) - PACE.dockSec + PACE.bigWreckSec);
   table('PLANNED calls against the Rescue (UNIVERSE.md 11; PACE times): pay as designed, an hour at that pay, against the rescue, and the pay that would match it', ['call', 'pay', 'time', 'cr/h flat', 'vs rescue', 'pay for x1.0', 'pay for x1.3'], rows,
-    '  Courier and haul have no ground leg and no fight, only a short tunnel, so at the design pay they earn four to six times the rescue an hour; survey and the big wreck sit level with it.');
+    '  Courier and haul have no ground leg and no fight, only a short tunnel, so at the design pay they earn two to three times the rescue an hour; survey and the big wreck, with a long flight and a fight, earn less than it.');
 }
 
 // ship prices that put the first new ship at about an hour: the same curve scaled, and a flatter one (the full fleet would otherwise take about nine hours
@@ -344,11 +351,11 @@ function tSystems(g) {
   const wren = g.ships.wren;
   const hrows = hops.map(([a, b]) => {
     const ly = hypot(SYSTEM_ECON[a].ly, SYSTEM_ECON[b].ly), fuel = ly * wren.fuelPerLy, price = SYSTEM_ECON[a].fuel || SYSTEM_ECON[b].fuel || 0;
-    const courier = NEW_CALLS.courierBase + NEW_CALLS.courierPerLy * ly;
-    return [SYSTEM_ECON[a].name + ' to ' + SYSTEM_ECON[b].name, r1(ly), ly > wren.range ? 'no (needs ' + r1(ly) + ' ly)' : 'yes', r1(fuel), r0(fuel * price), r0(courier), r0(fuel * price / courier * 100) + '%'];
+    const courier = NEW_CALLS.courierBase + NEW_CALLS.courierPerLy * ly, mine = PROPOSED_CALLS.courierBase + PROPOSED_CALLS.courierPerLy * ly;
+    return [SYSTEM_ECON[a].name + ' to ' + SYSTEM_ECON[b].name, r1(ly), ly > wren.range ? 'no (needs ' + r1(ly) + ' ly)' : 'yes', r1(fuel), r0(fuel * price), r0(courier), r0(fuel * price / courier * 100) + '%', r0(mine), r0(fuel * price / mine * 100) + '%'];
   });
-  table('JUMPS with the Wren (8 ly range, 1 fuel a ly): fuel burned, its cost at the system you leave, a courier call for the same hop, fuel as a share of it',
-    ['hop', 'ly', 'in range', 'fuel', 'fuel cr', 'courier pays', 'fuel share'], hrows);
+  table('JUMPS with the Wren (8 ly range, 1 fuel a ly): fuel burned, its cost at the system you leave, a courier call for the same hop at the design pay and at the proposed pay, and fuel as a share of each',
+    ['hop', 'ly', 'in range', 'fuel', 'fuel cr', 'courier (design)', 'fuel share', 'courier (proposed)', 'fuel share'], hrows);
   const hold = ['wren', 'kite', 'ox', 'pathfinder'].map(id => { const m = g.ships[id]; return [m.name, m.cargo, ...['halcyon', 'meridian', 'brass', 'ember'].map(s => money(m.cargo * SYSTEM_ECON[s].ore))]; });
   table('ORE: a full hold sold at each ore system (credits; a Kepler-size belt holds only about ' + r1(beltOre(g, 15).ore) + ' ore, so a hold above that is not filled in one flight)', ['ship', 'hold', 'Halcyon 20', 'Meridian 26', 'Brass Reach 30', 'Ember 28'], hold);
 }
