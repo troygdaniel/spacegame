@@ -30,6 +30,7 @@
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #   4o. tests/chat.mjs: the NPC chat adapter and the chat box in the bar with a mocked fetch: no key means no call; OpenAI and Anthropic get the right URL,
 #   4t. tests/shipmodels.mjs: the six ship models against docs/UNIVERSE.md 6.1, and the Wren's speed, thrust, turn, boost and hull in the real Space scene
+#   4y. tests/ribbons.mjs: the ship ribbon's bounds (no line over 24 px, no bar across a teleport, no fade over 1, nothing non-finite)
 #   4u. tests/parts.mjs: the five ship parts (shields, weapons, engine, tank, cargo): tables, every effect, shields in flight, shot rate and damage, the shop's five cards with fit and stock rules, the save
 #   4w. tests/fleet.mjs: buy, sell, switch, rename and transfer ships, the yard and the prices, per-ship state through a save, and dying (docs/UNIVERSE.md 6.3)
 #       header and body shape; the key is only ever in its header; 401 switches chat off; 429 waits; the setup panel saves a key
@@ -122,6 +123,8 @@ echo "== 4w. the fleet: buy, sell, switch, rename, transfer (tests/fleet.mjs)"
 if node tests/fleet.mjs; then :; else fail=1; fi
 echo "== 4x. the proof set in markdown: files over their defaults change nothing, edits change exactly what they say (tests/contentproof.mjs)"
 if node tests/contentproof.mjs; then :; else fail=1; fi
+echo "== 4y. ship ribbon bounds: a teleport, a clock that ran backwards, a huge scale and a NaN never draw a bar or a square (tests/ribbons.mjs)"
+if node tests/ribbons.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
