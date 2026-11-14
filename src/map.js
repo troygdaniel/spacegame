@@ -61,6 +61,9 @@ class Overlay extends Phaser.Scene {
     this.tObjH = m(mapText(this, SX, 250, 'OBJECTIVE', 13, '#5b7a92'));
     this.tObj = m(mapText(this, SX, 270, '', 18, '#ffb454', 470));
     this.tLegH = m(mapText(this, SX, 352, 'LEGEND', 13, '#5b7a92'));
+    // the rest of the system: planets, belts and scenery besides the ones the legend names, each with its name on the map (far space, src/cruise.js)
+    this.far = sysBodies().filter(b => (b.type === 'planet' && b !== D.pl) || b.type === 'belt' || (b.type === 'scenery' && b !== D.op))
+      .map(b => ({ b, lb: m(mapText(this, 0, 0, b.x < 8000 && b.y < 8000 ? '' : b.name, 12, '#9fb4c9').setOrigin(0.5, 1)) })); // the old cluster is crowded enough: no label for what is inside it
     this.legend = [
       ['you', 'ship'], [D.st.name, 'station'], [D.op ? D.op.name : 'outpost', 'outpost'], [D.pl.name, 'planet'], ['objective', 'target'],
       ['drone in sensor range', 'live'], ['drone, where you last saw it', 'stale'], ['wanted pirate', 'wanted'], ['salvage site', 'poi']
@@ -117,6 +120,7 @@ class Overlay extends Phaser.Scene {
   }
 
   objective(S) {
+    if (S.live && S.sp.cr && S.sp.cr.target) return S.sp.cr.target; // a target picked in the nav list (src/cruise.js) comes first
     if (S.live && typeof missionTarget === 'function') { try { return missionTarget(S.sp); } catch (e) { /* fall through */ } }
     if (typeof missionActive === 'function') {
       if (missionActive('rescue')) return { x: S.pl.x, y: S.pl.y, name: this.D.pl.name };
@@ -140,13 +144,14 @@ class Overlay extends Phaser.Scene {
     g.clear();
     g.fillStyle(0x03070f, 1); g.fillRect(MX, MY, MS, MS);
     g.lineStyle(1, CYAN, 0.12);
-    for (let i = 1; i < 8; i++) { g.lineBetween(X(i * 1000), MY, X(i * 1000), MY + MS); g.lineBetween(MX, Y(i * 1000), MX + MS, Y(i * 1000)); }
+    const gs = S.ws / 8; // eight grid cells across, whatever the size of the system
+    for (let i = 1; i < 8; i++) { g.lineBetween(X(i * gs), MY, X(i * gs), MY + MS); g.lineBetween(MX, Y(i * gs), MX + MS, Y(i * gs)); }
     // a scan band drifts down the map; the frame glows, has ticks on the grid lines and amber brackets outside its corners
     const sy0 = MY + 30 + ((time / 4200) % 1) * (MS - 30);
     g.fillGradientStyle(CYAN, CYAN, CYAN, CYAN, 0, 0, 0.09, 0.09); g.fillRect(MX, sy0 - 30, MS, 30);
     hudGlowPath(g, [[MX, MY], [MX + MS, MY], [MX + MS, MY + MS], [MX, MY + MS]], CYAN, 0.85, true, 1.25);
     g.lineStyle(1, CYAN, 0.55);
-    for (let i = 1; i < 8; i++) { g.lineBetween(X(i * 1000), MY - 6, X(i * 1000), MY); g.lineBetween(MX - 6, Y(i * 1000), MX, Y(i * 1000)); }
+    for (let i = 1; i < 8; i++) { g.lineBetween(X(i * gs), MY - 6, X(i * gs), MY); g.lineBetween(MX - 6, Y(i * gs), MX, Y(i * gs)); }
     g.lineStyle(3, AMBER, 1);
     [[0, 0, 1, 1], [MS, 0, -1, 1], [0, MS, 1, -1], [MS, MS, -1, -1]].forEach(([ox, oy, sx, sy]) => {
       const x = MX + ox - sx * 6, y = MY + oy - sy * 6;
@@ -166,6 +171,15 @@ class Overlay extends Phaser.Scene {
     if (this.D.op) { // Kestrel Outpost (src/stationart.js): scenery, no docking, but worth finding
       const ox = X(this.D.op.x), oy = Y(this.D.op.y); mapHex(g, ox, oy, 8); this.lbOutpost.setPosition(ox, oy - 12);
     } else this.lbOutpost.setVisible(false);
+
+    // belts, far planets and far scenery: a ring for a belt, a smaller disc for a planet, a small diamond for a wreck
+    this.far.forEach(({ b, lb }) => {
+      const fx = X(b.x), fy = Y(b.y);
+      if (b.type === 'belt') { g.lineStyle(1, 0x9fb4c9, 0.6); g.strokeCircle(fx, fy, Math.max(4, b.r * sc)); }
+      else if (b.type === 'planet') { g.fillStyle(AMBER, 0.55); g.fillCircle(fx, fy, Math.max(4, b.r * sc)); }
+      else { g.lineStyle(1, 0x9aa7b3, 0.9); g.strokePoints([{ x: fx, y: fy - 5 }, { x: fx + 5, y: fy }, { x: fx, y: fy + 5 }, { x: fx - 5, y: fy }], true); }
+      lb.setPosition(fx, fy - Math.max(4, b.type === 'scenery' ? 5 : b.r * sc) - 3);
+    });
 
     // the Perseus gate, only while an escort is on
     const gate = typeof missionActive === 'function' && missionActive('escort') && this.D.gate;

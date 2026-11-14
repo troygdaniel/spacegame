@@ -1,0 +1,147 @@
+// Cruise: in-system fast travel (src/cruise.js, docs/UNIVERSE.md 2.2). Run: node tests/cruise.mjs
+// The game clock is stepped by hand (16.67 ms a frame, see cdp.mjs clock()), so the speeds, times and distances below are exact
+// whatever the load on the Mac. Checks: Halcyon is 36000 px with its old cluster where it was; the nav list; the three locks;
+// the speed profile (6000 px/s, stops about 900 px out under 150 px/s, never inside a planet); S cancels; A and D nudge; a pirate
+// ahead ends it; rocks and bullets do not touch a cruising ship; the look; the Tab map; the frame cost. Saves tests/out/cruise-*.png.
+import { launch, sleep } from './cdp.mjs';
+
+const SP = "game.scene.getScene('Space')";
+let bad = 0;
+const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
+
+const t = await launch('#space');
+try {
+  await t.waitFor(`!!(window.game && game.scene.isActive('Space'))`, 30000, 'Space active');
+  await sleep(1500); await t.ev('G.guideDone = true');
+  await t.clock();
+  await t.ev(`(() => { window.__toasts = []; const orig = toast; toast = (s, msg, c) => { window.__toasts.push(msg); return orig(s, msg, c); }; })()`);
+  const E = x => t.ev(x);
+  const tick = async n => { for (let left = n; left > 0; left -= 20) await E(`tick(${Math.min(20, left)})`); }; // short calls: a busy Mac can take seconds a frame, and one DevTools call times out
+  // a quiet sky and a ship parked where the test says; the toast list starts empty
+  const park = (x, y) => E(`(() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.eb.getChildren().forEach(b => b.disableBody(true, true));
+    if (s.cr.active) cruiseEnd(s, 'quiet'); s.cr.target = null; s.ship.setPosition(${x}, ${y}); s.ship.setVelocity(0, 0); s.ship.rotation = 0; s.ship.body.setAcceleration(0, 0);
+    s.cameras.main.centerOn(${x}, ${y}); (s.toasts || []).forEach(o => { o.t.destroy(); o.bg.destroy(); o.tab.destroy(); }); s.toasts = []; window.__toasts = []; G.hull = G.maxHull; s.ironUntil = 0; })()`);
+  const target = name => E(`(() => { const s = ${SP}, b = cruiseKnown(s).find(b => b.name === '${name}'); cruisePick(s, b); return b.dist; })()`);
+  const said = () => E('JSON.stringify(window.__toasts)').then(JSON.parse);
+  // fly a cruise to its end, sampling every 6 frames: speed, distance to the target, the heading
+  const fly = async (maxFrames = 900) => {
+    const log = []; let i = 0;
+    for (; i < maxFrames; i += 6) {
+      await tick(6);
+      const r = JSON.parse(await E(`(() => { const s = ${SP}, t = s.cr.target; return JSON.stringify({ on: s.cruising, v: Math.round(s.ship.body.speed), d: t ? Math.round(Math.hypot(t.x - s.ship.x, t.y - s.ship.y)) : -1, z: +s.cameras.main.zoom.toFixed(3), x: Math.round(s.ship.x), y: Math.round(s.ship.y) }); })()`));
+      log.push(r); if (!r.on) break;
+    }
+    return { log, frames: i + 6, seconds: (i + 6) * 16.67 / 1000, end: log[log.length - 1] };
+  };
+
+  // ---- the world ----
+  check('Halcyon is 36000 px: physics world and camera bounds', await E(`${SP}.WS === 36000 && ${SP}.physics.world.bounds.width === 36000 && ${SP}.cameras.main.getBounds().width === 36000`));
+  check('the old cluster is where it was: station, Kepler-4b, belt, outpost, a wreck', await E(`(() => { const p = id => sysBodies().find(b => b.id === id); return [['halcyon-station', 4000, 4000], ['kepler-4b', 6200, 2000], ['kepler-belt', 5500, 1300], ['kestrel-outpost', 2000, 5800], ['wreck-se', 6900, 6500]].every(([id, x, y]) => p(id).x === x && p(id).y === y); })()`));
+  check('the far bodies are drawn: Kepler-4c and Tern from planetTexture, the dead station from stationLookFx',
+    await E(`game.textures.exists('planet-rock-3') && game.textures.exists('planet-gas-2') && game.textures.exists('sl-derelict')`));
+
+  // ---- the nav list ----
+  const known = JSON.parse(await E(`JSON.stringify(cruiseKnown(${SP}).map(b => [b.name, b.type, Math.round(b.dist)]))`));
+  check('the nav list knows 8 bodies at the start: stations, planets, belts, scenery', known.length === 8, known.map(k => k[0]).join(', '));
+  check('the nav list is sorted nearest first', known.every((k, i) => !i || known[i - 1][2] <= k[2]));
+  check('a salvage site is not on the list until you find it, then it is', await E(`(() => { const s = ${SP}, n0 = cruiseKnown(s).length; G.poi['wreck-nw'] = 1; const n1 = cruiseKnown(s).length; delete G.poi['wreck-nw']; return n1 === n0 + 1; })()`));
+  check('cruiseEta: a 30000 px leg takes about 6.5 s, a 3000 px leg about 2 s', await E('Math.abs(cruiseEta(30000) - 6.5) < 0.9 && cruiseEta(3000) > 1.2 && cruiseEta(3000) < 3'), await E('cruiseEta(30000).toFixed(2) + " / " + cruiseEta(3000).toFixed(2)'));
+  await park(9000, 9000);
+  await E(`(() => { const s = ${SP}; cruiseNavOpen(s); cruiseNavDraw(s); })()`); await tick(2);
+  check('the nav panel is up with a row per body and the nearest selected', await E(`(() => { const c = ${SP}.cr; return c.ui.box.visible && c.rows.filter(r => r.name.visible).length === 8 && c.rows[0].hl.visible && c.rows[0].name.text === 'Halcyon Station'; })()`));
+  if (!(await t.shot('cruise-nav'))) check('screenshot of the nav list', false);
+  // keys: S moves down, Enter picks, the list closes and the objective arrow follows
+  await E(`(() => { const k = ${SP}.cr.k; k.S._justDown = true; })()`); // JustDown reads this flag
+  await tick(2);
+  check('S moves the selection down a row', (await E(`${SP}.cr.sel`)) === 1);
+  await E(`${SP}.cr.k.ENTER._justDown = true`); await tick(2);
+  check('Enter picks the selected body as the target and closes the list', await E(`(() => { const c = ${SP}.cr; return !c.navOpen && !c.ui.box.visible && c.target && c.target.name === 'Kepler-4b'; })()`));
+  check('the amber objective arrow points at the nav target, the radar arrow stays on the mission',
+    await E(`(() => { const s = ${SP}; return hudObjective(s, 'Space').name === 'KEPLER-4B' && hudObjective(s, 'Space', true).name !== undefined && s.cr.target !== null; })()`));
+  await E(`(() => { const s = ${SP}; cruiseNavOpen(s); cruiseNavDraw(s); })()`); await tick(2);
+  await E(`${SP}.cr.k.X._justDown = true`); await tick(2);
+  check('X in the nav list clears the target', (await E(`${SP}.cr.target`)) === null);
+  await E(`(() => { cruiseNavClose(${SP}); })()`);
+
+  // ---- the locks ----
+  await park(9000, 9000); await E(`${SP}.cr.k.C._justDown = true`); await tick(2);
+  check('C with no target says so and does not engage', !(await E(`${SP}.cruising`)) && (await said()).some(m => /No destination/.test(m)));
+  await park(9000, 9000); await target('Kepler-4c'); await park(9000, 9000);
+  await E(`(() => { const s = ${SP}; cruisePick(s, cruiseKnown(s).find(b => b.name === 'Kepler-4c')); s.ship.setPosition(4000 + 1800, 4000); cruiseEngage(s); })()`);
+  check('inside 2500 px of the station: too close to the mass', !(await E(`${SP}.cruising`)) && (await said()).some(m => /Too close to the mass/.test(m)), JSON.stringify(await said()));
+  await park(9000, 9000);
+  await E(`(() => { const s = ${SP}; cruisePick(s, cruiseKnown(s).find(b => b.name === 'Kepler-4c')); spawnPirate(s, s.ship.x + 1200, s.ship.y, 'drone'); cruiseEngage(s); })()`);
+  check('a hostile within 1500 px: cruise is locked', !(await E(`${SP}.cruising`)) && (await said()).some(m => /Hostiles near/.test(m)), JSON.stringify(await said()));
+  await park(9000, 9000);
+  await E(`(() => { const s = ${SP}; cruisePick(s, cruiseKnown(s).find(b => b.name === 'Slag Belt')); s.ship.setPosition(12500, 22000 - 2000); cruiseEngage(s); })()`);
+  check('a target 1100 px away is just flown to', !(await E(`${SP}.cruising`)) && (await said()).some(m => /is close: fly there/.test(m)));
+
+  // ---- a clean cruise: Kepler-4c, 12700 px away ----
+  await park(9000, 9000); const dist = await target('Kepler-4c'); const eta = await E(`cruiseEta(${dist})`);
+  await E(`${SP}.cr.k.C._justDown = true`); await tick(1);
+  check('C engages cruise toward the target', await E(`${SP}.cruising === true`));
+  let mid = null; const samples = [];
+  for (let i = 0; i < 8; i++) { await tick(18); const r = JSON.parse(await E(`(() => { const s = ${SP}, c = s.cr; return JSON.stringify({ on: s.cruising, v: Math.round(s.ship.body.speed), z: +s.cameras.main.zoom.toFixed(3), vig: +c.vig.alpha.toFixed(2), streaks: c.fx.commandBuffer.length, read: c.read.visible ? c.read.text : '', lbl: s._hud.t.g2 ? 1 : 0 }); })()`)); samples.push(r); if (r.v > 5000 && !mid) mid = r; }
+  check('it speeds up to 6000 px/s and no further', samples.some(r => r.v >= 5800) && samples.every(r => r.v <= 6001), samples.map(r => r.v).join(' '));
+  check('the look at speed: zoom 0.85, the cyan vignette, speed streaks, the CRUISE readout', mid && mid.z <= 0.87 && mid.vig > 0.3 && mid.streaks > 50 && /^CRUISE  KEPLER-4C/.test(mid.read), JSON.stringify(mid));
+  if (mid && !(await t.shot('cruise-flying'))) check('screenshot of cruise', false);
+  const run = await fly(); const end = run.end;
+  check('it drops out about 900 px from the target', end && !end.on && end.d > 850 && end.d < 1000, 'ended ' + (end && end.d) + ' px out');
+  check('it arrives under 150 px/s and does not fly through the body', end && end.v <= 150 && run.log.every(r => r.d > 700), 'v ' + (end && end.v));
+  check('the whole leg takes about as long as cruiseEta says', Math.abs(18 * 8 * 16.67 / 1000 + run.seconds - eta) < 1.6, `${(18 * 8 * 16.67 / 1000 + run.seconds).toFixed(1)} s against ${eta.toFixed(1)} s`);
+  await tick(60);
+  check('the camera zoom comes back to 1 and the vignette fades', await E(`${SP}.cameras.main.zoom === 1 && ${SP}.cr.vig.visible === false`));
+  check('arrival is announced and the ship flies on locally', (await said()).some(m => /Cruise ended/.test(m)) && (await E(`${SP}.ship.body.maxSpeed <= 1200`)));
+  if (!(await t.shot('cruise-arrived'))) check('screenshot after arrival', false);
+
+  // ---- a big planet: the speed limit stops you short of it ----
+  await park(10000, 20000); await target('Tern'); await E(`${SP}.cr.k.C._justDown = true`); await tick(1);
+  const big = await fly(1200);
+  check('cruise to Tern (a gas giant, radius 440) stops outside it', !big.end.on && big.end.d > 850 && big.log.every(r => r.d > 440 + 200), 'ended ' + big.end.d + ' px out');
+
+  // ---- cancel and nudge ----
+  await park(9000, 9000); await target('Kepler-4c'); await E(`${SP}.cr.k.C._justDown = true`); await tick(40);
+  await E(`${SP}.k.S.isDown = true`); await tick(30); await E(`${SP}.k.S.isDown = false`);
+  check('S cancels: cruise ends at local speed and says so', await E(`!${SP}.cruising && ${SP}.ship.body.speed <= 600`) && (await said()).some(m => /Cruise cancelled/.test(m)), 'v ' + await E(`Math.round(${SP}.ship.body.speed)`));
+  await park(9000, 9000); await target('Kepler-4c'); await E(`${SP}.cr.k.C._justDown = true`); await tick(30);
+  await E(`${SP}.k.D.isDown = true`); await tick(24); const nudged = await E(`${SP}.cr.nudge`); await E(`${SP}.k.D.isDown = false`);
+  check('D nudges the heading, and it is limited', nudged > 0.1 && nudged <= 0.5001, 'nudge ' + nudged.toFixed(2));
+  await tick(90);
+  check('the nudge fades and cruise still arrives', !(await E(`${SP}.cruising`)) || (await fly(900)).end.d < 1100);
+
+  // ---- trouble ----
+  await park(9000, 9000); await target('Kepler-4c'); await E(`${SP}.cr.k.C._justDown = true`); await tick(30);
+  await E(`(() => { const s = ${SP}, r = s.ship.rotation; spawnPirate(s, s.ship.x + Math.cos(r) * 700, s.ship.y + Math.sin(r) * 700, 'raider'); })()`); await tick(6);
+  check('a pirate dead ahead ends cruise: contact ahead', await E(`!${SP}.cruising`) && (await said()).some(m => /Contact ahead/.test(m)), 'v ' + await E(`Math.round(${SP}.ship.body.speed)`));
+  // rocks and bullets: through the Slag Belt at full speed
+  await park(9000, 22000); await target('Tern'); await E(`${SP}.cr.k.C._justDown = true`); await tick(1);
+  const before = await E(`${SP}.ast.rocks.countActive()`);
+  let minV = 1e9, passed = false;
+  for (let i = 0; i < 60; i++) { await tick(6); const r = JSON.parse(await E(`JSON.stringify({ x: ${SP}.ship.x, v: ${SP}.ship.body.speed, on: ${SP}.cruising })`)); if (r.x > 11500 && r.x < 13500) { passed = true; minV = Math.min(minV, r.v); } if (!r.on) break; }
+  check('cruising through the Slag Belt: no rock slows the ship and none breaks', passed && minV > 3500 && (await E(`${SP}.ast.rocks.countActive()`)) === before && (await E(`${SP}.ast.bumpAt`)) === 0, `slowest ${Math.round(minV)} px/s`);
+  await park(9000, 9000); await target('Kepler-4c'); await E(`${SP}.cr.k.C._justDown = true`); await tick(40);
+  const hull0 = await E('G.hull'); await E(`(() => { const s = ${SP}, b = s.eb.get(s.ship.x, s.ship.y); b.enableBody(true, s.ship.x, s.ship.y, true, true); b.dmg = 20; b.born = s.time.now; })()`); await tick(4);
+  check('an enemy bullet on a cruising ship does nothing', (await E('G.hull')) === hull0 && await E(`${SP}.cruising`));
+  check('no pirates spawn during cruise', await E(`(() => { const s = ${SP}; return s.enemies.countActive() === 0; })()`));
+
+  // ---- the Tab map knows the far bodies ----
+  await park(9000, 9000);
+  await E(`game.scene.start('Overlay', { from: 'Space', mode: 'map' })`); await tick(4);
+  const mp = JSON.parse(await E(`JSON.stringify({ far: game.scene.getScene('Overlay').far.map(f => f.b.name), shown: game.scene.getScene('Overlay').far.every(f => f.lb.visible) })`));
+  check('the Tab map has the grid of a 36000 system and labels Kepler-4c, Slag Belt, Tern, the dead station', mp.far.length === 5 && ['Kepler-4c', 'Slag Belt', 'Tern', 'Dead station'].every(n => mp.far.includes(n)) && mp.shown, mp.far.join(', '));
+  await tick(2); if (!(await t.shot('cruise-map'))) check('screenshot of the map', false);
+  await E(`(() => { game.scene.stop('Overlay'); game.scene.resume('Space'); })()`);
+
+  // ---- frame cost: the same 60 steps parked, flying locally, and cruising ----
+  await park(9000, 9000);
+  const cost = async setup => { await setup(); const t0 = Date.now(); await tick(60); return (Date.now() - t0) / 60; };
+  const idle = await cost(() => park(9000, 9000));
+  const local = await cost(async () => { await park(9000, 9000); await E(`${SP}.k.W.isDown = true`); });
+  await E(`${SP}.k.W.isDown = false`);
+  const cruise = await cost(async () => { await park(9000, 9000); await target('Tern'); await E(`${SP}.cr.k.C._justDown = true`); await tick(1); });
+  console.log(`  info  frame cost in headless software GL: parked ${idle.toFixed(1)} ms, local flight ${local.toFixed(1)} ms, cruise ${cruise.toFixed(1)} ms`);
+  check('cruise costs no more than twice a parked frame (world 36000 px, zoom 0.85, streaks)', cruise < Math.max(2 * idle, idle + 25), `${cruise.toFixed(1)} against ${idle.toFixed(1)} ms`);
+  check('no console errors', t.errors.length === 0, t.errors.join(' | '));
+} catch (e) { console.error('  FAIL ' + e.message); bad++; } finally { await t.close(); }
+console.log(bad ? 'CRUISE FAIL' : 'CRUISE PASS');
+process.exitCode = bad ? 1 : 0;

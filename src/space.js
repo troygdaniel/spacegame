@@ -47,7 +47,7 @@ class Space extends Phaser.Scene {
     [[5700, 2700], [6000, 3500], [2500, 2200]].forEach(([x, y]) => this.spawnDrone(x, y));
     this.time.addEvent({
       delay: 15000, loop: true, callback: () => {
-        if (this.dead || this.enemies.countActive() >= 8 || pirateCap(this, this.time.now) === 0) return; // quiet during the launch grace
+        if (this.dead || this.cruising || this.enemies.countActive() >= 8 || pirateCap(this, this.time.now) === 0) return; // quiet during the launch grace
         const a = Math.random() * Math.PI * 2;
         const x = Phaser.Math.Clamp(this.ship.x + Math.cos(a) * SPAWN_DIST, 100, WS - 100);
         const y = Phaser.Math.Clamp(this.ship.y + Math.sin(a) * SPAWN_DIST, 100, WS - 100);
@@ -61,10 +61,10 @@ class Space extends Phaser.Scene {
       if (e.hp <= 0) this.killDrone(e);
     });
     this.physics.add.overlap(this.ship, this.eb, (s, b) => {
-      if (!b.active) return; b.disableBody(true, true); this.hurt(b.dmg || 8, b.x, b.y);
+      if (!b.active || this.cruising) return; b.disableBody(true, true); this.hurt(b.dmg || 8, b.x, b.y);
     });
     this.physics.add.overlap(this.ship, this.enemies, (s, e) => {
-      if (this.time.now < this.rammedAt) return; this.rammedAt = this.time.now + 600; e.hp -= 10; this.hurt(e.def ? e.def.ram : 12, e.x, e.y);
+      if (this.cruising || this.time.now < this.rammedAt) return; this.rammedAt = this.time.now + 600; e.hp -= 10; this.hurt(e.def ? e.def.ram : 12, e.x, e.y);
       if (e.hp <= 0) this.killDrone(e); // ramming used to take hp off a drone but never finish it
     });
 
@@ -81,6 +81,7 @@ class Space extends Phaser.Scene {
     asteroidsSetup(this); // src/asteroids.js: the Kepler belt
     feelInstall(this); // src/feel.js: hit flashes, flame, approach rings, arrival zoom
     shipsInstall(this); // src/ships.js: flames, trails, shield flash, smoke and sparks on every ship
+    cruiseSetup(this); cruiseFarBodies(this); // src/cruise.js: N nav list, C cruise, and the bodies out in far space
   }
 
   killDrone(e) { // one place for bullets and ramming to finish an enemy
@@ -127,9 +128,17 @@ class Space extends Phaser.Scene {
     spaceBackdropTick(this); // parallax layers follow the camera
     if (this.dead) return;
     if (this.leaving) { feelFrame(this, time, dt); return; } // docking or landing move is playing (feel.js)
+    const crs = cruiseFrame(this, time, dt); // src/cruise.js: 'cruise' = the ship flies itself, 'nav' = the nav list is open (no flight input)
+    if (crs === 'cruise') {
+      this.prompt.setText('');
+      missionSpaceUpdate(this, time, dt); trafficUpdate(this, time, dt); asteroidsUpdate(this, time, dt);
+      hudTick(this); feelFrame(this, time, dt);
+      return;
+    }
+    const still = crs === 'nav';
     const locked = time < this.lockUntil;
-    const left = k.A.isDown || k.LEFT.isDown, right = k.D.isDown || k.RIGHT.isDown;
-    const up = k.W.isDown || k.UP.isDown, brake = k.S.isDown || k.DOWN.isDown;
+    const left = !still && (k.A.isDown || k.LEFT.isDown), right = !still && (k.D.isDown || k.RIGHT.isDown);
+    const up = !still && (k.W.isDown || k.UP.isDown), brake = still || k.S.isDown || k.DOWN.isDown;
     const boost = boostFrame(this, time, dt, locked, up); // src/boost.js: Shift drains the energy ring, Q and E dash
 
     if (!locked) ship.rotation += ((right ? 1 : 0) - (left ? 1 : 0)) * 0.0036 * dt;
@@ -141,7 +150,7 @@ class Space extends Phaser.Scene {
       const tx = ship.x - Math.cos(ship.rotation) * 20, ty = ship.y - Math.sin(ship.rotation) * 20;
       this.trail.emitParticleAt(tx, ty, boost ? 3 : 2);
     }
-    if (!locked && (k.SPACE.isDown || this.input.activePointer.isDown) && time > this.nextFire) {
+    if (!locked && !still && (k.SPACE.isDown || this.input.activePointer.isDown) && time > this.nextFire) {
       this.nextFire = time + fireDelay();
       this.shoot(this.pb, ship.x + Math.cos(ship.rotation) * 24, ship.y + Math.sin(ship.rotation) * 24, ship.rotation, 950, time);
       sfx('laser'); feelShot(this, ship.x + Math.cos(ship.rotation) * 26, ship.y + Math.sin(ship.rotation) * 26, ship.rotation);
