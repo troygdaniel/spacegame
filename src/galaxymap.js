@@ -197,6 +197,7 @@ class Galaxy extends Phaser.Scene {
   }
   close() {
     if (this.closing) return; this.closing = true;
+    if (typeof JUMPST !== 'undefined') JUMPST.closedAt = performance.now(); // src/jump.js: the same G that closed it must not open it again
     if (this.from) { this.scene.stop(); this.scene.resume(this.from); } else this.scene.start('Title'); // the test hash has nothing to go back to
   }
 
@@ -233,7 +234,7 @@ class Galaxy extends Phaser.Scene {
     const by = ch - 98, ok = !here && j.ok, msg = here ? ['AT HOME BASE', '#ffd37a', 'Pick another star.']
       : j.why === 'range' ? ['OUT OF RANGE BY ' + fmtLy(j.over) + ' LY', '#ff4d6d', 'You reach ' + fmtLy(j.range) + ' ly. A courier, an explorer or an engine part goes further.']
       : j.why === 'fuel' ? ['SHORT BY ' + fmtFuel(j.short) + ' UNITS', '#ffb454', this.here.pump ? 'Fill up at the pump here first.' : 'There is no pump here: you need fuel from somewhere else.']
-      : ['JUMP READY', '#6dff9c', this.onJump ? 'Press Enter to jump.' : 'The jump comes with the G key.'];
+      : ['JUMP READY', '#6dff9c', this.onJump ? 'Press Enter to jump.' : 'Jumps start from space: launch, then press G.'];
     const vc = parseInt(msg[1].slice(1), 16);
     g.fillStyle(here ? 0x2a1a06 : vc, here ? 0.5 : 0.14); g.fillRect(cx + 12, cy + by - 8, cardW - 24, 90); g.lineStyle(2, vc, 0.9); g.strokeRect(cx + 12, cy + by - 8, cardW - 24, 90); g.fillStyle(vc, 1); g.fillRect(cx + 12, cy + by - 8, 5, 90);
     T(28, by + 10, msg[0], 15, msg[1], { style: { fontStyle: 'bold', letterSpacing: 1 } });

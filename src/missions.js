@@ -90,8 +90,9 @@ function missionTarget(s) {
   const m = missionDef();
   const t = m && m.space && m.space.target && G.mission === 'accepted' ? m.space.target(s) : null;
   if (t) return t;
-  if (missionActive('rescue')) return { x: s.planet.x, y: s.planet.y, name: sysBody('planet').name };
-  return { x: s.station.x, y: s.station.y, name: sysBody('station').name };
+  if (missionActive('rescue') && sysBody('planet')) return { x: s.planet.x, y: s.planet.y, name: sysBody('planet').name };
+  const st = sysBody('station'); // a system with no station (Kestrel until card u-b5) has nothing to point at
+  return st ? { x: s.station.x, y: s.station.y, name: st.name } : null;
 }
 // a pirate went down: a wanted one counts for the patrol, the Reaver ends the bounty
 function missionKill(s, e) {

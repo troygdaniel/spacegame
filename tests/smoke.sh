@@ -140,6 +140,8 @@ echo "== 4zc. the galaxy map overlay (tests/galaxymap.mjs)"
 if node tests/galaxymap.mjs; then :; else fail=1; fi
 echo "== 4zd. ship ribbon bounds: a teleport, a clock that ran backwards, a huge scale and a NaN never draw a bar or a square (tests/ribbons.mjs)"
 if node tests/ribbons.mjs; then :; else fail=1; fi
+echo "== 4ze. the jump: G, the charge, the tunnel, arrival, the fuel ranger (tests/jump.mjs)"
+if node tests/jump.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then

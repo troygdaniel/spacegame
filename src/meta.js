@@ -41,7 +41,9 @@ const HELP = {
 };
 
 // the fleet records, the ship stats and the G accessors over the active ship are in src/fleet.js (card u-a3)
-G.lastDock = homeDock(); G.known = ['halcyon']; G.jumps = 0; G.charted = [];
+// the stars a new game already knows (docs/UNIVERSE.md 4.3: the nearest ones): the home system and Kestrel, 6.3 ly away, so the first jump is there to be made
+const START_KNOWN = ['halcyon', 'kestrel'];
+G.lastDock = homeDock(); G.known = START_KNOWN.slice(); G.jumps = 0; G.charted = [];
 
 // ---------- save and load (localStorage is optional: every call is wrapped) ----------
 // Save v2 (docs/UNIVERSE.md 8.2). The v1 key is only ever read, and only when v2 is missing; it is never written or deleted,
@@ -86,7 +88,7 @@ function v1ToV2(s) {
   });
   const maxHull = SHIPREC.hull; // armor plating used to add 20 hull a tier; shields (points of their own) replace that, and the hull is capped below
   const out = Object.assign({}, s, {
-    v: 2, system: 'halcyon', lastDock: homeDock(), jumps: 0, known: ['halcyon'], charted: [], active: 0,
+    v: 2, system: 'halcyon', lastDock: homeDock(), jumps: 0, known: START_KNOWN.slice(), charted: [], active: 0,
     fleet: [{ uid: 1, model: 'wren', name: 'Wren', at: homeDock(), hull: s.hull, maxHull, fuel: SHIPREC.fuel, ore: s.ore, parts }]
   });
   ['hull', 'maxHull', 'ore'].forEach(k => { delete out[k]; }); // now per ship (upgrades stays: guideRestore reads it for saves from before the guide)
@@ -120,7 +122,7 @@ function applySave(s) {
   G.system = dockSys || (SYSTEMS[s.system] ? s.system : 'halcyon');
   G.lastDock = dockSys ? s.lastDock : (sysBodies('station', G.system)[0] || { id: homeDock() }).id;
   const strs = a => Array.isArray(a) ? [...new Set(a.filter(x => typeof x === 'string' && x))] : [];
-  G.known = strs(s.known); if (!G.known.includes('halcyon')) G.known.unshift('halcyon');
+  G.known = strs(s.known); START_KNOWN.slice().reverse().forEach(id => { if (!G.known.includes(id)) G.known.unshift(id); }); // the start stars are always known, first
   G.charted = strs(s.charted);
   G.jumps = Number.isFinite(s.jumps) ? Math.max(0, Math.floor(s.jumps)) : 0;
 
@@ -166,7 +168,7 @@ function clearSave() { // erases the v2 save. The v1 key stays untouched: new ga
 
 function newGameState() {
   G.credits = 0; G.mission = 'none'; G.missionId = null; G.missionProgress = 0; G.patrolsDone = 0;
-  G.system = 'halcyon'; G.lastDock = homeDock(); G.known = ['halcyon']; G.charted = []; G.jumps = 0;
+  G.system = 'halcyon'; G.lastDock = homeDock(); G.known = START_KNOWN.slice(); G.charted = []; G.jumps = 0;
   G.fleet = [newShip()]; G.active = 0; // hull, hold and parts are per ship: a new Wren starts them all over
   guideReset(); // guide.js: tips and stats start over
   poiReset(); // poi.js: every site can be salvaged again
@@ -176,6 +178,8 @@ function newGameState() {
 // ---------- window hooks ----------
 function openPause(game) {
   if (game.scene.isActive('Pause')) return;
+  if (typeof jumpEscape === 'function' && jumpEscape(game)) return; // src/jump.js: Esc during a charge cancels the charge
+  if (typeof JUMPST !== 'undefined' && performance.now() - JUMPST.closedAt < 250) return; // the Esc that has just closed the galaxy map must not also open the pause menu
   const s = game.scene.getScenes(true).find(sc => GAMEPLAY.includes(sc.scene.key));
   if (!s || s.leaving || s.dead || s.panel) return; // fading out, wrecked, or a terminal is open (Esc closes that)
   saveGame();

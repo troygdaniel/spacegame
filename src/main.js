@@ -9,6 +9,7 @@ installMeta(window.game); // Esc pause, M mute, autosave
 installAudio(window.game); // ambient pads, engine hum (audio.js)
 installLookFx(window.game); // speed streaks while boosting (title.js)
 installMap(window.game); // Tab sector map, H help, key reminder (map.js)
+installJump(window.game); // G opens the galaxy map, Enter there charges a jump (jump.js)
 voiceInstall(window.game); // optional ship voice: Deepgram text-to-speech, only with the player's own key (voice.js)
 installJournal(window.game); // J opens the Journal in the station (journal.js)
 chatLoad(); // optional NPC chat: reads the player's own OpenAI or Anthropic key from this browser, nothing else happens here (chat.js)
