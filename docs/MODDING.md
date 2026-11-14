@@ -283,7 +283,7 @@ Voice (`space-game-voice`) and chat (`space-game-npc-chat`) use the player's own
 
 ## 8. The proof: what moves to markdown first
 
-Nothing about play changes. Card `m4-proof` moved this set, and `tests/contentproof.mjs` (smoke step 4w) guards it:
+Nothing about play changes. Card `m4-proof` moved this set, and `tests/contentproof.mjs` (smoke step 4x) guards it:
 - **Two ships:** `raider` and `drone` (the pirate stat blocks of `PIRATES` in `enemies.js`; `gunship` follows with the rest). `name`, `role`, `side` and the description are read and checked, but nothing in the game shows them yet. When `space-game-u-a3-ship-models` merged, `wren` and `kite` did not move with them: a player ship file is refused until its adapter lands (card `m5`).
 - **One mission:** `rescue` (title, place, reward, offer, the three board lines, both progress texts, steps, failure line). The station pays what the file says.
 - **One NPC:** JUNO (look, place, voice, lines, reactions, persona). Her file leaves out `station:` because there is no `stations/halcyon-station.md` yet.
