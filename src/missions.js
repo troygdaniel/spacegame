@@ -4,7 +4,9 @@
 // Escort and Police patrol live entirely in space (hooks below) and pay the moment they are done.
 G.missionId = null; G.missionProgress = 0; G.patrolsDone = 0; // patrolsDone unlocks the bounty call (saved by meta.js)
 
-const GATE = { x: 1800, y: 6200 };
+// The Perseus gate is a body of type 'gate' in the system data (src/data_systems.js). GATE stays as a live alias of its position
+// for tests/missions.mjs, which moves the MULE next to it; the code below asks sysBody('gate') itself.
+const GATE = { get x() { return sysBody('gate').x; }, get y() { return sysBody('gate').y; } };
 const REAVER_HP = 300;
 
 const MISSIONS = [
@@ -88,8 +90,8 @@ function missionTarget(s) {
   const m = missionDef();
   const t = m && m.space && m.space.target && G.mission === 'accepted' ? m.space.target(s) : null;
   if (t) return t;
-  if (missionActive('rescue')) return { x: s.planet.x, y: s.planet.y, name: 'Kepler-4b' };
-  return { x: s.station.x, y: s.station.y, name: 'Halcyon Station' };
+  if (missionActive('rescue')) return { x: s.planet.x, y: s.planet.y, name: sysBody('planet').name };
+  return { x: s.station.x, y: s.station.y, name: sysBody('station').name };
 }
 // a pirate went down: a wanted one counts for the patrol, the Reaver ends the bounty
 function missionKill(s, e) {
@@ -106,17 +108,17 @@ function radarDot(s, x, y, color, r) { hudBlip(s, x, y, color, r); } // the HUD 
 
 // ---- Escort: the MULE flies station -> gate; pirates lie in wait along the route ----
 function escortSetup(s) {
-  const st = s.station;
+  const st = s.station, gate = sysBody('gate'); // src/universe.js
   const f = s.physics.add.sprite(st.x - 60, st.y + 260, 'freighter').setDepth(4);
   f.body.setCircle(14, 24, 6).setMaxSpeed(130); // offset in the 76x40 texture (ships.js)
   f.hp = 200; f.maxHp = 200; f.rammedAt = 0;
-  f.rotation = Phaser.Math.Angle.Between(f.x, f.y, GATE.x, GATE.y);
+  f.rotation = Phaser.Math.Angle.Between(f.x, f.y, gate.x, gate.y);
   s.mx.freighter = f;
 
   const g = s.add.graphics().setDepth(1);
-  g.lineStyle(6, AMBER, 0.9); g.strokeCircle(GATE.x, GATE.y, 110);
-  g.lineStyle(2, AMBER, 0.4); g.strokeCircle(GATE.x, GATE.y, 130);
-  label(s, GATE.x, GATE.y - 160, 'PERSEUS GATE', '#ffb454', 18);
+  g.lineStyle(6, AMBER, 0.9); g.strokeCircle(gate.x, gate.y, gate.r);
+  g.lineStyle(2, AMBER, 0.4); g.strokeCircle(gate.x, gate.y, gate.r + 20);
+  label(s, gate.x, gate.y - gate.r - 50, gate.name.toUpperCase(), '#ffb454', 18);
 
   s.physics.add.overlap(f, s.eb, (fr, b) => { if (!b.active) return; b.disableBody(true, true); freighterHurt(s, 5); });
   s.physics.add.overlap(f, s.enemies, (fr, e) => {
@@ -125,8 +127,8 @@ function escortSetup(s) {
   // two ambushes along the route; these drones hunt the MULE, not you
   const ambush = (frac, n) => {
     for (let i = 0; i < n; i++) {
-      const d = s.spawnDrone(st.x + (GATE.x - st.x) * frac + Phaser.Math.Between(-260, 260),
-                             st.y + (GATE.y - st.y) * frac + Phaser.Math.Between(-260, 260));
+      const d = s.spawnDrone(st.x + (gate.x - st.x) * frac + Phaser.Math.Between(-260, 260),
+                             st.y + (gate.y - st.y) * frac + Phaser.Math.Between(-260, 260));
       d.prey = f;
     }
   };
@@ -145,7 +147,8 @@ function freighterHurt(s, n) {
 }
 function escortUpdate(s) {
   const f = s.mx.freighter; if (!f || !f.active) return;
-  if (Phaser.Math.Distance.Between(f.x, f.y, GATE.x, GATE.y) < 110) {
+  const gate = sysBody('gate');
+  if (Phaser.Math.Distance.Between(f.x, f.y, gate.x, gate.y) < gate.r) {
     s.boom.explode(30, f.x, f.y); f.destroy();
     completeMission(s, 'The MULE made the Perseus gate.'); return;
   }
@@ -153,14 +156,14 @@ function escortUpdate(s) {
   let threat = false;
   s.enemies.getChildren().forEach(e => { if (e.active && Phaser.Math.Distance.Between(e.x, e.y, f.x, f.y) < 500) threat = true; });
   const behind = Phaser.Math.Distance.Between(f.x, f.y, s.ship.x, s.ship.y) > 700;
-  s.physics.moveTo(f, GATE.x, GATE.y, threat ? 50 : behind ? 70 : 130);
-  f.rotation = Phaser.Math.Angle.RotateTo(f.rotation, Phaser.Math.Angle.Between(f.x, f.y, GATE.x, GATE.y), 0.02);
+  s.physics.moveTo(f, gate.x, gate.y, threat ? 50 : behind ? 70 : 130);
+  f.rotation = Phaser.Math.Angle.RotateTo(f.rotation, Phaser.Math.Angle.Between(f.x, f.y, gate.x, gate.y), 0.02);
   hudMeter(s, 'MULE', f.hp / f.maxHp, AMBER);
-  radarDot(s, f.x, f.y, 0xffd37a, 3); radarDot(s, GATE.x, GATE.y, AMBER, 2);
+  radarDot(s, f.x, f.y, 0xffd37a, 3); radarDot(s, gate.x, gate.y, AMBER, 2);
 }
 function escortTarget(s) {
-  const f = s.mx.freighter;
-  return f && f.active ? { x: f.x, y: f.y, name: 'Freighter MULE' } : { x: GATE.x, y: GATE.y, name: 'Perseus gate' };
+  const f = s.mx.freighter, gate = sysBody('gate');
+  return f && f.active ? { x: f.x, y: f.y, name: 'Freighter MULE' } : { x: gate.x, y: gate.y, name: gate.name };
 }
 
 // ---- Police patrol: wanted pirates loiter on the approach to the station ----

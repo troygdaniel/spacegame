@@ -2,6 +2,7 @@
 # Long Haul smoke test. Run from anywhere: bash tests/smoke.sh   (exit code 1 if anything fails)
 #   1. node --check on every src file
 #   1b. tests/content.mjs: the markdown content parser, schema, validator and build script (no browser; docs/MODDING.md)
+#   1b2. tests/contentapply.mjs: the second look at content.generated.js and the merge by id over the built-in tables (no browser)
 #   1c. tests/hygiene.mjs: fails on a key, token, email address, phone number or /Users path in a tracked file or in content/
 #   2. tests/scenes.mjs: load index.html, index.html#space, index.html#surface in headless Chrome, fail on a console
 #      error, save a screenshot of each to tests/out/ (gitignored)
@@ -14,6 +15,8 @@
 #   4e. tests/credits.mjs: the gold coin and CR readout in the HUD strip and on the board, shop, map and pause panels, +N / -N floats
 #   4f. tests/hyper.mjs: the hyperspace tunnel demo (#hyper), its timing, readout and colour; no save written
 #   4g. tests/shipmode.mjs: boarding opens the Ship bay instead of launching; Enter launches, Esc goes back, Tab opens the map over it
+#   4i. tests/launch.mjs: pirates fair at launch (20 s grace, one-at-a-time first wave, spawns kept out, hit invulnerability)
+#   4j. tests/contentboot.mjs: a bad, missing, broken or hand-edited content.generated.js never stops the game reaching Title and playing
 #   4j. tests/chat.mjs: the NPC chat adapter with a mocked fetch: no key means no call; OpenAI and Anthropic get the right URL,
 #       header and body shape; the key is only ever in its header; 401 switches chat off; 429 waits; the setup panel saves a key
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
@@ -32,6 +35,8 @@ done
 
 echo "== 1b. markdown content parser and build script (tests/content.mjs)"
 if node tests/content.mjs; then :; else fail=1; fi
+echo "== 1b2. content merge by id and the second look at content.generated.js (tests/contentapply.mjs)"
+if node tests/contentapply.mjs; then :; else fail=1; fi
 echo "== 1c. hygiene: no keys, emails, phone numbers or personal paths in anything we publish (tests/hygiene.mjs)"
 if node tests/hygiene.mjs; then :; else fail=1; fi
 
@@ -65,6 +70,11 @@ echo "== 4h. ship voice with a mocked fetch: no key, no call; nothing ever reach
 if node tests/voice.mjs; then :; else fail=1; fi
 echo "== 4j. NPC chat adapter with a mocked fetch: no key, no call; the right host and header per provider; 401 and 429 (tests/chat.mjs)"
 if node tests/chat.mjs; then :; else fail=1; fi
+
+echo "== 4i. fair launch: 20 s pirate grace, first-wave cap, distant spawns, hit invulnerability (tests/launch.mjs)"
+if node tests/launch.mjs; then :; else fail=1; fi
+echo "== 4j. content loader: a bad, missing or broken content.generated.js never blanks the game (tests/contentboot.mjs)"
+if node tests/contentboot.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
