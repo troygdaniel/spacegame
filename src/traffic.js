@@ -87,14 +87,14 @@ function trafficPoliceStep(s, dt, snap) {
 
 // ---------- civilians ----------
 function spawnCivilian(s, initial) {
-  const t = s.tr, st = s.station, pl = s.planet;
+  const t = s.tr, st = s.station, pl = s.planet, gate = sysBody('gate'); // src/universe.js
   let goal;
-  if (Math.random() < 0.6) { // park short of the planet, on the line from the station
+  if (Math.random() < 0.6 || !gate) { // park short of the planet, on the line from the station
     const a = Phaser.Math.Angle.Between(st.x, st.y, pl.x, pl.y);
     goal = { x: pl.x - Math.cos(a) * 760, y: pl.y - Math.sin(a) * 760 };
   } else {                   // or fly out toward the Perseus gate
-    const a = Phaser.Math.Angle.Between(GATE.x, GATE.y, st.x, st.y);
-    goal = { x: GATE.x + Math.cos(a) * 240, y: GATE.y + Math.sin(a) * 240 };
+    const a = Phaser.Math.Angle.Between(gate.x, gate.y, st.x, st.y);
+    goal = { x: gate.x + Math.cos(a) * 240, y: gate.y + Math.sin(a) * 240 };
   }
   const a0 = Phaser.Math.Angle.Between(st.x, st.y, goal.x, goal.y), f = initial ? Phaser.Math.FloatBetween(0.2, 0.5) : 0;
   const x = st.x + Math.cos(a0) * (240 + f * Phaser.Math.Distance.Between(st.x, st.y, goal.x, goal.y));

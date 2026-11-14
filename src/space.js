@@ -6,17 +6,18 @@ class Space extends Phaser.Scene {
     this.leaving = false; this.dead = false; this.rammedAt = 0; this.ironUntil = 0;
     this.launchAt = this.time.now; this.aggro = 0; this.graceOver = false; // enemies.js: launch grace and first-wave cap
     shipRefresh(this); // src/ships.js: the ship texture shows the upgrade tiers you own
-    const WS = 8000; this.WS = WS;
+    const WS = sysDef().size; this.WS = WS; // src/universe.js: the current system, from src/data_systems.js
     this.physics.world.setBounds(0, 0, WS, WS);
     this.cameras.main.fadeIn(300, 0, 0, 0).setBounds(0, 0, WS, WS);
     spaceBackdrop(this); // src/art_world.js: nebula, parallax star layers, distant sun, giant and moon
 
-    this.station = this.add.image(4000, 4000, 'station');
+    const stDef = sysBody('station'), plDef = sysBody('planet');
+    this.station = this.add.image(stDef.x, stDef.y, stDef.art);
     this.tweens.add({ targets: this.station, angle: 360, duration: 180000, repeat: -1 });
-    label(this, 4000, 3740, 'HALCYON STATION', '#38e1ff', 18);
+    label(this, stDef.x, stDef.y + stDef.labelDy, stDef.name.toUpperCase(), '#38e1ff', 18);
     stationFx(this); // src/stationart.js: spinning hub and ring, beacons, docking lane, Kestrel Outpost
-    this.planet = this.add.image(6200, 2000, 'planet'); this.planetR = 316;
-    label(this, 6200, 1620, 'KEPLER-4B', '#ffb454', 18);
+    this.planet = this.add.image(plDef.x, plDef.y, plDef.art); this.planetR = plDef.r;
+    label(this, plDef.x, plDef.y - plDef.r - 64, plDef.name.toUpperCase(), '#ffb454', 18);
 
     let sx, sy, rot;
     if (this.from === 'surface') { sx = this.planet.x - 460; sy = this.planet.y + 120; rot = Math.PI; }

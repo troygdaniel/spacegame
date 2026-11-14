@@ -2,7 +2,6 @@
 // One overlay scene with two modes, opened over a paused gameplay scene, the same way the pause menu is.
 // installMap(game) catches Tab and H on the window and hooks scene create events, so the scenes need no code.
 
-const SECTOR = { size: 8000, station: { x: 4000, y: 4000 }, planet: { x: 6200, y: 2000, r: 316 } }; // as in space.js
 const SENSOR = 1600;          // a drone this close to your ship counts as seen; farther ones keep their last spot
 const STRIP_MS = 60000;       // the "Tab map  H help" reminder fades out after the first minute of play
 const MAPUI = { t0: 0, seen: new Map(), tracker: null, trackScene: null, nextAt: 0 };
@@ -33,6 +32,9 @@ class Overlay extends Phaser.Scene {
   init(d) { this.from = (d && d.from) || 'Station'; this.mode = (d && d.mode) || 'map'; }
   create() {
     const cx = W / 2, cy = H / 2;
+    // where things are: the bodies of the current system (src/universe.js), not tables kept here
+    this.D = { st: sysBody('station'), pl: sysBody('planet'), op: sysBodies('scenery').find(b => b.art === 'outpost') || null, gate: sysBody('gate') };
+    const D = this.D;
     this.MX = 100; this.MY = 100; this.MS = 560; this.SX = 706; // map square and the side column
     this.add.rectangle(cx, cy, W, H, 0x02050c, 0.78).setInteractive(); // swallows clicks
     hudPanel(this.add.graphics(), cx - 570, cy - 325, 1140, 650, 20, 0.97, CYAN); // src/hud.js: the same glass panel as the HUD
@@ -46,10 +48,10 @@ class Overlay extends Phaser.Scene {
     const SX = this.SX;
     this.mapObjs = [];
     const m = o => { this.mapObjs.push(o); return o; };
-    this.lbPlanet = m(mapText(this, 0, 0, 'KEPLER-4B', 13, '#ffb454').setOrigin(0.5, 1));
-    this.lbStation = m(mapText(this, 0, 0, 'HALCYON STATION', 13, '#38e1ff').setOrigin(0.5, 1));
-    this.lbOutpost = m(mapText(this, 0, 0, 'KESTREL OUTPOST', 13, '#6dff9c').setOrigin(0.5, 1));
-    this.lbGate = m(mapText(this, 0, 0, 'PERSEUS GATE', 13, '#ffb454').setOrigin(0.5, 1));
+    this.lbPlanet = m(mapText(this, 0, 0, D.pl.name.toUpperCase(), 13, '#ffb454').setOrigin(0.5, 1));
+    this.lbStation = m(mapText(this, 0, 0, D.st.name.toUpperCase(), 13, '#38e1ff').setOrigin(0.5, 1));
+    this.lbOutpost = m(mapText(this, 0, 0, D.op ? D.op.name.toUpperCase() : '', 13, '#6dff9c').setOrigin(0.5, 1));
+    this.lbGate = m(mapText(this, 0, 0, D.gate ? D.gate.name.toUpperCase() : '', 13, '#ffb454').setOrigin(0.5, 1));
     this.lbShip = m(mapText(this, 0, 0, 'YOU', 13, '#ffffff').setOrigin(0.5, 0));
     this.lbMule = m(mapText(this, 0, 0, 'MULE', 12, '#6dff9c').setOrigin(0.5, 0));
     this.tCr = m(mapText(this, SX + 30, 98, '', 20, GOLD_S).setFontStyle('bold')); // credits: a gold coin (drawn in update) and N CR
@@ -60,13 +62,13 @@ class Overlay extends Phaser.Scene {
     this.tObj = m(mapText(this, SX, 270, '', 18, '#ffb454', 470));
     this.tLegH = m(mapText(this, SX, 352, 'LEGEND', 13, '#5b7a92'));
     this.legend = [
-      ['you', 'ship'], ['Halcyon Station', 'station'], ['Kestrel Outpost', 'outpost'], ['Kepler-4b', 'planet'], ['objective', 'target'],
+      ['you', 'ship'], [D.st.name, 'station'], [D.op ? D.op.name : 'outpost', 'outpost'], [D.pl.name, 'planet'], ['objective', 'target'],
       ['drone in sensor range', 'live'], ['drone, where you last saw it', 'stale'], ['wanted pirate', 'wanted'], ['salvage site', 'poi']
     ];
     this.legend.forEach(([name], i) => m(mapText(this, SX + 40, MAP_LEG_Y + i * MAP_LEG_STEP, name, 15, '#cfefff')));
 
     this.poiLabels = []; // names of salvage sites you have found (poi.js fills them in)
-    for (let i = 0; i < (typeof POI !== 'undefined' ? POI.length + SIGNAL_MAX : 0); i++) this.poiLabels.push(m(mapText(this, 0, 0, '', 12, '#6dff9c').setOrigin(0.5, 0)));
+    for (let i = 0; i < (typeof poiSites === 'function' ? poiSites().length + SIGNAL_MAX : 0); i++) this.poiLabels.push(m(mapText(this, 0, 0, '', 12, '#6dff9c').setOrigin(0.5, 0)));
 
     // help mode
     this.helpObjs = [];
@@ -105,8 +107,8 @@ class Overlay extends Phaser.Scene {
   // where everything is right now, from the live Space scene when it is running, else the fixed sector layout
   state() {
     const sp = this.scene.get('Space'), live = this.from === 'Space' && sp && sp.ship && sp.station && sp.planet;
-    const st = live ? sp.station : SECTOR.station, pl = live ? sp.planet : SECTOR.planet;
-    const S = { ws: (sp && sp.WS) || SECTOR.size, live, sp, st: { x: st.x, y: st.y }, pl: { x: pl.x, y: pl.y } };
+    const st = live ? sp.station : this.D.st, pl = live ? sp.planet : this.D.pl;
+    const S = { ws: (sp && sp.WS) || sysDef().size, live, sp, st: { x: st.x, y: st.y }, pl: { x: pl.x, y: pl.y, r: this.D.pl.r } };
     if (live) S.ship = { x: sp.ship.x, y: sp.ship.y, rot: sp.ship.rotation, tag: 'YOU' };
     else if (this.from === 'Surface') S.ship = { x: S.pl.x - 150, y: S.pl.y + 60, rot: -Math.PI / 2, tag: 'LANDED' };
     else S.ship = { x: S.st.x + 120, y: S.st.y, rot: 0, tag: 'DOCKED' };
@@ -117,10 +119,10 @@ class Overlay extends Phaser.Scene {
   objective(S) {
     if (S.live && typeof missionTarget === 'function') { try { return missionTarget(S.sp); } catch (e) { /* fall through */ } }
     if (typeof missionActive === 'function') {
-      if (missionActive('rescue')) return { x: S.pl.x, y: S.pl.y, name: 'Kepler-4b' };
-      if (missionActive('escort') && typeof GATE !== 'undefined') return { x: GATE.x, y: GATE.y, name: 'Perseus gate' };
+      if (missionActive('rescue')) return { x: S.pl.x, y: S.pl.y, name: this.D.pl.name };
+      if (missionActive('escort') && this.D.gate) return { x: this.D.gate.x, y: this.D.gate.y, name: this.D.gate.name };
     }
-    return S.live ? { x: S.st.x, y: S.st.y, name: 'Halcyon Station' } : null; // no call taken: nothing to point at
+    return S.live ? { x: S.st.x, y: S.st.y, name: this.D.st.name } : null; // no call taken: nothing to point at
   }
 
   update(time) {
@@ -152,7 +154,7 @@ class Overlay extends Phaser.Scene {
     });
 
     // planet and station
-    const pr = Math.max(7, SECTOR.planet.r * sc);
+    const pr = Math.max(7, S.pl.r * sc);
     g.fillStyle(AMBER, 0.85); g.fillCircle(X(S.pl.x), Y(S.pl.y), pr);
     g.lineStyle(1, AMBER, 0.5); g.strokeCircle(X(S.pl.x), Y(S.pl.y), pr + 5);
     this.lbPlanet.setPosition(X(S.pl.x), Y(S.pl.y) - pr - 8);
@@ -161,16 +163,16 @@ class Overlay extends Phaser.Scene {
     g.fillPoints([{ x: sx, y: sy - 9 }, { x: sx + 9, y: sy }, { x: sx, y: sy + 9 }, { x: sx - 9, y: sy }], true);
     g.strokePoints([{ x: sx, y: sy - 9 }, { x: sx + 9, y: sy }, { x: sx, y: sy + 9 }, { x: sx - 9, y: sy }], true);
     this.lbStation.setPosition(sx, sy - 14);
-    if (typeof SA_OUTPOST !== 'undefined') { // src/stationart.js: scenery, no docking, but worth finding
-      const ox = X(SA_OUTPOST.x), oy = Y(SA_OUTPOST.y); mapHex(g, ox, oy, 8); this.lbOutpost.setPosition(ox, oy - 12);
+    if (this.D.op) { // Kestrel Outpost (src/stationart.js): scenery, no docking, but worth finding
+      const ox = X(this.D.op.x), oy = Y(this.D.op.y); mapHex(g, ox, oy, 8); this.lbOutpost.setPosition(ox, oy - 12);
     } else this.lbOutpost.setVisible(false);
 
     // the Perseus gate, only while an escort is on
-    const gate = typeof missionActive === 'function' && missionActive('escort') && typeof GATE !== 'undefined';
+    const gate = typeof missionActive === 'function' && missionActive('escort') && this.D.gate;
     this.lbGate.setVisible(!!gate);
     if (gate) {
-      g.lineStyle(3, AMBER, 0.9); g.strokeCircle(X(GATE.x), Y(GATE.y), Math.max(6, 110 * sc));
-      this.lbGate.setPosition(X(GATE.x), Y(GATE.y) - 14);
+      g.lineStyle(3, AMBER, 0.9); g.strokeCircle(X(gate.x), Y(gate.y), Math.max(6, gate.r * sc));
+      this.lbGate.setPosition(X(gate.x), Y(gate.y) - 14);
     }
 
     // drones: bright where they are now (in sensor range), hollow where you last saw them

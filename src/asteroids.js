@@ -3,22 +3,24 @@
 // station.js calls sellOre(this) when you dock; hud.js shows the hold on the strip; meta.js saves G.ore.
 const ORE_CAP = 10;       // the cargo hold
 const ORE_PRICE = 20;     // credits per ore, paid when you dock
-const BELT = { x: 5500, y: 1300, r: 700 }; // north-west of Kepler-4b
 const ROCK_HP = { 1: 15, 2: 30, 3: 60 }, ROCK_SCALE = { 1: 0.38, 2: 0.65, 3: 1 };
 
 G.ore = 0;
 
 function asteroidsSetup(s) {
-  const a = s.ast = { rocks: s.physics.add.group(), ore: [], bumpAt: 0, fullAt: 0, told: false };
-  // scatter rocks, keeping them apart so the belt reads as separate boulders
-  const spots = [];
-  for (let tries = 0; spots.length < 15 && tries < 400; tries++) {
-    const ang = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * BELT.r;
-    const p = { x: BELT.x + Math.cos(ang) * d, y: BELT.y + Math.sin(ang) * d };
-    if (spots.every(q => Phaser.Math.Distance.Between(p.x, p.y, q.x, q.y) > 140)) spots.push(p);
-  }
-  spots.forEach((p, i) => spawnRock(s, p.x, p.y, i < 5 ? 3 : i < 10 ? 2 : 1));
-  label(s, BELT.x, BELT.y - BELT.r - 70, 'KEPLER BELT', '#9fb4c9', 16);
+  const belts = sysBodies('belt'); // src/universe.js: the belts of the current system
+  const a = s.ast = { rocks: s.physics.add.group(), ore: [], bumpAt: 0, fullAt: 0, told: false, belt: belts[0] || null };
+  belts.forEach(belt => {
+    // scatter rocks, keeping them apart so the belt reads as separate boulders: a third big, a third medium, a third small
+    const spots = [];
+    for (let tries = 0; spots.length < belt.rocks && tries < 400; tries++) {
+      const ang = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * belt.r;
+      const p = { x: belt.x + Math.cos(ang) * d, y: belt.y + Math.sin(ang) * d };
+      if (spots.every(q => Phaser.Math.Distance.Between(p.x, p.y, q.x, q.y) > 140)) spots.push(p);
+    }
+    spots.forEach((p, i) => spawnRock(s, p.x, p.y, i < belt.rocks / 3 ? 3 : i < belt.rocks * 2 / 3 ? 2 : 1));
+    label(s, belt.x, belt.y - belt.r - 70, belt.name.toUpperCase(), '#9fb4c9', 16);
+  });
 
   // a wrecked ship loses its cargo: wrap die() on this scene instance, so space.js needs no change
   const die = s.die.bind(s);
@@ -90,7 +92,7 @@ function asteroidsUpdate(s, time, dt) {
       } else if (time > a.fullAt) { a.fullAt = time + 4000; toast(s, 'Cargo hold full. Sell the ore at Halcyon Station.', '#ffd37a'); }
     }
   }
-  if (!a.told && Phaser.Math.Distance.Between(ship.x, ship.y, BELT.x, BELT.y) < BELT.r + 700) {
+  if (!a.told && a.belt && Phaser.Math.Distance.Between(ship.x, ship.y, a.belt.x, a.belt.y) < a.belt.r + 700) {
     a.told = true; toast(s, 'Kepler belt: shoot rocks, fly through the ore, sell it at Halcyon.', '#9fe9ff');
   }
 }

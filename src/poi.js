@@ -3,18 +3,8 @@
 // press E to salvage. Each site pays once per game. Two sites are guarded by pirates.
 // Wired by installPoi(game) from scene events, so space.js needs no edits. G.poi saves through meta.js.
 
-const POI = [
-  { id: 'wreck-nw', kind: 'wreck', x: 1400, y: 1300, name: 'Derelict freighter', credits: 120,
-    note: 'Strongbox recovered.' },
-  { id: 'wreck-w', kind: 'wreck', x: 1000, y: 3300, name: 'Wrecked patrol cutter', hull: 40,
-    note: 'A repair kit was still sealed.' },
-  { id: 'wreck-se', kind: 'wreck', x: 6900, y: 6500, name: 'Drifting survey rig', credits: 150,
-    note: 'Sold the data core.' },
-  { id: 'wreck-s', kind: 'wreck', x: 3800, y: 7100, name: 'Cargo hulk', credits: 250, guard: 2,
-    note: 'The pirates were guarding this.' },
-  { id: 'beacon-e', kind: 'beacon', x: 7300, y: 4200, name: 'Distress beacon', credits: 200, guard: 1,
-    note: 'The crew is long gone. The vault code still works.' }
-];
+// The fixed sites are bodies of type 'poi' in the system data (src/data_systems.js): wrecks and a beacon, two of them guarded.
+const poiSites = () => sysBodies('poi'); // src/universe.js
 const POI_FIND = 1600;   // same reach as the sensor ring on the Tab map
 const POI_RANGE = 140;   // how close you must be to salvage
 const POI_SPEED = 220;   // and how slowly
@@ -24,7 +14,7 @@ G.poi = {};              // id -> 1 found, 2 salvaged (saved by meta.js)
 function poiSnapshot() { return { poi: Object.assign({}, G.poi) }; }
 function poiRestore(s) {
   G.poi = {};
-  if (s && s.poi && typeof s.poi === 'object') POI.forEach(p => { const v = s.poi[p.id]; if (v === 1 || v === 2) G.poi[p.id] = v; });
+  if (s && s.poi && typeof s.poi === 'object') poiSites().forEach(p => { const v = s.poi[p.id]; if (v === 1 || v === 2) G.poi[p.id] = v; });
 }
 function poiReset() { G.poi = {}; }
 
@@ -61,7 +51,7 @@ let POIRUN = null;             // the current Space run: { sig: [signals], objs:
 
 const siteState = p => p.sig ? p.state : (G.poi[p.id] || 0);
 const setSiteState = (p, v) => { if (p.sig) p.state = v; else G.poi[p.id] = v; };
-const liveSites = () => POI.concat(POIRUN ? POIRUN.sig.filter(q => q.state === 1) : []);
+const liveSites = () => poiSites().concat(POIRUN ? POIRUN.sig.filter(q => q.state === 1) : []);
 
 function makeSite(sc, p, done) { // sprite, name label, and a pulsing ring on beacons
   const spr = sc.add.image(p.x, p.y, p.kind === 'wreck' ? 'poi-wreck' : 'poi-beacon').setDepth(3);
@@ -88,7 +78,7 @@ function removeSite(sc, p) { // a signal that faded or was salvaged and has fini
 function poiSpawnSignal(sc, typeIndex) { // a new random signal 1400 to 2200 units from you, so it shows on the 2400 radar
   const R = POIRUN, ship = sc.ship;
   if (!R || !ship || R.sig.filter(q => q.state === 1).length >= SIGNAL_MAX) return null;
-  const ws = sc.WS || SECTOR.size, d = (x, y, o) => Phaser.Math.Distance.Between(x, y, o.x, o.y);
+  const ws = sc.WS || sysDef().size, d = (x, y, o) => Phaser.Math.Distance.Between(x, y, o.x, o.y);
   let x = 0, y = 0, ok = false;
   for (let i = 0; i < 25 && !ok; i++) {
     const a = Math.random() * Math.PI * 2, r = Phaser.Math.Between(1400, 2200);
@@ -110,7 +100,7 @@ function poiSpawnSignal(sc, typeIndex) { // a new random signal 1400 to 2200 uni
 function poiSetup(sc) {
   poiTextures(sc);
   const R = POIRUN = { sig: [], objs: {}, nextAt: 0, n: 0, prompt: floatPrompt(sc, null) };
-  POI.forEach(p => {
+  poiSites().forEach(p => {
     const done = G.poi[p.id] === 2;
     R.objs[p.id] = makeSite(sc, p, done);
     if (!done && p.guard) { // pirates lie in wait around the unsalvaged guarded sites
@@ -171,7 +161,7 @@ function poiSalvage(sc, p, o, prompt) {
 
 // ---------- the Tab map (map.js calls this with its drawing helpers and a pool of text labels) ----------
 function poiMapMarks(g, X, Y, labels) {
-  const list = POI.concat(POIRUN ? POIRUN.sig.filter(q => q.state === 1) : []);
+  const list = poiSites().concat(POIRUN ? POIRUN.sig.filter(q => q.state === 1) : []);
   (labels || []).forEach(lb => lb.setVisible(false));
   list.forEach((p, i) => {
     const lb = labels && labels[i], st = siteState(p);
