@@ -102,7 +102,8 @@ function snapshot() {
     active: G.active, fleet: G.fleet.map(shipSnapshot), // hull, fuel, ore and parts live per ship
     volume: Math.round(G.volume * 10) / 10, muted: !!G.muted,
     ...guideSnapshot(), // first-run guide, run stats, ending card (guide.js)
-    ...poiSnapshot() // salvage sites found and salvaged (poi.js)
+    ...poiSnapshot(), // salvage sites found and salvaged (poi.js)
+    ...chatSnapshot() // NPC chat memory: who you met, what they think of you, the Journal (chat.js); never the key
   };
 }
 
@@ -191,6 +192,7 @@ function applySave(s) {
   if (typeof s.muted === 'boolean') G.muted = s.muted;
   guideRestore(s); // guide.js: tips done, stats, ending seen
   poiRestore(s); // poi.js: salvage sites found and salvaged (after G.system: the sites are the current system's)
+  chatRestore(s); // chat.js: NPC chat memory, every string clamped on the way in
 }
 
 function loadGame() {
@@ -217,6 +219,7 @@ function newGameState() {
   G.fleet = [newShip()]; G.active = 0; // hull, hold and parts are per ship: a new Wren starts them all over
   guideReset(); // guide.js: tips and stats start over
   poiReset(); // poi.js: every site can be salvaged again
+  chatReset(); // chat.js: the characters forget you (the chat key stays: it belongs to the browser, not the save)
 }
 
 // ---------- window hooks ----------
