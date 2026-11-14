@@ -14,6 +14,7 @@ const SYSTEMS = {
     ly: [20, 22],                 // galaxy map position, light years (section 4.2)
     size: 36000,                  // world px, square (docs/UNIVERSE.md 2.2): the old 8000 px cluster stays in the north-west corner, the rest is far space
     danger: 1, traffic: 2,        // 0 to 5 and 0 to 3 (it has police, so traffic is 2 or more)
+    pirates: { max: 8, every: 15000, weights: { raider: 0.25, drone: 0.35, gunship: 0.4 } }, // the spawn table (enemies.js pirateTable): what Halcyon has always done; other systems get one from their danger
     bodies: [
       { id: 'halcyon-station', type: 'station', art: 'station', name: 'Halcyon Station', x: 4000, y: 4000, labelDy: -260,
         dock: { fuel: 8 } }, // dock: what the station offers; fuel is the price of a unit at its pump (src/fuel.js), a station without it has no pump

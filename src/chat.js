@@ -258,7 +258,7 @@ function chatMissionLine() {
   return G.missionId + ' accepted' + (count ? ', ' + (G.missionProgress | 0) + ' of ' + count + ' done' : '');
 }
 function chatNowBlock(n) {
-  const ups = typeof UPGRADES !== 'undefined' ? UPGRADES.filter(u => G.upgrades[u.key]).map(u => u.name.toLowerCase() + (G.upgrades[u.key] > 1 ? ' II' : '')) : [];
+  const ups = typeof PART_ORDER !== 'undefined' ? PART_ORDER.filter(k => partTier(k)).map(k => PARTS[k].name.toLowerCase() + PART_TIER_NAME[partTier(k)]) : [];
   const st = G.stats || {}, m = ((G.chat || {}).npcs || {})[chatId(n)] || {}, met = m.met | 0;
   return 'Mission: ' + chatMissionLine() + '. Credits: ' + Math.floor(G.credits) + '. Hull: ' + Math.round(G.hull) + ' of ' + Math.round(G.maxHull) + '. Upgrades: ' + (ups.length ? ups.join(', ') : 'none')
     + '. Ore in hold: ' + (G.ore | 0) + '. Patrols done: ' + (G.patrolsDone | 0) + '. Missions done: ' + (st.missions | 0) + '. Pirates destroyed: ' + (st.drones | 0)
@@ -322,17 +322,23 @@ async function chatAsk(s) {
   s.chatText.setText('. . .');
   const r = await chatComplete({ system: chatSystem(c.n), messages: c.turns.slice(-CHAT_PAIRS * 2), maxTokens: CHAT_REPLY_TOKENS });
   if (s.chat !== c) return; // the conversation ended while the model was thinking
-  c.busy = false; c.el.disabled = false;
+  const done = () => { // the line is on screen: the box opens again
+    if (s.chat !== c) return;
+    c.busy = false; c.el.disabled = false;
+    const left = CHAT_TURNS - c.sent;
+    if (left <= 3 && s.chatNote.text === '') s.chatNote.setText(left + (left === 1 ? ' line left tonight' : ' lines left tonight'));
+    setTimeout(() => { try { if (s.chat === c) c.el.focus(); } catch (e) { /* focus is a nicety */ } }, 30);
+  };
   if (r.text) {
     const said = chatInWorld(r.text);
     c.turns.push({ role: 'assistant', content: said }); c.replies++;
-    chatSay(s, said, null);
+    // the character's voice (src/voice.js, docs/VOICE.md): the reply starts typing when the audio starts, after 1.5 s if the audio has not
+    // arrived, or at once when there is no voice. Until then the dots keep going and the box stays locked.
+    voiceSayThen(said, 1, c.n.voice, () => { if (s.chat !== c) return; chatSay(s, said, null); done(); });
   } else if (r.code === 'nokey' || r.code === 'off' || r.code === 'rejected') {
-    chatClose(s); toast(s, r.error, '#ff4d6d'); return;
-  } else chatSay(s, CHAT_HICCUP[r.code] || r.error, r.code === 'busy' || CHAT_HICCUP[r.code] ? null : r.error);
-  const left = CHAT_TURNS - c.sent;
-  if (left <= 3 && s.chatNote.text === '') s.chatNote.setText(left + (left === 1 ? ' line left tonight' : ' lines left tonight'));
-  setTimeout(() => { try { if (s.chat === c) c.el.focus(); } catch (e) { /* focus is a nicety */ } }, 30);
+    c.busy = false; c.el.disabled = false;
+    chatClose(s); toast(s, r.error, '#ff4d6d');
+  } else { chatSay(s, CHAT_HICCUP[r.code] || r.error, r.code === 'busy' || CHAT_HICCUP[r.code] ? null : r.error); done(); }
 }
 function chatSay(s, text, note) { // the character's line types out; a note (grey, small) says why a line failed, in plain words
   const c = s.chat; if (!c) return;

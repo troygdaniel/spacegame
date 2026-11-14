@@ -182,6 +182,17 @@ function hudFrame(g, now) {
   g.fillRect(6, 62, 4, 10); g.fillRect(W - 10, 62, 4, 10); g.fillRect(6, H - 72, 4, 10); g.fillRect(W - 10, H - 72, 4, 10);
 }
 
+// the shield, a ring just outside the hull gauge: lit for the points left, white for a moment after a hit, a red beat when it is down. sh is s.sh (space.js)
+function hudShield(h, sh, cx, cy, r, now) {
+  const g = h.g, a0 = Math.PI * 0.75, span = Math.PI * 1.5, frac = Phaser.Math.Clamp(sh.pts / sh.max, 0, 1), hit = Math.max(0, 1 - (now - sh.hitAt) / 260);
+  const down = sh.pts <= 0, beat = down ? 0.35 + 0.35 * Math.sin(now / 140) : 1;
+  g.lineStyle(3, down ? RED : HUD_OFF, down ? 0.6 * beat : 1); hudArc(g, cx, cy, r, a0, a0 + span);
+  if (frac > 0.01) {
+    g.lineStyle(8, 0x7fe9ff, 0.12 + 0.2 * hit); hudArc(g, cx, cy, r, a0, a0 + span * frac);
+    g.lineStyle(3, hit > 0 ? 0xffffff : 0x7fe9ff, 1); hudArc(g, cx, cy, r, a0, a0 + span * frac);
+  }
+}
+
 // ---- a 270 degree gauge of 30 segments; tick (0..1) marks a threshold on the scale ----
 // A round plate with a glowing bezel and ten ticks, the segments with a halo under the lit ones and a bright leading cell,
 // a scanner arc that circles the bezel, the number with a glow, and the label. warn turns the bezel red and makes it beat.
@@ -270,22 +281,22 @@ function hudStrip(h, now) {
   hudPut(h, 'crd', 503 + cv.width - 2 * HUD_PAD + 8, 25 - 8 * Math.min(1, (gain ? now - gain.t : 0) / 400), gain ? (gain.v > 0 ? '+' : '-') + hudFmt(Math.abs(gain.v)) : '',
     { size: 14, bold: true, color: gain && gain.v < 0 ? '#ff4d6d' : '#6dff9c', alpha: gain ? 1 - Math.pow((now - gain.t) / 1300, 2) : 0 });
   g.lineStyle(1, CYAN, 0.2); g.lineBetween(596, 17, 596, 33);
-  UPGRADES.forEach((u, i) => {
-    const gx = 612 + i * 74, tier = G.upgrades[u.key] | 0;
-    hudPut(h, 'up' + i, gx, 25, HUD_GEAR[u.key] || u.key.slice(0, 3).toUpperCase(), { size: HT.label, color: tier ? '#9fe9ff' : HUD_DIM, spacing: 1 });
-    for (let j = 0; j < 2; j++) { // a pip is a small slanted chip: lit ones have a halo
-      const x = gx + 30 + j * 13, p = [[x + 3, 21], [x + 10, 21], [x + 7, 30], [x, 30]];
+  PART_ORDER.forEach((slot, i) => { // the five parts: three letters and three chips each (src/data_parts.js)
+    const gx = 600 + i * 46, tier = partTier(slot);
+    hudPut(h, 'up' + i, gx, 25, PARTS[slot].short, { size: HT.tag, color: tier ? '#9fe9ff' : HUD_DIM, spacing: 0 });
+    for (let j = 0; j < 3; j++) { // a pip is a small slanted chip: lit ones have a halo
+      const x = gx + 20 + j * 7, p = [[x + 2, 21], [x + 6, 21], [x + 4, 30], [x, 30]];
       if (tier > j) {
-        g.fillStyle(CYAN, 0.2); g.fillRect(x - 1, 19, 14, 13);
+        g.fillStyle(CYAN, 0.2); g.fillRect(x - 1, 19, 9, 13);
         g.fillStyle(CYAN, 1); g.beginPath(); g.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.closePath(); g.fillPath();
       } else { g.lineStyle(1, HUD_LINE, 1); g.beginPath(); g.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.closePath(); g.strokePath(); }
     }
   });
   // cargo hold: ten cells, amber as they fill, red and beating when it is full (asteroids.js)
-  const ore = G.ore | 0, full = ore >= ORE_CAP;
+  const cap = holdCap(), ore = G.ore | 0, full = ore >= cap;
   hudPanel(g, 856, 10, 134, 30, 8, 0.78, full ? RED : CYAN);
   hudPut(h, 'orl', 872, 25, 'ORE', { size: HT.label, color: full ? '#ff4d6d' : HUD_DIM, spacing: 2 });
-  hudBar(g, 902, 19, 78, 12, ore / ORE_CAP, full ? RED : AMBER, ORE_CAP, full ? 0.55 + 0.45 * Math.sin(now / 120) : null);
+  hudBar(g, 902, 19, 78, 12, ore / cap, full ? RED : AMBER, Math.min(cap, 24), full ? 0.55 + 0.45 * Math.sin(now / 120) : null); // one cell an ore, up to 24
   hudFuel(h, now);
 }
 
@@ -553,17 +564,19 @@ function hudWarn(h, s, now, key, near, engage) {
   const hullF = surf ? s.hp / 100 : G.hull / G.maxHull;
   if ((space || surf) && hullF <= 0.3) list.push({ id: 'hull', text: surf ? 'HEALTH CRITICAL' : 'HULL CRITICAL', sub: Math.max(0, Math.round(hullF * 100)) + '%  BREAK OFF', color: RED, crit: true });
   if (surf && s.col && s.col.state !== 'dead' && s.col.hp / 60 <= 0.3) list.push({ id: 'col', text: 'COLONIST IN DANGER', sub: Math.max(0, Math.round(s.col.hp)) + ' HP', color: AMBER, crit: true });
+  if (space && now < (h.interdictUntil || 0)) list.push({ id: 'int', text: 'INTERDICTED', sub: 'PIRATES AHEAD', color: RED, crit: true }); // pulled out of cruise (src/cruise.js)
   if (space && s.boostLocked) list.push({ id: 'bst', text: 'BOOST EMPTY', sub: 'RECHARGING', color: AMBER });
+  if (space && s.sh && s.sh.max > 0 && now - s.sh.down < 2500) list.push({ id: 'shd', text: 'SHIELDS DOWN', sub: 'THE HULL TAKES THE HITS', color: AMBER });
   const hot = near < engage; // first contact: a banner for 2.5 s when something comes into attack range
   if (hot && !h.hotWas) h.contact = now + 2500;
   h.hotWas = hot;
   if (now < (h.contact || 0)) list.push({ id: 'hos', text: 'HOSTILE CONTACT', sub: Math.round(near * 0.1) + (space ? ' KM' : ' M'), color: RED });
-  const full = space && (G.ore | 0) >= ORE_CAP;
+  const full = space && (G.ore | 0) >= holdCap();
   if (full && !h.fullWas) h.holdFull = now + 3000;
   h.fullWas = full;
   if (now < (h.holdFull || 0)) list.push({ id: 'ore', text: 'CARGO HOLD FULL', sub: 'SELL AT THE STATION', color: AMBER });
 
-  if (hullF <= 0.3 && (space || surf)) { // the edge pulse: four strips that fade inward
+  if ((hullF <= 0.3 || now < (h.interdictUntil || 0)) && (space || surf)) { // the edge pulse: four strips that fade inward
     const a = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(now / 240)), d = 110;
     g.fillGradientStyle(RED, RED, RED, RED, a, a, 0, 0); g.fillRect(0, 0, W, d);
     g.fillGradientStyle(RED, RED, RED, RED, 0, 0, a, a); g.fillRect(0, H - d, W, d);
@@ -669,6 +682,7 @@ function hudTick(s) {
   // gauges, top left: hull (health on foot), then speed in space or the colonist on foot
   const hullFrac = surf ? s.hp / 100 : G.hull / G.maxHull;
   hudGauge(h, 'g1', 70, 80, 40, hullFrac, hullFrac > 0.5 ? CYAN : hullFrac > 0.3 ? AMBER : RED, String(Math.max(0, Math.round(surf ? s.hp : G.hull))), surf ? 'HEALTH' : 'HULL', null, hullFrac <= 0.3);
+  if (space && s.sh && s.sh.max > 0) hudShield(h, s.sh, 70, 80, 59, now); // the shield: a thin ring round the hull gauge (the parts, src/data_parts.js)
   if (space) {
     const spd = s.ship.body.speed, top = boostMax();
     if (s.cruising) hudGauge(h, 'g2', 186, 80, 40, Math.min(1, spd / CRUISE.top), CYAN, hudFmt(spd / 10), 'KM/S', null); // cruise: the speed in km/s (src/cruise.js)

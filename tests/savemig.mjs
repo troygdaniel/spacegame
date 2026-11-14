@@ -60,7 +60,7 @@ try {
   check('one Wren, parked at the station, tank full', ship.length === 1 && ship[0].model === 'wren' && ship[0].name === 'Wren' && ship[0].at === 'halcyon-station' && ship[0].fuel === 40 && g.active === 0, JSON.stringify(ship));
   check('parts: armor 1 to shields, rapid 2 to weapons, boolean booster to engine 1, tank and cargo 0',
     ship[0].parts.shields === 1 && ship[0].parts.weapons === 2 && ship[0].parts.engine === 1 && ship[0].parts.tank === 0 && ship[0].parts.cargo === 0, JSON.stringify(ship[0].parts));
-  check('hull 88 of 120 and 4 ore are on the ship; G.upgrades answers with the old keys', g.hull === 88 && g.maxHull === 120 && g.ore === 4 && JSON.stringify(g.up) === '{"armor":1,"rapid":2,"booster":1}', JSON.stringify(g));
+  check('hull 88 of 100 (shields no longer add hull) and 4 ore are on the ship; G.upgrades answers with the old keys', g.hull === 88 && g.maxHull === 100 && g.ore === 4 && JSON.stringify(g.up) === '{"armor":1,"rapid":2,"booster":1}', JSON.stringify(g));
   await ev(`__realSave(true)`);
   const v2 = JSON.parse(await ev(`localStorage.getItem('longhaul.save.v2')`));
   check('saving wrote v2 with the fleet and none of the v1 top-level fields', v2.v === 2 && v2.fleet.length === 1 && v2.fleet[0].hull === 88 && v2.fleet[0].ore === 4
@@ -71,7 +71,7 @@ try {
   await wipe();
   await ev(`(() => {
     G.credits = 2500; G.volume = 0.4; G.mission = 'accepted'; G.missionId = 'escort'; G.missionProgress = 0; G.patrolsDone = 2;
-    G.upgrades.armor = 2; G.upgrades.rapid = 1; G.upgrades.booster = 1; G.fleet[0].maxHull = 140; G.hull = 101; G.ore = 6; G.fleet[0].fuel = 31.5; G.fleet[0].parts.tank = 1;
+    G.upgrades.armor = 2; G.upgrades.rapid = 1; G.upgrades.booster = 1; G.hull = 97; G.ore = 6; G.fleet[0].fuel = 31.5; G.fleet[0].parts.tank = 1;
     G.fleet.push(Object.assign(newShip('wren', 'halcyon-station'), { uid: 2, name: 'Spare', hull: 55, ore: 2, fuel: 12 })); G.active = 1;
     G.known = ['halcyon', 'kestrel']; G.charted = ['hollow-beacon']; G.jumps = 3; G.poi = { 'wreck-w': 2 };
     return 1; })()`);
@@ -83,7 +83,7 @@ try {
   check('saving again gives the same file byte for byte', (await ev(`JSON.stringify(snapshot())`)) === saved);
   const rt = await json(`({ active: G.active, n: G.fleet.length, hull: G.hull, ore: G.ore, up: G.upgrades, h0: G.fleet[0].hull, o0: G.fleet[0].ore, f0: G.fleet[0].fuel, mh0: G.fleet[0].maxHull, tank0: G.fleet[0].parts.tank, name1: G.fleet[1].name, credits: G.credits, known: G.known, jumps: G.jumps })`);
   check('two ships, the second active, each with its own hull, hold and fuel',
-    rt.n === 2 && rt.active === 1 && rt.hull === 55 && rt.ore === 2 && rt.h0 === 101 && rt.o0 === 6 && rt.f0 === 31.5 && rt.mh0 === 140 && rt.tank0 === 1 && rt.name1 === 'Spare', JSON.stringify(rt));
+    rt.n === 2 && rt.active === 1 && rt.hull === 55 && rt.ore === 2 && rt.h0 === 97 && rt.o0 === 6 && rt.f0 === 31.5 && rt.mh0 === 100 && rt.tank0 === 1 && rt.name1 === 'Spare', JSON.stringify(rt));
   check('the rest came back too', rt.credits === 2500 && rt.known.join() === 'halcyon,kestrel' && rt.jumps === 3 && (await ev(`G.mission + G.missionId + G.patrolsDone + G.charted.join()`)) === 'acceptedescort2hollow-beacon');
 
   // ---- 4. v2 beats v1; unknown ids fall back ----
@@ -100,7 +100,7 @@ try {
   const u = await json(`({ system: G.system, lastDock: G.lastDock, active: G.active, model: G.fleet[0].model, name: G.fleet[0].name, hull: G.hull, fuel: G.fleet[0].fuel, ore: G.ore, parts: G.fleet[0].parts, credits: G.credits, volume: G.volume, known: G.known, uid: G.fleet[0].uid })`);
   check('unknown system and station fall back to halcyon', u.system === 'halcyon' && u.lastDock === 'halcyon-station', JSON.stringify([u.system, u.lastDock]));
   check('unknown model falls back to the wren, the name and the rest of the ship are kept', u.model === 'wren' && u.name === 'Old Faithful' && u.hull === 70 && u.fuel === 12 && u.ore === 3 && u.uid === 5, JSON.stringify(u));
-  check('a bad active index is 0; parts are clamped to what this build sells; junk is 0', u.active === 0 && u.parts.engine === 2 && u.parts.shields === 1 && u.parts.weapons === 0, JSON.stringify(u.parts));
+  check('a bad active index is 0; parts are clamped to what this build sells; junk is 0', u.active === 0 && u.parts.engine === 3 && u.parts.shields === 1 && u.parts.weapons === 0, JSON.stringify(u.parts)); // tier 9 comes down to 3, the highest tier of any part (card u-d1)
   check('the rest of the save is kept (credits, volume, known systems, deduped, halcyon first)', u.credits === 700 && u.volume === 0.3 && u.known.join() === 'halcyon,kestrel', JSON.stringify([u.credits, u.volume, u.known]));
   await wipe();
   await put('longhaul.save.v2', { v: 2, credits: 10, fleet: [] });

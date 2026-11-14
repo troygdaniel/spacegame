@@ -174,6 +174,8 @@ Five slots on every ship: **engine, shields, weapons, tank, cargo**. Each has ti
 
 Where they are sold: Halcyon and Meridian sell tier 1 and 2 of everything; Meridian also tier 3. Outposts sell tank and engine tier 1. Mining systems sell cargo and tank to tier 2 and 3. Ember sells weapons to tier 3, the Roost sells shields and weapons to tier 3 at x1.25. The shop terminal keeps the look it has now (`openShop` in `shop.js`); it gets five cards in two rows instead of three.
 
+**As built (card `u-d1`):** `src/data_parts.js` holds the table; the shop keys 1 to 5 are shields, rapid fire (weapons), engine, tank, cargo, so the old keys 1 to 3 did not move. A station sells tier 2 of every slot unless its dock row says `shop` (a tier cap), `parts` (a cap per slot) or `partMult` (a price factor); what a ship can fit is `maxTier` in `data_ships.js`; the price is the table's, times the ship's `partMult`, times the station's, to ten credits. Shields are points of their own (`shieldMax`, `shieldRegen`, `shieldDelay` in `shipStat`), they take hits before the hull, and they no longer add hull. The hold is `holdCap()`, not a constant.
+
 **v1 upgrades map across**: `armor` becomes `shields` (tier for tier, same prices: the old +20 max hull is replaced by shield points), `rapid` becomes `weapons`, `booster` becomes `engine`. `tank` and `cargo` start at 0. The save migration (section 8.3) does this once.
 
 ## 8. Data and save
