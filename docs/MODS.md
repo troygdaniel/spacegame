@@ -6,7 +6,8 @@ game's complaints. The design behind it is `docs/MODDING.md`; the full list of f
 
 ## What you can change today, and what you cannot yet
 
-**You can change what the game ships with**: the four calls on the mission board, the six characters in the bar, the three pirates, and the fifteen part tiers.
+**You can change what the game ships with**: the four calls on the mission board, the six characters in the bar, the three pirates, and the fifteen part tiers. Only some of these have a file in `content/`
+today (the Rescue call, JUNO, the raider and the drone, and nine of the parts). To change one that has no file, you make a file for it: sections 3 to 5 show how.
 
 **You cannot add a brand-new mission, character or ship yet.** A file whose name the game does not know is skipped, and the game says so:
 
@@ -52,6 +53,7 @@ failed: Failed. Ask the station for another call
 
 1. Edit a file under `content/` and save it.
 2. Run `node tools/build-content.mjs` in the game's folder. It checks every file, prints every problem in plain words and writes `content.generated.js`.
+   The build always ends with a note that your content "differs from the shipped core pack ... will say MODDED". That is normal: it is how the Title screen knows the game is modded.
 3. Reload `index.html` (double-click it, or press F5). The game opens from a file, which is why the build step exists: a browser will not let a page read other local files.
 
 Faster: `node tools/serve.mjs` serves the game at `http://127.0.0.1:8787/`, rebuilds the moment you save and prints the problems; press **R** in the page to reload. Nothing else needs it.
@@ -63,7 +65,7 @@ To undo: put the file back (`git checkout content/` if you use git, or delete yo
 
 ## 3. Change a mission (2 minutes)
 
-Open `content/missions/rescue.md`. Change `reward: 500` to `reward: 700`, and rewrite the first line of the story:
+Open `content/missions/rescue.md`. Change `reward: 500` to `reward: 700`, and rewrite only the first line of the story (the text under the `---`; the other five lines stay):
 
 ```
 reward: 700
@@ -74,8 +76,8 @@ A survey pod went down on Kepler-4b. Bring them home.
 Save, build, reload, open the mission board in the station and read the Rescue call: it says REWARD 700 cr. The text under the front matter is what the board says; `## Board line` is the one-line
 objective on the HUD; `## Progress`, `## Steps` and `## Failure` are the other texts. A text may use `{reward}`, `{count}` and `{progress}`: `She pays {reward} on arrival.`
 
-The other three calls (`escort`, `patrol`, `bounty`) have no file yet, so they keep the game's own text. To change one, give it a file of its own: the file name is the id and `kind` must be the
-same word. This is a whole, working file, `content/missions/escort.md`:
+The other three calls (`escort`, `patrol`, `bounty`) have no file in `content/` yet: the game uses its own built-in text and numbers for them. To change one, give it a file of its own, and that file is the first
+change to it: the file name is the id and `kind` must be the same word. This is a whole, working file, `content/missions/escort.md`:
 
 ```md file=content/missions/escort.md
 ---
@@ -103,7 +105,7 @@ against the time it takes is worked out in `docs/ECONOMY.md`.
 
 ## 4. Change a character (2 minutes)
 
-Open `content/npcs/juno.md` and add a line under `## Lines`:
+Open `content/npcs/juno.md` and add a line at the top of the list, as the first line under `## Lines`:
 
 ```
 ## Lines
@@ -142,7 +144,8 @@ the same way (`type: ship`, `side: pirate`, then the numbers). The other fields 
 credits add up against the rest of the game.
 
 Parts are one file a tier, named `<slot>-<tier>`: `shields-2.md`, `engine-1.md`, ... `cargo-3.md`. The slot and tier inside the file must match its name. Edit a price or the numbers a tier gives
-(`points`, `delay`, `damage`, `speedPct`, ...) and the shop and the ship use them at once.
+(`points`, `delay`, `damage`, `speedPct`, ...) and the shop and the ship use them at once. The nine files for shields, weapons and engine are in `content/parts/`; `tank` and `cargo` have no file yet, and a file you
+make for one works the same way. For example, `content/parts/cargo-3.md` with `type: part`, `slot: cargo`, `tier: 3`, `name: FREIGHT HOLD`, `price: 800` and `holdPlus: 20` gives the big hold 20 ore for 800 credits.
 
 **What the game reads today, type by type** (everything else in a file is checked by the build, then ignored):
 
@@ -156,7 +159,8 @@ Parts are one file a tier, named `<slot>-<tier>`: `shields-2.md`, `engine-1.md`,
 
 ## 6. When it goes wrong (2 minutes)
 
-Every complaint is one line: the file, the line, what is wrong, and what the game did. These are the ones you will meet, word for word:
+Every complaint is one line: the file, the line, what is wrong, and what the game did. These are the ones you will meet, word for word. The build prints the first four. The last two come only from the game when it loads your
+content (the Title screen chip, or **P**): the build cannot know which ids the game has, so it says "0 problems" for them, and `--strict` does not catch them.
 
 | The message | What it means, and the fix |
 |---|---|

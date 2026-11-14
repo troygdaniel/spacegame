@@ -64,6 +64,18 @@ check('no adapter in src/contenttables.js can add a new id (the guide says none 
 const unread = Object.keys(C.SCHEMA).filter(t => !new RegExp('CONTENT_TABLES\\.' + t + ' =').test(tables));
 check('the types the game does not read yet are system, station, voice and text (section 5 of the guide)', same(unread, ['system', 'station', 'voice', 'text']), unread.join());
 
+console.log('3b. the claims about which files exist and what the build can see');
+import { readdirSync } from 'node:fs';
+const partFiles = readdirSync(join(ROOT, 'content', 'parts')).filter(f => f.endsWith('.md'));
+check('content/parts has nine files, all shields, weapons or engine (the guide says tank and cargo have none)', partFiles.length === 9 && partFiles.every(f => /^(shields|weapons|engine)-[123]\.md$/.test(f)), partFiles.join());
+check('content/missions has only rescue.md (the guide says escort, patrol and bounty have no file)', readdirSync(join(ROOT, 'content', 'missions')).filter(f => f.endsWith('.md')).join() === 'rescue.md');
+check('content/npcs has only juno.md', readdirSync(join(ROOT, 'content', 'npcs')).filter(f => f.endsWith('.md')).join() === 'juno.md');
+// the two mistakes the guide says only the game can see: the build reports nothing for them
+const escortFile = fences.find(f => f.path === 'content/missions/escort.md');
+const wrongKind = escortFile.text.replace('kind: escort', 'kind: rescue'), unknownId = { path: 'content/missions/my-call.md', text: escortFile.text };
+check('a mission file with the wrong kind is not a problem to the build (the game says it)', C.loadAll([{ path: escortFile.path, text: wrongKind }]).errors.length === 0);
+check('a mission file with an id the game does not know is not a problem to the build (the game says it)', C.loadAll([unknownId]).errors.length === 0);
+
 console.log('4. what the guide quotes and names is still there');
 const code = read('src/content.js') + read('src/contenttables.js') + read('src/boot.js');
 // [a piece of a message the code says, whether the guide quotes it]
