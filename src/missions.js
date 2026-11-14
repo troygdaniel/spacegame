@@ -26,7 +26,7 @@ const MISSIONS = [
     progress: () => 'The MULE is under way to the Perseus gate.\nStay with her. Do not dock or land.',
     failOnDeath: ['accepted'], deathMsg: 'Ship destroyed. The MULE is on her own. Mission failed.',
     space: { setup: escortSetup, update: escortUpdate, target: escortTarget,
-      leave: s => failMission(s, 'You left the MULE behind. Mission failed.') }
+      leave: s => failMission(s, uiText('toast.mule-left')) }
   },
   {
     id: 'patrol', key: '3', title: 'Police patrol', where: 'Halcyon approach', reward: 600, count: 5,
@@ -96,13 +96,13 @@ function missionTarget(s) {
 // a pirate went down: a wanted one counts for the patrol, the Reaver ends the bounty
 function missionKill(s, e) {
   if (e && e.boss) {
-    if (missionActive('bounty')) { s.cameras.main.shake(600, 0.012); completeMission(s, 'The Reaver is wreckage. Bounty paid.'); }
+    if (missionActive('bounty')) { s.cameras.main.shake(600, 0.012); completeMission(s, uiText('toast.reaver-dead')); }
     return;
   }
   if (!e || !e.wanted || !missionActive('patrol')) return;
   const m = missionDef(); G.missionProgress++;
-  if (G.missionProgress >= m.count) { G.patrolsDone++; completeMission(s, 'Patrol complete. All wanted pirates destroyed.'); }
-  else toast(s, 'Wanted pirate down  ' + G.missionProgress + ' of ' + m.count, '#ffb454');
+  if (G.missionProgress >= m.count) { G.patrolsDone++; completeMission(s, uiText('toast.patrol-done')); }
+  else toast(s, uiText('toast.patrol-down'), '#ffb454');
 }
 function radarDot(s, x, y, color, r) { hudBlip(s, x, y, color, r); } // the HUD radar (src/hud.js) draws it this frame
 
@@ -133,7 +133,7 @@ function escortSetup(s) {
     }
   };
   ambush(0.35, 2); ambush(0.7, 3);
-  s.time.delayedCall(3600, () => { if (f.active && !s.leaving) toast(s, 'The MULE is leaving the hangar. Stay close to her.', '#ffd37a'); });
+  s.time.delayedCall(3600, () => { if (f.active && !s.leaving) toast(s, uiText('toast.mule-leaving'), '#ffd37a'); });
 }
 function freighterHurt(s, n) {
   const f = s.mx.freighter; if (!f || !f.active) return;
@@ -142,7 +142,7 @@ function freighterHurt(s, n) {
   beep(200, 0.08, 'square', 0.02, -100);
   if (f.hp <= 0) {
     s.boom.explode(50, f.x, f.y); f.destroy(); beep(90, 0.5, 'sawtooth', 0.05, -60);
-    failMission(s, 'The MULE was destroyed. Mission failed.');
+    failMission(s, uiText('toast.mule-lost'));
   }
 }
 function escortUpdate(s) {
@@ -150,7 +150,7 @@ function escortUpdate(s) {
   const gate = sysBody('gate');
   if (Phaser.Math.Distance.Between(f.x, f.y, gate.x, gate.y) < gate.r) {
     s.boom.explode(30, f.x, f.y); f.destroy();
-    completeMission(s, 'The MULE made the Perseus gate.'); return;
+    completeMission(s, uiText('toast.mule-arrived')); return;
   }
   // she slows when pirates are close or you fall behind, so you can catch up
   let threat = false;
@@ -207,7 +207,7 @@ function bountySetup(s) {
   s.mx.boss = d;
   spawnPirate(s, bx + 180, by - 140, 'raider'); spawnPirate(s, bx - 160, by + 160, 'gunship'); // the two escorts
   s.mx.mark = s.add.graphics().setDepth(3);
-  s.time.delayedCall(3600, () => { if (!s.leaving && d.active) toast(s, 'The Reaver is south-west of Kepler-4b. Watch for the flash before it charges.', '#ffd37a'); });
+  s.time.delayedCall(3600, () => { if (!s.leaving && d.active) toast(s, uiText('toast.reaver-intro'), '#ffd37a'); });
 }
 function reaverAI(s, d, ship, time) {
   const def = d.def, dist = Phaser.Math.Distance.Between(d.x, d.y, ship.x, ship.y);
@@ -215,7 +215,7 @@ function reaverAI(s, d, ship, time) {
   const phase = d.hp > REAVER_HP * 2 / 3 ? 1 : d.hp > REAVER_HP / 3 ? 2 : 3;
   if (phase > d.phase) {
     d.phase = phase; s.cameras.main.shake(300, 0.006);
-    toast(s, phase === 2 ? 'The Reaver calls in its wing.' : 'The Reaver is burning. It fights harder.', '#ff4d6d');
+    toast(s, uiText(phase === 2 ? 'toast.reaver-wing' : 'toast.reaver-burning'), '#ff4d6d');
     for (let i = 0; i < 2; i++) spawnPirate(s, d.x + Phaser.Math.Between(-200, 200), d.y + Phaser.Math.Between(-200, 200), 'raider');
   }
   const mult = [1, 1, 1.25, 1.5][phase];

@@ -14,6 +14,7 @@
 import { readdirSync, readFileSync, writeFileSync, existsSync, watch } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { createRequire } from 'node:module';
+import vm from 'node:vm';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -49,11 +50,25 @@ export function generate(result, core) {
   ].join('\n');
 }
 
+// the ids the game's own code defines, so a station file may say system: halcyon without a systems/halcyon.md (docs/MODDING.md 5.1: the code defaults
+// stay). Read from src/data_systems.js, which is plain data and runs in a bare vm.
+let CODE_IDS = null;
+function codeKnown(type, id) {
+  if (!CODE_IDS) {
+    CODE_IDS = { system: new Set(), station: new Set() };
+    try {
+      const S = vm.runInNewContext(readFileSync(join(ROOT, 'src/data_systems.js'), 'utf8') + '\n;SYSTEMS', {});
+      Object.keys(S).forEach(k => { CODE_IDS.system.add(k); (S[k].bodies || []).forEach(b => { if (b.type === 'station') CODE_IDS.station.add(b.id); }); });
+    } catch (e) { /* no code ids: every reference then needs its own file, as before */ }
+  }
+  return !!(CODE_IDS[type] && CODE_IDS[type].has(id));
+}
+
 // build once. write:false leaves the file alone (tests); returns the result, the text and whether the file on disk differs
 // core: the hash of the shipped pack. Given (tests), it is used as is; seal: true makes this build the shipped pack; otherwise the
 // core already in the file at out stays, and a first build seals itself.
 export function build({ dir = join(ROOT, 'content'), prefix = 'content/', out = join(ROOT, 'content.generated.js'), write = true, opts = {}, core, seal = false } = {}) {
-  const result = ContentLib.loadAll(readPack(dir, prefix), opts);
+  const result = ContentLib.loadAll(readPack(dir, prefix), Object.assign({ known: codeKnown }, opts));
   const old = existsSync(out) ? readFileSync(out, 'utf8') : null;
   const kept = old && /\bcore:\s*"([0-9a-f]{1,16})"/.exec(old);
   const sealed = seal ? result.hash : core || (kept && kept[1]) || result.hash;
