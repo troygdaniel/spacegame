@@ -11,6 +11,7 @@
 //   jumpCheck(from, to, rec)                      { ok, why: 'unknown' | 'range' | 'fuel' | null, cost, have, short, ly }
 //   pumpQuote(stationId, rec)                     what the terminal offers: half a tank, a full tank, what each costs
 //   pumpBuy(mode, stationId, rec)                 'half' or 'full': pays and fills as far as credits allow
+//   fuelBurn(units, rec)                          a jump's fuel, taken when its charge completes (src/jump.js)
 //   rangerCall(now) / rangerTick(now)             the fuel ranger; the Space scene will drive these (card u-b4)
 //   buildPump(s) openPump(s) closePump(s) pumpFrame(s)   the terminal in the Station scene
 
@@ -83,6 +84,13 @@ function pumpBuy(mode, stationId, rec) {
   const afford = fuelRound(Math.floor(G.credits / q.price * 10) / 10), units = Math.min(want, afford), cost = pumpCost(units, q.price);
   G.credits -= cost; rec.fuel = fuelRound(Math.min(fuelTank(rec), fuelHave(rec) + units));
   return { ok: true, why: null, units, cost, partial: units < want };
+}
+
+// a jump burns its fuel when the charge completes (src/jump.js); a tank never goes below 0 and the sum is rounded as everything else here is
+function fuelBurn(units, rec) {
+  rec = rec || activeShip();
+  rec.fuel = fuelRound(Math.max(0, fuelHave(rec) - Math.max(0, units)));
+  return rec.fuel;
 }
 
 // ---------- the fuel ranger ----------

@@ -42,13 +42,16 @@ export const NOTES = {
     speedPct: 'engine: percent more top speed', jump: 'engine: light years more jump range', boostAdd: 'engine: px a second more boost speed', boostTank: 'engine: the boost tank', boostRegen: 'engine: how fast it refills',
     fuelMult: 'tank: the tank times this', holdPlus: 'cargo: ore units more'
   },
-  system: { name: 'its name', kind: 'what kind of place', ly: 'galaxy map position [x, y], light years', size: 'world size, px', danger: '0 to 5: how many pirates', traffic: '0 to 3: how busy', seed: 'the random seed' },
+  system: { name: 'its name', kind: 'what kind of place', ly: 'galaxy map position [x, y], light years', size: 'world size, px', danger: '0 to 5: how many pirates', traffic: '0 to 3: how busy', seed: 'the random seed',
+    starType: 'the star: O, B, A, F, G, K or M (not read yet)', starX: 'where the star is, px (not read yet)', starY: 'where the star is, px (not read yet)',
+    pirateMax: 'its own pirate table: at most this many at once (not read yet)', pirateEvery: 'its own pirate table: one new pirate every this many ms (not read yet)' },
   poi: {
     kind: 'wreck or beacon; it must match the site', name: 'what it is called on the radar',
     credits: 'a fixed site: what it pays', hull: 'hull it repairs', guard: 'a fixed site: how many pirates guard it',
     pays: 'a random signal: what it pays, [least, most]', guardChance: 'a random signal: how often pirates guard it, 0 to 1', hullChance: 'a random signal: how often it repairs the hull, 0 to 1'
   },
-  station: { name: 'its name', system: 'the system it is in', accent: 'its colour (not read yet)', fuel: 'credits a unit of fuel (not read yet)', repair: 'credits a point of hull at the repair bay', ore: 'credits an ore pays when you dock' },
+  station: { name: 'its name', system: 'the system it is in', accent: 'its colour (not read yet)', fuel: 'credits a unit of fuel (not read yet)', repair: 'credits a point of hull at the repair bay', ore: 'credits an ore pays when you dock',
+    yard: 'the ships it sells, by id (not read yet)', partMult: 'the price of its parts times this (not read yet)', fee: 'credits it takes at the door (not read yet)', salvageMult: 'what a salvage is worth here, times the usual (not read yet)' },
   voice: { event: 'which moment the lines are for' },
   text: {}
 };

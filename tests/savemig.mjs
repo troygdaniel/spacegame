@@ -31,7 +31,7 @@ try {
   // ---- 1. a fresh game and the accessors ----
   await wipe();
   check('fresh game: system halcyon, docked at halcyon-station, one Wren, tank full',
-    (await json(`[G.system, G.lastDock, G.fleet.length, G.fleet[0].model, G.fleet[0].fuel, G.active, G.known]`)).join('|') === 'halcyon|halcyon-station|1|wren|40|0|halcyon');
+    (await json(`[G.system, G.lastDock, G.fleet.length, G.fleet[0].model, G.fleet[0].fuel, G.active, G.known]`)).join('|') === 'halcyon|halcyon-station|1|wren|40|0|halcyon,kestrel');
   check('G.upgrades still shows the three old keys', (await ev(`Object.keys(G.upgrades).join()`)) === 'armor,rapid,booster');
   await ev(`(() => { G.upgrades.armor = 2; G.upgrades.rapid = 1; G.upgrades.booster = 2; G.hull = 77; G.maxHull = 140; G.ore = 3; return 1; })()`);
   const rec = await json(`G.fleet[0]`);
@@ -55,7 +55,7 @@ try {
     g.credits === 1420 && g.mission === 'accepted' && g.missionId === 'patrol' && g.progress === 2 && g.patrols === 1 && g.volume === 0.6 && g.muted === true
     && g.earned === 2310 && g.guideDone === true && g.stats.drones === 9 && g.stats.missions === 3 && g.stats.time === 120000, JSON.stringify(g));
   check('poi came across', g.poi['wreck-nw'] === 2 && g.poi['beacon-e'] === 1, JSON.stringify(g.poi));
-  check('system halcyon, lastDock the station, jumps 0, known only halcyon', g.system === 'halcyon' && g.lastDock === 'halcyon-station' && g.jumps === 0 && g.known.join() === 'halcyon');
+  check('system halcyon, lastDock the station, jumps 0, known the start stars (halcyon and kestrel)', g.system === 'halcyon' && g.lastDock === 'halcyon-station' && g.jumps === 0 && g.known.join() === 'halcyon,kestrel');
   const ship = await json(`G.fleet`);
   check('one Wren, parked at the station, tank full', ship.length === 1 && ship[0].model === 'wren' && ship[0].name === 'Wren' && ship[0].at === 'halcyon-station' && ship[0].fuel === 40 && g.active === 0, JSON.stringify(ship));
   check('parts: armor 1 to shields, rapid 2 to weapons, boolean booster to engine 1, tank and cargo 0',
@@ -78,7 +78,7 @@ try {
   await ev(`__realSave(true)`);
   const saved = await ev(`localStorage.getItem('longhaul.save.v2')`);
   await ev(`(() => { newGameState(); G.credits = 5; return 1; })()`);
-  check('the wipe really cleared it', (await json(`[G.fleet.length, G.known.length, G.jumps]`)).join() === '1,1,0');
+  check('the wipe really cleared it', (await json(`[G.fleet.length, G.known.length, G.jumps]`)).join() === '1,2,0');
   check('loadGame reads v2', (await ev(`loadGame()`)) === true);
   check('saving again gives the same file byte for byte', (await ev(`JSON.stringify(snapshot())`)) === saved);
   const rt = await json(`({ active: G.active, n: G.fleet.length, hull: G.hull, ore: G.ore, up: G.upgrades, h0: G.fleet[0].hull, o0: G.fleet[0].ore, f0: G.fleet[0].fuel, mh0: G.fleet[0].maxHull, tank0: G.fleet[0].parts.tank, name1: G.fleet[1].name, credits: G.credits, known: G.known, jumps: G.jumps })`);

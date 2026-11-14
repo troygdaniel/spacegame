@@ -15,6 +15,7 @@ const CONTROLS = [
     { k: ['1-5'], t: 'Buy a part in the shop' },
     { k: ['T'], t: 'Chat with someone in the bar (needs a chat key)' },
     { k: ['J'], t: 'Journal: who you have met' },
+    { k: ['G'], t: 'Galaxy map (look only here; you jump from your ship)' },
     { k: ['Esc'], t: 'Close a terminal, or pause' }
   ] },
   { id: 'ship', title: 'SHIP BAY', scene: 'Ship', rows: [
@@ -36,7 +37,8 @@ const CONTROLS = [
     { k: ['L'], t: 'Dock or land (fly slowly, close in)', bay: 1, bt: 'Dock or land' },
     { k: ['T'], t: 'Mission panel', bay: 1 },
     { k: ['N'], t: 'Nav list: Enter picks a target' },
-    { k: ['C'], t: 'Cruise to the target (A D nudge, S cancels)' }
+    { k: ['C'], t: 'Cruise to the target (A D nudge, S cancels)' },
+    { k: ['G'], t: 'Galaxy map: pick a system, Enter charges the jump (S or Esc cancels)' }
   ] },
   { id: 'surface', title: 'SURFACE', scene: 'Surface', rows: [
     { k: ['W', 'A', 'S', 'D'], t: 'Walk (the arrow keys work too)' },
@@ -48,6 +50,7 @@ const CONTROLS = [
     { k: ['S'], t: 'Open Settings' },
     { k: ['V'], t: 'Ship voice key (Settings, Keys)' },
     { k: ['C'], t: 'NPC chat key (Settings, Keys)' },
+    { k: ['O'], t: 'Mods screen (packs you have added)' },
     { k: ['P'], t: 'Content problems or a mod (Settings, Content)' }
   ] },
   { id: 'any', title: 'ANYWHERE', scene: null, rows: [

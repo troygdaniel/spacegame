@@ -33,13 +33,16 @@
 #   4t. tests/shipmodels.mjs: the six ship models against docs/UNIVERSE.md 6.1, and the Wren's speed, thrust, turn, boost and hull in the real Space scene
 #   4zd. tests/ribbons.mjs: the ship ribbon's bounds (no line over 24 px, no bar across a teleport, no fade over 1, nothing non-finite)
 #   4ze. tests/sfxlevels.mjs: the sound pass: each new effect rendered offline and measured (above the wind, under a laser shot, no clipping), the cruise rumble, mute and volume 0, and the real events calling the right sounds (cruise, shields, fuel, typing, Pause, Journal)
+#   4zf. tests/jump.mjs: the jump: G opens the galaxy map, Enter charges 4 s, Esc/S/a hit cancel, locked near a mass or a hostile, the fuel burns at the end, the Hyper tunnel, arrival in an empty Kestrel with 3 s of calm, the fuel ranger (docs/UNIVERSE.md 2.3)
+#   4zg. tests/worldat.mjs: worldAt(systemId) gives the code's Halcyon row and the other seven from their files; Halcyon built from its files alone equals the code's row; every field of the eight systems and six stations has a home; a pack of wrong files never blanks the game
 #   4u. tests/parts.mjs: the five ship parts (shields, weapons, engine, tank, cargo): tables, every effect, shields in flight, shot rate and damage, the shop's five cards with fit and stock rules, the save
 #   4w. tests/fleet.mjs: buy, sell, switch, rename and transfer ships, the yard and the prices, per-ship state through a save, and dying (docs/UNIVERSE.md 6.3)
 #   4zb. tests/modsdoc.mjs: docs/MODS.md, the modder guide, stays true: its field tables are written from the schema, its example files are valid, the ids and messages it names are in the code (no browser)
+#   4zm. tests/mods.mjs: mod packs: mods/<pack>/ built on its own, the example pack, off until turned on, the Mods screen (O on the Title), a picked folder with no Node, later names win, a tampered pack is refused (docs/MODDING.md 13)
 #   4y. tools/economy-sim.mjs check: the economy simulator still loads the real game data and every code line it pins (repair, insurance, MULE speed...) is still there (docs/ECONOMY.md; no browser)
 #   4z. tests/hangar.mjs: the hangar terminal in the Ship bay: fleet, yard and controls tabs, buy and sell with a second press, board, move, rename, what the stage shows
 #   4zc. tests/galaxymap.mjs: the galaxy map overlay (opens only from #galaxy): the eight systems, ranges, the card, out of range and short of fuel, keys and clicks, onJump
-#   4zf. tests/settings.mjs: the Settings screen: sound, keys (paste, last four, Test and Forget with a mocked fetch), controls from the one table, content, reset; V C P S on the title; the Pause row
+#   4zn. tests/settings.mjs: the Settings screen: sound, keys (paste, last four, Test and Forget with a mocked fetch), controls from the one table, content, reset; V C P S on the title; the Pause row
 #       header and body shape; the key is only ever in its header; 401 switches chat off; 429 waits; the setup panel saves a key
 #      their failure paths, with the game clock stepped by hand
 # Only one headless Chrome runs at a time on this Mac, whatever the worktree: cdp.mjs takes a lock in tests/lock.mjs, so a second
@@ -146,7 +149,14 @@ echo "== 4zd. ship ribbon bounds: a teleport, a clock that ran backwards, a huge
 if node tests/ribbons.mjs; then :; else fail=1; fi
 echo "== 4ze. the sound pass: levels against the planet wind and a laser shot, mute and volume 0, and the wiring (tests/sfxlevels.mjs)"
 if node tests/sfxlevels.mjs; then :; else fail=1; fi
-echo "== 4zf. the Settings screen: sound, keys with a mocked fetch, controls, content, reset (tests/settings.mjs)"
+echo "== 4zm. mod packs and the Mods screen (tests/mods.mjs)"
+if node tests/mods.mjs; then :; else fail=1; fi
+echo "== 4zf. the jump: G, the charge, the tunnel, arrival, the fuel ranger (tests/jump.mjs)"
+if node tests/jump.mjs; then :; else fail=1; fi
+
+echo "== 4zg. worldAt: the eight systems and six stations in one place; Halcyon from its files is the code's row (tests/worldat.mjs)"
+if node tests/worldat.mjs; then :; else fail=1; fi
+echo "== 4zn. the Settings screen: sound, keys with a mocked fetch, controls, content, reset (tests/settings.mjs)"
 if node tests/settings.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"

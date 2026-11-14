@@ -6,8 +6,18 @@ accent: green
 fuel: 9
 repair: 0.5
 ore: 26
+yard: [wren, kite, ox, talon, pathfinder, bastion]
 ---
 The Exchange: every ship, every part, six calls on the board.
+
+## Parts
+| slot | tier |
+| --- | --- |
+| shields | 3 |
+| weapons | 3 |
+| engine | 3 |
+| tank | 3 |
+| cargo | 3 |
 
 ## Welcome
 Welcome to {station}. Prices are posted, and everything is for sale.

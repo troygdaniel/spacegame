@@ -67,7 +67,9 @@ function contentBody(s, parent, x, y0, width) {
   if (!st.loaded) put('PACK   content.generated.js could not be read, so the game plays on its built-in values.', 14, '#ffd37a', 8);
   else if (st.modded) {
     put('PACK   MODDED: this game is not running the shipped core pack.', 14, '#9fe9ff', 2, { style: { fontStyle: 'bold' } });
-    put('content ' + (st.hash || '?') + ', shipped ' + (st.core || '?') + '. Please say so in a bug report.', 13, '#5b7a92', 8);
+    const on = (st.packs || []).filter(r => r.on).map(r => r.name); // src/mods.js: the packs laid over the core pack
+    put('content ' + (st.hash || '?') + ', shipped ' + (st.core || '?') + (on.length ? ', packs on: ' + on.join(', ') : '') + '. Please say so in a bug report.', 13, '#5b7a92', on.length ? 2 : 8);
+    if (on.length) put('Packs are turned on and off in the Mods screen (O on the Title screen).', 13, '#5b7a92', 8);
   } else put('PACK   the shipped core pack (' + (st.hash || '?') + ').', 14, '#9fe9ff', 8);
   if (n) put('The game started anyway. What is listed here was ignored and the built-in value is used instead.', 13, '#cfefff', 12);
   else put('No problems: every content file was read.', 13, '#6dff9c', 12);

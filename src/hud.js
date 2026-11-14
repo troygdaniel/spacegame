@@ -474,8 +474,8 @@ function hudRadar(h, s, key, obj, now) {
   };
 
   if (key === 'Space') {
-    mark(pt(s.station.x, s.station.y, true), CYAN, p => hudDiamond(g, p.x, p.y, 5, CYAN));
-    mark(pt(s.planet.x, s.planet.y, true), AMBER, p => { g.fillStyle(AMBER, 1); hudDisc(g, p.x, p.y, 5); });
+    if (!s.station.nowhere) mark(pt(s.station.x, s.station.y, true), CYAN, p => hudDiamond(g, p.x, p.y, 5, CYAN));
+    if (!s.planet.nowhere) mark(pt(s.planet.x, s.planet.y, true), AMBER, p => { g.fillStyle(AMBER, 1); hudDisc(g, p.x, p.y, 5); });
     s.enemies.getChildren().forEach(d => { if (d.active) dot(d.x, d.y, d.wanted ? AMBER : (d.def && d.def.radar) || RED, d.wanted ? 3 : d.def && d.def.key === 'gunship' ? 3 : 2.2); });
   } else {
     mark(pt(s.pad.x, s.pad.y, true), AMBER, p => hudDiamond(g, p.x, p.y, 5, AMBER));
@@ -607,7 +607,8 @@ function hudWarn(h, s, now, key, near, engage) {
 // ---- the objective: where to go, and how far ----
 function hudObjective(s, key, mission) { // mission: leave out the nav target (the radar arrow stays on the mission)
   if (key === 'Space') {
-    const t = (!mission && s.cr && s.cr.target) || missionTarget(s), big = t.name === 'Halcyon Station' || t.name === 'Kepler-4b';
+    const t = (!mission && s.cr && s.cr.target) || missionTarget(s); if (!t) return null; // a system with no station has nothing to point at
+    const big = t.name === 'Halcyon Station' || t.name === 'Kepler-4b';
     return { x: t.x, y: t.y, name: t.name.toUpperCase(), from: s.ship, unit: 'km', k: 0.1, hw: big ? 46 : 28, hh: big ? 46 : 28 };
   }
   if (key === 'Surface') {

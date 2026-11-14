@@ -110,6 +110,25 @@ for (const line of [...said(escortText.replace('reward: 400', 'rewrd: 400')), ..
   check(`the guide quotes "${line.slice(0, 70)}..." word for word`, doc.includes(line));
 }
 
+console.log('3c. the claims about packs (section 9 of the guide; tests/mods.mjs plays them in the game)');
+const ex = ['mods/example/_pack.md', 'mods/example/missions/rescue.md', 'mods/example/npcs/juno.md'];
+for (const f of ex) check(`${f} exists, and the guide names the example pack`, existsSync(join(ROOT, f)) && doc.includes('mods/example/'));
+check('the example pack makes Rescue pay 650, as the guide says', /reward: 650/.test(read('mods/example/missions/rescue.md')) && doc.includes('Rescue pays 650'));
+check('the guide names the label file, the generated file and the keys it tells the reader to press (O, F, R)', doc.includes('_pack.md') && doc.includes('mods.generated.js') && ['**O**', '**F**', '**R**'].every(k => doc.includes(k)));
+const titleJs = read('src/title.js'), modsJs = read('src/mods.js');
+check('O on the Title screen opens the Mods screen (src/title.js)', /KeyO'\)\s*modsOpenSetup/.test(titleJs));
+check('the Mods screen takes F (pick a folder), R (restart) and 1 to 6 (turn on or off) (src/mods.js)', /addKeys\('ESC,F,R,ONE,TWO,THREE,FOUR,FIVE,SIX'\)/.test(modsJs) && /this\.k\.F\)\) this\.pick\(\)/.test(modsJs) && /this\.k\.R\)\) this\.restart\(\)/.test(modsJs));
+check('the folder picker is an input with webkitdirectory (the guide says no Node is needed)', /setAttribute\('webkitdirectory'/.test(modsJs));
+check('packs are off until turned on and laid over in name order (the guide says so): modsAvailable sorts by name and only the on list is applied', /\.sort\(\(a, b\) => \(a\.name < b\.name/.test(modsJs) && /if \(!row\.on\) return;/.test(modsJs));
+check('a list in a pack file replaces the normal one whole (the guide says so for Lines, Reactions and Steps)', /n\.lines\.splice\(0, n\.lines\.length, \.\.\.data\.lines\)/.test(read('src/contenttables.js')) && /HUD_MISSIONS\[id\]\.steps = data\.steps\.map/.test(read('src/contenttables.js')) && /n\.react = \(\) =>/.test(read('src/contenttables.js')));
+check('the example JUNO file has a Lines list and no other section, the example Rescue file has no body (the guide describes both)', /^## Lines/m.test(read('mods/example/npcs/juno.md')) && !/^## (Reactions|Persona)/m.test(read('mods/example/npcs/juno.md')) && !/^## /m.test(read('mods/example/missions/rescue.md')) && read('content/npcs/juno.md').match(/^- /gm).length === 3, 'the guide says JUNO has three normal lines');
+check('_pack.md is the one underscore file the picker reads (the guide says so)', /parts\.join\('\/'\) !== '_pack\.md'/.test(modsJs));
+const addJs = read('src/contentadd.js');
+check('packs add things the way content/ does: the limits the guide gives (four calls, six characters, six ships, 40 voice files) are src/contentadd.js CA_MAX, and modsApply uses the same tables', /CA_MAX = \{ voice: 40, ship: 6, mission: 4, npc: 6 \}/.test(addJs) && /four calls, six characters, six ships, 40 voice files/.test(doc) && /ContentLib\.apply\(\{ entries: p\.entries[^)]*\}, CONTENT_TABLES\)/.test(modsJs));
+check('the guide says a pack can add (mods/my-pack/npcs/ada.md) and that a later pack changes a row an earlier one added; tests/mods.mjs B4 plays both', doc.includes('mods/my-pack/npcs/ada.md') && doc.includes('the later pack changes the row the earlier one added') && /B4\. a pack can add new things/.test(read('tests/mods.mjs')));
+const ign = read('.gitignore');
+check('.gitignore ignores mods/* except mods/example/ (the guide says your packs stay on your computer)', /^mods\/\*$/m.test(ign) && /^!mods\/example\/$/m.test(ign));
+
 console.log('4. what the guide quotes and names is still there');
 const code = read('src/content.js') + read('src/contenttables.js') + read('src/boot.js');
 // [a piece of a message the code says, whether the guide quotes it]

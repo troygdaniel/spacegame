@@ -16,8 +16,8 @@ A frontier outpost under a ringed gas giant. Quiet, cheap fuel, and a good first
 ## Bodies
 | id | type | name | x | y | art | r | rocks | landable | kind | credits |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| kestrel-outpost | station | Kestrel Outpost | 9000 | 21000 | station |  |  |  |  |  |
-| kestrel-giant | planet | Kestrel Prime | 24500 | 12500 | ringed | 520 |  | no |  |  |
-| kestrel-2 | planet | Kestrel II | 13000 | 9500 | rock | 260 |  | no |  |  |
+| kestrel-outpost | station |  | 9000 | 21000 | station |  |  |  |  |  |
+| kestrel-giant | planet | Kestrel Prime | 24500 | 12500 |  | 520 |  | no | ringed |  |
+| kestrel-2 | planet | Kestrel II | 13000 | 9500 |  | 260 |  | no | rock |  |
 | kestrel-belt | belt | Kestrel Belt | 22000 | 25000 |  | 800 | 20 |  |  |  |
 | beacon-k | poi | Drifting nav beacon | 30500 | 8500 |  |  |  |  | beacon | 180 |
