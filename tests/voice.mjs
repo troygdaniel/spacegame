@@ -14,11 +14,11 @@ const MOCK = `(() => {
   const wav = new ArrayBuffer(44 + 1600), v = new DataView(wav), w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
   w(0, 'RIFF'); v.setUint32(4, 36 + 1600, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
   v.setUint32(24, 8000, true); v.setUint32(28, 16000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, 1600, true);
-  window.__calls = []; window.__status = 200; window.__log = [];
-  window.fetch = (url, opts) => { __calls.push({ url: String(url), auth: opts && opts.headers && opts.headers.Authorization, body: opts && opts.body }); return Promise.resolve(new Response(__status === 200 ? wav.slice(0) : 'no', { status: __status })); };
+  window.__calls = []; window.__status = 200; window.__log = []; window.__delay = 0;
+  window.fetch = (url, opts) => { __calls.push({ url: String(url), auth: opts && opts.headers && opts.headers.Authorization, body: opts && opts.body }); return new Promise(r => setTimeout(r, __delay)).then(() => new Response(__status === 200 ? wav.slice(0) : 'no', { status: __status })); };
   ['log', 'warn', 'error', 'info', 'debug'].forEach(m => { const o = console[m]; console[m] = (...a) => { __log.push(a.join(' ')); o.apply(console, a); }; });
   window.__active = 0; window.__max = 0; const orig = voicePlay;
-  voicePlay = async b => { __active++; __max = Math.max(__max, __active); try { await orig(b); } finally { __active--; } };
+  voicePlay = async (b, ...rest) => { __active++; __max = Math.max(__max, __active); try { await orig(b, ...rest); } finally { __active--; } };
   return 1;
 })()`;
 const idle = t => t.waitFor('VOICE.playing === false && VOICE.queue.length === 0', 15000, 'voice idle');
@@ -31,6 +31,9 @@ const idle = t => t.waitFor('VOICE.playing === false && VOICE.queue.length === 0
     await t.ev(MOCK);
     check('no key: status says NO KEY', (await t.ev('voiceStatus()')) === 'NO KEY');
     check('no key: a line is refused', (await t.ev(`voiceSay(VOICE_LINES.launch, 1)`)) === false);
+    check('no key: a character line is refused too', (await t.ev(`voiceSay('Welcome to the Drift.', 1, 'aura-luna-en')`)) === false);
+    const none = await t.ev(`(() => { const r = []; const ok = voiceSayThen('Hello there.', 1, 'aura-luna-en', how => r.push(how)); return { ok, r }; })()`);
+    check('no key: the reply text starts at once, with no voice to wait for', none.ok === false && JSON.stringify(none.r) === '["silent"]', JSON.stringify(none));
     await sleep(300);
     check('no key: no network call', (await t.ev('__calls.length')) === 0);
 
@@ -57,9 +60,49 @@ const idle = t => t.waitFor('VOICE.playing === false && VOICE.queue.length === 0
     check('lines never overlapped', (await t.ev('__max')) === 1, 'max at once ' + (await t.ev('__max')));
     check('A, then D, then one of C/E were spoken (3 more calls)', (await t.ev('__calls.length')) === 4, 'calls ' + (await t.ev('__calls.length')));
 
+    // a character's voice (src/voice.js voiceSay with a model; docs/NPC-CHAT.md section 6)
+    console.log('a character voice');
+    await t.ev('(VOICE.said = {}, __calls.length = 0, 1)');
+    check('a character reply is accepted', (await t.ev(`voiceSay('Welcome to the Drift.', 1, 'aura-luna-en')`)) === true);
+    await t.waitFor('__calls.length === 1', 10000, 'character call');
+    const cc = await t.ev('__calls[0]');
+    check("the character's voice name reaches the Deepgram URL", /^https:\/\/api\.deepgram\.com\/v1\/speak\?model=aura-luna-en&encoding=mp3$/.test(cc.url), cc.url);
+    check('the body is the reply and the key is only in the header', JSON.parse(cc.body).text === 'Welcome to the Drift.' && cc.auth === 'Token ' + KEY && !cc.url.includes(KEY));
+    await idle(t);
+    await t.ev('(VOICE.said = {}, 1)');
+    await t.ev(`voiceSay('Welcome to the Drift.', 1, 'aura-luna-en')`); await idle(t);
+    check('a character reply is not cached: the same words are a second call', (await t.ev('__calls.length')) === 2);
+    check('the same words in another voice are not held back by the 8 s rule', (await t.ev(`voiceSay('Welcome to the Drift.', 1, 'aura-orion-en')`)) === true);
+    await idle(t);
+    check('that one went out with the other voice', /model=aura-orion-en/.test(await t.ev('__calls[2].url')));
+    await t.ev(`voiceSay('Odd name.', 1, 'evil&x=1')`); await idle(t);
+    const odd = await t.ev('__calls[3].url');
+    check('a made-up voice name falls back to the ship voice and cannot add to the URL', /model=aura-athena-en&encoding=mp3$/.test(odd) && !/x=1/.test(odd), odd);
+    // a character never talks over the ship computer: queued behind it, in order
+    await t.ev('(VOICE.said = {}, __calls.length = 0, 1)');
+    const both = await t.ev(`[voiceSay(VOICE_LINES.hull, 2), voiceSay('Sable speaks.', 1, 'aura-stella-en')]`);
+    check('the ship warning plays, the character waits in the queue', JSON.stringify(both) === '[true,true]' && (await t.ev('VOICE.queue.length')) === 1, JSON.stringify(both));
+    await idle(t);
+    check('they were spoken in that order, each in its own voice', (await t.ev('__calls.length')) === 2 && /athena/.test(await t.ev('__calls[0].url')) && /stella/.test(await t.ev('__calls[1].url')));
+    check('still never two at once', (await t.ev('__max')) === 1);
+    // the text starts with the audio, or after 1.5 s
+    await t.ev('(VOICE.said = {}, window.__how = [], 1)');
+    await t.ev(`voiceSayThen('Ready when you are.', 1, 'aura-hera-en', how => __how.push(how))`);
+    await t.waitFor('__how.length === 1', 8000, 'text start'); await idle(t);
+    check('quick audio: the reply starts typing when the audio starts', (await t.ev('__how.join()')) === 'audio', await t.ev('__how.join()'));
+    await t.ev('(VOICE.said = {}, __delay = 5000, window.__how = [], window.__t0 = performance.now(), 1)');
+    await t.ev(`voiceSayThen('Slow line.', 1, 'aura-hera-en', how => __how.push(how, Math.round(performance.now() - __t0)))`);
+    await t.waitFor('__how.length === 2', 8000, 'text start after the wait');
+    const slow = await t.ev('__how');
+    check('slow audio: the reply starts typing after about 1.5 s', slow[0] === 'timeout' && slow[1] >= 1300 && slow[1] <= 4000, JSON.stringify(slow));
+    await idle(t);
+    check('the late audio does not start it a second time', (await t.ev('__how.length')) === 2);
+    await t.ev('(__delay = 0)');
+
     // mute and volume
     await t.ev('(VOICE.said = {}, G.muted = true, 1)');
     check('muted: refused', (await t.ev(`voiceSay('Muted line', 1)`)) === false);
+    check('muted: a character reply starts at once, silent', (await t.ev(`(() => { const r = []; voiceSayThen('Muted reply', 1, 'aura-luna-en', how => r.push(how)); return r.join(); })()`)) === 'silent');
     await t.ev('(G.muted = false, G.volume = 0, 1)');
     check('volume 0: refused', (await t.ev(`voiceSay('Quiet line', 1)`)) === false);
     await t.ev('(G.volume = 1)');
