@@ -66,7 +66,7 @@ Systems become big: 36 000 px square by default (48 000 for empty wilds). Halcyo
 | What a jump costs | Halcyon to Kestrel (6.3 ly) is 6.3 units for the starter = 50 cr, about one rescue payout in ten |
 | Range of one tank | starter 40 units = about 6 jumps; explorer 90 units at 0.7 per ly = 128 ly |
 
-Why it is a real decision and not a tax: some systems have no pump (the Hollow, Lethe), so you plan the way out as well as the way in; heavy ships burn twice as much per ly; the nest charges double; a long hop can need more fuel than the cheap tank holds. If fuel runs out in a system with no pump you are not lost: a **fuel ranger** can be called (45 s, 10 units, three times the price, never more than all your credits). No soft locks.
+Why it is a real decision and not a tax: some systems have no pump (the Hollow, Lethe), so you plan the way out as well as the way in; heavy ships burn twice as much per ly; the nest charges double; a long hop can need more fuel than the cheap tank holds. If fuel runs out in a system with no pump you are not lost: a **fuel ranger** can be called (45 s, 10 units or the cheapest jump out of that system for your ship when that costs more, which a heavy ship needs; three times the price, never more than all your credits). No soft locks.
 
 The first two jumps of a new game cannot be interdicted, so the first look at the tunnel is always a calm one.
 

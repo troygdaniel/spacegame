@@ -92,6 +92,23 @@ try {
   await is('(() => { const r = rangerTick(45000); return [r.units, r.cost, G.credits, activeShip().fuel].join(); })()', '10,0,0,10', 'with 0 cr it still comes and brings 10 units: nobody is stranded');
   await ev('G.credits = 500; activeShip().fuel = 35; FUELST.rangerAt = 0;');
   await is("(() => { G.system = 'zz'; activeShip().fuel = 9; const r = rangerCall(0); FUELST.rangerAt = 0; return r.units; })()", 10, 'a ranger fills up to 10 or what fits');
+  // heavy ships (playtest 3): the ranger brings what the cheapest jump out costs when that is more than 10, so nobody is stranded
+  await ev("(() => { window.__known = G.known; G.known = ['halcyon', 'kestrel']; G.system = 'kestrel'; FUELST.rangerAt = 0; G.credits = 1000; activeShip().model = 'bastion'; activeShip().fuel = 0; return 1; })()");
+  await is('rangerUnits()', 12.5, 'a Bastion (2 units a ly) in Kestrel: Halcyon is 6.3 ly, the jump home costs 12.5, so the ranger brings 12.5');
+  const bcall = JSON.parse(await ev('JSON.stringify(rangerCall(1000))'));
+  check('called with an empty tank: 12.5 units, 300 cr (12.5 x 24)', bcall.ok && bcall.units === 12.5 && bcall.cost === 300, JSON.stringify(bcall));
+  await ev('rangerTick(46000)');
+  await is("(() => { const j = jumpCheck('kestrel', 'halcyon'); return [activeShip().fuel, j.ok, j.cost].join(); })()", '12.5,true,12.5', 'after it the jump home is allowed');
+  await is('rangerCall(50000).why', 'enough', 'with 12.5 a second call is refused: you can jump home');
+  await is("(() => { activeShip().fuel = 12.4; const r = rangerCall(50000); FUELST.rangerAt = 0; return r.ok + ',' + r.units; })()", 'true,12.5', 'with 12.4 (0.1 short of the jump home) the ranger still comes, and brings 12.5');
+  await is("(() => { activeShip().fuel = 0; const q = rangerQuote(); return q.units; })()", 12.5, 'the quote says 12.5 too (the HUD line reads it)');
+  await is("(() => { activeShip().model = 'wren'; activeShip().fuel = 0; return rangerUnits(); })()", 10, 'a Wren (1 unit a ly, 6.3 to Halcyon) is still brought 10');
+  // the rule behind it: from an empty tank, in a system with no pump, every ship can jump to the nearest star after one ranger call, even with no credits
+  for (const m of JSON.parse(await ev('JSON.stringify(Object.keys(SHIP_MODELS))'))) {
+    const r = JSON.parse(await ev(`(() => { activeShip().model = '${m}'; activeShip().fuel = 0; G.credits = 0; FUELST.rangerAt = 0; const c = rangerCall(0), a = rangerTick(45000), j = jumpCheck('kestrel', 'halcyon'); return JSON.stringify([c.ok, a && a.units, j.ok, j.why, rangerCall(99999).why]); })()`));
+    check('empty in Kestrel, one call, no credits: the ' + m + ' can jump home (and a second call is refused)', r[0] === true && r[2] === true && r[4] === 'enough', JSON.stringify(r));
+  }
+  await ev("(() => { activeShip().model = 'wren'; activeShip().fuel = 40; G.known = window.__known; G.credits = 500; FUELST.rangerAt = 0; return 1; })()");
   await ev("(() => { G.system = 'halcyon'; FUELST.rangerAt = 0; return 1; })()");
 
   console.log('the terminal in the station');
