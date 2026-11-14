@@ -662,7 +662,7 @@ function hudTick(s) {
   hudGauge(h, 'g1', 70, 80, 40, hullFrac, hullFrac > 0.5 ? CYAN : hullFrac > 0.3 ? AMBER : RED, String(Math.max(0, Math.round(surf ? s.hp : G.hull))), surf ? 'HEALTH' : 'HULL', null, hullFrac <= 0.3);
   if (space) {
     const spd = s.ship.body.speed, top = boostMax();
-    hudGauge(h, 'g2', 186, 80, 40, spd / top, spd > 480 ? AMBER : CYAN, String(Math.round(spd)), s.boostLocked ? 'NO BOOST' : 'SPEED', 150 / top);
+    hudGauge(h, 'g2', 186, 80, 40, spd / top, spd > shipStat('vmax') ? AMBER : CYAN, String(Math.round(spd)), s.boostLocked ? 'NO BOOST' : 'SPEED', 150 / top);
     if (s.enMax) hudEnergy(h, s, now);
   }
   if (surf && s.col && s.col.state !== 'dead') {

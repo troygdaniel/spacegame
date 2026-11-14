@@ -6,6 +6,7 @@ class Space extends Phaser.Scene {
     this.leaving = false; this.dead = false; this.rammedAt = 0; this.ironUntil = 0;
     this.launchAt = this.time.now; this.aggro = 0; this.graceOver = false; // enemies.js: launch grace and first-wave cap
     shipRefresh(this); // src/ships.js: the ship texture shows the upgrade tiers you own
+    shipSync(); // src/fleet.js: the hull cap comes from the model and its plating
     const WS = sysDef().size; this.WS = WS; // src/universe.js: the current system, from src/data_systems.js
     this.physics.world.setBounds(0, 0, WS, WS);
     this.cameras.main.fadeIn(300, 0, 0, 0).setBounds(0, 0, WS, WS);
@@ -23,7 +24,7 @@ class Space extends Phaser.Scene {
     if (this.from === 'surface') { sx = this.planet.x - 460; sy = this.planet.y + 120; rot = Math.PI; }
     else { sx = this.station.x + 250; sy = this.station.y; rot = 0; }
     this.ship = this.physics.add.sprite(sx, sy, 'ship').setDepth(5).setCollideWorldBounds(true);
-    this.ship.body.setCircle(12, 16, 8).setDamping(true).setDrag(0.55).setMaxSpeed(480); // the 56x40 texture has a glow margin (ships.js)
+    this.ship.body.setCircle(12, 16, 8).setDamping(true).setDrag(0.55).setMaxSpeed(shipStat('vmax')); // the 56x40 texture has a glow margin (ships.js)
     this.ship.rotation = rot;
     this.ship.setVelocity(Math.cos(rot) * 140, Math.sin(rot) * 140);
     this.lockUntil = this.time.now + 1300;
@@ -132,10 +133,11 @@ class Space extends Phaser.Scene {
     const up = k.W.isDown || k.UP.isDown, brake = k.S.isDown || k.DOWN.isDown;
     const boost = boostFrame(this, time, dt, locked, up); // src/boost.js: Shift drains the energy ring, Q and E dash
 
-    if (!locked) ship.rotation += ((right ? 1 : 0) - (left ? 1 : 0)) * 0.0036 * dt;
+    if (!locked) ship.rotation += ((right ? 1 : 0) - (left ? 1 : 0)) * 0.0036 * shipStat('turn') * dt;
     ship.body.setDrag(brake && !locked ? 0.12 : 0.55);
     ship.body.setMaxSpeed(boostCap(this, boost, dt));
-    const thrust = locked ? 600 : (up ? (boost ? 1500 : 720) : 0);
+    const acc = shipStat('accel'); // src/fleet.js; the Wren's 720 gives today's 600 while the launch lock holds and 1500 on the boost
+    const thrust = locked ? acc * 5 / 6 : (up ? (boost ? acc * 25 / 12 : acc) : 0);
     this.physics.velocityFromRotation(ship.rotation, thrust, ship.body.acceleration);
     if (thrust) {
       const tx = ship.x - Math.cos(ship.rotation) * 20, ty = ship.y - Math.sin(ship.rotation) * 20;

@@ -39,51 +39,8 @@ const HELP = {
   ]
 };
 
-// ---------- the ship you fly: fleet records, and the old G fields over the active ship (docs/UNIVERSE.md 6.3, 8.4) ----------
-// One record per owned ship. You fly G.fleet[G.active]; its hull, hold and parts are what G.hull, G.maxHull, G.ore and
-// G.upgrades read and write, so no call site had to change. Only the Wren exists so far (src/fleet.js, card a3, brings the
-// models and takes this over). A record: { uid, model, name, at (a station id), hull, maxHull, fuel, ore, parts }.
-// maxHull is not saved: it is 100 + 20 per shields tier, as the shop has always made it (the parts card d1 replaces that).
-const SHIPREC = {
-  slots: ['engine', 'shields', 'weapons', 'tank', 'cargo'],            // section 7
-  oldKeys: { armor: 'shields', rapid: 'weapons', booster: 'engine' },   // the v1 upgrade keys, tier for tier
-  max: 6, fuel: 40, hull: 100                                           // fleet size, the Wren's tank and hull (section 6.1)
-};
-const homeDock = () => sysBodies('station', 'halcyon')[0].id; // src/universe.js: where a new game, and a save we cannot place, wakes
-
-function newShip(model, at) {
-  return {
-    uid: 1, model: model || 'wren', name: 'Wren', at: at || homeDock(),
-    hull: SHIPREC.hull, maxHull: SHIPREC.hull, fuel: SHIPREC.fuel, ore: 0,
-    parts: { engine: 0, shields: 0, weapons: 0, tank: 0, cargo: 0 }
-  };
-}
-function activeShip() { return G.fleet[G.active] || G.fleet[0]; }
-function modelKnown(id) { return typeof SHIP_MODELS !== 'undefined' ? !!SHIP_MODELS[id] : id === 'wren'; } // data_ships.js arrives with card a3
-
+// the fleet records, the ship stats and the G accessors over the active ship are in src/fleet.js (card u-a3)
 G.lastDock = homeDock(); G.known = ['halcyon']; G.jumps = 0; G.charted = [];
-G.fleet = [newShip()]; G.active = 0;
-
-// G.upgrades: the old three keys, answering from the parts (armor is shields, rapid is weapons, booster is engine)
-function upgradesView(rec) {
-  if (!rec._up) {
-    const v = {};
-    Object.keys(SHIPREC.oldKeys).forEach(old => Object.defineProperty(v, old, {
-      enumerable: true, get: () => rec.parts[SHIPREC.oldKeys[old]], set: t => { rec.parts[SHIPREC.oldKeys[old]] = t; }
-    }));
-    Object.defineProperty(rec, '_up', { value: v }); // not enumerable, so it never reaches a save
-  }
-  return rec._up;
-}
-Object.defineProperties(G, {
-  hull: { enumerable: true, configurable: true, get: () => activeShip().hull, set: v => { activeShip().hull = v; } },
-  maxHull: { enumerable: true, configurable: true, get: () => activeShip().maxHull, set: v => { activeShip().maxHull = v; } },
-  ore: { enumerable: true, configurable: true, get: () => activeShip().ore, set: v => { activeShip().ore = v; } },
-  upgrades: {
-    enumerable: true, configurable: true, get: () => upgradesView(activeShip()),
-    set: u => { const v = upgradesView(activeShip()); Object.keys(v).forEach(k => { if (u && k in u) v[k] = u[k]; }); }
-  }
-});
 
 // ---------- save and load (localStorage is optional: every call is wrapped) ----------
 // Save v2 (docs/UNIVERSE.md 8.2). The v1 key is only ever read, and only when v2 is missing; it is never written or deleted,
@@ -132,8 +89,8 @@ function v1ToV2(s) {
     const t = up[old] === true ? 1 : Math.floor(Number(up[old]));
     parts[SHIPREC.oldKeys[old]] = Number.isFinite(t) ? Math.min(maxTier(old), Math.max(0, t)) : 0;
   });
-  const hullCap = 100 + 20 * maxTier('armor'); // a saved max hull is kept if it fits, else it comes from the armor tier
-  const maxHull = Number.isFinite(s.maxHull) ? Math.min(hullCap, Math.max(100, s.maxHull)) : 100 + 20 * parts.shields;
+  const hullCap = SHIPREC.hull + 20 * maxTier('armor'); // a saved max hull is kept if it fits, else it comes from the armor tier
+  const maxHull = Number.isFinite(s.maxHull) ? Math.min(hullCap, Math.max(SHIPREC.hull, s.maxHull)) : SHIPREC.hull + 20 * parts.shields;
   const out = Object.assign({}, s, {
     v: 2, system: 'halcyon', lastDock: homeDock(), jumps: 0, known: ['halcyon'], charted: [], active: 0,
     fleet: [{ uid: 1, model: 'wren', name: 'Wren', at: homeDock(), hull: s.hull, maxHull, fuel: SHIPREC.fuel, ore: s.ore, parts }]
@@ -154,7 +111,7 @@ function shipFromSave(r, at) {
     const t = p[k] === true ? 1 : Math.floor(Number(p[k]));
     rec.parts[k] = Number.isFinite(t) ? Math.min(slotCap(k), Math.max(0, t)) : 0;
   });
-  rec.maxHull = Number.isFinite(r.maxHull) ? Math.min(100 + 20 * maxTier('armor'), Math.max(100, r.maxHull)) : 100 + 20 * rec.parts.shields;
+  rec.maxHull = Number.isFinite(r.maxHull) ? Math.min(SHIPREC.hull + 20 * maxTier('armor'), Math.max(SHIPREC.hull, r.maxHull)) : shipStat('hull', rec);
   rec.hull = Number.isFinite(r.hull) ? Math.min(rec.maxHull, Math.max(1, r.hull)) : rec.maxHull;
   rec.fuel = Number.isFinite(r.fuel) ? Math.min(200, Math.max(0, r.fuel)) : SHIPREC.fuel;
   rec.ore = Number.isFinite(r.ore) ? Math.min(ORE_CAP, Math.max(0, Math.floor(r.ore))) : 0; // asteroids.js

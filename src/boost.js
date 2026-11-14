@@ -10,7 +10,7 @@ const BOOST = { drain: 25, pause: 1000, back: 0.25, dashMs: 200, dashSpeed: 900,
 function boostInit(s) {
   const e = boostEnergy();
   s.enMax = e.max; s.en = e.max; s.enPause = 0; s.boostLocked = false; s.boosting = false; s.dry = false;
-  s.dashReady = 0; s.dashLeft = 0; s.dashDir = 0; s.dashCool = BOOST.dashCool; s.vmax = 480;
+  s.dashReady = 0; s.dashLeft = 0; s.dashDir = 0; s.dashCool = BOOST.dashCool; s.vmax = shipStat('vmax');
   s.lastE = s.k.E.timeDown; s.lastQ = s.k.Q.timeDown; // a press is a new timeDown: read from here, so poi.js eating the E press does not hide it
 }
 
@@ -56,7 +56,7 @@ function boostFrame(s, time, dt, locked, thrusting) {
 
 // the top speed: up at once, down at 900 px/s per second, so running dry or letting go is a fade and not a wall
 function boostCap(s, boost, dt) {
-  const target = boost ? boostMax() : 480;
+  const target = boost ? boostMax() : shipStat('vmax');
   s.vmax = target >= s.vmax ? target : Math.max(target, s.vmax - BOOST.fall * dt / 1000);
   return s.vmax;
 }
