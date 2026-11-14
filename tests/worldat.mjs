@@ -2,7 +2,7 @@
 // The real game in headless Chrome. What it pins:
 //   A. the shipped pack: worldAt gives the game's own Halcyon row; the row built from Halcyon's files alone says the same thing as the code's row (so every field
 //      the code has has a home in the files); every field of the eight systems and six stations ends up in the row worldAt gives; the docks drive the code's
-//      own part functions; nothing the game plays changed (SYSTEMS still has one row).
+//      own part functions; and the code's eight rows (card u-b5) are what worldAt gives for every system (tests/systems.mjs pins them against their files).
 //   B. a pack full of wrong files: the game boots, the bad rows are left out, worldAt never throws and never gives a half-made row.
 // Run: node tests/worldat.mjs     (one game per case, one Chrome at a time)
 import { createRequire } from 'node:module';
@@ -47,8 +47,8 @@ try {
     check('eight systems: Halcyon first, then the seven the files add', ids.length === 8 && ids[0] === 'halcyon' && ['kestrel', 'meridian', 'brass', 'hollow', 'lethe', 'ember', 'roost'].every(i => ids.includes(i)), ids.join());
     check('worldAt knows every one of them and nothing else', (await ev(`worldIds().every(i => !!worldAt(i))`)) && (await ev(`[undefined, null, 5, '', 'nowhere', '__proto__', 'constructor', 'toString', 'hasOwnProperty'].every(i => worldAt(i) === null)`)));
     check('Halcyon: worldAt gives the code\'s own row, so nothing about the game changes', await ev(`worldAt('halcyon') === SYSTEMS.halcyon`));
-    check('the code has Halcyon and the empty Kestrel stub of card u-b4: the files add no system to SYSTEMS, and no scene reads the world yet', JSON.stringify(await ev(`Object.keys(SYSTEMS)`)) === '["halcyon","kestrel"]' && (await ev(`SYSTEMS.kestrel.bodies.length === 0`)));
-    check('Kestrel: the empty code stub gives way to the row the files make, and the stub itself is left alone', (await ev(`worldAt('kestrel') !== SYSTEMS.kestrel && worldAt('kestrel').bodies.length === 5 && SYSTEMS.kestrel.bodies.length === 0`)));
+    check('the code has all eight systems (card u-b5 authored the seven): the files add no system to SYSTEMS', JSON.stringify(await ev(`Object.keys(SYSTEMS)`)) === '["halcyon","kestrel","meridian","brass","hollow","lethe","ember","roost"]');
+    check('Kestrel: worldAt gives the code row (five bodies), and the row the files alone make is a different object', (await ev(`worldAt('kestrel') === SYSTEMS.kestrel && worldAt('kestrel').bodies.length === 5 && worldFromFiles('kestrel') !== SYSTEMS.kestrel && worldFromFiles('kestrel').bodies.length === 5`)));
     check('a made row is cached, and worldFromFiles of a system with no file is null', (await ev(`worldAt('kestrel') === worldAt('kestrel')`)) && (await ev(`worldFromFiles('nowhere') === null && worldFromFiles(7) === null`)));
 
     // Halcyon from its files alone against the code's row. What the files have beyond the code's row is named here and nowhere else:
@@ -74,7 +74,7 @@ try {
     const entries = await ev(`CONTENT.entries.map(e => ({ type: e.type, id: e.id, data: e.data }))`);
     const bySys = entries.filter(e => e.type === 'system'), stations = entries.filter(e => e.type === 'station'), sites = Object.fromEntries(entries.filter(e => e.type === 'poi').map(e => [e.id, e.data]));
     check('the pack has the eight systems and six stations the draft made', bySys.length === 8 && stations.length === 6, bySys.length + ' and ' + stations.length);
-    const worlds = await ev(`Object.fromEntries(worldIds().map(i => [i, worldAt(i)]))`);
+    const worlds = await ev(`Object.fromEntries(worldIds().map(i => [i, i === 'halcyon' ? worldAt(i) : worldFromFiles(i)]))`); // the row the files make: the code rows keep the numbers only, the words stay in the files
     const lost = [];
     for (const en of bySys) {
       const f = en.data, w = worlds[en.id];
@@ -140,7 +140,7 @@ try {
     check('the dock keeps what was good: a price factor, shields to tier 2 (the armor row is refused), no pump price (999 is refused)', dock && dock.partMult === 1.5 && JSON.stringify(dock.parts) === '{"shields":2}' && dock.fuel === undefined, JSON.stringify(dock));
     check('the yard is kept as written; the ship nobody has is a warning on the Title chip, and fleet.js never sells an id it does not know', JSON.stringify(dock.yard) === '["kite","ghost-ship"]' && (await ev(`CONTENT_ERRORS.some(e => /ghost-ship/.test(e.message))`)), JSON.stringify(dock.yard));
     check('a station for a system nobody has is kept and placed nowhere; worldAt for it is null', (await ev(`CONTENT_WORLD.station['lost-dock'].name`)) === 'Lost Dock' && (await ev(`worldAt('nowhere') === null`)));
-    check('the game is at Title with the code\'s rows untouched', (await ev(`worldAt('halcyon') === SYSTEMS.halcyon && Object.keys(SYSTEMS).join() === 'halcyon,kestrel' && SYSTEMS.kestrel.bodies.length === 0`)));
+    check('the game is at Title with the code\'s rows untouched', (await ev(`worldAt('halcyon') === SYSTEMS.halcyon && Object.keys(SYSTEMS).join() === 'halcyon,kestrel,meridian,brass,hollow,lethe,ember,roost' && SYSTEMS.kestrel.bodies.length === 5`)));
     check('the problems are listed for the Title chip', (await ev(`CONTENT_ERRORS.length`)) >= 6);
   });
 } catch (e) { check('the world test ran: ' + e.message, false); } finally {

@@ -156,6 +156,9 @@ if node tests/jump.mjs; then :; else fail=1; fi
 echo "== 4zg. worldAt: the eight systems and six stations in one place; Halcyon from its files is the code's row (tests/worldat.mjs)"
 if node tests/worldat.mjs; then :; else fail=1; fi
 
+echo "== 4zh. the eight star systems: the design table, who reaches what, the layouts, every dock; each one flown, drawn and docked at (tests/systems.mjs)"
+if node tests/systems.mjs; then :; else fail=1; fi
+
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
   if node tests/missions.mjs; then :; else fail=1; fi

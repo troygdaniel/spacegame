@@ -15,6 +15,9 @@ const t = await launch('#space');
 try {
   await t.waitFor(`!!(window.game && game.scene.isActive('Space'))`, 30000, 'Space active');
   await sleep(1500); await t.ev('(() => { G.guideDone = true; G.endingSeen = true; return 1; })()');
+  // card u-b5 authored Kestrel (an outpost, two planets, a belt, a beacon: tests/systems.mjs flies it and docks at it). This test is about the jump, and its second half about a system
+  // with nothing in it, so Kestrel is emptied here (a copy; the page is closed at the end) and Brass Reach is taken out for the "no route" check below.
+  await t.ev('(() => { window.__realKestrel = SYSTEMS.kestrel; SYSTEMS.kestrel = Object.assign({}, SYSTEMS.kestrel, { bodies: [] }); window.__realBrass = SYSTEMS.brass; return 1; })()');
   await t.clock();
   await t.ev(`(() => { const d0 = Date.now(), p0 = __t; Date.now = () => d0 + (__t - p0); performance.now = () => __t; return 1; })()`); // tweens and the fuel ranger time themselves on the stepped clock
   await t.ev(`(() => { window.__toasts = []; const orig = toast; toast = (s, msg, c) => { window.__toasts.push(msg); return orig(s, msg, c); }; })()`);
@@ -41,7 +44,7 @@ try {
   check('from Halcyon (west and south of it) you appear at the west edge of Kestrel, heading for the middle', pts.k.x === 500 && pts.k.y > 18000 && Math.abs(pts.k.rot) < 1, JSON.stringify(pts.k));
   check('and back: from Kestrel you appear at the east edge of Halcyon, heading west', pts.h.x === 35500 && pts.h.y < 18000 && Math.abs(Math.abs(pts.h.rot) - Math.PI) < 1, JSON.stringify(pts.h));
   check('no origin, or a system the game does not have: no entry point', pts.none === null && pts.bad === null);
-  check('enterSystem refuses a system that has no data and changes nothing', await E(`(() => { const j = G.jumps; const r = enterSystem('brass', 'halcyon'); return r === false && G.system === 'halcyon' && G.jumps === j && !G.known.includes('brass'); })()`));
+  check('enterSystem refuses a system that has no data and changes nothing', await E(`(() => { const j = G.jumps; const r = enterSystem('nowhere', 'halcyon'); return r === false && G.system === 'halcyon' && G.jumps === j && !G.known.includes('nowhere'); })()`));
 
   // ---- 1. G opens and closes the galaxy map ----
   console.log('G: the galaxy map over the flight');
@@ -104,9 +107,10 @@ try {
   await openMap('meridian'); await E(`${GL}.go()`); await tick(2);
   check('Meridian is 9.8 ly away: out of range too', await E(`!${SP}.jmp`));
   await gclose();
-  await E(`G.known = ['halcyon', 'kestrel', 'brass']`);
+  await E(`G.known = ['halcyon', 'kestrel', 'brass']; delete SYSTEMS.brass`); // a system the galaxy map knows (its stub) and the game has no data for
   await openMap('brass'); await E(`${GL}.go()`); await tick(2);
-  check('Brass Reach is in range but is not in this game yet: no charge, and the toast says there is no route', await E(`!${SP}.jmp`) && (await said()).some(m => /No route|not charted/.test(m)), JSON.stringify(await said()));
+  check('a system that is in range but has no data (Brass Reach, taken out for this check): no charge, and the toast says there is no route', await E(`!${SP}.jmp`) && (await said()).some(m => /No route|not charted/.test(m)), JSON.stringify(await said()));
+  await E(`SYSTEMS.brass = window.__realBrass`);
   await E(`G.known = ['halcyon', 'kestrel']`);
   await park(15000, 15000);
 

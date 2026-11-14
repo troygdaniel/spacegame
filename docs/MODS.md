@@ -15,8 +15,8 @@ game's complaints. The design behind it is `docs/MODDING.md`; the full list of f
 | `ships/` | two of the three pirates, `raider` and `drone`; `gunship` has no file yet |
 | `parts/` | nine of the fifteen part tiers: shields, weapons and engine, tiers 1 to 3; `tank` and `cargo` have no file yet |
 | `poi/` | the five salvage sites (`wreck-nw`, `wreck-w`, `wreck-se`, `wreck-s`, `beacon-e`) and the two kinds of random signal (`signal-beacon`, `signal-wreck`) |
-| `stations/` | the dock, `halcyon-station`: its name and its prices; and the five docks of the other systems, which the game keeps for later and does not use yet |
-| `systems/` | the eight star systems of the galaxy map: read and kept, and nothing in the game uses them yet (the systems card wires them in) |
+| `stations/` | the dock, `halcyon-station`: its name and its prices; and the five docks of the other systems: their name only (their numbers are in the game's own system rows, read by a later economy card) |
+| `systems/` | the eight star systems of the galaxy map: read and kept; the game flies the same eight from its own rows (`src/data_systems.js`), so a changed number here moves nothing yet |
 | `text/` | `ui.md`: the Help screens, the tip under them and the lines that pop up |
 
 To change something that has no file (the gunship, a tank or cargo tier), make a file for it with its name: it works the same way (section 5).
@@ -38,7 +38,7 @@ name the game does not know for one of those types is skipped, and the game says
 content/parts/engine-4.md: the game has no built-in part called "engine-4" and cannot add new ones. Skipped the file.
 ```
 
-New pirates, new kinds of call (courier, haul, salvage, survey) and new part slots wait for later cards. Star systems and the docks of other systems are read and kept, but nothing in the game uses them yet; a station's welcome, shop,
+New pirates, new kinds of call (courier, haul, salvage, survey) and new part slots wait for later cards. Star systems are read and kept, and the docks of other systems change only their name; the game flies its own rows of the same numbers; a station's welcome, shop,
 services and bar sections are checked by the build and not read. Section 7 has the exact list.
 
 You need a text editor and Node.js 22 or newer (`node --version`). No packages. Playing never needs Node; only the build step in section 2 does.
@@ -216,10 +216,10 @@ Everything else in a file is checked by the build, then ignored.
 | `ship` | the pirates `raider`, `drone`, `gunship` (side `pirate`); a new id adds a player ship (`name` needed) | for a pirate the numbers, `radar`, `art` (`name`, `role` and the description are read; nothing shows them yet); for a new ship every number of the model, `art` (the hull it borrows), `yard`. The six built-in player ships and new pirates are refused |
 | `part` | `shields-1` to `shields-3`, and the same for `weapons`, `engine`, `tank`, `cargo` | `name`, `brief`, `price`, the description, the tier's numbers |
 | `poi` | the sites `wreck-nw`, `wreck-w`, `wreck-se`, `wreck-s`, `beacon-e`; the signals `signal-beacon`, `signal-wreck` | `name`, the description, `credits`, `hull`, `guard`; for a signal `pays`, `guardChance`, `hullChance`, `hull` |
-| `station` | `halcyon-station` (its `system` must be `halcyon`); the docks of the other systems are kept, not used | `name`, `repair`, `ore` |
+| `station` | `halcyon-station` (its `system` must be `halcyon`); the other five docks change only their name | `name`, `repair`, `ore` |
 | `voice` | none built in: a new id adds the lines of its `event` (`replace: yes` drops the ship's own line) | what the ship computer says for that event |
 | `text` | any file in `text/`: new files are read | the strings whose key `ui.md` lists |
-| `system` | the eight systems, kept | nothing yet: the game keeps what the files say and no scene reads it |
+| `system` | the eight systems, kept | nothing yet: the game keeps what the files say; its own rows (`src/data_systems.js`) are what flies |
 
 ## 8. When it goes wrong (2 minutes)
 
