@@ -306,6 +306,12 @@ function hudFuel(h, now) {
   hudPanel(g, 296, 10, 134, 30, 8, 0.78, col);
   hudPut(h, 'fuell', 312, 25, 'FUEL', { size: HT.label, color: crit ? '#ff4d6d' : low ? '#ffd37a' : HUD_DIM, spacing: 2 });
   hudBar(g, 346, 19, 74, 12, f, col, 10, crit ? 0.55 + 0.45 * Math.sin(now / 120) : null);
+  // the warning (SFX.fuelLow): once when the tank falls into amber or red, and again every 20 s while it stays red; only in flight
+  if (h.s && h.s.scene.key === 'Space') {
+    const rank = crit ? 2 : low ? 1 : 0;
+    if (rank > (h.fuelRank || 0) || (crit && now - (h.fuelAt || 0) > 20000)) { h.fuelAt = now; sfx('fuelLow'); }
+    h.fuelRank = rank;
+  }
 }
 
 // ---- the mission as the checklist wants it ----

@@ -178,7 +178,7 @@ class ChatSetup extends Phaser.Scene {
   }
   dropInput() { [this.el, this.elModel].forEach(el => { if (el) el.remove(); }); this.el = null; this.elModel = null; }
   close() {
-    if (this.closing) return; this.closing = true; this.dropInput();
+    if (this.closing) return; this.closing = true; this.dropInput(); sfx('uiClose');
     const from = this.from, back = this.scene.get(from);
     if (back && back.k && back.k.ESC) Phaser.Input.Keyboard.JustDown(back.k.ESC); // clear the Esc that closed this, so the pause menu below does not take it too
     this.scene.stop(); this.scene.resume(from);
@@ -195,7 +195,7 @@ class ChatSetup extends Phaser.Scene {
 
 function chatOpenSetup(scene) { // scene: the scene to pause and come back to (Pause or Title)
   if (scene.scene.manager.isActive('ChatSetup')) return;
-  scene.scene.pause(); scene.scene.launch('ChatSetup', { from: scene.scene.key });
+  sfx('uiOpen'); scene.scene.pause(); scene.scene.launch('ChatSetup', { from: scene.scene.key });
 }
 // a real HTML text box laid over the canvas (paste works; the typing never reaches Phaser or the window's M / Esc hooks)
 function chatMakeInput(type, placeholder, maxLength, onEnter, onEsc) {
@@ -296,7 +296,7 @@ function chatOpen(s, i) {
   s.prompt.setText(''); s.panel = true; // s.panel: the pause menu and the mission board leave this frame alone
   s.chatUI.titleText.setText(n.name + '  -  ' + (n.role || '')).setColor(n.css || '#ffd37a');
   s.chatText.setText(''); s.chatNote.setText('');
-  s.chatBox.setVisible(true);
+  s.chatBox.setVisible(true); sfx('uiOpen');
   const el = chatMakeInput('text', 'say something', CHAT_LINE_MAX, () => chatSend(s), () => chatClose(s));
   s.chat = { i, n, el, turns: [{ role: 'user', content: CHAT_SEED }], sent: 0, replies: 0, busy: false, lastSend: 0, tw: null, focusAt: 0 };
   chatPlaceInput(s.game, el, -420, H / 2 - 100, 840, 40); // inside the panel (its centre is H - 130): 30 px under the middle line
@@ -347,7 +347,7 @@ function chatSay(s, text, note) { // the character's line types out; a note (gre
 }
 function chatClose(s, silent) {
   const c = s.chat; if (!c) return;
-  s.chat = null;
+  s.chat = null; if (!silent) sfx('uiClose');
   if (c.tw) c.tw.stop();
   try { c.el.remove(); } catch (e) { /* already gone */ }
   if (s.chatBox) s.chatBox.setVisible(false);

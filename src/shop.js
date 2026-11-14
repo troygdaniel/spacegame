@@ -195,7 +195,7 @@ function refreshShop(s, bought) {
 function openShop(s) {
   hideTalk(s); s.prompt.setText(''); s.shopOpen = true; s.panel = true; s.shopBox.setVisible(true); // s.panel: the pause menu ignores Esc while a terminal is open
   s.shopMsgText.setText('Pick a part for your ' + shipModel(activeShip().model).name + '. Fitted instantly.').setColor('#ffd37a');
-  refreshShop(s); beep(480, 0.08, 'triangle', 0.03, 200);
+  refreshShop(s); sfx('click');
 }
 function closeShop(s) { s.shopOpen = false; s.panel = false; s.shopBox.setVisible(false); s.shopObjs.forEach(o => o.destroy()); s.shopObjs = []; }
 
@@ -207,7 +207,7 @@ function buyUpgrade(s, i) {
   if (G.credits < st.price) { say('Need ' + (st.price - G.credits) + ' more credits for ' + P.name + PART_TIER_NAME[t + 1] + '.', '#ff4d6d'); beep(140, 0.15, 'sawtooth', 0.04, -40); }
   else {
     G.credits -= st.price; rec.parts[slot] = t + 1;
-    say(P.name + PART_TIER_NAME[t + 1] + ' installed (-' + st.price + ' cr).', '#6dff9c'); sfx('chime');
+    say(P.name + PART_TIER_NAME[t + 1] + ' installed (-' + st.price + ' cr).', '#6dff9c'); sfx('buy');
     shipRefresh(s); // src/ships.js: the hangar ship shows the new plating, barrels or nozzles at once
   }
   refreshShop(s, true);

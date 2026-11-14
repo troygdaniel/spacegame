@@ -178,7 +178,7 @@ function openPause(game) {
   if (game.scene.isActive('Pause')) return;
   const s = game.scene.getScenes(true).find(sc => GAMEPLAY.includes(sc.scene.key));
   if (!s || s.leaving || s.dead || s.panel) return; // fading out, wrecked, or a terminal is open (Esc closes that)
-  saveGame();
+  saveGame(); sfx('uiOpen');
   s.scene.pause();
   game.scene.run('Pause', { from: s.scene.key });
 }
@@ -271,7 +271,7 @@ class Pause extends Phaser.Scene {
   resume() {
     const sc = this.scene.get(this.from); // clear a stale Esc flag so a terminal does not close the moment it opens
     if (sc && sc.k && sc.k.ESC) Phaser.Input.Keyboard.JustDown(sc.k.ESC);
-    this.scene.stop(); this.scene.resume(this.from);
+    sfx('uiClose'); this.scene.stop(); this.scene.resume(this.from);
   }
 
   toStation() {
