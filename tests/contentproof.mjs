@@ -96,7 +96,7 @@ try {
   // ---- A: the shipped pack, B: nothing at all ----
   console.log('A: the shipped pack');
   const A = await play(ROOT);
-  check('the loader applied the thirteen files of the proof set, no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 13 && A.loader.state.modded === false, JSON.stringify(A.loader));
+  check('the loader applied the twenty-seven files (proof set, eight systems, six stations), no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 27 && A.loader.state.modded === false, JSON.stringify(A.loader));
   check('no console errors', A.errors.length === 0, A.errors.join(' | '));
 
   console.log('B: an empty pack (the code\'s own tables)');
@@ -126,7 +126,7 @@ try {
   const cg = gameWith(join(pack, 'content'), realCore);
   check('the edited pack builds with no problems', cg.made.result.errors.length === 0, JSON.stringify(cg.made.result.errors));
   const C = await play(cg.dir);
-  check('the loader applied the fifteen files (the proof set and a tank and a hold part) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 15 && C.loader.state.modded === true, JSON.stringify(C.loader));
+  check('the loader applied the twenty-nine files (the proof set, a tank and a hold part, eight systems, six stations) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 29 && C.loader.state.modded === true, JSON.stringify(C.loader));
   check('no console errors', C.errors.length === 0, C.errors.join(' | '));
   const want = JSON.parse(JSON.stringify(A.snap)); // what A says, with exactly the edited lines changed
   Object.assign(want.ships.raider, { hp: 22, bounty: 47, radar: 0x6dff9c, shot: [500, 900], strafe: false });
