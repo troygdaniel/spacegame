@@ -1,7 +1,34 @@
 // ---------- Boot: draw every texture with shapes ----------
+
+// ---- content in markdown (docs/MODDING.md section 5) ----
+// contentApply() runs once, first thing in Boot.create, before any scene. It takes the entries of content.generated.js
+// (made by tools/build-content.mjs), checks them again (src/content.js, ContentLib.apply) and merges the valid fields over the
+// built-in tables by id. It never throws and never stops the game: the worst a broken pack can do is leave the built-in
+// values in place and fill CONTENT_ERRORS. Behaviour is unchanged until a table registers itself in CONTENT_TABLES (card m4).
+//   CONTENT_TABLES  type -> { has(id), get(id, field), apply(id, data, isNew), canAdd }; one adapter per table moved to markdown
+//   CONTENT_ERRORS  every problem found, { level: 'error' | 'warn', path, line, field, message }; the Title chip (card m2b) reads it
+//   CONTENT_STATE   { loaded, hash, files, applied, skipped }: what happened; applied lists the 'type:id' that changed something
+const CONTENT_TABLES = {};
+const CONTENT_ERRORS = [];
+const CONTENT_STATE = { loaded: false, hash: '', files: 0, applied: [], skipped: 0 };
+function contentApply() {
+  let r;
+  try {
+    // ContentLib is src/content.js; CONTENT is content.generated.js (either missing means: play on the built-in values)
+    if (typeof ContentLib === 'undefined') r = { loaded: false, hash: '', files: 0, applied: [], skipped: 0, errors: [{ level: 'error', path: 'src/content.js', line: 0, field: '', message: 'src/content.js did not load, so content was not read. Playing on the built-in values.' }] };
+    else r = ContentLib.apply(typeof CONTENT === 'undefined' ? null : CONTENT, CONTENT_TABLES);
+  } catch (e) {
+    r = { loaded: false, hash: '', files: 0, applied: [], skipped: 0, errors: [{ level: 'error', path: 'content', line: 0, field: '', message: 'content could not be read (' + String(e && e.message || e).slice(0, 100) + '). Playing on the built-in values.' }] };
+  }
+  CONTENT_ERRORS.length = 0; r.errors.forEach(e => CONTENT_ERRORS.push(e));
+  Object.assign(CONTENT_STATE, { loaded: r.loaded, hash: r.hash, files: r.files, applied: r.applied, skipped: r.skipped });
+  CONTENT_ERRORS.forEach(e => { try { console.warn('[content] ' + (typeof ContentLib !== 'undefined' ? ContentLib.formatError(e) : e.path + ': ' + e.message)); } catch (x) { /* a warning is optional */ } });
+}
+
 class Boot extends Phaser.Scene {
   constructor() { super('Boot'); }
   create() {
+    contentApply(); // before anything else reads a table
     const mk = (key, w, h, fn) => {
       const g = this.make.graphics({ x: 0, y: 0, add: false });
       fn(g); g.generateTexture(key, w, h); g.destroy();

@@ -8,6 +8,8 @@
 //   ContentLib.validate(parsed, opts)            -> { path, type, id, data, errors }   data is null when the file is skipped
 //   ContentLib.loadAll([{ path, text }], opts)   -> { entries, errors, hash, files }
 //   ContentLib.formatError(e)                    -> one plain-words line
+//   ContentLib.checkEntry(entry, opts)           -> { data, errors }   the browser's second look at an entry of content.generated.js
+//   ContentLib.apply(CONTENT, tables, opts)      -> { errors, applied, skipped, ... }   merge the entries over the game's built-in tables
 // opts.defaultFor(type, id, field) -> the built-in value, so a message can say "Kept the built-in value 70" (the game passes it)
 // opts.known(type, id) -> true when the code already defines that id (a reference to it is fine)
 // opts.strictRefs -> a reference to an unknown id is an error, not a warning
@@ -477,6 +479,174 @@
     return { entries, errors, hash, files: list.length };
   }
 
-  const api = { LIMITS, SCHEMA, CONDITIONS, COLORS, FOLDERS, parse, validate, loadAll, formatError, suggest, levenshtein, hashOf };
+  // ---------- the second look: check an entry of content.generated.js, then merge it (docs/MODDING.md 5.1) ----------
+  // The build already validated every file, but the browser does not take its word for it: a stale or hand-edited
+  // content.generated.js is checked again here, field by field, against the same schema. A bad field is dropped (the built-in
+  // value stays); a bad entry is skipped. Nothing here throws, whatever it is given.
+  const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+  const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+  const itemSpec = spec => (spec.of === 'num' ? { t: 'num', min: spec.min, max: spec.max } : spec.of === 'int' ? { t: 'int', min: spec.min, max: spec.max } : { t: spec.of });
+
+  // one typed value (already parsed by the build) against its spec: { v } or { bad: 'is ... but must be ...' }
+  function checkValue(spec, v) {
+    switch (spec.t) {
+      case 'int': case 'num': return typeof v === 'number' && isFinite(v) ? parseValue(spec, String(v)) : { bad: 'is not a number' };
+      case 'bool': return typeof v === 'boolean' ? { v } : { bad: 'is not yes or no' };
+      case 'text':
+        if (typeof v !== 'string') return { bad: 'is not text' };
+        if (v === '') return { bad: 'is empty' };
+        if (v.length > spec.max) return { bad: 'is ' + v.length + ' characters but the limit is ' + spec.max };
+        if (clean(v) !== v) return { bad: 'has control characters in it' };
+        return { v };
+      case 'list': {
+        if (!Array.isArray(v)) return { bad: 'is not a list' };
+        if (v.length > LIMITS.list) return { bad: 'has ' + v.length + ' items but the limit is ' + LIMITS.list };
+        if (spec.len && v.length !== spec.len) return { bad: 'must have exactly ' + spec.len + ' items' };
+        const item = itemSpec(spec), out = [];
+        for (const x of v) { const r = checkValue(item, x); if (r.bad) return { bad: 'has an item that ' + r.bad }; out.push(r.v); }
+        return { v: out };
+      }
+      default: return typeof v === 'string' ? parseValue(spec, v) : { bad: 'is not text' }; // textkey, color, pick, id, cond
+    }
+  }
+
+  // one ## section (text, list, key: text lines or table) -> { v } or null when nothing in it is usable; problems go to say(msg)
+  function checkSection(spec, v, schema, say) {
+    const ph = s => badPlaceholder(s, schema.placeholders);
+    const line = (s, max) => {
+      if (typeof s !== 'string' || s === '') return 'is not text';
+      if (s.length > max) return 'is ' + s.length + ' characters but the limit is ' + max;
+      if (clean(s) !== s) return 'has control characters in it';
+      return ph(s);
+    };
+    if (spec.t === 'text') { const b = line(v, spec.max); if (b) { say(b); return null; } return { v }; }
+    if (spec.t === 'list') {
+      if (!Array.isArray(v)) { say('is not a list'); return null; }
+      const out = [];
+      v.forEach((s, i) => { if (i >= LIMITS.list) return; const b = line(s, spec.max); if (b) say('item ' + (i + 1) + ' ' + b); else out.push(s); });
+      if (v.length > LIMITS.list) say('has more than ' + LIMITS.list + ' items; the rest are ignored');
+      return out.length ? { v: out } : null;
+    }
+    if (spec.t === 'kv') {
+      if (!isObj(v)) { say('is not a set of key: text lines'); return null; }
+      const out = {}; let n = 0;
+      Object.keys(v).forEach(k => {
+        if (!spec.keys.includes(k)) { say('has the unknown key ' + quote(k)); return; }
+        const b = line(v[k], spec.max); if (b) say(quote(k) + ' ' + b); else { out[k] = v[k]; n++; }
+      });
+      return n ? { v: out } : null;
+    }
+    if (spec.t === 'table') {
+      if (!Array.isArray(v)) { say('is not a table'); return null; }
+      const out = [];
+      v.forEach((row, i) => {
+        if (i >= LIMITS.rows) return;
+        if (!isObj(row)) { say('row ' + (i + 1) + ' is not a row'); return; }
+        const o = {}; let dead = false;
+        Object.keys(row).forEach(c => {
+          if (!hasOwn(spec.cols, c)) { say('row ' + (i + 1) + ' has the unknown column ' + quote(c)); return; }
+          const cs = spec.cols[c], r = checkValue(cs, row[c]);
+          if (r.bad) { say('row ' + (i + 1) + ' ' + c + ' ' + r.bad); if (cs.req || (spec.required || []).includes(c)) dead = true; return; }
+          if (cs.t === 'text') { const b = ph(r.v); if (b) { say('row ' + (i + 1) + ' ' + c + ': ' + b); dead = true; return; } }
+          o[c] = r.v;
+        });
+        (spec.required || []).forEach(c => { if (o[c] === undefined) dead = true; });
+        if (dead) say('row ' + (i + 1) + ' is skipped'); else out.push(o);
+      });
+      if (v.length > LIMITS.rows) say('has more than ' + LIMITS.rows + ' rows; the rest are ignored');
+      return out.length ? { v: out } : null;
+    }
+    say('has an unknown type'); return null;
+  }
+
+  // entry: { type, id, path, data } from CONTENT.entries -> { data, errors }; data is null when the whole entry is skipped.
+  // opts.defaultFor(type, id, field) -> the built-in value, for the "Kept the built-in value" part of a message.
+  function checkEntry(entry, opts) {
+    opts = opts || {};
+    const errors = [], res = { data: null, errors };
+    const path = isObj(entry) && typeof entry.path === 'string' ? clean(entry.path).slice(0, 200) : 'content.generated.js';
+    const fail = (field, msg) => err(errors, 'error', path, 0, field, msg);
+    if (!isObj(entry) || typeof entry.type !== 'string' || typeof entry.id !== 'string' || !isObj(entry.data)) { fail('', 'this entry of content.generated.js is not a content entry. Skipped it.'); return res; }
+    if (!hasOwn(SCHEMA, entry.type)) { fail('type', 'type is ' + quote(clean(entry.type).slice(0, 30)) + ' but must be one of: ' + Object.keys(SCHEMA).join(', ') + '. Skipped the file.'); return res; }
+    if (!ID_RE.test(entry.id)) { fail('id', 'the id ' + quote(clean(entry.id).slice(0, 50)) + ' must be a-z, 0-9 and dashes, starting with a letter, 40 characters at most. Skipped the file.'); return res; }
+    const schema = SCHEMA[entry.type], src = entry.data, data = {};
+    const keep = field => { const d = opts.defaultFor && opts.defaultFor(entry.type, entry.id, field); return d !== undefined && d !== null ? ' Kept the built-in value ' + (typeof d === 'object' ? JSON.stringify(d) : d) + '.' : ' Ignored.'; };
+    let missing = false;
+    Object.keys(src).forEach(k => {
+      if (k === 'description') {
+        const b = typeof src[k] === 'string' && src[k].length <= LIMITS.desc && clean(src[k]) === src[k] ? badPlaceholder(src[k], schema.placeholders) : 'is not usable text (at most ' + LIMITS.desc + ' characters)';
+        if (b) fail(k, 'the description ' + b + '. Ignored.'); else data[k] = src[k];
+      } else if (hasOwn(schema.fields, k)) {
+        const spec = schema.fields[k], r = checkValue(spec, src[k]);
+        let bad = r.bad ? k + ' ' + r.bad : null;
+        if (!bad && spec.t === 'text') { const b = badPlaceholder(r.v, schema.placeholders); if (b) bad = k + ': ' + b; }
+        if (bad) { fail(k, bad + '.' + (spec.req ? ' Skipped the file.' : keep(k))); if (spec.req) missing = true; } else data[k] = r.v;
+      } else if (hasOwn(schema.sections, k)) {
+        const sg = [], r = checkSection(schema.sections[k], src[k], schema, m => sg.push(m));
+        sg.forEach(m => fail(k, 'the section ' + quote('## ' + schema.sections[k].heading) + ' ' + m + '. Ignored.'));
+        if (r) data[k] = r.v;
+      } else {
+        const sg = suggest(k, Object.keys(schema.fields));
+        fail(k, 'unknown field ' + quote(clean(k).slice(0, 30)) + '.' + (sg ? ' Did you mean ' + quote(sg) + '?' : '') + ' Ignored.');
+      }
+    });
+    Object.keys(schema.fields).forEach(n => { if (schema.fields[n].req && data[n] === undefined && !missing) { fail(n, n + ' is required but missing. Skipped the file.'); missing = true; } });
+    if (missing) return res;
+    res.data = data;
+    return res;
+  }
+
+  // content: the CONTENT object of content.generated.js (or anything, or nothing); tables: type -> a small adapter the game
+  // registers for each table it has moved to markdown:
+  //   { has(id) -> the code defines this id, get(id, field) -> its built-in value, apply(id, data, isNew), canAdd: true when a new id may be added }
+  // A type with no adapter is reported once per file and left alone. Returns { loaded, hash, files, applied: ['ship:raider'], skipped, errors }.
+  function apply(content, tables, opts) {
+    opts = opts || {}; tables = isObj(tables) ? tables : {};
+    const out = { loaded: false, hash: '', files: 0, applied: [], skipped: 0, errors: [] };
+    const say = (level, path, field, msg) => err(out.errors, level, path, 0, field, msg);
+    try {
+      if (!isObj(content) || !Array.isArray(content.entries)) {
+        say('error', 'content.generated.js', '', 'content.generated.js is missing: run node tools/build-content.mjs. Playing on the built-in values.');
+        return out;
+      }
+      out.loaded = true; out.hash = String(content.hash || '').slice(0, 16); out.files = +content.files || 0;
+      // what the build found
+      (Array.isArray(content.errors) ? content.errors : []).slice(0, 500).forEach(e => {
+        if (!isObj(e) || typeof e.message !== 'string') return;
+        out.errors.push({ level: e.level === 'warn' ? 'warn' : 'error', path: clean(String(e.path || 'content')).slice(0, 200), line: +e.line > 0 ? +e.line | 0 : 0, field: clean(String(e.field || '')).slice(0, 40), message: clean(e.message).slice(0, 500) });
+      });
+      // one entry per type and id: when two files share one, the later path wins and both are named
+      let list = content.entries;
+      if (list.length > LIMITS.files) { say('error', 'content.generated.js', '', 'more than ' + LIMITS.files + ' entries; the rest are ignored.'); list = list.slice(0, LIMITS.files); }
+      const byKey = new Map();
+      list.forEach(en => {
+        if (!isObj(en) || typeof en.type !== 'string' || typeof en.id !== 'string') { out.skipped++; say('error', 'content.generated.js', '', 'an entry is not a content entry. Skipped it.'); return; }
+        const k = en.type + ':' + en.id, old = byKey.get(k);
+        if (old) { say('warn', String(en.path || ''), '', 'there are two ' + clean(en.type).slice(0, 20) + ' files called ' + quote(clean(en.id).slice(0, 40)) + ' (' + clean(String(old.path || '')).slice(0, 100) + ' and this one). Used the later.'); if (String(en.path || '') < String(old.path || '')) return; }
+        byKey.set(k, en);
+      });
+      byKey.forEach(en => {
+        const table = hasOwn(tables, en.type) && isObj(tables[en.type]) ? tables[en.type] : null;
+        const chk = checkEntry(en, { defaultFor: (t, id, f) => { try { return table && table.get ? table.get(id, f) : undefined; } catch (e) { return undefined; } } });
+        chk.errors.forEach(e => out.errors.push(e));
+        const path = clean(String(en.path || 'content')).slice(0, 200);
+        if (!chk.data) { out.skipped++; return; }
+        if (!table) { say('warn', path, '', 'this version of the game does not read ' + SCHEMA[en.type].folder + ' yet. Ignored the file.'); out.skipped++; return; }
+        try {
+          const known = !!table.has(en.id);
+          if (!known && !table.canAdd) { say('error', path, '', 'the game has no built-in ' + en.type + ' called ' + quote(en.id) + ' and cannot add new ones. Skipped the file.'); out.skipped++; return; }
+          table.apply(en.id, chk.data, !known);
+          out.applied.push(en.type + ':' + en.id);
+        } catch (e) {
+          say('error', path, '', 'could not be applied (' + clean(String(e && e.message || e)).slice(0, 100) + '). Kept the built-in values.'); out.skipped++;
+        }
+      });
+    } catch (e) {
+      say('error', 'content.generated.js', '', 'could not be read (' + clean(String(e && e.message || e)).slice(0, 100) + '). Playing on the built-in values.');
+    }
+    return out;
+  }
+
+  const api = { LIMITS, SCHEMA, CONDITIONS, COLORS, FOLDERS, parse, validate, loadAll, formatError, suggest, levenshtein, hashOf, checkEntry, apply };
   if (typeof module === 'object' && module && module.exports) module.exports = api; else root.ContentLib = api;
 })(typeof self !== 'undefined' ? self : this);
