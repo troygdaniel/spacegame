@@ -38,6 +38,7 @@ What it is and is not:
 | `chat` | part 1: the provider adapters with a mocked fetch (keys, headers, 401, 404, 429, three failures) | parts 2 to 6: the setup panel, the pause menu, the bar, memory, voice |
 | `fleet` | part 1: the rules of the yard, prices, buy, sell, switch | part 2: a real save and a death |
 | `shipmodels` | part 1: the table pinned to the design | part 2: the Space scene |
+| `systems` | part 1: the eight systems of the design table, which ship reaches which, the layouts, every dock and pirate table | part 2: the shipped files equal the code's rows, each system flown and each station docked at, one Chrome |
 
 **Chrome only**, and why:
 
