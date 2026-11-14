@@ -243,6 +243,56 @@ console.log('B3. a tampered or hostile pack in the browser\'s storage is refused
   } finally { await t.close(); }
 }
 
+console.log('B4. a pack can add new things, as content/ can: shared limits, a later pack changes a row an earlier one added, a bad new file adds nothing');
+{
+  const dir = mkdtempSync(join(tmpdir(), 'longhaul-modsB4-')); tmp.push(dir);
+  mk(dir, 'aaa-add/missions/convoy.md', '---\ntype: mission\nkind: patrol\ntitle: Convoy patrol\nreward: 800\ncount: 3\n---\n');
+  mk(dir, 'aaa-add/npcs/ada.md', '---\ntype: npc\nname: ADA\ncolor: green\n---\n## Lines\n- A line from a pack.\n');
+  mk(dir, 'aaa-add/ships/mule.md', '---\ntype: ship\nname: Mule\nart: ox\ncargo: 30\nprice: 7000\n---\n');
+  mk(dir, 'aaa-add/voice/quips.md', '---\ntype: voice\nevent: hull-low\n---\n## Lines\n- Hull is low, from a pack.\n');
+  mk(dir, 'bbb-later/missions/convoy.md', '---\ntype: mission\nkind: patrol\ntitle: Convoy patrol\nreward: 900\n---\n');
+  for (const i of [1, 2, 3, 4]) mk(dir, `ccc-many/missions/extra-${i}.md`, `---\ntype: mission\nkind: rescue\ntitle: Extra ${i}\nreward: ${100 + i}\n---\n`);
+  mk(dir, 'ddd-bad/npcs/nolines.md', '---\ntype: npc\nname: NOBODY\n---\n');
+  mk(dir, 'ddd-bad/parts/engine-4.md', '---\ntype: part\nslot: engine\ntier: 4\nname: Fourth\n---\n');
+  const core = build({ write: false }).result.entries, built = buildMods({ dir, write: false, coreEntries: core });
+  const game = copyGame('modsadd'); tmp.push(game);
+  writeFileSync(join(game, 'mods.generated.js'), built.text);
+  writeFileSync(join(game, 'content.generated.js'), readFileSync(join(ROOT, 'content.generated.js'), 'utf8'));
+  const added = t => t.ev(`JSON.stringify({ calls: MISSIONS.filter(m => m.added).map(m => m.id + ':' + m.reward), convoy: (MISSIONS.find(m => m.id === 'convoy') || {}).reward, ada: !!NPCS.find(n => n.id === 'ada'), nobody: NPCS.some(n => /nobody/i.test(n.name || n.id)), mule: SHIP_MODELS.mule ? SHIP_MODELS.mule.price + ':' + SHIP_MODELS.mule.art : '', quips: VOICE_ADDED.has('quips'), errors: CONTENT_ERRORS.map(e => e.path + ' | ' + e.message) })`).then(JSON.parse);
+  const t = await launch('', game);
+  try {
+    await title(t);
+    let a = await added(t);
+    check('all off: nothing was added, the shipped board', a.calls.length === 0 && !a.ada && !a.mule && !a.quips && a.errors.length === 0, JSON.stringify(a));
+    await setLS(t, 'longhaul.mods.on', ['aaa-add']);
+    await reload(t, game);
+    a = await added(t);
+    check('one pack on: its call, character, ship and voice file are in the game', a.convoy === 800 && a.ada && a.mule === '7000:ox' && a.quips && a.errors.length === 0, JSON.stringify(a));
+    check('the new ship is for sale at Halcyon and the new call is on the board', await t.ev("(fleetStation('halcyon-station').body.dock.yard || []).includes('mule') && MISSIONS.some(m => m.id === 'convoy' && m.added)"), 'yard/board');
+    await setLS(t, 'longhaul.mods.on', ['aaa-add', 'bbb-later']);
+    await reload(t, game);
+    a = await added(t);
+    check('a later pack that names the same id changes the row the first one added (reward 900), and adds no second call', a.convoy === 900 && a.calls.filter(c => /^convoy:/.test(c)).length === 1, JSON.stringify(a));
+    await setLS(t, 'longhaul.mods.on', ['aaa-add', 'ccc-many']);
+    await reload(t, game);
+    a = await added(t);
+    check('the limit of four calls is shared by every pack: convoy and three extras are in, the fourth extra is refused', a.calls.length === 4 && a.errors.length === 1 && /^mods\/ccc-many\/missions\/extra-4\.md/.test(a.errors[0]) && /at most 4 calls/.test(a.errors[0]) && /Skipped the file/.test(a.errors[0]), JSON.stringify(a));
+    await setLS(t, 'longhaul.mods.on', ['ddd-bad']);
+    await reload(t, game);
+    a = await added(t);
+    check('a bad new file adds nothing and a part nobody can add (a fourth tier) is refused, both naming the pack', !a.nobody && a.errors.length >= 2 && a.errors.every(e => /^mods\/ddd-bad\//.test(e)) && a.errors.some(e => /npcs\/nolines\.md/.test(e) && /Skipped the file/.test(e)) && a.errors.some(e => /parts\/engine-4\.md/.test(e) && /Skipped the file/.test(e)), JSON.stringify(a.errors));
+    // a picked folder adds too
+    await setLS(t, 'longhaul.mods.on', []);
+    await t.ev(`(() => { const f = (rel, text) => { const x = new File([text], rel.split('/').pop()); Object.defineProperty(x, 'webkitRelativePath', { value: rel }); return x; };
+      window.__files = [f('mine/npcs/ada.md', '---\\ntype: npc\\nname: ADA\\n---\\n## Lines\\n- A picked line.\\n')]; return 1; })()`);
+    const r = JSON.parse(await evp(t, 'modsPickFiles(window.__files).then(r => JSON.stringify(r))'));
+    await reload(t, game);
+    a = await added(t);
+    check('a picked folder with a new character adds it after a restart', r.ok && a.ada && a.errors.length === 0, JSON.stringify([r, a]));
+    check('no JS errors', t.errors.length === 0, t.errors.join(' | '));
+  } finally { await t.close(); }
+}
+
 tmp.forEach(d => rmSync(d, { recursive: true, force: true }));
 console.log(failed ? `\nMODS FAIL (${failed} of ${n})` : `\nMODS PASS (${n} checks)`);
 process.exitCode = failed ? 1 : 0;
