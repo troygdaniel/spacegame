@@ -22,7 +22,7 @@
 #   4m. tests/systemart.mjs: planet kinds, star types and the four station looks for other systems (not used by the game yet)
 #   4n. tests/savemig.mjs: save v2 and the v1 migration; G.hull, G.maxHull, G.ore and G.upgrades over the active ship; unknown ids fall back
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
-#   4k. tests/chat.mjs: the NPC chat adapter with a mocked fetch: no key means no call; OpenAI and Anthropic get the right URL,
+#   4o. tests/chat.mjs: the NPC chat adapter with a mocked fetch: no key means no call; OpenAI and Anthropic get the right URL,
 #       header and body shape; the key is only ever in its header; 401 switches chat off; 429 waits; the setup panel saves a key
 #      their failure paths, with the game clock stepped by hand
 # Only one headless Chrome runs at a time on this Mac, whatever the worktree: cdp.mjs takes a lock in tests/lock.mjs, so a second
