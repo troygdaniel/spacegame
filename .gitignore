@@ -1,2 +1,9 @@
 .DS_Store
 node_modules/
+tests/out/
+*.log
+.env*
+
+# player mods (docs/MODDING.md): keep the example, ignore the rest
+mods/*
+!mods/example/

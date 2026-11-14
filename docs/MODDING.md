@@ -270,8 +270,8 @@ Nothing here publishes anything. **Troy decides when and where the repo goes pub
 
 ### 7.2 Audit of the repo today (main `6a605f3`, 2026-11-13)
 - **Working tree: no API keys, tokens, passwords, emails or phone numbers.** (Searched all text files except `phaser.min.js`.)
-- **One personal path:** a comment in `tests/ships.mjs` line 5 names `/Users/troydaniel/...`. Card `m3` replaces it.
-- **Git history: 87 commits are authored `Troy Daniel <troygdaniel@gmail.com>` and 18 `ORCH <orch@local>`.** Publishing the history publishes that email. Options for Troy: (a) publish a new repository with one fresh commit and leave this history private (recommended: nothing is rewritten, nothing breaks, all agent worktrees keep working); (b) rewrite authorship with `git filter-repo` to a no-reply address (changes every hash, breaks open worktrees, needs everyone to stop first); (c) accept the email in public. This is Troy's call and is not done here.
+- **One personal path:** a comment in `tests/ships.mjs` line 5 named a path inside the author's home folder. Card `m3` replaced it, and `tests/hygiene.mjs` now fails on any such path.
+- **Git history: 87 commits are authored by Troy Daniel with his personal email address, and 18 by `ORCH <orch@local>`.** Publishing the history publishes that address. Options for Troy: (a) publish a new repository with one fresh commit and leave this history private (recommended: nothing is rewritten, nothing breaks, all agent worktrees keep working); (b) rewrite authorship with `git filter-repo` to a no-reply address (changes every hash, breaks open worktrees, needs everyone to stop first); (c) accept the email in public. This is Troy's call and is not done here.
 - Agent names (ORCH, TaskMaster, BuildBot, DreamBot) and the first name Troy appear in `README.md`, `docs/*.md`, `tests/cdp.mjs`, `tests/missions.mjs`, comments in `src/missions.js` and two commit subjects. No private data; Troy decides if he wants them cleaned.
 
 ### 7.3 A hygiene test (card `m3`)
