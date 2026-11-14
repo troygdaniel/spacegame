@@ -117,7 +117,7 @@ class ChatSetup extends Phaser.Scene {
     this.ui = panel(this, { w: 780, h: 600, title: 'NPC CHAT  -  OPTIONAL', dim: true, depth: 0 });
     const box = this.ui.box, add = o => { box.add(o); return o; };
     const txt = (x, y, s, size, color, o = {}) => add(this.add.text(x, y, s, uiFont(size, color, o.style)).setOrigin(o.ox || 0, o.oy || 0));
-    txt(-360, -246, 'Talk with the people in the Drift bar in your own words. Each character answers in character through a model on your own OpenAI or Anthropic account, and remembers you.', 16, '#cfefff', { style: { wordWrap: { width: 720 }, lineSpacing: 4 } });
+    txt(-360, -246, 'Talk with the people in the Drift bar in your own words. Each one answers in character, through a model on your own OpenAI or Anthropic account.', 16, '#cfefff', { style: { wordWrap: { width: 720 }, lineSpacing: 4 } });
     const g = add(this.add.graphics());
     g.fillStyle(0x2a1a06, 0.9); g.fillRect(-360, -190, 720, 150); g.lineStyle(2, AMBER, 1); g.strokeRect(-360, -190, 720, 150); g.fillStyle(AMBER, 1); g.fillRect(-360, -190, 5, 150);
     txt(-342, -182, 'THIS USES YOUR OWN OPENAI OR ANTHROPIC ACCOUNT AND MAY COST YOU MONEY', 16, '#ffd37a', { style: { fontStyle: 'bold' } });
