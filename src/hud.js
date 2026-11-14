@@ -297,6 +297,15 @@ function hudStrip(h, now) {
   hudPanel(g, 856, 10, 134, 30, 8, 0.78, full ? RED : CYAN);
   hudPut(h, 'orl', 872, 25, 'ORE', { size: HT.label, color: full ? '#ff4d6d' : HUD_DIM, spacing: 2 });
   hudBar(g, 902, 19, 78, 12, ore / cap, full ? RED : AMBER, Math.min(cap, 24), full ? 0.55 + 0.45 * Math.sin(now / 120) : null); // one cell an ore, up to 24
+  hudFuel(h, now);
+}
+
+// fuel chip, left of the credits: a segmented bar for the tank; amber under a quarter, red and beating under a tenth (src/fuel.js)
+function hudFuel(h, now) {
+  const g = h.g, f = fuelFrac(), st = fuelState(), crit = st === 'crit', low = st !== 'ok', col = crit ? RED : low ? AMBER : CYAN;
+  hudPanel(g, 296, 10, 134, 30, 8, 0.78, col);
+  hudPut(h, 'fuell', 312, 25, 'FUEL', { size: HT.label, color: crit ? '#ff4d6d' : low ? '#ffd37a' : HUD_DIM, spacing: 2 });
+  hudBar(g, 346, 19, 74, 12, f, col, 10, crit ? 0.55 + 0.45 * Math.sin(now / 120) : null);
 }
 
 // ---- the mission as the checklist wants it ----

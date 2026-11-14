@@ -29,6 +29,7 @@
 #   4s. tests/journal.mjs: J opens the Journal in the station (people met, notes, facts, no key needed), Forget everything needs a second press, the Pause row
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #   4o. tests/chat.mjs: the NPC chat adapter and the chat box in the bar with a mocked fetch: no key means no call; OpenAI and Anthropic get the right URL,
+#   4u. tests/fuel.mjs: the tank per ship, jump cost, the fuel pump terminal in the station, the HUD FUEL chip, the fuel ranger
 #   4t. tests/shipmodels.mjs: the six ship models against docs/UNIVERSE.md 6.1, and the Wren's speed, thrust, turn, boost and hull in the real Space scene
 #   4u. tests/parts.mjs: the five ship parts (shields, weapons, engine, tank, cargo): tables, every effect, shields in flight, shot rate and damage, the shop's five cards with fit and stock rules, the save
 #   4w. tests/fleet.mjs: buy, sell, switch, rename and transfer ships, the yard and the prices, per-ship state through a save, and dying (docs/UNIVERSE.md 6.3)
@@ -129,6 +130,8 @@ echo "== 4y. economy simulator: real data loads, pinned code lines still there (
 if node tools/economy-sim.mjs check; then :; else fail=1; fi
 echo "== 4z. the hangar terminal in the Ship bay (tests/hangar.mjs)"
 if node tests/hangar.mjs; then :; else fail=1; fi
+echo "== 4za. fuel: tank, jump cost, the pump terminal, the FUEL chip, the ranger (tests/fuel.mjs)"
+if node tests/fuel.mjs; then :; else fail=1; fi
 echo "== 4zc. the Settings screen: sound, keys with a mocked fetch, controls, content, reset (tests/settings.mjs)"
 if node tests/settings.mjs; then :; else fail=1; fi
 

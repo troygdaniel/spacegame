@@ -33,7 +33,7 @@ function bayShipInfo(rec) {
     uid: rec.uid, model: bayModel(rec.model), name: rec.name, kind: L.name, role: L.role, at: rec === activeShip() ? G.lastDock : rec.at,
     hull: rec.hull, maxHull: rec.maxHull,
     ore: Math.min(rec.ore | 0, holdCap(rec)), oreCap: holdCap(rec),
-    fuel: null, fuelMax: null, // src/fuel.js (card u-b1) fills these in
+    fuel: Math.round(fuelHave(rec)), fuelMax: fuelTank(rec), // src/fuel.js: the status panel shows its fuel row once these are numbers
     parts: PART_ORDER.map(k => ({ key: k, name: PARTS[k].name, tier: partTier(k, rec), max: shipMaxTier(rec.model, k), descs: PARTS[k].brief, tiers: PARTS[k].tiers }))
   };
 }
