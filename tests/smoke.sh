@@ -17,9 +17,9 @@
 #   4g. tests/shipmode.mjs: boarding opens the Ship bay instead of launching; Enter launches, Esc goes back, Tab opens the map over it
 #   4i. tests/launch.mjs: pirates fair at launch (20 s grace, one-at-a-time first wave, spawns kept out, hit invulnerability)
 #   4j. tests/contentboot.mjs: a bad, missing, broken or hand-edited content.generated.js never stops the game reaching Title and playing
-#   4j. tests/chat.mjs: the NPC chat adapter with a mocked fetch: no key means no call; OpenAI and Anthropic get the right URL,
-#       header and body shape; the key is only ever in its header; 401 switches chat off; 429 waits; the setup panel saves a key
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
+#   4k. tests/chat.mjs: the NPC chat adapter with a mocked fetch: no key means no call; OpenAI and Anthropic get the right URL,
+#       header and body shape; the key is only ever in its header; 401 switches chat off; 429 waits; the setup panel saves a key
 #      their failure paths, with the game clock stepped by hand
 # Needs Google Chrome and Node 22+. Uses throwaway Chrome profiles, never your own. Chrome runs with
 # --headless=new --disable-gpu --use-angle=swiftshader --enable-unsafe-swiftshader --allow-file-access-from-files.
@@ -68,13 +68,14 @@ echo "== 4g. ship bay between boarding and launch (tests/shipmode.mjs)"
 if node tests/shipmode.mjs; then :; else fail=1; fi
 echo "== 4h. ship voice with a mocked fetch: no key, no call; nothing ever reaches Deepgram (tests/voice.mjs)"
 if node tests/voice.mjs; then :; else fail=1; fi
-echo "== 4j. NPC chat adapter with a mocked fetch: no key, no call; the right host and header per provider; 401 and 429 (tests/chat.mjs)"
-if node tests/chat.mjs; then :; else fail=1; fi
 
 echo "== 4i. fair launch: 20 s pirate grace, first-wave cap, distant spawns, hit invulnerability (tests/launch.mjs)"
 if node tests/launch.mjs; then :; else fail=1; fi
 echo "== 4j. content loader: a bad, missing or broken content.generated.js never blanks the game (tests/contentboot.mjs)"
 if node tests/contentboot.mjs; then :; else fail=1; fi
+
+echo "== 4k. NPC chat adapter with a mocked fetch: no key, no call; the right host and header per provider; 401 and 429 (tests/chat.mjs)"
+if node tests/chat.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
