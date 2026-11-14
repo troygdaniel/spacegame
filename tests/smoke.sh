@@ -98,7 +98,7 @@ if node tests/chat.mjs; then :; else fail=1; fi
 echo "== 4p. content on the Title screen: problems chip, panel, MODDED tag (tests/contentui.mjs)"
 if node tests/contentui.mjs; then :; else fail=1; fi
 
-echo "== 4p. the six player ships (tests/shipsheet.mjs)"
+echo "== 4q. the six player ships (tests/shipsheet.mjs)"
 if node tests/shipsheet.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
