@@ -23,7 +23,7 @@ What it is and is not:
 - It runs the real scripts, in `index.html` order, in one `vm` context with a plain `localStorage`, `setTimeout` (never keeps Node alive), no `setInterval` and no network (`fetch` rejects until a test installs its mock, as `tests/chat.mjs` does).
 - Names a browser has and Node has not (`Phaser`, `document`, `AudioContext`, `Image`...) are stand-ins that accept anything (list: `BROWSER` in the file). A name that is neither a stand-in nor a JavaScript built-in is a ReferenceError, so a test that reaches for a browser **fails**, it does not pass on nothing.
 - A stand-in does nothing: no scene is made, nothing is drawn, no key is read, `document.body.innerText` is not text. If a check is about any of that, it belongs in Chrome.
-- `tests/nodegame.mjs` was checked against the page: the same snapshot of every table the proof set reaches (2304 situations per character) comes out of Node and out of Chrome, equal field for field.
+- `tests/nodegame.mjs` was compared once with the page (a throwaway script, not kept): the snapshot of every table the proof set reaches (`SNAP` in `tests/contentproof.mjs`, 2304 situations per character) and the loader's report came out of Node and out of Chrome equal, field for field. If the scripts grow a new need of the browser, `nodeGame()` throws a ReferenceError and names it: add it to `BROWSER` only if a stand-in is honest for that test.
 
 ## Which test is which
 
