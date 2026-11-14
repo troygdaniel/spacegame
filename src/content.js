@@ -110,7 +110,7 @@
     system: {
       folder: 'systems', placeholders: [],
       fields: {
-        name: T(40, true), kind: P(['home', 'outpost', 'trade', 'mining', 'wild', 'graveyard', 'nest'], true), ly: L('num', { len: 2, min: -1000, max: 1000 }),
+        name: T(40, true), kind: P(['home', 'outpost', 'trade', 'mining', 'volcanic', 'wild', 'graveyard', 'nest'], true), ly: L('num', { len: 2, min: -1000, max: 1000 }),
         size: I(4000, 200000), danger: I(0, 5), traffic: I(0, 3), seed: I(0, 2147483647),
         starType: P(['O', 'B', 'A', 'F', 'G', 'K', 'M']), starX: I(0, 200000), starY: I(0, 200000),
         pirateMax: I(1, 40), pirateEvery: I(1000, 600000) // a system's own pirate spawn table (enemies.js pirateTable): at most this many, one every this many ms; the weights are the Pirates section

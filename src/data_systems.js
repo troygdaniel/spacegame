@@ -122,7 +122,7 @@ const SYSTEMS = {
     ]
   },
   ember: {
-    id: 'ember', name: 'Ember', kind: 'mining', ly: [34, 31], size: 36000, danger: 3, traffic: 1, seed: 6188,
+    id: 'ember', name: 'Ember', kind: 'volcanic', ly: [34, 31], size: 36000, danger: 3, traffic: 1, seed: 6188,
     star: { type: 'A', x: 18000, y: 18000 },
     pirates: { max: 10, every: 9000, weights: { raider: 0.45, drone: 0.15, gunship: 0.4 } },
     bodies: [

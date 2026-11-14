@@ -24,7 +24,7 @@ const DESIGN = [
   ['brass', 'Brass Reach', 'mining', [14, 26.5], 2, 1, true, 6],
   ['hollow', 'The Hollow', 'wild', [13.5, 17.5], 2, 0, false, 0],
   ['lethe', 'Lethe', 'graveyard', [7.5, 30], 2, 0, false, 0],
-  ['ember', 'Ember', 'mining', [34, 31], 3, 1, true, 6],
+  ['ember', 'Ember', 'volcanic', [34, 31], 3, 1, true, 6],
   ['roost', "Reaver's Roost", 'nest', [37, 15], 5, 0, true, 15]
 ];
 const IDS = DESIGN.map(d => d[0]);

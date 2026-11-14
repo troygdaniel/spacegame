@@ -1,7 +1,7 @@
 ---
 type: system
 name: Ember
-kind: mining
+kind: volcanic
 ly: [34, 31]
 size: 36000
 danger: 3

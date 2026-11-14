@@ -31,7 +31,7 @@ const GALAXY_STUB = [
   { id: 'brass', name: 'Brass Reach', kind: 'mining', ly: [14, 26.5], danger: 2, pump: 6, station: true, note: 'Three belts, one with rich veins. Cargo and tank parts, and the hauler. Raiders hunt miners.' },
   { id: 'hollow', name: 'The Hollow', kind: 'wild', ly: [13.5, 17.5], danger: 2, pump: 0, station: false, note: 'An ice world to land on and a beacon to chart. Nothing to buy: bring fuel home.' },
   { id: 'lethe', name: 'Lethe', kind: 'graveyard', ly: [7.5, 30], danger: 2, pump: 0, station: false, note: 'Fourteen wrecks to salvage, scavenger drones, and one wreck that pays 800.' },
-  { id: 'ember', name: 'Ember', kind: 'volcanic', ly: [34, 31], danger: 3, pump: 7, station: true, note: 'A lava world and heavy raiding. Weapons parts to tier 3, and the fighter.' },
+  { id: 'ember', name: 'Ember', kind: 'volcanic', ly: [34, 31], danger: 3, pump: 6, station: true, note: 'A lava world and heavy raiding. Weapons parts to tier 3, and the fighter.' },
   { id: 'roost', name: 'Reaver\'s Roost', kind: 'nest', ly: [37, 15], danger: 5, pump: 15, station: true, note: 'The pirate nest: no police, a 50 cr fee, waves of pirates and the Reaver bounty. They gouge on fuel.' }
 ];
 

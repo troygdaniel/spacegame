@@ -29,7 +29,7 @@ const texts = t => t.ev(`(() => { const out = []; const walk = o => { if (o.type
     console.log('A. the eight of the design table');
     const sys = await t.ev('galaxySystems().map(s => [s.id, s.kind, s.ly[0], s.ly[1], s.danger, s.pump, s.station])');
     const want = [['halcyon', 'home', 20, 22, 1, 8, true], ['kestrel', 'outpost', 25.5, 19, 1, 7, true], ['meridian', 'trade', 29, 24.5, 1, 9, true], ['brass', 'mining', 14, 26.5, 2, 6, true],
-      ['hollow', 'wild', 13.5, 17.5, 2, 0, false], ['lethe', 'graveyard', 7.5, 30, 2, 0, false], ['ember', 'volcanic', 34, 31, 3, 7, true], ['roost', 'nest', 37, 15, 5, 15, true]];
+      ['hollow', 'wild', 13.5, 17.5, 2, 0, false], ['lethe', 'graveyard', 7.5, 30, 2, 0, false], ['ember', 'volcanic', 34, 31, 3, 6, true], ['roost', 'nest', 37, 15, 5, 15, true]];
     check('eight systems with the design table\'s places, dangers and pumps', JSON.stringify(sys) === JSON.stringify(want), JSON.stringify(sys).slice(0, 120));
     const ly = (a, b) => t.ev(`Math.round(galaxyLy(galaxyFind('${a}'), galaxyFind('${b}')) * 10) / 10`);
     check('the distances in the design table: Halcyon to Kestrel 6.3, to Meridian 9.3, to Brass 7.5, to the Hollow 7.9; Kestrel to Meridian 6.5; Meridian to Ember 8.2; Kestrel to the Roost 12.2',

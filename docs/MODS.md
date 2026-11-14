@@ -465,7 +465,7 @@ No placeholders.
 | Field | Takes | Meaning |
 |---|---|---|
 | `name`* | text, up to 40 characters | its name |
-| `kind`* | one of: `home`, `outpost`, `trade`, `mining`, `wild`, `graveyard`, `nest` | what kind of place |
+| `kind`* | one of: `home`, `outpost`, `trade`, `mining`, `volcanic`, `wild`, `graveyard`, `nest` | what kind of place |
 | `ly` | list in square brackets, exactly 2: numbers from -1000 to 1000 | galaxy map position [x, y], light years |
 | `size` | whole number from 4000 to 200000 | world size, px |
 | `danger` | whole number from 0 to 5 | 0 to 5: how many pirates |
