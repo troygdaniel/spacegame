@@ -1,6 +1,6 @@
 // Adding new things from markdown (card space-game-m9-add-new, docs/MODDING.md section 12): a file with an id the code does not know
 // becomes a new voice line, bar character, mission, or ship. Each case runs the real game in headless Chrome from a throwaway COPY of this
-// folder whose content.generated.js is built from a small pack made here, then reads what the game plays from. Types so far: voice.
+// folder whose content.generated.js is built from a small pack made here, then reads what the game plays from. Types so far: voice, ship.
 // Run: node tests/contentadd.mjs     (one game per case, one Chrome at a time)
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -76,6 +76,56 @@ try {
   await play(many, async (t, ev) => {
     const L = await ev(LOADER);
     check('40 are added and the other two are refused with the limit named', L.applied.filter(k => k.startsWith('voice:')).length === 40 && L.errors.filter(e => /at most 40 voice files/.test(e)).length === 2, JSON.stringify([L.applied.length, L.errors.length, L.errors[0]]));
+  });
+
+  // ---------- ships ----------
+  console.log('ship: a new player ship');
+  const ships = {
+    'ships/mule.md': '---\ntype: ship\nname: Mule\nrole: freight tug\nart: ox\nhull: 150\ncargo: 30\ntank: 55\nrange: 9\nprice: 7000\n---\nA tug that hauls more than it should.\n\n## Hangar line\nSlow, loud, and never empty.\n',
+    'ships/shorty.md': '---\ntype: ship\nname: Shorty\n---\n',
+    'ships/kite.md': '---\ntype: ship\nname: Kite Mk2\nhull: 99\n---\n',
+    'ships/warbird.md': '---\ntype: ship\nname: Warbird\nside: pirate\n---\n',
+    'ships/bad-art.md': '---\ntype: ship\nname: Bad Art\nart: raider\n---\n',
+    'ships/gift.md': '---\ntype: ship\nname: Gift\nprice: 0\n---\n',
+    'ships/raider.md': '---\ntype: ship\nname: Raider\nside: pirate\nhp: 21\n---\n'
+  };
+  await play(ships, async (t, ev) => {
+    const L = await ev(LOADER);
+    check('mule and shorty are added; the five wrong files are not', L.applied.includes('ship:mule') && L.applied.includes('ship:shorty') && !L.applied.some(k => /kite|warbird|bad-art|gift/.test(k)), JSON.stringify(L.applied));
+    check('a pirate file is still a change to that pirate (raider hp 21)', L.applied.includes('ship:raider') && (await ev('PIRATES.raider.hp')) === 21);
+    const why = re => L.errors.some(e => re.test(e));
+    check('kite is refused: it is one of the six built-in ships', why(/kite\.md.*one of the six built-in ships/), JSON.stringify(L.errors));
+    check('a new pirate is refused and says why', why(/warbird\.md.*new pirate ships cannot be added/), JSON.stringify(L.errors));
+    check('art: raider is refused and the choices are listed', why(/bad-art\.md.*wren, kite, ox, talon, pathfinder, bastion/), JSON.stringify(L.errors));
+    check('price 0 is refused', why(/gift\.md.*price is 0/), JSON.stringify(L.errors));
+    const m = await ev('SHIP_MODELS.mule'), sh = await ev('SHIP_MODELS.shorty'), w = await ev('SHIP_MODELS.wren');
+    check('mule: the numbers the file gives, the rest the Wren\'s', m.hull === 150 && m.cargo === 30 && m.tank === 55 && m.range === 9 && m.price === 7000 && m.speed === w.speed && m.boost === w.boost && m.guns === w.guns && m.side === 'player' && m.art === 'ox', JSON.stringify(m));
+    check('shorty has only a name: the Wren\'s numbers, price 5000, art wren', sh.hull === w.hull && sh.speed === w.speed && sh.price === 5000 && sh.art === 'wren', JSON.stringify(sh));
+    check('mule keeps its text for the hangar', m.desc === 'A tug that hauls more than it should.' && m.line === 'Slow, loud, and never empty.', JSON.stringify([m.desc, m.line]));
+    check('the hangar says whose hull it borrows: Mule, (Ox hull)', (await ev('SHIP_LOOK.mule.name')) === 'Mule' && /freight tug \(Ox hull\)/.test(await ev('SHIP_LOOK.mule.role')));
+    check('the built-in ships are as they were: the Ox and the Wren', (await ev('SHIP_MODELS.ox.hull')) === 170 && (await ev('SHIP_LOOK.ox.name')) === 'Ox' && (await ev('Object.keys(SHIP_MODELS).length')) === 8);
+    const yard = await ev(`stationYard(homeDock())`);
+    check('Halcyon\'s yard sells the Kite and then the two new ships', yard.join() === 'kite,mule,shorty', yard.join());
+    const bought = await ev(`(() => { G.credits = 7000; const r = fleetBuy('mule', true); return { ok: r.ok, credits: G.credits, flying: r.flying, hull: G.hull, maxHull: G.maxHull, hold: holdCap(), vmax: shipStat('vmax'), tank: fuelTank(), model: activeShip().model, name: activeShip().name, look: shipActiveModel() }; })()`);
+    check('buying the Mule: 7000 credits, you fly it, the hull is 150, the hold 30, the tank 55', bought.ok && bought.credits === 0 && bought.flying && bought.maxHull === 150 && bought.hold === 30 && bought.tank === 55 && bought.model === 'mule' && bought.name === 'Mule', JSON.stringify(bought));
+    check('it flies with the Ox hull art', bought.look === 'mule' && (await ev('SHIP_LOOK[shipActiveModel()].draw === SHIP_LOOK.ox.draw')) === true);
+    await ev(`(() => { game.scene.stop('Title'); game.scene.start('Ship'); return 1; })()`);
+    await t.waitFor(`game.scene.isActive('Ship')`, 15000, 'Ship bay active'); await sleep(900);
+    check('the Ship bay shows the new ship: its name, with the borrowed hull in the label', (await ev(`(() => { const out = []; const walk = o => { if (o.visible === false) return; if (o.type === 'Text') out.push(o.text); if (o.list) o.list.forEach(walk); }; game.scene.getScene('Ship').children.list.forEach(walk); return out.join('|'); })()`)).toUpperCase().includes('MULE'));
+    await t.shot('contentadd-bay');
+    const run = await ev(`(() => { try { game.scene.stop('Ship'); game.scene.start('Space', { from: 'station' }); return 'started'; } catch (e) { return 'ERR ' + e.message; } })()`);
+    await t.waitFor(`game.scene.isActive('Space')`, 15000, 'Space active'); await sleep(600);
+    check('the game starts Space with the new ship', run === 'started' && (await ev('game.scene.isActive("Space")')) === true);
+    const again = await ev(`(() => { const a = Object.keys(SHIP_MODELS).length, y = stationYard(homeDock()).join(); ContentLib.apply(CONTENT, CONTENT_TABLES); return [a, Object.keys(SHIP_MODELS).length, y, stationYard(homeDock()).join()]; })()`);
+    check('applying the pack again adds nothing twice', again[0] === again[1] && again[2] === again[3], JSON.stringify(again));
+  });
+
+  console.log('ship: a pack may add at most 6 ships');
+  const fleet = {};
+  for (let i = 1; i <= 8; i++) fleet['ships/tug-' + i + '.md'] = `---\ntype: ship\nname: Tug ${i}\n---\n`;
+  await play(fleet, async (t, ev) => {
+    const L = await ev(LOADER);
+    check('6 are added and 2 are refused with the limit named', L.applied.filter(k => k.startsWith('ship:')).length === 6 && L.errors.filter(e => /at most 6 ships/.test(e)).length === 2, JSON.stringify([L.applied.length, L.errors]));
   });
 } catch (e) { console.error('  FAIL ' + (e && e.stack || e)); failed++; } finally {
   tmp.forEach(d => { try { rmSync(d, { recursive: true, force: true }); } catch (e) { /* tmp */ } });
