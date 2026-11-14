@@ -17,6 +17,7 @@
 #   4g. tests/shipmode.mjs: boarding opens the Ship bay instead of launching; Enter launches, Esc goes back, Tab opens the map over it
 #   4i. tests/launch.mjs: pirates fair at launch (20 s grace, one-at-a-time first wave, spawns kept out, hit invulnerability)
 #   4j. tests/contentboot.mjs: a bad, missing, broken or hand-edited content.generated.js never stops the game reaching Title and playing
+#   4l. tests/npcs.mjs: the six bar characters (persona cards, lines, reactions), IDA only after the first rescue is paid, a talk with each new one
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #      their failure paths, with the game clock stepped by hand
 # Needs Google Chrome and Node 22+. Uses throwaway Chrome profiles, never your own. Chrome runs with
@@ -74,6 +75,8 @@ if node tests/contentboot.mjs; then :; else fail=1; fi
 
 echo "== 4k. dev server: serves, refuses, rebuilds on change, R reloads (tests/serve.mjs)"
 if node tests/serve.mjs; then :; else fail=1; fi
+echo "== 4l. the Drift's six characters (tests/npcs.mjs)"
+if node tests/npcs.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then

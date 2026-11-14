@@ -268,6 +268,9 @@ function inDrawProps(P) {
   // stools: leather cushions on chrome rings
   for (let i = 0; i < 5; i++) { const x = 130 + i * 70, y = 570;
     P.dot(x + 3, y + 5, 10, 0x000000, 0.4); P.dot(x, y, 10, 0x9a8a60, 1); P.dot(x, y, 8, 0x0e0a0a, 1); P.dot(x, y, 7, 0x6a1a2a, 1); P.dot(x - 2, y - 2, 3.5, 0xa84458, 0.6); P.ring(x, y, 7, 0x3a0a14, 0.8, 1); }
+  // a stool in the east corner for SABLE, facing the door (shop.js NPCS)
+  { const x = 790, y = 600;
+    P.dot(x + 3, y + 5, 11, 0x000000, 0.4); P.dot(x, y, 11, 0x9a8a60, 1); P.dot(x, y, 9, 0x0e0a0a, 1); P.dot(x, y, 8, 0x3a2a5a, 1); P.dot(x - 2, y - 2, 3.5, 0x8a6ad0, 0.6); P.ring(x, y, 8, 0x1a0a3a, 0.8, 1); }
   // round tables with a glowing rim, a hologram candle, drinks
   [[598, 498], [178, 478]].forEach(([tx, ty]) => { const cx = tx + 22, cy = ty + 22;
     P.dot(cx + 4, cy + 6, 25, 0x000000, 0.42); P.dot(cx, cy, 25, 0x2e1608, 1); P.dot(cx, cy, 23, 0x4a2814, 1); P.dot(cx - 3, cy - 3, 14, 0x5e3620, 0.5); P.ring(cx, cy, 25, AMBER, 0.95, 2); P.ring(cx, cy, 28, AMBER, 0.12, 5);
@@ -347,6 +350,9 @@ function interiorTextures(s) {
   person('in-juno', { coat: 0x4a2a10, edge: AMBER, hair: 0x2a1408, skin: 0xb07850, apron: 0xe8d8b0, bun: true });
   person('in-tamsin', { coat: 0x5a1a28, edge: RED, hair: 0x2a1010, skin: 0xe0b090, cap: 0x2a0c14 });
   person('in-dex', { coat: 0x14402a, edge: GREEN, hair: 0x103018, skin: 0xc8946a, goggles: 0xbfffd8, pack: 0x0e2a1c });
+  person('in-moss', { coat: 0x2c4654, edge: CYAN, hair: 0x8a8a94, skin: 0x9a6a48, cap: 0x182630, pack: 0x14222c });          // the mechanic: steel-blue overalls, a cap, a tool roll on the back
+  person('in-sable', { coat: 0x241a32, edge: 0xc08cff, hair: 0xdcdcec, skin: 0xb89080, visor: 0xc08cff });                // the bounty hunter: a dark long coat, silver hair, a violet lens
+  person('in-ida', { coat: 0x6a3a58, edge: IN_PINK, hair: 0x3a2418, skin: 0xe8c0a0, pack: 0x3a2030 });                    // the colonist: a rose survey jacket and a small pack
   [[0x3a3a5a, 0x9fb4ff, 0x2a2a30, 0xe0b898], [0x5a4a2a, 0xffd37a, 0x6a4a2a, 0xb88860], [0x3a4a4a, 0x9fffe8, 0x1a1a1a, 0xd8a47a]].forEach(([coat, edge, hair, skin], i) => person('in-civ' + i, { coat, edge, hair, skin, bun: i === 1, pack: i === 0 ? 0x22223a : 0 }));
 }
 
