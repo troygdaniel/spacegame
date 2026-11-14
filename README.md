@@ -23,6 +23,7 @@ Open `index.html` in a browser (Chrome is what it is tested in). Double-clicking
 - src/art_world.js the world art, drawn in code on 2D canvases (seeded, same every boot): nebula and parallax star layers, distant sun, ringed giant and moon, Kepler-4b, asteroids and ore, the surface (ground, terrain, boulders, pad, crash site, colonist, crawlers) and the effects fxBoom (every s.boom), fxDash, fxPickup, fxDebris
 - src/hyperspace.js the Hyper scene, the watched hyperspace tunnel (star streaks, gates, ribbons, nose bloom, readout). Dark: only index.html#hyper (or #hyper<ly>, e.g. #hyper24) opens it, no game effect yet
 - src/voice.js  optional ship voice (Deepgram text-to-speech, only with the player's own key, see docs/VOICE.md)
+- src/chat.js   optional NPC chat: the adapter (OpenAI or Anthropic, only with the player's own key) and its setup panel; the bar chat box, memory and Journal follow in later cards (see docs/NPC-CHAT.md)
 - src/interior.js the station interior art and animation
 - src/main.js    Phaser config and scene list
 - src/content.js, tools/build-content.mjs, content/, content.generated.js  content in markdown (docs/MODDING.md): src/content.js is the parser, schema and validator (no Phaser; Node and the browser use the same file), `node tools/build-content.mjs` turns content/*.md into content.generated.js (`--watch`, `--strict`, `--check`), content/_templates/ has one starting file per type; tests/content.mjs checks it. Not loaded by the game yet: card space-game-m2-loader wires it in
