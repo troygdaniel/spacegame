@@ -17,8 +17,8 @@ const C = createRequire(import.meta.url)('../src/content.js');
 export const START = '<!-- fields:start (written by node tools/mods-fields.mjs --write: do not edit between these lines) -->';
 export const END = '<!-- fields:end -->';
 
-// what the game reads today, in the order a modder wants them; the rest are checked but not applied yet (docs/MODS.md section 5)
-const ORDER = ['mission', 'npc', 'ship', 'part', 'system', 'station', 'voice', 'text'];
+// what the game reads today, in the order a modder wants them; the last two (system, voice) are checked but not applied yet (docs/MODS.md section 7)
+const ORDER = ['mission', 'npc', 'ship', 'part', 'poi', 'station', 'text', 'system', 'voice'];
 
 // one plain-words meaning for the common fields (the schema has the types and ranges, not the meaning)
 export const NOTES = {
@@ -35,7 +35,7 @@ export const NOTES = {
     kind: 'what the call does: the code decides, the file only says which', title: 'its name on the board', where: 'where it happens, as the board says it', reward: 'credits paid',
     count: 'how many (a patrol counts pirates)', unlock: 'a condition: the board shows the call once it holds', system: 'the system it belongs to'
   },
-  npc: { name: 'what they are called', role: 'what they do', color: 'their colour', station: 'the station they stand in', x: 'where they stand, px from the left', y: 'where they stand, px from the top', face: 'which way they look, radians (0 is east)', voice: 'a Deepgram Aura voice name (docs/VOICE.md)' },
+  npc: { name: 'what they are called', role: 'what they do', color: 'their colour', label: 'the colour of the name above them, when it is not color', appears: 'a condition: they are in the bar only while it holds', station: 'the station they stand in', x: 'where they stand, px from the left', y: 'where they stand, px from the top', face: 'which way they look, radians (0 is east)', voice: 'a Deepgram Aura voice name (docs/VOICE.md)' },
   part: {
     slot: 'which of the five slots', tier: '1 to 3', name: 'the tier\'s name in the shop', brief: 'a short form for tight places', price: 'credits, for a Wren (a ship scales it)',
     points: 'shields: points that take hits before the hull', regen: 'shields: points a second once it recharges; engine: boost refill', delay: 'shields: ms without a hit before it recharges; weapons: ms between shots', damage: 'weapons: damage a shot',
@@ -43,7 +43,12 @@ export const NOTES = {
     fuelMult: 'tank: the tank times this', holdPlus: 'cargo: ore units more'
   },
   system: { name: 'its name', kind: 'what kind of place', ly: 'galaxy map position [x, y], light years', size: 'world size, px', danger: '0 to 5: how many pirates', traffic: '0 to 3: how busy', seed: 'the random seed' },
-  station: { name: 'its name', system: 'the system it is in', accent: 'its colour', fuel: 'credits a unit of fuel', repair: 'credits a point of hull', ore: 'credits a unit of ore' },
+  poi: {
+    kind: 'wreck or beacon; it must match the site', name: 'what it is called on the radar',
+    credits: 'a fixed site: what it pays', hull: 'hull it repairs', guard: 'a fixed site: how many pirates guard it',
+    pays: 'a random signal: what it pays, [least, most]', guardChance: 'a random signal: how often pirates guard it, 0 to 1', hullChance: 'a random signal: how often it repairs the hull, 0 to 1'
+  },
+  station: { name: 'its name', system: 'the system it is in', accent: 'its colour (not read yet)', fuel: 'credits a unit of fuel (not read yet)', repair: 'credits a point of hull at the repair bay', ore: 'credits an ore pays when you dock' },
   voice: { event: 'which moment the lines are for' },
   text: {}
 };
@@ -82,7 +87,9 @@ export function reference() {
   if (missing.length || extra.length) throw new Error('mods-fields: the schema types changed (missing ' + missing.join() + '; new ' + extra.join() + '): update ORDER');
   out.push('Fields marked * are required. "Takes" is what the file may say; a value outside it is an error, never a silent change.\n');
   out.push('**Colours:** ' + Object.entries(C.COLORS).map(([k, v]) => code(k) + ' ' + v).join(', ') + ', or any `#rrggbb`.\n');
-  out.push('**Conditions** (for `unlock:` and a `when` column; the whole list, a mod cannot add one): ' + C.CONDITIONS.map(code).join(', ') + '. ID, SLOT and N are what you fill in.\n');
+  // an entry may carry a gloss in brackets: 'hull<N (percent of the hull)' -> `hull<N` (percent of the hull)
+  const cond = c => { const m = /^(.*?) \((.*)\)$/.exec(c); return m ? code(m[1]) + ' (' + m[2] + ')' : code(c); };
+  out.push('**Conditions** (for `unlock:`, `appears:` and a `when` column; the whole list, a mod cannot add one): ' + C.CONDITIONS.map(cond).join(', ') + '. ID, SLOT and N are what you fill in; up to four joined by ` and ` all have to hold.\n');
   out.push('**Limits:** a file up to ' + L.fileBytes + ' bytes; up to ' + L.files + ' files; a text field up to ' + L.text + ' characters, a line up to ' + L.line + ', a persona up to ' + L.persona + ', a description up to ' + L.desc +
     '; a list up to ' + L.list + ' items; a table up to ' + L.rows + ' rows. Ids are a-z, 0-9 and dashes, starting with a letter, at most 40 characters.\n');
   for (const type of ORDER) {
