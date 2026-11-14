@@ -31,6 +31,7 @@
 #   4u. tests/fuel.mjs: the tank per ship, jump cost, the fuel pump terminal in the station, the HUD FUEL chip, the fuel ranger
 #   4t. tests/shipmodels.mjs: the six ship models against docs/UNIVERSE.md 6.1, and the Wren's speed, thrust, turn, boost and hull in the real Space scene
 #   4u. tests/parts.mjs: the five ship parts (shields, weapons, engine, tank, cargo): tables, every effect, shields in flight, shot rate and damage, the shop's five cards with fit and stock rules, the save
+#   4w. tests/fleet.mjs: buy, sell, switch, rename and transfer ships, the yard and the prices, per-ship state through a save, and dying (docs/UNIVERSE.md 6.3)
 #       header and body shape; the key is only ever in its header; 401 switches chat off; 429 waits; the setup panel saves a key
 #      their failure paths, with the game clock stepped by hand
 # Only one headless Chrome runs at a time on this Mac, whatever the worktree: cdp.mjs takes a lock in tests/lock.mjs, so a second
@@ -113,12 +114,13 @@ echo "== 4s. the Journal: who you have met (tests/journal.mjs)"
 if node tests/journal.mjs; then :; else fail=1; fi
 echo "== 4t. ship models and shipStat: the table pinned to the design, the Wren flies as before (tests/shipmodels.mjs)"
 if node tests/shipmodels.mjs; then :; else fail=1; fi
-
 echo "== 4v. interdiction in cruise and the pirate tables per system (tests/interdict.mjs)"
 if node tests/interdict.mjs; then :; else fail=1; fi
 echo "== 4u. ship parts: shields, weapons, engine, tank, cargo (tests/parts.mjs)"
 if node tests/parts.mjs; then :; else fail=1; fi
-echo "== 4w. fuel: tank, jump cost, the pump terminal, the FUEL chip, the ranger (tests/fuel.mjs)"
+echo "== 4w. the fleet: buy, sell, switch, rename, transfer (tests/fleet.mjs)"
+if node tests/fleet.mjs; then :; else fail=1; fi
+echo "== 4x. fuel: tank, jump cost, the pump terminal, the FUEL chip, the ranger (tests/fuel.mjs)"
 if node tests/fuel.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"

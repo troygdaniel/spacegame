@@ -14,6 +14,7 @@ try {
   await t.waitFor(`!!(window.game && game.scene.isActive('Space'))`, 30000, 'Space active');
   await sleep(1500); await t.ev('G.guideDone = true');
   await t.clock();
+  await t.ev(`(() => { const d0 = Date.now(), p0 = __t; Date.now = () => d0 + (__t - p0); return 1; })()`); // Phaser's tweens time themselves with Date.now: follow the stepped clock or the flash never fades
   await t.ev(`(() => { window.__toasts = []; const orig = toast; toast = (s, msg, c) => { window.__toasts.push(msg); return orig(s, msg, c); }; })()`);
   const E = x => t.ev(x);
   const tick = async n => { for (let left = n; left > 0; left -= 20) await E(`tick(${Math.min(20, left)})`); }; // short calls: a busy Mac can take seconds a frame, and one DevTools call times out
@@ -22,13 +23,14 @@ try {
     if (s.cr.active) cruiseEnd(s, 'quiet'); s.cr.target = null; s.ship.setPosition(${x}, ${y}); s.ship.setVelocity(0, 0); s.ship.rotation = 0; s.ship.body.setAcceleration(0, 0);
     s.cameras.main.centerOn(${x}, ${y}); (s.toasts || []).forEach(o => { o.t.destroy(); o.bg.destroy(); o.tab.destroy(); }); s.toasts = []; window.__toasts = []; G.hull = G.maxHull; s.ironUntil = 0; })()`);
   const target = name => E(`(() => { const s = ${SP}, b = cruiseKnown(s).find(b => b.name === '${name}'); cruisePick(s, b); return b.dist; })()`);
+  const snap = async name => { await t.shot(name); return t.shot(name); }; // a screenshot shows the frame composited at the previous capture: take two, keep the second
   const said = () => E('JSON.stringify(window.__toasts)').then(JSON.parse);
   // fly a cruise to its end, sampling every 6 frames: speed, distance to the target, the heading
   const fly = async (maxFrames = 900) => {
     const log = []; let i = 0;
     for (; i < maxFrames; i += 6) {
       await tick(6);
-      const r = JSON.parse(await E(`(() => { const s = ${SP}, t = s.cr.target; return JSON.stringify({ on: s.cruising, v: Math.round(s.ship.body.speed), d: t ? Math.round(Math.hypot(t.x - s.ship.x, t.y - s.ship.y)) : -1, z: +s.cameras.main.zoom.toFixed(3), x: Math.round(s.ship.x), y: Math.round(s.ship.y) }); })()`));
+      const r = JSON.parse(await E(`(() => { const s = ${SP}, t = s.cr.target; return JSON.stringify({ on: s.cruising, v: Math.round(s.ship.body.speed), d: t ? Math.round(Math.hypot(t.x - s.ship.x, t.y - s.ship.y)) : -1, z: +s.cameras.main.zoom.toFixed(3), x: Math.round(s.ship.x), y: Math.round(s.ship.y), bh: s.cr.brInfo ? s.cr.brInfo.half : 0 }); })()`));
       log.push(r); if (!r.on) break;
     }
     return { log, frames: i + 6, seconds: (i + 6) * 16.67 / 1000, end: log[log.length - 1] };
@@ -85,11 +87,32 @@ try {
   check('it speeds up to 6000 px/s and no further', samples.some(r => r.v >= 5800) && samples.every(r => r.v <= 6001), samples.map(r => r.v).join(' '));
   check('the look at speed: zoom 0.85, the cyan vignette, speed streaks, the CRUISE readout', mid && mid.z <= 0.87 && mid.vig > 0.3 && mid.streaks > 50 && /^CRUISE  KEPLER-4C/.test(mid.read), JSON.stringify(mid));
   if (mid && !(await t.shot('cruise-flying'))) check('screenshot of cruise', false);
+  // the target's bracket corners: none while it is far, then wide amber corners that tighten onto it as the ship closes in
+  let brFrames = 0, br = null;
+  check('no brackets while the target is far away', (await E(`${SP}.cr.brInfo`)) === null);
+  for (let i = 0; i < 500 && !br; i += 3) { await tick(3); brFrames += 3; br = JSON.parse(await E(`JSON.stringify(${SP}.cr.brInfo)`)); if (!(await E(`${SP}.cruising`))) break; }
+  check('the target gets bracket corners as it comes into view, wide at first (150 px or more)', !!br && br.half >= 150, JSON.stringify(br));
+  if (br && !(await snap('cruise-brackets'))) check('screenshot of the brackets', false);
   const run = await fly(); const end = run.end;
+  const hs = JSON.parse(await E(`JSON.stringify([5000, 3000, 1500, 1000, 700].map(d => Math.round(cruiseBracketHalf({ r: 220 }, d, 1))))`));
+  check('the brackets tighten onto the body as the ship closes in, and are never under 150 px', hs.every((h, i) => !i || h <= hs[i - 1]) && hs[0] > hs[hs.length - 1] + 100 && hs[hs.length - 1] >= 150, hs.join(' '));
+  check('a small outpost still gets brackets of 150 px or more', await E(`cruiseBracketHalf({ r: 0 }, 900, 0.85) >= 150 && cruiseBracketHalf({ r: 0 }, 900, 0.85) < 200`));
+  // the drop-out: a soft white flash under the HUD that fades in under half a second
+  const fl = JSON.parse(await E(`(() => { const f = ${SP}.cr.flash; return JSON.stringify(f && f.active ? { a: +(f.alpha * f.fillAlpha).toFixed(2), d: f.depth, hud: ${SP}._hud.g.depth } : null); })()`));
+  check('drop-out: a soft white flash, under the HUD, about 0.45 and fading', !!fl && fl.a > 0.2 && fl.a <= 0.45 && fl.d < fl.hud, JSON.stringify(fl));
+  if (!(await snap('cruise-dropout'))) check('screenshot of the drop-out flash', false);
+  await tick(40);
+  check('the flash is gone within half a second', await E(`!${SP}.cr.flash.active`));
+  // after the drop-out the target stays marked while it is on screen, and clears when you arrive (500 px from its rim)
+  await E(`(() => { const s = ${SP}, t = s.cr.target; s.ship.setPosition(t.x - (t.r + 600), t.y); s.ship.setVelocity(0, 0); s.cameras.main.centerOn(s.ship.x, s.ship.y); })()`); await tick(3);
+  check('after the drop-out the brackets stay on the target while it is on screen', await E(`${SP}.cr.brInfo !== null && ${SP}.cr.brInfo.half >= 150`), await E(`JSON.stringify(${SP}.cr.brInfo)`));
+  if (!(await snap('cruise-brackets-coast'))) check('screenshot of the brackets after the drop-out', false);
+  await E(`(() => { const s = ${SP}, t = s.cr.target; s.ship.setPosition(t.x - (t.r + 300), t.y); s.cameras.main.centerOn(s.ship.x, s.ship.y); })()`); await tick(3);
+  check('arriving clears the target and its brackets', await E(`${SP}.cr.target === null && ${SP}.cr.brInfo === null`));
   check('it drops out about 900 px from the target', end && !end.on && end.d > 850 && end.d < 1000, 'ended ' + (end && end.d) + ' px out');
   check('it arrives under 150 px/s and does not fly through the body', end && end.v <= 150 && run.log.every(r => r.d > 700), 'v ' + (end && end.v));
-  check('the whole leg takes about as long as cruiseEta says', Math.abs(18 * 8 * 16.67 / 1000 + run.seconds - eta) < 1.6, `${(18 * 8 * 16.67 / 1000 + run.seconds).toFixed(1)} s against ${eta.toFixed(1)} s`);
-  await tick(60);
+  check('the whole leg takes about as long as cruiseEta says', Math.abs((18 * 8 + brFrames) * 16.67 / 1000 + run.seconds - eta) < 1.6, `${((18 * 8 + brFrames) * 16.67 / 1000 + run.seconds).toFixed(1)} s against ${eta.toFixed(1)} s`);
+  await tick(20);
   check('the camera zoom comes back to 1 and the vignette fades', await E(`${SP}.cameras.main.zoom === 1 && ${SP}.cr.vig.visible === false`));
   check('arrival is announced and the ship flies on locally', (await said()).some(m => /Cruise ended/.test(m)) && (await E(`${SP}.ship.body.maxSpeed <= 1200`)));
   if (!(await t.shot('cruise-arrived'))) check('screenshot after arrival', false);

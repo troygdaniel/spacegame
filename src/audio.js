@@ -185,7 +185,8 @@ const SFX = {
   // interdiction: a two-tone siren for 1.2 s (src/cruise.js)
   siren(t) { for (let i = 0; i < 4; i++) { tone(t + i * 0.3, 'sawtooth', 620, 900, 0.28, 0.055); tone(t + i * 0.3, 'square', 310, 450, 0.28, 0.02); } },
   cruiseOn(t) { burst(t, 0.9, 0.16, 'bandpass', 300, 3200, 0.9, 0.3); tone(t, 'sawtooth', 90, 420, 0.8, 0.05); tone(t + 0.1, 'sine', 200, 900, 0.7, 0.04); },
-  cruiseOff(t) { burst(t, 0.7, 0.14, 'bandpass', 2600, 260, 0.9, 0.05); tone(t, 'sine', 420, 70, 0.6, 0.07); tone(t + 0.05, 'square', 140, 70, 0.16, 0.03); },
+  cruiseOff(t) { burst(t, 0.7, 0.14, 'bandpass', 2600, 260, 0.9, 0.05); tone(t, 'sine', 420, 70, 0.6, 0.07); tone(t + 0.05, 'square', 140, 70, 0.16, 0.03);
+    tone(t, 'sine', 95, 34, 0.5, 0.22); burst(t, 0.22, 0.12, 'lowpass', 520, 90); }, // the drop-out thud: a low sine falling away, a short soft thump of air
   chime(t) { [660, 880, 1320].forEach((f, i) => tone(t + i * 0.07, 'triangle', f, f * 0.995, 0.35, 0.05)); tone(t + 0.21, 'sine', 1760, 1750, 0.3, 0.025); }
 };
 

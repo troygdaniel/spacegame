@@ -131,9 +131,14 @@ const idle = t => t.waitFor('VOICE.playing === false && VOICE.queue.length === 0
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Title'))", 20000, 'title');
     await t.ev(MOCK);
-    await t.ev(`voiceOpenSetup(game.scene.getScene('Title'))`);
+    await sleep(800); // the title has to be drawing before a player could press anything
+    const frame = () => t.ev('game.loop.frame');
+    const f0 = await frame();
+    await t.press('V'); // the real key, as a player presses it (card space-game-bug-voice-panel-v-key-freezes); not a call to voiceOpenSetup()
     await t.waitFor("game.scene.isActive('VoiceSetup')", 8000, 'setup panel');
     check('the setup panel opens, the title waits below', (await t.ev("game.scene.isPaused('Title')")) === true);
+    const f1 = await frame(); await sleep(600); const f2 = await frame();
+    check('the game loop keeps running while the panel is open', f2 > f1 && f1 > f0 && (await t.ev('document.hidden')) === false, `frames ${f0} -> ${f1} -> ${f2}, hidden ${await t.ev('document.hidden')}`);
     check('there is a real text box over the canvas', (await t.ev("!!document.querySelector('input[type=password]')")) === true);
     check('the cost note is on screen', (await t.ev("game.scene.getScene('VoiceSetup').children.list.length > 0")) === true);
     await t.ev(`(() => { const s = game.scene.getScene('VoiceSetup'); s.el.value = 'short'; s.saveKey(); return 1; })()`);
@@ -145,6 +150,9 @@ const idle = t => t.waitFor('VOICE.playing === false && VOICE.queue.length === 0
     await t.press('ESC');
     await t.waitFor("!game.scene.isActive('VoiceSetup')", 8000, 'setup closed');
     check('Esc closes it and the title comes back', (await t.ev("game.scene.isActive('Title')")) === true);
+    check('the title runs again, not paused', (await t.ev("game.scene.isPaused('Title')")) === false);
+    const f3 = await frame(); await sleep(500);
+    check('the loop is still running after it closes', (await frame()) > f3);
     check('the text box is gone', (await t.ev("!document.querySelector('input[type=password]')")) === true);
     check('no console errors', t.errors.length === 0, t.errors.join(' | '));
   } finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }

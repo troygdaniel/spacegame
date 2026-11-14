@@ -17,7 +17,7 @@ const CALL_MS = Number(process.env.DEVTOOLS_TIMEOUT_MS) || 120000;
 const KEYS = {
   C: [67, 'KeyC', 'c'], E: [69, 'KeyE', 'e'], L: [76, 'KeyL', 'l'], W: [87, 'KeyW', 'w'], S: [83, 'KeyS', 's'], X: [88, 'KeyX', 'x'],
   1: [49, 'Digit1', '1'], 2: [50, 'Digit2', '2'], 3: [51, 'Digit3', '3'], 4: [52, 'Digit4', '4'], 5: [53, 'Digit5', '5'], ESC: [27, 'Escape', 'Escape'],
-  J: [74, 'KeyJ', 'j'], UP: [38, 'ArrowUp', 'ArrowUp'], DOWN: [40, 'ArrowDown', 'ArrowDown'],
+  J: [74, 'KeyJ', 'j'], V: [86, 'KeyV', 'v'], UP: [38, 'ArrowUp', 'ArrowUp'], DOWN: [40, 'ArrowDown', 'ArrowDown'],
   ENTER: [13, 'Enter', 'Enter'], TAB: [9, 'Tab', 'Tab'], SPACE: [32, 'Space', ' ']
 };
 
@@ -140,6 +140,11 @@ async function launchOnce(hash, root) {
     await removeDir(profile);
   };
   await send('Page.enable'); await send('Runtime.enable');
+  // Headless Chrome starts with no focused page, and the first key event sent through DevTools then makes it focused AND hidden
+  // (document.hidden turns true), so requestAnimationFrame stops and Phaser's real loop freezes: the game never handles that key
+  // and a queued scene.stop() never runs. Any key does it (M too), not only V (docs/PLAYTEST2.md finding 2). A real window does not.
+  // Focus emulation keeps the page focused and visible, so a test that lets the real loop run behaves like a player's browser.
+  await send('Emulation.setFocusEmulationEnabled', { enabled: true });
   await send('Page.navigate', { url: 'file://' + root + '/index.html' + hash });
   return { send, ev, waitFor, press, clock, run, key, shot, close, errors };
 }
