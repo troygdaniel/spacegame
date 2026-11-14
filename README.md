@@ -4,6 +4,8 @@ A browser 2D top-down space game, Elite Dangerous flavoured. Walk around a stati
 
 Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.md`).
 
+## The loop (v0.1)
+Station (walk, take the rescue call, board ship) -> Ship bay (look the ship over, read the mission and the controls, Enter to launch, Esc to go back) -> Space (fly, fight drones, dock/land with L) -> Surface (walk, find the colonist, protect them, return to ship) -> fly home, dock, get paid.
 ## Play
 
 Open `index.html` in a browser (Chrome is what it is tested in). Double-clicking the file works; if you prefer a server, run `python3 -m http.server` in this folder and open http://localhost:8000.
@@ -11,6 +13,7 @@ Open `index.html` in a browser (Chrome is what it is tested in). Double-clicking
 - src/common.js  shared helpers, global state G, beep(), toast(), go()
 - src/boot.js    every texture is drawn here with shapes (no image files)
 - src/station.js station interior scene
+- src/shipmode.js the Ship bay scene between boarding and flight: the ship, its status, the mission, the controls guide, LAUNCH; tests/shipmode.mjs checks it. It is also where the hangar terminal of docs/UNIVERSE.md will live (see the comment at the top of the file)
 - src/space.js   flight, combat, dock/land
 - src/surface.js planet surface, colonist escort
 - src/hud.js, src/ui.js credits are one look everywhere: a gold coin and "N CR" (hudStrip and hudCoin in hud.js, crTag for the panels in ui.js; +N green and -N red float on every change); tests/credits.mjs checks it

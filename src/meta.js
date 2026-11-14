@@ -4,6 +4,7 @@
 
 const SAVE_KEY = 'longhaul.save.v1';
 const GAMEPLAY = ['Station', 'Space', 'Surface'];
+const SCREENS = GAMEPLAY.concat('Ship'); // where Tab, H and M work too. The Ship scene (shipmode.js) uses Esc itself, so it is not in GAMEPLAY
 const DEV_HASH = /^#(space|surface|escort|patrol|hyper\d{0,2})$/.test(location.hash); // dev jumps neither load nor overwrite a save
 let lastSaved = '';
 
@@ -12,6 +13,12 @@ const HELP = {
     'W A S D / arrows   walk',
     'E   use the terminal, repair bay or ship',
     'Esc   close a terminal, or pause',
+    'M   mute sound'
+  ],
+  Ship: [
+    'Enter or Space   launch',
+    'Esc   back to the station',
+    'Tab   sector map',
     'M   mute sound'
   ],
   Space: [
@@ -118,7 +125,7 @@ function toggleMute(game) {
   G.muted = !G.muted;
   saveGame();
   if (game.scene.isActive('Pause')) return; // the menu shows it
-  const s = game.scene.getScenes(true).find(sc => GAMEPLAY.includes(sc.scene.key));
+  const s = game.scene.getScenes(true).find(sc => SCREENS.includes(sc.scene.key));
   if (s) toast(s, G.muted ? 'Sound muted  (M)' : 'Sound on  (M)', '#9fe9ff');
   if (!G.muted) beep(660, 0.08, 'triangle', 0.05);
 }

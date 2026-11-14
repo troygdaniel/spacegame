@@ -155,7 +155,7 @@ Each is a 56 x 40 style texture (the big ones larger) drawn in `ships.js`, with 
 
 ### 6.3 The fleet
 - You may own up to six ships, duplicates allowed. Every owned ship is a record: model, name, parts, hull, fuel, hold, and **where it is parked** (a station id). You start with one Wren.
-- You fly one, the **active** ship. At a station with a **hangar** terminal (the existing YOUR SHIP spot, now with a menu) you can switch to any ship parked there, buy a ship from that station's yard, sell one, rename one, or pay to **transfer** a ship from another station (25 cr per ly plus 100; it is waiting when you next dock there).
+- You fly one, the **active** ship. The Ship bay (`src/shipmode.js`, card `space-game-ship-mode`) is the hangar terminal's home: boarding at the YOUR SHIP spot opens it, it shows the active ship, and card `d4-hangar-ui` adds a strip of the ships parked here and the buy, sell, rename and transfer tabs to that scene instead of making a second screen (its data comes from `bayShipInfo()`, its part callouts from `BAY_SLOTS`, and a fuel row appears as soon as `bayShipInfo()` returns fuel). At a station with a **hangar** terminal (the existing YOUR SHIP spot, now opening the bay) you can switch to any ship parked there, buy a ship from that station's yard, sell one, rename one, or pay to **transfer** a ship from another station (25 cr per ly plus 100; it is waiting when you next dock there).
 - Selling gives 60% of the ship's base price plus 50% of what is fitted. Buying a ship does not touch the old one: it stays parked.
 - Death: the insurance flow stays (20% of credits, minimum 50); the ship is rebuilt, never lost. Fleet ships elsewhere are untouched.
 - Cargo stays with the ship. Ore is sold when you dock where the station buys it, as now; switching ships never moves cargo. A mission stays with you, not with a ship.
@@ -287,7 +287,7 @@ IDs start `space-game-u-`. Owners: **BB** BuildBot (logic), **DB** DreamBot (loo
 | `d1-parts` | BB | M | a3 | `data_parts.js`, five slots, shields mechanic, tank and cargo effects, `shop.js` rework, the v1 key mapping (`armor`, `rapid`, `booster`) retired from call sites, engine tier adds jump range |
 | `d2-ship-art` | BB | M | | five new ship textures and the per-ship tier overlays in `ships.js`; radar colours; the Station scene's ship image uses the active model |
 | `d3-fleet-logic` | BB | M | a3, d2 | fleet records, parking, switching, buying, selling, transfer, rules of 6.3, per-ship state, tests |
-| `d4-hangar-ui` | DB | M | d3 | the hangar terminal: ship cards (stats as bars), buy/sell/switch/rename/transfer, in the `panel()` and `hudPanel` style |
+| `d4-hangar-ui` | DB | M | d3 | the hangar terminal, built into the Ship bay scene (`src/shipmode.js`, already merged by then): a strip of the ships parked here, stat bars, buy/sell/switch/rename/transfer, in the `panel()` and `hudPanel` style. Boarding already opens the bay; Launch stays the amber button |
 
 **Phase E: danger, missions, money**
 
