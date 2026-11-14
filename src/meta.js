@@ -14,6 +14,7 @@ const HELP = {
     'W A S D / arrows   walk',
     'E   use the terminal, repair bay or ship',
     'Esc   close a terminal, or pause',
+    'J   journal: who you have met',
     'M   mute sound'
   ],
   Ship: [
@@ -264,10 +265,10 @@ class Pause extends Phaser.Scene {
     crTag(this, this.ui, G.credits); // src/ui.js: coin and gold N CR (the game is paused, so it cannot change here)
     this.title = this.ui.titleText;
     this.rows = []; this.zones = [];
-    for (let i = 0; i < 8; i++) {
-      const y = cy - 150 + i * 44;
+    for (let i = 0; i < 9; i++) {
+      const y = cy - 160 + i * 40;
       this.rows.push(this.add.text(cx, y, '', { fontFamily: 'monospace', fontSize: '22px', color: '#9fe9ff' }).setOrigin(0.5));
-      const z = this.add.rectangle(cx, y, 480, 40, 0x000000, 0.001).setInteractive({ useHandCursor: true });
+      const z = this.add.rectangle(cx, y, 480, 38, 0x000000, 0.001).setInteractive({ useHandCursor: true });
       z.on('pointerover', () => { if (this.view === 'menu') this.sel = i; });
       z.on('pointerdown', p => { if (this.view === 'menu') { this.sel = i; this.activate(i, p.x); } });
       this.zones.push(z);
@@ -277,6 +278,7 @@ class Pause extends Phaser.Scene {
     }).setOrigin(0.5).setVisible(false);
     this.input.on('pointerdown', () => { if (this.view === 'controls' && performance.now() - this.viewAt > 250) this.setView('menu'); });
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,ENTER,SPACE,ESC,UP,DOWN,LEFT,RIGHT');
+    this.events.on('resume', () => { this.born = performance.now(); }); // back from the Journal or a key setup: their Esc must not also resume the game
     this.refresh();
   }
 
@@ -291,6 +293,7 @@ class Pause extends Phaser.Scene {
     if (i === 4) return G.muted ? 'Sound    MUTED  (M)' : 'Sound    ON  (M)';
     if (i === 5) return 'Ship voice   ' + voiceStatus(); // src/voice.js: optional, needs the player's own Deepgram key
     if (i === 6) return 'NPC chat   ' + chatStatus(); // src/chat.js: optional, needs the player's own OpenAI or Anthropic key
+    if (i === 7) return 'Journal   (J in the station)'; // src/journal.js: who you have met and what you learned
     return this.confirmNew ? 'Select again to erase the save' : 'New game';
   }
 
@@ -299,7 +302,7 @@ class Pause extends Phaser.Scene {
     this.title.setText(menu ? 'PAUSED  -  AUTOSAVE ON' : 'CONTROLS  -  ' + this.from.toUpperCase());
     this.rows.forEach((r, i) => {
       r.setVisible(menu).setText((i === this.sel ? '> ' : '  ') + this.rowText(i))
-        .setColor(i === this.sel ? (i === 7 && this.confirmNew ? '#ff4d6d' : '#ffd37a') : '#9fe9ff');
+        .setColor(i === this.sel ? (i === 8 && this.confirmNew ? '#ff4d6d' : '#ffd37a') : '#9fe9ff');
       this.zones[i].input.enabled = menu;
     });
     this.help.setVisible(!menu).setText((HELP[this.from] || HELP.Station).join('\n'));
@@ -324,7 +327,7 @@ class Pause extends Phaser.Scene {
   }
 
   activate(i, px) {
-    if (i !== 7) this.confirmNew = false;
+    if (i !== 8) this.confirmNew = false;
     if (i === 0) this.resume();
     else if (i === 1) {
       if (G.mission === 'rescued') G.mission = 'accepted'; // the colonist stays behind; the call is still open
@@ -334,7 +337,8 @@ class Pause extends Phaser.Scene {
     else if (i === 4) { G.muted = !G.muted; saveGame(); if (!G.muted) beep(660, 0.08, 'triangle', 0.05); }
     else if (i === 5) voiceOpenSetup(this);
     else if (i === 6) chatOpenSetup(this);
-    else if (i === 7) {
+    else if (i === 7) journalOpen(this);
+    else if (i === 8) {
       if (!this.confirmNew) { this.confirmNew = true; return; }
       clearSave(); newGameState(); saveGame(true); this.toStation();
     }
@@ -349,8 +353,8 @@ class Pause extends Phaser.Scene {
     if (this.view === 'controls') {
       if (JD(k.ENTER) || JD(k.SPACE) || JD(k.E)) this.setView('menu');
     } else {
-      if (JD(k.UP) || JD(k.W)) { this.sel = (this.sel + 7) % 8; this.confirmNew = false; }
-      if (JD(k.DOWN) || JD(k.S)) { this.sel = (this.sel + 1) % 8; this.confirmNew = false; }
+      if (JD(k.UP) || JD(k.W)) { this.sel = (this.sel + 8) % 9; this.confirmNew = false; }
+      if (JD(k.DOWN) || JD(k.S)) { this.sel = (this.sel + 1) % 9; this.confirmNew = false; }
       if (this.sel === 3) {
         if (JD(k.LEFT) || JD(k.A)) this.adjustVolume(-1);
         if (JD(k.RIGHT) || JD(k.D)) this.adjustVolume(1);

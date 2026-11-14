@@ -23,6 +23,7 @@
 #   4n. tests/savemig.mjs: save v2 and the v1 migration; G.hull, G.maxHull, G.ore and G.upgrades over the active ship; unknown ids fall back
 #   4p. tests/contentui.mjs: the Title screen's content chip, problems panel and MODDED tag (nothing shows when all is well)
 #   4q. tests/shipsheet.mjs: the six player ships (silhouettes, every upgrade slot, nozzles, physics circle, hangar, flight, Ship bay)
+#   4r. tests/journal.mjs: J opens the Journal in the station (people met, notes, facts, no key needed), Forget everything needs a second press, the Pause row
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #   4o. tests/chat.mjs: the NPC chat adapter with a mocked fetch: no key means no call; OpenAI and Anthropic get the right URL,
 #       header and body shape; the key is only ever in its header; 401 switches chat off; 429 waits; the setup panel saves a key
@@ -100,6 +101,9 @@ if node tests/contentui.mjs; then :; else fail=1; fi
 
 echo "== 4q. the six player ships (tests/shipsheet.mjs)"
 if node tests/shipsheet.mjs; then :; else fail=1; fi
+
+echo "== 4r. the Journal: who you have met (tests/journal.mjs)"
+if node tests/journal.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
