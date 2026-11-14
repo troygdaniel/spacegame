@@ -102,7 +102,7 @@ if node tests/contentui.mjs; then :; else fail=1; fi
 echo "== 4q. the six player ships (tests/shipsheet.mjs)"
 if node tests/shipsheet.mjs; then :; else fail=1; fi
 
-echo "== 4p. cruise: N nav list, C cruise, a 36000 px Halcyon (tests/cruise.mjs)"
+echo "== 4r. cruise: N nav list, C cruise, a 36000 px Halcyon (tests/cruise.mjs)"
 if node tests/cruise.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
