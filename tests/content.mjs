@@ -203,7 +203,8 @@ section('systems: bodies, pirates, docks and what the files say to each other (d
   bad('scenery needs an art or a look', B('c-1', 'scenery', { name: 'C' }), 'a scenery body needs an art or a look');
   bad('scenery needs a name', B('c-2', 'scenery', { art: 'outpost' }), 'a scenery needs name');
   bad('a gate needs a radius', B('g-1', 'gate', { name: 'G' }), 'a gate needs r');
-  bad('a station row needs a name', B('t-1', 'station', { art: 'station' }), 'a station needs name');
+  const st1 = sys([B('t-1', 'station', { art: 'station' })]);
+  check('a station row needs no name: the station file has it', st1.errs.length === 0 && st1.e.data.bodies.length === 1 && st1.e.data.bodies[0].name === undefined, st1.errs.join(' | '));
   bad('a texture the game does not have is refused with the list', B('x-1', 'scenery', { name: 'X', art: 'banana' }), 'art is "banana" but must be one of: station, outpost, planet, hub, foundry, nest, derelict');
   const far = sys([B('l-1', 'scenery', { name: 'L', art: 'outpost', labelDy: -5000 })]);
   check('a label that sits 5000 px away loses the label offset and keeps the body', far.errs.length === 1 && far.errs[0].includes('labelDy is -5000 but must be a whole number from -3000 to 3000. Ignored.') && far.e.data.bodies.length === 1 && far.e.data.bodies[0].labelDy === undefined, far.errs.join(' | '));

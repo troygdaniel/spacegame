@@ -187,14 +187,14 @@ Section `## Bodies` is a table with the columns `id* | type* | name | x* | y* | 
 
 | type | needs | the rest |
 |---|---|---|
-| `station` | `name` | `art` (`station`, or a look: `hub`, `foundry`, `nest`), `labelDy`; its dock is `stations/<id>.md` |
+| `station` | nothing: its name, prices and words are in `stations/<id>.md` | `art` (`station`, or a look: `hub`, `foundry`, `nest`), `labelDy` |
 | `planet` | `r` and a `kind` (`rock`, `ice`, `gas`, `lava`, `ringed`) or `art: planet` (Kepler-4b, the built-in one) | `seed` (the same kind and seed is the same planet on every boot), `landable`, `name` |
 | `belt` | `r`, `rocks` | `name` |
 | `poi` | `kind` (`wreck` or `beacon`) | `name`, `credits`, `hull`, `guard`, `note` |
 | `scenery` | `name` and an `art` (`outpost`, or a station look) or a `look` (`derelict`: a dead station) | `labelDy` |
 | `gate` | `r` | `name` (Perseus gate: where the MULE is escorted to) |
 
-`labelDy` moves the name label (pixels, negative is above). A body id is used once in a system; a second row with it is ignored. **A site that has its own file in `poi/` (Halcyon's five) is paid from that file: its row says where, so `name`, `credits`, `hull`, `guard` and `note` in the row are ignored with a warning.** A site without one (every site outside Halcyon) says all of it in its row. A station row needs its `stations/<id>.md` and the file must say the same system; both are warnings when they disagree.
+`labelDy` moves the name label (pixels, negative is above). A body id is used once in a system; a second row with it is ignored. **A site that has its own file in `poi/` (Halcyon's five) is paid from that file: its row says where, so `name`, `credits`, `hull`, `guard` and `note` in the row are ignored with a warning.** A site without one (every site outside Halcyon) says all of it in its row. A station row needs its `stations/<id>.md` (the name is the file's; a row that gives another name gets a warning, and the file wins) and the file must say the same system; both are warnings when they disagree.
 
 **`worldAt(systemId)`** (`src/contenttables.js`) is the one place that puts these files together, for the cards that jump (`u-b4`), draw the systems (`u-b5`) and dock (`u-e5`). It gives a system shaped like a row of `SYSTEMS`: Halcyon is the code's own row, so nothing about the game changes; the other seven are built from their files (`worldFromFiles(id)` builds any of them, Halcyon too). Station bodies carry `dock` (`fuel`, `repair`, `ore`, `yard`, `shop` and `parts` as `src/data_parts.js` reads them, `partMult`, `fee`, `salvageMult`) and `about` (`accent`, `welcome`, `services`, `bar`, `shop`: the words for the Station scene); a site with its own file carries that file's payout. `worldIds()` lists every system. A system nobody knows is `null`, a wrong row is left out, and nothing throws. `tests/worldat.mjs` pins that Halcyon built from its files alone is the code's row, and that every field of the eight systems is in the row `worldAt` gives.
 

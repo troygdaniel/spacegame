@@ -16,7 +16,7 @@ A pirate nest cut into an asteroid. No police, a fee at the door, and the Reaver
 ## Bodies
 | id | type | name | x | y | art | r | rocks | landable | kind | credits |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| roost-dock | station | Roost Dock | 18000 | 22000 | nest |  |  |  |  |  |
+| roost-dock | station |  | 18000 | 22000 | nest |  |  |  |  |  |
 | roost-rock | planet | Reaver's Rock | 8000 | 8500 |  | 280 |  | no | rock |  |
 | roost-belt | belt | Roost Belt | 27500 | 12000 |  | 900 | 35 |  |  |  |
 | wreck-r1 | poi | Raided freighter | 30500 | 28500 |  |  |  |  | wreck | 300 |

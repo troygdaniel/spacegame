@@ -18,7 +18,7 @@ The home system: a ring station, a landable world, one belt in the old north-wes
 ## Bodies
 | id | type | name | x | y | art | r | rocks | landable | kind | seed | look | labelDy |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| halcyon-station | station | Halcyon Station | 4000 | 4000 | station |  |  |  |  |  |  | -260 |
+| halcyon-station | station |  | 4000 | 4000 | station |  |  |  |  |  |  | -260 |
 | kepler-4b | planet | Kepler-4b | 6200 | 2000 | planet | 316 |  | yes |  |  |  |  |
 | kepler-belt | belt | Kepler Belt | 5500 | 1300 |  | 700 | 15 |  |  |  |  |  |
 | wreck-nw | poi |  | 1400 | 1300 |  |  |  |  | wreck |  |  |  |

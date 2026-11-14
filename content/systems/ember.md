@@ -16,7 +16,7 @@ A volcanic mining system under a hot white star. The foundry pays well, the belt
 ## Bodies
 | id | type | name | x | y | art | r | rocks | landable | kind | credits |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| ember-foundry | station | Ember Foundry | 22000 | 15000 | foundry |  |  |  |  |  |
+| ember-foundry | station |  | 22000 | 15000 | foundry |  |  |  |  |  |
 | ember-lava | planet | Ember | 10000 | 23500 |  | 420 |  | no | lava |  |
 | ember-belt-a | belt | Slag Run | 28500 | 26000 |  | 900 | 40 |  |  |  |
 | ember-belt-b | belt | Cinder Field | 14000 | 8500 |  | 800 | 30 |  |  |  |

@@ -61,7 +61,7 @@
   const bodyRowProblem = o => {
     const need = (...c) => { const m = c.filter(k => o[k] === undefined); return m.length ? 'a ' + o.type + ' needs ' + m.join(' and ') + ' (docs/MODDING.md 6.3)' : null; };
     switch (o.type) {
-      case 'station': return need('name');
+      case 'station': return null; // a station's name, prices and words are its own file's (stations/<id>.md)
       case 'planet':
         if (o.kind !== undefined && !PLANET_KINDS.includes(o.kind)) return 'a planet\'s kind is ' + o.kind + ' but must be one of: ' + PLANET_KINDS.join(', ');
         if (o.kind === undefined && o.art !== 'planet') return 'a planet needs a kind (' + PLANET_KINDS.join(', ') + '), or art planet for the built-in one';
