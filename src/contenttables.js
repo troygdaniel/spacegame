@@ -8,6 +8,8 @@
 //   mission  the rows of MISSIONS in missions.js (rescue today): title, where, reward, count, the board text, progress, steps, failure line
 //   npc      the characters of the bar in shop.js NPCS (juno today): look and place, lines, reactions, persona
 //   part     the tiers of PARTS in data_parts.js (shields-1 ... engine-3 today; tank and cargo read too): name, text, price and the tier's numbers
+//   system, station  read and KEPT, not used yet: the validated fields of each file go into CONTENT_WORLD and nothing in the game reads them.
+//            Cards u-b5 (the eight systems) and u-e5 (the Station scene) wire that table in; until then the files only prove they are well formed
 // tests/contentproof.mjs pins that each file under content/ applied over its default changes nothing, and that editing one changes
 // exactly what the file says.
 const CT_HAS = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
@@ -148,7 +150,20 @@ const CT_PART = {
   }
 };
 
+// Systems and stations (content/systems, content/stations): the game has no table to merge them into yet, so the adapter only keeps what each
+// file says, by id, in CONTENT_WORLD.system and CONTENT_WORLD.station (the validated fields, a copy). No scene, test hook or save reads it. It stands
+// there so a shipped file of these types is accepted instead of warned about ("does not read systems yet"), and so u-b5 and u-e5 have one place to read.
+const CONTENT_WORLD = { system: {}, station: {} };
+const ctWorld = type => ({
+  canAdd: true,
+  has: id => CT_HAS(CONTENT_WORLD[type], id),
+  get: (id, f) => CT_HAS(CONTENT_WORLD[type], id) ? CONTENT_WORLD[type][id][f] : undefined,
+  apply: (id, data) => { CONTENT_WORLD[type][id] = JSON.parse(JSON.stringify(data)); }
+});
+
 CONTENT_TABLES.ship = CT_SHIP;
 CONTENT_TABLES.mission = CT_MISSION;
 CONTENT_TABLES.npc = CT_NPC;
 CONTENT_TABLES.part = CT_PART;
+CONTENT_TABLES.system = ctWorld('system');
+CONTENT_TABLES.station = ctWorld('station');
