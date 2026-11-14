@@ -1,4 +1,5 @@
 // ---------- Station: walk around, take the mission, board the ship ----------
+let REPAIR_PRICE = 0.5; // credits a point of hull at the repair bay (content/stations/halcyon-station.md can change it)
 class Station extends Phaser.Scene {
   constructor() { super('Station'); }
   init(d) { this.arrive = !!(d && d.arrive); }
@@ -33,7 +34,7 @@ class Station extends Phaser.Scene {
     });
 
     // the lower deck is the bar (src/shop.js) and the hangar gets the upgrade shop terminal
-    buildBar(this); buildShop(this);
+    buildBar(this); buildShop(this); buildPump(this); // src/fuel.js: the fuel pump terminal, where the station has one
 
     interiorBuild(this); // lights, signs, hologram desks, patrons and wanderers (src/interior.js)
 
@@ -51,9 +52,9 @@ class Station extends Phaser.Scene {
     if (this.arrive && G.mission === 'rescued') {
       const pay = (MISSIONS.find(m => m.id === 'rescue') || { reward: REWARD }).reward; // the rescue call's reward (content/missions/rescue.md)
       G.credits += pay; G.mission = 'none'; G.stats.missions++;
-      toast(this, 'Colonist delivered safely. +' + pay + ' cr', '#6dff9c'); sfx('chime');
+      toast(this, uiText('toast.delivered', { reward: pay }), '#6dff9c'); sfx('chime');
     } else if (this.arrive) {
-      toast(this, 'Docked.', '#9fe9ff');
+      toast(this, uiText('toast.docked'), '#9fe9ff');
     }
     if (this.arrive) sellOre(this); // asteroids.js: ore in the hold is sold on docking
     if (this.arrive) bountyDock(this); // enemies.js: what this flight's pirate kills paid
@@ -123,7 +124,7 @@ class Station extends Phaser.Scene {
     const acceptSel = () => { // same as pressing E in update()
       if (!this.canAccept) return;
       G.mission = 'accepted'; this.closePanel(); beep(520, 0.15, 'triangle', 0.05, 300);
-      toast(this, 'Mission accepted. Board your ship in the hangar.');
+      toast(this, uiText('toast.accepted'));
     };
 
     const kb = this.input.keyboard;
@@ -134,7 +135,7 @@ class Station extends Phaser.Scene {
       if (busy()) {
         if (key === 'x') {
           abandonMission(); this.closePanel(); beep(200, 0.2, 'sawtooth', 0.04, -100);
-          toast(this, 'Mission dropped. The board has other calls.', '#ffd37a');
+          toast(this, uiText('toast.dropped'), '#ffd37a');
         }
         return;
       }
@@ -152,13 +153,14 @@ class Station extends Phaser.Scene {
     guideTick(this); interiorTick(this, this.time.now);
     const JD = Phaser.Input.Keyboard.JustDown, k = this.k;
     hudTick(this); // src/hud.js
+    if (pumpFrame(this)) return; // src/fuel.js: the fuel pump panel is open
     if (shopFrame(this)) return; // upgrade shop panel is open
     if (this.panel) {
       this.player.setVelocity(0, 0);
       if (JD(k.ESC)) this.closePanel();
       if (this.canAccept && JD(k.E)) {
         G.mission = 'accepted'; this.closePanel(); beep(520, 0.15, 'triangle', 0.05, 300);
-        toast(this, 'Mission accepted. Board your ship in the hangar.');
+        toast(this, uiText('toast.accepted'));
       }
       return;
     }
@@ -177,9 +179,10 @@ class Station extends Phaser.Scene {
     this.prompt.setText(near && !this.talk ? 'E  ' + (near.prompt || { missions: 'Check the mission board', repair: 'Repair hull', ship: 'Board your ship' }[near.key]) : '');
     if (near && JD(k.E) && !spotInteract(this, near)) {
       if (near.key === 'missions') this.openPanel();
+      else if (near.key === 'pump') openPump(this);
       else if (near.key === 'repair') {
         // half a credit a point; too poor for a full repair and it mends as much as you can pay for
-        const missing = G.maxHull - G.hull, cost = Math.ceil(missing * 0.5);
+        const missing = G.maxHull - G.hull, cost = Math.ceil(missing * REPAIR_PRICE);
         if (missing <= 0) toast(this, 'Hull is already perfect.', '#9fe9ff');
         else if (G.credits <= 0) toast(this, 'Repair costs ' + cost + ' cr. You have 0.', '#ff4d6d');
         else {

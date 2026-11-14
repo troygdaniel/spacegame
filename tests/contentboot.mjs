@@ -37,8 +37,8 @@ try {
   // 1. the real pack: nothing wrong, nothing listed, the proof set (card m4: two ships, a call, a character, nine part tiers; card systems-content-draft: eight systems, six stations) applied
   await run('the real content pack', ROOT, '', 'Title', async (t, st) => {
     check('the loader read content.generated.js', st.state.loaded === true && typeof st.state.hash === 'string' && st.state.hash.length > 0, JSON.stringify(st.state));
-    check('it lists no problems and applies the twenty-seven files (the proof set, eight systems, six stations)', st.errors.length === 0 && st.state.applied.length === 27 && st.state.skipped === 0, JSON.stringify(st.errors) + ' ' + st.state.applied.join());
-    check('the eight systems and six stations are kept in CONTENT_WORLD, and the game still has only Halcyon', (await t.ev(`Object.keys(CONTENT_WORLD.system).length === 8 && Object.keys(CONTENT_WORLD.station).length === 6 && Object.keys(SYSTEMS).join() === 'halcyon'`)) === true);
+    check('it lists no problems and applies the forty-three files of the shipped set (with eight systems and five more docks)', st.errors.length === 0 && st.state.applied.length === 43 && st.state.skipped === 0, JSON.stringify(st.errors) + ' ' + st.state.applied.join());
+    check('the eight systems and the five docks the game does not have yet are kept in CONTENT_WORLD, and the game still has only Halcyon', (await t.ev(`Object.keys(CONTENT_WORLD.system).length === 8 && Object.keys(CONTENT_WORLD.station).length === 5 && Object.keys(SYSTEMS).join() === 'halcyon'`)) === true);
     check('the shipped pack is not MODDED', st.state.modded === false, JSON.stringify(st.state));
   });
 

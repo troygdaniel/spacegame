@@ -27,12 +27,16 @@
   // the whole list of conditions a reaction line or an unlock rule may carry (docs/MODDING.md 3.4)
   const CONDITIONS = [
     'always', 'mission:none', 'mission:accepted', 'mission:rescued', 'mission:failed', 'mission-id:ID', 'credits>=N', 'credits<N',
-    'upgrade:SLOT', 'patrols>=N', 'system:ID', 'ship:ID'
+    'upgrade:SLOT', 'upgrade:SLOT>=N', 'hull<N (percent of the hull)', 'kills>=N', 'missions>=N', 'patrols>=N', 'system:ID', 'ship:ID',
+    '!CONDITION (not)', 'CONDITION and CONDITION (all hold)'
   ];
   const COND_RES = [
     /^always$/, /^mission:(none|accepted|rescued|failed)$/, /^mission-id:[a-z][a-z0-9-]{0,39}$/, /^credits>=\d{1,9}$/, /^credits<\d{1,9}$/,
-    /^upgrade:[a-z][a-z0-9-]{0,39}$/, /^patrols>=\d{1,4}$/, /^system:[a-z][a-z0-9-]{0,39}$/, /^ship:[a-z][a-z0-9-]{0,39}$/
+    /^upgrade:[a-z][a-z0-9-]{0,39}$/, /^upgrade:[a-z][a-z0-9-]{0,39}>=[1-3]$/, /^hull<\d{1,3}$/, /^kills>=\d{1,6}$/, /^missions>=\d{1,4}$/,
+    /^patrols>=\d{1,4}$/, /^system:[a-z][a-z0-9-]{0,39}$/, /^ship:[a-z][a-z0-9-]{0,39}$/
   ];
+  // a condition is one of the above, with ! in front for "not", or up to four of them joined by " and " (all must hold)
+  const condOk = c => { const parts = String(c).split(' and '); return parts.length <= 4 && parts.every(p => COND_RES.some(r => r.test(p.replace(/^!/, '')))); };
 
   // ---------- the schema ----------
   const T = (max, req) => ({ t: 'text', max: max || LIMITS.text, req });
@@ -42,7 +46,8 @@
   const R = (ref, req) => ({ t: 'id', ref, req });
   const L = (of, extra) => Object.assign({ t: 'list', of }, extra);
   const COLOR = { t: 'color' }, BOOL = { t: 'bool' }, COND = { t: 'cond' };
-  const PH = ['reward', 'count', 'progress', 'station', 'system', 'credits', 'ship']; // placeholders the game can fill
+  const PH = ['reward', 'count', 'progress', 'station', 'system', 'credits', 'ship', 'kills']; // placeholders the game can fill
+  const PH_MISSION = PH.concat('hull'); // a mission may also say {hull}: the percent of hull the bounty target has left
   const SHIP_ART = ['ship', 'raider', 'drone', 'gunship', 'reaver', 'freighter', 'civilian', 'police', 'wren', 'kite', 'ox', 'talon', 'pathfinder', 'bastion']; // the built-in textures; grows when new ship art lands
   const SLOTS = ['engine', 'shields', 'weapons', 'tank', 'cargo'];
   const VOICE_EVENTS = ['launch-clear', 'hull-low', 'pirates-detected', 'docked', 'mission-accepted', 'credits-earned', 'fuel-low']; // docs/VOICE.md grows this list
@@ -105,7 +110,7 @@
       }
     },
     mission: {
-      folder: 'missions', placeholders: PH,
+      folder: 'missions', placeholders: PH_MISSION,
       fields: {
         kind: P(['rescue', 'escort', 'patrol', 'bounty', 'courier', 'haul', 'salvage', 'survey'], true), title: T(40, true), where: T(60),
         reward: I(0, 1000000, true), count: I(1, 50), unlock: COND, system: R('system')
@@ -121,7 +126,7 @@
     },
     npc: {
       folder: 'npcs', placeholders: PH,
-      fields: { name: T(24, true), role: T(40), color: COLOR, station: R('station'), x: I(0, 8000), y: I(0, 8000), face: N(-6.3, 6.3), voice: T(40) },
+      fields: { name: T(24, true), role: T(40), color: COLOR, label: COLOR, appears: COND, station: R('station'), x: I(0, 8000), y: I(0, 8000), face: N(-6.3, 6.3), voice: T(40) },
       sections: {
         lines: { heading: 'Lines', t: 'list', max: LIMITS.line },
         reactions: { heading: 'Reactions', t: 'table', required: ['when', 'line'], cols: { when: { t: 'cond', req: true }, line: T(LIMITS.line, true) } },
@@ -137,6 +142,15 @@
       folder: 'text', placeholders: '*',
       fields: {},
       sections: { strings: { heading: 'Strings', t: 'table', required: ['key', 'text'], cols: { key: { t: 'textkey', req: true }, text: T(LIMITS.text, true) } } }
+    },
+    poi: { // salvage sites and random signals (src/poi.js): a fixed site's name, note and payout, and the kinds of signal that turn up
+      folder: 'poi', placeholders: [],
+      fields: {
+        kind: P(['wreck', 'beacon'], true), name: T(40, true),
+        credits: I(0, 100000), hull: I(0, 100), guard: I(0, 6),     // a fixed site (wreck-nw, beacon-e ...): what it pays, the hull it repairs, the pirates that guard it
+        pays: L('int', { len: 2, min: 0, max: 100000 }), guardChance: N(0, 1), hullChance: N(0, 1) // a random signal (signal-beacon, signal-wreck): what it pays as [min, max], how often it is guarded, how often it repairs
+      },
+      sections: {} // the text under the front matter is the line shown when you salvage it
     }
   };
   const FOLDERS = {};
@@ -240,7 +254,7 @@
         if (!ID_RE.test(s)) return { bad: 'is ' + quote(s) + ' but must be an id: a-z, 0-9 and dashes, starting with a letter' };
         return { v: s };
       case 'cond':
-        if (!COND_RES.some(r => r.test(s))) return { bad: 'is ' + quote(s) + ' but is not a known condition. Known: ' + CONDITIONS.join(', ') };
+        if (!condOk(s)) return { bad: 'is ' + quote(s) + ' but is not a known condition. Known: ' + CONDITIONS.join(', ') };
         return { v: s };
       case 'list': {
         const m = /^\[(.*)\]$/.exec(s);

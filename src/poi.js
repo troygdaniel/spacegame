@@ -93,7 +93,7 @@ function poiSpawnSignal(sc, typeIndex) { // a new random signal 1400 to 2200 uni
   if (t.hullChance && Math.random() < t.hullChance) p.hull = t.hull; else p.credits = Phaser.Math.Between(t.credits[0], t.credits[1]);
   if (t.guardChance && Math.random() < t.guardChance) sc.spawnDrone(x + 260, y); // pirates followed the signal
   R.sig.push(p); R.objs[p.id] = makeSite(sc, p, false);
-  toast(sc, 'New signal on the radar: ' + p.name, '#9fe9ff'); sfx('tick');
+  toast(sc, uiText('toast.signal-new', { name: p.name }), '#9fe9ff'); sfx('tick');
   return p;
 }
 
@@ -121,7 +121,7 @@ function poiSetup(sc) {
     if (now >= R.nextAt) R.nextAt = now + (poiSpawnSignal(sc) ? Phaser.Math.Between(45000, 75000) : 15000);
     R.sig.forEach(q => {
       if (q.state === 1 && now > q.born + SIGNAL_LIFE) {
-        q.state = 0; removeSite(sc, q); toast(sc, 'Signal lost: ' + q.name, '#5b7a92');
+        q.state = 0; removeSite(sc, q); toast(sc, uiText('toast.signal-lost', { name: q.name }), '#5b7a92');
       }
     });
 
@@ -129,7 +129,7 @@ function poiSetup(sc) {
     liveSites().forEach(p => {
       const d = Phaser.Math.Distance.Between(ship.x, ship.y, p.x, p.y), o = R.objs[p.id];
       if (!o) return;
-      if (!siteState(p) && d <= POI_FIND) { setSiteState(p, 1); toast(sc, 'Signal found: ' + p.name, '#9fe9ff'); sfx('tick'); }
+      if (!siteState(p) && d <= POI_FIND) { setSiteState(p, 1); toast(sc, uiText('toast.signal-found', { name: p.name }), '#9fe9ff'); sfx('tick'); }
       if (siteState(p) === 1) hudBlip(sc, p.x, p.y, GREEN, 4);
       o.label.setVisible(d < 900);
       if (siteState(p) === 1 && d < POI_RANGE && (!near || d < near.d)) near = { p, d, o };
