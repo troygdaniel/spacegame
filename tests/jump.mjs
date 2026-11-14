@@ -167,6 +167,18 @@ try {
   await E(`${SP}.jk.F._justDown = true`); await tick(2);
   check('a full tank: "you still hold 40 units", no call', await E(`FUELST.rangerAt === 0`) && (await said()).some(m => /still hold 40 units/.test(m)), JSON.stringify(await said()));
 
+  // a heavy ship (playtest 3): a Bastion burns 2 units a ly, so Kestrel to Halcyon costs 12.5 and the ranger must bring that, not 10
+  await E(`FUELST.rangerAt = 0; activeShip().model = 'bastion'; activeShip().fuel = 0; G.credits = 500`); await tick(3);
+  check('a Bastion with an empty tank is offered 12.5 units for 300 cr, not 10', await E(`${SP}.rangerTxt.text`) === 'F  CALL THE FUEL RANGER  (12.5 UNITS, 300 CR, 45 S)', await E(`${SP}.rangerTxt.text`));
+  await E(`${SP}.jk.F._justDown = true`); await tick(2);
+  await secs(46);
+  check('at 45 s it comes: +12.5 units, -300 cr, and the line goes', await E(`activeShip().fuel === 12.5 && G.credits === 200 && ${SP}.rangerTxt.text === ''`), await E(`[activeShip().fuel, G.credits, ${SP}.rangerTxt.text]`));
+  check('a message said so', (await said()).some(m => /fuel ranger is here: \+12\.5 units, -300 cr/.test(m)), JSON.stringify(await said()));
+  check('the Bastion can now jump home: jumpCheck Kestrel to Halcyon is ok at 12.5', await E(`(() => { const j = jumpCheck('kestrel', 'halcyon'); return j.ok && j.cost === 12.5; })()`));
+  await E(`${SP}.jk.F._justDown = true`); await tick(2);
+  check('F again does not call a second ranger: it holds all the way home', await E(`FUELST.rangerAt === 0`));
+  await E(`activeShip().model = 'wren'; activeShip().fuel = 40; G.credits = 260`); await tick(2);
+
   // ---- 6. and back ----
   console.log('the way back: Halcyon, at the east edge, with a second jump counted');
   await park(18000, 18000);
