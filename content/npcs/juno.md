@@ -18,7 +18,7 @@ face: -1.5707963267948966
 | when | line |
 |---|---|
 | mission:failed | Heard you lost the colonist out there. It happens to every pilot once, so sit, drink, and go again. |
-| upgrade:armor | Nice plating on that ship. Try not to scratch my doorframe. |
+| upgrade:shields | Nice shielding on that ship. Try not to scratch my doorframe. |
 | credits>=800 | You are carrying a lot of credits. The hangar shop would love to meet them. |
 
 ## Persona

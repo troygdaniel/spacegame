@@ -25,6 +25,7 @@
 #   4q. tests/shipsheet.mjs: the six player ships (silhouettes, every upgrade slot, nozzles, physics circle, hangar, flight, Ship bay)
 #   4r. tests/cruise.mjs: Halcyon at 36000 px, the nav list (N) and cruise (C): speed profile, locks, cancel, nudge, frame cost
 #   4v. tests/interdict.mjs: pirates pull you out of cruise (forced roll, gates: 4000 px from a station, 90 s cooldown, two jumps) and the pirate tables per system
+#   4w. tests/contentproof.mjs: the proof set in markdown (raider, drone, rescue, JUNO, nine part tiers) over the code's tables changes nothing; edited files change exactly what they say; wrong files are refused
 #   4s. tests/journal.mjs: J opens the Journal in the station (people met, notes, facts, no key needed), Forget everything needs a second press, the Pause row
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #   4o. tests/chat.mjs: the NPC chat adapter and the chat box in the bar with a mocked fetch: no key means no call; OpenAI and Anthropic get the right URL,
@@ -117,6 +118,8 @@ echo "== 4v. interdiction in cruise and the pirate tables per system (tests/inte
 if node tests/interdict.mjs; then :; else fail=1; fi
 echo "== 4u. ship parts: shields, weapons, engine, tank, cargo (tests/parts.mjs)"
 if node tests/parts.mjs; then :; else fail=1; fi
+echo "== 4w. the proof set in markdown: files over their defaults change nothing, edits change exactly what they say (tests/contentproof.mjs)"
+if node tests/contentproof.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then

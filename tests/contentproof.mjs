@@ -1,6 +1,6 @@
 // The proof set in markdown (card space-game-m4-proof, docs/MODDING.md sections 8 and 10): the raider and drone, the rescue call, JUNO and
-// the six upgrade tiers (armor, rapid, booster) live in content/*.md, and the code tables in enemies.js, missions.js, shop.js and hud.js
-// read them through the adapters in src/contenttables.js. Each case runs the real game in headless Chrome from a throwaway COPY of this
+// nine ship part tiers (shields, weapons, engine) live in content/*.md, and the code tables in enemies.js, missions.js, shop.js, data_parts.js
+// and hud.js read them through the adapters in src/contenttables.js. Each case runs the real game in headless Chrome from a throwaway COPY of this
 // folder with its own content.generated.js, then reads the tables the game plays from:
 //   A  the shipped pack          the game plays on what the files say
 //   B  an empty pack             the game plays on the code's own tables (the defaults)
@@ -22,7 +22,7 @@ const same = (name, a, b) => { let ok = true, detail = ''; try { deepStrictEqual
 
 // everything the proof set reaches, read from the running game. G is put back as it was.
 const SNAP = `(() => {
-  const keep = { mission: G.mission, missionId: G.missionId, progress: G.missionProgress, credits: G.credits, armor: G.upgrades.armor, rapid: G.upgrades.rapid, booster: G.upgrades.booster };
+  const keep = { mission: G.mission, missionId: G.missionId, progress: G.missionProgress, credits: G.credits, parts: Object.assign({}, activeShip().parts) };
   const plain = o => JSON.parse(JSON.stringify(o));
   const out = { ships: { raider: plain(PIRATES.raider), drone: plain(PIRATES.drone), gunship: plain(PIRATES.gunship) } };
   const m = MISSIONS.find(x => x.id === 'rescue');
@@ -34,16 +34,15 @@ const SNAP = `(() => {
     hud: ['accepted', 'rescued'].map(st => { G.mission = st; const h = hudMission({}, 'Space'); return { cur: h.cur, next: h.next, steps: h.steps.map(x => x.text + '/' + x.state) }; })
   };
   const j = NPCS.find(x => x.id === 'juno'), react = [];
-  ['none', 'accepted', 'failed'].forEach(ms => [0, 1].forEach(arm => [0, 900].forEach(cr => { G.mission = ms; G.upgrades.armor = arm; G.credits = cr; react.push(j.react()); })));
+  ['none', 'accepted', 'failed'].forEach(ms => [0, 1].forEach(arm => [0, 900].forEach(cr => { G.mission = ms; activeShip().parts.shields = arm; G.credits = cr; react.push(j.react()); })));
   out.npc = { name: j.name, role: j.role, color: j.color, css: j.css, x: j.x, y: j.y, face: j.face, voice: j.voice, persona: j.persona, lines: j.lines.slice(), sprite: j.sprite === undefined ? null : j.sprite, react };
-  const rec = t => ({ model: 'wren', parts: { engine: t, shields: t, weapons: t, tank: 0, cargo: 0 } }), per = f => [0, 1, 2].map(f);
-  out.parts = {
-    upgrades: plain(UPGRADES), fx: plain(UPGRADE_FX),
-    fireDelay: per(t => { G.upgrades.rapid = t; return fireDelay(); }), boost: per(t => { G.upgrades.booster = t; return boostEnergy(); }),
-    hull: per(t => shipStat('hull', rec(t))), boostMax: per(t => shipStat('boost', rec(t)))
-  };
+  const rec = t => ({ model: 'wren', parts: { shields: t, weapons: t, engine: t, tank: t, cargo: t } }), tiers = [0, 1, 2, 3];
+  const stats = {};
+  ['vmax', 'boost', 'range', 'tank', 'hold', 'shieldMax', 'shieldRegen', 'shieldDelay', 'fireDelay', 'damage', 'boostTank', 'boostRegen'].forEach(nm => { stats[nm] = tiers.map(t => shipStat(nm, rec(t))); });
+  const fit = tiers.map(t => { const r = activeShip(), was = Object.assign({}, r.parts); Object.assign(r.parts, { weapons: t, engine: t }); const v = { fire: fireDelay(), boost: boostEnergy(), top: boostMax() }; Object.assign(r.parts, was); return v; });
+  out.parts = { parts: plain(PARTS), stats, fit };
   G.mission = keep.mission; G.missionId = keep.missionId; G.missionProgress = keep.progress; G.credits = keep.credits;
-  G.upgrades.armor = keep.armor; G.upgrades.rapid = keep.rapid; G.upgrades.booster = keep.booster;
+  Object.assign(activeShip().parts, keep.parts);
   return JSON.stringify(out);
 })()`;
 
@@ -86,18 +85,18 @@ const EDITS = [
     ['- Escort them to your ship\n- Dock at Halcyon Station', '- Dock and collect {reward} cr'],
     ['Mission failed.', 'Mission lost.']]],
   ['npcs/juno.md', [['color: amber', 'color: cyan'], ['x: 255', 'x: 260'], ['- Welcome to the Drift.', '- Welcome aboard the Drift.'],
-    ['| upgrade:armor | Nice plating on that ship.', '| upgrade:armor | Shiny plating on that ship.'], ['Manner: warm,', 'Manner: cheerful,']]],
-  ['parts/armor-1.md', [['price: 300', 'price: 310'], ['hullPlus: 20', 'hullPlus: 25']]],
-  ['parts/rapid-1.md', [['delay: 100', 'delay: 90']]],
-  ['parts/booster-1.md', [['boostTank: 130', 'boostTank: 140'], ['boostAdd: 200', 'boostAdd: 210']]],
-  ['parts/booster-2.md', [['name: BOOSTER', 'name: BOOSTER MK2']]]
+    ['| upgrade:shields | Nice shielding on that ship.', '| upgrade:shields | Shiny shielding on that ship.'], ['Manner: warm,', 'Manner: cheerful,']]],
+  ['parts/shields-1.md', [['price: 300', 'price: 310'], ['points: 25', 'points: 30'], ['name: LIGHT SHIELD', 'name: LITE SHIELD']]],
+  ['parts/weapons-1.md', [['delay: 100', 'delay: 90']]],
+  ['parts/engine-1.md', [['speedPct: 8', 'speedPct: 10'], ['jump: 1', 'jump: 2'], ['boostAdd: 200', 'boostAdd: 210'], ['boostTank: 130', 'boostTank: 140']]],
+  ['parts/engine-2.md', [['name: TWIN NOZZLES', 'name: TWIN NOZZLES MK2']]]
 ];
 
 try {
   // ---- A: the shipped pack, B: nothing at all ----
   console.log('A: the shipped pack');
   const A = await play(ROOT);
-  check('the loader applied the ten files of the proof set, no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 10 && A.loader.state.modded === false, JSON.stringify(A.loader));
+  check('the loader applied the thirteen files of the proof set, no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 13 && A.loader.state.modded === false, JSON.stringify(A.loader));
   check('no console errors', A.errors.length === 0, A.errors.join(' | '));
 
   console.log('B: an empty pack (the code\'s own tables)');
@@ -110,9 +109,9 @@ try {
   same('the pirates: raider, drone and gunship (every number, the radar colour, the shot window)', A.snap.ships, B.snap.ships);
   same('the rescue call: title, place, reward, offer, the three board lines, both progress texts, the failure line, the checklist', A.snap.mission, B.snap.mission);
   same('JUNO: look, place, voice, persona, her three lines and every reaction in 12 situations', A.snap.npc, B.snap.npc);
-  same('the upgrades: names, texts, prices, fire delay, boost tank and refill, plating and boost speed on a Wren at tiers 0, 1, 2', A.snap.parts, B.snap.parts);
+  same('the parts: every name, short form, text, price and number of the five slots, and what a Wren gets from them at tiers 0 to 3', A.snap.parts, B.snap.parts);
   check('docking with the colonist pays the same, 500 cr', A.pay === 500 && B.pay === 500, A.pay + ' / ' + B.pay);
-  check('and the defaults really are what the game has always had', B.snap.mission.reward === 500 && B.snap.ships.raider.hp === 20 && B.snap.parts.fireDelay.join() === '160,100,70' && B.snap.parts.boostMax.join() === '800,1000,1150' && B.snap.parts.hull.join() === '100,120,140');
+  check('and the defaults really are what the game has always had', B.snap.mission.reward === 500 && B.snap.ships.raider.hp === 20 && B.snap.parts.stats.fireDelay.join() === '160,100,70,50' && B.snap.parts.stats.boost.join() === '800,1000,1150,1300' && B.snap.parts.stats.shieldMax.join() === '0,25,50,85' && B.snap.parts.stats.vmax.join() === '480,518,557,600');
 
   // ---- C: edit the files, change exactly that ----
   console.log('C: a copy of the game with edited files');
@@ -122,10 +121,12 @@ try {
     for (const [a, b] of pairs) { if (s.split(a).length !== 2) throw new Error(rel + ': "' + a + '" must occur exactly once'); s = s.replace(a, () => b); }
     writeFileSync(f, s);
   }
+  writeFileSync(join(pack, 'content/parts/tank-1.md'), '---\ntype: part\nslot: tank\ntier: 1\nname: EXTRA TANK\nfuelMult: 1.3\n---\nfuel capacity x1.3\n');
+  writeFileSync(join(pack, 'content/parts/cargo-1.md'), '---\ntype: part\nslot: cargo\ntier: 1\nname: EXTRA HOLD\nholdPlus: 5\n---\nhold +5 ore\n');
   const cg = gameWith(join(pack, 'content'), realCore);
   check('the edited pack builds with no problems', cg.made.result.errors.length === 0, JSON.stringify(cg.made.result.errors));
   const C = await play(cg.dir);
-  check('the loader applied the ten files and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 10 && C.loader.state.modded === true, JSON.stringify(C.loader));
+  check('the loader applied the fifteen files (the proof set and a tank and a hold part) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 15 && C.loader.state.modded === true, JSON.stringify(C.loader));
   check('no console errors', C.errors.length === 0, C.errors.join(' | '));
   const want = JSON.parse(JSON.stringify(A.snap)); // what A says, with exactly the edited lines changed
   Object.assign(want.ships.raider, { hp: 22, bounty: 47, radar: 0x6dff9c, shot: [500, 900], strafe: false });
@@ -140,22 +141,27 @@ try {
     { cur: 2, next: A.snap.mission.hud[1].next, steps: ['Take the rescue call/done', 'Find the colonist/done', 'Dock and collect 650 cr/cur'] }];
   Object.assign(want.npc, { color: 0x38e1ff, css: '#38e1ff', x: 260, persona: A.snap.npc.persona.replace('Manner: warm,', 'Manner: cheerful,') });
   want.npc.lines[0] = want.npc.lines[0].replace('Welcome to the Drift.', 'Welcome aboard the Drift.');
-  want.npc.react = want.npc.react.map(r => r && r.replace('Nice plating', 'Shiny plating'));
-  want.parts.upgrades[0].prices[0] = 310; want.parts.upgrades[2].name = 'BOOSTER MK2';
-  Object.assign(want.parts.fx, { hull: [0, 25, 40, 60], delay: [160, 90, 70], boostTank: [100, 140, 165], boostAdd: [0, 210, 350, 350] });
-  Object.assign(want.parts, { fireDelay: [160, 90, 70], hull: [100, 125, 140], boostMax: [800, 1010, 1150], boost: [{ max: 100, regen: 17 }, { max: 140, regen: 24 }, { max: 165, regen: 32 }] });
+  want.npc.react = want.npc.react.map(r => r && r.replace('Nice shielding', 'Shiny shielding'));
+  const wp = want.parts, P = wp.parts; // the parts: tier 1 of shields, weapons and engine edited, tier 2 of the engine renamed, a tank and a hold part added
+  P.shields.prices[0] = 310; P.shields.pts[1] = 30; P.shields.tiers[0] = 'LITE SHIELD'; P.weapons.delay[1] = 90;
+  Object.assign(P.engine, { speed: [1, 1.1, 1.16, 1.25], range: [0, 2, 2, 3], boost: [0, 210, 350, 500], tank: [100, 140, 165, 200] }); P.engine.tiers[1] = 'TWIN NOZZLES MK2';
+  P.tank.mul[1] = 1.3; P.tank.descs[0] = 'fuel capacity x1.3'; P.cargo.add[1] = 5; P.cargo.descs[0] = 'hold +5 ore';
+  Object.assign(wp.stats.vmax, { 1: Math.round(480 * 1.1) }); wp.stats.boost[1] = 800 + 210; wp.stats.range[1] = 8 + 2; wp.stats.tank[1] = Math.round(40 * 1.3); wp.stats.hold[1] = 10 + 5;
+  wp.stats.shieldMax[1] = 30; wp.stats.fireDelay[1] = 90; wp.stats.boostTank[1] = 140;
+  wp.fit[1] = { fire: 90, boost: { max: 140, regen: 24 }, top: 1010 };
   same('the pirates changed exactly as the raider and drone files say', C.snap.ships, want.ships);
   same('the rescue call changed exactly as its file says (title, reward, board line with {reward}, progress with {progress}, a shorter checklist, failure line)', C.snap.mission, want.mission);
   same('JUNO changed exactly as her file says (colour, place, first line, one reaction, persona)', C.snap.npc, want.npc);
-  same('the upgrades changed exactly as the part files say (price, plating, fire delay, boost tank and speed, a name)', C.snap.parts, want.parts);
+  same('the parts changed exactly as the part files say (a price, shield points, a name, the fire delay, the engine speed, jump, boost and tank, a fuel tank and a hold)', C.snap.parts, want.parts);
   check('docking with the colonist pays the edited reward, 650 cr', C.pay === 650, String(C.pay));
 
   // ---- D: files that disagree with the code are refused, the tables stay ----
   console.log('D: files that disagree with the code');
   const wrong = mkdir('wrong'), put = (rel, text) => { const f = join(wrong, 'content', rel); mkdirSync(join(f, '..'), { recursive: true }); writeFileSync(f, text); };
-  put('parts/armor-1.md', '---\ntype: part\nslot: engine\ntier: 1\nname: ARMOR PLATING\nprice: 1\nhullPlus: 99\n---\nWrong slot.\n');
-  put('parts/rapid-2.md', '---\ntype: part\nslot: weapons\ntier: 1\nname: RAPID FIRE\nprice: 1\ndelay: 20\n---\nTier does not match the file name.\n');
-  put('parts/booster-3.md', '---\ntype: part\nslot: engine\ntier: 3\nname: BOOSTER\nprice: 1\n---\nThere is no third booster tier on sale.\n');
+  put('parts/shields-1.md', '---\ntype: part\nslot: engine\ntier: 1\nname: LIGHT SHIELD\nprice: 1\npoints: 99\n---\nWrong slot.\n');
+  put('parts/weapons-2.md', '---\ntype: part\nslot: weapons\ntier: 1\nname: RAPID FIRE II\nprice: 1\ndelay: 20\n---\nTier does not match the file name.\n');
+  put('parts/engine-4.md', '---\ntype: part\nslot: engine\ntier: 3\nname: BOOSTED\nprice: 1\n---\nThere is no fourth tier.\n');
+  put('parts/booster-1.md', '---\ntype: part\nslot: engine\ntier: 1\nname: BOOSTER\nprice: 1\n---\nThe old v1 name is not a slot.\n');
   put('missions/escort.md', '---\ntype: mission\nkind: patrol\ntitle: Not an escort\nreward: 1\n---\nWrong kind.\n');
   put('missions/courier-1.md', '---\ntype: mission\nkind: courier\ntitle: New call\nreward: 100\n---\nA call the game does not have yet.\n');
   put('ships/gunship.md', '---\ntype: ship\nname: Gunship\nside: player\nhp: 1\n---\nA pirate cannot be a player ship.\n');
@@ -163,11 +169,11 @@ try {
   put('npcs/nobody.md', '---\ntype: npc\nname: NOBODY\n---\n## Lines\n- Hello.\n');
   const D = await play(gameWith(join(wrong, 'content')).dir);
   check('the game boots and plays, with no console errors', D.errors.length === 0, D.errors.join(' | '));
-  check('nothing was applied and every file was refused', D.loader.state.applied.length === 0 && D.loader.state.skipped === 8, JSON.stringify(D.loader.state));
+  check('nothing was applied and every file was refused', D.loader.state.applied.length === 0 && D.loader.state.skipped === 9, JSON.stringify(D.loader.state));
   const said = D.loader.errors.join('\n');
-  check('the wrong slot is explained', /armor-1\.md\|could not be applied \(slot is "engine" but armor goes in the shields slot\)\. Kept the built-in values\./.test(said), said);
-  check('the wrong tier is explained', /rapid-2\.md\|could not be applied \(tier is 1 but the file is called rapid-2, so it must be tier 2\)/.test(said));
-  check('a tier that is not on sale is refused as a part the game does not have', /booster-3\.md\|the game has no built-in part called "booster-3" and cannot add new ones/.test(said));
+  check('the wrong slot is explained', /shields-1\.md\|could not be applied \(slot is "engine" but the file is called shields-1, so it must be the shields slot\)\. Kept the built-in values\./.test(said), said);
+  check('the wrong tier is explained', /weapons-2\.md\|could not be applied \(tier is 1 but the file is called weapons-2, so it must be tier 2\)/.test(said));
+  check('a fourth tier and the old v1 name (booster) are refused as parts the game does not have', /engine-4\.md\|the game has no built-in part called "engine-4" and cannot add new ones/.test(said) && /booster-1\.md\|the game has no built-in part called "booster-1"/.test(said));
   check('a call of another kind is explained', /escort\.md\|could not be applied \(kind is "patrol" but the file is called escort, so its kind must be escort\)/.test(said));
   check('a call the game does not have yet is refused', /courier-1\.md\|the game has no built-in mission called "courier-1" and cannot add new ones/.test(said));
   check('a player ship cannot replace a pirate', /gunship\.md\|could not be applied \(side is "player" but gunship is a pirate ship\)/.test(said));

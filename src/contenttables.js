@@ -7,7 +7,7 @@
 //   ship     the pirates in enemies.js PIRATES (raider, drone, gunship): the numbers and the radar colour
 //   mission  the rows of MISSIONS in missions.js (rescue today): title, where, reward, count, the board text, progress, steps, failure line
 //   npc      the characters of the bar in shop.js NPCS (juno today): look and place, lines, reactions, persona
-//   part     the upgrade tiers of UPGRADES in shop.js (armor-1, armor-2, rapid-1 ... booster-2): name, text, price and the tier's numbers
+//   part     the tiers of PARTS in data_parts.js (shields-1 ... engine-3 today; tank and cargo read too): name, text, price and the tier's numbers
 // tests/contentproof.mjs pins that each file under content/ applied over its default changes nothing, and that editing one changes
 // exactly what the file says.
 const CT_HAS = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
@@ -40,7 +40,7 @@ function contentWhen(cond) {
     if ((m = /^mission-id:(.+)$/.exec(c))) return G.missionId === m[1];
     if ((m = /^credits>=(\d+)$/.exec(c))) return G.credits >= +m[1];
     if ((m = /^credits<(\d+)$/.exec(c))) return G.credits < +m[1];
-    if ((m = /^upgrade:(.+)$/.exec(c))) { const k = m[1], t = CT_HAS(G.upgrades, k) ? G.upgrades[k] : activeShip().parts[k]; return (t | 0) > 0; } // an old key (armor) or a slot (shields)
+    if ((m = /^upgrade:(.+)$/.exec(c))) { const k = m[1], t = CT_HAS(G.upgrades, k) ? G.upgrades[k] : activeShip().parts[k]; return (t | 0) > 0; } // a slot (shields) or an old v1 key (armor)
     if ((m = /^patrols>=(\d+)$/.exec(c))) return (G.patrolsDone | 0) >= +m[1];
     if ((m = /^system:(.+)$/.exec(c))) return G.system === m[1];
     if ((m = /^ship:(.+)$/.exec(c))) return activeShip().model === m[1];
@@ -110,32 +110,41 @@ const CT_NPC = {
   }
 };
 
-// ---- part: the upgrade tiers ----
-// one file a tier: armor-1, armor-2, rapid-1 ... The upgrade is the key, the tier is the number. The v1 keys sit in these slots (fleet.js SHIPREC.oldKeys).
-// What each fitted tier gives: armor hullPlus (the max hull it adds in all), rapid delay (ms between shots), booster boostTank, boostRegen, boostAdd.
-const CT_PART_FX = { armor: [['hullPlus', 'hull']], rapid: [['delay', 'delay']], booster: [['boostTank', 'boostTank'], ['boostRegen', 'boostRegen'], ['boostAdd', 'boostAdd']] };
-function ctPart(id) { // 'armor-2' -> { u: the UPGRADES row, tier: 2 }, or null
-  const m = /^([a-z]+)-([1-9])$/.exec(id), u = m && UPGRADES.find(x => x.key === m[1]);
-  return u && +m[2] <= u.prices.length ? { u, tier: +m[2] } : null;
+// ---- part: the ship parts, one file a tier ----
+// shields-1, shields-2, shields-3, weapons-1 ... cargo-3: the slot is the first word, the tier (1 to 3) the number. A file changes that tier's
+// name, short form, shop text, price and the numbers in PARTS (src/data_parts.js), which shipStat() in src/fleet.js reads.
+// field in the file -> [the PARTS array it writes (index = tier), from the file's value, back to the file's value]
+const ctRound = v => Math.round(v * 1e6) / 1e6;
+const CT_PART_FX = {
+  shields: { points: ['pts'], regen: ['regen'], delay: ['delay'] },
+  weapons: { delay: ['delay'], damage: ['damage'] },
+  engine: { speedPct: ['speed', p => ctRound(1 + p / 100), v => ctRound((v - 1) * 100)], jump: ['range'], boostAdd: ['boost'], boostTank: ['tank'], boostRegen: ['regen'] },
+  tank: { fuelMult: ['mul'] },
+  cargo: { holdPlus: ['add'] }
+};
+function ctPart(id) { // 'shields-2' -> { slot: 'shields', tier: 2, P: PARTS.shields }, or null
+  const m = /^([a-z]+)-([1-3])$/.exec(id);
+  return m && CT_HAS(PARTS, m[1]) ? { slot: m[1], tier: +m[2], P: PARTS[m[1]] } : null;
 }
 const CT_PART = {
   canAdd: false,
   has: id => !!ctPart(id),
   get: (id, f) => {
     const p = ctPart(id); if (!p) return undefined;
-    const fx = (CT_PART_FX[p.u.key] || []).find(x => x[0] === f);
-    return f === 'name' ? p.u.name : f === 'price' ? p.u.prices[p.tier - 1] : f === 'description' ? p.u.descs[p.tier - 1] : f === 'tier' ? p.tier : f === 'key' ? p.u.key
-      : f === 'slot' ? SHIPREC.oldKeys[p.u.key] : fx ? UPGRADE_FX[fx[1]][p.tier] : undefined;
+    const i = p.tier - 1, fx = CT_PART_FX[p.slot][f];
+    return f === 'name' ? p.P.tiers[i] : f === 'brief' ? p.P.brief[i] : f === 'price' ? p.P.prices[i] : f === 'description' ? p.P.descs[i] : f === 'tier' ? p.tier : f === 'slot' ? p.slot
+      : fx ? (fx[2] ? fx[2](p.P[fx[0]][p.tier]) : p.P[fx[0]][p.tier]) : undefined;
   },
   apply: (id, data) => {
-    const p = ctPart(id), slot = SHIPREC.oldKeys[p.u.key];
-    if (data.slot !== slot) throw new Error('slot is "' + data.slot + '" but ' + p.u.key + ' goes in the ' + slot + ' slot');
+    const p = ctPart(id);
+    if (data.slot !== p.slot) throw new Error('slot is "' + data.slot + '" but the file is called ' + id + ', so it must be the ' + p.slot + ' slot');
     if (data.tier !== p.tier) throw new Error('tier is ' + data.tier + ' but the file is called ' + id + ', so it must be tier ' + p.tier);
-    if (data.key !== undefined && data.key !== p.u.key) throw new Error('key is "' + data.key + '" but the file is called ' + id);
-    if (data.name !== undefined) p.u.name = data.name;
-    if (data.price !== undefined) p.u.prices[p.tier - 1] = data.price;
-    if (data.description !== undefined) p.u.descs[p.tier - 1] = data.description;
-    (CT_PART_FX[p.u.key] || []).forEach(([field, fx]) => { if (data[field] !== undefined) UPGRADE_FX[fx][p.tier] = data[field]; });
+    const i = p.tier - 1;
+    if (data.name !== undefined) p.P.tiers[i] = data.name;
+    if (data.brief !== undefined) p.P.brief[i] = data.brief;
+    if (data.price !== undefined) p.P.prices[i] = data.price;
+    if (data.description !== undefined) p.P.descs[i] = data.description;
+    Object.keys(CT_PART_FX[p.slot]).forEach(f => { if (data[f] !== undefined) { const fx = CT_PART_FX[p.slot][f]; p.P[fx[0]][p.tier] = fx[1] ? fx[1](data[f]) : data[f]; } });
   }
 };
 
