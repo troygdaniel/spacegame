@@ -25,6 +25,9 @@ try {
   // 2. board the ship and launch
   await t.ev(`${ST}.player.setPosition(1090, 360)`); await sleep(250);
   await t.press('E');
+  await ok('ship bay opens (boarding no longer launches)', "game.scene.isActive('Ship') && !game.scene.isActive('Space')");
+  await sleep(500); // the bay ignores keys for its first 350 ms
+  await t.press('ENTER');
   await ok('space scene started', "game.scene.isActive('Space')");
   await ok('launch lock over', `${SP}.time.now > ${SP}.lockUntil + 100`);
   await t.ev(`${SP}.enemies.clear(true, true)`);

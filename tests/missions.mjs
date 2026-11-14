@@ -40,8 +40,8 @@ try {
 
   console.log('B. patrol in space');
   await x(`${S('Station')}.player.setPosition(1090, 360)`);
-  // E at the ship now plays feelLaunch (a 1.1 s tween) before go(); that tween never finishes under the stepped
-  // clock, so go() is called directly. tests/loop.mjs presses E in real time and covers the animation.
+  // E at the ship now opens the Ship scene, whose launch is a tween that never finishes under the stepped clock, so go()
+  // is called directly. tests/loop.mjs and tests/shipmode.mjs press the real keys in real time.
   await run(100); await x(`go(${S('Station')}, 'Space', { from: 'station' })`); await run(1500);
   check('launched into Space', (await scene()) === 'Space', await scene());
   await run(1500); await t.shot('missions-space-patrol');

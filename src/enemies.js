@@ -4,12 +4,15 @@
 //   Raider   fast and thin, strafes around you, 20 hp, quick light shots; common near the station
 //   Drone    the v0.1 pirate, 30 hp, circles in and pecks; everywhere
 //   Gunship  slow and wide, 80 hp, a 3-shot spread that hurts; common out by Kepler-4b
+// bounty: what a kill pays (credits is the older figure, kept for a def with no bounty, like the Reaver). The repair bay
+// charges half a credit a point, so a full 100-hull repair is 50 cr (70 with both armour plates): two kills of any type
+// cover it and one gunship covers it with change.
 const PIRATES = {
-  raider:  { key: 'raider',  tex: 'raider',  hp: 20, credits: 35, ram: 8,  radar: 0xff6b8a, body: [10, 10, 5], // body: circle radius and offset in the texture, which has a glow margin (ships.js)
+  raider:  { key: 'raider',  tex: 'raider',  hp: 20, credits: 35, bounty: 45, ram: 8,  radar: 0xff6b8a, body: [10, 10, 5], // body: circle radius and offset in the texture, which has a glow margin (ships.js)
              engage: 1000, speed: 520, max: 430, turn: 0.07, hold: 460, strafe: true, range: 520, aim: 0.4, shot: [550, 950], bullet: 540, dmg: 6 },
-  drone:   { key: 'drone',   tex: 'drone',   hp: 30, credits: 25, ram: 12, radar: RED,      body: [14, 8, 8],
+  drone:   { key: 'drone',   tex: 'drone',   hp: 30, credits: 25, bounty: 40, ram: 12, radar: RED,      body: [14, 8, 8],
              engage: 900, speed: 300, max: 260, turn: 0.035, hold: 280, range: 650, aim: 0.25, shot: [900, 1500], bullet: 420, dmg: 8 },
-  gunship: { key: 'gunship', tex: 'gunship', hp: 80, credits: 70, ram: 18, radar: 0xff8c3a, body: [19, 11, 6],
+  gunship: { key: 'gunship', tex: 'gunship', hp: 80, credits: 70, bounty: 100, ram: 18, radar: 0xff8c3a, body: [19, 11, 6],
              engage: 1000, speed: 170, max: 150, turn: 0.022, hold: 430, range: 780, aim: 0.5, shot: [1500, 2100], bullet: 380, dmg: 10, spread: 3 }
 };
 
@@ -112,4 +115,34 @@ function enemiesUpdate(s, time) {
     p.setAlpha(age > 9000 && Math.sin(time / 90) < 0 ? 0.3 : 1);
     hudBlip(s, p.x, p.y, 0xffd37a, 2);
   });
+}
+
+// ---- bounty: a kill pays, and you can see and hear it ----
+// G.flight is this flight's pirate kills and what they paid; docking shows it and clears it. It is not saved.
+Object.assign(G, { flight: { kills: 0, bounty: 0 } });
+function bountyOf(def) { return def && def.bounty != null ? def.bounty : (def && def.credits) || 25; }
+function bountyReset() { G.flight = { kills: 0, bounty: 0 }; }
+// pay the bounty for the pirate that was at (x, y): the credits, a gold BOUNTY +N that rises from the wreck, a small spray
+// of coins, a glow on the HUD credits strip and a short chime just after the boom
+function bountyPay(s, x, y, def) {
+  const n = bountyOf(def);
+  G.credits += n; G.flight.kills++; G.flight.bounty += n;
+  const t = s.add.text(x, y - 40, 'BOUNTY +' + n, { fontFamily: 'monospace', fontSize: '24px', fontStyle: 'bold', color: '#ffe08a' })
+    .setOrigin(0.5).setStroke('#02060d', 4).setDepth(91).setScale(0.6);
+  s.tweens.add({ targets: t, scale: 1, duration: 140, ease: 'Back.easeOut' });
+  s.tweens.add({ targets: t, y: y - 108, alpha: 0, delay: 500, duration: 800, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
+  for (let i = 0; i < 7; i++) { // coins: little amber discs that fly out and fade
+    const a = Math.random() * Math.PI * 2, r = 30 + Math.random() * 50;
+    const c = s.add.circle(x, y, 3, 0xffd37a).setStrokeStyle(1, 0xb8791a).setDepth(91);
+    s.tweens.add({ targets: c, x: x + Math.cos(a) * r, y: y + Math.sin(a) * r - 14, alpha: 0, duration: 550 + Math.random() * 250, ease: 'Cubic.easeOut', onComplete: () => c.destroy() });
+  }
+  if (s._hud) s._hud.pulse = s.time.now + 650; // hud.js lights the credits strip
+  s.time.delayedCall(140, () => sfx('bounty'));
+  return n;
+}
+// on docking: what this flight's kills paid, then start the count again. Shown after the ore sale so the toasts do not cover each other
+function bountyDock(s) {
+  const f = G.flight; bountyReset();
+  if (!f || f.kills <= 0) return;
+  s.time.delayedCall(1700, () => toast(s, 'Bounty this flight: +' + f.bounty + ' cr  (' + f.kills + (f.kills === 1 ? ' pirate)' : ' pirates)'), '#ffd37a'));
 }

@@ -103,6 +103,14 @@ function hudDisc(g, cx, cy, r) {
   g.fillPoints(pts, true);
 }
 
+// the credits coin: halo, rim, gold face, a ring on the face. k scales it (1 is the strip's); lit 0..1 brightens the halo
+function hudCoin(g, cx, cy, k, lit) {
+  g.fillStyle(GOLD, 0.2 + 0.25 * (lit || 0)); hudDisc(g, cx, cy, 12 * k);
+  g.fillStyle(0xb8791a, 1); hudDisc(g, cx, cy, 9 * k);
+  g.fillStyle(GOLD, 1); hudDisc(g, cx, cy, 7.5 * k);
+  g.lineStyle(1.5, 0xfff1a8, 0.95); hudRing(g, cx, cy, 4.6 * k);
+}
+
 // a path stroked three times, wide and faint then thin and bright: the glow Graphics cannot blur. pts: [[x, y], ...]
 function hudGlowPath(g, pts, color, a, closed, w) {
   w = w || 1.5;
@@ -241,20 +249,26 @@ function hudEnergy(h, s, now) {
 // ---- credits and gear strip, top centre ----
 function hudStrip(h, now) {
   const g = h.g;
-  // credits count up to the real figure; a gain flashes white and floats a +N beside it (a loss just snaps down)
+  // credits: a coin, the label CR and the figure in gold. The figure counts to the real value; a gain or a loss lights the strip
+  // (gold or red, also set at once by enemies.js bountyPay in h.pulse) and floats +N or -N beside the figure
   if (G.credits !== h.cr) {
-    if (G.credits > h.cr) { h.flash = now + 700; h.gain = { v: G.credits - h.cr, t: now }; } else h.crShow = G.credits;
-    h.cr = G.credits;
+    const d = G.credits - h.cr;
+    h.flash = now + 700; h.gain = { v: d, t: now }; h.cr = G.credits;
+    h.pulse = now + 650; h.pulseCol = d > 0 ? GOLD : RED;
   }
   if (h.crShow == null) h.crShow = G.credits;
   h.crShow += (G.credits - h.crShow) * 0.14; if (Math.abs(G.credits - h.crShow) < 1) h.crShow = G.credits;
-  hudPanel(g, 440, 10, 400, 30, 8, 0.78);
-  hudSpine(g, 440, 10, 30, AMBER, 0.8);
-  hudPut(h, 'crl', 460, 25, 'CR', { size: HT.label, color: HUD_DIM, spacing: 2 });
-  const cv = hudPut(h, 'crv', 484, 25, hudFmt(h.crShow), { size: 17, bold: true, color: now < h.flash ? '#ffffff' : '#ffb454', glow: 7 });
+  hudPanel(g, 440, 10, 400, 30, 8, 0.78, GOLD); // a gold edge: this is the one strip that is money
+  const pulse = h.pulse > now ? (h.pulse - now) / 650 : 0, pc = h.pulseCol || GOLD;
+  if (pulse > 0) { g.fillStyle(pc, 0.16 * pulse); g.fillRect(442, 12, 396 - 8, 26); g.lineStyle(2, pc, 0.9 * pulse); g.strokeRect(440, 10, 400, 30); }
+  hudSpine(g, 440, 10, 30, GOLD, 0.8);
+  hudCoin(g, 463, 25, 1, pulse);
+  hudPut(h, 'crl', 480, 25, 'CR', { size: 12, bold: true, color: GOLD_S, spacing: 1 });
+  const loss = h.gain && h.gain.v < 0;
+  const cv = hudPut(h, 'crv', 503, 25, hudFmt(h.crShow), { size: 21, bold: true, color: now < h.flash ? (loss ? '#ff4d6d' : '#ffffff') : GOLD_S, glow: 8 });
   const gain = h.gain && now - h.gain.t < 1300 ? h.gain : null;
-  hudPut(h, 'crd', 484 + cv.width - 2 * HUD_PAD + 8, 25 - 8 * Math.min(1, (gain ? now - gain.t : 0) / 400), gain ? '+' + hudFmt(gain.v) : '',
-    { size: HT.label, bold: true, color: '#6dff9c', alpha: gain ? 1 - Math.pow((now - gain.t) / 1300, 2) : 0 });
+  hudPut(h, 'crd', 503 + cv.width - 2 * HUD_PAD + 8, 25 - 8 * Math.min(1, (gain ? now - gain.t : 0) / 400), gain ? (gain.v > 0 ? '+' : '-') + hudFmt(Math.abs(gain.v)) : '',
+    { size: 14, bold: true, color: gain && gain.v < 0 ? '#ff4d6d' : '#6dff9c', alpha: gain ? 1 - Math.pow((now - gain.t) / 1300, 2) : 0 });
   g.lineStyle(1, CYAN, 0.2); g.lineBetween(596, 17, 596, 33);
   UPGRADES.forEach((u, i) => {
     const gx = 612 + i * 74, tier = G.upgrades[u.key] | 0;

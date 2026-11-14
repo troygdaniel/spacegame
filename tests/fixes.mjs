@@ -56,7 +56,7 @@ const active = (t, scene) => t.waitFor(`!!(window.game && game.scene.isActive('$
 
     console.log('bug 4: ramming finishes a drone');
     const c0 = await t.ev('G.credits'); // read before the spawn: the ram can finish the drone within one frame
-    const bounty = await t.ev(`(() => { const s = ${SP}; s.ship.setPosition(1000, 1000); s.ship.setVelocity(0, 0); const d = s.spawnDrone(1000, 1000); d.hp = 10; return d.def ? d.def.credits : 25; })()`);
+    const bounty = await t.ev(`(() => { const s = ${SP}; s.ship.setPosition(1000, 1000); s.ship.setVelocity(0, 0); const d = s.spawnDrone(1000, 1000); d.hp = 10; return d.def ? bountyOf(d.def) : 25; })()`);
     await t.waitFor(`${SP}.enemies.countActive() === 0`, 4000, 'drone destroyed by ramming').catch(() => {});
     check('the drone is gone after ramming', (await t.ev(`${SP}.enemies.countActive()`)) === 0);
     // at least the bounty: the wreck drops a salvage pod and the ship is sitting on it, so it may pick up more

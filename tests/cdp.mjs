@@ -12,8 +12,9 @@ const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/M
 export const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 const KEYS = {
-  E: [69, 'KeyE', 'e'], L: [76, 'KeyL', 'l'], W: [87, 'KeyW', 'w'], S: [83, 'KeyS', 's'], X: [88, 'KeyX', 'x'],
-  1: [49, 'Digit1', '1'], 2: [50, 'Digit2', '2'], 3: [51, 'Digit3', '3'], ESC: [27, 'Escape', 'Escape']
+  C: [67, 'KeyC', 'c'], E: [69, 'KeyE', 'e'], L: [76, 'KeyL', 'l'], W: [87, 'KeyW', 'w'], S: [83, 'KeyS', 's'], X: [88, 'KeyX', 'x'],
+  1: [49, 'Digit1', '1'], 2: [50, 'Digit2', '2'], 3: [51, 'Digit3', '3'], ESC: [27, 'Escape', 'Escape'],
+  ENTER: [13, 'Enter', 'Enter'], TAB: [9, 'Tab', 'Tab'], SPACE: [32, 'Space', ' ']
 };
 
 // Launch a throwaway headless Chrome (own profile, so it never touches your real Chrome) and return a session.
