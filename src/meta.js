@@ -107,7 +107,7 @@ function shipFromSave(r, at) {
   const rec = newShip('wren', at), p = r.parts && typeof r.parts === 'object' ? r.parts : {};
   rec.uid = Number.isInteger(r.uid) && r.uid > 0 ? r.uid : 0; // made unique by the caller
   rec.model = modelKnown(r.model) ? r.model : 'wren';
-  rec.name = typeof r.name === 'string' && r.name.trim() ? r.name.trim().slice(0, 24) : 'Wren';
+  rec.name = typeof r.name === 'string' && r.name.trim() ? r.name.trim().slice(0, SHIPREC.name) : 'Wren';
   if (typeof r.at === 'string' && r.at) rec.at = r.at;
   SHIPREC.slots.forEach(k => {
     const t = p[k] === true ? 1 : Math.floor(Number(p[k]));
@@ -137,6 +137,7 @@ function applySave(s) {
   const seen = new Set(); let next = 1 + Math.max(0, ...G.fleet.map(r => r.uid));
   G.fleet.forEach(r => { if (!r.uid || seen.has(r.uid)) r.uid = next++; seen.add(r.uid); });
   G.active = Number.isInteger(s.active) && s.active >= 0 && s.active < G.fleet.length ? s.active : 0;
+  fleetSync(); // the ship you fly is at the station you wake in (src/fleet.js)
 
   if (['none', 'accepted', 'rescued', 'failed'].includes(s.mission)) G.mission = s.mission;
   if (G.mission === 'rescued') G.mission = 'accepted'; // you always wake up at the station, colonist or not
