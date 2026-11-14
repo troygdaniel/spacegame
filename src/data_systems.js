@@ -17,7 +17,7 @@ const SYSTEMS = {
     pirates: { max: 8, every: 15000, weights: { raider: 0.25, drone: 0.35, gunship: 0.4 } }, // the spawn table (enemies.js pirateTable): what Halcyon has always done; other systems get one from their danger
     bodies: [
       { id: 'halcyon-station', type: 'station', art: 'station', name: 'Halcyon Station', x: 4000, y: 4000, labelDy: -260,
-        dock: { fuel: 8 } }, // dock: what the station offers; fuel is the price of a unit at its pump (src/fuel.js), a station without it has no pump
+        dock: { fuel: 8, yard: ['kite'] } }, // dock: what the station offers; fuel is the price of a unit at its pump (src/fuel.js), a station without it has no pump; yard is the ship models it sells (src/fleet.js), the Kite as before until card u-b5 authors the real yards
       { id: 'kepler-4b', type: 'planet', art: 'planet', name: 'Kepler-4b', x: 6200, y: 2000, r: 316, landable: true },
       { id: 'kepler-belt', type: 'belt', name: 'Kepler Belt', x: 5500, y: 1300, r: 700, rocks: 15 }, // north-west of Kepler-4b
 
