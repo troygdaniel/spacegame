@@ -2,7 +2,7 @@
 // The real game in headless Chrome. What it pins:
 //   A. the shipped pack: worldAt gives the game's own Halcyon row; the row built from Halcyon's files alone says the same thing as the code's row (so every field
 //      the code has has a home in the files); every field of the eight systems and six stations ends up in the row worldAt gives; the docks drive the code's
-//      own part functions; nothing the game plays changed (SYSTEMS still has one row).
+//      own part functions; nothing the game plays changed (SYSTEMS has the Halcyon row plus the empty Kestrel stub).
 //   B. a pack full of wrong files: the game boots, the bad rows are left out, worldAt never throws and never gives a half-made row.
 // Run: node tests/worldat.mjs     (one game per case, one Chrome at a time)
 import { createRequire } from 'node:module';
