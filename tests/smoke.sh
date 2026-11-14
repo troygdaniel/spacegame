@@ -4,6 +4,7 @@
 #   1b. tests/content.mjs: the markdown content parser, schema, validator and build script (no browser; docs/MODDING.md)
 #   1b2. tests/contentapply.mjs: the second look at content.generated.js and the merge by id over the built-in tables (no browser)
 #   1c. tests/hygiene.mjs: fails on a key, token, email address, phone number or /Users path in a tracked file or in content/
+#   1d. tests/locktest.mjs: the one-Chrome-at-a-time lock and the orphan Chrome profile cleanup (tests/lock.mjs; no browser)
 #   2. tests/scenes.mjs: load index.html, index.html#space, index.html#surface in headless Chrome, fail on a console
 #      error, save a screenshot of each to tests/out/ (gitignored)
 #   3. tests/loop.mjs: scripted rescue from station to payout, asserts +500 credits
@@ -19,9 +20,14 @@
 #   4j. tests/contentboot.mjs: a bad, missing, broken or hand-edited content.generated.js never stops the game reaching Title and playing
 #   4l. tests/npcs.mjs: the six bar characters (persona cards, lines, reactions), IDA only after the first rescue is paid, a talk with each new one
 #   4m. tests/systemart.mjs: planet kinds, star types and the four station looks for other systems (not used by the game yet)
-#   4n. tests/cruise.mjs: Halcyon at 36000 px, the nav list (N) and cruise (C): speed profile, locks, cancel, nudge, frame cost
+#   4n. tests/savemig.mjs: save v2 and the v1 migration; G.hull, G.maxHull, G.ore and G.upgrades over the active ship; unknown ids fall back
+#   4p. tests/cruise.mjs: Halcyon at 36000 px, the nav list (N) and cruise (C): speed profile, locks, cancel, nudge, frame cost
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
+#   4o. tests/chat.mjs: the NPC chat adapter with a mocked fetch: no key means no call; OpenAI and Anthropic get the right URL,
+#       header and body shape; the key is only ever in its header; 401 switches chat off; 429 waits; the setup panel saves a key
 #      their failure paths, with the game clock stepped by hand
+# Only one headless Chrome runs at a time on this Mac, whatever the worktree: cdp.mjs takes a lock in tests/lock.mjs, so a second
+# run prints "waiting for another Long Haul test run" and goes on when its turn comes (LONGHAUL_NO_LOCK=1 skips it).
 # Needs Google Chrome and Node 22+. Uses throwaway Chrome profiles, never your own. Chrome runs with
 # --headless=new --disable-gpu --use-angle=swiftshader --enable-unsafe-swiftshader --allow-file-access-from-files.
 # (The plain chrome --screenshot route hung at random when the Mac was busy, so the scenes go over DevTools too.)
@@ -40,6 +46,8 @@ echo "== 1b2. content merge by id and the second look at content.generated.js (t
 if node tests/contentapply.mjs; then :; else fail=1; fi
 echo "== 1c. hygiene: no keys, emails, phone numbers or personal paths in anything we publish (tests/hygiene.mjs)"
 if node tests/hygiene.mjs; then :; else fail=1; fi
+echo "== 1d. test lock and orphan profile cleanup (tests/locktest.mjs)"
+if node tests/locktest.mjs; then :; else fail=1; fi
 
 echo "== 2. headless Chrome, one screenshot per scene"
 if node tests/scenes.mjs; then :; else fail=1; fi
@@ -82,8 +90,12 @@ echo "== 4l. the Drift's six characters (tests/npcs.mjs)"
 if node tests/npcs.mjs; then :; else fail=1; fi
 echo "== 4m. art for other star systems (tests/systemart.mjs)"
 if node tests/systemart.mjs; then :; else fail=1; fi
+echo "== 4n. save v2, the v1 migration and the fleet accessors (tests/savemig.mjs)"
+if node tests/savemig.mjs; then :; else fail=1; fi
+echo "== 4o. NPC chat adapter with a mocked fetch: no key, no call; the right host and header per provider; 401 and 429 (tests/chat.mjs)"
+if node tests/chat.mjs; then :; else fail=1; fi
 
-echo "== 4n. cruise: N nav list, C cruise, a 36000 px Halcyon (tests/cruise.mjs)"
+echo "== 4p. cruise: N nav list, C cruise, a 36000 px Halcyon (tests/cruise.mjs)"
 if node tests/cruise.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
