@@ -21,7 +21,7 @@
 
 const SHIP_HANGAR_W = 168; // how wide a ship looks on the hangar pad: the Wren at 3x
 
-function shipTiers() { const u = G.upgrades || {}; return { plating: u.armor | 0, guns: u.rapid | 0, engine: u.booster | 0 }; } // armor, rapid, booster today
+function shipTiers() { return { plating: partTier('shields'), guns: partTier('weapons'), engine: partTier('engine') }; } // plating is drawn for the shields part
 function shipActiveModel() {
   const id = typeof activeShip === 'function' ? (activeShip() || {}).model : 'wren';
   return SHIP_LOOK[id] ? id : 'wren';

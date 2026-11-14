@@ -72,14 +72,7 @@ function saveGame(force) {
   try { localStorage.setItem(SAVE_KEY, s); lastSaved = s; } catch (e) { /* storage is optional */ }
 }
 
-function maxTier(key) { // the highest tier the shop sells for this upgrade (2 if shop.js is missing)
-  const u = typeof UPGRADES !== 'undefined' && UPGRADES.find(x => x.key === key);
-  return u ? u.prices.length : 2;
-}
-function slotCap(slot) { // the highest tier of a part slot this build can use: the shop's, or 3 where the shop has none yet
-  const old = Object.keys(SHIPREC.oldKeys).find(k => SHIPREC.oldKeys[k] === slot);
-  return old ? maxTier(old) : 3;
-}
+function slotCap(slot) { return PARTS[slot] ? PARTS[slot].prices.length : 3; } // the highest tier of a part slot (src/data_parts.js)
 
 // A v1 save, turned into the v2 shape so one loader reads both (section 8.3): one Wren with the old upgrades as parts,
 // its tank full, the ore from the hold, parked at the station. Everything else (credits, mission, patrols, volume, muted,
@@ -89,10 +82,9 @@ function v1ToV2(s) {
   SHIPREC.slots.forEach(k => { parts[k] = 0; });
   Object.keys(SHIPREC.oldKeys).forEach(old => { // an old save may hold true/false for a tier: true is tier 1
     const t = up[old] === true ? 1 : Math.floor(Number(up[old]));
-    parts[SHIPREC.oldKeys[old]] = Number.isFinite(t) ? Math.min(maxTier(old), Math.max(0, t)) : 0;
+    parts[SHIPREC.oldKeys[old]] = Number.isFinite(t) ? Math.min(2, Math.max(0, t)) : 0; // the v1 shop sold tiers 1 and 2
   });
-  const hullCap = SHIPREC.hull + 20 * maxTier('armor'); // a saved max hull is kept if it fits, else it comes from the armor tier
-  const maxHull = Number.isFinite(s.maxHull) ? Math.min(hullCap, Math.max(SHIPREC.hull, s.maxHull)) : SHIPREC.hull + 20 * parts.shields;
+  const maxHull = SHIPREC.hull; // armor plating used to add 20 hull a tier; shields (points of their own) replace that, and the hull is capped below
   const out = Object.assign({}, s, {
     v: 2, system: 'halcyon', lastDock: homeDock(), jumps: 0, known: ['halcyon'], charted: [], active: 0,
     fleet: [{ uid: 1, model: 'wren', name: 'Wren', at: homeDock(), hull: s.hull, maxHull, fuel: SHIPREC.fuel, ore: s.ore, parts }]
@@ -111,12 +103,12 @@ function shipFromSave(r, at) {
   if (typeof r.at === 'string' && r.at) rec.at = r.at;
   SHIPREC.slots.forEach(k => {
     const t = p[k] === true ? 1 : Math.floor(Number(p[k]));
-    rec.parts[k] = Number.isFinite(t) ? Math.min(slotCap(k), Math.max(0, t)) : 0;
+    rec.parts[k] = Number.isFinite(t) ? Math.min(slotCap(k), shipMaxTier(rec.model, k), Math.max(0, t)) : 0; // never above what the hull can fit
   });
-  rec.maxHull = Number.isFinite(r.maxHull) ? Math.min(SHIPREC.hull + 20 * maxTier('armor'), Math.max(SHIPREC.hull, r.maxHull)) : shipStat('hull', rec);
+  rec.maxHull = shipStat('hull', rec); // the model's hull: no part adds to it any more (an old save's 120 or 140 comes down to this)
   rec.hull = Number.isFinite(r.hull) ? Math.min(rec.maxHull, Math.max(1, r.hull)) : rec.maxHull;
   rec.fuel = Number.isFinite(r.fuel) ? Math.min(200, Math.max(0, r.fuel)) : SHIPREC.fuel;
-  rec.ore = Number.isFinite(r.ore) ? Math.min(ORE_CAP, Math.max(0, Math.floor(r.ore))) : 0; // asteroids.js
+  rec.ore = Number.isFinite(r.ore) ? Math.min(holdCap(rec), Math.max(0, Math.floor(r.ore))) : 0; // the hold: asteroids.js and the cargo part
   return rec;
 }
 

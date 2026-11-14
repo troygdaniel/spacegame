@@ -36,7 +36,7 @@ try {
   const s2 = await texts();
   check('mission card names the rescue', s2.includes('RESCUE CALL') && s2.includes('PAYS 500 cr'), s2.slice(0, 0));
   check('hull warning shows', s2.includes('REPAIR') && s2.includes('30%'));
-  check('upgrade tiers show', s2.includes('PLATED') && s2.includes('RAPID FIRE II'));
+  check('part tiers show (shields, weapons)', s2.includes('LIGHT SHIELD') && s2.includes('RAPID FIRE II'));
   check('hold shows ore', s2.includes('4 / 10 ore'));
   await t.shot('shipmode-2-mission-damaged');
 

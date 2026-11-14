@@ -58,7 +58,7 @@ class Space extends Phaser.Scene {
 
     this.physics.add.overlap(this.pb, this.enemies, (b, e) => {
       if (!b.active || !e.active) return;
-      b.disableBody(true, true); e.hp -= 15; this.boom.explode(4, b.x, b.y); sfx('tick'); feelNumber(this, e.x, e.y - 18, '15'); shipsHit(this, e, b.x, b.y);
+      const dmg = b.dmg || 15; b.disableBody(true, true); e.hp -= dmg; this.boom.explode(4, b.x, b.y); sfx('tick'); feelNumber(this, e.x, e.y - 18, String(dmg)); shipsHit(this, e, b.x, b.y);
       if (e.hp <= 0) this.killDrone(e);
     });
     this.physics.add.overlap(this.ship, this.eb, (s, b) => {
@@ -70,6 +70,7 @@ class Space extends Phaser.Scene {
     });
 
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,Q,L,SPACE,SHIFT,UP,DOWN,LEFT,RIGHT');
+    const sh = this.sh = { max: shipStat('shieldMax'), pts: shipStat('shieldMax'), regen: shipStat('shieldRegen'), delay: shipStat('shieldDelay'), last: -1e9, hitAt: -1e9, down: -1e9 }; // the shield part (src/data_parts.js): full at launch
     boostInit(this); // src/boost.js: boost energy and the Q/E dash
     this.nextFire = 0;
     this.prompt = floatPrompt(this, this.ship); // key cap above you instead of a strip at the bottom (src/ui.js)
@@ -108,6 +109,17 @@ class Space extends Phaser.Scene {
   hurt(n, fromX, fromY) {
     if (this.dead || this.leaving || this.time.now < this.ironUntil) return; // brief invulnerability after each hit; the shield flash (ships.js) shows it
     this.ironUntil = this.time.now + HIT_IRON;
+    const sh = this.sh, now = this.time.now;
+    if (sh && sh.max > 0) { // the shield takes the hit first; whatever it cannot hold goes through to the hull
+      sh.last = now; sh.hitAt = now;
+      const took = Math.min(sh.pts, n);
+      if (took > 0) {
+        sh.pts -= took; n -= took;
+        feelNumber(this, this.ship.x, this.ship.y - 22, '-' + Math.round(took), '#7fe9ff'); shipsHit(this, this.ship, fromX, fromY);
+        if (sh.pts <= 0) { sh.down = now; sfx('empty'); }
+        if (n <= 0) { sfx('tick'); this.cameras.main.shake(60, 0.002); return; } // all of it held: a flash and a number, no hull damage
+      }
+    }
     G.hull -= n; this.cameras.main.shake(120, 0.006); sfx('hit'); feelHit(this, fromX, fromY, n); shipsHit(this, this.ship, fromX, fromY);
     if (G.hull <= 0) this.die();
   }
@@ -137,6 +149,8 @@ class Space extends Phaser.Scene {
       return;
     }
     const still = crs === 'nav';
+    const sh = this.sh; // the shield recharges once it has gone a while without a hit
+    if (sh && sh.max > 0 && sh.pts < sh.max && this.time.now - sh.last > sh.delay) sh.pts = Math.min(sh.max, sh.pts + sh.regen * dt / 1000);
     const locked = time < this.lockUntil;
     const left = !still && (k.A.isDown || k.LEFT.isDown), right = !still && (k.D.isDown || k.RIGHT.isDown);
     const up = !still && (k.W.isDown || k.UP.isDown), brake = still || k.S.isDown || k.DOWN.isDown;
@@ -154,7 +168,8 @@ class Space extends Phaser.Scene {
     }
     if (!locked && !still && (k.SPACE.isDown || this.input.activePointer.isDown) && time > this.nextFire) {
       this.nextFire = time + fireDelay();
-      this.shoot(this.pb, ship.x + Math.cos(ship.rotation) * 24, ship.y + Math.sin(ship.rotation) * 24, ship.rotation, 950, time);
+      const shot = this.shoot(this.pb, ship.x + Math.cos(ship.rotation) * 24, ship.y + Math.sin(ship.rotation) * 24, ship.rotation, 950, time);
+      if (shot) shot.dmg = shipStat('damage'); // the weapons part: 15, and 20 at tier 3
       sfx('laser'); feelShot(this, ship.x + Math.cos(ship.rotation) * 26, ship.y + Math.sin(ship.rotation) * 26, ship.rotation);
     }
     this.pb.getChildren().forEach(b => { if (b.active && time - b.born > 900) b.disableBody(true, true); });

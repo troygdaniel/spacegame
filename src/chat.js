@@ -258,7 +258,7 @@ function chatMissionLine() {
   return G.missionId + ' accepted' + (count ? ', ' + (G.missionProgress | 0) + ' of ' + count + ' done' : '');
 }
 function chatNowBlock(n) {
-  const ups = typeof UPGRADES !== 'undefined' ? UPGRADES.filter(u => G.upgrades[u.key]).map(u => u.name.toLowerCase() + (G.upgrades[u.key] > 1 ? ' II' : '')) : [];
+  const ups = typeof PART_ORDER !== 'undefined' ? PART_ORDER.filter(k => partTier(k)).map(k => PARTS[k].name.toLowerCase() + PART_TIER_NAME[partTier(k)]) : [];
   const st = G.stats || {}, m = ((G.chat || {}).npcs || {})[chatId(n)] || {}, met = m.met | 0;
   return 'Mission: ' + chatMissionLine() + '. Credits: ' + Math.floor(G.credits) + '. Hull: ' + Math.round(G.hull) + ' of ' + Math.round(G.maxHull) + '. Upgrades: ' + (ups.length ? ups.join(', ') : 'none')
     + '. Ore in hold: ' + (G.ore | 0) + '. Patrols done: ' + (G.patrolsDone | 0) + '. Missions done: ' + (st.missions | 0) + '. Pirates destroyed: ' + (st.drones | 0)
