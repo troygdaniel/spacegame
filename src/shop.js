@@ -70,8 +70,9 @@ function buildBar(s) {
     s.tweens.add({ targets: sp, scale: 1.08, yoyo: true, repeat: -1, duration: 1100 + i * 250 });
     label(s, n.x, n.y - 24, n.name, n.css, 12).setDepth(4);
     s.npcSprites.push(sp);
-    s.spots.push({ x: n.x, y: n.y, text: n.name, key: 'npc' + i, npc: i, prompt: 'Talk to ' + n.name, color: n.css });
+    s.spots.push({ x: n.x, y: n.y, text: n.name, key: 'npc' + i, npc: i, get prompt() { return 'Talk to ' + n.name + chatPromptSuffix(); }, color: n.css }); // chat.js adds "(T to chat)" when a chat key is set
   });
+  chatBarInstall(s); // src/chat.js: the free-text chat box, T near a character (only with the player's own key)
 
   // dialogue box at the bottom: speaker in the title bar, typewriter text (src/ui.js)
   s.talkUI = panel(s, { w: 900, h: 130, y: H - 85, depth: 120, color: AMBER, foot: false });
@@ -178,6 +179,7 @@ function spotInteract(s, sp) {
 // once per frame from Station.update; true = the shop panel owns this frame
 function shopFrame(s) {
   const JD = Phaser.Input.Keyboard.JustDown, k = s.shopKeys;
+  if (chatFrame(s)) return true; // src/chat.js: a conversation is open (or T just opened one); it owns the frame
   if (s.shopOpen) {
     s.player.setVelocity(0, 0);
     if (JD(k.ESC)) closeShop(s);
