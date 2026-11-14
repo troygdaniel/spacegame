@@ -14,7 +14,7 @@ Three kinds of number go into the script, and the tables say which is which:
 | Kind | What it is | Where it comes from |
 |---|---|---|
 | **DATA** | ship and part tables, call rewards, bounties, ore price, rock hit points, belts, spawn table, positions, the shop's price function | read from `src/` when the script runs (the game's own scripts are run in a sandbox) |
-| **PINNED** | numbers that sit in a code line instead of a table: repair half a credit a point, insurance 20% (min 50), the MULE's speed, pod size, the rock split | copied once; `tools/economy-sim.mjs check` (smoke step 4y) greps the source and fails when a pinned line has changed, so a stale pin is noticed |
+| **PINNED** | numbers that sit in a code line instead of a table: repair half a credit a point, insurance 20% (min 50), the MULE's speed, pod size, the rock split | copied once, except the repair price: its number is read from the `REPAIR_PRICE` constant in `src/station.js` (a content file can change it), so the simulator follows the code. `tools/economy-sim.mjs check` (smoke step 4y) greps the source and fails when a pinned line has changed, so a stale pin is noticed |
 | **PACE** | how a player plays: seconds for a step, hit rate, how much of a session is spent earning | **guesses.** Nothing in the game knows them. They are all in one block at the top of the script |
 
 The one guess that moves every answer is **efficiency**: the share of play time spent in a loop. The rest of a session is reading, shopping, flying about, learning the

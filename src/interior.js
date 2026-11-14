@@ -353,6 +353,7 @@ function interiorTextures(s) {
   person('in-moss', { coat: 0x2c4654, edge: CYAN, hair: 0x8a8a94, skin: 0x9a6a48, cap: 0x182630, pack: 0x14222c });          // the mechanic: steel-blue overalls, a cap, a tool roll on the back
   person('in-sable', { coat: 0x241a32, edge: 0xc08cff, hair: 0xdcdcec, skin: 0xb89080, visor: 0xc08cff });                // the bounty hunter: a dark long coat, silver hair, a violet lens
   person('in-ida', { coat: 0x6a3a58, edge: IN_PINK, hair: 0x3a2418, skin: 0xe8c0a0, pack: 0x3a2030 });                    // the colonist: a rose survey jacket and a small pack
+  if (typeof NPCS !== 'undefined') NPCS.forEach(n => { if (n.look) person('in-' + n.sprite, n.look); }); // characters a content pack adds (src/contentadd.js caLook): their colour as the coat
   [[0x3a3a5a, 0x9fb4ff, 0x2a2a30, 0xe0b898], [0x5a4a2a, 0xffd37a, 0x6a4a2a, 0xb88860], [0x3a4a4a, 0x9fffe8, 0x1a1a1a, 0xd8a47a]].forEach(([coat, edge, hair, skin], i) => person('in-civ' + i, { coat, edge, hair, skin, bun: i === 1, pack: i === 0 ? 0x22223a : 0 }));
 }
 

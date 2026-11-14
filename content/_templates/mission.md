@@ -1,5 +1,5 @@
 ---
-# Copy to content/missions/<id>.md. kind picks what the mission does; everything else is words and numbers.
+# Copy to content/missions/<id>.md. A new id adds a call of that kind (at most 4; the board shows four at a time and scrolls). kind: rescue, escort, patrol or bounty. kind picks what the mission does; everything else is words and numbers.
 type: mission
 kind: rescue
 title: Example call

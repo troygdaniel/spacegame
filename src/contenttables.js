@@ -88,7 +88,8 @@ const CT_MISSION = {
   get: (id, f) => { const m = MISSIONS.find(x => x.id === id); return m ? m[f] : undefined; },
   apply: (id, data) => {
     const m = MISSIONS.find(x => x.id === id);
-    if (data.kind !== undefined && data.kind !== id) throw new Error('kind is "' + data.kind + '" but the file is called ' + id + ', so its kind must be ' + id);
+    const kind = missionKind(m); // a built-in call is of the kind it is called; a call a pack adds (src/contentadd.js) says its own
+    if (data.kind !== undefined && data.kind !== kind) throw new Error('kind is "' + data.kind + '" but the file is called ' + id + ', so its kind must be ' + kind);
     ['title', 'where', 'reward', 'count'].forEach(k => { if (data[k] !== undefined) m[k] = data[k]; });
     if (data.unlock !== undefined) m.unlock = () => contentWhen(data.unlock); // the board offers the call while this holds
     // {reward} and {count} in this call's own text are this call's, whichever call is open (the board shows them all); {progress}, {credits} and the rest are live
