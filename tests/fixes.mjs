@@ -1,15 +1,16 @@
 // One check per playtest bug fixed on card space-game-bugs (see docs/PLAYTEST.md). Run: node tests/fixes.mjs
 // Exit code 1 if any check fails. Each check says which bug it guards, so a regression names itself.
-import { launch, sleep } from './cdp.mjs';
+import { chromePool, sleep } from './cdp.mjs';
 
 const SP = "game.scene.getScene('Space')", SF = "game.scene.getScene('Surface')", ST = "game.scene.getScene('Station')";
 let failed = 0;
+const pool = chromePool(); // every case shares one Chrome (one turn at the test lock), each starting on a clean profile (tests/cdp.mjs goto)
 const check = (name, cond, detail = '') => { console.log(`  ${cond ? 'ok  ' : 'FAIL'} ${name}${detail ? '  (' + detail + ')' : ''}`); if (!cond) failed++; };
 const active = (t, scene) => t.waitFor(`!!(window.game && game.scene.isActive('${scene}'))`, 20000, scene + ' active');
 
 // ---- Surface: bug 1 (colonist), bug 2 (prompt box), bug 3 (toasts) ----
 {
-  const t = await launch('#surface');
+  const t = await pool.open('#surface');
   try {
     await active(t, 'Surface');
     console.log('bug 1: crawlers leave a waiting colonist alone (12 s, player idle at the ship)');
@@ -43,7 +44,7 @@ const active = (t, scene) => t.waitFor(`!!(window.game && game.scene.isActive('$
 
 // ---- Space: bug 2 (prompt), bug 4 (ram kills), bug 5 (insurance fee) ----
 {
-  const t = await launch('#space');
+  const t = await pool.open('#space');
   try {
     await active(t, 'Space');
     await t.waitFor(`${SP}.time.now > ${SP}.lockUntil + 100`);
@@ -79,7 +80,7 @@ const active = (t, scene) => t.waitFor(`!!(window.game && game.scene.isActive('$
 
 // ---- Station: bug 2 (prompt) ----
 {
-  const t = await launch('#station'); // no hash opens the title screen
+  const t = await pool.open('#station'); // no hash opens the title screen
   try {
     await active(t, 'Station');
     await sleep(800);
@@ -91,5 +92,6 @@ const active = (t, scene) => t.waitFor(`!!(window.game && game.scene.isActive('$
   } catch (e) { console.error('  FAIL station checks: ' + e.message); failed++; } finally { await t.close(); }
 }
 
+await pool.close();
 console.log(failed ? `\nFIXES FAIL (${failed})` : '\nFIXES PASS');
 process.exitCode = failed ? 1 : 0;

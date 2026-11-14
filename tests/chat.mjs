@@ -5,12 +5,13 @@
 // adapter wait; three network failures pause it; the key is not in the save file, the page text or the console; the setup
 // panel opens from the title screen, refuses a short key, saves a real-looking one, tests with one call, and closes with Esc.
 // Runs one headless Chrome at a time (the Mac is shared).
-import { launch, sleep } from './cdp.mjs';
+import { chromePool, sleep } from './cdp.mjs';
 import { nodeGame } from './nodegame.mjs';
 
 // built at run time so the hygiene scan (tests/hygiene.mjs) never sees a key-shaped literal
 const KEY_OPENAI = 'sk-test-' + 'o'.repeat(28), KEY_ANTHROPIC = 'sk-ant-test-' + 'a'.repeat(28);
 let failed = 0;
+const pool = chromePool(); // parts 2 to 6 share one Chrome (one turn at the test lock), each starting on a clean profile (tests/cdp.mjs goto)
 const check = (name, cond, detail = '') => { console.log(`  ${cond ? 'ok  ' : 'FAIL'} ${name}${detail ? '  (' + detail + ')' : ''}`); if (!cond) failed++; };
 
 // installed in the page: a fetch that records the call and answers in the shape of whichever provider the URL names
@@ -137,7 +138,7 @@ const call = async (t, req = REQ) => {
 
 // ---- part 2: the setup panel opens from the title screen (C), saves a key, tests it, closes with Esc ----
 {
-  const t = await launch('');
+  const t = await pool.open('');
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Title'))", 20000, 'title');
     await t.ev(MOCK);
@@ -180,7 +181,7 @@ const call = async (t, req = REQ) => {
 
 // ---- part 3: the pause menu has the Settings row and opens it from the station ----
 {
-  const t = await launch('#station');
+  const t = await pool.open('#station');
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Station'))", 20000, 'station');
     await t.ev(MOCK);
@@ -200,7 +201,7 @@ const call = async (t, req = REQ) => {
 
 // ---- part 4: the chat box in the bar (card space-game-npc-chat-bar) ----
 {
-  const t = await launch('#station');
+  const t = await pool.open('#station');
   const ST = "game.scene.getScene('Station')";
   const keyT = async () => { // T is not in cdp.mjs's key table
     await t.send('Input.dispatchKeyEvent', { type: 'keyDown', windowsVirtualKeyCode: 84, nativeVirtualKeyCode: 84, code: 'KeyT', key: 't' });
@@ -290,7 +291,7 @@ const call = async (t, req = REQ) => {
 
 // ---- part 5: memory (card space-game-npc-chat-memory) ----
 {
-  const t = await launch('#station');
+  const t = await pool.open('#station');
   const ST = "game.scene.getScene('Station')";
   const elKey = async key => t.ev(`(() => { const el = document.querySelector('input'); if (!el) return 0; el.dispatchEvent(new KeyboardEvent('keydown', { key: '${key}', bubbles: true })); return 1; })()`);
   const near = async () => { await t.ev(`(() => { const s = ${ST}; s.player.setPosition(255, 572); s.player.setVelocity(0, 0); return 1; })()`); await sleep(250); };
@@ -378,7 +379,7 @@ const call = async (t, req = REQ) => {
 
 // ---- part 6: a voice per character (card space-game-npc-chat-voice): the reply starts typing with the audio ----
 {
-  const t = await launch('#station');
+  const t = await pool.open('#station');
   const ST = "game.scene.getScene('Station')";
   const KEY_VOICE = 'TEST-KEY-NOT-REAL-' + 'ABCDEFGHIJ';
   // Deepgram answers 0.1 s of silence (after __dgDelay ms); the chat provider calls still go to the mock above
@@ -449,5 +450,6 @@ const call = async (t, req = REQ) => {
   finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
 }
 
+await pool.close();
 console.log(failed ? `CHAT FAIL (${failed})` : 'CHAT PASS');
 process.exitCode = failed ? 1 : 0;

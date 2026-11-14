@@ -12,10 +12,11 @@ import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 import { buildMods, readPacks, build } from '../tools/build-content.mjs';
 import { nodeGame } from './nodegame.mjs';
-import { launch, sleep } from './cdp.mjs';
+import { chromePool, sleep } from './cdp.mjs';
 import { copyGame, ROOT } from './gamecopy.mjs';
 const C = createRequire(import.meta.url)('../src/content.js');
 let failed = 0, n = 0;
+const pool = chromePool(); // every case shares one Chrome (one turn at the test lock), each starting on a clean profile (tests/cdp.mjs goto)
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok  ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + detail + ')' : ''}`); } };
 const tmp = [];
 const mk = (dir, rel, text) => { const f = join(dir, rel); mkdirSync(join(f, '..'), { recursive: true }); writeFileSync(f, text); };
@@ -87,7 +88,7 @@ const getLS = (t, k) => t.ev(`localStorage.getItem(${JSON.stringify(k)})`);
 
 console.log('B1. the real game: off by default, the screen, the picker');
 {
-  const t = await launch('', ROOT);
+  const t = await pool.open('', ROOT);
   try {
     await title(t);
     let w = await world(t);
@@ -180,7 +181,7 @@ console.log('B2. layers: later names win, a bad pack names itself, packs that ar
   const game = copyGame('mods'); tmp.push(game);
   writeFileSync(join(game, 'mods.generated.js'), built.text);
   writeFileSync(join(game, 'content.generated.js'), readFileSync(join(ROOT, 'content.generated.js'), 'utf8'));
-  const t = await launch('', game);
+  const t = await pool.open('', game);
   try {
     await title(t);
     let w = await world(t);
@@ -209,7 +210,7 @@ console.log('B2. layers: later names win, a bad pack names itself, packs that ar
 
 console.log('B3. a tampered or hostile pack in the browser\'s storage is refused, and the game starts');
 {
-  const t = await launch('', ROOT);
+  const t = await pool.open('', ROOT);
   try {
     await title(t);
     // the on list is junk and the picked list holds a pack whose entries are wrong in every way a hand edit can be
@@ -295,5 +296,6 @@ console.log('B4. a pack can add new things, as content/ can: shared limits, a la
 }
 
 tmp.forEach(d => rmSync(d, { recursive: true, force: true }));
+await pool.close();
 console.log(failed ? `\nMODS FAIL (${failed} of ${n})` : `\nMODS PASS (${n} checks)`);
 process.exitCode = failed ? 1 : 0;

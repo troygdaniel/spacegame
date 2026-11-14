@@ -3,9 +3,10 @@
 // gold "N CR" tag with a coin on the mission board, the shop (pops and floats -N after a purchase), the map and the pause menu.
 // Changes are made and read in one evaluation (the strip is stepped by hand with hudTick) so a busy Mac cannot miss a 1 s float.
 // Saves tests/out/credits-station.png, credits-shop.png, credits-map.png. Exit code 1 on a failed check or a console error.
-import { launch, sleep } from './cdp.mjs';
+import { chromePool, sleep } from './cdp.mjs';
 
 let bad = 0;
+const pool = chromePool(); // every case shares one Chrome (one turn at the test lock), each starting on a clean profile (tests/cdp.mjs goto)
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const scene = n => `game.scene.getScene('${n}')`;
 const ready = (t, n) => t.waitFor(`!!(window.game && game.scene.isActive('${n}'))`, 30000, n + ' active');
@@ -32,7 +33,7 @@ async function strip(t, n, tag) {
 
 // ---- station: the strip, the mission board, the shop, the map, the pause menu ----
 {
-  const t = await launch('#station');
+  const t = await pool.open('#station');
   try {
     await ready(t, 'Station');
     await strip(t, 'Station', 'station');
@@ -72,12 +73,13 @@ async function strip(t, n, tag) {
 
 // ---- flight and surface: the same strip ----
 for (const [hash, n, tag] of [['#space', 'Space', 'flight'], ['#surface', 'Surface', 'surface']]) {
-  const t = await launch(hash);
+  const t = await pool.open(hash);
   try {
     await ready(t, n);
     await strip(t, n, tag);
     check(`no console errors (${tag})`, t.errors.length === 0, t.errors.join(' | '));
   } catch (e) { console.error('  FAIL ' + e.message); bad++; } finally { await t.close(); }
 }
+await pool.close();
 console.log(bad ? 'CREDITS FAIL' : 'CREDITS PASS');
 process.exitCode = bad ? 1 : 0;

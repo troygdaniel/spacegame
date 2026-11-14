@@ -146,5 +146,32 @@ async function launchOnce(hash, root) {
   // Focus emulation keeps the page focused and visible, so a test that lets the real loop run behaves like a player's browser.
   await send('Emulation.setFocusEmulationEnabled', { enabled: true });
   await send('Page.navigate', { url: 'file://' + root + '/index.html' + hash });
-  return { send, ev, waitFor, press, clock, run, key, shot, close, errors };
+  // goto(hash, root): the same Chrome opens another page, or another copy of the game. A test with several cases uses it instead of a second
+  // launch(), which would wait for its turn at the test lock all over again. The profile is cleaned first (localStorage and sessionStorage), as a new
+  // launch would give it, and errors starts empty, so a case cannot see the last one's keys, saves or console errors. A page of its own is a
+  // new page: about:blank in between, because a change of the #hash alone does not reload the game.
+  const goto = async (h = '', r = root) => {
+    try { await ev('(() => { try { localStorage.clear(); sessionStorage.clear(); } catch (e) { /* no storage on this page */ } return 1; })()'); } catch (e) { /* nothing loaded to clean */ }
+    errors.length = 0;
+    await send('Page.navigate', { url: 'about:blank' }); await sleep(100);
+    await send('Page.navigate', { url: 'file://' + r + '/index.html' + h });
+  };
+  return { send, ev, waitFor, press, clock, run, key, shot, close, errors, goto, pid: chrome.pid };
+}
+
+// A test with several cases and one Chrome: pool.open(hash, root) is launch() the first time and goto() after, and the session it gives back has a
+// close() that does nothing, so a case written as `const t = await launch(...); try { ... } finally { await t.close(); }` only changes its first line.
+// pool.close() ends the Chrome (put it in the test's last finally). One turn at the test lock for the whole test, not one a case.
+export function chromePool() {
+  let t = null;
+  const quit = () => { if (t) { try { t.pid && process.kill(t.pid, 'SIGKILL'); } catch (e) { /* gone already */ } } };
+  process.once('exit', quit); // a test that throws must not leave its Chrome behind
+  return {
+    open: async (hash = '', root = ROOT) => {
+      if (!t) t = await launch(hash, root); else await t.goto(hash, root);
+      const view = Object.create(t); view.close = async () => {}; // the case's own close() leaves the Chrome up
+      return view;
+    },
+    close: async () => { if (t) { const x = t; t = null; await x.close(); } }
+  };
 }

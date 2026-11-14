@@ -4,9 +4,10 @@
 // verdict (jump ready, out of range by so many ly, short by so many units); a courier reaches further; galaxyJump agrees with jumpCheck of src/fuel.js
 // where both know the systems; the arrow keys, Tab and a click choose; Enter calls onJump only for a jump the ship can make, and does nothing without one;
 // Esc closes. Screenshots: tests/out/galaxy-*.png. Run: node tests/galaxymap.mjs   (exit code 1 on any failure). One Chrome at a time, closed at the end.
-import { launch, sleep } from './cdp.mjs';
+import { chromePool, sleep } from './cdp.mjs';
 
 let failed = 0;
+const pool = chromePool(); // every case shares one Chrome (one turn at the test lock), each starting on a clean profile (tests/cdp.mjs goto)
 const check = (name, cond, detail = '') => { console.log(`  ${cond ? 'ok  ' : 'FAIL'} ${name}${detail ? '  (' + detail + ')' : ''}`); if (!cond) failed++; };
 const KEYS = { A: [65, 'KeyA', 'a'], D: [68, 'KeyD', 'd'], W: [87, 'KeyW', 'w'], S: [83, 'KeyS', 's'], G: [71, 'KeyG', 'g'], ENTER: [13, 'Enter', 'Enter'], ESC: [27, 'Escape', 'Escape'], TAB: [9, 'Tab', 'Tab'],
   LEFT: [37, 'ArrowLeft', 'ArrowLeft'], RIGHT: [39, 'ArrowRight', 'ArrowRight'], UP: [38, 'ArrowUp', 'ArrowUp'], DOWN: [40, 'ArrowDown', 'ArrowDown'], H: [72, 'KeyH', 'h'] };
@@ -20,7 +21,7 @@ const texts = t => t.ev(`(() => { const out = []; const walk = o => { if (o.type
 
 // ---- part 1: the map itself, from the test hash ----
 {
-  const t = await launch('#galaxy');
+  const t = await pool.open('#galaxy');
   const press = mk(t);
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Galaxy'))", 20000, 'galaxy map');
@@ -132,7 +133,7 @@ const texts = t => t.ev(`(() => { const out = []; const walk = o => { if (o.type
 
 // ---- part 2: G opens it in the station, read only ----
 {
-  const t = await launch('#station');
+  const t = await pool.open('#station');
   const press = mk(t);
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Station'))", 20000, 'station');
@@ -146,5 +147,6 @@ const texts = t => t.ev(`(() => { const out = []; const walk = o => { if (o.type
   } finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
 }
 
+await pool.close();
 console.log(failed ? `GALAXY MAP FAIL (${failed})` : 'GALAXY MAP PASS');
 process.exit(failed ? 1 : 0);
