@@ -15,6 +15,8 @@ const t = await launch('#space');
 try {
   await t.waitFor(`!!(window.game && game.scene.isActive('Space'))`, 30000, 'Space active');
   await sleep(1500); await t.ev('(() => { G.guideDone = true; G.endingSeen = true; return 1; })()');
+  // the pull-out roll (src/pullout.js, card u-e2) is 3% a jump and left to chance, so a trip in this test would now and then end in deep space: the dice are loaded to never pull out here (tests/pullout.mjs plays the pull-out)
+  await t.ev('(() => { PULL.rnd = () => 0.99; return 1; })()');
   // card u-b5 authored Kestrel (an outpost, two planets, a belt, a beacon: tests/systems.mjs flies it and docks at it). This test is about the jump, and its second half about a system
   // with nothing in it, so Kestrel is emptied here (a copy; the page is closed at the end) and Brass Reach is taken out for the "no route" check below.
   await t.ev('(() => { window.__realKestrel = SYSTEMS.kestrel; SYSTEMS.kestrel = Object.assign({}, SYSTEMS.kestrel, { bodies: [] }); window.__realBrass = SYSTEMS.brass; return 1; })()');
