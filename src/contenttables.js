@@ -213,7 +213,8 @@ const CT_STATION = {
 // ---- text: the words the interface says (content/text/ui.md) ----
 // One table of key | text. A key is a string the game reads: help.<scene>.<line> (the H screen, src/meta.js HELP), tips.<scene> (src/map.js SCENE_TIPS) or
 // toast.<name> (the lines that pop up, UI_TEXT below, read through uiText()). Help lines and tips are plain text; a toast may use {placeholders}.
-// Copy text/ui.md to another file in text/ and change the text column to translate: a key the game does not read refuses the whole file.
+// Files in text/ are applied in name order and the last file to give a key wins, so ui.md beats a file that sorts before it (my-words.md) and loses to one that sorts after (words.md).
+// To translate, edit ui.md, or copy it to a name after ui (words-fr.md) and delete the original. A key the game does not read refuses the whole file.
 const UI_TEXT = {
   'toast.docked': 'Docked.', 'toast.delivered': 'Colonist delivered safely. +{reward} cr', 'toast.accepted': 'Mission accepted. Board your ship in the hangar.',
   'toast.dropped': 'Mission dropped. The board has other calls.',

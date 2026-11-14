@@ -45,7 +45,7 @@ content/                 the core pack: what the game ships with. One file per t
   missions/    rescue.md  escort.md ...
   npcs/        juno.md  tamsin.md  dex.md ...
   voice/       hull-low.md  launch-clear.md ...
-  text/        ui.md                       strings by key (also the way to translate)
+  text/        ui.md                       strings by key (also the way to translate; read in name order, last wins)
   _templates/  ship.md  mission.md  npc.md ...   copy one to start; a name starting with _ is ignored
 mods/                    player packs (phase 2, section 9): mods/<name>/ships/..., same layout, ignored by git
 content.generated.js     made by tools/build-content.mjs, committed, loaded by index.html
@@ -204,7 +204,7 @@ This is exactly the shape of a row of `MISSIONS` plus its `HUD_MISSIONS` entry t
 `event*` (from the list in `docs/VOICE.md` once it lands). Section `## Lines`: a list; the ship picks one at random and never repeats the last.
 
 ### 6.8 `text`
-A table `key | text` of the words the interface says. The keys are the allow-list, and `text/ui.md` lists all of them: `help.<scene>.<line>` (the H screen, one key a line: `help.space.5`), `tips.<scene>` (the tip under it) and `toast.<name>` (the lines that pop up: docking, the call outcomes, signals). A toast may use `{placeholders}` (`{reward}`, `{progress}`, `{count}`, `{name}`); help lines and tips are plain text. This is also the way to translate: copy `text/ui.md` to a new file in `text/` and change the text column. A key the game does not read refuses that whole file, with a hint ("Did you mean ..."), so a typo is seen. More strings join as code sites move to `uiText(key)`.
+A table `key | text` of the words the interface says. The keys are the allow-list, and `text/ui.md` lists all of them: `help.<scene>.<line>` (the H screen, one key a line: `help.space.5`), `tips.<scene>` (the tip under it) and `toast.<name>` (the lines that pop up: docking, the call outcomes, signals). A toast may use `{placeholders}` (`{reward}`, `{progress}`, `{count}`, `{name}`); help lines and tips are plain text. **Order:** the files in `text/` are read in name order (`ui.md` before `words.md`, `my-words.md` before `ui.md`) and the **last file to give a key wins**. A file that changes a key must therefore sort after `ui.md`; a file that sorts before it is overridden by it, key by key, and says nothing about it. This is also the way to translate: change the text column in `ui.md` itself, or copy it to a name that sorts after `ui` (`words-fr.md`) and delete the original (a copy named `fr.md` would lose to `ui.md`). A key the game does not read refuses that whole file, with a hint ("Did you mean ..."), so a typo is seen. More strings join as code sites move to `uiText(key)`.
 
 ### 6.9 Examples
 
