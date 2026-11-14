@@ -1,9 +1,10 @@
 ---
 type: text
 ---
-The words the interface says. A key is a string the game reads: help.<scene>.<line> (the H screen), tips.<scene> (the tip on the help screen)
-or toast.<name> (the lines that pop up). Change the text column; a toast may use {placeholders} such as {reward}, {name}, {progress} and {count},
-help lines and tips are plain text. To translate, copy this file to another name in this folder and change the text column.
+The words the interface says. A key is a string the game reads: help.<scene>.<line> (the H screen), tips.<scene> (the tip under it) or toast.<name> (the lines that pop up).
+Change the text column; a toast may use {placeholders} such as {reward}, {name}, {progress} and {count}; help lines and tips are plain text.
+Files here are read in name order and the last file to give a key wins, so a file that changes a key must sort after ui.md (words.md does; my-words.md loses to it).
+To translate, change the text column here, or copy this file to a name after ui (words-fr.md) and delete this one.
 
 ## Strings
 | key | text |

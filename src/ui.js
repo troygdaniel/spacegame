@@ -95,7 +95,7 @@ function typewrite(s, textObj, full, cps = 70) {
   const ev = s.time.addEvent({
     delay: 1000 / cps, loop: true, callback: () => {
       i = Math.min(full.length, i + 1); textObj.setText(full.slice(0, i));
-      if (i % 3 === 0 && full[i - 1] !== ' ') beep(900 + (i % 5) * 40, 0.012, 'square', 0.004);
+      if (i % 3 === 0 && full[i - 1] !== ' ') sfx('type');
       if (i >= full.length) api.stop();
     }
   });

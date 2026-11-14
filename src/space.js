@@ -138,9 +138,9 @@ class Space extends Phaser.Scene {
       sh.last = now; sh.hitAt = now;
       const took = Math.min(sh.pts, n);
       if (took > 0) {
-        sh.pts -= took; n -= took;
+        sh.pts -= took; n -= took; sh.hurt = true; // sh.hurt: the recharge below plays its sound once when the shield is whole again
         feelNumber(this, this.ship.x, this.ship.y - 22, '-' + Math.round(took), '#7fe9ff'); shipsHit(this, this.ship, fromX, fromY);
-        if (sh.pts <= 0) { sh.down = now; sfx('empty'); }
+        if (sh.pts <= 0) { sh.down = now; sfx('shieldDown'); }
         if (n <= 0) { sfx('tick'); this.cameras.main.shake(60, 0.002); return; } // all of it held: a flash and a number, no hull damage
       }
     }
@@ -176,7 +176,7 @@ class Space extends Phaser.Scene {
     }
     const still = crs === 'nav';
     const sh = this.sh; // the shield recharges once it has gone a while without a hit
-    if (sh && sh.max > 0 && sh.pts < sh.max && this.time.now - sh.last > sh.delay) sh.pts = Math.min(sh.max, sh.pts + sh.regen * dt / 1000);
+    if (sh && sh.max > 0 && sh.pts < sh.max && this.time.now - sh.last > sh.delay) { sh.pts = Math.min(sh.max, sh.pts + sh.regen * dt / 1000); if (sh.pts >= sh.max && sh.hurt) { sh.hurt = false; sfx('shieldUp'); } }
     const locked = time < this.lockUntil;
     const left = !still && (k.A.isDown || k.LEFT.isDown), right = !still && (k.D.isDown || k.RIGHT.isDown);
     const up = !still && (k.W.isDown || k.UP.isDown), brake = still || k.S.isDown || k.DOWN.isDown;

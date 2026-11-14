@@ -182,7 +182,7 @@ function openPause(game) {
   if (typeof JUMPST !== 'undefined' && performance.now() - JUMPST.closedAt < 250) return; // the Esc that has just closed the galaxy map must not also open the pause menu
   const s = game.scene.getScenes(true).find(sc => GAMEPLAY.includes(sc.scene.key));
   if (!s || s.leaving || s.dead || s.panel) return; // fading out, wrecked, or a terminal is open (Esc closes that)
-  saveGame();
+  saveGame(); sfx('uiOpen');
   s.scene.pause();
   game.scene.run('Pause', { from: s.scene.key });
 }
@@ -275,7 +275,7 @@ class Pause extends Phaser.Scene {
   resume() {
     const sc = this.scene.get(this.from); // clear a stale Esc flag so a terminal does not close the moment it opens
     if (sc && sc.k && sc.k.ESC) Phaser.Input.Keyboard.JustDown(sc.k.ESC);
-    this.scene.stop(); this.scene.resume(this.from);
+    sfx('uiClose'); this.scene.stop(); this.scene.resume(this.from);
   }
 
   toStation() {

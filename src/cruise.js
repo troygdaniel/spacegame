@@ -45,7 +45,7 @@ function cruiseInterdict(s) {
   }
   cr.warnUntil = s.time.now + INTERDICT.warnMs;
   if (s._hud) s._hud.interdictUntil = s.time.now + 2500; // hud.js: the INTERDICTED banner and the red edge
-  s.cameras.main.shake(500, 0.008); sfx('siren');
+  s.cameras.main.shake(500, 0.008); sfx('interdict');
   toast(s, 'Interdicted. Pirates ahead: fight, or fly away.', '#ff4d6d');
 }
 
@@ -78,6 +78,7 @@ function cruiseSetup(s) {
     lk: 0, z: 1, rows: [], readAt: 0, ps: []
   };
   s.cruising = false;
+  s.events.once('shutdown', stopCruiseHum); // the rumble never outlives the scene (a death, a dock, a restart)
   cr.k = s.input.keyboard.addKeys('N,C,X,ENTER,UP,DOWN,W,S');
   // the cyan edge vignette: clear in the middle, cyan toward the corners
   if (!s.textures.exists('cruise-vig')) {
@@ -168,12 +169,12 @@ function cruiseEngage(s) {
   if (s.enemies.getChildren().some(e => e.active && d(ship, e) < CRUISE.lockHostile)) return say('Hostiles near: cruise locked.', '#ff4d6d');
   cr.active = true; s.cruising = true; cr.cancel = false; cr.nudge = 0; cr.speed = Math.min(ship.body.speed, 600);
   s.cameras.main.startFollow(ship, true, 1, 1); s.cameras.main.shake(260, 0.003);
-  sfx('cruiseOn'); toast(s, 'Cruise to ' + t.name + '. S cancels, A and D nudge.', '#9fe9ff');
+  sfx('cruiseOn'); startCruiseHum(); toast(s, 'Cruise to ' + t.name + '. S cancels, A and D nudge.', '#9fe9ff');
 }
 
 function cruiseEnd(s, why) {
   const cr = s.cr, ship = s.ship, t = cr.target;
-  cr.active = false; s.cruising = false;
+  cr.active = false; s.cruising = false; stopCruiseHum();
   const sp = Math.min(cr.speed, why === 'cut' ? shipStat('vmax') : CRUISE.dropSpeed);
   ship.body.setVelocity(Math.cos(ship.rotation) * sp, Math.sin(ship.rotation) * sp).setDrag(0.55);
   cr.speed = 0; cr.cancel = false; cr.nudge = 0; s.lockUntil = 0;

@@ -217,8 +217,8 @@ Object.assign(ShipBay.prototype, {
     const rec = res.ship; let msg;
     if (what === 'board') { shipRefresh(this); this.selUid = rec.uid; msg = 'Now flying ' + rec.name + '.'; sfx('dock'); }
     else if (what === 'move') { this.selUid = rec.uid; msg = rec.name + ' is here. -' + hudFmt(res.cost) + ' CR.'; sfx('chime'); }
-    else if (what === 'buy') { this.tab = 'fleet'; HANGAR_UI.tab = 'fleet'; this.selUid = rec.uid; msg = 'Bought ' + rec.name + '. Parked here: board it to fly.'; sfx('chime'); }
-    else if (what === 'sell') { this.selUid = activeShip().uid; msg = 'Sold ' + rec.name + ' for ' + hudFmt(res.got) + ' CR.'; sfx('chime'); }
+    else if (what === 'buy') { this.tab = 'fleet'; HANGAR_UI.tab = 'fleet'; this.selUid = rec.uid; msg = 'Bought ' + rec.name + '. Parked here: board it to fly.'; sfx('buy'); }
+    else if (what === 'sell') { this.selUid = activeShip().uid; msg = 'Sold ' + rec.name + ' for ' + hudFmt(res.got) + ' CR.'; sfx('sell'); }
     this.noteHold = null; this.hangarRefresh(); this.hangarNote(msg, '#6dff9c');
     return true;
   },
@@ -237,7 +237,7 @@ Object.assign(ShipBay.prototype, {
     if (t === this.tab || !this.tabs[t]) return;
     this.armed = null; this.noteHold = null; this.tab = t; HANGAR_UI.tab = t;
     if (t === 'yard' && !this.yardList().includes(this.selModel)) this.selModel = this.yardList()[0] || null;
-    beep(520, 0.03, 'square', 0.02); this.hangarRefresh();
+    sfx('click'); this.hangarRefresh();
   },
   hangarStep(d) {
     if (this.tab === 'keys') this.hangarTab('fleet'); // A or D from the controls goes to the fleet first
@@ -251,7 +251,7 @@ Object.assign(ShipBay.prototype, {
     const yard = this.tab === 'yard', it = (yard ? this.yardList() : G.fleet)[i]; if (!it) return;
     this.armed = null; this.noteHold = null;
     if (yard) this.selModel = it; else this.selUid = it.uid;
-    beep(520, 0.03, 'square', 0.02); this.hangarRefresh();
+    sfx('click'); this.hangarRefresh();
   },
   hangarArm(kind, id) { this.armed = { kind, id, at: performance.now() }; sfx('tick'); this.hangarApply(); },
   hangarDisarm() { if (!this.armed) return; this.armed = null; this.hangarApply(); },

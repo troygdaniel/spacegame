@@ -23,6 +23,7 @@ function contentApply() {
   }
   CONTENT_ERRORS.length = 0; r.errors.forEach(e => CONTENT_ERRORS.push(e));
   Object.assign(CONTENT_STATE, { loaded: r.loaded, hash: r.hash, core: r.core || '', modded: !!r.modded, files: r.files, applied: r.applied, skipped: r.skipped });
+  if (typeof modsApply === 'function' && typeof ContentLib !== 'undefined') modsApply(); // src/mods.js: the packs the player turned on, laid over the core pack
   CONTENT_ERRORS.forEach(e => { try { console.warn('[content] ' + (typeof ContentLib !== 'undefined' ? ContentLib.formatError(e) : e.path + ': ' + e.message)); } catch (x) { /* a warning is optional */ } });
 }
 
