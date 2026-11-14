@@ -105,7 +105,7 @@ section('validator: sections, lists, key lines and tables');
   const M = (body) => FM('mission', 'kind: rescue\ntitle: T\nreward: 5\n', body);
   const N = (body) => FM('npc', 'name: JUNO\n', body);
   exact('an unknown section with a hint', one('content/missions/m.md', M('## Offr\nx\n')).errs, 'content/missions/m.md, line 7: unknown section "## Offr". Did you mean "## Offer"? Ignored.');
-  exact('an unknown section without a hint', one('content/missions/m.md', M('## Banana\nx\n')).errs, 'content/missions/m.md, line 7: unknown section "## Banana". This type has: Offer, Board line, Progress, Steps, Failure. Ignored.');
+  exact('an unknown section without a hint', one('content/missions/m.md', M('## Banana\nx\n')).errs, 'content/missions/m.md, line 7: unknown section "## Banana". This type has: Offer, Board line, Progress, Progress rescued, Steps, Failure. Ignored.');
   exact('a section twice', one('content/missions/m.md', M('## Offer\nA\n\n## Offer\nB\n')).errs, 'content/missions/m.md, line 10: "## Offer" appears twice. Used the first.');
   exact('a list line without a dash', one('content/missions/m.md', M('## Steps\n- One\nTwo\n')).errs, 'content/missions/m.md, line 9: this line is not a list item: start it with "- ". Ignored.');
   check('list items are kept in order, * works as a bullet', JSON.stringify(one('content/missions/m.md', M('## Steps\n- One\n* Two\n- Three\n')).e.data.steps) === '["One","Two","Three"]');
@@ -209,7 +209,15 @@ section('build script and the generated file');
   const errs = bad.result.errors.filter(e => e.level === 'error').length;
   check('the bad fixture pack loads what it can and lists what was wrong', bad.result.entries.length === 4 && errs === 12, bad.result.entries.length + ' entries, ' + errs + ' errors');
   check('and the problems are in the generated file too', JSON.stringify(vm.runInContext('CONTENT', (() => { const c = vm.createContext({}); vm.runInContext(bad.text, c); return c; })()).errors) === JSON.stringify(bad.result.errors));
-  check('readPack skips _ and . names and gives / paths with the prefix', readPack(join(ROOT, 'content'), 'content/').length === 0 && readPack(join(ROOT, 'tests/fixtures/content-good'), 'content/').every(f => f.path.startsWith('content/') && !f.path.includes('\\')));
+  const shipped = build({ dir: join(ROOT, 'content'), prefix: 'content/', out: '/nonexistent/none.js', write: false });
+  check('the shipped content/ is the proof set of card m4 (2 ships, 1 mission, 1 npc, 9 parts) and builds with no problems at all', shipped.result.errors.length === 0 && shipped.result.entries.map(e => e.type + ':' + e.id).sort().join() === 'mission:rescue,npc:juno,part:engine-1,part:engine-2,part:engine-3,part:shields-1,part:shields-2,part:shields-3,part:weapons-1,part:weapons-2,part:weapons-3,ship:drone,ship:raider', shipped.result.errors.map(C.formatError).join(' | '));
+  check('an engine part may set boostAdd (px/s on the boost speed) up to 2000, and a rescue call has a second progress text', (() => {
+    const p = (path, text) => C.validate(C.parse(path, text));
+    const ok = p('content/parts/booster-1.md', '---\ntype: part\nslot: engine\ntier: 1\nname: B\nboostAdd: 200\n---\n').data, big = p('content/parts/booster-1.md', '---\ntype: part\nslot: engine\ntier: 1\nname: B\nboostAdd: 9000\n---\n');
+    const r = p('content/missions/rescue.md', '---\ntype: mission\nkind: rescue\ntitle: T\nreward: 5\n---\n## Progress rescued\nAboard.\n').data;
+    return ok && ok.boostAdd === 200 && big.errors.some(e => /boostAdd/.test(e.message) && /2000/.test(e.message)) && r && r.progressRescued === 'Aboard.';
+  })());
+  check('readPack skips _ and . names (the templates) and gives / paths with the prefix', readPack(join(ROOT, 'content'), 'content/').length === 13 && !readPack(join(ROOT, 'content'), 'content/').some(f => /\/_/.test(f.path)) && readPack(join(ROOT, 'tests/fixtures/content-good'), 'content/').every(f => f.path.startsWith('content/') && !f.path.includes('\\')));
   check('generate() of an empty result is valid JavaScript', (() => { const c = vm.createContext({}); vm.runInContext(generate({ hash: 'x', files: 0, entries: [], errors: [] }), c); return vm.runInContext('CONTENT.entries.length', c) === 0; })());
 }
 

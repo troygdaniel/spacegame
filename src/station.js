@@ -49,8 +49,9 @@ class Station extends Phaser.Scene {
     this.panelBox = this.ui.box.setVisible(false); this.boardObjs = [];
 
     if (this.arrive && G.mission === 'rescued') {
-      G.credits += REWARD; G.mission = 'none'; G.stats.missions++;
-      toast(this, 'Colonist delivered safely. +' + REWARD + ' cr', '#6dff9c'); sfx('chime');
+      const pay = (MISSIONS.find(m => m.id === 'rescue') || { reward: REWARD }).reward; // the rescue call's reward (content/missions/rescue.md)
+      G.credits += pay; G.mission = 'none'; G.stats.missions++;
+      toast(this, 'Colonist delivered safely. +' + pay + ' cr', '#6dff9c'); sfx('chime');
     } else if (this.arrive) {
       toast(this, 'Docked.', '#9fe9ff');
     }

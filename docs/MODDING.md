@@ -174,7 +174,7 @@ Fields marked * are required. All numbers have ranges in the schema; the example
 `name*`, `role`, `side` (`player` or `pirate`), `art` (pick from the built-in textures), `trim` and `color` (colours). Player ships: `hull`, `speed` (top speed), `boost`, `accel`, `turn` (a multiplier), `tank`, `fuelPerLy`, `range` (jump range in ly), `cargo` (the hold), `guns`, `sensor`, `price`, `yard` (the stations that sell it). Pirate ships keep the names of `PIRATES` in `enemies.js`: `hp`, `speed`, `max`, `turn`, `engage`, `hold` (stand-off distance), `aim`, `shot` (`[min, max]` ms), `bullet`, `dmg`, `spread`, `strafe`, `ram`, `bounty`, `credits`, `radar`; `fireRange` is their shooting range in px (it is `PIRATES.range`; a ship's own `range` is the jump range). Section: `## Hangar line`. Matches `SHIP_MODELS` in `docs/UNIVERSE.md` section 6.1 and `PIRATES` in `enemies.js`. The exact fields and ranges are the `SCHEMA` in `src/content.js`.
 
 ### 6.2 `part`
-`slot*` (engine, shields, weapons, tank, cargo), `tier*` (1 to 3), `name*`, `price`, and that slot's effect numbers (`speedPct`, `jump`, `boostTank`; `points`, `regen`, `delay`; `fuelMult`; `holdPlus`). Today's `UPGRADES` with their `descs` and `prices` are parts.
+One file a tier, named `<slot>-<tier>` (`shields-1`, `engine-3`; the name says which tier of which slot). `slot*` (engine, shields, weapons, tank, cargo), `tier*` (1 to 3), `name*` (the tier's name in the shop), `brief` (a short form for tight places), `price` (for a Wren: a ship scales it by its price multiplier), and that tier's numbers: shields `points`, `regen` (points a second), `delay` (ms without a hit before it recharges); weapons `delay` (ms between shots), `damage`; engine `speedPct` (+% top speed), `jump` (+ly), `boostAdd` (+px/s boost speed), `boostTank`, `boostRegen`; tank `fuelMult`; cargo `holdPlus`. The text under the front matter is the shop's one-line description. This is `PARTS` in `src/data_parts.js`, which `shipStat()` reads; a file that says the wrong slot or tier for its name is refused with a message.
 
 ### 6.3 `system`
 `name*`, `kind*` (home, outpost, trade, mining, wild, graveyard, nest), `ly` (`[x, y]`), `size`, `danger`, `traffic`, `star` (`type`, `x`, `y`), `seed`. Section `## Bodies` is a table: `id | type | name | x | y | art | r | rocks | landable`. Matches `SYSTEMS` in `docs/UNIVERSE.md` 4.1. A body of type `station` points at a `stations/<id>.md`.
@@ -187,6 +187,7 @@ Fields marked * are required. All numbers have ranges in the schema; the example
 - `## Offer` text shown on the board.
 - `## Board line` a list of `state: text` pairs (`active:`, `rescued:`, `failed:`) for the one-line objective.
 - `## Progress` text for the progress view; may use `{progress}` and `{count}`.
+- `## Progress rescued` the progress text once the colonist is aboard (rescue calls; other kinds say it with `## Progress`).
 - `## Steps` a list: the HUD checklist.
 - `## Failure` text when the ship is lost or the mission fails.
 
@@ -282,14 +283,16 @@ Voice (`space-game-voice`) and chat (`space-game-npc-chat`) use the player's own
 
 ## 8. The proof: what moves to markdown first
 
-Nothing about play changes. The proof set exists in the code today and does not wait for the universe cards:
-- **Two ships:** `raider` and `drone` (pirate ship stat blocks from `PIRATES`). When `space-game-u-a3-ship-models` merges, `wren` and `kite` follow.
-- **One mission:** `rescue` (title, text, board lines, steps, failure line, reward).
-- **One NPC:** JUNO (lines, reactions).
-- **The three upgrades:** `armor`, `rapid`, `booster` as parts with names, descriptions and prices.
-- **One system:** `halcyon`, once `space-game-u-a1-systems-data` merges (the table must exist first).
+Nothing about play changes. Card `m4-proof` moved this set, and `tests/contentproof.mjs` (smoke step 4x) guards it:
+- **Two ships:** `raider` and `drone` (the pirate stat blocks of `PIRATES` in `enemies.js`; `gunship` follows with the rest). `name`, `role`, `side` and the description are read and checked, but nothing in the game shows them yet. When `space-game-u-a3-ship-models` merged, `wren` and `kite` did not move with them: a player ship file is refused until its adapter lands (card `m5`).
+- **One mission:** `rescue` (title, place, reward, offer, the three board lines, both progress texts, steps, failure line). The station pays what the file says.
+- **One NPC:** JUNO (look, place, voice, lines, reactions, persona). Her file leaves out `station:` because there is no `stations/halcyon-station.md` yet.
+- **Nine part tiers:** shields, weapons and engine, tiers 1 to 3 (what `armor`, `rapid` and `booster` became in `space-game-u-d1-parts`). The adapter reads all five slots; tank and cargo files join with `m5`.
+- **One system:** `halcyon`, once `space-game-u-a1-systems-data` merges (the table must exist first). Not part of `m4`.
 
-For each, the in-code table stays as the default and `tests/content.mjs` pins that the markdown file, applied over the default, changes **nothing** (a field-by-field comparison). Editing a file in a copy of the game (not in the test) then changes exactly what the file says. The test also loads a deliberately broken fixture pack (`tests/fixtures/content-bad/`) and checks that the game boots to Title, lists the errors and plays on the defaults.
+How it works: `src/contenttables.js` registers one adapter per type in `CONTENT_TABLES` (`src/boot.js`); `contentApply()` hands it each valid file and it changes the in-code row **in place**, only the fields the file sets. A file that disagrees with the code (a part in the wrong slot, a call of another `kind`, a pirate that says `side: player`) is refused with a message and the row stays as it was. A file with an id the code has no row for is refused too ("cannot add new ones"); adding rows is card `m5`.
+
+For each, the in-code table stays as the default and `tests/contentproof.mjs` pins that the markdown file, applied over the default, changes **nothing** (it plays the game twice, with the shipped pack and with an empty one, and compares every number and text field by field). It then edits a copy of the files and checks that exactly what each edited line says has changed, and that the Title would say MODDED. It also loads a pack of wrong files and checks that all are refused and every table stays the default. `tests/contentboot.mjs` loads a deliberately broken fixture pack (`tests/fixtures/content-bad/`) and checks that the game boots to Title, lists the errors and plays on the defaults.
 
 End state, in later cards: once a table is fully migrated and pinned, the in-code copy shrinks to a minimal safe core (one Wren, Halcyon, the rescue call) and the shipped `content/` becomes the single source of truth.
 

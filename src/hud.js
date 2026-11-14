@@ -315,9 +315,9 @@ function hudMission(s, key) {
   if (st === 'failed') return { kind: 'failed', head: 'MISSION FAILED', next: m.line('failed') };
   const row = HUD_MISSIONS[m.id];
   if (!row) return { kind: 'active', head: m.title, sub: m.where, reward: m.reward, next: m.line(st) };
-  const cur = row.cur(s, key);
+  const at = row.cur(s, key), cur = Math.min(at, row.steps.length - 1); // a content file may list fewer steps than the code counts
   return {
-    kind: 'active', head: m.title, sub: m.where, reward: m.reward, cur, next: row.next(s, key, cur),
+    kind: 'active', head: m.title, sub: m.where, reward: m.reward, cur, next: row.next(s, key, at),
     steps: row.steps.map((t, i) => ({ text: typeof t === 'function' ? t() : t, state: i < cur ? 'done' : i === cur ? 'cur' : 'todo' }))
   };
 }
