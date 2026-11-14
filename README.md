@@ -24,6 +24,7 @@ Open `index.html` in a browser (Chrome is what it is tested in). Double-clicking
 - src/hyperspace.js the Hyper scene, the watched hyperspace tunnel (star streaks, gates, ribbons, nose bloom, readout). Dark: only index.html#hyper (or #hyper<ly>, e.g. #hyper24) opens it, no game effect yet
 - src/voice.js  optional ship voice (Deepgram text-to-speech, only with the player's own key, see docs/VOICE.md)
 - src/interior.js the station interior art and animation
+- the bar's six characters (JUNO, TAMSIN, DEX, MOSS, SABLE, IDA KETTER) are rows of NPCS in src/shop.js with their lines, reactions, voice name and persona card (docs/NPC-CHAT.md 3.1); IDA is there only after the first rescue is paid; their sprites are drawn in src/interior.js; tests/npcs.mjs checks them
 - src/main.js    Phaser config and scene list
 - src/content.js, tools/build-content.mjs, content/, content.generated.js  content in markdown (docs/MODDING.md): src/content.js is the parser, schema and validator (no Phaser; Node and the browser use the same file), `node tools/build-content.mjs` turns content/*.md into content.generated.js (`--watch`, `--strict`, `--check`), content/_templates/ has one starting file per type; tests/content.mjs checks it. Not loaded by the game yet: card space-game-m2-loader wires it in
 New files get their own script tag in index.html. Keep edits inside the files your card names.

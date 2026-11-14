@@ -14,6 +14,7 @@
 #   4e. tests/credits.mjs: the gold coin and CR readout in the HUD strip and on the board, shop, map and pause panels, +N / -N floats
 #   4f. tests/hyper.mjs: the hyperspace tunnel demo (#hyper), its timing, readout and colour; no save written
 #   4g. tests/shipmode.mjs: boarding opens the Ship bay instead of launching; Enter launches, Esc goes back, Tab opens the map over it
+#   4g. tests/npcs.mjs: the six bar characters (persona cards, lines, reactions), IDA only after the first rescue is paid, a talk with each new one
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #      their failure paths, with the game clock stepped by hand
 # Needs Google Chrome and Node 22+. Uses throwaway Chrome profiles, never your own. Chrome runs with
@@ -61,6 +62,9 @@ echo "== 4g. ship bay between boarding and launch (tests/shipmode.mjs)"
 if node tests/shipmode.mjs; then :; else fail=1; fi
 echo "== 4h. ship voice with a mocked fetch: no key, no call; nothing ever reaches Deepgram (tests/voice.mjs)"
 if node tests/voice.mjs; then :; else fail=1; fi
+
+echo "== 4g. the Drift's six characters (tests/npcs.mjs)"
+if node tests/npcs.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
