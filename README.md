@@ -5,7 +5,7 @@ A browser 2D top-down space game, Elite Dangerous flavoured. Walk around a stati
 Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.md`).
 
 ## The loop (v0.1)
-Station (walk, take the rescue call, board ship) -> Ship bay (look the ship over, read the mission and the controls, Enter to launch, Esc to go back) -> Space (fly, fight drones, dock/land with L) -> Surface (walk, find the colonist, protect them, return to ship) -> fly home, dock, get paid.
+Station (walk, take the rescue call, board ship) -> Ship bay (the hangar terminal: look the ship over, read the mission, switch, buy, sell, rename and move ships, Enter to launch, Esc to go back) -> Space (fly, fight drones, dock/land with L) -> Surface (walk, find the colonist, protect them, return to ship) -> fly home, dock, get paid.
 ## Play
 
 Open `index.html` in a browser (Chrome is what it is tested in). Double-clicking the file works; if you prefer a server, run `python3 -m http.server` in this folder and open http://localhost:8000. If you are editing the markdown in `content/`, run `node tools/serve.mjs` instead: it rebuilds `content.generated.js` when you save and the page reloads on **R** (see `docs/MODDING.md` section 4).
@@ -16,7 +16,8 @@ Open `index.html` in a browser (Chrome is what it is tested in). Double-clicking
 - src/data_parts.js the five ship parts (shields, weapons, engine, tank, cargo), three tiers each: names, prices, what each tier does, what a station sells; shipStat() in fleet.js applies them, space.js has the shield (points that take hits before the hull, recharging after a pause), the shop in shop.js sells them to the ship you fly (its fit limit and its price multiplier) at the station's stock (docs/UNIVERSE.md 7); tests/parts.mjs checks every effect
 - src/shipmodels.js the six player ships (wren, kite, ox, talon, pathfinder, bastion): each hull drawn in code with its upgrade tiers, its physics circle, nozzles, flame colours and the anchors for the Ship bay callouts (table SHIP_LOOK); shipRefresh() in ships.js draws the active one into the texture 'ship'; tests/shipsheet.mjs makes the picture sheet and checks them
 - src/journal.js the Journal: J in the station (or the Journal row in Pause) lists everyone met in the Drift with their mood, what they think of you, the last thing said and what you learned, from G.chat (docs/NPC-CHAT.md 4 and 5); works with no key; Forget everything needs a second press; tests/journal.mjs checks it
-- src/shipmode.js the Ship bay scene between boarding and flight: the ship, its status, the mission, the controls guide, LAUNCH; tests/shipmode.mjs checks it. It is also where the hangar terminal of docs/UNIVERSE.md will live (see the comment at the top of the file)
+- src/shipmode.js the Ship bay scene between boarding and flight: the ship in view, its status, the mission, LAUNCH; tests/shipmode.mjs checks it
+- src/hangar.js the hangar terminal inside the Ship bay (docs/UNIVERSE.md 6.3): a panel with FLEET (your six berths: board, move, sell with a second S, rename with R), YARD (the ships this station sells, buy with a second Enter) and CONTROLS; the stage and the status panel show the selected ship and the amber button does what Enter does for it (LAUNCH, BOARD, MOVE HERE, BUY); the rules are src/fleet.js; tests/hangar.mjs checks it
 - src/space.js   flight, combat, dock/land
 - src/surface.js planet surface, colonist escort
 - src/hud.js, src/ui.js credits are one look everywhere: a gold coin and "N CR" (hudStrip and hudCoin in hud.js, crTag for the panels in ui.js; +N green and -N red float on every change); tests/credits.mjs checks it
