@@ -121,7 +121,7 @@ console.log('switching');
   const credits = w.run('G.credits');
   const r = w.j('fleetSwitch(1)');
   check('switching to the Wren parked here works', r.ok === true && w.run('G.active') === 0);
-  check('G now reads the Wren: hull 73 of 140 (two plating tiers), 4 ore, armor 2, top speed 480', w.j('[G.hull, G.maxHull, G.ore, G.upgrades.armor, shipStat("vmax")]').join() === '73,140,4,2,480');
+  check('G now reads the Wren: hull 73 of 100 (shields add points, not hull), 4 ore, armor 2, top speed 480', w.j('[G.hull, G.maxHull, G.ore, G.upgrades.armor, shipStat("vmax")]').join() === '73,100,4,2,480');
   const kite = w.j('G.fleet[1]');
   check('the Kite kept its own hull 50, 3 ore, fuel 11 and engine 2', kite.hull === 50 && kite.ore === 3 && kite.fuel === 11 && kite.parts.engine === 2 && kite.at === HOME, JSON.stringify(kite));
   check('cargo never moves: the Wren\'s 4 ore are still the Wren\'s and the Kite\'s 3 still the Kite\'s', w.run('G.fleet[0].ore') === 4 && w.run('G.fleet[1].ore') === 3);
@@ -240,7 +240,7 @@ try {
   await ev(`(() => { ${MORE_SYSTEMS}\n return 1; })()`);
   const rt = await json(`(() => {
     newGameState(); G.credits = 90000; G.hull = 61; G.ore = 2; G.upgrades.armor = 1;
-    fleetBuy('kite'); G.hull = 40; G.ore = 5; G.fleet[1].parts.engine = 2; G.fleet[1].fuel = 12.5; fleetRename(2, 'Quick Kite');
+    fleetBuy('kite'); G.hull = 40; G.ore = 3; G.fleet[1].parts.engine = 2; G.fleet[1].fuel = 12.5; fleetRename(2, 'Quick Kite');
     fleetBuy('ox', false); // not sold at Halcyon: refused
     G.fleet.push(Object.assign(newShip('ox', '${KESTREL}'), { uid: 3, name: 'Far Ox', hull: 150 }));
     fleetSync();
@@ -254,7 +254,7 @@ try {
   check('a three-ship fleet survives snapshot and applySave, byte for byte', rt.same === true);
   check('the three ships, their names and places are the same, and the Kite (the one you fly) is where you wake',
     rt.n === 3 && rt.active === 1 && rt.uids.join() === '1,2,3' && rt.names.join() === 'Wren,Quick Kite,Far Ox' && rt.at.join() === 'halcyon-station,halcyon-station,kestrel-outpost', JSON.stringify(rt));
-  check('each ship came back with its own hull, ore, fuel and parts', rt.hull === 40 && rt.ore === 5 && rt.fuel === 12.5 && rt.engine === 2 && rt.ox === 150, JSON.stringify(rt));
+  check('each ship came back with its own hull, ore, fuel and parts', rt.hull === 40 && rt.ore === 3 && rt.fuel === 12.5 && rt.engine === 2 && rt.ox === 150, JSON.stringify(rt));
   check('the model of each ship is saved by id', rt.saved.join() === 'wren,kite,ox');
   const wake = await json(`(() => { newGameState(); const s = JSON.parse(JSON.stringify(snapshot())); G.fleet[0].at = 'kestrel-outpost'; const s2 = JSON.parse(JSON.stringify(snapshot())); newGameState(); applySave(s2); return [G.fleet[G.active].at, G.lastDock]; })()`);
   check('you always wake with your ship docked at lastDock, even if the file says it was elsewhere', wake.join() === 'halcyon-station,halcyon-station', wake.join());
