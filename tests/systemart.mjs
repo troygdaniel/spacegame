@@ -11,9 +11,9 @@ import { launch, sleep } from './cdp.mjs';
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 
-const t = await launch('#space');
+const t = await launch('#station'); // not #space: that scene already draws the planets of Halcyon's far space (src/cruise.js)
 try {
-  await t.waitFor(`!!(window.game && game.scene.isActive('Space'))`, 30000, 'Space active');
+  await t.waitFor(`!!(window.game && game.scene.isActive('Station'))`, 30000, 'Station active');
   await sleep(1000);
   check('nothing is made at boot: no planet kind, star type or station look exists yet',
     await t.ev(`!game.textures.getTextureKeys().some(k => /^(planet-|star-|sl-)/.test(k))`));
@@ -56,6 +56,9 @@ try {
   check('the same kind and seed paints the same pixels again', (await t.ev(hash("'planet-lava-1'"))) === h1);
   const same = await t.ev(`(() => { const a = ${L}.textures.get(planetTexture(${L}, 'ice', 20 + 1)); return planetTexture(${L}, 'ice', 21) === 'planet-ice-21' && ${L}.textures.get('planet-ice-21') === a; })()`);
   check('asking again for one that is alive does not paint it again', same);
+  // a planet that an image is showing is never dropped, even when it is the oldest and the cache is over its cap
+  await t.ev(`(() => { planetTexture(${L}, 'ice', 40); ${L}.put(${L}.add.image(0, 0, 'planet-ice-40').setVisible(false)); ['rock', 'gas', 'lava', 'ringed', 'rock', 'gas', 'lava', 'ice'].forEach((k, i) => planetTexture(${L}, k, 50 + i)); })()`);
+  check('a planet that is on show is never dropped from the cache', await t.ev(`${L}.textures.exists('planet-ice-40')`));
   check('an unknown kind falls back to rock', await t.ev(`planetTexture(${L}, 'plasma', 5) === 'planet-rock-5'`));
   // the picture: one of each kind, as they are when you arrive
   await t.ev(`(() => { ${L}.clear(); planetTexture(${L}, 'rock', 1); PLANET_KINDS.forEach((k, i) => { ${L}.put(${L}.add.image(130 + i * 255, 330, planetTexture(${L}, k, 1)).setScale(0.3)); ${L}.put(${L}.add.text(130 + i * 255, 470, k, { fontFamily: 'monospace', fontSize: '18px', color: '#9fe9ff' }).setOrigin(0.5)); }); })()`);

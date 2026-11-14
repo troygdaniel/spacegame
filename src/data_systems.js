@@ -2,7 +2,7 @@
 // One plain object per system. Everything with a place in it is a "body" in `bodies`; src/universe.js looks them up, and the
 // scenes (space.js, asteroids.js, poi.js, stationart.js, traffic.js, map.js, missions.js) read their coordinates from there
 // instead of keeping tables of their own.
-//   body.type   station | planet | belt | poi | scenery | gate
+//   body.type   station | planet | belt | poi | scenery | gate (a planet with kind and seed is made by planetTexture; a scenery with look by stationLookFx)
 //   body.art    the texture key the body is drawn with (boot.js, stationart.js)
 //   labelDy     where the name label sits, in pixels above (negative) or below the body
 // Only Halcyon exists so far, with exactly the coordinates the game has always used, so nothing moves for the player.
@@ -12,7 +12,7 @@ const SYSTEMS = {
   halcyon: {
     id: 'halcyon', name: 'Halcyon', kind: 'home',
     ly: [20, 22],                 // galaxy map position, light years (section 4.2)
-    size: 8000,                   // world px, square; the cruise card grows it
+    size: 36000,                  // world px, square (docs/UNIVERSE.md 2.2): the old 8000 px cluster stays in the north-west corner, the rest is far space
     danger: 1, traffic: 2,        // 0 to 5 and 0 to 3 (it has police, so traffic is 2 or more)
     bodies: [
       { id: 'halcyon-station', type: 'station', art: 'station', name: 'Halcyon Station', x: 4000, y: 4000, labelDy: -260 },
@@ -35,7 +35,14 @@ const SYSTEMS = {
       { id: 'kestrel-outpost', type: 'scenery', art: 'outpost', name: 'Kestrel Outpost', x: 2000, y: 5800, labelDy: -175 },
 
       // where the MULE is escorted to (src/missions.js)
-      { id: 'perseus-gate', type: 'gate', name: 'Perseus gate', x: 1800, y: 6200, r: 110 }
+      { id: 'perseus-gate', type: 'gate', name: 'Perseus gate', x: 1800, y: 6200, r: 110 },
+
+      // far space: beyond the old 8000 px cluster, reached by cruise (src/cruise.js draws these with cruiseFarBodies).
+      // kind + seed pick a planet from src/art_world.js planetTexture; r is the radius in world px; look is a station look from src/stationart.js
+      { id: 'kepler-4c', type: 'planet', kind: 'rock', seed: 3, name: 'Kepler-4c', x: 17000, y: 4200, r: 210, landable: false },
+      { id: 'slag-belt', type: 'belt', name: 'Slag Belt', x: 12500, y: 22000, r: 1100, rocks: 40 },
+      { id: 'tern', type: 'planet', kind: 'gas', seed: 2, name: 'Tern', x: 27500, y: 25500, r: 440, landable: false },
+      { id: 'tern-wreck', type: 'scenery', look: 'derelict', name: 'Dead station', x: 24400, y: 22800, labelDy: -240 }
     ]
   }
 };

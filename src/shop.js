@@ -117,9 +117,10 @@ function buildBar(s) {
     s.tweens.add({ targets: sp, scale: 1.08, yoyo: true, repeat: -1, duration: 1100 + i * 250 });
     s.npcLabels.push(label(s, n.x, n.y - 24, n.name, n.css, 12).setDepth(4));
     s.npcSprites.push(sp);
-    s.npcSpots.push({ x: n.x, y: n.y, text: n.name, key: 'npc' + i, npc: i, prompt: 'Talk to ' + n.name, color: n.css });
+    s.npcSpots.push({ x: n.x, y: n.y, text: n.name, key: 'npc' + i, npc: i, get prompt() { return 'Talk to ' + n.name + chatPromptSuffix(); }, color: n.css }); // chat.js adds "(T to chat)" when a chat key is set
   });
   barSync(s); // who is in the bar right now
+  chatBarInstall(s); // src/chat.js: the free-text chat box, T near a character who is here (only with the player's own key)
 
   // dialogue box at the bottom: speaker in the title bar, typewriter text (src/ui.js)
   s.talkUI = panel(s, { w: 900, h: 130, y: H - 85, depth: 120, color: AMBER, foot: false });
@@ -210,6 +211,7 @@ function talkTo(s, i) {
   let line;
   if (r && r !== NPC_REACT[i]) { line = r; NPC_REACT[i] = r; }   // new situation: comment on it once
   else { line = n.lines[NPC_IDX[i] % n.lines.length]; NPC_IDX[i]++; }
+  chatMet(n, line); // src/chat.js: the Journal counts the meeting and keeps the line, key or no key
   s.talkName.setText(n.name + '  -  ' + n.role).setColor(n.css);
   s.talkUI.box.setVisible(true);
   s.talk = { i, until: s.time.now + 9000, tw: typewrite(s, s.talkText, '"' + line + '"', 75) };
@@ -240,6 +242,7 @@ function spotInteract(s, sp) {
 // once per frame from Station.update; true = the shop panel owns this frame
 function shopFrame(s) {
   const JD = Phaser.Input.Keyboard.JustDown, k = s.shopKeys;
+  if (chatFrame(s)) return true; // src/chat.js: a conversation is open (or T just opened one); it owns the frame
   barSync(s);
   if (s.shopOpen) {
     s.player.setVelocity(0, 0);

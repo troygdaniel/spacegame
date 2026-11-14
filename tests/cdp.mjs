@@ -1,10 +1,10 @@
 // Tiny Chrome DevTools helper for the Long Haul tests. No dependencies: needs Node 22+ (global WebSocket and fetch).
 import { spawn } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, mkdirSync, existsSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, mkdirSync, existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { acquire, release, cleanupOrphans } from './lock.mjs';
+import { acquire, release, cleanupOrphans, removeDir, stopProfileProcesses } from './lock.mjs';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const OUT = join(ROOT, 'tests', 'out');
@@ -17,6 +17,7 @@ const CALL_MS = Number(process.env.DEVTOOLS_TIMEOUT_MS) || 120000;
 const KEYS = {
   C: [67, 'KeyC', 'c'], E: [69, 'KeyE', 'e'], L: [76, 'KeyL', 'l'], W: [87, 'KeyW', 'w'], S: [83, 'KeyS', 's'], X: [88, 'KeyX', 'x'],
   1: [49, 'Digit1', '1'], 2: [50, 'Digit2', '2'], 3: [51, 'Digit3', '3'], ESC: [27, 'Escape', 'Escape'],
+  J: [74, 'KeyJ', 'j'], UP: [38, 'ArrowUp', 'ArrowUp'], DOWN: [40, 'ArrowDown', 'ArrowDown'],
   ENTER: [13, 'Enter', 'Enter'], TAB: [9, 'Tab', 'Tab'], SPACE: [32, 'Space', ' ']
 };
 
@@ -49,7 +50,7 @@ async function launchOnce(hash, root) {
   ], { stdio: 'ignore' });
   const portFile = join(profile, 'DevToolsActivePort');
   for (let i = 0; i < 300 && !existsSync(portFile); i++) await sleep(100);
-  if (!existsSync(portFile)) { chrome.kill('SIGKILL'); rmSync(profile, { recursive: true, force: true }); throw new Error('Chrome did not start'); }
+  if (!existsSync(portFile)) { chrome.kill('SIGKILL'); await removeDir(profile); throw new Error('Chrome did not start'); }
   const port = readFileSync(portFile, 'utf8').split('\n')[0];
   let page = null;
   for (let i = 0; i < 50 && !page; i++) {
@@ -122,13 +123,21 @@ async function launchOnce(hash, root) {
       return true;
     } catch (e) { console.log(`  (screenshot ${name} skipped: ${e.message})`); return false; }
   };
+  // close never throws: a test that finished its checks must not die on housekeeping. Wait for Chrome to exit (kill it if it will
+  // not), end any helper still holding the profile, then remove the profile, retrying while Chrome's helpers finish writing.
   const close = async () => {
     try { ws.close(); } catch (e) { /* already closed */ }
-    const exited = new Promise(r => chrome.once('exit', r));
-    chrome.kill('SIGTERM');
-    await Promise.race([exited, sleep(4000)]);
-    if (chrome.exitCode === null) { chrome.kill('SIGKILL'); await sleep(500); } // a loaded machine can ignore SIGTERM for a while
-    rmSync(profile, { recursive: true, force: true });
+    try {
+      const gone = () => chrome.exitCode !== null || chrome.signalCode !== null;
+      if (!gone()) {
+        const exited = new Promise(r => chrome.once('exit', r));
+        chrome.kill('SIGTERM');
+        await Promise.race([exited, sleep(4000)]);
+        if (!gone()) { chrome.kill('SIGKILL'); await Promise.race([exited, sleep(2000)]); } // a loaded machine can ignore SIGTERM for a while
+      }
+    } catch (e) { console.log('  (note: Chrome did not stop cleanly: ' + e.message + ')'); }
+    stopProfileProcesses(profile);
+    await removeDir(profile);
   };
   await send('Page.enable'); await send('Runtime.enable');
   await send('Page.navigate', { url: 'file://' + root + '/index.html' + hash });

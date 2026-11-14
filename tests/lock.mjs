@@ -88,6 +88,30 @@ export function release() {
   giveBack();
 }
 
+// ---------- removing a throwaway Chrome profile (card space-game-cdp-cleanup-race) ----------
+// Chrome's helper processes (GPU, network, renderer) can still be writing into the profile for a moment after the main process has
+// exited, so a plain rmSync fails with ENOTEMPTY and crashed a test's close(). stopProfileProcesses ends whatever still has THIS
+// profile open (matched on its exact --user-data-dir, never another run's); removeDir tries again for a few seconds and never
+// throws: a folder that stays busy is left for the next run's cleanupOrphans, with a note.
+const BUSY = ['ENOTEMPTY', 'EBUSY', 'EPERM', 'EACCES', 'EMFILE', 'ENFILE'];
+export function stopProfileProcesses(path) {
+  const re = '--user-data-dir=' + path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '( |$)'; // the whole argument, so longhaul-1-abc never matches longhaul-1-abcdef
+  try { execFileSync('pkill', ['-KILL', '-f', '--', re], { stdio: 'ignore' }); return true; } catch (e) { return false; } // exit status 1: nothing matched
+}
+export async function removeDir(path, { tries = 30, delayMs = 250, rm = rmSync, log = console.log } = {}) {
+  let last = null;
+  for (let i = 0; i < tries; i++) {
+    try { rm(path, { recursive: true, force: true }); return true; } catch (e) {
+      last = e;
+      if (!BUSY.includes(e && e.code)) break; // not a race: waiting will not help
+      if (i === 1) stopProfileProcesses(path); // still busy after two tries: something still has it open
+      await sleep(delayMs);
+    }
+  }
+  log(`  (note: could not remove ${path}: ${(last && last.code) || last}; the next test run cleans it up)`);
+  return false;
+}
+
 // Chrome profiles are named longhaul-<driver pid>-<random> (cdp.mjs). When the driver is gone the profile is an orphan: kill any
 // Chrome still using it and delete it. A profile whose driver is alive is never touched. Returns what it did.
 export function cleanupOrphans({ base = tmpdir(), log = () => {} } = {}) {

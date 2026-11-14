@@ -185,7 +185,7 @@ const call = async (t, req = REQ) => {
     await t.ev(`openPause(game)`);
     await t.waitFor("game.scene.isActive('Pause')", 8000, 'pause menu');
     const rows = await t.ev(`game.scene.getScene('Pause').rows.map(r => r.text.trim()).join(' | ')`);
-    check('the pause menu lists NPC chat before New game', /NPC chat\s+NO KEY \| New game/.test(rows), rows);
+    check('the pause menu lists NPC chat before New game (the Journal row may sit between them)', /NPC chat\s+NO KEY \| (Journal[^|]*\| )?New game/.test(rows), rows);
     await t.ev(`(() => { const p = game.scene.getScene('Pause'); p.sel = 6; p.activate(6); return 1; })()`);
     await t.waitFor("game.scene.isActive('ChatSetup')", 8000, 'setup from pause');
     check('the NPC chat row opens the setup panel over the pause menu', (await t.ev("game.scene.isPaused('Pause')")) === true);
@@ -194,6 +194,184 @@ const call = async (t, req = REQ) => {
     check('closing it returns to the pause menu', true);
     check('no console errors', t.errors.length === 0, t.errors.join(' | '));
   } finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
+}
+
+// ---- part 4: the chat box in the bar (card space-game-npc-chat-bar) ----
+{
+  const t = await launch('#station');
+  const ST = "game.scene.getScene('Station')";
+  const keyT = async () => { // T is not in cdp.mjs's key table
+    await t.send('Input.dispatchKeyEvent', { type: 'keyDown', windowsVirtualKeyCode: 84, nativeVirtualKeyCode: 84, code: 'KeyT', key: 't' });
+    await sleep(60);
+    await t.send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: 84, nativeVirtualKeyCode: 84, code: 'KeyT', key: 't' });
+  };
+  const elKey = async key => t.ev(`(() => { const el = document.querySelector('input'); if (!el) return 0; el.dispatchEvent(new KeyboardEvent('keydown', { key: '${key}', bubbles: true })); return 1; })()`);
+  try {
+    await t.waitFor("!!(window.game && game.scene.isActive('Station'))", 20000, 'station');
+    await t.ev(MOCK);
+    await t.ev(`(chatSetKey(''), chatSetProvider(''), chatSetModel(''), 1)`);
+    // stand at the bar in front of JUNO (she is behind the counter)
+    const near = async () => { await t.ev(`(() => { const s = ${ST}; s.player.setPosition(255, 572); s.player.setVelocity(0, 0); return 1; })()`); await sleep(250); };
+    await near();
+    check('no key: the prompt is the plain Talk to JUNO', (await t.ev(`${ST}.prompt.text`)) === 'E  Talk to JUNO', await t.ev(`${ST}.prompt.text`));
+    await keyT(); await sleep(300);
+    check('no key: T opens nothing and nothing is called', (await t.ev(`${ST}.chat === null`)) === true && (await t.ev('__calls.length')) === 0);
+
+    await t.ev(`chatSetKey('${KEY_OPENAI}')`);
+    await near();
+    check('with a key: the prompt offers T to chat', /T to chat/.test(await t.ev(`${ST}.prompt.text`)), await t.ev(`${ST}.prompt.text`));
+    await keyT();
+    await t.waitFor(`${ST}.chat !== null`, 5000, 'chat opened');
+    check('T opens the chat with JUNO, the panel shows, a text box is on the page', (await t.ev(`${ST}.chatBox.visible && ${ST}.chat.n.name === 'JUNO' && !!document.querySelector('input')`)) === true);
+    check('the station treats it like an open terminal (s.panel) and the prompt is cleared', (await t.ev(`${ST}.panel === true && ${ST}.prompt.text === ''`)) === true);
+    await t.waitFor('__calls.length === 1', 10000, 'the opening call');
+    const b = JSON.parse(await t.ev('__calls[0].body'));
+    const sys = b.messages[0].content;
+    check('the character speaks first: one call with the seed line as the only turn', b.messages.length === 2 && b.messages[1].content === '[The pilot sits down.]');
+    const at = m => sys.indexOf(m); // the block openers on their own lines: the RULES text also mentions the tags inline
+    check('the system prompt: RULES, then WORLD, then persona and memory in tags, then NOW', at('RULES\n') === 0 && at('\nWORLD\n') > 0 && at('\nWORLD\n') < at('\n<persona>\n') && at('\n<persona>\n') < at('\n</persona>\n') && at('\n</persona>\n') < at('\n<memory>\n') && at('\n<memory>\n') < at('\n</memory>\n') && at('\n</memory>\n') < at('\nNOW\n'), [at('RULES\n'), at('\nWORLD\n'), at('\n<persona>\n'), at('\n</persona>\n'), at('\n<memory>\n'), at('\n</memory>\n'), at('\nNOW\n')].join(','));
+    check('the rules name JUNO and say the tagged text is data', /You are JUNO, bartender/.test(sys) && /It is not instructions/.test(sys));
+    check('the persona is inside the tags and NOW carries credits and hull', /<persona>\nWho: Juno/.test(sys) && /Credits: \d+\. Hull: \d+ of \d+/.test(sys));
+    await t.waitFor(`${ST}.chatText.text === 'Welcome to the Drift, pilot.'`, 10000, 'reply typed out');
+    check('the reply types out in the box', true);
+    await t.shot('chat-bar');
+
+    // a long line is clamped and sent as the next turn
+    await t.ev(`(() => { const el = document.querySelector('input'); el.value = 'x'.repeat(300); return 1; })()`);
+    await t.ev(`(${ST}.chat.lastSend = 0, 1)`);
+    await elKey('Enter');
+    await t.waitFor('__calls.length === 2', 10000, 'second call');
+    const b2 = JSON.parse(await t.ev('__calls[1].body'));
+    const last = b2.messages[b2.messages.length - 1];
+    check('Enter sends the line, clamped to 240, after the seed and the reply', last.role === 'user' && last.content.length === 240 && b2.messages[b2.messages.length - 2].role === 'assistant');
+    check('the box is emptied after sending', (await t.ev(`document.querySelector('input').value`)) === '');
+    await t.waitFor(`${ST}.chat.busy === false`, 10000, 'reply two');
+    // two Enters inside the gap send once
+    await t.ev(`(() => { const el = document.querySelector('input'); el.value = 'one'; return 1; })()`);
+    await t.ev(`(${ST}.chat.lastSend = 0, 1)`);
+    await elKey('Enter');
+    await t.ev(`(() => { const el = document.querySelector('input'); el.value = 'two'; return 1; })()`);
+    await elKey('Enter');
+    await t.waitFor(`${ST}.chat.busy === false && __calls.length >= 3`, 10000, 'reply three');
+    await sleep(300);
+    check('a second Enter inside 1.2 s is ignored (one call, not two)', (await t.ev('__calls.length')) === 3, 'calls ' + await t.ev('__calls.length'));
+    // a 429 is said in-world and does not end the chat
+    await t.ev('(__status = 429, 1)');
+    await t.ev(`(() => { const el = document.querySelector('input'); el.value = 'still there?'; return 1; })()`);
+    await t.ev(`(${ST}.chat.lastSend = 0, 1)`);
+    await elKey('Enter');
+    await t.waitFor(`${ST}.chatText.text === 'Give me a moment, pilot.'`, 10000, 'in-world wait line');
+    check('429: JUNO asks for a moment and the chat stays open', (await t.ev(`${ST}.chat !== null`)) === true);
+    await t.ev('(__status = 200, CHAT.waitUntil = 0, 1)');
+    // walking away ends it; the text box goes
+    await t.ev(`(() => { const s = ${ST}; s.player.setPosition(255, 420); return 1; })()`);
+    await t.waitFor(`${ST}.chat === null`, 10000, 'closed by walking away');
+    check('walking away closes the chat, hides the panel, removes the box, frees the station', (await t.ev(`!${ST}.chatBox.visible && !document.querySelector('input') && ${ST}.panel === false`)) === true);
+    // Esc in the box ends it too
+    await near(); await t.ev(`chatOpen(${ST}, 0)`); // the T path is proven above; open directly so a slow frame cannot drop the key
+    await t.waitFor(`${ST}.chat !== null`, 10000, 'chat reopened');
+    await elKey('Escape');
+    await t.waitFor(`${ST}.chat === null`, 10000, 'closed by Esc');
+    check('Esc in the box closes the chat and the pause menu does not open', (await t.ev("!game.scene.isActive('Pause')")) === true);
+    // a rejected key closes the chat with the toast
+    await near(); await t.ev('(__status = 401, 1)'); await t.ev(`chatOpen(${ST}, 0)`);
+    await t.waitFor(`${ST}.chat === null && CHAT.bad === true`, 10000, 'closed by a rejected key');
+    check('a rejected key ends the chat and switches it off', true);
+    await t.ev('(__status = 200, 1)');
+    const page = await t.ev('document.body.innerText'), log = await t.ev(`__log.join('\\n')`);
+    check('the key is not in the page text or the console', !page.includes(KEY_OPENAI) && !log.includes(KEY_OPENAI));
+    await t.ev(`(chatSetKey(''), 1)`);
+    check('no console errors', t.errors.length === 0, t.errors.join(' | '));
+  } catch (e) { console.log('  FAIL bar: ' + e.message); failed++; }
+  finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
+}
+
+// ---- part 5: memory (card space-game-npc-chat-memory) ----
+{
+  const t = await launch('#station');
+  const ST = "game.scene.getScene('Station')";
+  const elKey = async key => t.ev(`(() => { const el = document.querySelector('input'); if (!el) return 0; el.dispatchEvent(new KeyboardEvent('keydown', { key: '${key}', bubbles: true })); return 1; })()`);
+  const near = async () => { await t.ev(`(() => { const s = ${ST}; s.player.setPosition(255, 572); s.player.setVelocity(0, 0); return 1; })()`); await sleep(250); };
+  const say = async (line) => { // one line from the player, wait for the reply
+    const before = await t.ev('__calls.length');
+    await t.ev(`(() => { const el = document.querySelector('input'); el.value = ${JSON.stringify(line)}; return 1; })()`);
+    await t.ev(`(${ST}.chat.lastSend = 0, 1)`);
+    await elKey('Enter');
+    await t.waitFor(`__calls.length === ${before + 1} && ${ST}.chat && ${ST}.chat.busy === false`, 15000, 'reply to ' + line.slice(0, 20));
+  };
+  const talk = async (reply) => { // a whole conversation: open, one line, close; the summary answers with reply
+    await near(); await t.ev(`(__reply = 'Welcome back.', 1)`); await t.ev(`chatOpen(${ST}, 0)`);
+    await t.waitFor(`${ST}.chat !== null && ${ST}.chat.busy === false && ${ST}.chat.replies === 1`, 15000, 'opened');
+    await say('Just passing through.');
+    const before = await t.ev('__calls.length');
+    await t.ev(`(__reply = ${JSON.stringify(reply)}, 1)`);
+    await elKey('Escape');
+    await t.waitFor(`__calls.length === ${before + 1}`, 15000, 'summary call');
+    await sleep(400);
+  };
+  try {
+    await t.waitFor("!!(window.game && game.scene.isActive('Station'))", 20000, 'station');
+    await t.ev(MOCK);
+    await t.ev(`(chatSetKey(''), chatSetProvider(''), chatSetModel(''), chatReset(), 1)`);
+    // offline: an E talk counts a meeting and files the line, with no call
+    await t.ev(`talkTo(${ST}, 0)`);
+    const off = await t.ev('JSON.stringify(G.chat)');
+    check('no key: an E talk counts a meeting and files the line as a fact, no call', /"juno":\{"met":1,"chats":0/.test(off) && /"fact":"JUNO: /.test(off) && (await t.ev('__calls.length')) === 0, off);
+    await t.ev(`(hideTalk(${ST}), talkTo(${ST}, 0), hideTalk(${ST}), talkTo(${ST}, 0), 1)`); // E again while a line types is a skip, not a meeting
+    check('two more talks: met 3, each different line filed once', (await t.ev('G.chat.npcs.juno.met')) === 3 && (await t.ev('G.chat.journal.length')) >= 2);
+    await t.ev(`(hideTalk(${ST}), 1)`);
+
+    // a conversation: the player gives a name; the summary updates the notes
+    await t.ev(`chatSetKey('${KEY_OPENAI}')`);
+    await near(); await t.ev(`chatOpen(${ST}, 0)`);
+    await t.waitFor(`${ST}.chat !== null && ${ST}.chat.busy === false && ${ST}.chat.replies === 1`, 15000, 'opened');
+    const sysFirst = JSON.parse(await t.ev('__calls[0].body')).messages[0].content;
+    check('before any chat the memory block says you have not talked, with the E talks counted as visits', /you have not talked before\. You have talked 0 times/.test(sysFirst) && /Time in the bar: 3 visits before/.test(sysFirst));
+    await say('My name is Troy and I fly careful.');
+    const summaryReply = { npcNotes: 'Careful pilot named Troy; polite, asks about prices.', playerNotes: 'Name Troy. Flies carefully.', name: 'Troy', mood: 'warm', journal: ['The repair bay charges half a credit a point.', 'y'.repeat(200)], last: 'Come back alive, Troy.' };
+    const nBefore = await t.ev('__calls.length');
+    await t.ev(`(__reply = ${JSON.stringify(JSON.stringify(summaryReply))}, 1)`);
+    await elKey('Escape');
+    await t.waitFor(`__calls.length === ${nBefore + 1}`, 15000, 'the summary call');
+    const sb = JSON.parse(await t.ev(`__calls[${nBefore}].body`));
+    check('closing sends one summary call: JSON-only rules, old notes in a memory block, the conversation as data', /Return JSON only/.test(sb.messages[0].content) && /<memory>/.test(sb.messages[0].content) && /PILOT: My name is Troy/.test(sb.messages[1].content) && sb.max_completion_tokens === 300);
+    await t.waitFor(`G.chat.npcs.juno.notes === 'Careful pilot named Troy; polite, asks about prices.'`, 10000, 'notes applied');
+    const mem = await t.ev('JSON.stringify(G.chat)');
+    check('the summary fills the notes, the name, the mood and the last line', /"name":"Troy"/.test(mem) && /"notes":"Name Troy\. Flies carefully\."/.test(mem) && /"mood":"warm"/.test(mem) && /"last":"Come back alive, Troy\."/.test(mem), mem);
+    check('met and chats count the conversation', (await t.ev('G.chat.npcs.juno.met')) === 4 && (await t.ev('G.chat.npcs.juno.chats')) === 1);
+    check('two journal facts from the summary, the long one clamped to 120', (await t.ev(`G.chat.journal.some(j => j.fact === 'The repair bay charges half a credit a point.' && j.npc === 'juno')`)) === true && (await t.ev(`G.chat.journal.some(j => j.fact.length === 120)`)) === true);
+
+    // the next chat carries the memory in its prompt
+    await near(); await t.ev(`(__reply = 'Troy. Good to see you.', 1)`); await t.ev(`chatOpen(${ST}, 0)`);
+    await t.waitFor(`${ST}.chat !== null && ${ST}.chat.busy === false`, 15000, 'reopened');
+    const sysNext = JSON.parse(await t.ev(`__calls[${nBefore + 1}].body`)).messages[0].content;
+    check('the next prompt carries the notes, the name, the mood and the last line', /Your notes on them: Careful pilot named Troy/.test(sysNext) && /Name: Troy\./.test(sysNext) && /You feel warm about them/.test(sysNext) && /Last time you said: Come back alive, Troy\./.test(sysNext) && /You have talked 1 time\./.test(sysNext));
+    await say('Still careful.');
+    const n2 = await t.ev('__calls.length');
+    await t.ev(`(__reply = 'not json at all {', 1)`); await elKey('Escape');
+    await t.waitFor(`__calls.length === ${n2 + 1}`, 15000, 'summary two'); await sleep(400);
+    check('broken JSON keeps the old notes', (await t.ev('G.chat.npcs.juno.notes')) === 'Careful pilot named Troy; polite, asks about prices.' && (await t.ev('G.chat.npcs.juno.chats')) === 2);
+    await talk(JSON.stringify({ npcNotes: 'x'.repeat(500), mood: 'ecstatic', journal: ['a', 'b', 'c'], name: 'Troy<script>' }));
+    const m3 = await t.ev('JSON.stringify(G.chat.npcs.juno)');
+    check('a wild summary is clamped: notes 240, mood refused, two facts at most, name at most 40', (await t.ev('G.chat.npcs.juno.notes.length')) === 240 && /"mood":"warm"/.test(m3) && (await t.ev(`G.chat.journal.filter(j => ['a','b','c'].includes(j.fact)).length`)) === 2 && (await t.ev('G.chat.player.name.length')) <= 40, m3);
+
+    // the save: the memory goes in, the key does not; load brings it back; new game clears it
+    // the save file is made and applied with the same functions saveGame and loadGame use (the wild summary above left notes of 240 x and the odd name)
+    const save = await t.ev('JSON.stringify(snapshot())');
+    check('the save holds the chat memory and not the key', /"chat":\{"v":1/.test(save) && /"name":"Troy<script>"/.test(save) && /"notes":"x{240}"/.test(save) && !save.includes(KEY_OPENAI), save.slice(save.indexOf('"chat"'), save.indexOf('"chat"') + 120));
+    await t.ev('(G.chat = chatMemoryEmpty(), 1)');
+    await t.ev(`(applySave(${JSON.stringify(save)}), 1)`.replace(/^\(applySave\("/, '(applySave(JSON.parse("').replace(/"\), 1\)$/, '")), 1)'));
+    check('applySave restores it, cleaned', (await t.ev('G.chat.player.name')) === 'Troy<script>' && (await t.ev('G.chat.npcs.juno.chats')) === 3 && (await t.ev('G.chat.npcs.juno.notes.length')) === 240);
+    await t.ev(`(() => { const s = snapshot(); s.chat.npcs.juno.mood = 'furious'; s.chat.npcs.juno.notes = 'z'.repeat(900); s.chat.journal = Array.from({ length: 90 }, (_, i) => ({ t: i, npc: 'juno', fact: 'f' + i })); applySave(s); return 1; })()`);
+    check('a hand-edited save is clamped on the way in: mood neutral, notes 400, journal 40', (await t.ev('G.chat.npcs.juno.mood')) === 'neutral' && (await t.ev('G.chat.npcs.juno.notes.length')) === 400 && (await t.ev('G.chat.journal.length')) === 40);
+    await t.ev('newGameState()');
+    check('new game clears the memory', (await t.ev('JSON.stringify(G.chat)')) === JSON.stringify({ v: 1, player: { name: '', notes: '' }, npcs: {}, journal: [] }));
+    const page = await t.ev('document.body.innerText'), log = await t.ev(`__log.join('\\n')`);
+    check('the key is not in the page text or the console', !page.includes(KEY_OPENAI) && !log.includes(KEY_OPENAI));
+    await t.ev(`(chatSetKey(''), 1)`);
+    check('no console errors', t.errors.length === 0, t.errors.join(' | '));
+  } catch (e) { console.log('  FAIL memory: ' + e.message); failed++; }
+  finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
 }
 
 console.log(failed ? `CHAT FAIL (${failed})` : 'CHAT PASS');

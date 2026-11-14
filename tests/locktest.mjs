@@ -135,6 +135,56 @@ console.log('orphan Chrome profiles');
   mine.kill('SIGKILL'); chrome.kill('SIGKILL');
 }
 
+console.log('removing a Chrome profile that is still being written to (card space-game-cdp-cleanup-race)');
+{
+  const base = join(work, 'tmp2'); mkdirSync(base);
+  const busy = code => () => { const e = new Error(code + ': simulated'); e.code = code; throw e; };
+  const notes = []; const note = m => notes.push(m);
+  let calls = 0;
+  let ok = await L.removeDir(join(base, 'x'), { rm: () => { if (++calls <= 3) busy('ENOTEMPTY')(); }, delayMs: 5, log: note });
+  check('ENOTEMPTY three times, then it works: removed, tried four times, no note', ok === true && calls === 4 && notes.length === 0, JSON.stringify({ ok, calls, notes }));
+  calls = 0; notes.length = 0;
+  let threw = false;
+  try { ok = await L.removeDir(join(base, 'y'), { rm: () => { calls++; busy('EBUSY')(); }, tries: 4, delayMs: 5, log: note }); } catch (e) { threw = true; }
+  check('busy for good: it gives up after its tries, says so and does not throw', !threw && ok === false && calls === 4 && notes.length === 1 && notes[0].includes('EBUSY') && notes[0].includes(join(base, 'y')), JSON.stringify({ threw, ok, calls, notes }));
+  calls = 0; notes.length = 0;
+  try { ok = await L.removeDir(join(base, 'z'), { rm: () => { calls++; busy('EINVAL')(); }, tries: 4, delayMs: 5, log: note }); } catch (e) { threw = true; }
+  check('an error that is not a race is not retried, and still does not throw', !threw && ok === false && calls === 1 && notes.length === 1, JSON.stringify({ ok, calls, notes }));
+  check('a folder that is already gone is fine', (await L.removeDir(join(base, 'nothing-here'), { log: note })) === true);
+
+  // a stand-in for Chrome's helper: keeps writing into the profile (and recreating it) for as long as it lives
+  const writer = path => spawn(process.execPath, ['-e', `const fs = require('node:fs'), path = require('node:path'), d = process.argv.find(a => a.startsWith('--user-data-dir=')).slice(16);
+    let i = 0; setInterval(() => { try { fs.mkdirSync(d, { recursive: true }); fs.writeFileSync(path.join(d, 'f' + (i++ % 50)), 'x'); } catch (e) {} }, 5);`, '--', `--user-data-dir=${path}`], { stdio: 'ignore' });
+
+  // 1. the helper only writes for a moment (Chrome closing down): plain retries are enough
+  const brief = join(base, 'longhaul-1-brief'); mkdirSync(brief); writeFileSync(join(brief, 'Local State'), '{}');
+  const w1 = writer(brief); await sleep(200);
+  setTimeout(() => w1.kill('SIGKILL'), 500);
+  const r1 = await L.removeDir(brief, { delayMs: 100, log: note });
+  check('a helper that stops writing after half a second: the profile is removed, nothing thrown', r1 === true && !existsSync(brief), JSON.stringify({ r1, exists: existsSync(brief) }));
+  w1.kill('SIGKILL');
+
+  // 2. the helper never stops: removeDir ends it (it has this profile in its command line) and then removes the folder
+  const stuck = join(base, 'longhaul-2-stuck'); mkdirSync(stuck);
+  const w2 = writer(stuck); await sleep(200);
+  let tries2 = 0; // the first two removals fail as a busy folder does; the helper is still alive then, so removeDir must end it
+  const r2 = await L.removeDir(stuck, { rm: (p, o) => { if (++tries2 <= 2) busy('ENOTEMPTY')(); return rmSync(p, o); }, delayMs: 50, log: note });
+  await sleep(200);
+  check('a helper that never stops: it is ended after two failed tries, then the profile is removed', r2 === true && tries2 === 3 && !existsSync(stuck) && !L.alive(w2.pid), JSON.stringify({ r2, exists: existsSync(stuck), alive: L.alive(w2.pid) }));
+  w2.kill('SIGKILL');
+
+  // 3. stopProfileProcesses only ends the process that has exactly this profile
+  const P = join(base, 'longhaul-3-abc');
+  const mine3 = writer(P), longer = writer(P + 'def'), other = writer(join(base, 'unrelated'));
+  await sleep(300);
+  L.stopProfileProcesses(P);
+  await sleep(300);
+  check('stopProfileProcesses ends the helper of that profile', !L.alive(mine3.pid));
+  check('it leaves a profile whose name merely starts the same, and unrelated ones, alone', L.alive(longer.pid) && L.alive(other.pid));
+  check('and it is quiet and false when nothing matches', L.stopProfileProcesses(join(base, 'nobody')) === false);
+  [mine3, longer, other].forEach(c => c.kill('SIGKILL'));
+}
+
 rmSync(work, { recursive: true, force: true });
 console.log(failed ? `\nLOCK FAIL (${failed} of ${n} checks)` : `\nLOCK PASS (${n} checks)`);
 process.exit(failed ? 1 : 0);
