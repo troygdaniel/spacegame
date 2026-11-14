@@ -51,7 +51,10 @@ const MISSIONS = [
 
 function missionDef() { return MISSIONS.find(m => m.id === G.missionId) || null; }
 function missionsOffered() { return MISSIONS.filter(m => !m.unlock || m.unlock()); } // what the board shows today
-function missionActive(id) { return G.mission === 'accepted' && G.missionId === id; }
+// a call is of a kind (rescue, escort, patrol, bounty); the four built-in rows are called by their kind, a call a content pack adds (src/contentadd.js)
+// carries its own id and kind. missionActive('patrol') is true for any patrol call under way, so the space-side logic never cares whose row it is.
+const missionKind = m => m && (m.kind || m.id);
+function missionActive(id) { const m = G.mission === 'accepted' ? missionDef() : null; return !!m && (m.id === id || missionKind(m) === id); }
 // the board calls this when Troy reads a call; pressing E in station.js then sets G.mission = 'accepted'
 function pickMission(id) { G.missionId = id; G.missionProgress = 0; }
 function abandonMission() { G.mission = 'none'; G.missionId = null; G.missionProgress = 0; }
