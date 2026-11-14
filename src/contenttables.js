@@ -225,8 +225,8 @@ const CT_STATION = {
   },
   apply: (id, data) => {
     const r = ctStationRow(id);
-    if (!r) { // a dock in a system the game has (Halcyon) must be a dock the game has; a dock in a system it does not have yet is kept
-      if (CT_HAS(SYSTEMS, data.system)) throw new Error('the game has no built-in station called "' + id + '" in ' + data.system + ' and cannot add new ones');
+    if (!r) { // a dock in a system the game has with bodies in it (Halcyon) must be a dock the game has; a dock in a system it does not have yet, or has only as an empty one (Kestrel until u-b5), is kept
+      if (CT_HAS(SYSTEMS, data.system) && (SYSTEMS[data.system].bodies || []).length) throw new Error('the game has no built-in station called "' + id + '" in ' + data.system + ' and cannot add new ones');
       CONTENT_WORLD.station[id] = ctWorldCopy(data); return;
     }
     if (data.system !== undefined && data.system !== r.sys) throw new Error('system is "' + data.system + '" but ' + id + ' is in ' + r.sys);
