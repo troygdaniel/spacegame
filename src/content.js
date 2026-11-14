@@ -50,6 +50,31 @@
   const PH_MISSION = PH.concat('hull'); // a mission may also say {hull}: the percent of hull the bounty target has left
   const SHIP_ART = ['ship', 'raider', 'drone', 'gunship', 'reaver', 'freighter', 'civilian', 'police', 'wren', 'kite', 'ox', 'talon', 'pathfinder', 'bastion']; // the built-in textures; grows when new ship art lands
   const SLOTS = ['engine', 'shields', 'weapons', 'tank', 'cargo'];
+  // star systems (docs/MODDING.md 6.3): what a body is, and the names the code's own tables use for them (src/data_systems.js, art_world.js, stationart.js)
+  const BODY_TYPES = ['station', 'planet', 'belt', 'poi', 'scenery', 'gate'];
+  const PLANET_KINDS = ['rock', 'ice', 'gas', 'lava', 'ringed'];   // art_world.js planetTexture
+  const SITE_KINDS = ['wreck', 'beacon'];                         // poi.js
+  const STATION_LOOKS = ['hub', 'foundry', 'nest', 'derelict'];   // stationart.js STATION_LOOKS (a station or a dead one)
+  const BODY_ART = ['station', 'outpost', 'planet'].concat(STATION_LOOKS); // the textures a body is drawn with (boot.js, stationart.js)
+  const PIRATE_IDS = ['raider', 'drone', 'gunship'];              // the pirate ships a system may weight
+  // one Bodies row against its type: the columns that type needs and the kind that fits it. The message is a whole sentence; the row is ignored.
+  const bodyRowProblem = o => {
+    const need = (...c) => { const m = c.filter(k => o[k] === undefined); return m.length ? 'a ' + o.type + ' needs ' + m.join(' and ') + ' (docs/MODDING.md 6.3)' : null; };
+    switch (o.type) {
+      case 'station': return null; // a station's name, prices and words are its own file's (stations/<id>.md)
+      case 'planet':
+        if (o.kind !== undefined && !PLANET_KINDS.includes(o.kind)) return 'a planet\'s kind is ' + o.kind + ' but must be one of: ' + PLANET_KINDS.join(', ');
+        if (o.kind === undefined && o.art !== 'planet') return 'a planet needs a kind (' + PLANET_KINDS.join(', ') + '), or art planet for the built-in one';
+        return need('r');
+      case 'belt': return need('r', 'rocks');
+      case 'poi':
+        if (o.kind === undefined || !SITE_KINDS.includes(o.kind)) return 'a poi needs a kind: ' + SITE_KINDS.join(' or ');
+        return null;
+      case 'scenery': return need('name') || (o.art === undefined && o.look === undefined ? 'a scenery body needs an art or a look' : null);
+      case 'gate': return need('r');
+      default: return null;
+    }
+  };
   const VOICE_EVENTS = ['launch-clear', 'hull-low', 'pirates-detected', 'docked', 'mission-accepted', 'credits-earned', 'fuel-low']; // docs/VOICE.md grows this list
 
   const SCHEMA = {
@@ -87,22 +112,30 @@
       fields: {
         name: T(40, true), kind: P(['home', 'outpost', 'trade', 'mining', 'wild', 'graveyard', 'nest'], true), ly: L('num', { len: 2, min: -1000, max: 1000 }),
         size: I(4000, 200000), danger: I(0, 5), traffic: I(0, 3), seed: I(0, 2147483647),
-        starType: P(['O', 'B', 'A', 'F', 'G', 'K', 'M']), starX: I(0, 200000), starY: I(0, 200000)
+        starType: P(['O', 'B', 'A', 'F', 'G', 'K', 'M']), starX: I(0, 200000), starY: I(0, 200000),
+        pirateMax: I(1, 40), pirateEvery: I(1000, 600000) // a system's own pirate spawn table (enemies.js pirateTable): at most this many, one every this many ms; the weights are the Pirates section
       },
       sections: {
         bodies: {
-          heading: 'Bodies', t: 'table', required: ['id', 'type', 'x', 'y'],
+          heading: 'Bodies', t: 'table', required: ['id', 'type', 'x', 'y'], rowCheck: bodyRowProblem,
+          // art is the texture a body is drawn with; a planet is a kind (and a seed: the same kind and seed is the same planet on every boot) or art planet (Kepler-4b);
+          // look is the station look of a dead station (scenery); labelDy moves the name label (pixels, negative is above); a site that has its own file in poi/ is paid from that file
           cols: {
-            id: { t: 'id' }, type: P(['station', 'planet', 'belt', 'poi', 'star'], true), name: T(40), x: I(0, 200000), y: I(0, 200000),
-            art: T(30), r: I(10, 5000), rocks: I(0, 200), landable: BOOL, kind: P(['wreck', 'beacon']), credits: I(0, 100000)
+            id: { t: 'id' }, type: P(BODY_TYPES, true), name: T(40), x: I(0, 200000), y: I(0, 200000),
+            art: P(BODY_ART), r: I(10, 5000), rocks: I(0, 200), landable: BOOL, kind: P(PLANET_KINDS.concat(SITE_KINDS)), seed: I(0, 2147483647),
+            look: P(STATION_LOOKS), labelDy: I(-3000, 3000), credits: I(0, 100000), hull: I(0, 100), guard: I(0, 6), note: T(160)
           }
-        }
+        },
+        pirates: { heading: 'Pirates', t: 'table', required: ['kind', 'weight'], cols: { kind: P(PIRATE_IDS, true), weight: N(0, 1, true) } }
       }
     },
     station: {
       folder: 'stations', placeholders: PH,
-      fields: { name: T(40, true), system: R('system', true), accent: COLOR, fuel: N(0, 100), repair: N(0, 5), ore: N(0, 200) },
+      // fuel, repair and ore are the prices (src/fuel.js, station.js, asteroids.js); yard the ship models it sells (data_ships.js ids); partMult the price factor of its parts;
+      // fee what it takes at the door; salvageMult how many times the usual a salvage pays here. The Parts section says which slots it sells and to which tier.
+      fields: { name: T(40, true), system: R('system', true), accent: COLOR, fuel: N(0, 100), repair: N(0, 5), ore: N(0, 200), yard: L('id', { ref: 'ship' }), partMult: N(0.1, 5), fee: I(0, 100000), salvageMult: N(1, 5) },
       sections: {
+        parts: { heading: 'Parts', t: 'table', required: ['slot', 'tier'], cols: { slot: P(SLOTS, true), tier: I(1, 3, true) } },
         welcome: { heading: 'Welcome', t: 'text', max: 400 },
         shop: { heading: 'Shop', t: 'table', required: ['item', 'price'], cols: { item: T(40, true), price: I(0, 1000000, true) } },
         services: { heading: 'Services', t: 'list', max: 60 },
@@ -454,6 +487,7 @@
         if (cs.t === 'text') { const p = badPlaceholder(v.v, schema.placeholders); if (p) { err(errors, 'error', path, row.n, c, c + ': ' + p + '. Ignored the row.'); dead = true; return; } }
         obj[c] = v.v;
       });
+      if (!dead && spec.rowCheck) { const bad = spec.rowCheck(obj); if (bad) { err(errors, 'error', path, row.n, '', bad + '. Ignored the row.'); dead = true; } }
       if (!dead) out.push(obj);
     }
     return out.length ? out : undefined;
@@ -461,6 +495,39 @@
 
   // ---------- load a whole pack ----------
   // files: [{ path, text }]. Names starting with _ or . (in any folder) are ignored, so are files that are not .md.
+  // the files of one world agree with each other (docs/MODDING.md 6.3, 6.4): a body id is used once in a system, a station row has its file and the
+  // file says the same system, a site that has its own poi file is paid from it. A body id used twice drops the second row (an error); the rest are warnings.
+  function worldChecks(entries, registry, opts, errors) {
+    const at = (en, field, msg, level) => err(errors, level || 'warn', en.path, 0, field, msg);
+    const rowsOf = en => (Array.isArray(en.data.bodies) ? en.data.bodies : []);
+    entries.filter(en => en.type === 'system').forEach(en => {
+      const seen = Object.create(null), keep = [];
+      rowsOf(en).forEach(b => {
+        if (seen[b.id]) { at(en, 'bodies', 'the body ' + quote(b.id) + ' is in the Bodies table twice. Ignored the second row.', 'error'); return; }
+        seen[b.id] = true; keep.push(b);
+      });
+      if (keep.length !== rowsOf(en).length) en.data.bodies = keep;
+      keep.forEach(b => {
+        if (b.type === 'station') {
+          const st = entries.find(e => e.type === 'station' && e.id === b.id);
+          if (!st) { if (!(opts.known && opts.known('station', b.id))) at(en, 'bodies', 'the station ' + quote(b.id) + ' has a row here but no file (stations/' + b.id + '.md).'); return; }
+          if (st.data.system !== undefined && st.data.system !== en.id) at(st, 'system', 'system is ' + quote(st.data.system) + ' but ' + SCHEMA.system.folder + '/' + en.id + '.md has a station row for ' + quote(b.id) + '. The row is the one the game would place.');
+          if (b.name !== undefined && st.data.name !== undefined && b.name !== st.data.name) at(st, 'name', 'name is ' + quote(st.data.name) + ' but the Bodies row in ' + en.path + ' calls it ' + quote(b.name) + '. The station file wins.');
+        } else if (b.type === 'poi') {
+          const pf = entries.find(e => e.type === 'poi' && e.id === b.id);
+          if (!pf) return;
+          const dup = ['name', 'credits', 'hull', 'guard', 'note'].filter(k => b[k] !== undefined);
+          if (dup.length) at(en, 'bodies', 'the site ' + quote(b.id) + ' has its own file (' + pf.path + '), which pays it; the row says where, so ' + dup.join(', ') + ' in the row ' + (dup.length > 1 ? 'are' : 'is') + ' ignored.');
+          if (pf.data.kind !== undefined && b.kind !== undefined && pf.data.kind !== b.kind) at(en, 'bodies', 'the site ' + quote(b.id) + ' is a ' + b.kind + ' here but a ' + pf.data.kind + ' in ' + pf.path + '.');
+        }
+      });
+    });
+    entries.filter(en => en.type === 'station' && en.data.system !== undefined).forEach(en => {
+      const sys = entries.find(e => e.type === 'system' && e.id === en.data.system);
+      if (sys && !rowsOf(sys).some(b => b.type === 'station' && b.id === en.id)) at(en, 'system', 'its system ' + quote(sys.id) + ' (' + sys.path + ') has no station row ' + quote(en.id) + ' in its Bodies table, so nothing places this dock.');
+    });
+  }
+
   function loadAll(files, opts) {
     opts = opts || {};
     const errors = [], entries = [], registry = new Map(), byKey = new Map();
@@ -494,6 +561,7 @@
         });
       });
     });
+    worldChecks(entries, registry, opts, errors);
     entries.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
     const hash = hashOf(JSON.stringify(entries.map(e => [e.type, e.id, e.data])));
     return { entries, errors, hash, files: list.length };
@@ -571,6 +639,7 @@
           o[c] = r.v;
         });
         (spec.required || []).forEach(c => { if (o[c] === undefined) dead = true; });
+        if (!dead && spec.rowCheck) { const bad = spec.rowCheck(o); if (bad) { say('row ' + (i + 1) + ': ' + bad); dead = true; } }
         if (dead) say('row ' + (i + 1) + ' is skipped'); else out.push(o);
       });
       if (v.length > LIMITS.rows) say('has more than ' + LIMITS.rows + ' rows; the rest are ignored');

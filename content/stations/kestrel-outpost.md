@@ -5,8 +5,15 @@ system: kestrel
 accent: green
 fuel: 7
 repair: 0.5
+
 ---
 A frontier dock that sells fuel and not much else.
+
+## Parts
+| slot | tier |
+| --- | --- |
+| engine | 1 |
+| tank | 1 |
 
 ## Welcome
 Welcome to {station}. Fuel is cheap, the coffee is not.

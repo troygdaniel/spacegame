@@ -11,9 +11,9 @@
 //   poi      the salvage sites (data_systems.js) and the random signal types (poi.js SIGNAL_TYPES): name, note, payout, guard
 //   npc      the characters of the bar in shop.js NPCS (juno today): look and place, lines, reactions, persona
 //   part     the tiers of PARTS in data_parts.js (shields-1 ... engine-3 today; tank and cargo read too): name, text, price and the tier's numbers
-//   system   read and KEPT, not used yet: the validated fields of each file go into CONTENT_WORLD.system and nothing in the game reads them (so are the
-//            docks of the other stations, in CONTENT_WORLD.station).
-//            Cards u-b5 (the eight systems) and u-e5 (the Station scene) wire that table in; until then the files only prove they are well formed
+//   system   read and KEPT: the validated fields of each file go into CONTENT_WORLD.system, the docks into CONTENT_WORLD.station and the fixed sites' payouts
+//            into CONTENT_WORLD.poi. Nothing in the game's scenes reads them yet; worldAt(systemId) (below) is the one place that puts them together, and
+//            cards u-b4 (the jump), u-b5 (the eight systems) and u-e5 (the Station scene) read the world through it
 // tests/contentproof.mjs pins that each file under content/ applied over its default changes nothing, and that editing one changes
 // exactly what the file says.
 const CT_HAS = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
@@ -173,12 +173,14 @@ const CT_PART = {
 // CT_STATION (below) does the same in CONTENT_WORLD.station for a dock that is not in data_systems.js (every one but Halcyon Station). The validated
 // fields, a copy. No scene, test hook or save reads it. It stands there so a shipped file of these types is accepted instead of warned about
 // ("does not read systems yet"), and so cards u-b5 and u-e5 have one place to read.
-const CONTENT_WORLD = { system: {}, station: {} };
+// CONTENT_WORLD.poi holds the payouts of the fixed sites (content/poi/<id>.md), for worldAt to lay over the system's rows.
+const CONTENT_WORLD = { system: {}, station: {}, poi: {} };
+const ctBuilt = new Map(); // worldAt's cache: one def per system, dropped whenever any adapter takes a new file
 const ctWorld = type => ({
   canAdd: true,
   has: id => CT_HAS(CONTENT_WORLD[type], id),
   get: (id, f) => CT_HAS(CONTENT_WORLD[type], id) ? CONTENT_WORLD[type][id][f] : undefined,
-  apply: (id, data) => { CONTENT_WORLD[type][id] = JSON.parse(JSON.stringify(data)); }
+  apply: (id, data) => { CONTENT_WORLD[type][id] = JSON.parse(JSON.stringify(data)); ctBuilt.clear(); }
 });
 
 // ---- poi: salvage sites and random signals (src/poi.js) ----
@@ -205,6 +207,7 @@ const CT_POI = {
     } else {
       if (data.credits !== undefined) p.credits = data.credits;
       if (data.guard !== undefined) p.guard = data.guard;
+      CONTENT_WORLD.poi[id] = ctWorldCopy(data); ctBuilt.clear();
     }
   }
 };
@@ -227,14 +230,82 @@ const CT_STATION = {
     const r = ctStationRow(id);
     if (!r) { // a dock in a system the game has with bodies in it (Halcyon) must be a dock the game has; a dock in a system it does not have yet, or has only as an empty one (Kestrel until u-b5), is kept
       if (CT_HAS(SYSTEMS, data.system) && (SYSTEMS[data.system].bodies || []).length) throw new Error('the game has no built-in station called "' + id + '" in ' + data.system + ' and cannot add new ones');
-      CONTENT_WORLD.station[id] = ctWorldCopy(data); return;
+      CONTENT_WORLD.station[id] = ctWorldCopy(data); ctBuilt.clear(); return;
     }
     if (data.system !== undefined && data.system !== r.sys) throw new Error('system is "' + data.system + '" but ' + id + ' is in ' + r.sys);
     if (data.name !== undefined) r.b.name = data.name;
     if (data.repair !== undefined) REPAIR_PRICE = data.repair;
     if (data.ore !== undefined) ORE_PRICE = data.ore;
+    CONTENT_WORLD.station[id] = ctWorldCopy(data); ctBuilt.clear(); // fuel, yard, parts, partMult, fee and the words are kept for worldAt; the game reads the three above
   }
 };
+
+// ---- worldAt(systemId): one system, the shape of a row of SYSTEMS (src/data_systems.js), for the cards that jump, draw and dock ----
+// worldAt gives the game's own row when the code has one with bodies in it (Halcyon: nothing about the game changes) and otherwise the row the files describe (a code row with no bodies, the Kestrel stub of card u-b4, gives way to its files). worldFromFiles builds
+// the row from the files alone, for any system with a file: its fields, its Bodies table (planets by kind and seed, belts, sites, scenery, the gate), its station
+// bodies with the dock from their station file, and the pirate table. The two agree for Halcyon, and tests/worldat.mjs pins that, field by field. What a row has
+// beyond the code's: seed and star (the system's own), description, and on a station body about (accent, welcome, services, bar, shop: the words for the Station scene).
+// A dock is the numbers of the station file under the names the code reads: fuel, repair, ore, yard; and parts as dock.shop and dock.parts the way
+// src/data_parts.js reads them (a Parts table means the slots it lists to those tiers and no others), partMult, fee and salvageMult.
+// Nothing here throws: a system nobody knows is null, a bad body is left out. The row is cached; treat it as read-only, like SYSTEMS.
+const CT_BODY_KEYS = ['name', 'x', 'y', 'art', 'r', 'rocks', 'landable', 'kind', 'seed', 'look', 'labelDy', 'credits', 'hull', 'guard', 'note'];
+function ctDock(st) {
+  const d = {};
+  ['fuel', 'repair', 'ore'].forEach(k => { if (st[k] !== undefined) d[k] = st[k]; });
+  if (Array.isArray(st.yard)) d.yard = st.yard.slice();
+  if (Array.isArray(st.parts) && st.parts.length) { d.shop = 0; d.parts = {}; st.parts.forEach(r => { d.parts[r.slot] = r.tier; }); }
+  ['partMult', 'fee', 'salvageMult'].forEach(k => { if (st[k] !== undefined) d[k] = st[k]; });
+  return d;
+}
+function ctWorldBody(row, sysId) {
+  const b = { id: row.id, type: row.type };
+  CT_BODY_KEYS.forEach(k => { if (row[k] !== undefined) b[k] = row[k]; });
+  if (row.type === 'poi' && CT_HAS(CONTENT_WORLD.poi, row.id)) { // a site with its own file is paid from it; the row only says where
+    const f = CONTENT_WORLD.poi[row.id];
+    ['name', 'credits', 'hull', 'guard'].forEach(k => { if (f[k] !== undefined) b[k] = f[k]; });
+    if (f.description !== undefined) b.note = f.description;
+  }
+  if (row.type === 'station' && CT_HAS(CONTENT_WORLD.station, row.id) && CONTENT_WORLD.station[row.id].system === sysId) {
+    const st = CONTENT_WORLD.station[row.id];
+    if (st.name !== undefined) b.name = st.name;
+    b.dock = ctDock(st);
+    const about = {};
+    ['accent', 'welcome', 'services', 'bar', 'shop'].forEach(k => { if (st[k] !== undefined) about[k] = st[k]; });
+    if (Object.keys(about).length) b.about = about;
+  }
+  return b;
+}
+function worldFromFiles(id) {
+  try {
+    if (!CT_HAS(CONTENT_WORLD.system, id)) return null;
+    const f = CONTENT_WORLD.system[id], def = { id, name: f.name, kind: f.kind };
+    ['ly', 'size', 'danger', 'traffic', 'seed'].forEach(k => { if (f[k] !== undefined) def[k] = f[k]; });
+    if (f.starType !== undefined) { def.star = { type: f.starType }; if (f.starX !== undefined) def.star.x = f.starX; if (f.starY !== undefined) def.star.y = f.starY; }
+    if (f.pirateMax !== undefined || f.pirateEvery !== undefined || (f.pirates && f.pirates.length)) {
+      def.pirates = {};
+      if (f.pirateMax !== undefined) def.pirates.max = f.pirateMax;
+      if (f.pirateEvery !== undefined) def.pirates.every = f.pirateEvery;
+      if (f.pirates && f.pirates.length) { def.pirates.weights = {}; f.pirates.forEach(r => { def.pirates.weights[r.kind] = r.weight; }); }
+    }
+    if (f.description !== undefined) def.description = f.description;
+    def.bodies = (f.bodies || []).map(row => ctWorldBody(row, id));
+    return def;
+  } catch (e) { return null; }
+}
+function worldAt(id) {
+  try {
+    if (typeof id !== 'string') return null;
+    const code = CT_HAS(SYSTEMS, id) ? SYSTEMS[id] : null;
+    if (code && (code.bodies || []).length) return code; // the game's own row, with its bodies in it (Halcyon)
+    if (!ctBuilt.has(id)) ctBuilt.set(id, worldFromFiles(id));
+    return ctBuilt.get(id) || code; // a row of the code's with no bodies is a stub (Kestrel until card u-b5): the files' row replaces it, and it stays when no file describes it
+  } catch (e) { return null; }
+}
+function worldIds() { // every system the game or a file has, the code's first
+  const ids = Object.keys(SYSTEMS);
+  Object.keys(CONTENT_WORLD.system).forEach(k => { if (!ids.includes(k)) ids.push(k); });
+  return ids;
+}
 
 // ---- text: the words the interface says (content/text/ui.md) ----
 // One table of key | text. A key is a string the game reads: help.<scene>.<line> (the H screen, src/meta.js HELP), tips.<scene> (src/map.js SCENE_TIPS) or

@@ -7,8 +7,15 @@ accent: amber
 fuel: 8
 repair: 0.5
 ore: 20
+yard: [kite, ox]
 ---
 Text for the station's sign.
+
+## Parts
+| slot | tier |
+|---|---|
+| engine | 2 |
+| tank | 3 |
 
 ## Welcome
 Welcome to {station}. Mind the gap.

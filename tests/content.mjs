@@ -130,8 +130,8 @@ section('validator: sections, lists, key lines and tables');
   exact('a table missing a required column', one('content/npcs/n.md', N('## Reactions\n| when |\n|---|\n| always |\n')).errs, 'content/npcs/n.md, line 6: the table needs the column line. Ignored the table.');
   const rows = one('content/npcs/n.md', T(Array.from({ length: 210 }, () => '| always | Hi. |').join('\n') + '\n'));
   check('a table stops at 200 rows and says so', rows.e.data.reactions.length === 200 && has(rows.errs, 'more than 200 rows; the rest are ignored.'), rows.errs.join('|'));
-  const sys = one('content/systems/s.md', FM('system', 'name: S\nkind: mining\nly: [14, 26.5]\n', '## Bodies\n| id | type | x | y | r |\n|---|---|---|---|---|\n| a-1 | planet | 10 | 20 | 300 |\n| b-1 | station | 10 | 20 | |\n'));
-  check('a table with empty optional cells leaves them out', sys.errs.length === 0 && JSON.stringify(sys.e.data.bodies) === '[{"id":"a-1","type":"planet","x":10,"y":20,"r":300},{"id":"b-1","type":"station","x":10,"y":20}]', JSON.stringify(sys.e && sys.e.data.bodies));
+  const sys = one('content/systems/s.md', FM('system', 'name: S\nkind: mining\nly: [14, 26.5]\n', '## Bodies\n| id | type | name | x | y | r | kind |\n|---|---|---|---|---|---|---|\n| a-1 | planet | | 10 | 20 | 300 | rock |\n| b-1 | gate | | 10 | 20 | 50 | |\n'));
+  check('a table with empty optional cells leaves them out', sys.errs.length === 0 && JSON.stringify(sys.e.data.bodies) === '[{"id":"a-1","type":"planet","x":10,"y":20,"r":300,"kind":"rock"},{"id":"b-1","type":"gate","x":10,"y":20,"r":50}]', JSON.stringify(sys.e && sys.e.data.bodies));
   check('a list of two numbers (ly) is read as numbers', JSON.stringify(sys.e.data.ly) === '[14,26.5]');
 }
 
@@ -167,6 +167,81 @@ section('loading a whole pack: duplicates, references, order, hash');
   const x = C.loadAll([a, { path: 'content/npcs/j.md', text: FM('npc', 'name: J\n') }]), y = C.loadAll([{ path: 'content/npcs/j.md', text: FM('npc', 'name: J\n') }, a]);
   check('the result does not depend on the order the files are given', JSON.stringify(x) === JSON.stringify(y));
   check('the hash is 8 hex characters, stable, and changes with the content', /^[0-9a-f]{8}$/.test(x.hash) && x.hash === y.hash && C.loadAll([{ path: a.path, text: SHIP('hull: 71\n') }]).hash !== C.loadAll([a]).hash);
+}
+
+section('systems: bodies, pirates, docks and what the files say to each other (docs/MODDING.md 6.3, 6.4)');
+{
+  const HEAD = '| id | type | name | x | y | art | r | rocks | landable | kind | seed | look | labelDy | credits | hull | guard | note |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n';
+  // a body row from the columns that matter; the rest stay empty
+  const ROW = o => '| ' + ['id', 'type', 'name', 'x', 'y', 'art', 'r', 'rocks', 'landable', 'kind', 'seed', 'look', 'labelDy', 'credits', 'hull', 'guard', 'note'].map(k => (o[k] === undefined ? '' : o[k])).join(' | ') + ' |\n';
+  const SYS = (rows, front = '', after = '') => FM('system', 'name: S\nkind: mining\n' + front, '## Bodies\n' + HEAD + rows.map(ROW).join('') + after);
+  const KNOWN = { known: () => true }; // the code knows every station, system and ship these single files name
+  const sys = (rows, front, after) => one('content/systems/s.md', SYS(rows, front, after), KNOWN);
+  const B = (id, type, extra) => Object.assign({ id, type, x: 100, y: 200 }, extra);
+
+  const all = sys([
+    B('s-station', 'station', { name: 'S Station', art: 'station', labelDy: -260 }),
+    B('s-home', 'planet', { name: 'Home', art: 'planet', r: 316, landable: 'yes' }),
+    B('s-far', 'planet', { name: 'Far', kind: 'gas', seed: 2, r: 440, landable: 'no' }),
+    B('s-belt', 'belt', { name: 'Belt', r: 700, rocks: 15 }),
+    B('s-wreck', 'poi', { name: 'Hulk', kind: 'wreck', credits: 250, hull: 40, guard: 2, note: 'Pirates guard it.' }),
+    B('s-out', 'scenery', { name: 'Outpost', art: 'outpost', labelDy: -175 }),
+    B('s-dead', 'scenery', { name: 'Dead station', look: 'derelict', labelDy: -240 }),
+    B('s-gate', 'gate', { name: 'Gate', r: 110 })
+  ], 'pirateMax: 8\npirateEvery: 15000\nstarType: G\nstarX: 18000\nstarY: 18000\nseed: 4001\n', '\n## Pirates\n| kind | weight |\n|---|---|\n| raider | 0.25 |\n| drone | 0.35 |\n| gunship | 0.4 |\n');
+  check('a system with every kind of body, a pirate table and a star loads with no problems', all.errs.length === 0 && all.e && all.e.data.bodies.length === 8, all.errs.join(' | '));
+  const rows = all.e && all.e.data.bodies;
+  check('a planet keeps kind and seed, scenery keeps look and labelDy, a site keeps its payout and note', rows && rows[2].kind === 'gas' && rows[2].seed === 2 && rows[2].landable === false && rows[6].look === 'derelict' && rows[6].labelDy === -240 && rows[5].art === 'outpost' && rows[4].guard === 2 && rows[4].note === 'Pirates guard it.' && rows[7].r === 110, JSON.stringify(rows));
+  check('the pirate table and its two numbers are kept', all.e && all.e.data.pirateMax === 8 && all.e.data.pirateEvery === 15000 && JSON.stringify(all.e.data.pirates) === '[{"kind":"raider","weight":0.25},{"kind":"drone","weight":0.35},{"kind":"gunship","weight":0.4}]', JSON.stringify(all.e && all.e.data.pirates));
+
+  const bad = (name, row, say) => { const r = sys([row, B('ok-1', 'gate', { name: 'Gate', r: 5 + 5 })]); check(name, r.errs.some(m => m.includes(say) && m.includes('Ignored')) && r.e.data.bodies.length === 1 && r.e.data.bodies[0].id === 'ok-1', r.errs.join(' | ')); };
+  bad('a planet with no kind and no art is refused, saying how to fix it', B('p-1', 'planet', { name: 'P', r: 300 }), 'a planet needs a kind (rock, ice, gas, lava, ringed), or art planet for the built-in one');
+  bad('a planet whose kind is a wreck is refused', B('p-2', 'planet', { name: 'P', r: 300, kind: 'wreck' }), 'a planet\'s kind is wreck but must be one of: rock, ice, gas, lava, ringed');
+  bad('a planet with no radius is refused', B('p-3', 'planet', { name: 'P', kind: 'rock' }), 'a planet needs r');
+  bad('a belt needs a radius and a rock count', B('b-1', 'belt', { name: 'B', r: 300 }), 'a belt needs rocks');
+  bad('a site needs a kind: wreck or beacon', B('w-1', 'poi', { name: 'W', kind: 'rock' }), 'a poi needs a kind: wreck or beacon');
+  bad('scenery needs an art or a look', B('c-1', 'scenery', { name: 'C' }), 'a scenery body needs an art or a look');
+  bad('scenery needs a name', B('c-2', 'scenery', { art: 'outpost' }), 'a scenery needs name');
+  bad('a gate needs a radius', B('g-1', 'gate', { name: 'G' }), 'a gate needs r');
+  const st1 = sys([B('t-1', 'station', { art: 'station' })]);
+  check('a station row needs no name: the station file has it', st1.errs.length === 0 && st1.e.data.bodies.length === 1 && st1.e.data.bodies[0].name === undefined, st1.errs.join(' | '));
+  bad('a texture the game does not have is refused with the list', B('x-1', 'scenery', { name: 'X', art: 'banana' }), 'art is "banana" but must be one of: station, outpost, planet, hub, foundry, nest, derelict');
+  const far = sys([B('l-1', 'scenery', { name: 'L', art: 'outpost', labelDy: -5000 })]);
+  check('a label that sits 5000 px away loses the label offset and keeps the body', far.errs.length === 1 && far.errs[0].includes('labelDy is -5000 but must be a whole number from -3000 to 3000. Ignored.') && far.e.data.bodies.length === 1 && far.e.data.bodies[0].labelDy === undefined, far.errs.join(' | '));
+
+  const dup = sys([B('d-1', 'gate', { name: 'One', r: 20 }), B('d-1', 'gate', { name: 'Two', r: 30 })]);
+  check('a body id used twice keeps the first row and says so', dup.e.data.bodies.length === 1 && dup.e.data.bodies[0].name === 'One' && dup.errs.some(m => m.includes('the body "d-1" is in the Bodies table twice. Ignored the second row.')), dup.errs.join(' | '));
+  const pb = sys([B('a-1', 'gate', { name: 'A', r: 9 + 1 })], 'pirateMax: 0\n', '\n## Pirates\n| kind | weight |\n|---|---|\n| bandit | 0.5 |\n| raider | 2 |\n');
+  check('a pirate table names real pirates with weights from 0 to 1, and pirateMax starts at 1', has(pb.errs, 'pirateMax is 0 but must be a whole number from 1 to 40') && has(pb.errs, 'kind is "bandit" but must be one of: raider, drone, gunship') && has(pb.errs, 'weight is 2 but must be a number from 0 to 1'), pb.errs.join(' | '));
+
+  const ST = (extra = '', body = '') => FM('station', 'name: Dock\nsystem: s\n' + extra, body);
+  const dock = one('content/stations/s-station.md', ST('yard: [kite, ox]\npartMult: 1.25\nfee: 50\nsalvageMult: 2\n', '## Parts\n| slot | tier |\n|---|---|\n| shields | 3 |\n| weapons | 2 |\n'), KNOWN);
+  check('a station keeps its yard, price factor, fee, salvage factor and part caps', dock.errs.length === 0 && JSON.stringify(dock.e.data.yard) === '["kite","ox"]' && dock.e.data.partMult === 1.25 && dock.e.data.fee === 50 && dock.e.data.salvageMult === 2 && JSON.stringify(dock.e.data.parts) === '[{"slot":"shields","tier":3},{"slot":"weapons","tier":2}]', dock.errs.join(' | ') + JSON.stringify(dock.e && dock.e.data));
+  const badDock = one('content/stations/s-station.md', ST('partMult: 9\nfee: -1\nsalvageMult: 0.5\n', '## Parts\n| slot | tier |\n|---|---|\n| armor | 2 |\n| tank | 4 |\n'), KNOWN);
+  check('a station with a wrong factor, fee, slot or tier is told so, one problem each', has(badDock.errs, 'partMult is 9 but must be a number from 0.1 to 5') && has(badDock.errs, 'fee is -1 but must be a whole number from 0 to 100000') && has(badDock.errs, 'salvageMult is 0.5 but must be a number from 1 to 5') && has(badDock.errs, 'slot is "armor" but must be one of: engine, shields, weapons, tank, cargo') && has(badDock.errs, 'tier is 4 but must be a whole number from 1 to 3'), badDock.errs.join(' | '));
+  const yardRef = C.loadAll([{ path: 'content/stations/s-station.md', text: ST('yard: [kite, frigate]\n') }], { strictRefs: true, known: (t, i) => t === 'system' || (t === 'ship' && i === 'kite') });
+  check('a yard with a ship nobody has is an error under strictRefs, naming the file to make; a ship the code has is fine', yardRef.errors.length === 1 && C.formatError(yardRef.errors[0]) === 'content/stations/s-station.md: yard refers to the ship "frigate", but there is no file for it (ships/frigate.md).', yardRef.errors.map(C.formatError).join('|'));
+
+  // the files of one world
+  const sysFile = (rows, extra) => ({ path: 'content/systems/s.md', text: SYS(rows, extra) });
+  const world = files => C.loadAll(files, { known: (t, i) => t === 'ship' }).errors.map(C.formatError);
+  let w = world([sysFile([B('s-dock', 'station', { name: 'Dock' })])]);
+  check('a station row with no station file is a warning naming the file to make', w.length === 1 && w[0] === '(warning) content/systems/s.md: the station "s-dock" has a row here but no file (stations/s-dock.md).', w.join('|'));
+  w = world([sysFile([B('s-dock', 'station', { name: 'Dock' })]), { path: 'content/stations/s-dock.md', text: ST() }]);
+  check('a station file and its row agree: nothing to say', w.length === 0, w.join('|'));
+  w = world([sysFile([B('s-dock', 'station', { name: 'Dock' })]), { path: 'content/stations/other.md', text: ST() }]);
+  check('a station file whose system has no row for it is a warning: nothing places the dock', has(w, 'content/stations/other.md: its system "s" (content/systems/s.md) has no station row "other" in its Bodies table, so nothing places this dock.'), w.join('|'));
+  w = world([sysFile([B('s-dock', 'station', { name: 'Dock' })]), { path: 'content/stations/s-dock.md', text: FM('station', 'name: Dock\nsystem: t\n') }, { path: 'content/systems/t.md', text: SYS([B('t-gate', 'gate', { name: 'G', r: 50 })]) }]);
+  check('a station that says another system than the one with its row is a warning', has(w, 'content/stations/s-dock.md: system is "t" but systems/s.md has a station row for "s-dock"'), w.join('|'));
+  w = world([sysFile([B('s-dock', 'station', { name: 'Dock Row' })]), { path: 'content/stations/s-dock.md', text: ST() }]);
+  check('a station called two things is a warning: the station file wins', has(w, 'name is "Dock" but the Bodies row in content/systems/s.md calls it "Dock Row". The station file wins.'), w.join('|'));
+  const SITE = (extra = '') => ({ path: 'content/poi/s-wreck.md', text: FM('poi', 'kind: wreck\nname: Hulk\n' + extra, 'Pays out.\n') });
+  w = world([sysFile([B('s-wreck', 'poi', { kind: 'wreck', credits: 90, name: 'Row name' })]), SITE('credits: 120\n')]);
+  check('a site paid in its file and again in the row is a warning: the file wins', has(w, 'the site "s-wreck" has its own file (content/poi/s-wreck.md), which pays it; the row says where, so name, credits in the row are ignored.'), w.join('|'));
+  w = world([sysFile([B('s-wreck', 'poi', { kind: 'beacon' })]), SITE()]);
+  check('a site that is a beacon in the row and a wreck in its file is a warning', has(w, 'the site "s-wreck" is a beacon here but a wreck in content/poi/s-wreck.md.'), w.join('|'));
+  w = world([sysFile([B('s-wreck', 'poi', { kind: 'wreck' })]), SITE('credits: 120\n')]);
+  check('a row that only says where, over a site with its own file: nothing to say', w.length === 0, w.join('|'));
 }
 
 section('schema sanity');

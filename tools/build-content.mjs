@@ -57,11 +57,15 @@ export function generate(result, core) {
 let CODE_IDS = null;
 function codeKnown(type, id) {
   if (!CODE_IDS) {
-    CODE_IDS = { system: new Set(), station: new Set() };
+    CODE_IDS = { system: new Set(), station: new Set(), ship: new Set() };
     try {
       const S = vm.runInNewContext(readFileSync(join(ROOT, 'src/data_systems.js'), 'utf8') + '\n;SYSTEMS', {});
       Object.keys(S).forEach(k => { CODE_IDS.system.add(k); (S[k].bodies || []).forEach(b => { if (b.type === 'station') CODE_IDS.station.add(b.id); }); });
     } catch (e) { /* no code ids: every reference then needs its own file, as before */ }
+    try { // the ship models a yard may sell (src/data_ships.js is plain data too)
+      const M = vm.runInNewContext(readFileSync(join(ROOT, 'src/data_ships.js'), 'utf8') + '\n;SHIP_MODELS', {});
+      Object.keys(M).forEach(k => { if (M[k].side === 'player') CODE_IDS.ship.add(k); });
+    } catch (e) { /* none */ }
   }
   return !!(CODE_IDS[type] && CODE_IDS[type].has(id));
 }
