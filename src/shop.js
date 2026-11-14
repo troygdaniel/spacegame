@@ -91,7 +91,7 @@ const UPGRADES = [
 ];
 const TIER_NAME = ['', '', ' II'];
 function fireDelay() { return [160, 100, 70][G.upgrades.rapid | 0]; }       // ms between shots
-function boostMax() { return [800, 1000, 1150][G.upgrades.booster | 0]; }  // top speed while boosting
+function boostMax() { return shipStat('boost'); }  // top speed while boosting: the model's, plus the booster tiers (src/fleet.js)
 function boostEnergy() { const t = G.upgrades.booster | 0; return { max: [100, 130, 165][t], regen: [17, 24, 32][t] }; } // boost tank (4 s at tier 0) and refill per second (src/boost.js)
 
 function ownedLine() {

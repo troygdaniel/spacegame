@@ -664,7 +664,7 @@ function hudTick(s) {
   if (space) {
     const spd = s.ship.body.speed, top = boostMax();
     if (s.cruising) hudGauge(h, 'g2', 186, 80, 40, Math.min(1, spd / CRUISE.top), CYAN, hudFmt(spd / 10), 'KM/S', null); // cruise: the speed in km/s (src/cruise.js)
-    else hudGauge(h, 'g2', 186, 80, 40, spd / top, spd > 480 ? AMBER : CYAN, String(Math.round(spd)), s.boostLocked ? 'NO BOOST' : 'SPEED', 150 / top);
+    else hudGauge(h, 'g2', 186, 80, 40, spd / top, spd > shipStat('vmax') ? AMBER : CYAN, String(Math.round(spd)), s.boostLocked ? 'NO BOOST' : 'SPEED', 150 / top);
     if (s.enMax) hudEnergy(h, s, now);
   }
   if (surf && s.col && s.col.state !== 'dead') {
