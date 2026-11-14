@@ -5,7 +5,7 @@ that put the three milestones where the plan wants them (first upgrade in about 
 Docs and a script only: nothing in the game changes here. E4 implements.
 
 Run it: `node tools/economy-sim.mjs` (all tables), or one of `income prices losses pacing tune planned systems check`. `--eff 0.25` changes the efficiency guess.
-Every table below is printed by that script from the game's own files, on main `edbcd48`. If a table here disagrees with the script, the script is right.
+Every table below is printed by that script from the game's own files, on main `a2aa7ae`. If a table here disagrees with the script, the script is right.
 
 ## 1. How to read the numbers
 
@@ -14,7 +14,7 @@ Three kinds of number go into the script, and the tables say which is which:
 | Kind | What it is | Where it comes from |
 |---|---|---|
 | **DATA** | ship and part tables, call rewards, bounties, ore price, rock hit points, belts, spawn table, positions, the shop's price function | read from `src/` when the script runs (the game's own scripts are run in a sandbox) |
-| **PINNED** | numbers that sit in a code line instead of a table: repair half a credit a point, insurance 20% (min 50), the MULE's speed, pod size, the rock split | copied once; `tools/economy-sim.mjs check` (smoke step 4x) greps the source and fails when a pinned line has changed, so a stale pin is noticed |
+| **PINNED** | numbers that sit in a code line instead of a table: repair half a credit a point, insurance 20% (min 50), the MULE's speed, pod size, the rock split | copied once; `tools/economy-sim.mjs check` (smoke step 4y) greps the source and fails when a pinned line has changed, so a stale pin is noticed |
 | **PACE** | how a player plays: seconds for a step, hit rate, how much of a session is spent earning | **guesses.** Nothing in the game knows them. They are all in one block at the top of the script |
 
 The one guess that moves every answer is **efficiency**: the share of play time spent in a loop. The rest of a session is reading, shopping, flying about, learning the
