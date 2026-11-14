@@ -39,7 +39,9 @@ try {
   await t.ev(`(() => { window.__toasts = []; const orig = toast; toast = (s, msg, c) => { window.__toasts.push(msg); return orig(s, msg, c); }; })()`);
   await t.ev(`go(${SP}, 'Station', { arrive: true })`);
   await t.waitFor(`!!(window.game && game.scene.isActive('Station'))`, 20000, 'Station active');
-  await t.waitFor(`window.__toasts.some(m => /^Bounty this flight/.test(m))`, 20000, 'the bounty toast');
+  // the toast is a 1.7 s timer on the Station's own clock, and on a busy Mac that scene can run at an eighth of real speed: step the clock by hand
+  // (500 ms per look) instead of waiting real seconds for it
+  await t.waitFor(`(() => { const s = ${ST}; if (s && s.time) s.time.update(s.time.now, 500); return window.__toasts.some(m => /^Bounty this flight/.test(m)); })()`, 20000, 'the bounty toast');
   const line = await t.ev(`window.__toasts.find(m => /^Bounty this flight/.test(m))`);
   check('docking toast: "Bounty this flight: +185 cr  (3 pirates)"', line === 'Bounty this flight: +185 cr  (3 pirates)', JSON.stringify(line));
   check('the count starts again after docking', await t.ev(`G.flight.kills === 0 && G.flight.bounty === 0`));
