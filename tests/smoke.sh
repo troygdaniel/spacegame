@@ -18,6 +18,7 @@
 #   4i. tests/launch.mjs: pirates fair at launch (20 s grace, one-at-a-time first wave, spawns kept out, hit invulnerability)
 #   4j. tests/contentboot.mjs: a bad, missing, broken or hand-edited content.generated.js never stops the game reaching Title and playing
 #   4l. tests/npcs.mjs: the six bar characters (persona cards, lines, reactions), IDA only after the first rescue is paid, a talk with each new one
+#   4m. tests/systemart.mjs: planet kinds, star types and the four station looks for other systems (not used by the game yet)
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #      their failure paths, with the game clock stepped by hand
 # Needs Google Chrome and Node 22+. Uses throwaway Chrome profiles, never your own. Chrome runs with
@@ -60,6 +61,7 @@ if node tests/bounty.mjs; then :; else fail=1; fi
 
 echo "== 4e. credits unmistakable (tests/credits.mjs)"
 if node tests/credits.mjs; then :; else fail=1; fi
+
 echo "== 4f. hyperspace tunnel demo (tests/hyper.mjs: #hyper, #hyper24, #hyper2)"
 if node tests/hyper.mjs; then :; else fail=1; fi
 
@@ -77,6 +79,8 @@ echo "== 4k. dev server: serves, refuses, rebuilds on change, R reloads (tests/s
 if node tests/serve.mjs; then :; else fail=1; fi
 echo "== 4l. the Drift's six characters (tests/npcs.mjs)"
 if node tests/npcs.mjs; then :; else fail=1; fi
+echo "== 4m. art for other star systems (tests/systemart.mjs)"
+if node tests/systemart.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
