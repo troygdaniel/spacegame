@@ -242,7 +242,7 @@ try {
   put('text/extra.md', '---\ntype: text\n---\n## Strings\n| key | text |\n|---|---|\n| toast.docked | Fine. |\n| help.stationn.1 | A typo in a key refuses the whole file. |\n');
   put('stations/halcyon-station.md', '---\ntype: station\nname: Halcyon Station\nsystem: kestrel\nrepair: 9\nore: 99\n---\n');
   put('stations/outpost.md', '---\ntype: station\nname: Outpost\nsystem: halcyon\n---\n');
-  put('npcs/nobody.md', '---\ntype: npc\nname: NOBODY\n---\n## Lines\n- Hello.\n');
+  put('npcs/nobody.md', '---\ntype: npc\nname: NOBODY\n---\nA new character needs a Lines list: without one the file is refused (src/contentadd.js).\n');
   const D = await play(gameWith(join(wrong, 'content')).dir);
   check('the game boots and plays, with no console errors', D.errors.length === 0, D.errors.join(' | '));
   check('nothing was applied and every file was refused', D.loader.state.applied.length === 0 && D.loader.state.skipped === 12, JSON.stringify(D.loader.state));
@@ -251,9 +251,9 @@ try {
   check('the wrong tier is explained', /weapons-2\.md\|could not be applied \(tier is 1 but the file is called weapons-2, so it must be tier 2\)/.test(said));
   check('a fourth tier and the old v1 name (booster) are refused as parts the game does not have', /engine-4\.md\|the game has no built-in part called "engine-4" and cannot add new ones/.test(said) && /booster-1\.md\|the game has no built-in part called "booster-1"/.test(said));
   check('a call of another kind is explained', /escort\.md\|could not be applied \(kind is "patrol" but the file is called escort, so its kind must be escort\)/.test(said));
-  check('a call the game does not have yet is refused', /courier-1\.md\|the game has no built-in mission called "courier-1" and cannot add new ones/.test(said));
+  check('a call of a kind the game does not play yet is refused', /courier-1\.md\|could not be applied \(kind is "courier" but the game plays only rescue, escort, patrol, bounty calls so far/.test(said), said);
   check('a player ship cannot replace a pirate', /gunship\.md\|could not be applied \(side is "player" but gunship is a pirate ship\)/.test(said));
-  check('a ship with no row, and a character with no row, are refused', /kite\.md\|the game has no built-in ship called "kite"/.test(said) && /nobody\.md\|the game has no built-in npc called "nobody"/.test(said));
+  check('a built-in player ship cannot be changed from a file yet, and a character with no lines is refused', /kite\.md\|could not be applied \(kite is one of the six built-in ships and cannot be changed from a file yet/.test(said) && /nobody\.md\|could not be applied \(a character needs a Lines list with at least one line to say\)\. Skipped the file\./.test(said), said);
   check('a text file with one key the game does not read is refused whole, with a hint', /extra\.md\|could not be applied \(the key "help\.stationn\.1" is not a string the game reads\. Did you mean "help\.station\.1"\?\)/.test(said), said);
   check('a station in the wrong system is refused, and so is a station the game has no dock for', /halcyon-station\.md\|could not be applied \(system is "kestrel" but halcyon-station is in halcyon\)/.test(said) && /outpost\.md\|the game has no built-in station called "outpost"/.test(said), said);
   same('every table is exactly the default', D.snap, B.snap);
