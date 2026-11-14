@@ -17,6 +17,7 @@ const CALL_MS = Number(process.env.DEVTOOLS_TIMEOUT_MS) || 120000;
 const KEYS = {
   C: [67, 'KeyC', 'c'], E: [69, 'KeyE', 'e'], L: [76, 'KeyL', 'l'], W: [87, 'KeyW', 'w'], S: [83, 'KeyS', 's'], X: [88, 'KeyX', 'x'],
   1: [49, 'Digit1', '1'], 2: [50, 'Digit2', '2'], 3: [51, 'Digit3', '3'], ESC: [27, 'Escape', 'Escape'],
+  J: [74, 'KeyJ', 'j'], UP: [38, 'ArrowUp', 'ArrowUp'], DOWN: [40, 'ArrowDown', 'ArrowDown'],
   ENTER: [13, 'Enter', 'Enter'], TAB: [9, 'Tab', 'Tab'], SPACE: [32, 'Space', ' ']
 };
 
