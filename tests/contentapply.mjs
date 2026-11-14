@@ -72,7 +72,7 @@ section('checkEntry: sections');
   check('a key: text section drops unknown keys and non-text', r.data && J(r.data.boardLine) === J({ active: 'Go.' }) && r.errors.length === 2, J(msgs(r.errors)));
   r = C.checkEntry({ type: 'npc', id: 'juno', path: 'content/npcs/juno.md', data: { name: 'JUNO', reactions: [{ when: 'credits>=500', line: 'Rich.' }, { when: 'sometimes', line: 'No.' }, { when: 'always' }, 'x'] } });
   check('table rows with a bad cell, a missing cell or no shape are dropped', r.data && J(r.data.reactions) === J([{ when: 'credits>=500', line: 'Rich.' }]) && r.errors.length >= 3, J(msgs(r.errors)));
-  r = C.checkEntry({ type: 'system', id: 'brass', path: 'content/systems/brass.md', data: { name: 'Brass', kind: 'trade', bodies: Array.from({ length: 201 }, (_, i) => ({ id: 'b' + i, type: 'belt', x: 1, y: 1 })) } });
+  r = C.checkEntry({ type: 'system', id: 'brass', path: 'content/systems/brass.md', data: { name: 'Brass', kind: 'trade', bodies: Array.from({ length: 201 }, (_, i) => ({ id: 'b' + i, type: 'belt', x: 1, y: 1, r: 100, rocks: 5 })) } });
   check('a table longer than 200 rows keeps the first 200', r.data && r.data.bodies.length === 200, J(msgs(r.errors)));
   r = C.checkEntry(m({ description: 'x'.repeat(601) }));
   check('a description over 600 characters is dropped, the entry stays', r.data && r.data.description === undefined && r.data.title === 'Rescue');

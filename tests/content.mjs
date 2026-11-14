@@ -130,8 +130,8 @@ section('validator: sections, lists, key lines and tables');
   exact('a table missing a required column', one('content/npcs/n.md', N('## Reactions\n| when |\n|---|\n| always |\n')).errs, 'content/npcs/n.md, line 6: the table needs the column line. Ignored the table.');
   const rows = one('content/npcs/n.md', T(Array.from({ length: 210 }, () => '| always | Hi. |').join('\n') + '\n'));
   check('a table stops at 200 rows and says so', rows.e.data.reactions.length === 200 && has(rows.errs, 'more than 200 rows; the rest are ignored.'), rows.errs.join('|'));
-  const sys = one('content/systems/s.md', FM('system', 'name: S\nkind: mining\nly: [14, 26.5]\n', '## Bodies\n| id | type | x | y | r |\n|---|---|---|---|---|\n| a-1 | planet | 10 | 20 | 300 |\n| b-1 | station | 10 | 20 | |\n'));
-  check('a table with empty optional cells leaves them out', sys.errs.length === 0 && JSON.stringify(sys.e.data.bodies) === '[{"id":"a-1","type":"planet","x":10,"y":20,"r":300},{"id":"b-1","type":"station","x":10,"y":20}]', JSON.stringify(sys.e && sys.e.data.bodies));
+  const sys = one('content/systems/s.md', FM('system', 'name: S\nkind: mining\nly: [14, 26.5]\n', '## Bodies\n| id | type | name | x | y | r | kind |\n|---|---|---|---|---|---|---|\n| a-1 | planet | | 10 | 20 | 300 | rock |\n| b-1 | gate | | 10 | 20 | 50 | |\n'));
+  check('a table with empty optional cells leaves them out', sys.errs.length === 0 && JSON.stringify(sys.e.data.bodies) === '[{"id":"a-1","type":"planet","x":10,"y":20,"r":300,"kind":"rock"},{"id":"b-1","type":"gate","x":10,"y":20,"r":50}]', JSON.stringify(sys.e && sys.e.data.bodies));
   check('a list of two numbers (ly) is read as numbers', JSON.stringify(sys.e.data.ly) === '[14,26.5]');
 }
 

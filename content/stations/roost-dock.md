@@ -5,8 +5,18 @@ system: roost
 accent: red
 fuel: 15
 repair: 0.5
+yard: [bastion]
+partMult: 1.25
+fee: 50
+salvageMult: 2
 ---
 The nest. Entry costs 50 cr and nobody asks why you came.
+
+## Parts
+| slot | tier |
+| --- | --- |
+| shields | 3 |
+| weapons | 3 |
 
 ## Welcome
 Welcome to {station}. The fee is 50 cr; the Reaver says hello.

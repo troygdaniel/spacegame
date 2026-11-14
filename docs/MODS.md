@@ -411,11 +411,16 @@ Placeholders in its text: `{reward}`, `{count}`, `{progress}`, `{station}`, `{sy
 | `fuel` | number from 0 to 100 | credits a unit of fuel (not read yet) |
 | `repair` | number from 0 to 5 | credits a point of hull at the repair bay |
 | `ore` | number from 0 to 200 | credits an ore pays when you dock |
+| `yard` | list in square brackets: ids of ships | the ships it sells, by id (not read yet) |
+| `partMult` | number from 0.1 to 5 | the price of its parts times this (not read yet) |
+| `fee` | whole number from 0 to 100000 | credits it takes at the door (not read yet) |
+| `salvageMult` | number from 1 to 5 | what a salvage is worth here, times the usual (not read yet) |
 
 Under `##` headings (the text before the first heading is the description, up to 600 characters):
 
 | Heading | Holds |
 |---|---|
+| `## Parts` | a table: `slot`* (one of: `engine`, `shields`, `weapons`, `tank`, `cargo`); `tier`* (whole number from 1 to 3) |
 | `## Welcome` | text, up to 400 characters |
 | `## Shop` | a table: `item`* (text, up to 40 characters); `price`* (whole number from 0 to 1000000) |
 | `## Services` | a list, one `- item` a line, each up to 60 characters |
@@ -448,15 +453,18 @@ No placeholders.
 | `danger` | whole number from 0 to 5 | 0 to 5: how many pirates |
 | `traffic` | whole number from 0 to 3 | 0 to 3: how busy |
 | `seed` | whole number from 0 to 2147483647 | the random seed |
-| `starType` | one of: `O`, `B`, `A`, `F`, `G`, `K`, `M` |  |
-| `starX` | whole number from 0 to 200000 |  |
-| `starY` | whole number from 0 to 200000 |  |
+| `starType` | one of: `O`, `B`, `A`, `F`, `G`, `K`, `M` | the star: O, B, A, F, G, K or M (not read yet) |
+| `starX` | whole number from 0 to 200000 | where the star is, px (not read yet) |
+| `starY` | whole number from 0 to 200000 | where the star is, px (not read yet) |
+| `pirateMax` | whole number from 1 to 40 | its own pirate table: at most this many at once (not read yet) |
+| `pirateEvery` | whole number from 1000 to 600000 | its own pirate table: one new pirate every this many ms (not read yet) |
 
 Under `##` headings (the text before the first heading is the description, up to 600 characters):
 
 | Heading | Holds |
 |---|---|
-| `## Bodies` | a table: `id`* (an id: a-z, 0-9, dashes); `type`* (one of: `station`, `planet`, `belt`, `poi`, `star`); `name` (text, up to 40 characters); `x`* (whole number from 0 to 200000); `y`* (whole number from 0 to 200000); `art` (text, up to 30 characters); `r` (whole number from 10 to 5000); `rocks` (whole number from 0 to 200); `landable` (yes or no); `kind` (one of: `wreck`, `beacon`); `credits` (whole number from 0 to 100000) |
+| `## Bodies` | a table: `id`* (an id: a-z, 0-9, dashes); `type`* (one of: `station`, `planet`, `belt`, `poi`, `scenery`, `gate`); `name` (text, up to 40 characters); `x`* (whole number from 0 to 200000); `y`* (whole number from 0 to 200000); `art` (one of: `station`, `outpost`, `planet`, `hub`, `foundry`, `nest`, `derelict`); `r` (whole number from 10 to 5000); `rocks` (whole number from 0 to 200); `landable` (yes or no); `kind` (one of: `rock`, `ice`, `gas`, `lava`, `ringed`, `wreck`, `beacon`); `seed` (whole number from 0 to 2147483647); `look` (one of: `hub`, `foundry`, `nest`, `derelict`); `labelDy` (whole number from -3000 to 3000); `credits` (whole number from 0 to 100000); `hull` (whole number from 0 to 100); `guard` (whole number from 0 to 6); `note` (text, up to 160 characters) |
+| `## Pirates` | a table: `kind`* (one of: `raider`, `drone`, `gunship`); `weight`* (number from 0 to 1) |
 
 #### `voice`  (folder `content/voice/`)
 

@@ -17,7 +17,7 @@ Three belts, one smelter, and raiders who know exactly when the ore trucks leave
 | id | type | name | x | y | art | r | rocks | landable | kind | credits |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | brass-smelter | station | Brass Smelter | 9000 | 21000 | foundry |  |  |  |  |  |
-| brass-3 | planet | Brass III | 24000 | 9000 | rock | 300 |  | no |  |  |
+| brass-3 | planet | Brass III | 24000 | 9000 |  | 300 |  | no | rock |  |
 | brass-belt-a | belt | Brass Belt | 12500 | 13500 |  | 900 | 40 |  |  |  |
 | brass-belt-b | belt | Cinder Belt | 26500 | 21500 |  | 800 | 30 |  |  |  |
 | brass-veinfield | belt | Veinfield | 19000 | 30500 |  | 700 | 25 |  |  |  |
