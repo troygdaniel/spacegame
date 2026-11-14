@@ -19,6 +19,7 @@
 #   4j. tests/contentboot.mjs: a bad, missing, broken or hand-edited content.generated.js never stops the game reaching Title and playing
 #   4l. tests/npcs.mjs: the six bar characters (persona cards, lines, reactions), IDA only after the first rescue is paid, a talk with each new one
 #   4m. tests/systemart.mjs: planet kinds, star types and the four station looks for other systems (not used by the game yet)
+#   4n. tests/cruise.mjs: Halcyon at 36000 px, the nav list (N) and cruise (C): speed profile, locks, cancel, nudge, frame cost
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #      their failure paths, with the game clock stepped by hand
 # Needs Google Chrome and Node 22+. Uses throwaway Chrome profiles, never your own. Chrome runs with
@@ -81,6 +82,9 @@ echo "== 4l. the Drift's six characters (tests/npcs.mjs)"
 if node tests/npcs.mjs; then :; else fail=1; fi
 echo "== 4m. art for other star systems (tests/systemart.mjs)"
 if node tests/systemart.mjs; then :; else fail=1; fi
+
+echo "== 4n. cruise: N nav list, C cruise, a 36000 px Halcyon (tests/cruise.mjs)"
+if node tests/cruise.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
