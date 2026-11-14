@@ -45,10 +45,10 @@ chatComplete({ system, messages, maxTokens }) -> Promise<{ text } | { error }>
 | Reply text | `choices[0].message.content` | `content[0].text` |
 | Default model | `gpt-5-mini` | `claude-haiku-5-5` |
 
-- **Provider:** picked from the key (`sk-ant-` is Anthropic, anything else OpenAI); a button in the setup panel overrides it. The model name is a text field with the default filled in, so a player whose account names its small model differently can change it; the Test button shows the provider's own error in plain words ("the model name was not found").
+- **Provider:** one key per provider (Settings > Keys has an OpenAI row and an Anthropic row; an `sk-ant-` key only goes in the Anthropic row). Auto uses the provider that has a key, OpenAI first; the provider buttons override it. The model name is a text field with the default filled in, so a player whose account names its small model differently can change it; the Test button shows the provider's own error in plain words ("the model name was not found").
 - **Storage:** `longhaul.chat.key`, `longhaul.chat.on`, `longhaul.chat.provider`, `longhaul.chat.model`, all in `localStorage` inside try/catch, separate from the save. `voice.js` is the model to copy: load once, set, remove, status.
-- **Setup panel:** `ChatSetup`, a copy of `VoiceSetup`: the same amber block, "THIS USES YOUR OWN OPENAI OR ANTHROPIC ACCOUNT AND MAY COST YOU MONEY", a real HTML password input laid over the canvas (paste works, keys do not reach Phaser), buttons Save key, Test chat (JUNO says hello: one real call on the player's key), Turn chat off, Remove key, and a counter "N calls this session". Opened from Pause (new row "NPC chat   NO KEY / ON / OFF / KEY REJECTED") and from `C` on the title screen next to `V`.
-- **Failure:** 401 or 403 switches chat off with one toast ("NPC chat: the key was rejected. Check it in Pause > NPC chat"); 429 makes the character say "Give me a moment." and blocks sends for 20 s; three network failures in a row pause chat for a minute; a timeout of 20 s per call. The game never stops or throws because of chat.
+- **Setup screen:** Settings (`src/settings.js`, Keys section; `C` on the title opens it at the chat keys, Pause > Settings from the game): the amber block "THESE USE YOUR OWN ACCOUNTS AND MAY COST YOU MONEY", a real HTML password box per key laid over the canvas (paste works), Save, Test and Forget per key, a saved key shown by its last four characters only, the chat on/off switch, the provider buttons and the model name. Test is the only button that calls a provider, and only when pressed. The old single key (`longhaul.chat.key`) moves to its provider's slot (`longhaul.chat.key.openai` or `.anthropic`) when the page loads, and the old copy is removed.
+- **Failure:** 401 or 403 switches chat off with one toast ("NPC chat: the key was rejected. Check it in Settings > Keys"); 429 makes the character say "Give me a moment." and blocks sends for 20 s; three network failures in a row pause chat for a minute; a timeout of 20 s per call. The game never stops or throws because of chat.
 - **Limits:** one call per Enter, at least 1.2 s between sends, a player line at most 240 characters, 20 turns per conversation, `max_tokens` 120 for a reply and 300 for a summary.
 
 ## 3. Personas and the prompt
@@ -160,7 +160,7 @@ A scene over the station, `J` to open and close, a Pause row "Journal", the HUD 
 
 - **Left column, PEOPLE:** one row per character met, in meeting order: name in their colour, role, a mood dot (five colours), "met 3 times", a small voice icon when they have a voice. Up and down, or the mouse, pick one.
 - **Right column:** the picked character's `notes` ("What they think of you"), `last` ("Last time"), and their facts from the journal ("What you learned"). The top row is **YOU**: name (or "unnamed pilot, tell someone your name") and `player.notes`.
-- **Foot:** "Chat ON (OpenAI)" or "Chat off: Pause > NPC chat" and a **Forget everything** button, confirm on a second press, which clears `G.chat` (the key is untouched).
+- **Foot:** "Chat ON (OpenAI)" or "Chat off: Pause > Settings > Keys" and a **Forget everything** button, confirm on a second press, which clears `G.chat` (the key is untouched).
 - Empty state: "Nobody yet. Talk to someone in the Drift (E)."
 
 It works with no key and with no chat ever used, so it can land before the adapter.

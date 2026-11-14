@@ -3,16 +3,18 @@
 // A jump will cost distLy x shipStat('fuelPerLy') units (jumpCost below); nothing spends fuel yet, so for now it only changes at
 // the pump: a terminal in the Station scene sells it by the unit, at the price in the station's data (dock.fuel in
 // src/data_systems.js; a station with no dock.fuel has no pump). Troy's rule: fuel is a real decision, never a soft lock, so
-// there is a fuel ranger for a pilot stranded in a system with no pump: it arrives in 45 s, brings 10 units, charges three
-// times the home price and never more than all your credits.
+// there is a fuel ranger for a pilot stranded in a system with no pump: it arrives in 45 s, brings 10 units (more when
+// the ship's cheapest jump out of the system costs more), charges three times the home price and never more than all your credits.
 //   fuelTank(rec) fuelHave(rec) fuelFrac(rec) fuelState(rec)   the numbers and 'ok' | 'low' | 'crit'; rec defaults to the active ship
 //   fuelPrice(stationId)                          credits a unit, or null when the station has no pump
 //   jumpCost(from, to, rec)                       units a jump between two systems burns, or null when one is not known
+//   jumpCheapestOut(from, rec)                    the least a jump out of a system costs this ship, to a star it knows and can reach; null when none
 //   jumpCheck(from, to, rec)                      { ok, why: 'unknown' | 'range' | 'fuel' | null, cost, have, short, ly }
 //   pumpQuote(stationId, rec)                     what the terminal offers: half a tank, a full tank, what each costs
 //   pumpBuy(mode, stationId, rec)                 'half' or 'full': pays and fills as far as credits allow
 //   fuelBurn(units, rec)                          a jump's fuel, taken when its charge completes (src/jump.js)
-//   rangerCall(now) / rangerTick(now)             the fuel ranger; the Space scene will drive these (card u-b4)
+//   rangerUnits(rec)                              what the ranger brings: 10 units, or the ship's cheapest jump out of here when that costs more
+//   rangerCall(now) / rangerTick(now)             the fuel ranger, driven by the Space scene (src/jump.js)
 //   buildPump(s) openPump(s) closePump(s) pumpFrame(s)   the terminal in the Station scene
 
 const FUEL = {
@@ -63,6 +65,20 @@ function jumpCheck(from, to, rec) {
   return { ok: true, why: null, cost, have, short: 0, ly };
 }
 
+// the least a jump out of `from` costs this ship, to a star it knows and can reach (G.known, within its range); null when there is none
+function jumpCheapestOut(from, rec) {
+  rec = rec || activeShip();
+  let best = null;
+  (G.known || []).forEach(id => {
+    if (id === from) return;
+    const ly = distLy(from, id);
+    if (ly === null || ly > shipStat('range', rec) + 1e-9) return;
+    const c = jumpCost(from, id, rec);
+    if (c !== null && (best === null || c < best)) best = c;
+  });
+  return best;
+}
+
 // ---------- the pump ----------
 const pumpCost = (units, price) => Math.ceil(units * price - 1e-9);
 function pumpQuote(stationId, rec) {
@@ -95,19 +111,26 @@ function fuelBurn(units, rec) {
 
 // ---------- the fuel ranger ----------
 const FUELST = { rangerAt: 0 }; // when the ranger arrives, on the caller's clock (ms); 0 = nobody called. Not saved: a reload cancels the call
-// Allowed when this system has no pump, you hold less than the ranger brings, and nobody has been called yet. now: the caller's clock, ms.
+// What the ranger brings, and the level under which it comes: 10 units, or the cheapest jump out of this system for this ship when that costs
+// more (a Bastion burns 2 units a ly, Kestrel to Halcyon is 12.5: ten units would leave it short and the next call refused). 10 when no jump is known.
+function rangerUnits(rec) {
+  rec = rec || activeShip();
+  const out = jumpCheapestOut(G.system, rec);
+  return out === null ? FUEL.ranger.units : Math.max(FUEL.ranger.units, out);
+}
+// Allowed when this system has no pump, you hold less than the ranger brings (rangerUnits), and nobody has been called yet. now: the caller's clock, ms.
 function rangerCall(now) {
   const rec = activeShip();
   if (FUELST.rangerAt) return { ok: false, why: 'called', eta: Math.max(0, FUELST.rangerAt - now) };
   if (fuelSystemHasPump(G.system)) return { ok: false, why: 'pump' };
-  if (fuelHave(rec) >= FUEL.ranger.units) return { ok: false, why: 'enough' };
+  if (fuelHave(rec) >= rangerUnits(rec)) return { ok: false, why: 'enough' };
   FUELST.rangerAt = now + FUEL.ranger.secs * 1000;
   const q = rangerQuote(rec);
   return { ok: true, why: null, eta: FUEL.ranger.secs * 1000, units: q.units, cost: q.cost };
 }
 function rangerQuote(rec) {
   rec = rec || activeShip();
-  const units = fuelRound(Math.min(FUEL.ranger.units, fuelTank(rec) - fuelHave(rec))), price = FUEL.homePrice * FUEL.ranger.mult;
+  const units = fuelRound(Math.min(rangerUnits(rec), fuelTank(rec) - fuelHave(rec))), price = FUEL.homePrice * FUEL.ranger.mult;
   return { units, price, cost: Math.min(pumpCost(units, price), Math.max(0, G.credits)) }; // never more than all your credits
 }
 // Once per frame while in space. Returns { units, cost } on the frame the ranger arrives, else null.

@@ -6,7 +6,7 @@
 //   locked       no charge starts inside 2000 px of a station or planet ("too close to the mass: fly clear") or with a hostile within 1500 px ("hostiles near")
 //   complete     the fuel is burned NOW (a pull-out later does not refund it), the Hyper scene (src/hyperspace.js) plays the tunnel for ly x 1.6 s, then the Space
 //                scene starts again with { from: 'jump', to, origin }: enterSystem() in src/universe.js picks the system, the entry point and the calm
-//   F            in a system with no pump and a nearly empty tank: call the fuel ranger (src/fuel.js): 45 s, 10 units, three times the home price
+//   F            in a system with no pump and a nearly empty tank: call the fuel ranger (src/fuel.js): 45 s, 10 units (more for a heavy ship), three times the home price
 //   space.js     calls jumpFrame(this, dt) first thing in update() and jumpCancel(this, 'hit') when the ship is hurt; meta.js asks jumpEscape(game) before it opens the pause menu
 //   tests        tests/jump.mjs runs it all on a stepped clock; JUMP.charge is the knob
 const JUMP = { charge: 4000, lockMass: 2000, lockHostile: 1500, zoom: 1.1, ring: 52 }; // ms, px, px, camera zoom at the end of the charge, ring radius
@@ -59,14 +59,14 @@ function jumpSetup(s) {
   s.jk = s.input.keyboard.addKeys('F');
   s.rangerTxt = s.add.text(W / 2, H - 86, '', uiFont(15, '#ffd37a', { fontStyle: 'bold' })).setOrigin(0.5).setScrollFactor(0).setDepth(100);
 }
-// the fuel ranger (src/fuel.js): F calls it when this system has no pump and the tank is nearly dry; it comes 45 s later with 10 units
+// the fuel ranger (src/fuel.js): F calls it when this system has no pump and the tank is nearly dry; it comes 45 s later with 10 units, or what this ship's cheapest jump out needs when that is more (rangerUnits)
 function rangerFrame(s) {
   const now = performance.now(), arrived = rangerTick(now);
   if (arrived) { toast(s, 'The fuel ranger is here: +' + fmtFuelUnits(arrived.units) + ' units' + (arrived.cost ? ', -' + arrived.cost + ' cr.' : ', no charge: you are out of credits.'), '#6dff9c'); sfx('chime'); }
   if (G.deep) { s.rangerTxt.setText(''); return; } // deep space after a pull-out: no ranger comes for you here, and F means nothing
   let line = '';
   if (FUELST.rangerAt) line = 'FUEL RANGER ARRIVES IN ' + Math.ceil(Math.max(0, FUELST.rangerAt - now) / 1000) + ' S';
-  else if (!fuelSystemHasPump(G.system) && fuelHave() < FUEL.ranger.units) { const q = rangerQuote(); line = 'F  CALL THE FUEL RANGER  (' + fmtFuelUnits(q.units) + ' UNITS, ' + q.cost + ' CR, 45 S)'; }
+  else if (!fuelSystemHasPump(G.system) && fuelHave() < rangerUnits()) { const q = rangerQuote(); line = 'F  CALL THE FUEL RANGER  (' + fmtFuelUnits(q.units) + ' UNITS, ' + q.cost + ' CR, 45 S)'; }
   s.rangerTxt.setText(line);
   if (s.jk && Phaser.Input.Keyboard.JustDown(s.jk.F)) {
     const r = rangerCall(now);

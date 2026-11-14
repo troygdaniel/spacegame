@@ -9,36 +9,8 @@ const SCREENS = GAMEPLAY.concat('Ship'); // where Tab, H and M work too. The Shi
 const DEV_HASH = /^#(space|surface|escort|patrol|hyper\d{0,2}|galaxy)$/.test(location.hash); // dev jumps neither load nor overwrite a save
 let lastSaved = '';
 
-const HELP = {
-  Station: [
-    'W A S D / arrows   walk',
-    'E   use the terminal, repair bay or ship',
-    'Esc   close a terminal, or pause',
-    'J   journal: who you have met',
-    'M   mute sound'
-  ],
-  Ship: [
-    'Enter or Space   launch',
-    'Esc   back to the station',
-    'Tab   sector map',
-    'M   mute sound'
-  ],
-  Space: [
-    'A D / left right   turn',
-    'W / up   thrust        S / down   brake',
-    'Shift   boost with thrust (energy: inner ring)',
-    'Q / E   dash left or right (cooldown)',
-    'Space or mouse   fire',
-    'L   dock or land (fly slowly, close in)',
-    'Esc   pause        M   mute sound'
-  ],
-  Surface: [
-    'W A S D / arrows   walk',
-    'Mouse   aim        click   fire',
-    'E   talk to the colonist, board at the pad',
-    'Esc   pause        M   mute sound'
-  ]
-};
+// the H page's key lines per scene, from the one table of keys (src/data_controls.js; Settings > Controls lists the same table)
+const HELP = { Station: controlsHelp('Station'), Ship: controlsHelp('Ship'), Space: controlsHelp('Space'), Surface: controlsHelp('Surface') };
 
 // the fleet records, the ship stats and the G accessors over the active ship are in src/fleet.js (card u-a3)
 // the stars a new game already knows (docs/UNIVERSE.md 4.3: the nearest ones): the home system and Kestrel, 6.3 ly away, so the first jump is there to be made
@@ -102,7 +74,7 @@ function shipFromSave(r, at) {
   rec.uid = Number.isInteger(r.uid) && r.uid > 0 ? r.uid : 0; // made unique by the caller
   rec.model = modelKnown(r.model) ? r.model : 'wren';
   rec.name = typeof r.name === 'string' && r.name.trim() ? r.name.trim().slice(0, SHIPREC.name) : 'Wren';
-  if (typeof r.at === 'string' && r.at) rec.at = r.at;
+  if (typeof r.at === 'string' && r.at && fleetStation(r.at)) rec.at = r.at; // a station this build does not know (a later version's, or a typo): the ship waits where you wake, not somewhere out of reach for ever (playtest 3)
   SHIPREC.slots.forEach(k => {
     const t = p[k] === true ? 1 : Math.floor(Number(p[k]));
     rec.parts[k] = Number.isFinite(t) ? Math.min(slotCap(k), shipMaxTier(rec.model, k), Math.max(0, t)) : 0; // never above what the hull can fit
@@ -208,62 +180,50 @@ function installMeta(game) {
 }
 
 // ---------- the Pause scene ----------
+const PAUSE_ROWS = ['resume', 'restart', 'volume', 'sound', 'settings', 'journal', 'new']; // top to bottom; the Controls page, Ship voice and NPC chat rows are in Settings now
 class Pause extends Phaser.Scene {
   constructor() { super('Pause'); }
   init(d) {
     this.from = (d && d.from) || 'Station';
-    this.view = 'menu'; this.sel = 0; this.confirmNew = false;
-    this.born = performance.now(); this.viewAt = this.born;
+    this.sel = 0; this.confirmNew = false;
+    this.born = performance.now();
   }
   create() {
-    const cx = W / 2, cy = H / 2;
+    const cx = W / 2, cy = H / 2, n = PAUSE_ROWS.length;
     this.add.rectangle(cx, cy, W, H, 0x02050c, 0.72).setInteractive(); // swallows clicks
-    this.ui = panel(this, { w: 560, h: 520, title: 'PAUSED  -  AUTOSAVE ON', depth: 0 }); // the shared panel style (src/ui.js)
+    this.ui = panel(this, { w: 560, h: 120 + n * 40 + 44, title: 'PAUSED  -  AUTOSAVE ON', depth: 0 }); // the shared panel style (src/ui.js)
     crTag(this, this.ui, G.credits); // src/ui.js: coin and gold N CR (the game is paused, so it cannot change here)
-    this.title = this.ui.titleText;
     this.rows = []; this.zones = [];
-    for (let i = 0; i < 9; i++) {
-      const y = cy - 160 + i * 40;
+    for (let i = 0; i < n; i++) {
+      const y = cy - (n - 1) * 20 + i * 40 - 6;
       this.rows.push(this.add.text(cx, y, '', { fontFamily: 'monospace', fontSize: '22px', color: '#9fe9ff' }).setOrigin(0.5));
       const z = this.add.rectangle(cx, y, 480, 38, 0x000000, 0.001).setInteractive({ useHandCursor: true });
-      z.on('pointerover', () => { if (this.view === 'menu') this.sel = i; });
-      z.on('pointerdown', p => { if (this.view === 'menu') { this.sel = i; this.activate(i, p.x); } });
+      z.on('pointerover', () => { this.sel = i; });
+      z.on('pointerdown', p => { this.sel = i; this.activate(i, p.x); });
       this.zones.push(z);
     }
-    this.help = this.add.text(cx, cy - 10, '', {
-      fontFamily: 'monospace', fontSize: '19px', color: '#cfefff', align: 'left', lineSpacing: 12
-    }).setOrigin(0.5).setVisible(false);
-    this.input.on('pointerdown', () => { if (this.view === 'controls' && performance.now() - this.viewAt > 250) this.setView('menu'); });
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,ENTER,SPACE,ESC,UP,DOWN,LEFT,RIGHT');
-    this.events.on('resume', () => { this.born = performance.now(); }); // back from the Journal or a key setup: their Esc must not also resume the game
+    this.events.on('resume', () => { this.born = performance.now(); }); // back from the Journal or Settings: their Esc must not also resume the game
+    this.ui.setHints([['↑↓', 'Choose'], ['Enter', 'Select'], ['←→', 'Volume'], ['Esc', 'Resume']]);
     this.refresh();
   }
 
-  setView(v) { this.view = v; this.viewAt = performance.now(); this.confirmNew = false; this.refresh(); }
-
-  rowText(i) {
+  rowText(id) {
     const pct = Math.round(G.volume * 100) + '%';
-    if (i === 0) return 'Resume';
-    if (i === 1) return 'Restart from station';
-    if (i === 2) return 'Controls help';
-    if (i === 3) return 'Volume   <  ' + pct.padStart(4) + '  >';
-    if (i === 4) return G.muted ? 'Sound    MUTED  (M)' : 'Sound    ON  (M)';
-    if (i === 5) return 'Ship voice   ' + voiceStatus(); // src/voice.js: optional, needs the player's own Deepgram key
-    if (i === 6) return 'NPC chat   ' + chatStatus(); // src/chat.js: optional, needs the player's own OpenAI or Anthropic key
-    if (i === 7) return 'Journal   (J in the station)'; // src/journal.js: who you have met and what you learned
+    if (id === 'resume') return 'Resume';
+    if (id === 'restart') return 'Restart from station';
+    if (id === 'volume') return 'Volume   <  ' + pct.padStart(4) + '  >';
+    if (id === 'sound') return G.muted ? 'Sound    MUTED  (M)' : 'Sound    ON  (M)';
+    if (id === 'settings') return 'Settings   (keys, controls, content)'; // src/settings.js: the ship voice and NPC chat keys, every key of the game, content, reset
+    if (id === 'journal') return 'Journal   (J in the station)'; // src/journal.js: who you have met and what you learned
     return this.confirmNew ? 'Select again to erase the save' : 'New game';
   }
 
   refresh() {
-    const menu = this.view === 'menu';
-    this.title.setText(menu ? 'PAUSED  -  AUTOSAVE ON' : 'CONTROLS  -  ' + this.from.toUpperCase());
     this.rows.forEach((r, i) => {
-      r.setVisible(menu).setText((i === this.sel ? '> ' : '  ') + this.rowText(i))
-        .setColor(i === this.sel ? (i === 8 && this.confirmNew ? '#ff4d6d' : '#ffd37a') : '#9fe9ff');
-      this.zones[i].input.enabled = menu;
+      r.setText((i === this.sel ? '> ' : '  ') + this.rowText(PAUSE_ROWS[i]))
+        .setColor(i === this.sel ? (PAUSE_ROWS[i] === 'new' && this.confirmNew ? '#ff4d6d' : '#ffd37a') : '#9fe9ff');
     });
-    this.help.setVisible(!menu).setText((HELP[this.from] || HELP.Station).join('\n'));
-    this.ui.setHints(menu ? [['↑↓', 'Choose'], ['Enter', 'Select'], ['←→', 'Volume'], ['Esc', 'Resume']] : [['Esc', 'Back']]);
   }
 
   adjustVolume(dir) {
@@ -284,40 +244,33 @@ class Pause extends Phaser.Scene {
   }
 
   activate(i, px) {
-    if (i !== 8) this.confirmNew = false;
-    if (i === 0) this.resume();
-    else if (i === 1) {
+    const id = PAUSE_ROWS[i];
+    if (id !== 'new') this.confirmNew = false;
+    if (id === 'resume') this.resume();
+    else if (id === 'restart') {
       if (G.mission === 'rescued') G.mission = 'accepted'; // the colonist stays behind; the call is still open
       saveGame(); this.toStation();
-    } else if (i === 2) this.setView('controls');
-    else if (i === 3) this.adjustVolume(px !== undefined && px < W / 2 ? -1 : 1);
-    else if (i === 4) { G.muted = !G.muted; saveGame(); if (!G.muted) beep(660, 0.08, 'triangle', 0.05); }
-    else if (i === 5) voiceOpenSetup(this);
-    else if (i === 6) chatOpenSetup(this);
-    else if (i === 7) journalOpen(this);
-    else if (i === 8) {
+    } else if (id === 'volume') this.adjustVolume(px !== undefined && px < W / 2 ? -1 : 1);
+    else if (id === 'sound') { G.muted = !G.muted; saveGame(); if (!G.muted) beep(660, 0.08, 'triangle', 0.05); }
+    else if (id === 'settings') settingsOpen(this, 'sound');
+    else if (id === 'journal') journalOpen(this);
+    else if (id === 'new') {
       if (!this.confirmNew) { this.confirmNew = true; return; }
       clearSave(); newGameState(); saveGame(true); this.toStation();
     }
   }
 
   update() {
-    const JD = Phaser.Input.Keyboard.JustDown, k = this.k;
+    const JD = Phaser.Input.Keyboard.JustDown, k = this.k, n = PAUSE_ROWS.length;
     const esc = JD(k.ESC); // always consume it: the Esc that opened this menu may still be flagged
-    if (esc && performance.now() - this.born > 200) {
-      if (this.view === 'controls') this.setView('menu'); else { this.resume(); return; }
+    if (esc && performance.now() - this.born > 200) { this.resume(); return; }
+    if (JD(k.UP) || JD(k.W)) { this.sel = (this.sel + n - 1) % n; this.confirmNew = false; }
+    if (JD(k.DOWN) || JD(k.S)) { this.sel = (this.sel + 1) % n; this.confirmNew = false; }
+    if (PAUSE_ROWS[this.sel] === 'volume') {
+      if (JD(k.LEFT) || JD(k.A)) this.adjustVolume(-1);
+      if (JD(k.RIGHT) || JD(k.D)) this.adjustVolume(1);
     }
-    if (this.view === 'controls') {
-      if (JD(k.ENTER) || JD(k.SPACE) || JD(k.E)) this.setView('menu');
-    } else {
-      if (JD(k.UP) || JD(k.W)) { this.sel = (this.sel + 8) % 9; this.confirmNew = false; }
-      if (JD(k.DOWN) || JD(k.S)) { this.sel = (this.sel + 1) % 9; this.confirmNew = false; }
-      if (this.sel === 3) {
-        if (JD(k.LEFT) || JD(k.A)) this.adjustVolume(-1);
-        if (JD(k.RIGHT) || JD(k.D)) this.adjustVolume(1);
-      }
-      if (JD(k.ENTER) || JD(k.SPACE) || JD(k.E)) this.activate(this.sel);
-    }
+    if (JD(k.ENTER) || JD(k.SPACE) || JD(k.E)) this.activate(this.sel);
     if (this.scene.isActive()) this.refresh();
   }
 }
