@@ -74,7 +74,7 @@ function shipFromSave(r, at) {
   rec.uid = Number.isInteger(r.uid) && r.uid > 0 ? r.uid : 0; // made unique by the caller
   rec.model = modelKnown(r.model) ? r.model : 'wren';
   rec.name = typeof r.name === 'string' && r.name.trim() ? r.name.trim().slice(0, SHIPREC.name) : 'Wren';
-  if (typeof r.at === 'string' && r.at) rec.at = r.at;
+  if (typeof r.at === 'string' && r.at && fleetStation(r.at)) rec.at = r.at; // a station this build does not know (a later version's, or a typo): the ship waits where you wake, not somewhere out of reach for ever (playtest 3)
   SHIPREC.slots.forEach(k => {
     const t = p[k] === true ? 1 : Math.floor(Number(p[k]));
     rec.parts[k] = Number.isFinite(t) ? Math.min(slotCap(k), shipMaxTier(rec.model, k), Math.max(0, t)) : 0; // never above what the hull can fit
