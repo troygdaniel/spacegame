@@ -11,6 +11,7 @@
 //   jumpCheck(from, to, rec)                      { ok, why: 'unknown' | 'range' | 'fuel' | null, cost, have, short, ly }
 //   pumpQuote(stationId, rec)                     what the terminal offers: half a tank, a full tank, what each costs
 //   pumpBuy(mode, stationId, rec)                 'half' or 'full': pays and fills as far as credits allow
+//   fuelBurn(units, rec)                          a jump's fuel, taken when its charge completes (src/jump.js)
 //   rangerCall(now) / rangerTick(now)             the fuel ranger; the Space scene will drive these (card u-b4)
 //   buildPump(s) openPump(s) closePump(s) pumpFrame(s)   the terminal in the Station scene
 
@@ -85,6 +86,13 @@ function pumpBuy(mode, stationId, rec) {
   return { ok: true, why: null, units, cost, partial: units < want };
 }
 
+// a jump burns its fuel when the charge completes (src/jump.js); a tank never goes below 0 and the sum is rounded as everything else here is
+function fuelBurn(units, rec) {
+  rec = rec || activeShip();
+  rec.fuel = fuelRound(Math.max(0, fuelHave(rec) - Math.max(0, units)));
+  return rec.fuel;
+}
+
 // ---------- the fuel ranger ----------
 const FUELST = { rangerAt: 0 }; // when the ranger arrives, on the caller's clock (ms); 0 = nobody called. Not saved: a reload cancels the call
 // Allowed when this system has no pump, you hold less than the ranger brings, and nobody has been called yet. now: the caller's clock, ms.
@@ -151,7 +159,7 @@ function openPump(s) {
   if (!s.pumpBox) return;
   hideTalk(s); s.prompt.setText(''); s.pumpOpen = true; s.panel = true; s.pumpBox.setVisible(true); // s.panel: the pause menu ignores Esc while a terminal is open
   s.pumpMsg.setText('Pay by the unit. It goes in at once.').setColor('#ffd37a');
-  refreshPump(s); beep(480, 0.08, 'triangle', 0.03, 200);
+  refreshPump(s); sfx('click');
 }
 function closePump(s) {
   s.pumpOpen = false; s.panel = false;
@@ -198,7 +206,7 @@ function buyFuel(s, mode) {
     else say('You have no credits for fuel.', '#ff4d6d');
     beep(r.why === 'full' ? 260 : 140, r.why === 'full' ? 0.08 : 0.15, r.why === 'full' ? 'square' : 'sawtooth', 0.03, r.why === 'full' ? 0 : -40);
   } else {
-    say((r.partial ? 'Partly filled: ' : 'Filled: ') + '+' + r.units.toFixed(1) + ' units (-' + r.cost + ' cr).', '#6dff9c'); sfx('chime');
+    say((r.partial ? 'Partly filled: ' : 'Filled: ') + '+' + r.units.toFixed(1) + ' units (-' + r.cost + ' cr).', '#6dff9c'); sfx('fuelPump');
   }
   refreshPump(s, r.ok && r.cost > 0);
 }

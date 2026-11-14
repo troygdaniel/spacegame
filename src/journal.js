@@ -36,7 +36,7 @@ function journalRows() {
 
 function journalOpen(scene) { // scene: the scene to pause and come back to (Station, or Pause)
   if (scene.scene.manager.isActive('Journal')) return;
-  scene.scene.pause(); scene.scene.launch('Journal', { from: scene.scene.key });
+  sfx('uiOpen'); scene.scene.pause(); scene.scene.launch('Journal', { from: scene.scene.key });
 }
 
 class Journal extends Phaser.Scene {
@@ -52,7 +52,7 @@ class Journal extends Phaser.Scene {
     this.render();
   }
 
-  pick(i) { if (!this.rows.length) return; const n = Phaser.Math.Wrap(i, 0, this.rows.length); if (n !== this.sel) { this.sel = n; beep(600, 0.04, 'square', 0.015); this.render(); } }
+  pick(i) { if (!this.rows.length) return; const n = Phaser.Math.Wrap(i, 0, this.rows.length); if (n !== this.sel) { this.sel = n; sfx('click'); this.render(); } }
 
   // everything but the window frame is drawn again whenever something changes: it is a few dozen objects
   render() {
@@ -151,7 +151,7 @@ class Journal extends Phaser.Scene {
   }
 
   close() {
-    if (this.closing) return; this.closing = true;
+    if (this.closing) return; this.closing = true; sfx('uiClose');
     const sc = this.scene.get(this.from); // keys released while the Journal was open are never seen: clear them so nothing sticks
     if (sc && sc.input && sc.input.keyboard) sc.input.keyboard.resetKeys();
     this.scene.stop(); this.scene.resume(this.from);

@@ -16,7 +16,7 @@
 (function (root) {
   'use strict';
 
-  const LIMITS = { fileBytes: 32768, files: 400, text: 400, line: 240, persona: 600, desc: 600, list: 60, rows: 200 };
+  const LIMITS = { fileBytes: 32768, files: 400, text: 400, line: 240, persona: 600, desc: 600, list: 60, rows: 200, packs: 12, packBytes: 1500000 };
   const COLORS = { cyan: '#38e1ff', amber: '#ffb454', red: '#ff4d6d', green: '#6dff9c', gold: '#ffd24a', white: '#ffffff', pink: '#ff4fd8' };
   const ID_RE = /^[a-z][a-z0-9-]{0,39}$/;
   const KEY_RE = /^[A-Za-z][A-Za-z0-9]{0,31}$/;
@@ -742,6 +742,30 @@
     return out;
   }
 
-  const api = { LIMITS, SCHEMA, CONDITIONS, COLORS, FOLDERS, parse, validate, loadAll, formatError, suggest, levenshtein, hashOf, checkEntry, apply };
+  // ---------- packs (docs/MODDING.md 13): a folder of files laid over the core pack ----------
+  // a pack's name is its folder's name: lower-case letters, digits and dashes, starting with a letter
+  const packName = n => typeof n === 'string' && ID_RE.test(n);
+  // the optional _pack.md of a pack: title, author and about, each one line between two --- lines. Never throws; what is missing is empty.
+  function packInfo(text) {
+    const info = { title: '', author: '', about: '' };
+    try {
+      const m = /^\uFEFF?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(\r?\n|$)/.exec(String(text));
+      if (!m) return info;
+      const max = { title: 40, author: 40, about: 200 };
+      m[1].split(/\r?\n/).forEach(line => {
+        const kv = /^([a-z]+):[ \t]*(.*)$/.exec(line.trim());
+        if (kv && Object.prototype.hasOwnProperty.call(max, kv[1])) info[kv[1]] = clean(kv[2]).trim().slice(0, max[kv[1]]);
+      });
+    } catch (e) { /* an unreadable _pack.md is just no info */ }
+    return info;
+  }
+  // one pack from its files: [{ path: 'mods/<name>/missions/rescue.md', text }, ...], read like any content, with the problems named by that path
+  function loadPack(name, files, opts) {
+    const info = packInfo((files.find(f => f && f.path === 'mods/' + name + '/_pack.md') || {}).text || '');
+    const r = loadAll(files, opts);
+    return { name, title: info.title, author: info.author, about: info.about, files: r.files, hash: r.hash, entries: r.entries, errors: r.errors };
+  }
+
+  const api = { LIMITS, SCHEMA, CONDITIONS, COLORS, FOLDERS, parse, validate, loadAll, formatError, suggest, levenshtein, hashOf, checkEntry, apply, packName, packInfo, loadPack };
   if (typeof module === 'object' && module && module.exports) module.exports = api; else root.ContentLib = api;
 })(typeof self !== 'undefined' ? self : this);

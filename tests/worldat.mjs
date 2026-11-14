@@ -47,7 +47,8 @@ try {
     check('eight systems: Halcyon first, then the seven the files add', ids.length === 8 && ids[0] === 'halcyon' && ['kestrel', 'meridian', 'brass', 'hollow', 'lethe', 'ember', 'roost'].every(i => ids.includes(i)), ids.join());
     check('worldAt knows every one of them and nothing else', (await ev(`worldIds().every(i => !!worldAt(i))`)) && (await ev(`[undefined, null, 5, '', 'nowhere', '__proto__', 'constructor', 'toString', 'hasOwnProperty'].every(i => worldAt(i) === null)`)));
     check('Halcyon: worldAt gives the code\'s own row, so nothing about the game changes', await ev(`worldAt('halcyon') === SYSTEMS.halcyon`));
-    check('the code still has one system: the files add none to SYSTEMS, and no scene reads the world yet', JSON.stringify(await ev(`Object.keys(SYSTEMS)`)) === '["halcyon"]');
+    check('the code has Halcyon and the empty Kestrel stub of card u-b4: the files add no system to SYSTEMS, and no scene reads the world yet', JSON.stringify(await ev(`Object.keys(SYSTEMS)`)) === '["halcyon","kestrel"]' && (await ev(`SYSTEMS.kestrel.bodies.length === 0`)));
+    check('Kestrel: the empty code stub gives way to the row the files make, and the stub itself is left alone', (await ev(`worldAt('kestrel') !== SYSTEMS.kestrel && worldAt('kestrel').bodies.length === 5 && SYSTEMS.kestrel.bodies.length === 0`)));
     check('a made row is cached, and worldFromFiles of a system with no file is null', (await ev(`worldAt('kestrel') === worldAt('kestrel')`)) && (await ev(`worldFromFiles('nowhere') === null && worldFromFiles(7) === null`)));
 
     // Halcyon from its files alone against the code's row. What the files have beyond the code's row is named here and nowhere else:
@@ -139,7 +140,7 @@ try {
     check('the dock keeps what was good: a price factor, shields to tier 2 (the armor row is refused), no pump price (999 is refused)', dock && dock.partMult === 1.5 && JSON.stringify(dock.parts) === '{"shields":2}' && dock.fuel === undefined, JSON.stringify(dock));
     check('the yard is kept as written; the ship nobody has is a warning on the Title chip, and fleet.js never sells an id it does not know', JSON.stringify(dock.yard) === '["kite","ghost-ship"]' && (await ev(`CONTENT_ERRORS.some(e => /ghost-ship/.test(e.message))`)), JSON.stringify(dock.yard));
     check('a station for a system nobody has is kept and placed nowhere; worldAt for it is null', (await ev(`CONTENT_WORLD.station['lost-dock'].name`)) === 'Lost Dock' && (await ev(`worldAt('nowhere') === null`)));
-    check('the game is at Title with the code\'s Halcyon untouched', (await ev(`worldAt('halcyon') === SYSTEMS.halcyon && Object.keys(SYSTEMS).join() === 'halcyon'`)));
+    check('the game is at Title with the code\'s rows untouched', (await ev(`worldAt('halcyon') === SYSTEMS.halcyon && Object.keys(SYSTEMS).join() === 'halcyon,kestrel' && SYSTEMS.kestrel.bodies.length === 0`)));
     check('the problems are listed for the Title chip', (await ev(`CONTENT_ERRORS.length`)) >= 6);
   });
 } catch (e) { check('the world test ran: ' + e.message, false); } finally {

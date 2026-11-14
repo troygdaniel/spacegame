@@ -46,5 +46,10 @@ const SYSTEMS = {
       { id: 'tern', type: 'planet', kind: 'gas', seed: 2, name: 'Tern', x: 27500, y: 25500, r: 440, landable: false },
       { id: 'tern-wreck', type: 'scenery', look: 'derelict', name: 'Dead station', x: 24400, y: 22800, labelDy: -240 }
     ]
+  },
+  // Kestrel as the jump card (u-b4) leaves it: a system with nothing in it, so a jump has somewhere to go. Card u-b5 authors the real one
+  // (the outpost, the ringed gas giant, the pump at 7 credits a unit). Its place on the galaxy map and its danger are the final numbers.
+  kestrel: {
+    id: 'kestrel', name: 'Kestrel', kind: 'outpost', ly: [25.5, 19], size: 36000, danger: 1, traffic: 0, bodies: []
   }
 };

@@ -26,6 +26,8 @@ function mapHex(g, x, y, r) { // Kestrel Outpost mark: a hexagon, so it is not m
   g.fillStyle(GREEN, 0.3); g.lineStyle(2, GREEN, 1); g.fillPoints(p, true); g.strokePoints(p, true);
 }
 
+// a system with no station or no planet (Kestrel until card u-b5): the map has a stand-in far outside the square, that is not drawn
+const MAP_NONE = { name: '', x: -60000, y: -60000, r: 0, none: true };
 // ---------- the overlay scene ----------
 class Overlay extends Phaser.Scene {
   constructor() { super('Overlay'); }
@@ -33,7 +35,7 @@ class Overlay extends Phaser.Scene {
   create() {
     const cx = W / 2, cy = H / 2;
     // where things are: the bodies of the current system (src/universe.js), not tables kept here
-    this.D = { st: sysBody('station'), pl: sysBody('planet'), op: sysBodies('scenery').find(b => b.art === 'outpost') || null, gate: sysBody('gate') };
+    this.D = { st: sysBody('station') || MAP_NONE, pl: sysBody('planet') || MAP_NONE, op: sysBodies('scenery').find(b => b.art === 'outpost') || null, gate: sysBody('gate') };
     const D = this.D;
     this.MX = 100; this.MY = 100; this.MS = 560; this.SX = 706; // map square and the side column
     this.add.rectangle(cx, cy, W, H, 0x02050c, 0.78).setInteractive(); // swallows clicks
@@ -43,6 +45,9 @@ class Overlay extends Phaser.Scene {
     const x = mapText(this, 1180, 50, 'Close  [x]', 15, '#9fe9ff').setOrigin(1, 0).setInteractive({ useHandCursor: true });
     x.on('pointerdown', () => this.close());
     this.footer = mapText(this, this.SX, 638, '', 14, '#5b7a92');
+    // the galaxy map (src/jump.js): a button beside the footer, in map mode only. It closes this map and opens that one over the same scene
+    this.galaxyBtn = mapText(this, 100, 638, 'G   Galaxy map', 14, '#38e1ff').setInteractive({ useHandCursor: true });
+    this.galaxyBtn.on('pointerdown', () => { const game = this.game; this.close(); setTimeout(() => { if (typeof jumpMapOpen === 'function') jumpMapOpen(game); }, 120); });
 
     // map mode
     const SX = this.SX;
@@ -93,7 +98,7 @@ class Overlay extends Phaser.Scene {
     const map = mode === 'map';
     this.title.setText(map ? 'SECTOR MAP' : 'HELP  -  ' + this.from.toUpperCase());
     this.footer.setText(map ? 'Tab or Esc: close     H: help' : 'H or Esc: close     Tab: sector map');
-    this.mapObjs.forEach(o => o.setVisible(map));
+    this.mapObjs.forEach(o => o.setVisible(map)); this.galaxyBtn.setVisible(map);
     this.helpObjs.forEach(o => o.setVisible(!map));
     if (!map) {
       this.hKeys.setText((typeof HELP !== 'undefined' && HELP[this.from] || []).join('\n'));
@@ -126,7 +131,7 @@ class Overlay extends Phaser.Scene {
       if (missionActive('rescue')) return { x: S.pl.x, y: S.pl.y, name: this.D.pl.name };
       if (missionActive('escort') && this.D.gate) return { x: this.D.gate.x, y: this.D.gate.y, name: this.D.gate.name };
     }
-    return S.live ? { x: S.st.x, y: S.st.y, name: this.D.st.name } : null; // no call taken: nothing to point at
+    return S.live && !this.D.st.none ? { x: S.st.x, y: S.st.y, name: this.D.st.name } : null; // no call taken: nothing to point at
   }
 
   update(time) {
@@ -160,14 +165,18 @@ class Overlay extends Phaser.Scene {
 
     // planet and station
     const pr = Math.max(7, S.pl.r * sc);
-    g.fillStyle(AMBER, 0.85); g.fillCircle(X(S.pl.x), Y(S.pl.y), pr);
-    g.lineStyle(1, AMBER, 0.5); g.strokeCircle(X(S.pl.x), Y(S.pl.y), pr + 5);
-    this.lbPlanet.setPosition(X(S.pl.x), Y(S.pl.y) - pr - 8);
+    if (!this.D.pl.none) {
+      g.fillStyle(AMBER, 0.85); g.fillCircle(X(S.pl.x), Y(S.pl.y), pr);
+      g.lineStyle(1, AMBER, 0.5); g.strokeCircle(X(S.pl.x), Y(S.pl.y), pr + 5);
+      this.lbPlanet.setPosition(X(S.pl.x), Y(S.pl.y) - pr - 8);
+    } else this.lbPlanet.setVisible(false);
     const sx = X(S.st.x), sy = Y(S.st.y);
-    g.fillStyle(CYAN, 0.3); g.lineStyle(2, CYAN, 1);
-    g.fillPoints([{ x: sx, y: sy - 9 }, { x: sx + 9, y: sy }, { x: sx, y: sy + 9 }, { x: sx - 9, y: sy }], true);
-    g.strokePoints([{ x: sx, y: sy - 9 }, { x: sx + 9, y: sy }, { x: sx, y: sy + 9 }, { x: sx - 9, y: sy }], true);
-    this.lbStation.setPosition(sx, sy - 14);
+    if (!this.D.st.none) {
+      g.fillStyle(CYAN, 0.3); g.lineStyle(2, CYAN, 1);
+      g.fillPoints([{ x: sx, y: sy - 9 }, { x: sx + 9, y: sy }, { x: sx, y: sy + 9 }, { x: sx - 9, y: sy }], true);
+      g.strokePoints([{ x: sx, y: sy - 9 }, { x: sx + 9, y: sy }, { x: sx, y: sy + 9 }, { x: sx - 9, y: sy }], true);
+      this.lbStation.setPosition(sx, sy - 14);
+    } else this.lbStation.setVisible(false);
     if (this.D.op) { // Kestrel Outpost (src/stationart.js): scenery, no docking, but worth finding
       const ox = X(this.D.op.x), oy = Y(this.D.op.y); mapHex(g, ox, oy, 8); this.lbOutpost.setPosition(ox, oy - 12);
     } else this.lbOutpost.setVisible(false);

@@ -120,7 +120,7 @@ class Hyper extends Phaser.Scene {
     this.h = { s: this, g: this.hg, t: {}, seen: {} }; // what hudPut (hud.js) wants for its text pool
 
     this.hum = hyperHum(this.dur);
-    if (!HYPER_QUIET) sfx('dash'); // the jump into the tunnel
+    if (!HYPER_QUIET) { sfx('hyperCharge'); this.time.delayedCall(HYPER.ramp * 1000 + 100, () => { if (!this.arrived) sfx('hyperJump'); }); } // the charge, then the jump as the tunnel reaches speed (the jump card B4 calls the same two)
     this.events.once('shutdown', () => { hyperHumStop(this.hum); this.hum = null; });
     this.input.keyboard.on('keydown-ESC', () => this.leave());
     this.input.keyboard.on('keydown-R', () => { if (!this.leaving) this.scene.restart(this.d); });
@@ -240,6 +240,7 @@ class Hyper extends Phaser.Scene {
   // the end: a white flash, then back where the demo started (a real jump will hand over to the arrival scene)
   arrive() {
     this.arrived = true;
+    if (!HYPER_QUIET) sfx('hyperArrive');
     this.cameras.main.flash(650, 255, 255, 255);
     this.time.delayedCall(700, () => this.leave());
   }

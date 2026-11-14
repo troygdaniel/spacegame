@@ -1,7 +1,16 @@
 // ---------- Space: fly, fight, dock, land ----------
+// a system with no station or no planet in its data (Kestrel until card u-b5, and the deep space of a pull-out): the scene still has an object where
+// the code looks for one, far outside the world, so every distance to it comes out huge and nothing is ever near it. nowhere marks it for the few
+// places that would draw it (hud.js)
+const spaceNowhere = () => ({ x: -60000, y: -60000, nowhere: true, active: false });
 class Space extends Phaser.Scene {
   constructor() { super('Space'); }
-  init(d) { this.from = (d && d.from) || 'station'; }
+  // from: 'station' (the default), 'surface', or 'jump': the ship comes out of hyperspace (src/jump.js hands over { from: 'jump', to, origin })
+  init(d) {
+    this.from = (d && d.from) || 'station';
+    this.jumped = this.from === 'jump';
+    if (this.jumped && d.to && G.system !== d.to) enterSystem(d.to, d.origin || null); // src/universe.js: the system, G.known, G.jumps and where the ship appears
+  }
   create() {
     this.leaving = false; this.dead = false; this.rammedAt = 0; this.ironUntil = 0;
     this.launchAt = null; this.aggro = 0; this.graceOver = false; // enemies.js: launch grace and first-wave cap; launchAt is set on the first update (the scene clock is still 0 in create on a fresh page)
@@ -13,21 +22,31 @@ class Space extends Phaser.Scene {
     spaceBackdrop(this); // src/art_world.js: nebula, parallax star layers, distant sun, giant and moon
 
     const stDef = sysBody('station'), plDef = sysBody('planet');
-    this.station = this.add.image(stDef.x, stDef.y, stDef.art);
-    this.tweens.add({ targets: this.station, angle: 360, duration: 180000, repeat: -1 });
-    label(this, stDef.x, stDef.y + stDef.labelDy, stDef.name.toUpperCase(), '#38e1ff', 18);
-    stationFx(this); // src/stationart.js: spinning hub and ring, beacons, docking lane, Kestrel Outpost
-    this.planet = this.add.image(plDef.x, plDef.y, plDef.art); this.planetR = plDef.r;
-    label(this, plDef.x, plDef.y - plDef.r - 64, plDef.name.toUpperCase(), '#ffb454', 18);
+    if (stDef) {
+      this.station = this.add.image(stDef.x, stDef.y, stDef.art);
+      this.tweens.add({ targets: this.station, angle: 360, duration: 180000, repeat: -1 });
+      label(this, stDef.x, stDef.y + stDef.labelDy, stDef.name.toUpperCase(), '#38e1ff', 18);
+      stationFx(this); // src/stationart.js: spinning hub and ring, beacons, docking lane, Kestrel Outpost
+    } else this.station = spaceNowhere();
+    if (plDef) {
+      this.planet = this.add.image(plDef.x, plDef.y, plDef.art); this.planetR = plDef.r;
+      label(this, plDef.x, plDef.y - plDef.r - 64, plDef.name.toUpperCase(), '#ffb454', 18);
+    } else { this.planet = spaceNowhere(); this.planetR = 0; }
 
     let sx, sy, rot;
-    if (this.from === 'surface') { sx = this.planet.x - 460; sy = this.planet.y + 120; rot = Math.PI; }
+    const arr = this.jumped && G.arrival && G.arrival.system === G.system ? G.arrival : null; // out of hyperspace at the edge facing the star we came from
+    if (arr) { sx = arr.x; sy = arr.y; rot = arr.rot; }
+    else if (this.jumped || !stDef) { sx = WS / 2; sy = WS / 2; rot = 0; } // a jump with no origin, or a system with no station to launch from: the middle
+    else if (this.from === 'surface') { sx = this.planet.x - 460; sy = this.planet.y + 120; rot = Math.PI; }
     else { sx = this.station.x + 250; sy = this.station.y; rot = 0; }
     this.ship = this.physics.add.sprite(sx, sy, 'ship').setDepth(5).setCollideWorldBounds(true);
     this.ship.body.setCircle(...shipLook().body).setDamping(true).setDrag(0.55).setMaxSpeed(shipStat('vmax')); // the 56x40 texture has a glow margin (ships.js); top speed from the model (fleet.js)
     this.ship.rotation = rot;
-    this.ship.setVelocity(Math.cos(rot) * 140, Math.sin(rot) * 140);
-    this.lockUntil = this.time.now + 1300;
+    const v0 = arr ? ARRIVE.speed : 140; // out of the tunnel at 500 px/s toward the middle (src/universe.js), off a launch pad at 140
+    this.ship.setVelocity(Math.cos(rot) * v0, Math.sin(rot) * v0);
+    this.lockUntil = this.time.now + (arr ? 0 : 1300);
+    this.calmUntil = null; // set by the first frame of flight: no pirates engage and none spawn until then (a jump's 3 s of calm)
+    if (this.jumped) G.arrival = null;
     this.cameras.main.startFollow(this.ship, true, 0.12, 0.12);
 
     this.pb = this.physics.add.group({ defaultKey: 'bullet', maxSize: 60 });
@@ -40,15 +59,17 @@ class Space extends Phaser.Scene {
     }).setDepth(3);
     this.boom = fxBoom(this); // src/art_world.js: sparks, flash, embers, shockwave, shards, smoke, scaled by the count
 
-    for (let i = 0; i < 6; i++) {
-      const a = i / 6 * Math.PI * 2, r = 520 + Math.random() * 220;
-      this.spawnDrone(this.planet.x + Math.cos(a) * r, this.planet.y + Math.sin(a) * r);
+    if (G.system === 'halcyon') { // the pirates round Kepler-4b and on the way to it are Halcyon's own (the other systems spawn from their table)
+      for (let i = 0; i < 6; i++) {
+        const a = i / 6 * Math.PI * 2, r = 520 + Math.random() * 220;
+        this.spawnDrone(this.planet.x + Math.cos(a) * r, this.planet.y + Math.sin(a) * r);
+      }
+      // the station-side pirates sit on the way to Kepler-4b, over 2000 px out: outside the police zone and well past engage range
+      [[5700, 2700], [6000, 3500], [2500, 2200]].forEach(([x, y]) => this.spawnDrone(x, y));
     }
-    // the station-side pirates sit on the way to Kepler-4b, over 2000 px out: outside the police zone and well past engage range
-    [[5700, 2700], [6000, 3500], [2500, 2200]].forEach(([x, y]) => this.spawnDrone(x, y));
     this.time.addEvent({
       delay: pirateTable().every, loop: true, callback: () => { // src/enemies.js: the system's spawn table
-        if (this.dead || this.cruising || this.enemies.countActive() >= pirateTable().max || pirateCap(this, this.time.now) === 0) return; // quiet during the launch grace
+        if (this.dead || this.cruising || this.enemies.countActive() >= pirateTable().max || pirateCap(this, this.time.now) === 0 || (this.calmUntil && this.time.now < this.calmUntil)) return; // quiet during the launch grace and a jump's calm
         const a = Math.random() * Math.PI * 2;
         const x = Phaser.Math.Clamp(this.ship.x + Math.cos(a) * SPAWN_DIST, 100, WS - 100);
         const y = Phaser.Math.Clamp(this.ship.y + Math.sin(a) * SPAWN_DIST, 100, WS - 100);
@@ -78,12 +99,14 @@ class Space extends Phaser.Scene {
       fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92'
     }).setScrollFactor(0).setDepth(100);
     if (this.from === 'station') { bountyReset(); toast(this, 'Launch clear. Kepler-4b is to the north-east.', '#9fe9ff'); } // enemies.js: a new flight's bounty count starts at 0
+    else if (this.jumped) toast(this, 'Arrived in ' + sysDef().name + '.', '#9fe9ff');
     missionSpaceSetup(this); // src/missions.js: escort freighter, wanted pirates
     trafficSetup(this); // src/traffic.js: civilian ships and the station police
     asteroidsSetup(this); // src/asteroids.js: the Kepler belt
     feelInstall(this); // src/feel.js: hit flashes, flame, approach rings, arrival zoom
     shipsInstall(this); // src/ships.js: flames, trails, shield flash, smoke and sparks on every ship
     cruiseSetup(this); cruiseFarBodies(this); // src/cruise.js: N nav list, C cruise, and the bodies out in far space
+    jumpSetup(this); // src/jump.js: the jump charge, and the F key for the fuel ranger
   }
 
   killDrone(e) { // one place for bullets and ramming to finish an enemy
@@ -108,15 +131,16 @@ class Space extends Phaser.Scene {
 
   hurt(n, fromX, fromY) {
     if (this.dead || this.leaving || this.time.now < this.ironUntil) return; // brief invulnerability after each hit; the shield flash (ships.js) shows it
+    if (this.jmp) jumpCancel(this, 'hit'); // src/jump.js: a charging jump does not survive a hit
     this.ironUntil = this.time.now + HIT_IRON;
     const sh = this.sh, now = this.time.now;
     if (sh && sh.max > 0) { // the shield takes the hit first; whatever it cannot hold goes through to the hull
       sh.last = now; sh.hitAt = now;
       const took = Math.min(sh.pts, n);
       if (took > 0) {
-        sh.pts -= took; n -= took;
+        sh.pts -= took; n -= took; sh.hurt = true; // sh.hurt: the recharge below plays its sound once when the shield is whole again
         feelNumber(this, this.ship.x, this.ship.y - 22, '-' + Math.round(took), '#7fe9ff'); shipsHit(this, this.ship, fromX, fromY);
-        if (sh.pts <= 0) { sh.down = now; sfx('empty'); }
+        if (sh.pts <= 0) { sh.down = now; sfx('shieldDown'); }
         if (n <= 0) { sfx('tick'); this.cameras.main.shake(60, 0.002); return; } // all of it held: a flash and a number, no hull damage
       }
     }
@@ -141,6 +165,8 @@ class Space extends Phaser.Scene {
     spaceBackdropTick(this); // parallax layers follow the camera
     if (this.dead) return;
     if (this.leaving) { feelFrame(this, time, dt); return; } // docking or landing move is playing (feel.js)
+    jumpFrame(this, dt); // src/jump.js: the charge ring, and the jump when it is full
+    if (this.leaving) { feelFrame(this, time, dt); return; } // the jump went
     const crs = cruiseFrame(this, time, dt); // src/cruise.js: 'cruise' = the ship flies itself, 'nav' = the nav list is open (no flight input)
     if (crs === 'cruise') {
       this.prompt.setText('');
@@ -150,7 +176,7 @@ class Space extends Phaser.Scene {
     }
     const still = crs === 'nav';
     const sh = this.sh; // the shield recharges once it has gone a while without a hit
-    if (sh && sh.max > 0 && sh.pts < sh.max && this.time.now - sh.last > sh.delay) sh.pts = Math.min(sh.max, sh.pts + sh.regen * dt / 1000);
+    if (sh && sh.max > 0 && sh.pts < sh.max && this.time.now - sh.last > sh.delay) { sh.pts = Math.min(sh.max, sh.pts + sh.regen * dt / 1000); if (sh.pts >= sh.max && sh.hurt) { sh.hurt = false; sfx('shieldUp'); } }
     const locked = time < this.lockUntil;
     const left = !still && (k.A.isDown || k.LEFT.isDown), right = !still && (k.D.isDown || k.RIGHT.isDown);
     const up = !still && (k.W.isDown || k.UP.isDown), brake = still || k.S.isDown || k.DOWN.isDown;
@@ -175,22 +201,25 @@ class Space extends Phaser.Scene {
     this.pb.getChildren().forEach(b => { if (b.active && time - b.born > 900) b.disableBody(true, true); });
     this.eb.getChildren().forEach(b => { if (b.active && time - b.born > 1800) b.disableBody(true, true); });
 
-    if (this.launchAt === null) this.launchAt = time; // the first frame of flight starts the launch grace (playtest 2: time.now was 0 in create, so the first launch of a session had no grace)
+    if (this.launchAt === null) { // the first frame of flight starts the launch grace (playtest 2: time.now was 0 in create, so the first launch of a session had no grace)
+      this.launchAt = time;
+      if (this.jumped) { this.calmUntil = time + ARRIVE.calm; this.launchAt = time - LAUNCH_GRACE + ARRIVE.calm; this.graceOver = true; } // a jump: 3 s of calm, then the first wave ramps as usual
+    }
     if (!this.graceOver && pirateCap(this, time) > 0) { this.graceOver = true; toast(this, 'Patrol cover ends here. Pirates about.', '#ffd37a'); }
     this.aggro = 0; // how many pirates have engaged you this frame (enemies.js caps it while the first wave ramps up)
     this.enemies.getChildren().forEach(d => pirateAI(this, d, ship, time)); // src/enemies.js: chase, strafe, shoot
     enemiesUpdate(this, time); // salvage pods drift and expire
 
     // dock / land
-    const dS = Phaser.Math.Distance.Between(ship.x, ship.y, this.station.x, this.station.y);
+    const dS = Phaser.Math.Distance.Between(ship.x, ship.y, this.station.x, this.station.y); // (huge when the system has none: spaceNowhere)
     const dP = Phaser.Math.Distance.Between(ship.x, ship.y, this.planet.x, this.planet.y);
     const spd = ship.body.speed;
     let msg = '';
     if (dS < 320) {
-      if (spd < 150) { msg = 'L  Dock at Halcyon Station'; if (JD(k.L)) { missionLeaveSpace(this); sfx('dock'); feelDescend(this, this.station, () => go(this, 'Station', { arrive: true })); } }
+      if (spd < 150) { msg = 'L  Dock at ' + sysBody('station').name; if (JD(k.L)) { missionLeaveSpace(this); sfx('dock'); feelDescend(this, this.station, () => go(this, 'Station', { arrive: true })); } }
       else msg = 'Too fast to dock. Hold S to brake';
     } else if (dP < this.planetR + 150) {
-      if (spd < 170) { msg = 'L  Land on Kepler-4b'; if (JD(k.L)) { missionLeaveSpace(this); sfx('thrusters'); feelDescend(this, this.planet, () => go(this, 'Surface')); } }
+      if (spd < 170) { msg = 'L  Land on ' + sysBody('planet').name; if (JD(k.L)) { missionLeaveSpace(this); sfx('thrusters'); feelDescend(this, this.planet, () => go(this, 'Surface')); } }
       else msg = 'Too fast to land. Hold S to brake';
     }
     this.prompt.setText(msg);

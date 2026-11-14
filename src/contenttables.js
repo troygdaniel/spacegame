@@ -228,8 +228,8 @@ const CT_STATION = {
   },
   apply: (id, data) => {
     const r = ctStationRow(id);
-    if (!r) { // a dock in a system the game has (Halcyon) must be a dock the game has; a dock in a system it does not have yet is kept
-      if (CT_HAS(SYSTEMS, data.system)) throw new Error('the game has no built-in station called "' + id + '" in ' + data.system + ' and cannot add new ones');
+    if (!r) { // a dock in a system the game has with bodies in it (Halcyon) must be a dock the game has; a dock in a system it does not have yet, or has only as an empty one (Kestrel until u-b5), is kept
+      if (CT_HAS(SYSTEMS, data.system) && (SYSTEMS[data.system].bodies || []).length) throw new Error('the game has no built-in station called "' + id + '" in ' + data.system + ' and cannot add new ones');
       CONTENT_WORLD.station[id] = ctWorldCopy(data); ctBuilt.clear(); return;
     }
     if (data.system !== undefined && data.system !== r.sys) throw new Error('system is "' + data.system + '" but ' + id + ' is in ' + r.sys);
@@ -241,7 +241,7 @@ const CT_STATION = {
 };
 
 // ---- worldAt(systemId): one system, the shape of a row of SYSTEMS (src/data_systems.js), for the cards that jump, draw and dock ----
-// worldAt gives the game's own row when the code has one (Halcyon: nothing about the game changes) and otherwise the row the files describe. worldFromFiles builds
+// worldAt gives the game's own row when the code has one with bodies in it (Halcyon: nothing about the game changes) and otherwise the row the files describe (a code row with no bodies, the Kestrel stub of card u-b4, gives way to its files). worldFromFiles builds
 // the row from the files alone, for any system with a file: its fields, its Bodies table (planets by kind and seed, belts, sites, scenery, the gate), its station
 // bodies with the dock from their station file, and the pirate table. The two agree for Halcyon, and tests/worldat.mjs pins that, field by field. What a row has
 // beyond the code's: seed and star (the system's own), description, and on a station body about (accent, welcome, services, bar, shop: the words for the Station scene).
@@ -295,9 +295,10 @@ function worldFromFiles(id) {
 function worldAt(id) {
   try {
     if (typeof id !== 'string') return null;
-    if (CT_HAS(SYSTEMS, id)) return SYSTEMS[id];
+    const code = CT_HAS(SYSTEMS, id) ? SYSTEMS[id] : null;
+    if (code && (code.bodies || []).length) return code; // the game's own row, with its bodies in it (Halcyon)
     if (!ctBuilt.has(id)) ctBuilt.set(id, worldFromFiles(id));
-    return ctBuilt.get(id);
+    return ctBuilt.get(id) || code; // a row of the code's with no bodies is a stub (Kestrel until card u-b5): the files' row replaces it, and it stays when no file describes it
   } catch (e) { return null; }
 }
 function worldIds() { // every system the game or a file has, the code's first
