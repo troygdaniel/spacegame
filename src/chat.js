@@ -114,18 +114,18 @@ class ChatSetup extends Phaser.Scene {
   constructor() { super('ChatSetup'); }
   init(d) { this.from = (d && d.from) || 'Title'; this.closing = false; }
   create() {
-    this.ui = panel(this, { w: 780, h: 580, title: 'NPC CHAT  -  OPTIONAL', dim: true, depth: 0 });
+    this.ui = panel(this, { w: 780, h: 600, title: 'NPC CHAT  -  OPTIONAL', dim: true, depth: 0 });
     const box = this.ui.box, add = o => { box.add(o); return o; };
     const txt = (x, y, s, size, color, o = {}) => add(this.add.text(x, y, s, uiFont(size, color, o.style)).setOrigin(o.ox || 0, o.oy || 0));
-    txt(-360, -270, 'Talk with the people in the Drift bar in your own words. Each character answers in character through a model on your own OpenAI or Anthropic account, and remembers you.', 16, '#cfefff', { style: { wordWrap: { width: 720 }, lineSpacing: 4 } });
+    txt(-360, -246, 'Talk with the people in the Drift bar in your own words. Each character answers in character through a model on your own OpenAI or Anthropic account, and remembers you.', 16, '#cfefff', { style: { wordWrap: { width: 720 }, lineSpacing: 4 } });
     const g = add(this.add.graphics());
-    g.fillStyle(0x2a1a06, 0.9); g.fillRect(-360, -208, 720, 126); g.lineStyle(2, AMBER, 1); g.strokeRect(-360, -208, 720, 126); g.fillStyle(AMBER, 1); g.fillRect(-360, -208, 5, 126);
-    txt(-342, -200, 'THIS USES YOUR OWN OPENAI OR ANTHROPIC ACCOUNT AND MAY COST YOU MONEY', 16, '#ffd37a', { style: { fontStyle: 'bold' } });
-    txt(-342, -174, 'Every line you send goes to that provider with your key; an evening of talking costs cents. Your key is kept in this browser only: never in the game files, never anywhere else. What you type is kept in this browser\'s save, so do not type anything private. With no key the characters keep their scripted lines, exactly as before.', 15, '#ffe9c0', { style: { wordWrap: { width: 690 }, lineSpacing: 4 } });
-    txt(-360, -66, 'API KEY  (OpenAI or Anthropic)', 13, '#5b7a92');
-    txt(-360, 12, 'PROVIDER', 13, '#5b7a92'); txt(-150, 12, 'MODEL  (blank = the default)', 13, '#5b7a92');
-    this.status = txt(0, 122, '', 16, '#9fe9ff', { ox: 0.5, style: { wordWrap: { width: 700 }, align: 'center' } });
-    this.counter = txt(-360, 228, '', 13, '#5b7a92');
+    g.fillStyle(0x2a1a06, 0.9); g.fillRect(-360, -190, 720, 150); g.lineStyle(2, AMBER, 1); g.strokeRect(-360, -190, 720, 150); g.fillStyle(AMBER, 1); g.fillRect(-360, -190, 5, 150);
+    txt(-342, -182, 'THIS USES YOUR OWN OPENAI OR ANTHROPIC ACCOUNT AND MAY COST YOU MONEY', 16, '#ffd37a', { style: { fontStyle: 'bold' } });
+    txt(-342, -156, 'Every line you send goes to that provider with your key; an evening of talking costs cents. Your key is kept in this browser only: never in the game files, never anywhere else. What you type is kept in this browser\'s save, so do not type anything private. With no key the characters keep their scripted lines, exactly as before.', 15, '#ffe9c0', { style: { wordWrap: { width: 690 }, lineSpacing: 4 } });
+    txt(-360, -26, 'API KEY  (OpenAI or Anthropic)', 13, '#5b7a92');
+    txt(-360, 50, 'PROVIDER', 13, '#5b7a92'); txt(-150, 50, 'MODEL  (blank = the default)', 13, '#5b7a92');
+    this.status = txt(0, 150, '', 16, '#9fe9ff', { ox: 0.5, style: { wordWrap: { width: 700 }, align: 'center' } });
+    this.counter = txt(-360, 232, '', 13, '#5b7a92');
     this.btns = [];
     const btn = (label, x, y, fn) => {
       const w = 176, bg = add(this.add.rectangle(x, y, w, 40, 0x0a1b2c, 1).setStrokeStyle(2, CYAN, 0.9).setInteractive({ useHandCursor: true }));
@@ -133,11 +133,11 @@ class ChatSetup extends Phaser.Scene {
       bg.on('pointerover', () => bg.setFillStyle(0x10283d)); bg.on('pointerout', () => bg.setFillStyle(0x0a1b2c)); bg.on('pointerdown', fn);
       this.btns.push({ bg, t }); return t;
     };
-    this.prov = btn('', -272, 50, () => { const order = ['', 'openai', 'anthropic']; chatSetProvider(order[(order.indexOf(CHAT.provider) + 1) % order.length]); this.refresh(); });
-    btn('Save key', -276, 176, () => this.saveKey());
-    btn('Test chat', -92, 176, () => this.test());
-    this.onoff = btn('', 92, 176, () => { chatSetOn(!CHAT.on); this.refresh(); });
-    btn('Remove key', 276, 176, () => { chatSetKey(''); this.el.value = ''; this.refresh('Key removed from this browser.'); });
+    this.prov = btn('', -272, 88, () => { const order = ['', 'openai', 'anthropic']; chatSetProvider(order[(order.indexOf(CHAT.provider) + 1) % order.length]); this.refresh(); });
+    btn('Save key', -276, 200, () => this.saveKey());
+    btn('Test chat', -92, 200, () => this.test());
+    this.onoff = btn('', 92, 200, () => { chatSetOn(!CHAT.on); this.refresh(); });
+    btn('Remove key', 276, 200, () => { chatSetKey(''); this.el.value = ''; this.refresh('Key removed from this browser.'); });
     this.ui.setHints([['Enter', 'Save'], ['Esc', 'Back']]);
 
     // two real text boxes: the key (hidden as you type) and the model name
@@ -197,7 +197,7 @@ class ChatSetup extends Phaser.Scene {
     if (!this.el) return;
     const r = this.game.canvas.getBoundingClientRect(), k = r.width / W, cx = W / 2, cy = H / 2; // the boxes follow the canvas when the window is resized
     const place = (el, x, y, w) => Object.assign(el.style, { left: (r.left + (cx + x) * k) + 'px', top: (r.top + (cy + y) * k) + 'px', width: w * k + 'px', height: 40 * k + 'px', fontSize: 17 * k + 'px' });
-    place(this.el, -360, -50, 720); place(this.elModel, -150, 30, 510);
+    place(this.el, -360, -8, 720); place(this.elModel, -150, 68, 510);
   }
 }
 
