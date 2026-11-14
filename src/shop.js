@@ -211,6 +211,7 @@ function talkTo(s, i) {
   let line;
   if (r && r !== NPC_REACT[i]) { line = r; NPC_REACT[i] = r; }   // new situation: comment on it once
   else { line = n.lines[NPC_IDX[i] % n.lines.length]; NPC_IDX[i]++; }
+  chatMet(n, line); // src/chat.js: the Journal counts the meeting and keeps the line, key or no key
   s.talkName.setText(n.name + '  -  ' + n.role).setColor(n.css);
   s.talkUI.box.setVisible(true);
   s.talk = { i, until: s.time.now + 9000, tw: typewrite(s, s.talkText, '"' + line + '"', 75) };
