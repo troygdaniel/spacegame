@@ -18,6 +18,9 @@ failed: Failed. Ask the station for another call
 ## Progress
 Where you are in it. Use {progress} and {count} if the kind counts something.
 
+## Progress rescued
+Only for rescue calls: what the progress view says once the colonist is aboard.
+
 ## Steps
 - Take the call
 - Do the thing
