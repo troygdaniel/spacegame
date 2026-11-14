@@ -20,6 +20,7 @@
 #   4j. tests/contentboot.mjs: a bad, missing, broken or hand-edited content.generated.js never stops the game reaching Title and playing
 #   4l. tests/npcs.mjs: the six bar characters (persona cards, lines, reactions), IDA only after the first rescue is paid, a talk with each new one
 #   4m. tests/systemart.mjs: planet kinds, star types and the four station looks for other systems (not used by the game yet)
+#   4n. tests/savemig.mjs: save v2 and the v1 migration; G.hull, G.maxHull, G.ore and G.upgrades over the active ship; unknown ids fall back
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #      their failure paths, with the game clock stepped by hand
 # Only one headless Chrome runs at a time on this Mac, whatever the worktree: cdp.mjs takes a lock in tests/lock.mjs, so a second
@@ -86,6 +87,8 @@ echo "== 4l. the Drift's six characters (tests/npcs.mjs)"
 if node tests/npcs.mjs; then :; else fail=1; fi
 echo "== 4m. art for other star systems (tests/systemart.mjs)"
 if node tests/systemart.mjs; then :; else fail=1; fi
+echo "== 4n. save v2, the v1 migration and the fleet accessors (tests/savemig.mjs)"
+if node tests/savemig.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
