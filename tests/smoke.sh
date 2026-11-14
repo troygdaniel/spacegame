@@ -24,6 +24,7 @@
 #   4p. tests/contentui.mjs: the Title screen's content chip, problems panel and MODDED tag (nothing shows when all is well)
 #   4q. tests/shipsheet.mjs: the six player ships (silhouettes, every upgrade slot, nozzles, physics circle, hangar, flight, Ship bay)
 #   4r. tests/cruise.mjs: Halcyon at 36000 px, the nav list (N) and cruise (C): speed profile, locks, cancel, nudge, frame cost
+#   4t. tests/interdict.mjs: pirates pull you out of cruise (forced roll, gates: 4000 px from a station, 90 s cooldown, two jumps) and the pirate tables per system
 #   4s. tests/journal.mjs: J opens the Journal in the station (people met, notes, facts, no key needed), Forget everything needs a second press, the Pause row
 #   5. tests/missions.mjs (only with FULL=1, about 2 minutes): the mission board, Rescue, Escort, Police patrol and
 #   4o. tests/chat.mjs: the NPC chat adapter and the chat box in the bar with a mocked fetch: no key means no call; OpenAI and Anthropic get the right URL,
@@ -107,6 +108,9 @@ echo "== 4r. cruise: N nav list, C cruise, a 36000 px Halcyon (tests/cruise.mjs)
 if node tests/cruise.mjs; then :; else fail=1; fi
 echo "== 4s. the Journal: who you have met (tests/journal.mjs)"
 if node tests/journal.mjs; then :; else fail=1; fi
+
+echo "== 4t. interdiction in cruise and the pirate tables per system (tests/interdict.mjs)"
+if node tests/interdict.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
