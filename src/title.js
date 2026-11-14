@@ -38,7 +38,7 @@ class Title extends Phaser.Scene {
     this.add.text(W / 2, 372, 'HALCYON STATION   >   KEPLER-4B', mono(18, '#ffb454')).setOrigin(0.5).setPadding(16, 12, 16, 12).setShadow(0, 0, '#ffb454', 8, false, true);
     const any = this.add.text(W / 2, 520, 'PRESS ANY KEY', mono(26, '#ffffff')).setOrigin(0.5).setPadding(20, 14, 20, 14).setShadow(0, 0, '#ffffff', 10, false, true);
     this.tweens.add({ targets: any, alpha: 0.25, yoyo: true, repeat: -1, duration: 900, ease: 'Sine.easeInOut' });
-    this.add.text(W / 2, H - 34, 'W A S D move    E use    Esc pause    M mute    V ship voice    C NPC chat  (both optional)', mono(14, '#5b7a92')).setOrigin(0.5);
+    this.add.text(W / 2, H - 34, 'W A S D move    E use    Esc pause    M mute    V ship voice    C NPC chat    O mods  (all optional)', mono(14, '#5b7a92')).setOrigin(0.5);
 
     const start = () => {
       if (this.leaving || performance.now() - this.born < 500) return;
@@ -46,7 +46,7 @@ class Title extends Phaser.Scene {
       go(this, 'Station', { arrive: false });
     };
     this.contentUi = contentTitleUi(this); // src/contentui.js: the content problems chip, its panel and the MODDED tag (nothing when all is well)
-    this.input.keyboard.on('keydown', e => { if (e.repeat || this.contentUi.handleKey(e)) return; if (e.code === 'KeyV') voiceOpenSetup(this); else if (e.code === 'KeyC') chatOpenSetup(this); else if (e.code !== 'KeyM') start(); }); // P opens the content panel and while it is open nothing starts the game; M still mutes; V and C open the optional ship-voice (src/voice.js) and NPC-chat (src/chat.js) setups
+    this.input.keyboard.on('keydown', e => { if (e.repeat || this.contentUi.handleKey(e)) return; if (e.code === 'KeyV') voiceOpenSetup(this); else if (e.code === 'KeyC') chatOpenSetup(this); else if (e.code === 'KeyO') modsOpenSetup(this); else if (e.code !== 'KeyM') start(); }); // P opens the content panel and while it is open nothing starts the game; M still mutes; V and C open the optional ship-voice (src/voice.js) and NPC-chat (src/chat.js) setups, O the Mods screen (src/mods.js)
     this.input.on('pointerdown', (p, over) => { if (over && over.length) return; start(); }); // a click on the chip, the tag or the panel is theirs, not "press any key"
   }
   update(time, dt) {

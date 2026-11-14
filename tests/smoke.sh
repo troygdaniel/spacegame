@@ -36,6 +36,7 @@
 #   4u. tests/parts.mjs: the five ship parts (shields, weapons, engine, tank, cargo): tables, every effect, shields in flight, shot rate and damage, the shop's five cards with fit and stock rules, the save
 #   4w. tests/fleet.mjs: buy, sell, switch, rename and transfer ships, the yard and the prices, per-ship state through a save, and dying (docs/UNIVERSE.md 6.3)
 #   4zb. tests/modsdoc.mjs: docs/MODS.md, the modder guide, stays true: its field tables are written from the schema, its example files are valid, the ids and messages it names are in the code (no browser)
+#   4zm. tests/mods.mjs: mod packs: mods/<pack>/ built on its own, the example pack, off until turned on, the Mods screen (O on the Title), a picked folder with no Node, later names win, a tampered pack is refused (docs/MODDING.md 13)
 #   4y. tools/economy-sim.mjs check: the economy simulator still loads the real game data and every code line it pins (repair, insurance, MULE speed...) is still there (docs/ECONOMY.md; no browser)
 #   4z. tests/hangar.mjs: the hangar terminal in the Ship bay: fleet, yard and controls tabs, buy and sell with a second press, board, move, rename, what the stage shows
 #   4zc. tests/galaxymap.mjs: the galaxy map overlay (opens only from #galaxy): the eight systems, ranges, the card, out of range and short of fuel, keys and clicks, onJump
@@ -145,6 +146,8 @@ echo "== 4zd. ship ribbon bounds: a teleport, a clock that ran backwards, a huge
 if node tests/ribbons.mjs; then :; else fail=1; fi
 echo "== 4ze. the sound pass: levels against the planet wind and a laser shot, mute and volume 0, and the wiring (tests/sfxlevels.mjs)"
 if node tests/sfxlevels.mjs; then :; else fail=1; fi
+echo "== 4zm. mod packs and the Mods screen (tests/mods.mjs)"
+if node tests/mods.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
