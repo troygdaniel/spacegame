@@ -1,10 +1,12 @@
 ---
 # Copy this file to content/ships/<id>.md. The file name is the id: a-z, 0-9 and dashes.
+# A new id adds a new player ship (at most 6): only name is needed, the rest is the Wren's. An id of a built-in ship is not changeable yet.
+# art: the hull it borrows: wren, kite, ox, talon, pathfinder or bastion. yard: the stations that sell it (Halcyon when left out).
 type: ship
 name: Example Ship
 role: what it is for
 side: player
-art: ship
+art: wren
 trim: cyan
 # player ships
 hull: 100
