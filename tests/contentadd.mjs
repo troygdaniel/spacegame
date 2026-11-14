@@ -1,6 +1,6 @@
 // Adding new things from markdown (card space-game-m9-add-new, docs/MODDING.md section 12): a file with an id the code does not know
 // becomes a new voice line, bar character, mission, or ship. Each case runs the real game in headless Chrome from a throwaway COPY of this
-// folder whose content.generated.js is built from a small pack made here, then reads what the game plays from. Types so far: voice, ship, mission.
+// folder whose content.generated.js is built from a small pack made here, then reads what the game plays from. Types so far: voice, ship, mission, npc.
 // Run: node tests/contentadd.mjs     (one game per case, one Chrome at a time)
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -191,6 +191,48 @@ try {
   await play({}, async (t, ev) => {
     const r = await ev(`(() => { try { applySave({ v: 2, mission: 'accepted', missionId: 'convoy-patrol', missionProgress: 2, active: 0, fleet: [{ uid: 1, model: 'mule', name: 'Mule', hull: 100, maxHull: 100, fuel: 40, ore: 0, parts: {}, at: homeDock() }] }); return { mission: G.mission, id: G.missionId, model: activeShip().model, look: shipActiveModel(), stat: shipStat('vmax'), hull: G.maxHull }; } catch (e) { return 'ERR ' + e.message; } })()`);
     check('no mission, the Mule flies as a Wren (a ship the game does not know), no error', r && r.mission === 'none' && r.id === null && r.look === 'wren' && r.stat === 480, JSON.stringify(r));
+  });
+
+  // ---------- NPCs ----------
+  console.log('npc: new characters in the bar');
+  const npcs = {
+    'npcs/ada.md': '---\ntype: npc\nname: ADA\nrole: dockhand\ncolor: green\nx: 300\ny: 540\nvoice: aura-asteria-en\nappears: mission:none\n---\n## Lines\n- Mind the cables.\n- The Wren came in smoking last week.\n\n## Reactions\n| when | line |\n|---|---|\n| credits>=100 | Flush today. Buy the pilot a drink. |\n| mission:accepted | Good luck out there, {ship}. |\n\n## Persona\nWho: Ada, dockhand.\nManner: brisk.\nKnows: cables.\nWants: a quiet shift.\nWill not: lend tools.\n',
+    'npcs/boris.md': '---\ntype: npc\nname: BORIS\n---\n## Lines\n- I have no spot picked. I stand where there is room.\n',
+    'npcs/stacked.md': '---\ntype: npc\nname: STACKED\ncolor: pink\nx: 255\ny: 652\n---\n## Lines\n- I asked for JUNO\'s spot.\n',
+    'npcs/in-door.md': '---\ntype: npc\nname: DOORMAN\nx: 460\ny: 430\n---\n## Lines\n- I wanted the doorway.\n',
+    'npcs/far-away.md': '---\ntype: npc\nname: FAR\nx: 7000\ny: 7000\n---\n## Lines\n- I asked for the far side of the map.\n',
+    'npcs/extra.md': '---\ntype: npc\nname: EXTRA\ncolor: gold\n---\n## Lines\n- Room for one more.\n',
+    'npcs/mute.md': '---\ntype: npc\nname: MUTE\n---\n',
+    'npcs/zzz-seventh.md': '---\ntype: npc\nname: SEVENTH\n---\n## Lines\n- One too many.\n'
+  };
+  await play(npcs, async (t, ev) => {
+    const L = await ev(LOADER);
+    check('six characters are added', ['ada', 'boris', 'extra', 'stacked', 'in-door', 'far-away'].every(k => L.applied.includes('npc:' + k)), JSON.stringify(L.applied));
+    check('a character with no lines is refused with its file', L.errors.some(e => /mute\.md.*at least one line/.test(e)), JSON.stringify(L.errors));
+    check('the seventh is refused with the limit named', L.errors.some(e => /zzz-seventh\.md/.test(e) && /at most 6 characters/.test(e)) && !L.applied.includes('npc:zzz-seventh'), JSON.stringify(L.errors));
+    const rows = await ev(`NPCS.map(n => ({ id: n.id, name: n.name, x: n.x, y: n.y, css: n.css, sprite: n.sprite || null, look: !!n.look, lines: n.lines.length, persona: !!n.persona, added: !!n.added }))`);
+    check('the bar has the six built-in characters and the new ones after them', rows.slice(0, 6).map(r => r.id).join() === 'juno,tamsin,dex,moss,sable,ida' && rows.filter(r => r.added).length === 6, rows.map(r => r.id).join());
+    const added = rows.filter(r => r.added);
+    check('nobody stands closer than 48 px to anybody else', rows.every((a, i) => rows.every((b, j) => i === j || Math.hypot(a.x - b.x, a.y - b.y) >= 48)), JSON.stringify(rows.map(r => [r.id, r.x, r.y])));
+    check('everybody stands on the floor of the bar, outside the doorway lane and the counter and tables', added.every(r => r.x >= 52 && r.x <= 828 && r.y >= 470 && r.y <= 646 && !(r.x > 376 && r.x < 544 && r.y < 540) && !(r.x > 60 && r.x < 450 && r.y > 566 && r.y < 652) && !(r.x > 568 && r.x < 672 && r.y > 468 && r.y < 572) && !(r.x > 148 && r.x < 252 && r.y > 448 && r.y < 552)), JSON.stringify(added.map(r => [r.id, r.x, r.y])));
+    const ada = rows.find(r => r.id === 'ada');
+    check('Ada stands where she asked (300, 540: a free spot) and is green', ada.x === 300 && ada.y === 540 && ada.css === '#6dff9c', JSON.stringify(ada));
+    check('a character with a spot taken stands near it, not on it: STACKED asked for JUNO\'s', (() => { const a = rows.find(r => r.id === 'stacked'), j = rows[0]; const d = Math.hypot(a.x - j.x, a.y - j.y); return d >= 48 && d < 200; })());
+    check('every new character has a body of their own (a look and a texture name) and a default cyan when no colour is given', added.every(r => r.look && /^mod-/.test(r.sprite)) && rows.find(r => r.id === 'boris').css === '#38e1ff');
+    const talk = await ev(`(() => { const n = NPCS.find(x => x.id === 'ada'); G.credits = 0; G.mission = 'none'; const a = n.react(); G.credits = 150; const b = n.react(); G.mission = 'accepted'; G.credits = 0; const c = n.react(); G.mission = 'none'; return { a, b, c, when: n.when(), persona: chatPersona(n), boris: chatPersona(NPCS.find(x => x.id === 'boris')), voice: n.voice }; })()`);
+    check('reactions read the game: nothing, then "Flush today", then (mission accepted) the character is not in the bar', talk.a === null && talk.b === 'Flush today. Buy the pilot a drink.' && talk.when === true, JSON.stringify(talk));
+    check('the persona is the file\'s, and a character without one gets the plain card', /Who: Ada/.test(talk.persona) && /BORIS, a regular on Halcyon Station/.test(talk.boris) && talk.voice === 'aura-asteria-en', JSON.stringify([talk.persona, talk.boris]));
+    // build the bar for real
+    await ev(`(() => { G.mission = 'none'; game.scene.stop('Title'); game.scene.start('Station', { arrive: false }); return 1; })()`);
+    await t.waitFor(`game.scene.isActive('Station')`, 15000, 'Station active'); await sleep(900);
+    const bar = await ev(`(() => { const st = game.scene.getScene('Station'); return { sprites: st.npcSprites.length, spots: st.spots.filter(s => /^Talk to/.test(s.prompt || '')).length, textures: NPCS.filter(n => n.look).map(n => game.textures.exists('in-' + n.sprite + '0') && game.textures.exists('in-' + n.sprite + '1')), visible: st.npcSprites.map(s => s.visible).filter(Boolean).length }; })()`);
+    check('the Station scene makes a sprite for every character and every added body has its two stride textures', bar.sprites === 12 && bar.textures.every(Boolean) && bar.textures.length === 6, JSON.stringify(bar));
+    const speak = await ev(`(() => { const st = game.scene.getScene('Station'); const i = NPCS.findIndex(n => n.id === 'ada'); talkTo(st, i); return { talk: !!st.talk, name: st.talkName.text, text: st.talkText.text.slice(0, 40) }; })()`);
+    check('E on Ada opens the talk box with her name', speak.talk && /ADA/.test(speak.name), JSON.stringify(speak));
+    await t.shot('contentadd-bar');
+    await ev(`(() => { G.mission = 'accepted'; G.missionId = 'rescue'; game.scene.getScene('Station').scene.restart({ arrive: false }); return 1; })()`);
+    await sleep(900);
+    check('Ada is in the bar only while no call is under way (appears: mission:none)', (await ev(`(() => { const st = game.scene.getScene('Station'); const i = NPCS.findIndex(n => n.id === 'ada'); return st.npcSprites[i].visible; })()`)) === false);
   });
 } catch (e) { console.error('  FAIL ' + (e && e.stack || e)); failed++; } finally {
   tmp.forEach(d => { try { rmSync(d, { recursive: true, force: true }); } catch (e) { /* tmp */ } });

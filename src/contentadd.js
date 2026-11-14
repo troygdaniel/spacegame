@@ -14,7 +14,9 @@
 //            in the yard of the stations its file names. New pirate ships and changes to the six built-in player ships are refused.
 //   mission  a new call of one of the four kinds the game plays (rescue, escort, patrol, bounty): a row of MISSIONS that plays as its kind
 //            and says what the file says, with its own entry in the HUD checklist (HUD_MISSIONS)
-const CA_MAX = { voice: 40, ship: 6, mission: 4 };
+//   npc      a new character in the bar at Halcyon: a row of NPCS (src/shop.js) with a body drawn from their colour, standing on the nearest
+//            free spot of the floor, with their lines, reactions and chat persona
+const CA_MAX = { voice: 40, ship: 6, mission: 4, npc: 6 };
 const caHas = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
 // ---- voice: lines for an event ----
@@ -109,3 +111,66 @@ const CA_MISSION = {
   }
 };
 CONTENT_TABLES.mission = CA_MISSION;
+
+// ---- npc: new characters in the bar ----
+// A file with an id the bar does not know adds a character. They need a name and at least one line; everything else has a default: the cyan
+// of the HUD, a body drawn from their colour (the coat is the colour, darkened; hair, skin and one extra come from the id, so two new
+// characters do not look alike: src/interior.js draws it from the row's look), no reactions, no persona (the chat then uses "name, role, a
+// regular on Halcyon Station"). They stand where the file says if that spot is free, and on the nearest free spot if not: the floor of
+// the bar is the box below, minus the walls, the counter, the two tables, the doorway lane and a body's width round every other character.
+const CA_BAR = { x0: 52, x1: 828, y0: 470, y1: 646 };                       // the walkable floor of the bar, with a margin for the walls (station.js, shop.js)
+const CA_BAR_BOXES = [[20, 420, 380, 20], [520, 420, 340, 20], [860, 0, 20, 720], [90, 596, 330, 26], [598, 498, 44, 44], [178, 478, 44, 44]]; // [x, y, w, h] solid
+const CA_DOOR = { x0: 376, x1: 544, y1: 540 };                              // the doorway into the bar and the lane below it: nobody stands here
+const CA_NPCS = new Set();
+function caSpotFree(x, y, self) {
+  if (x < CA_BAR.x0 || x > CA_BAR.x1 || y < CA_BAR.y0 || y > CA_BAR.y1) return false;
+  if (x > CA_DOOR.x0 && x < CA_DOOR.x1 && y < CA_DOOR.y1) return false;
+  if (CA_BAR_BOXES.some(([bx, by, bw, bh]) => x > bx - 30 && x < bx + bw + 30 && y > by - 30 && y < by + bh + 30)) return false;
+  return !NPCS.some(n => n !== self && Math.hypot(n.x - x, n.y - y) < 48);
+}
+function caSpot(x, y, self) { // the free spot nearest to (x, y), looked for in rings of 12 px; null when the bar has no room
+  const cx = Math.min(CA_BAR.x1, Math.max(CA_BAR.x0, x)), cy = Math.min(CA_BAR.y1, Math.max(CA_BAR.y0, y));
+  for (let r = 0; r <= 800; r += 12) {
+    let best = null, bd = Infinity;
+    for (let a = 0; a < (r ? 36 : 1); a++) {
+      const px = Math.round(cx + Math.cos(a / 36 * Math.PI * 2) * r), py = Math.round(cy + Math.sin(a / 36 * Math.PI * 2) * r);
+      if (caSpotFree(px, py, self)) { const d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; best = { x: px, y: py }; } }
+    }
+    if (best) return best;
+  }
+  return null;
+}
+function caLook(id, css) { // what interior.js draws for a character a pack adds
+  let h = 7; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const col = parseInt(String(css).slice(1), 16), coat = inMix(col, 0x0a0a14, 0.62);
+  const extra = [{ visor: col }, { cap: coat }, { goggles: 0xbfffd8 }, { pack: inMix(col, 0x000000, 0.75) }, {}, { bun: true }][(h >> 6) % 6];
+  return Object.assign({ coat, edge: col, hair: [0x20150e, 0x2a1408, 0x103018, 0x8a8a94, 0xdcdcec, 0x3a2418][h % 6], skin: [0xd8a47a, 0xb07850, 0xe0b090, 0xc8946a, 0x9a6a48, 0xe8c0a0][(h >> 3) % 6] }, extra);
+}
+const CA_NPC = {
+  canAdd: true,
+  has: id => CT_NPC.has(id),
+  get: (id, f) => CT_NPC.get(id, f),
+  apply: (id, data, isNew) => {
+    if (!isNew && !CA_NPCS.has(id)) return CT_NPC.apply(id, data);   // a built-in character: a change, as before
+    if (!CA_NPCS.has(id)) {
+      if (!Array.isArray(data.lines) || !data.lines.length) throw new Error('a character needs a Lines list with at least one line to say');
+      if (CA_NPCS.size >= CA_MAX.npc) throw new Error('a pack may add at most ' + CA_MAX.npc + ' characters to the bar and there are that many already');
+      if (data.station !== undefined && data.station !== homeDock()) throw new Error('station is "' + data.station + '" but only the bar at ' + (sysBody('station') || {}).name + ' exists so far');
+      const css = data.color !== undefined ? data.color : '#38e1ff';
+      const row = { id, name: data.name, role: '', color: ctHex(css), css, x: 0, y: 0, face: 0, lines: [], react: () => null, sprite: 'mod-' + id, added: true };
+      row.look = caLook(id, css);
+      const spot = caSpot(data.x !== undefined ? data.x : 560, data.y !== undefined ? data.y : 600, row);
+      if (!spot) throw new Error('there is no free spot left on the floor of the bar');
+      row.x = spot.x; row.y = spot.y;
+      NPCS.push(row); CA_NPCS.add(id);
+      try { CT_NPC.apply(id, data); }                                // role, voice, face, label, appears, lines, reactions, persona
+      catch (e) { NPCS.splice(NPCS.indexOf(row), 1); CA_NPCS.delete(id); throw e; } // all or nothing
+      row.x = spot.x; row.y = spot.y;                               // the base apply put the file's own x and y in: back to the free spot
+      return;
+    }
+    const row = NPCS.find(n => n.id === id);                          // one of ours seen again: say it again
+    CT_NPC.apply(id, data);
+    const at = caSpot(row.x, row.y, row); if (at) { row.x = at.x; row.y = at.y; }  // (an x and y the file gives are looked at again: the nearest free spot)
+  }
+};
+CONTENT_TABLES.npc = CA_NPC;
