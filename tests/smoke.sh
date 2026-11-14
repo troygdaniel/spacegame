@@ -36,6 +36,8 @@
 #   4zf. tests/jump.mjs: the jump: G opens the galaxy map, Enter charges 4 s, Esc/S/a hit cancel, locked near a mass or a hostile, the fuel burns at the end, the Hyper tunnel, arrival in an empty Kestrel with 3 s of calm, the fuel ranger (docs/UNIVERSE.md 2.3)
 #   4zg. tests/worldat.mjs: worldAt(systemId) gives the code's Halcyon row and the other seven from their files; Halcyon built from its files alone equals the code's row; every field of the eight systems and six stations has a home; a pack of wrong files never blanks the game
 #   4zh. tests/pullout.mjs: the pull-out: the roll (2% + 1% x the higher danger, at 40 to 70% of the tunnel), the flicker and alarm and collapse, deep space (empty, dark, 3 to 5 pirates by danger, no dock, cruise or jump), clear them and the tunnel resumes for the time left, dying wakes you at the last dock, a nest's entry pirates, the #pullout demo (docs/UNIVERSE.md 5.2)
+#   4zo. tests/perfart.mjs: the world art is pixel for pixel what it was before the speed-up (the noise against its first version, 47 textures against tests/fixtures/arthash.json)
+#   4zp. tests/perfleak.mjs: six trips round Station, Ship, Space, Surface leave no physics worlds, sprites or bodies behind (the Space die() wrapper used to stack at every launch)
 #   4u. tests/parts.mjs: the five ship parts (shields, weapons, engine, tank, cargo): tables, every effect, shields in flight, shot rate and damage, the shop's five cards with fit and stock rules, the save
 #   4w. tests/fleet.mjs: buy, sell, switch, rename and transfer ships, the yard and the prices, per-ship state through a save, and dying (docs/UNIVERSE.md 6.3)
 #   4zb. tests/modsdoc.mjs: docs/MODS.md, the modder guide, stays true: its field tables are written from the schema, its example files are valid, the ids and messages it names are in the code (no browser)
@@ -161,6 +163,10 @@ echo "== 4zg. worldAt: the eight systems and six stations in one place; Halcyon 
 if node tests/worldat.mjs; then :; else fail=1; fi
 echo "== 4zn. the Settings screen: sound, keys with a mocked fetch, controls, content, reset (tests/settings.mjs)"
 if node tests/settings.mjs; then :; else fail=1; fi
+echo "== 4zo. the world art is unchanged by the speed-up: noise numbers and the pixels of 47 textures (tests/perfart.mjs)"
+if node tests/perfart.mjs; then :; else fail=1; fi
+echo "== 4zp. six trips round the scenes leave nothing behind: physics worlds, sprites, bodies, textures (tests/perfleak.mjs)"
+if node tests/perfleak.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then

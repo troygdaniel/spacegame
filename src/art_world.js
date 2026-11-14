@@ -14,19 +14,29 @@ const waSmooth = (a, b, x) => { const t = waClamp((x - a) / (b - a)); return t *
 const waMix = (c1, c2, t) => [waLerp(c1[0], c2[0], t), waLerp(c1[1], c2[1], t), waLerp(c1[2], c2[2], t)];
 
 // value noise that repeats every `period` lattice cells; fbm stacks octaves (u, v in 0..1, seamless across a tile)
+// The nebula, the ground, the terrain and every planet call this a million times at boot, so the octaves run in one loop over plain
+// arrays (no closure per octave). It must give exactly the same numbers as the first version: the lattice is filled in the same order
+// from the same generator, every float operation is the same in the same order, and 1 / 2^o is exact, so x * (1 / 2^o) equals x / 2^o.
+// (tests/perfart.mjs checks the pixels of every texture against hashes taken before the change.)
 function waFbm(rnd, base, octaves) {
-  const ns = [];
+  const gs = [], Ps = [], scale = [], inv = [];
   for (let o = 0; o < octaves; o++) {
     const P = base << o, g = new Float32Array(P * P); for (let i = 0; i < g.length; i++) g[i] = rnd();
-    ns.push((x, y) => {
-      const xi = Math.floor(x), yi = Math.floor(y); let fx = x - xi, fy = y - yi; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
-      const x0 = ((xi % P) + P) % P, y0 = ((yi % P) + P) % P, x1 = (x0 + 1) % P, y1 = (y0 + 1) % P;
-      const a = g[y0 * P + x0], b = g[y0 * P + x1], c = g[y1 * P + x0], d = g[y1 * P + x1];
-      return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
-    });
+    gs.push(g); Ps.push(P); scale.push(base << o); inv.push(1 / (1 << o));
   }
   let norm = 0; for (let o = 0; o < octaves; o++) norm += 1 / (1 << o);
-  return (u, v) => { let s = 0; for (let o = 0; o < octaves; o++) s += ns[o](u * (base << o), v * (base << o)) / (1 << o); return s / norm; };
+  return (u, v) => {
+    let s = 0;
+    for (let o = 0; o < octaves; o++) {
+      const P = Ps[o], g = gs[o], k = scale[o], x = u * k, y = v * k;
+      const xi = Math.floor(x), yi = Math.floor(y); let fx = x - xi, fy = y - yi; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+      let x0 = xi % P, y0 = yi % P; if (x0 < 0) x0 += P; if (y0 < 0) y0 += P; // negative inputs wrap too (a modulo that is never negative)
+      const x1 = x0 + 1 === P ? 0 : x0 + 1, y1 = y0 + 1 === P ? 0 : y0 + 1, r0 = y0 * P, r1 = y1 * P;
+      const a = g[r0 + x0], b = g[r0 + x1], c = g[r1 + x0], d = g[r1 + x1];
+      s += (a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy) * inv[o];
+    }
+    return s / norm;
+  };
 }
 
 function waCanvas(sc, key, w, h, fn) {
@@ -254,8 +264,10 @@ const WA_PLANETS = {
     waHalo(ctx, C, R, '190,200,215', 0.12, 40);
     waSphere(ctx, C, C, R, { L: WA_LIGHT, amb: 0.06, rim: [170, 180, 200], rimA: 0.2 }, (lon, lat, dx, dy, nz, diff, c) => {
       let v = 0.52 + 0.7 * (alb(lon, lat) - 0.5) + 0.22 * (ridge(lon, lat) - 0.5);
-      for (const [x, y, r, young] of cr) {
-        const d = Math.hypot(dx - x * 0.85, dy - y * 0.85) / r;
+      for (let k = 0; k < cr.length; k++) {
+        const x = cr[k][0], y = cr[k][1], r = cr[k][2], young = cr[k][3], ex = dx - x * 0.85, ey = dy - y * 0.85, lim = r * 1.25;
+        if (ex > lim || ex < -lim || ey > lim || ey < -lim) continue; // clearly outside 1.2 radii (it could change nothing), and it spares a Math.hypot, which is slow
+        const d = Math.hypot(ex, ey) / r;
         if (d < 1.2) {
           if (d < 0.92) v *= 0.62 + 0.38 * d * d;                                  // a dark floor
           else v *= 1 + (young ? 0.4 : 0.12) * (1 - Math.abs(d - 1) * 5);           // a bright rim
