@@ -27,7 +27,7 @@ What it is and is not:
 
 ## Which test is which
 
-**Node only** (no Chrome at all): `content`, `contentapply`, `hygiene`, `locktest`, `modsdoc`, `savemig`, `worldat`, and `node tools/economy-sim.mjs check`.
+**Node only** (no Chrome at all): `content`, `contentapply`, `galaxy`, `hygiene`, `locktest`, `modsdoc`, `savemig`, `worldat`, and `node tools/economy-sim.mjs check`.
 
 **Node first, then Chrome for the part that needs a scene** (one test file, one Chrome turn, or fewer than before):
 
