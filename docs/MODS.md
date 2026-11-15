@@ -38,7 +38,7 @@ name the game does not know for one of those types is skipped, and the game says
 content/parts/engine-4.md: the game has no built-in part called "engine-4" and cannot add new ones. Skipped the file.
 ```
 
-New pirates, new kinds of call (courier, haul, salvage, survey) and new part slots wait for later cards. Star systems are read and kept, and the docks of other systems change only their name; the game flies its own rows of the same numbers; a station's welcome, shop,
+New pirates and new part slots wait for later cards, and so does a new courier, haul, salvage or survey call (the game has its own, below: a file with their id changes their words and pay). Star systems are read and kept, and the docks of other systems change only their name; the game flies its own rows of the same numbers; a station's welcome, shop,
 services and bar sections are checked by the build and not read. Section 7 has the exact list.
 
 You need a text editor and Node.js 22 or newer (`node --version`). No packages. Playing never needs Node; only the build step in section 2 does.
@@ -211,7 +211,7 @@ Everything else in a file is checked by the build, then ignored.
 
 | Type | Ids the game knows | What changes in the game |
 |---|---|---|
-| `mission` | `rescue`, `escort`, `patrol`, `bounty` (the file's `kind` must equal its name); a new id adds a call (`kind`, `title`, `reward` needed) | `title`, `where`, `reward`, `count`, `unlock`, the description, `## Board line`, `## Progress`, `## Progress rescued`, `## Steps`, `## Failure` |
+| `mission` | `rescue`, `escort`, `patrol`, `bounty`, and the built-in runs and sites `courier-<from>-<to>`, `haul-<from>-<to>`, `salvage-lethe`, `survey-hollow` (the file's `kind` must equal the row's kind); a new id of the first four kinds adds a call (`kind`, `title`, `reward` needed) | `title`, `where`, `reward`, `count`, `unlock`, the description, `## Board line`, `## Progress`, `## Progress rescued`, `## Steps`, `## Failure` |
 | `npc` | `juno`, `tamsin`, `dex`, `moss`, `sable`, `ida`; a new id adds a character (`name` and a line needed) | `name`, `role`, `voice`, `color`, `label`, `appears`, `x`, `y`, `face`, `## Lines`, `## Reactions`, `## Persona` |
 | `ship` | the pirates `raider`, `drone`, `gunship` (side `pirate`); a new id adds a player ship (`name` needed) | for a pirate the numbers, `radar`, `art` (`name`, `role` and the description are read; nothing shows them yet); for a new ship every number of the model, `art` (the hull it borrows), `yard`. The six built-in player ships and new pirates are refused |
 | `part` | `shields-1` to `shields-3`, and the same for `weapons`, `engine`, `tank`, `cargo` | `name`, `brief`, `price`, the description, the tier's numbers |
@@ -269,7 +269,7 @@ Editing `content/` changes the game for everyone who uses that folder. A **pack*
 Written by `node tools/mods-fields.mjs --write` from the schema in `src/content.js`, so it is what the build accepts. If you change the schema, run that command and commit the result:
 `tests/modsdoc.mjs` (in the smoke test) fails when this page is out of date.
 
-Accepted is not the same as played. The `kind` of a call may be `courier`, `haul`, `salvage` or `survey` here, but only the ids of section 7 do anything in the game today.
+Accepted is not the same as played. The `kind` of a call may be `courier`, `haul`, `salvage` or `survey` here, but only the ids of section 7 do anything in the game: the four calls of the files, and the sixteen runs and sites the game has built in (`courier-halcyon-kestrel`, `haul-brass-halcyon`, `salvage-lethe`, `survey-hollow` and the rest; their routes are code, and a file with one of those ids changes its words and pay).
 
 <!-- fields:start (written by node tools/mods-fields.mjs --write: do not edit between these lines) -->
 
@@ -430,6 +430,7 @@ Placeholders in its text: `{reward}`, `{count}`, `{progress}`, `{station}`, `{sy
 | `repair` | number from 0 to 5 | credits a point of hull at the repair bay |
 | `ore` | number from 0 to 200 | credits an ore pays when you dock |
 | `yard` | list in square brackets: ids of ships | the ships it sells, by id (not read yet) |
+| `missions` | list in square brackets: ids of thingss |  |
 | `partMult` | number from 0.1 to 5 | the price of its parts times this (not read yet) |
 | `fee` | whole number from 0 to 100000 | credits it takes at the door (not read yet) |
 | `salvageMult` | number from 1 to 5 | what a salvage is worth here, times the usual (not read yet) |

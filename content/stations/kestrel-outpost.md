@@ -6,6 +6,7 @@ accent: green
 fuel: 7
 repair: 0.5
 
+missions: [courier-kestrel-halcyon, courier-kestrel-meridian, haul-kestrel-meridian]
 ---
 A frontier dock that sells fuel and not much else.
 

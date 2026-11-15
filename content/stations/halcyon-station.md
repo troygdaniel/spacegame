@@ -8,6 +8,8 @@ fuel: 8
 repair: 0.5
 ore: 20
 yard: [kite]
+# the calls its mission board posts (the ids of src/missions.js); the board is this list, in this order
+missions: [rescue, escort, patrol, bounty, courier-halcyon-kestrel, courier-halcyon-brass, haul-halcyon-brass, survey-hollow]
 ---
 The ring station every pilot starts from.
 

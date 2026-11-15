@@ -7,6 +7,7 @@ fuel: 6
 repair: 0.5
 ore: 28
 yard: [talon]
+missions: [courier-ember-meridian, haul-ember-meridian]
 ---
 A foundry cut into volcanic rock.
 

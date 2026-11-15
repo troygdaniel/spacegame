@@ -51,7 +51,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | toast.mule-left | You left the MULE behind. Mission failed. |
 | toast.mule-lost | The MULE was destroyed. Mission failed. |
 | toast.mule-arrived | The MULE made the Perseus gate. |
-| toast.reaver-intro | The Reaver is south-west of Kepler-4b. Watch for the flash before it charges. |
+| toast.reaver-intro | The Reaver is south-west of Reaver's Rock. Watch for the flash before it charges. |
 | toast.reaver-wing | The Reaver calls in its wing. |
 | toast.reaver-burning | The Reaver is burning. It fights harder. |
 | toast.reaver-dead | The Reaver is wreckage. Bounty paid. |

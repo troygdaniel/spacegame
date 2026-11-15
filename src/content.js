@@ -133,7 +133,7 @@
       folder: 'stations', placeholders: PH,
       // fuel, repair and ore are the prices (src/fuel.js, station.js, asteroids.js); yard the ship models it sells (data_ships.js ids); partMult the price factor of its parts;
       // fee what it takes at the door; salvageMult how many times the usual a salvage pays here. The Parts section says which slots it sells and to which tier.
-      fields: { name: T(40, true), system: R('system', true), accent: COLOR, fuel: N(0, 100), repair: N(0, 5), ore: N(0, 200), yard: L('id', { ref: 'ship' }), partMult: N(0.1, 5), fee: I(0, 100000), salvageMult: N(1, 5) },
+      fields: { name: T(40, true), system: R('system', true), accent: COLOR, fuel: N(0, 100), repair: N(0, 5), ore: N(0, 200), yard: L('id', { ref: 'ship' }), missions: L('id'), partMult: N(0.1, 5), fee: I(0, 100000), salvageMult: N(1, 5) },
       sections: {
         parts: { heading: 'Parts', t: 'table', required: ['slot', 'tier'], cols: { slot: P(SLOTS, true), tier: I(1, 3, true) } },
         welcome: { heading: 'Welcome', t: 'text', max: 400 },

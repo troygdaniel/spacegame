@@ -17,7 +17,7 @@ const SYSTEMS = {
     pirates: { max: 8, every: 15000, weights: { raider: 0.25, drone: 0.35, gunship: 0.4 } }, // the spawn table (enemies.js pirateTable): what Halcyon has always done; other systems get one from their danger
     bodies: [
       { id: 'halcyon-station', type: 'station', art: 'station', name: 'Halcyon Station', x: 4000, y: 4000, labelDy: -260,
-        dock: { fuel: 8, yard: ['kite'] } }, // dock: what the station offers; fuel is the price of a unit at its pump (src/fuel.js), a station without it has no pump; yard is the ship models it sells (src/fleet.js), the Kite as before until card u-b5 authors the real yards
+        dock: { fuel: 8, yard: ['kite'], missions: ['rescue', 'escort', 'patrol', 'bounty', 'courier-halcyon-kestrel', 'courier-halcyon-brass', 'haul-halcyon-brass', 'survey-hollow'] } }, // dock: what the station offers; fuel is the price of a unit at its pump (src/fuel.js), a station without it has no pump; yard is the ship models it sells (src/fleet.js), the Kite as before until card u-b5 authors the real yards
       { id: 'kepler-4b', type: 'planet', art: 'planet', name: 'Kepler-4b', x: 6200, y: 2000, r: 316, landable: true },
       { id: 'kepler-belt', type: 'belt', name: 'Kepler Belt', x: 5500, y: 1300, r: 700, rocks: 15 }, // north-west of Kepler-4b
 
@@ -59,7 +59,7 @@ const SYSTEMS = {
     id: 'kestrel', name: 'Kestrel', kind: 'outpost', ly: [25.5, 19], size: 36000, danger: 1, traffic: 1, seed: 5191,
     star: { type: 'K', x: 18000, y: 18000 },
     bodies: [
-      { id: 'kestrel-outpost', type: 'station', art: 'outpost', name: 'Kestrel Outpost', x: 9000, y: 21000, dock: { fuel: 7, repair: 0.5, shop: 0, parts: { engine: 1, tank: 1 } } },
+      { id: 'kestrel-outpost', type: 'station', art: 'outpost', name: 'Kestrel Outpost', x: 9000, y: 21000, dock: { fuel: 7, repair: 0.5, missions: ['courier-kestrel-halcyon', 'courier-kestrel-meridian', 'haul-kestrel-meridian'], shop: 0, parts: { engine: 1, tank: 1 } } },
       { id: 'kestrel-giant', type: 'planet', kind: 'ringed', seed: 11, name: 'Kestrel Prime', x: 24500, y: 12500, r: 520, landable: false },
       { id: 'kestrel-2', type: 'planet', kind: 'rock', seed: 12, name: 'Kestrel II', x: 13000, y: 9500, r: 260, landable: false },
       { id: 'kestrel-belt', type: 'belt', name: 'Kestrel Belt', x: 22000, y: 25000, r: 800, rocks: 20 },
@@ -70,7 +70,7 @@ const SYSTEMS = {
     id: 'meridian', name: 'Meridian', kind: 'trade', ly: [29, 24.5], size: 36000, danger: 1, traffic: 3, seed: 2210,
     star: { type: 'F', x: 18000, y: 18000 },
     bodies: [
-      { id: 'meridian-exchange', type: 'station', art: 'hub', name: 'Meridian Exchange', x: 17000, y: 21000, dock: { fuel: 9, repair: 0.5, ore: 26, yard: ['wren', 'kite', 'ox', 'talon', 'pathfinder', 'bastion'], shop: 0, parts: { shields: 3, weapons: 3, engine: 3, tank: 3, cargo: 3 } } },
+      { id: 'meridian-exchange', type: 'station', art: 'hub', name: 'Meridian Exchange', x: 17000, y: 21000, dock: { fuel: 9, repair: 0.5, ore: 26, yard: ['wren', 'kite', 'ox', 'talon', 'pathfinder', 'bastion'], missions: ['courier-meridian-kestrel', 'courier-meridian-ember', 'courier-meridian-roost', 'haul-meridian-ember', 'salvage-lethe', 'survey-hollow'], shop: 0, parts: { shields: 3, weapons: 3, engine: 3, tank: 3, cargo: 3 } } },
       { id: 'meridian-2', type: 'planet', kind: 'ice', seed: 21, name: 'Meridian II', x: 8500, y: 26500, r: 300, landable: false },
       { id: 'meridian-4', type: 'planet', kind: 'gas', seed: 22, name: 'Meridian IV', x: 29500, y: 28500, r: 480, landable: false },
       { id: 'meridian-belt', type: 'belt', name: 'Meridian Belt', x: 10500, y: 8000, r: 700, rocks: 15 },
@@ -82,7 +82,7 @@ const SYSTEMS = {
     star: { type: 'K', x: 18000, y: 18000 },
     pirates: { max: 6, every: 13000, weights: { raider: 0.6, drone: 0.3, gunship: 0.1 } },
     bodies: [
-      { id: 'brass-smelter', type: 'station', art: 'foundry', name: 'Brass Smelter', x: 9000, y: 21000, dock: { fuel: 6, repair: 0.5, ore: 30, yard: ['ox'], shop: 0, parts: { cargo: 3, tank: 3 } } },
+      { id: 'brass-smelter', type: 'station', art: 'foundry', name: 'Brass Smelter', x: 9000, y: 21000, dock: { fuel: 6, repair: 0.5, ore: 30, yard: ['ox'], missions: ['courier-brass-halcyon', 'haul-brass-halcyon', 'salvage-lethe'], shop: 0, parts: { cargo: 3, tank: 3 } } },
       { id: 'brass-3', type: 'planet', kind: 'rock', seed: 31, name: 'Brass III', x: 24000, y: 9000, r: 300, landable: false },
       { id: 'brass-belt-a', type: 'belt', name: 'Brass Belt', x: 12500, y: 13500, r: 900, rocks: 40 },
       { id: 'brass-belt-b', type: 'belt', name: 'Cinder Belt', x: 26500, y: 21500, r: 800, rocks: 30 },
@@ -126,7 +126,7 @@ const SYSTEMS = {
     star: { type: 'A', x: 18000, y: 18000 },
     pirates: { max: 10, every: 9000, weights: { raider: 0.45, drone: 0.15, gunship: 0.4 } },
     bodies: [
-      { id: 'ember-foundry', type: 'station', art: 'foundry', name: 'Ember Foundry', x: 22000, y: 15000, dock: { fuel: 6, repair: 0.5, ore: 28, yard: ['talon'], shop: 0, parts: { weapons: 3 } } },
+      { id: 'ember-foundry', type: 'station', art: 'foundry', name: 'Ember Foundry', x: 22000, y: 15000, dock: { fuel: 6, repair: 0.5, ore: 28, yard: ['talon'], missions: ['courier-ember-meridian', 'haul-ember-meridian'], shop: 0, parts: { weapons: 3 } } },
       { id: 'ember-lava', type: 'planet', kind: 'lava', seed: 61, name: 'Ember', x: 10000, y: 23500, r: 420, landable: false },
       { id: 'ember-belt-a', type: 'belt', name: 'Slag Run', x: 28500, y: 26000, r: 900, rocks: 40 },
       { id: 'ember-belt-b', type: 'belt', name: 'Cinder Field', x: 14000, y: 8500, r: 800, rocks: 30 },

@@ -254,6 +254,7 @@ function ctDock(st) {
   const d = {};
   ['fuel', 'repair', 'ore'].forEach(k => { if (st[k] !== undefined) d[k] = st[k]; });
   if (Array.isArray(st.yard)) d.yard = st.yard.slice();
+  if (Array.isArray(st.missions)) d.missions = st.missions.slice();
   if (Array.isArray(st.parts) && st.parts.length) { d.shop = 0; d.parts = {}; st.parts.forEach(r => { d.parts[r.slot] = r.tier; }); }
   ['partMult', 'fee', 'salvageMult'].forEach(k => { if (st[k] !== undefined) d[k] = st[k]; });
   return d;
@@ -319,7 +320,7 @@ const UI_TEXT = {
   'toast.patrol-down': 'Wanted pirate down  {progress} of {count}', 'toast.patrol-done': 'Patrol complete. All wanted pirates destroyed.',
   'toast.mule-leaving': 'The MULE is leaving the hangar. Stay close to her.', 'toast.mule-left': 'You left the MULE behind. Mission failed.',
   'toast.mule-lost': 'The MULE was destroyed. Mission failed.', 'toast.mule-arrived': 'The MULE made the Perseus gate.',
-  'toast.reaver-intro': 'The Reaver is south-west of Kepler-4b. Watch for the flash before it charges.', 'toast.reaver-wing': 'The Reaver calls in its wing.',
+  'toast.reaver-intro': 'The Reaver is south-west of Reaver\'s Rock. Watch for the flash before it charges.', 'toast.reaver-wing': 'The Reaver calls in its wing.',
   'toast.reaver-burning': 'The Reaver is burning. It fights harder.', 'toast.reaver-dead': 'The Reaver is wreckage. Bounty paid.',
   'toast.signal-new': 'New signal on the radar: {name}', 'toast.signal-found': 'Signal found: {name}', 'toast.signal-lost': 'Signal lost: {name}'
 };

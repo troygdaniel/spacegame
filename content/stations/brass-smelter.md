@@ -7,6 +7,7 @@ fuel: 6
 repair: 0.5
 ore: 30
 yard: [ox]
+missions: [courier-brass-halcyon, haul-brass-halcyon, salvage-lethe]
 ---
 A smelter that pays the best ore price in the cluster.
 
