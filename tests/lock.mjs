@@ -32,6 +32,14 @@ import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
 export const STALE_MS = 120000, NO_OWNER_MS = 10000;
+// Two clocks. `wall` is what file times and the "since" fields use; `mono` does not tick while the Mac sleeps. A wait is timed on `mono`, so an hour asleep is not an
+// hour waited (a run lost a 2700 s wait that way, card tests-flake-list). When a waiting run sees the two clocks part (it slept), no lock or ticket is judged stale
+// from its file time for a while: every heartbeat looks hours old on waking, until its holder's next beat, and a waiter must not take a live run's lock then.
+// tests/locktest.mjs swaps the clocks to play a sleep.
+export const clock = { wall: () => Date.now(), mono: () => performance.now() };
+const SLEEP_JUMP_MS = 5000;
+let graceUntil = 0;
+const trusted = () => clock.mono() >= graceUntil;
 const beatMs = () => Number(process.env.LONGHAUL_BEAT_MS) || 15000; // env: tests/locktest.mjs speeds the heartbeat up
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 export const lockDir = () => process.env.LONGHAUL_LOCK_DIR || join(tmpdir(), 'longhaul-chrome.lock');
@@ -42,14 +50,14 @@ export function alive(pid) {
   try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } // EPERM: it exists but is not ours
 }
 const readOwner = dir => { try { return JSON.parse(readFileSync(join(dir, 'owner'), 'utf8')); } catch (e) { return null; } };
-const ageOf = path => { try { return Date.now() - statSync(path).mtimeMs; } catch (e) { return Infinity; } };
+const ageOf = path => { try { return clock.wall() - statSync(path).mtimeMs; } catch (e) { return Infinity; } };
 
 // why a lock can be taken over, or null when it is held by a live run
 export function staleReason(dir) {
   const o = readOwner(dir);
-  if (!o) return ageOf(dir) > NO_OWNER_MS ? 'it has no owner file' : null;
+  if (!o) return trusted() && ageOf(dir) > NO_OWNER_MS ? 'it has no owner file' : null;
   if (!alive(o.pid)) return `its owner (pid ${o.pid}) is gone`;
-  if (ageOf(join(dir, 'owner')) > STALE_MS) return `its owner (pid ${o.pid}) has not checked in for ${Math.round(ageOf(join(dir, 'owner')) / 1000)} s`;
+  if (trusted() && ageOf(join(dir, 'owner')) > STALE_MS) return `its owner (pid ${o.pid}) has not checked in for ${Math.round(ageOf(join(dir, 'owner')) / 1000)} s`;
   return null;
 }
 
@@ -77,7 +85,7 @@ function liveTickets() {
     const path = join(queueDir(), name); let o = null;
     try { o = JSON.parse(readFileSync(path, 'utf8')); } catch (e) { o = null; }
     if (!o && ageOf(path) < NO_OWNER_MS) { out.push({ name, pid: 0, cmd: '?', cwd: '?', since: Date.now() }); continue; } // just made, not written yet
-    if (!o || !alive(o.pid) || ageOf(path) > ticketStaleMs()) { try { rmSync(path, { force: true }); } catch (e) { /* another waiter did */ } continue; }
+    if (!o || !alive(o.pid) || (trusted() && ageOf(path) > ticketStaleMs())) { try { rmSync(path, { force: true }); } catch (e) { /* another waiter did */ } continue; }
     out.push({ name, ...o });
   }
   return out;
@@ -119,12 +127,18 @@ function giveBack() {
 export async function acquire({ timeoutMs = 45 * 60000, log = console.log } = {}) {
   if (process.env.LONGHAUL_NO_LOCK === '1') return;
   if (held) { held++; return; }
-  const t0 = Date.now();
-  let lastNote = 0, got = -1;
+  const t0 = clock.mono();
+  let lastNote = -Infinity, got = -1, lastWall = clock.wall(), lastMono = t0;
   myTicket = null;
   try {
     myTicket = makeTicket();
     for (;;) {
+      const w = clock.wall(), m = clock.mono();
+      if ((w - lastWall) - (m - lastMono) > SLEEP_JUMP_MS) { // the clocks parted: this Mac slept (or the clock was set)
+        graceUntil = m + 2 * beatMs() + 5000;
+        log('  (test lock: the clock jumped, the Mac probably slept: not taking over any lock for a little while)');
+      }
+      lastWall = w; lastMono = m;
       const line = liveTickets();
       let at = line.findIndex(t => t.name === myTicket);
       if (at < 0) { myTicket = makeTicket(); at = liveTickets().findIndex(t => t.name === myTicket); } // our ticket was dropped (a long stall): back of the line
@@ -138,14 +152,14 @@ export async function acquire({ timeoutMs = 45 * 60000, log = console.log } = {}
         if (got >= 0) break;
       }
       touchTicket(myTicket);
-      if (Date.now() - t0 > timeoutMs) {
+      if (clock.mono() - t0 > timeoutMs) {
         const o = readOwner(slotDir(0)) || {};
         throw new Error(`timed out after ${Math.round(timeoutMs / 1000)} s waiting for the test lock held by pid ${o.pid} (${o.cmd || '?'} in ${o.cwd || '?'}); delete ${slotDir(0)} if that run is dead`);
       }
-      if (Date.now() - lastNote > 30000) {
+      if (clock.mono() - lastNote > 30000) {
         const o = readOwner(slotDir(0)) || {};
         log(`  (test lock: waiting for another Long Haul test run: pid ${o.pid}, ${o.cmd || '?'}, running ${Math.round((Date.now() - (o.since || Date.now())) / 1000)} s; you are ${at < 0 ? '?' : at + 1} in line)`);
-        lastNote = Date.now();
+        lastNote = clock.mono();
       }
       await sleep(250 + Math.random() * 200);
     }
