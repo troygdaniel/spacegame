@@ -45,13 +45,14 @@ const ctx = vm.createContext(new Proxy(box, {
   has: (t, k) => typeof k === 'string' && (k in t || !builtins.has(k)),
   get: (t, k) => (k in t ? t[k] : builtins.has(k) ? real[k] : noop), set: (t, k, v) => { t[k] = v; return true; }
 }));
-for (const f of ['common', 'data_parts', 'missions', 'enemies', 'shop']) {
+for (const f of ['common', 'data_systems', 'universe', 'data_ships', 'data_parts', 'fleet', 'missions', 'enemies', 'shop']) { // the systems and the fleet too: the runs of src/missions.js are made from them
   try { vm.runInContext(read('src/' + f + '.js'), ctx, { filename: f + '.js' }); } catch (e) { check('the game table file src/' + f + '.js runs in the sandbox', false, e.message.split('\n')[0]); }
 }
 const ids = expr => { try { return vm.runInContext(expr, ctx); } catch (e) { return ['ERROR ' + e.message]; } };
 const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
 const MISSIONS = ids('MISSIONS.map(m => m.id)'), NPCS = ids('NPCS.map(n => n.id)'), PIRATES = ids('Object.keys(PIRATES)'), PARTS = ids("Object.keys(PARTS)");
-check('the calls are rescue, escort, patrol, bounty', same(MISSIONS, ['rescue', 'escort', 'patrol', 'bounty']), MISSIONS.join());
+check('the calls are rescue, escort, patrol, bounty, and the sixteen runs and sites built in (courier-<from>-<to>, haul-<from>-<to>, salvage-lethe, survey-hollow)',
+  ['rescue', 'escort', 'patrol', 'bounty', 'salvage-lethe', 'survey-hollow'].every(i => MISSIONS.includes(i)) && MISSIONS.length === 20 && MISSIONS.filter(i => /^(courier|haul)-[a-z]+-[a-z]+$/.test(i)).length === 14, MISSIONS.join());
 check('the bar has juno, tamsin, dex, moss, sable, ida', same(NPCS, ['juno', 'tamsin', 'dex', 'moss', 'sable', 'ida']), NPCS.join());
 check('the pirates are raider, drone, gunship', same(PIRATES, ['raider', 'drone', 'gunship']), PIRATES.join());
 check('the part slots are shields, weapons, engine, tank, cargo', same(PARTS, ['shields', 'weapons', 'engine', 'tank', 'cargo']), PARTS.join());

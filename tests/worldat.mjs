@@ -64,7 +64,7 @@ try {
     const HOME = { // the schema's fields, sections and columns that tests/worldat.mjs follows into the row below. A new one that is not here fails the test: give it a home first.
       system: ['name', 'kind', 'ly', 'size', 'danger', 'traffic', 'seed', 'starType', 'starX', 'starY', 'pirateMax', 'pirateEvery', 'bodies', 'pirates'],
       bodies: ['id', 'type', 'name', 'x', 'y', 'art', 'r', 'rocks', 'landable', 'kind', 'seed', 'look', 'labelDy', 'credits', 'hull', 'guard', 'note'],
-      station: ['name', 'system', 'accent', 'fuel', 'repair', 'ore', 'yard', 'partMult', 'fee', 'salvageMult', 'parts', 'welcome', 'shop', 'services', 'bar']
+      station: ['name', 'system', 'accent', 'fuel', 'repair', 'ore', 'yard', 'missions', 'partMult', 'fee', 'salvageMult', 'parts', 'welcome', 'shop', 'services', 'bar']
     };
     const sch = { system: Object.keys(SH.system.fields).concat(Object.keys(SH.system.sections)), bodies: Object.keys(SH.system.sections.bodies.cols), station: Object.keys(SH.station.fields).concat(Object.keys(SH.station.sections)) };
     check('every field, section and column of the system and station schema has a home that this test follows', Object.keys(HOME).every(k => sch[k].every(f => HOME[k].includes(f)) && HOME[k].every(f => sch[k].includes(f))), JSON.stringify(sch));
