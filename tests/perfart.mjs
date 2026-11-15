@@ -1,3 +1,4 @@
+// smoke: the world art is unchanged by the speed-up: noise numbers and the pixels of 47 textures
 // The world art is drawn pixel by pixel at boot (src/art_world.js), and that was the biggest cost of loading the game (card
 // space-game-perf-pass). The drawing was made faster without changing a pixel; this test keeps it that way.
 //   1. (no browser) waFbm, the noise every texture is built from, gives exactly the numbers of the first version, which is copied below.

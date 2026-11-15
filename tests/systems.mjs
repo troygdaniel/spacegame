@@ -1,3 +1,4 @@
+// smoke: the eight star systems: the design table, who reaches what, the layouts, every dock; each one flown, drawn and docked at
 // The eight star systems (card space-game-u-b5-systems-8, docs/UNIVERSE.md 4.2): authored in src/data_systems.js, drawn and flown by the Space scene.
 //   Part 1 runs the data in a plain Node context (no browser, so it does not care how busy the Mac is): the design table (places, danger, traffic), the jump distances
 //   and which ship reaches which system, the layout rules, every dock (pump, yard, parts), every pirate table.
