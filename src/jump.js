@@ -105,6 +105,7 @@ function jumpGo(s) {
   s.cameras.main.zoomTo(1, 100, 'Linear', true);
   fuelBurn(j.cost, rec); // src/fuel.js
   missionLeaveSpace(s); // src/missions.js: an escort that is left behind fails
+  missionLeaveSystem(s, from); // a call played in the system you are leaving fails with it (a courier or haul is carried out of one)
   const pull = pullRoll(from, j.to); // src/pullout.js: usually null; 2 to 7% of jumps are pulled out of the tunnel
   go(s, 'Hyper', { dest: j.name.toUpperCase(), ly: j.ly, fuel: j.cost, tank: fuelTank(rec), next: 'Space', nextData: { from: 'jump', to: j.to, origin: from }, pull });
 }

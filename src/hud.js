@@ -42,7 +42,7 @@ const HUD_MISSIONS = {
   bounty: {
     steps: ['Take the bounty call', 'Launch from the hangar', () => 'Reaver hull  ' + Math.round(100 * Math.max(0, REAVER_HP - G.missionProgress) / REAVER_HP) + '%'],
     cur: (s, key) => key === 'Station' ? 1 : 2,
-    next: (s, key) => key === 'Station' ? 'Board your ship in the hangar' : key === 'Space' ? 'Fly south-west of Kepler-4b; break off when it flashes' : 'Return to your ship'
+    next: (s, key) => key === 'Station' ? 'Board your ship in the hangar' : key === 'Space' ? (G.system === 'roost' ? 'Hunt it south-west of Reaver\'s Rock; break off when it flashes' : 'Jump to Reaver\'s Roost (G for the map)') : 'Return to your ship'
   }
 };
 

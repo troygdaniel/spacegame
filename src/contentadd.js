@@ -77,7 +77,7 @@ CONTENT_TABLES.ship = CA_SHIP;
 // surface.js and hud.js; what it SAYS and PAYS is data. A file with kind: patrol and a new id is a second police patrol: its own title, its
 // own pay, its own count, its own words. It starts as a copy of the built-in call of that kind, so every text a file leaves out is the kind's
 // own, except those that carry a number of the original (the patrol's five), which are rebuilt from this call's count.
-// Not added: kinds that have no code yet (courier, haul, salvage, survey) are refused by name; their cards bring them.
+// Not added: the courier, haul, salvage and survey calls are built in (src/missions.js: their routes and sites are code, and a file with their id changes their words and pay), but a pack cannot add a new one yet; the kind is refused by name.
 const CA_MISSION_KINDS = ['rescue', 'escort', 'patrol', 'bounty'];
 const CA_MISSION_KEYS = ['5', '6', '7', '8']; // the board's number keys for added calls (the four built-in ones use 1 to 4)
 const CA_MISSIONS = new Set();
@@ -87,7 +87,7 @@ const CA_MISSION = {
   get: (id, f) => CT_MISSION.get(id, f),
   apply: (id, data, isNew) => {
     if (!isNew) return CT_MISSION.apply(id, data);          // a built-in call, or one of ours seen again: a change, as before
-    if (!CA_MISSION_KINDS.includes(data.kind)) throw new Error('kind is "' + data.kind + '" but the game plays only ' + CA_MISSION_KINDS.join(', ') + ' calls so far (courier, haul, salvage and survey need their own cards)');
+    if (!CA_MISSION_KINDS.includes(data.kind)) throw new Error('kind is "' + data.kind + '" but the game plays only ' + CA_MISSION_KINDS.join(', ') + ' calls so far (the courier, haul, salvage and survey calls are built in, with their routes in code: a pack can change them but not add one)');
     if (CA_MISSIONS.size >= CA_MAX.mission) throw new Error('a pack may add at most ' + CA_MAX.mission + ' calls to the board and there are that many already');
     if (!CA_MISSION_KEYS.some(k => !MISSIONS.some(m => m.key === k))) throw new Error('the board has no free number key left for another call');
     const tmpl = MISSIONS.find(m => m.id === data.kind);   // the built-in call of this kind: its row is the pattern

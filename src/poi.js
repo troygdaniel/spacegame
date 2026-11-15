@@ -153,6 +153,7 @@ function poiSalvage(sc, p, o, prompt) {
   sfx('chime');
   toast(sc, p.name + ': ' + p.note + '\n' + gains.join('   '), '#6dff9c');
   if (typeof feelNumber === 'function') feelNumber(sc, p.x, p.y - 40, gains.join('  '), '#ffb454', 18);
+  if (typeof missionSite === 'function') missionSite(sc, p); // src/missions.js: a salvage or survey call that named this site ends here
   o.spr.setTint(0x445566).setAlpha(0.55);
   if (o.ring) { if (o.pulse) o.pulse.stop(); o.ring.destroy(); o.ring = null; }
   if (p.sig) sc.tweens.add({ targets: [o.spr, o.label], alpha: 0, delay: 1500, duration: 1500, onComplete: () => removeSite(sc, p) }); // a signal is used up

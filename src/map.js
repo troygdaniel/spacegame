@@ -126,6 +126,7 @@ class Overlay extends Phaser.Scene {
 
   objective(S) {
     if (S.live && S.sp.cr && S.sp.cr.target) return S.sp.cr.target; // a target picked in the nav list (src/cruise.js) comes first
+    if (typeof missionFar === 'function' && missionFar()) return null; // the call's goal is in another system: no arrow, the line below says where (src/missions.js)
     if (S.live && typeof missionTarget === 'function') { try { return missionTarget(S.sp); } catch (e) { /* fall through */ } }
     if (typeof missionActive === 'function') {
       if (missionActive('rescue')) return { x: S.pl.x, y: S.pl.y, name: this.D.pl.name };
@@ -232,7 +233,7 @@ class Overlay extends Phaser.Scene {
       const km = Phaser.Math.Distance.Between(ship.x, ship.y, S.obj.x, S.obj.y) / 10 | 0;
       const deg = (Phaser.Math.RadToDeg(Math.atan2(S.obj.y - ship.y, S.obj.x - ship.x)) + 90 + 360) % 360;
       objLine = S.obj.name + '\n' + (km < 20 ? 'you are here' : km + ' km  ' + COMPASS[Math.round(deg / 45) % 8]);
-    }
+    } else if (typeof missionFarLine === 'function' && missionFarLine()) objLine = missionFarLine().replace('  -  G opens the galaxy map', '\nG opens the galaxy map');
     tri(g, ox, oy, ship.rot, 9, 0xffffff);
     this.lbShip.setText(ship.tag).setPosition(ox, oy + 12);
 

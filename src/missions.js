@@ -1,7 +1,16 @@
-// ---------- Missions: the calls on the station board, and the space-side logic for each ----------
+// ---------- Missions: the calls on the station boards, and the space-side logic for each ----------
 // G.missionId names a row of MISSIONS; G.mission is its state: none | accepted | rescued | failed.
 // Rescue plays out in surface.js (land, find the colonist) and pays on docking (station.js), as in v0.1.
 // Escort and Police patrol live entirely in space (hooks below) and pay the moment they are done.
+// Calls and systems (docs/UNIVERSE.md 10.2 e3, 11; card u-e3):
+//   system    where a call is played: the gate, Kepler-4b and the patrol are Halcyon's, the Reaver is at the Roost, the Widow at Lethe, the beacon at the Hollow. Leaving that system by a
+//             jump fails the call (missionLeaveSystem); a carry call (courier, haul) is played in two systems and fails on death only. A call under way sits quiet in any other system.
+//   posted    each station's board is its dock.missions list (src/data_systems.js): the ids of the calls it offers. Halcyon posts the four it always had, then a courier run, a haul
+//             and a survey; the other docks post runs to their neighbours; the Roost posts none. A call a content pack adds is posted at Halcyon.
+//   courier   200 + 90 per light year to a station in another system; a case in your pocket, paid on docking there. haul: freight that fills the whole hold for the trip (src/fleet.js
+//             holdCap), paid 20 per unit of hold per 5 ly on docking there. salvage (Lethe, the Widow) and survey (the Hollow beacon): press E on the named site; the site's own
+//             payout stays, the call's pay is on top.
+//   far goals the HUD checklist, the Tab map, the nav list (N) and the galaxy map name a goal in another system and its distance instead of an arrow (missionFar).
 G.missionId = null; G.missionProgress = 0; G.patrolsDone = 0; // patrolsDone unlocks the bounty call (saved by meta.js)
 
 // The Perseus gate is a body of type 'gate' in the system data (src/data_systems.js). GATE stays as a live alias of its position
@@ -17,14 +26,14 @@ const MISSIONS = [
       : st === 'failed' ? 'Failed. Ask the station for another call' : 'Rescue the colonist on Kepler-4b',
     progress: () => G.mission === 'rescued' ? 'The colonist is aboard.\nDock at Halcyon Station to get paid.'
       : 'Find the colonist on Kepler-4b and\nbring them back alive.',
-    failOnDeath: ['rescued'], deathMsg: 'Ship destroyed. The colonist was lost. Mission failed.'
+    failOnDeath: ['rescued'], deathMsg: 'Ship destroyed. The colonist was lost. Mission failed.', system: 'halcyon'
   },
   {
     id: 'escort', key: '2', title: 'Escort', where: 'MULE to the Perseus gate', reward: 400,
     offer: 'The freighter MULE leaves the hangar when you do,\nbound for the Perseus gate to the south-west.\nPirates know the route. Fly with her and shoot\nanything that gets close. She pays on arrival.\nLose her and you get nothing.',
     line: st => st === 'failed' ? 'Failed. The MULE was lost' : 'Escort the MULE to the Perseus gate',
     progress: () => 'The MULE is under way to the Perseus gate.\nStay with her. Do not dock or land.',
-    failOnDeath: ['accepted'], deathMsg: 'Ship destroyed. The MULE is on her own. Mission failed.',
+    failOnDeath: ['accepted'], deathMsg: 'Ship destroyed. The MULE is on her own. Mission failed.', system: 'halcyon',
     space: { setup: escortSetup, update: escortUpdate, target: escortTarget,
       leave: s => failMission(s, uiText('toast.mule-left')) }
   },
@@ -34,23 +43,105 @@ const MISSIONS = [
     line: st => st === 'failed' ? 'Failed. The pirates got away'
       : 'Police patrol: ' + G.missionProgress + ' of 5 wanted pirates down',
     progress: () => 'Wanted pirates destroyed: ' + G.missionProgress + ' of 5.\nThey wait on the approach to the station.',
-    failOnDeath: [], deathMsg: '',
+    failOnDeath: [], deathMsg: '', system: 'halcyon',
     space: { setup: patrolSetup, update: patrolUpdate, target: patrolTarget }
   },
   {
-    id: 'bounty', key: '4', title: 'Bounty', where: 'The Reaver, off Kepler-4b', reward: 1200,
+    id: 'bounty', key: '4', title: 'Bounty', where: 'The Reaver, at Reaver\'s Roost', reward: 1200, system: 'roost',
     unlock: () => G.patrolsDone > 0, // the board offers it once a police patrol has been finished
-    offer: 'The pirate warlord they call the Reaver holds\nthe dark side of Kepler-4b with two escorts.\nA warship three times a drone: spread guns and\na ramming charge it telegraphs with a flash.\nHalcyon pays 1200 cr for the wreck.',
+    offer: 'The pirate warlord they call the Reaver has gone\nto ground at Reaver\'s Roost, twelve light years out,\nwith two escorts and a nest full of friends.\nA warship three times a drone: spread guns and\na ramming charge it telegraphs with a flash.\nHalcyon pays 1200 cr for the wreck.',
     line: st => st === 'failed' ? 'Failed. The Reaver got away'
+      : G.system !== 'roost' ? 'Bounty: jump to Reaver\'s Roost  (' + callLy('roost') + ' ly, G for the map)'
       : 'Bounty: the Reaver  hull ' + Math.round(100 * Math.max(0, REAVER_HP - G.missionProgress) / REAVER_HP) + '%',
-    progress: () => 'The Reaver waits south-west of Kepler-4b.\nIts hull is at ' + Math.round(100 * Math.max(0, REAVER_HP - G.missionProgress) / REAVER_HP) + '%.\nDock whenever you like; it will still be there.',
+    progress: () => 'The Reaver waits south-west of Reaver\'s Rock.\nIts hull is at ' + Math.round(100 * Math.max(0, REAVER_HP - G.missionProgress) / REAVER_HP) + '%.\nDock whenever you like; it will still be there.',
     failOnDeath: ['accepted'], deathMsg: 'Ship destroyed. The Reaver got away. Mission failed.',
     space: { setup: bountySetup, update: bountyUpdate, target: bountyTarget }
   }
 ];
 
+// ---- the new calls: courier and haul runs between stations, a salvage at Lethe, a survey at the Hollow (card u-e3) ----
+const callSystemOf = st => (fleetStation(st) || { system: 'halcyon' }).system;        // the system a station is in (src/fleet.js)
+const callSysName = id => (SYSTEMS[id] || { name: id }).name;
+const callStName = st => fleetStationName(st);
+const callFmtLy = ly => (Math.round(ly * 10) / 10).toFixed(1);
+// light years from the system you are in to another one
+function callLy(id) { const a = sysDef().ly, b = (SYSTEMS[id] || {}).ly; return a && b ? callFmtLy(Math.hypot(a[0] - b[0], a[1] - b[1])) : '?'; }
+// where a call wants you now: { system, name, station } when that is another system (or, for a carry call, the station in this one), else null
+function callGoal(m) {
+  if (!m) return null;
+  if (m.carry) return { system: callSystemOf(m.to), station: m.to, name: callStName(m.to) };
+  const sys = m.system || 'halcyon';
+  return { system: sys, station: null, name: callSysName(sys) };
+}
+const HAUL = { perUnit: 20, perLy: 5 };               // 20 cr per unit of hold per 5 ly
+const haulPay = (ly, units) => Math.round(HAUL.perUnit * units * ly / HAUL.perLy);
+const COURIER = { base: 200, perLy: 90 };             // 200 + 90 per ly
+function carryRow(kind, from, to) {
+  const ly = fleetLy(from, to), toSys = callSystemOf(to), where = callStName(to) + ', ' + callSysName(toSys);
+  const row = {
+    id: kind + '-' + callSystemOf(from) + '-' + toSys, kind, carry: true, from, to, system: toSys, where, ly,
+    failOnDeath: ['accepted']
+  };
+  const here = () => G.system === toSys;
+  const far = () => 'jump to ' + callSysName(toSys) + '  (' + callLy(toSys) + ' ly, G for the map)';
+  if (kind === 'courier') {
+    Object.assign(row, {
+      title: 'Courier run', reward: Math.round(COURIER.base + COURIER.perLy * ly),
+      offer: 'A sealed case for ' + callStName(to) + ', ' + callFmtLy(ly) + ' light years out.\nJump there, dock, and hand it over.\nIt pays on delivery.\nLose the ship and you lose the case.',
+      line: st => st === 'failed' ? 'Failed. The case was lost' : 'Courier: ' + (here() ? 'dock at ' + callStName(to) + ' (L)' : far()),
+      progress: () => 'Deliver the sealed case to ' + callStName(to) + '.\n' + (here() ? 'You are in ' + callSysName(toSys) + ': dock there.' : callSysName(toSys) + ' is ' + callLy(toSys) + ' ly from here.'),
+      deathMsg: 'Ship destroyed. The case is lost. Call failed.'
+    });
+  } else {
+    Object.defineProperty(row, 'reward', { enumerable: true, get: () => haulPay(ly, shipStat('hold')) }); // what this ship earns: the whole hold, 20 cr a unit per 5 ly
+    Object.assign(row, {
+      title: 'Haul',
+      offer: 'Freight for ' + callStName(to) + ', ' + callFmtLy(ly) + ' light years out. It fills your whole hold for the trip,\nso no ore fits. Pays ' + HAUL.perUnit + ' cr a unit of hold per ' + HAUL.perLy + ' ly.\nLose the ship and you lose the freight.',
+      line: st => st === 'failed' ? 'Failed. The freight was lost' : 'Haul: ' + (here() ? 'dock at ' + callStName(to) + ' (L)' : far()),
+      progress: () => 'Freight for ' + callStName(to) + ': ' + (G.missionProgress | 0) + ' units in the hold.\n' + (here() ? 'You are in ' + callSysName(toSys) + ': dock there.' : callSysName(toSys) + ' is ' + callLy(toSys) + ' ly from here.'),
+      deathMsg: 'Ship destroyed. The freight is lost. Call failed.'
+    });
+  }
+  return row;
+}
+// the routes: [kind, posted at, delivered to]
+const CALL_ROUTES = [
+  ['courier', 'halcyon-station', 'kestrel-outpost'], ['courier', 'halcyon-station', 'brass-smelter'], ['haul', 'halcyon-station', 'brass-smelter'],
+  ['courier', 'kestrel-outpost', 'halcyon-station'], ['courier', 'kestrel-outpost', 'meridian-exchange'], ['haul', 'kestrel-outpost', 'meridian-exchange'],
+  ['courier', 'meridian-exchange', 'kestrel-outpost'], ['courier', 'meridian-exchange', 'ember-foundry'], ['courier', 'meridian-exchange', 'roost-dock'], ['haul', 'meridian-exchange', 'ember-foundry'],
+  ['courier', 'brass-smelter', 'halcyon-station'], ['haul', 'brass-smelter', 'halcyon-station'],
+  ['courier', 'ember-foundry', 'meridian-exchange'], ['haul', 'ember-foundry', 'meridian-exchange']
+];
+MISSIONS.push(...CALL_ROUTES.map(r => carryRow(...r)));
+// a named site in a system: press E on it (src/poi.js calls missionSite)
+function siteRow(o) {
+  const row = Object.assign({ site: o.site, failOnDeath: [], deathMsg: '' }, o);
+  row.line = st => st === 'failed' ? 'Failed. ' + o.fail : o.title + ': ' + (G.system === o.system ? o.here : 'jump to ' + callSysName(o.system) + '  (' + callLy(o.system) + ' ly, G for the map)');
+  row.progress = () => o.here + '\n' + (G.system === o.system ? 'You are in ' + callSysName(o.system) + '.' : callSysName(o.system) + ' is ' + callLy(o.system) + ' ly from here.');
+  return row;
+}
+MISSIONS.push(
+  siteRow({ id: 'salvage-lethe', kind: 'salvage', title: 'Salvage: the Widow', where: 'Lethe', reward: 700, system: 'lethe', site: 'lethe-wreck-7',
+    offer: 'A troop carrier called the Widow went down at Lethe\nwith a strongbox nobody could reach. Fourteen wrecks\non a slow ring; scavenger drones pick over all of them.\nFind her, press E beside the wreck, bring nothing back.\nThe call pays 700 on top of what the wreck holds.',
+    here: 'Find the Widow among the wrecks and press E', fail: 'The Widow stays where she fell' }),
+  siteRow({ id: 'survey-hollow', kind: 'survey', title: 'Survey: the Hollow', where: 'The Hollow', reward: 600, system: 'hollow', site: 'beacon-h',
+    offer: 'An old survey beacon in the Hollow went quiet.\nThere is no pump out there: take the fuel to get home.\nFly to the beacon, press E to chart it, come back.\nThe call pays 600 on top of what the beacon holds.',
+    here: 'Fly to the old survey beacon and press E', fail: 'The beacon stays dark' })
+);
+
 function missionDef() { return MISSIONS.find(m => m.id === G.missionId) || null; }
-function missionsOffered() { return MISSIONS.filter(m => !m.unlock || m.unlock()); } // what the board shows today
+// what a station's board shows: the calls its dock lists (dock.missions in src/data_systems.js), unlocked ones only; the home dock also posts what a content pack added
+function missionsOffered(station) {
+  station = station || G.lastDock;
+  const st = fleetStation(station), list = st && st.body.dock && st.body.dock.missions, home = station === homeDock();
+  return MISSIONS.filter(m => (!m.unlock || m.unlock()) && (Array.isArray(list) ? list.includes(m.id) || (home && m.added) : home && !m.carry && !m.site));
+}
+// the board calls this when a call is accepted (station.js): a haul loads the freight, which fills the hold
+function missionAccepted() {
+  const m = missionDef();
+  if (m && missionKind(m) === 'haul') G.missionProgress = shipStat('hold'); // units of freight; holdCap() (src/fleet.js) takes them off the hold while the call is open
+}
+const haulFreight = () => (G.mission === 'accepted' && missionKind(missionDef()) === 'haul') ? (G.missionProgress | 0) : 0;
 // a call is of a kind (rescue, escort, patrol, bounty); the four built-in rows are called by their kind, a call a content pack adds (src/contentadd.js)
 // carries its own id and kind. missionActive('patrol') is true for any patrol call under way, so the space-side logic never cares whose row it is.
 const missionKind = m => m && (m.kind || m.id);
@@ -70,17 +161,23 @@ function completeMission(s, msg) {
 }
 
 // ---- hooks called from space.js ----
-// The three calls are Halcyon's: the gate, Kepler-4b and the Reaver's spot are places in that system. Until the calls belong to a system (card u-e3) a call under way sits
-// quiet in any other one: nothing is set up for it there, and it picks up again when you are back in Halcyon.
-const missionHere = () => G.system === 'halcyon';
+// A call is played in its own system (m.system): the gate, Kepler-4b and the patrol are Halcyon's, the Reaver is at the Roost. A call under way sits quiet in any other
+// system: nothing is set up for it there, and it picks up again when you are back.
+const missionHere = m => G.system === ((m && m.system) || 'halcyon');
 function missionSpaceSetup(s) {
   s.mx = {};
   const m = missionDef();
-  if (m && m.space && G.mission === 'accepted' && missionHere()) m.space.setup(s);
+  if (m && m.space && G.mission === 'accepted' && missionHere(m)) m.space.setup(s);
 }
 function missionSpaceUpdate(s, time, dt) {
   const m = missionDef();
-  if (m && m.space && G.mission === 'accepted' && missionHere()) m.space.update(s, time, dt);
+  if (m && m.space && G.mission === 'accepted' && missionHere(m)) m.space.update(s, time, dt);
+}
+// a jump away from the system a call is played in fails it (docs/UNIVERSE.md 10.2 e3); a carry call (courier, haul) is meant to be carried out of one, so it only fails on death
+function missionLeaveSystem(s, from) {
+  const m = missionDef();
+  if (!m || m.carry || (G.mission !== 'accepted' && G.mission !== 'rescued') || (m.system || 'halcyon') !== from) return;
+  failMission(s, 'You left ' + callSysName(from) + '. ' + m.title + ' failed.');
 }
 function missionLeaveSpace(s) {
   const m = missionDef();
@@ -91,12 +188,43 @@ function missionDeath(s) {
   if (!m || !m.failOnDeath.includes(G.mission)) return false;
   failMission(s, m.deathMsg); return true;
 }
+// where the active call wants you when that is another system: { system, name, station, ly } (the arrow cannot point there: the checklist, the Tab map, the nav list and the
+// galaxy map say it in words), or null when it is here or there is no call
+function missionFar() {
+  const m = G.mission === 'accepted' ? missionDef() : null, g = callGoal(m);
+  return g && g.system !== G.system ? Object.assign({ ly: callLy(g.system) }, g) : null;
+}
+// the system the open call wants you in (a courier or haul: the one its station is in), or null: the galaxy map marks it (src/galaxymap.js)
+function missionGoalSystem() { const g = callGoal(G.mission === 'accepted' ? missionDef() : null); return g ? g.system : null; }
+// one line for the nav list, the Tab map and the galaxy map: what the call wants, where, how far
+function missionFarLine() {
+  const far = missionFar(); if (!far) return '';
+  return 'CALL: ' + (far.station ? far.name + ', ' : '') + callSysName(far.system) + '  (' + far.ly + ' ly)  -  G opens the galaxy map';
+}
+// docking pays a carry call at the station it was bound for (station.js calls this when you arrive)
+function missionDock(s) {
+  const m = missionDef();
+  if (!m || !m.carry || G.mission !== 'accepted' || m.to !== G.lastDock) return;
+  const haul = missionKind(m) === 'haul', pay = haul ? haulPay(m.ly, G.missionProgress | 0) : m.reward;
+  G.credits += pay; G.mission = 'none'; G.missionId = null; G.missionProgress = 0;
+  sfx('chime'); toast(s, (haul ? 'Freight delivered.' : 'Case delivered.') + '  +' + pay + ' cr', '#6dff9c');
+}
+// a salvage or survey call ends when its named site is salvaged (src/poi.js calls this)
+function missionSite(s, p) {
+  const m = missionDef();
+  if (!m || !m.site || G.mission !== 'accepted' || m.site !== p.id) return;
+  completeMission(s, missionKind(m) === 'salvage' ? 'Salvage complete.' : 'Beacon charted.');
+}
 // where the objective arrow points
 function missionTarget(s) {
   const m = missionDef();
-  const t = m && m.space && m.space.target && G.mission === 'accepted' && missionHere() ? m.space.target(s) : null;
+  const t = m && m.space && m.space.target && G.mission === 'accepted' && missionHere(m) ? m.space.target(s) : null;
   if (t) return t;
-  if (missionActive('rescue') && missionHere() && sysBody('planet')) return { x: s.planet.x, y: s.planet.y, name: sysBody('planet').name };
+  const far = missionFar(); // a goal in another system has no arrow: the checklist, the maps and the nav list name it (missionFar)
+  if (far) return null;
+  if (m && m.carry && G.mission === 'accepted') { const dock = sysBodies('station').find(b => b.id === m.to); return dock ? { x: dock.x, y: dock.y, name: dock.name } : null; }
+  if (m && m.site && G.mission === 'accepted') { const site = sysBodies('poi').find(b => b.id === m.site); return site ? { x: site.x, y: site.y, name: site.name } : null; }
+  if (missionActive('rescue') && missionHere(m) && sysBody('planet')) return { x: s.planet.x, y: s.planet.y, name: sysBody('planet').name };
   const st = sysBody('station'); // a system with no station (Kestrel until card u-b5) has nothing to point at
   return st ? { x: s.station.x, y: s.station.y, name: st.name } : null;
 }

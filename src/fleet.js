@@ -84,7 +84,7 @@ function shipStat(name, rec) {
   if (typeof v !== 'number') return undefined;
   return PART_ADD[f] ? PART_ADD[f](v, rec) : v;
 }
-const holdCap = rec => shipStat('hold', rec);                                   // the cargo hold in ore units: asteroids.js, hud.js, the save
+const holdCap = rec => Math.max(0, shipStat('hold', rec) - (!rec || rec === activeShip() ? (typeof haulFreight === 'function' ? haulFreight() : 0) : 0)); // the cargo hold in ore units, less the freight of a haul under way (src/missions.js): asteroids.js, hud.js, the save
 const partTier = (slot, rec) => ((rec || activeShip()).parts[slot] | 0);        // the tier fitted in a slot of the active ship
 
 // the highest tier of a part slot this hull can fit (data_ships.js)

@@ -46,7 +46,7 @@ class Station extends Phaser.Scene {
     this.prompt = floatPrompt(this, this.player); // key cap above whatever you can use (src/ui.js)
     this.add.text(24, H - IN_SOUTH - 28, 'WASD walk   E interact', { fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92' }).setDepth(100);
 
-    this.ui = panel(this, { w: 900, h: 480, title: 'MISSION BOARD  -  HALCYON STATION', dim: true }); // src/ui.js
+    this.ui = panel(this, { w: 900, h: 480, title: 'MISSION BOARD  -  ' + fleetStationName(G.lastDock).toUpperCase(), dim: true }); // src/ui.js (src/fleet.js: the station you docked at)
     this.panelBox = this.ui.box.setVisible(false); this.boardObjs = [];
 
     if (this.arrive && G.mission === 'rescued') {
@@ -56,6 +56,7 @@ class Station extends Phaser.Scene {
     } else if (this.arrive) {
       toast(this, uiText('toast.docked'), '#9fe9ff');
     }
+    if (this.arrive) missionDock(this); // missions.js: a courier or haul bound for this station is paid
     if (this.arrive) sellOre(this); // asteroids.js: ore in the hold is sold on docking
     if (this.arrive) bountyDock(this); // enemies.js: what this flight's pirate kills paid
     if (this.arrive) feelArrive(this); // feel.js: a short settle-in zoom after docking
@@ -65,10 +66,11 @@ class Station extends Phaser.Scene {
   // 1-3 or the arrow keys choose a call, E accepts it, X drops the one under way, Esc closes.
   openPanel() {
     this.panel = true; this.panelBox.setVisible(true); this.canAccept = false; this.prompt.setText('');
-    if (G.lastDock !== homeDock()) return this.openEmptyBoard(); // src/fleet.js
+    const posted = missionsOffered(); // src/missions.js: the calls this station's dock posts
+    if (!posted.length && !(G.mission === 'accepted' || G.mission === 'rescued')) return this.openEmptyBoard();
     const busy = () => G.mission === 'accepted' || G.mission === 'rescued';
     const RISK = { rescue: ['MEDIUM', 2, '#ffb454'], escort: ['HIGH', 3, '#ff4d6d'], patrol: ['MEDIUM', 2, '#ffb454'], bounty: ['EXTREME', 3, '#ff2a4a'] };
-    const OFFERS = missionsOffered(); // the bounty call appears once a patrol has been finished (missions.js)
+    const OFFERS = posted.map((m, i) => Object.assign(Object.create(m), { key: i < 9 ? String(i + 1) : '' })); // the number keys follow the board's order, so every station's board is keyed 1, 2, 3 ...
     // four cards fit side by side; a pack that adds more calls than that scrolls: the window of four follows the call you choose
     const VIS = 4, SHOWN = Math.min(OFFERS.length, VIS), GAP = Math.min(288, Math.floor(1120 / SHOWN)), CW = Math.min(270, GAP - 14);
     let start = 0;
@@ -110,7 +112,7 @@ class Station extends Phaser.Scene {
         txt(-276, cy + 84, 'PAYS ' + m.reward + ' cr', 16, '#ffb454', { style: { fontStyle: 'bold' } });
         this.ui.setHints([['X', 'Drop the mission'], ['Esc', 'Close']]); return;
       }
-      this.ui.titleText.setText('MISSION BOARD  -  HALCYON STATION');
+      this.ui.titleText.setText('MISSION BOARD  -  ' + fleetStationName(G.lastDock).toUpperCase());
       OFFERS.slice(start, start + VIS).forEach((m, k) => {
         const i = start + k, z = card(m, i, (k - (SHOWN - 1) / 2) * GAP, -75, CW, 220, i === sel);
         z.on('pointerdown', () => { if (sel === i) acceptSel(); else choose(i); });
@@ -128,7 +130,7 @@ class Station extends Phaser.Scene {
     };
     const acceptSel = () => { // same as pressing E in update()
       if (!this.canAccept) return;
-      G.mission = 'accepted'; this.closePanel(); beep(520, 0.15, 'triangle', 0.05, 300);
+      G.mission = 'accepted'; missionAccepted(); this.closePanel(); beep(520, 0.15, 'triangle', 0.05, 300); // missions.js: a haul loads its freight
       toast(this, uiText('toast.accepted'));
     };
 
@@ -152,7 +154,7 @@ class Station extends Phaser.Scene {
     kb.on('keydown', this.boardKeys);
     if (busy()) render(); else choose(Math.max(0, OFFERS.findIndex(m => m.id === G.missionId)), true);
   }
-  // Only Halcyon posts calls so far (the three of src/missions.js are places in that system; card u-e3 gives every station a board of its own): anywhere else the desk says so
+  // A station whose dock posts no calls (the Roost): the desk says so
   openEmptyBoard() {
     const name = fleetStationName(G.lastDock); // src/fleet.js
     this.ui.titleText.setText('MISSION BOARD  -  ' + name.toUpperCase());
@@ -173,7 +175,7 @@ class Station extends Phaser.Scene {
       this.player.setVelocity(0, 0);
       if (JD(k.ESC)) this.closePanel();
       if (this.canAccept && JD(k.E)) {
-        G.mission = 'accepted'; this.closePanel(); beep(520, 0.15, 'triangle', 0.05, 300);
+        G.mission = 'accepted'; missionAccepted(); this.closePanel(); beep(520, 0.15, 'triangle', 0.05, 300);
         toast(this, uiText('toast.accepted'));
       }
       return;

@@ -109,6 +109,7 @@ function cruiseSetup(s) {
     });
   }
   cr.more = add(s.add.text(0, h / 2 - 62, '', uiFont(13, '#5b7a92')).setOrigin(0.5));
+  cr.far = add(s.add.text(0, h / 2 - 42, '', uiFont(13, '#ffd37a')).setOrigin(0.5)); // a goal in another system (src/missions.js missionFarLine)
   ui.setVisible(false);
 }
 
@@ -149,6 +150,7 @@ function cruiseNavDraw(s) {
     r.km.setText(hudFmt(b.dist / 10) + ' km');
     r.eta.setText(b.dist < CRUISE.stop + CRUISE.minLeg ? 'near' : Math.round(cruiseEta(b.dist)) + ' s');
   });
+  cr.far.setText(typeof missionFarLine === 'function' ? missionFarLine() : '');
   cr.more.setText(n > CRUISE_ROWS ? (first > 0 ? 'above  ' : '') + n + ' bodies' + (first + CRUISE_ROWS < n ? '  below' : '') : '');
 }
 

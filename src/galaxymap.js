@@ -230,6 +230,7 @@ class Galaxy extends Phaser.Scene {
     for (let i = 0; i < 5; i++) { g.fillStyle(i < s.danger ? (s.danger >= 4 ? 0xff4d6d : s.danger >= 3 ? AMBER : 0x6dff9c) : 0x1d3b5c, 1); g.fillRect(cx + 120 + i * 16, cy + y - 5, 12, 10); }
     T(cardW - 20, y, GALAXY_DANGER[s.danger] || '', 13, '#cfefff', { ox: 1, style: { fontStyle: 'bold' } }); y += 34;
     if (s.note) T(20, y, s.note, 13, '#8fb4c9', { oy: 0, style: { wordWrap: { width: cardW - 40 }, lineSpacing: 3 } });
+    if (typeof missionGoalSystem === 'function' && missionGoalSystem() === s.id) T(20, ch - 126, 'YOUR CALL IS HERE: ' + (missionDef() || {}).title, 12, '#6dff9c', { style: { letterSpacing: 1 } }); // src/missions.js
     // the verdict, at the foot of the card
     const by = ch - 98, ok = !here && j.ok, msg = here ? ['AT HOME BASE', '#ffd37a', 'Pick another star.']
       : j.why === 'range' ? ['OUT OF RANGE BY ' + fmtLy(j.over) + ' LY', '#ff4d6d', 'You reach ' + fmtLy(j.range) + ' ly. A courier, an explorer or an engine part goes further.']
@@ -270,6 +271,7 @@ class Galaxy extends Phaser.Scene {
       for (let i = 0; i < n; i += 2) g.lineBetween(here.x + (sel.x - here.x) * i / n, here.y + (sel.y - here.y) * i / n, here.x + (sel.x - here.x) * (i + 1) / n, here.y + (sel.y - here.y) * (i + 1) / n);
     }
     // the stars: a halo, the core, a ring on those with a dock, the danger pips under the name; reachable ones bright, the rest dim
+    const goal = typeof missionGoalSystem === 'function' ? missionGoalSystem() : null;
     Object.keys(this.nodes).forEach(id => {
       const n = this.nodes[id], s = n.s; if (n.unknown) { g.fillStyle(0x5b7a92, 0.12); g.fillCircle(n.x, n.y, 12); return; }
       const j = id === this.here.id ? null : galaxyJump(this.here, s, this.rec), reach = id === this.here.id || (j && j.why !== 'range'), r = id === this.here.id ? 8 : 6.5, on = id === this.sel || id === this.hover;
@@ -280,6 +282,7 @@ class Galaxy extends Phaser.Scene {
       for (let p = 0; p < 5; p++) { g.fillStyle(p < s.danger ? (s.danger >= 4 ? 0xff4d6d : s.danger >= 3 ? AMBER : 0x6dff9c) : 0x1d3b5c, a); g.fillRect(n.x - 19 + p * 8, n.y + 36, 6, 4); }
       n.name.setAlpha(a);
       if (id === this.here.id) { g.lineStyle(2, AMBER, 0.5 + 0.5 * pulse); g.strokeCircle(n.x, n.y, r + 11 + pulse * 3); }
+      if (id === goal) { g.lineStyle(2, GREEN, 0.95); g.strokePoints([{ x: n.x, y: n.y - r - 22 }, { x: n.x + 7, y: n.y - r - 15 }, { x: n.x, y: n.y - r - 8 }, { x: n.x - 7, y: n.y - r - 15 }], true); } // the call's goal (src/missions.js)
     });
     // "YOU", and the brackets round the pick
     if (!this.youTag) { this.youTag = this.add.text(0, 0, 'YOU', uiFont(11, '#ffb454', { fontStyle: 'bold', letterSpacing: 2 })).setOrigin(0.5, 1); this.box.add(this.youTag); }
