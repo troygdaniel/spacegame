@@ -46,7 +46,7 @@ What it is and is not:
 | What needs the browser | Tests |
 |---|---|
 | a scene with the clock stepped by hand (flight, pirates, a jump, the hangar) | `cruise`, `interdict`, `jump`, `launch`, `missions`, `parts`, `hyper`, `surface`, `bounty`, `fuel`, `loop`, `ribbons`, `outpostmap`, `systemart` |
-| keys and panels (terminals, the Journal, Settings, the galaxy map) | `journal`, `npcs`, `hangar`, `shipsheet`, `shipmode`, `settings`, `galaxymap`, `contentui`, `credits`, `fixes` |
+| keys and panels (terminals, the Journal, Settings, the galaxy map) | `journal`, `npcs`, `stationlook`, `hangar`, `shipsheet`, `shipmode`, `settings`, `galaxymap`, `contentui`, `credits`, `fixes` |
 | Web Audio (the ship voice speaks, levels against the wind) | `voice`, `audiolevels`, `sfxlevels` |
 | the game starting, a page reload or a screenshot | `scenes`, `contentboot`, `serve`, `contentadd`, `stationshots`, `hudshots`, `world`, `ships` |
 

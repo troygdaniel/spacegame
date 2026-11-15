@@ -227,7 +227,7 @@ try {
     await ev(`(() => { G.mission = 'none'; game.scene.stop('Title'); game.scene.start('Station', { arrive: false }); return 1; })()`);
     await t.waitFor(`game.scene.isActive('Station')`, 15000, 'Station active'); await sleep(900);
     const bar = await ev(`(() => { const st = game.scene.getScene('Station'); return { sprites: st.npcSprites.length, spots: st.spots.filter(s => /^Talk to/.test(s.prompt || '')).length, textures: NPCS.filter(n => n.look).map(n => game.textures.exists('in-' + n.sprite + '0') && game.textures.exists('in-' + n.sprite + '1')), visible: st.npcSprites.map(s => s.visible).filter(Boolean).length }; })()`);
-    check('the Station scene makes a sprite for every character and every added body has its two stride textures', bar.sprites === 12 && bar.textures.every(Boolean) && bar.textures.length === 6, JSON.stringify(bar));
+    check('the Station scene makes a sprite for every character (the six, the keeper of the other bars and the six added) and every added body has its two stride textures', bar.sprites === 13 && bar.textures.every(Boolean) && bar.textures.length === 6, JSON.stringify(bar));
     const speak = await ev(`(() => { const st = game.scene.getScene('Station'); const i = NPCS.findIndex(n => n.id === 'ada'); talkTo(st, i); return { talk: !!st.talk, name: st.talkName.text, text: st.talkText.text.slice(0, 40) }; })()`);
     check('E on Ada opens the talk box with her name', speak.talk && /ADA/.test(speak.name), JSON.stringify(speak));
     await t.shot('contentadd-bar');

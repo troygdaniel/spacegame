@@ -4,6 +4,7 @@
 // player's situation, or null), voice (the Aura voice name for src/voice.js), persona (the card the NPC chat reads, docs/NPC-CHAT.md 3.1:
 // five labelled parts, Who, Manner, Knows, Wants, Will not, 600 characters at most) and optionally when (the row is in the bar only while it
 // returns true) and sprite (the texture name in src/interior.js without 'in-' and the stride digit, when it is not the lower-case name).
+// station says where a character stands (card u-e5): a dock id, '*' for the keeper of any bar but Halcyon's, and nothing for Halcyon Station, where the six below stand.
 const NPCS = [
   {
     id: 'juno', voice: 'aura-luna-en', name: 'JUNO', role: 'bartender', color: AMBER, css: '#ffb454', x: 255, y: 652, face: -Math.PI / 2,
@@ -78,6 +79,12 @@ const NPCS = [
       : G.mission === 'accepted' && G.missionId === 'rescue' ? 'Another pod? Tell them to keep the beacon on and the door shut. That is what saved me.'
       : G.mission === 'accepted' ? 'You are heading out again already? Please come back. I would like to hear how it goes.' : null,
     persona: "Who: Ida Ketter, a colonist rescued from a survey pod on Kepler-4b, shaken but safe on Halcyon.\nManner: grateful, curious, a little shaky; asks the player questions back and thanks them too often.\nKnows: the surface from the ground: the red dust, the thin air, crawlers hunting by heat, the pod's beacon, the long wait.\nWants: to thank the pilot who came for her; to know who else is still out there.\nWill not: blame anyone for the crash, or go back down to the planet."
+  },
+  { // the keeper of every other bar (Meridian, Brass, Ember, the Roost): she says what the station's file says (its Bar lines, src/stationlook.js), a line at a time
+    id: 'barkeep', station: '*', voice: 'aura-asteria-en', name: 'BARKEEP', sprite: 'barkeep', role: 'bartender', color: AMBER, css: '#ffb454', x: 330, y: 652, face: -Math.PI / 2,
+    get lines() { const l = stationLook(G.lastDock).barLines; return l.length ? l : ['Quiet tonight, pilot.']; },
+    react: () => null,
+    persona: "Who: the keeper of this station's bar, who has poured for every kind of pilot and remembers the tabs.\nManner: dry, brief, civil to anyone who pays; says less than she knows.\nKnows: the gossip of this station and its system, the repair bay, who owes whom, which crews are in port.\nWants: a quiet shift and pilots who settle up.\nWill not: take sides in a fight, or talk about who owns the station."
   }
 ];
 const NPC_IDX = NPCS.map(() => 0);    // which generic line each NPC says next; survives launching and docking
@@ -101,9 +108,11 @@ function buildBar(s) {
 
   // the bar's look (floor, counter, stools, signs) is drawn in src/interior.js; this keeps only the solid boxes
   // counter and two tables (solid)
-  wall(90, 596, 330, 26, 0x3a2208, AMBER);
-  wall(598, 498, 44, 44, 0x3a2208, AMBER);
-  wall(178, 478, 44, 44, 0x3a2208, AMBER);
+  if (s.look.terminals.bar) { // a dock without a bar has crates there instead (src/interior.js IN_HALL)
+    wall(90, 596, 330, 26, 0x3a2208, AMBER);
+    wall(598, 498, 44, 44, 0x3a2208, AMBER);
+    wall(178, 478, 44, 44, 0x3a2208, AMBER);
+  }
 
   // NPCs: solid, face you when you talk to them
   NPCS.forEach((n, i) => {
@@ -130,10 +139,12 @@ function buildShop(s) {
   s.shopOpen = false;
   s.shopKeys = s.input.keyboard.addKeys('ONE,TWO,THREE,FOUR,FIVE,ESC');
 
-  // terminal in the hangar
-  const r = rectWall(s, 950, 148, 100, 44, 0x0d2a3f, AMBER); s.walls.push(r);
-  label(s, 1000, 186, 'UPGRADE SHOP', '#ffb454', 11);
-  s.spots.push({ x: 1000, y: 170, text: 'UPGRADE SHOP', key: 'shop', prompt: 'Open the upgrade shop', color: '#ffb454', dy: 74 });
+  // terminal in the hangar (a dock that sells no part has none)
+  if (s.look.terminals.shop) {
+    const r = rectWall(s, 950, 148, 100, 44, 0x0d2a3f, AMBER); s.walls.push(r);
+    label(s, 1000, 186, 'UPGRADE SHOP', '#ffb454', 11);
+    s.spots.push({ x: 1000, y: 170, text: 'UPGRADE SHOP', key: 'shop', prompt: 'Open the upgrade shop', color: '#ffb454', dy: 74 });
+  }
 
   s.shopUI = panel(s, { w: 1060, h: 440, title: 'UPGRADE SHOP  -  HANGAR', color: AMBER, dim: true, depth: 160 });
   s.shopBox = s.shopUI.box.setVisible(false); s.shopObjs = [];
@@ -229,9 +240,14 @@ function hideTalk(s) { if (s.talk && s.talk.tw) s.talk.tw.stop(); s.talk = null;
 
 // Who is in the bar: a row with a when() is there only while it returns true (IDA, once the first rescue is paid). Called every frame
 // from shopFrame, so she shows up the moment the station counts the rescue on docking, with no change to Station.create.
+// the station's look decides who can be here at all (src/stationlook.js): no bar, nobody; Halcyon, its six; another dock, its keeper
+function npcHere(n) {
+  const look = stationLook(G.lastDock);
+  return look.terminals.bar && (n.station === '*' ? !look.home : (n.station || homeDock()) === look.id) && (!n.when || !!n.when());
+}
 function barSync(s) {
   NPCS.forEach((n, i) => {
-    const here = !n.when || !!n.when();
+    const here = npcHere(n);
     if (s.npcHere[i] === here) return;
     s.npcHere[i] = here;
     const sp = s.npcSprites[i], at = s.spots.indexOf(s.npcSpots[i]);

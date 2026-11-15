@@ -333,6 +333,35 @@ Suggested order, keeping the board busy: A1, then A2 and B3 and B6 at once; A3; 
 | Repair | half a credit per point (as now) |
 | Insurance | 20% of credits, minimum 50 (as now) |
 
+### 11.1 Measured (card u-f1, main 1ca4d05 with B5's eight systems, 2026-11-14)
+
+`node tests/econprobe.mjs` asks the game's own functions (no browser) what each of the six stations charges and pays; this is what it printed. Where the table above and the data disagree with the code, the code is what the player meets.
+
+**Fuel is built as designed.** A unit: Halcyon 8, Kestrel 7, Meridian 9, Brass Smelter 6, Ember Foundry 6, the Roost 15; no pump in the Hollow or Lethe. A full tank from empty, at the pump's quote:
+
+| Station | Wren 40 u | Kite 30 u | Ox 70 u | Talon 28 u | Pathfinder 90 u | Bastion 60 u |
+|---|---|---|---|---|---|---|
+| Halcyon 8 | 320 | 240 | 560 | 224 | 720 | 480 |
+| Kestrel 7 | 280 | 210 | 490 | 196 | 630 | 420 |
+| Meridian 9 | 360 | 270 | 630 | 252 | 810 | 540 |
+| Brass Smelter 6 | 240 | 180 | 420 | 168 | 540 | 360 |
+| Ember Foundry 6 | 240 | 180 | 420 | 168 | 540 | 360 |
+| Roost 15 | 600 | 450 | 1,050 | 420 | 1,350 | 900 |
+
+Section 3 says "a full tank is never more than about 400 cr": true for the Wren, Kite and Talon, not for the Ox (560 at home), the Pathfinder (720) or the Bastion (480), and the Roost charges 1,350 to fill a Pathfinder. Either the line in section 3 is about the starter only (say so), or the big tanks need a cheaper unit.
+
+**Jumps the Wren can make from Halcyon**, fuel and the bill at Halcyon's pump: Kestrel 6.3 u = 50 cr, Brass Reach 7.5 u = 60, the Hollow 7.9 u = 63; Meridian (9.3), Lethe (14.8), Ember (16.6) and the Roost (18.4) are out of its 8 ly. The Roost is out of everyone's range from Halcyon: it is reached from Kestrel (12.2) or Meridian (12.4) by a Kite or a Pathfinder, as 4.2 says. Lethe is reached from Brass Reach (7.4) by every ship but the Bastion. The Bastion (7 ly) reaches Kestrel from Halcyon and Meridian from Kestrel, nothing else, as 4.2 says.
+
+**Parts: price and stock per shop are built** (`partPrice` reads the dock's `partMult`, `partStockCap` its `shop` and `parts`). Halcyon sells every slot to tier 2 at list; Kestrel engine and tank to tier 1; Meridian everything to tier 3; Brass Smelter tank and cargo to tier 3; Ember weapons to tier 3; the Roost shields and weapons to tier 3 at x1.25 (shields 380 / 630 / 1,250, weapons 500 / 750 / 1,500 on the Wren). Not in the data: Kestrel's x1.10 and Meridian's x0.90 of `docs/ECONOMY.md` 9 (both charge list today).
+
+**Yards are built**: Halcyon the Kite (4,500); Meridian all five (4,500, 6,500, 8,500, 11,000, 24,000); Brass Smelter the Ox; Ember the Talon; the Roost the Bastion at the same 24,000 (the "heavy ship discounted" of 4.2 has no field and is not built). A ship sells back for 60% plus half its parts.
+
+**Not built yet (the half of card u-e4 that was merged into u-f1):** the data gives every station `dock.repair` (0.5 everywhere), `dock.ore` (Meridian 26, Brass Smelter 30, Ember 28), the Roost `dock.fee` 50 and `dock.salvageMult` 2, and nothing reads them: the repair bay charges `REPAIR_PRICE` 0.5 and the dock pays `ORE_PRICE` 20 at every station (both Halcyon's, settable only by content/stations/halcyon-station.md), no dock fee is taken, salvage pays x1 at the Roost, and there is no pay multiplier per system in data or code: a rescue is 500 everywhere. Today a full Wren hold is 200 at Brass Smelter, not the 300 the table above and 4.2 promise. Card `space-game-u-e4-dock-prices-count` (Todo) is the build.
+
+**Income per run today**: rescue 500, escort 400, patrol 600, bounty 1,200 (Halcyon only; E3 adds the cross-system calls); a full hold 200 (Wren), 80 (Kite), 800 (Ox), 400 (Bastion) at 20 an ore; the wrecks and beacons of each system once: Halcyon 720 (five sites, one gives hull), Lethe 3,090 (fourteen, the Widow 800), the Roost 550, Kestrel 180, Meridian 200, Brass Reach 150, Ember 220, the Hollow 120.
+
+**Time to the first new ship**: the Kite is nine rescues plus fuel, repair and insurance. `node tools/economy-sim.mjs pacing` (data from this checkout, 35% efficiency) puts the first part at 9 minutes and the Kite at 36 minutes playing the four calls in turn, 29 on the best loop, the full fleet at 5 hours: inside the "one evening" above. The scripted playthrough of card u-f1 measures the real minutes once E3 and E6 are in.
+
 ## 12. Open questions for Troy
 1. **Skip the tunnel?** The plan says no skip (you like the tunnel). If it gets long after twenty jumps, one line makes Space skip the second half. Say if you want that.
 2. **Saving in space.** The plan wakes you docked at the last station you used. If you would rather resume where you were, that is a stretch card (it needs saving the position, speed and fight state).

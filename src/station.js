@@ -5,6 +5,7 @@ class Station extends Phaser.Scene {
   init(d) { this.arrive = !!(d && d.arrive); }
   create() {
     this.leaving = false; this.panel = false;
+    const look = this.look = stationLook(G.lastDock); // src/stationlook.js: this station's name, accent colour, which desks stand in the hall, and what the bar says
     shipRefresh(this); // src/ships.js: the hangar ship shows the upgrade tiers you own
     this.cameras.main.fadeIn(300, 0, 0, 0);
     interiorTextures(this); // src/interior.js: the floor, walls, props, lights and people are drawn there
@@ -23,12 +24,12 @@ class Station extends Phaser.Scene {
 
     // interactables: [x, y, label, key]
     this.spots = [
-      { x: 200, y: 200, text: 'MISSIONS', key: 'missions', color: '#38e1ff', dy: 74 },
-      { x: 640, y: 200, text: 'REPAIR BAY', key: 'repair', color: '#6dff9c', dy: 74 },
+      look.terminals.missions && { x: 200, y: 200, text: 'MISSIONS', key: 'missions', color: look.accentCss, dy: 74 },
+      look.terminals.repair && { x: 640, y: 200, text: 'REPAIR BAY', key: 'repair', color: '#6dff9c', dy: 74 },
       { x: 1090, y: 360, text: 'YOUR SHIP', key: 'ship', color: '#ffb454', dy: 76 }
-    ];
-    [this.spots[0], this.spots[1]].forEach(sp => {
-      const r = rectWall(this, sp.x - 50, sp.y - 22, 100, 44, 0x0d2a3f, sp.key === 'repair' ? GREEN : CYAN);
+    ].filter(Boolean);
+    this.spots.filter(sp => sp.key !== 'ship').forEach(sp => {
+      const r = rectWall(this, sp.x - 50, sp.y - 22, 100, 44, 0x0d2a3f, sp.key === 'repair' ? GREEN : look.accent);
       this.walls.push(r);
       label(this, sp.x, sp.y + 16, sp.text, sp.color, 11); // the nameplate on the front of the desk
     });
@@ -46,7 +47,7 @@ class Station extends Phaser.Scene {
     this.prompt = floatPrompt(this, this.player); // key cap above whatever you can use (src/ui.js)
     this.add.text(24, H - IN_SOUTH - 28, 'WASD walk   E interact', { fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92' }).setDepth(100);
 
-    this.ui = panel(this, { w: 900, h: 480, title: 'MISSION BOARD  -  ' + fleetStationName(G.lastDock).toUpperCase(), dim: true }); // src/ui.js (src/fleet.js: the station you docked at)
+    this.ui = panel(this, { w: 900, h: 480, title: 'MISSION BOARD  -  ' + look.name.toUpperCase(), dim: true }); // src/ui.js
     this.panelBox = this.ui.box.setVisible(false); this.boardObjs = [];
 
     if (this.arrive && G.mission === 'rescued') {
@@ -115,7 +116,7 @@ class Station extends Phaser.Scene {
         txt(-276, cy + 84, 'PAYS ' + m.reward + ' cr', 16, '#ffb454', { style: { fontStyle: 'bold' } });
         this.ui.setHints([['X', 'Drop the mission'], ['Esc', 'Close']]); return;
       }
-      this.ui.titleText.setText('MISSION BOARD  -  ' + fleetStationName(G.lastDock).toUpperCase());
+      this.ui.titleText.setText('MISSION BOARD  -  ' + this.look.name.toUpperCase());
       OFFERS.slice(start, start + VIS).forEach((m, k) => {
         const i = start + k, z = card(m, i, (k - (SHOWN - 1) / 2) * GAP, -75, CW, 220, i === sel);
         z.on('pointerdown', () => { if (sel === i) acceptSel(); else choose(i); });
