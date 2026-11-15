@@ -105,7 +105,7 @@ class Space extends Phaser.Scene {
       fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92'
     }).setScrollFactor(0).setDepth(100);
     if (this.from === 'station') { bountyReset(); toast(this, G.system === 'halcyon' ? 'Launch clear. Kepler-4b is to the north-east.' : 'Launch clear.', '#9fe9ff'); } // enemies.js: a new flight's bounty count starts at 0
-    else if (this.jumped) toast(this, 'Arrived in ' + sysDef().name + '.', '#9fe9ff');
+    else if (this.jumped) { const fresh = galaxyChart(); toast(this, 'Arrived in ' + sysDef().name + '.' + (fresh.length ? ' Charted in range: ' + fresh.map(x => x.name).join(', ') + '. G opens the galaxy map.' : ''), '#9fe9ff'); } // src/galaxymap.js: the stars in range of here are now known
     missionSpaceSetup(this); // src/missions.js: escort freighter, wanted pirates
     trafficSetup(this); // src/traffic.js: civilian ships and the station police
     asteroidsSetup(this); // src/asteroids.js: the Kepler belt

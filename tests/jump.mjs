@@ -52,9 +52,10 @@ try {
   // ---- 1. G opens and closes the galaxy map ----
   console.log('G: the galaxy map over the flight');
   await park(15000, 15000);
+  check('the new game knows Halcyon and Kestrel', (await E('G.known.join()')) === 'halcyon,kestrel');
   await gopen();
   check('G in space opens the galaxy map and the flight waits underneath', await E(`game.scene.isActive('Galaxy') && game.scene.isPaused('Space')`));
-  check('the new game knows Halcyon and Kestrel', (await E('G.known.join()')) === 'halcyon,kestrel');
+  check('opening the map charted the rest of the 8 ly range: Brass Reach and The Hollow (card space-game-travel-clarity)', (await E('G.known.join()')) === 'halcyon,kestrel,brass,hollow');
   check('the map can jump from here: it was handed an onJump', await E(`typeof ${GL}.onJump === 'function'`));
   await snap('jump-map');
   await gclose();
