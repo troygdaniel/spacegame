@@ -29,7 +29,7 @@ function stationLook(id) {
     accent: parseInt(accentCss.slice(1), 16), accentCss,
     pirate: art === 'nest',
     terminals: {
-      missions: true, // every station has a desk; where nothing is posted it says so (station.js openEmptyBoard, until card u-e3 fills it)
+      missions: true, // every station has a desk, and its board is what its dock posts (src/missions.js missionsOffered, card u-e3); where nothing is posted it says so (station.js openEmptyBoard)
       repair: dock.repair === undefined || dock.repair > 0, // Halcyon's dock carries no repair price of its own (REPAIR_PRICE), so a dock that says nothing repairs
       shop: PART_ORDER.some(k => partStockCap(k, dock) > 0), // src/data_parts.js: a dock that sells no part in any slot has no shop
       pump: dock.fuel > 0, // src/fuel.js
