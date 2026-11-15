@@ -51,7 +51,6 @@ const MISSIONS = [
     unlock: () => G.patrolsDone > 0, // the board offers it once a police patrol has been finished
     offer: 'The pirate warlord they call the Reaver has gone\nto ground at Reaver\'s Roost, twelve light years out,\nwith two escorts and a nest full of friends.\nA warship three times a drone: spread guns and\na ramming charge it telegraphs with a flash.\nHalcyon pays 1200 cr for the wreck.',
     line: st => st === 'failed' ? 'Failed. The Reaver got away'
-      : G.system !== 'roost' ? 'Bounty: jump to Reaver\'s Roost  (' + callLy('roost') + ' ly, G for the map)'
       : 'Bounty: the Reaver  hull ' + Math.round(100 * Math.max(0, REAVER_HP - G.missionProgress) / REAVER_HP) + '%',
     progress: () => 'The Reaver waits south-west of Reaver\'s Rock.\nIts hull is at ' + Math.round(100 * Math.max(0, REAVER_HP - G.missionProgress) / REAVER_HP) + '%.\nDock whenever you like; it will still be there.',
     failOnDeath: ['accepted'], deathMsg: 'Ship destroyed. The Reaver got away. Mission failed.',
@@ -134,7 +133,8 @@ function missionDef() { return MISSIONS.find(m => m.id === G.missionId) || null;
 function missionsOffered(station) {
   station = station || G.lastDock;
   const st = fleetStation(station), list = st && st.body.dock && st.body.dock.missions, home = station === homeDock();
-  return MISSIONS.filter(m => (!m.unlock || m.unlock()) && (Array.isArray(list) ? list.includes(m.id) || (home && m.added) : home && !m.carry && !m.site));
+  const posted = MISSIONS.filter(m => (!m.unlock || m.unlock()) && (Array.isArray(list) ? list.includes(m.id) || (home && m.added) : home && !m.carry && !m.site));
+  return posted.filter(m => m.key).concat(posted.filter(m => !m.key)); // the calls with a number key of their own (the four, and a pack's: 5 to 8) first, then the runs and sites
 }
 // the board calls this when a call is accepted (station.js): a haul loads the freight, which fills the hold
 function missionAccepted() {
