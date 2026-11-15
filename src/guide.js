@@ -57,6 +57,12 @@ function guideHint(s) {
   return '';
 }
 
+// How to travel (card space-game-travel-clarity): the rescue hints above end with the first rescue, and nothing after them said that G opens the galaxy map, so a player
+// who had not found it could not tell there was anywhere to go. In flight, with the rescue guide done and no jump made yet, one line says it; H hides it, and so does
+// opening the map (src/galaxymap.js sets TRAVEL.off). Not saved: a new visit with no jump made says it once more, a made jump (G.jumps) ends it for good.
+const TRAVEL = { off: false, text: 'Other stars to visit: G opens the galaxy map. Pick one, press Enter to jump.' };
+function travelHint(s) { return !TRAVEL.off && G.guideDone && !(G.jumps | 0) && s.scene.key === 'Space' && !s.dead && !s.cruising && !G.deep ? TRAVEL.text : ''; }
+
 function guideUI(s) { // the hint text lives in each scene; rebuilt after a scene restart
   if (s._gh && s._gh.active) return;
   const base = { fontFamily: 'monospace' };
@@ -82,12 +88,14 @@ function guideTick(s) {
   }
   guideUI(s);
   if (!G.guideDone && s._gH && Phaser.Input.Keyboard.JustDown(s._gH)) { G.guideDone = true; toast(s, 'Tips hidden.', '#9fe9ff'); }
+  else if (s._gH && Phaser.Input.Keyboard.JustDown(s._gH) && travelHint(s)) { TRAVEL.off = true; toast(s, 'Tip hidden. G opens the galaxy map any time.', '#9fe9ff'); }
   let text = '';
   if (s._gfinal && s.time.now < s._gfinal) text = 'Rescue paid. Now earn ' + GOAL + ' credits: more rescues, drone kills, gear at the shop.';
   else if (!G.guideDone && !s.leaving) text = guideHint(s);
+  else if (!s.leaving) text = travelHint(s);
   if (text !== s._gtext) {
     s._gtext = text;
-    s._gh.setText(text).setVisible(!!text).setAlpha(0); s._gk.setVisible(!!text && !G.guideDone);
+    s._gh.setText(text).setVisible(!!text).setAlpha(0); s._gk.setVisible(!!text && (!G.guideDone || text === TRAVEL.text));
     if (text) s.tweens.add({ targets: s._gh, alpha: 1, duration: 180 });
   }
 

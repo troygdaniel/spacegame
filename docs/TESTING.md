@@ -39,6 +39,7 @@ What it is and is not:
 | `fleet` | part 1: the rules of the yard, prices, buy, sell, switch | part 2: a real save and a death |
 | `shipmodels` | part 1: the table pinned to the design | part 2: the Space scene |
 | `calls` | part 1: the rows, the pay, each station's board, a courier and a haul from board to dock, sites, jumps, death, the save | part 2: the boards in the Station scene and a paid courier across a jump, one Chrome |
+| `travel` | the charting rule (`galaxyChart`: every star in jump range becomes known), the saved list, the `travelHint` line's rules | a new game in space: the hint line, G opening a map that names the four stars of the starter's range, picking Brass Reach, the hint gone once the map was opened |
 | `systems` | part 1: the eight systems of the design table, which ship reaches which, the layouts, every dock and pirate table | part 2: the shipped files equal the code's rows, each system flown and each station docked at, one Chrome |
 
 **Chrome only**, and why:

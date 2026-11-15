@@ -41,7 +41,8 @@ const texts = t => t.ev(`(() => { const out = []; const walk = o => { if (o.type
     check('the scene is up from the hash, nothing was saved by it', await t.ev("game.scene.isActive('Galaxy') && !game.scene.isActive('Title') && DEV_HASH === true"));
     const s1 = await texts(t);
     ['GALAXY', 'HALCYON', 'KESTREL', 'MERIDIAN', 'BRASS REACH', 'THE HOLLOW', 'YOU', 'HOME', 'PIRATE NEST', 'in range of your ship', 'your jump range'].forEach(w => check('shows ' + w, s1.includes(w)));
-    check('three unknown stars within reach of a known one show as "?" (Lethe, Ember, the Roost), and are not named', (s1.match(/\?/g) || []).length === 3 && !s1.includes('LETHE') && !s1.includes('EMBER') && !s1.includes('ROOST'));
+    // the legend has a "?" of its own now (card space-game-travel-clarity: "? beyond your range"), so the dots are counted from the scene's own list, not from the text
+    check('three unknown stars within reach of a known one show as "?" (Lethe, Ember, the Roost), and are not named', JSON.stringify((await t.ev(`${GM}.dim.map(s => s.id)`)).sort()) === '["ember","lethe","roost"]' && (s1.match(/\?/g) || []).length === 4 && s1.includes('beyond your range') && !s1.includes('LETHE') && !s1.includes('EMBER') && !s1.includes('ROOST'));
     check('the tag says where you are, your range and your fuel', s1.includes('YOU  HALCYON   RANGE 8 LY   FUEL 40 / 40'), s1.slice(s1.indexOf('YOU  '), s1.indexOf('YOU  ') + 50));
     await t.ev(`${GM}.pick('lethe')`);
     check('an unknown star cannot be picked', await t.ev(`${GM}.sel`) === 'kestrel');
