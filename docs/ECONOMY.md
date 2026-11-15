@@ -186,7 +186,7 @@ are new fields for E4.
 | Ember | volcanic mining | 3 | 6 | 240 | 28 | 1.00 | 1.30 | 1.0 | weapons parts to tier 3, heavy raiding |
 | Reaver's Roost | pirate nest | 5 | 15 | 600 | - | 1.25 | 1.60 | 1.5 | no police, salvage at double, gouging |
 
-**Measured on main 1ca4d05 (card u-f1, `node tests/econprobe.mjs`, 2026-11-14):** fuel is built exactly as this table says, and so are the part caps and the Roost's x1.25. Not built: the ore column (every dock pays `ORE_PRICE` 20), the repair column (every bay charges `REPAIR_PRICE` 0.5), the pay column (no field, no code), the Roost's fee and double salvage (in the data, read by nothing), and Kestrel's x1.10 and Meridian's x0.90 on parts (the data has no `partMult` for them, so both charge list). The numbers the player meets are in `docs/UNIVERSE.md` 11.1; the build is card `space-game-u-e4-dock-prices-count`.
+**Measured (card u-f1, `node tests/econprobe.mjs`):** on main 1ca4d05 fuel, the part caps and the Roost's x1.25 were built and the ore, repair, pay, fee and salvage columns were data the game did not read; card u-e4b (main 63beaf1) made them count, and the probe now reads back what each dock charges. The numbers the player meets are in `docs/UNIVERSE.md` 11.1.
 
 Ore: a full hold is 200 at Halcyon, 260 at Meridian, 300 at Brass Reach and 280 at Ember for the Wren, and 800, 1,040, 1,200 and 1,120 for the Ox. A Kepler-size belt holds about 37.5
 ore, so a 40-ore hold needs a bigger belt (the Slag Belt holds about 100) or two flights: the belts, not the price, limit mining.

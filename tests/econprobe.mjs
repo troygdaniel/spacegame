@@ -38,12 +38,17 @@ console.log('\nThe data says the same: `dock.fuel` is read by `fuelPrice` (src/f
 // ---- 2. repair, ore, fee, salvage: data against what the code charges ----
 console.log('## 2. Repair, ore, dock fee, salvage: what the data says and what the game charges today\n');
 const REPAIR = J('REPAIR_PRICE'), ORE = J('ORE_PRICE');
-head('Station', 'repair (data)', 'repair charged', 'ore (data)', 'ore paid', 'fee (data)', 'fee charged', 'salvage x (data)', 'salvage paid');
+const has = name => J(`typeof ${name} === 'function'`); // card u-e4b added these; before it the game had one price of each
+head('Station', 'repair (data)', 'repair charged', 'ore (data)', 'ore paid', 'fee (data)', 'fee charged', 'salvage x (data)', 'salvage paid', 'pay x (system)');
 for (const s of stations) {
-  const d = s.dock;
-  row(`${s.name} (${s.sysName})`, d.repair ?? '-', REPAIR + ' a point', d.ore ?? '-', ORE + ' an ore', d.fee ?? '-', 'none', d.salvageMult ?? '-', 'x1');
+  const d = s.dock; at(s.sys, s.id);
+  const repair = has('repairPrice') ? J(`repairPrice(${JSON.stringify(s.id)})`) : REPAIR, ore = has('orePrice') ? J(`orePrice(${JSON.stringify(s.id)})`) : ORE;
+  const fee = has('dockFee') ? (d.fee > 0 ? d.fee : 0) : 'none', salv = J(`typeof salvageMult === 'function' ? salvageMult() : 1`), pay = J(`SYSTEMS[${JSON.stringify(s.sys)}].pay > 0 ? SYSTEMS[${JSON.stringify(s.sys)}].pay : 1`);
+  row(`${s.name} (${s.sysName})`, d.repair ?? '-', repair + ' a point', d.ore ?? '-', ore + ' an ore', d.fee ?? '-', fee, d.salvageMult ?? '-', 'x' + salv, 'x' + pay);
 }
-console.log(`\nThe code has one price of each: \`REPAIR_PRICE\` ${REPAIR} (src/station.js) and \`ORE_PRICE\` ${ORE} (src/asteroids.js sellOre), both Halcyon's, which only content/stations/halcyon-station.md can change (src/contenttables.js). \`dock.repair\`, \`dock.ore\`, \`dock.fee\` and \`dock.salvageMult\` are in the data for every station and read by nothing yet; a pay multiplier per system is in neither. That is the unbuilt half of card u-e4 (docs/ECONOMY.md 9 and 10).\n`);
+console.log(has('orePrice') && has('repairPrice') && has('dockFee')
+  ? `\nBuilt (card u-e4b): \`repairPrice\` and \`orePrice\` read the dock you are at and fall back to Halcyon's \`REPAIR_PRICE\` ${REPAIR} and \`ORE_PRICE\` ${ORE} (which only content/stations/halcyon-station.md can change); \`dockFee\` takes the dock's fee at the door; a wreck pays \`salvageMult\` times in that system (src/poi.js); a call pays \`pay\` times its system's (src/missions.js callPayMult).\n`
+  : `\nThe code has one price of each: \`REPAIR_PRICE\` ${REPAIR} (src/station.js) and \`ORE_PRICE\` ${ORE} (src/asteroids.js sellOre), both Halcyon's. \`dock.repair\`, \`dock.ore\`, \`dock.fee\` and \`dock.salvageMult\` are in the data and read by nothing yet (card space-game-u-e4-dock-prices-count).\n`);
 
 // ---- 3. parts: price and stock per slot at each shop (the Wren; other ships multiply) ----
 console.log('## 3. Parts: the Wren\'s price and the top tier sold at each shop (credits; `partPrice` x the station\'s `partMult`, to ten)\n');
@@ -89,8 +94,10 @@ console.log('\nRange is the ship\'s before engine tiers (+1, +2, +3 ly). A heavy
 // ---- 6. income per run ----
 console.log('## 6. Income per run: the built calls, a full hold, the wrecks of each system\n');
 head('Source', 'Pays', 'Where', 'Note');
-for (const m of J('MISSIONS.map(m => ({ id: m.id, title: m.title, reward: m.reward, where: m.where }))')) row(m.title, money(m.reward), m.where, 'the same in every system today (no pay multiplier is built)');
-for (const m of MODELS) row(`A full hold in the ${J(`SHIP_MODELS.${m}.name`)} (${J(`SHIP_MODELS.${m}.cargo`)} ore)`, money(J(`SHIP_MODELS.${m}.cargo`) * ORE), 'any dock', `${ORE} an ore everywhere today; the data says 26 at Meridian, 30 at Brass Reach, 28 at Ember`);
+const PAYS = SYS.map(sys => [J(`SYSTEMS[${JSON.stringify(sys)}].name`), J(`SYSTEMS[${JSON.stringify(sys)}].pay > 0 ? SYSTEMS[${JSON.stringify(sys)}].pay : 1`)]).filter(p => p[1] !== 1);
+for (const m of J('MISSIONS.map(m => ({ id: m.id, title: m.title, reward: m.reward, where: m.where }))')) row(m.title, money(m.reward), m.where, PAYS.length ? 'at Halcyon; a system\'s pay multiplies it: ' + PAYS.map(p => p[0] + ' x' + p[1]).join(', ') : 'the same in every system (no pay multiplier)');
+const ORES = stations.filter(s => s.dock.ore > 0).map(s => s.name + ' ' + s.dock.ore);
+for (const m of MODELS) row(`A full hold in the ${J(`SHIP_MODELS.${m}.name`)} (${J(`SHIP_MODELS.${m}.cargo`)} ore)`, money(J(`SHIP_MODELS.${m}.cargo`) * ORE) + (ORES.length && has('orePrice') ? ' to ' + money(J(`SHIP_MODELS.${m}.cargo`) * Math.max(...stations.map(s => s.dock.ore || 0))) : ''), 'at the dock', `${ORE} an ore where the dock names none` + (ORES.length ? '; ' + ORES.join(', ') + (has('orePrice') ? ' (paid)' : ' (data only, not paid yet)') : ''));
 for (const sys of SYS) {
   const pois = J(`sysBodies('poi', ${JSON.stringify(sys)}).map(p => ({ kind: p.kind, credits: p.credits || 0, hull: p.hull || 0 }))`);
   if (!pois.length) continue;
