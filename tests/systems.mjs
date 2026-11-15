@@ -207,7 +207,7 @@ try {
     await E(`game.scene.getScene('Station').openPanel()`); await tick(5);
     const board = await J(`(() => { const s = game.scene.getScene('Station'); return { title: s.ui.titleText.text, objs: s.boardObjs.length, text: s.boardObjs.filter(o => o.text).map(o => o.text).join('|') }; })()`);
     if (id === 'halcyon') check('Halcyon posts calls, as before (offer cards)', board.title === 'MISSION BOARD  -  HALCYON STATION' && board.objs > 2, JSON.stringify(board));
-    else if (id === 'roost') check('the Roost: nothing is posted, the desk says so', board.title === 'MISSION BOARD  -  ' + st.name.toUpperCase() && board.text.join(' ').includes('No calls are posted at ' + st.name), JSON.stringify(board));
+    else if (id === 'roost') check('the Roost: nothing is posted, the desk says so', board.title === 'MISSION BOARD  -  ' + st.name.toUpperCase() && board.text.includes('No calls are posted at ' + st.name), JSON.stringify(board));
     else check(`${id}: its own board, with the runs its dock posts (card u-e3)`, board.title === 'MISSION BOARD  -  ' + st.name.toUpperCase() && board.text.includes('COURIER RUN'), JSON.stringify(board));
     await E(`game.scene.getScene('Station').closePanel()`);
     await E(`(() => { game.scene.stop('Station'); game.scene.start('Space', { from: 'station' }); return 1; })()`); await tick(60);
