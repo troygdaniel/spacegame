@@ -150,7 +150,7 @@ const CHAT_LINE_MAX = 240, CHAT_GAP = 1200, CHAT_TURNS = 20, CHAT_PAIRS = 6, CHA
 const CHAT_SEED = '[The pilot sits down.]'; // the game's own first line, so the character opens the conversation
 // RULES and WORLD are code, never content. The persona and memory blocks are data and the rules say so.
 const CHAT_RULES = [
-  'You are {name}, {role}, a character in Long Haul, a small 2D space game. You are talking to the player, a pilot, in the Drift bar on Halcyon Station.',
+  'You are {name}, {role}, a character in Long Haul, a small 2D space game. You are talking to the player, a pilot, in {bar}.',
   'Reply in one to three short sentences, in plain words, in character. No lists, no markdown, no stage directions, no quotation marks around your reply.',
   'Stay in the game\'s world. You do not know the real world, real companies, real people or real events, and you give no real-world advice.',
   'Keep it suitable for all ages: no slurs, no sexual content, no graphic violence, no self-harm talk. If the player pushes there, change the subject in character.',
@@ -169,7 +169,8 @@ const CHAT_WORLD = [
 const CHAT_MOODS = ['wary', 'neutral', 'warm', 'fond', 'cross'];
 function chatId(n) { return String(n.id || n.name || '').toLowerCase().replace(/[^a-z0-9-]/g, ''); }
 function chatData(s, max) { return s ? String(s).replace(CHAT_BAD, '').replace(/<\/?(persona|memory)>/gi, '').slice(0, max) : ''; } // a data block can never close its own tags
-function chatPersona(n) { return chatData(n.persona || (n.name + ', ' + (n.role || 'a regular') + ' on Halcyon Station.'), 600); } // the card on the NPCS row (shop.js; content/npcs/*.md later)
+function chatBar() { const l = stationLook(G.lastDock); return l.home ? 'the Drift bar on Halcyon Station' : 'the bar at ' + l.name; } // where the talk is (src/stationlook.js)
+function chatPersona(n) { return chatData(n.persona || (n.name + ', ' + (n.role || 'a regular') + ' on ' + stationLook(G.lastDock).name + '.'), 600); } // the card on the NPCS row (shop.js; content/npcs/*.md later)
 // what the game remembers (G.chat, written by the memory card; an empty shape until it lands)
 function chatMemoryBlock(n) {
   const all = G.chat || {}, pl = all.player || {}, m = (all.npcs || {})[chatId(n)] || {};
@@ -193,7 +194,7 @@ function chatNowBlock(n) {
     + '. Time in the bar: ' + (met ? met + (met === 1 ? ' visit before' : ' visits before') : 'first visit') + '.';
 }
 function chatSystem(n) {
-  return 'RULES\n' + CHAT_RULES.replace('{name}', n.name).replace('{role}', n.role || 'a regular') + '\n\nWORLD\n' + CHAT_WORLD
+  return 'RULES\n' + CHAT_RULES.replace('{name}', n.name).replace('{role}', n.role || 'a regular').replace('{bar}', chatBar()) + '\n\nWORLD\n' + CHAT_WORLD
     + '\n\n<persona>\n' + chatPersona(n) + '\n</persona>\n\n<memory>\n' + chatMemoryBlock(n) + '\n</memory>\n\nNOW\n' + chatNowBlock(n);
 }
 // a reply as the character says it: no markdown, no links, no wrapping quotes

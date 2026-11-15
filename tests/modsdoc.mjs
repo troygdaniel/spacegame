@@ -53,7 +53,7 @@ const ids = expr => { try { return vm.runInContext(expr, ctx); } catch (e) { ret
 const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
 const MISSIONS = ids('MISSIONS.map(m => m.id)'), NPCS = ids('NPCS.map(n => n.id)'), PIRATES = ids('Object.keys(PIRATES)'), PARTS = ids("Object.keys(PARTS)");
 check('the calls are rescue, escort, patrol, bounty', same(MISSIONS, ['rescue', 'escort', 'patrol', 'bounty']), MISSIONS.join());
-check('the bar has juno, tamsin, dex, moss, sable, ida', same(NPCS, ['juno', 'tamsin', 'dex', 'moss', 'sable', 'ida']), NPCS.join());
+check('the bar has juno, tamsin, dex, moss, sable, ida, and the keeper of the other bars (barkeep)', same(NPCS, ['juno', 'tamsin', 'dex', 'moss', 'sable', 'ida', 'barkeep']), NPCS.join());
 check('the pirates are raider, drone, gunship', same(PIRATES, ['raider', 'drone', 'gunship']), PIRATES.join());
 check('the part slots are shields, weapons, engine, tank, cargo', same(PARTS, ['shields', 'weapons', 'engine', 'tank', 'cargo']), PARTS.join());
 const partIds = PARTS.flatMap(slot => [1, 2, 3].map(t => slot + '-' + t));

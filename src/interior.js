@@ -5,6 +5,13 @@
 const IN_PINK = 0xff4fd8, IN_WARM = 0xffd9a0, IN_STEEL = 0x1b2f4a;
 const IN_NORTH = 48, IN_SOUTH = 48; // the north and south walls are drawn face-on and this thick (the colliders in station.js match)
 
+// The look of this visit (docs/UNIVERSE.md 9, card u-e5): the colour the trim takes, whether the hall has a bar, a repair kiosk and a shop kiosk, whether it is a pirate dock.
+// stationLook() (src/stationlook.js) says; Halcyon Station answers cyan with all three, which is the hall as it was before the variants. The baked layer is one texture per variant.
+let IN_V = { acc: CYAN, pirate: false, bar: true, repair: true, shop: true }, IN_KEY = 'in-base';
+const IN_HALL = [[110, 500, 40, 40, 0x4a3414], [150, 500, 40, 40, 0x3a4a5a], [130, 460, 40, 40, 0x2a3a4a], [600, 600, 40, 40, 0x4a3a2a], [640, 600, 40, 40, 0x4a3414], [620, 560, 40, 40, 0x3a4a5a]]; // crates where there is no bar: x, y, w, h, colour (baked in inDrawProps, solid in interiorBuild)
+const IN_BASES = {}; // texture key -> the big light pools its bake recorded
+const inVariant = look => ({ acc: look.accent, pirate: !!look.pirate, bar: !!look.terminals.bar, repair: !!look.terminals.repair, shop: !!look.terminals.shop });
+const inBaseKey = v => 'in-base-' + v.acc.toString(16) + (v.pirate ? 'p' : '') + (v.bar ? 'b' : '') + (v.repair ? 'r' : '') + (v.shop ? 's' : '');
 const IN_LIGHTS = []; // big floor light pools: P.pool() records these instead of drawing them (stacked discs band visibly); interiorBuild turns them into soft sprites
 function inRng(seed) { let s = seed >>> 0 || 1; return () => (s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296; }
 function inMix(a, b, t) { // colour between a and b
@@ -54,7 +61,7 @@ function inDisc(P, cx, cy, r, x0, y0, x1, y1, colorAt) {
 
 // ---------- the baked layer (1280 x 720) ----------
 function inDrawBase(P) {
-  const R = inRng(7);
+  const R = inRng(7), V = IN_V, ACC = V.acc, PK = V.pirate ? RED : IN_PINK;
   const rect = P.rect, line = P.line;
   rect(0, 0, W, H, 0x05080f);
 
@@ -70,22 +77,28 @@ function inDrawBase(P) {
       const r = R();
       if (r < 0.1) { for (let i = 0; i < 6; i++) line(x + 12, y + 14 + i * 6, x + w - 12, y + 14 + i * 6, 0x02060c, 0.8, 2); P.frame(x + 10, y + 10, w - 20, h - 20, 0x36587a, 0.5); }
       else if (r < 0.18) { rect(x + 9, y + 9, w - 18, h - 18, 0x08121f, 0.8); P.frame(x + 9, y + 9, w - 18, h - 18, 0x24405c, 0.6); }
-      else if (r < 0.21) { P.neonLine(x + 8, y + h / 2, x + w / 2, y + h / 2, CYAN); line(x + w / 2, y + h / 2, x + w / 2, y + h - 8, CYAN, 0.5, 1.5); P.dot(x + w / 2, y + h - 8, 2, CYAN, 0.9); }
+      else if (r < 0.21) { P.neonLine(x + 8, y + h / 2, x + w / 2, y + h / 2, ACC); line(x + w / 2, y + h / 2, x + w / 2, y + h - 8, ACC, 0.5, 1.5); P.dot(x + w / 2, y + h - 8, 2, ACC, 0.9); }
     }
     // a path of guide strips from the hangar door to the doors and terminals, with chevrons
-    const path = (pts) => { for (let i = 0; i < pts.length - 1; i++) { P.line(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], CYAN, 0.05, 14); P.line(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], CYAN, 0.2, 2); } };
-    path([[850, 360], [460, 360], [460, 412]]); path([[640, 360], [640, 270]]); path([[200, 360], [200, 270]]); path([[460, 360], [200, 360]]);
-    for (let x = 800; x > 230; x -= 64) { if (Math.abs(x - 460) < 30 || Math.abs(x - 640) < 30) continue; line(x, 352, x - 8, 360, CYAN, 0.35, 2); line(x - 8, 360, x, 368, CYAN, 0.35, 2); }
+    const path = (pts) => { for (let i = 0; i < pts.length - 1; i++) { P.line(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], ACC, 0.05, 14); P.line(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], ACC, 0.2, 2); } };
+    path([[850, 360], [460, 360]]); if (V.bar) path([[460, 360], [460, 412]]); if (V.repair) path([[640, 360], [640, 270]]); path([[200, 360], [200, 270]]); path([[460, 360], [200, 360]]);
+    for (let x = 800; x > 230; x -= 64) { if (Math.abs(x - 460) < 30 || Math.abs(x - 640) < 30) continue; line(x, 352, x - 8, 360, ACC, 0.35, 2); line(x - 8, 360, x, 368, ACC, 0.35, 2); }
     // light pools: cool white on the middle of the deck, cyan at the mission desk, green at the repair bay
-    P.pool(460, 250, 330, 120, 0x9fd8ff, 0.1); P.pool(200, 215, 130, 90, CYAN, 0.2); P.pool(640, 215, 130, 90, GREEN, 0.16);
+    P.pool(460, 250, 330, 120, 0x9fd8ff, 0.1); P.pool(200, 215, 130, 90, ACC, 0.2); if (V.repair) P.pool(640, 215, 130, 90, GREEN, 0.16);
     // floor painting around the two desks: a bay outline with corner ticks, and a standing mark in front
     const bay = (cx, cy, c) => { P.frame(cx - 80, cy - 44, 160, 112, c, 0.5, 2); [[-80, -44], [80, -44], [-80, 68], [80, 68]].forEach(([dx, dy]) => { P.dot(cx + dx, cy + dy, 3, c, 0.9); });
       for (let i = 0; i < 6; i++) line(cx - 52 + i * 21, cy + 44, cx - 40 + i * 21, cy + 36, c, 0.35, 3); };
-    bay(200, 200, CYAN); bay(640, 200, GREEN);
+    bay(200, 200, ACC); if (V.repair) bay(640, 200, GREEN);
   }
 
-  // ===== bar floor: dark planks, a rug, spilled neon =====
-  { const x0 = 20, y0 = 440, x1 = 860, y1 = 700;
+  // ===== bar floor: dark planks, a rug, spilled neon (a dock without a bar has the stores here: plain plates and a painted lane) =====
+  if (!V.bar) { const x0 = 20, y0 = 440, x1 = 860, y1 = 700, S = 60, R2 = inRng(31);
+    rect(x0, y0, x1 - x0, y1 - y0, 0x050b14);
+    for (let y = y0; y < y1; y += S) for (let x = x0; x < x1; x += S) { const w = Math.min(S, x1 - x), h = Math.min(S, y1 - y), j = Math.floor(R2() * 6);
+      rect(x + 1, y + 1, w - 2, h - 2, (((0x09 + j) << 16) | ((0x12 + j) << 8) | (0x20 + j))); line(x + 1, y + 1, x + w - 1, y + 1, 0x24405c, 0.45); line(x + 1, y + h - 1, x + w - 1, y + h - 1, 0x000000, 0.45); }
+    for (let x = 60; x < 820; x += 40) line(x, 560, x + 16, 560, 0xe8b020, 0.5, 3);
+    P.pool(250, 600, 200, 60, ACC, 0.1); P.pool(620, 600, 180, 60, ACC, 0.08);
+  } else { const x0 = 20, y0 = 440, x1 = 860, y1 = 700;
     const woods = [0x2b170b, 0x331c0e, 0x3a2010, 0x281409, 0x30190c];
     for (let y = y0; y < y1; y += 13) {
       let px = x0 - Math.floor(R() * 60);
@@ -100,10 +113,10 @@ function inDrawBase(P) {
     // the rug under the lounge
     P.oval(646, 604, 330, 150, 0x000000, 0.4);
     P.oval(646, 600, 320, 140, 0x3a1030); P.oval(646, 600, 300, 124, 0x4b1840); P.oval(646, 600, 262, 96, 0x2a0c28);
-    for (let i = 0; i < 3; i++) { P.g.lineStyle(2, i === 1 ? AMBER : IN_PINK, 0.55); P.g.strokeEllipse(646, 600, 290 - i * 36, 112 - i * 20); }
+    for (let i = 0; i < 3; i++) { P.g.lineStyle(2, i === 1 ? AMBER : PK, 0.55); P.g.strokeEllipse(646, 600, 290 - i * 36, 112 - i * 20); }
     for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; P.dot(646 + Math.cos(a) * 124, 600 + Math.sin(a) * 40, 2.2, AMBER, 0.6); }
     // warm lamp pools over the counter, the tables and the rug; magenta neon spill from the back wall
-    P.pool(255, 625, 190, 70, AMBER, 0.2); P.pool(598, 498, 80, 60, AMBER, 0.22); P.pool(178, 478, 80, 60, AMBER, 0.2); P.pool(646, 600, 190, 80, IN_PINK, 0.12); P.pool(640, 680, 220, 40, IN_PINK, 0.16);
+    P.pool(255, 625, 190, 70, AMBER, 0.2); P.pool(598, 498, 80, 60, AMBER, 0.22); P.pool(178, 478, 80, 60, AMBER, 0.2); P.pool(646, 600, 190, 80, PK, 0.12); P.pool(640, 680, 220, 40, PK, 0.16);
     // a dark rubber mat behind the counter, with a diamond pattern
     rect(30, 630, 390, 42, 0x0c0b10); for (let x = 30; x < 420; x += 14) { line(x, 630, x + 14, 672, 0x1b1a24, 0.7); line(x + 14, 630, x, 672, 0x1b1a24, 0.7); }
     P.frame(30, 630, 390, 42, 0x3a2a14, 0.9, 2);
@@ -122,7 +135,7 @@ function inDrawBase(P) {
     // the landing pad: a big ring, an inner dashed ring, corner brackets, painted numerals
     P.pool(1090, 360, 190, 190, 0xbfe9ff, 0.2); P.pool(1090, 360, 120, 120, AMBER, 0.12);
     P.ring(1090, 360, 128, AMBER, 0.14, 12); P.ring(1090, 360, 128, AMBER, 0.9, 3); P.ring(1090, 360, 118, 0x000000, 0.5, 2);
-    for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; P.line(1090 + Math.cos(a) * 104, 360 + Math.sin(a) * 104, 1090 + Math.cos(a + 0.09) * 104, 360 + Math.sin(a + 0.09) * 104, CYAN, 0.7, 3); }
+    for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; P.line(1090 + Math.cos(a) * 104, 360 + Math.sin(a) * 104, 1090 + Math.cos(a + 0.09) * 104, 360 + Math.sin(a + 0.09) * 104, ACC, 0.7, 3); }
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { const cx = 1090 + sx * 150, cy = 360 + sy * 150; line(cx, cy, cx - sx * 26, cy, AMBER, 0.85, 3); line(cx, cy, cx, cy - sy * 26, AMBER, 0.85, 3); });
     line(900, 360, 1220, 360, AMBER, 0.08, 6); line(1090, 120, 1090, 600, AMBER, 0.08, 6);
     // hazard stripes: along the floor edge by the bay door, and in the doorway between the deck and the hangar
@@ -141,8 +154,8 @@ function inDrawBase(P) {
 
 // ---------- walls: thin slabs between rooms, and thick face-on walls along the top and bottom ----------
 function inDrawWalls(P) {
-  const R = inRng(11), rect = P.rect, line = P.line;
-  const BOT = [CYAN, AMBER, GREEN, IN_PINK];
+  const R = inRng(11), rect = P.rect, line = P.line, V = IN_V, ACC = V.acc, PK = V.pirate ? RED : IN_PINK;
+  const BOT = [ACC, AMBER, GREEN, PK];
   const shade = (x, y, w, h, vertical, dir) => { // soft shadow a wall casts on the floor beside it
     for (let i = 0; i < 10; i++) { const a = 0.32 * (1 - i / 10); if (vertical) rect(dir > 0 ? x + w + i : x - 1 - i, y, 1, h, 0x000000, a); else rect(x, dir > 0 ? y + h + i : y - 1 - i, w, 1, 0x000000, a); }
   };
@@ -162,8 +175,8 @@ function inDrawWalls(P) {
       line(sx + 1, py + 1, sx + pw, py + 1, 0x35567a, 0.7); line(sx + 1, py + ph - 1, sx + pw, py + ph - 1, 0x000000, 0.5);
       [[4, 4], [pw - 3, 4], [4, ph - 5], [pw - 3, ph - 5]].forEach(([dx, dy]) => P.dot(sx + dx, py + dy, 1.2, 0x3a5c7a, 0.8));
     }
-    rect(x, ty, w, 13, 0x08111e); line(x, trimAtBottom ? ty : ty + 12, x + w, trimAtBottom ? ty : ty + 12, CYAN, 0.55, 1.5);
-    line(x, trimAtBottom ? ty : ty + 12, x + w, trimAtBottom ? ty : ty + 12, CYAN, 0.1, 6);
+    rect(x, ty, w, 13, 0x08111e); line(x, trimAtBottom ? ty : ty + 12, x + w, trimAtBottom ? ty : ty + 12, ACC, 0.55, 1.5);
+    line(x, trimAtBottom ? ty : ty + 12, x + w, trimAtBottom ? ty : ty + 12, ACC, 0.1, 6);
     for (let sx = x + 12; sx < x + w - 6; sx += 36) { const c = BOT[Math.floor(R() * BOT.length)]; P.dot(sx, ty + 6.5, 1.8, c, 0.9); P.dot(sx, ty + 6.5, 4, c, 0.12); }
     shade(x, y, w, h, false, trimAtBottom ? 1 : -1);
   };
@@ -177,7 +190,7 @@ function inDrawWalls(P) {
     if (planet) inDisc(P, x + w * planet[0], y + h * planet[1] + planet[2], planet[2], x, y, x + w, y + h, t => inMix(0xffd9a0, 0x6a2a20, Math.min(1, t * 3.2)));
     for (let mx = x + 65; mx < x + w - 20; mx += 65) { rect(mx - 2, y, 4, h, 0x0b1626); line(mx - 2, y, mx - 2, y + h, 0x3a5c7a, 0.5); }
     P.g.lineStyle(7, 0xffffff, 0.04); P.g.lineBetween(x + w * 0.18, y + h, x + w * 0.3, y); P.g.lineBetween(x + w * 0.62, y + h, x + w * 0.74, y);
-    P.neonFrame(x - 6, y - 6, w + 12, h + 12, CYAN);
+    P.neonFrame(x - 6, y - 6, w + 12, h + 12, ACC);
   };
   // lockers: tall doors with vents, handles, number plates
   const lockers = (x, y, n, w, h, c) => { for (let i = 0; i < n; i++) { const lx = x + i * (w + 2);
@@ -185,41 +198,45 @@ function inDrawWalls(P) {
     rect(lx + w - 7, y + h / 2, 2, 8, 0xbcd8ee, 0.8); rect(lx + w / 2 - 6, y + h - 9, 12, 5, 0x050b14); rect(lx + w / 2 - 4, y + h - 8, 8, 3, c, 0.85); } };
 
   // thin walls
-  slab(0, 0, 20, H, CYAN); slab(W - 20, 0, 20, H, CYAN);             // left and right
-  slab(860, IN_NORTH, 20, 280 - IN_NORTH, CYAN); slab(860, 440, 20, 260 - (IN_SOUTH - 20), AMBER); // hangar wall, with a gap for the door
-  slab(20, 420, 380, 20, AMBER); slab(520, 420, 340, 20, AMBER);     // deck / bar divider with a gap
+  slab(0, 0, 20, H, ACC); slab(W - 20, 0, 20, H, ACC);             // left and right
+  slab(860, IN_NORTH, 20, 280 - IN_NORTH, ACC); slab(860, 440, 20, 260 - (IN_SOUTH - 20), AMBER); // hangar wall, with a gap for the door
+  const BA = V.bar ? AMBER : ACC; // the lintel over the bar is amber; over the stores it takes the station's colour
+  slab(20, 420, 380, 20, BA); slab(520, 420, 340, 20, BA);     // deck / bar divider with a gap
   shade(20, 420, 380, 20, false, -1); shade(520, 420, 340, 20, false, -1); shade(860, IN_NORTH, 20, 232, true, -1); shade(880, IN_NORTH, 1, 232, true, 1); shade(860, 440, 20, 232, true, -1);
   // the bar side of the divider glows amber like a lintel
-  rect(20, 440, 380, 3, AMBER, 0.55); rect(520, 440, 340, 3, AMBER, 0.55); for (let i = 0; i < 6; i++) { rect(20, 443 + i * 2, 380, 2, AMBER, 0.12 - i * 0.02); rect(520, 443 + i * 2, 340, 2, AMBER, 0.12 - i * 0.02); }
+  rect(20, 440, 380, 3, BA, 0.55); rect(520, 440, 340, 3, BA, 0.55); for (let i = 0; i < 6; i++) { rect(20, 443 + i * 2, 380, 2, BA, 0.12 - i * 0.02); rect(520, 443 + i * 2, 340, 2, BA, 0.12 - i * 0.02); }
   // thick walls
   face(0, 0, W, IN_NORTH, true); face(0, H - IN_SOUTH, W, IN_SOUTH, false);
   // the doorway into the bar: two posts and an arch
-  [[392, 8], [520, 8]].forEach(([x, w]) => { rect(x, 414, w, 30, 0x1d3550); rect(x + 1, 414, 2, 30, 0xffd37a, 0.9); rect(x + w - 3, 414, 2, 30, AMBER, 0.9); P.pool(x + w / 2, 440, 26, 20, AMBER, 0.35); });
-  P.neonLine(392, 412, 528, 412, AMBER);
+  [[392, 8], [520, 8]].forEach(([x, w]) => { rect(x, 414, w, 30, 0x1d3550); rect(x + 1, 414, 2, 30, 0xffd37a, 0.9); rect(x + w - 3, 414, 2, 30, BA, 0.9); P.pool(x + w / 2, 440, 26, 20, BA, 0.35); });
+  P.neonLine(392, 412, 528, 412, BA);
 
   // north wall, main deck: pipes at the left, a big window, lockers on the right
-  [[26, CYAN], [38, AMBER], [50, GREEN]].forEach(([x, c]) => { rect(x, 0, 7, 36, 0x0b1626); line(x + 1, 0, x + 1, 36, c, 0.5, 1); for (let y = 6; y < 36; y += 10) rect(x - 1, y, 9, 2, 0x3a5c7a, 0.8); });
+  [[26, ACC], [38, AMBER], [50, GREEN]].forEach(([x, c]) => { rect(x, 0, 7, 36, 0x0b1626); line(x + 1, 0, x + 1, 36, c, 0.5, 1); for (let y = 6; y < 36; y += 10) rect(x - 1, y, 9, 2, 0x3a5c7a, 0.8); });
   window_(140, 9, 260, 26, [0.7, 0.5, 118]);
-  lockers(700, 4, 5, 32, 30, CYAN);
+  lockers(700, 4, 5, 32, 30, ACC);
   // north wall, hangar: parts shelves, a window onto the planet, a cable gantry
   window_(1010, 9, 220, 26, [0.28, 0.6, 130]);
   for (let i = 0; i < 4; i++) { const bx = 890 + i * 28; rect(bx, 6, 24, 28, 0x182c46); P.frame(bx, 6, 24, 28, 0x3d6288, 0.8, 1); rect(bx + 3, 10, 18, 8, [0x4a3414, 0x143a4a, 0x14402a, 0x4a1a34][i], 1); rect(bx + 3, 21, 18, 8, [0x143a4a, 0x4a3414, 0x4a1a34, 0x14402a][i], 1); }
-  // south wall, bar: the back bar. a mirror, two shelves of bottles, a menu board, a clock, a vending machine
-  { const x = 60, w = 380, y = H - IN_SOUTH;
+  // south wall, bar: the back bar. a mirror, two shelves of bottles, a menu board, a clock, a vending machine (no bar: lockers and a parts rack, in the station's colour)
+  if (!V.bar) { lockers(60, H - IN_SOUTH + 8, 9, 30, 36, ACC); lockers(380, H - IN_SOUTH + 8, 6, 30, 36, AMBER); P.neonLine(60, H - IN_SOUTH + 4, 560, H - IN_SOUTH + 4, ACC); }
+  else { const x = 60, w = 380, y = H - IN_SOUTH;
     rect(x, y + 16, w, 26, 0x1a2a3a); rect(x, y + 16, w, 26, 0x2a4a5a, 0.35); P.frame(x, y + 16, w, 26, 0xb07a30, 0.9, 2);
     for (let i = 0; i < 9; i++) line(x + 20 + i * 44, y + 42, x + 50 + i * 44, y + 16, 0xffffff, 0.05, 6);
     const shelf = (sy) => { rect(x - 4, sy, w + 8, 3, 0x7a4a1c); rect(x - 4, sy + 3, w + 8, 2, 0x000000, 0.6);
-      for (let bx = x + 6; bx < x + w - 8; bx += 11 + Math.floor(R() * 12)) { const bh = 8 + Math.floor(R() * 6), c = [AMBER, CYAN, GREEN, IN_PINK, 0xff7a3a][Math.floor(R() * 5)];
+      for (let bx = x + 6; bx < x + w - 8; bx += 11 + Math.floor(R() * 12)) { const bh = 8 + Math.floor(R() * 6), c = [AMBER, CYAN, GREEN, PK, 0xff7a3a][Math.floor(R() * 5)];
         rect(bx, sy - bh, 5, bh, 0x0a1620, 0.95); rect(bx + 1, sy - bh * 0.7, 3, bh * 0.7 - 1, c, 0.6); rect(bx + 1, sy - bh - 3, 3, 3, 0x0a1620, 0.95); rect(bx + 1, sy - bh + 1, 1, bh - 3, 0xffffff, 0.3); P.dot(bx + 2.5, sy - bh / 2, 7, c, 0.05); } };
     shelf(y + 28); shelf(y + 41);
     rect(x - 4, y + 13, w + 8, 3, 0x7a4a1c);
   }
-  rect(470, H - IN_SOUTH + 14, 220, 28, 0x05080f); P.neonFrame(470, H - IN_SOUTH + 14, 220, 28, AMBER);                  // the menu board
-  for (let i = 0; i < 4; i++) { rect(480, H - IN_SOUTH + 20 + i * 6, 40 + R() * 70, 2, AMBER, 0.55); rect(600, H - IN_SOUTH + 20 + i * 6, 30 + R() * 50, 2, CYAN, 0.45); }
-  P.dot(712, H - IN_SOUTH + 26, 11, 0x05080f); P.ring(712, H - IN_SOUTH + 26, 11, AMBER, 0.9, 2); line(712, H - IN_SOUTH + 26, 712, H - IN_SOUTH + 19, 0xffd37a, 1, 1.5); line(712, H - IN_SOUTH + 26, 718, H - IN_SOUTH + 29, 0xffd37a, 1, 1.5); // clock
+  if (V.bar) {
+    rect(470, H - IN_SOUTH + 14, 220, 28, 0x05080f); P.neonFrame(470, H - IN_SOUTH + 14, 220, 28, AMBER);                  // the menu board
+    for (let i = 0; i < 4; i++) { rect(480, H - IN_SOUTH + 20 + i * 6, 40 + R() * 70, 2, AMBER, 0.55); rect(600, H - IN_SOUTH + 20 + i * 6, 30 + R() * 50, 2, CYAN, 0.45); }
+    P.dot(712, H - IN_SOUTH + 26, 11, 0x05080f); P.ring(712, H - IN_SOUTH + 26, 11, AMBER, 0.9, 2); line(712, H - IN_SOUTH + 26, 712, H - IN_SOUTH + 19, 0xffd37a, 1, 1.5); line(712, H - IN_SOUTH + 26, 718, H - IN_SOUTH + 29, 0xffd37a, 1, 1.5); // clock
+  }
   lockers(760, H - IN_SOUTH + 8, 3, 30, 36, GREEN);
   // south wall, hangar: a gantry rail, hazard stripes, toolboxes, big warning plates
-  rect(880, H - IN_SOUTH + 14, 380, 4, 0x2a4a6a); line(880, H - IN_SOUTH + 15, 1260, H - IN_SOUTH + 15, CYAN, 0.35, 1);
+  rect(880, H - IN_SOUTH + 14, 380, 4, 0x2a4a6a); line(880, H - IN_SOUTH + 15, 1260, H - IN_SOUTH + 15, ACC, 0.35, 1);
   for (let x = 884; x < 1256; x += 30) { rect(x, H - IN_SOUTH + 14, 14, 4, 0xe8b020, 0.85); }
   lockers(900, H - IN_SOUTH + 22, 4, 26, 24, AMBER); lockers(1150, H - IN_SOUTH + 22, 4, 26, 24, CYAN);
   [[1030, 'FUEL'], [1090, 'POWER'], [1150, 'AIR']].forEach(([x]) => { /* plates drawn as text in interiorBuild */ });
@@ -227,7 +244,7 @@ function inDrawWalls(P) {
 
 // ---------- fixed props, baked into the same layer ----------
 function inDrawProps(P) {
-  const R = inRng(23), rect = P.rect, line = P.line;
+  const R = inRng(23), rect = P.rect, line = P.line, V = IN_V, ACC = V.acc, PK = V.pirate ? RED : IN_PINK;
   const drop = (x, y, w, h, a = 0.4) => P.rrect(x + 4, y + 6, w, h, 4, 0x000000, a); // cast shadow, down and right
   const crate = (x, y, w = 40, h = 40, c = 0x4a3414) => {
     drop(x, y, w, h); rect(x, y, w, h, c); rect(x + 2, y + 2, w - 4, h - 4, inMix(c, 0xffffff, 0.1));
@@ -246,13 +263,16 @@ function inDrawProps(P) {
     for (let i = 0; i < 5; i++) line(x + 72 + i * 4, y + 36, x + 72 + i * 4, y + 42, 0x2a4a6a, 0.9, 1.5);
     P.frame(x, y, 100, 44, c, 0.55, 1.5);
   };
-  kiosk(200, 200, CYAN); kiosk(640, 200, GREEN); kiosk(1000, 170 - 22 + 22 - 0, AMBER); // the shop kiosk sits at (950..1050, 148..192) = centre (1000, 170)
+  kiosk(200, 200, ACC); if (V.repair) kiosk(640, 200, GREEN); if (V.shop) kiosk(1000, 170, AMBER); // the shop kiosk sits at (950..1050, 148..192) = centre (1000, 170); a dock without a repair bay or a shop has no kiosk
   // crates on the main deck (positions match the collider boxes in station.js)
   crate(480, 80); crate(520, 80); crate(740, 300);
   // a stack of boxes by the repair bay and loose cables across the deck
-  P.g.lineStyle(3, 0x0a1220, 1); P.g.beginPath(); P.g.moveTo(690, 200); P.g.lineTo(760, 200); P.g.lineTo(790, 240); P.g.lineTo(790, 290); P.g.strokePath();
-  P.g.lineStyle(1, GREEN, 0.4); P.g.beginPath(); P.g.moveTo(690, 199); P.g.lineTo(760, 199); P.g.lineTo(790, 239); P.g.lineTo(790, 289); P.g.strokePath();
+  if (V.repair) {
+    P.g.lineStyle(3, 0x0a1220, 1); P.g.beginPath(); P.g.moveTo(690, 200); P.g.lineTo(760, 200); P.g.lineTo(790, 240); P.g.lineTo(790, 290); P.g.strokePath();
+    P.g.lineStyle(1, GREEN, 0.4); P.g.beginPath(); P.g.moveTo(690, 199); P.g.lineTo(760, 199); P.g.lineTo(790, 239); P.g.lineTo(790, 289); P.g.strokePath();
+  }
 
+  if (V.bar) {
   // ===== the bar =====
   // counter: a long dark-wood top with a bright lip, an underlit front, bottles, taps, a till
   { const x = 90, y = 596, w = 330, h = 26;
@@ -260,7 +280,7 @@ function inDrawProps(P) {
     P.rrect(x, y, w, h, 5, 0x3d2010); P.rrect(x + 2, y + 2, w - 4, h - 7, 4, 0x56301a);
     line(x + 4, y + 3, x + w - 4, y + 3, 0xd69a58, 0.55, 1); line(x, y + h - 4, x + w, y + h - 4, 0x120a05, 0.8, 2);
     rect(x + 6, y + h - 2, w - 12, 3, AMBER, 0.95); P.pool(x + w / 2, y + h + 10, w * 0.52, 16, AMBER, 0.25);
-    for (let i = 0; i < 6; i++) { const bx = x + 28 + i * 46, c = [AMBER, CYAN, GREEN, IN_PINK][i % 4]; P.dot(bx + 1, y + 11, 4.5, 0x08101a, 1); P.dot(bx, y + 10, 4, c, 0.95); P.dot(bx - 1, y + 9, 1.3, 0xffffff, 0.8); P.dot(bx, y + 10, 8, c, 0.1); }
+    for (let i = 0; i < 6; i++) { const bx = x + 28 + i * 46, c = [AMBER, CYAN, GREEN, PK][i % 4]; P.dot(bx + 1, y + 11, 4.5, 0x08101a, 1); P.dot(bx, y + 10, 4, c, 0.95); P.dot(bx - 1, y + 9, 1.3, 0xffffff, 0.8); P.dot(bx, y + 10, 8, c, 0.1); }
     [x + 292, x + 302, x + 312].forEach((tx, i) => { rect(tx, y + 6, 5, 11, 0xcfd8e0, 0.9); rect(tx + 1, y + 4, 3, 3, [AMBER, CYAN, GREEN][i], 0.95); });
     rect(x + 6, y + 6, 24, 14, 0x0a121c); rect(x + 8, y + 8, 20, 8, 0x0a3a24); P.frame(x + 6, y + 6, 24, 14, GREEN, 0.8, 1);
     for (let i = 0; i < 4; i++) rect(x + 56 + i * 5, y + 6, 3, 3, 0xdfe8f0, 0.6);
@@ -275,15 +295,19 @@ function inDrawProps(P) {
   [[598, 498], [178, 478]].forEach(([tx, ty]) => { const cx = tx + 22, cy = ty + 22;
     P.dot(cx + 4, cy + 6, 25, 0x000000, 0.42); P.dot(cx, cy, 25, 0x2e1608, 1); P.dot(cx, cy, 23, 0x4a2814, 1); P.dot(cx - 3, cy - 3, 14, 0x5e3620, 0.5); P.ring(cx, cy, 25, AMBER, 0.95, 2); P.ring(cx, cy, 28, AMBER, 0.12, 5);
     P.dot(cx, cy, 5, 0x05121c, 1); P.dot(cx, cy, 3, CYAN, 0.95); P.dot(cx, cy, 10, CYAN, 0.1);
-    [[-12, 8], [11, -9], [9, 12]].forEach(([dx, dy], i) => { P.dot(cx + dx, cy + dy, 4, 0x0a1620, 1); P.ring(cx + dx, cy + dy, 4, [AMBER, CYAN, IN_PINK][i], 0.95, 1.3); });
+    [[-12, 8], [11, -9], [9, 12]].forEach(([dx, dy], i) => { P.dot(cx + dx, cy + dy, 4, 0x0a1620, 1); P.ring(cx + dx, cy + dy, 4, [AMBER, CYAN, PK][i], 0.95, 1.3); });
     // two low stools tucked at the sides
     [[-33, 0], [33, 0]].forEach(([dx, dy]) => { P.dot(cx + dx + 2, cy + dy + 3, 9, 0x000000, 0.35); P.dot(cx + dx, cy + dy, 9, 0x6a1a2a, 1); P.ring(cx + dx, cy + dy, 9, 0x9a8a60, 0.9, 1.5); });
   });
   // a jukebox against the divider, east end of the bar
   { const x = 790, y = 444, w = 52, h = 26;
     drop(x, y, w, h); rect(x, y, w, h, 0x1a0e2a); rect(x + 2, y + 2, w - 4, h - 6, 0x2a1448); line(x, y + 1, x + w, y + 1, 0xd8a0ff, 0.6, 1);
-    P.frame(x - 1, y - 1, w + 2, h + 2, IN_PINK, 0.9, 1.5); P.frame(x - 3, y - 3, w + 6, h + 6, IN_PINK, 0.12, 4);
-    rect(x + 5, y + 5, w - 10, 11, 0x05030c); rect(x + 5, y + h - 8, w - 10, 3, CYAN, 0.7); P.pool(x + w / 2, y + h + 10, 50, 20, IN_PINK, 0.3);
+    P.frame(x - 1, y - 1, w + 2, h + 2, PK, 0.9, 1.5); P.frame(x - 3, y - 3, w + 6, h + 6, PK, 0.12, 4);
+    rect(x + 5, y + 5, w - 10, 11, 0x05030c); rect(x + 5, y + h - 8, w - 10, 3, CYAN, 0.7); P.pool(x + w / 2, y + h + 10, 50, 20, PK, 0.3);
+  }
+  } else {
+  // ===== the stores: where a dock has no bar, the lower deck holds crates (the colliders are IN_HALL, added in interiorBuild) =====
+  IN_HALL.forEach(([x, y, w, h, c]) => crate(x, y, w, h, c));
   }
   // potted plants: bio-lamps. (the leaves are separate sprites so they can sway)
   [[44, 462], [836, 650], [832, 560]].forEach(([x, y]) => { P.dot(x + 3, y + 5, 15, 0x000000, 0.4); P.dot(x, y, 14, 0x1a1208, 1); P.ring(x, y, 14, 0x6a4a28, 0.9, 2); P.dot(x, y, 11, 0x24160a, 1); });
@@ -307,7 +331,9 @@ function inDrawProps(P) {
 
 // ---------- textures ----------
 function interiorTextures(s) {
-  inTex(s, 'in-base', W, H, P => { P.big = true; inDrawBase(P); inDrawWalls(P); inDrawProps(P); P.big = false; });
+  IN_V = inVariant(s.look || stationLook(G.lastDock)); IN_KEY = inBaseKey(IN_V); // src/stationlook.js; the layer is baked once per look and the other looks are dropped
+  Object.keys(IN_BASES).forEach(k => { if (k !== IN_KEY) { if (s.textures.exists(k)) s.textures.remove(k); delete IN_BASES[k]; } });
+  inTex(s, IN_KEY, W, H, P => { IN_LIGHTS.length = 0; P.big = true; inDrawBase(P); inDrawWalls(P); inDrawProps(P); P.big = false; IN_BASES[IN_KEY] = IN_LIGHTS.slice(); IN_LIGHTS.length = 0; });
   inCanvas(s, 'in-glow', 128, 128, (ctx) => { const gr = ctx.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.5)'); gr.addColorStop(0.55, 'rgba(255,255,255,0.14)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, 128, 128); });
   inTex(s, 'in-shadow', 48, 24, P => { for (let i = 0; i < 8; i++) P.oval(24, 12, 44 * (1 - i / 8), 20 * (1 - i / 8), 0x000000, 0.1); });
   inCanvas(s, 'in-vig', W, H, (ctx) => { ctx.translate(W / 2, H / 2); ctx.scale(1, 0.62); const gr = ctx.createRadialGradient(0, 0, 330, 0, 0, 800); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.55, 'rgba(0,0,6,0.22)'); gr.addColorStop(1, 'rgba(0,0,6,0.78)'); ctx.fillStyle = gr; ctx.fillRect(-W, -H * 2, W * 2, H * 4); });
@@ -320,7 +346,7 @@ function interiorTextures(s) {
   });
   inTex(s, 'in-drone', 22, 22, P => { P.dot(11, 11, 9, 0x0e1c2e, 1); P.ring(11, 11, 9, CYAN, 0.95, 1.5); P.rect(3, 9, 16, 4, 0x1b3350); P.dot(16, 11, 3, CYAN, 1); P.dot(16, 11, 6, CYAN, 0.2); P.dot(4, 11, 2, AMBER, 0.9); });
   // hologram figures: wireframes in the terminal colour
-  inTex(s, 'in-holo-planet', 60, 60, P => { const g = P.g; P.dot(30, 30, 24, CYAN, 0.1); g.lineStyle(1.5, CYAN, 0.95); g.strokeCircle(30, 30, 22);
+  inTex(s, 'in-holo-planet-' + IN_V.acc.toString(16), 60, 60, P => { const g = P.g, CYAN = IN_V.acc; P.dot(30, 30, 24, CYAN, 0.1); g.lineStyle(1.5, CYAN, 0.95); g.strokeCircle(30, 30, 22);
     [10, 17].forEach(ry => { g.strokeEllipse(30, 30, 44, ry * 2); g.strokeEllipse(30, 30, ry * 2, 44); }); g.lineBetween(8, 30, 52, 30); g.lineBetween(30, 8, 30, 52); P.dot(48, 16, 3, 0xffffff, 0.95); });
   inTex(s, 'in-holo-hull', 60, 60, P => { const g = P.g; g.lineStyle(2, GREEN, 0.95); g.beginPath(); g.moveTo(30, 6); g.lineTo(52, 14); g.lineTo(52, 32); g.lineTo(30, 54); g.lineTo(8, 32); g.lineTo(8, 14); g.closePath(); g.strokePath();
     g.lineStyle(1, GREEN, 0.6); g.beginPath(); g.moveTo(30, 14); g.lineTo(44, 19); g.lineTo(44, 30); g.lineTo(30, 44); g.lineTo(16, 30); g.lineTo(16, 19); g.closePath(); g.strokePath();
@@ -352,6 +378,7 @@ function interiorTextures(s) {
   person('in-dex', { coat: 0x14402a, edge: GREEN, hair: 0x103018, skin: 0xc8946a, goggles: 0xbfffd8, pack: 0x0e2a1c });
   person('in-moss', { coat: 0x2c4654, edge: CYAN, hair: 0x8a8a94, skin: 0x9a6a48, cap: 0x182630, pack: 0x14222c });          // the mechanic: steel-blue overalls, a cap, a tool roll on the back
   person('in-sable', { coat: 0x241a32, edge: 0xc08cff, hair: 0xdcdcec, skin: 0xb89080, visor: 0xc08cff });                // the bounty hunter: a dark long coat, silver hair, a violet lens
+  person('in-barkeep', { coat: 0x3a3a46, edge: AMBER, hair: 0x7a7a86, skin: 0xa07050, apron: 0xd8d0b8 });                    // the keeper of the other bars: a grey coat and a pale apron
   person('in-ida', { coat: 0x6a3a58, edge: IN_PINK, hair: 0x3a2418, skin: 0xe8c0a0, pack: 0x3a2030 });                    // the colonist: a rose survey jacket and a small pack
   if (typeof NPCS !== 'undefined') NPCS.forEach(n => { if (n.look) person('in-' + n.sprite, n.look); }); // characters a content pack adds (src/contentadd.js caLook): their colour as the coat
   [[0x3a3a5a, 0x9fb4ff, 0x2a2a30, 0xe0b898], [0x5a4a2a, 0xffd37a, 0x6a4a2a, 0xb88860], [0x3a4a4a, 0x9fffe8, 0x1a1a1a, 0xd8a47a]].forEach(([coat, edge, hair, skin], i) => person('in-civ' + i, { coat, edge, hair, skin, bun: i === 1, pack: i === 0 ? 0x22223a : 0 }));
@@ -363,9 +390,9 @@ const inHash = n => { const x = Math.sin(n * 12.9898) * 43758.5453; return x - M
 function interiorBuild(s) {
   interiorTextures(s);
   const I = s.in = { screens: [], walkers: [], shadows: [], arm: null, armSpark: null, eq: null, drone: null, shipFx: [], door: null, last: 0 };
-  const ADD = Phaser.BlendModes.ADD;
-  s.add.image(0, 0, 'in-base').setOrigin(0).setDepth(-50);
-  IN_LIGHTS.forEach(([x, y, rx, ry, c, a]) => s.add.image(x, y, 'in-glow').setTint(c).setBlendMode(ADD).setAlpha(Math.min(1, a * 2.2)).setDisplaySize(rx * 2.1, ry * 2.1).setDepth(-49));
+  const ADD = Phaser.BlendModes.ADD, V = IN_V, ACC = V.acc, PK = V.pirate ? RED : IN_PINK, look = s.look || stationLook(G.lastDock);
+  s.add.image(0, 0, IN_KEY).setOrigin(0).setDepth(-50);
+  (IN_BASES[IN_KEY] || []).forEach(([x, y, rx, ry, c, a]) => s.add.image(x, y, 'in-glow').setTint(c).setBlendMode(ADD).setAlpha(Math.min(1, a * 2.2)).setDisplaySize(rx * 2.1, ry * 2.1).setDepth(-49));
   s.walls.forEach(w => { if (w instanceof Phaser.GameObjects.Rectangle) w.setVisible(false); }); // the plain collision boxes: the art replaces them
   const solid = (x, y, w, h) => { const r = s.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0).setVisible(false); s.physics.add.existing(r, true); s.walls.push(r); return r; };
   const glow = (x, y, r, c, a, o = {}) => {
@@ -376,14 +403,16 @@ function interiorBuild(s) {
   const shadow = (x, y, w = 1, a = 0.55) => { const im = s.add.image(x + 2, y + 6, 'in-shadow').setScale(w).setAlpha(a).setDepth(3.5); I.shadows.push(im); return im; };
 
   // solid props (the baked art in inDrawProps sits exactly on these boxes)
-  [[1170, 56, 84, 40], [1170, 100, 84, 40], [1180, 144, 70, 34], [978, 558, 44, 44], [898, 636, 70, 28], [1190, 600, 34, 34], [1226, 604, 34, 34], [1208, 566, 34, 34], [790, 444, 52, 26]].forEach(a => solid(...a));
+  [[1170, 56, 84, 40], [1170, 100, 84, 40], [1180, 144, 70, 34], [978, 558, 44, 44], [898, 636, 70, 28], [1190, 600, 34, 34], [1226, 604, 34, 34], [1208, 566, 34, 34]].forEach(a => solid(...a));
+  if (V.bar) solid(790, 444, 52, 26); // the jukebox
+  else IN_HALL.forEach(([x, y, w, h]) => solid(x, y, w, h)); // the crates of the stores
   [[44, 462], [836, 650], [832, 560]].forEach(([x, y]) => solid(x - 13, y - 13, 26, 26));
 
   // light: window shafts, pools that breathe, lamps
   const shaft = (x0, x1, y1, dx, a) => { const g = s.add.graphics().setDepth(2).setBlendMode(ADD); g.fillStyle(0x9fd8ff, a); g.fillPoints([{ x: x0, y: IN_NORTH }, { x: x1, y: IN_NORTH }, { x: x1 + dx + 30, y: y1 }, { x: x0 + dx - 10, y: y1 }], true); return g; };
   shaft(150, 190, 330, 60, 0.05); shaft(230, 290, 340, 80, 0.045); shaft(320, 395, 320, 70, 0.04);
-  [[460, 250, 260, 0x9fd8ff, 0.08], [255, 640, 150, AMBER, 0.12], [620, 560, 200, IN_PINK, 0.07], [1090, 360, 210, 0xbfe9ff, 0.1]].forEach(([x, y, r, c, a]) => glow(x, y, r, c, a, { pulse: 2600 + Math.random() * 1500 }));
-  [[200, 150, CYAN], [640, 150, GREEN], [1000, 118, AMBER]].forEach(([x, y, c]) => glow(x, y + 20, 70, c, 0.22, { pulse: 1800 }));
+  [[460, 250, 260, 0x9fd8ff, 0.08], V.bar && [255, 640, 150, AMBER, 0.12], V.bar && [620, 560, 200, PK, 0.07], [1090, 360, 210, 0xbfe9ff, 0.1]].filter(Boolean).forEach(([x, y, r, c, a]) => glow(x, y, r, c, a, { pulse: 2600 + Math.random() * 1500 }));
+  [[200, 150, ACC], V.repair && [640, 150, GREEN], V.shop && [1000, 118, AMBER]].filter(Boolean).forEach(([x, y, c]) => glow(x, y + 20, 70, c, 0.22, { pulse: 1800 }));
 
   // neon signs
   const neon = (x, y, text, color, size, o = {}) => {
@@ -394,9 +423,9 @@ function interiorBuild(s) {
     s.tweens.add({ targets: [t, halo], alpha: 0.45, duration: 60, yoyo: true, repeat: -1, repeatDelay: 1800 + Math.random() * 3200, hold: 40 });
     return t;
   };
-  neon(460, 394, 'THE DRIFT  BAR', AMBER, 18);
-  neon(460, 464, 'THE DRIFT', IN_PINK, 22, { a: 0.55 });
+  if (V.bar) { neon(460, 394, look.home ? look.barName + '  BAR' : 'BAR', AMBER, 18); neon(460, 464, look.barName, PK, 22, { a: 0.55 }); } // THE DRIFT BAR over THE DRIFT at Halcyon; BAR over ROOST BAR (the first word of the name) elsewhere
   neon(944, 66, 'HANGAR 1', AMBER, 14, { a: 0.35 });
+  neon(1090, 66, look.name.toUpperCase(), ACC, 14, { a: 0.4 }); // the name of the station, over the hangar
   const bayText = s.add.text(1090, 478, 'BAY 01', { fontFamily: 'monospace', fontSize: '26px', fontStyle: 'bold', color: '#ffb454' }).setOrigin(0.5).setAlpha(0.45).setDepth(-45);
 
   // hologram terminals: a wireframe that turns above each desk, with a light cone
@@ -407,18 +436,18 @@ function interiorBuild(s) {
     s.tweens.add({ targets: im, y: y - 5, duration: 1900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     s.tweens.add({ targets: im, alpha: 0.55, duration: 130, yoyo: true, repeat: -1, repeatDelay: 2200 + Math.random() * 2000 });
   };
-  holo(200, 150, 'in-holo-planet', CYAN); holo(640, 150, 'in-holo-hull', GREEN); holo(1000, 120, 'in-holo-ship', AMBER);
+  holo(200, 150, 'in-holo-planet-' + ACC.toString(16), ACC); if (V.repair) holo(640, 150, 'in-holo-hull', GREEN); if (V.shop) holo(1000, 120, 'in-holo-ship', AMBER);
 
   // terminal screens (the dark wells in the baked kiosks)
-  [[150, 178, CYAN, 'missions'], [590, 178, GREEN, 'repair'], [950, 148, AMBER, 'shop']].forEach(([x, y, c, kind]) => I.screens.push({ g: s.add.graphics().setDepth(2.2), x: x + 8, y: y + 5, w: 84, h: 21, c, kind, last: -1 }));
-  I.eq = s.add.graphics().setDepth(2.2); // the jukebox's meter
+  [[150, 178, ACC, 'missions'], V.repair && [590, 178, GREEN, 'repair'], V.shop && [950, 148, AMBER, 'shop']].filter(Boolean).forEach(([x, y, c, kind]) => I.screens.push({ g: s.add.graphics().setDepth(2.2), x: x + 8, y: y + 5, w: 84, h: 21, c, kind, last: -1 }));
+  if (V.bar) I.eq = s.add.graphics().setDepth(2.2); // the jukebox's meter
 
   // a repair arm that works over the bay, and sparks at its tip
-  I.arm = s.add.graphics().setDepth(7);
-  I.armSpark = s.add.particles(0, 0, 'spark', { lifespan: 380, speed: { min: 30, max: 120 }, angle: { min: 0, max: 360 }, scale: { start: 0.6, end: 0 }, alpha: { start: 1, end: 0 }, tint: [0xfff1a8, GREEN, 0xffffff], blendMode: 'ADD', emitting: false }).setDepth(7);
+  if (V.repair) I.arm = s.add.graphics().setDepth(7);
+  if (V.repair) I.armSpark = s.add.particles(0, 0, 'spark', { lifespan: 380, speed: { min: 30, max: 120 }, angle: { min: 0, max: 360 }, scale: { start: 0.6, end: 0 }, alpha: { start: 1, end: 0 }, tint: [0xfff1a8, GREEN, 0xffffff], blendMode: 'ADD', emitting: false }).setDepth(7);
 
   // hangar: beacons turning above the bay door, steam from vents, a drone that patrols the pad
-  [[1240, 236, AMBER], [1240, 484, AMBER], [900, 664, RED]].forEach(([x, y, c], i) => {
+  [[1240, 236, AMBER], [1240, 484, AMBER], [900, 664, RED]].forEach(([x, y, c0], i) => { const c = V.pirate ? RED : c0; // a pirate dock turns all three beacons red
     const b = s.add.image(x, y, 'in-beam').setOrigin(0, 0.5).setTint(c).setBlendMode(ADD).setAlpha(0.34).setDepth(7).setScale(0.8);
     s.tweens.add({ targets: b, rotation: Math.PI * 2, duration: 2400 + i * 300, repeat: -1 });
     s.add.circle(x, y, 3, c, 1).setDepth(7); glow(x, y, 26, c, 0.5, { depth: 7, pulse: 600 });
@@ -440,16 +469,16 @@ function interiorBuild(s) {
 
   // plants sway; the bar has a few people
   [[44, 462], [836, 650], [832, 560]].forEach(([x, y], i) => { const l = s.add.image(x, y, 'in-leaves').setDepth(3.6).setScale(1.15); s.tweens.add({ targets: l, rotation: 0.1, scale: 1.2, duration: 2400 + i * 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }); });
-  const seated = [['in-civ0', 587, 520, 0], ['in-civ1', 233, 500, Math.PI], ['in-civ2', 340, 570, Math.PI / 2]];
+  const seated = !V.bar ? [] : [['in-civ0', 587, 520, 0], ['in-civ1', 233, 500, Math.PI], ['in-civ2', 340, 570, Math.PI / 2]];
   seated.forEach(([key, x, y, rot], i) => { const p = s.add.image(x, y, key + '0').setRotation(rot).setDepth(4); shadow(x, y, 0.6, 0.5); solid(x - 10, y - 10, 20, 20);
     s.tweens.add({ targets: p, scale: 1.05, duration: 1700 + i * 330, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }); });
   // Juno's shaker
-  { const sh = s.add.rectangle(264, 640, 4, 11, 0xcfd8e0).setDepth(4.5).setStrokeStyle(1, 0xffffff, 0.6);
+  if (V.bar) { const sh = s.add.rectangle(264, 640, 4, 11, 0xcfd8e0).setDepth(4.5).setStrokeStyle(1, 0xffffff, 0.6);
     s.time.addEvent({ delay: 3800, loop: true, callback: () => s.tweens.add({ targets: sh, angle: 28, x: 268, duration: 90, yoyo: true, repeat: 7 }) });
     s.add.rectangle(246, 640, 5, 8, 0xe8b020, 0.9).setDepth(4.5); }
 
   // wanderers in the bar
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < (V.bar ? 2 : 0); i++) {
     const key = 'in-civ' + (i === 0 ? 1 : 2), sp = s.add.image(Phaser.Math.Between(460, 780), Phaser.Math.Between(570, 680), key + '0').setDepth(4);
     const sh = shadow(sp.x, sp.y, 0.6, 0.5), w = { sp, key, sh };
     const wander = () => { const tx = Phaser.Math.Between(450, 790), ty = Phaser.Math.Between(560, 680); sp.rotation = Math.atan2(ty - sp.y, tx - sp.x);
@@ -495,10 +524,10 @@ function interiorTick(s, time) {
         g.lineStyle(1, o.c, 0.9); g.beginPath(); for (let i = 0; i <= 20; i++) { const px = o.x + 4 + i * 4, py = o.y + 15 + Math.sin(i * 0.9 + f * 0.6) * 3 * (i % 5 === 2 ? 2 : 1); if (i) g.lineTo(px, py); else g.moveTo(px, py); } g.strokePath(); }
       else { PART_ORDER.forEach((slot, k) => { const t = partTier(slot); for (let p = 0; p < 3; p++) { g.fillStyle(p < t ? o.c : 0x3a2a0c, p < t ? 0.95 : 1); g.fillRect(o.x + 5 + k * 16 + p * 4, o.y + 4, 3, 5); } g.fillStyle(o.c, 0.35 + 0.3 * Math.sin(f * 0.5 + k)); g.fillRect(o.x + 5 + k * 16, o.y + 13, 12, 4); }); }
     });
-    const e = I.eq; e.clear(); for (let i = 0; i < 9; i++) { const h = 2 + inHash(i * 3 + f) * 8; e.fillStyle(i % 3 ? IN_PINK : CYAN, 0.95); e.fillRect(795 + i * 5, 460 - h, 3, h); }
+    const e = I.eq; if (e) { e.clear(); for (let i = 0; i < 9; i++) { const h = 2 + inHash(i * 3 + f) * 8; e.fillStyle(i % 3 ? (IN_V.pirate ? RED : IN_PINK) : CYAN, 0.95); e.fillRect(795 + i * 5, 460 - h, 3, h); } }
   }
   // the repair arm: base on the right of the bay, reaching over the kiosk
-  { const g = I.arm, t = time / 1000, bx = 698, by = 186;
+  if (I.arm) { const g = I.arm, t = time / 1000, bx = 698, by = 186;
     const a1 = Math.PI * 1.1 + 0.3 * Math.sin(t * 1.3), a2 = a1 - 0.9 + 0.8 * Math.sin(t * 2.1 + 1);
     const jx = bx + Math.cos(a1) * 36, jy = by + Math.sin(a1) * 36, tx = jx + Math.cos(a2) * 32, ty = jy + Math.sin(a2) * 32;
     g.clear(); g.lineStyle(7, 0x05090f, 1); g.lineBetween(bx, by, jx, jy); g.lineBetween(jx, jy, tx, ty);
