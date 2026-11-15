@@ -113,6 +113,16 @@ try {
   await run(1000); g = await G();
   check('rescue still pays 500 on docking', g.mission === 'none' && g.credits === c3 + 500, JSON.stringify(g));
   check('rescue: ship death with the colonist aboard fails', await t.ev(`(() => { G.mission = 'rescued'; G.missionId = 'rescue'; return missionDeath(${S('Station')}) && G.mission === 'failed'; })()`));
+  console.log('E. the Reaver at the Roost, and a call that is not played in the system you are in (card u-e3)');
+  await x(`G.patrolsDone = 1; G.hull = G.maxHull; G.mission = 'accepted'; G.missionId = 'bounty'; G.missionProgress = 0; ${S('Station')}.scene.start('Space', { from: 'jump', to: 'roost', origin: 'kestrel' })`);
+  await run(1500);
+  check('in Reaver\'s Roost the Reaver is there, inside the world, and the arrow points at it', await t.ev(`(() => { const s = ${S('Space')}, b = s.mx.boss; return G.system === 'roost' && !!b && b.active && b.x > 0 && b.x < s.WS && b.y > 0 && b.y < s.WS && missionTarget(s).name === 'The Reaver'; })()`));
+  check('the HUD says to hunt it south-west of Reaver\'s Rock', await t.ev(`/Reaver.s Rock/.test(hudMission(${S('Space')}, 'Space').next)`), await t.ev(`hudMission(${S('Space')}, 'Space').next`));
+  await x(`${S('Space')}.scene.start('Space', { from: 'jump', to: 'halcyon', origin: 'roost' })`);
+  await run(1500);
+  check('back in Halcyon the call is quiet: no Reaver, no arrow, the goal is the Roost', await t.ev(`(() => { const s = ${S('Space')}; return G.system === 'halcyon' && !s.mx.boss && missionTarget(s) === null && missionFar().system === 'roost'; })()`));
+  check('and the bounty is not failed by leaving Halcyon for it', await t.ev(`(() => { missionLeaveSystem(${S('Space')}, 'halcyon'); return G.mission === 'accepted'; })()`));
+  check('but is failed by leaving the Roost', await t.ev(`(() => { missionLeaveSystem(${S('Space')}, 'roost'); return G.mission === 'failed'; })()`));
   check('no JS errors at the end', t.errors.length === 0, t.errors.join(' | '));
 } catch (e) {
   console.error('  FAIL missions: ' + e.message);
