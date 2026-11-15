@@ -63,7 +63,7 @@ try {
     // every field of every system and station file has a home in the row worldAt gives
     const SH = JSON.parse(JSON.stringify({ system: C.SCHEMA.system, station: C.SCHEMA.station }));
     const HOME = { // the schema's fields, sections and columns that tests/worldat.mjs follows into the row below. A new one that is not here fails the test: give it a home first.
-      system: ['name', 'kind', 'ly', 'size', 'danger', 'traffic', 'seed', 'starType', 'starX', 'starY', 'pirateMax', 'pirateEvery', 'bodies', 'pirates'],
+      system: ['name', 'kind', 'ly', 'size', 'danger', 'traffic', 'pay', 'seed', 'starType', 'starX', 'starY', 'pirateMax', 'pirateEvery', 'bodies', 'pirates'],
       bodies: ['id', 'type', 'name', 'x', 'y', 'art', 'r', 'rocks', 'landable', 'kind', 'seed', 'look', 'labelDy', 'credits', 'hull', 'guard', 'note'],
       station: ['name', 'system', 'accent', 'fuel', 'repair', 'ore', 'yard', 'missions', 'partMult', 'fee', 'salvageMult', 'parts', 'welcome', 'shop', 'services', 'bar']
     };
@@ -78,7 +78,7 @@ try {
     for (const en of bySys) {
       const f = en.data, w = worlds[en.id];
       if (en.id === 'halcyon') continue; // the code's row stands in for it; its files were compared above
-      ['name', 'kind', 'ly', 'size', 'danger', 'traffic', 'seed'].forEach(k => { if (f[k] !== undefined && JSON.stringify(w[k]) !== JSON.stringify(f[k])) lost.push(en.id + '.' + k); });
+      ['name', 'kind', 'ly', 'size', 'danger', 'traffic', 'pay', 'seed'].forEach(k => { if (f[k] !== undefined && JSON.stringify(w[k]) !== JSON.stringify(f[k])) lost.push(en.id + '.' + k); });
       if (f.starType !== undefined && (!w.star || w.star.type !== f.starType || w.star.x !== f.starX || w.star.y !== f.starY)) lost.push(en.id + '.star');
       if (f.pirateMax !== undefined && (!w.pirates || w.pirates.max !== f.pirateMax)) lost.push(en.id + '.pirateMax');
       if (f.pirateEvery !== undefined && (!w.pirates || w.pirates.every !== f.pirateEvery)) lost.push(en.id + '.pirateEvery');

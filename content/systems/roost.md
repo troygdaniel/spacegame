@@ -6,6 +6,7 @@ ly: [37, 15]
 size: 36000
 danger: 5
 traffic: 0
+pay: 1.6
 seed: 1313
 starType: M
 starX: 18000

@@ -58,7 +58,7 @@ export const constIn = (file, name) => {
   try { const m = new RegExp('\\b(?:let|const|var) ' + name + ' = (-?[0-9.]+);').exec(readFileSync(join(ROOT, file), 'utf8')); return m ? Number(m[1]) : null; } catch (e) { return null; }
 };
 export const PINS = {
-  repairPerPoint: { get value() { return constIn('src/station.js', 'REPAIR_PRICE') ?? 0.5; }, constant: 'REPAIR_PRICE', file: 'src/station.js', text: ['Math.ceil(missing * REPAIR_PRICE)'], what: 'repair bay: credits a point of hull (the REPAIR_PRICE constant, 0.5 as shipped)' },
+  repairPerPoint: { get value() { return constIn('src/station.js', 'REPAIR_PRICE') ?? 0.5; }, constant: 'REPAIR_PRICE', file: 'src/station.js', text: ['price = repairPrice(), cost = Math.ceil(missing * price)', 'return d && d.repair > 0 ? d.repair : REPAIR_PRICE'], what: 'repair bay: credits a point of hull (the REPAIR_PRICE constant, 0.5 as shipped, Halcyon\'s; another dock has its own dock.repair)' },
   insurancePct: { value: 0.2, file: 'src/space.js', text: 'Math.floor(G.credits * 0.2)', what: 'insurance fee: 20% of your credits' },
   insuranceMin: { value: 50, file: 'src/space.js', text: 'Math.max(50,', what: 'insurance fee: never less than 50' },
   muleSpeed: { value: [130, 70, 50], file: 'src/missions.js', text: 'threat ? 50 : behind ? 70 : 130', what: 'the MULE: free, you far behind, pirates close (px/s)' },

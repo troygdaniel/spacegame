@@ -51,15 +51,17 @@ const SYSTEMS = {
   // against each other field by field); what the files add is the words (description, welcome, services, bar), which the Station scene reads from them.
   //   star       { type, x, y }: type (M K G F A) picks the sun in the sky and the tint of the backdrop (src/art_world.js STAR_TYPES, spaceBackdrop)
   //   pirates    this system's spawn table (src/enemies.js pirateTable); left out, it comes from the danger
-  //   dock       what a station offers: fuel (credits a unit), repair (credits a hull point), ore (credits an ore), yard (ships it sells), shop and parts (the slots it
-  //              sells and to which tier, src/data_parts.js), partMult, fee, salvageMult. Only fuel and yard are read by the game so far (src/fuel.js, src/fleet.js,
-  //              src/data_parts.js); the economy card (u-e4) makes the prices count at every dock, the station card (u-e5) the words
+  //   pay        a multiplier on what a call pays that is paid in this system (src/missions.js callPayMult; docs/ECONOMY.md 9); left out it is 1
+  //   dock       what a station offers, and all of it is read (card u-e4): fuel (credits a unit, src/fuel.js), repair (credits a hull point, src/station.js repairPrice), ore (credits an
+  //              ore, src/asteroids.js orePrice), yard (ships it sells, src/fleet.js), shop and parts (the slots it sells and to which tier) and partMult (the price of its parts,
+  //              src/data_parts.js), fee (taken at the door when you dock, src/station.js dockFee), salvageMult (what a wreck pays in this system, src/poi.js), missions (its board).
+  //              Halcyon's dock leaves repair and ore out: they are REPAIR_PRICE and ORE_PRICE, which content/stations/halcyon-station.md can set, and the fallback of a dock with none
   //   art        'station' is Halcyon's ring, 'outpost' a small frontier dock, 'hub' 'foundry' 'nest' 'derelict' the looks of src/stationart.js
   kestrel: {
     id: 'kestrel', name: 'Kestrel', kind: 'outpost', ly: [25.5, 19], size: 36000, danger: 1, traffic: 1, seed: 5191,
     star: { type: 'K', x: 18000, y: 18000 },
     bodies: [
-      { id: 'kestrel-outpost', type: 'station', art: 'outpost', name: 'Kestrel Outpost', x: 9000, y: 21000, dock: { fuel: 7, repair: 0.5, missions: ['courier-kestrel-halcyon', 'courier-kestrel-meridian', 'haul-kestrel-meridian'], shop: 0, parts: { engine: 1, tank: 1 } } },
+      { id: 'kestrel-outpost', type: 'station', art: 'outpost', name: 'Kestrel Outpost', x: 9000, y: 21000, dock: { fuel: 7, repair: 0.5, missions: ['courier-kestrel-halcyon', 'courier-kestrel-meridian', 'haul-kestrel-meridian'], shop: 0, parts: { engine: 1, tank: 1 }, partMult: 1.1 } },
       { id: 'kestrel-giant', type: 'planet', kind: 'ringed', seed: 11, name: 'Kestrel Prime', x: 24500, y: 12500, r: 520, landable: false },
       { id: 'kestrel-2', type: 'planet', kind: 'rock', seed: 12, name: 'Kestrel II', x: 13000, y: 9500, r: 260, landable: false },
       { id: 'kestrel-belt', type: 'belt', name: 'Kestrel Belt', x: 22000, y: 25000, r: 800, rocks: 20 },
@@ -67,10 +69,10 @@ const SYSTEMS = {
     ]
   },
   meridian: {
-    id: 'meridian', name: 'Meridian', kind: 'trade', ly: [29, 24.5], size: 36000, danger: 1, traffic: 3, seed: 2210,
+    id: 'meridian', name: 'Meridian', kind: 'trade', ly: [29, 24.5], size: 36000, danger: 1, traffic: 3, pay: 1.1, seed: 2210,
     star: { type: 'F', x: 18000, y: 18000 },
     bodies: [
-      { id: 'meridian-exchange', type: 'station', art: 'hub', name: 'Meridian Exchange', x: 17000, y: 21000, dock: { fuel: 9, repair: 0.5, ore: 26, yard: ['wren', 'kite', 'ox', 'talon', 'pathfinder', 'bastion'], missions: ['courier-meridian-kestrel', 'courier-meridian-ember', 'courier-meridian-roost', 'haul-meridian-ember', 'salvage-lethe', 'survey-hollow'], shop: 0, parts: { shields: 3, weapons: 3, engine: 3, tank: 3, cargo: 3 } } },
+      { id: 'meridian-exchange', type: 'station', art: 'hub', name: 'Meridian Exchange', x: 17000, y: 21000, dock: { fuel: 9, repair: 0.5, ore: 26, yard: ['wren', 'kite', 'ox', 'talon', 'pathfinder', 'bastion'], missions: ['courier-meridian-kestrel', 'courier-meridian-ember', 'courier-meridian-roost', 'haul-meridian-ember', 'salvage-lethe', 'survey-hollow'], shop: 0, parts: { shields: 3, weapons: 3, engine: 3, tank: 3, cargo: 3 }, partMult: 0.9 } },
       { id: 'meridian-2', type: 'planet', kind: 'ice', seed: 21, name: 'Meridian II', x: 8500, y: 26500, r: 300, landable: false },
       { id: 'meridian-4', type: 'planet', kind: 'gas', seed: 22, name: 'Meridian IV', x: 29500, y: 28500, r: 480, landable: false },
       { id: 'meridian-belt', type: 'belt', name: 'Meridian Belt', x: 10500, y: 8000, r: 700, rocks: 15 },
@@ -78,7 +80,7 @@ const SYSTEMS = {
     ]
   },
   brass: {
-    id: 'brass', name: 'Brass Reach', kind: 'mining', ly: [14, 26.5], size: 36000, danger: 2, traffic: 1, seed: 7714,
+    id: 'brass', name: 'Brass Reach', kind: 'mining', ly: [14, 26.5], size: 36000, danger: 2, traffic: 1, pay: 1.15, seed: 7714,
     star: { type: 'K', x: 18000, y: 18000 },
     pirates: { max: 6, every: 13000, weights: { raider: 0.6, drone: 0.3, gunship: 0.1 } },
     bodies: [
@@ -122,7 +124,7 @@ const SYSTEMS = {
     ]
   },
   ember: {
-    id: 'ember', name: 'Ember', kind: 'volcanic', ly: [34, 31], size: 36000, danger: 3, traffic: 1, seed: 6188,
+    id: 'ember', name: 'Ember', kind: 'volcanic', ly: [34, 31], size: 36000, danger: 3, traffic: 1, pay: 1.3, seed: 6188,
     star: { type: 'A', x: 18000, y: 18000 },
     pirates: { max: 10, every: 9000, weights: { raider: 0.45, drone: 0.15, gunship: 0.4 } },
     bodies: [
@@ -134,10 +136,10 @@ const SYSTEMS = {
     ]
   },
   roost: {
-    id: 'roost', name: 'Reaver\'s Roost', kind: 'nest', ly: [37, 15], size: 36000, danger: 5, traffic: 0, seed: 1313,
+    id: 'roost', name: 'Reaver\'s Roost', kind: 'nest', ly: [37, 15], size: 36000, danger: 5, traffic: 0, pay: 1.6, seed: 1313,
     star: { type: 'M', x: 18000, y: 18000 },
     bodies: [
-      { id: 'roost-dock', type: 'station', art: 'nest', name: 'Roost Dock', x: 18000, y: 22000, dock: { fuel: 15, repair: 0.5, yard: ['bastion'], shop: 0, parts: { shields: 3, weapons: 3 }, partMult: 1.25, fee: 50, salvageMult: 2 } },
+      { id: 'roost-dock', type: 'station', art: 'nest', name: 'Roost Dock', x: 18000, y: 22000, dock: { fuel: 15, repair: 0.75, yard: ['bastion'], shop: 0, parts: { shields: 3, weapons: 3 }, partMult: 1.25, fee: 50, salvageMult: 2 } },
       { id: 'roost-rock', type: 'planet', kind: 'rock', seed: 71, name: 'Reaver\'s Rock', x: 8000, y: 8500, r: 280, landable: false },
       { id: 'roost-belt', type: 'belt', name: 'Roost Belt', x: 27500, y: 12000, r: 900, rocks: 35 },
       { id: 'wreck-r1', type: 'poi', kind: 'wreck', name: 'Raided freighter', x: 30500, y: 28500, credits: 300 },

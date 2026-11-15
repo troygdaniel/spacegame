@@ -47,7 +47,7 @@ const MISSIONS = [
     space: { setup: patrolSetup, update: patrolUpdate, target: patrolTarget }
   },
   {
-    id: 'bounty', key: '4', title: 'Bounty', where: 'The Reaver, at Reaver\'s Roost', reward: 1200, system: 'roost',
+    id: 'bounty', key: '4', title: 'Bounty', where: 'The Reaver, at Reaver\'s Roost', reward: 1200, system: 'roost', paySystem: 'halcyon',
     unlock: () => G.patrolsDone > 0, // the board offers it once a police patrol has been finished
     offer: 'The pirate warlord they call the Reaver has gone\nto ground at Reaver\'s Roost, twelve light years out,\nwith two escorts and a nest full of friends.\nA warship three times a drone: spread guns and\na ramming charge it telegraphs with a flash.\nHalcyon pays 1200 cr for the wreck.',
     line: st => st === 'failed' ? 'Failed. The Reaver got away'
@@ -154,10 +154,16 @@ function failMission(s, msg) {
   if (G.mission !== 'accepted' && G.mission !== 'rescued') return;
   G.mission = 'failed'; beep(150, 0.6, 'sawtooth', 0.05, -100); toast(s, msg, '#ff4d6d');
 }
+// A system's pay (src/data_systems.js: 1.10 at the Meridian hub, 1.15 at Brass Reach, 1.30 at Ember: docs/ECONOMY.md 9) multiplies what a call pays that is paid there: a courier or haul
+// by the system it is delivered to, a site call by its system; the four calls of Halcyon's board by Halcyon's (the bounty is paid by Halcyon too, whatever the Roost's). No pay in the
+// data is 1, so the Hollow and Lethe, which have no dock to pay anything, change nothing.
+const callPayMult = m => { const s = SYSTEMS[(m && (m.paySystem || m.system)) || 'halcyon']; return s && s.pay > 0 ? s.pay : 1; };
+const callReward = m => Math.round((m.reward | 0) * callPayMult(m));
 function completeMission(s, msg) {
   const m = missionDef(); if (!m) return;
-  G.credits += m.reward; G.mission = 'none'; G.missionId = null; G.missionProgress = 0;
-  beep(660, 0.25, 'triangle', 0.05, 440); toast(s, msg + '  +' + m.reward + ' cr', '#6dff9c');
+  const pay = callReward(m);
+  G.credits += pay; G.mission = 'none'; G.missionId = null; G.missionProgress = 0;
+  beep(660, 0.25, 'triangle', 0.05, 440); toast(s, msg + '  +' + pay + ' cr', '#6dff9c');
 }
 
 // ---- hooks called from space.js ----
@@ -205,7 +211,7 @@ function missionFarLine() {
 function missionDock(s) {
   const m = missionDef();
   if (!m || !m.carry || G.mission !== 'accepted' || m.to !== G.lastDock) return;
-  const haul = missionKind(m) === 'haul', pay = haul ? haulPay(m.ly, G.missionProgress | 0) : m.reward;
+  const haul = missionKind(m) === 'haul', pay = Math.round((haul ? haulPay(m.ly, G.missionProgress | 0) : m.reward) * callPayMult(m));
   G.credits += pay; G.mission = 'none'; G.missionId = null; G.missionProgress = 0;
   sfx('chime'); toast(s, (haul ? 'Freight delivered.' : 'Case delivered.') + '  +' + pay + ' cr', '#6dff9c');
 }

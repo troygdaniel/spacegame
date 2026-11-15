@@ -320,10 +320,10 @@ function hudMission(s, key) {
   if (!m || st === 'none') return { kind: 'none', head: 'NO ACTIVE MISSION', next: 'Take a call at the MISSIONS terminal' };
   if (st === 'failed') return { kind: 'failed', head: 'MISSION FAILED', next: m.line('failed') };
   const row = HUD_MISSIONS[m.id];
-  if (!row) return { kind: 'active', head: m.title, sub: m.where, reward: m.reward, next: m.line(st) };
+  if (!row) return { kind: 'active', head: m.title, sub: m.where, reward: callReward(m), next: m.line(st) };
   const at = row.cur(s, key), cur = Math.min(at, row.steps.length - 1); // a content file may list fewer steps than the code counts
   return {
-    kind: 'active', head: m.title, sub: m.where, reward: m.reward, cur, next: row.next(s, key, at),
+    kind: 'active', head: m.title, sub: m.where, reward: callReward(m), cur, next: row.next(s, key, at),
     steps: row.steps.map((t, i) => ({ text: typeof t === 'function' ? t() : t, state: i < cur ? 'done' : i === cur ? 'cur' : 'todo' }))
   };
 }

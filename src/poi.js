@@ -145,10 +145,13 @@ function poiSetup(sc) {
   sc.events.on('update', tick);
 }
 
+// how many times the usual a salvage pays in this system: the dock's salvageMult (src/data_systems.js: 2 at the Roost, which buys it at double), 1 where no dock says
+const salvageMult = () => sysBodies('station').map(b => b.dock && b.dock.salvageMult).find(v => v > 0) || 1;
+
 function poiSalvage(sc, p, o, prompt) {
   setSiteState(p, 2);
   const gains = [];
-  if (p.credits) { G.credits += p.credits; gains.push('+' + p.credits + ' cr'); }
+  if (p.credits) { const c = Math.round(p.credits * salvageMult()); G.credits += c; gains.push('+' + c + ' cr'); }
   if (p.hull) { G.hull = Math.min(G.maxHull, G.hull + p.hull); gains.push('hull +' + p.hull); }
   sfx('chime');
   toast(sc, p.name + ': ' + p.note + '\n' + gains.join('   '), '#6dff9c');

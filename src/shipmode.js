@@ -298,7 +298,7 @@ class ShipBay extends Phaser.Scene {
     const w = 420, h = 138, ui = panel(this, { x: 1045, y: top + h / 2, w, h, title: 'MISSION', depth: 20, foot: false }), box = ui.box;
     const m = missionDef(), live = m && (G.mission === 'accepted' || G.mission === 'rescued'), failed = m && G.mission === 'failed';
     if (live) {
-      ui.tagText.setText('PAYS ' + m.reward + ' cr');
+      ui.tagText.setText('PAYS ' + callReward(m) + ' cr');
       this.text(box, -190, -16, m.title.toUpperCase(), 18, '#ffd37a', { style: { fontStyle: 'bold' } });
       this.text(box, -190, 8, m.where, 13, '#8fb4c9');
       this.text(box, -190, 30, m.progress(), 13, '#cfefff', { oy: 0, style: { lineSpacing: 3, wordWrap: { width: 380 } } });
