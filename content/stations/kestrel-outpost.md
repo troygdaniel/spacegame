@@ -5,6 +5,7 @@ system: kestrel
 accent: green
 fuel: 7
 repair: 0.5
+partMult: 1.1
 
 missions: [courier-kestrel-halcyon, courier-kestrel-meridian, haul-kestrel-meridian]
 ---

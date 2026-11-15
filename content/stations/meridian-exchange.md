@@ -7,6 +7,7 @@ fuel: 9
 repair: 0.5
 ore: 26
 yard: [wren, kite, ox, talon, pathfinder, bastion]
+partMult: 0.9
 missions: [courier-meridian-kestrel, courier-meridian-ember, courier-meridian-roost, haul-meridian-ember, salvage-lethe, survey-hollow]
 ---
 The Exchange: every ship, every part, six calls on the board.

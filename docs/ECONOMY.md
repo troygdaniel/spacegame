@@ -167,7 +167,9 @@ range and sensor (long courier, survey, the far wrecks), and give the Talon and 
 **The built calls.** The rescue stays at 500 (the guide, the tests and the toasts say so). Options for E4, cheapest first: (1) leave them; (2) pay the Reaver 1,200 once and 400
 on repeats (its repeat run then pays about 680 for 150 s: 1.6 times the rescue, which fits the hardest call); (3) lift the rescue to 700 so it stops being the slowest. I recommend (2).
 
-## 9. Systems: price multipliers for the eight (proposal for E4)
+## 9. Systems: price multipliers for the eight (built by card u-e4)
+
+*Built:* `pay` is a field of each system (`src/data_systems.js`, the system files), read by `callReward` in `src/missions.js`; `partMult`, `repair`, `ore`, `fee` and `salvageMult` are fields of each dock, read at the dock you are at (`tests/prices.mjs` plays all six). Everything below is the proposal the numbers came from.
 
 Fuel and ore are the plan's numbers. The others are one rule each: **pay = 1 + 0.15 for each danger step above 1** (the hub adds 0.1 for its better board); **parts = 0.9 at the
 hub, 1.1 at a far outpost, 1.25 at the nest** (the plan); **repair = 1.5 at the nest**. Put them in each system's data: `dock.partMult` already exists, `pay` and `repair`

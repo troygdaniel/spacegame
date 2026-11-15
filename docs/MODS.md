@@ -471,6 +471,7 @@ No placeholders.
 | `size` | whole number from 4000 to 200000 | world size, px |
 | `danger` | whole number from 0 to 5 | 0 to 5: how many pirates |
 | `traffic` | whole number from 0 to 3 | 0 to 3: how busy |
+| `pay` | number from 0.1 to 5 |  |
 | `seed` | whole number from 0 to 2147483647 | the random seed |
 | `starType` | one of: `O`, `B`, `A`, `F`, `G`, `K`, `M` | the star: O, B, A, F, G, K or M (not read yet) |
 | `starX` | whole number from 0 to 200000 | where the star is, px (not read yet) |

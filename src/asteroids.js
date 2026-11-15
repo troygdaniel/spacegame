@@ -2,7 +2,7 @@
 // space.js calls asteroidsSetup(this) in create() and asteroidsUpdate(this, time, dt) in update();
 // station.js calls sellOre(this) when you dock; hud.js shows the hold on the strip; meta.js saves G.ore.
 const ORE_CAP = 10;       // the Wren's hold with no cargo part; the hold in use is holdCap() (src/fleet.js)
-let ORE_PRICE = 20;       // credits per ore, paid when you dock (content/stations/halcyon-station.md can change it)
+let ORE_PRICE = 20;       // credits per ore at a dock that names no price of its own, which is Halcyon Station's (content/stations/halcyon-station.md can change it)
 const ROCK_HP = { 1: 15, 2: 30, 3: 60 }, ROCK_SCALE = { 1: 0.38, 2: 0.65, 3: 1 };
 
 G.ore = 0;
@@ -100,9 +100,12 @@ function asteroidsUpdate(s, time, dt) {
   }
 }
 
+// what the dock you are at pays an ore: its own dock.ore (src/data_systems.js: Brass Reach 30, Ember 28, Meridian 26), or ORE_PRICE where the dock names none
+function orePrice(station) { const d = stationDock(station); return d && d.ore > 0 ? d.ore : ORE_PRICE; } // stationDock: src/data_parts.js
+
 // docking sells the hold (called from station.js)
 function sellOre(s) {
   const n = G.ore | 0; if (n <= 0) return;
-  const pay = n * ORE_PRICE; G.ore = 0; G.credits += pay;
+  const pay = n * orePrice(); G.ore = 0; G.credits += pay;
   s.time.delayedCall(900, () => { toast(s, 'Sold ' + n + ' ore  +' + pay + ' cr', '#6dff9c'); sfx('chime'); });
 }

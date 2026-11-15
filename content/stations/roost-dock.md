@@ -4,7 +4,7 @@ name: Roost Dock
 system: roost
 accent: red
 fuel: 15
-repair: 0.5
+repair: 0.75
 yard: [bastion]
 partMult: 1.25
 fee: 50

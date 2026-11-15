@@ -281,7 +281,7 @@ function worldFromFiles(id) {
   try {
     if (!CT_HAS(CONTENT_WORLD.system, id)) return null;
     const f = CONTENT_WORLD.system[id], def = { id, name: f.name, kind: f.kind };
-    ['ly', 'size', 'danger', 'traffic', 'seed'].forEach(k => { if (f[k] !== undefined) def[k] = f[k]; });
+    ['ly', 'size', 'danger', 'traffic', 'pay', 'seed'].forEach(k => { if (f[k] !== undefined) def[k] = f[k]; });
     if (f.starType !== undefined) { def.star = { type: f.starType }; if (f.starX !== undefined) def.star.x = f.starX; if (f.starY !== undefined) def.star.y = f.starY; }
     if (f.pirateMax !== undefined || f.pirateEvery !== undefined || (f.pirates && f.pirates.length)) {
       def.pirates = {};

@@ -143,7 +143,7 @@ function fleetPartsValue(rec) {
 }
 // what a ship fetches: 60% of the base price, 50% of the fitted parts, and the ore in its hold at the dock price
 function fleetSellValue(rec) {
-  const ship = Math.floor(FLEET.sell * shipModel(rec.model).price), parts = Math.floor(FLEET.sellParts * fleetPartsValue(rec)), ore = (rec.ore | 0) * ORE_PRICE;
+  const ship = Math.floor(FLEET.sell * shipModel(rec.model).price), parts = Math.floor(FLEET.sellParts * fleetPartsValue(rec)), ore = (rec.ore | 0) * (typeof orePrice === 'function' ? orePrice() : ORE_PRICE);
   return { ship, parts, ore, total: ship + parts + ore };
 }
 // light years between two stations' systems, or null when one is not a station
