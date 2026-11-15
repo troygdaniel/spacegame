@@ -52,16 +52,17 @@ const SNAP = `(() => {
     [100, 40].forEach(hp => [0, 1].forEach(pd => [0, 12].forEach(k => states.push({ ms, mid, sh, wp, en, cr, hp, pd, k }))))))))));
   const setSt = st => { G.mission = st.ms; G.missionId = st.mid; Object.assign(activeShip().parts, { shields: st.sh, weapons: st.wp, engine: st.en }); G.credits = st.cr; G.hull = G.maxHull * st.hp / 100; G.patrolsDone = st.pd; G.stats.drones = st.k; G.stats.missions = st.pd; };
   const kept = { hull: G.hull, drones: G.stats.drones, missions: G.stats.missions };
-  const probes = {}, npcs = {};
+  const probes = {}, npcs = {}, keeper = {};
   NPCS.forEach(n => {
     const texts = [], at = r => { if (r === null || r === undefined) return -1; let i = texts.indexOf(r); if (i < 0) i = texts.push(r) - 1; return i; };
     const matrix = states.map(st => { setSt(st); return at(n.react()); }).join(',');
     const here = [0, 1].map(m => { setSt(Object.assign({}, base, { pd: m })); return n.when ? !!n.when() : null; });
-    npcs[n.id] = { name: n.name, role: n.role, color: n.color, css: n.css, x: n.x, y: n.y, face: n.face, voice: n.voice, persona: n.persona, lines: n.lines.slice(), sprite: n.sprite === undefined ? null : n.sprite, here, texts, matrix };
+    if (n.station === '*') keeper[n.id] = n.lines.slice(); // the keeper of the other bars reads the bar lines of its dock, which only a station file holds: no code default to equal
+    npcs[n.id] = { name: n.name, role: n.role, color: n.color, css: n.css, x: n.x, y: n.y, face: n.face, voice: n.voice, persona: n.persona, lines: n.station === '*' ? 'the bar lines of the dock' : n.lines.slice(), sprite: n.sprite === undefined ? null : n.sprite, here, texts, matrix };
   });
   const probe = (id, over) => { setSt(Object.assign({}, base, over)); const r = NPCS.find(x => x.id === id).react(); return r === undefined ? null : r; };
   probes.sablePatrol = probe('sable', { pd: 1 }); probes.mossHurt = probe('moss', { hp: 40 }); probes.sableKills = probe('sable', { k: 12 });
-  out.npcs = npcs; out.probes = probes;
+  out.npcs = npcs; out.keeper = keeper; out.probes = probes;
   G.missionId = 'patrol'; G.missionProgress = 2;
   out.ui = { help: plain(HELP), tips: plain(SCENE_TIPS), raw: plain(UI_TEXT), said: Object.keys(UI_TEXT).map(k => uiText(k, { reward: 500, name: 'Wreck' })) };
   out.station = { name: sysBody('station').name, ore: ORE_PRICE, repair: REPAIR_PRICE };
@@ -162,6 +163,7 @@ try {
   same('the rescue call: title, place, reward, offer, the three board lines, both progress texts, the failure line, the checklist', A.snap.mission, B.snap.mission);
   same('the other calls: escort, patrol and bounty (title, place, reward, count, offer, objective lines, progress, checklist, the bounty unlock)', A.snap.calls, B.snap.calls);
   same('the six characters: look, place, voice, persona, lines, when they are in the bar, and what each says in 2304 situations', A.snap.npcs, B.snap.npcs);
+  check('the keeper of the other bars says the dock\'s own bar lines: the shipped files give Halcyon\'s, an empty pack gives the one fallback line', A.snap.keeper.barkeep.length >= 1 && !A.snap.keeper.barkeep.includes('Quiet tonight, pilot.') && B.snap.keeper.barkeep.join('|') === 'Quiet tonight, pilot.', JSON.stringify([A.snap.keeper, B.snap.keeper]));
   same('the interface words: every help line, scene tip and toast, as the game says them', A.snap.ui, B.snap.ui);
   check('and a toast says its numbers: the delivery pays 500 and the patrol toast counts 2 of 5', A.snap.ui.said.includes('Colonist delivered safely. +500 cr') && A.snap.ui.said.includes('Wanted pirate down  2 of 5'), JSON.stringify(A.snap.ui.said.slice(0, 6)));
   same('the dock: the station name, the ore price and the repair price', A.snap.station, B.snap.station);
