@@ -164,7 +164,7 @@ Each is a 56 x 40 style texture (the big ones larger) drawn in `ships.js`, with 
 
 ## 7. Parts
 
-Five slots on every ship: **engine, shields, weapons, tank, cargo**. Each has tiers 1 to 3; the ship decides how high a slot goes (a courier cannot fit tier 3 weapons; a hauler can fit tier 3 cargo). Prices below are for the Wren; each ship has a price multiplier (Kite 0.8, Ox 1.2, Talon 1.1, Pathfinder 1.1, Bastion 1.8). Parts are tied to the ship; a part cannot move between ships (to keep the save simple). Selling a part gives 50%.
+Six slots on every ship: **engine, shields, weapons, tank, cargo, autotarget** (the sixth was added by `space-game-cannon-autotarget`). Each has tiers 1 to 3; the ship decides how high a slot goes (a courier cannot fit tier 3 weapons; a hauler can fit tier 3 cargo). Prices below are for the Wren; each ship has a price multiplier (Kite 0.8, Ox 1.2, Talon 1.1, Pathfinder 1.1, Bastion 1.8). Parts are tied to the ship; a part cannot move between ships (to keep the save simple). Selling a part gives 50%.
 
 | Slot | Tier 1 | Tier 2 | Tier 3 | Prices (T1 / T2 / T3) |
 |---|---|---|---|---|
@@ -173,8 +173,9 @@ Five slots on every ship: **engine, shields, weapons, tank, cargo**. Each has ti
 | **Weapons** | fire delay 100 ms (today's rapid tier 1) | 70 ms (today's tier 2) | 50 ms, shots 20 damage | 400 / 600 / 1200 |
 | **Tank** | fuel x1.25 | x1.5 | x2.0 | 250 / 450 / 900 |
 | **Cargo** | hold +4 | +8 | +14 | 250 / 450 / 900 |
+| **Autotarget** | the guns turn to the nearest raider within 450 px when you fire; a reticle shows which | reach 650 px, and the shot leads a moving raider | reach 850 px (as far as a shot flies), leads | 500 / 800 / 1400 |
 
-Where they are sold: Halcyon and Meridian sell tier 1 and 2 of everything; Meridian also tier 3. Outposts sell tank and engine tier 1. Mining systems sell cargo and tank to tier 2 and 3. Ember sells weapons to tier 3, the Roost sells shields and weapons to tier 3 at x1.25. The shop terminal keeps the look it has now (`openShop` in `shop.js`); it gets five cards in two rows instead of three.
+Where they are sold: Halcyon and Meridian sell tier 1 and 2 of everything; Meridian also tier 3. Outposts sell tank and engine tier 1. Mining systems sell cargo and tank to tier 2 and 3. Ember sells weapons and the autotarget to tier 3, the Roost sells shields, weapons and the autotarget to tier 3 at x1.25; Kestrel and Brass Reach, which sell only some parts, do not sell the autotarget. The shop terminal keeps the look it has now (`openShop` in `shop.js`); it has six cards in a row, keys 1 to 6. The autotarget (`src/autotarget.js`) never fires by itself: it only turns a shot you fire toward the nearest raider in reach (never the police or a freighter), and R switches it off and on (saved as `aimOff`; X is the nav list's).
 
 **As built (card `u-d1`):** `src/data_parts.js` holds the table; the shop keys 1 to 5 are shields, rapid fire (weapons), engine, tank, cargo, so the old keys 1 to 3 did not move. A station sells tier 2 of every slot unless its dock row says `shop` (a tier cap), `parts` (a cap per slot) or `partMult` (a price factor); what a ship can fit is `maxTier` in `data_ships.js`; the price is the table's, times the ship's `partMult`, times the station's, to ten credits. Shields are points of their own (`shieldMax`, `shieldRegen`, `shieldDelay` in `shipStat`), they take hits before the hull, and they no longer add hull. The hold is `holdCap()`, not a constant.
 

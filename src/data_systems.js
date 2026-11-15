@@ -72,7 +72,7 @@ const SYSTEMS = {
     id: 'meridian', name: 'Meridian', kind: 'trade', ly: [29, 24.5], size: 36000, danger: 1, traffic: 3, pay: 1.1, seed: 2210,
     star: { type: 'F', x: 18000, y: 18000 },
     bodies: [
-      { id: 'meridian-exchange', type: 'station', art: 'hub', name: 'Meridian Exchange', x: 17000, y: 21000, dock: { fuel: 9, repair: 0.5, ore: 26, yard: ['wren', 'kite', 'ox', 'talon', 'pathfinder', 'bastion'], missions: ['courier-meridian-kestrel', 'courier-meridian-ember', 'courier-meridian-roost', 'haul-meridian-ember', 'salvage-lethe', 'survey-hollow'], shop: 0, parts: { shields: 3, weapons: 3, engine: 3, tank: 3, cargo: 3 }, partMult: 0.9 } },
+      { id: 'meridian-exchange', type: 'station', art: 'hub', name: 'Meridian Exchange', x: 17000, y: 21000, dock: { fuel: 9, repair: 0.5, ore: 26, yard: ['wren', 'kite', 'ox', 'talon', 'pathfinder', 'bastion'], missions: ['courier-meridian-kestrel', 'courier-meridian-ember', 'courier-meridian-roost', 'haul-meridian-ember', 'salvage-lethe', 'survey-hollow'], shop: 0, parts: { shields: 3, weapons: 3, engine: 3, tank: 3, cargo: 3, aim: 3 }, partMult: 0.9 } },
       { id: 'meridian-2', type: 'planet', kind: 'ice', seed: 21, name: 'Meridian II', x: 8500, y: 26500, r: 300, landable: false },
       { id: 'meridian-4', type: 'planet', kind: 'gas', seed: 22, name: 'Meridian IV', x: 29500, y: 28500, r: 480, landable: false },
       { id: 'meridian-belt', type: 'belt', name: 'Meridian Belt', x: 10500, y: 8000, r: 700, rocks: 15 },
@@ -128,7 +128,7 @@ const SYSTEMS = {
     star: { type: 'A', x: 18000, y: 18000 },
     pirates: { max: 10, every: 9000, weights: { raider: 0.45, drone: 0.15, gunship: 0.4 } },
     bodies: [
-      { id: 'ember-foundry', type: 'station', art: 'foundry', name: 'Ember Foundry', x: 22000, y: 15000, dock: { fuel: 6, repair: 0.5, ore: 28, yard: ['talon'], missions: ['courier-ember-meridian', 'haul-ember-meridian'], shop: 0, parts: { weapons: 3 } } },
+      { id: 'ember-foundry', type: 'station', art: 'foundry', name: 'Ember Foundry', x: 22000, y: 15000, dock: { fuel: 6, repair: 0.5, ore: 28, yard: ['talon'], missions: ['courier-ember-meridian', 'haul-ember-meridian'], shop: 0, parts: { weapons: 3, aim: 3 } } },
       { id: 'ember-lava', type: 'planet', kind: 'lava', seed: 61, name: 'Ember', x: 10000, y: 23500, r: 420, landable: false },
       { id: 'ember-belt-a', type: 'belt', name: 'Slag Run', x: 28500, y: 26000, r: 900, rocks: 40 },
       { id: 'ember-belt-b', type: 'belt', name: 'Cinder Field', x: 14000, y: 8500, r: 800, rocks: 30 },
@@ -139,7 +139,7 @@ const SYSTEMS = {
     id: 'roost', name: 'Reaver\'s Roost', kind: 'nest', ly: [37, 15], size: 36000, danger: 5, traffic: 0, pay: 1.6, seed: 1313,
     star: { type: 'M', x: 18000, y: 18000 },
     bodies: [
-      { id: 'roost-dock', type: 'station', art: 'nest', name: 'Roost Dock', x: 18000, y: 22000, dock: { fuel: 15, repair: 0.75, yard: ['bastion'], shop: 0, parts: { shields: 3, weapons: 3 }, partMult: 1.25, fee: 50, salvageMult: 2 } },
+      { id: 'roost-dock', type: 'station', art: 'nest', name: 'Roost Dock', x: 18000, y: 22000, dock: { fuel: 15, repair: 0.75, yard: ['bastion'], shop: 0, parts: { shields: 3, weapons: 3, aim: 3 }, partMult: 1.25, fee: 50, salvageMult: 2 } },
       { id: 'roost-rock', type: 'planet', kind: 'rock', seed: 71, name: 'Reaver\'s Rock', x: 8000, y: 8500, r: 280, landable: false },
       { id: 'roost-belt', type: 'belt', name: 'Roost Belt', x: 27500, y: 12000, r: 900, rocks: 35 },
       { id: 'wreck-r1', type: 'poi', kind: 'wreck', name: 'Raided freighter', x: 30500, y: 28500, credits: 300 },

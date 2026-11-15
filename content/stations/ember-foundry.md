@@ -15,6 +15,7 @@ A foundry cut into volcanic rock.
 | slot | tier |
 | --- | --- |
 | weapons | 3 |
+| aim | 3 |
 
 ## Welcome
 Welcome to {station}. Keep your guns warm: the raiders here are not shy.
@@ -22,7 +23,7 @@ Welcome to {station}. Keep your guns warm: the raiders here are not shy.
 ## Services
 - Fuel
 - Repair
-- Parts (weapons to tier 3)
+- Parts (weapons and the autotarget, to tier 3)
 - Shipyard (the Talon)
 - Mission board
 

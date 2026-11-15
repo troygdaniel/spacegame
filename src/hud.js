@@ -269,9 +269,10 @@ function hudStrip(h, now) {
   }
   if (h.crShow == null) h.crShow = G.credits;
   h.crShow += (G.credits - h.crShow) * 0.14; if (Math.abs(G.credits - h.crShow) < 1) h.crShow = G.credits;
-  hudPanel(g, 440, 10, 400, 30, 8, 0.78, GOLD); // a gold edge: this is the one strip that is money
+  const CRW = 408; // the money strip: 400 wide until the sixth part (the autotarget) needed 8 more; the ORE panel starts at 856
+  hudPanel(g, 440, 10, CRW, 30, 8, 0.78, GOLD); // a gold edge: this is the one strip that is money
   const pulse = h.pulse > now ? (h.pulse - now) / 650 : 0, pc = h.pulseCol || GOLD;
-  if (pulse > 0) { g.fillStyle(pc, 0.16 * pulse); g.fillRect(442, 12, 396 - 8, 26); g.lineStyle(2, pc, 0.9 * pulse); g.strokeRect(440, 10, 400, 30); }
+  if (pulse > 0) { g.fillStyle(pc, 0.16 * pulse); g.fillRect(442, 12, CRW - 12, 26); g.lineStyle(2, pc, 0.9 * pulse); g.strokeRect(440, 10, CRW, 30); }
   hudSpine(g, 440, 10, 30, GOLD, 0.8);
   hudCoin(g, 463, 25, 1, pulse);
   hudPut(h, 'crl', 480, 25, 'CR', { size: 12, bold: true, color: GOLD_S, spacing: 1 });
@@ -281,11 +282,11 @@ function hudStrip(h, now) {
   hudPut(h, 'crd', 503 + cv.width - 2 * HUD_PAD + 8, 25 - 8 * Math.min(1, (gain ? now - gain.t : 0) / 400), gain ? (gain.v > 0 ? '+' : '-') + hudFmt(Math.abs(gain.v)) : '',
     { size: 14, bold: true, color: gain && gain.v < 0 ? '#ff4d6d' : '#6dff9c', alpha: gain ? 1 - Math.pow((now - gain.t) / 1300, 2) : 0 });
   g.lineStyle(1, CYAN, 0.2); g.lineBetween(596, 17, 596, 33);
-  PART_ORDER.forEach((slot, i) => { // the five parts: three letters and three chips each (src/data_parts.js)
-    const gx = 600 + i * 46, tier = partTier(slot);
-    hudPut(h, 'up' + i, gx, 25, PARTS[slot].short, { size: HT.tag, color: tier ? '#9fe9ff' : HUD_DIM, spacing: 0 });
+  PART_ORDER.forEach((slot, i) => { // the six parts: three letters and three chips each (src/data_parts.js); the autotarget's is red while it is switched off (R)
+    const gx = 600 + i * 40, tier = partTier(slot), aimOff = slot === 'aim' && tier && G.aimOff;
+    hudPut(h, 'up' + i, gx, 25, PARTS[slot].short, { size: HT.tag, color: aimOff ? '#ff4d6d' : tier ? '#9fe9ff' : HUD_DIM, spacing: 0 });
     for (let j = 0; j < 3; j++) { // a pip is a small slanted chip: lit ones have a halo
-      const x = gx + 20 + j * 7, p = [[x + 2, 21], [x + 6, 21], [x + 4, 30], [x, 30]];
+      const x = gx + 19 + j * 7, p = [[x + 2, 21], [x + 6, 21], [x + 4, 30], [x, 30]];
       if (tier > j) {
         g.fillStyle(CYAN, 0.2); g.fillRect(x - 1, 19, 9, 13);
         g.fillStyle(CYAN, 1); g.beginPath(); g.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.closePath(); g.fillPath();

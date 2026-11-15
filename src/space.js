@@ -96,7 +96,7 @@ class Space extends Phaser.Scene {
       if (e.hp <= 0) this.killDrone(e); // ramming used to take hp off a drone but never finish it
     });
 
-    this.k = this.input.keyboard.addKeys('W,A,S,D,E,Q,L,SPACE,SHIFT,UP,DOWN,LEFT,RIGHT');
+    this.k = this.input.keyboard.addKeys('W,A,S,D,E,Q,L,R,SPACE,SHIFT,UP,DOWN,LEFT,RIGHT');
     const sh = this.sh = { max: shipStat('shieldMax'), pts: shipStat('shieldMax'), regen: shipStat('shieldRegen'), delay: shipStat('shieldDelay'), last: -1e9, hitAt: -1e9, down: -1e9 }; // the shield part (src/data_parts.js): full at launch
     boostInit(this); // src/boost.js: boost energy and the Q/E dash
     this.nextFire = 0;
@@ -203,13 +203,16 @@ class Space extends Phaser.Scene {
       const tx = ship.x - Math.cos(ship.rotation) * 20, ty = ship.y - Math.sin(ship.rotation) * 20;
       this.trail.emitParticleAt(tx, ty, boost ? 3 : 2);
     }
+    if (JD(k.R)) aimToggle(this); // src/autotarget.js: the sixth part, on or off (R is free in flight; X belongs to the nav list, which reads it every frame)
+    aimUpdate(this, ship, locked || still); // the reticle on the raider the guns would turn to (none while it is off, unfitted, or you cannot fire)
     if (!locked && !still && (k.SPACE.isDown || this.input.activePointer.isDown) && time > this.nextFire) {
       this.nextFire = time + fireDelay();
-      const shot = this.shoot(this.pb, ship.x + Math.cos(ship.rotation) * 24, ship.y + Math.sin(ship.rotation) * 24, ship.rotation, 950, time);
+      const rot = aimAngle(this, ship); // the ship's heading, or toward the nearest raider in reach when the autotarget is fitted and on
+      const shot = this.shoot(this.pb, ship.x + Math.cos(ship.rotation) * 24, ship.y + Math.sin(ship.rotation) * 24, rot, SHOT_SPEED, time);
       if (shot) shot.dmg = shipStat('damage'); // the weapons part: 15, and 20 at tier 3
-      sfx('laser'); feelShot(this, ship.x + Math.cos(ship.rotation) * 26, ship.y + Math.sin(ship.rotation) * 26, ship.rotation);
+      sfx('laser'); feelShot(this, ship.x + Math.cos(ship.rotation) * 26, ship.y + Math.sin(ship.rotation) * 26, rot);
     }
-    this.pb.getChildren().forEach(b => { if (b.active && time - b.born > 900) b.disableBody(true, true); });
+    this.pb.getChildren().forEach(b => { if (b.active && time - b.born > SHOT_LIFE) b.disableBody(true, true); });
     this.eb.getChildren().forEach(b => { if (b.active && time - b.born > 1800) b.disableBody(true, true); });
 
     if (this.launchAt === null) { // the first frame of flight starts the launch grace (playtest 2: time.now was 0 in create, so the first launch of a session had no grace)

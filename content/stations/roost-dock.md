@@ -17,6 +17,7 @@ The nest. Entry costs 50 cr and nobody asks why you came.
 | --- | --- |
 | shields | 3 |
 | weapons | 3 |
+| aim | 3 |
 
 ## Welcome
 Welcome to {station}. The fee is 50 cr; the Reaver says hello.
@@ -24,7 +25,7 @@ Welcome to {station}. The fee is 50 cr; the Reaver says hello.
 ## Services
 - Fuel (double price)
 - Repair
-- Parts (shields and weapons, to tier 3, at x1.25)
+- Parts (shields, weapons, autotarget to tier 3, x1.25)
 - Shipyard (the Bastion, discounted)
 - Buys salvage at double
 

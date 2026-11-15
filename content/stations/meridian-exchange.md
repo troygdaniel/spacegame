@@ -20,6 +20,7 @@ The Exchange: every ship, every part, six calls on the board.
 | engine | 3 |
 | tank | 3 |
 | cargo | 3 |
+| aim | 3 |
 
 ## Welcome
 Welcome to {station}. Prices are posted, and everything is for sale.
@@ -27,7 +28,7 @@ Welcome to {station}. Prices are posted, and everything is for sale.
 ## Services
 - Fuel
 - Repair
-- Parts shop (all five slots to tier 3)
+- Parts shop (all six slots to tier 3)
 - Shipyard (all six ships)
 - Mission board (six calls)
 - Bar

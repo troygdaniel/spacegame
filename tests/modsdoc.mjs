@@ -56,7 +56,7 @@ check('the calls are rescue, escort, patrol, bounty, and the sixteen runs and si
   ['rescue', 'escort', 'patrol', 'bounty', 'salvage-lethe', 'survey-hollow'].every(i => MISSIONS.includes(i)) && MISSIONS.length === 20 && MISSIONS.filter(i => /^(courier|haul)-[a-z]+-[a-z]+$/.test(i)).length === 14, MISSIONS.join());
 check('the bar has juno, tamsin, dex, moss, sable, ida, and the keeper of the other bars (barkeep)', same(NPCS, ['juno', 'tamsin', 'dex', 'moss', 'sable', 'ida', 'barkeep']), NPCS.join());
 check('the pirates are raider, drone, gunship', same(PIRATES, ['raider', 'drone', 'gunship']), PIRATES.join());
-check('the part slots are shields, weapons, engine, tank, cargo', same(PARTS, ['shields', 'weapons', 'engine', 'tank', 'cargo']), PARTS.join());
+check('the part slots are shields, weapons, engine, tank, cargo, aim', same(PARTS, ['shields', 'weapons', 'engine', 'tank', 'cargo', 'aim']), PARTS.join());
 const partIds = PARTS.flatMap(slot => [1, 2, 3].map(t => slot + '-' + t));
 for (const f of fences) {
   const id = f.path.split('/').pop().replace(/\.md$/, ''), type = f.path.split('/')[1];

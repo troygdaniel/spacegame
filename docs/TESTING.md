@@ -37,6 +37,7 @@ What it is and is not:
 | `mods` | B4: a pack adds a call, a character, a ship, a voice file; the shared limit; a picked folder | B1 to B3: the Mods screen, the folder picker's real `<input>`, a tampered storage |
 | `chat` | part 1: the provider adapters with a mocked fetch (keys, headers, 401, 404, 429, three failures) | parts 2 to 6: the setup panel, the pause menu, the bar, memory, voice |
 | `fleet` | part 1: the rules of the yard, prices, buy, sell, switch | part 2: a real save and a death |
+| `autotarget` | part 1: the table, prices, which station sells which tier, what each hull fits, the save and its switch, the lead mathematics, the pick and the angle on a made-up scene | part 2: the guns turn to the raider, the lead, the reticle, the R switch, buying it with key 6 (one Chrome) |
 | `shipmodels` | part 1: the table pinned to the design | part 2: the Space scene |
 | `calls` | part 1: the rows, the pay, each station's board, a courier and a haul from board to dock, sites, jumps, death, the save | part 2: the boards in the Station scene and a paid courier across a jump, one Chrome |
 | `systems` | part 1: the eight systems of the design table, which ship reaches which, the layouts, every dock and pirate table | part 2: the shipped files equal the code's rows, each system flown and each station docked at, one Chrome |

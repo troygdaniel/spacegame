@@ -91,11 +91,11 @@ const GEN_KINDS = {
   graveyard: { weight: 10, kind: 'graveyard', planets: [0, 1], planetKinds: ['rock'], belts: [0, 1], wrecks: [6, 10], cr: 400, ruin: true, stars: ['M'], traffic: 0,
     danger: { add: 1, min: 2, max: 4 }, station: null, pirates: { max: 8, every: 11000, weights: { drone: 0.8, raider: 0.15, gunship: 0.05 } } },
   trade: { weight: 10, kind: 'trade', planets: [2, 4], planetKinds: ['ice', 'gas', 'rock', 'ringed'], belts: [1, 1], wrecks: [0, 1], cr: 200, stars: ['F', 'G'], traffic: 3,
-    danger: { add: 0, min: 1, max: 3 }, station: { art: 'hub', suffix: 'Exchange', dock: { fuel: [8, 10], repair: 0.5, ore: [24, 27], yard: ['wren', 'kite', 'ox'], shop: 0, parts: { shields: 2, weapons: 2, engine: 2, tank: 2, cargo: 2 } } } },
+    danger: { add: 0, min: 1, max: 3 }, station: { art: 'hub', suffix: 'Exchange', dock: { fuel: [8, 10], repair: 0.5, ore: [24, 27], yard: ['wren', 'kite', 'ox'], shop: 0, parts: { shields: 2, weapons: 2, engine: 2, tank: 2, cargo: 2, aim: 2 } } } },
   nest: { weight: 10, kind: 'nest', planets: [1, 2], planetKinds: ['rock', 'lava'], belts: [1, 2], wrecks: [2, 3], cr: 300, stars: ['M', 'K'], traffic: 0,
-    danger: { add: 2, min: 4, max: 5 }, station: { art: 'nest', suffix: 'Dock', dock: { fuel: [14, 16], repair: 0.5, yard: ['bastion'], shop: 0, parts: { shields: 3, weapons: 3 }, partMult: 1.25, fee: 50, salvageMult: 2 } } },
+    danger: { add: 2, min: 4, max: 5 }, station: { art: 'nest', suffix: 'Dock', dock: { fuel: [14, 16], repair: 0.5, yard: ['bastion'], shop: 0, parts: { shields: 3, weapons: 3, aim: 3 }, partMult: 1.25, fee: 50, salvageMult: 2 } } },
   lawless: { weight: 10, kind: 'mining', lawless: true, planets: [1, 2], planetKinds: ['rock', 'lava'], belts: [2, 3], wrecks: [1, 2], cr: 260, stars: ['K', 'A'], traffic: 0,
-    danger: { add: 2, min: 3, max: 5 }, station: { art: 'foundry', suffix: 'Hold', dock: { fuel: [11, 13], repair: 0.5, ore: [30, 34], yard: ['talon'], shop: 0, parts: { weapons: 2 }, partMult: 1.15, fee: 30 } },
+    danger: { add: 2, min: 3, max: 5 }, station: { art: 'foundry', suffix: 'Hold', dock: { fuel: [11, 13], repair: 0.5, ore: [30, 34], yard: ['talon'], shop: 0, parts: { weapons: 2, aim: 2 }, partMult: 1.15, fee: 30 } },
     pirates: { max: 9, every: 10000, weights: { raider: 0.6, drone: 0.2, gunship: 0.2 } } }
 };
 const GEN_PLANET_R = { rock: [200, 320], ice: [260, 400], gas: [420, 560], lava: [300, 440], ringed: [420, 560] }; // radius in world px, as the authored ones

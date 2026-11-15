@@ -32,7 +32,7 @@ function snapshot() {
     patrolsDone: G.patrolsDone | 0, // missions.js: unlocks the bounty call
     system: G.system, lastDock: G.lastDock, jumps: G.jumps | 0, known: G.known.slice(), charted: G.charted.slice(),
     active: G.active, fleet: G.fleet.map(shipSnapshot), // hull, fuel, ore and parts live per ship
-    volume: Math.round(G.volume * 10) / 10, muted: !!G.muted,
+    volume: Math.round(G.volume * 10) / 10, muted: !!G.muted, aimOff: !!G.aimOff, // aimOff: the autotarget switch (src/autotarget.js)
     ...guideSnapshot(), // first-run guide, run stats, ending card (guide.js)
     ...poiSnapshot(), // salvage sites found and salvaged (poi.js)
     ...chatSnapshot() // NPC chat memory: who you met, what they think of you, the Journal (chat.js); never the key
@@ -115,6 +115,7 @@ function applySave(s) {
   G.patrolsDone = Number.isFinite(s.patrolsDone) ? Math.max(0, Math.floor(s.patrolsDone)) : 0;
   if (Number.isFinite(s.volume)) G.volume = Math.min(1, Math.max(0, s.volume));
   if (typeof s.muted === 'boolean') G.muted = s.muted;
+  G.aimOff = s.aimOff === true; // src/autotarget.js: off only if the save says so
   guideRestore(s); // guide.js: tips done, stats, ending seen
   poiRestore(s); // poi.js: salvage sites found and salvaged (after G.system: the sites are the current system's)
   chatRestore(s); // chat.js: NPC chat memory, every string clamped on the way in

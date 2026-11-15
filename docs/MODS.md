@@ -384,7 +384,7 @@ No placeholders.
 
 | Field | Takes | Meaning |
 |---|---|---|
-| `slot`* | one of: `engine`, `shields`, `weapons`, `tank`, `cargo` | which of the five slots |
+| `slot`* | one of: `engine`, `shields`, `weapons`, `tank`, `cargo`, `aim` | which of the six slots |
 | `tier`* | whole number from 1 to 3 | 1 to 3 |
 | `name`* | text, up to 40 characters | the tier's name in the shop |
 | `brief` | text, up to 40 characters | a short form for tight places |
@@ -401,6 +401,7 @@ No placeholders.
 | `boostRegen` | whole number from 0 to 200 | engine: how fast it refills |
 | `fuelMult` | number from 1 to 5 | tank: the tank times this |
 | `holdPlus` | whole number from 0 to 100 | cargo: ore units more |
+| `range` | whole number from 0 to 855 |  |
 
 #### `poi`  (folder `content/poi/`)
 
@@ -439,7 +440,7 @@ Under `##` headings (the text before the first heading is the description, up to
 
 | Heading | Holds |
 |---|---|
-| `## Parts` | a table: `slot`* (one of: `engine`, `shields`, `weapons`, `tank`, `cargo`); `tier`* (whole number from 1 to 3) |
+| `## Parts` | a table: `slot`* (one of: `engine`, `shields`, `weapons`, `tank`, `cargo`, `aim`); `tier`* (whole number from 1 to 3) |
 | `## Welcome` | text, up to 400 characters |
 | `## Shop` | a table: `item`* (text, up to 40 characters); `price`* (whole number from 0 to 1000000) |
 | `## Services` | a list, one `- item` a line, each up to 60 characters |

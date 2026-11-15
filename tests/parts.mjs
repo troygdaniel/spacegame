@@ -1,7 +1,7 @@
-// smoke: ship parts: shields, weapons, engine, tank, cargo: the tables, every effect, the shop's five cards, the save
-// The five ship parts (src/data_parts.js, docs/UNIVERSE.md section 7): shields, weapons, engine, tank, cargo, tiers 1 to 3.
+// smoke: ship parts: shields, weapons, engine, tank, cargo, aim: the tables, every effect, the shop's six cards, the save
+// The six ship parts (src/data_parts.js, docs/UNIVERSE.md section 7): shields, weapons, engine, tank, cargo, aim, tiers 1 to 3 (the aim is tests/autotarget.mjs's).
 //   A. the tables and prices     B. every effect through shipStat     C. shields in flight (points, hull, recharge, the HUD ring)
-//   D. weapons (shot rate, damage)  E. engine and cargo in flight     F. the shop (five cards, price, fit, stock, credits)     G. saves
+//   D. weapons (shot rate, damage)  E. engine and cargo in flight     F. the shop (six cards, price, fit, stock, credits)     G. saves
 // One headless Chrome, game clock stepped by hand in space. Run: node tests/parts.mjs   (exit code 1 on any failure)
 import { launch, sleep } from './cdp.mjs';
 
@@ -26,7 +26,7 @@ try {
   await sleep(600); await t.clock(); await t.run(1500);
 
   console.log('A. the tables');
-  check('five slots in shop order: shields, weapons, engine, tank, cargo', same(await J('PART_ORDER'), ['shields', 'weapons', 'engine', 'tank', 'cargo']));
+  check('six slots in shop order: shields, weapons, engine, tank, cargo, aim', same(await J('PART_ORDER'), ['shields', 'weapons', 'engine', 'tank', 'cargo', 'aim']));
   const tables = await J(`PART_ORDER.map(k => { const P = PARTS[k]; return { k, name: P.name, short: P.short, prices: P.prices, t: P.tiers.length, d: P.descs.length, b: P.brief.length, ok: P.descs.every(x => x.length > 5 && x.length <= 40) && P.brief.every(x => x.length <= 24) }; })`);
   check('every slot has a name, three letters, three prices going up, three tier names, descriptions and short forms',
     tables.every(x => x.name && x.short.length === 3 && x.prices.length === 3 && x.prices[0] < x.prices[1] && x.prices[1] < x.prices[2] && x.t === 3 && x.d === 3 && x.b === 3 && x.ok), JSON.stringify(tables.map(x => x.k + x.prices)));
@@ -123,7 +123,7 @@ try {
   await t.ev(`(() => { openShop(${ST}); return 1; })()`); await t.run(500);
   const txt = async () => t.ev(`(() => { const out = []; const walk = o => { if (o.type === 'Text') out.push(o.text); if (o.list) o.list.forEach(walk); }; ${ST}.shopBox.list.forEach(walk); out.push('MSG ' + ${ST}.shopMsgText.text); return out.join('|'); })()`);
   let s = await txt();
-  check('five cards: SHIELDS, RAPID FIRE, ENGINE, FUEL TANK, CARGO HOLD, with list prices 300, 400, 350, 250, 250', ['SHIELDS', 'RAPID FIRE', 'ENGINE', 'FUEL TANK', 'CARGO HOLD', '300 cr', '400 cr', '350 cr', '250 cr'].every(w => s.includes(w)), s.slice(0, 120));
+  check('six cards: SHIELDS, RAPID FIRE, ENGINE, FUEL TANK, CARGO HOLD, AUTOTARGET, with list prices 300, 400, 350, 250, 250, 500', ['SHIELDS', 'RAPID FIRE', 'ENGINE', 'FUEL TANK', 'CARGO HOLD', 'AUTOTARGET', '300 cr', '400 cr', '350 cr', '250 cr', '500 cr'].every(w => s.includes(w)), s.slice(0, 120));
   check('the shop says which ship the parts are for', s.includes('Pick a part for your Wren'));
   await t.shot('parts-shop');
   await t.key('1'); await t.run(400);
@@ -155,9 +155,9 @@ try {
   await t.ev(`(() => { Object.assign(G.fleet[G.active].parts, { shields: 1, weapons: 0, engine: 2, tank: 3, cargo: 0 }); return 1; })()`);
   await t.run(400);
   const chips = await J(`PART_ORDER.map((k, i) => { const h = ${ST}._hud; const x = h && h.t['up' + i]; return x ? [x.text, Math.round(x.x), x.visible] : null; })`);
-  check('the HUD strip has five chips, in order, three letters each, left to right', chips.every(Boolean) && chips.map(c => c[0]).join() === 'SHD,WPN,ENG,TNK,CRG' && chips.every((c, i) => i === 0 || c[1] > chips[i - 1][1]) && chips[4][1] + 44 <= 840, JSON.stringify(chips));
+  check('the HUD strip has six chips, in order, three letters each, left to right, and the last ends inside the money strip (440 to 848)', chips.every(Boolean) && chips.map(c => c[0]).join() === 'SHD,WPN,ENG,TNK,CRG,AIM' && chips.every((c, i) => i === 0 || c[1] > chips[i - 1][1]) && chips[5][1] + 44 <= 848, JSON.stringify(chips));
   const rec = await J(`(() => { G.fleet[G.active].model = 'wren'; const snap = snapshot(); const r = shipFromSave({ model: 'wren', parts: { shields: 9, weapons: 2, engine: 3, tank: 3, cargo: 3 }, ore: 99 }, 'halcyon-station'); const k = shipFromSave({ model: 'kite', parts: { weapons: 3, cargo: 3, engine: 3 }, ore: 99 }, 'halcyon-station'); return { saved: snap.fleet[0].parts, wren: [r.parts.shields, r.ore, r.maxHull], kite: [k.parts.weapons, k.parts.cargo, k.parts.engine, k.ore] }; })()`);
-  check('the save keeps all five slots', same(rec.saved, { engine: 2, shields: 1, weapons: 0, tank: 3, cargo: 0 }) || (rec.saved.tank === 3 && rec.saved.engine === 2 && rec.saved.shields === 1), JSON.stringify(rec.saved));
+  check('the save keeps all six slots', same(rec.saved, { engine: 2, shields: 1, weapons: 0, tank: 3, cargo: 0, aim: 0 }) || (rec.saved.tank === 3 && rec.saved.engine === 2 && rec.saved.shields === 1), JSON.stringify(rec.saved));
   check('a loaded Wren: shields 9 comes down to 3, 99 ore to the hold (10 with no cargo part... 24 with cargo 3), the hull is the model\'s 100', rec.wren[0] === 3 && rec.wren[1] === 24 && rec.wren[2] === 100, rec.wren.join());
   check('a loaded Kite is held to what a Kite can fit: weapons 2, cargo 1, engine 3, ore up to 8', rec.kite[0] === 2 && rec.kite[1] === 1 && rec.kite[2] === 3 && rec.kite[3] === 8, rec.kite.join());
   check('no JS errors', t.errors.length === 0, t.errors.join(' | '));

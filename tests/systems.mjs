@@ -96,8 +96,8 @@ console.log('what each system has');
   const w = world(), S = id => w.j(`SYSTEMS.${id}`), of = (s, type) => s.bodies.filter(b => b.type === type);
   const k = S('kestrel'), m = S('meridian'), b = S('brass'), h = S('hollow'), l = S('lethe'), e = S('ember'), r = S('roost');
   check('Kestrel: a ringed gas giant, a quiet outpost, no yard', of(k, 'planet')[0].kind === 'ringed' && of(k, 'station')[0].art === 'outpost' && !of(k, 'station')[0].dock.yard);
-  check('Meridian: the hub look, a shipyard that sells all six, parts to tier 3 in all five slots, ore 26, fuel 9',
-    of(m, 'station')[0].art === 'hub' && of(m, 'station')[0].dock.yard.length === 6 && Object.keys(of(m, 'station')[0].dock.parts).length === 5 && Object.values(of(m, 'station')[0].dock.parts).every(t => t === 3) && of(m, 'station')[0].dock.ore === 26 && of(m, 'station')[0].dock.fuel === 9);
+  check('Meridian: the hub look, a shipyard that sells all six, parts to tier 3 in all six slots, ore 26, fuel 9',
+    of(m, 'station')[0].art === 'hub' && of(m, 'station')[0].dock.yard.length === 6 && Object.keys(of(m, 'station')[0].dock.parts).length === 6 && Object.values(of(m, 'station')[0].dock.parts).every(t => t === 3) && of(m, 'station')[0].dock.ore === 26 && of(m, 'station')[0].dock.fuel === 9);
   check('Brass Reach: three belts, a foundry that pays 30 for ore, cargo and tank parts, sells the hauler',
     of(b, 'belt').length === 3 && of(b, 'station')[0].art === 'foundry' && of(b, 'station')[0].dock.ore === 30 && Object.keys(of(b, 'station')[0].dock.parts).sort().join() === 'cargo,tank' && of(b, 'station')[0].dock.yard.join() === 'ox');
   check('the Hollow: one ice world to land on, a beacon, nothing to buy', of(h, 'planet').length === 1 && of(h, 'planet')[0].kind === 'ice' && of(h, 'planet')[0].landable === true && of(h, 'poi').some(p => p.kind === 'beacon') && of(h, 'station').length === 0);
@@ -105,11 +105,11 @@ console.log('what each system has');
   check('Ember: a lava world, two belts, weapons parts to tier 3, sells the fighter (talon), ore 28',
     of(e, 'planet')[0].kind === 'lava' && of(e, 'belt').length === 2 && of(e, 'station')[0].dock.parts.weapons === 3 && of(e, 'station')[0].dock.yard.join() === 'talon' && of(e, 'station')[0].dock.ore === 28);
   const rd = of(r, 'station')[0].dock;
-  check('the Roost: the nest look, fuel 15, a 50 cr fee, salvage at double, shield and weapon parts at x1.25, the heavy (bastion)', of(r, 'station')[0].art === 'nest' && rd.fuel === 15 && rd.fee === 50 && rd.salvageMult === 2 && rd.partMult === 1.25 && Object.keys(rd.parts).sort().join() === 'shields,weapons' && rd.yard.join() === 'bastion');
+  check('the Roost: the nest look, fuel 15, a 50 cr fee, salvage at double, shield, weapon and autotarget parts at x1.25, the heavy (bastion)', of(r, 'station')[0].art === 'nest' && rd.fuel === 15 && rd.fee === 50 && rd.salvageMult === 2 && rd.partMult === 1.25 && Object.keys(rd.parts).sort().join() === 'aim,shields,weapons' && rd.yard.join() === 'bastion');
   check('Halcyon is untouched: station, planet, belt, five sites, the outpost, the gate and the far bodies of cruise (14 bodies)', S('halcyon').bodies.length === 14 && S('halcyon').bodies[0].dock.fuel === 8);
   const stations = IDS.flatMap(id => of(S(id), 'station'));
   check('every dock with a pump has a price, every yard names ships the game has, every part slot and tier is one the game has',
-    stations.every(st => st.dock.fuel > 0 && (st.dock.yard || []).every(m => w.run(`!!SHIP_MODELS['${m}']`)) && Object.entries(st.dock.parts || {}).every(([slot, t]) => w.run(`['engine','shields','weapons','tank','cargo'].includes('${slot}')`) && t >= 1 && t <= 3)));
+    stations.every(st => st.dock.fuel > 0 && (st.dock.yard || []).every(m => w.run(`!!SHIP_MODELS['${m}']`)) && Object.entries(st.dock.parts || {}).every(([slot, t]) => w.run(`['engine','shields','weapons','tank','cargo','aim'].includes('${slot}')`) && t >= 1 && t <= 3)));
   check('the pump rule of the fuel card: the systems with no pump are the Hollow and Lethe', IDS.filter(id => w.run(`!SYSTEMS['${id}'].bodies.some(b => b.type === 'station' && b.dock && b.dock.fuel > 0)`)).join() === 'hollow,lethe');
   check('a station has its art from a look the game can draw', stations.every(st => ['station', 'outpost', 'hub', 'foundry', 'nest', 'derelict'].includes(st.art)));
 }

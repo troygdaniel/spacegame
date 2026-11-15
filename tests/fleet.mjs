@@ -226,7 +226,7 @@ console.log('every refusal has the same shape; fleetList');
   check('five refusals, each { ok: false, why, msg }', rs.every(r => r.ok === false && typeof r.why === 'string' && typeof r.msg === 'string' && Object.keys(r).sort().join() === 'msg,ok,why'));
   w.run(`G.credits = 9000; fleetBuy('kite', false)`);
   const rows = w.j('fleetList()');
-  check('fleetList() gives a row per ship, the ship you fly marked', rows.length === 2 && rows[0].flying === '*' && rows[1].flying === '' && rows[1].name === 'Kite' && rows[1].parts === '00000' && rows[1].hull === '70/70');
+  check('fleetList() gives a row per ship, the ship you fly marked', rows.length === 2 && rows[0].flying === '*' && rows[1].flying === '' && rows[1].name === 'Kite' && rows[1].parts === '000000' && rows[1].hull === '70/70');
 }
 
 // ================= Part 2: the real page =================

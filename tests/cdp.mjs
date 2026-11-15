@@ -20,8 +20,8 @@ const CALL_MS = Number(process.env.DEVTOOLS_TIMEOUT_MS) || 120000;
 export const patience = ms => ms * Math.min(4, Math.max(1, loadavg()[0] / (cpus().length || 1)));
 
 const KEYS = {
-  C: [67, 'KeyC', 'c'], E: [69, 'KeyE', 'e'], L: [76, 'KeyL', 'l'], W: [87, 'KeyW', 'w'], S: [83, 'KeyS', 's'], X: [88, 'KeyX', 'x'],
-  1: [49, 'Digit1', '1'], 2: [50, 'Digit2', '2'], 3: [51, 'Digit3', '3'], 4: [52, 'Digit4', '4'], 5: [53, 'Digit5', '5'], ESC: [27, 'Escape', 'Escape'],
+  C: [67, 'KeyC', 'c'], R: [82, 'KeyR', 'r'], E: [69, 'KeyE', 'e'], L: [76, 'KeyL', 'l'], W: [87, 'KeyW', 'w'], S: [83, 'KeyS', 's'], X: [88, 'KeyX', 'x'],
+  1: [49, 'Digit1', '1'], 2: [50, 'Digit2', '2'], 3: [51, 'Digit3', '3'], 4: [52, 'Digit4', '4'], 5: [53, 'Digit5', '5'], 6: [54, 'Digit6', '6'], ESC: [27, 'Escape', 'Escape'],
   J: [74, 'KeyJ', 'j'], V: [86, 'KeyV', 'v'], UP: [38, 'ArrowUp', 'ArrowUp'], DOWN: [40, 'ArrowDown', 'ArrowDown'],
   ENTER: [13, 'Enter', 'Enter'], TAB: [9, 'Tab', 'Tab'], SPACE: [32, 'Space', ' ']
 };

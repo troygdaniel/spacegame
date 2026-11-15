@@ -49,7 +49,7 @@
   const PH = ['reward', 'count', 'progress', 'station', 'system', 'credits', 'ship', 'kills']; // placeholders the game can fill
   const PH_MISSION = PH.concat('hull'); // a mission may also say {hull}: the percent of hull the bounty target has left
   const SHIP_ART = ['ship', 'raider', 'drone', 'gunship', 'reaver', 'freighter', 'civilian', 'police', 'wren', 'kite', 'ox', 'talon', 'pathfinder', 'bastion']; // the built-in textures; grows when new ship art lands
-  const SLOTS = ['engine', 'shields', 'weapons', 'tank', 'cargo'];
+  const SLOTS = ['engine', 'shields', 'weapons', 'tank', 'cargo', 'aim'];
   // star systems (docs/MODDING.md 6.3): what a body is, and the names the code's own tables use for them (src/data_systems.js, art_world.js, stationart.js)
   const BODY_TYPES = ['station', 'planet', 'belt', 'poi', 'scenery', 'gate'];
   const PLANET_KINDS = ['rock', 'ice', 'gas', 'lava', 'ringed'];   // art_world.js planetTexture
@@ -103,7 +103,7 @@
         slot: P(SLOTS, true), tier: I(1, 3, true), name: T(40, true), brief: T(40), key: T(20), price: I(0, 1000000),
         points: I(0, 500), regen: N(0, 100), delay: I(20, 10000), damage: I(1, 100),
         speedPct: N(0, 100), jump: N(0, 20), boostAdd: I(0, 2000), boostTank: I(0, 500), boostRegen: I(0, 200),
-        fuelMult: N(1, 5), holdPlus: I(0, 100)
+        fuelMult: N(1, 5), holdPlus: I(0, 100), range: I(0, 855)   // range: the autotarget's reach in px, no more than a shot flies (src/autotarget.js)
       },
       sections: {}
     },

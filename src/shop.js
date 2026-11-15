@@ -137,7 +137,7 @@ function buildBar(s) {
 
 function buildShop(s) {
   s.shopOpen = false;
-  s.shopKeys = s.input.keyboard.addKeys('ONE,TWO,THREE,FOUR,FIVE,ESC');
+  s.shopKeys = s.input.keyboard.addKeys('ONE,TWO,THREE,FOUR,FIVE,SIX,ESC');
 
   // terminal in the hangar (a dock that sells no part has none)
   if (s.look.terminals.shop) {
@@ -146,20 +146,21 @@ function buildShop(s) {
     s.spots.push({ x: 1000, y: 170, text: 'UPGRADE SHOP', key: 'shop', prompt: 'Open the upgrade shop', color: '#ffb454', dy: 74 });
   }
 
-  s.shopUI = panel(s, { w: 1060, h: 440, title: 'UPGRADE SHOP  -  HANGAR', color: AMBER, dim: true, depth: 160 });
+  s.shopUI = panel(s, { w: 1200, h: 440, title: 'UPGRADE SHOP  -  HANGAR', color: AMBER, dim: true, depth: 160 });
   s.shopBox = s.shopUI.box.setVisible(false); s.shopObjs = [];
   s.shopMsgText = s.add.text(0, 136, '', uiFont(16, '#ffd37a')).setOrigin(0.5);
   s.shopBox.add(s.shopMsgText);
-  s.shopUI.setHints([['1-5', 'Buy'], ['Esc', 'Close']]);
+  s.shopUI.setHints([['1-6', 'Buy'], ['Esc', 'Close']]);
 }
 
-// the little shape on each tile: shield, chevrons, flame, tank, crate
+// the little shape on each tile: shield, chevrons, flame, tank, crate, crosshair
 function upgradeIcon(g, key, x, y, color) {
   g.lineStyle(3, color, 1);
   if (key === 'shields') { g.beginPath(); g.moveTo(x - 14, y - 14); g.lineTo(x + 14, y - 14); g.lineTo(x + 14, y + 2); g.lineTo(x, y + 16); g.lineTo(x - 14, y + 2); g.closePath(); g.strokePath(); }
   else if (key === 'weapons') { [-12, 0, 12].forEach(dx => { g.beginPath(); g.moveTo(x + dx - 6, y - 12); g.lineTo(x + dx + 4, y); g.lineTo(x + dx - 6, y + 12); g.strokePath(); }); }
   else if (key === 'engine') { g.beginPath(); g.moveTo(x - 14, y + 14); g.lineTo(x, y - 16); g.lineTo(x + 14, y + 14); g.closePath(); g.strokePath(); g.fillStyle(color, 0.6); g.fillTriangle(x - 7, y + 14, x, y - 2, x + 7, y + 14); }
   else if (key === 'tank') { g.strokeRoundedRect(x - 10, y - 16, 20, 32, 6); g.fillStyle(color, 0.6); g.fillRoundedRect(x - 8, y + 2, 16, 12, 4); g.lineBetween(x - 10, y - 5, x + 10, y - 5); }
+  else if (key === 'aim') { g.strokeCircle(x, y, 13); g.lineBetween(x - 19, y, x - 6, y); g.lineBetween(x + 6, y, x + 19, y); g.lineBetween(x, y - 19, x, y - 6); g.lineBetween(x, y + 6, x, y + 19); }
   else { g.strokeRect(x - 15, y - 12, 30, 24); g.lineBetween(x - 15, y - 12, x + 15, y + 12); g.lineBetween(x + 15, y - 12, x - 15, y + 12); g.fillStyle(color, 0.35); g.fillRect(x - 15, y - 12, 30, 5); }
 }
 
@@ -180,7 +181,7 @@ function refreshShop(s, bought) {
   const ship = activeShip();
   PART_ORDER.forEach((slot, i) => {
     const P = PARTS[slot], st = partState(slot), t = st.t, buy = st.kind === 'buy', can = buy && G.credits >= st.price, done = st.kind === 'maxed' || st.kind === 'fit';
-    const cx = (i - 2) * 206, cy = -30, w = 196, h = 230, L = cx - w / 2 + 14, T = cy - h / 2;
+    const cx = (i - (PART_ORDER.length - 1) / 2) * 194, cy = -30, w = 188, h = 230, L = cx - w / 2 + 14, T = cy - h / 2;
     const edge = done ? GREEN : can ? AMBER : 0x3a5a78, dim = !done && !can;
     const g = add(s.add.graphics());
     hudPanel(g, cx - w / 2, T, w, h, 14, 1, edge); // src/hud.js: the HUD's glass card; amber and glowing when you can buy it, green when there is nothing more to buy, dim otherwise
@@ -191,7 +192,7 @@ function refreshShop(s, bought) {
     add(pips(s, L + 38, T + 82, t, 3, GREEN));
     const desc = add(s.add.text(L, T + 104, done ? P.descs[Math.max(0, t - 1)] : P.descs[t], uiFont(13, dim ? '#6b8296' : '#cfefff', { wordWrap: { width: w - 28 }, lineSpacing: 2 })).setOrigin(0, 0));
     if (st.kind === 'maxed') txt(L, T + 188, 'MAXED', 24, '#6dff9c', { fontStyle: 'bold' });
-    else if (st.kind === 'fit') { txt(L, T + 180, 'FULL FIT', 22, '#6dff9c', { fontStyle: 'bold' }); txt(L, T + 206, 'a ' + shipModel(ship.model).name + ' takes no more', 12, '#6dff9c'); }
+    else if (st.kind === 'fit') { txt(L, T + 180, 'FULL FIT', 22, '#6dff9c', { fontStyle: 'bold' }); txt(L, T + 206, 'a ' + shipModel(ship.model).name + ' takes no more', 11, '#6dff9c'); }
     else if (st.kind === 'stock') { txt(L, T + 180, 'NOT SOLD HERE', 17, '#ffd37a', { fontStyle: 'bold' }); txt(L, T + 206, 'a bigger station sells it', 12, '#ffd37a'); }
     else {
       txt(L, T + 186, st.price + ' cr', 26, can ? '#ffb454' : '#ff4d6d', { fontStyle: 'bold' });
@@ -272,7 +273,7 @@ function shopFrame(s) {
   if (s.shopOpen) {
     s.player.setVelocity(0, 0);
     if (JD(k.ESC)) closeShop(s);
-    else ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'].forEach((n, i) => { if (JD(k[n]) && s.shopOpen) buyUpgrade(s, i); });
+    else ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX'].forEach((n, i) => { if (JD(k[n]) && s.shopOpen) buyUpgrade(s, i); });
     return true;
   }
   if (s.panel) { if (s.talk) hideTalk(s); return false; } // the mission panel owns the frame

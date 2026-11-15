@@ -522,7 +522,7 @@ function interiorTick(s, time) {
       if (o.kind === 'missions') { for (let r = 0; r < 4; r++) { const wv = 18 + inHash(r * 7 + Math.floor(f / 9)) * 44, y = o.y + 3 + r * 5; g.fillStyle(o.c, r === (Math.floor(f / 7) % 4) ? 0.95 : 0.4); g.fillRect(o.x + 4, y, wv, 3); g.fillStyle(AMBER, 0.6); g.fillRect(o.x + o.w - 20, y, 14, 3); } }
       else if (o.kind === 'repair') { const hf = Phaser.Math.Clamp(G.hull / G.maxHull, 0, 1); g.fillStyle(0x0a2a1a, 1); g.fillRect(o.x + 4, o.y + 3, o.w - 8, 5); g.fillStyle(hf < 0.4 ? RED : o.c, 0.95); g.fillRect(o.x + 4, o.y + 3, (o.w - 8) * hf, 5);
         g.lineStyle(1, o.c, 0.9); g.beginPath(); for (let i = 0; i <= 20; i++) { const px = o.x + 4 + i * 4, py = o.y + 15 + Math.sin(i * 0.9 + f * 0.6) * 3 * (i % 5 === 2 ? 2 : 1); if (i) g.lineTo(px, py); else g.moveTo(px, py); } g.strokePath(); }
-      else { PART_ORDER.forEach((slot, k) => { const t = partTier(slot); for (let p = 0; p < 3; p++) { g.fillStyle(p < t ? o.c : 0x3a2a0c, p < t ? 0.95 : 1); g.fillRect(o.x + 5 + k * 16 + p * 4, o.y + 4, 3, 5); } g.fillStyle(o.c, 0.35 + 0.3 * Math.sin(f * 0.5 + k)); g.fillRect(o.x + 5 + k * 16, o.y + 13, 12, 4); }); }
+      else { PART_ORDER.forEach((slot, k) => { const t = partTier(slot); for (let p = 0; p < 3; p++) { g.fillStyle(p < t ? o.c : 0x3a2a0c, p < t ? 0.95 : 1); g.fillRect(o.x + 5 + k * 13 + p * 4, o.y + 4, 3, 5); } g.fillStyle(o.c, 0.35 + 0.3 * Math.sin(f * 0.5 + k)); g.fillRect(o.x + 5 + k * 13, o.y + 13, 11, 4); }); }
     });
     const e = I.eq; if (e) { e.clear(); for (let i = 0; i < 9; i++) { const h = 2 + inHash(i * 3 + f) * 8; e.fillStyle(i % 3 ? (IN_V.pirate ? RED : IN_PINK) : CYAN, 0.95); e.fillRect(795 + i * 5, 460 - h, 3, h); } }
   }

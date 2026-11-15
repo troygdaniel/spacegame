@@ -37,7 +37,7 @@ export const NOTES = {
   },
   npc: { name: 'what they are called', role: 'what they do', color: 'their colour', label: 'the colour of the name above them, when it is not color', appears: 'a condition: they are in the bar only while it holds', station: 'the station they stand in', x: 'where they stand, px from the left', y: 'where they stand, px from the top', face: 'which way they look, radians (0 is east)', voice: 'a Deepgram Aura voice name (docs/VOICE.md)' },
   part: {
-    slot: 'which of the five slots', tier: '1 to 3', name: 'the tier\'s name in the shop', brief: 'a short form for tight places', price: 'credits, for the starting ship, the Wren (the other ships scale it)',
+    slot: 'which of the six slots', tier: '1 to 3', name: 'the tier\'s name in the shop', brief: 'a short form for tight places', price: 'credits, for the starting ship, the Wren (the other ships scale it)',
     points: 'shields: points that take hits before the hull', regen: 'shields: points a second once it recharges; engine: boost refill', delay: 'shields: ms without a hit before it recharges; weapons: ms between shots', damage: 'weapons: damage a shot',
     speedPct: 'engine: percent more top speed', jump: 'engine: light years more jump range', boostAdd: 'engine: px a second more boost speed', boostTank: 'engine: the boost tank', boostRegen: 'engine: how fast it refills',
     fuelMult: 'tank: the tank times this', holdPlus: 'cargo: ore units more'

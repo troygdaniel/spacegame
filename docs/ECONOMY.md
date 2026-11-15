@@ -31,7 +31,7 @@ controls and dying. It is set to 35%. Section 6 shows how the answers move with 
 | Ore | 20 a unit at Halcyon; the Kepler belt (15 rocks) holds about 37.5 ore | `asteroids.js` |
 | Repair | half a credit a point of hull (a full Wren repair is 50) | `station.js` |
 | Insurance | 20% of your credits, never less than 50 | `space.js` |
-| Parts, tier 1 / 2 / 3 on the Wren | shields 300 / 500 / 1,000; weapons 400 / 600 / 1,200; engine 350 / 550 / 1,100; tank 250 / 450 / 900; cargo 250 / 450 / 900 | `data_parts.js` |
+| Parts, tier 1 / 2 / 3 on the Wren | shields 300 / 500 / 1,000; weapons 400 / 600 / 1,200; engine 350 / 550 / 1,100; tank 250 / 450 / 900; cargo 250 / 450 / 900; autotarget 500 / 800 / 1,400 (the sixth part, priced between the first rapid fire and the first shields; it is a convenience, not a number the income loops use) | `data_parts.js` |
 | Ships | Kite 4,500, Ox 6,500, Talon 8,500, Pathfinder 11,000, Bastion 24,000; sells for 60%, parts for 50% | `data_ships.js`, `fleet.js` |
 | Pirate spawn at Halcyon | one every 15 s up to 8; raider 25%, drone 35%, gunship 40% | `data_systems.js` |
 

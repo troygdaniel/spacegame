@@ -140,7 +140,8 @@ const CT_PART_FX = {
   weapons: { delay: ['delay'], damage: ['damage'] },
   engine: { speedPct: ['speed', p => ctRound(1 + p / 100), v => ctRound((v - 1) * 100)], jump: ['range'], boostAdd: ['boost'], boostTank: ['tank'], boostRegen: ['regen'] },
   tank: { fuelMult: ['mul'] },
-  cargo: { holdPlus: ['add'] }
+  cargo: { holdPlus: ['add'] },
+  aim: { range: ['range'] }   // the autotarget's reach in px (src/autotarget.js); the tiers' names, texts and prices work like any part's
 };
 function ctPart(id) { // 'shields-2' -> { slot: 'shields', tier: 2, P: PARTS.shields }, or null
   const m = /^([a-z]+)-([1-3])$/.exec(id);

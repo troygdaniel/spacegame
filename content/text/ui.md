@@ -11,7 +11,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 |---|---|
 | help.station.1 | W A S D   walk (the arrow keys work too) |
 | help.station.2 | E   use the terminal, repair bay or ship |
-| help.station.3 | 1-5   buy a part in the shop |
+| help.station.3 | 1-6   buy a part in the shop |
 | help.station.4 | T   chat with someone in the bar (needs a chat key) |
 | help.station.5 | J   journal: who you have met |
 | help.station.6 | G   galaxy map (look only here; you jump from your ship) |
@@ -31,9 +31,10 @@ To translate, change the text column here, or copy this file to a name after ui 
 | help.space.6 | Space   fire (or click) |
 | help.space.7 | L   dock or land (fly slowly, close in) |
 | help.space.8 | T   mission panel |
-| help.space.9 | N   nav list: Enter picks a target |
-| help.space.10 | C   cruise to the target (A D nudge, S cancels) |
-| help.space.11 | G   galaxy map: pick a system, Enter charges the jump (S or Esc cancels) |
+| help.space.9 | R   autotarget on or off (needs the part from the shop) |
+| help.space.10 | N   nav list: Enter picks a target |
+| help.space.11 | C   cruise to the target (A D nudge, S cancels) |
+| help.space.12 | G   galaxy map: pick a system, Enter charges the jump (S or Esc cancels) |
 | help.surface.1 | W A S D   walk (the arrow keys work too) |
 | help.surface.2 | Mouse   aim, and click to fire |
 | help.surface.3 | E   talk to the colonist, board at the pad |

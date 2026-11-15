@@ -8,7 +8,7 @@
 // shop.js read their speeds, thrust, turn rate and hull through it, so a different model flies differently.
 // meta.js saves and loads the records (save v2).
 const SHIPREC = {
-  slots: ['engine', 'shields', 'weapons', 'tank', 'cargo'],            // section 7
+  slots: ['engine', 'shields', 'weapons', 'tank', 'cargo', 'aim'],            // section 7
   oldKeys: { armor: 'shields', rapid: 'weapons', booster: 'engine' },   // the v1 upgrade keys, tier for tier
   max: 6, name: 24, fuel: SHIP_MODELS.wren.tank, hull: SHIP_MODELS.wren.hull // fleet size, longest ship name, the Wren's tank and hull (data_ships.js)
 };
@@ -22,7 +22,7 @@ function newShip(model, at) {
   return {
     uid: 1, model: m.id, name: m.name, at: at || homeDock(),
     hull: m.hull, maxHull: m.hull, fuel: m.tank, ore: 0,
-    parts: { engine: 0, shields: 0, weapons: 0, tank: 0, cargo: 0 }
+    parts: { engine: 0, shields: 0, weapons: 0, tank: 0, cargo: 0, aim: 0 }
   };
 }
 function activeShip() { return G.fleet[G.active] || G.fleet[0]; }
@@ -71,7 +71,9 @@ const PART_STAT = {
   fireDelay: rec => partFx('weapons', rec.parts.weapons, 'delay'),       // ms between shots
   damage: rec => partFx('weapons', rec.parts.weapons, 'damage'),         // one player shot
   boostTank: rec => partFx('engine', rec.parts.engine, 'tank'),          // the boost energy ring (src/boost.js)
-  boostRegen: rec => partFx('engine', rec.parts.engine, 'regen')         // its refill a second
+  boostRegen: rec => partFx('engine', rec.parts.engine, 'regen'),        // its refill a second
+  aimRange: rec => partFx('aim', rec.parts.aim, 'range'),                // px: how far the guns look for a raider (0: no autotarget fitted)
+  aimLead: rec => partFx('aim', rec.parts.aim, 'lead')                   // 1: the shot is aimed ahead of a moving target
 };
 
 // shipStat('vmax') is the active ship's top speed in px/s. Names: hull, vmax (or speed), boost, accel, turn, tank, fuelPerLy,
