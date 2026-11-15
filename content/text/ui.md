@@ -31,9 +31,11 @@ To translate, change the text column here, or copy this file to a name after ui 
 | help.space.6 | Space   fire (or click) |
 | help.space.7 | L   dock or land (fly slowly, close in) |
 | help.space.8 | T   mission panel |
-| help.space.9 | N   nav list: Enter picks a target |
+| help.space.9 | N   nav list: Enter picks a target, P flies there |
 | help.space.10 | C   cruise to the target (A D nudge, S cancels) |
-| help.space.11 | G   galaxy map: pick a system, Enter charges the jump (S or Esc cancels) |
+| help.space.11 | P   autopilot to the target: it stops at the dock (any key cancels) |
+| help.space.12 | Tab   sector map: W S choose a body, Enter flies there |
+| help.space.13 | G   galaxy map: pick a system, Enter charges the jump (S or Esc cancels) |
 | help.surface.1 | W A S D   walk (the arrow keys work too) |
 | help.surface.2 | Mouse   aim, and click to fire |
 | help.surface.3 | E   talk to the colonist, board at the pad |

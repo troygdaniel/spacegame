@@ -2,7 +2,8 @@
 // N opens the nav list: every body you know of, nearest first, with its distance and the cruise time to it. Enter picks one as your
 // target (the amber objective arrow points at it, the radar arrow stays on the mission). C engages cruise toward the target: the ship turns
 // by itself, speeds up to 6000 px/s and slows down so it arrives about 900 px out at under 150 px/s, then drops back to local flight.
-// A and D nudge the heading, S cancels. Cruise costs no fuel and does nothing else: no shooting, no docking.
+// A and D nudge the heading, S cancels. Cruise costs no fuel and does nothing else: no shooting, no docking. The short legs and the last
+// mile are the autopilot's (src/autopilot.js: P in the list or with a target, or Enter on the Tab map); it uses cruise for the long middle.
 //   space.js   calls cruiseSetup(this) and cruiseFarBodies(this) in create(), cruiseFrame(this, time, dt) first thing in update()
 //              (it returns 'cruise' while the ship flies itself, 'nav' while the list is open, '' otherwise) and tests this.cruising
 //              where a 6000 px/s ship must not be hit or spawn pirates
@@ -22,7 +23,7 @@ const CRUISE = {
 const INTERDICT = { rate: 0.004, safe: 4000, cooldown: 90, calm: 2, ahead: 900, spread: 170, warnMs: 1200 };
 G.interdictCool = 0; // seconds of flying left before the next one (not saved)
 CRUISE.rnd = Math.random; // tests replace this to force or forbid the roll
-const CRUISE_ROWS = 8, CRUISE_TYPES = { station: 'STATION', planet: 'PLANET', belt: 'BELT', scenery: 'OUTPOST', poi: 'SIGNAL' };
+const CRUISE_ROWS = 8, CRUISE_TYPES = { station: 'STATION', planet: 'PLANET', belt: 'BELT', scenery: 'OUTPOST', poi: 'SIGNAL', gate: 'GATE' };
 
 // the chance that one frame of cruise (dt ms) in a system of this danger is interdicted
 function cruiseInterdictChance(danger, dt) { return INTERDICT.rate * danger * dt / 1000; }
@@ -60,11 +61,11 @@ function cruiseEta(dist) {
   return t;
 }
 
-// every body you know of in this system: stations, planets, belts and scenery are always known; a salvage site once you have found it
+// every body you know of in this system: stations, planets, belts, gates and scenery are always known; a salvage site once you have found it
 function cruiseKnown(s) {
   const out = [];
   sysBodies().forEach(b => {
-    if (b.type === 'station' || b.type === 'planet' || b.type === 'belt' || b.type === 'scenery') out.push(b);
+    if (b.type === 'station' || b.type === 'planet' || b.type === 'belt' || b.type === 'scenery' || b.type === 'gate') out.push(b);
     else if (b.type === 'poi' && (typeof siteState === 'function' ? siteState(b) : G.poi[b.id]) >= 1) out.push(b);
   });
   if (typeof POIRUN !== 'undefined' && POIRUN) POIRUN.sig.filter(q => q.state === 1).forEach(q => out.push({ id: q.id, type: 'poi', name: q.name, x: q.x, y: q.y }));
@@ -75,7 +76,7 @@ function cruiseKnown(s) {
 function cruiseSetup(s) {
   const cr = s.cr = {
     target: null, active: false, cancel: false, speed: 0, nudge: 0, navOpen: false, sel: 0, list: [], listAt: 0, k: null,
-    lk: 0, z: 1, rows: [], readAt: 0, ps: []
+    lk: 0, z: 1, rows: [], readAt: 0, ps: [], endWhy: '' // endWhy: how the last cruise ended (the autopilot reads it, src/autopilot.js)
   };
   s.cruising = false;
   s.events.once('shutdown', stopCruiseHum); // the rumble never outlives the scene (a death, a dock, a restart)
@@ -94,7 +95,7 @@ function cruiseSetup(s) {
 
   // the nav list: the shared glass panel with a row per body
   const ui = cr.ui = panel(s, { w: 660, h: 440, title: 'NAV  -  ' + sysDef().name.toUpperCase(), depth: 140 });
-  ui.tagText.setText('N  close'); ui.setHints([['W S', 'Choose'], ['Enter', 'Set target'], ['X', 'Clear target'], ['N', 'Close']]);
+  ui.tagText.setText('N  close'); ui.setHints([['W S', 'Choose'], ['Enter', 'Set target'], ['P', 'Fly there'], ['X', 'Clear'], ['N', 'Close']]);
   const w = ui.w, h = ui.h, add = o => { ui.box.add(o); return o; };
   [[-w / 2 + 34, 'BODY'], [-w / 2 + 250, 'TYPE'], [w / 2 - 150, 'DISTANCE'], [w / 2 - 30, 'CRUISE']].forEach(([x, str], i) => add(s.add.text(x, -h / 2 + 62, str, uiFont(12, '#5b7a92')).setOrigin(i > 1 ? 1 : 0, 0.5)));
   for (let i = 0; i < CRUISE_ROWS; i++) {
@@ -157,7 +158,7 @@ function cruiseNavDraw(s) {
 function cruisePick(s, b) {
   const cr = s.cr;
   cr.target = { id: b.id, name: b.name, type: b.type, x: b.x, y: b.y, r: b.r || 0 };
-  toast(s, 'Target: ' + b.name + '. Press C to cruise.', '#ffd37a'); sfx('chime');
+  toast(s, 'Target: ' + b.name + '. C cruises, P flies you there.', '#ffd37a'); sfx('chime');
 }
 
 // ---- engage ----
@@ -176,7 +177,7 @@ function cruiseEngage(s) {
 
 function cruiseEnd(s, why) {
   const cr = s.cr, ship = s.ship, t = cr.target;
-  cr.active = false; s.cruising = false; stopCruiseHum();
+  cr.active = false; s.cruising = false; cr.endWhy = why; stopCruiseHum();
   const sp = Math.min(cr.speed, why === 'cut' ? shipStat('vmax') : CRUISE.dropSpeed);
   ship.body.setVelocity(Math.cos(ship.rotation) * sp, Math.sin(ship.rotation) * sp).setDrag(0.55);
   cr.speed = 0; cr.cancel = false; cr.nudge = 0; s.lockUntil = 0;
