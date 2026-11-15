@@ -103,8 +103,10 @@ try {
     await skey('Y'); await run(500); await t.ev(`(${SH}.hangarApply(), 1)`); await run(200); const c0 = await t.ev('G.credits');
     await skey('ENTER'); await run(400); await skey('ENTER'); await run(700);
     const bought = 'prompt "' + prompt + '" (' + how + '); credits ' + c0 + ' -> ' + await t.ev('G.credits') + ', fleet ' + await fleet() + ', tab ' + await t.ev(`${SH}.tab`);
-    await skey('D'); await run(300); await skey('ENTER'); await run(700);
-    const r = bought + '; after D Enter: flying ' + await t.ev('activeShip().model') + ' (' + await t.ev('activeShip().name') + ')';
+    // board the new ship: the FLEET tab selects the one just bought, Enter boards it; if the selection sits on the old ship, D moves it and Enter boards
+    await skey('ENTER'); await run(700);
+    if ((await t.ev('activeShip().model')) !== 'kite') { await skey('D'); await run(300); await skey('ENTER'); await run(700); }
+    const r = bought + '; boarding: flying ' + await t.ev('activeShip().model') + ' (' + await t.ev('activeShip().name') + ')';
     await skey('ESC'); await runUntil("game.scene.isActive('Station')", 8000, 200); await run(800); return r;
   });
   await step('save-reload', async () => {

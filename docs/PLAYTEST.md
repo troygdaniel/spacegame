@@ -36,3 +36,23 @@ Measured in the running game, one line each with a value to try.
 - `node tests/loop.mjs` : only the scripted rescue. It removes drones and crawlers so it is deterministic, which also means it does not see bug 1.
 - `node tests/probe.mjs` : prints the numbers in this file.
 - `node tests/missions.mjs` (or `FULL=1 bash tests/smoke.sh`) : the mission board, Rescue, Escort, Police patrol and their failure paths, game clock stepped by hand, about 2 minutes. Ported from BuildBot's drive.mjs.
+
+## Round 4: the universe loop, scripted (card u-f1, main with B5, E2, E5, E6 and the perf pass, 2026-11-14)
+
+`node tests/playthrough.mjs` plays the loop a new player plays, in headless Chrome on the stepped clock, and prints a table; `tests/out/playthrough.json` keeps the numbers and `tests/out/pt4-*.png` a picture per step. Five runs while the script was being written; the last two were clean on every step: new game, fuel up, launch, cruise, jump to Kestrel, jump home, dock, buy the Kite and board it, save and reload. No console error in any run. The economy numbers per station are in `docs/UNIVERSE.md` 11.1 (`node tests/econprobe.mjs`).
+
+| What | Measured | Reads as |
+|---|---|---|
+| New game | 0 cr, one Wren, 40 of 40 units | as designed |
+| Fill 10 to 40 units at Halcyon | 240 cr (key 2 fills, key 1 is half for 160) | half a rescue; fine |
+| Launch to flight | 14 s wall on this Mac (software GL), pirates 13 in the system, none engaging (grace) | the 20 s grace holds |
+| Frame in Halcyon space (36000 px), the whole step / `Space.update` alone | 41 to 57 ms / 0.19 to 0.27 ms, 168 to 175 objects, load 6 to 14 | `docs/PERF.md` measured 38 ms and 0.6 ms: the game's own code is well under its baseline, the rest is the software rasteriser |
+| Frame in cruise | 30 to 41 ms / 0.24 to 0.32 ms | same |
+| Frame in Kestrel (empty, 5 bodies) | 23 to 30 ms / 0.13 to 0.17 ms, 96 objects | half of Halcyon: the objects are the cost |
+| Cruise, 6,946 px to the Slag Belt | arrives within 1 to 3 s of game time, top speed 5,468 px/s | a 36000 px system crosses in seconds; by design (UNIVERSE 2.2) |
+| Jump, each way | charge 4.35 s, tunnel 11 s, 6.3 units (50 cr) | 15 s per jump; the round trip burns 12.6 of 40 units |
+| Dock after the trip | prompt at 200 px, "Docked.", hull 100 | fine |
+| Buy the Kite at Halcyon | 5,000 to 500 cr, parked, Enter in the FLEET tab boards it | fine |
+| Save and reload | byte for byte the same (738 chars), the Kite still flying, 4.3 to 4.6 s wall to the station | fine; the reload time is this Mac's |
+
+Nothing to fix from this round. Two things for the design: a full tank is well over 400 cr for the big ships (UNIVERSE 11.1), and the cruise crosses a system so fast that the interdiction window is short (a roll at 40 to 70% of a few seconds). Rerun after E3 (the calls across systems) lands: `node tests/playthrough.mjs`, about 4 minutes plus the wait at the test lock.
