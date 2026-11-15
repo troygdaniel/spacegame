@@ -1,5 +1,13 @@
 // ---------- Station: walk around, take the mission, board the ship ----------
-let REPAIR_PRICE = 0.5; // credits a point of hull at the repair bay (content/stations/halcyon-station.md can change it)
+let REPAIR_PRICE = 0.5; // credits a point of hull at a repair bay that names no price of its own, which is Halcyon's (content/stations/halcyon-station.md can change it)
+// what the dock you are at charges a point of hull: its own dock.repair (src/data_systems.js: 0.75 at the Roost, which gouges), or REPAIR_PRICE where the dock names none
+function repairPrice(station) { const d = stationDock(station); return d && d.repair > 0 ? d.repair : REPAIR_PRICE; } // stationDock: src/data_parts.js
+// the door fee of a dock that takes one (dock.fee: 50 at the Roost): paid when you dock, never more than all you have, so nobody is locked out of a station for being poor
+function dockFee(s) {
+  const d = stationDock(), fee = d && d.fee > 0 ? d.fee : 0; if (!fee) return;
+  const pay = Math.min(fee, G.credits | 0); G.credits -= pay;
+  toast(s, pay < fee ? 'Docking fee: ' + pay + ' cr, all you had.' : 'Docking fee  -' + pay + ' cr', '#ffb454');
+}
 class Station extends Phaser.Scene {
   constructor() { super('Station'); }
   init(d) { this.arrive = !!(d && d.arrive); }
@@ -50,12 +58,13 @@ class Station extends Phaser.Scene {
     this.panelBox = this.ui.box.setVisible(false); this.boardObjs = [];
 
     if (this.arrive && G.mission === 'rescued') {
-      const pay = (missionDef() || MISSIONS.find(m => m.id === 'rescue') || { reward: REWARD }).reward; // the rescue call you took: its reward (content/missions/*.md)
+      const pay = callReward(missionDef() || MISSIONS.find(m => m.id === 'rescue') || { reward: REWARD }); // the rescue call you took: its reward (content/missions/*.md) times the pay of the system
       G.credits += pay; G.mission = 'none'; G.stats.missions++;
       toast(this, uiText('toast.delivered', { reward: pay }), '#6dff9c'); sfx('chime');
     } else if (this.arrive) {
       toast(this, uiText('toast.docked'), '#9fe9ff');
     }
+    if (this.arrive) dockFee(this); // the door fee, if the dock has one
     if (this.arrive) missionDock(this); // missions.js: a courier or haul bound for this station is paid
     if (this.arrive) sellOre(this); // asteroids.js: ore in the hold is sold on docking
     if (this.arrive) bountyDock(this); // enemies.js: what this flight's pirate kills paid
@@ -91,7 +100,7 @@ class Station extends Phaser.Scene {
       const L = cx - w / 2 + 16, cap = keyCap(this, m.key, selected ? AMBER : CYAN); cap.setPosition(L + cap.kw / 2, cy - h / 2 + 30); add(cap);
       txt(L + cap.kw + 10, cy - h / 2 + 30, m.title.toUpperCase(), 17, selected ? '#ffd37a' : '#9fe9ff', { style: { fontStyle: 'bold' } });
       txt(L, cy - h / 2 + 58, m.where, 13, '#8fb4c9');
-      txt(L, cy - h / 2 + 90, 'REWARD', 11, '#5b7a92'); txt(L, cy - h / 2 + 112, m.reward + ' cr', 28, '#ffb454', { style: { fontStyle: 'bold' } });
+      txt(L, cy - h / 2 + 90, 'REWARD', 11, '#5b7a92'); txt(L, cy - h / 2 + 112, callReward(m) + ' cr', 28, '#ffb454', { style: { fontStyle: 'bold' } });
       const r = risk(m);
       txt(L, cy - h / 2 + 144, 'RISK', 11, '#5b7a92');
       const pg = add(pips(this, L, cy - h / 2 + 157, r[1], 3, Phaser.Display.Color.HexStringToColor(r[2]).color));
@@ -112,7 +121,7 @@ class Station extends Phaser.Scene {
         txt(276, cy - 78, 'IN PROGRESS', 15, '#6dff9c', { ox: 1 });
         txt(-276, cy - 44, m.where, 14, '#8fb4c9');
         txt(-276, cy - 8, m.progress(), 17, '#e8f6ff', { oy: 0, style: { lineSpacing: 6 } });
-        txt(-276, cy + 84, 'PAYS ' + m.reward + ' cr', 16, '#ffb454', { style: { fontStyle: 'bold' } });
+        txt(-276, cy + 84, 'PAYS ' + callReward(m) + ' cr', 16, '#ffb454', { style: { fontStyle: 'bold' } });
         this.ui.setHints([['X', 'Drop the mission'], ['Esc', 'Close']]); return;
       }
       this.ui.titleText.setText('MISSION BOARD  -  ' + fleetStationName(G.lastDock).toUpperCase());
@@ -201,12 +210,12 @@ class Station extends Phaser.Scene {
       else if (near.key === 'pump') openPump(this);
       else if (near.key === 'repair') {
         // half a credit a point; too poor for a full repair and it mends as much as you can pay for
-        const missing = G.maxHull - G.hull, cost = Math.ceil(missing * REPAIR_PRICE);
+        const missing = G.maxHull - G.hull, price = repairPrice(), cost = Math.ceil(missing * price);
         if (missing <= 0) toast(this, 'Hull is already perfect.', '#9fe9ff');
         else if (G.credits <= 0) toast(this, 'Repair costs ' + cost + ' cr. You have 0.', '#ff4d6d');
         else {
           const pay = Math.min(cost, G.credits);
-          G.credits -= pay; G.hull = pay < cost ? Math.min(G.maxHull, G.hull + pay * 2) : G.maxHull;
+          G.credits -= pay; G.hull = pay < cost ? Math.min(G.maxHull, G.hull + Math.floor(pay / price)) : G.maxHull;
           beep(400, 0.2, 'triangle', 0.05, 300); toast(this, (pay < cost ? 'Partly repaired' : 'Hull repaired') + ' (-' + pay + ' cr).', '#6dff9c'); }
       } else if (near.key === 'ship') { sfx('dock'); go(this, 'Ship'); } // src/shipmode.js: look the ship over, then Launch (Enter)
     }
