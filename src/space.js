@@ -10,6 +10,7 @@ class Space extends Phaser.Scene {
   init(d) {
     this.from = (d && d.from) || 'station';
     this.jumped = this.from === 'jump';
+    this.seamless = !!(d && d.seamless); // started under the tunnel's flash (src/hyperspace.js handOver): the flash is the fade, so no black fade-in of its own
     G.deep = this.from === 'pullout' && d.deep ? d.deep : null;
     if (this.jumped && d.to && G.system !== d.to) enterSystem(d.to, d.origin || null); // src/universe.js: the system, G.known, G.jumps and where the ship appears
   }
@@ -20,7 +21,8 @@ class Space extends Phaser.Scene {
     shipSync(); // src/fleet.js: the hull cap comes from the model and its plating
     const WS = sysDef().size; this.WS = WS; // src/universe.js: the current system, from src/data_systems.js
     this.physics.world.setBounds(0, 0, WS, WS);
-    this.cameras.main.fadeIn(300, 0, 0, 0).setBounds(0, 0, WS, WS);
+    if (!this.seamless) this.cameras.main.fadeIn(300, 0, 0, 0);
+    this.cameras.main.setBounds(0, 0, WS, WS);
     spaceBackdrop(this, !!G.deep); // src/art_world.js: nebula, parallax star layers, distant sun, giant and moon (deep space has only stars)
     this.events.once('shutdown', () => { G.deep = null; }); // a pull-out lives only as long as this scene shows it
 

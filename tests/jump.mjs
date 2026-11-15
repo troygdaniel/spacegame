@@ -8,7 +8,7 @@
 // Saves tests/out/jump-*.png.
 import { launch, sleep } from './cdp.mjs';
 
-const SP = "game.scene.getScene('Space')", GL = "game.scene.getScene('Galaxy')";
+const SP = "game.scene.getScene('Space')", HY = "game.scene.getScene('Hyper')", GL = "game.scene.getScene('Galaxy')";
 let bad = 0, n = 0;
 const check = (name, ok, extra = '') => { n++; console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 
@@ -125,15 +125,21 @@ try {
   check('at 3.9 s of 4 the ring is not full: still charging, nothing burned', await E(`!!${SP}.jmp && activeShip().fuel === 40 && game.scene.isActive('Space')`));
   await secs(0.2);
   check('at 4 s the charge completes: the fuel is burned NOW (40 - 6.3 = 33.7), before the tunnel is even up', await E(`!${SP}.jmp && activeShip().fuel === 33.7`), JSON.stringify(await E(`[!!${SP}.jmp, activeShip().fuel]`)));
-  await until(`game.scene.isActive('Hyper')`, 120, 'the Hyper scene (the screen fades out first)');
-  check('then the Hyper scene starts', await E(`game.scene.isActive('Hyper') && !game.scene.isActive('Space')`));
-  const hy = JSON.parse(await E(`JSON.stringify({ dest: game.scene.getScene('Hyper').dest, ly: +game.scene.getScene('Hyper').ly.toFixed(2), fuel: game.scene.getScene('Hyper').fuel, tank: game.scene.getScene('Hyper').tank, dur: +game.scene.getScene('Hyper').dur.toFixed(1), demo: !!game.scene.getScene('Hyper').d.demo, sys: G.system, jumps: G.jumps })`));
+  await until(`game.scene.isActive('Hyper')`, 120, 'the Hyper scene (it opens at once, over the flight)');
+  check('then the Hyper scene is running and the flight is not', await E(`game.scene.isActive('Hyper') && !game.scene.isActive('Space')`));
+  // seamless (card space-game-warp-seamless): no fade to black, no empty scene: the tunnel comes in over the frozen flight
+  check('the flight is paused under the tunnel, not stopped: it keeps its picture', await E(`game.scene.isPaused('Space') && ${SP}.sys.settings.visible`));
+  check('no cut: no fade is running on either scene, and the tunnel scene has no background of its own', await E(`!${HY}.cameras.main.fadeEffect.isRunning && !${SP}.cameras.main.fadeEffect.isRunning && ${HY}.cameras.main.transparent`));
+  check('the tunnel is coming in over it: under Space, the dark layer is still thin', await E(`${HY}.under === 'Space' && ${HY}.t < 0.5 && ${HY}.mix < 0.6 && ${HY}.back.alpha === ${HY}.mix`), await E(`JSON.stringify([${HY}.under, ${HY}.t, ${HY}.mix])`));
+  check('its ship starts where the flight\'s ship was (about the middle of the screen) and the flight\'s own ship is hidden', await E(`!${SP}.ship.visible && !!${HY}.pose && Math.abs(${HY}.pose.x - W / 2) < 90 && Math.abs(${HY}.pose.y - H / 2) < 90 && ${HY}.ship.x <= ${HY}.pose.x + 1`), await E(`JSON.stringify([${HY}.pose, ${HY}.ship.x, ${HY}.ship.y])`));
+  const hy = JSON.parse(await E(`JSON.stringify({ dest: ${HY}.dest, ly: +${HY}.ly.toFixed(2), fuel: ${HY}.fuel, tank: ${HY}.tank, dur: +${HY}.dur.toFixed(1), demo: !!${HY}.d.demo, sys: G.system, jumps: G.jumps })`));
   check('the tunnel is told: KESTREL, 6.26 ly, 6.3 units burned of a tank of 40, about 10 s, not the demo', hy.dest === 'KESTREL' && hy.ly === 6.26 && hy.fuel === 6.3 && hy.tank === 40 && hy.dur > 9.5 && hy.dur < 10.5 && hy.demo === false, JSON.stringify(hy));
   check('the system has not changed yet, and no jump is counted until you arrive', hy.sys === 'halcyon' && hy.jumps === 0);
   check('leaving the system lost the escort: the call is failed', (await E('G.mission')) === 'failed');
   await secs(4);
+  check('by the middle of the tunnel the layer is full and the ship is in its place at 35% of the screen', await E(`${HY}.mix === 1 && ${HY}.back.alpha === 1 && Math.abs(${HY}.ship.x - (${HY}.cx - 14 + 28 * ${HY}.k)) < 2`), await E(`JSON.stringify([${HY}.mix, ${HY}.ship.x, ${HY}.cx])`));
   await snap('jump-tunnel');
-  await until(`game.scene.isActive('Space') && !game.scene.isActive('Hyper')`, 1200, 'the Space scene after the tunnel');
+  for (let i = 0; i < 1500 && !(await E(`game.scene.isActive('Space') && G.system === 'kestrel'`)); i += 2) await E('tick(2)'); // the new Space starts under the flash, while the tunnel scene is still up
   await tick(4);
   const arr = JSON.parse(await E(`JSON.stringify({ sys: G.system, known: G.known, jumps: G.jumps, x: Math.round(${SP}.ship.x), y: Math.round(${SP}.ship.y), v: Math.round(${SP}.ship.body.speed), rot: +${SP}.ship.rotation.toFixed(2), ws: ${SP}.WS, calm: ${SP}.calmUntil, arrival: G.arrival })`));
   check('G.system is Kestrel, it is known, one jump is counted, the arrival record is used up', arr.sys === 'kestrel' && arr.known.includes('kestrel') && arr.jumps === 1 && arr.arrival === null, JSON.stringify(arr));
@@ -141,6 +147,9 @@ try {
   check('it came out flying toward the middle at about 500 px/s', arr.v > 380 && arr.v < 520 && arr.rot < 0 && arr.rot > -1, JSON.stringify([arr.v, arr.rot]));
   check('the pirates are held off: a calm of 3 s, then the first wave ramps as usual', arr.calm > 0 && await E(`pirateCap(${SP}, ${SP}.time.now) === 0`));
   check('no console errors so far (an empty system is flown by the same scene)', t.errors.length === 0, t.errors.join(' | ').slice(0, 400));
+  check('the arrival starts UNDER the flash: the tunnel scene is still up, flashing, its tunnel hidden, and the new Space has no black fade-in of its own', await E(`game.scene.isActive('Hyper') && ${HY}.cameras.main.flashEffect.isRunning && ${HY}.children.list.every(o => !o.visible) && ${SP}.seamless === true && !${SP}.cameras.main.fadeEffect.isRunning`), await E(`JSON.stringify([game.scene.isActive('Hyper'), ${HY}.cameras.main.flashEffect.isRunning, ${SP}.seamless, ${SP}.cameras.main.fadeEffect.isRunning])`));
+  await until(`!game.scene.isActive('Hyper')`, 120, 'the tunnel scene to stop when the flash is over');
+  check('the flash is over: the tunnel scene is gone and the new Space runs on', await E(`!game.scene.isActive('Hyper') && game.scene.isActive('Space')`));
   await snap('jump-kestrel');
   await secs(3.5);
   check('3 s later the cap is 1 (the first wave) and nothing has spawned out of the calm', await E(`pirateCap(${SP}, ${SP}.time.now) === 1`));

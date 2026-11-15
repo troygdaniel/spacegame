@@ -4,8 +4,8 @@
 //   Enter        on a star the ship can reach: the map closes and the CHARGE starts: a ring fills round the ship for 4 s, the camera creeps in
 //   cancel       Esc, S (brake) or any hit empties the ring and costs nothing
 //   locked       no charge starts inside 2000 px of a station or planet ("too close to the mass: fly clear") or with a hostile within 1500 px ("hostiles near")
-//   complete     the fuel is burned NOW (a pull-out later does not refund it), the Hyper scene (src/hyperspace.js) plays the tunnel for ly x 1.6 s, then the Space
-//                scene starts again with { from: 'jump', to, origin }: enterSystem() in src/universe.js picks the system, the entry point and the calm
+//   complete     the fuel is burned NOW (a pull-out later does not refund it), the Hyper scene (src/hyperspace.js) opens OVER the frozen flight (no cut, no fade to
+//                black) and plays the tunnel for ly x 1.6 s, then the Space scene starts again under a white flash with { from: 'jump', to, origin }: enterSystem() in src/universe.js picks the system, the entry point and the calm
 //   F            in a system with no pump and a nearly empty tank: call the fuel ranger (src/fuel.js): 45 s, 10 units (more for a heavy ship), three times the home price
 //   space.js     calls jumpFrame(this, dt) first thing in update() and jumpCancel(this, 'hit') when the ship is hurt; meta.js asks jumpEscape(game) before it opens the pause menu
 //   tests        tests/jump.mjs runs it all on a stepped clock; JUMP.charge is the knob
@@ -101,13 +101,12 @@ function jumpCancel(s, why) {
 // the charge is done: the fuel goes now, the tunnel takes over
 function jumpGo(s) {
   const j = s.jmp, rec = activeShip(), from = G.system;
-  s.jmp = null; j.g.destroy(); j.label.destroy();
-  s.cameras.main.zoomTo(1, 100, 'Linear', true);
+  s.jmp = null; j.g.destroy(); j.label.destroy(); // the camera stays at the charge's zoom: the tunnel opens over this very picture (src/hyperspace.js hyperEnter)
   fuelBurn(j.cost, rec); // src/fuel.js
   missionLeaveSpace(s); // src/missions.js: an escort that is left behind fails
   missionLeaveSystem(s, from); // a call played in the system you are leaving fails with it (a courier or haul is carried out of one)
   const pull = pullRoll(from, j.to); // src/pullout.js: usually null; 2 to 7% of jumps are pulled out of the tunnel
-  go(s, 'Hyper', { dest: j.name.toUpperCase(), ly: j.ly, fuel: j.cost, tank: fuelTank(rec), next: 'Space', nextData: { from: 'jump', to: j.to, origin: from }, pull });
+  hyperEnter(s, { dest: j.name.toUpperCase(), ly: j.ly, fuel: j.cost, tank: fuelTank(rec), next: 'Space', nextData: { from: 'jump', to: j.to, origin: from }, pull }); // no cut: the tunnel comes in over the flight
 }
 // meta.js asks before it opens the pause menu: Esc during a charge cancels the charge and nothing else
 function jumpEscape(game) {

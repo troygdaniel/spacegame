@@ -3,7 +3,7 @@
 //   roll        jump.js asks pullRoll(from, to) the moment a jump goes: 2% + 1% x the higher danger of the two systems (3% between two quiet ones, 7% when
 //               one is a nest). A hit gives { at, danger }: how far along the tunnel it happens (40 to 70%) and how big the ambush is
 //   tunnel      the Hyper scene (src/hyperspace.js) gets it as `pull`: at that point the tunnel flickers, an alarm sounds, the rings collapse, and the
-//               scene hands over to Space with { from: 'pullout', deep }
+//               scene starts Space with { from: 'pullout', deep } under a red flash (no cut)
 //   deep space  the Space scene reads G.deep (src/universe.js: deepSystem) as the current system: an empty one, 16000 px, a dark tint, no station or planet, no
 //               timed pirates; deepSetup() places 3 to 5 pirates ahead of the ship (3 at danger 1 to 2, 4 at 3 to 4, 5 at 5), all of them engaged at once.
 //               No docking (nothing to dock at), no cruise (cruise.js) and no jump (jump.js): the drive is spent
@@ -84,7 +84,8 @@ function deepFrame(s) {
 function deepResume(s) {
   const dp = G.deep;
   if (!dp || s.dead || s.leaving) return;
-  go(s, 'Hyper', { dest: dp.dest, ly: dp.ly, fuel: dp.fuel, tank: dp.tank, secs: dp.left, frac0: dp.at, demo: dp.demo, next: dp.next, nextData: dp.nextData });
+  hyperEnter(s, { dest: dp.dest, ly: dp.ly, fuel: dp.fuel, tank: dp.tank, secs: dp.left, frac0: dp.at, demo: dp.demo, next: dp.next, nextData: dp.nextData });
+  G.deep = null; // deep space is over: the scene stays paused under the tunnel as a picture only, and the arrival replaces it
 }
 
 // what boot.js passes for #pullout: a demo tunnel of 6.3 ly that is pulled out at 50% with the danger-3 ambush (hyperDemo is src/hyperspace.js)
