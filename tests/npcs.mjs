@@ -1,4 +1,4 @@
-// The Drift bar's six characters (src/shop.js NPCS, sprites in src/interior.js): the data rules of docs/NPC-CHAT.md 3.1 and docs/MODDING.md 5.3,
+// The Drift bar's six characters and the keeper of the other bars (src/shop.js NPCS, sprites in src/interior.js): the data rules of docs/NPC-CHAT.md 3.1 and docs/MODDING.md 5.3,
 // IDA appearing only after the first rescue is paid, and a real talk with each new character. One headless Chrome, closed at the end.
 // Run: node tests/npcs.mjs   (exit code 1 on any failure)
 import { launch, sleep } from './cdp.mjs';
@@ -15,9 +15,9 @@ try {
 
   console.log('A. the table');
   const rows = await J(`NPCS.map(n => ({ id: n.id, name: n.name, role: n.role, voice: n.voice, persona: n.persona, lines: n.lines, tex: 'in-' + (n.sprite || n.name.toLowerCase()), hasWhen: typeof n.when === 'function' }))`);
-  check('six characters', rows.length === 6, rows.map(r => r.id).join(','));
+  check('six characters at Halcyon, and the keeper of the other bars after them', rows.length === 7 && rows[6].id === 'barkeep', rows.map(r => r.id).join(','));
   check('ids are the six of the design', ['juno', 'tamsin', 'dex', 'moss', 'sable', 'ida'].every((id, i) => rows[i] && rows[i].id === id));
-  check('names are unique', new Set(rows.map(r => r.name)).size === 6);
+  check('names are unique', new Set(rows.map(r => r.name)).size === 7);
   const PARTS = ['Who:', 'Manner:', 'Knows:', 'Wants:', 'Will not:'];
   for (const r of rows) {
     const p = r.persona || '', parts = p.split('\n');
@@ -25,10 +25,10 @@ try {
     check(r.id + ': persona has the five labelled parts in order', parts.length === 5 && parts.every((x, i) => x.startsWith(PARTS[i])), parts.map(x => x.split(':')[0]).join('|'));
     check(r.id + ': persona is at most 600 characters, plain text', p.length > 200 && p.length <= 600 && !/[\u0000-\u0009\u000b-\u001f​-‏‪-‮<>]/.test(p), String(p.length));
     const sentences = l => (l.match(/[.!?](?=\s|$)/g) || []).length;
-    check(r.id + ': three lines, each at most two sentences and 240 characters', r.lines.length >= 3 && r.lines.every(l => l.length <= 240 && sentences(l) <= 2), r.lines.map(l => l.length + '/' + sentences(l)).join(' '));
+    check(r.id + ': three lines (the keeper says the station\'s own, at Halcyon two), each at most two sentences and 240 characters', r.lines.length >= (r.id === 'barkeep' ? 1 : 3) && r.lines.every(l => l.length <= 240 && sentences(l) <= 2), r.lines.map(l => l.length + '/' + sentences(l)).join(' '));
     check(r.id + ': both stride sprites exist', await t.ev(`game.textures.exists('${r.tex}0') && game.textures.exists('${r.tex}1')`), r.tex);
   }
-  check('voices are all different', new Set(rows.map(r => r.voice)).size === 6);
+  check('voices are all different', new Set(rows.map(r => r.voice)).size === 7);
   check('only IDA has a condition', rows.filter(r => r.hasWhen).map(r => r.id).join() === 'ida');
 
   console.log('B. reactions answer to the player\'s situation');

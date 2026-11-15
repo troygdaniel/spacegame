@@ -18,7 +18,7 @@
 #   4g. tests/shipmode.mjs: boarding opens the Ship bay instead of launching; Enter launches, Esc goes back, Tab opens the map over it
 #   4i. tests/launch.mjs: pirates fair at launch (20 s grace, one-at-a-time first wave, spawns kept out, hit invulnerability)
 #   4j. tests/contentboot.mjs: a bad, missing, broken or hand-edited content.generated.js never stops the game reaching Title and playing
-#   4l. tests/npcs.mjs: the six bar characters (persona cards, lines, reactions), IDA only after the first rescue is paid, a talk with each new one
+#   4l. tests/npcs.mjs: the six bar characters and the keeper of the other bars (persona cards, lines, reactions), IDA only after the first rescue is paid, a talk with each new one
 #   4m. tests/systemart.mjs: planet kinds, star types and the four station looks for other systems (not used by the game yet)
 #   4n. tests/savemig.mjs: save v2 and the v1 migration; G.hull, G.maxHull, G.ore and G.upgrades over the active ship; unknown ids fall back
 #   4p. tests/contentui.mjs: the Title screen's content chip, problems panel and MODDED tag (nothing shows when all is well)
@@ -36,6 +36,7 @@
 #   4zf. tests/jump.mjs: the jump: G opens the galaxy map, Enter charges 4 s, Esc/S/a hit cancel, locked near a mass or a hostile, the fuel burns at the end, the Hyper tunnel, arrival in an empty Kestrel with 3 s of calm, the fuel ranger (docs/UNIVERSE.md 2.3)
 #   4zg. tests/worldat.mjs: worldAt(systemId) gives the code's Halcyon row and the other seven from their files; Halcyon built from its files alone equals the code's row; every field of the eight systems and six stations has a home; a pack of wrong files never blanks the game
 #   4zh. tests/pullout.mjs: the pull-out: the roll (2% + 1% x the higher danger, at 40 to 70% of the tunnel), the flicker and alarm and collapse, deep space (empty, dark, 3 to 5 pirates by danger, no dock, cruise or jump), clear them and the tunnel resumes for the time left, dying wakes you at the last dock, a nest's entry pirates, the #pullout demo (docs/UNIVERSE.md 5.2)
+#   4zr. tests/stationlook.mjs: the Station scene reads its station's data: name, accent colour, which desks stand in the hall, the bar's lines; stores where there is no bar; the pirate dock (card u-e5)
 #   4zq. tests/systems.mjs: the eight star systems (docs/UNIVERSE.md 4.2): the design table, which ship reaches which system, the layouts, every dock, every pirate table; the shipped files equal the code's rows; each system flown 4 s, each station docked at and launched from
 #   4zo. tests/perfart.mjs: the world art is pixel for pixel what it was before the speed-up (the noise against its first version, 47 textures against tests/fixtures/arthash.json)
 #   4zp. tests/perfleak.mjs: six trips round Station, Ship, Space, Surface leave no physics worlds, sprites or bodies behind (the Space die() wrapper used to stack at every launch)
@@ -171,6 +172,9 @@ if node tests/perfleak.mjs; then :; else fail=1; fi
 
 echo "== 4zq. the eight star systems: the design table, who reaches what, the layouts, every dock; each one flown, drawn and docked at (tests/systems.mjs)"
 if node tests/systems.mjs; then :; else fail=1; fi
+
+echo "== 4zr. the Station scene follows the station: colour, desks, bar and keeper, stores, the pirate dock (tests/stationlook.mjs)"
+if node tests/stationlook.mjs; then :; else fail=1; fi
 
 echo "== 5. mission flow (board, Rescue, Escort, Police patrol, failures; about 2 minutes)"
 if [ "${FULL:-0}" = 1 ]; then
