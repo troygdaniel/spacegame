@@ -6,7 +6,12 @@
 //
 // LANDS DARK (UNIVERSE.md 10.1 rule 2): nothing in the game opens it yet and it never touches G or the save. The only way in is
 // the test hash:  index.html#hyper  (Kestrel, 6.3 ly, 10 s, cyan)  or  index.html#hyper<ly>  (#hyper14 white, #hyper24 amber, 30 s).
-// B4 (the jump) will start it with  scene.start('Hyper', { dest, ly, fuel, tank, next: 'Space', nextData })  (demo: false).
+// B4 (the jump) starts it with hyperEnter(scene, { dest, ly, fuel, tank, next: 'Space', nextData })  (demo: false).
+// SEAMLESS (card space-game-warp-seamless): a real jump never cuts the screen. hyperEnter() pauses the flight (it keeps drawing underneath, as under
+// the galaxy map) and launches Hyper ON TOP of it: a dark layer, the streaks and the HUD fade in over the frozen picture while the ship glides from where
+// it was to its place in the tunnel. At the end handOver() launches the next Space UNDER a white (or, for a pull-out, red) flash, hides the tunnel and
+// stops this scene: the new system is simply what is left when the flash fades. No fade to black, no scene shown empty. The #hyper and #pullout
+// test hashes have nothing beneath them and keep the plain fade in and the fade out to the title.
 //
 // Cheap to draw: the tunnel is ONE Graphics redrawn each frame (about a thousand short segments, the polyline helpers of hud.js);
 // the soft lights (nose bloom, lens flare, the glow ahead, the edge vignette) are three small canvas textures made once.
@@ -15,6 +20,7 @@
 const HYPER = {
   secPerLy: 1.6, minSec: 6, maxSec: 30,            // the knob: seconds of tunnel per light year, and its limits
   shipX: 0.35, stars: 220, near: 26,               // the ship's place across the screen; streaks, of which `near` are long and close
+  blend: 0.9, flash: 650,                          // seamless: seconds the tunnel takes to come in over the flight beneath it; ms of the white flash that hides the next scene starting
   gateEvery: 0.3, gateLife: 1.3,                   // a gate every 0.3 s; each crosses the screen in 1.3 s
   shake: 0.0015, ramp: 1.2, tail: 0.9,             // camera shake; seconds to build speed at the start and to slow down at the end
   fuelPerLy: 1, tank: 40,                          // demo numbers only: the real ones come with the jump card (B1, B4)
@@ -79,6 +85,17 @@ function hyperVignetteTex(scene, key) { // dark at the edges, clear in the middl
   x.fillStyle = gr; x.fillRect(0, 0, w, h); c.refresh();
 }
 
+// Start the tunnel over the scene that is flying now (jump.js at the end of the charge, pullout.js when the tunnel re-forms). The scene is paused, not stopped:
+// it keeps its last picture under the tunnel. `pose` is where its ship is on the screen, so the tunnel's ship can start exactly there.
+function hyperEnter(s, data) {
+  if (!s || s.leaving) return;
+  s.leaving = true;
+  const cam = s.cameras.main, sh = s.ship;
+  const pose = sh && sh.active ? { x: (sh.x - cam.worldView.x) * cam.zoom + cam.x, y: (sh.y - cam.worldView.y) * cam.zoom + cam.y, rot: sh.rotation, sc: sh.scaleX * cam.zoom } : null;
+  s.scene.pause();
+  s.scene.launch('Hyper', Object.assign({}, data, { under: s.scene.key, pose }));
+}
+
 class Hyper extends Phaser.Scene {
   constructor() { super('Hyper'); }
 
@@ -94,12 +111,17 @@ class Hyper extends Phaser.Scene {
     this.t = 0; this.k = 0; this.gates = []; this.gateAcc = -0.3; this.arrived = false; this.leaving = false;
     this.pull = d.pull || null; this.frac0 = d.frac0 || 0; // a pull-out to come at this fraction of the tunnel; or how far along a resumed tunnel starts (src/pullout.js)
     this.pulled = false; this.pullT = 0; this.coll = 0;
+    this.under = d.under || null; this.pose = d.pose || null; // seamless: the scene paused beneath this one, and where its ship was on the screen
+    this.mix = this.under ? 0 : 1; this.handed = false;      // how far the tunnel has come in over that picture (0 to 1); true once the next scene is launched
   }
 
   create() {
     shipRefresh(this); // the ship shows the upgrade tiers you own
     const cam = this.cameras.main;
-    cam.setBackgroundColor('#03050c'); cam.fadeIn(500, 0, 0, 0);
+    if (this.under) { // opened over the flight: its picture stays, the dark and the tunnel come in over it; its own ship is drawn again below, at the same place
+      const u = this.scene.get(this.under); if (u && u.ship) u.ship.setVisible(false);
+      this.back = this.add.rectangle(W / 2, H / 2, W, H, 0x03050c).setDepth(-1).setAlpha(0);
+    } else { cam.setBackgroundColor('#03050c'); cam.fadeIn(500, 0, 0, 0); }
     cam.shake((this.dur + 1) * 1000, HYPER.shake, true);
     this.cx = W * HYPER.shipX; this.cy = H / 2;
 
@@ -117,36 +139,58 @@ class Hyper extends Phaser.Scene {
     this.halo = this.add.image(this.cx, this.cy, 'hyper-glow').setBlendMode(Phaser.BlendModes.ADD).setTint(this.tint).setDepth(4).setAlpha(0);
     this.bloom = this.add.image(this.cx, this.cy, 'hyper-glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(6).setAlpha(0);
     this.flare = this.add.image(this.cx, this.cy, 'hyper-glow').setBlendMode(Phaser.BlendModes.ADD).setTint(this.tint).setDepth(6).setAlpha(0);
-    this.add.image(W / 2, H / 2, 'hyper-vig').setDisplaySize(W, H).setDepth(50);
+    this.vig = this.add.image(W / 2, H / 2, 'hyper-vig').setDisplaySize(W, H).setDepth(50);
 
     this.hg = this.add.graphics().setScrollFactor(0).setDepth(100);
     this.h = { s: this, g: this.hg, t: {}, seen: {} }; // what hudPut (hud.js) wants for its text pool
 
     this.hum = hyperHum(this.dur);
     if (!HYPER_QUIET) { sfx('hyperCharge'); this.time.delayedCall(HYPER.ramp * 1000 + 100, () => { if (!this.arrived) sfx('hyperJump'); }); } // the charge, then the jump as the tunnel reaches speed (the jump card B4 calls the same two)
-    this.events.once('shutdown', () => { hyperHumStop(this.hum); this.hum = null; });
+    this.events.once('shutdown', () => {
+      hyperHumStop(this.hum); this.hum = null;
+      if (this.leaving && !this.handed && this.under) this.scene.stop(this.under); // a demo going back to the Title: the flight paused beneath goes too (a hand-over has restarted it instead)
+    });
     this.input.keyboard.on('keydown-ESC', () => this.leave());
-    this.input.keyboard.on('keydown-R', () => { if (!this.leaving) this.scene.restart(this.d); });
+    this.input.keyboard.on('keydown-R', () => { if (!this.leaving && this.d.demo) this.scene.restart(this.d); }); // the replay is the test hashes' (the hint says so)
   }
 
   leave() {
     if (this.leaving) return;
-    go(this, this.d.demo ? 'Title' : (this.d.next || 'Space'), this.d.nextData);
+    if (this.d.demo) { go(this, 'Title'); return; }
+    this.handOver(this.d.next || 'Space', this.d.nextData, [255, 255, 255]); // Esc in a real tunnel skips to the arrival
+  }
+
+  // the next scene starts UNDER a flash that hides the swap; this scene hides its tunnel and stops when the flash is over (no black, no cut)
+  handOver(key, data, rgb) {
+    if (this.leaving) return;
+    if (key !== 'Space') { go(this, key, data); return; } // the old fade, for anything that is not the flight
+    this.leaving = true; this.handed = true;
+    this.cameras.main.flash(HYPER.flash, rgb[0], rgb[1], rgb[2]);
+    this.scene.launch('Space', Object.assign({ seamless: true }, data)); // space.js: no fade-in of its own
+    this.children.list.forEach(o => { if (o.setVisible) o.setVisible(false); });
+    this.time.delayedCall(HYPER.flash + 60, () => this.scene.stop());
   }
 
   update(time, delta) {
+    if (this.handed) return; // the next scene is starting under the flash
     const dt = Math.min(delta, 100) / 1000;
     if (!this.arrived) this.t += dt;
     const t = this.t, dur = this.dur;
+    if (this.under && this.mix < 1) { // the tunnel comes in over the frozen flight
+      this.mix = Phaser.Math.Easing.Sine.InOut(Phaser.Math.Clamp(t / HYPER.blend, 0, 1));
+      this.back.setAlpha(this.mix); this.vig.setAlpha(this.mix); this.g.setAlpha(this.mix); this.hg.setAlpha(this.mix);
+    }
     // k: how fast the tunnel runs, 0..1: builds up over the first 1.2 s, slows over the last 0.9 s
     const up = Phaser.Math.Clamp(t / HYPER.ramp, 0, 1), down = Phaser.Math.Clamp((dur - t) / HYPER.tail, 0, 1);
     const ease = Phaser.Math.Easing.Sine.InOut;
     let k = ease(up) * ease(down);
     if (this.pull && !this.pulled && t / dur >= this.pull.at) this.pullBegin();
     if (this.pulled) k = this.pullFrame(dt, k);
+    if (this.handed) return; // the collapse just handed over to deep space: nothing more is drawn this frame (hudPut would show its texts again)
     this.k = k; const v = 0.12 + 0.88 * k;
     this.drawTunnel(t, dt, k, v);
     this.drawHud(t);
+    if (this.mix < 1) Object.values(this.h.t).forEach(tx => tx.setAlpha(tx.alpha * this.mix)); // hudPut sets every text's alpha each frame: scale it by the fade-in
     if (t >= dur && !this.arrived && !this.pulled) this.arrive();
   }
 
@@ -172,8 +216,7 @@ class Hyper extends Phaser.Scene {
   }
   // the hand-over: a red flash, then the Space scene with the pirates (it reads the record pullRecord makes)
   pullGo() {
-    this.cameras.main.flash(500, 255, 90, 90);
-    go(this, 'Space', { from: 'pullout', deep: pullRecord(this.d, this.pull, this.dur) });
+    this.handOver('Space', { from: 'pullout', deep: pullRecord(this.d, this.pull, this.dur) }, [255, 90, 90]); // a red flash, and deep space starts under it
   }
 
   drawTunnel(t, dt, k, v) {
@@ -226,19 +269,24 @@ class Hyper extends Phaser.Scene {
     });
 
     // the ship: hovers, surges forward as the tunnel builds, flames out of its nozzles
-    const ship = this.ship, sc = ship.scaleX, breath = Math.sin(t * 1.3);
-    ship.x = this.cx - 14 + 28 * k; ship.y = cy + Math.sin(t * 1.6) * 3.5; ship.rotation = Math.sin(t * 1.1) * 0.025;
-    const r = ship.rotation, c = Math.cos(r), n = Math.sin(r), flame = hyperMix(0x9fe9ff, tint, 0.3);
+    const ship = this.ship, breath = Math.sin(t * 1.3);
+    const bx = this.cx - 14 + 28 * k, by = cy + Math.sin(t * 1.6) * 3.5, br = Math.sin(t * 1.1) * 0.025;
+    if (this.pose && this.mix < 1) { // seamless: it starts where the flight left it (place, heading, size) and glides to its place in the tunnel
+      const P = this.pose, m = this.mix;
+      ship.x = P.x + (bx - P.x) * m; ship.y = P.y + (by - P.y) * m; ship.rotation = Phaser.Math.Angle.Wrap(P.rot) * (1 - m) + br * m; ship.setScale(P.sc + (1.15 - P.sc) * m);
+    } else { ship.x = bx; ship.y = by; ship.rotation = br; }
+    const sc = ship.scaleX, r = ship.rotation, c = Math.cos(r), n = Math.sin(r), flame = hyperMix(0x9fe9ff, tint, 0.3);
     (SHIPS.nozzles.ship || [[-14, 0, 1]]).forEach(([dx, dy, size]) => {
       shipsFlame(g, ship.x + (c * dx - n * dy) * sc, ship.y + (n * dx + c * dy) * sc, r, 0.55 + 0.45 * v, size * sc, flame, 1.1 + 1.3 * v);
     });
 
     // the light: a bloom bleeding from the nose that breathes, a thin lens flare across it, the glow of the distance ahead
     const nx = ship.x + 24 * sc, ny = ship.y;
-    this.halo.setPosition(ship.x, ship.y).setScale(1.9, 1.1).setAlpha(0.32 * (0.3 + 0.7 * k));
-    this.bloom.setPosition(nx, ny).setScale((1.6 + 0.25 * breath) * (0.5 + 0.5 * k)).setAlpha((0.65 + 0.25 * breath) * (0.3 + 0.7 * k));
-    this.flare.setPosition(nx, ny).setScale(7 + 0.5 * breath, 0.22).setAlpha(0.4 * k * (0.7 + 0.3 * breath));
-    this.far.setAlpha((0.3 + 0.1 * Math.sin(t * 0.7)) * (0.2 + 0.8 * k));
+    const mx = this.mix;
+    this.halo.setPosition(ship.x, ship.y).setScale(1.9, 1.1).setAlpha(0.32 * (0.3 + 0.7 * k) * mx);
+    this.bloom.setPosition(nx, ny).setScale((1.6 + 0.25 * breath) * (0.5 + 0.5 * k)).setAlpha((0.65 + 0.25 * breath) * (0.3 + 0.7 * k) * mx);
+    this.flare.setPosition(nx, ny).setScale(7 + 0.5 * breath, 0.22).setAlpha(0.4 * k * (0.7 + 0.3 * breath) * mx);
+    this.far.setAlpha((0.3 + 0.1 * Math.sin(t * 0.7)) * (0.2 + 0.8 * k) * mx);
   }
 
   drawHud(t) {
@@ -272,11 +320,11 @@ class Hyper extends Phaser.Scene {
     if (this.d.demo) hudPut(h, 'hint', 24, H - 24, (this.d.pull ? 'TEST HASH #pullout' : 'TEST HASH #hyper') + '  -  NO GAME EFFECT  -  ESC LEAVE  -  R REPLAY', { size: HT.tag, color: HUD_DIM, spacing: 2 });
   }
 
-  // the end: a white flash, then back where the demo started (a real jump will hand over to the arrival scene)
+  // the end: a white flash, and the arrival scene starts under it (a demo has nothing to arrive in: back where it started)
   arrive() {
     this.arrived = true;
     if (!HYPER_QUIET) sfx('hyperArrive');
-    this.cameras.main.flash(650, 255, 255, 255);
-    this.time.delayedCall(700, () => this.leave());
+    if (this.d.demo) { this.cameras.main.flash(HYPER.flash, 255, 255, 255); this.time.delayedCall(700, () => this.leave()); return; }
+    this.handOver(this.d.next || 'Space', this.d.nextData, [255, 255, 255]);
   }
 }

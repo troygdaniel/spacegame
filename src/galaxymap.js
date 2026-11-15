@@ -2,8 +2,8 @@
 // An overlay scene in the HUD glass: the stars as glowing nodes coloured by kind, a ring on those with a dock, a row of danger pips under each
 // name, faint links between stars within the jump range of the ship you fly, a dashed ring for that range round the system you are in, and a card
 // for the star you pick: its distance in light years, what the jump costs in fuel, how long the tunnel takes, whether it has a pump, how dangerous
-// it is, and when you cannot go, why (out of range by so many ly, or short by so many units of fuel). Known stars only (G.known); unknown ones
-// within reach of a known star show as "?" dots.
+// it is, and when you cannot go, why (out of range by so many ly, or short by so many units of fuel). Known stars only (G.known: the ones you have been to, and
+// every one within the jump range of where you are, galaxyChart below); unknown ones near a known star but out of range show as "?" dots.
 // It LANDS DARK: nothing opens it but the test hash index.html#galaxy (boot.js; galaxyDemo() below). The G key, the Tab map's button and the jump
 // itself arrive with card u-b4; they open the scene with scene.run('Galaxy', { from, onJump }), and onJump(id) is called when Enter is pressed on a
 // star the ship can reach. With no onJump Enter does nothing, and the hint says so.
@@ -53,6 +53,16 @@ function galaxySystems() {
 }
 const galaxyFind = id => galaxySystems().find(s => s.id === id) || null;
 const galaxyLy = (a, b) => Math.hypot(a.ly[0] - b.ly[0], a.ly[1] - b.ly[1]);
+// The stars within the jump range of the system you are in are CHARTED: named, pickable, and kept in G.known (the save). Called when the map opens and when a jump
+// arrives (src/space.js). Without it a new player knew Halcyon and Kestrel only: Brass Reach and The Hollow, inside the dashed ring, were "?" dots that nothing could
+// pick, and a star only became known by being picked (card space-game-travel-clarity). Returns the rows of the stars charted just now.
+function galaxyChart(rec) {
+  const here = galaxyFind(G.system), added = [];
+  if (!here) return added;
+  const range = shipStat('range', rec || activeShip());
+  galaxySystems().forEach(s => { if (!G.known.includes(s.id) && galaxyLy(here, s) <= range + 1e-9) { G.known.push(s.id); added.push(s); } });
+  return added;
+}
 // can the ship fly from a to b (system rows from galaxySystems)? Same rules and same answer shape as jumpCheck in src/fuel.js, which only knows the systems in SYSTEMS.
 function galaxyJump(a, b, rec) {
   rec = rec || activeShip();
@@ -78,6 +88,7 @@ class Galaxy extends Phaser.Scene {
     this.ui = panel(this, { w, h, title: 'GALAXY', dim: true, depth: 0 });
     this.box = this.ui.box;
     this.rec = activeShip(); this.here = galaxyFind(G.system) || galaxySystems()[0];
+    galaxyChart(this.rec); if (typeof TRAVEL !== 'undefined') TRAVEL.off = true; // what is in range is charted; a player who has opened the map no longer needs the "G opens it" line (src/guide.js)
     this.all = galaxySystems(); this.known = this.all.filter(s => (G.known || []).includes(s.id) || s.id === this.here.id);
     this.dim = this.all.filter(s => !this.known.includes(s) && this.known.some(k => galaxyLy(k, s) <= GALAXY.near)); // the "?" dots
     // the map area (panel coordinates) and the projection from light years to it
@@ -122,7 +133,7 @@ class Galaxy extends Phaser.Scene {
     }
     // the legend, top left of the map where no star is: kinds by colour, and what the two kinds of line mean
     const lx = ax0 + 14, ly0 = ay0 + 14, items = [['HOME', CYAN], ['OUTPOST OR HUB', GREEN], ['MINING', AMBER], ['PIRATE NEST', RED], ['EMPTY WILD', 0x9aa7b3], ['GRAVEYARD', 0xe8f4ff]];
-    g.fillStyle(0x050c18, 0.8); g.fillRect(lx - 8, ly0 - 10, 150, items.length * 16 + 50);
+    g.fillStyle(0x050c18, 0.8); g.fillRect(lx - 8, ly0 - 10, 150, items.length * 16 + 66);
     items.forEach(([name, col], i) => {
       const y = ly0 + 6 + i * 16; g.fillStyle(col, 0.3); g.fillCircle(lx + 4, y, 6); g.fillStyle(col, 1); g.fillCircle(lx + 4, y, 3);
       this.box.add(this.add.text(lx + 18, y, name, uiFont(10, '#8fb4c9')).setOrigin(0, 0.5));
@@ -130,6 +141,7 @@ class Galaxy extends Phaser.Scene {
     const yl = ly0 + 6 + items.length * 16 + 4;
     g.lineStyle(1.2, CYAN, 0.9); g.lineBetween(lx - 2, yl, lx + 14, yl); this.box.add(this.add.text(lx + 18, yl, 'in range of your ship', uiFont(10, '#8fb4c9')).setOrigin(0, 0.5));
     g.lineStyle(1.2, AMBER, 0.9); g.lineBetween(lx - 2, yl + 16, lx + 5, yl + 16); g.lineBetween(lx + 9, yl + 16, lx + 14, yl + 16); this.box.add(this.add.text(lx + 18, yl + 16, 'your jump range', uiFont(10, '#8fb4c9')).setOrigin(0, 0.5));
+    this.box.add(this.add.text(lx + 4, yl + 32, '?', uiFont(12, '#5b7a92', { fontStyle: 'bold' })).setOrigin(0.5)); this.box.add(this.add.text(lx + 18, yl + 32, 'beyond your range', uiFont(10, '#8fb4c9')).setOrigin(0, 0.5));
   }
 
   // ---- one label per star, made once; the glow and rings are drawn every frame under them ----

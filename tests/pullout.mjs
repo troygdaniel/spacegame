@@ -28,6 +28,7 @@ try {
   const key = (code, extra = '') => E(`window.dispatchEvent(new KeyboardEvent('keydown', { code: '${code}', ${extra} }))`);
   const until = async (cond, frames, what) => { for (let i = 0; i < frames; i += 20) { if (await E(cond)) return true; await tick(20); } check('waited for ' + what, false); return false; };
   const snap = async name => { await t.shot(name); return t.shot(name); };
+  const untilNew = async cond => { for (let i = 0; i < 1500 && !(await E(cond)); i += 2) await E('tick(2)'); }; // a hand-over starts the next Space UNDER the flash: look at it the moment it starts, not when the tunnel scene is gone
   // the dice: the next values come from the list, then the real ones
   const dice = (...v) => E(`(() => { const q = ${JSON.stringify(v)}, real = Math.random; PULL.rnd = () => q.length ? q.shift() : real(); return 1; })()`);
   const park = (x, y) => E(`(() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.eb.getChildren().forEach(b => b.disableBody(true, true));
@@ -91,11 +92,12 @@ try {
   await secs(1.0);
   check('then the rings collapse (0 to 1 over 0.9 s) and the hum is gone', await E(`${HY}.coll > 0 && ${HY}.hum === null`), await E(`[${HY}.coll, !!${HY}.hum]`));
   await snap('pullout-collapse');
-  await until(`game.scene.isActive('Space') && !game.scene.isActive('Hyper')`, 300, 'deep space');
+  await untilNew(`game.scene.isActive('Space') && !!G.deep`);
   await tick(4);
+  check('deep space starts UNDER a red flash: the tunnel scene is still up and flashing with its tunnel hidden, and Space has no black fade-in of its own', await E(`game.scene.isActive('Hyper') && ${HY}.handed === true && ${HY}.cameras.main.flashEffect.isRunning && ${HY}.children.list.every(o => !o.visible) && ${SP}.seamless === true && !${SP}.cameras.main.fadeEffect.isRunning`), await E(`JSON.stringify([game.scene.isActive('Hyper'), ${HY}.handed, ${HY}.cameras.main.flashEffect.isRunning, ${SP}.seamless, ${SP}.cameras.main.fadeEffect.isRunning])`));
   const dp = JSON.parse(await E(`JSON.stringify({ sys: G.system, deep: !!G.deep, name: sysDef().name, jumps: G.jumps, known: G.known, fuel: activeShip().fuel, ws: ${SP}.WS, left: +G.deep.left.toFixed(2), at: G.deep.at, dest: G.deep.dest,
     x: Math.round(${SP}.ship.x), y: Math.round(${SP}.ship.y), pirates: ${SP}.enemies.countActive(), amb: ${SP}.enemies.getChildren().every(e => e.ambush), st: ${SP}.station.nowhere === true, pl: ${SP}.planet.nowhere === true })`));
-  check('deep space: still Halcyon on the books (G.system), the system is "Deep space", no jump counted, the known list untouched, the fuel stays burned', dp.sys === 'halcyon' && dp.deep && dp.name === 'Deep space' && dp.jumps === 0 && dp.known.join() === 'halcyon,kestrel' && dp.fuel === 33.7, JSON.stringify(dp));
+  check('deep space: still Halcyon on the books (G.system), the system is "Deep space", no jump counted, the known list is what the open map charted and no more (Kestrel is not added), the fuel stays burned', dp.sys === 'halcyon' && dp.deep && dp.name === 'Deep space' && dp.jumps === 0 && dp.known.join() === 'halcyon,kestrel,brass,hollow' && dp.fuel === 33.7, JSON.stringify(dp));
   check('a 16000 px world with the ship in the middle, no station and no planet', dp.ws === 16000 && Math.abs(dp.x - 8000) < 100 && Math.abs(dp.y - 8000) < 100 && dp.st && dp.pl, JSON.stringify([dp.ws, dp.x, dp.y]));
   check('three pirates (danger 1), every one engaged from the start (ambush)', dp.pirates === 3 && dp.amb, JSON.stringify([dp.pirates, dp.amb]));
   check('the record keeps the time left of the tunnel: 45% of 10 s, about 4.5 s, from 55%, bound for KESTREL', dp.left > 4.3 && dp.left < 4.7 && dp.at === 0.55 && dp.dest === 'KESTREL', JSON.stringify([dp.left, dp.at, dp.dest]));
@@ -104,6 +106,8 @@ try {
   check('the dark tint is up over the stars, and the sun, giant and moon are not drawn', await E(`${SP}.children.list.some(o => o.depth === -7 && o.fillColor === 0x14000a) && !${SP}.children.list.some(o => o.depth === -6.5 || o.depth === -6 || o.depth === -5.5)`));
   check('no launch lock and no patrol-cover notice in deep space', await E(`${SP}.lockUntil <= ${SP}.time.now && ${SP}.graceOver === true`));
   await snap('pullout-deep');
+  await until(`!game.scene.isActive('Hyper')`, 120, 'the red flash to end');
+  check('then the tunnel scene is gone and deep space runs on', await E(`!game.scene.isActive('Hyper') && game.scene.isActive('Space') && !!G.deep`));
 
   console.log('deep space has no way out but through the pirates');
   await E(`G.hull = 1e6`); // the three are shooting at a ship that cannot die in this part of the test
@@ -133,13 +137,14 @@ try {
   check('3.5 s later it has not gone yet: time to pick up the salvage', await E(`game.scene.isActive('Space') && !game.scene.isActive('Hyper')`));
   await secs(0.8);
   await until(`game.scene.isActive('Hyper')`, 120, 'the tunnel again');
+  check('the tunnel re-forms over the paused deep space: no cut, the flight is kept as a picture', await E(`game.scene.isPaused('Space') && ${HY}.under === 'Space' && ${HY}.mix < 1 && !${HY}.cameras.main.fadeEffect.isRunning`), await E(`JSON.stringify([game.scene.isPaused('Space'), ${HY}.under, ${HY}.mix])`));
   const rs = JSON.parse(await E(`JSON.stringify({ dest: ${HY}.dest, dur: +${HY}.dur.toFixed(2), frac0: ${HY}.frac0, pull: ${HY}.pull, fuel: ${HY}.fuel, demo: !!${HY}.d.demo, deep: G.deep })`));
   check('the resumed tunnel: KESTREL again, the 4.5 s that were left, starting at 55%, with no second pull-out, 6.3 units burned', rs.dest === 'KESTREL' && rs.dur > 4.3 && rs.dur < 4.7 && rs.frac0 === 0.55 && rs.pull === null && rs.fuel === 6.3 && rs.demo === false, JSON.stringify(rs));
   check('deep space is gone (G.deep clear) the moment the Space scene let go', rs.deep === null);
   await secs(2);
   check('its progress line starts at 55% and runs to the end (a little over 55% after 2 s of 4.5)', await E(`(() => { const f = Phaser.Math.Clamp(${HY}.frac0 + (1 - ${HY}.frac0) * ${HY}.t / ${HY}.dur, 0, 1); return f > 0.7 && f < 0.85; })()`));
   await snap('pullout-resumed');
-  await until(`game.scene.isActive('Space') && !game.scene.isActive('Hyper')`, 600, 'the arrival');
+  await untilNew(`game.scene.isActive('Space') && G.system === 'kestrel'`);
   await tick(4);
   const arr = JSON.parse(await E(`JSON.stringify({ sys: G.system, jumps: G.jumps, known: G.known, deep: G.deep, ws: ${SP}.WS, x: Math.round(${SP}.ship.x), fuel: activeShip().fuel, pirates: ${SP}.enemies.countActive() })`));
   check('then the ordinary arrival: Kestrel, one jump, known, the west edge of a 36000 px system, the fuel never refunded', arr.sys === 'kestrel' && arr.jumps === 1 && arr.known.includes('kestrel') && arr.deep === null && arr.ws === 36000 && arr.x < 900 && arr.fuel === 33.7, JSON.stringify(arr));
@@ -192,7 +197,7 @@ try {
   await E(`(() => { game.scene.stop('Space'); game.scene.start('Hyper', pulloutDemo()); return 1; })()`);
   await until(`game.scene.isActive('Hyper')`, 100, 'the demo tunnel');
   await secs(6);
-  await until(`game.scene.isActive('Space') && !game.scene.isActive('Hyper')`, 300, 'deep space from the demo');
+  await untilNew(`game.scene.isActive('Space') && !!G.deep`);
   await tick(4);
   check('the demo drops into deep space with four pirates (danger 3)', await E(`!!G.deep && ${SP}.enemies.countActive() === 4 && G.deep.demo === true`));
   await killAll(); await tick(3); await secs(4.5);
@@ -201,6 +206,7 @@ try {
   await secs(5.5);
   await until(`game.scene.isActive('Title')`, 300, 'the Title screen');
   check('and the demo ends on the Title, with no game effect on G', await E(`game.scene.isActive('Title') && G.deep === null`));
+  check('the flight that was paused under the demo tunnel went with it: nothing is left paused over the Title', await E(`!game.scene.isPaused('Space') && !game.scene.isActive('Space') && !game.scene.isActive('Hyper')`));
   check('no console errors in the demo', t.errors.length === 0, t.errors.join(' | ').slice(0, 400));
 } catch (e) { console.error('  FAIL ' + (e && e.stack || e)); bad++; } finally { await t.close(); }
 

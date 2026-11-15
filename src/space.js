@@ -10,6 +10,7 @@ class Space extends Phaser.Scene {
   init(d) {
     this.from = (d && d.from) || 'station';
     this.jumped = this.from === 'jump';
+    this.seamless = !!(d && d.seamless); // started under the tunnel's flash (src/hyperspace.js handOver): the flash is the fade, so no black fade-in of its own
     G.deep = this.from === 'pullout' && d.deep ? d.deep : null;
     if (this.jumped && d.to && G.system !== d.to) enterSystem(d.to, d.origin || null); // src/universe.js: the system, G.known, G.jumps and where the ship appears
   }
@@ -20,7 +21,8 @@ class Space extends Phaser.Scene {
     shipSync(); // src/fleet.js: the hull cap comes from the model and its plating
     const WS = sysDef().size; this.WS = WS; // src/universe.js: the current system, from src/data_systems.js
     this.physics.world.setBounds(0, 0, WS, WS);
-    this.cameras.main.fadeIn(300, 0, 0, 0).setBounds(0, 0, WS, WS);
+    if (!this.seamless) this.cameras.main.fadeIn(300, 0, 0, 0);
+    this.cameras.main.setBounds(0, 0, WS, WS);
     spaceBackdrop(this, !!G.deep); // src/art_world.js: nebula, parallax star layers, distant sun, giant and moon (deep space has only stars)
     this.events.once('shutdown', () => { G.deep = null; }); // a pull-out lives only as long as this scene shows it
 
@@ -101,17 +103,18 @@ class Space extends Phaser.Scene {
     boostInit(this); // src/boost.js: boost energy and the Q/E dash
     this.nextFire = 0;
     this.prompt = floatPrompt(this, this.ship); // key cap above you instead of a strip at the bottom (src/ui.js)
-    this.add.text(24, H - 44, 'W thrust  A/D turn  S brake  Shift boost  Q/E dash  Space or click fire  L land/dock', {
+    this.add.text(24, H - 44, 'W thrust  A/D turn  S brake  Shift boost  Q/E dash  Space or click fire  L land/dock  P autopilot', {
       fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92'
     }).setScrollFactor(0).setDepth(100);
     if (this.from === 'station') { bountyReset(); toast(this, G.system === 'halcyon' ? 'Launch clear. Kepler-4b is to the north-east.' : 'Launch clear.', '#9fe9ff'); } // enemies.js: a new flight's bounty count starts at 0
-    else if (this.jumped) toast(this, 'Arrived in ' + sysDef().name + '.', '#9fe9ff');
+    else if (this.jumped) { const fresh = galaxyChart(); toast(this, 'Arrived in ' + sysDef().name + '.' + (fresh.length ? ' Charted in range: ' + fresh.map(x => x.name).join(', ') + '. G opens the galaxy map.' : ''), '#9fe9ff'); } // src/galaxymap.js: the stars in range of here are now known
     missionSpaceSetup(this); // src/missions.js: escort freighter, wanted pirates
     trafficSetup(this); // src/traffic.js: civilian ships and the station police
     asteroidsSetup(this); // src/asteroids.js: the Kepler belt
     feelInstall(this); // src/feel.js: hit flashes, flame, approach rings, arrival zoom
     shipsInstall(this); // src/ships.js: flames, trails, shield flash, smoke and sparks on every ship
     cruiseSetup(this); cruiseFarBodies(this); // src/cruise.js: N nav list, C cruise, and the bodies out in far space
+    autopilotSetup(this); // src/autopilot.js: P flies the ship to the target at local speed
     jumpSetup(this); // src/jump.js: the jump charge, and the F key for the fuel ranger
     deepSetup(this); // src/pullout.js: the pirates of a pull-out in deep space, or a nest's entry pirates
   }
@@ -179,13 +182,14 @@ class Space extends Phaser.Scene {
     jumpFrame(this, dt); // src/jump.js: the charge ring, and the jump when it is full
     if (this.leaving) { feelFrame(this, time, dt); return; } // the jump went
     const crs = cruiseFrame(this, time, dt); // src/cruise.js: 'cruise' = the ship flies itself, 'nav' = the nav list is open (no flight input)
-    if (crs === 'cruise') {
+    const ap = autopilotFrame(this, time, dt, crs); // src/autopilot.js: 'auto' = the autopilot flies the ship locally, 'cruise' = it just engaged a cruise
+    if (crs === 'cruise' || ap === 'cruise') {
       this.prompt.setText('');
       missionSpaceUpdate(this, time, dt); trafficUpdate(this, time, dt); asteroidsUpdate(this, time, dt);
       hudTick(this); feelFrame(this, time, dt);
       return;
     }
-    const still = crs === 'nav';
+    const still = crs === 'nav' || ap === 'auto'; // no flight input: the list has the keys, or the autopilot has the stick (any key gives it back)
     const sh = this.sh; // the shield recharges once it has gone a while without a hit
     if (sh && sh.max > 0 && sh.pts < sh.max && this.time.now - sh.last > sh.delay) { sh.pts = Math.min(sh.max, sh.pts + sh.regen * dt / 1000); if (sh.pts >= sh.max && sh.hurt) { sh.hurt = false; sfx('shieldUp'); } }
     const locked = time < this.lockUntil;
@@ -203,6 +207,7 @@ class Space extends Phaser.Scene {
       const tx = ship.x - Math.cos(ship.rotation) * 20, ty = ship.y - Math.sin(ship.rotation) * 20;
       this.trail.emitParticleAt(tx, ty, boost ? 3 : 2);
     }
+    if (ap === 'auto') autopilotDrive(this, dt); // the autopilot sets the heading and the speed over the thrust code above
     if (JD(k.R)) aimToggle(this); // src/autotarget.js: the sixth part, on or off (R is free in flight; X belongs to the nav list, which reads it every frame)
     aimUpdate(this, ship, locked || still); // the reticle on the raider the guns would turn to (none while it is off, unfitted, or you cannot fire)
     if (!locked && !still && (k.SPACE.isDown || this.input.activePointer.isDown) && time > this.nextFire) {

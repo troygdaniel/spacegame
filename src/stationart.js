@@ -285,7 +285,7 @@ function saDrawOutpost(scene) {
 // ======================================================================================================================
 // Station looks for other star systems (Universe B6). Nothing calls these yet: the systems cards pick a look from a station's
 // `art` field (docs/UNIVERSE.md 4.1). They are drawn on first use, not at boot.
-//   stationLook(scene, art)                  the key 'sl-<art>' of the station's texture, drawn if it is not there yet
+//   stationLookTex(scene, art)               the key 'sl-<art>' of the station's texture, drawn if it is not there yet
 //   stationLookFx(scene, art, x, y, opts)    the station and its animated parts, added to a scene at (x, y); returns
 //                                            { c: container, radius, bay: {x, y}, destroy() }
 // art: 'hub' (trade hub, green and white), 'foundry' (smelter, rust and molten orange), 'nest' (pirate dock, red),
@@ -625,7 +625,9 @@ SA_LOOK_FX.derelict = (s, c, glow) => {
 };
 const SA_LOOK_DRAW = { hub: saDrawHubLook, foundry: saDrawFoundryLook, nest: saDrawNestLook, derelict: saDrawDerelictLook };
 
-function stationLook(scene, art) {
+// (stationLookTex, not stationLook: src/stationlook.js, loaded after this file, owns that name for a dock's look record. While both were
+// called stationLook, stationLookFx got a record back instead of a key and every scenery look drew the missing-texture square.)
+function stationLookTex(scene, art) {
   if (!STATION_LOOKS[art]) art = 'hub';
   if (!scene.textures.exists('sl-' + art)) SA_LOOK_DRAW[art](scene);
   return 'sl-' + art;
@@ -635,7 +637,7 @@ function stationLookFx(s, art, x, y, opts) {
   opts = opts || {};
   if (!STATION_LOOKS[art]) art = 'hub';
   if (!s.textures.exists('glow-a')) saDrawSmall(s);
-  const key = stationLook(s, art), look = STATION_LOOKS[art], ADD = Phaser.BlendModes.ADD;
+  const key = stationLookTex(s, art), look = STATION_LOOKS[art], ADD = Phaser.BlendModes.ADD;
   const c = s.add.container(x, y).setDepth(opts.depth !== undefined ? opts.depth : 1);
   c.add(s.add.image(0, 0, key));
   const glow = (col, gx, gy, sc) => { const im = s.add.image(gx, gy, 'glow-' + col).setBlendMode(ADD).setScale(sc); c.add(im); return im; };

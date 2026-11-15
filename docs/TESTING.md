@@ -40,13 +40,14 @@ What it is and is not:
 | `autotarget` | part 1: the table, prices, which station sells which tier, what each hull fits, the save and its switch, the lead mathematics, the pick and the angle on a made-up scene | part 2: the guns turn to the raider, the lead, the reticle, the R switch, buying it with key 6 (one Chrome) |
 | `shipmodels` | part 1: the table pinned to the design | part 2: the Space scene |
 | `calls` | part 1: the rows, the pay, each station's board, a courier and a haul from board to dock, sites, jumps, death, the save | part 2: the boards in the Station scene and a paid courier across a jump, one Chrome |
+| `travel` | the charting rule (`galaxyChart`: every star in jump range becomes known), the saved list, the `travelHint` line's rules | a new game in space: the hint line, G opening a map that names the four stars of the starter's range, picking Brass Reach, the hint gone once the map was opened |
 | `systems` | part 1: the eight systems of the design table, which ship reaches which, the layouts, every dock and pirate table | part 2: the shipped files equal the code's rows, each system flown and each station docked at, one Chrome |
 
 **Chrome only**, and why:
 
 | What needs the browser | Tests |
 |---|---|
-| a scene with the clock stepped by hand (flight, pirates, a jump, the hangar) | `cruise`, `interdict`, `jump`, `launch`, `missions`, `parts`, `hyper`, `surface`, `bounty`, `fuel`, `loop`, `ribbons`, `outpostmap`, `systemart` |
+| a scene with the clock stepped by hand (flight, pirates, a jump, the hangar) | `cruise`, `autopilot`, `interdict`, `jump`, `launch`, `missions`, `parts`, `hyper`, `surface`, `bounty`, `fuel`, `loop`, `ribbons`, `outpostmap`, `systemart` |
 | keys and panels (terminals, the Journal, Settings, the galaxy map) | `journal`, `npcs`, `stationlook`, `hangar`, `shipsheet`, `shipmode`, `settings`, `galaxymap`, `contentui`, `credits`, `fixes` |
 | Web Audio (the ship voice speaks, levels against the wind) | `voice`, `audiolevels`, `sfxlevels` |
 | the game starting, a page reload or a screenshot | `scenes`, `contentboot`, `serve`, `contentadd`, `stationshots`, `hudshots`, `world`, `ships` |
