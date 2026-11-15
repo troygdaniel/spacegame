@@ -82,7 +82,7 @@ try {
   check('four looks: hub, foundry, nest, derelict', arts.join() === 'hub,foundry,nest,derelict', arts.join());
   for (const art of arts) {
     const r = JSON.parse(await t.ev(`(() => {
-      const key = stationLook(${L}, '${art}'), src = ${L}.textures.get(key).getSourceImage(), c = src.getContext('2d'), N = src.width, look = STATION_LOOKS['${art}'];
+      const key = stationLookTex(${L}, '${art}'), src = ${L}.textures.get(key).getSourceImage(), c = src.getContext('2d'), N = src.width, look = STATION_LOOKS['${art}'];
       const mid = c.getImageData(N / 2, N / 2, 1, 1).data[3], corner = c.getImageData(2, 2, 1, 1).data[3];
       ${L}.clear(); const before = ${L}.events.listenerCount('update');
       const st = stationLookFx(${L}, '${art}', 640, 360); ${L}.put(st.c);

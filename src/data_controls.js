@@ -36,8 +36,10 @@ const CONTROLS = [
     { k: ['Space'], t: 'Fire (or click)', bay: 1 },
     { k: ['L'], t: 'Dock or land (fly slowly, close in)', bay: 1, bt: 'Dock or land' },
     { k: ['T'], t: 'Mission panel', bay: 1 },
-    { k: ['N'], t: 'Nav list: Enter picks a target' },
+    { k: ['N'], t: 'Nav list: Enter picks a target, P flies there' },
     { k: ['C'], t: 'Cruise to the target (A D nudge, S cancels)' },
+    { k: ['P'], t: 'Autopilot to the target: it stops at the dock (any key cancels)' },
+    { k: ['Tab'], t: 'Sector map: W S choose a body, Enter flies there' },
     { k: ['G'], t: 'Galaxy map: pick a system, Enter charges the jump (S or Esc cancels)' }
   ] },
   { id: 'surface', title: 'SURFACE', scene: 'Surface', rows: [

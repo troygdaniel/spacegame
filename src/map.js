@@ -1,6 +1,8 @@
 // ---------- Sector map (Tab), help page (H) and the key reminder strip ----------
 // One overlay scene with two modes, opened over a paused gameplay scene, the same way the pause menu is.
 // installMap(game) catches Tab and H on the window and hooks scene create events, so the scenes need no code.
+// Over the Space scene the map is also a picker: W and S (or the arrows) move a white ring over the bodies of the nav list
+// (cruiseKnown, src/cruise.js), Enter closes the map and the autopilot flies there (autopilotGo, src/autopilot.js).
 
 const SENSOR = 1600;          // a drone this close to your ship counts as seen; farther ones keep their last spot
 const STRIP_MS = 60000;       // the "Tab map  H help" reminder fades out after the first minute of play
@@ -78,6 +80,16 @@ class Overlay extends Phaser.Scene {
     this.poiLabels = []; // names of salvage sites you have found (poi.js fills them in)
     for (let i = 0; i < (typeof poiSites === 'function' ? poiSites().length + SIGNAL_MAX : 0); i++) this.poiLabels.push(m(mapText(this, 0, 0, '', 12, '#6dff9c').setOrigin(0.5, 0)));
 
+    // the picker: the bodies of the nav list, nearest first, the current target (or the nearest) under the ring to start with
+    const sp = this.scene.get('Space');
+    this.pick = { list: [], sel: 0 };
+    if (this.from === 'Space' && sp && sp.ship && sp.cr && typeof cruiseKnown === 'function') {
+      this.pick.list = cruiseKnown(sp);
+      const cur = sp.cr.target ? this.pick.list.findIndex(b => b.id === sp.cr.target.id) : -1; if (cur > 0) this.pick.sel = cur;
+    }
+    this.pk = this.input.keyboard.addKeys('W,S,UP,DOWN,ENTER');
+    this.tPick = m(mapText(this, SX, 326, '', 13, '#ffffff'));
+
     // help mode
     this.helpObjs = [];
     const h = o => { this.helpObjs.push(o); return o; };
@@ -97,7 +109,7 @@ class Overlay extends Phaser.Scene {
     this.mode = mode;
     const map = mode === 'map';
     this.title.setText(map ? 'SECTOR MAP' : 'HELP  -  ' + this.from.toUpperCase());
-    this.footer.setText(map ? 'Tab or Esc: close     H: help' : 'H or Esc: close     Tab: sector map');
+    this.footer.setText(map ? (this.pick.list.length ? 'W S: choose   Enter: autopilot there   Tab: close   H: help' : 'Tab or Esc: close     H: help') : 'H or Esc: close     Tab: sector map');
     this.mapObjs.forEach(o => o.setVisible(map)); this.galaxyBtn.setVisible(map);
     this.helpObjs.forEach(o => o.setVisible(!map));
     if (!map) {
@@ -210,6 +222,7 @@ class Overlay extends Phaser.Scene {
     }
 
     if (typeof poiMapMarks === 'function') poiMapMarks(g, X, Y, this.poiLabels);
+    this.pickFrame(g, X, Y, time);
 
     // the MULE in an escort
     const fr = S.live && S.sp.mx && S.sp.mx.freighter;
@@ -242,6 +255,27 @@ class Overlay extends Phaser.Scene {
     this.tMission.setText(typeof missionLine === 'function' ? missionLine().replace(/^MISSION\s+/, '') : '');
     this.tObj.setText(objLine);
     this.drawLegend(g);
+  }
+
+  // the picker: W S (or the arrows) move the ring, Enter hands the ship to the autopilot and closes the map
+  pickFrame(g, X, Y, time) {
+    const P = this.pick, n = P.list.length, JD = Phaser.Input.Keyboard.JustDown, k = this.pk;
+    this.tPick.setText('');
+    if (!n) return;
+    const down = JD(k.S) || JD(k.DOWN), up = JD(k.W) || JD(k.UP);
+    if (down || up) { P.sel = (P.sel + (down ? 1 : n - 1)) % n; sfx('tick'); }
+    const b = P.list[P.sel];
+    if (JD(k.ENTER)) {
+      const sp = this.scene.get('Space');
+      this.close();
+      if (sp && typeof autopilotGo === 'function') autopilotGo(sp, b);
+      return;
+    }
+    const x = X(b.x), y = Y(b.y), r = 14 + 2 * Math.sin(time / 180);
+    g.lineStyle(2, 0xffffff, 0.95); g.strokeCircle(x, y, r);
+    g.lineStyle(1, 0xffffff, 0.5); [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => g.lineBetween(x + dx * (r + 3), y + dy * (r + 3), x + dx * (r + 10), y + dy * (r + 10)));
+    const sp = this.scene.get('Space'), d = sp && sp.ship ? Math.hypot(b.x - sp.ship.x, b.y - sp.ship.y) : b.dist;
+    this.tPick.setText('Enter: autopilot to ' + b.name + '   ' + (d / 10 | 0) + ' km');
   }
 
   drawLegend(g) {
