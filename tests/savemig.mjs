@@ -1,3 +1,4 @@
+// smoke: save v2, the v1 migration and the fleet accessors; unknown ids fall back
 // Save v2 and the v1 migration (docs/UNIVERSE.md 8.2 to 8.4): node tests/savemig.mjs   (exit code 1 on a failed check or a console error)
 //   1. G.hull, G.maxHull, G.ore and G.upgrades are accessors over the active ship; the old upgrade keys answer from the parts
 //   2. a canned v1 save loads as one Wren with the right parts, and loading and saving never touch the v1 key

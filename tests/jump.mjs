@@ -1,3 +1,4 @@
+// smoke: the jump: G, the 4 s charge and its cancels, the tunnel, arrival in an empty Kestrel, the fuel ranger
 // The jump (card space-game-u-b4-jump, src/jump.js, docs/UNIVERSE.md 2.3 and 3): G opens the galaxy map over the flight, Enter charges for 4 s, the fuel
 // goes when the charge completes, the Hyper tunnel plays, and the ship comes out of it in the other system at the edge facing the star it came from.
 // Run: node tests/jump.mjs. The game clock is stepped by hand (16.67 ms a frame, cdp.mjs clock()), so every time below is exact whatever the load.

@@ -1,3 +1,4 @@
+// smoke: pirate bounty you can see: per type, the BOUNTY +N text, the HUD glow, the dock summary
 // Pirate bounty you can see: node tests/bounty.mjs
 // Kills one raider, one drone and one gunship in flight and checks what each pays, the gold BOUNTY +N text, the HUD
 // credits glow, the chime, the per-flight count, and the "Bounty this flight" toast on docking.

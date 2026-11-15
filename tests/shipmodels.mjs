@@ -1,3 +1,4 @@
+// smoke: ship models and shipStat: the table pinned to the design, the Wren flies as before
 // Ship models and shipStat (card space-game-u-a3-ship-models, docs/UNIVERSE.md 6.1 and 8.1). Pins two things:
 //   1. the model table in src/data_ships.js against the numbers in the design doc (an independent copy below)
 //   2. the Wren, which has to fly exactly as it always did: top speed 480, thrust 720 (600 while the launch lock holds, 1500

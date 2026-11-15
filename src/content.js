@@ -698,12 +698,15 @@
         say('error', 'content.generated.js', '', 'content.generated.js is missing: run node tools/build-content.mjs. Playing on the built-in values.');
         return out;
       }
-      out.loaded = true; out.hash = String(content.hash || '').slice(0, 16); out.files = +content.files || 0;
-      // MODDED: the hash of what is really in the entries (not the one the file claims) against the shipped core pack's hash
-      out.core = String(content.core || '').slice(0, 16);
+      out.loaded = true;
+      // the hash of what is really in the entries (the file carries none: a header that changed with the content made every merge conflict)
       try { out.actual = hashOf(JSON.stringify(content.entries.map(e => (isObj(e) ? [e.type, e.id, e.data] : e)))); } catch (e) { out.actual = ''; }
-      out.modded = !!out.core && out.actual !== out.core;
-      if (out.hash && out.actual && out.hash !== out.actual) say('warn', 'content.generated.js', '', 'its entries do not match its own hash, so it was edited by hand or is out of date: run node tools/build-content.mjs.');
+      out.hash = out.actual;
+      try { out.files = +content.files > 0 ? +content.files | 0 : new Set(content.entries.map(e => (isObj(e) ? String(e.path || '') : ''))).size; } catch (e) { out.files = 0; }
+      // MODDED: core is "sealed" in the shipped pack as committed (docs/SMOKE.md 2); a build of edited content writes the shipped
+      // pack's hash there instead, and the entries then differ from it. An old file with a hex core is read the same way.
+      out.core = String(content.core || '').slice(0, 16);
+      out.modded = !!out.core && out.core !== 'sealed' && out.actual !== out.core;
       // what the build found
       (Array.isArray(content.errors) ? content.errors : []).slice(0, 500).forEach(e => {
         if (!isObj(e) || typeof e.message !== 'string') return;

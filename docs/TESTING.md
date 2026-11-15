@@ -1,6 +1,6 @@
 # Testing Long Haul: what runs in Node and what needs Chrome
 
-The tests are `tests/*.mjs`, run in order by `bash tests/smoke.sh`. The slow, shared part is **headless Chrome**: only one runs at a time across every worktree (`tests/lock.mjs`), so every test that opens Chrome waits in the same queue. A test that does not need a browser should not be in that queue.
+The tests are `tests/*.mjs`, run by `bash tests/smoke.sh`, which finds each one by the `// smoke:` line at the top of its file (node-only tests first, then Chrome; `docs/SMOKE.md`). The slow, shared part is **headless Chrome**: only one runs at a time across every worktree (`tests/lock.mjs`), so every test that opens Chrome waits in the same queue. A test that does not need a browser should not be in that queue.
 
 ## The rule
 

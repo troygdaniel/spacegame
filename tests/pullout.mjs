@@ -1,3 +1,4 @@
+// smoke: the pull-out: the roll, the collapse, deep space, the way back into the tunnel, dying, a nest's entry pirates
 // The pull-out (card space-game-u-e2-pullout, src/pullout.js, docs/UNIVERSE.md 5.2): some jumps are cut short. The tunnel flickers, an alarm sounds, the rings
 // collapse at 40 to 70% of the way, and the ship is dropped into deep space with three to five pirates. Win and the tunnel resumes for the time that was
 // left; lose and the insurance flow wakes you at the last station. The fuel was spent when the jump went.

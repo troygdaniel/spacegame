@@ -1,3 +1,4 @@
+// smoke: the dev server: serves, refuses, rebuilds on change, R reloads
 // The dev server (tools/serve.mjs, docs/MODDING.md section 4). Needs no packages; one headless Chrome for the R key at the end.
 // Checks: it serves the game with the dev script added to HTML only; it refuses everything it should (.., dot-names, POST, a foreign
 // Host header, other network interfaces); it rebuilds and tells the page when content/ changes, also when a file is broken; and R

@@ -1,3 +1,4 @@
+// not in the smoke: world art pictures for before/after review, run by hand
 // Pictures of the world art for before/after review: the space backdrop at the station, near Kepler-4b and in the belt, the
 // planet surface at the landing pad and at the crash site, an explosion and the ore pickup. Saves tests/out/world-*.png and fails
 // on a console error or if painting the textures at boot takes too long. Run: node tests/world.mjs

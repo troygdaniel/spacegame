@@ -1,3 +1,4 @@
+// smoke: the Settings screen: sound, keys with a mocked fetch, controls from the one table, content, reset; S V C P on the Title; the Pause row
 // The Settings screen (src/settings.js, src/data_controls.js; card space-game-settings-screen) with a MOCKED fetch: nothing here ever calls
 // Deepgram, OpenAI or Anthropic, so nothing is spent. Run: node tests/settings.mjs   (exit code 1 on any failure)
 // Checks: the one table of keys (its shape, and that the H page and the Ship bay's list are built from it); S, V, C and P on the title;

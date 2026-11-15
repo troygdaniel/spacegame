@@ -1,3 +1,4 @@
+// not in the smoke: a throwaway copy of the game folder for the tests that need their own content.generated.js
 // A throwaway copy of the game folder (index.html, phaser.min.js, src/) so a test can give it its own content.generated.js.
 // It opens from file:// like the real game; remove it with rmSync(dir, { recursive: true, force: true }) when done.
 import { cpSync, mkdtempSync, writeFileSync } from 'node:fs';

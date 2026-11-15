@@ -1,3 +1,4 @@
+// smoke: hygiene: no keys, emails, phone numbers or personal paths in anything we publish (no browser)
 // Hygiene scan: nothing we publish may carry a key, a token, an email address, a phone number or a personal path.
 // Run: node tests/hygiene.mjs        (exit code 1 on a finding; no Chrome, takes well under a second)
 // Scans every tracked file, every untracked file git would not ignore, and everything under content/ and mods/example/

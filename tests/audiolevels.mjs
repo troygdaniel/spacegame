@@ -1,3 +1,4 @@
+// smoke: planet wind level: the wind sits under the effects (OfflineAudioContext, no sound plays)
 // Measures the planet wind against the effects with an OfflineAudioContext (no sound plays; the page is only used for its code).
 // Fails if the planet wind is not at least 8 dB under the laser, tick and hit effects and 15 dB under the old level, or is silent.
 // Run: node tests/audiolevels.mjs

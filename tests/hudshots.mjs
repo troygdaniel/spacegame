@@ -1,3 +1,4 @@
+// not in the smoke: HUD screenshots for before/after comparisons, run by hand
 // HUD screenshots for before/after comparisons. Run: node tests/hudshots.mjs <tag>   (tag: before | after, default "shot")
 // Saves tests/out/hud-<tag>-space.png, -space-fight.png, -surface.png, -station.png. Chrome runs muted (cdp.mjs).
 // The game clock is stepped by hand, so the pictures do not depend on how busy the Mac is.

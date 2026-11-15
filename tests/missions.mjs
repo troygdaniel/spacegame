@@ -1,3 +1,4 @@
+// smoke FULL=1: mission flow (the board, Rescue, Escort, Police patrol and their failure paths; about 2 minutes)
 // Mission flow checks: the board, Rescue, Escort, Police patrol and their failure paths, with the game clock stepped by
 // hand so every run lasts exactly the same game time. Ported from BuildBot's drive.mjs onto tests/cdp.mjs (random
 // port, throwaway Chrome profile, console errors caught). Run: node tests/missions.mjs   (exit code 1 on any failure)

@@ -1,3 +1,4 @@
+// smoke: credits unmistakable: the gold coin and CR readout in the HUD strip and on the panels, +N / -N floats
 // Credits are unmistakable: node tests/credits.mjs
 // The HUD strip (coin, CR label, gold figure, +N / -N float, pulse both ways) in the station, in flight and on the surface, and the
 // gold "N CR" tag with a coin on the mission board, the shop (pops and floats -N after a purchase), the map and the pause menu.

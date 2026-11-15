@@ -1,3 +1,4 @@
+// smoke: the fleet: buy, sell, switch, rename and transfer ships, the yard and the prices, per-ship state through a save
 // The fleet: buy, sell, switch, rename, transfer (card space-game-u-d3-fleet-logic, docs/UNIVERSE.md 6.3 and 7).
 //   Part 1 runs src/fleet.js with its data files in a plain Node context (no browser, so it does not care how busy the Mac is):
 //   the yard, every price, buying, switching, selling, renaming, transferring, and that a refused call changes nothing.

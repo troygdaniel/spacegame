@@ -1,3 +1,4 @@
+// smoke: content loader: a bad, missing, broken or hand-edited content.generated.js never stops the game reaching Title
 // Boot test for the content loader (card space-game-m2-loader, docs/MODDING.md 5): whatever content.generated.js holds, the
 // game reaches the Title screen, lists what was wrong in CONTENT_ERRORS and plays on the built-in values. Never a blank screen.
 // Each case runs the real game in headless Chrome from a throwaway COPY of this folder with its own content.generated.js:

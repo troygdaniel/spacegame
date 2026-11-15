@@ -1,3 +1,4 @@
+// smoke: ship parts: shields, weapons, engine, tank, cargo: the tables, every effect, the shop's five cards, the save
 // The five ship parts (src/data_parts.js, docs/UNIVERSE.md section 7): shields, weapons, engine, tank, cargo, tiers 1 to 3.
 //   A. the tables and prices     B. every effect through shipStat     C. shields in flight (points, hull, recharge, the HUD ring)
 //   D. weapons (shot rate, damage)  E. engine and cargo in flight     F. the shop (five cards, price, fit, stock, credits)     G. saves

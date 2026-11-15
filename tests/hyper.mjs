@@ -1,3 +1,4 @@
+// smoke: the hyperspace tunnel demo (#hyper, #hyper24, #hyper2): timing, readout, colour; no save written
 // The hyperspace tunnel demo (src/hyperspace.js), opened only from the test hash. Run: node tests/hyper.mjs
 //   #hyper    Kestrel, 6.3 ly: 10.08 s, cyan. Checked at the start, in the middle and at the end (stepped by hand,
 //             so the Mac being busy cannot change the timing); the screenshots are tests/out/hyper-*.png

@@ -1,3 +1,4 @@
+// smoke: worldAt: the eight systems and six stations in one place; Halcyon from its files is the code's row
 // worldAt(systemId): one system the cards that jump, draw and dock can ask for (card space-game-systems-schema-gaps, docs/MODDING.md 6.3 and 6.4).
 // The real game's scripts in plain Node (tests/nodegame.mjs: no Chrome, no Phaser; a game copy per case). What it pins:
 //   A. the shipped pack: worldAt gives the game's own Halcyon row; the row built from Halcyon's files alone says the same thing as the code's row (so every field

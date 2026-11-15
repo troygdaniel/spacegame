@@ -1,3 +1,4 @@
+// smoke: the proof set in markdown: files over their defaults change nothing, edits change exactly what they say
 // The proof set in markdown (card space-game-m4-proof, docs/MODDING.md sections 8 and 10): the raider and drone, the rescue call, JUNO and
 // nine ship part tiers (shields, weapons, engine) live in content/*.md, and the code tables in enemies.js, missions.js, shop.js, data_parts.js
 // and hud.js read them through the adapters in src/contenttables.js. Each case is a throwaway COPY of this folder with its own content.generated.js. The
@@ -13,7 +14,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deepStrictEqual } from 'node:assert';
-import { build } from '../tools/build-content.mjs';
+import { build, shippedCore } from '../tools/build-content.mjs';
 import { launch, sleep } from './cdp.mjs';
 import { nodeGame } from './nodegame.mjs';
 import { copyGame, ROOT } from './gamecopy.mjs';
@@ -110,7 +111,7 @@ const gameWith = (contentDir, core) => { // a game copy whose content.generated.
   const made = build({ dir: contentDir, prefix: 'content/', out: join(g, 'content.generated.js'), write: true, core });
   return { dir: g, made };
 };
-const realCore = /\bcore:\s*"([0-9a-f]+)"/.exec(readFileSync(join(ROOT, 'content.generated.js'), 'utf8'))[1];
+const realCore = shippedCore(); // the shipped pack's hash: the entries of the committed content.generated.js
 
 // the edits for case C: [file, [[old text, new text]]]; each old text must occur once
 const EDITS = [

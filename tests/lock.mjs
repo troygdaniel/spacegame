@@ -1,3 +1,4 @@
+// not in the smoke: the one-Chrome-at-a-time lock the tests import (tests/locktest.mjs checks it)
 // One headless Chrome at a time, across every worktree on this Mac (card space-game-test-load-proof), in the order runs arrived
 // (card space-game-lock-two-at-a-time).
 // With seven agents each running Chrome the load average reaches 35-50 and DevTools calls time out. cdp.mjs takes this lock in

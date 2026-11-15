@@ -1,3 +1,4 @@
+// smoke: NPC chat adapter with a mocked fetch: no key means no call; the right host and header per provider; 401 and 429
 // NPC chat adapter (src/chat.js) with a MOCKED fetch: nothing here ever calls OpenAI or Anthropic, so nothing is spent. Run: node tests/chat.mjs
 // Checks: no key = no call; an OpenAI-looking key goes to api.openai.com with the key only in the Authorization header and the
 // chat-completions body shape; an Anthropic key goes to api.anthropic.com with x-api-key, the version and browser-access headers

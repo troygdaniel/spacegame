@@ -1,3 +1,4 @@
+// smoke: calls across systems: courier, haul, salvage, survey, the Reaver at the Roost, a board per station, leaving a system (rules in Node, the boards and a paid courier in the page)
 // The calls across systems (card space-game-u-e3-missions-xsys, docs/UNIVERSE.md 10.2 e3 and 11): a system id per call, the courier, haul, salvage and survey calls,
 // the Reaver bounty at the Roost, a board per station, leaving a system, the goals in other systems.
 //   Part 1 runs the game's own scripts in plain Node (tests/nodegame.mjs: no Chrome, no lock): the rows, what each station posts, the pay of every run, a courier and a haul

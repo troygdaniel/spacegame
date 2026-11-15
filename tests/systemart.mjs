@@ -1,3 +1,4 @@
+// smoke: art for other star systems: planet kinds, star types, the four station looks
 // Art for other star systems (Universe B6): node tests/systemart.mjs
 // Planet kinds and star types (src/art_world.js) and the four station looks (src/stationart.js) are not used by the game yet, so this
 // puts them on a throwaway scene (ArtLab, made here and never shipped) and checks them:
