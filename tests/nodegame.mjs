@@ -1,3 +1,4 @@
+// not in the smoke: the plain-Node game context the node-only tests import
 // The game's own scripts in a plain Node context: no Chrome, no Phaser, no waiting for a turn at the test lock (card space-game-tests-node-only).
 //
 // Chrome is the slow, shared thing in the test suite (tests/lock.mjs: one Chrome at a time across every worktree). A test that only calls the

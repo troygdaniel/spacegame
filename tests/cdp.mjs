@@ -1,7 +1,8 @@
+// not in the smoke: the Chrome DevTools helper the tests import
 // Tiny Chrome DevTools helper for the Long Haul tests. No dependencies: needs Node 22+ (global WebSocket and fetch).
 import { spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync, mkdirSync, existsSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { tmpdir, loadavg, cpus } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { acquire, release, cleanupOrphans, removeDir, stopProfileProcesses } from './lock.mjs';
@@ -13,6 +14,10 @@ const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/M
 export const sleep = ms => new Promise(r => setTimeout(r, ms));
 // A DevTools call gets 120 s (it was 30: with seven agents running Chrome a call can take longer than that). DEVTOOLS_TIMEOUT_MS changes it.
 const CALL_MS = Number(process.env.DEVTOOLS_TIMEOUT_MS) || 120000;
+// How long a wait may take is stretched by how busy the Mac is: the one-minute load per core, never under 1 and at most 4 times (card tests-flake-list: with seven agents the
+// load average passed 80 on 10 cores, and DevTools calls and 8 s waits for a scene to start ran out while the page was only starved, in 14 of the 61 smoke logs on this Mac).
+// The limits are there to catch a hang, not to time the game: an idle Mac gets exactly the limit it always had, and a wait for something that never happens still ends.
+export const patience = ms => ms * Math.min(4, Math.max(1, loadavg()[0] / (cpus().length || 1)));
 
 const KEYS = {
   C: [67, 'KeyC', 'c'], E: [69, 'KeyE', 'e'], L: [76, 'KeyL', 'l'], W: [87, 'KeyW', 'w'], S: [83, 'KeyS', 's'], X: [88, 'KeyX', 'x'],
@@ -21,10 +26,24 @@ const KEYS = {
   ENTER: [13, 'Enter', 'Enter'], TAB: [9, 'Tab', 'Tab'], SPACE: [32, 'Space', ' ']
 };
 
+// A test process that is done with Chrome must be able to exit. Something (a Chrome child that will not die, a socket) can keep the event loop alive for ever, and the
+// smoke run waits for the process: one run sat 21 minutes after printing PASS and was ended by hand (card tests-flake-list). close() arms this net: if the process is
+// still here 5 minutes later it says so and ends with the exit code it already has, or 1 when none was set yet (so a process that was in the middle of something fails
+// loudly instead of passing). The next launch() disarms it, so a test that goes on to open another session is not cut short. The timer is unref'd: it never keeps a
+// process alive by itself.
+let exitNet = null;
+export function armExitNet(ms = Number(process.env.LONGHAUL_EXIT_NET_MS) || 300000) {
+  clearTimeout(exitNet);
+  exitNet = setTimeout(() => { console.log(`  (note: this test process was still running ${Math.round(ms / 1000)} s after its Chrome session closed; ending it)`); process.exit(process.exitCode ?? 1); }, ms);
+  exitNet.unref();
+}
+export function disarmExitNet() { clearTimeout(exitNet); exitNet = null; }
+
 // Launch a throwaway headless Chrome (own profile, so it never touches your real Chrome) and return a session.
 // root: the folder whose index.html to open (default: this checkout; a test can pass a copy with another content.generated.js)
 // Only one headless Chrome runs at a time across every worktree (tests/lock.mjs): launch() waits for its turn, close() gives it back.
 export async function launch(hash = '', root = ROOT) {
+  disarmExitNet();
   await acquire();
   try {
     cleanupOrphans({ log: console.log }); // Chrome profiles whose driver died: nobody else is running Chrome now, so they are safe to remove
@@ -35,7 +54,7 @@ export async function launch(hash = '', root = ROOT) {
       t = await launchOnce(hash, root);
     }
     const close = t.close; let done = false;
-    t.close = async () => { try { await close(); } finally { if (!done) { done = true; release(); } } };
+    t.close = async () => { try { await close(); } finally { if (!done) { done = true; release(); armExitNet(); } } };
     return t;
   } catch (e) { release(); throw e; }
 }
@@ -77,7 +96,8 @@ async function launchOnce(hash, root) {
   const send = (method, params = {}, opts = {}) => {
     const once = () => new Promise((res, rej) => {
       const i = ++id; pending.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params }));
-      setTimeout(() => { if (pending.delete(i)) rej(new Error(`DevTools call timed out: ${method} (after ${CALL_MS / 1000} s)`)); }, CALL_MS);
+      const limit = patience(CALL_MS);
+      setTimeout(() => { if (pending.delete(i)) rej(new Error(`DevTools call timed out: ${method} (after ${Math.round(limit / 1000)} s)`)); }, limit);
     });
     return opts.retry ? once().catch(e => (/timed out/.test(e.message) ? once() : Promise.reject(e))) : once();
   };
@@ -90,8 +110,8 @@ async function launchOnce(hash, root) {
     return r.result.value;
   };
   const waitFor = async (expr, ms = 8000, what = expr) => {
-    const t0 = Date.now();
-    while (Date.now() - t0 < ms) { try { if (await ev(expr)) return true; } catch (e) { /* page still loading */ } await sleep(100); }
+    const t0 = performance.now(), limit = patience(ms); // monotonic: a Mac that sleeps in the middle of a wait does not use it up
+    while (performance.now() - t0 < limit) { try { if (await ev(expr)) return true; } catch (e) { /* page still loading */ } await sleep(100); }
     throw new Error('timed out waiting for: ' + what);
   };
   const press = async (k, hold = 120) => {

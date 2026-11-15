@@ -1,3 +1,4 @@
+// smoke: six trips round the scenes leave nothing behind: physics worlds, sprites, bodies, textures
 // Going round the scenes again and again must not leave anything behind (card space-game-perf-pass).
 // It found a real leak: asteroids.js wrapped the Space scene's die() with s.die.bind(s) at every launch, and the scene instance lives on,
 // so each launch stacked a new layer on the last one. Every layer kept that launch's rocks, bodies and physics world alive:

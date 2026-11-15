@@ -1,3 +1,4 @@
+// smoke: ship voice with a mocked fetch: no key means no call; nothing ever reaches Deepgram
 // Ship voice (src/voice.js) with a MOCKED fetch: nothing here ever calls Deepgram, so nothing is spent. Run: node tests/voice.mjs
 // Checks: no key = no call; the call goes to api.deepgram.com with the key only in the Authorization header; the cache stops a
 // second call; lines never overlap and warnings queue; a rejected key switches the voice off; mute silences it; the key is not in

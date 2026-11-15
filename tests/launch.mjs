@@ -1,3 +1,4 @@
+// smoke: fair launch: 20 s pirate grace, first-wave cap, distant spawns, hit invulnerability
 // Pirates fair at launch (card space-game-pirate-balance, Troy's playtest 2026-11-13: he died right after undocking).
 //   1. for the first 20 s after undocking no pirate engages the ship and none fires, even with one dropped next to you
 //   2. after the grace only one pirate at a time comes at you (the first-wave cap), the rest hold off

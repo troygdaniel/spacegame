@@ -1,3 +1,4 @@
+// smoke: the Journal: who you have met, Forget everything needs a second press, the Pause row
 // The Journal (src/journal.js, docs/NPC-CHAT.md section 5): J in the station opens a panel with everyone you have met, what they think of you and
 // what you learned; it works with no key; Forget everything needs a second press; the Pause menu has a row for it. G.chat is set by hand here (the
 // memory card fills it in play). fetch is never called. Run: node tests/journal.mjs   (exit code 1 on any failure). One headless Chrome.

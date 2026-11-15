@@ -1,3 +1,4 @@
+// smoke: the one-Chrome-at-a-time test lock and the orphan profile cleanup (no browser)
 // Tests for tests/lock.mjs: the one-Chrome-at-a-time lock and the orphan profile cleanup. No Chrome is started: other processes
 // stand in for lock holders and for Chrome. Uses its own lock directory, never the real one. Run: node tests/locktest.mjs
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync, utimesSync, statSync, readFileSync } from 'node:fs';
@@ -224,6 +225,72 @@ console.log('two slots (LONGHAUL_LOCK_SLOTS), the second only while the Mac is q
   rmSync(dir(), { recursive: true, force: true });
   check('and gets in when that one is gone', await within(w.got, 4000));
   await w.exited; live.kill('SIGKILL');
+}
+
+console.log('the Mac sleeps in the middle of a wait (card tests-flake-list)');
+{
+  // play a sleep: the wall clock jumps an hour while the monotonic clock (which does not tick asleep) goes on as it was
+  const realWall = L.clock.wall, realMono = L.clock.mono; let skew = 0;
+  const sleepsAfter = ms => setTimeout(() => { skew = 3600000; }, ms);
+  const play = async (opts, { control = false } = {}) => {
+    skew = 0; L.clock.wall = () => realWall() + skew; if (control) L.clock.mono = L.clock.wall; // control: a monotonic clock that does tick asleep, as the old code's Date.now() did
+    const h = opts.holder; const t0 = performance.now(); const timer = sleepsAfter(300); let err = null;
+    try { await L.acquire({ ...quiet, timeoutMs: 1500 }); } catch (e) { err = e; }
+    clearTimeout(timer);
+    const elapsed = performance.now() - t0;
+    L.clock.wall = realWall; L.clock.mono = realMono; skew = 0;
+    return { err, elapsed, ownerPid: owner() && owner().pid };
+  };
+  {
+    const h = holder('hold'); await h.got;
+    const r = await play({ holder: h });
+    check('an hour asleep is not an hour waited: the 1.5 s wait still ran its 1.5 s', r.err && /timed out/.test(r.err.message) && r.elapsed >= 1300, Math.round(r.elapsed) + ' ms');
+    check('and the live holder kept its lock: its heartbeat looked an hour old after the jump, and nobody took it', r.ownerPid === h.p.pid, 'owner ' + r.ownerPid);
+    h.p.kill('SIGTERM'); await h.exited; await sleep(100);
+  }
+  {
+    const h = holder('hold'); await h.got;
+    const r = await play({ holder: h }, { control: true });
+    check('control: with a clock that ticks asleep the same wait ends at once, or takes the live holder\'s lock (so the two checks above can fail)', r.elapsed < 1300 || r.ownerPid === process.pid, Math.round(r.elapsed) + ' ms, owner ' + r.ownerPid);
+    if (r.ownerPid === process.pid) L.release();
+    h.p.kill('SIGTERM'); await h.exited; await sleep(100);
+  }
+  {
+    // a waiter in the line behind us keeps its ticket through the jump (its ticket looked an hour old)
+    const h = holder('hold'); await h.got;
+    const w = runner('behind'); await waitFor(() => tickets() >= 1);
+    skew = 0; L.clock.wall = () => realWall() + skew;
+    const timer = sleepsAfter(300); let err = null;
+    const p = L.acquire({ ...quiet, timeoutMs: 1500 }).catch(e => { err = e; });
+    await sleep(900);
+    check('after a jump of an hour the ticket of the run in front is not dropped as stale', tickets() >= 2, 'tickets ' + tickets());
+    await p; clearTimeout(timer); L.clock.wall = realWall; skew = 0;
+    w.p.kill('SIGKILL'); h.p.kill('SIGTERM'); await Promise.all([w.exited, h.exited]); await sleep(100);
+  }
+  check('the clocks are back to the real ones', L.clock.wall === realWall && L.clock.mono === realMono);
+}
+
+console.log('a finished test process that will not exit is ended (card tests-flake-list)');
+{
+  const CDPJS = pathToFileURL(join(HERE, 'cdp.mjs')).href;
+  const run = (body, env = {}) => new Promise(res => {
+    const t0 = performance.now(); let out = '';
+    const p = spawn(process.execPath, ['--input-type=module', '-e', `import { armExitNet, disarmExitNet } from ${JSON.stringify(CDPJS)}; ${body}`], { env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'inherit'] });
+    p.stdout.on('data', d => { out += d; });
+    const kill = setTimeout(() => p.kill('SIGKILL'), 8000);
+    p.on('exit', (code, signal) => { clearTimeout(kill); res({ code, signal, ms: performance.now() - t0, out }); });
+  });
+  let r = await run('armExitNet(600); setInterval(() => {}, 1000);');
+  check('a process kept alive after its Chrome closed is ended after the net time, with exit code 1 when none was set', r.code === 1 && r.signal === null && r.ms < 6000 && /still running/.test(r.out), JSON.stringify({ code: r.code, signal: r.signal, ms: Math.round(r.ms) }));
+  r = await run('process.exitCode = 0; armExitNet(600); setInterval(() => {}, 1000);');
+  check('a process that already set its exit code ends with it (0 here: it had passed)', r.code === 0 && r.signal === null && r.ms < 6000, JSON.stringify({ code: r.code, signal: r.signal, ms: Math.round(r.ms) }));
+  r = await run('armExitNet(600); disarmExitNet(); setTimeout(() => { console.log("still here"); process.exit(0); }, 1500);');
+  check('the next launch disarms it: a test that goes on is not cut short', r.code === 0 && /still here/.test(r.out) && r.ms >= 1300, JSON.stringify({ code: r.code, ms: Math.round(r.ms) }));
+  const { patience } = await import(CDPJS);
+  const idle = patience(8000);
+  check('a wait is never given less than its limit, and at most 4 times it (stretched by the load per core)', idle >= 8000 && idle <= 32000 && patience(1) >= 1 && patience(1) <= 4, String(Math.round(idle)));
+  r = await run('armExitNet(600);');
+  check('a process that ends by itself is not held up by the net (the timer is unref\'d)', r.code === 0 && r.ms < 2500, JSON.stringify({ code: r.code, ms: Math.round(r.ms) }));
 }
 
 console.log('orphan Chrome profiles');

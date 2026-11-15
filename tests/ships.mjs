@@ -1,3 +1,4 @@
+// not in the smoke: the ship gallery pictures, run by hand
 // Ship gallery: lines every ship class up in space at 2x zoom and saves two screenshots to tests/out/:
 //   ships-<name>.png         the gallery (player ship at each upgrade tier, pirates, the Reaver, MULE, civilian, police)
 //   ships-<name>-flight.png  the player thrusting with flame and trail, a hit on the shield, a smoking gunship

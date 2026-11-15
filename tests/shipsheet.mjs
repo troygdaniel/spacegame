@@ -1,3 +1,4 @@
+// smoke: the six player ships: silhouettes, every upgrade slot, nozzles, physics circle, hangar, flight, Ship bay
 // The six player ships (src/shipmodels.js): a picture sheet of every hull at upgrade tiers 0 to 3, and the checks that make them real ships:
 // each hull has its own silhouette, every upgrade slot changes the picture, nozzles, physics circle and callout anchors sit inside the texture,
 // and the game follows the active model (hangar size, physics body, flames, Ship bay). One headless Chrome, closed at the end.

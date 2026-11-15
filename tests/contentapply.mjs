@@ -1,3 +1,4 @@
+// smoke: the second look at content.generated.js, the merge by id over the built-in tables, and the seal (no browser)
 // Tests for the second look and the merge: ContentLib.checkEntry and ContentLib.apply (card space-game-m2-loader, docs/MODDING.md 5).
 // No browser: src/content.js is loaded with require(), like tests/content.mjs does; the browser side is tests/contentboot.mjs.
 // Run: node tests/contentapply.mjs        Each check names what it guards. Exit code 1 if any fails.
@@ -6,7 +7,7 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { readPack, build } from '../tools/build-content.mjs';
+import { readPack, build, readGenerated, shippedCore, SEALED } from '../tools/build-content.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const C = createRequire(import.meta.url)('../src/content.js');
@@ -136,7 +137,7 @@ section('apply: merge by id');
   check('a type that can add gets the new id with isNew true', calls.some(c => c[0] === 'mission' && c[1] === 'courier-9' && c[3] === true));
   check('a type with no table is left alone with a warning', msgs(r.errors).includes('(warning) content/npcs/juno.md: this version of the game does not read npcs yet. Ignored the file.'), J(msgs(r.errors)));
   check('applied lists exactly what changed something', J(r.applied) === J(['ship:raider', 'mission:rescue', 'mission:courier-9']), J(r.applied));
-  check('skipped counts the rest, loaded is true, hash and files pass through', r.skipped === 2 && r.loaded && r.hash === 'h1' && r.files === 3, J(r));
+  check('skipped counts the rest, loaded is true, hash is the entries\' own and files passes through', r.skipped === 2 && r.loaded && /^[0-9a-f]{8}$/.test(r.hash) && r.hash === r.actual && r.files === 3, J(r));
 }
 
 section('apply: a table that misbehaves');
@@ -235,28 +236,46 @@ section('MODDED: the entries against the shipped core pack');
   check('a file with no core hash (an old build) is not called modded', r.modded === false);
   const edited = JSON.parse(J(entries)); edited[0].data.hull = 700;
   r = C.apply(wrap({ entries: edited }), {});
-  check('a hand-edited file with the old hash is modded and says its hash does not match', r.modded === true && msgs(r.errors).some(m => m.includes('its entries do not match its own hash')), J(msgs(r.errors)));
-  check('a hash cannot hide a hand edit: the browser hashes the entries itself', r.actual !== h && r.hash === h);
+  check('entries that differ from a hex core are modded (a build of edited content carries the shipped hash)', r.modded === true && r.core === h && r.actual !== h, J(r));
+  check('the browser hashes the entries itself: hash is what is really there', r.actual !== h && r.hash === r.actual);
+  r = C.apply(wrap({ core: 'sealed' }), tables);
+  check('core "sealed" is the shipped pack as committed: not modded (docs/SMOKE.md 2)', r.modded === false && r.core === 'sealed' && r.errors.length === 0, J(r));
+  r = C.apply(wrap({ core: 'sealed', entries: edited }), {});
+  check('a sealed file is never called modded, whatever its entries (there is no hash line to disagree with)', r.modded === false && r.hash === r.actual);
+  r = C.apply(wrap({ core: 'sealed', files: undefined }), tables);
+  check('with no file count the loader counts the paths', r.files === 1, J(r));
   r = C.apply({ entries: [null, 5, 'x'], core: 'abc' }, {});
   check('odd entries still give an answer about modded', r.modded === true && typeof r.actual === 'string');
 }
 
-section('the build keeps the shipped core hash; only --seal moves it');
+section('the seal (docs/SMOKE.md 2): the committed file says "sealed", a build of edited content carries the shipped hash, only --seal writes sealed again');
 {
-  const dir = join(ROOT, 'tests/fixtures/content-good'), tmp = mkdtempSync(join(tmpdir(), 'longhaul-seal-')), out = join(tmp, 'content.generated.js');
+  const dir = join(ROOT, 'tests/fixtures/content-good'), bad = join(ROOT, 'tests/fixtures/content-bad'), tmp = mkdtempSync(join(tmpdir(), 'longhaul-seal-')), out = join(tmp, 'content.generated.js');
   try {
     let b = build({ dir, prefix: 'content/', out, write: true });
-    check('a first build seals itself: core equals hash, not modded', b.core === b.result.hash && b.modded === false);
-    writeFileSync(out, readFileSync(out, 'utf8').replace(/core: "[0-9a-f]+"/, 'core: "deadbeef"'));
+    const header = b.text.split('\n')[4];
+    check('a first build seals itself: core is "sealed", not modded', b.core === SEALED && b.modded === false, J(b.core));
+    check('the header carries no hash and no file count (what made every merge of two content branches conflict)', header === '  version: 1, core: "sealed",', header);
+    const good = readGenerated(readFileSync(out, 'utf8'));
+    check('readGenerated reads the core and hashes the entries the way the loader does', good.core === SEALED && good.hash === b.result.hash, J(good));
     b = build({ dir, prefix: 'content/', out, write: true });
-    check('a normal build keeps the core that was in the file, so the pack reads as modded', b.core === 'deadbeef' && b.modded === true && /core: "deadbeef"/.test(readFileSync(out, 'utf8')) && b.changed === false);
-    b = build({ dir, prefix: 'content/', out, write: true, seal: true });
-    check('--seal makes this content the shipped pack', b.core === b.result.hash && b.modded === false && !/deadbeef/.test(readFileSync(out, 'utf8')));
+    check('the same content over a sealed file changes nothing', b.changed === false && b.core === SEALED);
+    b = build({ dir: bad, prefix: 'content/', out, write: true });
+    check('other content over a sealed file carries the shipped hash and reads as modded', b.core === good.hash && b.modded === true && readFileSync(out, 'utf8').includes('core: "' + good.hash + '"'), J([b.core, good.hash]));
+    b = build({ dir: bad, prefix: 'content/', out, write: true });
+    check('a hash already in the file stays', b.core === good.hash && b.changed === false);
+    b = build({ dir, prefix: 'content/', out, write: true });
+    check('back to the shipped content: the hash stays and the file is no longer modded (its entries equal the core)', b.core === good.hash && b.modded === false);
+    b = build({ dir: bad, prefix: 'content/', out, write: true, seal: true });
+    check('--seal makes this content the shipped pack', b.core === SEALED && b.modded === false && /core: "sealed"/.test(readFileSync(out, 'utf8')));
     b = build({ dir, prefix: 'content/', out, write: false, core: 'cafe1234' });
     check('an explicit core is used as is (tests)', b.core === 'cafe1234' && /core: "cafe1234"/.test(b.text));
+    check('readGenerated of junk gives nothing and throws nothing', readGenerated('var x = 1;').hash === '' && readGenerated('').core === '');
   } finally { rmSync(tmp, { recursive: true, force: true }); }
-  const shipped = readFileSync(join(ROOT, 'content.generated.js'), 'utf8'), hash = /hash: "([0-9a-f]+)"/.exec(shipped), core = /core: "([0-9a-f]+)"/.exec(shipped);
-  check('the committed content.generated.js is sealed (hash equals core); after changing content/ run node tools/build-content.mjs --seal', !!hash && !!core && hash[1] === core[1], J([hash && hash[1], core && core[1]]));
+  const shippedText = readFileSync(join(ROOT, 'content.generated.js'), 'utf8'), shipped = readGenerated(shippedText);
+  check('the committed content.generated.js is sealed; after changing content/ run node tools/build-content.mjs --seal', shipped.core === SEALED, shipped.core);
+  check('and it is what a build makes: the seal as a test step, no hand step after a merge', build({ write: false }).text === shippedText);
+  check('shippedCore() is the hash of its entries', shippedCore() === shipped.hash && /^[0-9a-f]{8}$/.test(shipped.hash), shipped.hash);
 }
 
 console.log(failed ? `\nCONTENT APPLY FAIL: ${failed} of ${n} checks failed` : `\nCONTENT APPLY PASS: ${n} checks`);

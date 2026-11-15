@@ -20,7 +20,9 @@ FULL=1 bash tests/smoke.sh   # adds the mission flow, about two minutes more
 
 You need **Node 22+** and **Google Chrome** (set `CHROME=/path/to/chrome` if it is not in the usual place). The tests drive a throwaway headless Chrome with sound muted and its own profile, never yours. On a busy machine run one test at a time. Screenshots land in `tests/out/` (ignored by git); look at them for anything visual.
 
-The smoke test: `node --check` on every file, the hygiene scan, each scene loaded with no console errors, a scripted rescue from station to payout, one check per fixed bug, and the hyperspace tunnel demo.
+The smoke test: `node --check` on every file, a check that the generated content files are what a build makes, then every test in `tests/` (the hygiene scan, each scene loaded with no console errors, a scripted rescue from station to payout, one check per fixed bug, the jump, the fleet, the mods...). `bash tests/smoke.sh --list` shows the steps without running them.
+
+Adding a test: make `tests/<name>.mjs` and put one line at its very top, `// smoke: <what it checks>`. The smoke finds it by that line (there is no list to edit), runs the node-only tests first and then the Chrome ones, and fails by name on a test file with no such line. A helper the tests import, or a tool run by hand, says `// not in the smoke: <why>` instead; `// smoke FULL=1:` is for a slow test that only `FULL=1` runs. If you changed a file under `content/`, run `node tools/build-content.mjs --seal` and commit `content.generated.js` with your change. The rules and the reasons are in `docs/SMOKE.md`.
 
 ## Sending a change
 

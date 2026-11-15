@@ -1,3 +1,4 @@
+// smoke: cruise: the N nav list, C cruise, a 36000 px Halcyon: speed profile, locks, cancel, nudge, frame cost
 // Cruise: in-system fast travel (src/cruise.js, docs/UNIVERSE.md 2.2). Run: node tests/cruise.mjs
 // The game clock is stepped by hand (16.67 ms a frame, see cdp.mjs clock()), so the speeds, times and distances below are exact
 // whatever the load on the Mac. Checks: Halcyon is 36000 px with its old cluster where it was; the nav list; the three locks;

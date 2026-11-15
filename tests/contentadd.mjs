@@ -1,3 +1,4 @@
+// smoke: adding new things from markdown: voice lines, NPCs, missions, ships
 // Adding new things from markdown (card space-game-m9-add-new, docs/MODDING.md section 12): a file with an id the code does not know
 // becomes a new voice line, bar character, mission, or ship. Each case runs the real game in headless Chrome from a throwaway COPY of this
 // folder whose content.generated.js is built from a small pack made here, then reads what the game plays from. Types so far: voice, ship, mission, npc.
@@ -5,7 +6,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { build } from '../tools/build-content.mjs';
+import { build, shippedCore } from '../tools/build-content.mjs';
 import { launch, sleep } from './cdp.mjs';
 import { copyGame, ROOT } from './gamecopy.mjs';
 
@@ -13,7 +14,7 @@ let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok  ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + detail + ')' : ''}`); } };
 
 const tmp = [];
-const realCore = /\bcore:\s*"([0-9a-f]+)"/.exec(readFileSync(join(ROOT, 'content.generated.js'), 'utf8'))[1]; // the shipped pack's hash: a game with other files reads as MODDED
+const realCore = shippedCore(); // the shipped pack's hash (the entries of the committed content.generated.js): a game with other files reads as MODDED
 // a game copy whose content.generated.js is built from `files` ({ 'voice/x.md': text }) and nothing else
 function gameWith(files) {
   const pack = mkdtempSync(join(tmpdir(), `longhaul-add-pack-${process.pid}-`)); tmp.push(pack);

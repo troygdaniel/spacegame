@@ -1,3 +1,4 @@
+// smoke: the hangar terminal in the Ship bay: fleet, yard and controls tabs, buy and sell with a second press, board, move, rename
 // The hangar terminal in the Ship bay (src/hangar.js, card space-game-u-d4-hangar-ui; docs/UNIVERSE.md 6.3): the panel with FLEET, YARD and
 // CONTROLS, what the stage and the status panel show for the ship you select, and the amber button (LAUNCH, BOARD, MOVE HERE, BUY).
 // Real key presses over DevTools, real time. The fleet rules themselves are tests/fleet.mjs; this checks what the screen does with them.

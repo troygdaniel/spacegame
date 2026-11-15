@@ -1,3 +1,4 @@
+// smoke: one check per fixed playtest bug (colonist, prompt box, toasts, ramming, insurance fee)
 // One check per playtest bug fixed on card space-game-bugs (see docs/PLAYTEST.md). Run: node tests/fixes.mjs
 // Exit code 1 if any check fails. Each check says which bug it guards, so a regression names itself.
 import { chromePool, sleep } from './cdp.mjs';

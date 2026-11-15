@@ -1,3 +1,4 @@
+// smoke: the Station scene reads its station: name, accent, desks, bar lines and keeper for each of the six docks; stores where there is no bar
 // The Station scene reads its station's data (docs/UNIVERSE.md 9, card space-game-u-e5-station-variants): stationLook(id) gathers the name, the accent colour, which
 // desks stand in the hall and the bar's lines; the hall is baked once per look (cyan Halcyon, green Kestrel and Meridian, amber the two foundries, red the Roost);
 // a dock with no bar has stores in its place, no repair bay or no shop means no kiosk and no spot; the keeper of every bar but Halcyon's says the station's own lines.

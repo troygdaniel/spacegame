@@ -1,3 +1,4 @@
+// smoke: each scene loads in headless Chrome with no console error, one screenshot per scene
 // Loads each scene in headless Chrome, waits for it to be running, saves a screenshot to tests/out/ and fails on any
 // console error or uncaught exception. Run: node tests/scenes.mjs   (exit code 1 on any failure)
 // Uses the DevTools route rather than chrome --screenshot: that one hangs at random when the Mac is busy.

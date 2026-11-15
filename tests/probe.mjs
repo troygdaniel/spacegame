@@ -1,3 +1,4 @@
+// not in the smoke: balance probes for docs/PLAYTEST.md; nothing is asserted
 // Balance probes for docs/PLAYTEST.md: measures what the game actually does, nothing is asserted.
 // Run: node tests/probe.mjs    (about a minute; prints numbers)
 import { launch, sleep } from './cdp.mjs';
