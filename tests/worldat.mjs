@@ -102,7 +102,7 @@ try {
     }
     check('seven systems: every front-matter field, every cell of every body row, every dock number and every word of the station files is in the row worldAt gives', lost.length === 0, lost.join(' | '));
     const hs = worlds.halcyon.bodies.find(b => b.id === 'halcyon-station');
-    check('Halcyon\'s station file is kept whole too (accent, welcome, services, bar) and the code row keeps its dock {fuel 8, yard [kite]}', (await ev(`CONTENT_WORLD.station['halcyon-station'].accent`)) === '#38e1ff' && JSON.stringify(hs.dock) === '{"fuel":8,"yard":["kite"]}', JSON.stringify(hs.dock));
+    check('Halcyon\'s station file is kept whole too (accent, welcome, services, bar) and the code row keeps its dock {fuel 8, yard [kite], the eight calls its board posts}', (await ev(`CONTENT_WORLD.station['halcyon-station'].accent`)) === '#38e1ff' && JSON.stringify(hs.dock) === '{"fuel":8,"yard":["kite"],"missions":["rescue","escort","patrol","bounty","courier-halcyon-kestrel","courier-halcyon-brass","haul-halcyon-brass","survey-hollow"]}', JSON.stringify(hs.dock));
 
     // the numbers the design gave each place
     const dock = (sys, id) => (worlds[sys].bodies.find(b => b.id === id) || {}).dock || {};

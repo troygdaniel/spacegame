@@ -69,7 +69,8 @@ class Station extends Phaser.Scene {
     const posted = missionsOffered(); // src/missions.js: the calls this station's dock posts
     if (!posted.length && !(G.mission === 'accepted' || G.mission === 'rescued')) return this.openEmptyBoard();
     const busy = () => G.mission === 'accepted' || G.mission === 'rescued';
-    const RISK = { rescue: ['MEDIUM', 2, '#ffb454'], escort: ['HIGH', 3, '#ff4d6d'], patrol: ['MEDIUM', 2, '#ffb454'], bounty: ['EXTREME', 3, '#ff2a4a'] };
+    const RISK = { rescue: ['MEDIUM', 2, '#ffb454'], escort: ['HIGH', 3, '#ff4d6d'], patrol: ['MEDIUM', 2, '#ffb454'], bounty: ['EXTREME', 3, '#ff2a4a'],
+      courier: ['LOW', 1, '#6dff9c'], haul: ['LOW', 1, '#6dff9c'], salvage: ['MEDIUM', 2, '#ffb454'], survey: ['MEDIUM', 2, '#ffb454'] };
     const OFFERS = posted.map((m, i) => Object.assign(Object.create(m), { key: i < 9 ? String(i + 1) : '' })); // the number keys follow the board's order, so every station's board is keyed 1, 2, 3 ...
     // four cards fit side by side; a pack that adds more calls than that scrolls: the window of four follows the call you choose
     const VIS = 4, SHOWN = Math.min(OFFERS.length, VIS), GAP = Math.min(288, Math.floor(1120 / SHOWN)), CW = Math.min(270, GAP - 14);
