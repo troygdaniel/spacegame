@@ -1,0 +1,119 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Abyssal Garden Review</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* A review page in the agentboard docs style. ?theme=dark or ?theme=light forces a theme; otherwise it follows the system. */
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --line: #e7e5e4; --text: #1c1917; --muted: #6b6560;
+    --warn: #b45309; --ok: #15803d; --chip: #f2f0ee; --first: #1d4ed8; --first-bg: rgba(29,78,216,.08);
+    --fs-xs: 11px; --fs-sm: 12px; --fs-md: 13px; --fs-base: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #070b12; --surface: #0f1722; --line: #1c2a3a; --text: #d6e9ff; --muted: #7f95ad;
+      --warn: #ffc857; --ok: #5dffb0; --chip: #15202e; --first: #5ee7ff; --first-bg: rgba(94,231,255,.1); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #070b12; --surface: #0f1722; --line: #1c2a3a; --text: #d6e9ff; --muted: #7f95ad;
+    --warn: #ffc857; --ok: #5dffb0; --chip: #15202e; --first: #5ee7ff; --first-bg: rgba(94,231,255,.1); color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: var(--fs-base)/1.5 system-ui, sans-serif; padding: 24px max(16px, env(safe-area-inset-left, 0px)) 48px; }
+  main { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  h2 { font-size: var(--fs-sm); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 32px 0 8px; }
+  p { margin: 0 0 10px; max-width: 72ch; }
+  p.note { color: var(--muted); font-size: var(--fs-sm); }
+  a { color: inherit; }
+  code { font-family: ui-monospace, monospace; font-size: .92em; background: var(--chip); padding: 0 4px; border-radius: 4px; overflow-wrap: anywhere; }
+  .frame { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 12px 14px; }
+  .first3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .first3 .frame { border-color: var(--first); background: var(--first-bg); }
+  .first3 b { display: block; margin-bottom: 2px; }
+  .first3 span { color: var(--muted); font-size: var(--fs-sm); }
+  ul { margin: 0; padding-left: 18px; max-width: 72ch; } li { margin: 4px 0; }
+  .row { display: grid; grid-template-columns: 26px 1fr 44px; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; }
+  .row:first-child { border-top: 0; }
+  .row .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .row .nm { font-weight: 600; }
+  .row .about { color: var(--muted); font-size: var(--fs-md); margin-top: 2px; }
+  .row .have { font-size: var(--fs-sm); margin-top: 4px; }
+  .eff { font-size: var(--fs-sm); font-weight: 700; text-align: center; border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 1px 0; }
+  .row.top .n, .row.top .nm { color: var(--first); }
+  .tag { font-size: var(--fs-xs); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; margin-left: 6px; font-weight: 400; white-space: nowrap; }
+  .legend { color: var(--muted); font-size: var(--fs-sm); margin-top: 8px; }
+  @media (max-width: 640px) { .first3 { grid-template-columns: 1fr; } }
+</style>
+<script>{ const t = new URLSearchParams(location.search).get('theme'); if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t; }</script>
+
+<main>
+<h1>Abyssal Garden: what Long Haul can take from it</h1>
+<p class="note">Review for card <code>review-abyssal-garden</code>, 16 Nov 2026. Read from the source at
+<a href="https://github.com/Noniv/abyssal-garden">github.com/Noniv/abyssal-garden</a> (MIT); nothing from it was built or run.
+Compared with Long Haul at <code>bf96fca</code>.</p>
+
+<h2>Build these first</h2>
+<div class="first3">
+  <div class="frame"><b>1. A critic that sees only the pictures</b><span>A fresh agent gets fixed screenshots and no code, and lists what looks wrong. Small.</span></div>
+  <div class="frame"><b>2. A one-minute flight benchmark</b><span>One key flies a fixed route and reports average, 99th percentile and worst frame. Medium.</span></div>
+  <div class="frame"><b>3. Cards that say when they are done</b><span>Priorities in order, a number to hit, and the checks that close the card. Small.</span></div>
+</div>
+
+<h2>What it does well</h2>
+<ul>
+  <li><b>The prompt is a contract.</b> In 2 KB it gives three priorities in the order they win when they conflict, hard limits, one named machine with a frame budget (11 ms average, no frame over 16.7 ms), the scene, and two checks that define done.</li>
+  <li><b>It checks the look blind.</b> A separate agent sees six fixed camera shots and a recording, never the code or the reasoning, and returns ranked defects. Work continues until nothing is above "minor".</li>
+  <li><b>It measures speed the same way every time.</b> A scripted 60-second flight logs every frame and reports average, 99th percentile and worst. The flight and benchmark keys exist only in a separate <code>dev.html</code>.</li>
+  <li><b>It degrades by itself.</b> Each second it compares frame time with a 60 fps target and lowers resolution first, then draw distance, in small steps, and goes back up the same way. The result is remembered for the next visit.</li>
+  <li><b>It survives a crash.</b> A marker is set while the world loads; if it is still set on the next visit, that load crashed, and the page starts one detail level lower.</li>
+  <li><b>The menu is useful time.</b> The scene runs blurred behind the start menu, so the speed tuning is mostly finished before play starts.</li>
+  <li><b>The README invites changes.</b> A table says which file holds what, and five "easy first tweaks" name the exact constant to change.</li>
+</ul>
+
+<h2>What to steal, ranked for Long Haul</h2>
+<div class="frame">
+  <div class="row top"><span class="n">1</span><div><span class="nm">Blind visual critic on fixed shots</span>
+    <div class="about">A fresh agent is handed only the PNGs from a fixed list of views (title, station, space in a fight, surface, map, HUD) and returns ranked defects. A visual card closes when nothing is above minor.</div>
+    <div class="have">Long Haul has: screenshots from <code>hudshots</code>, <code>stationshots</code> and the playtests, read by the agent that wrote the code. Software drawing here is enough for pictures.</div></div><span class="eff">S</span></div>
+  <div class="row top"><span class="n">2</span><div><span class="nm">Scripted flight benchmark</span>
+    <div class="about">A dev-only key flies the autopilot along a fixed route for 60 seconds with the resolution held, then shows frames, average, 99th percentile and worst. Troy presses it on his own machine and pastes three numbers.</div>
+    <div class="have">Long Haul has: <code>docs/PERF.md</code>, which says drawing "cannot be judged without a real GPU" because headless Chrome here draws in software. This closes that gap. The same route can also drive a smoke test.</div></div><span class="eff">M</span></div>
+  <div class="row top"><span class="n">3</span><div><span class="nm">Card shape: priorities, target, done when</span><span class="tag">agentboard</span>
+    <div class="about">Three optional lines on a build card: what wins when goals conflict, the number to hit, and the checks that close it. The agent reports those numbers in the review.</div>
+    <div class="have">agentboard has: a free-text card body and a review body with "Checked". A template line in the dev-crew configuration is enough to start.</div></div><span class="eff">S</span></div>
+  <div class="row"><span class="n">4</span><div><span class="nm">"Easy first tweaks" table</span>
+    <div class="about">A short README table: what to change, the file, the constant. Flight speed, boost, hit flash, star density.</div>
+    <div class="have">Long Haul has: 96 named constant tables and content in markdown, but no list of where to start.</div></div><span class="eff">S</span></div>
+  <div class="row"><span class="n">5</span><div><span class="nm">Sound polish: reverb send and voice pools</span>
+    <div class="about">One shared reverb made from five seconds of fading noise, and a small pool of reused voices for repeated effects, so a busy fight makes no new audio nodes. Sound runs from a 10 Hz timer, not the frame loop.</div>
+    <div class="have">Long Haul has: all sound made in code already, with a limiter and an engine hum that follows thrust. It makes new nodes for each effect and has no reverb.</div></div><span class="eff">S</span></div>
+  <div class="row"><span class="n">6</span><div><span class="nm">Live scene behind the title</span>
+    <div class="about">Run a real Space scene with the autopilot flying, blurred and dimmed by CSS, behind the title menu; it sharpens when play starts.</div>
+    <div class="have">Long Haul has: a title with drifting stars and passing ships, and a load of about half a second, so no loading bar is needed.</div></div><span class="eff">M</span></div>
+  <div class="row"><span class="n">7</span><div><span class="nm">No new objects each frame</span>
+    <div class="about">Abyssal keeps all per-frame numbers in one preallocated array. For Long Haul this means caching the HUD's fixed rings and arcs.</div>
+    <div class="have">Long Haul has: 1.25 MB allocated a frame, left alone in <code>PERF.md</code>. Do it only if the benchmark in row 2 shows a bad worst frame.</div></div><span class="eff">M</span></div>
+  <div class="row"><span class="n">8</span><div><span class="nm">Detail levels and automatic resolution</span>
+    <div class="about">Low, Medium and High, remembered between visits, with resolution stepping down to hold 60 fps.</div>
+    <div class="have">Long Haul has: its own code at 0.6 ms a frame and no sign of a slow machine. Build only if row 2 shows a need.</div></div><span class="eff">M</span></div>
+  <div class="row"><span class="n">9</span><div><span class="nm">Glide along walls</span>
+    <div class="about">On contact, push out along the surface normal and remove only the speed going into the wall.</div>
+    <div class="have">Long Haul has: Phaser's box colliders on the surface and in the station, which already slide along straight walls. Worth it only if round rocks feel sticky.</div></div><span class="eff">S</span></div>
+</div>
+<p class="legend">Effort: S is under half a day for one agent, M is one card of about a day, L is several cards. Rows 1 to 3 are the recommended first builds.</p>
+
+<h2>Could our agents verify Long Haul this way?</h2>
+<p><b>The look: yes, now.</b> The screenshot tools exist and software drawing gives correct pictures. The new part is who reads them: an agent with no code and no card history, so it cannot explain a defect away.</p>
+<p><b>The speed: only on a real graphics card.</b> Headless Chrome on this Mac draws in software (38 ms a frame in Space), so an agent's timing says nothing. The benchmark key puts the measurement on Troy's screen in one minute.</p>
+
+<h2>What not to copy</h2>
+<ul>
+  <li><b>WebGPU with no engine.</b> It is a rewrite. Long Haul's size is Phaser (1.2 MB), and its scenes, physics and input depend on it.</li>
+  <li><b>One minified file and a build step.</b> Long Haul runs from plain files with no build, and mods and markdown content rely on that.</li>
+  <li><b>One big prompt for the whole game.</b> Abyssal is a scene to fly through with no rules, saves or economy. Take the prompt's shape for each card, not its size.</li>
+  <li><b>The crash marker and phone support.</b> Long Haul loads in half a second with no heavy GPU work, and is desktop only.</li>
+  <li><b>Its target machine.</b> A frame budget is only useful for the machine Troy plays on; name that one.</li>
+</ul>
+</main>
