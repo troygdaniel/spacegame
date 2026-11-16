@@ -18,7 +18,7 @@ Card `space-game-smoke-autodiscover` (Troy, 2026-11-14). Before it, almost every
 - Order: the node-only tests first (a file that does not import `tests/cdp.mjs`), alphabetical; then the Chrome tests, alphabetical. Node-only tests take seconds and fail fast; Chrome tests take the one-Chrome lock.
 - Fixed steps stay in `smoke.sh` because they are not tests: `node --check` on every file, `node tools/build-content.mjs --check` (the generated files are what a build makes; section 2), and `node tools/economy-sim.mjs check`.
 - `bash tests/smoke.sh --list` prints the steps it would run and the files it skips, and runs nothing. Use it to see a new test was picked up.
-- `SMOKE PASS` / `SMOKE FAIL` and the exit code are unchanged; the files skipped are listed at the end so an accidental `// not in the smoke:` is visible.
+- `SMOKE PASS` / `SMOKE FAIL` and the exit code are unchanged; the files skipped are listed at the end so an accidental `// not in the smoke:` is visible. A run now stops at the first failed step (section 5); `ALL=1` keeps the old run-to-the-end.
 
 A branch made before this change that added a step to `smoke.sh`: drop its `smoke.sh` lines in the merge and put the `// smoke:` line at the top of its test.
 
@@ -55,3 +55,14 @@ Tests that need "the shipped pack's hash" (`contentui`, `contentadd`, `contentpr
 ## 4. Landing
 
 Land only after the branches in review at the time (B5 systems, E2 pullout, perf) have merged, because this touches the top of every test file and the header of the generated file: rebase, `node tools/build-content.mjs --seal`, run `bash tests/smoke.sh --list` and the touched tests, then review. DreamBot's one full smoke on the merged batch is the first full run of the new runner.
+
+## 5. It stops at the first failed step (card `retro-smoke-fail-fast`, retro rec 7, Troy 2026-11-15)
+
+Before, `smoke.sh` set `fail=1` on a failed step and ran on to the end, so a typo found in the first second still cost the whole run, Chrome tests included. Now:
+
+- **The first failed step ends the run**: it prints `SMOKE FAIL: stopped at the first failure (step N/M); ALL=1 bash tests/smoke.sh goes on and lists every failure` and exits 1. This holds for every step: a `node --check` file, the content check, a node test, the economy simulator, a Chrome test.
+- **The cheap steps run first**, so the stop comes early: a test file with no `// smoke:` marker is named before anything runs (the run ends there, before step 1), then `node --check`, the content check, the node-only tests, the economy simulator, and last the Chrome tests (one headless Chrome at a time through the lock). Nothing that needs a browser runs before a step that does not.
+- **`ALL=1 bash tests/smoke.sh` runs everything**: every step after a failure, every failure listed, still exit 1 and `SMOKE FAIL` at the end. It is the gate's switch: DreamBot's one full pass on the merged batch is `ALL=1 FULL=1 bash tests/smoke.sh`. `FULL=1` is a separate switch (it adds the mission flow); `ALL=1` does not add it.
+- `bash tests/smoke.sh --list` is unchanged: it lists everything and runs nothing, and still ends `LIST FAIL` for a file with no marker.
+- A card's own pass before review is the touched suites (docs/TESTING.md), not the whole smoke, so fail-fast mostly saves the gate and a branch that runs the whole smoke by hand.
+- `tests/smokefail.mjs` (node-only, in the smoke) runs the real `smoke.sh` in a temp folder with stand-in tools and tests: a failing node test stops it before the next test, the economy step and the Chrome test; `ALL=1` runs them all; the order is node, economy, Chrome; a syntax error and an unmarked file stop it before any test.

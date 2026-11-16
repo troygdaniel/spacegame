@@ -1,6 +1,6 @@
 # Testing Long Haul: what runs in Node and what needs Chrome
 
-The tests are `tests/*.mjs`, run by `bash tests/smoke.sh`, which finds each one by the `// smoke:` line at the top of its file (node-only tests first, then Chrome; `docs/SMOKE.md`). The slow, shared part is **headless Chrome**: only one runs at a time across every worktree (`tests/lock.mjs`), so every test that opens Chrome waits in the same queue. A test that does not need a browser should not be in that queue.
+The tests are `tests/*.mjs`, run by `bash tests/smoke.sh`, which finds each one by the `// smoke:` line at the top of its file (node-only tests first, then Chrome; `docs/SMOKE.md`). It stops at the first failed step, so a break in a cheap step shows in seconds; `ALL=1 bash tests/smoke.sh` runs every step and lists every failure (the gate). The slow, shared part is **headless Chrome**: only one runs at a time across every worktree (`tests/lock.mjs`), so every test that opens Chrome waits in the same queue. A test that does not need a browser should not be in that queue.
 
 ## The rule
 
@@ -27,7 +27,7 @@ What it is and is not:
 
 ## Which test is which
 
-**Node only** (no Chrome at all): `content`, `contentapply`, `galaxy`, `hygiene`, `locktest`, `modsdoc`, `savemig`, `worldat`, and `node tools/economy-sim.mjs check`.
+**Node only** (no Chrome at all): `content`, `contentapply`, `galaxy`, `hygiene`, `locktest`, `modsdoc`, `savemig`, `smokefail`, `worldat`, and `node tools/economy-sim.mjs check`.
 
 **Node first, then Chrome for the part that needs a scene** (one test file, one Chrome turn, or fewer than before):
 
