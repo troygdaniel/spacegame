@@ -8,6 +8,7 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { build, readPack, generate } from '../tools/build-content.mjs';
+import { contentSet, KEY_KEYS } from './contentset.mjs';   // what is in content/, read from the disk: no count of the shipped files is typed in this test
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const C = createRequire(import.meta.url)('../src/content.js');
@@ -286,14 +287,16 @@ section('build script and the generated file');
   check('the bad fixture pack loads what it can and lists what was wrong', bad.result.entries.length === 4 && errs === 12, bad.result.entries.length + ' entries, ' + errs + ' errors');
   check('and the problems are in the generated file too', JSON.stringify(vm.runInContext('CONTENT', (() => { const c = vm.createContext({}); vm.runInContext(bad.text, c); return c; })()).errors) === JSON.stringify(bad.result.errors));
   const shipped = build({ dir: join(ROOT, 'content'), prefix: 'content/', out: '/nonexistent/none.js', write: false });
-  check('the shipped content/ is the proof set of card m4 (2 ships, 4 missions, 6 npcs, 9 parts, 7 poi, the UI strings, the dock, five more docks and eight star systems of card systems-content-draft) and builds with no problems at all', shipped.result.errors.length === 0 && shipped.result.entries.map(e => e.type + ':' + e.id).sort().join() === 'mission:bounty,mission:escort,mission:patrol,mission:rescue,npc:dex,npc:ida,npc:juno,npc:moss,npc:sable,npc:tamsin,part:engine-1,part:engine-2,part:engine-3,part:shields-1,part:shields-2,part:shields-3,part:weapons-1,part:weapons-2,part:weapons-3,poi:beacon-e,poi:signal-beacon,poi:signal-wreck,poi:wreck-nw,poi:wreck-s,poi:wreck-se,poi:wreck-w,ship:drone,ship:raider,station:brass-smelter,station:ember-foundry,station:halcyon-station,station:kestrel-outpost,station:meridian-exchange,station:roost-dock,system:brass,system:ember,system:halcyon,system:hollow,system:kestrel,system:lethe,system:meridian,system:roost,text:ui', shipped.result.errors.map(C.formatError).join(' | '));
+  const SET = contentSet(), ids = shipped.result.entries.map(e => e.type + ':' + e.id).sort();
+  check('every file of the shipped content/ builds into one entry, with no problems at all (' + SET.count + ' files now, counted from the folder)', shipped.result.errors.length === 0 && shipped.result.files === SET.count && ids.length === SET.count && ids.join() === SET.keys.join(), shipped.result.errors.map(C.formatError).join(' | ') + ' ' + ids.length + ' entries, ' + SET.count + ' files');
+  check('and the key entries are all there (the proof set of card m4, the docks and the eight star systems: tests/contentset.mjs KEY)', KEY_KEYS.every(k => ids.includes(k)), KEY_KEYS.filter(k => !ids.includes(k)).join());
   check('an engine part may set boostAdd (px/s on the boost speed) up to 2000, and a rescue call has a second progress text', (() => {
     const p = (path, text) => C.validate(C.parse(path, text));
     const ok = p('content/parts/booster-1.md', '---\ntype: part\nslot: engine\ntier: 1\nname: B\nboostAdd: 200\n---\n').data, big = p('content/parts/booster-1.md', '---\ntype: part\nslot: engine\ntier: 1\nname: B\nboostAdd: 9000\n---\n');
     const r = p('content/missions/rescue.md', '---\ntype: mission\nkind: rescue\ntitle: T\nreward: 5\n---\n## Progress rescued\nAboard.\n').data;
     return ok && ok.boostAdd === 200 && big.errors.some(e => /boostAdd/.test(e.message) && /2000/.test(e.message)) && r && r.progressRescued === 'Aboard.';
   })());
-  check('readPack skips _ and . names (the templates) and gives / paths with the prefix', readPack(join(ROOT, 'content'), 'content/').length === 43 && !readPack(join(ROOT, 'content'), 'content/').some(f => /\/_/.test(f.path)) && readPack(join(ROOT, 'tests/fixtures/content-good'), 'content/').every(f => f.path.startsWith('content/') && !f.path.includes('\\')));
+  check('readPack skips _ and . names (the templates) and gives / paths with the prefix', readPack(join(ROOT, 'content'), 'content/').length === contentSet().count && !readPack(join(ROOT, 'content'), 'content/').some(f => /\/_/.test(f.path)) && readPack(join(ROOT, 'tests/fixtures/content-good'), 'content/').every(f => f.path.startsWith('content/') && !f.path.includes('\\')));
   check('generate() of an empty result is valid JavaScript', (() => { const c = vm.createContext({}); vm.runInContext(generate({ hash: 'x', files: 0, entries: [], errors: [] }), c); return vm.runInContext('CONTENT.entries.length', c) === 0; })());
 }
 

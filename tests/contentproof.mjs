@@ -18,7 +18,9 @@ import { build, shippedCore } from '../tools/build-content.mjs';
 import { launch, sleep } from './cdp.mjs';
 import { nodeGame } from './nodegame.mjs';
 import { copyGame, ROOT } from './gamecopy.mjs';
+import { contentSet, KEY_KEYS } from './contentset.mjs';   // what is in a content folder, read from the disk: no file count is typed in this test
 
+const SHIPPED = contentSet();   // the shipped content/ as it is on the disk now
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok  ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + detail + ')' : ''}`); } };
 const same = (name, a, b) => { let ok = true, detail = ''; try { deepStrictEqual(a, b); } catch (e) { ok = false; detail = String(e.message).split('\n').slice(0, 14).join(' | ').slice(0, 900); } check(name, ok, detail); };
@@ -149,7 +151,7 @@ try {
   // ---- A: the shipped pack, B: nothing at all ----
   console.log('A: the shipped pack');
   const A = await play(ROOT);
-  check('the loader applied the forty-three files of the shipped set (with eight systems and five more docks), no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === 43 && A.loader.state.modded === false, JSON.stringify(A.loader));
+  check('the loader applied every file in content/ (' + SHIPPED.count + ' now, counted from the folder), the key entries among them, no problems, not MODDED', A.loader.errors.length === 0 && A.loader.state.applied.length === SHIPPED.count && KEY_KEYS.every(k => A.loader.state.applied.includes(k)) && A.loader.state.modded === false, JSON.stringify(A.loader));
   check('no console errors', A.errors.length === 0, A.errors.join(' | '));
 
   console.log('B: an empty pack (the code\'s own tables)');
@@ -188,7 +190,7 @@ try {
   const cg = gameWith(join(pack, 'content'), realCore);
   check('the edited pack builds with no problems', cg.made.result.errors.length === 0, JSON.stringify(cg.made.result.errors));
   const C = await play(cg.dir);
-  check('the loader applied the forty-five files (the shipped set, eight systems, five more docks, and a tank and a hold part) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === 45 && C.loader.state.modded === true, JSON.stringify(C.loader));
+  check('the loader applied every file of the edited copy (the shipped set and a tank and a hold part: ' + contentSet(join(pack, 'content')).count + ' counted from its folder) and the Title would say MODDED', C.loader.errors.length === 0 && C.loader.state.applied.length === contentSet(join(pack, 'content')).count && C.loader.state.applied.includes('part:tank-1') && C.loader.state.applied.includes('part:cargo-1') && C.loader.state.modded === true, JSON.stringify(C.loader));
   check('no console errors', C.errors.length === 0, C.errors.join(' | '));
   const want = JSON.parse(JSON.stringify(A.snap)); // what A says, with exactly the edited lines changed
   Object.assign(want.ships.raider, { hp: 22, bounty: 47, radar: 0x6dff9c, shot: [500, 900], strafe: false });
@@ -257,7 +259,7 @@ try {
   put('npcs/nobody.md', '---\ntype: npc\nname: NOBODY\n---\nA new character needs a Lines list: without one the file is refused (src/contentadd.js).\n');
   const D = await play(gameWith(join(wrong, 'content')).dir);
   check('the game boots and plays, with no console errors', D.errors.length === 0, D.errors.join(' | '));
-  check('nothing was applied and every file was refused', D.loader.state.applied.length === 0 && D.loader.state.skipped === 12, JSON.stringify(D.loader.state));
+  check('nothing was applied and every file was refused (all ' + contentSet(join(wrong, 'content')).count + ' of the wrong pack)', D.loader.state.applied.length === 0 && D.loader.state.skipped === contentSet(join(wrong, 'content')).count, JSON.stringify(D.loader.state));
   const said = D.loader.errors.join('\n');
   check('the wrong slot is explained', /shields-1\.md\|could not be applied \(slot is "engine" but the file is called shields-1, so it must be the shields slot\)\. Kept the built-in values\./.test(said), said);
   check('the wrong tier is explained', /weapons-2\.md\|could not be applied \(tier is 1 but the file is called weapons-2, so it must be tier 2\)/.test(said));

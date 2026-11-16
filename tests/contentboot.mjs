@@ -13,6 +13,8 @@ import { join } from 'node:path';
 import { build } from '../tools/build-content.mjs';
 import { chromePool, sleep } from './cdp.mjs';
 import { copyGame, ROOT } from './gamecopy.mjs';
+import { contentSet, KEY, KEY_KEYS } from './contentset.mjs';   // what is in content/ now, read from the disk: no count is typed in this file
+const SET = contentSet();
 let failed = 0, n = 0;
 const pool = chromePool(); // every case shares one Chrome (one turn at the test lock), each starting on a clean profile (tests/cdp.mjs goto)
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok  ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + detail + ')' : ''}`); } };
@@ -36,11 +38,11 @@ async function run(name, dir, hash, scene, extra, allowedErrors = []) {
 
 const tmp = [];
 try {
-  // 1. the real pack: nothing wrong, nothing listed, the proof set (card m4: two ships, a call, a character, nine part tiers; card systems-content-draft: eight systems, six stations) applied
+  // 1. the real pack: nothing wrong, nothing listed, every file of content/ applied (counted from the folder by tests/contentset.mjs; its KEY list names the entries that must stay)
   await run('the real content pack', ROOT, '', 'Title', async (t, st) => {
     check('the loader read content.generated.js', st.state.loaded === true && typeof st.state.hash === 'string' && st.state.hash.length > 0, JSON.stringify(st.state));
-    check('it lists no problems and applies the forty-three files of the shipped set (with eight systems and five more docks)', st.errors.length === 0 && st.state.applied.length === 43 && st.state.skipped === 0, JSON.stringify(st.errors) + ' ' + st.state.applied.join());
-    check('the eight systems and the six docks (Halcyon\'s too, for worldAt) are kept in CONTENT_WORLD, and the game has the same eight systems in the code (card u-b5), with the dock names of the files applied and the prices of Halcyon where they were', (await t.ev(`Object.keys(CONTENT_WORLD.system).length === 8 && Object.keys(CONTENT_WORLD.station).length === 6 && Object.keys(SYSTEMS).join() === 'halcyon,kestrel,meridian,brass,hollow,lethe,ember,roost' && SYSTEMS.kestrel.bodies.length === 5 && ORE_PRICE === 20 && REPAIR_PRICE === 0.5`)) === true);
+    check('it lists no problems and applies every file in content/ (' + SET.count + ' now, counted from the folder), the key entries among them', st.errors.length === 0 && st.state.skipped === 0 && st.state.applied.length === SET.count && st.state.applied.slice().sort().join() === SET.keys.join() && KEY_KEYS.every(k => st.state.applied.includes(k)), JSON.stringify(st.errors) + ' ' + st.state.applied.join());
+    check('every system and dock file of content/ is kept in CONTENT_WORLD (Halcyon\'s dock too, for worldAt), the game has each of its own systems in the files and each key system in the code (card u-b5), the code\'s Kestrel has the rows its file has, and the prices of Halcyon are where they were', (await t.ev(`(() => { const cw = CONTENT_WORLD, ids = o => Object.keys(o).sort().join(); return ids(cw.system) === ${JSON.stringify(SET.of('system').join())} && ids(cw.station) === ${JSON.stringify(SET.of('station').join())} && Object.keys(SYSTEMS).every(id => id in cw.system) && ${JSON.stringify(KEY.system)}.every(id => id in SYSTEMS) && SYSTEMS.kestrel.bodies.length === cw.system.kestrel.bodies.length && ORE_PRICE === 20 && REPAIR_PRICE === 0.5; })()`)) === true);
     check('the shipped pack is not MODDED', st.state.modded === false, JSON.stringify(st.state));
   });
 

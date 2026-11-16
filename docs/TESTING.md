@@ -52,7 +52,7 @@ What it is and is not:
 | Web Audio (the ship voice speaks, levels against the wind) | `voice`, `audiolevels`, `sfxlevels` |
 | the game starting, a page reload or a screenshot | `scenes`, `contentboot`, `serve`, `contentadd`, `stationshots`, `hudshots`, `world`, `ships` |
 
-`playtest2`, `playtest3` and `probe` drive the game to write notes; they are not part of the smoke. `cdp.mjs`, `lock.mjs`, `gamecopy.mjs` and `nodegame.mjs` are helpers.
+`playtest2`, `playtest3` and `probe` drive the game to write notes; they are not part of the smoke. `cdp.mjs`, `lock.mjs`, `gamecopy.mjs`, `nodegame.mjs` and `contentset.mjs` are helpers.
 
 ## Writing a new test
 
@@ -60,3 +60,4 @@ What it is and is not:
 2. Does the first half need only functions and the second a scene? Put the first half in `nodeGame()` and open Chrome once for the second, in the same file.
 3. Opening Chrome more than once in a file costs a turn at the lock each time. Open it once and navigate (`t.send('Page.navigate', ...)`), as `tests/contentproof.mjs` does.
 4. Keep every check: moving a check to Node is fine, dropping one is not. If a check is vacuous in Node (the page text of a canvas), say so in the test and make sure a Chrome test has it.
+5. **Count, do not pin.** A test that is about the files in `content/` never types how many there are (43 files, eight systems, nine parts): adding a file would break it, and a card would be needed to move the number (it happened on 14 Nov, card `space-game-u-e5-contentproof-fix`; rec 8 of `docs/retro-2026-11-15.html`). Read the folder: `contentSet()` in `tests/contentset.mjs` returns `count`, the sorted `type:id` of every file (`keys`) and `of(type)`; compare what the game loaded with that. What a test may still name is a key entry the game or the guide needs: `KEY` and `KEY_KEYS` in the same file. Taking one of those away fails, adding another file does not. A pack a test writes itself (a fixture or a throwaway copy) is counted the same way, `contentSet(dir)`, not by the number of files the test just wrote.

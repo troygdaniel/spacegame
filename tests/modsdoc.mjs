@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import { spliced, staleNotes } from '../tools/mods-fields.mjs';
+import { KEY } from './contentset.mjs';   // the entries that must stay, by name (no count of the files in content/ is typed in this test)
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const C = createRequire(import.meta.url)('../src/content.js');
@@ -21,6 +22,9 @@ let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (!cond) { failed++; console.log(`  FAIL ${name}${detail ? '  (' + detail + ')' : ''}`); } else console.log(`  ok   ${name}`); };
 
 const doc = read('docs/MODS.md');
+// a number as the guide writes it (the guide says 'three normal lines', not 3): a count taken from the game or the files is checked against the guide's words
+const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'], TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty'];
+const numWord = k => (k < 20 ? ONES[k] : TENS[Math.floor(k / 10)] + (k % 10 ? '-' + ONES[k % 10] : ''));
 
 console.log('1. the field reference is current');
 check('the two marker lines are in the guide', doc.includes('<!-- fields:start') && doc.includes('<!-- fields:end -->'));
@@ -52,8 +56,9 @@ for (const f of ['common', 'data_systems', 'universe', 'data_ships', 'data_parts
 const ids = expr => { try { return vm.runInContext(expr, ctx); } catch (e) { return ['ERROR ' + e.message]; } };
 const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
 const MISSIONS = ids('MISSIONS.map(m => m.id)'), NPCS = ids('NPCS.map(n => n.id)'), PIRATES = ids('Object.keys(PIRATES)'), PARTS = ids("Object.keys(PARTS)");
-check('the calls are rescue, escort, patrol, bounty, and the sixteen runs and sites built in (courier-<from>-<to>, haul-<from>-<to>, salvage-lethe, survey-hollow)',
-  ['rescue', 'escort', 'patrol', 'bounty', 'salvage-lethe', 'survey-hollow'].every(i => MISSIONS.includes(i)) && MISSIONS.length === 20 && MISSIONS.filter(i => /^(courier|haul)-[a-z]+-[a-z]+$/.test(i)).length === 14, MISSIONS.join());
+const CORE_CALLS = ['rescue', 'escort', 'patrol', 'bounty'], RUNS = MISSIONS.filter(i => !CORE_CALLS.includes(i));
+check('the calls are rescue, escort, patrol, bounty, and the runs and sites built in (courier-<from>-<to>, haul-<from>-<to>, salvage-<place>, survey-<place>); the guide gives their number in words, ' + numWord(RUNS.length) + ' now',
+  [...CORE_CALLS, 'salvage-lethe', 'survey-hollow'].every(i => MISSIONS.includes(i)) && RUNS.every(i => /^(courier|haul)-[a-z]+-[a-z]+$|^(salvage|survey)-[a-z]+$/.test(i)) && doc.includes('the ' + numWord(RUNS.length) + ' runs and sites the game has built in'), MISSIONS.join() + ' / the guide says: "the N runs and sites the game has built in", N is ' + numWord(RUNS.length));
 check('the bar has juno, tamsin, dex, moss, sable, ida, and the keeper of the other bars (barkeep)', same(NPCS, ['juno', 'tamsin', 'dex', 'moss', 'sable', 'ida', 'barkeep']), NPCS.join());
 check('the pirates are raider, drone, gunship', same(PIRATES, ['raider', 'drone', 'gunship']), PIRATES.join());
 check('the part slots are shields, weapons, engine, tank, cargo, aim', same(PARTS, ['shields', 'weapons', 'engine', 'tank', 'cargo', 'aim']), PARTS.join());
@@ -81,13 +86,14 @@ check('every type has an adapter (section 7 of the guide: system and station fil
 
 console.log('3b. which files exist, and the lines the guide says to change');
 const list = dir => readdirSync(join(ROOT, 'content', dir)).filter(f => f.endsWith('.md')).sort().join();
-check('content/missions: rescue, escort, patrol, bounty (the guide says all four have a file)', list('missions') === 'bounty.md,escort.md,patrol.md,rescue.md', list('missions'));
-check('content/npcs: all six people have a file', list('npcs') === 'dex.md,ida.md,juno.md,moss.md,sable.md,tamsin.md', list('npcs'));
-check('content/ships: raider and drone only (the guide says gunship has no file)', list('ships') === 'drone.md,raider.md', list('ships'));
+const has = (dir, type) => KEY[type].every(id => list(dir).split(',').includes(id + '.md'));
+check('content/missions has a file for rescue, escort, patrol and bounty (the guide says all four have one)', has('missions', 'mission'), list('missions'));
+check('content/npcs has a file for each of the six people the guide names', has('npcs', 'npc'), list('npcs'));
+check('content/ships has raider and drone, and no gunship file (the guide says gunship has none and shows how to make it)', has('ships', 'ship') && !list('ships').split(',').includes('gunship.md'), list('ships'));
 const partFiles = readdirSync(join(ROOT, 'content', 'parts')).filter(f => f.endsWith('.md'));
-check('content/parts has nine files, all shields, weapons or engine (the guide says tank and cargo have none)', partFiles.length === 9 && partFiles.every(f => /^(shields|weapons|engine)-[123]\.md$/.test(f)), partFiles.join());
-check('content/poi: five sites and two signals', list('poi') === 'beacon-e.md,signal-beacon.md,signal-wreck.md,wreck-nw.md,wreck-s.md,wreck-se.md,wreck-w.md', list('poi'));
-check('content/stations: the six docks (the guide says halcyon-station is the one the game uses)', list('stations') === 'brass-smelter.md,ember-foundry.md,halcyon-station.md,kestrel-outpost.md,meridian-exchange.md,roost-dock.md', list('stations'));
+check('content/parts has the shields, weapons and engine tiers 1 to 3, and no tank or cargo file (the guide says those have none and shows how to make one)', has('parts', 'part') && !partFiles.some(f => /^(tank|cargo)-/.test(f)), partFiles.join());
+check('content/poi has the fixed sites and the two signals the guide names', has('poi', 'poi'), list('poi'));
+check('content/stations has the docks of the key systems (the guide says halcyon-station is the one the game uses)', has('stations', 'station'), list('stations'));
 check('content/text has ui.md', list('text').split(',').includes('ui.md'), list('text'));
 // [file, a line the guide tells the reader to change, a line the guide says it then reads]
 for (const [file, snippet] of [
@@ -123,7 +129,8 @@ check('the Mods screen takes F (pick a folder), R (restart) and 1 to 6 (turn on 
 check('the folder picker is an input with webkitdirectory (the guide says no Node is needed)', /setAttribute\('webkitdirectory'/.test(modsJs));
 check('packs are off until turned on and laid over in name order (the guide says so): modsAvailable sorts by name and only the on list is applied', /\.sort\(\(a, b\) => \(a\.name < b\.name/.test(modsJs) && /if \(!row\.on\) return;/.test(modsJs));
 check('a list in a pack file replaces the normal one whole (the guide says so for Lines, Reactions and Steps)', /n\.lines\.splice\(0, n\.lines\.length, \.\.\.data\.lines\)/.test(read('src/contenttables.js')) && /HUD_MISSIONS\[id\]\.steps = data\.steps\.map/.test(read('src/contenttables.js')) && /n\.react = \(\) =>/.test(read('src/contenttables.js')));
-check('the example JUNO file has a Lines list and no other section, the example Rescue file has no body (the guide describes both)', /^## Lines/m.test(read('mods/example/npcs/juno.md')) && !/^## (Reactions|Persona)/m.test(read('mods/example/npcs/juno.md')) && !/^## /m.test(read('mods/example/missions/rescue.md')) && read('content/npcs/juno.md').match(/^- /gm).length === 3, 'the guide says JUNO has three normal lines');
+const junoLines = (read('content/npcs/juno.md').match(/^## Lines\n([\s\S]*?)(?=^## |(?![\s\S]))/m) || ['', ''])[1].match(/^- /gm) || [];   // the bullet lines under ## Lines, counted from the file
+check('the example JUNO file has a Lines list and no other section, the example Rescue file has no body (the guide describes both)', /^## Lines/m.test(read('mods/example/npcs/juno.md')) && !/^## (Reactions|Persona)/m.test(read('mods/example/npcs/juno.md')) && !/^## /m.test(read('mods/example/missions/rescue.md')) && doc.includes('replaces her ' + numWord(junoLines.length) + ' normal lines'), 'the guide says "replaces her N normal lines"; JUNO has ' + junoLines.length);
 check('_pack.md is the one underscore file the picker reads (the guide says so)', /parts\.join\('\/'\) !== '_pack\.md'/.test(modsJs));
 const addJs = read('src/contentadd.js');
 check('packs add things the way content/ does: the limits the guide gives (four calls, six characters, six ships, 40 voice files) are src/contentadd.js CA_MAX, and modsApply uses the same tables', /CA_MAX = \{ voice: 40, ship: 6, mission: 4, npc: 6 \}/.test(addJs) && /four calls, six characters, six ships, 40 voice files/.test(doc) && /ContentLib\.apply\(\{ entries: p\.entries[^)]*\}, CONTENT_TABLES\)/.test(modsJs));
