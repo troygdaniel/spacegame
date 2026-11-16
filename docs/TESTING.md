@@ -1,6 +1,6 @@
 # Testing Long Haul: what runs in Node and what needs Chrome
 
-The tests are `tests/*.mjs`, run by `bash tests/smoke.sh`, which finds each one by the `// smoke:` line at the top of its file (node-only tests first, then Chrome; `docs/SMOKE.md`). The slow, shared part is **headless Chrome**: only one runs at a time across every worktree (`tests/lock.mjs`), so every test that opens Chrome waits in the same queue. A test that does not need a browser should not be in that queue.
+The tests are `tests/*.mjs`, run by `bash tests/smoke.sh`, which finds each one by the `// smoke:` line at the top of its file (node-only tests first, then Chrome; `docs/SMOKE.md`). It stops at the first failed step, so a break in a cheap step shows in seconds; `ALL=1 bash tests/smoke.sh` runs every step and lists every failure (the gate). The slow, shared part is **headless Chrome**: only one runs at a time across every worktree (`tests/lock.mjs`), so every test that opens Chrome waits in the same queue. A test that does not need a browser should not be in that queue.
 
 ## The rule
 
@@ -27,7 +27,7 @@ What it is and is not:
 
 ## Which test is which
 
-**Node only** (no Chrome at all): `content`, `contentapply`, `galaxy`, `hygiene`, `locktest`, `modsdoc`, `savemig`, `worldat`, and `node tools/economy-sim.mjs check`.
+**Node only** (no Chrome at all): `content`, `contentapply`, `galaxy`, `hygiene`, `ledgertest`, `locktest`, `modsdoc`, `savemig`, `smokefail`, `worldat`, and `node tools/economy-sim.mjs check`.
 
 **Node first, then Chrome for the part that needs a scene** (one test file, one Chrome turn, or fewer than before):
 
@@ -53,6 +53,21 @@ What it is and is not:
 | the game starting, a page reload or a screenshot | `scenes`, `contentboot`, `serve`, `contentadd`, `stationshots`, `hudshots`, `world`, `ships` |
 
 `playtest2`, `playtest3` and `probe` drive the game to write notes; they are not part of the smoke. `cdp.mjs`, `lock.mjs`, `gamecopy.mjs`, `nodegame.mjs` and `contentset.mjs` are helpers.
+
+## The run ledger: what testing costs
+
+Every test run adds **one line** to a ledger, so the cost of testing is a number you read, not one you rebuild from logs (retro rec 9). A run is one test process: `node tests/jump.mjs` by hand, or a step of `bash tests/smoke.sh`. The line is seven tab-separated fields: when it ended (UTC), the suite (`jump`), seconds, of those the seconds **waited for the Chrome lock**, the result (`pass`, `fail`, `killed` for Ctrl+C or kill, `timeout` for giving up on the lock), who ran it, and `smoke` or `hand`. Counts and times only: no test output, no path, no user name. **Who** is `LONGHAUL_WHO`, else `AGENTBOARD_NAME`, else the checkout's folder name (`spacegame-TaskMaster-2`).
+
+```
+node tools/test-ledger.mjs                     totals per suite (runs, not passed, total, waited, ran, mean, longest) and per day
+node tools/test-ledger.mjs --days 7            the last 7 days;  --since 2026-11-14 from a day on
+node tools/test-ledger.mjs --who NAME --via hand   one runner / hand runs only (or smoke);  --by who  the first table per runner
+```
+
+- **One file for every worktree**, in the repository's shared git directory (`<repo>/.git/longhaul-test-runs.tsv`; the OS temp folder outside git). It is never in git and it outlives a deleted worktree. Past 256 KB (about 3,500 runs) it moves to `<file>.1` and starts again, so there are at most two files.
+- **Who writes it:** `tests/lock.mjs` arms it the first time a test asks for the lock (every Chrome test, by hand or in the smoke, and the seconds it waited there), and `smoke.sh` loads `tests/ledger-on.mjs` (`node --import`) for every test it runs, which adds the node-only ones. Both together are still one line. A node-only test run by hand is not recorded (a second, no lock), and neither is a run killed before it could say so.
+- **Reading it:** "total" includes the wait, "ran" is total minus the wait. A lot of "waited" means the queue, not the test, is the cost (`node tests/lock.mjs status`); a long "ran" is a slow test. The effect of the touched-suites rule shows as hand runs against smoke runs per day.
+- `LONGHAUL_LEDGER=off` writes nothing, `LONGHAUL_LEDGER=<path>` writes there instead (the ledger's own test uses it; so does `tests/locktest.mjs`, to keep its stand-in runs out). Writing the ledger never changes a test's result: any failure there is swallowed. `tests/ledgertest.mjs` checks the line, the rotation, the hooks and the reader.
 
 ## Writing a new test
 

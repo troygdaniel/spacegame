@@ -10,6 +10,7 @@ import { spawn } from 'node:child_process';
 const HERE = dirname(fileURLToPath(import.meta.url)), LOCKJS = pathToFileURL(join(HERE, 'lock.mjs')).href;
 const work = mkdtempSync(join(tmpdir(), 'lhtest-')); // not named longhaul-*: the cleanup test must not touch real profiles
 process.env.LONGHAUL_LOCK_DIR = join(work, 'chrome.lock');
+process.env.LONGHAUL_LEDGER = 'off'; // the stand-in runs it starts take the lock too: they must not add lines to the real run ledger (tests/ledger.mjs; this run's own line is already armed)
 delete process.env.LONGHAUL_NO_LOCK;
 const L = await import(LOCKJS);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
