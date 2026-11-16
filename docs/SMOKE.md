@@ -18,6 +18,7 @@ Card `space-game-smoke-autodiscover` (Troy, 2026-11-14). Before it, almost every
 - Order: the node-only tests first (a file that does not import `tests/cdp.mjs`), alphabetical; then the Chrome tests, alphabetical. Node-only tests take seconds and fail fast; Chrome tests take the one-Chrome lock.
 - Fixed steps stay in `smoke.sh` because they are not tests: `node --check` on every file, `node tools/build-content.mjs --check` (the generated files are what a build makes; section 2), and `node tools/economy-sim.mjs check`.
 - `bash tests/smoke.sh --list` prints the steps it would run and the files it skips, and runs nothing. Use it to see a new test was picked up.
+- Every test it runs adds one line to the run ledger (suite, seconds, seconds waited for the lock, result, who): `smoke.sh` sets `LONGHAUL_VIA=smoke` and runs each test as `node --import ./tests/ledger-on.mjs <file>`. Counts and times only; `node tools/test-ledger.mjs` reads it (`docs/TESTING.md`, "The run ledger").
 - `SMOKE PASS` / `SMOKE FAIL` and the exit code are unchanged; the files skipped are listed at the end so an accidental `// not in the smoke:` is visible.
 
 A branch made before this change that added a step to `smoke.sh`: drop its `smoke.sh` lines in the merge and put the `// smoke:` line at the top of its test.

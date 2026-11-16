@@ -14,10 +14,12 @@
 #
 # Only one headless Chrome runs at a time on this Mac, whatever the worktree: cdp.mjs takes a lock in tests/lock.mjs, so a second
 # run prints "waiting for another Long Haul test run" and goes on when its turn comes (LONGHAUL_NO_LOCK=1 skips it).
+# Every test it runs adds one line to the run ledger (suite, seconds, seconds waited for the lock, result, who; counts and times only): node tools/test-ledger.mjs reads it.
 # Needs Google Chrome and Node 22+. Uses throwaway Chrome profiles, never your own. Chrome runs with
 # --headless=new --disable-gpu --use-angle=swiftshader --enable-unsafe-swiftshader --allow-file-access-from-files --mute-audio.
 set -u
 cd "$(dirname "$0")/.." || exit 1
+export LONGHAUL_VIA=smoke   # the run ledger (tests/ledger.mjs) marks these lines as smoke runs, not hand runs
 fail=0
 list=0; [ "${1:-}" = "--list" ] && list=1
 
@@ -47,7 +49,7 @@ tests() {
     [ "$kind" = "$1" ] || continue
     step "$file: $what"
     if [ "$when" = full ] && [ "${FULL:-0}" != 1 ]; then echo "  skipped: run FULL=1 bash tests/smoke.sh to include it"; continue; fi
-    run node "$file"
+    run node --import ./tests/ledger-on.mjs "$file"   # ledger-on.mjs: one line in the run ledger when the test ends (docs/TESTING.md "The run ledger")
   done
 }
 

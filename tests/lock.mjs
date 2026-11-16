@@ -25,11 +25,14 @@
 //   env LONGHAUL_LOCK_SLOTS      how many runs at once (default 1)
 //   env LONGHAUL_LOCK_MAXLOAD    a slot after the first is only given while the load is under this (default 12)
 //   env LONGHAUL_BEAT_MS, LONGHAUL_TICKET_STALE_MS, LONGHAUL_FAKE_LOAD   tests only
+// The run ledger (card retro-test-run-ledger): the first acquire() in a process arms tests/ledger.mjs, which appends one line when the process ends
+// (suite, seconds, seconds waited here, result, who). node tools/test-ledger.mjs reads it.
 import { mkdirSync, rmSync, readFileSync, writeFileSync, utimesSync, statSync, readdirSync, existsSync } from 'node:fs';
 import { tmpdir, loadavg } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { arm as armLedger, addWait, note as noteLedger } from './ledger.mjs';
 
 export const STALE_MS = 120000, NO_OWNER_MS = 10000;
 // Two clocks. `wall` is what file times and the "since" fields use; `mono` does not tick while the Mac sleeps. A wait is timed on `mono`, so an hour asleep is not an
@@ -125,6 +128,7 @@ function giveBack() {
 }
 
 export async function acquire({ timeoutMs = 45 * 60000, log = console.log } = {}) {
+  armLedger(); // the run ledger (tests/ledger.mjs): this process now writes one line when it ends, with the seconds spent waiting here
   if (process.env.LONGHAUL_NO_LOCK === '1') return;
   if (held) { held++; return; }
   const t0 = clock.mono();
@@ -154,6 +158,7 @@ export async function acquire({ timeoutMs = 45 * 60000, log = console.log } = {}
       touchTicket(myTicket);
       if (clock.mono() - t0 > timeoutMs) {
         const o = readOwner(slotDir(0)) || {};
+        noteLedger('timeout');
         throw new Error(`timed out after ${Math.round(timeoutMs / 1000)} s waiting for the test lock held by pid ${o.pid} (${o.cmd || '?'} in ${o.cwd || '?'}); delete ${slotDir(0)} if that run is dead`);
       }
       if (clock.mono() - lastNote > 30000) {
@@ -163,7 +168,7 @@ export async function acquire({ timeoutMs = 45 * 60000, log = console.log } = {}
       }
       await sleep(250 + Math.random() * 200);
     }
-  } finally { dropTicket(myTicket); myTicket = null; } // got it, timed out or failed: the ticket is not needed
+  } finally { dropTicket(myTicket); myTicket = null; addWait(clock.mono() - t0); } // got it, timed out or failed: the ticket is not needed; the wait goes in the ledger
   mySlot = got; held = 1;
   const dir = slotDir(mySlot);
   beat = setInterval(() => { try { const t = new Date(); utimesSync(join(dir, 'owner'), t, t); } catch (e) { /* lock was removed: nothing to keep alive */ } }, beatMs());
