@@ -1,9 +1,10 @@
 // ---------- Enemies: three pirate types, their AI, and the salvage pods they drop ----------
 // space.js keeps the groups, the overlaps and spawnDrone(x, y) (which now picks a type by how far the
 // spot is from Halcyon); missions.js keeps using d.wanted and d.prey on whatever spawnDrone returns.
-//   Raider   fast and thin, strafes around you, 20 hp, quick light shots; common near the station
-//   Drone    the v0.1 pirate, 30 hp, circles in and pecks; everywhere
-//   Gunship  slow and wide, 80 hp, a 3-shot spread that hurts; common out by Kepler-4b
+//   Raider   fast and thin, 20 hp, quick light shots, circles wide and makes many gun runs; common near the station
+//   Drone    the v0.1 pirate, 30 hp, circles close and makes a pass now and then; everywhere
+//   Gunship  slow and wide, 80 hp, a 3-shot spread that hurts, circles and never turns in; common out by Kepler-4b
+// How they fly (circle, pass and break away, run when badly hit) is pirateSteer below.
 // bounty: what a kill pays (credits is the older figure, kept for a def with no bounty, like the Reaver). The repair bay
 // charges half a credit a point, so a full 100-hull repair is 50 cr (70 with both armour plates): two kills of any type
 // cover it and one gunship covers it with change.
@@ -68,12 +69,48 @@ function spawnPirate(s, x, y, type) {
   const def = typeof type === 'object' && type ? type : PIRATES[type] || PIRATES[pirateTypeFor(s, x, y)];
   const d = s.enemies.create(x, y, def.tex).setDepth(4);
   d.def = def; d.hp = def.hp; d.nextShot = 0; d.rotation = Math.random() * 6.28;
-  d.side = Math.random() < 0.5 ? -1 : 1; d.flipAt = 0;
+  d.side = Math.random() < 0.5 ? -1 : 1; d.move = null; d.moveUntil = 0; d.ran = false; // src: pirateSteer
   d.body.setCircle(def.body[0], def.body[1], def.body[2]).setDamping(true).setDrag(0.5).setMaxSpeed(def.max);
   return d;
 }
 
-// one frame of one pirate: chase its prey (the escort freighter) or you, then shoot when lined up
+// ---- how a pirate flies a fight (Troy, 2026-11-17: the escort fight was flat, they flew straight in and sat there) ----
+// Three moves, the same against you or the freighter a pirate hunts:
+//   circle   orbit the target at def.hold (inside gun range), nose on it, shooting as the guns line up
+//   pass     every few seconds turn in and fly a gun run just past the target, then BREAK away to the ring again, sometimes the other way round
+//   run      the first time it is down to RUN_AT of its hull it turns and runs for a few seconds, not shooting; then it comes back and fights to the end
+// Hull, damage, speed and range are the def's, as before: only where the pirate points its engine changed.
+// FIGHT.pass: ms a type circles between passes. A type that is not here (the gunship, a mod's own def) only circles and runs.
+const FIGHT = { pass: { raider: [2200, 4200], drone: [3200, 5600] }, passFor: 2600, near: 150, miss: 90, breakFor: 1500, breakTo: 0.7, runAt: 0.35, runFor: [3500, 5000] };
+function fightBetween(a, b) { return a + Math.random() * (b - a); }
+// What the pirate d does this frame: plain numbers in and out, so tests/enemies.mjs flies it in Node.
+//   in:  dist and target (the bearing, radians) to what it hunts, time in ms, vx and vy its own velocity relative to the target;
+//        d carries hp, side, move, moveUntil, ran
+//   out: { move, ang: where the engine pushes, face: where the nose turns, fire: may it shoot }
+function pirateSteer(d, def, dist, target, time, vx, vy) {
+  const ring = def.hold, passes = FIGHT.pass[def.key];
+  if (!d.move) { d.move = 'circle'; d.moveUntil = time + (passes ? fightBetween(passes[0], passes[1]) : 0); }
+  if (!d.ran && d.hp < def.hp && d.hp <= def.hp * FIGHT.runAt) { d.ran = true; d.move = 'run'; d.moveUntil = time + fightBetween(FIGHT.runFor[0], FIGHT.runFor[1]); }
+  else if (d.move === 'run' && time > d.moveUntil) { d.move = 'circle'; d.moveUntil = time + (passes ? fightBetween(passes[0], passes[1]) : 0); }
+  else if (d.move === 'circle' && passes && time > d.moveUntil && dist < ring * 1.5) { d.move = 'pass'; d.moveUntil = time + FIGHT.passFor; }
+  else if (d.move === 'pass' && (dist < FIGHT.near || time > d.moveUntil)) { d.move = 'break'; d.moveUntil = time + FIGHT.breakFor; }
+  else if (d.move === 'break' && (dist > ring * FIGHT.breakTo || time > d.moveUntil)) {
+    d.move = 'circle'; d.moveUntil = time + fightBetween(passes[0], passes[1]);
+    if (Math.random() < 0.5) d.side = -d.side;
+  }
+  if (d.move === 'run') { const ang = target + Math.PI + d.side * 0.3; return { move: 'run', ang, face: ang, fire: false }; }
+  if (d.move === 'break') { const ang = target + Math.PI - d.side * 0.9; return { move: 'break', ang, face: ang, fire: false }; } // peel off to one side, nose where it flies
+  if (d.move === 'pass') return { move: 'pass', ang: target + d.side * Math.atan2(FIGHT.miss, Math.max(dist, 1)), face: target, fire: true }; // aimed just beside the target: a run past it, not a ram
+  // circle: sideways along the ring. It leans in by what the turn itself needs (speed squared over the radius), more when it is too far out
+  // or drifting out, and leans out when too close or closing; from far away it is a straight approach.
+  if (dist > ring * 2) return { move: 'circle', ang: target, face: target, fire: true };
+  vx = vx || 0; vy = vy || 0;
+  const out = -(vx * Math.cos(target) + vy * Math.sin(target)), v2 = vx * vx + vy * vy - out * out; // out: speed away from the target; v2: speed along the ring, squared
+  const lean = Math.asin(Math.min(0.9, v2 / (ring * def.speed))) + 2.2 * (dist - ring) / ring + 1.2 * out / def.max;
+  return { move: 'circle', ang: target + d.side * (Math.PI / 2 - Math.max(-0.8, Math.min(1.45, lean))), face: target, fire: true };
+}
+
+// one frame of one pirate: fly its move around its prey (the escort freighter) or you, then shoot when lined up
 function pirateAI(s, d, ship, time) {
   if (!d.active || !d.body) return;
   const def = d.def || PIRATES.drone;
@@ -81,16 +118,12 @@ function pirateAI(s, d, ship, time) {
   const tgt = d.prey && d.prey.active ? d.prey : ship;
   const ddx = tgt.x - d.x, ddy = tgt.y - d.y, dist = Math.hypot(ddx, ddy);
   d.calm = tgt === ship && !d.ambush && pirateHeld(s, dist, def, time); // held back by the launch grace or the first-wave cap (an interdiction ambush is not: src/cruise.js)
-  if (dist >= def.engage || d.calm) { d.body.setAcceleration(0, 0); d.rotation += 0.003; return; }
-  const target = Math.atan2(ddy, ddx);
-  d.rotation = Phaser.Math.Angle.RotateTo(d.rotation, target, def.turn);
-  if (def.strafe) {
-    if (time > d.flipAt) { d.flipAt = time + Phaser.Math.Between(1400, 2600); d.side = -d.side; }
-    const ang = dist > def.hold ? target : target + d.side * 1.35; // close in, then circle
-    s.physics.velocityFromRotation(ang, def.speed, d.body.acceleration);
-  } else if (dist > def.hold) s.physics.velocityFromRotation(d.rotation, def.speed, d.body.acceleration);
-  else d.body.setAcceleration(0, 0);
-  if (dist < def.range && time > d.nextShot && Math.abs(Phaser.Math.Angle.Wrap(target - d.rotation)) < def.aim) {
+  if (dist >= def.engage || d.calm) { d.body.setAcceleration(0, 0); d.rotation += 0.003; if (d.move !== 'run') d.move = null; return; }
+  const target = Math.atan2(ddy, ddx), tv = tgt.body ? tgt.body.velocity : { x: 0, y: 0 },
+        m = pirateSteer(d, def, dist, target, time, d.body.velocity.x - tv.x, d.body.velocity.y - tv.y);
+  d.rotation = Phaser.Math.Angle.RotateTo(d.rotation, m.face, def.turn * (m.face === target ? 1 : 2)); // it turns away faster than it aims
+  s.physics.velocityFromRotation(m.ang, def.speed, d.body.acceleration);
+  if (m.fire && dist < def.range && time > d.nextShot && Math.abs(Phaser.Math.Angle.Wrap(target - d.rotation)) < def.aim) {
     d.nextShot = time + Phaser.Math.Between(def.shot[0], def.shot[1]);
     const n = def.spread || 1;
     for (let i = 0; i < n; i++) {

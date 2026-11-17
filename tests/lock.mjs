@@ -14,6 +14,17 @@
 // waited 45 minutes and timed out while later runs passed it. A waiter refreshes its ticket each time round its loop; a ticket whose
 // process is gone, or that has not been refreshed for 15 s, is dropped by the others, so a dead or stuck waiter never blocks the line.
 //
+// The gate goes first (card space-game-lock-gate-first): a run started with LONGHAUL_GATE=1 (tests/smoke.sh sets it for ALL=1, the gate's
+// batch smoke) takes the next free slot ahead of every ordinary waiter. Its smoke is forty Chrome runs one after another, and behind four
+// or five builders at each of them it took over an hour. The ordinary runs keep their order among themselves, and none is passed twice in a
+// row: when the last run let in was a gate run and nobody ordinary has had a turn since, the next gate run stands SECOND, behind the oldest
+// ordinary waiter. So a builder's run waits for one gate run at most before its own turn, and the gate waits for one builder at most.
+// How: the line is still the tickets sorted by name and only the head tries, so a gate ticket is simply named to sort where it should stand
+// ("!gate-..." sorts before every ordinary ticket, "<oldest ticket>~gate-..." right behind the oldest). A lock.mjs from before this card, in
+// another worktree, sorts the same names the same way: it needs no change to give way. "The last run let in was a gate run" is a file,
+// <lock>.gate, written when a gate run gets a slot and removed when an ordinary one does; a run of an older lock.mjs cannot remove it, so a
+// gate run also reads the holder: an ordinary run holding the lock now has had its turn.
+//
 // Slots: LONGHAUL_LOCK_SLOTS=2 lets a second run in at once, but only while the one-minute load average is under LONGHAUL_LOCK_MAXLOAD
 // (default 12, a 10-core Mac). Slot 0 is the lock directory itself, so an older lock.mjs (no queue, no slots) still excludes this one
 // from slot 0; slot k is <lock>.<k>. The default is one slot: nothing changes for a run that does not ask.
@@ -22,6 +33,7 @@
 //   node tests/lock.mjs status   who holds a slot and who waits, in order ("idle" when nobody does)
 //   env LONGHAUL_LOCK_DIR        another lock directory (tests/locktest.mjs uses it)
 //   env LONGHAUL_NO_LOCK=1       skip the lock (one run on a quiet machine)
+//   env LONGHAUL_GATE=1          this run is the gate's: front of the line (see above)
 //   env LONGHAUL_LOCK_SLOTS      how many runs at once (default 1)
 //   env LONGHAUL_LOCK_MAXLOAD    a slot after the first is only given while the load is under this (default 12)
 //   env LONGHAUL_BEAT_MS, LONGHAUL_TICKET_STALE_MS, LONGHAUL_FAKE_LOAD   tests only
@@ -71,11 +83,21 @@ const load1 = () => (process.env.LONGHAUL_FAKE_LOAD !== undefined && process.env
 const ticketStaleMs = () => Number(process.env.LONGHAUL_TICKET_STALE_MS) || 15000;
 export const slotDir = k => (k === 0 ? lockDir() : lockDir() + '.' + k); // slot 0 is the old lock directory: an older lock.mjs still excludes this one
 export const queueDir = () => lockDir() + '.queue';
+export const isGate = () => process.env.LONGHAUL_GATE === '1';
+export const gateMark = () => lockDir() + '.gate'; // there: the last run let in was a gate run
+const gateTicket = name => name.startsWith('!gate-') || name.includes('~gate-');
+// where a gate run stands: first, or second (behind the oldest ordinary waiter) when a gate run was the last one let in and no ordinary run has had a turn since
+function gateName(base) {
+  const ordinary = liveTickets().filter(t => !gateTicket(t.name)), o = readOwner(slotDir(0));
+  const ordinaryHolds = !!o && !o.gate && !staleReason(slotDir(0));
+  return existsSync(gateMark()) && ordinary.length && !ordinaryHolds ? ordinary[0].name + '~gate-' + base : '!gate-' + base;
+}
 
 function makeTicket() {
   mkdirSync(queueDir(), { recursive: true });
-  const name = `${String(Date.now()).padStart(15, '0')}-${String(process.pid).padStart(7, '0')}-${Math.random().toString(36).slice(2, 6)}`;
-  writeFileSync(join(queueDir(), name), JSON.stringify({ pid: process.pid, cwd: process.cwd(), cmd: process.argv.slice(1).join(' '), since: Date.now() }));
+  const base = `${String(Date.now()).padStart(15, '0')}-${String(process.pid).padStart(7, '0')}-${Math.random().toString(36).slice(2, 6)}`;
+  const name = isGate() ? gateName(base) : base;
+  writeFileSync(join(queueDir(), name), JSON.stringify({ pid: process.pid, cwd: process.cwd(), cmd: process.argv.slice(1).join(' '), since: Date.now(), ...(isGate() ? { gate: true } : {}) }));
   return name;
 }
 const dropTicket = name => { if (name) try { rmSync(join(queueDir(), name), { force: true }); } catch (e) { /* gone already */ } };
@@ -100,7 +122,8 @@ function takeSlot(k, log) {
   const dir = slotDir(k);
   try {
     mkdirSync(dir);
-    writeFileSync(join(dir, 'owner'), JSON.stringify({ pid: process.pid, cwd: process.cwd(), cmd: process.argv.slice(1).join(' '), since: Date.now() }));
+    writeFileSync(join(dir, 'owner'), JSON.stringify({ pid: process.pid, cwd: process.cwd(), cmd: process.argv.slice(1).join(' '), since: Date.now(), ...(isGate() ? { gate: true } : {}) }));
+    try { if (isGate()) writeFileSync(gateMark(), JSON.stringify({ pid: process.pid, since: Date.now() })); else rmSync(gateMark(), { force: true }); } catch (e) { /* the mark is a courtesy: the line works without it */ }
     return 'taken';
   } catch (e) { if (e.code !== 'EEXIST') throw e; }
   const was = readOwner(dir), why = staleReason(dir);
@@ -116,9 +139,9 @@ export function queueStatus() {
   const holders = [];
   for (let k = 0; k < Math.max(slots(), 4); k++) {
     const o = readOwner(slotDir(k));
-    if (o && !staleReason(slotDir(k))) holders.push({ slot: k, pid: o.pid, cmd: o.cmd, cwd: o.cwd, runningS: Math.round((Date.now() - (o.since || Date.now())) / 1000) });
+    if (o && !staleReason(slotDir(k))) holders.push({ slot: k, pid: o.pid, cmd: o.cmd, cwd: o.cwd, gate: !!o.gate, runningS: Math.round((Date.now() - (o.since || Date.now())) / 1000) });
   }
-  const waiting = liveTickets().map((t, i) => ({ place: i + 1, pid: t.pid, cmd: t.cmd, cwd: t.cwd, waitedS: Math.round((Date.now() - (t.since || Date.now())) / 1000) }));
+  const waiting = liveTickets().map((t, i) => ({ place: i + 1, pid: t.pid, cmd: t.cmd, cwd: t.cwd, gate: gateTicket(t.name), waitedS: Math.round((Date.now() - (t.since || Date.now())) / 1000) }));
   return { holders, waiting, idle: !holders.length && !waiting.length };
 }
 
@@ -237,7 +260,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href &
   const q = queueStatus();
   if (q.idle) console.log('test lock: idle (nobody holds it, nobody waits)');
   else {
-    q.holders.forEach(h => console.log(`holds slot ${h.slot}: pid ${h.pid} for ${h.runningS} s  ${h.cmd}  (${h.cwd})`));
-    q.waiting.forEach(w => console.log(`waiting #${w.place}: pid ${w.pid} for ${w.waitedS} s  ${w.cmd}  (${w.cwd})`));
+    q.holders.forEach(h => console.log(`holds slot ${h.slot}: pid ${h.pid} for ${h.runningS} s  ${h.gate ? '[gate]  ' : ''}${h.cmd}  (${h.cwd})`));
+    q.waiting.forEach(w => console.log(`waiting #${w.place}: pid ${w.pid} for ${w.waitedS} s  ${w.gate ? '[gate]  ' : ''}${w.cmd}  (${w.cwd})`));
   }
 }

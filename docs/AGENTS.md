@@ -7,7 +7,7 @@ New files get their own script tag in `index.html`. Keep edits inside the files 
 ## Rules for agents
 - Work in your own git worktree: `git -C ~/dev/spacegame worktree add ~/dev/spacegame-<yourname> -b <card-id>`. Never edit `~/dev/spacegame` directly.
 - Small commits on your branch. Do not push. ORCH fast-forward merges after you send the card to review.
-- Smoke test before review: `bash tests/smoke.sh` (it runs `node --check` on every file, then loads each scene in headless Chrome), and look at a screenshot from `tests/out/` for anything visual. One headless Chrome at a time when the machine is busy: tests/lock.mjs enforces it and queues runs in arrival order (`node tests/lock.mjs status` shows the line).
+- Smoke test before review: `bash tests/smoke.sh` (it runs `node --check` on every file, then loads each scene in headless Chrome), and look at a screenshot from `tests/out/` for anything visual. One headless Chrome at a time when the machine is busy: tests/lock.mjs enforces it and queues runs in arrival order (`node tests/lock.mjs status` shows the line). The gate's batch smoke (`ALL=1`, which sets `LONGHAUL_GATE=1`) goes to the front of that line, one gate run at a time: your run waits for one of its Chrome tests at most, then has its turn. Do not set `ALL=1` or `LONGHAUL_GATE` on your own runs.
 - Keep it one evening: simple shapes, no image assets, no new libraries.
 
 ## New work found along the way

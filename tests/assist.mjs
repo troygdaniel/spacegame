@@ -87,6 +87,8 @@ g.run(`__press('ONE')`);
 check('1 gives Approach on the nav target', J(`__s.as.mode`) === 'approach' && J(`__toasts`).some(m => /^Approach: Tern at 40 km/.test(m)), JSON.stringify(J(`__toasts`)));
 g.run(`__press('TWO')`);
 check('2 changes the order to Keep at range', J(`__s.as.mode`) === 'keep' && J(`__s.as.range`) === 500);
+check('the nav target dropped while the order flies (the game does that near the body): 1 keeps the target of the order', J(`(() => { const t = __s.as.target; __s.cr.target = null; __press('ONE'); const r = [__s.as.mode, __s.as.target === t, __toasts.some(m => /No target/.test(m))]; __press('TWO'); return r.concat([__s.as.mode, __s.as.target === t]); })()`).join() === 'approach,true,false,keep,true');
+check('a new nav target picked while the order flies: the next key takes it', J(`(() => { __s.cr.target = { id: 'c', name: 'Kepler-4c', type: 'planet', x: -9000, y: 0, r: 200 }; __press('ONE'); const r = [__s.as.mode, __s.as.target.name]; __press('TWO'); return r.concat([__s.as.mode, __s.as.target.name]); })()`).join() === 'approach,Kepler-4c,keep,Kepler-4c');
 g.run(`__press('TWO')`);
 check('the same key again ends the order: you have the stick', J(`__s.as.mode`) === '' && J(`__toasts`).some(m => /You have the stick/.test(m)));
 for (const key of ['W', 'A', 'S', 'D', 'UP', 'LEFT', 'SHIFT', 'Q', 'E']) {
