@@ -8,6 +8,27 @@ function dockFee(s) {
   const pay = Math.min(fee, G.credits | 0); G.credits -= pay;
   toast(s, pay < fee ? 'Docking fee: ' + pay + ' cr, all you had.' : 'Docking fee  -' + pay + ' cr', '#ffb454');
 }
+// ---------- quick go: a number key puts you next to a lounge spot (card space-game-lounge-quick-go) ----------
+// The stops in key order; a station numbers only the ones it has, so the Roost's keys still run 1, 2, 3 with no gap.
+const LOUNGE_STOPS = [['bar', 'BAR'], ['missions', 'MISSIONS'], ['pump', 'FUEL'], ['shop', 'SHOP'], ['repair', 'REPAIR'], ['ship', 'SHIP']];
+const LOUNGE_BAR = { x: 255, y: 582 }; // in front of the counter (shop.js: its top edge is y 596), facing whoever tends it
+// spots: Station.spots; look: stationLook(). Gives [{ n: '1', key, name, x, y, face, cx, cy }]: where you stand (within E reach of the spot,
+// clear of its desk), which way you look, and where the key cap sits on the floor plan.
+function loungeStops(spots, look) {
+  const out = [], put = (key, name, x, y, tx, ty, cx, cy) => out.push({ n: String(out.length + 1), key, name, x, y, face: Math.atan2(ty - y, tx - x), cx, cy });
+  LOUNGE_STOPS.forEach(([key, name]) => {
+    if (key === 'bar') {
+      if (!(look && look.terminals && look.terminals.bar)) return; // stores, not a bar: nothing to go to
+      const bk = spots.find(sp => sp.npc !== undefined && typeof NPCS !== 'undefined' && NPCS[sp.npc] && NPCS[sp.npc].role === 'bartender'); // src/shop.js: Juno at Halcyon, the barkeep elsewhere
+      const x = bk ? bk.x : LOUNGE_BAR.x;
+      return put(key, name, x, LOUNGE_BAR.y, x, bk ? bk.y : LOUNGE_BAR.y + 70, x - 56, LOUNGE_BAR.y - 4);
+    }
+    const sp = spots.find(q => q.key === key); if (!sp) return;
+    if (key === 'ship') put(key, name, sp.x - 62, sp.y + 34, sp.x, sp.y, sp.x - 62, sp.y + 72);
+    else put(key, name, sp.x, sp.y + 44, sp.x, sp.y, sp.x - 66, sp.y); // a desk is 100 by 44 around its spot: stand at its front, the cap to its left
+  });
+  return out;
+}
 class Station extends Phaser.Scene {
   constructor() { super('Station'); }
   init(d) { this.arrive = !!(d && d.arrive); }
@@ -53,7 +74,11 @@ class Station extends Phaser.Scene {
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,ESC,UP,DOWN,LEFT,RIGHT');
 
     this.prompt = floatPrompt(this, this.player); // key cap above whatever you can use (src/ui.js)
-    this.add.text(24, H - IN_SOUTH - 28, 'WASD walk   E interact', { fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92' }).setDepth(100);
+    // quick go: a key cap beside every spot, and the hint says the keys (walking still works)
+    const stops = loungeStops(this.spots, look);
+    this.goCaps = stops.map(st => keyCap(this, st.n, AMBER).setPosition(st.cx, st.cy).setDepth(6)); // src/ui.js
+    this.goHint = this.add.text(24, H - IN_SOUTH - 28, (stops.length > 1 ? '1-' + stops.length : '1') + ' go to a spot   E interact   WASD walk', { fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92' }).setDepth(100);
+    this.input.keyboard.on('keydown', e => { if (!e.repeat && /^[1-9]$/.test(e.key)) this.quickGo(e.key); });
 
     this.ui = panel(this, { w: 900, h: 480, title: 'MISSION BOARD  -  ' + look.name.toUpperCase(), dim: true }); // src/ui.js
     this.panelBox = this.ui.box.setVisible(false); this.boardObjs = [];
@@ -175,6 +200,17 @@ class Station extends Phaser.Scene {
     const o = this.add.text(0, -70, 'No calls are posted at ' + name + ' yet.\nThe board at Halcyon Station has work.', uiFont(18, '#cfefff', { align: 'center', lineSpacing: 8 })).setOrigin(0.5);
     this.panelBox.add(o); this.boardObjs.push(o);
     this.ui.setHints([['Esc', 'Close']]);
+  }
+  // Quick go: stand next to stop n at once. Not while a terminal, the shop, the pump or a chat owns the keys (their number keys mean something else).
+  quickGo(n) {
+    if (this.leaving || this.panel || this.shopOpen || this.pumpOpen || this.chat) return false;
+    const el = typeof document !== 'undefined' && document.activeElement;
+    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return false; // typing in a field
+    const st = loungeStops(this.spots, this.look).find(q => q.n === String(n)); if (!st) return false;
+    if (this.talk) hideTalk(this); // src/shop.js
+    this.player.body.reset(st.x, st.y); this.player.rotation = st.face;
+    beep(700, 0.06, 'square', 0.02);
+    return true;
   }
   closePanel() { this.panel = false; this.panelBox.setVisible(false); this.boardObjs.forEach(o => o.destroy()); this.boardObjs = []; }
 

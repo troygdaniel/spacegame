@@ -11,8 +11,9 @@
 const CONTROLS = [
   { id: 'station', title: 'STATION', scene: 'Station', rows: [
     { k: ['W', 'A', 'S', 'D'], t: 'Walk (the arrow keys work too)' },
+    { k: ['1-6'], t: 'Go straight to a spot (the number on the floor beside it)' },
     { k: ['E'], t: 'Use the terminal, repair bay or ship' },
-    { k: ['1-6'], t: 'Buy a part in the shop' },
+    { k: ['1-6'], t: 'Buy a part, with the shop open' },
     { k: ['T'], t: 'Chat with someone in the bar (needs a chat key)' },
     { k: ['J'], t: 'Journal: who you have met' },
     { k: ['G'], t: 'Galaxy map (look only here; you jump from your ship)' },
