@@ -235,7 +235,7 @@ class Space extends Phaser.Scene {
     const dP = Phaser.Math.Distance.Between(ship.x, ship.y, this.planet.x, this.planet.y);
     const spd = ship.body.speed;
     let msg = '';
-    if (dS < 320) {
+    if (dS < 320 && !this.station.nowhere) { // nowhere: the stand-in of a system with no station is never a dock, however near (tests/nostation.mjs)
       if (spd < 150) { msg = 'L  Dock at ' + sysBody('station').name; if (JD(k.L)) { missionLeaveSpace(this); sfx('dock'); G.lastDock = sysBody('station').id; fleetSync(); feelDescend(this, this.station, () => go(this, 'Station', { arrive: true })); } } // lastDock: where the pump, the yard and the fleet are now (src/fleet.js)
       else msg = 'Too fast to dock. Hold S to brake';
     } else if (this.canLand && dP < this.planetR + 150) {
