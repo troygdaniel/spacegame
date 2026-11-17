@@ -177,6 +177,20 @@ const open = async (t, press, key, section) => { await press(key); await t.waitF
     check('every group row count on screen matches the table', await t.ev(`(() => { let ok = true; for (const g of CONTROLS) { ${SE}.ctab = g.id; ${SE}.show('controls'); const n = ${SE}.body.list.filter(o => o.type === 'Container').length; if (n < g.rows.length) ok = false; } return ok; })()`));
     await t.shot('settings-4-controls');
 
+    console.log('H2. flight feel');
+    await t.ev(`${SE}.show('flight')`); await sleep(300);
+    const f0 = await texts(t);
+    check('the Flight section shows the row and both feels', ['FLIGHT FEEL', 'Classic', 'Heavy', 'TURN BUILDS', 'TO TOP SPEED', 'at once'].every(w => f0.includes(w)));
+    check('Classic is the feel on a fresh browser, and the rail says so', await t.ev('handlingNow().id') === 'classic' && f0.includes('CLASSIC'));
+    await press('RIGHT');
+    check('Right picks Heavy, kept in this browser and not in the save', await t.ev('handlingNow().id') === 'heavy' && await t.ev("localStorage.getItem(HANDLING_STORE)") === 'heavy' && await t.ev("!JSON.stringify(snapshot ? snapshot() : {}).includes('heavy')"));
+    check('the rail and the tag say Heavy', (await texts(t)).includes('FEEL HEAVY'));
+    await t.shot('settings-4b-flight');
+    await press('ENTER');
+    check('Enter switches back to Classic', await t.ev('handlingNow().id') === 'classic' && await t.ev("localStorage.getItem(HANDLING_STORE)") === 'classic');
+    await t.ev(`${SE}.slots.feel[1].t && ${SE}.setFeel('heavy')`); check('setFeel, the handler behind each button, does the same', await t.ev('handlingNow().id') === 'heavy');
+    await t.ev(`${SE}.setFeel('classic')`);
+
     console.log('I. content');
     await t.ev(`${SE}.show('content')`); await sleep(300);
     const c = await texts(t);

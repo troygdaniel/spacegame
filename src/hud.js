@@ -32,7 +32,7 @@ const HUD_MISSIONS = {
   escort: {
     steps: ['Take the escort call', 'Launch with the MULE', 'Escort the MULE to the gate'],
     cur: (s, key) => key === 'Station' ? 1 : 2,
-    next: (s, key) => key === 'Station' ? 'Board your ship in the hangar' : key === 'Space' ? 'Stay close to the MULE' : 'Return to your ship'
+    next: (s, key) => key === 'Station' ? 'Board your ship in the hangar' : key === 'Space' ? (s.mx && s.mx.covered ? 'Covered: hold her ring to the gate' : 'Get inside the MULE\'s ring') : 'Return to your ship'
   },
   patrol: {
     steps: ['Take the patrol call', 'Launch from the hangar', () => 'Wanted pirates down  ' + G.missionProgress + '/' + (missionDef().count || 5)],
@@ -563,6 +563,54 @@ function hudTargets(h, s, now) {
   }
 }
 
+// ---- Space: the target panel of the flight assist (src/assist.js; card space-game-assist-hud). Under the radar while the assist is on and
+// there is a target: its name, the range, how fast you close on it, the order in force, and one key cap per command. The commands come from
+// assistState().keys, so a mode another file adds (Orbit, Match speed) gets its key here by itself. ----
+// what the panel says, with no drawing in it (tests/hudassist.mjs reads it in plain Node); null when there is nothing to show
+function hudAssistModel(s) {
+  if (typeof assistState !== 'function' || !s || !s.as || !s.ship) return null;
+  const st = assistState(); if (!st.on) return null;
+  let name = st.name, dist = st.dist, closing = st.closing;
+  if (!st.mode) { // no order yet: the nav target the next order would take, measured as assistState measures its own
+    const t = s.cr && s.cr.target; if (!t) return null;
+    const tv = (t.body && t.body.velocity) || { x: t.vx || 0, y: t.vy || 0 }, b = s.ship.body.velocity, dx = t.x - s.ship.x, dy = t.y - s.ship.y;
+    dist = Math.hypot(dx, dy) || 1e-6; closing = ((b.x - (tv.x || 0)) * dx + (b.y - (tv.y || 0)) * dy) / dist; name = assistName(t);
+  }
+  const rel = Math.abs(closing) < 3 ? 0 : Math.round(closing); // px/s, the unit of the SPEED gauge
+  return {
+    name: String(name).toUpperCase().slice(0, 22), km: hudFmt(dist / 10), rel: Math.abs(rel), relLabel: rel > 0 ? 'CLOSING' : rel < 0 ? 'OPENING' : 'STEADY',
+    mode: st.mode, order: st.mode ? st.label.toUpperCase() + (st.range ? '  ' + hudFmt(st.range / 10) + ' KM' : '') : 'NO ORDER', status: (st.status || '').toUpperCase(),
+    keys: st.keys.filter(k => k.cap)
+  };
+}
+function hudAssist(h, s) {
+  const m = hudAssistModel(s);
+  if (typeof ASSIST !== 'undefined') ASSIST.readout = !m; // the panel says what the assist's own line says; with no target that line stays
+  if (!m) return;
+  const g = h.g, w = 248, x = W - w - 20, y = 262, rows = Math.ceil(m.keys.length / 2), ht = 120 + rows * 22, live = !!m.mode;
+  hudPanel(g, x, y, w, ht, 12, 0.82, live ? CYAN : HUD_LINE); hudSpine(g, x, y, ht, live ? CYAN : HUD_LINE);
+  hudPut(h, 'as0', x + 18, y + 16, 'TARGET', { size: HT.tag, color: HUD_DIM, spacing: 2 });
+  hudPut(h, 'as1', x + w - 34, y + 16, 'ASSIST', { size: HT.tag, color: HUD_DIM, spacing: 2, ox: 1 }); hudKeycap(h, 'asz', x + w - 20, y + 16, 'Z');
+  hudPut(h, 'as2', x + 18, y + 37, m.name, { size: HT.head, bold: true, color: '#e8f8ff' });
+  const cell = (id, cx, label, num, unit, color) => {
+    hudPut(h, id + 'l', cx, y + 58, label, { size: HT.tag, color: HUD_DIM, spacing: 2 });
+    const t = hudPut(h, id + 'n', cx, y + 77, num, { size: HT.num, bold: true, color });
+    if (unit) hudPut(h, id + 'u', cx + t.width + 5, y + 81, unit, { size: HT.tag, color: HUD_DIM });
+  };
+  cell('asr', x + 18, 'RANGE', m.km, 'KM', '#9fe9ff');
+  cell('asc', x + w / 2 + 8, m.relLabel, String(m.rel), '', m.relLabel === 'OPENING' ? '#ffb454' : '#9fe9ff');
+  g.lineStyle(1, HUD_LINE, 0.6); g.lineBetween(x + 16, y + 94, x + w - 12, y + 94);
+  hudPut(h, 'aso', x + 18, y + 107, m.order, { size: HT.label, bold: live, color: live ? '#9fe9ff' : HUD_DIM, spacing: 1 });
+  if (m.status) hudPut(h, 'ass', x + w - 14, y + 107, m.status, { size: HT.label, bold: true, color: m.status === 'BRAKE' || m.status === 'BACK OFF' ? '#ffb454' : '#6dff9c', ox: 1 });
+  m.keys.forEach((k, i) => { // one cap per command, two to a row; the order in force is lit
+    const cx = x + 26 + (i % 2) * (w / 2 - 14), cy = y + 128 + Math.floor(i / 2) * 22, on = k.id === m.mode;
+    if (on) { g.fillStyle(CYAN, 0.28); g.fillRoundedRect(cx - 8, cy - 8, 16, 16, 3); }
+    hudKeycap(h, 'ak' + i, cx, cy, k.cap);
+    hudPut(h, 'al' + i, cx + 14, cy + 1, k.label, { size: HT.label, bold: on, color: on ? '#e8f8ff' : '#9fe9ff' });
+  });
+  h.zones.push({ x0: x - 8, y0: y - 6, x1: W, y1: y + ht + 8 });
+}
+
 // ---- warnings: banners low in the middle, one per live problem, and a red pulse round the screen edge while the hull is
 // critical. Some stay for as long as the problem does (hull, boost, colonist); some are an event and show for a few seconds
 // (first contact, hold full). Each banner is a zone, so world labels fade under it. ----
@@ -728,6 +776,7 @@ function hudTick(s) {
     if (space && s.cruising) { g.fillStyle(HUD_BG, 0.72); hudDisc(g, W - 110, 112, 88); } // cruise: nothing local matters, the radar dims
   }
   if (space) hudTargets(h, s, now);
+  if (space) hudAssist(h, s);
   if (space || surf) hudWarn(h, s, now, key, h.near, h.engage);
   h.zones.push({ x0: 430, y0: 0, x1: 850, y1: 50 });
   // toasts (depth 299 and up) are zones too, for as long as they are up

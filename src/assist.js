@@ -104,7 +104,7 @@ assistMode('keep', { label: 'Keep at range', key: 'TWO', cap: '2', range: ASSIST
 
 function assistSetup(s) {
   ASSIST.s = s;
-  const a = s.as = { mode: '', target: null, range: 0, since: 0, burning: false, cmd: null, held: {}, readAt: 0 };
+  const a = s.as = { mode: '', target: null, nav: null, range: 0, since: 0, burning: false, cmd: null, held: {}, readAt: 0 };
   a.k = s.input.keyboard.addKeys([ASSIST.key].concat(Object.values(ASSIST_MODES).map(m => m.key).filter(Boolean)).join(','));
   a.read = s.add.text(W / 2, 156, '', { fontFamily: 'monospace', fontSize: '16px', fontStyle: 'bold', color: '#9fe9ff' }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setStroke('#02060d', 4).setVisible(false);
   s.events.once('shutdown', () => { if (ASSIST.s === s) ASSIST.s = null; });
@@ -129,7 +129,7 @@ function assistSet(mode, target, range) {
   const t = target || assistTarget(s);
   if (!t) { toast(s, 'No target. Press N and pick one.', '#ffd37a'); sfx('empty'); return false; }
   if (s.ap && s.ap.on) autopilotEnd(s, 'quiet');
-  a.mode = mode; a.target = t; a.since = s.time.now; a.burning = false; a.cmd = null; a.readAt = 0;
+  a.mode = mode; a.target = t; a.nav = assistTarget(s); a.since = s.time.now; a.burning = false; a.cmd = null; a.readAt = 0;
   a.range = typeof range === 'number' && range >= 0 ? range : typeof m.range === 'function' ? m.range(t) : (m.range || 0);
   a.held = {}; ASSIST.keys.forEach(n => { if (s.k && s.k[n] && s.k[n].isDown) a.held[n] = true; }); // a key already down when the order came is not a new wish for the stick
   toast(s, m.label + ': ' + assistName(t) + (a.range ? ' at ' + hudFmt(a.range / 10) + ' km' : '') + '. Any flight key takes the stick back.', '#9fe9ff'); sfx('chime');
@@ -163,7 +163,10 @@ function assistFrame(s, time, dt, crs, ap) {
   if (assistJustDown(a.k[ASSIST.key]) && !nav) assistOn(s, !ASSIST.on);
   for (const m of Object.values(ASSIST_MODES)) {
     if (!m.key || !assistJustDown(a.k[m.key]) || nav || !ASSIST.on) continue;
-    if (a.mode === m.id) assistStop(s, 'key'); else assistSet(m.id);
+    if (a.mode === m.id) { assistStop(s, 'key'); break; }
+    // a new order while one flies keeps that order's target, unless the nav target has been changed since (the game drops the nav target near its body)
+    const nt = assistTarget(s);
+    assistSet(m.id, nt && nt !== a.nav ? nt : a.target || nt || undefined);
     break;
   }
   assistRead(s, time);

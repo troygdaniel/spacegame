@@ -12,6 +12,7 @@ const work = mkdtempSync(join(tmpdir(), 'lhtest-')); // not named longhaul-*: th
 process.env.LONGHAUL_LOCK_DIR = join(work, 'chrome.lock');
 process.env.LONGHAUL_LEDGER = 'off'; // the stand-in runs it starts take the lock too: they must not add lines to the real run ledger (tests/ledger.mjs; this run's own line is already armed)
 delete process.env.LONGHAUL_NO_LOCK;
+delete process.env.LONGHAUL_GATE; // the gate's smoke runs this test with it set (tests/smoke.sh, ALL=1): the stand-in runs below are ordinary unless a check says otherwise
 const L = await import(LOCKJS);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let failed = 0, n = 0;
@@ -182,6 +183,87 @@ console.log('the queue: runs get the lock in the order they came (card space-gam
   check('status names the holder and the run waiting behind it', q.holders.length === 1 && q.holders[0].pid === h.p.pid && q.waiting.length === 1 && q.waiting[0].place === 1 && !q.idle, JSON.stringify(q));
   h.p.kill('SIGTERM'); await Promise.all([h.exited, w.exited]);
   check('status says idle when nobody holds it or waits', L.queueStatus().idle === true, JSON.stringify(L.queueStatus()));
+}
+
+console.log('the gate goes first: LONGHAUL_GATE=1 takes the next free slot ahead of the ordinary waiters (card space-game-lock-gate-first)');
+{
+  const GATE = { LONGHAUL_GATE: '1' }, mark = () => existsSync(dir() + '.gate');
+  delete process.env.LONGHAUL_GATE; rmSync(dir() + '.gate', { force: true });
+  // each run is in the line before the next one starts; the order they get the lock in is what the checks read
+  const line = async (specs, order, rs) => { for (const [label, env] of specs) { const r = runner(label, env); rs.push(r); r.got.then(ok => { if (ok) order.push(label); }); await waitFor(() => tickets() >= rs.length, 8000); } };
+  {
+    // four builders wait behind a holder; the gate's run arrives last and goes first
+    const h = holder('hold'); await h.got;
+    const order = [], rs = [];
+    await line([['b1'], ['b2'], ['b3'], ['b4'], ['gate', GATE]], order, rs);
+    const q = L.queueStatus();
+    check('the gate run arrives last, behind four builders, and stands first in the line', q.waiting.length === 5 && q.waiting[0].gate === true && q.waiting[0].pid === rs[4].p.pid && q.waiting.slice(1).every(w => !w.gate), JSON.stringify(q.waiting.map(w => [w.place, w.gate])));
+    h.p.kill('SIGTERM'); await h.exited;
+    await Promise.all(rs.map(r => r.exited));
+    check('it gets the next free slot ahead of all four, and they keep their own order', order.join(',') === 'gate,b1,b2,b3,b4', order.join(','));
+    check('the line is empty afterwards, nothing held, and the last run let in was an ordinary one (no mark left)', tickets() === 0 && !existsSync(dir()) && !mark());
+  }
+  {
+    // the gate's smoke is one Chrome run after another: its next run must not pass the same builder twice in a row
+    const h = holder('hold', GATE); await h.got; // a gate run holds the lock
+    check('a gate run that gets the lock leaves the mark: the last run let in was the gate', mark() && owner().gate === true);
+    const order = [], rs = [];
+    await line([['b1'], ['b2'], ['gate2', GATE]], order, rs);
+    const q = L.queueStatus();
+    check('behind a gate run, the next gate run stands second: the oldest builder is first', q.waiting.map(w => w.gate).join() === 'false,true,false' && q.waiting[0].pid === rs[0].p.pid && q.waiting[1].pid === rs[2].p.pid, JSON.stringify(q.waiting.map(w => [w.place, w.pid, w.gate])));
+    check('status says which is the gate, holder and waiter', q.holders[0].gate === true);
+    h.p.kill('SIGTERM'); await h.exited;
+    await Promise.all(rs.map(r => r.exited));
+    check('so the builder that waited through one gate run goes next, then the gate, then the other builder', order.join(',') === 'b1,gate2,b2', order.join(','));
+  }
+  {
+    // the whole evening in small: a gate smoke of four runs, each queued when the one before ends, against builders who keep arriving
+    rmSync(dir() + '.gate', { force: true });
+    const h = holder('hold'); await h.got;
+    const order = [], rs = [], passed = {};
+    await line([['b1'], ['b2'], ['b3']], order, rs);
+    const gateRuns = (async () => { for (let i = 1; i <= 4; i++) { const r = runner('g' + i, GATE); rs.push(r); const ok = await r.got; if (ok) order.push('g' + i); await r.exited; } })();
+    await waitFor(() => tickets() >= 4, 8000);
+    h.p.kill('SIGTERM'); await h.exited;
+    await gateRuns; await Promise.all(rs.map(r => r.exited));
+    const at = l => order.indexOf(l);
+    check('all seven runs got the lock', order.length === 7, order.join(','));
+    check('the builders kept their own order', at('b1') < at('b2') && at('b2') < at('b3'), order.join(','));
+    check('the gate went first, and never waited for more than one builder between two of its runs', at('g1') === 0 && [1, 2, 3].every(i => { const gap = at('g' + (i + 1)) - at('g' + i) - 1; return gap >= 0 && gap <= 1; }), order.join(','));
+    let worst = 0, run = 0; for (const l of order) { if (l[0] === 'g') { run++; if (order.slice(order.indexOf(l)).some(x => x[0] === 'b')) worst = Math.max(worst, run); } else run = 0; }
+    check('no builder was passed by two gate runs in a row', worst <= 1, order.join(',') + '  worst ' + worst);
+    check('its four runs were done before the third builder: it did not go to the back', at('g2') < at('b3'), order.join(','));
+  }
+  {
+    // an ordinary run that holds the lock has had its turn, even when it could not remove the mark (a lock.mjs from before this card)
+    const h = holder('hold'); await h.got;
+    writeFileSync(dir() + '.gate', '{}');
+    const order = [], rs = [];
+    await line([['b1'], ['gate', GATE]], order, rs);
+    check('a stale mark with an ordinary holder: the gate run still stands first', L.queueStatus().waiting[0].gate === true, JSON.stringify(L.queueStatus().waiting));
+    h.p.kill('SIGTERM'); await h.exited; await Promise.all(rs.map(r => r.exited));
+    check('and goes first', order.join(',') === 'gate,b1', order.join(','));
+  }
+  {
+    // nobody ordinary waits: a second gate run has nobody to give way to
+    const h = holder('hold', GATE); await h.got;
+    const g = runner('g', GATE); await waitFor(() => tickets() >= 1);
+    check('with no ordinary waiter a gate run stands first behind a gate run', L.queueStatus().waiting[0].gate === true);
+    h.p.kill('SIGTERM'); await h.exited;
+    check('and gets the lock', await within(g.got, 6000)); await g.exited;
+  }
+  {
+    // a builder with an older lock.mjs reads the same line: only names sorted, so the gate ticket is the head for it too
+    const h = holder('hold'); await h.got;
+    const order = [], rs = [];
+    await line([['b1'], ['gate', GATE]], order, rs);
+    const { readdirSync } = await import('node:fs');
+    const names = readdirSync(dir() + '.queue').sort();
+    check('sorted by name alone (all an older lock.mjs does), the gate ticket is the head of the line', names.length === 2 && names[0].startsWith('!gate-') && /^\d{15}-/.test(names[1]), names.join(' '));
+    h.p.kill('SIGTERM'); await h.exited; await Promise.all(rs.map(r => r.exited));
+    rmSync(dir() + '.gate', { force: true });
+    check('everything is given back', L.queueStatus().idle === true && !existsSync(dir()), JSON.stringify(L.queueStatus()));
+  }
 }
 
 console.log('two slots (LONGHAUL_LOCK_SLOTS), the second only while the Mac is quiet');

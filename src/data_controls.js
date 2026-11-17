@@ -11,8 +11,9 @@
 const CONTROLS = [
   { id: 'station', title: 'STATION', scene: 'Station', rows: [
     { k: ['W', 'A', 'S', 'D'], t: 'Walk (the arrow keys work too)' },
+    { k: ['1-6'], t: 'Go straight to a spot (the number on the floor beside it)' },
     { k: ['E'], t: 'Use the terminal, repair bay or ship' },
-    { k: ['1-6'], t: 'Buy a part in the shop' },
+    { k: ['1-6'], t: 'Buy a part, with the shop open' },
     { k: ['T'], t: 'Chat with someone in the bar (needs a chat key)' },
     { k: ['J'], t: 'Journal: who you have met' },
     { k: ['G'], t: 'Galaxy map (look only here; you jump from your ship)' },
@@ -41,7 +42,9 @@ const CONTROLS = [
     { k: ['C'], t: 'Cruise to the target (A D nudge, S cancels)' },
     { k: ['P'], t: 'Autopilot to the target: it stops at the dock (any key cancels)' },
     { k: ['Tab'], t: 'Sector map: W S choose a body, Enter flies there' },
-    { k: ['G'], t: 'Galaxy map: pick a system, Enter charges the jump (S or Esc cancels)' }
+    { k: ['G'], t: 'Galaxy map: pick a system, Enter charges the jump (S or Esc cancels)' },
+    { k: ['Z'], t: 'Flight assist on or off: the ship flies itself about the target' },
+    { k: ['1-4'], t: 'Assist orders: approach, keep at range, orbit, match speed' }
   ] },
   { id: 'surface', title: 'SURFACE', scene: 'Surface', rows: [
     { k: ['W', 'A', 'S', 'D'], t: 'Walk (the arrow keys work too)' },

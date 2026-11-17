@@ -201,11 +201,11 @@ class Space extends Phaser.Scene {
     const up = !still && (k.W.isDown || k.UP.isDown), brake = still || k.S.isDown || k.DOWN.isDown;
     const boost = boostFrame(this, time, dt, locked, up); // src/boost.js: Shift drains the energy ring, Q and E dash
 
-    if (!locked) ship.rotation += ((right ? 1 : 0) - (left ? 1 : 0)) * 0.0036 * shipStat('turn') * dt;
-    ship.body.setDrag(brake && !locked ? 0.12 : 0.55);
+    if (!locked) ship.rotation += handlingTurn(this, (right ? 1 : 0) - (left ? 1 : 0), dt) * 0.0036 * shipStat('turn') * dt; // src/handling.js: Classic or Heavy
+    ship.body.setDrag(handlingDrag(brake && !locked));
     ship.body.setMaxSpeed(boostCap(this, boost, dt));
     const acc = shipStat('accel'); // src/fleet.js; the Wren's 720 gives today's 600 while the launch lock holds and 1500 on the boost
-    const thrust = locked ? acc * 5 / 6 : (up ? (boost ? acc * 25 / 12 : acc) : 0);
+    const thrust = (locked ? acc * 5 / 6 : (up ? (boost ? acc * 25 / 12 : acc) : 0)) * handlingThrust(this, locked || up, dt);
     this.physics.velocityFromRotation(ship.rotation, thrust, ship.body.acceleration);
     if (thrust) {
       const tx = ship.x - Math.cos(ship.rotation) * 20, ty = ship.y - Math.sin(ship.rotation) * 20;
@@ -240,7 +240,7 @@ class Space extends Phaser.Scene {
     const dP = Phaser.Math.Distance.Between(ship.x, ship.y, this.planet.x, this.planet.y);
     const spd = ship.body.speed;
     let msg = '';
-    if (dS < 320) {
+    if (dS < 320 && !this.station.nowhere) { // nowhere: the stand-in of a system with no station is never a dock, however near (tests/nostation.mjs)
       if (spd < 150) { msg = 'L  Dock at ' + sysBody('station').name; if (JD(k.L)) { missionLeaveSpace(this); sfx('dock'); G.lastDock = sysBody('station').id; fleetSync(); feelDescend(this, this.station, () => go(this, 'Station', { arrive: true })); } } // lastDock: where the pump, the yard and the fleet are now (src/fleet.js)
       else msg = 'Too fast to dock. Hold S to brake';
     } else if (this.canLand && dP < this.planetR + 150) {
