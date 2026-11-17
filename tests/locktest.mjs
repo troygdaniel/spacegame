@@ -12,6 +12,7 @@ const work = mkdtempSync(join(tmpdir(), 'lhtest-')); // not named longhaul-*: th
 process.env.LONGHAUL_LOCK_DIR = join(work, 'chrome.lock');
 process.env.LONGHAUL_LEDGER = 'off'; // the stand-in runs it starts take the lock too: they must not add lines to the real run ledger (tests/ledger.mjs; this run's own line is already armed)
 delete process.env.LONGHAUL_NO_LOCK;
+delete process.env.LONGHAUL_GATE; // the gate's smoke runs this test with it set (tests/smoke.sh, ALL=1): the stand-in runs below are ordinary unless a check says otherwise
 const L = await import(LOCKJS);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let failed = 0, n = 0;
