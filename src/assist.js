@@ -32,6 +32,7 @@ const ASSIST = {
   align: 0.3,                        // rad: the nose is on the line, the engine may burn
   lead: 1.7,                         // px/s allowed per px left: the brake takes 2.12 off per second, so 1.7 is in time
   dead: 20, slow: 15,                // px either side of the range that count as there; px/s that counts as stopped
+  readY: 156, readGap: 18,           // px: the readout's own line, and how far under a toast it sits when one is in the way
   keepRange: 500, shipStop: 150,     // px: Keep at range when none is given; how near Approach stops to a ship
   keys: ['W', 'A', 'S', 'D', 'UP', 'DOWN', 'LEFT', 'RIGHT', 'SHIFT', 'Q', 'E'] // a flight key: the player wants the stick
 };
@@ -106,7 +107,7 @@ function assistSetup(s) {
   ASSIST.s = s;
   const a = s.as = { mode: '', target: null, range: 0, since: 0, burning: false, cmd: null, held: {}, readAt: 0 };
   a.k = s.input.keyboard.addKeys([ASSIST.key].concat(Object.values(ASSIST_MODES).map(m => m.key).filter(Boolean)).join(','));
-  a.read = s.add.text(W / 2, 156, '', { fontFamily: 'monospace', fontSize: '16px', fontStyle: 'bold', color: '#9fe9ff' }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setStroke('#02060d', 4).setVisible(false);
+  a.read = s.add.text(W / 2, ASSIST.readY, '', { fontFamily: 'monospace', fontSize: '16px', fontStyle: 'bold', color: '#9fe9ff' }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setStroke('#02060d', 4).setVisible(false);
   s.events.once('shutdown', () => { if (ASSIST.s === s) ASSIST.s = null; });
 }
 
@@ -192,12 +193,21 @@ function assistDrive(s, dt) {
 }
 
 // this file's own readout, one line under the autopilot's: what the assist is doing, or the command keys while it waits for an order
+// where the readout sits: its own line (y 156), or just under the lowest toast still up when one reaches that far down (toasts stack from y 96
+// and are drawn over everything, so the line used to be half hidden behind the second one: docs/CRITIC.md run 1, finding 2)
+function assistReadY(toasts) {
+  let low = 0;
+  (toasts || []).forEach(o => { if (o && o.t && o.t.active) low = Math.max(low, o.y + o.h / 2); });
+  return low + ASSIST.readGap > ASSIST.readY - 10 ? Math.round(low + ASSIST.readGap) : ASSIST.readY;
+}
 function assistRead(s, time) {
   const a = s.as, show = ASSIST.readout && ASSIST.on;
   a.read.setVisible(show);
+  if (show) a.read.setY(assistReadY(s.toasts)); // every frame, not every 200 ms: a toast can come up at any time
   if (!show || time < a.readAt) return;
   a.readAt = time + 200;
   const st = assistState();
   a.read.setText(st.mode ? 'ASSIST  ' + st.label.toUpperCase() + '  ' + st.name.toUpperCase() + '   ' + hudFmt(st.dist / 10) + ' km' + (st.status ? '   ' + st.status.toUpperCase() : '')
-    : 'ASSIST ON   ' + assistKeyLine() + '   Z off');
+    : assistTarget(s) ? 'ASSIST ON   ' + assistKeyLine() + '   Z off'
+    : 'ASSIST ON   no target: press N and pick one   Z off'); // short, so it stays clear of the mission panel on its left; the keys mean nothing without a target
 }
