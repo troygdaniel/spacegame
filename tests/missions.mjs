@@ -71,6 +71,21 @@ try {
   check('objective arrow points at the MULE', (await t.ev(`missionTarget(${S('Space')}).name`)) === 'Freighter MULE');
   await x(`freighterHurt(${S('Space')}, 30)`);
   check('freighter hull drops', await t.ev(`${S('Space')}.mx.freighter.hp <= ${S('Space')}.mx.freighter.maxHp - 30`)); // at most: pirates may already have hit her
+  // the escort box (docs/ESCORT.md change 2): inside her 350 px ring she cruises and a hit costs half; outside she slows and takes it all
+  const SP = S('Space'), spd = () => t.ev(`Math.round(Math.hypot(${SP}.mx.freighter.body.velocity.x, ${SP}.mx.freighter.body.velocity.y))`);
+  const box = async (dx, dy) => { await x(`${SP}.ship.body.reset(${SP}.mx.freighter.x + ${dx}, ${SP}.mx.freighter.y + ${dy})`); await run(100); };
+  check('the box is 350 px, cruise 60, slow 30, half damage', await t.ev('ESCORT.box === 350 && ESCORT.cruise === 60 && ESCORT.slow === 30 && ESCORT.cover === 0.5'));
+  await box(0, -500);
+  check('outside the ring: exposed, she slows to 30, a shot costs her 5', await t.ev(`${SP}.mx.covered === false && escortCover(${SP}, ESCORT.shot) === 5`) && (await spd()) === 30, 'speed ' + await spd());
+  check('the ring says EXPOSED and the HUD says to get inside', await t.ev(`${SP}.mx.ringText.text === 'EXPOSED' && ${SP}.mx.ringText.visible && HUD_MISSIONS.escort.next(${SP}, 'Space').includes('ring')`));
+  await box(0, -340);
+  check('inside the ring: covered, she cruises at 60, a shot costs her 2.5', await t.ev(`${SP}.mx.covered === true && escortCover(${SP}, ESCORT.shot) === 2.5`) && (await spd()) === 60, 'speed ' + await spd());
+  check('the ring says COVERED and the HUD says to hold it', await t.ev(`${SP}.mx.ringText.text === 'COVERED' && HUD_MISSIONS.escort.next(${SP}, 'Space').includes('Covered')`));
+  await x(`${SP}.spawnDrone(${SP}.mx.freighter.x + 120, ${SP}.mx.freighter.y + 60)`); await run(100);
+  check('a pirate right beside her no longer slows her: the fight is on the move', (await spd()) === 60, 'speed ' + await spd());
+  await t.shot('missions-escort-box');
+  await box(0, -360);
+  check('ten pixels past the ring she is exposed again', await t.ev(`${SP}.mx.covered === false`) && (await spd()) === 30);
   await x(`${S('Space')}.ship.setPosition(${S('Space')}.mx.freighter.x, ${S('Space')}.mx.freighter.y - 150)`);
   await run(20000); // no screenshot here: after a 20 s run the GL readback hung on a busy Mac
   const hp20 = await t.ev(`${S('Space')}.mx.freighter.active ? ${S('Space')}.mx.freighter.hp : -1`);
@@ -87,6 +102,7 @@ try {
   await run(1500);
   await x(`freighterHurt(${S('Space')}, 999)`);
   await run(100); g = await G();
+  check('the ring goes out with her', await t.ev(`${S('Space')}.mx.ringText.visible === false`));
   check('escort fails when the MULE dies', g.mission === 'failed' && g.missionId === 'escort', JSON.stringify(g));
   check('failed line says the MULE was lost', (await t.ev('missionLine()')).includes('MULE was lost'));
   await x(`G.mission = 'accepted'; G.missionId = 'escort'; ${S('Space')}.scene.restart({ from: 'station' })`);

@@ -50,7 +50,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | toast.dropped | Mission dropped. The board has other calls. |
 | toast.patrol-down | Wanted pirate down  {progress} of {count} |
 | toast.patrol-done | Patrol complete. All wanted pirates destroyed. |
-| toast.mule-leaving | The MULE is leaving the hangar. Stay close to her. |
+| toast.mule-leaving | The MULE is leaving the hangar. Stay inside her ring: she runs faster and takes half damage. |
 | toast.mule-left | You left the MULE behind. Mission failed. |
 | toast.mule-lost | The MULE was destroyed. Mission failed. |
 | toast.mule-arrived | The MULE made the Perseus gate. |
