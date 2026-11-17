@@ -32,9 +32,10 @@ g.run(`
   function __press(n) { __s.as.k[n]._justDown = true; __frames(1); }
   // fly frames of 16.67 ms: the assist's frame and drive, then the ship (and a moving target) move by their velocity as Phaser moves them
   function __frames(count, tgt) {
-    const s = __s, dt = 1000 / 60, log = { frames: 0, maxV: 0, minD: 1e9, burnAt: -1, brakeAt: -1, offLineBurn: 0, ended: false };
+    const s = __s, dt = 1000 / 60, log = { frames: 0, maxV: 0, minD: 1e9, burnAt: -1, brakeAt: -1, offLineBurn: 0, ended: false, flips: 0 }; let lastTurn = 0;
     for (let i = 0; i < count; i++) {
       s.time.now += dt;
+      const rot0 = s.ship.rotation;
       const r = assistFrame(s, s.time.now, dt, '', '');
       if (r === 'assist') {
         const t = s.as.target, before = Math.atan2(t.y - s.ship.y, t.x - s.ship.x);
@@ -44,6 +45,7 @@ g.run(`
         if (c && c.brake && log.brakeAt < 0) log.brakeAt = i;
         if (c && c.burn && c.face !== null && Math.abs(assistWrap(c.face - s.ship.rotation)) > ASSIST.align + 0.01) log.offLineBurn++;
       } else { const k = Math.pow(0.55, dt / 1000); s.ship.body.velocity.x *= k; s.ship.body.velocity.y *= k; } // hand flight, hands off: it coasts
+      const turn = Math.sign(assistWrap(s.ship.rotation - rot0)); if (turn) { if (lastTurn && turn !== lastTurn) log.flips++; lastTurn = turn; } // flips: how often the nose changes the way it turns
       const v = s.ship.body.velocity; s.ship.x += v.x * dt / 1000; s.ship.y += v.y * dt / 1000;
       if (tgt && tgt.body) { tgt.x += tgt.body.velocity.x * dt / 1000; tgt.y += tgt.body.velocity.y * dt / 1000; }
       const tt = tgt || s.as.target;
@@ -147,6 +149,23 @@ check('Keep at range on a moving ship: it stays with it, near 400 px', f.mode ==
 g.run(`__scene(0, 0, 0);`);
 f = J(`(() => { const t = { x: 2500, y: 0 }; assistSet('keep', t); __frames(120, t); __s.k.S.isDown = true; __frames(1, t); __s.k.S.isDown = false; const v0 = Math.hypot(__s.ship.body.velocity.x, __s.ship.body.velocity.y); const r = __frames(120, t); r.v0 = v0; return r; })()`);
 check('the stick handed back mid-flight: the order is off and the ship coasts on its own speed', f.mode === '' && f.v0 > 200 && f.v < f.v0, `${f.v0.toFixed(0)} px/s then ${f.v.toFixed(0)}`);
+
+// ---- the nose does not chatter (playtest 4: 24 reversals backing off, 38 in a re-aimed approach; a clean flight has 0 to 2) ----
+g.run(`__scene(0, 0, 0);`);
+f = J(`(() => { const t = { x: 150, y: 0 }; assistSet('keep', t); return __frames(900, t); })()`);
+check('Keep at range from 150 px inside: the nose changes its turn 4 times or fewer on the way out to 500', f.flips <= 4 && Math.abs(f.d - 500) <= 25, f.flips + ' reversals, ended at ' + f.d.toFixed(1) + ' px');
+g.run(`__scene(0, 0, 0);`);
+f = J(`(() => { const a = { x: 2500, y: 0 }, b = { x: 600, y: -1400 }; assistSet('approach', a, 0); __frames(150, a); assistSet('approach', b, 0); return __frames(192, b); })()`);
+check('a new point given mid-flight: 4 reversals or fewer in the 3.2 s after it', f.flips <= 4, f.flips + ' reversals');
+for (const [name, x0, y0, vx, vy, tx, ty] of [['from a sideways drift', 0, 0, 0, 400, 2500, 0], ['back the way it came', 0, 0, 450, 0, -1500, 200], ['a short hop', 0, 0, 0, 0, 300, 250]]) {
+  g.run(`__scene(${x0}, ${y0}, 0); __s.ship.body.velocity.x = ${vx}; __s.ship.body.velocity.y = ${vy};`);
+  f = J(`(() => { const t = { x: ${tx}, y: ${ty} }; assistSet('approach', t, 0); return __frames(1500, t); })()`);
+  check('Approach ' + name + ': 4 reversals or fewer, and it still ends on the point', f.flips <= 4 && f.ended && f.d <= 20, f.flips + ' reversals, ' + f.d.toFixed(1) + ' px off after ' + (f.frames / 60).toFixed(1) + ' s');
+}
+g.run(`__scene(0, 0, 0);`);
+f = J(`(() => { const t = { x: 1500, y: 0, active: true, body: { velocity: { x: 90, y: 60 } } }; assistSet('keep', t, 400); return __frames(1500, t); })()`);
+check('Keep at range beside a moving ship for 25 s: the nose does not saw (12 reversals or fewer)', f.flips <= 12 && f.d > 300 && f.d < 500, f.flips + ' reversals, at ' + f.d.toFixed(1) + ' px');
+check('Approach on a real ship sprite (Phaser gives every sprite a type) stops 150 px off, not at a body range', J(`(() => { __scene(0, 0, 0); assistSet('approach', { type: 'Sprite', x: 3000, y: 0, active: true, body: { velocity: { x: 0, y: 0 } } }); return __s.as.range; })()`) === 150);
 
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `ASSIST FAIL (${failed} of ${n})` : `ASSIST PASS (${n} checks)`);
