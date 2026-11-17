@@ -37,6 +37,8 @@ To translate, change the text column here, or copy this file to a name after ui 
 | help.space.12 | P   autopilot to the target: it stops at the dock (any key cancels) |
 | help.space.13 | Tab   sector map: W S choose a body, Enter flies there |
 | help.space.14 | G   galaxy map: pick a system, Enter charges the jump (S or Esc cancels) |
+| help.space.15 | Z   flight assist on or off: the ship flies itself about the target |
+| help.space.16 | 1-4   assist orders: approach, keep at range, orbit, match speed |
 | help.surface.1 | W A S D   walk (the arrow keys work too) |
 | help.surface.2 | Mouse   aim, and click to fire |
 | help.surface.3 | E   talk to the colonist, board at the pad |
