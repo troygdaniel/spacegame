@@ -248,22 +248,38 @@ function missionKill(s, e) {
 function radarDot(s, x, y, color, r) { hudBlip(s, x, y, color, r); } // the HUD radar (src/hud.js) draws it this frame
 
 // ---- Escort: the MULE flies station -> gate; pirates lie in wait along the route ----
+// The escort box (docs/ESCORT.md change 2): a ring of ESCORT.box px around her. Inside it you are covering her: she runs at her cruise speed
+// and a hit costs her half. Outside it she drops to ESCORT.slow and takes it all. Pirates nearby no longer slow her: the fight is on the move.
+// s.mx.covered says which it is this frame (the assist panel's Match speed reads the box from ESCORT.box).
+const ESCORT = { box: 350, cruise: 60, slow: 30, hull: 200, cover: 0.5, shot: 5, ram: 2 };
+const escortCover = (s, n) => (s.mx.covered ? n * ESCORT.cover : n); // what a hit of n costs her right now
+function escortRing(s, f) { // drawn every frame: a steady green ring while you cover her, a beating amber one while you do not
+  const g = s.mx.ring, t = s.mx.ringText; if (!g) return;
+  g.clear();
+  if (!f || !f.active) { t.setVisible(false); return; }
+  const on = s.mx.covered, beat = 0.5 + 0.5 * Math.sin(s.time.now / 130);
+  g.lineStyle(on ? 2 : 3, on ? 0x6dff9c : AMBER, on ? 0.5 : 0.35 + 0.45 * beat); g.strokeCircle(f.x, f.y, ESCORT.box);
+  if (on) { g.fillStyle(0x6dff9c, 0.035); g.fillCircle(f.x, f.y, ESCORT.box); }
+  t.setPosition(f.x, f.y + 34).setText(on ? 'COVERED' : 'EXPOSED').setColor(on ? '#6dff9c' : '#ffb454').setVisible(true);
+}
 function escortSetup(s) {
   const st = s.station, gate = sysBody('gate'); // src/universe.js
   const f = s.physics.add.sprite(st.x - 60, st.y + 260, 'freighter').setDepth(4);
-  f.body.setCircle(14, 24, 6).setMaxSpeed(130); // offset in the 76x40 texture (ships.js)
-  f.hp = 200; f.maxHp = 200; f.rammedAt = 0;
+  f.body.setCircle(14, 24, 6).setMaxSpeed(ESCORT.cruise); // offset in the 76x40 texture (ships.js)
+  f.hp = ESCORT.hull; f.maxHp = ESCORT.hull; f.rammedAt = 0;
   f.rotation = Phaser.Math.Angle.Between(f.x, f.y, gate.x, gate.y);
-  s.mx.freighter = f;
+  s.mx.freighter = f; s.mx.covered = false;
+  s.mx.ring = s.add.graphics().setDepth(3);
+  s.mx.ringText = s.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: '12px', color: '#6dff9c' }).setOrigin(0.5).setStroke('#02060d', 3).setDepth(4).setVisible(false);
 
   const g = s.add.graphics().setDepth(1);
   g.lineStyle(6, AMBER, 0.9); g.strokeCircle(gate.x, gate.y, gate.r);
   g.lineStyle(2, AMBER, 0.4); g.strokeCircle(gate.x, gate.y, gate.r + 20);
   label(s, gate.x, gate.y - gate.r - 50, gate.name.toUpperCase(), '#ffb454', 18);
 
-  s.physics.add.overlap(f, s.eb, (fr, b) => { if (!b.active) return; b.disableBody(true, true); freighterHurt(s, 5); });
+  s.physics.add.overlap(f, s.eb, (fr, b) => { if (!b.active) return; b.disableBody(true, true); freighterHurt(s, escortCover(s, ESCORT.shot)); });
   s.physics.add.overlap(f, s.enemies, (fr, e) => {
-    if (s.time.now < f.rammedAt) return; f.rammedAt = s.time.now + 1000; e.hp -= 10; freighterHurt(s, 2);
+    if (s.time.now < f.rammedAt) return; f.rammedAt = s.time.now + 1000; e.hp -= 10; freighterHurt(s, escortCover(s, ESCORT.ram));
   });
   // two ambushes along the route; these drones hunt the MULE, not you
   const ambush = (frac, n) => {
@@ -282,7 +298,7 @@ function freighterHurt(s, n) {
   if (s.sparks) s.sparks.explode(5, f.x, f.y); // ships.js
   beep(200, 0.08, 'square', 0.02, -100);
   if (f.hp <= 0) {
-    s.boom.explode(50, f.x, f.y); f.destroy(); beep(90, 0.5, 'sawtooth', 0.05, -60);
+    s.boom.explode(50, f.x, f.y); f.destroy(); escortRing(s, null); beep(90, 0.5, 'sawtooth', 0.05, -60);
     failMission(s, uiText('toast.mule-lost'));
   }
 }
@@ -290,16 +306,18 @@ function escortUpdate(s) {
   const f = s.mx.freighter; if (!f || !f.active) return;
   const gate = sysBody('gate');
   if (Phaser.Math.Distance.Between(f.x, f.y, gate.x, gate.y) < gate.r) {
-    s.boom.explode(30, f.x, f.y); f.destroy();
+    s.boom.explode(30, f.x, f.y); f.destroy(); escortRing(s, null);
     completeMission(s, uiText('toast.mule-arrived')); return;
   }
-  // she slows when pirates are close or you fall behind, so you can catch up
-  let threat = false;
-  s.enemies.getChildren().forEach(e => { if (e.active && Phaser.Math.Distance.Between(e.x, e.y, f.x, f.y) < 500) threat = true; });
-  const behind = Phaser.Math.Distance.Between(f.x, f.y, s.ship.x, s.ship.y) > 700;
-  s.physics.moveTo(f, gate.x, gate.y, threat ? 50 : behind ? 70 : 130);
+  // the escort box: inside her ring you cover her (cruise speed, half damage); outside it she slows, so you can catch up, and takes it all
+  const was = s.mx.covered;
+  s.mx.covered = !s.dead && Phaser.Math.Distance.Between(f.x, f.y, s.ship.x, s.ship.y) <= ESCORT.box;
+  if (was !== s.mx.covered && s.mx.ringSaid) sfx('tick');
+  s.mx.ringSaid = true;
+  s.physics.moveTo(f, gate.x, gate.y, s.mx.covered ? ESCORT.cruise : ESCORT.slow);
   f.rotation = Phaser.Math.Angle.RotateTo(f.rotation, Phaser.Math.Angle.Between(f.x, f.y, gate.x, gate.y), 0.02);
-  hudMeter(s, 'MULE', f.hp / f.maxHp, AMBER);
+  hudMeter(s, 'MULE', f.hp / f.maxHp, s.mx.covered ? 0x6dff9c : AMBER);
+  escortRing(s, f);
   radarDot(s, f.x, f.y, 0xffd37a, 3); radarDot(s, gate.x, gate.y, AMBER, 2);
 }
 function escortTarget(s) {
