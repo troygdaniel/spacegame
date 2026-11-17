@@ -41,7 +41,9 @@ const CONTROLS = [
     { k: ['C'], t: 'Cruise to the target (A D nudge, S cancels)' },
     { k: ['P'], t: 'Autopilot to the target: it stops at the dock (any key cancels)' },
     { k: ['Tab'], t: 'Sector map: W S choose a body, Enter flies there' },
-    { k: ['G'], t: 'Galaxy map: pick a system, Enter charges the jump (S or Esc cancels)' }
+    { k: ['G'], t: 'Galaxy map: pick a system, Enter charges the jump (S or Esc cancels)' },
+    { k: ['Z'], t: 'Flight assist on or off: the ship flies itself about the target' },
+    { k: ['1-4'], t: 'Assist orders: approach, keep at range, orbit, match speed' }
   ] },
   { id: 'surface', title: 'SURFACE', scene: 'Surface', rows: [
     { k: ['W', 'A', 'S', 'D'], t: 'Walk (the arrow keys work too)' },
