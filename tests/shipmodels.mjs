@@ -88,6 +88,31 @@ try {
   await t.ev(`(() => { ${SP}.k.A.isDown = false; return 1; })()`);
   const expect = -0.0036 * 16.67 * 18;
   check('A turns the ship at 0.0036 rad/ms (18 frames: ' + expect.toFixed(3) + ' rad)', Math.abs(rot - expect) < 0.011, rot.toFixed(4));
+  // the Heavy feel (src/handling.js, card space-game-ship-weight): the same keys, the same frames, a ship with mass
+  console.log('flying: the Heavy feel');
+  check('the ship flies Classic until Heavy is picked: drag 0.55', (await t.ev('handlingNow().id')) === 'classic' && (await t.ev(`${SP}.ship.body.drag.x`)) === 0.55);
+  await t.ev(`(() => { handlingSet('heavy'); ${SP}.ship.rotation = 0; ${SP}.hTurn = 0; ${SP}.hThrust = 0; ${SP}.k.A.isDown = true; return 1; })()`);
+  await t.run(300);
+  const hrot = await t.ev(`${SP}.ship.rotation`);
+  check('Heavy: A for the same 18 frames turns it well under half as far, the turn is still building', hrot < -0.05 && hrot > expect * 0.5, hrot.toFixed(4));
+  await t.run(400);
+  const r1 = await t.ev(`${SP}.ship.rotation`); await t.run(100); const r2 = await t.ev(`${SP}.ship.rotation`);
+  check('once built it turns at 0.85 of the Classic rate', Math.abs((r2 - r1) - -0.0036 * 0.85 * 16.67 * 6) < 0.012, (r2 - r1).toFixed(4));
+  await t.ev(`(() => { ${SP}.k.A.isDown = false; return 1; })()`);
+  const r3 = await t.ev(`${SP}.ship.rotation`); await t.run(100); const r4 = await t.ev(`${SP}.ship.rotation`); await t.run(400); const r5 = await t.ev(`${SP}.ship.rotation`); await t.run(100); const r6 = await t.ev(`${SP}.ship.rotation`);
+  check('key up: it keeps turning a little, then holds its heading', r4 < r3 - 0.005 && r6 === r5, [r3, r4, r5, r6].map(x => x.toFixed(3)).join(' '));
+  await t.send('Input.dispatchKeyEvent', { type: 'keyDown', windowsVirtualKeyCode: 87, nativeVirtualKeyCode: 87, code: 'KeyW', key: 'w' });
+  await t.run(200);
+  const hacc = await t.ev(`Math.round(Math.hypot(${SP}.ship.body.acceleration.x, ${SP}.ship.body.acceleration.y))`);
+  await t.run(1000);
+  const hfull = await t.ev(`Math.round(Math.hypot(${SP}.ship.body.acceleration.x, ${SP}.ship.body.acceleration.y))`);
+  await t.send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: 87, nativeVirtualKeyCode: 87, code: 'KeyW', key: 'w' });
+  check('Heavy: W for 200 ms is a fraction of the thrust (the ramp)', hacc > 0 && hacc < 100, String(hacc));
+  check('and 360 once it has ramped: half the Wren\'s 720', hfull === 360, String(hfull));
+  check('Heavy drag 0.78 while coasting, top speed still 480', (await t.ev(`${SP}.ship.body.drag.x`)) === 0.78 && (await t.ev(`${SP}.ship.body.maxSpeed`)) === 480);
+  await t.ev("handlingSet('classic')");
+  await t.run(50);
+  check('back to Classic: drag 0.55 again', (await t.ev(`${SP}.ship.body.drag.x`)) === 0.55);
   check('no console errors', t.errors.length === 0, t.errors.join(' | '));
 } catch (e) { console.error('  FAIL ' + e.message); failed++; } finally { await t.close(); }
 

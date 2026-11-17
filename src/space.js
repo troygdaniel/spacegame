@@ -115,6 +115,7 @@ class Space extends Phaser.Scene {
     shipsInstall(this); // src/ships.js: flames, trails, shield flash, smoke and sparks on every ship
     cruiseSetup(this); cruiseFarBodies(this); // src/cruise.js: N nav list, C cruise, and the bodies out in far space
     autopilotSetup(this); // src/autopilot.js: P flies the ship to the target at local speed
+    assistSetup(this); // src/assist.js: Z switches the flight assist on; 1 Approach, 2 Keep at range fly the ship about its target
     jumpSetup(this); // src/jump.js: the jump charge, and the F key for the fuel ranger
     deepSetup(this); // src/pullout.js: the pirates of a pull-out in deep space, or a nest's entry pirates
   }
@@ -183,6 +184,7 @@ class Space extends Phaser.Scene {
     if (this.leaving) { feelFrame(this, time, dt); return; } // the jump went
     const crs = cruiseFrame(this, time, dt); // src/cruise.js: 'cruise' = the ship flies itself, 'nav' = the nav list is open (no flight input)
     const ap = autopilotFrame(this, time, dt, crs); // src/autopilot.js: 'auto' = the autopilot flies the ship locally, 'cruise' = it just engaged a cruise
+    const ast = assistFrame(this, time, dt, crs, ap); // src/assist.js: 'assist' = an order of the flight assist flies the ship (any flight key gives the stick back; the guns stay yours)
     if (crs === 'cruise' || ap === 'cruise') {
       this.prompt.setText('');
       missionSpaceUpdate(this, time, dt); trafficUpdate(this, time, dt); asteroidsUpdate(this, time, dt);
@@ -197,17 +199,18 @@ class Space extends Phaser.Scene {
     const up = !still && (k.W.isDown || k.UP.isDown), brake = still || k.S.isDown || k.DOWN.isDown;
     const boost = boostFrame(this, time, dt, locked, up); // src/boost.js: Shift drains the energy ring, Q and E dash
 
-    if (!locked) ship.rotation += ((right ? 1 : 0) - (left ? 1 : 0)) * 0.0036 * shipStat('turn') * dt;
-    ship.body.setDrag(brake && !locked ? 0.12 : 0.55);
+    if (!locked) ship.rotation += handlingTurn(this, (right ? 1 : 0) - (left ? 1 : 0), dt) * 0.0036 * shipStat('turn') * dt; // src/handling.js: Classic or Heavy
+    ship.body.setDrag(handlingDrag(brake && !locked));
     ship.body.setMaxSpeed(boostCap(this, boost, dt));
     const acc = shipStat('accel'); // src/fleet.js; the Wren's 720 gives today's 600 while the launch lock holds and 1500 on the boost
-    const thrust = locked ? acc * 5 / 6 : (up ? (boost ? acc * 25 / 12 : acc) : 0);
+    const thrust = (locked ? acc * 5 / 6 : (up ? (boost ? acc * 25 / 12 : acc) : 0)) * handlingThrust(this, locked || up, dt);
     this.physics.velocityFromRotation(ship.rotation, thrust, ship.body.acceleration);
     if (thrust) {
       const tx = ship.x - Math.cos(ship.rotation) * 20, ty = ship.y - Math.sin(ship.rotation) * 20;
       this.trail.emitParticleAt(tx, ty, boost ? 3 : 2);
     }
     if (ap === 'auto') autopilotDrive(this, dt); // the autopilot sets the heading and the speed over the thrust code above
+    if (ast === 'assist') assistDrive(this, dt); // the flight assist does the same, with its own flight model
     if (JD(k.R)) aimToggle(this); // src/autotarget.js: the sixth part, on or off (R is free in flight; X belongs to the nav list, which reads it every frame)
     aimUpdate(this, ship, locked || still); // the reticle on the raider the guns would turn to (none while it is off, unfitted, or you cannot fire)
     if (!locked && !still && (k.SPACE.isDown || this.input.activePointer.isDown) && time > this.nextFire) {
@@ -235,7 +238,7 @@ class Space extends Phaser.Scene {
     const dP = Phaser.Math.Distance.Between(ship.x, ship.y, this.planet.x, this.planet.y);
     const spd = ship.body.speed;
     let msg = '';
-    if (dS < 320) {
+    if (dS < 320 && !this.station.nowhere) { // nowhere: the stand-in of a system with no station is never a dock, however near (tests/nostation.mjs)
       if (spd < 150) { msg = 'L  Dock at ' + sysBody('station').name; if (JD(k.L)) { missionLeaveSpace(this); sfx('dock'); G.lastDock = sysBody('station').id; fleetSync(); feelDescend(this, this.station, () => go(this, 'Station', { arrive: true })); } } // lastDock: where the pump, the yard and the fleet are now (src/fleet.js)
       else msg = 'Too fast to dock. Hold S to brake';
     } else if (this.canLand && dP < this.planetR + 150) {

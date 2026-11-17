@@ -69,6 +69,25 @@ New files get their own script tag in index.html. Keep edits inside the files yo
 
 Developer shortcuts: `index.html#space`, `#surface`, `#escort` and `#patrol` jump straight into that scene with the mission accepted and do not touch your save. `#hyper` (or `#hyper24` for a 24 light year jump) plays the hyperspace tunnel on its own. `#pullout` plays a jump that is pulled out at half way: the tunnel breaks, deep space with four pirates, then the rest of the tunnel. `#station` and `#bounty` also work but use your save.
 
+## Easy first tweaks
+
+Ten numbers that change how the game feels. Open the file, change the number, reload the page. The ship rows are for the Wren, the ship you start in; the other five hulls have the same fields in the same table.
+
+| Change | File | Constant | Today | What it does |
+|---|---|---|---|---|
+| Flight speed | `src/data_ships.js` | `SHIP_MODELS.wren.speed` | 480 | top speed, px/s |
+| Boost | `src/data_ships.js` | `SHIP_MODELS.wren.boost` | 800 | top speed while Shift is held, px/s (`BOOST.drain` in `src/boost.js`, 25, is how fast it eats energy) |
+| Turn rate | `src/data_ships.js` | `SHIP_MODELS.wren.turn` | 1.0 | a multiplier on the base turn rate (the `0.0036` in `src/space.js`); 1.5 turns half as fast again |
+| Hit flash | `src/feel.js` | `FEEL.flashFade` | 260 | ms the red screen edge takes to fade after a hit; higher lingers |
+| Star density | `src/art_world.js` | the fourth argument of the two `waStars(...)` calls for `stars2` and `stars3` | 80 and 26 | stars drawn on each background tile (a number in the call, not a named constant) |
+| Raider count | `src/data_systems.js` | `SYSTEMS.halcyon.pirates.max` | 8 | pirates the home system keeps alive at once; `weights.raider` beside it (0.25) is the share that are raiders, and the three weights add up to 1 |
+| Fuel burn | `src/data_ships.js` | `SHIP_MODELS.wren.fuelPerLy` | 1.0 | fuel units one light year of a jump costs |
+| Cruise speed | `src/cruise.js` | `CRUISE.top` | 6000 | top speed in cruise (`C`), px/s |
+| Jump charge time | `src/jump.js` | `JUMP.charge` | 4000 | ms the jump charges before it goes |
+| Rescue pay | `content/missions/rescue.md` | `reward:` | 500 | credits the rescue call pays; this one is a markdown file, so run `node tools/build-content.mjs` before you reload |
+
+The tests pin some of these numbers, so `bash tests/smoke.sh` can fail after a tweak: that is the tests noticing, not the game breaking.
+
 ## Code map
 
 | File | What it does |

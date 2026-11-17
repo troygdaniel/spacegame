@@ -8,6 +8,7 @@
 //             characters and nothing else. Below: NPC chat on or off, the provider, the model. Keys stay in this browser (localStorage), never
 //             in the save, never in the game files; the cost note says so in plain words
 //   CONTROLS  every key of the game, from the one table in src/data_controls.js, a tab for each group
+//   FLIGHT    the flight feel: Classic or Heavy (src/handling.js), one row; kept in this browser, not in the save
 //   CONTENT   which content pack is running and what it ignored (src/contentui.js builds the lines)
 //   RESET     Reset game (erase the save and start again) and Forget all keys, each with a second press
 // Nothing here calls a service by itself. Test and Hear it are the only buttons that do, and only when the player presses them, on the key they
@@ -17,7 +18,7 @@
 
 const SETTINGS = {
   w: 1120, h: 640, railW: 232,
-  sections: [['sound', 'SOUND'], ['keys', 'KEYS'], ['controls', 'CONTROLS'], ['content', 'CONTENT'], ['reset', 'RESET']],
+  sections: [['sound', 'SOUND'], ['keys', 'KEYS'], ['controls', 'CONTROLS'], ['flight', 'FLIGHT'], ['content', 'CONTENT'], ['reset', 'RESET']],
   keyRows: [ // the three keys: where each is kept, what it is for, how to tell a wrong paste
     { id: 'deepgram', name: 'DEEPGRAM', use: 'ship voice and bar voices' },
     { id: 'openai', name: 'OPENAI', use: 'NPC chat' },
@@ -67,7 +68,7 @@ class Settings extends Phaser.Scene {
       it.t.setColor(on ? '#ffb454' : '#9fe9ff');
     });
     const keys = SETTINGS.keyRows.filter(r => this.keyOf(r.id)).length, n = typeof CONTENT_ERRORS !== 'undefined' ? CONTENT_ERRORS.length : 0, st = typeof CONTENT_STATE !== 'undefined' ? CONTENT_STATE : {};
-    const status = { sound: G.muted ? 'MUTED' : Math.round(G.volume * 100) + '%', keys: keys + ' of 3', controls: '', content: n ? n + (n === 1 ? ' PROBLEM' : ' PROBLEMS') : st.modded ? 'MODDED' : 'CORE PACK', reset: '' };
+    const status = { sound: G.muted ? 'MUTED' : Math.round(G.volume * 100) + '%', keys: keys + ' of 3', controls: '', flight: handlingNow().name.toUpperCase(), content: n ? n + (n === 1 ? ' PROBLEM' : ' PROBLEMS') : st.modded ? 'MODDED' : 'CORE PACK', reset: '' };
     this.railItems.forEach(it => it.st.setText(status[it.id]).setColor(it.id === 'content' && n ? '#ffb454' : '#5b7a92'));
   }
   keyOf(id) { return id === 'deepgram' ? VOICE.key : CHAT.keys[id] || ''; }
@@ -80,7 +81,7 @@ class Settings extends Phaser.Scene {
     this.focusFirst();
   }
   tagDraw() {
-    const tag = { sound: G.muted ? 'MUTED' : 'VOLUME ' + Math.round(G.volume * 100) + '%', keys: 'STAY IN THIS BROWSER', controls: controlsGroup(this.ctab).title, content: '', reset: 'AUTOSAVE ON' }[this.section];
+    const tag = { sound: G.muted ? 'MUTED' : 'VOLUME ' + Math.round(G.volume * 100) + '%', keys: 'STAY IN THIS BROWSER', controls: controlsGroup(this.ctab).title, flight: 'FEEL ' + handlingNow().name.toUpperCase(), content: '', reset: 'AUTOSAVE ON' }[this.section];
     this.ui.tagText.setText(tag || '');
   }
 
@@ -264,6 +265,31 @@ class Settings extends Phaser.Scene {
     this.txt(bx, by + 500, 'Left and right change the group.', 12, '#5b7a92');
   }
 
+  // ---------- FLIGHT ----------
+  // one row: which set of handling numbers the ship flies with (src/handling.js). Left, right or Enter switch it; it takes hold at once
+  draw_flight() {
+    const bx = this.bx, by = this.by, bw = this.bw, ids = Object.keys(HANDLING), now = handlingNow();
+    this.label(bx, by + 10, 'FLIGHT FEEL');
+    this.slots.feel = ids.map((id, i) => this.button(bx + i * 176, by + 44, 168, HANDLING[id].name, () => this.setFeel(id), { size: 16 }).mark(id === now.id));
+    this.txt(bx + ids.length * 176 + 12, by + 44, now.note, 14, '#cfefff', { style: { wordWrap: { width: bw - ids.length * 176 - 12 }, lineSpacing: 3 } });
+    this.line(by + 88);
+    // the two feels side by side, as bars: how long each takes, on the ship you fly
+    const acc = shipStat('accel'), vmax = shipStat('vmax'), g = this.add.graphics(); this.body.add(g);
+    const rows = [['TURN BUILDS', h => h.turnUp / 1000, 1], ['TURN EASES OFF', h => h.turnDown / 1000, 1], ['THRUST RAMPS', h => h.thrustUp / 1000, 1], ['TO TOP SPEED', h => handlingTimeTo(h, acc, vmax), 3], ['COASTS TO A STOP', h => handlingCoast(h, vmax), 15]];
+    ids.forEach((id, c) => this.txt(bx + 200 + c * 300, by + 116, HANDLING[id].name.toUpperCase(), 12, id === now.id ? '#ffb454' : '#5b7a92', { style: { letterSpacing: 2, fontStyle: 'bold' } }));
+    rows.forEach(([name, f, max], i) => {
+      const y = by + 152 + i * 40; this.label(bx, y, name);
+      ids.forEach((id, c) => {
+        const v = f(HANDLING[id]), x = bx + 200 + c * 300;
+        hudBar(g, x, y - 8, 200, 16, Math.min(1, v / max), id === now.id ? AMBER : 0x5b7a92, 20);
+        this.txt(x + 212, y, v ? v.toFixed(1) + ' s' : 'at once', 13, id === now.id ? '#ffd37a' : '#8fb4c9');
+      });
+    });
+    this.txt(bx, by + 372, 'Top speed, boost, dash and the autopilot are the same in both. The choice stays in this browser and takes hold at once.', 12, '#5b7a92', { oy: 0, style: { wordWrap: { width: bw } } });
+  }
+  setFeel(id) { handlingSet(id); beep(660, 0.08, 'triangle', 0.05); if (this.section === 'flight') this.show('flight'); }
+  stepFeel(d) { const ids = Object.keys(HANDLING); this.setFeel(ids[(ids.indexOf(handlingNow().id) + d + ids.length) % ids.length]); }
+
   // ---------- CONTENT ----------
   draw_content() {
     const by = this.by;
@@ -324,10 +350,12 @@ class Settings extends Phaser.Scene {
     else if (code === 'ArrowLeft' || code === 'KeyA' || code === 'ArrowRight' || code === 'KeyD') {
       const d = code === 'ArrowLeft' || code === 'KeyA' ? -1 : 1;
       if (this.section === 'sound') this.adjustVolume(d);
+      else if (this.section === 'flight') this.stepFeel(d);
       else if (this.section === 'controls') { const ids = CONTROLS.map(g => g.id); this.ctab = ids[(ids.indexOf(this.ctab) + d + ids.length) % ids.length]; this.show('controls'); }
     } else if (code === 'Enter' || code === 'Space' || code === 'NumpadEnter') {
       if (this.section === 'sound') this.toggleMute();
       else if (this.section === 'keys') { const el = this.inputs.deepgram; if (el) el.focus(); }
+      else if (this.section === 'flight') this.stepFeel(1);
       else if (this.section === 'reset') this.press('reset');
     }
   }
