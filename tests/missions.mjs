@@ -95,9 +95,29 @@ try {
   await x(`G.mission = 'accepted'; G.missionId = 'escort'; G.missionProgress = 0; ${S('Space')}.scene.restart({ from: 'station' })`);
   await run(1500);
   const c2 = (await G()).credits;
-  await x(`${S('Space')}.mx.freighter.setPosition(GATE.x + 40, GATE.y)`);
+  // the stakes (docs/ESCORT.md change 3): she calls out, holds 8 s at the gate while the last pirates come, and pays 400 plus up to 200 for her hull
+  const SQ = S('Space'), toasts = () => t.ev(`(() => { const out = []; const walk = o => { if (o.type === 'Text') out.push(o.text); if (o.list) o.list.forEach(walk); }; ${SQ}.children.list.forEach(walk); return out.join('|'); })()`);
+  await x(`${SQ}.pirateOff = true; ${SQ}.enemies.clear(true, true); ${SQ}.mx.freighter.hp = 100`); await run(100);
+  check('at half hull she says so', (await toasts()).includes('Hull at half'));
+  await x(`${SQ}.mx.freighter.body.reset(GATE.x + 700, GATE.y)`); await run(100);
+  check('within 900 px of the gate: Gate in sight', (await toasts()).includes('Gate in sight'));
+  await x(`${SQ}.mx.freighter.body.reset(GATE.x + 40, GATE.y)`);
   await run(200); g = await G();
-  check('escort pays 400 at the gate', g.mission === 'none' && g.credits === c2 + 400, JSON.stringify(g));
+  check('at the gate she is not paid yet: the gate spins up for 8 s', g.mission === 'accepted' && g.credits === c2 && await t.ev(`${SQ}.mx.spin > 7000 && ${SQ}.mx.spin <= 8000`), JSON.stringify(g));
+  check('she holds still in the ring and says so', await t.ev(`${SQ}.mx.freighter.body.speed === 0`) && (await toasts()).includes('Eight seconds to spin up'));
+  check('the last stand: three pirates come for her from 1,100 px out', await t.ev(`${SQ}.enemies.getChildren().filter(d => d.active && d.prey === ${SQ}.mx.freighter).length === 3 && ${SQ}.enemies.getChildren().every(d => Phaser.Math.Distance.Between(d.x, d.y, GATE.x, GATE.y) > 900)`));
+  check('the HUD counts the spin-up down', (await t.ev(`HUD_MISSIONS.escort.next(${SQ}, 'Space')`)).startsWith('Hold the gate: '));
+  await t.shot('missions-escort-laststand');
+  await x(`${SQ}.enemies.clear(true, true)`); // the fight is not what this checks
+  await run(4000); g = await G();
+  check('half way through she is still spinning up, and only one wave came', g.mission === 'accepted' && await t.ev(`${SQ}.enemies.countActive() === 0`));
+  await run(4000); g = await G();
+  check('after 8 s she is through: 400 plus 100 for half her hull', g.mission === 'none' && g.credits === c2 + 500, JSON.stringify(g));
+  await x(`G.mission = 'accepted'; G.missionId = 'escort'; G.missionProgress = 0; ${S('Space')}.scene.restart({ from: 'station' })`);
+  await run(1500);
+  await x(`${SQ}.pirateOff = true; ${SQ}.enemies.clear(true, true); ${SQ}.mx.freighter.hp = 200; ${SQ}.mx.freighter.body.reset(GATE.x + 40, GATE.y)`);
+  await run(300); await x(`${SQ}.enemies.clear(true, true)`); await run(8000); g = await G();
+  check('a clean run pays 600', g.mission === 'none' && g.credits === c2 + 500 + 600, JSON.stringify(g));
   await x(`G.mission = 'accepted'; G.missionId = 'escort'; ${S('Space')}.scene.restart({ from: 'station' })`);
   await run(1500);
   await x(`freighterHurt(${S('Space')}, 999)`);

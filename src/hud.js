@@ -32,7 +32,7 @@ const HUD_MISSIONS = {
   escort: {
     steps: ['Take the escort call', 'Launch with the MULE', 'Escort the MULE to the gate'],
     cur: (s, key) => key === 'Station' ? 1 : 2,
-    next: (s, key) => key === 'Station' ? 'Board your ship in the hangar' : key === 'Space' ? (s.mx && s.mx.covered ? 'Covered: hold her ring to the gate' : 'Get inside the MULE\'s ring') : 'Return to your ship'
+    next: (s, key) => key === 'Station' ? 'Board your ship in the hangar' : key === 'Space' ? (s.mx && s.mx.spin > 0 ? 'Hold the gate: ' + Math.ceil(s.mx.spin / 1000) + ' s' : s.mx && s.mx.covered ? 'Covered: hold her ring to the gate' : 'Get inside the MULE\'s ring') : 'Return to your ship'
   },
   patrol: {
     steps: ['Take the patrol call', 'Launch from the hangar', () => 'Wanted pirates down  ' + G.missionProgress + '/' + (missionDef().count || 5)],
