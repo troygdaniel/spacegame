@@ -16,7 +16,7 @@ const OVERVIEW = {
   key: 'B', max: 10,            // rows shown
   every: 250,                   // ms between rebuilds of the list
   still: 5,                     // px/s: under this the range neither closes nor opens
-  x: 1004, y: 226, w: 260, row: 18,
+  x: 1004, y: 242, w: 260, row: 18,   // under the radar and its hostile line
   kinds: { station: 'STATION', planet: 'PLANET', gate: 'GATE', belt: 'BELT', poi: 'SIGNAL', scenery: 'BODY', raider: 'RAIDER', drone: 'DRONE', gunship: 'GUNSHIP', pirate: 'PIRATE', escort: 'ESCORT', police: 'POLICE', civ: 'SHIP' },
   colors: { hostile: '#ff4d6d', friend: '#6dff9c', station: '#38e1ff', planet: '#ffb454', other: '#9fb6c8' }
 };
