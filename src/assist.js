@@ -10,7 +10,7 @@
 //                                     range   the default when assistSet gets none: a number of px, or target => px
 //                                     plan    (a, me, tgt, st) => { face, burn, brake, done, status }   called once a frame, pure:
 //                                               a    the order: { mode, target, range, since }
-//                                               me   { x, y, rot, vx, vy, burning }        tgt  { x, y, vx, vy, moving }
+//                                               me   { x, y, rot, vx, vy, burning, mem }   tgt  { x, y, vx, vy, moving }
 //                                               st   { turn, accel, vmax } of the ship (shipStat)
 //                                               face rad to turn to (null: hold the heading), burn: main engine, brake: the brake (as S),
 //                                               done: the order is finished, status: one word for the HUD
@@ -32,6 +32,8 @@ const ASSIST = {
   align: 0.3,                        // rad: the nose is on the line, the engine may burn
   lead: 1.7,                         // px/s allowed per px left: the brake takes 2.12 off per second, so 1.7 is in time
   dead: 20, slow: 15,                // px either side of the range that count as there; px/s that counts as stopped
+  faceLean: 0.3,                     // how far the nose line leans toward the way the ship wants to go (a share of that speed)
+  faceOn: 35, faceOff: 20,           // px/s of needed change that turns the nose onto it, and that lets it go again
   keepRange: 500, shipStop: 150,     // px: Keep at range when none is given; how near Approach stops to a ship
   keys: ['W', 'A', 'S', 'D', 'UP', 'DOWN', 'LEFT', 'RIGHT', 'SHIFT', 'Q', 'E'] // a flight key: the player wants the stick
 };
@@ -47,8 +49,8 @@ function assistMode(id, def) {
 
 // how near Approach stops when no range is given: a body as the autopilot does (dock and land range), a ship 150 px off, a bare point on it
 function assistStopAt(t) {
-  if (t.type) return autopilotStop(t);
-  return t.body ? ASSIST.shipStop : 0;
+  if (t.body) return ASSIST.shipStop; // a ship first: Phaser gives every sprite a type of its own ('Sprite')
+  return t.type ? autopilotStop(t) : 0;
 }
 function assistVel(t) {
   const v = t.body && t.body.velocity;
@@ -85,10 +87,21 @@ function assistSeek(me, tgt, st, stop, back) {
   const ex = ux * want - rvx, ey = uy * want - rvy, err = Math.hypot(ex, ey); // the change of velocity the ship needs
   const sp = Math.hypot(me.vx, me.vy), toTarget = Math.atan2(dy, dx);
   const out = { face: toTarget, burn: false, brake: false, done: false, status: there ? 'hold' : left < 0 ? 'back off' : 'burn', dist, left, closing: rvx * ux + rvy * uy };
-  if (there && rel <= ASSIST.slow) return out; // there and still: nose on the target, engine off
+  // where the nose goes. It remembers (me.mem, kept on the order): the nose follows the change of velocity the ship needs only once that is
+  // worth a turn (over faceOn px/s) and until it is small again (under faceOff); below that, and while the brake is on, it stays where it is,
+  // or settles on a target that stands still. Without this the nose
+  // sawed left and right every frame near the threshold (playtest 4).
+  const mem = me.mem || (me.mem = {}), moving = Math.hypot(tgt.vx || 0, tgt.vy || 0) > 1;
+  const rest = moving ? Math.atan2(tgt.vy || 0, tgt.vx || 0) : toTarget; // beside a moving ship the nose is on the way they both fly; else it is on the target
+  const aim = f => (mem.face = f);
+  if (there && rel <= ASSIST.slow) { mem.onErr = false; out.face = aim(rest); return out; } // there and still: engine off
   // what it needs is mostly "slower": the brake does that without a turn
-  if (sp > 8 && err > Math.abs(want) * 0.03 + 3 && ex * me.vx + ey * me.vy < -0.7 * err * sp) { out.brake = true; out.status = there ? 'hold' : 'brake'; if (left < 0) out.face = Math.atan2(ey, ex); return out; }
-  if (err > ASSIST.dead) out.face = Math.atan2(ey, ex); // turn first: the nose onto the line of the change it needs
+  if (sp > 8 && err > Math.abs(want) * 0.03 + 3 && ex * me.vx + ey * me.vy < -0.7 * err * sp) { out.brake = true; out.status = there ? 'hold' : 'brake'; out.face = mem.face !== undefined ? mem.face : aim(toTarget); return out; }
+  if (err > ASSIST.faceOn) mem.onErr = true; else if (err < ASSIST.faceOff) mem.onErr = false;
+  // the line of the change it needs, leaning toward the way it wants to go: at cruise the needed change is small, and without the lean one px/s
+  // of sideways drift swung the nose by 0.04 rad, back and forth
+  const lean = ASSIST.faceLean * Math.sign(want) * Math.min(Math.abs(want), st.vmax);
+  out.face = aim(mem.onErr ? Math.atan2(ey + uy * lean + (tgt.vy || 0), ex + ux * lean + (tgt.vx || 0)) : rest); // turn first (a moving target's own velocity leans it too: the ship flies alongside)
   const p = ex * Math.cos(out.face) + ey * Math.sin(out.face), aligned = Math.abs(assistWrap(out.face - me.rot)) < ASSIST.align;
   out.burn = aligned && (p > Math.abs(want) * 0.1 + 4 || (!!me.burning && p > 0));
   if (!out.burn && !aligned) out.status = 'turn';
@@ -129,7 +142,7 @@ function assistSet(mode, target, range) {
   const t = target || assistTarget(s);
   if (!t) { toast(s, 'No target. Press N and pick one.', '#ffd37a'); sfx('empty'); return false; }
   if (s.ap && s.ap.on) autopilotEnd(s, 'quiet');
-  a.mode = mode; a.target = t; a.nav = assistTarget(s); a.since = s.time.now; a.burning = false; a.cmd = null; a.readAt = 0;
+  a.mode = mode; a.target = t; a.nav = assistTarget(s); a.since = s.time.now; a.burning = false; a.cmd = null; a.readAt = 0; a.mem = {};
   a.range = typeof range === 'number' && range >= 0 ? range : typeof m.range === 'function' ? m.range(t) : (m.range || 0);
   a.held = {}; ASSIST.keys.forEach(n => { if (s.k && s.k[n] && s.k[n].isDown) a.held[n] = true; }); // a key already down when the order came is not a new wish for the stick
   toast(s, m.label + ': ' + assistName(t) + (a.range ? ' at ' + hudFmt(a.range / 10) + ' km' : '') + '. Any flight key takes the stick back.', '#9fe9ff'); sfx('chime');
@@ -184,7 +197,7 @@ function assistFrame(s, time, dt, crs, ap) {
 function assistDrive(s, dt) {
   const a = s.as; if (!a || !a.mode) return;
   const ship = s.ship, b = ship.body, st = assistStats(), t = a.target, tv = assistVel(t);
-  const me = { x: ship.x, y: ship.y, rot: ship.rotation, vx: b.velocity.x, vy: b.velocity.y, burning: a.burning };
+  const me = { x: ship.x, y: ship.y, rot: ship.rotation, vx: b.velocity.x, vy: b.velocity.y, burning: a.burning, mem: a.mem || (a.mem = {}) };
   const cmd = ASSIST_MODES[a.mode].plan(a, me, { x: t.x, y: t.y, vx: tv.x, vy: tv.y, moving: Math.hypot(tv.x, tv.y) > 1 }, st) || {};
   const n = assistStep(me, cmd, st, dt);
   ship.rotation = n.rot; a.burning = n.burning; a.cmd = cmd;
