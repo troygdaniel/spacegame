@@ -12,14 +12,15 @@
 //                                               a    the order: { mode, target, range, since }
 //                                               me   { x, y, rot, vx, vy, burning, mem }   tgt  { x, y, vx, vy, moving }
 //                                               st   { turn, accel, vmax } of the ship (shipStat)
-//                                               face rad to turn to (null: hold the heading), burn: main engine, brake: the brake (as S),
+//                                               face rad to turn to (null: hold the heading), burn: main engine (true, or a throttle 0 to 1), brake: the brake (as S),
 //                                               done: the order is finished, status: one word for the HUD
 //   assistSet(mode, target, range)  give an order. target: anything with a live x and y (a body of cruiseKnown, a ship sprite, a bare { x, y });
 //                                   none = the nav target. range in px; none = the mode's default. Returns true when the ship took the order,
 //                                   false when it did not (assist off, no target, docked, dead, cruising, launch lock). assistSet('') ends the order.
 //   assistOn(s, on)                 switch the whole assist on or off (what Z does); ASSIST.on says which
 //   assistState()                   for a HUD: { on, mode, label, name, range, dist, closing, status, keys: [{ id, label, cap }] }
-//   assistSeek(me, tgt, st, stop, back)   the shared planner: come to rest `stop` px from tgt (back: also back off when inside it)
+//   assistSeek(me, tgt, st, stop, back, trail)   the shared planner: come to rest `stop` px from tgt (back: also back off when inside it;
+//                                   trail: about a moving target hold only the range and trail it, do not match its velocity across the line)
 //   assistStep(me, cmd, st, dt)     the flight model, pure: what one frame of a command does to { x, y, rot, vx, vy } (tests fly it in plain Node)
 //   ASSIST.readout = false          hides this file's own one-line readout (for a HUD panel that shows the same)
 //   space.js   assistSetup(this) in create(); assistFrame(this, time, dt, crs, ap) after autopilotFrame: 'assist' while an order flies the ship;
@@ -30,6 +31,7 @@ const ASSIST = {
   turn: 0.0036,                      // rad per ms times the ship's turn stat: the hand flight's own rate (space.js)
   drag: 0.55, brakeDrag: 0.12,       // what is left of the speed after a second of coasting, and of braking: the hand flight's own numbers
   align: 0.3,                        // rad: the nose is on the line, the engine may burn
+  full: 60, idle: 0.04,              // px/s of needed change that gets a full burn (less gets less); the least the engine gives while lit
   lead: 1.7,                         // px/s allowed per px left: the brake takes 2.12 off per second, so 1.7 is in time
   dead: 20, slow: 15,                // px either side of the range that count as there; px/s that counts as stopped
   faceLean: 0.3,                     // how far the nose line leans toward the way the ship wants to go (a share of that speed)
@@ -70,48 +72,59 @@ function assistStep(me, cmd, st, dt) {
     const d = assistWrap(cmd.face - rot), step = ASSIST.turn * st.turn * dt;
     rot = Math.abs(d) <= step ? assistWrap(cmd.face) : assistWrap(rot + Math.sign(d) * step);
   }
-  if (cmd.burn) { vx += Math.cos(rot) * st.accel * dts; vy += Math.sin(rot) * st.accel * dts; }
-  else { const k = Math.pow(cmd.brake ? ASSIST.brakeDrag : ASSIST.drag, dts); vx *= k; vy *= k; }
+  const b = cmd.burn === true ? 1 : Math.min(1, Math.max(0, +cmd.burn || 0)); // the throttle: true or 1 is a full burn, 0.3 a third of it
+  if (b > 0) { vx += Math.cos(rot) * st.accel * b * dts; vy += Math.sin(rot) * st.accel * b * dts; }
+  if (b < 1) { const k = Math.pow(cmd.brake ? ASSIST.brakeDrag : ASSIST.drag, dts * (1 - b)); vx *= k; vy *= k; } // the less it burns, the more the speed bleeds
   const sp = Math.hypot(vx, vy); if (sp > st.vmax) { vx *= st.vmax / sp; vy *= st.vmax / sp; }
-  return { x: me.x + vx * dts, y: me.y + vy * dts, rot, vx, vy, burning: !!cmd.burn };
+  return { x: me.x + vx * dts, y: me.y + vy * dts, rot, vx, vy, burning: b > 0 };
 }
 
 // come to rest `stop` px from the target (measured to its centre), relative to its own motion. back: when inside that distance, back off to it.
 // The speed it wants falls with the distance left, so the brake comes on in time; the engine burns only with the nose on the line.
-function assistSeek(me, tgt, st, stop, back) {
+function assistSeek(me, tgt, st, stop, back, trail) {
   const dx = tgt.x - me.x, dy = tgt.y - me.y, dist = Math.hypot(dx, dy) || 1e-6, ux = dx / dist, uy = dy / dist;
   let left = dist - (stop || 0); if (!back && left < 0) left = 0;
   const there = Math.abs(left) <= ASSIST.dead;
-  const want = there ? 0 : Math.sign(left) * Math.min(st.vmax * 1.05, ASSIST.lead * (Math.abs(left) - ASSIST.dead / 2)); // px/s toward the target (1.05: the cruise part never reaches it, so the engine stays lit)
+  const moving = Math.hypot(tgt.vx || 0, tgt.vy || 0) > 1;
+  const want = there && !moving ? 0 : Math.sign(left) * Math.min(st.vmax * 1.05, ASSIST.lead * Math.max(0, Math.abs(left) - ASSIST.dead / 2)); // px/s toward the target (1.05: the cruise part never reaches it, so the engine stays lit)
   const rvx = me.vx - (tgt.vx || 0), rvy = me.vy - (tgt.vy || 0), rel = Math.hypot(rvx, rvy);
-  const ex = ux * want - rvx, ey = uy * want - rvy, err = Math.hypot(ex, ey); // the change of velocity the ship needs
+  // the change of velocity the ship needs: the closing speed it wants, and no drift across the line. trail (Approach and Keep at range about
+  // a target that moves): only the closing speed counts, so the ship works along the line to it and ends up trailing it at the range, where
+  // chasing its every turn (a circling raider) had the nose and the engine going many times a second (playtest 4). Without trail the
+  // target's velocity is matched in full (Match speed flies to a spot beside a moving ship this way)
+  const closing = rvx * ux + rvy * uy, across = trail && moving ? 0 : 1;
+  const ex = ux * (want - closing) - across * (rvx - ux * closing), ey = uy * (want - closing) - across * (rvy - uy * closing), err = Math.hypot(ex, ey);
   const sp = Math.hypot(me.vx, me.vy), toTarget = Math.atan2(dy, dx);
-  const out = { face: toTarget, burn: false, brake: false, done: false, status: there ? 'hold' : left < 0 ? 'back off' : 'burn', dist, left, closing: rvx * ux + rvy * uy };
+  const out = { face: toTarget, burn: false, brake: false, done: false, status: there ? 'hold' : left < 0 ? 'back off' : 'burn', dist, left, closing };
   // where the nose goes. It remembers (me.mem, kept on the order): the nose follows the change of velocity the ship needs only once that is
   // worth a turn (over faceOn px/s) and until it is small again (under faceOff); below that, and while the brake is on, it stays where it is,
   // or settles on a target that stands still. Without this the nose
   // sawed left and right every frame near the threshold (playtest 4).
-  const mem = me.mem || (me.mem = {}), moving = Math.hypot(tgt.vx || 0, tgt.vy || 0) > 1;
-  const rest = moving ? Math.atan2(tgt.vy || 0, tgt.vx || 0) : toTarget; // beside a moving ship the nose is on the way they both fly; else it is on the target
+  const mem = me.mem || (me.mem = {});
+  const rest = toTarget; // with nothing worth a turn the nose is on the target
   const aim = f => (mem.face = f);
-  if (there && rel <= ASSIST.slow) { mem.onErr = false; out.face = aim(rest); return out; } // there and still: engine off
+  if (there && rel <= ASSIST.slow && !moving) { mem.onErr = false; out.face = aim(rest); return out; } // there and still: engine off (beside a moving ship the engine stays lit low, below)
   // what it needs is mostly "slower": the brake does that without a turn
   if (sp > 8 && err > Math.abs(want) * 0.03 + 3 && ex * me.vx + ey * me.vy < -0.7 * err * sp) { out.brake = true; out.status = there ? 'hold' : 'brake'; out.face = mem.face !== undefined ? mem.face : aim(toTarget); return out; }
   if (err > ASSIST.faceOn) mem.onErr = true; else if (err < ASSIST.faceOff) mem.onErr = false;
   // the line of the change it needs, leaning toward the way it wants to go: at cruise the needed change is small, and without the lean one px/s
   // of sideways drift swung the nose by 0.04 rad, back and forth
   const lean = ASSIST.faceLean * Math.sign(want) * Math.min(Math.abs(want), st.vmax);
-  out.face = aim(mem.onErr ? Math.atan2(ey + uy * lean + (tgt.vy || 0), ex + ux * lean + (tgt.vx || 0)) : rest); // turn first (a moving target's own velocity leans it too: the ship flies alongside)
+  out.face = aim(mem.onErr ? Math.atan2(ey + uy * lean, ex + ux * lean) : rest); // turn first
   const p = ex * Math.cos(out.face) + ey * Math.sin(out.face), aligned = Math.abs(assistWrap(out.face - me.rot)) < ASSIST.align;
-  out.burn = aligned && (p > Math.abs(want) * 0.1 + 4 || (!!me.burning && p > 0));
-  if (!out.burn && !aligned) out.status = 'turn';
+  // the engine: lit once the change along the nose is worth it and until it is made, and only as hard as that change asks: a full burn for
+  // ASSIST.full px/s or more, less below. Beside a moving ship that is a small steady flame that makes up what the drag takes, where a
+  // full burn or nothing lit and cut the engine many times a second (playtest 4)
+  const lit = aligned && (p > Math.abs(want) * 0.1 + 4 || (!!me.burning && p > 0));
+  out.burn = lit ? Math.max(ASSIST.idle, Math.min(1, p / ASSIST.full)) : false;
+  if (!lit && !aligned) out.status = 'turn';
   return out;
 }
 
 assistMode('approach', { label: 'Approach', key: 'ONE', cap: '1', range: assistStopAt,
-  plan: (a, me, tgt, st) => { const c = assistSeek(me, tgt, st, a.range, false); if (c.status === 'hold' && !c.brake && !tgt.moving) c.done = true; return c; } });
+  plan: (a, me, tgt, st) => { const c = assistSeek(me, tgt, st, a.range, !!tgt.moving, true); if (c.status === 'hold' && !c.brake && !tgt.moving) c.done = true; return c; } }); // a ship that moves is followed at the range from both sides; a still target nearer than the range is left alone
 assistMode('keep', { label: 'Keep at range', key: 'TWO', cap: '2', range: ASSIST.keepRange,
-  plan: (a, me, tgt, st) => assistSeek(me, tgt, st, a.range, true) });
+  plan: (a, me, tgt, st) => assistSeek(me, tgt, st, a.range, true, true) });
 
 // ---- the scene side ----
 
@@ -203,7 +216,7 @@ function assistDrive(s, dt) {
   ship.rotation = n.rot; a.burning = n.burning; a.cmd = cmd;
   b.setAcceleration(0, 0).setDrag(0).setMaxSpeed(st.vmax + 10); // the model above has the drag in it; the next frame of hand flight sets its own again
   b.setVelocity(n.vx, n.vy);
-  if (cmd.burn && s.trail) s.trail.emitParticleAt(ship.x - Math.cos(n.rot) * 20, ship.y - Math.sin(n.rot) * 20, 2);
+  if (cmd.burn && s.trail) s.trail.emitParticleAt(ship.x - Math.cos(n.rot) * 20, ship.y - Math.sin(n.rot) * 20, cmd.burn === true || cmd.burn >= 0.5 ? 2 : 1); // a low throttle: a thinner flame
   if (cmd.done) assistStop(s, 'arrived');
 }
 
