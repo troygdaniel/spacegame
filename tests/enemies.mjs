@@ -66,7 +66,7 @@ for (const type of ['raider', 'drone']) {
   const passes = moves.filter((m, i) => m === 'pass' && moves[i - 1] !== 'pass').length;
   const breaks = moves.filter((m, i) => m === 'break' && moves[i - 1] !== 'break').length;
   check('it circles, makes passes and breaks away: all three in a minute', passes >= 3 && breaks >= 3 && moves.includes('circle'), `${passes} passes, ${breaks} breaks`);
-  check('a pass is never the first thing: it circles for 2 s or more before turning in', rows.find(r => r[2] === 'pass')[0] - rows.find(r => r[1] < def.hold * 1.5)[0] > 1);
+  check('a pass is never the first thing: it circles for 2 s or more before turning in', rows.find(r => r[2] === 'pass')[0] - rows.find(r => r[1] < def.hold * 1.5)[0] >= 2, (rows.find(r => r[2] === 'pass')[0] - rows.find(r => r[1] < def.hold * 1.5)[0]).toFixed(2));
   const passEnds = rows.filter((r, i) => r[2] === 'pass' && moves[i + 1] === 'break').map(r => r[1]);
   check('a pass brings it in close: well inside the ring on average', avg(passEnds) < def.hold * 0.75, passEnds.map(Math.round).join());
   check('it flies past the target, it does not ram it: never nearer than 40 px', min(d) > 40, Math.round(min(d)));

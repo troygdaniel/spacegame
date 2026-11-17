@@ -90,6 +90,7 @@ function fightBetween(a, b) { return a + Math.random() * (b - a); }
 function pirateSteer(d, def, dist, target, time, vx, vy) {
   const ring = def.hold, passes = FIGHT.pass[def.key];
   if (!d.move) { d.move = 'circle'; d.moveUntil = time + (passes ? fightBetween(passes[0], passes[1]) : 0); }
+  if (d.move === 'circle' && passes && dist > ring * 1.5) d.moveUntil = Math.max(d.moveUntil, time + passes[0]); // still flying in: the time to the first pass starts when it is on the ring
   if (!d.ran && d.hp < def.hp && d.hp <= def.hp * FIGHT.runAt) { d.ran = true; d.move = 'run'; d.moveUntil = time + fightBetween(FIGHT.runFor[0], FIGHT.runFor[1]); }
   else if (d.move === 'run' && time > d.moveUntil) { d.move = 'circle'; d.moveUntil = time + (passes ? fightBetween(passes[0], passes[1]) : 0); }
   else if (d.move === 'circle' && passes && time > d.moveUntil && dist < ring * 1.5) { d.move = 'pass'; d.moveUntil = time + FIGHT.passFor; }
