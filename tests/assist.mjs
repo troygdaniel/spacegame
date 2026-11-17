@@ -10,7 +10,7 @@ import { nodeGame } from './nodegame.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name + (detail ? '  ' + String(detail).slice(0, 300) : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 600) + ')' : ''}`); } };
-const g = nodeGame();
+const g = nodeGame({ replace: { 'src/assist_orbit.js': '' } }); // the core alone: the modes another file adds (Orbit, Match speed) have their own test
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 
 // the stand-in scene and the frame loop, inside the game's context
