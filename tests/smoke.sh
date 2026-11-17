@@ -28,6 +28,8 @@ export LONGHAUL_VIA=smoke   # the run ledger (tests/ledger.mjs) marks these line
 fail=0
 list=0; [ "${1:-}" = "--list" ] && list=1
 all=0; [ "${ALL:-0}" = 1 ] && all=1
+# the gate's run goes to the front of the Chrome lock line (tests/lock.mjs "The gate goes first"); a builder's own smoke does not set ALL=1
+[ "$all" = 1 ] && export LONGHAUL_GATE=1
 
 # find the tests: "file|when|what", node-only first, then Chrome, each in name order
 steps=(); skipped=(); unmarked=()

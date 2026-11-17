@@ -67,3 +67,12 @@ Before, `smoke.sh` set `fail=1` on a failed step and ran on to the end, so a typ
 - `bash tests/smoke.sh --list` is unchanged: it lists everything and runs nothing, and still ends `LIST FAIL` for a file with no marker.
 - A card's own pass before review is the touched suites (docs/TESTING.md), not the whole smoke, so fail-fast mostly saves the gate and a branch that runs the whole smoke by hand.
 - `tests/smokefail.mjs` (node-only, in the smoke) runs the real `smoke.sh` in a temp folder with stand-in tools and tests: a failing node test stops it before the next test, the economy step and the Chrome test; `ALL=1` runs them all; the order is node, economy, Chrome; a syntax error and an unmarked file stop it before any test.
+
+## 6. The gate's smoke goes to the front of the Chrome line (card `space-game-lock-gate-first`)
+
+The batch smoke is some forty Chrome runs one after another, and each one queued behind every builder's run already in the line: on 2026-11-17 it would have taken over an hour, and main went out before it finished. Now:
+
+- **`ALL=1 bash tests/smoke.sh` sets `LONGHAUL_GATE=1`**, and a run with that set takes the next free slot of the test lock (`tests/lock.mjs`) ahead of every ordinary waiter. `ALL=1` is the gate's switch (section 5): a builder's own run does not set it, and must not set `LONGHAUL_GATE` to jump the line.
+- **Ordinary runs keep their order** among themselves, and none is passed twice in a row: after a gate run, the oldest ordinary waiter goes before the next gate run. A builder's Chrome test waits for one gate run at most; the gate waits for one builder at most between two of its runs.
+- **Nothing to update in a worktree on an older `lock.mjs`**: the line is tickets sorted by name, and a gate ticket is only named to sort first, so an older copy gives way by itself.
+- `node tests/lock.mjs status` marks the gate's runs `[gate]`. `tests/locktest.mjs` proves the rule with stand-in waiters in plain Node (no Chrome).
