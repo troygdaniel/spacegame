@@ -10,12 +10,13 @@ To translate, change the text column here, or copy this file to a name after ui 
 | key | text |
 |---|---|
 | help.station.1 | W A S D   walk (the arrow keys work too) |
-| help.station.2 | E   use the terminal, repair bay or ship |
-| help.station.3 | 1-6   buy a part in the shop |
-| help.station.4 | T   chat with someone in the bar (needs a chat key) |
-| help.station.5 | J   journal: who you have met |
-| help.station.6 | G   galaxy map (look only here; you jump from your ship) |
-| help.station.7 | Esc   close a terminal, or pause |
+| help.station.2 | 1-6   go straight to a spot (the number on the floor beside it) |
+| help.station.3 | E   use the terminal, repair bay or ship |
+| help.station.4 | 1-6   buy a part, with the shop open |
+| help.station.5 | T   chat with someone in the bar (needs a chat key) |
+| help.station.6 | J   journal: who you have met |
+| help.station.7 | G   galaxy map (look only here; you jump from your ship) |
+| help.station.8 | Esc   close a terminal, or pause |
 | help.ship.1 | Enter Space   the amber button: launch or board |
 | help.ship.2 | Enter   press twice to buy a ship |
 | help.ship.3 | F Y C   fleet, yard or controls tab |
