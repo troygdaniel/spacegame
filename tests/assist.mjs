@@ -188,6 +188,29 @@ check('readout: no toast, or one toast at the top: it sits on its own line', J(`
 check('readout: a second toast reaches its line: it moves just under that toast', J(`assistReadY([${T(96, 39)}, ${T(153, 62)}])`) === 202, J(`assistReadY([${T(96, 39)}, ${T(153, 62)}])`));
 check('readout: three toasts: under the lowest, and still on the screen', J(`assistReadY([${T(96, 39)}, ${T(153, 62)}, ${T(209, 39)}])`) === 247 && J(`assistReadY([${T(96, 39)}, ${T(153, 62)}, ${T(209, 39)}]) < H - 150`));
 check('readout: a toast that has gone no longer pushes it', J(`assistReadY([${T(96, 39)}, ${T(153, 62, false)}])`) === 156);
+// ---- the assist flies the feel the player chose (playtest 4, bug 2: the same Approach took 6.7 s under Classic and under Heavy) ----
+const flyFeel = feel => { g.run(`handlingSet('${feel}'); __scene(0, 0, Math.PI);`); return J(`(() => { const t = { x: 2000, y: 0 }; assistSet('approach', t, 0); return __frames(2400, t); })()`); };
+const fc = flyFeel('classic'), fh = flyFeel('heavy');
+check('the same 2000 px Approach takes clearly longer under Heavy (at least 1.4 times Classic)', fh.ended && fc.ended && fh.frames >= fc.frames * 1.4, `classic ${(fc.frames / 60).toFixed(1)} s, heavy ${(fh.frames / 60).toFixed(1)} s`);
+check('under Heavy it still ends on the point, slow, without flying past it', fh.ended && fh.d <= 20 && fh.v <= 15 && fh.maxV <= vmax + 0.01, `ended ${fh.d.toFixed(1)} px off at ${fh.v.toFixed(1)} px/s`);
+check('under Heavy the nose is as steady: 6 reversals or fewer, and no burn with the nose off the line', fh.flips <= 6 && fh.offLineBurn === 0, `${fh.flips} reversals, ${fh.offLineBurn} off-line burns`);
+check('under Heavy the turn builds up: the first burn comes later than under Classic', fh.burnAt > fc.burnAt, `classic frame ${fc.burnAt}, heavy frame ${fh.burnAt}`);
+const feelStep = J(`(() => { const st = { turn: 1, accel: 600, vmax: 1e6 }, out = {};
+  for (const f of ['classic', 'heavy']) { handlingSet(f); const h = handlingNow();
+    out[f] = { coast: assistStep({ x: 0, y: 0, rot: 0, vx: 100, vy: 0, mem: {} }, {}, st, 1000).vx, brake: assistStep({ x: 0, y: 0, rot: 0, vx: 100, vy: 0, mem: {} }, { brake: true }, st, 1000).vx,
+      firstBurn: assistStep({ x: 0, y: 0, rot: 0, vx: 0, vy: 0, mem: {} }, { burn: true }, st, 1000 / 60).vx, turn: assistStep({ x: 0, y: 0, rot: 0, vx: 0, vy: 0, mem: {} }, { face: 3 }, st, 1000 / 60).rot, drag: h.drag, brakeDrag: h.brake }; }
+  handlingSet('classic'); return out; })()`);
+check('coasting and braking bleed the speed as the feel says (Classic 0.55 and 0.12 a second, Heavy 0.78 and 0.3)', Math.abs(feelStep.classic.coast - 55) < 0.01 && Math.abs(feelStep.classic.brake - 12) < 0.01 && Math.abs(feelStep.heavy.coast - 78) < 0.01 && Math.abs(feelStep.heavy.brake - 30) < 0.01, JSON.stringify(feelStep));
+check('the first frame of a burn: all of the thrust under Classic, the start of a ramp under Heavy', Math.abs(feelStep.classic.firstBurn - 10) < 0.01 && feelStep.heavy.firstBurn > 0 && feelStep.heavy.firstBurn < 0.5, `${feelStep.classic.firstBurn.toFixed(2)} and ${feelStep.heavy.firstBurn.toFixed(3)} px/s`);
+check('the first frame of a turn: the full rate under Classic, a build-up under Heavy', Math.abs(feelStep.classic.turn - 0.06) < 0.001 && feelStep.heavy.turn > 0 && feelStep.heavy.turn < 0.01, `${feelStep.classic.turn.toFixed(4)} and ${feelStep.heavy.turn.toFixed(5)} rad`);
+g.run(`handlingSet('heavy'); __scene(0, 0, 0);`);
+f = J(`(() => { const t = { x: 2500, y: 0 }; assistSet('keep', t); return __frames(1500, t); })()`);
+check('Heavy, Keep at range from 2500 px: it holds 500 px, still, and never came inside', f.mode === 'keep' && Math.abs(f.d - 500) <= 25 && f.v <= 15 && f.minD >= 470, `at ${f.d.toFixed(1)} px, ${f.v.toFixed(1)} px/s, nearest ${f.minD.toFixed(1)}`);
+g.run(`__scene(0, 0, 0);`);
+f = J(`(() => { const t = { x: 700, y: 0, active: true, body: { velocity: { x: 152, y: 0 } } }; assistSet('keep', t, 400); return __frames(1500, t); })()`);
+check('Heavy, Keep at range beside a ship at 152 px/s: the range held, 20 engine starts and 20 reversals or fewer', f.starts <= 20 && f.flips <= 20 && Math.abs(f.d - 400) <= 60, `${f.starts} starts, ${f.flips} reversals, at ${f.d.toFixed(1)} px`);
+g.run(`handlingSet('classic');`);
+
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `ASSIST FAIL (${failed} of ${n})` : `ASSIST PASS (${n} checks)`);
 process.exitCode = failed ? 1 : 0;
