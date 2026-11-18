@@ -19,19 +19,21 @@ try {
   check('launchAt is set from the first frame, not from create (it is not 0)', (await t.ev(`${S}.launchAt`)) > 0 && Math.abs((await t.ev(`${S}.time.now - ${S}.launchAt`))) < 5000, 'launchAt ' + await t.ev(`${S}.launchAt`) + ' now ' + await t.ev(`${S}.time.now`));
   // the scene was created in real time before the stepped clock took over (seconds, on a busy Mac): restart the grace now
   await t.ev(`(() => { const s = ${S}; s.launchAt = s.time.now; s.graceOver = false; return 1; })()`);
-  const hull0 = await t.ev('G.hull');
 
   console.log('1. launch grace');
   const near = await t.ev(`(() => { const s = ${S}; let nd = 1e9; s.enemies.getChildren().forEach(d => nd = Math.min(nd, Phaser.Math.Distance.Between(d.x, d.y, s.station.x, s.station.y))); return Math.round(nd); })()`);
   check('every pirate starts over 2000 px from Halcyon (police zone is 900, engage range 1000)', near > 2000, 'nearest ' + near);
   // park the ship in empty space (the police would shoot a pirate next to Halcyon) and drop a raider right beside it:
   // it must sit still and not fire for the whole grace
-  await t.ev(`(() => { const s = ${S}; s.ship.setPosition(1500, 6500); s.ship.body.setVelocity(0, 0); const r = spawnPirate(s, 1800, 6500, 'raider'); r.rotation = Math.PI; r.nextShot = 0; return 1; })()`);
+  // a clean slate first (night smoke 18 Nov: this check failed once under load and passed on every rerun): the scene ran in real time before the stepped clock took
+  // over, so a bullet or a ram from those unstepped seconds, or a pirate already on its way, could still be counted. The grace is about the raider dropped beside you.
+  await t.ev(`(() => { const s = ${S}; s.enemies.clear(true, true); s.eb.getChildren().forEach(b => b.disableBody(true, true)); G.hull = G.maxHull; s.ironUntil = 0; s.ship.setPosition(1500, 6500); s.ship.body.setVelocity(0, 0); const r = spawnPirate(s, 1800, 6500, 'raider'); r.rotation = Math.PI; r.nextShot = 0; return 1; })()`);
+  const hullGrace = await t.ev('G.hull');
   await go(19000);
   const grace = await t.ev(`(() => { const s = ${S}; return { calm: s.enemies.getChildren().every(d => !d.active || d.calm === true || Phaser.Math.Distance.Between(d.x, d.y, s.ship.x, s.ship.y) >= d.def.engage), shots: s.eb.countActive(), hull: G.hull, n: s.enemies.countActive(), cap: pirateCap(s, s.time.now) }; })()`);
   check('19 s in: every pirate in engage range is holding off', grace.calm, 'pirates ' + grace.n);
   check('19 s in: no pirate bullet in flight', grace.shots === 0, 'bullets ' + grace.shots);
-  check('19 s in: no hull lost', grace.hull === hull0, 'hull ' + grace.hull);
+  check('19 s in: no hull lost', grace.hull === hullGrace, 'hull ' + grace.hull + ' of ' + hullGrace);
   check('19 s in: the cap is still 0, which keeps the 15 s spawner quiet', grace.cap === 0, 'cap ' + grace.cap);
 
   console.log('2. first wave: one at a time');
