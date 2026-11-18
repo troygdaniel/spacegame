@@ -1,5 +1,5 @@
 // ---------- Flight assist: tell the ship what to do about a target and it flies itself (card space-game-assist-core) ----------
-// Beside the hand flight, not instead of it: Z switches the assist on and off. While it is on, a command key gives the ship an order about the
+// Beside the hand flight, not instead of it: Z switches the assist on and off, and a command key switches it on too. A command key gives the ship an order about the
 // target (the one the N list sets, or one handed to assistSet): 1 Approach (fly to it and stop near it), 2 Keep at range (hold a distance, backing
 // off when too close). The ship flies like a ship: it turns first, burns when its nose is on the line, and brakes in time. Any flight key
 // (W A S D, the arrows, Shift, Q, E) hands the stick back; the guns stay yours (Space fires while the assist flies). The same key again ends the order.
@@ -223,7 +223,11 @@ function assistFrame(s, time, dt, crs, ap) {
   const nav = crs === 'nav'; // the nav list has the keyboard
   if (assistJustDown(a.k[ASSIST.key]) && !nav) assistOn(s, !ASSIST.on);
   for (const m of Object.values(ASSIST_MODES)) {
-    if (!m.key || !assistJustDown(a.k[m.key]) || nav || !ASSIST.on) continue;
+    if (!m.key || !assistJustDown(a.k[m.key]) || nav) continue;
+    // the assist off: a command key is the wish for that order, so it switches the assist on and gives the order in the one press. With no
+    // target (assistSet says how to pick one), or refused (the launch lock, a jump charge), the assist stays off. Troy pressed 2 with a
+    // target set and nothing happened, without a word
+    if (!ASSIST.on) { ASSIST.on = true; a.readAt = 0; if (!assistSet(m.id)) ASSIST.on = false; break; }
     if (a.mode === m.id) { assistStop(s, 'key'); break; }
     // a new order while one flies keeps that order's target, unless the nav target has been changed since (the game drops the nav target near its body)
     const nt = assistTarget(s);
