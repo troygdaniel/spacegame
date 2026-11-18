@@ -430,9 +430,11 @@ function hudCompact(h, m) {
 // where the body is, and you are an arrow on it. All of it is read from the system's data each frame (src/data_systems.js): nothing is pinned,
 // so a system that is spread out or moved draws itself. A system with no star in its data uses its middle; one with no size either (and no
 // bodies) puts you at the centre, so there is always something to see.
-// The radar flips by itself: a hostile within HUD_ORRERY.near px switches it to the close view (the blips of a fight), and it goes back
-// HUD_ORRERY.back ms after the last one left that range. On foot it is always the close view.
-const HUD_ORRERY = { near: 1500, back: 3000, floor: 2000, types: ['station', 'planet', 'gate', 'belt', 'scenery'] }; // floor: the least world px the rim stands for
+// In space the radar is always this map of the system (card space-game-real-solar-system; Troy, 17 Nov: the rings should be the solar system).
+// A fight does not change it: hostiles are red dots on it, drawn over your own mark so the ones beside you show, the rim turns red and the line
+// under it counts them and says how near. The close view of a fight is gone: the Overview list (src/overview.js) is the close-range tool.
+// On foot it is still the close radar.
+const HUD_ORRERY = { floor: 2000, types: ['station', 'planet', 'gate', 'belt', 'scenery'] }; // floor: the least world px the rim stands for
 // what to draw, with no drawing in it (tests/hudradar.mjs reads it in plain Node): the centre, the scale, the orbit circles and the bodies
 function hudOrreryModel(sys, me, R) {
   sys = sys || {};
@@ -451,9 +453,18 @@ function hudOrreryModel(sys, me, R) {
   return { c, star: !!(sys.star && ok(sys.star.x)), far, sc, rings, bodies: out, name: sys.name || '' };
 }
 // 'sys' (the orrery) or 'near' (the close blips): near while a hostile is inside the range and for a few seconds after
-function hudRadarMode(h, near, now) {
-  if (near < HUD_ORRERY.near) h.radarHot = now;
-  return h.radarHot != null && now - h.radarHot < HUD_ORRERY.back ? 'near' : 'sys';
+function hudRadarMode(h, near, now) { return 'sys'; } // in space it is always the system (it used to flip to a close view with a hostile near)
+// where the hostiles are on the orrery, with no drawing in it: plate px from its centre, kept inside the rim. m: hudOrreryModel; foes: things with
+// x, y (and active, wanted); R: the plate's radius
+function hudOrreryFoes(m, foes, R) {
+  const out = [];
+  (foes || []).forEach(e => {
+    if (!e || e.active === false || !isFinite(e.x) || !isFinite(e.y)) return;
+    let dx = (e.x - m.c.x) * m.sc, dy = (e.y - m.c.y) * m.sc; const d = Math.hypot(dx, dy);
+    if (d > R - 4) { dx *= (R - 4) / d; dy *= (R - 4) / d; }
+    out.push({ x: dx, y: dy, wanted: !!e.wanted });
+  });
+  return out;
 }
 
 // ---- radar: rings, sweep, landmarks and what is near; it sits top right ----
@@ -524,7 +535,6 @@ function hudRadar(h, s, key, obj, now) {
     });
     const nav = s.cr && s.cr.target; // the nav target: a cyan ring (the mission's goal is the amber one below)
     if (nav && isFinite(nav.x) && isFinite(nav.y)) { const p = pt(nav.x, nav.y, true); g.lineStyle(1.5, CYAN, 0.9); hudRing(g, p.x, p.y, 6.5); }
-    s.enemies.getChildren().forEach(d => { if (d.active) dot(d.x, d.y, d.wanted ? AMBER : RED, 1.8); });
   } else if (key === 'Space') {
     if (!s.station.nowhere) mark(pt(s.station.x, s.station.y, true), CYAN, p => hudDiamond(g, p.x, p.y, 5, CYAN));
     if (!s.planet.nowhere) mark(pt(s.planet.x, s.planet.y, true), AMBER, p => { g.fillStyle(AMBER, 1); hudDisc(g, p.x, p.y, 5); });
@@ -553,6 +563,9 @@ function hudRadar(h, s, key, obj, now) {
   }
   const at = far ? pt(me.x, me.y, true) : { x: cx, y: cy }; // you: the centre of the close view, your place in the system on the orrery
   if (far) { g.fillStyle(HUD_BG, 0.9); hudDisc(g, at.x, at.y, 6.5); } // a dark disc under the arrow, so it reads on top of a body's dot
+  if (far) hudOrreryFoes(far, s.enemies.getChildren(), R).forEach(f => { // hostiles: red dots (a wanted one amber), over the dark disc so the ones beside you show
+    const c = f.wanted ? AMBER : RED; g.fillStyle(c, 0.25); hudDisc(g, cx + f.x, cy + f.y, 4.2); g.fillStyle(c, 1); hudDisc(g, cx + f.x, cy + f.y, 1.9);
+  });
   g.lineStyle(1, 0xffffff, 0.45); g.lineBetween(at.x, at.y, at.x + Math.cos(me.rotation) * R * (far ? 0.18 : 0.3), at.y + Math.sin(me.rotation) * R * (far ? 0.18 : 0.3)); // where you are pointing
   tri(g, at.x, at.y, me.rotation, 5, 0xffffff);
 }
