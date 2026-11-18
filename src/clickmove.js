@@ -5,7 +5,7 @@
 //                               makes it the nav target, the one the N list sets (cruisePick): 1, 2, C and P then work on it
 //   a click on a ship           makes that ship the target: an order that is flying moves onto it; with no order, 1 and 2 are now about it
 // A belt is not picked: a click inside one is a point to fly to. While the assist is on the mouse button gives orders and does not fire
-// (Space still does); the held button fires again as soon as the assist is off.
+// (Space still does, also while the button is held); the held button fires again as soon as the assist is off.
 //
 // This file edits nothing else. It hooks itself onto the Space scene (clickmoveInstall, at the end), reads the pointer there and, one step
 // before the assist reads its keys, hands 1 and 2 the picked ship (the assist's own keys know only the nav target).
@@ -67,7 +67,11 @@ function clickmoveClick(s, x, y) {
 function clickmoveFrame(s, time) {
   const cm = s.cm, a = s.as; if (!cm || !a) return;
   // the guns: space.js fires while the pointer is down, so an order's press keeps them quiet until the button is up
-  if (cm.hold) { if (ASSIST.on && s.input.activePointer.isDown) s.nextFire = Math.max(s.nextFire || 0, time + CLICKMOVE.hold); else cm.hold = false; }
+  // (only the button: with Space down the guns are left alone, so Space fires whatever the mouse is doing)
+  if (cm.hold) {
+    if (!ASSIST.on || !s.input.activePointer.isDown) cm.hold = false;
+    else if (!(s.k && s.k.SPACE && s.k.SPACE.isDown)) s.nextFire = Math.max(s.nextFire || 0, time + CLICKMOVE.hold);
+  }
   // the picked ship stops being the target when it is gone, when the assist is off, or when the nav target has changed since (N list, a body click)
   if (cm.pick && (cm.pick.active === false || !ASSIST.on || (s.cr && s.cr.target !== cm.nav))) cm.pick = null;
   // 1 and 2 about the picked ship: taken here, one step before assistFrame would give them to the nav target
