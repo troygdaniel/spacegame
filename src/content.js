@@ -151,6 +151,8 @@
       fields: { name: T(40, true), system: R('system', true), accent: COLOR, fuel: N(0, 100), repair: N(0, 5), ore: N(0, 200), yard: L('id', { ref: 'ship' }), missions: L('id'), partMult: N(0.1, 5), fee: I(0, 100000), salvageMult: N(1, 5) },
       sections: {
         parts: { heading: 'Parts', t: 'table', required: ['slot', 'tier'], cols: { slot: P(SLOTS, true), tier: I(1, 3, true) } },
+        // the courier and haul runs this dock posts: a row is one run from here to the station it names (src/missions.js builds the call from it)
+        runs: { heading: 'Runs', t: 'table', required: ['kind', 'to'], cols: { kind: P(['courier', 'haul'], true), to: { t: 'id', req: true } } },
         welcome: { heading: 'Welcome', t: 'text', max: 400 },
         shop: { heading: 'Shop', t: 'table', required: ['item', 'price'], cols: { item: T(40, true), price: I(0, 1000000, true) } },
         services: { heading: 'Services', t: 'list', max: 60 },
@@ -543,6 +545,16 @@
           if (dup.length) at(en, 'bodies', 'the site ' + quote(b.id) + ' has its own file (' + pf.path + '), which pays it; the row says where, so ' + dup.join(', ') + ' in the row ' + (dup.length > 1 ? 'are' : 'is') + ' ignored.');
           if (pf.data.kind !== undefined && b.kind !== undefined && pf.data.kind !== b.kind) at(en, 'bodies', 'the site ' + quote(b.id) + ' is a ' + b.kind + ' here but a ' + pf.data.kind + ' in ' + pf.path + '.');
         }
+      });
+    });
+    // a run goes from this dock to another one that exists: a row that names itself, a dock no file has, or the same run twice is a mistake in the file
+    entries.filter(en => en.type === 'station' && Array.isArray(en.data.runs)).forEach(en => {
+      const seen = new Set();
+      en.data.runs.forEach(r => {
+        if (!r || r.to === undefined) return;
+        if (r.to === en.id) at(en, 'runs', 'a ' + r.kind + ' run to ' + quote(r.to) + ' goes nowhere: that is this station.');
+        else if (!entries.some(e => e.type === 'station' && e.id === r.to) && !(opts.known && opts.known('station', r.to))) at(en, 'runs', 'the ' + r.kind + ' run to ' + quote(r.to) + ' names a station no file has (stations/' + r.to + '.md).');
+        const k = r.kind + ' ' + r.to; if (seen.has(k)) at(en, 'runs', 'the ' + r.kind + ' run to ' + quote(r.to) + ' is listed twice.'); seen.add(k);
       });
     });
     entries.filter(en => en.type === 'station' && en.data.system !== undefined).forEach(en => {

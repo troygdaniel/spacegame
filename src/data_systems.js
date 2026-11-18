@@ -16,7 +16,7 @@
 //   sysWorldOf(content)   W from a CONTENT object (its entries)
 //   sysRowFrom(id, W)     one row in the shape the game reads, in the units the files are written in (sysScale spreads it); null when no file has that id
 //   sysRowsFrom(content)  every system of the files: the shipped eight in their order (SYSTEM_ORDER), then any other by id
-// A dock is the numbers of the station file under the names the code reads: fuel, repair, ore, yard, missions; parts as dock.shop and dock.parts the way
+// A dock is the numbers of the station file under the names the code reads: fuel, repair, ore, yard, missions, runs; parts as dock.shop and dock.parts the way
 // src/data_parts.js reads them (a Parts table means the slots it lists to those tiers and no others), partMult, fee and salvageMult. The home dock's
 // repair and ore are left out of its row: they are the constants REPAIR_PRICE and ORE_PRICE, which its file sets through src/contenttables.js.
 // What a row has beyond the old code rows: description, the system's seed, and on a station body `about` (the words for the Station scene).
@@ -28,6 +28,7 @@ function sysDockFrom(st) {
   ['fuel', 'repair', 'ore'].forEach(k => { if (st[k] !== undefined) d[k] = st[k]; });
   if (Array.isArray(st.yard)) d.yard = st.yard.slice();
   if (Array.isArray(st.missions)) d.missions = st.missions.slice();
+  if (Array.isArray(st.runs) && st.runs.length) d.runs = st.runs.map(r => ({ kind: r.kind, to: r.to })); // the courier and haul runs it posts (src/missions.js carryRoutes)
   if (Array.isArray(st.parts) && st.parts.length) { d.shop = 0; d.parts = {}; st.parts.forEach(r => { d.parts[r.slot] = r.tier; }); }
   ['partMult', 'fee', 'salvageMult'].forEach(k => { if (st[k] !== undefined) d[k] = st[k]; });
   return d;
