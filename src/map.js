@@ -107,7 +107,8 @@ class Overlay extends Phaser.Scene {
   create() {
     const cx = W / 2, cy = H / 2;
     // where things are: the bodies of the current system (src/universe.js), not tables kept here
-    this.D = { st: sysBody('station') || MAP_NONE, pl: sysBody('planet') || MAP_NONE, op: sysBodies('scenery').find(b => b.art === 'outpost') || null, gate: sysBody('gate') };
+    this.D = { st: (typeof spaceHomeDock === 'function' ? spaceHomeDock() : sysBody('station')) || MAP_NONE, // the dock you launched from, which is what the Space scene calls its station
+       pl: sysBody('planet') || MAP_NONE, op: sysBodies('scenery').find(b => b.art === 'outpost') || null, gate: sysBody('gate') };
     const D = this.D;
     this.MX = 100; this.MY = 100; this.MS = 560; this.SX = 706; // map square and the side column
     this.add.rectangle(cx, cy, W, H, 0x02050c, 0.78).setInteractive(); // swallows clicks

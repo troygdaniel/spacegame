@@ -24,10 +24,15 @@ const lines = src.slice(from, to + 'this.prompt.setText(msg);'.length);
 const stand = vm.runInNewContext('(' + src.match(/const spaceNowhere = (\(\) => \(\{[^\n]*\}\));/)[1] + ')()');
 check('the stand-in station is far outside the world and marked nowhere', stand.x === -60000 && stand.y === -60000 && stand.nowhere === true, stand);
 
-// one frame of those lines. bodies: what sysBody answers for this system; pressL: L went down this frame
+// the dock rules those lines call (card space-game-more-than-one-dock): the game's own, cut out of src/space.js like the lines above
+const rules = src.slice(src.indexOf('const DOCK_REACH = '), src.indexOf('class Space extends'));
+check('the dock rules are where the test looks for them', /function spaceDockAt\(/.test(rules) && /function spaceDockNearest\(/.test(rules));
+
+// one frame of those lines. The scene's docks are its station rows: one for a system with a station, none for a system without (the stand-in is no dock). bodies: what sysBody answers for this system; pressL: L went down this frame
 function frame({ station, planet, bodies, ship, canLand = false, pressL = false }) {
   const calls = [];
-  const scene = { station, planet, canLand, planetR: 200, prompt: { text: null, setText(t) { this.text = t; } } };
+  const scene = { station, planet, canLand, planetR: 200, prompt: { text: null, setText(t) { this.text = t; } },
+    docks: bodies.station ? [{ def: Object.assign({ x: station.x, y: station.y }, bodies.station), obj: station }] : [] };
   const box = {
     Phaser: { Math: { Distance: { Between: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1) } } },
     sysBody: type => bodies[type] || null,
@@ -37,7 +42,7 @@ function frame({ station, planet, bodies, ship, canLand = false, pressL = false 
     ship,
   };
   let error = null;
-  try { vm.runInNewContext('(function () {\n' + lines + '\n}).call(scene)', { ...box, scene }); } catch (e) { error = String(e && e.message || e); }
+  try { vm.runInNewContext(rules + '\n(function () {\n' + lines + '\n}).call(scene)', { ...box, scene, G: box.G, sysBodies: () => [] }); } catch (e) { error = String(e && e.message || e); }
   return { error, text: scene.prompt.text, calls, lastDock: box.G.lastDock };
 }
 const at = (o, dx = 0, speed = 0) => ({ x: o.x + dx, y: o.y, body: { speed } });

@@ -7,7 +7,7 @@
 //   space.js   calls autopilotSetup(this) in create(); autopilotFrame(this, time, dt, crs) right after cruiseFrame: 'auto' while it flies the
 //              ship locally (flight input is ignored then, like the nav list), 'cruise' while it waits for a cruise it engaged, '' otherwise;
 //              autopilotDrive(this, dt) after the thrust code sets the ship's heading and speed
-// An ORDER takes it all the way in (card space-game-dock-by-command): autopilotGo(s, body, 'dock') on the system's station, or 'land' on the planet
+// An ORDER takes it all the way in (card space-game-dock-by-command): autopilotGo(s, body, 'dock') on a station of the system (any of its docks), or 'land' on the planet
 // you can land on. The legs are the same (clear the mass, cruise the long middle, the local approach); where the plain order stops and says
 // "press L", the order goes on to a last stage, 'final': the ship is in the dock or land zone and slow enough, so the autopilot presses the ship's
 // own L and the dock or land code in src/space.js does the rest. One quiet line says what it is doing (autopilotSay). Any flight key, P, a hit or
@@ -21,11 +21,11 @@ const AUTO = {
   final: 2500                            // ms: how long a Dock or Land order waits in the zone for the dock to take; after that it says "press L" as the plain order does
 };
 
-// the order a body can take: 'dock' on the system's station, 'land' on the planet you can land on, '' on anything else (you can only reach it).
+// the order a body can take: 'dock' on a station of the system (station: one row or all its station rows), 'land' on the planet you can land on, '' on anything else (you can only reach it).
 // b: a body or a row { id, type }; station, planet: the system's own (sysBody), or null; canLand: the Space scene's flag
 function autopilotOrder(b, station, planet, canLand) {
   if (!b) return '';
-  if (b.type === 'station' && station && b.id === station.id) return 'dock';
+  if (b.type === 'station' && [].concat(station || []).some(st => st.id === b.id)) return 'dock'; // any dock of the system (a row, or all its station rows)
   if (b.type === 'planet' && canLand && planet && b.id === planet.id) return 'land';
   return '';
 }
@@ -55,7 +55,7 @@ function autopilotSetup(s) {
 function autopilotGo(s, b, order) {
   const ap = s.ap, cr = s.cr; if (!ap || !cr || !b || s.dead || s.leaving || s.jmp || G.deep) return false;
   const t = { id: b.id, name: b.name, type: b.type, x: b.x, y: b.y, r: b.r || 0 };
-  order = order && order === autopilotOrder(t, sysBody('station'), sysBody('planet'), s.canLand) ? order : '';
+  order = order && order === autopilotOrder(t, sysBodies('station'), sysBody('planet'), s.canLand) ? order : '';
   ap.order = order;
   if (!order && Math.hypot(t.x - s.ship.x, t.y - s.ship.y) <= autopilotStop(t) + 60) { toast(s, t.name + ': you are there.', '#ffd37a'); sfx('empty'); return false; }
   if (cr.active) cruiseEnd(s, 'quiet');

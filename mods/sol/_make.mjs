@@ -62,13 +62,13 @@ export const MOONS = [
   { id: 'sol-phoebe', name: 'Phoebe', of: 'sol-saturn', km: 12947000, off: 3000, at: 340, r: 30, kind: 'rock', seed: 40 },
   { id: 'sol-triton', name: 'Triton', of: 'sol-neptune', km: 354800, off: 1100, at: 60, r: 70, kind: 'ice', seed: 41 }
 ];
-// the seven docks: our own names, each after a real feature of the body it serves. Only the FIRST station row of a system is a dock the game opens
-// today (src/space.js draws and docks at one), so Imbrium Dock is the live one and the other six are written as scenery you can fly to; their dock
-// files are in the pack, ready for the card that gives a system more than one dock (docs/SOL.md).
+// the seven docks: our own names, each after a real feature of the body it serves. Every one is a station row and a dock you can use (card
+// space-game-more-than-one-dock: src/space.js draws and docks at every station row). Imbrium Dock is the first row: where the system's own things
+// that want one station look (the police, the galaxy map's pump mark).
 export const DOCKS = [
   { id: 'sol-imbrium-dock', name: 'Imbrium Dock', of: 'sol-luna', off: 420, at: 160, look: 'hub', after: 'Mare Imbrium, a sea of Luna',
     dock: { fuel: 8, repair: 0.5, ore: 20, yard: ['kite', 'ox'], parts: { engine: 2, shields: 2, weapons: 2, tank: 2, cargo: 2 } },
-    runs: [['courier', 'halcyon-station'], ['haul', 'halcyon-station']], // the way home: a job on the board of the one dock Sol has today
+    runs: [['courier', 'halcyon-station'], ['haul', 'halcyon-station']], // the way home: a job on the board of Imbrium Dock
     welcome: 'Welcome to {station}. Earth is the blue one. Mind the traffic.', services: ['Fuel', 'Repair', 'Parts shop (to tier 2)', 'Shipyard (the Kite and the Ox)'] },
   { id: 'sol-arsia-high', name: 'Arsia High', of: 'sol-mars', off: 430, at: 110, look: 'hub', after: 'Arsia Mons, a volcano of Mars',
     dock: { fuel: 9, repair: 0.5, ore: 22, yard: ['talon'], parts: { weapons: 3, shields: 3, aim: 3 } },
@@ -98,16 +98,16 @@ export function layout() {
   SUN_BODIES.forEach(b => { const angle = b.L !== undefined ? angleOf(b.L) : b.at, orbit = ringOf(b.au); at[b.id] = Object.assign(place(SCALE.sun, SCALE.sun, orbit, angle), { orbit, angle: Math.round(angle * 100) / 100 }); });
   MOONS.forEach(m => { at[m.id] = place(at[m.of].x, at[m.of].y, m.off, m.at); });
   DOCKS.forEach(d => { at[d.id] = place(at[d.of].x, at[d.of].y, d.off, d.at); });
-  // the order of the rows: the live dock first (the game takes the first station), then the Sun's bodies outward with each one's moons and dock after it
+  // the order of the rows: Imbrium Dock first (the system's first station), then the Sun's bodies outward with each one's moons and dock after it
   const live = DOCKS[0];
   rows.push({ id: live.id, type: 'station', name: live.name, orbit: live.off, angle: live.at, parent: live.of, art: live.look, labelDy: -260 });
   SUN_BODIES.forEach(b => {
     rows.push(Object.assign({ id: b.id, type: b.type, name: b.name, orbit: at[b.id].orbit, angle: at[b.id].angle, r: b.r }, b.type === 'planet' ? { landable: 'no', kind: b.kind, seed: b.seed } : b.type === 'belt' ? { rocks: b.rocks } : {}));
     MOONS.filter(m => m.of === b.id).forEach(m => {
       rows.push({ id: m.id, type: 'planet', name: m.name, orbit: m.off, angle: m.at, parent: m.of, r: m.r, landable: 'no', kind: m.kind, seed: m.seed });
-      DOCKS.filter(d => d.of === m.id && d !== live).forEach(d => rows.push({ id: d.id, type: 'scenery', name: d.name, orbit: d.off, angle: d.at, parent: d.of, look: d.look, labelDy: -240 }));
+      DOCKS.filter(d => d.of === m.id && d !== live).forEach(d => rows.push({ id: d.id, type: 'station', name: d.name, orbit: d.off, angle: d.at, parent: d.of, art: d.look, labelDy: -260 }));
     });
-    DOCKS.filter(d => d.of === b.id && d !== live).forEach(d => rows.push({ id: d.id, type: 'scenery', name: d.name, orbit: d.off, angle: d.at, parent: d.of, look: d.look, labelDy: -240 }));
+    DOCKS.filter(d => d.of === b.id && d !== live).forEach(d => rows.push({ id: d.id, type: 'station', name: d.name, orbit: d.off, angle: d.at, parent: d.of, art: d.look, labelDy: -260 }));
   });
   return { at, rows };
 }
@@ -158,7 +158,7 @@ export function docTables() {
   const { at } = layout(), px = u => (u * SCALE.spread).toLocaleString('en-US'), n = x => x.toLocaleString('en-US');
   const sun = SUN_BODIES.filter(b => !b.invented).map(b => `| ${b.name} | ${b.type === 'belt' ? 'belt field' : b.kind + ' world'} | ${b.au} | ${n(at[b.id].orbit)} | ${px(at[b.id].orbit)} | ${b.L !== undefined ? 'J2000 longitude ' + (((b.L % 360) + 360) % 360).toFixed(2) + ' deg' : 'invented'} | ${b.why || ''} |`);
   const moons = MOONS.map(m => `| ${m.name} | ${SUN_BODIES.find(b => b.id === m.of).name} | ${n(m.km)} | ${n(m.off)} | ${px(m.off)} |`);
-  const docks = DOCKS.map((d, i) => { const host = MOONS.find(m => m.id === d.of) || SUN_BODIES.find(b => b.id === d.of), k = d.dock; return `| ${d.name} | ${host.name} | ${d.after} | fuel ${k.fuel}, repair ${k.repair}${k.ore ? ', ore ' + k.ore : ''}${k.yard ? ', yard: ' + k.yard.join(', ') : ''} | ${i === 0 ? 'the live dock' : 'scenery today; its dock file is ready'} |`; });
+  const docks = DOCKS.map((d, i) => { const host = MOONS.find(m => m.id === d.of) || SUN_BODIES.find(b => b.id === d.of), k = d.dock; return `| ${d.name} | ${host.name} | ${d.after} | fuel ${k.fuel}, repair ${k.repair}${k.ore ? ', ore ' + k.ore : ''}${k.yard ? ', yard: ' + k.yard.join(', ') : ''} | ${i === 0 ? 'a dock; the first station row of the system' : 'a dock'} |`; });
   const gates = SUN_BODIES.filter(b => b.invented).map(b => `| ${b.name} | ${b.au} AU | ${n(at[b.id].orbit)} | ${px(at[b.id].orbit)} |`);
   return [DOC_START, '',
     '### Bodies that go round the Sun', '', '| Body | Drawn as | Real distance, AU | Ring in the file | Ring in space, px | Where on the ring | Note |', '|---|---|---|---|---|---|---|', ...sun, '',
@@ -169,9 +169,8 @@ export function docTables() {
 
 export function files() {
   const out = { 'mods/sol/systems/sol.md': systemFile() };
-  // the live dock is a file the build reads; the other six wait in a folder whose name starts with _ (the build skips it), because a dock file with no
-  // station row is a warning. When a system can have more than one dock: make their rows `station` in layout() and write them to stations/ too.
-  DOCKS.forEach((d, i) => { out['mods/sol/' + (i === 0 ? 'stations/' : '_stations-later/') + d.id + '.md'] = stationFile(d); });
+  // every dock has a station row in layout(), so every dock file is one the build reads
+  DOCKS.forEach(d => { out['mods/sol/stations/' + d.id + '.md'] = stationFile(d); });
   return out;
 }
 function main() {
