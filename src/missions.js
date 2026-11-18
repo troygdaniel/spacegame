@@ -136,6 +136,38 @@ function missionsOffered(station) {
   const posted = MISSIONS.filter(m => (!m.unlock || m.unlock()) && (Array.isArray(list) ? list.includes(m.id) || (home && m.added) : home && !m.carry && !m.site));
   return posted.filter(m => m.key).concat(posted.filter(m => !m.key)); // the calls with a number key of their own (the four, and a pack's: 5 to 8) first, then the runs and sites
 }
+// ---- can the ship you fly do this call (card space-game-bug-runs-out-of-jump-range) ----
+// Five runs on the boards are 8.2 or 12.4 light years and the Wren jumps 8: a new player could take a job he could not do. The board still posts
+// every call (missionsOffered), but one the ship cannot fly to and come back from is shown dimmed, cannot be accepted, and says in one line
+// what would reach it, so it reads as a goal and not a trap.
+//   missionReach(m, station, rec)   { ok } or { ok: false, why: 'range' | 'fuel', line, need }  (src/jump.js jumpReach does the sum)
+//                                   need: { kind: 'part', part, tier, name } (a part of the ship you fly, named first when one is enough)
+//                                         or { kind: 'ship', model, name } (the cheapest ship that reaches it), or null
+//   missionsBoard(station)          every posted call with its reach: [{ m, reach }]
+//   missionCanAccept(m, station)    may the board take it
+const missionReachSystem = m => (m.carry ? callSystemOf(m.to) : (m.system || 'halcyon')); // the system a call sends you to
+function missionReach(m, station, rec) {
+  rec = rec || activeShip();
+  const from = callSystemOf(station || G.lastDock), to = missionReachSystem(m);
+  const test = r => jumpReach(from, to, shipStat('range', r), shipStat('tank', r), shipStat('fuelPerLy', r));
+  const res = test(rec);
+  if (res.ok) return res;
+  const fit = (part, tier) => Object.assign({}, rec, { parts: Object.assign({}, rec.parts, { [part]: tier }) });
+  let need = null;
+  (res.why === 'fuel' ? ['tank', 'engine'] : ['engine', 'tank']).forEach(part => {
+    const top = PARTS[part].prices.length;
+    for (let tier = (rec.parts[part] | 0) + 1; tier <= top && !need; tier++) if (test(fit(part, tier)).ok) need = { kind: 'part', part, tier, name: PARTS[part].name + ' tier ' + tier };
+  });
+  if (!need) {
+    const ship = Object.values(SHIP_MODELS).filter(s => s.side === 'player' && s.id !== rec.model).sort((a, b) => a.price - b.price).find(s => test(newShip(s.id)).ok);
+    if (ship) need = { kind: 'ship', model: ship.id, name: ship.name };
+  }
+  const head = res.why === 'fuel' ? 'Not enough tank for the trip' : 'Out of jump range for this ship';
+  const line = head + (need ? (need.kind === 'part' ? ': ' + need.name + ' reaches it.' : ': the ' + need.name + ' reaches it.') : '.');
+  return Object.assign(res, { line, need });
+}
+function missionsBoard(station) { return missionsOffered(station).map(m => ({ m, reach: missionReach(m, station) })); }
+function missionCanAccept(m, station) { return !!m && missionReach(m, station).ok; }
 // the board calls this when a call is accepted (station.js): a haul loads the freight, which fills the hold
 function missionAccepted() {
   const m = missionDef();
