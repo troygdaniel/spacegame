@@ -5,6 +5,7 @@
 // Hostiles are red. A click on a row makes it the target; so do W S and Enter while the list has the keys. The target's row opens: under it
 // are its range, its closing speed and its orders as buttons (the assist's 1 to 4, and the gun lock for a hostile): a click on a button, or
 // its key, gives the order. This is the only place the orders are drawn: there is no separate assist panel.
+// A ship that is far away gets one more order, first on its row: Cruise to (C), which cruises to it and then hands over to the assist.
 //   B                   hidden -> shown with the keys on it -> hidden. Enter picks the row and gives the keys back to the ship (the list stays up);
 //                       B on a list that is up without the keys takes them again.
 //   the target setter   a ship: the same pick a click on the ship in space makes
@@ -20,6 +21,7 @@ const OVERVIEW = {
   still: 5,                     // px/s: under this the range neither closes nor opens
   x: 1004, y: 242, w: 260, row: 18,   // under the radar and its hostile line
   btn: 18, btns: 8,             // the open row's block: a button's height, and how many buttons the pool holds
+  far: 2500, cruiseKey: 'C', cruiseThen: 'keep',   // Cruise to: a ship further than this (px) gets it; its key (the cruise key); the order it hands over to when none was chosen
   kinds: { station: 'STATION', planet: 'PLANET', gate: 'GATE', belt: 'BELT', poi: 'SIGNAL', scenery: 'BODY', raider: 'RAIDER', drone: 'DRONE', gunship: 'GUNSHIP', pirate: 'PIRATE', escort: 'ESCORT', police: 'POLICE', civ: 'SHIP' },
   colors: { hostile: '#ff4d6d', friend: '#6dff9c', station: '#38e1ff', planet: '#ffb454', other: '#9fb6c8' }
 };
@@ -43,8 +45,10 @@ function overviewLayout(n, ti, lines) {
 // the orders of the target, as buttons. keys: assistState().keys ([{ id, label, cap }]); st: { mode, mine } (the order in force, and whether
 // it is about this target); lock: { cap, can, on } or null when there is no gun lock in this build.
 // Answers [{ id, cap, label, on, off }]: label is the mode's first word (Keep at range -> Keep), on: lit, off: not for this target.
-function overviewOrders(keys, st, lock) {
+// cruise: { cap, on } when the target is far enough for Cruise to (it goes first), else null or nothing.
+function overviewOrders(keys, st, lock, cruise) {
   const out = (keys || []).filter(k => k.cap).map(k => ({ id: k.id, cap: k.cap, label: String(k.label).split(' ')[0], on: !!(st && st.mine && st.mode === k.id), off: false }));
+  if (cruise) out.unshift({ id: 'cruise', cap: cruise.cap, label: 'Cruise to', on: !!cruise.on, off: false });
   if (lock) out.push({ id: 'lock', cap: lock.cap, label: 'Lock', on: !!lock.on, off: !lock.can });
   return out;
 }
@@ -160,10 +164,56 @@ function overviewOrderState(s) {
   return { mode: st.mode, label: st.label, status: st.status, mine: t.ship ? at === t.ref : !(at && (at.body || at.setPosition)) };
 }
 
-// give the selected thing an order: what a click on a button of the block does. id: a mode of the assist, or 'lock'. The same button again
+// ---- Cruise to: the order for a ship that is far away (card space-game-overview-cruise-to) ----
+// Like Warp to in EVE. A selected ship further than OVERVIEW.far gets Cruise to as the first order of its row (key C). It uses the cruise
+// of src/cruise.js as it is: the ship's place becomes the cruise's destination and follows the ship while it moves, cruise drops out where it
+// always does (900 px short, or 1100 px from a hostile, which is the "contact ahead" of cruise), and then the assist takes over with the order
+// that was in force on that ship when you pressed it, or Keep at range. Cancelled (S), interdicted, or the ship gone: no hand-over.
+// Nothing in src/cruise.js or src/assist.js changes for it: what this needs of them is cruiseEngage, cruiseEnd, s.cr.target and assistSet.
+
+function overviewFar(range) { return range > OVERVIEW.far; }
+// what to do when the cruise that Cruise to started has ended. why: s.cr.endWhy; alive: the ship is still there.
+// 'hand': give the assist its order; 'drop': forget it (you cancelled, pirates pulled you out, or there is nothing left to fly to)
+function overviewCruiseEnds(why, alive) { return alive && (why === 'arrived' || why === 'hostile') ? 'hand' : 'drop'; }
+
+function overviewCruiseDrop(s) {
+  const ov = s.ov, c = ov && ov.cruise; if (!c) return;
+  ov.cruise = null; ov.at = 0;
+  if (s.cr && s.cr.target && s.cr.target.of === c.ref) { s.cr.target = c.prev || null; if (s.cm) s.cm.nav = s.cr.target; } // the nav target you had comes back
+}
+// start it (or, pressed again while it runs, cancel it). Returns true when it took the ship or cancelled.
+function overviewCruiseTo(s) {
+  const t = overviewTarget(s), ov = s.ov, cr = s.cr;
+  if (!t || !t.ship || !ov || !cr || s.dead || s.leaving || typeof cruiseEngage !== 'function') return false;
+  if (ov.cruise) { const on = cr.active; if (on) cruiseEnd(s, 'cut'); overviewCruiseDrop(s); return on; }
+  const o = t.ref, st = overviewOrderState(s), row = overviewThings(s).find(x => x.ref === o);
+  if (!ASSIST.on) assistOn(s, true); // the hand-over is an order of the assist
+  ov.cruise = { ref: o, then: st.mine && st.mode ? st.mode : OVERVIEW.cruiseThen, prev: cr.target, started: false };
+  cr.target = { id: 'ov-ship', name: String((row && row.name) || 'the ship'), type: 'ship', x: o.x, y: o.y, r: 0, of: o };
+  if (s.cm) s.cm.nav = cr.target; // click to move drops its picked ship when the nav target changes under it: this change is ours
+  cruiseEngage(s); // it says why when it will not (too close, hostiles near); inside a mass limit the autopilot flies clear first
+  if (!cr.active && !(s.ap && s.ap.on)) { overviewCruiseDrop(s); return false; }
+  ov.cruise.started = !!cr.active; // engaged at once (not flying clear of a mass first): its end is a real end, even one frame later
+  return true;
+}
+// every frame while a Cruise to is on: keep the destination on the ship, and when the cruise is over hand the ship to the assist
+function overviewCruiseFrame(s) {
+  const c = s.ov.cruise; if (!c) return;
+  const cr = s.cr, o = c.ref, alive = o.active !== false;
+  if (s.dead || s.leaving) { overviewCruiseDrop(s); return; }
+  if (alive && cr.target && cr.target.of === o) { cr.target.x = o.x; cr.target.y = o.y; }
+  if (cr.active) { c.started = true; return; }
+  if (!c.started) { if (!(s.ap && s.ap.on)) overviewCruiseDrop(s); return; } // still flying clear of a mass; or it never engaged
+  const then = c.then, what = overviewCruiseEnds(cr.endWhy, alive);
+  overviewCruiseDrop(s);
+  if (what === 'hand' && ASSIST.on) assistSet(then, o);
+}
+
+// give the selected thing an order: what a click on a button of the block does. id: a mode of the assist, 'cruise' (Cruise to) or 'lock'. The same button again
 // ends the order (or drops the lock). The assist is switched on if it was off: an order needs it. Returns true when something changed.
 function overviewOrder(s, id) {
   const t = overviewTarget(s); if (!t || s.dead || s.leaving || typeof ASSIST === 'undefined' || !s.as) return false;
+  if (id === 'cruise') return overviewCruiseTo(s);
   if (id === 'lock') {
     if (typeof gunlockSet !== 'function' || !t.ship || !overviewHostile(s, t.ref)) return false;
     if (!ASSIST.on) assistOn(s, true);
@@ -178,7 +228,7 @@ function overviewOrder(s, id) {
 
 function overviewSetup(s) {
   const O = OVERVIEW, ov = s.ov = { shown: false, keys: false, sel: 0, rows: [], at: 0, press: false, k: null, parts: [], texts: [], btns: [], orders: [], lay: overviewLayout(0, -1) };
-  ov.k = s.input.keyboard.addKeys([O.key, 'W', 'S', 'UP', 'DOWN', 'ENTER'].join(','));
+  ov.k = s.input.keyboard.addKeys([O.key, O.cruiseKey, 'W', 'S', 'UP', 'DOWN', 'ENTER'].join(','));
   const fix = o => { o.setScrollFactor(0).setVisible(false); ov.parts.push(o); return o; };
   const L = ov.lay, stop = e => { ov.press = true; if (e && e.stopPropagation) e.stopPropagation(); }; // a click on the panel is not a click in space
   ov.bg = fix(s.add.rectangle(L.x, L.y, L.w, L.h, 0x04101c, 0.72).setOrigin(0, 0).setStrokeStyle(1, 0x2a6f8f, 0.9).setDepth(100)); // the whole panel: click to move reads it as HUD
@@ -218,6 +268,16 @@ function overviewFrame(s, time) {
   if (ov.press) { if (s.input.activePointer.isDown) s.nextFire = Math.max(s.nextFire || 0, time + 80); else ov.press = false; } // a press on the panel does not fire the guns
   if (nav) ov.keys = false; // the nav list has the keyboard
   else if (overviewJustDown(k[OVERVIEW.key])) { if (!ov.shown) overviewShow(s, true, true); else if (!ov.keys) overviewShow(s, true, true); else overviewShow(s, false); sfx('tick'); }
+  // C with a far ship selected is Cruise to that ship, not cruise to the nav target: this frame the cruise code (which runs after this) must
+  // not see the key. With the list hidden too: the order is the key's, the button only shows it.
+  overviewCruiseFrame(s);
+  if (!nav && overviewJustDown(k[OVERVIEW.cruiseKey])) {
+    const sel = overviewTarget(s), sh = s.ship;
+    if (ov.cruise || (sel && sel.ship && overviewFar(Math.hypot(sel.ref.x - sh.x, sel.ref.y - sh.y)))) {
+      if (s.cr && s.cr.k && s.cr.k[OVERVIEW.cruiseKey]) s.cr.k[OVERVIEW.cruiseKey]._justDown = false;
+      overviewCruiseTo(s);
+    }
+  }
   if (!ov.shown) return;
   const t = overviewTarget(s), tr = t ? t.ref : null;
   if (tr !== ov.tgt) { ov.tgt = tr; ov.at = 0; } // the target changed (a click in space, the nav list, an order): the block moves this frame
@@ -248,7 +308,8 @@ function overviewDraw(s) {
   // the open row's block: the range and the rate, the planner's word, and the orders as buttons
   const st = has ? overviewOrderState(s) : null, tr = has ? ov.rows[ti] : null;
   const lock = has && typeof gunlockTarget === 'function' ? { cap: GUNLOCK.key, can: overviewHostile(s, tr.ref), on: gunlockTarget() === tr.ref } : null;
-  const orders = has ? overviewOrders(typeof assistState === 'function' ? assistState().keys : [], st, lock).slice(0, O.btns) : [];
+  const going = has && !!ov.cruise && ov.cruise.ref === tr.ref, cruise = has && tr.ref && (tr.ref.body || tr.ref.setPosition) && (going || overviewFar(tr.range)) ? { cap: O.cruiseKey, on: going } : null;
+  const orders = has ? overviewOrders(typeof assistState === 'function' ? assistState().keys : [], st, lock, cruise).slice(0, O.btns) : [];
   const L = ov.lay = overviewLayout(ov.rows.length, ti, overviewButtonLines(orders)), open = L.blockY >= 0;
   ov.bg.setVisible(true).setPosition(L.x, L.y).setSize(L.w, L.h);
   if (ov.bg.input && ov.bg.input.hitArea && ov.bg.input.hitArea.setSize) ov.bg.input.hitArea.setSize(L.w, L.h);
@@ -262,7 +323,7 @@ function overviewDraw(s) {
   ov.orders = open ? overviewButtons(orders, L) : [];
   ov.blk.setVisible(open); ov.info.setVisible(open); ov.stat.setVisible(open);
   if (open) {
-    const info = overviewInfo(tr, st);
+    const info = overviewInfo(tr, going ? { mine: true, status: 'cruise' } : st);
     ov.blk.setPosition(L.x + 4, L.blockY - 2).setSize(L.w - 8, L.block - 4);
     ov.info.setPosition(L.x + 12, L.blockY + 1).setText(info.left);
     ov.stat.setPosition(L.x + L.w - 12, L.blockY + 1).setText(info.right).setColor(st.mine ? (/BRAKE|BACK/.test(info.right) ? '#ffb454' : '#6dff9c') : '#5b7a92');
