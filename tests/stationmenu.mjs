@@ -143,7 +143,7 @@ p = J(`(() => {
 check('menuSetup and menuDraw run at all six docks: six lines for six rows, with and without the keys, shown and put away', p.out.length === 6 && p.out.every(x => /,6,6,true$/.test(x)), p.out.join(' | '));
 check('the chosen row when you dock is the first one the dock has, never a dim one (Kestrel, with no bar, starts on Missions)', p.first.every(x => /:false$/.test(x)) && p.first.includes('kestrel-outpost:1:false') && p.first.includes('halcyon-station:0:false'), p.first.join(' | '));
 // ---- the controls table and the help text say the menu's keys ----
-p = J(`(() => { const st = CONTROLS.find(c => c.id === 'station'); return st.rows.map(r => r.k.join(' ') + '   ' + r.t.charAt(0).toLowerCase() + r.t.slice(1)); })()`);
+p = J(`(() => { const st = CONTROLS.find(c => c.id === 'station'); return st.rows.filter(r => r.help !== 0).map(r => r.k.join(' ') + '   ' + r.t.charAt(0).toLowerCase() + r.t.slice(1)); })()`);
 const help = J(`(() => { const k = ctTextKeys(); return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => k['help.station.' + i] ? k['help.station.' + i].get() : null); })()`); // the H screen's lines, after content/text/ui.md was applied
 check('the station rows of the controls table and the ten help lines are the same lines', JSON.stringify(p) === JSON.stringify(help), JSON.stringify([p, help]));
 check('they name the menu keys: 1-6 picks and opens, W S Enter, N for walking', help.some(l => /^1-6 {3}station menu/.test(l)) && help.some(l => /^W S Enter {3}station menu/.test(l)) && help.some(l => /^N {3}menu keys off/.test(l)), help.join(' | '));

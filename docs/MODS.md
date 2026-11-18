@@ -125,6 +125,8 @@ turn up only sometimes: IDA has `appears: missions>=1`, so she is in the bar onc
 
 `{placeholders}` work in a mission's text and in an NPC's reaction lines, not in their ordinary lines.
 
+**The ship's computer** has a file too, `content/npcs/ship-computer.md`, and it is the one NPC file that is not a person in the bar. Press **I** in space or in a station (it needs a chat key, like talking to the bar: Settings > Keys) and ask it a question; it answers from the game's own facts about your ship, the stars, the dock and the keys, in the voice this file gives it. `name` is what it is called (the player can rename it in the box with `/name Something`), `voice` the ship voice it speaks with, `## Persona` how it sounds (calm, dry, exact), and `## Lines` the stock lines it greets you with. What it knows is not in this file: it is built from the game each time you ask (`src/shipcomputer.js`), so a pack cannot make it say anything about the game that is not true.
+
 ## 5. Change a pirate or a part (2 minutes)
 
 Open `content/ships/drone.md`. A pirate's numbers are the front matter: change `hp: 30` and `bounty: 40` to make it tougher and more rewarding.

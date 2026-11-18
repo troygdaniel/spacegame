@@ -125,11 +125,14 @@ const CT_MISSION = {
 };
 
 // ---- npc: the bar's characters ----
+// content/npcs/ship-computer.md is the ship's computer (src/shipcomputer.js), not a character of the bar: its name, role, voice, Lines and Persona go to SHIPCOMP
+const CT_COMPUTER = 'ship-computer';
 const CT_NPC = {
   canAdd: false,
-  has: id => NPCS.some(n => n.id === id),
-  get: (id, f) => { const n = NPCS.find(x => x.id === id); return n ? (f === 'color' ? n.css : n[f]) : undefined; },
+  has: id => id === CT_COMPUTER || NPCS.some(n => n.id === id),
+  get: (id, f) => { if (id === CT_COMPUTER) return typeof shipcompGet === 'function' ? shipcompGet(f) : undefined; const n = NPCS.find(x => x.id === id); return n ? (f === 'color' ? n.css : n[f]) : undefined; },
   apply: (id, data) => {
+    if (id === CT_COMPUTER) { if (typeof shipcompApply === 'function') shipcompApply(data); return; }
     const n = NPCS.find(x => x.id === id);
     if (data.name !== undefined && data.name !== n.name && !n.sprite) n.sprite = n.name.toLowerCase(); // the bar's art is looked up by the old name
     ['name', 'role', 'voice', 'x', 'y', 'face', 'persona'].forEach(k => { if (data[k] !== undefined) n[k] = data[k]; });
