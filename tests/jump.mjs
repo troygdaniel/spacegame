@@ -87,11 +87,12 @@ try {
   await park(15000, 15000);
 
   // ---- 3. the locks and the refusals ----
-  console.log('locks: too close to a station or planet, a hostile near, out of range, short of fuel');
+  console.log('locks: a hostile near, out of range, short of fuel; beside a station is no lock');
   await park('sysAt(4000) + 1500', 'sysAt(4000)'); // beside the station, wherever SYSTEM_SCALE puts it
   await clearSaid();
   await openMap('kestrel'); await E(`${GL}.go()`); await tick(2);
-  check('1500 px from Halcyon Station: no charge, and the toast says fly clear of it', await E(`!${SP}.jmp`) && (await said()).some(m => /Too close to the mass: fly clear of Halcyon Station/.test(m)), JSON.stringify(await said()));
+  // card space-game-jump-from-anywhere (Troy, 17 Nov 2026): no mass limit for the jump any more
+  check('1500 px from Halcyon Station: the charge starts, nothing says fly clear', await E(`!!${SP}.jmp`) && !(await said()).some(m => /Too close to the mass|fly clear/.test(m)), JSON.stringify(await said()));
   await park(15000, 15000);
   await E(`(() => { const s = ${SP}; spawnPirate(s, s.ship.x + 1000, s.ship.y, 'raider'); return 1; })()`);
   await openMap('kestrel'); await E(`${GL}.go()`); await tick(2);

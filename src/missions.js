@@ -136,6 +136,38 @@ function missionsOffered(station) {
   const posted = MISSIONS.filter(m => (!m.unlock || m.unlock()) && (Array.isArray(list) ? list.includes(m.id) || (home && m.added) : home && !m.carry && !m.site));
   return posted.filter(m => m.key).concat(posted.filter(m => !m.key)); // the calls with a number key of their own (the four, and a pack's: 5 to 8) first, then the runs and sites
 }
+// ---- can the ship you fly do this call (card space-game-bug-runs-out-of-jump-range) ----
+// Five runs on the boards are 8.2 or 12.4 light years and the Wren jumps 8: a new player could take a job he could not do. The board still posts
+// every call (missionsOffered), but one the ship cannot fly to and come back from is shown dimmed, cannot be accepted, and says in one line
+// what would reach it, so it reads as a goal and not a trap.
+//   missionReach(m, station, rec)   { ok } or { ok: false, why: 'range' | 'fuel', line, need }  (src/jump.js jumpReach does the sum)
+//                                   need: { kind: 'part', part, tier, name } (a part of the ship you fly, named first when one is enough)
+//                                         or { kind: 'ship', model, name } (the cheapest ship that reaches it), or null
+//   missionsBoard(station)          every posted call with its reach: [{ m, reach }]
+//   missionCanAccept(m, station)    may the board take it
+const missionReachSystem = m => (m.carry ? callSystemOf(m.to) : (m.system || 'halcyon')); // the system a call sends you to
+function missionReach(m, station, rec) {
+  rec = rec || activeShip();
+  const from = callSystemOf(station || G.lastDock), to = missionReachSystem(m);
+  const test = r => jumpReach(from, to, shipStat('range', r), shipStat('tank', r), shipStat('fuelPerLy', r));
+  const res = test(rec);
+  if (res.ok) return res;
+  const fit = (part, tier) => Object.assign({}, rec, { parts: Object.assign({}, rec.parts, { [part]: tier }) });
+  let need = null;
+  (res.why === 'fuel' ? ['tank', 'engine'] : ['engine', 'tank']).forEach(part => {
+    const top = PARTS[part].prices.length;
+    for (let tier = (rec.parts[part] | 0) + 1; tier <= top && !need; tier++) if (test(fit(part, tier)).ok) need = { kind: 'part', part, tier, name: PARTS[part].name + ' tier ' + tier };
+  });
+  if (!need) {
+    const ship = Object.values(SHIP_MODELS).filter(s => s.side === 'player' && s.id !== rec.model).sort((a, b) => a.price - b.price).find(s => test(newShip(s.id)).ok);
+    if (ship) need = { kind: 'ship', model: ship.id, name: ship.name };
+  }
+  const head = res.why === 'fuel' ? 'Not enough tank for the trip' : 'Out of jump range for this ship';
+  const line = head + (need ? (need.kind === 'part' ? ': ' + need.name + ' reaches it.' : ': the ' + need.name + ' reaches it.') : '.');
+  return Object.assign(res, { line, need });
+}
+function missionsBoard(station) { return missionsOffered(station).map(m => ({ m, reach: missionReach(m, station) })); }
+function missionCanAccept(m, station) { return !!m && missionReach(m, station).ok; }
 // the board calls this when a call is accepted (station.js): a haul loads the freight, which fills the hold
 function missionAccepted() {
   const m = missionDef();
@@ -253,7 +285,9 @@ function radarDot(s, x, y, color, r) { hudBlip(s, x, y, color, r); } // the HUD 
 // s.mx.covered says which it is this frame (the assist panel's Match speed reads the box from ESCORT.box).
 // The stakes (change 3): she pays ESCORT.bonus more for a whole hull (in proportion), calls out at half hull and with the gate ESCORT.sight px off, and
 // at the gate she holds still for ESCORT.spinUp ms while ESCORT.lastStand pirates come in from ESCORT.lastOut px. s.mx.spin is the ms left of the spin-up.
-const ESCORT = { box: 350, cruise: 60, slow: 30, hull: 200, cover: 0.5, shot: 5, ram: 2, bonus: 200, sight: 900, spinUp: 8000, lastStand: 3, lastOut: 1100,
+// Her speeds (cruise 90, slow 45 px/s; they were 60 and 30) follow the 3 times spread of the systems: her route to the gate went from 2800 to 9000 px, which made the
+// call over 5 minutes with a wave every 49 s. At 90 and 45 it is about 3.7 minutes with a wave every 33 s (docs/MISSIONS-TIMING.md, tools/mission-timing.mjs).
+const ESCORT = { box: 350, cruise: 90, slow: 45, hull: 200, cover: 0.5, shot: 5, ram: 2, bonus: 200, sight: 900, spinUp: 8000, lastStand: 3, lastOut: 1100,
   waves: [0.25, 0.5, 0.75], waveSize: [2, 3, 3], waveOut: 1400, inbound: 240, peel: 4000 };
 // The fight (change 1): nobody waits on the route any more. A wave comes when she is ESCORT.waves of the way there, ESCORT.waveOut px out on her port
 // flank, then starboard, then dead ahead, and she calls it. The first pirate of a wave is its screen: it has no prey and hunts you. The rest go for her,

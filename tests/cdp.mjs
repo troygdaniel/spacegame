@@ -59,10 +59,18 @@ export async function launch(hash = '', root = ROOT) {
   } catch (e) { release(); throw e; }
 }
 
+// How Chrome draws (card space-game-chrome-throughput). The Mac's own GPU through ANGLE's Metal backend is the default: measured 2026-11-17 on an
+// M4 under load 19, three tests took 185 s in software and 26 s on the GPU (the long stepped one 151 s to 8 s), with the same checks passing and
+// stepped pictures the same to within 1 of 255 per channel. LONGHAUL_GL=software puts back SwiftShader, which every run used before: for a
+// machine with no GPU, or to tell a drawing difference from a game bug. Read at each launch, so one process can try both. docs/SMOKE.md 5.
+export function glFlags(mode = process.env.LONGHAUL_GL) {
+  return mode === 'software' ? ['--disable-gpu', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'];
+}
+
 async function launchOnce(hash, root) {
   const profile = mkdtempSync(join(tmpdir(), `longhaul-${process.pid}-`)) // pid in the name: cleanup can target only this run;
   const chrome = spawn(CHROME, [
-    '--headless=new', '--mute-audio', '--disable-gpu', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
+    '--headless=new', '--mute-audio', ...glFlags(),
     '--allow-file-access-from-files', '--remote-debugging-port=0', '--remote-allow-origins=*',
     `--user-data-dir=${profile}`, '--window-size=1280,720', '--hide-scrollbars', '--no-first-run',
     '--no-default-browser-check', 'about:blank'

@@ -3,23 +3,51 @@
 //   G            in space the galaxy map (src/galaxymap.js) opens over the paused flight; docked it opens read-only: you plan from the bar, you do not leave from it
 //   Enter        on a star the ship can reach: the map closes and the CHARGE starts: a ring fills round the ship for 4 s, the camera creeps in
 //   cancel       Esc, S (brake) or any hit empties the ring and costs nothing
-//   locked       no charge starts inside 2000 px of a station or planet ("too close to the mass: fly clear") or with a hostile within 1500 px ("hostiles near")
+//   locked       no charge starts with a hostile within 1500 px ("hostiles near"). That is the only lock: you may jump from anywhere in space, right beside
+//                a station or a planet included (Troy, 17 Nov 2026, card space-game-jump-from-anywhere: there used to be a 2000 px mass limit to fly clear of first)
 //   complete     the fuel is burned NOW (a pull-out later does not refund it), the Hyper scene (src/hyperspace.js) opens OVER the frozen flight (no cut, no fade to
 //                black) and plays the tunnel for ly x 1.6 s, then the Space scene starts again under a white flash with { from: 'jump', to, origin }: enterSystem() in src/universe.js picks the system, the entry point and the calm
 //   F            in a system with no pump and a nearly empty tank: call the fuel ranger (src/fuel.js): 45 s, 10 units (more for a heavy ship), three times the home price
 //   space.js     calls jumpFrame(this, dt) first thing in update() and jumpCancel(this, 'hit') when the ship is hurt; meta.js asks jumpEscape(game) before it opens the pause menu
 //   tests        tests/jump.mjs runs it all on a stepped clock; JUMP.charge is the knob
-const JUMP = { charge: 4000, lockMass: 2000, lockHostile: 1500, zoom: 1.1, ring: 52 }; // ms, px, px, camera zoom at the end of the charge, ring radius
+const JUMP = { charge: 4000, lockHostile: 1500, zoom: 1.1, ring: 52 }; // ms, px, camera zoom at the end of the charge, ring radius
 const JUMPST = { closedAt: 0 }; // performance.now() when the galaxy map last closed (galaxymap.js): G closes it too, and must not open it again in the same keypress
 const JUMP_WHY = { // what the toast says when a charge ends early
   brake: 'Jump cancelled: you braked.', esc: 'Jump cancelled.', hit: 'Jump cancelled: the ship was hit.', map: 'Jump cancelled.'
 };
 
+// Can a ship go from one system to another and come home (card space-game-bug-runs-out-of-jump-range)? Pure: it reads only the galaxy's
+// light years and which systems have a fuel pump. range: ly of one jump; tank: fuel units; perLy: fuel a light year.
+// It looks for a chain of jumps, each inside the range, fewest jumps first, and flies it there and back the same way on a tank that is full at
+// the start and filled again in every system with a pump: a system with none (the Hollow, Lethe) means the fuel home comes along.
+// Returns { ok, hops: [system ids after `from`], ly } or { ok: false, why: 'range' | 'fuel', hops }.
+function jumpReach(from, to, range, tank, perLy) {
+  if (!SYSTEMS[from] || !SYSTEMS[to] || !SYSTEMS[from].ly || !SYSTEMS[to].ly) return { ok: false, why: 'range', hops: [] };
+  if (from === to) return { ok: true, hops: [], ly: 0 };
+  const ids = Object.keys(SYSTEMS).filter(id => SYSTEMS[id].ly), ly = (a, b) => Math.hypot(SYSTEMS[a].ly[0] - SYSTEMS[b].ly[0], SYSTEMS[a].ly[1] - SYSTEMS[b].ly[1]);
+  const paths = [], queue = [[from]];
+  while (queue.length && paths.length < 24) {
+    const p = queue.shift(), last = p[p.length - 1];
+    if (last === to) { paths.push(p.slice(1)); continue; }
+    if (p.length > 5) continue; // five jumps is across the whole map
+    ids.forEach(n => { if (!p.includes(n) && ly(last, n) <= range + 1e-9) queue.push(p.concat(n)); });
+  }
+  if (!paths.length) return { ok: false, why: 'range', hops: [] };
+  const pump = id => (typeof fuelSystemHasPump === 'function' ? fuelSystemHasPump(id) : true);
+  const fuelOk = path => {
+    const seq = [from].concat(path, path.slice(0, -1).reverse(), [from]); let have = tank;
+    for (let i = 0; i + 1 < seq.length; i++) { const need = ly(seq[i], seq[i + 1]) * perLy; if (need > have + 1e-9) return false; have -= need; if (pump(seq[i + 1])) have = tank; }
+    return true;
+  };
+  const good = paths.find(fuelOk);
+  if (!good) return { ok: false, why: 'fuel', hops: paths[0] };
+  let total = 0, here = from; good.forEach(h => { total += ly(here, h); here = h; });
+  return { ok: true, hops: good, ly: total };
+}
+
 // why the ship cannot start a charge right now, as the words the player reads, or null when it can
 function jumpLock(s) {
   if (!s || s.dead || s.leaving || s.cruising || G.deep) return 'not now';
-  const near = sysBodies().find(b => (b.type === 'station' || b.type === 'planet') && Math.hypot(b.x - s.ship.x, b.y - s.ship.y) < JUMP.lockMass);
-  if (near) return 'Too close to the mass: fly clear of ' + near.name + ' to jump.';
   const hostile = s.enemies.getChildren().some(e => e.active && Math.hypot(e.x - s.ship.x, e.y - s.ship.y) < JUMP.lockHostile);
   return hostile ? 'Hostiles near: no jump.' : null;
 }

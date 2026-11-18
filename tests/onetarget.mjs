@@ -25,7 +25,8 @@ const DOORS = [
     clickmove: 1 } }, // a click on the place in space
   { what: 'cr.target = : write the destination', re: /\bcr\.target = (?!null)/g, who: {
     cruise: 1,      // cruisePick itself
-    autopilot: 2 } }, // the autopilot keeps the place it was sent to (autopilotGo, and its cruise leg); it picks nothing
+    autopilot: 2,   // the autopilot keeps the place it was sent to (autopilotGo, and its cruise leg); it picks nothing
+    overview: 2 } }, // Cruise to (card space-game-overview-cruise-to): the ship ALREADY selected becomes the cruise's destination, and the destination you had comes back after; it picks nothing
   { what: 'np.jump = : make another system the destination', re: /\bnp\.jump = (?!null)/g, who: {
     navpanel: 1 } }, // a row of Gates and jumps
   { what: 'autopilotGo( : fly to a place', re: /\bautopilotGo\(/g, who: {
@@ -45,7 +46,7 @@ const DOORS = [
   { what: 'assistSet(mode, target : an order on a ship', re: /\bassistSet\([^(),]+,/g, who: {
     assist: 1,      // an order key (1-4) goes to the thing already selected
     clickmove: 3,   // a click on a ship, and the order keys on the picked ship
-    overview: 2 } }, // a row with no click to move in the build, and the order buttons of the target row
+    overview: 3 } }, // a row with no click to move in the build, the order buttons of the target row, and the hand-over after Cruise to (the same selected ship)
   { what: 'gunlockSet( : lock a raider', re: /\bgunlockSet\((?!null)/g, who: {
     gunlock: 1,     // V: the selected raider, else the nearest. No walk to the next one.
     overview: 1 } }, // the Lock button of the target row
@@ -76,8 +77,8 @@ console.log('what was taken out stays out');
   check('the Overview lists no places: it does not read the bodies of the system', !/cruiseKnown/.test(code.overview));
   check('a place handed to the Overview is refused', J(`overviewPick({ cr: { target: null } }, { ref: { id: 'st', name: 'Halcyon Station', x: 0, y: 0 } })`) === '');
   check('V does not walk from one raider to the next: the rule takes no current lock', J('gunlockNext.length') === 3);
-  check('one key each: N for places, B for ships', J(`CONTROLS.find(g => g.id === 'flight').rows.filter(r => /^Places: the navigation panel/.test(r.t) && r.k.join() === 'N').length`) === 1 && J(`CONTROLS.find(g => g.id === 'flight').rows.filter(r => /^Ships: the Overview list/.test(r.t) && r.k.join() === OVERVIEW.key).length`) === 1);
-  check('the help page says it too, and the Tab line picks nothing', J(`HELP.Space.some(l => /^N   places: the navigation panel/.test(l)) && HELP.Space.some(l => /^B   ships: the Overview list/.test(l)) && HELP.Space.some(l => /^Tab   sector map/.test(l) && !/choose|Enter/.test(l))`));
+  check('one key each: N for places, B for ships', J(`CONTROLS.find(g => g.id === 'flight').rows.filter(r => /^Places/.test(r.t) && r.k[0] === 'N').length`) === 1 && J(`CONTROLS.find(g => g.id === 'flight').rows.filter(r => /^Overview of ships/.test(r.t) && r.k.join() === OVERVIEW.key).length`) === 1);
+  check('the help page says it too, and the Tab line picks nothing', J(`HELP.Space.some(l => /^N X   places/.test(l)) && HELP.Space.some(l => /^B   overview of ships/.test(l)) && HELP.Space.some(l => /^Tab   sector map/.test(l) && !/choose|Enter/.test(l))`));
 }
 
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));

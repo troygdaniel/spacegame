@@ -15,6 +15,9 @@ const g = nodeGame();
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 
 const BORROWED = ['W', 'S', 'UP', 'DOWN', 'ENTER'];                       // a list that is open takes these from the flight code
+// one action in two files is not two actions: C is cruise (src/cruise.js), and with a far ship selected in the Overview it is Cruise to that
+// ship (src/overview.js takes the key that frame, card space-game-overview-cruise-to)
+const SAME_ACTION = { C: ['cruise', 'overview'] };
 const FILES = ['space', 'assist', 'assist_orbit', 'autopilot', 'cruise', 'jump', 'gunlock', 'overview', 'clickmove', 'boost', 'camzoom', 'autotarget', 'handling', 'navpanel'];
 const owners = new Map();                                                 // key -> the files that bind it
 const own = (key, who) => { const k = String(key).toUpperCase(); if (!owners.has(k)) owners.set(k, new Set()); owners.get(k).add(who); };
@@ -24,12 +27,12 @@ for (const f of FILES) {
   for (const m of src.matchAll(/addKeys?\('([^']+)'\)/g)) m[1].split(',').forEach(k => own(k.trim(), f));
 }
 own(J('ASSIST.key'), 'assist'); J('Object.values(ASSIST_MODES).map(m => m.key).filter(Boolean)').forEach(k => own(k, 'assist modes'));
-own(J('OVERVIEW.key'), 'overview'); own(J('GUNLOCK.key'), 'gunlock');
+own(J('OVERVIEW.key'), 'overview'); own(J('OVERVIEW.cruiseKey'), 'overview'); own(J('GUNLOCK.key'), 'gunlock');
 ['W', 'S', 'UP', 'DOWN', 'ENTER'].forEach(k => own(k, 'overview'));           // overviewSetup binds its list keys beside its own key
 
 console.log('one key, one owner');
 {
-  const shared = [...owners].filter(([k, who]) => who.size > 1 && !BORROWED.includes(k)).map(([k, who]) => k + ': ' + [...who].join(' and '));
+  const shared = [...owners].filter(([k, who]) => who.size > 1 && !BORROWED.includes(k) && !(SAME_ACTION[k] && [...who].every(w => SAME_ACTION[k].includes(w)))).map(([k, who]) => k + ': ' + [...who].join(' and '));
   check('no key is bound by two files of the Space scene (list keys apart)', shared.length === 0, shared.join('; '));
   check('the scan found the keys it should: the flight keys, the assist, its orders, the Overview and the gun lock', ['W', 'A', 'D', 'SPACE', 'L', 'R', 'P', 'N', 'C', 'F', 'Z', 'ONE', 'TWO', J('OVERVIEW.key'), J('GUNLOCK.key')].every(k => owners.has(k)), [...owners.keys()].join(' '));
   check('the Overview and the gun lock have different keys', J('OVERVIEW.key') !== J('GUNLOCK.key'), J('OVERVIEW.key') + ' ' + J('GUNLOCK.key'));
