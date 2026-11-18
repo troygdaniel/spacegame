@@ -60,7 +60,11 @@ try {
       const s = await ui(t);
       check('no chip and no tag', !s.chip && !s.tag && !s.texts.some(x => /CONTENT|MODDED/.test(x)), JSON.stringify(s.texts));
       await press(t, 'P');
-      check('P does nothing when there is nothing to show, and does not start the game', (await isActive(t, 'Title')) && !(await ui(t)).open);
+      // With nothing to show the content UI claims no key (src/contentui.js handleKey returns false for P), so P is any key: the Title says PRESS ANY KEY and start()
+      // runs, as it has since this UI was made (60ad931). The old check asked whether the Title was still up 330 ms after the press, which is a race against the 280 ms
+      // fade of go() (src/common.js), not a fact about P. What P owns is the panel: it must not open. The game starting is read from the flag go() sets at once.
+      const afterP = await t.ev(`(() => { const s = game.scene.getScene('Title'); return { leaving: !!s.leaving, open: s.contentUi.isOpen(), claimed: s.contentUi.handleKey({ code: 'KeyP' }), settings: game.scene.isActive('Settings') }; })()`);
+      check('P opens nothing when there is nothing to show (the content UI does not claim it); like any key it starts the game', afterP.open === false && afterP.claimed === false && afterP.settings === false && afterP.leaving === true, JSON.stringify(afterP));
       check('no console errors', t.errors.length === 0, t.errors.join(' | '));
     } finally { await t.close(); }
   }
