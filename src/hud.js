@@ -719,7 +719,7 @@ function hudObjective(s, key, mission) { // mission: leave out the nav target (t
   }
   const want = G.mission === 'accepted' || G.mission === 'rescued' ? 'ship' : 'missions';
   const sp = s.spots.find(p => p.key === want);
-  return sp ? { x: sp.x, y: sp.y, name: want === 'ship' ? 'YOUR SHIP' : 'MISSIONS', from: s.player, unit: 'm', k: 0.1, hw: want === 'ship' ? 70 : 62, hh: want === 'ship' ? 50 : 34, below: want === 'missions' } : null;
+  return sp ? { x: sp.x, y: sp.y, name: '', from: s.player, unit: 'm', k: 0.1, hw: want === 'ship' ? 70 : 62, hh: want === 'ship' ? 50 : 34, below: want === 'missions' } : null; // no name: the desk's own plate and the ship's own label say it once (docs/CRITIC.md 17: MISSIONS was written twice)
 }
 
 // where the arrow sits when the target is off screen: on the screen edge, kept out of the corner panels
