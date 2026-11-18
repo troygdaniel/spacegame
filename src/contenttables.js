@@ -331,7 +331,9 @@ const UI_TEXT = {
   // provider's key page; keys.steps is the three steps. The words and the addresses are content/text/ui.md's and are left empty here on purpose: when a provider
   // moves its page that is a text edit and a reseal, not code. A line left empty is not shown; an address that is not a plain https address is shown as text only.
   'keys.steps': '', 'keys.deepgram.use': '', 'keys.deepgram.cost': '', 'keys.deepgram.url': '', 'keys.openai.use': '', 'keys.openai.cost': '', 'keys.openai.url': '',
-  'keys.anthropic.use': '', 'keys.anthropic.cost': '', 'keys.anthropic.url': ''
+  'keys.anthropic.use': '', 'keys.anthropic.cost': '', 'keys.anthropic.url': '',
+  // Settings > Listen (card space-game-ship-computer-listens, src/listen.js and src/settings.js): what holding the key does, the cost, and the one-line hint about the microphone. {key} and {minutes}
+  'listen.use': '', 'listen.cost': '', 'listen.hint': ''
 };
 function uiText(key, vars) { return contentFill(CT_HAS(UI_TEXT, key) ? UI_TEXT[key] : key, vars); }
 function ctTextKeys() { // every string the game reads: key -> { get, set }

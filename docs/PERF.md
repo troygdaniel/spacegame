@@ -25,7 +25,7 @@ below come from runs that alternate old and new code in the same page.
    outside of, which also spares a `Math.hypot` (slow). In an A/B inside one page, the space art went from 227 to 168 ms and the
    surface art from 149 to 110 ms (1.35 times faster); a rock planet from about 225 to about 100 ms in quiet runs. Other planet kinds
    gained 5 to 20%. `tests/perfart.mjs` holds it to the original: the noise against a copy of its first version on 300,000 samples,
-   and 47 textures (27 painted at boot, 20 planets) against hashes taken from the code before the change
+   and 44 textures (24 painted at boot, 20 planets) against hashes taken from the code before the change
    (`tests/fixtures/arthash.json`).
 2. **A leak.** `src/asteroids.js` wrapped the Space scene's `die()` with `s.die.bind(s)` in `asteroidsSetup`, which runs at every
    launch into Space. The scene instance lives on, so each launch wrapped the last wrapper, and each layer kept that launch's rocks,
