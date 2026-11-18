@@ -119,26 +119,18 @@ try {
   await pressP(); await tick(1);
   check('P on a row of the nav list closes it and flies there', !(await E(`${SP}.cr.navOpen`)) && (await state()).on && (await E(`${SP}.ap.target.name`)) === row, row);
 
-  // ---- the Tab map picks ----
+  // ---- the Tab map picks nothing: it rings the destination (card space-game-one-way-to-target) ----
   await park(9000, 9000);
+  const dest = await E(`(() => { const b = cruiseKnown(${SP})[1]; cruisePick(${SP}, b); return b.name; })()`);
   await E(`game.scene.start('Overlay', { from: 'Space', mode: 'map' })`); await tick(4);
   const OV = "game.scene.getScene('Overlay')";
-  const pick0 = JSON.parse(await E(`JSON.stringify({ n: ${OV}.pick.list.length, known: cruiseKnown(${SP}).length, sel: ${OV}.pick.sel, on: ${OV}.pick.list[${OV}.pick.sel].name, obj: (${OV}.state().obj || {}).name || '', foot: ${OV}.footer.text, line: ${OV}.tPick.text })`));
-  // the ring starts on the objective, so the Enter line names what the OBJECTIVE line names (card space-game-critic-map); with no objective in the list, on the nearest
-  check('the map lists every body of the nav list (signals found on the way included), the ring on the objective, and says what Enter does', pick0.n === pick0.known && pick0.n >= known.length && (pick0.obj ? pick0.on === pick0.obj : pick0.sel === 0) && /Enter: autopilot there/.test(pick0.foot) && pick0.line.startsWith('Enter: autopilot to ' + pick0.on), JSON.stringify(pick0));
-  if (!(await snap('autopilot-map'))) check('screenshot of the map picker', false);
-  await E(`${OV}.pk.S._justDown = true`); await tick(2);
-  await E(`${OV}.pk.S._justDown = true`); await tick(2);
-  const sel2 = JSON.parse(await E(`JSON.stringify({ sel: ${OV}.pick.sel, name: ${OV}.pick.list[${OV}.pick.sel].name })`));
-  check('S twice moves the ring two bodies down', sel2.sel === (pick0.sel + 2) % pick0.n, JSON.stringify(sel2));
-  await E(`${OV}.pk.W._justDown = true`); await tick(2);
-  check('W moves it back up', (await E(`${OV}.pick.sel`)) === (pick0.sel + 1) % pick0.n);
-  const picked = await E(`${OV}.pick.list[${OV}.pick.sel].name`);
-  await E(`${OV}.pk.ENTER._justDown = true`); await tick(3);
-  check('Enter closes the map and the autopilot flies to the ringed body', !(await E(`game.scene.isActive('Overlay')`)) && (await state()).on && (await E(`${SP}.ap.target.name`)) === picked, picked);
-  await park(9000, 9000);
+  const map0 = JSON.parse(await E(`JSON.stringify({ pick: ${OV}.pick === undefined, foot: ${OV}.footer.text, line: ${OV}.tPick.text })`));
+  check('the map has no picker, and names the destination with its distance', map0.pick && !/Enter|W S/.test(map0.foot) && map0.line.startsWith('Destination: ' + dest) && / km$/.test(map0.line), JSON.stringify(map0));
+  await E(`(() => { const e = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13 }); window.dispatchEvent(e); return 1; })()`); await tick(3);
+  check('Enter on the map flies nowhere', !(await state()).on && (await E(`${SP}.cr.target.name`)) === dest);
+  await E(`(() => { game.scene.stop('Overlay'); game.scene.resume('Space'); })()`);
   await E(`game.scene.start('Overlay', { from: 'Station', mode: 'map' })`); await tick(3);
-  check('over the station the map has no picker', (await E(`${OV}.pick.list.length`)) === 0 && !/autopilot/.test(await E(`${OV}.footer.text`)));
+  check('over the station the map names no destination', (await E(`${OV}.tPick.text`)) === '' && !/autopilot/.test(await E(`${OV}.footer.text`)));
   await E(`(() => { game.scene.stop('Overlay'); game.scene.resume('Space'); })()`);
 
   check('no console errors', t.errors.length === 0, t.errors.join(' | '));

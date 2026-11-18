@@ -13,6 +13,7 @@ const SYSTEMS = {
     id: 'halcyon', name: 'Halcyon', kind: 'home',
     ly: [20, 22],                 // galaxy map position, light years (section 4.2)
     size: 36000,                  // world px, square (docs/UNIVERSE.md 2.2): the old 8000 px cluster stays in the north-west corner, the rest is far space
+    star: { type: 'G', x: 18000, y: 18000 }, // the sun, in the middle (content/systems/halcyon.md says the same): a body you can fly to (src/universe.js sysStar)
     danger: 1, traffic: 2,        // 0 to 5 and 0 to 3 (it has police, so traffic is 2 or more)
     pirates: { max: 8, every: 15000, weights: { raider: 0.25, drone: 0.35, gunship: 0.4 } }, // the spawn table (enemies.js pirateTable): what Halcyon has always done; other systems get one from their danger
     bodies: [
@@ -49,7 +50,7 @@ const SYSTEMS = {
   },
   // The other seven of docs/UNIVERSE.md 4.2 (card u-b5). They are the same data as content/systems/ and content/stations/ say (tests/systems.mjs pins the two
   // against each other field by field); what the files add is the words (description, welcome, services, bar), which the Station scene reads from them.
-  //   star       { type, x, y }: type (M K G F A) picks the sun in the sky and the tint of the backdrop (src/art_world.js STAR_TYPES, spaceBackdrop)
+  //   star       { type, x, y }: type (M K G F A) picks the tint of the backdrop (src/art_world.js STAR_TYPES, spaceBackdrop); no sun is drawn in the sky
   //   pirates    this system's spawn table (src/enemies.js pirateTable); left out, it comes from the danger
   //   pay        a multiplier on what a call pays that is paid in this system (src/missions.js callPayMult; docs/ECONOMY.md 9); left out it is 1
   //   dock       what a station offers, and all of it is read (card u-e4): fuel (credits a unit, src/fuel.js), repair (credits a hull point, src/station.js repairPrice), ore (credits an

@@ -24,7 +24,7 @@ const CRUISE = {
 const INTERDICT = { rate: 0.004, safe: 4000, cooldown: 90, calm: 2, ahead: 900, spread: 170, warnMs: 1200 };
 G.interdictCool = 0; // seconds of flying left before the next one (not saved)
 CRUISE.rnd = Math.random; // tests replace this to force or forbid the roll
-const CRUISE_ROWS = 8, CRUISE_TYPES = { station: 'STATION', planet: 'PLANET', belt: 'BELT', scenery: 'OUTPOST', poi: 'SIGNAL', gate: 'GATE' };
+const CRUISE_ROWS = 8, CRUISE_TYPES = { star: 'STAR', station: 'STATION', planet: 'PLANET', belt: 'BELT', scenery: 'OUTPOST', poi: 'SIGNAL', gate: 'GATE' };
 
 // the chance that one frame of cruise (dt ms) in a system of this danger is interdicted
 function cruiseInterdictChance(danger, dt) { return INTERDICT.rate * danger * dt / 1000; }
@@ -62,11 +62,11 @@ function cruiseEta(dist) {
   return t;
 }
 
-// every body you know of in this system: stations, planets, belts, gates and scenery are always known; a salvage site once you have found it
+// every body you know of in this system: the star, stations, planets, belts, gates and scenery are always known; a salvage site once you have found it
 function cruiseKnown(s) {
   const out = [];
   sysBodies().forEach(b => {
-    if (b.type === 'station' || b.type === 'planet' || b.type === 'belt' || b.type === 'scenery' || b.type === 'gate') out.push(b);
+    if (b.type === 'star' || b.type === 'station' || b.type === 'planet' || b.type === 'belt' || b.type === 'scenery' || b.type === 'gate') out.push(b);
     else if (b.type === 'poi' && (typeof siteState === 'function' ? siteState(b) : G.poi[b.id]) >= 1) out.push(b);
   });
   if (typeof POIRUN !== 'undefined' && POIRUN) POIRUN.sig.filter(q => q.state === 1).forEach(q => out.push({ id: q.id, type: 'poi', name: q.name, x: q.x, y: q.y }));
@@ -98,7 +98,15 @@ function cruiseSetup(s) {
 }
 
 // ---- the far bodies of the system: planets with a kind (art_world.js) and scenery with a look (stationart.js) ----
+// how far from a body's centre a cruise ends: 900 px, and for the star 900 px off its rim (it is the one body bigger than that)
+function cruiseStop(t) { return t && t.type === 'star' ? (t.r || 0) + CRUISE.stop : CRUISE.stop; }
+
 function cruiseFarBodies(s) {
+  const star = sysBodies('star')[0]; // the star, where it really is (src/universe.js sysStar): the glow is 512 px wide with the disc in its middle third
+  if (star && typeof starTexture === 'function') {
+    s.add.image(star.x, star.y, starTexture(s, star.star)).setDepth(0).setScale(star.r * 3 / 256);
+    label(s, star.x, star.y - star.r - 90, star.name.toUpperCase(), '#ffe08a', 18);
+  }
   sysBodies('planet').slice(1).forEach(b => { // the first planet is Kepler-4b, which space.js draws itself
     const key = b.kind ? planetTexture(s, b.kind, b.seed) : b.art;
     s.add.image(b.x, b.y, key).setDepth(0).setScale(b.r / (b.kind === 'ringed' ? 206 : 300)); // the globe is 300 px (ringed: 206) in its 800 px canvas
@@ -164,8 +172,8 @@ function cruiseStep(s, time, dt) {
   const want = Math.atan2(dy, dx) + cr.nudge;
   ship.rotation = Phaser.Math.Angle.RotateTo(ship.rotation, want, CRUISE.turn * dt);
   const aligned = Math.abs(Phaser.Math.Angle.Wrap(want - ship.rotation)) < 0.45;
-  // the speed limit is what stops you flying through a planet: 3 x the distance left after the 900 px stop, never above CRUISE.top
-  const limit = cr.cancel ? 0 : Math.min(CRUISE.top, CRUISE.brake * Math.max(0, dist - CRUISE.stop));
+  // the speed limit is what stops you flying through a planet: 3 x the distance left after the 900 px stop (the star: off its rim, cruiseStop), never above CRUISE.top
+  const limit = cr.cancel ? 0 : Math.min(CRUISE.top, CRUISE.brake * Math.max(0, dist - cruiseStop(t)));
   if (cr.speed > limit) cr.speed = Math.max(limit, cr.speed - (cr.cancel ? 12000 : 40000) * dts);
   else if (aligned) cr.speed = Math.min(limit, cr.speed + CRUISE.accel * dts);
   ship.body.setAcceleration(0, 0).setMaxSpeed(CRUISE.top + 500).setDrag(1);

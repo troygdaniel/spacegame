@@ -1,12 +1,13 @@
 // ---------- Overview: the list of what is around, nearest first (card space-game-overview) ----------
 // Goes with the flight assist (src/assist.js) and click to move (src/clickmove.js). A compact panel under the radar lists what is near the ship:
-// raiders, the escort, police and freighters, the station, planets, gates and found signals, each with its range and whether it closes or opens.
+// raiders, the escort, police and freighters, each with its range and whether it closes or opens. Ships only: a place (the station, a planet,
+// a gate, a signal) is picked in the navigation panel (N, src/navpanel.js), card space-game-one-way-to-target.
 // Hostiles are red. A click on a row makes it the target; so do W S and Enter while the list has the keys. The target's row opens: under it
 // are its range, its closing speed and its orders as buttons (the assist's 1 to 4, and the gun lock for a hostile): a click on a button, or
 // its key, gives the order. This is the only place the orders are drawn: there is no separate assist panel.
 //   B                   hidden -> shown with the keys on it -> hidden. Enter picks the row and gives the keys back to the ship (the list stays up);
 //                       B on a list that is up without the keys takes them again.
-//   the target setter   a body: cruisePick (the N list's own target). A ship: the same pick a click on the ship in space makes
+//   the target setter   a ship: the same pick a click on the ship in space makes
 //                       (clickmoveClick at the ship), which needs the assist on, so picking a ship switches it on.
 //   space.js            overviewSetup(this) in create(); overviewFrame(this, time) in update(), before the keys are read: while the list has
 //                       the keys it takes W, S and the up and down arrows away from the flight code
@@ -117,7 +118,7 @@ function overviewThings(s) {
   if (s.enemies && s.enemies.getChildren) s.enemies.getChildren().forEach(e => { const k = (e.def && e.def.key) || 'pirate'; ship(e, e.boss || e.wanted ? 'wanted ' + k : k, OVERVIEW.kinds[k] ? k : 'pirate', { hostile: true }); });
   if (s.mx && s.mx.freighter) ship(s.mx.freighter, 'MULE', 'escort', { friend: true });
   if (s.tr) { (s.tr.police || []).forEach(p => ship(p.img, 'police', 'police', {})); (s.tr.civ || []).forEach(c => ship(c.img, 'freighter', 'civ', {})); }
-  cruiseKnown(s).forEach(b => out.push({ id: b.id, name: b.name, kind: b.type, x: b.x, y: b.y, vx: 0, vy: 0, ref: b, ship: false }));
+  // no places here (card space-game-one-way-to-target): the station, planets, belts, gates and signals are picked in the navigation panel (N, src/navpanel.js)
   return out;
 }
 
@@ -133,7 +134,7 @@ function overviewIsTarget(s, r) {
 
 function overviewPick(s, r) {
   const o = r && r.ref; if (!o || s.dead || s.leaving) return '';
-  if (!(o.body || o.setPosition)) { cruisePick(s, o); if (s.cm) s.cm.pick = null; return 'body'; } // a body: the nav target, as the N list sets it
+  if (!(o.body || o.setPosition)) return ''; // not a ship: a place is picked in the navigation panel, never here
   if (o.active === false) return '';
   if (typeof ASSIST === 'undefined' || !s.as) return '';
   if (!ASSIST.on) assistOn(s, true); // a ship is a target of the assist: picking one switches it on

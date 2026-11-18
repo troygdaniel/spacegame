@@ -18,7 +18,7 @@ console.log('the rows: groups in order, nearest first');
 const rows = rowsOf(), known = J(`cruiseKnown(${SHIP})`), jumps = J(`navpanelJumps(${SHIP})`);
 check('every body you know of has a row, and every jump in reach', rows.filter(r => r.kind === 'body').length === known.length && rows.filter(r => r.kind === 'jump').length === jumps.length && known.length > 3, known.length + ' bodies, ' + jumps.length + ' jumps, ' + rows.length + ' rows');
 check('the groups come in the panel\'s order', rows.every((r, i) => !i || ORDER.indexOf(rows[i - 1].group) <= ORDER.indexOf(r.group)), rows.map(r => r.group).join(' '));
-check('stations and outposts are STATIONS, planets and belts their own group, the gate with the jumps', rows.every(r => r.kind !== 'body' || r.group === { station: 'stations', scenery: 'stations', planet: 'bodies', belt: 'bodies', poi: 'signals', gate: 'gates' }[r.type]));
+check('stations and outposts are STATIONS, the sun, planets and belts their own group, the gate with the jumps', rows.every(r => r.kind !== 'body' || r.group === { star: 'bodies', station: 'stations', scenery: 'stations', planet: 'bodies', belt: 'bodies', poi: 'signals', gate: 'gates' }[r.type]) && rows.some(r => r.type === 'star'));
 check('inside a group the nearest is first', rows.every((r, i) => !i || rows[i - 1].group !== r.group || rows[i - 1].kind !== r.kind || (r.kind === 'jump' ? rows[i - 1].ly <= r.ly : rows[i - 1].dist <= r.dist)));
 check('in the last group the gate comes before the jumps', (l => l.every((r, i) => !i || !(l[i - 1].kind === 'jump' && r.kind === 'body')))(rows.filter(r => r.group === 'gates')));
 check('with no call open there is no MISSION group', !rows.some(r => r.group === 'mission'));
@@ -69,7 +69,7 @@ check('a short leg is the autopilot\'s, a long one cruises in the middle (the au
 check('first Enter sets the destination, the second goes', /set as destination/.test(J(`navpanelHint(${JSON.stringify(mid)}, false)`)) && /go: autopilot$/.test(J(`navpanelHint(${JSON.stringify(mid)}, true)`)) && /cruise/.test(J(`navpanelHint(${JSON.stringify(long)}, true)`)));
 check('a jump says the fuel it burns', /jump/.test(J(`navpanelHint(${JSON.stringify({ kind: 'jump', ok: true, cost: 3.25, ly: 4 })}, true)`)) && /3\.3 fuel|3\.2 fuel/.test(J(`navpanelHint(${JSON.stringify({ kind: 'jump', ok: true, cost: 3.25, ly: 4 })}, true)`)));
 check('distances read as km for a body and ly for a jump', / km$/.test(J(`navpanelDist(${JSON.stringify(mid)})`)) && J(`navpanelDist({ kind: 'jump', ly: 4.26 })`) === '4.3 ly');
-check('the controls table and the help page name the panel on N', J(`CONTROLS.some(g => g.rows.some(r => r.k.includes('N') && /Navigation panel/.test(r.t)))`) && J(`HELP.Space.some(l => /^N   navigation panel/.test(l))`));
+check('the controls table and the help page name the panel on N', J(`CONTROLS.some(g => g.rows.some(r => r.k.includes('N') && /navigation panel/.test(r.t)))`) && J(`HELP.Space.some(l => /^N   places: the navigation panel/.test(l))`));
 
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(`\n${n - failed} of ${n} checks passed`);
