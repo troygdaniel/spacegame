@@ -11,11 +11,13 @@
 // before the assist reads its keys, hands 1 and 2 the picked ship (the assist's own keys know only the nav target).
 //   clickmovePick(s, x, y)    pure: what is under a world point: { kind: 'ship' | 'body' | 'point', target }
 //   clickmoveClick(s, x, y)   what a click does; returns the kind it acted on, '' when it did nothing (assist off, nav list open, docked, dead)
+//   clickmovePress(s, p)      the pointerdown listener: the left button, and not on the HUD (clickmoveOnHud(s, px, py), from clickmoveHud(s))
 //   clickmoveFrame(s, time)   once a frame before Space.update: the picked ship's keys, the gun hold, the marker
 const CLICKMOVE = {
   ship: 34, body: 120,   // px on screen around a ship's centre that count as a click on it; the least radius of a body (a station has none of its own)
   hold: 80,              // ms the guns stay quiet past each frame the order button is still down
-  color: 0x9fe9ff
+  color: 0x9fe9ff,
+  hud: [], hudPad: 4     // more rectangles of the HUD, from other files (see clickmoveHud); px round a HUD rectangle that still count as on it
 };
 
 function clickmoveShips(s) {
@@ -64,6 +66,32 @@ function clickmoveClick(s, x, y) {
   return 'point';
 }
 
+// what the HUD covers right now, as { x, y, w, h } in screen px (the game's 1280 by 720): the zones src/hud.js lists each frame (gauges, the
+// mission panel, the radar, the top strip, the assist panel, banners and toasts), then the things with a rectangle of their own while they
+// are up: the key line, a tip of the guide, the assist readout, the Overview, the nav panel. A panel of another file joins with
+// CLICKMOVE.hud.push(s => ({ x, y, w, h }))  (or an array of them, or null while it is hidden).
+function clickmoveHud(s) {
+  const out = [], rect = b => { if (b && b.right > b.x && b.bottom > b.y) out.push({ x: b.x, y: b.y, w: b.right - b.x, h: b.bottom - b.y }); };
+  const obj = o => { if (o && o.active !== false && o.visible && typeof o.getBounds === 'function') rect(o.getBounds()); };
+  ((s._hud && s._hud.zones) || []).forEach(z => rect({ x: z.x0, y: z.y0, right: z.x1, bottom: z.y1 }));
+  obj(s.keyLine); obj(s._gh); obj(s.as && s.as.read);
+  if (s.ov && s.ov.shown) obj(s.ov.bg);
+  if (s.np && s.np.shown) obj(s.np.bg);
+  CLICKMOVE.hud.forEach(f => { const r = f(s); [].concat(r || []).forEach(q => { if (q && q.w > 0 && q.h > 0) out.push(q); }); });
+  return out;
+}
+// is this screen point on the HUD
+function clickmoveOnHud(s, px, py) {
+  const m = CLICKMOVE.hudPad;
+  return clickmoveHud(s).some(r => px >= r.x - m && px <= r.x + r.w + m && py >= r.y - m && py <= r.y + r.h + m);
+}
+// a press of the mouse: the left button, and not on the HUD (a click on the mission panel folds it, a click on the radar is a click on the
+// radar: neither is an order to fly to the world point behind it). Returns what clickmoveClick did, '' for nothing.
+function clickmovePress(s, p) {
+  if (!p || p.button || clickmoveOnHud(s, p.x, p.y)) return '';
+  return clickmoveClick(s, p.worldX, p.worldY);
+}
+
 function clickmoveFrame(s, time) {
   const cm = s.cm, a = s.as; if (!cm || !a) return;
   // the guns: space.js fires while the pointer is down, so an order's press keeps them quiet until the button is up
@@ -105,7 +133,7 @@ function clickmoveDraw(s, time) {
 function clickmoveSetup(s) {
   const cm = s.cm = { pick: null, point: null, nav: null, hold: false, g: null };
   cm.g = s.add.graphics().setDepth(5);
-  s.input.on('pointerdown', p => { if (!p.button) clickmoveClick(s, p.worldX, p.worldY); }); // the left button; the input plugin drops its listeners when the scene ends
+  s.input.on('pointerdown', p => clickmovePress(s, p)); // the input plugin drops its listeners when the scene ends
   s.events.once('shutdown', () => { if (s.cm === cm) s.cm = null; });
 }
 
