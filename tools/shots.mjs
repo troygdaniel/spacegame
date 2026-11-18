@@ -115,7 +115,23 @@ const solFly = async (t, name, secs = 90) => {
   if (o.none) throw new Error(name + ' is not a body the nav list knows: ' + o.none.join(', '));
   let ran = 0, cruised = false; while (ran < secs) { await t.run(2000); ran += 2; if (await t.ev(`!!${SP}.cruising`)) cruised = true; if (!(await t.ev(`!!(${SP}.ap && ${SP}.ap.on)`))) break; }
   const end = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}, b = cruiseKnown(s).find(x => x.name === '${name}'); return { left: Math.round(b.dist / 10), ap: !!(s.ap && s.ap.on), v: Math.round(s.ship.body.speed) }; })())`));
-  console.log(`        to ${name}: ${o.km} km, autopilot took it ${o.ok}; after ${ran} s of game time: ${end.left} km left, cruised ${cruised}, autopilot on ${end.ap}`);
+  console.log(`        to ${name}: ${o.km} km, autopilot took it ${o.ok}; after ${ran} s of game time: ${end.left} km left, cruised ${cruised}, autopilot on ${end.ap}; last toasts: ` + await t.ev(`JSON.stringify((window.__toasts || []).slice(-3))`));
+};
+// jump to Sol, put the ship 20,000 px off a station of the system, order the dock from its row (Enter twice) and say how it went; the Station scene of that dock is the picture
+const solDock = name => async t => {
+  await solOn(t, 'Space'); await solJump(t);
+  const o = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}, b = sysBodies('station').concat(sysBodies('scenery')).find(x => x.name === '${name}'); if (!b) return { none: sysBodies('station').map(x => x.name) };
+    s.ship.setPosition(b.x - 20000, b.y); s.ship.setVelocity(0, 0); s.cameras.main.centerOn(s.ship.x, s.ship.y); s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12;
+    cruiseNavOpen(s); const i = s.cr.list.findIndex(r => r.name === '${name}'); if (i < 0) return { norow: true, rows: s.cr.list.map(r => r.name) };
+    const row = s.cr.list[i]; const hint = navpanelHint(row, false); navpanelClick(s, i); const hint2 = navpanelHint(row, true); navpanelClick(s, i);
+    return { id: b.id, type: b.type, row: row.name, rowType: row.type, hintBefore: hint, hintAfter: hint2, km: Math.round(Math.hypot(b.x - s.ship.x, b.y - s.ship.y) / 10), ap: !!(s.ap && s.ap.on), order: s.ap && s.ap.order || null }; })())`));
+  if (o.none) throw new Error('${name} is not a station of this system; stations are ' + o.none.join(', ')); if (o.norow) throw new Error('no navigation row for ' + o.rows.length + ' rows: ' + o.rows.join(', '));
+  console.log('        ' + JSON.stringify(o));
+  await t.run(1200); await pic(t, 'sol-dock-' + o.id + '-panel');
+  let ran = 0; while (ran < 240) { await t.run(2000); ran += 2; try { if (await t.ev(up('Station'))) break; } catch (e) { /* between scenes */ } }
+  const docked = await t.ev(up('Station'));
+  console.log('        after ' + ran + ' s of game time: ' + (docked ? 'docked, lastDock ' + await t.ev('G.lastDock') + ', title ' + await t.ev(`${ST}.ui && ${ST}.ui.titleText ? ${ST}.ui.titleText.text : ''`) + ', menu rows ' + await t.ev(`JSON.stringify(${ST}.menu.rows.map(r => r.n + r.name + (r.off ? '(off)' : '')))`) : 'not docked: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}; return { ap: !!(s.ap && s.ap.on), stage: s.ap && s.ap.stage, cruising: !!s.cruising, prompt: s.prompt && s.prompt.text, toasts: (window.__toasts || []).slice(-3) }; })())`)));
+  await t.run(1500);
 };
 const LOOKS = [
   ['far-cruise-mid', '#space', 'Space', farCruise(20)],      // the systems are 3 times the size (card space-game-system-distances): 8 s into a cruise to the farthest body
@@ -246,13 +262,14 @@ const LOOKS = [
     console.log('        dock order: ' + JSON.stringify(d) + '; after ' + ran + ' s: ' + ((await t.ev(up('Station'))) ? 'docked at ' + await t.ev('G.lastDock') : 'not docked: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}; return { ap: !!(s.ap && s.ap.on), stage: s.ap && s.ap.stage, cruising: !!s.cruising, prompt: s.prompt && s.prompt.text }; })())`)));
     await t.run(1500);
   }],
-  ['sol-neptune', '#space', 'Space', async t => { // Earth, then Earth to Neptune by autopilot and cruise, timed in seconds of game time (card space-game-sol-needs-bigger-systems)
+  ['sol-neptune', '#space', 'Space', async t => { // Earth to Neptune by autopilot and cruise, timed in seconds of game time (card space-game-sol-needs-bigger-systems)
     await solOn(t, 'Space'); await solJump(t);
-    await solFly(t, 'Earth', 120);
-    const t0 = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}, b = cruiseKnown(s).find(x => x.name === 'Neptune'); return b ? { km: Math.round(b.dist / 10) } : { none: true }; })())`));
-    if (t0.none) throw new Error('Neptune is not in the nav list'); console.log('        Earth to Neptune: ' + t0.km + ' km');
-    await solFly(t, 'Neptune', 600); await t.run(1000); await pic(t, 'sol-neptune');
-    console.log('        world ' + await t.ev(`${SP}.physics.world.bounds.width`) + ' px, ship at ' + await t.ev(`JSON.stringify([Math.round(${SP}.ship.x), Math.round(${SP}.ship.y)])`));
+    const e = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}, ea = sysBodies().find(x => x.name === 'Earth'), n = sysBodies().find(x => x.name === 'Neptune'); if (!ea || !n) return { none: true };
+      s.ship.setPosition(ea.x - 2500, ea.y); s.ship.setVelocity(0, 0); s.cameras.main.centerOn(s.ship.x, s.ship.y); return { km: Math.round(Math.hypot(n.x - ea.x, n.y - ea.y) / 10), from: Math.round(Math.hypot(n.x - s.ship.x, n.y - s.ship.y) / 10) }; })())`));
+    if (e.none) throw new Error('no Earth or no Neptune'); console.log('        Earth to Neptune: ' + e.km + ' km between them; from the ship 2,500 px off Earth: ' + e.from + ' km');
+    await t.run(1500);
+    await solFly(t, 'Neptune', 700); await t.run(1000); await pic(t, 'sol-neptune');
+    console.log('        world ' + await t.ev(`${SP}.physics.world.bounds.width`) + ' px');
   }],
   ['sol-moons', '#space', 'Space', async t => { // Jupiter's moons (the parent column): the ship 6,000 px off Jupiter; every moon image drawn (none missing), the nav list and the minimap
     await solOn(t, 'Space'); await solJump(t);
@@ -267,6 +284,8 @@ const LOOKS = [
     await solFly(t, 'Io', 120); await t.run(1000); await pic(t, 'sol-moons-io');
     await t.ev(`(() => { cruiseNavOpen(${SP}); return 1; })()`); await t.run(600); await pic(t, 'sol-moons-nav');
   }],
+  ['sol-dock-mars', '#space', 'Space', solDock('Arsia High')],       // card space-game-more-than-one-dock: a second and a third dock of one system, ordered from the navigation panel
+  ['sol-dock-ceres', '#space', 'Space', solDock('Occator Works')],
   ['sol-jupiter-probe', '#space', 'Space', async t => { // what is drawn where the autopilot says Jupiter is
     await solOn(t, 'Space'); await solJump(t); await solFly(t, 'Jupiter', 120); await t.run(1000);
     console.log('        ' + await t.ev(`JSON.stringify((() => { const s = ${SP}, b = sysBodies().find(x => x.name === 'Jupiter'), near = o => Math.hypot(o.x - s.ship.x, o.y - s.ship.y) < 3000;
