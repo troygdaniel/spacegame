@@ -615,7 +615,7 @@ function hudRadar(h, s, key, obj, now) {
     const nav = s.cr && s.cr.target; // the nav target: a cyan ring (the mission's goal is the amber one below)
     if (nav && isFinite(nav.x) && isFinite(nav.y)) { const q = rimMark('rm1', nav.x, nav.y, CYAN, '#9fe9ff'); if (!q.out) { g.lineStyle(1.5, CYAN, 0.9); hudRing(g, cx + q.x, cy + q.y, 6.5); } }
   } else if (key === 'Space') {
-    if (!s.station.nowhere) mark(pt(s.station.x, s.station.y, true), CYAN, p => hudDiamond(g, p.x, p.y, 5, CYAN));
+    (s.docks || (s.station.nowhere ? [] : [{ obj: s.station }])).forEach(k => mark(pt(k.obj.x, k.obj.y, true), CYAN, p => hudDiamond(g, p.x, p.y, 5, CYAN))); // every dock of the system (src/space.js)
     if (!s.planet.nowhere) mark(pt(s.planet.x, s.planet.y, true), AMBER, p => { g.fillStyle(AMBER, 1); hudDisc(g, p.x, p.y, 5); });
     s.enemies.getChildren().forEach(d => { if (d.active) dot(d.x, d.y, d.wanted ? AMBER : (d.def && d.def.radar) || RED, d.wanted ? 3 : d.def && d.def.key === 'gunship' ? 3 : 2.2); });
   } else {

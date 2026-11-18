@@ -21,13 +21,15 @@ const CRUISE = {
 // interdiction (docs/UNIVERSE.md 5.1): pirates can pull you out of cruise. Every cruising second rolls `rate x danger`; never within `safe` px of a
 // station, never twice within `cooldown` s of flying, never before the player has made `calm` jumps (so the first look at hyperspace is calm).
 // When it fires: the INTERDICTED banner and a siren, cruise drops to 150 px/s, two or three pirates (the system's table) appear `ahead` px in front.
-const INTERDICT = { rate: 0.004, safe: 4000, cooldown: 90, calm: 2, ahead: 900, spread: 170, warnMs: 1200 };
+const INTERDICT = { rate: 0.004, safe: 4000, cooldown: 90, calm: 2, ahead: 900, spread: 170, warnMs: 1200,
+  leg: 13.5 }; // s: the longest leg of a shipped system. A longer leg (a wider system: the Sol pack) is rolled thinner, so the whole leg is no likelier to be cut than that one
 G.interdictCool = 0; // seconds of flying left before the next one (not saved)
 CRUISE.rnd = Math.random; // tests replace this to force or forbid the roll
 const CRUISE_ROWS = 8, CRUISE_TYPES = { star: 'STAR', station: 'STATION', planet: 'PLANET', belt: 'BELT', scenery: 'OUTPOST', poi: 'SIGNAL', gate: 'GATE' };
 
-// the chance that one frame of cruise (dt ms) in a system of this danger is interdicted
-function cruiseInterdictChance(danger, dt) { return INTERDICT.rate * danger * dt / 1000; }
+// the chance that one frame of cruise (dt ms) in a system of this danger is interdicted. legSec: how long the whole leg takes (cruiseEta at
+// engage): the roll is per second, so a two minute leg at danger 1 was cut four times in ten where the longest shipped leg is cut one in twenty
+function cruiseInterdictChance(danger, dt, legSec) { return INTERDICT.rate * danger * dt / 1000 * (legSec > INTERDICT.leg ? INTERDICT.leg / legSec : 1); }
 // may it happen at all right now: not too close to a station, not on cooldown, not before the calm jumps
 function cruiseInterdictOk(s) {
   if (G.interdictCool > 0 || (G.jumps | 0) < INTERDICT.calm || !(sysDef().danger > 0)) return false;
@@ -52,10 +54,15 @@ function cruiseInterdict(s) {
 }
 
 // seconds for a leg of this length, from rest, by the same speed rules the ship follows (plus 0.4 s to turn onto the heading)
+// the time left as the readout says it: seconds, and from 100 s on minutes and seconds (1:58)
+function cruiseEtaText(sec) { const s = Math.max(0, Math.round(sec)); return s < 100 ? s + ' s' : Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 function cruiseEta(dist) {
   const d = Math.max(0, dist - CRUISE.stop), h = 0.05;
   let t = 0.4, v = 0, x = 0;
-  for (let i = 0; i < 1000 && x < d - 50; i++) {
+  for (let i = 0; i < 100000 && x < d - 50; i++) {
+    // a leg longer than 50 s (a system wider than the shipped ones: the Sol pack) used to stop counting there. Past the first 1000 steps the
+    // steady middle is taken in one stride, so a long leg costs no more to sum than a short one and every shorter leg gives the number it gave
+    if (i >= 1000 && v >= CRUISE.top) { const steady = d - x - CRUISE.top / CRUISE.brake - CRUISE.top * h; if (steady > 0) { x += steady; t += steady / CRUISE.top; } }
     const lim = Math.min(CRUISE.top, CRUISE.brake * Math.max(0, d - x));
     v = v > lim ? lim : Math.min(lim, v + CRUISE.accel * h); x += v * h; t += h;
   }
@@ -142,6 +149,7 @@ function cruiseEngage(s) {
   }
   if (s.enemies.getChildren().some(e => e.active && d(ship, e) < CRUISE.lockHostile)) return say('Hostiles near: cruise locked.', '#ff4d6d');
   cr.active = true; s.cruising = true; cr.cancel = false; cr.nudge = 0; cr.speed = Math.min(ship.body.speed, 600);
+  cr.legSec = cruiseEta(dist); // how long this leg takes: the interdiction roll is thinned on a long one (cruiseInterdictChance)
   s.cameras.main.startFollow(ship, true, 1, 1); s.cameras.main.shake(260, 0.003);
   sfx('cruiseOn'); startCruiseHum(); toast(s, 'Cruise to ' + t.name + '. S cancels, A and D nudge.', '#9fe9ff');
 }
@@ -163,7 +171,7 @@ function cruiseEnd(s, why) {
 function cruiseStep(s, time, dt) {
   const cr = s.cr, ship = s.ship, t = cr.target, k = s.k, dts = dt / 1000;
   if (s.enemies.getChildren().some(e => e.active && Math.hypot(e.x - ship.x, e.y - ship.y) < CRUISE.abortHostile)) { cr.speed = Math.min(cr.speed, CRUISE.dropSpeed); return cruiseEnd(s, 'hostile'); }
-  if (cruiseInterdictOk(s) && CRUISE.rnd() < cruiseInterdictChance(sysDef().danger, dt)) return cruiseInterdict(s);
+  if (cruiseInterdictOk(s) && CRUISE.rnd() < cruiseInterdictChance(sysDef().danger, dt, s.cr.legSec)) return cruiseInterdict(s);
   const dx = t.x - ship.x, dy = t.y - ship.y, dist = Math.hypot(dx, dy);
   if (k.S.isDown || k.DOWN.isDown) cr.cancel = true;
   const left = k.A.isDown || k.LEFT.isDown, right = k.D.isDown || k.RIGHT.isDown;
@@ -241,7 +249,7 @@ function cruiseLook(s, time, dt) {
   if (on && cr.target && time > cr.readAt) {
     cr.readAt = time + 200;
     const d = Math.hypot(cr.target.x - s.ship.x, cr.target.y - s.ship.y);
-    cr.read.setText('CRUISE  ' + cr.target.name.toUpperCase() + '   ' + hudFmt(d / 10) + ' km   ' + Math.max(0, Math.round(cruiseEta(d) - 0.4)) + ' s');
+    cr.read.setText('CRUISE  ' + cr.target.name.toUpperCase() + '   ' + hudFmt(d / 10) + ' km   ' + cruiseEtaText(cruiseEta(d) - 0.4));
   }
 }
 
