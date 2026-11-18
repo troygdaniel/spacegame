@@ -103,8 +103,10 @@ class Space extends Phaser.Scene {
     boostInit(this); // src/boost.js: boost energy and the Q/E dash
     this.nextFire = 0;
     this.prompt = floatPrompt(this, this.ship); // key cap above you instead of a strip at the bottom (src/ui.js)
-    this.add.text(24, H - 44, 'W thrust  A/D turn  S brake  Shift boost  Q/E dash  Space or click fire  L land/dock  P autopilot', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92'
+    // the key line, bottom left: a readable grey-blue with a dark outline, so the sun's rays and the station do not wash it out, and hidden
+    // while a first-run tip of the guide is up (update below), because that tip says the same keys two lines higher (docs/CRITIC.md run 1, finding 19)
+    this.keyLine = this.add.text(24, H - 44, 'W thrust  A/D turn  S brake  Shift boost  Q/E dash  Space or click fire  L land/dock  P autopilot', {
+      fontFamily: 'monospace', fontSize: '14px', color: '#9fbdd1', stroke: '#02060d', strokeThickness: 4
     }).setScrollFactor(0).setDepth(100);
     if (this.from === 'station') { bountyReset(); toast(this, G.system === 'halcyon' ? 'Launch clear. Kepler-4b is to the north-east.' : 'Launch clear.', '#9fe9ff'); } // enemies.js: a new flight's bounty count starts at 0
     else if (this.jumped) { const fresh = galaxyChart(); toast(this, 'Arrived in ' + sysDef().name + '.' + (fresh.length ? ' Charted in range: ' + fresh.map(x => x.name).join(', ') + '. G opens the galaxy map.' : ''), '#9fe9ff'); } // src/galaxymap.js: the stars in range of here are now known
@@ -177,6 +179,7 @@ class Space extends Phaser.Scene {
 
   update(time, dt) {
     guideTick(this);
+    if (this.keyLine) this.keyLine.setVisible(G.guideDone || !(this._gh && this._gh.visible)); // not under a first-run tip, which says the keys itself; the later travel tip does not, so the line stays
     const k = this.k, ship = this.ship, JD = Phaser.Input.Keyboard.JustDown;
     spaceBackdropTick(this); // parallax layers follow the camera
     if (this.dead) return;
