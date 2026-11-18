@@ -48,8 +48,8 @@ function navpanelRows(bodies, jumps, mission) {
   (jumps || []).forEach(j => rows.push({ kind: 'jump', group: 'gates', id: j.id, name: j.name, type: 'jump', ly: j.ly, cost: j.cost, ok: !!j.ok, why: j.why || null }));
   if (mission && mission.system) { // a goal in another system: the jump there is the mission's row, or a row that says it is out of reach
     const j = rows.find(r => r.kind === 'jump' && r.id === mission.system);
-    if (j) { j.group = 'mission'; j.mission = true; }
-    else rows.push({ kind: 'jump', group: 'mission', id: mission.system, name: mission.name, type: 'jump', ly: mission.ly, cost: 0, ok: false, why: 'far', mission: true });
+    if (j) { j.group = 'mission'; j.mission = true; j.goal = mission.goal || null; } // goal: the far star the next jump is on the way to (the galaxy map opens on that, with the whole chain)
+    else rows.push({ kind: 'jump', group: 'mission', id: mission.system, name: mission.name, type: 'jump', ly: mission.ly, cost: 0, ok: false, why: 'far', mission: true, say: mission.say || null });
   } else if (mission) { // a goal here: the body it is (same id, or the body it sits on), else a row of its own
     const b = rows.find(r => r.kind === 'body' && (r.id === mission.id || Math.hypot(r.x - mission.x, r.y - mission.y) < 60));
     if (b) { b.group = 'mission'; b.mission = true; }
@@ -92,8 +92,8 @@ function navpanelHint(r, isDest, order) {
   if (!r) return 'Nowhere to go from here.';
   const how = navpanelHow(r);
   if (how === 'here' && !order) return 'You are there.';
-  if (r.mission && r.kind === 'jump') return 'Enter  open the galaxy map at ' + navpanelStar(r); // the job is in another system: the map shows the way, and what is missing
-  if (how === 'no') return r.why === 'fuel' ? 'Not enough fuel for this jump.' : r.why === 'far' ? 'Out of jump range: plot it on the galaxy map (G).' : 'No route charted yet.';
+  if (r.mission && r.kind === 'jump' && !r.say) return 'Enter  open the galaxy map at ' + navpanelStar(r); // the job is in another system: the map shows the way, and what is missing
+  if (how === 'no') return r.say || (r.why === 'fuel' ? 'Not enough fuel for this jump.' : r.why === 'far' ? 'Out of jump range: plot it on the galaxy map (G).' : 'No route charted yet.');
   if (!isDest) return 'Enter  set as destination';
   if (order) return 'Enter  ' + order + (how === 'here' ? '' : '   P  fly there only'); // the order takes the ship all the way in; P is the plain travel
   return how === 'jump' ? 'Enter  jump   ' + navpanelFuel(r.cost) + ' fuel' : how === 'cruise' ? 'Enter  go: autopilot and cruise' : 'Enter  go: autopilot';
@@ -115,7 +115,11 @@ function navpanelJumps(s) {
 function navpanelMission(s) {
   if (G.mission !== 'accepted' && G.mission !== 'rescued') return null;
   const far = typeof missionFar === 'function' ? missionFar() : null;
-  if (far) return { system: far.system, name: (far.station ? far.name + ', ' : '') + callSysName(far.system), ly: far.ly };
+  if (far) { // a goal in another system: with a plotted chain the row is the NEXT JUMP of it (one this ship can make), else the goal itself, which says why it cannot (src/missions.js routeCheck)
+    const step = typeof missionStep === 'function' ? missionStep() : null;
+    if (step && step.kind === 'jump' && step.hop) return { system: step.hop, name: callSysName(step.hop), ly: step.route.hops[0].ly, goal: far.system, hops: step.hops };
+    return { system: far.system, name: (far.station ? far.name + ', ' : '') + callSysName(far.system), ly: far.ly, say: step && step.kind === 'blocked' ? step.text : null };
+  }
   const t = typeof missionTarget === 'function' ? missionTarget(s) : null;
   return t ? { id: t.id, name: t.name, x: t.x, y: t.y, dist: Math.hypot(t.x - s.ship.x, t.y - s.ship.y) } : null;
 }
@@ -227,8 +231,9 @@ function navpanelDraw(s) {
     if (sel) np.hl.setPosition(N.x + 3, l.y - N.row / 2).setVisible(true).setFillStyle(0xffb454, np.keys ? 0.16 : 0.06);
   });
   const r = rows[cr.sel];
-  np.foot.setText(np.keys ? navpanelHint(r, r ? navpanelIsDest(s, r) : false, navpanelOrder(s, r)) : 'N  choose where to go');
+  const hint = np.keys ? navpanelHint(r, r ? navpanelIsDest(s, r) : false, navpanelOrder(s, r)) : 'N  choose where to go';
   np.more.setText(view.above || view.below ? (view.above ? '^' + view.above + ' ' : '') + (view.below ? 'v' + view.below : '') : np.keys ? 'X clear' : '');
+  np.foot.setText(hudFitSub(hint, N.w - 28 - (+np.more.width || 0), 12)); // one line in the room the tag leaves: the route plotter's sentence ("Needs a 12.2 ly jump: your Wren does 8. The Kite ...") ran out across the screen over the tag (first look; the whole sentence is on the job line and the map)
 }
 
 // N: the panel with the keys on it, the destination (or the mission's row, or the first row) chosen
@@ -252,7 +257,7 @@ function navpanelClick(s, i) {
   cr.sel = i;
   if (r.mission && r.kind === 'jump') { // the job is in another system: Enter does the step, which is the galaxy map with that star chosen (G does the same)
     navpanelClose(s);
-    if (typeof jumpMapOpen !== 'function' || !jumpMapOpen(s.game, r.id)) { toast(s, 'Not now: the galaxy map opens when you are flying free.', '#ffb454'); sfx('empty'); }
+    if (typeof jumpMapOpen !== 'function' || !jumpMapOpen(s.game, r.goal || r.id)) { toast(s, 'Not now: the galaxy map opens when you are flying free.', '#ffb454'); sfx('empty'); }
     return;
   }
   if (navpanelIsDest(s, r)) navpanelEngage(s, r); else navpanelPick(s, r);
@@ -266,7 +271,7 @@ function navpanelPick(s, r) {
   cruisePick(s, r); // src/cruise.js: the one target C, P, the Tab map and the HUD arrow share
 }
 // the order a row can take: 'dock' (this system's station), 'land' (the planet you can land on) or ''
-function navpanelOrder(s, r) { return r && r.kind !== 'jump' ? autopilotOrder(r, sysBody('station'), sysBody('planet'), s.canLand) : ''; }
+function navpanelOrder(s, r) { return r && r.kind !== 'jump' ? autopilotOrder(r, sysBodies('station'), sysBody('planet'), s.canLand) : ''; }
 function navpanelEngage(s, r) {
   const np = s.np, no = m => { toast(s, m, '#ffb454'); sfx('empty'); return false; };
   if (r.kind !== 'jump') { // a body: the autopilot flies it, and cruises the middle of a long leg

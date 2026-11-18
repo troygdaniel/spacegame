@@ -178,7 +178,7 @@ Twenty more ore units of hold.
 **The dock.** Open `content/stations/halcyon-station.md`: `repair: 0.5` is the credits a point of hull costs at the repair bay, and `ore: 20` what an ore pays when you dock. Set `repair: 1` and the bay costs twice
 as much. At Halcyon Station these two are the game's prices; every other dock has its own in its own file, and `fuel` is the price at its pump. `accent` and the welcome, shop, services and bar sections are checked but not read yet. Numbers and words are separate: JUNO and MOSS still say "half a credit a point" after you change the price, so change their lines too if you want them to agree.
 
-**The words.** Open `content/text/ui.md`. It is a table of `key | text`: `help.space.5` is the fifth line of the flight Help screen, `tips.space` is the tip under it, `toast.docked` is the line that pops up when you dock.
+**The words.** Open `content/text/ui.md`. It is a table of `key | text`: `help.space.5` is the fifth line of the flight Help screen, `tips.space` is the tip under it, `toast.docked` is the line that pops up when you dock, and `keys.openai.url` is the address of the page Settings > Keys sends you to for an OpenAI key (a pack that changes it is shown as text only unless it is a plain `https://` address).
 Change `toast.docked` to `Docked. Mind the stools.` and dock; press **H** in flight to see the Help screen with `help.space.5` on it. A toast may use placeholders (`{reward}`, `{progress}`, `{count}`, `{name}`); help lines and tips are plain text. `ui.md` lists every key the game reads.
 A file need not hold them all: this whole file, `content/text/words.md`, changes just two lines. **Files are read in name order and the last one to say a key wins**, so your file has to sort after
 `ui.md` (`words.md` does; `my-words.md` would be overridden by `ui.md`). To translate, change the text column in `ui.md` itself, or copy it to a name that sorts after `ui` (`words-fr.md`) and delete the original.
@@ -220,6 +220,15 @@ The galaxy is built from files. `content/systems/<id>.md` is one star system; ea
 | inner | planet | Inner | | | 4000 | 30 | 200 | rock | 3 |
 | outer | planet | Outer | | | 11000 | 210 | 420 | gas | 5 |
 | far-gate | gate | Far gate | 2000 | 6000 | | | 110 | | |
+
+**A moon: a body that goes round another body.** Add a `parent` cell with the id of another row of the same table, and `orbit` and `angle` are measured from that body instead of the sun: a moon round its planet, a dock beside its moon. A parent may have a parent of its own (the dock, its moon, the planet). The order of the rows does not matter.
+
+| id | type | name | x | y | orbit | angle | parent | r | kind | seed |
+|---|---|---|---|---|---|---|---|---|---|---|
+| outer | planet | Outer | | | 11000 | 210 | | 420 | gas | 5 |
+| outer-1 | planet | Outer I | | | 900 | 45 | outer | 60 | ice | 6 |
+
+The game keeps the parent on the body, so when bodies move along their orbits a moon turns with its planet (nothing moves yet), and the minimap draws no ring round the sun for a moon. A row with `x`, `y` and a `parent` is placed at its `x` and `y` and still belongs to that parent. The build refuses a row whose parent is not in the table, goes round itself, or goes round in a circle, and with it any row that went round the refused one. `mods/sol/systems/sol.md` writes every moon and dock this way.
 
 The game spreads an orbit 3 times like every other distance, and the ring the minimap draws for the body is that orbit. The build tells you when a row gives neither way, gives `x` without `y`, or has an orbit that would put the body outside the system's `size`; with both ways in one row, `x` and `y` are used and it says the orbit is ignored. The shipped systems are written with `x` and `y`; `content/_templates/system.md` has two rows written by orbit.
 
@@ -353,7 +362,7 @@ Under `##` headings (the text before the first heading is the description, up to
 | `## Progress rescued` | text, up to 400 characters |
 | `## Steps` | a list, one `- item` a line, each up to 80 characters |
 | `## Failure` | text, up to 240 characters |
-| `## Pickets` | a table: `x`* (whole number from 0 to 200000); `y`* (whole number from 0 to 200000) |
+| `## Pickets` | a table: `x`* (whole number from 0 to 1000000); `y`* (whole number from 0 to 1000000) |
 
 #### `npc`  (folder `content/npcs/`)
 
@@ -519,14 +528,14 @@ No placeholders.
 | `name`* | text, up to 40 characters | its name |
 | `kind`* | one of: `home`, `outpost`, `trade`, `mining`, `volcanic`, `wild`, `graveyard`, `nest` | what kind of place |
 | `ly` | list in square brackets, exactly 2: numbers from -1000 to 1000 | galaxy map position [x, y], light years |
-| `size` | whole number from 4000 to 200000 | world size, px |
+| `size` | whole number from 4000 to 1000000 | world size, px |
 | `danger` | whole number from 0 to 5 | 0 to 5: how many pirates |
 | `traffic` | whole number from 0 to 3 | 0 to 3: how busy |
 | `pay` | number from 0.1 to 5 |  |
 | `seed` | whole number from 0 to 2147483647 | the random seed |
 | `starType` | one of: `O`, `B`, `A`, `F`, `G`, `K`, `M` | the star: O, B, A, F, G, K or M (the sun you can fly to, and the tint of the sky) |
-| `starX` | whole number from 0 to 200000 | where the star is, px |
-| `starY` | whole number from 0 to 200000 | where the star is, px |
+| `starX` | whole number from 0 to 1000000 | where the star is, px |
+| `starY` | whole number from 0 to 1000000 | where the star is, px |
 | `pirateMax` | whole number from 1 to 40 | its own pirate table: at most this many at once |
 | `pirateEvery` | whole number from 1000 to 600000 | its own pirate table: one new pirate every this many ms |
 
@@ -534,7 +543,7 @@ Under `##` headings (the text before the first heading is the description, up to
 
 | Heading | Holds |
 |---|---|
-| `## Bodies` | a table: `id`* (an id: a-z, 0-9, dashes); `type`* (one of: `station`, `planet`, `belt`, `poi`, `scenery`, `gate`); `name` (text, up to 40 characters); `x` (whole number from 0 to 200000); `y` (whole number from 0 to 200000); `orbit` (number from 0 to 200000); `angle` (number from -360 to 360); `art` (one of: `station`, `outpost`, `planet`, `hub`, `foundry`, `nest`, `derelict`); `r` (whole number from 10 to 5000); `rocks` (whole number from 0 to 200); `landable` (yes or no); `kind` (one of: `rock`, `ice`, `gas`, `lava`, `ringed`, `wreck`, `beacon`); `seed` (whole number from 0 to 2147483647); `look` (one of: `hub`, `foundry`, `nest`, `derelict`); `labelDy` (whole number from -3000 to 3000); `credits` (whole number from 0 to 100000); `hull` (whole number from 0 to 100); `guard` (whole number from 0 to 6); `note` (text, up to 160 characters) |
+| `## Bodies` | a table: `id`* (an id: a-z, 0-9, dashes); `type`* (one of: `station`, `planet`, `belt`, `poi`, `scenery`, `gate`); `name` (text, up to 40 characters); `x` (whole number from 0 to 1000000); `y` (whole number from 0 to 1000000); `orbit` (number from 0 to 1000000); `angle` (number from -360 to 360); `parent` (an id: a-z, 0-9, dashes); `art` (one of: `station`, `outpost`, `planet`, `hub`, `foundry`, `nest`, `derelict`); `r` (whole number from 10 to 5000); `rocks` (whole number from 0 to 200); `landable` (yes or no); `kind` (one of: `rock`, `ice`, `gas`, `lava`, `ringed`, `wreck`, `beacon`); `seed` (whole number from 0 to 2147483647); `look` (one of: `hub`, `foundry`, `nest`, `derelict`); `labelDy` (whole number from -3000 to 3000); `credits` (whole number from 0 to 100000); `hull` (whole number from 0 to 100); `guard` (whole number from 0 to 6); `note` (text, up to 160 characters) |
 | `## Pirates` | a table: `kind`* (one of: `raider`, `drone`, `gunship`); `weight`* (number from 0 to 1) |
 
 #### `voice`  (folder `content/voice/`)

@@ -27,6 +27,8 @@ g.run(`
   function __take(id, system) { G.missionId = id; G.mission = 'accepted'; G.missionProgress = 0; G.system = system; G.deep = null; }
   // every charted star, so the panel has the jump rows the galaxy has
   G.known = Object.keys(SYSTEMS);
+  // the explorer (range 18): every call has a way there, so the loops below see the plotted jumps; the ship that cannot is tests/routeplot.mjs
+  G.fleet = [newShip('pathfinder')]; G.active = 0;
 `);
 
 const KINDS = ['rescue', 'escort', 'patrol', 'bounty', 'courier', 'haul', 'salvage', 'survey'];
@@ -43,9 +45,10 @@ for (const c of calls) {
   g.run(`__take('${c.id}', '${from}')`);
   const r = J(`(() => { const s = __scene(), st = missionStep(), m = navpanelMission(s), rows = navpanelRows([], navpanelJumps(s), m), row = rows.find(r => r.mission);
     return { step: st, m, row: row && { kind: row.kind, id: row.id, group: row.group, first: rows[0] === row }, hint: row ? navpanelHint(row, false, '') : '', job: navpanelJob(), next: hudMission(s, 'Space').next, far: !!missionFar() }; })()`);
-  const name = J(`callSysName('${c.goal}')`);
-  check(`${c.id}: "${r.step && r.step.text}"`, !!r.step && r.step.kind === 'jump' && r.step.system === c.goal && r.step.text.startsWith('Jump to ' + name + ': press G, then ') && !/undefined|null|\n/.test(r.step.text), JSON.stringify(r.step));
-  check(`${c.id}: the panel's first row is that star, and Enter opens the galaxy map there`, !!r.row && r.row.kind === 'jump' && r.row.id === c.goal && r.row.group === 'mission' && r.row.first && r.hint === 'Enter  open the galaxy map at ' + name, JSON.stringify(r.row) + ' ' + r.hint);
+  const name = J(`callSysName('${c.goal}')`), hop = r.step && r.step.hop, hopName = hop ? J(`callSysName('${hop}')`) : '';
+  const start = r.step && (r.step.hops === 1 ? 'Jump to ' + name + ': press G, then ' : 'Jump 1 of ' + r.step.hops + ': ' + hopName + ', ');
+  check(`${c.id}: "${r.step && r.step.text}"`, !!r.step && r.step.kind === 'jump' && r.step.system === c.goal && !!hop && r.step.text.startsWith(start) && !/undefined|null|\n/.test(r.step.text), JSON.stringify(r.step));
+  check(`${c.id}: the panel's first row is the next jump (${hopName}), and Enter opens the galaxy map there`, !!r.row && r.row.kind === 'jump' && r.row.id === hop && r.row.group === 'mission' && r.row.first && r.hint === 'Enter  open the galaxy map at ' + hopName, JSON.stringify(r.row) + ' ' + r.hint);
   check(`${c.id}: the job line and the checklist say the same sentence`, r.job === 'JOB  ' + r.step.text && r.next === r.step.text, r.job + ' | ' + r.next);
 }
 

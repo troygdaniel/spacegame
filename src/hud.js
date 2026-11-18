@@ -323,7 +323,7 @@ function hudMission(s, key) {
   if (st === 'failed') return { kind: 'failed', head: 'MISSION FAILED', next: m.line('failed') };
   const row = HUD_MISSIONS[m.id], sub = missionWhere(m); // the place and its star system
   // in space, a call whose place is in another system says the jump first, in the words the navigation panel pins (missionStep, src/missions.js)
-  const step = key === 'Space' ? missionStep() : null, far = step && step.kind === 'jump' ? step.text : '';
+  const step = key === 'Space' ? missionStep() : null, far = step && step.system ? step.text : ''; // the jump first, or why this ship cannot get there
   if (!row) return { kind: 'active', head: m.title, sub, reward: callReward(m), next: far || m.line(st) };
   const at = row.cur(s, key), cur = Math.min(at, row.steps.length - 1); // a content file may list fewer steps than the code counts
   return {
@@ -337,6 +337,17 @@ function hudMission(s, key) {
 function hudFitSub(sub, room, size) {
   const max = Math.floor(room / (size * 0.6)); sub = String(sub || '');
   return sub.length <= max ? sub : max >= 4 ? sub.slice(0, max - 2).replace(/[ ,]+$/, '') + '..' : '';
+}
+
+// the box of the navigation panel's parts that are showing, as a zone the edge arrow keeps out of; null when none is (pure on the shape of s.np)
+function hudNavZone(s, box) {
+  const np = s && s.np; if (!np) return null;
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  [np.jobBg, np.pinBg, np.bg].forEach(o => {
+    if (!o || !o.visible) return;
+    const b = box ? o.getBounds(box) : o.getBounds(); x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.right); y1 = Math.max(y1, b.bottom);
+  });
+  return x1 < x0 ? null : { x0: x0 - 4, y0, x1: x1 + 4, y1, inboard: true };
 }
 
 // a small key cap
@@ -457,7 +468,7 @@ function hudOrreryModel(sys, me, R) {
   const out = bodies.map(b => {
     const d = Math.hypot(b.x - c.x, b.y - c.y), r = d * sc;
     if (r > 4 && !rings.some(q => Math.abs(q - r) < 2.5)) rings.push(r); // bodies at nearly the same distance share a circle
-    return { id: b.id, type: b.type, name: b.name || '', x: b.x, y: b.y, d };
+    return { id: b.id, type: b.type, name: b.name || '', x: b.x, y: b.y, d, parent: b.parent };
   });
   return { c, star: !!(sys.star && ok(sys.star.x)), far, sc, rings, bodies: out, name: sys.name || '' };
 }
@@ -522,7 +533,8 @@ function hudMapArc(sx, sy, r, R) {
 function hudMapRings(m) {
   const out = [];
   if (!m.star) return out;
-  (m.bodies || []).map(b => b.d).filter(d => d > 0).sort((a, b) => a - b).forEach(d => { if (!out.length || d > out[out.length - 1] * 1.03) out.push(d); });
+  (m.bodies || []).filter(b => !b.parent).map(b => b.d).filter(d => d > 0) // a body that goes round another (a moon, its dock) has no ring round the sun
+   .sort((a, b) => a - b).forEach(d => { if (!out.length || d > out[out.length - 1] * 1.03) out.push(d); });
   return out;
 }
 // a distance for a rim marker, short: 86 km, 1,240 km, 12k km
@@ -614,7 +626,7 @@ function hudRadar(h, s, key, obj, now) {
     const nav = s.cr && s.cr.target; // the nav target: a cyan ring (the mission's goal is the amber one below)
     if (nav && isFinite(nav.x) && isFinite(nav.y)) { const q = rimMark('rm1', nav.x, nav.y, CYAN, '#9fe9ff'); if (!q.out) { g.lineStyle(1.5, CYAN, 0.9); hudRing(g, cx + q.x, cy + q.y, 6.5); } }
   } else if (key === 'Space') {
-    if (!s.station.nowhere) mark(pt(s.station.x, s.station.y, true), CYAN, p => hudDiamond(g, p.x, p.y, 5, CYAN));
+    (s.docks || (s.station.nowhere ? [] : [{ obj: s.station }])).forEach(k => mark(pt(k.obj.x, k.obj.y, true), CYAN, p => hudDiamond(g, p.x, p.y, 5, CYAN))); // every dock of the system (src/space.js)
     if (!s.planet.nowhere) mark(pt(s.planet.x, s.planet.y, true), AMBER, p => { g.fillStyle(AMBER, 1); hudDisc(g, p.x, p.y, 5); });
     s.enemies.getChildren().forEach(d => { if (d.active) dot(d.x, d.y, d.wanted ? AMBER : (d.def && d.def.radar) || RED, d.wanted ? 3 : d.def && d.def.key === 'gunship' ? 3 : 2.2); });
   } else {
@@ -805,6 +817,7 @@ function hudEdge(h, sx, sy) {
     const m = 28, up = p.side === 'T' ? 56 : m; // an arrow on the top edge has its words below it
     if (p.x <= z.x0 - m || p.x >= z.x1 + m || p.y <= z.y0 - up || p.y >= z.y1 + m) return;
     if (p.side === 'T') p.x = z.x0 <= 24 ? z.x1 + 28 : z.x1 >= W - 24 ? z.x0 - 28 : (p.x - z.x0 < z.x1 - p.x ? z.x0 - 28 : z.x1 + 28);
+    else if (p.side === 'L' && z.inboard) p.x = z.x1 + 28; // the navigation panel is a tall column on the left: the arrow keeps its height and moves in beside it (sliding it down put it on the panel's rows: first look)
     else if (p.side === 'L' || p.side === 'R') p.y = z.y1 + 28;
   });
   return p;
@@ -905,6 +918,7 @@ function hudTick(s) {
   if (space) hudAssist(h, s);
   if (space || surf) hudWarn(h, s, now, key, h.near, h.engage);
   h.zones.push({ x0: 430, y0: 0, x1: 850, y1: 50 });
+  const npz = hudNavZone(s, h.box); if (npz) h.zones.push(npz); // the navigation panel (src/navpanel.js): its job line, pinned destination and list, whichever are up
   // toasts (depth 299 and up) are zones too, for as long as they are up
   s.children.list.forEach(o => {
     if (o.depth < 299 || !o.visible || o.alpha < 0.05 || (o.type !== 'Text' && o.type !== 'Rectangle')) return;

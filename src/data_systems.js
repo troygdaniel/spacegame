@@ -21,7 +21,7 @@
 // repair and ore are left out of its row: they are the constants REPAIR_PRICE and ORE_PRICE, which its file sets through src/contenttables.js.
 // What a row has beyond the old code rows: description, the system's seed, and on a station body `about` (the words for the Station scene).
 const SYSTEM_ORDER = ['halcyon', 'kestrel', 'meridian', 'brass', 'hollow', 'lethe', 'ember', 'roost']; // the order the lists show the shipped systems in; a new file comes after them
-const SYS_BODY_KEYS = ['name', 'x', 'y', 'art', 'r', 'rocks', 'landable', 'kind', 'seed', 'look', 'labelDy', 'credits', 'hull', 'guard', 'note'];
+const SYS_BODY_KEYS = ['name', 'x', 'y', 'parent', 'art', 'r', 'rocks', 'landable', 'kind', 'seed', 'look', 'labelDy', 'credits', 'hull', 'guard', 'note'];
 const sysHas = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
 function sysDockFrom(st) {
   const d = {};
@@ -33,18 +33,26 @@ function sysDockFrom(st) {
   ['partMult', 'fee', 'salvageMult'].forEach(k => { if (st[k] !== undefined) d[k] = st[k]; });
   return d;
 }
-// Where a body is (card space-game-orbit-fields-in-files). A row of the Bodies table gives x and y, or leaves them empty and gives its orbit:
-// `orbit` units from the sun (the middle of the system when it has none), at `angle` degrees round it clockwise from north (0 north, 90 east,
-// 180 south, 270 west: the minimap is north up, and y grows downward in the world). f: the system's own fields. The game only ever reads x and y:
-// sysOrbit (src/universe.js) works the ring back out from them, so a body written either way is the same body. null: the row says neither.
-function sysPlace(row, f) {
+// Where a body is (cards space-game-orbit-fields-in-files, space-game-bodies-orbit-a-body). A row of the Bodies table gives x and y, or leaves them
+// empty and gives its orbit: `orbit` units from what it goes round, at `angle` degrees round it clockwise from north (0 north, 90 east, 180 south,
+// 270 west: the minimap is north up, and y grows downward in the world). What it goes round is its `parent`, another row of the same table by id (a
+// moon round its planet, a dock round its moon), or with no parent the sun (the middle of the system when it has none). f: the system's own fields;
+// rows: its Bodies table, to find a parent in. The game reads x and y, and keeps `parent` on the body: sysOrbit (src/universe.js) works the ring back
+// out round the parent, so a moon turns with its planet when bodies move. null: the row says neither way, or its parent cannot be placed.
+function sysPlace(row, f, rows, depth) {
   if (row.x !== undefined && row.y !== undefined) return { x: row.x, y: row.y };
   if (row.orbit === undefined) return null;
-  const star = !!f && f.starX !== undefined && f.starY !== undefined, cx = star ? f.starX : ((f && f.size) || 0) / 2, cy = star ? f.starY : ((f && f.size) || 0) / 2, a = (row.angle || 0) * Math.PI / 180;
-  return { x: Math.round(cx + Math.sin(a) * row.orbit), y: Math.round(cy - Math.cos(a) * row.orbit) };
+  const star = !!f && f.starX !== undefined && f.starY !== undefined, a = (row.angle || 0) * Math.PI / 180;
+  let c = { x: star ? f.starX : ((f && f.size) || 0) / 2, y: star ? f.starY : ((f && f.size) || 0) / 2 };
+  if (row.parent !== undefined) {
+    const par = (rows || []).find(r => r && r.id === row.parent);
+    c = par && par !== row && (depth || 0) < 8 ? sysPlace(par, f, rows, (depth || 0) + 1) : null;
+    if (!c) return null;
+  }
+  return { x: Math.round(c.x + Math.sin(a) * row.orbit), y: Math.round(c.y - Math.cos(a) * row.orbit) };
 }
 function sysBodyFrom(row, sysId, W, home) {
-  const b = { id: row.id, type: row.type }, at = sysPlace(row, W && W.system && W.system[sysId]);
+  const f = W && W.system && W.system[sysId], b = { id: row.id, type: row.type }, at = sysPlace(row, f, f && f.bodies);
   SYS_BODY_KEYS.forEach(k => { const v = at && (k === 'x' || k === 'y') ? at[k] : row[k]; if (v !== undefined) b[k] = v; });
   if (row.type === 'poi' && sysHas(W.poi, row.id)) { // a site with its own file is paid from it; the row only says where
     const f = W.poi[row.id];

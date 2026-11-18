@@ -61,7 +61,28 @@ function galaxyChart(rec) {
   if (!here) return added;
   const range = shipStat('range', rec || activeShip());
   galaxySystems().forEach(s => { if (!G.known.includes(s.id) && galaxyLy(here, s) <= range + 1e-9) { G.known.push(s.id); added.push(s); } });
+  // the system the open call names is charted too: a call to Reaver's Roost that left the Roost a "?" gave the player nothing to plot a route to (card space-game-route-plotter)
+  const goal = typeof missionGoalSystem === 'function' ? missionGoalSystem() : null, row = goal ? galaxyFind(goal) : null;
+  if (row && !G.known.includes(goal)) { G.known.push(goal); added.push(row); }
   return added;
+}
+
+// ---------- the route to the picked star (card space-game-route-plotter) ----------
+// galaxyPlan(hereId, selId, rec): the plotted trip to the star you picked, for the card, the lines on the map and Enter. Pure apart from reading the ship.
+//   ok       a chain of jumps this ship can fly exists (hops: [{ id, ly, fuel, fill }], n of them); next is the system Enter jumps to, the FIRST hop
+//   !ok      none does: hops is the chain that would work with a bigger range or tank, line says why in plain words and what fixes it (src/missions.js routeCheck)
+//   none     a star the game has no system for (res null): the old rules, Enter jumps to the pick itself
+// title / detail: what the card says for a chain of two or more jumps ("JUMP 1 OF 2: KESTREL, 6.3 LY"); one jump keeps the card's JUMP READY
+function galaxyPlan(hereId, selId, rec) {
+  const real = id => typeof SYSTEMS !== 'undefined' && Object.prototype.hasOwnProperty.call(SYSTEMS, id) && !!SYSTEMS[id].ly;
+  const none = { res: null, ok: false, hops: [], n: 0, next: selId, title: '', detail: '', line: '' };
+  if (!selId || hereId === selId || !real(hereId) || !real(selId) || typeof routeCheck !== 'function') return none;
+  const way = routeCheck(hereId, selId, rec), nm = id => (galaxyFind(id) || { name: id }).name, hops = way.res.hops || [];
+  if (!way.res.ok) return { res: way.res, ok: false, hops, n: hops.length, next: selId, title: '', detail: '', line: way.line };
+  const h = hops[0], rest = hops.slice(1).map(x => nm(x.id) + ', ' + fmtLy(x.ly) + ' ly').join(', then ');
+  return { res: way.res, ok: true, hops, n: hops.length, next: h.id, line: '',
+    title: hops.length > 1 ? 'JUMP 1 OF ' + hops.length + ': ' + nm(h.id).toUpperCase() + ', ' + fmtLy(h.ly) + ' LY' : '',
+    detail: (hops.length > 1 ? 'Enter jumps there, then ' + rest + '.' : '') + (h.fill ? (hops.length > 1 ? ' ' : '') + 'Fill up at the pump in ' + nm(hereId) + ' first.' : '') };
 }
 // can the ship fly from a to b (system rows from galaxySystems)? Same rules and same answer shape as jumpCheck in src/fuel.js, which only knows the systems in SYSTEMS.
 function galaxyJump(a, b, rec) {
@@ -205,9 +226,10 @@ class Galaxy extends Phaser.Scene {
   // Enter: only when card u-b4 handed us an onJump and the ship can make this jump
   go() {
     if (!this.onJump || this.sel === this.here.id) return beep(180, 0.08, 'square', 0.03);
-    const j = galaxyJump(this.here, galaxyFind(this.sel), this.rec);
+    const pl = this.plan, next = pl && pl.ok && pl.next ? pl.next : this.sel; // a plotted chain: Enter jumps the next hop of it, not the far star
+    const j = galaxyJump(this.here, galaxyFind(next), this.rec);
     if (!j.ok) return beep(180, 0.12, 'square', 0.03);
-    this.onJump(this.sel, j);
+    this.onJump(next, j);
   }
   close() {
     if (this.closing) return; this.closing = true;
@@ -246,16 +268,40 @@ class Galaxy extends Phaser.Scene {
     if (s.note) T(20, y, s.note, 13, '#8fb4c9', { oy: 0, style: { wordWrap: { width: cardW - 40 }, lineSpacing: 3 } });
     if (typeof missionGoalSystem === 'function' && missionGoalSystem() === s.id) T(20, ch - 126, 'YOUR CALL IS HERE: ' + (missionDef() || {}).title, 12, '#6dff9c', { style: { letterSpacing: 1 } }); // src/missions.js
     // the verdict, at the foot of the card
-    const by = ch - 98, ok = !here && j.ok, msg = here ? ['AT HOME BASE', '#ffd37a', 'Pick another star.']
+    // the plotted trip to this star (galaxyPlan): a chain of two or more jumps says the first, a trip this ship cannot make says why, in plain words, and what fixes it
+    const pl = this.plan = here ? null : galaxyPlan(this.here.id, this.sel, this.rec), chain = !!pl && pl.ok && pl.n > 1, hopJ = chain ? galaxyJump(this.here, galaxyFind(pl.next), this.rec) : null;
+    const stuck = !!pl && !pl.ok && !!pl.line && !!pl.res, by = ch - 98, ok = !here && (chain ? hopJ.ok : !stuck && j.ok);
+    const msg = here ? ['AT HOME BASE', '#ffd37a', 'Pick another star.']
+      : stuck ? [pl.res.why === 'fuel' ? 'TANK TOO SMALL' : 'OUT OF RANGE BY ' + fmtLy(pl.res.over) + ' LY', '#ff4d6d', pl.line]
+      : chain && hopJ.ok ? [pl.title, '#6dff9c', pl.detail]
+      : chain ? ['SHORT BY ' + fmtFuel(hopJ.short) + ' UNITS', '#ffb454', this.here.pump ? 'Fill up at the pump here first.' : 'There is no pump here: you need fuel from somewhere else.']
       : j.why === 'range' ? ['OUT OF RANGE BY ' + fmtLy(j.over) + ' LY', '#ff4d6d', 'You reach ' + fmtLy(j.range) + ' ly. A courier, an explorer or an engine part goes further.']
       : j.why === 'fuel' ? ['SHORT BY ' + fmtFuel(j.short) + ' UNITS', '#ffb454', this.here.pump ? 'Fill up at the pump here first.' : 'There is no pump here: you need fuel from somewhere else.']
       : ['JUMP READY', '#6dff9c', this.onJump ? 'Press Enter to jump.' : 'Jumps start from space: launch, then press G.'];
     const vc = parseInt(msg[1].slice(1), 16);
     g.fillStyle(here ? 0x2a1a06 : vc, here ? 0.5 : 0.14); g.fillRect(cx + 12, cy + by - 8, cardW - 24, 90); g.lineStyle(2, vc, 0.9); g.strokeRect(cx + 12, cy + by - 8, cardW - 24, 90); g.fillStyle(vc, 1); g.fillRect(cx + 12, cy + by - 8, 5, 90);
-    T(28, by + 10, msg[0], 15, msg[1], { style: { fontStyle: 'bold', letterSpacing: 1 } });
-    T(28, by + 32, msg[2], 12, '#cfefff', { oy: 0, style: { wordWrap: { width: cardW - 56 } } });
-    this.ui.setHints([['←↑↓→', 'Choose a star'], ['Tab', 'Next star'], ['Esc', 'Close']].concat(this.onJump ? [['Enter', 'Jump']] : []));
-    this.verdict = ok ? 'ok' : here ? 'here' : j.why;
+    const head = T(28, by + 10, msg[0], 15, msg[1], { style: { fontStyle: 'bold', letterSpacing: 1 } });
+    if (head.width > cardW - 44) head.setScale((cardW - 44) / head.width); // "JUMP 1 OF 2: KESTREL, 6.3 LY" is wider than the card at full size
+    T(28, by + 32, msg[2], msg[2].length > 80 ? 11 : 12, '#cfefff', { oy: 0, style: { wordWrap: { width: cardW - 56 } } });
+    this.ui.setHints([['←↑↓→', 'Choose a star'], ['Tab', 'Next star'], ['Esc', 'Close']].concat(this.onJump ? [['Enter', chain ? 'Jump 1 of ' + pl.n : 'Jump']] : []));
+    this.verdict = ok ? 'ok' : here ? 'here' : stuck ? (pl.res.why === 'fuel' ? 'fuel' : 'range') : chain ? hopJ.why : j.why;
+  }
+
+  // the chain to the pick: a line for each hop (green when this ship can fly it, red for a jump longer than its range) and a number on each star it stops at.
+  // Returns how many numbers it set. The stars of the chain need not be charted: their places come from the map's own projection.
+  drawChain(g, pl, range, here) {
+    let px = here.x, py = here.y, k = 0;
+    pl.hops.forEach((h, i) => {
+      const s = galaxyFind(h.id), [x, y] = s ? this.px(s) : [px, py], long = h.ly > range + 1e-9, c = long ? 0xff4d6d : pl.ok ? 0x6dff9c : AMBER;
+      const len = Math.hypot(x - px, y - py), n = Math.max(2, Math.floor(len / 10));
+      g.lineStyle(i === 0 ? 3 : 2, c, 0.95);
+      for (let d = 0; d < n; d += long ? 2 : 1) g.lineBetween(px + (x - px) * d / n, py + (y - py) * d / n, px + (x - px) * (d + 1) / n, py + (y - py) * (d + 1) / n);
+      g.fillStyle(0x050c18, 0.95); g.fillCircle(x, y - 24, 9); g.lineStyle(2, c, 1); g.strokeCircle(x, y - 24, 9);
+      if (!this.chainMarks[i]) { this.chainMarks[i] = this.add.text(0, 0, '', uiFont(12, '#e8f6ff', { fontStyle: 'bold' })).setOrigin(0.5); this.box.add(this.chainMarks[i]); }
+      this.chainMarks[i].setText(String(i + 1)).setPosition(x, y - 24); k++;
+      px = x; py = y;
+    });
+    return k;
   }
 
   // ---- every frame: the links, the range ring, the line to the pick, and the glow of each star ----
@@ -278,8 +324,11 @@ class Galaxy extends Phaser.Scene {
       g.beginPath(); g.arc(here.x, here.y, rr, a0, a1); g.strokePath();
     }
     // the line from you to the pick, coloured by what the verdict is, with its length on it
-    const sel = this.nodes[this.sel];
-    if (this.sel !== this.here.id) {
+    const sel = this.nodes[this.sel], pl = this.plan;
+    this.chainMarks = this.chainMarks || [];
+    const marks = (pl && this.sel !== this.here.id && pl.hops.length > 1) ? this.drawChain(g, pl, range, here) : 0; // a plotted chain of two or more jumps: numbered hops, not the one straight line
+    this.chainMarks.forEach((m, i) => m.setVisible(i < marks));
+    if (this.sel !== this.here.id && !marks) {
       const c = this.verdict === 'ok' ? 0x6dff9c : this.verdict === 'fuel' ? AMBER : 0xff4d6d, len = Math.hypot(sel.x - here.x, sel.y - here.y), n = Math.max(2, Math.floor(len / 10));
       g.lineStyle(2, c, 0.9);
       for (let i = 0; i < n; i += 2) g.lineBetween(here.x + (sel.x - here.x) * i / n, here.y + (sel.y - here.y) * i / n, here.x + (sel.x - here.x) * (i + 1) / n, here.y + (sel.y - here.y) * (i + 1) / n);

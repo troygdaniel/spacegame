@@ -252,28 +252,88 @@ function missionsOffered(station) {
 //   missionsBoard(station)          every posted call with its reach: [{ m, reach }]
 //   missionCanAccept(m, station)    may the board take it
 const missionReachSystem = m => (m.carry ? callSystemOf(m.to) : (m.system || 'halcyon')); // the system a call sends you to
+
+// ---- the way there, in plain words (card space-game-route-plotter) ----
+// Troy had a call to Reaver's Roost, flew a Wren (jumps 8) and nothing said the Roost is 12.2 ly from its nearest neighbour, or what would get him there.
+//   routeFrom(from, to, rec)      jumpRoute (src/jump.js) with this ship's range, tank and the fuel it holds: the plan of one trip, one way
+//   routeNeed(test, rec, why)     what would make `test(ship)` true: { kind: 'part', part, tier, name, price } or { kind: 'ship', model, name, price, where }, or null
+//   routeSay(res, rec, need)      the one plain sentence for a trip that cannot be flown: the jump that is too long and what the ship does, then what fixes it, by name,
+//                                 price and where to buy it ("Needs a 12.2 ly jump: your Wren does 8. The Kite at the Halcyon yard does 14, 4,500 cr.")
+//   routeCheck(from, to, rec)     { res, line, need }: the plan and, when it cannot be flown, the sentence
+const lyWords = v => String(Math.round(v * 10) / 10);
+const routeA = v => (/^(8|11|18)/.test(lyWords(v)) ? 'an ' : 'a ') + lyWords(v); // "a 12.2 ly jump", "an 8.2 ly jump"
+const routePart = slot => { const n = PARTS[slot].name; return n.charAt(0) + n.slice(1).toLowerCase(); } // ENGINE -> Engine
+const routeShipName = rec => (SHIP_MODELS[rec.model] || { name: rec.name || rec.model }).name;
+function routeFrom(from, to, rec) {
+  rec = rec || activeShip();
+  return jumpRoute(from, to, shipStat('range', rec), shipStat('tank', rec), shipStat('fuelPerLy', rec), rec === activeShip() ? fuelHave(rec) : undefined);
+}
+// the yard that sells a ship model: the one in the system you are in when it is there, else the first one the galaxy has; null when nothing sells it
+function routeYard(model) {
+  let found = null;
+  Object.keys(SYSTEMS).forEach(sid => sysBodies('station', sid).forEach(b => {
+    if (stationYard(b.id).includes(model) && (!found || (sid === G.system && found.system !== G.system))) found = { system: sid, station: b.id };
+  }));
+  return found;
+}
+function routeNeed(test, rec, why) {
+  const stat = why === 'fuel' ? 'tank' : 'range', fit = (part, tier) => Object.assign({}, rec, { parts: Object.assign({}, rec.parts, { [part]: tier }) });
+  let need = null;
+  (why === 'fuel' ? ['tank', 'engine'] : ['engine', 'tank']).forEach(part => {
+    const top = PARTS[part].prices.length;
+    for (let tier = (rec.parts[part] | 0) + 1; tier <= top && !need; tier++) { const r = fit(part, tier); if (test(r)) need = { kind: 'part', part, tier, name: routePart(part) + ' tier ' + tier, price: partPrice(part, tier, rec.model, {}), stat, value: shipStat(stat, r) }; }
+  });
+  if (!need) {
+    const ship = Object.values(SHIP_MODELS).filter(s => s.side === 'player' && s.id !== rec.model).sort((a, b) => a.price - b.price).find(s => test(newShip(s.id)));
+    if (ship) need = { kind: 'ship', model: ship.id, name: ship.name, price: ship.price, where: routeYard(ship.id), stat, value: shipStat(stat, newShip(ship.id)) };
+  }
+  return need;
+}
+// what fixes it, by name, price and where to buy it: " The Kite at the Halcyon yard does 14, 4,500 cr." (fuel: true says holds, and fuel for a part)
+function routeFix(need, fuel, rec) {
+  if (!need) return ' No ship on sale does it yet.';
+  const price = hudFmt(need.price) + ' cr.';
+  if (need.kind === 'ship') return ' The ' + need.name + (need.where ? ' at the ' + callSysName(need.where.system) + ' yard' : '') + (fuel ? ' holds ' : ' does ') + lyWords(need.value) + ', ' + price;
+  return ' ' + need.name + ' at any shop: ' + lyWords(need.value) + (fuel ? ' fuel' : ' ly') + ', ' + price;
+}
+function routeSay(res, rec, need) {
+  if (res.why !== 'range' && res.why !== 'fuel') return 'No route charted to there yet.';
+  const name = routeShipName(rec), fuel = res.why === 'fuel', own = shipStat(fuel ? 'tank' : 'range', rec);
+  return (fuel ? 'Needs ' + lyWords(res.needTank) + ' fuel between pumps: your ' + name + ' holds ' + lyWords(own) + '.'
+    : 'Needs ' + routeA(res.bottleneck) + ' ly jump: your ' + name + ' does ' + lyWords(own) + '.') + routeFix(need, fuel, rec);
+}
+function routeCheck(from, to, rec) {
+  rec = rec || activeShip();
+  const res = routeFrom(from, to, rec);
+  if (res.ok) return { res, line: '', need: null };
+  if (res.why === 'fuel' && jumpRoute(from, to, shipStat('range', rec), shipStat('tank', rec), shipStat('fuelPerLy', rec)).ok) // it is the fuel you hold, not the tank: fill up
+    return { res, line: 'Low on fuel: you hold ' + lyWords(fuelHave(rec)) + ' units and the trip needs more. Dock and fill up at a pump' + (fuelSystemHasPump(from) ? '' : ', or call the fuel ranger (F)') + '.', need: null };
+  const need = res.why === 'none' ? null : routeNeed(r => jumpRoute(from, to, shipStat('range', r), shipStat('tank', r), shipStat('fuelPerLy', r)).ok, rec, res.why);
+  return { res, line: routeSay(res, rec, need), need };
+}
 function missionReach(m, station, rec) {
   rec = rec || activeShip();
   const from = callSystemOf(station || G.lastDock), to = missionReachSystem(m);
   const test = r => jumpReach(from, to, shipStat('range', r), shipStat('tank', r), shipStat('fuelPerLy', r));
   const res = test(rec);
   if (res.ok) return res;
-  const fit = (part, tier) => Object.assign({}, rec, { parts: Object.assign({}, rec.parts, { [part]: tier }) });
-  let need = null;
-  (res.why === 'fuel' ? ['tank', 'engine'] : ['engine', 'tank']).forEach(part => {
-    const top = PARTS[part].prices.length;
-    for (let tier = (rec.parts[part] | 0) + 1; tier <= top && !need; tier++) if (test(fit(part, tier)).ok) need = { kind: 'part', part, tier, name: PARTS[part].name + ' tier ' + tier };
-  });
-  if (!need) {
-    const ship = Object.values(SHIP_MODELS).filter(s => s.side === 'player' && s.id !== rec.model).sort((a, b) => a.price - b.price).find(s => test(newShip(s.id)).ok);
-    if (ship) need = { kind: 'ship', model: ship.id, name: ship.name };
-  }
-  const head = res.why === 'fuel' ? 'Not enough tank for the trip' : 'Out of jump range for this ship';
-  const line = head + (need ? (need.kind === 'part' ? ': ' + need.name + ' reaches it.' : ': the ' + need.name + ' reaches it.') : '.');
+  // the words: the one-way plan on a full tank says which jump is too long (or which stretch of fuel); when only the way home is the trouble it is the tank
+  const full = r => jumpRoute(from, to, shipStat('range', r), shipStat('tank', r), shipStat('fuelPerLy', r)), one = full(rec);
+  let need, line;
+  if (!one.ok && one.why !== 'none') { need = routeNeed(r => full(r).ok && test(r).ok, rec, one.why); line = routeSay(one, rec, need); }
+  else { need = routeNeed(r => test(r).ok, rec, 'fuel'); line = 'Needs a bigger tank for the round trip: your ' + routeShipName(rec) + ' holds ' + lyWords(shipStat('tank', rec)) + '.' + routeFix(need, true, rec); }
   return Object.assign(res, { line, need });
 }
 function missionsBoard(station) { return missionsOffered(station).map(m => ({ m, reach: missionReach(m, station) })); }
 function missionCanAccept(m, station) { return !!m && missionReach(m, station).ok; }
+// the board's accept: the call is taken only if the ship you fly NOW can reach it (the board's own flag is from when the card was chosen; a ship switch, a stale
+// board or a second way in must not get round it). Returns true when it was taken.
+function missionTryAccept(m, station) {
+  m = m || missionDef();
+  if (!m || !missionCanAccept(m, station)) return false;
+  G.missionId = m.id; G.mission = 'accepted'; missionAccepted();
+  return true;
+}
 // the board calls this when a call is accepted (station.js): a haul loads the freight, which fills the hold
 function missionAccepted() {
   const m = missionDef();
@@ -366,7 +426,13 @@ function missionStep() {
   const st = G.mission, m = st === 'accepted' || st === 'rescued' ? missionDef() : null; if (!m) return null;
   const then = missionThen(m, st), sys = st === 'rescued' ? (m.system || 'halcyon') : callGoal(m).system;
   if (sys === G.system) return Object.assign({ system: null }, then);
-  return { kind: 'jump', system: sys, text: 'Jump to ' + callSysName(sys) + ': press G, then ' + then.text.charAt(0).toLowerCase() + then.text.slice(1) };
+  // the way there for the ship you fly (card space-game-route-plotter): the next jump of the plotted chain, or why this ship cannot get there and what fixes it
+  const way = routeCheck(G.system, sys, activeShip()), low = s => s.charAt(0).toLowerCase() + s.slice(1);
+  if (!way.res.ok) return { kind: 'blocked', system: sys, text: way.line, route: way.res };
+  const hops = way.res.hops, h = hops[0], fill = h.fill ? ' Fill up at ' + callSysName(G.system) + ' first.' : '';
+  if (hops.length === 1) return { kind: 'jump', system: sys, hop: h.id, hops: 1, text: 'Jump to ' + callSysName(sys) + ': press G, then ' + low(then.text) + fill, route: way.res };
+  return { kind: 'jump', system: sys, hop: h.id, hops: hops.length, route: way.res,
+    text: 'Jump 1 of ' + hops.length + ': ' + callSysName(h.id) + ', ' + lyWords(h.ly) + ' ly (press G, then Enter). Then ' + callSysName(sys) + ': ' + low(then.text) + '.' + fill };
 }
 // the where line of the mission board and the checklist: the place, and the star system it is in when the place does not say so itself
 function missionWhere(m) {
@@ -399,7 +465,7 @@ function missionTarget(s) {
   if (m && m.site && G.mission === 'accepted') { const site = sysBodies('poi').find(b => b.id === m.site); return site ? { x: site.x, y: site.y, name: site.name } : null; }
   const pod = missionActive('rescue') && missionHere(m) ? missionBody(m) : null; // the planet the rescue is on (its file's body)
   if (pod) return { x: pod.x, y: pod.y, name: pod.name };
-  const st = sysBody('station'); // a system with no station (Kestrel until card u-b5) has nothing to point at
+  const st = typeof spaceHomeDock === 'function' ? spaceHomeDock() : sysBody('station'); // the dock you launched from (src/space.js); a system with no station has nothing to point at
   return st ? { x: s.station.x, y: s.station.y, name: st.name } : null;
 }
 // a pirate went down: a wanted one counts for the patrol, the Reaver ends the bounty
