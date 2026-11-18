@@ -149,19 +149,23 @@ try {
 
   console.log('the shipped files say what the code says');
   check('worldAt gives the code row for every one of the eight', await E(`worldIds().length === 8 && worldIds().every(i => worldAt(i) === SYSTEMS[i])`));
+  // SYSTEMS is built from the files now (card space-game-systems-from-markdown), so it cannot be the other side of this comparison: the row the files build
+  // is held to the eight rows as the code wrote them on 17 Nov 2026 (tests/fixtures/systems-code-rows.json, the same fixture as tests/systemsfromfiles.mjs)
+  const FIX = JSON.parse(readFileSync(join(ROOT, 'tests', 'fixtures', 'systems-code-rows.json'), 'utf8'));
+  const EXTRA = new Set(['description', 'about', 'seed']); // what a built row has beyond the old code rows: the words and the seed
   const ign = (a, b, path = '') => { // the paths where a and b differ: key order does not matter
     if (a === b) return [];
     if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object' || Array.isArray(a) !== Array.isArray(b)) return [path + ': ' + JSON.stringify(a) + ' vs ' + JSON.stringify(b)];
     const out = [];
     if (Array.isArray(a)) { if (a.length !== b.length) out.push(path + ': ' + a.length + ' items vs ' + b.length); a.forEach((x, i) => out.push(...ign(x, b[i], path + '[' + i + ']'))); return out; }
-    new Set(Object.keys(a).concat(Object.keys(b))).forEach(k => out.push(...ign(a[k], b[k], path + '.' + k)));
+    new Set(Object.keys(a).concat(Object.keys(b))).forEach(k => { if (b[k] === undefined && EXTRA.has(k)) return; out.push(...ign(a[k], b[k], path + '.' + k)); });
     return out;
   };
   for (const id of IDS.filter(i => i !== 'halcyon')) {
-    const files = await J(`worldFromFiles('${id}')`), code = await J(`SYSTEMS.${id}`);
-    delete files.description; files.bodies.forEach(b => { delete b.about; }); // the words are the Station scene's: the files only
-    const d = ign(code, files);
-    check(`${id}: the files and the code row are the same system (${code.bodies.length} bodies)`, d.length === 0, d.join(' | '));
+    const files = await J(`worldFromFiles('${id}')`), code = FIX.systems[id];
+    files.bodies.forEach(b => { if (b.dock) delete b.dock.runs; }); // the runs came after the fixture: tests/routesfromfiles.mjs holds them
+    const d = ign(files, code);
+    check(`${id}: the files build the row the code had (${code.bodies.length} bodies)`, d.length === 0, d.join(' | '));
   }
   check('the station files do not move Halcyon\'s prices (repair 0.5, ore 20)', await E(`REPAIR_PRICE === 0.5 && ORE_PRICE === 20`));
   check('a station file reads back its own dock prices (Brass Smelter ore 30, Meridian Exchange repair 0.5)', await E(`CONTENT_TABLES.station.get('brass-smelter', 'ore') === 30 && CONTENT_TABLES.station.get('meridian-exchange', 'repair') === 0.5 && CONTENT_TABLES.station.get('halcyon-station', 'ore') === 20`));
@@ -171,9 +175,11 @@ try {
   for (const [id, name, , , danger, traffic, hasStation] of DESIGN) {
     await arrive(id, id === 'halcyon' ? 'kestrel' : 'halcyon');
     const d = await J(`(() => { const s = ${SP}, sys = sysDef(), pl = sysBody('planet'), belts = sysBodies('belt'), sites = sysBodies('poi'), pt = pirateTable(sys);
-      const far = s.children.list.filter(o => o.texture && ['sun', 'giant', 'moon'].concat(Object.keys(STAR_TYPES).map(k => 'star-' + k)).includes(o.texture.key)).map(o => o.texture.key);
+      const stars = sysBodies('star'), atStar = o => stars.some(b => Math.abs(b.x - o.x) < 1 && Math.abs(b.y - o.y) < 1); // the star is a real body now: its picture sits where it is (src/cruise.js cruiseFarBodies)
+      const far = s.children.list.filter(o => o.texture && (['sun', 'giant', 'moon'].includes(o.texture.key) || (/^star-[MKGFA]$/.test(o.texture.key) && !atStar(o)))).map(o => o.texture.key);
+      const starPics = s.children.list.filter(o => o.texture && /^star-[MKGFA]$/.test(o.texture.key) && atStar(o)).length;
       return { sys: G.system, ws: s.WS, nowhere: !!s.station.nowhere, planetNowhere: !!s.planet.nowhere, planetKey: s.planet.texture && s.planet.texture.key, planetScale: s.planet.scaleX, canLand: s.canLand,
-        tint: s.bgLayers.map(l => l.tintTopLeft), far, rocks: s.ast.rocks.getChildren().length, want: belts.reduce((a, b) => a + b.rocks, 0), sites: sites.length,
+        tint: s.bgLayers.map(l => l.tintTopLeft), far, starPics, rocks: s.ast.rocks.getChildren().length, want: belts.reduce((a, b) => a + b.rocks, 0), sites: sites.length,
         police: s.tr.police.length, civCap: s.tr.cap, trafficOff: !!s.tr.off, pt, shipOk: s.ship.x > 0 && s.ship.x < s.WS && s.ship.y > 0 && s.ship.y < s.WS, arrive: G.system === sys.id }; })()`);
     check(`${id}: you arrive in ${name}, a 108000 px world (36000 in the data, times SYSTEM_SCALE)`, d.sys === id && d.ws === await J('sysAt(36000)') && d.shipOk);
     check(`${id}: ${hasStation ? 'the station is there' : 'no station: nothing to dock at'}`, d.nowhere === !hasStation);
@@ -181,11 +187,9 @@ try {
     check(`${id}: the planet is drawn from its kind and seed${id === 'halcyon' ? ' (Kepler-4b keeps its own picture)' : ''}`, !d.planetNowhere && (id === 'halcyon' ? d.planetKey === 'planet' : d.planetKey === 'planet-' + pl.kind + '-' + pl.seed && Math.abs(d.planetScale - pl.r / (pl.kind === 'ringed' ? 206 : 300)) < 1e-6), JSON.stringify([d.planetKey, pl]));
     check(`${id}: you can land only on Kepler-4b`, d.canLand === (id === 'halcyon'));
     check(`${id}: no picture of a sun, a planet or a moon in the backdrop: what you see is a real body`, d.far.length === 0, JSON.stringify(d.far));
-    if (id === 'halcyon') check('Halcyon: the star layers keep their own colour (no tint)', d.tint.every(c => c === 0xffffff), JSON.stringify(d.tint));
-    else {
-      const star = await J(`sysDef().star.type`);
-      check(`${id}: the sky takes the colour of its star (${star}): its tint on the star layers`, d.tint.every(c => (c & 0xffffff) === TINT[star]), JSON.stringify(d.tint.map(c => c.toString(16))));
-    }
+    check(`${id}: the star is one picture, at the star body (a real place you can fly to)`, d.starPics === 1, d.starPics);
+    const star = await J(`sysDef().star.type`); // Halcyon too: its file says starType G, so its layers take the G tint like any other system's
+    check(`${id}: the sky takes the colour of its star (${star}): its tint on the star layers`, d.tint.every(c => (c & 0xffffff) === TINT[star]), JSON.stringify(d.tint.map(c => c.toString(16))));
     check(`${id}: the belts are rocks (${d.rocks} of ${d.want}) and the sites are there (${d.sites})`, d.rocks >= Math.floor(d.want * 0.8) && d.rocks <= d.want && d.sites === await E(`sysBodies('poi').length`));
     check(`${id}: traffic ${traffic} means ${traffic === 0 || !hasStation ? 'an empty sky' : Math.min(2, traffic) + ' police and room for ' + traffic + ' civilians'}`, traffic === 0 || !hasStation ? d.trafficOff : !d.trafficOff && d.police === Math.min(2, traffic) && d.civCap === traffic, JSON.stringify([d.police, d.civCap, d.trafficOff]));
     check(`${id}: the pirate table is the system's (danger ${danger}): ${d.pt.max} at most, one every ${d.pt.every / 1000} s`, d.pt.max > 0 && d.pt.every > 0 && Math.abs(Object.values(d.pt.weights).reduce((a, x) => a + x, 0) - 1) < 1e-9);

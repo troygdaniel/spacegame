@@ -225,8 +225,8 @@ function siteRowFrom(id, d) {
 // every site call of a CONTENT object (content.generated.js), in the order of its entries
 function siteCallsFrom(content) {
   const out = [];
-  ((content && content.entries) || []).forEach(e => {
-    if (e.type !== 'mission' || !e.data || !SITE_KINDS.includes(e.data.kind)) return;
+  (content && Array.isArray(content.entries) ? content.entries : []).forEach(e => {
+    if (!e || typeof e !== 'object' || e.type !== 'mission' || !e.data || typeof e.data !== 'object' || !SITE_KINDS.includes(e.data.kind)) return; // a hand-edited file may hold a null, a number or a word where an entry should be: ContentLib.apply names it at Boot, this only skips it
     try { out.push(siteRowFrom(e.id, e.data)); } catch (err) { SITE_PROBLEMS.push({ id: e.id, why: err.message }); }
   });
   return out;

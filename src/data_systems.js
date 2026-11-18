@@ -87,12 +87,15 @@ function sysRowFrom(id, W, keepHomePrices) {
 }
 function sysWorldOf(content) {
   const W = { system: {}, station: {}, poi: {} };
-  ((content && content.entries) || []).forEach(e => { if (e && sysHas(W, e.type) && typeof e.id === 'string' && e.data && typeof e.data === 'object') W[e.type][e.id] = e.data; });
+  (content && Array.isArray(content.entries) ? content.entries : []).forEach(e => { if (e && typeof e === 'object' && sysHas(W, e.type) && typeof e.id === 'string' && e.data && typeof e.data === 'object' && !Array.isArray(e.data)) W[e.type][e.id] = e.data; });
   return W;
 }
 function sysRowsFrom(content) {
   const W = sysWorldOf(content), ids = Object.keys(W.system), out = {};
-  SYSTEM_ORDER.filter(id => ids.includes(id)).concat(ids.filter(id => !SYSTEM_ORDER.includes(id)).sort()).forEach(id => { const r = sysRowFrom(id, W); if (r) out[id] = r; });
+  SYSTEM_ORDER.filter(id => ids.includes(id)).concat(ids.filter(id => !SYSTEM_ORDER.includes(id)).sort()).forEach(id => {
+    let r = null; try { r = sysRowFrom(id, W); } catch (e) { r = null; } // a hand-edited file with a system the builder cannot read (bodies that is a word, a null row): this script runs at load, before any check, so the system is left out and a shipped one is flown from its sealed copy (SYSTEMS_KEPT), as worldSync does at Boot
+    if (r) out[id] = r;
+  });
   return out;
 }
 
