@@ -107,7 +107,7 @@ section('validator: sections, lists, key lines and tables');
   const M = (body) => FM('mission', 'kind: rescue\ntitle: T\nreward: 5\n', body);
   const N = (body) => FM('npc', 'name: JUNO\n', body);
   exact('an unknown section with a hint', one('content/missions/m.md', M('## Offr\nx\n')).errs, 'content/missions/m.md, line 7: unknown section "## Offr". Did you mean "## Offer"? Ignored.');
-  exact('an unknown section without a hint', one('content/missions/m.md', M('## Banana\nx\n')).errs, 'content/missions/m.md, line 7: unknown section "## Banana". This type has: Offer, Board line, Progress, Progress rescued, Steps, Failure. Ignored.');
+  exact('an unknown section without a hint', one('content/missions/m.md', M('## Banana\nx\n')).errs, 'content/missions/m.md, line 7: unknown section "## Banana". This type has: Offer, Board line, Progress, Progress rescued, Steps, Failure, Pickets. Ignored.');
   exact('a section twice', one('content/missions/m.md', M('## Offer\nA\n\n## Offer\nB\n')).errs, 'content/missions/m.md, line 10: "## Offer" appears twice. Used the first.');
   exact('a list line without a dash', one('content/missions/m.md', M('## Steps\n- One\nTwo\n')).errs, 'content/missions/m.md, line 9: this line is not a list item: start it with "- ". Ignored.');
   check('list items are kept in order, * works as a bullet', JSON.stringify(one('content/missions/m.md', M('## Steps\n- One\n* Two\n- Three\n')).e.data.steps) === '["One","Two","Three"]');

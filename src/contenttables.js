@@ -91,6 +91,20 @@ const CT_MISSION = {
     const kind = missionKind(m); // a built-in call is of the kind it is called; a call a pack adds (src/contentadd.js) says its own
     if (data.kind !== undefined && data.kind !== kind) throw new Error('kind is "' + data.kind + '" but the file is called ' + id + ', so its kind must be ' + kind);
     ['title', 'where', 'reward', 'count'].forEach(k => { if (data[k] !== undefined) m[k] = data[k]; });
+    // where it is played (src/missions.js missionBody): the system, the body there, and the pirates that are always in that system
+    if (data.system !== undefined || data.body !== undefined) {
+      const sys = data.system !== undefined ? data.system : (m.system || 'halcyon');
+      if (m.carry || m.site) { if (data.body !== undefined) throw new Error(missionBodyFault(kind, sys, data.body)); } // a run or a site call keeps its own places
+      else {
+        if (!Object.prototype.hasOwnProperty.call(SYSTEMS, sys)) throw new Error('the system "' + sys + '" is not in the game');
+        if (data.body !== undefined) { const fault = missionBodyFault(kind, sys, data.body); if (fault) throw new Error(fault); }
+        else if (data.system !== undefined && data.system !== m.system && !sysBody(CALL_BODY[kind], sys)) throw new Error(sys + ' has no ' + CALL_BODY[kind] + ' for a ' + kind + ' call');
+        const moved = sys !== (m.system || 'halcyon'); // a call moved to another system with no body named: the first body of its type there
+        m.system = sys; m.body = data.body !== undefined ? data.body : moved ? undefined : m.body;
+      }
+    }
+    if (data.guards !== undefined) m.guards = data.guards;
+    if (data.pickets !== undefined) m.pickets = data.pickets.map(r => [r.x, r.y]);
     if (data.unlock !== undefined) m.unlock = () => contentWhen(data.unlock); // the board offers the call while this holds
     // {reward} and {count} in this call's own text are this call's, whichever call is open (the board shows them all); {progress}, {credits} and the rest are live
     const fill = text => contentFill(text, { reward: m.reward, count: m.count === undefined ? '' : m.count });

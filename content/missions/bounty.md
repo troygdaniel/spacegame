@@ -6,6 +6,9 @@ where: The Reaver, at Reaver's Roost
 reward: 1200
 # the board offers this call once a police patrol has been finished
 unlock: patrols>=1
+# where it is played: the star system, and the planet there the Reaver hides behind
+system: roost
+body: roost-rock
 ---
 The pirate warlord they call the Reaver has gone
 to ground at Reaver's Roost, twelve light years out,

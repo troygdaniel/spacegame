@@ -108,13 +108,18 @@ for (const [file, snippet] of [
 }
 // the two mistakes the guide says only the game can see: the build reports nothing for them
 const escortText = read('content/missions/escort.md');
+// the Escort file names its system and body now (card space-game-call-places-from-files), so it is loaded with the rest of the shipped content
+// beside it, as the build does (alone, the build would warn that it cannot find the system); only what is said about the mission file counts
+const shipped = readdirSync(join(ROOT, 'content')).filter(d => d !== '_templates' && existsSync(join(ROOT, 'content', d)) && !d.includes('.'))
+  .flatMap(d => readdirSync(join(ROOT, 'content', d)).filter(f => f.endsWith('.md')).map(f => ({ path: 'content/' + d + '/' + f, text: read('content/' + d + '/' + f) })));
+const withFile = file => C.loadAll(shipped.filter(f => f.path !== file.path).concat([file])).errors.filter(e => C.formatError(e).includes(file.path));
 const wrongKind = escortText.replace('kind: escort', 'kind: rescue'), unknownId = { path: 'content/missions/my-call.md', text: escortText };
-check('a mission file with the wrong kind is not a problem to the build (the game says it)', C.loadAll([{ path: 'content/missions/escort.md', text: wrongKind }]).errors.length === 0);
-check('a mission file with an id the game does not know is not a problem to the build (the game says it)', C.loadAll([unknownId]).errors.length === 0);
+check('a mission file with the wrong kind is not a problem to the build (the game says it)', withFile({ path: 'content/missions/escort.md', text: wrongKind }).length === 0);
+check('a mission file with an id the game does not know is not a problem to the build (the game says it)', withFile(unknownId).length === 0);
 const typoKey = C.loadAll([{ path: 'content/text/words.md', text: '---\ntype: text\n---\nA typo.\n\n## Strings\n| key | text |\n|---|---|\n| toast.docekd | Docked. |\n' }]);
 check('a text file with a key the game does not read is not a problem to the build (the game says it)', typoKey.errors.length === 0);
 // the three messages the build does print, word for word as the guide quotes them (made from the shipped Escort file)
-const said = text => C.loadAll([{ path: 'content/missions/escort.md', text }]).errors.map(e => C.formatError(e));
+const said = text => withFile({ path: 'content/missions/escort.md', text }).map(e => C.formatError(e));
 for (const line of [...said(escortText.replace('reward: 400', 'rewrd: 400')), ...said(escortText.replace('reward: 400', 'reward: lots')), ...said(escortText.replace('She pays on arrival.', 'She pays {rewrd} cr on arrival.'))]) {
   check(`the guide quotes "${line.slice(0, 70)}..." word for word`, doc.includes(line));
 }
