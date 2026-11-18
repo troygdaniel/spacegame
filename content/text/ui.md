@@ -10,13 +10,15 @@ To translate, change the text column here, or copy this file to a name after ui 
 | key | text |
 |---|---|
 | help.station.1 | W A S D   walk (the arrow keys work too) |
-| help.station.2 | 1-6   go straight to a spot (the number on the floor beside it) |
-| help.station.3 | E   use the terminal, repair bay or ship |
-| help.station.4 | 1-6   buy a part, with the shop open |
-| help.station.5 | T   chat with someone in the bar (needs a chat key) |
-| help.station.6 | J   journal: who you have met |
-| help.station.7 | G   galaxy map (look only here; you jump from your ship) |
-| help.station.8 | Esc   close a terminal, or pause |
+| help.station.2 | 1-6   station menu: pick a row, you go there and it opens |
+| help.station.3 | W S Enter   station menu: choose a row, open it (or click it) |
+| help.station.4 | N   menu keys off, so W A S D walk; N again for the menu |
+| help.station.5 | E   use the terminal, repair bay or ship |
+| help.station.6 | 1-6   buy a part, with the shop open |
+| help.station.7 | T   chat with someone in the bar (needs a chat key) |
+| help.station.8 | J   journal: who you have met |
+| help.station.9 | G   galaxy map (look only here; you jump from your ship) |
+| help.station.10 | Esc   close a terminal, or pause |
 | help.ship.1 | Enter Space   the amber button: launch or board |
 | help.ship.2 | Enter   press twice to buy a ship |
 | help.ship.3 | F Y C   fleet, yard or controls tab |
@@ -33,7 +35,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | help.space.7 | L   dock or land (fly slowly, close in) |
 | help.space.8 | T   mission panel |
 | help.space.9 | R   autotarget on or off (needs the part from the shop) |
-| help.space.10 | N   nav list: Enter picks a target, P flies there |
+| help.space.10 | N   navigation panel: W S choose, Enter sets the destination, Enter again goes there |
 | help.space.11 | C   cruise to the target (A D nudge, S cancels) |
 | help.space.12 | P   autopilot to the target: it stops at the dock (any key cancels) |
 | help.space.13 | Tab   sector map: W S choose a body, Enter flies there |
@@ -43,7 +45,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | help.surface.1 | W A S D   walk (the arrow keys work too) |
 | help.surface.2 | Mouse   aim, and click to fire |
 | help.surface.3 | E   talk to the colonist, board at the pad |
-| tips.station | Walk up to a terminal, the bar or the hangar shop and press E. Board your ship in the hangar to launch. |
+| tips.station | Pick from the station menu, bottom right: a number, or W S and Enter. Your ship is the last row: board it to launch. |
 | tips.space | The amber arrow points at your objective and the radar is top right. Slow down near the station or the planet, then press L. |
 | tips.ship | Look your ship over, then press Enter to launch. Esc goes back to the station to take a mission or repair first. |
 | tips.surface | Aim with the mouse and click to fire. Walk back to the landing pad and press E to lift off. |

@@ -52,6 +52,46 @@ function stationPlates(s) {
   return s.plates;
 }
 
+// ---------- the station menu: pick a place and it opens (card space-game-station-menu) ----------
+// Troy, on the number keys: better, but odd; he wants a menu. So when you dock a menu is on the screen: Bar, Missions, Fuel, Shop, Repair, Your
+// ship. Picking a row stands you at that spot AND opens what it offers in the same press (the bar talk, the mission board, the pump, the shop,
+// the repair, the ship bay); closing that brings the menu back. Nobody has to walk or press E. The lounge stays the living backdrop and walking
+// still works: N hands the keys back to your feet, N again takes them for the menu.
+// One menu idiom with the navigation panel in space (src/navpanel.js, card space-game-nav-panel): the same panel (dark glass, 322 px wide, 22 px
+// rows, a title with its key on the right, an amber bar on the chosen row, one amber line at the foot that names the next key), the same keys
+// (W S or the arrows choose, Enter picks, a click on a row does what Enter does, N opens and closes).
+// The number keys of the lounge quick-go are this menu's keys now: a number picks its row and opens it. The numbers still come from loungeStops,
+// so a dock without a desk keeps keys with no gap, and its missing rows are listed dim, with the reason, and no key.
+// It sits low on the right, over the crates of the hangar: every desk, every stop you are stood at and the bar stay in view.
+const STATION_MENU = {
+  x: W - 24 - 322, y: 478, w: 322, row: 22,
+  name: { bar: 'Bar', missions: 'Missions', pump: 'Fuel', shop: 'Shop', repair: 'Repair', ship: 'Your ship' },
+  note: { bar: 'talk', missions: 'mission board', pump: 'buy fuel', shop: 'upgrades', repair: 'mend the hull', ship: 'ship bay, launch' },
+  does: { bar: 'talk at the bar', missions: 'open the mission board', pump: 'open the fuel pump', shop: 'open the upgrade shop', repair: 'repair the hull', ship: 'board your ship' },
+  why: { bar: 'no bar here', missions: 'no mission board here', pump: 'no pump here', shop: 'no shop here', repair: 'no repair bay here' }
+};
+// the rows, in the order of LOUNGE_STOPS: [{ key, name, n, off, why, note }]. n is the number key ('' on a row this station does not have).
+// st (optional) is what the notes read: { hull, maxHull, price, keeper }.
+function stationMenuRows(spots, look, st) {
+  const M = STATION_MENU, stops = loungeStops(spots, look);
+  return LOUNGE_STOPS.map(([key]) => {
+    const stop = stops.find(q => q.key === key), row = { key, name: M.name[key], n: stop ? stop.n : '', off: !stop, why: stop ? '' : M.why[key] || 'not here', note: stop ? M.note[key] : M.why[key] || 'not here' };
+    if (stop && st && key === 'repair') { const missing = Math.max(0, (st.maxHull || 0) - (st.hull || 0)); row.note = missing > 0 ? Math.ceil(missing * (st.price || 0)) + ' cr' : 'hull is whole'; }
+    if (stop && st && key === 'bar' && st.keeper) row.note = 'talk to ' + st.keeper;
+    return row;
+  });
+}
+// the amber line at the foot: what Enter does on the chosen row, or why it does nothing
+function stationMenuHint(row, keys) {
+  if (!keys) return 'N  menu keys   ' + 'number or click picks';
+  if (!row) return '';
+  return row.off ? row.name + ': ' + row.why + '.' : 'Enter  ' + STATION_MENU.does[row.key];
+}
+// the row a key or a click means: by number key ('3'), by row key ('repair') or by place in the list (2)
+function stationMenuFind(rows, what) {
+  return typeof what === 'number' ? rows[what] || null : rows.find(r => (r.n && r.n === String(what)) || r.key === what) || null;
+}
+
 class Station extends Phaser.Scene {
   constructor() { super('Station'); }
   init(d) { this.arrive = !!(d && d.arrive); }
@@ -100,8 +140,9 @@ class Station extends Phaser.Scene {
     // quick go: a key cap beside every spot, and the hint says the keys (walking still works)
     const stops = loungeStops(this.spots, look);
     this.goCaps = stops.map(st => keyCap(this, st.n, AMBER).setPosition(st.cx, st.cy).setDepth(6)); // src/ui.js
-    this.goHint = this.add.text(24, H - IN_SOUTH - 28, (stops.length > 1 ? '1-' + stops.length : '1') + ' go to a spot   E interact   WASD walk', { fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92' }).setDepth(100);
-    this.input.keyboard.on('keydown', e => { if (!e.repeat && /^[1-9]$/.test(e.key)) this.quickGo(e.key); });
+    this.goHint = this.add.text(24, H - IN_SOUTH - 28, (stops.length > 1 ? '1-' + stops.length : '1') + ' pick from the menu   N menu or walk   E interact', { fontFamily: 'monospace', fontSize: '14px', color: '#5b7a92' }).setDepth(100);
+    this.input.keyboard.on('keydown', e => { if (!e.repeat && /^[1-9]$/.test(e.key)) this.menuPick(e.key); }); // a number picks its row of the station menu: go there and open it
+    this.menuSetup();
 
     this.ui = panel(this, { w: 900, h: 480, title: 'MISSION BOARD  -  ' + look.name.toUpperCase(), dim: true }); // src/ui.js
     this.panelBox = this.ui.box.setVisible(false); this.boardObjs = [];
@@ -235,14 +276,113 @@ class Station extends Phaser.Scene {
     beep(700, 0.06, 'square', 0.02);
     return true;
   }
+  // ---- the station menu (the list and the idea: stationMenuRows above) ----
+  menuSetup() {
+    const M = STATION_MENU, n = LOUNGE_STOPS.length, h = 30 + M.row * n + 30, m = this.menu = { keys: true, sel: 0, rows: [], lines: [], parts: [], shown: true, at: 0, pending: null };
+    const fix = o => { o.setScrollFactor(0); m.parts.push(o); return o; };
+    const font = (size, color, bold) => ({ fontFamily: 'monospace', fontSize: size + 'px', color, fontStyle: bold ? 'bold' : 'normal' });
+    m.bg = fix(this.add.rectangle(M.x, M.y, M.w, h, 0x04101c, 0.86).setOrigin(0, 0).setStrokeStyle(1, 0x2a6f8f, 0.9).setDepth(100));
+    m.bg.setInteractive(); m.bg.on('pointerdown', (p, x, y, e) => { if (e && e.stopPropagation) e.stopPropagation(); });
+    m.title = fix(this.add.text(M.x + 10, M.y + 15, this.look.name.toUpperCase(), font(13, '#9fe9ff', true)).setOrigin(0, 0.5).setDepth(101));
+    m.key = fix(this.add.text(M.x + M.w - 10, M.y + 15, '', font(12, '#5b7a92')).setOrigin(1, 0.5).setDepth(101));
+    m.hl = fix(this.add.rectangle(M.x + 3, M.y + 30, M.w - 6, M.row, 0xffb454, 0.16).setOrigin(0, 0).setStrokeStyle(1, 0xffb454, 0.7).setDepth(100.5));
+    for (let i = 0; i < n; i++) {
+      const y = M.y + 30 + M.row * i + M.row / 2;
+      const cap = fix(this.add.text(M.x + 18, y, '', font(12, '#02101c', true)).setOrigin(0.5).setDepth(101.2));
+      const capBg = fix(this.add.rectangle(M.x + 18, y, 18, 16, 0xffb454, 1).setDepth(101));
+      const name = fix(this.add.text(M.x + 36, y, '', font(14, '#cfefff')).setOrigin(0, 0.5).setDepth(101));
+      const note = fix(this.add.text(M.x + M.w - 10, y, '', font(13, '#9fe9ff')).setOrigin(1, 0.5).setDepth(101));
+      const zone = fix(this.add.rectangle(M.x + 3, y - M.row / 2, M.w - 6, M.row, 0x000000, 0.001).setOrigin(0, 0).setDepth(101.5));
+      zone.setInteractive({ useHandCursor: true });
+      zone.on('pointerdown', (p, x, yy, e) => { if (e && e.stopPropagation) e.stopPropagation(); if (this.menu.shown) this.menuPick(i); }); // a click on a row is Enter on that row
+      zone.on('pointerover', () => { if (this.menu.shown) { this.menu.sel = i; this.menu.at = 0; } });
+      m.lines.push({ cap, capBg, name, note, zone });
+    }
+    m.foot = fix(this.add.text(M.x + 10, M.y + h - 15, '', font(12, '#ffd37a')).setOrigin(0, 0.5).setDepth(101));
+    m.k = this.input.keyboard.addKeys('N,ENTER');
+    this.menuDraw();
+  }
+  // what the notes of the rows read: the hull and what mending it costs here, and who tends the bar
+  menuState() {
+    const bk = this.spots.find(sp => sp.npc !== undefined && typeof NPCS !== 'undefined' && NPCS[sp.npc] && NPCS[sp.npc].role === 'bartender');
+    return { hull: G.hull, maxHull: G.maxHull, price: repairPrice(), keeper: bk ? NPCS[bk.npc].name : '' };
+  }
+  menuDraw() {
+    const m = this.menu, M = STATION_MENU; if (!m) return;
+    const rows = m.rows = stationMenuRows(this.spots, this.look, this.menuState());
+    m.sel = Math.max(0, Math.min(m.sel, rows.length - 1));
+    m.parts.forEach(o => o.setVisible(m.shown));
+    if (!m.shown) return;
+    m.bg.setAlpha(m.keys ? 1 : 0.7);
+    m.key.setText(m.keys ? 'N  walk' : 'N  menu');
+    m.hl.setY(M.y + 30 + M.row * m.sel).setVisible(m.keys);
+    rows.forEach((r, i) => {
+      const l = m.lines[i], on = m.keys && i === m.sel;
+      l.cap.setText(r.n).setVisible(!r.off); l.capBg.setVisible(!r.off).setAlpha(m.keys ? 1 : 0.75);
+      l.name.setText((on ? '> ' : '') + r.name).setColor(r.off ? '#5b7a92' : on ? '#ffffff' : '#cfefff');
+      l.note.setText(r.note).setColor(r.off ? '#5b7a92' : '#9fe9ff');
+    });
+    m.foot.setText(stationMenuHint(rows[m.sel], m.keys));
+  }
+  // pick a row: by its number key ('3'), its key ('repair') or its place (2, a click). You are stood at the spot now; what it offers opens on the
+  // next frame (menuFrame), so the key that picked it is not read a second time by the board or the shop it opens.
+  menuPick(what) {
+    const m = this.menu; if (!m || this.leaving || this.panel || this.shopOpen || this.pumpOpen || this.chat) return false;
+    const row = stationMenuFind(m.rows, what); if (!row) return false;
+    m.sel = m.rows.indexOf(row); m.at = 0;
+    if (row.off) { toast(this, row.name + ': ' + row.why + '.', '#ffd37a'); sfx('empty'); return false; }
+    if (!this.quickGo(row.n)) return false;
+    m.pending = row.key; m.keys = true; // the menu has the keys again when what you opened is closed
+    return true;
+  }
+  // open what a spot offers, as E at it does
+  menuOpen(key) {
+    if (key === 'missions') this.openPanel();
+    else if (key === 'pump') openPump(this); // src/fuel.js
+    else if (key === 'shop') openShop(this); // src/shop.js
+    else if (key === 'repair') this.repairHull();
+    else if (key === 'ship') { sfx('dock'); go(this, 'Ship'); } // src/shipmode.js
+    else if (key === 'bar') {
+      const bk = this.spots.find(sp => sp.npc !== undefined && NPCS[sp.npc] && NPCS[sp.npc].role === 'bartender');
+      if (bk) talkTo(this, bk.npc); else toast(this, 'Nobody is tending the bar just now.', '#9fe9ff'); // src/shop.js
+    }
+  }
+  // once a frame, before the walking: true while the menu has the keyboard (no walking then)
+  menuFrame() {
+    const m = this.menu, JD = Phaser.Input.Keyboard.JustDown, k = this.k; if (!m) return false;
+    const shown = !(this.leaving || this.panel || this.shopOpen || this.pumpOpen || this.chat);
+    if (shown !== m.shown) { m.shown = shown; m.at = 0; }
+    if (!shown) { if (m.at !== -1) { m.at = -1; this.menuDraw(); } return false; }
+    if (m.pending) { const key = m.pending; m.pending = null; this.menuOpen(key); m.at = 0; return true; }
+    if (JD(m.k.N)) { m.keys = !m.keys; m.at = 0; beep(700, 0.05, 'square', 0.02); }
+    if (m.keys) {
+      const n = m.rows.length || 1;
+      if (JD(k.W) || JD(k.UP)) { m.sel = (m.sel + n - 1) % n; m.at = 0; beep(820, 0.03, 'square', 0.015); }
+      if (JD(k.S) || JD(k.DOWN)) { m.sel = (m.sel + 1) % n; m.at = 0; beep(820, 0.03, 'square', 0.015); }
+      if (JD(m.k.ENTER)) this.menuPick(m.sel);
+    }
+    if (this.time.now >= m.at) { m.at = this.time.now + 400; this.menuDraw(); } // the notes (the repair price, who tends the bar) follow the game
+    return m.keys;
+  }
+  // the repair bay: half a credit a point at Halcyon (repairPrice); too poor for a full repair and it mends as much as you can pay for
+  repairHull() {
+    const missing = G.maxHull - G.hull, price = repairPrice(), cost = Math.ceil(missing * price);
+    if (missing <= 0) toast(this, 'Hull is already perfect.', '#9fe9ff');
+    else if (G.credits <= 0) toast(this, 'Repair costs ' + cost + ' cr. You have 0.', '#ff4d6d');
+    else {
+      const pay = Math.min(cost, G.credits);
+      G.credits -= pay; G.hull = pay < cost ? Math.min(G.maxHull, G.hull + Math.floor(pay / price)) : G.maxHull;
+      beep(400, 0.2, 'triangle', 0.05, 300); toast(this, (pay < cost ? 'Partly repaired' : 'Hull repaired') + ' (-' + pay + ' cr).', '#6dff9c');
+    }
+  }
   closePanel() { this.panel = false; this.panelBox.setVisible(false); this.boardObjs.forEach(o => o.destroy()); this.boardObjs = []; }
 
   update() {
     guideTick(this); interiorTick(this, this.time.now);
     const JD = Phaser.Input.Keyboard.JustDown, k = this.k;
     hudTick(this); // src/hud.js
-    if (pumpFrame(this)) return; // src/fuel.js: the fuel pump panel is open
-    if (shopFrame(this)) return; // upgrade shop panel is open
+    if (pumpFrame(this)) { this.menuFrame(); return; } // src/fuel.js: the fuel pump panel is open (menuFrame: the station menu is put away meanwhile)
+    if (shopFrame(this)) { this.menuFrame(); return; } // upgrade shop panel is open, or a chat
     if (this.panel) {
       this.player.setVelocity(0, 0);
       if (JD(k.ESC)) this.closePanel();
@@ -250,10 +390,12 @@ class Station extends Phaser.Scene {
         G.mission = 'accepted'; missionAccepted(); this.closePanel(); beep(520, 0.15, 'triangle', 0.05, 300);
         toast(this, uiText('toast.accepted'));
       }
+      this.menuFrame();
       return;
     }
-    const dx = (k.D.isDown || k.RIGHT.isDown ? 1 : 0) - (k.A.isDown || k.LEFT.isDown ? 1 : 0);
-    const dy = (k.S.isDown || k.DOWN.isDown ? 1 : 0) - (k.W.isDown || k.UP.isDown ? 1 : 0);
+    const menu = this.menuFrame(); // the station menu: while it has the keys W and S choose a row, so nobody walks
+    const dx = menu ? 0 : (k.D.isDown || k.RIGHT.isDown ? 1 : 0) - (k.A.isDown || k.LEFT.isDown ? 1 : 0);
+    const dy = menu ? 0 : (k.S.isDown || k.DOWN.isDown ? 1 : 0) - (k.W.isDown || k.UP.isDown ? 1 : 0);
     const v = new Phaser.Math.Vector2(dx, dy).normalize().scale(210);
     this.player.setVelocity(v.x, v.y);
     if (dx || dy) this.player.rotation = Math.atan2(dy, dx);
@@ -268,16 +410,8 @@ class Station extends Phaser.Scene {
     if (near && JD(k.E) && !spotInteract(this, near)) {
       if (near.key === 'missions') this.openPanel();
       else if (near.key === 'pump') openPump(this);
-      else if (near.key === 'repair') {
-        // half a credit a point; too poor for a full repair and it mends as much as you can pay for
-        const missing = G.maxHull - G.hull, price = repairPrice(), cost = Math.ceil(missing * price);
-        if (missing <= 0) toast(this, 'Hull is already perfect.', '#9fe9ff');
-        else if (G.credits <= 0) toast(this, 'Repair costs ' + cost + ' cr. You have 0.', '#ff4d6d');
-        else {
-          const pay = Math.min(cost, G.credits);
-          G.credits -= pay; G.hull = pay < cost ? Math.min(G.maxHull, G.hull + Math.floor(pay / price)) : G.maxHull;
-          beep(400, 0.2, 'triangle', 0.05, 300); toast(this, (pay < cost ? 'Partly repaired' : 'Hull repaired') + ' (-' + pay + ' cr).', '#6dff9c'); }
-      } else if (near.key === 'ship') { sfx('dock'); go(this, 'Ship'); } // src/shipmode.js: look the ship over, then Launch (Enter)
+      else if (near.key === 'repair') this.repairHull();
+      else if (near.key === 'ship') { sfx('dock'); go(this, 'Ship'); } // src/shipmode.js: look the ship over, then Launch (Enter)
     }
   }
 }

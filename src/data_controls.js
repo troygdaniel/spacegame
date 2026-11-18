@@ -11,7 +11,9 @@
 const CONTROLS = [
   { id: 'station', title: 'STATION', scene: 'Station', rows: [
     { k: ['W', 'A', 'S', 'D'], t: 'Walk (the arrow keys work too)' },
-    { k: ['1-6'], t: 'Go straight to a spot (the number on the floor beside it)' },
+    { k: ['1-6'], t: 'Station menu: pick a row, you go there and it opens' },
+    { k: ['W', 'S', 'Enter'], t: 'Station menu: choose a row, open it (or click it)' },
+    { k: ['N'], t: 'Menu keys off, so W A S D walk; N again for the menu' },
     { k: ['E'], t: 'Use the terminal, repair bay or ship' },
     { k: ['1-6'], t: 'Buy a part, with the shop open' },
     { k: ['T'], t: 'Chat with someone in the bar (needs a chat key)' },
@@ -38,7 +40,7 @@ const CONTROLS = [
     { k: ['L'], t: 'Dock or land (fly slowly, close in)', bay: 1, bt: 'Dock or land' },
     { k: ['T'], t: 'Mission panel', bay: 1 },
     { k: ['R'], t: 'Autotarget on or off (needs the part from the shop)' },
-    { k: ['N'], t: 'Nav list: Enter picks a target, P flies there' },
+    { k: ['N'], t: 'Navigation panel: W S choose, Enter sets the destination, Enter again goes there' },
     { k: ['C'], t: 'Cruise to the target (A D nudge, S cancels)' },
     { k: ['P'], t: 'Autopilot to the target: it stops at the dock (any key cancels)' },
     { k: ['Tab'], t: 'Sector map: W S choose a body, Enter flies there' },

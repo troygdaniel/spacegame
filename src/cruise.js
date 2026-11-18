@@ -94,25 +94,7 @@ function cruiseSetup(s) {
   for (let i = 0; i < 70; i++) cr.ps.push({ x: Math.random() * W, y: Math.random() * H, l: 0.4 + Math.random() * 1.2 });
   cr.read = s.add.text(W / 2, 128, '', { fontFamily: 'monospace', fontSize: '20px', fontStyle: 'bold', color: '#9fe9ff' }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setStroke('#02060d', 4).setVisible(false);
 
-  // the nav list: the shared glass panel with a row per body
-  const ui = cr.ui = panel(s, { w: 660, h: 440, title: 'NAV  -  ' + sysDef().name.toUpperCase(), depth: 140 });
-  ui.tagText.setText('N  close'); ui.setHints([['W S', 'Choose'], ['Enter', 'Set target'], ['P', 'Fly there'], ['X', 'Clear'], ['N', 'Close']]);
-  const w = ui.w, h = ui.h, add = o => { ui.box.add(o); return o; };
-  [[-w / 2 + 34, 'BODY'], [-w / 2 + 250, 'TYPE'], [w / 2 - 150, 'DISTANCE'], [w / 2 - 30, 'CRUISE']].forEach(([x, str], i) => add(s.add.text(x, -h / 2 + 62, str, uiFont(12, '#5b7a92')).setOrigin(i > 1 ? 1 : 0, 0.5)));
-  for (let i = 0; i < CRUISE_ROWS; i++) {
-    const y = -h / 2 + 96 + i * 36;
-    cr.rows.push({
-      hl: add(s.add.rectangle(0, y, w - 36, 32, 0xffb454, 0.16).setStrokeStyle(1, AMBER, 0.7).setVisible(false)),
-      mark: add(s.add.text(-w / 2 + 24, y, '', uiFont(16, '#ffb454', { fontStyle: 'bold' })).setOrigin(0.5)),
-      name: add(s.add.text(-w / 2 + 38, y, '', uiFont(17, '#cfefff')).setOrigin(0, 0.5)),
-      type: add(s.add.text(-w / 2 + 250, y, '', uiFont(13, '#5b7a92')).setOrigin(0, 0.5)),
-      km: add(s.add.text(w / 2 - 150, y, '', uiFont(16, '#9fe9ff')).setOrigin(1, 0.5)),
-      eta: add(s.add.text(w / 2 - 30, y, '', uiFont(16, '#ffd37a')).setOrigin(1, 0.5))
-    });
-  }
-  cr.more = add(s.add.text(0, h / 2 - 62, '', uiFont(13, '#5b7a92')).setOrigin(0.5));
-  cr.far = add(s.add.text(0, h / 2 - 42, '', uiFont(13, '#ffd37a')).setOrigin(0.5)); // a goal in another system (src/missions.js missionFarLine)
-  ui.setVisible(false);
+  navpanelSetup(s); // src/navpanel.js: the navigation panel on the left, which is the N list now (it keeps cr.list, cr.sel and cr.ui for the files that read them)
 }
 
 // ---- the far bodies of the system: planets with a kind (art_world.js) and scenery with a look (stationart.js) ----
@@ -129,32 +111,9 @@ function cruiseFarBodies(s) {
 }
 
 // ---- the nav list ----
-function cruiseNavOpen(s) {
-  const cr = s.cr; cr.navOpen = true; cr.listAt = 0; cr.sel = 0;
-  const cur = cr.target && cruiseKnown(s).findIndex(b => b.id === cr.target.id); if (cur > 0) cr.sel = cur;
-  cr.ui.setVisible(true); sfx('tick');
-}
-function cruiseNavClose(s) { s.cr.navOpen = false; s.cr.ui.setVisible(false); sfx('tick'); }
-
-function cruiseNavDraw(s) {
-  const cr = s.cr, list = cr.list = cruiseKnown(s), n = list.length;
-  cr.sel = Phaser.Math.Clamp(cr.sel, 0, Math.max(0, n - 1));
-  const first = Phaser.Math.Clamp(cr.sel - Math.floor(CRUISE_ROWS / 2), 0, Math.max(0, n - CRUISE_ROWS));
-  cr.rows.forEach((r, i) => {
-    const b = list[first + i], on = !!b;
-    [r.hl, r.mark, r.name, r.type, r.km, r.eta].forEach(o => o.setVisible(on));
-    if (!on) return;
-    const isSel = first + i === cr.sel, isTgt = cr.target && cr.target.id === b.id;
-    r.hl.setVisible(isSel);
-    r.mark.setText(isTgt ? '>' : '');
-    r.name.setText(b.name).setColor(isSel ? '#ffffff' : '#cfefff');
-    r.type.setText(b.look === 'derelict' ? 'DERELICT' : CRUISE_TYPES[b.type] || '');
-    r.km.setText(hudFmt(b.dist / 10) + ' km');
-    r.eta.setText(b.dist < CRUISE.stop + CRUISE.minLeg ? 'near' : Math.round(cruiseEta(b.dist)) + ' s');
-  });
-  cr.far.setText(typeof missionFarLine === 'function' ? missionFarLine() : '');
-  cr.more.setText(n > CRUISE_ROWS ? (first > 0 ? 'above  ' : '') + n + ' bodies' + (first + CRUISE_ROWS < n ? '  below' : '') : '');
-}
+function cruiseNavOpen(s) { navpanelOpen(s, false); }  // src/navpanel.js draws the list and reads its keys; these three names are what the other files and the tests call
+function cruiseNavClose(s) { navpanelClose(s); }
+function cruiseNavDraw(s) { navpanelDraw(s); }
 
 function cruisePick(s, b) {
   const cr = s.cr;
@@ -294,15 +253,7 @@ function cruiseFrame(s, time, dt) {
     if (gone || Math.hypot(t.x - ship.x, t.y - ship.y) < t.r + 500) cr.target = null;
   }
   if (cr.active) { if (!cr.target) cruiseEnd(s, 'cut'); else { cruiseStep(s, time, dt); } return cr.active ? 'cruise' : ''; }
-  if (cr.navOpen) {
-    if (n) { cruiseNavClose(s); return ''; }
-    if (up || down) { cr.sel += down ? 1 : -1; sfx('tick'); cr.listAt = 0; }
-    if (x) { cr.target = null; toast(s, 'Target cleared.', '#9fe9ff'); sfx('tick'); }
-    if (enter && cr.list[cr.sel]) { cruisePick(s, cr.list[cr.sel]); cruiseNavClose(s); return ''; }
-    if (time > cr.listAt) { cr.listAt = time + 250; cruiseNavDraw(s); }
-    return 'nav';
-  }
-  if (n) { cruiseNavOpen(s); cruiseNavDraw(s); return 'nav'; }
+  const nv = navpanelFrame(s, time, { n, x, enter, up, down }); if (nv) return nv; // src/navpanel.js: 'nav' while the panel has the keys
   if (c) cruiseEngage(s);
   return cr.active ? 'cruise' : '';
 }
