@@ -179,10 +179,11 @@ try {
     const pl = await J(`sysBody('planet')`);
     check(`${id}: the planet is drawn from its kind and seed${id === 'halcyon' ? ' (Kepler-4b keeps its own picture)' : ''}`, !d.planetNowhere && (id === 'halcyon' ? d.planetKey === 'planet' : d.planetKey === 'planet-' + pl.kind + '-' + pl.seed && Math.abs(d.planetScale - pl.r / (pl.kind === 'ringed' ? 206 : 300)) < 1e-6), JSON.stringify([d.planetKey, pl]));
     check(`${id}: you can land only on Kepler-4b`, d.canLand === (id === 'halcyon'));
-    if (id === 'halcyon') check('Halcyon: the sky is the old one (the orange sun, the giant and the moon, no tint)', d.far.sort().join() === 'giant,moon,sun' && d.tint.every(c => c === 0xffffff), JSON.stringify([d.far, d.tint]));
+    check(`${id}: no picture of a sun, a planet or a moon in the backdrop: what you see is a real body`, d.far.length === 0, JSON.stringify(d.far));
+    if (id === 'halcyon') check('Halcyon: the star layers keep their own colour (no tint)', d.tint.every(c => c === 0xffffff), JSON.stringify(d.tint));
     else {
       const star = await J(`sysDef().star.type`);
-      check(`${id}: the sky takes its star (${star}): its sun in the sky, its tint on the star layers, no giant or moon`, d.far.join() === 'star-' + star && d.tint.every(c => (c & 0xffffff) === TINT[star]), JSON.stringify([d.far, d.tint.map(c => c.toString(16))]));
+      check(`${id}: the sky takes the colour of its star (${star}): its tint on the star layers`, d.tint.every(c => (c & 0xffffff) === TINT[star]), JSON.stringify(d.tint.map(c => c.toString(16))));
     }
     check(`${id}: the belts are rocks (${d.rocks} of ${d.want}) and the sites are there (${d.sites})`, d.rocks >= Math.floor(d.want * 0.8) && d.rocks <= d.want && d.sites === await E(`sysBodies('poi').length`));
     check(`${id}: traffic ${traffic} means ${traffic === 0 || !hasStation ? 'an empty sky' : Math.min(2, traffic) + ' police and room for ' + traffic + ' civilians'}`, traffic === 0 || !hasStation ? d.trafficOff : !d.trafficOff && d.police === Math.min(2, traffic) && d.civCap === traffic, JSON.stringify([d.police, d.civCap, d.trafficOff]));

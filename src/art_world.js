@@ -114,7 +114,7 @@ function worldArt(sc) {
   window.waMs = Math.round(performance.now() - t0); // tests/world.mjs checks the boot cost
 }
 
-// ---------- space: nebula + star layers, distant sun, ringed giant, moon ----------
+// ---------- space: nebula + star layers (no sun, planet or moon here: a body is drawn only where it is, by the scene) ----------
 function waSpaceArt(sc) {
   const rnd = waRng(4711);
   // stars1: the nebula (soft clouds in four colours, dark dust lanes) with a fine layer of tiny stars. Seamless at 1024.
@@ -134,83 +134,21 @@ function waSpaceArt(sc) {
   });
   waCanvas(sc, 'stars2', 512, 512, (ctx, S) => waStars(ctx, rnd, S, 80, 0.5, 1.5, 0.35, 0.95, 0.04, 22));
   waCanvas(sc, 'stars3', 1024, 1024, (ctx, S) => waStars(ctx, rnd, S, 26, 1.1, 2.6, 0.7, 1, 0.55, 44));
-
-  waCanvas(sc, 'sun', 512, 512, (ctx, S) => { // a distant sun: wide corona, rays, a hot core
-    const C = S / 2;
-    waGlow(ctx, C, C, C, '255,170,90', 0.5, 0.2);
-    ctx.globalCompositeOperation = 'lighter';
-    const r2 = waRng(9);
-    for (let i = 0; i < 30; i++) {
-      const a = r2() * Math.PI * 2, len = 130 + r2() * 110, w = 2 + r2() * 5;
-      ctx.save(); ctx.translate(C, C); ctx.rotate(a);
-      const lg = ctx.createLinearGradient(30, 0, len, 0); lg.addColorStop(0, 'rgba(255,224,170,0.32)'); lg.addColorStop(1, 'rgba(255,200,140,0)');
-      ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(30, -w); ctx.lineTo(len, 0); ctx.lineTo(30, w); ctx.closePath(); ctx.fill(); ctx.restore();
-    }
-    ctx.globalCompositeOperation = 'source-over';
-    const g = ctx.createRadialGradient(C, C, 0, C, C, 46);
-    g.addColorStop(0, '#fffdf4'); g.addColorStop(0.55, '#ffeab0'); g.addColorStop(0.9, '#ffc070'); g.addColorStop(1, 'rgba(255,170,80,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(C, C, 48, 0, 7); ctx.fill();
-  });
-
-  const SUN_DIR = (() => { const l = Math.hypot(-0.66, 0.42, 0.62); return [-0.66 / l, 0.42 / l, 0.62 / l]; })(); // sun is low on the left
-  waCanvas(sc, 'giant', 512, 512, (ctx, S) => { // a ringed gas giant, tilted
-    const C = S / 2, R = 112, r2 = waRng(31), band = waFbm(r2, 2, 4), warp = waFbm(r2, 4, 3);
-    const ringBand = []; for (let i = 0; i < 128; i++) ringBand.push(0.25 + 0.75 * waSmooth(0.2, 0.8, 0.5 + 0.5 * Math.sin(i * 0.5 + r2() * 3) * r2()));
-    const ring = front => {
-      ctx.save(); ctx.translate(C, C); ctx.rotate(-0.3); ctx.scale(1, 0.27);
-      for (let r = 142, i = 0; r < 236; r += 1.6, i++) {
-        const gap = r > 186 && r < 196 ? 0.08 : 1, a = ringBand[i % ringBand.length] * gap * (0.55 - 0.25 * (r - 142) / 94);
-        ctx.strokeStyle = r < 190 ? `rgba(226,205,170,${a})` : `rgba(186,200,226,${a})`; ctx.lineWidth = 2.4;
-        ctx.beginPath(); ctx.arc(0, 0, r, front ? 0 : Math.PI, front ? Math.PI : Math.PI * 2); ctx.stroke();
-      }
-      ctx.restore();
-    };
-    ring(false);
-    const pal = [[78, 88, 138], [124, 138, 186], [176, 172, 200], [104, 118, 168], [196, 184, 190]];
-    waSphere(ctx, C, C, R, { L: SUN_DIR, amb: 0.1, rim: [150, 170, 230], rimA: 0.7, term: [255, 150, 110], termA: 0.12 }, (lon, lat, dx, dy, nz, diff, c) => {
-      const t = waClamp(0.5 + 0.5 * Math.sin((lat + (warp(lon, lat) - 0.5) * 0.1) * 17 + band(lon, lat) * 2.2));
-      const k = t * (pal.length - 1), i = Math.min(pal.length - 2, Math.floor(k)), col = waMix(pal[i], pal[i + 1], k - i);
-      c[0] = col[0]; c[1] = col[1]; c[2] = col[2];
-    });
-    ring(true);
-  });
-
-  waCanvas(sc, 'moon', 192, 192, (ctx, S) => { // a small cratered moon
-    const r2 = waRng(77), alb = waFbm(r2, 3, 4), cr = [];
-    for (let i = 0; i < 11; i++) cr.push([r2() * 2 - 1, r2() * 2 - 1, 0.08 + r2() * r2() * 0.3]);
-    waSphere(ctx, S / 2, S / 2, 84, { L: SUN_DIR, amb: 0.07, rim: [150, 170, 210], rimA: 0.25 }, (lon, lat, dx, dy, nz, diff, c) => {
-      let v = 0.55 + 0.6 * (alb(lon, lat) - 0.5);
-      for (const [x, y, r] of cr) {
-        const d = Math.hypot(dx - x * 0.8, dy - y * 0.8) / r;
-        if (d < 1.15) { v *= d < 0.95 ? 0.78 + 0.22 * d * d : 1 + 0.12 * (1 - Math.abs(d - 1) * 6); }
-      }
-      c[0] = 150 * v; c[1] = 154 * v; c[2] = 168 * v;
-    });
-  });
 }
 
-// Backdrop for the Space scene: parallax star layers and distant bodies. spaceBackdropTick(s) runs every frame.
-// A system with a `star` ({ type, x, y }, src/data_systems.js) takes its sky from it: the star layers get the star type's tint (STAR_TYPES) and the sun in the sky is that
-// type's star (its size), placed by the system's seed so no two skies are alike; its far planets are the bodies you can fly to, so there is no giant or moon. Halcyon has no
-// `star` row, so its sky (the orange sun, the giant, the moon) is exactly what it always was. deep: the empty space of a pull-out (src/pullout.js): the stars and nothing else.
+// Backdrop for the Space scene: parallax star layers, and nothing else. spaceBackdropTick(s) runs every frame.
+// There is no sun, planet or moon in the backdrop (Troy, 17 Nov 2026): a picture of a body that is not a place you can fly to reads as a
+// place and confuses navigation. Halcyon's orange sun, ringed giant and moon and the other systems' sun in the sky were such pictures and
+// are gone. What you see in space is a real body of the system (src/data_systems.js), drawn by the scene where it is. A system with a
+// `star` ({ type, x, y }) still takes the colour of its light from it: the star layers get the star type's tint (STAR_TYPES). The star
+// itself becomes a real body in a later card (space-game-real-solar-system); starTexture() below is kept for it.
+// deep: the empty space of a pull-out (src/pullout.js): the same stars.
 function spaceBackdrop(s, deep) {
   const sys = sysDef(), star = sys.star && STAR_TYPES[sys.star.type] ? sys.star.type : null; // src/universe.js
   s.cameras.main.setBackgroundColor(0x02050e);
   const layer = (key, depth, f, a) => { const t = s.add.tileSprite(0, 0, W, H, key).setOrigin(0).setScrollFactor(0).setDepth(depth).setAlpha(a); t.par = f; if (star) t.setTint(STAR_TYPES[star].tint); return t; };
   s.bgLayers = [layer('stars1', -10, 0.2, 1), layer('stars2', -9, 0.45, 1), layer('stars3', -8, 0.85, 1)]; // three full-screen layers: each one costs fill rate
   s.tweens.add({ targets: s.bgLayers[2], alpha: 0.78, duration: 3400, yoyo: true, repeat: -1, ease: 'Sine.inOut' }); // the bright stars breathe a little
-  if (deep) return;
-  // distant bodies drift slower than the world: an image with scroll factor f sits at (anchor + f * reference scroll), so each
-  // one is placed where it should appear when you launch from the station
-  const REF = { x: 3360, y: 3640 };
-  const far = (key, ax, ay, f, depth, scale, alpha = 1) => s.add.image(ax + f * REF.x, ay + f * REF.y, key).setScrollFactor(f).setDepth(depth).setScale(scale).setAlpha(alpha);
-  const seed = sys.seed | 0, k = star ? STAR_TYPES[star].size : 1;
-  const sun = far(star ? starTexture(s, star) : 'sun', star ? 120 + (seed * 37) % 900 : 150, star ? 380 + (seed * 53) % 460 : 620, 0.03, -6.5, 1.15 * k);
-  s.tweens.add({ targets: sun, scale: 1.22 * k, duration: 5200, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-  if (!star) {
-    far('giant', 1010, 520, 0.07, -6, 0.62);
-    far('moon', 560, 90, 0.11, -5.5, 0.42, 0.7); // dim and small so it never reads as a rock to shoot
-  }
 }
 function spaceBackdropTick(s) {
   const c = s.cameras.main;
@@ -386,7 +324,7 @@ const STAR_TYPES = {
 function starTexture(sc, type) {
   const st = STAR_TYPES[type] || STAR_TYPES.G, key = 'star-' + (STAR_TYPES[type] ? type : 'G');
   if (sc.textures.exists(key)) return key;
-  waCanvas(sc, key, 512, 512, (ctx, S) => { // the same recipe as 'sun': a wide corona, rays, a hot core
+  waCanvas(sc, key, 512, 512, (ctx, S) => { // a wide corona, rays, a hot core
     const C = S / 2, rgb = a => a.join(','), r2 = waRng('MKGFA'.indexOf(type) * 131 + 9);
     waGlow(ctx, C, C, C, rgb(st.corona), 0.5, 0.2);
     ctx.globalCompositeOperation = 'lighter';
