@@ -30,9 +30,14 @@ function sysStar(id) {
   return c;
 }
 function sysCentre(id) { const def = sysDef(id), st = sysStar(id); return st ? { x: st.x, y: st.y } : { x: (def.size || 0) / 2, y: (def.size || 0) / 2 }; }
-function sysOrbit(b, id) { const c = sysCentre(id); return { r: Math.hypot(b.x - c.x, b.y - c.y), a: Math.atan2(b.y - c.y, b.x - c.x) }; }
-// where a body is on its orbit at a later angle (motion, when it is switched on): the same ring, turned by da rad
-function sysOrbitAt(b, da, id) { const c = sysCentre(id), o = sysOrbit(b, id); return { x: c.x + Math.cos(o.a + da) * o.r, y: c.y + Math.sin(o.a + da) * o.r }; }
+// what a body goes round: its parent (card space-game-bodies-orbit-a-body: a moon's planet, a dock's moon; `parent` is the id of another body of the
+// system) or, with none, the centre of the system. A parent that is not there (a pack took it away) falls back to the centre.
+function sysParent(b, id) { return b && b.parent ? sysDef(id).bodies.find(x => x.id === b.parent && x !== b) || null : null; }
+function sysRound(b, id) { const p = sysParent(b, id); return p ? { x: p.x, y: p.y } : sysCentre(id); }
+function sysOrbit(b, id) { const c = sysRound(b, id); return { r: Math.hypot(b.x - c.x, b.y - c.y), a: Math.atan2(b.y - c.y, b.x - c.x) }; }
+// where a body is on its orbit at a later angle (motion, when it is switched on): the same ring, turned by da rad. A body with a parent turns round where its
+// parent is NOW: when bodies move, move a parent before what goes round it, or a moon is left behind
+function sysOrbitAt(b, da, id) { const c = sysRound(b, id), o = sysOrbit(b, id); return { x: c.x + Math.cos(o.a + da) * o.r, y: c.y + Math.sin(o.a + da) * o.r }; }
 function sysBodies(type, id) { const st = sysStar(id), all = st ? [st].concat(sysDef(id).bodies) : sysDef(id).bodies.slice(); return type ? all.filter(b => b.type === type) : all; }
 function sysBody(type, id) { return sysBodies(type, id)[0] || null; }
 
