@@ -300,7 +300,7 @@ function planetTexture(sc, kind, seed) {
   waCanvas(sc, key, 800, 800, (ctx, S) => WA_PLANETS[kind](ctx, S, waRng(Math.imul(seed, 2654435761) + PLANET_KINDS.indexOf(kind) * 104729)));
   waPlanetCache.push(key);
   while (waPlanetCache.length > PLANET_CACHE_MAX) {
-    const drop = waPlanetCache.find(k => !waOnShow(sc, k));
+    const drop = waPlanetCache.find(k => k !== key && !waOnShow(sc, k)); // never the one just made: no image shows it yet, so with every older one on show it was the one dropped, and the caller's image came out blank (Sol: 24 planets, every one past the sixth; first look)
     if (!drop) break; // every one is on show: keep them all
     waPlanetCache.splice(waPlanetCache.indexOf(drop), 1); sc.textures.remove(drop);
   }
