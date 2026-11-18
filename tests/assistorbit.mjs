@@ -147,6 +147,21 @@ g.run(`__scene(0, 0, 0)`);
 f = J(`(() => { const t = __ship(600, 300, 20, 10); assistSet('keep', t, 400); return __frames(1200, t, 5); })()`);
 check('Keep at range on a ship that barely moves (20,10): 20 starts or fewer (the engine idles low instead of pulsing)', f.starts <= 20 && f.flips <= 20, `${f.starts} starts, ${f.flips} reversals`);
 
+// ---- the same under Heavy (found with space-game-assist-flies-heavy: the planner was tuned for the Classic thrust and brake) ----
+g.run(`handlingSet('heavy')`);
+for (const [x, y, vx, vy] of [[600, 300, 152, 0], [800, 0, 140, -60], [600, 300, 140, -60], [600, 300, 0, 152], [600, 300, 60, 0], [600, 300, 20, 10]]) {
+  g.run(`__scene(0, 0, 0)`);
+  f = J(`(() => { const t = __ship(${x}, ${y}, ${vx}, ${vy}); assistSet('match', t); return __frames(1500, t, 5); })()`);
+  check(`Heavy, Match speed, a ship at ${x},${y} flying ${vx},${vy}, 25 s: 20 starts and 20 reversals or fewer, matched`, f.starts <= 20 && f.flips <= 20 && f.rel < 25, `${f.starts} starts, ${f.flips} reversals, relative ${f.rel.toFixed(1)} px/s`);
+}
+g.run(`__scene(0, 0, 0)`);
+f = J(`(() => { const t = { x: 900, y: 0 }; assistSet('orbit', t, 400); return __frames(1500, t, 8); })()`);
+check('Heavy, Orbit round a still buoy, 25 s: 20 starts and 20 reversals or fewer, on the circle', f.starts <= 20 && f.flips <= 20 && f.lo > 300 && f.hi < 500, `${f.starts} starts, ${f.flips} reversals, ${f.lo.toFixed(0)} to ${f.hi.toFixed(0)} px`);
+g.run(`__scene(0, 0, 0)`);
+f = J(`(() => { const t = __ship(900, 0, 120, 60); assistSet('orbit', t, 400); return __frames(1500, t, 8); })()`);
+check('Heavy, Orbit round a ship that moves, 25 s: 20 starts and 20 reversals or fewer, near the circle', f.starts <= 20 && f.flips <= 20 && f.lo > 250 && f.hi < 560, `${f.starts} starts, ${f.flips} reversals, ${f.lo.toFixed(0)} to ${f.hi.toFixed(0)} px`);
+g.run(`handlingSet('classic')`);
+
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `ASSIST ORBIT FAIL (${failed} of ${n})` : `ASSIST ORBIT PASS (${n} checks)`);
 process.exitCode = failed ? 1 : 0;

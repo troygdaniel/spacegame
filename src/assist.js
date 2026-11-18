@@ -88,6 +88,17 @@ function assistStep(me, cmd, st, dt) {
 // px/s allowed per px left: ASSIST.lead is right for the Classic brake; a feel with a weaker brake (Heavy) gets less, in proportion, so it still stops in time
 function assistLead() { return ASSIST.lead * Math.log(handlingNow().brake) / Math.log(HANDLING.classic.brake); }
 
+// is the change the ship needs mostly "slower" (the brake does that without a turn)? It remembers its answer (mem.slower): the brake comes on
+// when the change points well against the way the ship flies and stays on until it no longer does. Without the memory the answer flipped
+// every frame near the line, and the brake and the engine took turns (under Heavy, whose engine ramps, that lit it 37 times on one arrival).
+function assistSlower(mem, ex, ey, vx, vy, floor) {
+  const err = Math.hypot(ex, ey), sp = Math.hypot(vx, vy);
+  if (sp <= 8 || err <= floor) return (mem.slower = false);
+  const cos = (ex * vx + ey * vy) / (err * sp);
+  if (cos < -0.7) mem.slower = true; else if (cos > -0.45) mem.slower = false;
+  return !!mem.slower;
+}
+
 // come to rest `stop` px from the target (measured to its centre), relative to its own motion. back: when inside that distance, back off to it.
 // The speed it wants falls with the distance left, so the brake comes on in time; the engine burns only with the nose on the line.
 function assistSeek(me, tgt, st, stop, back, trail) {
@@ -115,7 +126,7 @@ function assistSeek(me, tgt, st, stop, back, trail) {
   // there and slow: engine off, and the brake takes the last of the speed (a feel that coasts long, Heavy, drifted 30 px past the range without it). Beside a moving ship the engine stays lit low, below
   if (there && rel <= ASSIST.slow && !moving) { mem.onErr = false; out.face = aim(rest); out.still = true; out.brake = sp > 0.5; return out; }
   // what it needs is mostly "slower": the brake does that without a turn
-  if (sp > 8 && err > Math.abs(want) * 0.03 + 3 && ex * me.vx + ey * me.vy < -0.7 * err * sp) { out.brake = true; out.status = there ? 'hold' : 'brake'; out.face = mem.face !== undefined ? mem.face : aim(toTarget); return out; }
+  if (assistSlower(mem, ex, ey, me.vx, me.vy, Math.abs(want) * 0.03 + 3)) { out.brake = true; out.status = there ? 'hold' : 'brake'; out.face = mem.face !== undefined ? mem.face : aim(toTarget); return out; }
   // a change that points away from where the nose rests cannot be made without a turn, however small it is: turn for it once it is over
   // ASSIST.slow (a ship a little inside its range with a weak brake sat there for good, nose on the target, the change too small to count)
   const away = ex * Math.cos(rest) + ey * Math.sin(rest) < 0;
