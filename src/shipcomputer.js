@@ -145,9 +145,12 @@ function scDock() {
     + (parts.length ? ' Parts for this ship at this shop (next tier): ' + parts.join('; ') + '.' : ' No part for this ship is for sale here.') + (jobs.length ? ' Jobs posted: ' + jobs.join(', ') + '.' : '');
 }
 // who could make the trip when this ship cannot: the cheapest ship models (and ships you own) whose own range and tank do
+function scParked(id, from) { // the ships you own and have left at a station whose own range and tank make the trip
+  const here = activeShip();
+  return G.fleet.filter(x => x !== here).filter(x => jumpReach(from, id, shipStat('range', x), shipStat('tank', x), shipStat('fuelPerLy', x)).ok).map(x => 'your ' + x.name + ' (parked at ' + fleetStationName(x.at) + ') can');
+}
 function scWhoCould(id, from) {
-  const here = activeShip(), out = [];
-  G.fleet.filter(x => x !== here).forEach(x => { const q = jumpReach(from, id, shipStat('range', x), shipStat('tank', x), shipStat('fuelPerLy', x)); if (q.ok) out.push('your ' + x.name + ' (parked at ' + fleetStationName(x.at) + ') can'); });
+  const here = activeShip(), out = scParked(id, from);
   Object.keys(SHIP_MODELS).map(k => SHIP_MODELS[k]).filter(m => m.price > 0 && m.id !== here.model && !G.fleet.some(x => x.model === m.id)).sort((a, b) => a.price - b.price).forEach(m => {
     if (out.length >= 3 || !jumpReach(from, id, m.range, m.tank, m.fuelPerLy).ok) return;
     const where = []; Object.keys(SYSTEMS).forEach(sid => sysBodies('station', sid).forEach(b => { if (stationYard(b.id).includes(m.id) && where.length < 2) where.push(fleetStationName(b.id)); }));
@@ -164,7 +167,8 @@ function scJumpLine(id, from) {
   const route = typeof routeCheck === 'function' ? scTry(() => routeCheck(from, id), null) : null; // the route plotter (src/missions.js), when the game has it
   if (route && route.res) {
     if (route.res.ok) return head + 'out of one jump\'s range (' + range + ' ly) but a chain of jumps works: ' + route.res.hops.map(h => scSysName(h.id)).join(', then ') + '.';
-    return head + 'cannot be reached with this ship. ' + (route.line || ('Out of range for a ' + range + ' ly jump.')) + (route.line ? '' : scWhoCould(id, from));
+    const parked = scParked(id, from); // the plotter's words name the ship models that could; the ships you already own are only in the fleet
+    return head + 'cannot be reached with this ship. ' + (route.line || ('Out of range for a ' + range + ' ly jump.')) + (route.line ? (parked.length ? ' Who could: ' + parked.join('; ') + '.' : '') : scWhoCould(id, from));
   }
   const reach = jumpReach(from, id, range, shipStat('tank', r), shipStat('fuelPerLy', r));
   if (reach.ok) return head + 'out of one jump\'s range (' + range + ' ly) but a chain of jumps works: ' + reach.hops.map(scSysName).join(', then ') + ' (' + scRound(reach.ly) + ' ly in all).';

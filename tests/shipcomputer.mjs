@@ -49,7 +49,7 @@ check('no job: it says so and where jobs are taken', /Job: none accepted \(jobs 
 check('a star in range with the fuel: one jump, what it costs, what you hold, you can go', /- Kestrel: 6\.3 ly, has a fuel pump; one jump, costs 6\.3 fuel and you hold 25: you can jump there now\./.test(s1), s1.split('\n').find(l => /Kestrel:/.test(l)));
 check('a star not charted yet says so; one with no pump says so', /- The Hollow: 7\.9 ly, not charted yet, no fuel pump;/.test(s1));
 check('a star past one jump but inside a chain of jumps: the chain, by name', /- Meridian: 9\.3 ly, not charted yet, has a fuel pump; out of one jump's range \(8 ly\) but a chain of jumps works: Kestrel, then Meridian/.test(s1), s1.split('\n').find(l => /Meridian:/.test(l)));
-check('THE ROOST: a Wren cannot reach it, is told why, and is told that a Kite can: its range, its price, where it is sold', /- Reaver's Roost: 18\.4 ly[^\n]*cannot be reached with this ship: it is out of range \(8 ly a jump[^\n]*Who could: a Kite can \(jump range 14 ly, 4,500 cr, sold at Halcyon Station and Meridian Exchange\)/.test(s1), s1.split('\n').find(l => /Roost:/.test(l)));
+check('THE ROOST: a Wren cannot reach it, is told why (the route plotter\'s words), and is told that a Kite can: its range and its price', /- Reaver's Roost: 18\.4 ly[^\n]*cannot be reached with this ship\. Needs a [\d.]+ ly jump: your Wren does 8\. The Kite at the [^\n]* does 14, 4,500 cr\./.test(s1), s1.split('\n').find(l => /Roost:/.test(l)));
 check('the dock: the fuel, repair and ore prices, the parts it sells for this ship, the jobs posted', /Dock \(the last you were docked at\): Halcyon Station\. Fuel: 8 cr a unit\. Repairs: 0\.5 cr a hull point\./.test(s1) && /Parts for this ship at this shop \(next tier\): light shield \d+ cr/.test(s1) && /Jobs posted: Rescue call, Escort/.test(s1), s1.split('\n').find(l => /^Dock/.test(l)));
 check('the yards: every station that sells ships, each ship with its price and its range', /Yards \(ships for sale\): Halcyon Station \(Halcyon\): Kite 4,500 cr, jump range 14 ly\. Meridian Exchange \(Meridian\): Kite 4,500 cr, jump range 14 ly; Ox/.test(s1));
 
@@ -59,7 +59,7 @@ check('too little fuel for a star in range: it says short by how much and to fil
 
 g.run(`__world('kite', 20)`);
 s1 = snap();
-check('THE ROOST for a Kite: it can, through Kestrel, and the Roost is no longer "cannot"', /- Reaver's Roost: 18\.4 ly[^\n]*a chain of jumps works: Kestrel, then Reaver's Roost \(18\.4 ly in all\)/.test(s1) && !/Roost:[^\n]*cannot be reached/.test(s1), s1.split('\n').find(l => /Roost:/.test(l)));
+check('THE ROOST for a Kite: it can, through Kestrel, and the Roost is no longer "cannot"', /- Reaver's Roost: 18\.4 ly[^\n]*a chain of jumps works: Kestrel, then Reaver's Roost\./.test(s1) && !/Roost:[^\n]*cannot be reached/.test(s1), s1.split('\n').find(l => /Roost:/.test(l)));
 check('a Kite flying: its own numbers (range 14, 0.6 fuel a light year, tank 30)', /Ship: a Kite, hull 70 of 70; fuel 20 of 30 units; jump range 14 ly, 0\.6 fuel a light year/.test(s1), s1.split('\n').find(l => /^Ship/.test(l)));
 g.run(`__world('wren', 25); G.fleet.push(Object.assign(newShip('kite', 'meridian-exchange'), { uid: 2, name: 'Old Faithful' }));`);
 s1 = snap();
