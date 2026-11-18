@@ -288,6 +288,23 @@ const LOOKS = [
   }],
   ['sol-dock-mars', '#space', 'Space', solDock('Arsia High')],       // card space-game-more-than-one-dock: a second and a third dock of one system, ordered from the navigation panel
   ['sol-dock-ceres', '#space', 'Space', solDock('Occator Works')],
+  ['settings-keys', '', 'Title', async t => { // V on the title opens Settings > Keys at the Deepgram key (card space-game-key-links): the three key rows, Get a key, the address, Copy; nothing cut off at 1458 px
+    await t.run(1000); await t.key('V'); await t.run(1500);
+    if (!(await t.ev(up('Settings')))) throw new Error('V did not open Settings: scenes ' + await t.ev(`JSON.stringify(game.scene.getScenes(true).map(x => x.scene.key))`));
+    await pic(t, 'settings-keys');
+    const r = JSON.parse(await t.ev(`JSON.stringify((() => { const s = game.scene.getScene('Settings'), W = 1280, H = 720, pw = SETTINGS.w, ph = SETTINGS.h, L = W / 2 - pw / 2, R = W / 2 + pw / 2, T = H / 2 - ph / 2, B = H / 2 + ph / 2;
+      const m = s.box.getWorldTransformMatrix(), ox = m.tx, oy = m.ty;
+      const texts = []; const walk = list => list.forEach(o => { if (o.list) walk(o.list); else if (o.type === 'Text' && o.visible && o.alpha > 0.05 && String(o.text).trim()) { const b = o.getBounds(); texts.push({ t: String(o.text).replace(/\\n/g, ' / ').slice(0, 44), x0: Math.round(b.x), y0: Math.round(b.y), x1: Math.round(b.right), y1: Math.round(b.bottom) }); } }); walk(s.children.list);
+      const out = texts.filter(o => o.x1 > R - 8 || o.x0 < L + 8 || o.y1 > B - 8 || o.y0 < T + 8);
+      const over = []; for (let i = 0; i < texts.length; i++) for (let j = i + 1; j < texts.length; j++) { const a = texts[i], b = texts[j], w = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0), h = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0); if (w > 4 && h > 4) over.push([a.t, b.t, w, h]); }
+      const cv = game.canvas.getBoundingClientRect(), k = cv.width / W;
+      const inputs = Object.entries(s.inputs || {}).map(([id, i]) => { const e = i && (i.el || i); if (!e || !e.getBoundingClientRect) return null; const b = e.getBoundingClientRect(); return { id, x0: Math.round((b.left - cv.left) / k), x1: Math.round((b.right - cv.left) / k), y0: Math.round((b.top - cv.top) / k), y1: Math.round((b.bottom - cv.top) / k), shown: e.style.display !== 'none' }; }).filter(Boolean);
+      return { panel: [L, T, R, B], texts: texts.length, outside: out, overlaps: over.slice(0, 10), inputs, scale: +k.toFixed(3) }; })())`));
+    console.log('        panel ' + JSON.stringify(r.panel) + ', ' + r.texts + ' texts, canvas scale ' + r.scale);
+    console.log('        outside the panel body: ' + JSON.stringify(r.outside));
+    console.log('        overlapping texts: ' + JSON.stringify(r.overlaps));
+    console.log('        inputs: ' + JSON.stringify(r.inputs));
+  }],
   ['sol-jupiter-probe', '#space', 'Space', async t => { // what is drawn where the autopilot says Jupiter is
     await solOn(t, 'Space'); await solJump(t); await solFly(t, 'Jupiter', 120); await t.run(1000);
     console.log('        ' + await t.ev(`JSON.stringify((() => { const s = ${SP}, b = sysBodies().find(x => x.name === 'Jupiter'), near = o => Math.hypot(o.x - s.ship.x, o.y - s.ship.y) < 3000;
