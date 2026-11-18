@@ -92,7 +92,7 @@ function cruiseSetup(s) {
   cr.fx = s.add.graphics().setScrollFactor(0).setDepth(-7);
   cr.br = s.add.graphics().setDepth(99); cr.brInfo = null; cr.flash = null; // brackets live in the world, on the target: the camera moves them, so they never lag a fast ship
   for (let i = 0; i < 70; i++) cr.ps.push({ x: Math.random() * W, y: Math.random() * H, l: 0.4 + Math.random() * 1.2 });
-  cr.read = s.add.text(W / 2, 128, '', { fontFamily: 'monospace', fontSize: '20px', fontStyle: 'bold', color: '#9fe9ff' }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setStroke('#02060d', 4).setVisible(false);
+  cr.read = s.add.text(W / 2, TOAST.readY, '', { fontFamily: 'monospace', fontSize: '20px', fontStyle: 'bold', color: '#9fe9ff' }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setStroke('#02060d', 4).setVisible(false);
 
   navpanelSetup(s); // src/navpanel.js: the navigation panel on the left, which is the N list now (it keeps cr.list, cr.sel and cr.ui for the files that read them)
 }

@@ -188,12 +188,13 @@ check('a still target is as before: one engine start, the nose steady', (() => {
 
 check('Approach on a real ship sprite (Phaser gives every sprite a type) stops 150 px off, not at a body range', J(`(() => { __scene(0, 0, 0); assistSet('approach', { type: 'Sprite', x: 3000, y: 0, active: true, body: { velocity: { x: 0, y: 0 } } }); return __s.as.range; })()`) === 150);
 
-// the one-line readout keeps clear of the toasts (card space-game-critic-assist-readout): they stack down from y 96 and are drawn over it
+// the one-line readout keeps clear of the toasts (card space-game-critic-assist-readout). Since space-game-toasts-cover-readout a toast stays in its
+// band above the readouts (tests/toastband.mjs), so the line's own place is y 192 and this dodge is a second line of defence
 const T = (y, h, active = true) => `{ y: ${y}, h: ${h}, t: { active: ${active} } }`;
-check('readout: no toast, or one toast at the top: it sits on its own line', J(`assistReadY()`) === 156 && J(`assistReadY([])`) === 156 && J(`assistReadY([${T(96, 39)}])`) === 156);
+check('readout: no toast, or one toast at the top: it sits on its own line', J(`assistReadY()`) === 192 && J(`assistReadY([])`) === 192 && J(`assistReadY([${T(96, 39)}])`) === 192);
 check('readout: a second toast reaches its line: it moves just under that toast', J(`assistReadY([${T(96, 39)}, ${T(153, 62)}])`) === 202, J(`assistReadY([${T(96, 39)}, ${T(153, 62)}])`));
 check('readout: three toasts: under the lowest, and still on the screen', J(`assistReadY([${T(96, 39)}, ${T(153, 62)}, ${T(209, 39)}])`) === 247 && J(`assistReadY([${T(96, 39)}, ${T(153, 62)}, ${T(209, 39)}]) < H - 150`));
-check('readout: a toast that has gone no longer pushes it', J(`assistReadY([${T(96, 39)}, ${T(153, 62, false)}])`) === 156);
+check('readout: a toast that has gone no longer pushes it', J(`assistReadY([${T(96, 39)}, ${T(153, 62, false)}])`) === 192);
 // ---- the assist flies the feel the player chose (playtest 4, bug 2: the same Approach took 6.7 s under Classic and under Heavy) ----
 const flyFeel = feel => { g.run(`handlingSet('${feel}'); __scene(0, 0, Math.PI);`); return J(`(() => { const t = { x: 2000, y: 0 }; assistSet('approach', t, 0); return __frames(2400, t); })()`); };
 const fc = flyFeel('classic'), fh = flyFeel('heavy');
