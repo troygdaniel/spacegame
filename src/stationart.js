@@ -689,8 +689,8 @@ function stationBuild(s, def) {
 }
 
 // ---------- the animated parts, added to the Space scene ----------
-function stationFx(s) {
-  const st = s.station;
+function stationFx(s, at) { // at: the station's image when the system has more than one dock (src/space.js); else the scene's own
+  const st = at || s.station;
   if (!st || !s.textures.exists('station-hub')) return;
   const ADD = Phaser.BlendModes.ADD;
   const ring2 = s.add.image(st.x, st.y, 'station-ring2').setDepth(1);

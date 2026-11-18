@@ -465,7 +465,7 @@ function missionTarget(s) {
   if (m && m.site && G.mission === 'accepted') { const site = sysBodies('poi').find(b => b.id === m.site); return site ? { x: site.x, y: site.y, name: site.name } : null; }
   const pod = missionActive('rescue') && missionHere(m) ? missionBody(m) : null; // the planet the rescue is on (its file's body)
   if (pod) return { x: pod.x, y: pod.y, name: pod.name };
-  const st = sysBody('station'); // a system with no station (Kestrel until card u-b5) has nothing to point at
+  const st = typeof spaceHomeDock === 'function' ? spaceHomeDock() : sysBody('station'); // the dock you launched from (src/space.js); a system with no station has nothing to point at
   return st ? { x: s.station.x, y: s.station.y, name: st.name } : null;
 }
 // a pirate went down: a wanted one counts for the patrol, the Reaver ends the bounty
