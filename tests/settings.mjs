@@ -103,6 +103,7 @@ const open = async (t, press, key, section) => { await press(key); await t.waitF
     const k1 = await texts(t);
     ['THESE USE YOUR OWN ACCOUNTS AND MAY COST YOU MONEY', 'DEEPGRAM', 'OPENAI', 'ANTHROPIC', 'no key', 'NPC CHAT', 'PROVIDER', 'Auto: OpenAI'].forEach(w => check('keys shows ' + w, k1.includes(w)));
     check('the note says the keys stay in this browser', k1.includes('stays in this browser'));
+    check('each of the three keys has its Get a key button, its address as text and a Copy button (card space-game-key-links)', ((k1.match(/Get a key/g) || []).length === 3) && ((k1.match(/Copy/g) || []).length === 3) && ['console.deepgram.com', 'platform.openai.com', 'platform.claude.com'].every(h => k1.includes(h)) && k1.includes('Clear'), k1.slice(0, 200));
     await t.shot('settings-2-keys');
     await t.ev(`${SE}.show('sound')`);
     check('leaving the keys section takes the text boxes away', await t.ev("document.querySelectorAll('input').length") === 0);
