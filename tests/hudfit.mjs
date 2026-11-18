@@ -1,0 +1,22 @@
+// smoke: the mission box's place line is cut to the room its title leaves (plain Node, no Chrome)
+// hudFitSub in src/hud.js (first look, docs/FIRSTLOOK.md): "Kestrel Outpost, Kestrel" beside "Courier run" ran into the title once the place
+// line carried the star system. The line is monospace, so the cut is a count of letters.
+// Run: node tests/hudfit.mjs   (exit code 1 on a failed check)
+import { nodeGame } from './nodegame.mjs';
+
+let failed = 0, n = 0;
+const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + detail + ')' : ''}`); } };
+const g = nodeGame();
+const J = e => JSON.parse(g.run(`JSON.stringify(${e})`));
+const size = J('HT.label'), wide = s => s.length * size * 0.6;
+
+check('a place that fits is left alone', J(`hudFitSub('Kepler-4b', 150, ${size})`) === 'Kepler-4b');
+const cut = J(`hudFitSub('Kestrel Outpost, Kestrel', 150, ${size})`);
+check('a place that does not fit is cut, ends in two dots and fits the room', cut.endsWith('..') && cut.length < 'Kestrel Outpost, Kestrel'.length && wide(cut) <= 150 && cut.startsWith('Kestrel Outpost'), cut);
+check('the cut never leaves a comma or a space before the dots', J(`hudFitSub('Kestrel Outpost, Kestrel', ${Math.ceil(wide('Kestrel Outpost, ..'))}, ${size})`) === 'Kestrel Outpost..', J(`hudFitSub('Kestrel Outpost, Kestrel', ${Math.ceil(wide('Kestrel Outpost, ..'))}, ${size})`));
+check('no room at all: nothing is written, not two dots on the title', J(`hudFitSub('Kestrel Outpost, Kestrel', 20, ${size})`) === '' && J(`hudFitSub('Kestrel', -40, ${size})`) === '');
+check('for every call in the game the cut line fits the room it is given', J(`MISSIONS.every(m => [60, 120, 180, 260].every(room => hudFitSub(missionWhere(m), room, ${size}).length * ${size} * 0.6 <= room))`));
+check('no place: an empty line', J(`hudFitSub(undefined, 150, ${size})`) === '');
+check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
+console.log(failed ? `HUD FIT FAIL (${failed} of ${n})` : `HUD FIT PASS (${n} checks)`);
+process.exitCode = failed ? 1 : 0;
