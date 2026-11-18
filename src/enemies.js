@@ -115,7 +115,7 @@ function pirateAI(s, d, ship, time) {
   if (!d.active || !d.body) return;
   const def = d.def || PIRATES.drone;
   if (def.ai) return def.ai(s, d, ship, time); // a boss brings its own brain
-  const tgt = d.prey && d.prey.active ? d.prey : ship;
+  const tgt = d.prey && d.prey.active && !(d.distractedUntil > time) ? d.prey : ship; // distractedUntil: the escort's pirate you hit fights you for a while (src/missions.js)
   const ddx = tgt.x - d.x, ddy = tgt.y - d.y, dist = Math.hypot(ddx, ddy);
   d.calm = tgt === ship && !d.ambush && pirateHeld(s, dist, def, time); // held back by the launch grace or the first-wave cap (an interdiction ambush is not: src/cruise.js)
   if (dist >= def.engage || d.calm) { d.body.setAcceleration(0, 0); d.rotation += 0.003; if (d.move !== 'run') d.move = null; return; }

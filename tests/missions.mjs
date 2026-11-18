@@ -63,8 +63,7 @@ try {
   await x(`G.mission = 'accepted'; G.missionId = 'escort'; G.missionProgress = 0; ${S('Space')}.scene.restart({ from: 'station' })`);
   await run(2500);
   check('escort: freighter alive', await t.ev(`!!(${S('Space')}.mx.freighter && ${S('Space')}.mx.freighter.active)`));
-  const prey = await t.ev(`${S('Space')}.enemies.getChildren().filter(d => d.prey).length`);
-  check('escort: pirates hunt the MULE (5 are sent; one may already be gone)', prey >= 4, 'prey=' + prey);
+  check('escort: nobody lies in wait at launch any more (the waves come by her progress)', await t.ev(`${S('Space')}.enemies.getChildren().filter(d => d.prey || d.escort).length === 0 && ${S('Space')}.mx.freighter.wave === 0`));
   await t.shot('missions-space-escort');
   const fx = await t.ev(`${S('Space')}.mx.freighter.x`);
   check('freighter is moving toward the gate', fx < 3930, 'x=' + fx);
@@ -91,13 +90,39 @@ try {
   const hp20 = await t.ev(`${S('Space')}.mx.freighter.active ? ${S('Space')}.mx.freighter.hp : -1`);
   // information only: with the player parked and not shooting, the pirates usually kill the MULE before the gate
   console.log('       MULE after 20 s with the player idle next to her:', hp20 > 0 ? 'hull ' + hp20 : 'destroyed', ' mission', (await G()).mission);
+  // the fight (docs/ESCORT.md change 1): a wave at 25, 50 and 75% of the route, 1,400 px out; one screen pirate hunts you, the rest her; a hit pulls one off her
+  await x(`G.mission = 'accepted'; G.missionId = 'escort'; G.missionProgress = 0; ${S('Space')}.scene.restart({ from: 'station' })`);
+  await run(1500);
+  const SW = S('Space'), esc = f => t.ev(`(() => { const s = ${SW}, f = s.mx.freighter, e = s.enemies.getChildren().filter(d => d.active && d.escort); return ${f}; })()`);
+  const along = async k => { await x(`const s = ${SW}, f = s.mx.freighter; if (!s.x0) { s.x0 = f.x; s.y0 = f.y; } f.body.reset(s.x0 + (GATE.x - s.x0) * ${k}, s.y0 + (GATE.y - s.y0) * ${k})`); await run(100); };
+  const said = () => t.ev(`(() => { const out = []; const walk = o => { if (o.type === 'Text') out.push(o.text); if (o.list) o.list.forEach(walk); }; ${SW}.children.list.forEach(walk); return out.join('|'); })()`);
+  await x(`${SW}.pirateOff = true; ${SW}.enemies.clear(true, true)`);
+  await along(0.2);
+  check('at 20% of the route no wave has come', await esc('e.length === 0 && f.wave === 0'));
+  await along(0.3);
+  check('at 25% the first wave: two pirates, one for her and one screen for you', await esc('e.length === 2 && e.filter(d => d.prey === f).length === 1 && e.filter(d => !d.prey).length === 1 && f.wave === 1'), await esc('e.length + " " + f.wave'));
+  check('they appear about 1,400 px out and she calls the side', await esc('e.every(d => { const r = Phaser.Math.Distance.Between(d.x, d.y, f.x, f.y); return r > 1150 && r < 1600; })') && (await said()).includes('Raiders, port side'));
+  check('they are not held back by the launch grace', await esc('e.every(d => d.ambush && d.inbound)'));
+  const far0 = await esc('Math.round(Phaser.Math.Distance.Between(e.find(d => d.prey).x, e.find(d => d.prey).y, f.x, f.y))');
+  await run(2000);
+  const far1 = await esc('Math.round(Phaser.Math.Distance.Between(e.find(d => d.prey).x, e.find(d => d.prey).y, f.x, f.y))');
+  check('they fly in: her hunter is at least 250 px closer after 2 s', far1 < far0 - 250, far0 + ' -> ' + far1);
+  await x(`const d = ${SW}.enemies.getChildren().find(d => d.active && d.escort && d.prey); d.hp -= 5`); await run(100);
+  check('a pirate you hit drops her and fights you for 4 s', await esc(`(() => { const d = e.find(d => d.prey); const left = d.distractedUntil - s.time.now; return left > 3500 && left <= 4000; })()`));
+  await x(`const s = ${SW}, d = s.enemies.getChildren().find(d => d.active && d.escort && d.prey); d.hp -= 10; d.lastHp = d.hp; d.distractedUntil = 0`); await run(100);
+  check('a bump against her hull does not pull it off', await esc('!(e.find(d => d.prey).distractedUntil > s.time.now)'));
+  await along(0.55);
+  check('at 50% the second wave: three more, called to starboard', await esc('e.length === 5 && f.wave === 2 && e.filter(d => !d.prey).length === 2') && (await said()).includes('starboard side'), await esc('e.length + " " + f.wave'));
+  await along(0.8);
+  check('at 75% the third, dead ahead: eight in all, three of them screens', await esc('e.length === 8 && f.wave === 3 && e.filter(d => !d.prey).length === 3') && (await said()).includes('dead ahead'), await esc('e.length + " " + f.wave'));
+  await t.shot('missions-escort-waves');
   // the payout is checked on a fresh run, with her put at the gate, so it does not depend on the fight
   await x(`G.mission = 'accepted'; G.missionId = 'escort'; G.missionProgress = 0; ${S('Space')}.scene.restart({ from: 'station' })`);
   await run(1500);
   const c2 = (await G()).credits;
   // the stakes (docs/ESCORT.md change 3): she calls out, holds 8 s at the gate while the last pirates come, and pays 400 plus up to 200 for her hull
   const SQ = S('Space'), toasts = () => t.ev(`(() => { const out = []; const walk = o => { if (o.type === 'Text') out.push(o.text); if (o.list) o.list.forEach(walk); }; ${SQ}.children.list.forEach(walk); return out.join('|'); })()`);
-  await x(`${SQ}.pirateOff = true; ${SQ}.enemies.clear(true, true); ${SQ}.mx.freighter.hp = 100`); await run(100);
+  await x(`${SQ}.pirateOff = true; ${SQ}.enemies.clear(true, true); ${SQ}.mx.freighter.hp = 100; ${SQ}.mx.freighter.wave = 3`); await run(100); // wave = 3: the route's waves are checked above
   check('at half hull she says so', (await toasts()).includes('Hull at half'));
   await x(`${SQ}.mx.freighter.body.reset(GATE.x + 700, GATE.y)`); await run(100);
   check('within 900 px of the gate: Gate in sight', (await toasts()).includes('Gate in sight'));
@@ -115,7 +140,7 @@ try {
   check('after 8 s she is through: 400 plus 100 for half her hull', g.mission === 'none' && g.credits === c2 + 500, JSON.stringify(g));
   await x(`G.mission = 'accepted'; G.missionId = 'escort'; G.missionProgress = 0; ${S('Space')}.scene.restart({ from: 'station' })`);
   await run(1500);
-  await x(`${SQ}.pirateOff = true; ${SQ}.enemies.clear(true, true); ${SQ}.mx.freighter.hp = 200; ${SQ}.mx.freighter.body.reset(GATE.x + 40, GATE.y)`);
+  await x(`${SQ}.pirateOff = true; ${SQ}.enemies.clear(true, true); ${SQ}.mx.freighter.hp = 200; ${SQ}.mx.freighter.wave = 3; ${SQ}.mx.freighter.body.reset(GATE.x + 40, GATE.y)`);
   await run(300); await x(`${SQ}.enemies.clear(true, true)`); await run(8000); g = await G();
   check('a clean run pays 600', g.mission === 'none' && g.credits === c2 + 500 + 600, JSON.stringify(g));
   await x(`G.mission = 'accepted'; G.missionId = 'escort'; ${S('Space')}.scene.restart({ from: 'station' })`);
