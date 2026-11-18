@@ -238,7 +238,7 @@ class Overlay extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.pk.Z)) { this.whole = !this.whole; sfx('tick'); }
     // the view: you, the objective and the body under the ring; it slides to a new square, it does not jump
     const ring = this.pick.list[this.pick.sel], want = mapView([S.ship, S.obj, ring], S.ws, this.whole), v = this.view || (this.view = Object.assign({}, want));
-    ['x', 'y', 'size'].forEach(k => { v[k] += (want[k] - v[k]) * 0.25; if (Math.abs(want[k] - v[k]) < 2) v[k] = want[k]; });
+    ['x', 'y', 'size'].forEach(k => { v[k] += (want[k] - v[k]) * 0.25; if (Math.abs(want[k] - v[k]) < want.size * 0.003) v[k] = want[k]; }); // the last few px in one step, so it comes to rest (about 20 frames)
     const sc = MS / v.size, X = x => MX + (x - v.x) * sc, Y = y => MY + (y - v.y) * sc;
     this.marks = [];
     g.clear(); gm.clear();
