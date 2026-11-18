@@ -88,7 +88,8 @@ function gunlockSet(target) {
 
 // V: the next target, or none
 function gunlockKey(s) {
-  const L = GUNLOCK, list = gunlockPirates(s), order = s.as && s.as.mode ? s.as.target : null;
+  const sel = typeof overviewTarget === 'function' ? overviewTarget(s) : null;   // the one selected thing (a click in space, an Overview row) comes first
+  const L = GUNLOCK, list = gunlockPirates(s), order = sel && sel.ship ? sel.ref : s.as && s.as.mode ? s.as.target : null;
   const next = gunlockNext(list, s.ship, L.target, order);
   if (next) { gunlockSet(next); return; }
   if (L.target) gunlockDrop(s, 'key'); else { toast(s, 'Nothing to lock in reach.', '#ffd37a'); sfx('empty'); }

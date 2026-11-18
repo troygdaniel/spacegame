@@ -1,7 +1,7 @@
 // smoke: the flight assist's target panel on the HUD: when it shows, what it says, keys from the mode table, the help rows (plain Node, no Chrome)
 // The target panel (card space-game-assist-hud, src/hud.js hudAssistModel / hudAssist) reads the flight assist's interface (src/assist.js
 // assistState). What the panel says is a function with no drawing in it, so it is checked here in plain Node (tests/nodegame.mjs) on a stand-in
-// scene, the same one tests/assist.mjs flies. The drawing is called once on a stand-in pen to see it runs and claims its place on the screen.
+// scene, the same one tests/assist.mjs flies. hudAssist draws no panel now (the orders are on the Overview's target row): it is called on a stand-in pen to see that it draws nothing and switches the assist's quiet line.
 // Run: node tests/hudassist.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -30,14 +30,17 @@ g.run(`
 console.log('A. when the panel shows');
 check('assist off: no panel', J(`hudAssistModel(__s)`) === null);
 g.run(`assistOn(__s, true)`);
-check('assist on, no target: no panel, and the assist keeps its own one-line readout', J(`hudAssistModel(__s)`) === null && J(`__draw()`).readout === true && J(`__draw()`).zones.length === 0);
+check('assist on, no target: nothing to say, and the assist keeps its own one-line readout', J(`hudAssistModel(__s)`) === null && J(`__draw()`).readout === true && J(`__draw()`).zones.length === 0);
 g.run(`__s.cr.target = __mule`);
 let m = J(`hudAssistModel(__s)`);
 check('assist on, a nav target, no order yet: the panel names it, 60 km off, steady, NO ORDER', m && m.name === 'FREIGHTER MULE' && m.km === '60' && m.relLabel === 'STEADY' && m.rel === 0 && m.mode === '' && m.order === 'NO ORDER', JSON.stringify(m));
 let d = J(`__draw()`);
-check('drawn: it claims a zone under the radar and switches the assist\'s own line off', d.readout === false && d.zones.length === 1 && d.zones[0].y0 >= 250 && d.zones[0].x1 === J(`W`), JSON.stringify(d.zones));
-g.run(`__s.cr.target = null`);
-check('target gone: the panel goes and the one-line readout is back', J(`__draw()`).readout === true);
+// card space-game-assist-overview-overlap (Troy, 17 Nov 2026): no panel under the radar any more: the orders live on the Overview's target row
+check('with a target and the Overview hidden: no panel is drawn, no zone is claimed, and the assist\'s own quiet line is on', d.readout === true && d.zones.length === 0 && d.texts.length === 0, JSON.stringify(d));
+g.run(`__s.ov = { shown: true }`);
+check('with the Overview up, the list says it: the quiet line is off, and still nothing is drawn here', J(`__draw()`).readout === false && J(`__draw()`).zones.length === 0 && J(`__draw()`).texts.length === 0);
+g.run(`__s.ov = null; __s.cr.target = null`);
+check('target gone, Overview hidden: the one-line readout is on', J(`__draw()`).readout === true);
 
 console.log('B. what it says about an order');
 g.run(`__s.cr.target = __mule; assistSet('keep', __mule, 500)`);
@@ -61,13 +64,11 @@ console.log('C. the keys come from the mode table');
 const table = J(`Object.values(ASSIST_MODES).filter(x => x.cap).map(x => x.cap + ' ' + x.label)`);
 m = J(`hudAssistModel(__s)`);
 check('one key per mode of the table, in its order', JSON.stringify(m.keys.map(k => k.cap + ' ' + k.label)) === JSON.stringify(table) && table.length >= 2, table.join(' | '));
-const before = J(`__draw()`);
 g.run(`assistMode('hudtest-a', { label: 'Test order', key: 'NINE', cap: '9' }); assistMode('hudtest-b', { label: 'No key' })`);
 m = J(`hudAssistModel(__s)`);
 check('a mode another file adds gets its key with no change to the HUD; one without a key cap gets none', m.keys.length === table.length + 1 && m.keys[m.keys.length - 1].cap === '9' && m.keys[m.keys.length - 1].label === 'Test order', JSON.stringify(m.keys));
 g.run(`assistMode('hudtest-c', { label: 'Third', key: 'EIGHT', cap: '8' })`);
-const after = J(`__draw()`);
-check('more keys than fit the rows: the panel grows by a row', after.zones[0].y1 > before.zones[0].y1 && after.texts.length > before.texts.length, before.zones[0].y1 + ' -> ' + after.zones[0].y1);
+check('a third added mode is in the model too (the Overview draws them as buttons: tests/hudlayout.mjs)', J(`hudAssistModel(__s)`).keys.length === table.length + 2);
 g.run(`['hudtest-a', 'hudtest-b', 'hudtest-c'].forEach(k => delete ASSIST_MODES[k])`);
 
 console.log('D. the keys in the help');
