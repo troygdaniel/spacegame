@@ -25,7 +25,7 @@ const SETTINGS = {
     { id: 'anthropic', name: 'ANTHROPIC', use: 'NPC chat' }
   ],
   confirmMs: 4000,
-  dim: 0.78 // the extra dim over the scene behind: with the panel's own 0.55 nine tenths of it is gone
+  dim: 0.93 // the extra dim over the scene behind: with the panel's own 0.55 only a thirtieth of it is left (the title's key line sat half under the bottom edge)
 };
 const settingsMask = k => (k ? '**** ' + String(k).slice(-4) : 'no key'); // a saved key is shown by its last four characters only
 
@@ -142,8 +142,8 @@ class Settings extends Phaser.Scene {
     this.line(by + 166);
     this.label(bx, by + 190, 'SHIP VOICE');
     this.txt(bx, by + 214, 'The ship computer speaks the key moments of a run: launch, hostiles, hull warnings, docking, missions and payments. The bar characters speak their lines in their own voices when NPC chat is on. It needs your own Deepgram key (Keys).', 13, '#cfefff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 4 } });
-    this.slots.voiceOn = this.button(bx, by + 292, 190, '', () => { voiceSetOn(!VOICE.on); this.soundRefresh(); });
-    this.slots.voiceStat = this.txt(bx + 208, by + 292, '', 14, '#9fe9ff');
+    this.slots.voiceOn = this.button(bx, by + 292, 216, '', () => { voiceSetOn(!VOICE.on); this.soundRefresh(); });
+    this.slots.voiceStat = this.txt(bx + 234, by + 292, '', 14, '#9fe9ff', { style: { wordWrap: { width: bw - 234 }, lineSpacing: 3 } }); // two lines when it is long: it ran off the panel
     this.label(bx, by + 346, 'SHIP COMPUTER VOICE');
     this.button(bx, by + 376, 44, '<', () => this.stepVoice(-1), { size: 18 });
     this.slots.voiceName = this.txt(bx + 60, by + 376, '', 20, '#ffd37a', { style: { fontStyle: 'bold' } });

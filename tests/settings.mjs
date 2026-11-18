@@ -73,7 +73,7 @@ const open = async (t, press, key, section) => { await press(key); await t.waitF
     check('the rail says the volume and that no key is saved', s1.includes('80%') && s1.includes('0 of 3'));
     { // the blind critic, picture 10: the title's letters ghosted through the panel
       const b = await t.ev(`(() => { const s = ${SE}, box = s.ui.box, i = box.list.indexOf(s.back); return JSON.stringify({ has: !!s.back, i, n: box.list.length, firstIsDim: box.list[0].type === 'Rectangle', dim: SETTINGS.dim }); })()`).then(JSON.parse);
-      check('a solid back sits under the glass of the panel and over its dim, and the scene behind is dimmed to a tenth', b.has && b.i === 1 && b.firstIsDim && b.n > 4 && 1 - 0.45 * (1 - b.dim) >= 0.89, JSON.stringify(b));
+      check('a solid back sits under the glass of the panel and over its dim, and the scene behind is dimmed almost out', b.has && b.i === 1 && b.firstIsDim && b.n > 4 && 1 - 0.45 * (1 - b.dim) >= 0.95, JSON.stringify(b));
     }
     await t.shot('settings-1-sound');
 
@@ -89,7 +89,9 @@ const open = async (t, press, key, section) => { await press(key); await t.waitF
     { // the blind critic, picture 10: "Ship voice: ON" stood beside "the game is silent" with the sound on at 100%
       const v = await texts(t);
       check('with no key the voice button does not claim ON: it says it needs a key', await t.ev('VOICE.on') === true && v.includes('Ship voice: NEEDS KEY') && !v.includes('Ship voice: ON'));
-      check('nothing says the game is silent while the sound is on', !/the game is silent/.test(v.join(' | ')) && v.some(x => /The sound effects play/.test(x)));
+      check('nothing says the game is silent while the sound is on', !/the game is silent/.test(String(v)) && /The sound effects play/.test(String(v)));
+      const fit = await t.ev(`(() => { const s = ${SE}, v = s.slots.voiceStat; return JSON.stringify({ right: Math.round(v.x + v.width), edge: SETTINGS.w / 2 }); })()`).then(JSON.parse);
+      check('the line beside the voice button ends inside the panel', fit.right <= fit.edge - 16, JSON.stringify(fit));
       await t.ev(`(voiceSetOn(false), ${SE}.soundRefresh(), 1)`); check('switched off it says OFF', (await texts(t)).includes('Ship voice: OFF'));
       await t.ev(`(voiceSetOn(true), ${SE}.soundRefresh(), 1)`);
     }
