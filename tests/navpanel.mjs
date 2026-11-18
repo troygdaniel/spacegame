@@ -54,6 +54,14 @@ check('30 rows in a 13 line window: always 13 lines, the chosen row always in vi
 check('at the top nothing is above, at the bottom nothing below', lines(many, 0, 13).above === 0 && lines(many, 29, 13).below === 0 && lines(many, 0, 13).below > 0);
 check('no rows, no lines', lines([], 0, 13).lines.length === 0);
 
+console.log('where it sits: under the HUD\'s left side, and only as many lines as fit');
+const P = J('({ x: NAVPANEL.x, y: NAVPANEL.y, max: NAVPANEL.max, min: NAVPANEL.min, bottom: NAVPANEL.bottom, row: NAVPANEL.row })');
+check('with nothing above it, it starts at its own top and shows all its lines', J('navpanelTop([])') === P.y && J(`navpanelFit(${P.y})`) === P.max);
+check('the mission checklist open (a tall zone from the top left): the panel starts under it', J(`navpanelTop([{ x0: 0, y0: 0, x1: 360, y1: 330 }])`) === 336);
+check('a toast or a panel elsewhere on the screen does not move it', J(`navpanelTop([{ x0: 290, y0: 80, x1: 990, y1: 400 }, { x0: 1050, y0: 0, x1: 1280, y1: 250 }, { x0: 0, y0: 500, x1: 400, y1: 700 }])`) === P.y);
+check('pushed down, it shows fewer lines and never passes its bottom', [200, 336, 420].every(top => { const f = J(`navpanelFit(${top})`); return f <= P.max && (top + 90 + f * P.row <= P.bottom || f === P.min); }) && J('navpanelFit(336)') < P.max);
+check('it never shows fewer than its least', J('navpanelFit(9999)') === P.min);
+
 console.log('what Enter would do');
 const near = { kind: 'body', id: 'x', name: 'X', type: 'station', r: 0, dist: 100 }, mid = Object.assign({}, near, { dist: 2000 }), long = Object.assign({}, near, { dist: 2000 + J('AUTO.cruiseLeg') });
 check('a body you are at: nothing to do', J(`navpanelHow(${JSON.stringify(near)})`) === 'here' && /there/.test(J(`navpanelHint(${JSON.stringify(near)}, true)`)));

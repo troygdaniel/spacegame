@@ -26,7 +26,8 @@
 // to go, other systems included. While this panel has the keys Overview lets go of them (it reads s.cr.navOpen).
 // tests/navpanel.mjs checks the grouping, the sort and the window in plain Node.
 const NAVPANEL = {
-  x: 24, y: 176, w: 322, row: 22, max: 13, // the left side, under the gauges and the checklist; lines shown (rows and group headings)
+  x: 24, y: 140, w: 322, row: 22, max: 13, min: 4, // the left side; y is the highest it sits (it goes below the gauges and the mission checklist, src/hud.js); lines shown at most and at least (rows and group headings)
+  bottom: 584,  // nothing of it below this: the tips band and the key line are there
   peek: 9000,   // ms it stays up when it opened by itself
   every: 250,   // ms between rebuilds of the list
   groups: [['mission', 'MISSION'], ['stations', 'STATIONS'], ['bodies', 'PLANETS AND BELTS'], ['signals', 'SIGNALS'], ['gates', 'GATES AND JUMPS']],
@@ -69,6 +70,14 @@ function navpanelLines(rows, sel, max) {
   const lines = all.slice(start, start + max), count = l => l.filter(x => x.row).length;
   return { lines, above: count(all.slice(0, start)), below: count(all.slice(start + max)) };
 }
+// where the panel starts: under whatever the HUD has on the left (its zones: the gauges, the mission checklist open or shut), never above NAVPANEL.y
+function navpanelTop(zones) {
+  let y = NAVPANEL.y;
+  (zones || []).forEach(z => { if (z.x0 <= NAVPANEL.x && z.x1 > NAVPANEL.x && z.y0 < NAVPANEL.y) y = Math.max(y, z.y1 + 6); });
+  return y;
+}
+// how many lines fit between there and the bottom (the pinned line, the title and the foot take 90 px)
+function navpanelFit(top) { return Math.max(NAVPANEL.min, Math.min(NAVPANEL.max, Math.floor((NAVPANEL.bottom - top - 90) / NAVPANEL.row))); }
 function navpanelDist(r) { return r.kind === 'jump' ? (Math.round(r.ly * 10) / 10) + ' ly' : hudFmt(r.dist / 10) + ' km'; }
 // how the ship would get to a row: 'here', 'autopilot' (a short leg), 'cruise' (the autopilot cruises the middle), 'jump', or 'no' with row.why
 function navpanelHow(r) {
@@ -120,7 +129,7 @@ function navpanelSetup(s) {
   const N = NAVPANEL, cr = s.cr, np = s.np = { shown: false, keys: false, hideAt: 0, at: 0, jump: null, jumpRow: null, first: true, mkey: null, press: false, parts: [], lines: [], pinned: [] };
   const fix = (o, list) => { o.setScrollFactor(0).setVisible(false); (list || np.parts).push(o); return o; };
   const font = (size, color, bold) => ({ fontFamily: 'monospace', fontSize: size + 'px', color, fontStyle: bold ? 'bold' : 'normal' });
-  const h = 30 + N.row * N.max + 30, y0 = N.y + 30;
+  const h = 30 + N.row * N.max + 30, y0 = N.y + 30; // placed for real by navpanelPlace, every draw
   // the pinned destination: there whenever you have one
   np.pinBg = fix(s.add.rectangle(N.x, N.y, N.w, 26, 0x04101c, 0.78).setOrigin(0, 0).setStrokeStyle(1, 0xffb454, 0.8).setDepth(100), np.pinned);
   np.pinName = fix(s.add.text(N.x + 10, N.y + 13, '', font(14, '#ffd37a', true)).setOrigin(0, 0.5).setDepth(101), np.pinned);
@@ -150,6 +159,16 @@ function navpanelSetup(s) {
   s.events.on('postupdate', tick);
   s.events.once('shutdown', () => { s.events.off('postupdate', tick); if (s.np === np) s.np = null; });
 }
+// put every piece where it belongs for a panel that starts at top and shows n lines
+function navpanelPlace(s, top, n) {
+  const np = s.np, N = NAVPANEL, y0 = top + 30, h = 30 + N.row * n + 30;
+  np.top = top;
+  np.pinBg.setY(top); np.pinName.setY(top + 13); np.pinDist.setY(top + 13);
+  np.bg.setY(y0).setSize(N.w, h); if (np.bg.input && np.bg.input.hitArea) np.bg.input.hitArea.height = h;
+  np.title.setY(y0 + 15); np.key.setY(y0 + 15);
+  np.lines.forEach((l, i) => { l.y = y0 + 30 + N.row * i + N.row / 2; l.name.setY(l.y); l.dist.setY(l.y); l.zone.setY(l.y - N.row / 2); });
+  np.foot.setY(y0 + h - 15); np.more.setY(y0 + h - 15);
+}
 function navpanelHide(s) { const np = s.np; if (!np) return; np.shown = false; np.keys = false; np.parts.forEach(o => o.setVisible(false)); }
 
 // rebuild the rows, keeping the chosen row the chosen row
@@ -176,8 +195,9 @@ function navpanelDraw(s) {
   const np = s.np, cr = s.cr, N = NAVPANEL; if (!np) return;
   navpanelBuild(s);
   if (!np.shown) return;
-  const rows = cr.list, view = navpanelLines(rows, cr.sel, N.max), C = N.colors;
+  const top = navpanelTop(s._hud && s._hud.zones), rows = cr.list, view = navpanelLines(rows, cr.sel, navpanelFit(top)), C = N.colors;
   np.shownLines = view.lines;
+  navpanelPlace(s, top, Math.max(1, view.lines.length));
   np.parts.forEach(o => o.setVisible(true));
   np.title.setText('NAVIGATION  -  ' + sysDef().name.toUpperCase()); np.key.setText(np.keys ? 'N close' : 'N choose');
   np.g.clear(); np.hl.setVisible(false);
@@ -277,6 +297,7 @@ function navpanelTick(s) {
     else if (now > np.at) { np.at = now + N.every; navpanelDraw(s); }
   }
   const d = navpanelDest(s);
+  if (d && !np.shown) { const top = navpanelTop(s._hud && s._hud.zones); if (top !== np.top) navpanelPlace(s, top, 1); } // the checklist opened or shut: the pinned line moves with it
   np.pinned.forEach(o => o.setVisible(!!d));
   if (d) { np.pinName.setText('> ' + d.name.toUpperCase()).setColor(d.color); np.pinDist.setText(d.text); }
 }
