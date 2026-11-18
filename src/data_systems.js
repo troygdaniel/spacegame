@@ -33,9 +33,19 @@ function sysDockFrom(st) {
   ['partMult', 'fee', 'salvageMult'].forEach(k => { if (st[k] !== undefined) d[k] = st[k]; });
   return d;
 }
+// Where a body is (card space-game-orbit-fields-in-files). A row of the Bodies table gives x and y, or leaves them empty and gives its orbit:
+// `orbit` units from the sun (the middle of the system when it has none), at `angle` degrees round it clockwise from north (0 north, 90 east,
+// 180 south, 270 west: the minimap is north up, and y grows downward in the world). f: the system's own fields. The game only ever reads x and y:
+// sysOrbit (src/universe.js) works the ring back out from them, so a body written either way is the same body. null: the row says neither.
+function sysPlace(row, f) {
+  if (row.x !== undefined && row.y !== undefined) return { x: row.x, y: row.y };
+  if (row.orbit === undefined) return null;
+  const star = !!f && f.starX !== undefined && f.starY !== undefined, cx = star ? f.starX : ((f && f.size) || 0) / 2, cy = star ? f.starY : ((f && f.size) || 0) / 2, a = (row.angle || 0) * Math.PI / 180;
+  return { x: Math.round(cx + Math.sin(a) * row.orbit), y: Math.round(cy - Math.cos(a) * row.orbit) };
+}
 function sysBodyFrom(row, sysId, W, home) {
-  const b = { id: row.id, type: row.type };
-  SYS_BODY_KEYS.forEach(k => { if (row[k] !== undefined) b[k] = row[k]; });
+  const b = { id: row.id, type: row.type }, at = sysPlace(row, W && W.system && W.system[sysId]);
+  SYS_BODY_KEYS.forEach(k => { const v = at && (k === 'x' || k === 'y') ? at[k] : row[k]; if (v !== undefined) b[k] = v; });
   if (row.type === 'poi' && sysHas(W.poi, row.id)) { // a site with its own file is paid from it; the row only says where
     const f = W.poi[row.id];
     ['name', 'credits', 'hull', 'guard'].forEach(k => { if (f[k] !== undefined) b[k] = f[k]; });
