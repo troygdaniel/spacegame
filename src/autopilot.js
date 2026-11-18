@@ -1,5 +1,5 @@
 // ---------- Autopilot: the ship flies itself to a body at local speed (card space-game-local-autopilot) ----------
-// Cruise (src/cruise.js) covers the long legs and refuses the short ones: nothing inside 2100 px, nothing within 2500 px of a station or planet.
+// Cruise (src/cruise.js) covers the long legs and refuses the short ones: nothing inside 2100 px, and within 2500 px of a station or planet it asks the autopilot to fly clear first (autopilotClear below).
 // Autopilot covers the rest. Pick a body (the N list and P, or the Tab map with W S and Enter, or P with a target already set) and the ship turns
 // onto it, flies at its own top speed, slows down and stops just outside it, slow enough to dock or land (L). A long leg cruises in the middle:
 // autopilot engages cruise once it is clear of the mass and takes the stick back when cruise drops out 900 px short. Any flight key cancels

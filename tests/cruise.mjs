@@ -21,7 +21,7 @@ try {
   const tick = async n => { for (let left = n; left > 0; left -= 20) await E(`tick(${Math.min(20, left)})`); }; // short calls: a busy Mac can take seconds a frame, and one DevTools call times out
   // a quiet sky and a ship parked where the test says, in the units the data is written in (sysAt spreads it out, src/data_systems.js SYSTEM_SCALE); the toast list starts empty
   const park = (x, y) => E(`(() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.eb.getChildren().forEach(b => b.disableBody(true, true));
-    if (s.cr.active) cruiseEnd(s, 'quiet'); s.cr.target = null; s.ship.setPosition(sysAt(${x}), sysAt(${y})); s.ship.setVelocity(0, 0); s.ship.rotation = 0; s.ship.body.setAcceleration(0, 0);
+    if (s.cr.active) cruiseEnd(s, 'quiet'); if (s.ap && s.ap.on) autopilotEnd(s, 'quiet'); s.cr.target = null; s.ship.setPosition(sysAt(${x}), sysAt(${y})); s.ship.setVelocity(0, 0); s.ship.rotation = 0; s.ship.body.setAcceleration(0, 0);
     s.cameras.main.centerOn(sysAt(${x}), sysAt(${y})); (s.toasts || []).forEach(o => { o.t.destroy(); o.bg.destroy(); o.tab.destroy(); }); s.toasts = []; window.__toasts = []; G.hull = G.maxHull; s.ironUntil = 0; })()`);
   const target = name => E(`(() => { const s = ${SP}, b = cruiseKnown(s).find(b => b.name === '${name}'); cruisePick(s, b); return b.dist; })()`);
   const snap = async name => { await t.shot(name); return t.shot(name); }; // a screenshot shows the frame composited at the previous capture: take two, keep the second
@@ -73,7 +73,7 @@ try {
   check('C with no target says so and does not engage', !(await E(`${SP}.cruising`)) && (await said()).some(m => /No destination/.test(m)));
   await park(9000, 9000); await target('Kepler-4c'); await park(9000, 9000);
   await E(`(() => { const s = ${SP}; cruisePick(s, cruiseKnown(s).find(b => b.name === 'Kepler-4c')); s.ship.setPosition(s.station.x + 1800, s.station.y); cruiseEngage(s); })()`);
-  check('inside 2500 px of the station: too close to the mass', !(await E(`${SP}.cruising`)) && (await said()).some(m => /Too close to the mass/.test(m)), JSON.stringify(await said()));
+  check('inside 2500 px of the station: no cruise yet, the ship flies itself clear first and says so (tests/travelclear.mjs flies it out)', !(await E(`${SP}.cruising`)) && (await E(`${SP}.ap.on && ${SP}.ap.stage === 'clear'`)) && (await said()).some(m => /^Clearing Halcyon Station, then cruising to Kepler-4c/.test(m)) && !(await said()).some(m => /Too close to the mass/.test(m)), JSON.stringify(await said()));
   await park(9000, 9000);
   await E(`(() => { const s = ${SP}; cruisePick(s, cruiseKnown(s).find(b => b.name === 'Kepler-4c')); spawnPirate(s, s.ship.x + 1200, s.ship.y, 'drone'); cruiseEngage(s); })()`);
   check('a hostile within 1500 px: cruise is locked', !(await E(`${SP}.cruising`)) && (await said()).some(m => /Hostiles near/.test(m)), JSON.stringify(await said()));

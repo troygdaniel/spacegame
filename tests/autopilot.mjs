@@ -45,10 +45,10 @@ try {
   check('the nav list has the gate now, typed GATE', known.some(k => k[1] === 'gate') && (await E(`CRUISE_TYPES.gate`)) === 'GATE', known.map(k => k[0]).join(', '));
   check('P with no target says so and does nothing', await (async () => { await park(9000, 9000); await pressP(); const s = await state(); return !s.on && (await said()).some(m => /No destination/.test(m)); })());
 
-  // ---- the short hop cruise refuses: from the station's doorstep to Kepler-4b ----
-  await park(stationAt[0] + 600, stationAt[1]); const d0 = await target(planet.name);
+  // ---- the short hop cruise refuses: 2000 px from Kepler-4b, inside its mass limit (the station's doorstep is a cruise away now the systems are spread out) ----
+  await park(planet.x - 2000, planet.y); const d0 = await target(planet.name);
   await E(`${SP}.cr.k.C._justDown = true`); await tick(1);
-  check('C refuses the hop: too close to the mass', !(await E(`${SP}.cruising`)) && (await said()).some(m => /Too close to the mass/.test(m)));
+  check('C refuses the hop: it is close, fly there', !(await E(`${SP}.cruising`)) && !(await state()).on && (await said()).some(m => /is close: fly there/.test(m)), JSON.stringify(await said()));
   await pressP();
   let s0 = await state();
   check('P takes the ship: autopilot on, the local stage, the readout up', s0.on && s0.stage === 'local' && (await said()).some(m => /Autopilot to Kepler-4b/.test(m)), JSON.stringify(s0));
@@ -61,7 +61,7 @@ try {
   check('the arrival line says what to press', (await said()).some(m => /Kepler-4b: press L to land/.test(m)), JSON.stringify(await said()));
   await tick(3);
   check('the land prompt is on: L lands', /Land/.test((await state()).prompt), (await state()).prompt);
-  check('the hop takes about as long as the distance says (4 to 12 s for 2500 px)', hop.seconds > 4 && hop.seconds < 13, hop.seconds.toFixed(1) + ' s for ' + Math.round(d0) + ' px');
+  check('the hop takes about as long as the distance says (4 to 12 s for 2000 px)', hop.seconds > 4 && hop.seconds < 13, hop.seconds.toFixed(1) + ' s for ' + Math.round(d0) + ' px');
   if (!(await snap('autopilot-arrived'))) check('screenshot after arrival', false);
 
   // ---- to the station: it ends on the dock prompt ----
