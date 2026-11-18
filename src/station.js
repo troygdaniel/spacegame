@@ -190,7 +190,7 @@ class Station extends Phaser.Scene {
       const L = cx - w / 2 + 16, cap = keyCap(this, m.key, selected ? AMBER : CYAN); cap.setPosition(L + cap.kw / 2, cy - h / 2 + 30); add(cap);
       const reach = missionReach(m); // a call the ship you fly cannot reach is dimmed and says so (src/missions.js; the line that says what would reach it is under BRIEFING)
       txt(L + cap.kw + 10, cy - h / 2 + 30, m.title.toUpperCase(), 17, !reach.ok ? '#5b7a92' : selected ? '#ffd37a' : '#9fe9ff', { style: { fontStyle: 'bold' } });
-      txt(L, cy - h / 2 + 58, m.where, 13, reach.ok ? '#8fb4c9' : '#5b7a92');
+      txt(L, cy - h / 2 + 58, missionWhere(m), 13, reach.ok ? '#8fb4c9' : '#5b7a92'); // the place and its star system (src/missions.js)
       if (!reach.ok) txt(L, cy - h / 2 + 74, reach.why === 'fuel' ? 'NOT ENOUGH TANK' : 'OUT OF JUMP RANGE', 11, '#ffb454', { style: { fontStyle: 'bold' } });
       txt(L, cy - h / 2 + 90, 'REWARD', 11, '#5b7a92'); txt(L, cy - h / 2 + 112, callReward(m) + ' cr', 28, '#ffb454', { style: { fontStyle: 'bold' } });
       const r = risk(m);
@@ -211,7 +211,7 @@ class Station extends Phaser.Scene {
         g.fillStyle(AMBER, 1); g.fillRect(-300, cy - 110, 600, 4);
         txt(-276, cy - 78, m.title.toUpperCase(), 22, '#ffd37a', { style: { fontStyle: 'bold' } });
         txt(276, cy - 78, 'IN PROGRESS', 15, '#6dff9c', { ox: 1 });
-        txt(-276, cy - 44, m.where, 14, '#8fb4c9');
+        txt(-276, cy - 44, missionWhere(m), 14, '#8fb4c9');
         txt(-276, cy - 8, m.progress(), 17, '#e8f6ff', { oy: 0, style: { lineSpacing: 6 } });
         txt(-276, cy + 84, 'PAYS ' + callReward(m) + ' cr', 16, '#ffb454', { style: { fontStyle: 'bold' } });
         this.ui.setHints([['X', 'Drop the mission'], ['Esc', 'Close']]); return;

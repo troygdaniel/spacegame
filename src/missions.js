@@ -239,6 +239,35 @@ function missionFarLine() {
   const far = missionFar(); if (!far) return '';
   return 'CALL: ' + (far.station ? far.name + ', ' : '') + callSysName(far.system) + '  (' + far.ly + ' ly)  -  G opens the galaxy map';
 }
+// ---- the next step, in plain words (card space-game-job-shows-the-way) ----
+// Troy took a courier run and could not find where to go: a job in another system gave him nothing to follow. This is the one sentence the
+// navigation panel pins (src/navpanel.js), the checklist shows as NEXT (src/hud.js) and tests/jobway.mjs reads for every kind of call.
+// what the call wants once you are in its system: { kind, text }. kind: 'dock', 'land', 'site', 'escort' or 'fight'
+function missionThen(m, st) {
+  const kind = missionKind(m);
+  if (st === 'rescued') return { kind: 'dock', text: 'Dock at ' + callStName('halcyon-station') };
+  if (m.carry) return { kind: 'dock', text: 'Dock at ' + callStName(m.to) };
+  if (m.site) return { kind: 'site', text: m.here };
+  if (kind === 'rescue') return { kind: 'land', text: 'Land on ' + m.where };
+  if (kind === 'escort') return { kind: 'escort', text: 'Stay with the MULE to the Perseus gate' };
+  if (kind === 'patrol') return { kind: 'fight', text: 'Destroy the wanted pirates: ' + (G.missionProgress | 0) + ' of ' + (m.count || 5) + ' down' };
+  if (kind === 'bounty') return { kind: 'fight', text: 'Destroy the Reaver' };
+  return { kind: 'go', text: m.line(st) };
+}
+// the next step of the open call: { kind, text, system } or null with no call. In another system than the call's it is the jump first:
+// kind 'jump', system: where to, text: "Jump to Kestrel: press G, then dock at Kestrel Outpost". In the right system: missionThen, system null.
+function missionStep() {
+  const st = G.mission, m = st === 'accepted' || st === 'rescued' ? missionDef() : null; if (!m) return null;
+  const then = missionThen(m, st), sys = st === 'rescued' ? (m.system || 'halcyon') : callGoal(m).system;
+  if (sys === G.system) return Object.assign({ system: null }, then);
+  return { kind: 'jump', system: sys, text: 'Jump to ' + callSysName(sys) + ': press G, then ' + then.text.charAt(0).toLowerCase() + then.text.slice(1) };
+}
+// the where line of the mission board and the checklist: the place, and the star system it is in when the place does not say so itself
+function missionWhere(m) {
+  if (!m) return '';
+  const sys = callSysName(callGoal(m).system), where = m.where || '';
+  return where.toLowerCase().includes(sys.toLowerCase()) ? where : where + ', ' + sys;
+}
 // docking pays a carry call at the station it was bound for (station.js calls this when you arrive)
 function missionDock(s) {
   const m = missionDef();

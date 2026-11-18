@@ -79,7 +79,7 @@ function galaxyDemo() { G.system = 'halcyon'; G.known = ['halcyon', 'kestrel', '
 class Galaxy extends Phaser.Scene {
   constructor() { super('Galaxy'); }
   init(d) {
-    this.from = (d && d.from) || null; this.onJump = d && d.onJump; this.closing = false; this.born = performance.now();
+    this.from = (d && d.from) || null; this.onJump = d && d.onJump; this.want = (d && d.sel) || null; this.closing = false; this.born = performance.now();
     this.sel = null; this.hover = null; this.youTag = null; // a restarted scene keeps its old fields: they point at objects that are gone
   }
 
@@ -105,7 +105,9 @@ class Galaxy extends Phaser.Scene {
     this.nodes = this.buildNodes();
     this.cardBox = this.add.container(0, 0); this.box.add(this.cardBox);
     this.zone();
-    this.sel = this.nearestOther() ? this.nearestOther().id : this.here.id; // the first thing the card shows: the nearest star
+    // the first thing the card shows: the star asked for (the navigation panel's job row), else the star the open call wants you at, else the nearest
+    const goal = typeof missionGoalSystem === 'function' ? missionGoalSystem() : null, ok = id => !!id && id !== this.here.id && this.nodes[id] && !this.nodes[id].unknown;
+    this.sel = ok(this.want) ? this.want : ok(goal) ? goal : this.nearestOther() ? this.nearestOther().id : this.here.id;
     this.refresh();
     this.input.keyboard.on('keydown', e => this.onKey(e));
     this.ui.tagText.setText('YOU  ' + this.here.name.toUpperCase() + '   RANGE ' + fmtLy(shipStat('range', this.rec)) + ' LY   FUEL ' + Math.round(fuelHave(this.rec) * 10) / 10 + ' / ' + fuelTank(this.rec));
