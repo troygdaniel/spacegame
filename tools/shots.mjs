@@ -79,7 +79,7 @@ const LOOKS = [
   }],
   ['overview-orders', '#space', 'Space', async t => { // the Overview list with an order of the flight assist in its target row
     await need(t, `typeof overviewSetup === 'function' || typeof overviewFrame === 'function'`, 'src/overview.js'); await t.run(1500);
-    await t.ev(`(() => { const s = ${SP}, a = s.ship; [[420, -120], [-300, 260]].forEach(([dx, dy]) => s.spawnDrone(a.x + dx, a.y + dy)); if (typeof assistOn === 'function') { assistOn(s, true); s.cr.target = sysBody('gate'); assistSet('keep', null, 500); } return 1; })()`);
+    await t.ev(`(() => { const s = ${SP}, a = s.ship; [[420, -120], [-300, 260]].forEach(([dx, dy]) => s.spawnDrone(a.x + dx, a.y + dy)); if (typeof assistOn === 'function') { assistOn(s, true); s.cr.target = sysBody('gate'); assistSet('keep', null, 500); } overviewShow(s, true, false); return 1; })()`);
     await t.run(2500);
   }],
   ['sky', '#space', 'Space', async t => { await t.run(2000); }] // the sky with no backdrop sun, giant or moon: only real bodies

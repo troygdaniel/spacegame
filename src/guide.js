@@ -31,8 +31,10 @@ function guideHint(s) {
   if (key === 'Station') {
     if (s.talk || s.shopOpen) return '';
     if (s.panel) return s.canAccept ? 'Press E to accept the rescue, or Esc to close.' : '';
-    if (G.mission === 'accepted') return 'Rescue accepted. Go right to the hangar and press E at YOUR SHIP.';
-    return 'Walk left to the MISSIONS terminal and press E.';
+    // the station menu does the walking now (card space-game-station-menu): the tip names the row and its key
+    const row = k => { const r = s.menu && s.menu.rows && s.menu.rows.find(x => x.key === k && !x.off); return r ? ' (press ' + r.n + ')' : ''; };
+    if (G.mission === 'accepted') return 'Rescue accepted. Pick Your ship in the station menu' + row('ship') + ' to board.';
+    return 'Pick Missions in the station menu, bottom right' + row('missions') + '.';
   }
   if (key === 'Space' && s.ship && s.planet && s.station) {
     if (s.dead) return '';
