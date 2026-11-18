@@ -23,3 +23,4 @@ wrong picture. Views come and go with the cards; the critic's ten fixed pictures
 
 | When | Card | Picture | Verdict | Fix |
 |---|---|---|---|---|
+| 17 Nov 21:13 | `space-game-nav-panel` | `nav-panel.png`, `nav-panel-set.png` | **Fine.** The panel draws under the mission checklist, the chosen row has its amber bar, the pinned line and the foot line ("Enter  go: autopilot and cruise") read well at 1458 px, no console error. Noted, not broken: with the mission checklist open only 4 lines fit (the foot says 7 more below). | none |
