@@ -562,8 +562,8 @@ function hudRadar(h, s, key, obj, now) {
 // ring turns round it; a tag gives its type, range and hull. Other hostiles in view get four small ticks. ----
 const HUD_LOCK_RANGE = 1500;
 function hudLock(h, s, now) {
-  const cam = s.cameras.main, me = s.ship;
-  const on = e => { const x = e.x - cam.scrollX, y = e.y - cam.scrollY; return x > 24 && x < W - 24 && y > 56 && y < H - 150; };
+  const me = s.ship;
+  const on = e => { const p = camzoomScreen(s, e.x, e.y), x = p.x, y = p.y; return x > 24 && x < W - 24 && y > 56 && y < H - 150; };
   let best = null, bd = Infinity, cur = h.lock && h.lock.active && on(h.lock) ? h.lock : null;
   h.view = [];
   s.enemies.getChildren().forEach(e => {
@@ -590,15 +590,15 @@ function hudBrackets(g, x, y, half, k, color, a, w) {
 }
 
 function hudTargets(h, s, now) {
-  const g = h.g, cam = s.cameras.main, me = s.ship, lock = h.lock;
+  const g = h.g, me = s.ship, lock = h.lock;
   (h.view || []).forEach(e => { // the ones in view that are not the target: four small ticks
     if (e === lock) return;
-    const x = e.x - cam.scrollX, y = e.y - cam.scrollY, half = Math.max(e.displayWidth, e.displayHeight) / 2 + 8;
+    const p = camzoomScreen(s, e.x, e.y), x = p.x, y = p.y, half = Math.max(e.displayWidth, e.displayHeight) / 2 * camzoomZ(s) + 8; // src/camzoom.js: where it is on the screen at this zoom
     hudBrackets(g, x, y, half, 4, e.wanted ? AMBER : RED, 0.4, 1);
   });
   if (!lock) return; // its tag texts are not used this frame, so hudTick hides them
-  const x = lock.x - cam.scrollX, y = lock.y - cam.scrollY, c = h.lockColor, t = Phaser.Math.Clamp((now - h.lockSince) / 380, 0, 1);
-  const half = Math.max(22, Math.max(lock.displayWidth, lock.displayHeight) / 2 + 12), open = Math.pow(1 - t, 2) * 70;
+  const lp = camzoomScreen(s, lock.x, lock.y), x = lp.x, y = lp.y, c = h.lockColor, t = Phaser.Math.Clamp((now - h.lockSince) / 380, 0, 1);
+  const half = Math.max(22, Math.max(lock.displayWidth, lock.displayHeight) / 2 * camzoomZ(s) + 12), open = Math.pow(1 - t, 2) * 70;
   hudBrackets(g, x, y, half + open, 10 + 6 * (1 - t), c, 0.45 + 0.55 * t, 2);
   if (t >= 1) { // locked: a dashed ring turns slowly round it
     const r = half + 7, spin = now / 900;
@@ -738,7 +738,7 @@ function hudEdge(h, sx, sy) {
 }
 
 function hudMarker(h, s, o, now) {
-  const g = h.g, cam = s.cameras.main, sx = o.x - cam.scrollX, sy = o.y - cam.scrollY;
+  const g = h.g, sp = camzoomScreen(s, o.x, o.y), sx = sp.x, sy = sp.y; // src/camzoom.js
   const pulse = 0.7 + 0.3 * Math.sin(now / 260);
   const dist = Math.round(Phaser.Math.Distance.Between(o.from.x, o.from.y, o.x, o.y) * o.k) + ' ' + o.unit;
   const name = { size: 13, bold: true, color: '#ffd37a', stroke: true }, far = { size: 12, color: '#9fe9ff', stroke: true };
@@ -771,10 +771,10 @@ function hudMarker(h, s, o, now) {
 // world labels (the ones label() made) fade while a panel, the radar or a toast sits on top of them
 function hudFade(h, s) {
   if (!s._wl) return;
-  const cam = s.cameras.main, m = 6;
+  const m = 6;
   s._wl = s._wl.filter(t => t.active);
   s._wl.forEach(t => {
-    const w = t.width / 2, hh = t.height / 2, x = t.x - cam.scrollX, y = t.y - cam.scrollY;
+    const kz = camzoomZ(s), w = t.displayWidth * kz / 2, hh = t.displayHeight * kz / 2, p = camzoomScreen(s, t.x, t.y), x = p.x, y = p.y;
     const hit = h.zones.some(z => x + w > z.x0 - m && x - w < z.x1 + m && y + hh > z.y0 - m && y - hh < z.y1 + m);
     t.alpha += ((hit ? 0.1 : 1) - t.alpha) * 0.25;
   });

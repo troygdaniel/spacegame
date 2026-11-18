@@ -119,6 +119,7 @@ class Space extends Phaser.Scene {
     overviewSetup(this); // src/overview.js: B shows the list of what is around; a click on a row, or W S and Enter, makes it the target
     jumpSetup(this); // src/jump.js: the jump charge, and the F key for the fuel ranger
     deepSetup(this); // src/pullout.js: the pirates of a pull-out in deep space, or a nest's entry pirates
+    camzoomSetup(this); // src/camzoom.js: the mouse wheel zooms the view; the HUD keeps its size on a camera of its own
   }
 
   killDrone(e) { // one place for bullets and ramming to finish an enemy
