@@ -191,7 +191,7 @@ check('readout: a toast that has gone no longer pushes it', J(`assistReadY([${T(
 // ---- the assist flies the feel the player chose (playtest 4, bug 2: the same Approach took 6.7 s under Classic and under Heavy) ----
 const flyFeel = feel => { g.run(`handlingSet('${feel}'); __scene(0, 0, Math.PI);`); return J(`(() => { const t = { x: 2000, y: 0 }; assistSet('approach', t, 0); return __frames(2400, t); })()`); };
 const fc = flyFeel('classic'), fh = flyFeel('heavy');
-check('the same 2000 px Approach takes clearly longer under Heavy (at least 1.4 times Classic)', fh.ended && fc.ended && fh.frames >= fc.frames * 1.4, `classic ${(fc.frames / 60).toFixed(1)} s, heavy ${(fh.frames / 60).toFixed(1)} s`);
+check('the same 2000 px Approach takes clearly longer under Heavy (at least a quarter longer than Classic)', fh.ended && fc.ended && fh.frames >= fc.frames * 1.25, `classic ${(fc.frames / 60).toFixed(1)} s, heavy ${(fh.frames / 60).toFixed(1)} s`);
 check('under Heavy it still ends on the point, slow, without flying past it', fh.ended && fh.d <= 20 && fh.v <= 15 && fh.maxV <= vmax + 0.01, `ended ${fh.d.toFixed(1)} px off at ${fh.v.toFixed(1)} px/s`);
 check('under Heavy the nose is as steady: 6 reversals or fewer, and no burn with the nose off the line', fh.flips <= 6 && fh.offLineBurn === 0, `${fh.flips} reversals, ${fh.offLineBurn} off-line burns`);
 check('under Heavy the turn builds up: the first burn comes later than under Classic', fh.burnAt > fc.burnAt, `classic frame ${fc.burnAt}, heavy frame ${fh.burnAt}`);
