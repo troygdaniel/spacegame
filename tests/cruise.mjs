@@ -45,7 +45,7 @@ try {
 
   // ---- the nav list ----
   const known = JSON.parse(await E(`JSON.stringify(cruiseKnown(${SP}).map(b => [b.name, b.type, Math.round(b.dist)]))`));
-  check('the nav list knows 9 bodies at the start: stations, planets, belts, scenery, the gate', known.length === 9 && known.some(k => k[1] === 'gate'), known.map(k => k[0]).join(', '));
+  check('the nav list knows 10 bodies at the start: the star, stations, planets, belts, scenery, the gate', known.length === 10 && known.some(k => k[1] === 'gate') && known.some(k => k[1] === 'star' && k[0] === 'Halcyon Sun'), known.map(k => k[0]).join(', '));
   check('the nav list is sorted nearest first', known.every((k, i) => !i || known[i - 1][2] <= k[2]));
   check('a salvage site is not on the list until you find it, then it is', await E(`(() => { const s = ${SP}, n0 = cruiseKnown(s).length; G.poi['wreck-nw'] = 1; const n1 = cruiseKnown(s).length; delete G.poi['wreck-nw']; return n1 === n0 + 1; })()`));
   check('cruiseEta: a 90000 px leg (the old 30000, spread out) takes about 13.5 s, twice the 6.5 s it was and not three times; a 3000 px leg about 2 s', await E('Math.abs(cruiseEta(sysAt(30000)) - 13.5) < 0.9 && cruiseEta(3000) > 1.2 && cruiseEta(3000) < 3'), await E('cruiseEta(sysAt(30000)).toFixed(2) + " / " + cruiseEta(3000).toFixed(2)'));
