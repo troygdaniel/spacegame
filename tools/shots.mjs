@@ -100,7 +100,9 @@ const solJump = async t => {
   if (!(await t.ev(up('Galaxy')))) throw new Error('the galaxy map did not open');
   await pic(t, 'sol-galaxy');
   console.log('        galaxy map: ' + await t.ev(`JSON.stringify((() => { const here = galaxyFind(G.system), g = galaxyFind('sol'), j = g && galaxyJump(here, g); return g ? { name: g.name, ly: j.ly, cost: j.cost, ok: j.ok, why: j.why || null, fuel: G.fuel } : { missing: true }; })())`));
-  await t.key('ENTER');
+  await t.ev(`(() => { window.__toasts = []; const orig = toast; toast = (s, msg, c) => { window.__toasts.push(msg); return orig(s, msg, c); }; const sp = ${SP}; sp.enemies.getChildren().slice().forEach(d => d.destroy()); return 1; })()`); // no hostile within the jump lock when Enter is pressed (the map pauses the scene)
+  await t.key('ENTER'); await t.run(1500);
+  if (!(await t.ev(`G.system === 'sol' || !!${SP}.jmp || ${up('Hyper')}`))) console.log('        the jump did not start; toasts: ' + await t.ev('JSON.stringify(window.__toasts)') + '; scenes ' + await t.ev(`JSON.stringify(game.scene.getScenes(true).map(x => x.scene.key))`) + '; lock ' + await t.ev(`jumpLock(${SP})`));
   let ran = 0; while (ran < 90) { await t.run(2000); ran += 2; try { if (await t.ev(`G.system === 'sol' && ${up('Space')}`)) break; } catch (e) { /* between scenes */ } }
   if (!(await t.ev(`G.system === 'sol' && ${up('Space')}`))) throw new Error('not in Sol after ' + ran + ' s: system ' + await t.ev('G.system') + ', scenes ' + await t.ev(`JSON.stringify(game.scene.getScenes(true).map(x => x.scene.key))`));
   await t.run(3000);
