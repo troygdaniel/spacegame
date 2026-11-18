@@ -40,11 +40,11 @@ function assistSteer(me, tgt, wantX, wantY, holdFace) {
   const rvx = me.vx - (tgt.vx || 0), rvy = me.vy - (tgt.vy || 0), ex = wantX - rvx, ey = wantY - rvy, err = Math.hypot(ex, ey);
   const sp = Math.hypot(me.vx, me.vy), want = Math.hypot(wantX, wantY);
   const out = { face: holdFace, burn: false, brake: false, done: false, status: '', err };
-  if (sp > 8 && err > want * 0.03 + 3 && ex * me.vx + ey * me.vy < -0.7 * err * sp) { out.brake = true; return out; }
   // the nose follows the change it needs once that is worth a turn and until it is small again (it remembers on the order, me.mem, as
   // assistSeek does), and the engine burns only as hard as the change asks (the throttle of assistStep). A full burn or nothing, switched
   // at one threshold, lit the engine 15 times a second on a circle and sawed the nose (playtest 4)
   const mem = me.mem || (me.mem = {}), O = ASSIST_ORBIT;
+  if (assistSlower(mem, ex, ey, me.vx, me.vy, want * 0.03 + 3)) { out.brake = true; return out; } // src/assist.js: mostly "slower", remembered so the brake and the engine do not take turns
   if (err > O.faceOn) mem.steer = true; else if (err < O.faceOff) mem.steer = false;
   if (mem.steer) out.face = Math.atan2(ey, ex);
   if (out.face === null || out.face === undefined) return out;
