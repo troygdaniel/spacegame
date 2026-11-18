@@ -15,6 +15,35 @@ const JUMP_WHY = { // what the toast says when a charge ends early
   brake: 'Jump cancelled: you braked.', esc: 'Jump cancelled.', hit: 'Jump cancelled: the ship was hit.', map: 'Jump cancelled.'
 };
 
+// Can a ship go from one system to another and come home (card space-game-bug-runs-out-of-jump-range)? Pure: it reads only the galaxy's
+// light years and which systems have a fuel pump. range: ly of one jump; tank: fuel units; perLy: fuel a light year.
+// It looks for a chain of jumps, each inside the range, fewest jumps first, and flies it there and back the same way on a tank that is full at
+// the start and filled again in every system with a pump: a system with none (the Hollow, Lethe) means the fuel home comes along.
+// Returns { ok, hops: [system ids after `from`], ly } or { ok: false, why: 'range' | 'fuel', hops }.
+function jumpReach(from, to, range, tank, perLy) {
+  if (!SYSTEMS[from] || !SYSTEMS[to] || !SYSTEMS[from].ly || !SYSTEMS[to].ly) return { ok: false, why: 'range', hops: [] };
+  if (from === to) return { ok: true, hops: [], ly: 0 };
+  const ids = Object.keys(SYSTEMS).filter(id => SYSTEMS[id].ly), ly = (a, b) => Math.hypot(SYSTEMS[a].ly[0] - SYSTEMS[b].ly[0], SYSTEMS[a].ly[1] - SYSTEMS[b].ly[1]);
+  const paths = [], queue = [[from]];
+  while (queue.length && paths.length < 24) {
+    const p = queue.shift(), last = p[p.length - 1];
+    if (last === to) { paths.push(p.slice(1)); continue; }
+    if (p.length > 5) continue; // five jumps is across the whole map
+    ids.forEach(n => { if (!p.includes(n) && ly(last, n) <= range + 1e-9) queue.push(p.concat(n)); });
+  }
+  if (!paths.length) return { ok: false, why: 'range', hops: [] };
+  const pump = id => (typeof fuelSystemHasPump === 'function' ? fuelSystemHasPump(id) : true);
+  const fuelOk = path => {
+    const seq = [from].concat(path, path.slice(0, -1).reverse(), [from]); let have = tank;
+    for (let i = 0; i + 1 < seq.length; i++) { const need = ly(seq[i], seq[i + 1]) * perLy; if (need > have + 1e-9) return false; have -= need; if (pump(seq[i + 1])) have = tank; }
+    return true;
+  };
+  const good = paths.find(fuelOk);
+  if (!good) return { ok: false, why: 'fuel', hops: paths[0] };
+  let total = 0, here = from; good.forEach(h => { total += ly(here, h); here = h; });
+  return { ok: true, hops: good, ly: total };
+}
+
 // why the ship cannot start a charge right now, as the words the player reads, or null when it can
 function jumpLock(s) {
   if (!s || s.dead || s.leaving || s.cruising || G.deep) return 'not now';

@@ -188,8 +188,10 @@ class Station extends Phaser.Scene {
       g.lineStyle(selected ? 3 : 1, selected ? AMBER : CYAN, selected ? 1 : 0.5); g.strokeRect(cx - w / 2, cy - h / 2, w, h);
       if (selected) { g.fillStyle(AMBER, 1); g.fillRect(cx - w / 2, cy - h / 2, w, 4); }
       const L = cx - w / 2 + 16, cap = keyCap(this, m.key, selected ? AMBER : CYAN); cap.setPosition(L + cap.kw / 2, cy - h / 2 + 30); add(cap);
-      txt(L + cap.kw + 10, cy - h / 2 + 30, m.title.toUpperCase(), 17, selected ? '#ffd37a' : '#9fe9ff', { style: { fontStyle: 'bold' } });
-      txt(L, cy - h / 2 + 58, m.where, 13, '#8fb4c9');
+      const reach = missionReach(m); // a call the ship you fly cannot reach is dimmed and says so (src/missions.js; the line that says what would reach it is under BRIEFING)
+      txt(L + cap.kw + 10, cy - h / 2 + 30, m.title.toUpperCase(), 17, !reach.ok ? '#5b7a92' : selected ? '#ffd37a' : '#9fe9ff', { style: { fontStyle: 'bold' } });
+      txt(L, cy - h / 2 + 58, m.where, 13, reach.ok ? '#8fb4c9' : '#5b7a92');
+      if (!reach.ok) txt(L, cy - h / 2 + 74, reach.why === 'fuel' ? 'NOT ENOUGH TANK' : 'OUT OF JUMP RANGE', 11, '#ffb454', { style: { fontStyle: 'bold' } });
       txt(L, cy - h / 2 + 90, 'REWARD', 11, '#5b7a92'); txt(L, cy - h / 2 + 112, callReward(m) + ' cr', 28, '#ffb454', { style: { fontStyle: 'bold' } });
       const r = risk(m);
       txt(L, cy - h / 2 + 144, 'RISK', 11, '#5b7a92');
@@ -221,11 +223,12 @@ class Station extends Phaser.Scene {
       });
       if (OFFERS.length > VIS) txt(420, 52, (start > 0 ? '<  ' : '') + 'CALLS ' + (start + 1) + '-' + (start + SHOWN) + ' OF ' + OFFERS.length + (start + VIS < OFFERS.length ? '  >' : ''), 11, '#5b7a92', { ox: 1 });
       txt(-420, 52, 'BRIEFING', 11, '#5b7a92');
+      { const reach = missionReach(OFFERS[sel]); if (!reach.ok) txt(-340, 52, reach.line, 12, '#ffb454'); } // why E does nothing on this one, and what would reach it
       txt(-420, 66, OFFERS[sel].offer, 14, '#cfefff', { oy: 0, style: { lineSpacing: 4 } });
       this.ui.setHints([['E', 'Accept'], OFFERS.length > VIS ? ['< >', 'Choose'] : ['1-' + OFFERS.length, 'Choose'], ['Esc', 'Close']]);
     };
     const choose = (i, quiet) => {
-      sel = Phaser.Math.Wrap(i, 0, OFFERS.length); pickMission(OFFERS[sel].id); this.canAccept = true;
+      sel = Phaser.Math.Wrap(i, 0, OFFERS.length); pickMission(OFFERS[sel].id); this.canAccept = missionCanAccept(OFFERS[sel]); // src/missions.js: not a call this ship cannot fly to and back
       if (sel < start) start = sel; else if (sel >= start + VIS) start = sel - VIS + 1;
       if (!quiet) beep(600, 0.05, 'square', 0.02);
       render();
