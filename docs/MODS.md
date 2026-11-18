@@ -15,8 +15,8 @@ game's complaints. The design behind it is `docs/MODDING.md`; the full list of f
 | `ships/` | two of the three pirates, `raider` and `drone`; `gunship` has no file yet |
 | `parts/` | nine of the fifteen part tiers: shields, weapons and engine, tiers 1 to 3; `tank` and `cargo` have no file yet |
 | `poi/` | the five salvage sites (`wreck-nw`, `wreck-w`, `wreck-se`, `wreck-s`, `beacon-e`) and the two kinds of random signal (`signal-beacon`, `signal-wreck`) |
-| `stations/` | the dock, `halcyon-station`: its name and its prices; and the five docks of the other systems: their name only (their numbers are in the game's own system rows, read by a later economy card) |
-| `systems/` | the eight star systems of the galaxy map: read and kept; the game flies the same eight from its own rows (`src/data_systems.js`), so a changed number here moves nothing yet |
+| `stations/` | the six docks: name, pump price, repair and ore prices, the ships and parts it sells, its door fee, its mission board |
+| `systems/` | the eight star systems: where each is on the galaxy map, its sun, every body in it and where it sits, its pirates. **These files are what the game flies** (see [Star systems](#star-systems)) |
 | `text/` | `ui.md`: the Help screens, the tip under them and the lines that pop up |
 
 To change something that has no file (the gunship, a tank or cargo tier), make a file for it with its name: it works the same way (section 5).
@@ -38,7 +38,7 @@ name the game does not know for one of those types is skipped, and the game says
 content/parts/engine-4.md: the game has no built-in part called "engine-4" and cannot add new ones. Skipped the file.
 ```
 
-New pirates and new part slots wait for later cards, and so does a new courier, haul, salvage or survey call (the game has its own, below: a file with their id changes their words and pay). Star systems are read and kept, and the docks of other systems change only their name; the game flies its own rows of the same numbers; a station's welcome, shop,
+New pirates and new part slots wait for later cards, and so does a new courier, haul, salvage or survey call (the game has its own, below: a file with their id changes their words and pay). Star systems and docks are flown from their files: move a planet, add a belt, change a pump price, or add a whole new system (see [Star systems](#star-systems)); a station's welcome, shop,
 services and bar sections are checked by the build and not read. Section 7 has the exact list.
 
 You need a text editor and Node.js 22 or newer (`node --version`). No packages. Playing never needs Node; only the build step in section 2 does.
@@ -171,10 +171,10 @@ Twenty more ore units of hold.
 
 **A salvage site.** Open `content/poi/wreck-nw.md`: `credits: 120` is what the derelict freighter in the north-west pays for its strongbox. Make it 300. A site can also repair the hull (`hull`) and be guarded
 (`guard`, how many pirates), and the text under the front matter is the line shown when you salvage it. The random signals that turn up on the radar (`signal-beacon`, `signal-wreck`) have no `credits` or `guard`: they take
-`pays: [80, 160]` (the least and the most), `guardChance` and `hullChance`, and `hull` as well. Where a site *is* stays in the star system's data, which is code.
+`pays: [80, 160]` (the least and the most), `guardChance` and `hullChance`, and `hull` as well. Where a site *is* is its row in the `## Bodies` table of its star system's file.
 
 **The dock.** Open `content/stations/halcyon-station.md`: `repair: 0.5` is the credits a point of hull costs at the repair bay, and `ore: 20` what an ore pays when you dock. Set `repair: 1` and the bay costs twice
-as much. There is one dock, so these are the game's prices; `fuel`, `accent` and the welcome, shop, services and bar sections are checked but not read yet. Numbers and words are separate: JUNO and MOSS still say "half a credit a point" after you change the price, so change their lines too if you want them to agree.
+as much. At Halcyon Station these two are the game's prices; every other dock has its own in its own file, and `fuel` is the price at its pump. `accent` and the welcome, shop, services and bar sections are checked but not read yet. Numbers and words are separate: JUNO and MOSS still say "half a credit a point" after you change the price, so change their lines too if you want them to agree.
 
 **The words.** Open `content/text/ui.md`. It is a table of `key | text`: `help.space.5` is the fifth line of the flight Help screen, `tips.space` is the tip under it, `toast.docked` is the line that pops up when you dock.
 Change `toast.docked` to `Docked. Mind the stools.` and dock; press **H** in flight to see the Help screen with `help.space.5` on it. A toast may use placeholders (`{reward}`, `{progress}`, `{count}`, `{name}`); help lines and tips are plain text. `ui.md` lists every key the game reads.
@@ -205,6 +205,29 @@ A key the game does not read refuses the whole file, with a hint, so a typo is s
 
 A pack may add a limited number of each (the table at the top), a file with a mistake adds nothing and the message names it, and a save that uses something from a pack that is gone falls back (no call under way, the ship flies as a Wren).
 
+## Star systems
+
+The galaxy is built from files. `content/systems/<id>.md` is one star system; each dock in it has a file in `content/stations/`; a salvage site may have one in `content/poi/` for what it pays. The game has no other table of systems: `src/data_systems.js` only reads these.
+
+**Change one.** Open `content/systems/halcyon.md`, find `kepler-4b` in the `## Bodies` table and change its `x` from `6200` to `7000`. Run `node tools/build-content.mjs` and reload: the planet has moved, and so have the nav panel, the map, the minimap and the missions that fly to it. Positions are written in the old units; the game spreads every system out 3 times when it reads them (`SYSTEM_SCALE`), so 6200 in the file is 18,600 px in space. Sizes (`r`) are not spread.
+
+**Add one.** Copy `content/_templates/system.md` to `content/systems/sol.md` (the file name is the id), give it a `name`, a `kind`, an `ly` position and a `## Bodies` table, and build. A new star is on the galaxy map, it has a sun at `starX`, `starY`, and a ship with the range can jump there. For a dock, add a `station` row to its bodies and a file `content/stations/<that id>.md` with `system: sol`; give it `fuel:` and it has a pump. The same two files in a pack (`mods/my-pack/systems/sol.md`) add the system when the pack is switched on.
+
+**Replace one.** A file with the id of a shipped system replaces it whole: every body comes from your file.
+
+**A mistake in a file.** A wrong field is refused, in words, and the rest of the file is used; a wrong row of `## Bodies` is left out. If the file cannot be used at all, a shipped system flies as it shipped (from `src/data_systems_core.js`, a copy the game keeps of its own eight) and the Title screen lists the problem. The game always starts.
+
+**What a file cannot change yet** (it is code, each has a card):
+
+| What | Where it lives | Card |
+|---|---|---|
+| Which courier and haul runs exist (from which dock to which) | `CALL_ROUTES` in `src/missions.js` | `space-game-routes-from-files` |
+| The two site calls (the Widow at `lethe-wreck-7`, the beacon at `beacon-h`) | `siteRow(...)` in `src/missions.js` | `space-game-site-calls-from-files` |
+| Where the four first calls play: the rescue on the first planet of `halcyon`, the escort to its first gate, the patrol round its station, the bounty at the first planet of `roost`; Halcyon's nine fixed pirates | `src/missions.js`, `src/space.js` | `space-game-call-places-from-files` |
+| A body's orbit as a radius and an angle (the file gives `x` and `y`; the orbit is worked out from them) | `sysOrbit` in `src/universe.js` | `space-game-orbit-fields-in-files` |
+
+Also code, with no card: the home system is `halcyon` and its dock is where a new game starts; the eight shipped systems are listed in a fixed order and cannot be removed (delete a file and the shipped copy flies); only Kepler-4b has a surface to land on; a sun's name ("Halcyon Sun") and size; the kinds of body and how each is drawn; the notes on the galaxy map.
+
 ## 7. What the game reads today, type by type
 
 Everything else in a file is checked by the build, then ignored.
@@ -216,10 +239,10 @@ Everything else in a file is checked by the build, then ignored.
 | `ship` | the pirates `raider`, `drone`, `gunship` (side `pirate`); a new id adds a player ship (`name` needed) | for a pirate the numbers, `radar`, `art` (`name`, `role` and the description are read; nothing shows them yet); for a new ship every number of the model, `art` (the hull it borrows), `yard`. The six built-in player ships and new pirates are refused |
 | `part` | `shields-1` to `shields-3`, and the same for `weapons`, `engine`, `tank`, `cargo` | `name`, `brief`, `price`, the description, the tier's numbers |
 | `poi` | the sites `wreck-nw`, `wreck-w`, `wreck-se`, `wreck-s`, `beacon-e`; the signals `signal-beacon`, `signal-wreck` | `name`, the description, `credits`, `hull`, `guard`; for a signal `pays`, `guardChance`, `hullChance`, `hull` |
-| `station` | `halcyon-station` (its `system` must be `halcyon`); the other five docks change only their name | `name`, `repair`, `ore` |
+| `station` | the six docks; a new id is a new dock, once a system's `## Bodies` table has a `station` row with that id | `name`, `fuel`, `repair`, `ore`, `yard`, the parts table, `partMult`, `fee`, `salvageMult`, `missions` |
 | `voice` | none built in: a new id adds the lines of its `event` (`replace: yes` drops the ship's own line) | what the ship computer says for that event |
 | `text` | any file in `text/`: new files are read | the strings whose key `ui.md` lists |
-| `system` | the eight systems, kept | nothing yet: the game keeps what the files say; its own rows (`src/data_systems.js`) are what flies |
+| `system` | the eight systems; a new id is a new system | everything in the file: the galaxy position, size, sun, pirates and every row of `## Bodies` |
 
 ## 8. When it goes wrong (2 minutes)
 
@@ -427,14 +450,14 @@ Placeholders in its text: `{reward}`, `{count}`, `{progress}`, `{station}`, `{sy
 | `name`* | text, up to 40 characters | its name |
 | `system`* | the id of a system | the system it is in |
 | `accent` | a colour (see Colours) | its colour (not read yet) |
-| `fuel` | number from 0 to 100 | credits a unit of fuel (not read yet) |
+| `fuel` | number from 0 to 100 | credits a unit of fuel at its pump (none: no pump) |
 | `repair` | number from 0 to 5 | credits a point of hull at the repair bay |
 | `ore` | number from 0 to 200 | credits an ore pays when you dock |
-| `yard` | list in square brackets: ids of ships | the ships it sells, by id (not read yet) |
+| `yard` | list in square brackets: ids of ships | the ships it sells, by id |
 | `missions` | list in square brackets: ids of thingss |  |
-| `partMult` | number from 0.1 to 5 | the price of its parts times this (not read yet) |
-| `fee` | whole number from 0 to 100000 | credits it takes at the door (not read yet) |
-| `salvageMult` | number from 1 to 5 | what a salvage is worth here, times the usual (not read yet) |
+| `partMult` | number from 0.1 to 5 | the price of its parts times this |
+| `fee` | whole number from 0 to 100000 | credits it takes at the door |
+| `salvageMult` | number from 1 to 5 | what a salvage is worth here, times the usual |
 
 Under `##` headings (the text before the first heading is the description, up to 600 characters):
 
@@ -474,11 +497,11 @@ No placeholders.
 | `traffic` | whole number from 0 to 3 | 0 to 3: how busy |
 | `pay` | number from 0.1 to 5 |  |
 | `seed` | whole number from 0 to 2147483647 | the random seed |
-| `starType` | one of: `O`, `B`, `A`, `F`, `G`, `K`, `M` | the star: O, B, A, F, G, K or M (not read yet) |
-| `starX` | whole number from 0 to 200000 | where the star is, px (not read yet) |
-| `starY` | whole number from 0 to 200000 | where the star is, px (not read yet) |
-| `pirateMax` | whole number from 1 to 40 | its own pirate table: at most this many at once (not read yet) |
-| `pirateEvery` | whole number from 1000 to 600000 | its own pirate table: one new pirate every this many ms (not read yet) |
+| `starType` | one of: `O`, `B`, `A`, `F`, `G`, `K`, `M` | the star: O, B, A, F, G, K or M (the sun you can fly to, and the tint of the sky) |
+| `starX` | whole number from 0 to 200000 | where the star is, px |
+| `starY` | whole number from 0 to 200000 | where the star is, px |
+| `pirateMax` | whole number from 1 to 40 | its own pirate table: at most this many at once |
+| `pirateEvery` | whole number from 1000 to 600000 | its own pirate table: one new pirate every this many ms |
 
 Under `##` headings (the text before the first heading is the description, up to 600 characters):
 

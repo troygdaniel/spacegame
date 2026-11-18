@@ -61,6 +61,28 @@ const added = (() => {
 check('a file for a new system "sol" adds it after the eight, with its bodies spread like the rest', !added.failed && added.ids.join() === FIX.order.concat('sol').join() && added.earth.length === 2 && added.earth[0][2] === 63000, JSON.stringify(added).slice(0, 400));
 check('the new system has its sun, a star on the galaxy map, its dock and pump, and a jump from Halcyon reaches it', added.star === 'Sol Sun' && added.onMap && added.onMap[0] === 'Sol' && added.onMap[2] === 5 && added.onMap[3] === true && added.dock === 'sol' && added.reach === true, JSON.stringify(added).slice(0, 400));
 
+// ---- the template is a system that flies: copy it, build, and it is in the game ----
+const fromTemplate = (() => {
+  const C = g.run('ContentLib'), tpl = readFileSync(new URL('../content/_templates/system.md', import.meta.url), 'utf8');
+  const made = C.loadAll([{ path: 'content/systems/example-reach.md', text: tpl }, { path: 'content/stations/example-smelter.md', text: '---\ntype: station\nname: Example Smelter\nsystem: example-reach\nfuel: 6\n---\n' }], {});
+  const text = readFileSync(new URL('../content.generated.js', import.meta.url), 'utf8');
+  const g2 = nodeGame({ replace: { 'content.generated.js': text.replace('  entries: [\n', '  entries: [\n' + made.entries.map(e => '  ' + JSON.stringify(e)).join(',\n') + ',\n') } });
+  return Object.assign({ problems: made.errors.length }, JSON.parse(g2.run(`JSON.stringify({ has: !!SYSTEMS['example-reach'], bodies: (SYSTEMS['example-reach'] || { bodies: [] }).bodies.map(b => b.type), pump: ((SYSTEMS['example-reach'] || { bodies: [{}] }).bodies[0].dock || {}).fuel, pirates: (SYSTEMS['example-reach'] || {}).pirates, sun: sysStar('example-reach') && sysStar('example-reach').star, errs: CONTENT_ERRORS.length })`)));
+})();
+check('content/_templates/system.md has no mistake in it and, copied to a file, is a system the game flies: six bodies, a dock with a pump, its own pirates, a K sun', fromTemplate.problems === 0 && fromTemplate.has && fromTemplate.bodies.join() === 'station,planet,belt,poi,scenery,gate' && fromTemplate.pump === 6 && fromTemplate.pirates && fromTemplate.pirates.max === 8 && fromTemplate.sun === 'K', JSON.stringify(fromTemplate));
+check('the template explains every field of the system schema in a line of its own', (() => { const tpl = readFileSync(new URL('../content/_templates/system.md', import.meta.url), 'utf8'); return Object.keys(g.run('ContentLib').SCHEMA.system.fields || {}).filter(f => f !== 'type' && !new RegExp('^# ' + f.replace(/[XY]$/, '') + '[^\\n]*:', 'm').test(tpl) && !new RegExp('^# [^\\n]*' + f, 'm').test(tpl)); })().length === 0);
+
+// ---- a bad file never leaves the game without a system ----
+const broken = (() => {
+  const text = readFileSync(new URL('../content.generated.js', import.meta.url), 'utf8');
+  const noHome = text.split('\n').filter(l => !l.includes('"type":"system","id":"halcyon"') && !l.includes('"type":"system","id":"roost"')).join('\n'); // as if the build had refused those two files
+  const g2 = nodeGame({ replace: { 'content.generated.js': noHome } });
+  return JSON.parse(g2.run(`JSON.stringify({ ids: Object.keys(SYSTEMS), kept: SYSTEMS_KEPT, home: SYSTEMS.halcyon.bodies.length, roost: SYSTEMS.roost.bodies.length, station: (sysBody('station', 'halcyon') || {}).id })`));
+})();
+check('two system files refused by the build: the game starts, those two fly as shipped (the sealed copy), the other six from their files, in the usual order', broken.ids.join() === FIX.order.join() && broken.kept.join() === 'halcyon,roost' && broken.home === 14 && broken.roost === FIX.systems.roost.bodies.length && broken.station === 'halcyon-station', JSON.stringify(broken));
+check('nothing is kept from the sealed copy when every file is good', J(`SYSTEMS_KEPT`).length === 0);
+check('the sealed copy is the systems, docks and sites of the shipped content, and nothing else', J(`(() => { const types = {}; SYSTEMS_CORE.entries.forEach(e => { types[e.type] = (types[e.type] || 0) + 1; }); const same = JSON.stringify(sysRowsFrom(SYSTEMS_CORE)) === JSON.stringify(sysRowsFrom(CONTENT)); return [Object.keys(types).sort().join(), types.system, same]; })()`).join() === 'poi,station,system,8,true');
+
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `SYSTEMSFROMFILES FAIL (${failed} of ${n})` : `SYSTEMSFROMFILES PASS (${n} checks)`);
 process.exit(failed ? 1 : 0);
