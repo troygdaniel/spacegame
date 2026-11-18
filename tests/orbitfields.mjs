@@ -69,7 +69,7 @@ check('the build\'s check and the game place a body at the same spot, over 1,300
 const tpl = readFileSync(new URL('../content/_templates/system.md', import.meta.url), 'utf8');
 const t = J(`(() => { const r = ContentLib.loadAll([{ path: 'content/systems/example-reach.md', text: ${JSON.stringify(tpl)} }]), e = r.entries[0], W = { system: {}, station: {}, poi: {} }; W.system[e.id] = e.data;
   return { bodies: sysRowFrom(e.id, W).bodies.map(b => [b.id, b.x, b.y]), rows: e.data.bodies.length, errors: r.errors.filter(x => x.level === 'error').map(ContentLib.formatError) }; })()`);
-check('the template (content/_templates/system.md) loads with no error and places its two orbit rows', t.errors.length === 0 && t.rows === 6 && t.bodies.every(b => Number.isInteger(b[1]) && Number.isInteger(b[2])) && JSON.stringify(t.bodies.find(b => b[0] === 'belt-a')) === '["belt-a",12000,18000]', JSON.stringify(t).slice(0, 500));
+check('the template (content/_templates/system.md) loads with no error and places its orbit rows', t.errors.length === 0 && t.rows === 7 && t.bodies.every(b => Number.isInteger(b[1]) && Number.isInteger(b[2])) && JSON.stringify(t.bodies.find(b => b[0] === 'belt-a')) === '["belt-a",12000,18000]', JSON.stringify(t).slice(0, 500));
 check('the template says how: orbit, angle, 0 north, 90 east', /# orbit /.test(tpl) && /# angle /.test(tpl) && /0 north, 90 east/.test(tpl));
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 

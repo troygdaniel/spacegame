@@ -457,7 +457,7 @@ function hudOrreryModel(sys, me, R) {
   const out = bodies.map(b => {
     const d = Math.hypot(b.x - c.x, b.y - c.y), r = d * sc;
     if (r > 4 && !rings.some(q => Math.abs(q - r) < 2.5)) rings.push(r); // bodies at nearly the same distance share a circle
-    return { id: b.id, type: b.type, name: b.name || '', x: b.x, y: b.y, d };
+    return { id: b.id, type: b.type, name: b.name || '', x: b.x, y: b.y, d, parent: b.parent };
   });
   return { c, star: !!(sys.star && ok(sys.star.x)), far, sc, rings, bodies: out, name: sys.name || '' };
 }
@@ -522,7 +522,8 @@ function hudMapArc(sx, sy, r, R) {
 function hudMapRings(m) {
   const out = [];
   if (!m.star) return out;
-  (m.bodies || []).map(b => b.d).filter(d => d > 0).sort((a, b) => a - b).forEach(d => { if (!out.length || d > out[out.length - 1] * 1.03) out.push(d); });
+  (m.bodies || []).filter(b => !b.parent).map(b => b.d).filter(d => d > 0) // a body that goes round another (a moon, its dock) has no ring round the sun
+   .sort((a, b) => a - b).forEach(d => { if (!out.length || d > out[out.length - 1] * 1.03) out.push(d); });
   return out;
 }
 // a distance for a rim marker, short: 86 km, 1,240 km, 12k km

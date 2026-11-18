@@ -21,7 +21,8 @@ check('the tables of docs/SOL.md are the ones the same table makes', i > 0 && j 
 const built = buildMods({ write: false }), sol = built.packs.find(p => p.name === 'sol');
 check('the build finds the pack sol', !!sol, built.packs.map(p => p.name).join());
 check('no problem and no warning in it', sol && sol.errors.length === 0, sol ? JSON.stringify(sol.errors.slice(0, 3)) : '');
-check('it is one system and its seven docks', sol && sol.entries.map(e => e.type + ':' + e.id).sort().join() === DOCKS.map(d => 'station:' + d.id).sort().concat('system:sol').join(), sol ? sol.entries.map(e => e.id).join() : '');
+// the same pack also holds the stars near the Sun (card space-game-near-stars-pack, tests/nearstars.mjs): Sol's own part of it is the files named sol
+check('Sol is one system and its seven docks', sol && sol.entries.map(e => e.type + ':' + e.id).filter(k => /:sol(-|$)/.test(k)).sort().join() === DOCKS.map(d => 'station:' + d.id).sort().concat('system:sol').join(), sol ? sol.entries.map(e => e.id).join() : '');
 check('mods.generated.js is current: it has the pack', !built.changed, 'run node tools/build-content.mjs');
 
 // ---- the pack off: the game is as it shipped ----
@@ -35,7 +36,7 @@ check('the galaxy map has no Sol either, and Halcyon is as it was', !J(off, `gal
 const store = new Map([['longhaul.mods.on', JSON.stringify(['sol'])]]);
 const g = nodeGame({ store });
 const S = J(g, `SYSTEMS.sol || null`);
-check('switched on, Sol is a system the game flies, after the eight', !!S && J(g, `Object.keys(SYSTEMS)`).join() === FIX.order.concat('sol').join(), J(g, `JSON.stringify(CONTENT_ERRORS.slice(0, 2))`));
+check('switched on, Sol is a system the game flies, after the eight', !!S && J(g, `Object.keys(SYSTEMS)`).slice(0, FIX.order.length).join() === FIX.order.join() && J(g, `Object.keys(SYSTEMS)`).includes('sol'), J(g, `JSON.stringify(CONTENT_ERRORS.slice(0, 2))`));
 check('the eight are untouched by it', FIX.order.every(id => J(g, `SYSTEMS['${id}'].bodies.length`) === FIX.systems[id].bodies.length));
 const rows = layout().rows;
 check('it has every body of the table: ' + rows.length, S && S.bodies.length === rows.length && S.bodies.map(b => b.id).join() === rows.map(r => r.id).join());
@@ -75,7 +76,7 @@ const names = DOCKS.map(d => d.name).concat(SUN_BODIES.filter(b => b.invented).m
 const TAKEN = /tycho|medina|anderson|thoth|lovell|ceres station|eros station|ganymede station|phoebe station|pallas station|hygiea|londres|mariner valley|innis|laconia|ilus|behemoth|rocinante|canterbury|donnager|deep space nine|babylon|citadel|serenity|enterprise|nostromo|sevastopol|arcadia|omega station|jameson|coriolis/i;
 check('seven docks and two gates, none with a name from a book, a show or a game (a list of the well-known ones)', DOCKS.length === 7 && names.length === 9 && names.every(x => !TAKEN.test(x)), names.join(', '));
 check('each dock is named after a real feature of the body it is beside, and the doc says which', DOCKS.every(d => d.after && doc.includes(d.name) && doc.includes(d.after)));
-check('no dock is scenery and none waits in a folder the build skips: every dock file is in stations/', (() => { const made = readdirSync(new URL('../mods/sol/stations/', import.meta.url)).filter(f => f.endsWith('.md')).sort(); return !existsSync(new URL('../mods/sol/_stations-later/', import.meta.url)) && S.bodies.filter(b => b.type === 'scenery').length === 0 && made.join() === DOCKS.map(d => d.id + '.md').sort().join(); })());
+check('no dock is scenery and none waits in a folder the build skips: every dock file is in stations/', (() => { const made = readdirSync(new URL('../mods/sol/stations/', import.meta.url)).filter(f => /^sol-.*\.md$/.test(f)).sort(); // the docks of the stars near the Sun are in the same folder (tests/nearstars.mjs) return !existsSync(new URL('../mods/sol/_stations-later/', import.meta.url)) && S.bodies.filter(b => b.type === 'scenery').length === 0 && made.join() === DOCKS.map(d => d.id + '.md').sort().join(); })());
 check('the doc lists every body, says what is invented, and names the three cards', SUN_BODIES.concat(MOONS).every(b => doc.includes('| ' + b.name + ' |')) && /What is real and what is invented/.test(doc) && ['space-game-bodies-orbit-a-body', 'space-game-more-than-one-dock', 'space-game-sol-needs-bigger-systems'].every(c => doc.includes(c)));
 
 check('no errors in the game scripts', g.errors.length === 0 && off.errors.length === 0, g.errors.concat(off.errors).join(' | '));
