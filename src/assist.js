@@ -31,7 +31,7 @@ const ASSIST = {
   turn: 0.0036,                      // rad per ms times the ship's turn stat: the hand flight's own rate (space.js)
   drag: 0.55, brakeDrag: 0.12,       // what is left of the speed after a second of coasting, and of braking: the hand flight's own numbers
   align: 0.3,                        // rad: the nose is on the line, the engine may burn
-  full: 60, idle: 0.04,              // px/s of needed change that gets a full burn (less gets less); the least the engine gives while lit
+  full: 60, idle: 0.005,             // px/s of needed change that gets a full burn (less gets less); the least the engine gives while lit
   lead: 1.7,                         // px/s allowed per px left: the brake takes 2.12 off per second, so 1.7 is in time
   dead: 20, slow: 15,                // px either side of the range that count as there; px/s that counts as stopped
   faceLean: 0.3,                     // how far the nose line leans toward the way the ship wants to go (a share of that speed)

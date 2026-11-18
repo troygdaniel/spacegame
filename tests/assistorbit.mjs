@@ -138,6 +138,14 @@ check('Orbit round a ship that moves, 20 s: 20 starts and 20 reversals or fewer,
 g.run(`__scene(0, 0, 0)`);
 f = J(`(() => { const t = __ship(600, 300, 152, 0); assistSet('match', t); return __frames(1200, t, 5); })()`);
 check('Match speed beside a ship on a straight line at 152 px/s, 20 s: 20 starts and 20 reversals or fewer, matched', f.starts <= 20 && f.flips <= 20 && f.rel < 20, `${f.starts} starts, ${f.flips} reversals, relative ${f.rel.toFixed(1)} px/s, status ${f.status}`);
+for (const [x, y, vx, vy] of [[800, 0, 140, -60], [600, 300, 140, -60], [600, 300, 0, 152], [600, 300, 107, 107], [600, 300, 60, 0], [600, 300, -200, 90], [600, 300, 20, 10]]) { // 6-GEN's sim: other headings and speeds pulsed (up to 235 starts)
+  g.run(`__scene(0, 0, 0)`);
+  f = J(`(() => { const t = __ship(${x}, ${y}, ${vx}, ${vy}); assistSet('match', t); return __frames(1200, t, 5); })()`);
+  check(`Match speed, a ship at ${x},${y} flying ${vx},${vy}: 20 starts and 20 reversals or fewer, matched`, f.starts <= 20 && f.flips <= 20 && f.rel < 20, `${f.starts} starts, ${f.flips} reversals, relative ${f.rel.toFixed(1)} px/s`);
+}
+g.run(`__scene(0, 0, 0)`);
+f = J(`(() => { const t = __ship(600, 300, 20, 10); assistSet('keep', t, 400); return __frames(1200, t, 5); })()`);
+check('Keep at range on a ship that barely moves (20,10): 20 starts or fewer (the engine idles low instead of pulsing)', f.starts <= 20 && f.flips <= 20, `${f.starts} starts, ${f.flips} reversals`);
 
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `ASSIST ORBIT FAIL (${failed} of ${n})` : `ASSIST ORBIT PASS (${n} checks)`);

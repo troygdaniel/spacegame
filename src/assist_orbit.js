@@ -89,7 +89,7 @@ function assistMatchPlan(a, me, tgt, st) {
   let c;
   if (off <= O.matchNear && rel <= O.matchNearV) {
     // nearly alongside: hold the target's velocity with small burns, drifting onto the spot; the nose the way the target flies
-    const pull = off > O.matchHold ? O.lead : 0;
+    const pull = off > O.matchHold ? O.lead * (off - O.matchHold) / off : 0; // the pull grows from nothing at the edge of the hold: a step there (all of it or none) sat the ship on the edge with the engine pulsing
     c = assistSteer(me, tgt, sx * pull, sy * pull, spot.heading);
     c.status = off <= O.matchDead && rel <= O.matchSlow ? 'matched' : c.brake ? 'brake' : 'burn';
   } else c = assistSeek(me, { x: spot.x, y: spot.y, vx: tgt.vx, vy: tgt.vy }, st, 0, false); // far off: fly to the spot as Approach flies to a moving ship
