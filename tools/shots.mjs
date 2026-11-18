@@ -56,14 +56,33 @@ const farCruise = secs => async t => {
   console.log(`        cruise to ${far.name} (${far.type}), ${far.km} km away, world ${far.world.join(' x ')} px: autopilot took it ${far.cruising}; after ${ran} s of game time: cruised ${cruised}, cruising now ${end.cruising}, autopilot on ${end.ap}, ${end.left} km left, ${end.v} px/s`);
 };
 // take the courier run from Halcyon to Kestrel at the board and launch: the Space scene is up, the launch lock over
-const takeJob = async t => {
+const takeJob = async (t, id = 'courier-halcyon-kestrel') => {
   await t.run(800);
-  await t.ev(`(() => { pickMission('courier-halcyon-kestrel'); G.mission = 'accepted'; missionAccepted(); ${ST}.scene.start('Space'); return 1; })()`);
+  if (!(await t.ev(`missionsOffered().some(m => m.id === '${id}')`))) throw new Error('the board at Halcyon does not post ' + id + ': it posts ' + await t.ev(`missionsOffered().map(m => m.id).join(', ')`));
+  await t.ev(`(() => { pickMission('${id}'); G.mission = 'accepted'; missionAccepted(); ${ST}.scene.start('Space'); return 1; })()`);
   for (let i = 0; i < 40 && !(await t.ev(up('Space'))); i++) await t.run(250); // the clock is stepped by hand: the new scene starts on a frame we give it
   if (!(await t.ev(up('Space')))) throw new Error('the Space scene did not start after the launch');
   await t.run(2500);
   await t.ev(`(() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; return 1; })()`);
 };
+// a carry job of Halcyon taken and followed by its own row: Enter twice on the row (the galaxy map), Enter there (the jump), then Enter twice on its row in the other system (the dock)
+const followJob = (id, sys) => async t => {
+    await takeJob(t, id);
+    const pick = () => t.ev(`JSON.stringify((() => { const s = ${SP}; cruiseNavOpen(s); const i = s.cr.list.findIndex(r => r.group === 'mission'); if (i < 0) return { none: true, rows: s.cr.list.map(r => r.group + ':' + r.name) }; navpanelClick(s, i); navpanelClick(s, i); return { row: s.cr.list[i].name, kind: s.cr.list[i].kind, jump: !!s.jmp, ap: !!(s.ap && s.ap.on) }; })())`);
+    const wait = async (expr, secs) => { let ran = 0; while (ran < secs) { await t.run(2000); ran += 2; try { if (await t.ev(expr)) break; } catch (e) { /* between scenes */ } } return ran; };
+    console.log('        in ' + await t.ev('G.system') + ', job row twice: ' + await pick());
+    await t.run(1500);
+    if (await t.ev(up('Galaxy'))) { console.log('        the galaxy map opened at ' + await t.ev(`JSON.stringify((() => { const g = game.scene.getScene('Galaxy'); return g.sel !== undefined ? (g.sel && g.sel.id) || g.sel : null; })())`) + ': Enter'); await t.key('ENTER'); }
+    const a = await wait(`G.system === '${sys}' && ${up('Space')}`, 120);
+    console.log('        after ' + a + ' s of game time: system ' + await t.ev('G.system') + ', scenes up: ' + await t.ev(`JSON.stringify(game.scene.getScenes(true).map(x => x.scene.key))`));
+    if (await t.ev(`G.system === '${sys}' && ${up('Space')}`)) {
+      await t.run(3000);
+      console.log('        in ' + sys + ', job line: ' + await t.ev('navpanelJob()') + '; job row twice: ' + await pick());
+      const b = await wait(up('Station'), 180);
+      console.log('        after ' + b + ' s more: ' + ((await t.ev(up('Station'))) ? 'docked at ' + await t.ev('G.lastDock') + ', credits ' + await t.ev('G.credits') + ', call ' + await t.ev('G.mission') : 'not docked: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}; return { ap: !!(s.ap && s.ap.on), stage: s.ap && s.ap.stage, cruising: !!s.cruising, prompt: s.prompt && s.prompt.text }; })())`)));
+    }
+    await t.run(1500);
+  };
 const LOOKS = [
   ['far-cruise-mid', '#space', 'Space', farCruise(20)],      // the systems are 3 times the size (card space-game-system-distances): 8 s into a cruise to the farthest body
   ['far-cruise-end', '#space', 'Space', farCruise(180)],    // and where that cruise ends (or where it is after 3 minutes of game time)
@@ -148,23 +167,9 @@ const LOOKS = [
     await takeJob(t); await t.ev(`(() => { cruiseNavOpen(${SP}); return 1; })()`); await t.run(800);
     console.log('        ' + await t.ev(`JSON.stringify({ job: navpanelJob(), step: missionStep(), rows: ${SP}.cr.list.filter(r => r.group === 'mission').map(r => r.kind + ' ' + r.name + (r.ok === false ? ' (no: ' + r.why + ')' : '')) })`));
   }],
-  ['job-follow', '#station', 'Station', async t => { // and followed: Enter twice on the job's row (the jump), then Enter twice on its row in the other system (the dock)
-    await takeJob(t);
-    const pick = () => t.ev(`JSON.stringify((() => { const s = ${SP}; cruiseNavOpen(s); const i = s.cr.list.findIndex(r => r.group === 'mission'); if (i < 0) return { none: true, rows: s.cr.list.map(r => r.group + ':' + r.name) }; navpanelClick(s, i); navpanelClick(s, i); return { row: s.cr.list[i].name, kind: s.cr.list[i].kind, jump: !!s.jmp, ap: !!(s.ap && s.ap.on) }; })())`);
-    const wait = async (expr, secs) => { let ran = 0; while (ran < secs) { await t.run(2000); ran += 2; try { if (await t.ev(expr)) break; } catch (e) { /* between scenes */ } } return ran; };
-    console.log('        in ' + await t.ev('G.system') + ', job row twice: ' + await pick());
-    await t.run(1500);
-    if (await t.ev(up('Galaxy'))) { console.log('        the galaxy map opened at ' + await t.ev(`JSON.stringify((() => { const g = game.scene.getScene('Galaxy'); return g.sel !== undefined ? (g.sel && g.sel.id) || g.sel : null; })())`) + ': Enter'); await t.key('ENTER'); }
-    const a = await wait(`G.system === 'kestrel' && ${up('Space')}`, 120);
-    console.log('        after ' + a + ' s of game time: system ' + await t.ev('G.system') + ', scenes up: ' + await t.ev(`JSON.stringify(game.scene.getScenes(true).map(x => x.scene.key))`));
-    if (await t.ev(`G.system === 'kestrel' && ${up('Space')}`)) {
-      await t.run(3000);
-      console.log('        in kestrel, job line: ' + await t.ev('navpanelJob()') + '; job row twice: ' + await pick());
-      const b = await wait(up('Station'), 180);
-      console.log('        after ' + b + ' s more: ' + ((await t.ev(up('Station'))) ? 'docked at ' + await t.ev('G.lastDock') + ', credits ' + await t.ev('G.credits') + ', call ' + await t.ev('G.mission') : 'not docked: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}; return { ap: !!(s.ap && s.ap.on), stage: s.ap && s.ap.stage, cruising: !!s.cruising, prompt: s.prompt && s.prompt.text }; })())`)));
-    }
-    await t.run(1500);
-  }],
+  ['job-follow', '#station', 'Station', followJob('courier-halcyon-kestrel', 'kestrel')],
+  ['job-courier-brass', '#station', 'Station', followJob('courier-halcyon-brass', 'brass')], // the other courier run of Halcyon (card space-game-routes-from-files: the runs come from content files)
+  ['job-haul-brass', '#station', 'Station', followJob('haul-halcyon-brass', 'brass')],       // and the haul: freight in the hold, paid by what arrives
   ['radar-cruise', '#space', 'Space', async t => { // the minimap at cruise speed (card space-game-minimap-ship-centred: the scale follows speed): 6 s into the trip to the farthest body
     await t.run(1500);
     await t.ev(`(() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; s.lockUntil = 0; const b = cruiseKnown(s).slice().sort((a, c) => c.dist - a.dist)[0]; autopilotGo(s, b); return 1; })()`);
