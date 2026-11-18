@@ -65,7 +65,7 @@ try {
       system: ['name', 'kind', 'ly', 'size', 'danger', 'traffic', 'pay', 'seed', 'starType', 'starX', 'starY', 'pirateMax', 'pirateEvery', 'bodies', 'pirates'],
       bodies: ['id', 'type', 'name', 'x', 'y', 'orbit', 'angle', 'art', 'r', // orbit and angle become x and y in sysBodyFrom (the same function worldAt uses); tests/orbitfields.mjs follows them
         'rocks', 'landable', 'kind', 'seed', 'look', 'labelDy', 'credits', 'hull', 'guard', 'note'],
-      station: ['name', 'system', 'accent', 'fuel', 'repair', 'ore', 'yard', 'missions', 'partMult', 'fee', 'salvageMult', 'parts', 'welcome', 'shop', 'services', 'bar']
+      station: ['name', 'system', 'accent', 'fuel', 'repair', 'ore', 'yard', 'missions', 'partMult', 'fee', 'salvageMult', 'parts', 'runs', 'welcome', 'shop', 'services', 'bar']
     };
     const sch = { system: Object.keys(SH.system.fields).concat(Object.keys(SH.system.sections)), bodies: Object.keys(SH.system.sections.bodies.cols), station: Object.keys(SH.station.fields).concat(Object.keys(SH.station.sections)) };
     check('every field, section and column of the system and station schema has a home that this test follows', Object.keys(HOME).every(k => sch[k].every(f => HOME[k].includes(f)) && HOME[k].every(f => sch[k].includes(f))), JSON.stringify(sch));
@@ -102,7 +102,7 @@ try {
     }
     check('seven systems: every front-matter field, every cell of every body row, every dock number and every word of the station files is in the row worldAt gives', lost.length === 0, lost.join(' | '));
     const hs = worlds.halcyon.bodies.find(b => b.id === 'halcyon-station');
-    check('Halcyon\'s station file is kept whole too (accent, welcome, services, bar) and the code row keeps its dock {fuel 8, yard [kite], the eight calls its board posts}', (await ev(`CONTENT_WORLD.station['halcyon-station'].accent`)) === '#38e1ff' && JSON.stringify(hs.dock) === '{"fuel":8,"yard":["kite"],"missions":["rescue","escort","patrol","bounty","courier-halcyon-kestrel","courier-halcyon-brass","haul-halcyon-brass","survey-hollow"]}', JSON.stringify(hs.dock));
+    check('Halcyon\'s station file is kept whole too (accent, welcome, services, bar) and the code row keeps its dock {fuel 8, yard [kite], the eight calls its board posts}', (await ev(`CONTENT_WORLD.station['halcyon-station'].accent`)) === '#38e1ff' && JSON.stringify(hs.dock) === '{"fuel":8,"yard":["kite"],"missions":["rescue","escort","patrol","bounty","courier-halcyon-kestrel","courier-halcyon-brass","haul-halcyon-brass","survey-hollow"],"runs":[{"kind":"courier","to":"kestrel-outpost"},{"kind":"courier","to":"brass-smelter"},{"kind":"haul","to":"brass-smelter"}]}', JSON.stringify(hs.dock));
 
     // the numbers the design gave each place
     const dock = (sys, id) => (worlds[sys].bodies.find(b => b.id === id) || {}).dock || {};

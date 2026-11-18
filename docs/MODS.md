@@ -227,11 +227,22 @@ The game spreads an orbit 3 times like every other distance, and the ring the mi
 
 **A mistake in a file.** A wrong field is refused, in words, and the rest of the file is used; a wrong row of `## Bodies` is left out. If the file cannot be used at all, a shipped system flies as it shipped (from `src/data_systems_core.js`, a copy the game keeps of its own eight) and the Title screen lists the problem. The game always starts.
 
+**Runs between docks.** Which courier and haul runs exist is what the station files say. A station posts a run by listing it in a `## Runs` table: one row per run, `kind` (`courier` or `haul`) and `to` (the id of the station it goes to).
+
+```
+## Runs
+| kind | to |
+|---|---|
+| courier | halcyon-station |
+| haul | halcyon-station |
+```
+
+The dock posts its runs on its mission board without naming them in `missions`. A courier pays 200 cr plus 90 a light year, a haul 20 cr a unit of hold per 5 light years, worked out from where the two systems are on the map. For a run back, add a row to the other station's file (in a pack, a file with that station's id). A run to the station itself, to a station no file has, or listed twice is refused in words.
+
 **What a file cannot change yet** (it is code, each has a card):
 
 | What | Where it lives | Card |
 |---|---|---|
-| Which courier and haul runs exist (from which dock to which) | `CALL_ROUTES` in `src/missions.js` | `space-game-routes-from-files` |
 | Where the four first calls play: the rescue on the first planet of `halcyon`, the escort to its first gate, the patrol round its station, the bounty at the first planet of `roost`; Halcyon's nine fixed pirates | `src/missions.js`, `src/space.js` | `space-game-call-places-from-files` |
 
 Also code, with no card: the home system is `halcyon` and its dock is where a new game starts; the eight shipped systems are listed in a fixed order and cannot be removed (delete a file and the shipped copy flies); only Kepler-4b has a surface to land on; a sun's name ("Halcyon Sun") and size; the kinds of body and how each is drawn; the notes on the galaxy map.
@@ -477,6 +488,7 @@ Under `##` headings (the text before the first heading is the description, up to
 | Heading | Holds |
 |---|---|
 | `## Parts` | a table: `slot`* (one of: `engine`, `shields`, `weapons`, `tank`, `cargo`, `aim`); `tier`* (whole number from 1 to 3) |
+| `## Runs` | a table: `kind`* (one of: `courier`, `haul`); `to`* (an id: a-z, 0-9, dashes) |
 | `## Welcome` | text, up to 400 characters |
 | `## Shop` | a table: `item`* (text, up to 40 characters); `price`* (whole number from 0 to 1000000) |
 | `## Services` | a list, one `- item` a line, each up to 60 characters |
