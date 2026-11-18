@@ -13,6 +13,7 @@ const SYSTEMS = {
     id: 'halcyon', name: 'Halcyon', kind: 'home',
     ly: [20, 22],                 // galaxy map position, light years (section 4.2)
     size: 36000,                  // world px, square (docs/UNIVERSE.md 2.2): the old 8000 px cluster stays in the north-west corner, the rest is far space
+    star: { type: 'G', x: 18000, y: 18000 }, // the sun, in the middle (content/systems/halcyon.md says the same): a body you can fly to (src/universe.js sysStar)
     danger: 1, traffic: 2,        // 0 to 5 and 0 to 3 (it has police, so traffic is 2 or more)
     pirates: { max: 8, every: 15000, weights: { raider: 0.25, drone: 0.35, gunship: 0.4 } }, // the spawn table (enemies.js pirateTable): what Halcyon has always done; other systems get one from their danger
     bodies: [

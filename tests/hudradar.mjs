@@ -45,13 +45,17 @@ check('no star and no size: the middle of the bodies; a body with a bad place, a
 m = J(`hudOrreryModel({ star: { x: 0, y: 0 }, bodies: [{ type: 'station', x: 1000, y: 0 }, { type: 'planet', x: 0, y: 1010 }, { type: 'gate', x: 5000, y: 0 }] }, { x: 0, y: 0 }, ${R})`);
 check('two bodies at nearly the same distance share one circle', m.bodies.length === 3 && m.rings.length === 2, JSON.stringify(m.rings));
 
-console.log('D. the switch to the close view');
-const mode = J(`(() => { const h = {}, out = []; out.push(hudRadarMode(h, Infinity, 0)); out.push(hudRadarMode(h, 2000, 100)); out.push(hudRadarMode(h, HUD_ORRERY.near - 1, 200));
-  out.push(hudRadarMode(h, Infinity, 200 + HUD_ORRERY.back - 1)); out.push(hudRadarMode(h, Infinity, 200 + HUD_ORRERY.back)); out.push(hudRadarMode(h, 100, 9000)); out.push(hudRadarMode(h, 100, 99000)); return out; })()`);
-check('nothing near: the orrery; a hostile outside the range: still the orrery', mode[0] === 'sys' && mode[1] === 'sys');
-check('a hostile inside the range: the close view at once', mode[2] === 'near');
-check('it leaves: the close view stays for the hold, then the orrery is back', mode[3] === 'near' && mode[4] === 'sys');
-check('a long fight stays on the close view', mode[5] === 'near' && mode[6] === 'near');
+console.log('D. in space it is always the system; hostiles are dots on it');
+const mode = J(`(() => { const h = {}, out = []; out.push(hudRadarMode(h, Infinity, 0)); out.push(hudRadarMode(h, 2000, 100)); out.push(hudRadarMode(h, 100, 200)); out.push(hudRadarMode(h, 100, 99000)); out.push(hudRadarMode(h, Infinity, 99001)); return out; })()`);
+check('nothing near, a hostile far off, a hostile beside you, a long fight, after it: always the system (card space-game-real-solar-system)', mode.every(x => x === 'sys') && mode.length === 5, mode.join());
+const foes = J(`(() => { const sys = SYSTEMS.halcyon, me = { x: sys.bodies[0].x + 300, y: sys.bodies[0].y }, m = hudOrreryModel(sys, me, ${R});
+  const list = [{ x: me.x + 900, y: me.y, active: true }, { x: me.x, y: me.y - 900, active: true, wanted: true }, { x: sys.size * 5, y: sys.star.y, active: true }, { x: 1, y: 1, active: false }, null, { x: 'a', y: 2, active: true }];
+  const f = hudOrreryFoes(m, list, ${R}), you = { x: (me.x - m.c.x) * m.sc, y: (me.y - m.c.y) * m.sc };
+  return { n: f.length, f, you, sc: m.sc }; })()`);
+check('each live hostile is a dot; one that is gone, a hole in the list and one with a bad place are left out', foes.n === 3, JSON.stringify(foes.f));
+check('a hostile 900 px east of you is drawn east of your mark, at the map\'s scale', Math.abs((foes.f[0].x - foes.you.x) - 900 * foes.sc) < 1e-6 && Math.abs(foes.f[0].y - foes.you.y) < 1e-6 && foes.f[0].x > foes.you.x, JSON.stringify([foes.f[0], foes.you]));
+check('a wanted one is marked (amber), north of you', foes.f[1].wanted === true && foes.f[1].y < foes.you.y && foes.f[0].wanted === false);
+check('a hostile outside the system is held on the rim, not drawn off the plate', Math.abs(Math.hypot(foes.f[2].x, foes.f[2].y) - (R - 4)) < 1e-6);
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 
 console.log(failed ? `\nHUDRADAR FAIL (${failed} of ${n})` : `\nHUDRADAR PASS (${n})`);

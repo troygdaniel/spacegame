@@ -18,7 +18,7 @@ console.log('the rows: groups in order, nearest first');
 const rows = rowsOf(), known = J(`cruiseKnown(${SHIP})`), jumps = J(`navpanelJumps(${SHIP})`);
 check('every body you know of has a row, and every jump in reach', rows.filter(r => r.kind === 'body').length === known.length && rows.filter(r => r.kind === 'jump').length === jumps.length && known.length > 3, known.length + ' bodies, ' + jumps.length + ' jumps, ' + rows.length + ' rows');
 check('the groups come in the panel\'s order', rows.every((r, i) => !i || ORDER.indexOf(rows[i - 1].group) <= ORDER.indexOf(r.group)), rows.map(r => r.group).join(' '));
-check('stations and outposts are STATIONS, planets and belts their own group, the gate with the jumps', rows.every(r => r.kind !== 'body' || r.group === { station: 'stations', scenery: 'stations', planet: 'bodies', belt: 'bodies', poi: 'signals', gate: 'gates' }[r.type]));
+check('stations and outposts are STATIONS, the sun, planets and belts their own group, the gate with the jumps', rows.every(r => r.kind !== 'body' || r.group === { star: 'bodies', station: 'stations', scenery: 'stations', planet: 'bodies', belt: 'bodies', poi: 'signals', gate: 'gates' }[r.type]) && rows.some(r => r.type === 'star'));
 check('inside a group the nearest is first', rows.every((r, i) => !i || rows[i - 1].group !== r.group || rows[i - 1].kind !== r.kind || (r.kind === 'jump' ? rows[i - 1].ly <= r.ly : rows[i - 1].dist <= r.dist)));
 check('in the last group the gate comes before the jumps', (l => l.every((r, i) => !i || !(l[i - 1].kind === 'jump' && r.kind === 'body')))(rows.filter(r => r.group === 'gates')));
 check('with no call open there is no MISSION group', !rows.some(r => r.group === 'mission'));
