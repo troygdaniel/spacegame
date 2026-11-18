@@ -44,6 +44,23 @@ spread.entries = [null, ...spread.entries.slice(0, mid), 7, 'not an entry', ...s
   }
 }
 
+// ---- an entry that is an object but whose data is wrong: the systems builder reads it when the script loads, before any check of the file ----
+{
+  const first = t => content.entries.findIndex(e => e && e.type === t);
+  const si = first('system'), ti = first('station');
+  const MUT = [['system', si, { bodies: 'x' }], ['system', si, { bodies: [null, 7] }], ['system', si, { bodies: [{ id: 'a' }] }], ['system', si, { bodies: { a: 1 } }], ['system', si, { pirates: 'x', bodies: [] }],
+    ['system', si, { pirates: [null] }], ['system', si, {}], ['system', si, []], ['station', ti, { runs: [null, 7] }], ['station', ti, { runs: 'x' }], ['station', ti, { parts: [null] }],
+    ['station', ti, { parts: 'x' }], ['station', ti, { yard: 7, missions: 'x' }], ['station', ti, 'text'], ['station', ti, []]];
+  for (const [type, at, data] of MUT) {
+    const c = JSON.parse(JSON.stringify(content));
+    c.entries[at] = Object.assign({}, c.entries[at], { data: Array.isArray(data) || typeof data === 'string' ? data : Object.assign({}, c.entries[at].data, data) });
+    const r = load('bad data', mk(c)), label = type + ' entry with data ' + JSON.stringify(data).slice(0, 40);
+    check(`a ${label}: the scripts load`, r.g !== null, r.err);
+    if (r.g) { const got = sample(r.g); check(`a ${label}: the game has all its systems and some calls`, JSON.stringify(got.systems) === JSON.stringify(want.systems) && got.missions.length >= 1, JSON.stringify({ systems: got.systems, kept: got.kept }));
+      if (data && data.bodies === 'x') check(`a ${label}: that system is flown from its sealed copy and named in SYSTEMS_KEPT, and all the calls are there`, got.kept.includes(content.entries[at].id) && JSON.stringify(got.missions) === JSON.stringify(want.missions), JSON.stringify(got.kept)); }
+  }
+}
+
 // ---- entries is not a list ----
 for (const [name, value] of [['a word', 'text'], ['an object', { a: 1 }], ['a number', 7], ['null', null], ['true', true], ['missing', undefined]]) {
   const c = JSON.parse(JSON.stringify(content)); if (value === undefined) delete c.entries; else c.entries = value;
