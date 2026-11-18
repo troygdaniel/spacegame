@@ -91,6 +91,7 @@ The run ledger for 15 to 17 Nov said 77 percent of all test time was spent waiti
 | all three | 185.4 s | 26.0 s | 7.1 times faster |
 
 - Pictures of a stepped test are the same to the eye: 0.6 to 0.7 of 255 per channel on average. A picture is not byte-for-byte the same as a software one, so do not compare a new picture with an old one by its bytes.
+- `tests/perfart.mjs` keeps software drawing: its 47 recorded texture hashes (`tests/fixtures/arthash.json`) are SwiftShader's and the GPU rounds a few values differently, so on the GPU it failed on every texture. It sets `LONGHAUL_GL=software` for its own launch; what it checks is unchanged. `shipsheet` and `systemart`, which look at drawn shapes, pass on the GPU as they are.
 - A test that runs in real time (`scenes`, anything that sleeps instead of stepping) reaches a later frame in the same wall time: the game is the same, the moment is not.
 - `LONGHAUL_GL=software node tests/<name>.mjs` puts SwiftShader back: for a machine with no GPU, or to tell a drawing difference from a game bug.
 - Numbers in `docs/PERF.md` and the playtest pages that say "software GL" were measured before this and are not comparable with a run after it.

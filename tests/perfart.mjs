@@ -48,7 +48,11 @@ function firstFbm(rnd, base, octaves) {
 // ---- 2. the pixels ----
 const FIXTURE = join(ROOT, 'tests', 'fixtures', 'arthash.json');
 const write = process.argv.includes('--write');
+// The pixels in tests/fixtures/arthash.json were recorded from software drawing (SwiftShader). The GPU rounds a few values differently, so this one
+// test keeps software drawing whatever the default is (docs/SMOKE.md 7); what it checks is unchanged.
+const gl0 = process.env.LONGHAUL_GL; process.env.LONGHAUL_GL = 'software';
 const t = await launch('');
+if (gl0 === undefined) delete process.env.LONGHAUL_GL; else process.env.LONGHAUL_GL = gl0;
 try {
   await t.waitFor("!!(window.game && game.scene.isActive('Title'))", 30000, 'Title active');
   const got = await t.ev(`(() => {
