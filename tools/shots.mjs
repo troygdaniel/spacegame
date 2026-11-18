@@ -42,7 +42,21 @@ const SHOTS = [
 // First look (docs/FIRSTLOOK.md): one view per screen that landed without a browser test. Not the critic's list: these come and go with the cards.
 // A view that asks for something the checkout does not have yet (a card not merged) fails with its own message, it does not take a wrong picture.
 const need = (t, expr, what) => t.ev(expr).then(ok => { if (!ok) throw new Error('not in this checkout: ' + what); });
+// a cruise from where the ship launches to the farthest body of the system: start it, run it for `secs` of game time or until it ends, say what happened
+const farCruise = secs => async t => {
+  await t.run(1500);
+  const far = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; s.lockUntil = 0;
+    const b = cruiseKnown(s).slice().sort((a, c) => c.dist - a.dist)[0]; cruisePick(s, b); cruiseEngage(s);
+    return { name: b.name, type: b.type, km: Math.round(b.dist / 10), cruising: !!s.cruising, world: [s.physics.world.bounds.width, s.physics.world.bounds.height] }; })())`));
+  let ran = 0; const step = 2;
+  while (ran < secs) { await t.run(step * 1000); ran += step; if (!(await t.ev(`!!${SP}.cruising`))) break; }
+  const end = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}, k = cruiseKnown(s).find(x => x.name === ${JSON.stringify(far.name)}); return { cruising: !!s.cruising, v: Math.round(s.ship.body.speed), left: k ? Math.round(k.dist / 10) : null, x: Math.round(s.ship.x), y: Math.round(s.ship.y) }; })())`));
+  console.log(`        cruise to ${far.name} (${far.type}), ${far.km} km away, world ${far.world.join(' x ')} px: engaged ${far.cruising}; after ${ran} s of game time: cruising ${end.cruising}, ${end.left} km left, ${end.v} px/s`);
+};
 const LOOKS = [
+  ['far-cruise-mid', '#space', 'Space', farCruise(8)],      // the systems are 3 times the size (card space-game-system-distances): 8 s into a cruise to the farthest body
+  ['far-cruise-end', '#space', 'Space', farCruise(180)],    // and where that cruise ends (or where it is after 3 minutes of game time)
+  ['far-map', '#space', 'Space', async t => { await t.run(1500); await t.ev(`(() => { toggleOverlay(game, 'map'); return 1; })()`); await t.run(800); }], // the Tab map of the bigger system
   ['nav-panel', '#space', 'Space', async t => { // N: the navigation panel with the keys, a row chosen
     await need(t, `typeof navpanelOpen === 'function'`, 'src/navpanel.js'); await t.run(1500);
     await t.ev(`(() => { const s = ${SP}; cruiseNavOpen(s); return 1; })()`); await t.run(600);
