@@ -169,7 +169,10 @@ function cruiseEngage(s) {
   if (!t) return say('No destination. Press N and pick one.');
   if (dist < CRUISE.stop + CRUISE.minLeg) return say(t.name + ' is close: fly there.');
   const mass = sysBodies('station').concat(sysBodies('planet')).find(b => d(ship, b) < CRUISE.lockMass);
-  if (mass) return say('Too close to the mass: fly clear of ' + mass.name + '.', '#ff4d6d');
+  if (mass) { // inside a mass limit: the autopilot flies the ship clear and cruise engages then (src/autopilot.js autopilotClear); the refusal is left for when it cannot take the ship
+    if (typeof autopilotClear === 'function' && autopilotClear(s, t, 'cruise', mass)) return;
+    return say('Too close to the mass: fly clear of ' + mass.name + '.', '#ff4d6d');
+  }
   if (s.enemies.getChildren().some(e => e.active && d(ship, e) < CRUISE.lockHostile)) return say('Hostiles near: cruise locked.', '#ff4d6d');
   cr.active = true; s.cruising = true; cr.cancel = false; cr.nudge = 0; cr.speed = Math.min(ship.body.speed, 600);
   s.cameras.main.startFollow(ship, true, 1, 1); s.cameras.main.shake(260, 0.003);
