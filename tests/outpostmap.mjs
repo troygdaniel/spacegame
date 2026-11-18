@@ -21,8 +21,14 @@ for (const [hash, scene, tag] of [['#space', 'Space', 'space'], ['#station', 'St
     check(`${tag}: Tab opens the map`, await t.ev(`game.scene.isActive('Overlay') && game.scene.getScene('Overlay').mode === 'map'`));
     await sleep(400);
     check(`${tag}: outpost label is on the map`, await t.ev(`(() => { const o = game.scene.getScene('Overlay'); return o.lbOutpost.visible && o.lbOutpost.text === 'KESTREL OUTPOST'; })()`));
-    check(`${tag}: legend has a Kestrel Outpost row, 9 rows in all`, await t.ev(`(() => { const l = game.scene.getScene('Overlay').legend; return l.length === 9 && l.some(r => r[1] === 'outpost'); })()`));
-    check(`${tag}: last legend row ends above the footer`, await t.ev(`MAP_LEG_Y + 8 * MAP_LEG_STEP + 20 < 638`));
+    // the legend lists what is on the map now (card space-game-critic-map): at the start no pirate has been seen and no site found, so no row for those
+    const leg = JSON.parse(await t.ev(`JSON.stringify(game.scene.getScene('Overlay').legend)`));
+    check(`${tag}: legend has a Kestrel Outpost row, and no row for a thing that is not on the map`, leg.some(r => r[1] === 'outpost' && r[0] === 'Kestrel Outpost') && leg.length >= 4 && leg.length <= 8 && !leg.some(r => ['live', 'stale', 'wanted', 'poi'].includes(r[1])), JSON.stringify(leg));
+    check(`${tag}: last legend row ends above the footer, with 9 rows and with all 11`, await t.ev(`MAP_LEG_Y + 8 * mapLegStep(9) + 20 < 638 && MAP_LEG_Y + 10 * mapLegStep(11) + 20 < 638`));
+    // no two names on the map touch, and each is inside the frame
+    const names = JSON.parse(await t.ev(`JSON.stringify((() => { const o = game.scene.getScene('Overlay'); return o.marks.map(k => ({ t: k.lb.text, x: k.lb.x, y: k.lb.y - 3, w: k.w, h: k.h, in: k.lb.x - k.w / 2 >= o.MX && k.lb.x + k.w / 2 <= o.MX + o.MS && k.lb.y - 3 - k.h / 2 >= o.MY && k.lb.y - 3 + k.h / 2 <= o.MY + o.MS })); })())`));
+    const touch = []; names.forEach((a, i) => names.slice(i + 1).forEach(b => { if (Math.abs(a.x - b.x) < (a.w + b.w) / 2 && Math.abs(a.y - b.y) < (a.h + b.h) / 2) touch.push(a.t + ' / ' + b.t); }));
+    check(`${tag}: ${names.length} names on the map, none touching another, all inside the frame`, names.length >= 4 && touch.length === 0 && names.every(n => n.in), touch.join(', ') + ' ' + names.filter(n => !n.in).map(n => n.t).join(', '));
     if (!(await t.shot('outpostmap-' + tag))) check(`${tag}: screenshot`, false);
     await tap(t, 'Esc');
     check(`${tag}: Esc closes the map`, !(await t.ev(`game.scene.isActive('Overlay')`)));
