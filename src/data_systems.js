@@ -49,7 +49,7 @@ const SYSTEMS = {
   },
   // The other seven of docs/UNIVERSE.md 4.2 (card u-b5). They are the same data as content/systems/ and content/stations/ say (tests/systems.mjs pins the two
   // against each other field by field); what the files add is the words (description, welcome, services, bar), which the Station scene reads from them.
-  //   star       { type, x, y }: type (M K G F A) picks the sun in the sky and the tint of the backdrop (src/art_world.js STAR_TYPES, spaceBackdrop)
+  //   star       { type, x, y }: type (M K G F A) picks the tint of the backdrop (src/art_world.js STAR_TYPES, spaceBackdrop); no sun is drawn in the sky
   //   pirates    this system's spawn table (src/enemies.js pirateTable); left out, it comes from the danger
   //   pay        a multiplier on what a call pays that is paid in this system (src/missions.js callPayMult; docs/ECONOMY.md 9); left out it is 1
   //   dock       what a station offers, and all of it is read (card u-e4): fuel (credits a unit, src/fuel.js), repair (credits a hull point, src/station.js repairPrice), ore (credits an
