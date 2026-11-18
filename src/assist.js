@@ -58,7 +58,15 @@ function assistVel(t) {
   const v = t.body && t.body.velocity;
   return v ? { x: v.x || 0, y: v.y || 0 } : { x: t.vx || 0, y: t.vy || 0 };
 }
-function assistName(t) { return t.name || (t.body ? 'the ship' : 'the point'); }
+function assistName(t) { return t.name || (t.def && t.def.key ? 'the ' + t.def.key : t.body ? 'the ship' : 'the point'); } // a pirate by its type, as a click names it (clickmove.js)
+// The assist has one line on screen: a new one takes the place of its last, so three orders in a row are not three toasts over the
+// target (playtest 4). Other toasts are left alone. src/clickmove.js says its lines through this too.
+function assistSay(s, msg, color) {
+  const a = s.as, old = a && a.said;
+  if (old && Array.isArray(s.toasts)) { const i = s.toasts.indexOf(old); if (i >= 0) { s.toasts.splice(i, 1); [old.t, old.bg, old.tab].forEach(o => { if (o && o.destroy) o.destroy(); }); } }
+  toast(s, msg, color);
+  if (a) a.said = Array.isArray(s.toasts) && s.toasts.length ? s.toasts[s.toasts.length - 1] : null;
+}
 function assistStats() { return { turn: shipStat('turn'), accel: shipStat('accel'), vmax: shipStat('vmax') }; }
 function assistKeyLine() { return Object.values(ASSIST_MODES).filter(m => m.cap).map(m => m.cap + ' ' + m.label).join('   '); }
 
@@ -166,7 +174,7 @@ function assistOn(s, on) {
   const a = s && s.as; if (!a) return false;
   ASSIST.on = !!on;
   if (!ASSIST.on && a.mode) assistStop(s, 'quiet');
-  toast(s, ASSIST.on ? 'Flight assist on.   ' + assistKeyLine() : 'Flight assist off.', '#9fe9ff'); sfx(ASSIST.on ? 'chime' : 'tick');
+  assistSay(s, ASSIST.on ? 'Flight assist on.   ' + assistKeyLine() : 'Flight assist off.', '#9fe9ff'); sfx(ASSIST.on ? 'chime' : 'tick');
   a.readAt = 0;
   return ASSIST.on;
 }
@@ -179,21 +187,22 @@ function assistSet(mode, target, range) {
   const m = ASSIST_MODES[mode];
   if (!m || !ASSIST.on || s.dead || s.leaving || s.jmp || s.cruising || s.time.now < (s.lockUntil || 0)) return false;
   const t = target || assistTarget(s);
-  if (!t) { toast(s, 'No target. Press N and pick one.', '#ffd37a'); sfx('empty'); return false; }
+  if (!t) { assistSay(s, 'No target. Press N and pick one.', '#ffd37a'); sfx('empty'); return false; }
   if (s.ap && s.ap.on) autopilotEnd(s, 'quiet');
   a.mode = mode; a.target = t; a.nav = assistTarget(s); a.since = s.time.now; a.burning = false; a.cmd = null; a.readAt = 0; a.mem = {};
   a.range = typeof range === 'number' && range >= 0 ? range : typeof m.range === 'function' ? m.range(t) : (m.range || 0);
   a.held = {}; ASSIST.keys.forEach(n => { if (s.k && s.k[n] && s.k[n].isDown) a.held[n] = true; }); // a key already down when the order came is not a new wish for the stick
-  toast(s, m.label + ': ' + assistName(t) + (a.range ? ' at ' + hudFmt(a.range / 10) + ' km' : '') + '. Any flight key takes the stick back.', '#9fe9ff'); sfx('chime');
+  assistSay(s, m.label + ': ' + assistName(t) + (a.range ? ' at ' + hudFmt(a.range / 10) + ' km' : '') + '.' + (ASSIST.hinted ? '' : ' Any flight key takes the stick back.'), '#9fe9ff'); // the hint once: the first order since the page loaded
+  ASSIST.hinted = true; sfx('chime');
   return true;
 }
 
 function assistStop(s, why) {
   const a = s.as, t = a.target, m = ASSIST_MODES[a.mode];
   a.mode = ''; a.target = null; a.burning = false; a.cmd = null; a.readAt = 0;
-  if (why === 'arrived') { toast(s, m.label + ' done: ' + assistName(t) + '.', '#6dff9c'); sfx('chime'); }
-  else if (why === 'key') { toast(s, 'You have the stick.', '#9fe9ff'); sfx('tick'); }
-  else if (why === 'lost') { toast(s, 'Target lost. You have the stick.', '#ffd37a'); sfx('empty'); }
+  if (why === 'arrived') { assistSay(s, m.label + ' done: ' + assistName(t) + '.', '#6dff9c'); sfx('chime'); }
+  else if (why === 'key') { assistSay(s, 'You have the stick.', '#9fe9ff'); sfx('tick'); }
+  else if (why === 'lost') { assistSay(s, 'Target lost. You have the stick.', '#ffd37a'); sfx('empty'); }
   // 'quiet': a dock, a death, a jump, a cruise, the autopilot, the assist switched off: that event says its own line
 }
 
