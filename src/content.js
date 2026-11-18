@@ -58,7 +58,22 @@
   const BODY_ART = ['station', 'outpost', 'planet'].concat(STATION_LOOKS); // the textures a body is drawn with (boot.js, stationart.js)
   const PIRATE_IDS = ['raider', 'drone', 'gunship'];              // the pirate ships a system may weight
   // one Bodies row against its type: the columns that type needs and the kind that fits it. The message is a whole sentence; the row is ignored.
+  // where a body is (card space-game-orbit-fields-in-files): its own x and y, or, when they are left empty, its orbit: `orbit` units from the sun (the
+  // middle of the system when it has no sun) at `angle` degrees round it, clockwise from north (0 north, 90 east, 180 south: the minimap is north up).
+  // sys: the system's own fields (starX, starY, size). null when the row gives neither. src/data_systems.js sysPlace is the same sum for the game.
+  const bodyPlace = (o, sys) => {
+    if (o.x !== undefined && o.y !== undefined) return { x: o.x, y: o.y };
+    if (o.orbit === undefined) return null;
+    const f = sys || {}, star = f.starX !== undefined && f.starY !== undefined, cx = star ? f.starX : (f.size || 0) / 2, cy = star ? f.starY : (f.size || 0) / 2, a = (o.angle || 0) * Math.PI / 180;
+    return { x: Math.round(cx + Math.sin(a) * o.orbit), y: Math.round(cy - Math.cos(a) * o.orbit) };
+  };
+  const bodyPlaceProblem = o => {
+    if ((o.x === undefined) !== (o.y === undefined)) return 'the row has ' + (o.x === undefined ? 'y but no x' : 'x but no y') + ': give both, or leave both empty and give an orbit';
+    if (o.x === undefined && o.orbit === undefined) return 'the row says where the body is in neither way: give x and y, or an orbit (how far from the sun) and an angle (0 north, 90 east)';
+    return null;
+  };
   const bodyRowProblem = o => {
+    const where = bodyPlaceProblem(o); if (where) return where;
     const need = (...c) => { const m = c.filter(k => o[k] === undefined); return m.length ? 'a ' + o.type + ' needs ' + m.join(' and ') + ' (docs/MODDING.md 6.3)' : null; };
     switch (o.type) {
       case 'station': return null; // a station's name, prices and words are its own file's (stations/<id>.md)
@@ -117,11 +132,11 @@
       },
       sections: {
         bodies: {
-          heading: 'Bodies', t: 'table', required: ['id', 'type', 'x', 'y'], rowCheck: bodyRowProblem,
+          heading: 'Bodies', t: 'table', required: ['id', 'type'], rowCheck: bodyRowProblem, // x and y, or orbit and angle: bodyPlaceProblem says which is missing
           // art is the texture a body is drawn with; a planet is a kind (and a seed: the same kind and seed is the same planet on every boot) or art planet (Kepler-4b);
           // look is the station look of a dead station (scenery); labelDy moves the name label (pixels, negative is above); a site that has its own file in poi/ is paid from that file
           cols: {
-            id: { t: 'id' }, type: P(BODY_TYPES, true), name: T(40), x: I(0, 200000), y: I(0, 200000),
+            id: { t: 'id' }, type: P(BODY_TYPES, true), name: T(40), x: I(0, 200000), y: I(0, 200000), orbit: N(0, 200000), angle: N(-360, 360),
             art: P(BODY_ART), r: I(10, 5000), rocks: I(0, 200), landable: BOOL, kind: P(PLANET_KINDS.concat(SITE_KINDS)), seed: I(0, 2147483647),
             look: P(STATION_LOOKS), labelDy: I(-3000, 3000), credits: I(0, 100000), hull: I(0, 100), guard: I(0, 6), note: T(160)
           }
@@ -505,6 +520,11 @@
       const seen = Object.create(null), keep = [];
       rowsOf(en).forEach(b => {
         if (seen[b.id]) { at(en, 'bodies', 'the body ' + quote(b.id) + ' is in the Bodies table twice. Ignored the second row.', 'error'); return; }
+        // a body placed by its orbit must land inside the system's square, or nothing could fly to it
+        if (b.x === undefined && b.orbit !== undefined) {
+          const p = bodyPlace(b, en.data), size = en.data.size;
+          if (p.x < 0 || p.y < 0 || (size !== undefined && (p.x > size || p.y > size))) { at(en, 'bodies', 'the body ' + quote(b.id) + ' with orbit ' + b.orbit + ' at angle ' + (b.angle || 0) + ' would be at x ' + p.x + ', y ' + p.y + ', outside the system' + (size !== undefined ? ' (size ' + size + ')' : '') + '. Ignored the row.', 'error'); return; }
+        } else if (b.orbit !== undefined || b.angle !== undefined) at(en, 'bodies', 'the body ' + quote(b.id) + ' has x and y, so its ' + (b.orbit !== undefined && b.angle !== undefined ? 'orbit and angle are' : b.orbit !== undefined ? 'orbit is' : 'angle is') + ' ignored.');
         seen[b.id] = true; keep.push(b);
       });
       if (keep.length !== rowsOf(en).length) en.data.bodies = keep;
@@ -770,6 +790,6 @@
     return { name, title: info.title, author: info.author, about: info.about, files: r.files, hash: r.hash, entries: r.entries, errors: r.errors };
   }
 
-  const api = { LIMITS, SCHEMA, CONDITIONS, COLORS, FOLDERS, parse, validate, loadAll, formatError, suggest, levenshtein, hashOf, checkEntry, apply, packName, packInfo, loadPack };
+  const api = { bodyPlace, LIMITS, SCHEMA, CONDITIONS, COLORS, FOLDERS, parse, validate, loadAll, formatError, suggest, levenshtein, hashOf, checkEntry, apply, packName, packInfo, loadPack };
   if (typeof module === 'object' && module && module.exports) module.exports = api; else root.ContentLib = api;
 })(typeof self !== 'undefined' ? self : this);

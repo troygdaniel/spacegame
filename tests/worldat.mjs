@@ -63,7 +63,8 @@ try {
     const SH = JSON.parse(JSON.stringify({ system: C.SCHEMA.system, station: C.SCHEMA.station }));
     const HOME = { // the schema's fields, sections and columns that tests/worldat.mjs follows into the row below. A new one that is not here fails the test: give it a home first.
       system: ['name', 'kind', 'ly', 'size', 'danger', 'traffic', 'pay', 'seed', 'starType', 'starX', 'starY', 'pirateMax', 'pirateEvery', 'bodies', 'pirates'],
-      bodies: ['id', 'type', 'name', 'x', 'y', 'art', 'r', 'rocks', 'landable', 'kind', 'seed', 'look', 'labelDy', 'credits', 'hull', 'guard', 'note'],
+      bodies: ['id', 'type', 'name', 'x', 'y', 'orbit', 'angle', 'art', 'r', // orbit and angle become x and y in sysBodyFrom (the same function worldAt uses); tests/orbitfields.mjs follows them
+        'rocks', 'landable', 'kind', 'seed', 'look', 'labelDy', 'credits', 'hull', 'guard', 'note'],
       station: ['name', 'system', 'accent', 'fuel', 'repair', 'ore', 'yard', 'missions', 'partMult', 'fee', 'salvageMult', 'parts', 'welcome', 'shop', 'services', 'bar']
     };
     const sch = { system: Object.keys(SH.system.fields).concat(Object.keys(SH.system.sections)), bodies: Object.keys(SH.system.sections.bodies.cols), station: Object.keys(SH.station.fields).concat(Object.keys(SH.station.sections)) };
