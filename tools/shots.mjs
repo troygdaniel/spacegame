@@ -83,6 +83,38 @@ const followJob = (id, sys) => async t => {
     }
     await t.run(1500);
   };
+// ---- the Sol pack (mods/sol, card space-game-sol-pack): a mod, so it is off until it is switched on and the page restarted ----
+const pic = async (t, name) => { await t.shot('firstlook/' + name); if (!(await t.shot('firstlook/' + name))) throw new Error('the picture ' + name + ' could not be taken'); };
+// a key the driver's table does not have (O), as a real key press
+const rawKey = async (t, vk, code, key) => { await t.send('Input.dispatchKeyEvent', { type: 'keyDown', windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, code, key }); await t.run(60); await t.send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, code, key }); await t.run(400); };
+// Sol switched on as the Mods screen does it (the same stored list), then the page reloaded, which is the restart the screen asks for; the scene is up and the clock stepped again
+const solOn = async (t, scene) => {
+  await t.ev(`(() => { modsSetOn('sol', true); location.reload(); return 1; })()`);
+  await t.waitFor(up(scene), 30000, scene + ' active after the restart with Sol on'); await t.clock(); await t.run(1500);
+  if (!(await t.ev(`Object.prototype.hasOwnProperty.call(SYSTEMS, 'sol')`))) throw new Error('Sol is on but SYSTEMS has no sol: ' + await t.ev(`JSON.stringify({ on: modsOnList(), errors: (typeof CONTENT_ERRORS !== 'undefined' ? CONTENT_ERRORS : []).slice(0, 4) })`));
+};
+// jump from Halcyon to Sol through the galaxy map; the Space scene of Sol is up
+const solJump = async t => {
+  await t.ev(`(() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; s.lockUntil = 0; if (!G.known.includes('sol')) G.known.push('sol'); return jumpMapOpen(game, 'sol'); })()`);
+  await t.run(1200);
+  if (!(await t.ev(up('Galaxy')))) throw new Error('the galaxy map did not open');
+  await pic(t, 'sol-galaxy');
+  console.log('        galaxy map: ' + await t.ev(`JSON.stringify((() => { const here = galaxyFind(G.system), g = galaxyFind('sol'), j = g && galaxyJump(here, g); return g ? { name: g.name, ly: j.ly, cost: j.cost, ok: j.ok, why: j.why || null, fuel: G.fuel } : { missing: true }; })())`));
+  await t.key('ENTER');
+  let ran = 0; while (ran < 90) { await t.run(2000); ran += 2; try { if (await t.ev(`G.system === 'sol' && ${up('Space')}`)) break; } catch (e) { /* between scenes */ } }
+  if (!(await t.ev(`G.system === 'sol' && ${up('Space')}`))) throw new Error('not in Sol after ' + ran + ' s: system ' + await t.ev('G.system') + ', scenes ' + await t.ev(`JSON.stringify(game.scene.getScenes(true).map(x => x.scene.key))`));
+  await t.run(3000);
+  await t.ev(`(() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; return 1; })()`);
+  return ran;
+};
+// the autopilot to a body of the system by name; resolves when it lets go (or after `secs`); says how it went
+const solFly = async (t, name, secs = 90) => {
+  const o = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; const b = cruiseKnown(s).find(x => x.name === '${name}'); if (!b) return { none: cruiseKnown(s).map(x => x.name) }; return { ok: autopilotGo(s, b), km: Math.round(b.dist / 10) }; })())`));
+  if (o.none) throw new Error(name + ' is not a body the nav list knows: ' + o.none.join(', '));
+  let ran = 0, cruised = false; while (ran < secs) { await t.run(2000); ran += 2; if (await t.ev(`!!${SP}.cruising`)) cruised = true; if (!(await t.ev(`!!(${SP}.ap && ${SP}.ap.on)`))) break; }
+  const end = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}, b = cruiseKnown(s).find(x => x.name === '${name}'); return { left: Math.round(b.dist / 10), ap: !!(s.ap && s.ap.on), v: Math.round(s.ship.body.speed) }; })())`));
+  console.log(`        to ${name}: ${o.km} km, autopilot took it ${o.ok}; after ${ran} s of game time: ${end.left} km left, cruised ${cruised}, autopilot on ${end.ap}`);
+};
 const LOOKS = [
   ['far-cruise-mid', '#space', 'Space', farCruise(20)],      // the systems are 3 times the size (card space-game-system-distances): 8 s into a cruise to the farthest body
   ['far-cruise-end', '#space', 'Space', farCruise(180)],    // and where that cruise ends (or where it is after 3 minutes of game time)
@@ -188,6 +220,28 @@ const LOOKS = [
       if (await t.ev(`G.mission !== 'accepted'`)) break;
     }
     console.log('        after ' + ran + ' s of game time: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}, f = s.mx && s.mx.freighter, g = sysBody('gate'); return { state: G.mission, credits: G.credits, mule: !!(f && f.active), toGate: f && f.active ? Math.round(Math.hypot(f.x - g.x, f.y - g.y) / 10) : null }; })())`));
+    await t.run(1500);
+  }],
+  ['sol-mods', '', 'Title', async t => { // O on the title: the Mods screen lists the Sol pack; its row switched on by its number key
+    await t.run(1000); await rawKey(t, 79, 'KeyO', 'o'); await t.run(800);
+    if (!(await t.ev(up('ModsSetup')))) throw new Error('O did not open the Mods screen: scenes ' + await t.ev(`JSON.stringify(game.scene.getScenes(true).map(x => x.scene.key))`));
+    const i = await t.ev(`modsAvailable().findIndex(p => p.name === 'sol')`);
+    console.log('        packs listed: ' + await t.ev(`JSON.stringify(modsAvailable().map(p => p.name + (p.errors && p.errors.length ? ' (' + p.errors.length + ' problems)' : '')))`) + '; on before: ' + await t.ev('JSON.stringify(modsOnList())'));
+    if (i < 0) throw new Error('the Sol pack is not in the list');
+    await t.key(String(i + 1)); await t.run(800);
+    console.log('        after key ' + (i + 1) + ': on ' + await t.ev('JSON.stringify(modsOnList())'));
+  }],
+  ['sol-arrive', '#space', 'Space', async t => { // Sol on, the page restarted, the jump from Halcyon: the galaxy map (sol-galaxy.png), then Sol with the navigation panel open
+    await solOn(t, 'Space'); const ran = await solJump(t);
+    console.log('        in Sol after ' + ran + ' s of game time; fuel ' + await t.ev('G.fuel') + '; bodies in the nav list: ' + await t.ev(`cruiseKnown(${SP}).length`) + '; world ' + await t.ev(`${SP}.physics.world.bounds.width`) + ' px');
+    await t.ev(`(() => { cruiseNavOpen(${SP}); return 1; })()`); await t.run(800);
+  }],
+  ['sol-tour', '#space', 'Space', async t => { // Earth, Mars, Jupiter by autopilot and cruise (a picture at each: sol-earth.png, sol-mars.png, sol-jupiter.png), then the dock at Imbrium
+    await solOn(t, 'Space'); await solJump(t);
+    for (const name of ['Earth', 'Mars', 'Jupiter']) { await solFly(t, name); await t.run(1000); await pic(t, 'sol-' + name.toLowerCase()); }
+    const d = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}; cruiseNavOpen(s); const i = s.cr.list.findIndex(r => r.kind === 'body' && r.type === 'station'); if (i < 0) return { none: true }; navpanelClick(s, i); navpanelClick(s, i); return { row: s.cr.list[i].name, km: Math.round(s.cr.list[i].dist / 10), ap: !!(s.ap && s.ap.on) }; })())`));
+    let ran = 0; while (!d.none && ran < 120) { await t.run(2000); ran += 2; try { if (await t.ev(up('Station'))) break; } catch (e) { /* between scenes */ } }
+    console.log('        dock order: ' + JSON.stringify(d) + '; after ' + ran + ' s: ' + ((await t.ev(up('Station'))) ? 'docked at ' + await t.ev('G.lastDock') : 'not docked: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}; return { ap: !!(s.ap && s.ap.on), stage: s.ap && s.ap.stage, cruising: !!s.cruising, prompt: s.prompt && s.prompt.text }; })())`)));
     await t.run(1500);
   }],
   ['clear-mass', '#space', 'Space', async t => { // Troy's bug beside Kepler-4b (card space-game-bug-travel-refuses-near-mass): C inside a mass limit flies clear, then cruises
