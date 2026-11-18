@@ -55,8 +55,7 @@ try {
     const fromFiles = await ev(`worldFromFiles('halcyon')`), code = await ev(`SYSTEMS.halcyon`), consts = await ev(`({ repair: REPAIR_PRICE, ore: ORE_PRICE })`);
     check('Halcyon\'s files make a row with the extras: seed 4001, a G star, a description, the station\'s words and prices', fromFiles && fromFiles.seed === 4001 && fromFiles.star && fromFiles.star.type === 'G' && typeof fromFiles.description === 'string' && fromFiles.bodies[0].about && fromFiles.bodies[0].about.welcome && fromFiles.bodies[0].dock.repair === consts.repair && fromFiles.bodies[0].dock.ore === consts.ore, JSON.stringify(fromFiles && fromFiles.bodies[0]));
     const same = JSON.parse(JSON.stringify(fromFiles));
-    delete same.seed; delete same.description; // the star is in the code's row too now (card space-game-real-solar-system: it is a body you fly to), so it is compared
-    same.bodies.forEach(b => { delete b.about; if (b.dock) { delete b.dock.repair; delete b.dock.ore; } });
+    same.bodies.forEach(b => { if (b.dock) { delete b.dock.repair; delete b.dock.ore; } }); // the row the game flies leaves the home dock's two prices to its constants; the rest is the same row now (SYSTEMS is built from the files: card space-game-systems-from-markdown)
     const d = diff(same, code);
     check('Halcyon from its files alone is the code\'s row: ids, types, names, places, sizes, kinds, seeds, payouts, notes, labels, the dock and the pirate table', d.length === 0, d.join(' | '));
 
@@ -139,7 +138,7 @@ try {
     check('the dock keeps what was good: a price factor, shields to tier 2 (the armor row is refused), no pump price (999 is refused)', dock && dock.partMult === 1.5 && JSON.stringify(dock.parts) === '{"shields":2}' && dock.fuel === undefined, JSON.stringify(dock));
     check('the yard is kept as written; the ship nobody has is a warning on the Title chip, and fleet.js never sells an id it does not know', JSON.stringify(dock.yard) === '["kite","ghost-ship"]' && (await ev(`CONTENT_ERRORS.some(e => /ghost-ship/.test(e.message))`)), JSON.stringify(dock.yard));
     check('a station for a system nobody has is kept and placed nowhere; worldAt for it is null', (await ev(`CONTENT_WORLD.station['lost-dock'].name`)) === 'Lost Dock' && (await ev(`worldAt('nowhere') === null`)));
-    check('the game is at Title with the code\'s rows untouched', (await ev(`worldAt('halcyon') === SYSTEMS.halcyon && Object.keys(SYSTEMS).join() === 'halcyon,kestrel,meridian,brass,hollow,lethe,ember,roost' && SYSTEMS.kestrel.bodies.length === 5`)));
+    check('the game is at Title: this content has none of the shipped systems, so all eight fly from the sealed copy, and the pack\'s own system is added after them', (await ev(`worldAt('halcyon') === SYSTEMS.halcyon && Object.keys(SYSTEMS).join() === 'halcyon,kestrel,meridian,brass,hollow,lethe,ember,roost,odd' && SYSTEMS.kestrel.bodies.length === 5 && SYSTEMS_KEPT.length === 8`)));
     check('the problems are listed for the Title chip', (await ev(`CONTENT_ERRORS.length`)) >= 6);
   });
 } catch (e) { check('the world test ran: ' + e.message, false); } finally {
