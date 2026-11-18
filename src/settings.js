@@ -7,6 +7,8 @@
 //   KEYS      one row each for Deepgram (voices), OpenAI and Anthropic (NPC chat): paste, Save, Test, Forget. A saved key shows its last four
 //             characters and nothing else. Below: NPC chat on or off, the provider, the model. Keys stay in this browser (localStorage), never
 //             in the save, never in the game files; the cost note says so in plain words
+//   LISTEN    talk to the ship's computer (src/listen.js): the on/off switch, the key to hold, what is missing, the session's minutes of listening, a
+//             Test microphone button (opens the microphone for an instant, sends nothing) and the one-line hint about `node tools/serve.mjs`
 //   CONTROLS  every key of the game, from the one table in src/data_controls.js, a tab for each group
 //   FLIGHT    the flight feel: Classic or Heavy (src/handling.js), one row; kept in this browser, not in the save
 //   CONTENT   which content pack is running and what it ignored (src/contentui.js builds the lines)
@@ -18,7 +20,7 @@
 
 const SETTINGS = {
   w: 1120, h: 640, railW: 232,
-  sections: [['sound', 'SOUND'], ['keys', 'KEYS'], ['controls', 'CONTROLS'], ['flight', 'FLIGHT'], ['content', 'CONTENT'], ['reset', 'RESET']],
+  sections: [['sound', 'SOUND'], ['keys', 'KEYS'], ['listen', 'LISTEN'], ['controls', 'CONTROLS'], ['flight', 'FLIGHT'], ['content', 'CONTENT'], ['reset', 'RESET']],
   keys: { warnH: 78, top: 104, block: 96, linkDy: 64, bodyFoot: 44 }, // the Keys section: the note on top, the first field's centre, the height of a key's block, where its link row is, the footer under the body
   keyRows: [ // the three keys: where each is kept, what it is for, how to tell a wrong paste
     { id: 'deepgram', name: 'DEEPGRAM' }, // what each is for, its cost line and its address are content/text/ui.md's (keys.<id>.use, .cost, .url)
@@ -120,7 +122,7 @@ class Settings extends Phaser.Scene {
       it.t.setColor(on ? '#ffb454' : '#9fe9ff');
     });
     const keys = SETTINGS.keyRows.filter(r => this.keyOf(r.id)).length, n = typeof CONTENT_ERRORS !== 'undefined' ? CONTENT_ERRORS.length : 0, st = typeof CONTENT_STATE !== 'undefined' ? CONTENT_STATE : {};
-    const status = { sound: G.muted ? 'MUTED' : Math.round(G.volume * 100) + '%', keys: keys + ' of 3', controls: '', flight: handlingNow().name.toUpperCase(), content: n ? n + (n === 1 ? ' PROBLEM' : ' PROBLEMS') : st.modded ? 'MODDED' : 'CORE PACK', reset: '' };
+    const status = { sound: G.muted ? 'MUTED' : Math.round(G.volume * 100) + '%', keys: keys + ' of 3', listen: !LISTEN.on ? 'OFF' : listenReady().ok ? 'ON' : 'NEEDS KEYS', controls: '', flight: handlingNow().name.toUpperCase(), content: n ? n + (n === 1 ? ' PROBLEM' : ' PROBLEMS') : st.modded ? 'MODDED' : 'CORE PACK', reset: '' };
     this.railItems.forEach(it => it.st.setText(status[it.id]).setColor(it.id === 'content' && n ? '#ffb454' : '#5b7a92'));
   }
   keyOf(id) { return id === 'deepgram' ? VOICE.key : CHAT.keys[id] || ''; }
@@ -133,7 +135,7 @@ class Settings extends Phaser.Scene {
     this.focusFirst();
   }
   tagDraw() {
-    const tag = { sound: G.muted ? 'MUTED' : 'VOLUME ' + Math.round(G.volume * 100) + '%', keys: 'STAY IN THIS BROWSER', controls: controlsGroup(this.ctab).title, flight: 'FEEL ' + handlingNow().name.toUpperCase(), content: '', reset: 'AUTOSAVE ON' }[this.section];
+    const tag = { sound: G.muted ? 'MUTED' : 'VOLUME ' + Math.round(G.volume * 100) + '%', keys: 'STAY IN THIS BROWSER', listen: 'HOLD ' + LISTEN.cap + ' TO TALK', controls: controlsGroup(this.ctab).title, flight: 'FEEL ' + handlingNow().name.toUpperCase(), content: '', reset: 'AUTOSAVE ON' }[this.section];
     this.ui.tagText.setText(tag || '');
   }
 
@@ -313,6 +315,44 @@ class Settings extends Phaser.Scene {
     this.keysRefresh(); this.say('Key removed from this browser.');
   }
 
+  // ---------- LISTEN ----------
+  // Talk to the ship's computer (src/listen.js): the words are content/text/ui.md's (listen.use, .cost, .hint). The only button here that touches the
+  // microphone is Test microphone, and it opens it for an instant and sends nothing; nothing in this section calls Deepgram
+  draw_listen() {
+    const bx = this.bx, by = this.by, bw = this.bw;
+    this.warn(bx, by, bw, SETTINGS.keys.warnH, 'THIS USES YOUR OWN DEEPGRAM ACCOUNT AND MAY COST YOU MONEY', uiText('listen.cost', { key: LISTEN.cap, minutes: LISTEN.limit.minutes }));
+    this.label(bx, by + 112, 'HOLD TO TALK');
+    const cap = keyCap(this, LISTEN.cap, AMBER); cap.setPosition(bx + 8 + cap.kw / 2, by + 146); this.body.add(cap);
+    this.txt(bx + 24 + cap.kw, by + 146, 'in space or in a station: speak, then let go', 15, '#cfefff');
+    this.txt(bx, by + 184, uiText('listen.use', { key: LISTEN.cap, minutes: LISTEN.limit.minutes }), 13, '#cfefff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 4 } });
+    this.slots.listenOn = this.button(bx, by + 252, 216, '', () => { listenSetOn(!LISTEN.on); this.listenRefresh(); });
+    this.slots.listenStat = this.txt(bx + 234, by + 252, '', 14, '#9fe9ff', { style: { wordWrap: { width: bw - 234 }, lineSpacing: 3 } });
+    this.line(by + 298);
+    this.label(bx, by + 320, 'MICROPHONE');
+    this.button(bx, by + 354, 216, 'Test microphone', () => this.testMic(), { color: '#ffb454', edge: AMBER });
+    this.txt(bx + 234, by + 354, 'Opens it for an instant so the browser can ask. Records nothing, sends nothing.', 13, '#8fb4c9', { style: { wordWrap: { width: bw - 234 } } });
+    this.slots.listenUsed = this.txt(bx, by + 402, '', 13, '#8fb4c9');
+    this.slots.listenBar = this.add.graphics(); this.body.add(this.slots.listenBar);
+    this.slots.status = this.txt(bx, by + 434, '', 14, '#9fe9ff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 3 } });
+    this.slots.listenHint = this.txt(bx, by + 486, '', 12, '#5b7a92', { style: { wordWrap: { width: bw } } });
+    this.listenRefresh();
+  }
+  listenRefresh() {
+    const s = this.slots; if (!s.listenOn) return;
+    const st = listenStatus(), h = listenHint();
+    s.listenOn.set(LISTEN.on ? 'Listening: ON' : 'Listening: OFF').color(LISTEN.on ? '#6dff9c' : '#8fb4c9').mark(LISTEN.on);
+    s.listenStat.setText(st.line).setColor(st.color);
+    s.listenUsed.setText(listenUsedLine());
+    s.listenBar.clear(); hudBar(s.listenBar, this.bx + 330, this.by + 393, 300, 14, Math.min(1, LISTEN.s.used / (LISTEN.limit.minutes * 60000)), CYAN, 20);
+    s.listenHint.setText(h.text).setColor(h.warn ? '#ffb454' : '#5b7a92');
+    this.railDraw();
+  }
+  async testMic() { // opens the microphone for an instant, to let the browser ask; nothing is recorded or sent
+    this.say('Opening the microphone...', '#ffd37a');
+    const r = await listenMicTest();
+    if (this.scene.isActive() && this.section === 'listen') { this.say(r, /works/.test(r) ? '#6dff9c' : '#ff4d6d'); this.listenRefresh(); }
+  }
+
   // ---------- CONTROLS ----------
   draw_controls() {
     const bx = this.bx, by = this.by, bw = this.bw, n = CONTROLS.length, cw = bw / n;
@@ -417,6 +457,7 @@ class Settings extends Phaser.Scene {
     } else if (code === 'Enter' || code === 'Space' || code === 'NumpadEnter') {
       if (this.section === 'sound') this.toggleMute();
       else if (this.section === 'keys') { const el = this.inputs.deepgram; if (el) el.focus(); }
+      else if (this.section === 'listen') { listenSetOn(!LISTEN.on); this.listenRefresh(); }
       else if (this.section === 'flight') this.stepFeel(1);
       else if (this.section === 'reset') this.press('reset');
     }
