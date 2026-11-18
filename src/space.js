@@ -59,7 +59,7 @@ class Space extends Phaser.Scene {
     spaceBackdrop(this, !!G.deep); // src/art_world.js: nebula, parallax star layers, distant sun, giant and moon (deep space has only stars)
     this.events.once('shutdown', () => { G.deep = null; }); // a pull-out lives only as long as this scene shows it
 
-    const land = missionLandBody(); // src/missions.js: the planet of a rescue call played in this system (its file names the body), when it is landable
+    const land = G.deep ? null : missionLandBody(); // src/missions.js: the planet of a rescue call played in this system (its file names the body), when it is landable; deep space keeps G.system on the books but has no planet (the call's body is looked up by that id and would put Kepler-4b in the empty world)
     const stDef = spaceHomeDock(), plDef = land || sysBody('planet'); // the dock you launch from (G.lastDock), else the system's first
     this.docks = sysBodies('station').map(def => { // every station row is a dock
       const built = stationBuild(this, def); // src/stationart.js: Halcyon's ring, a small outpost, or one of the looks, by the body's art
