@@ -16,6 +16,7 @@
 const HUD_BG = 0x07101c, HUD_OFF = 0x16293d, HUD_LINE = 0x3a566e, HUD_DIM = '#5b7a92', HUD_RANGE = { Space: 2400, Surface: 900 }; // radar range, world units
 const TAU = Math.PI * 2;
 const HT = { tag: 10, label: 11, body: 13, head: 15, num: 22 }; // type scale in px: tags and units, labels, lines of text, panel titles, gauge numbers
+const HUD_PART_OFF = '#86a3b8'; // the strip's label of a part you do not own yet
 const HUD_GEAR = { armor: 'ARM', rapid: 'RPD', booster: 'BST' };                                       // gear abbreviations on the strip
 const HUD_FRAME = { x: 20, y: 148, w: 296 };                                                               // checklist panel (Space, Surface)
 const HUDUI = { mode: 'auto', until: 0, base: null }; // checklist: auto (open until the timer runs out) | open | closed; shared by all scenes
@@ -284,13 +285,13 @@ function hudStrip(h, now) {
   g.lineStyle(1, CYAN, 0.2); g.lineBetween(596, 17, 596, 33);
   PART_ORDER.forEach((slot, i) => { // the six parts: three letters and three chips each (src/data_parts.js); the autotarget's is red while it is switched off (R)
     const gx = 600 + i * 40, tier = partTier(slot), aimOff = slot === 'aim' && tier && G.aimOff;
-    hudPut(h, 'up' + i, gx, 25, PARTS[slot].short, { size: HT.tag, color: aimOff ? '#ff4d6d' : tier ? '#9fe9ff' : HUD_DIM, spacing: 0 });
+    hudPut(h, 'up' + i, gx, 25, PARTS[slot].short, { size: HT.tag, bold: true, color: aimOff ? '#ff4d6d' : tier ? '#9fe9ff' : HUD_PART_OFF, spacing: 0 }); // bold, and a part you do not own is a readable grey-blue, not the dimmest tag colour (docs/CRITIC.md run 1, findings 7 and 20)
     for (let j = 0; j < 3; j++) { // a pip is a small slanted chip: lit ones have a halo
       const x = gx + 19 + j * 7, p = [[x + 2, 21], [x + 6, 21], [x + 4, 30], [x, 30]];
       if (tier > j) {
         g.fillStyle(CYAN, 0.2); g.fillRect(x - 1, 19, 9, 13);
         g.fillStyle(CYAN, 1); g.beginPath(); g.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.closePath(); g.fillPath();
-      } else { g.lineStyle(1, HUD_LINE, 1); g.beginPath(); g.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.closePath(); g.strokePath(); }
+      } else { g.fillStyle(HUD_LINE, 0.6); g.beginPath(); g.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.closePath(); g.fillPath(); } // an empty slot is a dim solid chip: the 1 px outline it used to be drew as hollow boxes in some frames and as dots in others, and read as missing letters
     }
   });
   // cargo hold: ten cells, amber as they fill, red and beating when it is full (asteroids.js)
