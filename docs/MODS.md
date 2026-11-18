@@ -211,6 +211,16 @@ The galaxy is built from files. `content/systems/<id>.md` is one star system; ea
 
 **Change one.** Open `content/systems/halcyon.md`, find `kepler-4b` in the `## Bodies` table and change its `x` from `6200` to `7000`. Run `node tools/build-content.mjs` and reload: the planet has moved, and so have the nav panel, the map, the minimap and the missions that fly to it. Positions are written in the old units; the game spreads every system out 3 times when it reads them (`SYSTEM_SCALE`), so 6200 in the file is 18,600 px in space. Sizes (`r`) are not spread.
 
+**Place a body by its orbit.** A row of `## Bodies` says where the body is in one of two ways. `x` and `y` are its place in the square of space. Or leave both empty and give `orbit`, how far it is from the sun in the same units, and `angle`, where on that ring: degrees clockwise from north, so `0` is north of the sun (up on the map), `90` east, `180` south, `270` west; an empty `angle` is `0`. A system with no sun measures the orbit from its middle. For a solar system that is the easy way to write it: one ring per planet, `orbit` 4000, 7000, 11000, and an angle each.
+
+| id | type | name | x | y | orbit | angle | r | kind | seed |
+|---|---|---|---|---|---|---|---|---|---|
+| inner | planet | Inner | | | 4000 | 30 | 200 | rock | 3 |
+| outer | planet | Outer | | | 11000 | 210 | 420 | gas | 5 |
+| far-gate | gate | Far gate | 2000 | 6000 | | | 110 | | |
+
+The game spreads an orbit 3 times like every other distance, and the ring the minimap draws for the body is that orbit. The build tells you when a row gives neither way, gives `x` without `y`, or has an orbit that would put the body outside the system's `size`; with both ways in one row, `x` and `y` are used and it says the orbit is ignored. The shipped systems are written with `x` and `y`; `content/_templates/system.md` has two rows written by orbit.
+
 **Add one.** Copy `content/_templates/system.md` to `content/systems/sol.md` (the file name is the id), give it a `name`, a `kind`, an `ly` position and a `## Bodies` table, and build. A new star is on the galaxy map, it has a sun at `starX`, `starY`, and a ship with the range can jump there. For a dock, add a `station` row to its bodies and a file `content/stations/<that id>.md` with `system: sol`; give it `fuel:` and it has a pump. The same two files in a pack (`mods/my-pack/systems/sol.md`) add the system when the pack is switched on.
 
 **Replace one.** A file with the id of a shipped system replaces it whole: every body comes from your file.
@@ -224,7 +234,6 @@ The galaxy is built from files. `content/systems/<id>.md` is one star system; ea
 | Which courier and haul runs exist (from which dock to which) | `CALL_ROUTES` in `src/missions.js` | `space-game-routes-from-files` |
 | The two site calls (the Widow at `lethe-wreck-7`, the beacon at `beacon-h`) | `siteRow(...)` in `src/missions.js` | `space-game-site-calls-from-files` |
 | Where the four first calls play: the rescue on the first planet of `halcyon`, the escort to its first gate, the patrol round its station, the bounty at the first planet of `roost`; Halcyon's nine fixed pirates | `src/missions.js`, `src/space.js` | `space-game-call-places-from-files` |
-| A body's orbit as a radius and an angle (the file gives `x` and `y`; the orbit is worked out from them) | `sysOrbit` in `src/universe.js` | `space-game-orbit-fields-in-files` |
 
 Also code, with no card: the home system is `halcyon` and its dock is where a new game starts; the eight shipped systems are listed in a fixed order and cannot be removed (delete a file and the shipped copy flies); only Kepler-4b has a surface to land on; a sun's name ("Halcyon Sun") and size; the kinds of body and how each is drawn; the notes on the galaxy map.
 
@@ -507,7 +516,7 @@ Under `##` headings (the text before the first heading is the description, up to
 
 | Heading | Holds |
 |---|---|
-| `## Bodies` | a table: `id`* (an id: a-z, 0-9, dashes); `type`* (one of: `station`, `planet`, `belt`, `poi`, `scenery`, `gate`); `name` (text, up to 40 characters); `x`* (whole number from 0 to 200000); `y`* (whole number from 0 to 200000); `art` (one of: `station`, `outpost`, `planet`, `hub`, `foundry`, `nest`, `derelict`); `r` (whole number from 10 to 5000); `rocks` (whole number from 0 to 200); `landable` (yes or no); `kind` (one of: `rock`, `ice`, `gas`, `lava`, `ringed`, `wreck`, `beacon`); `seed` (whole number from 0 to 2147483647); `look` (one of: `hub`, `foundry`, `nest`, `derelict`); `labelDy` (whole number from -3000 to 3000); `credits` (whole number from 0 to 100000); `hull` (whole number from 0 to 100); `guard` (whole number from 0 to 6); `note` (text, up to 160 characters) |
+| `## Bodies` | a table: `id`* (an id: a-z, 0-9, dashes); `type`* (one of: `station`, `planet`, `belt`, `poi`, `scenery`, `gate`); `name` (text, up to 40 characters); `x` (whole number from 0 to 200000); `y` (whole number from 0 to 200000); `orbit` (number from 0 to 200000); `angle` (number from -360 to 360); `art` (one of: `station`, `outpost`, `planet`, `hub`, `foundry`, `nest`, `derelict`); `r` (whole number from 10 to 5000); `rocks` (whole number from 0 to 200); `landable` (yes or no); `kind` (one of: `rock`, `ice`, `gas`, `lava`, `ringed`, `wreck`, `beacon`); `seed` (whole number from 0 to 2147483647); `look` (one of: `hub`, `foundry`, `nest`, `derelict`); `labelDy` (whole number from -3000 to 3000); `credits` (whole number from 0 to 100000); `hull` (whole number from 0 to 100); `guard` (whole number from 0 to 6); `note` (text, up to 160 characters) |
 | `## Pirates` | a table: `kind`* (one of: `raider`, `drone`, `gunship`); `weight`* (number from 0 to 1) |
 
 #### `voice`  (folder `content/voice/`)
