@@ -29,6 +29,29 @@ function loungeStops(spots, look) {
   });
   return out;
 }
+// The name of each desk (card space-game-critic-station-read, docs/CRITIC.md 17): the names were 11 px glow text straight on the kiosk art,
+// and the screens, the wires and the hologram crossed them. Now each is a plate on the front of the desk: a dark, solid backing with a rim in
+// the desk's colour and bold 13 px letters, above the art (the screens are at depth 2.2, the plates at 4.6) and under the player and the key
+// caps. One place draws them all, for the desks of this file and for the ones src/shop.js and src/fuel.js add to s.spots; the small label
+// those two still make is taken away here, so a name is written once.
+const STATION_PLATE = { size: 13, h: 20, padX: 9, dy: 12, depth: 4.6, back: 0x02101c, backAlpha: 0.94 };
+function stationPlates(s) {
+  const P = STATION_PLATE;
+  s.plates = s.spots.filter(sp => sp.key !== 'ship' && sp.npc === undefined && sp.text).map(sp => {
+    (s._wl || []).filter(t => t.active && t.text === sp.text && Math.abs(t.x - sp.x) < 6 && Math.abs(t.y - sp.y) < 30).forEach(t => t.destroy()); // the old small nameplate
+    const col = Phaser.Display.Color.HexStringToColor(sp.color).color;
+    const t = s.add.text(0, 0, sp.text, { fontFamily: 'monospace', fontSize: P.size + 'px', fontStyle: 'bold', color: '#f2fbff' }).setOrigin(0.5);
+    const w = Math.ceil(t.width) + P.padX * 2, g = s.add.graphics();
+    g.fillStyle(P.back, P.backAlpha); g.fillRoundedRect(-w / 2, -P.h / 2, w, P.h, 4);
+    g.lineStyle(1.5, col, 1); g.strokeRoundedRect(-w / 2, -P.h / 2, w, P.h, 4);
+    g.fillStyle(col, 1); g.fillRect(-w / 2 + 3, -P.h / 2 + 4, 2, P.h - 8); // a tab in the desk's colour, as the HUD panels have
+    const c = s.add.container(sp.x, sp.y + P.dy, [g, t]).setDepth(P.depth);
+    c.pw = w; c.key = sp.key; c.label = t;
+    return c;
+  });
+  return s.plates;
+}
+
 class Station extends Phaser.Scene {
   constructor() { super('Station'); }
   init(d) { this.arrive = !!(d && d.arrive); }
@@ -60,13 +83,13 @@ class Station extends Phaser.Scene {
     this.spots.filter(sp => sp.key !== 'ship').forEach(sp => {
       const r = rectWall(this, sp.x - 50, sp.y - 22, 100, 44, 0x0d2a3f, sp.key === 'repair' ? GREEN : look.accent);
       this.walls.push(r);
-      label(this, sp.x, sp.y + 16, sp.text, sp.color, 11); // the nameplate on the front of the desk
     });
 
     // the lower deck is the bar (src/shop.js) and the hangar gets the upgrade shop terminal
     buildBar(this); buildShop(this); buildPump(this); // src/fuel.js: the fuel pump terminal, where the station has one
 
     interiorBuild(this); // lights, signs, hologram desks, patrons and wanderers (src/interior.js)
+    stationPlates(this); // every desk's name on a plate the machine art cannot cross (below)
 
     this.player = this.physics.add.sprite(960, 400, 'in-pilot0').setCollideWorldBounds(true).setDepth(5);
     this.player.body.setCircle(9, 7, 7);

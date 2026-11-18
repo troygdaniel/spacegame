@@ -32,10 +32,21 @@ try {
   check('panel is visible with the landing', (await t.ev(`${SF}.ctl.box.visible && ${SF}.ctl.box.alpha > 0.9`)) === true);
   await t.shot('surface-hint-arrival');
 
+  console.log('the landing keeps the play field and the mission panel clear (card space-game-critic-surface-start)');
+  const land = await t.ev(`(() => { const s = ${SF}, b = s.ctl.box.getBounds(), pb = s.prompt.box, z = s._hud.zones[0];
+    return { card: [b.left, b.top, b.right, b.bottom], hintA: s.ctl.hint.alpha, text: s.prompt.text, pvis: pb.visible, px: pb.x, py: pb.y, pw: s.prompt.pw, zone: [z.x1, z.y1],
+      playerY: s.player.y - s.cameras.main.scrollY, you: !!(s.you && s.you.tag.active && s.you.tag.text === 'YOU') }; })()`);
+  check('the controls card is in the bottom left, out of the play field', land.card[0] >= 20 && land.card[0] < 80 && land.card[1] > 720 - 110 && land.card[3] <= 720 - 16 && land.card[2] < 1280 - 260, JSON.stringify(land.card)); // the bounds are of the card's words and key caps: its plate is drawn 30 px wider each side
+  check('the "C  show controls" reminder is not shown while the controls are', land.hintA === 0, 'alpha ' + land.hintA);
+  check('at the ship the prompt says Board ship, and it is under you, clear of the mission panel', land.pvis && /Board ship/.test(land.text) && land.py > land.playerY && !(land.px - land.pw / 2 < land.zone[0] && land.py - 17 < land.zone[1]), JSON.stringify(land));
+  check('a YOU mark is on the walker just after landing', land.you === true);
+  check('away from the panel the prompt is above you again', (await t.ev(`surfacePromptSide(${SF}, { x: ${SF}.cameras.main.scrollX + 800, y: ${SF}.cameras.main.scrollY + 500 })`)) === (await t.ev('SURFACE_PROMPT.up')));
+
   console.log('it fades after a few seconds, and C brings it back');
   await waitHidden(t, 8500);
   check('panel gone after 8.5 s', (await t.ev(`${SF}.ctl.box.visible`)) === false);
   check('a "C  show controls" reminder stays on screen', (await t.ev(`${SF}.ctl.hint.visible && ${SF}.ctl.hint.text`)) === 'C  show controls');
+  check('and it is showing again now the card has gone; the YOU mark has gone too', (await t.ev(`${SF}.ctl.hint.alpha === 1 && !${SF}.you.tag.active && !${SF}.you.ring.active`)) === true);
   await t.key('C'); await t.run(300);
   check('C shows the panel again', (await t.ev(`${SF}.ctl.box.visible && ${SF}.ctl.box.alpha > 0.9`)) === true);
   await waitHidden(t, 7500);
