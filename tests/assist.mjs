@@ -109,7 +109,13 @@ check('cruise or the autopilot taking the ship ends the order quietly', J(`(() =
 check('a target ship that is destroyed: target lost', J(`(() => { const t = { x: 4000, y: 0, active: true, body: { velocity: { x: 0, y: 0 } } }; assistSet('keep', t); __frames(5); t.active = false; __frames(1); return [__s.as.mode, __toasts.some(m => /Target lost/.test(m))]; })()`).join() === ',true');
 g.run(`__press('ONE'); __press(ASSIST.key);`);
 check('Z again switches the assist off and ends the order', J(`ASSIST.on`) === false && J(`__s.as.mode`) === '' && J(`__toasts`).some(m => /Flight assist off/.test(m)));
-check('off: the command keys do nothing', J(`(() => { __press('ONE'); return __s.as.mode; })()`) === '');
+// Troy, 17 Nov: "the 2 does not work": a target set, the assist off, and 2 was ignored without a word
+check('off, a target set: 2 switches the assist on and gives Keep at range in the same press', J(`(() => { __toasts = []; __press('TWO'); return [ASSIST.on, __s.as.mode, __s.as.target && __s.as.target.name, __toasts.some(m => /^Keep at range: Tern/.test(m))]; })()`).join() === 'true,keep,Tern,true', JSON.stringify(J(`__toasts`)));
+check('Z still switches it off, and the order with it', J(`(() => { __press(ASSIST.key); return [ASSIST.on, __s.as.mode]; })()`).join() === 'false,');
+check('off, a target set: 1 does the same for Approach', J(`(() => { __press('ONE'); const r = [ASSIST.on, __s.as.mode]; __press(ASSIST.key); return r; })()`).join() === 'true,approach');
+check('off, no target: the key says how to pick one, and the assist stays off', J(`(() => { const keep = __s.cr.target; __s.cr.target = null; __toasts = []; __press('TWO'); const r = [ASSIST.on, __s.as.mode, __toasts.length, /No target/.test(__toasts[0] || '')]; __s.cr.target = keep; return r; })()`).join() === 'false,,1,true', JSON.stringify(J(`__toasts`)));
+check('off, under the launch lock: the key is refused and the assist stays off', J(`(() => { __s.lockUntil = __s.time.now + 500; __press('TWO'); const r = [ASSIST.on, __s.as.mode]; __s.lockUntil = 0; return r; })()`).join() === 'false,');
+check('off, the nav list open: the keys are its own', J(`(() => { __s.as.k.TWO._justDown = true; assistFrame(__s, __s.time.now, 16, 'nav', ''); const r = [ASSIST.on, __s.as.mode]; __s.as.k.TWO._justDown = false; return r; })()`).join() === 'false,');
 
 // ---- Approach, flown ----
 const vmax = J(`shipStat('vmax')`);
