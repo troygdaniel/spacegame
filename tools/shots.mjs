@@ -135,6 +135,29 @@ const solDock = name => async t => {
   console.log('        after ' + ran + ' s of game time: ' + (docked ? 'docked, lastDock ' + await t.ev('G.lastDock') + ', title ' + await t.ev(`${ST}.ui && ${ST}.ui.titleText ? ${ST}.ui.titleText.text : ''`) + ', menu rows ' + await t.ev(`JSON.stringify(${ST}.menu.rows.map(r => r.n + r.name + (r.off ? '(off)' : '')))`) : 'not docked: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}; return { ap: !!(s.ap && s.ap.on), stage: s.ap && s.ap.stage, cruising: !!s.cruising, prompt: s.prompt && s.prompt.text, toasts: (window.__toasts || []).slice(-3) }; })())`)));
   await t.run(1500);
 };
+// the route plotter (card space-game-route-plotter): the bounty call (the Reaver, at the Roost) accepted at Halcyon in a Wren or a Kite; then the galaxy map the way G opens it
+// (on the job's star) and the navigation panel, with what each says about the way to the Roost
+const routeView = model => async t => {
+  await t.run(1200);
+  const ready = JSON.parse(await t.ev(`JSON.stringify((() => { G.credits = 20000; ['kestrel', 'roost'].forEach(id => { if (!G.known.includes(id)) G.known.push(id); });
+    if ('${model}' !== 'wren') { const r = fleetBuy('${model}', true); if (!r.ok) return { err: r.why || r.say || JSON.stringify(r) }; }
+    pickMission('bounty'); G.mission = 'accepted'; missionAccepted(); return { ship: activeShip().model, range: shipStat('range'), tank: shipStat('tank'), mission: G.missionId }; })())`));
+  if (ready.err) throw new Error('could not set up the ship: ' + ready.err); console.log('        ' + JSON.stringify(ready));
+  await t.ev(`(() => { ${ST}.scene.start('Space'); return 1; })()`);
+  for (let i = 0; i < 40 && !(await t.ev(up('Space'))); i++) await t.run(250);
+  if (!(await t.ev(up('Space')))) throw new Error('the Space scene did not start'); await t.run(2500);
+  await t.ev(`(() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; return 1; })()`);
+  console.log('        route: ' + await t.ev(`JSON.stringify((() => { try { const w = routeCheck('halcyon', 'roost', activeShip()); return { ok: w.res.ok, why: w.res.why || null, hops: (w.res.hops || []).map(h => ({ id: h.id, ly: +(+h.ly).toFixed(1), fuel: h.fuel, fill: !!h.fill })), line: w.line }; } catch (e) { return { err: String(e.message) }; } })())`));
+  // the galaxy map as G opens it: on the job's star
+  await t.ev(`(() => { return jumpMapOpen(game, null); })()`); await t.run(1200);
+  if (!(await t.ev(up('Galaxy')))) throw new Error('the galaxy map did not open');
+  await pic(t, 'route-' + model + '-map');
+  console.log('        map says: ' + await t.ev(`JSON.stringify((() => { const g = game.scene.getScene('Galaxy'), out = []; const walk = list => list.forEach(o => { if (o.list) walk(o.list); else if (o.type === 'Text' && o.visible && o.alpha > 0.05 && String(o.text).trim()) out.push(String(o.text).replace(/\\n/g, ' / ')); }); walk(g.children.list); return { sel: g.sel, texts: out.filter(x => /roost|kestrel|range|jump|fuel|hop|route|call|tank|engine/i.test(x)).slice(0, 24) }; })())`));
+  await t.key('ESC'); await t.run(800);
+  await t.ev(`(() => { cruiseNavOpen(${SP}); return 1; })()`); await t.run(800);
+  await pic(t, 'route-' + model + '-nav');
+  console.log('        panel says: ' + await t.ev(`JSON.stringify({ job: navpanelJob(), mission: ${SP}.cr.list.filter(r => r.group === 'mission').map(r => r.kind + ' ' + r.name + (r.ok === false ? ' (no: ' + r.why + ')' : '') + (r.hops ? ' hops ' + r.hops : '')), hint: navpanelHint(${SP}.cr.list[${SP}.cr.sel], false) })`));
+};
 const LOOKS = [
   ['far-cruise-mid', '#space', 'Space', farCruise(20)],      // the systems are 3 times the size (card space-game-system-distances): 8 s into a cruise to the farthest body
   ['far-cruise-end', '#space', 'Space', farCruise(180)],    // and where that cruise ends (or where it is after 3 minutes of game time)
@@ -305,6 +328,8 @@ const LOOKS = [
     console.log('        overlapping texts: ' + JSON.stringify(r.overlaps));
     console.log('        inputs: ' + JSON.stringify(r.inputs));
   }],
+  ['route-wren', '#station', 'Station', routeView('wren')],
+  ['route-kite', '#station', 'Station', routeView('kite')],
   ['sol-jupiter-probe', '#space', 'Space', async t => { // what is drawn where the autopilot says Jupiter is
     await solOn(t, 'Space'); await solJump(t); await solFly(t, 'Jupiter', 120); await t.run(1000);
     console.log('        ' + await t.ev(`JSON.stringify((() => { const s = ${SP}, b = sysBodies().find(x => x.name === 'Jupiter'), near = o => Math.hypot(o.x - s.ship.x, o.y - s.ship.y) < 3000;
