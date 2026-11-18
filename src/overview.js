@@ -271,9 +271,13 @@ function overviewFrame(s, time) {
   // C with a far ship selected is Cruise to that ship, not cruise to the nav target: this frame the cruise code (which runs after this) must
   // not see the key. With the list hidden too: the order is the key's, the button only shows it.
   overviewCruiseFrame(s);
-  if (!nav && overviewJustDown(k[OVERVIEW.cruiseKey])) {
+  // The key is only looked at here, never taken unless Cruise to is what it does: Phaser hands this list and src/cruise.js the same Key object for C,
+  // so taking the press for a ship that is not far (or none) would leave plain cruise to the nav target with a key that never came (the night smoke, tests/cruise.mjs)
+  const ck = k[OVERVIEW.cruiseKey];
+  if (!nav && ck && ck._justDown) {
     const sel = overviewTarget(s), sh = s.ship;
     if (ov.cruise || (sel && sel.ship && overviewFar(Math.hypot(sel.ref.x - sh.x, sel.ref.y - sh.y)))) {
+      ck._justDown = false;
       if (s.cr && s.cr.k && s.cr.k[OVERVIEW.cruiseKey]) s.cr.k[OVERVIEW.cruiseKey]._justDown = false;
       overviewCruiseTo(s);
     }
