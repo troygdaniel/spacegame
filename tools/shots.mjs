@@ -171,6 +171,20 @@ const LOOKS = [
     await t.run(6000);
     console.log('        6 s in: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}; return { cruising: !!s.cruising, v: Math.round(s.ship.body.speed) }; })())`));
   }],
+  ['play-escort', '#escort', 'Space', async t => { // one escort played to its end (card space-game-call-places-from-files: the places of the calls come from content files now)
+    await t.run(2500);
+    const start = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}, f = s.mx.freighter, g = sysBody('gate'); return { call: G.missionId, state: G.mission, mule: !!(f && f.active), toGate: f ? Math.round(Math.hypot(f.x - g.x, f.y - g.y) / 10) : null, gate: g.name, credits: G.credits, target: (missionTarget(s) || {}).name }; })())`));
+    console.log('        start: ' + JSON.stringify(start));
+    let ran = 0, shot = false;
+    while (ran < 300) { // stay in her ring, keep the pirates off her: the route and the payout are what is looked at, not the fight
+      await t.ev(`(() => { const s = ${SP}, f = s.mx && s.mx.freighter; s.ironUntil = 1e12; s.enemies.getChildren().slice().forEach(d => d.destroy()); if (f && f.active) { s.ship.setPosition(f.x - 120, f.y + 90); s.ship.setVelocity(f.body.velocity.x, f.body.velocity.y); s.ship.rotation = f.rotation; } return 1; })()`);
+      await t.run(2000); ran += 2;
+      if (!shot && ran >= 20) { shot = true; await t.shot('firstlook/play-escort-mid'); await t.shot('firstlook/play-escort-mid'); }
+      if (await t.ev(`G.mission !== 'accepted'`)) break;
+    }
+    console.log('        after ' + ran + ' s of game time: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}, f = s.mx && s.mx.freighter, g = sysBody('gate'); return { state: G.mission, credits: G.credits, mule: !!(f && f.active), toGate: f && f.active ? Math.round(Math.hypot(f.x - g.x, f.y - g.y) / 10) : null }; })())`));
+    await t.run(1500);
+  }],
   ['clear-mass', '#space', 'Space', async t => { // Troy's bug beside Kepler-4b (card space-game-bug-travel-refuses-near-mass): C inside a mass limit flies clear, then cruises
     await t.run(1500);
     const o = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; s.lockUntil = 0;
