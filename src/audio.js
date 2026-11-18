@@ -106,6 +106,7 @@ function stopAmbient() {
 }
 
 // ---------- engine hum: rises with thrust and boost, silent when idle ----------
+const ENG_BRAKE = 0.03, ENG_RCS = 0.009; // the braking hiss and the thruster hiss at full, before the master volume: both under the engine (0.2 at full boost)
 function startEngine(sc) {
   if (!audioReady()) return;
   stopEngine();
@@ -114,7 +115,10 @@ function startEngine(sc) {
   const flt = AC.createBiquadFilter(); flt.type = 'lowpass'; flt.frequency.value = 300; flt.Q.value = 1.2; flt.connect(out);
   const saw = aOsc(list, 'sawtooth', 50, flt, 0.5), sub = aOsc(list, 'square', 25, flt, 0.25);
   const rush = aNoise(list, out, 'bandpass', 900, 1, 0.3);
-  AUD.eng = { out, list, flt, saw, sub, rush, level: 0, nextAt: 0 };
+  // the braking burn and the turn thrusters (card space-game-burn-feel): two quiet hisses of their own, so they sound while the engine is off
+  const brk = AC.createGain(); brk.gain.value = 0; brk.connect(AUD.master); aNoise(list, brk, 'bandpass', 1500, 0.8, 1); aOsc(list, 'sawtooth', 70, brk, 0.25);
+  const rcs = AC.createGain(); rcs.gain.value = 0; rcs.connect(AUD.master); aNoise(list, rcs, 'highpass', 3800, 0.7, 1);
+  AUD.eng = { out, list, flt, saw, sub, rush, brk, rcs, level: 0, nextAt: 0 };
   const tick = (time) => {
     const e = AUD.eng;
     if (!e || time < e.nextAt) return;
@@ -123,6 +127,12 @@ function startEngine(sc) {
     const thrusting = ship && ship.body && !sc.dead && ship.body.acceleration.length() > 0 && !AUD.ducked;
     const boost = thrusting && sc.boosting; // boost.js: Shift held and the tank not empty
     e.level = thrusting ? (boost ? 1 : 0.55) : 0;
+    // what the ship is doing, read by src/feel.js (feelBurnRead): the hum builds with the burn instead of snapping on, and sounds under the
+    // flight assist too; the brake and the thrusters hiss as much as they fire. Louder on Heavy handling (b.strength).
+    const b = !sc.dead && !AUD.ducked && sc.fx && sc.fx.burn;
+    if (b) e.level = Math.min(1, (boost ? 1 : 0.55) * b.engine * (0.8 + 0.2 * b.strength));
+    e.brk.gain.setTargetAtTime(b ? ENG_BRAKE * b.brake * b.strength : 0, now, 0.06);
+    e.rcs.gain.setTargetAtTime(b ? ENG_RCS * Math.abs(b.turn) * b.strength : 0, now, 0.04);
     const speed = ship && ship.body ? Math.min(1, ship.body.speed / 800) : 0;
     e.out.gain.setTargetAtTime(e.level * 0.2, now, 0.12);
     const f = 46 + e.level * 32 + speed * 22;
@@ -137,6 +147,7 @@ function stopEngine() {
   const e = AUD.eng;
   if (!e) return;
   if (e.scene) e.scene.events.off('update', e.handler);
+  [e.brk, e.rcs].forEach(g => { try { g.gain.cancelScheduledValues(AC.currentTime); g.gain.setTargetAtTime(0, AC.currentTime, 0.05); } catch (err) { /* gone */ } });
   fadeOutAndStop(e.out, e.list, 0.25);
   AUD.eng = null;
 }
@@ -144,7 +155,7 @@ function stopEngine() {
 function duck(on) { // the pause menu: engine off, pad down to a murmur
   AUD.ducked = on;
   if (AUD.amb && AC) AUD.amb.out.gain.setTargetAtTime(ambLevel(AUD.amb.kind) * (on ? 0.3 : 1), AC.currentTime, 0.15);
-  if (AUD.eng && AC) { if (on) AUD.eng.level = 0; AUD.eng.out.gain.setTargetAtTime(0, AC.currentTime, 0.05); }
+  if (AUD.eng && AC) { if (on) AUD.eng.level = 0; [AUD.eng.out, AUD.eng.brk, AUD.eng.rcs].forEach(g => g.gain.setTargetAtTime(0, AC.currentTime, 0.05)); }
 }
 
 // ---------- one-shot effects ----------
