@@ -112,8 +112,8 @@ try {
   await gclose();
   await E(`G.known = ['halcyon', 'kestrel', 'meridian']; activeShip().fuel = 40`);
   await openMap('meridian'); await E(`${GL}.go()`); await tick(2);
-  check('Meridian is 9.8 ly away: out of range too', await E(`!${SP}.jmp`));
-  await gclose();
+  check('Meridian is 9.3 ly away, past the Wren\'s 8: but the route plotter finds two jumps through Kestrel, and Enter charges the first hop, Kestrel (src/galaxymap.js galaxyPlan)', await E(`!!${SP}.jmp && ${SP}.jmp.to === 'kestrel'`), await E(`JSON.stringify([${SP}.jmp && ${SP}.jmp.to, window.__toasts])`));
+  await park(15000, 15000); // the charge is cancelled; the map closed when it started
   await E(`G.known = ['halcyon', 'kestrel', 'brass']; delete SYSTEMS.brass`); // a system the galaxy map knows (its stub) and the game has no data for
   await openMap('brass'); await E(`${GL}.go()`); await tick(2);
   check('a system that is in range but has no data (Brass Reach, taken out for this check): no charge, and the toast says there is no route', await E(`!${SP}.jmp`) && (await said()).some(m => /No route|not charted/.test(m)), JSON.stringify(await said()));
