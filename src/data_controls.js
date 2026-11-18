@@ -40,10 +40,11 @@ const CONTROLS = [
     { k: ['L'], t: 'Dock or land (fly slowly, close in)', bay: 1, bt: 'Dock or land' },
     { k: ['T'], t: 'Mission panel', bay: 1 },
     { k: ['R'], t: 'Autotarget on or off (needs the part from the shop)' },
-    { k: ['N'], t: 'Navigation panel: W S choose, Enter sets the destination, Enter again goes there' },
+    { k: ['N'], t: 'Places: the navigation panel (W S choose, Enter sets the destination, Enter again goes there)' },
+    { k: ['B'], t: 'Ships: the Overview list (W S choose, Enter targets it); a click in space picks either' },
     { k: ['C'], t: 'Cruise to the target (A D nudge, S cancels)' },
     { k: ['P'], t: 'Autopilot to the target: it stops at the dock (any key cancels)' },
-    { k: ['Tab'], t: 'Sector map: W S choose a body, Enter flies there' },
+    { k: ['Tab'], t: 'Sector map: it shows your destination (Z zooms)' },
     { k: ['G'], t: 'Galaxy map: pick a system, Enter charges the jump (S or Esc cancels)' },
     { k: ['Z'], t: 'Flight assist on or off: the ship flies itself about the target' },
     { k: ['1-4'], t: 'Assist orders: approach, keep at range, orbit, match speed' }

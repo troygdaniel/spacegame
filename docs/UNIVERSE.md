@@ -42,7 +42,7 @@ Systems become big: 36 000 px square by default (48 000 for empty wilds). Halcyo
 
 - Press **N**: the nav list. Every body you know (stations, planets, belts, found signals), sorted by distance, each with distance and cruise ETA. Enter picks one: it becomes the target (the amber objective arrow of the HUD points at it; the radar edge arrow stays as is).
 - Press **C** with a target and clear space: cruise engages. The ship turns toward the target by itself (A and D nudge it, S cancels), speeds up at 4000 px/s2 to 6000 px/s, and slows down by itself so it arrives about 900 px from the body at under 150 px/s, then drops out into local flight. The speed limit is `min(6000, 3 x (distance - 900))`, which is what stops you flying through a planet.
-- It will not engage inside 2500 px of a station or planet ("too close to the mass: fly clear") or with a hostile within 1500 px ("hostiles near").
+- Inside 2500 px of a station or planet cruise does not start at once: the ship flies itself clear by the short way ("Clearing Kepler-4b, then cruising to ...") and cruise engages then; any flight key takes the stick back. It will not engage with a hostile within 1500 px ("hostiles near").
 - Cruise costs no fuel. Fuel is for jumps (decision 3). Cruise exists to save the player's time, so it must never become a chore.
 - A typical leg: 30 000 px = 1.5 s of acceleration, about 3.5 s of flat out, 1.5 s of braking: 6.5 s.
 - Trip legs cross empty space on purpose: that is where interdiction happens (section 5) and where the scenery shows.

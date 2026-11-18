@@ -6,15 +6,16 @@
 //   SUN, PLANETS AND BELTS
 //   SIGNALS              salvage sites and signals you have found
 //   GATES AND JUMPS      the gate, then every charted system the ship can reach from here (light years, and the fuel the jump burns)
-// N opens it with the keys on it: W S (or the arrows) choose, Enter sets the row as the destination, Enter again on that row goes there. X clears
+// N opens it with the keys on it: W S (or the arrows) choose, Enter sets the row as the destination, Enter again on that row goes there (on the
+// station it docks, on the planet you can land on it lands: the order takes the ship all the way in; P on the row only flies there). X clears
 // the destination, N closes. A click on a row does what Enter does. It opens by itself, without taking the keys, when you launch or arrive (you
 // have no destination yet) and when the call gives you a new goal; it goes away again after a few seconds. The destination stays pinned at the
 // top of the panel's place with its distance while you fly, panel open or not.
 //
 // It adds no way to travel. Going there is what the game already had: a body is flown to by the autopilot (src/autopilot.js autopilotGo, which
 // cruises the middle of a long leg by itself), another system by the jump (src/jump.js jumpStart, behind the same locks and fuel check as the
-// galaxy map). The destination of a body is cruise's own target (s.cr.target, src/cruise.js cruisePick), so C, P, the Tab map, the Overview list
-// and the HUD arrow all agree on it.
+// galaxy map). The destination of a body is cruise's own target (s.cr.target, src/cruise.js cruisePick), so C, P, the Tab map, the Overview's target row
+// and the HUD arrow all agree on it. Places are picked here and by a click in space, nowhere else (tests/onetarget.mjs).
 //
 // It replaces the N list that src/cruise.js drew. cruise.js still owns the N key and the state other files read (s.cr.navOpen: the list has the
 // keyboard; s.cr.list and s.cr.sel: the rows and the chosen one, which P in src/autopilot.js reads), and calls in here:
@@ -85,13 +86,14 @@ function navpanelHow(r) {
   const left = r.dist - autopilotStop(r);
   return left <= 60 ? 'here' : left > AUTO.cruiseLeg ? 'cruise' : 'autopilot';
 }
-// what the bottom line says about the chosen row
-function navpanelHint(r, isDest) {
+// what the bottom line says about the chosen row. order: 'dock' or 'land' when the row can take that order (autopilotOrder), else ''
+function navpanelHint(r, isDest, order) {
   if (!r) return 'Nowhere to go from here.';
   const how = navpanelHow(r);
-  if (how === 'here') return 'You are there.';
+  if (how === 'here' && !order) return 'You are there.';
   if (how === 'no') return r.why === 'fuel' ? 'Not enough fuel for this jump.' : r.why === 'far' ? 'Out of jump range: plot it on the galaxy map (G).' : 'No route charted yet.';
   if (!isDest) return 'Enter  set as destination';
+  if (order) return 'Enter  ' + order + (how === 'here' ? '' : '   P  fly there only'); // the order takes the ship all the way in; P is the plain travel
   return how === 'jump' ? 'Enter  jump   ' + navpanelFuel(r.cost) + ' fuel' : how === 'cruise' ? 'Enter  go: autopilot and cruise' : 'Enter  go: autopilot';
 }
 function navpanelFuel(v) { return String(Math.round(v * 10) / 10); }
@@ -215,7 +217,7 @@ function navpanelDraw(s) {
     if (sel) np.hl.setPosition(N.x + 3, l.y - N.row / 2).setVisible(true).setFillStyle(0xffb454, np.keys ? 0.16 : 0.06);
   });
   const r = rows[cr.sel];
-  np.foot.setText(np.keys ? navpanelHint(r, r ? navpanelIsDest(s, r) : false) : 'N  choose where to go');
+  np.foot.setText(np.keys ? navpanelHint(r, r ? navpanelIsDest(s, r) : false, navpanelOrder(s, r)) : 'N  choose where to go');
   np.more.setText(view.above || view.below ? (view.above ? '^' + view.above + ' ' : '') + (view.below ? 'v' + view.below : '') : np.keys ? 'X clear' : '');
 }
 
@@ -248,11 +250,13 @@ function navpanelPick(s, r) {
   np.jump = null; np.jumpRow = null;
   cruisePick(s, r); // src/cruise.js: the one target C, P, the Tab map and the HUD arrow share
 }
+// the order a row can take: 'dock' (this system's station), 'land' (the planet you can land on) or ''
+function navpanelOrder(s, r) { return r && r.kind !== 'jump' ? autopilotOrder(r, sysBody('station'), sysBody('planet'), s.canLand) : ''; }
 function navpanelEngage(s, r) {
   const np = s.np, no = m => { toast(s, m, '#ffb454'); sfx('empty'); return false; };
   if (r.kind !== 'jump') { // a body: the autopilot flies it, and cruises the middle of a long leg
     if (s.cruising) return no('Cruising already. S cancels.');
-    const went = autopilotGo(s, r);
+    const went = autopilotGo(s, r, navpanelOrder(s, r)); // the station and the planet you can land on: Dock and Land, all the way in
     if (went) navpanelClose(s);
     return went;
   }

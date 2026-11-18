@@ -186,7 +186,7 @@ const open = async (t, press, key, section) => { await press(key); await t.waitF
     check('the first group lists its rows from the table', ['STATION', 'SHIP BAY', 'FLIGHT', 'SURFACE', 'TITLE', 'ANYWHERE', 'Use the terminal, repair bay or ship', 'Journal: who you have met'].every(w => g0.includes(w)));
     await press('RIGHT'); await press('RIGHT');
     const g2 = await texts(t);
-    check('right moves two groups on: the flight keys show', g2.includes('Thrust') && g2.includes('Cruise to the target') && g2.includes('Navigation panel'));
+    check('right moves two groups on: the flight keys show', g2.includes('Thrust') && g2.includes('Cruise to the target') && g2.includes('the navigation panel'));
     check('every group row count on screen matches the table', await t.ev(`(() => { let ok = true; for (const g of CONTROLS) { ${SE}.ctab = g.id; ${SE}.show('controls'); const n = ${SE}.body.list.filter(o => o.type === 'Container').length; if (n < g.rows.length) ok = false; } return ok; })()`));
     await t.shot('settings-4-controls');
 

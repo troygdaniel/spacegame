@@ -69,7 +69,7 @@ check('a short leg is the autopilot\'s, a long one cruises in the middle (the au
 check('first Enter sets the destination, the second goes', /set as destination/.test(J(`navpanelHint(${JSON.stringify(mid)}, false)`)) && /go: autopilot$/.test(J(`navpanelHint(${JSON.stringify(mid)}, true)`)) && /cruise/.test(J(`navpanelHint(${JSON.stringify(long)}, true)`)));
 check('a jump says the fuel it burns', /jump/.test(J(`navpanelHint(${JSON.stringify({ kind: 'jump', ok: true, cost: 3.25, ly: 4 })}, true)`)) && /3\.3 fuel|3\.2 fuel/.test(J(`navpanelHint(${JSON.stringify({ kind: 'jump', ok: true, cost: 3.25, ly: 4 })}, true)`)));
 check('distances read as km for a body and ly for a jump', / km$/.test(J(`navpanelDist(${JSON.stringify(mid)})`)) && J(`navpanelDist({ kind: 'jump', ly: 4.26 })`) === '4.3 ly');
-check('the controls table and the help page name the panel on N', J(`CONTROLS.some(g => g.rows.some(r => r.k.includes('N') && /Navigation panel/.test(r.t)))`) && J(`HELP.Space.some(l => /^N   navigation panel/.test(l))`));
+check('the controls table and the help page name the panel on N', J(`CONTROLS.some(g => g.rows.some(r => r.k.includes('N') && /navigation panel/.test(r.t)))`) && J(`HELP.Space.some(l => /^N   places: the navigation panel/.test(l))`));
 
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(`\n${n - failed} of ${n} checks passed`);
