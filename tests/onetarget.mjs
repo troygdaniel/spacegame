@@ -22,7 +22,8 @@ const DOORS = [
   // ---- a place ----
   { what: 'cruisePick( : make a place the destination', re: /\bcruisePick\(/g, who: {
     navpanel: 1,    // Enter or a click on a row of the navigation panel
-    clickmove: 1 } }, // a click on the place in space
+    clickmove: 1,   // a click on the place in space
+    shipcomputer: 2 } }, // the ship's computer (card space-game-ship-computer-acts): set_destination, and travel with a place named; both only after SC_ACT checked the live state, and they pick what the panel's row would
   { what: 'cr.target = : write the destination', re: /\bcr\.target = (?!null)/g, who: {
     cruise: 1,      // cruisePick itself
     autopilot: 2,   // the autopilot keeps the place it was sent to (autopilotGo, and its cruise leg); it picks nothing
@@ -31,10 +32,12 @@ const DOORS = [
     navpanel: 1 } }, // a row of Gates and jumps
   { what: 'autopilotGo( : fly to a place', re: /\bautopilotGo\(/g, who: {
     autopilot: 2,   // P: to the destination, or to the row under the ring while the navigation panel is open
-    navpanel: 1 } }, // Enter again on the destination
+    navpanel: 1,    // Enter again on the destination
+    shipcomputer: 3 } }, // the ship's computer: travel, dock and land (the Dock and Land orders of the panel)
   { what: 'jumpStart( : start a jump', re: /\bjumpStart\(/g, who: {
     jump: 1,        // the galaxy map's own Enter (G)
-    navpanel: 1 } }, // Enter again on a jump row
+    navpanel: 1,    // Enter again on a jump row
+    shipcomputer: 1 } }, // the ship's computer: jump_next_hop, after jumpLock and the plotter's route and fuel check; S or Esc cancels the charge as ever
   // ---- a ship ----
   { what: 'overviewPick( : make a ship the target', re: /\boverviewPick\(/g, who: {
     overview: 2 } }, // Enter on a row, a click on a row
@@ -46,7 +49,8 @@ const DOORS = [
   { what: 'assistSet(mode, target : an order on a ship', re: /\bassistSet\([^(),]+,/g, who: {
     assist: 1,      // an order key (1-4) goes to the thing already selected
     clickmove: 3,   // a click on a ship, and the order keys on the picked ship
-    overview: 3 } }, // a row with no click to move in the build, the order buttons of the target row, and the hand-over after Cruise to (the same selected ship)
+    overview: 3,    // a row with no click to move in the build, the order buttons of the target row, and the hand-over after Cruise to (the same selected ship)
+    shipcomputer: 1 } }, // the ship's computer: assist_order, on the target already selected (the nav target), never on one it picks
   { what: 'gunlockSet( : lock a raider', re: /\bgunlockSet\((?!null)/g, who: {
     gunlock: 1,     // V: the selected raider, else the nearest. No walk to the next one.
     overview: 1 } }, // the Lock button of the target row
