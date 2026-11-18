@@ -54,6 +54,7 @@ class Surface extends Phaser.Scene {
     this.k = this.input.keyboard.addKeys('W,A,S,D,E,UP,DOWN,LEFT,RIGHT');
     this.nextFire = 0; this.tmp = new Phaser.Math.Vector2();
     this.prompt = floatPrompt(this, this.player); // key cap above you instead of a strip at the bottom (src/ui.js)
+    surfaceYou(this); // a mark on you for the first seconds (below)
     surfaceControls(this); // controls panel on arrival (fades; C brings it back) and the aim line and cursor, both below
     surfaceAimInit(this);
     toast(this, missionActive('rescue') ? 'Landed. Find the colonist. The pod is to the east.' : 'Landed on Kepler-4b. Nobody needs you here yet.', '#9fe9ff');
@@ -143,12 +144,35 @@ class Surface extends Phaser.Scene {
         }
       }
     }
+    this.prompt.offsetY = surfacePromptSide(this, p); // above you, or below when above would cover the mission panel (the landing spot is right under it)
     this.prompt.setText(msg);
 
     surfaceTick(this, time); // src/art_world.js: crawler legs, colonist beacon
     hudTick(this); // src/hud.js
     feelFrame(this, time, dt); // src/feel.js: hit cues, muzzle flash, low-health pulse
   }
+}
+
+// ---------- the landing: where the key prompt goes, and a mark on you ----------
+// The prompt floats 52 px above you. You land just under the mission panel (top left), so there it covered the panel's last rows and its hint
+// (docs/CRITIC.md run 1, finding 3): when the prompt's box would reach into the panel it goes under you instead. The panel's place is what the HUD
+// drew last frame (its first zone, src/hud.js hudTick), so an open panel and a slim one are both right.
+const SURFACE_PROMPT = { up: -52, down: 58, halfH: 20 };
+function surfacePromptSide(s, p, zone) {
+  const z = zone || (s._hud && s._hud.zones && s._hud.zones[0]), cam = s.cameras.main; if (!z) return SURFACE_PROMPT.up;
+  const px = p.x - cam.scrollX, py = p.y - cam.scrollY + SURFACE_PROMPT.up, half = Math.max(90, (s.prompt && s.prompt.pw || 0) / 2);
+  return px - half < z.x1 && py - SURFACE_PROMPT.halfH < z.y1 ? SURFACE_PROMPT.down : SURFACE_PROMPT.up;
+}
+// YOU and a ring that closes in on the walker for the first seconds after landing: it is small beside the ship, and a first look could not find it (finding 10)
+function surfaceYou(s) {
+  const p = s.player, ring = s.add.circle(p.x, p.y, 26).setStrokeStyle(2, 0xffffff, 0.9).setDepth(6);
+  const tag = s.add.text(p.x + 34, p.y, 'YOU', uiFont(13, '#ffffff')).setOrigin(0, 0.5).setDepth(6).setStroke('#02060d', 4); // beside you: above is the mission panel at the landing spot, below is the key prompt
+  const follow = () => { ring.setPosition(p.x, p.y); tag.setPosition(p.x + 34, p.y); };
+  s.events.on('update', follow);
+  s.tweens.add({ targets: ring, scale: { from: 1.6, to: 0.7 }, alpha: { from: 1, to: 0.2 }, duration: 800, repeat: 4 });
+  s.tweens.add({ targets: tag, alpha: 0, delay: 3400, duration: 600, onComplete: () => { s.events.off('update', follow); ring.destroy(); tag.destroy(); } });
+  s.events.once('shutdown', () => s.events.off('update', follow));
+  s.you = { ring, tag };
 }
 
 // ---------- controls panel: on arrival it shows WASD move, mouse aim, click fire, E interact, then fades; C brings it back ----------
@@ -178,7 +202,7 @@ function surfaceControls(s) {
   const bg = s.add.graphics();
   bg.fillStyle(0x04101c, 0.92); bg.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
   bg.lineStyle(1, CYAN, 0.8); bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 8);
-  const box = s.add.container(W / 2, H - 196, [bg]).setScrollFactor(0).setDepth(125);
+  const box = s.add.container(24 + w / 2, H - 52, [bg]).setScrollFactor(0).setDepth(125); // bottom left, where its "C  show controls" reminder sits: out of the play field (it was in the middle of it: docs/CRITIC.md run 1, finding 8)
   let x = -total / 2;
   made.forEach(m => {
     let cx = x;
@@ -190,9 +214,9 @@ function surfaceControls(s) {
   const ctl = s.ctl = { box, hint, timer: null };
   ctl.show = secs => { // fade in, hold, fade out
     s.tweens.killTweensOf(box); if (ctl.timer) ctl.timer.remove(false);
-    box.setVisible(true).setAlpha(0);
+    box.setVisible(true).setAlpha(0); hint.setAlpha(0); // the reminder says "show controls": not while they are showing, and the card sits on its place
     s.tweens.add({ targets: box, alpha: 1, duration: 220 });
-    ctl.timer = s.time.delayedCall(secs * 1000, () => s.tweens.add({ targets: box, alpha: 0, duration: 700, onComplete: () => box.setVisible(false) }));
+    ctl.timer = s.time.delayedCall(secs * 1000, () => s.tweens.add({ targets: box, alpha: 0, duration: 700, onComplete: () => { box.setVisible(false); hint.setAlpha(1); } }));
   };
   s._cKey = s.input.keyboard.addKey('C'); // polled in surfaceAimDraw each frame
   ctl.show(7);
