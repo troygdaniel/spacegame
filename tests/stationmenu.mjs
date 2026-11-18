@@ -126,6 +126,27 @@ p = J(`(() => { const s = __scene('halcyon-station', 'halcyon'), out = [];
   return out; })()`);
 check('the menu has the keys when you dock; N hands them to your feet (W S walk, rows stay); a number still picks and gives the menu the keys back', p.join() === 'true,false,0,true,true', p.join());
 
+// ---- the panel itself is built and drawn without an error (no browser here: every Phaser object is a stand-in that accepts any call, so this
+// catches a wrong name or a missing piece in menuSetup and menuDraw, not how it looks) ----
+p = J(`(() => {
+  const P = new Proxy(function () {}, { get: (o, k) => k === Symbol.toPrimitive ? () => 0 : P, apply: () => P });
+  const out = [];
+  for (const [station, system] of ${JSON.stringify(DOCKS)}) {
+    G.system = system; G.lastDock = station;
+    const look = stationLook(), s = { look, spots: __spots(look), add: P, input: P, time: { now: 0 } };
+    ['menuSetup', 'menuDraw', 'menuState'].forEach(m => { s[m] = Station.prototype[m]; });
+    try { s.menuSetup(); s.menu.keys = false; s.menuDraw(); s.menu.shown = false; s.menuDraw(); out.push([station, s.menu.lines.length, s.menu.rows.length, s.menu.keys === false].join()); }
+    catch (e) { out.push(station + ' ERROR ' + e.message); }
+  }
+  return out;
+})()`);
+check('menuSetup and menuDraw run at all six docks: six lines for six rows, with and without the keys, shown and put away', p.length === 6 && p.every(x => /,6,6,true$/.test(x)), p.join(' | '));
+// ---- the controls table and the help text say the menu's keys ----
+p = J(`(() => { const st = CONTROLS.find(c => c.id === 'station'); return st.rows.map(r => r.k.join(' ') + '   ' + r.t.charAt(0).toLowerCase() + r.t.slice(1)); })()`);
+const help = J(`(() => { const k = ctTextKeys(); return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => k['help.station.' + i] ? k['help.station.' + i].get() : null); })()`); // the H screen's lines, after content/text/ui.md was applied
+check('the station rows of the controls table and the ten help lines are the same lines', JSON.stringify(p) === JSON.stringify(help), JSON.stringify([p, help]));
+check('they name the menu keys: 1-6 picks and opens, W S Enter, N for walking', help.some(l => /^1-6 {3}station menu/.test(l)) && help.some(l => /^W S Enter {3}station menu/.test(l)) && help.some(l => /^N {3}menu keys off/.test(l)), help.join(' | '));
+
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `STATION MENU FAIL (${failed} of ${n})` : `STATION MENU PASS (${n} checks)`);
 process.exitCode = failed ? 1 : 0;
