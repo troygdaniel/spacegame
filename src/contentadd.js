@@ -77,7 +77,9 @@ CONTENT_TABLES.ship = CA_SHIP;
 // surface.js and hud.js; what it SAYS and PAYS is data. A file with kind: patrol and a new id is a second police patrol: its own title, its
 // own pay, its own count, its own words. It starts as a copy of the built-in call of that kind, so every text a file leaves out is the kind's
 // own, except those that carry a number of the original (the patrol's five), which are rebuilt from this call's count.
-// Not added: the courier, haul, salvage and survey calls are built in (src/missions.js: their routes and sites are code, and a file with their id changes their words and pay), but a pack cannot add a new one yet; the kind is refused by name.
+// A site call (kind salvage or survey; card space-game-site-calls-from-files) is added too: its file names a system and a site of that
+// system (src/missions.js siteRowFrom), so a new system can have a call of its own. It is no copy of a pattern: the row is made from the file.
+// Not added: the courier and haul runs are built in (src/missions.js: their routes are code, and a file with their id changes their words and pay), but a pack cannot add a new one yet; the kind is refused by name.
 const CA_MISSION_KINDS = ['rescue', 'escort', 'patrol', 'bounty'];
 const CA_MISSION_KEYS = ['5', '6', '7', '8']; // the board's number keys for added calls (the four built-in ones use 1 to 4)
 const CA_MISSIONS = new Set();
@@ -87,9 +89,16 @@ const CA_MISSION = {
   get: (id, f) => CT_MISSION.get(id, f),
   apply: (id, data, isNew) => {
     if (!isNew) return CT_MISSION.apply(id, data);          // a built-in call, or one of ours seen again: a change, as before
-    if (!CA_MISSION_KINDS.includes(data.kind)) throw new Error('kind is "' + data.kind + '" but the game plays only ' + CA_MISSION_KINDS.join(', ') + ' calls so far (the courier, haul, salvage and survey calls are built in, with their routes in code: a pack can change them but not add one)');
+    const site = typeof SITE_KINDS !== 'undefined' && SITE_KINDS.includes(data.kind);
+    if (!site && !CA_MISSION_KINDS.includes(data.kind)) throw new Error('kind is "' + data.kind + '" but a pack can add only ' + CA_MISSION_KINDS.concat(SITE_KINDS).join(', ') + ' calls so far (the courier and haul runs are built in, with their routes in code: a pack can change them but not add one)');
     if (CA_MISSIONS.size >= CA_MAX.mission) throw new Error('a pack may add at most ' + CA_MAX.mission + ' calls to the board and there are that many already');
     if (!CA_MISSION_KEYS.some(k => !MISSIONS.some(m => m.key === k))) throw new Error('the board has no free number key left for another call');
+    if (site) { // a site call: the row is the file's own (it throws, in words, when the system or the site is not there)
+      const row = Object.assign(siteRowFrom(id, data), { key: CA_MISSION_KEYS.find(k => !MISSIONS.some(m => m.key === k)), added: true });
+      MISSIONS.push(row); CA_MISSIONS.add(id);
+      try { CT_MISSION.apply(id, data); } catch (e) { MISSIONS.splice(MISSIONS.indexOf(row), 1); CA_MISSIONS.delete(id); throw e; } // all or nothing
+      return;
+    }
     const tmpl = MISSIONS.find(m => m.id === data.kind);   // the built-in call of this kind: its row is the pattern
     const row = Object.assign({}, tmpl, {
       id, kind: data.kind, key: CA_MISSION_KEYS.find(k => !MISSIONS.some(m => m.key === k)), added: true,

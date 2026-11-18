@@ -8,7 +8,7 @@
 //   posted    each station's board is its dock.missions list (src/data_systems.js): the ids of the calls it offers. Halcyon posts the four it always had, then a courier run, a haul
 //             and a survey; the other docks post runs to their neighbours; the Roost posts none. A call a content pack adds is posted at Halcyon.
 //   courier   200 + 90 per light year to a station in another system; a case in your pocket, paid on docking there. haul: freight that fills the whole hold for the trip (src/fleet.js
-//             holdCap), paid 20 per unit of hold per 5 ly on docking there. salvage (Lethe, the Widow) and survey (the Hollow beacon): press E on the named site; the site's own
+//             holdCap), paid 20 per unit of hold per 5 ly on docking there. salvage (Lethe, the Widow) and survey (the Hollow beacon): press E on the named site (both are files in content/missions: a site call names its system and site there); the site's own
 //             payout stays, the call's pay is on top.
 //   far goals the HUD checklist, the Tab map, the nav list (N) and the galaxy map name a goal in another system and its distance instead of an arrow (missionFar).
 G.missionId = null; G.missionProgress = 0; G.patrolsDone = 0; // patrolsDone unlocks the bounty call (saved by meta.js)
@@ -112,21 +112,49 @@ const CALL_ROUTES = [
   ['courier', 'ember-foundry', 'meridian-exchange'], ['haul', 'ember-foundry', 'meridian-exchange']
 ];
 MISSIONS.push(...CALL_ROUTES.map(r => carryRow(...r)));
-// a named site in a system: press E on it (src/poi.js calls missionSite)
+// ---- the site calls: fly to a named site of a system and press E beside it (src/poi.js calls missionSite) ----
+// They come from files (card space-game-site-calls-from-files): a mission file of kind salvage or survey names its system and its site,
+// the id of a row in that system's ## Bodies table. content/missions/salvage-lethe.md (the Widow) and survey-hollow.md (the old beacon)
+// are the two the game ships with; a new system gets its own site call with one more file, and a content pack can add one too
+// (src/contentadd.js). What a site call DOES is this code: the row below, missionSite, missionTarget. What it says and pays is the file.
+const SITE_KINDS = ['salvage', 'survey'];
+const SITE_PROBLEMS = []; // a core file that could not become a call: [{ id, why }] (tests/sitecalls.mjs wants none)
 function siteRow(o) {
-  const row = Object.assign({ site: o.site, failOnDeath: [], deathMsg: '' }, o);
-  row.line = st => st === 'failed' ? 'Failed. ' + o.fail : o.title + ': ' + (G.system === o.system ? o.here : 'jump to ' + callSysName(o.system) + '  (' + callLy(o.system) + ' ly, G for the map)');
+  const row = Object.assign({ site: o.site, failOnDeath: [], deathMsg: '' }, o), fail = o.fail || 'The call was lost';
+  row.line = st => st === 'failed' ? 'Failed. ' + fail : row.title + ': ' + (G.system === o.system ? o.here : 'jump to ' + callSysName(o.system) + '  (' + callLy(o.system) + ' ly, G for the map)');
   row.progress = () => o.here + '\n' + (G.system === o.system ? 'You are in ' + callSysName(o.system) + '.' : callSysName(o.system) + ' is ' + callLy(o.system) + ' ly from here.');
   return row;
 }
-MISSIONS.push(
-  siteRow({ id: 'salvage-lethe', kind: 'salvage', title: 'Salvage: the Widow', where: 'Lethe', reward: 700, system: 'lethe', site: 'lethe-wreck-7',
-    offer: 'A troop carrier called the Widow went down at Lethe\nwith a strongbox nobody could reach. Fourteen wrecks\non a slow ring; scavenger drones pick over all of them.\nFind her, press E beside the wreck, bring nothing back.\nThe call pays 700 on top of what the wreck holds.',
-    here: 'Find the Widow among the wrecks and press E', fail: 'The Widow stays where she fell' }),
-  siteRow({ id: 'survey-hollow', kind: 'survey', title: 'Survey: the Hollow', where: 'The Hollow', reward: 600, system: 'hollow', site: 'beacon-h',
-    offer: 'An old survey beacon in the Hollow went quiet.\nThere is no pump out there: take the fuel to get home.\nFly to the beacon, press E to chart it, come back.\nThe call pays 600 on top of what the beacon holds.',
-    here: 'Fly to the old survey beacon and press E', fail: 'The beacon stays dark' })
-);
+// why a file's data cannot be a site call, in words for the person who wrote the file; '' when it can
+function siteWhy(d) {
+  if (!d || !SITE_KINDS.includes(d.kind)) return 'kind must be ' + SITE_KINDS.join(' or ') + ' for a site call';
+  if (!d.system) return 'a ' + d.kind + ' call needs system: the id of the star system its site is in';
+  const sys = SYSTEMS[d.system];
+  if (!sys) return 'system is "' + d.system + '" but there is no star system with that id';
+  if (!d.site) return 'a ' + d.kind + ' call needs site: the id of a poi row in the ## Bodies table of ' + d.system;
+  const body = (sys.bodies || []).find(b => b.id === d.site);
+  if (!body) return 'site is "' + d.site + '" but ' + d.system + ' has no body with that id (its poi rows: ' + ((sys.bodies || []).filter(b => b.type === 'poi').map(b => b.id).join(', ') || 'none') + ')';
+  if (body.type !== 'poi') return 'site "' + d.site + '" is a ' + body.type + ' of ' + d.system + ', not a poi: a site call ends when you press E on a salvage site';
+  return '';
+}
+// the row of a site call from a mission file's data ({ kind, title, where, reward, system, site, here, description }); throws with siteWhy's words
+function siteRowFrom(id, d) {
+  const why = siteWhy(d); if (why) throw new Error(why);
+  const body = SYSTEMS[d.system].bodies.find(b => b.id === d.site);
+  return siteRow({ id, kind: d.kind, title: d.title, where: d.where !== undefined ? d.where : callSysName(d.system), reward: d.reward, system: d.system, site: d.site,
+    offer: d.offer !== undefined ? d.offer : d.description !== undefined ? d.description : d.title + ' - ' + callSysName(d.system),
+    here: d.here || 'Fly to ' + (body.name || 'the site') + ' and press E' });
+}
+// every site call of a CONTENT object (content.generated.js), in the order of its entries
+function siteCallsFrom(content) {
+  const out = [];
+  ((content && content.entries) || []).forEach(e => {
+    if (e.type !== 'mission' || !e.data || !SITE_KINDS.includes(e.data.kind)) return;
+    try { out.push(siteRowFrom(e.id, e.data)); } catch (err) { SITE_PROBLEMS.push({ id: e.id, why: err.message }); }
+  });
+  return out;
+}
+MISSIONS.push(...siteCallsFrom(typeof CONTENT !== 'undefined' ? CONTENT : null));
 
 function missionDef() { return MISSIONS.find(m => m.id === G.missionId) || null; }
 // what a station's board shows: the calls its dock lists (dock.missions in src/data_systems.js), unlocked ones only; the home dock also posts what a content pack added
