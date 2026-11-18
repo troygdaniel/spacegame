@@ -3,6 +3,11 @@
 // installMap(game) catches Tab and H on the window and hooks scene create events, so the scenes need no code.
 // Over the Space scene the map is also a picker: W and S (or the arrows) move a white ring over the bodies of the nav list
 // (cruiseKnown, src/cruise.js), Enter closes the map and the autopilot flies there (autopilotGo, src/autopilot.js).
+// The map opens on a LOCAL view: the square that holds you, your objective and the body under the ring (never less than MAP_MIN px
+// across), so the home cluster of a 36000 px system fills the map and is not six marks in one corner. Z shows the whole system and
+// back; the view grows by itself when the ring or the objective is far away. Names never sit on each other or leave the frame:
+// mapPlace puts each one on a free side of its mark. The legend lists what is on the map now, and nothing else.
+// The rules are the pure functions mapView, mapPlace, mapLegendRows and mapPickStart (tests/sectormap.mjs, plain Node).
 
 const SENSOR = 1600;          // a drone this close to your ship counts as seen; farther ones keep their last spot
 const STRIP_MS = 60000;       // the "Tab map  H help" reminder fades out after the first minute of play
@@ -22,7 +27,70 @@ function mapText(s, x, y, str, size, color, wrap) {
   return t;
 }
 
-const MAP_LEG_Y = 380, MAP_LEG_STEP = 27; // legend rows: 9 of them still end above the footer line
+const MAP_LEG_Y = 380, MAP_LEG_STEP = 27, MAP_LEG_MAX = 11; // legend rows: 9 at this step end above the footer line; with more the step shrinks (mapLegStep)
+const MAP_MIN = 9000, MAP_PAD = 1.45, MAP_WHOLE = 0.7; // the local view: its smallest width in px, the room round what it holds, and the share of the system past which it is just the whole map
+function mapLegStep(n) { return Math.min(MAP_LEG_STEP, Math.floor((638 - 22 - MAP_LEG_Y) / Math.max(1, n - 1))); }
+
+// the square of the system the map shows: { x, y, size } in px. pts: what must be in it ({ x, y }); ws: the system's width; whole: Z asked for all of it
+function mapView(pts, ws, whole) {
+  pts = (pts || []).filter(p => p && typeof p.x === 'number' && typeof p.y === 'number' && isFinite(p.x) && isFinite(p.y));
+  if (whole || !pts.length) return { x: 0, y: 0, size: ws };
+  const x0 = Math.min(...pts.map(p => p.x)), x1 = Math.max(...pts.map(p => p.x)), y0 = Math.min(...pts.map(p => p.y)), y1 = Math.max(...pts.map(p => p.y));
+  const size = Math.max(MAP_MIN, Math.max(x1 - x0, y1 - y0) * MAP_PAD);
+  if (size >= ws * MAP_WHOLE) return { x: 0, y: 0, size: ws };
+  const cl = v => Math.max(0, Math.min(ws - size, v));
+  return { x: cl((x0 + x1) / 2 - size / 2), y: cl((y0 + y1) / 2 - size / 2), size };
+}
+
+// where each name goes. items: [{ x, y, r, w, h, side }] in order of importance: the mark's centre and radius on the screen, the size of its
+// name, and the side it would like ('below'; anything else: above). frame: { x, y, w, h }. Answers one { x, y } per item: the CENTRE of the name,
+// on the first of above, below, right, left (then further out) that is inside the frame and touches no name already placed and no other mark.
+function mapPlace(items, frame) {
+  const placed = [], out = [];
+  const hit = (a, b) => Math.max(0, Math.min(a.x + a.w / 2, b.x + b.w / 2) - Math.max(a.x - a.w / 2, b.x - b.w / 2)) * Math.max(0, Math.min(a.y + a.h / 2, b.y + b.h / 2) - Math.max(a.y - a.h / 2, b.y - b.h / 2));
+  const marks = items.map(it => ({ x: it.x, y: it.y, w: it.r * 2, h: it.r * 2 }));
+  items.forEach((it, i) => {
+    const up = g => ({ x: it.x, y: it.y - it.r - it.h / 2 - g }), dn = g => ({ x: it.x, y: it.y + it.r + it.h / 2 + g });
+    const rt = g => ({ x: it.x + it.r + it.w / 2 + g + 2, y: it.y }), lf = g => ({ x: it.x - it.r - it.w / 2 - g - 2, y: it.y });
+    const first = it.side === 'below' ? [dn, up] : [up, dn];
+    const cands = [first[0](3), first[1](3), rt(3), lf(3), first[0](3 + it.h), first[1](3 + it.h), rt(3 + it.h), lf(3 + it.h), first[0](3 + it.h * 2), first[1](3 + it.h * 2)];
+    let best = null, bestBad = Infinity;
+    for (const c of cands) {
+      const box = { x: Math.max(frame.x + it.w / 2 + 3, Math.min(frame.x + frame.w - it.w / 2 - 3, c.x)), y: Math.max(frame.y + it.h / 2 + 3, Math.min(frame.y + frame.h - it.h / 2 - 3, c.y)), w: it.w, h: it.h };
+      let bad = 0;
+      placed.forEach(q => { bad += hit(box, q); });
+      marks.forEach((q, j) => { bad += hit(box, q) * (j === i ? 2 : 1); }); // pushed back over its own mark by the frame is the worst place
+      if (bad < bestBad) { bestBad = bad; best = box; }
+      if (!bad) break;
+    }
+    placed.push(best); out.push({ x: best.x, y: best.y });
+  });
+  return out;
+}
+
+// the legend: a row for each kind of thing that is on the map now, [name, kind]. on: { station, outpost (names, or ''), planet, belt, wreck,
+// objective, live, stale, wanted, poi } (true when one is drawn)
+function mapLegendRows(on) {
+  const rows = [['you', 'ship']];
+  if (on.station) rows.push([on.station, 'station']);
+  if (on.outpost) rows.push([on.outpost, 'outpost']);
+  if (on.planet) rows.push(['planet', 'planet']);
+  if (on.belt) rows.push(['asteroid belt', 'belt']);
+  if (on.wreck) rows.push(['wreck or ruin', 'wreck']);
+  if (on.objective) rows.push(['objective', 'target']);
+  if (on.live) rows.push(['pirate in sensor range', 'live']);
+  if (on.stale) rows.push(['pirate, where you last saw it', 'stale']);
+  if (on.wanted) rows.push(['wanted pirate', 'wanted']);
+  if (on.poi) rows.push(['salvage site', 'poi']);
+  return rows;
+}
+
+// which row of the picker the ring starts on: the nav target, else the objective (so the Enter line names what the OBJECTIVE names), else the nearest
+function mapPickStart(list, target, obj) {
+  let i = target ? list.findIndex(b => b.id === target.id) : -1;
+  if (i < 0 && obj) i = list.findIndex(b => (obj.id && b.id === obj.id) || Math.hypot(b.x - obj.x, b.y - obj.y) < 60);
+  return i < 0 ? 0 : i;
+}
 function mapHex(g, x, y, r) { // Kestrel Outpost mark: a hexagon, so it is not mistaken for a salvage circle
   const p = []; for (let i = 0; i < 6; i++) p.push({ x: x + Math.cos(i * Math.PI / 3 + Math.PI / 6) * r, y: y + Math.sin(i * Math.PI / 3 + Math.PI / 6) * r });
   g.fillStyle(GREEN, 0.3); g.lineStyle(2, GREEN, 1); g.fillPoints(p, true); g.strokePoints(p, true);
@@ -43,6 +111,10 @@ class Overlay extends Phaser.Scene {
     this.add.rectangle(cx, cy, W, H, 0x02050c, 0.78).setInteractive(); // swallows clicks
     hudPanel(this.add.graphics(), cx - 570, cy - 325, 1140, 650, 20, 0.97, CYAN); // src/hud.js: the same glass panel as the HUD
     this.g = this.add.graphics();
+    this.gm = this.add.graphics(); // the marks on the map: cut off at the frame, so a belt or a sensor ring half in view does not run over the panel
+    const cut = this.make.graphics(); cut.fillStyle(0xffffff, 1); cut.fillRect(this.MX + 1, this.MY + 1, this.MS - 2, this.MS - 2);
+    this.gm.setMask(cut.createGeometryMask());
+    this.view = null; this.whole = false; this.marks = [];
     this.title = mapText(this, 100, 46, '', 26, '#38e1ff');
     const x = mapText(this, 1180, 50, 'Close  [x]', 15, '#9fe9ff').setOrigin(1, 0).setInteractive({ useHandCursor: true });
     x.on('pointerdown', () => this.close());
@@ -55,12 +127,12 @@ class Overlay extends Phaser.Scene {
     const SX = this.SX;
     this.mapObjs = [];
     const m = o => { this.mapObjs.push(o); return o; };
-    this.lbPlanet = m(mapText(this, 0, 0, D.pl.name.toUpperCase(), 13, '#ffb454').setOrigin(0.5, 1));
-    this.lbStation = m(mapText(this, 0, 0, D.st.name.toUpperCase(), 13, '#38e1ff').setOrigin(0.5, 1));
-    this.lbOutpost = m(mapText(this, 0, 0, D.op ? D.op.name.toUpperCase() : '', 13, '#6dff9c').setOrigin(0.5, 1));
-    this.lbGate = m(mapText(this, 0, 0, D.gate ? D.gate.name.toUpperCase() : '', 13, '#ffb454').setOrigin(0.5, 1));
-    this.lbShip = m(mapText(this, 0, 0, 'YOU', 13, '#ffffff').setOrigin(0.5, 0));
-    this.lbMule = m(mapText(this, 0, 0, 'MULE', 12, '#6dff9c').setOrigin(0.5, 0));
+    this.lbPlanet = m(mapText(this, 0, 0, D.pl.name.toUpperCase(), 13, '#ffb454').setOrigin(0.5));
+    this.lbStation = m(mapText(this, 0, 0, D.st.name.toUpperCase(), 13, '#38e1ff').setOrigin(0.5));
+    this.lbOutpost = m(mapText(this, 0, 0, D.op ? D.op.name.toUpperCase() : '', 13, '#6dff9c').setOrigin(0.5));
+    this.lbGate = m(mapText(this, 0, 0, D.gate ? D.gate.name.toUpperCase() : '', 13, '#ffb454').setOrigin(0.5));
+    this.lbShip = m(mapText(this, 0, 0, 'YOU', 13, '#ffffff').setOrigin(0.5));
+    this.lbMule = m(mapText(this, 0, 0, 'MULE', 12, '#6dff9c').setOrigin(0.5));
     this.tCr = m(mapText(this, SX + 30, 98, '', 20, GOLD_S).setFontStyle('bold')); // credits: a gold coin (drawn in update) and N CR
     this.tHud = m(mapText(this, SX + 250, 101, '', 16, '#9fe9ff'));
     this.tMissionH = m(mapText(this, SX, 142, 'MISSION', 13, '#5b7a92'));
@@ -70,24 +142,22 @@ class Overlay extends Phaser.Scene {
     this.tLegH = m(mapText(this, SX, 352, 'LEGEND', 13, '#5b7a92'));
     // the rest of the system: planets, belts and scenery besides the ones the legend names, each with its name on the map (far space, src/cruise.js)
     this.far = sysBodies().filter(b => (b.type === 'planet' && b !== D.pl) || b.type === 'belt' || (b.type === 'scenery' && b !== D.op))
-      .map(b => ({ b, lb: m(mapText(this, 0, 0, b.x < 8000 && b.y < 8000 ? '' : b.name, 12, '#9fb4c9').setOrigin(0.5, 1)) })); // the old cluster is crowded enough: no label for what is inside it
-    this.legend = [
-      ['you', 'ship'], [D.st.name, 'station'], [D.op ? D.op.name : 'outpost', 'outpost'], [D.pl.name, 'planet'], ['objective', 'target'],
-      ['drone in sensor range', 'live'], ['drone, where you last saw it', 'stale'], ['wanted pirate', 'wanted'], ['salvage site', 'poi']
-    ];
-    this.legend.forEach(([name], i) => m(mapText(this, SX + 40, MAP_LEG_Y + i * MAP_LEG_STEP, name, 15, '#cfefff')));
+      .map(b => ({ b, lb: m(mapText(this, 0, 0, b.name, 12, '#9fb4c9').setOrigin(0.5)) }));
+    this.legend = []; // [name, kind] of the rows shown: drawLegend fills it every frame from what is on the map (mapLegendRows)
+    this.legT = []; for (let i = 0; i < MAP_LEG_MAX; i++) this.legT.push(m(mapText(this, SX + 40, 0, '', 15, '#cfefff')));
+    this.tView = m(mapText(this, this.MX + this.MS - 10, this.MY + 8, '', 12, '#5b7a92').setOrigin(1, 0));
 
     this.poiLabels = []; // names of salvage sites you have found (poi.js fills them in)
-    for (let i = 0; i < (typeof poiSites === 'function' ? poiSites().length + SIGNAL_MAX : 0); i++) this.poiLabels.push(m(mapText(this, 0, 0, '', 12, '#6dff9c').setOrigin(0.5, 0)));
+    for (let i = 0; i < (typeof poiSites === 'function' ? poiSites().length + SIGNAL_MAX : 0); i++) this.poiLabels.push(m(mapText(this, 0, 0, '', 12, '#6dff9c').setOrigin(0.5)));
 
     // the picker: the bodies of the nav list, nearest first, the current target (or the nearest) under the ring to start with
     const sp = this.scene.get('Space');
     this.pick = { list: [], sel: 0 };
     if (this.from === 'Space' && sp && sp.ship && sp.cr && typeof cruiseKnown === 'function') {
       this.pick.list = cruiseKnown(sp);
-      const cur = sp.cr.target ? this.pick.list.findIndex(b => b.id === sp.cr.target.id) : -1; if (cur > 0) this.pick.sel = cur;
+      this.pick.sel = mapPickStart(this.pick.list, sp.cr.target, this.state().obj);
     }
-    this.pk = this.input.keyboard.addKeys('W,S,UP,DOWN,ENTER');
+    this.pk = this.input.keyboard.addKeys('W,S,UP,DOWN,ENTER,Z');
     this.tPick = m(mapText(this, SX, 326, '', 13, '#ffffff'));
 
     // help mode
@@ -109,7 +179,7 @@ class Overlay extends Phaser.Scene {
     this.mode = mode;
     const map = mode === 'map';
     this.title.setText(map ? 'SECTOR MAP' : 'HELP  -  ' + this.from.toUpperCase());
-    this.footer.setText(map ? (this.pick.list.length ? 'W S: choose   Enter: autopilot there   Tab: close   H: help' : 'Tab or Esc: close     H: help') : 'H or Esc: close     Tab: sector map');
+    this.footer.setText(map ? (this.pick.list.length ? 'W S: choose   Enter: autopilot there   Z: zoom   Tab: close' : 'Z: zoom     Tab or Esc: close     H: help') : 'H or Esc: close     Tab: sector map');
     this.mapObjs.forEach(o => o.setVisible(map)); this.galaxyBtn.setVisible(map);
     this.helpObjs.forEach(o => o.setVisible(!map));
     if (!map) {
@@ -149,112 +219,141 @@ class Overlay extends Phaser.Scene {
 
   update(time) {
     if (this.mode === 'help') {
-      this.g.clear();
+      this.g.clear(); this.gm.clear();
       this.hMission.setText(typeof missionLine === 'function' ? missionLine().replace(/^MISSION\s+/, '') : '');
       return;
     }
     this.drawMap(time);
   }
 
+  // a name for a mark: where the mark is on the screen and how big, then mapPlace finds the name a free place (names of marks outside the frame are hidden)
+  mark(lb, x, y, r, side) {
+    const inside = x >= this.MX && x <= this.MX + this.MS && y >= this.MY && y <= this.MY + this.MS;
+    lb.setVisible(inside && !!lb.text);
+    if (inside && lb.text) this.marks.push({ lb, x, y, r, side, w: lb.width, h: lb.height - 6 }); // 6: the line spacing mapText adds under the last line
+  }
+
   drawMap(time) {
-    const g = this.g, S = this.state(), MX = this.MX, MY = this.MY, MS = this.MS, sc = MS / S.ws;
-    const X = x => MX + x * sc, Y = y => MY + y * sc;
-    g.clear();
+    const g = this.g, gm = this.gm, S = this.state(), MX = this.MX, MY = this.MY, MS = this.MS;
+    if (Phaser.Input.Keyboard.JustDown(this.pk.Z)) { this.whole = !this.whole; sfx('tick'); }
+    // the view: you, the objective and the body under the ring; it slides to a new square, it does not jump
+    const ring = this.pick.list[this.pick.sel], want = mapView([S.ship, S.obj, ring], S.ws, this.whole), v = this.view || (this.view = Object.assign({}, want));
+    ['x', 'y', 'size'].forEach(k => { v[k] += (want[k] - v[k]) * 0.25; if (Math.abs(want[k] - v[k]) < 2) v[k] = want[k]; });
+    const sc = MS / v.size, X = x => MX + (x - v.x) * sc, Y = y => MY + (y - v.y) * sc;
+    this.marks = [];
+    g.clear(); gm.clear();
     g.fillStyle(0x03070f, 1); g.fillRect(MX, MY, MS, MS);
     g.lineStyle(1, CYAN, 0.12);
-    const gs = S.ws / 8; // eight grid cells across, whatever the size of the system
-    for (let i = 1; i < 8; i++) { g.lineBetween(X(i * gs), MY, X(i * gs), MY + MS); g.lineBetween(MX, Y(i * gs), MX + MS, Y(i * gs)); }
-    // a scan band drifts down the map; the frame glows, has ticks on the grid lines and amber brackets outside its corners
+    const gs = v.size >= S.ws ? S.ws / 8 : [500, 1000, 2000, 2500, 5000, 10000].find(n => n >= v.size / 9) || S.ws / 8; // about eight grid cells across, on round numbers of the system
+    const lines = []; for (let w = Math.ceil(v.x / gs) * gs; w < v.x + v.size; w += gs) if (w > v.x) lines.push(w);
+    const rows = []; for (let w = Math.ceil(v.y / gs) * gs; w < v.y + v.size; w += gs) if (w > v.y) rows.push(w);
+    lines.forEach(w => g.lineBetween(X(w), MY, X(w), MY + MS)); rows.forEach(w => g.lineBetween(MX, Y(w), MX + MS, Y(w)));
+    // a faint scan band drifts down the map; the frame glows, has ticks on the grid lines and amber brackets outside its corners
     const sy0 = MY + 30 + ((time / 4200) % 1) * (MS - 30);
-    g.fillGradientStyle(CYAN, CYAN, CYAN, CYAN, 0, 0, 0.09, 0.09); g.fillRect(MX, sy0 - 30, MS, 30);
+    g.fillGradientStyle(CYAN, CYAN, CYAN, CYAN, 0, 0, 0.04, 0.04); g.fillRect(MX, sy0 - 30, MS, 30);
     hudGlowPath(g, [[MX, MY], [MX + MS, MY], [MX + MS, MY + MS], [MX, MY + MS]], CYAN, 0.85, true, 1.25);
     g.lineStyle(1, CYAN, 0.55);
-    for (let i = 1; i < 8; i++) { g.lineBetween(X(i * gs), MY - 6, X(i * gs), MY); g.lineBetween(MX - 6, Y(i * gs), MX, Y(i * gs)); }
+    lines.forEach(w => g.lineBetween(X(w), MY - 6, X(w), MY)); rows.forEach(w => g.lineBetween(MX - 6, Y(w), MX, Y(w)));
     g.lineStyle(3, AMBER, 1);
     [[0, 0, 1, 1], [MS, 0, -1, 1], [0, MS, 1, -1], [MS, MS, -1, -1]].forEach(([ox, oy, sx, sy]) => {
       const x = MX + ox - sx * 6, y = MY + oy - sy * 6;
       g.beginPath(); g.moveTo(x, y + sy * 20); g.lineTo(x, y); g.lineTo(x + sx * 20, y); g.strokePath();
     });
+    this.tView.setText(v.size >= S.ws ? 'WHOLE SYSTEM   ' + hudFmt(S.ws / 10) + ' km across   Z: local' : 'LOCAL   ' + hudFmt(Math.round(v.size / 100) * 10) + ' km across   Z: whole system');
+    const on = { station: '', outpost: '', planet: false, belt: false, wreck: false, objective: false, live: false, stale: false, wanted: false, poi: false }; // what the legend must explain
+    const seen = (x, y) => x >= MX && x <= MX + MS && y >= MY && y <= MY + MS;
+
+    // the ship first: its name has the first pick of a place, then the objective's body, then the rest
+    const ship = S.ship, ox = X(ship.x), oy = Y(ship.y);
+    this.lbShip.setText(ship.tag); this.mark(this.lbShip, ox, oy, 12, 'below');
 
     // planet and station
     const pr = Math.max(7, S.pl.r * sc);
     if (!this.D.pl.none) {
-      g.fillStyle(AMBER, 0.85); g.fillCircle(X(S.pl.x), Y(S.pl.y), pr);
-      g.lineStyle(1, AMBER, 0.5); g.strokeCircle(X(S.pl.x), Y(S.pl.y), pr + 5);
-      this.lbPlanet.setPosition(X(S.pl.x), Y(S.pl.y) - pr - 8);
+      gm.fillStyle(AMBER, 0.85); gm.fillCircle(X(S.pl.x), Y(S.pl.y), pr);
+      gm.lineStyle(1, AMBER, 0.5); gm.strokeCircle(X(S.pl.x), Y(S.pl.y), pr + 5);
+      this.mark(this.lbPlanet, X(S.pl.x), Y(S.pl.y), pr + 6); if (seen(X(S.pl.x), Y(S.pl.y))) on.planet = true;
     } else this.lbPlanet.setVisible(false);
     const sx = X(S.st.x), sy = Y(S.st.y);
     if (!this.D.st.none) {
-      g.fillStyle(CYAN, 0.3); g.lineStyle(2, CYAN, 1);
-      g.fillPoints([{ x: sx, y: sy - 9 }, { x: sx + 9, y: sy }, { x: sx, y: sy + 9 }, { x: sx - 9, y: sy }], true);
-      g.strokePoints([{ x: sx, y: sy - 9 }, { x: sx + 9, y: sy }, { x: sx, y: sy + 9 }, { x: sx - 9, y: sy }], true);
-      this.lbStation.setPosition(sx, sy - 14);
+      gm.fillStyle(CYAN, 0.3); gm.lineStyle(2, CYAN, 1);
+      gm.fillPoints([{ x: sx, y: sy - 9 }, { x: sx + 9, y: sy }, { x: sx, y: sy + 9 }, { x: sx - 9, y: sy }], true);
+      gm.strokePoints([{ x: sx, y: sy - 9 }, { x: sx + 9, y: sy }, { x: sx, y: sy + 9 }, { x: sx - 9, y: sy }], true);
+      this.mark(this.lbStation, sx, sy, 11); if (seen(sx, sy)) on.station = this.D.st.name;
     } else this.lbStation.setVisible(false);
     if (this.D.op) { // Kestrel Outpost (src/stationart.js): scenery, no docking, but worth finding
-      const ox = X(this.D.op.x), oy = Y(this.D.op.y); mapHex(g, ox, oy, 8); this.lbOutpost.setPosition(ox, oy - 12);
+      const px = X(this.D.op.x), py = Y(this.D.op.y); mapHex(gm, px, py, 8); this.mark(this.lbOutpost, px, py, 10); if (seen(px, py)) on.outpost = this.D.op.name;
     } else this.lbOutpost.setVisible(false);
-
-    // belts, far planets and far scenery: a ring for a belt, a smaller disc for a planet, a small diamond for a wreck
-    this.far.forEach(({ b, lb }) => {
-      const fx = X(b.x), fy = Y(b.y);
-      if (b.type === 'belt') { g.lineStyle(1, 0x9fb4c9, 0.6); g.strokeCircle(fx, fy, Math.max(4, b.r * sc)); }
-      else if (b.type === 'planet') { g.fillStyle(AMBER, 0.55); g.fillCircle(fx, fy, Math.max(4, b.r * sc)); }
-      else { g.lineStyle(1, 0x9aa7b3, 0.9); g.strokePoints([{ x: fx, y: fy - 5 }, { x: fx + 5, y: fy }, { x: fx, y: fy + 5 }, { x: fx - 5, y: fy }], true); }
-      lb.setPosition(fx, fy - Math.max(4, b.type === 'scenery' ? 5 : b.r * sc) - 3);
-    });
 
     // the Perseus gate, only while an escort is on
     const gate = typeof missionActive === 'function' && missionActive('escort') && this.D.gate;
-    this.lbGate.setVisible(!!gate);
+    this.lbGate.setVisible(false);
     if (gate) {
-      g.lineStyle(3, AMBER, 0.9); g.strokeCircle(X(gate.x), Y(gate.y), Math.max(6, gate.r * sc));
-      this.lbGate.setPosition(X(gate.x), Y(gate.y) - 14);
+      const gr = Math.max(6, gate.r * sc);
+      gm.lineStyle(3, AMBER, 0.9); gm.strokeCircle(X(gate.x), Y(gate.y), gr);
+      this.mark(this.lbGate, X(gate.x), Y(gate.y), gr + 2);
     }
 
-    // drones: bright where they are now (in sensor range), hollow where you last saw them
+    // the MULE in an escort
+    const fr = S.live && S.sp.mx && S.sp.mx.freighter;
+    this.lbMule.setVisible(false);
+    if (fr && fr.active) {
+      gm.fillStyle(GREEN, 1); gm.fillRect(X(fr.x) - 4, Y(fr.y) - 3, 8, 6);
+      this.mark(this.lbMule, X(fr.x), Y(fr.y), 6, 'below');
+    }
+
+    // belts, far planets and far scenery: a ring for a belt, a smaller disc for a planet, a small diamond for a wreck
+    this.far.forEach(({ b, lb }) => {
+      const fx = X(b.x), fy = Y(b.y), r = b.type === 'scenery' ? 5 : Math.max(4, b.r * sc);
+      if (b.type === 'belt') { gm.lineStyle(1, 0x9fb4c9, 0.6); gm.strokeCircle(fx, fy, r); }
+      else if (b.type === 'planet') { gm.fillStyle(AMBER, 0.55); gm.fillCircle(fx, fy, r); }
+      else { gm.lineStyle(1, 0x9aa7b3, 0.9); gm.strokePoints([{ x: fx, y: fy - 5 }, { x: fx + 5, y: fy }, { x: fx, y: fy + 5 }, { x: fx - 5, y: fy }], true); }
+      this.mark(lb, fx, fy, Math.min(r, 40) + 1); // a belt that fills the view keeps its name near its middle
+      if (seen(fx, fy)) on[b.type === 'belt' ? 'belt' : b.type === 'planet' ? 'planet' : 'wreck'] = true;
+    });
+
+    // pirates: bright where they are now (in sensor range), hollow where you last saw them
     for (const [o, p] of MAPUI.seen) {
       if (!o.active) { MAPUI.seen.delete(o); continue; }
       const live = S.live && Phaser.Math.Distance.Between(S.ship.x, S.ship.y, o.x, o.y) <= SENSOR;
       const x = X(live ? o.x : p.x), y = Y(live ? o.y : p.y);
-      if (live) { g.fillStyle(RED, 1); g.fillRect(x - 3, y - 3, 6, 6); }
-      else { g.lineStyle(1, RED, 0.55); g.strokeRect(x - 3, y - 3, 6, 6); }
-      if (o.wanted) { g.lineStyle(2, AMBER, live ? 0.95 : 0.5); g.strokeCircle(x, y, 8); }
+      if (live) { gm.fillStyle(RED, 1); gm.fillRect(x - 3, y - 3, 6, 6); }
+      else { gm.lineStyle(1, RED, 0.55); gm.strokeRect(x - 3, y - 3, 6, 6); }
+      if (o.wanted) { gm.lineStyle(2, AMBER, live ? 0.95 : 0.5); gm.strokeCircle(x, y, 8); }
+      if (seen(x, y)) { on[live ? 'live' : 'stale'] = true; if (o.wanted) on.wanted = true; }
     }
 
-    if (typeof poiMapMarks === 'function') poiMapMarks(g, X, Y, this.poiLabels);
-    this.pickFrame(g, X, Y, time);
-
-    // the MULE in an escort
-    const fr = S.live && S.sp.mx && S.sp.mx.freighter;
-    const showMule = !!(fr && fr.active);
-    this.lbMule.setVisible(showMule);
-    if (showMule) {
-      g.fillStyle(GREEN, 1); g.fillRect(X(fr.x) - 4, Y(fr.y) - 3, 8, 6);
-      this.lbMule.setPosition(X(fr.x), Y(fr.y) + 6);
+    if (typeof poiMapMarks === 'function') {
+      poiMapMarks(gm, X, Y, this.poiLabels); // it puts each name 9 px under its site: the site is where the name is, less that
+      this.poiLabels.forEach(lb => { if (!lb.visible) return; const px = lb.x, py = lb.y - 9; this.mark(lb, px, py, 8, 'below'); if (seen(px, py)) on.poi = true; });
     }
+    this.pickFrame(gm, X, Y, time);
 
     // sensor range, then the dashed route to the objective with a pulsing ring, then you
-    const ship = S.ship, ox = X(ship.x), oy = Y(ship.y);
-    if (S.live) { g.lineStyle(1, CYAN, 0.28); g.strokeCircle(ox, oy, SENSOR * sc); }
+    if (S.live) { gm.lineStyle(1, CYAN, 0.28); gm.strokeCircle(ox, oy, SENSOR * sc); }
     let objLine = 'No objective. Take a call at the MISSIONS terminal.';
     if (S.obj) {
       const tx = X(S.obj.x), ty = Y(S.obj.y), len = Phaser.Math.Distance.Between(ox, oy, tx, ty);
-      g.lineStyle(2, AMBER, 0.55);
+      gm.lineStyle(2, AMBER, 0.55);
       const ux = (tx - ox) / (len || 1), uy = (ty - oy) / (len || 1);
-      for (let d = 12; d < len - 14; d += 12) g.lineBetween(ox + ux * d, oy + uy * d, ox + ux * Math.min(d + 6, len - 14), oy + uy * Math.min(d + 6, len - 14));
-      g.lineStyle(2, AMBER, 0.95); g.strokeCircle(tx, ty, 13 + 3 * Math.sin(time / 220));
+      for (let d = 12; d < len - 14; d += 12) gm.lineBetween(ox + ux * d, oy + uy * d, ox + ux * Math.min(d + 6, len - 14), oy + uy * Math.min(d + 6, len - 14));
+      gm.lineStyle(2, AMBER, 0.95); gm.strokeCircle(tx, ty, 13 + 3 * Math.sin(time / 220));
+      on.objective = true;
       const km = Phaser.Math.Distance.Between(ship.x, ship.y, S.obj.x, S.obj.y) / 10 | 0;
       const deg = (Phaser.Math.RadToDeg(Math.atan2(S.obj.y - ship.y, S.obj.x - ship.x)) + 90 + 360) % 360;
       objLine = S.obj.name + '\n' + (km < 20 ? 'you are here' : km + ' km  ' + COMPASS[Math.round(deg / 45) % 8]);
     } else if (typeof missionFarLine === 'function' && missionFarLine()) objLine = missionFarLine().replace('  -  G opens the galaxy map', '\nG opens the galaxy map');
-    tri(g, ox, oy, ship.rot, 9, 0xffffff);
-    this.lbShip.setText(ship.tag).setPosition(ox, oy + 12);
+    tri(gm, ox, oy, ship.rot, 9, 0xffffff);
+
+    // every name on a free side of its mark, inside the frame
+    const at = mapPlace(this.marks, { x: MX, y: MY, w: MS, h: MS });
+    this.marks.forEach((k, i) => k.lb.setPosition(Math.round(at[i].x), Math.round(at[i].y + 3))); // 3: half the line spacing under the last line
 
     this.tCr.setText(hudFmt(G.credits) + ' CR'); hudCoin(g, this.SX + 10, 110, 0.85, 0);
     this.tHud.setText('HULL ' + Math.round(G.hull) + '/' + G.maxHull);
     this.tMission.setText(typeof missionLine === 'function' ? missionLine().replace(/^MISSION\s+/, '') : '');
     this.tObj.setText(objLine);
-    this.drawLegend(g);
+    this.drawLegend(g, mapLegendRows(on));
   }
 
   // the picker: W S (or the arrows) move the ring, Enter hands the ship to the autopilot and closes the map
@@ -278,10 +377,12 @@ class Overlay extends Phaser.Scene {
     this.tPick.setText('Enter: autopilot to ' + b.name + '   ' + (d / 10 | 0) + ' km');
   }
 
-  drawLegend(g) {
-    const x = this.SX + 14;
-    this.legend.forEach(([, kind], i) => {
-      const y = MAP_LEG_Y + i * MAP_LEG_STEP + 9;
+  drawLegend(g, rows) {
+    const x = this.SX + 14, step = mapLegStep(rows.length);
+    this.legend = rows;
+    this.legT.forEach((t, i) => { t.setVisible(i < rows.length); if (i < rows.length) t.setText(rows[i][0]).setPosition(this.SX + 40, MAP_LEG_Y + i * step); });
+    rows.forEach(([, kind], i) => {
+      const y = MAP_LEG_Y + i * step + 9;
       if (kind === 'ship') tri(g, x, y, -Math.PI / 2, 8, 0xffffff);
       else if (kind === 'station') {
         g.fillStyle(CYAN, 0.3); g.lineStyle(2, CYAN, 1);
@@ -289,6 +390,8 @@ class Overlay extends Phaser.Scene {
         g.fillPoints(p, true); g.strokePoints(p, true);
       } else if (kind === 'outpost') { mapHex(g, x, y, 8);
       } else if (kind === 'planet') { g.fillStyle(AMBER, 0.85); g.fillCircle(x, y, 7); }
+      else if (kind === 'belt') { g.lineStyle(1, 0x9fb4c9, 0.8); g.strokeCircle(x, y, 8); }
+      else if (kind === 'wreck') { g.lineStyle(1, 0x9aa7b3, 0.9); g.strokePoints([{ x, y: y - 6 }, { x: x + 6, y }, { x, y: y + 6 }, { x: x - 6, y }], true); }
       else if (kind === 'target') { g.lineStyle(2, AMBER, 0.95); g.strokeCircle(x, y, 8); }
       else if (kind === 'live') { g.fillStyle(RED, 1); g.fillRect(x - 3, y - 3, 6, 6); }
       else if (kind === 'stale') { g.lineStyle(1, RED, 0.55); g.strokeRect(x - 3, y - 3, 6, 6); }
