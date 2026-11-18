@@ -84,9 +84,9 @@ const LOOKS = [
   }],
   ['sky', '#space', 'Space', async t => { await t.run(2000); }], // the sky with no backdrop sun, giant or moon: only real bodies
   // ---- round 2 ----
-  ['star', '#space', 'Space', async t => { // the star is a real body at the centre of the system (card space-game-real-solar-system): the ship beside it
+  ['star', '#space', 'Space', async t => { // the star is a real body at the centre of the system (card space-game-real-solar-system): the ship 80 px off its rim, nose at it
     await need(t, `typeof sysStar === 'function'`, 'the star as a body (src/universe.js)'); await t.run(1200);
-    const o = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}, b = sysBodies().find(x => x.type === 'star'); if (!b) return { none: true }; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ship.setPosition(b.x + (b.r || 300) + 80, b.y + 250); s.ship.setVelocity(0, 0); s.ship.rotation = Math.PI; // 80 px off the rim, nose at it: the disc fills the left of the picture s.cameras.main.centerOn(s.ship.x, s.ship.y); return { name: b.name, r: b.r, x: b.x, y: b.y }; })())`));
+    const o = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}, b = sysBodies().find(x => x.type === 'star'); if (!b) return { none: true }; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ship.setPosition(b.x + (b.r || 300) + 80, b.y + 250); s.ship.setVelocity(0, 0); s.ship.rotation = Math.PI; s.cameras.main.centerOn(s.ship.x, s.ship.y); return { name: b.name, r: b.r, x: b.x, y: b.y }; })())`));
     if (o.none) throw new Error('no star body in this system'); console.log('        the star: ' + JSON.stringify(o));
     await t.run(1500);
   }],
