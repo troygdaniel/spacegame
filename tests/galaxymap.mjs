@@ -58,8 +58,14 @@ const texts = t => t.ev(`(() => { const out = []; const walk = o => { if (o.type
     console.log('D. out of range, and short of fuel');
     await t.ev(`${GM}.pick('meridian')`);
     const c2 = await texts(t);
-    check('Meridian is 9.3 ly: out of range by 1.3 ly for the starter, and it says what to do', c2.includes('OUT OF RANGE BY 1.3 LY') && c2.includes('You reach 8 ly') && c2.includes('TRADE HUB') && await t.ev(`${GM}.verdict`) === 'range', c2.slice(c2.indexOf('OUT OF')));
+    check('Meridian is 9.3 ly, past the starter\'s 8: the route plotter finds two jumps through Kestrel, and the card says the first (JUMP 1 OF 2: KESTREL, 6.3 LY) and the rest', c2.includes('JUMP 1 OF 2: KESTREL, 6.3 LY') && c2.includes('Enter jumps there, then Meridian, 6.5 ly.') && c2.includes('TRADE HUB') && await t.ev(`${GM}.verdict`) === 'ok' && await t.ev(`${GM}.plan.n`) === 2, c2.slice(c2.indexOf('JUMP 1')));
+    check('and the map draws the chain: two numbers on it', await t.ev(`(() => { ${GM}.update(1000); return ${GM}.chainMarks.length; })()`) === 2);
     await t.shot('galaxy-2-out-of-range');
+    await t.ev("(() => { if (!G.known.includes('ember')) G.known.push('ember'); return 1; })()");
+    await t.ev(`${GM}.scene.restart({ from: null })`); await sleep(1200);
+    await t.ev(`${GM}.pick('ember')`);
+    const c2b = await texts(t);
+    check('Ember has no route for the starter (its last jump is 8.2 ly, the Wren does 8): out of range by 0.2 ly, and the card says what would fix it, with a price', c2b.includes('OUT OF RANGE BY 0.2 LY') && c2b.includes('Needs an 8.2 ly jump: your Wren does 8.') && /Engine tier 1 at any shop: 9 ly, [\d,]+ cr\./.test(c2b) && await t.ev(`${GM}.verdict`) === 'range', c2b.slice(c2b.indexOf('OUT OF')));
     await t.ev("(() => { G.fleet[G.active].fuel = 3; return 1; })()");
     await t.ev(`${GM}.scene.restart({ from: null })`); await sleep(1200);
     await t.ev(`${GM}.pick('kestrel')`);
