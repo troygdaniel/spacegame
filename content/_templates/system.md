@@ -30,7 +30,10 @@ pirateEvery: 15000
 # id        its own id (a-z, 0-9, dashes)
 # type      station, planet, belt, poi (a salvage site), scenery or gate
 # name      what the player reads
-# x, y      where it is, in the units of this file (the game spreads them 3 times)
+# x, y      where it is, in the units of this file (the game spreads them 3 times). Leave BOTH empty to place it by its orbit instead:
+# orbit     how far it is from the sun, in the same units (from the middle of the system when it has no sun)
+# angle     where on that ring, in degrees clockwise from north: 0 north, 90 east, 180 south, 270 west (leave empty for 0). The map is north up
+#           A row gives x and y, or orbit and angle. With both, x and y are used and the build says the orbit is ignored
 # art       how a station or an outpost is drawn: station, outpost, hub, foundry, nest or derelict
 # r         its radius in px: a planet, a belt, the ring of a gate (not spread)
 # rocks     how many rocks a belt has
@@ -46,14 +49,14 @@ pirateEvery: 15000
 A line or two about the system (the text before the first heading, up to 600 characters).
 
 ## Bodies
-| id | type | name | x | y | art | r | rocks | landable | kind | seed | look | labelDy | credits |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| example-smelter | station | Example Smelter | 9000 | 21000 | foundry | | | | | | | -260 | |
-| example-3 | planet | Example III | 24000 | 9000 | | 300 | | no | rock | 7 | | | |
-| belt-a | belt | | 12000 | 18000 | | 900 | 40 | | | | | | |
-| wreck-1 | poi | Old hulk | 30000 | 30000 | | | | | wreck | | | | 150 |
-| old-ring | scenery | Dead station | 5000 | 5000 | | | | | | | derelict | -240 | |
-| example-gate | gate | Example gate | 2000 | 6000 | | 110 | | | | | | | |
+| id | type | name | x | y | orbit | angle | art | r | rocks | landable | kind | seed | look | labelDy | credits |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| example-smelter | station | Example Smelter | 9000 | 21000 | | | foundry | | | | | | | -260 | |
+| example-3 | planet | Example III | | | 9000 | 45 | | 300 | | no | rock | 7 | | | |
+| belt-a | belt | | | | 6000 | 270 | | 900 | 40 | | | | | | |
+| wreck-1 | poi | Old hulk | 30000 | 30000 | | | | | | | wreck | | | | 150 |
+| old-ring | scenery | Dead station | 5000 | 5000 | | | | | | | | | derelict | -240 | |
+| example-gate | gate | Example gate | 2000 | 6000 | | | | 110 | | | | | | | |
 
 ## Pirates
 | kind | weight |
