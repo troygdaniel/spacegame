@@ -98,7 +98,7 @@ function feelSpace(s, f, now, sx, sy) {
     g.fillStyle(CYAN, 0.75); g.fillCircle(ex, ey, 2.5);
   }
   // approach rings: dim cyan far out, amber inside but too fast, green when L will work
-  feelRing(s, f, now, sx, sy, s.station, 320, 150, 'DOCK');
+  feelRing(s, f, now, sx, sy, typeof spaceDockObj === 'function' ? spaceDockObj(s) : s.station, 320, 150, 'DOCK'); // the dock you are nearest to (src/space.js)
   if (s.canLand) feelRing(s, f, now, sx, sy, s.planet, s.planetR + 150, 170, 'LAND'); // only where you can land (src/space.js)
 }
 

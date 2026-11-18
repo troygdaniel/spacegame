@@ -21,7 +21,7 @@ check('the tables of docs/SOL.md are the ones the same table makes', i > 0 && j 
 const built = buildMods({ write: false }), sol = built.packs.find(p => p.name === 'sol');
 check('the build finds the pack sol', !!sol, built.packs.map(p => p.name).join());
 check('no problem and no warning in it', sol && sol.errors.length === 0, sol ? JSON.stringify(sol.errors.slice(0, 3)) : '');
-check('it is one system and its one live dock', sol && sol.entries.map(e => e.type + ':' + e.id).sort().join() === 'station:sol-imbrium-dock,system:sol');
+check('it is one system and its seven docks', sol && sol.entries.map(e => e.type + ':' + e.id).sort().join() === DOCKS.map(d => 'station:' + d.id).sort().concat('system:sol').join(), sol ? sol.entries.map(e => e.id).join() : '');
 check('mods.generated.js is current: it has the pack', !built.changed, 'run node tools/build-content.mjs');
 
 // ---- the pack off: the game is as it shipped ----
@@ -52,7 +52,7 @@ const close = []; B.bodies.forEach((a, k) => B.bodies.slice(k + 1).forEach(b => 
 check('no two bodies touch: at least 600 px of clear space between any two', close.length === 0, close.slice(0, 6).join(' | '));
 check('every body is in the nav list, so cruise and the autopilot fly to it', B.bodies.every(b => B.known.includes(b.id)) && B.known.includes('sol-star'), B.bodies.filter(b => !B.known.includes(b.id)).map(b => b.id).join());
 check('a cruise or the autopilot stops outside each one', J(g, `SYSTEMS.sol.bodies.every(b => autopilotStop(b) > (b.r || 0))`));
-check('one dock is live (the game opens the first station of a system): Imbrium Dock, with a pump, a yard and a parts shop', (() => { const st = S.bodies.filter(b => b.type === 'station'); return st.length === 1 && st[0].name === 'Imbrium Dock' && st[0].dock.fuel === 8 && st[0].dock.yard.join() === 'kite,ox' && st[0].dock.parts.engine === 2; })());
+check('all seven docks are station rows with their own pump price (card space-game-more-than-one-dock); Imbrium Dock is first, with a yard and a parts shop', (() => { const st = S.bodies.filter(b => b.type === 'station'); return st.length === 7 && st.map(b => b.id).sort().join() === DOCKS.map(d => d.id).sort().join() && st.every(b => b.dock && b.dock.fuel === DOCKS.find(d => d.id === b.id).dock.fuel) && st[0].name === 'Imbrium Dock' && st[0].dock.yard.join() === 'kite,ox' && st[0].dock.parts.engine === 2; })());
 
 check('its board posts a courier and a haul home to Halcyon Station, and the starter Wren can fly both', J(g, `missionsOffered('sol-imbrium-dock').map(m => [m.id, missionReach(m, 'sol-imbrium-dock', newShip('wren')).ok, m.reward > 0].join(':'))`).join() === 'courier-sol-halcyon:true:true,haul-sol-halcyon:true:true');
 check('the boards of the shipped docks are as they were with the pack on', J(g, `missionsOffered('halcyon-station').map(m => m.id)`).join() === J(off, `missionsOffered('halcyon-station').map(m => m.id)`).join() && J(g, `MISSIONS.length`) === J(off, `MISSIONS.length`) + 2);
@@ -75,7 +75,7 @@ const names = DOCKS.map(d => d.name).concat(SUN_BODIES.filter(b => b.invented).m
 const TAKEN = /tycho|medina|anderson|thoth|lovell|ceres station|eros station|ganymede station|phoebe station|pallas station|hygiea|londres|mariner valley|innis|laconia|ilus|behemoth|rocinante|canterbury|donnager|deep space nine|babylon|citadel|serenity|enterprise|nostromo|sevastopol|arcadia|omega station|jameson|coriolis/i;
 check('seven docks and two gates, none with a name from a book, a show or a game (a list of the well-known ones)', DOCKS.length === 7 && names.length === 9 && names.every(x => !TAKEN.test(x)), names.join(', '));
 check('each dock is named after a real feature of the body it is beside, and the doc says which', DOCKS.every(d => d.after && doc.includes(d.name) && doc.includes(d.after)));
-check('the six docks the game cannot open yet are scenery in the system and their dock files wait in a folder the build skips', (() => { const later = readdirSync(new URL('../mods/sol/_stations-later/', import.meta.url)).filter(f => f.endsWith('.md')).sort(); return later.length === 6 && S.bodies.filter(b => b.type === 'scenery').length === 6 && later.join() === DOCKS.slice(1).map(d => d.id + '.md').sort().join(); })());
+check('no dock is scenery and none waits in a folder the build skips: every dock file is in stations/', (() => { const made = readdirSync(new URL('../mods/sol/stations/', import.meta.url)).filter(f => f.endsWith('.md')).sort(); return !existsSync(new URL('../mods/sol/_stations-later/', import.meta.url)) && S.bodies.filter(b => b.type === 'scenery').length === 0 && made.join() === DOCKS.map(d => d.id + '.md').sort().join(); })());
 check('the doc lists every body, says what is invented, and names the three cards', SUN_BODIES.concat(MOONS).every(b => doc.includes('| ' + b.name + ' |')) && /What is real and what is invented/.test(doc) && ['space-game-bodies-orbit-a-body', 'space-game-more-than-one-dock', 'space-game-sol-needs-bigger-systems'].every(c => doc.includes(c)));
 
 check('no errors in the game scripts', g.errors.length === 0 && off.errors.length === 0, g.errors.concat(off.errors).join(' | '));

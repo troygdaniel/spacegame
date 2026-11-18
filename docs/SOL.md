@@ -79,13 +79,13 @@ Real distance from the planet, and the offset the file uses instead (the order o
 
 | Dock | Beside | Named for | Its dock file | In the game today |
 |---|---|---|---|---|
-| Imbrium Dock | Luna | Mare Imbrium, a sea of Luna | fuel 8, repair 0.5, ore 20, yard: kite, ox | the live dock |
-| Arsia High | Mars | Arsia Mons, a volcano of Mars | fuel 9, repair 0.5, ore 22, yard: talon | scenery today; its dock file is ready |
-| Himeros Anchorage | Eros | Himeros, the saddle of Eros | fuel 7, repair 0.6, ore 26 | scenery today; its dock file is ready |
-| Occator Works | Ceres | Occator, the crater of Ceres with the bright salt | fuel 6, repair 0.5, ore 30, yard: ox | scenery today; its dock file is ready |
-| Patroclus Yard | Trojan camp (L5) | Patroclus, a double asteroid among the trojans | fuel 7, repair 0.4, yard: kite, ox, talon, pathfinder, bastion | scenery today; its dock file is ready |
-| Perrine Station | Ganymede | Perrine Regio, a dark plain of Ganymede | fuel 8, repair 0.5, ore 24 | scenery today; its dock file is ready |
-| Kraken Shore | Titan | Kraken Mare, the largest sea of Titan | fuel 5, repair 0.6, ore 18, yard: pathfinder | scenery today; its dock file is ready |
+| Imbrium Dock | Luna | Mare Imbrium, a sea of Luna | fuel 8, repair 0.5, ore 20, yard: kite, ox | a dock; the first station row of the system |
+| Arsia High | Mars | Arsia Mons, a volcano of Mars | fuel 9, repair 0.5, ore 22, yard: talon | a dock |
+| Himeros Anchorage | Eros | Himeros, the saddle of Eros | fuel 7, repair 0.6, ore 26 | a dock |
+| Occator Works | Ceres | Occator, the crater of Ceres with the bright salt | fuel 6, repair 0.5, ore 30, yard: ox | a dock |
+| Patroclus Yard | Trojan camp (L5) | Patroclus, a double asteroid among the trojans | fuel 7, repair 0.4, yard: kite, ox, talon, pathfinder, bastion | a dock |
+| Perrine Station | Ganymede | Perrine Regio, a dark plain of Ganymede | fuel 8, repair 0.5, ore 24 | a dock |
+| Kraken Shore | Titan | Kraken Mare, the largest sea of Titan | fuel 5, repair 0.6, ore 18, yard: pathfinder | a dock |
 
 ### Gates (invented)
 
@@ -105,6 +105,6 @@ Real distance from the planet, and the offset the file uses instead (the order o
 ## What the data model cannot say yet
 
 - **A body that goes round a body.** A row of a system file is placed by `x` and `y`, or by an `orbit` and `angle` round the sun. There is no way to write "Luna, 1,100 units from Earth": a moon is written as its own `x` and `y`, which `_make.mjs` works out from its planet. That is enough while nothing moves. When bodies move along their orbits a moon must follow its planet, and that needs a `parent` column in the Bodies table and code that reads it. Card: `space-game-bodies-orbit-a-body`.
-- **More than one dock in a system.** The game opens the first `station` row of a system and no other (`src/space.js` draws one and docks at one). So Imbrium Dock, beside Luna, is the dock of Sol; the other six are written as `scenery` (a station you can fly to and look at, not dock at). Their dock files are finished and wait in `mods/sol/_stations-later/`, a folder the build skips. Card: `space-game-more-than-one-dock`.
+- **More than one dock in a system.** Done (card `space-game-more-than-one-dock`): every `station` row of a system is a dock, so all seven docks of Sol are drawn, have a dock prompt, and you launch from the one you docked at. Imbrium Dock is the first row, which is where the things that still want one station per system look: the police and traffic when you arrive by a jump, the pump mark on the galaxy map, and the Tab map (it shows the dock you launched from only).
 - **Calls.** Imbrium Dock posts two runs home, a courier and a haul to Halcyon Station (its dock file's `## Runs` table). Nothing comes the other way: a run *to* Sol would be a row in Halcyon Station's own file, which a pack that only adds things does not touch. The four first calls (rescue, escort, patrol, bounty) play where their mission files say, in Halcyon and the Roost; Sol has none of its own yet.
 - **Landing.** Only Kepler-4b has a surface, so every world of Sol is `landable: no`.
