@@ -19,15 +19,59 @@
 const SETTINGS = {
   w: 1120, h: 640, railW: 232,
   sections: [['sound', 'SOUND'], ['keys', 'KEYS'], ['controls', 'CONTROLS'], ['flight', 'FLIGHT'], ['content', 'CONTENT'], ['reset', 'RESET']],
+  keys: { warnH: 78, top: 104, block: 96, linkDy: 64, bodyFoot: 44 }, // the Keys section: the note on top, the first field's centre, the height of a key's block, where its link row is, the footer under the body
   keyRows: [ // the three keys: where each is kept, what it is for, how to tell a wrong paste
-    { id: 'deepgram', name: 'DEEPGRAM', use: 'ship voice and bar voices' },
-    { id: 'openai', name: 'OPENAI', use: 'NPC chat' },
-    { id: 'anthropic', name: 'ANTHROPIC', use: 'NPC chat' }
+    { id: 'deepgram', name: 'DEEPGRAM' }, // what each is for, its cost line and its address are content/text/ui.md's (keys.<id>.use, .cost, .url)
+    { id: 'openai', name: 'OPENAI' },
+    { id: 'anthropic', name: 'ANTHROPIC' }
   ],
   confirmMs: 4000,
   dim: 0.93 // the extra dim over the scene behind: with the panel's own 0.55 only a thirtieth of it is left (the title's key line sat half under the bottom edge)
 };
 const settingsMask = k => (k ? '**** ' + String(k).slice(-4) : 'no key'); // a saved key is shown by its last four characters only
+
+// ---------- Getting a key (card space-game-key-links) ----------
+// Under each key's field: what it is for, that it is your own account and may cost money, a Get a key link to the provider's key page, the same address as
+// text with Copy (a link out of a canvas can be blocked when the game is opened from a file), and the three steps. The words and the addresses are
+// content/text/ui.md's (keys.<id>.use, .cost, .url, keys.steps), so a provider moving its page is a text edit and a reseal; nothing here names one.
+// Nothing about the player is sent: the link is only the address, opened with noopener and noreferrer, and no key is ever read to make a line, a link
+// or what Copy puts on the clipboard. The address is checked before it is offered: a text file (a pack) that points it anywhere but a plain https
+// address with a real host name leaves the text on screen and no link.
+function settingsKeyUrl(raw) {
+  if (typeof raw !== 'string' || !raw || raw.length > 200 || /[\s\\<>"'`]/.test(raw) || !/^https:\/\//.test(raw)) return '';
+  let u; try { u = new URL(raw); } catch (e) { return ''; }
+  if (u.protocol !== 'https:' || u.username || u.password || u.port || u.search || u.hash) return '';
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(u.hostname) || /^[0-9.]+$/.test(u.hostname)) return ''; // a name with a dot: no localhost, no bare number
+  return u.href;
+}
+function settingsKeyInfo(id) {
+  const row = SETTINGS.keyRows.find(r => r.id === id); if (!row) return null;
+  const line = f => { const k = 'keys.' + id + '.' + f, v = uiText(k); return v === k ? '' : String(v); }, raw = line('url'), url = settingsKeyUrl(raw), steps = uiText('keys.steps');
+  return { id, name: row.name, use: line('use'), cost: line('cost'), steps: steps === 'keys.steps' ? '' : String(steps), url: url || raw, urlOk: !!url };
+}
+// open the provider's key page in a new tab; open is window.open unless a test gives one. { ok, say }: say is the line to show
+function settingsOpenKey(id, open) {
+  const i = settingsKeyInfo(id);
+  if (!i || !i.urlOk) return { ok: false, say: 'There is no address to open for this key. Look for the provider\'s key page.' };
+  open = open || (typeof window !== 'undefined' && typeof window.open === 'function' ? window.open.bind(window) : null);
+  if (!open) return { ok: false, say: 'This page cannot open a link. Copy the address and paste it into your browser.' };
+  try { open(i.url, '_blank', 'noopener,noreferrer'); } catch (e) { return { ok: false, say: 'The link could not open. Copy the address and paste it into your browser.' }; }
+  return { ok: true, url: i.url, say: 'Opening ' + new URL(i.url).hostname + ' in a new tab. If nothing opens, press Copy and paste the address into your browser.' };
+}
+// put the address (and only that) on the clipboard; nav is navigator unless a test gives one. Never throws
+async function settingsCopyKey(id, nav) {
+  const i = settingsKeyInfo(id);
+  if (!i || !i.urlOk) return { ok: false, say: 'There is no address to copy.' };
+  nav = nav || (typeof navigator !== 'undefined' ? navigator : null);
+  try { if (nav && nav.clipboard && typeof nav.clipboard.writeText === 'function') { await nav.clipboard.writeText(i.url); return { ok: true, say: 'Address copied: ' + i.url }; } } catch (e) { /* refused: the same answer as no clipboard */ }
+  return { ok: false, say: 'Copy did not work here. The address is on the screen: ' + i.url };
+}
+// where everything in the Keys section sits, in px down the body: three blocks (the field, what it is for, the cost, the link row), then the chat rows
+function settingsKeysLayout() {
+  const K = SETTINGS.keys, rows = SETTINGS.keyRows.map((r, i) => { const y = K.top + i * K.block; return { id: r.id, y, use: y + 26, cost: y + 44, link: y + K.linkDy }; });
+  const line = rows[rows.length - 1].link + 21, chat = line + 28, model = chat + 44, status = model + 34, bottom = status + 38;
+  return { rows, line, chat, model, status, bottom, bodyH: SETTINGS.h - 58 - K.bodyFoot - 8 };
+}
 
 class Settings extends Phaser.Scene {
   constructor() { super('Settings'); }
@@ -185,36 +229,44 @@ class Settings extends Phaser.Scene {
 
   // ---------- KEYS ----------
   draw_keys() {
-    const bx = this.bx, by = this.by, bw = this.bw;
-    this.warn(bx, by, bw, 122, 'THESE USE YOUR OWN ACCOUNTS AND MAY COST YOU MONEY',
-      'Each spoken line goes to Deepgram, and each line you type to a character goes to OpenAI or Anthropic, with your key. A key stays in this browser: never in the game files, never in the save, never anywhere else. What you type to a character is kept in this browser\'s save, so do not type anything private. With no keys the game works exactly as before.');
+    const bx = this.bx, by = this.by, bw = this.bw, L = settingsKeysLayout(), shown = s => (s.length > 42 ? s.slice(0, 39) + '...' : s);
+    this.warn(bx, by, bw, SETTINGS.keys.warnH, 'THESE USE YOUR OWN ACCOUNTS AND MAY COST YOU MONEY',
+      'A key stays in this browser: never in the game files or the save. What you type to a character is kept in this browser\'s save, so keep it private. With no keys the game works as before.');
     SETTINGS.keyRows.forEach((r, i) => {
-      const y = by + 154 + i * 58;
+      const row = L.rows[i], y = by + row.y, info = settingsKeyInfo(r.id), ly = by + row.link;
       this.txt(bx, y - 8, r.name, 15, '#cfefff', { style: { fontStyle: 'bold', letterSpacing: 1 } });
-      this.txt(bx, y + 12, r.use, 11, '#5b7a92');
       this.slots['stat_' + r.id] = this.txt(bx + 148, y, '', 14, '#6b8296');
       this.slots['at_' + r.id] = { x: bx + 290, y: y - 17, w: 250, h: 34 };
       this.button(bx + 556, y, 70, 'Save', () => this.saveKey(r.id));
       this.button(bx + 632, y, 70, 'Test', () => this.testKey(r.id));
-      this.button(bx + 708, y, 90, 'Forget', () => this.forgetKey(r.id), { color: '#ff8da0', edge: RED });
+      this.button(bx + 708, y, 90, 'Clear', () => this.forgetKey(r.id), { color: '#ff8da0', edge: RED });
       this.inputs[r.id] = this.makeInput('password', 'paste your key here', 200, () => this.saveKey(r.id));
+      // what it is for, that it is your own account, and where to get one (the words and the address are content/text/ui.md's)
+      this.txt(bx, by + row.use, info.use, 12, '#8fb4c9');
+      this.txt(bx, by + row.cost, info.cost, 12, '#ffd37a');
+      if (info.urlOk) {
+        this.button(bx, ly, 118, 'Get a key', () => { const o = settingsOpenKey(r.id); this.say(o.say, o.ok ? '#9fe9ff' : '#ff4d6d'); }, { size: 13, h: 24 });
+        this.txt(bx + 132, ly, shown(info.url), 12, '#cfefff');
+        this.button(bx + 440, ly, 70, 'Copy', () => { settingsCopyKey(r.id).then(c => { if (this.scene.isActive() && this.section === 'keys') this.say(c.say, c.ok ? '#6dff9c' : '#ffb454'); }); }, { size: 13, h: 24 });
+        this.txt(bx + 526, ly, info.steps, 12, '#8fb4c9', { style: { wordWrap: { width: bw - 526 } } });
+      } else this.txt(bx, ly, info.url ? shown(info.url) + '  (not a plain https address: no link is offered)' : 'No key page address is set for this key.', 12, '#ff8da0');
     });
-    this.line(by + 154 + 3 * 58 - 10);
-    const cy = by + 154 + 3 * 58 + 24;
+    this.line(by + L.line);
+    const cy = by + L.chat;
     this.label(bx, cy, 'NPC CHAT');
     this.slots.chatOn = this.button(bx + 120, cy, 150, '', () => { chatSetOn(!CHAT.on); this.keysRefresh(); });
     this.label(bx + 300, cy, 'PROVIDER');
     this.slots.provs = [['', 'Auto'], ['openai', 'OpenAI'], ['anthropic', 'Anthropic']].map(([id, name], i) => {
       const b = this.button(bx + 390 + i * 110, cy, 104, name, () => { chatSetProvider(id); this.keysRefresh(); }); b.pid = id; return b;
     });
-    const my = cy + 52;
+    const my = by + L.model;
     this.label(bx, my, 'MODEL  (blank = the provider\'s default)');
     this.slots.at_model = { x: bx + 290, y: my - 17, w: 300, h: 34 };
     this.inputs.model = this.makeInput('text', '', 60, () => this.saveModel());
     this.inputs.model.value = CHAT.model;
     this.inputs.model.addEventListener('change', () => this.saveModel());
     this.slots.counter = this.txt(bx + bw, my, '', 12, '#5b7a92', { ox: 1 });
-    this.slots.status = this.txt(bx, my + 40, '', 14, '#9fe9ff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 3 } });
+    this.slots.status = this.txt(bx, by + L.status, '', 14, '#9fe9ff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 3 } });
     this.keysRefresh();
     this.say(!VOICE.key && !CHAT.keys.openai && !CHAT.keys.anthropic ? 'No keys yet: the ship does not speak and the characters keep their scripted lines. The sound effects play.' : 'Keys are saved in this browser. Test asks the provider once, when you press it.');
   }
