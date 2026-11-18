@@ -24,3 +24,10 @@ Welcome to {station}. Fuel is cheap, the coffee is not.
 - Fuel
 - Repair
 - Parts (engine and tank, tier 1)
+
+## Runs
+| kind | to |
+|---|---|
+| courier | halcyon-station |
+| courier | meridian-exchange |
+| haul | meridian-exchange |

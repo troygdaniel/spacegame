@@ -29,3 +29,9 @@ Welcome to {station}. The ore price is on the board, and the board is honest.
 
 ## Bar
 - The raiders know when the trucks leave. Fly with the shift.
+
+## Runs
+| kind | to |
+|---|---|
+| courier | halcyon-station |
+| haul | halcyon-station |

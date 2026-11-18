@@ -27,3 +27,10 @@ Welcome to {station}. Mind the gap, and bring your ore.
 ## Bar
 - The drinks are synthetic, but the gossip is genuine.
 - Halcyon turns once every three minutes. If your drink slides toward the hangar, you are not drunk, just late.
+
+## Runs
+| kind | to |
+|---|---|
+| courier | kestrel-outpost |
+| courier | brass-smelter |
+| haul | brass-smelter |

@@ -29,3 +29,9 @@ Welcome to {station}. Keep your guns warm: the raiders here are not shy.
 
 ## Bar
 - The floor is warm. That is not a figure of speech.
+
+## Runs
+| kind | to |
+|---|---|
+| courier | meridian-exchange |
+| haul | meridian-exchange |
