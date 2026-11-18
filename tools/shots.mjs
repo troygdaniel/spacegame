@@ -244,6 +244,27 @@ const LOOKS = [
     console.log('        dock order: ' + JSON.stringify(d) + '; after ' + ran + ' s: ' + ((await t.ev(up('Station'))) ? 'docked at ' + await t.ev('G.lastDock') : 'not docked: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}; return { ap: !!(s.ap && s.ap.on), stage: s.ap && s.ap.stage, cruising: !!s.cruising, prompt: s.prompt && s.prompt.text }; })())`)));
     await t.run(1500);
   }],
+  ['sol-neptune', '#space', 'Space', async t => { // Earth, then Earth to Neptune by autopilot and cruise, timed in seconds of game time (card space-game-sol-needs-bigger-systems)
+    await solOn(t, 'Space'); await solJump(t);
+    await solFly(t, 'Earth', 120);
+    const t0 = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}, b = cruiseKnown(s).find(x => x.name === 'Neptune'); return b ? { km: Math.round(b.dist / 10) } : { none: true }; })())`));
+    if (t0.none) throw new Error('Neptune is not in the nav list'); console.log('        Earth to Neptune: ' + t0.km + ' km');
+    await solFly(t, 'Neptune', 600); await t.run(1000); await pic(t, 'sol-neptune');
+    console.log('        world ' + await t.ev(`${SP}.physics.world.bounds.width`) + ' px, ship at ' + await t.ev(`JSON.stringify([Math.round(${SP}.ship.x), Math.round(${SP}.ship.y)])`));
+  }],
+  ['sol-moons', '#space', 'Space', async t => { // Jupiter's moons (the parent column): the ship 6,000 px off Jupiter; every moon image drawn (none missing), the nav list and the minimap
+    await solOn(t, 'Space'); await solJump(t);
+    const o = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}, j = sysBodies().find(x => x.name === 'Jupiter'); if (!j) return { none: true };
+      s.ship.setPosition(j.x - 6000, j.y); s.ship.setVelocity(0, 0); s.ship.rotation = 0; s.cameras.main.centerOn(s.ship.x, s.ship.y);
+      const moons = sysBodies('planet').filter(b => b.parent === j.id || ['Io', 'Europa', 'Ganymede', 'Callisto'].includes(b.name)).map(b => ({ name: b.name, parent: b.parent || null, d: Math.round(Math.hypot(b.x - j.x, b.y - j.y)), r: b.r }));
+      return { jupiter: { x: j.x, y: j.y, r: j.r }, moons }; })())`));
+    if (o.none) throw new Error('no Jupiter'); console.log('        Jupiter ' + JSON.stringify(o.jupiter) + '; moons: ' + JSON.stringify(o.moons));
+    await t.run(1500);
+    console.log('        images with a missing texture in the scene: ' + await t.ev(`${SP}.children.list.filter(o => o.type === 'Image' && o.texture && o.texture.key === '__MISSING').length`) + '; planet images: ' + await t.ev(`${SP}.children.list.filter(o => o.type === 'Image' && o.texture && /^planet-/.test(o.texture.key)).length`));
+    await pic(t, 'sol-moons-far');
+    await solFly(t, 'Io', 120); await t.run(1000); await pic(t, 'sol-moons-io');
+    await t.ev(`(() => { cruiseNavOpen(${SP}); return 1; })()`); await t.run(600); await pic(t, 'sol-moons-nav');
+  }],
   ['sol-jupiter-probe', '#space', 'Space', async t => { // what is drawn where the autopilot says Jupiter is
     await solOn(t, 'Space'); await solJump(t); await solFly(t, 'Jupiter', 120); await t.run(1000);
     console.log('        ' + await t.ev(`JSON.stringify((() => { const s = ${SP}, b = sysBodies().find(x => x.name === 'Jupiter'), near = o => Math.hypot(o.x - s.ship.x, o.y - s.ship.y) < 3000;
