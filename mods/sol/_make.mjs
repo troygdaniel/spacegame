@@ -14,7 +14,7 @@ const HERE = dirname(fileURLToPath(import.meta.url)), ROOT = resolve(HERE, '..',
 // A body's ring is K x the square root of its real distance from the Sun in AU, in the units a system file is written in (the game spreads every
 // position 3 times, SYSTEM_SCALE, so a unit is 3 px of space). A square root keeps the order and the feel: Mercury to Mars are close together,
 // the giants far apart, and Neptune is 5.5 times as far out as Earth instead of 30 times.
-export const SCALE = { K: 14000, power: 0.5, size: 200000, sun: 100000, spread: 3 };
+export const SCALE = { K: 70000, power: 0.5, size: 1000000, sun: 500000, spread: 3 }; // K was 14,000 while a system file could be 200,000 units wide (card space-game-sol-needs-bigger-systems)
 export const ringOf = au => Math.round(SCALE.K * Math.pow(au, SCALE.power));
 // ecliptic longitude L (degrees, counted anticlockwise from the direction a map draws as east) to the file's angle (clockwise from north)
 export const angleOf = L => ((90 - L) % 360 + 360) % 360;
@@ -45,7 +45,9 @@ export const SUN_BODIES = [
   { id: 'sol-outer-gate', name: 'Kuiper Gate', type: 'gate', au: 44, at: 215, r: 110, invented: true }
 ];
 // ---- what sits beside a body: moons and docks, placed by an offset from their parent in file units, at an angle in the file's sense ----
-// The file has no way to say "this goes round that" (docs/SOL.md, the data model): a moon is written as its own x and y, worked out here.
+// A moon's row says what it goes round: `parent` is its planet, `orbit` and `angle` are measured from there (card space-game-bodies-orbit-a-body);
+// a dock's parent is the moon or the rock it sits beside. layout().at still works every place out here, on its own, so tests/solpack.mjs can hold
+// the game's sum against it.
 // km: the moon's real distance from its planet, for the table. A dock's `off` is small: it is beside its rock, not on a ring of its own.
 export const MOONS = [
   { id: 'sol-luna', name: 'Luna', of: 'sol-earth', km: 384400, off: 1100, at: 70, r: 90, kind: 'rock', seed: 31 },
@@ -98,19 +100,19 @@ export function layout() {
   DOCKS.forEach(d => { at[d.id] = place(at[d.of].x, at[d.of].y, d.off, d.at); });
   // the order of the rows: the live dock first (the game takes the first station), then the Sun's bodies outward with each one's moons and dock after it
   const live = DOCKS[0];
-  rows.push({ id: live.id, type: 'station', name: live.name, x: at[live.id].x, y: at[live.id].y, art: live.look, labelDy: -260 });
+  rows.push({ id: live.id, type: 'station', name: live.name, orbit: live.off, angle: live.at, parent: live.of, art: live.look, labelDy: -260 });
   SUN_BODIES.forEach(b => {
     rows.push(Object.assign({ id: b.id, type: b.type, name: b.name, orbit: at[b.id].orbit, angle: at[b.id].angle, r: b.r }, b.type === 'planet' ? { landable: 'no', kind: b.kind, seed: b.seed } : b.type === 'belt' ? { rocks: b.rocks } : {}));
     MOONS.filter(m => m.of === b.id).forEach(m => {
-      rows.push({ id: m.id, type: 'planet', name: m.name, x: at[m.id].x, y: at[m.id].y, r: m.r, landable: 'no', kind: m.kind, seed: m.seed });
-      DOCKS.filter(d => d.of === m.id && d !== live).forEach(d => rows.push({ id: d.id, type: 'scenery', name: d.name, x: at[d.id].x, y: at[d.id].y, look: d.look, labelDy: -240 }));
+      rows.push({ id: m.id, type: 'planet', name: m.name, orbit: m.off, angle: m.at, parent: m.of, r: m.r, landable: 'no', kind: m.kind, seed: m.seed });
+      DOCKS.filter(d => d.of === m.id && d !== live).forEach(d => rows.push({ id: d.id, type: 'scenery', name: d.name, orbit: d.off, angle: d.at, parent: d.of, look: d.look, labelDy: -240 }));
     });
-    DOCKS.filter(d => d.of === b.id && d !== live).forEach(d => rows.push({ id: d.id, type: 'scenery', name: d.name, x: at[d.id].x, y: at[d.id].y, look: d.look, labelDy: -240 }));
+    DOCKS.filter(d => d.of === b.id && d !== live).forEach(d => rows.push({ id: d.id, type: 'scenery', name: d.name, orbit: d.off, angle: d.at, parent: d.of, look: d.look, labelDy: -240 }));
   });
   return { at, rows };
 }
 
-const COLS = ['id', 'type', 'name', 'x', 'y', 'orbit', 'angle', 'art', 'r', 'rocks', 'landable', 'kind', 'seed', 'look', 'labelDy'];
+const COLS = ['id', 'type', 'name', 'x', 'y', 'orbit', 'angle', 'parent', 'art', 'r', 'rocks', 'landable', 'kind', 'seed', 'look', 'labelDy'];
 const cell = v => (v === undefined || v === null ? '' : String(v));
 export function systemFile() {
   const { rows } = layout();

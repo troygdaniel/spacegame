@@ -15,18 +15,21 @@ node tools/build-content.mjs     # puts the pack into mods.generated.js
 
 ## The scale
 
-True distances would leave the outer system empty for hours: Neptune is 30 times as far from the Sun as Earth. So a body's ring is **14,000 times the square root of its real distance in AU**, in the units a system file is written in. The game spreads every position 3 times, so a file unit is 3 px of space: Earth's ring is 14,000 units, 42,000 px.
+True distances would leave the outer system empty for hours: Neptune is 30 times as far from the Sun as Earth. So a body's ring is **70,000 times the square root of its real distance in AU**, in the units a system file is written in. The game spreads every position 3 times, so a file unit is 3 px of space: Earth's ring is 70,000 units, 210,000 px.
 
-What the square root keeps: the order of every body, and the feel of inner-close, outer-far (Mercury to Mars fit inside 26,000 px of each other's rings; Saturn to Uranus is 54,000 px). What it gives up: proportion. Neptune is 5.5 times as far out as Earth here, not 30.
+What the square root keeps: the order of every body, and the feel of inner-close, outer-far (Mercury to Mars fit inside 129,000 px of each other's rings; Saturn to Uranus is 271,000 px). What it gives up: proportion. Neptune is 5.5 times as far out as Earth here, not 30.
 
 | Trip, at its shortest | Space, px | A cruise at 8,000 px/s |
 |---|---|---|
-| Earth to Mars | 9,800 | a few seconds |
-| Earth to Jupiter | 53,800 | about 9 s |
-| Earth to Neptune | 188,300 | about 26 s |
-| Earth to Pluto | 221,900 | about 30 s |
+| Earth to Mars | 49,200 | about 8 s |
+| Earth to Jupiter | 269,000 | about 36 s |
+| Earth to Saturn | 438,500 | about 1 minute |
+| Earth to Neptune | 941,600 | about 2 minutes |
+| Earth to Pluto | 1,109,500 | about 2 minutes 20 s |
 
-**This is shorter than the card asked for** ("Earth to Neptune a cruise of a few minutes"). The reason is a limit, not a choice: a system file may be at most 200,000 units across, the Kuiper Gate already sits 92,865 units from the Sun, and a cruise is 8,000 px/s. A few minutes would need a system about five times as wide or a slower cruise in big systems; both are code (the schema's `size` limit in `src/content.js`, `CRUISE.top` in `src/cruise.js`). Card: `space-game-sol-needs-bigger-systems`.
+**Earth to Neptune is a cruise of two minutes**, which is what the card asked for ("a few minutes"). It was 26 seconds while a system file could be at most 200,000 units across. Card `space-game-sol-needs-bigger-systems` raised that limit to 1,000,000 units (3,000,000 px) and the scale here from 14,000 to 70,000: the system is five times as wide and the cruise is as fast as everywhere else. Two things follow from the width. You arrive from another star at the edge of the system, as in every system, and here the edge is about three minutes of cruise from the Sun. And a long cruise is no likelier to be interdicted than the longest one in a shipped system (the roll is thinned on a long leg, `INTERDICT.leg` in `src/cruise.js`).
+
+To make the trips longer or shorter, change `K` in `SCALE` in `mods/sol/_make.mjs` and run the two commands above: 70,000 is about the most that fits (the Kuiper Gate sits 464,000 units from the Sun and the Sun is in the middle of 1,000,000).
 
 Where a body is on its ring: each planet is at its real mean longitude for 1 January 2000 (J2000), so the planets are spread as they really were that day. An asteroid's place on its ring is invented. The map is north up; longitude 0 points east and grows anticlockwise, as on a chart seen from above the Sun's north pole.
 
@@ -38,24 +41,24 @@ Where a body is on its ring: each planet is at its real mean longitude for 1 Jan
 
 | Body | Drawn as | Real distance, AU | Ring in the file | Ring in space, px | Where on the ring | Note |
 |---|---|---|---|---|---|---|
-| Mercury | rock world | 0.387 | 8,709 | 26,127 | J2000 longitude 252.25 deg |  |
-| Venus | lava world | 0.723 | 11,904 | 35,712 | J2000 longitude 181.98 deg | no cloud world in the game: lava is the hot one |
-| Earth | ice world | 1 | 14,000 | 42,000 | J2000 longitude 100.46 deg | no ocean world in the game: ice is the blue and white one |
-| Eros | rock world | 1.458 | 16,905 | 50,715 | invented | a near-Earth asteroid: its orbit lies between Earth and Mars, not in the belt |
-| Mars | rock world | 1.524 | 17,283 | 51,849 | J2000 longitude 355.45 deg |  |
-| Vesta | rock world | 2.362 | 21,516 | 64,548 | invented |  |
-| Ceres | ice world | 2.767 | 23,288 | 69,864 | invented |  |
-| Pallas | rock world | 2.772 | 23,309 | 69,927 | invented |  |
-| Main Belt, Vesta side | belt field | 2.2 | 20,765 | 62,295 | invented |  |
-| Main Belt, Ceres side | belt field | 2.9 | 23,841 | 71,523 | invented |  |
-| Main Belt, far side | belt field | 3.1 | 24,650 | 73,950 | invented |  |
-| Jupiter | gas world | 5.203 | 31,934 | 95,802 | J2000 longitude 34.40 deg |  |
-| Greek camp (L4) | belt field | 5.203 | 31,934 | 95,802 | J2000 longitude 94.40 deg | the Jupiter trojans 60 degrees ahead of the planet |
-| Trojan camp (L5) | belt field | 5.203 | 31,934 | 95,802 | J2000 longitude 334.40 deg | the Jupiter trojans 60 degrees behind the planet; Patroclus is one of them |
-| Saturn | ringed world | 9.537 | 43,235 | 129,705 | J2000 longitude 49.94 deg |  |
-| Uranus | ice world | 19.19 | 61,329 | 183,987 | J2000 longitude 313.23 deg |  |
-| Neptune | gas world | 30.07 | 76,771 | 230,313 | J2000 longitude 304.88 deg |  |
-| Pluto | ice world | 39.48 | 87,966 | 263,898 | J2000 longitude 238.93 deg |  |
+| Mercury | rock world | 0.387 | 43,547 | 130,641 | J2000 longitude 252.25 deg |  |
+| Venus | lava world | 0.723 | 59,521 | 178,563 | J2000 longitude 181.98 deg | no cloud world in the game: lava is the hot one |
+| Earth | ice world | 1 | 70,000 | 210,000 | J2000 longitude 100.46 deg | no ocean world in the game: ice is the blue and white one |
+| Eros | rock world | 1.458 | 84,523 | 253,569 | invented | a near-Earth asteroid: its orbit lies between Earth and Mars, not in the belt |
+| Mars | rock world | 1.524 | 86,415 | 259,245 | J2000 longitude 355.45 deg |  |
+| Vesta | rock world | 2.362 | 107,582 | 322,746 | invented |  |
+| Ceres | ice world | 2.767 | 116,440 | 349,320 | invented |  |
+| Pallas | rock world | 2.772 | 116,545 | 349,635 | invented |  |
+| Main Belt, Vesta side | belt field | 2.2 | 103,827 | 311,481 | invented |  |
+| Main Belt, Ceres side | belt field | 2.9 | 119,206 | 357,618 | invented |  |
+| Main Belt, far side | belt field | 3.1 | 123,248 | 369,744 | invented |  |
+| Jupiter | gas world | 5.203 | 159,671 | 479,013 | J2000 longitude 34.40 deg |  |
+| Greek camp (L4) | belt field | 5.203 | 159,671 | 479,013 | J2000 longitude 94.40 deg | the Jupiter trojans 60 degrees ahead of the planet |
+| Trojan camp (L5) | belt field | 5.203 | 159,671 | 479,013 | J2000 longitude 334.40 deg | the Jupiter trojans 60 degrees behind the planet; Patroclus is one of them |
+| Saturn | ringed world | 9.537 | 216,174 | 648,522 | J2000 longitude 49.94 deg |  |
+| Uranus | ice world | 19.19 | 306,645 | 919,935 | J2000 longitude 313.23 deg |  |
+| Neptune | gas world | 30.07 | 383,853 | 1,151,559 | J2000 longitude 304.88 deg |  |
+| Pluto | ice world | 39.48 | 439,832 | 1,319,496 | J2000 longitude 238.93 deg |  |
 
 ### Moons
 
@@ -91,8 +94,8 @@ Real distance from the planet, and the offset the file uses instead (the order o
 
 | Gate | Placed as if at | Ring in the file | Ring in space, px |
 |---|---|---|---|
-| Lagrange Gate | 1.2 AU | 15,336 | 46,008 |
-| Kuiper Gate | 44 AU | 92,865 | 278,595 |
+| Lagrange Gate | 1.2 AU | 76,681 | 230,043 |
+| Kuiper Gate | 44 AU | 464,327 | 1,392,981 |
 
 <!-- sol-tables:end -->
 
@@ -104,7 +107,7 @@ Real distance from the planet, and the offset the file uses instead (the order o
 
 ## What the data model cannot say yet
 
-- **A body that goes round a body.** A row of a system file is placed by `x` and `y`, or by an `orbit` and `angle` round the sun. There is no way to write "Luna, 1,100 units from Earth": a moon is written as its own `x` and `y`, which `_make.mjs` works out from its planet. That is enough while nothing moves. When bodies move along their orbits a moon must follow its planet, and that needs a `parent` column in the Bodies table and code that reads it. Card: `space-game-bodies-orbit-a-body`.
+- **A body that goes round a body: it can now** (card `space-game-bodies-orbit-a-body`). A row may name a `parent`, another body of the same table, and its `orbit` and `angle` are then measured from that body: Luna is `orbit` 1100, `angle` 70, `parent` `sol-earth`, and Imbrium Dock's parent is Luna. Every moon and dock of Sol is written that way; the game keeps the parent on the body, so when bodies move along their orbits a moon turns with its planet. Nothing moves yet.
 - **More than one dock in a system.** The game opens the first `station` row of a system and no other (`src/space.js` draws one and docks at one). So Imbrium Dock, beside Luna, is the dock of Sol; the other six are written as `scenery` (a station you can fly to and look at, not dock at). Their dock files are finished and wait in `mods/sol/_stations-later/`, a folder the build skips. Card: `space-game-more-than-one-dock`.
 - **Calls.** Imbrium Dock posts two runs home, a courier and a haul to Halcyon Station (its dock file's `## Runs` table). Nothing comes the other way: a run *to* Sol would be a row in Halcyon Station's own file, which a pack that only adds things does not touch. The four first calls (rescue, escort, patrol, bounty) play where their mission files say, in Halcyon and the Roost; Sol has none of its own yet.
 - **Landing.** Only Kepler-4b has a surface, so every world of Sol is `landable: no`.

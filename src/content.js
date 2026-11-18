@@ -51,6 +51,10 @@
   const SHIP_ART = ['ship', 'raider', 'drone', 'gunship', 'reaver', 'freighter', 'civilian', 'police', 'wren', 'kite', 'ox', 'talon', 'pathfinder', 'bastion']; // the built-in textures; grows when new ship art lands
   const SLOTS = ['engine', 'shields', 'weapons', 'tank', 'cargo', 'aim'];
   // star systems (docs/MODDING.md 6.3): what a body is, and the names the code's own tables use for them (src/data_systems.js, art_world.js, stationart.js)
+  // how wide a system file may be, in its own units (the game spreads every position SYSTEM_SCALE times, so 1,000,000 units is 3,000,000 px:
+  // a little over six minutes of cruise from edge to edge). It was 200,000 until the Sol pack needed Earth to Neptune to be minutes, not
+  // seconds (card space-game-sol-needs-bigger-systems). tests/bigsystems.mjs follows what has to cope: the cruise time sum, the Tab map's grid.
+  const SYS_MAX = 1000000;
   const BODY_TYPES = ['station', 'planet', 'belt', 'poi', 'scenery', 'gate'];
   const PLANET_KINDS = ['rock', 'ice', 'gas', 'lava', 'ringed'];   // art_world.js planetTexture
   const SITE_KINDS = ['wreck', 'beacon'];                         // poi.js
@@ -58,14 +62,36 @@
   const BODY_ART = ['station', 'outpost', 'planet'].concat(STATION_LOOKS); // the textures a body is drawn with (boot.js, stationart.js)
   const PIRATE_IDS = ['raider', 'drone', 'gunship'];              // the pirate ships a system may weight
   // one Bodies row against its type: the columns that type needs and the kind that fits it. The message is a whole sentence; the row is ignored.
-  // where a body is (card space-game-orbit-fields-in-files): its own x and y, or, when they are left empty, its orbit: `orbit` units from the sun (the
-  // middle of the system when it has no sun) at `angle` degrees round it, clockwise from north (0 north, 90 east, 180 south: the minimap is north up).
-  // sys: the system's own fields (starX, starY, size). null when the row gives neither. src/data_systems.js sysPlace is the same sum for the game.
-  const bodyPlace = (o, sys) => {
+  // where a body is (cards space-game-orbit-fields-in-files, space-game-bodies-orbit-a-body): its own x and y, or, when they are left empty, its
+  // orbit: `orbit` units from what it goes round, at `angle` degrees round it, clockwise from north (0 north, 90 east, 180 south: the minimap is
+  // north up). What it goes round is its `parent` (another row of the same table, by id: a moon round its planet, a dock round its moon), or with no
+  // parent the sun (the middle of the system when it has no sun). sys: the system's own fields (starX, starY, size); rows: the Bodies table, to find
+  // a parent in. null when the row gives neither way, or its parent cannot be placed (not in the table, or the rows go round each other).
+  // src/data_systems.js sysPlace is the same sum for the game.
+  const bodyPlace = (o, sys, rows, depth) => {
     if (o.x !== undefined && o.y !== undefined) return { x: o.x, y: o.y };
     if (o.orbit === undefined) return null;
-    const f = sys || {}, star = f.starX !== undefined && f.starY !== undefined, cx = star ? f.starX : (f.size || 0) / 2, cy = star ? f.starY : (f.size || 0) / 2, a = (o.angle || 0) * Math.PI / 180;
-    return { x: Math.round(cx + Math.sin(a) * o.orbit), y: Math.round(cy - Math.cos(a) * o.orbit) };
+    const f = sys || {}, star = f.starX !== undefined && f.starY !== undefined, a = (o.angle || 0) * Math.PI / 180;
+    let c = { x: star ? f.starX : (f.size || 0) / 2, y: star ? f.starY : (f.size || 0) / 2 };
+    if (o.parent !== undefined) {
+      const par = (rows || []).find(r => r && r.id === o.parent);
+      c = par && par !== o && (depth || 0) < 8 ? bodyPlace(par, f, rows, (depth || 0) + 1) : null;
+      if (!c) return null;
+    }
+    return { x: Math.round(c.x + Math.sin(a) * o.orbit), y: Math.round(c.y - Math.cos(a) * o.orbit) };
+  };
+  // what is wrong with a row's parent, in words, or null: it must be another body of the same table, and the chain must end (at most 8 deep)
+  const bodyParentProblem = (o, rows) => {
+    if (o.parent === undefined) return null;
+    if (o.parent === o.id) return 'goes round itself (parent ' + quote(o.parent) + ')';
+    let cur = o; const seen = [o.id];
+    for (let i = 0; i < 9 && cur.parent !== undefined; i++) {
+      const par = rows.find(r => r.id === cur.parent);
+      if (!par) return (cur === o ? 'goes round ' : 'goes round ' + quote(o.parent) + ', and further along ' + quote(cur.id) + ' goes round ') + quote(cur.parent) + ', which is not a body of this system (or its row was ignored)';
+      if (seen.includes(par.id)) return 'goes round ' + quote(o.parent) + ', which in the end goes round it: ' + seen.concat(par.id).join(' > ');
+      seen.push(par.id); cur = par;
+    }
+    return cur.parent !== undefined ? 'is more than 8 parents deep: ' + seen.join(' > ') : null;
   };
   const bodyPlaceProblem = o => {
     if ((o.x === undefined) !== (o.y === undefined)) return 'the row has ' + (o.x === undefined ? 'y but no x' : 'x but no y') + ': give both, or leave both empty and give an orbit';
@@ -126,8 +152,8 @@
       folder: 'systems', placeholders: [],
       fields: {
         name: T(40, true), kind: P(['home', 'outpost', 'trade', 'mining', 'volcanic', 'wild', 'graveyard', 'nest'], true), ly: L('num', { len: 2, min: -1000, max: 1000 }),
-        size: I(4000, 200000), danger: I(0, 5), traffic: I(0, 3), pay: N(0.1, 5), seed: I(0, 2147483647),
-        starType: P(['O', 'B', 'A', 'F', 'G', 'K', 'M']), starX: I(0, 200000), starY: I(0, 200000),
+        size: I(4000, SYS_MAX), danger: I(0, 5), traffic: I(0, 3), pay: N(0.1, 5), seed: I(0, 2147483647),
+        starType: P(['O', 'B', 'A', 'F', 'G', 'K', 'M']), starX: I(0, SYS_MAX), starY: I(0, SYS_MAX),
         pirateMax: I(1, 40), pirateEvery: I(1000, 600000) // a system's own pirate spawn table (enemies.js pirateTable): at most this many, one every this many ms; the weights are the Pirates section
       },
       sections: {
@@ -136,7 +162,7 @@
           // art is the texture a body is drawn with; a planet is a kind (and a seed: the same kind and seed is the same planet on every boot) or art planet (Kepler-4b);
           // look is the station look of a dead station (scenery); labelDy moves the name label (pixels, negative is above); a site that has its own file in poi/ is paid from that file
           cols: {
-            id: { t: 'id' }, type: P(BODY_TYPES, true), name: T(40), x: I(0, 200000), y: I(0, 200000), orbit: N(0, 200000), angle: N(-360, 360),
+            id: { t: 'id' }, type: P(BODY_TYPES, true), name: T(40), x: I(0, SYS_MAX), y: I(0, SYS_MAX), orbit: N(0, SYS_MAX), angle: N(-360, 360), parent: { t: 'id' },
             art: P(BODY_ART), r: I(10, 5000), rocks: I(0, 200), landable: BOOL, kind: P(PLANET_KINDS.concat(SITE_KINDS)), seed: I(0, 2147483647),
             look: P(STATION_LOOKS), labelDy: I(-3000, 3000), credits: I(0, 100000), hull: I(0, 100), guard: I(0, 6), note: T(160)
           }
@@ -174,7 +200,7 @@
         progressRescued: { heading: 'Progress rescued', t: 'text', max: 400 }, // the progress text once the colonist is aboard (rescue calls)
         steps: { heading: 'Steps', t: 'list', max: 80 },
         failure: { heading: 'Failure', t: 'text', max: 240 },
-        pickets: { heading: 'Pickets', t: 'table', required: ['x', 'y'], cols: { x: I(0, 200000, true), y: I(0, 200000, true) } } // pirates at fixed places in the call's system, in the units of the system files
+        pickets: { heading: 'Pickets', t: 'table', required: ['x', 'y'], cols: { x: I(0, SYS_MAX, true), y: I(0, SYS_MAX, true) } } // pirates at fixed places in the call's system, in the units of the system files
       }
     },
     npc: {
@@ -524,13 +550,24 @@
       const seen = Object.create(null), keep = [];
       rowsOf(en).forEach(b => {
         if (seen[b.id]) { at(en, 'bodies', 'the body ' + quote(b.id) + ' is in the Bodies table twice. Ignored the second row.', 'error'); return; }
-        // a body placed by its orbit must land inside the system's square, or nothing could fly to it
-        if (b.x === undefined && b.orbit !== undefined) {
-          const p = bodyPlace(b, en.data), size = en.data.size;
-          if (p.x < 0 || p.y < 0 || (size !== undefined && (p.x > size || p.y > size))) { at(en, 'bodies', 'the body ' + quote(b.id) + ' with orbit ' + b.orbit + ' at angle ' + (b.angle || 0) + ' would be at x ' + p.x + ', y ' + p.y + ', outside the system' + (size !== undefined ? ' (size ' + size + ')' : '') + '. Ignored the row.', 'error'); return; }
-        } else if (b.orbit !== undefined || b.angle !== undefined) at(en, 'bodies', 'the body ' + quote(b.id) + ' has x and y, so its ' + (b.orbit !== undefined && b.angle !== undefined ? 'orbit and angle are' : b.orbit !== undefined ? 'orbit is' : 'angle is') + ' ignored.');
+        if (b.x !== undefined && (b.orbit !== undefined || b.angle !== undefined)) at(en, 'bodies', 'the body ' + quote(b.id) + ' has x and y, so its ' + (b.orbit !== undefined && b.angle !== undefined ? 'orbit and angle are' : b.orbit !== undefined ? 'orbit is' : 'angle is') + ' ignored.');
         seen[b.id] = true; keep.push(b);
       });
+      // a parent must be a body of this table and the chain must end; a body placed by its orbit must land inside the system's square, or nothing
+      // could fly to it. A row that fails goes, and then so does a row that went round it: so look again until a pass drops nothing.
+      for (let again = true; again;) {
+        again = false;
+        const rows = keep.slice();
+        rows.forEach(b => {
+          let bad = bodyParentProblem(b, rows);
+          if (!bad && b.x === undefined && b.orbit !== undefined) {
+            const p = bodyPlace(b, en.data, rows), size = en.data.size;
+            if (!p) bad = 'cannot be placed from its parent ' + quote(b.parent);
+            else if (p.x < 0 || p.y < 0 || (size !== undefined && (p.x > size || p.y > size))) bad = 'with orbit ' + b.orbit + ' at angle ' + (b.angle || 0) + (b.parent !== undefined ? ' round ' + quote(b.parent) : '') + ' would be at x ' + p.x + ', y ' + p.y + ', outside the system' + (size !== undefined ? ' (size ' + size + ')' : '');
+          }
+          if (bad) { at(en, 'bodies', 'the body ' + quote(b.id) + ' ' + bad + '. Ignored the row.', 'error'); keep.splice(keep.indexOf(b), 1); again = true; }
+        });
+      }
       if (keep.length !== rowsOf(en).length) en.data.bodies = keep;
       keep.forEach(b => {
         if (b.type === 'station') {
@@ -804,6 +841,6 @@
     return { name, title: info.title, author: info.author, about: info.about, files: r.files, hash: r.hash, entries: r.entries, errors: r.errors };
   }
 
-  const api = { bodyPlace, LIMITS, SCHEMA, CONDITIONS, COLORS, FOLDERS, parse, validate, loadAll, formatError, suggest, levenshtein, hashOf, checkEntry, apply, packName, packInfo, loadPack };
+  const api = { bodyPlace, bodyParentProblem, LIMITS, SCHEMA, CONDITIONS, COLORS, FOLDERS, parse, validate, loadAll, formatError, suggest, levenshtein, hashOf, checkEntry, apply, packName, packInfo, loadPack };
   if (typeof module === 'object' && module && module.exports) module.exports = api; else root.ContentLib = api;
 })(typeof self !== 'undefined' ? self : this);

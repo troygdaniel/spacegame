@@ -172,7 +172,7 @@ class ModsSetup extends Phaser.Scene {
       g.lineStyle(2, isOn ? 0x6dff9c : 0x5b7a92, 1); g.strokeRect(-w / 2 + 40, y - 13, 26, 26);
       if (isOn) { g.fillStyle(0x6dff9c, 1); g.fillRect(-w / 2 + 46, y - 7, 14, 14); }
       add(this.add.text(-w / 2 + 80, y - 17, (i + 1) + '  ' + p.name + (p.title ? '   ' + p.title : ''), uiFont(17, isOn ? '#6dff9c' : '#9fe9ff', { fontStyle: 'bold' })));
-      add(this.add.text(-w / 2 + 80, y + 4, (p.about || (p.author ? 'by ' + p.author : '')).slice(0, 100), uiFont(13, '#5b7a92')));
+      add(this.add.text(-w / 2 + 80, y + 4, (t => (t.length > 100 ? t.slice(0, 98).replace(/[ ,.]+$/, '') + '..' : t))(p.about || (p.author ? 'by ' + p.author : '')), uiFont(13, '#5b7a92')));
       const bad = p.errors.length;
       add(this.add.text(w / 2 - (p.source === 'picked' ? 130 : 40), y - 9, p.files + (p.files === 1 ? ' file' : ' files') + '   ' + (bad ? bad + (bad === 1 ? ' problem' : ' problems') : 'no problems') + '   ' + (p.source === 'picked' ? 'picked here' : 'from mods/'),
         uiFont(13, bad ? '#ffd37a' : '#5b7a92')).setOrigin(1, 0));

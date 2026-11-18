@@ -63,7 +63,7 @@ try {
     const SH = JSON.parse(JSON.stringify({ system: C.SCHEMA.system, station: C.SCHEMA.station }));
     const HOME = { // the schema's fields, sections and columns that tests/worldat.mjs follows into the row below. A new one that is not here fails the test: give it a home first.
       system: ['name', 'kind', 'ly', 'size', 'danger', 'traffic', 'pay', 'seed', 'starType', 'starX', 'starY', 'pirateMax', 'pirateEvery', 'bodies', 'pirates'],
-      bodies: ['id', 'type', 'name', 'x', 'y', 'orbit', 'angle', 'art', 'r', // orbit and angle become x and y in sysBodyFrom (the same function worldAt uses); tests/orbitfields.mjs follows them
+      bodies: ['id', 'type', 'name', 'x', 'y', 'orbit', 'angle', 'parent', 'art', 'r', // orbit and angle become x and y in sysBodyFrom (the same function worldAt uses); tests/orbitfields.mjs follows them
         'rocks', 'landable', 'kind', 'seed', 'look', 'labelDy', 'credits', 'hull', 'guard', 'note'],
       station: ['name', 'system', 'accent', 'fuel', 'repair', 'ore', 'yard', 'missions', 'partMult', 'fee', 'salvageMult', 'parts', 'runs', 'welcome', 'shop', 'services', 'bar']
     };
