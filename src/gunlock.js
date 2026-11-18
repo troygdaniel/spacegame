@@ -1,8 +1,8 @@
 // ---------- Gun lock: lock a pirate and the cannons engage it by themselves (card space-game-gun-lock) ----------
 // For the flight assist (src/assist.js): with the assist on you give orders and the ship carries them out, so the guns need an order too.
-//   B        lock a target. A ring closes on it while the lock builds (GUNLOCK.time); then the cannons fire at it by themselves whenever it
+//   V        lock a target. A ring closes on it while the lock builds (GUNLOCK.time); then the cannons fire at it by themselves whenever it
 //            is in range and inside their arc (GUNLOCK.arc either side of the nose), leading it, at the weapons part's own rate and damage.
-//   B again  the lock moves to the next pirate further out; after the furthest one it is dropped.
+//   V again  the lock moves to the next pirate further out; after the furthest one it is dropped.
 // Who gets locked first: the pirate the assist order is about (assistSet(mode, pirate), as the overview list and a click do), else the nearest.
 // The lock is dropped when the target is destroyed, gets further than GUNLOCK.keep, or the assist is switched off. With the assist off
 // nothing here runs: no key, no ring, no shot. Space still fires by hand at any time, and both share one fire clock (s.nextFire), so a
@@ -15,12 +15,12 @@
 // THE INTERFACE (for a HUD or another file; nothing here needs an edit to space.js, assist.js or hud.js):
 //   gunlockState()        { on, name, locking: 0 to 1, locked, firing, why: '' | 'range' | 'arc', dist }   on: there is a lock or one is building
 //   gunlockTarget()       the sprite that is locked or being locked, or null
-//   gunlockSet(target)    lock this pirate (as B does); gunlockSet(null) drops the lock. Returns true when taken.
+//   gunlockSet(target)    lock this pirate (as V does); gunlockSet(null) drops the lock. Returns true when taken.
 //   GUNLOCK.readout = false   hides this file's own one-line readout
 // How it runs: the game's 'poststep' event (after the scenes' update, before the draw) calls gunlockFrame for the Space scene the assist
 // knows (ASSIST.s). The rules are the pure functions gunlockTime, gunlockNext and gunlockSolve; tests/gunlock.mjs runs them in plain Node.
 const GUNLOCK = {
-  key: 'B', readout: true,
+  key: 'V', readout: true,   // V: B is the Overview list's (src/overview.js); tests/spacekeys.mjs keeps one key to one owner
   time: 1400, timePart: 900, timeLead: 600, // ms to build a lock: no Autotarget part, the part fitted, the part at a tier that leads
   range: 600,                               // px the locked guns fire at (the part's reach when that is further; never past how far a shot flies)
   arc: 0.9,                                 // rad either side of the nose the cannons can turn
@@ -33,7 +33,7 @@ const GUNLOCK = {
 function gunlockTime(aimRange, aimLead) { return aimLead ? GUNLOCK.timeLead : aimRange > 0 ? GUNLOCK.timePart : GUNLOCK.time; }
 function gunlockRange(aimRange) { return Math.min(Math.max(GUNLOCK.range, aimRange || 0), SHOT_SPEED * SHOT_LIFE / 1000 - 30); }
 
-// who B locks. list: the live pirates [{ x, y }], me: the ship, cur: the one locked now (or null), prefer: the assist order's target (or null).
+// who V locks. list: the live pirates [{ x, y }], me: the ship, cur: the one locked now (or null), prefer: the assist order's target (or null).
 // With no lock: prefer when it is a pirate in reach, else the nearest. With a lock: the next one further out, and null after the furthest.
 function gunlockNext(list, me, cur, prefer) {
   const d = t => Math.hypot(t.x - me.x, t.y - me.y);
@@ -86,9 +86,10 @@ function gunlockSet(target) {
   return true;
 }
 
-// B: the next target, or none
+// V: the next target, or none
 function gunlockKey(s) {
-  const L = GUNLOCK, list = gunlockPirates(s), order = s.as && s.as.mode ? s.as.target : null;
+  const sel = typeof overviewTarget === 'function' ? overviewTarget(s) : null;   // the one selected thing (a click in space, an Overview row) comes first
+  const L = GUNLOCK, list = gunlockPirates(s), order = sel && sel.ship ? sel.ref : s.as && s.as.mode ? s.as.target : null;
   const next = gunlockNext(list, s.ship, L.target, order);
   if (next) { gunlockSet(next); return; }
   if (L.target) gunlockDrop(s, 'key'); else { toast(s, 'Nothing to lock in reach.', '#ffd37a'); sfx('empty'); }
@@ -99,7 +100,7 @@ function gunlockSetup(s) {
   L.s = s; L.target = null; L.locked = false; L.firing = false; L.why = ''; L.readAt = 0;
   L.k = s.input.keyboard.addKey(L.key);
   L.g = s.add.graphics().setDepth(7);
-  L.read = s.add.text(W / 2, 178, '', { fontFamily: 'monospace', fontSize: '16px', fontStyle: 'bold', color: '#ffb454' }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setStroke('#02060d', 4).setVisible(false);
+  L.read = s.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: '13px', fontStyle: 'bold', color: '#ffb454' }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setStroke('#02060d', 4).setVisible(false);
   s.events.once('shutdown', () => { if (L.s === s) { L.s = null; L.target = null; L.locked = false; } });
 }
 
@@ -147,14 +148,30 @@ function gunlockDraw(s, time) {
       for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + time / 600; g.lineBetween(t.x + Math.cos(a) * (r - 6), t.y + Math.sin(a) * (r - 6), t.x + Math.cos(a) * (r + 8), t.y + Math.sin(a) * (r + 8)); }
     }
   }
-  if (!L.read) return;
-  const show = GUNLOCK.readout;
-  L.read.setVisible(show);
-  if (!show || time < L.readAt) return;
-  L.readAt = time + 200;
-  L.read.setText(!st.on ? (gunlockPirates(s).some(d => Math.hypot(d.x - s.ship.x, d.y - s.ship.y) <= GUNLOCK.reach) ? GUNLOCK.key + ' lock target' : '')
-    : !st.locked ? 'LOCKING  ' + st.name + '  ' + Math.round(st.locking * 100) + '%'
-    : 'LOCKED  ' + st.name + '   ' + (st.firing ? 'GUNS FIRING' : st.why === 'range' ? 'OUT OF RANGE' : 'OUT OF ARC') + '   ' + GUNLOCK.key + ' next');
+  gunlockRead(s, time, st);
+}
+
+// what the line says, and which pirate it stands under: pure. st: gunlockState(); hint: the pirate V would lock now (or null).
+// With no lock it is a short hint under that pirate; with one it is the lock's state under the locked pirate. Never a line in mid-screen.
+function gunlockLine(st, hint) {
+  if (!st.on) return hint ? { text: GUNLOCK.key + ' lock', color: '#ffb454' } : null;
+  if (!st.locked) return { text: 'LOCKING ' + Math.round(st.locking * 100) + '%', color: '#ffb454' };
+  return { text: st.firing ? 'LOCKED  FIRING' : st.why === 'range' ? 'LOCKED  OUT OF RANGE' : 'LOCKED  OUT OF ARC', color: st.firing ? '#ff4d6d' : '#ffb454' };
+}
+
+// this file's own readout: one short line that rides under the pirate it is about, at any zoom (the text is on the HUD camera, src/camzoom.js)
+function gunlockRead(s, time, st) {
+  const L = GUNLOCK; if (!L.read) return;
+  const on = L.target, hint = on ? null : gunlockNext(gunlockPirates(s), s.ship, null, s.as && s.as.mode ? s.as.target : null), t = on || hint;
+  const line = GUNLOCK.readout && t ? gunlockLine(st, hint) : null;
+  L.read.setVisible(!!line);
+  if (!line) return;
+  const z = typeof camzoomZ === 'function' ? camzoomZ(s) : 1, cam = s.cameras.main;
+  const p = typeof camzoomScreen === 'function' ? camzoomScreen(s, t.x, t.y) : { x: t.x - cam.scrollX, y: t.y - cam.scrollY };
+  L.read.setPosition(Math.round(p.x), Math.round(p.y + (Math.max(22, (t.displayWidth || 36) / 2 + 12) + 10) * z + 8));
+  if (time < L.readAt && L.readFor === t) return;
+  L.readAt = time + 200; L.readFor = t;
+  L.read.setText(line.text).setColor(line.color);
 }
 
 // the hook: once the page has made the game, every frame after the scenes have updated
