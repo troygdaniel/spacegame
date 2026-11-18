@@ -49,7 +49,7 @@ g.run(`
       enemies: { getChildren: () => [__raider] }, mx: { freighter: __mule }, ship: { x: 200000, y: 200000, rotation: 0, body } };
     ASSIST.keys.forEach(n => { s.k[n] = { isDown: false }; });
     assistSetup(s); overviewSetup(s); ASSIST.on = false; __toasts = [];
-    s.ov.k = { B: {}, C: {}, W: {}, S: {}, UP: {}, DOWN: {}, ENTER: {} };
+    s.ov.k = { B: {}, C: s.cr.k.C, W: {}, S: {}, UP: {}, DOWN: {}, ENTER: {} }; // C is one Key object for the list and for src/cruise.js, as Phaser's addKeys gives it: a press the list takes is gone for cruise
     __mule.x += s.ship.x; __mule.y = s.ship.y; if (raiderAt !== undefined) { __raider.x = s.ship.x + raiderAt; __raider.y = s.ship.y; }
     return s;
   }
