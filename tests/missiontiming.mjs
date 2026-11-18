@@ -31,9 +31,10 @@ check('now it is between 3 and 4.5 minutes with a wave every 20 to 40 s', e.min 
 check('the MULE flies at 90 covered and 45 exposed (60 and 30 before), still slower than any ship that escorts her', g.run('ESCORT.cruise') === 90 && g.run('ESCORT.slow') === 45 && BEFORE.mule.cruise === 60 && g.run('ESCORT.cruise < Math.min(...Object.values(SHIP_MODELS).map(s => s.speed)) / 3'));
 check('her ring, the pirates\' fly-in and the gate hold are sizes and timers, not places: unchanged', g.run('ESCORT.box === 350 && ESCORT.inbound === 240 && ESCORT.spinUp === 8000 && ESCORT.waveOut === 1400 && ESCORT.lastOut === 1100'));
 
-// Halcyon's station-side pirates: written as places in the old units in src/space.js, they were left behind by the spread
-const src = readFileSync(new URL('../src/space.js', import.meta.url), 'utf8');
-check('the three pirates on the way to Kepler-4b are placed through sysAt, like the system data', /\[\[5700, 2700\], \[6000, 3500\], \[2500, 2200\]\]\.forEach\(\(\[x, y\]\) => this\.spawnDrone\(sysAt\(x\), sysAt\(y\)\)\)/.test(src));
+// Halcyon's station-side pirates: written as places in the old units, they were left behind by the spread. They are the rescue call's pickets now
+// (content/missions/rescue.md, card space-game-call-places-from-files), placed through sysAt by missionPirates in src/missions.js.
+const src = readFileSync(new URL('../src/missions.js', import.meta.url), 'utf8');
+check('the three pirates on the way to Kepler-4b are placed through sysAt, like the system data', /\(m\.pickets \|\| \[\]\)\.forEach\(\(\[x, y\]\) => out\.push\(\{ x: sysAt\(x\), y: sysAt\(y\) \}\)\)/.test(src) && g.run(`JSON.stringify(MISSIONS.find(m => m.id === 'rescue').pickets)`) === '[[5700,2700],[6000,3500],[2500,2200]]');
 const far = JSON.parse(g.run(`JSON.stringify([[5700, 2700], [6000, 3500], [2500, 2200]].map(([x, y]) => { const st = sysBody('station', 'halcyon'), pl = sysBody('planet', 'halcyon'), p = { x: sysAt(x), y: sysAt(y) }; return { st: Math.hypot(p.x - st.x, p.y - st.y), pl: Math.hypot(p.x - pl.x, p.y - pl.y), raw: Math.hypot(x - st.x, y - st.y) }; }))`));
 check('placed so, each is over 2000 px from the station (outside the police zone) and nearer to it than the raw numbers were', far.every(p => p.st > 2000 && p.st < p.raw), JSON.stringify(far.map(p => [Math.round(p.st), Math.round(p.raw)])));
 check('two of them sit between the station and the planet, as the comment in space.js says', far.filter(p => p.st + p.pl < 1.6 * g.run(`Math.hypot(sysBody('station', 'halcyon').x - sysBody('planet', 'halcyon').x, sysBody('station', 'halcyon').y - sysBody('planet', 'halcyon').y)`)).length >= 2);

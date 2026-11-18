@@ -91,6 +91,20 @@ const CT_MISSION = {
     const kind = missionKind(m); // a built-in call is of the kind it is called; a call a pack adds (src/contentadd.js) says its own
     if (data.kind !== undefined && data.kind !== kind) throw new Error('kind is "' + data.kind + '" but the file is called ' + id + ', so its kind must be ' + kind);
     ['title', 'where', 'reward', 'count'].forEach(k => { if (data[k] !== undefined) m[k] = data[k]; });
+    // where it is played (src/missions.js missionBody): the system, the body there, and the pirates that are always in that system
+    if (data.system !== undefined || data.body !== undefined) {
+      const sys = data.system !== undefined ? data.system : (m.system || 'halcyon');
+      if (m.carry || m.site) { if (data.body !== undefined) throw new Error(missionBodyFault(kind, sys, data.body)); } // a run or a site call keeps its own places
+      else {
+        if (!Object.prototype.hasOwnProperty.call(SYSTEMS, sys)) throw new Error('the system "' + sys + '" is not in the game');
+        if (data.body !== undefined) { const fault = missionBodyFault(kind, sys, data.body); if (fault) throw new Error(fault); }
+        else if (data.system !== undefined && data.system !== m.system && !sysBody(CALL_BODY[kind], sys)) throw new Error(sys + ' has no ' + CALL_BODY[kind] + ' for a ' + kind + ' call');
+        const moved = sys !== (m.system || 'halcyon'); // a call moved to another system with no body named: the first body of its type there
+        m.system = sys; m.body = data.body !== undefined ? data.body : moved ? undefined : m.body;
+      }
+    }
+    if (data.guards !== undefined) m.guards = data.guards;
+    if (data.pickets !== undefined) m.pickets = data.pickets.map(r => [r.x, r.y]);
     if (data.unlock !== undefined) m.unlock = () => contentWhen(data.unlock); // the board offers the call while this holds
     // {reward} and {count} in this call's own text are this call's, whichever call is open (the board shows them all); {progress}, {credits} and the rest are live
     const fill = text => contentFill(text, { reward: m.reward, count: m.count === undefined ? '' : m.count });
@@ -231,7 +245,8 @@ const CT_STATION = {
   apply: (id, data) => {
     const r = ctStationRow(id);
     if (!r) { // a dock in a system the game has with bodies in it (Halcyon) must be a dock the game has; a dock in a system it does not have yet, or has only as an empty one (Kestrel until u-b5), is kept
-      if (CT_HAS(SYSTEMS, data.system) && (SYSTEMS[data.system].bodies || []).length) throw new Error('the game has no built-in station called "' + id + '" in ' + data.system + ' and cannot add new ones');
+      // a dock no row has yet: kept. Its system's file lists it as a body, and worldSync (below) puts both into SYSTEMS at Boot. (Until card
+      // space-game-systems-from-markdown this refused a new dock in a system the code had rows for.)
       CONTENT_WORLD.station[id] = ctWorldCopy(data); ctBuilt.clear(); return;
     }
     if (data.system !== undefined && data.system !== r.sys) throw new Error('system is "' + data.system + '" but ' + id + ' is in ' + r.sys);
@@ -250,50 +265,33 @@ const CT_STATION = {
 // A dock is the numbers of the station file under the names the code reads: fuel, repair, ore, yard; and parts as dock.shop and dock.parts the way
 // src/data_parts.js reads them (a Parts table means the slots it lists to those tiers and no others), partMult, fee and salvageMult.
 // Nothing here throws: a system nobody knows is null, a bad body is left out. The row is cached; treat it as read-only, like SYSTEMS.
-const CT_BODY_KEYS = ['name', 'x', 'y', 'art', 'r', 'rocks', 'landable', 'kind', 'seed', 'look', 'labelDy', 'credits', 'hull', 'guard', 'note'];
-function ctDock(st) {
-  const d = {};
-  ['fuel', 'repair', 'ore'].forEach(k => { if (st[k] !== undefined) d[k] = st[k]; });
-  if (Array.isArray(st.yard)) d.yard = st.yard.slice();
-  if (Array.isArray(st.missions)) d.missions = st.missions.slice();
-  if (Array.isArray(st.parts) && st.parts.length) { d.shop = 0; d.parts = {}; st.parts.forEach(r => { d.parts[r.slot] = r.tier; }); }
-  ['partMult', 'fee', 'salvageMult'].forEach(k => { if (st[k] !== undefined) d[k] = st[k]; });
-  return d;
-}
-function ctWorldBody(row, sysId) {
-  const b = { id: row.id, type: row.type };
-  CT_BODY_KEYS.forEach(k => { if (row[k] !== undefined) b[k] = row[k]; });
-  if (row.type === 'poi' && CT_HAS(CONTENT_WORLD.poi, row.id)) { // a site with its own file is paid from it; the row only says where
-    const f = CONTENT_WORLD.poi[row.id];
-    ['name', 'credits', 'hull', 'guard'].forEach(k => { if (f[k] !== undefined) b[k] = f[k]; });
-    if (f.description !== undefined) b.note = f.description;
-  }
-  if (row.type === 'station' && CT_HAS(CONTENT_WORLD.station, row.id) && CONTENT_WORLD.station[row.id].system === sysId) {
-    const st = CONTENT_WORLD.station[row.id];
-    if (st.name !== undefined) b.name = st.name;
-    b.dock = ctDock(st);
-    const about = {};
-    ['accent', 'welcome', 'services', 'bar', 'shop'].forEach(k => { if (st[k] !== undefined) about[k] = st[k]; });
-    if (Object.keys(about).length) b.about = about;
-  }
-  return b;
-}
+// The row itself is made by sysRowFrom in src/data_systems.js: the same function that makes SYSTEMS when the page loads, here over the fields the
+// adapters kept (CONTENT_WORLD), so a pack that is switched on is in it. worldFromFiles keeps the home dock's own repair and ore prices (SYSTEMS leaves
+// them to the game's two constants).
 function worldFromFiles(id) {
   try {
-    if (!CT_HAS(CONTENT_WORLD.system, id)) return null;
-    const f = CONTENT_WORLD.system[id], def = { id, name: f.name, kind: f.kind };
-    ['ly', 'size', 'danger', 'traffic', 'pay', 'seed'].forEach(k => { if (f[k] !== undefined) def[k] = f[k]; });
-    if (f.starType !== undefined) { def.star = { type: f.starType }; if (f.starX !== undefined) def.star.x = f.starX; if (f.starY !== undefined) def.star.y = f.starY; }
-    if (f.pirateMax !== undefined || f.pirateEvery !== undefined || (f.pirates && f.pirates.length)) {
-      def.pirates = {};
-      if (f.pirateMax !== undefined) def.pirates.max = f.pirateMax;
-      if (f.pirateEvery !== undefined) def.pirates.every = f.pirateEvery;
-      if (f.pirates && f.pirates.length) { def.pirates.weights = {}; f.pirates.forEach(r => { def.pirates.weights[r.kind] = r.weight; }); }
-    }
-    if (f.description !== undefined) def.description = f.description;
-    def.bodies = (f.bodies || []).map(row => ctWorldBody(row, id));
-    return typeof sysScale === 'function' ? sysScale(def) : def; // the files are in the old units, as SYSTEMS is written (src/data_systems.js SYSTEM_SCALE)
+    const def = sysRowFrom(id, CONTENT_WORLD, true);
+    return def ? sysScale(def) : null; // the files are in the old units (src/data_systems.js SYSTEM_SCALE)
   } catch (e) { return null; }
+}
+// The files are the source of the systems the game flies (card space-game-systems-from-markdown). SYSTEMS is made from the core pack when the page
+// loads; worldSync runs once at Boot, after the core pack and the packs the player turned on have been applied, and lays what they say over it:
+// a system no row has yet is added (a star on the galaxy map, bodies to fly to), one whose fields differ is replaced in place (the object the
+// game holds stays the same one). Nothing here throws: a system that cannot be built keeps the row it had.
+function worldSync() {
+  const done = { added: [], replaced: [] };
+  try {
+    Object.keys(CONTENT_WORLD.system).forEach(id => {
+      let row = null;
+      try { row = sysRowFrom(id, CONTENT_WORLD); if (row) sysScale(row); } catch (e) { row = null; }
+      if (!row || !Array.isArray(row.bodies)) return;
+      if (!CT_HAS(SYSTEMS, id)) { SYSTEMS[id] = row; done.added.push(id); return; }
+      if (JSON.stringify(SYSTEMS[id]) === JSON.stringify(row)) return;
+      const cur = SYSTEMS[id]; Object.keys(cur).forEach(k => { delete cur[k]; }); Object.assign(cur, row); done.replaced.push(id); // `scaled` is not a key: it stays set, and the new values are already spread
+    });
+    ctBuilt.clear();
+  } catch (e) { /* the rows the page loaded with stand */ }
+  return done;
 }
 function worldAt(id) {
   try {

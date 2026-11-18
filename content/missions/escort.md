@@ -4,6 +4,9 @@ kind: escort
 title: Escort
 where: MULE to the Perseus gate
 reward: 400
+# where it is played: the star system, and the gate there the MULE flies to
+system: halcyon
+body: perseus-gate
 ---
 The freighter MULE leaves the hangar when you do,
 bound for the Perseus gate to the south-west.

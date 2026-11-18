@@ -42,15 +42,16 @@ class Space extends Phaser.Scene {
     spaceBackdrop(this, !!G.deep); // src/art_world.js: nebula, parallax star layers, distant sun, giant and moon (deep space has only stars)
     this.events.once('shutdown', () => { G.deep = null; }); // a pull-out lives only as long as this scene shows it
 
-    const stDef = sysBody('station'), plDef = sysBody('planet');
+    const land = missionLandBody(); // src/missions.js: the planet of a rescue call played in this system (its file names the body), when it is landable
+    const stDef = sysBody('station'), plDef = land || sysBody('planet');
     if (stDef) {
       const built = stationBuild(this, stDef); // src/stationart.js: Halcyon's ring, a small outpost, or one of the looks, by the body's art
       this.station = built.obj;
       label(this, stDef.x, stDef.y + built.labelDy, stDef.name.toUpperCase(), '#38e1ff', 18);
       if (stDef.art === 'station') stationFx(this); // src/stationart.js: Halcyon's spinning hub and ring, beacons, docking lane, Kestrel Outpost scenery
     } else this.station = spaceNowhere();
-    // you can land only where there is a surface to land on: the Surface scene is Kepler-4b's (a world of the Hollow gets its own later), so a planet is landable in Halcyon only
-    this.canLand = !!(plDef && plDef.landable && G.system === 'halcyon');
+    // you can land only where there is a surface to land on: the Surface scene is the rescue call's (a world of the Hollow gets its own later), so only that call's planet is landable
+    this.canLand = !!land;
     if (plDef) {
       this.planet = this.add.image(plDef.x, plDef.y, plDef.kind ? planetTexture(this, plDef.kind, plDef.seed) : plDef.art); this.planetR = plDef.r; // a planet of a kind and seed is made on first use (src/art_world.js)
       if (plDef.kind) this.planet.setScale(plDef.r / (plDef.kind === 'ringed' ? 206 : 300)); // the globe is 300 px (ringed: 206) in its 800 px canvas
@@ -83,14 +84,9 @@ class Space extends Phaser.Scene {
     }).setDepth(3);
     this.boom = fxBoom(this); // src/art_world.js: sparks, flash, embers, shockwave, shards, smoke, scaled by the count
 
-    if (G.system === 'halcyon' && !G.deep) { // (G.system is still the system you left while deep space is up) the pirates round Kepler-4b and on the way to it are Halcyon's own (the other systems spawn from their table)
-      for (let i = 0; i < 6; i++) {
-        const a = i / 6 * Math.PI * 2, r = 520 + Math.random() * 220;
-        this.spawnDrone(this.planet.x + Math.cos(a) * r, this.planet.y + Math.sin(a) * r);
-      }
-      // the station-side pirates sit on the way to Kepler-4b, over 2000 px out: outside the police zone and well past engage range
-      [[5700, 2700], [6000, 3500], [2500, 2200]].forEach(([x, y]) => this.spawnDrone(sysAt(x), sysAt(y))); // written in the old units, like the system data (src/data_systems.js sysAt): unscaled they sat nowhere near the route after the spread
-    }
+    // (G.system is still the system you left while deep space is up) the pirates that are always here: the rescue call's file lists them (guards round
+    // its planet, pickets on the way to it; content/missions/rescue.md, src/missions.js missionPirates). The other systems spawn from their table.
+    if (!G.deep) missionPirates().forEach(p => this.spawnDrone(p.x, p.y));
     this.time.addEvent({
       delay: pirateTable().every, loop: true, callback: () => { // src/enemies.js: the system's spawn table
         if (this.dead || this.cruising || this.enemies.countActive() >= pirateTable().max || pirateCap(this, this.time.now) === 0 || (this.calmUntil && this.time.now < this.calmUntil)) return; // quiet during the launch grace and a jump's calm
