@@ -30,6 +30,7 @@ export function loadGame(root) {
     set: (t, k, v) => { t[k] = v; return true; }
   });
   const ctx = vm.createContext(sandbox), problems = [];
+  try { vm.runInContext(readFileSync(join(root, 'content.generated.js'), 'utf8'), ctx, { filename: 'content.generated.js' }); } catch (e) { problems.push('content.generated.js: ' + e.message.split('\n')[0]); } // the systems are built from it (src/data_systems.js)
   for (const f of FILES) {
     try { vm.runInContext(readFileSync(join(root, 'src', f + '.js'), 'utf8'), ctx, { filename: f + '.js' }); } catch (e) { problems.push(f + '.js: ' + e.message.split('\n')[0]); }
   }

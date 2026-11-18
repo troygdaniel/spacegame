@@ -50,6 +50,7 @@ const ctx = vm.createContext(new Proxy(box, {
   has: (t, k) => typeof k === 'string' && (k in t || !builtins.has(k)),
   get: (t, k) => (k in t ? t[k] : builtins.has(k) ? real[k] : noop), set: (t, k, v) => { t[k] = v; return true; }
 }));
+try { vm.runInContext(read('content.generated.js'), ctx, { filename: 'content.generated.js' }); } catch (e) { check('content.generated.js runs in the sandbox', false, e.message.split('\n')[0]); } // the systems are built from it (src/data_systems.js)
 for (const f of ['common', 'data_systems', 'universe', 'data_ships', 'data_parts', 'fleet', 'missions', 'enemies', 'shop']) { // the systems and the fleet too: the runs of src/missions.js are made from them
   try { vm.runInContext(read('src/' + f + '.js'), ctx, { filename: f + '.js' }); } catch (e) { check('the game table file src/' + f + '.js runs in the sandbox', false, e.message.split('\n')[0]); }
 }

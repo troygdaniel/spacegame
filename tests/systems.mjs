@@ -32,6 +32,7 @@ const IDS = DESIGN.map(d => d[0]);
 
 function world() { // the real scripts in the order index.html loads them
   const ctx = vm.createContext({ window: { addEventListener() {} }, console: { table() {}, log() {} } });
+  vm.runInContext(readFileSync(new URL('../content.generated.js', import.meta.url), 'utf8'), ctx, { filename: 'content.generated.js' }); // the systems are built from it (src/data_systems.js)
   for (const f of ['common', 'data_systems', 'universe', 'data_ships', 'data_parts', 'fleet']) vm.runInContext(src(f), ctx, { filename: f + '.js' });
   vm.runInContext('G.lastDock = homeDock();', ctx);
   const run = code => vm.runInContext(code, ctx);

@@ -28,6 +28,7 @@ SYSTEMS.meridian = { id: 'meridian', name: 'Meridian', ly: [29, 24.5], bodies: [
 // a fresh game: the real scripts in the order index.html loads them, G is the real G
 function world() {
   const ctx = vm.createContext({ window: { addEventListener() {} }, console: { table() {}, log() {} } });
+  vm.runInContext(readFileSync(new URL('../content.generated.js', import.meta.url), 'utf8'), ctx, { filename: 'content.generated.js' }); // the systems are built from it (src/data_systems.js)
   for (const f of ['common', 'data_systems', 'universe', 'data_ships', 'data_parts', 'fleet']) vm.runInContext(src(f), ctx, { filename: f + '.js' });
   vm.runInContext(`const ORE_PRICE = ${ORE_PRICE}; G.lastDock = homeDock();` + MORE_SYSTEMS, ctx); // meta.js sets lastDock in the page
   const run = code => vm.runInContext(code, ctx);

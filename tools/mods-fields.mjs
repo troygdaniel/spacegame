@@ -17,7 +17,7 @@ const C = createRequire(import.meta.url)('../src/content.js');
 export const START = '<!-- fields:start (written by node tools/mods-fields.mjs --write: do not edit between these lines) -->';
 export const END = '<!-- fields:end -->';
 
-// what the game reads today, in the order a modder wants them; the last two (system, voice) are checked but not applied yet (docs/MODS.md section 7)
+// what the game reads today, in the order a modder wants them (systems are flown from their files since card space-game-systems-from-markdown)
 const ORDER = ['mission', 'npc', 'ship', 'part', 'poi', 'station', 'text', 'system', 'voice'];
 
 // one plain-words meaning for the common fields (the schema has the types and ranges, not the meaning)
@@ -43,15 +43,15 @@ export const NOTES = {
     fuelMult: 'tank: the tank times this', holdPlus: 'cargo: ore units more'
   },
   system: { name: 'its name', kind: 'what kind of place', ly: 'galaxy map position [x, y], light years', size: 'world size, px', danger: '0 to 5: how many pirates', traffic: '0 to 3: how busy', seed: 'the random seed',
-    starType: 'the star: O, B, A, F, G, K or M (not read yet)', starX: 'where the star is, px (not read yet)', starY: 'where the star is, px (not read yet)',
-    pirateMax: 'its own pirate table: at most this many at once (not read yet)', pirateEvery: 'its own pirate table: one new pirate every this many ms (not read yet)' },
+    starType: 'the star: O, B, A, F, G, K or M (the sun you can fly to, and the tint of the sky)', starX: 'where the star is, px', starY: 'where the star is, px',
+    pirateMax: 'its own pirate table: at most this many at once', pirateEvery: 'its own pirate table: one new pirate every this many ms' },
   poi: {
     kind: 'wreck or beacon; it must match the site', name: 'what it is called on the radar',
     credits: 'a fixed site: what it pays', hull: 'hull it repairs', guard: 'a fixed site: how many pirates guard it',
     pays: 'a random signal: what it pays, [least, most]', guardChance: 'a random signal: how often pirates guard it, 0 to 1', hullChance: 'a random signal: how often it repairs the hull, 0 to 1'
   },
-  station: { name: 'its name', system: 'the system it is in', accent: 'its colour (not read yet)', fuel: 'credits a unit of fuel (not read yet)', repair: 'credits a point of hull at the repair bay', ore: 'credits an ore pays when you dock',
-    yard: 'the ships it sells, by id (not read yet)', partMult: 'the price of its parts times this (not read yet)', fee: 'credits it takes at the door (not read yet)', salvageMult: 'what a salvage is worth here, times the usual (not read yet)' },
+  station: { name: 'its name', system: 'the system it is in', accent: 'its colour (not read yet)', fuel: 'credits a unit of fuel at its pump (none: no pump)', repair: 'credits a point of hull at the repair bay', ore: 'credits an ore pays when you dock',
+    yard: 'the ships it sells, by id', partMult: 'the price of its parts times this', fee: 'credits it takes at the door', salvageMult: 'what a salvage is worth here, times the usual' },
   voice: { event: 'which moment the lines are for' },
   text: {}
 };

@@ -65,7 +65,8 @@ function codeKnown(type, id) {
   if (!CODE_IDS) {
     CODE_IDS = { system: new Set(), station: new Set(), ship: new Set() };
     try {
-      const S = vm.runInNewContext(readFileSync(join(ROOT, 'src/data_systems.js'), 'utf8') + '\n;SYSTEMS', {});
+      // the systems are built from content.generated.js itself now (src/data_systems.js sysRowsFrom): the last build says which ids the game has
+      const S = vm.runInNewContext(readFileSync(join(ROOT, 'content.generated.js'), 'utf8') + '\n;' + readFileSync(join(ROOT, 'src/data_systems.js'), 'utf8') + '\n;SYSTEMS', {});
       Object.keys(S).forEach(k => { CODE_IDS.system.add(k); (S[k].bodies || []).forEach(b => { if (b.type === 'station') CODE_IDS.station.add(b.id); }); });
     } catch (e) { /* no code ids: every reference then needs its own file, as before */ }
     try { // the ship models a yard may sell (src/data_ships.js is plain data too)
@@ -77,6 +78,23 @@ function codeKnown(type, id) {
 }
 
 // ---------- packs: mods/<name>/ laid over the core pack, each checked and written on its own ----------
+// the text of src/data_systems_core.js: the shipped systems, docks and salvage sites as the sealed build has them, one entry a line. The game builds its
+// star systems from content.generated.js; when that has no valid file for one of the shipped systems (a file with a mistake in it, a build of other
+// content) this copy is what still flies, so the game always starts. Written only by a sealed build of the game's own content/.
+export const CORE_WORLD_FILE = 'src/data_systems_core.js';
+export function generateCore(result) {
+  const world = result.entries.filter(e => e.type === 'system' || e.type === 'station' || e.type === 'poi');
+  return [
+    '// src/data_systems_core.js: made by tools/build-content.mjs --seal from content/systems, content/stations and content/poi. Do not edit it by hand.',
+    '// The shipped star systems as the sealed core pack has them: src/data_systems.js flies a system from here only when content.generated.js has no',
+    '// valid file for it (docs/MODS.md "Star systems"), so a mistake in a system file never leaves the game without its home.',
+    'const SYSTEMS_CORE = {',
+    '  entries: [' + (world.length ? '\n' + world.map(x => '  ' + JSON.stringify({ type: x.type, id: x.id, data: x.data })).join(',\n') + '\n  ' : '') + ']',
+    '};',
+    ''
+  ].join('\n');
+}
+
 // the text of mods.generated.js: one pack a line (a change in git is readable); the same input always gives the same text
 export function generateMods(packs, errors) {
   const lines = a => a.map(x => '  ' + JSON.stringify(x)).join(',\n');
@@ -150,8 +168,13 @@ export function build({ dir = join(ROOT, 'content'), prefix = 'content/', out = 
   else if (was.core === SEALED) sealed = was.hash && was.hash !== result.hash ? was.hash : SEALED;
   else sealed = was.core || SEALED;
   const text = generate(result, sealed);
-  const changed = old !== text;
+  let changed = old !== text;
   if (write && changed) writeFileSync(out, text);
+  // the sealed build of the game's own content also keeps the copy of its systems that the game falls back on (generateCore)
+  if (sealed === SEALED && resolve(out) === join(ROOT, 'content.generated.js') && resolve(dir) === join(ROOT, 'content')) {
+    const coreFile = join(ROOT, CORE_WORLD_FILE), coreText = generateCore(result), coreOld = existsSync(coreFile) ? readFileSync(coreFile, 'utf8') : null;
+    if (coreOld !== coreText) { changed = true; if (write) writeFileSync(coreFile, coreText); }
+  }
   return { result, text, changed, wrote: write && changed, core: sealed, modded: sealed !== SEALED && sealed !== result.hash };
 }
 
