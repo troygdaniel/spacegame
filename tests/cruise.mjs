@@ -51,16 +51,18 @@ try {
   check('cruiseEta: a 30000 px leg takes about 6.5 s, a 3000 px leg about 2 s', await E('Math.abs(cruiseEta(30000) - 6.5) < 0.9 && cruiseEta(3000) > 1.2 && cruiseEta(3000) < 3'), await E('cruiseEta(30000).toFixed(2) + " / " + cruiseEta(3000).toFixed(2)'));
   await park(9000, 9000);
   await E(`(() => { const s = ${SP}; cruiseNavOpen(s); cruiseNavDraw(s); })()`); await tick(2);
-  check('the nav panel is up with a row per body and the nearest selected', await E(`(() => { const c = ${SP}.cr; return c.ui.box.visible && c.rows.filter(r => r.name.visible).length === 8 && c.rows[0].hl.visible && c.rows[0].name.text === 'Halcyon Station'; })()`));
+  check('the navigation panel (src/navpanel.js) is up with the keys on it, a row per body and one chosen', await E(`(() => { const s = ${SP}, c = s.cr; return c.ui.box.visible && c.navOpen && s.np.keys && c.list.filter(r => r.kind === 'body').length === cruiseKnown(s).length && !!c.list[c.sel] && s.np.hl.visible; })()`));
   if (!(await t.shot('cruise-nav'))) check('screenshot of the nav list', false);
-  // keys: S moves down, Enter picks, the list closes and the objective arrow follows
+  // keys: S moves down, Enter makes the row the destination (the panel stays: Enter again would go there) and the objective arrow follows
+  const sel0 = await E(`${SP}.cr.sel`);
   await E(`(() => { const k = ${SP}.cr.k; k.S._justDown = true; })()`); // JustDown reads this flag
   await tick(2);
-  check('S moves the selection down a row', (await E(`${SP}.cr.sel`)) === 1);
+  check('S moves the selection down a row', (await E(`${SP}.cr.sel`)) === sel0 + 1);
+  const picked = await E(`${SP}.cr.list[${SP}.cr.sel].name`);
   await E(`${SP}.cr.k.ENTER._justDown = true`); await tick(2);
-  check('Enter picks the selected body as the target and closes the list', await E(`(() => { const c = ${SP}.cr; return !c.navOpen && !c.ui.box.visible && c.target && c.target.name === 'Kepler-4b'; })()`));
+  check('Enter makes the chosen body the target; the panel stays up for the second Enter', await E(`(() => { const c = ${SP}.cr; return c.navOpen && c.ui.box.visible && !!c.target && c.target.name === ${JSON.stringify(picked)}; })()`), picked);
   check('the amber objective arrow points at the nav target, the radar arrow stays on the mission',
-    await E(`(() => { const s = ${SP}; return hudObjective(s, 'Space').name === 'KEPLER-4B' && hudObjective(s, 'Space', true).name !== undefined && s.cr.target !== null; })()`));
+    await E(`(() => { const s = ${SP}; return hudObjective(s, 'Space').name === ${JSON.stringify(picked.toUpperCase())} && hudObjective(s, 'Space', true).name !== undefined && s.cr.target !== null; })()`));
   await E(`(() => { const s = ${SP}; cruiseNavOpen(s); cruiseNavDraw(s); })()`); await tick(2);
   await E(`${SP}.cr.k.X._justDown = true`); await tick(2);
   check('X in the nav list clears the target', (await E(`${SP}.cr.target`)) === null);
