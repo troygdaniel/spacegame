@@ -149,6 +149,75 @@ const SYSTEMS = {
   }
 };
 
+// ---------- The systems come from the files (card space-game-systems-from-markdown) ----------
+// content/systems/<id>.md is a system, content/stations/<id>.md a dock in it, content/poi/<id>.md the payout of a salvage site. tools/build-content.mjs
+// checks them and writes the valid ones into content.generated.js as CONTENT.entries, which index.html loads BEFORE this file. sysRowFrom makes the
+// row the game flies from those fields, and nothing else: change a number in a file, run the build, and the game has moved.
+//   W            { system: { id: fields }, station: { id: fields }, poi: { id: fields } }: the validated fields of the files, by type
+//   sysWorldOf(content)   W from a CONTENT object (its entries)
+//   sysRowFrom(id, W)     one row in the shape the game reads, in the units the files are written in (sysScale spreads it); null when no file has that id
+//   sysRowsFrom(content)  every system of the files: the shipped eight in their order (SYSTEM_ORDER), then any other by id
+// A dock is the numbers of the station file under the names the code reads: fuel, repair, ore, yard, missions; parts as dock.shop and dock.parts the way
+// src/data_parts.js reads them (a Parts table means the slots it lists to those tiers and no others), partMult, fee and salvageMult. The home dock's
+// repair and ore are left out of its row: they are the constants REPAIR_PRICE and ORE_PRICE, which its file sets through src/contenttables.js.
+// What a row has beyond the old code rows: description, the system's seed, and on a station body `about` (the words for the Station scene).
+const SYSTEM_ORDER = ['halcyon', 'kestrel', 'meridian', 'brass', 'hollow', 'lethe', 'ember', 'roost']; // the order the lists show the shipped systems in; a new file comes after them
+const SYS_BODY_KEYS = ['name', 'x', 'y', 'art', 'r', 'rocks', 'landable', 'kind', 'seed', 'look', 'labelDy', 'credits', 'hull', 'guard', 'note'];
+const sysHas = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
+function sysDockFrom(st) {
+  const d = {};
+  ['fuel', 'repair', 'ore'].forEach(k => { if (st[k] !== undefined) d[k] = st[k]; });
+  if (Array.isArray(st.yard)) d.yard = st.yard.slice();
+  if (Array.isArray(st.missions)) d.missions = st.missions.slice();
+  if (Array.isArray(st.parts) && st.parts.length) { d.shop = 0; d.parts = {}; st.parts.forEach(r => { d.parts[r.slot] = r.tier; }); }
+  ['partMult', 'fee', 'salvageMult'].forEach(k => { if (st[k] !== undefined) d[k] = st[k]; });
+  return d;
+}
+function sysBodyFrom(row, sysId, W, home) {
+  const b = { id: row.id, type: row.type };
+  SYS_BODY_KEYS.forEach(k => { if (row[k] !== undefined) b[k] = row[k]; });
+  if (row.type === 'poi' && sysHas(W.poi, row.id)) { // a site with its own file is paid from it; the row only says where
+    const f = W.poi[row.id];
+    ['name', 'credits', 'hull', 'guard'].forEach(k => { if (f[k] !== undefined) b[k] = f[k]; });
+    if (f.description !== undefined) b.note = f.description;
+  }
+  if (row.type === 'station' && sysHas(W.station, row.id) && W.station[row.id].system === sysId) {
+    const st = W.station[row.id];
+    if (st.name !== undefined) b.name = st.name;
+    b.dock = sysDockFrom(st);
+    if (home) { delete b.dock.repair; delete b.dock.ore; } // the home dock's two prices are the game's constants
+    const about = {};
+    ['accent', 'welcome', 'services', 'bar', 'shop'].forEach(k => { if (st[k] !== undefined) about[k] = st[k]; });
+    if (Object.keys(about).length) b.about = about;
+  }
+  return b;
+}
+function sysRowFrom(id, W, keepHomePrices) {
+  if (!W || !sysHas(W.system, id)) return null;
+  const f = W.system[id], def = { id, name: f.name, kind: f.kind };
+  ['ly', 'size', 'danger', 'traffic', 'pay', 'seed'].forEach(k => { if (f[k] !== undefined) def[k] = f[k]; });
+  if (f.starType !== undefined) { def.star = { type: f.starType }; if (f.starX !== undefined) def.star.x = f.starX; if (f.starY !== undefined) def.star.y = f.starY; }
+  if (f.pirateMax !== undefined || f.pirateEvery !== undefined || (f.pirates && f.pirates.length)) {
+    def.pirates = {};
+    if (f.pirateMax !== undefined) def.pirates.max = f.pirateMax;
+    if (f.pirateEvery !== undefined) def.pirates.every = f.pirateEvery;
+    if (f.pirates && f.pirates.length) { def.pirates.weights = {}; f.pirates.forEach(r => { def.pirates.weights[r.kind] = r.weight; }); }
+  }
+  if (f.description !== undefined) def.description = f.description;
+  def.bodies = (f.bodies || []).map(row => sysBodyFrom(row, id, W, f.kind === 'home' && !keepHomePrices));
+  return def;
+}
+function sysWorldOf(content) {
+  const W = { system: {}, station: {}, poi: {} };
+  ((content && content.entries) || []).forEach(e => { if (e && sysHas(W, e.type) && typeof e.id === 'string' && e.data && typeof e.data === 'object') W[e.type][e.id] = e.data; });
+  return W;
+}
+function sysRowsFrom(content) {
+  const W = sysWorldOf(content), ids = Object.keys(W.system), out = {};
+  SYSTEM_ORDER.filter(id => ids.includes(id)).concat(ids.filter(id => !SYSTEM_ORDER.includes(id)).sort()).forEach(id => { const r = sysRowFrom(id, W); if (r) out[id] = r; });
+  return out;
+}
+
 // ---------- The scale of a system (card space-game-system-distances) ----------
 // Troy, 17 Nov 2026: places are too close together. Everything above, and every file in content/systems, is written in the old units; SYSTEM_SCALE spreads it
 // out. sysScale(def) multiplies where things ARE (the world's size, the star, each body's x and y) and leaves how BIG they are alone (a planet's or a belt's r,
