@@ -10,7 +10,30 @@ G.system = 'halcyon';
 
 G.deep = null; // the pull-out in progress (src/pullout.js), or null; never saved. While it is set the "current system" is the empty deep space below
 function sysDef(id) { if (!id && G.deep) return deepSystem(); return SYSTEMS[id || G.system] || SYSTEMS.halcyon; }
-function sysBodies(type, id) { const all = sysDef(id).bodies; return type ? all.filter(b => b.type === type) : all.slice(); }
+// The star is a real body (card space-game-real-solar-system): type 'star', at the centre the data gives (sys.star), in every list of bodies, so the
+// nav panel lists it and cruise and the autopilot fly to it. It is made from sys.star here, once per system, not written into the bodies of the data
+// (content/systems/*.md and src/data_systems.js keep their rows as they are). A landmark for now: no heat, no scooping.
+//   sysStar(id)        the star body of a system, or null (deep space, a system with no star in its data)
+//   sysOrbit(b, id)    where a body is round its star: { r: px from the star, a: rad, the angle from the star to the body } (a system with no star: round
+//                      its middle). Bodies stand still for now; this is the orbit each is on, so motion can be switched on later from these two numbers
+const SYS_STAR = { r: 900, name: ' Sun' }; // world px of a size 1 star (STAR_TYPES in src/art_world.js: M 0.8 to A 1.2); the name after the system's
+const sysStarCache = new WeakMap();
+function sysStar(id) {
+  const def = sysDef(id), st = def && def.star;
+  if (!st || !Number.isFinite(st.x) || !Number.isFinite(st.y)) return null;
+  let c = sysStarCache.get(def);
+  if (!c || c.x !== st.x || c.y !== st.y || c.star !== st.type) {
+    const size = typeof STAR_TYPES !== 'undefined' && STAR_TYPES[st.type] ? STAR_TYPES[st.type].size : 1;
+    c = { id: (def.id || 'system') + '-star', type: 'star', star: st.type, name: (def.name || 'The') + SYS_STAR.name, x: st.x, y: st.y, r: Math.round(SYS_STAR.r * size) };
+    sysStarCache.set(def, c);
+  }
+  return c;
+}
+function sysCentre(id) { const def = sysDef(id), st = sysStar(id); return st ? { x: st.x, y: st.y } : { x: (def.size || 0) / 2, y: (def.size || 0) / 2 }; }
+function sysOrbit(b, id) { const c = sysCentre(id); return { r: Math.hypot(b.x - c.x, b.y - c.y), a: Math.atan2(b.y - c.y, b.x - c.x) }; }
+// where a body is on its orbit at a later angle (motion, when it is switched on): the same ring, turned by da rad
+function sysOrbitAt(b, da, id) { const c = sysCentre(id), o = sysOrbit(b, id); return { x: c.x + Math.cos(o.a + da) * o.r, y: c.y + Math.sin(o.a + da) * o.r }; }
+function sysBodies(type, id) { const st = sysStar(id), all = st ? [st].concat(sysDef(id).bodies) : sysDef(id).bodies.slice(); return type ? all.filter(b => b.type === type) : all; }
 function sysBody(type, id) { return sysBodies(type, id)[0] || null; }
 
 // the system that holds a station (by the station's id), or null: you always wake docked at G.lastDock, so this is where a death or a load puts G.system

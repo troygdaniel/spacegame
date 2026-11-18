@@ -3,7 +3,7 @@
 // group nearest first, with the distance and a small icon of what it is:
 //   MISSION              what the open call wants: a body here, or the system it is in
 //   STATIONS             stations and outposts
-//   PLANETS AND BELTS
+//   SUN, PLANETS AND BELTS
 //   SIGNALS              salvage sites and signals you have found
 //   GATES AND JUMPS      the gate, then every charted system the ship can reach from here (light years, and the fuel the jump burns)
 // N opens it with the keys on it: W S (or the arrows) choose, Enter sets the row as the destination, Enter again on that row goes there. X clears
@@ -30,8 +30,8 @@ const NAVPANEL = {
   bottom: 584,  // nothing of it below this: the tips band and the key line are there
   peek: 9000,   // ms it stays up when it opened by itself
   every: 250,   // ms between rebuilds of the list
-  groups: [['mission', 'MISSION'], ['stations', 'STATIONS'], ['bodies', 'PLANETS AND BELTS'], ['signals', 'SIGNALS'], ['gates', 'GATES AND JUMPS']],
-  of: { station: 'stations', scenery: 'stations', planet: 'bodies', belt: 'bodies', poi: 'signals', gate: 'gates' },
+  groups: [['mission', 'MISSION'], ['stations', 'STATIONS'], ['bodies', 'SUN, PLANETS AND BELTS'], ['signals', 'SIGNALS'], ['gates', 'GATES AND JUMPS']],
+  of: { star: 'bodies', station: 'stations', scenery: 'stations', planet: 'bodies', belt: 'bodies', poi: 'signals', gate: 'gates' },
   colors: { station: '#38e1ff', scenery: '#9fb6c8', planet: '#ffb454', belt: '#9fb6c8', poi: '#6dff9c', gate: '#c08cff', jump: '#c08cff', mission: '#ffd37a', off: '#5b7a92' }
 };
 
@@ -184,6 +184,7 @@ function navpanelIcon(g, r, x, y, color) {
   g.lineStyle(1.5, c, 1); g.fillStyle(c, 1);
   if (r.type === 'station') { g.strokeCircle(x, y, 6); g.fillCircle(x, y, 2); }
   else if (r.type === 'scenery') g.strokeRect(x - 5, y - 5, 10, 10);
+  else if (r.type === 'star') { g.fillCircle(x, y, 4); for (let i = 0; i < 8; i++) { const q = i * Math.PI / 4; g.lineBetween(x + Math.cos(q) * 6, y + Math.sin(q) * 6, x + Math.cos(q) * 8.5, y + Math.sin(q) * 8.5); } } // a sun: a disc with rays
   else if (r.type === 'planet') g.fillCircle(x, y, 6);
   else if (r.type === 'belt') { g.fillCircle(x - 5, y + 2, 2); g.fillCircle(x, y - 3, 2.5); g.fillCircle(x + 5, y + 3, 1.8); }
   else if (r.type === 'poi') g.strokeTriangle(x, y - 6, x + 6, y + 5, x - 6, y + 5);
