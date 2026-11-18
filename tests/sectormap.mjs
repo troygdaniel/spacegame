@@ -20,7 +20,8 @@ console.log('the view');
 {
   const ship = { x: body('halcyon-station').x + 120, y: body('halcyon-station').y }, kep = body('kepler-4b');
   const v = view([ship, kep]);
-  check('at launch with Kepler-4b as the objective the view is local: 9000 px, a quarter of the system', v.size === 9000 && WS === 36000, JSON.stringify(v));
+  const MIN = J('sysAt(9000)'); // the smallest local view: 9000 px of the data, spread out with the system (src/data_systems.js SYSTEM_SCALE)
+  check('at launch with Kepler-4b as the objective the view is local: a quarter of the system across', v.size === MIN && WS === J('sysAt(36000)') && MIN * 4 === WS, JSON.stringify(v));
   check('it holds the ship and the objective, each well inside', [ship, kep].every(p => p.x > v.x + v.size * 0.1 && p.x < v.x + v.size * 0.9 && p.y >= v.y && p.y < v.y + v.size * 0.9), JSON.stringify(v));
   check('it never leaves the system', v.x >= 0 && v.y >= 0 && v.x + v.size <= WS && v.y + v.size <= WS);
   const px = p => [(p.x - v.x) * 560 / v.size, (p.y - v.y) * 560 / v.size];
@@ -30,8 +31,8 @@ console.log('the view');
   check('Z: the whole system', JSON.stringify(view([ship, kep], true)) === JSON.stringify({ x: 0, y: 0, size: WS }));
   check('an objective across the system (Tern) makes it the whole system by itself', view([ship, body('tern')]).size === WS);
   const mid = view([ship, body('kepler-4c')]);
-  check('one in between (Kepler-4c) gets a view in between that holds both', mid.size > 9000 && mid.size < WS && [ship, body('kepler-4c')].every(p => p.x >= mid.x && p.x <= mid.x + mid.size && p.y >= mid.y && p.y <= mid.y + mid.size), JSON.stringify(mid));
-  check('a ship in a corner: the view stops at the edge of the system', JSON.stringify(view([{ x: 100, y: 35900 }])) === JSON.stringify({ x: 0, y: WS - 9000, size: 9000 }));
+  check('one in between (Kepler-4c) gets a view in between that holds both', mid.size > MIN && mid.size < WS && [ship, body('kepler-4c')].every(p => p.x >= mid.x && p.x <= mid.x + mid.size && p.y >= mid.y && p.y <= mid.y + mid.size), JSON.stringify(mid));
+  check('a ship in a corner: the view stops at the edge of the system', JSON.stringify(view([{ x: 100, y: WS - 100 }])) === JSON.stringify({ x: 0, y: WS - MIN, size: MIN }));
   check('nothing to hold (or a broken point): the whole system', view([]).size === WS && view([null, { x: NaN, y: 1 }]).size === WS);
 }
 

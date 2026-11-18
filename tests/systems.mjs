@@ -45,8 +45,8 @@ console.log('the design table');
   check('eight systems, Halcyon first', w.j('Object.keys(SYSTEMS)').join() === IDS.join());
   DESIGN.forEach(([id, name, kind, ly, danger, traffic, hasStation]) => {
     const s = w.j(`SYSTEMS.${id}`), st = s.bodies.filter(b => b.type === 'station');
-    check(`${id}: ${name}, ${kind}, at ${ly.join(', ')} ly, danger ${danger}, traffic ${traffic}, 36000 px`,
-      s.name === name && s.kind === kind && s.ly.join() === ly.join() && s.danger === danger && s.traffic === traffic && s.size === 36000, JSON.stringify([s.name, s.kind, s.ly, s.danger, s.traffic, s.size]));
+    check(`${id}: ${name}, ${kind}, at ${ly.join(', ')} ly, danger ${danger}, traffic ${traffic}, 36000 px in the data (times SYSTEM_SCALE in the game)`,
+      s.name === name && s.kind === kind && s.ly.join() === ly.join() && s.danger === danger && s.traffic === traffic && s.size === 36000 * w.j('SYSTEM_SCALE') && w.j('SYSTEM_SCALE') === 3, JSON.stringify([s.name, s.kind, s.ly, s.danger, s.traffic, s.size]));
     check(`${id}: ${hasStation ? 'one station' : 'no station'}`, st.length === (hasStation ? 1 : 0));
   });
   check('an id of the game that nothing else knows still falls back to Halcyon', w.run(`sysDef('nowhere') === SYSTEMS.halcyon`));
@@ -174,7 +174,7 @@ try {
       return { sys: G.system, ws: s.WS, nowhere: !!s.station.nowhere, planetNowhere: !!s.planet.nowhere, planetKey: s.planet.texture && s.planet.texture.key, planetScale: s.planet.scaleX, canLand: s.canLand,
         tint: s.bgLayers.map(l => l.tintTopLeft), far, rocks: s.ast.rocks.getChildren().length, want: belts.reduce((a, b) => a + b.rocks, 0), sites: sites.length,
         police: s.tr.police.length, civCap: s.tr.cap, trafficOff: !!s.tr.off, pt, shipOk: s.ship.x > 0 && s.ship.x < s.WS && s.ship.y > 0 && s.ship.y < s.WS, arrive: G.system === sys.id }; })()`);
-    check(`${id}: you arrive in ${name}, a 36000 px world`, d.sys === id && d.ws === 36000 && d.shipOk);
+    check(`${id}: you arrive in ${name}, a 108000 px world (36000 in the data, times SYSTEM_SCALE)`, d.sys === id && d.ws === await J('sysAt(36000)') && d.shipOk);
     check(`${id}: ${hasStation ? 'the station is there' : 'no station: nothing to dock at'}`, d.nowhere === !hasStation);
     const pl = await J(`sysBody('planet')`);
     check(`${id}: the planet is drawn from its kind and seed${id === 'halcyon' ? ' (Kepler-4b keeps its own picture)' : ''}`, !d.planetNowhere && (id === 'halcyon' ? d.planetKey === 'planet' : d.planetKey === 'planet-' + pl.kind + '-' + pl.seed && Math.abs(d.planetScale - pl.r / (pl.kind === 'ringed' ? 206 : 300)) < 1e-6), JSON.stringify([d.planetKey, pl]));

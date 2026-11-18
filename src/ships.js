@@ -23,7 +23,7 @@ const SHIPS = {
   flame: { ship: CYAN, police: 0x7fb8ff, raider: 0xff6b8a, drone: RED, gunship: 0xff8c3a, reaver: 0xff2a4a, freighter: AMBER, civilian: 0xdfefff },
   ribbonMs: 420, shieldMs: 450, flashMs: 70, // shieldMs matches HIT_IRON (enemies.js): the hex shield shows exactly how long you cannot be hurt again
   // bounds for the ribbon (card space-game-bug-ribbon-zero-length-quad): a real ribbon line is under 12 px wide and a frame moves a nozzle under 100 px
-  // (cruise, 6000 px/s: a slower frame may move it further, so a jump is judged against 7000 px/s times the time since the last point, never under ribJump). Playtest 2 saw a tan rectangle 200 x 180 px ending at the nozzle and a full-height bar through the ship, both one stroke of
+  // (cruise, 8000 px/s: a slower frame may move it further, so a jump is judged against 9500 px/s times the time since the last point, never under ribJump). Playtest 2 saw a tan rectangle 200 x 180 px ending at the nozzle and a full-height bar through the ship, both one stroke of
   // the ships layer with a width or length far outside that, cause not found. Anything outside these bounds is dropped, and the first time it happens
   // of each kind a console.warn names it (SHIPS.guard keeps the count and the last values for a bug report).
   ribMaxW: 24, ribJump: 220, guard: { n: 0, last: null, seen: {} }
@@ -311,7 +311,7 @@ function shipsOne(s, g, o, key, th, frac, time, dt, color, boost) {
     // ribbon: the last 420 ms of nozzle positions, fading and thinning toward the tail
     const rib = o.ribs[i] || (o.ribs[i] = []);
     const last = rib[rib.length - 1];
-    if (last && Math.hypot(x - last.x, y - last.y) > Math.max(SHIPS.ribJump, 7000 * Math.max(0, time - last.t) / 1000)) { shipsGuard('jump', Math.round(Math.hypot(x - last.x, y - last.y)) + ' px'); rib.length = 0; } // a teleport (scene restart, launch, setPosition), not flight: a ribbon across the gap would be a bar through the screen
+    if (last && Math.hypot(x - last.x, y - last.y) > Math.max(SHIPS.ribJump, 9500 * Math.max(0, time - last.t) / 1000)) { shipsGuard('jump', Math.round(Math.hypot(x - last.x, y - last.y)) + ' px'); rib.length = 0; } // a teleport (scene restart, launch, setPosition), not flight: a ribbon across the gap would be a bar through the screen
     while (rib.length && rib[rib.length - 1].t > time) { shipsGuard('time', Math.round(rib[rib.length - 1].t - time) + ' ms ahead'); rib.pop(); } // the clock never runs backwards for a ribbon
     if (th > 0.05 || (o.body && o.body.speed > 60)) {
       const w = (2 + 4 * th) * size * sc * boost;

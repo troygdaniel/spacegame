@@ -1,18 +1,19 @@
 // ---------- Cruise: fast travel inside one star system (docs/UNIVERSE.md 2.2) ----------
 // N opens the nav list: every body you know of, nearest first, with its distance and the cruise time to it. Enter picks one as your
 // target (the amber objective arrow points at it, the radar arrow stays on the mission). C engages cruise toward the target: the ship turns
-// by itself, speeds up to 6000 px/s and slows down so it arrives about 900 px out at under 150 px/s, then drops back to local flight.
+// by itself, speeds up to 8000 px/s (6000 until the systems were spread out 3 times, card space-game-system-distances: the longest
+// trip in a system now takes about twice as long as it did, not three times) and slows down so it arrives about 900 px out at under 150 px/s, then drops back to local flight.
 // A and D nudge the heading, S cancels. Cruise costs no fuel and does nothing else: no shooting, no docking. The short legs and the last
 // mile are the autopilot's (src/autopilot.js: P in the list or with a target, or Enter on the Tab map); it uses cruise for the long middle.
 //   space.js   calls cruiseSetup(this) and cruiseFarBodies(this) in create(), cruiseFrame(this, time, dt) first thing in update()
 //              (it returns 'cruise' while the ship flies itself, 'nav' while the list is open, '' otherwise) and tests this.cruising
-//              where a 6000 px/s ship must not be hit or spawn pirates
+//              where a ship at cruise speed must not be hit or spawn pirates
 //   hud.js     draws s.cr.target as the objective, shows the speed in km/s and dims the radar while s.cruising
 //   data       the far bodies it draws are in src/data_systems.js (planets with a kind and seed, scenery with a look)
 //   the look   streaks, the cyan vignette, zoom 0.85 and the CRUISE readout (cruiseLook); amber bracket corners on the nav target that tighten
 //              as the ship closes in, in cruise and after the drop-out (cruiseBrackets); a soft white flash and a low thud when cruise drops out (cruiseFlash, SFX.cruiseOff)
 const CRUISE = {
-  top: 6000, accel: 4000, stop: 900, brake: 3, dropSpeed: 150, // px/s, px/s2, px from the body, 1/s (limit = brake x distance left), px/s
+  top: 8000, accel: 4000, stop: 900, brake: 3, dropSpeed: 150, // px/s, px/s2, px from the body, 1/s (limit = brake x distance left), px/s
   turn: 0.006, nudgeMax: 0.5, nudgeRate: 0.0014,                // auto-steer rad per ms, how far A and D can pull the heading (rad), rad per ms held
   lockMass: 2500, lockHostile: 1500, abortHostile: 1100,        // px: no cruise this close to a station or planet, or to a hostile; a hostile this close ends it
   zoom: 0.85, minLeg: 1200                                      // camera zoom in cruise; a target within stop + minLeg is just flown to
@@ -168,7 +169,7 @@ function cruiseStep(s, time, dt) {
   const want = Math.atan2(dy, dx) + cr.nudge;
   ship.rotation = Phaser.Math.Angle.RotateTo(ship.rotation, want, CRUISE.turn * dt);
   const aligned = Math.abs(Phaser.Math.Angle.Wrap(want - ship.rotation)) < 0.45;
-  // the speed limit is what stops you flying through a planet: 3 x the distance left after the 900 px stop, never above 6000
+  // the speed limit is what stops you flying through a planet: 3 x the distance left after the 900 px stop (the star: off its rim, cruiseStop), never above CRUISE.top
   const limit = cr.cancel ? 0 : Math.min(CRUISE.top, CRUISE.brake * Math.max(0, dist - cruiseStop(t)));
   if (cr.speed > limit) cr.speed = Math.max(limit, cr.speed - (cr.cancel ? 12000 : 40000) * dts);
   else if (aligned) cr.speed = Math.min(limit, cr.speed + CRUISE.accel * dts);
@@ -189,7 +190,7 @@ function cruiseFlash(s, why) {
 // the target's bracket corners (amber, the colour of the thing to do) on the nav target, while it is on screen: in cruise and after the drop-out,
 // until you arrive (the target clears itself 500 px from its rim). Wide while it is far, tightening onto the body as the ship closes in,
 // so the arrival has something to land on. They live in the world, on the target, in world units: the camera scales and moves them, so they
-// never lag a 6000 px/s ship. The drop-out is 900 px out, just past the edge of a 0.85 zoom screen, so the corners are never under 150 px:
+// never lag a ship at cruise speed. The drop-out is 900 px out, just past the edge of a 0.85 zoom screen, so the corners are never under 150 px:
 // a small outpost still shows its two near corners. cr.brInfo keeps what was drawn (tests read it).
 function cruiseBracketHalf(t, d, z) { // screen px
   const body = Math.max((t.r || 0) * z + 30, 150);

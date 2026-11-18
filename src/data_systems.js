@@ -148,3 +148,22 @@ const SYSTEMS = {
     ]
   }
 };
+
+// ---------- The scale of a system (card space-game-system-distances) ----------
+// Troy, 17 Nov 2026: places are too close together. Everything above, and every file in content/systems, is written in the old units; SYSTEM_SCALE spreads it
+// out. sysScale(def) multiplies where things ARE (the world's size, the star, each body's x and y) and leaves how BIG they are alone (a planet's or a belt's r,
+// a gate's ring, labelDy), so flying by hand near a station, the fight and the dock are as they were and only the space between places grows.
+// It is applied once to each row: here to SYSTEMS, in worldFromFiles (src/contenttables.js) to a system read from the files, and in makeSystem (src/universe.js)
+// to a generated one. So every position the game reads is already scaled, and a test that pins a position multiplies the authored number by SYSTEM_SCALE.
+// sysAt(n) is that sum for a number written in the old units (a distance from the data, a spot beside a body).
+const SYSTEM_SCALE = 3;
+const sysAt = n => Math.round(n * SYSTEM_SCALE);
+function sysScale(def) {
+  if (!def || def.scaled) return def;
+  if (typeof def.size === 'number') def.size = sysAt(def.size);
+  if (def.star) { if (typeof def.star.x === 'number') def.star.x = sysAt(def.star.x); if (typeof def.star.y === 'number') def.star.y = sysAt(def.star.y); }
+  (def.bodies || []).forEach(b => { if (typeof b.x === 'number') b.x = sysAt(b.x); if (typeof b.y === 'number') b.y = sysAt(b.y); });
+  Object.defineProperty(def, 'scaled', { value: SYSTEM_SCALE, enumerable: false }); // not a field of the row: the files have no such key
+  return def;
+}
+Object.keys(SYSTEMS).forEach(id => sysScale(SYSTEMS[id]));

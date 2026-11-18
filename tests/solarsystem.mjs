@@ -24,12 +24,12 @@ for (const id of ids) {
   const inside = orb.filter(o => o.type !== 'star' && o.type !== 'poi' && o.r < J(`sysStar('${id}').r`) + o.br);
   check(`${id}: no station, planet, belt or gate lies inside the star`, inside.length === 0, JSON.stringify(inside));
 }
-check('Halcyon has its sun in the middle of the system: Halcyon Sun, a yellow star', J(`(() => { const s = sysStar('halcyon'); return [s.name, s.x, s.y, s.star, s.r]; })()`).join() === 'Halcyon Sun,18000,18000,G,900');
+check('Halcyon has its sun in the middle of the system: Halcyon Sun, a yellow star', J(`(() => { const s = sysStar('halcyon'); return [s.name, s.x === sysAt(18000), s.y === sysAt(18000), s.x === SYSTEMS.halcyon.size / 2, s.star, s.r]; })()`).join() === 'Halcyon Sun,true,true,true,G,900');
 check('a later angle keeps a body on its ring: a quarter turn of the station is as far from the star', J(`(() => { const b = sysBody('station', 'halcyon'), c = sysStar('halcyon'), p = sysOrbitAt(b, Math.PI / 2, 'halcyon'); return Math.abs(Math.hypot(p.x - c.x, p.y - c.y) - sysOrbit(b, 'halcyon').r) < 1e-6 && Math.hypot(p.x - b.x, p.y - b.y) > 1000; })()`));
 check('deep space (a pull-out) has no star', J(`(() => { G.deep = { from: 'halcyon' }; const r = [sysStar(), sysBodies('star').length]; G.deep = null; return r; })()`).join() === ',0');
 
 // ---- a destination: the nav list, the nav panel, cruise ----
-g.run(`G.system = 'halcyon'; var __s = { ship: { x: 4250, y: 4000 }, cr: { target: null } };`);
+g.run(`G.system = 'halcyon'; var __s = { ship: { x: sysBody('station').x + 250, y: sysBody('station').y }, cr: { target: null } };`);
 const known = J(`cruiseKnown(__s).map(b => [b.name, b.type, Math.round(b.r), Math.round(b.dist)])`);
 const sun = known.find(k => k[1] === 'star');
 check('the nav list has the star, with its radius and its distance', !!sun && sun[0] === 'Halcyon Sun' && sun[2] === 900 && sun[3] > 15000, JSON.stringify(sun));
@@ -43,7 +43,7 @@ const sunRow = rows.find(r => r[2] === 'star');
 check('the nav panel has a row for the star, with the planets and belts', !!sunRow && sunRow[0] === 'bodies' && sunRow[1] === 'Halcyon Sun', JSON.stringify(rows.filter(r => r[0] === 'bodies')));
 check('that group says so in its heading', J(`NAVPANEL.groups.find(g => g[0] === 'bodies')[1]`) === 'SUN, PLANETS AND BELTS');
 check('every other system lists its star too', ids.every(id => J(`(() => { G.system = '${id}'; const k = cruiseKnown({ ship: { x: 0, y: 0 } }); G.system = 'halcyon'; return k.filter(b => b.type === 'star').length; })()`) === 1));
-check('the Overview list would show it as a body named STAR', J(`overviewRows(cruiseKnown(__s).map(b => ({ id: b.id, name: b.name, kind: b.type, x: b.x, y: b.y })), { x: 4250, y: 4000 }).find(r => r.kind === 'star').label`) === 'STAR');
+check('the Overview list would show it as a body named STAR', J(`overviewRows(cruiseKnown(__s).map(b => ({ id: b.id, name: b.name, kind: b.type, x: b.x, y: b.y })), { x: 0, y: 0 }).find(r => r.kind === 'star').label`) === 'STAR');
 
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `SOLARSYSTEM FAIL (${failed} of ${n})` : `SOLARSYSTEM PASS (${n} checks)`);

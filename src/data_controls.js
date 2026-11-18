@@ -11,7 +11,9 @@
 const CONTROLS = [
   { id: 'station', title: 'STATION', scene: 'Station', rows: [
     { k: ['W', 'A', 'S', 'D'], t: 'Walk (the arrow keys work too)' },
-    { k: ['1-6'], t: 'Go straight to a spot (the number on the floor beside it)' },
+    { k: ['1-6'], t: 'Station menu: pick a row, you go there and it opens' },
+    { k: ['W', 'S', 'Enter'], t: 'Station menu: choose a row, open it (or click it)' },
+    { k: ['N'], t: 'Menu keys off, so W A S D walk; N again for the menu' },
     { k: ['E'], t: 'Use the terminal, repair bay or ship' },
     { k: ['1-6'], t: 'Buy a part, with the shop open' },
     { k: ['T'], t: 'Chat with someone in the bar (needs a chat key)' },

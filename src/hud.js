@@ -629,7 +629,8 @@ function hudTargets(h, s, now) {
   }
 }
 
-// ---- Space: the target panel of the flight assist (src/assist.js; card space-game-assist-hud). Under the radar while the assist is on and
+// ---- Space: what the flight assist says about its target (src/assist.js; card space-game-assist-hud; no panel of its own since card
+// space-game-assist-overview-overlap). Was: under the radar while the assist is on and
 // there is a target: its name, the range, how fast you close on it, the order in force, and one key cap per command. The commands come from
 // assistState().keys, so a mode another file adds (Orbit, Match speed) gets its key here by itself. ----
 // what the panel says, with no drawing in it (tests/hudassist.mjs reads it in plain Node); null when there is nothing to show
@@ -649,32 +650,11 @@ function hudAssistModel(s) {
     keys: st.keys.filter(k => k.cap)
   };
 }
+// The panel itself is gone (Troy, 17 Nov 2026: the orders live in the Overview list, src/overview.js, on the target's row). What is left
+// here: with the Overview hidden the assist's own one quiet line says the order in force (src/assist.js assistRead); with it up, the
+// list says it, so the line is off. hudAssistModel above stays for a HUD that wants the same words.
 function hudAssist(h, s) {
-  const m = hudAssistModel(s);
-  if (typeof ASSIST !== 'undefined') ASSIST.readout = !m; // the panel says what the assist's own line says; with no target that line stays
-  if (!m) return;
-  const g = h.g, w = 248, x = W - w - 20, y = 262, rows = Math.ceil(m.keys.length / 2), ht = 120 + rows * 22, live = !!m.mode;
-  hudPanel(g, x, y, w, ht, 12, 0.82, live ? CYAN : HUD_LINE); hudSpine(g, x, y, ht, live ? CYAN : HUD_LINE);
-  hudPut(h, 'as0', x + 18, y + 16, 'TARGET', { size: HT.tag, color: HUD_DIM, spacing: 2 });
-  hudPut(h, 'as1', x + w - 34, y + 16, 'ASSIST', { size: HT.tag, color: HUD_DIM, spacing: 2, ox: 1 }); hudKeycap(h, 'asz', x + w - 20, y + 16, 'Z');
-  hudPut(h, 'as2', x + 18, y + 37, m.name, { size: HT.head, bold: true, color: '#e8f8ff' });
-  const cell = (id, cx, label, num, unit, color) => {
-    hudPut(h, id + 'l', cx, y + 58, label, { size: HT.tag, color: HUD_DIM, spacing: 2 });
-    const t = hudPut(h, id + 'n', cx, y + 77, num, { size: HT.num, bold: true, color });
-    if (unit) hudPut(h, id + 'u', cx + t.width + 5, y + 81, unit, { size: HT.tag, color: HUD_DIM });
-  };
-  cell('asr', x + 18, 'RANGE', m.km, 'KM', '#9fe9ff');
-  cell('asc', x + w / 2 + 8, m.relLabel, String(m.rel), '', m.relLabel === 'OPENING' ? '#ffb454' : '#9fe9ff');
-  g.lineStyle(1, HUD_LINE, 0.6); g.lineBetween(x + 16, y + 94, x + w - 12, y + 94);
-  hudPut(h, 'aso', x + 18, y + 107, m.order, { size: HT.label, bold: live, color: live ? '#9fe9ff' : HUD_DIM, spacing: 1 });
-  if (m.status) hudPut(h, 'ass', x + w - 14, y + 107, m.status, { size: HT.label, bold: true, color: m.status === 'BRAKE' || m.status === 'BACK OFF' ? '#ffb454' : '#6dff9c', ox: 1 });
-  m.keys.forEach((k, i) => { // one cap per command, two to a row; the order in force is lit
-    const cx = x + 26 + (i % 2) * (w / 2 - 14), cy = y + 128 + Math.floor(i / 2) * 22, on = k.id === m.mode;
-    if (on) { g.fillStyle(CYAN, 0.28); g.fillRoundedRect(cx - 8, cy - 8, 16, 16, 3); }
-    hudKeycap(h, 'ak' + i, cx, cy, k.cap);
-    hudPut(h, 'al' + i, cx + 14, cy + 1, k.label, { size: HT.label, bold: on, color: on ? '#e8f8ff' : '#9fe9ff' });
-  });
-  h.zones.push({ x0: x - 8, y0: y - 6, x1: W, y1: y + ht + 8 });
+  if (typeof ASSIST !== 'undefined') ASSIST.readout = !(s && s.ov && s.ov.shown);
 }
 
 // ---- warnings: banners low in the middle, one per live problem, and a red pulse round the screen edge while the hull is
