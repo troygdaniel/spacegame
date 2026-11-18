@@ -24,7 +24,8 @@ const SETTINGS = {
     { id: 'openai', name: 'OPENAI', use: 'NPC chat' },
     { id: 'anthropic', name: 'ANTHROPIC', use: 'NPC chat' }
   ],
-  confirmMs: 4000
+  confirmMs: 4000,
+  dim: 0.78 // the extra dim over the scene behind: with the panel's own 0.55 nine tenths of it is gone
 };
 const settingsMask = k => (k ? '**** ' + String(k).slice(-4) : 'no key'); // a saved key is shown by its last four characters only
 
@@ -41,6 +42,13 @@ class Settings extends Phaser.Scene {
     const { w, h } = SETTINGS;
     this.ui = panel(this, { w, h, title: 'SETTINGS', dim: true, depth: 0 });
     this.box = this.ui.box;
+    // nothing of the scene behind reads through (the blind critic, picture 10: LONG HAUL and PRESS ANY KEY of the title ghosted through the
+    // glass, and the title's key line sat half under the bottom edge). A second, darker dim over the whole screen, and a solid back in the
+    // panel's own shape (its glass is 97% and the title's letters glow white)
+    const back = this.add.graphics(), cut = 16, x0 = -w / 2, y0 = -h / 2;
+    back.fillStyle(0x02050c, SETTINGS.dim); back.fillRect(-W, -H, W * 2, H * 2);
+    back.fillStyle(HUD_BG, 1); back.beginPath(); back.moveTo(x0, y0); back.lineTo(x0 + w - cut, y0); back.lineTo(x0 + w, y0 + cut); back.lineTo(x0 + w, y0 + h); back.lineTo(x0 + cut, y0 + h); back.lineTo(x0, y0 + h - cut); back.closePath(); back.fillPath();
+    this.box.addAt(back, 1); this.back = back; // above the panel's own dim (which takes the clicks), under its glass
     this.bx = -w / 2 + SETTINGS.railW + 24; this.by = -h / 2 + 58; this.bw = w / 2 - 24 - this.bx; // the body: where a section draws
     this.rail = this.add.graphics(); this.box.add(this.rail);
     this.railItems = SETTINGS.sections.map(([id, name], i) => {
@@ -152,9 +160,11 @@ class Settings extends Phaser.Scene {
     s.bar.clear(); hudBar(s.bar, bx + 52, by + 29, 404, 18, G.muted ? 0 : G.volume, G.muted ? 0x5b7a92 : CYAN, 20);
     s.pct.setText(G.muted ? 'MUTED' : Math.round(G.volume * 100) + '%').setColor(G.muted ? '#ff4d6d' : '#ffd37a');
     s.mute.set(G.muted ? 'Sound: MUTED' : 'Sound: ON').color(G.muted ? '#ff4d6d' : '#6dff9c').mark(!G.muted);
-    s.voiceOn.set(VOICE.on ? 'Ship voice: ON' : 'Ship voice: OFF').color(VOICE.on ? '#6dff9c' : '#8fb4c9').mark(VOICE.on);
     const st = voiceStatus();
-    s.voiceStat.setText(st === 'NO KEY' ? 'No Deepgram key yet: the game is silent (add it under Keys).' : st === 'KEY REJECTED' ? 'Deepgram rejected the key (check it under Keys).' : st === 'ON' ? 'Speaking.' : 'Off.')
+    // the button says what the player will hear, not only the switch: on with no key (or a rejected one) is not ON, it is waiting for a key
+    const waits = VOICE.on && st !== 'ON';
+    s.voiceOn.set(!VOICE.on ? 'Ship voice: OFF' : waits ? 'Ship voice: NEEDS KEY' : 'Ship voice: ON').color(!VOICE.on ? '#8fb4c9' : waits ? '#ffb454' : '#6dff9c').mark(VOICE.on && !waits);
+    s.voiceStat.setText(st === 'NO KEY' ? 'No Deepgram key yet: the ship does not speak until you add one under Keys. The sound effects play.' : st === 'KEY REJECTED' ? 'Deepgram rejected the key (check it under Keys).' : st === 'ON' ? 'Speaking.' : 'Off.')
       .setColor(st === 'ON' ? '#6dff9c' : st === 'KEY REJECTED' ? '#ff4d6d' : '#8fb4c9');
     const c = VOICE_CHOICES.find(x => x[0] === VOICE.voice) || VOICE_CHOICES[0];
     s.voiceName.setText(c[1]); s.voiceDesc.setText(c[2]);
@@ -206,7 +216,7 @@ class Settings extends Phaser.Scene {
     this.slots.counter = this.txt(bx + bw, my, '', 12, '#5b7a92', { ox: 1 });
     this.slots.status = this.txt(bx, my + 40, '', 14, '#9fe9ff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 3 } });
     this.keysRefresh();
-    this.say(!VOICE.key && !CHAT.keys.openai && !CHAT.keys.anthropic ? 'No keys yet: the game is silent and the characters keep their scripted lines.' : 'Keys are saved in this browser. Test asks the provider once, when you press it.');
+    this.say(!VOICE.key && !CHAT.keys.openai && !CHAT.keys.anthropic ? 'No keys yet: the ship does not speak and the characters keep their scripted lines. The sound effects play.' : 'Keys are saved in this browser. Test asks the provider once, when you press it.');
   }
   keysRefresh() {
     const s = this.slots; if (!s.chatOn) return;
