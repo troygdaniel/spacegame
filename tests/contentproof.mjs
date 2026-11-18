@@ -166,7 +166,14 @@ try {
   same('the other calls: escort, patrol and bounty (title, place, reward, count, offer, objective lines, progress, checklist, the bounty unlock)', A.snap.calls, B.snap.calls);
   same('the six characters: look, place, voice, persona, lines, when they are in the bar, and what each says in 2304 situations', A.snap.npcs, B.snap.npcs);
   check('the keeper of the other bars says the dock\'s own bar lines: the shipped files give Halcyon\'s, an empty pack gives the one fallback line', A.snap.keeper.barkeep.length >= 1 && !A.snap.keeper.barkeep.includes('Quiet tonight, pilot.') && B.snap.keeper.barkeep.join('|') === 'Quiet tonight, pilot.', JSON.stringify([A.snap.keeper, B.snap.keeper]));
-  same('the interface words: every help line, scene tip and toast, as the game says them', A.snap.ui, B.snap.ui);
+  // Thirteen rows of UI_TEXT have no default in the code (the default is empty) on purpose, so there is nothing for the file to drift from: the address and the words of
+  // Settings > Keys (space-game-key-links: a provider moving its page is a text edit, so no address is in the code) and the notes of the push-to-talk row (listen.*).
+  // The shipped file must give each of them text; every other word must equal the code's. A row that has lost its default by accident is not in this list and fails.
+  const FILE_ONLY = ['keys.steps', 'keys.deepgram.use', 'keys.deepgram.cost', 'keys.deepgram.url', 'keys.openai.use', 'keys.openai.cost', 'keys.openai.url', 'keys.anthropic.use', 'keys.anthropic.cost', 'keys.anthropic.url', 'listen.use', 'listen.cost', 'listen.hint'];
+  const uiKeys = Object.keys(B.snap.ui.raw), fileOnly = uiKeys.filter(k => B.snap.ui.raw[k] === '' && A.snap.ui.raw[k] !== '');
+  const strip = u => ({ help: u.help, tips: u.tips, raw: Object.fromEntries(Object.entries(u.raw).filter(([k]) => !FILE_ONLY.includes(k))), said: u.said.filter((_, i) => !FILE_ONLY.includes(uiKeys[i])) });
+  check('the words only a file gives are exactly the ' + FILE_ONLY.length + ' listed (no default in the code, text in the shipped file), and the code has no text of its own for them', JSON.stringify(fileOnly.slice().sort()) === JSON.stringify(FILE_ONLY.slice().sort()) && FILE_ONLY.every(k => uiKeys.includes(k) && B.snap.ui.raw[k] === ''), JSON.stringify(fileOnly));
+  same('the interface words: every help line, scene tip and toast, as the game says them (the ' + FILE_ONLY.length + ' file-only rows aside)', strip(A.snap.ui), strip(B.snap.ui));
   check('and a toast says its numbers: the delivery pays 500 and the patrol toast counts 2 of 5', A.snap.ui.said.includes('Colonist delivered safely. +500 cr') && A.snap.ui.said.includes('Wanted pirate down  2 of 5'), JSON.stringify(A.snap.ui.said.slice(0, 6)));
   same('the dock: the station name, the ore price and the repair price', A.snap.station, B.snap.station);
   check('and they are the prices the game has always had: 20 an ore, half a credit a point of hull', B.snap.station.ore === 20 && B.snap.station.repair === 0.5 && B.snap.station.name === 'Halcyon Station', JSON.stringify(B.snap.station));
@@ -254,8 +261,7 @@ try {
   put('ships/gunship.md', '---\ntype: ship\nname: Gunship\nside: player\nhp: 1\n---\nA pirate cannot be a player ship.\n');
   put('ships/kite.md', '---\ntype: ship\nname: Kite\nhull: 70\n---\nNo pirate called kite.\n');
   put('text/extra.md', '---\ntype: text\n---\n## Strings\n| key | text |\n|---|---|\n| toast.docked | Fine. |\n| help.stationn.1 | A typo in a key refuses the whole file. |\n');
-  put('stations/halcyon-station.md', '---\ntype: station\nname: Halcyon Station\nsystem: kestrel\nrepair: 9\nore: 99\n---\n');
-  put('stations/outpost.md', '---\ntype: station\nname: Outpost\nsystem: halcyon\n---\n');
+  put('stations/halcyon-station.md', '---\ntype: station\nname: Halcyon Station\nsystem: kestrel\nrepair: 1\nore: 99\n---\n'); // (a dock the game has not got is no longer refused: a file may add one, src/contenttables.js, so there is no wrong-pack file for that)
   put('npcs/nobody.md', '---\ntype: npc\nname: NOBODY\n---\nA new character needs a Lines list: without one the file is refused (src/contentadd.js).\n');
   const D = await play(gameWith(join(wrong, 'content')).dir);
   check('the game boots and plays, with no console errors', D.errors.length === 0, D.errors.join(' | '));
@@ -265,11 +271,11 @@ try {
   check('the wrong tier is explained', /weapons-2\.md\|could not be applied \(tier is 1 but the file is called weapons-2, so it must be tier 2\)/.test(said));
   check('a fourth tier and the old v1 name (booster) are refused as parts the game does not have', /engine-4\.md\|the game has no built-in part called "engine-4" and cannot add new ones/.test(said) && /booster-1\.md\|the game has no built-in part called "booster-1"/.test(said));
   check('a call of another kind is explained', /escort\.md\|could not be applied \(kind is "patrol" but the file is called escort, so its kind must be escort\)/.test(said));
-  check('a call of a kind the game does not play yet is refused', /courier-1\.md\|could not be applied \(kind is "courier" but the game plays only rescue, escort, patrol, bounty calls so far/.test(said), said);
+  check('a call of a kind the game does not play yet is refused', /courier-1\.md\|could not be applied \(kind is "courier" but a pack can add only rescue, escort, patrol, bounty, salvage, survey calls so far/.test(said), said);
   check('a player ship cannot replace a pirate', /gunship\.md\|could not be applied \(side is "player" but gunship is a pirate ship\)/.test(said));
   check('a built-in player ship cannot be changed from a file yet, and a character with no lines is refused', /kite\.md\|could not be applied \(kite is one of the six built-in ships and cannot be changed from a file yet/.test(said) && /nobody\.md\|could not be applied \(a character needs a Lines list with at least one line to say\)\. Skipped the file\./.test(said), said);
   check('a text file with one key the game does not read is refused whole, with a hint', /extra\.md\|could not be applied \(the key "help\.stationn\.1" is not a string the game reads\. Did you mean "help\.station\.1"\?\)/.test(said), said);
-  check('a station in the wrong system is refused, and so is a dock the game has not got in a system it has', /halcyon-station\.md\|could not be applied \(system is "kestrel" but halcyon-station is in halcyon\)/.test(said) && /outpost\.md\|could not be applied \(the game has no built-in station called "outpost" in halcyon and cannot add new ones\)/.test(said), said);
+  check('a station in the wrong system is refused', /halcyon-station\.md\|could not be applied \(system is "kestrel" but halcyon-station is in halcyon\)/.test(said) && !/halcyon-station\.md\|repair is/.test(said), said);
   same('every table is exactly the default', D.snap, B.snap);
   check('docking pays the default 500 cr', D.pay === 500, String(D.pay));
 } catch (e) { check('the proof test ran: ' + e.message, false); } finally {
