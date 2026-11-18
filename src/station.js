@@ -144,7 +144,7 @@ class Station extends Phaser.Scene {
     this.input.keyboard.on('keydown', e => { if (!e.repeat && /^[1-9]$/.test(e.key)) this.menuPick(e.key); }); // a number picks its row of the station menu: go there and open it
     this.menuSetup();
 
-    this.ui = panel(this, { w: 900, h: 480, title: 'MISSION BOARD  -  ' + look.name.toUpperCase(), dim: true }); // src/ui.js
+    this.ui = panel(this, { w: 1160, h: 480, title: 'MISSION BOARD  -  ' + look.name.toUpperCase(), dim: true }); // src/ui.js; 1160 wide: four cards side by side are 1106 px (openPanel: GAP 280, CW 266), and at 900 the outer two hung 100 px out of the panel each side (first look, docs/FIRSTLOOK.md)
     this.panelBox = this.ui.box.setVisible(false); this.boardObjs = [];
 
     if (this.arrive && G.mission === 'rescued') {

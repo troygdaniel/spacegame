@@ -123,8 +123,9 @@ const LOOKS = [
     await t.run(1200); await t.ev(`(() => { ${ST}.openPanel(); return 1; })()`); await t.run(800);
     console.log('        board: ' + await t.ev(`JSON.stringify((() => { const s = ${ST}; return { offered: missionsOffered().map(m => m.id + (typeof jumpReach === 'function' && m.system && m.system !== G.system ? ':' + JSON.stringify(jumpReach(m.system)) : '')), texts: s.boardObjs.filter(o => o.type === 'Text').map(o => o.text.replace(/\\n/g, ' / ')).slice(0, 40) }; })())`));
   }],
-  ['board-low-fuel', '#station', 'Station', async t => { // the same board with an empty tank: whatever is out of reach then is dimmed
-    await t.run(1200); await t.ev(`(() => { if (typeof G.fuel === 'number') G.fuel = 0; ${ST}.openPanel(); return 1; })()`); await t.run(800);
+  ['board-far', '#station', 'Station', async t => { // the last call of the board chosen: the far runs, dimmed when the ship you fly cannot reach them
+    await t.run(1200); await t.ev(`(() => { const s = ${ST}; s.openPanel(); for (let i = 0; i < missionsOffered().length - 1; i++) s.boardKeys({ key: 'ArrowRight' }); return 1; })()`); await t.run(800);
+    console.log('        reach: ' + await t.ev(`JSON.stringify(missionsOffered().map(m => m.id + ' ' + (missionReach(m).ok ? 'ok' : missionReach(m).why)))`) + '; can accept the chosen one: ' + await t.ev(`!!${ST}.canAccept`));
   }],
   ['clear-mass', '#space', 'Space', async t => { // Troy's bug beside Kepler-4b (card space-game-bug-travel-refuses-near-mass): C inside a mass limit flies clear, then cruises
     await t.run(1500);
