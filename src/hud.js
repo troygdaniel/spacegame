@@ -636,11 +636,18 @@ function hudAssistModel(s) {
     keys: st.keys.filter(k => k.cap)
   };
 }
+// where the panel is on the screen for what it says (m: hudAssistModel's answer; null: no panel). The one place its rectangle is worked out:
+// hudAssist draws in it and the Overview list (src/overview.js overviewLayout) starts under it, so the two can never overprint
+function hudAssistRect(m) {
+  if (!m) return null;
+  const w = 248;
+  return { x: W - w - 20, y: 262, w, h: 120 + Math.ceil(m.keys.length / 2) * 22 };
+}
 function hudAssist(h, s) {
   const m = hudAssistModel(s);
   if (typeof ASSIST !== 'undefined') ASSIST.readout = !m; // the panel says what the assist's own line says; with no target that line stays
   if (!m) return;
-  const g = h.g, w = 248, x = W - w - 20, y = 262, rows = Math.ceil(m.keys.length / 2), ht = 120 + rows * 22, live = !!m.mode;
+  const g = h.g, R = hudAssistRect(m), w = R.w, x = R.x, y = R.y, ht = R.h, live = !!m.mode;
   hudPanel(g, x, y, w, ht, 12, 0.82, live ? CYAN : HUD_LINE); hudSpine(g, x, y, ht, live ? CYAN : HUD_LINE);
   hudPut(h, 'as0', x + 18, y + 16, 'TARGET', { size: HT.tag, color: HUD_DIM, spacing: 2 });
   hudPut(h, 'as1', x + w - 34, y + 16, 'ASSIST', { size: HT.tag, color: HUD_DIM, spacing: 2, ox: 1 }); hudKeycap(h, 'asz', x + w - 20, y + 16, 'Z');

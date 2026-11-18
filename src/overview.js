@@ -23,6 +23,13 @@ const OVERVIEW = {
 
 // ---- the list: pure ----
 
+// where the list is on the screen: { x, y, w, h, rows }. assist: the rectangle of the flight assist's target panel (src/hud.js hudAssistRect),
+// or null when that panel is not up.
+function overviewLayout(assist) {
+  const O = OVERVIEW;
+  return { x: O.x, y: O.y, w: O.w, h: O.row * (O.max + 2) + 14, rows: O.max };
+}
+
 // nearest first. range: px to its centre. closing: px/s the range shrinks by (negative: it opens). trend: 'closing', 'opening' or ''.
 function overviewRows(things, me, max) {
   const rows = things.map(t => {
