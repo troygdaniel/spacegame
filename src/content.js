@@ -161,7 +161,8 @@
       folder: 'missions', placeholders: PH_MISSION,
       fields: {
         kind: P(['rescue', 'escort', 'patrol', 'bounty', 'courier', 'haul', 'salvage', 'survey'], true), title: T(40, true), where: T(60),
-        reward: I(0, 1000000, true), count: I(1, 50), unlock: COND, system: R('system')
+        reward: I(0, 1000000, true), count: I(1, 50), unlock: COND, system: R('system'),
+        body: T(40), guards: I(0, 20) // where the call is played: a body id of that system (checked when the file is applied, src/contenttables.js), and the drones that ring it
       },
       sections: {
         offer: { heading: 'Offer', t: 'text', max: 600 },
@@ -169,7 +170,8 @@
         progress: { heading: 'Progress', t: 'text', max: 400 },
         progressRescued: { heading: 'Progress rescued', t: 'text', max: 400 }, // the progress text once the colonist is aboard (rescue calls)
         steps: { heading: 'Steps', t: 'list', max: 80 },
-        failure: { heading: 'Failure', t: 'text', max: 240 }
+        failure: { heading: 'Failure', t: 'text', max: 240 },
+        pickets: { heading: 'Pickets', t: 'table', required: ['x', 'y'], cols: { x: I(0, 200000, true), y: I(0, 200000, true) } } // pirates at fixed places in the call's system, in the units of the system files
       }
     },
     npc: {

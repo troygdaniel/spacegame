@@ -263,7 +263,7 @@ content (the Title screen chip, or **P**): the build cannot know which ids and k
 | `content/missions/escort.md, line 6: unknown field "rewrd". Did you mean "reward"? Ignored.` | a typo in a field name. The game guesses what you meant; fix the spelling |
 | `content/missions/escort.md: reward is required but missing. Skipped the file.` | a required field (marked * in the reference) is not there; here it was the typo above |
 | `content/missions/escort.md, line 6: reward is "lots" but must be a whole number from 0 to 1000000. Skipped the file.` | the value is the wrong kind or out of range; the reference says what each field takes |
-| `content/missions/escort.md, line 8: the description: "{rewrd}" is not a known placeholder here. Did you mean {reward}? Ignored.` | a `{placeholder}` the game does not know (here a typo in the line you added in section 3: `{rewrd}`). The line number is where the description starts, whichever of its lines has the typo |
+| `content/missions/escort.md, line 11: the description: "{rewrd}" is not a known placeholder here. Did you mean {reward}? Ignored.` | a `{placeholder}` the game does not know (here a typo in the line you added in section 3: `{rewrd}`). The line number is where the description starts, whichever of its lines has the typo |
 | `content/missions/escort.md: could not be applied (kind is "rescue" but the file is called escort, so its kind must be escort). Kept the built-in values.` | you copied the template and left `kind: rescue`. A file's `kind` must be its own name |
 | `content/parts/engine-4.md: the game has no built-in part called "engine-4" and cannot add new ones. Skipped the file.` | the id is not one the game knows, and this type (parts, salvage sites, stations) cannot add new ones (section 7). A mission, character, ship or voice file with a new name is added instead |
 | `content/text/words.md: could not be applied (the key "toast.docekd" is not a string the game reads. Did you mean "toast.docked"?). Kept the built-in values.` | a key in a `text/` file that the game does not read (here a typo). The whole file is refused until every key is right |
@@ -326,6 +326,8 @@ Placeholders in its text: `{reward}`, `{count}`, `{progress}`, `{station}`, `{sy
 | `count` | whole number from 1 to 50 | how many (a patrol counts pirates) |
 | `unlock` | a condition (see Conditions) | a condition: the board shows the call once it holds |
 | `system` | the id of a system | the system it belongs to |
+| `body` | text, up to 40 characters |  |
+| `guards` | whole number from 0 to 20 |  |
 
 Under `##` headings (the text before the first heading is the description, up to 600 characters):
 
@@ -337,6 +339,7 @@ Under `##` headings (the text before the first heading is the description, up to
 | `## Progress rescued` | text, up to 400 characters |
 | `## Steps` | a list, one `- item` a line, each up to 80 characters |
 | `## Failure` | text, up to 240 characters |
+| `## Pickets` | a table: `x`* (whole number from 0 to 200000); `y`* (whole number from 0 to 200000) |
 
 #### `npc`  (folder `content/npcs/`)
 
