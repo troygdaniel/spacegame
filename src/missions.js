@@ -159,9 +159,9 @@ function failMission(s, msg) {
 // data is 1, so the Hollow and Lethe, which have no dock to pay anything, change nothing.
 const callPayMult = m => { const s = SYSTEMS[(m && (m.paySystem || m.system)) || 'halcyon']; return s && s.pay > 0 ? s.pay : 1; };
 const callReward = m => Math.round((m.reward | 0) * callPayMult(m));
-function completeMission(s, msg) {
+function completeMission(s, msg, bonus) { // bonus: extra pay on top of the call's reward (the escort's pay by hull), before the system's pay
   const m = missionDef(); if (!m) return;
-  const pay = callReward(m);
+  const pay = callReward(m) + Math.round((bonus | 0) * callPayMult(m));
   G.credits += pay; G.mission = 'none'; G.missionId = null; G.missionProgress = 0;
   beep(660, 0.25, 'triangle', 0.05, 440); toast(s, msg + '  +' + pay + ' cr', '#6dff9c');
 }
@@ -251,7 +251,36 @@ function radarDot(s, x, y, color, r) { hudBlip(s, x, y, color, r); } // the HUD 
 // The escort box (docs/ESCORT.md change 2): a ring of ESCORT.box px around her. Inside it you are covering her: she runs at her cruise speed
 // and a hit costs her half. Outside it she drops to ESCORT.slow and takes it all. Pirates nearby no longer slow her: the fight is on the move.
 // s.mx.covered says which it is this frame (the assist panel's Match speed reads the box from ESCORT.box).
-const ESCORT = { box: 350, cruise: 60, slow: 30, hull: 200, cover: 0.5, shot: 5, ram: 2 };
+// The stakes (change 3): she pays ESCORT.bonus more for a whole hull (in proportion), calls out at half hull and with the gate ESCORT.sight px off, and
+// at the gate she holds still for ESCORT.spinUp ms while ESCORT.lastStand pirates come in from ESCORT.lastOut px. s.mx.spin is the ms left of the spin-up.
+const ESCORT = { box: 350, cruise: 60, slow: 30, hull: 200, cover: 0.5, shot: 5, ram: 2, bonus: 200, sight: 900, spinUp: 8000, lastStand: 3, lastOut: 1100,
+  waves: [0.25, 0.5, 0.75], waveSize: [2, 3, 3], waveOut: 1400, inbound: 240, peel: 4000 };
+// The fight (change 1): nobody waits on the route any more. A wave comes when she is ESCORT.waves of the way there, ESCORT.waveOut px out on her port
+// flank, then starboard, then dead ahead, and she calls it. The first pirate of a wave is its screen: it has no prey and hunts you. The rest go for her,
+// and one you hit drops her and fights you for ESCORT.peel ms (d.distractedUntil, read by pirateAI in src/enemies.js). They fly in at ESCORT.inbound
+// px/s until they are inside their own engage range, then pirateAI flies the fight.
+function escortSend(s, f, x, y, hunt) { // one escort pirate; hunt: it goes for her (else for you)
+  const d = s.spawnDrone(x, y);
+  d.escort = true; d.ambush = true; d.inbound = true; d.lastHp = d.hp; if (hunt) d.prey = f; // ambush: the launch grace and the first-wave cap do not hold it
+  return d;
+}
+function escortWave(s, f, i) {
+  const gate = sysBody('gate'), side = [-1, 1, 0][i % 3], a = Phaser.Math.Angle.Between(f.x, f.y, gate.x, gate.y) + side * 1.2; // y is down, so a turn to the right is starboard
+  const cx = f.x + Math.cos(a) * ESCORT.waveOut, cy = f.y + Math.sin(a) * ESCORT.waveOut, n = ESCORT.waveSize[i] || 2;
+  for (let k = 0; k < n; k++) escortSend(s, f, cx + Phaser.Math.Between(-90, 90), cy + Phaser.Math.Between(-90, 90), k > 0);
+  toast(s, uiText(side < 0 ? 'toast.mule-wave-port' : side > 0 ? 'toast.mule-wave-starboard' : 'toast.mule-wave-ahead'), '#ff8da0'); sfx('tick');
+}
+function escortPirates(s, f, now) { // every frame: who you have pulled off her, and the fly-in
+  s.enemies.getChildren().forEach(e => {
+    if (!e.active || !e.escort) return;
+    if (e.prey && e.hp < e.lastHp) e.distractedUntil = now + ESCORT.peel; // you hit it: it turns on you
+    e.lastHp = e.hp;
+    if (!e.inbound) return;
+    const tg = e.prey && e.prey.active ? e.prey : s.ship;
+    if (Phaser.Math.Distance.Between(e.x, e.y, tg.x, tg.y) < (e.def ? e.def.engage : 900) - 100) { e.inbound = false; return; }
+    s.physics.moveToObject(e, tg, ESCORT.inbound); e.rotation = Phaser.Math.Angle.Between(e.x, e.y, tg.x, tg.y);
+  });
+}
 const escortCover = (s, n) => (s.mx.covered ? n * ESCORT.cover : n); // what a hit of n costs her right now
 function escortRing(s, f) { // drawn every frame: a steady green ring while you cover her, a beating amber one while you do not
   const g = s.mx.ring, t = s.mx.ringText; if (!g) return;
@@ -266,7 +295,8 @@ function escortSetup(s) {
   const st = s.station, gate = sysBody('gate'); // src/universe.js
   const f = s.physics.add.sprite(st.x - 60, st.y + 260, 'freighter').setDepth(4);
   f.body.setCircle(14, 24, 6).setMaxSpeed(ESCORT.cruise); // offset in the 76x40 texture (ships.js)
-  f.hp = ESCORT.hull; f.maxHp = ESCORT.hull; f.rammedAt = 0;
+  f.hp = ESCORT.hull; f.maxHp = ESCORT.hull; f.rammedAt = 0; f.wave = 0;
+  f.route = Math.max(1, Phaser.Math.Distance.Between(f.x, f.y, gate.x, gate.y) - gate.r); // px she has to fly: the waves come by her progress along it
   f.rotation = Phaser.Math.Angle.Between(f.x, f.y, gate.x, gate.y);
   s.mx.freighter = f; s.mx.covered = false;
   s.mx.ring = s.add.graphics().setDepth(3);
@@ -279,17 +309,8 @@ function escortSetup(s) {
 
   s.physics.add.overlap(f, s.eb, (fr, b) => { if (!b.active) return; b.disableBody(true, true); freighterHurt(s, escortCover(s, ESCORT.shot)); });
   s.physics.add.overlap(f, s.enemies, (fr, e) => {
-    if (s.time.now < f.rammedAt) return; f.rammedAt = s.time.now + 1000; e.hp -= 10; freighterHurt(s, escortCover(s, ESCORT.ram));
+    if (s.time.now < f.rammedAt) return; f.rammedAt = s.time.now + 1000; e.hp -= 10; e.lastHp = e.hp; freighterHurt(s, escortCover(s, ESCORT.ram)); // lastHp: bumping her is not you pulling it off her
   });
-  // two ambushes along the route; these drones hunt the MULE, not you
-  const ambush = (frac, n) => {
-    for (let i = 0; i < n; i++) {
-      const d = s.spawnDrone(st.x + (gate.x - st.x) * frac + Phaser.Math.Between(-260, 260),
-                             st.y + (gate.y - st.y) * frac + Phaser.Math.Between(-260, 260));
-      d.prey = f;
-    }
-  };
-  ambush(0.35, 2); ambush(0.7, 3);
   s.time.delayedCall(3600, () => { if (f.active && !s.leaving) toast(s, uiText('toast.mule-leaving'), '#ffd37a'); });
 }
 function freighterHurt(s, n) {
@@ -304,20 +325,41 @@ function freighterHurt(s, n) {
 }
 function escortUpdate(s) {
   const f = s.mx.freighter; if (!f || !f.active) return;
-  const gate = sysBody('gate');
-  if (Phaser.Math.Distance.Between(f.x, f.y, gate.x, gate.y) < gate.r) {
-    s.boom.explode(30, f.x, f.y); f.destroy(); escortRing(s, null);
-    completeMission(s, uiText('toast.mule-arrived')); return;
-  }
+  const gate = sysBody('gate'), now = s.time.now, toGate = Phaser.Math.Distance.Between(f.x, f.y, gate.x, gate.y);
   // the escort box: inside her ring you cover her (cruise speed, half damage); outside it she slows, so you can catch up, and takes it all
   const was = s.mx.covered;
   s.mx.covered = !s.dead && Phaser.Math.Distance.Between(f.x, f.y, s.ship.x, s.ship.y) <= ESCORT.box;
   if (was !== s.mx.covered && s.mx.ringSaid) sfx('tick');
   s.mx.ringSaid = true;
-  s.physics.moveTo(f, gate.x, gate.y, s.mx.covered ? ESCORT.cruise : ESCORT.slow);
-  f.rotation = Phaser.Math.Angle.RotateTo(f.rotation, Phaser.Math.Angle.Between(f.x, f.y, gate.x, gate.y), 0.02);
+  // she talks (docs/ESCORT.md change 3): once each, as toasts
+  if (!f.saidHalf && f.hp <= f.maxHp / 2) { f.saidHalf = true; toast(s, uiText('toast.mule-half'), '#ffb454'); }
+  if (!f.saidGate && toGate < ESCORT.sight) { f.saidGate = true; toast(s, uiText('toast.mule-gate-sight'), '#ffd37a'); }
+  if (f.wave < ESCORT.waves.length && 1 - (toGate - gate.r) / f.route >= ESCORT.waves[f.wave]) escortWave(s, f, f.wave++); // one a frame at most
+  escortPirates(s, f, now);
+  if (toGate < gate.r) {
+    // the last stand: she holds still in the ring while the gate spins up, and the last pirates come for her then
+    if (!f.spinAt) {
+      f.spinAt = now; toast(s, uiText('toast.mule-spinup'), '#ffd37a'); sfx('thrusters');
+      const out = Phaser.Math.Angle.Between(gate.x, gate.y, s.station.x, s.station.y);
+      for (let i = 0; i < ESCORT.lastStand; i++) { const a = out + (i - (ESCORT.lastStand - 1) / 2) * 0.9; escortSend(s, f, f.x + Math.cos(a) * ESCORT.lastOut, f.y + Math.sin(a) * ESCORT.lastOut, true); }
+    }
+    f.body.setVelocity(0, 0);
+    s.mx.spin = Math.max(0, ESCORT.spinUp - (now - f.spinAt)); // ms left; the HUD hint counts it down
+    if (s.mx.spin <= 0) {
+      const bonus = Math.round(ESCORT.bonus * Phaser.Math.Clamp(f.hp / f.maxHp, 0, 1)); // pay by hull: a clean run is worth flying well for
+      s.boom.explode(30, f.x, f.y); f.destroy(); escortRing(s, null);
+      completeMission(s, uiText('toast.mule-arrived'), bonus); return;
+    }
+  } else {
+    s.physics.moveTo(f, gate.x, gate.y, s.mx.covered ? ESCORT.cruise : ESCORT.slow);
+    f.rotation = Phaser.Math.Angle.RotateTo(f.rotation, Phaser.Math.Angle.Between(f.x, f.y, gate.x, gate.y), 0.02);
+  }
   hudMeter(s, 'MULE', f.hp / f.maxHp, s.mx.covered ? 0x6dff9c : AMBER);
   escortRing(s, f);
+  if (f.spinAt) { // the gate winds up: an arc that closes round its ring
+    const g = s.mx.ring, k = 1 - s.mx.spin / ESCORT.spinUp;
+    g.lineStyle(8, 0xffffff, 0.85); g.beginPath(); g.arc(gate.x, gate.y, gate.r + 10, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); g.strokePath();
+  }
   radarDot(s, f.x, f.y, 0xffd37a, 3); radarDot(s, gate.x, gate.y, AMBER, 2);
 }
 function escortTarget(s) {

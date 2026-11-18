@@ -16,6 +16,7 @@
 const HUD_BG = 0x07101c, HUD_OFF = 0x16293d, HUD_LINE = 0x3a566e, HUD_DIM = '#5b7a92', HUD_RANGE = { Space: 2400, Surface: 900 }; // radar range, world units
 const TAU = Math.PI * 2;
 const HT = { tag: 10, label: 11, body: 13, head: 15, num: 22 }; // type scale in px: tags and units, labels, lines of text, panel titles, gauge numbers
+const HUD_PART_OFF = '#86a3b8'; // the strip's label of a part you do not own yet
 const HUD_GEAR = { armor: 'ARM', rapid: 'RPD', booster: 'BST' };                                       // gear abbreviations on the strip
 const HUD_FRAME = { x: 20, y: 148, w: 296 };                                                               // checklist panel (Space, Surface)
 const HUDUI = { mode: 'auto', until: 0, base: null }; // checklist: auto (open until the timer runs out) | open | closed; shared by all scenes
@@ -32,7 +33,7 @@ const HUD_MISSIONS = {
   escort: {
     steps: ['Take the escort call', 'Launch with the MULE', 'Escort the MULE to the gate'],
     cur: (s, key) => key === 'Station' ? 1 : 2,
-    next: (s, key) => key === 'Station' ? 'Board your ship in the hangar' : key === 'Space' ? (s.mx && s.mx.covered ? 'Covered: hold her ring to the gate' : 'Get inside the MULE\'s ring') : 'Return to your ship'
+    next: (s, key) => key === 'Station' ? 'Board your ship in the hangar' : key === 'Space' ? (s.mx && s.mx.spin > 0 ? 'Hold the gate: ' + Math.ceil(s.mx.spin / 1000) + ' s' : s.mx && s.mx.covered ? 'Covered: hold her ring to the gate' : 'Get inside the MULE\'s ring') : 'Return to your ship'
   },
   patrol: {
     steps: ['Take the patrol call', 'Launch from the hangar', () => 'Wanted pirates down  ' + G.missionProgress + '/' + (missionDef().count || 5)],
@@ -284,13 +285,13 @@ function hudStrip(h, now) {
   g.lineStyle(1, CYAN, 0.2); g.lineBetween(596, 17, 596, 33);
   PART_ORDER.forEach((slot, i) => { // the six parts: three letters and three chips each (src/data_parts.js); the autotarget's is red while it is switched off (R)
     const gx = 600 + i * 40, tier = partTier(slot), aimOff = slot === 'aim' && tier && G.aimOff;
-    hudPut(h, 'up' + i, gx, 25, PARTS[slot].short, { size: HT.tag, color: aimOff ? '#ff4d6d' : tier ? '#9fe9ff' : HUD_DIM, spacing: 0 });
+    hudPut(h, 'up' + i, gx, 25, PARTS[slot].short, { size: HT.tag, bold: true, color: aimOff ? '#ff4d6d' : tier ? '#9fe9ff' : HUD_PART_OFF, spacing: 0 }); // bold, and a part you do not own is a readable grey-blue, not the dimmest tag colour (docs/CRITIC.md run 1, findings 7 and 20)
     for (let j = 0; j < 3; j++) { // a pip is a small slanted chip: lit ones have a halo
       const x = gx + 19 + j * 7, p = [[x + 2, 21], [x + 6, 21], [x + 4, 30], [x, 30]];
       if (tier > j) {
         g.fillStyle(CYAN, 0.2); g.fillRect(x - 1, 19, 9, 13);
         g.fillStyle(CYAN, 1); g.beginPath(); g.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.closePath(); g.fillPath();
-      } else { g.lineStyle(1, HUD_LINE, 1); g.beginPath(); g.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.closePath(); g.strokePath(); }
+      } else { g.fillStyle(HUD_LINE, 0.6); g.beginPath(); g.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.closePath(); g.fillPath(); } // an empty slot is a dim solid chip: the 1 px outline it used to be drew as hollow boxes in some frames and as dots in others, and read as missing letters
     }
   });
   // cargo hold: ten cells, amber as they fill, red and beating when it is full (asteroids.js)
@@ -424,6 +425,37 @@ function hudCompact(h, m) {
   h.zones.push({ x0: 410, y0: 0, x1: 870, y1: 82 });
 }
 
+// ---- the orrery: the radar's far view in space (card space-game-radar-orrery; Troy, 17 Nov: the solar system as circles with the sun in the
+// centre, for a reference point). The star is fixed at the centre, every body has a thin circle at its distance from the star and a dot on it
+// where the body is, and you are an arrow on it. All of it is read from the system's data each frame (src/data_systems.js): nothing is pinned,
+// so a system that is spread out or moved draws itself. A system with no star in its data uses its middle; one with no size either (and no
+// bodies) puts you at the centre, so there is always something to see.
+// The radar flips by itself: a hostile within HUD_ORRERY.near px switches it to the close view (the blips of a fight), and it goes back
+// HUD_ORRERY.back ms after the last one left that range. On foot it is always the close view.
+const HUD_ORRERY = { near: 1500, back: 3000, floor: 2000, types: ['station', 'planet', 'gate', 'belt', 'scenery'] }; // floor: the least world px the rim stands for
+// what to draw, with no drawing in it (tests/hudradar.mjs reads it in plain Node): the centre, the scale, the orbit circles and the bodies
+function hudOrreryModel(sys, me, R) {
+  sys = sys || {};
+  const ok = v => typeof v === 'number' && isFinite(v);
+  const bodies = (sys.bodies || []).filter(b => b && HUD_ORRERY.types.includes(b.type) && ok(b.x) && ok(b.y));
+  let c = sys.star && ok(sys.star.x) && ok(sys.star.y) ? { x: sys.star.x, y: sys.star.y } : ok(sys.size) && sys.size > 0 ? { x: sys.size / 2, y: sys.size / 2 } : null;
+  if (!c) c = bodies.length ? { x: bodies.reduce((a, b) => a + b.x, 0) / bodies.length, y: bodies.reduce((a, b) => a + b.y, 0) / bodies.length } : { x: me.x, y: me.y };
+  let far = Math.max(HUD_ORRERY.floor, Math.hypot(me.x - c.x, me.y - c.y));
+  bodies.forEach(b => { far = Math.max(far, Math.hypot(b.x - c.x, b.y - c.y)); });
+  const sc = (R - 8) / far, rings = [];
+  const out = bodies.map(b => {
+    const d = Math.hypot(b.x - c.x, b.y - c.y), r = d * sc;
+    if (r > 4 && !rings.some(q => Math.abs(q - r) < 2.5)) rings.push(r); // bodies at nearly the same distance share a circle
+    return { id: b.id, type: b.type, name: b.name || '', x: b.x, y: b.y, d };
+  });
+  return { c, star: !!(sys.star && ok(sys.star.x)), far, sc, rings, bodies: out, name: sys.name || '' };
+}
+// 'sys' (the orrery) or 'near' (the close blips): near while a hostile is inside the range and for a few seconds after
+function hudRadarMode(h, near, now) {
+  if (near < HUD_ORRERY.near) h.radarHot = now;
+  return h.radarHot != null && now - h.radarHot < HUD_ORRERY.back ? 'near' : 'sys';
+}
+
 // ---- radar: rings, sweep, landmarks and what is near; it sits top right ----
 function hudRadar(h, s, key, obj, now) {
   const g = h.g, R = 84, cx = W - 110, cy = 112, range = HUD_RANGE[key], sc = R / range;
@@ -434,11 +466,15 @@ function hudRadar(h, s, key, obj, now) {
   foes.forEach(e => { if (!e.active) return; const d = Math.hypot(e.x - ox, e.y - oy); if (d <= range) { n++; if (d < near) near = d; } });
   const hot = near < engage, rim = hot ? RED : CYAN, beat = hot ? 0.6 + 0.4 * Math.sin(now / 120) : 1;
   h.near = near; h.engage = engage; // hudWarn reads these
+  const far = key === 'Space' && hudRadarMode(h, near, now) === 'sys' ? hudOrreryModel(sysDef(), me, R) : null; // the orrery, or null for the close view
+  h.radarMode = far ? 'sys' : 'near';
+  const px = far ? far.c.x : ox, py = far ? far.c.y : oy, psc = far ? far.sc : sc; // what the centre of the plate stands for, and the scale
   // the plate, the rings (dashed), the cross hairs, and a bezel with a tick every 15 degrees and a marker at north
   g.fillStyle(HUD_BG, 0.8); hudDisc(g, cx, cy, R + 4);
   g.fillStyle(rim, 0.05); hudDisc(g, cx, cy, R);
   [[6.5, 0.07], [3.5, 0.17], [1.5, 0.85]].forEach(([lw, k]) => { g.lineStyle(lw, rim, k * beat); hudRing(g, cx, cy, R + 4); });
-  [R / 3, R * 2 / 3].forEach(rr => { g.lineStyle(1, CYAN, 0.28); for (let i = 0; i < 28; i++) { const a = i * Math.PI / 14; hudArc(g, cx, cy, rr, a, a + 0.1); } });
+  if (far) far.rings.forEach(rr => { g.lineStyle(1, CYAN, 0.34); hudRing(g, cx, cy, rr); }); // one thin circle per orbit
+  else [R / 3, R * 2 / 3].forEach(rr => { g.lineStyle(1, CYAN, 0.28); for (let i = 0; i < 28; i++) { const a = i * Math.PI / 14; hudArc(g, cx, cy, rr, a, a + 0.1); } });
   g.lineStyle(1, CYAN, 0.14); g.lineBetween(cx - R, cy, cx + R, cy); g.lineBetween(cx, cy - R, cx, cy + R);
   for (let i = 0; i < 24; i++) {
     const a = i * Math.PI / 12, q = i % 6 === 0, r0 = R - (q ? 9 : 5);
@@ -447,20 +483,22 @@ function hudRadar(h, s, key, obj, now) {
   g.fillStyle(AMBER, 1); g.fillTriangle(cx, cy - R - 9, cx - 4, cy - R - 2, cx + 4, cy - R - 2);
   // the sweep: a wedge that fades behind a bright leading line; a ping ring leaves the centre every three seconds
   const sw = (now / 1500) % (Math.PI * 2);
-  for (let i = 0; i < 18; i++) {
-    const a0 = sw - (i + 1) * 0.06, a1 = sw - i * 0.06;
-    g.fillStyle(rim, 0.24 * Math.pow(1 - i / 18, 1.6));
-    g.fillTriangle(cx, cy, cx + Math.cos(a0) * R, cy + Math.sin(a0) * R, cx + Math.cos(a1) * R, cy + Math.sin(a1) * R);
+  if (!far) { // a map has no sweep: the orrery is still
+    for (let i = 0; i < 18; i++) {
+      const a0 = sw - (i + 1) * 0.06, a1 = sw - i * 0.06;
+      g.fillStyle(rim, 0.24 * Math.pow(1 - i / 18, 1.6));
+      g.fillTriangle(cx, cy, cx + Math.cos(a0) * R, cy + Math.sin(a0) * R, cx + Math.cos(a1) * R, cy + Math.sin(a1) * R);
+    }
+    g.lineStyle(2, rim, 0.85); g.lineBetween(cx, cy, cx + Math.cos(sw) * R, cy + Math.sin(sw) * R);
+    const pg = (now % 3000) / 1500;
+    if (pg < 1) { g.lineStyle(1, CYAN, 0.35 * (1 - pg)); hudRing(g, cx, cy, R * pg); }
   }
-  g.lineStyle(2, rim, 0.85); g.lineBetween(cx, cy, cx + Math.cos(sw) * R, cy + Math.sin(sw) * R);
-  const pg = (now % 3000) / 1500;
-  if (pg < 1) { g.lineStyle(1, CYAN, 0.35 * (1 - pg)); hudRing(g, cx, cy, R * pg); }
   hudPut(h, 'rt', cx, cy + R + 32, n ? n + ' HOSTILE  ' + Math.round(near * 0.1) + ' ' + unit : 'CLEAR',
     { size: HT.label, bold: hot, color: hot ? '#ff4d6d' : n ? '#ffb454' : '#58b57d', ox: 0.5, spacing: 1, alpha: hot ? 0.7 + 0.3 * Math.sin(now / 120) : 1 });
-  hudPut(h, 'rl', cx, cy + R + 16, 'RADAR  ' + (key === 'Space' ? (range / 10) + ' km' : (range / 10) + ' m'), { size: HT.label, color: HUD_DIM, ox: 0.5, spacing: 1 });
+  hudPut(h, 'rl', cx, cy + R + 16, far ? (far.name || 'SYSTEM').toUpperCase().slice(0, 14) + '  ' + hudFmt(far.far / 10) + ' km' : 'RADAR  ' + (key === 'Space' ? (range / 10) + ' km' : (range / 10) + ' m'), { size: HT.label, color: HUD_DIM, ox: 0.5, spacing: 1 });
 
   const pt = (wx, wy, keep) => { // world point -> radar point; off the radar it is clamped to the rim when keep, else null
-    let dx = (wx - ox) * sc, dy = (wy - oy) * sc;
+    let dx = (wx - px) * psc, dy = (wy - py) * psc;
     const d = Math.hypot(dx, dy), out = d > R - 4;
     if (out) { if (!keep) return null; dx *= (R - 4) / d; dy *= (R - 4) / d; }
     return { x: cx + dx, y: cy + dy, out, a: Math.atan2(dy, dx) };
@@ -469,12 +507,25 @@ function hudRadar(h, s, key, obj, now) {
   // a blip is brightest just after the sweep passes it and settles back to half; each has a halo
   const dot = (wx, wy, color, r) => {
     const p = pt(wx, wy, false); if (!p) return;
-    const age = (((sw - p.a) % TAU) + TAU) % TAU / TAU, k = 0.55 + 0.45 * Math.pow(1 - age, 2);
+    const age = (((sw - p.a) % TAU) + TAU) % TAU / TAU, k = far ? 0.95 : 0.55 + 0.45 * Math.pow(1 - age, 2);
     g.fillStyle(color, 0.22 * k); hudDisc(g, p.x, p.y, r * 2.4);
     g.fillStyle(color, k); hudDisc(g, p.x, p.y, r);
   };
 
-  if (key === 'Space') {
+  if (far) { // the star (a hollow mark when the data has none: it is the middle of the system), then each body on its circle
+    if (far.star) { g.fillStyle(0xffe08a, 0.25); hudDisc(g, cx, cy, 7); g.fillStyle(0xffe08a, 1); hudDisc(g, cx, cy, 3.5); }
+    else { g.lineStyle(1.5, 0xffe08a, 0.8); hudRing(g, cx, cy, 3.5); }
+    far.bodies.forEach(b => {
+      const p = pt(b.x, b.y, true);
+      if (b.type === 'station') hudDiamond(g, p.x, p.y, 4, CYAN);
+      else if (b.type === 'gate') { g.lineStyle(1.5, AMBER, 1); g.strokeRect(p.x - 3, p.y - 3, 6, 6); }
+      else if (b.type === 'planet') { g.fillStyle(AMBER, 1); hudDisc(g, p.x, p.y, 3); }
+      else { g.fillStyle(0x8b95a1, b.type === 'belt' ? 0.9 : 0.7); hudDisc(g, p.x, p.y, b.type === 'belt' ? 2.2 : 1.8); }
+    });
+    const nav = s.cr && s.cr.target; // the nav target: a cyan ring (the mission's goal is the amber one below)
+    if (nav && isFinite(nav.x) && isFinite(nav.y)) { const p = pt(nav.x, nav.y, true); g.lineStyle(1.5, CYAN, 0.9); hudRing(g, p.x, p.y, 6.5); }
+    s.enemies.getChildren().forEach(d => { if (d.active) dot(d.x, d.y, d.wanted ? AMBER : RED, 1.8); });
+  } else if (key === 'Space') {
     if (!s.station.nowhere) mark(pt(s.station.x, s.station.y, true), CYAN, p => hudDiamond(g, p.x, p.y, 5, CYAN));
     if (!s.planet.nowhere) mark(pt(s.planet.x, s.planet.y, true), AMBER, p => { g.fillStyle(AMBER, 1); hudDisc(g, p.x, p.y, 5); });
     s.enemies.getChildren().forEach(d => { if (d.active) dot(d.x, d.y, d.wanted ? AMBER : (d.def && d.def.radar) || RED, d.wanted ? 3 : d.def && d.def.key === 'gunship' ? 3 : 2.2); });
@@ -500,8 +551,10 @@ function hudRadar(h, s, key, obj, now) {
       });
     }
   }
-  g.lineStyle(1, 0xffffff, 0.45); g.lineBetween(cx, cy, cx + Math.cos(me.rotation) * R * 0.3, cy + Math.sin(me.rotation) * R * 0.3); // where you are pointing
-  tri(g, cx, cy, me.rotation, 5, 0xffffff);
+  const at = far ? pt(me.x, me.y, true) : { x: cx, y: cy }; // you: the centre of the close view, your place in the system on the orrery
+  if (far) { g.fillStyle(HUD_BG, 0.9); hudDisc(g, at.x, at.y, 6.5); } // a dark disc under the arrow, so it reads on top of a body's dot
+  g.lineStyle(1, 0xffffff, 0.45); g.lineBetween(at.x, at.y, at.x + Math.cos(me.rotation) * R * (far ? 0.18 : 0.3), at.y + Math.sin(me.rotation) * R * (far ? 0.18 : 0.3)); // where you are pointing
+  tri(g, at.x, at.y, me.rotation, 5, 0xffffff);
 }
 
 // ---- Space: the lock. The nearest hostile on screen is the target; it keeps the lock until it is gone, leaves the screen or
@@ -773,7 +826,7 @@ function hudTick(s) {
   if (space) hudLock(h, s, now); // before the radar, which brackets the target's blip too
   if (space || surf) {
     h.zones.push({ x0: W - 230, y0: 0, x1: W, y1: 250 }); hudRadar(h, s, key, space ? hudObjective(s, key, true) : obj, now);
-    if (space && s.cruising) { g.fillStyle(HUD_BG, 0.72); hudDisc(g, W - 110, 112, 88); } // cruise: nothing local matters, the radar dims
+    if (space && s.cruising && h.radarMode !== 'sys') { g.fillStyle(HUD_BG, 0.72); hudDisc(g, W - 110, 112, 88); } // cruise: nothing local matters, the radar dims
   }
   if (space) hudTargets(h, s, now);
   if (space) hudAssist(h, s);

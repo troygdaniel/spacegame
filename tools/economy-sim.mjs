@@ -61,7 +61,7 @@ export const PINS = {
   repairPerPoint: { get value() { return constIn('src/station.js', 'REPAIR_PRICE') ?? 0.5; }, constant: 'REPAIR_PRICE', file: 'src/station.js', text: ['price = repairPrice(), cost = Math.ceil(missing * price)', 'return d && d.repair > 0 ? d.repair : REPAIR_PRICE'], what: 'repair bay: credits a point of hull (the REPAIR_PRICE constant, 0.5 as shipped, Halcyon\'s; another dock has its own dock.repair)' },
   insurancePct: { value: 0.2, file: 'src/space.js', text: 'Math.floor(G.credits * 0.2)', what: 'insurance fee: 20% of your credits' },
   insuranceMin: { value: 50, file: 'src/space.js', text: 'Math.max(50,', what: 'insurance fee: never less than 50' },
-  muleSpeed: { value: [130, 70, 50], file: 'src/missions.js', text: 'threat ? 50 : behind ? 70 : 130', what: 'the MULE: free, you far behind, pirates close (px/s)' },
+  muleSpeed: { value: [60, 30], file: 'src/missions.js', text: 'box: 350, cruise: 60, slow: 30', what: 'the MULE: covered (you inside her 350 px ring), exposed (px/s)' },
   podCredit: { value: [10, 40], file: 'src/enemies.js', text: 'Phaser.Math.Between(10, 40)', what: 'a salvage pod that holds credits' },
   podCreditShare: { value: 0.7, file: 'src/enemies.js', text: "Math.random() < 0.3 ? 'hull'", what: 'a pod holds credits 70% of the time (30% hull)' },
   rockSplit: { value: 'thirds', file: 'src/asteroids.js', text: 'i < belt.rocks / 3 ? 3 : i < belt.rocks * 2 / 3 ? 2 : 1', what: 'a belt is a third each of size 3, 2 and 1 rocks' },
@@ -177,10 +177,12 @@ export function loops(g, kit, mult = { pay: 1, ore: g.orePrice }) {
   const toPlanet = hypot(pos(station), pos(planet));
   out.rescue = { credits: reward('rescue'), sec: PACE.dockSec + 2 * fly(toPlanet) + PACE.groundSec };
 
-  // escort: the MULE leaves just south-west of the station for the gate and slows when pirates are near; five drones lie in wait for her
-  const mule = [station.x - 60, station.y + 260], muleRoute = hypot(mule, pos(gate)) - gate.r, [free, , slow] = PINS.muleSpeed.value;
-  const threatShare = 0.3, muleSec = muleRoute / (1 / ((1 - threatShare) / free + threatShare / slow));
-  out.escort = { credits: reward('escort') + 5 * bountyOf(drone.bounty), sec: PACE.dockSec + muleSec + 5 * 0.5 * killSec(drone.hp, st) + fly(hypot(pos(gate), pos(station))) };
+  // escort: the MULE leaves just south-west of the station for the gate and slows while you are outside her ring (chasing a pirate); three waves (8 pirates) and a last stand of 3 at the gate,
+  // where she holds 8 s; she pays her reward plus up to 200 for her hull (half of it counted here), and you kill about 8 of the 11
+  const mule = [station.x - 60, station.y + 260], muleRoute = hypot(mule, pos(gate)) - gate.r, [free, slow] = PINS.muleSpeed.value;
+  const threatShare = 0.3, // the share of the route you spend outside her ring
+        muleSec = muleRoute / (1 / ((1 - threatShare) / free + threatShare / slow));
+  out.escort = { credits: reward('escort') + 100 + 8 * bountyOf(drone.bounty), sec: PACE.dockSec + muleSec + 8 + 8 * 0.5 * killSec(drone.hp, st) + fly(hypot(pos(gate), pos(station))) };
 
   // police patrol: five wanted drones (hp 40) 650 to 950 px from the station; each kill pays its bounty on top of the 600
   out.patrol = { credits: reward('patrol') + 5 * bountyOf(drone.bounty), sec: PACE.dockSec + 5 * killSec(40, st) };

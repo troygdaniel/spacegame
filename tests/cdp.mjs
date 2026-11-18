@@ -77,12 +77,12 @@ async function launchOnce(hash, root) {
     if (!page) await sleep(100);
   }
   const ws = new WebSocket(page.webSocketDebuggerUrl);
-  await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; setTimeout(() => rej(new Error('DevTools socket did not open')), 20000); });
+  await new Promise((res, rej) => { const t = setTimeout(() => rej(new Error('DevTools socket did not open')), 20000); ws.onopen = () => { clearTimeout(t); res(); }; ws.onerror = e => { clearTimeout(t); rej(e); }; });
   let id = 0; const pending = new Map(); const errors = [];
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
     if (m.id && pending.has(m.id)) {
-      const p = pending.get(m.id); pending.delete(m.id);
+      const p = pending.get(m.id); pending.delete(m.id); clearTimeout(p.timer); // an answered call's time limit must not keep the test process alive (see send)
       m.error ? p.rej(new Error(JSON.stringify(m.error))) : p.res(m.result);
     } else if (m.method === 'Runtime.exceptionThrown') {
       const d = m.params.exceptionDetails; errors.push('exception: ' + (d.exception?.description || d.text));
@@ -95,9 +95,11 @@ async function launchOnce(hash, root) {
   // timed-out call may still be running in the page, and running a step or an action twice would change the game.
   const send = (method, params = {}, opts = {}) => {
     const once = () => new Promise((res, rej) => {
-      const i = ++id; pending.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params }));
+      const i = ++id, call = { res, rej }; pending.set(i, call); ws.send(JSON.stringify({ id: i, method, params }));
       const limit = patience(CALL_MS);
-      setTimeout(() => { if (pending.delete(i)) rej(new Error(`DevTools call timed out: ${method} (after ${Math.round(limit / 1000)} s)`)); }, limit);
+      // The limit's timer is cleared when the call answers (ws.onmessage). Left running, the last one kept a finished test process alive for the whole limit:
+      // 120 s on an idle Mac, up to 480 s under load, after its PASS line, in every test that sets process.exitCode instead of calling process.exit().
+      call.timer = setTimeout(() => { if (pending.delete(i)) rej(new Error(`DevTools call timed out: ${method} (after ${Math.round(limit / 1000)} s)`)); }, limit);
     });
     return opts.retry ? once().catch(e => (/timed out/.test(e.message) ? once() : Promise.reject(e))) : once();
   };

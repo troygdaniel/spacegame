@@ -32,19 +32,23 @@ g.run(`
   function __press(n) { __s.as.k[n]._justDown = true; __frames(1); }
   // fly frames of 16.67 ms: the assist's frame and drive, then the ship (and a moving target) move by their velocity as Phaser moves them
   function __frames(count, tgt) {
-    const s = __s, dt = 1000 / 60, log = { frames: 0, maxV: 0, minD: 1e9, burnAt: -1, brakeAt: -1, offLineBurn: 0, ended: false };
+    const s = __s, dt = 1000 / 60, log = { frames: 0, maxV: 0, minD: 1e9, burnAt: -1, brakeAt: -1, offLineBurn: 0, ended: false, flips: 0, starts: 0 }; let lastTurn = 0, wasOn = false;
     for (let i = 0; i < count; i++) {
       s.time.now += dt;
+      const rot0 = s.ship.rotation;
       const r = assistFrame(s, s.time.now, dt, '', '');
       if (r === 'assist') {
         const t = s.as.target, before = Math.atan2(t.y - s.ship.y, t.x - s.ship.x);
         assistDrive(s, dt);
         const c = s.as.cmd;
         if (c && c.burn && log.burnAt < 0) log.burnAt = i;
+        const on = !!(c && c.burn); if (on && !wasOn) log.starts++; wasOn = on; // starts: how often the engine lights
         if (c && c.brake && log.brakeAt < 0) log.brakeAt = i;
         if (c && c.burn && c.face !== null && Math.abs(assistWrap(c.face - s.ship.rotation)) > ASSIST.align + 0.01) log.offLineBurn++;
       } else { const k = Math.pow(0.55, dt / 1000); s.ship.body.velocity.x *= k; s.ship.body.velocity.y *= k; } // hand flight, hands off: it coasts
+      const turn = Math.sign(assistWrap(s.ship.rotation - rot0)); if (turn) { if (lastTurn && turn !== lastTurn) log.flips++; lastTurn = turn; } // flips: how often the nose changes the way it turns
       const v = s.ship.body.velocity; s.ship.x += v.x * dt / 1000; s.ship.y += v.y * dt / 1000;
+      if (tgt && tgt.fly) tgt.fly(s.time.now / 1000);
       if (tgt && tgt.body) { tgt.x += tgt.body.velocity.x * dt / 1000; tgt.y += tgt.body.velocity.y * dt / 1000; }
       const tt = tgt || s.as.target;
       log.frames++; log.maxV = Math.max(log.maxV, Math.hypot(v.x, v.y));
@@ -147,6 +151,36 @@ check('Keep at range on a moving ship: it stays with it, near 400 px', f.mode ==
 g.run(`__scene(0, 0, 0);`);
 f = J(`(() => { const t = { x: 2500, y: 0 }; assistSet('keep', t); __frames(120, t); __s.k.S.isDown = true; __frames(1, t); __s.k.S.isDown = false; const v0 = Math.hypot(__s.ship.body.velocity.x, __s.ship.body.velocity.y); const r = __frames(120, t); r.v0 = v0; return r; })()`);
 check('the stick handed back mid-flight: the order is off and the ship coasts on its own speed', f.mode === '' && f.v0 > 200 && f.v < f.v0, `${f.v0.toFixed(0)} px/s then ${f.v.toFixed(0)}`);
+
+// ---- the nose does not chatter (playtest 4: 24 reversals backing off, 38 in a re-aimed approach; a clean flight has 0 to 2) ----
+g.run(`__scene(0, 0, 0);`);
+f = J(`(() => { const t = { x: 150, y: 0 }; assistSet('keep', t); return __frames(900, t); })()`);
+check('Keep at range from 150 px inside: the nose changes its turn 4 times or fewer on the way out to 500', f.flips <= 4 && Math.abs(f.d - 500) <= 25, f.flips + ' reversals, ended at ' + f.d.toFixed(1) + ' px');
+g.run(`__scene(0, 0, 0);`);
+f = J(`(() => { const a = { x: 2500, y: 0 }, b = { x: 600, y: -1400 }; assistSet('approach', a, 0); __frames(150, a); assistSet('approach', b, 0); return __frames(192, b); })()`);
+check('a new point given mid-flight: 4 reversals or fewer in the 3.2 s after it', f.flips <= 4, f.flips + ' reversals');
+for (const [name, x0, y0, vx, vy, tx, ty] of [['from a sideways drift', 0, 0, 0, 400, 2500, 0], ['back the way it came', 0, 0, 450, 0, -1500, 200], ['a short hop', 0, 0, 0, 0, 300, 250]]) {
+  g.run(`__scene(${x0}, ${y0}, 0); __s.ship.body.velocity.x = ${vx}; __s.ship.body.velocity.y = ${vy};`);
+  f = J(`(() => { const t = { x: ${tx}, y: ${ty} }; assistSet('approach', t, 0); return __frames(1500, t); })()`);
+  check('Approach ' + name + ': 4 reversals or fewer, and it still ends on the point', f.flips <= 4 && f.ended && f.d <= 20, f.flips + ' reversals, ' + f.d.toFixed(1) + ' px off after ' + (f.frames / 60).toFixed(1) + ' s');
+}
+g.run(`__scene(0, 0, 0);`);
+f = J(`(() => { const t = { x: 1500, y: 0, active: true, body: { velocity: { x: 90, y: 60 } } }; assistSet('keep', t, 400); return __frames(1500, t); })()`);
+check('Keep at range beside a moving ship for 25 s: the nose does not saw (12 reversals or fewer)', f.flips <= 12 && f.d > 300 && f.d < 500, f.flips + ' reversals, at ' + f.d.toFixed(1) + ' px');
+// ---- the engine does not strobe beside something that moves (playtest 4: 86 starts in 20 s beside a ship on a straight line, 281 on a circling raider) ----
+g.run(`__scene(0, 0, 0);`);
+f = J(`(() => { const t = { x: 700, y: 0, active: true, body: { velocity: { x: 152, y: 0 } } }; assistSet('keep', t, 400); return __frames(1200, t); })()`);
+check('Keep at range beside a ship on a straight line at 152 px/s, 20 s: 20 engine starts and 20 nose reversals or fewer, the range held', f.starts <= 20 && f.flips <= 20 && Math.abs(f.d - 400) <= 40, `${f.starts} starts, ${f.flips} reversals, at ${f.d.toFixed(1)} px`);
+g.run(`__scene(0, 0, 0);`);
+f = J(`(() => { const R = 400, w = 360 / R, t = { x: 1500 + R, y: 0, active: true, body: { velocity: { x: 0, y: 360 } }, fly(now) { const a = w * (now - t.t0); t.body.velocity.x = -360 * Math.sin(a); t.body.velocity.y = 360 * Math.cos(a); } }; t.t0 = __s.time.now / 1000; assistSet('keep', t, 500); return __frames(1200, t); })()`);
+check('Keep at range on a raider circling at 360 px/s, 20 s: 20 engine starts and 20 nose reversals or fewer, still within reach of the range', f.starts <= 20 && f.flips <= 20 && f.d > 250 && f.d < 800, `${f.starts} starts, ${f.flips} reversals, at ${f.d.toFixed(1)} px`);
+g.run(`__scene(0, 0, 0);`);
+f = J(`(() => { const t = { x: 1500, y: 0, active: true, body: { velocity: { x: 0, y: 120 } } }; assistSet('approach', t); return __frames(1200, t); })()`);
+check('Approach on a ship that keeps moving, 20 s: 20 engine starts and 20 reversals or fewer, near its 150 px', f.starts <= 20 && f.flips <= 20 && f.d > 100 && f.d < 260, `${f.starts} starts, ${f.flips} reversals, at ${f.d.toFixed(1)} px`);
+check('the throttle: a half burn pushes half as hard, and true is a full burn', J(`(() => { const st = { turn: 1, accel: 600, vmax: 1e6 }, me = { x: 0, y: 0, rot: 0, vx: 0, vy: 0 }; return [assistStep(me, { burn: 0.5 }, st, 1).vx, assistStep(me, { burn: true }, st, 1).vx, assistStep(me, { burn: 1 }, st, 1).vx, assistStep(me, { burn: 7 }, st, 1).vx, assistStep(me, { burn: false }, st, 1).vx].map(v => Math.round(v * 1000) / 1000); })()`).join() === '0.3,0.6,0.6,0.6,0');
+check('a still target is as before: one engine start, the nose steady', (() => { g.run(`__scene(0, 0, 0);`); const r = J(`(() => { const t = { x: 2500, y: 0 }; assistSet('keep', t); return __frames(1200, t); })()`); return r.starts <= 2 && r.flips <= 2 && Math.abs(r.d - 500) <= 25; })());
+
+check('Approach on a real ship sprite (Phaser gives every sprite a type) stops 150 px off, not at a body range', J(`(() => { __scene(0, 0, 0); assistSet('approach', { type: 'Sprite', x: 3000, y: 0, active: true, body: { velocity: { x: 0, y: 0 } } }); return __s.as.range; })()`) === 150);
 
 // the one-line readout keeps clear of the toasts (card space-game-critic-assist-readout): they stack down from y 96 and are drawn over it
 const T = (y, h, active = true) => `{ y: ${y}, h: ${h}, t: { active: ${active} } }`;
