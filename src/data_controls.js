@@ -22,7 +22,8 @@ const CONTROLS = [
     { k: ['T'], t: 'Chat in the bar (needs a chat key)' },
     { k: ['J'], t: 'Journal: who you have met' },
     { k: ['G'], t: 'Galaxy map (look only; jump in flight)' },
-    { k: ['Esc'], t: 'Close a terminal, or pause' }
+    { k: ['Esc'], t: 'Close a terminal, or pause' },
+    { k: ['I'], t: 'Ship\'s computer: ask it a question (needs a chat key)', help: 0 }
   ] },
   { id: 'ship', title: 'SHIP BAY', scene: 'Ship', rows: [
     { k: ['Enter', 'Space'], t: 'Launch or board' },
@@ -54,6 +55,7 @@ const CONTROLS = [
     { k: ['F'], t: 'Call the fuel ranger (tank near empty)' },
     { k: ['G'], t: 'Galaxy map: Enter jumps, Esc cancels' },
     { k: ['Tab'], t: 'Sector map (Z zooms)' },
+    { k: ['I'], t: 'Ship\'s computer: ask it a question (needs a chat key)', help: 0 },
     { k: ['Wheel'], t: 'Zoom out and in', help: 0 }
   ] },
   { id: 'surface', title: 'SURFACE', scene: 'Surface', rows: [

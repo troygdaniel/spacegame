@@ -38,7 +38,7 @@ function bound(files) {
   return keys;
 }
 const SPACE_FILES = ['space', 'assist', 'assist_orbit', 'autopilot', 'cruise', 'jump', 'gunlock', 'overview', 'clickmove', 'boost', 'camzoom', 'autotarget', 'handling', 'navpanel', 'hud'];
-const EVERYWHERE = ['map', 'meta'];                                  // Tab, H, Esc, M: window handlers for every scene
+const EVERYWHERE = ['map', 'meta', 'shipcomputer'];                   // Tab, H, Esc, M, and I (the ship's computer, src/shipcomputer.js): window handlers for every scene
 const SCENES = {
   station: ['station', 'shop', 'fuel', 'chat', 'journal', 'jump'].concat(EVERYWHERE),
   ship: ['shipmode', 'hangar'].concat(EVERYWHERE),
