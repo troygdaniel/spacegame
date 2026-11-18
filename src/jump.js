@@ -53,14 +53,14 @@ function jumpLock(s) {
 }
 
 // G: the galaxy map over the scene you are in (Space: it can jump; Station: it only shows). The scene waits underneath until the map closes.
-function jumpMapOpen(game) {
+function jumpMapOpen(game, sel) { // sel: the star the card opens on (the job's, from the navigation panel); else the job's star, else the nearest
   if (game.scene.isActive('Galaxy') || game.scene.isActive('Pause') || game.scene.isActive('Overlay') || performance.now() - JUMPST.closedAt < 250) return false;
   const s = game.scene.getScenes(true).find(sc => sc.scene.key === 'Space' || sc.scene.key === 'Station');
   if (!s || s.leaving || s.dead || s.panel || s.talk || s.cruising || (s.cr && s.cr.navOpen) || s.jmp) return false; // a terminal, the nav list, a charge or a fade is up: G waits
   if (G.deep) { toast(s, 'The jump drive is spent. Clear the pirates and the tunnel re-forms.', '#ffb454'); return false; } // deep space after a pull-out (src/pullout.js)
   const key = s.scene.key;
   s.scene.pause();
-  game.scene.run('Galaxy', { from: key, onJump: key === 'Space' ? (id, j) => jumpPick(s, id, j) : null });
+  game.scene.run('Galaxy', { from: key, sel: sel || null, onJump: key === 'Space' ? (id, j) => jumpPick(s, id, j) : null });
   return true;
 }
 // Enter on a star in the map: close it, give the flight back, then charge unless something is in the way

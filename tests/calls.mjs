@@ -142,7 +142,7 @@ console.log('the checklist names a goal in another system');
 {
   fresh(); accept('courier-halcyon-kestrel');
   const h = J(`hudMission(${SC}, 'Space')`);
-  check('the HUD says so: Courier run, pays 764, jump to Kestrel (6.3 ly)', h.head === 'Courier run' && h.reward === 764 && /jump to Kestrel/.test(h.next), JSON.stringify(h));
+  check('the HUD says so: Courier run, pays 764, the jump first and then the dock', h.head === 'Courier run' && h.reward === 764 && h.next === 'Jump to Kestrel: press G, then dock at Kestrel Outpost', JSON.stringify(h));
   g.run(`G.system = 'kestrel'`);
   check('in Kestrel: dock at Kestrel Outpost (L)', /dock at Kestrel Outpost/.test(J(`hudMission(${SC}, 'Space').next`)));
 }

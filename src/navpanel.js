@@ -27,6 +27,7 @@
 // to go, other systems included. While this panel has the keys Overview lets go of them (it reads s.cr.navOpen).
 // tests/navpanel.mjs checks the grouping, the sort and the window in plain Node.
 const NAVPANEL = {
+  job: 54,      // px: the height of the job line (up to three lines of the next step) above the destination
   x: 24, y: 140, w: 322, row: 22, max: 13, min: 4, // the left side; y is the highest it sits (it goes below the gauges and the mission checklist, src/hud.js); lines shown at most and at least (rows and group headings)
   bottom: 584,  // nothing of it below this: the tips band and the key line are there
   peek: 9000,   // ms it stays up when it opened by itself
@@ -78,7 +79,7 @@ function navpanelTop(zones) {
   return y;
 }
 // how many lines fit between there and the bottom (the pinned line, the title and the foot take 90 px)
-function navpanelFit(top) { return Math.max(NAVPANEL.min, Math.min(NAVPANEL.max, Math.floor((NAVPANEL.bottom - top - 90) / NAVPANEL.row))); }
+function navpanelFit(top, job) { return Math.max(NAVPANEL.min, Math.min(NAVPANEL.max, Math.floor((NAVPANEL.bottom - top - 90 - (job || 0)) / NAVPANEL.row))); } // job: the height of the job line above
 function navpanelDist(r) { return r.kind === 'jump' ? (Math.round(r.ly * 10) / 10) + ' ly' : hudFmt(r.dist / 10) + ' km'; }
 // how the ship would get to a row: 'here', 'autopilot' (a short leg), 'cruise' (the autopilot cruises the middle), 'jump', or 'no' with row.why
 function navpanelHow(r) {
@@ -91,11 +92,15 @@ function navpanelHint(r, isDest, order) {
   if (!r) return 'Nowhere to go from here.';
   const how = navpanelHow(r);
   if (how === 'here' && !order) return 'You are there.';
+  if (r.mission && r.kind === 'jump') return 'Enter  open the galaxy map at ' + navpanelStar(r); // the job is in another system: the map shows the way, and what is missing
   if (how === 'no') return r.why === 'fuel' ? 'Not enough fuel for this jump.' : r.why === 'far' ? 'Out of jump range: plot it on the galaxy map (G).' : 'No route charted yet.';
   if (!isDest) return 'Enter  set as destination';
   if (order) return 'Enter  ' + order + (how === 'here' ? '' : '   P  fly there only'); // the order takes the ship all the way in; P is the plain travel
   return how === 'jump' ? 'Enter  jump   ' + navpanelFuel(r.cost) + ' fuel' : how === 'cruise' ? 'Enter  go: autopilot and cruise' : 'Enter  go: autopilot';
 }
+function navpanelStar(r) { return typeof callSysName === 'function' ? callSysName(r.id) : r.name; }
+// the job line: the next step of the open call, or '' with no call
+function navpanelJob() { const st = typeof missionStep === 'function' ? missionStep() : null; return st ? 'JOB  ' + st.text : ''; }
 function navpanelFuel(v) { return String(Math.round(v * 10) / 10); }
 
 // ---- what the scene has ----
@@ -132,6 +137,10 @@ function navpanelSetup(s) {
   const fix = (o, list) => { o.setScrollFactor(0).setVisible(false); (list || np.parts).push(o); return o; };
   const font = (size, color, bold) => ({ fontFamily: 'monospace', fontSize: size + 'px', color, fontStyle: bold ? 'bold' : 'normal' });
   const h = 30 + N.row * N.max + 30, y0 = N.y + 30; // placed for real by navpanelPlace, every draw
+  // the job: the next step of the open call in plain words, there whenever you have a call (missionStep, src/missions.js)
+  np.jobs = []; np.jobH = 0;
+  np.jobBg = fix(s.add.rectangle(N.x, N.y, N.w, N.job, 0x04101c, 0.78).setOrigin(0, 0).setStrokeStyle(1, 0x6dff9c, 0.7).setDepth(100), np.jobs);
+  np.jobText = fix(s.add.text(N.x + 10, N.y + 5, '', Object.assign(font(12, '#6dff9c'), { wordWrap: { width: N.w - 20 }, maxLines: 3 })).setOrigin(0, 0).setDepth(101), np.jobs);
   // the pinned destination: there whenever you have one
   np.pinBg = fix(s.add.rectangle(N.x, N.y, N.w, 26, 0x04101c, 0.78).setOrigin(0, 0).setStrokeStyle(1, 0xffb454, 0.8).setDepth(100), np.pinned);
   np.pinName = fix(s.add.text(N.x + 10, N.y + 13, '', font(14, '#ffd37a', true)).setOrigin(0, 0.5).setDepth(101), np.pinned);
@@ -163,9 +172,10 @@ function navpanelSetup(s) {
 }
 // put every piece where it belongs for a panel that starts at top and shows n lines
 function navpanelPlace(s, top, n) {
-  const np = s.np, N = NAVPANEL, y0 = top + 30, h = 30 + N.row * n + 30;
-  np.top = top;
-  np.pinBg.setY(top); np.pinName.setY(top + 13); np.pinDist.setY(top + 13);
+  const np = s.np, N = NAVPANEL, job = np.jobH || 0, y0 = top + job + 30, h = 30 + N.row * n + 30; // the job line, when there is one, sits above the destination
+  np.top = top; np.placedJob = job;
+  np.jobBg.setY(top); np.jobText.setY(top + 5);
+  np.pinBg.setY(top + job); np.pinName.setY(top + job + 13); np.pinDist.setY(top + job + 13);
   np.bg.setY(y0).setSize(N.w, h); if (np.bg.input && np.bg.input.hitArea) np.bg.input.hitArea.height = h;
   np.title.setY(y0 + 15); np.key.setY(y0 + 15);
   np.lines.forEach((l, i) => { l.y = y0 + 30 + N.row * i + N.row / 2; l.name.setY(l.y); l.dist.setY(l.y); l.zone.setY(l.y - N.row / 2); });
@@ -198,7 +208,7 @@ function navpanelDraw(s) {
   const np = s.np, cr = s.cr, N = NAVPANEL; if (!np) return;
   navpanelBuild(s);
   if (!np.shown) return;
-  const top = navpanelTop(s._hud && s._hud.zones), rows = cr.list, view = navpanelLines(rows, cr.sel, navpanelFit(top)), C = N.colors;
+  const top = navpanelTop(s._hud && s._hud.zones), rows = cr.list, view = navpanelLines(rows, cr.sel, navpanelFit(top, np.jobH)), C = N.colors;
   np.shownLines = view.lines;
   navpanelPlace(s, top, Math.max(1, view.lines.length));
   np.parts.forEach(o => o.setVisible(true));
@@ -240,6 +250,11 @@ function navpanelClose(s) {
 function navpanelClick(s, i) {
   const cr = s.cr, r = cr.list[i]; if (!r) return;
   cr.sel = i;
+  if (r.mission && r.kind === 'jump') { // the job is in another system: Enter does the step, which is the galaxy map with that star chosen (G does the same)
+    navpanelClose(s);
+    if (typeof jumpMapOpen !== 'function' || !jumpMapOpen(s.game, r.id)) { toast(s, 'Not now: the galaxy map opens when you are flying free.', '#ffb454'); sfx('empty'); }
+    return;
+  }
   if (navpanelIsDest(s, r)) navpanelEngage(s, r); else navpanelPick(s, r);
   s.np.at = 0; if (s.np.shown) { s.np.hideAt = s.time.now + NAVPANEL.peek; navpanelDraw(s); }
 }
@@ -292,7 +307,10 @@ function navpanelTick(s) {
   const np = s.np, cr = s.cr, N = NAVPANEL; if (!np || !cr) return;
   const now = s.time.now, quiet = s.dead || s.leaving || !!s.jmp || !!G.deep;
   if (np.press) { if (s.input.activePointer.isDown) s.nextFire = Math.max(s.nextFire || 0, now + 80); else np.press = false; } // a press on the panel does not fire the guns
-  if (quiet) { if (np.shown && !np.keys) navpanelHide(s); np.pinned.forEach(o => o.setVisible(false)); return; }
+  if (quiet) { if (np.shown && !np.keys) navpanelHide(s); np.pinned.forEach(o => o.setVisible(false)); np.jobs.forEach(o => o.setVisible(false)); return; }
+  const job = navpanelJob(), jobH = job ? N.job : 0;
+  if (job !== np.job) { np.job = job; np.jobText.setText(job); np.at = 0; }
+  if (jobH !== np.jobH) { np.jobH = jobH; np.top = null; } // the job line came or went: everything under it moves
   // it opens by itself: once when the flight starts (no destination yet), and when the call's goal changes
   const m = navpanelMission(s), mkey = G.mission + '|' + (G.missionId || '') + '|' + (m ? m.system || m.name : '');
   if (np.first || (mkey !== np.mkey && m)) { if (!np.keys && !s.cruising) navpanelOpen(s, true); np.first = false; }
@@ -302,7 +320,8 @@ function navpanelTick(s) {
     else if (now > np.at) { np.at = now + N.every; navpanelDraw(s); }
   }
   const d = navpanelDest(s);
-  if (d && !np.shown) { const top = navpanelTop(s._hud && s._hud.zones); if (top !== np.top) navpanelPlace(s, top, 1); } // the checklist opened or shut: the pinned line moves with it
+  if ((d || job) && !np.shown) { const top = navpanelTop(s._hud && s._hud.zones); if (top !== np.top || np.placedJob !== jobH) navpanelPlace(s, top, 1); } // the checklist opened or shut: the pinned lines move with it
+  np.jobs.forEach(o => o.setVisible(!!job));
   np.pinned.forEach(o => o.setVisible(!!d));
   if (d) { np.pinName.setText('> ' + d.name.toUpperCase()).setColor(d.color); np.pinDist.setText(d.text); }
 }
