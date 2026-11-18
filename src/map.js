@@ -28,7 +28,7 @@ function mapText(s, x, y, str, size, color, wrap) {
 }
 
 const MAP_LEG_Y = 380, MAP_LEG_STEP = 27, MAP_LEG_MAX = 11; // legend rows: 9 at this step end above the footer line; with more the step shrinks (mapLegStep)
-const MAP_MIN = 9000, MAP_PAD = 1.45, MAP_WHOLE = 0.7; // the local view: its smallest width in px, the room round what it holds, and the share of the system past which it is just the whole map
+const MAP_MIN = sysAt(9000), MAP_PAD = 1.45, MAP_WHOLE = 0.7; // the local view: its smallest width in px, the room round what it holds, and the share of the system past which it is just the whole map (9000 is in the units the data is written in: src/data_systems.js SYSTEM_SCALE)
 function mapLegStep(n) { return Math.min(MAP_LEG_STEP, Math.floor((638 - 22 - MAP_LEG_Y) / Math.max(1, n - 1))); }
 
 // the square of the system the map shows: { x, y, size } in px. pts: what must be in it ({ x, y }); ws: the system's width; whole: Z asked for all of it

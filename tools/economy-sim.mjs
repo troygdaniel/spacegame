@@ -73,7 +73,7 @@ export const PINS = {
 // ---------------------------------------------------------------- 3. PACE: how a player plays (guesses, replace with measurements)
 export const PACE = {
   speedUse: 0.85,      // share of top speed really flown over a leg (turns, the dock speed limit, looking around)
-  cruiseSpeed: 6000,   // px/s in cruise (src/asteroids.js comment); used for far belts
+  cruiseSpeed: 8000,   // px/s in cruise (src/asteroids.js comment); used for far belts
   dockSec: 40,         // at the station per run: read the board, take the call, walk to the ship, undock; and on return dock and be paid
   groundSec: 120,      // Rescue on Kepler-4b: land, find the colonist, keep them alive, walk back, lift off
   hitRate: 0.45,       // the share of shots that hit a moving pirate

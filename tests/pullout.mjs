@@ -147,7 +147,7 @@ try {
   await untilNew(`game.scene.isActive('Space') && G.system === 'kestrel'`);
   await tick(4);
   const arr = JSON.parse(await E(`JSON.stringify({ sys: G.system, jumps: G.jumps, known: G.known, deep: G.deep, ws: ${SP}.WS, x: Math.round(${SP}.ship.x), fuel: activeShip().fuel, pirates: ${SP}.enemies.countActive() })`));
-  check('then the ordinary arrival: Kestrel, one jump, known, the west edge of a 36000 px system, the fuel never refunded', arr.sys === 'kestrel' && arr.jumps === 1 && arr.known.includes('kestrel') && arr.deep === null && arr.ws === 36000 && arr.x < 900 && arr.fuel === 33.7, JSON.stringify(arr));
+  check('then the ordinary arrival: Kestrel, one jump, known, the west edge of the system (36000 px in the data, times SYSTEM_SCALE), the fuel never refunded', arr.sys === 'kestrel' && arr.jumps === 1 && arr.known.includes('kestrel') && arr.deep === null && arr.ws === await E('sysAt(36000)') && arr.x < 900 && arr.fuel === 33.7, JSON.stringify(arr));
   check('no pirates were left waiting', arr.pirates === 0);
   check('no console errors on the way through', t.errors.length === 0, t.errors.join(' | ').slice(0, 400));
 
@@ -162,7 +162,7 @@ try {
   await secs(2.6);
   await until(`game.scene.isActive('Station')`, 300, 'the Station scene');
   check('you wake in the Halcyon station, and the system on the books is Halcyon again (it was Kestrel)', await E(`G.system === 'halcyon' && G.deep === null && game.scene.isActive('Station')`), await E(`[G.system, G.deep]`));
-  check('and the next launch is an ordinary one from Halcyon', await E(`(() => { game.scene.stop('Station'); game.scene.start('Space', { from: 'station' }); return 1; })()`) && await until(`game.scene.isActive('Space')`, 200, 'Space') && await E(`${SP}.station.nowhere !== true && ${SP}.WS === 36000`));
+  check('and the next launch is an ordinary one from Halcyon', await E(`(() => { game.scene.stop('Station'); game.scene.start('Space', { from: 'station' }); return 1; })()`) && await until(`game.scene.isActive('Space')`, 200, 'Space') && await E(`${SP}.station.nowhere !== true && ${SP}.WS === sysAt(36000)`));
 
   console.log('and dying in plain Kestrel (no pull-out) wakes you at Halcyon too');
   await E(`(() => { G.credits = 1000; return 1; })()`);

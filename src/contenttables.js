@@ -292,7 +292,7 @@ function worldFromFiles(id) {
     }
     if (f.description !== undefined) def.description = f.description;
     def.bodies = (f.bodies || []).map(row => ctWorldBody(row, id));
-    return def;
+    return typeof sysScale === 'function' ? sysScale(def) : def; // the files are in the old units, as SYSTEMS is written (src/data_systems.js SYSTEM_SCALE)
   } catch (e) { return null; }
 }
 function worldAt(id) {

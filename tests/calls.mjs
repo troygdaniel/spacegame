@@ -68,7 +68,7 @@ console.log('a courier, from the board to the dock');
   check('leaving Halcyon does not fail it (it is carried out of one)', (g.run(`missionLeaveSystem(${SC}, 'halcyon')`), J(`G.mission`) === 'accepted'));
   check('docking at the wrong station pays nothing', (g.run(`G.system = 'kestrel'; G.lastDock = 'halcyon-station'; missionDock(${SC})`), J(`G.credits`) === 1000 && J(`G.mission`) === 'accepted'));
   const t = J(`(() => { const t = missionTarget(${SC}); return t && [t.name, t.x, t.y]; })()`);
-  check('in Kestrel the arrow points at the outpost, and there is no far goal', t && t[0] === 'Kestrel Outpost' && t[1] === 9000 && t[2] === 21000 && J(`missionFar()`) === null, JSON.stringify(t));
+  check('in Kestrel the arrow points at the outpost, and there is no far goal', t && t[0] === 'Kestrel Outpost' && t[1] === J('sysAt(9000)') && t[2] === J('sysAt(21000)') && J(`missionFar()`) === null, JSON.stringify(t));
   g.run(`G.lastDock = 'kestrel-outpost'; missionDock(${SC})`);
   check('docking there pays 764 and closes the call', J(`G.credits`) === 1764 && J(`G.mission`) === 'none' && J(`G.missionId`) === null);
   fresh(); accept('courier-halcyon-kestrel'); g.run(`G.system = 'kestrel'; G.lastDock = 'kestrel-outpost'; missionDeath(${SC})`);

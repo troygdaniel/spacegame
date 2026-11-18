@@ -25,7 +25,7 @@ Open `index.html` in a browser (Chrome is what it is tested in). Double-clicking
 - src/ships.js   every ship texture (player with upgrade tiers, pirates, Reaver, MULE, civilian, police) and their flames, trails, shield flash, smoke and sparks
 - src/stationart.js Halcyon Station and Kestrel Outpost art (canvas gradients, drawn in code) and their animation: spinning hub and ring, beacons, docking lane; stationBuild picks what a system's station looks like from its `art` (ring, outpost or a look)
   and the four looks for other systems (stationLook / stationLookFx: hub, foundry, nest, derelict, drawn on first use; Meridian, Brass Reach, Ember and the Roost use them)
-- src/cruise.js in-system fast travel: N nav list, C cruise (6000 px/s, stops 900 px out), and the far bodies of a system; Halcyon is 36000 px (src/data_systems.js); tests/cruise.mjs checks it. Interdiction (pirates pull you out of cruise, INTERDICT in cruise.js, dark until two jumps) and the pirate table per system (pirateTable in enemies.js) are checked by tests/interdict.mjs
+- src/cruise.js in-system fast travel: N nav list, C cruise (8000 px/s, stops 900 px out), and the far bodies of a system; Halcyon is 36000 px in the data and SYSTEM_SCALE (3) times that in the game (src/data_systems.js); tests/cruise.mjs checks it. Interdiction (pirates pull you out of cruise, INTERDICT in cruise.js, dark until two jumps) and the pirate table per system (pirateTable in enemies.js) are checked by tests/interdict.mjs
 - src/art_world.js world art: backdrop, Kepler-4b, asteroids, surface, effects; also planetTexture (rock, ice, gas, lava, ringed; at most six alive) and starTexture (types M K G F A) for other systems; tests/systemart.mjs checks the new art
 - src/art_world.js the world art, drawn in code on 2D canvases (seeded, same every boot): nebula and parallax star layers, distant sun, ringed giant and moon, Kepler-4b, asteroids and ore, the surface (ground, terrain, boulders, pad, crash site, colonist, crawlers) and the effects fxBoom (every s.boom), fxDash, fxPickup, fxDebris
 - src/hyperspace.js the Hyper scene, the watched hyperspace tunnel (star streaks, gates, ribbons, nose bloom, readout). The jump (src/jump.js) plays it; index.html#hyper (or #hyper<ly>, e.g. #hyper24) still opens it on its own, with no game effect
@@ -82,7 +82,7 @@ Ten numbers that change how the game feels. Open the file, change the number, re
 | Star density | `src/art_world.js` | the fourth argument of the two `waStars(...)` calls for `stars2` and `stars3` | 80 and 26 | stars drawn on each background tile (a number in the call, not a named constant) |
 | Raider count | `src/data_systems.js` | `SYSTEMS.halcyon.pirates.max` | 8 | pirates the home system keeps alive at once; `weights.raider` beside it (0.25) is the share that are raiders, and the three weights add up to 1 |
 | Fuel burn | `src/data_ships.js` | `SHIP_MODELS.wren.fuelPerLy` | 1.0 | fuel units one light year of a jump costs |
-| Cruise speed | `src/cruise.js` | `CRUISE.top` | 6000 | top speed in cruise (`C`), px/s |
+| Cruise speed | `src/cruise.js` | `CRUISE.top` | 8000 | top speed in cruise (`C`), px/s |
 | Jump charge time | `src/jump.js` | `JUMP.charge` | 4000 | ms the jump charges before it goes |
 | Rescue pay | `content/missions/rescue.md` | `reward:` | 500 | credits the rescue call pays; this one is a markdown file, so run `node tools/build-content.mjs` before you reload |
 

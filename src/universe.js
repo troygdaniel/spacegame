@@ -56,7 +56,8 @@ function enterSystem(id, from) {
 const GEN = {
   size: 36000,       // world px, as the authored systems
   margin: 1500,      // px kept between a body's edge and the world's wall
-  gap: 2500,         // px of clear space between the edges of any two things (4.4 "minimum 2500 px between anything"), the star counts as a body of radius starClear
+  gap: 2500,         // (these px are the old units: makeSystem lays a system out in them and sysScale spreads it out, so the real gaps are SYSTEM_SCALE times these)
+                     // px of clear space between the edges of any two things (4.4 "minimum 2500 px between anything"), the star counts as a body of radius starClear
   starClear: 800,
   ringFrom: 4500, ringStep: 2800, // planets sit on loose rings round the star: ring i is about ringFrom + i * ringStep px out
   area: [80, 50],    // the galaxy map, light years
@@ -162,7 +163,7 @@ function makeSystem(seed, kind) {
     if (at) sys.bodies.push({ id: id + '-wreck-' + (i + 1), type: 'poi', kind: 'wreck', name: pick(GEN_WRECKS), x: at.x, y: at.y, credits: Math.round(ri(100, spec.cr) / 10) * 10 });
   }
   if (spec.beacon) { const at = spot(60, 60, anywhere); if (at) sys.bodies.push({ id: id + '-beacon', type: 'poi', kind: 'beacon', name: 'Old survey beacon', x: at.x, y: at.y, credits: Math.round(ri(120, 200) / 10) * 10 }); }
-  return sys;
+  return sysScale(sys); // laid out in the old units by the GEN numbers above, then spread out like every other system (src/data_systems.js SYSTEM_SCALE)
 }
 
 // n new systems over the galaxy map, kept clear of the systems in `fixed` (default: the authored ones): kinds by the shares of GEN_KINDS, at least GEN.apart ly from every
