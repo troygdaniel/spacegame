@@ -119,6 +119,13 @@ const LOOKS = [
     console.log('        after ' + ran + ' s of game time: ' + ((await t.ev(up('Station'))) ? 'docked, the Station scene is up' : 'not docked: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}; return { ap: !!(s.ap && s.ap.on), stage: s.ap && s.ap.stage, d: Math.round(Math.hypot(s.ship.x - s.station.x, s.ship.y - s.station.y)), v: Math.round(s.ship.body.speed), prompt: s.prompt.text }; })())`)));
     await t.run(1500);
   }],
+  ['board', '#station', 'Station', async t => { // the mission board (card space-game-bug-runs-out-of-jump-range: runs out of jump range are dimmed, four drawing edits never drawn)
+    await t.run(1200); await t.ev(`(() => { ${ST}.openPanel(); return 1; })()`); await t.run(800);
+    console.log('        board: ' + await t.ev(`JSON.stringify((() => { const s = ${ST}; return { offered: missionsOffered().map(m => m.id + (typeof jumpReach === 'function' && m.system && m.system !== G.system ? ':' + JSON.stringify(jumpReach(m.system)) : '')), texts: s.boardObjs.filter(o => o.type === 'Text').map(o => o.text.replace(/\\n/g, ' / ')).slice(0, 40) }; })())`));
+  }],
+  ['board-low-fuel', '#station', 'Station', async t => { // the same board with an empty tank: whatever is out of reach then is dimmed
+    await t.run(1200); await t.ev(`(() => { if (typeof G.fuel === 'number') G.fuel = 0; ${ST}.openPanel(); return 1; })()`); await t.run(800);
+  }],
   ['clear-mass', '#space', 'Space', async t => { // Troy's bug beside Kepler-4b (card space-game-bug-travel-refuses-near-mass): C inside a mass limit flies clear, then cruises
     await t.run(1500);
     const o = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; s.lockUntil = 0;
