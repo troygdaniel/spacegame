@@ -165,6 +165,12 @@ const LOOKS = [
     }
     await t.run(1500);
   }],
+  ['radar-cruise', '#space', 'Space', async t => { // the minimap at cruise speed (card space-game-minimap-ship-centred: the scale follows speed): 6 s into the trip to the farthest body
+    await t.run(1500);
+    await t.ev(`(() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; s.lockUntil = 0; const b = cruiseKnown(s).slice().sort((a, c) => c.dist - a.dist)[0]; autopilotGo(s, b); return 1; })()`);
+    await t.run(6000);
+    console.log('        6 s in: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}; return { cruising: !!s.cruising, v: Math.round(s.ship.body.speed) }; })())`));
+  }],
   ['clear-mass', '#space', 'Space', async t => { // Troy's bug beside Kepler-4b (card space-game-bug-travel-refuses-near-mass): C inside a mass limit flies clear, then cruises
     await t.run(1500);
     const o = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; s.lockUntil = 0;
