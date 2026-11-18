@@ -48,7 +48,7 @@ function navpanelRows(bodies, jumps, mission) {
   (jumps || []).forEach(j => rows.push({ kind: 'jump', group: 'gates', id: j.id, name: j.name, type: 'jump', ly: j.ly, cost: j.cost, ok: !!j.ok, why: j.why || null }));
   if (mission && mission.system) { // a goal in another system: the jump there is the mission's row, or a row that says it is out of reach
     const j = rows.find(r => r.kind === 'jump' && r.id === mission.system);
-    if (j) { j.group = 'mission'; j.mission = true; }
+    if (j) { j.group = 'mission'; j.mission = true; j.goal = mission.goal || null; } // goal: the far star the next jump is on the way to (the galaxy map opens on that, with the whole chain)
     else rows.push({ kind: 'jump', group: 'mission', id: mission.system, name: mission.name, type: 'jump', ly: mission.ly, cost: 0, ok: false, why: 'far', mission: true, say: mission.say || null });
   } else if (mission) { // a goal here: the body it is (same id, or the body it sits on), else a row of its own
     const b = rows.find(r => r.kind === 'body' && (r.id === mission.id || Math.hypot(r.x - mission.x, r.y - mission.y) < 60));
@@ -256,7 +256,7 @@ function navpanelClick(s, i) {
   cr.sel = i;
   if (r.mission && r.kind === 'jump') { // the job is in another system: Enter does the step, which is the galaxy map with that star chosen (G does the same)
     navpanelClose(s);
-    if (typeof jumpMapOpen !== 'function' || !jumpMapOpen(s.game, r.id)) { toast(s, 'Not now: the galaxy map opens when you are flying free.', '#ffb454'); sfx('empty'); }
+    if (typeof jumpMapOpen !== 'function' || !jumpMapOpen(s.game, r.goal || r.id)) { toast(s, 'Not now: the galaxy map opens when you are flying free.', '#ffb454'); sfx('empty'); }
     return;
   }
   if (navpanelIsDest(s, r)) navpanelEngage(s, r); else navpanelPick(s, r);
