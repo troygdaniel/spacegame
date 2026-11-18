@@ -1,11 +1,11 @@
-// not in the smoke: the playtest round 4 walk (docs/PLAYTEST4.md), run by hand: about 5 minutes
+// not in the smoke: the playtest round 4 walk (docs/PLAYTEST4.md), run by hand in parts of under 5 minutes each (PT4_PART=a to g)
 // Playtest round 4 (card space-game-playtest-4): the new flight, played in the real game in headless Chrome the way tests/playtest3.mjs
 // walks the loop. One Chrome at a time (tests/lock.mjs), --mute-audio, the game clock stepped by hand so every number is exact whatever
 // the load. It flies each order of the flight assist and measures it (seconds, top speed, how close, how often the engine cuts in and out,
 // how far past the mark), clicks with a real mouse event, flies Classic and Heavy by hand on the same course, fights raiders with the
 // assist holding the range, and flies beside the MULE. A step never stops the walk: what it saw is written down and the next one runs.
 // A step for a part that is not in the tree it runs against (Orbit, Match speed, the HUD panel, the lounge keys) says "not here" and passes.
-// The result is printed and saved to tests/out/playtest4.json; the human reading is docs/PLAYTEST4.md.
+// The result is printed and saved to tests/out/playtest4-<parts>.json; the human reading is docs/PLAYTEST4.md.
 // Run: node tests/playtest4.mjs            against this checkout
 //      PT4_ROOT=~/dev/spacegame-playtest-4-mix node tests/playtest4.mjs      against another tree (a scratch branch that merges the flight cards)
 import { launch, sleep, OUT, ROOT } from './cdp.mjs';
@@ -16,7 +16,11 @@ import { homedir } from 'node:os';
 const GAME = process.env.PT4_ROOT ? resolve(process.env.PT4_ROOT.replace(/^~/, homedir())) : ROOT;
 const SP = "game.scene.getScene('Space')";
 const results = [];
-let t = null, errSeen = 0;
+let t = null, errSeen = 0, heldSince = 0;
+// The walk runs in parts so no run holds the one Chrome of this Mac for long: PT4_PART=a (the orders), b (the fights), c (Orbit and Match
+// speed), d (the mouse), e (the other pilots, Classic against Heavy, the HUD panel), f (the escort), g (the lounge); several letters run
+// together (PT4_PART=ab); none runs them all. A part that has held Chrome for LIMIT seconds skips the steps it has left and says so.
+const PARTS = (process.env.PT4_PART || 'abcdefg').toLowerCase(), P = x => PARTS.includes(x), LIMIT = Number(process.env.PT4_LIMIT) || 280;
 const VK = { A: [65, 'KeyA', 'a'], D: [68, 'KeyD', 'd'], S: [83, 'KeyS', 's'], W: [87, 'KeyW', 'w'], Z: [90, 'KeyZ', 'z'], C: [67, 'KeyC', 'c'], P: [80, 'KeyP', 'p'], L: [76, 'KeyL', 'l'], N: [78, 'KeyN', 'n'],
   1: [49, 'Digit1', '1'], 2: [50, 'Digit2', '2'], 3: [51, 'Digit3', '3'], 4: [52, 'Digit4', '4'], SPACE: [32, 'Space', ' '], ENTER: [13, 'Enter', 'Enter'] };
 const kev = (name, type) => { const [code, key, ch] = VK[name]; return t.send('Input.dispatchKeyEvent', { type, windowsVirtualKeyCode: code, nativeVirtualKeyCode: code, code: key, key: ch }); };
@@ -31,6 +35,7 @@ const r1 = v => Math.round(v * 10) / 10;
 
 async function step(name, fn) {
   const r = { step: name, ok: true, detail: '', errors: [] };
+  if ((Date.now() - heldSince) / 1000 > LIMIT) { r.detail = 'skipped: this part has held Chrome for ' + LIMIT + ' s'; r.skipped = true; results.push(r); console.log('  skip ' + name); return r; }
   try { const d = await fn(); if (typeof d === 'string') r.detail = d; else if (d && typeof d === 'object') { r.data = d; r.detail = JSON.stringify(d); } }
   catch (e) { r.ok = false; r.detail = 'threw: ' + e.message; }
   try { await t.shot('pt4-' + name); await t.shot('pt4-' + name); } catch (e) { r.detail += ' (no screenshot)'; }
@@ -80,7 +85,7 @@ const flyOrder = async (maxFrames, untilEnd = true) => { for (let f = 0; f < max
 const assistOnNow = async () => { if (!(await E('ASSIST.on'))) await skey('Z'); return E('ASSIST.on'); };
 
 async function open(hash) {
-  t = await launch(hash, GAME); errSeen = 0;
+  t = await launch(hash, GAME); errSeen = 0; heldSince = Date.now();
   await t.waitFor(`!!(window.game && game.scene.isActive('Space'))`, 30000, 'Space active');
   await sleep(1500); await E('G.guideDone = true');
   await t.clock(); await E(PAGE); await E('__recStart(null)');
@@ -90,14 +95,15 @@ const FAR = [20000, 30000]; // empty space in Halcyon, far from every body
 console.log('playtest 4 against ' + GAME);
 
 // ================= 1. the assist and the mouse, in open space and at the station =================
-await open('#space');
+if (/[abcde]/.test(PARTS)) { await open('#space');
 try {
   const st = await JE(`(() => { const b = sysBody('station'); return { x: b.x, y: b.y, name: b.name }; })()`);
   const planet = await JE(`(() => { const b = sysBody('planet'); return { x: b.x, y: b.y, r: b.r, name: b.name }; })()`);
-  const parts = { assist: await has('assistSet'), click: await has('clickmoveClick'), handling: await has('handlingSet'), orbit: await E(`typeof ASSIST_MODES !== 'undefined' && !!ASSIST_MODES.orbit`), match: await E(`typeof ASSIST_MODES !== 'undefined' && !!ASSIST_MODES.match`), hud: await has('assistHud') };
+  const parts = { assist: await has('assistSet'), click: await has('clickmoveClick'), handling: await has('handlingSet'), orbit: await E(`typeof ASSIST_MODES !== 'undefined' && !!ASSIST_MODES.orbit`), match: await E(`typeof ASSIST_MODES !== 'undefined' && !!ASSIST_MODES.match`), hud: await has('hudAssist') };
   await step('parts', async () => parts);
   if (!parts.assist) throw new Error('this tree has no flight assist: nothing to play');
 
+  if (P('a')) {
   await step('z-on', async () => { await E(`__park(${FAR[0]}, ${FAR[1]})`); await skey('Z'); await tick(20); return { on: await E('ASSIST.on'), toast: (await said()).pop(), readout: await E(`${SP}.as.read.visible ? ${SP}.as.read.text : '(hidden)'`), modes: await JE('assistState().keys.map(k => k.cap + " " + k.label)') }; });
   await step('one-with-no-target', async () => { await skey('1'); return { mode: await E(`${SP}.as.mode`), toast: (await said()).pop() }; });
 
@@ -124,20 +130,24 @@ try {
       return { range: await E(`${SP}.as.range`), settle: { maxV: settle.maxV, minD: settle.minD, engineStarts: settle.engineStarts, noseFlips: settle.noseFlips }, hold10s: { minD: hold.minD, maxD: hold.maxD, v: hold.v, engineStarts: hold.engineStarts, burnPct: hold.burnPct, brakePct: hold.brakePct, noseFlips: hold.noseFlips, status: hold.status } }; });
   }
 
-  // Keep at range on a real raider that fights back, Space held: 25 s
-  await step('keep-on-raider-fight', async () => { await E(`__park(${FAR[0]}, ${FAR[1]}, 0)`); await assistOnNow();
-    await E(`(() => { const s = ${SP}; window.__foe = spawnPirate(s, s.ship.x + 700, s.ship.y - 200, 'raider'); window.__kills = 0; const k = s.killDrone; s.killDrone = function (e) { window.__kills++; return k.apply(s, arguments); }; return 1; })()`);
-    await E(`__recStart(() => (window.__foe && window.__foe.active ? window.__foe : null))`);
-    const took = await E(`assistSet('keep', window.__foe)`); await hold('SPACE', true); const r = await flyOrder(60 * 25); await hold('SPACE', false); await tick(5);
-    return { took, firstKillSecs: r.endSecs, kills: await E('window.__kills'), secs: r.secs, hullLost: r.hullLost, minD: r.minD, maxD: r.maxD, meanD: r.meanD, engineStarts: r.engineStarts, noseFlips: r.noseFlips, endMode: r.mode, toast: (await said()).pop() }; });
-  // the same fight by hand is not scripted: a script cannot fly like a person. Two raiders with the assist, to see if it copes
-  await step('keep-on-two-raiders', async () => { await E(`__park(${FAR[0]}, ${FAR[1]}, 0)`); await assistOnNow();
-    await E(`(() => { const s = ${SP}; window.__foe = spawnPirate(s, s.ship.x + 700, s.ship.y - 200, 'raider'); window.__foe2 = spawnPirate(s, s.ship.x - 600, s.ship.y + 300, 'raider'); window.__kills = 0; return 1; })()`);
-    await E(`__recStart(() => (window.__foe && window.__foe.active ? window.__foe : null))`);
-    await E(`assistSet('keep', window.__foe)`); await hold('SPACE', true); const r = await flyOrder(60 * 30); await hold('SPACE', false); await tick(5);
-    return { kills: await E('window.__kills'), secs: r.secs, hullLost: r.hullLost, endMode: r.mode, dead: await E(`!!${SP}.dead`), toast: (await said()).pop() }; });
+  }
+  if (P('b')) {
+  // Keep at range on a real raider that shoots back. First with the guns cold (what does holding the range cost you), then Space held for
+  // 30 s against one and against three: after each kill the order is given again on the nearest raider, as a player would click the next one
+  const foes = n => E(`(() => { const s = ${SP}; window.__kills = 0; window.__killAt = []; if (!s.__pt4) { s.__pt4 = 1; const k = s.killDrone; s.killDrone = function (e) { window.__kills++; window.__killAt.push(Math.round(window.__rec.f / 6) / 10); return k.apply(s, arguments); }; }
+    [[700, -200], [-600, 300], [200, 650]].slice(0, ${n}).forEach(([dx, dy]) => spawnPirate(s, s.ship.x + dx, s.ship.y + dy, 'raider')); return 1; })()`);
+  const NEAR = `(() => { const s = ${SP}; let b = null, bd = 1e9; s.enemies.getChildren().forEach(e => { if (!e.active) return; const d = Math.hypot(e.x - s.ship.x, e.y - s.ship.y); if (d < bd) { bd = d; b = e; } }); return b; })()`;
+  const fight = async (secs, fire) => { let orders = 0; if (fire) await hold('SPACE', true);
+    for (let f = 0; f < secs * 60; f += 60) { if (!(await E(`${SP}.as.mode`)) && !(await E(`!!${SP}.dead`)) && (await E(`!!${NEAR}`))) { await E(`assistSet('keep', ${NEAR})`); orders++; } await tick(60); if (await E(`!!${SP}.dead || !game.scene.isActive('Space')`)) break; }
+    if (fire) await hold('SPACE', false); await tick(3); return orders; };
+  await step('keep-on-raider-guns-cold-20s', async () => { await E(`__park(${FAR[0]}, ${FAR[1]}, 0)`); await assistOnNow(); await foes(1); await E(`__recStart(() => ${NEAR})`); await fight(20, false); const r = await JE('__recEnd()');
+    return { keepRange: await E('ASSIST.keepRange'), raiderGunRange: await E('PIRATES.raider.range'), hullLost: r.hullLost, minD: r.minD, maxD: r.maxD, meanD: r.meanD, maxV: r.maxV, engineStarts: r.engineStarts, burnPct: r.burnPct, noseFlips: r.noseFlips }; });
+  for (const n of [1, 3]) await step('keep-and-fire-' + n + '-raider' + (n > 1 ? 's' : '') + '-30s', async () => { await E(`__park(${FAR[0]}, ${FAR[1]}, 0)`); await assistOnNow(); await foes(n); await E(`__recStart(() => ${NEAR})`); const orders = await fight(30, true); const r = await JE('__recEnd()');
+    return { raiders: n, kills: await E('window.__kills'), killAtSecs: await JE('window.__killAt'), ordersGiven: orders, secs: r.secs, hullLost: r.hullLost, dead: await E(`!!${SP}.dead`), minD: r.minD, meanD: r.meanD, engineStarts: r.engineStarts, noseFlips: r.noseFlips, lastToast: (await said()).pop() }; });
   if (!(await E(`game.scene.isActive('Space')`)) || (await E(`!!${SP}.dead`))) { await t.close(); await open('#space'); }
 
+  }
+  if (P('c')) {
   // Orbit and Match speed (card space-game-assist-orbit-match), when they are in the tree
   await step('orbit-buoy', async () => { if (!parts.orbit) return 'not here yet';
     await E(`__park(${FAR[0]}, ${FAR[1]}, 0)`); await assistOnNow(); await E(`__recStart({ x: ${FAR[0] + 1500}, y: ${FAR[1]} })`);
@@ -150,6 +160,8 @@ try {
     const r = await JE('__recEnd()'); const rel = await JE(`(() => { const s = ${SP}, v = s.ship.body.velocity; return Math.round(Math.hypot(v.x - 140, v.y + 60)); })()`); await E('window.__foe.destroy()');
     return { took, relSpeedAfter15s: rel, d: r.d, engineStarts: r.engineStarts, noseFlips: r.noseFlips, status: r.status, mode: r.mode }; });
 
+  }
+  if (P('d')) {
   // ---- the mouse ----
   if (parts.click) {
     await step('click-off-is-a-shot', async () => { await E(`__park(${FAR[0]}, ${FAR[1]}, 0)`); if (await E('ASSIST.on')) await skey('Z'); const n0 = await E(`${SP}.pb.countActive(true)`); await clickWorld(FAR[0] + 300, FAR[1] - 100); return { order: await E(`${SP}.as.mode`), bullets: (await E(`${SP}.pb.countActive(true)`)) - n0 }; });
@@ -182,6 +194,8 @@ try {
       return out; });
   } else await step('click', async () => 'not here yet');
 
+  }
+  if (P('e')) {
   // ---- the assist against the other pilots of the ship ----
   await step('assist-then-P-autopilot', async () => { await E(`__park(${st.x + 2500}, ${st.y}, 0)`); await assistOnNow(); await E(`cruisePick(${SP}, cruiseKnown(${SP}).find(b => b.type === 'station'))`); await skey('1'); await tick(30); await skey('P'); await tick(10);
     return { assist: (await E(`${SP}.as.mode`)) || 'ended', autopilot: await E(`${SP}.ap.on`), toasts: (await said()).slice(-2) }; });
@@ -209,26 +223,48 @@ try {
   } else await step('handling', async () => 'not here yet');
 
   await step('hud-panel', async () => { if (!parts.hud) return 'not here yet'; await E(`__park(${FAR[0]}, ${FAR[1]}, 0)`); await assistOnNow(); await E(`assistSet('keep', { x: ${FAR[0] + 900}, y: ${FAR[1]}, name: 'the buoy' })`); await tick(120); return { state: await JE('assistState()'), ownReadout: await E('ASSIST.readout') }; });
+  }
 } catch (e) { console.log('  LOOK section 1 stopped: ' + e.message); results.push({ step: 'section-1', ok: false, detail: 'stopped: ' + e.message, errors: [] }); }
-finally { if (t) await t.close(); }
+finally { if (t) await t.close(); } }
 
 // ================= 2. the escort: fly beside the MULE with the assist =================
-await open('#escort');
+if (P('f')) { await open('#escort');
 try {
-  await step('escort-start', async () => { await tick(60 * 3); return { mule: await E(`!!(${SP}.mx && ${SP}.mx.freighter)`), muleSpeed: await E(`${SP}.mx && ${SP}.mx.freighter && ${SP}.mx.freighter.body ? Math.round(${SP}.mx.freighter.body.speed) : null`), d: await E(`Math.round(Math.hypot(${SP}.mx.freighter.x - ${SP}.ship.x, ${SP}.mx.freighter.y - ${SP}.ship.y))`) }; });
+  const muleNow = () => JE(`(() => { const s = ${SP}, f = s.mx && s.mx.freighter, g = sysBody('gate'); return { there: !!(f && f.active), d: f && f.active ? Math.round(Math.hypot(f.x - s.ship.x, f.y - s.ship.y)) : null, muleSpeed: f && f.active ? Math.round(f.body.speed) : null, toGate: f && f.active ? Math.round(Math.hypot(f.x - g.x, f.y - g.y)) : null, muleHp: f && f.active ? f.hp : null, pirates: s.enemies.countActive(true), hull: G.hull, order: s.as ? s.as.mode : '', mission: G.mission }; })()`);
+  await step('escort-start', async () => { await tick(60 * 2); return muleNow(); });
   if (await has('assistSet')) {
-    await step('escort-keep-on-mule-30s', async () => { await assistOnNow(); await E(`${SP}.calmUntil = ${SP}.time.now + 3600000; ${SP}.enemies.getChildren().slice().forEach(d => d.destroy())`);
-      await E(`__recStart(() => ${SP}.mx.freighter)`); const took = await E(`assistSet('keep', ${SP}.mx.freighter, 250)`); const said1 = (await said()).pop(); await flyOrder(60 * 10, false); await E(`__recStart(() => ${SP}.mx.freighter)`); await tick(60 * 20); const r = await JE('__recEnd()');
-      return { took, said: said1, over20s: { minD: r.minD, maxD: r.maxD, meanD: r.meanD, v: r.v, engineStarts: r.engineStarts, burnPct: r.burnPct, brakePct: r.brakePct, noseFlips: r.noseFlips, status: r.status, mode: r.mode } }; });
-    if (await has('clickmoveClick')) await step('escort-click-mule', async () => { await E(`assistSet('')`); await tick(5); const f = await JE(`({ x: ${SP}.mx.freighter.x, y: ${SP}.mx.freighter.y })`); const pos = await clickWorld(f.x, f.y); return { onScreen: pos.on, picked: await E(`${SP}.cm.pick === ${SP}.mx.freighter`), toast: (await said()).pop() }; });
-    await step('escort-with-pirates-keep-and-fire', async () => { await E(`${SP}.calmUntil = 0`); await E(`(() => { const s = ${SP}, f = s.mx.freighter; spawnPirate(s, f.x + 500, f.y - 300, 'raider'); spawnPirate(s, f.x - 450, f.y + 350, 'raider'); return 1; })()`);
-      await E(`__recStart(() => ${SP}.mx.freighter)`); await E(`assistSet('keep', ${SP}.mx.freighter, 250)`); await hold('SPACE', true); await tick(60 * 25); await hold('SPACE', false); const r = await JE('__recEnd()');
-      return { hullLost: r.hullLost, muleHull: await E(`${SP}.mx.freighterHp !== undefined ? ${SP}.mx.freighterHp : (${SP}.mx.freighter.hp !== undefined ? ${SP}.mx.freighter.hp : null)`), pirateLeft: await E(`${SP}.enemies.countActive(true)`), minD: r.minD, maxD: r.maxD, mode: r.mode, note: 'the assist holds the MULE; the guns point where the nose points, so do they ever bear on a pirate?' }; });
+    if (await has('clickmoveClick')) await step('escort-click-mule', async () => { await assistOnNow(); await E(`assistSet('approach', ${SP}.mx.freighter)`); await tick(60 * 6); await E(`(assistSet(''), 1)`); await tick(60); const f = await JE(`({ x: ${SP}.mx.freighter.x, y: ${SP}.mx.freighter.y })`); const pos = await clickWorld(f.x, f.y);
+      return { onScreen: pos.on, picked: await E(`!!${SP}.cm.pick && (${SP}.cm.pick === ${SP}.mx.freighter)`), name: await E(`${SP}.cm.pick ? ${SP}.cm.pick.name : ''`), toast: (await said()).pop() }; });
+    // the whole run as the game plays it (its own pirates), Keep at 250 px on the MULE, Space held: a line every 5 s until she arrives, is lost, or 70 s
+    await step('escort-keep-and-fire-whole-run', async () => { await assistOnNow(); await E(`__recStart(() => (${SP}.mx.freighter && ${SP}.mx.freighter.active ? ${SP}.mx.freighter : null))`);
+      const took = await E(`assistSet('keep', ${SP}.mx.freighter, 250)`); const log = []; let reorders = 0; await hold('SPACE', true);
+      for (let sec = 0; sec < 70; sec += 5) { await tick(300); const m = await muleNow(); log.push([sec + 5, m.d, m.muleSpeed, m.muleHp, m.pirates, m.hull, m.order || '-'].join('/')); if (!m.there || (await E(`!!${SP}.dead || !game.scene.isActive('Space')`))) break; if (!m.order) { await E(`assistSet('keep', ${SP}.mx.freighter, 250)`); reorders++; } }
+      await hold('SPACE', false); const r = await JE('__recEnd()'); const end = await muleNow();
+      return { took, 'secs/d/muleSpeed/muleHp/pirates/hull/order': log, reorders, kills: await E(`G.stats && G.stats.kills !== undefined ? G.stats.kills : null`), minD: r.minD, maxD: r.maxD, meanD: r.meanD, engineStarts: r.engineStarts, noseFlips: r.noseFlips, hullLost: r.hullLost, end, toasts: (await said()).slice(-3) }; });
   }
 } catch (e) { console.log('  LOOK section 2 stopped: ' + e.message); results.push({ step: 'section-2', ok: false, detail: 'stopped: ' + e.message, errors: [] }); }
-finally { if (t) await t.close(); }
+finally { if (t) await t.close(); } }
 
-writeFileSync(join(OUT, 'playtest4.json'), JSON.stringify({ game: GAME, at: new Date().toISOString(), results }, null, 1));
+// ================= 3. the lounge: the number keys (card space-game-lounge-quick-go) =================
+if (P('g')) { t = await launch('#station', GAME); errSeen = 0; heldSince = Date.now();
+try {
+  const ST = "game.scene.getScene('Station')";
+  await t.waitFor(`!!(window.game && game.scene.isActive('Station'))`, 30000, 'Station active'); await sleep(1500);
+  const tapKey = async (name, code, ch) => { for (const type of ['keyDown', 'keyUp']) { await t.send('Input.dispatchKeyEvent', { type, windowsVirtualKeyCode: code, nativeVirtualKeyCode: code, code: name, key: ch }); await sleep(120); } await sleep(350); };
+  if (!(await has('loungeStops'))) await step('lounge-keys', async () => 'not here yet');
+  else {
+    const stops = await JE(`loungeStops(${ST}.spots, ${ST}.look).map(s => ({ n: s.n, name: s.name, x: Math.round(s.x), y: Math.round(s.y) }))`);
+    await step('lounge-stops', async () => ({ hint: await E(`${ST}.goHint.text`), stops: stops.map(s => s.n + ' ' + s.name).join(', ') }));
+    for (const s of stops) await step('lounge-key-' + s.n + '-' + s.name.toLowerCase(), async () => { await tapKey('Digit' + s.n, 48 + Number(s.n), s.n); const p = await JE(`({ x: Math.round(${ST}.player.x), y: Math.round(${ST}.player.y) })`);
+      const prompt = await E(`(function all(list, out) { list.forEach(o => { if (typeof o.text === 'string' && o.visible && /^E  |E to|Press E/.test(o.text)) out.push(o.text); if (o.list) all(o.list, out); }); return out; })(${ST}.children.list, []).join(' | ').slice(0, 120)`);
+      return { stoodAt: p, off: Math.round(Math.hypot(p.x - s.x, p.y - s.y)), prompt }; });
+    await step('lounge-key-with-a-panel-open', async () => { await tapKey('Digit2', 50, '2'); await tapKey('KeyE', 69, 'e'); const before = await JE(`({ x: Math.round(${ST}.player.x), y: Math.round(${ST}.player.y), panel: !!${ST}.panel })`); await tapKey('Digit1', 49, '1');
+      const after = await JE(`({ x: Math.round(${ST}.player.x), y: Math.round(${ST}.player.y), panel: !!${ST}.panel, mission: G.mission || '' })`); await tapKey('Escape', 27, 'Escape'); return { before, after, note: 'with the mission board open, 1 must pick the call and not move you' }; });
+  }
+} catch (e) { console.log('  LOOK section 3 stopped: ' + e.message); results.push({ step: 'section-3', ok: false, detail: 'stopped: ' + e.message, errors: [] }); }
+finally { if (t) await t.close(); } }
+
+writeFileSync(join(OUT, 'playtest4-' + PARTS + '.json'), JSON.stringify({ game: GAME, at: new Date().toISOString(), results }, null, 1));
 const look = results.filter(r => !r.ok || r.errors.length);
-console.log(`\nplaytest 4: ${results.length} steps, ${look.length} to look at (${look.map(r => r.step).join(', ') || 'none'}); tests/out/playtest4.json`);
+console.log(`\nplaytest 4: ${results.length} steps, ${look.length} to look at (${look.map(r => r.step).join(', ') || 'none'}); tests/out/playtest4-${PARTS}.json`);
 process.exit(0);
