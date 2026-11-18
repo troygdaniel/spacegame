@@ -1,13 +1,13 @@
 // ---------- Sector map (Tab), help page (H) and the key reminder strip ----------
 // One overlay scene with two modes, opened over a paused gameplay scene, the same way the pause menu is.
 // installMap(game) catches Tab and H on the window and hooks scene create events, so the scenes need no code.
-// Over the Space scene the map is also a picker: W and S (or the arrows) move a white ring over the bodies of the nav list
-// (cruiseKnown, src/cruise.js), Enter closes the map and the autopilot flies there (autopilotGo, src/autopilot.js).
-// The map opens on a LOCAL view: the square that holds you, your objective and the body under the ring (never less than MAP_MIN px
+// The map is a map: it picks nothing (card space-game-one-way-to-target). A place is picked in the navigation panel (N, src/navpanel.js) or by
+// a click in space; over the Space scene the map rings that destination and says how far it is.
+// The map opens on a LOCAL view: the square that holds you, your objective and your destination (never less than MAP_MIN px
 // across), so the home cluster of a 36000 px system fills the map and is not six marks in one corner. Z shows the whole system and
-// back; the view grows by itself when the ring or the objective is far away. Names never sit on each other or leave the frame:
+// back; the view grows by itself when the destination or the objective is far away. Names never sit on each other or leave the frame:
 // mapPlace puts each one on a free side of its mark. The legend lists what is on the map now, and nothing else.
-// The rules are the pure functions mapView, mapPlace, mapLegendRows and mapPickStart (tests/sectormap.mjs, plain Node).
+// The rules are the pure functions mapView, mapPlace and mapLegendRows (tests/sectormap.mjs, plain Node).
 
 const SENSOR = 1600;          // a drone this close to your ship counts as seen; farther ones keep their last spot
 const STRIP_MS = 60000;       // the "Tab map  H help" reminder fades out after the first minute of play
@@ -85,12 +85,6 @@ function mapLegendRows(on) {
   return rows;
 }
 
-// which row of the picker the ring starts on: the nav target, else the objective (so the Enter line names what the OBJECTIVE names), else the nearest
-function mapPickStart(list, target, obj) {
-  let i = target ? list.findIndex(b => b.id === target.id) : -1;
-  if (i < 0 && obj) i = list.findIndex(b => (obj.id && b.id === obj.id) || Math.hypot(b.x - obj.x, b.y - obj.y) < 60);
-  return i < 0 ? 0 : i;
-}
 function mapHex(g, x, y, r) { // Kestrel Outpost mark: a hexagon, so it is not mistaken for a salvage circle
   const p = []; for (let i = 0; i < 6; i++) p.push({ x: x + Math.cos(i * Math.PI / 3 + Math.PI / 6) * r, y: y + Math.sin(i * Math.PI / 3 + Math.PI / 6) * r });
   g.fillStyle(GREEN, 0.3); g.lineStyle(2, GREEN, 1); g.fillPoints(p, true); g.strokePoints(p, true);
@@ -150,14 +144,7 @@ class Overlay extends Phaser.Scene {
     this.poiLabels = []; // names of salvage sites you have found (poi.js fills them in)
     for (let i = 0; i < (typeof poiSites === 'function' ? poiSites().length + SIGNAL_MAX : 0); i++) this.poiLabels.push(m(mapText(this, 0, 0, '', 12, '#6dff9c').setOrigin(0.5)));
 
-    // the picker: the bodies of the nav list, nearest first, the current target (or the nearest) under the ring to start with
-    const sp = this.scene.get('Space');
-    this.pick = { list: [], sel: 0 };
-    if (this.from === 'Space' && sp && sp.ship && sp.cr && typeof cruiseKnown === 'function') {
-      this.pick.list = cruiseKnown(sp);
-      this.pick.sel = mapPickStart(this.pick.list, sp.cr.target, this.state().obj);
-    }
-    this.pk = this.input.keyboard.addKeys('W,S,UP,DOWN,ENTER,Z');
+    this.pk = this.input.keyboard.addKeys('Z');
     this.tPick = m(mapText(this, SX, 326, '', 13, '#ffffff'));
 
     // help mode
@@ -179,7 +166,7 @@ class Overlay extends Phaser.Scene {
     this.mode = mode;
     const map = mode === 'map';
     this.title.setText(map ? 'SECTOR MAP' : 'HELP  -  ' + this.from.toUpperCase());
-    this.footer.setText(map ? (this.pick.list.length ? 'W S: choose   Enter: autopilot there   Z: zoom   Tab: close' : 'Z: zoom     Tab or Esc: close     H: help') : 'H or Esc: close     Tab: sector map');
+    this.footer.setText(map ? 'Z: zoom     Tab or Esc: close     H: help' : 'H or Esc: close     Tab: sector map');
     this.mapObjs.forEach(o => o.setVisible(map)); this.galaxyBtn.setVisible(map);
     this.helpObjs.forEach(o => o.setVisible(!map));
     if (!map) {
@@ -236,8 +223,8 @@ class Overlay extends Phaser.Scene {
   drawMap(time) {
     const g = this.g, gm = this.gm, S = this.state(), MX = this.MX, MY = this.MY, MS = this.MS;
     if (Phaser.Input.Keyboard.JustDown(this.pk.Z)) { this.whole = !this.whole; sfx('tick'); }
-    // the view: you, the objective and the body under the ring; it slides to a new square, it does not jump
-    const ring = this.pick.list[this.pick.sel], want = mapView([S.ship, S.obj, ring], S.ws, this.whole), v = this.view || (this.view = Object.assign({}, want));
+    // the view: you and the objective (your destination when you have one); it slides to a new square, it does not jump
+    const want = mapView([S.ship, S.obj], S.ws, this.whole), v = this.view || (this.view = Object.assign({}, want));
     ['x', 'y', 'size'].forEach(k => { v[k] += (want[k] - v[k]) * 0.25; if (Math.abs(want[k] - v[k]) < want.size * 0.003) v[k] = want[k]; }); // the last few px in one step, so it comes to rest (about 20 frames)
     const sc = MS / v.size, X = x => MX + (x - v.x) * sc, Y = y => MY + (y - v.y) * sc;
     this.marks = [];
@@ -327,7 +314,7 @@ class Overlay extends Phaser.Scene {
       poiMapMarks(gm, X, Y, this.poiLabels); // it puts each name 9 px under its site: the site is where the name is, less that
       this.poiLabels.forEach(lb => { if (!lb.visible) return; const px = lb.x, py = lb.y - 9; this.mark(lb, px, py, 8, 'below'); if (seen(px, py)) on.poi = true; });
     }
-    this.pickFrame(gm, X, Y, time);
+    this.destFrame(gm, X, Y, time);
 
     // sensor range, then the dashed route to the objective with a pulsing ring, then you
     if (S.live) { gm.lineStyle(1, CYAN, 0.28); gm.strokeCircle(ox, oy, SENSOR * sc); }
@@ -356,25 +343,15 @@ class Overlay extends Phaser.Scene {
     this.drawLegend(g, mapLegendRows(on));
   }
 
-  // the picker: W S (or the arrows) move the ring, Enter hands the ship to the autopilot and closes the map
-  pickFrame(g, X, Y, time) {
-    const P = this.pick, n = P.list.length, JD = Phaser.Input.Keyboard.JustDown, k = this.pk;
+  // the destination picked in the navigation panel or by a click: a white ring on it and a line with its distance. Nothing is picked here.
+  destFrame(g, X, Y, time) {
+    const sp = this.from === 'Space' ? this.scene.get('Space') : null, b = sp && sp.ship && sp.cr ? sp.cr.target : null;
     this.tPick.setText('');
-    if (!n) return;
-    const down = JD(k.S) || JD(k.DOWN), up = JD(k.W) || JD(k.UP);
-    if (down || up) { P.sel = (P.sel + (down ? 1 : n - 1)) % n; sfx('tick'); }
-    const b = P.list[P.sel];
-    if (JD(k.ENTER)) {
-      const sp = this.scene.get('Space');
-      this.close();
-      if (sp && typeof autopilotGo === 'function') autopilotGo(sp, b);
-      return;
-    }
+    if (!b) return;
     const x = X(b.x), y = Y(b.y), r = 14 + 2 * Math.sin(time / 180);
     g.lineStyle(2, 0xffffff, 0.95); g.strokeCircle(x, y, r);
     g.lineStyle(1, 0xffffff, 0.5); [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => g.lineBetween(x + dx * (r + 3), y + dy * (r + 3), x + dx * (r + 10), y + dy * (r + 10)));
-    const sp = this.scene.get('Space'), d = sp && sp.ship ? Math.hypot(b.x - sp.ship.x, b.y - sp.ship.y) : b.dist;
-    this.tPick.setText('Enter: autopilot to ' + b.name + '   ' + (d / 10 | 0) + ' km');
+    this.tPick.setText('Destination: ' + b.name + '   ' + (Math.hypot(b.x - sp.ship.x, b.y - sp.ship.y) / 10 | 0) + ' km');
   }
 
   drawLegend(g, rows) {

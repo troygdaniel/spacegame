@@ -3,7 +3,7 @@
 // YOU on top of each other in one corner of an empty grid, a name running out of the frame, an Enter line about Halcyon under an objective of
 // Kepler-4b, and a legend of things not on the map. The rules that fix it are pure functions, tested here with the real Halcyon system:
 //   mapView        the square of the system the map shows      mapPlace       where each name goes
-//   mapLegendRows  the legend rows for what is drawn           mapPickStart   which body the ring starts on
+//   mapLegendRows  the legend rows for what is drawn
 // The drawing itself is checked on the page by tests/outpostmap.mjs and tests/cruise.mjs.
 // Run: node tests/sectormap.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
@@ -71,17 +71,8 @@ console.log('the legend');
   check('up to nine rows keep the old spacing', J('mapLegStep(9)') === J('MAP_LEG_STEP') && J('mapLegStep(1)') === J('MAP_LEG_STEP'));
 }
 
-console.log('the ring and the Enter line');
-{
-  const list = B.filter(b => ['station', 'planet', 'belt', 'scenery', 'gate'].includes(b.type)).map(b => ({ ...b, dist: Math.hypot(b.x - 4120, b.y - 4000) })).sort((a, b) => a.dist - b.dist);
-  const start = (target, obj) => J(`mapPickStart(${JSON.stringify(list)}, ${JSON.stringify(target)}, ${JSON.stringify(obj)})`);
-  const kep = body('kepler-4b');
-  check('the nearest body is the station (what the Enter line named in picture 08)', list[0].id === 'halcyon-station');
-  check('objective Kepler-4b, no nav target: the ring starts on Kepler-4b, so Enter flies to the objective', list[start(null, { x: kep.x, y: kep.y, name: kep.name })].id === 'kepler-4b');
-  check('a nav target comes first', list[start({ id: 'slag-belt' }, { x: kep.x, y: kep.y })].id === 'slag-belt');
-  check('no objective and no target: the nearest', start(null, null) === 0);
-  check('an objective that is not a body of the list (the MULE): the nearest', start(null, { x: 9999, y: 123 }) === 0);
-}
+console.log('the map picks nothing');
+check('the picker rule is gone (a place is picked in the navigation panel)', J("typeof mapPickStart") === 'undefined');
 
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\n${failed} of ${n} checks FAILED` : `\nall ${n} checks passed`);
