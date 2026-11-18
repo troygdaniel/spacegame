@@ -7,3 +7,4 @@ tests/out/
 # player mods (docs/MODDING.md): keep the example, ignore the rest
 mods/*
 !mods/example/
+!mods/sol/
