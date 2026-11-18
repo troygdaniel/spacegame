@@ -17,6 +17,7 @@ const OVERVIEW = {
   every: 250,                   // ms between rebuilds of the list
   still: 5,                     // px/s: under this the range neither closes nor opens
   x: 1004, y: 242, w: 260, row: 18,   // under the radar and its hostile line
+  gap: 8, foot: 52,             // px between the assist's target panel and the list; px kept clear at the bottom of the screen (the Tab map strip)
   kinds: { station: 'STATION', planet: 'PLANET', gate: 'GATE', belt: 'BELT', poi: 'SIGNAL', scenery: 'BODY', raider: 'RAIDER', drone: 'DRONE', gunship: 'GUNSHIP', pirate: 'PIRATE', escort: 'ESCORT', police: 'POLICE', civ: 'SHIP' },
   colors: { hostile: '#ff4d6d', friend: '#6dff9c', station: '#38e1ff', planet: '#ffb454', other: '#9fb6c8' }
 };
@@ -25,9 +26,12 @@ const OVERVIEW = {
 
 // where the list is on the screen: { x, y, w, h, rows }. assist: the rectangle of the flight assist's target panel (src/hud.js hudAssistRect),
 // or null when that panel is not up.
+// One column, no overprint: the target panel sits directly under the radar and the list starts O.gap px under it, with as many rows as
+// fit above the bottom strip (never more than O.max, never fewer than 4). With no panel the list is where it always was.
 function overviewLayout(assist) {
-  const O = OVERVIEW;
-  return { x: O.x, y: O.y, w: O.w, h: O.row * (O.max + 2) + 14, rows: O.max };
+  const O = OVERVIEW, y = assist ? Math.max(O.y, assist.y + assist.h + O.gap) : O.y;
+  const rows = Math.max(4, Math.min(O.max, Math.floor((H - O.foot - y - 14) / O.row) - 2));
+  return { x: O.x, y, w: O.w, h: O.row * (rows + 2) + 14, rows };
 }
 
 // nearest first. range: px to its centre. closing: px/s the range shrinks by (negative: it opens). trend: 'closing', 'opening' or ''.
@@ -98,6 +102,7 @@ function overviewSetup(s) {
   ov.k = s.input.keyboard.addKeys([O.key, 'W', 'S', 'UP', 'DOWN', 'ENTER'].join(','));
   const fix = o => { o.setScrollFactor(0).setVisible(false); ov.parts.push(o); return o; };
   const h = O.row * (O.max + 2) + 14;
+  ov.lay = overviewLayout(null);
   ov.bg = fix(s.add.rectangle(O.x, O.y, O.w, h, 0x04101c, 0.72).setOrigin(0, 0).setStrokeStyle(1, 0x2a6f8f, 0.9).setDepth(100));
   ov.bg.setInteractive(); ov.bg.on('pointerdown', (p, x, y, e) => { ov.press = true; if (e && e.stopPropagation) e.stopPropagation(); }); // a click on the panel is not a click in space
   ov.hl = fix(s.add.rectangle(O.x + 2, O.y, O.w - 4, O.row, 0x38e1ff, 0.16).setOrigin(0, 0).setDepth(100.5));
@@ -110,6 +115,19 @@ function overviewSetup(s) {
   }
   ov.foot = fix(s.add.text(O.x + 8, O.y + 9 + O.row * (O.max + 1), '', Object.assign({}, style, { color: '#5b7a92' })).setDepth(101));
   s.events.once('shutdown', () => { if (s.ov === ov) s.ov = null; });
+}
+
+// the layout now: under the assist's target panel when that is up (src/hud.js says where it is)
+function overviewLay(s) {
+  return overviewLayout(typeof hudAssistRect === 'function' && typeof hudAssistModel === 'function' ? hudAssistRect(hudAssistModel(s)) : null);
+}
+// move every part of the panel to a layout: the frame, the head, the rows (those past L.rows are hidden by the draw), the foot
+function overviewPlace(s, L) {
+  const ov = s.ov, O = OVERVIEW; ov.lay = L;
+  ov.bg.setPosition(L.x, L.y).setSize(L.w, L.h); if (ov.bg.input && ov.bg.input.hitArea && ov.bg.input.hitArea.setSize) ov.bg.input.hitArea.setSize(L.w, L.h);
+  ov.head.setPosition(L.x + 8, L.y + 5);
+  ov.texts.forEach((t, i) => t.setPosition(L.x + 8, L.y + 7 + O.row * (i + 1)));
+  ov.foot.setPosition(L.x + 8, L.y + 9 + O.row * (L.rows + 1));
 }
 
 function overviewShow(s, shown, keys) {
@@ -128,6 +146,7 @@ function overviewFrame(s, time) {
   if (nav) ov.keys = false; // the nav list has the keyboard
   else if (overviewJustDown(k[OVERVIEW.key])) { if (!ov.shown) overviewShow(s, true, true); else if (!ov.keys) overviewShow(s, true, true); else overviewShow(s, false); sfx('tick'); }
   if (!ov.shown) return;
+  const L = overviewLay(s); if (L.y !== ov.lay.y || L.rows !== ov.lay.rows) { overviewPlace(s, L); ov.at = 0; } // the target panel came, went or grew: the list moves this frame
   if (time >= ov.at) { ov.at = time + OVERVIEW.every; overviewBuild(s); }
   if (ov.keys) {
     const up = overviewJustDown(k.W) | overviewJustDown(k.UP), down = overviewJustDown(k.S) | overviewJustDown(k.DOWN);
@@ -144,7 +163,7 @@ function overviewFrame(s, time) {
 function overviewBuild(s) {
   const ov = s.ov, sh = s.ship, v = (sh.body && sh.body.velocity) || { x: 0, y: 0 };
   const keep = ov.selRef;
-  ov.rows = overviewRows(overviewThings(s), { x: sh.x, y: sh.y, vx: v.x, vy: v.y }, OVERVIEW.max);
+  ov.rows = overviewRows(overviewThings(s), { x: sh.x, y: sh.y, vx: v.x, vy: v.y }, ov.lay.rows);
   if (ov.keys && keep) { const i = ov.rows.findIndex(r => r.ref === keep || (r.id !== undefined && keep && r.id === keep.id)); if (i >= 0) ov.sel = i; } // the ring stays on its row while the order changes
   if (ov.sel >= ov.rows.length) ov.sel = Math.max(0, ov.rows.length - 1);
   overviewDraw(s);
@@ -158,6 +177,6 @@ function overviewDraw(s) {
     t.setVisible(!!r);
     if (r) t.setText(overviewLine(r, overviewIsTarget(s, r))).setColor(overviewColor(r));
   });
-  ov.hl.setVisible(ov.keys && ov.rows.length > 0).setY(O.y + 6 + O.row * (ov.sel + 1));
+  ov.hl.setVisible(ov.keys && ov.rows.length > 0).setPosition(ov.lay.x + 2, ov.lay.y + 6 + O.row * (ov.sel + 1));
   ov.foot.setVisible(true).setText(ov.keys ? 'W S choose   Enter target   B hide' : 'click a row to target   B keys');
 }

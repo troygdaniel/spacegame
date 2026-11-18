@@ -129,6 +129,16 @@ console.log('the order\'s target, and the interface');
   check('index.html loads src/gunlock.js after the assist and the autotarget, before space.js', html.indexOf('src/gunlock.js') > html.indexOf('src/autotarget.js') && html.indexOf('src/gunlock.js') > html.indexOf('src/assist.js') && html.indexOf('src/gunlock.js') < html.indexOf('src/space.js'));
 }
 
+console.log('the line under the target (card space-game-assist-overview-overlap: it floated in mid-screen)');
+{
+  const line = (st, hint) => J(`gunlockLine(${JSON.stringify(st)}, ${hint ? '{}' : 'null'})`);
+  check('no lock and nobody in reach: no line at all', line({ on: false }, false) === null);
+  check('no lock, a pirate in reach: a short hint for under that pirate, with the key', line({ on: false }, true).text === J('GUNLOCK.key') + ' lock');
+  check('building: LOCKING and the percent', line({ on: true, locked: false, locking: 0.4 }, false).text === 'LOCKING 40%');
+  check('locked: FIRING, OUT OF RANGE or OUT OF ARC', [line({ on: true, locked: true, firing: true }).text, line({ on: true, locked: true, why: 'range' }).text, line({ on: true, locked: true, why: 'arc' }).text].join('|') === 'LOCKED  FIRING|LOCKED  OUT OF RANGE|LOCKED  OUT OF ARC');
+  check('the readout is made at no fixed place on the screen: gunlockRead puts it under its pirate every frame', !/W \/ 2, 178/.test(J('gunlockSetup.toString()')) && /camzoomScreen\(s, t\.x, t\.y\)/.test(J('gunlockRead.toString()')));
+}
+
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\n${failed} of ${n} checks FAILED` : `\nall ${n} checks passed`);
 process.exit(failed ? 1 : 0);
