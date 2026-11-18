@@ -78,7 +78,7 @@ try {
     const want = JSON.parse(readFileSync(FIXTURE, 'utf8'));
     const bad = Object.keys(want).filter(k => want[k] !== got[k]);
     const missing = Object.keys(want).filter(k => !(k in got)), extra = names.filter(k => !(k in want));
-    check(names.length >= 40, `${names.length} textures hashed (27 painted at boot, 20 planets)`);
+    check(names.length >= 40, `${names.length} textures hashed (24 painted at boot, 20 planets)`);
     check(bad.length === 0 && missing.length === 0, `every texture has the recorded pixels${bad.length ? ' (changed: ' + bad.join(', ') + ')' : ''}${missing.length ? ' (not made now: ' + missing.join(', ') + ')' : ''}`);
     check(extra.length === 0, `no texture the record does not know${extra.length ? ' (' + extra.join(', ') + ' are new: run node tests/perfart.mjs --write)' : ''}`);
   }

@@ -23,7 +23,8 @@ const CONTROLS = [
     { k: ['J'], t: 'Journal: who you have met' },
     { k: ['G'], t: 'Galaxy map (look only; jump in flight)' },
     { k: ['Esc'], t: 'Close a terminal, or pause' },
-    { k: ['I'], t: 'Ship\'s computer: ask it a question (needs a chat key)', help: 0 }
+    { k: ['I'], t: 'Ship\'s computer: ask it a question (needs a chat key)', help: 0 },
+    { k: ['U'], t: 'Hold to talk to the ship\'s computer' }
   ] },
   { id: 'ship', title: 'SHIP BAY', scene: 'Ship', rows: [
     { k: ['Enter', 'Space'], t: 'Launch or board' },
@@ -76,7 +77,8 @@ const CONTROLS = [
     { k: ['Tab'], t: 'Sector map', bay: 1 },
     { k: ['H'], t: 'Help page for this scene', bay: 1, bt: 'Help' },
     { k: ['Esc'], t: 'Pause: saves, volume, Settings', bay: 1, bt: 'Pause' },
-    { k: ['M'], t: 'Mute sound', bay: 1 }
+    { k: ['M'], t: 'Mute sound', bay: 1 },
+    { k: ['U'], t: 'Hold, in space or a station, to talk to the ship\'s computer', help: 0 }
   ] }
 ];
 
