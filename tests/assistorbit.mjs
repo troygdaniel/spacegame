@@ -34,14 +34,16 @@ g.run(`
   // fly seconds of 60 frames. Measured over the last "tail" seconds: the nearest and farthest the ship was from the target, the fastest it went
   // relative to it; over the whole flight: the angle it swept round the target (rad, signed), the top speed, burns with the nose off the line
   function __frames(count, tgt, tail) {
-    const s = __s, dt = 1000 / 60, log = { frames: 0, maxV: 0, offLineBurn: 0, sweep: 0, back: 0, lo: 1e9, hi: 0, relHi: 0, status: '' };
+    const s = __s, dt = 1000 / 60, log = { frames: 0, maxV: 0, offLineBurn: 0, sweep: 0, back: 0, lo: 1e9, hi: 0, relHi: 0, status: '', starts: 0, flips: 0 }; let wasOn = false, lastTurn = 0;
     const from = count - Math.round((tail || 0) * 60);
     let last = tgt ? Math.atan2(s.ship.y - tgt.y, s.ship.x - tgt.x) : 0;
     for (let i = 0; i < count; i++) {
-      s.time.now += dt;
+      s.time.now += dt; const rot0 = s.ship.rotation;
       if (assistFrame(s, s.time.now, dt, '', '') === 'assist') {
         assistDrive(s, dt);
         const c = s.as.cmd;
+        const on = !!(c && c.burn); if (on && !wasOn) log.starts++; wasOn = on; // starts: how often the engine lights
+        const turn = Math.sign(assistWrap(s.ship.rotation - rot0)); if (turn) { if (lastTurn && turn !== lastTurn) log.flips++; lastTurn = turn; } // flips: how often the nose changes the way it turns
         if (c && c.burn && c.face !== null && Math.abs(assistWrap(c.face - s.ship.rotation)) > ASSIST.align + 0.01) log.offLineBurn++;
       } else { const k = Math.pow(0.55, dt / 1000); s.ship.body.velocity.x *= k; s.ship.body.velocity.y *= k; }
       const v = s.ship.body.velocity; s.ship.x += v.x * dt / 1000; s.ship.y += v.y * dt / 1000;
@@ -125,6 +127,25 @@ check('a target that stands still: it stops 200 px off it and holds, still on', 
 f = match('0, 0, 0', `__ship(600, 0, ${vmax + 150}, 0)`, 0, 10);
 check('a target faster than the ship: it chases and does not say matched', f.mode === 'match' && f.status !== 'matched' && f.maxV <= vmax + 0.01, f.status);
 check('S hands the stick back from Match speed', J(`(() => { __scene(0, 0, 0); const t = __ship(900, 0, 100, 0); assistSet('match', t); __frames(120, t); __s.k.S.isDown = true; __frames(1, t); return __s.as.mode; })()`) === '');
+
+// ---- the engine and the nose are steady (playtest 4: Orbit round a still buoy lit the engine 312 times in 20 s and reversed the nose 558 times; Match speed 113 starts) ----
+g.run(`__scene(0, 0, 0)`);
+f = J(`(() => { const t = { x: 900, y: 0 }; assistSet('orbit', t, 400); return __frames(1200, t, 8); })()`);
+check('Orbit round a still buoy, 20 s: 20 engine starts and 20 nose reversals or fewer, and it is on the circle', f.starts <= 20 && f.flips <= 20 && f.lo > 320 && f.hi < 480, `${f.starts} starts, ${f.flips} reversals, ${f.lo.toFixed(0)} to ${f.hi.toFixed(0)} px`);
+g.run(`__scene(0, 0, 0)`);
+f = J(`(() => { const t = __ship(900, 0, 120, 60); assistSet('orbit', t, 400); return __frames(1200, t, 8); })()`);
+check('Orbit round a ship that moves, 20 s: 20 starts and 20 reversals or fewer, near the circle', f.starts <= 20 && f.flips <= 20 && f.lo > 250 && f.hi < 560, `${f.starts} starts, ${f.flips} reversals, ${f.lo.toFixed(0)} to ${f.hi.toFixed(0)} px`);
+g.run(`__scene(0, 0, 0)`);
+f = J(`(() => { const t = __ship(600, 300, 152, 0); assistSet('match', t); return __frames(1200, t, 5); })()`);
+check('Match speed beside a ship on a straight line at 152 px/s, 20 s: 20 starts and 20 reversals or fewer, matched', f.starts <= 20 && f.flips <= 20 && f.rel < 20, `${f.starts} starts, ${f.flips} reversals, relative ${f.rel.toFixed(1)} px/s, status ${f.status}`);
+for (const [x, y, vx, vy] of [[800, 0, 140, -60], [600, 300, 140, -60], [600, 300, 0, 152], [600, 300, 107, 107], [600, 300, 60, 0], [600, 300, -200, 90], [600, 300, 20, 10]]) { // 6-GEN's sim: other headings and speeds pulsed (up to 235 starts)
+  g.run(`__scene(0, 0, 0)`);
+  f = J(`(() => { const t = __ship(${x}, ${y}, ${vx}, ${vy}); assistSet('match', t); return __frames(1200, t, 5); })()`);
+  check(`Match speed, a ship at ${x},${y} flying ${vx},${vy}: 20 starts and 20 reversals or fewer, matched`, f.starts <= 20 && f.flips <= 20 && f.rel < 20, `${f.starts} starts, ${f.flips} reversals, relative ${f.rel.toFixed(1)} px/s`);
+}
+g.run(`__scene(0, 0, 0)`);
+f = J(`(() => { const t = __ship(600, 300, 20, 10); assistSet('keep', t, 400); return __frames(1200, t, 5); })()`);
+check('Keep at range on a ship that barely moves (20,10): 20 starts or fewer (the engine idles low instead of pulsing)', f.starts <= 20 && f.flips <= 20, `${f.starts} starts, ${f.flips} reversals`);
 
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `ASSIST ORBIT FAIL (${failed} of ${n})` : `ASSIST ORBIT PASS (${n} checks)`);
