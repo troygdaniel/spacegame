@@ -2,7 +2,8 @@
 // For the flight assist (src/assist.js): with the assist on you give orders and the ship carries them out, so the guns need an order too.
 //   V        lock a target. A ring closes on it while the lock builds (GUNLOCK.time); then the cannons fire at it by themselves whenever it
 //            is in range and inside their arc (GUNLOCK.arc either side of the nose), leading it, at the weapons part's own rate and damage.
-//   V again  the lock moves to the next pirate further out; after the furthest one it is dropped.
+//   V again  the lock is dropped. V never walks from one pirate to the next (card space-game-one-way-to-target): you choose who in the Overview
+//            list or with a click, and V locks that one; with nothing chosen it locks the nearest.
 // Who gets locked first: the pirate the assist order is about (assistSet(mode, pirate), as the overview list and a click do), else the nearest.
 // The lock is dropped when the target is destroyed, gets further than GUNLOCK.keep, or the assist is switched off. With the assist off
 // nothing here runs: no key, no ring, no shot. Space still fires by hand at any time, and both share one fire clock (s.nextFire), so a
@@ -34,12 +35,11 @@ function gunlockTime(aimRange, aimLead) { return aimLead ? GUNLOCK.timeLead : ai
 function gunlockRange(aimRange) { return Math.min(Math.max(GUNLOCK.range, aimRange || 0), SHOT_SPEED * SHOT_LIFE / 1000 - 30); }
 
 // who V locks. list: the live pirates [{ x, y }], me: the ship, cur: the one locked now (or null), prefer: the assist order's target (or null).
-// With no lock: prefer when it is a pirate in reach, else the nearest. With a lock: the next one further out, and null after the furthest.
-function gunlockNext(list, me, cur, prefer) {
+// prefer when it is a pirate in reach, else the nearest; null when none is in reach. A lock that is on is dropped by V, never moved (gunlockKey).
+function gunlockNext(list, me, prefer) {
   const d = t => Math.hypot(t.x - me.x, t.y - me.y);
   const near = list.filter(t => d(t) <= GUNLOCK.reach).sort((a, b) => d(a) - d(b));
-  if (!cur || !near.includes(cur)) return prefer && near.includes(prefer) ? prefer : near[0] || null;
-  return near[near.indexOf(cur) + 1] || null;
+  return prefer && near.includes(prefer) ? prefer : near[0] || null;
 }
 
 // may the cannons fire at it now, and along which heading? me: { x, y, rot } of the ship; tgt: { x, y, vx, vy }; range in px.
@@ -86,13 +86,13 @@ function gunlockSet(target) {
   return true;
 }
 
-// V: the next target, or none
+// V: lock the selected pirate (else the nearest); V on a lock drops it
 function gunlockKey(s) {
   const sel = typeof overviewTarget === 'function' ? overviewTarget(s) : null;   // the one selected thing (a click in space, an Overview row) comes first
   const L = GUNLOCK, list = gunlockPirates(s), order = sel && sel.ship ? sel.ref : s.as && s.as.mode ? s.as.target : null;
-  const next = gunlockNext(list, s.ship, L.target, order);
-  if (next) { gunlockSet(next); return; }
-  if (L.target) gunlockDrop(s, 'key'); else { toast(s, 'Nothing to lock in reach.', '#ffd37a'); sfx('empty'); }
+  if (L.target) { gunlockDrop(s, 'key'); return; }
+  const next = gunlockNext(list, s.ship, order);
+  if (next) gunlockSet(next); else { toast(s, 'Nothing to lock in reach.', '#ffd37a'); sfx('empty'); }
 }
 
 function gunlockSetup(s) {
@@ -162,7 +162,7 @@ function gunlockLine(st, hint) {
 // this file's own readout: one short line that rides under the pirate it is about, at any zoom (the text is on the HUD camera, src/camzoom.js)
 function gunlockRead(s, time, st) {
   const L = GUNLOCK; if (!L.read) return;
-  const on = L.target, hint = on ? null : gunlockNext(gunlockPirates(s), s.ship, null, s.as && s.as.mode ? s.as.target : null), t = on || hint;
+  const on = L.target, hint = on ? null : gunlockNext(gunlockPirates(s), s.ship, s.as && s.as.mode ? s.as.target : null), t = on || hint;
   const line = GUNLOCK.readout && t ? gunlockLine(st, hint) : null;
   L.read.setVisible(!!line);
   if (!line) return;
