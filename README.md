@@ -51,9 +51,11 @@ New files get their own script tag in index.html. Keep edits inside the files yo
 
 | Where | Keys |
 |---|---|
-| Station | `W A S D` or arrows walk, `E` use a terminal, the repair bay or the ship |
-| Space | `A D` turn, `W` thrust, `S` brake, `Shift` boost (uses energy), `Q` / `E` dash sideways, `Space` or mouse fire, `L` dock or land (fly slowly, close in) |
-| Surface | `W A S D` walk, mouse aim and click to fire, `E` talk to the colonist or board at the pad |
+| Station | `1`-`6` or `W S` and `Enter` pick from the station menu (go there and open it); `N` hands the keys back so `W A S D` walk and `E` uses what you stand at; `J` journal, `G` galaxy map |
+| Space, by hand | `A D` turn, `W` thrust, `S` brake, `Shift` boost (uses energy), `Q` / `E` dash sideways, `Space` or mouse fire, `L` dock or land (fly slowly, close in), mouse wheel zoom |
+| Space, where to go | `N` places (`Enter` sets the destination, `Enter` again goes there, `X` clears it), `C` cruise there, `P` autopilot there, `G` galaxy map and jump, `F` call the fuel ranger on a near-empty tank |
+| Space, by command | `Z` flight assist on or off; `B` the Overview of ships (`Enter` targets one); `1`-`4` orders about the target: approach, keep at range, orbit, match speed; `V` gun lock; with the assist on a click in space flies there and a click on a ship or place targets it; `R` autotarget on or off (needs the part) |
+| Surface | `W A S D` walk, mouse aim and click to fire, `E` talk to the colonist or board at the pad, `C` show the controls again |
 | Anywhere | `Esc` pause menu, `M` mute, `Tab` sector map, `H` help page, `T` pin or hide the mission list |
 
 **The loop:** Station (take the rescue call, board your ship) -> Space (fly, fight drones, dock or land with `L`) -> Surface (find the colonist, protect them, return to the ship) -> fly home, dock, get paid. Credits buy ship upgrades at the station shop.
