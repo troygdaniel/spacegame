@@ -82,7 +82,52 @@ const LOOKS = [
     await t.ev(`(() => { const s = ${SP}, a = s.ship; [[420, -120], [-300, 260]].forEach(([dx, dy]) => s.spawnDrone(a.x + dx, a.y + dy)); if (typeof assistOn === 'function') { assistOn(s, true); s.cr.target = sysBody('gate'); assistSet('keep', null, 500); } overviewShow(s, true, false); return 1; })()`);
     await t.run(2500);
   }],
-  ['sky', '#space', 'Space', async t => { await t.run(2000); }] // the sky with no backdrop sun, giant or moon: only real bodies
+  ['sky', '#space', 'Space', async t => { await t.run(2000); }], // the sky with no backdrop sun, giant or moon: only real bodies
+  // ---- round 2 ----
+  ['star', '#space', 'Space', async t => { // the star is a real body at the centre of the system (card space-game-real-solar-system): the ship beside it
+    await need(t, `typeof sysStar === 'function'`, 'the star as a body (src/universe.js)'); await t.run(1200);
+    const o = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}, b = sysBodies().find(x => x.type === 'star'); if (!b) return { none: true }; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ship.setPosition(b.x + (b.r || 300) + 500, b.y); s.ship.setVelocity(0, 0); s.cameras.main.centerOn(s.ship.x, s.ship.y); return { name: b.name, r: b.r, x: b.x, y: b.y }; })())`));
+    if (o.none) throw new Error('no star body in this system'); console.log('        the star: ' + JSON.stringify(o));
+    await t.run(1500);
+  }],
+  ['radar-fight', '#space', 'Space', async t => { // the radar is always the system now: hostiles are red dots over your mark (three raiders close by)
+    await t.run(1500);
+    await t.ev(`(() => { const s = ${SP}, a = s.ship; [[420, -120], [-300, 260], [650, 300]].forEach(([dx, dy]) => s.spawnDrone(a.x + dx, a.y + dy)); return 1; })()`); await t.run(1200);
+  }],
+  ['one-target', '#space', 'Space', async t => { // one way to pick a target (card space-game-one-way-to-target): places in the navigation panel, ships in the Overview, both open
+    await t.run(1500);
+    await t.ev(`(() => { const s = ${SP}, a = s.ship; [[420, -120], [-300, 260]].forEach(([dx, dy]) => s.spawnDrone(a.x + dx, a.y + dy)); cruiseNavOpen(s); overviewShow(s, true, false); return 1; })()`); await t.run(1500);
+    console.log('        overview rows: ' + await t.ev(`JSON.stringify((${SP}.ov && ${SP}.ov.rows || []).map(r => r.name + (r.ship ? '' : ' (place)')))`));
+  }],
+  ['map-dest', '#space', 'Space', async t => { // the Tab map picks nothing now: it rings the destination set in the navigation panel
+    await t.run(1500);
+    await t.ev(`(() => { const s = ${SP}; cruiseNavOpen(s); const i = s.cr.list.findIndex(r => r.kind === 'body' && r.type === 'planet'); navpanelClick(s, Math.max(0, i)); toggleOverlay(game, 'map'); return 1; })()`); await t.run(800);
+  }],
+  ['dock-order', '#space', 'Space', async t => { // Dock as an order (card space-game-dock-by-command): Enter twice on the station row; the picture is 4 s in
+    await t.run(1500);
+    const o = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; s.lockUntil = 0; s.ship.setPosition(s.station.x + 1800, s.station.y + 300); s.ship.setVelocity(0, 0);
+      cruiseNavOpen(s); const i = s.cr.list.findIndex(r => r.kind === 'body' && r.type === 'station'); navpanelClick(s, i); navpanelClick(s, i); return { row: s.cr.list[i] && s.cr.list[i].name, ap: !!(s.ap && s.ap.on), order: s.ap && s.ap.order || null }; })())`));
+    await t.run(4000);
+    const mid = await t.ev(`JSON.stringify((() => { const s = ${SP}; return { ap: !!(s.ap && s.ap.on), stage: s.ap && s.ap.stage, read: s.ap && s.ap.read && s.ap.read.text, v: Math.round(s.ship.body.speed) }; })())`);
+    console.log('        Enter twice on ' + o.row + ': autopilot ' + o.ap + ', order ' + JSON.stringify(o.order) + '; 4 s in: ' + mid);
+  }],
+  ['dock-order-end', '#space', 'Space', async t => { // and where that order ends: docked (the Station scene) inside a minute of game time, or where it is then
+    await t.run(1500);
+    await t.ev(`(() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; s.lockUntil = 0; s.ship.setPosition(s.station.x + 1800, s.station.y + 300); s.ship.setVelocity(0, 0);
+      cruiseNavOpen(s); const i = s.cr.list.findIndex(r => r.kind === 'body' && r.type === 'station'); navpanelClick(s, i); navpanelClick(s, i); return 1; })()`);
+    let ran = 0; while (ran < 60) { await t.run(2000); ran += 2; if (await t.ev(up('Station'))) break; }
+    console.log('        after ' + ran + ' s of game time: ' + ((await t.ev(up('Station'))) ? 'docked, the Station scene is up' : 'not docked: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}; return { ap: !!(s.ap && s.ap.on), stage: s.ap && s.ap.stage, d: Math.round(Math.hypot(s.ship.x - s.station.x, s.ship.y - s.station.y)), v: Math.round(s.ship.body.speed), prompt: s.prompt.text }; })())`)));
+    await t.run(1500);
+  }],
+  ['clear-mass', '#space', 'Space', async t => { // Troy's bug beside Kepler-4b (card space-game-bug-travel-refuses-near-mass): C inside a mass limit flies clear, then cruises
+    await t.run(1500);
+    const o = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; s.lockUntil = 0;
+      s.ship.setPosition(s.planet.x + s.planetR + 500, s.planet.y); s.ship.setVelocity(0, 0); s.cameras.main.centerOn(s.ship.x, s.ship.y);
+      cruisePick(s, sysBody('gate')); cruiseEngage(s); return { cruising: !!s.cruising, ap: !!(s.ap && s.ap.on), stage: s.ap && s.ap.stage }; })())`));
+    await t.run(3000); await t.ev(`(() => { window.__mid = 1; return 1; })()`);
+    let ran = 3, cruised = false; while (ran < 40) { await t.run(1000); ran += 1; if (await t.ev(`!!${SP}.cruising`)) { cruised = true; break; } }
+    console.log('        C beside the planet with the gate as target: at once ' + JSON.stringify(o) + '; cruising after ' + (cruised ? ran + ' s' : 'never in 40 s') + '; ' + await t.ev(`JSON.stringify((() => { const s = ${SP}; return { d: Math.round(Math.hypot(s.ship.x - s.planet.x, s.ship.y - s.planet.y)), v: Math.round(s.ship.body.speed) }; })())`));
+  }]
 ];
 const args = process.argv.slice(2), look = args.includes('--look'), want = args.filter(a => a !== '--look');
 const list = look ? LOOKS.filter(([n]) => !want.length || want.some(w => n.includes(w))) : SHOTS.filter(([n]) => !want.length || want.some(w => n.startsWith(w)));
