@@ -45,6 +45,77 @@ function jumpReach(from, to, range, tank, perLy) {
   return { ok: true, hops: good, ly: total };
 }
 
+// ---------- The route plotter (card space-game-route-plotter) ----------
+// jumpRoute(from, to, range, tank, perLy, have) plans ONE trip, one way, with the ship's numbers: the chain of jumps with the fewest jumps (then the fewest light years),
+// each inside the range, flown on `have` fuel (default a full tank) that is filled again at every system with a pump. Pure: it reads only the galaxy's light years and
+// which systems have a pump (the same facts as jumpReach, which answers the round trip a call's board needs). Returns
+//   { ok: true, hops: [{ id, ly, fuel, fill }], ly, fuel }   fill: true = fill up in the system you leave before this jump (the tank would not make it otherwise)
+//   { ok: false, why: 'range', hops: [{ id, ly }], bottleneck, over }   no chain of jumps is within the range; hops is the chain with the shortest longest-jump (the way
+//                                  that would work with a bigger range), bottleneck the longest jump on it in ly, over how much more than the range that is
+//   { ok: false, why: 'fuel', hops: [{ id, ly }], needTank }           there is a chain in range, but no pump is near enough to fly it: needTank is the smallest tank that would
+//   { ok: false, why: 'none', hops: [] }                               a system the game has no place for
+const ROUTE = { maxHops: 6, maxPaths: 600 }; // six jumps is across the whole map; the caps keep a big galaxy cheap
+function jumpRoute(from, to, range, tank, perLy, have) {
+  const known = id => SYSTEMS[id] && SYSTEMS[id].ly;
+  if (!known(from) || !known(to)) return { ok: false, why: 'none', hops: [] };
+  if (from === to) return { ok: true, hops: [], ly: 0, fuel: 0 };
+  have = have === undefined || have === null ? tank : have;
+  const ids = Object.keys(SYSTEMS).filter(known), ly = (a, b) => Math.hypot(SYSTEMS[a].ly[0] - SYSTEMS[b].ly[0], SYSTEMS[a].ly[1] - SYSTEMS[b].ly[1]);
+  const pump = id => (typeof fuelSystemHasPump === 'function' ? fuelSystemHasPump(id) : true);
+  const link = (r, a, b) => ly(a, b) <= r + 1e-9;
+  // the chains with `depth` jumps, every one inside the range (depth first, capped)
+  const chains = (r, depth) => {
+    const out = [];
+    const walk = path => {
+      if (out.length >= ROUTE.maxPaths) return;
+      const last = path[path.length - 1];
+      if (path.length - 1 === depth) { if (last === to) out.push(path.slice(1)); return; }
+      if (last === to) return; // reached early: that is a shorter chain
+      ids.forEach(n => { if (!path.includes(n) && link(r, last, n)) walk(path.concat(n)); });
+    };
+    walk([from]);
+    return out;
+  };
+  // the plan of one chain on this tank, or null when the tank cannot fly it
+  const plan = path => {
+    let fuel = have, prev = from, total = 0, burn = 0; const hops = [];
+    for (const id of path) {
+      const d = ly(prev, id), need = d * perLy; let fill = false;
+      if (need > fuel + 1e-9 && pump(prev)) { fuel = tank; fill = true; }
+      if (need > fuel + 1e-9) return null;
+      fuel -= need; burn += need; total += d; hops.push({ id, ly: d, fuel: need, fill }); prev = id;
+    }
+    return { hops, ly: total, fuel: burn };
+  };
+  let anyInRange = null;
+  for (let depth = 1; depth <= ROUTE.maxHops; depth++) {
+    const all = chains(range, depth);
+    if (all.length && !anyInRange) anyInRange = all;
+    let best = null;
+    all.forEach(path => { const p = plan(path); if (p && (!best || p.ly < best.ly - 1e-9)) best = p; });
+    if (best) return Object.assign({ ok: true }, best);
+  }
+  const legs = path => { let prev = from; return path.map(id => { const d = ly(prev, id); prev = id; return { id, ly: d }; }); };
+  if (anyInRange) { // a chain exists, but the tank cannot fly it: the smallest tank that could is the longest stretch between two pumps, over the best chain
+    let need = Infinity;
+    anyInRange.forEach(path => {
+      let prev = from, stretch = 0, worst = 0;
+      path.forEach(id => { stretch += ly(prev, id) * perLy; worst = Math.max(worst, stretch); if (pump(id)) stretch = 0; prev = id; });
+      need = Math.min(need, worst);
+    });
+    return { ok: false, why: 'fuel', hops: legs(anyInRange[0]), needTank: Math.ceil(need * 10) / 10 };
+  }
+  // no chain in range: the smallest range that would make one (the longest jump of the best chain)
+  const lens = []; ids.forEach((a, i) => ids.slice(i + 1).forEach(b => lens.push(ly(a, b)))); lens.sort((x, y) => x - y);
+  for (const r of lens) {
+    for (let depth = 1; depth <= ROUTE.maxHops; depth++) {
+      const all = chains(r, depth);
+      if (all.length) { const path = all.sort((x, y) => legs(x).reduce((t, h) => t + h.ly, 0) - legs(y).reduce((t, h) => t + h.ly, 0))[0], hops = legs(path), bottleneck = Math.max(...hops.map(h => h.ly)); return { ok: false, why: 'range', hops, bottleneck, over: Math.max(0, bottleneck - range) }; }
+    }
+  }
+  return { ok: false, why: 'range', hops: [], bottleneck: Infinity, over: Infinity }; // the map has no way there at all
+}
+
 // why the ship cannot start a charge right now, as the words the player reads, or null when it can
 function jumpLock(s) {
   if (!s || s.dead || s.leaving || s.cruising || G.deep) return 'not now';

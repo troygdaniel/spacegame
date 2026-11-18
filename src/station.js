@@ -224,7 +224,7 @@ class Station extends Phaser.Scene {
       });
       if (OFFERS.length > VIS) txt(420, 52, (start > 0 ? '<  ' : '') + 'CALLS ' + (start + 1) + '-' + (start + SHOWN) + ' OF ' + OFFERS.length + (start + VIS < OFFERS.length ? '  >' : ''), 11, '#5b7a92', { ox: 1 });
       txt(-420, 52, 'BRIEFING', 11, '#5b7a92');
-      { const reach = missionReach(OFFERS[sel]); if (!reach.ok) txt(-340, 52, reach.line, 12, '#ffb454'); } // why E does nothing on this one, and what would reach it
+      { const reach = missionReach(OFFERS[sel]); if (!reach.ok) { const ln = txt(-340, 52, reach.line, 12, '#ffb454'); if (ln.width > 760) ln.setScale(760 / ln.width); } } // why E does nothing on this one, what is missing and what fixes it, by name, price and yard
       txt(-420, 66, OFFERS[sel].offer, 14, '#cfefff', { oy: 0, style: { lineSpacing: 4 } });
       this.ui.setHints([['E', 'Accept'], OFFERS.length > VIS ? ['< >', 'Choose'] : ['1-' + OFFERS.length, 'Choose'], ['Esc', 'Close']]);
     };
@@ -235,8 +235,8 @@ class Station extends Phaser.Scene {
       render();
     };
     const acceptSel = () => { // same as pressing E in update()
-      if (!this.canAccept) return;
-      G.mission = 'accepted'; missionAccepted(); this.closePanel(); beep(520, 0.15, 'triangle', 0.05, 300); // missions.js: a haul loads its freight
+      if (!this.canAccept || !missionTryAccept(OFFERS[sel])) return;
+      this.closePanel(); beep(520, 0.15, 'triangle', 0.05, 300); // missions.js: a haul loads its freight
       toast(this, uiText('toast.accepted'));
     };
 
@@ -392,8 +392,8 @@ class Station extends Phaser.Scene {
     if (this.panel) {
       this.player.setVelocity(0, 0);
       if (JD(k.ESC)) this.closePanel();
-      if (this.canAccept && JD(k.E)) {
-        G.mission = 'accepted'; missionAccepted(); this.closePanel(); beep(520, 0.15, 'triangle', 0.05, 300);
+      if (this.canAccept && JD(k.E) && missionTryAccept()) {
+        this.closePanel(); beep(520, 0.15, 'triangle', 0.05, 300);
         toast(this, uiText('toast.accepted'));
       }
       this.menuFrame();

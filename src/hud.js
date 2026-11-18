@@ -323,7 +323,7 @@ function hudMission(s, key) {
   if (st === 'failed') return { kind: 'failed', head: 'MISSION FAILED', next: m.line('failed') };
   const row = HUD_MISSIONS[m.id], sub = missionWhere(m); // the place and its star system
   // in space, a call whose place is in another system says the jump first, in the words the navigation panel pins (missionStep, src/missions.js)
-  const step = key === 'Space' ? missionStep() : null, far = step && step.kind === 'jump' ? step.text : '';
+  const step = key === 'Space' ? missionStep() : null, far = step && step.system ? step.text : ''; // the jump first, or why this ship cannot get there
   if (!row) return { kind: 'active', head: m.title, sub, reward: callReward(m), next: far || m.line(st) };
   const at = row.cur(s, key), cur = Math.min(at, row.steps.length - 1); // a content file may list fewer steps than the code counts
   return {
