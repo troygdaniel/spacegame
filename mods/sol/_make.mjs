@@ -14,7 +14,7 @@ const HERE = dirname(fileURLToPath(import.meta.url)), ROOT = resolve(HERE, '..',
 // A body's ring is K x the square root of its real distance from the Sun in AU, in the units a system file is written in (the game spreads every
 // position 3 times, SYSTEM_SCALE, so a unit is 3 px of space). A square root keeps the order and the feel: Mercury to Mars are close together,
 // the giants far apart, and Neptune is 5.5 times as far out as Earth instead of 30 times.
-export const SCALE = { K: 14000, power: 0.5, size: 200000, sun: 100000, spread: 3 };
+export const SCALE = { K: 70000, power: 0.5, size: 1000000, sun: 500000, spread: 3 }; // K was 14,000 while a system file could be 200,000 units wide (card space-game-sol-needs-bigger-systems)
 export const ringOf = au => Math.round(SCALE.K * Math.pow(au, SCALE.power));
 // ecliptic longitude L (degrees, counted anticlockwise from the direction a map draws as east) to the file's angle (clockwise from north)
 export const angleOf = L => ((90 - L) % 360 + 360) % 360;

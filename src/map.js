@@ -32,6 +32,14 @@ const MAP_MIN = sysAt(9000), MAP_PAD = 1.45, MAP_WHOLE = 0.7; // the local view:
 function mapLegStep(n) { return Math.min(MAP_LEG_STEP, Math.floor((638 - 22 - MAP_LEG_Y) / Math.max(1, n - 1))); }
 
 // the square of the system the map shows: { x, y, size } in px. pts: what must be in it ({ x, y }); ws: the system's width; whole: Z asked for all of it
+// the grid of the map: about eight cells across. The whole system is cut in eight; a local view takes the first round number (1, 2, 2.5, 5
+// times a power of ten, from 500 px) that gives nine cells or fewer. The list used to stop at 10,000 px, so a local view wider than
+// 90,000 px fell back to an eighth of the system: in a system 3,000,000 px wide that was one line or none (tests/bigsystems.mjs).
+function mapGridStep(viewSize, ws) {
+  if (viewSize >= ws) return ws / 8;
+  for (let p = 100; p <= 1e9; p *= 10) for (const m of [1, 2, 2.5, 5]) { const n = m * p; if (n >= 500 && n >= viewSize / 9) return n; }
+  return ws / 8;
+}
 function mapView(pts, ws, whole) {
   pts = (pts || []).filter(p => p && typeof p.x === 'number' && typeof p.y === 'number' && isFinite(p.x) && isFinite(p.y));
   if (whole || !pts.length) return { x: 0, y: 0, size: ws };
@@ -232,7 +240,7 @@ class Overlay extends Phaser.Scene {
     g.clear(); gm.clear();
     g.fillStyle(0x03070f, 1); g.fillRect(MX, MY, MS, MS);
     g.lineStyle(1, CYAN, 0.12);
-    const gs = v.size >= S.ws ? S.ws / 8 : [500, 1000, 2000, 2500, 5000, 10000].find(n => n >= v.size / 9) || S.ws / 8; // about eight grid cells across, on round numbers of the system
+    const gs = mapGridStep(v.size, S.ws);
     const lines = []; for (let w = Math.ceil(v.x / gs) * gs; w < v.x + v.size; w += gs) if (w > v.x) lines.push(w);
     const rows = []; for (let w = Math.ceil(v.y / gs) * gs; w < v.y + v.size; w += gs) if (w > v.y) rows.push(w);
     lines.forEach(w => g.lineBetween(X(w), MY, X(w), MY + MS)); rows.forEach(w => g.lineBetween(MX, Y(w), MX + MS, Y(w)));

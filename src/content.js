@@ -51,6 +51,10 @@
   const SHIP_ART = ['ship', 'raider', 'drone', 'gunship', 'reaver', 'freighter', 'civilian', 'police', 'wren', 'kite', 'ox', 'talon', 'pathfinder', 'bastion']; // the built-in textures; grows when new ship art lands
   const SLOTS = ['engine', 'shields', 'weapons', 'tank', 'cargo', 'aim'];
   // star systems (docs/MODDING.md 6.3): what a body is, and the names the code's own tables use for them (src/data_systems.js, art_world.js, stationart.js)
+  // how wide a system file may be, in its own units (the game spreads every position SYSTEM_SCALE times, so 1,000,000 units is 3,000,000 px:
+  // a little over six minutes of cruise from edge to edge). It was 200,000 until the Sol pack needed Earth to Neptune to be minutes, not
+  // seconds (card space-game-sol-needs-bigger-systems). tests/bigsystems.mjs follows what has to cope: the cruise time sum, the Tab map's grid.
+  const SYS_MAX = 1000000;
   const BODY_TYPES = ['station', 'planet', 'belt', 'poi', 'scenery', 'gate'];
   const PLANET_KINDS = ['rock', 'ice', 'gas', 'lava', 'ringed'];   // art_world.js planetTexture
   const SITE_KINDS = ['wreck', 'beacon'];                         // poi.js
@@ -148,8 +152,8 @@
       folder: 'systems', placeholders: [],
       fields: {
         name: T(40, true), kind: P(['home', 'outpost', 'trade', 'mining', 'volcanic', 'wild', 'graveyard', 'nest'], true), ly: L('num', { len: 2, min: -1000, max: 1000 }),
-        size: I(4000, 200000), danger: I(0, 5), traffic: I(0, 3), pay: N(0.1, 5), seed: I(0, 2147483647),
-        starType: P(['O', 'B', 'A', 'F', 'G', 'K', 'M']), starX: I(0, 200000), starY: I(0, 200000),
+        size: I(4000, SYS_MAX), danger: I(0, 5), traffic: I(0, 3), pay: N(0.1, 5), seed: I(0, 2147483647),
+        starType: P(['O', 'B', 'A', 'F', 'G', 'K', 'M']), starX: I(0, SYS_MAX), starY: I(0, SYS_MAX),
         pirateMax: I(1, 40), pirateEvery: I(1000, 600000) // a system's own pirate spawn table (enemies.js pirateTable): at most this many, one every this many ms; the weights are the Pirates section
       },
       sections: {
@@ -158,7 +162,7 @@
           // art is the texture a body is drawn with; a planet is a kind (and a seed: the same kind and seed is the same planet on every boot) or art planet (Kepler-4b);
           // look is the station look of a dead station (scenery); labelDy moves the name label (pixels, negative is above); a site that has its own file in poi/ is paid from that file
           cols: {
-            id: { t: 'id' }, type: P(BODY_TYPES, true), name: T(40), x: I(0, 200000), y: I(0, 200000), orbit: N(0, 200000), angle: N(-360, 360), parent: { t: 'id' },
+            id: { t: 'id' }, type: P(BODY_TYPES, true), name: T(40), x: I(0, SYS_MAX), y: I(0, SYS_MAX), orbit: N(0, SYS_MAX), angle: N(-360, 360), parent: { t: 'id' },
             art: P(BODY_ART), r: I(10, 5000), rocks: I(0, 200), landable: BOOL, kind: P(PLANET_KINDS.concat(SITE_KINDS)), seed: I(0, 2147483647),
             look: P(STATION_LOOKS), labelDy: I(-3000, 3000), credits: I(0, 100000), hull: I(0, 100), guard: I(0, 6), note: T(160)
           }
@@ -196,7 +200,7 @@
         progressRescued: { heading: 'Progress rescued', t: 'text', max: 400 }, // the progress text once the colonist is aboard (rescue calls)
         steps: { heading: 'Steps', t: 'list', max: 80 },
         failure: { heading: 'Failure', t: 'text', max: 240 },
-        pickets: { heading: 'Pickets', t: 'table', required: ['x', 'y'], cols: { x: I(0, 200000, true), y: I(0, 200000, true) } } // pirates at fixed places in the call's system, in the units of the system files
+        pickets: { heading: 'Pickets', t: 'table', required: ['x', 'y'], cols: { x: I(0, SYS_MAX, true), y: I(0, SYS_MAX, true) } } // pirates at fixed places in the call's system, in the units of the system files
       }
     },
     npc: {

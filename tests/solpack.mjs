@@ -60,7 +60,7 @@ check('the boards of the shipped docks are as they were with the pack on', J(g, 
 
 // ---- the scale ----
 const at = layout().at, spread = J(g, `SYSTEM_SCALE`);
-check('a ring is 14,000 x the square root of the real distance in AU, and the game spreads it 3 times', SCALE.K === 14000 && SCALE.power === 0.5 && spread === SCALE.spread && SUN_BODIES.every(b => at[b.id].orbit === Math.round(14000 * Math.sqrt(b.au))) && ringOf(1) === 14000);
+check('a ring is 70,000 x the square root of the real distance in AU, and the game spreads it 3 times', SCALE.K === 70000 && SCALE.power === 0.5 && spread === SCALE.spread && SUN_BODIES.every(b => at[b.id].orbit === Math.round(70000 * Math.sqrt(b.au))) && ringOf(1) === 70000);
 check('in space each body is on that ring: its distance from the Sun is the ring times 3 (to a px or two of rounding)', SUN_BODIES.every(b => { const q = S.bodies.find(x => x.id === b.id); return Math.abs(Math.hypot(q.x - B.sun.x, q.y - B.sun.y) - at[b.id].orbit * spread) <= 3; }));
 const planets = ['sol-mercury', 'sol-venus', 'sol-earth', 'sol-mars', 'sol-jupiter', 'sol-saturn', 'sol-uranus', 'sol-neptune', 'sol-pluto'];
 check('the planets keep their order outward, and the gaps grow: inner close, outer far', planets.every((id, k) => !k || at[id].orbit > at[planets[k - 1]].orbit) && at['sol-mars'].orbit - at['sol-earth'].orbit < at['sol-saturn'].orbit - at['sol-jupiter'].orbit && at['sol-saturn'].orbit - at['sol-jupiter'].orbit < at['sol-neptune'].orbit - at['sol-uranus'].orbit);
@@ -68,8 +68,8 @@ check('Eros is where it really is: between Earth and Mars, not in the belt', at[
 check('the belt is between Mars and Jupiter; the trojans share Jupiter\'s ring 60 degrees either side of it', ['sol-vesta', 'sol-ceres', 'sol-pallas', 'sol-belt-inner', 'sol-belt-ceres', 'sol-belt-outer'].every(id => at[id].orbit > at['sol-mars'].orbit && at[id].orbit < at['sol-jupiter'].orbit) && at['sol-greeks'].orbit === at['sol-jupiter'].orbit && [at['sol-greeks'].angle, at['sol-trojans'].angle].every(a => Math.abs(Math.abs(((a - at['sol-jupiter'].angle + 540) % 360) - 180) - 60) < 0.01));
 check('every moon is nearer to its own planet than to anything else that goes round the Sun, and each planet\'s moons keep their real order outward', MOONS.every(m => { const q = S.bodies.find(x => x.id === m.id), d = id => { const p = S.bodies.find(x => x.id === id); return Math.hypot(p.x - q.x, p.y - q.y); }; return SUN_BODIES.every(b => b.id === m.of || d(b.id) > d(m.of)); }) && MOONS.every(m => MOONS.filter(o => o.of === m.of && o.km < m.km).every(o => o.off < m.off)));
 const eN = (at['sol-neptune'].orbit - at['sol-earth'].orbit) * spread, top = J(g, `CRUISE.top`);
-check('Earth to Neptune at its shortest is about 188,000 px, about half a minute of cruise (the doc says why it is not minutes)', eN > 180000 && eN < 200000 && eN / top > 20 && eN / top < 30 && /about 26 s/.test(doc), Math.round(eN) + ' px, ' + (eN / top).toFixed(1) + ' s at top speed');
-check('the system is as wide as a file may be: 200,000 units', J(g, `SYSTEMS.sol.size`) === 200000 * spread && SCALE.size === 200000);
+check('Earth to Neptune at its shortest is about 941,000 px, a cruise of two minutes (card space-game-sol-needs-bigger-systems: it was 26 s), and the doc says so', eN > 900000 && eN < 980000 && eN / top > 110 && eN / top < 125 && /Earth to Neptune \| 941,600 \| about 2 minutes/.test(doc) && J(g, `cruiseEta(${Math.round(eN)})`) > 115 && J(g, `cruiseEta(${Math.round(eN)})`) < 125, Math.round(eN) + ' px, ' + (eN / top).toFixed(1) + ' s at top speed');
+check('the system is as wide as a file may be: 1,000,000 units', J(g, `SYSTEMS.sol.size`) === 1000000 * spread && SCALE.size === 1000000);
 
 // ---- our own names ----
 const names = DOCKS.map(d => d.name).concat(SUN_BODIES.filter(b => b.invented).map(b => b.name));
