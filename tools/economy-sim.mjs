@@ -83,7 +83,7 @@ export const PACE = {
   oreSec: 3.5,         // per ore: line up a rock, fly through the pod, collect it
   pumpSec: 10,         // refuel at the fuel pump before a jump
   arriveSec: 35,       // after a jump: fly from the arrival point to the station (cruise) and dock
-  leaveSec: 25,        // before a jump: undock and fly clear of the station to where the jump can start
+  leaveSec: 25,        // before a jump: undock. (It was: and fly clear of the station. A jump starts from anywhere since card space-game-jump-from-anywhere; the 25 s guess is kept until someone times it again)
   loadSec: 30,         // loading a haul at one end and unloading at the other
   surveySec: 150,      // a survey call: fly to the site and scan it
   bigWreckSec: 180,    // the 800 cr wreck at Lethe: its scavenger drones and the salvage

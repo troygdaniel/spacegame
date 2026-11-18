@@ -61,9 +61,10 @@ const MODEL = `(P, S, OLD) => {
     return out;
   };
   const station = id => sysBodies('station', id)[0];
-  // leave a station and jump: read the board and undock, the pump, fly clear of the mass (JUMP.lockMass, by hand), the charge, the tunnel
-  const firstJump = ly => P.dockSec + P.pumpSec + hand(JUMP.lockMass) + JUMP.charge / 1000 + tunnel(ly);
-  const nextJump = ly => JUMP.charge / 1000 + tunnel(ly); // from where the last one came out: it is clear of every mass
+  // leave a station and jump: read the board and undock, the pump, the charge, the tunnel. No flying clear first: a jump starts from anywhere
+  // in space since card space-game-jump-from-anywhere (it was hand(2000 px) more)
+  const firstJump = ly => P.dockSec + P.pumpSec + JUMP.charge / 1000 + tunnel(ly);
+  const nextJump = ly => JUMP.charge / 1000 + tunnel(ly); // from where the last one came out
   const trip = (from, hops) => { let sec = 0, here = from; hops.forEach((h, i) => { sec += (i ? nextJump : firstJump)(lyOf(here, h)); here = h; }); return sec; };
 
   const H = 'halcyon', st = at(station(H)), planet = at(sysBody('planet', H)), gate = sysBody('gate', H), gateAt = at(gate);
