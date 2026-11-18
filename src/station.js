@@ -305,6 +305,8 @@ class Station extends Phaser.Scene {
     m.foot = fix(this.add.text(M.x + 10, M.y + h - 15, '', font(12, '#ffd37a')).setOrigin(0, 0.5).setDepth(101));
     m.k = this.input.keyboard.addKeys('N,ENTER');
     this.menuDraw();
+    const first = m.rows.findIndex(r => !r.off); // the bar starts on the first row this dock has, not on a dim one (Kestrel has no bar: first look)
+    if (first > 0) { m.sel = first; this.menuDraw(); }
   }
   // what the notes of the rows read: the hull and what mending it costs here, and who tends the bar
   menuState() {
