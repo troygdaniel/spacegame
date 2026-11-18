@@ -59,7 +59,9 @@ const farCruise = secs => async t => {
 const takeJob = async t => {
   await t.run(800);
   await t.ev(`(() => { pickMission('courier-halcyon-kestrel'); G.mission = 'accepted'; missionAccepted(); ${ST}.scene.start('Space'); return 1; })()`);
-  await t.waitFor(up('Space'), 20000, 'Space active after the launch'); await t.run(2500);
+  for (let i = 0; i < 40 && !(await t.ev(up('Space'))); i++) await t.run(250); // the clock is stepped by hand: the new scene starts on a frame we give it
+  if (!(await t.ev(up('Space')))) throw new Error('the Space scene did not start after the launch');
+  await t.run(2500);
   await t.ev(`(() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; return 1; })()`);
 };
 const LOOKS = [
