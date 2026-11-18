@@ -123,6 +123,38 @@ check('button up: the hold is over', J(`__s.cm.hold`) === false && J(`__s.nextFi
 g.run(`ASSIST.on = false; __s.nextFire = 0; __s.input.activePointer.isDown = true; clickmoveClick(__s, ${X + 500}, ${Y}); __frames(2);`);
 check('assist off: the mouse is the trigger again', J(`__s.nextFire`) === 0);
 
+// ---- a press on the HUD is not a click in space (playtest 4, step click-on-hud-panel: each of these four gave an Approach order) ----
+// the HUD says what it covers each frame (s._hud.zones, src/hud.js); the key line, the tip bar, the assist readout, the Overview and the nav
+// panel are objects of their own. The pointer's screen point is p.x, p.y in game px; its world point is what the order would fly to.
+g.run(`
+  var __box = (x, y, w, h, visible = true) => ({ visible, active: true, getBounds: () => ({ x, y, right: x + w, bottom: y + h }) });
+  function __hud() {
+    const s = __scene(${X}, ${Y}); ASSIST.on = true;
+    s._hud = { zones: [{ x0: 0, y0: 0, x1: 122, y1: 132 }, { x0: 0, y0: 0, x1: 336, y1: 330 }, { x0: 1050, y0: 0, x1: 1280, y1: 250 }, { x0: 430, y0: 0, x1: 850, y1: 50 }, { x0: 1004, y0: 256, x1: 1280, y1: 430 }] };
+    s.keyLine = __box(24, 676, 820, 22); s._gh = __box(300, 590, 680, 40, false);
+    s.ov = { shown: false, bg: __box(1004, 242, 260, 230, false) }; s.np = { shown: false, bg: __box(24, 340, 322, 300, false) };
+    return s;
+  }
+  // a press at a screen point; the world point behind it is far from the ship, so an order would show
+  function __click(px, py) { assistSet(''); __s.cm.point = null; const kind = clickmovePress(__s, { button: 0, x: px, y: py, worldX: ${X} + (px - 640) * 2, worldY: ${Y} + (py - 360) * 2 }); return [kind, __s.as.mode]; }
+`);
+g.run(`__hud()`);
+for (const [what, px, py] of [['the mission panel', 180, 230], ['the radar', 1105, 100], ['the hull gauge', 140, 70], ['the key line at the bottom', 400, 686], ['the top strip', 640, 25], ['the assist target panel', 1100, 300]]) {
+  const r = J(`__click(${px}, ${py})`);
+  check(`a press on ${what} (${px},${py}) gives no order`, r[0] === '' && r[1] === '', JSON.stringify(r));
+}
+check('a press in open space still flies there', J(`__click(640, 420)`).join() === 'point,approach');
+check('just outside a panel is space', J(`__click(350, 420)`).join() === 'point,approach' && J(`__click(900, 150)`).join() === 'point,approach');
+check('the Overview and the nav panel are not in the way while they are hidden', J(`__click(1100, 450)`).join() === 'point,approach' && J(`__click(180, 500)`).join() === 'point,approach');
+g.run(`__s.ov.shown = true; __s.ov.bg.visible = true; __s.np.shown = true; __s.np.bg.visible = true; __s._gh.visible = true;`);
+check('shown, the Overview counts as HUD', J(`__click(1100, 450)`).join() === ',');
+check('shown, the nav panel counts as HUD', J(`__click(180, 500)`).join() === ',');
+check('a tip of the guide on the screen counts as HUD', J(`__click(640, 610)`).join() === ',');
+check('clickmoveOnHud says where: true on the radar, false in the middle of the screen', J(`[clickmoveOnHud(__s, 1105, 100), clickmoveOnHud(__s, 640, 360)]`).join() === 'true,false');
+check('another file can add its own panel to the list', J(`(() => { CLICKMOVE.hud.push(s => ({ x: 600, y: 300, w: 80, h: 80 })); const r = __click(640, 340); CLICKMOVE.hud.pop(); return r.concat(__click(640, 340)); })()`).join() === ',,point,approach');
+check('a scene with no HUD yet (the first frame) takes the click as before', J(`(() => { __scene(${X}, ${Y}); ASSIST.on = true; return __click(180, 230); })()`).join() === 'point,approach');
+check('the right button gives no order', J(`(() => { assistSet(''); return [clickmovePress(__s, { button: 2, x: 640, y: 420, worldX: ${X} + 400, worldY: ${Y} }), __s.as.mode]; })()`).join() === ',');
+
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `CLICKMOVE FAIL (${failed} of ${n})` : `CLICKMOVE PASS (${n} checks)`);
 process.exit(failed ? 1 : 0);
