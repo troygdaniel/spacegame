@@ -321,11 +321,13 @@ function hudMission(s, key) {
   const m = missionDef(), st = G.mission;
   if (!m || st === 'none') return { kind: 'none', head: 'NO ACTIVE MISSION', next: 'Take a call at the MISSIONS terminal' };
   if (st === 'failed') return { kind: 'failed', head: 'MISSION FAILED', next: m.line('failed') };
-  const row = HUD_MISSIONS[m.id];
-  if (!row) return { kind: 'active', head: m.title, sub: m.where, reward: callReward(m), next: m.line(st) };
+  const row = HUD_MISSIONS[m.id], sub = missionWhere(m); // the place and its star system
+  // in space, a call whose place is in another system says the jump first, in the words the navigation panel pins (missionStep, src/missions.js)
+  const step = key === 'Space' ? missionStep() : null, far = step && step.kind === 'jump' ? step.text : '';
+  if (!row) return { kind: 'active', head: m.title, sub, reward: callReward(m), next: far || m.line(st) };
   const at = row.cur(s, key), cur = Math.min(at, row.steps.length - 1); // a content file may list fewer steps than the code counts
   return {
-    kind: 'active', head: m.title, sub: m.where, reward: callReward(m), cur, next: row.next(s, key, at),
+    kind: 'active', head: m.title, sub, reward: callReward(m), cur, next: far || row.next(s, key, at),
     steps: row.steps.map((t, i) => ({ text: typeof t === 'function' ? t() : t, state: i < cur ? 'done' : i === cur ? 'cur' : 'todo' }))
   };
 }
