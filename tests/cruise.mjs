@@ -155,7 +155,11 @@ try {
   // ---- the Tab map knows the far bodies ----
   await park(9000, 9000);
   await E(`game.scene.start('Overlay', { from: 'Space', mode: 'map' })`); await tick(4);
-  const mp = JSON.parse(await E(`JSON.stringify({ far: game.scene.getScene('Overlay').far.map(f => f.b.name), shown: game.scene.getScene('Overlay').far.every(f => f.lb.visible) })`));
+  // the map opens on the local view (card space-game-critic-map): the far bodies are on the whole-system view, which Z shows
+  const mapLocal = JSON.parse(await E(`JSON.stringify({ size: game.scene.getScene('Overlay').view.size, far: game.scene.getScene('Overlay').far.filter(f => f.lb.visible).map(f => f.b.name) })`));
+  check('the Tab map opens on a local view: smaller than the system, the far bodies not on it', mapLocal.size < await E('sysAt(36000)') && !mapLocal.far.includes('Tern'), JSON.stringify(mapLocal));
+  await E(`(() => { game.scene.getScene('Overlay').pk.Z._justDown = true; return 1; })()`); await tick(30);
+  const mp = JSON.parse(await E(`JSON.stringify({ far: game.scene.getScene('Overlay').far.map(f => f.b.name), shown: game.scene.getScene('Overlay').far.every(f => f.lb.visible) && game.scene.getScene('Overlay').view.size === sysAt(36000) })`));
   check('the Tab map has the grid of the whole system and labels Kepler-4c, Slag Belt, Tern, the dead station', mp.far.length === 5 && ['Kepler-4c', 'Slag Belt', 'Tern', 'Dead station'].every(n => mp.far.includes(n)) && mp.shown, mp.far.join(', '));
   await tick(2); if (!(await t.shot('cruise-map'))) check('screenshot of the map', false);
   await E(`(() => { game.scene.stop('Overlay'); game.scene.resume('Space'); })()`);

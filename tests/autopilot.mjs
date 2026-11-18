@@ -123,16 +123,17 @@ try {
   await park(9000, 9000);
   await E(`game.scene.start('Overlay', { from: 'Space', mode: 'map' })`); await tick(4);
   const OV = "game.scene.getScene('Overlay')";
-  const pick0 = JSON.parse(await E(`JSON.stringify({ n: ${OV}.pick.list.length, known: cruiseKnown(${SP}).length, sel: ${OV}.pick.sel, foot: ${OV}.footer.text, line: ${OV}.tPick.text })`));
-  check('the map lists every body of the nav list (signals found on the way included), the ring on the nearest, and says what Enter does', pick0.n === pick0.known && pick0.n >= known.length && pick0.sel === 0 && /Enter: autopilot there/.test(pick0.foot) && /^Enter: autopilot to /.test(pick0.line), JSON.stringify(pick0));
+  const pick0 = JSON.parse(await E(`JSON.stringify({ n: ${OV}.pick.list.length, known: cruiseKnown(${SP}).length, sel: ${OV}.pick.sel, on: ${OV}.pick.list[${OV}.pick.sel].name, obj: (${OV}.state().obj || {}).name || '', foot: ${OV}.footer.text, line: ${OV}.tPick.text })`));
+  // the ring starts on the objective, so the Enter line names what the OBJECTIVE line names (card space-game-critic-map); with no objective in the list, on the nearest
+  check('the map lists every body of the nav list (signals found on the way included), the ring on the objective, and says what Enter does', pick0.n === pick0.known && pick0.n >= known.length && (pick0.obj ? pick0.on === pick0.obj : pick0.sel === 0) && /Enter: autopilot there/.test(pick0.foot) && pick0.line.startsWith('Enter: autopilot to ' + pick0.on), JSON.stringify(pick0));
   if (!(await snap('autopilot-map'))) check('screenshot of the map picker', false);
   await E(`${OV}.pk.S._justDown = true`); await tick(2);
   await E(`${OV}.pk.S._justDown = true`); await tick(2);
   const sel2 = JSON.parse(await E(`JSON.stringify({ sel: ${OV}.pick.sel, name: ${OV}.pick.list[${OV}.pick.sel].name })`));
-  check('S twice moves the ring two bodies down', sel2.sel === 2, JSON.stringify(sel2));
+  check('S twice moves the ring two bodies down', sel2.sel === (pick0.sel + 2) % pick0.n, JSON.stringify(sel2));
   await E(`${OV}.pk.W._justDown = true`); await tick(2);
-  check('W moves it back up', (await E(`${OV}.pick.sel`)) === 1);
-  const picked = await E(`${OV}.pick.list[1].name`);
+  check('W moves it back up', (await E(`${OV}.pick.sel`)) === (pick0.sel + 1) % pick0.n);
+  const picked = await E(`${OV}.pick.list[${OV}.pick.sel].name`);
   await E(`${OV}.pk.ENTER._justDown = true`); await tick(3);
   check('Enter closes the map and the autopilot flies to the ringed body', !(await E(`game.scene.isActive('Overlay')`)) && (await state()).on && (await E(`${SP}.ap.target.name`)) === picked, picked);
   await park(9000, 9000);
