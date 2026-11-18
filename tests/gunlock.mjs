@@ -1,8 +1,8 @@
-// smoke: gun lock: B locks a pirate, the lock builds, the cannons fire at it in range and in arc at the hand rate; assist off = nothing (plain Node, no Chrome)
-// The gun lock (card space-game-gun-lock, src/gunlock.js): with the flight assist on, B locks a pirate and the cannons engage it by themselves.
+// smoke: gun lock: V locks a pirate, the lock builds, the cannons fire at it in range and in arc at the hand rate; assist off = nothing (plain Node, no Chrome)
+// The gun lock (card space-game-gun-lock, src/gunlock.js): with the flight assist on, V locks a pirate and the cannons engage it by themselves.
 // The rules are pure functions (gunlockTime, gunlockRange, gunlockNext, gunlockSolve) and the frame (gunlockFrame) only needs a scene that
 // holds a ship, a list of pirates, a clock and a shoot(): a stand-in below, so all of it runs in plain Node (tests/nodegame.mjs).
-// Checks: who B picks and in what order, the lock time with and without the Autotarget part, range and arc, the lead, one fire clock shared
+// Checks: who V picks and in what order, the lock time with and without the Autotarget part, range and arc, the lead, one fire clock shared
 // with Space (the rate and the damage of a shot by hand), what drops the lock, and that nothing happens with the assist off.
 // Run: node tests/gunlock.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
@@ -41,7 +41,7 @@ console.log('the rules');
   check('no lock yet: the nearest pirate', pick('', '') === 'near');
   check('no lock yet and the assist order is about a pirate in reach: that one', pick('', 'mid') === 'mid');
   check('an order about a pirate out of reach does not count: the nearest', pick('', 'out') === 'near');
-  check('B again: the next one further out, then the next', pick('near', '') === 'mid' && pick('mid', '') === 'far');
+  check('V again: the next one further out, then the next', pick('near', '') === 'mid' && pick('mid', '') === 'far');
   check('after the furthest in reach: none (the lock is dropped); the one beyond reach is never picked', pick('far', '') === 'none');
   check('nothing in reach: none', J(`gunlockNext([{ x: 5000, y: 0 }], { x: 0, y: 0 }, null, null)`) === null);
   const sol = (me, t, r) => J(`gunlockSolve(${JSON.stringify(me)}, ${JSON.stringify(t)}, ${r})`);
@@ -57,11 +57,11 @@ console.log('the rules');
   check('and that shot meets it (within 10 px)', miss < 10, miss);
 }
 
-console.log('B locks, the lock builds, the guns fire');
+console.log('V locks, the lock builds, the guns fire');
 {
   g.run(`__part(0); __scene([__pirate(400, 0), __pirate(0, 800, 0, 0, 'gunship')]); __press(); __run(16);`);
   let st = J('gunlockState()');
-  check('B: a lock starts on the nearest pirate, not locked yet', st.on && st.name === 'RAIDER' && !st.locked && st.locking < 0.1, JSON.stringify(st));
+  check('V: a lock starts on the nearest pirate, not locked yet', st.on && st.name === 'RAIDER' && !st.locked && st.locking < 0.1, JSON.stringify(st));
   g.run('__run(1300)');
   check('1.3 s in: still building, and no shot has left', !J('gunlockState().locked') && J('gunlockState().locking') > 0.9 && J('__shots.length') === 0);
   g.run('__run(200)');
@@ -79,11 +79,11 @@ console.log('B locks, the lock builds, the guns fire');
   check('no shot during the launch lock', J('__shots.length') === 0);
   g.run('__s.lockUntil = 0; __press(); __run(16)');
   st = J('gunlockState()');
-  check('B again: the lock moves to the gunship and builds from nothing', st.name === 'GUNSHIP' && !st.locked, JSON.stringify(st));
+  check('V again: the lock moves to the gunship and builds from nothing', st.name === 'GUNSHIP' && !st.locked, JSON.stringify(st));
   g.run('__shots = []; __s.ship.rotation = Math.PI / 2; __run(2000)');
   check('locked on it at 800 px: out of range, so no shot', J('gunlockState().locked') && J('gunlockState().why') === 'range' && J('__shots.length') === 0);
   g.run('__press(); __run(16)');
-  check('B after the furthest: the lock is dropped, and it says so', !J('gunlockState().on') && J('__toasts.includes("Lock dropped.")'));
+  check('V after the furthest: the lock is dropped, and it says so', !J('gunlockState().on') && J('__toasts.includes("Lock dropped.")'));
 }
 
 console.log('the Autotarget part makes the lock faster and longer');
@@ -111,18 +111,18 @@ console.log('what drops the lock');
 console.log('assist off: nothing changes');
 {
   g.run(`__scene([__pirate(400, 0)]); ASSIST.on = false; __press(); __run(3000);`);
-  check('B does nothing: no lock, no shot, no toast', !J('gunlockState().on') && J('__shots.length') === 0 && J('__toasts.length') === 0);
+  check('V does nothing: no lock, no shot, no toast', !J('gunlockState().on') && J('__shots.length') === 0 && J('__toasts.length') === 0);
   check('gunlockSet refuses too', J('gunlockSet(__s.enemies.getChildren()[0])') === false);
   g.run(`__scene([]); __press(); __run(16);`);
-  check('assist on with nobody about: B says there is nothing to lock', J('__toasts.includes("Nothing to lock in reach.")'));
+  check('assist on with nobody about: V says there is nothing to lock', J('__toasts.includes("Nothing to lock in reach.")'));
   g.run(`__scene([__pirate(400, 0)]); __s.cr.navOpen = true; __press(); __run(16);`);
-  check('the nav list has the keyboard: B is not read', !J('gunlockState().on'));
+  check('the nav list has the keyboard: V is not read', !J('gunlockState().on'));
 }
 
 console.log('the order\'s target, and the interface');
 {
   g.run(`__scene([__pirate(300, 0), __pirate(0, 500, 0, 0, 'drone')]); __s.as.mode = 'keep'; __s.as.target = __s.enemies.getChildren()[1]; __press(); __run(16);`);
-  check('an assist order about the drone: B locks the drone, not the nearer raider', J('gunlockState().name') === 'DRONE');
+  check('an assist order about the drone: V locks the drone, not the nearer raider', J('gunlockState().name') === 'DRONE');
   check('gunlockSet(pirate) locks it, gunlockSet(null) drops it', J('gunlockSet(__s.enemies.getChildren()[0])') === true && J('gunlockState().name') === 'RAIDER' && J('gunlockSet(null)') === true && !J('gunlockState().on'));
   check('the state with no lock is all zeros', JSON.stringify(J('gunlockState()')) === JSON.stringify({ on: false, name: '', locking: 0, locked: false, firing: false, why: '', dist: 0 }));
   const html = (await import('node:fs')).readFileSync(new URL('../index.html', import.meta.url), 'utf8');

@@ -1,8 +1,8 @@
 // ---------- Gun lock: lock a pirate and the cannons engage it by themselves (card space-game-gun-lock) ----------
 // For the flight assist (src/assist.js): with the assist on you give orders and the ship carries them out, so the guns need an order too.
-//   B        lock a target. A ring closes on it while the lock builds (GUNLOCK.time); then the cannons fire at it by themselves whenever it
+//   V        lock a target. A ring closes on it while the lock builds (GUNLOCK.time); then the cannons fire at it by themselves whenever it
 //            is in range and inside their arc (GUNLOCK.arc either side of the nose), leading it, at the weapons part's own rate and damage.
-//   B again  the lock moves to the next pirate further out; after the furthest one it is dropped.
+//   V again  the lock moves to the next pirate further out; after the furthest one it is dropped.
 // Who gets locked first: the pirate the assist order is about (assistSet(mode, pirate), as the overview list and a click do), else the nearest.
 // The lock is dropped when the target is destroyed, gets further than GUNLOCK.keep, or the assist is switched off. With the assist off
 // nothing here runs: no key, no ring, no shot. Space still fires by hand at any time, and both share one fire clock (s.nextFire), so a
@@ -15,12 +15,12 @@
 // THE INTERFACE (for a HUD or another file; nothing here needs an edit to space.js, assist.js or hud.js):
 //   gunlockState()        { on, name, locking: 0 to 1, locked, firing, why: '' | 'range' | 'arc', dist }   on: there is a lock or one is building
 //   gunlockTarget()       the sprite that is locked or being locked, or null
-//   gunlockSet(target)    lock this pirate (as B does); gunlockSet(null) drops the lock. Returns true when taken.
+//   gunlockSet(target)    lock this pirate (as V does); gunlockSet(null) drops the lock. Returns true when taken.
 //   GUNLOCK.readout = false   hides this file's own one-line readout
 // How it runs: the game's 'poststep' event (after the scenes' update, before the draw) calls gunlockFrame for the Space scene the assist
 // knows (ASSIST.s). The rules are the pure functions gunlockTime, gunlockNext and gunlockSolve; tests/gunlock.mjs runs them in plain Node.
 const GUNLOCK = {
-  key: 'B', readout: true,
+  key: 'V', readout: true,   // V: B is the Overview list's (src/overview.js); tests/spacekeys.mjs keeps one key to one owner
   time: 1400, timePart: 900, timeLead: 600, // ms to build a lock: no Autotarget part, the part fitted, the part at a tier that leads
   range: 600,                               // px the locked guns fire at (the part's reach when that is further; never past how far a shot flies)
   arc: 0.9,                                 // rad either side of the nose the cannons can turn
@@ -33,7 +33,7 @@ const GUNLOCK = {
 function gunlockTime(aimRange, aimLead) { return aimLead ? GUNLOCK.timeLead : aimRange > 0 ? GUNLOCK.timePart : GUNLOCK.time; }
 function gunlockRange(aimRange) { return Math.min(Math.max(GUNLOCK.range, aimRange || 0), SHOT_SPEED * SHOT_LIFE / 1000 - 30); }
 
-// who B locks. list: the live pirates [{ x, y }], me: the ship, cur: the one locked now (or null), prefer: the assist order's target (or null).
+// who V locks. list: the live pirates [{ x, y }], me: the ship, cur: the one locked now (or null), prefer: the assist order's target (or null).
 // With no lock: prefer when it is a pirate in reach, else the nearest. With a lock: the next one further out, and null after the furthest.
 function gunlockNext(list, me, cur, prefer) {
   const d = t => Math.hypot(t.x - me.x, t.y - me.y);
@@ -86,7 +86,7 @@ function gunlockSet(target) {
   return true;
 }
 
-// B: the next target, or none
+// V: the next target, or none
 function gunlockKey(s) {
   const L = GUNLOCK, list = gunlockPirates(s), order = s.as && s.as.mode ? s.as.target : null;
   const next = gunlockNext(list, s.ship, L.target, order);
@@ -150,7 +150,7 @@ function gunlockDraw(s, time) {
   gunlockRead(s, time, st);
 }
 
-// what the line says, and which pirate it stands under: pure. st: gunlockState(); hint: the pirate B would lock now (or null).
+// what the line says, and which pirate it stands under: pure. st: gunlockState(); hint: the pirate V would lock now (or null).
 // With no lock it is a short hint under that pirate; with one it is the lock's state under the locked pirate. Never a line in mid-screen.
 function gunlockLine(st, hint) {
   if (!st.on) return hint ? { text: GUNLOCK.key + ' lock', color: '#ffb454' } : null;
