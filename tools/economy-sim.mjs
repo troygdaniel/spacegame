@@ -177,11 +177,12 @@ export function loops(g, kit, mult = { pay: 1, ore: g.orePrice }) {
   const toPlanet = hypot(pos(station), pos(planet));
   out.rescue = { credits: reward('rescue'), sec: PACE.dockSec + 2 * fly(toPlanet) + PACE.groundSec };
 
-  // escort: the MULE leaves just south-west of the station for the gate and slows while you are outside her ring (chasing a pirate); five drones lie in wait for her
+  // escort: the MULE leaves just south-west of the station for the gate and slows while you are outside her ring (chasing a pirate); three waves (8 pirates) and a last stand of 3 at the gate,
+  // where she holds 8 s; she pays her reward plus up to 200 for her hull (half of it counted here), and you kill about 8 of the 11
   const mule = [station.x - 60, station.y + 260], muleRoute = hypot(mule, pos(gate)) - gate.r, [free, slow] = PINS.muleSpeed.value;
   const threatShare = 0.3, // the share of the route you spend outside her ring
         muleSec = muleRoute / (1 / ((1 - threatShare) / free + threatShare / slow));
-  out.escort = { credits: reward('escort') + 5 * bountyOf(drone.bounty), sec: PACE.dockSec + muleSec + 5 * 0.5 * killSec(drone.hp, st) + fly(hypot(pos(gate), pos(station))) };
+  out.escort = { credits: reward('escort') + 100 + 8 * bountyOf(drone.bounty), sec: PACE.dockSec + muleSec + 8 + 8 * 0.5 * killSec(drone.hp, st) + fly(hypot(pos(gate), pos(station))) };
 
   // police patrol: five wanted drones (hp 40) 650 to 950 px from the station; each kill pays its bounty on top of the 600
   out.patrol = { credits: reward('patrol') + 5 * bountyOf(drone.bounty), sec: PACE.dockSec + 5 * killSec(40, st) };
