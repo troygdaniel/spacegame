@@ -55,7 +55,7 @@ try {
     const fromFiles = await ev(`worldFromFiles('halcyon')`), code = await ev(`SYSTEMS.halcyon`), consts = await ev(`({ repair: REPAIR_PRICE, ore: ORE_PRICE })`);
     check('Halcyon\'s files make a row with the extras: seed 4001, a G star, a description, the station\'s words and prices', fromFiles && fromFiles.seed === 4001 && fromFiles.star && fromFiles.star.type === 'G' && typeof fromFiles.description === 'string' && fromFiles.bodies[0].about && fromFiles.bodies[0].about.welcome && fromFiles.bodies[0].dock.repair === consts.repair && fromFiles.bodies[0].dock.ore === consts.ore, JSON.stringify(fromFiles && fromFiles.bodies[0]));
     const same = JSON.parse(JSON.stringify(fromFiles));
-    delete same.seed; delete same.star; delete same.description;
+    delete same.seed; delete same.description; // the star is in the code's row too now (card space-game-real-solar-system: it is a body you fly to), so it is compared
     same.bodies.forEach(b => { delete b.about; if (b.dock) { delete b.dock.repair; delete b.dock.ore; } });
     const d = diff(same, code);
     check('Halcyon from its files alone is the code\'s row: ids, types, names, places, sizes, kinds, seeds, payouts, notes, labels, the dock and the pirate table', d.length === 0, d.join(' | '));
