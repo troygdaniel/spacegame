@@ -89,7 +89,7 @@ class Space extends Phaser.Scene {
         this.spawnDrone(this.planet.x + Math.cos(a) * r, this.planet.y + Math.sin(a) * r);
       }
       // the station-side pirates sit on the way to Kepler-4b, over 2000 px out: outside the police zone and well past engage range
-      [[5700, 2700], [6000, 3500], [2500, 2200]].forEach(([x, y]) => this.spawnDrone(x, y));
+      [[5700, 2700], [6000, 3500], [2500, 2200]].forEach(([x, y]) => this.spawnDrone(sysAt(x), sysAt(y))); // written in the old units, like the system data (src/data_systems.js sysAt): unscaled they sat nowhere near the route after the spread
     }
     this.time.addEvent({
       delay: pirateTable().every, loop: true, callback: () => { // src/enemies.js: the system's spawn table
