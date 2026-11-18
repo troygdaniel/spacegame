@@ -20,6 +20,12 @@ Named for Mare Imbrium, a sea of Luna.
 | tank | 2 |
 | cargo | 2 |
 
+## Runs
+| kind | to |
+|---|---|
+| courier | halcyon-station |
+| haul | halcyon-station |
+
 ## Welcome
 Welcome to {station}. Earth is the blue one. Mind the traffic.
 

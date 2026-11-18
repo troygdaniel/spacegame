@@ -66,6 +66,7 @@ export const MOONS = [
 export const DOCKS = [
   { id: 'sol-imbrium-dock', name: 'Imbrium Dock', of: 'sol-luna', off: 420, at: 160, look: 'hub', after: 'Mare Imbrium, a sea of Luna',
     dock: { fuel: 8, repair: 0.5, ore: 20, yard: ['kite', 'ox'], parts: { engine: 2, shields: 2, weapons: 2, tank: 2, cargo: 2 } },
+    runs: [['courier', 'halcyon-station'], ['haul', 'halcyon-station']], // the way home: a job on the board of the one dock Sol has today
     welcome: 'Welcome to {station}. Earth is the blue one. Mind the traffic.', services: ['Fuel', 'Repair', 'Parts shop (to tier 2)', 'Shipyard (the Kite and the Ox)'] },
   { id: 'sol-arsia-high', name: 'Arsia High', of: 'sol-mars', off: 430, at: 110, look: 'hub', after: 'Arsia Mons, a volcano of Mars',
     dock: { fuel: 9, repair: 0.5, ore: 22, yard: ['talon'], parts: { weapons: 3, shields: 3, aim: 3 } },
@@ -146,7 +147,7 @@ export function stationFile(d) {
   if (k.repair !== undefined) lines.push('repair: ' + k.repair);
   if (k.ore !== undefined) lines.push('ore: ' + k.ore);
   if (k.yard) lines.push('yard: [' + k.yard.join(', ') + ']');
-  lines.push('---', 'Named for ' + d.after + '.', '', '## Parts', '| slot | tier |', '|---|---|', ...Object.entries(k.parts).map(([s, t]) => '| ' + s + ' | ' + t + ' |'), '', '## Welcome', d.welcome, '', '## Services', ...d.services.map(s => '- ' + s), '');
+  lines.push('---', 'Named for ' + d.after + '.', '', '## Parts', '| slot | tier |', '|---|---|', ...Object.entries(k.parts).map(([s, t]) => '| ' + s + ' | ' + t + ' |'), ...(d.runs ? ['', '## Runs', '| kind | to |', '|---|---|', ...d.runs.map(([k, to]) => '| ' + k + ' | ' + to + ' |')] : []), '', '## Welcome', d.welcome, '', '## Services', ...d.services.map(s => '- ' + s), '');
   return lines.join('\n');
 }
 // the tables of docs/SOL.md, between its two marker lines

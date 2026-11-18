@@ -54,6 +54,9 @@ check('every body is in the nav list, so cruise and the autopilot fly to it', B.
 check('a cruise or the autopilot stops outside each one', J(g, `SYSTEMS.sol.bodies.every(b => autopilotStop(b) > (b.r || 0))`));
 check('one dock is live (the game opens the first station of a system): Imbrium Dock, with a pump, a yard and a parts shop', (() => { const st = S.bodies.filter(b => b.type === 'station'); return st.length === 1 && st[0].name === 'Imbrium Dock' && st[0].dock.fuel === 8 && st[0].dock.yard.join() === 'kite,ox' && st[0].dock.parts.engine === 2; })());
 
+check('its board posts a courier and a haul home to Halcyon Station, and the starter Wren can fly both', J(g, `missionsOffered('sol-imbrium-dock').map(m => [m.id, missionReach(m, 'sol-imbrium-dock', newShip('wren')).ok, m.reward > 0].join(':'))`).join() === 'courier-sol-halcyon:true:true,haul-sol-halcyon:true:true');
+check('the boards of the shipped docks are as they were with the pack on', J(g, `missionsOffered('halcyon-station').map(m => m.id)`).join() === J(off, `missionsOffered('halcyon-station').map(m => m.id)`).join() && J(g, `MISSIONS.length`) === J(off, `MISSIONS.length`) + 2);
+
 // ---- the scale ----
 const at = layout().at, spread = J(g, `SYSTEM_SCALE`);
 check('a ring is 14,000 x the square root of the real distance in AU, and the game spreads it 3 times', SCALE.K === 14000 && SCALE.power === 0.5 && spread === SCALE.spread && SUN_BODIES.every(b => at[b.id].orbit === Math.round(14000 * Math.sqrt(b.au))) && ringOf(1) === 14000);
