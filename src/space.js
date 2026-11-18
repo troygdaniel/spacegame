@@ -13,12 +13,29 @@ function spaceLaunchLine(s) {
   if (G.mission !== 'accepted' || typeof missionTarget !== 'function') return plain;
   let t = null;
   try { const view = Object.create(s); view.mx = {}; t = missionTarget(view); } catch (e) { t = null; } // a call whose target needs its ships: no direction rather than no launch
-  const home = sysBody('station');
+  const home = spaceHomeDock();
   if (!t || !t.name || (home && t.name === home.name)) return plain; // the fallback of missionTarget is the station you have just left
   const dx = t.x - s.ship.x, dy = t.y - s.ship.y;
   if (!(Math.hypot(dx, dy) > 600)) return plain;
   return plain + ' ' + t.name + ' is to the ' + spaceCompass(dx, dy) + '.';
 }
+// ---- more than one dock in a system (card space-game-more-than-one-dock) ----
+// Every station row of the system's data is a dock: drawn, with a dock prompt near it, and G.lastDock is the one you docked at (the pump, the yard,
+// the fleet and the launch are that one's). The scene keeps them in s.docks: [{ def: the body's row, obj: what is drawn }]. s.station stays, for the
+// code that wants "the station" (the police, the traffic, the escort's start): it is the dock you launched from, else the system's first.
+const DOCK_REACH = 320, DOCK_SPEED = 150; // px from a dock's centre the prompt comes on, and the speed (px/s) under which L docks
+// the dock you launch from: the station row with the id of G.lastDock when it is in this system, else the first station row, else null
+function spaceHomeDock(id) { const all = sysBodies('station', id); return all.find(b => b.id === G.lastDock) || all[0] || null; }
+// the nearest of docks ([{ def }] or the rows themselves) to a point, with how far: { dock, d }, or null when there is none
+function spaceDockNearest(docks, x, y) {
+  let best = null;
+  (docks || []).forEach(k => { const b = k.def || k, d = Math.hypot(b.x - x, b.y - y); if (!best || d < best.d) best = { dock: k, d }; });
+  return best;
+}
+// the dock L would take: the nearest one, when it is inside DOCK_REACH; else null
+function spaceDockAt(docks, x, y) { const n = spaceDockNearest(docks, x, y); return n && n.d < DOCK_REACH ? n.dock : null; }
+// what the scene draws for the dock the ship is nearest to (the approach ring of src/feel.js goes round it); the home dock with no ship yet
+function spaceDockObj(s) { const n = s.ship && s.docks && s.docks.length ? spaceDockNearest(s.docks, s.ship.x, s.ship.y) : null; return n ? n.dock.obj : s.station; }
 class Space extends Phaser.Scene {
   constructor() { super('Space'); }
   // from: 'station' (the default), 'surface', 'jump' (the ship comes out of hyperspace: src/jump.js hands over { from: 'jump', to, origin }) or 'pullout'
@@ -43,13 +60,14 @@ class Space extends Phaser.Scene {
     this.events.once('shutdown', () => { G.deep = null; }); // a pull-out lives only as long as this scene shows it
 
     const land = missionLandBody(); // src/missions.js: the planet of a rescue call played in this system (its file names the body), when it is landable
-    const stDef = sysBody('station'), plDef = land || sysBody('planet');
-    if (stDef) {
-      const built = stationBuild(this, stDef); // src/stationart.js: Halcyon's ring, a small outpost, or one of the looks, by the body's art
-      this.station = built.obj;
-      label(this, stDef.x, stDef.y + built.labelDy, stDef.name.toUpperCase(), '#38e1ff', 18);
-      if (stDef.art === 'station') stationFx(this); // src/stationart.js: Halcyon's spinning hub and ring, beacons, docking lane, Kestrel Outpost scenery
-    } else this.station = spaceNowhere();
+    const stDef = spaceHomeDock(), plDef = land || sysBody('planet'); // the dock you launch from (G.lastDock), else the system's first
+    this.docks = sysBodies('station').map(def => { // every station row is a dock
+      const built = stationBuild(this, def); // src/stationart.js: Halcyon's ring, a small outpost, or one of the looks, by the body's art
+      label(this, def.x, def.y + built.labelDy, def.name.toUpperCase(), '#38e1ff', 18);
+      if (def.art === 'station') stationFx(this, built.obj); // src/stationart.js: Halcyon's spinning hub and ring, beacons, docking lane, Kestrel Outpost scenery
+      return { def, obj: built.obj };
+    });
+    this.station = stDef ? this.docks.find(k => k.def === stDef).obj : spaceNowhere();
     // you can land only where there is a surface to land on: the Surface scene is the rescue call's (a world of the Hollow gets its own later), so only that call's planet is landable
     this.canLand = !!land;
     if (plDef) {
@@ -93,7 +111,8 @@ class Space extends Phaser.Scene {
         const a = Math.random() * Math.PI * 2;
         const x = Phaser.Math.Clamp(this.ship.x + Math.cos(a) * SPAWN_DIST, 100, WS - 100);
         const y = Phaser.Math.Clamp(this.ship.y + Math.sin(a) * SPAWN_DIST, 100, WS - 100);
-        if (Phaser.Math.Distance.Between(x, y, this.station.x, this.station.y) > SPAWN_KEEP_OUT) this.spawnDrone(x, y);
+        const near = spaceDockNearest(this.docks, x, y); // no pirate spawns on top of a dock, whichever one
+        if (!near || near.d > SPAWN_KEEP_OUT) this.spawnDrone(x, y);
       }
     });
 
@@ -252,12 +271,12 @@ class Space extends Phaser.Scene {
     enemiesUpdate(this, time); // salvage pods drift and expire
 
     // dock / land
-    const dS = Phaser.Math.Distance.Between(ship.x, ship.y, this.station.x, this.station.y); // (huge when the system has none: spaceNowhere)
+    const dock = spaceDockAt(this.docks, ship.x, ship.y); // the dock in reach, of all the system has (none in a system with no station: tests/nostation.mjs)
     const dP = Phaser.Math.Distance.Between(ship.x, ship.y, this.planet.x, this.planet.y);
     const spd = ship.body.speed;
     let msg = '';
-    if (dS < 320 && !this.station.nowhere) { // nowhere: the stand-in of a system with no station is never a dock, however near (tests/nostation.mjs)
-      if (spd < 150) { msg = 'L  Dock at ' + sysBody('station').name; if (JD(k.L)) { missionLeaveSpace(this); sfx('dock'); G.lastDock = sysBody('station').id; fleetSync(); feelDescend(this, this.station, () => go(this, 'Station', { arrive: true })); } } // lastDock: where the pump, the yard and the fleet are now (src/fleet.js)
+    if (dock) {
+      if (spd < DOCK_SPEED) { msg = 'L  Dock at ' + dock.def.name; if (JD(k.L)) { missionLeaveSpace(this); sfx('dock'); G.lastDock = dock.def.id; fleetSync(); feelDescend(this, dock.obj, () => go(this, 'Station', { arrive: true })); } } // lastDock: where the pump, the yard and the fleet are now (src/fleet.js)
       else msg = 'Too fast to dock. Hold S to brake';
     } else if (this.canLand && dP < this.planetR + 150) {
       if (spd < 170) { msg = 'L  Land on ' + sysBody('planet').name; if (JD(k.L)) { missionLeaveSpace(this); sfx('thrusters'); feelDescend(this, this.planet, () => go(this, 'Surface')); } }

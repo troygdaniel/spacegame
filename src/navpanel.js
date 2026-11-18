@@ -266,7 +266,7 @@ function navpanelPick(s, r) {
   cruisePick(s, r); // src/cruise.js: the one target C, P, the Tab map and the HUD arrow share
 }
 // the order a row can take: 'dock' (this system's station), 'land' (the planet you can land on) or ''
-function navpanelOrder(s, r) { return r && r.kind !== 'jump' ? autopilotOrder(r, sysBody('station'), sysBody('planet'), s.canLand) : ''; }
+function navpanelOrder(s, r) { return r && r.kind !== 'jump' ? autopilotOrder(r, sysBodies('station'), sysBody('planet'), s.canLand) : ''; }
 function navpanelEngage(s, r) {
   const np = s.np, no = m => { toast(s, m, '#ffb454'); sfx('empty'); return false; };
   if (r.kind !== 'jump') { // a body: the autopilot flies it, and cruises the middle of a long leg
