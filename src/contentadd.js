@@ -64,13 +64,21 @@ const CA_SHIP = {
     if (data.hangarLine !== undefined) row.line = data.hangarLine;
     SHIP_MODELS[id] = row; CA_SHIPS.add(id);
     SHIP_LOOK[id] = Object.assign({}, look, { name: data.name, role: row.role + ' (' + SHIP_MODELS[art].name + ' hull)' });
-    at.forEach(st => {
-      const d = st.body.dock || (st.body.dock = {}), list = Array.isArray(d.yard) ? d.yard : FLEET.yardFallback.slice();
-      d.yard = list.includes(id) ? list : list.concat(id);
-    });
+    CA_YARDS.set(id, yard.slice()); caYardsSync();
   }
 };
 CONTENT_TABLES.ship = CA_SHIP;
+// Where a pack's ship is sold: the stations its file names. worldSync (src/contenttables.js) may rebuild a system from its files AFTER the ship
+// was added (it does when a pack changed anything in that system), and the rebuilt dock sells only what its station file says, so the boot calls
+// caYardsSync again once worldSync is done (src/boot.js). Without it a pack's new ship was in the game and in no yard (card space-game-fix-mods-test-packs).
+const CA_YARDS = new Map(); // ship id -> the stations that sell it
+function caYardsSync() {
+  CA_YARDS.forEach((stations, id) => stations.forEach(sid => {
+    const st = fleetStation(sid); if (!st) return;
+    const d = st.body.dock || (st.body.dock = {}), list = Array.isArray(d.yard) ? d.yard : FLEET.yardFallback.slice();
+    if (!list.includes(id)) d.yard = list.concat(id);
+  }));
+}
 
 // ---- mission: new calls of the four kinds the game can play ----
 // What a call DOES (where the pod is, what the MULE flies past, which pirates are wanted, the Reaver) is the code of its kind in missions.js,

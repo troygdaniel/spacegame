@@ -6,7 +6,7 @@
 //      name wins; a picked folder (the same parser, no Node) is read, kept in the browser and applied after a restart; a tampered or
 //      hostile pack is refused, field by field, and the game still starts
 // Run: node tests/mods.mjs        (one Chrome at a time; about 60 seconds)
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
@@ -22,13 +22,24 @@ const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok  '
 const tmp = [];
 const mk = (dir, rel, text) => { const f = join(dir, rel); mkdirSync(join(f, '..'), { recursive: true }); writeFileSync(f, text); };
 
+// The packs that really are in mods/ (the committed mods.generated.js, which the build writes in name order): the example pack, Sol and the near
+// stars, and any pack a later card adds. Nothing below pins that list: what the Mods screen and the game must show with every one of them off,
+// or with one of them on, is worked out from it (card space-game-fix-mods-test-packs: the test pinned 'example' alone and broke when the Sol pack landed).
+const committed = (() => { const box = {}; new Function('MODS', readFileSync(join(ROOT, 'mods.generated.js'), 'utf8').replace(/^var MODS =/m, 'MODS.v =') + ';')(box); return box.v; })();
+const REAL = committed.packs.map(p => p.name).sort();
+// what world(t).packs says: the real packs and the named extra ones (a pack picked in the browser) in name order, each '-0' (off) unless spec gives it, e.g. { example: '+2' }
+const listOf = (spec = {}) => [...new Set(REAL.concat(Object.keys(spec)))].sort().map(n => n + (spec[n] || '-0')).join();
+// what the Mods screen lists, as 'name:source' ('built' for a pack of mods/, 'picked' for one picked in the browser), in name order
+const shownOf = (picked = []) => [...new Set(REAL.concat(picked))].sort().map(n => n + ':' + (REAL.includes(n) ? 'built' : 'picked')).join();
+// the number key of the example pack on the Mods screen (it is the first of the list today; the screen numbers its rows from 1)
+const EXKEY = 'Digit' + (REAL.indexOf('example') + 1);
+
 // ---------- A. the build ----------
 console.log('A. the build writes each pack on its own');
 {
   const core = build({ write: false }).result.entries;
-  const committed = (() => { const box = {}; new Function('MODS', readFileSync(join(ROOT, 'mods.generated.js'), 'utf8').replace(/^var MODS =/m, 'MODS.v =') + ';')(box); return box.v; })();
   const ex = committed.packs.find(p => p.name === 'example');
-  check('the committed mods.generated.js has the example pack', !!ex);
+  check('the committed mods.generated.js has the example pack, and every pack folder of mods/ (the ones git keeps)', !!ex && REAL.join() === readdirSync(join(ROOT, 'mods'), { withFileTypes: true }).filter(d => d.isDirectory() && C.packName(d.name)).map(d => d.name).sort().join(), REAL.join());
   const fresh = buildMods({ dir: join(ROOT, 'mods'), write: false, coreEntries: core });
   const exNow = fresh.packs.find(p => p.name === 'example');
   check('the example pack in it is what a build of mods/example makes now (run node tools/build-content.mjs)', !!exNow && JSON.stringify(exNow) === JSON.stringify(ex));
@@ -93,16 +104,16 @@ console.log('B1. the real game: off by default, the screen, the picker');
   try {
     await title(t);
     let w = await world(t);
-    check('the example pack is listed and OFF: the game is the shipped game (Rescue 500, JUNO as shipped, not modded, no problems)', w.packs.join() === 'example-0' && w.rescue === 500 && !/^This line comes from/.test(w.juno) && !w.modded && w.errors.length === 0, JSON.stringify(w));
+    check('every pack of mods/ is listed and OFF: the game is the shipped game (Rescue 500, JUNO as shipped, not modded, no problems)', w.packs.join() === listOf() && w.rescue === 500 && !/^This line comes from/.test(w.juno) && !w.modded && w.errors.length === 0, JSON.stringify(w));
     check('no Mods screen yet, no packs on', !(await t.ev("game.scene.isActive('ModsSetup')")) && (await getLS(t, 'longhaul.mods.on')) === null);
 
     // the screen: O opens it, 1 turns the first pack on, the screen says a restart is needed and the setting is kept
     await keyEv(t, 'KeyO'); await sleep(500);
     check('O on the Title screen opens the Mods screen', await t.ev("game.scene.isActive('ModsSetup')"));
-    check('it lists the example pack, off, and the restart button is dim', await t.ev("(() => { const s = game.scene.getScene('ModsSetup'); return s.shown.length === 1 && s.shown[0].name === 'example' && s.restartBtn.bg.alpha < 0.5; })()"));
+    check('it lists the packs of mods/, all off, and the restart button is dim', await t.ev(`(() => { const s = game.scene.getScene('ModsSetup'); return s.shown.map(p => p.name).join() === ${JSON.stringify(REAL.join())} && s.restartBtn.bg.alpha < 0.5; })()`));
     check('the real folder picker is in the page: an input with webkitdirectory', await t.ev("(() => { const i = document.querySelector('input[data-mods-picker]'); return !!i && i.type === 'file' && i.hasAttribute('webkitdirectory'); })()"));
-    await keyEv(t, 'Digit1'); await sleep(300);
-    check('1 turns the pack on: it is kept, the screen asks for a restart', (await getLS(t, 'longhaul.mods.on')) === '["example"]' && await t.ev("(() => { const s = game.scene.getScene('ModsSetup'); return /Restart/.test(s.status.text) && s.restartBtn.bg.alpha === 1; })()"));
+    await keyEv(t, EXKEY); await sleep(300);
+    check('the example pack\'s number turns it on: it is kept, the screen asks for a restart', (await getLS(t, 'longhaul.mods.on')) === '["example"]' && await t.ev("(() => { const s = game.scene.getScene('ModsSetup'); return /Restart/.test(s.status.text) && s.restartBtn.bg.alpha === 1; })()"));
     check('the running game has not changed (a pack is applied when the game starts)', (await world(t)).rescue === 500);
     await t.shot('mods-screen');
     await keyEv(t, 'Escape'); await sleep(500);
@@ -111,17 +122,17 @@ console.log('B1. the real game: off by default, the screen, the picker');
 
     await reload(t, ROOT);
     w = await world(t);
-    check('after a restart the pack is laid over the core: Rescue pays 650 and JUNO says the pack\'s line', w.packs.join() === 'example+2' && w.rescue === 650 && /^This line comes from/.test(w.juno), JSON.stringify(w));
+    check('after a restart the pack is laid over the core: Rescue pays 650 and JUNO says the pack\'s line', w.packs.join() === listOf({ example: '+2' }) && w.rescue === 650 && /^This line comes from/.test(w.juno), JSON.stringify(w));
     check('the Title says MODDED, with no problems', w.modded && w.errors.length === 0 && await t.ev('!!contentTitleUi && !!game.scene.getScene("Title").contentUi.tag'));
     await keyEv(t, 'KeyP'); await sleep(500);
     check('the Content section of Settings says which packs are on', await t.ev("(() => { if (!game.scene.isActive('Settings')) return false; const pt = []; const walk = o => { if (o.type === 'Text') pt.push(o.text); if (o.list) o.list.forEach(walk); }; game.scene.getScene('Settings').children.list.forEach(walk); return pt.some(x => /packs on: example/.test(x)); })()")); // P opens Settings at Content (src/settings.js); Esc closes it
     await keyEv(t, 'Escape'); await sleep(400);
 
     // turn it off again in the screen and restart: back to the shipped game
-    await keyEv(t, 'KeyO'); await sleep(500); await keyEv(t, 'Digit1'); await sleep(300); await keyEv(t, 'Escape'); await sleep(400);
+    await keyEv(t, 'KeyO'); await sleep(500); await keyEv(t, EXKEY); await sleep(300); await keyEv(t, 'Escape'); await sleep(400);
     await reload(t, ROOT);
     w = await world(t);
-    check('turned off and restarted: the shipped game again', w.rescue === 500 && !w.modded && w.packs.join() === 'example-0', JSON.stringify(w));
+    check('turned off and restarted: the shipped game again', w.rescue === 500 && !w.modded && w.packs.join() === listOf(), JSON.stringify(w));
 
     // a picked folder: File objects as an <input webkitdirectory> hands them over (webkitRelativePath says where each lies)
     const makeFiles = `(() => {
@@ -142,9 +153,9 @@ console.log('B1. the real game: off by default, the screen, the picker');
     check('files that are not content never reach the pack (_notes.md, .hidden/, readme.txt)', kept[0].entries.every(e => /^mods\/my-pack\/(missions\/escort|npcs\/moss)\.md$/.test(e.path)));
     await reload(t, ROOT);
     w = await world(t);
-    check('after a restart the picked pack is applied: Escort pays 999 and the problems of the pack are listed, each naming it', w.escort === 999 && w.modded && w.packs.join() === 'example-0,my-pack+2' && w.errors.length === 2 && w.errors.every(e => e.startsWith('mods/my-pack/')), JSON.stringify(w));
+    check('after a restart the picked pack is applied: Escort pays 999 and the problems of the pack are listed, each naming it', w.escort === 999 && w.modded && w.packs.join() === listOf({ 'my-pack': '+2' }) && w.errors.length === 2 && w.errors.every(e => e.startsWith('mods/my-pack/')), JSON.stringify(w));
     await keyEv(t, 'KeyO'); await sleep(500);
-    check('the screen lists both packs, the picked one on and marked as picked here', await t.ev("(() => { const s = game.scene.getScene('ModsSetup'); return s.shown.map(p => p.name + ':' + p.source).join() === 'example:built,my-pack:picked' && s.rowObjs.some(o => o.text && /picked here/.test(o.text)); })()"));
+    check('the screen lists the packs of mods/ and the picked one, the picked one on and marked as picked here', await t.ev(`(() => { const s = game.scene.getScene('ModsSetup'); return s.shown.map(p => p.name + ':' + p.source).join() === ${JSON.stringify(shownOf(['my-pack']))} && s.rowObjs.some(o => o.text && /picked here/.test(o.text)); })()`));
     await t.shot('mods-screen-picked');
     // the real <input> element: a change event with files hands them to the same reader
     await t.ev(makeFiles);
@@ -230,18 +241,18 @@ console.log('B3. a tampered or hostile pack in the browser\'s storage is refused
     await reload(t, ROOT);
     const w = await world(t);
     check('the game started on the Title screen', true);
-    check('the junk in the on list is dropped and the one valid name (evil) is on; the other bad entries of the picked list are dropped (with the example pack, off, that makes two)', w.packs.join() === 'evil+2,example-0', w.packs.join());
+    check('the junk in the on list is dropped and the one valid name (evil) is on; the other bad entries of the picked list are dropped (with the packs of mods/, all off, that makes the list below)', w.packs.join() === listOf({ evil: '+2' }), w.packs.join());
     check('nothing wrong was taken: Rescue 500, Escort 400, the Raider\'s hp is not negative', w.rescue === 500 && w.escort === 400 && await t.ev('PIRATES.raider.hp > 0'), JSON.stringify(w));
     check('what was refused is listed, each naming the pack', w.errors.length >= 4 && w.errors.every(e => /^mods\/evil/.test(e)), JSON.stringify(w.errors));
     check('JUNO\'s line, hostile text and all, is only ever drawn as text (it is a line of her list, not HTML)', await t.ev("NPCS.find(n => n.id === 'juno').lines.every(l => typeof l === 'string' && l.length <= 240)"));
     check('Object.prototype was not touched', await t.ev("({}).name === undefined && ({}).lines === undefined && Object.keys(Object.prototype).length === 0"));
-    check('the screen still opens, and shows only well-formed packs', await (async () => { await keyEv(t, 'KeyO'); await sleep(500); const ok = await t.ev("(() => { const s = game.scene.getScene('ModsSetup'); return !!s && s.shown.map(p => p.name).join() === 'evil,example'; })()"); return ok; })());
+    check('the screen still opens, and shows only well-formed packs', await (async () => { await keyEv(t, 'KeyO'); await sleep(500); const ok = await t.ev(`(() => { const s = game.scene.getScene('ModsSetup'); return !!s && s.shown.map(p => p.name).join() === ${JSON.stringify(shownOf(['evil']).replace(/:built|:picked/g, ''))}; })()`); return ok; })());
     check('a 40-character title is the limit of what a stored title can show', await t.ev("modsAvailable().every(p => p.title.length <= 40 && p.about.length <= 200)"));
     // storage that is not JSON at all
     await setLS(t, 'longhaul.mods.on', '{{{not json'); await setLS(t, 'longhaul.mods.picked', '[[[');
     await reload(t, ROOT);
     const w2 = await world(t);
-    check('storage that is not JSON: the shipped game, the example pack off', w2.rescue === 500 && !w2.modded && w2.packs.join() === 'example-0' && w2.errors.length === 0, JSON.stringify(w2));
+    check('storage that is not JSON: the shipped game, every pack of mods/ off', w2.rescue === 500 && !w2.modded && w2.packs.join() === listOf() && w2.errors.length === 0, JSON.stringify(w2));
     check('no JS errors or uncaught exceptions', t.errors.length === 0, t.errors.join(' | '));
   } finally { await t.close(); }
 }
