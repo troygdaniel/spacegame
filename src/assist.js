@@ -1,5 +1,5 @@
 // ---------- Flight assist: tell the ship what to do about a target and it flies itself (card space-game-assist-core) ----------
-// Beside the hand flight, not instead of it: Z switches the assist on and off. While it is on, a command key gives the ship an order about the
+// Beside the hand flight, not instead of it: Z switches the assist on and off, and a command key switches it on too. A command key gives the ship an order about the
 // target (the one the N list sets, or one handed to assistSet): 1 Approach (fly to it and stop near it), 2 Keep at range (hold a distance, backing
 // off when too close). The ship flies like a ship: it turns first, burns when its nose is on the line, and brakes in time. Any flight key
 // (W A S D, the arrows, Shift, Q, E) hands the stick back; the guns stay yours (Space fires while the assist flies). The same key again ends the order.
@@ -29,10 +29,9 @@ const ASSIST = {
   on: false, s: null, readout: true,
   key: 'Z',                          // on and off
   turn: 0.0036,                      // rad per ms times the ship's turn stat: the hand flight's own rate (space.js)
-  drag: 0.55, brakeDrag: 0.12,       // what is left of the speed after a second of coasting, and of braking: the hand flight's own numbers
   align: 0.3,                        // rad: the nose is on the line, the engine may burn
   full: 60, idle: 0.005,             // px/s of needed change that gets a full burn (less gets less); the least the engine gives while lit
-  lead: 1.7,                         // px/s allowed per px left: the brake takes 2.12 off per second, so 1.7 is in time
+  lead: 1.7,                         // px/s allowed per px left under Classic: its brake takes 2.12 off per second, so 1.7 is in time (assistLead: other feels)
   dead: 20, slow: 15,                // px either side of the range that count as there; px/s that counts as stopped
   faceLean: 0.3,                     // how far the nose line leans toward the way the ship wants to go (a share of that speed)
   faceOn: 35, faceOff: 20,           // px/s of needed change that turns the nose onto it, and that lets it go again
@@ -59,7 +58,15 @@ function assistVel(t) {
   const v = t.body && t.body.velocity;
   return v ? { x: v.x || 0, y: v.y || 0 } : { x: t.vx || 0, y: t.vy || 0 };
 }
-function assistName(t) { return t.name || (t.body ? 'the ship' : 'the point'); }
+function assistName(t) { return t.name || (t.def && t.def.key ? 'the ' + t.def.key : t.body ? 'the ship' : 'the point'); } // a pirate by its type, as a click names it (clickmove.js)
+// The assist has one line on screen: a new one takes the place of its last, so three orders in a row are not three toasts over the
+// target (playtest 4). Other toasts are left alone. src/clickmove.js says its lines through this too.
+function assistSay(s, msg, color) {
+  const a = s.as, old = a && a.said;
+  if (old && Array.isArray(s.toasts)) { const i = s.toasts.indexOf(old); if (i >= 0) { s.toasts.splice(i, 1); [old.t, old.bg, old.tab].forEach(o => { if (o && o.destroy) o.destroy(); }); } }
+  toast(s, msg, color);
+  if (a) a.said = Array.isArray(s.toasts) && s.toasts.length ? s.toasts[s.toasts.length - 1] : null;
+}
 function assistStats() { return { turn: shipStat('turn'), accel: shipStat('accel'), vmax: shipStat('vmax') }; }
 function assistKeyLine() { return Object.values(ASSIST_MODES).filter(m => m.cap).map(m => m.cap + ' ' + m.label).join('   '); }
 
@@ -68,16 +75,36 @@ function assistKeyLine() { return Object.values(ASSIST_MODES).filter(m => m.cap)
 // one frame of a command. Turn toward cmd.face at the ship's turn rate; burn pushes along the nose; no burn coasts (the speed bleeds as in
 // hand flight) or brakes; never faster than the ship's top speed.
 function assistStep(me, cmd, st, dt) {
-  const dts = dt / 1000; let rot = me.rot, vx = me.vx, vy = me.vy;
-  if (cmd.face !== null && cmd.face !== undefined) {
-    const d = assistWrap(cmd.face - rot), step = ASSIST.turn * st.turn * dt;
-    rot = Math.abs(d) <= step ? assistWrap(cmd.face) : assistWrap(rot + Math.sign(d) * step);
-  }
+  const dts = dt / 1000, h = handlingNow(), hs = me.mem || (me.mem = {}); let rot = me.rot, vx = me.vx, vy = me.vy; // hs: where the turn and the thrust ramp have got to (hTurn, hThrust), kept on the order
+  // the turn: the hand's own (src/handling.js). Under Heavy it builds up and eases off, so the stick is let go early enough to stop on the line
+  const full = ASSIST.turn * st.turn * dt, has = cmd.face !== null && cmd.face !== undefined, d = has ? assistWrap(cmd.face - rot) : 0;
+  const r = Math.abs(hs.hTurn || 0), going = Math.sign(hs.hTurn || 0);
+  const stop = h.turnDown ? h.turn * (full / dt) * h.turnDown * (r * r * r - r * r * r * r / 2) : 0; // rad it still turns while easing off from here
+  let dir = Math.sign(d);
+  if (dir && h.turnDown && going === dir && Math.abs(d) <= stop + full * 0.5) dir = 0;
+  const step = handlingTurn(hs, dir, dt) * full;
+  if (has && step && Math.sign(step) === Math.sign(d) && Math.abs(step) >= Math.abs(d)) { rot = assistWrap(cmd.face); if (h.turnUp || h.turnDown) hs.hTurn = 0; } // on the line
+  else if (step) rot = assistWrap(rot + step);
+  // the engine: the throttle times what the feel gives this frame (all of it under Classic, a ramp to half of it under Heavy)
   const b = cmd.burn === true ? 1 : Math.min(1, Math.max(0, +cmd.burn || 0)); // the throttle: true or 1 is a full burn, 0.3 a third of it
-  if (b > 0) { vx += Math.cos(rot) * st.accel * b * dts; vy += Math.sin(rot) * st.accel * b * dts; }
-  if (b < 1) { const k = Math.pow(cmd.brake ? ASSIST.brakeDrag : ASSIST.drag, dts * (1 - b)); vx *= k; vy *= k; } // the less it burns, the more the speed bleeds
+  const push = st.accel * b * handlingThrust(hs, b > 0, dt);
+  if (b > 0) { vx += Math.cos(rot) * push * dts; vy += Math.sin(rot) * push * dts; }
+  if (b < 1) { const k = Math.pow(handlingDrag(!!cmd.brake), dts * (1 - b)); vx *= k; vy *= k; } // the less it burns, the more the speed bleeds: the feel's own drag and brake
   const sp = Math.hypot(vx, vy); if (sp > st.vmax) { vx *= st.vmax / sp; vy *= st.vmax / sp; }
   return { x: me.x + vx * dts, y: me.y + vy * dts, rot, vx, vy, burning: b > 0 };
+}
+// px/s allowed per px left: ASSIST.lead is right for the Classic brake; a feel with a weaker brake (Heavy) gets less, in proportion, so it still stops in time
+function assistLead() { return ASSIST.lead * Math.log(handlingNow().brake) / Math.log(HANDLING.classic.brake); }
+
+// is the change the ship needs mostly "slower" (the brake does that without a turn)? It remembers its answer (mem.slower): the brake comes on
+// when the change points well against the way the ship flies and stays on until it no longer does. Without the memory the answer flipped
+// every frame near the line, and the brake and the engine took turns (under Heavy, whose engine ramps, that lit it 37 times on one arrival).
+function assistSlower(mem, ex, ey, vx, vy, floor) {
+  const err = Math.hypot(ex, ey), sp = Math.hypot(vx, vy);
+  if (sp <= 8 || err <= floor) return (mem.slower = false);
+  const cos = (ex * vx + ey * vy) / (err * sp);
+  if (cos < -0.7) mem.slower = true; else if (cos > -0.45) mem.slower = false;
+  return !!mem.slower;
 }
 
 // come to rest `stop` px from the target (measured to its centre), relative to its own motion. back: when inside that distance, back off to it.
@@ -87,7 +114,7 @@ function assistSeek(me, tgt, st, stop, back, trail) {
   let left = dist - (stop || 0); if (!back && left < 0) left = 0;
   const there = Math.abs(left) <= ASSIST.dead;
   const moving = Math.hypot(tgt.vx || 0, tgt.vy || 0) > 1;
-  const want = there && !moving ? 0 : Math.sign(left) * Math.min(st.vmax * 1.05, ASSIST.lead * Math.max(0, Math.abs(left) - ASSIST.dead / 2)); // px/s toward the target (1.05: the cruise part never reaches it, so the engine stays lit)
+  const want = there && !moving ? 0 : Math.sign(left) * Math.min(st.vmax * 1.05, assistLead() * Math.max(0, Math.abs(left) - ASSIST.dead / 2)); // px/s toward the target (1.05: the cruise part never reaches it, so the engine stays lit)
   const rvx = me.vx - (tgt.vx || 0), rvy = me.vy - (tgt.vy || 0), rel = Math.hypot(rvx, rvy);
   // the change of velocity the ship needs: the closing speed it wants, and no drift across the line. trail (Approach and Keep at range about
   // a target that moves): only the closing speed counts, so the ship works along the line to it and ends up trailing it at the range, where
@@ -104,10 +131,16 @@ function assistSeek(me, tgt, st, stop, back, trail) {
   const mem = me.mem || (me.mem = {});
   const rest = toTarget; // with nothing worth a turn the nose is on the target
   const aim = f => (mem.face = f);
-  if (there && rel <= ASSIST.slow && !moving) { mem.onErr = false; out.face = aim(rest); return out; } // there and still: engine off (beside a moving ship the engine stays lit low, below)
+  // there and slow: engine off, and the brake takes the last of the speed (a feel that coasts long, Heavy, drifted 30 px past the range without it). Beside a moving ship the engine stays lit low, below
+  if (there && rel <= ASSIST.slow && !moving) { mem.onErr = false; out.face = aim(rest); out.still = true; out.brake = sp > 0.5; return out; }
   // what it needs is mostly "slower": the brake does that without a turn
-  if (sp > 8 && err > Math.abs(want) * 0.03 + 3 && ex * me.vx + ey * me.vy < -0.7 * err * sp) { out.brake = true; out.status = there ? 'hold' : 'brake'; out.face = mem.face !== undefined ? mem.face : aim(toTarget); return out; }
-  if (err > ASSIST.faceOn) mem.onErr = true; else if (err < ASSIST.faceOff) mem.onErr = false;
+  if (assistSlower(mem, ex, ey, me.vx, me.vy, Math.abs(want) * 0.03 + 3)) { out.brake = true; out.status = there ? 'hold' : 'brake'; out.face = mem.face !== undefined ? mem.face : aim(toTarget); return out; }
+  // a change that points away from where the nose rests cannot be made without a turn, however small it is: turn for it once it is over
+  // ASSIST.slow (a ship a little inside its range with a weak brake sat there for good, nose on the target, the change too small to count)
+  const away = ex * Math.cos(rest) + ey * Math.sin(rest) < 0;
+  if (err > ASSIST.faceOn) { mem.onErr = true; mem.small = false; }
+  else if (away && err > ASSIST.slow && !mem.onErr) { mem.onErr = true; mem.small = true; } // small: it turned for a small change, so it lets go only when that is nearly made
+  else if (err < (mem.small ? ASSIST.slow * 0.6 : ASSIST.faceOff)) { mem.onErr = false; mem.small = false; }
   // the line of the change it needs, leaning toward the way it wants to go: at cruise the needed change is small, and without the lean one px/s
   // of sideways drift swung the nose by 0.04 rad, back and forth
   const lean = ASSIST.faceLean * Math.sign(want) * Math.min(Math.abs(want), st.vmax);
@@ -123,7 +156,7 @@ function assistSeek(me, tgt, st, stop, back, trail) {
 }
 
 assistMode('approach', { label: 'Approach', key: 'ONE', cap: '1', range: assistStopAt,
-  plan: (a, me, tgt, st) => { const c = assistSeek(me, tgt, st, a.range, !!tgt.moving, true); if (c.status === 'hold' && !c.brake && !tgt.moving) c.done = true; return c; } }); // a ship that moves is followed at the range from both sides; a still target nearer than the range is left alone
+  plan: (a, me, tgt, st) => { const c = assistSeek(me, tgt, st, a.range, !!tgt.moving, true); if (c.still && !tgt.moving) c.done = true; return c; } }); // a ship that moves is followed at the range from both sides; a still target nearer than the range is left alone
 assistMode('keep', { label: 'Keep at range', key: 'TWO', cap: '2', range: ASSIST.keepRange,
   plan: (a, me, tgt, st) => assistSeek(me, tgt, st, a.range, true, true) });
 
@@ -141,7 +174,7 @@ function assistOn(s, on) {
   const a = s && s.as; if (!a) return false;
   ASSIST.on = !!on;
   if (!ASSIST.on && a.mode) assistStop(s, 'quiet');
-  toast(s, ASSIST.on ? 'Flight assist on.   ' + assistKeyLine() : 'Flight assist off.', '#9fe9ff'); sfx(ASSIST.on ? 'chime' : 'tick');
+  assistSay(s, ASSIST.on ? 'Flight assist on.   ' + assistKeyLine() : 'Flight assist off.', '#9fe9ff'); sfx(ASSIST.on ? 'chime' : 'tick');
   a.readAt = 0;
   return ASSIST.on;
 }
@@ -154,21 +187,22 @@ function assistSet(mode, target, range) {
   const m = ASSIST_MODES[mode];
   if (!m || !ASSIST.on || s.dead || s.leaving || s.jmp || s.cruising || s.time.now < (s.lockUntil || 0)) return false;
   const t = target || assistTarget(s);
-  if (!t) { toast(s, 'No target. Press N and pick one.', '#ffd37a'); sfx('empty'); return false; }
+  if (!t) { assistSay(s, 'No target. Press N and pick one.', '#ffd37a'); sfx('empty'); return false; }
   if (s.ap && s.ap.on) autopilotEnd(s, 'quiet');
   a.mode = mode; a.target = t; a.nav = assistTarget(s); a.since = s.time.now; a.burning = false; a.cmd = null; a.readAt = 0; a.mem = {};
   a.range = typeof range === 'number' && range >= 0 ? range : typeof m.range === 'function' ? m.range(t) : (m.range || 0);
   a.held = {}; ASSIST.keys.forEach(n => { if (s.k && s.k[n] && s.k[n].isDown) a.held[n] = true; }); // a key already down when the order came is not a new wish for the stick
-  toast(s, m.label + ': ' + assistName(t) + (a.range ? ' at ' + hudFmt(a.range / 10) + ' km' : '') + '. Any flight key takes the stick back.', '#9fe9ff'); sfx('chime');
+  assistSay(s, m.label + ': ' + assistName(t) + (a.range ? ' at ' + hudFmt(a.range / 10) + ' km' : '') + '.' + (ASSIST.hinted ? '' : ' Any flight key takes the stick back.'), '#9fe9ff'); // the hint once: the first order since the page loaded
+  ASSIST.hinted = true; sfx('chime');
   return true;
 }
 
 function assistStop(s, why) {
   const a = s.as, t = a.target, m = ASSIST_MODES[a.mode];
   a.mode = ''; a.target = null; a.burning = false; a.cmd = null; a.readAt = 0;
-  if (why === 'arrived') { toast(s, m.label + ' done: ' + assistName(t) + '.', '#6dff9c'); sfx('chime'); }
-  else if (why === 'key') { toast(s, 'You have the stick.', '#9fe9ff'); sfx('tick'); }
-  else if (why === 'lost') { toast(s, 'Target lost. You have the stick.', '#ffd37a'); sfx('empty'); }
+  if (why === 'arrived') { assistSay(s, m.label + ' done: ' + assistName(t) + '.', '#6dff9c'); sfx('chime'); }
+  else if (why === 'key') { assistSay(s, 'You have the stick.', '#9fe9ff'); sfx('tick'); }
+  else if (why === 'lost') { assistSay(s, 'Target lost. You have the stick.', '#ffd37a'); sfx('empty'); }
   // 'quiet': a dock, a death, a jump, a cruise, the autopilot, the assist switched off: that event says its own line
 }
 
@@ -189,7 +223,11 @@ function assistFrame(s, time, dt, crs, ap) {
   const nav = crs === 'nav'; // the nav list has the keyboard
   if (assistJustDown(a.k[ASSIST.key]) && !nav) assistOn(s, !ASSIST.on);
   for (const m of Object.values(ASSIST_MODES)) {
-    if (!m.key || !assistJustDown(a.k[m.key]) || nav || !ASSIST.on) continue;
+    if (!m.key || !assistJustDown(a.k[m.key]) || nav) continue;
+    // the assist off: a command key is the wish for that order, so it switches the assist on and gives the order in the one press. With no
+    // target (assistSet says how to pick one), or refused (the launch lock, a jump charge), the assist stays off. Troy pressed 2 with a
+    // target set and nothing happened, without a word
+    if (!ASSIST.on) { ASSIST.on = true; a.readAt = 0; if (!assistSet(m.id)) ASSIST.on = false; break; }
     if (a.mode === m.id) { assistStop(s, 'key'); break; }
     // a new order while one flies keeps that order's target, unless the nav target has been changed since (the game drops the nav target near its body)
     const nt = assistTarget(s);

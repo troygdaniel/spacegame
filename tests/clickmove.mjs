@@ -91,7 +91,7 @@ if (belt) check('a belt is not picked: a click inside one is a point', J(`clickm
 // ---- a ship ----
 g.run(`__scene(${X}, ${Y}); ASSIST.on = true; __s.enemies.list.push(__ship(${X + 900}, ${Y}, 'raider'), __ship(${X - 700}, ${Y + 100}, 'gunship'));`);
 check('a click near a ship picks the ship, not the point', J(`clickmovePick(__s, ${X + 920}, ${Y + 15}).kind`) === 'ship' && J(`clickmovePick(__s, ${X + 960}, ${Y}).kind`) === 'point');
-check('with no order flying, the click makes it the target and names the keys', J(`clickmoveClick(__s, ${X + 905}, ${Y})`) === 'ship' && J(`__s.as.mode`) === '' && J(`__s.cm.pick === __s.enemies.list[0]`) && J(`__toasts`).some(m => /^Target: the raider.*1 Approach.*2 Keep at range/.test(m)), JSON.stringify(J(`__toasts`)));
+check('with no order flying, the click makes it the target and says so in one short line', J(`clickmoveClick(__s, ${X + 905}, ${Y})`) === 'ship' && J(`__s.as.mode`) === '' && J(`__s.cm.pick === __s.enemies.list[0]`) && J(`__toasts`).some(m => m === 'Target: the raider.'), JSON.stringify(J(`__toasts`)));
 g.run(`__press('TWO')`);
 check('2 keeps range on the picked ship (not the nav target)', J(`__s.as.mode`) === 'keep' && J(`__s.as.target === __s.enemies.list[0]`) && J(`__s.as.range`) === 500);
 g.run(`clickmoveClick(__s, ${X - 700}, ${Y + 100}); __frames(1);`);

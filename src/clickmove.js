@@ -57,7 +57,7 @@ function clickmoveClick(s, x, y) {
   if (p.kind === 'ship') {
     cm.pick = p.target; cm.nav = s.cr ? s.cr.target : null;
     if (a.mode) assistSet(a.mode, p.target);
-    else { toast(s, 'Target: ' + p.target.name + '.   ' + Object.values(ASSIST_MODES).filter(m => m.cap).map(m => m.cap + ' ' + m.label).join('   '), '#ffd37a'); sfx('chime'); }
+    else { assistSay(s, 'Target: ' + p.target.name + '.', '#ffd37a'); sfx('chime'); } // short: the HUD panel and the assist's own line list the order keys
     return 'ship';
   }
   cm.pick = null;
@@ -107,7 +107,7 @@ function clickmoveFrame(s, time) {
     for (const m of Object.values(ASSIST_MODES)) {
       const k = m.key && a.k[m.key]; if (!k || !k._justDown) continue;
       k._justDown = false;
-      if (a.mode === m.id && a.target === cm.pick) assistSet(''), toast(s, 'You have the stick.', '#9fe9ff'); else assistSet(m.id, cm.pick);
+      if (a.mode === m.id && a.target === cm.pick) assistSet(''), assistSay(s, 'You have the stick.', '#9fe9ff'); else assistSet(m.id, cm.pick);
       break;
     }
   }
