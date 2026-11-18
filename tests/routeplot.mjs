@@ -187,6 +187,8 @@ console.log('the galaxy map: the chain, the card, Enter on the next jump');
   check('after the jump, from Kestrel: the map opens on the Roost again, one hop left, and Enter jumps it', J('__h.sel') === 'roost' && J('__h.plan.n') === 1 && (g.run(`__h.go()`), J('__jumps')[0][0] === 'roost'), JSON.stringify(J('__jumps')));
   g.run(`__ship('wren'); __take('bounty', 'halcyon'); var __w = __gal(null); __w.update(1000);`);
   check('a Wren with the bounty: the map opens on the Roost, says why, draws the chain that would work, and Enter does not jump', J('__w.sel') === 'roost' && J('__w.verdict') === 'range' && J('__w.plan.ok') === false && J('__w.chainMarks.length') === 2 && (g.run(`__jumps = []; __w.go()`), J('__jumps').length === 0));
+  g.run(`__ship('wren'); __take('courier-halcyon-kestrel', 'halcyon'); G.known = ['halcyon', 'kestrel', 'ember']; var __s2 = __gal(null); __s2.sel = 'ember'; __jumps = []; __s2.go();`);
+  check('Enter uses the plan of the star picked NOW: a pick set without refresh (the jump test does it) is not jumped on the old pick\'s plan', J('__jumps').length === 0 && J('__s2.plan.ok') === false);
   g.run(`__ship('kite', 2); __take('bounty', 'halcyon'); var __f = __gal(null);`);
   check('a Kite on 2 units: the first hop needs a fill-up, so Enter is refused and the verdict is fuel, the card says to fill up at the pump here', J('__f.verdict') === 'fuel' && (g.run(`__jumps = []; __f.go()`), J('__jumps').length === 0));
   g.run(`__ship('kite'); __take('courier-halcyon-kestrel', 'halcyon'); var __k = __gal(null); __k.update(1000);`);
