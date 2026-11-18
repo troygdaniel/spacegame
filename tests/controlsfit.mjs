@@ -1,4 +1,5 @@
-// node: Settings > Controls draws every row of every group on the panel (card space-game-settings-controls-overflow)
+// smoke: Settings > Controls draws every row of every group on the panel (plain Node, no Chrome)
+// Card space-game-settings-controls-overflow.
 // FLIGHT has 22 rows and the body has room for eleven one under another (they were drawn 38 px apart, so the last ten ran off the panel). A group of
 // more than eleven rows is now set in columns. This is plain Node: it runs the layout function (settingsControlsLayout, src/settings.js) on every
 // group of the one table (src/data_controls.js) and the real draw_controls on a stand-in scene that records where each key cap and each line goes.
