@@ -37,13 +37,12 @@ console.log('the rules');
 {
   check('the lock builds in 1.4 s, 0.9 s with the Autotarget part, 0.6 s from the tier that leads', J('[gunlockTime(0, 0), gunlockTime(450, 0), gunlockTime(650, 1)]').join() === '1400,900,600');
   check('the guns reach 600 px, or as far as the part when that is further, never past a shot\'s flight', J('[gunlockRange(0), gunlockRange(450), gunlockRange(650), gunlockRange(850), gunlockRange(5000)]').join() === '600,600,650,825,825' && J('SHOT_SPEED * SHOT_LIFE / 1000') > 825);
-  const pick = (cur, prefer) => J(`(() => { const L = [{ x: 300, y: 0, id: 'near' }, { x: 0, y: 700, id: 'mid' }, { x: -1000, y: 0, id: 'far' }, { x: 2000, y: 0, id: 'out' }]; const f = id => L.find(t => t.id === id) || null; const r = gunlockNext(L, { x: 0, y: 0 }, f('${cur}'), f('${prefer}')); return r ? r.id : 'none'; })()`);
-  check('no lock yet: the nearest pirate', pick('', '') === 'near');
-  check('no lock yet and the assist order is about a pirate in reach: that one', pick('', 'mid') === 'mid');
-  check('an order about a pirate out of reach does not count: the nearest', pick('', 'out') === 'near');
-  check('V again: the next one further out, then the next', pick('near', '') === 'mid' && pick('mid', '') === 'far');
-  check('after the furthest in reach: none (the lock is dropped); the one beyond reach is never picked', pick('far', '') === 'none');
-  check('nothing in reach: none', J(`gunlockNext([{ x: 5000, y: 0 }], { x: 0, y: 0 }, null, null)`) === null);
+  const pick = prefer => J(`(() => { const L = [{ x: 300, y: 0, id: 'near' }, { x: 0, y: 700, id: 'mid' }, { x: -1000, y: 0, id: 'far' }, { x: 2000, y: 0, id: 'out' }]; const f = id => L.find(t => t.id === id) || null; const r = gunlockNext(L, { x: 0, y: 0 }, f('${prefer}')); return r ? r.id : 'none'; })()`);
+  check('no lock yet: the nearest pirate', pick('') === 'near');
+  check('no lock yet and the assist order is about a pirate in reach: that one', pick('mid') === 'mid');
+  check('an order about a pirate out of reach does not count: the nearest', pick('out') === 'near');
+  check('there is no walk from one pirate to the next: the rule takes no current lock', J('gunlockNext.length') === 3);
+  check('nothing in reach: none', J(`gunlockNext([{ x: 5000, y: 0 }], { x: 0, y: 0 }, null)`) === null);
   const sol = (me, t, r) => J(`gunlockSolve(${JSON.stringify(me)}, ${JSON.stringify(t)}, ${r})`);
   const ahead = sol({ x: 0, y: 0, rot: 0 }, { x: 400, y: 0, vx: 0, vy: 0 }, 600);
   check('dead ahead and in range: fire along the nose', ahead.fire && Math.abs(ahead.rot) < 1e-6 && ahead.why === '');
@@ -78,12 +77,7 @@ console.log('V locks, the lock builds, the guns fire');
   g.run('__s.ship.rotation = 0; __s.lockUntil = __s.time.now + 100000; __run(300)');
   check('no shot during the launch lock', J('__shots.length') === 0);
   g.run('__s.lockUntil = 0; __press(); __run(16)');
-  st = J('gunlockState()');
-  check('V again: the lock moves to the gunship and builds from nothing', st.name === 'GUNSHIP' && !st.locked, JSON.stringify(st));
-  g.run('__shots = []; __s.ship.rotation = Math.PI / 2; __run(2000)');
-  check('locked on it at 800 px: out of range, so no shot', J('gunlockState().locked') && J('gunlockState().why') === 'range' && J('__shots.length') === 0);
-  g.run('__press(); __run(16)');
-  check('V after the furthest: the lock is dropped, and it says so', !J('gunlockState().on') && J('__toasts.includes("Lock dropped.")'));
+  check('V again: the lock is dropped and it says so; it does not move to the gunship', !J('gunlockState().on') && J('__toasts.includes("Lock dropped.")'));
 }
 
 console.log('the Autotarget part makes the lock faster and longer');

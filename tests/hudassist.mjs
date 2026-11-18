@@ -76,7 +76,7 @@ const rows = J(`controlsGroup('flight').rows.map(r => r.k.join(' ') + '|' + r.t)
 check('the flight table has Z (assist on or off) and 1-4 (the orders)', rows.some(r => r.startsWith('Z|Flight assist')) && rows.some(r => r.startsWith('1-4|Assist orders')));
 check('the H page of Space has both lines, from the table', J(`HELP.Space.filter(l => /^Z   flight assist|^1-4   assist orders/.test(l)).length`) === 2 && J(`JSON.stringify(HELP.Space) === JSON.stringify(controlsHelp('Space'))`));
 const ui = readFileSync(join(ROOT, 'content/text/ui.md'), 'utf8'), help = J(`controlsHelp('Space')`);
-check('the shipped text has the same two lines (content/text/ui.md rows help.space.15 and 16)', ui.includes('| help.space.15 | ' + help[14] + ' |') && ui.includes('| help.space.16 | ' + help[15] + ' |'), help[15]);
+check('the shipped text has the same two lines (content/text/ui.md rows help.space.16 and 17)', ui.includes('| help.space.16 | ' + help[15] + ' |') && ui.includes('| help.space.17 | ' + help[16] + ' |'), help[16]);
 check('Z is the key the assist listens to', J(`ASSIST.key`) === 'Z');
 check('no errors', g.errors.length === 0, g.errors.join(' | '));
 

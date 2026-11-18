@@ -35,13 +35,14 @@ To translate, change the text column here, or copy this file to a name after ui 
 | help.space.7 | L   dock or land (fly slowly, close in) |
 | help.space.8 | T   mission panel |
 | help.space.9 | R   autotarget on or off (needs the part from the shop) |
-| help.space.10 | N   navigation panel: W S choose, Enter sets the destination, Enter again goes there |
-| help.space.11 | C   cruise to the target (A D nudge, S cancels) |
-| help.space.12 | P   autopilot to the target: it stops at the dock (any key cancels) |
-| help.space.13 | Tab   sector map: W S choose a body, Enter flies there |
-| help.space.14 | G   galaxy map: pick a system, Enter charges the jump (S or Esc cancels) |
-| help.space.15 | Z   flight assist on or off: the ship flies itself about the target |
-| help.space.16 | 1-4   assist orders: approach, keep at range, orbit, match speed |
+| help.space.10 | N   places: the navigation panel (W S choose, Enter sets the destination, Enter again goes there) |
+| help.space.11 | B   ships: the Overview list (W S choose, Enter targets it); a click in space picks either |
+| help.space.12 | C   cruise to the target (A D nudge, S cancels) |
+| help.space.13 | P   autopilot to the target: it stops at the dock (any key cancels) |
+| help.space.14 | Tab   sector map: it shows your destination (Z zooms) |
+| help.space.15 | G   galaxy map: pick a system, Enter charges the jump (S or Esc cancels) |
+| help.space.16 | Z   flight assist on or off: the ship flies itself about the target |
+| help.space.17 | 1-4   assist orders: approach, keep at range, orbit, match speed |
 | help.surface.1 | W A S D   walk (the arrow keys work too) |
 | help.surface.2 | Mouse   aim, and click to fire |
 | help.surface.3 | E   talk to the colonist, board at the pad |

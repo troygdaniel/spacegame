@@ -71,29 +71,26 @@ g.run(`
 `);
 g.run(`__scene()`);
 const things = J(`overviewThings(__s).map(t => ({ name: t.name, kind: t.kind, hostile: !!t.hostile, friend: !!t.friend, ship: t.ship }))`);
-check('the scene gives raiders, the escort, police, freighters and the bodies of the nav list; a dead ship is left out', things.length === 8 && things.map(t => t.name).join() === 'raider,wanted gunship,MULE,police,freighter,Halcyon Station,Kepler-4b,Perseus Gate', things.map(t => t.name).join());
+check('the scene gives raiders, the escort, police and freighters, and no places (those are the navigation panel\'s); a dead ship is left out', things.length === 5 && things.every(t => t.ship) && things.map(t => t.name).join() === 'raider,wanted gunship,MULE,police,freighter', things.map(t => t.name).join());
 check('pirates are hostile, the escort a friend, police and freighters neither', things[0].hostile && things[1].hostile && things[2].friend && !things[3].hostile && !things[3].friend && !things[4].hostile);
 check('a hand-moved ship gets its speed from where it was: the police cruiser moved 30 px in 100 ms = 300 px/s', J(`(() => { const img = __s.tr.police[0].img; overviewThings(__s); __s.time.now += 100; img.x += 30; const t = overviewThings(__s).find(t => t.name === 'police'); img.x -= 30; return Math.round(t.vx); })()`) === 300);
 
 check('hidden at first: a frame draws nothing and takes no keys', J(`(() => { __s.k.W.isDown = true; __frame(); const r = [__s.ov.shown, __s.k.W.isDown]; __s.k.W.isDown = false; return r; })()`).join() === 'false,true');
 g.run(`__frame('B')`);
 let ov = J(`({ shown: __s.ov.shown, keys: __s.ov.keys, sel: __s.ov.sel, names: __s.ov.rows.map(r => r.name) })`);
-check('B shows the list with the keys on it, nearest first', ov.shown && ov.keys && ov.sel === 0 && ov.names.join() === 'MULE,raider,police,Halcyon Station,freighter,wanted gunship,Kepler-4b,Perseus Gate', JSON.stringify(ov));
+check('B shows the list with the keys on it, nearest first', ov.shown && ov.keys && ov.sel === 0 && ov.names.join() === 'MULE,raider,police,freighter,wanted gunship', JSON.stringify(ov));
 g.run(`__frame('S'); __frame('S')`);
 check('S twice moves two rows down', J(`__s.ov.sel`) === 2);
 g.run(`__frame('W')`);
 check('W moves back up', J(`__s.ov.sel`) === 1 && J(`__s.ov.rows[__s.ov.sel].name`) === 'raider');
 check('while the list has the keys a held W or S does not reach the flight code', J(`(() => { __s.k.W.isDown = true; __s.k.S.isDown = true; __s.k.A.isDown = true; __frame(); const r = [__s.k.W.isDown, __s.k.S.isDown, __s.k.A.isDown]; __s.k.A.isDown = false; return r; })()`).join() === 'false,false,true');
-check('the ring stays on its row when the order of the list changes', J(`(() => { const e = __s.enemies.getChildren()[0]; e.x = 5000; /* now behind the gunship, level with the planet */ __s.ov.at = 0; __frame(); const r = [__s.ov.rows[__s.ov.sel].name, __s.ov.sel]; e.x = 600; __s.ov.at = 0; __frame(); return r.concat([__s.ov.sel]); })()`).join() === 'raider,6,1');
-check('W at the top wraps to the last row', J(`(() => { __frame('W'); __frame('W'); return __s.ov.sel; })()`) === 7);
+check('the ring stays on its row when the order of the list changes', J(`(() => { const e = __s.enemies.getChildren()[0]; e.x = 5000; /* now behind the gunship */ __s.ov.at = 0; __frame(); const r = [__s.ov.rows[__s.ov.sel].name, __s.ov.sel]; e.x = 600; __s.ov.at = 0; __frame(); return r.concat([__s.ov.sel]); })()`).join() === 'raider,4,1');
+check('W at the top wraps to the last row', J(`(() => { __frame('W'); __frame('W'); return __s.ov.sel; })()`) === 4);
 
-// the target setter: a body
-g.run(`__frame('S'); __frame('S'); __frame('S'); __frame('S')`); // wraps to MULE, then down to Halcyon Station
-check('on the station row', J(`__s.ov.rows[__s.ov.sel].name`) === 'Halcyon Station');
-g.run(`__frame('ENTER')`);
-check('Enter on a body makes it the nav target (the N list one) and gives the keys back; the list stays up', J(`__s.cr.target && __s.cr.target.id`) === 'st' && J(`__s.ov.keys`) === false && J(`__s.ov.shown`) === true && J(`__toasts`).some(m => /^Target: Halcyon Station/.test(m)), JSON.stringify(J(`__toasts`)));
-check('the target row has its mark, the others do not', J(`__s.ov.rows.map(r => overviewIsTarget(__s, r))`).join() === 'false,false,false,true,false,false,false,false');
-check('a body does not switch the assist on', J(`ASSIST.on`) === false);
+// a place is never a target here (card space-game-one-way-to-target)
+g.run(`__frame('S')`); // wraps to MULE
+check('a place handed to the target setter is refused and the nav target is not touched', J(`(() => { const r = overviewPick(__s, { ref: { id: 'st', name: 'Halcyon Station', type: 'station', x: 2000, y: 0 } }); return [r, __s.cr.target, ASSIST.on]; })()`).join() === ',,false');
+g.run(`__s.ov.keys = false`);
 check('with the keys back, W reaches the flight code again', J(`(() => { __s.k.W.isDown = true; __frame(); const r = __s.k.W.isDown; __s.k.W.isDown = false; return r; })()`) === true);
 g.run(`__frame('B')`);
 check('B on a list that is up without the keys takes them again', J(`__s.ov.shown && __s.ov.keys`) === true);
@@ -103,13 +100,12 @@ check('B again hides it', J(`__s.ov.shown`) === false && J(`__s.ov.keys`) === fa
 // the target setter: a ship, with no click to move in the build
 g.run(`__frame('B'); __s.ov.sel = 1; __s.ov.selRef = null;`);
 check('a ship with no click to move: the assist comes on and Approach is ordered on it', J(`(() => { const kind = overviewPick(__s, __s.ov.rows[1]); return [kind, ASSIST.on, __s.as.mode, __s.as.target === __s.enemies.getChildren()[0]]; })()`).join() === 'ship,true,approach,true', JSON.stringify(J(`__toasts`).slice(-2)));
-check('the ship under the order is the marked row, and the nav body no longer is', J(`__s.ov.rows.map(r => overviewIsTarget(__s, r))`).join() === 'false,true,false,false,false,false,false,false');
+check('the ship under the order is the marked row, and only it', J(`__s.ov.rows.map(r => overviewIsTarget(__s, r))`).join() === 'false,true,false,false,false');
 check('an order that is flying moves onto the next ship picked, in its own mode', J(`(() => { assistSet('keep', __s.enemies.getChildren()[0], 400); overviewPick(__s, __s.ov.rows[0]); return [__s.as.mode, __s.as.target === __s.mx.freighter]; })()`).join() === 'keep,true');
 // with click to move: the same pick a click on the ship makes
 g.run(`assistSet(''); ASSIST.on = false; __s.cm = { pick: null }; clickmoveClick = (s, x, y) => { __clicks.push([x, y, ASSIST.on]); s.cm.pick = s.enemies.getChildren()[0]; return 'ship'; };`);
 check('with click to move: picking a ship is a click on that ship, with the assist switched on first', J(`(() => { const kind = overviewPick(__s, __s.ov.rows[1]); return [kind, __clicks.length, __clicks[0][0], __clicks[0][1], __clicks[0][2], __s.as.mode]; })()`).join() === 'ship,1,600,0,true,');
-check('the picked ship is the marked row, and only it', J(`__s.ov.rows.map(r => overviewIsTarget(__s, r))`).join() === 'false,true,false,false,false,false,false,false');
-check('picking a body after a ship drops the picked ship', J(`(() => { overviewPick(__s, __s.ov.rows[3]); return [__s.cm.pick, __s.cr.target.id]; })()`).join() === ',st');
+check('the picked ship is the marked row, and only it', J(`__s.ov.rows.map(r => overviewIsTarget(__s, r))`).join() === 'false,true,false,false,false');
 check('a ship that is gone is not picked', J(`(() => { const e = __s.enemies.getChildren()[0]; e.active = false; const r = overviewPick(__s, __s.ov.rows[1]); e.active = true; return r; })()`) === '');
 check('dead or docking: nothing is picked', J(`(() => { __s.dead = true; const r = overviewPick(__s, __s.ov.rows[3]); __s.dead = false; return r; })()`) === '');
 

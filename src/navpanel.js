@@ -13,8 +13,8 @@
 //
 // It adds no way to travel. Going there is what the game already had: a body is flown to by the autopilot (src/autopilot.js autopilotGo, which
 // cruises the middle of a long leg by itself), another system by the jump (src/jump.js jumpStart, behind the same locks and fuel check as the
-// galaxy map). The destination of a body is cruise's own target (s.cr.target, src/cruise.js cruisePick), so C, P, the Tab map, the Overview list
-// and the HUD arrow all agree on it.
+// galaxy map). The destination of a body is cruise's own target (s.cr.target, src/cruise.js cruisePick), so C, P, the Tab map, the Overview's target row
+// and the HUD arrow all agree on it. Places are picked here and by a click in space, nowhere else (tests/onetarget.mjs).
 //
 // It replaces the N list that src/cruise.js drew. cruise.js still owns the N key and the state other files read (s.cr.navOpen: the list has the
 // keyboard; s.cr.list and s.cr.sel: the rows and the chosen one, which P in src/autopilot.js reads), and calls in here:

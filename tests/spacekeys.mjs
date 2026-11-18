@@ -42,8 +42,9 @@ console.log('the controls table');
   const twice = caps.filter((k, i) => caps.indexOf(k) !== i);
   check('no key cap stands in two FLIGHT rows', twice.length === 0, twice.join(' '));
   const everywhere = J(`CONTROLS.find(g => g.id === 'any').rows.map(r => r.k).flat()`).map(k => k.toUpperCase());
-  for (const [what, key] of [['the Overview', J('OVERVIEW.key')], ['the gun lock', J('GUNLOCK.key')]])
-    check(`${what}'s key (${key}) is not a FLIGHT or ANYWHERE key for something else`, !caps.includes(key) && !everywhere.includes(key));
+  const texts = J(`CONTROLS.find(g => g.id === 'flight').rows.map(r => [r.k.join(' ').toUpperCase(), r.t])`);
+  for (const [what, key, word] of [['the Overview', J('OVERVIEW.key'), /Overview/], ['the gun lock', J('GUNLOCK.key'), /lock/i]])
+    check(`${what}'s key (${key}) is not a FLIGHT or ANYWHERE key for something else`, texts.filter(([k]) => k.split(' ').includes(key)).every(([, t]) => word.test(t)) && !everywhere.includes(key));
 }
 
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
