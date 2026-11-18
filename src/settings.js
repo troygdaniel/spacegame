@@ -30,6 +30,34 @@ const SETTINGS = {
   confirmMs: 4000,
   dim: 0.93 // the extra dim over the scene behind: with the panel's own 0.55 only a thirtieth of it is left (the title's key line sat half under the bottom edge)
 };
+// ---------- Controls: where the rows of a group sit (card space-game-settings-controls-overflow) ----------
+// The body has room for eleven rows one under another (the first row's centre 106 px under the body's top, the last no lower than 474: the note
+// "Left and right change the group." is at 500). FLIGHT has 22, so a group of more than eleven rows is set in columns of eleven, side by side, the
+// text in the smaller size and wrapped to the column's width (two lines fit a row). The layout is a plain function so a Node test can measure it:
+// tests/controlsfit.mjs checks that every group of the table, now and when a row is added, stays inside the body.
+const SETTINGS_CONTROLS = { top: 106, last: 474, perCol: 11, pitchMax: 38, capGap: 5, textGap: 14, colGap: 16, size: 15, sizeCols: 13, ch: 0.6, capCh: 0.6 * 13, capMin: 24, capPad: 14, capH: 22, edge: 492 };
+// the width of one key cap, as keyCap() (src/ui.js) makes it: its label at 13 px bold monospace plus 14 px, never under 24
+const settingsCapW = k => Math.max(SETTINGS_CONTROLS.capMin, Math.ceil(String(k).length * SETTINGS_CONTROLS.capCh) + SETTINGS_CONTROLS.capPad);
+// rows: the table's rows ({ k, t }); bw: the body's width. Returns { cols, pitch, size, items: [{ i, col, y, caps: [{ k, x, w }], x, wrap, lines, h }], fits, why }
+// with every x from the body's left edge and every y from its top (the scene adds its bx and by)
+function settingsControlsLayout(rows, bw) {
+  const C = SETTINGS_CONTROLS, n = rows.length, cols = Math.max(1, Math.ceil(n / C.perCol)), per = Math.ceil(n / cols);
+  const pitch = per > 1 ? Math.min(C.pitchMax, Math.floor((C.last - C.top) / (per - 1))) : C.pitchMax, size = cols > 1 ? C.sizeCols : C.size, ch = C.ch * size;
+  const colW = bw / cols, items = []; let why = '';
+  for (let c = 0; c < cols; c++) {
+    const mine = rows.slice(c * per, (c + 1) * per), x0 = c * colW + 8;
+    const caps = mine.map(r => { let x = x0; return r.k.map(k => { const w = settingsCapW(k), o = { k, x: x + w / 2, w }; x += w + C.capGap; return o; }); });
+    const capsEnd = Math.max(...caps.map(cs => cs.length ? cs[cs.length - 1].x + cs[cs.length - 1].w / 2 : x0));
+    const x = cols > 1 ? capsEnd + C.textGap : c * colW + 200, wrap = cols > 1 ? (c + 1) * colW - C.colGap - x : bw - 200 - 10; // one column: the old place for the words (200 px in)
+    mine.forEach((r, j) => {
+      const lines = Math.max(1, Math.ceil(String(r.t).length * ch / wrap)), h = Math.max(C.capH, lines * size * 1.2);
+      items.push({ i: c * per + j, col: c, y: C.top + j * pitch, caps: caps[j], x, wrap, lines, h });
+    });
+  }
+  const bad = items.find(it => it.lines > 2 || it.h > pitch - 2 || it.y + it.h / 2 > C.edge || it.caps.some(k => k.x + k.w / 2 > it.x - 4));
+  if (bad) why = 'row ' + bad.i + ' (' + rows[bad.i].k.join(' ') + ') does not fit: ' + bad.lines + ' lines of ' + Math.round(bad.wrap) + ' px, row height ' + Math.round(bad.h) + ' of ' + pitch;
+  return { cols, pitch, size, items, fits: !bad, why };
+}
 const settingsMask = k => (k ? '**** ' + String(k).slice(-4) : 'no key'); // a saved key is shown by its last four characters only
 
 // ---------- Getting a key (card space-game-key-links) ----------
@@ -359,10 +387,11 @@ class Settings extends Phaser.Scene {
     this.slots.tabs = CONTROLS.map((g, i) => this.button(bx + i * cw, by + 14, cw - 6, g.title, () => { this.ctab = g.id; this.show('controls'); }, { size: 12 }).mark(g.id === this.ctab));
     const g = controlsGroup(this.ctab);
     this.txt(bx, by + 66, g.scene ? 'WHAT THE KEYS DO IN THE ' + g.title + '  (the H page in the game shows the same)' : g.title, 11, '#5b7a92', { style: { letterSpacing: 2 } });
-    g.rows.forEach((r, i) => {
-      const y = by + 106 + i * 38; let x = bx + 8;
-      r.k.forEach(k => { const cap = keyCap(this, k, AMBER); cap.setPosition(x + cap.kw / 2, y); this.body.add(cap); x += cap.kw + 5; });
-      this.txt(bx + 200, y, r.t, 15, '#cfefff');
+    const L = settingsControlsLayout(g.rows, bw); // a long group (FLIGHT has 22) is in columns, so every row is on the panel
+    L.items.forEach(it => {
+      const r = g.rows[it.i], y = by + it.y;
+      r.k.forEach((k, j) => { const cap = keyCap(this, k, AMBER); cap.setPosition(bx + it.caps[j].x, y); this.body.add(cap); });
+      this.txt(bx + it.x, y, r.t, L.size, '#cfefff', { style: { wordWrap: { width: it.wrap }, lineSpacing: 0 } });
     });
     this.txt(bx, by + 500, 'Left and right change the group.', 12, '#5b7a92');
   }
