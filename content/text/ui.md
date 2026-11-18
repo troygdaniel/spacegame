@@ -33,7 +33,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | help.space.7 | L   dock or land (fly slowly, close in) |
 | help.space.8 | T   mission panel |
 | help.space.9 | R   autotarget on or off (needs the part from the shop) |
-| help.space.10 | N   nav list: Enter picks a target, P flies there |
+| help.space.10 | N   navigation panel: W S choose, Enter sets the destination, Enter again goes there |
 | help.space.11 | C   cruise to the target (A D nudge, S cancels) |
 | help.space.12 | P   autopilot to the target: it stops at the dock (any key cancels) |
 | help.space.13 | Tab   sector map: W S choose a body, Enter flies there |
