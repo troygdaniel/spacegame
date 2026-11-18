@@ -49,7 +49,7 @@ function navpanelRows(bodies, jumps, mission) {
   if (mission && mission.system) { // a goal in another system: the jump there is the mission's row, or a row that says it is out of reach
     const j = rows.find(r => r.kind === 'jump' && r.id === mission.system);
     if (j) { j.group = 'mission'; j.mission = true; }
-    else rows.push({ kind: 'jump', group: 'mission', id: mission.system, name: mission.name, type: 'jump', ly: mission.ly, cost: 0, ok: false, why: 'far', mission: true });
+    else rows.push({ kind: 'jump', group: 'mission', id: mission.system, name: mission.name, type: 'jump', ly: mission.ly, cost: 0, ok: false, why: 'far', mission: true, say: mission.say || null });
   } else if (mission) { // a goal here: the body it is (same id, or the body it sits on), else a row of its own
     const b = rows.find(r => r.kind === 'body' && (r.id === mission.id || Math.hypot(r.x - mission.x, r.y - mission.y) < 60));
     if (b) { b.group = 'mission'; b.mission = true; }
@@ -92,8 +92,8 @@ function navpanelHint(r, isDest, order) {
   if (!r) return 'Nowhere to go from here.';
   const how = navpanelHow(r);
   if (how === 'here' && !order) return 'You are there.';
-  if (r.mission && r.kind === 'jump') return 'Enter  open the galaxy map at ' + navpanelStar(r); // the job is in another system: the map shows the way, and what is missing
-  if (how === 'no') return r.why === 'fuel' ? 'Not enough fuel for this jump.' : r.why === 'far' ? 'Out of jump range: plot it on the galaxy map (G).' : 'No route charted yet.';
+  if (r.mission && r.kind === 'jump' && !r.say) return 'Enter  open the galaxy map at ' + navpanelStar(r); // the job is in another system: the map shows the way, and what is missing
+  if (how === 'no') return r.say || (r.why === 'fuel' ? 'Not enough fuel for this jump.' : r.why === 'far' ? 'Out of jump range: plot it on the galaxy map (G).' : 'No route charted yet.');
   if (!isDest) return 'Enter  set as destination';
   if (order) return 'Enter  ' + order + (how === 'here' ? '' : '   P  fly there only'); // the order takes the ship all the way in; P is the plain travel
   return how === 'jump' ? 'Enter  jump   ' + navpanelFuel(r.cost) + ' fuel' : how === 'cruise' ? 'Enter  go: autopilot and cruise' : 'Enter  go: autopilot';
@@ -115,7 +115,11 @@ function navpanelJumps(s) {
 function navpanelMission(s) {
   if (G.mission !== 'accepted' && G.mission !== 'rescued') return null;
   const far = typeof missionFar === 'function' ? missionFar() : null;
-  if (far) return { system: far.system, name: (far.station ? far.name + ', ' : '') + callSysName(far.system), ly: far.ly };
+  if (far) { // a goal in another system: with a plotted chain the row is the NEXT JUMP of it (one this ship can make), else the goal itself, which says why it cannot (src/missions.js routeCheck)
+    const step = typeof missionStep === 'function' ? missionStep() : null;
+    if (step && step.kind === 'jump' && step.hop) return { system: step.hop, name: callSysName(step.hop), ly: step.route.hops[0].ly, goal: far.system, hops: step.hops };
+    return { system: far.system, name: (far.station ? far.name + ', ' : '') + callSysName(far.system), ly: far.ly, say: step && step.kind === 'blocked' ? step.text : null };
+  }
   const t = typeof missionTarget === 'function' ? missionTarget(s) : null;
   return t ? { id: t.id, name: t.name, x: t.x, y: t.y, dist: Math.hypot(t.x - s.ship.x, t.y - s.ship.y) } : null;
 }
