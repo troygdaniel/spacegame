@@ -27,7 +27,7 @@ function guideReset() {
 
 // ---------- the hint for right now, worked out from the game state (so it always matches what is on screen) ----------
 function guideHint(s) {
-  const key = s.scene.key, dist = (a, b) => Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y);
+  const key = s.scene.key, dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   if (key === 'Station') {
     if (s.talk || s.shopOpen) return '';
     if (s.panel) return s.canAccept ? 'Press E to accept the rescue, or Esc to close.' : '';
@@ -36,17 +36,28 @@ function guideHint(s) {
   }
   if (key === 'Space' && s.ship && s.planet && s.station) {
     if (s.dead) return '';
+    // the tip names what the amber arrow points at (card space-game-critic-tips, docs/CRITIC.md 5): it named the rescue's planet on an escort and with
+    // the gate picked in the nav list. The arrow is the nav target if there is one, else the mission's (src/hud.js hudObjective asks the same two).
+    const nav = s.cr && s.cr.target, goal = nav || (typeof missionTarget === 'function' ? missionTarget(s) : null);
+    const rescue = typeof missionActive === 'function' ? missionActive('rescue') : G.mission === 'accepted'; // the call that ends with a landing
     if (G.mission === 'accepted') {
-      return dist(s.ship, s.planet) < s.planetR + 320
-        ? 'Hold S to slow down, then press L to land on Kepler-4b.'
-        : 'W thrusts, A and D turn, Space fires. Follow the amber arrow to Kepler-4b.';
+      const pl = typeof sysBody === 'function' && sysBody('planet'), planet = pl ? pl.name : 'the planet';
+      if (rescue && (!nav || nav.name === planet)) { // the rescue, the arrow on its planet
+        return dist(s.ship, s.planet) < s.planetR + 320
+          ? 'Hold S to slow down, then press L to land on ' + planet + '.'
+          : 'W thrusts, A and D turn, Space fires. Follow the amber arrow to ' + planet + '.';
+      }
+      return goal ? 'W thrusts, A and D turn, Space fires. Follow the amber arrow: ' + guideName(goal.name) + '.'
+        : 'W thrusts, A and D turn, Space fires. Your call is in the MISSION list, top left.'; // a goal in another system has no arrow
     }
+    const home = typeof sysBody === 'function' && sysBody('station');
+    if (nav && !(home && nav.name === home.name)) return 'The amber arrow is on the target you picked: ' + guideName(nav.name) + '.';
     if (G.mission === 'rescued') {
       return dist(s.ship, s.station) < 640
         ? 'Hold S to slow down, then press L to dock.'
         : 'Colonist aboard. Follow the amber arrow home to the station.';
     }
-    return 'No rescue yet. Follow the arrow to Halcyon Station and press L to dock.';
+    return 'No rescue yet. Follow the arrow to ' + (home ? home.name : 'a station') + ' and press L to dock.';
   }
   if (key === 'Surface') {
     const c = s.col;
@@ -55,6 +66,24 @@ function guideHint(s) {
     return 'Walk back to your ship and press E at the pad.';
   }
   return '';
+}
+
+// a name as the amber marker writes it on the screen (src/hud.js): FREIGHTER MULE, PERSEUS GATE, so the tip and the marker can be matched at a glance
+const guideName = name => String(name || 'your objective').toUpperCase();
+
+// Where the tip sits (card space-game-critic-tips, docs/CRITIC.md 9 and 16). In flight and on the surface: low in the middle, as before, and the
+// "H hide tips" line under it has the same dark backing now (it was dim grey text straight on the ground, and a rock under it ate it).
+// In the station the middle of the floor is the bar, the rug and the people at SABLE's corner, so there the tip is one row on the south wall
+// (the 48 px band under the floor, left of Tab map and H help), a size smaller, with the hide line beside it instead of under it.
+function guidePlace(s) {
+  const st = s.scene.key === 'Station';
+  if (s._gst !== st) { s._gst = st; s._gh.setFontSize(st ? 16 : 18).setPadding(st ? 12 : 14, st ? 5 : 8); }
+  if (st) {
+    const y = H - 25, total = s._gh.width + 8 + s._gk.width, x0 = Math.max(150, Math.min(W / 2 - total / 2, 1020 - total)); // clear of the frame's left corner and of Tab map
+    s._gh.setOrigin(0, 0.5).setPosition(x0, y); s._gk.setOrigin(0, 0.5).setPosition(x0 + s._gh.width + 8, y);
+  } else {
+    s._gh.setOrigin(0.5).setPosition(W / 2, H - 112); s._gk.setOrigin(0.5).setPosition(W / 2, H - 112 + s._gh.height / 2 + 13);
+  }
 }
 
 // How to travel (card space-game-travel-clarity): the rescue hints above end with the first rescue, and nothing after them said that G opens the galaxy map, so a player
@@ -68,10 +97,10 @@ function guideUI(s) { // the hint text lives in each scene; rebuilt after a scen
   const base = { fontFamily: 'monospace' };
   s._gh = s.add.text(W / 2, H - 112, '', Object.assign({ fontSize: '18px', color: '#ffd37a', backgroundColor: '#07101ce6', padding: { x: 14, y: 8 }, align: 'center' }, base))
     .setOrigin(0.5).setScrollFactor(0).setDepth(210).setVisible(false);
-  s._gk = s.add.text(W / 2, H - 84, 'H  hide tips', Object.assign({ fontSize: '12px', color: '#5b7a92' }, base))
+  s._gk = s.add.text(W / 2, H - 84, 'H  hide tips', Object.assign({ fontSize: '12px', color: '#9fc4dc', backgroundColor: '#07101ce6', padding: { x: 10, y: 4 } }, base))
     .setOrigin(0.5).setScrollFactor(0).setDepth(210).setVisible(false);
   s._gH = s.input.keyboard.addKey('H');
-  s._gtext = '';
+  s._gtext = ''; s._gst = undefined;
 }
 
 let seenCredits = null, goalToasted = false;
@@ -97,6 +126,7 @@ function guideTick(s) {
     s._gtext = text;
     s._gh.setText(text).setVisible(!!text).setAlpha(0); s._gk.setVisible(!!text && (!G.guideDone || text === TRAVEL.text));
     if (text) s.tweens.add({ targets: s._gh, alpha: 1, duration: 180 });
+    guidePlace(s);
   }
 
   if (G.earned >= GOAL && !G.endingSeen) {
