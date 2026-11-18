@@ -76,3 +76,25 @@ The batch smoke is some forty Chrome runs one after another, and each one queued
 - **Ordinary runs keep their order** among themselves, and none is passed twice in a row: after a gate run, the oldest ordinary waiter goes before the next gate run. A builder's Chrome test waits for one gate run at most; the gate waits for one builder at most between two of its runs.
 - **Nothing to update in a worktree on an older `lock.mjs`**: the line is tickets sorted by name, and a gate ticket is only named to sort first, so an older copy gives way by itself.
 - `node tests/lock.mjs status` marks the gate's runs `[gate]`. `tests/locktest.mjs` proves the rule with stand-in waiters in plain Node (no Chrome).
+
+## 7. Chrome draws on the Mac's GPU (card `space-game-chrome-throughput`, 2026-11-17)
+
+The run ledger for 15 to 17 Nov said 77 percent of all test time was spent waiting for the one Chrome. Chrome was drawing in software (SwiftShader), so every stepped frame was rasterised on the CPU that seven agents were already using.
+
+`tests/cdp.mjs` now starts Chrome with `--use-angle=metal --enable-gpu --ignore-gpu-blocklist`. Measured in one hold of the lock, each test in software and then on the GPU, load average 19, an M4:
+
+| test | software | GPU | checks |
+|---|---|---|---|
+| `surface` (short, stepped) | 16.5 s | 5.1 s | 21 pass both |
+| `autotarget` (long, stepped) | 150.9 s | 8.2 s | 39 pass both |
+| `scenes` (screenshots, real time) | 18.0 s | 12.7 s | 4 pass both |
+| all three | 185.4 s | 26.0 s | 7.1 times faster |
+
+Two more holds confirmed it, the second with the GPU going first: 117 s against 21 s, and 132 s against 32 s. The stepped tests gain the most (`autotarget` 9 to 18 times, `surface` 3 to 4 times); `scenes`, which waits in real time, gains little. Over the three holds: 4.1 to 7.1 times faster, the same 64 checks passing every time.
+
+- Pictures of a stepped test are the same to the eye: 0.6 to 0.7 of 255 per channel on average. A picture is not byte-for-byte the same as a software one, so do not compare a new picture with an old one by its bytes.
+- `tests/perfart.mjs` keeps software drawing: its 47 recorded texture hashes (`tests/fixtures/arthash.json`) are SwiftShader's and the GPU rounds a few values differently, so on the GPU it failed on every texture. It sets `LONGHAUL_GL=software` for its own launch; what it checks is unchanged. `shipsheet` and `systemart`, which look at drawn shapes, pass on the GPU as they are.
+- A test that runs in real time (`scenes`, anything that sleeps instead of stepping) reaches a later frame in the same wall time: the game is the same, the moment is not.
+- `LONGHAUL_GL=software node tests/<name>.mjs` puts SwiftShader back: for a machine with no GPU, or to tell a drawing difference from a game bug.
+- Numbers in `docs/PERF.md` and the playtest pages that say "software GL" were measured before this and are not comparable with a run after it.
+- Not done on that card, by ORCH's word, unless the overnight smoke is still slow: a second Chrome slot, and moving logic-only Chrome tests to plain Node.
