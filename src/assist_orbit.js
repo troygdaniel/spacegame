@@ -16,7 +16,9 @@ const ASSIST_ORBIT = {
   matchRange: 200,                   // px abeam for Match speed when none is given
   matchDead: 30, matchSlow: 20,      // px and px/s: alongside and matched
   matchNear: 90, matchNearV: 90,     // px and px/s: near enough to the spot to stop flying at it and hold the target's velocity instead
-  matchHold: 6                       // px: on the spot; nearer than this it does not chase the last pixels
+  matchHold: 6,                      // px: on the spot; nearer than this it does not chase the last pixels
+  faceOn: 12, faceOff: 5,            // px/s of needed change that turns the nose onto it, and that lets it go again
+  lightAt: 6, full: 40               // px/s of needed change along the nose that lights the engine, and that gets a full burn (less gets less)
 };
 
 // which way round: +1 anticlockwise on the screen's axes (x right, y down: it looks clockwise), -1 the other way. The way the ship already goes
@@ -39,10 +41,16 @@ function assistSteer(me, tgt, wantX, wantY, holdFace) {
   const sp = Math.hypot(me.vx, me.vy), want = Math.hypot(wantX, wantY);
   const out = { face: holdFace, burn: false, brake: false, done: false, status: '', err };
   if (sp > 8 && err > want * 0.03 + 3 && ex * me.vx + ey * me.vy < -0.7 * err * sp) { out.brake = true; return out; }
-  if (err > 12) out.face = Math.atan2(ey, ex);
+  // the nose follows the change it needs once that is worth a turn and until it is small again (it remembers on the order, me.mem, as
+  // assistSeek does), and the engine burns only as hard as the change asks (the throttle of assistStep). A full burn or nothing, switched
+  // at one threshold, lit the engine 15 times a second on a circle and sawed the nose (playtest 4)
+  const mem = me.mem || (me.mem = {}), O = ASSIST_ORBIT;
+  if (err > O.faceOn) mem.steer = true; else if (err < O.faceOff) mem.steer = false;
+  if (mem.steer) out.face = Math.atan2(ey, ex);
   if (out.face === null || out.face === undefined) return out;
   const p = ex * Math.cos(out.face) + ey * Math.sin(out.face), aligned = Math.abs(assistWrap(out.face - me.rot)) < ASSIST.align;
-  out.burn = err > 12 && aligned && (p > 14 || (!!me.burning && p > 0));
+  const lit = aligned && (p > O.lightAt || (!!me.burning && p > 0));
+  out.burn = lit ? Math.max(ASSIST.idle, Math.min(1, p / O.full)) : false;
   return out;
 }
 
@@ -81,7 +89,7 @@ function assistMatchPlan(a, me, tgt, st) {
   let c;
   if (off <= O.matchNear && rel <= O.matchNearV) {
     // nearly alongside: hold the target's velocity with small burns, drifting onto the spot; the nose the way the target flies
-    const pull = off > O.matchHold ? O.lead : 0;
+    const pull = off > O.matchHold ? O.lead * (off - O.matchHold) / off : 0; // the pull grows from nothing at the edge of the hold: a step there (all of it or none) sat the ship on the edge with the engine pulsing
     c = assistSteer(me, tgt, sx * pull, sy * pull, spot.heading);
     c.status = off <= O.matchDead && rel <= O.matchSlow ? 'matched' : c.brake ? 'brake' : 'burn';
   } else c = assistSeek(me, { x: spot.x, y: spot.y, vx: tgt.vx, vy: tgt.vy }, st, 0, false); // far off: fly to the spot as Approach flies to a moving ship
