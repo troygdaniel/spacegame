@@ -123,11 +123,13 @@ const solDock = name => async t => {
   const o = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}, b = sysBodies('station').concat(sysBodies('scenery')).find(x => x.name === '${name}'); if (!b) return { none: sysBodies('station').map(x => x.name) };
     s.ship.setPosition(b.x - 20000, b.y); s.ship.setVelocity(0, 0); s.cameras.main.centerOn(s.ship.x, s.ship.y); s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12;
     cruiseNavOpen(s); const i = s.cr.list.findIndex(r => r.name === '${name}'); if (i < 0) return { norow: true, rows: s.cr.list.map(r => r.name) };
-    const row = s.cr.list[i]; const hint = navpanelHint(row, false); navpanelClick(s, i); const hint2 = navpanelHint(row, true); navpanelClick(s, i);
-    return { id: b.id, type: b.type, row: row.name, rowType: row.type, hintBefore: hint, hintAfter: hint2, km: Math.round(Math.hypot(b.x - s.ship.x, b.y - s.ship.y) / 10), ap: !!(s.ap && s.ap.on), order: s.ap && s.ap.order || null }; })())`));
+    const row = s.cr.list[i]; navpanelClick(s, i); // the first Enter: the row becomes the destination
+    return { id: b.id, type: b.type, row: row.name, rowType: row.type, rows: s.cr.list.filter(r => r.type === 'station').length, km: Math.round(Math.hypot(b.x - s.ship.x, b.y - s.ship.y) / 10), i }; })())`));
   if (o.none) throw new Error('${name} is not a station of this system; stations are ' + o.none.join(', ')); if (o.norow) throw new Error('no navigation row for ' + o.rows.length + ' rows: ' + o.rows.join(', '));
-  console.log('        ' + JSON.stringify(o));
-  await t.run(1200); await pic(t, 'sol-dock-' + o.id + '-panel');
+  await t.run(1200); await pic(t, 'sol-dock-' + o.id + '-set'); // the panel with the row set as the destination: its foot line says what the second Enter does
+  const second = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}; navpanelClick(s, ${o.i}); return { ap: !!(s.ap && s.ap.on), order: s.ap && s.ap.order || null }; })())`));
+  console.log('        ' + JSON.stringify(Object.assign(o, second)));
+  await t.run(1200);
   let ran = 0; while (ran < 240) { await t.run(2000); ran += 2; try { if (await t.ev(up('Station'))) break; } catch (e) { /* between scenes */ } }
   const docked = await t.ev(up('Station'));
   console.log('        after ' + ran + ' s of game time: ' + (docked ? 'docked, lastDock ' + await t.ev('G.lastDock') + ', title ' + await t.ev(`${ST}.ui && ${ST}.ui.titleText ? ${ST}.ui.titleText.text : ''`) + ', menu rows ' + await t.ev(`JSON.stringify(${ST}.menu.rows.map(r => r.n + r.name + (r.off ? '(off)' : '')))`) : 'not docked: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}; return { ap: !!(s.ap && s.ap.on), stage: s.ap && s.ap.stage, cruising: !!s.cruising, prompt: s.prompt && s.prompt.text, toasts: (window.__toasts || []).slice(-3) }; })())`)));
