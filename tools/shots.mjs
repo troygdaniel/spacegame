@@ -244,6 +244,13 @@ const LOOKS = [
     console.log('        dock order: ' + JSON.stringify(d) + '; after ' + ran + ' s: ' + ((await t.ev(up('Station'))) ? 'docked at ' + await t.ev('G.lastDock') : 'not docked: ' + await t.ev(`JSON.stringify((() => { const s = ${SP}; return { ap: !!(s.ap && s.ap.on), stage: s.ap && s.ap.stage, cruising: !!s.cruising, prompt: s.prompt && s.prompt.text }; })())`)));
     await t.run(1500);
   }],
+  ['sol-jupiter-probe', '#space', 'Space', async t => { // what is drawn where the autopilot says Jupiter is
+    await solOn(t, 'Space'); await solJump(t); await solFly(t, 'Jupiter', 120); await t.run(1000);
+    console.log('        ' + await t.ev(`JSON.stringify((() => { const s = ${SP}, b = sysBodies().find(x => x.name === 'Jupiter'), near = o => Math.hypot(o.x - s.ship.x, o.y - s.ship.y) < 3000;
+      return { ship: [Math.round(s.ship.x), Math.round(s.ship.y)], body: b && { x: b.x, y: b.y, r: b.r, kind: b.kind, d: Math.round(Math.hypot(b.x - s.ship.x, b.y - s.ship.y)) }, cam: [Math.round(s.cameras.main.scrollX), Math.round(s.cameras.main.scrollY), s.cameras.main.zoom],
+        images: s.children.list.filter(o => o.type === 'Image' && o.scrollFactorX === 1 && near(o)).map(o => ({ key: o.texture.key, x: Math.round(o.x), y: Math.round(o.y), scale: +o.scaleX.toFixed(2), vis: o.visible, alpha: o.alpha, depth: o.depth, w: o.width })),
+        cache: waPlanetCache.slice(), planets: sysBodies('planet').length }; })())`));
+  }],
   ['clear-mass', '#space', 'Space', async t => { // Troy's bug beside Kepler-4b (card space-game-bug-travel-refuses-near-mass): C inside a mass limit flies clear, then cruises
     await t.run(1500);
     const o = JSON.parse(await t.ev(`JSON.stringify((() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.ironUntil = 1e12; s.lockUntil = 0;
