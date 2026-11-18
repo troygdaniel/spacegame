@@ -103,15 +103,46 @@ function carryRow(kind, from, to) {
   }
   return row;
 }
-// the routes: [kind, posted at, delivered to]
-const CALL_ROUTES = [
-  ['courier', 'halcyon-station', 'kestrel-outpost'], ['courier', 'halcyon-station', 'brass-smelter'], ['haul', 'halcyon-station', 'brass-smelter'],
-  ['courier', 'kestrel-outpost', 'halcyon-station'], ['courier', 'kestrel-outpost', 'meridian-exchange'], ['haul', 'kestrel-outpost', 'meridian-exchange'],
-  ['courier', 'meridian-exchange', 'kestrel-outpost'], ['courier', 'meridian-exchange', 'ember-foundry'], ['courier', 'meridian-exchange', 'roost-dock'], ['haul', 'meridian-exchange', 'ember-foundry'],
-  ['courier', 'brass-smelter', 'halcyon-station'], ['haul', 'brass-smelter', 'halcyon-station'],
-  ['courier', 'ember-foundry', 'meridian-exchange'], ['haul', 'ember-foundry', 'meridian-exchange']
-];
-MISSIONS.push(...CALL_ROUTES.map(r => carryRow(...r)));
+// ---- which runs exist: the station files say (card space-game-routes-from-files) ----
+// A run is a row of the Runs table of the station that posts it (content/stations/<id>.md: | kind | to |): courier or haul, to another station.
+// There is no list of routes in the code any more: a new dock, in the core files or in a pack, posts runs to its neighbours by listing them.
+//   carryRoutes()   [[kind, posted at, delivered to], ...] read from the docks of SYSTEMS (dock.runs: the station file's table, put there by
+//                   src/data_systems.js, and again by worldSync for a pack), in the order of the systems and of each table; a row whose
+//                   two docks are not both in SYSTEMS (yet) is left out
+//   carrySync()     makes MISSIONS agree with them: a run that is new gets its row (after the runs already there), one the files dropped
+//                   goes (never the run you are flying), the rest keep their objects, so words or pay a mission file laid over a run stay.
+//                   It runs when this script loads (SYSTEMS is already made from the core files) and again whenever the routes have changed since:
+//                   missionsOffered and missionDef ask, so a pack's dock has its runs the first time its board opens or a saved run is read.
+// A run's id is kind-fromSystem-toSystem, as it always was (a saved game names it); two runs that would share one take the station ids instead.
+// A dock posts its own runs whether or not its `missions` list names them (missionsOffered); the list still sets what else it posts and the order.
+function carryRoutes() {
+  const out = [];
+  Object.keys(SYSTEMS).forEach(sys => (SYSTEMS[sys].bodies || []).forEach(b => {
+    const runs = b.type === 'station' && b.dock && b.dock.runs; // the dock row is made from the station file (src/data_systems.js sysDockFrom)
+    if (!Array.isArray(runs)) return;
+    runs.forEach(r => { if (r && (r.kind === 'courier' || r.kind === 'haul') && r.to !== b.id && fleetStation(r.to)) out.push([r.kind, b.id, r.to]); });
+  }));
+  return out;
+}
+let CARRY_KEY = null;
+function carrySync() {
+  const routes = carryRoutes(), key = JSON.stringify(routes);
+  if (key === CARRY_KEY) return false;
+  CARRY_KEY = key;
+  const want = new Map();
+  routes.forEach(r => { const row = carryRow(...r); if (want.has(row.id)) row.id = r.join('-'); want.set(row.id, row); });
+  const flying = id => G.mission === 'accepted' && G.missionId === id;
+  for (let i = MISSIONS.length - 1; i >= 0; i--) { const m = MISSIONS[i]; if (m.carry && !want.has(m.id) && !flying(m.id)) MISSIONS.splice(i, 1); }
+  want.forEach((row, id) => {
+    const i = MISSIONS.findIndex(m => m.id === id);
+    if (i >= 0) { if (MISSIONS[i].from !== row.from || MISSIONS[i].to !== row.to) MISSIONS[i] = row; return; } // the same run keeps its object
+    let at = -1; MISSIONS.forEach((m, j) => { if (m.carry) at = j; });
+    if (at < 0) { const site = MISSIONS.findIndex(m => m.site); at = (site < 0 ? MISSIONS.length : site) - 1; }
+    MISSIONS.splice(at + 1, 0, row);
+  });
+  return true;
+}
+carrySync();
 // a named site in a system: press E on it (src/poi.js calls missionSite)
 function siteRow(o) {
   const row = Object.assign({ site: o.site, failOnDeath: [], deathMsg: '' }, o);
@@ -128,12 +159,13 @@ MISSIONS.push(
     here: 'Fly to the old survey beacon and press E', fail: 'The beacon stays dark' })
 );
 
-function missionDef() { return MISSIONS.find(m => m.id === G.missionId) || null; }
+function missionDef() { return MISSIONS.find(m => m.id === G.missionId) || (G.missionId && carrySync() && MISSIONS.find(m => m.id === G.missionId)) || null; } // a run a pack's dock posts is in MISSIONS once the routes are read again (carrySync)
 // what a station's board shows: the calls its dock lists (dock.missions in src/data_systems.js), unlocked ones only; the home dock also posts what a content pack added
 function missionsOffered(station) {
   station = station || G.lastDock;
-  const st = fleetStation(station), list = st && st.body.dock && st.body.dock.missions, home = station === homeDock();
-  const posted = MISSIONS.filter(m => (!m.unlock || m.unlock()) && (Array.isArray(list) ? list.includes(m.id) || (home && m.added) : home && !m.carry && !m.site));
+  carrySync(); // the runs are what the station files say now (a pack may have added a dock since this script loaded)
+  const st = fleetStation(station), list = st && st.body.dock && st.body.dock.missions, home = station === homeDock(), mine = m => m.carry && m.from === station; // a dock posts its own runs
+  const posted = MISSIONS.filter(m => (!m.unlock || m.unlock()) && (Array.isArray(list) ? list.includes(m.id) || mine(m) || (home && m.added) : mine(m) || (home && !m.carry && !m.site)));
   return posted.filter(m => m.key).concat(posted.filter(m => !m.key)); // the calls with a number key of their own (the four, and a pack's: 5 to 8) first, then the runs and sites
 }
 // ---- can the ship you fly do this call (card space-game-bug-runs-out-of-jump-range) ----

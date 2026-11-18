@@ -36,3 +36,11 @@ Welcome to {station}. Prices are posted, and everything is for sale.
 ## Bar
 - Everybody passes through the Exchange sooner or later.
 - The police here are polite until you are not.
+
+## Runs
+| kind | to |
+|---|---|
+| courier | kestrel-outpost |
+| courier | ember-foundry |
+| courier | roost-dock |
+| haul | ember-foundry |
