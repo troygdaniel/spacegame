@@ -1,5 +1,5 @@
 // ---------- Autopilot: the ship flies itself to a body at local speed (card space-game-local-autopilot) ----------
-// Cruise (src/cruise.js) covers the long legs and refuses the short ones: nothing inside 2100 px, nothing within 2500 px of a station or planet.
+// Cruise (src/cruise.js) covers the long legs and refuses the short ones: nothing inside 2100 px, and within 2500 px of a station or planet it asks the autopilot to fly clear first (autopilotClear below).
 // Autopilot covers the rest. Pick a body (the N list and P, or the Tab map with W S and Enter, or P with a target already set) and the ship turns
 // onto it, flies at its own top speed, slows down and stops just outside it, slow enough to dock or land (L). A long leg cruises in the middle:
 // autopilot engages cruise once it is clear of the mass and takes the stick back when cruise drops out 900 px short. Any flight key cancels
@@ -36,8 +36,42 @@ function autopilotGo(s, b) {
   if (Math.hypot(t.x - s.ship.x, t.y - s.ship.y) <= autopilotStop(t) + 60) { toast(s, t.name + ': you are there.', '#ffd37a'); sfx('empty'); return false; }
   if (cr.active) cruiseEnd(s, 'quiet');
   cr.target = t; ap.target = t; // the HUD's objective arrow and the brackets follow cr.target (cruise clears it near the body; ap.target stays)
+  const mass = autopilotMass(s);
+  if (mass && Math.hypot(t.x - s.ship.x, t.y - s.ship.y) - autopilotStop(t) > AUTO.cruiseLeg) return autopilotClear(s, t, 'auto', mass); // a long leg from inside a mass limit: out the short way first
   ap.on = true; ap.stage = 'local'; ap.since = s.time.now; ap.speed = s.ship.body.speed; ap.hull = G.hull; ap.sh = s.sh ? s.sh.pts : 0;
   toast(s, 'Autopilot to ' + t.name + '. Any key takes the stick back.', '#ffd37a'); sfx('chime');
+  return true;
+}
+
+// ---- flying clear of a mass (card space-game-bug-travel-refuses-near-mass) ----
+// Cruise will not start within CRUISE.lockMass px of a station or planet. With a target set, C and P there used to answer "Too close to the mass" and the
+// ship sat still. Now the autopilot takes it out of the limit by the short way, leaning to the target's side, and then does what was asked: `then` is
+// 'cruise' (C: cruise engages and the autopilot lets go) or 'auto' (P: the autopilot's own leg, which cruises the long middle). Any flight key, P, a hit
+// or a hostile close by takes the stick back, as in any autopilot leg.
+// the station or planet whose mass limit the ship is inside (the nearest one), or null
+function autopilotMass(s) {
+  const ship = s.ship; let best = null, bd = CRUISE.lockMass;
+  sysBodies('station').concat(sysBodies('planet')).forEach(b => { const d = Math.hypot(b.x - ship.x, b.y - ship.y); if (d < bd) { bd = d; best = b; } });
+  return best;
+}
+// the heading (radians) that takes a ship at (sx, sy) out of the mass at (mx, my) on the way to a target at (tx, ty): straight at the target when it is on
+// the ship's side of the mass, else outward from the mass, leaning to the target's side. It always has an outward part, so the ship never flies deeper in.
+function autopilotClearAngle(sx, sy, mx, my, tx, ty) {
+  let ox = sx - mx, oy = sy - my; const ol = Math.hypot(ox, oy), ux0 = tx - sx, uy0 = ty - sy, ul = Math.hypot(ux0, uy0) || 1, ux = ux0 / ul, uy = uy0 / ul;
+  if (ol < 1) return Math.atan2(uy, ux); // at the very middle: any way is out, so the target's
+  ox /= ol; oy /= ol;
+  const dot = ox * ux + oy * uy;
+  if (dot >= 0.2) return Math.atan2(uy, ux);
+  const side = ux * -oy + uy * ox; // how far the target lies to the left of straight out (the part of its bearing along the limit's edge)
+  return Math.atan2(oy + ox * side * 0.6, ox - oy * side * 0.6);
+}
+// take the ship out of `mass`, then `then` ('cruise' or 'auto') to the target t. Returns true when the autopilot took the ship.
+function autopilotClear(s, t, then, mass) {
+  const ap = s.ap, cr = s.cr; if (!ap || !cr || !t || !mass || s.dead || s.leaving || s.jmp || G.deep) return false;
+  if (cr.active) cruiseEnd(s, 'quiet');
+  ap.target = t; ap.then = then; // cr.target is t already: autopilotGo and cruiseEngage, the two callers, have it set
+  ap.on = true; ap.stage = 'clear'; ap.since = s.time.now; ap.speed = s.ship.body.speed; ap.hull = G.hull; ap.sh = s.sh ? s.sh.pts : 0;
+  toast(s, 'Clearing ' + mass.name + ', then ' + (then === 'cruise' ? 'cruising to ' : 'on to ') + t.name + '. Any key takes the stick back.', '#ffd37a'); sfx('chime');
   return true;
 }
 
@@ -70,6 +104,9 @@ function autopilotCruiseOk(s) {
   return !sysBodies('station').concat(sysBodies('planet')).some(b => d(b) < CRUISE.lockMass) && !s.enemies.getChildren().some(e => e.active && d(e) < CRUISE.lockHostile);
 }
 
+// hand the leg to cruise: the one place the autopilot gives cruise its target back (cruise drops it near a body; ours stays)
+function autopilotCruise(s, t) { s.cr.target = t; s.cr.endWhy = ''; cruiseEngage(s); }
+
 // one call per frame from Space.update, right after cruiseFrame (crs is what it returned)
 function autopilotFrame(s, time, dt, crs) {
   const ap = s.ap; if (!ap) return '';
@@ -93,8 +130,18 @@ function autopilotFrame(s, time, dt, crs) {
   if (s.enemies.getChildren().some(e => e.active && Math.hypot(e.x - ship.x, e.y - ship.y) < AUTO.hostile)) { autopilotEnd(s, 'hostile'); return ''; }
   if (G.hull < ap.hull || (s.sh && s.sh.pts < ap.sh)) { autopilotEnd(s, 'hit'); return ''; }
   if (time > ap.since + AUTO.grace && autopilotKeyDown(s)) { autopilotEnd(s, 'key'); return ''; }
+  if (ap.stage === 'clear') {
+    if (autopilotMass(s)) return 'auto'; // still inside the limit: autopilotDrive flies it out
+    if (ap.then === 'cruise') { // C was pressed: cruise takes it from here and the autopilot lets go (a cruise that will not start says why itself)
+      ap.on = false; ap.stage = ''; ap.target = null; ap.read.setVisible(false);
+      autopilotCruise(s, t);
+      if (s.cruising) return 'cruise';
+      ship.body.setDrag(0.55).setAcceleration(0, 0); return '';
+    }
+    ap.stage = 'local'; ap.since = time; // P was pressed: the leg to the body, as ever
+  }
   if (dist - autopilotStop(t) > AUTO.cruiseLeg && autopilotCruiseOk(s)) { // a long leg: cruise the middle
-    cr.target = t; cr.endWhy = ''; cruiseEngage(s);
+    autopilotCruise(s, t);
     if (s.cruising) { ap.stage = 'cruise'; ap.read.setVisible(false); return 'cruise'; }
   }
   return 'auto';
@@ -102,9 +149,11 @@ function autopilotFrame(s, time, dt, crs) {
 
 // the local leg: turn onto the body, run up to the ship's top speed, brake by the distance left, stop just outside it
 function autopilotDrive(s, dt) {
-  const ap = s.ap; if (!ap || !ap.on || ap.stage !== 'local' || s.cruising) return;
-  const ship = s.ship, t = ap.target, dts = dt / 1000, dx = t.x - ship.x, dy = t.y - ship.y, dist = Math.hypot(dx, dy), left = Math.max(0, dist - autopilotStop(t));
-  const want = Math.atan2(dy, dx);
+  const ap = s.ap; if (!ap || !ap.on || (ap.stage !== 'local' && ap.stage !== 'clear') || s.cruising) return;
+  const ship = s.ship, t = ap.target, dts = dt / 1000, dx = t.x - ship.x, dy = t.y - ship.y, dist = Math.hypot(dx, dy);
+  const mass = ap.stage === 'clear' ? autopilotMass(s) : null; // flying clear: out of the mass at full speed, no stop to brake for
+  const left = mass ? 1e6 : Math.max(0, dist - autopilotStop(t));
+  const want = mass ? autopilotClearAngle(ship.x, ship.y, mass.x, mass.y, t.x, t.y) : Math.atan2(dy, dx);
   ship.rotation = Phaser.Math.Angle.RotateTo(ship.rotation, want, AUTO.turn * shipStat('turn') * dt);
   const aligned = Math.abs(Phaser.Math.Angle.Wrap(want - ship.rotation)) < 0.5, acc = shipStat('accel'), vmax = shipStat('vmax');
   const limit = Math.min(vmax, AUTO.floor + AUTO.brake * left);
@@ -116,5 +165,5 @@ function autopilotDrive(s, dt) {
   if (aligned && ap.speed < limit && s.trail) s.trail.emitParticleAt(ship.x - Math.cos(ship.rotation) * 20, ship.y - Math.sin(ship.rotation) * 20, 2);
   if (left <= 30 && ap.speed <= AUTO.dropSpeed) return autopilotEnd(s, 'arrived');
   ap.read.setVisible(true);
-  if (s.time.now > ap.readAt) { ap.readAt = s.time.now + 200; ap.read.setText('AUTOPILOT  ' + t.name.toUpperCase() + '   ' + hudFmt(dist / 10) + ' km'); }
+  if (s.time.now > ap.readAt) { ap.readAt = s.time.now + 200; ap.read.setText(mass ? 'CLEARING  ' + mass.name.toUpperCase() : 'AUTOPILOT  ' + t.name.toUpperCase() + '   ' + hudFmt(dist / 10) + ' km'); }
 }
