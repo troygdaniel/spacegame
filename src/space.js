@@ -116,6 +116,7 @@ class Space extends Phaser.Scene {
     cruiseSetup(this); cruiseFarBodies(this); // src/cruise.js: N nav list, C cruise, and the bodies out in far space
     autopilotSetup(this); // src/autopilot.js: P flies the ship to the target at local speed
     assistSetup(this); // src/assist.js: Z switches the flight assist on; 1 Approach, 2 Keep at range fly the ship about its target
+    overviewSetup(this); // src/overview.js: B shows the list of what is around; a click on a row, or W S and Enter, makes it the target
     jumpSetup(this); // src/jump.js: the jump charge, and the F key for the fuel ranger
     deepSetup(this); // src/pullout.js: the pirates of a pull-out in deep space, or a nest's entry pirates
   }
@@ -182,6 +183,7 @@ class Space extends Phaser.Scene {
     deepFrame(this); // src/pullout.js: the last pirate of a pull-out gone starts the way back into the tunnel
     jumpFrame(this, dt); // src/jump.js: the charge ring, and the jump when it is full
     if (this.leaving) { feelFrame(this, time, dt); return; } // the jump went
+    overviewFrame(this, time); // src/overview.js: the list's own keys, read before the flight keys below
     const crs = cruiseFrame(this, time, dt); // src/cruise.js: 'cruise' = the ship flies itself, 'nav' = the nav list is open (no flight input)
     const ap = autopilotFrame(this, time, dt, crs); // src/autopilot.js: 'auto' = the autopilot flies the ship locally, 'cruise' = it just engaged a cruise
     const ast = assistFrame(this, time, dt, crs, ap); // src/assist.js: 'assist' = an order of the flight assist flies the ship (any flight key gives the stick back; the guns stay yours)
