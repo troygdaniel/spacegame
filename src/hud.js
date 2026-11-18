@@ -339,6 +339,17 @@ function hudFitSub(sub, room, size) {
   return sub.length <= max ? sub : max >= 4 ? sub.slice(0, max - 2).replace(/[ ,]+$/, '') + '..' : '';
 }
 
+// the box of the navigation panel's parts that are showing, as a zone the edge arrow keeps out of; null when none is (pure on the shape of s.np)
+function hudNavZone(s, box) {
+  const np = s && s.np; if (!np) return null;
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  [np.jobBg, np.pinBg, np.bg].forEach(o => {
+    if (!o || !o.visible) return;
+    const b = box ? o.getBounds(box) : o.getBounds(); x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.right); y1 = Math.max(y1, b.bottom);
+  });
+  return x1 < x0 ? null : { x0: x0 - 4, y0, x1: x1 + 4, y1, inboard: true };
+}
+
 // a small key cap
 function hudKeycap(h, id, x, y, str) {
   h.g.lineStyle(1, 0x5b7a92, 1); h.g.strokeRoundedRect(x - 8, y - 8, 16, 16, 3);
@@ -806,6 +817,7 @@ function hudEdge(h, sx, sy) {
     const m = 28, up = p.side === 'T' ? 56 : m; // an arrow on the top edge has its words below it
     if (p.x <= z.x0 - m || p.x >= z.x1 + m || p.y <= z.y0 - up || p.y >= z.y1 + m) return;
     if (p.side === 'T') p.x = z.x0 <= 24 ? z.x1 + 28 : z.x1 >= W - 24 ? z.x0 - 28 : (p.x - z.x0 < z.x1 - p.x ? z.x0 - 28 : z.x1 + 28);
+    else if (p.side === 'L' && z.inboard) p.x = z.x1 + 28; // the navigation panel is a tall column on the left: the arrow keeps its height and moves in beside it (sliding it down put it on the panel's rows: first look)
     else if (p.side === 'L' || p.side === 'R') p.y = z.y1 + 28;
   });
   return p;
@@ -906,6 +918,7 @@ function hudTick(s) {
   if (space) hudAssist(h, s);
   if (space || surf) hudWarn(h, s, now, key, h.near, h.engage);
   h.zones.push({ x0: 430, y0: 0, x1: 850, y1: 50 });
+  const npz = hudNavZone(s, h.box); if (npz) h.zones.push(npz); // the navigation panel (src/navpanel.js): its job line, pinned destination and list, whichever are up
   // toasts (depth 299 and up) are zones too, for as long as they are up
   s.children.list.forEach(o => {
     if (o.depth < 299 || !o.visible || o.alpha < 0.05 || (o.type !== 'Text' && o.type !== 'Rectangle')) return;
