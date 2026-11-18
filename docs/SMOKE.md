@@ -90,6 +90,8 @@ The run ledger for 15 to 17 Nov said 77 percent of all test time was spent waiti
 | `scenes` (screenshots, real time) | 18.0 s | 12.7 s | 4 pass both |
 | all three | 185.4 s | 26.0 s | 7.1 times faster |
 
+Two more holds confirmed it, the second with the GPU going first: 117 s against 21 s, and 132 s against 32 s. The stepped tests gain the most (`autotarget` 9 to 18 times, `surface` 3 to 4 times); `scenes`, which waits in real time, gains little. Over the three holds: 4.1 to 7.1 times faster, the same 64 checks passing every time.
+
 - Pictures of a stepped test are the same to the eye: 0.6 to 0.7 of 255 per channel on average. A picture is not byte-for-byte the same as a software one, so do not compare a new picture with an old one by its bytes.
 - `tests/perfart.mjs` keeps software drawing: its 47 recorded texture hashes (`tests/fixtures/arthash.json`) are SwiftShader's and the GPU rounds a few values differently, so on the GPU it failed on every texture. It sets `LONGHAUL_GL=software` for its own launch; what it checks is unchanged. `shipsheet` and `systemart`, which look at drawn shapes, pass on the GPU as they are.
 - A test that runs in real time (`scenes`, anything that sleeps instead of stepping) reaches a later frame in the same wall time: the game is the same, the moment is not.
