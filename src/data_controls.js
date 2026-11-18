@@ -38,7 +38,7 @@ const CONTROLS = [
     { k: ['L'], t: 'Dock or land (fly slowly, close in)', bay: 1, bt: 'Dock or land' },
     { k: ['T'], t: 'Mission panel', bay: 1 },
     { k: ['R'], t: 'Autotarget on or off (needs the part from the shop)' },
-    { k: ['N'], t: 'Nav list: Enter picks a target, P flies there' },
+    { k: ['N'], t: 'Navigation panel: W S choose, Enter sets the destination, Enter again goes there' },
     { k: ['C'], t: 'Cruise to the target (A D nudge, S cancels)' },
     { k: ['P'], t: 'Autopilot to the target: it stops at the dock (any key cancels)' },
     { k: ['Tab'], t: 'Sector map: W S choose a body, Enter flies there' },
