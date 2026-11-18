@@ -22,10 +22,10 @@ try {
   const tick = async n => { for (let left = n; left > 0; left -= 20) await E(`tick(${Math.min(20, left)})`); };
   const said = () => E('JSON.stringify(window.__toasts)').then(JSON.parse);
   const snap = async name => { await t.shot(name); return t.shot(name); };
-  // a quiet sky, the ship parked and still, the autopilot and cruise off, the toast list empty
+  // a quiet sky (no pirate on the timer: s.calmUntil holds the spawner of src/space.js off, so one that lands 1600 px ahead cannot turn a leg into "Contact"; the tests below that want a pirate spawn it by hand), the ship parked and still, the autopilot and cruise off, the toast list empty
   const park = (x, y) => E(`(() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.eb.getChildren().forEach(b => b.disableBody(true, true));
     if (s.cr.active) cruiseEnd(s, 'quiet'); if (s.ap.on) autopilotEnd(s, 'quiet'); s.cr.target = null; s.ship.setPosition(${x}, ${y}); s.ship.setVelocity(0, 0); s.ship.rotation = 0; s.ship.body.setAcceleration(0, 0);
-    s.cameras.main.centerOn(${x}, ${y}); (s.toasts || []).forEach(o => { o.t.destroy(); o.bg.destroy(); o.tab.destroy(); }); s.toasts = []; window.__toasts = []; G.hull = G.maxHull; s.ironUntil = 0; s.lockUntil = 0;
+    s.cameras.main.centerOn(${x}, ${y}); (s.toasts || []).forEach(o => { o.t.destroy(); o.bg.destroy(); o.tab.destroy(); }); s.toasts = []; window.__toasts = []; G.hull = G.maxHull; s.ironUntil = 0; s.lockUntil = 0; s.calmUntil = s.time.now + 1e9;
     ['W', 'A', 'S', 'D', 'UP', 'DOWN', 'LEFT', 'RIGHT', 'SPACE', 'SHIFT', 'Q', 'E'].forEach(n => { if (s.k[n]) s.k[n].isDown = false; }); })()`);
   // target() also keeps the body's spot in window.__T: the autopilot and cruise both drop their target on arrival, and the samples still need the distance
   const target = name => E(`(() => { const s = ${SP}, b = cruiseKnown(s).find(b => b.name === '${name}'); cruisePick(s, b); window.__T = { x: b.x, y: b.y }; return b.dist; })()`);
@@ -61,7 +61,9 @@ try {
   check('the arrival line says what to press', (await said()).some(m => /Kepler-4b: press L to land/.test(m)), JSON.stringify(await said()));
   await tick(3);
   check('the land prompt is on: L lands', /Land/.test((await state()).prompt), (await state()).prompt);
-  check('the hop takes about as long as the distance says (4 to 12 s for 2000 px)', hop.seconds > 4 && hop.seconds < 13, hop.seconds.toFixed(1) + ' s for ' + Math.round(d0) + ' px');
+  // the ship comes to rest planet.r + 100 px short of the planet's middle (autopilotStop), so the way it flies is that much less than d0, and it cannot cover it faster than its top speed
+  const flown = d0 - (planet.r + 100), vmax = await E(`shipStat('vmax')`);
+  check('the hop takes about as long as the way says (not faster than the top speed allows, and under 13 s)', hop.seconds > flown / vmax && hop.seconds < 13, `${hop.seconds.toFixed(1)} s for ${Math.round(flown)} px of the ${Math.round(d0)} (top speed ${vmax}: at least ${(flown / vmax).toFixed(1)} s)`);
   if (!(await snap('autopilot-arrived'))) check('screenshot after arrival', false);
 
   // ---- to the station: it ends on the dock prompt ----
@@ -109,7 +111,7 @@ try {
   // S during the cruise part ends both
   await park(stationAt[0] + 600, stationAt[1]); await target('Tern'); await pressP(); await fly(600, r => r.cruising || !r.on); await tick(30);
   await E(`${SP}.k.S.isDown = true`); await tick(40); await E(`${SP}.k.S.isDown = false`);
-  check('S during the cruise part cancels the cruise and the autopilot with it', !(await state()).on && !(await E(`${SP}.cruising`)) && (await said()).some(m => /Cruise cancelled/.test(m)));
+  check('S during the cruise part cancels the cruise and the autopilot with it', !(await state()).on && !(await E(`${SP}.cruising`)) && (await said()).some(m => /Cruise cancelled/.test(m)), JSON.stringify({ state: await state(), said: await said(), end: await E(`${SP}.cr.endWhy`), enemies: await E(`${SP}.enemies.countActive()`) }));
 
   // ---- P in the nav list ----
   await park(9000, 9000);
