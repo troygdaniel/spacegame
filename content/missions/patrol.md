@@ -5,6 +5,9 @@ title: Police patrol
 where: Halcyon approach
 reward: 600
 count: 5
+# where it is played: the star system, and the station there the wanted pirates loiter round
+system: halcyon
+body: halcyon-station
 ---
 Five pirates with bounties on their heads are
 loitering on the approach to Halcyon Station.

@@ -15,7 +15,52 @@ G.missionId = null; G.missionProgress = 0; G.patrolsDone = 0; // patrolsDone unl
 
 // The Perseus gate is a body of type 'gate' in the system data (src/data_systems.js). GATE stays as a live alias of its position
 // for tests/missions.mjs, which moves the MULE next to it; the code below asks sysBody('gate') itself.
-const GATE = { get x() { return sysBody('gate').x; }, get y() { return sysBody('gate').y; } };
+const GATE = { get x() { return escortGate().x; }, get y() { return escortGate().y; } };
+
+// ---- where the first four calls are played: from their files (card space-game-call-places-from-files) ----
+// Each call says its star system (system) and the body there it is about (body: an id of that system's Bodies table, content/systems/<id>.md):
+//   rescue   the planet you land on        escort   the gate the MULE flies to
+//   patrol   the station the wanted pirates loiter round        bounty   the planet the Reaver hides behind
+// The rows below carry what the shipped files say (content/missions/*.md; src/contenttables.js CT_MISSION puts a file's values over them), so
+// the game is the same with no content loaded. A call that names no body gets the first body of its type in its system, as the code used to.
+// The rescue file also lists the pirates that are always in its system: guards (drones in a ring round its body) and pickets (fixed places).
+const CALL_BODY = { rescue: 'planet', escort: 'gate', patrol: 'station', bounty: 'planet' };
+// the body a call is played at: { id, type, name, x, y, r, ... } of its system's data, or null (a kind with no body, a system that is not there)
+function missionBody(m) {
+  const type = m ? CALL_BODY[missionKind(m)] : null, sys = m ? (m.system || 'halcyon') : null;
+  if (!type || !Object.prototype.hasOwnProperty.call(SYSTEMS, sys)) return null;
+  const all = sysBodies(null, sys);
+  return (m.body && all.find(b => b.id === m.body && b.type === type)) || all.find(b => b.type === type) || null;
+}
+// what is wrong with a body named for a call of this kind in this system, as a sentence, or '' when it is fine (the content loader says it)
+function missionBodyFault(kind, sys, body) {
+  const type = CALL_BODY[kind]; if (!type) return 'a ' + kind + ' call has no body: it is played between stations or at its site';
+  if (!Object.prototype.hasOwnProperty.call(SYSTEMS, sys)) return 'the system "' + sys + '" is not in the game';
+  const b = sysBodies(null, sys).find(x => x.id === body);
+  if (!b) return 'there is no body "' + body + '" in ' + sys + ' (its Bodies table has: ' + sysBodies(type, sys).map(x => x.id).join(', ') + ')';
+  if (b.type !== type) return '"' + body + '" is a ' + b.type + ', and a ' + kind + ' call needs a ' + type;
+  if (kind === 'rescue' && !b.landable) return '"' + body + '" is not landable, and the rescue lands on its planet';
+  return '';
+}
+// the gate the escort flies to (the open call's when it is an escort, else the built-in escort's)
+function escortGate() { const m = missionDef(); return missionBody(m && missionKind(m) === 'escort' ? m : MISSIONS.find(x => x.id === 'escort')) || sysBody('gate'); }
+// the planet you can land on in the system you are in: the body of a rescue call played here, when it is landable. The Surface scene is that call's.
+function missionLandBody() {
+  return MISSIONS.filter(m => missionKind(m) === 'rescue' && (m.system || 'halcyon') === G.system).map(missionBody).find(b => b && b.landable) || null;
+}
+// the pirates that are always in the system you are in, whatever call is open: [{ x, y }] from the calls played here that list them
+// (guards: that many in a ring 520 to 740 px round the call's body; pickets: [x, y] in the units of the system files, placed through sysAt)
+function missionPirates() {
+  const out = [], seen = new Set(); // one set per body: a call a pack adds is a copy of its kind's row (src/contentadd.js) and would bring the same pirates again
+  MISSIONS.forEach(m => {
+    if ((m.system || 'halcyon') !== G.system || (!m.guards && !(m.pickets && m.pickets.length))) return;
+    const b = missionBody(m), n = b ? m.guards | 0 : 0, key = b ? b.id : '';
+    if (seen.has(key)) return; seen.add(key);
+    for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, r = 520 + Math.random() * 220; out.push({ x: b.x + Math.cos(a) * r, y: b.y + Math.sin(a) * r }); }
+    (m.pickets || []).forEach(([x, y]) => out.push({ x: sysAt(x), y: sysAt(y) }));
+  });
+  return out;
+}
 const REAVER_HP = 300;
 
 const MISSIONS = [
@@ -26,14 +71,15 @@ const MISSIONS = [
       : st === 'failed' ? 'Failed. Ask the station for another call' : 'Rescue the colonist on Kepler-4b',
     progress: () => G.mission === 'rescued' ? 'The colonist is aboard.\nDock at Halcyon Station to get paid.'
       : 'Find the colonist on Kepler-4b and\nbring them back alive.',
-    failOnDeath: ['rescued'], deathMsg: 'Ship destroyed. The colonist was lost. Mission failed.', system: 'halcyon'
+    failOnDeath: ['rescued'], deathMsg: 'Ship destroyed. The colonist was lost. Mission failed.', system: 'halcyon', body: 'kepler-4b',
+    guards: 6, pickets: [[5700, 2700], [6000, 3500], [2500, 2200]] // the drones round the planet, and three on the way to it, over 2000 px from the station: outside the police zone and well past engage range
   },
   {
     id: 'escort', key: '2', title: 'Escort', where: 'MULE to the Perseus gate', reward: 400,
     offer: 'The freighter MULE leaves the hangar when you do,\nbound for the Perseus gate to the south-west.\nPirates know the route. Fly with her and shoot\nanything that gets close. She pays on arrival.\nLose her and you get nothing.',
     line: st => st === 'failed' ? 'Failed. The MULE was lost' : 'Escort the MULE to the Perseus gate',
     progress: () => 'The MULE is under way to the Perseus gate.\nStay with her. Do not dock or land.',
-    failOnDeath: ['accepted'], deathMsg: 'Ship destroyed. The MULE is on her own. Mission failed.', system: 'halcyon',
+    failOnDeath: ['accepted'], deathMsg: 'Ship destroyed. The MULE is on her own. Mission failed.', system: 'halcyon', body: 'perseus-gate',
     space: { setup: escortSetup, update: escortUpdate, target: escortTarget,
       leave: s => failMission(s, uiText('toast.mule-left')) }
   },
@@ -43,11 +89,11 @@ const MISSIONS = [
     line: st => st === 'failed' ? 'Failed. The pirates got away'
       : 'Police patrol: ' + G.missionProgress + ' of 5 wanted pirates down',
     progress: () => 'Wanted pirates destroyed: ' + G.missionProgress + ' of 5.\nThey wait on the approach to the station.',
-    failOnDeath: [], deathMsg: '', system: 'halcyon',
+    failOnDeath: [], deathMsg: '', system: 'halcyon', body: 'halcyon-station',
     space: { setup: patrolSetup, update: patrolUpdate, target: patrolTarget }
   },
   {
-    id: 'bounty', key: '4', title: 'Bounty', where: 'The Reaver, at Reaver\'s Roost', reward: 1200, system: 'roost', paySystem: 'halcyon',
+    id: 'bounty', key: '4', title: 'Bounty', where: 'The Reaver, at Reaver\'s Roost', reward: 1200, system: 'roost', body: 'roost-rock', paySystem: 'halcyon',
     unlock: () => G.patrolsDone > 0, // the board offers it once a police patrol has been finished
     offer: 'The pirate warlord they call the Reaver has gone\nto ground at Reaver\'s Roost, twelve light years out,\nwith two escorts and a nest full of friends.\nA warship three times a drone: spread guns and\na ramming charge it telegraphs with a flash.\nHalcyon pays 1200 cr for the wreck.',
     line: st => st === 'failed' ? 'Failed. The Reaver got away'
@@ -305,7 +351,7 @@ function missionFarLine() {
 // what the call wants once you are in its system: { kind, text }. kind: 'dock', 'land', 'site', 'escort' or 'fight'
 function missionThen(m, st) {
   const kind = missionKind(m);
-  if (st === 'rescued') return { kind: 'dock', text: 'Dock at ' + callStName('halcyon-station') };
+  if (st === 'rescued') { const dock = sysBody('station', m.system || 'halcyon'); return { kind: 'dock', text: 'Dock at ' + (dock ? callStName(dock.id) : 'the station') }; } // the station of the call's own system
   if (m.carry) return { kind: 'dock', text: 'Dock at ' + callStName(m.to) };
   if (m.site) return { kind: 'site', text: m.here };
   if (kind === 'rescue') return { kind: 'land', text: 'Land on ' + m.where };
@@ -351,7 +397,8 @@ function missionTarget(s) {
   if (far) return null;
   if (m && m.carry && G.mission === 'accepted') { const dock = sysBodies('station').find(b => b.id === m.to); return dock ? { x: dock.x, y: dock.y, name: dock.name } : null; }
   if (m && m.site && G.mission === 'accepted') { const site = sysBodies('poi').find(b => b.id === m.site); return site ? { x: site.x, y: site.y, name: site.name } : null; }
-  if (missionActive('rescue') && missionHere(m) && sysBody('planet')) return { x: s.planet.x, y: s.planet.y, name: sysBody('planet').name };
+  const pod = missionActive('rescue') && missionHere(m) ? missionBody(m) : null; // the planet the rescue is on (its file's body)
+  if (pod) return { x: pod.x, y: pod.y, name: pod.name };
   const st = sysBody('station'); // a system with no station (Kestrel until card u-b5) has nothing to point at
   return st ? { x: s.station.x, y: s.station.y, name: st.name } : null;
 }
@@ -388,7 +435,7 @@ function escortSend(s, f, x, y, hunt) { // one escort pirate; hunt: it goes for 
   return d;
 }
 function escortWave(s, f, i) {
-  const gate = sysBody('gate'), side = [-1, 1, 0][i % 3], a = Phaser.Math.Angle.Between(f.x, f.y, gate.x, gate.y) + side * 1.2; // y is down, so a turn to the right is starboard
+  const gate = escortGate(), side = [-1, 1, 0][i % 3], a = Phaser.Math.Angle.Between(f.x, f.y, gate.x, gate.y) + side * 1.2; // y is down, so a turn to the right is starboard
   const cx = f.x + Math.cos(a) * ESCORT.waveOut, cy = f.y + Math.sin(a) * ESCORT.waveOut, n = ESCORT.waveSize[i] || 2;
   for (let k = 0; k < n; k++) escortSend(s, f, cx + Phaser.Math.Between(-90, 90), cy + Phaser.Math.Between(-90, 90), k > 0);
   toast(s, uiText(side < 0 ? 'toast.mule-wave-port' : side > 0 ? 'toast.mule-wave-starboard' : 'toast.mule-wave-ahead'), '#ff8da0'); sfx('tick');
@@ -415,7 +462,7 @@ function escortRing(s, f) { // drawn every frame: a steady green ring while you 
   t.setPosition(f.x, f.y + 34).setText(on ? 'COVERED' : 'EXPOSED').setColor(on ? '#6dff9c' : '#ffb454').setVisible(true);
 }
 function escortSetup(s) {
-  const st = s.station, gate = sysBody('gate'); // src/universe.js
+  const st = s.station, gate = escortGate(); // the gate the call's file names (missionBody)
   const f = s.physics.add.sprite(st.x - 60, st.y + 260, 'freighter').setDepth(4);
   f.body.setCircle(14, 24, 6).setMaxSpeed(ESCORT.cruise); // offset in the 76x40 texture (ships.js)
   f.hp = ESCORT.hull; f.maxHp = ESCORT.hull; f.rammedAt = 0; f.wave = 0;
@@ -448,7 +495,7 @@ function freighterHurt(s, n) {
 }
 function escortUpdate(s) {
   const f = s.mx.freighter; if (!f || !f.active) return;
-  const gate = sysBody('gate'), now = s.time.now, toGate = Phaser.Math.Distance.Between(f.x, f.y, gate.x, gate.y);
+  const gate = escortGate(), now = s.time.now, toGate = Phaser.Math.Distance.Between(f.x, f.y, gate.x, gate.y);
   // the escort box: inside her ring you cover her (cruise speed, half damage); outside it she slows, so you can catch up, and takes it all
   const was = s.mx.covered;
   s.mx.covered = !s.dead && Phaser.Math.Distance.Between(f.x, f.y, s.ship.x, s.ship.y) <= ESCORT.box;
@@ -486,17 +533,17 @@ function escortUpdate(s) {
   radarDot(s, f.x, f.y, 0xffd37a, 3); radarDot(s, gate.x, gate.y, AMBER, 2);
 }
 function escortTarget(s) {
-  const f = s.mx.freighter, gate = sysBody('gate');
+  const f = s.mx.freighter, gate = escortGate();
   return f && f.active ? { x: f.x, y: f.y, name: 'Freighter MULE' } : { x: gate.x, y: gate.y, name: gate.name };
 }
 
 // ---- Police patrol: wanted pirates loiter on the approach to the station ----
 function patrolSetup(s) {
-  const m = missionDef(), left = m.count - G.missionProgress;
+  const m = missionDef(), left = m.count - G.missionProgress, at = missionBody(m) || s.station; // the station the call's file names
   s.mx.mark = s.add.graphics().setDepth(3);
   for (let i = 0; i < left; i++) {
     const a = i / left * Math.PI * 2 + Math.random() * 0.8, r = Phaser.Math.Between(650, 950);
-    const d = s.spawnDrone(s.station.x + Math.cos(a) * r, s.station.y + Math.sin(a) * r);
+    const d = s.spawnDrone(at.x + Math.cos(a) * r, at.y + Math.sin(a) * r);
     d.wanted = true; d.hp = 40;
   }
 }
@@ -525,7 +572,7 @@ const REAVER = {
   boss: true, ai: (s, d, ship, time) => reaverAI(s, d, ship, time)
 };
 function bountySetup(s) {
-  const bx = s.planet.x - 1100, by = s.planet.y + 650;
+  const rock = missionBody(missionDef()) || s.planet, bx = rock.x - 1100, by = rock.y + 650; // the planet the call's file names
   const d = spawnPirate(s, bx, by, REAVER);
   d.boss = true; d.hp = Math.max(1, REAVER_HP - G.missionProgress); d.phase = 1; d.chargeAt = s.time.now + 6000; d.tele = 0; d.chargeEnd = 0;
   s.mx.boss = d;
