@@ -19,6 +19,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | help.station.8 | J   journal: who you have met |
 | help.station.9 | G   galaxy map (look only; jump in flight) |
 | help.station.10 | Esc   close a terminal, or pause |
+| help.station.11 | U   hold to talk to the ship's computer |
 | help.ship.1 | Enter Space   launch or board |
 | help.ship.2 | Enter   press twice to buy a ship |
 | help.ship.3 | F Y C   fleet, yard or controls tab |
@@ -78,8 +79,8 @@ To translate, change the text column here, or copy this file to a name after ui 
 | toast.signal-found | Signal found: {name} |
 | toast.signal-lost | Signal lost: {name} |
 | keys.steps | Then: paste it above, press Test, done. |
-| keys.deepgram.use | Speaks the ship and the bar voices; each spoken line is sent to Deepgram. Without it the game is silent. |
-| keys.deepgram.cost | It is your own Deepgram account: Deepgram may charge you for what you use. |
+| keys.deepgram.use | Speaks the ship and the bar voices, and hears you when you hold U: lines and sound go to Deepgram. |
+| keys.deepgram.cost | It is your own Deepgram account: Deepgram may charge you for speaking and listening. |
 | keys.deepgram.url | https://console.deepgram.com/ |
 | keys.openai.use | Lets the characters answer you; each line you type is sent to OpenAI. Without it they use scripted lines. |
 | keys.openai.cost | It is your own OpenAI account: OpenAI may charge you for what you use. |
@@ -87,3 +88,6 @@ To translate, change the text column here, or copy this file to a name after ui 
 | keys.anthropic.use | Lets the characters answer you; each line you type is sent to Anthropic. Without it they use scripted lines. |
 | keys.anthropic.cost | It is your own Anthropic account: Anthropic may charge you for what you use. |
 | keys.anthropic.url | https://platform.claude.com/settings/keys |
+| listen.use | Hold {key} in space or in a station and speak; let go and your words go to the ship's computer, as if you had typed them. The microphone is open only while the key is held. Nothing is recorded or kept. |
+| listen.cost | Each hold sends its sound to Deepgram, on your own account, and may cost you money. This session may listen for {minutes} minutes. |
+| listen.hint | Run node tools/serve.mjs and open http://127.0.0.1:8787/ : the browser then asks for the microphone once. Opened from a file it may ask every time, or refuse. |
