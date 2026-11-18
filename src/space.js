@@ -3,6 +3,22 @@
 // the code looks for one, far outside the world, so every distance to it comes out huge and nothing is ever near it. nowhere marks it for the few
 // places that would draw it (hud.js)
 const spaceNowhere = () => ({ x: -60000, y: -60000, nowhere: true, active: false });
+// which of the eight ways a step of (dx, dy) goes; the screen's y grows downward, so north is up
+function spaceCompass(dx, dy) { return ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'][((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8]; }
+// the banner of a launch from the station: where the call you carry sends you and which way that is, or only "Launch clear." (no call, a goal
+// in another system, a goal right beside the pad). It named Kepler-4b on every launch, whatever the call: on an escort that was the wrong way.
+// It is shown before the call's own ships are in space (missionSpaceSetup), so an escort gives where the MULE is bound, the gate.
+function spaceLaunchLine(s) {
+  const plain = 'Launch clear.';
+  if (G.mission !== 'accepted' || typeof missionTarget !== 'function') return plain;
+  let t = null;
+  try { const view = Object.create(s); view.mx = {}; t = missionTarget(view); } catch (e) { t = null; } // a call whose target needs its ships: no direction rather than no launch
+  const home = sysBody('station');
+  if (!t || !t.name || (home && t.name === home.name)) return plain; // the fallback of missionTarget is the station you have just left
+  const dx = t.x - s.ship.x, dy = t.y - s.ship.y;
+  if (!(Math.hypot(dx, dy) > 600)) return plain;
+  return plain + ' ' + t.name + ' is to the ' + spaceCompass(dx, dy) + '.';
+}
 class Space extends Phaser.Scene {
   constructor() { super('Space'); }
   // from: 'station' (the default), 'surface', 'jump' (the ship comes out of hyperspace: src/jump.js hands over { from: 'jump', to, origin }) or 'pullout'
@@ -108,7 +124,7 @@ class Space extends Phaser.Scene {
     this.keyLine = this.add.text(24, H - 44, 'W thrust  A/D turn  S brake  Shift boost  Q/E dash  Space or click fire  L land/dock  P autopilot', {
       fontFamily: 'monospace', fontSize: '14px', color: '#9fbdd1', stroke: '#02060d', strokeThickness: 4
     }).setScrollFactor(0).setDepth(100);
-    if (this.from === 'station') { bountyReset(); toast(this, G.system === 'halcyon' ? 'Launch clear. Kepler-4b is to the north-east.' : 'Launch clear.', '#9fe9ff'); } // enemies.js: a new flight's bounty count starts at 0
+    if (this.from === 'station') { bountyReset(); toast(this, spaceLaunchLine(this), '#9fe9ff'); } // enemies.js: a new flight's bounty count starts at 0
     else if (this.jumped) { const fresh = galaxyChart(); toast(this, 'Arrived in ' + sysDef().name + '.' + (fresh.length ? ' Charted in range: ' + fresh.map(x => x.name).join(', ') + '. G opens the galaxy map.' : ''), '#9fe9ff'); } // src/galaxymap.js: the stars in range of here are now known
     missionSpaceSetup(this); // src/missions.js: escort freighter, wanted pirates
     trafficSetup(this); // src/traffic.js: civilian ships and the station police
