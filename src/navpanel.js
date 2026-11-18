@@ -231,8 +231,9 @@ function navpanelDraw(s) {
     if (sel) np.hl.setPosition(N.x + 3, l.y - N.row / 2).setVisible(true).setFillStyle(0xffb454, np.keys ? 0.16 : 0.06);
   });
   const r = rows[cr.sel];
-  np.foot.setText(np.keys ? navpanelHint(r, r ? navpanelIsDest(s, r) : false, navpanelOrder(s, r)) : 'N  choose where to go');
+  const hint = np.keys ? navpanelHint(r, r ? navpanelIsDest(s, r) : false, navpanelOrder(s, r)) : 'N  choose where to go';
   np.more.setText(view.above || view.below ? (view.above ? '^' + view.above + ' ' : '') + (view.below ? 'v' + view.below : '') : np.keys ? 'X clear' : '');
+  np.foot.setText(hudFitSub(hint, N.w - 28 - (+np.more.width || 0), 12)); // one line in the room the tag leaves: the route plotter's sentence ("Needs a 12.2 ly jump: your Wren does 8. The Kite ...") ran out across the screen over the tag (first look; the whole sentence is on the job line and the map)
 }
 
 // N: the panel with the keys on it, the destination (or the mission's row, or the first row) chosen
