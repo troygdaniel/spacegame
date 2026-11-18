@@ -262,7 +262,7 @@ function navpanelEngage(s, r) {
   }
   const here = galaxyFind(G.system), dest = galaxyFind(r.id), j = here && dest ? galaxyJump(here, dest) : null;
   if (!j || !j.ok) return no(navpanelHint(Object.assign({}, r, { ok: false, why: j ? j.why : 'route' }), true));
-  const why = jumpLock(s); // src/jump.js: the mass, hostiles, a cruise under way
+  const why = jumpLock(s); // src/jump.js: hostiles near, a cruise under way (no mass limit: a jump starts from anywhere)
   if (why) return no(why === 'not now' ? 'Not now: end the cruise first.' : why);
   if (s.ap && s.ap.on) autopilotEnd(s, 'quiet');
   navpanelClose(s); jumpStart(s, r.id, j);
