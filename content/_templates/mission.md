@@ -1,5 +1,6 @@
 ---
 # Copy to content/missions/<id>.md. A new id adds a call of that kind (at most 4; the board shows four at a time and scrolls). kind: rescue, escort, patrol or bounty. kind picks what the mission does; everything else is words and numbers.
+# A site call is kind: salvage or survey, with three more lines: system: <star system id>, site: <id of a poi row in that system's ## Bodies table>, here: <what to do there>. Copy content/missions/salvage-lethe.md for one.
 type: mission
 kind: rescue
 title: Example call

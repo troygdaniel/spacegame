@@ -145,6 +145,7 @@
     mission: {
       folder: 'missions', placeholders: PH_MISSION,
       fields: {
+        site: T(40), here: T(80), // a site call (kind salvage or survey; card space-game-site-calls-from-files): the id of the site in the call's system, and what to do there
         kind: P(['rescue', 'escort', 'patrol', 'bounty', 'courier', 'haul', 'salvage', 'survey'], true), title: T(40, true), where: T(60),
         reward: I(0, 1000000, true), count: I(1, 50), unlock: COND, system: R('system')
       },
