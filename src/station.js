@@ -197,7 +197,7 @@ class Station extends Phaser.Scene {
       txt(L, cy - h / 2 + 144, 'RISK', 11, '#5b7a92');
       const pg = add(pips(this, L, cy - h / 2 + 157, r[1], 3, Phaser.Display.Color.HexStringToColor(r[2]).color));
       txt(L + 58, cy - h / 2 + 161, r[0], 13, r[2], { style: { fontStyle: 'bold' } });
-      txt(L, cy - h / 2 + 178, m.offer.split('\n')[0], 13, '#cfefff', { oy: 0, style: { wordWrap: { width: w - 32 }, lineSpacing: 2 } });
+      txt(L, cy - h / 2 + 178, m.offer.split('\n')[0], 13, '#cfefff', { oy: 0, style: { wordWrap: { width: w - 32 }, lineSpacing: 2, maxLines: 2 } }); // two lines fit in the card: a long first line (the haul's) ran out under it; the whole text is under BRIEFING
       return add(this.add.rectangle(cx, cy, w, h, 0x000000, 0.001).setInteractive({ useHandCursor: true }));
     };
 

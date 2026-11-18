@@ -123,6 +123,10 @@ const LOOKS = [
     await t.run(1200); await t.ev(`(() => { ${ST}.openPanel(); return 1; })()`); await t.run(800);
     console.log('        board: ' + await t.ev(`JSON.stringify((() => { const s = ${ST}; return { offered: missionsOffered().map(m => m.id + (typeof jumpReach === 'function' && m.system && m.system !== G.system ? ':' + JSON.stringify(jumpReach(m.system)) : '')), texts: s.boardObjs.filter(o => o.type === 'Text').map(o => o.text.replace(/\\n/g, ' / ')).slice(0, 40) }; })())`));
   }],
+  ['board-dim', '#station', 'Station', async t => { // the same, flown in a ship with 7 light years of jump range: the Brass and Hollow runs are out of reach, so dimmed, and E does nothing on them
+    await t.run(1200); await t.ev(`(() => { const s = ${ST}, real = shipStat; shipStat = (k, r) => (k === 'range' ? 7 : real(k, r)); s.openPanel(); for (let i = 0; i < missionsOffered().length - 1; i++) s.boardKeys({ key: 'ArrowRight' }); return 1; })()`); await t.run(800);
+    console.log('        reach at 7 ly: ' + await t.ev(`JSON.stringify(missionsOffered().map(m => m.id + ' ' + (missionReach(m).ok ? 'ok' : missionReach(m).why)))`) + '; can accept the chosen one: ' + await t.ev(`!!${ST}.canAccept`));
+  }],
   ['board-far', '#station', 'Station', async t => { // the last call of the board chosen: the far runs, dimmed when the ship you fly cannot reach them
     await t.run(1200); await t.ev(`(() => { const s = ${ST}; s.openPanel(); for (let i = 0; i < missionsOffered().length - 1; i++) s.boardKeys({ key: 'ArrowRight' }); return 1; })()`); await t.run(800);
     console.log('        reach: ' + await t.ev(`JSON.stringify(missionsOffered().map(m => m.id + ' ' + (missionReach(m).ok ? 'ok' : missionReach(m).why)))`) + '; can accept the chosen one: ' + await t.ev(`!!${ST}.canAccept`));
