@@ -31,8 +31,13 @@ for (const id of names) {
   const colEnds = [...Array(L.cols).keys()].map(c => Math.max(...L.items.filter(it => it.col === c).map(it => it.x + it.wrap)));
   check(`${id}: a column's words stop before the next column's key caps`, colEnds.every((e, c) => c === L.cols - 1 || e <= Math.min(...L.items.filter(it => it.col === c + 1).flatMap(it => it.caps.map(k => k.x - k.w / 2)))));
 }
-const fl = g.run(`settingsControlsLayout(controlsGroup("flight").rows, ${BW})`), st = g.run(`settingsControlsLayout(controlsGroup("station").rows, ${BW})`);
-check('FLIGHT: 22 rows in two columns of eleven; STATION: 11 rows in one', fl.cols === 2 && st.cols === 1 && fl.items.filter(it => it.col === 0).length === 11, `${fl.cols} and ${st.cols}`);
+const fl = g.run(`settingsControlsLayout(controlsGroup("flight").rows, ${BW})`);
+const perCol = g.run('SETTINGS_CONTROLS.perCol');
+const wantCols = n => Math.max(1, Math.ceil(n / perCol)); // the rule: up to eleven rows one column, then a column more for each eleven
+check('every group is in as many columns as its rows call for (up to eleven one column, twelve to twenty-two two)', names.every(id => { const n = g.run(`controlsGroup(${JSON.stringify(id)}).rows.length`); return g.run(`settingsControlsLayout(controlsGroup(${JSON.stringify(id)}).rows, ${BW}).cols`) === wantCols(n); }), names.map(id => id + ' ' + g.run(`controlsGroup(${JSON.stringify(id)}).rows.length`) + ' rows').join(', '));
+check('FLIGHT: 22 rows in two columns of eleven', fl.cols === 2 && fl.items.filter(it => it.col === 0).length === 11 && fl.items.filter(it => it.col === 1).length === 11, `${fl.cols} columns`);
+const synth = n => g.run(`(() => { const rows = []; for (let i = 0; i < ${n}; i++) rows.push({ k: ['Q'], t: 'Row ' + i }); return settingsControlsLayout(rows, ${BW}); })()`);
+check('the edges of the rule: 11 rows one column, 12 rows two, 22 rows two, 23 rows three, and each fits', [[11, 1], [12, 2], [22, 2], [23, 3]].every(([n, c]) => { const L = synth(n); return L.cols === c && L.fits && L.items.length === n; }));
 check('a short group keeps the old look: the words 200 px in, the larger size', g.run(`settingsControlsLayout(controlsGroup("ship").rows, ${BW}).items.every(it => it.x === 200)`) && g.run(`settingsControlsLayout(controlsGroup("ship").rows, ${BW}).size`) === 15);
 check('the longest line of FLIGHT (the ship computer, 53 letters) wraps to two lines, and the others stay on one', fl.items.filter(it => it.lines === 2).length >= 1 && fl.items.every(it => it.lines <= 2), fl.items.filter(it => it.lines > 1).map(it => it.i).join(','));
 
