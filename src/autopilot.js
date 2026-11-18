@@ -69,7 +69,7 @@ function autopilotClearAngle(sx, sy, mx, my, tx, ty) {
 function autopilotClear(s, t, then, mass) {
   const ap = s.ap, cr = s.cr; if (!ap || !cr || !t || !mass || s.dead || s.leaving || s.jmp || G.deep) return false;
   if (cr.active) cruiseEnd(s, 'quiet');
-  cr.target = t; ap.target = t; ap.then = then;
+  ap.target = t; ap.then = then; // cr.target is t already: autopilotGo and cruiseEngage, the two callers, have it set
   ap.on = true; ap.stage = 'clear'; ap.since = s.time.now; ap.speed = s.ship.body.speed; ap.hull = G.hull; ap.sh = s.sh ? s.sh.pts : 0;
   toast(s, 'Clearing ' + mass.name + ', then ' + (then === 'cruise' ? 'cruising to ' : 'on to ') + t.name + '. Any key takes the stick back.', '#ffd37a'); sfx('chime');
   return true;
@@ -104,6 +104,9 @@ function autopilotCruiseOk(s) {
   return !sysBodies('station').concat(sysBodies('planet')).some(b => d(b) < CRUISE.lockMass) && !s.enemies.getChildren().some(e => e.active && d(e) < CRUISE.lockHostile);
 }
 
+// hand the leg to cruise: the one place the autopilot gives cruise its target back (cruise drops it near a body; ours stays)
+function autopilotCruise(s, t) { s.cr.target = t; s.cr.endWhy = ''; cruiseEngage(s); }
+
 // one call per frame from Space.update, right after cruiseFrame (crs is what it returned)
 function autopilotFrame(s, time, dt, crs) {
   const ap = s.ap; if (!ap) return '';
@@ -131,14 +134,14 @@ function autopilotFrame(s, time, dt, crs) {
     if (autopilotMass(s)) return 'auto'; // still inside the limit: autopilotDrive flies it out
     if (ap.then === 'cruise') { // C was pressed: cruise takes it from here and the autopilot lets go (a cruise that will not start says why itself)
       ap.on = false; ap.stage = ''; ap.target = null; ap.read.setVisible(false);
-      cr.target = t; cr.endWhy = ''; cruiseEngage(s);
+      autopilotCruise(s, t);
       if (s.cruising) return 'cruise';
       ship.body.setDrag(0.55).setAcceleration(0, 0); return '';
     }
     ap.stage = 'local'; ap.since = time; // P was pressed: the leg to the body, as ever
   }
   if (dist - autopilotStop(t) > AUTO.cruiseLeg && autopilotCruiseOk(s)) { // a long leg: cruise the middle
-    cr.target = t; cr.endWhy = ''; cruiseEngage(s);
+    autopilotCruise(s, t);
     if (s.cruising) { ap.stage = 'cruise'; ap.read.setVisible(false); return 'cruise'; }
   }
   return 'auto';
