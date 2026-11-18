@@ -20,7 +20,8 @@ try {
   const tick = async n => { for (let left = n; left > 0; left -= 20) await E(`tick(${Math.min(20, left)})`); };
   const said = () => E('JSON.stringify(window.__toasts)').then(JSON.parse);
   const park = (x, y) => E(`(() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.eb.getChildren().forEach(b => b.disableBody(true, true));
-    if (s.cr.active) cruiseEnd(s, 'quiet'); s.cr.target = null; s.ship.setPosition(${x}, ${y}); s.ship.setVelocity(0, 0); s.ship.rotation = 0; s.ship.body.setAcceleration(0, 0);
+    if (s.cr.active) cruiseEnd(s, 'quiet'); s.cr.target = null; s.ship.setPosition(sysAt(${x}), sysAt(${y})); // in the units the data is written in (src/data_systems.js SYSTEM_SCALE)
+    s.ship.setVelocity(0, 0); s.ship.rotation = 0; s.ship.body.setAcceleration(0, 0);
     s.cameras.main.centerOn(${x}, ${y}); (s.toasts || []).forEach(o => { o.t.destroy(); o.bg.destroy(); o.tab.destroy(); }); s.toasts = []; window.__toasts = []; G.hull = G.maxHull; s.ironUntil = 0; })()`);
   const go = name => E(`(() => { const s = ${SP}; cruisePick(s, cruiseKnown(s).find(b => b.name === '${name}')); cruiseEngage(s); return s.cruising; })()`);
 
@@ -45,8 +46,8 @@ try {
   check('never in the first two jumps of a game: not at 0 or 1 jumps, yes at 2', !calm0 && !calm1 && calm2);
   await E('G.interdictCool = 30'); const cool = await E(`cruiseInterdictOk(${SP})`); await E('G.interdictCool = 0');
   check('not while the cooldown runs', !cool);
-  await E(`${SP}.ship.setPosition(4000 + 3900, 4000)`); const near = await E(`cruiseInterdictOk(${SP})`);
-  await E(`${SP}.ship.setPosition(4000 + 4100, 4000)`); const far = await E(`cruiseInterdictOk(${SP})`);
+  await E(`${SP}.ship.setPosition(${SP}.station.x + 3900, ${SP}.station.y)`); const near = await E(`cruiseInterdictOk(${SP})`);
+  await E(`${SP}.ship.setPosition(${SP}.station.x + 4100, ${SP}.station.y)`); const far = await E(`cruiseInterdictOk(${SP})`);
   check('never within 4000 px of a station (3900 no, 4100 yes)', !near && far);
   await E('G.interdictCool = 90'); await tick(60); const left = await E('G.interdictCool');
   check('the cooldown counts down while you fly (60 frames = 1 s)', left > 88.9 && left < 89.1, left.toFixed(2));
@@ -89,12 +90,12 @@ try {
   check('once the cooldown is over the next roll fires', await E(`!${SP}.cruising && ${SP}.enemies.countActive() >= 2`));
 
   // ---- near a station: starting 3500 px from Halcyon, it fires only once you are 4000 px clear ----
-  await park(4000, 7500); await S('G.jumps = 2; G.interdictCool = 0; CRUISE.rnd = () => 0');
+  await park(9000, 9000); await E(`${SP}.ship.setPosition(${SP}.station.x, ${SP}.station.y + 3500)`); await S('G.jumps = 2; G.interdictCool = 0; CRUISE.rnd = () => 0');
   check('cruise starts south of the station', await go('Slag Belt')); await tick(10);
-  const early = await E(`({ on: ${SP}.cruising, d: Math.round(Math.hypot(${SP}.ship.x - 4000, ${SP}.ship.y - 4000)) })`);
+  const early = await E(`({ on: ${SP}.cruising, d: Math.round(Math.hypot(${SP}.ship.x - ${SP}.station.x, ${SP}.ship.y - ${SP}.station.y)) })`);
   check('inside 4000 px of the station a forced roll does nothing', early.on && early.d < 4000, early.d + ' px out');
   await tick(60);
-  check('4000 px clear of the station the forced roll fires', await E(`!${SP}.cruising && ${SP}.enemies.countActive() >= 2 && Math.hypot(${SP}.ship.x - 4000, ${SP}.ship.y - 4000) >= 4000`));
+  check('4000 px clear of the station the forced roll fires', await E(`!${SP}.cruising && ${SP}.enemies.countActive() >= 2 && Math.hypot(${SP}.ship.x - ${SP}.station.x, ${SP}.ship.y - ${SP}.station.y) >= 4000`));
 
   // ---- the first two jumps ----
   await park(9000, 9000); await S('G.jumps = 1; G.interdictCool = 0; CRUISE.rnd = () => 0');

@@ -42,10 +42,11 @@ try {
 
   // ---- 0. the empty Kestrel, and what the arrival code says ----
   console.log('the data: Kestrel is a system with nothing in it; the entry point faces the star you came from');
-  check('SYSTEMS.kestrel exists: 36000 px, no bodies, on the galaxy map at [25.5, 19]', await E(`SYSTEMS.kestrel && SYSTEMS.kestrel.size === 36000 && SYSTEMS.kestrel.bodies.length === 0 && SYSTEMS.kestrel.ly.join() === '25.5,19'`));
+  const WSZ = await E('sysAt(36000)'); // a system is 36000 px in the data and SYSTEM_SCALE times that in the game (src/data_systems.js)
+  check('SYSTEMS.kestrel exists: 36000 px in the data (108000 in the game), no bodies, on the galaxy map at [25.5, 19]', await E(`SYSTEMS.kestrel && SYSTEMS.kestrel.size === sysAt(36000) && SYSTEM_SCALE === 3 && SYSTEMS.kestrel.bodies.length === 0 && SYSTEMS.kestrel.ly.join() === '25.5,19'`));
   const pts = JSON.parse(await E(`JSON.stringify({ k: arrivalPoint('kestrel', 'halcyon'), h: arrivalPoint('halcyon', 'kestrel'), none: arrivalPoint('kestrel', null), bad: arrivalPoint('nowhere', 'halcyon') })`));
-  check('from Halcyon (west and south of it) you appear at the west edge of Kestrel, heading for the middle', pts.k.x === 500 && pts.k.y > 18000 && Math.abs(pts.k.rot) < 1, JSON.stringify(pts.k));
-  check('and back: from Kestrel you appear at the east edge of Halcyon, heading west', pts.h.x === 35500 && pts.h.y < 18000 && Math.abs(Math.abs(pts.h.rot) - Math.PI) < 1, JSON.stringify(pts.h));
+  check('from Halcyon (west and south of it) you appear at the west edge of Kestrel, heading for the middle', pts.k.x === 500 && pts.k.y > WSZ / 2 && Math.abs(pts.k.rot) < 1, JSON.stringify(pts.k));
+  check('and back: from Kestrel you appear at the east edge of Halcyon, heading west', pts.h.x === WSZ - 500 && pts.h.y < WSZ / 2 && Math.abs(Math.abs(pts.h.rot) - Math.PI) < 1, JSON.stringify(pts.h));
   check('no origin, or a system the game does not have: no entry point', pts.none === null && pts.bad === null);
   check('enterSystem refuses a system that has no data and changes nothing', await E(`(() => { const j = G.jumps; const r = enterSystem('nowhere', 'halcyon'); return r === false && G.system === 'halcyon' && G.jumps === j && !G.known.includes('nowhere'); })()`));
 
@@ -87,7 +88,8 @@ try {
 
   // ---- 3. the locks and the refusals ----
   console.log('locks: too close to a station or planet, a hostile near, out of range, short of fuel');
-  await park(4000 + 1500, 4000); await clearSaid();
+  await park('sysAt(4000) + 1500', 'sysAt(4000)'); // beside the station, wherever SYSTEM_SCALE puts it
+  await clearSaid();
   await openMap('kestrel'); await E(`${GL}.go()`); await tick(2);
   check('1500 px from Halcyon Station: no charge, and the toast says fly clear of it', await E(`!${SP}.jmp`) && (await said()).some(m => /Too close to the mass: fly clear of Halcyon Station/.test(m)), JSON.stringify(await said()));
   await park(15000, 15000);
@@ -144,7 +146,7 @@ try {
   await tick(4);
   const arr = JSON.parse(await E(`JSON.stringify({ sys: G.system, known: G.known, jumps: G.jumps, x: Math.round(${SP}.ship.x), y: Math.round(${SP}.ship.y), v: Math.round(${SP}.ship.body.speed), rot: +${SP}.ship.rotation.toFixed(2), ws: ${SP}.WS, calm: ${SP}.calmUntil, arrival: G.arrival })`));
   check('G.system is Kestrel, it is known, one jump is counted, the arrival record is used up', arr.sys === 'kestrel' && arr.known.includes('kestrel') && arr.jumps === 1 && arr.arrival === null, JSON.stringify(arr));
-  check('the ship is at the west edge of the 36000 px system, a little over 500 px in', arr.ws === 36000 && arr.x >= 500 && arr.x < 900 && arr.y > 25000, JSON.stringify([arr.x, arr.y]));
+  check('the ship is at the west edge of the system, a little over 500 px in', arr.ws === WSZ && arr.x >= 500 && arr.x < 900 && arr.y > WSZ * 25 / 36, JSON.stringify([arr.x, arr.y]));
   check('it came out flying toward the middle at about 500 px/s', arr.v > 380 && arr.v < 520 && arr.rot < 0 && arr.rot > -1, JSON.stringify([arr.v, arr.rot]));
   check('the pirates are held off: a calm of 3 s, then the first wave ramps as usual', arr.calm > 0 && await E(`pirateCap(${SP}, ${SP}.time.now) === 0`));
   check('no console errors so far (an empty system is flown by the same scene)', t.errors.length === 0, t.errors.join(' | ').slice(0, 400));
@@ -208,8 +210,8 @@ try {
   await until(`game.scene.isActive('Space') && !game.scene.isActive('Hyper')`, 1200, 'the Space scene after the tunnel');
   await tick(4);
   const back = JSON.parse(await E(`JSON.stringify({ sys: G.system, jumps: G.jumps, x: Math.round(${SP}.ship.x), y: Math.round(${SP}.ship.y), ws: ${SP}.WS, drones: ${SP}.enemies.countActive(), st: !!${SP}.station.nowhere })`));
-  check('back in Halcyon: jump 2, the east edge, the station and the planet are real again', back.sys === 'halcyon' && back.jumps === 2 && back.x > 35000 && back.ws === 36000 && back.st === false, JSON.stringify(back));
-  check('Halcyon\'s own pirates are where they always were, none near the arrival point 30000 px away', await E(`${SP}.enemies.countActive() >= 9 && ${SP}.enemies.getChildren().every(e => Math.hypot(e.x - ${SP}.ship.x, e.y - ${SP}.ship.y) > 3000)`), await E(`${SP}.enemies.countActive()`));
+  check('back in Halcyon: jump 2, the east edge, the station and the planet are real again', back.sys === 'halcyon' && back.jumps === 2 && back.x > WSZ - 1000 && back.ws === WSZ && back.st === false, JSON.stringify(back));
+  check('Halcyon\'s own pirates are where they always were, none near the arrival point at the far edge', await E(`${SP}.enemies.countActive() >= 9 && ${SP}.enemies.getChildren().every(e => Math.hypot(e.x - ${SP}.ship.x, e.y - ${SP}.ship.y) > 3000)`), await E(`${SP}.enemies.countActive()`));
   check('no console errors on the way back', t.errors.length === 0, t.errors.join(' | ').slice(0, 400));
 
   // ---- 7. docked: read only ----

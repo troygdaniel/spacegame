@@ -66,7 +66,7 @@ try {
   check('escort: nobody lies in wait at launch any more (the waves come by her progress)', await t.ev(`${S('Space')}.enemies.getChildren().filter(d => d.prey || d.escort).length === 0 && ${S('Space')}.mx.freighter.wave === 0`));
   await t.shot('missions-space-escort');
   const fx = await t.ev(`${S('Space')}.mx.freighter.x`);
-  check('freighter is moving toward the gate', fx < 3930, 'x=' + fx);
+  check('freighter is moving toward the gate', fx < await t.ev(`${S('Space')}.station.x - 70`), 'x=' + fx); // she starts 60 px west of the station
   check('objective arrow points at the MULE', (await t.ev(`missionTarget(${S('Space')}).name`)) === 'Freighter MULE');
   await x(`freighterHurt(${S('Space')}, 30)`);
   check('freighter hull drops', await t.ev(`${S('Space')}.mx.freighter.hp <= ${S('Space')}.mx.freighter.maxHp - 30`)); // at most: pirates may already have hit her

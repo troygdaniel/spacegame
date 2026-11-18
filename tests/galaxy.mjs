@@ -42,7 +42,7 @@ console.log('makeSystem: same seed, same system');
 
 console.log('makeSystem: the shape of 4.1 and the layout rules of 4.4, 7 kinds x 60 seeds');
 {
-  const w = world(), SHIPS = w.j('Object.keys(SHIP_MODELS)'), SLOTS = w.j('PART_ORDER');
+  const w = world(), SHIPS = w.j('Object.keys(SHIP_MODELS)'), SLOTS = w.j('PART_ORDER'), SC = w.j('SYSTEM_SCALE'); // a system is laid out in the old units and spread out SC times (src/data_systems.js)
   const planetKinds = (readFileSync(join(ROOT, 'src/art_world.js'), 'utf8').match(/const PLANET_KINDS = \[([^\]]*)\]/) || [, ''])[1].split(',').map(s => s.trim().replace(/'/g, '')).filter(Boolean);
   check('the planet kinds the art can draw: rock ice gas lava ringed', planetKinds.join() === 'rock,ice,gas,lava,ringed', planetKinds.join());
   const bad = {}, note = (k, m) => { (bad[k] = bad[k] || []).push(m); };
@@ -50,8 +50,8 @@ console.log('makeSystem: the shape of 4.1 and the layout rules of 4.4, 7 kinds x
   for (const kind of KINDS) for (let seed = 1; seed <= 60; seed++) {
     const s = w.j(`makeSystem(${seed}, '${kind}')`), tag = `${kind}/${seed}`, c = s.size / 2;
     if (!/^[a-z]{4,12}$/.test(s.id) || s.name[0] !== s.name[0].toUpperCase() || !/^[A-Za-z]{4,12}$/.test(s.name) || s.id !== s.name.toLowerCase()) note('names', tag + ' ' + s.id + '/' + s.name);
-    if (s.size !== 36000 || !MAP_KINDS.includes(s.kind) || s.ly !== null || s.seed !== seed || !(s.traffic >= 0 && s.traffic <= 3) || !(s.danger >= 1 && s.danger <= 5)) note('shape', tag);
-    if (!'MKGFA'.includes(s.star.type) || Math.abs(s.star.x - c) > 1500 || Math.abs(s.star.y - c) > 1500) note('star', tag + ' ' + JSON.stringify(s.star));
+    if (s.size !== 36000 * SC || !MAP_KINDS.includes(s.kind) || s.ly !== null || s.seed !== seed || !(s.traffic >= 0 && s.traffic <= 3) || !(s.danger >= 1 && s.danger <= 5)) note('shape', tag);
+    if (!'MKGFA'.includes(s.star.type) || Math.abs(s.star.x - c) > 1500 * SC || Math.abs(s.star.y - c) > 1500 * SC) note('star', tag + ' ' + JSON.stringify(s.star));
     const ids = s.bodies.map(b => b.id);
     if (new Set(ids).size !== ids.length || !ids.every(i => i.startsWith(s.id + '-'))) note('ids', tag);
     if (!s.bodies.every(b => b.name && ['station', 'planet', 'belt', 'poi', 'scenery'].includes(b.type))) note('types', tag);
