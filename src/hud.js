@@ -476,6 +476,58 @@ function hudOrreryFoes(m, foes, R) {
   return out;
 }
 
+// ---- the minimap is centred on the ship (card space-game-minimap-ship-centred; Troy, 17 Nov, three answers) ----
+// The ship is fixed in the middle and north is always up: the map never turns, the arrow in the centre does. The sun, its orbit rings and every
+// body are drawn where they are relative to the ship, so they slide across the plate as you fly and you read your place in the system from where
+// the sun and the rings sit. The scale follows your speed, eased so it never jumps: the local area when slow or stopped (a fight, the dock), out
+// to the sun and most of the rings in cruise. What matters and is off the plate (the sun always, the destination, the job) is a small marker on
+// the rim that points at it, with its distance. A system with no star in its data has no sun and no rings: bodies and rim markers only.
+// The functions below have no drawing in them; tests/hudradar.mjs flies them in plain Node. hudOrreryModel above still says where the centre of
+// the system is and which bodies there are; only what the plate is centred on has changed.
+const HUD_MAP = { near: 2400, slow: 150, fast: 2000, ease: 900, farK: 0.6, edge: 4 }; // near: world px to the rim when slow; slow, fast: px/s between which it opens; ease: ms; farK: how much of the widest ring to add beyond the sun; edge: px inside the rim where markers sit
+// the widest view for this system from where you are: the sun on the plate, and most of the rings (never tighter than the near view)
+function hudMapFar(m, me) {
+  let ring = 0; (m.bodies || []).forEach(b => { if (b.d > ring) ring = b.d; });
+  return Math.max(HUD_MAP.near, m.star ? Math.hypot(me.x - m.c.x, me.y - m.c.y) * 1.08 + ring * HUD_MAP.farK : ring * HUD_MAP.farK);
+}
+// world px the rim stands for at this speed: the near view up to HUD_MAP.slow, the far view from HUD_MAP.fast, a smooth step between them on a
+// log scale (so it opens as evenly at 3,000 km as at 300)
+function hudMapRange(speed, far) {
+  far = Math.max(HUD_MAP.near, far || 0);
+  const t = Math.min(1, Math.max(0, ((speed || 0) - HUD_MAP.slow) / (HUD_MAP.fast - HUD_MAP.slow))), k = t * t * (3 - 2 * t);
+  return Math.exp(Math.log(HUD_MAP.near) + (Math.log(far) - Math.log(HUD_MAP.near)) * k);
+}
+// one frame of the ease toward the range the speed asks for: a share of the way on a log scale, so it never jumps and never overshoots
+function hudMapEase(cur, want, dt) {
+  if (!(cur > 0)) return want;
+  const k = 1 - Math.exp(-Math.max(0, dt) / HUD_MAP.ease);
+  return Math.exp(Math.log(cur) + (Math.log(want) - Math.log(cur)) * k);
+}
+// a thing at (dx, dy) world px from the ship, on a plate of radius R px whose rim stands for `range` world px: where it is on the plate, or,
+// when it is off the plate, the point on the rim toward it. a is the angle from the ship (0 east, PI/2 south: screen angles), dist the world px.
+function hudMapPoint(dx, dy, range, R) {
+  const sc = R / range, d = Math.hypot(dx, dy), a = Math.atan2(dy, dx), lim = R - HUD_MAP.edge, out = d * sc > lim;
+  return out ? { x: Math.cos(a) * lim, y: Math.sin(a) * lim, out: true, a, dist: d } : { x: dx * sc, y: dy * sc, out: false, a, dist: d };
+}
+// the part of an orbit ring that crosses the plate. The ring is a true circle of radius r px round the sun, which sits (sx, sy) px from the
+// plate's centre. Returns null (none of it is on the plate), { full: true } (all of it is), or { a0, a1 }: the arc, as angles round the SUN.
+function hudMapArc(sx, sy, r, R) {
+  const d = Math.hypot(sx, sy);
+  if (!(r > 0) || d - r >= R || r - d >= R) return null; // the ring is wholly outside the plate, or the plate is wholly inside the ring
+  if (d + r <= R) return { full: true };
+  const mid = Math.atan2(-sy, -sx), half = Math.acos(Math.min(1, Math.max(-1, (d * d + r * r - R * R) / (2 * d * r))));
+  return { a0: mid - half, a1: mid + half };
+}
+// the rings of a system in world px from the sun: one per distance, bodies within 3 percent of each other share one
+function hudMapRings(m) {
+  const out = [];
+  if (!m.star) return out;
+  (m.bodies || []).map(b => b.d).filter(d => d > 0).sort((a, b) => a - b).forEach(d => { if (!out.length || d > out[out.length - 1] * 1.03) out.push(d); });
+  return out;
+}
+// a distance for a rim marker, short: 86 km, 1,240 km, 12k km
+function hudMapDist(px) { const km = px / 10; return km >= 10000 ? Math.round(km / 1000) + 'k' : hudFmt(Math.round(km)); }
+
 // ---- radar: rings, sweep, landmarks and what is near; it sits top right ----
 function hudRadar(h, s, key, obj, now) {
   const g = h.g, R = 84, cx = W - 110, cy = 112, range = HUD_RANGE[key], sc = R / range;
@@ -488,12 +540,23 @@ function hudRadar(h, s, key, obj, now) {
   h.near = near; h.engage = engage; // hudWarn reads these
   const far = key === 'Space' && hudRadarMode(h, near, now) === 'sys' ? hudOrreryModel(sysDef(), me, R) : null; // the orrery, or null for the close view
   h.radarMode = far ? 'sys' : 'near';
-  const px = far ? far.c.x : ox, py = far ? far.c.y : oy, psc = far ? far.sc : sc; // what the centre of the plate stands for, and the scale
+  // in space the plate is centred on the ship and its scale follows the speed, eased (HUD_MAP above); on foot it is the fixed close radar
+  if (far) { const want = hudMapRange(me.body ? me.body.speed : 0, hudMapFar(far, me)); h.mapRange = hudMapEase(h.mapRange, want, h.mapAt ? Math.min(100, now - h.mapAt) : 0); h.mapAt = now; }
+  const mapRange = far ? h.mapRange : range, px = ox, py = oy, psc = R / mapRange; // the centre of the plate is you; psc: plate px per world px
   // the plate, the rings (dashed), the cross hairs, and a bezel with a tick every 15 degrees and a marker at north
   g.fillStyle(HUD_BG, 0.8); hudDisc(g, cx, cy, R + 4);
   g.fillStyle(rim, 0.05); hudDisc(g, cx, cy, R);
   [[6.5, 0.07], [3.5, 0.17], [1.5, 0.85]].forEach(([lw, k]) => { g.lineStyle(lw, rim, k * beat); hudRing(g, cx, cy, R + 4); });
-  if (far) far.rings.forEach(rr => { g.lineStyle(1, CYAN, 0.34); hudRing(g, cx, cy, rr); }); // one thin circle per orbit
+  if (far) { // the orbit rings: true circles round the sun, so zoomed in only arcs of them cross the plate; each is drawn clipped to it
+    const sx = (far.c.x - ox) * psc, sy = (far.c.y - oy) * psc;
+    hudMapRings(far).forEach(d => {
+      const r = d * psc, arc = hudMapArc(sx, sy, r, R - 1); if (!arc) return;
+      const a0 = arc.full ? 0 : arc.a0, a1 = arc.full ? TAU : arc.a1, n = Math.max(2, Math.min(96, Math.ceil(r * (a1 - a0) / 5)));
+      g.lineStyle(1, CYAN, 0.34); g.beginPath();
+      for (let i = 0; i <= n; i++) { const a = a0 + (a1 - a0) * i / n, x = cx + sx + Math.cos(a) * r, y = cy + sy + Math.sin(a) * r; if (i) g.lineTo(x, y); else g.moveTo(x, y); }
+      g.strokePath();
+    });
+  }
   else [R / 3, R * 2 / 3].forEach(rr => { g.lineStyle(1, CYAN, 0.28); for (let i = 0; i < 28; i++) { const a = i * Math.PI / 14; hudArc(g, cx, cy, rr, a, a + 0.1); } });
   g.lineStyle(1, CYAN, 0.14); g.lineBetween(cx - R, cy, cx + R, cy); g.lineBetween(cx, cy - R, cx, cy + R);
   for (let i = 0; i < 24; i++) {
@@ -515,7 +578,7 @@ function hudRadar(h, s, key, obj, now) {
   }
   hudPut(h, 'rt', cx, cy + R + 32, n ? n + ' HOSTILE  ' + Math.round(near * 0.1) + ' ' + unit : 'CLEAR',
     { size: HT.label, bold: hot, color: hot ? '#ff4d6d' : n ? '#ffb454' : '#58b57d', ox: 0.5, spacing: 1, alpha: hot ? 0.7 + 0.3 * Math.sin(now / 120) : 1 });
-  hudPut(h, 'rl', cx, cy + R + 16, far ? (far.name || 'SYSTEM').toUpperCase().slice(0, 14) + '  ' + hudFmt(far.far / 10) + ' km' : 'RADAR  ' + (key === 'Space' ? (range / 10) + ' km' : (range / 10) + ' m'), { size: HT.label, color: HUD_DIM, ox: 0.5, spacing: 1 });
+  hudPut(h, 'rl', cx, cy + R + 16, far ? (far.name || 'SYSTEM').toUpperCase().slice(0, 14) + '  ' + hudFmt(mapRange / 10) + ' km' : 'RADAR  ' + (key === 'Space' ? (range / 10) + ' km' : (range / 10) + ' m'), { size: HT.label, color: HUD_DIM, ox: 0.5, spacing: 1 });
 
   const pt = (wx, wy, keep) => { // world point -> radar point; off the radar it is clamped to the rim when keep, else null
     let dx = (wx - px) * psc, dy = (wy - py) * psc;
@@ -532,18 +595,24 @@ function hudRadar(h, s, key, obj, now) {
     g.fillStyle(color, k); hudDisc(g, p.x, p.y, r);
   };
 
-  if (far) { // the star (a hollow mark when the data has none: it is the middle of the system), then each body on its circle
-    if (far.star) { g.fillStyle(0xffe08a, 0.25); hudDisc(g, cx, cy, 7); g.fillStyle(0xffe08a, 1); hudDisc(g, cx, cy, 3.5); }
-    else { g.lineStyle(1.5, 0xffe08a, 0.8); hudRing(g, cx, cy, 3.5); }
+  // a marker on the rim for something off the plate: a small arrow pointing at it and its distance just inside the rim
+  const rimMark = (id, wx, wy, color, css) => {
+    const q = hudMapPoint(wx - ox, wy - oy, mapRange, R); if (!q.out) return q;
+    hudTri(g, cx + q.x, cy + q.y, q.a, 6, color, 0.95);
+    hudPut(h, id, cx + Math.cos(q.a) * (R - 19), cy + Math.sin(q.a) * (R - 19), hudMapDist(q.dist), { size: HT.tag, bold: true, color: css, ox: 0.5, stroke: true });
+    return q;
+  };
+  if (far) { // the sun where it is from you (always marked: on the plate, or on the rim with its distance), then the bodies that are on the plate
+    if (far.star) { const q = rimMark('rm0', far.c.x, far.c.y, 0xffe08a, '#ffe08a'); if (!q.out) { g.fillStyle(0xffe08a, 0.25); hudDisc(g, cx + q.x, cy + q.y, 7); g.fillStyle(0xffe08a, 1); hudDisc(g, cx + q.x, cy + q.y, 3.5); } }
     far.bodies.forEach(b => {
-      const p = pt(b.x, b.y, true);
+      const p = pt(b.x, b.y, false); if (!p) return; // off the plate: only the sun, the destination and the job get a rim marker
       if (b.type === 'station') hudDiamond(g, p.x, p.y, 4, CYAN);
       else if (b.type === 'gate') { g.lineStyle(1.5, AMBER, 1); g.strokeRect(p.x - 3, p.y - 3, 6, 6); }
       else if (b.type === 'planet') { g.fillStyle(AMBER, 1); hudDisc(g, p.x, p.y, 3); }
       else { g.fillStyle(0x8b95a1, b.type === 'belt' ? 0.9 : 0.7); hudDisc(g, p.x, p.y, b.type === 'belt' ? 2.2 : 1.8); }
     });
     const nav = s.cr && s.cr.target; // the nav target: a cyan ring (the mission's goal is the amber one below)
-    if (nav && isFinite(nav.x) && isFinite(nav.y)) { const p = pt(nav.x, nav.y, true); g.lineStyle(1.5, CYAN, 0.9); hudRing(g, p.x, p.y, 6.5); }
+    if (nav && isFinite(nav.x) && isFinite(nav.y)) { const q = rimMark('rm1', nav.x, nav.y, CYAN, '#9fe9ff'); if (!q.out) { g.lineStyle(1.5, CYAN, 0.9); hudRing(g, cx + q.x, cy + q.y, 6.5); } }
   } else if (key === 'Space') {
     if (!s.station.nowhere) mark(pt(s.station.x, s.station.y, true), CYAN, p => hudDiamond(g, p.x, p.y, 5, CYAN));
     if (!s.planet.nowhere) mark(pt(s.planet.x, s.planet.y, true), AMBER, p => { g.fillStyle(AMBER, 1); hudDisc(g, p.x, p.y, 5); });
@@ -555,7 +624,10 @@ function hudRadar(h, s, key, obj, now) {
     if (s.col && s.col.state !== 'dead' && s.col.s.active) dot(s.col.s.x, s.col.s.y, GREEN, 3);
   }
   (s._hb || []).forEach(b => dot(b[0], b[1], b[2], b[3]));
-  if (obj) { // ring the objective; off the radar it is the arrow on the rim
+  if (obj && far) { // the job: its amber ring on the plate, or an amber marker on the rim with its distance
+    const q = rimMark('rm2', obj.x, obj.y, AMBER, '#ffb454');
+    if (!q.out) { g.lineStyle(2, AMBER, 0.6 + 0.4 * Math.sin(now / 200)); hudRing(g, cx + q.x, cy + q.y, 8 + Math.sin(now / 200)); }
+  } else if (obj) { // ring the objective; off the radar it is the arrow on the rim
     const p = pt(obj.x, obj.y, true);
     g.lineStyle(2, AMBER, 0.6 + 0.4 * Math.sin(now / 200));
     if (p.out) hudTri(g, p.x, p.y, p.a, 7, AMBER, 0.9); else hudRing(g, p.x, p.y, 8 + Math.sin(now / 200));
@@ -570,12 +642,11 @@ function hudRadar(h, s, key, obj, now) {
       });
     }
   }
-  const at = far ? pt(me.x, me.y, true) : { x: cx, y: cy }; // you: the centre of the close view, your place in the system on the orrery
-  if (far) { g.fillStyle(HUD_BG, 0.9); hudDisc(g, at.x, at.y, 6.5); } // a dark disc under the arrow, so it reads on top of a body's dot
-  if (far) hudOrreryFoes(far, s.enemies.getChildren(), R).forEach(f => { // hostiles: red dots (a wanted one amber), over the dark disc so the ones beside you show
+  const at = { x: cx, y: cy }; // you are the centre of the plate, in space and on foot
+  if (far) hudOrreryFoes({ c: { x: ox, y: oy }, sc: psc }, s.enemies.getChildren().filter(e => e.active && Math.hypot(e.x - ox, e.y - oy) <= mapRange), R).forEach(f => { // hostiles on the plate: red dots (a wanted one amber)
     const c = f.wanted ? AMBER : RED; g.fillStyle(c, 0.25); hudDisc(g, cx + f.x, cy + f.y, 4.2); g.fillStyle(c, 1); hudDisc(g, cx + f.x, cy + f.y, 1.9);
   });
-  g.lineStyle(1, 0xffffff, 0.45); g.lineBetween(at.x, at.y, at.x + Math.cos(me.rotation) * R * (far ? 0.18 : 0.3), at.y + Math.sin(me.rotation) * R * (far ? 0.18 : 0.3)); // where you are pointing
+  g.lineStyle(1, 0xffffff, 0.45); g.lineBetween(at.x, at.y, at.x + Math.cos(me.rotation) * R * 0.3, at.y + Math.sin(me.rotation) * R * 0.3); // where you are pointing
   tri(g, at.x, at.y, me.rotation, 5, 0xffffff);
 }
 
