@@ -7,14 +7,35 @@
 //   space.js   calls autopilotSetup(this) in create(); autopilotFrame(this, time, dt, crs) right after cruiseFrame: 'auto' while it flies the
 //              ship locally (flight input is ignored then, like the nav list), 'cruise' while it waits for a cruise it engaged, '' otherwise;
 //              autopilotDrive(this, dt) after the thrust code sets the ship's heading and speed
-//   map.js     the Tab map's picker (W S choose, Enter) calls autopilotGo(space, body)
+// An ORDER takes it all the way in (card space-game-dock-by-command): autopilotGo(s, body, 'dock') on the system's station, or 'land' on the planet
+// you can land on. The legs are the same (clear the mass, cruise the long middle, the local approach); where the plain order stops and says
+// "press L", the order goes on to a last stage, 'final': the ship is in the dock or land zone and slow enough, so the autopilot presses the ship's
+// own L and the dock or land code in src/space.js does the rest. One quiet line says what it is doing (autopilotSay). Any flight key, P, a hit or
+// a hostile close by hands the stick back, as on every leg. The navigation panel gives the order (src/navpanel.js); P stays the plain "fly there".
 //   cruise.js  cruiseKnown(s) is the list of bodies; cruiseEngage/cruiseEnd fly the long middle and cr.endWhy says how a cruise ended
 const AUTO = {
   brake: 1.0, floor: 60, dropSpeed: 100, // limit = floor + brake x px left (so it keeps moving to the end); it stops under 100 px/s: the dock (150) and land (170) limits allow it
   turn: 0.004,                           // rad per ms, times the ship's turn stat
   hostile: 1100, grace: 250,             // px: a hostile this close stops it; ms after engaging before a held key counts as a cancel
-  cruiseLeg: 3500                        // px: a leg longer than this cruises in the middle (cruise itself wants 2100 or more)
+  cruiseLeg: 3500,                       // px: a leg longer than this cruises in the middle (cruise itself wants 2100 or more)
+  final: 2500                            // ms: how long a Dock or Land order waits in the zone for the dock to take; after that it says "press L" as the plain order does
 };
+
+// the order a body can take: 'dock' on the system's station, 'land' on the planet you can land on, '' on anything else (you can only reach it).
+// b: a body or a row { id, type }; station, planet: the system's own (sysBody), or null; canLand: the Space scene's flag
+function autopilotOrder(b, station, planet, canLand) {
+  if (!b) return '';
+  if (b.type === 'station' && station && b.id === station.id) return 'dock';
+  if (b.type === 'planet' && canLand && planet && b.id === planet.id) return 'land';
+  return '';
+}
+// the one quiet line while the autopilot flies. stage: 'clear', 'local' or 'final'; mass: the name of the mass it is clearing; km: what is left
+function autopilotSay(order, stage, name, mass, km) {
+  const N = String(name).toUpperCase(), head = order === 'dock' ? 'DOCKING AT  ' + N : order === 'land' ? 'LANDING ON  ' + N : 'AUTOPILOT  ' + N;
+  if (stage === 'clear') return order ? head + '   clearing ' + mass : 'CLEARING  ' + String(mass).toUpperCase();
+  if (stage === 'final') return head + (order === 'land' ? '   going down' : '   going in');
+  return head + '   ' + km + ' km';
+}
 
 // how far from the body's centre the ship comes to rest
 function autopilotStop(t) {
@@ -24,22 +45,25 @@ function autopilotStop(t) {
 }
 
 function autopilotSetup(s) {
-  const ap = s.ap = { on: false, stage: '', target: null, since: 0, speed: 0, hull: 0, sh: 0, readAt: 0 };
+  const ap = s.ap = { on: false, stage: '', order: '', target: null, since: 0, speed: 0, hull: 0, sh: 0, readAt: 0 };
   ap.k = s.input.keyboard.addKeys('P');
   ap.read = s.add.text(W / 2, 128, '', { fontFamily: 'monospace', fontSize: '20px', fontStyle: 'bold', color: '#ffd37a' }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setStroke('#02060d', 4).setVisible(false);
 }
 
-// fly to this body (a row of cruiseKnown, or a cr.target). Returns true when the autopilot took the ship.
-function autopilotGo(s, b) {
+// fly to this body (a row of cruiseKnown, or a cr.target). order: '' (stop outside it), 'dock' or 'land' (all the way in; only where
+// autopilotOrder allows it, else it is the plain order). Returns true when the autopilot took the ship.
+function autopilotGo(s, b, order) {
   const ap = s.ap, cr = s.cr; if (!ap || !cr || !b || s.dead || s.leaving || s.jmp || G.deep) return false;
   const t = { id: b.id, name: b.name, type: b.type, x: b.x, y: b.y, r: b.r || 0 };
-  if (Math.hypot(t.x - s.ship.x, t.y - s.ship.y) <= autopilotStop(t) + 60) { toast(s, t.name + ': you are there.', '#ffd37a'); sfx('empty'); return false; }
+  order = order && order === autopilotOrder(t, sysBody('station'), sysBody('planet'), s.canLand) ? order : '';
+  ap.order = order;
+  if (!order && Math.hypot(t.x - s.ship.x, t.y - s.ship.y) <= autopilotStop(t) + 60) { toast(s, t.name + ': you are there.', '#ffd37a'); sfx('empty'); return false; }
   if (cr.active) cruiseEnd(s, 'quiet');
   cr.target = t; ap.target = t; // the HUD's objective arrow and the brackets follow cr.target (cruise clears it near the body; ap.target stays)
   const mass = autopilotMass(s);
   if (mass && Math.hypot(t.x - s.ship.x, t.y - s.ship.y) - autopilotStop(t) > AUTO.cruiseLeg) return autopilotClear(s, t, 'auto', mass); // a long leg from inside a mass limit: out the short way first
   ap.on = true; ap.stage = 'local'; ap.since = s.time.now; ap.speed = s.ship.body.speed; ap.hull = G.hull; ap.sh = s.sh ? s.sh.pts : 0;
-  toast(s, 'Autopilot to ' + t.name + '. Any key takes the stick back.', '#ffd37a'); sfx('chime');
+  toast(s, (order === 'dock' ? 'Docking at ' : order === 'land' ? 'Landing on ' : 'Autopilot to ') + t.name + '. Any key takes the stick back.', '#ffd37a'); sfx('chime');
   return true;
 }
 
@@ -71,13 +95,14 @@ function autopilotClear(s, t, then, mass) {
   if (cr.active) cruiseEnd(s, 'quiet');
   ap.target = t; ap.then = then; // cr.target is t already: autopilotGo and cruiseEngage, the two callers, have it set
   ap.on = true; ap.stage = 'clear'; ap.since = s.time.now; ap.speed = s.ship.body.speed; ap.hull = G.hull; ap.sh = s.sh ? s.sh.pts : 0;
-  toast(s, 'Clearing ' + mass.name + ', then ' + (then === 'cruise' ? 'cruising to ' : 'on to ') + t.name + '. Any key takes the stick back.', '#ffd37a'); sfx('chime');
+  toast(s, 'Clearing ' + mass.name + ', then ' + (then === 'cruise' ? 'cruising to ' : ap.order === 'dock' ? 'docking at ' : ap.order === 'land' ? 'landing on ' : 'on to ') + t.name + '. Any key takes the stick back.', '#ffd37a'); sfx('chime');
   return true;
 }
 
 function autopilotEnd(s, why) {
   const ap = s.ap, ship = s.ship, t = ap.target;
-  ap.on = false; ap.stage = ''; ap.read.setVisible(false);
+  if (ap.stage === 'final' && s.k && s.k.L) s.k.L._justDown = false; // an L the dock code did not take is not left lying about
+  ap.on = false; ap.stage = ''; ap.order = ''; ap.read.setVisible(false);
   if (!s.cruising) {
     const sp = Math.min(ship.body.speed, shipStat('vmax'));
     ship.body.setVelocity(Math.cos(ship.rotation) * sp, Math.sin(ship.rotation) * sp).setDrag(0.55).setAcceleration(0, 0);
@@ -140,6 +165,11 @@ function autopilotFrame(s, time, dt, crs) {
     }
     ap.stage = 'local'; ap.since = time; // P was pressed: the leg to the body, as ever
   }
+  if (ap.stage === 'final') { // a Dock or Land order, in the zone and slow: press the ship's own L until the dock or land code takes it (s.leaving ends us, quietly)
+    if (time > ap.since + AUTO.final) { autopilotEnd(s, 'arrived'); return ''; } // it did not take (a zone that moved, a scene with no L): say "press L" as the plain order does
+    if (s.k && s.k.L) s.k.L._justDown = true;
+    return 'auto';
+  }
   if (dist - autopilotStop(t) > AUTO.cruiseLeg && autopilotCruiseOk(s)) { // a long leg: cruise the middle
     autopilotCruise(s, t);
     if (s.cruising) { ap.stage = 'cruise'; ap.read.setVisible(false); return 'cruise'; }
@@ -149,8 +179,14 @@ function autopilotFrame(s, time, dt, crs) {
 
 // the local leg: turn onto the body, run up to the ship's top speed, brake by the distance left, stop just outside it
 function autopilotDrive(s, dt) {
-  const ap = s.ap; if (!ap || !ap.on || (ap.stage !== 'local' && ap.stage !== 'clear') || s.cruising) return;
+  const ap = s.ap; if (!ap || !ap.on || (ap.stage !== 'local' && ap.stage !== 'clear' && ap.stage !== 'final') || s.cruising) return;
   const ship = s.ship, t = ap.target, dts = dt / 1000, dx = t.x - ship.x, dy = t.y - ship.y, dist = Math.hypot(dx, dy);
+  if (ap.stage === 'final') { // going in: keep the nose on it and let the speed run down; the dock or land code takes the ship
+    ap.speed = Math.max(0, ap.speed - shipStat('accel') * dts);
+    ship.body.setAcceleration(0, 0).setDrag(0).setVelocity(Math.cos(ship.rotation) * ap.speed, Math.sin(ship.rotation) * ap.speed);
+    ap.read.setVisible(true).setText(autopilotSay(ap.order, 'final', t.name));
+    return;
+  }
   const mass = ap.stage === 'clear' ? autopilotMass(s) : null; // flying clear: out of the mass at full speed, no stop to brake for
   const left = mass ? 1e6 : Math.max(0, dist - autopilotStop(t));
   const want = mass ? autopilotClearAngle(ship.x, ship.y, mass.x, mass.y, t.x, t.y) : Math.atan2(dy, dx);
@@ -163,7 +199,10 @@ function autopilotDrive(s, dt) {
   ship.body.setAcceleration(0, 0).setDrag(0).setMaxSpeed(vmax + 10);
   ship.body.setVelocity(Math.cos(ship.rotation) * ap.speed, Math.sin(ship.rotation) * ap.speed);
   if (aligned && ap.speed < limit && s.trail) s.trail.emitParticleAt(ship.x - Math.cos(ship.rotation) * 20, ship.y - Math.sin(ship.rotation) * 20, 2);
-  if (left <= 30 && ap.speed <= AUTO.dropSpeed) return autopilotEnd(s, 'arrived');
+  if (left <= 30 && ap.speed <= AUTO.dropSpeed) {
+    if (!ap.order) return autopilotEnd(s, 'arrived');
+    ap.stage = 'final'; ap.since = s.time.now; return; // the order goes on: autopilotFrame presses L
+  }
   ap.read.setVisible(true);
-  if (s.time.now > ap.readAt) { ap.readAt = s.time.now + 200; ap.read.setText(mass ? 'CLEARING  ' + mass.name.toUpperCase() : 'AUTOPILOT  ' + t.name.toUpperCase() + '   ' + hudFmt(dist / 10) + ' km'); }
+  if (s.time.now > ap.readAt) { ap.readAt = s.time.now + 200; ap.read.setText(autopilotSay(ap.order, mass ? 'clear' : 'local', t.name, mass ? mass.name : '', hudFmt(dist / 10))); }
 }
