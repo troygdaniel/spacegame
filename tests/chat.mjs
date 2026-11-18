@@ -150,7 +150,7 @@ const call = async (t, req = REQ) => {
     check('Settings opens at the keys, the title waits below', (await t.ev("game.scene.isPaused('Title')")) === true && (await t.ev(`${SE}.section`)) === 'keys');
     check('there are real boxes for the three keys and the model', (await t.ev("document.querySelectorAll('input[type=password]').length === 3 && document.querySelectorAll('input').length === 4")) === true);
     const text = await t.ev(`(() => { const out = []; const walk = o => { if (o.type === 'Text') out.push(o.text); if (o.list) o.list.forEach(walk); }; ${SE}.children.list.forEach(walk); return out.join(' | '); })()`);
-    check('the cost warning and the privacy line are on screen', /MAY COST YOU MONEY/.test(text) && /do not type anything private/.test(text));
+    check('the cost warning and the privacy line are on screen', /MAY COST YOU MONEY/.test(text) && /keep it private/.test(text)); // the words of src/settings.js Settings > Keys (47b608c)
     check('the rail says no key is saved', /0 of 3/.test(text));
     await t.ev(`(() => { const s = ${SE}; s.inputs.openai.value = 'short'; s.saveKey('openai'); return 1; })()`);
     check('a too-short key is refused', (await t.ev('CHAT.key')) === '');
@@ -240,9 +240,10 @@ const call = async (t, req = REQ) => {
     check('the reply types out in the box', true);
     await t.shot('chat-bar');
 
-    // a long line is clamped and sent as the next turn
+    // a long line is clamped and sent as the next turn. lastSend = -1e6 and not 0: the 1.2 s gap counts from the page's own clock, which starts at 0 on load, so 0 means
+    // "sent just now" for the first 1.2 s and a fast run (Chrome on the GPU) sent its first line inside that and was ignored (night smoke 18 Nov: memory, voice)
     await t.ev(`(() => { const el = document.querySelector('input'); el.value = 'x'.repeat(300); return 1; })()`);
-    await t.ev(`(${ST}.chat.lastSend = 0, 1)`);
+    await t.ev(`(${ST}.chat.lastSend = -1e6, 1)`);
     await elKey('Enter');
     await t.waitFor('__calls.length === 2', 10000, 'second call');
     const b2 = JSON.parse(await t.ev('__calls[1].body'));
@@ -252,7 +253,7 @@ const call = async (t, req = REQ) => {
     await t.waitFor(`${ST}.chat.busy === false`, 10000, 'reply two');
     // two Enters inside the gap send once
     await t.ev(`(() => { const el = document.querySelector('input'); el.value = 'one'; return 1; })()`);
-    await t.ev(`(${ST}.chat.lastSend = 0, 1)`);
+    await t.ev(`(${ST}.chat.lastSend = -1e6, 1)`);
     await elKey('Enter');
     await t.ev(`(() => { const el = document.querySelector('input'); el.value = 'two'; return 1; })()`);
     await elKey('Enter');
@@ -262,7 +263,7 @@ const call = async (t, req = REQ) => {
     // a 429 is said in-world and does not end the chat
     await t.ev('(__status = 429, 1)');
     await t.ev(`(() => { const el = document.querySelector('input'); el.value = 'still there?'; return 1; })()`);
-    await t.ev(`(${ST}.chat.lastSend = 0, 1)`);
+    await t.ev(`(${ST}.chat.lastSend = -1e6, 1)`);
     await elKey('Enter');
     await t.waitFor(`${ST}.chatText.text === 'Give me a moment, pilot.'`, 10000, 'in-world wait line');
     check('429: JUNO asks for a moment and the chat stays open', (await t.ev(`${ST}.chat !== null`)) === true);
@@ -299,7 +300,7 @@ const call = async (t, req = REQ) => {
   const say = async (line) => { // one line from the player, wait for the reply
     const before = await t.ev('__calls.length');
     await t.ev(`(() => { const el = document.querySelector('input'); el.value = ${JSON.stringify(line)}; return 1; })()`);
-    await t.ev(`(${ST}.chat.lastSend = 0, 1)`);
+    await t.ev(`(${ST}.chat.lastSend = -1e6, 1)`);
     await elKey('Enter');
     await t.waitFor(`__calls.length === ${before + 1} && ${ST}.chat && ${ST}.chat.busy === false`, 15000, 'reply to ' + line.slice(0, 20));
   };
@@ -398,7 +399,7 @@ const call = async (t, req = REQ) => {
   const stand = async (x, y) => { await t.ev(`(() => { const s = ${ST}; s.player.setPosition(${x}, ${y}); s.player.setVelocity(0, 0); return 1; })()`); await sleep(250); };
   const send = async line => {
     await t.ev(`(() => { const el = document.querySelector('input'); el.value = ${JSON.stringify(line)}; return 1; })()`);
-    await t.ev(`(${ST}.chat.lastSend = 0, window.__t0 = performance.now(), 1)`);
+    await t.ev(`(${ST}.chat.lastSend = -1e6, window.__t0 = performance.now(), 1)`);
     await elKey('Enter');
   };
   try {
