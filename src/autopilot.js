@@ -47,7 +47,7 @@ function autopilotStop(t) {
 function autopilotSetup(s) {
   const ap = s.ap = { on: false, stage: '', order: '', target: null, since: 0, speed: 0, hull: 0, sh: 0, readAt: 0 };
   ap.k = s.input.keyboard.addKeys('P');
-  ap.read = s.add.text(W / 2, 128, '', { fontFamily: 'monospace', fontSize: '20px', fontStyle: 'bold', color: '#ffd37a' }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setStroke('#02060d', 4).setVisible(false);
+  ap.read = s.add.text(W / 2, TOAST.readY, '', { fontFamily: 'monospace', fontSize: '20px', fontStyle: 'bold', color: '#ffd37a' }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setStroke('#02060d', 4).setVisible(false);
 }
 
 // fly to this body (a row of cruiseKnown, or a cr.target). order: '' (stop outside it), 'dock' or 'land' (all the way in; only where

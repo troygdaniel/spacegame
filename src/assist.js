@@ -35,7 +35,7 @@ const ASSIST = {
   dead: 20, slow: 15,                // px either side of the range that count as there; px/s that counts as stopped
   faceLean: 0.3,                     // how far the nose line leans toward the way the ship wants to go (a share of that speed)
   faceOn: 35, faceOff: 20,           // px/s of needed change that turns the nose onto it, and that lets it go again
-  readY: 156, readGap: 18,           // px: the readout's own line, and how far under a toast it sits when one is in the way
+  readY: 192, readGap: 18,           // px: the readout's own line, under the toast band and the autopilot's line (TOAST in src/common.js); and how far under a toast it would sit if one reached it
   keepRange: 500, shipStop: 150,     // px: Keep at range when none is given; how near Approach stops to a ship
   keys: ['W', 'A', 'S', 'D', 'UP', 'DOWN', 'LEFT', 'RIGHT', 'SHIFT', 'Q', 'E'] // a flight key: the player wants the stick
 };

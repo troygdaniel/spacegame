@@ -29,16 +29,15 @@ const active = (t, scene) => t.waitFor(`!!(window.game && game.scene.isActive('$
     await t.ev(`(() => { const s = ${SF}; s.col.state = 'dead'; s.player.setPosition(s.pad.x + 50, s.pad.y); })()`); await sleep(400);
     check('surface: prompt shown on the pad', (await t.ev(`${SF}.prompt.box.visible`)) === true && (await t.ev(`${SF}.prompt.text`)) !== '');
 
-    console.log('bug 3: toasts stack instead of overlapping');
+    console.log('bug 3: toasts never overlap: one box in its band (card space-game-toasts-cover-readout; they used to stack three deep)');
     await sleep(3500); // let the landing toast fade
     await t.ev("(() => { toast(game.scene.getScene('Surface'), 'one'); toast(game.scene.getScene('Surface'), 'two'); toast(game.scene.getScene('Surface'), 'three'); })()");
-    const rec = await t.ev(`${SF}.toasts.map(o => ({ y: o.y, h: o.h })).sort((a, b) => a.y - b.y)`);
-    const apart = rec.length === 3 && [1, 2].every(i => rec[i].y - rec[i - 1].y >= (rec[i].h + rec[i - 1].h) / 2 + 5);
-    check('three toasts stack with a gap, none on top of another', apart, JSON.stringify(rec));
+    const rec = await t.ev(`${SF}.toasts.filter(o => o.t.active).map(o => ({ y: o.y, h: o.h, text: o.t.text, top: o.bg.getBounds().y, bottom: o.bg.getBounds().bottom }))`);
+    check('three toasts at once are one box inside the band, the last two messages in it', rec.length === 1 && rec[0].text === 'two\nthree' && rec[0].top >= (await t.ev('TOAST.top')) - 1 && rec[0].bottom <= (await t.ev('TOAST.bottom')) + 1, JSON.stringify(rec));
     await t.shot('fix-3-toasts');
     await t.ev("toast(game.scene.getScene('Surface'), 'four')");
-    const after = await t.ev(`${SF}.toasts.map(o => o.t.text)`);
-    check('a fourth replaces the oldest, never more than three', after.length === 3 && !after.includes('one') && after.includes('four'), JSON.stringify(after));
+    const after = await t.ev(`${SF}.toasts.filter(o => o.t.active).map(o => o.t.text)`);
+    check('a fourth takes the box: never more than one', after.length === 1 && !after[0].includes('one') && after[0].includes('four'), JSON.stringify(after));
     check('no console errors (surface)', t.errors.length === 0, t.errors.join(' | '));
   } catch (e) { console.error('  FAIL surface checks: ' + e.message); failed++; } finally { await t.close(); }
 }
