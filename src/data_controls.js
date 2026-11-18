@@ -8,24 +8,27 @@
 //           bay: 1    also in the Ship bay's list (twelve fit: eight of flight, then four of everywhere); bt is the short text it uses there
 //           help: 0   left out of the H page (it is long enough)
 // When a key changes in the game, change its row here and nothing else. tests/settings.mjs checks the table's shape and that the three views agree.
+// A line of the H page is the caps, three spaces and the text: keep it to 43 characters and a scene to 20 lines, which is what the page holds
+// (20 px type, 520 px wide, 580 px high). tests/controlshelp.mjs checks that, that every key named here is bound, and that every key the
+// Space scene binds is named here.
 const CONTROLS = [
   { id: 'station', title: 'STATION', scene: 'Station', rows: [
     { k: ['W', 'A', 'S', 'D'], t: 'Walk (the arrow keys work too)' },
-    { k: ['1-6'], t: 'Station menu: pick a row, you go there and it opens' },
-    { k: ['W', 'S', 'Enter'], t: 'Station menu: choose a row, open it (or click it)' },
-    { k: ['N'], t: 'Menu keys off, so W A S D walk; N again for the menu' },
+    { k: ['1-6'], t: 'Station menu: go to a row and open it' },
+    { k: ['W', 'S', 'Enter'], t: 'Station menu: choose and open' },
+    { k: ['N'], t: 'Menu keys off to walk; N again for menu' },
     { k: ['E'], t: 'Use the terminal, repair bay or ship' },
     { k: ['1-6'], t: 'Buy a part, with the shop open' },
-    { k: ['T'], t: 'Chat with someone in the bar (needs a chat key)' },
+    { k: ['T'], t: 'Chat in the bar (needs a chat key)' },
     { k: ['J'], t: 'Journal: who you have met' },
-    { k: ['G'], t: 'Galaxy map (look only here; you jump from your ship)' },
+    { k: ['G'], t: 'Galaxy map (look only; jump in flight)' },
     { k: ['Esc'], t: 'Close a terminal, or pause' }
   ] },
   { id: 'ship', title: 'SHIP BAY', scene: 'Ship', rows: [
-    { k: ['Enter', 'Space'], t: 'The amber button: launch or board' },
+    { k: ['Enter', 'Space'], t: 'Launch or board' },
     { k: ['Enter'], t: 'Press twice to buy a ship' },
     { k: ['F', 'Y', 'C'], t: 'Fleet, yard or controls tab' },
-    { k: ['A', 'D'], t: 'Choose a ship (the arrow keys work too)' },
+    { k: ['A', 'D'], t: 'Choose a ship (arrow keys too)' },
     { k: ['R'], t: 'Rename the ship' },
     { k: ['S'], t: 'Sell the ship (press twice)' },
     { k: ['Esc'], t: 'Back to the station' }
@@ -36,23 +39,28 @@ const CONTROLS = [
     { k: ['S'], t: 'Brake', bay: 1 },
     { k: ['Shift'], t: 'Boost with thrust', bay: 1 },
     { k: ['Q', 'E'], t: 'Dash left or right', bay: 1 },
-    { k: ['Space'], t: 'Fire (or click)', bay: 1 },
-    { k: ['L'], t: 'Dock or land (fly slowly, close in)', bay: 1, bt: 'Dock or land' },
+    { k: ['Space'], t: 'Fire (so does a click, assist off)', bay: 1, bt: 'Fire (or click)' },
+    { k: ['L'], t: 'Dock or land (slow, close in)', bay: 1, bt: 'Dock or land' },
     { k: ['T'], t: 'Mission panel', bay: 1 },
-    { k: ['R'], t: 'Autotarget on or off (needs the part from the shop)' },
-    { k: ['N'], t: 'Places: the navigation panel (W S choose, Enter sets the destination, Enter again goes there)' },
-    { k: ['B'], t: 'Ships: the Overview list (W S choose, Enter targets it); a click in space picks either' },
-    { k: ['C'], t: 'Cruise to the target (A D nudge, S cancels)' },
-    { k: ['P'], t: 'Autopilot to the target: it stops at the dock (any key cancels)' },
-    { k: ['Tab'], t: 'Sector map: it shows your destination (Z zooms)' },
-    { k: ['G'], t: 'Galaxy map: pick a system, Enter charges the jump (S or Esc cancels)' },
-    { k: ['Z'], t: 'Flight assist on or off: the ship flies itself about the target' },
-    { k: ['1-4'], t: 'Assist orders: approach, keep at range, orbit, match speed' }
+    { k: ['N', 'X'], t: 'Places. Enter: set, then go. X: clear' },
+    { k: ['B'], t: 'Overview of ships: Enter targets one' },
+    { k: ['Click'], t: 'Assist on: fly there, or target it' },
+    { k: ['C'], t: 'Cruise there (A D nudge, S cancels)' },
+    { k: ['P'], t: 'Autopilot there (any key cancels)' },
+    { k: ['R'], t: 'Autotarget on or off (needs the part)' },
+    { k: ['V'], t: 'Gun lock: the guns fire at your target' },
+    { k: ['Z'], t: 'Flight assist on or off' },
+    { k: ['1-4'], t: 'Assist orders: go, keep, orbit, match' },
+    { k: ['F'], t: 'Call the fuel ranger (tank near empty)' },
+    { k: ['G'], t: 'Galaxy map: Enter jumps, Esc cancels' },
+    { k: ['Tab'], t: 'Sector map (Z zooms)' },
+    { k: ['Wheel'], t: 'Zoom out and in', help: 0 }
   ] },
   { id: 'surface', title: 'SURFACE', scene: 'Surface', rows: [
     { k: ['W', 'A', 'S', 'D'], t: 'Walk (the arrow keys work too)' },
     { k: ['Mouse'], t: 'Aim, and click to fire' },
-    { k: ['E'], t: 'Talk to the colonist, board at the pad' }
+    { k: ['E'], t: 'Talk to the colonist, board at the pad' },
+    { k: ['C'], t: 'Show the controls panel again' }
   ] },
   { id: 'title', title: 'TITLE', scene: null, rows: [
     { k: ['Any key'], t: 'Start the game' },

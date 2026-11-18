@@ -76,8 +76,8 @@ console.log('what was taken out stays out');
   check('the Overview lists no places: it does not read the bodies of the system', !/cruiseKnown/.test(code.overview));
   check('a place handed to the Overview is refused', J(`overviewPick({ cr: { target: null } }, { ref: { id: 'st', name: 'Halcyon Station', x: 0, y: 0 } })`) === '');
   check('V does not walk from one raider to the next: the rule takes no current lock', J('gunlockNext.length') === 3);
-  check('one key each: N for places, B for ships', J(`CONTROLS.find(g => g.id === 'flight').rows.filter(r => /^Places: the navigation panel/.test(r.t) && r.k.join() === 'N').length`) === 1 && J(`CONTROLS.find(g => g.id === 'flight').rows.filter(r => /^Ships: the Overview list/.test(r.t) && r.k.join() === OVERVIEW.key).length`) === 1);
-  check('the help page says it too, and the Tab line picks nothing', J(`HELP.Space.some(l => /^N   places: the navigation panel/.test(l)) && HELP.Space.some(l => /^B   ships: the Overview list/.test(l)) && HELP.Space.some(l => /^Tab   sector map/.test(l) && !/choose|Enter/.test(l))`));
+  check('one key each: N for places, B for ships', J(`CONTROLS.find(g => g.id === 'flight').rows.filter(r => /^Places/.test(r.t) && r.k[0] === 'N').length`) === 1 && J(`CONTROLS.find(g => g.id === 'flight').rows.filter(r => /^Overview of ships/.test(r.t) && r.k.join() === OVERVIEW.key).length`) === 1);
+  check('the help page says it too, and the Tab line picks nothing', J(`HELP.Space.some(l => /^N X   places/.test(l)) && HELP.Space.some(l => /^B   overview of ships/.test(l)) && HELP.Space.some(l => /^Tab   sector map/.test(l) && !/choose|Enter/.test(l))`));
 }
 
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));

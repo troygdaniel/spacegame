@@ -16,7 +16,7 @@ const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
 const SCENE_TIPS = {
   Station: 'Walk up to a terminal, the bar or the hangar shop and press E. Board your ship in the hangar to launch.',
-  Space: 'The amber arrow points at your objective and the radar is top right. Slow down near the station or the planet, then press L.',
+  Space: 'N picks a place: Enter sets it, Enter again goes there. B lists the ships; Z and 1 to 4 fly yours about the one you pick. Near a station or a planet, slow down and press L.',
   Ship: 'Look your ship over, then press Enter to launch. Esc goes back to the station to take a mission or repair first.',
   Surface: 'Aim with the mouse and click to fire. Walk back to the landing pad and press E to lift off.'
 };

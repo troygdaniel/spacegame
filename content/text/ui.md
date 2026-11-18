@@ -10,19 +10,19 @@ To translate, change the text column here, or copy this file to a name after ui 
 | key | text |
 |---|---|
 | help.station.1 | W A S D   walk (the arrow keys work too) |
-| help.station.2 | 1-6   station menu: pick a row, you go there and it opens |
-| help.station.3 | W S Enter   station menu: choose a row, open it (or click it) |
-| help.station.4 | N   menu keys off, so W A S D walk; N again for the menu |
+| help.station.2 | 1-6   station menu: go to a row and open it |
+| help.station.3 | W S Enter   station menu: choose and open |
+| help.station.4 | N   menu keys off to walk; N again for menu |
 | help.station.5 | E   use the terminal, repair bay or ship |
 | help.station.6 | 1-6   buy a part, with the shop open |
-| help.station.7 | T   chat with someone in the bar (needs a chat key) |
+| help.station.7 | T   chat in the bar (needs a chat key) |
 | help.station.8 | J   journal: who you have met |
-| help.station.9 | G   galaxy map (look only here; you jump from your ship) |
+| help.station.9 | G   galaxy map (look only; jump in flight) |
 | help.station.10 | Esc   close a terminal, or pause |
-| help.ship.1 | Enter Space   the amber button: launch or board |
+| help.ship.1 | Enter Space   launch or board |
 | help.ship.2 | Enter   press twice to buy a ship |
 | help.ship.3 | F Y C   fleet, yard or controls tab |
-| help.ship.4 | A D   choose a ship (the arrow keys work too) |
+| help.ship.4 | A D   choose a ship (arrow keys too) |
 | help.ship.5 | R   rename the ship |
 | help.ship.6 | S   sell the ship (press twice) |
 | help.ship.7 | Esc   back to the station |
@@ -31,23 +31,27 @@ To translate, change the text column here, or copy this file to a name after ui 
 | help.space.3 | S   brake |
 | help.space.4 | Shift   boost with thrust |
 | help.space.5 | Q E   dash left or right |
-| help.space.6 | Space   fire (or click) |
-| help.space.7 | L   dock or land (fly slowly, close in) |
+| help.space.6 | Space   fire (so does a click, assist off) |
+| help.space.7 | L   dock or land (slow, close in) |
 | help.space.8 | T   mission panel |
-| help.space.9 | R   autotarget on or off (needs the part from the shop) |
-| help.space.10 | N   places: the navigation panel (W S choose, Enter sets the destination, Enter again goes there) |
-| help.space.11 | B   ships: the Overview list (W S choose, Enter targets it); a click in space picks either |
-| help.space.12 | C   cruise to the target (A D nudge, S cancels) |
-| help.space.13 | P   autopilot to the target: it stops at the dock (any key cancels) |
-| help.space.14 | Tab   sector map: it shows your destination (Z zooms) |
-| help.space.15 | G   galaxy map: pick a system, Enter charges the jump (S or Esc cancels) |
-| help.space.16 | Z   flight assist on or off: the ship flies itself about the target |
-| help.space.17 | 1-4   assist orders: approach, keep at range, orbit, match speed |
+| help.space.9 | N X   places. Enter: set, then go. X: clear |
+| help.space.10 | B   overview of ships: Enter targets one |
+| help.space.11 | Click   assist on: fly there, or target it |
+| help.space.12 | C   cruise there (A D nudge, S cancels) |
+| help.space.13 | P   autopilot there (any key cancels) |
+| help.space.14 | R   autotarget on or off (needs the part) |
+| help.space.15 | V   gun lock: the guns fire at your target |
+| help.space.16 | Z   flight assist on or off |
+| help.space.17 | 1-4   assist orders: go, keep, orbit, match |
+| help.space.18 | F   call the fuel ranger (tank near empty) |
+| help.space.19 | G   galaxy map: Enter jumps, Esc cancels |
+| help.space.20 | Tab   sector map (Z zooms) |
 | help.surface.1 | W A S D   walk (the arrow keys work too) |
 | help.surface.2 | Mouse   aim, and click to fire |
 | help.surface.3 | E   talk to the colonist, board at the pad |
+| help.surface.4 | C   show the controls panel again |
 | tips.station | Pick from the station menu, bottom right: a number, or W S and Enter. Your ship is the last row: board it to launch. |
-| tips.space | The amber arrow points at your objective and the radar is top right. Slow down near the station or the planet, then press L. |
+| tips.space | N picks a place: Enter sets it, Enter again goes there. B lists the ships; Z and 1 to 4 fly yours about the one you pick. Near a station or a planet, slow down and press L. |
 | tips.ship | Look your ship over, then press Enter to launch. Esc goes back to the station to take a mission or repair first. |
 | tips.surface | Aim with the mouse and click to fire. Walk back to the landing pad and press E to lift off. |
 | toast.docked | Docked. |

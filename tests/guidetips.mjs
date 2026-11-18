@@ -72,7 +72,7 @@ check('colonist aboard, far out: follow the arrow home', J(`guideHint(__space(${
 check('colonist aboard, at the station: slow down and dock', J(`guideHint(__space(sysBody('station').x + 100, sysBody('station').y))`) === 'Hold S to slow down, then press L to dock.');
 check('a dead ship has no tip', J(`(() => { const s = __space(${far}); s.dead = true; return guideHint(s); })()`) === '');
 g.run(`__call(null, 'none')`);
-check('the station and the surface tips are unchanged', J(`guideHint({ scene: { key: 'Station' } })`) === 'Walk left to the MISSIONS terminal and press E.' && J(`guideHint({ scene: { key: 'Surface' }, col: { state: 'waiting' } })`).startsWith('Walk east to the crashed pod'));
+check('the station tip names the station menu (it has the keys on arrival) and the surface tip is unchanged', J(`guideHint({ scene: { key: 'Station' } })`) === 'Pick Missions in the station menu, bottom right: its number, or W S and Enter.' && J(`guideHint({ scene: { key: 'Surface' }, col: { state: 'waiting' } })`).startsWith('Walk east to the crashed pod'));
 
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `GUIDE TIPS FAIL (${failed} of ${n})` : `GUIDE TIPS PASS (${n} checks)`);
