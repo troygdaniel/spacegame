@@ -351,7 +351,7 @@ Under `##` headings (the text before the first heading is the description, up to
 | `## Progress rescued` | text, up to 400 characters |
 | `## Steps` | a list, one `- item` a line, each up to 80 characters |
 | `## Failure` | text, up to 240 characters |
-| `## Pickets` | a table: `x`* (whole number from 0 to 200000); `y`* (whole number from 0 to 200000) |
+| `## Pickets` | a table: `x`* (whole number from 0 to 1000000); `y`* (whole number from 0 to 1000000) |
 
 #### `npc`  (folder `content/npcs/`)
 
@@ -517,14 +517,14 @@ No placeholders.
 | `name`* | text, up to 40 characters | its name |
 | `kind`* | one of: `home`, `outpost`, `trade`, `mining`, `volcanic`, `wild`, `graveyard`, `nest` | what kind of place |
 | `ly` | list in square brackets, exactly 2: numbers from -1000 to 1000 | galaxy map position [x, y], light years |
-| `size` | whole number from 4000 to 200000 | world size, px |
+| `size` | whole number from 4000 to 1000000 | world size, px |
 | `danger` | whole number from 0 to 5 | 0 to 5: how many pirates |
 | `traffic` | whole number from 0 to 3 | 0 to 3: how busy |
 | `pay` | number from 0.1 to 5 |  |
 | `seed` | whole number from 0 to 2147483647 | the random seed |
 | `starType` | one of: `O`, `B`, `A`, `F`, `G`, `K`, `M` | the star: O, B, A, F, G, K or M (the sun you can fly to, and the tint of the sky) |
-| `starX` | whole number from 0 to 200000 | where the star is, px |
-| `starY` | whole number from 0 to 200000 | where the star is, px |
+| `starX` | whole number from 0 to 1000000 | where the star is, px |
+| `starY` | whole number from 0 to 1000000 | where the star is, px |
 | `pirateMax` | whole number from 1 to 40 | its own pirate table: at most this many at once |
 | `pirateEvery` | whole number from 1000 to 600000 | its own pirate table: one new pirate every this many ms |
 
@@ -532,7 +532,7 @@ Under `##` headings (the text before the first heading is the description, up to
 
 | Heading | Holds |
 |---|---|
-| `## Bodies` | a table: `id`* (an id: a-z, 0-9, dashes); `type`* (one of: `station`, `planet`, `belt`, `poi`, `scenery`, `gate`); `name` (text, up to 40 characters); `x` (whole number from 0 to 200000); `y` (whole number from 0 to 200000); `orbit` (number from 0 to 200000); `angle` (number from -360 to 360); `art` (one of: `station`, `outpost`, `planet`, `hub`, `foundry`, `nest`, `derelict`); `r` (whole number from 10 to 5000); `rocks` (whole number from 0 to 200); `landable` (yes or no); `kind` (one of: `rock`, `ice`, `gas`, `lava`, `ringed`, `wreck`, `beacon`); `seed` (whole number from 0 to 2147483647); `look` (one of: `hub`, `foundry`, `nest`, `derelict`); `labelDy` (whole number from -3000 to 3000); `credits` (whole number from 0 to 100000); `hull` (whole number from 0 to 100); `guard` (whole number from 0 to 6); `note` (text, up to 160 characters) |
+| `## Bodies` | a table: `id`* (an id: a-z, 0-9, dashes); `type`* (one of: `station`, `planet`, `belt`, `poi`, `scenery`, `gate`); `name` (text, up to 40 characters); `x` (whole number from 0 to 1000000); `y` (whole number from 0 to 1000000); `orbit` (number from 0 to 1000000); `angle` (number from -360 to 360); `art` (one of: `station`, `outpost`, `planet`, `hub`, `foundry`, `nest`, `derelict`); `r` (whole number from 10 to 5000); `rocks` (whole number from 0 to 200); `landable` (yes or no); `kind` (one of: `rock`, `ice`, `gas`, `lava`, `ringed`, `wreck`, `beacon`); `seed` (whole number from 0 to 2147483647); `look` (one of: `hub`, `foundry`, `nest`, `derelict`); `labelDy` (whole number from -3000 to 3000); `credits` (whole number from 0 to 100000); `hull` (whole number from 0 to 100); `guard` (whole number from 0 to 6); `note` (text, up to 160 characters) |
 | `## Pirates` | a table: `kind`* (one of: `raider`, `drone`, `gunship`); `weight`* (number from 0 to 1) |
 
 #### `voice`  (folder `content/voice/`)
