@@ -226,7 +226,7 @@ class Galaxy extends Phaser.Scene {
   // Enter: only when card u-b4 handed us an onJump and the ship can make this jump
   go() {
     if (!this.onJump || this.sel === this.here.id) return beep(180, 0.08, 'square', 0.03);
-    const pl = this.plan, next = pl && pl.ok && pl.next ? pl.next : this.sel; // a plotted chain: Enter jumps the next hop of it, not the far star
+    const pl = this.plan = galaxyPlan(this.here.id, this.sel, this.rec), next = pl.ok && pl.next ? pl.next : this.sel; // a plotted chain: Enter jumps the next hop of it, not the far star. The plan of the star picked NOW: the one the card drew last is stale when the pick was set without refresh()
     const j = galaxyJump(this.here, galaxyFind(next), this.rec);
     if (!j.ok) return beep(180, 0.12, 'square', 0.03);
     this.onJump(next, j);
