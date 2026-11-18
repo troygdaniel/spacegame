@@ -30,7 +30,7 @@ function guideHint(s) {
   const key = s.scene.key, dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   if (key === 'Station') {
     if (s.talk || s.shopOpen) return '';
-    if (s.panel) return s.canAccept ? 'Press E to accept the rescue, or Esc to close.' : '';
+    if (s.panel) return s.canAccept ? 'Press E to accept the call, or Esc to close.' : ''; // any call: it said "the rescue" with a courier run chosen (first look)
     // the station menu does the walking now (card space-game-station-menu): the tip names the row and its key
     const row = k => { const r = s.menu && s.menu.rows && s.menu.rows.find(x => x.key === k && !x.off); return r ? ' (press ' + r.n + ')' : ''; };
     if (G.mission === 'accepted') return 'Rescue accepted. Pick Your ship in the station menu' + row('ship') + ' to board.';

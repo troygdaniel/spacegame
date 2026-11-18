@@ -190,7 +190,8 @@ class Station extends Phaser.Scene {
       const L = cx - w / 2 + 16, cap = keyCap(this, m.key, selected ? AMBER : CYAN); cap.setPosition(L + cap.kw / 2, cy - h / 2 + 30); add(cap);
       const reach = missionReach(m); // a call the ship you fly cannot reach is dimmed and says so (src/missions.js; the line that says what would reach it is under BRIEFING)
       txt(L + cap.kw + 10, cy - h / 2 + 30, m.title.toUpperCase(), 17, !reach.ok ? '#5b7a92' : selected ? '#ffd37a' : '#9fe9ff', { style: { fontStyle: 'bold' } });
-      txt(L, cy - h / 2 + 58, missionWhere(m), 13, reach.ok ? '#8fb4c9' : '#5b7a92'); // the place and its star system (src/missions.js)
+      const wh = txt(L, cy - h / 2 + 58, missionWhere(m), 13, reach.ok ? '#8fb4c9' : '#5b7a92'); // the place and its star system (src/missions.js)
+      if (wh.width > w - 32) wh.setScale((w - 32) / wh.width); // a long place with its system ("MULE to the Perseus gate, Halcyon") ran out of the card on the right (first look)
       if (!reach.ok) txt(L, cy - h / 2 + 74, reach.why === 'fuel' ? 'NOT ENOUGH TANK' : 'OUT OF JUMP RANGE', 11, '#ffb454', { style: { fontStyle: 'bold' } });
       txt(L, cy - h / 2 + 90, 'REWARD', 11, '#5b7a92'); txt(L, cy - h / 2 + 112, callReward(m) + ' cr', 28, '#ffb454', { style: { fontStyle: 'bold' } });
       const r = risk(m);
@@ -304,6 +305,8 @@ class Station extends Phaser.Scene {
     m.foot = fix(this.add.text(M.x + 10, M.y + h - 15, '', font(12, '#ffd37a')).setOrigin(0, 0.5).setDepth(101));
     m.k = this.input.keyboard.addKeys('N,ENTER');
     this.menuDraw();
+    const first = m.rows.findIndex(r => !r.off); // the bar starts on the first row this dock has, not on a dim one (Kestrel has no bar: first look)
+    if (first > 0) { m.sel = first; this.menuDraw(); }
   }
   // what the notes of the rows read: the hull and what mending it costs here, and who tends the bar
   menuState() {

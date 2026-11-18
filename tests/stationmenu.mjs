@@ -130,17 +130,18 @@ check('the menu has the keys when you dock; N hands them to your feet (W S walk,
 // catches a wrong name or a missing piece in menuSetup and menuDraw, not how it looks) ----
 p = J(`(() => {
   const P = new Proxy(function () {}, { get: (o, k) => k === Symbol.toPrimitive ? () => 0 : P, apply: () => P });
-  const out = [];
+  const out = [], first = [];
   for (const [station, system] of ${JSON.stringify(DOCKS)}) {
     G.system = system; G.lastDock = station;
     const look = stationLook(), s = { look, spots: __spots(look), add: P, input: P, time: { now: 0 } };
     ['menuSetup', 'menuDraw', 'menuState'].forEach(m => { s[m] = Station.prototype[m]; });
-    try { s.menuSetup(); s.menu.keys = false; s.menuDraw(); s.menu.shown = false; s.menuDraw(); out.push([station, s.menu.lines.length, s.menu.rows.length, s.menu.keys === false].join()); }
+    try { s.menuSetup(); const sel0 = s.menu.sel, off0 = s.menu.rows[sel0].off; s.menu.keys = false; s.menuDraw(); s.menu.shown = false; s.menuDraw(); out.push([station, s.menu.lines.length, s.menu.rows.length, s.menu.keys === false].join()); first.push(station + ':' + sel0 + ':' + off0); }
     catch (e) { out.push(station + ' ERROR ' + e.message); }
   }
-  return out;
+  return { out, first };
 })()`);
-check('menuSetup and menuDraw run at all six docks: six lines for six rows, with and without the keys, shown and put away', p.length === 6 && p.every(x => /,6,6,true$/.test(x)), p.join(' | '));
+check('menuSetup and menuDraw run at all six docks: six lines for six rows, with and without the keys, shown and put away', p.out.length === 6 && p.out.every(x => /,6,6,true$/.test(x)), p.out.join(' | '));
+check('the chosen row when you dock is the first one the dock has, never a dim one (Kestrel, with no bar, starts on Missions)', p.first.every(x => /:false$/.test(x)) && p.first.includes('kestrel-outpost:1:false') && p.first.includes('halcyon-station:0:false'), p.first.join(' | '));
 // ---- the controls table and the help text say the menu's keys ----
 p = J(`(() => { const st = CONTROLS.find(c => c.id === 'station'); return st.rows.map(r => r.k.join(' ') + '   ' + r.t.charAt(0).toLowerCase() + r.t.slice(1)); })()`);
 const help = J(`(() => { const k = ctTextKeys(); return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => k['help.station.' + i] ? k['help.station.' + i].get() : null); })()`); // the H screen's lines, after content/text/ui.md was applied

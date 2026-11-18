@@ -332,6 +332,13 @@ function hudMission(s, key) {
   };
 }
 
+// the place line beside the call's title: cut to the room the title leaves (monospace: 0.6 of the size a letter), so "Kestrel Outpost, Kestrel"
+// does not run into "Courier run" (first look, docs/FIRSTLOOK.md). Pure.
+function hudFitSub(sub, room, size) {
+  const max = Math.floor(room / (size * 0.6)); sub = String(sub || '');
+  return sub.length <= max ? sub : max >= 4 ? sub.slice(0, max - 2).replace(/[ ,]+$/, '') + '..' : '';
+}
+
 // a small key cap
 function hudKeycap(h, id, x, y, str) {
   h.g.lineStyle(1, 0x5b7a92, 1); h.g.strokeRoundedRect(x - 8, y - 8, 16, 16, 3);
@@ -369,7 +376,7 @@ function hudTracker(h, m, meter, now, open) {
   hudPut(h, 'tk', px + 98, py + 14, 'T  hide', { size: HT.tag, color: HUD_DIM });
   if (m.reward) hudPut(h, 'tr', px + P.w - 14, py + 14, '+' + m.reward + ' cr', { size: 12, bold: true, color: '#ffb454', ox: 1, glow: 6 });
   hudPut(h, 'th', px + 20, py + 36, m.head, { size: HT.head, bold: true, color: bad ? '#ff4d6d' : m.kind === 'none' ? '#9fe9ff' : '#ffd37a', glow: 6 });
-  if (m.sub) hudPut(h, 'tsub', px + P.w - 14, py + 37, m.sub, { size: HT.label, color: HUD_DIM, ox: 1 });
+  if (m.sub) hudPut(h, 'tsub', px + P.w - 14, py + 37, hudFitSub(m.sub, P.w - 34 - (h.t.th ? h.t.th.width : 0) - 4, HT.label), { size: HT.label, color: HUD_DIM, ox: 1 });
   if (m.steps) { // progress: one cell a step, the steps done so far lit green and the one you are on beating amber
     const n = steps.length, gap = 3, cw = (P.w - 34 - gap * (n - 1)) / n;
     steps.forEach((st, i) => {
