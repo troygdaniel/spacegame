@@ -151,15 +151,18 @@ try {
     check('the board has the four built-in calls then the four new ones, each with its own key', JSON.stringify(rows.map(r => r.slice(0, 3))) === JSON.stringify([['rescue', 'rescue', '1'], ['escort', 'escort', '2'], ['patrol', 'patrol', '3'], ['bounty', 'bounty', '4'], ['big-game', 'bounty', '5'], ['convoy-patrol', 'patrol', '6'], ['escort-run', 'escort', '7'], ['rescue-two', 'rescue', '8']]), JSON.stringify(rows));
     check('titles, pay and count are the files\'', rows[5][3] === 'Convoy patrol' && rows[5][4] === 800 && rows[5][5] === 3 && rows[7][4] === 700 && rows[6][4] === 350, JSON.stringify(rows));
     check('only the call with an unlock rule is locked: the built-in bounty and Big game', rows[3][6] === true && rows[4][6] === true && rows[5][6] === false && rows[6][6] === false && rows[7][6] === false);
-    const off = await ev(`(() => { G.patrolsDone = 0; const a = missionsOffered().map(m => m.id); G.patrolsDone = 2; const b = missionsOffered().map(m => m.id); G.patrolsDone = 0; return [a, b]; })()`);
-    check('Big game is offered only after two patrols', !off[0].includes('big-game') && off[1].includes('big-game') && off[0].length === 10, JSON.stringify(off)); // six, and the four runs and surveys Halcyon's dock posts (card u-e3)
+    const off = await ev(`(() => { G.patrolsDone = 0; const a = missionsOffered().map(m => m.id); G.patrolsDone = 2; const b = missionsOffered().map(m => m.id); G.patrolsDone = 0; return [a, b, MISSIONS.filter(m => m.carry && m.from === homeDock()).length]; })()`);
+    check('Big game is offered only after two patrols (the built-in bounty with it)', !off[0].includes('big-game') && !off[0].includes('bounty') && off[1].includes('big-game') && off[1].includes('bounty') && off[1].length === off[0].length + 2, JSON.stringify(off));
+    // the six open calls and the runs Halcyon's dock lists (card u-e3, and space-game-routes-from-files: they are in the station file). The two site calls (salvage-lethe, survey-hollow) are mission FILES since card space-game-site-calls-from-files, and this copy has only the pack's files: none is posted here.
+    const six = ['rescue', 'escort', 'patrol', 'convoy-patrol', 'escort-run', 'rescue-two'];
+    check('before two patrols the board posts those six and the runs Halcyon\'s dock posts, and nothing else', six.every(id => off[0].includes(id)) && off[2] >= 1 && off[0].length === 6 + off[2] && off[0].filter(id => !six.includes(id)).every(id => /^(courier|haul)-halcyon-/.test(id)), JSON.stringify(off));
     const words = await ev(`(() => { const m = MISSIONS.find(x => x.id === 'convoy-patrol'); G.missionId = 'convoy-patrol'; G.mission = 'accepted'; G.missionProgress = 1; const o = [m.offer, m.line('accepted'), m.line('failed'), m.progress(), HUD_MISSIONS['convoy-patrol'].steps.map(t => typeof t === 'function' ? t() : t)]; G.mission = 'none'; G.missionId = null; return o; })()`);
     check('the briefing says {reward} for this call, the board line and the steps count to 3', words[0] === 'Three pirates are shadowing a convoy.\nClear them for 800 cr.' && words[1] === 'Convoy: 1 of 3 pirates down' && words[2] === 'The convoy was left alone' && words[4][2] === 'Pirates down 1/3', JSON.stringify(words));
     check('a text the file leaves out is the kind\'s own, rebuilt for this call: the progress counts to 3', /Wanted pirates destroyed: 1 of 3\./.test(words[3]), JSON.stringify(words[3]));
     const kinds = await ev(`(() => { const r = {}; MISSIONS.forEach(m => { G.mission = 'accepted'; G.missionId = m.id; r[m.id] = ['rescue', 'escort', 'patrol', 'bounty'].filter(k => missionActive(k)); }); G.mission = 'none'; G.missionId = null; return r; })()`);
     check('a call is active as its own kind and its own id, never as another kind', JSON.stringify(kinds['convoy-patrol']) === '["patrol"]' && JSON.stringify(kinds['rescue-two']) === '["rescue"]' && JSON.stringify(kinds['patrol']) === '["patrol"]' && JSON.stringify(kinds['escort-run']) === '["escort"]', JSON.stringify(kinds));
-    const keep = await ev(`(() => { const a = MISSIONS.length; ContentLib.apply(CONTENT, CONTENT_TABLES); return [a, MISSIONS.length]; })()`);
-    check('applying the pack again adds nothing twice', keep[0] === keep[1] && keep[0] === 24, JSON.stringify(keep));
+    const keep = await ev(`(() => { const a = MISSIONS.length; ContentLib.apply(CONTENT, CONTENT_TABLES); return [a, MISSIONS.length, MISSIONS.filter(m => m.carry).length, MISSIONS.filter(m => m.site).length]; })()`);
+    check('applying the pack again adds nothing twice: the eight calls and the runs and sites the files make, as before', keep[0] === keep[1] && keep[0] === 8 + keep[2] + keep[3], JSON.stringify(keep)); // the number itself moves with the station files' runs, so it is counted, not pinned
 
     // play the convoy patrol: three wanted pirates, the third pays 800
     await ev(`(() => { G.mission = 'accepted'; G.missionId = 'convoy-patrol'; G.missionProgress = 0; G.patrolsDone = 0; G.credits = 0; game.scene.stop('Title'); game.scene.start('Space', { from: 'station' }); return 1; })()`);
@@ -175,14 +178,15 @@ try {
     // the board: six calls offered, four cards at a time
     await ev(`(() => { G.mission = 'none'; G.missionId = null; G.patrolsDone = 0; game.scene.getScene('Station').openPanel(); return 1; })()`);
     await sleep(500);
+    const total = await ev(`missionsOffered().length`); // the calls the board posts now: window counts below are of this
     const shownText = () => ev(`(() => { const out = []; const walk = o => { if (o.visible === false) return; if (o.type === 'Text') out.push(o.text); if (o.list) o.list.forEach(walk); }; game.scene.getScene('Station').panelBox.list.forEach(walk); return out.join('|'); })()`);
     const first = await shownText();
-    check('the board shows four cards (Rescue call to Convoy patrol) and says "CALLS 1-4 OF 10 >"', /CALLS 1-4 OF 10\s+>/.test(first) && /RESCUE CALL/.test(first) && /CONVOY PATROL/.test(first) && !/ESCORT RUN/.test(first), first.slice(0, 300));
+    check('the board shows four cards (Rescue call to Convoy patrol) and says "CALLS 1-4 OF ' + total + ' >"', total > 4 && new RegExp('CALLS 1-4 OF ' + total + '\\s+>').test(first) && /RESCUE CALL/.test(first) && /CONVOY PATROL/.test(first) && !/ESCORT RUN/.test(first), first.slice(0, 300));
     await t.shot('contentadd-board-1');
     await ev(`(() => { const st = game.scene.getScene('Station'); for (let i = 0; i < 5; i++) st.boardKeys({ key: 'ArrowRight' }); return 1; })()`);
     await sleep(300);
     const last = await shownText();
-    check('five steps right scrolls the window: "< CALLS 3-6 OF 10" with Convoy patrol and Escort run on it', /<\s+CALLS 3-6 OF 10/.test(last) && /CONVOY PATROL/.test(last) && /ESCORT RUN/.test(last) && !/RESCUE CALL/.test(last), last.slice(0, 300));
+    check('five steps right scrolls the window: "< CALLS 3-6 OF ' + total + '" with Convoy patrol and Escort run on it', new RegExp('<\\s+CALLS 3-6 OF ' + total).test(last) && /CONVOY PATROL/.test(last) && /ESCORT RUN/.test(last) && !/RESCUE CALL/.test(last), last.slice(0, 300));
     await t.shot('contentadd-board-2');
     await ev(`(() => { const st = game.scene.getScene('Station'); st.boardKeys({ key: '8' }); return 1; })()`);
     check('the number key 8 picks Rescue two', (await ev('G.missionId')) === 'rescue-two');
