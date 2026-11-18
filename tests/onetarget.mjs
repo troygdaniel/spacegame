@@ -25,7 +25,8 @@ const DOORS = [
     clickmove: 1 } }, // a click on the place in space
   { what: 'cr.target = : write the destination', re: /\bcr\.target = (?!null)/g, who: {
     cruise: 1,      // cruisePick itself
-    autopilot: 2 } }, // the autopilot keeps the place it was sent to (autopilotGo, and its cruise leg); it picks nothing
+    autopilot: 2,   // the autopilot keeps the place it was sent to (autopilotGo, and its cruise leg); it picks nothing
+    overview: 2 } }, // Cruise to (card space-game-overview-cruise-to): the ship ALREADY selected becomes the cruise's destination, and the destination you had comes back after; it picks nothing
   { what: 'np.jump = : make another system the destination', re: /\bnp\.jump = (?!null)/g, who: {
     navpanel: 1 } }, // a row of Gates and jumps
   { what: 'autopilotGo( : fly to a place', re: /\bautopilotGo\(/g, who: {
@@ -45,7 +46,7 @@ const DOORS = [
   { what: 'assistSet(mode, target : an order on a ship', re: /\bassistSet\([^(),]+,/g, who: {
     assist: 1,      // an order key (1-4) goes to the thing already selected
     clickmove: 3,   // a click on a ship, and the order keys on the picked ship
-    overview: 2 } }, // a row with no click to move in the build, and the order buttons of the target row
+    overview: 3 } }, // a row with no click to move in the build, the order buttons of the target row, and the hand-over after Cruise to (the same selected ship)
   { what: 'gunlockSet( : lock a raider', re: /\bgunlockSet\((?!null)/g, who: {
     gunlock: 1,     // V: the selected raider, else the nearest. No walk to the next one.
     overview: 1 } }, // the Lock button of the target row

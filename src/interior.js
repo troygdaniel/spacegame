@@ -508,16 +508,16 @@ function interiorTick(s, time) {
   if (!I.pshadow) { I.pshadow = s.add.image(0, 0, 'in-shadow').setAlpha(0.6).setDepth(3.5); I.plight = s.add.image(0, 0, 'in-glow').setTint(0xbfe9ff).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.14).setScale(1.1).setDepth(2.4); }
   I.pshadow.setPosition(s.player.x + 2, s.player.y + 6); I.plight.setPosition(s.player.x, s.player.y);
   // which one is you (card space-game-critic-station-read, docs/CRITIC.md 18): the pilot looked like one more patron. A white ring on the floor
-  // under your feet that breathes, and a small YOU tag over your head, pointing down at you (the key cap prompt sits at the desk, not on you, and is drawn over the tag where they meet). Nobody else has either.
+  // under your feet that breathes, and a small YOU tag under your feet, pointing up at you (the first-run tip is on the south wall now, so nothing covers it there). Nobody else has either.
   if (!I.pring) {
     I.pring = s.add.graphics().setDepth(3.6);
     I.pring.lineStyle(2.5, 0xffffff, 0.95); I.pring.strokeCircle(0, 0, 17); I.pring.lineStyle(5, CYAN, 0.28); I.pring.strokeCircle(0, 0, 20);
     const tt = s.add.text(0, 0, 'YOU', { fontFamily: 'monospace', fontSize: '11px', fontStyle: 'bold', color: '#02101c' }).setOrigin(0.5), tg = s.add.graphics();
-    tg.fillStyle(0xffffff, 0.95); tg.fillRoundedRect(-16, -8, 32, 15, 4); tg.fillTriangle(-4, 7, 4, 7, 0, 12);
+    tg.fillStyle(0xffffff, 0.95); tg.fillRoundedRect(-16, -8, 32, 15, 4); tg.fillTriangle(-4, -8, 4, -8, 0, -13);
     I.ptag = s.add.container(0, 0, [tg, tt]).setDepth(5.2);
   }
   I.pring.setPosition(s.player.x, s.player.y + 2).setAlpha(0.72 + 0.28 * Math.sin(time / 320));
-  I.ptag.setPosition(s.player.x, s.player.y - 34);
+  I.ptag.setPosition(s.player.x, s.player.y + 34); // under the feet: over the head it sat on the desk's nameplate when the menu stood you at a desk (first look, docs/FIRSTLOOK.md)
   if (s.shipImg && I.shipShadow) {
     const x = s.shipImg.x, y = s.shipImg.y; I.shipShadow.setPosition(x + 10, y + 14);
     const L = shipLook(), k = s.shipImg.scaleX; // src/shipmodels.js: where this hull's engine and cockpit are

@@ -72,7 +72,10 @@ check('colonist aboard, far out: follow the arrow home', J(`guideHint(__space(${
 check('colonist aboard, at the station: slow down and dock', J(`guideHint(__space(sysBody('station').x + 100, sysBody('station').y))`) === 'Hold S to slow down, then press L to dock.');
 check('a dead ship has no tip', J(`(() => { const s = __space(${far}); s.dead = true; return guideHint(s); })()`) === '');
 g.run(`__call(null, 'none')`);
-check('the station tip names the station menu (it has the keys on arrival) and the surface tip is unchanged', J(`guideHint({ scene: { key: 'Station' } })`) === 'Pick Missions in the station menu, bottom right: its number, or W S and Enter.' && J(`guideHint({ scene: { key: 'Surface' }, col: { state: 'waiting' } })`).startsWith('Walk east to the crashed pod'));
+check('the station tip points at the station menu and names the row\'s key; the surface tip is unchanged', J(`guideHint({ scene: { key: 'Station' }, menu: { rows: [{ key: 'bar', n: '1' }, { key: 'missions', n: '2' }, { key: 'ship', n: '6' }] } })`) === 'Pick Missions in the station menu, bottom right (press 2).' && J(`guideHint({ scene: { key: 'Station' } })`) === 'Pick Missions in the station menu, bottom right.' && J(`guideHint({ scene: { key: 'Surface' }, col: { state: 'waiting' } })`).startsWith('Walk east to the crashed pod'));
+g.run(`__call('rescue')`);
+check('with the rescue accepted the station tip says to pick Your ship, with its key', J(`guideHint({ scene: { key: 'Station' }, menu: { rows: [{ key: 'missions', n: '2' }, { key: 'ship', n: '6' }] } })`) === 'Rescue accepted. Pick Your ship in the station menu (press 6) to board.');
+g.run(`__call(null, 'none')`);
 
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `GUIDE TIPS FAIL (${failed} of ${n})` : `GUIDE TIPS PASS (${n} checks)`);

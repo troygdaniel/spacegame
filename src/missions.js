@@ -253,7 +253,9 @@ function radarDot(s, x, y, color, r) { hudBlip(s, x, y, color, r); } // the HUD 
 // s.mx.covered says which it is this frame (the assist panel's Match speed reads the box from ESCORT.box).
 // The stakes (change 3): she pays ESCORT.bonus more for a whole hull (in proportion), calls out at half hull and with the gate ESCORT.sight px off, and
 // at the gate she holds still for ESCORT.spinUp ms while ESCORT.lastStand pirates come in from ESCORT.lastOut px. s.mx.spin is the ms left of the spin-up.
-const ESCORT = { box: 350, cruise: 60, slow: 30, hull: 200, cover: 0.5, shot: 5, ram: 2, bonus: 200, sight: 900, spinUp: 8000, lastStand: 3, lastOut: 1100,
+// Her speeds (cruise 90, slow 45 px/s; they were 60 and 30) follow the 3 times spread of the systems: her route to the gate went from 2800 to 9000 px, which made the
+// call over 5 minutes with a wave every 49 s. At 90 and 45 it is about 3.7 minutes with a wave every 33 s (docs/MISSIONS-TIMING.md, tools/mission-timing.mjs).
+const ESCORT = { box: 350, cruise: 90, slow: 45, hull: 200, cover: 0.5, shot: 5, ram: 2, bonus: 200, sight: 900, spinUp: 8000, lastStand: 3, lastOut: 1100,
   waves: [0.25, 0.5, 0.75], waveSize: [2, 3, 3], waveOut: 1400, inbound: 240, peel: 4000 };
 // The fight (change 1): nobody waits on the route any more. A wave comes when she is ESCORT.waves of the way there, ESCORT.waveOut px out on her port
 // flank, then starboard, then dead ahead, and she calls it. The first pirate of a wave is its screen: it has no prey and hunts you. The rest go for her,
