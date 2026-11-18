@@ -74,12 +74,12 @@ try {
     const bySys = entries.filter(e => e.type === 'system'), stations = entries.filter(e => e.type === 'station'), sites = Object.fromEntries(entries.filter(e => e.type === 'poi').map(e => [e.id, e.data]));
     check('the pack has the eight systems and six stations the draft made', bySys.length === 8 && stations.length === 6, bySys.length + ' and ' + stations.length);
     const worlds = await ev(`Object.fromEntries(worldIds().map(i => [i, i === 'halcyon' ? worldAt(i) : worldFromFiles(i)]))`); // the row the files make: the code rows keep the numbers only, the words stay in the files
-    const lost = [];
+    const lost = [], SC = await ev('SYSTEM_SCALE'), at = (k, v) => (['size', 'x', 'y'].includes(k) && typeof v === 'number' ? Math.round(v * SC) : v); // where things are is spread out SC times from the files (src/data_systems.js); everything else is the file's number
     for (const en of bySys) {
       const f = en.data, w = worlds[en.id];
       if (en.id === 'halcyon') continue; // the code's row stands in for it; its files were compared above
-      ['name', 'kind', 'ly', 'size', 'danger', 'traffic', 'pay', 'seed'].forEach(k => { if (f[k] !== undefined && JSON.stringify(w[k]) !== JSON.stringify(f[k])) lost.push(en.id + '.' + k); });
-      if (f.starType !== undefined && (!w.star || w.star.type !== f.starType || w.star.x !== f.starX || w.star.y !== f.starY)) lost.push(en.id + '.star');
+      ['name', 'kind', 'ly', 'size', 'danger', 'traffic', 'pay', 'seed'].forEach(k => { if (f[k] !== undefined && JSON.stringify(w[k]) !== JSON.stringify(at(k, f[k]))) lost.push(en.id + '.' + k); });
+      if (f.starType !== undefined && (!w.star || w.star.type !== f.starType || w.star.x !== at('x', f.starX) || w.star.y !== at('y', f.starY))) lost.push(en.id + '.star');
       if (f.pirateMax !== undefined && (!w.pirates || w.pirates.max !== f.pirateMax)) lost.push(en.id + '.pirateMax');
       if (f.pirateEvery !== undefined && (!w.pirates || w.pirates.every !== f.pirateEvery)) lost.push(en.id + '.pirateEvery');
       (f.pirates || []).forEach(r => { if (!w.pirates || !w.pirates.weights || w.pirates.weights[r.kind] !== r.weight) lost.push(en.id + '.pirates.' + r.kind); });
@@ -87,7 +87,7 @@ try {
       if ((f.bodies || []).length !== w.bodies.length) lost.push(en.id + ' bodies ' + (f.bodies || []).length + ' vs ' + w.bodies.length);
       (f.bodies || []).forEach((row, i) => {
         const b = w.bodies[i] || {}, own = row.type === 'poi' ? sites[row.id] : null;
-        Object.keys(row).forEach(k => { if (!(own && ['name', 'credits', 'hull', 'guard', 'note'].includes(k)) && JSON.stringify(b[k]) !== JSON.stringify(row[k])) lost.push(en.id + '.' + row.id + '.' + k); });
+        Object.keys(row).forEach(k => { if (!(own && ['name', 'credits', 'hull', 'guard', 'note'].includes(k)) && JSON.stringify(b[k]) !== JSON.stringify(at(k, row[k]))) lost.push(en.id + '.' + row.id + '.' + k); });
         if (row.type === 'station') {
           const st = (stations.find(s => s.id === row.id) || {}).data;
           if (!st) { lost.push(row.id + ' has no station file'); return; }

@@ -34,7 +34,7 @@ function asteroidsSetup(s) {
     const now = s.time.now;
     if (now < a.bumpAt || s.dead) return;
     a.bumpAt = now + 400; s.cameras.main.shake(70, 0.0025); sfx('tick');
-  }, () => !s.cruising); // a cruising ship (6000 px/s) flies through the rocks without bumping them (src/cruise.js)
+  }, () => !s.cruising); // a cruising ship (8000 px/s) flies through the rocks without bumping them (src/cruise.js)
   s.physics.add.overlap(s.pb, a.rocks, (b, r) => {
     if (!b.active || !r.active) return;
     b.disableBody(true, true); r.hp -= b.dmg || 15; s.boom.explode(3, b.x, b.y); sfx('tick');

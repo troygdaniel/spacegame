@@ -70,7 +70,7 @@ class Overlay extends Phaser.Scene {
     this.tLegH = m(mapText(this, SX, 352, 'LEGEND', 13, '#5b7a92'));
     // the rest of the system: planets, belts and scenery besides the ones the legend names, each with its name on the map (far space, src/cruise.js)
     this.far = sysBodies().filter(b => (b.type === 'planet' && b !== D.pl) || b.type === 'belt' || (b.type === 'scenery' && b !== D.op))
-      .map(b => ({ b, lb: m(mapText(this, 0, 0, b.x < 8000 && b.y < 8000 ? '' : b.name, 12, '#9fb4c9').setOrigin(0.5, 1)) })); // the old cluster is crowded enough: no label for what is inside it
+      .map(b => ({ b, lb: m(mapText(this, 0, 0, b.x < sysAt(8000) && b.y < sysAt(8000) ? '' : b.name, 12, '#9fb4c9').setOrigin(0.5, 1)) })); // the old cluster is crowded enough: no label for what is inside it
     this.legend = [
       ['you', 'ship'], [D.st.name, 'station'], [D.op ? D.op.name : 'outpost', 'outpost'], [D.pl.name, 'planet'], ['objective', 'target'],
       ['drone in sensor range', 'live'], ['drone, where you last saw it', 'stale'], ['wanted pirate', 'wanted'], ['salvage site', 'poi']
