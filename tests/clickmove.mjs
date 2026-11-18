@@ -4,7 +4,8 @@
 // velocity each frame as Phaser would; clickmoveFrame, assistFrame and assistDrive do the rest exactly as in the game.
 // Checks: nothing happens with the assist off or the nav list open; a point click flies there, stops there and ends; a body click sets the
 // nav target the N list sets; a belt is not picked; a ship click moves a flying order onto the ship, and with no order hands 1 and 2 the ship;
-// the picked ship is dropped when it dies or the nav target changes; an order's click keeps the guns quiet while the button is down.
+// the picked ship is dropped when it dies or the nav target changes; an order's click keeps the guns quiet while the button is down,
+// but not Space: Space fires whatever the mouse button is doing.
 // Run: node tests/clickmove.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
 
@@ -26,7 +27,7 @@ g.run(`
     const s = __s = { add: __P, events: __P, input: { on() {}, keyboard: __P, activePointer: { isDown: false } }, cameras: { main: { zoom: 1 } }, time: { now: 0 }, k: {}, nextFire: 0,
       cr: { target: null, navOpen: false }, ship: { x, y, rotation: 0, body }, lockUntil: 0, enemies: { list, getChildren: () => list },
       tr: { police: [{ img: { x: 5000, y: 5000, active: true, visible: true } }], civ: [] }, mx: {} };
-    ASSIST.keys.forEach(n => { s.k[n] = { isDown: false }; });
+    ASSIST.keys.forEach(n => { s.k[n] = { isDown: false }; }); s.k.SPACE = { isDown: false };
     assistSetup(s);
     s.as.k = {}; [ASSIST.key].concat(Object.values(ASSIST_MODES).map(m => m.key)).forEach(n => { s.as.k[n] = {}; });
     clickmoveSetup(s);
@@ -112,6 +113,11 @@ check('Approach on a clicked, moving ship holds 150 px off it at its speed', cha
 // ---- the guns ----
 g.run(`__scene(${X}, ${Y}); ASSIST.on = true; __s.input.activePointer.isDown = true; clickmoveClick(__s, ${X + 500}, ${Y}); __frames(3);`);
 check('while the order button is down the guns stay quiet', J(`__s.nextFire > __s.time.now`) && J(`__s.cm.hold`) === true);
+// Space is the trigger while the assist flies: the held order button must not keep it quiet (playtest 4: 0 shots in half a second of Space)
+g.run(`__s.k.SPACE.isDown = true; __frames(1); __s.__nf = __s.nextFire; __frames(12);`);
+check('button still down and Space held: the guns are not pushed back any more, so Space fires', J(`__s.nextFire === __s.__nf`) && J(`__s.nextFire <= __s.time.now`) && J(`__s.cm.hold`) === true, JSON.stringify(J(`[__s.nextFire, __s.time.now]`)));
+g.run(`__s.k.SPACE.isDown = false; __frames(3);`);
+check('Space up, button still down: quiet again (the button alone is not a trigger)', J(`__s.nextFire > __s.time.now`));
 g.run(`__s.input.activePointer.isDown = false; __frames(1); __s.time.now += 200;`);
 check('button up: the hold is over', J(`__s.cm.hold`) === false && J(`__s.nextFire <= __s.time.now`));
 g.run(`ASSIST.on = false; __s.nextFire = 0; __s.input.activePointer.isDown = true; clickmoveClick(__s, ${X + 500}, ${Y}); __frames(2);`);
