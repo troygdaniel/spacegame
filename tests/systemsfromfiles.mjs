@@ -26,7 +26,10 @@ const built = J(`(() => { const rows = sysRowsFrom(CONTENT); Object.keys(rows).f
 check('the files build the same eight, in the same order', Object.keys(built).join() === FIX.order.join(), Object.keys(built).join());
 let total = 0;
 for (const id of FIX.order) {
-  const d = diff(built[id], FIX.systems[id]); total += d.length;
+  // dock.runs came after the fixture (card space-game-routes-from-files: the runs a dock posts were a list in src/missions.js, not part of a row): it is
+  // checked against that list in tests/routesfromfiles.mjs and left out of this comparison
+  const row = JSON.parse(JSON.stringify(built[id])); row.bodies.forEach(b => { if (b.dock) delete b.dock.runs; });
+  const d = diff(row, FIX.systems[id]); total += d.length;
   check(`${id}: built from its files it is the row the code had, field by field (${FIX.systems[id].bodies.length} bodies)`, d.length === 0, d.slice(0, 6).join(' | '));
 }
 check('what the built rows have beyond the old code rows is only the words and the seed: a description for each system, about on each dock', FIX.order.every(id => typeof built[id].description === 'string') && FIX.order.every(id => built[id].bodies.filter(b => b.type === 'station').every(b => b.about && typeof b.about.welcome === 'string')));
@@ -34,7 +37,7 @@ check('the home dock leaves its repair and ore prices to the game\'s constants, 
 
 // ---- the game flies what the files say ----
 const live = J(`SYSTEMS`);
-let liveDiff = 0; FIX.order.forEach(id => { liveDiff += diff(live[id], FIX.systems[id]).length; });
+let liveDiff = 0; FIX.order.forEach(id => { live[id].bodies.forEach(b => { if (b.dock) delete b.dock.runs; }); liveDiff += diff(live[id], FIX.systems[id]).length; }); // dock.runs: see above
 check('SYSTEMS, the table the game reads, is those rows', Object.keys(live).join() === FIX.order.join() && liveDiff === 0, liveDiff + ' differences');
 check('SYSTEMS is made from the files, not written in code: src/data_systems.js has no body rows left', !/type: 'station', art:/.test(readFileSync(new URL('../src/data_systems.js', import.meta.url), 'utf8')) && J(`typeof SYSTEMS_FROM === 'string' ? SYSTEMS_FROM : ''`) === 'content');
 
