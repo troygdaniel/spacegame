@@ -182,6 +182,7 @@ function cmdstripDom() {
     input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); cmdstripEnter(); } else if (e.key === 'Escape') { e.preventDefault(); cmdstripClose(); } });
     input.addEventListener('input', () => { S.text = input.value; });
     input.addEventListener('blur', () => { setTimeout(() => { if (S.typing && document.activeElement !== input) cmdstripClose(); }, 0); }); // a click on the game takes the keyboard: the line lets go
+    box.addEventListener('click', () => { if (voiceStop('click')) cmdstripPaint(); }); // a click on the strip, while the ship is talking, stops the voice; the words stay
     older.forEach(o => box.appendChild(o)); row.appendChild(cap); row.appendChild(input); row.appendChild(text); row.appendChild(hint); box.appendChild(row); box.appendChild(reply); root.appendChild(box);
     root.setAttribute('role', 'status'); root.setAttribute('aria-live', 'polite'); document.body.appendChild(root);
     S.dom = { root, box, older, row, cap, input, text, hint, reply }; S.el = input;
@@ -193,6 +194,8 @@ function cmdstripPaint() {
   try {
     const now = csNow(), game = S.game || (typeof window !== 'undefined' ? window.game : null), sc = cmdstripScene(game);
     if (!sc && S.typing) { S.typing = false; S.text = ''; }
+    const talking = typeof voiceSpeaking === 'function' && voiceSpeaking();
+    if (talking && S.live) S.live.at = csNow(); // the answer is not faded away while the ship is still saying it: its hold counts from the last word, or from the stop
     cmdstripSettle(now);
     const v = sc ? cmdstripView(S, now, S.voice) : null;
     S.shown = !!v;
@@ -200,6 +203,7 @@ function cmdstripPaint() {
     const canvas = game && game.canvas, r = canvas && canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : null, k = r ? r.width / 1280 : 1;
     const color = v.mode === 'voice' ? (CS_COLOR[v.mark] || CS_COLOR.cyan) : '#38e1ff';
     Object.assign(d.root.style, { display: 'block', left: (r ? r.left : 0) + 'px', top: (r ? r.top : 0) + 'px', transform: 'scale(' + k + ')', opacity: String(v.alpha) });
+    d.box.style.pointerEvents = talking ? 'auto' : 'none'; d.box.style.cursor = talking ? 'pointer' : 'default'; // clickable only while the voice speaks: a click then stops it
     Object.assign(d.box.style, { left: CMDSTRIP.x + 'px', width: CMDSTRIP.w + 'px', bottom: CMDSTRIP.bottom + 'px', borderColor: v.mode === 'voice' && v.mark === 'red' ? CS_COLOR.red : v.mode === 'voice' && v.mark === 'green' ? CS_COLOR.green : '#38e1ff' });
     d.older.forEach((o, i) => { const row = v.older[v.older.length - d.older.length + i]; if (!row) { o.style.display = 'none'; return; } o.style.display = 'block'; o.style.opacity = String(row.alpha); o.style.color = '#8fb4c9'; o.textContent = '> ' + row.q + '   ' + row.a; });
     const voice = v.mode === 'voice', typing = v.mode === 'typing';

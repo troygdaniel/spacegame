@@ -3,7 +3,7 @@
 // exactly as before and nothing is sent anywhere. The key lives only in this browser's localStorage, never in the save file,
 // never in the repo, never logged or put in a message, and goes only to api.deepgram.com. See docs/VOICE.md.
 // Events come from watching the game once a frame (voiceInstall, called from main.js), so the scenes have no voice code.
-const VOICE_STORE = 'longhaul.voice.key', VOICE_FLAG = 'longhaul.voice.on', VOICE_PICK = 'longhaul.voice.model';
+const VOICE_STORE = 'longhaul.voice.key', VOICE_FLAG = 'longhaul.voice.on', VOICE_PICK = 'longhaul.voice.model', VOICE_SPOKEN = 'longhaul.voice.spoken';
 const VOICE_URL = 'https://api.deepgram.com/v1/speak', VOICE_MODEL = 'aura-athena-en'; // athena: a calm female voice, the ship computer's until you choose another
 // the voices the ship computer can have (Settings > Sound): [Aura name, shown name, a few words]
 const VOICE_CHOICES = [['aura-athena-en', 'ATHENA', 'calm, the default'], ['aura-asteria-en', 'ASTERIA', 'bright and clear'], ['aura-luna-en', 'LUNA', 'warm'], ['aura-orion-en', 'ORION', 'steady, male'], ['aura-helios-en', 'HELIOS', 'deep, male']];
@@ -38,13 +38,18 @@ function voiceLine(event, builtin) {
   VOICE_LAST[event] = pick;
   try { return typeof contentFill === 'function' ? contentFill(pick) : pick; } catch (e) { return pick; } // a {placeholder} the game cannot fill stays as written
 }
-const VOICE = { key: '', on: true, voice: VOICE_MODEL, bad: false, playing: false, queue: [], cache: new Map(), fails: 0, pauseUntil: 0, said: {}, calls: 0 };
+// Spoken replies (card space-game-voice-shorter; Troy, 18 Nov 2026: "the ship is long winded"): how much of the computer's ANSWER is said aloud. short: the first sentence or
+// two (the strip shows it all); full: everything; off: never aloud. The key moments of a run (launch, hull, docking) are short lines of their own and are not affected.
+const VOICE_SPOKEN_MODES = [['short', 'SHORT'], ['full', 'FULL'], ['off', 'OFF']], VOICE_SPOKEN_LIMIT = { min: 70, max: 170 }; // a first sentence under min takes the next one too; never past max
+const VOICE = { key: '', on: true, voice: VOICE_MODEL, bad: false, playing: false, queue: [], cache: new Map(), fails: 0, pauseUntil: 0, said: {}, calls: 0,
+  spoken: 'short', gen: 0, src: null, cur: null, finish: null, stopping: '', stops: 0 }; // gen: a stop bumps it, so a line still on its way never plays; src and cur: what is playing now
 
 // ---------- the key (localStorage is optional: every call is wrapped) ----------
 function voiceLoad() {
   try {
     VOICE.key = (localStorage.getItem(VOICE_STORE) || '').trim(); VOICE.on = localStorage.getItem(VOICE_FLAG) !== '0';
     const pick = localStorage.getItem(VOICE_PICK); VOICE.voice = VOICE_CHOICES.some(c => c[0] === pick) ? pick : VOICE_MODEL;
+    const sp = localStorage.getItem(VOICE_SPOKEN); VOICE.spoken = VOICE_SPOKEN_MODES.some(m => m[0] === sp) ? sp : 'short';
   } catch (e) { /* storage is optional */ }
   VOICE.bad = false;
 }
@@ -60,6 +65,26 @@ function voiceSetKey(k) {
   VOICE.key = String(k || '').trim(); VOICE.bad = false; VOICE.fails = 0; VOICE.pauseUntil = 0;
   try { if (VOICE.key) localStorage.setItem(VOICE_STORE, VOICE.key); else localStorage.removeItem(VOICE_STORE); } catch (e) { /* storage is optional */ }
 }
+function voiceSetSpoken(m) {
+  if (!VOICE_SPOKEN_MODES.some(x => x[0] === m)) return false;
+  VOICE.spoken = m;
+  try { localStorage.setItem(VOICE_SPOKEN, m); } catch (e) { /* storage is optional */ }
+  return true;
+}
+// PURE. The first sentence or two of an answer, to be said aloud: a first sentence under 70 letters takes the second one too when both fit in 170; a first sentence longer than 170 is
+// cut at the last space before it (and ends with a full stop). "4.1 of the 7.8 ly" is not a sentence end: a stop counts only when a space or the end follows it.
+function voiceFirst(text) {
+  const t = String(text == null ? '' : text).replace(/\s+/g, ' ').trim(), L = VOICE_SPOKEN_LIMIT;
+  if (!t) return '';
+  const parts = t.match(/.+?(?:[.!?]+(?=\s|$)|$)/g) || [t], first = parts[0].trim(), second = (parts[1] || '').trim();
+  if (first.length > L.max) { const cut = first.slice(0, L.max), at = cut.lastIndexOf(' '); return (at > 40 ? cut.slice(0, at) : cut).replace(/[\s,;:-]+$/, '') + '.'; }
+  return second && first.length < L.min && first.length + 1 + second.length <= L.max ? first + ' ' + second : first;
+}
+// what to say aloud of an answer, by the player's choice: '' when it is off
+function voiceSpokenText(text) {
+  const m = VOICE.spoken;
+  return m === 'off' ? '' : m === 'full' ? String(text == null ? '' : text) : voiceFirst(text);
+}
 function voiceSetOn(on) { VOICE.on = !!on; try { localStorage.setItem(VOICE_FLAG, on ? '1' : '0'); } catch (e) { /* storage is optional */ } }
 function voiceUsable() { return !!VOICE.key && VOICE.on && !VOICE.bad && !G.muted && G.volume > 0 && performance.now() >= VOICE.pauseUntil; }
 function voiceStatus() { return !VOICE.key ? 'NO KEY' : VOICE.bad ? 'KEY REJECTED' : VOICE.on ? 'ON' : 'OFF'; }
@@ -71,9 +96,9 @@ function voiceStatus() { return !VOICE.key ? 'NO KEY' : VOICE.bad ? 'KEY REJECTE
 // shop.js, docs/NPC-CHAT.md section 2). onStart runs when the audio begins to play.
 const VOICE_NAME = /^aura(-2)?-[a-z]{3,12}-en$/; // the name goes into a URL, so anything else falls back to the ship computer's voice
 const voiceModelOf = m => (typeof m === 'string' && VOICE_NAME.test(m) ? m : voiceShip());
-function voiceSay(text, prio = 0, model, onStart) {
+function voiceSay(text, prio = 0, model, onStart, meta) {
   if (!voiceUsable()) return false;
-  const line = { text, voice: voiceModelOf(model), onStart, prio, at: performance.now() }, id = line.voice + '|' + text;
+  const line = { text, voice: voiceModelOf(model), onStart, prio, at: performance.now(), meta: meta || null, gen: VOICE.gen }, id = line.voice + '|' + text;
   if (VOICE.said[id] && line.at - VOICE.said[id] < 8000) return false;
   VOICE.said[id] = line.at;
   if (VOICE.playing) {
@@ -84,17 +109,34 @@ function voiceSay(text, prio = 0, model, onStart) {
 }
 // For a caller that shows the words along with the voice (the NPC chat): start(how) runs once. 'audio' when the voice begins, 'timeout' after
 // 1.5 s if it has not arrived yet, 'silent' at once when there will be no voice (no key, off, muted, refused), so text never waits for nothing.
-function voiceSayThen(text, prio, model, start) {
+// meta: { kind: 'computer', full: the letters of the whole answer } for the play log (counts only) and for the strip to know the voice is on its answer.
+function voiceSayThen(text, prio, model, start, meta) {
   let done = false, timer = null;
   const go = how => { if (done) return; done = true; clearTimeout(timer); try { start(how); } catch (e) { /* the caller's trouble must not stop the voice */ } };
-  if (!voiceSay(text, prio == null ? 1 : prio, model, () => go('audio'))) { go('silent'); return false; }
+  if (!voiceSay(text, prio == null ? 1 : prio, model, () => go('audio'), meta)) { go('silent'); return false; }
   timer = setTimeout(() => go('timeout'), 1500);
   return true;
 }
+// Is anything being said (or on its way to be said)? kind: only a line of that kind (the computer's answer)
+const voiceSpeaking = kind => !!VOICE.playing && (!kind || !!(VOICE.cur && VOICE.cur.meta && VOICE.cur.meta.kind === kind));
+// Stop it: U, Esc or a click on the strip (the card space-game-voice-shorter). What is playing is cut at once, what waits is dropped, and a line still being fetched is never played
+// (VOICE.gen moved on). how: u, esc, click, for the play log. true when there was something to stop. The words stay where they are shown: this only silences.
+function voiceStop(how) {
+  if (!VOICE.playing && !VOICE.queue.length) return false;
+  const line = VOICE.cur, src = VOICE.src, fin = VOICE.finish;
+  VOICE.gen++; VOICE.queue.length = 0; VOICE.playing = false; VOICE.cur = null; VOICE.src = null; VOICE.finish = null; VOICE.stops++;
+  if (src) { try { src.onended = null; src.stop(); } catch (e) { /* already over */ } }
+  if (fin) fin(how || 'stop');
+  else if (line && line.meta) voiceSpoke({ kind: line.meta.kind, sec: 0, stopped: true, how: how || 'stop', mode: VOICE.spoken, chars: line.text.length, full: line.meta.full | 0 });
+  return true;
+}
+// one spoken reply is over (it ended, or it was stopped): counts and seconds, never the words. src/playlog.js watches this name.
+function voiceSpoke(info) { return info; }
 async function voiceRun(line) {
-  VOICE.playing = true;
-  try { const buf = await voiceBuffer(line.text, line.voice); if (buf && voiceUsable()) await voicePlay(buf, line.onStart); } catch (e) { /* the voice must never break the game */ }
-  VOICE.playing = false;
+  VOICE.playing = true; VOICE.cur = line;
+  try { const buf = await voiceBuffer(line.text, line.voice); if (buf && voiceUsable() && line.gen === VOICE.gen) await voicePlay(buf, line.onStart, line); } catch (e) { /* the voice must never break the game */ }
+  if (line.gen !== VOICE.gen) return; // stopped meanwhile: voiceStop has already put everything back, and a newer line may be running
+  VOICE.playing = false; VOICE.cur = null; VOICE.src = null; VOICE.finish = null;
   const now = performance.now(); let next = null;
   while (VOICE.queue.length && !next) { const q = VOICE.queue.shift(); if (now - q.at < 6000) next = q; }
   if (next && voiceUsable()) voiceRun(next);
@@ -119,15 +161,21 @@ async function voiceBuffer(text, voice = voiceShip()) {
   if (keep) { VOICE.cache.set(text, buf); if (VOICE.cache.size > 40) VOICE.cache.delete(VOICE.cache.keys().next().value); }
   return buf;
 }
-function voicePlay(buf, onStart) { // through audio.js's master gain, so the volume and mute settings apply
+function voicePlay(buf, onStart, line) { // through audio.js's master gain, so the volume and mute settings apply
   return new Promise(res => {
-    let done = false; const fin = () => { if (!done) { done = true; res(); } };
+    let done = false, t0 = 0;
+    const fin = how => {
+      if (done) return; done = true;
+      if (line && line.meta) { try { voiceSpoke({ kind: line.meta.kind, sec: t0 ? Math.round((performance.now() - t0) / 100) / 10 : 0, stopped: !!how, how: how || 'end', mode: VOICE.spoken, chars: line.text.length, full: line.meta.full | 0 }); } catch (e) { /* the log is a nicety */ } }
+      res();
+    };
     try {
-      const src = AC.createBufferSource(); src.buffer = buf; src.connect(AUD.master || AC.destination); src.onended = fin;
+      const src = AC.createBufferSource(); src.buffer = buf; src.connect(AUD.master || AC.destination); src.onended = () => fin();
       if (onStart) { try { onStart(); } catch (e) { /* the caller's trouble must not stop the voice */ } }
+      VOICE.src = src; VOICE.finish = fin; t0 = performance.now();
       src.start();
     } catch (e) { fin(); }
-    setTimeout(fin, buf.duration * 1000 + 1500); // a suspended context never ends the line: do not wait forever
+    setTimeout(() => fin(), buf.duration * 1000 + 1500); // a suspended context never ends the line: do not wait forever
   });
 }
 function voiceFailed() { if (++VOICE.fails >= 3) { VOICE.fails = 0; VOICE.pauseUntil = performance.now() + 60000; } }

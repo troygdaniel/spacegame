@@ -457,12 +457,14 @@ function listenTyping() { const el = typeof document !== 'undefined' ? document.
 function listenKeyDown(e, game) {
   const S = LISTEN.s;
   if (e.code === 'Escape') {
-    if (S.state === 'idle') return;
+    // the ship is talking: the first Esc only stops the voice (the pause menu waits for the next one), card space-game-voice-shorter
+    if (S.state === 'idle') { if (typeof voiceSpeaking === 'function' && voiceSpeaking() && voiceStop('esc')) { e.preventDefault(); e.stopPropagation(); } return; }
     e.preventDefault(); e.stopPropagation(); listenCancel(); return;
   }
   if (e.code !== LISTEN.code || e.ctrlKey || e.metaKey || e.altKey || listenTyping()) return;
   if (e.repeat) { if (S.held) e.preventDefault(); return; }
   if (!LISTEN.on || !listenScene(game)) return;
+  if (typeof voiceStop === 'function') voiceStop('u'); // U while the ship talks cuts the voice at once, and the ring starts (he will usually want to talk next)
   e.preventDefault(); listenPress(game);
 }
 function listenKeyUp(e) {

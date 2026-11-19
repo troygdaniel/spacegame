@@ -340,6 +340,9 @@ const UI_TEXT = {
   'keys.anthropic.use': '', 'keys.anthropic.cost': '', 'keys.anthropic.url': '',
   // Settings > Listen (card space-game-ship-computer-listens, src/listen.js and src/settings.js): what holding the key does, the cost, and the one-line hint about the microphone. {key} and {minutes}
   'listen.use': '', 'listen.cost': '', 'listen.hint': '', 'listen.early': '',
+  // Settings > Sound > Spoken replies (card space-game-voice-shorter, src/voice.js, src/settings.js): the sentence under the row, and what each choice means
+  'spoken.use': 'Spoken replies: how much of the computer\'s answer is said aloud. The strip always shows all of it. U, Esc or a click on the strip stops the voice.',
+  'spoken.short': 'the first sentence or two is said', 'spoken.full': 'the whole answer is said', 'spoken.off': 'answers are never said aloud',
   // Settings > Sound > Music (card space-game-music, src/music.js): the one sentence under the row
   'music.use': 'Music is made by the game as you fly and steps back when the ship speaks. Effects is the engine, the drone and every shot and click; they ease off a little while music plays. M mutes all.'
 };
