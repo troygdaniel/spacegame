@@ -31,7 +31,7 @@ export function sessionsOf(events) {
 // the numbers of one session (or of all, merged: pass all the events)
 export function summarize(events) {
   const S = { events: events.length, build: {}, scenes: {}, samples: [], deals: { buy: 0, sell: 0, buyN: 0, sellN: 0, by: {} }, missions: { accepted: 0, done: 0, failed: 0, dropped: 0, pay: 0, by: {} }, credits: { other: 0 },
-    docks: 0, systems: [], jumps: 0, deaths: [], deathCauses: {}, actions: {}, idle: [], computer: { n: 0, ms: 0, failed: 0, codes: {}, tools: {} }, listen: { starts: 0, opens: 0, openMs: 0, openFail: 0, releases: 0, held: 0, clips: 0, heard: 0, heardEmpty: 0, ends: {} }, chat: { n: 0, ms: 0, failed: 0, codes: {} },
+    docks: 0, systems: [], jumps: 0, deaths: [], deathCauses: {}, actions: {}, nokeys: {}, idle: [], computer: { n: 0, ms: 0, failed: 0, codes: {}, tools: {} }, listen: { starts: 0, rings: 0, ringAborts: 0, opens: 0, openMs: 0, openFail: 0, stops: 0, held: 0, clips: 0, heard: 0, heardEmpty: 0, ends: {} }, chat: { n: 0, ms: 0, failed: 0, codes: {} },
     errors: [], errorCount: 0, dips: [], pauses: 0, settings: 0, hidden: 0, stalls: 0, end: null, endScene: '', last: null, unclean: false };
   const errs = new Map();
   events.forEach(e => {
@@ -54,13 +54,14 @@ export function summarize(events) {
       case 'credits': S.credits.other += e.delta || 0; break;
       case 'mission': { const m = S.missions; if (m[e.state] !== undefined) m[e.state]++; if (e.state === 'done') m.pay += e.pay || 0; if (e.id) { const b = m.by[e.id] = m.by[e.id] || {}; b[e.state] = (b[e.state] || 0) + 1; } break; }
       case 'death': S.deaths.push(e); S.deathCauses[e.cause || 'unknown'] = (S.deathCauses[e.cause || 'unknown'] || 0) + 1; break;
-      case 'counts': Object.entries(e.a || {}).forEach(([k, v]) => { S.actions[k] = (S.actions[k] || 0) + v; }); break;
+      case 'counts': Object.entries(e.a || {}).forEach(([k, v]) => { if (/^nokey: /.test(k)) S.nokeys[k.slice(7)] = (S.nokeys[k.slice(7)] || 0) + v; else S.actions[k] = (S.actions[k] || 0) + v; }); break; // nokey: <screen> <code>, a key that did nothing (src/playlog.js playlogRawKey): kept apart from the actions
       case 'idle': S.idle.push(e); break;
       case 'computer': S.computer.n++; S.computer.ms += e.ms || 0; if (e.ok === false) { S.computer.failed++; const k = (e.code || 'error') + (e.why ? '/' + e.why : ''); S.computer.codes[k] = (S.computer.codes[k] || 0) + 1; } break;
       case 'listen': { const V = S.listen; switch (e.step) {
         case 'start': V.starts++; break;
         case 'open': V.opens++; V.openMs += e.ms || 0; if (e.ok === false) V.openFail++; break;
-        case 'release': V.releases++; V.held += e.held || 0; break;
+        case 'ring': if (e.done) V.rings++; else V.ringAborts++; break;
+        case 'stop': V.stops++; V.held += e.held || 0; break;
         case 'clip': V.clips++; break;
         case 'heard': V.heard++; if (!e.chars) V.heardEmpty++; break;
         case 'end': V.ends[e.why || 'other'] = (V.ends[e.why || 'other'] || 0) + 1; break;
@@ -112,8 +113,10 @@ export function render(S, label = '') {
   L.push(`Deaths ${S.deaths.length}${S.deaths.length ? ': ' + top(S.deathCauses, 4).map(([k, v]) => `${k} x${v}`).join(', ') + ' (in ' + [...new Set(S.deaths.map(x => x.system).filter(Boolean))].join(', ') + ')' : ''}`);
   const acts = top(S.actions, 8);
   L.push('Pressed most:  ' + (acts.length ? acts.map(([k, v]) => `${k.replace(/^key:/, '')} ${num(v)}`).join('   ') : '(nothing counted)'));
+  const nk = top(S.nokeys, 8), nkTotal = Object.values(S.nokeys).reduce((a, b) => a + b, 0);
+  if (nk.length) L.push(('No action: ' + nk.map(([k, v]) => `${k} x${num(v)}`).join(', ') + (Object.keys(S.nokeys).length > nk.length ? `, and ${Object.keys(S.nokeys).length - nk.length} more` : '') + `   (${num(nkTotal)} presses of keys that did nothing there)`).slice(0, 128));
   const c = S.computer, ch = S.chat, v = S.listen;
-  if (v.starts || Object.keys(v.ends).length) L.push(`Voice (U): ${v.starts} holds${v.opens ? `, mic open in ${(v.openMs / v.opens / 1000).toFixed(1)} s${v.openFail ? ` (${v.openFail} failed)` : ''}` : ''}${v.releases ? `, held ${(v.held / v.releases).toFixed(1)} s` : ''}${v.heard ? `, heard ${v.heard - v.heardEmpty} of ${v.heard}` : ''}.  Ended: ${Object.keys(v.ends).length ? top(v.ends, 5).map(([k, n]) => k + ' x' + n).join(', ') : 'no end seen'}`);
+  if (v.starts || Object.keys(v.ends).length) L.push(`Voice (U): ${v.starts} presses, ring full ${v.rings}x${v.opens ? `, mic ${(v.openMs / v.opens / 1000).toFixed(1)} s${v.openFail ? ` (${v.openFail} failed)` : ''}` : ''}${v.stops ? `, listened ${(v.held / v.stops).toFixed(1)} s` : ''}${v.heard ? `, heard ${v.heard - v.heardEmpty} of ${v.heard}` : ''}.  Ended: ${Object.keys(v.ends).length ? top(v.ends, 4).map(([k, n]) => k + ' x' + n).join(', ') : 'no end seen'}`);
   if (c.n || ch.n) L.push(`Ship computer: ${c.n} asks${c.n ? `, ${(c.ms / c.n / 1000).toFixed(1)} s each` : ''}${c.failed ? `, ${c.failed} failed (${Object.entries(c.codes).map(([k, v]) => k + ' x' + v).join(', ')})` : ''}${Object.keys(c.tools).length ? '; chose: ' + top(c.tools, 5).map(([k, v]) => `${k} x${v}`).join(', ') : ''}.   Bar chat: ${ch.n}${ch.n ? `, ${(ch.ms / ch.n / 1000).toFixed(1)} s each` : ''}${ch.failed ? `, ${ch.failed} failed` : ''}`);
   const idle = [...S.idle].sort((a, b) => b.secs - a.secs), conf = idle.filter(i => !i.auto), auto = idle.length - conf.length;
   L.push('');

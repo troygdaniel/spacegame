@@ -20,13 +20,22 @@ One JSON line per event, `{ t: ms since the session began, s: session id, ev: na
 | `death` | what killed the ship (the nearest raider's kind) |
 | `counts` | every minute: how many times each ACTION was used (`key:flight: thrust`, `click`, `voice`) |
 | `computer`, `computer_plan`, `npc_chat` | the ship computer asked (ms, ok, code, and `why` for an empty reply: length, refusal, filter or blank) and which action of its closed list it chose; the bar chat (ms, ok, code, why) |
-| `listen` | a hold of the voice key (U), one line a step: `start`, `open` (ms the microphone took), `release` (seconds held, short, silent), `clip` (bytes), `heard` (ms, `chars` of the transcript: 0 is empty) and `end` (`why`: `sent`, or the plain line shown: tap, silent, nothing, denied, nokey, slow...). Counts and times, never the words |
+| `listen` | a press of the voice key (U), one line a step: `start`, `ring` (`done`: the ring filled; or `held`: how long it was held when it did not), `open` (ms the microphone took), `stop` (`held`: seconds it listened; `why`: silence, again, lead or cap; short, silent), `clip` (bytes), `heard` (ms, `chars` of the transcript: 0 is empty) and `end` (`why`: `sent`, or the plain line shown: tap, silent, nothing, denied, nokey, slow...). Counts and times, never the words |
 | `idle` | **no input for 20 s or more**: how long, and what was on screen (scene, panel, call, system, flying itself). The best sign of confusion |
 | `fps_dip` | under 30 frames a second for 2 s or more |
 | `stall`, `tab` | the page froze (no tick for 5 s); the tab was hidden or shown |
 | `error` | every JS error, rejected promise and `console.error`, with the stack (the home folder shortened to `~`), 30 a minute at most |
 
 A key is counted by what it **does** (from `src/data_controls.js`, by the screen you are on), never by its letter; a key pressed in a text box is activity and no action.
+
+A key that does nothing on its screen is counted as `key:other` and also as `nokey: <screen> <code>` (for example `nokey: Galaxy KeyJ`, `nokey: Space F5`): the screen it was
+pressed on and the **physical key's code** (`event.code`), so a list of the keys a player reaches for in vain can be read (card `space-game-keys-awkward`). It is never the
+character a key types, never from a text box (every typed-text field of the game is a real `<input>`, so a key pressed in one never reaches the log), never a chord with
+Ctrl, Cmd or Alt, never a held-down repeat and never a key of an input method. A code that is not plain letters and digits is `Other`. The counts are per minute, with no order
+and no times between presses, so nothing typed can be read back out of them. `node tools/playlog-summary.mjs` lists them on one `No action:` line, most pressed first.
+The ANYWHERE keys of the controls table (Esc, H, M, Tab) count as their own action (`key:any: pause`) in every screen that has a table (flight, station, ship bay, surface); on a
+screen with no table of its own (the maps, Pause, the ship's computer) every key is `key:other`, which is why the raw code and the screen are kept beside it. Before 18 Nov 2026 the
+ANYWHERE rows were never read, so Esc, H and M in flight were `key:other` too (Troy's first log: 70 `other`, 7 of them the Esc that opened a pause).
 
 ## Where it goes
 

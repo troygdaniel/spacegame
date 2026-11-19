@@ -1,22 +1,27 @@
-// ---------- Talk to the ship's computer (card space-game-ship-computer-listens; Troy, 17 Nov 2026) ----------
-// Hold U, say the question, let go: the words are shown on screen and, after a short pause in which Esc cancels them, handed to the ship's computer
-// (src/shipcomputer.js) exactly as if they had been typed in its box. This reverses the 13 Nov decision "no speech to text, no push to talk" (docs/VOICE.md
-// records the new one). What stays the same is the rule of the whole voice side: nothing happens unless the player's own key is in this browser.
-//   hold U (in space or in a station)   the browser opens the microphone, a red LISTENING mark shows and a short sound plays; the microphone is open
-//                                       ONLY while the key is held (tracks stopped the moment it is let go, or Esc, or the window loses focus)
-//   let go                              a second sound; the sound goes in ONE request to Deepgram (POST /v1/listen, on the Deepgram key of Settings > Keys,
-//                                       in the Authorization header and nowhere else); the audio is dropped when the call ends: never saved, never kept
-//   the words                           shown for 1.5 s (Esc cancels; holding U again says it again), then shipcompSubmit(words) asks the ship's computer
+// ---------- Talk to the ship's computer (card space-game-ship-computer-listens; Troy, 17 Nov 2026; the ring: card space-game-voice-ring, 18 Nov) ----------
+// Press U and keep it down: a ring around the U key cap on the screen fills (0.6 s). When it is full the game LISTENS: the microphone opens, a red LISTENING mark
+// shows and a short sound plays, and you can let go and speak. It stops by itself when you stop talking (about 1.2 s of quiet), or when you press U again
+// (send now), or when it has listened as long as it may (20 s). Esc cancels. Let go before the ring is full and nothing happens but a one-line hint: a tap
+// is not a command. This reverses the 13 Nov decision "no speech to text, no push to talk" (docs/VOICE.md records the new one). What stays the same is the
+// rule of the whole voice side: nothing happens unless the player's own key is in this browser.
+//   hold U (in space or in a station)   the ring fills; the microphone is NOT open yet (the first time the box says the browser will ask: choose Allow)
+//   the ring is full                    the browser opens the microphone, a red LISTENING mark shows and a short sound plays; the key may be let go now
+//   quiet for 1.2 s after words         (or U again, or the cap) a second sound; the sound goes in ONE request to Deepgram (POST /v1/listen, on the Deepgram
+//                                       key of Settings > Keys, in the Authorization header and nowhere else); the audio is dropped when the call ends
+//   the words                           shown for 1.5 s (Esc cancels; U again says it again), then shipcompSubmit(words) asks the ship's computer
+// The microphone is open ONLY while it listens (tracks stopped the moment it ends, or Esc, or the window loses focus). The level meter decides "quiet": with
+// no meter (no Web Audio) nothing ends it but U again, Esc or the cap. Nothing heard at all for 6 s ends it too, and what it has is sent (a level meter that
+// could be wrong must never be the reason nothing is heard: the empty answer says "I heard silence").
 // It needs BOTH keys, the Deepgram one to hear and a chat key (OpenAI or Anthropic) for the computer to answer: with either missing a plain line says where
-// to add it and nothing is recorded. A tap (under a third of a second) sends nothing; a silent microphone is sent (a level meter that could be wrong must never be the reason nothing is heard) and the empty answer says "I heard silence". A session may listen
-// LISTEN.limit.minutes minutes (the player's account, the player's cost: Settings > Listen says so); the count is kept in memory, so a reload starts it again.
+// to add it and nothing is recorded. A listen under a third of a second sends nothing. A session may listen LISTEN.limit.minutes minutes (the player's account,
+// the player's cost: Settings > Listen says so); the count is kept in memory, so a reload starts it again.
 // The browser asks for the microphone itself. Denied, no device, not a secure page and a game opened from a file each get a plain line. 127.0.0.1 is a
 // secure context, so `node tools/serve.mjs` asks once; opened from a file the browser may ask every time or refuse (Settings > Listen says so).
-// One request after the key is let go, not a stream: the words appear a moment after the release, not word by word. A live stream over a WebSocket is
+// One request after the listening ends, not a stream: the words appear a moment after it, not word by word. A live stream over a WebSocket is
 // a later card; the interface below does not change for it.
 //
 // THE INTERFACE (Settings and the tests use these):
-//   listenReady()          { ok, code, say }: may a hold start now; code off (a silent no), nokey, badkey, nochat, chatoff, chatbad, limit, insecure, nomic
+//   listenReady()          { ok, code, say }: may a press start now; code off (a silent no), nokey, badkey, nochat, chatoff, chatbad, limit, insecure, nomic
 //   listenStatus()         { ok, line, color }: the Settings > Listen status line
 //   listenHint()           { text, warn }: the one-line hint about the microphone and `node tools/serve.mjs`
 //   listenMicTest()        Promise<string>: opens the microphone for an instant and says how it went; sends nothing anywhere
@@ -24,15 +29,16 @@
 //   listenSetOn(on)        the player's switch, kept in this browser
 //   listenTranscribe(blob) Promise<{ text } | { error, code }>: the one call, never throws
 //   listenHeld()           how many pieces of audio or microphone the game holds right now: 0 when idle (the test of "nothing is kept")
-// A hold is a small state machine in LISTEN.s: idle, opening (the microphone is being asked for), listening, stopping, hearing, review (the words wait their
-// pause). Every async step checks LISTEN.s.seq, so a cancel or a new hold makes the older one's answer fall on the floor.
+// A press is a small state machine in LISTEN.s: idle, ring (the key is down, the ring fills), opening (the microphone is being asked for), listening, stopping,
+// hearing, review (the words wait their pause). Every async step checks LISTEN.s.seq, so a cancel or a new press makes the older one's answer fall on the floor.
 const LISTEN = {
   code: 'KeyU', cap: 'U',                 // the key to hold: no scene binds it (tests/listen.mjs reads the sources to prove it); T is taken in both places
   on: true,                              // the player's switch (Settings > Listen), kept in this browser
   host: 'api.deepgram.com', url: 'https://api.deepgram.com/v1/listen', model: 'nova-3',
   mimes: ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'], // the recorder's formats, the first this browser can make (Deepgram reads all of them)
-  limit: { minutes: 10, hold: 20000, tap: 350, grace: 1500, wait: 15000, chars: 240, terms: 30, quiet: 0.02, line: 4500 },
-  store: { on: 'longhaul.listen.on' },
+  limit: { minutes: 10, hold: 20000, tap: 350, grace: 1500, wait: 15000, chars: 240, terms: 30, quiet: 0.02, line: 4500,
+    ring: 600, silence: 1200, words: 300, lead: 6000, talk: 0.05 },   // the ring's seconds; the quiet that ends it; the sound that counts as words; the wait for the first words; the level that is sound
+  store: { on: 'longhaul.listen.on', asked: 'longhaul.listen.asked' },
   say: {                                 // the plain lines; {key} is the key to hold
     nokey: 'Listening needs a Deepgram key: Settings > Keys.',
     badkey: 'Deepgram rejected the key: check it in Settings > Keys.',
@@ -47,10 +53,10 @@ const LISTEN = {
     busy: 'The microphone would not start: another app may be using it.',
     failed: 'The microphone did not start. Try again.',
     norecord: 'The browser could not start recording. Try again.',
-    ready: 'The microphone is ready. Hold {key}, speak, and let go.',
-    tap: 'Hold {key} while you speak, and let go to send.',
+    first: 'The browser will ask to use the microphone: choose Allow, then speak.',
+    tap: 'Hold {key} until the ring is full, then speak.',
     silent: 'I heard silence. Check the microphone the browser is using, then try again.',
-    nothing: 'I did not catch anything. Hold {key}, speak, and let go.',
+    nothing: 'I did not catch anything. Hold {key} until the ring is full, then speak.',
     cancelled: 'Cancelled.',
     nobox: 'I could not open the ship\'s computer here. Close what is open, then hold {key} again.',
     rejected: 'Deepgram rejected the key: check it in Settings > Keys.',
@@ -62,8 +68,9 @@ const LISTEN = {
     badreply: 'Deepgram sent something I cannot read. Try again.'
   },
   s: { state: 'idle', held: false, seq: 0, stream: null, rec: null, chunks: [], blob: null, mime: '', t0: 0, used: 0, calls: 0, words: '', send: false, peak: 0, level: 0,
-    meter: null, tick: 0, timer: 0, stopTimer: 0, line: null, lineTimer: 0, lastSay: -1e9, short: false, silent: false },
-  el: null, game: null
+    meter: null, tick: 0, timer: 0, stopTimer: 0, line: null, lineTimer: 0, lastSay: -1e9, short: false, silent: false,
+    ringAt: 0, lastTick: 0, sound: 0, talk: 0, asked: false },   // the ring began; the last tick; the last loud moment; ms of words; the browser has asked for the microphone before
+  el: null, capEl: null, game: null
 };
 const lsSay = (k, v) => String(LISTEN.say[k] || k).replace(/\{(\w+)\}/g, (all, n) => (n === 'key' ? LISTEN.cap : n === 'minutes' ? LISTEN.limit.minutes : v && v[n] !== undefined ? v[n] : all));
 const lsClean = (t, max) => String(t == null ? '' : t).replace(typeof CHAT_BAD !== 'undefined' ? CHAT_BAD : /[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max || LISTEN.limit.chars); // CHAT_BAD (src/chat.js): control and invisible characters
@@ -71,7 +78,7 @@ const lsNow = () => performance.now();
 const lsTry = (fn, fallback) => { try { const v = fn(); return v === undefined ? fallback : v; } catch (e) { return fallback; } };
 
 // ---------- the switch (kept in this browser, like the voice's) ----------
-function listenLoad() { try { LISTEN.on = localStorage.getItem(LISTEN.store.on) !== '0'; } catch (e) { /* storage is optional */ } }
+function listenLoad() { try { LISTEN.on = localStorage.getItem(LISTEN.store.on) !== '0'; LISTEN.s.asked = localStorage.getItem(LISTEN.store.asked) === '1'; } catch (e) { /* storage is optional */ } }
 function listenSetOn(on) { LISTEN.on = !!on; try { localStorage.setItem(LISTEN.store.on, on ? '1' : '0'); } catch (e) { /* storage is optional */ } if (!LISTEN.on) listenCancel(''); }
 
 // ---------- what the browser has, and may a hold start ----------
@@ -96,7 +103,7 @@ function listenReady() {
 function listenUsedLine() { return 'This session: ' + (LISTEN.s.used / 60000).toFixed(1) + ' of ' + LISTEN.limit.minutes + ' minutes of listening.'; }
 function listenStatus() {
   const r = listenReady();
-  if (r.ok) return { ok: true, line: 'Ready: hold ' + LISTEN.cap + ' in space or in a station, speak, and let go.', color: '#6dff9c' };
+  if (r.ok) return { ok: true, line: 'Ready: hold ' + LISTEN.cap + ' in space or in a station until the ring is full, then speak.', color: '#6dff9c' };
   if (r.code === 'off') return { ok: false, line: 'Listening is switched off.', color: '#8fb4c9' };
   return { ok: false, line: r.say, color: '#ffb454' };
 }
@@ -123,7 +130,7 @@ async function listenMicTest() {
   let stream = null;
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { return listenMicError(e); }
   listenStopStream(stream);
-  return 'The microphone works. Hold ' + LISTEN.cap + ' in space or in a station, speak, and let go.';
+  return 'The microphone works. Hold ' + LISTEN.cap + ' in space or in a station until the ring is full, then speak.';
 }
 // the loudest sample of a block of 8-bit time-domain samples (128 is silence), 0 to 1
 function listenPeak(bytes) { let m = 0; for (let i = 0; i < bytes.length; i++) m = Math.max(m, Math.abs(bytes[i] - 128)); return m / 128; }
@@ -167,10 +174,13 @@ async function listenTranscribe(blob, terms = true) {
 
 // ---------- what is on the screen ----------
 // A pure view of the state: { mark, head, body } or null. mark is the colour of the dot: red while the microphone is open.
+// The ring itself is drawn on the U key cap (listenCapPaint); the box above says the rest, and stays away while the ring fills, except the first time
+// (the plain line before the browser asks for the microphone).
 function listenView(now = lsNow()) {
   const S = LISTEN.s, L = S.line;
-  if (S.state === 'opening') return { mark: 'amber', head: 'OPENING THE MICROPHONE', body: 'If the browser asks, choose Allow.' };
-  if (S.state === 'listening') return { mark: 'red', head: 'LISTENING  ' + Math.max(0, (now - S.t0) / 1000).toFixed(1) + ' s', body: listenMeter(S.level) + '   let go to send   Esc cancels' };
+  if (S.state === 'ring') return S.asked ? null : { mark: 'amber', head: 'KEEP HOLDING ' + LISTEN.cap, body: lsSay('first') };
+  if (S.state === 'opening') return S.asked ? { mark: 'amber', head: 'OPENING THE MICROPHONE', body: 'One moment.' } : { mark: 'amber', head: 'ALLOW THE MICROPHONE', body: lsSay('first') };
+  if (S.state === 'listening') return { mark: 'red', head: 'LISTENING  ' + Math.max(0, (now - S.t0) / 1000).toFixed(1) + ' s', body: listenMeter(S.level) + '   stops when you stop talking   ' + LISTEN.cap + ' sends   Esc cancels' };
   if (S.state === 'stopping' || S.state === 'hearing') return { mark: 'cyan', head: 'HEARING YOU', body: '' };
   if (S.state === 'review') return { mark: 'green', head: '"' + S.words + '"', body: 'Asking the ship\'s computer   Esc cancels   ' + LISTEN.cap + ' again to say it again' };
   if (L && now < L.until) return { mark: L.kind === 'warn' ? 'amber' : 'cyan', head: L.text, body: L.words ? '"' + L.words + '"' : '' };
@@ -191,6 +201,7 @@ function listenDom() { // the mark is a plain HTML box over the canvas: it is th
   return LISTEN.el;
 }
 function listenPaint() {
+  listenCapPaint();
   const v = listenView(), d = listenDom(); if (!d) return v;
   try {
     if (!v) { d.root.style.display = 'none'; return v; }
@@ -201,6 +212,47 @@ function listenPaint() {
   } catch (e) { /* the mark is a nicety: the hold works without it */ }
   return v;
 }
+// The U key cap on the screen, with the ring around it (left edge, halfway down: the bottom of the screen is the instruments, the top the strips). It shows
+// only where the key works (Space or Station running) and only when listening can work at all (both keys, the switch on): with no keys the game is as before.
+// Idle: a faint ring and "talk". Ring: it fills, amber. Opening: full amber. Listening: solid red, glowing with the level. Hearing: cyan. Words waiting: green.
+// A pure view first (listenCapView), then the paint.
+function listenCapView(now = lsNow()) {
+  const S = LISTEN.s;
+  if (S.state === 'ring') return { fill: Math.max(0, Math.min(1, (now - S.ringAt) / LISTEN.limit.ring)), color: LISTEN_CSS.amber, label: 'hold' };
+  if (S.state === 'opening') return { fill: 1, color: LISTEN_CSS.amber, label: 'allow' };
+  if (S.state === 'listening') return { fill: 1, color: LISTEN_CSS.red, label: 'listening', glow: S.level };
+  if (S.state === 'stopping' || S.state === 'hearing') return { fill: 1, color: LISTEN_CSS.cyan, label: 'hearing' };
+  if (S.state === 'review') return { fill: 1, color: LISTEN_CSS.green, label: 'sending' };
+  return { fill: 0, color: LISTEN_CSS.cyan, label: 'talk', idle: true };
+}
+function listenCapDom() {
+  if (LISTEN.capEl) return LISTEN.capEl;
+  if (typeof document === 'undefined' || !document.body) return null;
+  try {
+    const mk = css => { const e = document.createElement('div'); e.style.cssText = css; return e; };
+    const root = mk('position:fixed;z-index:59;pointer-events:none;display:none;width:58px;height:58px;border-radius:50%;background:rgba(56,225,255,0.2)');
+    const face = mk('position:absolute;left:5px;top:5px;width:48px;height:48px;border-radius:50%;background:rgba(4,12,24,0.92)');
+    const key = mk('position:absolute;left:12px;top:11px;width:24px;height:22px;border-radius:5px;background:#38e1ff;color:#02101c;font:700 14px ui-monospace,Menlo,Consolas,monospace;text-align:center;line-height:22px;box-shadow:0 3px 0 rgba(0,0,0,0.45)');
+    const label = mk('position:absolute;left:-10px;top:60px;width:78px;text-align:center;font:600 11px ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px;color:#8fb4c9');
+    key.textContent = LISTEN.cap; root.setAttribute('aria-hidden', 'true'); face.appendChild(key); root.appendChild(face); root.appendChild(label); document.body.appendChild(root);
+    LISTEN.capEl = { root, face, key, label };
+  } catch (e) { LISTEN.capEl = null; }
+  return LISTEN.capEl;
+}
+function listenCapShown(game) { return !!(LISTEN.on && listenScene(game || LISTEN.game) && listenReady().ok); }
+function listenCapPaint() {
+  const S = LISTEN.s, d = listenCapDom(); if (!d) return null;
+  try {
+    const game = LISTEN.game || (typeof window !== 'undefined' ? window.game : undefined), busy = S.state !== 'idle';
+    if (!busy && !listenCapShown(game)) { d.root.style.display = 'none'; return null; }
+    if (busy && !listenCapShown(game) && S.state !== 'listening' && S.state !== 'opening') { d.root.style.display = 'none'; return null; } // the scene went away under the ring
+    const v = listenCapView(), canvas = typeof window !== 'undefined' && window.game && window.game.canvas, r = canvas && canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : null;
+    Object.assign(d.root.style, { display: 'block', left: (r ? r.left + 14 : 14) + 'px', top: (r ? r.top + r.height / 2 - 29 : 300) + 'px', opacity: v.idle ? '0.55' : '1',
+      background: v.fill >= 1 ? v.color : 'conic-gradient(' + v.color + ' ' + Math.round(v.fill * 360) + 'deg, rgba(56,225,255,0.2) 0)', boxShadow: v.glow !== undefined ? '0 0 ' + Math.round(8 + v.glow * 30) + 'px ' + v.color : 'none' });
+    d.label.textContent = v.label; d.label.style.color = v.idle ? '#8fb4c9' : v.color;
+  } catch (e) { /* the cap is a nicety: the ring works without it */ }
+  return null;
+}
 // a plain line for a few seconds (a refusal, a hint, an error). words: the transcript to show under it, when there is one. Said once every few seconds per text
 function listenLine(text, kind = 'warn', words = '') {
   const S = LISTEN.s, now = lsNow();
@@ -210,7 +262,7 @@ function listenLine(text, kind = 'warn', words = '') {
 }
 const listenSound = name => { try { if (typeof sfx === 'function') sfx(name); } catch (e) { /* sound is optional */ } };
 
-// ---------- one hold ----------
+// ---------- one press ----------
 function listenScene(game) { // the scene the computer can open over: the Space or Station scene that is running (a paused one, behind a menu, is not)
   if (!game || !game.scene || game.scene.isActive('ShipComputer')) return null;
   return game.scene.getScenes(true).find(sc => sc.scene.key === 'Space' || sc.scene.key === 'Station') || null;
@@ -223,7 +275,7 @@ function listenReset(keepLine) {
   clearTimeout(S.timer); clearInterval(S.tick); clearTimeout(S.stopTimer);
   if (S.meter) { lsTry(() => S.meter.src.disconnect(), 0); S.meter = null; }
   listenStopStream(S.stream); S.stream = null; S.rec = null; S.chunks = []; S.blob = null;
-  S.held = false; S.state = 'idle'; S.words = ''; S.send = false; S.short = false; S.silent = false; S.peak = 0; S.level = 0; S.tick = 0; S.timer = 0;
+  S.held = false; S.state = 'idle'; S.words = ''; S.send = false; S.short = false; S.silent = false; S.peak = 0; S.level = 0; S.tick = 0; S.timer = 0; S.talk = 0; S.sound = 0; S.lastTick = 0; S.ringAt = 0;
   if (!keepLine) { S.line = null; clearTimeout(S.lineTimer); }
 }
 function listenCancel(say = LISTEN.say.cancelled) {
@@ -233,60 +285,85 @@ function listenCancel(say = LISTEN.say.cancelled) {
   listenReset(false);
   if (say && was !== 'idle') listenLine(say, 'info'); else listenPaint();
 }
+// U: while it listens, U again is "send now". Otherwise it starts the ring (the microphone stays shut until the ring is full).
 function listenPress(game) {
-  const S = LISTEN.s, scene = listenScene(game);
-  if (S.held || S.state === 'opening' || S.state === 'listening' || S.state === 'stopping' || S.state === 'hearing') return false; // a hold is on, or its sound is on its way
+  const S = LISTEN.s, scene = listenScene(game); if (game) LISTEN.game = game;
+  if (S.state === 'listening') { listenRelease('again'); return true; }
+  if (S.state === 'ring' || S.state === 'opening' || S.state === 'stopping' || S.state === 'hearing') return false; // a press is on, or its sound is on its way
   if (!LISTEN.on || !scene) return false;                                // not ours: in a menu, on the title, in the map the key is only a key
   const r = listenReady(), say = r.ok && listenBlocked(scene) ? { say: lsSay('nobox') } : r;
   if (say.say) { if (lsNow() - S.lastSay > 2000) { S.lastSay = lsNow(); listenLine(say.say, 'warn'); } return false; }
   if (!r.ok) return false;
-  listenReset(true);                                                      // words that were waiting for their pause are replaced by this hold
-  S.held = true; S.state = 'opening'; listenPaint();
-  listenOpen(++S.seq);
+  listenReset(true);                                                      // words that were waiting for their pause are replaced by this press
+  S.held = true; S.state = 'ring'; S.ringAt = lsNow(); ++S.seq;
+  S.tick = setInterval(listenTick, 40); listenPaint();
   return true;
+}
+// the key came up before the ring was full: a tap is not a command, so it says how to do it and nothing else happens
+function listenRingAbort() {
+  const S = LISTEN.s; if (S.state !== 'ring') return;
+  S.seq++; listenReset(true); listenLine(lsSay('tap'), 'info');
+}
+// the ring is full: now the microphone is asked for (and the key may be let go)
+function listenRingDone() {
+  const S = LISTEN.s; if (S.state !== 'ring') return;
+  clearInterval(S.tick); S.tick = 0; S.state = 'opening'; listenPaint();
+  listenOpen(S.seq);
 }
 async function listenOpen(seq) {
   const S = LISTEN.s; let stream = null;
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
   catch (e) { if (seq === S.seq) { listenReset(false); listenLine(listenMicError(e), 'warn'); } return; }
+  if (!S.asked) { S.asked = true; try { localStorage.setItem(LISTEN.store.asked, '1'); } catch (e) { /* storage is optional */ } } // the browser has asked once: the next time it need not be explained
   if (seq !== S.seq) { listenStopStream(stream); return; }                  // cancelled while the browser was asking
-  if (!S.held) {                                                              // let go before it was ready (the first time the browser asks first): nothing was recorded
-    listenStopStream(stream); listenReset(false); listenLine(lsSay('ready'), 'info'); return;
-  }
   let rec = null; const mime = listenMime();
   try { rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream); } catch (e) { listenStopStream(stream); listenReset(false); listenLine(lsSay('norecord'), 'warn'); return; }
   S.stream = stream; S.rec = rec; S.chunks = []; S.mime = mime || rec.mimeType || ''; S.peak = 0; S.level = 0; S.silent = false;
   rec.ondataavailable = ev => { if (seq === S.seq && ev && ev.data && ev.data.size) S.chunks.push(ev.data); };
   rec.onstop = () => listenStopped(seq);
   try { rec.start(); } catch (e) { listenReset(false); listenLine(lsSay('norecord'), 'warn'); return; }
-  // a level bar, and the proof that the microphone hears something: a node that only listens, nothing from it goes to the speakers
+  // a level bar, the proof that the microphone hears something, and what tells "quiet" from "talking": a node that only listens, nothing from it goes to the speakers
   lsTry(() => { if (typeof AC !== 'undefined' && AC && AC.createMediaStreamSource) { resumeAudio(); const src = AC.createMediaStreamSource(stream), an = AC.createAnalyser(); an.fftSize = 512; src.connect(an); S.meter = { src, an, buf: new Uint8Array(an.fftSize) }; } }, 0);
-  S.t0 = lsNow(); S.state = 'listening'; listenSound('uiOpen');
+  S.t0 = lsNow(); S.lastTick = S.t0; S.sound = S.t0; S.talk = 0; S.state = 'listening'; listenSound('uiOpen');
   clearInterval(S.tick); S.tick = setInterval(listenTick, 100);
   listenPaint();
 }
-function listenSample() { const S = LISTEN.s; if (S.meter) lsTry(() => { S.meter.an.getByteTimeDomainData(S.meter.buf); S.level = listenPeak(S.meter.buf); S.peak = Math.max(S.peak, S.level); }, 0); }
-function listenTick() { // every 100 ms while the key is held: the level, the seconds, and the longest hold
-  const S = LISTEN.s; if (S.state !== 'listening') return;
-  listenSample();
-  if (lsNow() - S.t0 >= Math.min(LISTEN.limit.hold, listenLeft())) { listenRelease('cap'); return; }
+// the meter is only believed when the audio context runs (a suspended one reads as silence)
+const listenMeterOk = () => !!LISTEN.s.meter && lsTry(() => AC.state === 'running', false);
+function listenSample(now = lsNow()) {
+  const S = LISTEN.s; if (!S.meter) return;
+  lsTry(() => { S.meter.an.getByteTimeDomainData(S.meter.buf); S.level = listenPeak(S.meter.buf); S.peak = Math.max(S.peak, S.level); }, 0);
+  const dt = Math.min(200, Math.max(0, now - (S.lastTick || now))); S.lastTick = now;
+  if (S.level >= LISTEN.limit.talk) { S.sound = now; S.talk += dt; }       // words so far (ms of sound) and when the last of it was
+}
+function listenTick() { // every 40 ms while the ring fills, every 100 ms while it listens
+  const S = LISTEN.s, now = lsNow();
+  if (S.state === 'ring') { if (!S.held) listenRingAbort(); else if (now - S.ringAt >= LISTEN.limit.ring) listenRingDone(); else listenPaint(); return; }
+  if (S.state !== 'listening') return;
+  listenSample(now);
+  const age = now - S.t0;
+  if (age >= Math.min(LISTEN.limit.hold, listenLeft())) { listenRelease('cap'); return; }       // listened as long as it may: send what it has
+  if (listenMeterOk()) {
+    if (S.talk >= LISTEN.limit.words && now - S.sound >= LISTEN.limit.silence) { listenRelease('silence'); return; } // words, then quiet: that was the question
+    if (S.talk < LISTEN.limit.words && age >= LISTEN.limit.lead) { listenRelease('lead'); return; }                   // nothing said: send it anyway, the empty answer says so
+  }
   listenPaint();
 }
-// why: key (let go: send) or cap (held as long as it may be: send). A hold under LISTEN.limit.tap is a tap: nothing is sent
-function listenRelease(why = 'key') {
+// why: silence (quiet after words), again (U pressed), lead (nothing said), cap (listened as long as it may). A listen under LISTEN.limit.tap is not sent
+function listenRelease(why = 'again') {
   const S = LISTEN.s;
-  if (S.state !== 'listening') { S.held = false; return; }                   // 'opening': listenOpen sees the key is up when the microphone is ready
+  if (S.state !== 'listening') return;
   const ms = lsNow() - S.t0, rec = S.rec, seq = S.seq;
   listenSample();
   // a microphone the level meter heard nothing from: only used to say so when the transcript comes back empty (a suspended audio context reads as silence, so it is not believed then)
-  S.silent = !!S.meter && lsTry(() => AC.state === 'running', false) && ms > 600 && S.peak < LISTEN.limit.quiet;
-  S.held = false; S.used += ms; S.state = 'stopping'; clearInterval(S.tick); S.tick = 0;
+  S.silent = listenMeterOk() && ms > 600 && S.peak < LISTEN.limit.quiet;
+  S.used += ms; S.state = 'stopping'; clearInterval(S.tick); S.tick = 0;
   S.short = ms < LISTEN.limit.tap; S.send = why !== 'blur' && !S.short;
   listenSound('uiClose');
   if (S.meter) { lsTry(() => S.meter.src.disconnect(), 0); S.meter = null; }
   try { rec.stop(); } catch (e) { /* already stopped */ }
   listenStopStream(S.stream); S.stream = null;                                 // the microphone is closed from this moment, before anything is sent
-  S.stopTimer = setTimeout(() => { if (seq === S.seq && S.state === 'stopping') listenStopped(seq); }, 1500); // a recorder that never says it stopped must not hang the hold
+  S.stopTimer = setTimeout(() => { if (seq === S.seq && S.state === 'stopping') listenStopped(seq); }, 1500); // a recorder that never says it stopped must not hang it
   listenPaint();
 }
 function listenStopped(seq) {
@@ -294,7 +371,7 @@ function listenStopped(seq) {
   clearTimeout(S.stopTimer);
   const chunks = S.chunks, mime = S.mime, send = S.send, short = S.short, silent = S.silent;
   S.chunks = []; S.rec = null;
-  if (!send) { listenReset(true); listenLine(short ? lsSay('tap') : lsSay('cancelled'), 'info'); return; }
+  if (!send) { listenReset(true); listenLine(short ? lsSay('nothing') : lsSay('cancelled'), 'info'); return; }
   let blob = null; try { blob = new Blob(chunks, { type: mime || 'audio/webm' }); } catch (e) { blob = null; }
   chunks.length = 0;
   if (!blob || !blob.size) { listenReset(true); listenLine(lsSay('nothing'), 'warn'); return; }
@@ -333,12 +410,20 @@ function listenKeyDown(e, game) {
   if (!LISTEN.on || !listenScene(game)) return;
   e.preventDefault(); listenPress(game);
 }
-function listenKeyUp(e) { if (e.code === LISTEN.code && LISTEN.s.held) { e.preventDefault(); listenRelease('key'); } }
+function listenKeyUp(e) {
+  if (e.code !== LISTEN.code) return;
+  const S = LISTEN.s; S.held = false;
+  if (S.state === 'ring') { e.preventDefault(); listenRingAbort(); }        // let go before the ring was full; after that the key is not needed (it listens by itself)
+}
 function listenInstall(game) {
   LISTEN.game = game; listenLoad();
   window.addEventListener('keydown', e => listenKeyDown(e, game), true);
   window.addEventListener('keyup', listenKeyUp, true);
-  window.addEventListener('blur', () => { if (LISTEN.s.state === 'listening' || LISTEN.s.state === 'opening') listenCancel(); });
-  if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('visibilitychange', () => { if (document.hidden && (LISTEN.s.state === 'listening' || LISTEN.s.state === 'opening')) listenCancel(); });
+  // the window losing focus: a ring in progress (its key-up would never come) is dropped, a microphone that is open is closed. Not while the browser is asking for
+  // the microphone: its own question takes the focus, and that is the very moment the press must not be lost (it was, the first time: the log of 18 Nov)
+  window.addEventListener('blur', () => { if (LISTEN.s.state === 'ring') listenRingAbort(); else if (LISTEN.s.state === 'listening') listenCancel(); });
+  if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('visibilitychange', () => { if (document.hidden && ['ring', 'opening', 'listening'].includes(LISTEN.s.state)) listenCancel(''); });
+  const t = setInterval(listenCapPaint, 500); if (t && typeof t.unref === 'function') t.unref(); // the key cap appears and goes with the scene
+  listenCapPaint();
 }
 if (typeof window !== 'undefined' && window.game && window.game.scene && typeof window.game.scene.add === 'function') listenInstall(window.game);
