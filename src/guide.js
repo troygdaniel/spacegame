@@ -3,12 +3,13 @@
 // meta.js saves this state through guideSnapshot / guideRestore / guideReset.
 const GOAL = 2000; // total credits earned (spending does not lower it)
 
-Object.assign(G, { earned: 0, guideDone: false, endingSeen: false, stats: { drones: 0, missions: 0, time: 0 } });
+Object.assign(G, { earned: 0, guideDone: false, endingSeen: false, stats: { drones: 0, missions: 0, time: 0 }, hints: { off: false, seen: {}, docks: 0, sold: 0, map: 0 } });
 
 function guideSnapshot() {
   return {
     earned: Math.floor(G.earned), guideDone: !!G.guideDone, endingSeen: !!G.endingSeen,
-    stats: { drones: G.stats.drones | 0, missions: G.stats.missions | 0, time: Math.floor(G.stats.time / 10000) * 10000 } // time to 10 s: autosave then writes every 10 s, not every second
+    stats: { drones: G.stats.drones | 0, missions: G.stats.missions | 0, time: Math.floor(G.stats.time / 10000) * 10000 }, // time to 10 s: autosave then writes every 10 s, not every second
+    hints: { off: !!G.hints.off, seen: Object.assign({}, G.hints.seen), docks: G.hints.docks | 0, sold: G.hints.sold | 0, map: G.hints.map | 0 } // the next steps below
   };
 }
 
@@ -19,10 +20,12 @@ function guideRestore(s) { // s = the parsed save
   // a save from before the guide existed: someone who already has credits, gear or a mission has played
   G.guideDone = typeof s.guideDone === 'boolean' ? s.guideDone
     : (s.credits > 0 || (s.mission && s.mission !== 'none') || Object.values(s.upgrades || {}).some(Boolean));
+  hintsRestore(s);
 }
 
 function guideReset() {
   G.earned = 0; G.guideDone = false; G.endingSeen = false; G.stats = { drones: 0, missions: 0, time: 0 };
+  G.hints = { off: false, seen: {}, docks: 0, sold: 0, map: 0 }; LADDER.id = ''; // the next steps start over with a new game
 }
 
 // ---------- the hint for right now, worked out from the game state (so it always matches what is on screen) ----------
@@ -94,6 +97,57 @@ function guidePlace(s) {
 const TRAVEL = { off: false, text: 'Other stars to visit: G opens the galaxy map. Pick one, press Enter to jump.' };
 function travelHint(s) { return !TRAVEL.off && G.guideDone && !(G.jumps | 0) && s.scene.key === 'Space' && !s.dead && !s.cruising && !G.deep ? TRAVEL.text : ''; }
 
+// ---------- The next steps (card space-game-first-ten-minutes) ----------
+// Troy played 13 minutes and never jumped or traded. The rescue guide above ends at the first finished call and the travel line goes once the map has been looked at,
+// so a player who took patrol calls, or looked at the map and left, was told nothing more. These are the hints after that, worked out from what the player has and has
+// not done: one line each, with its key, said once (G.hints.seen, saved) for HINT_MS, then never again. H while one is up hides it and the rest (G.hints.off, saved).
+// The first-run guide and the travel line come first; a step waits until neither is up, and one scene visit says at most one.
+// What the player has done is counted from the frames the scenes give (hintsWatch), so no other file calls in: a dock is the Space scene followed by the Station, ore was
+// sold when the hold was full on the last frame of flight and is empty on the dock, the map is opened when src/galaxymap.js says so (guideMapOpened).
+// Trade here is ore, courier and haul calls, and parts: there is no buying low and selling high.
+const HINT_MS = 14000, HINT_DOCK_AFTER = 180000; // how long a step stays up; flight time with no dock before the dock step
+const LADDER = { id: '', until: 0 }; // the step that is up (not saved: a reload says nothing more of it, it is in G.hints.seen)
+const hintRow = (s, k) => { const r = s.menu && s.menu.rows && s.menu.rows.find(x => x.key === k && !x.off); return r ? r.n : ''; }; // the number key of a station menu row
+const hintParts = () => Object.values(G.upgrades || {}).some(Boolean); // a part bought
+const HINT_STEPS = [ // in this order, the first one for this scene that has not been said and whose test holds
+  { id: 'dock', scene: 'Space', when: () => !G.hints.docks && G.stats.time >= HINT_DOCK_AFTER },
+  { id: 'jump', scene: 'Space', when: () => G.stats.missions >= 1 && !!G.hints.map && !(G.jumps | 0) },
+  { id: 'ore', scene: 'Space', when: () => G.hints.docks >= 1 && G.stats.missions >= 1 && !G.hints.sold && !(G.ore | 0) },
+  { id: 'shop', scene: 'Station', when: s => G.hints.docks >= 2 && !G.hints.sold && !hintParts() && !!hintRow(s, 'shop') },
+  { id: 'calls', scene: 'Station', when: s => G.hints.docks >= 2 && !G.hints.sold && !!hintRow(s, 'missions') }
+];
+let hintKey = null, hintOre = 0;
+function hintsWatch(s) { // once a frame, before the hints are chosen
+  const key = s.scene.key, h = G.hints;
+  if (key === 'Space') hintOre = G.ore | 0;
+  else if (key === 'Station' && hintKey === 'Space') { h.docks++; if (hintOre > 0 && !(G.ore | 0)) h.sold++; hintOre = 0; }
+  hintKey = key;
+}
+function guideMapOpened() { if (typeof TRAVEL !== 'undefined') TRAVEL.off = true; G.hints.map = 1; } // src/galaxymap.js: the map has been looked at
+function hintsRestore(s) { // a save from before the steps: nothing is known of what was done, so a save with a finished call has docked at least twice
+  const h = s.hints || {}, num = v => (Number.isFinite(v) ? Math.max(0, v) : 0), seen = {};
+  Object.keys(h.seen || {}).forEach(k => { if (HINT_STEPS.some(x => x.id === k) && h.seen[k]) seen[k] = 1; });
+  G.hints = { off: h.off === true, seen, docks: s.hints ? num(h.docks) : ((s.stats && s.stats.missions) >= 1 ? 2 : 0), sold: num(h.sold), map: h.map ? 1 : 0 };
+  LADDER.id = '';
+}
+// the words of the step that is up (content/text/ui.md, hint.<id>); {shop} and {missions} are the number keys of those rows of the station menu
+const hintText = (s, st) => uiText('hint.' + st.id, { shop: hintRow(s, 'shop'), missions: hintRow(s, 'missions') });
+// the step for this scene right now, or ''. A step is chosen once: it is marked said the moment it comes up, and it stays up for HINT_MS of play
+function hintLadder(s) {
+  const h = G.hints, key = s.scene.key, now = G.stats.time;
+  if (h.off || G.deep || s.dead || s.cruising || s.jmp) return '';
+  if (LADDER.id) {
+    const st = HINT_STEPS.find(x => x.id === LADDER.id);
+    if (st && st.scene === key && now < LADDER.until) return s.talk || s.shopOpen || s.panel ? '' : hintText(s, st); // a panel owns the screen: the step waits behind it
+    LADDER.id = ''; s._lhDone = true; // it ran its time, or the scene changed under it
+  }
+  if (s._lhDone || s.talk || s.shopOpen || s.panel) return '';
+  const st = HINT_STEPS.find(x => x.scene === key && !h.seen[x.id] && x.when(s));
+  if (!st) return '';
+  h.seen[st.id] = 1; LADDER.id = st.id; LADDER.until = now + HINT_MS;
+  return hintText(s, st);
+}
+
 function guideUI(s) { // the hint text lives in each scene; rebuilt after a scene restart
   if (s._gh && s._gh.active) return;
   const base = { fontFamily: 'monospace' };
@@ -118,15 +172,18 @@ function guideTick(s) {
     G.guideDone = true; s._gfinal = s.time.now + 8000;
   }
   guideUI(s);
-  if (!G.guideDone && s._gH && Phaser.Input.Keyboard.JustDown(s._gH)) { G.guideDone = true; toast(s, 'Tips hidden.', '#9fe9ff'); }
-  else if (s._gH && Phaser.Input.Keyboard.JustDown(s._gH) && travelHint(s)) { TRAVEL.off = true; toast(s, 'Tip hidden. G opens the galaxy map any time.', '#9fe9ff'); }
+  hintsWatch(s);
+  const hDown = !!(s._gH && Phaser.Input.Keyboard.JustDown(s._gH)); // JustDown takes the press: read it once
+  if (hDown && !G.guideDone) { G.guideDone = true; toast(s, 'Tips hidden.', '#9fe9ff'); }
+  else if (hDown && travelHint(s)) { TRAVEL.off = true; toast(s, 'Tip hidden. G opens the galaxy map any time.', '#9fe9ff'); }
+  else if (hDown && LADDER.id && s._gtext) { G.hints.off = true; LADDER.id = ''; toast(s, 'Tips off. H opens the help page.', '#9fe9ff'); } // a next step was up: this and the rest go
   let text = '';
   if (s._gfinal && s.time.now < s._gfinal) text = 'Rescue paid. Now earn ' + GOAL + ' credits: more rescues, drone kills, gear at the shop.';
   else if (!G.guideDone && !s.leaving) text = guideHint(s);
-  else if (!s.leaving) text = travelHint(s);
+  else if (!s.leaving) text = travelHint(s) || hintLadder(s);
   if (text !== s._gtext) {
     s._gtext = text;
-    s._gh.setText(text).setVisible(!!text).setAlpha(0); s._gk.setVisible(!!text && (!G.guideDone || text === TRAVEL.text));
+    s._gh.setText(text).setVisible(!!text).setAlpha(0); s._gk.setVisible(!!text && (!G.guideDone || text === TRAVEL.text || !!LADDER.id));
     if (text) s.tweens.add({ targets: s._gh, alpha: 1, duration: 180 });
     guidePlace(s);
   }

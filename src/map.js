@@ -15,8 +15,8 @@ const MAPUI = { t0: 0, seen: new Map(), tracker: null, trackScene: null, nextAt:
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
 const SCENE_TIPS = {
-  Station: 'Pick from the station menu, bottom right: a number, or W S and Enter. Your ship is the last row: board it to launch.',
-  Space: 'N picks a place: Enter sets it, Enter again goes there. B lists the ships; Z and 1 to 4 fly yours about the one you pick. Near a station or a planet, slow down and press L.',
+  Station: 'Pick from the station menu, bottom right: a number, or W S and Enter. Your ship is the last row: board it to launch. The SHOP sells parts; MISSIONS has courier and haul calls.',
+  Space: 'N picks a place, B lists the ships. Near a station, slow down and press L: ore sells there. G opens the galaxy map: pick a star, press Enter to jump.',
   Ship: 'Look your ship over, then press Enter to launch. Esc goes back to the station to take a mission or repair first.',
   Surface: 'Aim with the mouse and click to fire. Walk back to the landing pad and press E to lift off.'
 };
@@ -426,7 +426,7 @@ function toggleOverlay(game, mode) {
   }
   const s = game.scene.getScenes(true).find(sc => SCREENS.includes(sc.scene.key));
   if (!s || s.leaving || s.dead || s.panel || s.talk || s.shopOpen) return; // fading out, wrecked, or a panel owns the keys
-  if (mode === 'help' && !G.guideDone && s._gh && s._gh.visible) return;   // first-run tips: H still hides them
+  if (mode === 'help' && s._gh && s._gh.visible && (!G.guideDone || (typeof LADDER !== 'undefined' && LADDER.id))) return;   // first-run tips and a next step (src/guide.js): H still hides them
   s.scene.pause();
   game.scene.run('Overlay', { from: s.scene.key, mode });
 }

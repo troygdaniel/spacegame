@@ -109,7 +109,7 @@ class Galaxy extends Phaser.Scene {
     this.ui = panel(this, { w, h, title: 'GALAXY', dim: true, depth: 0 });
     this.box = this.ui.box;
     this.rec = activeShip(); this.here = galaxyFind(G.system) || galaxySystems()[0];
-    galaxyChart(this.rec); if (typeof TRAVEL !== 'undefined') TRAVEL.off = true; // what is in range is charted; a player who has opened the map no longer needs the "G opens it" line (src/guide.js)
+    galaxyChart(this.rec); if (typeof guideMapOpened === 'function') guideMapOpened(); // what is in range is charted; a player who has opened the map no longer needs the "G opens it" line, and the jump step knows it was looked at (src/guide.js)
     this.all = galaxySystems(); this.known = this.all.filter(s => (G.known || []).includes(s.id) || s.id === this.here.id);
     this.dim = this.all.filter(s => !this.known.includes(s) && this.known.some(k => galaxyLy(k, s) <= GALAXY.near)); // the "?" dots
     // the map area (panel coordinates) and the projection from light years to it
