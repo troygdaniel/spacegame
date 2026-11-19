@@ -96,9 +96,10 @@ function playlogAction(controls, sceneKey, e) {
   const g = (controls || []).find(x => x.scene === sceneKey); if (!g) return 'key:other';
   const alias = { Up: 'W', Left: 'A', Down: 'S', Right: 'D' }[label]; // the arrows do what the WASD keys do
   const has = (r, k) => r.k.some(x => x === k || (/^\d-\d$/.test(x) && /^\d$/.test(k) && k >= x[0] && k <= x[2]));
-  const row = g.rows.find(r => has(r, label)) || (alias && g.rows.find(r => has(r, alias)));
+  let grp = g, row = g.rows.find(r => has(r, label)) || (alias && g.rows.find(r => has(r, alias)));
+  if (!row) { const any = (controls || []).find(x => x.id === 'any'); row = any && any.rows.find(r => has(r, label)); if (row) grp = any; } // Esc, H, M, Tab: the ANYWHERE rows work in every screen that has a table (card space-game-keys-awkward: they were "key:other")
   if (!row) return 'key:other';
-  return 'key:' + g.id + ': ' + plClean(String(row.t).split(/[(:;,.]/)[0].trim().toLowerCase(), 36);
+  return 'key:' + grp.id + ': ' + plClean(String(row.t).split(/[(:;,.]/)[0].trim().toLowerCase(), 36);
 }
 // the name a key with no action is counted under, beside "key:other": the game's own screen it was pressed on and the physical key's code. Pure.
 // scene: the screen on top (PLAYLOG.scenes; anything else is "Other"); e: { code, isComposing }. The character the key types (e.key) is never read.

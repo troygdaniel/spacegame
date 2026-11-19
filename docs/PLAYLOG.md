@@ -33,6 +33,9 @@ pressed on and the **physical key's code** (`event.code`), so a list of the keys
 character a key types, never from a text box (every typed-text field of the game is a real `<input>`, so a key pressed in one never reaches the log), never a chord with
 Ctrl, Cmd or Alt, never a held-down repeat and never a key of an input method. A code that is not plain letters and digits is `Other`. The counts are per minute, with no order
 and no times between presses, so nothing typed can be read back out of them. `node tools/playlog-summary.mjs` lists them on one `No action:` line, most pressed first.
+The ANYWHERE keys of the controls table (Esc, H, M, Tab) count as their own action (`key:any: pause`) in every screen that has a table (flight, station, ship bay, surface); on a
+screen with no table of its own (the maps, Pause, the ship's computer) every key is `key:other`, which is why the raw code and the screen are kept beside it. Before 18 Nov 2026 the
+ANYWHERE rows were never read, so Esc, H and M in flight were `key:other` too (Troy's first log: 70 `other`, 7 of them the Esc that opened a pause).
 
 ## Where it goes
 
