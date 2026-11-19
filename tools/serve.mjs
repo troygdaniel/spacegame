@@ -8,11 +8,14 @@
 //   --mods DIR      the packs to watch and build (default: mods; with --content or --out and no --mods the packs are left alone)
 //   --out FILE      where the built script goes (default: content.generated.js)
 //   --no-watch      build once and serve, do not watch
-// Needs Node 22+, no packages. It listens on 127.0.0.1 only, answers only GET and HEAD, and serves nothing outside --root and
+//   --playlogs DIR  where the play log of the page is kept (default ~/dev/spacegame-playlogs, or $LONGHAUL_PLAYLOGS): OUTSIDE the repo, never inside it
+// Needs Node 22+, no packages. It listens on 127.0.0.1 only, answers only GET and HEAD (and the one POST of the play log, /__playlog, below), and serves nothing outside --root and
 // nothing whose path has a dot-name in it (.git, .env, .DS_Store). The R-to-reload script is added to HTML pages as they are
 // sent: the files themselves, and the game when you open it any other way, have no dev code in them.
 import { createServer } from 'node:http';
-import { readFileSync, realpathSync, statSync, createReadStream, watch, existsSync } from 'node:fs';
+import { readFileSync, realpathSync, statSync, createReadStream, watch, existsSync, appendFileSync, mkdirSync, readdirSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { execFileSync } from 'node:child_process';
 import { join, resolve, dirname, sep, extname } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -62,7 +65,7 @@ function parseArgs(argv) {
   return {
     port: Number.isInteger(port) && port >= 0 && port < 65536 ? port : 8787, portGiven: has('--port'),
     root: resolve(REPO, val('--root', '.')), content: resolve(REPO, val('--content', 'content')), out: resolve(REPO, val('--out', 'content.generated.js')),
-    watch: !has('--no-watch'),
+    watch: !has('--no-watch'), playlogs: resolve(val('--playlogs', process.env.LONGHAUL_PLAYLOGS || join(homedir(), 'dev', 'spacegame-playlogs'))),
     // packs (docs/MODDING.md 13): built and watched too, unless --content or --out point somewhere else (tests) and --mods does not say where the packs are
     mods: resolve(REPO, val('--mods', 'mods')), modsOut: resolve(REPO, val('--mods-out', 'mods.generated.js')), modsToo: has('--mods') || (!has('--content') && !has('--out'))
   };
@@ -83,6 +86,33 @@ function resolveFile(root, urlPath) {
     return statSync(real).isFile() ? real : null;
   } catch (e) { return null; }
 }
+
+// ---------- the play log (card space-game-playlog): the page POSTs the lines it keeps to /__playlog?s=<session id>; they are appended here ----------
+// One file a session, <date>-<time>-<session id>.jsonl, in a folder OUTSIDE the repo (a log inside a worktree would end up in a commit). Only lines that are a JSON object
+// with a short "ev" and this session's id are kept; the rest are counted and dropped. The first line of a new file says the commit and the node that served it.
+export const PLAYLOG_MAX = { body: 256 * 1024, lines: 2000, line: 4000 };
+export function playlogDirOk(dir) { const d = resolve(dir); return d !== REPO && !d.startsWith(REPO + sep); }
+export function playlogAppend(dir, sid, text, now = new Date(), commit = '') {
+  if (!/^[0-9a-f]{8}$/.test(sid)) return { ok: false, why: 'session' };
+  if (!playlogDirOk(dir)) return { ok: false, why: 'inside the repo' };
+  const keep = []; let dropped = 0;
+  String(text).split('\n').filter(Boolean).slice(0, PLAYLOG_MAX.lines).forEach(l => {
+    try { const o = JSON.parse(l); if (l.length <= PLAYLOG_MAX.line && o && typeof o === 'object' && !Array.isArray(o) && typeof o.ev === 'string' && o.ev.length <= 24 && o.s === sid) { keep.push(l); return; } } catch (e) { /* not a line of ours */ }
+    dropped++;
+  });
+  if (!keep.length) return { ok: true, kept: 0, dropped };
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  let name = readdirSync(dir).find(f => f.endsWith('-' + sid + '.jsonl')), fresh = false;
+  if (!name) {
+    const p = n => String(n).padStart(2, '0');
+    name = now.getFullYear() + '-' + p(now.getMonth() + 1) + '-' + p(now.getDate()) + '-' + p(now.getHours()) + p(now.getMinutes()) + p(now.getSeconds()) + '-' + sid + '.jsonl'; fresh = true;
+  }
+  const head = fresh ? JSON.stringify({ t: 0, s: sid, ev: 'server', commit: String(commit).slice(0, 40), node: process.version }) + '\n' : '';
+  appendFileSync(join(dir, name), head + keep.join('\n') + '\n', { mode: 0o600 });
+  return { ok: true, kept: keep.length, dropped, file: name };
+}
+let COMMIT = null;
+const gitCommit = () => { if (COMMIT === null) { try { COMMIT = execFileSync('git', ['-C', REPO, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch (e) { COMMIT = ''; } } return COMMIT; };
 
 export function startServer(opts) {
   const o = Object.assign(parseArgs([]), opts);
@@ -120,9 +150,26 @@ export function startServer(opts) {
     // a page on another site must not be able to talk to this server by pointing a hostname at 127.0.0.1
     const host = String(req.headers.host || '').toLowerCase();
     if (host !== '127.0.0.1:' + port && host !== 'localhost:' + port) return send(res, 403, 'Wrong Host header.\n');
+    let path, query;
+    try { const u = new URL(req.url, 'http://x'); path = u.pathname; query = u.searchParams; } catch (e) { return send(res, 400, 'Bad request.\n'); }
+    if (req.method === 'POST' && path === '/__playlog') { // the one thing that is written: a batch of play log lines, from this server's own page
+      const origin = req.headers.origin;
+      if (origin && origin !== 'http://127.0.0.1:' + port && origin !== 'http://localhost:' + port) return send(res, 403, 'Wrong Origin.\n');
+      if (!/^text\/plain/i.test(String(req.headers['content-type'] || ''))) return send(res, 415, 'text/plain only.\n');
+      let size = 0; const chunks = []; let over = false;
+      req.on('data', d => { size += d.length; if (size > PLAYLOG_MAX.body) { over = true; req.destroy(); } else chunks.push(d); });
+      req.on('close', () => { if (over && !res.writableEnded) send(res, 413, 'Too big.\n'); });
+      req.on('end', () => {
+        if (over) return;
+        try {
+          const r = playlogAppend(o.playlogs, String(query.get('s') || ''), Buffer.concat(chunks).toString('utf8'), new Date(), gitCommit());
+          if (!r.ok) return send(res, r.why === 'session' ? 400 : 500, 'Not kept: ' + r.why + '.\n');
+          return send(res, 204, '');
+        } catch (e) { return send(res, 500, 'Could not write the play log.\n'); }
+      });
+      return;
+    }
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Only GET and HEAD.\n', { Allow: 'GET, HEAD' });
-    let path;
-    try { path = new URL(req.url, 'http://x').pathname; } catch (e) { return send(res, 400, 'Bad request.\n'); }
 
     if (path === '/__dev.js') return send(res, 200, DEV_CLIENT, { 'Content-Type': MIME['.js'] });
     if (path === '/__events') {
@@ -175,6 +222,7 @@ async function main() {
   try {
     const { url } = await s.ready;
     console.log(`Long Haul dev server: ${url}   (serving ${o.root.replace(REPO, '.') || '.'}; press R in the page to reload it; Ctrl+C stops)`);
+    console.log(playlogDirOk(o.playlogs) ? `play log: the page's log is kept in ${o.playlogs.replace(homedir(), '~')} (outside the repo)` : `play log: ${o.playlogs} is inside the repo: the page's log is NOT kept (use --playlogs with a folder outside it)`);
     console.log(o.watch ? `watching ${o.content.replace(REPO + sep, '')}/${o.modsToo ? ' and ' + o.mods.replace(REPO + sep, '') + '/' : ''} and rebuilding ${o.out.replace(REPO + sep, '')}${o.modsToo ? ' and ' + o.modsOut.replace(REPO + sep, '') : ''} when it changes` : 'not watching: --no-watch');
   } catch (e) {
     console.error(e.code === 'EADDRINUSE' ? `Port ${o.port} is already in use. Try --port ${o.port + 1}, or --port 0 for any free port.` : 'Could not start: ' + e.message);

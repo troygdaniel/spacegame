@@ -311,6 +311,25 @@ const LOOKS = [
   }],
   ['sol-dock-mars', '#space', 'Space', solDock('Arsia High')],       // card space-game-more-than-one-dock: a second and a third dock of one system, ordered from the navigation panel
   ['sol-dock-ceres', '#space', 'Space', solDock('Occator Works')],
+  ['settings-reset', '', 'Title', async t => { // Settings > Reset with the Play log row (card space-game-playlog): ON or OFF, Download log, Forget log; nothing cut off or overlapping at 1458 px
+    await t.run(1000); await t.key('S'); await t.run(1200);
+    if (!(await t.ev(up('Settings')))) throw new Error('S did not open Settings');
+    await t.ev(`(() => { game.scene.getScene('Settings').show('reset'); return 1; })()`); await t.run(800);
+    await pic(t, 'settings-reset');
+    const r = JSON.parse(await t.ev(`JSON.stringify((() => { const s = game.scene.getScene('Settings'), W = 1280, H = 720, pw = SETTINGS.w, ph = SETTINGS.h, L = W / 2 - pw / 2, R = W / 2 + pw / 2, T = H / 2 - ph / 2, B = H / 2 + ph / 2;
+      const texts = []; const walk = list => list.forEach(o => { if (o.list) walk(o.list); else if (o.type === 'Text' && o.visible && o.alpha > 0.05 && String(o.text).trim()) { const b = o.getBounds(); texts.push({ t: String(o.text).replace(/\\n/g, ' / ').slice(0, 40), x0: Math.round(b.x), y0: Math.round(b.y), x1: Math.round(b.right), y1: Math.round(b.bottom) }); } }); walk(s.children.list);
+      const out = texts.filter(o => o.x1 > R - 8 || o.x0 < L + 8 || o.y1 > B - 40); const over = []; for (let i = 0; i < texts.length; i++) for (let j = i + 1; j < texts.length; j++) { const a = texts[i], b = texts[j], w = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0), h = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0); if (w > 4 && h > 4) over.push([a.t, b.t, w, h]); }
+      return { panel: [L, T, R, B], texts: texts.length, outside: out, overlaps: over.slice(0, 8), on: playlogOn(), lowest: Math.max(...texts.map(x => x.y1)) }; })())`));
+    console.log('        panel ' + JSON.stringify(r.panel) + ', ' + r.texts + ' texts, lowest text at y ' + r.lowest + '; play log on: ' + r.on);
+    console.log('        outside the body or the footer: ' + JSON.stringify(r.outside) + '; overlapping: ' + JSON.stringify(r.overlaps));
+  }],
+  ['settings-reset-off', '', 'Title', async t => { // the same with the play log switched OFF by its button
+    await t.run(1000); await t.key('S'); await t.run(1200);
+    if (!(await t.ev(up('Settings')))) throw new Error('S did not open Settings');
+    await t.ev(`(() => { const s = game.scene.getScene('Settings'); s.show('reset'); s.playlogToggle(); return 1; })()`); await t.run(800);
+    console.log('        after the toggle: play log on = ' + await t.ev('playlogOn()') + ', stored ' + await t.ev(`localStorage.getItem('longhaul.playlog.on')`));
+    await pic(t, 'settings-reset-off');
+  }],
   ['settings-keys', '', 'Title', async t => { // V on the title opens Settings > Keys at the Deepgram key (card space-game-key-links): the three key rows, Get a key, the address, Copy; nothing cut off at 1458 px
     await t.run(1000); await t.key('V'); await t.run(1500);
     if (!(await t.ev(up('Settings')))) throw new Error('V did not open Settings: scenes ' + await t.ev(`JSON.stringify(game.scene.getScenes(true).map(x => x.scene.key))`));

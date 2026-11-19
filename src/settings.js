@@ -12,7 +12,7 @@
 //   CONTROLS  every key of the game, from the one table in src/data_controls.js, a tab for each group
 //   FLIGHT    the flight feel: Classic or Heavy (src/handling.js), one row; kept in this browser, not in the save
 //   CONTENT   which content pack is running and what it ignored (src/contentui.js builds the lines)
-//   RESET     Reset game (erase the save and start again) and Forget all keys, each with a second press
+//   RESET     Reset game (erase the save and start again) and Forget all keys, each with a second press; and the PLAY LOG: ON or OFF, Download log, Forget log (src/playlog.js)
 // Nothing here calls a service by itself. Test and Hear it are the only buttons that do, and only when the player presses them, on the key they
 // pressed it in; tests/settings.mjs mocks fetch and checks that nothing else is called.
 // The text boxes are real HTML inputs laid over the canvas (paste works; the typing never reaches Phaser or the window's M and Esc hooks), as the
@@ -431,13 +431,30 @@ class Settings extends Phaser.Scene {
   draw_reset() {
     const bx = this.bx, by = this.by, bw = this.bw;
     this.label(bx, by + 10, 'RESET GAME');
-    this.txt(bx, by + 34, 'Erases your save: credits, ships, missions, the journal and everyone\'s memory of you. You start again at Halcyon Station with a Wren.\nYour keys, volume and voice choice are not part of the save and stay.', 14, '#cfefff', { oy: 0, style: { lineSpacing: 4 } });
+    this.txt(bx, by + 34, 'Erases your save: credits, ships, missions, the journal and everyone\'s memory of you. You start again at Halcyon Station with a Wren.\nYour keys, volume and voice choice are not part of the save and stay.', 14, '#cfefff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 4 } }); // wrapped: the first line ran out past the panel's right edge (first look)
     this.slots.reset = this.button(bx, by + 118, 250, 'Reset game', () => this.press('reset'), { color: '#ff8da0', edge: RED });
     this.line(by + 176);
     this.label(bx, by + 200, 'FORGET ALL KEYS');
     this.txt(bx, by + 224, 'Removes the Deepgram, OpenAI and Anthropic keys from this browser. The game goes back to silent ship and scripted characters.', 14, '#cfefff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 4 } });
     this.slots.forget = this.button(bx, by + 290, 250, 'Forget all keys', () => this.press('forget'), { color: '#ff8da0', edge: RED });
-    this.slots.status = this.txt(bx, by + 350, '', 14, '#9fe9ff', { oy: 0, style: { wordWrap: { width: bw } } });
+    // the play log (card space-game-playlog): a plain record of how the game is played, kept on this computer so it can be talked through; ON by default
+    this.line(by + 330);
+    this.label(bx, by + 346, 'PLAY LOG');
+    this.txt(bx, by + 368, 'A plain record of how you play, kept on this computer so it can be talked through with you: which screens, how long, deals, deaths, what went wrong. No word you type or say is in it, no key, and nothing leaves this computer.', 13, '#cfefff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 3 } });
+    const on = playlogOn();
+    this.slots.plOn = this.button(bx, by + 446, 170, on ? 'Play log: ON' : 'Play log: OFF', () => this.playlogToggle(), { on, edge: on ? GREEN : CYAN, size: 13 });
+    this.slots.plDown = this.button(bx + 182, by + 446, 160, 'Download log', () => this.playlogGet(), { size: 13 });
+    this.slots.plforget = this.button(bx + 354, by + 446, 160, 'Forget log', () => this.press('plforget'), { color: '#ff8da0', edge: RED, size: 13 });
+    this.slots.status = this.txt(bx, by + 478, '', 14, '#9fe9ff', { oy: 0, style: { wordWrap: { width: bw } } });
+  }
+  playlogToggle() {
+    const on = playlogSet(!playlogOn());
+    this.slots.plOn.set(on ? 'Play log: ON' : 'Play log: OFF').mark(on); this.slots.plOn.edge = on ? GREEN : CYAN; this.slots.plOn.draw(false);
+    this.say(on ? 'Play log ON.' : 'Play log OFF: nothing more is recorded.', on ? '#6dff9c' : '#ffd37a');
+  }
+  playlogGet() {
+    const r = playlogDownload();
+    this.say(r.ok ? 'Saved ' + r.name + ' (' + Math.max(1, Math.round(r.bytes / 1024)) + ' KB) to your downloads.' : 'There is nothing in the log to download yet.', r.ok ? '#6dff9c' : '#ffd37a');
   }
   // a second press within four seconds confirms
   press(what) {
@@ -445,11 +462,15 @@ class Settings extends Phaser.Scene {
     if (this.armed && this.armed.what !== what) { this.armed = null; this.show('reset'); } // the other button was waiting: put it back
     const b = this.slots[what];
     if (!this.armed || this.armed.what !== what || now - this.armed.at > SETTINGS.confirmMs) {
-      this.armed = { what, at: now }; this.say(what === 'reset' ? 'Press Reset game again to erase everything.' : 'Press Forget all keys again to remove them.', '#ff4d6d');
+      this.armed = { what, at: now }; this.say(what === 'reset' ? 'Press Reset game again to erase everything.' : what === 'plforget' ? 'Press Forget log again to erase the log kept in this browser.' : 'Press Forget all keys again to remove them.', '#ff4d6d');
       b.set(what === 'reset' ? 'Press again to erase' : 'Press again').color('#ff4d6d').mark(true); return;
     }
     if (now - this.armed.at < 350) return; // a double tap is not a confirmation
     this.armed = null;
+    if (what === 'plforget') {
+      const ok = playlogForget();
+      b.set('Forget log').color('#ff8da0').mark(false); return this.say(ok ? 'Play log forgotten. (A copy that the dev server kept stays in its own folder.)' : 'The play log could not be cleared.', ok ? '#6dff9c' : '#ff4d6d');
+    }
     if (what === 'forget') {
       voiceSetKey(''); chatSetKey('');
       b.set('Forget all keys').color('#ff8da0').mark(false); return this.say('All keys removed from this browser.', '#6dff9c');
