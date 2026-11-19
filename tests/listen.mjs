@@ -60,14 +60,18 @@ g.run(`
   LISTEN.limit.grace = 40; LISTEN.limit.wait = 60; // a short pause and a short timeout, so the test does not wait
 `);
 const press = (over = '{}', game = '__fg') => g.run(`listenKeyDown(Object.assign({ code: 'KeyU', repeat: false, ctrlKey: false, metaKey: false, altKey: false, preventDefault() { __pd++; }, stopPropagation() { __sp++; } }, ${over}), ${game})`);
-const up = () => g.run(`listenKeyUp({ code: 'KeyU', preventDefault() {} })`);
+const up = () => g.run(`listenKeyUp({ code: 'KeyU', preventDefault() { __pd++; } })`);
+const send = () => press(); // U again while it listens: send now
 const esc = () => g.run(`listenKeyDown({ code: 'Escape', repeat: false, preventDefault() { __pd++; }, stopPropagation() { __sp++; } }, __fg)`);
 const view = () => g.run(`LISTEN.el ? LISTEN.el.head.textContent + ' | ' + LISTEN.el.body.textContent + ' | ' + LISTEN.el.root.style.display : ''`);
 const state = () => g.run('LISTEN.s.state');
 const tick = ms => g.run(`(__t += ${ms}, listenTick(), 1)`);
 const calls = () => g.run('__calls.length');
 const settle = async (ms = 20) => new Promise(r => setTimeout(r, ms));
-async function hold(ms = 2000) { press(); await g.waitFor("LISTEN.s.state === 'listening'", 3000, 'listening'); tick(ms); }
+const RING = () => J('LISTEN.limit.ring');
+const ticks = (ms, level, step = 100) => { if (level !== undefined) g.run(`window.__level = ${level}`); for (let i = 0; i < ms / step; i++) g.run(`(__t += ${step}, listenTick(), 1)`); }; // a fake clock in small steps, so the level is read as it goes
+async function ring() { press(); tick(RING()); await g.waitFor("LISTEN.s.state === 'listening'", 3000, 'listening'); } // press, wait for the ring to fill, and it listens
+async function hold(ms = 2000) { await ring(); tick(ms); }
 async function reset() { g.run(`(listenCancel(''), __t += 10000, LISTEN.s.used = 0, LISTEN.s.lastSay = -1e9, LISTEN.on = true, LISTEN.limit.minutes = 10, LISTEN.limit.hold = 20000, __gum.length = 0, __tracks.length = 0, __recs.length = 0, __calls.length = 0, __subs.length = 0, __fail = null, __deny = null, __gumHold = null, __hold = null, __status = 200, __statuses.length = 0, __audio = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]), __subOk = true, document.activeElement = null, AC = null, __say = ${JSON.stringify(WORDS)}, 1)`); await settle(5); }
 const keys = () => g.run(`(voiceSetKey(${JSON.stringify(KEY)}), voiceSetOn(true), chatSetKey(${JSON.stringify(CHATKEY)}, 'openai'), chatSetOn(true), VOICE.bad = false, CHAT.bad = false, 1)`);
 const allText = () => g.run(`JSON.stringify([LISTEN.line, LISTEN.s.line, LISTEN.el && LISTEN.el.head.textContent, LISTEN.el && LISTEN.el.body.textContent, listenStatus()])`);
@@ -89,7 +93,7 @@ console.log('A. the key, and where it is written down');
   check('index.html loads src/listen.js after src/shipcomputer.js, with its own script tag', html.indexOf('src/listen.js') > html.indexOf('src/shipcomputer.js') && html.split('src/listen.js').length === 2);
   const lsrc = read('src/listen.js'), keyLines = lsrc.split('\n').filter(l => /VOICE\.key/.test(l) && !/^\s*\/\//.test(l));
   check('the Deepgram key is read in only two ways: a check that it exists, and the Authorization header', keyLines.every(l => /!VOICE\.key/.test(l) || /Authorization: 'Token ' \+ VOICE\.key/.test(l)), keyLines.join(' || ').slice(0, 300));
-  check('the only thing listen.js stores in this browser is the switch', (lsrc.match(/localStorage\.(setItem|getItem|removeItem)\(([^,)]+)/g) || []).every(m => /LISTEN\.store\.on/.test(m)), (lsrc.match(/localStorage\.\w+\([^,)]+/g) || []).join(' '));
+  check('the only things listen.js stores in this browser are the switch and the one flag that the browser has asked for the microphone before (no sound, no words)', (lsrc.match(/localStorage\.(setItem|getItem|removeItem)\(([^,)]+)/g) || []).every(m => /LISTEN\.store\.(on|asked)/.test(m)), (lsrc.match(/localStorage\.\w+\([^,)]+/g) || []).join(' '));
 }
 
 console.log('B. may a hold start');
@@ -113,23 +117,29 @@ await reset();
   check('so far the microphone was not asked for and nothing was sent', J('__gum.length') === 0 && await calls() === 0);
 }
 
-console.log('C. one hold, start to finish');
+console.log('C. one press, start to finish');
 await reset(); keys();
 {
   g.run('__hold = new Promise(r => { window.__go = r; })'); // Deepgram answers when the test says
   press(); const pd = J('__pd');
-  check('the key press is taken (the browser does not also get it)', pd >= 1 && J('LISTEN.s.state') === 'opening' && /OPENING THE MICROPHONE/.test(await view()), await view());
+  check('the key press is taken (the browser does not also get it), and the ring starts: the microphone is NOT asked for yet', pd >= 1 && J('LISTEN.s.state') === 'ring' && J('__gum.length') === 0 && J('listenCapView().fill') === 0 && J('listenCapView().label') === 'hold', J('LISTEN.s.state'));
+  check('the first time, a plain line says the browser will ask for the microphone (before it does)', /ask to use the microphone: choose Allow/.test(await view()) && J('LISTEN.s.asked') === false, await view());
+  tick(300); check('half way round the ring after half of it', Math.abs(J('listenCapView().fill') - 0.5) < 0.01 && J('LISTEN.s.state') === 'ring' && J('__gum.length') === 0, J('listenCapView().fill'));
+  check('the key cap shows the ring filling, in amber, with a conic gradient, over the canvas', /conic-gradient\(#ffb454 180deg/.test(J('LISTEN.capEl.root.style.background')) && J('LISTEN.capEl.root.style.display') === 'block' && J('LISTEN.capEl.key.textContent') === 'U', J('LISTEN.capEl.root.style.background'));
+  tick(300); check('the ring is full: now the microphone is asked for, and the box says to allow it', J('LISTEN.s.state') === 'opening' && /ALLOW THE MICROPHONE/.test(await view()), await view());
   await g.waitFor("LISTEN.s.state === 'listening'", 3000, 'listening');
+  check('the browser has asked once: remembered in this browser, so the next time it is not explained', J('LISTEN.s.asked') === true && g.store.get('longhaul.listen.asked') === '1');
   check('the microphone was asked for: audio only, no video', J('__gum.length') === 1 && /"audio"/.test(J('__gum[0]')) && !/video/.test(J('__gum[0]')), J('__gum[0]'));
   check('the recorder is made on that stream in the first format the browser has, and runs', J('__recs.length') === 1 && J('__recs[0].mimeType') === 'audio/webm;codecs=opus' && J('__recs[0].state') === 'recording');
   check('a sound at the start', J('__sfx').includes('uiOpen'));
   let v = await view();
-  check('the red LISTENING mark is up (a dot, the word, the seconds, how to send and cancel)', /^\u25CF LISTENING  0\.0 s \| .*let go to send.*Esc cancels \| block$/.test(v) && J('LISTEN.el.head.style.color') === '#ff4d6d' && J('listenView().mark') === 'red', v);
+  check('the red LISTENING mark is up (a dot, the word, the seconds, how to send and cancel)', /^\u25CF LISTENING  0\.0 s \| .*stops when you stop talking.*U sends.*Esc cancels \| block$/.test(v) && J('LISTEN.el.head.style.color') === '#ff4d6d' && J('listenView().mark') === 'red', v);
   check('the mark is a status region, drawn over the canvas', J('LISTEN.el.root.attrs.role') === 'status' && J('LISTEN.el.root.attrs[\'aria-live\']') === 'polite');
   tick(2000); v = await view(); check('two seconds later it says so', /LISTENING  2\.0 s/.test(v), v);
-  check('the microphone is open now (a track running)', J('__tracks[0].stopped') === false);
-  up();
-  check('let go: the microphone is CLOSED at once (the track stopped), before any request', J('__tracks[0].stopped') === true && await calls() === 0 && J('__recs[0].state') === 'inactive');
+  check('the microphone is open now (a track running), and the cap is a solid red ring', J('__tracks[0].stopped') === false && J('listenCapView().color') === '#ff4d6d' && J('listenCapView().fill') === 1 && J('LISTEN.capEl.root.style.background') === '#ff4d6d');
+  up(); check('letting the key go now changes nothing: it listens by itself, hands free', J('LISTEN.s.state') === 'listening' && J('__tracks[0].stopped') === false);
+  send();
+  check('U again: the microphone is CLOSED at once (the track stopped), before any request', J('__tracks[0].stopped') === true && await calls() === 0 && J('__recs[0].state') === 'inactive');
   check('a sound at the end', J('__sfx').includes('uiClose'));
   await g.waitFor('__calls.length === 1', 3000, 'the one request');
   const url = new URL(J('__calls[0].url')), c0 = g.run('__calls[0]'), body = c0.body;
@@ -155,10 +165,10 @@ await reset(); keys();
   check('the time held was counted (2 s)', J('LISTEN.s.used') === 2000 && /0\.0 of 10 minutes/.test(J('listenUsedLine()')) === true);
 }
 
-console.log('D. Esc, and the key again');
+console.log('D. Esc, and U again');
 await reset(); keys();
 {
-  await hold(); up(); await g.waitFor("LISTEN.s.state === 'review'", 3000, 'review');
+  await hold(); send(); await g.waitFor("LISTEN.s.state === 'review'", 3000, 'review');
   const sp0 = J('__sp'); esc();
   check('Esc while the words wait cancels them, and is taken (the pause menu does not also open)', J('__sp') === sp0 + 1 && J('LISTEN.s.state') === 'idle' && /^Cancelled\. \|/.test(await view()), await view());
   await settle(120);
@@ -167,34 +177,37 @@ await reset(); keys();
   check('Esc with nothing to cancel is left alone (not taken)', J('__sp') === sp1);
 
   await reset(); await hold(); const c0 = await calls(); esc();
-  check('Esc while the key is held: the microphone closes, nothing is sent, the time still counts', J('__tracks[__tracks.length - 1].stopped') === true && J('LISTEN.s.state') === 'idle' && J('LISTEN.s.held') === false && J('LISTEN.s.used') === 2000, J('LISTEN.s.used'));
+  check('Esc while it listens: the microphone closes, nothing is sent, the time still counts', J('__tracks[__tracks.length - 1].stopped') === true && J('LISTEN.s.state') === 'idle' && J('LISTEN.s.held') === false && J('LISTEN.s.used') === 2000, J('LISTEN.s.used'));
   up(); await settle(20);
   check('and the key coming up afterwards starts nothing', await calls() === c0 && J('__recs[__recs.length - 1].state') === 'inactive');
 
   await reset(); g.run('__hold = new Promise(r => { window.__go = r; })');
-  await hold(); up(); await g.waitFor('__calls.length === 1', 3000, 'sent'); esc();
+  await hold(); send(); await g.waitFor('__calls.length === 1', 3000, 'sent'); esc();
   check('Esc while Deepgram is hearing: it lets go of the answer', J('LISTEN.s.state') === 'idle' && J('listenHeld()') === 0);
   g.run('__go()'); await settle(100);
   check('the words that come back are not used', J('__subs.length') === 0 && J('LISTEN.s.state') === 'idle');
 
   await reset(); g.run('LISTEN.limit.grace = 400; __say = "first words"');
-  await hold(); up(); await g.waitFor("LISTEN.s.state === 'review'", 3000, 'review 1');
+  await hold(); send(); await g.waitFor("LISTEN.s.state === 'review'", 3000, 'review 1');
   g.run('__say = "second words"; __t += 3000');
-  press(); await g.waitFor("LISTEN.s.state === 'listening'", 3000, 'listening again'); tick(1500); up(); await g.waitFor("LISTEN.s.state === 'review'", 3000, 'review 2');
+  await ring(); tick(1500); send(); await g.waitFor("LISTEN.s.state === 'review'", 3000, 'review 2');
   g.run('LISTEN.limit.grace = 40'); await g.waitFor('__subs.length >= 1', 2000, 'handed on'); await settle(500);
-  check('the key again while the words wait says them again: the first words are dropped, the second go, once', J('__subs.length') === 1 && J('__subs[0]') === 'second words', J('JSON.stringify(__subs)'));
+  check('a new press while the words wait says them again: the first words are dropped, the second go, once', J('__subs.length') === 1 && J('__subs[0]') === 'second words', J('JSON.stringify(__subs)'));
 }
 
 console.log('E. the edges');
 await reset(); keys();
 {
-  await hold(100); up(); await g.waitFor("LISTEN.s.state === 'idle' && LISTEN.s.line", 3000, 'a tap');
-  check('a tap: the microphone opens and closes, nothing is sent, the line says to hold while speaking', await calls() === 0 && J('__tracks[__tracks.length - 1].stopped') === true && /Hold U while you speak/.test(await view()), await view());
+  press(); tick(200); up();
+  check('a tap (let go before the ring is full): the microphone was never asked for, nothing is sent, and the one line says to hold until the ring is full', J('__gum.length') === 0 && await calls() === 0 && J('LISTEN.s.state') === 'idle' && /Hold U until the ring is full, then speak/.test(await view()) && J('listenCapView().idle') === true, await view());
+  check('and the key coming up is taken, the ring is empty again', J('__pd') >= 1 && J('listenCapView().fill') === 0);
+  press(); tick(RING() - 1); check('one millisecond short of full is still a tap', J('LISTEN.s.state') === 'ring' && J('__gum.length') === 0); up(); await settle(10);
 
   await reset(); g.run('__gumHold = new Promise(r => { window.__ready = r; })'); const recs0 = J('__recs.length');
-  press(); up(); g.run('__ready()'); await g.waitFor('__tracks.length === 1', 2000, 'asked');
-  await settle(30);
-  check('let go before the microphone was ready (the first time the browser asks): it is closed again, nothing recorded, and the line says it is ready', J('__tracks[0].stopped') === true && J('__recs.length') === recs0 && await calls() === 0 && /microphone is ready\. Hold U/.test(await view()), await view());
+  press(); tick(RING()); up(); await settle(10);
+  check('the ring is full and the key is let go while the browser is still asking: it waits for the answer (the question must not lose the press)', J('LISTEN.s.state') === 'opening' && J('__recs.length') === recs0);
+  g.run('__ready()'); await g.waitFor("LISTEN.s.state === 'listening'", 3000, 'listening after the prompt');
+  check('the microphone arrives and it listens by itself, with the key up', J('__recs.length') === recs0 + 1 && J('LISTEN.s.held') === false && J('__tracks[__tracks.length - 1].stopped') === false); esc(); g.run('__gumHold = null');
 
   await reset(); const gum0 = J('__gum.length');
   press(`{ repeat: true }`); press(`{ ctrlKey: true }`); press(`{ metaKey: true }`); press(`{ altKey: true }`);
@@ -206,27 +219,31 @@ await reset(); keys();
   check('a panel in the way: the line is given before anyone speaks into a box that would not open', J('__gum.length') === gum0 && /could not open the ship's computer here/.test(await view()), await view()); g.run('__sc.panel = false');
 
   await reset(); g.run('LISTEN.limit.hold = 3000');
-  await hold(3100); await g.waitFor('__calls.length === 1', 3000, 'the longest hold');
-  check('the longest hold lets go by itself and sends', J('LISTEN.s.held') === false && J('__tracks[__tracks.length - 1].stopped') === true && await calls() === 1);
+  await hold(3100); await g.waitFor('__calls.length === 1', 3000, 'the longest listen');
+  check('the longest listen ends by itself and sends', J('LISTEN.s.state') !== 'listening' && J('__tracks[__tracks.length - 1].stopped') === true && await calls() === 1);
   await settle(100);
 
   await reset(); g.run(`AC = { state: 'running', createMediaStreamSource: () => ({ connect() {}, disconnect() {} }), createAnalyser: () => ({ fftSize: 0, getByteTimeDomainData(b) { b.fill(window.__level); } }) }; window.__level = 128; __say = ''; resumeAudio = () => {}`);
-  await hold(1500); up(); await g.waitFor("LISTEN.s.state === 'idle' && LISTEN.s.line", 3000, 'silent');
+  await hold(1500); send(); await g.waitFor("LISTEN.s.state === 'idle' && LISTEN.s.line", 3000, 'silent');
   check('a microphone the meter heard nothing from is still sent (a meter that is wrong must not stop the player), and the empty answer says "I heard silence"', await calls() === 1 && /heard silence/.test(await view()) && J('listenHeld()') === 0, await view());
   await reset(); g.run(`AC = { state: 'running', createMediaStreamSource: () => ({ connect() {}, disconnect() {} }), createAnalyser: () => ({ fftSize: 0, getByteTimeDomainData(b) { b.fill(window.__level); } }) }; window.__level = 200`);
-  await hold(1500); check('while held, the level shows on the mark', /\|{2,}/.test(await view()), await view()); up(); await g.waitFor('__calls.length === 1', 3000, 'loud');
+  await hold(1500); check('while it listens, the level shows on the mark and makes the cap glow', /\|{2,}/.test(await view()) && /0 0 \d+px/.test(J('LISTEN.capEl.root.style.boxShadow')), await view()); send(); await g.waitFor('__calls.length === 1', 3000, 'loud');
   check('a microphone that heard something is sent', await calls() === 1); await settle(100);
   await reset(); g.run(`AC = { state: 'suspended', createMediaStreamSource: () => ({ connect() {}, disconnect() {} }), createAnalyser: () => ({ fftSize: 0, getByteTimeDomainData(b) { b.fill(128); } }) }; __say = ''`);
-  await hold(1500); up(); await g.waitFor("LISTEN.s.state === 'idle' && LISTEN.s.line", 3000, 'suspended');
+  await hold(1500); send(); await g.waitFor("LISTEN.s.state === 'idle' && LISTEN.s.line", 3000, 'suspended');
   check('a suspended audio context reads as silence and is not believed: the empty answer is the ordinary "did not catch anything"', await calls() === 1 && /did not catch anything/.test(await view()), await view()); await settle(100);
   check('the level bar and the peak are what they should be', J('listenPeak([128, 128, 128])') === 0 && J('listenPeak([128, 192, 64])') === 0.5 && J('listenMeter(0).length') === 8 && J('listenMeter(1)') === '||||||||' && J('listenMeter(0)') === '........');
 
   await reset(); g.run(`window.__h = []; window.addEventListener = (t, f, c) => __h.push([t, f, c]); document.addEventListener = (t, f) => __h.push(['doc-' + t, f]); LISTEN.game = null; listenInstall(__fg); 1`);
   check('install: keydown in the capture phase (it sees Esc before Phaser), keyup, blur and a hidden page', J('__h.filter(h => h[0] === "keydown" && h[2] === true).length') === 1 && J('__h.some(h => h[0] === "keyup")') && J('__h.some(h => h[0] === "blur")') && J('__h.some(h => h[0] === "doc-visibilitychange")'));
-  press(); await g.waitFor("LISTEN.s.state === 'listening'", 3000, 'listening'); g.run('__h.find(h => h[0] === "blur")[1]()');
-  check('the window losing focus while the key is held: the microphone closes and nothing is sent (the key-up would never come)', J('__tracks[__tracks.length - 1].stopped') === true && J('LISTEN.s.state') === 'idle' && J('LISTEN.s.held') === false && await calls() === 0);
-  g.run('document.hidden = true'); press(); await g.waitFor("LISTEN.s.state === 'listening'", 3000, 'listening 2'); g.run('__h.find(h => h[0] === "doc-visibilitychange")[1]()'); g.run('document.hidden = false');
-  check('a page that goes to the background does the same', J('LISTEN.s.state') === 'idle' && J('__tracks[__tracks.length - 1].stopped') === true);
+  await ring(); g.run('__h.find(h => h[0] === "blur")[1]()');
+  check('the window losing focus while it listens: the microphone closes and nothing is sent', J('__tracks[__tracks.length - 1].stopped') === true && J('LISTEN.s.state') === 'idle' && J('LISTEN.s.held') === false && await calls() === 0);
+  g.run('__t += 5000; __gumHold = new Promise(r => { window.__ready = r; })'); press(); tick(RING()); await settle(10); g.run('__h.find(h => h[0] === "blur")[1]()');
+  check('the window losing focus while the browser asks for the microphone does NOT drop the press: that question takes the focus, and the first press was lost to it', J('LISTEN.s.state') === 'opening'); g.run('__ready(); __gumHold = null'); await g.waitFor("LISTEN.s.state === 'listening'", 3000, 'after the question'); esc();
+  g.run('__t += 5000'); press(); g.run('__h.find(h => h[0] === "blur")[1]()');
+  check('the window losing focus while the ring fills drops the ring (the key-up would never come), quietly', J('LISTEN.s.state') === 'idle' && J('__gum.length') >= 1);
+  g.run('__t += 5000; document.hidden = true'); await ring(); g.run('__h.find(h => h[0] === "doc-visibilitychange")[1]()'); g.run('document.hidden = false');
+  check('a page that goes to the background ends a listen the same way', J('LISTEN.s.state') === 'idle' && J('__tracks[__tracks.length - 1].stopped') === true);
 }
 
 console.log('F. every failure has a plain line, and never the key');
@@ -234,8 +251,8 @@ await reset(); keys();
 {
   const fail = async (what, setup, re, extra = '') => {
     await reset(); g.run(setup); g.run('__t += 100');
-    press(); await g.waitFor("LISTEN.s.state !== 'opening'", 3000, 'opened');
-    if (J('LISTEN.s.state') === 'listening') { tick(1500); up(); await g.waitFor("LISTEN.s.state === 'idle' && LISTEN.s.line", 4000, what); }
+    press(); tick(RING()); await g.waitFor("LISTEN.s.state !== 'opening'", 3000, 'opened');
+    if (J('LISTEN.s.state') === 'listening') { tick(1500); send(); await g.waitFor("LISTEN.s.state === 'idle' && LISTEN.s.line", 4000, what); }
     const v = await view();
     check(what + ': ' + String(re).slice(1, 40), re.test(v) && !v.includes(KEY) && J('listenHeld()') === 0 && J('LISTEN.s.state') === 'idle' && J('LISTEN.s.held') === false && (!J('__tracks.length') || J('__tracks.every(t => t.stopped)')) && !(await allText()).includes(KEY), v + ' ' + extra);
   };
@@ -256,7 +273,7 @@ await reset(); keys();
   await fail('a reply that is not JSON', `__statuses = ['badjson']`, /cannot read/);
   await fail('a transcript that is empty', `__say = '   '`, /did not catch anything/);
   await fail('a recording with no sound in it', `__audio = null`, /did not catch anything/);
-  await reset(); g.run('__statuses = [400, 200]; __t += 100'); await hold(); up(); await g.waitFor("LISTEN.s.state === 'review'", 4000, 'retry');
+  await reset(); g.run('__statuses = [400, 200]; __t += 100'); await hold(); send(); await g.waitFor("LISTEN.s.state === 'review'", 4000, 'retry');
   check('a 400 is tried once more without the keyterms, and then it works', await calls() === 2 && /keyterm=/.test(J('__calls[0].url')) && !/keyterm/.test(J('__calls[1].url')) && J('LISTEN.s.words') === WORDS, J('__calls.map(c => c.url.length)')); await settle(100);
   const lines = J('Object.values(LISTEN.say)');
   check('no plain line of the module can hold a key or a secret', lines.every(l => !/sk-|Token |dg-/.test(l)) && lines.every(l => l.length < 160), lines.filter(l => l.length >= 160).join(' | '));
@@ -266,10 +283,10 @@ console.log('G. the session limit');
 await reset(); keys();
 {
   g.run('LISTEN.limit.minutes = 0.05'); // 3 seconds in all
-  await hold(2000); up(); await g.waitFor("LISTEN.s.state === 'review'", 4000, 'first'); await settle(100);
-  check('a two second hold counts two seconds', J('LISTEN.s.used') === 2000 && /0\.0 of 0 minutes|0\.0 of 0\.05 minutes/.test(J('listenUsedLine()')));
-  g.run('__t += 5000'); press(); await g.waitFor("LISTEN.s.state === 'listening'", 3000, 'second'); tick(1500);
-  check('the next hold is cut at what is left (one second), and sends what it has', J('LISTEN.s.held') === false && J('LISTEN.s.used') >= 3000, J('LISTEN.s.used')); await g.waitFor('__calls.length === 2', 3000, 'second call'); await settle(100);
+  await hold(2000); send(); await g.waitFor("LISTEN.s.state === 'review'", 4000, 'first'); await settle(100);
+  check('a two second listen counts two seconds', J('LISTEN.s.used') === 2000 && /0\.0 of 0 minutes|0\.0 of 0\.05 minutes/.test(J('listenUsedLine()')));
+  g.run('__t += 5000'); await ring(); tick(1500);
+  check('the next listen is cut at what is left (one second), and sends what it has', J('LISTEN.s.state') !== 'listening' && J('LISTEN.s.used') >= 3000, J('LISTEN.s.used')); await g.waitFor('__calls.length === 2', 3000, 'second call'); await settle(100);
   g.run('__t += 5000; __subs.length = 0'); const gum = J('__gum.length'); press();
   check('after that: a plain line, no microphone', J('__gum.length') === gum && /minutes of listening/.test(await view()) && J('listenStatus().ok') === false, await view());
   check('the line says how to go on: type with I, or reload', /Type with I/.test(J('listenReady().say')) && /reload/.test(J('listenReady().say')));
@@ -280,12 +297,12 @@ console.log('H. the real ship\'s computer takes the words');
 await reset(); keys();
 {
   g.run(`shipcompSubmit = __realSubmit; __fg.calls.length = 0; SHIPCOMP.queued = ''; LISTEN.game = __fg`);
-  await hold(); up(); await g.waitFor("LISTEN.s.state === 'review'", 3000, 'review'); await g.waitFor("SHIPCOMP.queued !== ''", 2000, 'queued');
+  await hold(); send(); await g.waitFor("LISTEN.s.state === 'review'", 3000, 'review'); await g.waitFor("SHIPCOMP.queued !== ''", 2000, 'queued');
   check('the transcript is submitted as if typed: the box opens over the game (the game paused) and holds the question', J('SHIPCOMP.queued') === WORDS && J('__fg.calls.join()') === 'pause,run ShipComputer Space', J('__fg.calls.join()'));
   check('the mark is gone and nothing is held', J('listenHeld()') === 0 && J('LISTEN.el.root.style.display') === 'none');
   g.run('SHIPCOMP.queued = ""; __fg.calls.length = 0; __t += 5000'); await settle(10);
   g.run(`shipcompSubmit = (t, gm) => { __subs.push(t); return false; }`);
-  await hold(); up(); await g.waitFor("LISTEN.s.line && /could not open/.test(LISTEN.s.line.text)", 3000, 'refused');
+  await hold(); send(); await g.waitFor("LISTEN.s.line && /could not open/.test(LISTEN.s.line.text)", 3000, 'refused');
   check('when the box cannot open the words stay on screen with the plain line', /could not open the ship's computer here/.test(await view()) && (await view()).includes('"' + WORDS + '"'), await view());
   g.run('shipcompSubmit = (t, gm) => { __subs.push(t); return __subOk; }');
 }
@@ -325,7 +342,7 @@ await reset(); keys();
   `);
   g.run(`(() => { __rec.txts.length = 0; __rec.buttons.length = 0; window.__f = __mk(); Settings.prototype.draw_listen.call(__f); return 1; })()`);
   const shown = J('__rec.txts').join(' | '), labels = J('__rec.buttons.map(b => b.label)');
-  check('the section draws without an error and shows the cost note first, the key, what it does, the minutes and the hint', /THIS USES YOUR OWN DEEPGRAM ACCOUNT AND MAY COST YOU MONEY/.test(shown) && /may cost you money/.test(shown) && /HOLD TO TALK/.test(shown) && /Hold U in space or in a station and speak/.test(shown) && /This session: 0\.0 of 10 minutes/.test(shown) && /node tools\/serve\.mjs/.test(shown) && /Ready: hold U/.test(shown), shown.slice(0, 300));
+  check('the section draws without an error and shows the cost note first, the key, what it does, the minutes and the hint', /THIS USES YOUR OWN DEEPGRAM ACCOUNT AND MAY COST YOU MONEY/.test(shown) && /may cost you money/.test(shown) && /HOLD TO TALK/.test(shown) && /Hold U in space or in a station until the ring around it is full, then speak/.test(shown) && /This session: 0\.0 of 10 minutes/.test(shown) && /node tools\/serve\.mjs/.test(shown) && /Ready: hold U/.test(shown), shown.slice(0, 300));
   check('with a switch that says Listening: ON and a Test microphone button', labels.includes('Listening: ON') && labels.includes('Test microphone'), labels.join(', '));
   g.run(`__rec.buttons.find(b => b.label === 'Listening: ON').fn()`);
   check('pressing the switch turns listening off, and the button and the status follow', J('LISTEN.on') === false && J('__rec.buttons[0].label') === 'Listening: OFF' && /switched off/.test(J('__rec.txts[__rec.txts.length - 1]') + J('__rec.txts.join()')));
@@ -347,33 +364,75 @@ await reset(); keys();
   check('switching it off during a hold ends the hold and closes the microphone', J('LISTEN.s.state') === 'idle' && J('__tracks[__tracks.length - 1].stopped') === true); g.run('listenSetOn(true)');
 }
 
-// ---- J. the play log (card space-game-voice-empty): Troy's voice commands "did not work" and the log had no line about them. Each hold now says how it went, never the words ----
-console.log('J. the play log sees every hold: counts and times, never the words');
+// ---- J. the play log (cards space-game-voice-empty and space-game-voice-ring): each press says how it went, never the words ----
+console.log('J. the play log sees every press: counts and times, never the words');
 {
   await reset(); keys();
   g.run(`window.__pl = []; playlogWrap({ ev: (n, d) => { if (n === 'listen') __pl.push(Object.assign({}, d)); }, count() {}, dealt() {} }, window)`);
   const steps = () => J('__pl').map(e => e.step + (e.step === 'end' ? ':' + e.why : '')).join(' ');
   g.run(`__say = ${JSON.stringify(WORDS)}; __subs.length = 0; __subOk = true`);
-  await hold(2000); up();
+  await hold(2000); send();
   await g.waitFor(`__subs.length === 1`, 3000, 'the words reach the computer');
   const pl = J('__pl');
-  check('a hold that worked: start, microphone open, release, clip, heard, sent, in that order', steps() === 'start open release clip heard end:sent', steps());
-  check('it says how long the microphone took, how long it was held (2 s), the clip size, and how many characters came back', pl[1].ok === true && pl[1].ms >= 0 && pl[2].held === 2 && pl[2].short === false && pl[3].bytes === 8 && pl[4].chars === WORDS.length, JSON.stringify(pl));
+  check('a press that worked: start, ring full, microphone open, stop, clip, heard, sent, in that order', steps() === 'start ring open stop clip heard end:sent', steps());
+  check('it says the ring filled, how long the microphone took, how long it listened (2 s) and why it stopped, the clip size, and how many characters came back', pl[1].done === true && pl[2].ok === true && pl[2].ms >= 0 && pl[3].held === 2 && pl[3].why === 'again' && pl[3].short === false && pl[4].bytes === 8 && pl[5].chars === WORDS.length, JSON.stringify(pl));
   check('and the words themselves are nowhere in it', !JSON.stringify(pl).includes('Roost') && !JSON.stringify(pl).includes('how do I'));
   await reset(); keys(); g.run(`__pl.length = 0; __say = ''; __subs.length = 0`);
-  await hold(1500); up();
-  await g.waitFor(`__pl.some(e => e.step === 'end')`, 3000, 'the end of the empty hold');
-  check('a hold that heard nothing: heard with 0 characters, and it ends with the line shown (nothing)', steps() === 'start open release clip end:nothing heard' && J('__pl')[5].chars === 0, steps()); // the plain line is written inside the step, so its end comes just before the step's own line
+  await hold(1500); send();
+  await g.waitFor(`__pl.some(e => e.step === 'end')`, 3000, 'the end of the empty press');
+  check('a press that heard nothing: heard with 0 characters, and it ends with the line shown (nothing)', steps() === 'start ring open stop clip end:nothing heard' && J('__pl')[6].chars === 0, steps()); // the plain line is written inside the step, so its end comes just before the step's own line
   await reset(); keys(); g.run(`__pl.length = 0; __say = ${JSON.stringify(WORDS)}`);
-  await hold(100); up();
-  await g.waitFor(`__pl.some(e => e.step === 'end')`, 3000, 'the end of the tap');
-  check('a tap (under a third of a second): release says short, no clip is sent, it ends as tap', steps() === 'start open release end:tap' && J('__pl')[2].short === true, steps());
+  press(); tick(200); up();
+  await g.waitFor(`__pl.some(e => e.step === 'ring')`, 3000, 'the end of the tap');
+  check('a tap: the ring did not fill (done false, held 0.2 s), no microphone, no clip, it ends as tap', steps() === 'start end:tap ring' && J('__pl')[2].done === false && J('__pl')[2].held === 0.2, steps() + ' ' + JSON.stringify(J('__pl')[2]));
   await reset(); keys(); g.run(`__pl.length = 0; __deny = 'NotAllowedError'`);
-  press(); await g.waitFor(`__pl.some(e => e.step === 'end')`, 3000, 'the refusal');
-  check('a blocked microphone: the hold starts, the microphone fails, it ends as denied', steps() === 'start end:denied open' && J('__pl')[2].ok === false, steps()); g.run(`__deny = null`);
+  press(); tick(RING()); await g.waitFor(`__pl.some(e => e.step === 'end')`, 3000, 'the refusal'); await settle(10);
+  check('a blocked microphone: the ring fills, the microphone fails, it ends as denied', steps() === 'start ring end:denied open' && J('__pl')[3].ok === false, steps()); g.run(`__deny = null`);
   await reset(); keys(); g.run(`__pl.length = 0; voiceSetKey('')`);
   press(); await settle(20);
-  check('no Deepgram key: no hold starts, and the one line shown is logged as nokey', steps() === 'end:nokey', steps()); keys();
+  check('no Deepgram key: no ring starts, and the one line shown is logged as nokey', steps() === 'end:nokey', steps()); keys();
+}
+
+// ---- K. it stops when you stop talking (card space-game-voice-ring) ----
+console.log('K. it listens until you stop talking');
+{
+  const AC_ON = `AC = { state: 'running', createMediaStreamSource: () => ({ connect() {}, disconnect() {} }), createAnalyser: () => ({ fftSize: 0, getByteTimeDomainData(b) { b.fill(window.__level); } }) }; window.__level = 128; resumeAudio = () => {}; __say = ${JSON.stringify(WORDS)}`;
+  const LOUD = 200, QUIET = 128;
+  await reset(); keys(); g.run(AC_ON);
+  await ring(); ticks(1000, LOUD);
+  check('while words are coming it keeps listening (a second of speech)', J('LISTEN.s.state') === 'listening' && J('LISTEN.s.talk') >= 900, J('LISTEN.s.talk'));
+  ticks(1000, QUIET);
+  check('a second of quiet after words is not enough', J('LISTEN.s.state') === 'listening');
+  ticks(300, QUIET);
+  check('1.2 s of quiet after words ends it by itself: the microphone closes and the sound is sent', J('LISTEN.s.state') !== 'listening' && J('__tracks[__tracks.length - 1].stopped') === true, J('LISTEN.s.state'));
+  await g.waitFor('__calls.length === 1', 3000, 'sent on silence'); await g.waitFor("LISTEN.s.state === 'idle'", 4000, 'handed on'); await settle(50);
+  check('and the words go to the computer, once', J('__subs.length') >= 1 && J('__subs[__subs.length - 1]') === WORDS);
+
+  await reset(); keys(); g.run(AC_ON);
+  await ring(); ticks(300, QUIET); ticks(200, LOUD); ticks(3000, QUIET);
+  check('a short noise (0.2 s) is not words: quiet after it does not end the listen', J('LISTEN.s.state') === 'listening' && J('LISTEN.s.talk') < 300, J('LISTEN.s.talk'));
+  ticks(3000, QUIET);
+  check('but nothing said for 6 s ends it, and what it has is sent (the empty answer then says so)', J('LISTEN.s.state') !== 'listening' && J('__tracks[__tracks.length - 1].stopped') === true);
+  await g.waitFor("LISTEN.s.state === 'idle'", 4000, 'after the lead'); await settle(50);
+
+  await reset(); keys(); g.run(AC_ON); g.run(`window.__level = 200`);
+  await ring(); ticks(4000, LOUD);
+  check('talking without a pause keeps it listening', J('LISTEN.s.state') === 'listening');
+  g.run('AC.state = "suspended"'); ticks(8000, QUIET);
+  check('a suspended audio context reads as silence and is not believed: nothing is ended on it, only U, Esc or the longest listen end it', J('LISTEN.s.state') === 'listening'); esc();
+
+  await reset(); keys(); g.run(`AC = undefined`); await ring(); ticks(12000, 128);
+  check('with no level meter at all nothing ends it by itself before the longest listen (20 s)', J('LISTEN.s.state') === 'listening'); ticks(9000, 128);
+  check('and the longest listen does end it', J('LISTEN.s.state') !== 'listening'); await settle(50); await reset();
+  check('the numbers are the ones the card names: ring 0.6 s, 1.2 s of quiet, 20 s at most', J('LISTEN.limit.ring') === 600 && J('LISTEN.limit.silence') === 1200 && J('LISTEN.limit.hold') === 20000);
+
+  await reset(); keys(); g.run(AC_ON); g.run(`window.__sc.panel = false`);
+  g.run('__t += 5000'); press();
+  check('the cap is on the screen while the keys are in and the scene is Space', J('LISTEN.capEl.root.style.display') === 'block'); up(); await settle(10);
+  g.run(`__fg.scene.getScenes = () => []; listenCapPaint()`);
+  check('and gone when no Space or Station scene runs (a menu, the title)', J('LISTEN.capEl.root.style.display') === 'none'); g.run(`__fg.scene.getScenes = () => [__sc]`);
+  g.run(`voiceSetKey(''); listenCapPaint()`);
+  check('and with no Deepgram key there is no cap at all: the game is as before', J('LISTEN.capEl.root.style.display') === 'none'); keys();
 }
 
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));

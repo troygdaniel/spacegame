@@ -327,13 +327,21 @@ const UI_TEXT = {
   'toast.reaver-intro': 'The Reaver is south-west of Reaver\'s Rock. Watch for the flash before it charges.', 'toast.reaver-wing': 'The Reaver calls in its wing.',
   'toast.reaver-burning': 'The Reaver is burning. It fights harder.', 'toast.reaver-dead': 'The Reaver is wreckage. Bounty paid.',
   'toast.signal-new': 'New signal on the radar: {name}', 'toast.signal-found': 'Signal found: {name}', 'toast.signal-lost': 'Signal lost: {name}',
+  // The next steps (card space-game-first-ten-minutes, src/guide.js): one line each, with its key, said once. {shop} and {missions} are the number keys of those rows of the station menu
+  'hint.dock': 'Slow down near a station and press L to dock. Ore sells and calls are taken there.',
+  'hint.jump': 'To jump: G opens the map, pick a star, press Enter. A jump burns fuel; the station pump refills it.',
+  'hint.ore': 'Shoot asteroids for ore. It sells for credits when you dock (L).',
+  'hint.shop': 'Credits buy parts at the SHOP: press {shop} in the station menu.',
+  'hint.calls': 'Courier and haul calls pay to carry cargo: MISSIONS, press {missions}.',
   // Settings > Keys (card space-game-key-links, src/settings.js settingsKeyInfo): for each key what it is for, that it is your own account, and the address of the
   // provider's key page; keys.steps is the three steps. The words and the addresses are content/text/ui.md's and are left empty here on purpose: when a provider
   // moves its page that is a text edit and a reseal, not code. A line left empty is not shown; an address that is not a plain https address is shown as text only.
   'keys.steps': '', 'keys.deepgram.use': '', 'keys.deepgram.cost': '', 'keys.deepgram.url': '', 'keys.openai.use': '', 'keys.openai.cost': '', 'keys.openai.url': '',
   'keys.anthropic.use': '', 'keys.anthropic.cost': '', 'keys.anthropic.url': '',
   // Settings > Listen (card space-game-ship-computer-listens, src/listen.js and src/settings.js): what holding the key does, the cost, and the one-line hint about the microphone. {key} and {minutes}
-  'listen.use': '', 'listen.cost': '', 'listen.hint': ''
+  'listen.use': '', 'listen.cost': '', 'listen.hint': '',
+  // Settings > Sound > Music (card space-game-music, src/music.js): the one sentence under the row
+  'music.use': 'Music made by the game as you fly, never the same twice. It follows the master volume and M, and steps back when the ship speaks.'
 };
 function uiText(key, vars) { return contentFill(CT_HAS(UI_TEXT, key) ? UI_TEXT[key] : key, vars); }
 function ctTextKeys() { // every string the game reads: key -> { get, set }
