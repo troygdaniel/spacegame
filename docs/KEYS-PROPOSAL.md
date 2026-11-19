@@ -1,6 +1,6 @@
 # Keys: a proposal for Troy (card `space-game-keys-awkward`, 18 Nov 2026)
 
-**Nothing in the game has been changed.** No key moved, no line of text changed. Three questions at the end; each is a yes or a no.
+**No key of the game has moved and no line a player sees has changed.** (The play log itself changed, see below.) Three questions at the end; each is a yes or a no.
 
 ## What Troy's first log says (13 min 20 s, 720 key presses, `node tools/playlog-summary.mjs`)
 
