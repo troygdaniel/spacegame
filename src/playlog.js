@@ -91,7 +91,7 @@ function playlogAction(controls, sceneKey, e) {
   const has = (r, k) => r.k.some(x => x === k || (/^\d-\d$/.test(x) && /^\d$/.test(k) && k >= x[0] && k <= x[2]));
   const row = g.rows.find(r => has(r, label)) || (alias && g.rows.find(r => has(r, alias)));
   if (!row) return 'key:other';
-  return 'key:' + g.id + ': ' + plClean(String(row.t).split(/[(:;]/)[0].trim().toLowerCase(), 36);
+  return 'key:' + g.id + ': ' + plClean(String(row.t).split(/[(:;,.]/)[0].trim().toLowerCase(), 36);
 }
 
 // ---- the logger ----
@@ -162,13 +162,14 @@ function playlogCreate(env) {
       }
       if (last) {
         if (snap.system !== last.system) L.ev('system', { from: last.system, to: snap.system });
+        let paid = 0; // the pay of a call that was done this second is the call's, not a second line of "other credits"
         if (snap.mission !== last.mission || snap.missionId !== last.missionId) {
-          const was = last.mission, id = snap.missionId || last.missionId, pay = Math.round(snap.credits - last.credits);
+          const was = last.mission, id = snap.missionId || last.missionId, pay = Math.round(snap.credits - last.credits - dealt);
           if (snap.mission === 'accepted' && was !== 'accepted') L.ev('mission', { state: 'accepted', id });
           else if (snap.mission === 'failed') L.ev('mission', { state: 'failed', id });
-          else if (snap.mission === 'none' && (was === 'accepted' || was === 'rescued')) L.ev('mission', { state: pay > 0 ? 'done' : 'dropped', id, pay: pay > 0 ? pay : undefined });
+          else if (snap.mission === 'none' && (was === 'accepted' || was === 'rescued')) { L.ev('mission', { state: pay > 0 ? 'done' : 'dropped', id, pay: pay > 0 ? pay : undefined }); if (pay > 0) paid = pay; }
         }
-        const resid = Math.round(snap.credits - last.credits - dealt);
+        const resid = Math.round(snap.credits - last.credits - dealt - paid);
         if (resid && Number.isFinite(resid)) L.ev('credits', { delta: resid, scene: snap.scene });
       }
       dealt = 0; last = snap;
