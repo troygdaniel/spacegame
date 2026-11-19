@@ -28,6 +28,12 @@ One JSON line per event, `{ t: ms since the session began, s: session id, ev: na
 
 A key is counted by what it **does** (from `src/data_controls.js`, by the screen you are on), never by its letter; a key pressed in a text box is activity and no action.
 
+A key that does nothing on its screen is counted as `key:other` and also as `nokey: <screen> <code>` (for example `nokey: Galaxy KeyJ`, `nokey: Space F5`): the screen it was
+pressed on and the **physical key's code** (`event.code`), so a list of the keys a player reaches for in vain can be read (card `space-game-keys-awkward`). It is never the
+character a key types, never from a text box (every typed-text field of the game is a real `<input>`, so a key pressed in one never reaches the log), never a chord with
+Ctrl, Cmd or Alt, never a held-down repeat and never a key of an input method. A code that is not plain letters and digits is `Other`. The counts are per minute, with no order
+and no times between presses, so nothing typed can be read back out of them. `node tools/playlog-summary.mjs` lists them on one `No action:` line, most pressed first.
+
 ## Where it goes
 
 - **Always:** a ring of chunks in this browser's localStorage (about 480 KB, the oldest chunk goes first). Works from a double-clicked `index.html`.
