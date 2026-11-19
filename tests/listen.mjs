@@ -347,6 +347,35 @@ await reset(); keys();
   check('switching it off during a hold ends the hold and closes the microphone', J('LISTEN.s.state') === 'idle' && J('__tracks[__tracks.length - 1].stopped') === true); g.run('listenSetOn(true)');
 }
 
+// ---- J. the play log (card space-game-voice-empty): Troy's voice commands "did not work" and the log had no line about them. Each hold now says how it went, never the words ----
+console.log('J. the play log sees every hold: counts and times, never the words');
+{
+  await reset(); keys();
+  g.run(`window.__pl = []; playlogWrap({ ev: (n, d) => { if (n === 'listen') __pl.push(Object.assign({}, d)); }, count() {}, dealt() {} }, window)`);
+  const steps = () => J('__pl').map(e => e.step + (e.step === 'end' ? ':' + e.why : '')).join(' ');
+  g.run(`__say = ${JSON.stringify(WORDS)}; __subs.length = 0; __subOk = true`);
+  await hold(2000); up();
+  await g.waitFor(`__subs.length === 1`, 3000, 'the words reach the computer');
+  const pl = J('__pl');
+  check('a hold that worked: start, microphone open, release, clip, heard, sent, in that order', steps() === 'start open release clip heard end:sent', steps());
+  check('it says how long the microphone took, how long it was held (2 s), the clip size, and how many characters came back', pl[1].ok === true && pl[1].ms >= 0 && pl[2].held === 2 && pl[2].short === false && pl[3].bytes === 8 && pl[4].chars === WORDS.length, JSON.stringify(pl));
+  check('and the words themselves are nowhere in it', !JSON.stringify(pl).includes('Roost') && !JSON.stringify(pl).includes('how do I'));
+  await reset(); keys(); g.run(`__pl.length = 0; __say = ''; __subs.length = 0`);
+  await hold(1500); up();
+  await g.waitFor(`__pl.some(e => e.step === 'end')`, 3000, 'the end of the empty hold');
+  check('a hold that heard nothing: heard with 0 characters, and it ends with the line shown (nothing)', steps() === 'start open release clip end:nothing heard' && J('__pl')[5].chars === 0, steps()); // the plain line is written inside the step, so its end comes just before the step's own line
+  await reset(); keys(); g.run(`__pl.length = 0; __say = ${JSON.stringify(WORDS)}`);
+  await hold(100); up();
+  await g.waitFor(`__pl.some(e => e.step === 'end')`, 3000, 'the end of the tap');
+  check('a tap (under a third of a second): release says short, no clip is sent, it ends as tap', steps() === 'start open release end:tap' && J('__pl')[2].short === true, steps());
+  await reset(); keys(); g.run(`__pl.length = 0; __deny = 'NotAllowedError'`);
+  press(); await g.waitFor(`__pl.some(e => e.step === 'end')`, 3000, 'the refusal');
+  check('a blocked microphone: the hold starts, the microphone fails, it ends as denied', steps() === 'start end:denied open' && J('__pl')[2].ok === false, steps()); g.run(`__deny = null`);
+  await reset(); keys(); g.run(`__pl.length = 0; voiceSetKey('')`);
+  press(); await settle(20);
+  check('no Deepgram key: no hold starts, and the one line shown is logged as nokey', steps() === 'end:nokey', steps()); keys();
+}
+
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nLISTEN FAIL (${failed} of ${n})` : `\nLISTEN PASS (${n} checks)`);
 process.exit(failed ? 1 : 0);

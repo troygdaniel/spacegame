@@ -229,7 +229,7 @@ async function shipcompAsk(text, s) {
     SHIPCOMP.history.slice(-SHIPCOMP.limit.pairs).forEach(h => { messages.push({ role: 'user', content: h.q }, { role: 'assistant', content: h.a }); });
     messages.push({ role: 'user', content: q });
     const r = await chatComplete({ system: shipcompSystem(s), messages, maxTokens: SHIPCOMP.limit.tokens, maxChars: SHIPCOMP.limit.chars });
-    if (!r.text) return { error: r.code === 'timeout' ? 'I lost the link to the model. Ask me again.' : r.error, code: r.code || 'error' };
+    if (!r.text) return { error: r.code === 'timeout' ? 'I lost the link to the model. Ask me again.' : r.code === 'empty' ? 'I had nothing to say to that. Ask me again.' : r.error, code: r.code || 'error', why: r.why }; // empty: the model's reply was blank (r.why says why); the settings are not the cause
     const plan = shipcompPlan(r.text, s), a = plan.text; // the reply read, checked against the live game: a is what is said (an action's announcement or refusal, else the model's line)
     if (!a) return { error: 'The model sent nothing I can use. Ask me again.', code: 'empty' };
     SHIPCOMP.history.push({ q, a }); if (SHIPCOMP.history.length > 20) SHIPCOMP.history.splice(0, SHIPCOMP.history.length - 20);

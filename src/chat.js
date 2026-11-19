@@ -11,6 +11,10 @@ const CHAT_PROVIDERS = { // one adapter, two providers (Troy, 2026-11-13: OpenAI
   anthropic: { name: 'Anthropic', url: 'https://api.anthropic.com/v1/messages', model: 'claude-haiku-5-5' }
 };
 const CHAT_TIMEOUT = 20000, CHAT_WAIT = 20000, CHAT_PAUSE = 60000; // one call's limit; the wait after a 429; the pause after three network failures
+// A model that thinks before it answers (gpt-5, o1 and on) spends the hidden thinking out of the SAME token limit as the reply: with a small limit it can use all of it
+// and send back nothing (card space-game-voice-empty: both of Troy's first asks came back empty after 2 s, then worked). These get this much extra room on top of the caller's
+// limit; the reply is still cut to the caller's characters. An empty reply the limit cut off is asked once more with a bigger limit (CHAT_AGAIN times the caller's).
+const CHAT_THINK = /^(gpt-5|o[1-9])/i, CHAT_ROOM = 1500, CHAT_AGAIN = 4;
 // CHAT.keys holds both keys; CHAT.key is always the one of the provider in use (chatSync), so the adapter and its callers read one key
 const CHAT = { key: '', keys: { openai: '', anthropic: '' }, on: true, provider: '', model: '', bad: false, fails: 0, pauseUntil: 0, waitUntil: 0, calls: 0 };
 
@@ -58,7 +62,7 @@ function chatPlainReply(s, max = 400) { return s ? String(s).replace(CHAT_BAD, '
 // ---------- the one call ----------
 // chatComplete({ system, messages: [{ role: 'user' | 'assistant', content }], maxTokens, provider?, force? }) -> { text } or { error, code }
 // provider names the one to call (the Settings Test button tests each key); force skips the on switch (a test of a key works while chat is off)
-// Never throws. codes: nokey, off, rejected, paused, busy, timeout, network, model, http, empty. The error is a plain-words line
+// Never throws. codes: nokey, off, rejected, paused, busy, timeout, network, model, http, empty (with why: length, refusal, filter, blank). The error is a plain-words line
 // the caller may show; it never holds the key.
 async function chatComplete(req) {
   const now = performance.now(), p = req && CHAT_PROVIDERS[req.provider] ? req.provider : chatProvider(), key = CHAT.keys[p] || '';
@@ -76,7 +80,7 @@ async function chatComplete(req) {
     body = { model, system, messages, max_tokens: max };
   } else { // max_completion_tokens is the field every current OpenAI model accepts (max_tokens is refused by the reasoning models)
     headers = { 'content-type': 'application/json', Authorization: 'Bearer ' + key };
-    body = { model, messages: [{ role: 'system', content: system }].concat(messages), max_completion_tokens: max };
+    body = { model, messages: [{ role: 'system', content: system }].concat(messages), max_completion_tokens: max + (CHAT_THINK.test(model) ? CHAT_ROOM : 0) };
   }
   CHAT.calls++;
   const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
@@ -98,7 +102,12 @@ async function chatComplete(req) {
     ? (j && Array.isArray(j.content) && (j.content.find(c => c && c.type === 'text') || {}).text)
     : (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content);
   const text = chatPlainReply(raw, (req && req.maxChars) | 0 || 400);
-  if (!text) return { error: 'The model sent nothing back. Try another model name in Settings > Keys.', code: 'empty' };
+  if (!text) { // why it is empty, in one word (the log keeps it; never the words): length = the limit ran out, refusal, filter, or blank = it just sent nothing
+    const ch = p === 'anthropic' ? null : j && j.choices && j.choices[0], fin = String((p === 'anthropic' ? j && j.stop_reason : ch && ch.finish_reason) || '');
+    const why = /^(length|max_tokens)$/.test(fin) ? 'length' : ch && ch.message && ch.message.refusal ? 'refusal' : fin === 'content_filter' ? 'filter' : 'blank';
+    if (why === 'length' && !(req && req.again)) return chatComplete(Object.assign({}, req, { maxTokens: max * CHAT_AGAIN, again: true })); // once, with room to think
+    return { error: 'The model sent nothing back. Try another model name in Settings > Keys.', code: 'empty', why };
+  }
   return { text };
 }
 function chatFailed(code) {

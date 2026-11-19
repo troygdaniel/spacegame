@@ -88,6 +88,18 @@ const asyncLines = await (async () => {
   return J('__ret');
 })();
 check('the computer asked: one line with how long and whether it worked, and the chat it made inside is not a second line', only(asyncLines, 'computer').length === 1 && only(asyncLines, 'computer')[0].ok === true && only(asyncLines, 'computer')[0].ms >= 0 && only(asyncLines, 'npc_chat').length === 1, JSON.stringify(asyncLines));
+// an empty reply says why in one word (card space-game-voice-empty); a reason that is not one plain word is dropped
+const whyLines = await (async () => {
+  g.run(`var __ret2 = null; (async () => {
+    const L = __mk(); const root = { G: { credits: 0 }, shipcompAsk: async () => ({ error: 'x', code: 'empty', why: 'length' }) };
+    playlogWrap(L, root); await root.shipcompAsk('q', {});
+    root.shipcompAsk = async () => ({ error: 'x', code: 'empty', why: 'SECRET words here' }); playlogWrap(L, root); await root.shipcompAsk('q', {});
+    __ret2 = __lines(L);
+  })();`);
+  await g.waitFor('__ret2 !== null', 3000);
+  return J('__ret2');
+})();
+check('an empty reply from the model is logged with its one-word reason, and nothing else is accepted as a reason', only(whyLines, 'computer')[0].code === 'empty' && only(whyLines, 'computer')[0].why === 'length' && only(whyLines, 'computer').length >= 1 && !JSON.stringify(whyLines).includes('SECRET'), JSON.stringify(whyLines));
 check('which action of its closed list the computer chose is a line (a name of letters, nothing else)', only(asyncLines, 'computer_plan')[0].action === 'plot_route', JSON.stringify(only(asyncLines, 'computer_plan')));
 check('neither the question, the chat line nor the reply is anywhere in the log', !JSON.stringify(asyncLines).includes('SECRET'), JSON.stringify(asyncLines).slice(0, 300));
 g.run(`var __ret2 = null; (async () => { const L = __mk(); const root = { G: {}, chatComplete: async () => ({ error: 'Bad key', code: 'badkey' }) }; playlogWrap(L, root); await root.chatComplete({}); __ret2 = __lines(L); })();`);
