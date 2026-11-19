@@ -394,6 +394,8 @@ class ShipBay extends Phaser.Scene {
   // the panels fade, the ship fires its nozzles and flies out through the bay door, then the flight begins
   launch() {
     if (this.leaving || performance.now() < this.ignoreUntil || this.view.kind !== 'fleet' || this.view.rec !== activeShip()) return; // only the ship you fly launches
+    // the first launch asks for the microphone, once, so flight never starts with the browser's question up (src/listen.js, card space-game-mic-early)
+    if (!this.micAsked && typeof listenEarly === 'function' && listenEarly(this.game, () => { this.micAsked = true; if (this.sys.isActive() && !this.leaving) this.launch(); })) return;
     this.hangarClose(); this.leaving = true; sfx('thrusters');
     const cam = this.cameras.main, img = this.shipImg;
     this.bob.stop(); img.setRotation(0);
