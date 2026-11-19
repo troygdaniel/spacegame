@@ -1,6 +1,6 @@
 // ---------- The ship's computer (card space-game-ship-computer; Troy, 17 Nov 2026) ----------
 // Troy asked ORCH how to get to Reaver's Roost, how to buy a ship, why a jump refused, what a key does. This is those questions, asked in the game: press I
-// (in space or in a station) and a box opens; type, press Enter, and the ship's computer answers in a line or two, and says it through the ship voice when
+// (in space or in a station) and a line opens at the bottom of the screen; type, press Enter, and the ship's computer answers in a line or two, and says it through the ship voice when
 // that is on. It is the optional NPC chat's adapter (src/chat.js) with the player's OWN key from Settings > Keys, nothing new to set up:
 //   no key (or chat switched off)   the feature is absent: I does nothing, no hint, nothing is sent anywhere
 //   the key                         lives only in this browser (chat.js); it is never in a message, the save or the repo
@@ -18,8 +18,8 @@
 //   shipcompSystem(s)             the whole system prompt: RULES, the persona, STATE, HOW, KEYS
 //   shipcompAsk(text, s)          Promise<{ text } | { error, code }>: one question; checks the limits, calls chatComplete, keeps the last few answers
 //                                 in SHIPCOMP.history ({ q, a }). Never throws. codes: empty, nokey, busy, gap, limit, and chatComplete's own
-//   shipcompOpen(game)            opens the box over the scene you are in (the ShipComputer scene); false when it cannot (no key, a panel is up)
-//   shipcompSubmit(text, game)    a question as if typed (a transcript from the microphone card): opens the box if it is shut, asks, shows the answer
+//   shipcompOpen(game)            opens the command strip's line (src/cmdstrip.js); false when it cannot (no key, a panel or the nav list is up)
+//   shipcompSubmit(text, game)    a question as if typed (a transcript from the microphone card): the strip shows it, asks, shows the answer; false when it cannot
 //   shipcompSay(text)             the answer through the ship voice, when that is on (voiceSay)
 //   SHIPCOMP                      name, role, voice, persona, lines (the file's), limit, history, route
 // AND IT ACTS (card space-game-ship-computer-acts; Troy, 17 Nov 2026: "plot a course to the mission's destination", and it does it, or tells him what to buy):
@@ -30,7 +30,8 @@
 //   The model never touches the game: it writes words, the game parses them, checks them and runs its own public functions (jumpMapOpen, cruisePick,
 //   autopilotGo, assistSet, jumpStart ...). Nothing outside the list runs, and what costs money or cannot be undone (buying or selling a ship or a part, accepting or
 //   abandoning a job, refuelling) is advice only: it is never in the list, whatever the model writes (SC_ADVICE_ONLY names the ones it is most likely to try).
-// The scene is the same kind as the Journal and the galaxy map: the game underneath is paused while the box is open, so nothing shoots at you while you type.
+// There is no box: the strip (src/cmdstrip.js, card space-game-command-strip) is one line over the flight view or the station. The game is NOT paused while you type: the ship keeps
+// flying, and the line swallows its own keys so typing never turns it. The answer fades away a few seconds after it (Troy: quiet).
 const SHIPCOMP = {
   key: 'KeyI', cap: 'I',
   name: 'ATHENA', role: 'the ship\'s computer', voice: '', lines: [],
@@ -563,24 +564,15 @@ function shipcompLocal(text, s) {
   return plan.text ? plan : null;
 }
 
-// ---- the box: a scene over the game, the game paused underneath (like the Journal) ----
-function shipcompOpen(game) {
-  if (!shipcompAvailable() || game.scene.isActive('ShipComputer')) return false;
-  const s = game.scene.getScenes(true).find(sc => sc.scene.key === 'Space' || sc.scene.key === 'Station');
-  if (!s || s.leaving || s.dead || s.panel || s.talk || s.shopOpen || s.jmp || (s.cr && s.cr.navOpen)) return false;
-  sfx('uiOpen'); s.scene.pause(); game.scene.run('ShipComputer', { from: s.scene.key });
-  return true;
-}
+// ---- the doors: the command strip ----
+// The doors the other files use (src/listen.js, the I key below, the tests): the strip is src/cmdstrip.js. There is no box and no pause any more.
+function shipcompOpen(game) { return typeof cmdstripOpen === 'function' ? cmdstripOpen(game || (typeof window !== 'undefined' ? window.game : undefined)) : false; }
 function shipcompSubmit(text, game) {
-  game = game || window.game;
-  const sc = game && game.scene.getScene('ShipComputer');
-  if (sc && game.scene.isActive('ShipComputer')) { sc.ask(text); return true; }
-  if (game && !shipcompAvailable() && shipcompQuick(text, game)) return true; // no chat key: a plain command still runs, without the box
-  SHIPCOMP.queued = scClean(text, SHIPCOMP.limit.line);
-  if (!game || !shipcompOpen(game)) { SHIPCOMP.queued = ''; return false; }
-  return true;
+  game = game || (typeof window !== 'undefined' ? window.game : undefined);
+  if (game && !shipcompAvailable() && shipcompQuick(text, game)) return true; // no chat key: a plain command still runs, without the strip
+  return typeof cmdstripSubmit === 'function' ? cmdstripSubmit(text, game) : false;
 }
-// a plain command (shipcompLocal) with no box and no key: said and shown as a toast, and run at once. false when the words are not one, or the game is not in flight or at a station.
+// a plain command (shipcompLocal) with no strip and no key: said and shown as a toast, and run at once. false when the words are not one, or the game is not in flight or at a station.
 function shipcompQuick(text, game) {
   const s = game.scene.getScenes(true).find(sc => sc.scene.key === 'Space' || sc.scene.key === 'Station');
   if (!s || s.leaving || s.dead || s.panel || s.talk || s.shopOpen || s.jmp || (s.cr && s.cr.navOpen)) return false;
@@ -590,104 +582,13 @@ function shipcompQuick(text, game) {
   if (plan.run) { try { plan.run(s); } catch (e) { /* the game says when it cannot */ } }
   return true;
 }
-class ShipComputer extends Phaser.Scene {
-  constructor() { super('ShipComputer'); }
-  init(d) { this.from = (d && d.from) || 'Space'; this.closing = false; this.pending = null; this.items = []; this.lastA = null; this.born = performance.now(); this.dotsAt = 0; this.focusAt = 0; }
-  create() {
-    this.ui = panel(this, { w: 940, h: 560, title: 'SHIP\'S COMPUTER  -  ' + shipcompName(), dim: true, depth: 0 }); // src/ui.js: the same glass window as the Journal
-    this.ui.setHints([['Enter', 'Ask'], ['Esc', 'Close']]);
-    this.note = this.add.text(-440, 166, '', uiFont(13, '#5b7a92')).setOrigin(0, 0.5); this.ui.box.add(this.note);
-    this.k = this.input.keyboard.addKeys('ESC');
-    this.el = chatMakeInput('text', 'ask the ship\'s computer', SHIPCOMP.limit.line, () => this.ask(this.el.value), () => this.close()); // src/chat.js: a real text box over the canvas; its keys never reach the game
-    this.place(); this.focus();
-    this.events.once('shutdown', () => { try { this.el.remove(); } catch (e) { /* gone */ } });
-    this.render();
-    if (SHIPCOMP.queued) { const q = SHIPCOMP.queued; SHIPCOMP.queued = ''; this.ask(q); }
-  }
-  place() { chatPlaceInput(this.game, this.el, -440, 178, 880, 40); }
-  focus() { setTimeout(() => { try { if (!this.closing && this.el && !this.el.disabled) this.el.focus(); } catch (e) { /* focus is a nicety */ } }, 30); }
-  state() { return this.scene.get(this.from); } // the Space or Station scene underneath, paused: the snapshot reads it
-  // the last answers, newest at the bottom, each with its question above; what does not fit is dropped from the top.
-  // pending: the question being answered (dots), or { q, a, hist: true } for an answer that is in the history but not shown until the voice starts
-  render() {
-    this.items.forEach(o => o.destroy()); this.items = []; this.lastA = null;
-    const box = this.ui.box, p = this.pending, list = SHIPCOMP.history.slice(-SHIPCOMP.limit.pairs).map(h => ({ q: h.q, a: h.a }));
-    if (p && p.hist) list.pop();
-    if (p) list.push({ q: p.q, a: p.hist ? '' : p.a, err: !!p.err });
-    this.note.setText(shipcompLeft() + ' questions left today');
-    if (!list.length) {
-      const greet = SHIPCOMP.lines.length ? SHIPCOMP.lines[Math.floor(Math.random() * SHIPCOMP.lines.length)] : 'Ship\'s computer ready. Ask me about the route, the ship, your job or the controls.';
-      const t = this.add.text(-440, -170, greet + '\n\nAsk about a star ("how do I get to the Roost?"), a ship, your job, your fuel or what a key does. Or give an order: "hunt" flies to the nearest pirate and fights it, "fly to the station" goes to any place or ship in your lists. Type /name followed by a name to rename me.', uiFont(17, '#8fb4c9', { wordWrap: { width: 880 }, lineSpacing: 6 })).setOrigin(0, 0);
-      box.add(t); this.items.push(t); return;
-    }
-    let y = 150;
-    for (let i = list.length - 1; i >= 0; i--) {
-      const it = list[i], a = this.add.text(-440, y, it.a, uiFont(18, it.err ? '#ffb454' : '#e8f6ff', { wordWrap: { width: 880 }, lineSpacing: 4 })).setOrigin(0, 1);
-      const q = this.add.text(-440, y - Math.max(a.height, 24) - 6, '> ' + it.q, uiFont(15, '#6fa8c0', { wordWrap: { width: 880 } })).setOrigin(0, 1);
-      if (i < list.length - 1 && y - Math.max(a.height, 24) - q.height - 20 < -235) { a.destroy(); q.destroy(); break; } // the newest always stays
-      box.add([q, a]); this.items.push(q, a); if (i === list.length - 1) this.lastA = a;
-      y -= Math.max(a.height, 24) + q.height + 26;
-    }
-  }
-  async ask(text) {
-    if (this.closing || this.pending) return;
-    const q = scClean(text, SHIPCOMP.limit.line); if (!q) return;
-    this.el.value = '';
-    const nm = /^\/name\b\s*(.*)$/i.exec(q);
-    if (nm) { // /name Vesper: the player renames it, here and now
-      const n = nm[1] ? shipcompSetName(nm[1]) : shipcompName();
-      this.ui.titleText.setText('SHIP\'S COMPUTER  -  ' + shipcompName());
-      this.pending = { q, a: nm[1] ? 'Understood. I will answer to ' + n + '.' : 'My name is ' + n + '. Type /name followed by a new name to change it.' };
-      this.render(); this.pending = null; return;
-    }
-    this.pending = { q, a: '' }; this.el.disabled = true; this.dotsAt = this.time.now; this.render();
-    const r = await shipcompAsk(q, this.state());
-    if (this.closing) return;
-    const free = () => { if (this.closing) return; this.pending = null; this.el.disabled = false; this.focus(); };
-    if (!r.text) { this.pending = { q, a: r.error, err: true }; this.render(); free(); return; } // the plain line says why; it stays on screen until the next question
-    this.pending = { q, a: '', hist: true }; // the answer is in the history; it shows when the voice starts (at once with no voice, after 1.5 s at the latest)
-    shipcompSay(r.text, () => {
-      if (this.closing) return;
-      this.pending = null; this.render(); this.el.disabled = false; this.focus();
-      if (this.lastA) typewrite(this, this.lastA, r.text, 90);
-      if (r.plan && r.plan.run) this.act(r.plan);
-    });
-  }
-  // an action: announced (the line above, and aloud), then run by the game. The box closes so the game runs again, a moment after the line so it can be read;
-  // Esc in that moment cancels it. The toast says it again on the flight screen.
-  act(plan) {
-    const sc = this.state();
-    setTimeout(() => {
-      if (this.closing) return;
-      this.close();
-      setTimeout(() => { try { toast(sc, plan.text, '#9fe9ff'); plan.run(sc); } catch (e) { /* the game says when it cannot */ } }, 80);
-    }, 700);
-  }
-  close() {
-    if (this.closing) return; this.closing = true; sfx('uiClose');
-    try { this.el.remove(); } catch (e) { /* gone */ }
-    const sc = this.scene.get(this.from); // keys released while the box was open are never seen: clear them so nothing sticks
-    if (sc && sc.input && sc.input.keyboard) sc.input.keyboard.resetKeys();
-    this.scene.stop(); this.scene.resume(this.from);
-  }
-  update() {
-    if (this.closing) return;
-    const esc = Phaser.Input.Keyboard.JustDown(this.k.ESC); // always consumed: the Esc that closed something just before may still be flagged
-    if (esc && performance.now() - this.born > 200) { this.close(); return; }
-    this.place(); // follows the canvas when the window is resized
-    if (this.pending && !this.pending.hist && this.pending.a === '' && this.lastA) this.lastA.setText(['.', '. .', '. . .', ''][Math.floor((this.time.now - this.dotsAt) / 350) % 4]);
-    if (document.activeElement !== this.el && !this.el.disabled && this.time.now - this.focusAt > 500) { this.focusAt = this.time.now; this.focus(); }
-  }
-}
-// I, once for the whole game: in space or in a station, not while typing in a field, a terminal, the shop or a talk is open
+// I, once for the whole game: in space or in a station, not while typing in a field, a terminal, the shop or a talk is open. It opens the strip's line.
 function shipcompInstall(game) {
   shipcompLoad();
-  if (!game.scene.getScene('ShipComputer')) game.scene.add('ShipComputer', ShipComputer, false);
   window.addEventListener('keydown', e => {
     if (e.repeat || e.code !== 'KeyI' || e.ctrlKey || e.metaKey || e.altKey) return;
     const el = document.activeElement;
-    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return; // typing in a field (the key setup, a chat line, this box)
-    if (game.scene.isActive('ShipComputer')) { game.scene.getScene('ShipComputer').close(); return; }
+    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return; // typing in a field (the key setup, a chat line, the strip's own line)
     shipcompOpen(game);
   });
 }

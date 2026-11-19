@@ -110,10 +110,10 @@ g.run(`chatSetKey(''); chatSetProvider(''); chatSetModel(''); SHIPCOMP.limit.gap
 check('no key: not available', J(`shipcompAvailable()`) === false);
 let r = await ask('how do I get to the Roost?', near);
 check('no key: a question is refused in plain words and NOTHING is sent', r.code === 'nokey' && /chat key/.test(r.error) && J(`__calls.length`) === 0, JSON.stringify(r));
-const fakeGame = (over = {}) => `(() => { const calls = [], sc = Object.assign({ scene: { key: 'Space', pause() { calls.push('pause'); } }, panel: false, talk: false, shopOpen: false, leaving: false, dead: false, jmp: null, cr: {} }, ${JSON.stringify(over)});
-  window.__fg = { calls, scene: { isActive: k => k === 'ShipComputer' && !!window.__open, getScene: () => null, getScenes: () => [sc], run: (k, d) => calls.push('run ' + k + ' ' + d.from) } }; return 1; })()`;
+const fakeGame = (over = {}) => `(() => { const calls = [], sc = Object.assign({ scene: { key: 'Space', pause() { calls.push('pause'); } }, input: { keyboard: { resetKeys() { calls.push('reset'); } } }, panel: false, talk: false, shopOpen: false, leaving: false, dead: false, jmp: null, cr: {} }, ${JSON.stringify(over)});
+  window.__fg = { calls, scene: { isActive: () => false, getScene: () => null, getScenes: () => [sc] } }; return 1; })()`;
 g.run(fakeGame());
-check('no key: the I key opens nothing (no box, no pause)', J(`shipcompOpen(__fg)`) === false && J(`__fg.calls.length`) === 0);
+check('no key: the I key opens nothing (no line, no pause)', J(`shipcompOpen(__fg)`) === false && J(`__fg.calls.length`) === 0 && J(`CMDSTRIP.s.typing`) === false);
 g.run(`chatSetKey('${KEY}')`);
 check('with a key: available, and no network call yet', J(`shipcompAvailable()`) === true && J(`__calls.length`) === 0);
 g.run(`chatSetOn(false)`);
@@ -218,18 +218,22 @@ g.run(`SHIPCOMP.you = ''; shipcompLoad()`);
 check('it is still the name after a reload (the page loads it)', J(`shipcompName()`) === 'VESPER 2 THE GRE');
 check('an empty name puts the file\'s back', J(`shipcompSetName('')`) === 'ATHENA' && g.run(`localStorage.getItem(SHIPCOMP.store.name)`) === null);
 check('the controls table names I in flight and in the station (Settings > Controls shows it; the H pages are full, so the row is left off them)', ['flight', 'station'].every(id => J(`controlsGroup('${id}').rows.some(r => r.k.includes('I') && /computer/.test(r.t) && r.help === 0)`)));
-check('the key is I, and the scene is there to open', J(`SHIPCOMP.key`) === 'KeyI' && J(`typeof ShipComputer`) === 'function');
-g.run(fakeGame()); g.run(`window.__open = false`);
-g.run(`__fg.calls.length = 0`);
-check('with a key, in space: the box opens over the scene you are in and the scene is paused', J(`shipcompOpen(__fg)`) === true && J(`__fg.calls`).join() === 'pause,run ShipComputer Space', J(`__fg.calls`).join());
+check('the key is I, and the command strip is what it opens (there is no ShipComputer scene any more)', J(`SHIPCOMP.key`) === 'KeyI' && J(`typeof ShipComputer`) === 'undefined' && J(`typeof cmdstripOpen`) === 'function');
+g.run(fakeGame());
+check('with a key, in space: the line opens over the scene you are in, held keys are let go and the game is NOT paused', J(`shipcompOpen(__fg)`) === true && J(`CMDSTRIP.s.typing`) === true && J(`__fg.calls`).join() === 'reset', J(`__fg.calls`).join());
+check('and it does not open twice', J(`shipcompOpen(__fg)`) === false);
+g.run(`cmdstripClose()`);
+check('Esc, Enter or a click puts the keyboard back: the line is shut and the held keys are let go again', J(`CMDSTRIP.s.typing`) === false && J(`__fg.calls`).join() === 'reset,reset', J(`__fg.calls`).join());
 for (const [what, over] of [['a terminal is open', { panel: true }], ['a talk is open', { talk: true }], ['the shop is open', { shopOpen: true }], ['the ship is leaving', { leaving: true }], ['the ship is wrecked', { dead: true }], ['a jump is charging', { jmp: { to: 'kestrel' } }], ['the nav list is open', { cr: { navOpen: true } }]]) {
   g.run(fakeGame(over));
-  check('the box stays shut when ' + what, J(`shipcompOpen(__fg)`) === false && J(`__fg.calls.length`) === 0);
+  check('the line stays shut when ' + what, J(`shipcompOpen(__fg)`) === false && J(`__fg.calls.length`) === 0 && J(`CMDSTRIP.s.typing`) === false);
 }
-g.run(fakeGame()); g.run(`window.__open = true`);
-check('and it does not open twice', J(`shipcompOpen(__fg)`) === false);
-check('a transcript from the microphone card reaches the box: with the box shut and no key nothing happens', (() => { g.run(`chatSetKey(''); window.__open = false`); return J(`shipcompSubmit('where is the Roost', __fg)`) === false && J(`SHIPCOMP.queued`) === ''; })());
-g.run(`chatSetKey('${KEY}')`);
+g.run(fakeGame());
+check('a transcript from the microphone card reaches the strip: with no key nothing happens', (() => { g.run(`chatSetKey('')`); return J(`shipcompSubmit('where is the Roost', __fg)`) === false && J(`CMDSTRIP.s.pend`) === null; })());
+g.run(`chatSetKey('${KEY}'); SHIPCOMP.limit.gap = 0; SHIPCOMP.lastAt = 0; SHIPCOMP.busy = false; shipcompAsk = async () => ({ text: 'Mock answer.' }); shipcompSay = (t, then) => then('silent')`);
+check('and with a key it shows the question at once and asks, and the game is not paused', J(`shipcompSubmit('where is the Roost', __fg)`) === true && J(`CMDSTRIP.s.pend.q`) === 'where is the Roost' && !J(`__fg.calls`).includes('pause'));
+await new Promise(r => setTimeout(r, 20));
+check('the answer arrives under it', J(`CMDSTRIP.s.live.q`) === 'where is the Roost' && J(`CMDSTRIP.s.live.a`) === 'Mock answer.' && J(`CMDSTRIP.s.pend`) === null);
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 
 console.log(failed ? `\nSHIPCOMPUTER FAIL (${failed} of ${n})` : `\nSHIPCOMPUTER PASS (${n})`);

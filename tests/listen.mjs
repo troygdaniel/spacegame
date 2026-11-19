@@ -213,10 +213,10 @@ await reset(); keys();
   press(`{ repeat: true }`); press(`{ ctrlKey: true }`); press(`{ metaKey: true }`); press(`{ altKey: true }`);
   g.run(`document.activeElement = { tagName: 'INPUT' }`); press(); g.run(`document.activeElement = { tagName: 'TEXTAREA' }`); press(); g.run(`document.activeElement = { tagName: 'DIV', isContentEditable: true }`); press(); g.run('document.activeElement = null');
   check('a repeat, Ctrl, Cmd, Alt, and a text field (an input, a text area, an editable box) do nothing', J('__gum.length') === gum0 && J('LISTEN.s.state') === 'idle');
-  press(`{}`, '__nofg'); press(`{}`, 'null'); g.run('__fg.scene.isActive = k => k === "ShipComputer"'); press(); g.run('__fg.scene.isActive = k => false');
-  check('with no Space or Station scene running (a menu, the title, the box itself) the key is only a key', J('__gum.length') === gum0 && J('LISTEN.s.state') === 'idle');
+  press(`{}`, '__nofg'); press(`{}`, 'null');
+  check('with no Space or Station scene running (a menu, the title, the map) the key is only a key', J('__gum.length') === gum0 && J('LISTEN.s.state') === 'idle');
   g.run('__sc.panel = true'); press();
-  check('a panel in the way: the line is given before anyone speaks into a box that would not open', J('__gum.length') === gum0 && /could not open the ship's computer here/.test(await view()), await view()); g.run('__sc.panel = false');
+  check('a panel in the way: the line is given before anyone speaks into a line that would not open', J('__gum.length') === gum0 && /could not open the ship's computer here/.test(await view()), await view()); g.run('__sc.panel = false');
 
   await reset(); g.run('LISTEN.limit.hold = 3000');
   await hold(3100); await g.waitFor('__calls.length === 1', 3000, 'the longest listen');
@@ -293,18 +293,18 @@ await reset(); keys();
   g.run('LISTEN.limit.minutes = 10');
 }
 
-console.log('H. the real ship\'s computer takes the words');
+console.log('H. the real ship\'s computer takes the words (the command strip, src/cmdstrip.js)');
 await reset(); keys();
 {
-  g.run(`shipcompSubmit = __realSubmit; __fg.calls.length = 0; SHIPCOMP.queued = ''; LISTEN.game = __fg`);
-  await hold(); send(); await g.waitFor("LISTEN.s.state === 'review'", 3000, 'review'); await g.waitFor("SHIPCOMP.queued !== ''", 2000, 'queued');
-  check('the transcript is submitted as if typed: the box opens over the game (the game paused) and holds the question', J('SHIPCOMP.queued') === WORDS && J('__fg.calls.join()') === 'pause,run ShipComputer Space', J('__fg.calls.join()'));
+  g.run(`shipcompSubmit = __realSubmit; window.__realAsk = shipcompAsk; window.__realSay = shipcompSay; shipcompAsk = async () => ({ text: 'Mock answer.' }); shipcompSay = (t, then) => then('silent'); __fg.calls.length = 0; LISTEN.game = __fg; CMDSTRIP.s.pend = null; CMDSTRIP.s.live = null; SHIPCOMP.limit.gap = 0`);
+  await hold(); send(); await g.waitFor("LISTEN.s.state === 'review'", 3000, 'review'); await g.waitFor("CMDSTRIP.s.live || CMDSTRIP.s.pend", 2000, 'asked');
+  check('the transcript is submitted as if typed: the strip holds the question and the game is not paused', J('(CMDSTRIP.s.live || CMDSTRIP.s.pend).q') === WORDS && !J('__fg.calls').includes('pause'), J('__fg.calls.join()'));
   check('the mark is gone and nothing is held', J('listenHeld()') === 0 && J('LISTEN.el.root.style.display') === 'none');
-  g.run('SHIPCOMP.queued = ""; __fg.calls.length = 0; __t += 5000'); await settle(10);
+  g.run('CMDSTRIP.s.pend = null; CMDSTRIP.s.live = null; __fg.calls.length = 0; __t += 5000'); await settle(10);
   g.run(`shipcompSubmit = (t, gm) => { __subs.push(t); return false; }`);
   await hold(); send(); await g.waitFor("LISTEN.s.line && /could not open/.test(LISTEN.s.line.text)", 3000, 'refused');
-  check('when the box cannot open the words stay on screen with the plain line', /could not open the ship's computer here/.test(await view()) && (await view()).includes('"' + WORDS + '"'), await view());
-  g.run('shipcompSubmit = (t, gm) => { __subs.push(t); return __subOk; }');
+  check('when the strip cannot open the words stay on screen with the plain line', /could not open the ship's computer here/.test(await view()) && (await view()).includes('"' + WORDS + '"'), await view());
+  g.run('shipcompSubmit = (t, gm) => { __subs.push(t); return __subOk; }; shipcompAsk = __realAsk; shipcompSay = __realSay');
 }
 
 console.log('I. Settings');

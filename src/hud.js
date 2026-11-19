@@ -919,6 +919,7 @@ function hudTick(s) {
   if (space || surf) hudWarn(h, s, now, key, h.near, h.engage);
   h.zones.push({ x0: 430, y0: 0, x1: 850, y1: 50 });
   const npz = hudNavZone(s, h.box); if (npz) h.zones.push(npz); // the navigation panel (src/navpanel.js): its job line, pinned destination and list, whichever are up
+  const csz = typeof cmdstripZone === 'function' ? cmdstripZone() : null; if (csz) h.zones.push(csz); // the command strip (src/cmdstrip.js), while it is up
   // toasts (depth 299 and up) are zones too, for as long as they are up
   s.children.list.forEach(o => {
     if (o.depth < 299 || !o.visible || o.alpha < 0.05 || (o.type !== 'Text' && o.type !== 'Rectangle')) return;
