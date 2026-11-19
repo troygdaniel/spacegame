@@ -15,7 +15,10 @@
 // It needs BOTH keys, the Deepgram one to hear and a chat key (OpenAI or Anthropic) for the computer to answer: with either missing a plain line says where
 // to add it and nothing is recorded. A listen under a third of a second sends nothing. A session may listen LISTEN.limit.minutes minutes (the player's account,
 // the player's cost: Settings > Listen says so); the count is kept in memory, so a reload starts it again.
-// The browser asks for the microphone itself. Denied, no device, not a secure page and a game opened from a file each get a plain line. 127.0.0.1 is a
+// The browser asks for the microphone itself, EARLY (card space-game-mic-early; Troy, 18 Nov): at the first launch from a station, before flight, with the one-line
+// note first (ui.md listen.early), once; the launch waits for the answer, so flight never starts with the browser's question up. Skipped when the browser says it is
+// granted (or blocked) already, when listening cannot work (no Deepgram key...), and for ever after that one time. Blocked: the U key cap says so, a press says
+// so, and Settings > Listen says so. Denied, no device, not a secure page and a game opened from a file each get a plain line. 127.0.0.1 is a
 // secure context, so `node tools/serve.mjs` asks once; opened from a file the browser may ask every time or refuse (Settings > Listen says so).
 // One request after the listening ends, not a stream: the words appear a moment after it, not word by word. A live stream over a WebSocket is
 // a later card; the interface below does not change for it.
@@ -37,8 +40,8 @@ const LISTEN = {
   host: 'api.deepgram.com', url: 'https://api.deepgram.com/v1/listen', model: 'nova-3',
   mimes: ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'], // the recorder's formats, the first this browser can make (Deepgram reads all of them)
   limit: { minutes: 10, hold: 20000, tap: 350, grace: 1500, wait: 15000, chars: 240, terms: 30, quiet: 0.02, line: 4500,
-    ring: 600, silence: 1200, words: 300, lead: 6000, talk: 0.05 },   // the ring's seconds; the quiet that ends it; the sound that counts as words; the wait for the first words; the level that is sound
-  store: { on: 'longhaul.listen.on', asked: 'longhaul.listen.asked' },
+    ring: 600, silence: 1200, words: 300, lead: 6000, talk: 0.05, note: 1600, early: 30000 },   // the ring's seconds; the quiet that ends it; the sound that counts as words; the wait for the first words; the level that is sound
+  store: { on: 'longhaul.listen.on', asked: 'longhaul.listen.asked', nagged: 'longhaul.listen.nagged' },
   say: {                                 // the plain lines; {key} is the key to hold
     nokey: 'Listening needs a Deepgram key: Settings > Keys.',
     badkey: 'Deepgram rejected the key: check it in Settings > Keys.',
@@ -54,6 +57,7 @@ const LISTEN = {
     failed: 'The microphone did not start. Try again.',
     norecord: 'The browser could not start recording. Try again.',
     first: 'The browser will ask to use the microphone: choose Allow, then speak.',
+    blocked: 'The microphone is blocked for this page, so voice is off. Allow it (the icon beside the address), then reload the game.',
     tap: 'Hold {key} until the ring is full, then speak.',
     silent: 'I heard silence. Check the microphone the browser is using, then try again.',
     nothing: 'I did not catch anything. Hold {key} until the ring is full, then speak.',
@@ -69,7 +73,7 @@ const LISTEN = {
   },
   s: { state: 'idle', held: false, seq: 0, stream: null, rec: null, chunks: [], blob: null, mime: '', t0: 0, used: 0, calls: 0, words: '', send: false, peak: 0, level: 0,
     meter: null, tick: 0, timer: 0, stopTimer: 0, line: null, lineTimer: 0, lastSay: -1e9, short: false, silent: false,
-    ringAt: 0, lastTick: 0, sound: 0, talk: 0, asked: false },   // the ring began; the last tick; the last loud moment; ms of words; the browser has asked for the microphone before
+    ringAt: 0, lastTick: 0, sound: 0, talk: 0, asked: false, nagged: false, perm: '', early: '', earlyWhy: '' },   // the ring began; the last tick; the last loud moment; ms of words; the browser has asked for the microphone before
   el: null, capEl: null, game: null
 };
 const lsSay = (k, v) => String(LISTEN.say[k] || k).replace(/\{(\w+)\}/g, (all, n) => (n === 'key' ? LISTEN.cap : n === 'minutes' ? LISTEN.limit.minutes : v && v[n] !== undefined ? v[n] : all));
@@ -78,7 +82,7 @@ const lsNow = () => performance.now();
 const lsTry = (fn, fallback) => { try { const v = fn(); return v === undefined ? fallback : v; } catch (e) { return fallback; } };
 
 // ---------- the switch (kept in this browser, like the voice's) ----------
-function listenLoad() { try { LISTEN.on = localStorage.getItem(LISTEN.store.on) !== '0'; LISTEN.s.asked = localStorage.getItem(LISTEN.store.asked) === '1'; } catch (e) { /* storage is optional */ } }
+function listenLoad() { try { LISTEN.on = localStorage.getItem(LISTEN.store.on) !== '0'; LISTEN.s.asked = localStorage.getItem(LISTEN.store.asked) === '1'; LISTEN.s.nagged = localStorage.getItem(LISTEN.store.nagged) === '1'; } catch (e) { /* storage is optional */ } }
 function listenSetOn(on) { LISTEN.on = !!on; try { localStorage.setItem(LISTEN.store.on, on ? '1' : '0'); } catch (e) { /* storage is optional */ } if (!LISTEN.on) listenCancel(''); }
 
 // ---------- what the browser has, and may a hold start ----------
@@ -98,6 +102,7 @@ function listenReady() {
   if (listenLeft() <= 0) return no('limit', 'limit');
   if (!listenSecure() || !lsTry(() => navigator.mediaDevices, null)) return no('insecure', 'insecure'); // a page that is not a secure context has no mediaDevices at all
   if (!listenHasMic()) return no('nomic', 'nomic');
+  if (LISTEN.s.perm === 'denied') return no('blocked', 'blocked');          // the browser says the microphone is blocked: a press would only fail after the ring
   return { ok: true, code: 'ok', say: '' };
 }
 function listenUsedLine() { return 'This session: ' + (LISTEN.s.used / 60000).toFixed(1) + ' of ' + LISTEN.limit.minutes + ' minutes of listening.'; }
@@ -225,6 +230,7 @@ function listenCapView(now = lsNow()) {
   if (S.state === 'listening') return { fill: 1, color: LISTEN_CSS.red, label: 'listening', glow: S.level };
   if (S.state === 'stopping' || S.state === 'hearing') return { fill: 1, color: LISTEN_CSS.cyan, label: 'hearing' };
   if (S.state === 'review') return { fill: 1, color: LISTEN_CSS.green, label: 'sending' };
+  if (S.perm === 'denied') return { fill: 1, color: LISTEN_CSS.amber, label: 'blocked', idle: true };
   return { fill: 0, color: LISTEN_CSS.cyan, label: 'talk', idle: true };
 }
 function listenCapDom() {
@@ -241,7 +247,7 @@ function listenCapDom() {
   } catch (e) { LISTEN.capEl = null; }
   return LISTEN.capEl;
 }
-function listenCapShown(game) { return !!(LISTEN.on && listenScene(game || LISTEN.game) && listenReady().ok); }
+function listenCapShown(game) { return !!(LISTEN.on && listenScene(game || LISTEN.game) && (listenReady().ok || listenReady().code === 'blocked')); }
 function listenCapPaint() {
   const S = LISTEN.s, d = listenCapDom(); if (!d) return null;
   try {
@@ -263,6 +269,52 @@ function listenLine(text, kind = 'warn', words = '') {
   listenPaint();
 }
 const listenSound = name => { try { if (typeof sfx === 'function') sfx(name); } catch (e) { /* sound is optional */ } };
+
+// ---------- the microphone, asked early (card space-game-mic-early) ----------
+// The browser's own answer, with no question to the player: granted, denied, prompt, or '' when this browser will not say. Kept in LISTEN.s.perm and followed.
+async function listenPermission() {
+  try {
+    const p = await navigator.permissions.query({ name: 'microphone' });
+    LISTEN.s.perm = p.state; p.onchange = () => { LISTEN.s.perm = p.state; listenCapPaint(); };
+    return p.state;
+  } catch (e) { return LISTEN.s.perm; }
+}
+// a refusal of the microphone (blocked, dismissed): when the browser's answer is not to be had, a refusal by name is taken as blocked
+function listenDenied(e) { if (/^(NotAllowedError|PermissionDeniedError|SecurityError)$/.test(String((e && e.name) || ''))) { LISTEN.s.perm = 'denied'; listenPermission(); } }
+const listenEarlyNeeded = () => { const S = LISTEN.s; return LISTEN.on && !S.nagged && !S.asked && S.perm !== 'granted' && S.perm !== 'denied' && listenReady().ok; };
+// The launch from a station calls this: false = nothing to ask, launch now. true = the question is on its way and proceed() is called when it is answered (never
+// before): a second call meanwhile is swallowed. The one-line note shows first, then the browser asks, the tracks are stopped at once (nothing is recorded or sent).
+function listenEarly(game, proceed) {
+  const S = LISTEN.s;
+  if (S.early === 'pending') return true;
+  if (!listenEarlyNeeded()) return false;
+  S.early = 'pending'; S.earlyWhy = '';
+  listenEarlyRun(game).then(() => {}, () => {}).then(() => { S.early = 'done'; try { proceed(); } catch (e) { /* the launch is the game's */ } });
+  return true;
+}
+async function listenEarlyRun(game) {
+  const S = LISTEN.s, nap = ms => new Promise(r => setTimeout(r, ms));
+  const perm = await listenPermission();                                     // asked only when the browser has not already answered
+  if (perm === 'granted') { S.asked = true; S.earlyWhy = 'granted'; try { localStorage.setItem(LISTEN.store.asked, '1'); } catch (e) { /* storage is optional */ } return; }
+  if (perm === 'denied') { S.earlyWhy = 'blocked'; return; }
+  S.nagged = true; try { localStorage.setItem(LISTEN.store.nagged, '1'); } catch (e) { /* storage is optional */ } // once, whatever the answer
+  const note = lsTry(() => uiText('listen.early'), ''), line = note && note !== 'listen.early' ? note : 'Voice: the browser will ask to use your microphone. Choose Allow on every visit.';
+  listenLine(line, 'info'); S.line.until = lsNow() + LISTEN.limit.note + LISTEN.limit.early; listenPaint();
+  await nap(LISTEN.limit.note);                                              // the note is read before the browser's question takes the screen
+  let stream = null, gone = false;
+  const ask = navigator.mediaDevices.getUserMedia({ audio: true });
+  ask.then(st => { if (gone) listenStopStream(st); }, () => {});             // an answer that comes after the launch went ahead is closed at once
+  try { stream = await Promise.race([ask, nap(LISTEN.limit.early).then(() => { throw Object.assign(new Error('slow'), { name: 'SlowError' }); })]); }
+  catch (e) {
+    gone = true; S.line = null; listenPaint();
+    if (e && e.name === 'SlowError') { S.earlyWhy = 'slow'; return; }
+    S.earlyWhy = 'declined'; listenDenied(e); await listenPermission();
+    if (S.perm !== 'granted') listenLine(lsSay('blocked'), 'warn');           // said once, here; after this the cap, a press and Settings say it
+    return;
+  }
+  listenStopStream(stream); gone = true; S.asked = true; S.perm = 'granted'; S.earlyWhy = 'allowed'; S.line = null; listenPaint();
+  try { localStorage.setItem(LISTEN.store.asked, '1'); } catch (e) { /* storage is optional */ }
+}
 
 // ---------- one press ----------
 function listenScene(game) { // the scene the computer can open over: the Space or Station scene that is running (a paused one, behind a menu, is not)
@@ -315,7 +367,8 @@ function listenRingDone() {
 async function listenOpen(seq) {
   const S = LISTEN.s; let stream = null;
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
-  catch (e) { if (seq === S.seq) { listenReset(false); listenLine(listenMicError(e), 'warn'); } return; }
+  catch (e) { listenDenied(e); if (seq === S.seq) { listenReset(false); listenLine(listenMicError(e), 'warn'); } return; }
+  S.perm = 'granted';
   if (!S.asked) { S.asked = true; try { localStorage.setItem(LISTEN.store.asked, '1'); } catch (e) { /* storage is optional */ } } // the browser has asked once: the next time it need not be explained
   if (seq !== S.seq) { listenStopStream(stream); return; }                  // cancelled while the browser was asking
   let rec = null; const mime = listenMime();
@@ -425,6 +478,7 @@ function listenInstall(game) {
   // the microphone: its own question takes the focus, and that is the very moment the press must not be lost (it was, the first time: the log of 18 Nov)
   window.addEventListener('blur', () => { if (LISTEN.s.state === 'ring') listenRingAbort(); else if (LISTEN.s.state === 'listening') listenCancel(); });
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('visibilitychange', () => { if (document.hidden && ['ring', 'opening', 'listening'].includes(LISTEN.s.state)) listenCancel(''); });
+  listenPermission().then(listenCapPaint, () => {});                          // the browser's answer, to know early whether the microphone is blocked
   const t = setInterval(listenCapPaint, 500); if (t && typeof t.unref === 'function') t.unref(); // the key cap appears and goes with the scene
   listenCapPaint();
 }

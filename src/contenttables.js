@@ -339,7 +339,7 @@ const UI_TEXT = {
   'keys.steps': '', 'keys.deepgram.use': '', 'keys.deepgram.cost': '', 'keys.deepgram.url': '', 'keys.openai.use': '', 'keys.openai.cost': '', 'keys.openai.url': '',
   'keys.anthropic.use': '', 'keys.anthropic.cost': '', 'keys.anthropic.url': '',
   // Settings > Listen (card space-game-ship-computer-listens, src/listen.js and src/settings.js): what holding the key does, the cost, and the one-line hint about the microphone. {key} and {minutes}
-  'listen.use': '', 'listen.cost': '', 'listen.hint': '',
+  'listen.use': '', 'listen.cost': '', 'listen.hint': '', 'listen.early': '',
   // Settings > Sound > Music (card space-game-music, src/music.js): the one sentence under the row
   'music.use': 'Music is made by the game as you fly and steps back when the ship speaks. Effects is the engine, the drone and every shot and click; they ease off a little while music plays. M mutes all.'
 };

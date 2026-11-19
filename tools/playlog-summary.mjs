@@ -31,7 +31,7 @@ export function sessionsOf(events) {
 // the numbers of one session (or of all, merged: pass all the events)
 export function summarize(events) {
   const S = { events: events.length, build: {}, scenes: {}, samples: [], deals: { buy: 0, sell: 0, buyN: 0, sellN: 0, by: {} }, missions: { accepted: 0, done: 0, failed: 0, dropped: 0, pay: 0, by: {} }, credits: { other: 0 },
-    docks: 0, systems: [], jumps: 0, deaths: [], deathCauses: {}, actions: {}, nokeys: {}, idle: [], computer: { n: 0, ms: 0, failed: 0, codes: {}, tools: {} }, listen: { starts: 0, rings: 0, ringAborts: 0, opens: 0, openMs: 0, openFail: 0, stops: 0, held: 0, clips: 0, heard: 0, heardEmpty: 0, ends: {} }, chat: { n: 0, ms: 0, failed: 0, codes: {} },
+    docks: 0, systems: [], jumps: 0, deaths: [], deathCauses: {}, actions: {}, nokeys: {}, idle: [], computer: { n: 0, ms: 0, failed: 0, codes: {}, tools: {} }, listen: { starts: 0, rings: 0, ringAborts: 0, early: '', earlyMs: 0, opens: 0, openMs: 0, openFail: 0, stops: 0, held: 0, clips: 0, heard: 0, heardEmpty: 0, ends: {} }, chat: { n: 0, ms: 0, failed: 0, codes: {} },
     errors: [], errorCount: 0, dips: [], pauses: 0, settings: 0, hidden: 0, stalls: 0, end: null, endScene: '', last: null, unclean: false };
   const errs = new Map();
   events.forEach(e => {
@@ -60,6 +60,7 @@ export function summarize(events) {
       case 'listen': { const V = S.listen; switch (e.step) {
         case 'start': V.starts++; break;
         case 'open': V.opens++; V.openMs += e.ms || 0; if (e.ok === false) V.openFail++; break;
+        case 'early': V.early = e.why || 'none'; V.earlyMs = e.ms || 0; break;
         case 'ring': if (e.done) V.rings++; else V.ringAborts++; break;
         case 'stop': V.stops++; V.held += e.held || 0; break;
         case 'clip': V.clips++; break;
@@ -116,6 +117,7 @@ export function render(S, label = '') {
   const nk = top(S.nokeys, 8), nkTotal = Object.values(S.nokeys).reduce((a, b) => a + b, 0);
   if (nk.length) L.push(('No action: ' + nk.map(([k, v]) => `${k} x${num(v)}`).join(', ') + (Object.keys(S.nokeys).length > nk.length ? `, and ${Object.keys(S.nokeys).length - nk.length} more` : '') + `   (${num(nkTotal)} presses of keys that did nothing there)`).slice(0, 128));
   const c = S.computer, ch = S.chat, v = S.listen;
+  if (v.early) L.push(`Microphone asked at the first launch: ${v.early} (the launch waited ${(v.earlyMs / 1000).toFixed(1)} s)`);
   if (v.starts || Object.keys(v.ends).length) L.push(`Voice (U): ${v.starts} presses, ring full ${v.rings}x${v.opens ? `, mic ${(v.openMs / v.opens / 1000).toFixed(1)} s${v.openFail ? ` (${v.openFail} failed)` : ''}` : ''}${v.stops ? `, listened ${(v.held / v.stops).toFixed(1)} s` : ''}${v.heard ? `, heard ${v.heard - v.heardEmpty} of ${v.heard}` : ''}.  Ended: ${Object.keys(v.ends).length ? top(v.ends, 4).map(([k, n]) => k + ' x' + n).join(', ') : 'no end seen'}`);
   if (c.n || ch.n) L.push(`Ship computer: ${c.n} asks${c.n ? `, ${(c.ms / c.n / 1000).toFixed(1)} s each` : ''}${c.failed ? `, ${c.failed} failed (${Object.entries(c.codes).map(([k, v]) => k + ' x' + v).join(', ')})` : ''}${Object.keys(c.tools).length ? '; chose: ' + top(c.tools, 5).map(([k, v]) => `${k} x${v}`).join(', ') : ''}.   Bar chat: ${ch.n}${ch.n ? `, ${(ch.ms / ch.n / 1000).toFixed(1)} s each` : ''}${ch.failed ? `, ${ch.failed} failed` : ''}`);
   const idle = [...S.idle].sort((a, b) => b.secs - a.secs), conf = idle.filter(i => !i.auto), auto = idle.length - conf.length;

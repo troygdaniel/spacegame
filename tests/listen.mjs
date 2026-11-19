@@ -30,7 +30,7 @@ g.run(`
   window.__pd = 0; window.__sp = 0; window.__sfx = []; sfx = n => { __sfx.push(n); };
   window.__gum = []; window.__tracks = []; window.__deny = null; window.__gumHold = null; window.__recs = []; window.__audio = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
   navigator = { mediaDevices: { getUserMedia: c => {
-    __gum.push(JSON.stringify(c)); if (__deny) return Promise.reject(Object.assign(new Error('no'), { name: __deny }));
+    __gum.push(JSON.stringify(c)); if (__deny) { if (__deny === 'NotAllowedError') window.__perm = 'denied'; return Promise.reject(Object.assign(new Error('no'), { name: __deny })); } // a refusal is also the browser's answer to the permission query
     const tr = { stopped: false, stop() { this.stopped = true; } }; __tracks.push(tr); const st = { getTracks: () => [tr] };
     return __gumHold ? __gumHold.then(() => st) : Promise.resolve(st);
   } } };
@@ -41,6 +41,7 @@ g.run(`
     stop() { this.state = 'inactive'; const me = this; setTimeout(() => { if (me.ondataavailable && window.__audio) me.ondataavailable({ data: new Blob([window.__audio], { type: me.mimeType }) }); if (me.onstop) me.onstop(); }, 0); }
   }
   MediaRecorder = FakeRecorder;
+  window.__perm = 'prompt'; window.__permOn = []; navigator.permissions = { query: async () => { const p = { state: __perm, onchange: null }; __permOn.push(p); return p; } };
   window.__calls = []; window.__status = 200; window.__statuses = []; window.__fail = null; window.__say = ${JSON.stringify(WORDS)}; window.__hold = null;
   window.fetch = (url, opts) => {
     __calls.push({ url: String(url), headers: (opts && opts.headers) || {}, body: opts && opts.body, method: opts && opts.method });
@@ -72,7 +73,7 @@ const RING = () => J('LISTEN.limit.ring');
 const ticks = (ms, level, step = 100) => { if (level !== undefined) g.run(`window.__level = ${level}`); for (let i = 0; i < ms / step; i++) g.run(`(__t += ${step}, listenTick(), 1)`); }; // a fake clock in small steps, so the level is read as it goes
 async function ring() { press(); tick(RING()); await g.waitFor("LISTEN.s.state === 'listening'", 3000, 'listening'); } // press, wait for the ring to fill, and it listens
 async function hold(ms = 2000) { await ring(); tick(ms); }
-async function reset() { g.run(`(listenCancel(''), __t += 10000, LISTEN.s.used = 0, LISTEN.s.lastSay = -1e9, LISTEN.on = true, LISTEN.limit.minutes = 10, LISTEN.limit.hold = 20000, __gum.length = 0, __tracks.length = 0, __recs.length = 0, __calls.length = 0, __subs.length = 0, __fail = null, __deny = null, __gumHold = null, __hold = null, __status = 200, __statuses.length = 0, __audio = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]), __subOk = true, document.activeElement = null, AC = null, __say = ${JSON.stringify(WORDS)}, 1)`); await settle(5); }
+async function reset() { g.run(`(listenCancel(''), window.__perm = 'prompt', LISTEN.s.perm = '', __t += 10000, LISTEN.s.used = 0, LISTEN.s.lastSay = -1e9, LISTEN.on = true, LISTEN.limit.minutes = 10, LISTEN.limit.hold = 20000, __gum.length = 0, __tracks.length = 0, __recs.length = 0, __calls.length = 0, __subs.length = 0, __fail = null, __deny = null, __gumHold = null, __hold = null, __status = 200, __statuses.length = 0, __audio = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]), __subOk = true, document.activeElement = null, AC = null, __say = ${JSON.stringify(WORDS)}, 1)`); await settle(5); }
 const keys = () => g.run(`(voiceSetKey(${JSON.stringify(KEY)}), voiceSetOn(true), chatSetKey(${JSON.stringify(CHATKEY)}, 'openai'), chatSetOn(true), VOICE.bad = false, CHAT.bad = false, 1)`);
 const allText = () => g.run(`JSON.stringify([LISTEN.line, LISTEN.s.line, LISTEN.el && LISTEN.el.head.textContent, LISTEN.el && LISTEN.el.body.textContent, listenStatus()])`);
 
@@ -93,7 +94,7 @@ console.log('A. the key, and where it is written down');
   check('index.html loads src/listen.js after src/shipcomputer.js, with its own script tag', html.indexOf('src/listen.js') > html.indexOf('src/shipcomputer.js') && html.split('src/listen.js').length === 2);
   const lsrc = read('src/listen.js'), keyLines = lsrc.split('\n').filter(l => /VOICE\.key/.test(l) && !/^\s*\/\//.test(l));
   check('the Deepgram key is read in only two ways: a check that it exists, and the Authorization header', keyLines.every(l => /!VOICE\.key/.test(l) || /Authorization: 'Token ' \+ VOICE\.key/.test(l)), keyLines.join(' || ').slice(0, 300));
-  check('the only things listen.js stores in this browser are the switch and the one flag that the browser has asked for the microphone before (no sound, no words)', (lsrc.match(/localStorage\.(setItem|getItem|removeItem)\(([^,)]+)/g) || []).every(m => /LISTEN\.store\.(on|asked)/.test(m)), (lsrc.match(/localStorage\.\w+\([^,)]+/g) || []).join(' '));
+  check('the only things listen.js stores in this browser are the switch and the two flags that the browser has asked for the microphone before, and that the early question was asked (no sound, no words)', (lsrc.match(/localStorage\.(setItem|getItem|removeItem)\(([^,)]+)/g) || []).every(m => /LISTEN\.store\.(on|asked|nagged)/.test(m)), (lsrc.match(/localStorage\.\w+\([^,)]+/g) || []).join(' '));
 }
 
 console.log('B. may a hold start');
@@ -433,6 +434,75 @@ console.log('K. it listens until you stop talking');
   check('and gone when no Space or Station scene runs (a menu, the title)', J('LISTEN.capEl.root.style.display') === 'none'); g.run(`__fg.scene.getScenes = () => [__sc]`);
   g.run(`voiceSetKey(''); listenCapPaint()`);
   check('and with no Deepgram key there is no cap at all: the game is as before', J('LISTEN.capEl.root.style.display') === 'none'); keys();
+}
+
+// ---- L. the microphone asked early, at the first launch (card space-game-mic-early) ----
+console.log('L. the microphone is asked at the launch from a station, once');
+{
+  g.run(`LISTEN.limit.note = 30; LISTEN.limit.early = 120`);
+  const fresh = async (perm = 'prompt') => { await reset(); keys(); g.run(`LISTEN.s.nagged = false; LISTEN.s.asked = false; LISTEN.s.perm = ''; LISTEN.s.early = ''; LISTEN.s.earlyWhy = ''; window.__perm = ${JSON.stringify(perm)}; window.__proceeded = 0; __gum.length = 0; __tracks.length = 0; __recs.length = 0; __calls.length = 0; __gumHold = null; __deny = null; try { localStorage.removeItem(LISTEN.store.asked); localStorage.removeItem(LISTEN.store.nagged); } catch (e) {}`); };
+  const early = () => g.run(`listenEarly(__fg, () => { __proceeded++; })`);
+  await fresh(); g.run('__gumHold = new Promise(r => { window.__ready = r; })');
+  check('the first launch with the browser still to ask: it takes over (true), the launch must wait', early() === true && J('__proceeded') === 0);
+  await g.waitFor("LISTEN.s.line", 2000, 'the note');
+  check('the one-line plain note comes first, before anything is asked', /Voice: the browser will ask to use your microphone\. Choose Allow on every visit\./.test(await view()) && J('__gum.length') === 0, await view());
+  await g.waitFor('__gum.length === 1', 2000, 'asked');
+  check('then the microphone is asked for, once: audio only, no video', J('__gum.length') === 1 && /"audio"/.test(J('__gum[0]')) && !/video/.test(J('__gum[0]')));
+  check('while the browser question is up the launch is held, and a second try is swallowed without a second question', J('__proceeded') === 0 && g.run(`listenEarly(__fg, () => { __proceeded += 100; })`) === true && J('__gum.length') === 1);
+  g.run('__ready()'); await g.waitFor('__proceeded >= 1', 2000, 'the launch goes on');
+  await settle(20);
+  check('answered: the launch goes on, once, and only then', J('__proceeded') === 1);
+  check('the tracks were stopped at once, nothing was recorded, nothing was sent', J('__tracks.every(t => t.stopped)') && J('__recs.length') === 0 && await calls() === 0 && J('listenHeld()') === 0);
+  check('it remembers it asked (never again) and that it was allowed, in this browser, and the note is gone', J('LISTEN.s.nagged') === true && J('LISTEN.s.asked') === true && J('LISTEN.s.perm') === 'granted' && g.store.get('longhaul.listen.nagged') === '1' && g.store.get('longhaul.listen.asked') === '1' && J('LISTEN.s.line') === null);
+  check('and the first press of U afterwards needs no explaining: no first-time line', J('listenView()') === null || !/ask to use/.test((J('listenView()') || {}).body || ''));
+  check('a second launch asks nothing', early() === false && J('__gum.length') === 1);
+
+  await fresh('granted');
+  check('the browser says granted already: no question, no note, the launch is released at once', early() === true); await g.waitFor('__proceeded === 1', 2000, 'released');
+  check('and nothing was asked of the player', J('__gum.length') === 0 && J('LISTEN.s.asked') === true && J('LISTEN.s.earlyWhy') === 'granted');
+
+  await fresh('denied');
+  check('the browser says blocked already: no question, the launch goes on, and listening says it is blocked', early() === true); await g.waitFor('__proceeded === 1', 2000, 'released');
+  check('nothing was asked, and it did not set the nag flag', J('__gum.length') === 0 && J('LISTEN.s.earlyWhy') === 'blocked');
+  check('the status line, a press and the key cap all say blocked, plainly', /microphone is blocked for this page/.test(J('listenStatus().line')) && J('listenReady().code') === 'blocked' && J('listenCapView().label') === 'blocked');
+  g.run('__t += 5000'); const gumB = J('__gum.length'); press();
+  check('a press of U says so at once: no ring, no question', /microphone is blocked/.test(await view()) && J('LISTEN.s.state') === 'idle' && J('__gum.length') === gumB, await view());
+
+  await fresh(); g.run(`voiceSetKey('')`);
+  check('no Deepgram key (voice is off): nothing to ask, the launch is not held', early() === false && J('__gum.length') === 0); keys();
+  g.run(`LISTEN.on = false`); check('and with listening switched off', early() === false); g.run(`LISTEN.on = true`);
+
+  await fresh(); g.run(`__deny = 'NotAllowedError'`);
+  early(); await g.waitFor('__proceeded === 1', 3000, 'declined'); await settle(20);
+  check('he declines: the launch goes on, it is said once that the microphone is blocked, and the nag flag is set', J('__gum.length') === 1 && /microphone is blocked for this page/.test(await view()) && J('LISTEN.s.nagged') === true && J('LISTEN.s.perm') === 'denied' && J('LISTEN.s.earlyWhy') === 'declined', await view());
+  check('and it never asks again', early() === false && J('__gum.length') === 1);
+  g.run(`window.__perm = 'granted'; __permOn[__permOn.length - 1].state = 'granted'; __permOn[__permOn.length - 1].onchange()`);
+  check('if he allows it later in the browser, the page hears it and voice works again, no reload', J('LISTEN.s.perm') === 'granted' && J('listenReady().ok') === true);
+
+  await fresh(); g.run(`__gumHold = new Promise(r => { window.__ready = r; })`);
+  early(); await g.waitFor('__proceeded === 1', 3000, 'slow');
+  check('a question nobody answers must not hold the launch for ever: it goes on after the limit', J('__proceeded') === 1 && J('LISTEN.s.earlyWhy') === 'slow');
+  g.run('__ready()'); await settle(30);
+  check('and an answer that comes after that is closed at once', J('__tracks.every(t => t.stopped)') && J('__recs.length') === 0);
+
+  // the launch itself (src/shipmode.js): the first launch waits, a launch with nothing to ask goes straight on
+  await fresh(); g.run(`__gumHold = new Promise(r => { window.__ready = r; }); window.__bay = () => ({ leaving: false, ignoreUntil: 0, view: { kind: 'fleet', rec: activeShip() }, game: __fg, sys: { isActive: () => true }, runs: 0, closed: false,
+    hangarClose() { this.closed = true; }, launch() { this.runs++; return ShipBay.prototype.launch.call(this); }, cameras: { main: { shake() {} } }, shipImg: { setRotation() {}, x: 0, scale: 1 }, bob: { stop() {} }, tweens: { add() {} }, fadeSet: [], flames: [], K: 1 }); window.__b = __bay(); __b.launch()`);
+  check('the first launch from a station is held while the browser asks: the bay door has not started, flight has not begun', J('__b.closed') === false && J('__b.leaving') === false && J('__b.runs') === 1);
+  await g.waitFor('__gum.length === 1', 2000, 'asked at the launch'); g.run('__ready()'); await g.waitFor('__b.runs === 2', 3000, 'launched after the answer');
+  check('answered: the same launch goes on by itself, once, and it is the launch that starts (the door, the thrusters)', J('__b.closed') === true && J('__b.leaving') === true && J('__b.micAsked') === true && J('__b.runs') === 2);
+  await fresh('granted'); g.run(`window.__b = __bay(); __b.launch()`); await g.waitFor('__b.runs === 2', 3000, 'launched');
+  check('nothing to ask (granted already): the launch is only held for the permission check and then goes on', J('__b.closed') === true && J('__gum.length') === 0);
+  await fresh(); g.run(`voiceSetKey(''); window.__b = __bay(); __b.launch()`);
+  check('no keys: the launch is not held at all, it starts in the same breath', J('__b.closed') === true && J('__b.runs') === 1 && J('__gum.length') === 0); keys();
+  await fresh(); g.run(`__gumHold = new Promise(r => { window.__ready = r; }); window.__b = __bay(); __b.launch()`); await g.waitFor('__gum.length === 1', 2000, 'asked'); g.run('__b.sys.isActive = () => false; __ready()'); await settle(60);
+  check('if the player left the bay while the browser asked, the launch does not start from a scene that is gone', J('__b.runs') === 1 && J('__b.closed') === false);
+
+  // the log
+  await fresh(); keys(); g.run(`__pl.length = 0`); // the logger stand-in of section J is still wired to the game's functions
+  early(); await g.waitFor('__proceeded === 1', 3000, 'logged'); await settle(20);
+  check('the play log says the microphone was asked early, how long the launch waited and what came of it (allowed)', J('__pl').some(e => e.step === 'early' && e.why === 'allowed' && e.ms >= 0), JSON.stringify(J('__pl')));
+  g.run(`LISTEN.limit.note = 1600; LISTEN.limit.early = 30000`);
 }
 
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));

@@ -11,7 +11,7 @@
 //   mission    state accepted | done | failed | dropped, id, pay        buy / sell   what, n (credits, negative when it cost)      credits   delta of the rest (pay, fees)
 //   death      cause (the nearest raider's kind), scene, system         counts   a: how many times each ACTION name was used (key:<what it does>, click, voice), every minute
 //   computer, computer_plan   the ship computer asked: ms, ok, code (why: one word for an empty reply); and which action of its closed list it chose        npc_chat   the bar chat: ms, ok, code, why
-//   listen     a press of the voice key (U), one line a step: start, ring (done: the ring filled, or held: how long it was held when it did not), open (ms the microphone took),
+//   listen     the microphone asked early, at the launch from a station: early (ms the launch waited, why: granted, blocked, allowed, declined or slow). A press of the voice key (U), one line a step: start, ring (done: the ring filled, or held: how long it was held when it did not), open (ms the microphone took),
 //              stop (held: seconds it listened; why: silence, again, lead or cap; short, silent), clip (bytes), heard (ms, chars of the transcript, 0 = empty), and the end:
 //              why = sent (the words went to the computer) or the name of the plain line shown (tap, silent, nothing, denied...). Counts and times, never the words.
 //   idle       NO INPUT FOR 20 s OR MORE: secs, and what was on screen (scene, scenes, panel, mission, system, auto): the best sign of confusion
@@ -275,6 +275,11 @@ function playlogWrap(L, root) {
   // ended: the name of the plain line shown (tap, silent, nothing, denied...) or sent. Never the words.
   const LS = () => (typeof LISTEN !== 'undefined' ? LISTEN : null), lsEv = d => { try { L.ev('listen', d); } catch (e) { /* never */ } };
   wrap('listenPress', orig => function () { let was = ''; try { was = LS().s.state; } catch (e) { /* never */ } const r = orig.apply(this, arguments); try { if (r && was !== 'listening') lsEv({ step: 'start' }); } catch (e) { /* never */ } return r; });
+  wrap('listenEarlyRun', orig => function () { // the microphone asked at the launch from a station: how long the launch waited and what came of it (granted, blocked, allowed, declined, slow)
+    const t = Date.now(), p = orig.apply(this, arguments);
+    try { Promise.resolve(p).then(() => { const S = LS().s; lsEv({ step: 'early', ms: Date.now() - t, why: S.earlyWhy || 'none' }); }, () => {}); } catch (e) { /* never */ }
+    return p;
+  });
   wrap('listenRingDone', orig => function () { let was = ''; try { was = LS().s.state; } catch (e) { /* never */ } const r = orig.apply(this, arguments); if (was === 'ring') lsEv({ step: 'ring', done: true }); return r; });
   wrap('listenRingAbort', orig => function () { let held = -1; try { const S = LS().s; if (S.state === 'ring') held = (lsNow() - S.ringAt) / 1000; } catch (e) { /* never */ } const r = orig.apply(this, arguments); if (held >= 0) lsEv({ step: 'ring', done: false, held }); return r; });
   wrap('listenOpen', orig => function () {

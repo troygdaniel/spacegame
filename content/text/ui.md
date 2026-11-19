@@ -96,4 +96,5 @@ To translate, change the text column here, or copy this file to a name after ui 
 | listen.use | Hold {key} in space or in a station until the ring around it is full, then speak: it stops when you stop talking (or press {key} again to send, Esc to cancel) and your words go to the ship's computer, as if you had typed them. The microphone is open only while it listens. Nothing is recorded or kept. |
 | listen.cost | Each time it listens, it sends its sound to Deepgram, on your own account, and may cost you money. This session may listen for {minutes} minutes. |
 | listen.hint | Run node tools/serve.mjs and open http://127.0.0.1:8787/ : the browser then asks for the microphone once. Opened from a file it may ask every time, or refuse. |
+| listen.early | Voice: the browser will ask to use your microphone. Choose Allow on every visit. |
 | music.use | Music is made by the game as you fly and steps back when the ship speaks. Effects is the engine, the drone and every shot and click; they ease off a little while music plays. M mutes all. |
