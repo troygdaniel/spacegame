@@ -159,7 +159,7 @@ console.log('the navigation panel gives the order');
   const hint = (r, dest, o) => J(`navpanelHint(${JSON.stringify(r)}, ${dest}, '${o}')`);
   check('the station as the destination: Enter docks, P only flies there', hint(far, true, 'dock') === 'Enter  dock   P  fly there only');
   check('the planet: Enter lands', hint(far, true, 'land') === 'Enter  land   P  fly there only');
-  check('not the destination yet: Enter sets it first, as on every row', hint(far, false, 'dock') === 'Enter  set as destination');
+  check('not the destination yet: a place goes on the first Enter (card space-game-hunt-pirates), so the hint is the same', hint(far, false, 'dock') === 'Enter  dock   P  fly there only');
   check('at the dock already: Enter docks; a place with no order says you are there', hint(at, true, 'dock') === 'Enter  dock' && hint(at, true, '') === 'You are there.');
   check('a place with no order goes as before', /go: autopilot/.test(hint(far, true, '')));
   g.run(`__start(${st.x + 1200}, ${st.y})`);

@@ -1,8 +1,9 @@
 // ---------- Sector map (Tab), help page (H) and the key reminder strip ----------
 // One overlay scene with two modes, opened over a paused gameplay scene, the same way the pause menu is.
 // installMap(game) catches Tab and H on the window and hooks scene create events, so the scenes need no code.
-// The map is a map: it picks nothing (card space-game-one-way-to-target). A place is picked in the navigation panel (N, src/navpanel.js) or by
-// a click in space; over the Space scene the map rings that destination and says how far it is.
+// The map has no picker of its own (card space-game-one-way-to-target). A place is picked in the navigation panel (N, src/navpanel.js) or by
+// a click in space; over the Space scene the map rings that destination and says how far it is. Card space-game-hunt-pirates (Troy, 18 Nov 2026): a click on
+// a place of the map FLIES there, by the navigation panel's own rule (navpanelFly): the map only says which place is under the pointer.
 // The map opens on a LOCAL view: the square that holds you, your objective and your destination (never less than MAP_MIN px
 // across), so the home cluster of a 36000 px system fills the map and is not six marks in one corner. Z shows the whole system and
 // back; the view grows by itself when the destination or the objective is far away. Names never sit on each other or leave the frame:
@@ -13,10 +14,11 @@ const SENSOR = 1600;          // a drone this close to your ship counts as seen;
 const STRIP_MS = 60000;       // the "Tab map  H help" reminder fades out after the first minute of play
 const MAPUI = { t0: 0, seen: new Map(), tracker: null, trackScene: null, nextAt: 0 };
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+const MAP_CLICK = 24;         // px on the map around a mark that count as a click on it
 
 const SCENE_TIPS = {
   Station: 'Pick from the station menu, bottom right: a number, or W S and Enter. Your ship is the last row: board it to launch. The SHOP sells parts; MISSIONS has courier and haul calls.',
-  Space: 'N picks a place, B lists the ships. Near a station, slow down and press L: ore sells there. G opens the galaxy map: pick a star, press Enter to jump.',
+  Space: 'N lists the places and B the ships: Enter or a click flies there, and so does a click on the Tab map. Near a station, slow down and press L: ore sells there. G opens the galaxy map: pick a star, press Enter to jump.',
   Ship: 'Look your ship over, then press Enter to launch. Esc goes back to the station to take a mission or repair first.',
   Surface: 'Aim with the mouse and click to fire. Walk back to the landing pad and press E to lift off.'
 };
@@ -153,6 +155,9 @@ class Overlay extends Phaser.Scene {
     this.poiLabels = []; // names of salvage sites you have found (poi.js fills them in)
     for (let i = 0; i < (typeof poiSites === 'function' ? poiSites().length + SIGNAL_MAX : 0); i++) this.poiLabels.push(m(mapText(this, 0, 0, '', 12, '#6dff9c').setOrigin(0.5)));
 
+    // a click on a place of the map flies there (map mode, over the live Space scene): the zone is nearly clear, since Phaser skips a game object that is fully clear
+    this.hit = m(this.add.rectangle(this.MX + this.MS / 2, this.MY + this.MS / 2, this.MS, this.MS, 0xffffff, 0.002).setInteractive({ useHandCursor: true }));
+    this.hit.on('pointerdown', p => this.flyAt(p.x, p.y));
     this.pk = this.input.keyboard.addKeys('Z');
     this.tPick = m(mapText(this, SX, 326, '', 13, '#ffffff'));
 
@@ -169,6 +174,16 @@ class Overlay extends Phaser.Scene {
     h(mapText(this, 100, 428, 'Tab   sector map\nH   this help page\nEsc   pause menu, saves, volume', 20, '#cfefff'));
 
     this.setMode(this.mode);
+  }
+
+  // the place under a click, by the view the map is drawn with: the navigation panel's own list (navpanelPlaceAt), and its own way of flying there
+  flyAt(px, py) {
+    const sp = this.from === 'Space' ? this.scene.get('Space') : null, v = this.view;
+    if (this.mode !== 'map' || !sp || !sp.ship || !sp.cr || !v || typeof navpanelPlaceAt !== 'function') return;
+    const sc = this.MS / v.size, b = navpanelPlaceAt(sp, v.x + (px - this.MX) / sc, v.y + (py - this.MY) / sc, MAP_CLICK / sc);
+    if (!b) return;
+    this.close(); sfx('tick');
+    setTimeout(() => { try { navpanelFly(sp, b); } catch (e) { /* the panel says when it cannot */ } }, 80); // after the scene runs again
   }
 
   setMode(mode) {
@@ -352,15 +367,15 @@ class Overlay extends Phaser.Scene {
     this.drawLegend(g, mapLegendRows(on));
   }
 
-  // the destination picked in the navigation panel or by a click: a white ring on it and a line with its distance. Nothing is picked here.
+  // the destination picked in the navigation panel or by a click: a white ring on it and a line with its distance.
   destFrame(g, X, Y, time) {
     const sp = this.from === 'Space' ? this.scene.get('Space') : null, b = sp && sp.ship && sp.cr ? sp.cr.target : null;
-    this.tPick.setText('');
+    this.tPick.setText(sp && sp.cr ? 'Click a place on the map to fly there.' : '');
     if (!b) return;
     const x = X(b.x), y = Y(b.y), r = 14 + 2 * Math.sin(time / 180);
     g.lineStyle(2, 0xffffff, 0.95); g.strokeCircle(x, y, r);
     g.lineStyle(1, 0xffffff, 0.5); [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => g.lineBetween(x + dx * (r + 3), y + dy * (r + 3), x + dx * (r + 10), y + dy * (r + 10)));
-    this.tPick.setText('Destination: ' + b.name + '   ' + (Math.hypot(b.x - sp.ship.x, b.y - sp.ship.y) / 10 | 0) + ' km');
+    this.tPick.setText('Destination: ' + b.name + '   ' + (Math.hypot(b.x - sp.ship.x, b.y - sp.ship.y) / 10 | 0) + ' km   (click a place to fly)');
   }
 
   drawLegend(g, rows) {
