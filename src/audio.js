@@ -12,6 +12,21 @@ const AUD = { master: null, noise: null, amb: null, eng: null, cru: null, ducked
 const AMB_LEVEL = { station: 1, space: 1, wind: 0.06 };
 const ambLevel = kind => AMB_LEVEL[kind] === undefined ? 1 : AMB_LEVEL[kind];
 
+// ---------- the effects volume, and the mix under the music (card space-game-music) ----------
+// FX.vol is Settings > Sound > Effects: one scale (0 to 1, tenths) for every game sound except the ship's voice and the music: each effect, the
+// beeps and clicks, the engine hum, the thrusters, the cruise hum and the scene pads. It sits under the master volume and M, which still apply to
+// everything. It scales the level a sound is given when it is scheduled, so the share an effect sends to the reverb follows it. At 1, with no music
+// playing, nothing changes: every level in tests/sfxlevels.mjs and tests/audiolevels.mjs is as it was.
+// While the music plays (MUS.bus, src/music.js) the effects are eased to FX.under.effects and the pads (the space drone sits in the music's own low
+// band and was masking it) to FX.under.pad, on top of FX.vol; both come back when the music stops (syncMaster follows it).
+const FX = { vol: 1, store: 'longhaul.fx.vol', under: { effects: 0.75, pad: 0.45 } };
+function fxLoad() { try { const v = parseFloat(localStorage.getItem(FX.store)); if (Number.isFinite(v)) FX.vol = Math.min(1, Math.max(0, Math.round(v * 10) / 10)); } catch (e) { /* storage is optional */ } }
+function fxSetVol(v) { FX.vol = Math.min(1, Math.max(0, Math.round(v * 10) / 10)); try { localStorage.setItem(FX.store, String(FX.vol)); } catch (e) { /* storage is optional */ } }
+const fxMusic = () => typeof MUS !== 'undefined' && !!MUS.bus; // the music is playing now
+const fxScale = () => FX.vol * (fxMusic() ? FX.under.effects : 1);                       // what an effect, a click or the engine is multiplied by
+const padScale = kind => ambLevel(kind) * FX.vol * (fxMusic() ? FX.under.pad : 1);     // a pad's own level, before the pause duck
+fxLoad();
+
 function audioReady() {
   try {
     AC = AC || new (window.AudioContext || window.webkitAudioContext)();
@@ -28,7 +43,15 @@ function audioReady() {
 function syncMaster() {
   if (!AUD.master) return;
   AUD.master.gain.setTargetAtTime(G.muted ? 0 : G.volume, AC.currentTime, 0.05);
+  fxSync();
   resumeAudio(); // after M unmutes, wake a suspended context
+}
+// the pad follows the Effects volume and the music coming and going (the effects and the engine read them when they are scheduled)
+function fxSync() {
+  const a = AUD.amb; if (!a || !AC) return;
+  const want = padScale(a.kind) * (AUD.ducked ? 0.3 : 1);
+  if (a.want !== undefined && Math.abs(want - a.want) < 1e-6) return;
+  a.want = want; a.out.gain.setTargetAtTime(want, AC.currentTime, 0.8);
 }
 
 function resumeAudio() { if (AC && AUD.gesture && AC.state === 'suspended' && !G.muted) AC.resume(); }
@@ -98,8 +121,9 @@ function startAmbient(kind) {
   out.gain.value = 0.0001; out.connect(AUD.master); pad.connect(out);
   PADS[kind](list, pad);
   revSend(out, SOUND.loop[kind] || 0); // the space drone has a long tail; the planet wind has none
-  out.gain.setTargetAtTime(ambLevel(kind) * (AUD.ducked ? 0.3 : 1), AC.currentTime, 0.5); // fade in
-  AUD.amb = { kind, out, list };
+  const want = padScale(kind) * (AUD.ducked ? 0.3 : 1);
+  out.gain.setTargetAtTime(want, AC.currentTime, 0.5); // fade in
+  AUD.amb = { kind, out, list, want };
 }
 function stopAmbient() {
   if (!AUD.amb) return;
@@ -126,7 +150,7 @@ function startEngine(sc) {
     const e = AUD.eng;
     if (!e || time < e.nextAt) return;
     e.nextAt = time + 60; // retune about 16 times a second, not every frame
-    const ship = sc.ship, now = AC.currentTime;
+    const ship = sc.ship, now = AC.currentTime, fx = fxScale();
     const thrusting = ship && ship.body && !sc.dead && ship.body.acceleration.length() > 0 && !AUD.ducked;
     const boost = thrusting && sc.boosting; // boost.js: Shift held and the tank not empty
     e.level = thrusting ? (boost ? 1 : 0.55) : 0;
@@ -134,10 +158,10 @@ function startEngine(sc) {
     // flight assist too; the brake and the thrusters hiss as much as they fire. Louder on Heavy handling (b.strength).
     const b = !sc.dead && !AUD.ducked && sc.fx && sc.fx.burn;
     if (b) e.level = Math.min(1, (boost ? 1 : 0.55) * b.engine * (0.8 + 0.2 * b.strength));
-    e.brk.gain.setTargetAtTime(b ? ENG_BRAKE * b.brake * b.strength : 0, now, 0.06);
-    e.rcs.gain.setTargetAtTime(b ? ENG_RCS * Math.abs(b.turn) * b.strength : 0, now, 0.04);
+    e.brk.gain.setTargetAtTime(b ? ENG_BRAKE * b.brake * b.strength * fx : 0, now, 0.06);
+    e.rcs.gain.setTargetAtTime(b ? ENG_RCS * Math.abs(b.turn) * b.strength * fx : 0, now, 0.04);
     const speed = ship && ship.body ? Math.min(1, ship.body.speed / 800) : 0;
-    e.out.gain.setTargetAtTime(e.level * 0.2, now, 0.12);
+    e.out.gain.setTargetAtTime(e.level * 0.2 * fx, now, 0.12);
     const f = 46 + e.level * 32 + speed * 22;
     e.saw.frequency.setTargetAtTime(f, now, 0.15); e.sub.frequency.setTargetAtTime(f / 2, now, 0.15);
     e.flt.frequency.setTargetAtTime(280 + e.level * 700, now, 0.15);
@@ -157,7 +181,7 @@ function stopEngine() {
 
 function duck(on) { // the pause menu: engine off, pad down to a murmur
   AUD.ducked = on;
-  if (AUD.amb && AC) AUD.amb.out.gain.setTargetAtTime(ambLevel(AUD.amb.kind) * (on ? 0.3 : 1), AC.currentTime, 0.15);
+  if (AUD.amb && AC) { AUD.amb.want = padScale(AUD.amb.kind) * (on ? 0.3 : 1); AUD.amb.out.gain.setTargetAtTime(AUD.amb.want, AC.currentTime, 0.15); }
   if (AUD.eng && AC) { if (on) AUD.eng.level = 0; [AUD.eng.out, AUD.eng.brk, AUD.eng.rcs].forEach(g => g.gain.setTargetAtTime(0, AC.currentTime, 0.05)); }
 }
 
@@ -267,12 +291,14 @@ function soundVoice(list, kind, t, end) {
 
 // ---------- one-shot effects: envelopes on the pool's voices ----------
 function tone(t, type, f0, f1, dur, vol) {
+  vol *= fxScale();
   const v = soundVoice(soundPool().tones, type, t, t + dur + 0.012), g = v.g.gain;
   v.o.type = type;
   v.o.frequency.setValueAtTime(f0, t); v.o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
   g.setValueAtTime(vol, t); g.exponentialRampToValueAtTime(0.0001, t + dur); g.setValueAtTime(0, t + dur + 0.006); // silent again: the voice goes on running
 }
 function burst(t, dur, vol, ftype, f0, f1, q = 1, attack = 0.005) {
+  vol *= fxScale();
   const v = soundVoice(soundPool().noises, ftype, t, t + dur + 0.012), g = v.g.gain;
   v.flt.type = ftype; v.flt.Q.setValueAtTime(q, t);
   v.flt.frequency.setValueAtTime(f0, t); v.flt.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
@@ -281,6 +307,7 @@ function burst(t, dur, vol, ftype, f0, f1, q = 1, attack = 0.005) {
 }
 // a tone that swells in and then dies away: the first `attack` seconds are the rise (charge-up whines, a shield coming back)
 function swell(t, type, f0, f1, dur, vol, attack) {
+  vol *= fxScale();
   const v = soundVoice(soundPool().tones, type, t, t + dur + 0.012), g = v.g.gain;
   v.o.type = type;
   v.o.frequency.setValueAtTime(f0, t); v.o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
@@ -353,7 +380,7 @@ function startCruiseHum() {
   const flt = AC.createBiquadFilter(); flt.type = 'lowpass'; flt.frequency.value = 180; flt.Q.value = 0.8; flt.connect(out);
   aOsc(list, 'sine', 42, flt, 0.5); aOsc(list, 'sine', 63, flt, 0.25); aOsc(list, 'sawtooth', 84, flt, 0.12);
   aNoise(list, out, 'bandpass', 140, 0.7, 0.18);
-  out.gain.linearRampToValueAtTime(0.024, now + 0.6);
+  out.gain.linearRampToValueAtTime(0.024 * fxScale(), now + 0.6);
   AUD.cru = { out, list };
 }
 function stopCruiseHum() {
@@ -363,14 +390,14 @@ function stopCruiseHum() {
 }
 
 function sfx(name) {
-  if (G.muted || G.volume <= 0 || !SFX[name] || !audioReady()) return;
+  if (G.muted || G.volume <= 0 || FX.vol <= 0 || !SFX[name] || !audioReady()) return;
   resumeAudio(); syncMaster();
   try { SFX[name](AC.currentTime); } catch (e) { /* audio is optional */ }
 }
 // beep() of src/common.js made an oscillator and a gain for every call (a salvage pod, a hit on the MULE, most of the station's clicks).
 // The same call now plays on a voice of the pool, through the master gain (which is the volume, so v is not scaled here), nearly dry.
 beep = function (f = 440, d = 0.08, type = 'square', v = 0.03, slide = 0) {
-  if (G.muted || G.volume <= 0 || !audioReady()) return;
+  if (G.muted || G.volume <= 0 || FX.vol <= 0 || !audioReady()) return;
   resumeAudio(); syncMaster();
   const was = AUD.sendNow; AUD.sendNow = soundSend('beep');
   try { tone(AC.currentTime, type, f, slide ? Math.max(30, f + slide) : f, d, v); } catch (e) { /* audio is optional */ } finally { AUD.sendNow = was; }
