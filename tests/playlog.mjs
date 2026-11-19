@@ -197,6 +197,36 @@ check('the pending list never grows past its cap', J(`(() => { const L = __mk({ 
   check('the wiring raised no errors', w.errors.length === 0, w.errors.join(' | '));
 }
 
+// ---- the Settings row (src/settings.js): the three buttons on a stand-in scene ----
+{
+  const w = nodeGame();
+  w.run(`
+    var __pn = 10000; performance.now = () => __pn;
+    var __map2 = new Map(), __st = { get: k => (__map2.has(k) ? __map2.get(k) : null), set: (k, v) => { __map2.set(k, String(v)); }, remove: k => { __map2.delete(k); } };
+    var __tt = 1000; globalThis.PLAYLOG_LIVE = playlogCreate({ mono: () => __tt, wall: () => 1763424000000, store: __st, sink: null, sid: 'cafe0001' });
+    const __btn = () => { const b = { text: '', on: false, edge: 0, set(s) { b.text = s; return b; }, color() { return b; }, mark(o) { b.on = !!o; return b; }, draw() {} }; return b; };
+    var __said = [], __row = { armed: null, slots: { plOn: __btn(), plforget: __btn() }, show() {}, say(m) { __said.push(m); } };
+    var __S = Settings.prototype;
+  `);
+  const WJ = e => JSON.parse(w.run(`JSON.stringify(${e})`));
+  check('the row starts ON (the default)', WJ('playlogOn()') === true);
+  w.run(`__S.playlogToggle.call(__row)`);
+  check('the first press turns it OFF: the button says so, the log stops, and the choice is kept for next time', WJ('[playlogOn(), __row.slots.plOn.text, __row.slots.plOn.on, __map2.get(PLAYLOG.keys.on), __said.slice(-1)[0]]').join() === 'false,Play log: OFF,false,0,Play log OFF: nothing more is recorded.');
+  w.run(`__S.playlogToggle.call(__row)`);
+  check('the second press turns it ON again', WJ('[playlogOn(), __row.slots.plOn.text, __row.slots.plOn.on, __map2.get(PLAYLOG.keys.on)]').join() === 'true,Play log: ON,true,1');
+  w.run(`__said.length = 0; PLAYLOG_LIVE.forget(); __S.playlogGet.call(__row)`);
+  check('Download with nothing in the log says so and saves nothing', WJ('__said[0]') === 'There is nothing in the log to download yet.');
+  w.run(`__said.length = 0; PLAYLOG_LIVE.ev('tab', { state: 'hidden' }); PLAYLOG_LIVE.flush(); __S.playlogGet.call(__row)`);
+  check('Download with a log says the file name (longhaul-playlog-<date>.jsonl)', /^Saved longhaul-playlog-\d{8}\.jsonl \(1 KB\) to your downloads\.$/.test(WJ('__said[0]')), WJ('__said[0]'));
+  w.run(`__said.length = 0; __S.press.call(__row, 'plforget')`);
+  check('Forget log: the first press only asks (the button says "Press again") and the log is still there', WJ('[__row.slots.plforget.text, __said[0], PLAYLOG_LIVE.text().length > 0]').join() === 'Press again,Press Forget log again to erase the log kept in this browser.,true');
+  w.run(`__pn += 100; __S.press.call(__row, 'plforget')`);
+  check('a second press within a third of a second is a double tap, not a yes', WJ('PLAYLOG_LIVE.text().length > 0'));
+  w.run(`__pn += 600; __S.press.call(__row, 'plforget')`);
+  check('the second press forgets: the log is empty, the button is back to "Forget log", and it says what stays on the server', WJ('[PLAYLOG_LIVE.text().length, __row.slots.plforget.text, __said.slice(-1)[0]]').join() === '0,Forget log,Play log forgotten. (A copy that the dev server kept stays in its own folder.)');
+  check('the row raised no errors', w.errors.length === 0, w.errors.join(' | '));
+}
+
 check('the file does not start itself in plain Node (no page, no game)', J(`typeof PLAYLOG_LIVE`) === 'undefined' || J(`PLAYLOG_LIVE`) === null);
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `PLAYLOG FAIL (${failed} of ${n})` : `PLAYLOG PASS (${n} checks)`);

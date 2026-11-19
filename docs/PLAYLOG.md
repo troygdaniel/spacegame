@@ -1,0 +1,51 @@
+# The play log
+
+Long Haul keeps a plain record of how it is played, on this computer, so the way a person plays can be looked at and talked through (card `space-game-playlog`).
+It is local only. **No word typed or spoken is in it** (the ship computer and the bar chat are logged as "it happened, it took this long, it failed with this code"),
+no key, and nothing is sent anywhere: the only other place the lines go is `tools/serve.mjs` on the same machine.
+
+## What is in it
+
+One JSON line per event, `{ t: ms since the session began, s: session id, ev: name, ... }`. The events and the only fields each may carry are `PLAYLOG.fields` in
+`src/playlog.js`; a field that is not on the list is dropped, and a string is cut to plain characters.
+
+| event | what it says |
+|---|---|
+| `session` | start (with the window size and the mods on, and `prev: unclean` when the last session never ended), end (and why: `pagehide` is the tab closing or the page reloading), off, resume |
+| `scene` | the screen on top changed: from, to, seconds spent in the one it left. Pause and Settings are scenes, so every pause and every Settings visit is a line |
+| `dock`, `system`, `jump` | docked, the star system changed, a jump started |
+| `sample` | every 10 s: where, the ship, credits, fuel, hull, speed, whether it is flying itself, the call |
+| `mission` | accepted, done (with the pay), failed, dropped |
+| `buy`, `sell`, `credits` | a deal (what, and the credits it moved); credits that moved with no deal (fees, finds) |
+| `death` | what killed the ship (the nearest raider's kind) |
+| `counts` | every minute: how many times each ACTION was used (`key:flight: thrust`, `click`, `voice`) |
+| `computer`, `computer_plan`, `npc_chat` | the ship computer asked (ms, ok, code) and which action of its closed list it chose; the bar chat (ms, ok, code) |
+| `idle` | **no input for 20 s or more**: how long, and what was on screen (scene, panel, call, system, flying itself). The best sign of confusion |
+| `fps_dip` | under 30 frames a second for 2 s or more |
+| `stall`, `tab` | the page froze (no tick for 5 s); the tab was hidden or shown |
+| `error` | every JS error, rejected promise and `console.error`, with the stack (the home folder shortened to `~`), 30 a minute at most |
+
+A key is counted by what it **does** (from `src/data_controls.js`, by the screen you are on), never by its letter; a key pressed in a text box is activity and no action.
+
+## Where it goes
+
+- **Always:** a ring of chunks in this browser's localStorage (about 480 KB, the oldest chunk goes first). Works from a double-clicked `index.html`.
+- **With the dev server** (`node tools/serve.mjs`): each batch is also POSTed to `/__playlog` and appended to `~/dev/spacegame-playlogs/<date>-<time>-<session>.jsonl`
+  (or `--playlogs DIR`, or `$LONGHAUL_PLAYLOGS`), **outside the repo** (the server refuses a folder inside it), mode 600. The first line of a file says the commit.
+  The server takes the POST only from its own page (Origin and Host checked), `text/plain`, 256 KB at most, only well-formed lines of that session.
+- **Settings > Reset > PLAY LOG:** ON or OFF (default ON), Download log (a `.jsonl` file), Forget log (a second press; a copy the server kept stays in its folder).
+
+## Reading it
+
+    node tools/playlog-summary.mjs                  the newest file of ~/dev/spacegame-playlogs, its last session
+    node tools/playlog-summary.mjs FILE [--session ID | --all | --json]
+
+One screen: playtime, where the time went, the credits curve, deals and profit, calls, deaths and causes, what was pressed most, idle gaps with what was on screen
+(the ones while the ship flew itself counted apart), the ship computer, errors, frame dips, and where the session ended.
+
+## For the code
+
+`src/playlog.js` loads last (after every script it watches) and starts itself. It changes no other file's code: it looks at the game once a second and wraps a few of the
+game's own functions (`buyUpgrade`, `fleetBuy`, `fleetSell`, `sellOre`, `buyFuel`, `jumpStart`, `voiceSay`, `shipcompAsk`, `shipcompPlan`, `chatComplete`,
+`Space.prototype.die`, `Station.prototype.repairHull`). It never throws and never slows a frame: every entry point is in try/catch, a frame is a few additions, writes are
+batched (one 24 KB chunk every 5 s). Tests, all plain Node: `tests/playlog.mjs` (a fake clock, store and sink, a fake game and window), `tests/playlogserve.mjs`, `tests/playlogsummary.mjs`.
