@@ -26,7 +26,7 @@ g.run(`
     sec(60, __snap({ scene: 'Station', scenes: 'Station' }), true);
     sec(20, __snap({}), true);
     sec(1, __snap({ mission: 'accepted', missionId: 'rescue' }), true);
-    for (let i = 0; i < 300; i++) L.count('key:flight: thrust'); for (let i = 0; i < 90; i++) L.count('key:flight: turn'); L.count('key:station: use the terminal'); L.count('click'); L.count('voice');
+    for (let i = 0; i < 300; i++) L.count('key:flight: thrust'); for (let i = 0; i < 90; i++) L.count('key:flight: turn'); L.count('key:station: use the terminal'); L.count('click'); L.count('voice'); for (let i = 0; i < 5; i++) L.count('nokey: Galaxy KeyJ'); for (let i = 0; i < 2; i++) L.count('nokey: Space F5'); for (let i = 0; i < 7; i++) L.count('key:other');
     sec(40, __snap({ mission: 'accepted', missionId: 'rescue', auto: 'cruise' }));   // flying itself: an idle gap that is not confusion
     sec(5, __snap({ scene: 'Pause', scenes: 'Pause+Space', mission: 'accepted', missionId: 'rescue' }), true);
     sec(10, __snap({ mission: 'accepted', missionId: 'rescue' }), true);
@@ -59,6 +59,7 @@ check('one call accepted and done for 500, and the 500 is not also counted as ot
 check('deals: two buys (-240) and a sale (+130), net -110', S.deals.buy === 2 && S.deals.buyN === -240 && S.deals.sell === 1 && S.deals.sellN === 130, JSON.stringify(S.deals));
 check('a death by a drone', S.deaths.length === 1 && S.deathCauses.drone === 1);
 check('keys by action: thrust 300, turn 90, a click, a voice line', S.actions['key:flight: thrust'] === 300 && S.actions['key:flight: turn'] === 90 && S.actions.click === 1 && S.actions.voice === 1, JSON.stringify(S.actions));
+check('keys with no action are kept by screen and raw code apart from the actions: Galaxy KeyJ 5 and Space F5 2, and they are not in the pressed-most list', S.nokeys && S.nokeys['Galaxy KeyJ'] === 5 && S.nokeys['Space F5'] === 2 && !Object.keys(S.actions).some(k => /^nokey/.test(k)) && S.actions['key:other'] === 7, JSON.stringify([S.nokeys, S.actions]));
 const conf = S.idle.filter(i => !i.auto);
 check('two idle gaps: 40 s flying itself (not confusion) and 45+ s at the mission board, with that on it', S.idle.length === 2 && S.idle.filter(i => i.auto === 'cruise').length === 1 && conf.length === 1 && conf[0].scene === 'Station' && conf[0].panel === 'board' && conf[0].secs >= 45 && conf[0].mission === 'accepted', JSON.stringify(S.idle));
 check('the computer: 3 asks, 2 failed (the limit, and an empty reply with its reason), chose plot_route; the bar chat once', S.computer.n === 3 && S.computer.failed === 2 && S.computer.codes.limit === 1 && S.computer.codes['empty/length'] === 1 && S.computer.tools.plot_route === 1 && S.chat.n === 1, JSON.stringify([S.computer, S.chat]));
@@ -70,6 +71,7 @@ const lines = text.split('\n');
 check('the screen is one screen: at most 24 lines, none over 130 characters', lines.length <= 24 && lines.every(l => l.length <= 130), lines.length + ' lines, longest ' + Math.max(...lines.map(l => l.length)));
 check('the screen says where the time went, the deals, the calls, the deaths, what was pressed, the idle gaps, the errors and the dips', ['Where the time went', 'Deals: bought 2', 'Calls: accepted 1, done 1 (+500 cr)', 'Deaths 1: drone x1', 'Pressed most:  flight: thrust 300', 'station: use the terminal 1', 'Idle gaps', 'Errors: 3 (2 different)', 'Frame dips', 'Ship computer: 3 asks'].every(k => text.includes(k)), text);
 check('the idle gap at the board is listed with where and what, the one while flying itself only counted', text.includes('Station / board') && text.includes('call: accepted') && /1 while the ship flew itself/.test(text));
+check('the screen has one line for the keys that did nothing: where and which, most pressed first, as codes and counts', /No action: Galaxy KeyJ x5, Space F5 x2/.test(text) && !/Pressed most:.*nokey/.test(text), (text.split('\n').find(l => /No action/.test(l)) || 'no such line'));
 check('no word anyone typed or said can be in it: the logger had none', !/secret|question/i.test(text));
 
 // a session with no end line, and an empty one

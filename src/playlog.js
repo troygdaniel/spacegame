@@ -19,6 +19,10 @@
 //   error      every JS error, rejected promise and console.error: kind, msg, stack (file paths shortened to ~)
 // A key is counted by what it DOES, from the one table of src/data_controls.js (the screen you are on decides): "key:flight: Thrust", never "W" and never a letter
 // typed into a box (a keypress in an input is activity, not an action).
+// A key that does nothing on its screen is "key:other" and ALSO "nokey: <screen> <code>" (card space-game-keys-awkward): the raw code of the physical key (KeyJ, F5,
+// Backquote), so a list of the keys a player hunts for can be read. Never the character a key types (only event.code is read, never event.key), never from a text
+// box (every typed-text field of the game is a real <input>, src/chat.js chatMakeInput; a key pressed in one never gets here), never a chord (Ctrl, Cmd, Alt), never a
+// held-down repeat, never a key of an input method (composing). Counts per minute, no order and no times: a word cannot be read back out of it.
 //
 // WHERE IT GOES. Always: a ring buffer of chunks in this browser's localStorage (works from a double-clicked index.html), about 480 KB, the oldest chunk goes first.
 // When the page is served by tools/serve.mjs it also POSTs each batch to that server (/__playlog), which appends it to ~/dev/spacegame-playlogs/ OUTSIDE the repo.
@@ -93,9 +97,18 @@ function playlogAction(controls, sceneKey, e) {
   const g = (controls || []).find(x => x.scene === sceneKey); if (!g) return 'key:other';
   const alias = { Up: 'W', Left: 'A', Down: 'S', Right: 'D' }[label]; // the arrows do what the WASD keys do
   const has = (r, k) => r.k.some(x => x === k || (/^\d-\d$/.test(x) && /^\d$/.test(k) && k >= x[0] && k <= x[2]));
-  const row = g.rows.find(r => has(r, label)) || (alias && g.rows.find(r => has(r, alias)));
+  let grp = g, row = g.rows.find(r => has(r, label)) || (alias && g.rows.find(r => has(r, alias)));
+  if (!row) { const any = (controls || []).find(x => x.id === 'any'); row = any && any.rows.find(r => has(r, label)); if (row) grp = any; } // Esc, H, M, Tab: the ANYWHERE rows work in every screen that has a table (card space-game-keys-awkward: they were "key:other")
   if (!row) return 'key:other';
-  return 'key:' + g.id + ': ' + plClean(String(row.t).split(/[(:;,.]/)[0].trim().toLowerCase(), 36);
+  return 'key:' + grp.id + ': ' + plClean(String(row.t).split(/[(:;,.]/)[0].trim().toLowerCase(), 36);
+}
+// the name a key with no action is counted under, beside "key:other": the game's own screen it was pressed on and the physical key's code. Pure.
+// scene: the screen on top (PLAYLOG.scenes; anything else is "Other"); e: { code, isComposing }. The character the key types (e.key) is never read.
+// A code that is not 1 to 20 plain letters and digits is "Other", no code at all is "Unidentified". '' for a key of an input method: nothing is counted.
+function playlogRawKey(scene, e) {
+  if (e && e.isComposing) return '';
+  const code = String((e && e.code) || '');
+  return 'nokey: ' + (PLAYLOG.scenes.includes(scene) ? scene : 'Other') + ' ' + (code === '' ? 'Unidentified' : /^[A-Za-z0-9]{1,20}$/.test(code) ? code : 'Other');
 }
 
 // ---- the logger ----
@@ -333,9 +346,11 @@ function playlogInstall(game) {
     const typing = t => !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
     w.addEventListener('keydown', e => {
       try {
-        L.input(); if (e.repeat || typing(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
+        L.input(); if (e.repeat || e.isComposing || typing(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
         const sc = P.scenes.find(k => game.scene.isActive(k)) || '';
-        L.count(playlogAction(typeof CONTROLS !== 'undefined' ? CONTROLS : [], sc === 'Space' || sc === 'Station' || sc === 'Ship' || sc === 'Surface' ? sc : '', e));
+        const act = playlogAction(typeof CONTROLS !== 'undefined' ? CONTROLS : [], sc === 'Space' || sc === 'Station' || sc === 'Ship' || sc === 'Surface' ? sc : '', e);
+        L.count(act);
+        if (act === 'key:other') { const raw = playlogRawKey(sc, e); if (raw) L.count(raw); } // which key it was, for a key that did nothing (never from a text box: returned above)
       } catch (er) { /* never */ }
     }, true);
     w.addEventListener('pointerdown', () => { try { L.input(); L.count('click'); } catch (e) { /* never */ } }, true);
