@@ -617,7 +617,7 @@ class ShipComputer extends Phaser.Scene {
     this.note.setText(shipcompLeft() + ' questions left today');
     if (!list.length) {
       const greet = SHIPCOMP.lines.length ? SHIPCOMP.lines[Math.floor(Math.random() * SHIPCOMP.lines.length)] : 'Ship\'s computer ready. Ask me about the route, the ship, your job or the controls.';
-      const t = this.add.text(-440, -170, greet + '\n\nAsk about a star ("how do I get to the Roost?"), a ship, your job, your fuel or what a key does. Type /name followed by a name to rename me.', uiFont(17, '#8fb4c9', { wordWrap: { width: 880 }, lineSpacing: 6 })).setOrigin(0, 0);
+      const t = this.add.text(-440, -170, greet + '\n\nAsk about a star ("how do I get to the Roost?"), a ship, your job, your fuel or what a key does. Or give an order: "hunt" flies to the nearest pirate and fights it, "fly to the station" goes to any place or ship in your lists. Type /name followed by a name to rename me.', uiFont(17, '#8fb4c9', { wordWrap: { width: 880 }, lineSpacing: 6 })).setOrigin(0, 0);
       box.add(t); this.items.push(t); return;
     }
     let y = 150;
