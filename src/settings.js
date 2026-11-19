@@ -351,7 +351,7 @@ class Settings extends Phaser.Scene {
     this.warn(bx, by, bw, SETTINGS.keys.warnH, 'THIS USES YOUR OWN DEEPGRAM ACCOUNT AND MAY COST YOU MONEY', uiText('listen.cost', { key: LISTEN.cap, minutes: LISTEN.limit.minutes }));
     this.label(bx, by + 112, 'HOLD TO TALK');
     const cap = keyCap(this, LISTEN.cap, AMBER); cap.setPosition(bx + 8 + cap.kw / 2, by + 146); this.body.add(cap);
-    this.txt(bx + 24 + cap.kw, by + 146, 'in space or in a station: speak, then let go', 15, '#cfefff');
+    this.txt(bx + 24 + cap.kw, by + 146, 'in space or in a station: hold until the ring is full, then speak', 15, '#cfefff');
     this.txt(bx, by + 184, uiText('listen.use', { key: LISTEN.cap, minutes: LISTEN.limit.minutes }), 13, '#cfefff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 4 } });
     this.slots.listenOn = this.button(bx, by + 252, 216, '', () => { listenSetOn(!LISTEN.on); this.listenRefresh(); });
     this.slots.listenStat = this.txt(bx + 234, by + 252, '', 14, '#9fe9ff', { style: { wordWrap: { width: bw - 234 }, lineSpacing: 3 } });
