@@ -116,6 +116,12 @@ check('a key the screen does not use, a screen with no table and a key with no n
 check('the voice key U is counted as what it does in every screen, in space too where no table row names it (it was key:other)', ['Space', 'Station', 'Ship', 'Galaxy'].every(sc => act(sc, 'KeyU') === 'key:voice: hold to talk'), JSON.stringify(['Space', 'Station'].map(sc => act(sc, 'KeyU'))));
 check('no action name is a single letter or contains a typed character outside the table', J(`CONTROLS.every(gr => gr.rows.every(r => { const a = playlogAction(CONTROLS, gr.scene, { code: 'Key' + (r.k[0].length === 1 ? r.k[0] : 'Q') }); return a.length > 10 || a === 'key:other'; }))`));
 
+// ---- a key that does nothing on its screen: its raw code and the screen, never the character (card space-game-keys-awkward) ----
+const rawKey = (scene, e) => J(`typeof playlogRawKey === 'function' ? playlogRawKey(${JSON.stringify(scene)}, ${JSON.stringify(e)}) : 'playlogRawKey is not there'`);
+check('a key with no action on its screen is named by the screen and the raw code of the key: "nokey: Galaxy KeyJ", "nokey: Space F5"; the character it would type is never read', rawKey('Galaxy', { code: 'KeyJ', key: 'SECRETCHAR' }) === 'nokey: Galaxy KeyJ' && rawKey('Space', { code: 'F5', key: 'SECRETCHAR' }) === 'nokey: Space F5' && rawKey('Overlay', { code: 'Backquote' }) === 'nokey: Overlay Backquote', JSON.stringify(['Galaxy', 'Space', 'Overlay'].map(sc => rawKey(sc, { code: 'KeyJ', key: 'SECRETCHAR' }))));
+check('a code that is not plain letters and digits is "Other" (no markup, no text gets in), a key with no code is "Unidentified", and a key in the middle of an input method (composing) is nothing', rawKey('Space', { code: '<b>x</b> hi' }) === 'nokey: Space Other' && rawKey('Space', { code: 'A'.repeat(40) }) === 'nokey: Space Other' && rawKey('Space', { code: '' }) === 'nokey: Space Unidentified' && rawKey('Space', {}) === 'nokey: Space Unidentified' && rawKey('Space', { code: 'KeyJ', isComposing: true }) === '', JSON.stringify([rawKey('Space', { code: '<b>x</b> hi' }), rawKey('Space', { code: '' }), rawKey('Space', { code: 'KeyJ', isComposing: true })]));
+check('the screen in the name is one of the game\'s own screens: anything else is "Other" (the name cannot carry a word)', rawKey('typed words here', { code: 'KeyJ' }) === 'nokey: Other KeyJ' && rawKey('Galaxy', { code: 'KeyJ' }) === 'nokey: Galaxy KeyJ' && rawKey('', { code: 'KeyJ' }) === 'nokey: Other KeyJ', JSON.stringify([rawKey('typed words here', { code: 'KeyJ' }), rawKey('', { code: 'KeyJ' })]));
+
 // ---- idle: 20 s or more with no input ----
 ls = lines(`__sec(L, 5, __snap({}), true); __sec(L, 30, __snap({ scene: 'Station', scenes: 'Station', panel: 'board', mission: 'accepted', missionId: 'rescue' })); __t += 1000; L.input(); __sec(L, 3, __snap({}), true)`);
 let idle = only(ls, 'idle');
@@ -208,6 +214,34 @@ check('the pending list never grows past its cap', J(`(() => { const L = __mk({ 
   check('an error event on the window is a line with the message', (() => { w.run(`__h.error.forEach(f => f({ message: 'boom', error: { stack: 'Error: boom' } }))`); w.run(`__L.flush()`); return WJ('__L.text()').includes('"msg":"boom"'); })());
   check('a rejected promise is a line too', (() => { w.run(`__h.unhandledrejection.forEach(f => f({ reason: { message: 'nope', stack: 'x' } }))`); w.run(`__L.flush()`); return WJ('__L.text()').includes('"kind":"promise"'); })());
   check('the settings helpers: OFF then ON, download and forget answer without a page', WJ('[playlogOn(), playlogSet(false), playlogOn(), playlogSet(true), playlogOn(), typeof playlogDownload().ok, playlogForget(), __L.text().length]').join() === 'true,false,false,true,true,boolean,true,0');
+  check('the wiring raised no errors', w.errors.length === 0, w.errors.join(' | '));
+}
+
+// ---- the page: keys with no action are counted by raw code, and never from a text box (card space-game-keys-awkward) ----
+{
+  const w = nodeGame();
+  w.run(`
+    var __h = {}, __on = (n, f) => { (__h[n] = __h[n] || []).push(f); };
+    window.addEventListener = __on; document.addEventListener = __on;
+    var __scenes = [], __ev = {};
+    const __sc = (key, st) => ({ scene: { key, isActive: () => st === 'run', isPaused: () => st === 'pause' } });
+    var __game = { scene: { scenes: __scenes, getScene: k => __scenes.find(s => s.scene.key === k) || null, isActive: k => (__scenes.find(s => s.scene.key === k) || { scene: { isActive: () => false } }).scene.isActive() },
+      events: { on: (n, f) => { __ev[n] = f; } } };
+    function __set(list) { __scenes.length = 0; list.forEach(([k, st, extra]) => __scenes.push(Object.assign(__sc(k, st), extra || {}))); }
+    G.system = 'halcyon'; G.lastDock = 'halcyon-station'; G.credits = 321; G.hull = 87; G.mission = 'none'; G.missionId = null;
+    __set([['Space', 'run', { ship: { x: 5, y: 5, body: { speed: 1 } } }]]); window.game = __game; var __L = playlogInstall(__game);
+    var __press = (code, scene, o) => { __set([[scene, 'run', { ship: { x: 5, y: 5, body: { speed: 1 } } }]]); __h.keydown.forEach(f => f(Object.assign({ code, key: 'SECRETCHAR', repeat: false, target: { tagName: 'BODY' } }, o || {}))); };
+  `);
+  const WJ = e => JSON.parse(w.run(`JSON.stringify(${e})`));
+  w.run(`__press('KeyJ', 'Galaxy'); __press('KeyJ', 'Galaxy'); __press('KeyL', 'Galaxy'); __press('F5', 'Space'); __press('KeyW', 'Space'); __press('KeyU', 'Space');`);
+  w.run(`__press('KeyQ', 'Galaxy', { target: { tagName: 'INPUT' } }); __press('KeyZ', 'Galaxy', { target: { tagName: 'TEXTAREA' } }); __press('KeyX', 'Galaxy', { target: { isContentEditable: true } });`); // typed in a box
+  w.run(`__press('KeyK', 'Galaxy', { ctrlKey: true }); __press('KeyK', 'Galaxy', { metaKey: true }); __press('KeyK', 'Galaxy', { altKey: true }); __press('KeyK', 'Galaxy', { repeat: true }); __press('KeyK', 'Galaxy', { isComposing: true });`);
+  w.run(`__h.pagehide.forEach(f => f())`);
+  const text = WJ('__L.text()'), evs = text.split('\n').filter(Boolean).map(l => JSON.parse(l)), cnt = evs.filter(e => e.ev === 'counts').pop();
+  check('a key that does nothing on its screen is counted twice over: as "key:other" (as before) and by screen and raw code', cnt && cnt.a['key:other'] === 4 && cnt.a['nokey: Galaxy KeyJ'] === 2 && cnt.a['nokey: Galaxy KeyL'] === 1 && cnt.a['nokey: Space F5'] === 1, JSON.stringify(cnt));
+  check('a key that has an action, and the voice key, are not in the raw list', cnt && !Object.keys(cnt.a).some(k => /^nokey: .* (KeyW|KeyU)$/.test(k)) && !!cnt.a['key:voice: hold to talk'], JSON.stringify(cnt));
+  check('nothing typed into a text box, a text area or an editable field, no chord with Ctrl, Cmd or Alt, no held-down repeat and no input-method key is counted by raw code (or at all)', cnt && !Object.keys(cnt.a).some(k => /KeyQ|KeyZ|KeyX|KeyK/.test(k)) && Object.keys(cnt.a).filter(k => /^nokey: /.test(k)).length === 3, JSON.stringify(cnt));
+  check('the character a key types is nowhere in the log, only its code', !text.includes('SECRETCHAR'), text.slice(0, 300));
   check('the wiring raised no errors', w.errors.length === 0, w.errors.join(' | '));
 }
 
