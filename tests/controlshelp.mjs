@@ -95,7 +95,11 @@ console.log('4. the other places that say keys');
   const named = new Set(); group('flight').rows.forEach(r => r.k.forEach(c => named.add(c.toUpperCase())));
   const line = (/this\.keyLine = this\.add\.text\([^']*'([^']+)'/.exec(read('src/space.js')) || [])[1] || '';
   const caps = line.split(/ {2,}/).map(part => part.split(' ')[0]).flatMap(c => c.split('/')).filter(Boolean).map(c => c.toUpperCase());
-  check('the key line in space names only keys of the FLIGHT table', caps.length >= 8 && caps.every(c => named.has(c)), line + '   -> ' + caps.join(' '));
+  const anyNamed = new Set(); group('any').rows.forEach(r => r.k.forEach(c => anyNamed.add(c.toUpperCase()))); // H help is an ANYWHERE row
+  check('the key line in space names only keys of the FLIGHT table (and the ANYWHERE rows: H help)', caps.length >= 8 && caps.every(c => named.has(c) || anyNamed.has(c)), line + '   -> ' + caps.join(' '));
+  // card space-game-key-line (Troy, 18 Nov 2026, from docs/KEYS-PROPOSAL.md): the line the first flights show names jump, help and the click, and drops the dash (2 presses in his first 13 minutes)
+  check('the key line says G jump, H help and Z fly by click, and no longer Q/E dash', /(^| {2})G jump( {2}|$)/.test(line) && /(^| {2})H help( {2}|$)/.test(line) && /(^| {2})Z fly by click( {2}|$)/.test(line) && !/Q\/E|dash/.test(line), line);
+  check('it keeps the ones he used (W A/D S Shift Space L P N B) and fits the screen: 145 characters at the most (14 px monospace is about 8.4 px a character: 1220 of the 1232 px from its left edge)', ['W thrust', 'A/D turn', 'S brake', 'Shift boost', 'Space or click fire', 'L land/dock', 'P autopilot', 'N places', 'B ships'].every(p => line.includes(p)) && line.length <= 145, line.length + ' ' + line);
   const readme = read('README.md'), rows = readme.split('\n').filter(l => /^\| Space/.test(l)).join(' ');
   const inReadme = [...rows.matchAll(/`([^`]+)`/g)].flatMap(m => m[1].split(' ')).map(c => c.toUpperCase());
   check('the README\'s Space rows name only keys of the FLIGHT table', inReadme.length >= 15 && inReadme.every(c => named.has(c) || c === 'ENTER' || /^\d$/.test(c)), inReadme.filter(c => !named.has(c) && c !== 'ENTER' && !/^\d$/.test(c)).join(' '));

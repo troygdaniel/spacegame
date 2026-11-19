@@ -26,7 +26,11 @@ const far = `sysBody('planet').x + 3000, sysBody('planet').y`;
 // ---- the rescue: as it always read ----
 g.run(`__call('rescue')`);
 let r = J(`__tip(__space(${far}))`);
-check('rescue, far from the planet: the old line, with the planet\'s name', r.tip === `W thrusts, A and D turn, Space fires. Follow the amber arrow to ${planet}.` && r.arrow === planet.toUpperCase(), JSON.stringify(r));
+// card space-game-key-line (Troy, 18 Nov 2026): the first flight shows this tip INSTEAD of the key line at the bottom (space.js hides the line under a first-run tip), so it is where a new
+// player learns that a click can fly the ship: Z turns flight assist on. Troy's first log: 224 presses of A and D, the mouse never turned the ship.
+const Z = 'Z: click to fly there.';
+check('rescue, far from the planet: the keys, then Z and the click, then the planet\'s name', r.tip === `W thrusts, A and D turn, Space fires. ${Z} Follow the amber arrow to ${planet}.` && r.arrow === planet.toUpperCase(), JSON.stringify(r));
+check('the Z sentence is in all three first-flight tips (the planet, a goal with an arrow, a goal in another system) and each stays one line of the tip bar (110 characters: 18 px type is 10.8 px a character, the bar holds 1250)', J(`GUIDE_FIRST`).includes(Z) && J(`guideHint.toString().split('GUIDE_FIRST').length - 1`) === 3 && r.tip.length <= 110, r.tip.length + ' ' + r.tip);
 r = J(`__tip(__space(sysBody('planet').x + 200, sysBody('planet').y))`);
 check('rescue, close to the planet: slow down and land there', r.tip === `Hold S to slow down, then press L to land on ${planet}.`, r.tip);
 check('the planet is named from the system, not written into the tip', J(`guideHint.toString().includes('Kepler')`) === false);
@@ -35,6 +39,7 @@ check('the planet is named from the system, not written into the tip', J(`guideH
 g.run(`__call('escort')`);
 r = J(`__tip(__space(${far}, { mx: { freighter: { x: 500, y: 500, active: true } } }))`);
 check('escort: the tip names the freighter the arrow is on, not the planet', r.arrow === 'FREIGHTER MULE' && r.tip.endsWith('Follow the amber arrow: FREIGHTER MULE.') && !r.tip.includes(planet), JSON.stringify(r));
+check('escort: it carries the Z sentence too and fits one line', r.tip.includes(Z) && r.tip.length <= 110, r.tip.length + ' ' + r.tip);
 r = J(`__tip(__space(sysBody('planet').x + 200, sysBody('planet').y, { mx: { freighter: { x: 500, y: 500, active: true } } }))`);
 check('escort, passing close to the planet: it does not say to land', !/land/.test(r.tip) && r.tip.includes('FREIGHTER MULE'), r.tip);
 r = J(`__tip(__space(${far}, { mx: { freighter: null } }))`);
