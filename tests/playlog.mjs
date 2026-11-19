@@ -62,6 +62,7 @@ ls = J(`(() => { const L = __mk(); const root = { G: { credits: 1000 }, buyUpgra
   const done = playlogWrap(L, root);
   __sec(L, 1, __snap({ credits: 1000 })); root.G.credits = 1000; const r = [root.buyUpgrade(), root.fleetBuy(), root.sellOre(), root.fleetSell(), root.jumpStart({}, 'kestrel', { ly: 6.3, cost: 6.3 }), root.voiceSay('hello pilot, a secret')]; __sec(L, 1, __snap({ credits: 1000 - 200 - 4500 + 130 })); L.end('test');
   return { done, r, ls: __lines(L) }; })()`);
+check('with no G on the root (the game\'s G is a const, not a property of window) the global G is used: a deal is still seen', J(`(() => { const L = __mk(); const keep = G.credits; G.credits = 700; const root = { buyUpgrade() { G.credits -= 150; } }; playlogWrap(L, root); root.buyUpgrade(); const r = __lines(L).filter(l => l.ev === 'buy').map(l => l.what + ' ' + l.n); G.credits = keep; return r; })()`).join() === 'part -150');
 check('the wrapped functions are found and wrapped once each', J(`(() => { const root = { G: { credits: 0 }, buyUpgrade() {} }; const L = __mk(); return [playlogWrap(L, root), playlogWrap(L, root)]; })()`).map(a => a.length).join() === '1,0');
 check('the wrappers return what the real function returned', ls.r.join() === 'a,b,c,nothing sold,j,v', ls.r.join());
 const deals = ls.ls.filter(l => l.ev === 'buy' || l.ev === 'sell');

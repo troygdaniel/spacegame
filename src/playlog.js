@@ -228,7 +228,7 @@ function playlogCreate(env) {
 // deal: the credits before and after say what it cost or paid. A wrapper is made once, never throws, and returns what the real function returned.
 const PLAYLOG_DEALS = [['buyUpgrade', 'part'], ['fleetBuy', 'ship'], ['fleetSell', 'ship'], ['sellOre', 'ore'], ['buyFuel', 'fuel']];
 function playlogWrap(L, root) {
-  const done = [], G_ = root.G;
+  const done = [], G_ = root.G || (typeof G !== 'undefined' ? G : undefined); // the game's G is a const: not a property of window, but a name this script can read
   const wrap = (name, make) => {
     try {
       const orig = root[name]; if (typeof orig !== 'function' || orig.__playlog) return;
