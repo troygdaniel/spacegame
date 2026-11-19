@@ -51,8 +51,8 @@ To translate, change the text column here, or copy this file to a name after ui 
 | help.surface.2 | Mouse   aim, and click to fire |
 | help.surface.3 | E   talk to the colonist, board at the pad |
 | help.surface.4 | C   show the controls panel again |
-| tips.station | Pick from the station menu, bottom right: a number, or W S and Enter. Your ship is the last row: board it to launch. |
-| tips.space | N picks a place: Enter sets it, Enter again goes there. B lists the ships; Z and 1 to 4 fly yours about the one you pick. Near a station or a planet, slow down and press L. |
+| tips.station | Pick from the station menu, bottom right: a number, or W S and Enter. Your ship is the last row: board it to launch. The SHOP sells parts; MISSIONS has courier and haul calls. |
+| tips.space | N picks a place, B lists the ships. Near a station, slow down and press L: ore sells there. G opens the galaxy map: pick a star, press Enter to jump. |
 | tips.ship | Look your ship over, then press Enter to launch. Esc goes back to the station to take a mission or repair first. |
 | tips.surface | Aim with the mouse and click to fire. Walk back to the landing pad and press E to lift off. |
 | toast.docked | Docked. |
@@ -78,6 +78,11 @@ To translate, change the text column here, or copy this file to a name after ui 
 | toast.signal-new | New signal on the radar: {name} |
 | toast.signal-found | Signal found: {name} |
 | toast.signal-lost | Signal lost: {name} |
+| hint.dock | Slow down near a station and press L to dock. Ore sells and calls are taken there. |
+| hint.jump | To jump: G opens the map, pick a star, press Enter. A jump burns fuel; the station pump refills it. |
+| hint.ore | Shoot asteroids for ore. It sells for credits when you dock (L). |
+| hint.shop | Credits buy parts at the SHOP: press {shop} in the station menu. |
+| hint.calls | Courier and haul calls pay to carry cargo: MISSIONS, press {missions}. |
 | keys.steps | Then: paste it above, press Test, done. |
 | keys.deepgram.use | Speaks the ship and the bar voices, and hears you when you hold U: lines and sound go to Deepgram. |
 | keys.deepgram.cost | It is your own Deepgram account: Deepgram may charge you for speaking and listening. |
