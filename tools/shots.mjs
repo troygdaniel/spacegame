@@ -322,7 +322,13 @@ const LOOKS = [
       return { panel: [L, T, R, B], texts: texts.length, outside: out, overlaps: over.slice(0, 8), on: playlogOn(), lowest: Math.max(...texts.map(x => x.y1)) }; })())`));
     console.log('        panel ' + JSON.stringify(r.panel) + ', ' + r.texts + ' texts, lowest text at y ' + r.lowest + '; play log on: ' + r.on);
     console.log('        outside the body or the footer: ' + JSON.stringify(r.outside) + '; overlapping: ' + JSON.stringify(r.overlaps));
-    await t.ev(`(() => { game.scene.getScene('Settings').playlogToggle(); return 1; })()`); await t.run(400); await pic(t, 'settings-reset-off');
+  }],
+  ['settings-reset-off', '', 'Title', async t => { // the same with the play log switched OFF by its button
+    await t.run(1000); await t.key('S'); await t.run(1200);
+    if (!(await t.ev(up('Settings')))) throw new Error('S did not open Settings');
+    await t.ev(`(() => { const s = game.scene.getScene('Settings'); s.show('reset'); s.playlogToggle(); return 1; })()`); await t.run(800);
+    console.log('        after the toggle: play log on = ' + await t.ev('playlogOn()') + ', stored ' + await t.ev(`localStorage.getItem('longhaul.playlog.on')`));
+    await pic(t, 'settings-reset-off');
   }],
   ['settings-keys', '', 'Title', async t => { // V on the title opens Settings > Keys at the Deepgram key (card space-game-key-links): the three key rows, Get a key, the address, Copy; nothing cut off at 1458 px
     await t.run(1000); await t.key('V'); await t.run(1500);

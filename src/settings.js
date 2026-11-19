@@ -431,7 +431,7 @@ class Settings extends Phaser.Scene {
   draw_reset() {
     const bx = this.bx, by = this.by, bw = this.bw;
     this.label(bx, by + 10, 'RESET GAME');
-    this.txt(bx, by + 34, 'Erases your save: credits, ships, missions, the journal and everyone\'s memory of you. You start again at Halcyon Station with a Wren.\nYour keys, volume and voice choice are not part of the save and stay.', 14, '#cfefff', { oy: 0, style: { lineSpacing: 4 } });
+    this.txt(bx, by + 34, 'Erases your save: credits, ships, missions, the journal and everyone\'s memory of you. You start again at Halcyon Station with a Wren.\nYour keys, volume and voice choice are not part of the save and stay.', 14, '#cfefff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 4 } }); // wrapped: the first line ran out past the panel's right edge (first look)
     this.slots.reset = this.button(bx, by + 118, 250, 'Reset game', () => this.press('reset'), { color: '#ff8da0', edge: RED });
     this.line(by + 176);
     this.label(bx, by + 200, 'FORGET ALL KEYS');
