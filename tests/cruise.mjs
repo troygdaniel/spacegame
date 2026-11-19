@@ -53,17 +53,17 @@ try {
   await E(`(() => { const s = ${SP}; cruiseNavOpen(s); cruiseNavDraw(s); })()`); await tick(2);
   check('the navigation panel (src/navpanel.js) is up with the keys on it, a row per body and one chosen', await E(`(() => { const s = ${SP}, c = s.cr; return c.ui.box.visible && c.navOpen && s.np.keys && c.list.filter(r => r.kind === 'body').length === cruiseKnown(s).length && !!c.list[c.sel] && s.np.hl.visible; })()`));
   if (!(await t.shot('cruise-nav'))) check('screenshot of the nav list', false);
-  // keys: S moves down, Enter makes the row the destination (the panel stays: Enter again would go there) and the objective arrow follows
+  // keys: S moves down, Enter on a place flies there at once (card space-game-hunt-pirates: the target is the row, the autopilot is on, the panel is put away) and the objective arrow follows
   const sel0 = await E(`${SP}.cr.sel`);
   await E(`(() => { const k = ${SP}.cr.k; k.S._justDown = true; })()`); // JustDown reads this flag
   await tick(2);
   check('S moves the selection down a row', (await E(`${SP}.cr.sel`)) === sel0 + 1);
   const picked = await E(`${SP}.cr.list[${SP}.cr.sel].name`);
   await E(`${SP}.cr.k.ENTER._justDown = true`); await tick(2);
-  check('Enter makes the chosen body the target; the panel stays up for the second Enter', await E(`(() => { const c = ${SP}.cr; return c.navOpen && c.ui.box.visible && !!c.target && c.target.name === ${JSON.stringify(picked)}; })()`), picked);
+  check('Enter makes the chosen body the target and the autopilot takes the ship there; the panel is put away', await E(`(() => { const s = ${SP}, c = s.cr; return !c.navOpen && !!c.target && c.target.name === ${JSON.stringify(picked)} && !!(s.ap && s.ap.on); })()`), picked);
   check('the amber objective arrow points at the nav target, the radar arrow stays on the mission',
     await E(`(() => { const s = ${SP}; return hudObjective(s, 'Space').name === ${JSON.stringify(picked.toUpperCase())} && hudObjective(s, 'Space', true).name !== undefined && s.cr.target !== null; })()`));
-  await E(`(() => { const s = ${SP}; cruiseNavOpen(s); cruiseNavDraw(s); })()`); await tick(2);
+  await E(`(() => { const s = ${SP}; autopilotEnd(s, 'quiet'); cruiseNavOpen(s); cruiseNavDraw(s); })()`); await tick(2); // the autopilot is off again: X clears a target that is only set
   await E(`${SP}.cr.k.X._justDown = true`); await tick(2);
   check('X in the nav list clears the target', (await E(`${SP}.cr.target`)) === null);
   await E(`(() => { cruiseNavClose(${SP}); })()`);

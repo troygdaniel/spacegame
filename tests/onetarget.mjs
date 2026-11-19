@@ -3,7 +3,9 @@
 //   a place (station, planet, sun, belt, gate, signal, another system)   the navigation panel (N, src/navpanel.js)
 //   a ship (raider, escort, police, freighter)                          the Overview list (B, src/overview.js)
 //   anything you can see                                                 a click on it in space (src/clickmove.js)
-// Nothing else picks: the Tab map only shows the destination, V locks the selected raider and never walks to the next one.
+// Nothing else picks: V locks the selected raider and never walks to the next one. Since card space-game-hunt-pirates (Troy, 18 Nov 2026) picking also FLIES:
+// Enter or a click on a place of the navigation panel, a ship of the Overview, and a click on a place of the Tab map go there; the ship's computer does the
+// same by name ("fly to ...", "hunt"). All of them go through navpanelFly and overviewFly below, so the rule is still two lists (places, ships) and one pointer.
 // This test reads src/*.js for every call and every write that makes something the target, and compares them with the DOORS table below.
 // A call from a file that is not in the table, or one more call than the table has, fails: a new way to pick a target has appeared.
 // If it is meant, it belongs in the navigation panel or the Overview; only then add it here, with the reason on its line.
@@ -34,13 +36,20 @@ const DOORS = [
     autopilot: 2,   // P: to the destination, or to the row under the ring while the navigation panel is open
     navpanel: 1,    // Enter again on the destination
     shipcomputer: 3 } }, // the ship's computer: travel, dock and land (the Dock and Land orders of the panel)
+  { what: 'navpanelFly( : pick a place and fly there', re: /\bnavpanelFly\(/g, who: {
+    navpanel: 1,    // Enter or a click on a row that is a place
+    map: 1,         // a click on a place of the Tab map: the map only says which place is under the pointer (navpanelPlaceAt); the rule is the panel's
+    shipcomputer: 1 } }, // fly_to with a place named
+  { what: 'overviewFly( : pick a ship and fly there', re: /\boverviewFly\(/g, who: {
+    overview: 2,    // Enter on a row, a click on a row
+    shipcomputer: 2 } }, // hunt (the nearest raider) and fly_to with a ship named
   { what: 'jumpStart( : start a jump', re: /\bjumpStart\(/g, who: {
     jump: 1,        // the galaxy map's own Enter (G)
     navpanel: 1,    // Enter again on a jump row
     shipcomputer: 1 } }, // the ship's computer: jump_next_hop, after jumpLock and the plotter's route and fuel check; S or Esc cancels the charge as ever
   // ---- a ship ----
   { what: 'overviewPick( : make a ship the target', re: /\boverviewPick\(/g, who: {
-    overview: 2 } }, // Enter on a row, a click on a row
+    overview: 1 } }, // overviewFly, which Enter and a click on a row call
   { what: 'clickmoveClick( : a click in space', re: /\bclickmoveClick\(/g, who: {
     clickmove: 1,   // the pointer
     overview: 1 } }, // an Overview row is the same pick as a click on that ship
@@ -49,11 +58,11 @@ const DOORS = [
   { what: 'assistSet(mode, target : an order on a ship', re: /\bassistSet\([^(),]+,/g, who: {
     assist: 1,      // an order key (1-4) goes to the thing already selected
     clickmove: 3,   // a click on a ship, and the order keys on the picked ship
-    overview: 3,    // a row with no click to move in the build, the order buttons of the target row, and the hand-over after Cruise to (the same selected ship)
+    overview: 4,    // a row with no click to move in the build, the order buttons of the target row, the hand-over after Cruise to (the same selected ship), and overviewFly's order on the ship it just picked
     shipcomputer: 1 } }, // the ship's computer: assist_order, on the target already selected (the nav target), never on one it picks
   { what: 'gunlockSet( : lock a raider', re: /\bgunlockSet\((?!null)/g, who: {
     gunlock: 1,     // V: the selected raider, else the nearest. No walk to the next one.
-    overview: 1 } }, // the Lock button of the target row
+    overview: 2 } }, // the Lock button of the target row, and overviewHuntFrame: the raider a hunt flew to is locked once it is in reach
   { what: 'L.target = : the lock itself', re: /\bL\.target = (?!null)/g, who: {
     gunlock: 1 } }
 ];
@@ -77,7 +86,7 @@ for (const d of DOORS) {
 
 console.log('what was taken out stays out');
 {
-  check('the Tab map has no picker: no ring rule, no call that flies or picks', J('typeof mapPickStart') === 'undefined' && !/autopilotGo|cruisePick|cruiseKnown/.test(code.map));
+  check('the Tab map has no picker of its own: no ring rule, no call that flies or picks (it forwards a click to navpanelFly)', J('typeof mapPickStart') === 'undefined' && !/autopilotGo|cruisePick|cruiseKnown/.test(code.map));
   check('the Overview lists no places: it does not read the bodies of the system', !/cruiseKnown/.test(code.overview));
   check('a place handed to the Overview is refused', J(`overviewPick({ cr: { target: null } }, { ref: { id: 'st', name: 'Halcyon Station', x: 0, y: 0 } })`) === '');
   check('V does not walk from one raider to the next: the rule takes no current lock', J('gunlockNext.length') === 3);

@@ -6,9 +6,10 @@
 //   SUN, PLANETS AND BELTS
 //   SIGNALS              salvage sites and signals you have found
 //   GATES AND JUMPS      the gate, then every charted system the ship can reach from here (light years, and the fuel the jump burns)
-// N opens it with the keys on it: W S (or the arrows) choose, Enter sets the row as the destination, Enter again on that row goes there (on the
-// station it docks, on the planet you can land on it lands: the order takes the ship all the way in; P on the row only flies there). X clears
-// the destination, N closes. A click on a row does what Enter does. It opens by itself, without taking the keys, when you launch or arrive (you
+// N opens it with the keys on it: W S (or the arrows) choose, Enter on a place flies there at once (on the station it docks, on the planet you can
+// land on it lands: the order takes the ship all the way in; P on the row only flies there; card space-game-hunt-pirates: Enter used to only set the
+// destination and a second Enter went, and Troy pressed it 19 times without flying). A jump row keeps its two steps: Enter sets it, Enter again jumps,
+// because a jump burns fuel. X clears the destination, N closes. A click on a row does what Enter does. It opens by itself, without taking the keys, when you launch or arrive (you
 // have no destination yet) and when the call gives you a new goal; it goes away again after a few seconds. The destination stays pinned at the
 // top of the panel's place with its distance while you fly, panel open or not.
 //
@@ -94,7 +95,7 @@ function navpanelHint(r, isDest, order) {
   if (how === 'here' && !order) return 'You are there.';
   if (r.mission && r.kind === 'jump' && !r.say) return 'Enter  open the galaxy map at ' + navpanelStar(r); // the job is in another system: the map shows the way, and what is missing
   if (how === 'no') return r.say || (r.why === 'fuel' ? 'Not enough fuel for this jump.' : r.why === 'far' ? 'Out of jump range: plot it on the galaxy map (G).' : 'No route charted yet.');
-  if (!isDest) return 'Enter  set as destination';
+  if (!isDest && r.kind === 'jump') return 'Enter  set as destination'; // a jump keeps its two steps; a place goes on the first Enter
   if (order) return 'Enter  ' + order + (how === 'here' ? '' : '   P  fly there only'); // the order takes the ship all the way in; P is the plain travel
   return how === 'jump' ? 'Enter  jump   ' + navpanelFuel(r.cost) + ' fuel' : how === 'cruise' ? 'Enter  go: autopilot and cruise' : 'Enter  go: autopilot';
 }
@@ -260,9 +261,35 @@ function navpanelClick(s, i) {
     if (typeof jumpMapOpen !== 'function' || !jumpMapOpen(s.game, r.goal || r.id)) { toast(s, 'Not now: the galaxy map opens when you are flying free.', '#ffb454'); sfx('empty'); }
     return;
   }
-  if (navpanelIsDest(s, r)) navpanelEngage(s, r); else navpanelPick(s, r);
+  if (r.kind !== 'jump') navpanelFly(s, r); // a place: pick it and fly there
+  else if (navpanelIsDest(s, r)) navpanelEngage(s, r); else navpanelPick(s, r); // a jump: set it, then Enter jumps
   s.np.at = 0; if (s.np.shown) { s.np.hideAt = s.time.now + NAVPANEL.peek; navpanelDraw(s); }
 }
+// why the ship cannot fly to this place right now, in the words the pilot gets ('' when it can). r: a row of the panel or of cruiseKnown.
+function navpanelFlyWhy(s, r) {
+  if (!r || s.dead || s.leaving) return 'Not now.';
+  if (G.deep) return 'There is nothing to fly to in deep space.';
+  if (s.jmp) return 'A jump is charging: S or Esc cancels it first.';
+  if (s.cruising) return 'Cruising already. S cancels.';
+  if (!s.ap || !s.cr) return 'The autopilot is not ready.';
+  if (navpanelHow(r) === 'here' && !navpanelOrder(s, r)) return 'You are already at ' + r.name + '.';
+  return '';
+}
+// Enter or a click on a place, and the ship's computer's and the Tab map's "fly there": the autopilot takes the ship (the station docks, the planet you can land on
+// lands, a long leg cruises). The one confirmation line is the autopilot's own toast; a place that cannot be reached says why in one line. Returns true when it went.
+function navpanelFly(s, r) {
+  const why = navpanelFlyWhy(s, r);
+  if (why) { toast(s, why, '#ffb454'); sfx('empty'); return false; }
+  if (s.np) { s.np.jump = null; s.np.jumpRow = null; }
+  return navpanelEngage(s, r);
+}
+// the place nearest a world point within rad px, from the same list the panel is made of (the Tab map's click); null when none
+function navpanelNear(rows, x, y, rad) {
+  let best = null, bd = rad;
+  (rows || []).forEach(b => { const d = Math.hypot(b.x - x, b.y - y); if (d <= bd) { bd = d; best = b; } });
+  return best;
+}
+function navpanelPlaceAt(s, x, y, rad) { return navpanelNear(cruiseKnown(s), x, y, rad); }
 function navpanelPick(s, r) {
   const np = s.np, how = navpanelHow(r), no = m => { toast(s, m, '#ffb454'); sfx('empty'); };
   if (how === 'no') return no(navpanelHint(r, false));

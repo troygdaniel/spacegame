@@ -2,7 +2,8 @@
 // Goes with the flight assist (src/assist.js) and click to move (src/clickmove.js). A compact panel under the radar lists what is near the ship:
 // raiders, the escort, police and freighters, each with its range and whether it closes or opens. Ships only: a place (the station, a planet,
 // a gate, a signal) is picked in the navigation panel (N, src/navpanel.js), card space-game-one-way-to-target.
-// Hostiles are red. A click on a row makes it the target; so do W S and Enter while the list has the keys. The target's row opens: under it
+// Hostiles are red. A click on a row makes it the target and flies there (card space-game-hunt-pirates: it used to only select, and Troy pressed it 17 times
+// without going anywhere); so do W S and Enter while the list has the keys. A raider is fought: Keep at range, and the gun lock when it is in reach. The target's row opens: under it
 // are its range, its closing speed and its orders as buttons (the assist's 1 to 4, and the gun lock for a hostile): a click on a button, or
 // its key, gives the order. This is the only place the orders are drawn: there is no separate assist panel.
 // A ship that is far away gets one more order, first on its row: Cruise to (C), which cruises to it and then hands over to the assist.
@@ -15,12 +16,15 @@
 //   overviewRows(things, me, max)   pure: the sort and the rows. things: [{ name, kind, x, y, vx, vy, hostile, friend, ref }], me: { x, y, vx, vy }
 //   overviewThings(s)               what the scene has around the ship, as things
 //   overviewPick(s, row)            make a row the target; returns 'body', 'ship' or ''
+//   overviewFly(s, row)             pick it and go there (a far one by Cruise to); a raider is hunted: returns 'cruise', 'order' or ''
+//   overviewHostileRows(s)          the raiders, nearest first (the ship's computer's hunt)
 const OVERVIEW = {
   key: 'B', max: 10,            // rows shown
   every: 250,                   // ms between rebuilds of the list
   still: 5,                     // px/s: under this the range neither closes nor opens
   x: 1004, y: 242, w: 260, row: 18,   // under the radar and its hostile line
   btn: 18, btns: 8,             // the open row's block: a button's height, and how many buttons the pool holds
+  huntFor: 90000,               // ms a hunt waits for the raider to come in reach of the gun lock
   far: 2500, cruiseKey: 'C', cruiseThen: 'keep',   // Cruise to: a ship further than this (px) gets it; its key (the cruise key); the order it hands over to when none was chosen
   kinds: { station: 'STATION', planet: 'PLANET', gate: 'GATE', belt: 'BELT', poi: 'SIGNAL', scenery: 'BODY', raider: 'RAIDER', drone: 'DRONE', gunship: 'GUNSHIP', pirate: 'PIRATE', escort: 'ESCORT', police: 'POLICE', civ: 'SHIP' },
   colors: { hostile: '#ff4d6d', friend: '#6dff9c', station: '#38e1ff', planet: '#ffb454', other: '#9fb6c8' }
@@ -146,6 +150,36 @@ function overviewPick(s, r) {
   return assistSet(s.as.mode || 'approach', o) ? 'ship' : ''; // no click to move in this build: give the order straight
 }
 
+// the raiders as rows, nearest first
+function overviewHostileRows(s) {
+  const sh = s.ship, v = (sh.body && sh.body.velocity) || { x: 0, y: 0 };
+  return overviewRows(overviewThings(s).filter(t => t.hostile), { x: sh.x, y: sh.y, vx: v.x, vy: v.y }, 0);
+}
+// Enter or a click on a row, and the ship's computer's "fly to" and "hunt": pick the ship, then go there. A far one (OVERVIEW.far) by Cruise to, which hands over to Keep at
+// range on a raider and to the order in force otherwise; a near one by the order in force on it, else Approach (Keep at range on a raider). A raider is fought: s.ov.hunt
+// makes the gun lock (V's) the moment it is in reach, since the lock cannot be held on a ship that is further than GUNLOCK.keep or while the ship cruises.
+// Returns 'cruise', 'order' or '' (nothing done: the ship is not there, the assist cannot take it, or the cruise refused and so did the order).
+function overviewFly(s, r) {
+  if (!overviewPick(s, r)) return '';
+  const o = r.ref, sh = s.ship, hostile = overviewHostile(s, o), a = s.as, ov = s.ov, want = hostile ? 'keep' : 'approach';
+  if (ov) { ov.hunt = hostile ? { ref: o, until: s.time.now + OVERVIEW.huntFor } : null; if (ov.cruise && ov.cruise.ref !== o) overviewCruiseDrop(s); } // a new pick ends the old hunt and the old Cruise to
+  const ordered = !!(a && a.mode && (a.target === o || (a.target && a.target.of === o)));
+  if (overviewFar(Math.hypot(o.x - sh.x, o.y - sh.y))) {
+    if (ov && ov.cruise && ov.cruise.ref === o) return 'cruise'; // already on its way: a second press must not cancel it
+    if (overviewCruiseTo(s, hostile ? 'keep' : '')) return 'cruise';
+  }
+  return ordered || assistSet(want, o) ? 'order' : '';
+}
+// every frame while a hunt is on: the gun lock, once the raider is in reach and the ship is not cruising
+function overviewHuntFrame(s) {
+  const h = s.ov.hunt; if (!h) return;
+  const o = h.ref;
+  if (!o || o.active === false || s.dead || s.leaving || s.time.now > h.until || typeof ASSIST === 'undefined' || !ASSIST.on) { s.ov.hunt = null; return; }
+  if (s.cruising || (s.cr && s.cr.active) || typeof gunlockSet !== 'function') return;
+  if (gunlockTarget() === o) { s.ov.hunt = null; return; }
+  if (Math.hypot(o.x - s.ship.x, o.y - s.ship.y) <= GUNLOCK.reach) gunlockSet(o);
+}
+
 // the one selected thing: what a click in space, a row of this list or the nav list last made the target. { ref, ship } or null.
 // The same rule overviewIsTarget marks a row by: a picked ship first, then the ship an order is on, then the nav body.
 function overviewTarget(s) {
@@ -181,14 +215,14 @@ function overviewCruiseDrop(s) {
   ov.cruise = null; ov.at = 0;
   if (s.cr && s.cr.target && s.cr.target.of === c.ref) { s.cr.target = c.prev || null; if (s.cm) s.cm.nav = s.cr.target; } // the nav target you had comes back
 }
-// start it (or, pressed again while it runs, cancel it). Returns true when it took the ship or cancelled.
-function overviewCruiseTo(s) {
+// start it (or, pressed again while it runs, cancel it). Returns true when it took the ship or cancelled. then: the order to hand over to ('' = the one in force, else Keep at range).
+function overviewCruiseTo(s, then) {
   const t = overviewTarget(s), ov = s.ov, cr = s.cr;
   if (!t || !t.ship || !ov || !cr || s.dead || s.leaving || typeof cruiseEngage !== 'function') return false;
   if (ov.cruise) { const on = cr.active; if (on) cruiseEnd(s, 'cut'); overviewCruiseDrop(s); return on; }
   const o = t.ref, st = overviewOrderState(s), row = overviewThings(s).find(x => x.ref === o);
   if (!ASSIST.on) assistOn(s, true); // the hand-over is an order of the assist
-  ov.cruise = { ref: o, then: st.mine && st.mode ? st.mode : OVERVIEW.cruiseThen, prev: cr.target, started: false };
+  ov.cruise = { ref: o, then: then || (st.mine && st.mode ? st.mode : OVERVIEW.cruiseThen), prev: cr.target, started: false };
   cr.target = { id: 'ov-ship', name: String((row && row.name) || 'the ship'), type: 'ship', x: o.x, y: o.y, r: 0, of: o };
   if (s.cm) s.cm.nav = cr.target; // click to move drops its picked ship when the nav target changes under it: this change is ours
   cruiseEngage(s); // it says why when it will not (too close, hostiles near); inside a mass limit the autopilot flies clear first
@@ -227,7 +261,7 @@ function overviewOrder(s, id) {
 }
 
 function overviewSetup(s) {
-  const O = OVERVIEW, ov = s.ov = { shown: false, keys: false, sel: 0, rows: [], at: 0, press: false, k: null, parts: [], texts: [], btns: [], orders: [], lay: overviewLayout(0, -1) };
+  const O = OVERVIEW, ov = s.ov = { shown: false, keys: false, hunt: null, sel: 0, rows: [], at: 0, press: false, k: null, parts: [], texts: [], btns: [], orders: [], lay: overviewLayout(0, -1) };
   ov.k = s.input.keyboard.addKeys([O.key, O.cruiseKey, 'W', 'S', 'UP', 'DOWN', 'ENTER'].join(','));
   const fix = o => { o.setScrollFactor(0).setVisible(false); ov.parts.push(o); return o; };
   const L = ov.lay, stop = e => { ov.press = true; if (e && e.stopPropagation) e.stopPropagation(); }; // a click on the panel is not a click in space
@@ -239,7 +273,7 @@ function overviewSetup(s) {
   ov.head = fix(s.add.text(L.x + 8, L.y + 5, '', Object.assign({}, style, { color: '#5b7a92' })).setDepth(101));
   for (let i = 0; i < O.max; i++) {
     const t = fix(s.add.text(L.x + 8, L.rowY[i], '', style).setDepth(101));
-    t.setInteractive(); t.on('pointerdown', (p, x, y, e) => { stop(e); if (ov.rows[i]) { ov.sel = i; overviewPick(s, ov.rows[i]); ov.at = 0; } });
+    t.setInteractive(); t.on('pointerdown', (p, x, y, e) => { stop(e); if (ov.rows[i]) { ov.sel = i; overviewFly(s, ov.rows[i]); ov.at = 0; } });
     ov.texts.push(t);
   }
   ov.info = fix(s.add.text(L.x + 12, L.y, '', Object.assign({}, style, { fontSize: '12px', color: '#9fe9ff' })).setDepth(101));
@@ -271,6 +305,7 @@ function overviewFrame(s, time) {
   // C with a far ship selected is Cruise to that ship, not cruise to the nav target: this frame the cruise code (which runs after this) must
   // not see the key. With the list hidden too: the order is the key's, the button only shows it.
   overviewCruiseFrame(s);
+  overviewHuntFrame(s);
   // The key is only looked at here, never taken unless Cruise to is what it does: Phaser hands this list and src/cruise.js the same Key object for C,
   // so taking the press for a ship that is not far (or none) would leave plain cruise to the nav target with a key that never came (the night smoke, tests/cruise.mjs)
   const ck = k[OVERVIEW.cruiseKey];
@@ -293,7 +328,7 @@ function overviewFrame(s, time) {
       if (down) ov.sel = (ov.sel + 1) % ov.rows.length;
       if (up || down) { ov.selRef = ov.rows[ov.sel].ref; sfx('tick'); overviewDraw(s); }
     }
-    if (overviewJustDown(k.ENTER)) { if (ov.rows[ov.sel]) overviewPick(s, ov.rows[ov.sel]); ov.keys = false; ov.at = 0; overviewBuild(s); }
+    if (overviewJustDown(k.ENTER)) { if (ov.rows[ov.sel]) overviewFly(s, ov.rows[ov.sel]); ov.keys = false; ov.at = 0; overviewBuild(s); }
     ['W', 'S', 'UP', 'DOWN'].forEach(n => { if (k[n]) k[n].isDown = false; }); // these keys are the list's: the flight code after this line does not see them held
   }
 }
@@ -337,5 +372,5 @@ function overviewDraw(s) {
     b.setVisible(!!o);
     if (o) b.setPosition(o.x, o.y).setText(o.cap + ' ' + o.label).setColor(o.off ? '#3d566a' : o.on ? '#04101c' : '#9fe9ff').setBackgroundColor(o.off ? '#0b1c29' : o.on ? '#38e1ff' : '#123347');
   });
-  ov.foot.setVisible(true).setPosition(L.x + 8, L.footY).setText(ov.keys ? 'W S choose   Enter target   B hide' : 'click a row to target   B keys');
+  ov.foot.setVisible(true).setPosition(L.x + 8, L.footY).setText(ov.keys ? 'W S choose   Enter fly there   B hide' : 'click a row to fly there   B keys');
 }

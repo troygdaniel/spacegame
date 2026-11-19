@@ -55,7 +55,9 @@ const SC_HOW = [
   'Fuel: the pump on a station\'s upper deck (between the repair bay and the hangar wall) fills the tank; a unit costs credits there. A system with no pump gives no fuel.',
   'Buying a ship: dock at a station whose yard sells it (see Yards), walk to your ship in the hangar and press E, press Y for the yard tab, pick the ship with A and D, press Enter twice. It costs its price in credits and joins your fleet; the F tab lists your ships and Enter boards the one you picked.',
   'Repairs: the repair bay in a station charges credits for each point of hull. Parts: the shop in the hangar sells the next tier of each part.',
-  'Jobs: the MISSIONS terminal in a station (E at it): choose a call with its number key and press E to accept it. Docking: fly slowly close to the station and press L.'
+  'Jobs: the MISSIONS terminal in a station (E at it): choose a call with its number key and press E to accept it. Docking: fly slowly close to the station and press L.',
+  'Trade: there is no goods market. Ore: shoot the rocks of an asteroid belt with Space, collect the ore, dock, and it sells by itself at the station\'s price. Jobs: courier and haul runs from the MISSIONS terminal pay most.',
+  'Flying to things: N lists the places (a station, a planet, a belt, a gate, a signal) and B lists the ships; Enter or a click on a row flies there at once, and a raider is fought. A click on a place of the Tab map flies there too. Pirates: "hunt" flies to the nearest and fights it.'
 ].join('\n');
 
 // the format instruction: how the model writes an action. Only the words are the model's: the game checks the action itself (SC_ACT) and says if it cannot.
@@ -64,7 +66,8 @@ const SC_ACTS = [
   'Reply in exactly this form and nothing else:',
   'SAY: one to four short sentences for the pilot',
   'DO: one action from the list below (leave this line out when the pilot only asked a question)',
-  'The list: plot_route <star> | jump_next_hop | set_destination <place> | travel | dock | land | assist_order <approach|keep|orbit|match|cruise_to> | open_map <star> | open_yard | show_job.',
+  'The list: plot_route <star> | jump_next_hop | set_destination <place> | travel | dock | land | assist_order <approach|keep|orbit|match|cruise_to> | hunt | fly_to <place, ship or star> | open_map <star> | open_sector_map | open_yard | show_job.',
+  'hunt flies to the nearest pirate and fights it; fly_to takes the name of anything in the pilot\'s lists: a place, a ship (the police, the freighter, the MULE) or a star (it starts the first jump there).',
   'Use DO only when the pilot asks you to do something ("plot a course to the Roost", "take me there", "dock"). Name the star or place as STATE writes it. The game checks every action itself, says if it cannot be done and then does nothing: so say only what you are doing, never that it is done.',
   'You can NEVER buy, sell, accept, abandon or refuel: those are the pilot\'s own key presses. When one is the answer, SAY the exact step, the place and the price from STATE and leave DO out (DO: open_yard is allowed: it only opens the screen).'
 ].join('\n');
@@ -218,6 +221,8 @@ function shipcompSystem(s) {
 async function shipcompAsk(text, s) {
   const q = scClean(text, SHIPCOMP.limit.line);
   if (!q) return { error: 'Ask me something.', code: 'empty' };
+  const local = shipcompLocal(q, s); // the obvious words: no model, no key, not counted
+  if (local) { SHIPCOMP.history.push({ q, a: local.text }); if (SHIPCOMP.history.length > 20) SHIPCOMP.history.splice(0, SHIPCOMP.history.length - 20); return { text: local.text, plan: local }; }
   if (!shipcompAvailable()) return { error: 'The ship\'s computer needs a chat key: Settings > Keys.', code: 'nokey' }; // nothing is sent
   if (SHIPCOMP.busy) return { error: 'One moment: I am still on your last question.', code: 'busy' };
   const now = performance.now();
@@ -306,6 +311,51 @@ function scPlace(s, arg) {
   if (kind) return list.find(b => b.type === kind) || null; // cruiseKnown is nearest first
   return list.find(b => scNorm(b.id) === q || scNorm(b.name) === q) || list.find(b => q.length >= 3 && (scNorm(b.name).includes(q) || scNorm(b.id) === q)) || null;
 }
+// ---- hunting and flying to names (card space-game-hunt-pirates) ----
+const scFoe = r => scClean(r.name || r.label || 'pirate', 20).toLowerCase();
+// the plain line when no pirate is in the system: how often they come here, and the nearest charted stars with more
+function scNoPirates() {
+  if (G.deep) return 'There are no pirates in deep space right now. They come at you when the jump ends.';
+  const sys = scTry(() => sysDef(), null), tab = scTry(() => pirateTable(sys), null);
+  const near = scTry(() => galaxySystems(), []).filter(g => g.id !== G.system && (G.known || []).includes(g.id) && (g.danger | 0) >= 2 && distLy(G.system, g.id) !== null)
+    .map(g => ({ g, ly: distLy(G.system, g.id) })).sort((a, b) => a.ly - b.ly).slice(0, 3).map(o => o.g.name + ', ' + scRound(o.ly) + ' ly (danger ' + o.g.danger + ')');
+  return 'No pirates in ' + scSysName(G.system) + ' right now' + (tab && tab.every ? '; a new one turns up about every ' + Math.round(tab.every / 1000) + ' seconds' : '') + '.'
+    + (near.length ? ' Nearest charted stars with more: ' + near.join('; ') + '. G opens the galaxy map.' : ' No charted star is known for pirates yet.');
+}
+// where the pirates are now, as a line (the "where are the pirates" question: it flies nowhere)
+function scPirateWhere(s) {
+  if (scKey(s) !== 'Space' || typeof overviewHostileRows !== 'function' || !s.ov) return 'Pirates show on the radar and the B list in flight. Launch first.';
+  const rows = overviewHostileRows(s);
+  if (!rows.length) return scNoPirates();
+  const r = rows[0];
+  return 'Nearest: a ' + scFoe(r) + ', ' + scNum(r.range / 10) + ' km ' + scCompass(r.ref.x - s.ship.x, r.ref.y - s.ship.y) + (rows.length > 1 ? '; ' + scWord(rows.length) + ' in all' : '') + '. Say hunt and I fly there and fight.';
+}
+// the names the pilot may use, for the line that says one was not found: the nearest places and the ships around
+function scListed(s) {
+  const places = scTry(() => cruiseKnown(s), []).filter(b => b.type !== 'star').slice(0, 4).map(b => b.name);
+  const ships = scTry(() => overviewRows(overviewThings(s), { x: s.ship.x, y: s.ship.y }, 0), []).slice(0, 2).map(r => String(r.name).toLowerCase());
+  return places.length || ships.length ? 'Try: ' + places.concat(ships).join(', ') + '.' : 'Press N for the places.';
+}
+const SC_FOE_RE = /^(pirates?|raiders?|drones?|gunships?|hostiles?|bandits?|enemy|enemies|bad_guys|baddies|wanted(_\w+)?)$/;
+const SC_SHIP_WORDS = { cop: 'police', cops: 'police', police_cruiser: 'police', police_ship: 'police', cruiser: 'police', trader: 'freighter', merchant: 'freighter', civilian: 'freighter', escort: 'mule' };
+const SC_PLACE_WORDS = { home: 'station', base: 'station', port: 'station', space_station: 'station', docking_bay: 'station', asteroids: 'belt', asteroid: 'belt', asteroid_belt: 'belt', asteroid_field: 'belt', rocks: 'belt' };
+// what name means, over everything in the pilot's lists: { kind: 'hunt' | 'ship' (row) | 'place' (b) | 'star' (id) | 'none' }
+function scFlyTarget(s, arg) {
+  let q = scNorm(arg).replace(/^((the|a|an|that|this|nearest|closest|nearby|local|my)_)+/, '');
+  if (SC_FOE_RE.test(q)) return { kind: 'hunt' };
+  q = SC_PLACE_WORDS[q] || q;
+  const rows = scTry(() => overviewRows(overviewThings(s).filter(t => !t.hostile), { x: s.ship.x, y: s.ship.y }, 0), []), w = SC_SHIP_WORDS[q] || q;
+  const row = rows.find(r => scNorm(r.name) === w || scNorm(r.name) === q || (r.kind === 'civ' && /^(ship|freighter)s?$/.test(q)));
+  const b = scPlace(s, q);
+  if (row) return { kind: 'ship', row };
+  // a place named exactly (or by its kind: "the station") beats a star; a star named exactly beats a place that only contains the words (Kestrel the star, Kestrel Outpost the body)
+  const kindWord = /^(station|dock|planet|gate|belt|outpost)$/.test(q), exactPlace = !!b && (kindWord || scNorm(b.name) === q || scNorm(b.id) === q);
+  if (b && exactPlace) return { kind: 'place', b };
+  const star = scStar(q), exactStar = !!star && (scNorm(star) === q || scNorm(SYSTEMS[star].name) === q);
+  if (exactStar) return { kind: 'star', id: star };
+  if (b) return { kind: 'place', b };
+  return star ? { kind: 'star', id: star } : { kind: 'none' };
+}
 // what to buy, in the computer's own words, from the plotter's fix: what you have, what is short, how many rescues that is. Advice only: nothing is bought.
 function scBuyAdvice(need) {
   if (!need || !(need.price > 0)) return '';
@@ -385,6 +435,41 @@ const SC_ACT = {
     const t = s.cr && s.cr.target; if (!t) return scNo('Nothing is selected. Press N and pick a target, or tell me where.');
     return scYes(m.label + ' on ' + (t.name || 'the target') + '.', s2 => { if (!ASSIST.on) assistOn(s2, true); if (!assistSet(mode, null)) toast(s2, 'Not now.', '#ffd37a'); });
   },
+  // the nearest pirate: the Overview's Enter (overviewFly): Cruise to when it is far, Keep at range, and the gun lock the moment it is in reach
+  hunt(s) {
+    if (scKey(s) !== 'Space') return scNo('We are docked, pilot: launch first, then I can hunt.');
+    if (typeof overviewHostileRows !== 'function' || !s.ov || !s.as) return scNo('The ship cannot take that order right now.');
+    const rows = overviewHostileRows(s);
+    if (!rows.length) return scNo(scNoPirates());
+    const r = rows[0];
+    return scYes('Hunting the ' + scFoe(r) + ', ' + scNum(r.range / 10) + ' km ' + scCompass(r.ref.x - s.ship.x, r.ref.y - s.ship.y) + '. ' + (r.range > OVERVIEW.far ? 'Cruising to it, then the guns lock.' : 'The guns lock in range.') + ' Any flight key takes the stick back.', s2 => {
+      const now = overviewHostileRows(s2)[0];
+      if (!now || !overviewFly(s2, now)) toast(s2, 'The ship will not take that order right now.', '#ffd37a');
+    });
+  },
+  // anything in the pilot's lists, by name: a place (N), a ship (B) or a star (G). Each goes the way its panel's Enter goes.
+  fly_to(s, arg) {
+    if (scKey(s) !== 'Space') return scNo('We are docked, pilot: launch first.');
+    if (!arg) return scNo('Fly to what, pilot?');
+    const t = scFlyTarget(s, arg);
+    if (G.deep && (t.kind === 'place' || t.kind === 'none')) return scNo('There is nothing to fly to in deep space.');
+    if (t.kind === 'hunt') return SC_ACT.hunt(s);
+    if (t.kind === 'star') return SC_ACT.jump_next_hop(s, t.id); // the first jump of the way, charged as the galaxy map's Enter does; S or Esc cancels
+    if (t.kind === 'ship') {
+      const r = t.row, name = scClean(r.name, 20).toLowerCase();
+      return scYes('Flying to the ' + name + ', ' + scNum(r.range / 10) + ' km ' + scCompass(r.ref.x - s.ship.x, r.ref.y - s.ship.y) + '. Any flight key takes the stick back.', s2 => { if (!overviewFly(s2, { ref: r.ref })) toast(s2, 'The ship will not take that order right now.', '#ffd37a'); });
+    }
+    if (t.kind === 'place') {
+      const b = t.b, why = scTry(() => navpanelFlyWhy(s, b), ''); if (why) return scNo(why);
+      const order = scTry(() => navpanelOrder(s, b), '');
+      return scYes((order === 'dock' ? 'Docking at ' : order === 'land' ? 'Landing on ' : 'Flying to ') + b.name + ', ' + scKm(s, b) + ' km. Any flight key takes the stick back.', s2 => { navpanelFly(s2, b); });
+    }
+    return scNo('I see nothing called "' + scClean(arg, 30).replace(/^(the|a|an) /i, '') + '" in your lists. ' + scListed(s));
+  },
+  open_sector_map(s) {
+    if (scKey(s) !== 'Space' && scKey(s) !== 'Station') return scNo('The sector map opens from the flight or the station screen.');
+    return scYes('Opening the sector map. A click on a place flies there.', s2 => { if (typeof toggleOverlay === 'function') toggleOverlay(s2.game, 'map'); });
+  },
   open_map(s, arg) {
     if (arg && !scStar(arg)) return scNo('I have no star called "' + scClean(arg, 30) + '" on my charts.');
     const id = scStar(arg) || null;
@@ -421,6 +506,63 @@ function shipcompPlan(raw, s) {
   return plan;
 }
 
+// ---- the obvious words, read by the game itself (card space-game-hunt-pirates) ----
+// Troy typed "fly to the pirates and fight them" and the model answered with words and no act. The plain commands do not need a model: this reads them, turns
+// each into the SAME closed-list action the model would have written (shipcompPlan checks it against the live game and says so when it cannot), and answers
+// "how do I jump" and "how do I trade" with the keys. It runs first, before the key check and the daily count: it costs nothing and works with no chat key.
+// What a phrase means (the whole table; anything else goes to the model):
+//   hunt, patrol, attack/fight/kill/chase/find + pirates, go/fly/head to + pirates ... hunt        the nearest pirate, fought
+//   fly/go/head/travel/take me/set course (to|for|toward) <name>, approach/visit <name>    fly_to    a place, a ship or a star by the name the lists show
+//   jump to <star>                                                                         fly_to    a star: the first jump of the way
+//   dock, go home, take me home, return                                                    dock
+//   land                                                                                   land (on the planet)
+//   open/show the map, galaxy map | sector map, local map                                  open_map | open_sector_map
+//   where are the pirates                                                                  a line, no order
+//   how do I jump, how do I trade (also: how do I make money, sell ore)                    the keys, in words
+const SC_QUESTION = /^(how|what|why|when|who|which|where|is|are|does|do|did|can i|could i)\b/;
+const SC_NO_FILLER = /^(?:(?:please|hey|ok|okay|computer|athena|can you|could you|would you|will you|i want to|i wanna|i need to|i would like to|i'd like to|lets|let's|go ahead and|try to)\s+)+/;
+function scJumpHow(s) {
+  const docked = scKey(s) === 'Station', c = typeof JUMP !== 'undefined' ? JUMP : { charge: 4000 };
+  return (docked ? 'Launch first: jumps start from space. ' : '') + 'To jump: press G for the galaxy map, pick a star with the arrow keys or a click, then press Enter. The jump charges for ' + Math.round(c.charge / 1000)
+    + ' seconds; Esc or S cancels. It needs the star in jump range, the fuel for it (the pump is on a station\'s upper deck) and no pirate close by. Or tell me "fly to" and a star.';
+}
+function scTradeHow() {
+  return 'There is no goods market. Ore: shoot the rocks of an asteroid belt with Space, collect the ore, then dock (slow, close in, press L) and it sells itself. Jobs: at a station\'s MISSIONS terminal press E, choose a call with its number key and press E to accept; courier and haul runs pay most.';
+}
+// the phrase as { act, arg } (an action of the closed list), { say } (an answer in words) or null (not one of the obvious ones: the model reads it)
+function shipcompIntent(text, s) {
+  let q = String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9' -]+/g, ' ').replace(/\s+/g, ' ').trim();
+  q = q.replace(SC_NO_FILLER, '').replace(/\s+(please|now|right now|for me|already)$/, '').trim();
+  if (!q) return null;
+  const FOE = '(?:pirates?|raiders?|drones?|gunships?|hostiles?|bandits?|enemy|enemies|bad guys|baddies|wanted ships?)', ART = '(?:(?:the|a|an|some|any|all|those|these|nearest|closest|nearby|local)\\s+)*';
+  if (SC_QUESTION.test(q)) {
+    if (/\bjump(?:ing|s)?\b|hyperspace|another (?:star|system)/.test(q)) return { say: scJumpHow(s) };
+    if (/\b(?:trade|trading|make money|earn (?:money|credits)|get (?:money|credits|rich)|sell (?:my |the )?ore|selling ore|mine|mining)\b/.test(q) && !/\b(?:ship|part)s?\b/.test(q)) return { say: scTradeHow() };
+    if (new RegExp('^where (?:are|is) ' + ART + FOE + '\\b').test(q)) return { say: scPirateWhere(s) };
+    return null; // a question about anything else is the model's
+  }
+  if (/^(?:jump|jump now|make the jump|go on|jump on)$/.test(q)) return SHIPCOMP.route || scTry(() => missionGoalSystem(), '') ? { act: 'jump_next_hop', arg: '' } : { say: scJumpHow(s) }; // a course is plotted: its first jump; none: how it is done
+  if (new RegExp('^(?:hunt|patrol|go hunting|go patrolling|start hunting|start patrolling)\\b').test(q)) return { act: 'hunt', arg: '' };
+  if (new RegExp('\\b(?:hunt|attack|fight|engage|kill|destroy|shoot(?: at)?|battle|chase|intercept|find|seek|go after|fly to|fly at|go to|head to|head for|take me to|get me to|travel to|approach|charge)\\s+' + ART + FOE + '\\b').test(q)) return { act: 'hunt', arg: '' };
+  if (/^(?:attack|fight|engage|kill|destroy|shoot|battle|chase|intercept)(?: them| it| him| nearest| closest)?$/.test(q)) return { act: 'hunt', arg: '' };
+  if (/^(?:dock|go home|take me home|go back home|return(?: home| to base| to the station)?|come home|dock at the station|dock at home)$/.test(q)) return { act: 'dock', arg: '' };
+  if (/^(?:land|land on the planet|land on the surface|touch down)$/.test(q)) return { act: 'land', arg: '' };
+  if (/^(?:land on|land at|dock at|dock with|dock in) (.+)$/.test(q)) return { act: 'fly_to', arg: /^(?:land on|land at|dock at|dock with|dock in) (.+)$/.exec(q)[1] };
+  if (/\b(?:sector|local|system|tab) map\b/.test(q) && /^(?:open|show|bring up|pull up|view|see|look at|check|display)?\s*(?:me )?(?:the |a )?(?:sector|local|system|tab) map$/.test(q)) return { act: 'open_sector_map', arg: '' };
+  if (/^(?:open|show|bring up|pull up|view|see|look at|check|display)?\s*(?:me )?(?:the |a )?(?:galaxy |star |jump )?map$/.test(q)) return { act: 'open_map', arg: '' };
+  let m = /^(?:fly|go|head|travel|navigate|steer|move|sail|burn|run|take|bring|get|set (?:a )?course|course)\b(?: me| us| the ship)?(?: right| straight| back| over| out| up| down)?\s+(?:to|for|toward|towards|into|near|at)\s+(.+)$/.exec(q)
+    || /^(?:jump|warp)(?: me| us)?\s+(?:to|toward|towards|into)\s+(.+)$/.exec(q) || /^(?:approach|visit|follow|reach)\s+(.+)$/.exec(q);
+  if (m) return { act: 'fly_to', arg: m[1] };
+  return null;
+}
+// the plan for such a phrase, or null: the same shape shipcompPlan gives (text, action, run, refused), so the box and the voice treat it as any answer
+function shipcompLocal(text, s) {
+  const it = scTry(() => shipcompIntent(text, s), null); if (!it) return null;
+  if (it.say) return { text: scReply(it.say), action: '', arg: '', run: null, refused: false, dropped: '', local: true };
+  const plan = shipcompPlan('DO: ' + it.act + (it.arg ? ' ' + it.arg : ''), s); plan.local = true;
+  return plan.text ? plan : null;
+}
+
 // ---- the box: a scene over the game, the game paused underneath (like the Journal) ----
 function shipcompOpen(game) {
   if (!shipcompAvailable() || game.scene.isActive('ShipComputer')) return false;
@@ -433,8 +575,19 @@ function shipcompSubmit(text, game) {
   game = game || window.game;
   const sc = game && game.scene.getScene('ShipComputer');
   if (sc && game.scene.isActive('ShipComputer')) { sc.ask(text); return true; }
+  if (game && !shipcompAvailable() && shipcompQuick(text, game)) return true; // no chat key: a plain command still runs, without the box
   SHIPCOMP.queued = scClean(text, SHIPCOMP.limit.line);
   if (!game || !shipcompOpen(game)) { SHIPCOMP.queued = ''; return false; }
+  return true;
+}
+// a plain command (shipcompLocal) with no box and no key: said and shown as a toast, and run at once. false when the words are not one, or the game is not in flight or at a station.
+function shipcompQuick(text, game) {
+  const s = game.scene.getScenes(true).find(sc => sc.scene.key === 'Space' || sc.scene.key === 'Station');
+  if (!s || s.leaving || s.dead || s.panel || s.talk || s.shopOpen || s.jmp || (s.cr && s.cr.navOpen)) return false;
+  const plan = shipcompLocal(scClean(text, SHIPCOMP.limit.line), s); if (!plan) return false;
+  try { toast(s, plan.text, plan.refused ? '#ffb454' : '#9fe9ff'); } catch (e) { /* the voice still says it */ }
+  shipcompSay(plan.text, () => {});
+  if (plan.run) { try { plan.run(s); } catch (e) { /* the game says when it cannot */ } }
   return true;
 }
 class ShipComputer extends Phaser.Scene {
