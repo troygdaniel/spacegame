@@ -56,7 +56,7 @@ console.log('the plan: sparse, slow, and never loud');
   check('never more than ten notes sounding at once (six of a chord changing over and a few bells)', r.every(x => x.voices <= 10), r.map(x => x.voices).join(' '));
   const cap = J('MUSIC.cap'), level = J('MUSIC.level');
   check(`the loudest instant of eight seeds, ten minutes each, counting every note at its full velocity for its whole life: ${Math.max(...r.map(x => x.peak)).toFixed(2)} on the bus, ${(Math.max(...r.map(x => x.peak)) * level).toFixed(2)} after it, under the cap of ${cap} at volume 1`, r.every(x => x.peak * level <= cap));
-  check('and at the default volume (30%) that is under 0.1 of full scale, about 20 dB down', r.every(x => x.peak * level * J('MUSIC.vol') <= 0.1));
+  check('and at the default volume (70%) that is under 0.21 of full scale, about 14 dB down, the loudest instant there is', r.every(x => x.peak * level * J('MUSIC.vol') <= 0.21), (Math.max(...r.map(x => x.peak)) * level * J('MUSIC.vol')).toFixed(3));
   check('every velocity is inside the mood\'s bounds, so no note is louder than its peak', J(`(() => { const m = MUSIC.moods.space; const { notes } = __play(3, 10, 0.4); return notes.every(n => n.vel >= (n.kind === 'pad' ? m.padVel[0] : m.bellVel[0] * 0.8) - 1e-9 && n.vel <= (n.kind === 'pad' ? m.padVel[1] : m.bellVel[1]) + 1e-9); })()`));
   check('the peak of one note is small: a pad 0.10 and a bell 0.07 at velocity 1', J('MUSIC.peak.pad') <= 0.1 && J('MUSIC.peak.bell') <= 0.07);
   const gaps = J(`(() => { const { notes } = __play(4, 20, 0.4); const b = notes.filter(n => n.kind === 'bell').map(n => n.at).sort((x, y) => x - y); const d = []; for (let i = 1; i < b.length; i++) d.push(b[i] - b[i - 1]); return { longest: Math.max(...d), shortest: Math.min(...d) }; })()`);
@@ -115,7 +115,7 @@ g.run(`
   function __reset(o) {
     o = o || {}; AC = null; __ac = null; __made = 0; if (MUS.bus) MUS.bus = null;
     Object.assign(AUD, { master: null, noise: null, amb: null, eng: null, cru: null, rev: null, pool: null, sendNow: undefined, gesture: o.gesture !== false, ducked: false });
-    G.muted = !!o.muted; G.volume = o.volume === undefined ? 1 : o.volume; MUSIC.on = o.on !== false; MUSIC.vol = o.vol === undefined ? 0.3 : o.vol;
+    G.muted = !!o.muted; G.volume = o.volume === undefined ? 1 : o.volume; MUSIC.on = o.on !== false; MUSIC.vol = o.vol === undefined ? 0.7 : o.vol;
     MUS.scene = o.scene === undefined ? 'Space' : o.scene; MUS.lastPreview = 0; VOICE.playing = false;
   }
   function __run(secs, step) { for (let t = 0; t < secs; t += step) { if (__ac) __ac.currentTime += step; musicTick(); } }
@@ -138,25 +138,26 @@ console.log('the engine: the Space scene starts it');
   check('notes are scheduled: oscillators exist, two for each pad note and three for each bell', b.osc > 0 && b.osc === J('__bus().played.reduce((s, x) => s + (x.kind === "pad" ? 2 : 3), 0)'), b.osc + ' oscillators for ' + b.played + ' notes');
   check('each oscillator is started on the audio clock, not before it, and told when to stop; none starts a note in the past', J(`__ac.nodes.filter(n => n.kind === 'osc').every(n => n.startAt >= 10 && n.stopAt > n.startAt)`));
   check('every oscillator\'s pitch is the plan\'s: a note\'s own pitch (or its detune, or a partial of a bell)', J(`(() => { const ratios = [1, 1.003, 2, 2.76]; return __ac.nodes.filter(n => n.kind === 'osc').every(o => { const s = musicSemi(o.frequency.value / ratios.find(r => { const f = o.frequency.value / r, x = musicSemi(f); return Math.abs(x - Math.round(x)) < 1e-6; })); return Math.abs(s - Math.round(s)) < 1e-6; }); })()`));
-  check('the bus fades in: its gain starts at 0 and the target is the level times the music volume (0.4 x 0.3)', J('__bus().out.gain.value') === 0 && Math.abs(J('__target()') - 0.4 * 0.3) < 1e-9, J('__target()'));
+  check('the bus fades in: its gain starts at 0 and the target is the level times the music volume (0.6 x 0.7)', J('__bus().out.gain.value') === 0 && Math.abs(J('__target()') - J('MUSIC.level') * 0.7) < 1e-9, J('__target()'));
 }
 
 console.log('the engine: the volume, the pause, the ship voice');
 {
   g.run(`__reset(); __run(5, 0.4);`);
   const at = () => J('__target()');
-  check('music volume 100%: the bus follows it up (0.4)', (g.run(`musicSetVol(1); __run(1, 0.4);`), Math.abs(at() - 0.4) < 1e-9), at());
-  check('music volume 50%: 0.2', (g.run(`musicSetVol(0.5); __run(1, 0.4);`), Math.abs(at() - 0.2) < 1e-9));
+  const L = J('MUSIC.level');
+  check('music volume 100%: the bus follows it up (the level, 0.6)', (g.run(`musicSetVol(1); __run(1, 0.4);`), Math.abs(at() - L) < 1e-9), at());
+  check('music volume 50%: half of that', (g.run(`musicSetVol(0.5); __run(1, 0.4);`), Math.abs(at() - L * 0.5) < 1e-9));
   g.run(`musicSetVol(0.5); AUD.ducked = true; __run(1, 0.4);`);
-  check('the pause (audio.js ducks): the music goes down to 30% of that, quickly', Math.abs(at() - 0.2 * 0.3) < 1e-9 && J(`__bus().out.gain.ev.filter(x => x[0] === 'target').pop()[3]`) <= 0.3, at());
+  check('the pause (audio.js ducks): the music goes down to 30% of that, quickly', Math.abs(at() - L * 0.5 * 0.3) < 1e-9 && J(`__bus().out.gain.ev.filter(x => x[0] === 'target').pop()[3]`) <= 0.3, at());
   g.run(`AUD.ducked = false; __run(1, 0.4);`);
-  check('and back when the pause ends, slowly (a time constant over a second)', Math.abs(at() - 0.2) < 1e-9 && J(`__bus().out.gain.ev.filter(x => x[0] === 'target').pop()[3]`) >= 1);
+  check('and back when the pause ends, slowly (a time constant over a second)', Math.abs(at() - L * 0.5) < 1e-9 && J(`__bus().out.gain.ev.filter(x => x[0] === 'target').pop()[3]`) >= 1);
   g.run(`VOICE.playing = true; __run(1, 0.4);`);
-  check('the ship\'s voice (VOICE.playing): the music goes down to 40%', Math.abs(at() - 0.2 * 0.4) < 1e-9, at());
+  check('the ship\'s voice (VOICE.playing): the music goes down to 40%', Math.abs(at() - L * 0.5 * 0.4) < 1e-9, at());
   g.run(`AUD.ducked = true; __run(1, 0.4);`);
-  check('the pause and the voice together: the lower of the two, not both', Math.abs(at() - 0.2 * 0.3) < 1e-9, at());
+  check('the pause and the voice together: the lower of the two, not both', Math.abs(at() - L * 0.5 * 0.3) < 1e-9, at());
   g.run(`AUD.ducked = false; VOICE.playing = false; __run(1, 0.4);`);
-  check('both over: back to the full level', Math.abs(at() - 0.2) < 1e-9);
+  check('both over: back to the full level', Math.abs(at() - L * 0.5) < 1e-9);
   check('the music never touches the master gain itself: M and the game\'s volume stay the game\'s (the bus feeds the master, nothing writes to it)', !/AUD\.master\.gain/.test(read('src/music.js')) && !/G\.volume\s*=/.test(read('src/music.js')) && !/G\.muted\s*=/.test(read('src/music.js')));
 }
 
@@ -197,7 +198,7 @@ console.log('the engine: the preview, and the scenes it listens to');
   check('the preview with the music off or muted: nothing is made', (g.run(`MUSIC.on = false;`), J('musicPreview()') === false) && (g.run(`MUSIC.on = true; G.muted = true;`), J('musicPreview()') === false) && J('__ac === null || __ac.made.osc === 0'));
   g.run(`__reset({ scene: null }); window.__t0 = 0;`);
   const p = J(`(() => { const ok = musicPreview(); const bells = __ac.nodes.filter(n => n.kind === 'osc'); const bus = __ac.nodes.filter(n => n.kind === 'gain').find(n => n.to.includes(AUD.master)); return { ok, osc: bells.length, level: bus ? bus.gain.value : null, again: musicPreview() }; })()`);
-  check('a press in Settings plays two bells (six oscillators) on a bus of their own at the level the music will have (0.4 x 0.3), into the master gain', p.ok && p.osc === 6 && Math.abs(p.level - 0.12) < 1e-9, JSON.stringify(p));
+  check('a press in Settings plays two bells (six oscillators) on a bus of their own at the level the music will have (the level x the volume), into the master gain', p.ok && p.osc === 6 && Math.abs(p.level - J('MUSIC.level') * 0.7) < 1e-9, JSON.stringify(p));
   check('and a second press within a third of a second plays nothing (a held button does not pile bells up)', p.again === false);
   const sc = J(`(() => {
     const on = {}, fake = key => ({ scene: { key }, events: { on: (e, f) => { (on[key] = on[key] || {})[e] = f; } } });
@@ -226,19 +227,19 @@ console.log('Settings > Sound: the Music row');
   const store = new Map();
   const peek = (st, e) => JSON.parse(nodeGame({ store: st }).run(`JSON.stringify(${e})`));
   let r = peek(store, '({ on: MUSIC.on, vol: MUSIC.vol })');
-  check('first run: music on, volume 30% (low)', r.on === true && r.vol === 0.3, JSON.stringify(r));
+  check('first run: music on, volume 70% (30% was lost under the drone and the engine)', r.on === true && r.vol === 0.7, JSON.stringify(r));
   const g2 = nodeGame({ store }); g2.run('musicSetOn(false); musicSetVol(0.7);');
   r = peek(store, '({ on: MUSIC.on, vol: MUSIC.vol })');
   check('the switch and the volume are kept in this browser (localStorage), and come back on a reload', r.on === false && r.vol === 0.7, JSON.stringify(r) + ' ' + JSON.stringify([...store]));
   check('not in the save: the save file has no music field', !/music/i.test(read('src/meta.js')));
   store.set('longhaul.music.vol', 'loud'); store.set('longhaul.music.on', 'maybe');
   r = peek(store, '({ on: MUSIC.on, vol: MUSIC.vol })');
-  check('a stored value that is not a number or not 0 or 1 is ignored: the defaults', r.on === true && r.vol === 0.3, JSON.stringify(r));
+  check('a stored value that is not a number or not 0 or 1 is ignored: the defaults', r.on === true && r.vol === 0.7, JSON.stringify(r));
   store.set('longhaul.music.vol', '9');
   check('a volume out of range is clamped to 100%', peek(store, 'MUSIC.vol') === 1);
   g.run(`musicSetVol(0.34)`); check('a volume is in tenths (0.34 is 0.3)', J('MUSIC.vol') === 0.3);
   g.run(`musicSetVol(-1)`); check('and never under 0', J('MUSIC.vol') === 0);
-  g.run(`musicSetVol(0.3); musicSetOn(true)`);
+  g.run(`musicSetVol(0.7); musicSetOn(true)`);
   // the real draw_sound and soundRefresh on a stand-in scene: what is drawn, where, and what a press does
   g.run(`
     window.__draw = (() => {
@@ -254,13 +255,13 @@ console.log('Settings > Sound: the Music row');
       return { fake, rec };
     })();
   `);
-  const row = J(`(() => { const { rec } = __draw; const mu = rec.buttons.find(b => /^Music/.test(b.l)); return { label: rec.label.some(l => l.s === 'MUSIC'), on: mu && mu.l, pct: rec.txt.find(t => /^\\d+%$/.test(t.s) && t.x > -100 && t.y < -100) && true, note: rec.txt.some(t => /never the same twice/.test(t.s)), buttons: rec.buttons.map(b => b.l) }; })()`);
+  const row = J(`(() => { const { rec } = __draw; const mu = rec.buttons.find(b => /^Music/.test(b.l)); return { label: rec.label.some(l => l.s === 'MUSIC'), on: mu && mu.l, pct: rec.txt.find(t => /^\\d+%$/.test(t.s) && t.x > -100 && t.y < -100) && true, note: rec.txt.some(t => /Music is made by the game/.test(t.s)), buttons: rec.buttons.map(b => b.l) }; })()`);
   check('Sound has a MUSIC label, a Music: ON button and the sentence of content/text/ui.md (music.use) under the row', row.label && row.on === 'Music: ON' && row.note, JSON.stringify(row));
   g.run(`(() => { const { rec } = __draw; rec.buttons.filter(b => b.l === '-')[1].fn(); })()`);
-  check('the - beside it takes a tenth off the music volume (not the master volume)', J('MUSIC.vol') === 0.2 && J('G.volume') === 1);
+  check('the - beside it takes a tenth off the music volume (not the master volume)', J('MUSIC.vol') === 0.6 && J('G.volume') === 1, J('MUSIC.vol'));
   g.run(`(() => { const { rec } = __draw; rec.buttons.filter(b => b.l === '+')[1].fn(); rec.buttons.filter(b => b.l === '+')[1].fn(); })()`);
-  check('the + puts it back, a tenth at a time (twice: 0.4)', J('MUSIC.vol') === 0.4 && J('G.volume') === 1, J('MUSIC.vol'));
-  g.run(`musicSetVol(0.3); (() => { const { rec } = __draw; rec.buttons.find(b => /^Music/.test(b.l)).fn(); })()`);
+  check('the + puts it back, a tenth at a time (twice: 0.8)', J('MUSIC.vol') === 0.8 && J('G.volume') === 1, J('MUSIC.vol'));
+  g.run(`musicSetVol(0.7); (() => { const { rec } = __draw; rec.buttons.find(b => /^Music/.test(b.l)).fn(); })()`);
   check('the Music button switches it off (label Music: OFF, and the percentage says OFF), and on again', J('MUSIC.on') === false && J(`__draw.rec.buttons.find(b => /^Music/.test(b.l)).l`) === 'Music: OFF' && J(`__draw.rec.txt.some(t => t.s === 'OFF')`) && (g.run(`__draw.rec.buttons.find(b => /^Music/.test(b.l)).fn()`), J('MUSIC.on') === true));
   const ys = J(`(() => { const { rec, fake } = __draw; return Math.max(...rec.txt.map(t => t.y), ...rec.buttons.map(b => b.y), ...rec.label.map(l => l.y)) - fake.by; })()`);
   check(`every row of Sound is still on the panel: the lowest is ${ys} px under the body's top, the hint line is at 560 and the panel ends at 582`, ys <= 520, ys);

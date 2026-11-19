@@ -13,13 +13,14 @@
 //   the engine   musicTick() every 400 ms (musicInstall): wants the music or not (the scene, the switch, volume, mute), starts a bus into the
 //                master gain of audio.js (so the volume and the mute of the game apply), feeds the plan's notes to oscillators scheduled ahead on
 //                the audio clock, ducks under the pause (AUD.ducked) and under the ship's voice (VOICE.playing), and fades out when it stops.
-// Settings > Sound has its own Music row: On/Off and a volume in tenths (default on, 30%), kept in this browser (localStorage) like the ship
-// voice choice, not in the save. The row's sentence is content/text/ui.md's (music.use).
+// Settings > Sound has its own Music row: On/Off and a volume in tenths (default on, 70%), kept in this browser (localStorage) like the ship
+// voice choice, not in the save. The row's sentence is content/text/ui.md's (music.use). The Effects volume beside it, and the way the drone and the
+// effects ease off while the music plays, are src/audio.js's (FX): the music only says it is playing (MUS.bus).
 
 const MUSIC = {
   store: { on: 'longhaul.music.on', vol: 'longhaul.music.vol' },
-  on: true, vol: 0.3,              // Settings > Sound: the switch and the volume, 0 to 1 in tenths. Default low
-  level: 0.4,                      // the music bus at volume 1, before the master gain: with the loudest instant of the plan under cap
+  on: true, vol: 0.7,              // Settings > Sound: the switch and the volume, 0 to 1 in tenths. 30% was lost under the drone and the engine (Troy, the first listen)
+  level: 0.6,                      // the music bus at volume 1, before the master gain: with the loudest instant of the plan under cap
   cap: 0.3,                        // the most the notes can add up to after the bus at volume 1 (about 10 dB under full scale); tests/music.mjs
   send: 0.7,                       // how much of the bus goes to the shared reverb (the space drone sends 0.3): the music is mostly room
   ahead: 4,                        // seconds of notes scheduled ahead of the audio clock

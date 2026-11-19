@@ -211,14 +211,18 @@ class Settings extends Phaser.Scene {
     zone.on('pointerdown', p => this.setVolume(Phaser.Math.Clamp((p.x - (W / 2 + bx + 52)) / 404, 0, 1))); // p.x is in game pixels, whatever the window size
     this.body.add(zone);
     this.label(bx, by + 92, 'SOUND');
-    this.slots.mute = this.button(bx, by + 122, 160, '', () => this.toggleMute());
-    this.txt(bx + 176, by + 122, 'M does the same', 13, '#5b7a92');
-    // the music (src/music.js): its own switch and volume, in tenths, to the right of the mute; a press plays two bells at the new level
-    this.label(bx + 430, by + 92, 'MUSIC');
-    this.slots.musicOn = this.button(bx + 430, by + 122, 130, '', () => { musicSetOn(!MUSIC.on); musicPreview(); this.soundRefresh(); });
-    this.button(bx + 572, by + 122, 36, '-', () => this.adjustMusic(-1), { size: 18 });
-    this.slots.musicPct = this.txt(bx + 646, by + 122, '', 16, '#ffd37a', { ox: 0.5, style: { fontStyle: 'bold' } });
-    this.button(bx + 684, by + 122, 36, '+', () => this.adjustMusic(1), { size: 18 });
+    this.slots.mute = this.button(bx, by + 122, 150, '', () => this.toggleMute());
+    // the music (src/music.js): its own switch and volume, in tenths; then the effects volume (src/audio.js FX): every game sound but the voice and the music.
+    // A press on either plays its own sound at the new level (two bells; a click)
+    this.label(bx + 190, by + 92, 'MUSIC');
+    this.slots.musicOn = this.button(bx + 190, by + 122, 110, '', () => { musicSetOn(!MUSIC.on); musicPreview(); this.soundRefresh(); });
+    this.button(bx + 308, by + 122, 32, '-', () => this.adjustMusic(-1), { size: 18 });
+    this.slots.musicPct = this.txt(bx + 372, by + 122, '', 16, '#ffd37a', { ox: 0.5, style: { fontStyle: 'bold' } });
+    this.button(bx + 404, by + 122, 32, '+', () => this.adjustMusic(1), { size: 18 });
+    this.label(bx + 476, by + 92, 'EFFECTS');
+    this.button(bx + 476, by + 122, 32, '-', () => this.adjustFx(-1), { size: 18 });
+    this.slots.fxPct = this.txt(bx + 540, by + 122, '', 16, '#ffd37a', { ox: 0.5, style: { fontStyle: 'bold' } });
+    this.button(bx + 572, by + 122, 32, '+', () => this.adjustFx(1), { size: 18 });
     this.txt(bx, by + 146, uiText('music.use'), 12, '#5b7a92', { oy: 0, style: { wordWrap: { width: bw } } }); // two lines under the row, above the rule
     const Y = 24; // the rows from here down sit this much lower than before the music row
     this.line(by + 166 + Y);
@@ -244,6 +248,7 @@ class Settings extends Phaser.Scene {
     s.mute.set(G.muted ? 'Sound: MUTED' : 'Sound: ON').color(G.muted ? '#ff4d6d' : '#6dff9c').mark(!G.muted);
     s.musicOn.set(MUSIC.on ? 'Music: ON' : 'Music: OFF').color(MUSIC.on ? '#6dff9c' : '#8fb4c9').mark(MUSIC.on);
     s.musicPct.setText(MUSIC.on ? Math.round(MUSIC.vol * 100) + '%' : 'OFF').setColor(MUSIC.on ? '#ffd37a' : '#5b7a92');
+    s.fxPct.setText(Math.round(FX.vol * 100) + '%').setColor(FX.vol > 0 ? '#ffd37a' : '#5b7a92');
     const st = voiceStatus();
     // the button says what the player will hear, not only the switch: on with no key (or a rejected one) is not ON, it is waiting for a key
     const waits = VOICE.on && st !== 'ON';
@@ -257,6 +262,7 @@ class Settings extends Phaser.Scene {
   setVolume(v) { G.volume = Math.min(1, Math.max(0, Math.round(v * 10) / 10)); if (G.volume > 0 && G.muted) G.muted = false; saveGame(); beep(660, 0.08, 'triangle', 0.05); this.soundRefresh(); }
   adjustVolume(dir) { this.setVolume(G.volume + dir * 0.1); }
   adjustMusic(dir) { musicSetVol(MUSIC.vol + dir * 0.1); musicPreview(); this.soundRefresh(); }
+  adjustFx(dir) { fxSetVol(FX.vol + dir * 0.1); beep(660, 0.08, 'triangle', 0.05); this.soundRefresh(); }
   toggleMute() { G.muted = !G.muted; saveGame(); if (!G.muted) beep(660, 0.08, 'triangle', 0.05); this.soundRefresh(); }
   stepVoice(d) {
     const i = Math.max(0, VOICE_CHOICES.findIndex(x => x[0] === VOICE.voice));
