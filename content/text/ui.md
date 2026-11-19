@@ -91,3 +91,4 @@ To translate, change the text column here, or copy this file to a name after ui 
 | listen.use | Hold {key} in space or in a station and speak; let go and your words go to the ship's computer, as if you had typed them. The microphone is open only while the key is held. Nothing is recorded or kept. |
 | listen.cost | Each hold sends its sound to Deepgram, on your own account, and may cost you money. This session may listen for {minutes} minutes. |
 | listen.hint | Run node tools/serve.mjs and open http://127.0.0.1:8787/ : the browser then asks for the microphone once. Opened from a file it may ask every time, or refuse. |
+| music.use | Music made by the game as you fly, never the same twice. It follows the master volume and M, and steps back when the ship speaks. |
