@@ -19,7 +19,8 @@ One JSON line per event, `{ t: ms since the session began, s: session id, ev: na
 | `buy`, `sell`, `credits` | a deal (what, and the credits it moved); credits that moved with no deal (fees, finds) |
 | `death` | what killed the ship (the nearest raider's kind) |
 | `counts` | every minute: how many times each ACTION was used (`key:flight: thrust`, `click`, `voice`) |
-| `computer`, `computer_plan`, `npc_chat` | the ship computer asked (ms, ok, code) and which action of its closed list it chose; the bar chat (ms, ok, code) |
+| `computer`, `computer_plan`, `npc_chat` | the ship computer asked (ms, ok, code, and `why` for an empty reply: length, refusal, filter or blank) and which action of its closed list it chose; the bar chat (ms, ok, code, why) |
+| `listen` | a hold of the voice key (U), one line a step: `start`, `open` (ms the microphone took), `release` (seconds held, short, silent), `clip` (bytes), `heard` (ms, `chars` of the transcript: 0 is empty) and `end` (`why`: `sent`, or the plain line shown: tap, silent, nothing, denied, nokey, slow...). Counts and times, never the words |
 | `idle` | **no input for 20 s or more**: how long, and what was on screen (scene, panel, call, system, flying itself). The best sign of confusion |
 | `fps_dip` | under 30 frames a second for 2 s or more |
 | `stall`, `tab` | the page froze (no tick for 5 s); the tab was hidden or shown |

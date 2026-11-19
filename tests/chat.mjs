@@ -62,7 +62,7 @@ const call = async (t, req = REQ) => {
     check('OpenAI: the call goes to api.openai.com/v1/chat/completions', c1.url === 'https://api.openai.com/v1/chat/completions', c1.url);
     check('OpenAI: the key is only in the Authorization header', c1.headers.Authorization === 'Bearer ' + KEY_OPENAI && !c1.url.includes(KEY_OPENAI) && !c1.body.includes(KEY_OPENAI));
     const b1 = JSON.parse(c1.body);
-    check('OpenAI: system message first, then the turns, with max_completion_tokens', b1.messages[0].role === 'system' && b1.messages[0].content === 'You are JUNO.' && b1.messages[1].role === 'user' && b1.max_completion_tokens === 80 && b1.model === (await t.ev('CHAT_PROVIDERS.openai.model')), c1.body);
+    check('OpenAI: system message first, then the turns, with max_completion_tokens', b1.messages[0].role === 'system' && b1.messages[0].content === 'You are JUNO.' && b1.messages[1].role === 'user' && b1.max_completion_tokens === 80 + (await t.ev('CHAT_ROOM')) && b1.model === (await t.ev('CHAT_PROVIDERS.openai.model')), c1.body);
     check('the call counter counts it', (await t.ev('CHAT.calls')) === 1);
 
     // Anthropic second
@@ -339,7 +339,7 @@ const call = async (t, req = REQ) => {
     await elKey('Escape');
     await t.waitFor(`__calls.length === ${nBefore + 1}`, 15000, 'the summary call');
     const sb = JSON.parse(await t.ev(`__calls[${nBefore}].body`));
-    check('closing sends one summary call: JSON-only rules, old notes in a memory block, the conversation as data', /Return JSON only/.test(sb.messages[0].content) && /<memory>/.test(sb.messages[0].content) && /PILOT: My name is Troy/.test(sb.messages[1].content) && sb.max_completion_tokens === 300);
+    check('closing sends one summary call: JSON-only rules, old notes in a memory block, the conversation as data', /Return JSON only/.test(sb.messages[0].content) && /<memory>/.test(sb.messages[0].content) && /PILOT: My name is Troy/.test(sb.messages[1].content) && sb.max_completion_tokens === 300 + (await t.ev('CHAT_ROOM')));
     await t.waitFor(`G.chat.npcs.juno.notes === 'Careful pilot named Troy; polite, asks about prices.'`, 10000, 'notes applied');
     const mem = await t.ev('JSON.stringify(G.chat)');
     check('the summary fills the notes, the name, the mood and the last line', /"name":"Troy"/.test(mem) && /"notes":"Name Troy\. Flies carefully\."/.test(mem) && /"mood":"warm"/.test(mem) && /"last":"Come back alive, Troy\."/.test(mem), mem);

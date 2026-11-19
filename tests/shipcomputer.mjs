@@ -19,11 +19,12 @@ const KEY = 'sk-test-' + 'o'.repeat(28); // built from pieces: tests/hygiene.mjs
 
 // the mocked fetch (as tests/chat.mjs does): nothing here ever calls a real model
 g.run(`
-  window.__calls = []; window.__status = 200; window.__fail = null; window.__reply = 'Take the Kite. It is sold at Halcyon Station for 4,500 cr.'; window.__hold = null;
+  window.__calls = []; window.__status = 200; window.__fail = null; window.__reply = 'Take the Kite. It is sold at Halcyon Station for 4,500 cr.'; window.__hold = null; window.__queue = [];
   window.fetch = (url, opts) => {
     __calls.push({ url: String(url), headers: (opts && opts.headers) || {}, body: opts && opts.body });
     if (__fail) return Promise.reject(Object.assign(new TypeError('Failed to fetch'), { name: __fail }));
-    const done = () => new Response(JSON.stringify(__status === 200 ? { choices: [{ message: { role: 'assistant', content: __reply } }] } : { error: { message: 'mock error ' + __status } }), { status: __status, headers: { 'content-type': 'application/json' } });
+    const q = __queue.length ? __queue.shift() : null; // a ready-made reply body for this call (an empty one, a refusal), else the usual
+    const done = () => new Response(JSON.stringify(q || (__status === 200 ? { choices: [{ message: { role: 'assistant', content: __reply } }] } : { error: { message: 'mock error ' + __status } })), { status: __status, headers: { 'content-type': 'application/json' } });
     return __hold ? __hold.then(done) : Promise.resolve(done());
   };
   var __sp = (x, y, speed) => ({ scene: { key: 'Space' }, ship: { x, y, body: { speed: speed || 0 } }, enemies: { getChildren: () => [] }, cruising: false, cr: {} });
@@ -129,7 +130,7 @@ let body = JSON.parse(J(`__calls[0].body`));
 check('one call, to the provider the key belongs to, with the key in the header and nowhere else', J(`__calls.length`) === 1 && /api\.openai\.com/.test(J(`__calls[0].url`)) && J(`__calls[0].headers.Authorization`) === 'Bearer ' + KEY && !JSON.stringify(body).includes(KEY));
 const sysMsg = body.messages[0].content, last = body.messages[body.messages.length - 1];
 check('the system message is the whole prompt: rules, state of the game and keys; the pilot\'s question is the user turn', body.messages[0].role === 'system' && /^RULES/.test(sysMsg) && /Reaver's Roost: 18\.4 ly/.test(sysMsg) && last.role === 'user' && last.content === 'How do I get to Reaver\'s Roost?', last.content);
-check('a few hundred tokens back at most', body.max_completion_tokens === 300, JSON.stringify(Object.keys(body)));
+check('a few hundred tokens back at most, plus the room a thinking model (the default, gpt-5-mini) needs for its hidden thinking', body.max_completion_tokens === 300 + J('CHAT_ROOM'), JSON.stringify(Object.keys(body)));
 check('what the model is not given: the save, the NPC memory, a second copy of the key', !sysMsg.includes('CANARY-NOTE-XYZ') && !JSON.stringify(body).includes(KEY));
 check('the answer is kept as the last answer', J(`SHIPCOMP.history.length`) === 1 && J(`SHIPCOMP.history[0].q`) === 'How do I get to Reaver\'s Roost?');
 g.run(`__reply = 'Press **G**, pick *Kestrel* and read https://example.com/x then press Enter.'`);
@@ -182,6 +183,30 @@ r = await ask('key?', near);
 check('a rejected key: a plain line, and the computer is absent from then on until it is fixed', r.code === 'rejected' && /key was rejected/.test(r.error) && J(`shipcompAvailable()`) === false, JSON.stringify(r));
 g.run(`__status = 200; CHAT.bad = false; CHAT.waitUntil = 0; CHAT.pauseUntil = 0`);
 check('everything fine again: it answers', (await ask('back?', near)).text === 'ok');
+
+// an empty reply (card space-game-voice-empty): a model that thinks before it answers (the default, gpt-5-mini) can spend its whole limit on the hidden thinking and send back nothing
+console.log('F2. an empty reply from the model');
+const cut = { choices: [{ finish_reason: 'length', message: { role: 'assistant', content: '' } }] };
+g.run(`SHIPCOMP.limit.gap = 0; SHIPCOMP.lastAt = 0; SHIPCOMP.history = []; SHIPCOMP.limit.day = 40; SHIPCOMP.mem = { day: '', n: 0 }; localStorage.removeItem(SHIPCOMP.store.used); __calls.length = 0; __reply = 'Press G.'; __queue = [${JSON.stringify(cut)}]`);
+r = await ask('the first ask', near);
+check('a reply the limit cut to nothing is asked once more with more room, and the answer comes back on the first try', r.text === 'Press G.' && J(`__calls.length`) === 2 && JSON.parse(J(`__calls[0].body`)).max_completion_tokens === 300 + J(`CHAT_ROOM`) && JSON.parse(J(`__calls[1].body`)).max_completion_tokens === 300 * J(`CHAT_AGAIN`) + J(`CHAT_ROOM`), JSON.stringify(r));
+check('that was one question for the day, not two', J(`shipcompUsed()`) === 1);
+g.run(`__calls.length = 0; __queue = [${JSON.stringify(cut)}, ${JSON.stringify(cut)}]`);
+r = await ask('and again', near);
+check('cut off twice: a plain line that does not send the player to Settings, code empty with the reason length, and no third call', r.code === 'empty' && r.why === 'length' && /nothing to say/.test(r.error) && !/Settings/.test(r.error) && J(`__calls.length`) === 2, JSON.stringify(r));
+check('and the computer is free again, nothing is kept in the history from the failure', J(`SHIPCOMP.busy`) === false && J(`SHIPCOMP.history.length`) === 1);
+g.run(`__calls.length = 0; __queue = [{ choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: '' } }] }]`);
+r = await ask('blank', near);
+check('a blank reply that was not cut off: the same plain line, the reason blank, no second call', r.code === 'empty' && r.why === 'blank' && J(`__calls.length`) === 1, JSON.stringify(r));
+g.run(`__calls.length = 0; __queue = [{ choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: null, refusal: 'I cannot help with that.' } }] }]`);
+r = await ask('refused', near);
+check('a refusal: the reason refusal, no second call', r.code === 'empty' && r.why === 'refusal' && J(`__calls.length`) === 1, JSON.stringify(r));
+g.run(`__calls.length = 0; chatSetModel('gpt-4o-mini')`);
+await ask('a model that does not think', near);
+check('a model that does not think gets exactly the limit it was asked for', JSON.parse(J(`__calls[0].body`)).max_completion_tokens === 300 && JSON.parse(J(`__calls[0].body`)).model === 'gpt-4o-mini');
+g.run(`chatSetModel(''); __calls.length = 0; __queue = []`);
+check('everything fine again: it answers', (await ask('back again?', near)).text === 'Press G.');
+g.run(`__reply = 'ok'`);
 
 console.log('G. the name, the persona file, the key, the box');
 check('the persona file reached the game: the name, the voice, four stock lines (one says it acts)', J(`[shipcompName(), SHIPCOMP.voice, SHIPCOMP.lines.length]`).join() === 'ATHENA,aura-athena-en,4' && /plot a course/.test(J('SHIPCOMP.lines')[3]));

@@ -10,7 +10,9 @@
 //   sample     every 10 s: w (epoch s), scene, system, x, y, ship, credits, fuel, hull, speed, auto (cruise | autopilot | assist), mission
 //   mission    state accepted | done | failed | dropped, id, pay        buy / sell   what, n (credits, negative when it cost)      credits   delta of the rest (pay, fees)
 //   death      cause (the nearest raider's kind), scene, system         counts   a: how many times each ACTION name was used (key:<what it does>, click, voice), every minute
-//   computer, computer_plan   the ship computer asked: ms, ok, code; and which action of its closed list it chose        npc_chat   the bar chat: ms, ok, code
+//   computer, computer_plan   the ship computer asked: ms, ok, code (why: one word for an empty reply); and which action of its closed list it chose        npc_chat   the bar chat: ms, ok, code, why
+//   listen     a hold of the voice key, one line a step: start, open (ms the microphone took), release (held seconds; short, silent), clip (bytes), heard (ms, chars of the transcript, 0 = empty), and
+//              the end: why = sent (the words went to the computer) or the name of the plain line shown (tap, silent, nothing, denied...). Counts and times, never the words.
 //   idle       NO INPUT FOR 20 s OR MORE: secs, and what was on screen (scene, scenes, panel, mission, system, auto): the best sign of confusion
 //   fps_dip    under 30 frames a second for 2 s or more: fps (the worst), secs        stall   the page froze (no tick for 5 s)       tab   hidden | visible
 //   error      every JS error, rejected promise and console.error: kind, msg, stack (file paths shortened to ~)
@@ -39,7 +41,7 @@ const PLAYLOG = {
     scene: ['from', 'to', 'secs'], dock: ['at', 'system'], system: ['from', 'to'], jump: ['to', 'ly', 'cost'],
     sample: ['w', 'scene', 'system', 'x', 'y', 'ship', 'credits', 'fuel', 'hull', 'speed', 'auto', 'mission'],
     mission: ['state', 'id', 'pay'], buy: ['what', 'n'], sell: ['what', 'n'], credits: ['delta', 'scene'], death: ['cause', 'scene', 'system'],
-    counts: ['a'], computer: ['ms', 'ok', 'code'], computer_plan: ['action', 'refused', 'dropped'], npc_chat: ['ms', 'ok', 'code'],
+    counts: ['a'], computer: ['ms', 'ok', 'code', 'why'], computer_plan: ['action', 'refused', 'dropped'], npc_chat: ['ms', 'ok', 'code', 'why'], listen: ['step', 'ms', 'held', 'bytes', 'chars', 'ok', 'why', 'short', 'silent'],
     idle: ['secs', 'scene', 'scenes', 'panel', 'mission', 'system', 'auto', 'open'], fps_dip: ['fps', 'secs', 'scene'], stall: ['secs'], tab: ['state'],
     error: ['kind', 'msg', 'stack', 'scene']
   }
@@ -248,11 +250,37 @@ function playlogWrap(L, root) {
   const timed = (kind, orig) => async function () {
     const t = Date.now(); let r;
     try { r = await orig.apply(this, arguments); return r; } finally {
-      try { L.ev(kind, { ms: Date.now() - t, ok: !!(r && !r.error), code: r && r.error ? (r.code || 'error') : '' }); } catch (e) { /* never */ }
+      try { const why = r && r.error && /^[a-z]{1,12}$/.test(r.why || '') ? { why: r.why } : {}; L.ev(kind, Object.assign({ ms: Date.now() - t, ok: !!(r && !r.error), code: r && r.error ? (r.code || 'error') : '' }, why)); } catch (e) { /* never */ } // why: an empty reply's one-word reason
     }
   };
   wrap('shipcompAsk', orig => { const t = timed('computer', orig); return async function () { inComputer++; try { return await t.apply(this, arguments); } finally { inComputer--; } }; });
   wrap('chatComplete', orig => { const t = timed('npc_chat', orig); return function () { return inComputer ? orig.apply(this, arguments) : t.apply(this, arguments); }; }); // a question to the computer is its own line
+  // a hold of the voice key, step by step: that it began, how long the microphone took, how long it was held, how big the clip, how long Deepgram took and whether it heard anything
+  // (chars: how many characters came back, never which), and how it ended: the name of the plain line shown (tap, silent, nothing, denied...) or sent. Never the words.
+  const LS = () => (typeof LISTEN !== 'undefined' ? LISTEN : null), lsEv = d => { try { L.ev('listen', d); } catch (e) { /* never */ } };
+  wrap('listenPress', orig => function () { const r = orig.apply(this, arguments); if (r) lsEv({ step: 'start' }); return r; });
+  wrap('listenOpen', orig => function () {
+    const t = Date.now(), p = orig.apply(this, arguments);
+    try { Promise.resolve(p).then(() => { const S = LS() && LS().s; lsEv({ step: 'open', ms: Date.now() - t, ok: !!S && S.state === 'listening' }); }, () => {}); } catch (e) { /* never */ }
+    return p;
+  });
+  wrap('listenRelease', orig => function (why) {
+    let was = '', held = 0; try { const S = LS().s, now = typeof lsNow === 'function' ? lsNow() : 0; was = S.state; held = was === 'listening' ? (now - S.t0) / 1000 : 0; } catch (e) { /* never */ }
+    const r = orig.apply(this, arguments);
+    try { const S = LS().s; if (was === 'listening') lsEv({ step: 'release', held, why: why || 'key', short: !!S.short, silent: !!S.silent }); else if (was === 'opening') lsEv({ step: 'release', held: 0, why: 'early' }); } catch (e) { /* never */ }
+    return r;
+  });
+  wrap('listenStopped', orig => function (seq) {
+    try { const S = LS().s; if (seq === S.seq && S.state === 'stopping' && S.send) lsEv({ step: 'clip', bytes: S.chunks.reduce((a, c) => a + ((c && c.size) || 0), 0) }); } catch (e) { /* never */ }
+    return orig.apply(this, arguments);
+  });
+  wrap('listenHear', orig => function (blob) {
+    const t = Date.now(), bytes = blob && blob.size, p = orig.apply(this, arguments);
+    try { Promise.resolve(p).then(() => { const S = LS().s; lsEv({ step: 'heard', ms: Date.now() - t, bytes, chars: S.state === 'review' ? String(S.words || '').length : 0 }); }, () => {}); } catch (e) { /* never */ }
+    return p;
+  });
+  wrap('listenLine', orig => function (text) { try { const k = Object.keys(LS().say).find(n => String(text).indexOf(lsSay(n)) === 0); lsEv({ step: 'end', why: k || 'other' }); } catch (e) { /* never */ } return orig.apply(this, arguments); });
+  wrap('listenGo', orig => function () { const r = orig.apply(this, arguments); if (r) lsEv({ step: 'end', why: 'sent' }); return r; });
   wrap('shipcompPlan', orig => function () {
     const r = orig.apply(this, arguments);
     try { const a = r && r.action, name = typeof a === 'string' ? a : a && a.name; L.ev('computer_plan', { action: /^[a-z_]{1,24}$/.test(name || '') ? name : (a ? 'other' : 'none'), refused: !!(r && r.refused), dropped: !!(r && r.dropped) }); } catch (e) { /* never */ }
