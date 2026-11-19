@@ -113,6 +113,7 @@ check('in flight W is the thrust action, by the table, not "W"', /^key:flight: /
 check('the arrow keys count as the WASD row when the row says so', act('Space', 'ArrowUp') === act('Space', 'KeyW'), act('Space', 'ArrowUp') + ' / ' + act('Space', 'KeyW'));
 check('a number key in the station is the menu action from the "1-6" row', /^key:station: /.test(act('Station', 'Digit3')) && act('Station', 'Digit3') === act('Station', 'Digit1'), act('Station', 'Digit3'));
 check('a key the screen does not use, a screen with no table and a key with no name are all "key:other": never a letter', ['KeyZ', 'Digit9', 'F5'].every(c => act('Station', c) === 'key:other' || /^key:station/.test(act('Station', c))) && act('Settings', 'KeyW') === 'key:other' && act('Space', 'F5') === 'key:other' && act('', 'KeyA') === 'key:other');
+check('the voice key U is counted as what it does in every screen, in space too where no table row names it (it was key:other)', ['Space', 'Station', 'Ship', 'Galaxy'].every(sc => act(sc, 'KeyU') === 'key:voice: hold to talk'), JSON.stringify(['Space', 'Station'].map(sc => act(sc, 'KeyU'))));
 check('no action name is a single letter or contains a typed character outside the table', J(`CONTROLS.every(gr => gr.rows.every(r => { const a = playlogAction(CONTROLS, gr.scene, { code: 'Key' + (r.k[0].length === 1 ? r.k[0] : 'Q') }); return a.length > 10 || a === 'key:other'; }))`));
 
 // ---- idle: 20 s or more with no input ----

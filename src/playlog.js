@@ -88,6 +88,7 @@ function playlogKeyLabel(e) {
 }
 function playlogAction(controls, sceneKey, e) {
   const label = playlogKeyLabel(e); if (!label) return 'key:other';
+  if (label === 'U') return 'key:voice: hold to talk'; // the voice key is a row of the ANYWHERE table (no scene), which this lookup never reads: in space it was key:other (card space-game-voice-empty)
   const g = (controls || []).find(x => x.scene === sceneKey); if (!g) return 'key:other';
   const alias = { Up: 'W', Left: 'A', Down: 'S', Right: 'D' }[label]; // the arrows do what the WASD keys do
   const has = (r, k) => r.k.some(x => x === k || (/^\d-\d$/.test(x) && /^\d$/.test(k) && k >= x[0] && k <= x[2]));
