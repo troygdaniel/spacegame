@@ -28,6 +28,9 @@ function guideReset() {
   G.hints = { off: false, seen: {}, docks: 0, sold: 0, map: 0 }; LADDER.id = ''; // the next steps start over with a new game
 }
 
+// The keys of the first flight: this tip stands INSTEAD of the key line (space.js hides the line under it), so it is where a new player learns that a click can fly the ship
+// (card space-game-key-line: Troy's first log had 224 presses of A and D and the mouse never turned the ship; Z turns flight assist on, and with it on a click flies there).
+const GUIDE_FIRST = 'W thrusts, A and D turn, Space fires. Z: click to fly there.';
 // ---------- the hint for right now, worked out from the game state (so it always matches what is on screen) ----------
 function guideHint(s) {
   const key = s.scene.key, dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -50,10 +53,10 @@ function guideHint(s) {
       if (rescue && (!nav || nav.name === planet)) { // the rescue, the arrow on its planet
         return dist(s.ship, s.planet) < s.planetR + 320
           ? 'Hold S to slow down, then press L to land on ' + planet + '.'
-          : 'W thrusts, A and D turn, Space fires. Follow the amber arrow to ' + planet + '.';
+          : GUIDE_FIRST + ' Follow the amber arrow to ' + planet + '.';
       }
-      return goal ? 'W thrusts, A and D turn, Space fires. Follow the amber arrow: ' + guideName(goal.name) + '.'
-        : 'W thrusts, A and D turn, Space fires. Your call is in the MISSION list, top left.'; // a goal in another system has no arrow
+      return goal ? GUIDE_FIRST + ' Follow the amber arrow: ' + guideName(goal.name) + '.'
+        : GUIDE_FIRST + ' Your call is in the MISSION list, top left.'; // a goal in another system has no arrow
     }
     const home = typeof sysBody === 'function' && sysBody('station');
     if (nav && !(home && nav.name === home.name)) return 'The amber arrow is on the target you picked: ' + guideName(nav.name) + '.';
