@@ -190,6 +190,11 @@ function guideTick(s) {
     if (text) s.tweens.add({ targets: s._gh, alpha: 1, duration: 180 });
     guidePlace(s);
   }
+  if (typeof cmdstripUp === 'function') { // the command strip (src/cmdstrip.js) is where the tip sits: it steps aside while the strip is up, and says itself again after
+    const away = cmdstripUp();
+    if (away) { s._gh.setVisible(false); s._gk.setVisible(false); } else if (s._gaway) s._gtext = null;
+    s._gaway = away;
+  }
 
   if (G.earned >= GOAL && !G.endingSeen) {
     if (key === 'Station') { if (!s.leaving && !s.panel && !s.talk) showEnding(s); }

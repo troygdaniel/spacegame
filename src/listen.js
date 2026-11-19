@@ -8,7 +8,7 @@
 //   the ring is full                    the browser opens the microphone, a red LISTENING mark shows and a short sound plays; the key may be let go now
 //   quiet for 1.2 s after words         (or U again, or the cap) a second sound; the sound goes in ONE request to Deepgram (POST /v1/listen, on the Deepgram
 //                                       key of Settings > Keys, in the Authorization header and nowhere else); the audio is dropped when the call ends
-//   the words                           shown for 1.5 s (Esc cancels; U again says it again), then shipcompSubmit(words) asks the ship's computer
+//   the words                           shown for 1.5 s (Esc cancels; U again says it again), then shipcompSubmit(words) hands them to the command strip (src/cmdstrip.js), which asks the ship's computer
 // The microphone is open ONLY while it listens (tracks stopped the moment it ends, or Esc, or the window loses focus). The level meter decides "quiet": with
 // no meter (no Web Audio) nothing ends it but U again, Esc or the cap. Nothing heard at all for 6 s ends it too, and what it has is sent (a level meter that
 // could be wrong must never be the reason nothing is heard: the empty answer says "I heard silence").
@@ -202,7 +202,9 @@ function listenDom() { // the mark is a plain HTML box over the canvas: it is th
 }
 function listenPaint() {
   listenCapPaint();
-  const v = listenView(), d = listenDom(); if (!d) return v;
+  const v = listenView();
+  if (typeof cmdstripVoice === 'function' && cmdstripVoice(v)) { if (LISTEN.el) LISTEN.el.root.style.display = 'none'; return v; } // the command strip (src/cmdstrip.js) draws it: the floating box stays shut
+  const d = listenDom(); if (!d) return v;
   try {
     if (!v) { d.root.style.display = 'none'; return v; }
     const c = LISTEN_CSS[v.mark] || LISTEN_CSS.cyan, canvas = typeof window !== 'undefined' && window.game && window.game.canvas, r = canvas && canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : null;
@@ -264,10 +266,10 @@ const listenSound = name => { try { if (typeof sfx === 'function') sfx(name); } 
 
 // ---------- one press ----------
 function listenScene(game) { // the scene the computer can open over: the Space or Station scene that is running (a paused one, behind a menu, is not)
-  if (!game || !game.scene || game.scene.isActive('ShipComputer')) return null;
+  if (!game || !game.scene) return null;
   return game.scene.getScenes(true).find(sc => sc.scene.key === 'Space' || sc.scene.key === 'Station') || null;
 }
-// the same things that keep shipcompOpen from opening the box (src/shipcomputer.js), asked early so the player is not asked to speak into a box that will not open
+// the same things that keep the strip's line from opening (src/cmdstrip.js cmdstripBlocked), asked early so the player is not asked to speak into a line that will not open
 const listenBlocked = s => !!(s.leaving || s.dead || s.panel || s.talk || s.shopOpen || s.jmp || (s.cr && s.cr.navOpen));
 // the words waiting for their pause, the sending, a recording, the microphone: all of it, forgotten
 function listenReset(keepLine) {
