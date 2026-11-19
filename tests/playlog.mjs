@@ -159,6 +159,44 @@ const safe = J(`(() => { const out = []; for (const o of [{ storeThrows: true },
 check('a store that throws, a sink that throws and junk arguments never make the logger throw', safe.join() === 'ok,ok,ok', safe.join());
 check('the pending list never grows past its cap', J(`(() => { const L = __mk({ storeThrows: true }); for (let i = 0; i < 5000; i++) L.ev('tab', { state: 'x' }); return L.pending.length <= PLAYLOG.pendingMax; })()`));
 
+// ---- the page wiring, on a fake game and a window that records its listeners ----
+{
+  const w = nodeGame();
+  w.run(`
+    var __h = {}, __on = (n, f) => { (__h[n] = __h[n] || []).push(f); };
+    window.addEventListener = __on; document.addEventListener = __on;
+    var __scenes = [], __ev = {};
+    const __sc = (key, st) => ({ scene: { key, isActive: () => st === 'run', isPaused: () => st === 'pause' } });
+    var __game = { scene: { scenes: __scenes, getScene: k => __scenes.find(s => s.scene.key === k) || null, isActive: k => (__scenes.find(s => s.scene.key === k) || { scene: { isActive: () => false } }).scene.isActive() },
+      events: { on: (n, f) => { __ev[n] = f; } } };
+    function __set(list) { __scenes.length = 0; list.forEach(([k, st, extra]) => __scenes.push(Object.assign(__sc(k, st), extra || {}))); }
+    G.system = 'halcyon'; G.lastDock = 'halcyon-station'; G.credits = 321; G.hull = 87; G.mission = 'none'; G.missionId = null;
+  `);
+  const WJ = e => JSON.parse(w.run(`JSON.stringify(${e})`));
+  w.run(`__set([['Space', 'pause', { ship: { x: 1234, y: 5678, body: { speed: 210 }, active: true }, cruising: true }], ['Galaxy', 'run'], ['Title', 'stop']])`);
+  const snap = WJ('playlogSnapshot(__game)');
+  check('the snapshot picks the screen on top (the map over a paused Space), and says where the ship is, how fast, and that it is cruising', snap.scene === 'Galaxy' && snap.scenes === 'Space+Galaxy' && snap.x === 1230 && snap.y === 5680 && snap.speed === 210 && snap.auto === 'cruise' && snap.credits === 321 && snap.system === 'halcyon', JSON.stringify(snap));
+  w.run(`__set([['Station', 'run', { shopOpen: true }], ['Space', 'stop', { ship: { x: 1, y: 1, body: { speed: 99 } } }]])`);
+  const st = WJ('playlogSnapshot(__game)');
+  check('in the station the panel is named, and a stale Space scene gives no position', st.scene === 'Station' && st.panel === 'shop' && st.x === undefined && st.speed === undefined, JSON.stringify(st));
+  w.run(`__set([['Pause', 'run'], ['Space', 'pause'], ['Settings', 'stop']])`);
+  check('Pause comes before the scene under it', WJ('playlogSnapshot(__game).scene') === 'Pause');
+  w.run(`__set([['Space', 'run', { ship: { x: 5, y: 5, body: { speed: 1 } } }]]); window.game = __game; var __L = playlogInstall(__game);`);
+  check('installing returns the logger, hooks the page and does not throw', WJ('!!__L && window.PLAYLOG_LIVE === __L && typeof __ev.step === "function" && !!__h.keydown && !!__h.pagehide && !!__h.error && !!__h.unhandledrejection'));
+  w.run(`__keys = (code, target) => __h.keydown.forEach(f => f({ code, key: 'x', repeat: false, target: target || { tagName: 'BODY' } }));`);
+  w.run(`__keys('KeyW'); __keys('KeyW'); __keys('Space'); __keys('KeyQ', { tagName: 'INPUT' }); __keys('KeyH', { tagName: 'TEXTAREA' }); __keys('KeyA', { isContentEditable: true }); __h.pointerdown.forEach(f => f({}));`);
+  const live = WJ('(() => { __L.flush(); const t = __L.text(); return t; })()');
+  w.run(`__h.pagehide.forEach(f => f())`); // the tab closing
+  const text = WJ('__L.text()'), evs = text.split('\n').filter(Boolean).map(l => JSON.parse(l)), cnt = evs.filter(e => e.ev === 'counts').pop();
+  check('keys are counted by action: W twice as the thrust action, Space as fire, a click as a click', cnt && cnt.a['key:flight: thrust'] === 2 && /^key:flight: fire/.test(Object.keys(cnt.a).find(k => /fire/.test(k)) || '') && cnt.a.click === 1, JSON.stringify(cnt));
+  check('a key pressed in a text box, a text area or an editable field is activity and nothing else: no action is counted for it, and no letter is ever a name', Object.keys(cnt.a).every(k => k === 'click' || /^key:[a-z]+: /.test(k)) && Object.values(cnt.a).reduce((a, b) => a + b, 0) === 4, JSON.stringify(cnt));
+  check('the session start is in the log and the end says pagehide', evs[0].ev === 'session' && evs[0].phase === 'start' && evs[evs.length - 1].why === 'pagehide', JSON.stringify([evs[0], evs[evs.length - 1]]));
+  check('an error event on the window is a line with the message', (() => { w.run(`__h.error.forEach(f => f({ message: 'boom', error: { stack: 'Error: boom' } }))`); w.run(`__L.flush()`); return WJ('__L.text()').includes('"msg":"boom"'); })());
+  check('a rejected promise is a line too', (() => { w.run(`__h.unhandledrejection.forEach(f => f({ reason: { message: 'nope', stack: 'x' } }))`); w.run(`__L.flush()`); return WJ('__L.text()').includes('"kind":"promise"'); })());
+  check('the settings helpers: OFF then ON, download and forget answer without a page', WJ('[playlogOn(), playlogSet(false), playlogOn(), playlogSet(true), playlogOn(), typeof playlogDownload().ok, playlogForget(), __L.text().length]').join() === 'true,false,false,true,true,boolean,true,0');
+  check('the wiring raised no errors', w.errors.length === 0, w.errors.join(' | '));
+}
+
 check('the file does not start itself in plain Node (no page, no game)', J(`typeof PLAYLOG_LIVE`) === 'undefined' || J(`PLAYLOG_LIVE`) === null);
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `PLAYLOG FAIL (${failed} of ${n})` : `PLAYLOG PASS (${n} checks)`);
