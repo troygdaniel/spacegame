@@ -11,6 +11,8 @@
 //   mission    state accepted | done | failed | dropped, id, pay        buy / sell   what, n (credits, negative when it cost)      credits   delta of the rest (pay, fees)
 //   death      cause (the nearest raider's kind), scene, system         counts   a: how many times each ACTION name was used (key:<what it does>, click, voice), every minute
 //   computer, computer_plan   the ship computer asked: ms, ok, code (why: one word for an empty reply); and which action of its closed list it chose        npc_chat   the bar chat: ms, ok, code, why
+//   voice_reply  one spoken answer of the ship's computer is over: sec (seconds it was heard), stopped (cut by the player), how (end, u, esc, click), mode (short, full, off: Settings > Sound),
+//              chars (said) and full (the whole answer). Counts and seconds, never the words.
 //   listen     the microphone asked early, at the launch from a station: early (ms the launch waited, why: granted, blocked, allowed, declined or slow). A press of the voice key (U), one line a step: start, ring (done: the ring filled, or held: how long it was held when it did not), open (ms the microphone took),
 //              stop (held: seconds it listened; why: silence, again, lead or cap; short, silent), clip (bytes), heard (ms, chars of the transcript, 0 = empty), and the end:
 //              why = sent (the words went to the computer) or the name of the plain line shown (tap, silent, nothing, denied...). Counts and times, never the words.
@@ -46,7 +48,7 @@ const PLAYLOG = {
     scene: ['from', 'to', 'secs'], dock: ['at', 'system'], system: ['from', 'to'], jump: ['to', 'ly', 'cost'],
     sample: ['w', 'scene', 'system', 'x', 'y', 'ship', 'credits', 'fuel', 'hull', 'speed', 'auto', 'mission'],
     mission: ['state', 'id', 'pay'], buy: ['what', 'n'], sell: ['what', 'n'], credits: ['delta', 'scene'], death: ['cause', 'scene', 'system'],
-    counts: ['a'], computer: ['ms', 'ok', 'code', 'why'], computer_plan: ['action', 'refused', 'dropped'], npc_chat: ['ms', 'ok', 'code', 'why'], listen: ['step', 'ms', 'held', 'bytes', 'chars', 'ok', 'why', 'short', 'silent', 'done'],
+    counts: ['a'], computer: ['ms', 'ok', 'code', 'why'], computer_plan: ['action', 'refused', 'dropped'], voice_reply: ['sec', 'stopped', 'how', 'mode', 'chars', 'full'], npc_chat: ['ms', 'ok', 'code', 'why'], listen: ['step', 'ms', 'held', 'bytes', 'chars', 'ok', 'why', 'short', 'silent', 'done'],
     idle: ['secs', 'scene', 'scenes', 'panel', 'mission', 'system', 'auto', 'open'], fps_dip: ['fps', 'secs', 'scene'], stall: ['secs'], tab: ['state'],
     error: ['kind', 'msg', 'stack', 'scene']
   }
@@ -260,6 +262,7 @@ function playlogWrap(L, root) {
   }));
   wrap('jumpStart', orig => function (s, id, j) { try { L.ev('jump', { to: id, ly: j && j.ly, cost: j && j.cost }); } catch (e) { /* never */ } return orig.apply(this, arguments); });
   wrap('voiceSay', orig => function () { try { L.count('voice'); } catch (e) { /* never */ } return orig.apply(this, arguments); });
+  wrap('voiceSpoke', orig => function (info) { try { if (info && info.kind === 'computer') L.ev('voice_reply', { sec: info.sec, stopped: !!info.stopped, how: info.how, mode: info.mode, chars: info.chars, full: info.full }); } catch (e) { /* never */ } return orig.apply(this, arguments); });
   // the ship computer and the bar chat: that it happened, how long, whether it failed: never the words
   let inComputer = 0;
   const timed = (kind, orig) => async function () {

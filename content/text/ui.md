@@ -97,4 +97,8 @@ To translate, change the text column here, or copy this file to a name after ui 
 | listen.cost | Each time it listens, it sends its sound to Deepgram, on your own account, and may cost you money. This session may listen for {minutes} minutes. |
 | listen.hint | Run node tools/serve.mjs and open http://127.0.0.1:8787/ : the browser then asks for the microphone once. Opened from a file it may ask every time, or refuse. |
 | listen.early | Voice: the browser will ask to use your microphone. Choose Allow on every visit. |
+| spoken.use | Spoken replies: how much of the computer's answer is said aloud. The strip always shows all of it. U, Esc or a click on the strip stops the voice. |
+| spoken.short | the first sentence or two is said |
+| spoken.full | the whole answer is said |
+| spoken.off | answers are never said aloud |
 | music.use | Music is made by the game as you fly and steps back when the ship speaks. Effects is the engine, the drone and every shot and click; they ease off a little while music plays. M mutes all. |

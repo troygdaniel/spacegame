@@ -227,17 +227,21 @@ class Settings extends Phaser.Scene {
     const Y = 24; // the rows from here down sit this much lower than before the music row
     this.line(by + 166 + Y);
     this.label(bx, by + 190 + Y, 'SHIP VOICE');
-    this.txt(bx, by + 214 + Y, 'The ship computer speaks the key moments of a run: launch, hostiles, hull warnings, docking, missions and payments. The bar characters speak their lines in their own voices when NPC chat is on. It needs your own Deepgram key (Keys).', 13, '#cfefff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 4 } });
+    this.txt(bx, by + 214 + Y, 'The ship computer speaks the key moments of a run (launch, hostiles, hull warnings, docking, missions, payments) and its answers to you. The bar characters speak in their own voices when NPC chat is on. It needs your own Deepgram key (Keys).', 13, '#cfefff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 4 } });
     this.slots.voiceOn = this.button(bx, by + 292 + Y, 216, '', () => { voiceSetOn(!VOICE.on); this.soundRefresh(); });
     this.slots.voiceStat = this.txt(bx + 234, by + 292 + Y, '', 14, '#9fe9ff', { style: { wordWrap: { width: bw - 234 }, lineSpacing: 3 } }); // two lines when it is long: it ran off the panel
     this.label(bx, by + 346 + Y, 'SHIP COMPUTER VOICE');
     this.button(bx, by + 376 + Y, 44, '<', () => this.stepVoice(-1), { size: 18 });
     this.slots.voiceName = this.txt(bx + 60, by + 376 + Y, '', 20, '#ffd37a', { style: { fontStyle: 'bold' } });
-    this.slots.voiceDesc = this.txt(bx + 250, by + 376 + Y, '', 14, '#8fb4c9');
-    this.button(bx + 520, by + 376 + Y, 44, '>', () => this.stepVoice(1), { size: 18 });
-    this.button(bx + 590, by + 376 + Y, 150, 'Hear it', () => this.hearVoice(), { color: '#ffb454', edge: AMBER });
+    this.slots.voiceDesc = this.txt(bx + 160, by + 376 + Y, '', 14, '#8fb4c9');
+    this.button(bx + 312, by + 376 + Y, 44, '>', () => this.stepVoice(1), { size: 18 });
+    this.button(bx + 366, by + 376 + Y, 150, 'Hear it', () => this.hearVoice(), { color: '#ffb454', edge: AMBER });
+    // Spoken replies (card space-game-voice-shorter): how much of the computer's answer is said aloud: Short (the first sentence or two), Full, Off. The strip shows all of it.
+    this.label(bx + 548, by + 346 + Y, 'SPOKEN REPLIES');
+    VOICE_SPOKEN_MODES.forEach(([id, name], i) => { this.slots['spoken_' + id] = this.button(bx + 548 + i * 84, by + 376 + Y, 78, name[0] + name.slice(1).toLowerCase(), () => { voiceSetSpoken(id); this.soundRefresh(); }); });
     this.slots.status = this.txt(bx, by + 430 + Y, '', 14, '#9fe9ff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 3 } });
-    this.txt(bx, by + 478 + Y, 'Hear it makes one call to Deepgram, on your key, when you press it. Nothing else here sends anything.', 12, '#5b7a92');
+    this.slots.spokenNote = this.txt(bx, by + 458 + Y, uiText('spoken.use'), 12, '#8fb4c9', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 3 } });
+    this.txt(bx, by + 496 + Y, 'Hear it makes one call to Deepgram, on your key, when you press it. Nothing else here sends anything.', 12, '#5b7a92');
     this.soundRefresh();
   }
   soundRefresh() {
@@ -257,6 +261,8 @@ class Settings extends Phaser.Scene {
       .setColor(st === 'ON' ? '#6dff9c' : st === 'KEY REJECTED' ? '#ff4d6d' : '#8fb4c9');
     const c = VOICE_CHOICES.find(x => x[0] === VOICE.voice) || VOICE_CHOICES[0];
     s.voiceName.setText(c[1]); s.voiceDesc.setText(c[2]);
+    VOICE_SPOKEN_MODES.forEach(([id, name]) => { const on = VOICE.spoken === id; s['spoken_' + id].set(name[0] + name.slice(1).toLowerCase()).color(on ? '#6dff9c' : '#8fb4c9').mark(on); });
+    s.spokenNote.setText(uiText('spoken.use') + '  ' + uiText('spoken.' + VOICE.spoken).replace(/^./, c0 => c0.toUpperCase()) + '.');
     this.railDraw(); this.tagDraw();
   }
   setVolume(v) { G.volume = Math.min(1, Math.max(0, Math.round(v * 10) / 10)); if (G.volume > 0 && G.muted) G.muted = false; saveGame(); beep(660, 0.08, 'triangle', 0.05); this.soundRefresh(); }

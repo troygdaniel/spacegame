@@ -236,7 +236,7 @@ console.log('F. the instruction, and the voice');
   g.run(`__world('wren', 40); __space(${station.x + 3000}, ${station.y})`);
   const sys = g.run(`shipcompSystem(__cur)`), names = J('Object.keys(SC_ACT)');
   check('the prompt names every action of the closed list, and the ones it may not do', names.every(k => sys.includes(k)) && /NEVER buy, sell, accept, abandon or refuel/.test(sys));
-  check('the format is told: SAY: and DO:, one action, and "say only what you are doing, never that it is done"', /SAY: one to four short sentences/.test(sys) && /DO: one action from the list/.test(sys) && /never that it is done/.test(sys));
+  check('the format is told: SAY: and DO:, one action, and "say only what you are doing, never that it is done"', /SAY: one or two short sentences/.test(sys) && /DO: one action from the list/.test(sys) && /never that it is done/.test(sys));
   check('the prompt still holds the rules, the persona, the state and the keys, and never a key', /RULES\n/.test(sys) && /<persona>/.test(sys) && /STATE\n/.test(sys) && /KEYS\n/.test(sys) && !sys.includes(KEY));
   g.run(`__spoken = []; shipcompSay('Plotting a course to Kestrel, one jump.', () => { window.__started = true; })`);
   check('the announcement goes through the ship voice (voiceSayThen) and the action may start when it does', J('__spoken').join() === 'Plotting a course to Kestrel, one jump.' && J('window.__started') === true);
