@@ -30,7 +30,7 @@ let r = J(`__tip(__space(${far}))`);
 // player learns that a click can fly the ship: Z turns flight assist on. Troy's first log: 224 presses of A and D, the mouse never turned the ship.
 const Z = 'Z: click to fly there.';
 check('rescue, far from the planet: the keys, then Z and the click, then the planet\'s name', r.tip === `W thrusts, A and D turn, Space fires. ${Z} Follow the amber arrow to ${planet}.` && r.arrow === planet.toUpperCase(), JSON.stringify(r));
-check('the Z sentence is in all three first-flight tips (the planet, a goal with an arrow, a goal in another system) and each stays one line of the tip bar (110 characters: 18 px type is 10.8 px a character, the bar holds 1250)', J(`guideHint.toString().split(${JSON.stringify(Z)}).length - 1`) === 3 && r.tip.length <= 110, r.tip.length + ' ' + r.tip);
+check('the Z sentence is in all three first-flight tips (the planet, a goal with an arrow, a goal in another system) and each stays one line of the tip bar (110 characters: 18 px type is 10.8 px a character, the bar holds 1250)', J(`GUIDE_FIRST`).includes(Z) && J(`guideHint.toString().split('GUIDE_FIRST').length - 1`) === 3 && r.tip.length <= 110, r.tip.length + ' ' + r.tip);
 r = J(`__tip(__space(sysBody('planet').x + 200, sysBody('planet').y))`);
 check('rescue, close to the planet: slow down and land there', r.tip === `Hold S to slow down, then press L to land on ${planet}.`, r.tip);
 check('the planet is named from the system, not written into the tip', J(`guideHint.toString().includes('Kepler')`) === false);

@@ -136,7 +136,8 @@ class Space extends Phaser.Scene {
     this.prompt = floatPrompt(this, this.ship); // key cap above you instead of a strip at the bottom (src/ui.js)
     // the key line, bottom left: a readable grey-blue with a dark outline, so the sun's rays and the station do not wash it out, and hidden
     // while a first-run tip of the guide is up (update below), because that tip says the same keys two lines higher (docs/CRITIC.md run 1, finding 19)
-    this.keyLine = this.add.text(24, H - 44, 'W thrust  A/D turn  S brake  Shift boost  Q/E dash  Space or click fire  L land/dock  P autopilot  N places  B ships', {
+    // (card space-game-key-line, Troy 18 Nov 2026: G jump, H help and Z fly by click are on it, Q/E dash is not: the keys docs/KEYS-PROPOSAL.md found he did not know; the tip says Z too)
+    this.keyLine = this.add.text(24, H - 44, 'W thrust  A/D turn  S brake  Shift boost  Space or click fire  L land/dock  P autopilot  N places  B ships  G jump  H help  Z fly by click', {
       fontFamily: 'monospace', fontSize: '14px', color: '#9fbdd1', stroke: '#02060d', strokeThickness: 4
     }).setScrollFactor(0).setDepth(100);
     if (this.from === 'station') { bountyReset(); toast(this, spaceLaunchLine(this), '#9fe9ff'); } // enemies.js: a new flight's bounty count starts at 0

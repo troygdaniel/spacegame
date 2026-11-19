@@ -40,3 +40,8 @@ Mouse to steer or aim, WASD, Space or click to fire, Esc for a menu, M or Tab fo
 2. **Turning with the mouse.** (a) Put `Z fly by click` on the first key line and in the first-run tip: assist already flies to a click; text only. (b) Build a real mouse turn (the ship
    follows the cursor while a button is held): a new control, its own card. *Recommended: (a) now, (b) only if (a) is not enough after the next log.*
 3. **Move no key until the next logged session.** The raw list will say which keys he reaches for; I will write the second half of this proposal (the keys themselves) from it. *Recommended: yes.*
+
+## Answers (Troy, 18 Nov 2026: yes, yes, yes) and what was done
+1. Done (card `space-game-key-line`): the first key line is `... N places  B ships  G jump  H help  Z fly by click`; `Q/E dash` is off it. The key still works.
+2. (a) Done: the first flight's tip says `Z: click to fly there.` (the tip stands in for the key line on a first flight, so it is where a new player reads it). (b) is not built.
+3. No key has moved. The next logged session lists the keys that did nothing (`No action:` line of `node tools/playlog-summary.mjs`); the second half of this proposal waits for it.
