@@ -212,20 +212,28 @@ class Settings extends Phaser.Scene {
     this.body.add(zone);
     this.label(bx, by + 92, 'SOUND');
     this.slots.mute = this.button(bx, by + 122, 160, '', () => this.toggleMute());
-    this.txt(bx + 176, by + 122, 'M does the same, anywhere in the game', 13, '#5b7a92');
-    this.line(by + 166);
-    this.label(bx, by + 190, 'SHIP VOICE');
-    this.txt(bx, by + 214, 'The ship computer speaks the key moments of a run: launch, hostiles, hull warnings, docking, missions and payments. The bar characters speak their lines in their own voices when NPC chat is on. It needs your own Deepgram key (Keys).', 13, '#cfefff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 4 } });
-    this.slots.voiceOn = this.button(bx, by + 292, 216, '', () => { voiceSetOn(!VOICE.on); this.soundRefresh(); });
-    this.slots.voiceStat = this.txt(bx + 234, by + 292, '', 14, '#9fe9ff', { style: { wordWrap: { width: bw - 234 }, lineSpacing: 3 } }); // two lines when it is long: it ran off the panel
-    this.label(bx, by + 346, 'SHIP COMPUTER VOICE');
-    this.button(bx, by + 376, 44, '<', () => this.stepVoice(-1), { size: 18 });
-    this.slots.voiceName = this.txt(bx + 60, by + 376, '', 20, '#ffd37a', { style: { fontStyle: 'bold' } });
-    this.slots.voiceDesc = this.txt(bx + 250, by + 376, '', 14, '#8fb4c9');
-    this.button(bx + 520, by + 376, 44, '>', () => this.stepVoice(1), { size: 18 });
-    this.button(bx + 590, by + 376, 150, 'Hear it', () => this.hearVoice(), { color: '#ffb454', edge: AMBER });
-    this.slots.status = this.txt(bx, by + 430, '', 14, '#9fe9ff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 3 } });
-    this.txt(bx, by + 478, 'Hear it makes one call to Deepgram, on your key, when you press it. Nothing else here sends anything.', 12, '#5b7a92');
+    this.txt(bx + 176, by + 122, 'M does the same', 13, '#5b7a92');
+    // the music (src/music.js): its own switch and volume, in tenths, to the right of the mute; a press plays two bells at the new level
+    this.label(bx + 430, by + 92, 'MUSIC');
+    this.slots.musicOn = this.button(bx + 430, by + 122, 130, '', () => { musicSetOn(!MUSIC.on); musicPreview(); this.soundRefresh(); });
+    this.button(bx + 572, by + 122, 36, '-', () => this.adjustMusic(-1), { size: 18 });
+    this.slots.musicPct = this.txt(bx + 646, by + 122, '', 16, '#ffd37a', { ox: 0.5, style: { fontStyle: 'bold' } });
+    this.button(bx + 684, by + 122, 36, '+', () => this.adjustMusic(1), { size: 18 });
+    this.txt(bx, by + 146, uiText('music.use'), 12, '#5b7a92', { oy: 0, style: { wordWrap: { width: bw } } }); // two lines under the row, above the rule
+    const Y = 24; // the rows from here down sit this much lower than before the music row
+    this.line(by + 166 + Y);
+    this.label(bx, by + 190 + Y, 'SHIP VOICE');
+    this.txt(bx, by + 214 + Y, 'The ship computer speaks the key moments of a run: launch, hostiles, hull warnings, docking, missions and payments. The bar characters speak their lines in their own voices when NPC chat is on. It needs your own Deepgram key (Keys).', 13, '#cfefff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 4 } });
+    this.slots.voiceOn = this.button(bx, by + 292 + Y, 216, '', () => { voiceSetOn(!VOICE.on); this.soundRefresh(); });
+    this.slots.voiceStat = this.txt(bx + 234, by + 292 + Y, '', 14, '#9fe9ff', { style: { wordWrap: { width: bw - 234 }, lineSpacing: 3 } }); // two lines when it is long: it ran off the panel
+    this.label(bx, by + 346 + Y, 'SHIP COMPUTER VOICE');
+    this.button(bx, by + 376 + Y, 44, '<', () => this.stepVoice(-1), { size: 18 });
+    this.slots.voiceName = this.txt(bx + 60, by + 376 + Y, '', 20, '#ffd37a', { style: { fontStyle: 'bold' } });
+    this.slots.voiceDesc = this.txt(bx + 250, by + 376 + Y, '', 14, '#8fb4c9');
+    this.button(bx + 520, by + 376 + Y, 44, '>', () => this.stepVoice(1), { size: 18 });
+    this.button(bx + 590, by + 376 + Y, 150, 'Hear it', () => this.hearVoice(), { color: '#ffb454', edge: AMBER });
+    this.slots.status = this.txt(bx, by + 430 + Y, '', 14, '#9fe9ff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 3 } });
+    this.txt(bx, by + 478 + Y, 'Hear it makes one call to Deepgram, on your key, when you press it. Nothing else here sends anything.', 12, '#5b7a92');
     this.soundRefresh();
   }
   soundRefresh() {
@@ -234,6 +242,8 @@ class Settings extends Phaser.Scene {
     s.bar.clear(); hudBar(s.bar, bx + 52, by + 29, 404, 18, G.muted ? 0 : G.volume, G.muted ? 0x5b7a92 : CYAN, 20);
     s.pct.setText(G.muted ? 'MUTED' : Math.round(G.volume * 100) + '%').setColor(G.muted ? '#ff4d6d' : '#ffd37a');
     s.mute.set(G.muted ? 'Sound: MUTED' : 'Sound: ON').color(G.muted ? '#ff4d6d' : '#6dff9c').mark(!G.muted);
+    s.musicOn.set(MUSIC.on ? 'Music: ON' : 'Music: OFF').color(MUSIC.on ? '#6dff9c' : '#8fb4c9').mark(MUSIC.on);
+    s.musicPct.setText(MUSIC.on ? Math.round(MUSIC.vol * 100) + '%' : 'OFF').setColor(MUSIC.on ? '#ffd37a' : '#5b7a92');
     const st = voiceStatus();
     // the button says what the player will hear, not only the switch: on with no key (or a rejected one) is not ON, it is waiting for a key
     const waits = VOICE.on && st !== 'ON';
@@ -246,6 +256,7 @@ class Settings extends Phaser.Scene {
   }
   setVolume(v) { G.volume = Math.min(1, Math.max(0, Math.round(v * 10) / 10)); if (G.volume > 0 && G.muted) G.muted = false; saveGame(); beep(660, 0.08, 'triangle', 0.05); this.soundRefresh(); }
   adjustVolume(dir) { this.setVolume(G.volume + dir * 0.1); }
+  adjustMusic(dir) { musicSetVol(MUSIC.vol + dir * 0.1); musicPreview(); this.soundRefresh(); }
   toggleMute() { G.muted = !G.muted; saveGame(); if (!G.muted) beep(660, 0.08, 'triangle', 0.05); this.soundRefresh(); }
   stepVoice(d) {
     const i = Math.max(0, VOICE_CHOICES.findIndex(x => x[0] === VOICE.voice));
@@ -351,7 +362,7 @@ class Settings extends Phaser.Scene {
     this.warn(bx, by, bw, SETTINGS.keys.warnH, 'THIS USES YOUR OWN DEEPGRAM ACCOUNT AND MAY COST YOU MONEY', uiText('listen.cost', { key: LISTEN.cap, minutes: LISTEN.limit.minutes }));
     this.label(bx, by + 112, 'HOLD TO TALK');
     const cap = keyCap(this, LISTEN.cap, AMBER); cap.setPosition(bx + 8 + cap.kw / 2, by + 146); this.body.add(cap);
-    this.txt(bx + 24 + cap.kw, by + 146, 'in space or in a station: speak, then let go', 15, '#cfefff');
+    this.txt(bx + 24 + cap.kw, by + 146, 'in space or in a station: hold until the ring is full, then speak', 15, '#cfefff');
     this.txt(bx, by + 184, uiText('listen.use', { key: LISTEN.cap, minutes: LISTEN.limit.minutes }), 13, '#cfefff', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 4 } });
     this.slots.listenOn = this.button(bx, by + 252, 216, '', () => { listenSetOn(!LISTEN.on); this.listenRefresh(); });
     this.slots.listenStat = this.txt(bx + 234, by + 252, '', 14, '#9fe9ff', { style: { wordWrap: { width: bw - 234 }, lineSpacing: 3 } });

@@ -11,13 +11,18 @@
 //   mission    state accepted | done | failed | dropped, id, pay        buy / sell   what, n (credits, negative when it cost)      credits   delta of the rest (pay, fees)
 //   death      cause (the nearest raider's kind), scene, system         counts   a: how many times each ACTION name was used (key:<what it does>, click, voice), every minute
 //   computer, computer_plan   the ship computer asked: ms, ok, code (why: one word for an empty reply); and which action of its closed list it chose        npc_chat   the bar chat: ms, ok, code, why
-//   listen     a hold of the voice key, one line a step: start, open (ms the microphone took), release (held seconds; short, silent), clip (bytes), heard (ms, chars of the transcript, 0 = empty), and
-//              the end: why = sent (the words went to the computer) or the name of the plain line shown (tap, silent, nothing, denied...). Counts and times, never the words.
+//   listen     a press of the voice key (U), one line a step: start, ring (done: the ring filled, or held: how long it was held when it did not), open (ms the microphone took),
+//              stop (held: seconds it listened; why: silence, again, lead or cap; short, silent), clip (bytes), heard (ms, chars of the transcript, 0 = empty), and the end:
+//              why = sent (the words went to the computer) or the name of the plain line shown (tap, silent, nothing, denied...). Counts and times, never the words.
 //   idle       NO INPUT FOR 20 s OR MORE: secs, and what was on screen (scene, scenes, panel, mission, system, auto): the best sign of confusion
 //   fps_dip    under 30 frames a second for 2 s or more: fps (the worst), secs        stall   the page froze (no tick for 5 s)       tab   hidden | visible
 //   error      every JS error, rejected promise and console.error: kind, msg, stack (file paths shortened to ~)
 // A key is counted by what it DOES, from the one table of src/data_controls.js (the screen you are on decides): "key:flight: Thrust", never "W" and never a letter
 // typed into a box (a keypress in an input is activity, not an action).
+// A key that does nothing on its screen is "key:other" and ALSO "nokey: <screen> <code>" (card space-game-keys-awkward): the raw code of the physical key (KeyJ, F5,
+// Backquote), so a list of the keys a player hunts for can be read. Never the character a key types (only event.code is read, never event.key), never from a text
+// box (every typed-text field of the game is a real <input>, src/chat.js chatMakeInput; a key pressed in one never gets here), never a chord (Ctrl, Cmd, Alt), never a
+// held-down repeat, never a key of an input method (composing). Counts per minute, no order and no times: a word cannot be read back out of it.
 //
 // WHERE IT GOES. Always: a ring buffer of chunks in this browser's localStorage (works from a double-clicked index.html), about 480 KB, the oldest chunk goes first.
 // When the page is served by tools/serve.mjs it also POSTs each batch to that server (/__playlog), which appends it to ~/dev/spacegame-playlogs/ OUTSIDE the repo.
@@ -41,7 +46,7 @@ const PLAYLOG = {
     scene: ['from', 'to', 'secs'], dock: ['at', 'system'], system: ['from', 'to'], jump: ['to', 'ly', 'cost'],
     sample: ['w', 'scene', 'system', 'x', 'y', 'ship', 'credits', 'fuel', 'hull', 'speed', 'auto', 'mission'],
     mission: ['state', 'id', 'pay'], buy: ['what', 'n'], sell: ['what', 'n'], credits: ['delta', 'scene'], death: ['cause', 'scene', 'system'],
-    counts: ['a'], computer: ['ms', 'ok', 'code', 'why'], computer_plan: ['action', 'refused', 'dropped'], npc_chat: ['ms', 'ok', 'code', 'why'], listen: ['step', 'ms', 'held', 'bytes', 'chars', 'ok', 'why', 'short', 'silent'],
+    counts: ['a'], computer: ['ms', 'ok', 'code', 'why'], computer_plan: ['action', 'refused', 'dropped'], npc_chat: ['ms', 'ok', 'code', 'why'], listen: ['step', 'ms', 'held', 'bytes', 'chars', 'ok', 'why', 'short', 'silent', 'done'],
     idle: ['secs', 'scene', 'scenes', 'panel', 'mission', 'system', 'auto', 'open'], fps_dip: ['fps', 'secs', 'scene'], stall: ['secs'], tab: ['state'],
     error: ['kind', 'msg', 'stack', 'scene']
   }
@@ -92,9 +97,18 @@ function playlogAction(controls, sceneKey, e) {
   const g = (controls || []).find(x => x.scene === sceneKey); if (!g) return 'key:other';
   const alias = { Up: 'W', Left: 'A', Down: 'S', Right: 'D' }[label]; // the arrows do what the WASD keys do
   const has = (r, k) => r.k.some(x => x === k || (/^\d-\d$/.test(x) && /^\d$/.test(k) && k >= x[0] && k <= x[2]));
-  const row = g.rows.find(r => has(r, label)) || (alias && g.rows.find(r => has(r, alias)));
+  let grp = g, row = g.rows.find(r => has(r, label)) || (alias && g.rows.find(r => has(r, alias)));
+  if (!row) { const any = (controls || []).find(x => x.id === 'any'); row = any && any.rows.find(r => has(r, label)); if (row) grp = any; } // Esc, H, M, Tab: the ANYWHERE rows work in every screen that has a table (card space-game-keys-awkward: they were "key:other")
   if (!row) return 'key:other';
-  return 'key:' + g.id + ': ' + plClean(String(row.t).split(/[(:;,.]/)[0].trim().toLowerCase(), 36);
+  return 'key:' + grp.id + ': ' + plClean(String(row.t).split(/[(:;,.]/)[0].trim().toLowerCase(), 36);
+}
+// the name a key with no action is counted under, beside "key:other": the game's own screen it was pressed on and the physical key's code. Pure.
+// scene: the screen on top (PLAYLOG.scenes; anything else is "Other"); e: { code, isComposing }. The character the key types (e.key) is never read.
+// A code that is not 1 to 20 plain letters and digits is "Other", no code at all is "Unidentified". '' for a key of an input method: nothing is counted.
+function playlogRawKey(scene, e) {
+  if (e && e.isComposing) return '';
+  const code = String((e && e.code) || '');
+  return 'nokey: ' + (PLAYLOG.scenes.includes(scene) ? scene : 'Other') + ' ' + (code === '' ? 'Unidentified' : /^[A-Za-z0-9]{1,20}$/.test(code) ? code : 'Other');
 }
 
 // ---- the logger ----
@@ -256,19 +270,22 @@ function playlogWrap(L, root) {
   };
   wrap('shipcompAsk', orig => { const t = timed('computer', orig); return async function () { inComputer++; try { return await t.apply(this, arguments); } finally { inComputer--; } }; });
   wrap('chatComplete', orig => { const t = timed('npc_chat', orig); return function () { return inComputer ? orig.apply(this, arguments) : t.apply(this, arguments); }; }); // a question to the computer is its own line
-  // a hold of the voice key, step by step: that it began, how long the microphone took, how long it was held, how big the clip, how long Deepgram took and whether it heard anything
-  // (chars: how many characters came back, never which), and how it ended: the name of the plain line shown (tap, silent, nothing, denied...) or sent. Never the words.
+  // a press of the voice key, step by step: that it began, whether the ring filled (or how long it was held when it did not), how long the microphone took, how long it
+  // listened and why it stopped, how big the clip, how long Deepgram took and whether it heard anything (chars: how many characters came back, never which), and how it
+  // ended: the name of the plain line shown (tap, silent, nothing, denied...) or sent. Never the words.
   const LS = () => (typeof LISTEN !== 'undefined' ? LISTEN : null), lsEv = d => { try { L.ev('listen', d); } catch (e) { /* never */ } };
-  wrap('listenPress', orig => function () { const r = orig.apply(this, arguments); if (r) lsEv({ step: 'start' }); return r; });
+  wrap('listenPress', orig => function () { let was = ''; try { was = LS().s.state; } catch (e) { /* never */ } const r = orig.apply(this, arguments); try { if (r && was !== 'listening') lsEv({ step: 'start' }); } catch (e) { /* never */ } return r; });
+  wrap('listenRingDone', orig => function () { let was = ''; try { was = LS().s.state; } catch (e) { /* never */ } const r = orig.apply(this, arguments); if (was === 'ring') lsEv({ step: 'ring', done: true }); return r; });
+  wrap('listenRingAbort', orig => function () { let held = -1; try { const S = LS().s; if (S.state === 'ring') held = (lsNow() - S.ringAt) / 1000; } catch (e) { /* never */ } const r = orig.apply(this, arguments); if (held >= 0) lsEv({ step: 'ring', done: false, held }); return r; });
   wrap('listenOpen', orig => function () {
     const t = Date.now(), p = orig.apply(this, arguments);
     try { Promise.resolve(p).then(() => { const S = LS() && LS().s; lsEv({ step: 'open', ms: Date.now() - t, ok: !!S && S.state === 'listening' }); }, () => {}); } catch (e) { /* never */ }
     return p;
   });
   wrap('listenRelease', orig => function (why) {
-    let was = '', held = 0; try { const S = LS().s, now = typeof lsNow === 'function' ? lsNow() : 0; was = S.state; held = was === 'listening' ? (now - S.t0) / 1000 : 0; } catch (e) { /* never */ }
+    let listened = -1; try { const S = LS().s; if (S.state === 'listening') listened = (lsNow() - S.t0) / 1000; } catch (e) { /* never */ }
     const r = orig.apply(this, arguments);
-    try { const S = LS().s; if (was === 'listening') lsEv({ step: 'release', held, why: why || 'key', short: !!S.short, silent: !!S.silent }); else if (was === 'opening') lsEv({ step: 'release', held: 0, why: 'early' }); } catch (e) { /* never */ }
+    try { const S = LS().s; if (listened >= 0) lsEv({ step: 'stop', held: listened, why: why || 'again', short: !!S.short, silent: !!S.silent }); } catch (e) { /* never */ }
     return r;
   });
   wrap('listenStopped', orig => function (seq) {
@@ -280,7 +297,7 @@ function playlogWrap(L, root) {
     try { Promise.resolve(p).then(() => { const S = LS().s; lsEv({ step: 'heard', ms: Date.now() - t, bytes, chars: S.state === 'review' ? String(S.words || '').length : 0 }); }, () => {}); } catch (e) { /* never */ }
     return p;
   });
-  wrap('listenLine', orig => function (text) { try { const k = Object.keys(LS().say).find(n => String(text).indexOf(lsSay(n)) === 0); lsEv({ step: 'end', why: k || 'other' }); } catch (e) { /* never */ } return orig.apply(this, arguments); });
+  wrap('listenLine', orig => function (text) { try { const k = Object.keys(LS().say).find(n => String(text).indexOf(lsSay(n).split('{')[0]) === 0); lsEv({ step: 'end', why: k || 'other' }); } catch (e) { /* never */ } return orig.apply(this, arguments); });
   wrap('listenGo', orig => function () { const r = orig.apply(this, arguments); if (r) lsEv({ step: 'end', why: 'sent' }); return r; });
   wrap('shipcompPlan', orig => function () {
     const r = orig.apply(this, arguments);
@@ -329,9 +346,11 @@ function playlogInstall(game) {
     const typing = t => !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
     w.addEventListener('keydown', e => {
       try {
-        L.input(); if (e.repeat || typing(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
+        L.input(); if (e.repeat || e.isComposing || typing(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
         const sc = P.scenes.find(k => game.scene.isActive(k)) || '';
-        L.count(playlogAction(typeof CONTROLS !== 'undefined' ? CONTROLS : [], sc === 'Space' || sc === 'Station' || sc === 'Ship' || sc === 'Surface' ? sc : '', e));
+        const act = playlogAction(typeof CONTROLS !== 'undefined' ? CONTROLS : [], sc === 'Space' || sc === 'Station' || sc === 'Ship' || sc === 'Surface' ? sc : '', e);
+        L.count(act);
+        if (act === 'key:other') { const raw = playlogRawKey(sc, e); if (raw) L.count(raw); } // which key it was, for a key that did nothing (never from a text box: returned above)
       } catch (er) { /* never */ }
     }, true);
     w.addEventListener('pointerdown', () => { try { L.input(); L.count('click'); } catch (e) { /* never */ } }, true);
