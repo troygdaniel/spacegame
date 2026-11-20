@@ -35,6 +35,7 @@ They are listed in one small line on the pause screen (`campDebugLine`). The row
 | more or fewer missiles | `missile.magazine` (the start and the reload's full), `missile.reload` (ms for one to come back), `missile.max` (the most ore can fill it to) |
 | easier or harder to aim | `missile.turn`, `missile.speed`, `missile.lock` (how far it can pick a target), `missile.fuze` |
 | the turrets hit harder, reach further or fire faster | `carrier.pd` (damage of one shot), `carrier.pdRange` (px), `carrier.pdDelay` (ms between a turret's shots); eight turrets means 8 times `pd` over `pdDelay`; `tech.beam` for the beam tech |
+| the turrets miss moving ships (or hit too well) | `carrier.lead`: 1 aims where the shot and the alien meet, 0 where the alien is now, 0.5 half way; `carrier.pdSpeed` (a faster shot needs less lead) |
 | more or fewer turrets, or somewhere else on the hull | `carrier.mounts`: one `[x, y]` row each, px from the carrier's centre in its own frame (x along the nose); the hull is drawn 140 by 100 px |
 | a faster or slower level | `waves[i].at` (seconds into the level), `early` (seconds after the wave before is dead), `convoys[i].at` |
 | the map | `places` (px from Earth); the Sol distances are `docs/SOL.md` at 1 to 12 |
