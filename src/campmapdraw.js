@@ -51,7 +51,9 @@ function campMapOpen(s) {
   own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.hintY, uiText('camp.map.keys'), uiFont(13, '#5b7a92'))).setDepth(154);
   mp.goalText = own(s.add.text(0, 0, uiText('camp.map.goalmark'), uiFont(12, '#ffd37a'))).setOrigin(0.5).setDepth(154);
   mp.routeText = own(s.add.text(0, 0, '', uiFont(12, '#ffd37a'))).setOrigin(0.5).setDepth(154);
-  mp.rows = []; mp.rowsAt = -1e9; mp.selId = '';
+  mp.rows = []; mp.rowsAt = -1e9; mp.selId = ''; mp.setId = '';
+  mp.btnFly = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false); // the two small buttons by a place you have set (card space-game-map-click-fly)
+  mp.btnFast = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false);
   mp.onPointer = p => campMapClick(s, p.x, p.y);
   if (s.input && s.input.on) s.input.on('pointerdown', mp.onPointer);
   for (let i = 0; i < CAMPMAP_SIDE.rows; i++) mp.leg.push(own(s.add.text(CAMPMAP_SIDE.x + 22, CAMPMAP_SIDE.y + i * CAMPMAP_SIDE.step, '', uiFont(14, '#9fe9ff', { wordWrap: { width: 235 } }))).setOrigin(0, 0.5).setDepth(154)); // a row is one line (27 letters at most, tests/campmap.mjs); the wrap is only a net
@@ -147,6 +149,16 @@ function campMapPaint(s, time) {
   } else { mp.goalText.setVisible(false); mp.routeText.setVisible(false); }
   if (N) { route({ x: N.x, y: N.y }, gc.select, 0.85); mp.dest.setText(uiText('camp.map.dest', { name: N.name }) + '  ' + campNavKm(Math.hypot(N.x - C.carrier.x, N.y - C.carrier.y)) + ' km'); } else mp.dest.setText('');
   const chosen = mp.rows[sel]; if (chosen) { const q = pin(X(chosen.x), Y(chosen.y)); g.lineStyle(2, gc.select, 1).strokeRect(q.x - 9, q.y - 9, 18, 18); }
+  // ---- set by a click (card space-game-map-click-fly): the place has a ring and a line from the carrier, its distance, and two small buttons beside it: Fly (regular speed) and Fast (a burn) ----
+  const setRow = mp.setId ? mp.rows.find(r => r.id === mp.setId) : null; if (mp.setId && !setRow) mp.setId = '';
+  if (setRow && !(N && N.on && N.id === (setRow.of || setRow.id))) {
+    const q = route(setRow, gc.select, 0.7), d = Math.hypot(setRow.x - C.carrier.x, setRow.y - C.carrier.y), eta = n => typeof cruiseEtaText === 'function' ? cruiseEtaText(n) : n + ' s';
+    g.lineStyle(2, 0xffffff, 0.9).strokeCircle(q.x, q.y, 13 + 2 * pulse);
+    mp.btnFly.setText(uiText('camp.map.fly', { t: eta(campNavEta(C, d)) })).setVisible(true); mp.btnFast.setText(uiText('camp.map.fast', { t: eta(campNavEta(C, d, true)) })).setVisible(true);
+    const w = Math.max(mp.btnFly.width, mp.btnFast.width), h = mp.btnFly.height, right = q.x + 22 + w <= F.x + F.w - 4, bx = right ? q.x + 22 : Math.max(F.x + 4, q.x - 22 - w), by = Math.max(F.y + 4, Math.min(F.y + F.h - 2 * h - 8, q.y - h - 2)); // beside the mark, on the side with room, inside the frame
+    mp.btnFly.setPosition(bx, by); mp.btnFast.setPosition(bx, by + h + 4);
+    if (!N) mp.dest.setText(uiText('camp.map.set', { name: setRow.name }) + '  ' + campNavKm(d) + ' km');
+  } else { mp.btnFly.setVisible(false); mp.btnFast.setVisible(false); }
   const win = navpanelLines(mp.rows, sel, CAMP.nav.list, CAMPNAV.groups); // the Long Haul nav panel's own windowing: headings, and the chosen row kept in view
   mp.list.forEach((t, k) => {
     const ln = win.lines[k]; t.rowId = '';
@@ -165,16 +177,17 @@ function campMapPaint(s, time) {
 }
 
 // ---- picking (card space-game-campaign-navigate): the keys and the clicks of the open map ----
-// fly there: the same for a key, a click and the words (src/campnav.js campNavGo). A place you are already at says so and does nothing.
-function campMapFly(s, row) {
+// fly there: the same for a key, a click and the words (src/campnav.js campNavGo). fast: the Fast button, Shift+Enter (a burn at CAMP.nav.fast times the speed); the words and Enter fly at regular speed.
+// A place you are already at says so and does nothing.
+function campMapFly(s, row, fast) {
   const C = s.camp; if (!C || !row || C.result) return false;
   const t = campNavTarget(C, row) || row, d = Math.hypot(t.x - C.carrier.x, t.y - C.carrier.y);
   if (!row.moving && d - campNavStop(row.kind, t) <= CAMP.nav.arrive) { toast(s, uiText('camp.nav.there', { name: row.name }), '#ffd37a'); return false; }
-  campNavGo(C, row); if (s.mp) s.mp.dirty = true; return true;
+  campNavGo(C, row, fast); if (s.mp) { s.mp.dirty = true; s.mp.setId = ''; } return true;
 }
 // a key while the map is open: W S and the arrows choose (flying keys are the list's while it is open, as in the Long Haul nav panel), A D and the side arrows go to the next or the last group,
 // Enter flies there, X clears the destination. true when the key was the map's.
-function campMapKey(s, code) {
+function campMapKey(s, code, shift) {
   const mp = s.mp; if (!mp) return false;
   const rows = mp.rows, at = Math.max(0, rows.findIndex(r => r.id === mp.selId));
   const set = i => { if (rows.length) mp.selId = rows[((i % rows.length) + rows.length) % rows.length].id; return true; };
@@ -185,18 +198,23 @@ function campMapKey(s, code) {
     const gi = groups.indexOf(rows[at] ? rows[at].group : ''), next = groups[(gi + (code === 'KeyD' || code === 'ArrowRight' ? 1 : -1) + groups.length) % groups.length];
     return set(rows.findIndex(r => r.group === next));
   }
-  if (code === 'Enter' || code === 'NumpadEnter') { if (rows[at]) campMapFly(s, rows[at]); return true; }
+  if (code === 'Enter' || code === 'NumpadEnter') { if (rows[at]) campMapFly(s, rows[at], !!shift); return true; } // Enter: regular speed; Shift+Enter: fast
   if (code === 'KeyZ') return campMapWhole(s);
   if (code === 'KeyX') { if (s.camp && s.camp.nav) { campNavClear(s.camp, 'clear'); mp.dirty = true; } return true; }
   return false;
 }
-// a click: on a line of the list, or on a mark of the map. true when it picked something.
+// a click: on one of the two buttons by a place you have set (Fly, Fast), on a line of the list, or on a mark of the map. A place is SET by the first click (ring, line, distance, the two buttons)
+// and flown to at regular speed by a second click on it (card space-game-map-click-fly: a click used to fly at once). true when it picked something.
 function campMapClick(s, px, py) {
   const mp = s.mp; if (!mp) return false;
+  const onBtn = t => !!t && t.visible && px >= t.x && px <= t.x + t.width && py >= t.y && py <= t.y + t.height;
+  if (onBtn(mp.btnFly) || onBtn(mp.btnFast)) { const set = mp.rows.find(r => r.id === mp.setId); if (set) campMapFly(s, set, onBtn(mp.btnFast)); return true; }
   const F = CAMPMAP.frame, hit = mp.list.find(t => t.rowId && px >= t.x && px <= t.x + 260 && Math.abs(py - t.y) <= 11);
   let row = hit ? mp.rows.find(r => r.id === hit.rowId) : null;
   const inF = r => { const q = campMapPoint(mp.fit, F, r.x, r.y); return q.x >= F.x && q.x <= F.x + F.w && q.y >= F.y && q.y <= F.y + F.h; };
   if (!row && px >= F.x && px <= F.x + F.w && py >= F.y && py <= F.y + F.h) row = campNavPickAt(mp.rows.filter(inF), (x, y) => campMapPoint(mp.fit, F, x, y), px, py);
   if (!row) return false;
-  mp.selId = row.id; campMapFly(s, row); return true;
+  mp.selId = row.id;
+  if (mp.setId === row.id) campMapFly(s, row, false); else { mp.setId = row.id; mp.dirty = true; } // a second click on the same place: regular speed
+  return true;
 }

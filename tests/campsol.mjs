@@ -42,6 +42,19 @@ const toNep = dist(sol.neptune, sol.earth);
 check('Neptune is 80,000 to 125,000 px from Earth (the pack\'s ring at 1 to 12: 96,000 px from the Sun)', toNep > 80000 && toNep < 125000, Math.round(toNep));
 check('a place has the same id in the list the carrier flies to: campNavRows has every one, the far ones flagged and the Sun flagged as a star', (() => { const rows = J('(() => { const C = campNew(1, [], { seed: 3 }); return campNavRows(C).filter(r => r.group === "places").map(r => ({ id: r.id, far: r.far, star: r.star })); })()'); return planets.every(id => rows.some(r => r.id === 'place:' + id)) && rows.find(r => r.id === 'place:sun').star === true && rows.find(r => r.id === 'place:neptune').far === true && rows.find(r => r.id === 'place:mars').far === false; })());
 
+// ---- B2. fast travel across the system ----
+const trip = (id, fast) => J(`(() => { const C = campNew(1, [], { seed: 3, god: true }); C.ships = C.ships.filter(u => u.team !== 'alien'); const row = campNavRows(C).find(r => r.id === '${id}');
+  const d0 = Math.hypot(row.x - C.carrier.x, row.y - C.carrier.y), eta = campNavEta(C, d0, ${fast}), burn0 = campNavGo(C, row, ${fast}).burn; let t = 0, top = 0;
+  while (C.nav && C.nav.on && t < 3000) { campStep(C, 1 / 30); t += 1 / 30; top = Math.max(top, Math.hypot(C.carrier.vx, C.carrier.vy)); }
+  return { d0, eta, burn0, took: t, top, left: Math.hypot(row.x - C.carrier.x, row.y - C.carrier.y) - (row.r || 0), result: !!C.result }; })()`);
+const near = trip('place:mars', true), nep = trip('place:neptune', true), nepSlow = trip('place:neptune', false);
+check('one helper decides the burn: regular is 1, Fast is CAMP.nav.fast up to farFrom, CAMP.nav.farFast past it', J('[campNavBurn(99999, false), campNavBurn(4000, true), campNavBurn(CAMP.nav.farFrom, true), campNavBurn(CAMP.nav.farFrom + 1, true)]').join() === `1,${J('CAMP.nav.fast')},${J('CAMP.nav.fast')},${J('CAMP.nav.farFast')}`);
+check('Earth to Mars (4,100 px) is still a Fast trip of the old burn: top speed 2 times the carrier\'s, arriving a stop distance from it', near.burn0 === J('CAMP.nav.fast') && Math.abs(near.top - 2 * J('CAMP.carrier.speed')) < 3 && near.left < 130, JSON.stringify(near));
+check('Earth to Neptune on Fast: the far burn (672 px/s, Long Haul\'s cruise at 1 to 12), 2 to 3.5 minutes, and the map\'s time is within 10 percent of the trip', nep.burn0 === J('CAMP.nav.farFast') && Math.abs(nep.top - J('CAMP.carrier.speed') * J('CAMP.nav.farFast')) < 3 && nep.took > 120 && nep.took < 210 && Math.abs(nep.eta - nep.took) / nep.took < 0.1, JSON.stringify(nep));
+check('it stops at the planet, not past it (the brake holds at 672 px/s): within a stop distance and a bit', nep.left > 0 && nep.left < 160, nep.left);
+check('Earth to Neptune at regular speed is the long way: about 9 minutes (the carrier\'s own 210 px/s)', nepSlow.took > 480 && nepSlow.took < 620 && nepSlow.burn0 === 1, JSON.stringify(nepSlow));
+check('the burn is decided once by the distance at the start: a trip begun far keeps its far burn when it is near', J(`(() => { const C = campNew(1, [], { seed: 3, god: true }); const row = campNavRows(C).find(r => r.id === 'place:jupiter'); campNavGo(C, row, true); C.carrier.x = row.x - 2000; C.carrier.y = row.y; return C.nav.burn === CAMP.nav.farFast; })()`));
+
 // ---- C. the belt ----
 const B = W1.bands;
 check('the main belt is ONE band of rocks (the pack has three belts on rings 19 percent apart), between Mars\'s ring and Jupiter\'s', B.length === 1 && B[0].r0 > dist(sol.mars, sun) && B[0].r1 < dist(sol.jupiter, sun) && /Main Belt/.test(B[0].name), JSON.stringify(B.map(b => [b.r0, b.r1])));

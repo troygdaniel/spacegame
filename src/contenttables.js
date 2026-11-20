@@ -498,7 +498,10 @@ const UI_TEXT = {
   'camp.map.keys': 'W S choose   Enter fly   X clear',
   'camp.map.local': 'AREA  {km} km across  Z: whole',
   'camp.map.whole': 'SYSTEM  {km} km across  Z: area',
-
+  'camp.map.fly': 'FLY    Enter          {t}',
+  'camp.map.fast': 'FAST   Shift+Enter    {t}',
+  'camp.map.set': 'SET: {name}',
+  'camp.nav.gofast': 'Autopilot to {name}, full burn. Any steering key takes the wheel.',
   'camp.map.route': '{km} km, about {s} s',
   'camp.map.goalmark': 'GOAL',
   'camp.map.dest': 'Flying: {name}',

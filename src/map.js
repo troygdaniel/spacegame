@@ -160,6 +160,10 @@ class Overlay extends Phaser.Scene {
     this.hit.on('pointerdown', p => this.flyAt(p.x, p.y));
     this.pk = this.input.keyboard.addKeys('Z');
     this.tPick = m(mapText(this, SX, 326, '', 13, '#ffffff'));
+    // the two small buttons by the destination's mark (card space-game-map-click-fly): Fly is regular speed, Fast is cruise; Enter and Shift+Enter are the same two, a second click on the mark is Fly
+    const btn = fast => { const t = m(mapText(this, 0, 0, '', 13, '#ffffff').setBackgroundColor('#0a3a4a').setPadding(7, 3, 7, 3).setDepth(5).setVisible(false).setInteractive({ useHandCursor: true })); t.on('pointerdown', (p, lx, ly, e) => { if (e && e.stopPropagation) e.stopPropagation(); this.go(fast); }); return t; };
+    this.btnFly = btn(false); this.btnFast = btn(true);
+    this.input.keyboard.on('keydown-ENTER', e => { if (this.mode === 'map') this.go(!!(e && e.shiftKey)); });
 
     // help mode
     this.helpObjs = [];
@@ -174,16 +178,26 @@ class Overlay extends Phaser.Scene {
     h(mapText(this, 100, 428, 'Tab   sector map\nH   this help page\nEsc   pause menu, saves, volume', 20, '#cfefff'));
 
     this.setMode(this.mode);
+    this.btnFly.setVisible(false); this.btnFast.setVisible(false); // destFrame shows them once there is a destination
   }
 
-  // the place under a click, by the view the map is drawn with: the navigation panel's own list (navpanelPlaceAt), and its own way of flying there
+  // a click on a place: the navigation panel's own list says which (navpanelPlaceAt, by the view the map is drawn with). It SETS the destination (the ring, the dashed route and the distance
+  // are drawn, and the two buttons by it offer Fly and Fast); a second click on the destination flies there at regular speed (card space-game-map-click-fly; it used to fly at once)
   flyAt(px, py) {
     const sp = this.from === 'Space' ? this.scene.get('Space') : null, v = this.view;
     if (this.mode !== 'map' || !sp || !sp.ship || !sp.cr || !v || typeof navpanelPlaceAt !== 'function') return;
     const sc = this.MS / v.size, b = navpanelPlaceAt(sp, v.x + (px - this.MX) / sc, v.y + (py - this.MY) / sc, MAP_CLICK / sc);
     if (!b) return;
+    if (sp.cr.target && sp.cr.target.id === b.id) { this.go(false); return; }
+    navpanelPick(sp, b, true); // the one way to set a place (src/navpanel.js), with no toast: the game is paused under the map
+  }
+  // fly to the destination: fast false is regular speed (the autopilot's local leg), true is the autopilot as it always was (cruise for the middle of a long leg; the same as regular on a short one)
+  go(fast) {
+    const sp = this.from === 'Space' ? this.scene.get('Space') : null, t = sp && sp.cr ? sp.cr.target : null;
+    if (this.mode !== 'map' || !sp || !sp.ship || !t || typeof navpanelFly !== 'function') return;
+    const b = (typeof navpanelPlaceAt === 'function' ? navpanelPlaceAt(sp, t.x, t.y, 5) : null) || Object.assign({ dist: Math.hypot(t.x - sp.ship.x, t.y - sp.ship.y) }, t); // the panel's own row of that place (it has the distance)
     this.close(); sfx('tick');
-    setTimeout(() => { try { navpanelFly(sp, b); } catch (e) { /* the panel says when it cannot */ } }, 80); // after the scene runs again
+    setTimeout(() => { try { navpanelFly(sp, b, fast ? undefined : false); } catch (e) { /* the panel says when it cannot */ } }, 80); // after the scene runs again
   }
 
   setMode(mode) {
@@ -370,12 +384,18 @@ class Overlay extends Phaser.Scene {
   // the destination picked in the navigation panel or by a click: a white ring on it and a line with its distance.
   destFrame(g, X, Y, time) {
     const sp = this.from === 'Space' ? this.scene.get('Space') : null, b = sp && sp.ship && sp.cr ? sp.cr.target : null;
-    this.tPick.setText(sp && sp.cr ? 'Click a place on the map to fly there.' : '');
+    this.tPick.setText(sp && sp.cr ? 'Click a place on the map to set it as the destination.' : '');
+    [this.btnFly, this.btnFast].forEach(t => t.setVisible(!!b));
     if (!b) return;
     const x = X(b.x), y = Y(b.y), r = 14 + 2 * Math.sin(time / 180);
     g.lineStyle(2, 0xffffff, 0.95); g.strokeCircle(x, y, r);
     g.lineStyle(1, 0xffffff, 0.5); [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => g.lineBetween(x + dx * (r + 3), y + dy * (r + 3), x + dx * (r + 10), y + dy * (r + 10)));
-    this.tPick.setText('Destination: ' + b.name + '   ' + (Math.hypot(b.x - sp.ship.x, b.y - sp.ship.y) / 10 | 0) + ' km   (click a place to fly)');
+    this.tPick.setText('Destination: ' + b.name + '   ' + (Math.hypot(b.x - sp.ship.x, b.y - sp.ship.y) / 10 | 0) + ' km   (click it again to fly)');
+    const T = typeof autopilotLegTimes === 'function' ? autopilotLegTimes(sp, b) : { slow: 0, fast: null }, eta = typeof cruiseEtaText === 'function' ? cruiseEtaText : String;
+    this.btnFly.setText('FLY    Enter          ' + eta(T.slow)); this.btnFast.setText(T.fast == null ? 'FAST   too near to cruise' : 'FAST   Shift+Enter    ' + eta(T.fast)).setAlpha(T.fast == null ? 0.55 : 1);
+    const w = Math.max(this.btnFly.width, this.btnFast.width), hh = this.btnFly.height, right = x + r + 14 + w <= this.MX + this.MS - 4; // beside the mark, on the side that has room, inside the frame
+    const bx = right ? x + r + 14 : Math.max(this.MX + 4, x - r - 14 - w), by = Math.max(this.MY + 4, Math.min(this.MY + this.MS - 2 * hh - 8, y - hh - 2));
+    this.btnFly.setPosition(bx, by); this.btnFast.setPosition(bx, by + hh + 4);
   }
 
   drawLegend(g, rows) {

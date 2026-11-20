@@ -5,7 +5,7 @@
 //   campNavRows(C)            the one list: the goal, the places, the convoys, the caches and the relic, your ships: [{ id, kind, group, name, x, y, r, dist, ... }], by group then by distance
 //   campNavFind(C, words)     what the words name: { row } or { code } ('unknown', 'nogoal', 'nomother', 'noconvoy', ...): "mars", "the relic", "the objective", "the mars convoy"
 //   campNavCheck(C, arg)      the dry check the closed list asks before the ship computer says it will fly: { ok, say, row } or { ok: false, say }
-//   campNavGo(C, row)         fly there: C.nav = { on, id, kind, name, ... }; campNavClear(C, why) ends it (why: key, clear, arrived, lost)
+//   campNavGo(C, row, fast)   fly there: C.nav = { on, id, kind, name, fast, ... }; fast is the map's Fast button, a burn at CAMP.nav.fast times the speed; campNavClear(C, why) ends it (why: key, clear, arrived, lost)
 //   campNavDrive(C, dt)       once a tick, from campTick (src/campaign.js), while C.nav is on: it sets the carrier's input (turn, thrust, brake) by the Long Haul autopilot's rule
 //   campNavEta(C, dist)       the flight time in seconds;   campNavPickAt(rows, project, px, py)   the row nearest a click on the map
 //   campNavEdge(dx, dy, W, H, margin, keep) / campNavArrow(C, scroll, W, H)   where the arrow at the screen edge sits and which way it points, out of the HUD's way
@@ -63,13 +63,15 @@ function campNavTarget(C, N) {
   return u && u.hp > 0 ? { x: u.x, y: u.y, r: u.r || 0 } : null;
 }
 const campNavStop = (kind, t) => (kind === 'place' ? (t.r || 0) + CAMP.nav.stop : kind === 'convoy' || kind === 'mother' || kind === 'tower' ? CAMP.nav.stopShip : CAMP.nav.stopPoint);
-const campNavEta = (C, dist) => Math.round(dist / CAMP.carrier.speed * CAMP.nav.etaSlow);
+// the burn of a Fast trip (the one place it is decided: campNavGo stores it, campCarrier and campNavDrive read it, campNavEta tells it on the map): CAMP.nav.fast times the speed, farFast times it past farFrom px; 1 for a regular trip
+const campNavBurn = (dist, fast) => (!fast ? 1 : dist > CAMP.nav.farFrom ? CAMP.nav.farFast : CAMP.nav.fast);
+const campNavEta = (C, dist, fast) => Math.round(dist / (CAMP.carrier.speed * campNavBurn(dist, fast)) * CAMP.nav.etaSlow); // fast: the map's Fast button
 
-function campNavGo(C, row) {
+function campNavGo(C, row, fast) {
   if (!C || !row || C.result) return null;
   const id = row.of || row.id;
-  C.nav = { on: true, id, of: id, kind: row.kind, name: row.name, ref: row.ref || '', moving: !!row.moving, x: row.x, y: row.y, since: C.t };
-  C.events.push({ type: 'nav', key: 'camp.nav.go', vars: { name: row.name } });
+  C.nav = { on: true, id, of: id, kind: row.kind, name: row.name, ref: row.ref || '', moving: !!row.moving, x: row.x, y: row.y, since: C.t, fast: !!fast, burn: campNavBurn(Math.hypot(row.x - C.carrier.x, row.y - C.carrier.y), fast) }; // fast: the carrier burns at N.burn times its speed while this runs (campCarrier, campNavDrive); decided once, by the distance at the start
+  C.events.push({ type: 'nav', key: fast ? 'camp.nav.gofast' : 'camp.nav.go', vars: { name: row.name } });
   return C.nav;
 }
 function campNavClear(C, why) {
@@ -87,7 +89,7 @@ function campNavDrive(C, dt) {
   const t = campNavTarget(C, N); if (!t) { campNavClear(C, N.kind === 'cache' ? 'arrived' : 'lost'); return; } // a cache that has gone was gathered: that is arriving
   N.x = t.x; N.y = t.y;
   const K = CAMP.nav, dx = t.x - c.x, dy = t.y - c.y, dist = Math.hypot(dx, dy), left = Math.max(0, dist - campNavStop(N.kind, t)), speed = Math.hypot(c.vx, c.vy);
-  const diff = campWrap(Math.atan2(dy, dx) - c.rot), limit = Math.min(CAMP.carrier.speed, K.floor + K.brake * left), inp = C.input;
+  const diff = campWrap(Math.atan2(dy, dx) - c.rot), limit = Math.min(CAMP.carrier.speed * (N.fast ? (N.burn || K.fast) : 1), K.floor + K.brake * left), inp = C.input;
   inp.turn = Math.max(-1, Math.min(1, diff * K.steer));
   inp.thrust = Math.abs(diff) < K.align && speed < limit ? 1 : 0;
   inp.brake = speed > limit + 5;

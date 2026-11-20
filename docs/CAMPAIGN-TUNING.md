@@ -78,6 +78,7 @@ Card `space-game-campaign-sol`. The Campaign world holds all of Sol, and every l
 - **The belt** is one ring of 700 rocks round the Sun between Mars's ring and Jupiter's (the pack's three belts, 19 percent apart, are one band), with Ceres, Vesta and Pallas in it; the Trojan camps are clusters on Jupiter's ring. **Alpha Centauri** (level 2): the star, Alpha Centauri B, Proxima and Proxima d round it with Proxima b where the level has it, and the Centauri Drift as a ring of rocks. **Epsilon Eridani** (level 3): a K star, the alien home world (the pack's Aegir) on its ring, and the inner and outer belts as rings of rocks (the rings are three times the pack's so the star is not on top of the towers).
 - **The Tab map** has the rings (a thin circle through every body, one for bodies at one distance) and the belts under the marks, every body named, and **Z** between the level's own area and the whole system, to scale (the key line below the map says which, how wide, and Z). A click on a list line or a mark flies there as before; the list has every body.
 - **In the world** a far body is made (a picture) only while the carrier is within `CAMP.world.draw` px of it, and taken down when it leaves; the Sun is a star with its corona. Far bodies are not on the radar beyond its range, and not in the area view of the map.
+- **Fast travel across the system** (`CAMP.nav.farFrom`, `farFast`, one helper `campNavBurn` in `src/campnav.js` read by the carrier, the autopilot and the map's time): a Fast trip (the map's Fast button, Shift+Enter) of 8,000 px or less burns at 2 times the carrier's speed, longer at 3.2 times, 672 px/s, which is Long Haul's cruise at the Campaign's scale. **Earth to Neptune: 112,000 px, about 3 minutes on Fast (173 s measured, the map says 184 s), about 9 minutes at the carrier's regular 210 px/s.** Earth to Jupiter is about a minute. Each mission's content stays near its own area; the trip crosses empty space and any steering key takes the wheel.
 - **Which levels:** one data line, `world: { system, fit: { place, pack }, star?, same?, k? }`, on a level in `CAMP.levels` (see `src/campsol.js`). Without a pack, or without that line, a level is what it was.
 
 ## The play log
@@ -93,3 +94,14 @@ What the Campaign scene calls (none of it draws, all of it is plain data and fun
 - Every key: `const id = campDebugKey(e.code); if (id) { const r = campDebugRun(this.C, this.P, id); show(r.say); if (r.go) start r.go.level with r.go.techs }`.
 - Pause screen: `campDebugLine(C)`.
 - The play log needs nothing else: it watches `campNew`, `campStep`, `campOrder` and `campPick` from outside (`playlogWrap`) and `campDebugRun` says its own steps (`campaignNote`).
+
+## Click a place, then Fly or Fast (both maps)
+
+Card `space-game-map-click-fly` (Troy, 20 Nov 2026). In the Campaign's Tab map and in Long Haul's sector map a click on a place **sets** it as the destination (a ring, the route and the distance, as before) instead of flying at once. Two small buttons by the mark say **Fly** (regular speed) and **Fast**, each with its key and its time: `Enter` is Fly, `Shift+Enter` is Fast, and a second click on the place with no button is Fly. Every existing key stays (the Campaign list's W S A D Enter X, Long Haul's N, B, X, P and C); any steering key takes the wheel back. Plain Node: `tests/mapclickfly.mjs`; a hand-run boot of both games with a real mouse: `node tests/mapclickfly-boot.mjs`.
+
+| | Fly (regular) | Fast |
+|---|---|---|
+| Campaign | the autopilot as it was: the carrier at its top speed, 210 px/s | a **burn**: the carrier's top speed and thrust times `CAMP.nav.fast` (2) while the autopilot flies it; steering, arriving or X ends it. The time on the button is `campNavEta(C, dist, true)` |
+| Long Haul | the autopilot's **local leg only**, at the ship's own top speed: no cruise, and no flying clear of a mass first (`autopilotGo(s, body, order, false)`) | the autopilot as it always was: a leg longer than 3,500 px cruises in the middle (8,000 px/s), the rest is local. On a short leg Fast is Fly and the button says "too near to cruise" |
+
+The words are in `content/text/mapfly.md` (Campaign) and in `src/map.js` (Long Haul). The Long Haul N list's Enter, P, C and the ship computer are unchanged (they pass no speed, so they go as they always did).
