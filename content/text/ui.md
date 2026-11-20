@@ -146,7 +146,8 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.ui.pick | Choose one salvaged technology:  1  2  3 |
 | camp.ui.next | Enter  continue |
 | camp.ui.retry | Enter  try again     T  title |
-| camp.ui.paused | PAUSED     Esc  resume     T  title |
+| camp.ui.pausetitle | PAUSED |
+| camp.ui.paused | Esc  resume     T  title |
 | camp.ui.pausemap | Tab  map of the whole level (the battle goes on behind it) |
 | camp.map.title | MAP  -  LEVEL {n}: {name} |
 | camp.map.footer | Tab or Esc closes it. The battle goes on behind it. |
