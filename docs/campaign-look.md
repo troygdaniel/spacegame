@@ -18,7 +18,7 @@ The scene scales each picture to its `CAMP.size` length (`campArtLook`), so one 
 
 The Long Haul's Bastion (`src/shipmodels.js`) is not touched: the cruiser is its own drawing in `src/campcruiser.js`.
 
-## What was done (one `[look]` commit each, each reverts alone)
+## What was done (one `[look]` commit each; revert newest first)
 
 | Commit | What | Test |
 |---|---|---|
@@ -33,7 +33,7 @@ The Long Haul's Bastion (`src/shipmodels.js`) is not touched: the cruiser is its
 | 90266ca | a smaller muzzle flash (0.9) and a longer idle barrel (6.5) | `camplook-mounts.mjs` |
 | 4882387 | a faint pale disc under the fighters and escorts | `camplook-small.mjs` |
 
-Main was merged in once (ac8a7ad, the title card): no conflict.
+Revert newest first: `git revert` of each in turn, from the faint disc back to `CAMP.size`, was run on a scratch branch and after every step the `camplook-*` tests, `campaign`, `campmissiles`, `campturretstagger`, `campgfx-start` and `hygiene` passed (the size table and the cruiser are the base the later commits read). A middle one reverted alone conflicts with a later commit that touches the same line (the barrel length, the palette). Main was merged in twice (the title card, the level 2 warp): no conflict.
 
 ## The blind critic (two rounds, `docs/CRITIC.md` brief, ten pictures each)
 
