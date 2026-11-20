@@ -198,7 +198,7 @@ class Campaign extends Phaser.Scene {
     if (c === 'KeyH') { this.openKeys(); return; } // H: every key, on one page
     const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // a word typed into the strip is not a key
     if ((typeof this.pn !== 'object' || typeof this.pn.open !== 'string') && typeof campPanelNew === 'function') this.pn = campPanelNew(); // made in create (campPanelsInstall); a stand-in scene in a test has none, and answers any property
-    const pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0) : { used: false }; // the digits are the panels': 1 opens FLEET, 2 SHIP, then a digit picks a row (src/camppanel.js); Esc closes a panel first
+    const pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0, e.shiftKey) : { used: false }; // the digits are the panels': 1 opens FLEET, 2 SHIP, then a digit picks a row (src/camppanel.js); Esc closes a panel first
     if (pr.ran) toast(this, pr.say, pr.ok ? '#9fe9ff' : '#ffb454');
     if (pr.used) return;
     if (c === 'Escape') { if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc closes the map first; it never pauses while the map is open
@@ -244,7 +244,7 @@ class Campaign extends Phaser.Scene {
       // the autopilot (src/campnav.js, card space-game-campaign-navigate): while the map is open W A S D and the arrows are the list's, not the wheel's; with it closed any of them takes the wheel back
       const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // the strip's own box: the letters typed there are not the wheel
       const wheel = !this.mp && !typing && [k.W, k.A, k.S, k.D, k.UP, k.DOWN, k.LEFT, k.RIGHT].some(x => x && x.isDown);
-      if (wheel && C.nav && typeof campNavClear === 'function') campNavClear(C, 'key');
+      if (wheel && (C.nav || C.navWait) && typeof campNavClear === 'function') campNavClear(C, 'key'); // a steering key gives up the trip, and a burn that was waiting for the wing
       if (!(C.nav && C.nav.on)) {
         if (this.mp) { inp.turn = 0; inp.thrust = 0; inp.brake = false; }
         else {
@@ -410,7 +410,7 @@ class Campaign extends Phaser.Scene {
     C.rocks.forEach(o => dot(o, 0x8c8c8c, 1)); C.pickups.forEach(o => dot(o, 0xffd37a, 1)); C.caches.forEach(k => { if (!k.got) dot(k, 0xffd37a, 2); }); if (C.relic) dot(C.relic, 0x7fe9ff, 3);
     C.ships.forEach(u => { if (u.hp <= 0) return; dot(u, campDotColor(u), u.kind === 'mother' ? 4 : u.kind === 'carrier' ? 3 : 2); }); // campDotColor (src/campmap.js): the map's colours too
     // the autopilot's readout under the goal line, and an arrow at the edge of the screen pointing at the goal with its distance (src/campnav.js; docs/night/graphics.md finding 3)
-    if (this.hud.nav) this.hud.nav.setText(C.nav ? uiText('camp.nav.hud', { name: C.nav.name, km: campNavKm(Math.hypot(C.nav.x - c.x, C.nav.y - c.y)) }) : '');
+    if (this.hud.nav) this.hud.nav.setText(C.navWait ? uiText('camp.nav.recalling', { n: C.navWait.n }) : C.nav ? uiText('camp.nav.hud', { name: C.nav.name, km: campNavKm(Math.hypot(C.nav.x - c.x, C.nav.y - c.y)) }) : '');
     if (this.hud.arrow) {
       const cam = this.cameras && this.cameras.main, ar = cam && typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: cam.scrollX, y: cam.scrollY }, W, H) : null; // a stand-in scene in a test has no camera
       if (!ar) this.hud.arrow.setVisible(false);
