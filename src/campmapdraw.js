@@ -41,6 +41,7 @@ function campMapOpen(s) {
   const C = s.camp, F = CAMPMAP.frame, P = CAMPMAP_PANEL, L = (C.L || CAMP.levels[C.level]);
   const base = campMapFit(campMapBounds(C.level, false), F);
   const mp = s.mp = { objs: [], whole: false, nameObjs: [], base, fit: Object.assign({}, base), z: 1, zWant: 1, namesZ: 1, tAt: null, userSel: false, leg: [] }; // base: the level fitted to the frame; fit: what is drawn and clicked through, the base at zoom z (src/campzoom.js, campMapView)
+  mp.fire = campFireNew(); // the fight on the map (src/campmapfire.js): a pool of marks made once, per open map; the scene feeds it while the map is open
   const own = o => { o.setScrollFactor(0); mp.objs.push(o); return o; };
   own(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.84)).setDepth(150);
   hudPanel(own(s.add.graphics()).setDepth(151), P.x, P.y, P.w, P.h, 20, 0.97, CYAN);
@@ -158,6 +159,7 @@ function campMapPaint(s, time) {
       g.fillStyle(m.color, 1).fillPoints(tri, true); g.lineStyle(1, CYAN, 1).strokePoints(tri, true);
     }
   });
+  campFirePaint(mp.fire, C, g, F, f, performance.now()); // the fight over the marks: volleys, bullets, missiles, mining beams, rings and flashes (src/campmapfire.js), thin and cut to the frame
   // ---- navigate (card space-game-campaign-navigate): the goal pulses with a line from the carrier and its distance and flight time; the chosen row has a frame; the place you are flying to has a line ----
   if (time - mp.rowsAt >= 250 || mp.dirty) { mp.rows = campNavRows(C); mp.rowsAt = time; mp.dirty = false; } // the list is rebuilt four times a second: ships move
   let sel = mp.rows.findIndex(r => r.id === mp.selId); if (sel < 0) { sel = 0; mp.selId = mp.rows[0] ? mp.rows[0].id : ''; }

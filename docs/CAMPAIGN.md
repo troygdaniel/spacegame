@@ -122,6 +122,11 @@ These numbers are those of the Earth defence level (`CAMP.levels.home`), which w
 - **All three levels use it** (rocks and wrecks are in every level; Earth's shield only in the Earth level, `home`). Every number is a line of `CAMP` (`ore`, `shield`, `recharge`, `build`).
 - **Assumed:** Troy meant the shield bars; the carrier had none, so it has one now. Wrecks are the income of a fight, the rocks are the quiet minute's. The words of these orders are in `content/text/campaign.md` because `content/text/ui.md` is full (200 rows a file).
 
+## The Tab map shows the fight (card `space-game-campaign-map-lasers`, Troy: "it would be good to see lasers firing on it as well")
+While the map is open the battle goes on behind it, and the map draws it too, in thin lines (`src/campmapfire.js`): the carrier's turret volleys (a line from the turret to what it hits, amber), the guns' and the enemy's bullets (a few pixels of tail: the wing's green, the enemy's red; the turrets' own shots are the volleys), the mining lasers (a steady cyan line from the ship to the rock, fading in), a missile (a dot and a short trail), a ring where something blew up (red for theirs, pale blue for ours, amber for a missile's blast) and a flash on the mark of a ship that was hit (a shield hit is cyan). Lines are 1.5 px whatever the zoom, are cut to the map's frame, and fade in over about 150 ms.
+- **Cheap, by rule** (the Campaign keeps 60 a second, `docs/night/performance.md`): a pool of 96 marks made once when the map opens and reused oldest first; the painting loops over the pool and over the sim's own lists (`C.bullets`, `C.rockets`, `C.lasers`) and allocates nothing; at most 120 bullets are drawn; the scene gives it events only while the map is open, and only the map's own paint draws it. `tests/campmapfire.mjs` proves each of these (plain Node, on a Graphics that only records, and it reads the painting code for anything that allocates); `tests/campmapfire-boot.mjs` is the one hand-run picture and a timing of the paint.
+- **Not on the map:** numbers, names or a legend for the fire; it is a picture of what the guns are doing, nothing to read.
+
 ## Tech: one of three after each battle
 
 | After level 1 (their wreck) | Does |
