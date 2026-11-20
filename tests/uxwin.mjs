@@ -2,12 +2,13 @@
 // Card space-game-night-ux, finding 8 (docs/night/ux.md; src/campwin.js, showWon in src/campaignscene.js). The win card was two story lines and "Enter continue". It now has one more line, for
 // reading and not said aloud: "Won in 3:12. Carrier hull 420 of 600, 2 of 2 convoys delivered, 1 of your ships lost." Levels with no convoys (2 and 3) leave them out.
 // Run: node tests/uxwin.mjs   (exit code 1 on a failed check)
+import { readFileSync as __rf } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame();
-g.run('CAMP.levels[1] = CAMP.levels.home'); // level 1 is the asteroid belt now (card space-game-campaign-belt); this test is about the Earth level (its convoys, Earth's shield, its wave times), which is kept as data under "home"
+g.run(__rf(new URL('./fixtures/camplegacy.js', import.meta.url), 'utf8') + ' CAMP.levels[1] = CAMP.levels.home; CAMP.levels[2] = CAMP.levels.legacy2; CAMP.levels[3] = CAMP.levels.legacy3;'); // levels 1 to 3 as whole-level battles, the way they were before the belt and the missions (cards space-game-campaign-belt and -missions): these tests are about the Earth level and the old levels, kept as data
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 g.run(`
   window.__cards = []; window.__said = []; window.__went = []; go = (s, key, data) => { __went.push({ key, data }); }; toast = () => {}; shipcompSay = t => { __said.push(t); return true; };

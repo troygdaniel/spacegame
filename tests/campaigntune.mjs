@@ -8,13 +8,14 @@
 //   G. the scene (Phaser's, so its source is read) and the title call the kit with the arguments the log and the kit need
 // Levels 2 and 3 are built by another card; here a copy of level 1 stands in for them where a test needs a second level.
 // Run: node tests/campaigntune.mjs   (exit code 1 on a failed check)
+import { readFileSync as __rf } from 'node:fs';
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const g = nodeGame();
-g.run('CAMP.levels[1] = CAMP.levels.home'); // level 1 is the asteroid belt now (card space-game-campaign-belt); this test is about the Earth level (its Earth, convoys and wave times), kept as data under "home"
+g.run(__rf(new URL('./fixtures/camplegacy.js', import.meta.url), 'utf8') + ' CAMP.levels[1] = CAMP.levels.home; CAMP.levels[2] = CAMP.levels.legacy2; CAMP.levels[3] = CAMP.levels.legacy3;'); // levels 1 to 3 as whole-level battles, the way they were before the belt and the missions (cards space-game-campaign-belt and -missions): these tests are about the Earth level and the old levels, kept as data
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 g.run(`
   const __lv1 = CAMP.levels[1]; delete CAMP.levels[2]; delete CAMP.levels[3];

@@ -35,7 +35,7 @@ function campMapClose(s) {
 
 function campMapOpen(s) {
   if (s.mp || !s.camp) return;
-  const C = s.camp, F = CAMPMAP.frame, P = CAMPMAP_PANEL, L = CAMP.levels[C.level];
+  const C = s.camp, F = CAMPMAP.frame, P = CAMPMAP_PANEL, L = (C.L || CAMP.levels[C.level]);
   const mp = s.mp = { objs: [], fit: campMapFit(campMapBounds(C.level), F), leg: [] };
   const own = o => { o.setScrollFactor(0); mp.objs.push(o); return o; };
   own(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.84)).setDepth(150);

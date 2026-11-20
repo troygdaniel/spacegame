@@ -54,7 +54,7 @@ const campMapPoint = (fit, frame, x, y) => ({ x: frame.x + frame.w / 2 + (x - fi
 
 const CAMPMAP_RANK = { place: 0, relic: 1, cache: 2, tower: 3, convoy: 4, alien: 5, wing: 6, mother: 7, carrier: 8 }; // drawn in this order: the carrier on top
 function campMapMarks(C) {
-  const L = CAMP.levels[C.level], pl = campPlaces(C.level), c = CAMPMAP.color, out = [];
+  const L = (C.L || CAMP.levels[C.level]), pl = campPlaces(C.level), c = CAMPMAP.color, out = [];
   Object.keys(pl).forEach(id => { const p = pl[id]; if (p.hidden) return; out.push({ type: 'place', id, x: p.x, y: p.y, r: p.r || 60, name: String(p.name) + (p.base ? ' / ' + p.base : ''), color: id === 'earth' ? c.earth : c.place }); });
   (C.caches || []).forEach(k => { if (!k.got) out.push({ type: 'cache', x: k.x, y: k.y, color: c.cache }); });
   if (C.relic && L.relic) out.push({ type: 'relic', x: C.relic.x, y: C.relic.y, r: L.relic.radius, hold: L.relic.hold ? C.relic.hold / L.relic.hold : 0, color: c.relic });

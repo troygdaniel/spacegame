@@ -4,7 +4,7 @@
 //   campWinLine(C) -> "Won in 3:12. Carrier hull 420 of 600, 2 of 2 convoys delivered, 1 ship lost."      src/campaignscene.js showWon shows it under the story and does not say it aloud
 function campWinLine(C) {
   try {
-    const L = CAMP.levels[C.level], t = Math.max(0, Math.round(C.t / 1000)), time = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+    const L = (C.L || CAMP.levels[C.level]), t = Math.max(0, Math.round(C.t / 1000)), time = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
     const vars = { time, hull: Math.round(C.carrier.hp), max: Math.round(C.carrier.maxHp), delivered: C.delivered, convoys: (L.convoys || []).length, lost: C.lostShips };
     return uiText((L.convoys || []).length ? 'camp.win.resultconv' : 'camp.win.result', vars);
   } catch (e) { return ''; }

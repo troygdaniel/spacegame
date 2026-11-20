@@ -21,7 +21,7 @@ const campNavKm = d => hudFmt(Math.round(d / 10));
 // the thing the level asks for next, or null
 function campNavGoal(C) {
   try {
-    const L = CAMP.levels[C.level], pl = campPlaces(C.level), c = C.carrier, near = list => list.slice().sort((a, b) => campDist(a, c) - campDist(b, c))[0] || null;
+    const L = (C.L || CAMP.levels[C.level]), pl = campPlaces(C.level), c = C.carrier, near = list => list.slice().sort((a, b) => campDist(a, c) - campDist(b, c))[0] || null;
     const ship = (u, kind, name) => ({ id: kind === 'mother' ? 'mother' : kind + ':' + u.id, kind, name, x: u.x, y: u.y, r: u.r || 0, moving: u.vmax > 0, ref: u.id });
     if (L.win === 'mother') {
       const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); if (m) return ship(m, 'mother', uiText('camp.nav.mother'));

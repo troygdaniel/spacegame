@@ -229,11 +229,14 @@ console.log('H. the scene: keys, modes, the pick, retry (on a stand-in)');
   `);
   const mk = (level, d) => g.run(`window.F = __fake(${level}, ${JSON.stringify(d || {})}); 0`);
   const key = c => g.run(`F.onKey({ code: '${c}' }); 0`);
+  const begin = () => { if (J('F.mode') === 'intro') key('Enter'); if (J('F.mode') === 'brief') key('Enter'); }; // the level's story, then the mission's briefing, then the flight
   mk(1);
   check('it opens on the story of the level: the intro card is up, the strip is kept shut (panel), the sim has not moved', J('F.mode') === 'intro' && J('F.panel') === true && (g.run('F.update(0, 100)'), J('F.camp.t') === 0));
   key('Digit1'); check('no order is taken while the story shows', J('F.camp.launchQ.length') === 0);
   key('Enter');
-  check('Enter begins: the card is gone, the strip may open, the battle runs', J('F.mode') === 'play' && J('F.panel') === false && (g.run('F.update(0, 100)'), J('F.camp.t') > 90));
+  check('Enter on the story shows the briefing of the first mission: its title, two lines and the bonus objectives; the sim has not moved', J('F.mode') === 'brief' && J('F.panel') === true && J('F.camp.t') === 0);
+  key('Enter');
+  check('Enter on the briefing flies it: the card is gone, the strip may open, the battle runs', J('F.mode') === 'play' && J('F.panel') === false && (g.run('F.update(0, 100)'), J('F.camp.t') > 90));
   g.run('F.k.W.isDown = true; F.k.D.isDown = true; F.k.SPACE.isDown = true; F.update(0, 33)');
   check('W thrusts, D turns, Space fires: the keys are read into the sim\'s input every frame', J('F.camp.input.thrust') === 1 && J('F.camp.input.turn') === 1 && J('F.camp.input.fire') === true);
   g.run('F.k.W.isDown = false; F.k.D.isDown = false; F.k.A.isDown = true; F.k.S.isDown = true; F.k.SPACE.isDown = false; F.update(0, 33)');
@@ -244,17 +247,17 @@ console.log('H. the scene: keys, modes, the pick, retry (on a stand-in)');
   key('Escape'); check('Esc again goes back to the battle', J('F.mode') === 'play' && J('F.panel') === false);
   key('Escape'); key('KeyT'); check('T from the pause goes to the title', J('__went.pop()').key === 'Title');
   mk(1);
-  key('Enter');
+  begin();
   g.run('F.camp.techs = ["blink"]; F.onKey({ code: "KeyQ" })');
   check('Q asks for the blink (the sim says whether it is ready)', J('F.camp.input.blink') === true);
   // the end of a level
   g.run(`campHurt(F.camp, F.camp.carrier, 9999, 'x'); F.update(0, 33)`);
   check('the carrier lost: the lost card with Enter and T, and the reason in words', J('F.mode') === 'lost' && J('F.panel') === true);
   key('Enter'); const re = J('__went.pop()');
-  check('Enter tries the level again with the same techs, started as "retry"', re.key === 'Campaign' && re.data.level === 1 && re.data.via === 'retry' && Array.isArray(re.data.techs));
-  mk(1); key('Enter');
+  check('Enter flies the MISSION again (the level is not lost: mission 0 of level 1) with the same techs, started as "retry"', re.key === 'Campaign' && re.data.level === 1 && re.data.mission === 0 && re.data.via === 'retry' && Array.isArray(re.data.techs));
+  mk(1, { mission: 2 }); begin();
   g.run(`F.camp.ships.push({ id: 'mother-9', kind: 'mother', team: 'alien', x: 99999, y: 0, vx: 0, vy: 0, hp: 10, r: 90 }); F.camp.by['mother-9'] = F.camp.ships[F.camp.ships.length - 1]; campHurt(F.camp, F.camp.by['mother-9'], 50, 'x'); F.update(0, 33)`);
-  check('the mothership dead: the story after the battle, then Enter opens the Earth refit (level 1 ends with it; the later levels have the plain pick)', J('F.mode') === 'won' && (key('Enter'), J('F.mode') === 'refit') && J('F.choices.length') === 3 && J('F.panel') === true);
+  check('the mothership of the last mission dead: the debrief (score), then Enter the story after the level, then Enter opens the Earth refit (level 1 ends with it; the later levels have the plain pick)', J('F.mode') === 'debrief' && J('F.mdone') === true && (key('Enter'), J('F.mode') === 'won') && (key('Enter'), J('F.mode') === 'refit') && J('F.choices.length') === 3 && J('F.panel') === true);
   key('Digit9'); check('a key that is not a choice does nothing, and Enter before a pick does nothing', J('F.mode') === 'refit' && (key('Enter'), J('F.mode') === 'refit') && J('__went.length') === 0);
   key('Digit2'); key('Digit3');
   check('1, 2 or 3 chooses a technology; choosing again changes the choice; nothing is kept until Enter', J('F.refit.pick') === J('F.choices[2]') && !JSON.parse(store.get('longhaul.campaign') || '{"techs":[]}').techs.length);
@@ -270,76 +273,76 @@ console.log('H. the scene: keys, modes, the pick, retry (on a stand-in)');
   g.run('go = __go0; toast = __toast0');
 }
 
-// ---------- I. levels 2 and 3 ----------
-console.log('I. level 2 (Alpha Centauri) and level 3 (the home world)');
+// ---------- I. levels 1, 2 and 3 are runs of three missions ----------
+console.log('I. the nine missions: the table, each kind, the plain bot and the idle player, the chain');
 {
   g.run(`go = (s, key, data) => { __went.push({ key, data }); }; toast = (s, msg) => { __toasts2.push(msg); };`); // the stand-ins of H again (H gave the real ones back)
   g.run(`
-    window.__new2 = (level, techs, seed) => { window.C = campNew(level, techs || [], { seed: seed == null ? 1 : seed }); return !!C; };
-    window.__smart2 = (C, s) => {
-      const c = C.carrier, L = CAMP.levels[C.level];
+    window.__new2 = (level, techs, seed, mi) => { window.C = campNew(level, techs || [], { seed: seed == null ? 1 : seed, mission: mi | 0 }); return !!C; };
+    window.__mbot = (C, s) => {            // a plain player of any mission: launches, attacks every 5 s, escorts the haulers, flies the cruiser at what the mission asks (a point, a cache, the relic, the haulers) and at what comes near, and fires
+      const L = C.L, c = C.carrier;
       if (s > 1 && s < 1.05) campOrder(C, 'launch');
-      if (s > 6 && Math.round(s * 30) % 120 === 0) campOrder(C, 'attack', '');
-      const al = campAliens(C).sort((p, q) => campDist(p, c) - campDist(q, c))[0];
-      let goal = al;
-      if (C.level === 2) { const k = C.caches.filter(k => !k.got).sort((p, q) => campDist(p, c) - campDist(q, c))[0]; goal = C.cachesGot < L.relic.caches && k ? k : C.relic; }
-      const near = al && campDist(al, c) < 700, tgt = near ? al : goal || al;
+      if (s > 12 && Math.round(s * 30) % 150 === 0) campOrder(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : '');
+      if (L.convoys.length && Math.round(s * 30) % 90 === 0 && campConvoys(C).length) campOrder(C, 'escort', 'hauler');
+      const al = campAliens(C).sort((p, q) => campDist(p, c) - campDist(q, c)), near = al[0], fight = near && campDist(near, c) < 900;
+      const first = campObjectives(C).find(o => !o.done) || {}, byDist = list => list.sort((p, q) => campDist(p, c) - campDist(q, c))[0];
+      let goal = null;
+      if (first.type === 'scan') goal = byDist(C.scan.filter(p => !p.got)); else if (first.type === 'caches') goal = byDist(C.caches.filter(k => !k.got)); else if (first.type === 'relic') goal = C.relic;
+      else if (first.type === 'deliver') goal = byDist(campConvoys(C).slice()) || { x: 1000, y: -500 }; else if (first.type === 'hold') goal = C.earth; else goal = near;
+      const tgt = fight ? near : (goal || near);
       if (tgt) {
-        const want = Math.atan2(tgt.y - c.y, tgt.x - c.x), d = Math.atan2(Math.sin(want - c.rot), Math.cos(want - c.rot)), dist = campDist(tgt, c);
-        C.input.turn = Math.max(-1, Math.min(1, d * 3)); C.input.thrust = (near ? dist > 420 : dist > (C.level === 2 && goal === C.relic ? 60 : 300)) ? 1 : 0;
-        const w2 = al ? Math.atan2(al.y - c.y, al.x - c.x) : 0, d2 = Math.atan2(Math.sin(w2 - c.rot), Math.cos(w2 - c.rot)); C.input.fire = !!al && campDist(al, c) < 520;
+        const want = Math.atan2(tgt.y - c.y, tgt.x - c.x), d = Math.atan2(Math.sin(want - c.rot), Math.cos(want - c.rot)), dist = campDist(tgt, c), stand = fight ? 420 : (goal === C.relic || (goal && goal.got === false) ? 40 : 250);
+        C.input.turn = Math.max(-1, Math.min(1, d * 3)); C.input.thrust = dist > stand ? 1 : 0;
+        const w2 = near ? Math.atan2(near.y - c.y, near.x - c.x) : 0, d2 = Math.atan2(Math.sin(w2 - c.rot), Math.cos(w2 - c.rot)); C.input.fire = !!near && Math.abs(d2) < 0.22 && campDist(near, c) < 800;
       } else { C.input.thrust = 0; C.input.turn = 0; C.input.fire = false; }
     };
-    window.__play2 = (level, seed, script, secs, techs) => {
-      window.C = campNew(level, techs || [], { seed });
-      for (let i = 0; i < secs * 30 && !C.result; i++) { script(C, i / 30); campStep(C, 1 / 30); C.events.length = 0; }
-      return { result: C.result, why: C.why, t: Math.round(C.t / 1000), hull: Math.round(C.carrier.hp), caches: C.cachesGot, towers: C.ships.filter(u => u.kind === 'tower').length };
-    };
+    window.__mplay = (level, mi, seed, script, secs, techs) => { const C = window.C = campNew(level, techs || [], { seed, mission: mi }); for (let i = 0; i < secs * 30 && !C.result; i++) { script(C, i / 30); campStep(C, 1 / 30); C.events.length = 0; } return { r: C.result || 'time', w: C.why, t: Math.round(C.t / 1000), hull: Math.round(C.carrier.hp), score: C.score ? C.score.score : 0 }; };
   `);
-  check('the table has levels 1, 2 and 3 (win by the mothership, the relic, the towers) and the Earth level "home", which is not in the chain; levels 1, 2 and 3 have no Earth and no convoys', J('Object.keys(CAMP.levels).join()') === '1,2,3,home' && J('CAMP.levels[1].win') === 'mother' && J('CAMP.levels[2].win') === 'relic' && J('CAMP.levels[3].win') === 'towers' && [1, 2, 3].every(n => J(`CAMP.levels[${n}].earth`) === false && J(`CAMP.levels[${n}].convoys.length`) === 0) && J('CAMP.levels.home.earth') === null && J('CAMP.levels.home.convoys.length') === 2);
-  check('each level names only places it has (the start, the relic, the tower rings), and every wave line is a text the game has', J(`[1, 2, 3].every(n => { const L = CAMP.levels[n], p = campPlaces(n); return !!p[L.start] && (!L.relic || !!p[L.relic.place]) && (L.towers || []).every(g => !!p[g.place]) && L.waves.every(w => uiText(w.say) !== w.say); })`));
-  check('the story of levels 2 and 3 is in content/text/ui.md: two lines before and two after each, and no tech is offered after level 3', [2, 3].every(n => J(`campStory(${n}, 'before')`).length === 2 && J(`campStory(${n}, 'after')`).length === 2) && J('campTechChoices(3).length') === 0);
-  // level 2
-  g.run('__new2(2, [], 1)');
-  check('level 2: no Earth to lose, the carrier warps in at the warp point, five guards wait round Proxima b, three caches lie about, the relic is on Proxima b', J('C.earth') === null && J('C.carrier.x') === -4800 && J('campAliens(C).length') === 5 && J('campAliens(C).every(u => u.hold)') && J('C.caches.length') === 3 && J('C.relic.x') === 1200 && J('C.relic.y') === 800);
-  g.run('__run(5)');
-  check('the guards wait: five seconds in, none has moved off its post', J('campAliens(C).every(u => u.hold && Math.hypot(u.vx, u.vy) < 1)'));
-  g.run('C.carrier.x = -2800 + 100; C.carrier.y = 2000; __run(0.2)');
-  check('a cache is collected when a ship of yours comes within 160 px, once, and the game says how many', J('C.cachesGot') === 1 && J('C.caches[0].got') && g.run('C.events.filter(e => e.type === "say").map(e => e.key).join()').includes('camp.say.cache') && (g.run('__run(1)'), J('C.cachesGot') === 1));
-  check('the goal line says what the level asks: caches first, then the ring', /Gather resources: 1 of 2/.test(J('campObjective(C)')) && (g.run('C.cachesGot = 2'), /Hold the ring at the relic: 0%/.test(J('campObjective(C)'))));
-  g.run('__new2(2, [], 1); C.cachesGot = 1; C.ships.forEach(u => { if (u.team === "alien") u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0); C.carrier.x = 1200; C.carrier.y = 800; __run(3)');
-  check('with too few caches the relic does not answer, however long you sit on it', J('C.relic.hold') === 0 && J('C.result') === null);
-  g.run('C.cachesGot = 2; __run(4)');
-  check('with the caches, the carrier on the ring and no alien near, the hold fills at one second a second', Math.abs(J('C.relic.hold') - 4) < 0.1 && J('C.result') === null, J('C.relic.hold'));
-  g.run('C.carrier.x = 5000; __run(1)');
-  check('leave the ring and it loses ground twice as fast', Math.abs(J('C.relic.hold') - 2) < 0.1, J('C.relic.hold'));
-  g.run('C.carrier.x = 1200; C.carrier.y = 800; var __d = campSpawn(C, "drone", 1200 + 300, 800); __d.goal = "carrier"; __d.hold = true; __run(1)');
-  check('an alien near the relic stops the hold: it goes down, not up', J('C.relic.hold') < 2 && J('C.result') === null);
-  g.run('C.ships.forEach(u => { if (u.team === "alien") u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0); __run(12)');
-  check('hold it the full 8 seconds, clear of the guards, and level 2 is won: "relic"', J('C.result') === 'won' && J('C.why') === 'relic');
-  const l2 = [1, 2, 3, 4, 5, 6].map(sd => J(`__play2(2, ${sd}, __smart2, 400)`));
-  check('level 2: a sensible player (gather two caches, fly to the relic, fight) wins on every seed, in under four minutes', l2.every(r => r.result === 'won' && r.why === 'relic' && r.t <= 240 && r.caches >= 2), JSON.stringify(l2.map(r => r.result + ' ' + r.t)));
-  check('level 2: doing nothing loses (the second wave and the first are for the carrier)', [1, 2, 3].every(sd => J(`__play2(2, ${sd}, () => {}, 500)`).result === 'lost'));
-  // level 3
-  g.run('__new2(3, [], 1)');
-  check('level 3: twelve towers in two rings round the home world (8 at 1,000 px, 4 at 1,500 px, the outer ones tougher), the carrier far out, no Earth', J(`C.ships.filter(u => u.kind === 'tower').length`) === 12 && J(`C.ships.filter(u => u.kind === 'tower' && u.maxHp === 260).length`) === 4 && J('C.earth') === null && Math.hypot(J('C.carrier.x'), J('C.carrier.y')) > 7000);
-  check('a tower on its post: it turns on the nearest of your ships inside 800 px and fires, and does nothing when none is near; it never moves', (() => { g.run('var __t = C.ships.find(u => u.kind === "tower"); var __tx = __t.x, __ty = __t.y; __run(3)'); const idle = J('C.bullets.length') === 0; g.run('C.carrier.x = __t.x + 500; C.carrier.y = __t.y; __run(4)'); return idle && J('C.bullets.some(b => b.team === "alien")') !== undefined && J('__t.x') === J('__tx') && J('__t.y') === J('__ty') && (J('C.carrier.hp') < 600 || J('C.shield') < 150 || J('C.bullets.length') > 0); })());
-  g.run('__new2(3, [], 1); C.ships.forEach(u => { if (u.kind === "tower" && u !== C.ships.filter(v => v.kind === "tower")[0]) { u.hp = 0; } }); C.ships = C.ships.filter(u => u.hp > 0 || u.kind === "carrier")');
-  check('level 3 is won when the last tower falls, not before', J('C.result') === null && (g.run('campHurt(C, C.ships.find(u => u.kind === "tower"), 9999, "x")'), J('C.result') === 'won' && J('C.why') === 'towers'));
-  check('the goal line counts the towers left', (g.run('__new2(3, [], 1)'), /Break the defence towers: 12 left/.test(J('campObjective(C)'))));
-  const l3 = [1, 2, 3, 4, 5, 6].map(sd => J(`__play2(3, ${sd}, __smart2, 500)`));
-  check('level 3 is the hardest: a sensible player wins most seeds (4 of 6 or more) and some of them cost the carrier dear, in 2 to 5 minutes', l3.filter(r => r.result === 'won').length >= 4 && l3.filter(r => r.result === 'won').every(r => r.t >= 100 && r.t <= 300), JSON.stringify(l3.map(r => r.result + ' ' + r.t + ' ' + r.hull)));
-  check('level 3: doing nothing loses', [1, 2, 3].every(sd => J(`__play2(3, ${sd}, () => {}, 500)`).result === 'lost'));
-  check('the ship computer is told the goal of level 2 and 3, and no Earth shield', (g.run('__new2(2, [], 1)'), /Goal: Gather resources: 0 of 2/.test(J('campSummary(C)')) && !/Earth shield/.test(J('campSummary(C)'))) && (g.run('__new2(3, [], 1)'), /Goal: Break the defence towers: 12 left/.test(J('campSummary(C)'))));
-  // the chain, on the stand-in scene
+  check('each of the three levels is three missions: the belt (recon, escort, attack), Alpha Centauri (recon, attack, defend), the home world (recon, attack, attack); each has objectives, bonus objectives and a par time; none has an Earth', [1, 2, 3].every(n => J(`campMissions(${n}).length`) === 3 && J(`campMissions(${n}).every(m => m.objectives.length >= 1 && m.bonus.length >= 1 && m.par > 0)`) && J(`[0, 1, 2].every(i => campMissionRow(${n}, i).earth === false)`)) && J('[1, 2, 3].map(n => campMissions(n).map(m => m.kind).join()).join("|")') === 'recon,escort,attack|recon,attack,defend|recon,attack,attack');
+  check('every mission has its words (a title and two lines, curt: 12 words at most) and its bonus objectives a template text; every place, wave line and convoy it names exists', [1, 2, 3].every(n => [0, 1, 2].every(i => { const r = J(`(() => { const L = campMissionRow(${n}, ${i}), k = 'camp.m.${n}.${i + 1}.', pl = campPlaces(${n}), w = x => String(x).split(' ').length, ok = []; ok.push(uiText(k + 'title') !== k + 'title', uiText(k + 'b1') !== k + 'b1' && w(uiText(k + 'b1')) <= 12, uiText(k + 'b2') !== k + 'b2' && w(uiText(k + 'b2')) <= 12); ok.push(!!pl[L.start]); (L.convoys || []).forEach(c => ok.push(!!pl[c.from] && !!pl[c.to])); (L.towers || []).forEach(g => ok.push(!!pl[g.place])); if (L.relic) ok.push(!!pl[L.relic.place]); L.waves.forEach(x => ok.push(uiText(x.say) !== x.say)); L.bonus.forEach(b => ok.push(uiText('camp.b.' + b.type) !== 'camp.b.' + b.type)); return ok.every(Boolean); })()`); return r === true; })));
+  check('the story of the levels is curt: level 1 has three lines before and three after, levels 2 and 3 two each (none over 12 words); no tech is offered after level 3', J(`campStory(1, 'before')`).length === 3 && J(`campStory(1, 'after')`).length === 3 && [2, 3].every(n => J(`campStory(${n}, 'before')`).length === 2 && J(`campStory(${n}, 'after')`).length === 2) && [1, 2, 3].every(n => ['before', 'after'].every(w => J(`campStory(${n}, '${w}')`).every(x => x.split(' ').length <= 12))) && J('campTechChoices(3).length') === 0);
+  // --- level 2
+  g.run('__new2(2, [], 1, 0)');
+  check('2.1 resources: three caches lie about (collect two), no guards and no relic yet; the aliens that followed come at 20 s', J('C.caches.length') === 3 && J('C.relic') === null && J('C.ships.filter(u => u.guard).length') === 0 && J('C.L.objectives.map(o => o.type).join()') === 'caches,kill' && (g.run('__run(19)'), J('C.waves[0].started') === false) && (g.run('__run(1.2)'), J('C.waves[0].started') && J('campAliens(C).length') === 5));
+  g.run('__new2(2, [], 1, 0); C.carrier.x = -2800 + 100; C.carrier.y = 2000; __run(0.2)');
+  check('a cache is collected when a ship of yours comes within 160 px, once, and the game says how many; the goal line says how many are needed', J('C.cachesGot') === 1 && J('C.caches[0].got') && g.run('C.events.filter(e => e.type === "say").map(e => e.key).join()').includes('camp.say.cache') && /Gather resources: 1 of 2/.test(J('campObjective(C)')) && (g.run('__run(1)'), J('C.cachesGot') === 1));
+  g.run('__new2(2, [], 1, 0); C.cachesGot = 2; __run(21)');
+  check('two caches alone do not win: the attackers (wave 0) must be dead too; with both done the mission is won', J('C.result') === null && (g.run('C.ships.forEach(u => { if (u.team === "alien") u.hp = 0; }); __run(0.2)'), J('C.result') === 'won'));
+  g.run('__new2(2, [], 1, 1)');
+  check('2.2 the guards: seven guards (three gunships, four drones) wait round Proxima b until a ship of yours comes within reach; five seconds in none has moved; the objective is to destroy them all', J('C.ships.filter(u => u.guard).length') === 7 && J('C.ships.filter(u => u.guard && u.hold).length') === 7 && (g.run('__run(5)'), J('C.ships.filter(u => u.guard).every(u => Math.hypot(u.vx, u.vy) < 1)')) && J('C.L.objectives[0].what') === 'guards');
+  g.run('C.ships.forEach(u => { if (u.guard) u.hp = 0; }); __run(0.3)');
+  check('every guard dead wins the mission (the wave of the reserve is not needed)', J('C.result') === 'won');
+  g.run('__new2(2, [], 1, 1); C.ships.forEach(u => { if (u.guard) u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0 || u.kind === "carrier"); C.guardsStart = true; C.ships.push(Object.assign(campSpawn(C, "drone", 99999, 99999), { guard: true, hold: true })); __run(0.2)');
+  check('one guard still alive: not won', J('C.result') === null);
+  g.run('__new2(2, [], 1, 2)');
+  check('2.3 the relic: the cruiser starts near it (within 700 px), the ring holds for 14 seconds with no alien within 650 px, no resources needed; the first attackers come at 6 s', J('Math.hypot(C.carrier.x - C.relic.x, C.carrier.y - C.relic.y)') < 700 && J('C.L.relic.hold') === 14 && J('C.L.relic.caches') === 0 && J('C.L.kind') === 'defend');
+  g.run('__new2(2, [], 1, 2); C.waves[0].started = true; C.carrier.x = C.relic.x; C.carrier.y = C.relic.y; __run(5)');
+  check('on the ring with no alien near the hold fills a second a second (5 of 14); leave and it loses twice as fast; an alien near stops it', Math.abs(J('C.relic.hold') - 5) < 0.1 && (g.run('C.carrier.x = C.relic.x + 5000; __run(1)'), Math.abs(J('C.relic.hold') - 3) < 0.1) && (g.run('C.carrier.x = C.relic.x; var __d3 = campSpawn(C, "drone", C.relic.x + 300, C.relic.y); __d3.hold = true; __run(1)'), J('C.relic.hold') < 3));
+  g.run('__new2(2, [], 1, 2); C.waves[0].started = true; C.ships.forEach(u => { if (u.team === "alien") u.hp = 0; }); C.carrier.x = C.relic.x; C.carrier.y = C.relic.y; __run(15)');
+  check('held the full fourteen seconds, clear of aliens: the mission is won, "relic"', J('C.result') === 'won' && J('C.why') === 'relic');
+  // --- level 3
+  g.run('__new2(3, [], 1, 0)');
+  check('3.1 approach: three points to scan on the way in (each 420 px wide, 7 seconds); the defenders come when the first is scanned; the attackers must be dead too', J('C.scan.length') === 3 && J('C.scan.every(p => p.secs === 7 && p.r === 420)') && J('C.L.waves[0].on.scanned') === 1 && J('C.L.objectives.map(o => o.type).join()') === 'scan,kill');
+  g.run('__new2(3, [], 1, 1)');
+  check('3.2 the outer ring: four towers of 260 hit points, 1,500 px from the world, and nothing else; the cruiser starts near the ring', J('C.ships.filter(u => u.kind === "tower").length') === 4 && J('C.ships.filter(u => u.kind === "tower").every(u => u.maxHp === 260 && Math.abs(Math.hypot(u.x, u.y) - 1500) < 1)') && Math.hypot(J('C.carrier.x'), J('C.carrier.y')) < 4500);
+  g.run('__new2(3, [], 1, 2)');
+  check('3.3 the inner ring: eight towers 1,000 px from the world, the goal line counts them', J('C.ships.filter(u => u.kind === "tower").length') === 8 && /Destroy the towers/.test(J('campObjective(C)')));
+  check('a tower on its post: it turns on the nearest of your ships inside 800 px and fires, and does nothing when none is near; it never moves', (() => { g.run('__new2(3, [], 1, 2); var __t = C.ships.find(u => u.kind === "tower"); var __tx = __t.x, __ty = __t.y; C.carrier.x = 30000; C.carrier.y = 30000; __run(3)'); const idle = J('C.bullets.length') === 0; g.run('C.carrier.x = __t.x + 500; C.carrier.y = __t.y; __run(4)'); return idle && J('__t.x') === J('__tx') && J('__t.y') === J('__ty') && (J('C.carrier.hp') < 600 || J('C.shield') < 150 || J('C.bullets.length') > 0); })());
+  // --- all nine, played
+  const plan = [[1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2], [3, 0], [3, 1], [3, 2]], res = plan.map(([l, m]) => ({ l, m, bot: [1, 2, 3, 4, 5, 6].map(sd => J(`__mplay(${l}, ${m}, ${sd}, __mbot, 400)`)), idle: J(`__mplay(${l}, ${m}, 1, () => {}, 300)`) }));
+  check('a plain player wins every one of the nine missions on at least five seeds of six, each in 25 seconds to 3 minutes (the aim is about one to two)', res.every(x => x.bot.filter(r => r.r === 'won').length >= 5 && x.bot.filter(r => r.r === 'won').every(r => r.t >= 25 && r.t <= 180)), JSON.stringify(res.map(x => x.l + '.' + (x.m + 1) + ' ' + x.bot.map(r => r.r[0] + r.t).join(' '))));
+  check('a player who does nothing never wins a mission (the survey and the approach are never finished; the others are lost: the cruiser, the haulers)', res.every(x => x.idle.r !== 'won'), JSON.stringify(res.map(x => x.l + '.' + (x.m + 1) + ' ' + x.idle.r + ' ' + (x.idle.w || ''))));
+  check('the ship computer is told the goal of the mission, and no Earth shield, in all three levels', [1, 2, 3].every(n => (g.run(`__new2(${n}, [], 1, 0)`), /Goal: /.test(J('campSummary(C)')) && !/Earth shield/.test(J('campSummary(C)')))));
+  // --- the chain, on the stand-in scene: the last mission of level 2 to the pick and level 3; the last of level 3 to the end
   store.delete('longhaul.campaign');
-  g.run(`window.F = __fake(2, {}); 0`);
-  g.run(`F.onKey({ code: 'Enter' }); F.camp.cachesGot = 2; F.camp.relic.hold = 0; campEnd(F.camp, 'won', 'relic'); F.update(0, 33)`);
-  check('level 2 won: the story after, then the pick of one of three (hull plating, second bay, repair field), then level 3 started as "next" with the pick in the save', J('F.mode') === 'won' && (g.run(`F.onKey({ code: 'Enter' })`), J('F.mode') === 'pick') && J('F.choices.join()') === 'plating,bay2,repair' && (g.run(`F.onKey({ code: 'Digit1' })`), true) && (() => { const w = J('__went.pop()'); return w.key === 'Campaign' && w.data.level === 3 && w.data.via === 'next' && JSON.parse(store.get('longhaul.campaign')).level === 3 && JSON.parse(store.get('longhaul.campaign')).techs.includes('plating'); })());
-  g.run(`window.F = __fake(3, {}); 0`);
-  g.run(`F.onKey({ code: 'Enter' }); campEnd(F.camp, 'won', 'towers'); F.update(0, 33)`);
-  check('level 3 won: the story after, no pick, then the end card, and the title on Enter; the save starts a fresh campaign (level 1, no techs)', J('F.mode') === 'won' && (g.run(`F.onKey({ code: 'Enter' })`), J('F.mode') === 'end') && J('F.panel') === true && JSON.parse(store.get('longhaul.campaign')).level === 1 && JSON.parse(store.get('longhaul.campaign')).techs.length === 0 && (g.run(`F.onKey({ code: 'Enter' })`), J('__went.pop()').key === 'Title'));
-  check('K on the title opens the highest built level reached, and never one that does not exist', (() => { g.run(`campProgressSave({ level: 3, techs: ['beam'] })`); g.run(`__went.length = 0; campaignStart({}, 0)`); const a = J('__went.pop()'); g.run(`campProgressSave({ level: 9, techs: [] })`); g.run(`campaignStart({}, 0)`); const b = J('__went.pop()'); return a.data.level === 3 && b.data.level === 3; })());
+  g.run(`window.F = __fake(2, { mission: 2 }); 0`);
+  g.run(`F.onKey({ code: 'Enter' }); F.camp.carrier.hp = 600; campWin(F.camp, 'relic'); F.update(0, 33); F.update(0, 33)`);
+  check('level 2, its last mission won: the debrief, then the story after, then the pick of one of three (hull plating, second bay, repair field), then level 3 started as "next" with the pick in the save', J('F.mode') === 'debrief' && (g.run(`F.onKey({ code: 'Enter' })`), J('F.mode') === 'won') && (g.run(`F.onKey({ code: 'Enter' })`), J('F.mode') === 'pick') && J('F.choices.join()') === 'plating,bay2,repair' && (g.run(`F.onKey({ code: 'Digit1' })`), true) && (() => { const w = J('__went.pop()'); return w.key === 'Campaign' && w.data.level === 3 && w.data.via === 'next' && JSON.parse(store.get('longhaul.campaign')).level === 3 && JSON.parse(store.get('longhaul.campaign')).techs.includes('plating'); })());
+  g.run(`window.F = __fake(3, { mission: 2 }); 0`);
+  g.run(`F.onKey({ code: 'Enter' }); campWin(F.camp, 'towers'); F.camp.ships.filter(u => u.kind === 'tower').forEach(u => { u.hp = 0; }); F.update(0, 33); F.update(0, 33); F.update(0, 33)`);
+  check('level 3, its last mission won: the debrief, the story after, no pick, then the end card, and the title on Enter; the save starts a fresh campaign (level 1, mission 0, no techs)', J('F.mode') === 'debrief' && (g.run(`F.onKey({ code: 'Enter' })`), J('F.mode') === 'won') && (g.run(`F.onKey({ code: 'Enter' })`), J('F.mode') === 'end') && J('F.panel') === true && JSON.parse(store.get('longhaul.campaign')).level === 1 && JSON.parse(store.get('longhaul.campaign')).mission === 0 && JSON.parse(store.get('longhaul.campaign')).techs.length === 0 && (g.run(`F.onKey({ code: 'Enter' })`), J('__went.pop()').key === 'Title'));
+  check('K on the title opens the highest built level reached, and never one that does not exist', (() => { g.run(`campProgressSave({ level: 3, techs: ['beam'], mission: 0, results: {} })`); g.run(`__went.length = 0; campaignStart({}, 0)`); const a = J('__went.pop()'); g.run(`campProgressSave({ level: 9, techs: [], mission: 0, results: {} })`); g.run(`campaignStart({}, 0)`); const b = J('__went.pop()'); return a.data.level === 3 && b.data.level === 3; })());
+
   // the two nits of 8-GEN's boot (a51ca77)
   g.run('__new2(2, [], 1); C.carrier.x = -2800 + 100; C.carrier.y = 2000; __run(0.2)');
   check('the cache toast says what you have gathered and never "of 3", while the goal line says how many the relic needs: "Resources gathered: 1." and "Gather resources: 1 of 2."', (() => { const key = g.run('C.events.filter(e => e.type === "say" && e.key === "camp.say.cache").map(e => JSON.stringify(e.vars))[0]'); const vars = JSON.parse(key); return J(`uiText('camp.say.cache', ${JSON.stringify(vars)})`) === 'Resources gathered: 1.' && /Gather resources: 1 of 2/.test(J('campObjective(C)')) && !/of 3/.test(J(`uiText('camp.say.cache', ${JSON.stringify(vars)})`)); })());
@@ -479,7 +482,7 @@ console.log('L. ore: asteroid rocks and wrecks, mining, the carrier shield, rech
   check('the model is told the eight orders, the ore and the keys 6 to 9', (() => { const sys = J('shipcompSystem(__scene)'); return /fleet_mine \| fleet_recharge/.test(sys) && /fleet_build/.test(sys) && /6 mine ore/.test(sys) && /Ore in the store/.test(sys) && /6-9 ore/.test(sys); })());
   check('every word the new orders can say is in content/text/campaign.md (ui.md is full at 200 rows)', (() => { const md = src('content/text/ui.md') + src('content/text/campaign.md'), ks = ['mine', 'recharge', 'rechargeearth', 'build', 'built'].map(k => 'camp.say.' + k).concat(['noore', 'noore2', 'noearth', 'farearth', 'earthfull', 'shieldfull', 'buildfull'].map(k => 'camp.no.' + k), ['camp.ui.ore', 'camp.ui.shield']); const miss = ks.filter(k => !md.includes('| ' + k + ' |') || J(`uiText('${k}')`) === k); return miss.length === 0 || miss.join(); })());
   // the scene, on the stand-in
-  g.run(`go = (s, key, data) => { __went.push({ key, data }); }; toast = (s, msg) => { __toasts2.push(msg); }; window.F = __fake(1, {}); F.onKey({ code: 'Enter' }); F.camp.ore = 100; campHurt(F.camp, F.camp.carrier, 150, 'x'); __toasts2.length = 0; 0`);
+  g.run(`go = (s, key, data) => { __went.push({ key, data }); }; toast = (s, msg) => { __toasts2.push(msg); }; window.F = __fake(1, {}); F.onKey({ code: 'Enter' }); F.onKey({ code: 'Enter' }); F.camp.ore = 100; campHurt(F.camp, F.camp.carrier, 150, 'x'); __toasts2.length = 0; 0`);
   g.run(`F.onKey({ code: 'Digit7' })`); const t7 = J('__toasts2.pop()');
   g.run(`F.onKey({ code: 'Digit8' })`); const t8 = J('__toasts2.pop()');
   g.run(`F.onKey({ code: 'Digit9' })`); const t9 = J('__toasts2.pop()');
@@ -503,49 +506,54 @@ console.log('L. ore: asteroid rocks and wrecks, mining, the carrier shield, rech
   check('a player who also mines, recharges and builds wins level 1 on every seed, and loses fewer small ships than the same player without ore (6 seeds together)', withOre.every(r => r.r === 'won') && withOre.reduce((a, r) => a + r.ls, 0) < without.reduce((a, r) => a + r.ls, 0) && withOre.some(r => r.built > 0), JSON.stringify([withOre.map(r => r.ls), without.map(r => r.ls)]));
 }
 
-// ---------- M. level 1 is the asteroid belt ----------
-console.log('M. level 1, the belt: a mining cruiser, a quiet minute, the ambush, the refit');
+// ---------- M. level 1 is the asteroid belt, in three missions ----------
+console.log('M. level 1, the belt: survey, haulers, the mothership; the refit');
 {
-  g.run(`
-    window.__belt = (C, s) => {           // a plain player of the belt: launches, sends the wing at the aliens every 5 s, flies the cruiser at the nearest alien and holds Space
-      if (s > 1 && s < 1.05) campOrder(C, 'launch');
-      if (s > 12 && Math.round(s * 30) % 150 === 0) campOrder(C, 'attack', '');
-      const c = C.carrier, a = campAliens(C).sort((p, q) => campDist(p, c) - campDist(q, c))[0];
-      if (a) { const w = Math.atan2(a.y - c.y, a.x - c.x), d = Math.atan2(Math.sin(w - c.rot), Math.cos(w - c.rot)); C.input.turn = Math.max(-1, Math.min(1, d * 3)); C.input.thrust = campDist(a, c) > 500 ? 1 : 0; C.input.fire = Math.abs(d) < 0.22 && campDist(a, c) < 800; } else { C.input.turn = 0; C.input.thrust = 0; C.input.fire = false; }
-    };
-    window.__beltplays = (script, secs, seeds) => (seeds || [1, 2, 3, 4, 5, 6]).map(sd => { window.C = campNew(1, [], { seed: sd }); for (let i = 0; i < secs * 30 && !C.result; i++) { script(C, i / 30); campStep(C, 1 / 30); C.events.length = 0; } return { r: C.result, w: C.why, t: Math.round(C.t / 1000), hull: Math.round(C.carrier.hp), ore: Math.floor(C.ore) }; });
-  `);
-  check('level 1 is "The belt": at Ceres (Occator Works), Vesta and Pallas; no Earth, no convoys, a store that starts empty; won by the mothership; ends with the Earth refit', J('CAMP.levels[1].name') === 'The belt' && J('CAMP.levels[1].start') === 'ceres' && J('CAMP.levels[1].places.ceres.base') === 'Occator Works' && J('CAMP.levels[1].places.vesta.name') === 'Vesta' && J('CAMP.levels[1].places.pallas.name') === 'Pallas' && J('CAMP.levels[1].earth') === false && J('CAMP.levels[1].convoys.length') === 0 && J('CAMP.levels[1].startOre') === 0 && J('CAMP.levels[1].win') === 'mother' && J('CAMP.levels[1].refit') === true);
-  g.run('__new2(1, [], 1)');
-  check('the cruiser starts at Ceres with no ore, no Earth to lose, thirty-two rocks of ore in the belt (640 ore, more than the store holds), nothing hunting it', J('C.ore') === 0 && J('C.earth') === null && J('C.rocks.length') === 32 && J('campAliens(C).length') === 0 && Math.hypot(J('C.carrier.x'), J('C.carrier.y')) < 200);
-  g.run('__run(59)');
-  check('a quiet minute: for the first 59 seconds there is not an alien in the sky and no wave has started', J('campAliens(C).length') === 0 && J('C.waves.every(w => !w.started)') && g.run('C.events.filter(e => e.type === "alarm").length') !== undefined);
-  g.run('C.events.length = 0; __run(1.1)');
-  check('at 60 seconds the ambush: the alarm sounds, the ambush line is said, five raiders and three drones come out of the dark, all for the cruiser', J('C.waves[0].started') && g.run('C.events.some(e => e.type === "alarm")') && g.run('C.events.filter(e => e.type === "say").map(e => e.key).join()').includes('camp.say.ambush') && J(`campAliens(C).filter(u => u.kind === 'raider').length`) === 5 && J(`campAliens(C).filter(u => u.kind === 'drone').length`) === 3 && J('campAliens(C).every(u => u.goal === "carrier")'));
+  check('level 1 is "The belt": at Ceres (Occator Works), Vesta and Pallas; no Earth, a store that starts empty, thirty-two rocks; its missions are the survey, the haulers, the mothership; the level ends with the Earth refit', J('CAMP.levels[1].name') === 'The belt' && J('CAMP.levels[1].start') === 'ceres' && J('CAMP.levels[1].places.ceres.base') === 'Occator Works' && J('CAMP.levels[1].places.vesta.name') === 'Vesta' && J('CAMP.levels[1].places.pallas.name') === 'Pallas' && J('CAMP.levels[1].earth') === false && J('CAMP.levels[1].startOre') === 0 && J('CAMP.levels[1].refit') === true && J('campMissions(1).map(m => m.id).join()') === 'survey,haulers,mothership' && J('CAMP.levels[1].rocks.reduce((a, f) => a + f.n, 0)') === 32);
+  // 1.1 the survey
+  g.run('__new2(1, [], 1, 0)');
+  check('1.1 the survey: the cruiser starts at Ceres with an empty store and no Earth; three points to scan, one in each of three rock fields (8 seconds each); the objectives are to scan them all and to beat the ambush', J('C.ore') === 0 && J('C.earth') === null && J('C.rocks.length') === 32 && J('C.scan.length') === 3 && J('C.scan.every(p => p.secs === 8)') && J('C.L.objectives.map(o => o.type + (o.what || "")).join()') === 'scan,killwave:0' && J('campAliens(C).length') === 0);
+  g.run('__run(100)');
+  check('a quiet survey: with nothing scanned there is no wave, no alien, however long it takes (the ambush is not on a clock)', J('C.waves[0].started') === false && J('campAliens(C).length') === 0 && J('C.result') === null);
+  g.run('C.carrier.x = C.scan[0].x; C.carrier.y = C.scan[0].y; __run(9)');
+  check('the first field scanned: "Point scanned: 1 of 3", and still nobody comes', J('C.scan[0].got') && J('campAliens(C).length') === 0 && J('C.waves[0].started') === false);
+  g.run('C.events.length = 0; C.carrier.x = C.scan[1].x; C.carrier.y = C.scan[1].y; __run(9)');
+  check('the second scanned: the ambush hits mid-survey: the alarm, the line, and four raiders and three drones out of the dark, all for the cruiser', J('C.waves[0].started') && g.run('C.events.some(e => e.type === "alarm")') && g.run('C.events.filter(e => e.type === "say").map(e => e.key).join()').includes('camp.say.ambush') && J(`campAliens(C).filter(u => u.kind === 'raider').length`) === 4 && J(`campAliens(C).filter(u => u.kind === 'drone').length`) === 3 && J('campAliens(C).every(u => u.goal === "carrier")'));
   g.run('C.events.length = 0; __run(5)');
-  check('five seconds after it a second line says what the cruiser has: the mining lasers are weapons now, hold Space, the drones answer to 2', g.run('C.events.filter(e => e.type === "say").map(e => e.key).join()').includes('camp.say.ambush2') && /Hold Space/.test(J(`uiText('camp.say.ambush2')`)) && /press 2/.test(J(`uiText('camp.say.ambush2')`)));
-  // the mining opening
-  g.run('__new2(1, [], 1); campOrder(C, "launch"); __run(5); campOrder(C, "mine")');
-  g.run('__run(50)');
-  check('the quiet minute earns ore: a wing sent to mine brings in a good share of the belt (at least 100 ore in under a minute) and the store never passes 200', J('C.ore') >= 100 && J('C.ore') <= 200, J('C.ore'));
-  g.run('__new2(1, [], 1); campOrder(C, "launch"); __run(6)');
-  check('with no convoys in the level, Escort keeps the escorts close to the cruiser, and says so (the key is never dead)', J(`campOrder(C, 'escort', '').say`) === 'Escorts are with the cruiser.' && J(`campWing(C, 'escort').every(u => u.order.type === 'guard' && u.order.at.kind === 'carrier')`) && J(`campOrder(C, 'recharge', 'earth').say`) === 'There is no Earth here, pilot.');
-  // balance
-  const belt = J('__beltplays(__belt, 600)'), idle = J('__beltplays(() => {}, 600, [1, 2, 3])');
-  check('a plain player (launch, attack, the cruiser at the nearest alien, Space held) wins the belt on every seed, in four to six minutes', belt.every(r => r.r === 'won' && r.w === 'mother' && r.t >= 240 && r.t <= 360), JSON.stringify(belt.map(r => r.r + ' ' + r.t)));
-  check('a passive player loses, and the only way to lose is the cruiser: nothing points at an Earth shield that is gone', idle.every(r => r.r === 'lost' && r.w === 'carrier') && J(`campLoseLines(C, 'carrier').join(' ')`).indexOf('Earth') < 0 || (idle.every(r => r.r === 'lost' && r.w === 'carrier')), JSON.stringify(idle.map(r => r.r + ' ' + r.w + ' ' + r.t)));
-  check('the belt has no Earth to point at anywhere: no Earth bar (null), no goal line about Earth, no Earth in the model prompt of level 1', (() => { g.run('__new2(1, [], 1); __scene.camp = C'); return J('C.earth') === null && !/Earth/.test(J('campObjective(C)')) && !/Earth shield/.test(J('campSummary(C)')); })());
-  // what the next level inherits
-  check('the ore and the extra ships of the refit come with the cruiser into the next level: 120 ore and 2 fighters and an escort more in the bay (8 and 3); the cap of 200 holds; a level started by itself has its own 30', (() => { return J(`(() => { const a = campNew(2, [], { ore: 120, bonus: { fighters: 2, escorts: 1 } }), b = campNew(2, [], { ore: 9999 }), c = campNew(2, []); return [a.ore, a.bay.fighters, a.bay.escorts, b.ore, c.ore, c.bay.fighters, c.bay.escorts]; })()`).join() === '120,8,3,200,30,6,2'; })());
+  check('five seconds after it the second line: the mining lasers are weapons now, hold Space, the drones answer to 2', g.run('C.events.filter(e => e.type === "say").map(e => e.key).join()').includes('camp.say.ambush2') && /Hold Space/.test(J(`uiText('camp.say.ambush2')`)) && /press 2/.test(J(`uiText('camp.say.ambush2')`)));
+  g.run('C.ships.forEach(u => { if (u.team === "alien") u.hp = 0; }); C.carrier.x = C.scan[2].x; C.carrier.y = C.scan[2].y; __run(9)');
+  check('all three scanned and the ambush dead: the survey is won, with a score', J('C.result') === 'won' && J('C.score.score') > 1000);
+  g.run('__new2(1, [], 1, 0); C.ships.forEach(u => { if (u.team === "alien") u.hp = 0; }); C.scan.forEach(p => { p.got = true; }); C.waves[0].started = true; var __al = campSpawn(C, "drone", 99999, 99999); __al.wave = 0; __al.hold = true; __run(0.3)');
+  check('everything scanned but one of the ambush still alive: not yet won', J('C.result') === null && (g.run('__al.hp = 0; __run(0.2)'), J('C.result') === 'won'));
+  // mining is part of the survey
+  g.run('__new2(1, [], 1, 0); campOrder(C, "launch"); __run(5); campOrder(C, "mine"); __run(25)');
+  const mid = J('C.ore'); g.run('__run(35)');
+  check('mining goes on in the survey: launch at once and Mine, and the wing brings the store from empty to full (200) in about a minute, not in ten seconds', mid >= 40 && mid < 200 && J('C.ore') >= 160);
+  check('Escort with no hauler in the level keeps the escorts close to the cruiser, and says so; there is no Earth to recharge', J(`campOrder(C, 'escort', '').say`) === 'Escorts are with the cruiser.' && J(`campOrder(C, 'recharge', 'earth').say`) === 'There is no Earth here, pilot.');
+  // 1.2 the haulers
+  g.run('__new2(1, [], 1, 1)');
+  check('1.2 the haulers: three ore haulers (Hauler 1, 2, 3) leave Vesta for Ceres at 3, 18 and 33 seconds; two must arrive and none may be on its way; the raiders go for them', J('C.L.convoys.length') === 3 && J('C.L.convoys.map(c => c.name).join()') === 'Hauler 1,Hauler 2,Hauler 3' && J('C.L.convoys.every(c => c.from === "vesta" && c.to === "ceres")') && J('C.L.objectives[0].n') === 2 && J('C.L.waves.every(w => /^convoy:h/.test(w.goal))'));
+  g.run('__run(4)');
+  check('the first hauler is out, named, from Vesta (a place of the level), with its own line ("Hauler 1 is under way."); the second not yet', J('campConvoys(C).length') === 1 && J('campConvoys(C)[0].cname') === 'Hauler 1' && Math.hypot(J('campConvoys(C)[0].x') - 2700, J('campConvoys(C)[0].y') + 1500) < 300 && /under way/.test(J(`uiText('camp.say.hauler', { name: 'Hauler 1' })`)));
+  const haul = J('__mplay(1, 1, 1, __mbot, 300)'), haulIdle = J('__mplay(1, 1, 1, () => {}, 300)');
+  check('escorted, the haulers get through (a plain player wins, with the bonus for delivering them all on most seeds); not escorted, too many are lost and the mission is lost: "convoy"', haul.r === 'won' && haulIdle.r === 'lost' && haulIdle.w === 'convoy', JSON.stringify([haul, haulIdle]));
+  check('the Escort order names a hauler: "escort the haulers" sends the escorts to the nearest, "escort Hauler 2" to that one', (() => { g.run('__new2(1, [], 1, 1); campOrder(C, "launch"); __run(20)'); const a = J(`campOrder(C, 'escort', 'the haulers')`); const b = J(`campOrder(C, 'escort', 'hauler 2')`); return a.ok && /Hauler/.test(a.say) && b.ok && /Hauler 2/.test(b.say) && J(`campWing(C, 'escort').every(u => u.order.target === 'freighter-h2')`); })());
+  // 1.3 the mothership
+  g.run('__new2(1, [], 1, 2)');
+  check('1.3 the mothership: three waves, the last with the mothership; the objective is to destroy it; nothing else is asked', J('C.L.waves.length') === 3 && J('C.L.waves[2].mother.length') === 2 && J('C.L.objectives.length') === 1 && J('C.L.objectives[0].what') === 'mother' && J('C.L.win') === 'mother');
+  g.run('C.waves.forEach(w => { w.started = true; }); var __m = campSpawn(C, "mother", 99999, 0); __m.hp = 10; campHurt(C, __m, 50, "x"); __run(0.2)');
+  check('the mothership dead wins the mission, and as the last of the level it completes the level (levelDone): the story, then the refit', J('C.result') === 'won' && J('C.why') === 'mother' && J('campMissionDone(campProgressNew(), 1, 2, C.score).levelDone') === true);
+  // the carry-over and the refit
+  check('the ore and the extra ships of the refit come with the cruiser into the next level: 120 ore and 2 fighters and an escort more in the bay (8 and 3); the cap of 200 holds; a level started by itself has its own 30', J(`(() => { const a = campNew(2, [], { ore: 120, bonus: { fighters: 2, escorts: 1 } }), b = campNew(2, [], { ore: 9999 }), c = campNew(2, []); return [a.ore, a.bay.fighters, a.bay.escorts, b.ore, c.ore, c.bay.fighters, c.bay.escorts]; })()`).join() === '120,8,3,200,30,6,2');
   store.set('longhaul.campaign', JSON.stringify({ level: 2, techs: ['beam'], ore: 99999, bonus: { fighters: 99, escorts: -1 } }));
   check('the save keeps the ore and the extras in range: the ore is cut to the 200 the store holds, the extras to 0 to 3', J('campProgressLoad().ore') === 200 && J('campProgressLoad().bonus.fighters') === 3 && J('campProgressLoad().bonus.escorts') === 0);
   store.delete('longhaul.campaign');
-  g.run(`go = (s, key, data) => { __went.push({ key, data }); }; toast = (s, msg) => { __toasts2.push(msg); }; campProgressSave({ level: 2, techs: ['beam'], ore: 77, bonus: { fighters: 2, escorts: 1 } }); window.F = __fake(2, {}); 0`);
-  check('the scene gives a level reached by the chain its carried ore and extras (the save is at that level); a level started by itself gets the 30 of its own', J('F.camp.ore') === 77 && J('F.camp.bay.fighters') === 8 && J('F.camp.bay.escorts') === 3 && (g.run('campProgressSave({ level: 1, techs: [], ore: 77, bonus: { fighters: 2, escorts: 1 } }); window.F = __fake(2, {}); 0'), J('F.camp.ore') === 30 && J('F.camp.bay.fighters') === 6));
+  g.run(`go = (s, key, data) => { __went.push({ key, data }); }; toast = (s, msg) => { __toasts2.push(msg); }; campProgressSave({ level: 1, mission: 1, techs: ['beam'], ore: 77, bonus: { fighters: 2, escorts: 1 }, results: {} }); window.F = __fake(1, {}); 0`);
+  check('the scene gives a mission reached by the chain the ore of the one before it (the save is at that level and mission) and the extras; a level started by itself gets the 30 of its own', J('F.mi') === 1 && J('F.camp.mission') === 1 && J('F.camp.ore') === 77 && J('F.camp.bay.fighters') === 8 && (g.run('campProgressSave({ level: 1, mission: 0, techs: [], ore: 77, bonus: { fighters: 2, escorts: 1 }, results: {} }); window.F = __fake(2, {}); 0'), J('F.camp.ore') === 30 && J('F.camp.bay.fighters') === 6));
   store.delete('longhaul.campaign'); g.run('go = __go0; toast = __toast0');
-  check('plain words: "send the drones to mine", "mine the belt", "drones, mine" are Mine', ['send the drones to mine', 'mine the belt', 'drones mine', 'go mining'].every(x => J(`campIntent(${JSON.stringify(x)})`) && J(`campIntent(${JSON.stringify(x)})`).act === 'fleet_mine'));
-  check('the lines of all three levels are curt: one short sentence each, 12 words at most', [1, 2, 3].every(n => ['before', 'after'].every(w => J(`campStory(${n}, '${w}')`).every(x => x.split(' ').length <= 12 && /[.]$/.test(x)))) && ['ambush', 'ambush2', 'bwave2', 'bwave3', 'escortcarrier'].every(k => J(`uiText('camp.say.${k}')`).split(' ').length <= 12));
+  check('plain words: "send the drones to mine", "mine the belt", "drones mine" are Mine', ['send the drones to mine', 'mine the belt', 'drones mine', 'go mining'].every(x => J(`campIntent(${JSON.stringify(x)})`) && J(`campIntent(${JSON.stringify(x)})`).act === 'fleet_mine'));
   check('every new word of the belt is in its own file, content/text/campaign-belt.md (ui.md is full), and the game reads it', (() => { const md = src('content/text/campaign-belt.md'); const keys = ['camp.l1.before.3', 'camp.l1.after.3', 'camp.say.ambush', 'camp.say.ambush2', 'camp.say.bwave2', 'camp.say.bwave3', 'camp.say.escortcarrier', 'camp.ui.refit', 'camp.ui.refitpick', 'camp.ui.refitbuy', 'camp.ui.refitore', 'camp.ui.refitgot']; const miss = keys.filter(k => !md.includes('| ' + k + ' |') || J(`uiText('${k}')`) === k); return miss.length === 0 || miss.join(); })());
+  check('every word of the missions is in content/text/campaign-missions.md and the game reads it (titles and briefings, objectives, bonus objectives, the debrief, the lose reasons)', (() => { const md = src('content/text/campaign-missions.md'); const keys = [...md.matchAll(/^\| (camp\.[a-z0-9.]+) \|/gm)].map(m => m[1]); const miss = keys.filter(k => J(`uiText('${k}', {})`) === k); return keys.length >= 60 && miss.length === 0 || miss.join(); })());
 }
 
 // ---------- N. mining by laser ----------
@@ -594,9 +602,78 @@ console.log('N. mining lasers: rocks have hit points, a beam cuts them, they bre
   g.run('__new2(1, [], 1)');
   check('the quiet minute: launch at once and Mine, and the wing brings the store from empty to full (200 ore) in about a minute, not in ten seconds', (() => { g.run('campOrder(C, "launch"); __run(5); campOrder(C, "mine"); __run(25)'); const mid = J('C.ore'); g.run('__run(35)'); return mid >= 40 && mid < 200 && J('C.ore') >= 160; })());
   // the scene draws it (the stand-in): rocks cracking, beams, no error
-  g.run(`go = (s, key, data) => { __went.push({ key, data }); }; toast = (s, msg) => { __toasts2.push(msg); }; window.F = __fake(1, {}); F.onKey({ code: 'Enter' }); F.beamG = document; F.beams = []; F.rsp = {}; campOrder(F.camp, 'launch'); 0`);
+  g.run(`go = (s, key, data) => { __went.push({ key, data }); }; toast = (s, msg) => { __toasts2.push(msg); }; window.F = __fake(1, {}); F.onKey({ code: 'Enter' }); F.onKey({ code: 'Enter' }); F.beamG = document; F.beams = []; F.rsp = {}; campOrder(F.camp, 'launch'); 0`);
   check('the scene draws rocks, cracks and beams from this frame\'s events on a stand-in without an error, and keeps the beams for a moment', (() => { try { g.run('F.camp.rocks[0].hp = 40; F.update(0, 33); F.update(0, 33); F.onEvent({ type: "laser", src: "drone", x: 1, y: 2, tx: 3, ty: 4 }); F.onEvent({ type: "turret", i: 0, x: 1, y: 2, aim: 0, tx: 5, ty: 6 }); F.onEvent({ type: "rockbreak", x: 1, y: 2 }); F.update(0, 33)'); return J('F.beams.length') >= 2; } catch (e) { return String(e.message).slice(0, 140); } })());
   g.run('go = __go0; toast = __toast0');
+}
+
+// ---------- O. missions: the table shape, objectives, bonus objectives, score, results ----------
+console.log('O. missions: a level is a run of missions (a fixture level, so the shape is tested apart from the real data)');
+{
+  g.run(`
+    var __pl = CAMP.levels[1].places;
+    CAMP.levels.t = { name: 'Test', start: 'ceres', startAt: [130, 30], earth: false, startOre: 0, places: __pl, rocks: [], convoys: [], waves: [], missions: [
+      { id: 'survey', kind: 'recon', objectives: [{ type: 'scan', points: [{ at: [900, 0], r: 200, secs: 2 }, { at: [-900, 0], r: 200, secs: 2 }] }],
+        waves: [{ on: { scanned: 1 }, from: [3000, 0], ships: { drone: 2 }, goal: 'carrier', say: 'camp.say.ambush' }], bonus: [{ id: 'swift', type: 'time', secs: 100, text: 'x' }, { id: 'clean', type: 'lost', n: 0, text: 'y' }] },
+      { id: 'haul', kind: 'escort', convoys: [{ id: 'h1', name: 'Hauler 1', at: 1, from: 'vesta', to: 'ceres' }, { id: 'h2', name: 'Hauler 2', at: 2, from: 'vesta', to: 'ceres' }, { id: 'h3', name: 'Hauler 3', at: 3, from: 'vesta', to: 'ceres' }],
+        objectives: [{ type: 'deliver', n: 2 }], bonus: [{ id: 'all', type: 'delivered', text: 'z' }] },
+      { id: 'hold', kind: 'defend', defend: { place: 'ceres', shield: 200, name: 'the Works' }, objectives: [{ type: 'hold', secs: 30 }], waves: [{ at: 3, from: [2500, 0], ships: { drone: 2 }, goal: 'earth', say: 'camp.say.bwave2' }], bonus: [{ id: 'hull', type: 'hull', pct: 50, text: 'h' }] },
+      { id: 'kill', kind: 'attack', towers: [{ place: 'ceres', r: 700, n: 2, hp: 40 }], objectives: [{ type: 'kill', what: 'towers' }], par: 200 }
+    ] };
+    window.__mnew = (i, seed, techs) => { window.C = campNew('t', techs || [], { seed: seed == null ? 1 : seed, mission: i }); return !!C; };
+  `);
+  check('a level is a run of missions: campMissions gives the rows, campMissionRow lays a mission over the level row (the level\'s own row is not changed), an index out of range is clamped, a level with no missions is one mission of kind waves', J('campMissions("t").length') === 4 && J('campMissionRow("t", 1).kind') === 'escort' && J('campMissionRow("t", 1).mission') === 1 && J('campMissionRow("t", 1).missions') === 4 && J('campMissionRow("t", 1).convoys.length') === 3 && J('campMissionRow("t", 0).convoys.length') === 0 && J('campMissionRow("t", 99).mid') === 'kill' && J('CAMP.levels.t.convoys.length') === 0 && J('campMissions("home").length') === 1 && J('campMissionRow("home", 0).kind') === 'waves' && J('campMissionRow("nope", 0)') === null);
+  check('a battle reads the mission: C.L is the row, C.mission its place in the level, C.level the level', (g.run('__mnew(1)'), J('C.L.id') === 'haul' && J('C.mission') === 1 && J('C.level') === 't' && J('C.L.kind') === 'escort'));
+  // recon
+  g.run('__mnew(0)');
+  check('recon: the mission has two points to scan; none scanned yet, and no alien: the ambush wave waits for the first point (on scanned 1)', J('C.scan.length') === 2 && J('C.scan.every(p => !p.got)') && (g.run('__run(20)'), J('C.waves[0].started') === false && J('campAliens(C).length') === 0 && J('campObjectives(C)[0].got') === 0 && J('campObjectives(C)[0].need') === 2));
+  g.run('C.carrier.x = 900; C.carrier.y = 0; __run(1.5)');
+  check('a ship of yours near a point fills it, in all (not at once): after 1.5 seconds of 2 it is not scanned', J('C.scan[0].got') === false && J('C.scan[0].t') > 1.4 && J('C.waves[0].started') === false);
+  g.run('C.events.length = 0; __run(1)');
+  check('scanned after 2 seconds: the point is done, the game says so (1 of 2), and the ambush wave comes on that event: two drones for the carrier', J('C.scan[0].got') && g.run('C.events.some(e => e.type === "scanned")') && g.run('C.events.filter(e => e.type === "say").map(e => e.key).join()').includes('camp.say.scanned') && J('C.waves[0].started') && J('campAliens(C).length') === 2);
+  g.run('C.ships.forEach(u => { if (u.team === "alien") u.hp = 0; }); C.carrier.x = -900; C.carrier.y = 0; __run(2.2)');
+  check('both scanned (and the drones gone) wins the mission: result won, a score on it', J('C.result') === 'won' && J('C.score.score') > 0 && J('C.score.base') === 1000);
+  // a wing ship scans too
+  g.run('__mnew(0); campOrder(C, "launch"); __run(6); var __w = campWing(C)[0]; __w.x = 900; __w.y = 0; __w.vx = 0; __w.vy = 0; __w.order = { type: "guard", at: { kind: "place", id: "ceres" } }; C.carrier.x = 30000; C.carrier.y = 30000; __run(0.5)');
+  check('any ship of yours can scan: a drone parked at the point fills it, the carrier far away', J('C.scan[0].t') > 0);
+  // escort
+  g.run('__mnew(1)');
+  g.run('__run(1.2)');
+  check('escort: the haulers leave Vesta (a place of the level) for Ceres, one a second, each with its own name; the cruiser is not needed to start them', J('campConvoys(C).length') === 1 && J('campConvoys(C)[0].cname') === 'Hauler 1' && Math.hypot(J('campConvoys(C)[0].x') - 2700, J('campConvoys(C)[0].y') + 1500) < 250 && (g.run('__run(3)'), J('campConvoys(C).length') === 3));
+  g.run('__run(60)');
+  check('two haulers of the three arriving at Ceres complete the delivery objective (deliver 2); here all three arrive, and the bonus "all delivered" is met', J('C.delivered') >= 2 && J('C.result') === 'won' && J('C.score.bonuses.find(b => b.id === "all").ok') === true);
+  g.run('__mnew(1); __run(3.2); campConvoys(C).forEach((u, i) => { if (i < 2) campHurt(C, u, 9999, "x"); }); __run(0.2)');
+  check('too many haulers lost: with two of three dead, two can no longer arrive, and the mission is lost for that, "convoy"', J('C.result') === 'lost' && J('C.why') === 'convoy');
+  // defend
+  g.run('__mnew(2)');
+  check('defend: the defended place is an Earth-like thing at Ceres with its own shield (200) and name; the aliens of the wave go for it', J('C.earth.shield') === 200 && J('C.earth.name') === 'the Works' && J('Math.round(C.earth.x)') === 0 && J('C.earth.loseWhy') === 'base' && (g.run('__run(4)'), J('campAliens(C).every(u => u.goal === "earth")')));
+  g.run('C.carrier.x = 9000; C.carrier.y = 9000; C.earth.shield = 3; campBullet(C, { x: 700, y: 0, vx: 0, vy: 0, id: "t" }, Math.PI, 600, 40, 3000, "alien", 0); __run(1.5)');
+  check('the defended place lost: its shield gone loses the mission, and the reason is "base" (not Earth)', J('C.result') === 'lost' && J('C.why') === 'base');
+  g.run('__mnew(2); C.ships.forEach(u => { if (u.team === "alien") u.hp = 0; }); C.waves[0].started = true; __run(25)');
+  check('hold: thirty seconds with the place standing wins; at 25 s not yet', J('C.result') === null && (g.run('__run(7)'), J('C.result') === 'won'));
+  // attack
+  g.run('__mnew(3)');
+  check('attack: two towers in a ring of 700 px at Ceres; the objective is to destroy them all: one dead is not enough, both win', J('C.ships.filter(u => u.kind === "tower").length') === 2 && (g.run('campHurt(C, C.ships.find(u => u.kind === "tower" && u.hp > 0), 9999, "x")'), J('C.result') === null) && (g.run('campHurt(C, C.ships.find(u => u.kind === "tower" && u.hp > 0), 9999, "x"); __run(0.1)'), J('C.result') === 'won' && J('C.why') === 'towers'));
+  // bonus and score
+  g.run('__mnew(0); C.t = 60000; C.lostShips = 0; C.ships.forEach(u => { if (u.team === "alien") u.hp = 0; })');
+  const fast = J('campScore(C)');
+  g.run('C.t = 150000; C.lostShips = 3; C.carrier.hp = 150');
+  const slow = J('campScore(C)');
+  check('the score: a fast clean mission earns the base, both bonuses (250 each), the whole hull share (300) and the seconds under the par (120 s: 60 saved at 5 a second); a slow one that lost three ships and half its hull earns far less', fast.score === 1000 + 500 + 300 + 300 && fast.bonuses.every(b => b.ok) && slow.bonuses.every(b => !b.ok) && slow.score < fast.score - 700 && slow.score === 1000 + Math.round(300 * 150 / 600) - 150, JSON.stringify([fast.score, slow.score]));
+  check('a mission row can set its own par (200 s): the same 60 s earns 140 s of speed there', (g.run('__mnew(3); C.t = 60000'), J('campScore(C).speed') === 140 * 5));
+  check('the bonus objective types: time, lost (at most), hull (at least), ore, delivered (all haulers)', (g.run('__mnew(0); C.t = 60000'), J('campBonuses(C).map(b => b.type).join()') === 'time,lost') && J('campBonuses(C).every(b => typeof b.ok === "boolean" && typeof b.points === "number")'));
+  // the results and the state
+  store.delete('longhaul.campaign');
+  check('the Campaign state: the level and the mission to fly next (a new game: level 1, mission 0), the results of the missions flown, the ore and the extras', (() => { const P = J('campProgressLoad()'); return P.level === 1 && P.mission === 0 && JSON.stringify(P.results) === '{}' && P.ore === 0; })());
+  g.run(`var __P = campProgressNew(); window.__sc1 = { score: 1500, bonuses: [{ id: 'swift', ok: true }, { id: 'clean', ok: false }], t: 70, hullLeft: 540, shipsLost: 1 }; window.__r1 = campMissionDone(__P, 't', 0, __sc1)`);
+  check('campMissionDone keeps the result under "<level>.<mission>" (the bonuses met, the time, the hull, the ships lost, one try) and moves the mission to fly next on; the level is not done until its last mission', J('__P.results["t.1"].score') === 1500 && J('__P.results["t.1"].bonuses.join()') === 'swift' && J('__P.results["t.1"].tries') === 1 && J('__P.mission') === 1 && J('__r1.levelDone') === false);
+  g.run('var __r2 = campMissionDone(__P, "t", 0, { score: 900, bonuses: [], t: 99, hullLeft: 100, shipsLost: 4 }); campMissionTried(__P, "t", 0)');
+  check('a mission flown again keeps its best score and counts the tries (best 1500 stays, tries 3)', J('__P.results["t.1"].score') === 1500 && J('__P.results["t.1"].tries') === 3);
+  g.run('var __r3 = campMissionDone(__P, "t", 3, __sc1)');
+  check('the last mission of a level completes the level: levelDone true, the mission index back to 0', J('__r3.levelDone') === true && J('__P.mission') === 0);
+  check('the state is the one JSON under longhaul.campaign: saved with the results and read back, and junk in it is cleaned (a result with no score, a key that is no mission, a level out of range)', (() => { g.run('__P.level = 1; __P.mission = 0; campProgressSave(__P)'); const back = J('campProgressLoad()'); store.set('longhaul.campaign', JSON.stringify({ level: 99, mission: 77, results: { '1.1': { score: 5, bonuses: ['a'], t: 1, hull: 2, lost: 0, tries: 1 }, 'x.y': { score: 1 }, '1.2': { nope: 1 } } })); const junk = J('campProgressLoad()'); return back.results['t.1'] === undefined && JSON.stringify(Object.keys(junk.results)) === '["1.1"]' && junk.level === 1 && junk.mission === 0; })());
+  store.delete('longhaul.campaign');
+  g.run('delete CAMP.levels.t');
 }
 
 // ---------- F. the save, and Long Haul untouched ----------
@@ -615,7 +692,7 @@ console.log('F. the save, and Long Haul untouched');
   check('a saved line with rubbish in it is read as far as it makes sense: level of 99 is dropped to 1, the one real tech kept once', J('campProgressLoad().level') === 1 && J('campProgressLoad().techs').join() === 'beam');
   store.set('longhaul.campaign', 'not json');
   check('and one that is not JSON starts again from level 1', J('campProgressLoad().level') === 1);
-  check('the save has no words and no numbers of the battle', Object.keys(JSON.parse((g.run(`campProgressSave({ level: 2, techs: ['shield'], ore: 0, bonus: { fighters: 0, escorts: 0 } })`), store.get('longhaul.campaign')))).sort().join() === 'bonus,level,ore,techs');
+  check('the save has no words and no numbers of the battle', Object.keys(JSON.parse((g.run(`campProgressSave({ level: 2, techs: ['shield'], ore: 0, bonus: { fighters: 0, escorts: 0 } })`), store.get('longhaul.campaign')))).sort().join() === 'bonus,level,mission,ore,results,techs');
   check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 }
 
