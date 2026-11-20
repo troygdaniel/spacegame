@@ -392,7 +392,8 @@ class Overlay extends Phaser.Scene {
     g.lineStyle(1, 0xffffff, 0.5); [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => g.lineBetween(x + dx * (r + 3), y + dy * (r + 3), x + dx * (r + 10), y + dy * (r + 10)));
     this.tPick.setText('Destination: ' + b.name + '   ' + (Math.hypot(b.x - sp.ship.x, b.y - sp.ship.y) / 10 | 0) + ' km   (click it again to fly)');
     const T = typeof autopilotLegTimes === 'function' ? autopilotLegTimes(sp, b) : { slow: 0, fast: null }, eta = typeof cruiseEtaText === 'function' ? cruiseEtaText : String;
-    this.btnFly.setText('FLY    Enter          ' + eta(T.slow)); this.btnFast.setText(T.fast == null ? 'FAST   too near to cruise' : 'FAST   Shift+Enter    ' + eta(T.fast)).setAlpha(T.fast == null ? 0.55 : 1);
+    const going = sp.ap && sp.ap.on && sp.ap.target && sp.ap.target.id === b.id, flyOn = going && sp.ap.local, fastOn = going && !sp.ap.local; // the one that is on is marked
+    this.btnFly.setText('FLY    Enter          ' + eta(T.slow) + (flyOn ? '  ON' : '')).setBackgroundColor(flyOn ? '#1f7f95' : '#0a3a4a'); this.btnFast.setText(T.fast == null ? 'FAST   too near to cruise' : 'FAST   Shift+Enter    ' + eta(T.fast) + (fastOn ? '  ON' : '')).setAlpha(T.fast == null ? 0.55 : 1).setBackgroundColor(fastOn ? '#1f7f95' : '#0a3a4a');
     const w = Math.max(this.btnFly.width, this.btnFast.width), hh = this.btnFly.height, right = x + r + 14 + w <= this.MX + this.MS - 4; // beside the mark, on the side that has room, inside the frame
     const bx = right ? x + r + 14 : Math.max(this.MX + 4, x - r - 14 - w), by = Math.max(this.MY + 4, Math.min(this.MY + this.MS - 2 * hh - 8, y - hh - 2));
     this.btnFly.setPosition(bx, by); this.btnFast.setPosition(bx, by + hh + 4);

@@ -9,7 +9,7 @@
 //   campIntent(text)                 plain words -> { act: 'fleet_attack', arg } or null (the ship computer calls it; src/shipcomputer.js)
 //   campTechChoices(level)           the three techs offered after that level;  campPick(P, id): the pick, kept in P
 //   campProgressLoad() / campProgressSave(P)   { level, techs } in localStorage under CAMP.store, apart from the Long Haul save
-//   campStory(level, 'before' | 'after')       the plain lines of the story, from content/text/ui.md (keys camp.l<level>.<before|after>.<n>)
+//   campStory(level, 'before' | 'after', revealed)  the plain lines of the story, from content/text/ui.md (keys camp.l<level>.<before|after>.<n>; after the ending has been seen, .r. lines where a level has them)
 // C: { level, t (ms), ships, bullets, events, input, earth, bay, techs, carrier, result ('won' | 'lost' | null), why, delivered, lost, kills, ... }
 // A ship: { id, kind, team ('earth' | 'alien'), x, y, vx, vy, rot, hp, maxHp, r, vmax, accel, turn, def, order }  (the alien ones are src/enemies.js PIRATES)
 // The aliens fly with the game's own pirateSteer (circle, pass, break, run), so a fight here moves like a fight in Long Haul.
@@ -167,7 +167,9 @@ const CAMP = {
     steer: 3,                              // turn input per radian off the line to the target (1 is full turn, so 3 is full beyond a third of a radian)
     align: 0.5,                            // rad: thrust only when the nose is within this of the line (the Long Haul autopilot's aligned)
     etaSlow: 1.1,                          // the flight time on the map is distance over the carrier's top speed times this (it speeds up and brakes)
-    fast: 2,                               // the map's Fast button (card space-game-map-click-fly): the carrier's top speed and thrust, times this, while the autopilot flies it; steering takes it away
+    fast: 2.2,                             // the map's Fast button (card space-game-map-click-fly): the carrier's top speed and thrust, times this, while the autopilot flies it; steering takes it away. 462 px/s: above a fighter's 430 (and an escort's 300), so a ship of the wing could not keep up: Fast needs the wing aboard (card space-game-campaign-fast-board)
+    recallWait: 20,                        // s: after a second press of Fast with ships out, how long the wing has to get back aboard before the burn is given up (the ships still out are named)
+    askFor: 8,                             // s: a first press of Fast with ships out is refused and remembered this long: a second press in that time recalls the wing and burns once the last ship is aboard
     farFrom: 8000,                         // px: a Fast trip longer than this (Earth to Mars is 4,100, Earth to Jupiter 40,000) burns at farFast instead of fast (card space-game-campaign-sol)
     farFast: 3.2,                          // times the carrier's speed on a far trip: 672 px/s, Long Haul's own cruise (8,000 px/s) at the Campaign's 1 to 12 scale, so Earth to Neptune (112,000 px) is about 3 minutes
     pick: 28,                              // px on the map around a mark that count as a click on it
@@ -181,7 +183,12 @@ const CAMP = {
     hpScale: 1,                            // times the PIRATES hit points (src/enemies.js: raider 20, drone 30, gunship 80)
     damageScale: 1,                        // times the PIRATES shot damage (raider 6, drone 8, gunship 10 a shot, three shots)
     earthDamage: 0.25,                     // a shot that hits Earth takes this share of its damage off Earth's shield (a big planet takes a pounding)
-    distract: 4000                         // ms an alien you hit fights the ship that hit it instead of its goal
+    distract: 4000,                        // ms an alien you hit fights the ship that hit it instead of its goal
+    pursuit: {                             // a chase can be broken by a burn (card space-game-campaign-pursuit, Troy 20 Nov 2026): every alien's top speed is under the burn's (raider 430, drone 260, gunship 150 against 462; the mothership 55 and the towers do not chase). The raider is only 32 under it, so the leash is short
+      leashOf: 1.25,                       // the leash, as a share of the kind's firing range (raider 650 px, drone 810, gunship 975): an alien that has been on the carrier and is farther than this from it is out of touch. A kind that fires from a distance is not out of touch while it does
+      loseAfter: 1500,                     // ms out of touch (beyond the leash) before it gives up the chase: a short time, so a burn that opens the distance loses it, and a wobble does not
+      sayEvery: 8000                       // ms between two "Lost them." lines (one line for a pack that drops away together)
+    }
   },
   warn: [0.5, 0.25],                       // shares of Earth's shield and of the carrier's hull at which the ship's voice warns (each once, and again if it mends past the share and falls back)
   mother: {
@@ -331,6 +338,7 @@ const CAMP = {
     },
     3: {                                                          // the alien home world: scan the approach, break the outer ring, break the inner ring
       name: 'The home world', start: 'arrival', startAt: [0, 0], earth: false,
+      reveal: { star: 'Tau Ceti', name: 'The outpost', place: 'Alien outpost' }, // SPOILER: after the win the ending says this was an outpost and the data points to this star; once the ending has been seen (the saved flag revealed) a replay says the true names (campReveal)
       // no outposts here: the alien home world is the only place, so nothing friendly to dock at (build with the Fabricator, or fight on)
       world: { system: 'epsilon-eridani', fit: { place: 'home', pack: 'epsilon-eridani-b' }, same: { home: 'epsilon-eridani-b' }, k: 3 }, // Epsilon Eridani's star and belts round the alien home world, which is the pack's Aegir; k: the rings are this many times the pack's (so the star is not on top of the towers)
       places: {
@@ -416,7 +424,7 @@ function campNew(level, techs, opts) {
   const rr = campRng((opts.seed == null ? 1 : opts.seed) * 7919 + 13); // the rocks have a stream of their own, so ore never changes how a fight flies
   C.rocks = []; C.lasers = []; C.laserNow = []; C.laserLog = {}; // C.lasers: the beams firing now, [{ from: the ship's id, to: the rock's or the alien's id, kind: 'rock' | 'alien', since: C.t when this beam began without a break }] (data for the beam hum, src/campaign.js campBeamState of card space-game-campaign-sounds)
   (L.rocks || []).forEach(f => { for (let i = 0; i < f.n; i++) { const a = rr() * 2 * Math.PI, d = Math.sqrt(rr()) * f.spread; C.rocks.push({ id: 'rock-' + (C.nextId++), x: f.at[0] + Math.cos(a) * d, y: f.at[1] + Math.sin(a) * d, hp: CAMP.ore.rockHp, maxHp: CAMP.ore.rockHp, r: CAMP.ore.rockR, ore: CAMP.ore.rock, cutAt: -1e9 }); } }); // asteroids: a laser cuts one, and it breaks into a chunk of ore
-  (L.guards || []).forEach(g => { const a = campSpawn(C, g.kind, g.at[0], g.at[1]); if (a) { a.hold = true; a.guard = true; a.goal = 'carrier'; } }); // guard: a kill objective 'guards' counts them
+  (L.guards || []).forEach(g => { const a = campSpawn(C, g.kind, g.at[0], g.at[1]); if (a) { a.hold = true; a.guard = true; a.goal = 'carrier'; a.post = { x: g.at[0], y: g.at[1] }; } }); // guard: a kill objective 'guards' counts them; a guard's post: where it goes back to when it loses you
   return C;
 }
 
@@ -648,6 +656,7 @@ function campStep(C, sec) {
 function campTick(C, dt) {
   C.t += dt * 1000; C.dt = dt; C.laserNow.length = 0;
   campSchedule(C);
+  if (typeof campNavWait === 'function') campNavWait(C); // a Fast trip waiting for the wing to come aboard (src/campnav.js)
   if (typeof campNavDrive === 'function') campNavDrive(C, dt); // the autopilot (src/campnav.js), when it is on, sets the carrier's input
   campCarrier(C, dt);
   campLaunch(C);
@@ -925,7 +934,15 @@ function campAlienAI(C, u, dt) {
   let tgt = null;
   if (u.hitBy && u.distractedUntil > C.t) { const h = C.by[u.hitBy]; if (h && h.hp > 0) tgt = h; }
   if (!tgt && u.goal && u.goal.indexOf('convoy:') === 0) { const f = C.by['freighter-' + u.goal.slice(7)]; if (f && f.hp > 0) tgt = f; }
-  if (!tgt) { const near = campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, def.engage * 0.7); if (near) tgt = near; }
+  if (!tgt) { const near = campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, def.engage * 0.7); if (near) { tgt = near; if (near !== C.carrier) u.lost = false; } } // one of your other ships in reach: it is on that ship (the carrier is the leash's: campPursuit)
+  if (campPursuit(C, u, tgt)) { // it has lost you: it goes back to its post (a guard) or settles where it is and guards (the rest), and an Earth wave goes on to Earth
+    if (!C.earth) { // no Earth here: a guard goes back to its post and holds there again; the rest come to rest where they are, out of it until the carrier comes within the leash again (campPursuit clears it)
+      if (u.post && campDist(u, u.post) > 90) { campSeek(u, u.post.x, u.post.y, dt); return; }
+      if (u.post) { u.hold = true; u.lost = false; return; }
+      const keep = Math.pow(0.4, dt); u.vx *= keep; u.vy *= keep; u.x += u.vx * dt; u.y += u.vy * dt; return;
+    }
+    tgt = null; // Earth is its goal as it was
+  }
   const isEarth = !tgt && !!C.earth; if (!tgt) tgt = C.earth || C.carrier; // nothing near and no Earth in this level: it comes for the carrier
   const dx = tgt.x - u.x, dy = tgt.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx), tv = isEarth ? { x: 0, y: 0 } : { x: tgt.vx || 0, y: tgt.vy || 0 };
   const m = campSteer(C, u, def, dist, target, u.vx - tv.x, u.vy - tv.y);
@@ -935,6 +952,18 @@ function campAlienAI(C, u, dt) {
     const n = def.spread || 1;
     for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet, def.dmg * CAMP.alien.damageScale, 1800, 'alien', 14);
   }
+}
+// pursuit: an alien that was on the carrier (it targeted it within the leash) and has been beyond the leash for loseAfter ms has lost it. Returns true while it has. A burn does it (every top speed is under the burn's,
+// and the aliens' are all over the carrier's regular speed, so at regular speed nothing is lost); an alien that has never been near (it is coming from afar) is not lost, it has nothing to lose.
+function campPursuit(C, u, tgt) {
+  const K = CAMP.alien.pursuit, car = C.carrier; if (!K || !car || car.hp <= 0 || (tgt && tgt !== car)) return false; // an alien fighting something else (a convoy, the ship that hit it, one of your ships in reach) is not chasing the carrier
+  const d = campDist(u, car), onCar = tgt === car || (!tgt && !C.earth), leash = ((u.def && u.def.range) || 520) * K.leashOf; // with no Earth in the level an alien with nothing near comes for the carrier
+  if (onCar && d <= leash) { u.seenAt = C.t; u.lost = false; return false; } // on the carrier and within the leash
+  if (u.lost) return true;
+  if (u.seenAt == null || d <= leash || C.t - u.seenAt < K.loseAfter) return false;
+  u.lost = true; u.seenAt = null; u.lostN = (u.lostN || 0) + 1; // lostN: how many times it has lost you
+  if (C.t - (C.lostSayAt == null ? -1e9 : C.lostSayAt) >= K.sayEvery) { C.lostSayAt = C.t; campSay(C, 'camp.say.lost'); }
+  return true;
 }
 // the mothership: it comes in toward Earth, stops at holdAt, fires volleys at your ships, and launches raiders
 function campMotherAI(C, u, dt) {
@@ -992,7 +1021,7 @@ function campWingAI(C, u, dt) {
     campMove(u, m.ang, m.face, dt);
     if (m.fire && dist < k.range + (foe.r || 0) && C.t > u.nextShot && Math.abs(campWrap(target - u.rot)) < k.aim) {
       u.nextShot = C.t + campBetween(C, k.delay[0], k.delay[1]);
-      campBullet(C, u, u.rot, k.bullet, k.damage, 1400, 'earth', 14);
+      campBullet(C, u, u.rot, k.bullet, k.damage, 1400, 'earth', 14); C.events.push({ type: 'wingshot', x: u.x, y: u.y, kind: u.kind, id: u.id }); // the wing's gun has a sound of its own (the scene scales it by the distance)
     }
     u.move = u.move || null;
   } else if (home) campSeek(u, home.x + (home.vx || 0) * 0.2, home.y + (home.vy || 0) * 0.2, dt);
@@ -1070,12 +1099,26 @@ function campPick(P, id) {
   if (!CAMP.tech[id] || P.techs.indexOf(id) >= 0) return false;
   P.techs.push(id); return true;
 }
-function campStory(level, when) {
-  const out = [];
-  for (let n = 1; n <= 6; n++) { const key = 'camp.l' + level + '.' + when + '.' + n; if (Object.prototype.hasOwnProperty.call(UI_TEXT, key)) out.push(uiText(key)); }
+// the story lines of a level, before or after it. revealed: the ending has been seen (the saved flag), so a level that has lines of its own for it (camp.lN.when.r.n) says those instead
+function campStory(level, when, revealed) {
+  const out = [], has = k => Object.prototype.hasOwnProperty.call(UI_TEXT, k), base = 'camp.l' + level + '.' + when + '.', pre = revealed && has(base + 'r.1') ? base + 'r.' : base;
+  for (let n = 1; n <= 6; n++) if (has(pre + n)) out.push(uiText(pre + n));
   return out;
 }
-function campProgressNew() { return { level: 1, mission: 0, techs: [], ore: 0, bonus: { fighters: 0, escorts: 0 }, results: {} }; } // level and mission: the next one to fly; ore: carried into the next level; bonus: the extra ships the Earth refit bought for it; results: { '<level>.<mission>': { score, bonuses: [ids], t, hull, lost, tries } }, one for each mission flown (the best score is kept)
+// SPOILER (card space-game-campaign-outpost-reveal): level 3 is an outpost, not their home world, and the player finds out only after winning. campReveal(true) gives the level and its place their
+// true names (CAMP.levels[3].reveal), campReveal(false) the old ones; the scene calls it from the saved flag when it starts and when the ending shows. Nothing before the flag says outpost.
+function campReveal(on) {
+  const L = CAMP.levels[3], R = L && L.reveal; if (!R || !L.places || !L.places.home) return false;
+  if (!R.was) R.was = { name: L.name, place: L.places.home.name };
+  L.name = on ? R.name : R.was.name; L.places.home.name = on ? R.place : R.was.place;
+  return !!on;
+}
+// the ending's lines (content/text/campaign-reveal.md): this is not their home, the war is not over, the star the data points to
+function campEnding() {
+  const R = (CAMP.levels[3] && CAMP.levels[3].reveal) || {};
+  return [uiText('camp.end.1'), uiText('camp.end.2'), uiText('camp.end.3', { star: R.star || '' })];
+}
+function campProgressNew() { return { level: 1, mission: 0, techs: [], ore: 0, bonus: { fighters: 0, escorts: 0 }, results: {}, revealed: false }; } // level and mission: the next one to fly; ore: carried into the next level; bonus: the extra ships the Earth refit bought for it; results: { '<level>.<mission>': { score, bonuses: [ids], t, hull, lost, tries } }, one for each mission flown (the best score is kept)
 const campResultKey = (level, i) => level + '.' + ((i | 0) + 1);
 function campProgressLoad() {
   const P = campProgressNew();
@@ -1085,13 +1128,14 @@ function campProgressLoad() {
     if (Number.isInteger(raw.mission) && raw.mission >= 0 && raw.mission < 9) P.mission = raw.mission;
     if (Array.isArray(raw.techs)) raw.techs.forEach(t => { if (CAMP.tech[t] && P.techs.indexOf(t) < 0) P.techs.push(t); });
     if (Number.isFinite(raw.ore)) P.ore = Math.max(0, Math.min(CAMP.ore.cap, Math.floor(raw.ore)));
+    P.revealed = raw.revealed === true; // the ending has been seen (SPOILER: campReveal)
     if (raw.bonus && typeof raw.bonus === 'object') { const b = x => Number.isInteger(x) ? Math.max(0, Math.min(CAMP.refit.most, x)) : 0; P.bonus = { fighters: b(raw.bonus.fighters), escorts: b(raw.bonus.escorts) }; }
     if (raw.results && typeof raw.results === 'object') Object.keys(raw.results).slice(0, 40).forEach(k => { const r = raw.results[k]; if (/^[1-9]\.[1-9]$/.test(k) && r && Number.isFinite(r.score)) P.results[k] = { score: Math.max(0, Math.min(99999, Math.floor(r.score))), bonuses: Array.isArray(r.bonuses) ? r.bonuses.filter(x => typeof x === 'string').slice(0, 6).map(x => x.slice(0, 24)) : [], t: Math.max(0, r.t | 0), hull: Math.max(0, r.hull | 0), lost: Math.max(0, r.lost | 0), tries: Math.max(1, Math.min(99, r.tries | 0 || 1)) }; });
   }, 0);
   if (P.mission >= campMissions(P.level).length) P.mission = 0;
   return P;
 }
-function campProgressSave(P) { campTry(() => localStorage.setItem(CAMP.store, JSON.stringify({ level: P.level, mission: P.mission | 0, techs: P.techs, ore: P.ore | 0, bonus: P.bonus, results: P.results || {} })), 0); }
+function campProgressSave(P) { campTry(() => localStorage.setItem(CAMP.store, JSON.stringify({ level: P.level, mission: P.mission | 0, techs: P.techs, ore: P.ore | 0, bonus: P.bonus, results: P.results || {}, revealed: P.revealed === undefined ? campProgressLoad().revealed : P.revealed === true })), 0); } // revealed: the ending has been seen (SPOILER: campReveal)
 // a mission won: its result is kept (the best score, how many tries), and the mission to fly next moves on. Answers { levelDone }: true when it was the last mission of its level (the caller goes to the level's story and refit, then the next level)
 function campMissionDone(P, level, i, sc) {
   const k = campResultKey(level, i), old = P.results[k], res = { score: sc.score, bonuses: sc.bonuses.filter(b => b.ok).map(b => b.id), t: sc.t, hull: sc.hullLeft, lost: sc.shipsLost, tries: (old ? old.tries : 0) + 1 };
