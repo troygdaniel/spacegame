@@ -27,13 +27,13 @@ g.run(`
     setText(v) { o.t = v; return o; }, setColor(c) { o.color = c; return o; }, setVisible(v) { o.vis = v; return o; }, setY(v) { o.y = v; return o; }, setPosition(a, b) { o.x = a; o.y = b; return o; }, setRotation(r) { o.rot = r; return o; },
     setBackgroundColor(c) { o.bg = c; return o; }, setAngle() { return o; }, setScale() { return o; }, setDepth() { return o; }, setOrigin() { return o; }, setPadding() { return o; }, setStrokeStyle() { return o; }, setInteractive() { return o; }, setAlpha() { return o; },
     on(ev, fn) { o.handlers[ev] = fn; return o; }, destroy() {} }; return o; };
-  window.__scene = () => {
+  window.__scene = d => {
     __rec.go.length = 0; __rec.sfx.length = 0; __rec.texts.length = 0; __rec.tweens.length = 0; __rec.door = 0;
     const s = Object.create(CampHub.prototype);
     s.add = { rectangle: (x, y) => { const o = __obj(); o.x = x; o.y = y; return o; }, text: (x, y, t) => { const o = __obj(); o.x = x; o.y = y; o.t = t; __rec.texts.push(o); return o; }, image: (x, y, k) => { const o = __obj(); o.x = x; o.y = y; o.key = k; return o; } };
     s.cameras = { main: { fadeIn() {}, fadeOut() {} } }; s.tweens = { add: cfg => { __rec.tweens.push(cfg); return { stop() { cfg.stopped = true; } }; } }; s.time = { now: 1000 };
     s.input = { keyboard: { on: (e, fn) => { s.kb = fn; }, off() {} } }; s.events = { once() {} };
-    s.init({}); s.create(); return s;
+    s.init(d || {}); s.create(); return s;
   };
   window.__shown = s => __rec.texts.filter(o => o.vis && o.t !== '').map(o => o.t);
   window.__key = (s, code) => s.onKey({ code, repeat: false });
@@ -101,6 +101,32 @@ g.run(`var S8 = __scene(); __key(S8, 'Escape');`);
 check('Esc leaves for the title (T too); nothing is lost: every change was saved when it was made', J('__rec.go.length') === 1 && J('__rec.go[0].key') === 'Title' && (() => { g.run(`var S9 = __scene(); __key(S9, 'KeyT');`); return J('__rec.go[0].key') === 'Title'; })());
 g.run(`var S10 = __scene(); S10.leaving = true; __key(S10, 'KeyL');`);
 check('once the scene is leaving no key does anything', J('__rec.go.length') === 0 && J('__rec.door') === 0);
+
+// ---- E2. the room is data: a dock opens it with its own rows, station and ways out ----
+g.run(`
+  CAMP_HUB.note.build = P => 'build ' + (P.ore | 0); CAMP_HUB.rowKey.build = (H, P, code, res) => { if (code !== 'KeyB') return null; res.used = true; res.say = { key: 'camp.hub.boughtf', vars: { ore: 7 } }; return res; };
+  UI_TEXT['camp.hub.row.build'] = 'BUILD'; UI_TEXT['camp.hub.foot.build'] = 'B  build a ship'; CAMP_HUBS.page.build = s => { s.line(0, 0, 'THE BUILD PAGE', '#6dff9c'); s.line(1, 0, 'ore ' + (s.P.ore | 0), '#ffd37a'); };
+  CAMP_HUBS.stops.build = [500, 250];
+  window.__dock = { out: [] };
+  localStorage.setItem(CAMP.store, JSON.stringify({ level: 1, mission: 0, techs: [], ore: 60, bonus: { fighters: 0, escorts: 0 }, results: {} }));
+  var D = __scene({ rows: ['build', 'refit', 'launch'], at: 'build', station: { name: 'Ceres Dock', accent: '#ffb454', art: 'foundry' }, onLaunch: s => __dock.out.push('launch'), onLeave: s => __dock.out.push('leave') });
+`);
+const dshown = () => J('__shown(D)');
+check('a dock\'s room: its station name on the glass and in the hall\'s look, its colour, three rows numbered 1 to 3 with the registered one first and chosen', dshown().some(x => /^READY ROOM {2}- {2}CERES DOCK$/.test(x)) && J('D.look.name') === 'Ceres Dock' && J('D.look.accentCss') === '#ffb454' && J('D.rowT.length') === 3 && J('D.hub.row') === 0 && dshown().includes('BUILD') && dshown().includes('build 60'), dshown().join(' | '));
+check('the registered row\'s page is drawn, its foot is its own words, the pilot stands at its own stop', dshown().includes('THE BUILD PAGE') && dshown().includes('ore 60') && dshown().includes('B  build a ship') && J('D.player.x') === 500 && J('D.player.y') === 250);
+g.run(`__key(D, 'KeyB');`);
+check('its own key is its row\'s: the answer it gives is shown (the refit page is not showing: the row said it)', J('D.msg.text') === 'A fighter joins the wing. 7 ore left.');
+g.run(`__key(D, 'Digit2'); __key(D, 'KeyF');`);
+check('the refit row works in a dock\'s room as it does in the hall: F buys, the save changes', JSON.parse(g.run('localStorage.getItem(CAMP.store)')).bonus.fighters === 1 && JSON.parse(g.run('localStorage.getItem(CAMP.store)')).ore === 35);
+g.run(`__key(D, 'Digit3'); __key(D, 'Enter'); __key(D, 'KeyL');`);
+check('Launch in a dock\'s room is the dock\'s (onLaunch), twice here, with the door rolled up and no Campaign scene started', J('__dock.out').join() === 'launch,launch' && J('__rec.door') === 2 && J('__rec.go.length') === 0);
+g.run(`__dock.out.length = 0; __key(D, 'Escape'); __key(D, 'KeyT');`);
+check('Esc and T are the dock\'s onLeave, not the title', J('__dock.out').join() === 'leave,leave' && J('__rec.go.length') === 0);
+g.run(`var D2 = __scene({ rows: ['board'], station: { name: 'X', accent: 'not a colour' } });`);
+check('a room of one row and a colour that is not one still stand: the level\'s own colour is used, S and Enter wrap on the one row, L does nothing without a Launch row', J('D2.look.accentCss') === '#6dff9c' && J('D2.rowT.length') === 1 && (() => { g.run(`__key(D2, 'KeyS'); __key(D2, 'Enter'); __key(D2, 'KeyL');`); return J('D2.hub.row') === 0 && J('__rec.go.length') === 0 && J('__rec.door') === 0; })());
+g.run(`var D3 = __scene({ rows: ['board', 'brief', 'refit', 'rank', 'launch', 'build'] });`);
+check('six rows fit the glass: each row is closer than five rows\' (the height of the list is shared) and the sixth has its stop', J('D3.rowT.length') === 6 && J('D3.rowH') < 34 && J('D3.rowH') * 6 <= 170);
+g.run(`delete CAMP_HUB.note.build; delete CAMP_HUB.rowKey.build; delete UI_TEXT['camp.hub.row.build']; delete UI_TEXT['camp.hub.foot.build']; delete CAMP_HUBS.page.build; delete CAMP_HUBS.stops.build;`);
 
 // ---- F. the Campaign scene's side ----
 g.run(`window.__camp = via => { const c = Object.create(Campaign.prototype); c.via = via; c.mode = 'intro'; c.shown = []; c.hideCard = () => { c.hidden = true; }; c.showBrief = () => { c.shown.push('brief'); c.mode = 'brief'; }; c.P = campProgressLoad(); c.level = 1; c.mi = 0; return c; };`);

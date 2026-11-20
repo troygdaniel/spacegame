@@ -5,9 +5,12 @@
 //   Missions and Briefing and Rank are read at the mission desk (left), the Refit at the repair bay (middle), Launch at the pad (right). A dark glass panel lies over the lower deck: the five rows at the left,
 //   the chosen row's page at the right, the amber line under the rows says what Enter does. The key line is in the south wall.
 //   Launch rolls the bay door up and starts the Campaign scene on the next mission (via 'hub': the briefing was read here, so the scene does not show it again). A debrief comes back here (campaignscene.js).
+//   THE ROOM IS DATA (src/camphub.js has the rows: CAMP_HUB.note, .act, .rowKey): this file has the rest, by row id: CAMP_HUBS.page[id] (draws the row's page), .stops[id] and .face[id] (where the pilot stands), and
+//   CAMP_HUBS.run[action] (what an action does). The scene is started with data { rows: [ids], at: id, station: { name, accent, art }, onLaunch(scene), onLeave(scene) }: a dock at an outpost (card
+//   space-game-campaign-outposts) registers its rows (build, repair ...) with their pages, and opens the same room with them; what it passes replaces the defaults, and nothing it leaves out is needed.
 const CAMP_HUBS = {
   panel: { x: 36, y: 440, w: 818, h: 232 },    // the glass over the lower deck of the hall: where it is and how big
-  list: { x: 52, y: 478, w: 252, row: 34 },    // the five rows: the left edge, the top, the width, the height of a row
+  list: { x: 52, y: 478, w: 252, row: 34, room: 170 }, // the rows: the left edge, the top, the width, the height of a row, and the height they all share (five rows of 34)
   pane: { x: 324, y: 476, w: 518, line: 15, lines: 12, col2: 262 }, // the page of the chosen row: its left edge and top, its width, the height of a line, how many lines, and where the second column starts
   foot: { x: 52, y: 654 },                     // the amber line: what Enter does
   keys: { x: 640, y: 696 },                    // the key line, in the south wall
@@ -20,11 +23,11 @@ const CAMP_HUBS = {
 
 class CampHub extends Phaser.Scene {
   constructor() { super('CampHub'); }
-  init(d) { this.d = d || {}; this.leaving = false; }
+  init(d) { this.d = d || {}; this.leaving = false; } // d: the scene data above (all of it optional)
   create() {
-    this.P = campProgressLoad(); this.hub = campHubNew(this.P); this.msg = null; this.walls = [];
-    const nx = campHubNext(this.P), st = campHubStation(nx.level), css = st.accent;
-    this.look = { id: 'camp-hub', name: st.name, art: st.art, home: false, accent: parseInt(css.slice(1), 16), accentCss: css, pirate: false, // what src/stationlook.js answers for a dock: the hall's colour, and the desks in it (a mission desk and a repair bay, no bar, shop or pump)
+    this.P = campProgressLoad(); this.hub = campHubNew(this.P, { rows: this.d.rows, at: this.d.at }); this.msg = null; this.walls = [];
+    const nx = campHubNext(this.P), st = Object.assign({}, campHubStation(nx.level), this.d.station && typeof this.d.station === 'object' ? this.d.station : {}), css = /^#[0-9a-f]{6}$/i.test(st.accent) ? st.accent : campHubStation(nx.level).accent;
+    this.look = { id: 'camp-hub', name: String(st.name), art: st.art, home: false, accent: parseInt(css.slice(1), 16), accentCss: css, pirate: false, // what src/stationlook.js answers for a dock: the hall's colour, and the desks in it (a mission desk and a repair bay, no bar, shop or pump)
       terminals: { missions: true, repair: true, shop: false, pump: false, bar: false }, barName: '', barLines: [], welcome: '' };
     this.accent = css;
     this.cameras.main.fadeIn(300, 0, 0, 0);
@@ -59,12 +62,13 @@ class CampHub extends Phaser.Scene {
     this.titleT = this.add.text(Pn.x + 16, Pn.y + 12, '', uiFont(14, this.accent, { letterSpacing: 2 })).setDepth(81);
     this.lvT = this.add.text(Pn.x + Pn.w - 16, Pn.y + 12, '', uiFont(13, '#8fb4c9')).setOrigin(1, 0).setDepth(81);
     this.glass.push(this.add.rectangle(Pg.x - 12, Pn.y + 130, 1, 168, hex, 0.4).setDepth(81)); // the line between the rows and the page
-    this.bar = this.add.rectangle(Li.x + Li.w / 2, Li.y + Li.row / 2, Li.w, Li.row - 2, 0xffb454, 0.16).setDepth(81); this.barEdge = this.add.rectangle(Li.x + 1, Li.y + Li.row / 2, 3, Li.row - 2, 0xffb454, 1).setDepth(82);
-    this.rowT = campHubRows(this.P).map((r, k) => {
-      const y = Li.y + k * Li.row;
-      const cap = this.add.text(Li.x + 12, y + Li.row / 2, String(r.n), uiFont(14, '#02101c', { fontStyle: 'bold' })).setOrigin(0.5).setDepth(83).setBackgroundColor('#9fe9ff').setPadding(5, 1, 5, 1);
+    const rh = this.rowH = Math.min(Li.row, Math.floor(CAMP_HUBS.list.room / this.hub.rows.length)); // a room with more rows than five has them closer
+    this.bar = this.add.rectangle(Li.x + Li.w / 2, Li.y + rh / 2, Li.w, rh - 2, 0xffb454, 0.16).setDepth(81); this.barEdge = this.add.rectangle(Li.x + 1, Li.y + rh / 2, 3, rh - 2, 0xffb454, 1).setDepth(82);
+    this.rowT = campHubRows(this.P, this.hub.rows).map((r, k) => {
+      const y = Li.y + k * rh, Lr = rh;
+      const cap = this.add.text(Li.x + 12, y + Lr / 2, String(r.n), uiFont(14, '#02101c', { fontStyle: 'bold' })).setOrigin(0.5).setDepth(83).setBackgroundColor('#9fe9ff').setPadding(5, 1, 5, 1);
       const name = this.add.text(Li.x + 30, y + 3, '', uiFont(15, '#e8f6ff', { fontStyle: 'bold' })).setDepth(82), note = this.add.text(Li.x + 30, y + 20, '', uiFont(11, '#8fb4c9')).setDepth(82);
-      const hit = this.add.rectangle(Li.x + Li.w / 2, y + Li.row / 2, Li.w, Li.row, 0xffffff, 0.001).setDepth(84).setInteractive({ useHandCursor: true });
+      const hit = this.add.rectangle(Li.x + Li.w / 2, y + Lr / 2, Li.w, Lr, 0xffffff, 0.001).setDepth(84).setInteractive({ useHandCursor: true });
       hit.on('pointerdown', () => this.click(k));
       return { cap, name, note, hit };
     });
@@ -82,13 +86,13 @@ class CampHub extends Phaser.Scene {
 
   // everything on the glass from the state: rows, foot and the page of the chosen row
   paint() {
-    const P = this.P, H = this.hub, Li = CAMP_HUBS.list, rows = campHubRows(P), id = CAMP_HUB.rows[H.row], nx = campHubNext(P);
+    const P = this.P, H = this.hub, Li = CAMP_HUBS.list, rows = campHubRows(P, H.rows), id = H.rows[H.row], nx = campHubNext(P);
     this.titleT.setText(uiText('camp.hub.title', { name: this.look.name.toUpperCase() })); this.lvT.setText(uiText('camp.hub.level', { n: nx.level, name: CAMP.levels[nx.level].name }));
     rows.forEach((r, k) => { const o = this.rowT[k]; o.name.setText(r.name).setColor(k === H.row ? '#ffffff' : '#cfefff'); o.note.setText(r.note).setColor(k === H.row ? '#ffd37a' : '#8fb4c9'); o.cap.setBackgroundColor(k === H.row ? '#ffb454' : '#9fe9ff'); });
-    this.bar.setY(Li.y + H.row * Li.row + Li.row / 2); this.barEdge.setY(this.bar.y);
+    this.bar.setY(Li.y + H.row * this.rowH + this.rowH / 2); this.barEdge.setY(this.bar.y);
     this.footT.setText(campHubFoot(id));
     Object.keys(this.slots).forEach(k => this.slots[k].setVisible(false));
-    ({ board: () => this.pageBoard(), brief: () => this.pageBrief(), refit: () => this.pageRefit(), rank: () => this.pageRank(), launch: () => this.pageLaunch() })[id]();
+    const page = CAMP_HUBS.page[id]; if (page) page(this);
   }
   pageBoard() {
     const view = campHubBoardView(campHubBoard(this.P), CAMP_HUBS.pane.lines);
@@ -136,9 +140,9 @@ class CampHub extends Phaser.Scene {
 
   // the pilot walks to the desk of the chosen row (straight lines: the hall's doors are in line with the desks)
   stand(now) {
-    const id = CAMP_HUB.rows[this.hub.row], to = CAMP_HUBS.stops[id], p = this.player, W_ = CAMP_HUBS.walk; if (!p) return;
+    const id = this.hub.rows[this.hub.row], to = CAMP_HUBS.stops[id] || CAMP_HUBS.stops.board, p = this.player, W_ = CAMP_HUBS.walk; if (!p) return;
     if (this.walk) { this.walk.stop(); this.walk = null; }
-    const d = Math.hypot(to[0] - p.x, to[1] - p.y), face = CAMP_HUBS.face[id];
+    const d = Math.hypot(to[0] - p.x, to[1] - p.y), face = CAMP_HUBS.face[id] != null ? CAMP_HUBS.face[id] : -1.5708;
     if (now || d < 1) { p.setPosition(to[0], to[1]).setRotation(face); this.player.body.speed = 0; return; }
     p.setRotation(Math.atan2(to[1] - p.y, to[0] - p.x)); // the art looks east at rotation 0: it turns to walk
     this.player.body.speed = 100; // interiorTick swaps the stride poses while the body has speed
@@ -154,7 +158,7 @@ class CampHub extends Phaser.Scene {
   }
   click(k) { // a click on a row picks it; a second click on Launch launches
     if (this.leaving) return;
-    if (k === this.hub.row && CAMP_HUB.rows[k] === 'launch') { this.apply({ used: true, action: 'launch', moved: false, changed: false, ok: true, say: null }); return; }
+    const id = this.hub.rows[k]; if (k === this.hub.row && CAMP_HUB.act[id]) { this.apply({ used: true, action: CAMP_HUB.act[id], moved: false, changed: false, ok: true, say: null }); return; }
     this.hub.row = k; this.apply({ used: true, moved: true, action: '', changed: false, ok: true, say: null });
   }
   apply(r) {
@@ -162,14 +166,20 @@ class CampHub extends Phaser.Scene {
     if (r.changed) campProgressSave(this.P); // a purchase is kept at once
     if (r.moved) { sfx('tick'); this.stand(false); }
     this.paint();
-    if (r.action === 'launch') this.launch(); else if (r.action === 'title') go(this, 'Title');
+    const run = r.action && CAMP_HUBS.run[r.action]; if (run) run(this);
   }
   launch() {
-    const d = campHubLaunch(this.P); sfx('dock'); if (typeof interiorLaunch === 'function') interiorLaunch(this); // the bay door rolls up as the cruiser goes
-    go(this, 'Campaign', d);
+    sfx('dock'); if (typeof interiorLaunch === 'function') interiorLaunch(this); // the bay door rolls up as the cruiser goes
+    if (typeof this.d.onLaunch === 'function') { this.d.onLaunch(this); return; } // a dock's own launch (the outposts card): back to the flight it came from
+    go(this, 'Campaign', campHubLaunch(this.P));
   }
+  leave() { if (typeof this.d.onLeave === 'function') this.d.onLeave(this); else go(this, 'Title'); }
   update(time) {
     interiorTick(this, time);
-    if (this.msg && this.msg.until <= time && CAMP_HUB.rows[this.hub.row] === 'refit' && !this.msg.gone) { this.msg.gone = true; this.paint(); } // the answer fades from the page
+    if (this.msg && this.msg.until <= time && this.hub.rows[this.hub.row] === 'refit' && !this.msg.gone) { this.msg.gone = true; this.paint(); } // the answer fades from the page
   }
 }
+
+// the registries the room reads by row id and action: the five rows' pages, and what an action does. A dock at an outpost adds its own (CAMP_HUBS.page.build = scene => { scene.line(0, 0, ...) }).
+CAMP_HUBS.page = { board: s => s.pageBoard(), brief: s => s.pageBrief(), refit: s => s.pageRefit(), rank: s => s.pageRank(), launch: s => s.pageLaunch() };
+CAMP_HUBS.run = { launch: s => s.launch(), title: s => s.leave() };
