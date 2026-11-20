@@ -1,8 +1,8 @@
 // ---------- The Campaign scene: reads the keys, steps src/campaign.js, draws what its numbers say (docs/CAMPAIGN.md) ----------
 // The only Phaser in the mode. Every rule, number and word comes from src/campaign.js (the tuning table CAMP, the sim, uiText for the text), so this
 // file draws and listens and decides nothing about the game. It is not run by a test in plain Node (a scene is Phaser's): tests/campaign.mjs runs the sim.
-//   K on the title opens it (campaignStart); Enter begins a level; W A S D fly, Space fires the main gun, F a homing missile (the magazine is C.missiles), Q blinks (the warp tech);
-//   the point guns need no key: they shoot the nearest alien in reach by themselves, and the scene draws their reach and their flash (syncRockets)
+//   K on the title opens it (campaignStart); Enter begins a level; W A S D fly, Space (held) makes the eight turrets fire, F fires a homing missile (the magazine is C.missiles), Q blinks (the warp tech);
+//   there is no other gun: the turrets aim themselves at the nearest alien in reach, always, and fire only while Space is held; the scene draws them, their reach and their flash (syncRockets)
 //   1 launch, 2 attack, 3 escort, 4 guard, 5 recall; I types an order and U speaks one (the strip and the ship computer, src/shipcomputer.js, find this scene);
 //   Esc pauses (this scene's own pause, not Long Haul's: the Long Haul save is not touched here); after a win the story, the tech pick (1 2 3), then the next level.
 // Mode: 'intro' (the story before) -> 'play' <-> 'pause' -> 'won' (story after) -> 'pick' (one of three techs, when the level offers any) -> next level, or after the last level 'end' (back to the title);
@@ -29,7 +29,7 @@ class Campaign extends Phaser.Scene {
   init(d) { // d: { level, techs (instead of the saved ones: the address's), via, seed, god }
     d = d || {}; this.level = d.level || 1; this.via = d.via || 'menu'; this.opts = { seed: d.seed, god: !!d.god, via: this.via };
     this.P = campProgressLoad(); if (Array.isArray(d.techs)) this.P.techs = d.techs.filter(t => CAMP.tech[t]);
-    this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null;
+    this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null; this.shown = {};
   }
   create() {
     this.cameras.main.fadeIn(300, 0, 0, 0);
@@ -73,25 +73,25 @@ class Campaign extends Phaser.Scene {
   }
   hideCard() { if (this.card) this.card.forEach(x => x.destroy()); this.card = null; this.panel = false; }
   flash(id) { const sp = this.sp[id]; if (!sp) return; sp.setTint(0xff8a8a); this.time.delayedCall(90, () => { if (sp.active !== false) sp.clearTint(); }); } // the hull took a hit: the carrier blinks red for 90 ms (the blind critic: nothing but a red bar said so)
-  say(lines) { if (typeof shipcompSay === 'function' && lines.length) shipcompSay(lines.join(' ')); } // the ship's voice, as much as Settings > Sound allows
+  say(lines) { if (typeof shipcompSay === 'function') lines.forEach(l => { if (l) shipcompSay(l); }); } // the ship's voice, as much as Settings > Sound allows: each line on its own, because Short speaks only the first sentence or two of what it is given and one joined text lost the line that says what to do (docs/night/ux.md 1)
   showIntro() {
     this.mode = 'intro'; const lines = campStory(this.level, 'before');
     this.showCard(uiText('camp.ui.level', { n: this.level, name: CAMP.levels[this.level].name }), lines, uiText('camp.ui.begin'));
     this.say(lines);
   }
   showWon() {
-    this.mode = 'won'; const lines = campStory(this.level, 'after');
-    this.showCard(uiText('camp.ui.won', { n: this.level }), lines, uiText('camp.ui.next')); this.say(lines);
+    this.mode = 'won'; const lines = campStory(this.level, 'after'), res = typeof campWinLine === 'function' ? campWinLine(this.camp) : ''; // src/campwin.js: how it went, for reading
+    this.showCard(uiText('camp.ui.won', { n: this.level }), res ? lines.concat([res]) : lines, uiText('camp.ui.next')); this.say(lines);
   }
   showPick() {
     this.mode = 'pick'; this.choices = campTechChoices(this.level);
     this.showCard(uiText('camp.ui.pick'), this.choices.map((id, i) => (i + 1) + '   ' + uiText('camp.tech.' + id + '.name') + '  -  ' + uiText('camp.tech.' + id + '.text')), '', 340);
   }
   showLost(why) {
-    this.mode = 'lost'; const line = uiText('camp.lose.' + why);
-    this.showCard(uiText('camp.ui.lost', { n: this.level }), [line], uiText('camp.ui.retry')); this.say([line]);
+    this.mode = 'lost'; const lines = typeof campLoseLines === 'function' ? campLoseLines(this.camp, why) : [uiText('camp.lose.' + why)]; // src/camplose.js: what happened, how far, one thing to try
+    this.showCard(uiText('camp.ui.lost', { n: this.level }), lines, uiText('camp.ui.retry')); this.say([lines[0]].concat(lines.slice(2))); // the numbers are for reading: the cause and the tip are said
   }
-  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausemap')].concat([uiText('camp.ui.pausehelp')], typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), 290); } // campDebugLine: the tune kit's one short line of its keys
+  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap')].concat([uiText('camp.ui.pausehelp')], typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), 322); } // the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
   next() { // after the story (and the pick): the next level, or after the last one the end, with a new campaign waiting
     const last = !CAMP.levels[this.level + 1];
     this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) this.P.techs = []; campProgressSave(this.P);
@@ -136,6 +136,7 @@ class Campaign extends Phaser.Scene {
       inp.turn = ((k.D.isDown || k.RIGHT.isDown) ? 1 : 0) - ((k.A.isDown || k.LEFT.isDown) ? 1 : 0);
       inp.thrust = (k.W.isDown || k.UP.isDown) ? 1 : 0; inp.brake = k.S.isDown || k.DOWN.isDown; inp.fire = k.SPACE.isDown;
       campStep(C, Math.min(dt, 100) / 1000);
+      if (typeof campNudge === 'function') { const nd = campNudge(C, this.shown); if (nd) toast(this, nd, '#9fe9ff'); } // the first-minute hints, once each (src/campnudge.js)
     }
     C.events.splice(0).forEach(e => this.onEvent(e));
     this.syncRockets(Math.min(dt, 100));
@@ -189,8 +190,8 @@ class Campaign extends Phaser.Scene {
     while (this.bsp.length < C.bullets.length) this.bsp.push(this.add.image(0, 0, 'bullet').setDepth(4));
     this.bsp.forEach((im, i) => {
       const b = C.bullets[i]; if (!b) { im.setVisible(false); return; }
-      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'bullet' : 'ebullet').setScale(b.beam ? 4 : b.pd ? 0.9 : 1, b.beam ? 1.6 : 1);
-      if (b.beam) im.setTint(0x7fe9ff); else if (b.pd) im.setTint(0xffd37a); else im.clearTint(); // the turrets' shots are amber, so they are not mistaken for the main gun's
+      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'bullet' : 'ebullet').setScale(b.beam ? 3 : b.pd ? 0.9 : 1, b.beam ? 1.2 : 1);
+      if (b.beam) im.setTint(0x7fe9ff); else if (b.pd) im.setTint(0xffd37a); else im.clearTint(); // the turrets' shots are amber; the beam tech's are cyan, long and go through
     });
   }
   // the missiles in flight (a body, a flame and a trail of smoke), the turrets (a faint ring of how far they reach, four mounts that flash when one fires) and the magazine count
@@ -214,14 +215,11 @@ class Campaign extends Phaser.Scene {
     Object.keys(this.msp).forEach(id => { if (!seen[id]) { this.msp[id].body.destroy(); this.msp[id].flame.destroy(); delete this.msp[id]; } });
     const g = this.reachG, mg = this.mountG; g.clear(); mg.clear();
     if (c.hp > 0) {
-      g.lineStyle(CAMP_REACH.w, CAMP_REACH.color, CAMP_REACH.alpha).strokeCircle(c.x, c.y, CAMP.carrier.pdRange);
-      const hot = C.t - C.pdAt < 160, aim = campWrap(C.pdAim - c.rot), cs = Math.cos(c.rot), sn = Math.sin(c.rot);
-      const MOUNTS = [[24, -20], [24, 20], [-20, -22], [-20, 22]]; // px from the carrier's centre in its own frame (x along the nose)
-      let near = -1, best = 9; if (hot) MOUNTS.forEach((p, i) => { const d = Math.abs(campWrap(aim - Math.atan2(p[1], p[0]))); if (d < best) { best = d; near = i; } });
-      MOUNTS.forEach((p, i) => {
-        const x = c.x + cs * p[0] - sn * p[1], y = c.y + sn * p[0] + cs * p[1];
-        mg.fillStyle(0x04101c, 0.9).fillCircle(x, y, 5); mg.fillStyle(i === near ? 0xffffff : 0xffd37a, 1).fillCircle(x, y, i === near ? 4 : 2.5);
-        if (i === near) mg.lineStyle(3, 0xffe9a0, 0.9).lineBetween(x, y, x + Math.cos(C.pdAim) * 18, y + Math.sin(C.pdAim) * 18);
+      g.lineStyle(CAMP_REACH.w, CAMP_REACH.color, CAMP_REACH.alpha).strokeCircle(c.x, c.y, campReach(C)); // how far a turret reaches (the beam tech reaches further)
+      C.turrets.forEach(tu => { // the eight turrets, where the sim put them: a dark base and an amber dot; a barrel toward the alien each has picked (it aims even when Space is not held); a bright flash and a longer barrel on the shot
+        const hot = C.t - tu.shotAt < 120;
+        mg.fillStyle(0x04101c, 0.9).fillCircle(tu.x, tu.y, 5); mg.fillStyle(hot ? 0xffffff : 0xffd37a, 1).fillCircle(tu.x, tu.y, hot ? 4 : 2.5);
+        if (tu.target) mg.lineStyle(hot ? 3 : 2, hot ? 0xffe9a0 : 0xffd37a, hot ? 0.95 : 0.7).lineBetween(tu.x, tu.y, tu.x + Math.cos(tu.aim) * (hot ? 18 : 11), tu.y + Math.sin(tu.aim) * (hot ? 18 : 11));
       });
     }
     this.hud.missiles.setColor(C.missiles > 0 ? '#ffb454' : '#ff4d6d').setText(uiText('camp.ui.missiles', { n: C.missiles })
@@ -238,7 +236,7 @@ class Campaign extends Phaser.Scene {
     if (m) bar(W / 2 - 150, 36, 300, m.hp / m.maxHp, 0xc9a0ff);
     const out = campWing(C, 'fighter').length + campWing(C, 'escort').length, waves = CAMP.levels[C.level].waves;
     this.hud.hull.setText(uiText('camp.ui.hull') + '  ' + Math.round(c.hp)); this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(campObjective(C));
-    this.hud.bay.setText(uiText('camp.ui.bay') + '  ' + C.bay.fighters + '+' + C.bay.escorts + '    ' + uiText('camp.ui.out') + '  ' + out + '    ' + uiText('camp.ui.ore') + '  ' + Math.floor(C.ore) + (C.build.queue.length ? '  +' + C.build.queue.length : ''));
+    this.hud.bay.setText(uiText('camp.ui.baywords', { f: C.bay.fighters, e: C.bay.escorts, out }) + '    ' + uiText('camp.ui.ore') + '  ' + Math.floor(C.ore) + (C.build.queue.length ? '  +' + C.build.queue.length : '')); // "BAY  fighters 6  escorts 2   OUT 0" (docs/night/ux.md 5), then the ore
     this.hud.shield.setText(uiText('camp.ui.shield') + '  ' + Math.round(C.shield));
     this.hud.wave.setText(uiText('camp.ui.wave', { n: C.waves.filter(w => w.started).length, total: waves.length }));
     this.hud.mother.setText(m ? uiText('camp.ui.mother') : '');

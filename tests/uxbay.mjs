@@ -1,0 +1,33 @@
+// smoke: the Campaign's bay gauge says what its numbers are (plain Node, no Chrome)
+// Card space-game-night-ux, finding 5 (docs/night/ux.md; paintHud in src/campaignscene.js). It read "BAY  6+2    OUT  0" and nothing said that was six fighters and two escorts. Now
+// "BAY  fighters 6  escorts 2   OUT 0" (labels first, so there is no plural to get wrong), kept to 40 letters so it stays clear of the toast band (which starts at x 364).
+// Run: node tests/uxbay.mjs   (exit code 1 on a failed check)
+import { readFileSync } from 'node:fs';
+import { nodeGame, ROOT } from './nodegame.mjs';
+
+let failed = 0, n = 0;
+const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
+const g = nodeGame();
+const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
+g.run(`
+  window.__went = []; go = (s, key, data) => { __went.push({ key, data }); }; toast = () => {}; shipcompSay = () => true;
+  window.__fake = (level) => { const f = Object.create(Campaign.prototype); f.add = document; f.cameras = document; f.input = document; f.textures = document; f.tweens = document;
+    f.time = { delayedCall: (ms, fn) => fn() }; f.boom = { explode() {} }; f.bgLayers = []; f.hudG = document; f.relicG = document;
+    const h = {}; ['hull', 'earth', 'bay', 'wave', 'mother', 'blink', 'obj', 'keys'].forEach(k => { h[k] = { text: '', setText(t) { h[k].text = t; return h[k]; } }; }); f.hud = h;
+    f.k = { W: { isDown: false }, A: { isDown: false }, S: { isDown: false }, D: { isDown: false }, UP: { isDown: false }, DOWN: { isDown: false }, LEFT: { isDown: false }, RIGHT: { isDown: false }, SPACE: { isDown: false } };
+    f.init({ level }); f.camp = campNew(f.level, f.P.techs, f.opts); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); f.sync = () => {}; return f; };
+  window.F = __fake(1); F.onKey({ code: 'Enter' }); F.update(0, 33);
+`);
+check('at the start: six fighters, two escorts, none out, in words', J('F.hud.bay.text') === 'BAY  fighters 6  escorts 2   OUT 0', J('F.hud.bay.text'));
+g.run(`F.onKey({ code: 'Digit1' }); for (let i = 0; i < 30 * 6; i++) F.update(0, 1000 / 30);`);
+check('after Launch the bay is empty and eight are out', J('F.hud.bay.text') === 'BAY  fighters 0  escorts 0   OUT 8', J('F.hud.bay.text'));
+g.run(`window.F = __fake(1); F.onKey({ code: 'Enter' }); F.camp.bay.fighters = 1; F.camp.bay.escorts = 1; F.update(0, 33);`);
+check('one of each has no plural to get wrong', J('F.hud.bay.text') === 'BAY  fighters 1  escorts 1   OUT 0');
+g.run(`window.F = __fake(2); F.onKey({ code: 'Enter' }); F.update(0, 33);`);
+check('level 2 reads the same (the second bay of the tech adds fighters)', J('F.hud.bay.text') === 'BAY  fighters 6  escorts 2   OUT 0' && (g.run(`window.F = __fake(2); F.P.techs = ['bay2']; F.camp = campNew(2, ['bay2'], F.opts); F.onKey({ code: 'Enter' }); F.update(0, 33);`), J('F.hud.bay.text') === 'BAY  fighters 10  escorts 2   OUT 0'), J('F.hud.bay.text'));
+check('the line fits: 40 letters at most with three-digit numbers, and ends left of the toast band (x 364)', J(`uiText('camp.ui.baywords', { f: 999, e: 999, out: 999 })`).length <= 40 && 24 + 40 * 8.4 < 364, J(`uiText('camp.ui.baywords', { f: 999, e: 999, out: 999 })`).length);
+check('the old words are still in the table (nothing else is removed)', J(`uiText('camp.ui.bay')`) === 'BAY' && J(`uiText('camp.ui.out')`) === 'OUT');
+check('the scene no longer builds the gauge from "+" and the numbers', !/C\.bay\.fighters \+ '\+'/.test(readFileSync(ROOT + '/src/campaignscene.js', 'utf8')));
+check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
+console.log(failed ? `UX BAY FAIL (${failed} of ${n})` : `UX BAY PASS (${n} checks)`);
+process.exitCode = failed ? 1 : 0;

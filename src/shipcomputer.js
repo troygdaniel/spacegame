@@ -216,7 +216,7 @@ function shipcompSnapshot(s) {
   if (scKey(s) === 'Campaign') return scTry(() => campSummary(s.camp), '');
   return [scTry(() => scWhere(s), ''), scTry(scShip, ''), scTry(scJob, ''), scTry(() => scJumps(s), ''), scTry(scDock, ''), scTry(scYards, '')].filter(Boolean).join('\n').slice(0, 9000);
 }
-const SC_CAMP_HOW = 'You command the Earth carrier against the alien fleet. The pilot flies it with W A S D, fires its main gun with Space, and gives the small ships orders: 1 launch, 2 attack, 3 escort a convoy, 4 guard, 5 recall, 6 mine ore, 7 recharge the shields (of the carrier, or of Earth when near it), 8 build a fighter, 9 build an escort; ore comes from rocks and alien wrecks. F fires a homing missile at the mothership or the nearest big ship (a small magazine that reloads slowly). Typing or saying the order does the same.';
+const SC_CAMP_HOW = 'You command the Earth carrier against the alien fleet. The pilot flies it with W A S D, holds Space to make its eight turrets fire at the ships close by (they aim themselves and never fire on their own), presses F to fire a homing missile at the mothership or the nearest big ship (a small magazine that reloads slowly), and gives the small ships orders: 1 launch, 2 attack, 3 escort a convoy, 4 guard, 5 recall, 6 mine ore, 7 recharge the shields (of the carrier, or of Earth when near it), 8 build a fighter, 9 build an escort; ore comes from rocks and alien wrecks. Typing or saying an order does the same.';
 const SC_CAMP_ACTS = 'ACTIONS\nReply in exactly this form and nothing else:\nSAY: one or two short sentences for the pilot\nDO: one action from the list (leave this line out when the pilot only asked a question)\nThe list: fleet_launch | fleet_attack <the mothership, or nothing> | fleet_escort <a convoy, such as Mars> | fleet_guard <a place, or nothing> | fleet_recall | fleet_missiles <the mothership, or nothing> | fleet_mine | fleet_recharge <earth, carrier, or nothing> | fleet_build <fighter or escort, with a number>.\nThe game checks every action itself and says if it cannot be done: so say only what you are doing, never that it is done.';
 function shipcompSystem(s) {
   if (scKey(s) === 'Campaign') return 'RULES\n' + SC_RULES.replace('{name}', shipcompName()) + '\n\n<persona>\n' + scClean(SHIPCOMP.persona, 900).replace(/<\/?persona>/gi, '') + '\n</persona>\n\nSTATE\n' + shipcompSnapshot(s) + '\n\nHOW\n' + SC_CAMP_HOW + '\n\nKEYS\n' + uiText('camp.ui.keys') + '\n\n' + SC_CAMP_ACTS;
@@ -556,7 +556,7 @@ function scTradeHow() {
 }
 // the phrase as { act, arg } (an action of the closed list), { say } (an answer in words) or null (not one of the obvious ones: the model reads it)
 function shipcompIntent(text, s) {
-  if (scKey(s) === 'Campaign') return typeof campIntent === 'function' ? campIntent(text) : null; // in a battle the fleet's orders are the plain words; the Long Haul ones (hunt, dock, fly to) mean nothing here
+  if (scKey(s) === 'Campaign') { const it = typeof campIntent === 'function' ? campIntent(text) : null; if (it) return it; const h = typeof campHelp === 'function' ? campHelp(text, s.camp) : null; return h ? { say: h } : null; } // in a battle the fleet's orders are the plain words (the Long Haul ones, hunt, dock, fly to, mean nothing here), then the plain questions (src/camphelp.js: goal, keys, map, status)
   let q = String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9' -]+/g, ' ').replace(/\s+/g, ' ').trim();
   q = q.replace(SC_NO_FILLER, '').replace(/\s+(please|now|right now|for me|already)$/, '').trim();
   if (!q) return null;

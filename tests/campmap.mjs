@@ -81,7 +81,7 @@ check('the map key is not the mute key (M mutes in every screen, src/meta.js) an
 // ---- E. the scene and a dry run of the drawing ----
 check('the scene installs the map\'s Tab key once in create, Esc closes the map before it can pause, Esc closes the map before it can pause, every frame paints it while it is open, and a card closes it', /campMapInstall\(this\)/.test(scene) && /if \(c === 'Escape'\) \{ if \(this\.mp\) campMapClose\(this\); else this\.showPause\(\)/.test(scene) && /if \(this\.mp\) campMapPaint\(this, time\)/.test(scene) && /campMapClose\(this\); \/\/ a card/.test(scene) && /this\.mp = null/.test(scene));
 check('the battle is not paused behind the map: no scene pause, no stop of the sim, in the drawing or in the scene\'s map lines', !/scene\.pause|\.pause\(\)|physics\.pause|timeScale/.test(draw + pure) && /update\(time, dt\)/.test(scene) && /this\.mode === 'play' && !C\.result/.test(scene));
-check('the pause card lists the map key (a line of its own above the debug line)', /\[uiText\('camp\.ui\.pausemap'\)\]\.concat\(/.test(scene));
+check('the pause card lists the map key (a line of its own, above the debug line)', /uiText\('camp\.ui\.pausemap'\)\]\.concat\(/.test(scene));
 check('the pure file reaches nothing of the page or of Phaser; the drawing file masks nothing (no geometry mask: a ship past the frame is drawn on its edge)', !/\b(Phaser|document|window|localStorage|setTimeout|geometryMask|setMask)\b/.test(pure.replace(/\/\/.*$/gm, '')) && !/setMask|createGeometryMask/.test(draw));
 {
   const html = readFileSync(ROOT + '/index.html', 'utf8'), at = f => html.indexOf('src/' + f);
