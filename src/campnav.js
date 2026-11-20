@@ -170,10 +170,10 @@ function campNavEdge(dx, dy, W_, H_, m, keep) {
   return { x, y, angle: Math.atan2(cy + dy - y, cx + dx - x) };
 }
 // the arrow at the goal: scroll { x, y }: the camera's top left in the world. null when the goal is on the screen, near, or there is none. { x, y, angle, dist, name }
-function campNavArrow(C, scroll, W_, H_) {
+function campNavArrow(C, scroll, W_, H_, zoom) { // zoom: the camera's (1 when it has none): a point is (its offset from the middle of the view) times the zoom from the middle of the screen
   const g = campNavGoal(C); if (!g || !C.carrier) return null;
   const A = CAMP.nav.arrow, c = C.carrier, dist = Math.hypot(g.x - c.x, g.y - c.y); if (dist < A.min) return null;
-  const sx = g.x - scroll.x, sy = g.y - scroll.y;
+  const z = zoom > 0 ? zoom : 1, sx = (g.x - scroll.x - W_ / 2) * z + W_ / 2, sy = (g.y - scroll.y - H_ / 2) * z + H_ / 2;
   if (sx > A.margin && sx < W_ - A.margin && sy > A.margin && sy < H_ - A.margin && !(A.keep || []).some(r => sx >= r[0] && sx <= r[2] && sy >= r[1] && sy <= r[3])) return null; // on the screen and clear of the HUD: seen
   const e = campNavEdge(sx - W_ / 2, sy - H_ / 2, W_, H_, A.margin, A.keep); if (!e) return null;
   return { x: e.x, y: e.y, angle: e.angle, dist, name: g.name };

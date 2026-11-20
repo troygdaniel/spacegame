@@ -62,8 +62,13 @@ class Campaign extends Phaser.Scene {
     this.input.keyboard.on('keydown', e => this.onKey(e));
     if (typeof campMapInstall === 'function') campMapInstall(this); // Tab: the map of the level, over the battle, which goes on behind it (src/campmap.js, src/campmapdraw.js)
     this.events.once('shutdown', () => { if (typeof stopBeamHum === 'function') stopBeamHum(); }); // no hum left behind when the level ends or the title comes
+    if (typeof camzoomSetup === 'function') { // the Long Haul's own camera zoom (src/camzoom.js): the world on one camera, the HUD, panels and strip on another that never scales; + - = 0 and the wheel zoom the world (src/campzoom.js)
+      this.lhZoom = CAMZOOM.want; CAMZOOM.want = campZoomStart(this.level); camzoomSetup(this); // the zoom is kept for the level and starts at the default on a new one; the Long Haul's own is put back when this scene is left
+      this.events.once('shutdown', () => { campZoomKeep(this.level, CAMZOOM.want); CAMZOOM.want = this.lhZoom; });
+    }
     this.showIntro();
   }
+  get camzoomHold() { return !!this.mp; } // with the map open the wheel is the map's (camzoomCanWheel, src/camzoom.js)
   beam(e, ms) { if (!this.beams) this.beams = []; this.beams.push({ x: e.x, y: e.y, tx: e.tx, ty: e.ty, until: performance.now() + ms }); } // (the beam hum is the sound card's: it reads C.lasers)
   makeCamp() { // a new battle of this level: arrived by the chain (or a retry), the ore and the extra ships of the refit come with the cruiser; a level started by itself (an address, a skip) has its own
     const carried = this.P.level === this.level;
@@ -152,6 +157,8 @@ class Campaign extends Phaser.Scene {
 
   // ----- keys -----
   onKey(e) {
+    const zk = typeof campZoomKey === 'function' ? campZoomKey(e.code) : null;
+    if (zk && !this.leaving && this.mode === 'play') { campZoomPress(this, zk, e.repeat); return; } // + - = 0: the zoom of the view, or of the map when it is open (src/campzoom.js); a held key repeats, so this is read before the repeat guard
     if (e.repeat || this.leaving) return;
     const c = e.code, C = this.camp;
     if (this.mode === 'intro') { if (c === 'Enter') { this.hideCard(); this.mode = 'play'; } return; }
@@ -368,7 +375,7 @@ class Campaign extends Phaser.Scene {
     // the autopilot's readout under the goal line, and an arrow at the edge of the screen pointing at the goal with its distance (src/campnav.js; docs/night/graphics.md finding 3)
     if (this.hud.nav) this.hud.nav.setText(C.nav ? uiText('camp.nav.hud', { name: C.nav.name, km: campNavKm(Math.hypot(C.nav.x - c.x, C.nav.y - c.y)) }) : '');
     if (this.hud.arrow) {
-      const cam = this.cameras && this.cameras.main, ar = cam && typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: cam.scrollX, y: cam.scrollY }, W, H) : null; // a stand-in scene in a test has no camera
+      const cam = this.cameras && this.cameras.main, ar = cam && typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: cam.scrollX, y: cam.scrollY }, W, H, cam.zoom) : null; // a stand-in scene in a test has no camera
       if (!ar) this.hud.arrow.setVisible(false);
       else {
         const a = ar.angle, tri = [{ x: ar.x + Math.cos(a) * 13, y: ar.y + Math.sin(a) * 13 }, { x: ar.x + Math.cos(a + 2.5) * 10, y: ar.y + Math.sin(a + 2.5) * 10 }, { x: ar.x + Math.cos(a - 2.5) * 10, y: ar.y + Math.sin(a - 2.5) * 10 }];
