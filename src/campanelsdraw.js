@@ -11,10 +11,10 @@
 // Everything is on the screen's own camera (scroll factor 0), so the zoom (src/camzoom.js) never scales it. tests/campanelsui.mjs checks the states and their timing on stand-ins.
 const CAMPPANELS_LOOK = {
   tab: { w: 110, h: 28 }, slotGap: 6,                       // px: a collapsed tab: a key cap and the name; the gap between two tabs on one side (a panel's slot in the table)
-  list: { w: 220, row: 24, gap: 3, pad: 6 },               // px: the column of rows under the tab: its width, a row's height, the gap between rows, the gap under the tab
+  list: { w: 232, row: 24, gap: 3, pad: 6 },               // px: the column of rows under the tab: its width (a name, its word and the digit have to fit: tests/campanelsui.mjs measures every row of the table), a row's height, the gap between rows, the gap under the tab
   top: 238, edge: 24, depth: 160, every: 250,              // the tab's y (the gauges take the top left to 176 and the radar the top right to 226), its distance from the screen's edge, the depth (over the map, 150 to 156), ms between the words being made live
   color: { left: CYAN, right: AMBER }, ink: { left: '#7fe9ff', right: '#ffd37a' },
-  rowInk: { ok: '#e8f6ff', no: '#6b7f90', suffix: '#8fb4c8', why: '#ff9e7a', digit: '#ffd37a' }, flash: 0xffffff
+  rowInk: { ok: '#e8f6ff', no: '#7f95a8', suffix: '#8fb4c8', why: '#ff9e7a', digit: '#ffd37a' }, flash: 0xffffff
 };
 
 // where a panel is: its tab, the column of rows under it and the rows' places. x, y, w, h are the whole of it open (the tab and the list), as they were when it was one box
@@ -75,7 +75,7 @@ function campPanelsPaintOne(s, O, now, play) {
     const y = G.rowY(r.n), on = v.flash && v.flash.row === r.id ? v.flash.lit : 0;
     g.fillStyle(0x04101c, 0.8 * v.list); g.fillRoundedRect(G.list.x, y, G.list.w, G.rowH, 5);
     g.fillStyle(col, 0.9 * v.list); g.fillRect(G.list.x, y + 3, 3, G.rowH - 6);
-    if (on > 0) { g.fillStyle(K.flash, 0.7 * on); g.fillRoundedRect(G.list.x, y, G.list.w, G.rowH, 5); }
+    if (on > 0) { g.fillStyle(K.flash, 0.85 * on); g.fillRoundedRect(G.list.x, y, G.list.w, G.rowH, 5); }
   });
 }
 function campPanelsPaint(s, now) {

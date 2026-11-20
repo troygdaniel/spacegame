@@ -160,7 +160,7 @@ try {
     await t.key('TAB'); await t.run(400); await snap('panels-08-map-open'); await t.key('TAB'); await t.run(300); await keyOn('Digit0'); await t.run(900);
     // the key line: a ship under it
     await t.ev(`(() => { const s = ${SC}, C = s.camp, c = C.carrier; const sp = s.sp[c.id]; return 1; })()`);
-    await clipShot('panels-09-keyline', 77, 640, 1130, 80);
+    await clipShot('panels-09-keyline', 77, 575, 1130, 58); // the viewport is 633 px high (the canvas fits it at 0.88): the key line is at about y 590 to 610
     note('sizes', JSON.stringify(await sizes()));
   } else if (part === 'mars') {
     await enter(); await t.run(500);

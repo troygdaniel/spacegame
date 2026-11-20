@@ -41,6 +41,7 @@ async function campaign() {
     await press(t, 'KeyQ', 20); await t.run(400);
     const words = await j(`${SC}.pnl.p.fleet.rows.map(r => r.name.text + ': ' + r.suffix.text)`);
     check('Q alone: at once the FLEET tab lights and its list drops in, one line a row: launch all out, attack the fighters out, escort stay close (the belt has no convoy)', (await j(`${SC}.pn.open`)) === 'fleet' && words.length === 5 && /^Launch: all out$/.test(words[0]) && /^Attack: \d+ out$/.test(words[1]) && /^Escort: stay close$/.test(words[2]), words.join(' | '));
+    check('and every row of the FLEET list too', (await j(`${SC}.pnl.p.fleet.rows.every(r => 30 + r.name.width + r.suffix.width + 10 <= CAMPPANELS_LOOK.list.w)`)) === true);
     await snap(t, 'fleet');
     await clickAt(t, 150, 238 + 28 + 6 + 27 * 1 + 12); await t.run(60); // row 2: attack
     check('a click on row 2 (attack) does it, closes the panel in the state and flashes the row', (await j(`${SC}.camp.orders.attack`)) === 1 && (await j(`${SC}.pn.open`)) === '' && (await j(`${SC}.pn.flash && ${SC}.pn.flash.row`)) === 'attack');
@@ -49,7 +50,8 @@ async function campaign() {
     check('and then it is a tab again: the list is gone', (await j(`${SC}.pnl.p.fleet.rows.every(r => !r.name.visible)`)) === true);
     await press(t, 'KeyE', 20); await t.run(400);
     const ship = await j(`${SC}.pnl.p.ship.rows.map(r => r.name.text + ': ' + r.suffix.text)`);
-    check('E opens the SHIP list at the right: mine, recharge, what a ship costs (or the ore it needs: the belt starts with none) and the objective row', ship.length === 5 && /^Mine ore: \d+ ships$/.test(ship[0]) && /^Build fighter: (25 ore|needs 25 ore)$/.test(ship[2]) && /^Fly to goal: /.test(ship[4]), ship.join(' | '));
+    check('E opens the SHIP list at the right: mine, recharge, what a ship costs (or the ore it needs: the belt starts with none) and the objective row', ship.length === 5 && /^Mine ore: \d+ ships$/.test(ship[0]) && /^New fighter: (25 ore|needs 25 ore)$/.test(ship[2]) && /^Fly to goal: /.test(ship[4]), ship.join(' | '));
+    check('every row of the open SHIP list fits its column as the browser draws it: the name, its word and the digit side by side with room to spare (the critic saw two of them run together)', (await j(`${SC}.pnl.p.ship.rows.every(r => 30 + r.name.width + r.suffix.width + 10 <= CAMPPANELS_LOOK.list.w)`)) === true, await j(`${SC}.pnl.p.ship.rows.map(r => Math.round(30 + r.name.width + r.suffix.width + 10)).join(' ') + ' of ' + CAMPPANELS_LOOK.list.w`));
     await snap(t, 'ship');
     await press(t, 'KeyQ', 20); await t.run(60); await snap(t, 'crossfade');
     check('Q with SHIP open switches to FLEET', (await j(`${SC}.pn.open`)) === 'fleet' && (await j(`${SC}.pn.closed.id`)) === 'ship');

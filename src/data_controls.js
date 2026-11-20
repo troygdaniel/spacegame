@@ -35,8 +35,8 @@ const CAMP_PANELS = {
     { key: 'E', code: 'KeyE', id: 'ship', side: 'right', title: 'SHIP', rows: [
       { n: 1, id: 'mine', order: 'mine', label: 'Mine ore', help: 'The wing goes and mines ore' },
       { n: 2, id: 'recharge', order: 'recharge', label: 'Recharge shields', tag: 'Recharge', help: 'Recharge a shield (costs ore)' },
-      { n: 3, id: 'buildf', order: 'build', arg: 'fighter', label: 'Build a fighter', tag: 'Build fighter', help: 'Build a fighter (costs ore)' },
-      { n: 4, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', tag: 'Build escort', help: 'Build an escort (costs ore)' },
+      { n: 3, id: 'buildf', order: 'build', arg: 'fighter', label: 'Build a fighter', tag: 'New fighter', help: 'Build a fighter (costs ore)' },
+      { n: 4, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', tag: 'New escort', help: 'Build an escort (costs ore)' },
       { n: 5, id: 'goal', fly: 'objective', label: 'Fly to the objective', tag: 'Fly to goal', help: 'Autopilot to the objective' }
     ] }
   ],

@@ -45,7 +45,7 @@ console.log('A. tabs, and a key opens a list at its side with live words');
   g.run(`campPanelKey(S.pn, S.camp, 'Escape', 2000); campPanelsPaint(S, 2000); campPanelsPaint(S, 2200);`);
   check('Esc closes it: the rows are gone (the tab stays)', J('S.pn.open') === '' && J('S.pnl.p.fleet.rows.every(r => !r.name.visible)') && J('S.pnl.p.fleet.cap.visible'));
   g.run(`campPanelKey(S.pn, S.camp, 'KeyE', 3000); campPanelsPaint(S, 3300); window.__t2 = __texts();`);
-  check('E draws SHIP: the five rows (Mine ore, Recharge, Build fighter, Build escort, Fly to goal), what each costs and why not', J('__t2').includes('SHIP') && ['Mine ore', 'Recharge', 'Build fighter', 'Build escort', 'Fly to goal'].every(r => J('__t2').includes(r)) && J('__t2').includes('25 ore'), J('__t2').join(' | '));
+  check('E draws SHIP: the five rows (Mine ore, Recharge, New fighter, New escort, Fly to goal), what each costs and why not', J('__t2').includes('SHIP') && ['Mine ore', 'Recharge', 'New fighter', 'New escort', 'Fly to goal'].every(r => J('__t2').includes(r)) && J('__t2').includes('25 ore'), J('__t2').join(' | '));
   g.run(`campPanelKey(S.pn, S.camp, 'Digit4', 3400); campPanelsPaint(S, 3400); campPanelsPaint(S, 3700);`);
   check('a pick closes it too: E then 4 (build an escort, refused for want of ore) and the list is gone after its flash', J('S.pn.open') === '' && J('S.pnl.p.ship.rows.every(r => !r.name.visible)'));
 }
