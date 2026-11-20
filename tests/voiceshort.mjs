@@ -35,14 +35,14 @@ console.log('A. what is said aloud');
 {
   const first = t => J(`voiceFirst(${JSON.stringify(t)})`);
   check('one short sentence is said whole', first('Kepler-4b is 816 km north-east.') === 'Kepler-4b is 816 km north-east.');
-  check('a first sentence under 70 letters takes the second one too', first('Press G. Pick a star, then press Enter. The jump takes four seconds.') === 'Press G. Pick a star, then press Enter.');
+  check('a first sentence under 45 letters takes the second one too', first('Press G. Pick a star, then press Enter. The jump takes four seconds.') === 'Press G. Pick a star, then press Enter.');
   const long1 = 'Kestrel is 6.3 ly away and your tank holds 4.1 of the 7.8 ly the jump needs, so you are short.';
-  check('a first sentence of 70 letters or more is said alone', first(long1 + ' Refuel at the pump.') === long1, first(long1 + ' Refuel at the pump.'));
+  check('a first sentence of 45 letters or more is said alone', first(long1 + ' Refuel at the pump.') === long1, first(long1 + ' Refuel at the pump.'));
   check('"6.3 ly" and "4.1 of the 7.8" are not sentence ends: a full stop counts only before a space or the end', first('It is 6.3 ly. Go.') === 'It is 6.3 ly. Go.');
   check('"!" and "?" end a sentence too', first('Hostiles near! Weapons ready. Fire at will, pilot, when you are in range of anything.') === 'Hostiles near! Weapons ready.');
   const huge = 'word '.repeat(80).trim() + '.';
   const cut = first(huge);
-  check('one very long sentence is cut at a space, never mid-word, to 170 letters at most, and ends with a full stop', cut.length <= 171 && /\.$/.test(cut) && /word\.$/.test(cut) && cut.length > 100, cut.length);
+  check('one very long sentence is cut at a space, never mid-word, to 120 letters at most, and ends with a full stop', cut.length <= 121 && /\.$/.test(cut) && /word\.$/.test(cut) && cut.length > 100, cut.length);
   check('nothing in, nothing out; no full stop at all is fine', first('') === '' && first('   ') === '' && first('no stops here') === 'no stops here');
   check('white space is tidied', first('Line one.\n\n  Line   two.') === 'Line one. Line two.');
   g.run(`VOICE.spoken = 'short'`);
