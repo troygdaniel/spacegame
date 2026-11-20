@@ -126,6 +126,25 @@ const CAMP = {
     hp: 90, speed: 300, accel: 360, turn: 2.6, damage: 6, delay: [350, 500], bullet: 650, range: 520, aim: 0.35, hold: 300, // as a fighter: tougher, slower, longer reach
     beside: 150                            // px: how far from its convoy an escort keeps station
   },
+  wing: {                                  // the wing's groups, verbs and targets (card space-game-campaign-wing-targets; src/campwing.js): campWingOrder(C, group, verb, target, how)
+    groups: {                              // three built-in groups, as data (a list of kinds, or of ship ids): numbered groups drop in later as C.groups[id] = { name, ships: [ids] }
+      fighters: { name: 'Fighters', kinds: ['fighter'] },
+      escorts: { name: 'Escorts', kinds: ['escort'] },           // the escorts, and the scouts they send out
+      all: { name: 'All ships', kinds: ['fighter', 'escort'] }
+    },
+    verbs: {                               // kinds: what the verb takes as a target (enemy, friend, convoy, place, point, pickup, cache, anomaly, rock); group: who it addresses when none is named (today's orders); need: a target must be named
+      attack: { kinds: ['enemy'], group: 'fighters' },
+      escort: { kinds: ['friend', 'convoy'], group: 'escorts' },
+      guard: { kinds: ['place', 'point', 'friend', 'convoy'], group: 'all' },
+      hold: { kinds: ['place', 'point'], group: 'all', need: true },                     // fly there and stay, firing at what comes into range
+      scout: { kinds: ['place', 'point', 'anomaly'], group: 'escorts', need: true },     // the scouts' order (card space-game-campaign-scouts), once it is in
+      fetch: { kinds: ['pickup', 'cache'], group: 'escorts' },                           // fly over it: a ship of yours takes ore and caches it touches
+      mine: { kinds: ['rock', 'pickup'], group: 'all' },
+      recall: { kinds: [], group: 'all' }
+    },
+    smart: { enemy: 'attack', friend: 'escort', convoy: 'escort', place: 'guard', point: 'guard', pickup: 'fetch', cache: 'fetch', anomaly: 'scout', rock: 'mine' }, // the verb a right-click does for a kind of target
+    holdAt: 60                             // px: a ship ordered to hold at a point is there when it is this near it, and stops
+  },
   stance: {                                // the wing's stances (card space-game-campaign-stances): how Attack and Guard move; which stances there are, and their order, is CAMP.stances
     orbit: 300,                            // px: ORBIT circles its target at this distance (from the edge of it), facing it and firing
     orbitSpeed: 0.9,                       // rad/s a ship goes round at: half of them one way, half the other
@@ -562,9 +581,9 @@ const campYes = (code, vars) => ({ ok: true, code, say: uiText('camp.say.' + cod
 // campOrder is the one door every order goes through (the keys, the strip, the voice); how says which ('key', 'strip', 'voice', 'click'): the play log reads it
 // from outside (src/playlog.js wraps this function by name), so nothing here uses it. campCheck answers an order with the same words and does nothing: the
 // ship computer checks an order before it announces it, then runs it with campOrder.
-function campOrder(C, name, arg, how) { return campDo(C, name, arg, false); }
+function campOrder(C, name, arg, how) { return campDo(C, name, arg, false, how); }
 function campCheck(C, name, arg) { return campDo(C, name, arg, true); }
-function campDo(C, name, arg, dry) {
+function campDo(C, name, arg, dry, how) {
   if (!C || C.result) return campNo('over');
   const t = campFind(C, arg), out = campWing(C);
   if (name === 'launch') {
@@ -576,39 +595,22 @@ function campDo(C, name, arg, dry) {
     C.bay.fighters = 0; C.bay.escorts = 0; C.orders.launch++;
     return campYes('launch');
   }
+  // Attack, Escort, Guard and Recall are the wing orders of src/campwing.js (campWingOrder) with no group and no target named: today's groups and today's answers
   if (name === 'attack') {
-    const fs = campWing(C, 'fighter'); if (!fs.length) return campNo(C.launchQ.length ? 'launching' : 'nofighters');
-    const mother = t && t.kind === 'mother' && campTarget(C, t);
-    if (t && t.kind === 'mother' && !mother) return campNo('nomother');
-    if (dry) return campYes(mother ? 'attackmother' : 'attack');
-    fs.forEach(u => { u.order = { type: 'attack', target: mother ? mother.id : '' }; u.move = null; });
-    C.orders.attack++; return campYes(mother ? 'attackmother' : 'attack');
+    if (!campWing(C, 'fighter').length) return campNo(C.launchQ.length ? 'launching' : 'nofighters');
+    if (t && t.kind === 'mother' && !campTarget(C, t)) return campNo('nomother');
+    return campWingOrder(C, null, 'attack', t && t.kind === 'mother' ? 'mother' : null, how, dry);
   }
   if (name === 'escort') {
-    const es = campWing(C, 'escort'); if (!es.length) return campNo(C.launchQ.length ? 'launching' : 'noescorts');
-    if (!C.L.convoys.length) { // no convoys in this level: Escort keeps the escorts close to the carrier
-      if (dry) return campYes('escortcarrier');
-      es.forEach(u => { u.order = { type: 'guard', at: { kind: 'carrier' } }; u.move = null; }); C.orders.escort++; return campYes('escortcarrier');
-    }
+    if (!campWing(C, 'escort').length) return campNo(C.launchQ.length ? 'launching' : 'noescorts');
+    if (!C.L.convoys.length) return campWingOrder(C, null, 'escort', null, how, dry); // no convoys in this level: Escort keeps the escorts close to the carrier
     const cv = t && t.kind === 'convoy' ? C.by[t.id] : t ? null : campNearest(campConvoys(C), C.carrier);
     if (!cv || cv.hp <= 0) return campNo('noconvoy');
-    if (dry) return campYes('escort', { name: campConvoyName(cv) });
-    es.forEach((u, i) => { u.order = { type: 'escort', target: cv.id, slot: i }; u.move = null; });
-    C.orders.escort++; return campYes('escort', { name: campConvoyName(cv) });
+    return campWingOrder(C, null, 'escort', cv.id, how, dry);
   }
-  if (name === 'guard') {
-    if (!out.length) return campNo(C.launchQ.length ? 'launching' : 'nowing');
-    if (dry) return campYes('guard');
-    const at = t && (t.kind === 'place' || t.kind === 'convoy') ? t : { kind: 'carrier' };
-    out.forEach(u => { u.order = { type: 'guard', at }; u.move = null; });
-    C.orders.guard++; return campYes('guard');
-  }
-  if (name === 'recall') {
-    if (!out.length) return campNo(C.launchQ.length ? 'launching' : 'nowing');
-    if (dry) return campYes('recall');
-    out.forEach(u => { u.order = { type: 'recall' }; u.move = null; });
-    C.orders.recall++; return campYes('recall');
-  }
+  if (name === 'guard') return campWingOrder(C, null, 'guard', t && t.kind === 'place' ? 'place:' + t.id : t && t.kind === 'convoy' ? t.id : null, how, dry);
+  if (name === 'recall') return campWingOrder(C, null, 'recall', null, how, dry);
+  if (name === 'wing') return campWingText(C, arg, dry); // a group, a verb and a target in words: "fighters at the mothership", "all guard Ceres"
   if (name === 'missiles') { // the launcher: the mothership if you name it (or if it is in reach), else the nearest big ship in reach
     if (C.missiles <= 0) return campNo('nomissiles');
     if (C.t < C.nextRocket) return campNo('missilewait');
@@ -687,6 +689,11 @@ function campIntent(text) {
   const SC_FILLER = /^(?:(?:please|hey|ok|okay|computer|athena|can you|could you|would you|will you|i want to|i wanna|i need to|lets|let's|go ahead and|all|everyone)\s+)+/;
   let q = String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9' -]+/g, ' ').replace(/\s+/g, ' ').trim().replace(SC_FILLER, '').replace(/\s+(please|now|right now|already)$/, '').trim();
   if (!q) return null;
+  { // a group named first, in words the old forms below would lose the group of: "all attack the mothership", "escorts scout the anomaly", "fighters hold at Ceres", "cancel the fighters" (src/campwing.js)
+    const wp = typeof campWingParse === 'function' ? campWingParse(String(text).toLowerCase().replace(/^(?:(?:please|hey|ok|okay|computer|athena|can you|could you|would you|will you|go ahead and)\s+)+/, '')) : null;
+    const same = wp && ((wp.group === 'fighters' && wp.verb === 'attack') || (wp.group === 'escorts' && wp.verb === 'escort') || (wp.group === 'all' && (wp.verb === 'guard' || !wp.verb)) || (wp.group === 'escorts' && !wp.verb && /\b(?:convoys?|freighters?|cargo|supplies|haulers?)\b/.test(wp.target))); // the old forms mean the same: their own words and answers
+    if (wp && (wp.verb || wp.target) && !same && !/^(?:launch|return|come|go|land|dock|retreat|fall|pull|stay|form|get them)\b/.test(wp.target) && !(wp.verb === '' && /^(?:cancel)$/.test(wp.target))) return { act: 'fleet_wing', arg: wp.verb === 'cancel' ? 'cancel ' + wp.group : (wp.group + ' ' + wp.verb + ' ' + wp.target).replace(/\s+/g, ' ').trim() };
+  }
   q = q.replace(/^(?:the |our )?(?:fighters?|wing|escorts?|squadron|ships)\s+(?=(?:attack|engage|guard|defend|protect|launch|recall|return|escort)\b)/, '');
   let m;
   if (/\b(?:missiles?|rockets?|torpedoe?s?)\b/.test(q)) return { act: 'fleet_missiles', arg: q.replace(/\b(?:fire|launch|shoot|send|loose|use|the|our|all|some|a|one|missiles?|rockets?|torpedoe?s?|with|at|on|to)\b/g, ' ').replace(/\s+/g, ' ').trim() }; // "fire missiles", "missiles at the mothership": before "launch", which is the bay
@@ -1065,9 +1072,18 @@ function campWingAI(C, u, dt) {
     const cv = C.by[o.target];
     if (!cv || cv.hp <= 0) { u.order = { type: 'guard', at: { kind: 'carrier' } }; return; }
     foe = campNearest(aliens, cv, 650); if (!foe) { const a = (o.slot || 0) * 2.4 + C.t / 4000; home = { x: cv.x + Math.cos(a) * k.beside, y: cv.y + Math.sin(a) * k.beside, vx: cv.vx, vy: cv.vy }; }
+  } else if (o.type === 'hold') { // (src/campwing.js) fly to the point and stay there: brake, turn to what is in range and fire
+    const hp = o.at || c; if (campDist(u, hp) > CAMP.wing.holdAt) return campSeek(u, hp.x, hp.y, dt);
+    const fo = campNearest(aliens, u, k.range + 40), keep = Math.pow(0.04, dt); u.vx *= keep; u.vy *= keep; u.x += u.vx * dt; u.y += u.vy * dt;
+    if (fo) { const face = Math.atan2(fo.y - u.y, fo.x - u.x); u.rot = campRot(u.rot, face, u.turn * dt * 2); campWingFire(C, u, k, fo, campDist(u, fo), face, true); }
+    return;
+  } else if (o.type === 'fetch') { // (src/campwing.js) fly over the ore or the cache (a ship of ours takes what it touches), fighting what comes within 320 px; when it is gone, back to guarding the carrier
+    const ft = campWingLive(C, o.tg); if (!ft || (ft.kind === 'cache' && C.caches[+String(ft.id).slice(6)] && C.caches[+String(ft.id).slice(6)].got)) { u.order = { type: 'guard', at: { kind: 'carrier' } }; return; }
+    foe = campNearest(aliens, u, 320); if (!foe) home = ft;
   } else if (o.type === 'mine') { // fight what comes within 320 px; else take a chunk or a wreck lying about, or cut the nearest rock (a laser from the ship); with none, circle the carrier and wait for more
     foe = campNearest(aliens, u, 320);
-    const safe = r => !aliens.some(a => campDist(a, r) < CAMP.ore.danger), pk = campNearest(C.pickups.filter(safe), u), rk = campNearest(C.rocks.filter(r => r.hp > 0 && safe(r)), u);
+    const safe = r => !aliens.some(a => campDist(a, r) < CAMP.ore.danger), want = o.target ? C.rocks.find(r => r.id === o.target && r.hp > 0) || C.pickups.find(q => q.id === o.target) : null; // a rock or ore named by the order, while it is there
+    const pk = want ? (C.pickups.indexOf(want) >= 0 ? want : null) : campNearest(C.pickups.filter(safe), u), rk = want ? (C.pickups.indexOf(want) >= 0 ? null : want) : campNearest(C.rocks.filter(r => r.hp > 0 && safe(r)), u);
     if (!foe) {
       if (pk && (!rk || campDist(pk, u) <= campDist(rk, u) + 150)) home = pk; // ore lying about first: fly over it
       else if (rk) { // a rock: go to the laser's hold distance from it and cut it
@@ -1077,7 +1093,7 @@ function campWingAI(C, u, dt) {
       } else { const a = (parseInt(u.id.split('-')[1], 10) || 0) * 0.9 + C.t / 3500; home = { x: c.x + Math.cos(a) * 330, y: c.y + Math.sin(a) * 330, vx: c.vx || 0, vy: c.vy || 0 }; }
     }
   } else { // guard: a point (the carrier, a place, a convoy) is circled; an alien that comes within reach of it, or of this ship, is fought
-    const at = o.at || { kind: 'carrier' }, p = at.kind === 'carrier' ? c : at.kind === 'place' ? campPlaces(C.level)[at.id] : C.by[at.id] || c;
+    const at = o.at || { kind: 'carrier' }, p = at.kind === 'carrier' ? c : at.kind === 'place' ? campPlaces(C.level)[at.id] : at.kind === 'point' ? at : C.by[at.id] || c;
     foe = campNearest(aliens, p, 700) || campNearest(aliens, u, 450);
     if (!foe) { const a = (u.id.length * 1.7 + (parseInt(u.id.split('-')[1], 10) || 0) * 0.9) + C.t / 3500; home = { x: p.x + Math.cos(a) * 330, y: p.y + Math.sin(a) * 330, vx: p.vx || 0, vy: p.vy || 0 }; }
   }
