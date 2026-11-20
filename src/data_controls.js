@@ -114,8 +114,7 @@ const CONTROLS = [
     { k: ['Click'], t: 'Map: click sets a place, again flies', sub: 'THE MAP' },
     { k: ['W', 'S'], t: 'Map list: choose (arrows too)', sub: 'THE MAP' },
     { k: ['A', 'D'], t: 'Map list: next or last group', sub: 'THE MAP' },
-    { k: ['Enter'], t: 'Map: fly to the chosen place', sub: 'THE MAP' },
-    { k: ['Shift', 'Enter'], t: 'Map: fly there fast (a burn)', sub: 'THE MAP' },
+    { k: ['Shift', 'Enter'], t: 'Map: Enter flies, Shift+Enter fast', sub: 'THE MAP' }, // (the two rows were one too many for Settings' four columns once E docked)
     { k: ['X'], t: 'Map: clear the destination', sub: 'THE MAP' },
     { k: ['Z'], t: 'Map: the area, or the whole system', sub: 'THE MAP' },
     { k: ['I'], t: 'Type an order to the ship', sub: 'THE STRIP AND THE VOICE' },
@@ -123,6 +122,7 @@ const CONTROLS = [
     { k: ['H'], t: 'This page of keys', sub: 'ANYWHERE' },
     { k: ['Esc'], t: 'Pause; closes the map or a panel', sub: 'ANYWHERE' },
     { k: ['T'], t: 'Title, from the pause or end card', sub: 'ANYWHERE' },
+    { k: ['R'], t: 'Pause: restart the mission', sub: 'ANYWHERE' },
     { k: ['Enter'], t: 'Cards: begin, continue, try again', sub: 'ANYWHERE' },
     { k: ['1-3'], t: 'Pick a salvaged tech after a level', sub: 'ANYWHERE' },
     { k: ['4', '5'], t: 'Refit card: buy a fighter or escort', sub: 'ANYWHERE' },
