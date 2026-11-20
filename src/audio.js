@@ -5,7 +5,7 @@
 // installAudio(game) hooks each scene's create, update, pause, resume and shutdown events,
 // so the scenes need no code for loops; only sfx('name') calls replace beep() at a few spots.
 
-const AUD = { master: null, noise: null, amb: null, eng: null, cru: null, ducked: false, gesture: false, rev: null, pool: null, sendNow: undefined };
+const AUD = { master: null, noise: null, amb: null, eng: null, cru: null, beam: null, ducked: false, gesture: false, rev: null, pool: null, sendNow: undefined };
 // Each pad has its own level on top of the master volume (G.volume and mute), so a pad that is only noise can sit low
 // without turning the others down. The planet wind is hiss with no pitch, so it reads much louder than a tone of the same
 // size: it sits about 8 dB under the quietest effect (it was 16 dB over a laser shot at level 1) (tests/surface.mjs measures it against laser, tick, hit and boom).
@@ -206,12 +206,12 @@ const SOUND = {
   send: {                           // how much of each effect goes to the reverb (0: dry). A name that is not here gets SOUND.other
     boom: 0.55, hyperJump: 0.6, hyperArrive: 0.55, dock: 0.45,                       // the big events: long tails
     hyperCharge: 0.3, interdict: 0.3, cruiseOn: 0.3, cruiseOff: 0.3, shieldDown: 0.3, thrusters: 0.3, shieldUp: 0.25,
-    hit: 0.22, bounty: 0.2, siren: 0.2, dash: 0.15, laser: 0.14, chime: 0.12, tick: 0.06,
+    hit: 0.22, bounty: 0.2, siren: 0.2, dash: 0.15, laser: 0.14, chime: 0.12, tick: 0.06, turret: 0.06, missileLaunch: 0.2, missileBlast: 0.4, missileFizzle: 0.1, blastSmall: 0.3, blastBig: 0.4, shieldHit: 0.15, hullHit: 0.1, earthHit: 0.3,
     fuelPump: 0.05, fuelLow: 0.05, beep: 0.05,
     click: 0, uiOpen: 0, uiClose: 0, type: 0, buy: 0, sell: 0, empty: 0             // the interface: short and dry
   },
   other: 0.1,
-  loop: { engine: 0.18, space: 0.3, station: 0.08, wind: 0 }   // the loops: the engine hum and each scene's pad
+  loop: { engine: 0.18, space: 0.3, station: 0.08, wind: 0, beam: 0.1 }   // the loops: the engine hum, each scene's pad and the Campaign's beam hum
 };
 const soundSend = name => SOUND.send[name] === undefined ? SOUND.other : SOUND.send[name];
 
@@ -329,6 +329,27 @@ const SFX = {
   thrusters(t) { burst(t, 0.9, 0.14, 'bandpass', 300, 1200, 0.9, 0.25); tone(t, 'sine', 70, 110, 0.8, 0.07); },
   dash(t) { burst(t, 0.22, 0.13, 'bandpass', 700, 2800, 0.9, 0.2); tone(t, 'sine', 260, 820, 0.18, 0.05); },
   empty(t) { tone(t, 'square', 190, 120, 0.1, 0.035); },
+  // ---- the Campaign's sounds (card space-game-campaign-sounds; what each is built of is in SFX_BUILT below, so a change can be asked for by name) ----
+  // turret: one shot of the eight turrets, a short bright bolt, higher or lower by turret (a = the turret's number, 0 to 7), so a staggered volley rattles
+  turret(t, a) { const i = a | 0, f = (1500 + (i % 4) * 150 + (i > 3 ? 70 : 0)) * (0.97 + Math.random() * 0.06);
+    tone(t, 'square', f, f * 0.3, 0.07, 0.03); tone(t, 'sawtooth', f * 1.9, f * 0.6, 0.035, 0.012); burst(t, 0.012, 0.012, 'highpass', 4500, 4500); },
+  // missileLaunch: a whoosh that climbs for half a second (a rising noise band and a rising sawtooth), then a dull thump as the motor catches
+  missileLaunch(t) { burst(t, 0.5, 0.05, 'bandpass', 250, 3200, 1, 0.3); swell(t, 'sawtooth', 110, 520, 0.5, 0.025, 0.45); tone(t + 0.3, 'sine', 90, 36, 0.24, 0.07); burst(t + 0.3, 0.1, 0.045, 'lowpass', 700, 120); },
+  // missileBlast: where a missile goes off: a low thump that falls, a rumble of low noise, and a short crackle of five quick bright bursts
+  missileBlast(t) { tone(t, 'sine', 80, 30, 0.45, 0.12); burst(t, 0.3, 0.09, 'lowpass', 1000, 70); [0.02, 0.05, 0.095, 0.15, 0.22].forEach((o, i) => burst(t + o, 0.025, 0.04, 'highpass', 3600 + i * 300, 5200, 1)); },
+  // missileFizzle: a missile that ran out of fuel: a soft puff of air and a small falling tone
+  missileFizzle(t) { burst(t, 0.3, 0.02, 'bandpass', 1200, 200, 0.8, 0.02); tone(t, 'sine', 300, 120, 0.2, 0.01); },
+  // blastSmall: a small ship dies: a thump that falls, a short rumble, and a crackle of four quick bright bursts
+  blastSmall(t) { tone(t, 'sine', 110, 40, 0.3, 0.09); burst(t, 0.3, 0.07, 'lowpass', 1400, 90); [0.02, 0.06, 0.1, 0.14].forEach((o, i) => burst(t + o, 0.022, 0.035, 'highpass', 3800 + i * 250, 5200, 1)); },
+  // blastBig: the mothership, the carrier: two thumps (a low one that falls for a second and a higher one under it), a long rumble, and a crackle of eight bursts over half a second
+  blastBig(t) { tone(t, 'sine', 70, 24, 1.0, 0.14); tone(t, 'sine', 140, 45, 0.5, 0.09); burst(t, 1.0, 0.1, 'lowpass', 1800, 60);
+    [0.02, 0.07, 0.12, 0.19, 0.27, 0.34, 0.42, 0.5].forEach((o, i) => burst(t + o, 0.03, 0.035, 'highpass', 3400 + (i % 4) * 300, 5200, 1)); },
+  // shieldHit: the carrier's shield takes a shot: a bright electric zap (a triangle falling 1500 to 700 Hz and a sine over it) with two bursts of high crackle
+  shieldHit(t) { tone(t, 'triangle', 1500, 700, 0.12, 0.03); tone(t, 'sine', 2300, 1700, 0.09, 0.012); burst(t, 0.06, 0.02, 'highpass', 3000, 5000); burst(t + 0.045, 0.03, 0.015, 'highpass', 3500, 4500); },
+  // hullHit: the hull takes a shot: a dull clank (a sawtooth falling 190 to 60 Hz, a square under it) and a short band of metallic noise
+  hullHit(t) { tone(t, 'sawtooth', 190, 60, 0.16, 0.06); tone(t, 'square', 100, 52, 0.1, 0.03); burst(t, 0.1, 0.06, 'bandpass', 900, 250, 1.2, 0.003); },
+  // earthHit: a shot lands on Earth's shield: a deep thump that falls and a short low rumble, felt more than heard
+  earthHit(t) { tone(t, 'sine', 60, 28, 0.5, 0.09); burst(t, 0.4, 0.05, 'lowpass', 300, 60); },
   // bounty: two bright coin pings, the second higher and longer, with a thin shimmer on top (plays just after the boom)
   bounty(t) { tone(t, 'triangle', 988, 975, 0.1, 0.06); tone(t + 0.075, 'triangle', 1319, 1300, 0.26, 0.06); tone(t + 0.075, 'sine', 2637, 2620, 0.2, 0.022); },
   // cruise: a rising whoosh as it engages, a falling one and a soft thud as it drops out (src/cruise.js)
@@ -364,10 +385,25 @@ const SFX = {
   chime(t) { [660, 880, 1320].forEach((f, i) => tone(t + i * 0.07, 'triangle', f, f * 0.995, 0.35, 0.05)); tone(t + 0.21, 'sine', 1760, 1750, 0.3, 0.025); }
 };
 
-// every effect plays with its own share of the reverb, however it is called (sfx('boom'), or SFX.boom(t) from another effect or a test)
+// What each of the Campaign's sounds is made of, in plain words (card space-game-campaign-sounds), and the group it was made in: so Troy can ask for a change by name.
+// The numbers are in the sound's own line above. tests/campsounds.mjs holds every name here to a sound that exists and to the level rules.
+const SFX_BUILT = {
+  blastSmall: { group: 'blasts', says: 'a small ship dying (a fighter, an escort, a raider, a drone, a freighter): a sine thump falling 110 to 40 Hz, a rumble of low-passed noise falling 1.4 kHz to 90 Hz for 0.3 s, and a crackle of four 22 ms bursts of high-passed noise' },
+  blastBig: { group: 'blasts', says: 'a big ship dying (the mothership, the carrier): two sine thumps, a low one falling 70 to 24 Hz for a second and a higher one 140 to 45 Hz for half a second, a rumble of low-passed noise for a second, and a crackle of eight 30 ms bursts of high-passed noise over half a second' },
+  shieldHit: { group: 'blasts', says: 'a shot on the carrier\'s shield: a bright electric zap, a triangle falling 1500 to 700 Hz with a sine over it (2.3 to 1.7 kHz) and two quick bursts of high-passed crackle' },
+  hullHit: { group: 'blasts', says: 'a shot on the carrier\'s hull: a dull clank, a sawtooth falling 190 to 60 Hz with a square under it (100 to 52 Hz) and a short band of metallic noise around 900 Hz' },
+  earthHit: { group: 'blasts', says: 'a shot on Earth\'s shield: a deep sine thump falling 60 to 28 Hz and a short low rumble of noise, felt more than heard' },
+  missileLaunch: { group: 'missiles', says: 'the missile launch: a whoosh that climbs for half a second (a band of noise sweeping 250 Hz to 3.2 kHz and a sawtooth rising 110 to 520 Hz), then, 0.3 s in, a dull thump (a sine falling 90 to 36 Hz and a short low-passed burst of noise)' },
+  missileBlast: { group: 'missiles', says: 'where a missile goes off: a low sine thump falling 80 to 30 Hz, a rumble of low-passed noise falling 1 kHz to 70 Hz for 0.3 s, and a crackle of five 25 ms bursts of high-passed noise in the first quarter second' },
+  missileFizzle: { group: 'missiles', says: 'a missile out of fuel: a soft puff of band-passed air sweeping down from 1.2 kHz and a small sine falling 300 to 120 Hz, both very quiet' },
+  beamhum: { group: 'hum', loop: true, says: 'the beam hum (a loop, BEAMHUM): a sine root with a sine fifth over it and a sawtooth buzz an octave up, through a low-pass that opens as it climbs, with a thin band of hiss; it rises from 140 to 320 Hz over two seconds of unbroken fire (Beam turrets tech with Space held and a turret on a target, or a mining laser on a rock) and fades in a quarter second when it stops' },
+  turret: { group: 'turrets', says: 'the turret pew: a short bright square bolt that falls to under a third of its pitch in 70 ms, a thin sawtooth zip on top and a hair of click at the start; the pitch is set by the turret (four steps of 150 Hz, the back four a little higher) and moved 3 percent at random, so the eight rattle and do not smear' }
+};
+
+// every effect plays with its own share of the reverb, however it is called (sfx('boom'), or SFX.boom(t) from another effect or a test); a is the sound's own argument (the turret's number)
 Object.keys(SFX).forEach(name => {
   const play = SFX[name];
-  SFX[name] = t => { const was = AUD.sendNow; AUD.sendNow = soundSend(name); try { play(t); } finally { AUD.sendNow = was; } };
+  SFX[name] = (t, a) => { const was = AUD.sendNow; AUD.sendNow = soundSend(name); try { play(t, a); } finally { AUD.sendNow = was; } };
 });
 
 // ---------- the cruise rumble: a quiet sub-bass bed while the ship flies itself (src/cruise.js) ----------
@@ -389,10 +425,37 @@ function stopCruiseHum() {
   setTimeout(() => c.list.forEach(o => { try { o.stop(); } catch (e) { /* already stopped */ } }), 700);
 }
 
-function sfx(name) {
+// ---------- the beam hum: a sustained, rising hum while a beam fires (card space-game-campaign-sounds) ----------
+// The Campaign's Beam turrets tech (held Space, a turret has a target) and a mining ship closing on its ore. The scene calls beamHum(level, rise) each frame (src/campaign.js campBeamState):
+// level 0 to 1 is how loud (0 is off: it fades away), rise 0 to 1 is how far up it has climbed. Through AUD.master and the effects volume like everything else; one loop, no new nodes after it.
+const BEAMHUM = { vol: 0.02, f0: 140, f1: 320, flt0: 500, flt1: 1900, fade: 0.25, step: 0.06 }; // its loudest level before the effects volume; its pitch (Hz) from f0 to f1 as it rises; the low-pass's opening (Hz); the fade-out and how often it is retuned (s)
+function startBeamHum() {
+  const out = AC.createGain(), list = []; out.gain.value = 0.0001; out.connect(AUD.master);
+  const flt = AC.createBiquadFilter(); flt.type = 'lowpass'; flt.frequency.value = BEAMHUM.flt0; flt.Q.value = 2; flt.connect(out);
+  const o1 = aOsc(list, 'sine', BEAMHUM.f0, flt, 0.5), o2 = aOsc(list, 'sine', BEAMHUM.f0 * 1.5, flt, 0.25), o3 = aOsc(list, 'sawtooth', BEAMHUM.f0 * 2, flt, 0.12); // the root, a fifth over it, and a buzz an octave up
+  aNoise(list, out, 'bandpass', 2400, 3, 0.08); // a thin hiss of energy over it
+  revSend(out, SOUND.loop.beam);
+  AUD.beam = { out, list, flt, o1, o2, o3, nextAt: 0 };
+}
+function stopBeamHum() {
+  const b = AUD.beam; if (!b) return; AUD.beam = null;
+  try { b.out.gain.cancelScheduledValues(AC.currentTime); b.out.gain.setTargetAtTime(0, AC.currentTime, BEAMHUM.fade / 3); } catch (e) { /* audio is optional */ }
+  setTimeout(() => { b.list.forEach(o => { try { o.stop(); } catch (e) { /* already stopped */ } }); try { b.out.disconnect(); } catch (e) { /* gone */ } }, BEAMHUM.fade * 1000 + 100);
+}
+function beamHum(level, rise) {
+  if (!(level > 0.001) || G.muted || G.volume <= 0 || FX.vol <= 0) { if (AUD.beam) stopBeamHum(); return; }
+  if (!AUD.beam) { if (!audioReady()) return; resumeAudio(); try { startBeamHum(); } catch (e) { return; } }
+  const b = AUD.beam, now = AC.currentTime; if (now < b.nextAt) return; b.nextAt = now + BEAMHUM.step;
+  const r = Math.min(1, Math.max(0, rise || 0)), f = BEAMHUM.f0 + (BEAMHUM.f1 - BEAMHUM.f0) * r;
+  b.out.gain.setTargetAtTime(BEAMHUM.vol * level * fxScale(), now, 0.08);
+  b.o1.frequency.setTargetAtTime(f, now, 0.1); b.o2.frequency.setTargetAtTime(f * 1.5, now, 0.1); b.o3.frequency.setTargetAtTime(f * 2, now, 0.1);
+  b.flt.frequency.setTargetAtTime(BEAMHUM.flt0 + (BEAMHUM.flt1 - BEAMHUM.flt0) * r, now, 0.1);
+}
+
+function sfx(name, arg) { // arg: what a sound takes (the turret's number); most take none
   if (G.muted || G.volume <= 0 || FX.vol <= 0 || !SFX[name] || !audioReady()) return;
   resumeAudio(); syncMaster();
-  try { SFX[name](AC.currentTime); } catch (e) { /* audio is optional */ }
+  try { SFX[name](AC.currentTime, arg); } catch (e) { /* audio is optional */ }
 }
 // beep() of src/common.js made an oscillator and a gain for every call (a salvage pod, a hit on the MULE, most of the station's clicks).
 // The same call now plays on a voice of the pool, through the master gain (which is the volume, so v is not scaled here), nearly dry.
