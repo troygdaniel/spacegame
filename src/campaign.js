@@ -19,6 +19,11 @@
 const CAMP = {
   store: 'longhaul.campaign',              // the localStorage key of the campaign progress (the level reached and the techs picked)
   step: 1 / 30,                            // s: the longest step the sim takes at once (a longer frame is cut into steps)
+  size: {                                  // how big your ships are: the one place for it (card space-game-campaign-look: another 30 percent smaller than the 140 x 100, 31 x 23 and 40 x 29 px they were drawn at). len: the drawn length in px (the scene scales the picture to it); hit: the hit circle's radius in px, about half of len over two, as it always was
+    carrier: { len: 98, hit: 25 },         // it was 140 and 36
+    fighter: { len: 22, hit: 6 },          // it was 31 and 8
+    escort: { len: 28, hit: 7 }            // it was 40 and 10
+  },
   carrier: {
     hull: 600,                             // hit points of the flagship; zero and the level is lost
     speed: 210,                            // px/s, top speed: big, slow, heavy
@@ -26,8 +31,7 @@ const CAMP = {
     turn: 1.1,                             // rad/s the nose turns (A, D)
     drag: 0.55,                            // velocity kept after one second with no thrust (0.55 is the Wren's)
     brakeDrag: 0.12,                       // the same with S held
-    radius: 36,                            // px, the hit circle (it was 56: the carrier is drawn 35 percent smaller)
-    mounts: [[42, -14], [42, 14], [12, -26], [12, 26], [-16, -30], [-16, 30], [-44, -24], [-44, 24]], // the turrets (there is no other gun): where each sits, px from the carrier's centre in its own frame (x along the nose), spread along the hull; the number of turrets is the number of rows
+    mounts: [[30, -7], [30, 7], [10, -20], [10, 20], [-6, -20], [-6, 20], [-22, -20], [-22, 20]], // the turrets (there is no other gun): where each sits, px from the carrier's centre in its own frame (x along the nose), spread along the hull; the number of turrets is the number of rows
     pd: 4,                                 // hit points one turret shot takes off an alien
     pdDelay: 700,                          // ms between the shots of one turret (eight of them: 46 hit points a second in all): they fire only while Space is held, each at the nearest alien in its reach, and never on their own
     pdRange: 500,                          // px a turret reaches (to the edge of the alien it aims at: about three and a half carrier lengths)
@@ -90,7 +94,8 @@ const CAMP = {
     fighters: 6,                           // fighters in the bay at the start
     escorts: 2,                            // escorts in the bay at the start
     launchEvery: 600,                      // ms between ships leaving the bay once Launch is ordered
-    dockAt: 90                             // px: a recalled ship this close to the carrier lands (and is whole again when next launched)
+    mouth: [21, 19.5],                     // px from the carrier's centre (x along the nose, y to the side): where a launched ship appears, one side and then the other: just in front of the launch tube of a hangar pod (CAMP_ART.cruiser.launch)
+    dockAt: 63                             // px: a recalled ship this close to the carrier lands (and is whole again when next launched)
   },
   fighter: {
     hp: 36,                                // hit points
@@ -102,13 +107,11 @@ const CAMP = {
     bullet: 700,                           // px/s of a shot
     range: 420,                            // px it shoots from
     aim: 0.3,                              // rad: how far off its target the nose may be and still fire
-    hold: 240,                             // px: the ring it circles an alien at (pirateSteer's hold)
-    radius: 8                              // px, the hit circle (it was 12)
+    hold: 240                              // px: the ring it circles an alien at (pirateSteer's hold)
   },
   escort: {
     hp: 90, speed: 300, accel: 360, turn: 2.6, damage: 6, delay: [350, 500], bullet: 650, range: 520, aim: 0.35, hold: 300, // as a fighter: tougher, slower, longer reach
-    beside: 150,                           // px: how far from its convoy an escort keeps station
-    radius: 10                             // px, the hit circle (it was 16)
+    beside: 150                            // px: how far from its convoy an escort keeps station
   },
   convoy: {
     hp: 200,                               // hit points of a freighter
@@ -367,10 +370,10 @@ function campNew(level, techs, opts) {
 function campSpawn(C, kind, x, y) {
   const u = { id: kind + '-' + (C.nextId++), kind, x, y, vx: 0, vy: 0, rot: 0, move: null, moveUntil: 0, ran: false, side: C.rng() < 0.5 ? -1 : 1, nextShot: 0, order: null, goal: '', distractedUntil: 0 };
   if (kind === 'carrier') {
-    const k = CAMP.carrier; Object.assign(u, { team: 'earth', hp: k.hull * (campHas(C, 'plating') ? CAMP.tech.plating.hull : 1), r: k.radius, vmax: k.speed, accel: k.accel, turn: k.turn });
+    const k = CAMP.carrier; Object.assign(u, { team: 'earth', hp: k.hull * (campHas(C, 'plating') ? CAMP.tech.plating.hull : 1), r: CAMP.size.carrier.hit, vmax: k.speed, accel: k.accel, turn: k.turn });
   } else if (kind === 'fighter' || kind === 'escort') {
     const k = CAMP[kind];
-    Object.assign(u, { team: 'earth', hp: k.hp, r: k.radius, vmax: k.speed, accel: k.accel, turn: k.turn,
+    Object.assign(u, { team: 'earth', hp: k.hp, r: CAMP.size[kind].hit, vmax: k.speed, accel: k.accel, turn: k.turn,
       def: { key: kind === 'fighter' ? 'raider' : 'drone', hold: k.hold, speed: k.accel, max: k.speed, hp: k.hp } }); // the shape pirateSteer reads
   } else if (kind === 'freighter') {
     Object.assign(u, { team: 'earth', hp: CAMP.convoy.hp, r: 22, vmax: CAMP.convoy.speed, accel: 400, turn: 2 });
@@ -697,8 +700,8 @@ function campBullet(C, from, rot, speed, dmg, lifeMs, team, ahead, extra) {
 function campLaunch(C) {
   if (!C.launchQ.length || C.t < C.nextLaunch || C.carrier.hp <= 0) return;
   C.nextLaunch = C.t + CAMP.bay.launchEvery;
-  const kind = C.launchQ.shift(), c = C.carrier, side = (C.launched % 2 ? 1 : -1), a = c.rot + side * 1.2;
-  const u = campSpawn(C, kind, c.x + Math.cos(a) * 70, c.y + Math.sin(a) * 70); C.launched++;
+  const kind = C.launchQ.shift(), c = C.carrier, side = (C.launched % 2 ? 1 : -1), m = CAMP.bay.mouth, cs = Math.cos(c.rot), sn = Math.sin(c.rot); // out of the mouth of a hangar pod, one side and then the other
+  const u = campSpawn(C, kind, c.x + cs * m[0] - sn * side * m[1], c.y + sn * m[0] + cs * side * m[1]); C.launched++;
   u.vx = c.vx + Math.cos(c.rot) * 140; u.vy = c.vy + Math.sin(c.rot) * 140; u.rot = c.rot;
   const cv = kind === 'escort' ? campNearest(campConvoys(C), c) : null;
   u.order = cv ? { type: 'escort', target: cv.id, slot: campWing(C, 'escort').length - 1 } : { type: 'guard', at: { kind: 'carrier' } };
