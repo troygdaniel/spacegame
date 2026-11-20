@@ -71,7 +71,7 @@ class Campaign extends Phaser.Scene {
   makeCamp() { // a new battle of this level: arrived by the chain (or a retry), the ore and the extra ships of the refit come with the cruiser; a level started by itself (an address, a skip) has its own
     const carried = this.P.level === this.level;
     this.P.promo = null; // the promotion of the last debrief is told once
-    return campNew(this.level, this.P.techs, Object.assign({}, this.opts, { rank: typeof campRank === 'function' ? campRank(this.P).i : 0 }, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {})); // the rank (src/campranks.js) fills the bay and lifts the wing limit
+    return campNew(this.level, this.P.techs, Object.assign({}, this.opts, { rank: typeof campRank === 'function' ? campRank(this.P).i : 0, stance: this.P.stance }, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {})); // the rank (src/campranks.js) fills the bay and lifts the wing limit; the wing's stance is the pilot's: it comes with every battle
   }
   drawPlace(p) { // returns what it made, so a far place can be taken down again (syncFar)
     const r = p.r || 60, made = [];
@@ -273,6 +273,7 @@ class Campaign extends Phaser.Scene {
     chatterHear(this, e); // the wing's radio hears every sim event (src/campchatter.js)
     if (e.type === 'say') { const text = uiText(e.key, e.vars); toast(this, text, '#9fe9ff'); this.say([text]); }
     else if (e.type === 'nav') { toast(this, uiText(e.key, e.vars), '#7fe9ff'); if (e.key === 'camp.nav.go' || e.key === 'camp.nav.arrived') beep(e.key === 'camp.nav.go' ? 520 : 660, 0.07, 'triangle', 0.04, 160); } // the autopilot's own lines (src/campnav.js)
+    else if (e.type === 'stance') { this.P.stance = e.stance; campProgressSave(this.P); } // the wing's stance is the pilot's choice: kept across missions (src/campaign.js)
     else if (e.type === 'turret') { this.turretFlash(e); if (e.tx !== undefined) this.beam(e, 120); } // a turret shot at an alien is the same laser: a beam flash
     else if (e.type === 'laser') this.beam(e, e.src === 'turret' ? 220 : 90);
     else if (e.type === 'rockbreak') { this.boom.explode(16, e.x, e.y); beep(520, 0.09, 'triangle', 0.04, 260); }

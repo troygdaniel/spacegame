@@ -126,6 +126,15 @@ const CAMP = {
     hp: 90, speed: 300, accel: 360, turn: 2.6, damage: 6, delay: [350, 500], bullet: 650, range: 520, aim: 0.35, hold: 300, // as a fighter: tougher, slower, longer reach
     beside: 150                            // px: how far from its convoy an escort keeps station
   },
+  stance: {                                // the wing's stances (card space-game-campaign-stances): how Attack and Guard move; which stances there are, and their order, is CAMP.stances
+    orbit: 300,                            // px: ORBIT circles its target at this distance (from the edge of it), facing it and firing
+    orbitSpeed: 0.9,                       // rad/s a ship goes round at: half of them one way, half the other
+    stand: 0.85,                           // KEEP DISTANCE stands off at this share of its own gun's range from the target (farther off it comes in, closer it backs away)
+    weave: 140,                            // px/s KEEP DISTANCE sidesteps back and forth at while it holds the range (a ship that stands still is a target for the towers and the mothership)
+    formation: 200,                        // px: MATCH SPEED keeps its place this far from the carrier, spread round it, at the carrier's speed
+    leash: 1400                            // px: HOLD POSITION stays where it is, until the carrier has gone this far; then the ship comes back to it
+  },
+  stances: ['free', 'orbit', 'keep', 'match', 'hold'], // the stances, in the order of the panel's second page: free is how the wing always flew (the pirates' own steering)
   convoy: {
     hp: 200,                               // hit points of a freighter
     speed: 120                             // px/s: the same as the MULE of the escort call
@@ -402,6 +411,7 @@ function campNew(level, techs, opts) {
   C.rank = Math.max(0, Math.min(CAMP.ranks.length - 1, opts.rank | 0)); // the rank of the pilot (src/campranks.js: from the scores of the missions flown): its extras fill the bay and lift the wing limit
   { const rk = CAMP.ranks[C.rank]; C.bay.fighters += rk.fighters; C.bay.escorts += rk.escorts; C.cap = { fighters: CAMP.build.maxFighters + rk.fighters, escorts: CAMP.build.maxEscorts + rk.escorts }; }
   Object.assign(C, { missiles: CAMP.missile.magazine, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0 }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks
+  C.stance = campStanceId(opts.stance); C.orders.stance = 0; // the wing's stance: one for the whole wing, kept across orders and saved with the progress (card space-game-campaign-stances)
   const p = campPlaces(level)[L.start], c = campSpawn(C, 'carrier', p.x + L.startAt[0], p.y + L.startAt[1]);
   C.carrier = c; c.rot = 0;
   C.scan = ((L.objectives || []).find(o => o.type === 'scan') || { points: [] }).points.map(q => ({ x: q.at[0], y: q.at[1], r: q.r || 260, secs: q.secs || 5, t: 0, got: false })); // recon: the points to scan
@@ -567,6 +577,15 @@ function campDo(C, name, arg, dry) {
   }
   if (name === 'recharge') return campRecharge(C, arg, dry);
   if (name === 'build') return campBuild(C, arg, dry);
+  if (name === 'stance') { // the wing's stance: how Attack and Guard move (orbit, keep distance, match speed, hold position, free); "orbit the mothership" also sends the fighters at it
+    const q = String(arg == null ? '' : arg).toLowerCase(), id = /\b(?:orbit|circle)\b/.test(q) ? 'orbit' : /\b(?:distance|stand off|keep away|kite)\b|^keep\b/.test(q) ? 'keep' : /\b(?:match|formation)\b/.test(q) ? 'match' : /\b(?:hold|stay put)\b/.test(q) ? 'hold' : /\b(?:free|at will|freely)\b/.test(q) ? 'free' : null;
+    if (!id) return campNo('stance');
+    const mo = t && t.kind === 'mother' ? campTarget(C, t) : null, fs = campWing(C, 'fighter'), withMother = !!mo && fs.length > 0 && (id === 'orbit' || id === 'keep'), code = 'stance.' + id + (withMother ? '.mother' : '');
+    if (dry) return campYes(code);
+    C.stance = id; C.orders.stance++; C.events.push({ type: 'stance', stance: id });
+    if (withMother) { fs.forEach(u => { u.order = { type: 'attack', target: mo.id }; u.move = null; }); C.orders.attack++; }
+    return campYes(code);
+  }
   return campNo('what');
 }
 // the ships that mine: the whole wing that is out. In the belt the fighters are the cruiser's mining drones; an attack order (key 2) turns them back to the fight
@@ -626,7 +645,12 @@ function campIntent(text) {
   if ((m = /^(?:the |our )?escorts?\s+(?:to|with|beside|for|on)\s+(.*)$/.exec(q))) return { act: 'fleet_escort', arg: m[1] }; // "escorts to the Mars convoy"
   if ((m = /^(?:escort|cover|screen|protect|defend|guard|watch)\s+(?:the )?(.*(?:convoy|convoys|freighter|freighters|cargo|supplies).*)$/.exec(q))) return { act: 'fleet_escort', arg: m[1] };
   if ((m = /^(?:escort|cover)\s+(?:the )?(.+)$/.exec(q))) return { act: 'fleet_escort', arg: m[1] };
-  if ((m = /^(?:guard|defend|protect|screen|cover|hold|form up on|stay with|stay near|orbit)\s*(.*)$/.exec(q))) return { act: 'fleet_guard', arg: m[1] };
+  if ((m = /^(?:orbit|circle|fly around|go around)\b\s*(.*)$/.exec(q))) return { act: 'fleet_stance', arg: 'orbit ' + m[1] }; // "orbit the mothership": the stance, and the fighters at it
+  if ((m = /^(?:keep (?:your |a )?distance|keep away|stand off|stay back|kite)\b\s*(.*)$/.exec(q))) return { act: 'fleet_stance', arg: 'keep ' + m[1] };
+  if (/^(?:match (?:my |the carrier's |the carriers )?speed|match|(?:stay |fly )?in formation|form on me|formation)\b/.test(q)) return { act: 'fleet_stance', arg: 'match' };
+  if (/^(?:hold (?:your |the )?position|hold here|stay put|stay where you are)\b/.test(q)) return { act: 'fleet_stance', arg: 'hold' };
+  if (/^(?:free|fight free|fight freely|free stance|at will|break formation|free fight)\b/.test(q)) return { act: 'fleet_stance', arg: 'free' };
+  if ((m = /^(?:guard|defend|protect|screen|cover|hold|form up on|stay with|stay near)\s*(.*)$/.exec(q))) return { act: 'fleet_guard', arg: m[1] };
   if ((m = /^(?:attack|engage|fight|kill|destroy|go after|hit|strike|assault|charge|hunt)\s*(.*)$/.exec(q))) return { act: 'fleet_attack', arg: m[1] };
   return null;
 }
@@ -977,16 +1001,65 @@ function campWingAI(C, u, dt) {
     foe = campNearest(aliens, p, 700) || campNearest(aliens, u, 450);
     if (!foe) { const a = (u.id.length * 1.7 + (parseInt(u.id.split('-')[1], 10) || 0) * 0.9) + C.t / 3500; home = { x: p.x + Math.cos(a) * 330, y: p.y + Math.sin(a) * 330, vx: p.vx || 0, vy: p.vy || 0 }; }
   }
+  if (C.stance !== 'free' && (o.type === 'attack' || o.type === 'guard')) return campStanceMove(C, u, k, foe, home, dt); // a stance: how this ship moves while it attacks or guards (below)
   if (foe) {
     const dx = foe.x - u.x, dy = foe.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx);
     const m = campSteer(C, u, u.def, dist, target, u.vx - (foe.vx || 0), u.vy - (foe.vy || 0));
     campMove(u, m.ang, m.face, dt);
-    if (m.fire && dist < k.range + (foe.r || 0) && C.t > u.nextShot && Math.abs(campWrap(target - u.rot)) < k.aim) {
-      u.nextShot = C.t + campBetween(C, k.delay[0], k.delay[1]);
-      campBullet(C, u, u.rot, k.bullet, k.damage, 1400, 'earth', 14);
-    }
+    campWingFire(C, u, k, foe, dist, target, m.fire);
     u.move = u.move || null;
   } else if (home) campSeek(u, home.x + (home.vx || 0) * 0.2, home.y + (home.vy || 0) * 0.2, dt);
+}
+
+// one shot of a fighter or an escort, if it may fire, the gun is on the target and in range
+function campWingFire(C, u, k, foe, dist, target, may) {
+  if (!(may && dist < k.range + (foe.r || 0) && C.t > u.nextShot && Math.abs(campWrap(target - u.rot)) < k.aim)) return false;
+  u.nextShot = C.t + campBetween(C, k.delay[0], k.delay[1]);
+  campBullet(C, u, u.rot, k.bullet, k.damage, 1400, 'earth', 14);
+  return true;
+}
+
+// ---------- the wing's stances (card space-game-campaign-stances) ----------
+// A stance is HOW the wing moves when it attacks or guards: C.stance, one for the whole wing, kept across orders and saved with the progress (the order 'stance', the panel's second page, the strip and the voice).
+//   free     the pirates' own steering (circle, pass, break, run), as the wing always flew
+//   orbit    circle the target at CAMP.stance.orbit px, the nose on it, firing; half the ships go round each way
+//   keep     stand off at CAMP.stance.stand of the ship's own gun range: farther off it comes in, closer it backs away, and it sidesteps back and forth (CAMP.stance.weave) so it is not a still target
+//   match    fly in formation round the carrier at its speed (what Escort does with no convoy), and fire at what comes into range
+//   hold     stay where it is, fire at what comes into range, and come back to the carrier when it has gone CAMP.stance.leash px
+// ORBIT and KEEP follow the order's target (the nearest alien, or the one named) and are as free when there is none; MATCH and HOLD fight what is in range of the ship, whatever the order's target.
+const campStanceId = id => CAMP.stances.indexOf(id) >= 0 ? id : 'free';
+// fly to a place and take its velocity (the formation): the ship's wish is the place's own velocity plus the way to it
+function campStation(u, p, dt, face) {
+  const dx = p.x - u.x, dy = p.y - u.y, d = Math.hypot(dx, dy), ang = Math.atan2(dy, dx), want = Math.min(u.vmax, d * 1.6);
+  const vx = (p.vx || 0) + Math.cos(ang) * want, vy = (p.vy || 0) + Math.sin(ang) * want, ex = vx - u.vx, ey = vy - u.vy;
+  campMove(u, Math.atan2(ey, ex), face == null ? (d > 40 ? ang : u.rot) : face, dt, Math.min(1, Math.hypot(ex, ey) / 120));
+}
+function campStanceMove(C, u, k, foe, home, dt) {
+  const S = CAMP.stance, c = C.carrier, st = C.stance, aliens = campAliens(C), n = parseInt(String(u.id).split('-')[1], 10) || 0;
+  if (st === 'match') { // formation: a slot of the ring round the carrier, turning with it
+    const wing = campWing(C), i = Math.max(0, wing.indexOf(u)), a = c.rot + (i + 0.5) * 2 * Math.PI / Math.max(1, wing.length), fo = campNearest(aliens, u, k.range * 1.15);
+    const face = fo ? Math.atan2(fo.y - u.y, fo.x - u.x) : (Math.hypot(c.vx, c.vy) > 20 ? Math.atan2(c.vy, c.vx) : c.rot);
+    campStation(u, { x: c.x + Math.cos(a) * S.formation, y: c.y + Math.sin(a) * S.formation, vx: c.vx, vy: c.vy }, dt, face);
+    if (fo) campWingFire(C, u, k, fo, campDist(u, fo), face, true);
+    return;
+  }
+  if (st === 'hold') { // stay: brake hard, turn to what is in range and fire; come back when the carrier is out of the leash
+    if (campDist(u, c) > S.leash) return campSeek(u, c.x, c.y, dt);
+    const fo = campNearest(aliens, u, k.range + 40), keep = Math.pow(0.04, dt); u.vx *= keep; u.vy *= keep; u.x += u.vx * dt; u.y += u.vy * dt;
+    if (fo) { const face = Math.atan2(fo.y - u.y, fo.x - u.x); u.rot = campRot(u.rot, face, u.turn * dt * 2); campWingFire(C, u, k, fo, campDist(u, fo), face, true); }
+    return;
+  }
+  if (!foe) { if (home) campSeek(u, home.x + (home.vx || 0) * 0.2, home.y + (home.vy || 0) * 0.2, dt); return; } // orbit and keep with nothing to go for: as free
+  const dx = foe.x - u.x, dy = foe.y - u.y, d = Math.hypot(dx, dy), target = Math.atan2(dy, dx);
+  if (st === 'orbit') { // the station is the point of the circle round the target in the ship's own direction, moving round it: it settles on the circle and goes round, the nose on the target
+    const R = S.orbit + (foe.r || 0), dir = n % 2 ? 1 : -1, a = Math.atan2(-dy, -dx), w = dir * S.orbitSpeed * R;
+    campStation(u, { x: foe.x + Math.cos(a) * R, y: foe.y + Math.sin(a) * R, vx: (foe.vx || 0) - Math.sin(a) * w, vy: (foe.vy || 0) + Math.cos(a) * w }, dt, target);
+  } else { // keep: the station is the point at the stand-off range on the ship's own side of the target: farther off it comes in, closer it backs away
+    const R = S.stand * k.range + (foe.r || 0);
+    const w = Math.sin(C.t / 700 + n * 1.3) * S.weave;
+    campStation(u, { x: foe.x - Math.cos(target) * R, y: foe.y - Math.sin(target) * R, vx: (foe.vx || 0) - Math.sin(target) * w, vy: (foe.vy || 0) + Math.cos(target) * w }, dt, target);
+  }
+  campWingFire(C, u, k, foe, d, target, true);
 }
 
 // shots fly and hit: a step of a shot is tested against the circle it crosses, so a fast shot cannot skip a small ship
@@ -1066,7 +1139,7 @@ function campStory(level, when) {
   for (let n = 1; n <= 6; n++) { const key = 'camp.l' + level + '.' + when + '.' + n; if (Object.prototype.hasOwnProperty.call(UI_TEXT, key)) out.push(uiText(key)); }
   return out;
 }
-function campProgressNew() { return { level: 1, mission: 0, techs: [], ore: 0, bonus: { fighters: 0, escorts: 0 }, results: {} }; } // level and mission: the next one to fly; ore: carried into the next level; bonus: the extra ships the Earth refit bought for it; results: { '<level>.<mission>': { score, bonuses: [ids], t, hull, lost, tries } }, one for each mission flown (the best score is kept)
+function campProgressNew() { return { level: 1, mission: 0, techs: [], ore: 0, bonus: { fighters: 0, escorts: 0 }, results: {}, stance: 'free' }; } // level and mission: the next one to fly; ore: carried into the next level; bonus: the extra ships the Earth refit bought for it; results: { '<level>.<mission>': { score, bonuses: [ids], t, hull, lost, tries } }, one for each mission flown (the best score is kept)
 const campResultKey = (level, i) => level + '.' + ((i | 0) + 1);
 function campProgressLoad() {
   const P = campProgressNew();
@@ -1076,13 +1149,14 @@ function campProgressLoad() {
     if (Number.isInteger(raw.mission) && raw.mission >= 0 && raw.mission < 9) P.mission = raw.mission;
     if (Array.isArray(raw.techs)) raw.techs.forEach(t => { if (CAMP.tech[t] && P.techs.indexOf(t) < 0) P.techs.push(t); });
     if (Number.isFinite(raw.ore)) P.ore = Math.max(0, Math.min(CAMP.ore.cap, Math.floor(raw.ore)));
+    if (CAMP.stances.indexOf(raw.stance) >= 0) P.stance = raw.stance; // the wing's stance is the pilot's choice: it stays across missions and sessions
     if (raw.bonus && typeof raw.bonus === 'object') { const b = x => Number.isInteger(x) ? Math.max(0, Math.min(CAMP.refit.most, x)) : 0; P.bonus = { fighters: b(raw.bonus.fighters), escorts: b(raw.bonus.escorts) }; }
     if (raw.results && typeof raw.results === 'object') Object.keys(raw.results).slice(0, 40).forEach(k => { const r = raw.results[k]; if (/^[1-9]\.[1-9]$/.test(k) && r && Number.isFinite(r.score)) P.results[k] = { score: Math.max(0, Math.min(99999, Math.floor(r.score))), bonuses: Array.isArray(r.bonuses) ? r.bonuses.filter(x => typeof x === 'string').slice(0, 6).map(x => x.slice(0, 24)) : [], t: Math.max(0, r.t | 0), hull: Math.max(0, r.hull | 0), lost: Math.max(0, r.lost | 0), tries: Math.max(1, Math.min(99, r.tries | 0 || 1)) }; });
   }, 0);
   if (P.mission >= campMissions(P.level).length) P.mission = 0;
   return P;
 }
-function campProgressSave(P) { campTry(() => localStorage.setItem(CAMP.store, JSON.stringify({ level: P.level, mission: P.mission | 0, techs: P.techs, ore: P.ore | 0, bonus: P.bonus, results: P.results || {} })), 0); }
+function campProgressSave(P) { campTry(() => localStorage.setItem(CAMP.store, JSON.stringify({ level: P.level, mission: P.mission | 0, techs: P.techs, ore: P.ore | 0, bonus: P.bonus, results: P.results || {}, stance: campStanceId(P.stance) })), 0); }
 // a mission won: its result is kept (the best score, how many tries), and the mission to fly next moves on. Answers { levelDone }: true when it was the last mission of its level (the caller goes to the level's story and refit, then the next level)
 function campMissionDone(P, level, i, sc) {
   const k = campResultKey(level, i), old = P.results[k], res = { score: sc.score, bonuses: sc.bonuses.filter(b => b.ok).map(b => b.id), t: sc.t, hull: sc.hullLeft, lost: sc.shipsLost, tries: (old ? old.tries : 0) + 1 };

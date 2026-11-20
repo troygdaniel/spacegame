@@ -22,15 +22,22 @@
 //           fly: 'objective' is the autopilot to the goal (src/campnav.js) and not an order; label is the row's name on the panel, help its line on the H page and in Settings
 //   key 3 is RESERVED: a centre panel for a later card. It is bound to nothing now (and no digit from 4 to 9 is), and the panels replace the old direct digit keys of the Campaign.
 const CAMP_PANELS = {
+  pages: 1,                                // how many pages a panel with a second one shows: 1 until the panels are drawn with their second page (card space-game-campaign-stances); 2 turns the flip on (the arrows) and the stance rows with it
   delay: 250,                              // ms a panel waits before it is drawn: for a fast typist "1 then 3" never flashes it (the pick works whether or not the panel has been drawn)
   panels: [
     { key: '1', id: 'fleet', side: 'left', title: 'FLEET', rows: [
       { n: 1, id: 'launch', order: 'launch', label: 'Launch', help: 'Launch the wing' },
       { n: 2, id: 'attack', order: 'attack', label: 'Attack', help: 'Fighters attack the aliens' },
-      { n: 3, id: 'escort', order: 'escort', label: 'Escort', help: 'Escorts go to a convoy' },
+      { n: 3, id: 'escort', order: 'escort', label: 'Escort', help: 'Escorts go to a convoy' }, // the row to be called "Escort / match speed" when the panels are redrawn: that label does not fit the column of the panel as drawn today
       { n: 4, id: 'guard', order: 'guard', label: 'Guard', help: 'The wing guards the carrier' },
       { n: 5, id: 'recall', order: 'recall', label: 'Recall', help: 'The wing flies home' }
-    ] },
+    ], page2: { title: 'STANCES', rows: [ // the second page of the FLEET panel (the arrows flip it): how Attack and Guard move; the current one is marked
+      { n: 1, id: 'free', order: 'stance', arg: 'free', label: 'Free', help: 'The wing fights its own way' },
+      { n: 2, id: 'orbit', order: 'stance', arg: 'orbit', label: 'Orbit', help: 'Circle the target, firing' },
+      { n: 3, id: 'keep', order: 'stance', arg: 'keep distance', label: 'Keep distance', help: 'Stand off from the target' },
+      { n: 4, id: 'match', order: 'stance', arg: 'match speed', label: 'Match speed', help: 'Fly beside the carrier' },
+      { n: 5, id: 'hold', order: 'stance', arg: 'hold position', label: 'Hold position', help: 'Stay put, fire at what comes' }
+    ] } },
     { key: '2', id: 'ship', side: 'right', title: 'SHIP', rows: [
       { n: 1, id: 'mine', order: 'mine', label: 'Mine ore', help: 'The wing goes and mines ore' },
       { n: 2, id: 'recharge', order: 'recharge', label: 'Recharge shields', help: 'Recharge a shield (costs ore)' },
@@ -46,7 +53,7 @@ const CAMP_PANELS = {
 };
 // the rows the H page and Settings list for the panels: the panel's key then the row's digit, under the panel's heading, in the table's order
 function campPanelKeyRows() {
-  return CAMP_PANELS.panels.flatMap(p => p.rows.map(r => ({ k: [p.key, String(r.n)], t: p.title.charAt(0) + p.title.slice(1).toLowerCase() + ': ' + r.help.charAt(0).toLowerCase() + r.help.slice(1), sub: 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL' })));
+  return CAMP_PANELS.panels.flatMap(p => p.rows.map(r => ({ k: [p.key, String(r.n)], t: p.title.charAt(0) + p.title.slice(1).toLowerCase() + ': ' + r.help.charAt(0).toLowerCase() + r.help.slice(1), sub: 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL' }))).concat(CAMP_PANELS.pages > 1 ? CAMP_PANELS.panels.filter(p => p.page2).flatMap(p => p.page2.rows.map(r => ({ k: [p.key, '\u2192', String(r.n)], t: 'Stance: ' + r.help.charAt(0).toLowerCase() + r.help.slice(1), sub: 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL, PAGE 2 (ARROWS FLIP)' }))) : []); // the stances (page 2) are listed once the panels show them
 }
 
 const CONTROLS = [
