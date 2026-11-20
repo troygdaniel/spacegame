@@ -79,8 +79,8 @@ class Campaign extends Phaser.Scene {
     this.say(lines);
   }
   showWon() {
-    this.mode = 'won'; const lines = campStory(this.level, 'after');
-    this.showCard(uiText('camp.ui.won', { n: this.level }), lines, uiText('camp.ui.next')); this.say(lines);
+    this.mode = 'won'; const lines = campStory(this.level, 'after'), res = typeof campWinLine === 'function' ? campWinLine(this.camp) : ''; // src/campwin.js: how it went, for reading
+    this.showCard(uiText('camp.ui.won', { n: this.level }), res ? lines.concat([res]) : lines, uiText('camp.ui.next')); this.say(lines);
   }
   showPick() {
     this.mode = 'pick'; this.choices = campTechChoices(this.level);

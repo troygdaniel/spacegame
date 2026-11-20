@@ -349,6 +349,8 @@ const UI_TEXT = {
   'camp.l1.before.2': 'You have the Lunar carrier, pilot. Launch the wing, cover the convoys, and kill their mothership.',
   'camp.l1.after.1': 'The mothership is gone. Their wreck holds working technology.',
   'camp.l1.after.2': 'Our engineers can build one piece of it. Choose.',
+  'camp.win.result': 'Won in {time}. Carrier hull {hull} of {max}, {lost} of your ships lost.',
+  'camp.win.resultconv': 'Won in {time}. Carrier hull {hull} of {max}, {delivered} of {convoys} convoys delivered, {lost} of your ships lost.',
   'camp.l2.before.1': 'The warp drive works. The nearest star is Alpha Centauri, four light years out.',
   'camp.l2.before.2': 'Something old waits on Proxima b. Gather what we need, and find it before they do.',
   'camp.l2.after.1': 'It was a machine left by a race older than the aliens.',
