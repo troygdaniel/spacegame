@@ -67,7 +67,7 @@ const tableRows = f => read(f).split('\n').map(l => /^\|\s*([^|]+?)\s*\|\s*(.*?)
   const mine = rows.filter(([k]) => OWN.test(k) && !STORY.test(k));
   const bad = mine.filter(([k, t]) => words(t) > (EXTRA[k] || MAX)).map(([k, t]) => k + ' ' + words(t) + ': ' + t);
   check(`C  every spoken Campaign line and the two comms toasts is ${MAX} words or fewer (${mine.length} rows)`, mine.length > 40 && bad.length === 0, bad.join(' | '));
-  check('C  the story lines are untouched by this card (camp.l1..l3 before and after keep their own rows)', rows.filter(([k]) => STORY.test(k)).length === 12);
+  check('C  the story lines are not this card\'s (camp.l1..l3 before and after keep their own rows: 14 since the belt gave level 1 a third line before and after, card space-game-campaign-belt, which keeps them curt itself)', rows.filter(([k]) => STORY.test(k)).length === 14);
 }
 
 // ---- D: the computer ----
