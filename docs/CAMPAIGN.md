@@ -79,6 +79,26 @@ Levels 1, 2 and 3 are rows of the same table and reuse every piece. The kinds th
 
 These numbers are those of the Earth defence level (`CAMP.levels.home`), which was level 1 until the belt. Troy lost level 1 twice at wave 3, both times because Earth's shield ran out, with about seven small ships lost each time. A player who launches, escorts, attacks and guards but leaves the carrier at the Moon now wins: Earth's shield is 600 (was 300) and mends 3 a second after 6 seconds without a hit (a lull between waves heals it, a siege does not); wave 3 is two raiders and a gunship (was three and one); the mothership has 700 hull (was 900), shoots for 8 (was 12), holds 1,300 px from Earth (was 1,600, out of reach of anything at the Moon) and launches a raider every 12 s up to 3 (was 8 s, 6). `tests/campaign.mjs` K pins it: those two plain players win, nobody wins by doing nothing, and the same players lose with the old numbers.
 
+## Ship systems: power to weapons, shields and engines (card `space-game-campaign-systems`; Troy, 20 Nov 2026: "manage my ship's resources and systems, energy, shields, engine, like X-Wing")
+*Design lines, written before the code. Keep it light.* The carrier has **three power pools**, WEAPONS, SHIELDS and ENGINES, and a **fixed budget of 6 pips** to share between them, 0 to 4 in each. The default is **2 / 2 / 2 and it gives today's numbers exactly** (every effect below is a multiplier of 1 at 2 pips, so the game plays as before until the player moves a pip; the bot, `tools/campaign-bot.mjs`, plays at 2 / 2 / 2 and must still win). Everything is one table, `CAMP.power` in `src/campaign.js`, indexed by pips 0 to 4:
+| pips | 0 | 1 | **2** | 3 | 4 |
+|---|---|---|---|---|---|
+| WEAPONS: the turrets' interval (x `pdDelay` 700 ms) | 1.6 | 1.3 | **1** | 0.8 | 0.65 |
+| WEAPONS: the missile reload (x 15 s) | 1.6 | 1.3 | **1** | 0.75 | 0.55 |
+| SHIELDS: the shield cap (x 150) | 0.5 | 0.75 | **1** | 1.25 | 1.5 |
+| SHIELDS: regeneration, points a second (after 3 s with no hit; today there is none) | 0 | 0 | **0** | 3 | 6 |
+| ENGINES: top speed, and the Fast burn with it | 0.75 | 0.88 | **1** | 1.12 | 1.25 |
+| ENGINES: thrust | 0.7 | 0.85 | **1** | 1.15 | 1.3 |
+| ENGINES: turn | 0.8 | 0.9 | **1** | 1.1 | 1.2 |
+| ENGINES: the warp blink's recharge (x 20 s) | 1.5 | 1.25 | **1** | 0.8 | 0.6 |
+- **Weak, never dead:** zero pips is the first column: the turrets fire at 5 shots in 8, the shield is half and does not mend, the carrier crawls at three quarters. Nothing switches off.
+- **The budget rule** (`campPowerShift`): a pip moves, the total stays 6. "Power to shields" takes a pip from the system that has the most (a tie: weapons, then shields, then engines) unless you name one; a system at 4 refuses ("at full power"), and there is nothing to take when the others are at 0. **Balance** is back to 2 / 2 / 2 at once.
+- **Emergency shields:** all four pips to shields (weapons 1, engines 1) for 10 seconds, then back to what it was; ready again 40 seconds after it started. While it runs the pips are locked ("emergency shields hold the power"). It does not refill the shield (ore does): it is the cap, and 6 points a second of regeneration, for ten seconds.
+- **Why it matters:** shields up before a fight (a bigger shield that mends), engines up for the run to an outpost or a retreat, weapons up against the mothership (the missiles come back in 8 seconds, the turrets rattle faster). At 2 / 2 / 2 nothing changes.
+- **Where it shows:** three small pip bars under the gauges, W S E, the pips lit (HUD); the **SYSTEMS** panel on **C**, a collapsed tab like Q FLEET and E SHIP (7-GEN's panels-ui; rows 1 Weapons +, 2 Shields +, 3 Engines +, 4 Balance, 5 Emergency shields, each with its live state); the strip and the voice ("power to shields", "balance power", "emergency shields"); the ship's computer and the wing's radio say a short line when the shields or the engines run low. The setting is kept in the Campaign's save and is how the next level starts (a level start, not a battle: the emergency never carries over).
+- **Not in this card:** power for the wing, a per-system heat or damage, a power that costs ore, new keys beyond C.
+- **Pinned by** `tests/campsystems.mjs` (plain Node): the table, the default equal to the numbers of before (a battle replayed, bit for bit), each effect, the budget rule, the emergency and its cooldown, the save.
+
 ## Ore: mine it, spend it (card `space-game-campaign-resources`, Troy: "mine resources to recharge my shields and build new ships")
 
 - **Where ore is.** Asteroid rocks (fields of them, level data `rocks`; each has 100 hit points and 20 ore) and the wrecks of dead aliens (a raider 4, a drone 6, a gunship 12, a tower 20, the mothership 40; a wreck goes after 30 s). A rock is cut by a laser (below) and breaks into a chunk of ore; a chunk, or a wreck's ore, is taken by any ship of yours that flies over it, into the one ore store of the carrier (200 at most). The ore store is shown on the HUD.
