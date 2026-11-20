@@ -4,7 +4,7 @@
 // (tests/campanels.mjs runs it in Node); src/campanelsdraw.js draws the panels and src/campaignscene.js gives it the keys and the clicks.
 //   campPanelDigit(code)             the digit of a key code ('Digit3' -> 3, 'Numpad3' -> 3), else null
 //   campPanelNew()                   the state the scene keeps: { open: '' or a panel id, at: the clock when it opened }
-//   campPanelKey(P, C, code, now)    one key: { used, opened, closed, ran, ok, say, row }. A digit opens a panel, or with one open picks its row (and closes it); Esc closes it; any other key closes it and goes on being itself
+//   campPanelKey(P, C, code, now, shift)    one key (shift: Shift+5 on the SHIP panel flies to the objective FAST, which needs the wing aboard: src/campnav.js campNavFly): { used, opened, closed, ran, ok, say, row }. A digit opens a panel, or with one open picks its row (and closes it); Esc closes it; any other key closes it and goes on being itself
 //   campPanelShown(P, now)           is the panel to be drawn? only CAMP_PANELS.delay ms after it opened, so 1 then 3 typed quickly never flashes it
 //   campPanelRows(C, id, page)       the rows of a panel (its page 0, or 1: the FLEET panel's stances) with their live state: [{ n, id, label, ok, state, marked }] (state: what it will do, or why it cannot, in a few words; marked: the stance in force)
 //   campPanelPages(id)               how many pages the panel shows: 2 for FLEET once CAMP_PANELS.pages says so (the arrows flip them while it is open), else 1
@@ -21,7 +21,7 @@ const campPanelCase = t => t.charAt(0) + t.slice(1).toLowerCase();
 const campPanelKeyLine = () => CAMP_PANELS.panels.map(p => p.key + ' ' + campPanelCase(p.title)).join('   ');
 const campKeyLine = () => uiText('camp.ui.keys', { panels: campPanelKeyLine() });
 
-function campPanelKey(P, C, code, now) {
+function campPanelKey(P, C, code, now, shift) {
   const d = campPanelDigit(code), res = { used: false, opened: '', closed: false, ran: false, ok: false, say: '', row: '' };
   if (code === 'Escape' && P.open) { P.open = ''; res.used = true; res.closed = true; return res; }
   if (P.open && (code === 'ArrowLeft' || code === 'ArrowRight')) { // the arrows flip the pages of a panel that has more than one (FLEET: the orders, the stances); with one page they are an ordinary key
@@ -32,7 +32,7 @@ function campPanelKey(P, C, code, now) {
   if (P.open) {
     const def = campPanelDef(P.open), row = def && campPanelPageRows(def, campPanelPages(P.open) > 1 ? P.page | 0 : 0).find(r => r.n === d);
     if (!row) return res; // not a row of this panel (0, 6 to 9): nothing happens and the panel stays
-    const r = campPanelRun(C, row, 'key'); P.open = ''; res.closed = true; res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = row.id; return res;
+    const r = campPanelRun(C, row, 'key', shift); P.open = ''; res.closed = true; res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = row.id; return res;
   }
   const def = CAMP_PANELS.panels.find(p => p.key === String(d));
   if (def) { P.open = def.id; P.at = now; P.page = 0; res.opened = def.id; } // key 3 has no panel yet (reserved), and nor has a digit from 4 to 9: nothing
@@ -41,9 +41,9 @@ function campPanelKey(P, C, code, now) {
 const campPanelShown = (P, now) => !!P.open && now - P.at >= CAMP_PANELS.delay;
 
 // do a row: the order with the row's words, so the keys, the strip and the voice are one set of rules; fly: the autopilot to the objective
-function campPanelRun(C, row, how) {
+function campPanelRun(C, row, how, fast) {
   if (!C || !row) return { ok: false, say: '' };
-  if (row.fly === 'objective') { const r = campNavCheck(C, 'the objective'); if (r.ok) campNavDo(C, r); return r; }
+  if (row.fly === 'objective') { const r = campNavCheck(C, (fast && row.fast ? 'fast ' : '') + 'the objective'); if (r.ok) campNavDo(C, r, how); return r; } // Shift: a burn (a row that has `fast` in the table)
   return campOrder(C, row.order, row.arg || '', how || 'key');
 }
 

@@ -31,7 +31,7 @@ g.run(`
 // ---------- A. the Campaign: the burn ----------
 console.log('A. the Campaign: Fast is a burn while the autopilot flies');
 {
-  check('the table has it: CAMP.nav.fast is 2 (the drive times 2 while the autopilot flies fast)', J('CAMP.nav.fast') === 2);
+  check('the table has it: CAMP.nav.fast is 2.2 (the drive times 2.2 while the autopilot flies fast: above a fighter\'s speed, card space-game-campaign-fast-board)', J('CAMP.nav.fast') === 2.2);
   g.run(`var C0 = __quiet(campNew(1, [], { seed: 3 })); var row0 = campNavRows(C0).find(r => r.id === 'place:mars');`);
   g.run(`campNavGo(C0, row0, false);`);
   check('regular: the autopilot as it always was, no burn, and the line is the old one', J('C0.nav.fast') === false && J(`C0.events.some(e => e.key === 'camp.nav.go')`));
@@ -39,7 +39,7 @@ console.log('A. the Campaign: Fast is a burn while the autopilot flies');
   check('fast: C.nav.fast is set and the line says full burn', J('C0.nav.fast') === true && J(`C0.events.some(e => e.key === 'camp.nav.gofast')`) && /full burn/.test(J(`uiText('camp.nav.gofast', { name: 'Mars' })`)));
   const reg = J('__fly(false)'), fast = J('__fly(true)');
   check('regular speed never passes 210 px/s (the carrier\'s top speed) and arrives', reg.top <= 211 && reg.t > 0 && !reg.left, JSON.stringify(reg));
-  check('fast passes 210 (a burn) and never 420, and arrives', fast.top > 300 && fast.top <= 421 && fast.t > 0 && !fast.left, JSON.stringify(fast));
+  check('fast passes 210 (a burn) and never 462, and arrives', fast.top > 300 && fast.top <= 463 && fast.t > 0 && !fast.left, JSON.stringify(fast));
   check('fast is about twice as quick over the 4,100 px to Mars: under 65 percent of the regular time', fast.t < reg.t * 0.65, fast.t + ' s against ' + reg.t + ' s');
   check('both stop outside Mars, in the same place within a few px, slowly (the burn brakes in time: it does not fly through it)', Math.abs(fast.d - reg.d) < 40 && fast.d > 100 && fast.speed <= 80 && reg.speed <= 80, JSON.stringify([reg.d, fast.d, reg.speed, fast.speed]));
   g.run(`var C1 = __quiet(campNew(1, [], { seed: 3 })); campNavGo(C1, campNavRows(C1).find(r => r.id === 'place:mars'), true); __sim(C1, 6);`);
@@ -59,7 +59,7 @@ g.run(`
   window.__calls = []; window.__mk = path => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => 0 : k === 'then' ? undefined : k === 'visible' ? true : __mk(path + '.' + String(k))), apply: (t, self, args) => { __calls.push([path, args]); return __mk(path + '()'); } });
   window.__toastsB = []; toast = (s, m) => { __toastsB.push(m); };
   window.__scx = level => { const C = campNew(level, [], { seed: 3, god: true }); C.ships = C.ships.filter(u => u.team !== 'alien' || u.kind === 'tower');
-    const s = { camp: C, mode: 'play', add: { rectangle: () => __mk('r'), graphics: () => __mk('g'), text: (x, y, t, st) => { const o = { x, y, t, visible: true, rowId: '', width: 190, height: 24, alpha: 1, setText(v) { o.t = v; return o; }, setColor() { return o; }, setAlpha(a) { o.alpha = a; return o; }, setVisible(v) { o.visible = v; return o; }, setPosition(a, b) { o.x = a; o.y = b; return o; }, setOrigin() { return o; }, setScrollFactor() { return o; }, setDepth() { return o; }, destroy() { o.gone = true; } }; return o; } }, make: __mk('make'), input: { handlers: [], on(e, f) { this.handlers.push([e, f]); }, off(e, f) { this.handlers = this.handlers.filter(h => h[1] !== f); } } };
+    const s = { camp: C, mode: 'play', add: { rectangle: () => __mk('r'), graphics: () => __mk('g'), text: (x, y, t, st) => { const o = { x, y, t, visible: true, rowId: '', width: 190, height: 24, alpha: 1, setText(v) { o.t = v; return o; }, setBackgroundColor(c) { o.bg = c; return o; }, setColor() { return o; }, setAlpha(a) { o.alpha = a; return o; }, setVisible(v) { o.visible = v; return o; }, setPosition(a, b) { o.x = a; o.y = b; return o; }, setOrigin() { return o; }, setScrollFactor() { return o; }, setDepth() { return o; }, destroy() { o.gone = true; } }; return o; } }, make: __mk('make'), input: { handlers: [], on(e, f) { this.handlers.push([e, f]); }, off(e, f) { this.handlers = this.handlers.filter(h => h[1] !== f); } } };
     return s; };
 `);
 {
@@ -73,7 +73,16 @@ g.run(`
   check('both sit inside the map\'s frame, one under the other, beside the mark', J(`(() => { const F = CAMPMAP.frame, a = M.mp.btnFly, b = M.mp.btnFast; return [a, b].every(t => t.x >= F.x && t.x + t.width <= F.x + F.w + 1 && t.y >= F.y && t.y + t.height <= F.y + F.h) && b.y > a.y && Math.abs(a.x - b.x) < 1; })()`));
   check('fast says a shorter time than fly', (() => { const num = t => { const m = /(\d+):(\d+)$|(\d+) s$/.exec(t); return m[1] ? +m[1] * 60 + +m[2] : +m[3]; }; return num(s) < num(f); })(), f + ' | ' + s);
   g.run(`campMapClick(M, M.mp.btnFast.x + 10, M.mp.btnFast.y + 5);`);
-  check('a click on Fast flies there fast (a burn), the buttons go and the column says Flying', J('M.camp.nav.id') === 'place:sun' && J('M.camp.nav.fast') === true && J('M.mp.setId') === '' && (g.run('campMapPaint(M, 1200)'), J('M.mp.btnFly.visible') === false && /^Flying: Alpha Centauri/.test(J('M.mp.dest.t'))));
+  check('a click on Fast flies there fast (a burn); the column says Flying, and the place stays set with its buttons (they are live for the whole flight), Fast marked ON and Fly not', J('M.camp.nav.id') === 'place:sun' && J('M.camp.nav.fast') === true && J('M.mp.setId') === 'place:sun' && (g.run('campMapPaint(M, 1200)'), J('M.mp.btnFly.visible') === true && J('M.mp.btnFast.visible') === true && /  ON$/.test(J('M.mp.btnFast.t')) && !/ON$/.test(J('M.mp.btnFly.t')) && /^Flying: Alpha Centauri/.test(J('M.mp.dest.t'))), J('M.mp.btnFast.t') + ' | ' + J('M.mp.btnFly.t'));
+  g.run(`window.__n0 = M.camp.nav; window.__since = M.camp.nav.since; campMapKey(M, 'Enter', false); campMapPaint(M, 1300);`);
+  check('mid-flight Enter (Fly) on the same place: the speed drops to regular, the same trip is kept (same target, same start), Fly marked ON and Fast not', J('M.camp.nav === __n0') && J('M.camp.nav.id') === 'place:sun' && J('M.camp.nav.fast') === false && J('M.camp.nav.since === __since') && /  ON$/.test(J('M.mp.btnFly.t')) && !/ON$/.test(J('M.mp.btnFast.t')), J('M.mp.btnFly.t') + ' | ' + J('M.mp.btnFast.t'));
+  g.run(`campMapKey(M, 'Enter', true); campMapPaint(M, 1400);`);
+  check('and Shift+Enter (Fast) back: a burn again, same trip, Fast marked', J('M.camp.nav === __n0') && J('M.camp.nav.fast') === true && /  ON$/.test(J('M.mp.btnFast.t')) && J('M.mp.setId') === 'place:sun');
+  g.run(`campMapClick(M, M.mp.btnFly.x + 10, M.mp.btnFly.y + 5); campMapPaint(M, 1450); window.__a = M.camp.nav.fast; campMapClick(M, M.mp.btnFast.x + 10, M.mp.btnFast.y + 5); campMapPaint(M, 1500);`);
+  check('the buttons switch it too (a click on Fly, then on Fast), whenever, and each is marked in turn', J('__a') === false && J('M.camp.nav.fast') === true && J('M.camp.nav === __n0'));
+  g.run(`M.camp.carrier.x = M.camp.nav.x; M.camp.carrier.y = M.camp.nav.y - 40; M.camp.carrier.vx = M.camp.carrier.vy = 0; for (let i = 0; i < 60; i++) campStep(M.camp, 1 / 30); campMapPaint(M, 1600);`);
+  check('when the trip is over (arrived) the place is no longer set and the buttons go', J('M.camp.nav') === null && J('M.mp.setId') === '' && J('M.mp.btnFly.visible') === false && J('M.mp.btnFast.visible') === false, J('M.mp.setId'));
+  g.run(`M.camp.carrier.x = M.camp.carrier.y = 0; M.camp.carrier.vx = M.camp.carrier.vy = 0; M.mp.dirty = true; campMapPaint(M, 1700);`); // back to where the next checks start from
   g.run(`campMapKey(M, 'KeyX'); M.mp.dirty = true; campMapPaint(M, 1500); campMapClick(M, __pt.x + 6, __pt.y); campMapPaint(M, 1800); campMapClick(M, M.mp.btnFly.x + 10, M.mp.btnFly.y + 5);`);
   check('a click on Fly flies there at regular speed', J('M.camp.nav.id') === 'place:sun' && J('M.camp.nav.fast') === false);
   g.run(`campMapKey(M, 'KeyX'); M.mp.dirty = true; campMapPaint(M, 2100); campMapClick(M, __pt.x + 6, __pt.y); campMapClick(M, __pt.x + 6, __pt.y);`);
@@ -132,7 +141,7 @@ g.run(`
   window.__fo = () => { const st = sysBody('station'), sp = __sp(st.x + 3000, st.y);
     const ov = { from: 'Space', mode: 'map', MX: 100, MY: 100, MS: 560, view: { x: st.x - 500, y: st.y - 500, size: 1000 }, scene: { get: k => sp }, closed: 0, close() { this.closed++; }, go: Overlay.prototype.go, flyAt: Overlay.prototype.flyAt, destFrame: Overlay.prototype.destFrame,
       tPick: { t: '', setText(v) { this.t = v; return this; } } };
-    const btn = () => ({ t: '', visible: false, alpha: 1, x: 0, y: 0, width: 220, height: 24, setText(v) { this.t = v; return this; }, setVisible(v) { this.visible = v; return this; }, setPosition(a, b) { this.x = a; this.y = b; return this; }, setAlpha(a) { this.alpha = a; return this; } });
+    const btn = () => ({ t: '', visible: false, alpha: 1, x: 0, y: 0, width: 220, height: 24, setText(v) { this.t = v; return this; }, setBackgroundColor(c) { this.bg = c; return this; }, setVisible(v) { this.visible = v; return this; }, setPosition(a, b) { this.x = a; this.y = b; return this; }, setAlpha(a) { this.alpha = a; return this; } });
     ov.btnFly = btn(); ov.btnFast = btn(); ov.sp = sp; ov.st = st; return ov; };
   window.__calls2 = []; autopilotGo = function () { __calls2.push(Array.prototype.slice.call(arguments, 1)); return true; };
 `);

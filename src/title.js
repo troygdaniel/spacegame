@@ -69,7 +69,7 @@ class Title extends Phaser.Scene {
       hudPanel(g, left, y, w, h, 10, 0.88, c.color); g.setAlpha(0.85).setDepth(20);
       cap.setPosition(left + 18 + cap.kw / 2, y + 22).setDepth(21);
       this.add.text(left + 18 + cap.kw + 12, y + 22, uiText(c.name), mono(c.css)).setOrigin(0, 0.5).setDepth(21);
-      this.add.text(left + 18, y + 48, uiText(c.sub), uiFont(13, '#9fbdd1', { wordWrap: { width: w - 36 }, lineSpacing: 3 })).setOrigin(0, 0).setDepth(21);
+      this.add.text(left + 18, y + 48, uiText(c.sub + (c.go === 'campaign' && typeof campProgressLoad === 'function' && campProgressLoad().revealed ? '.r' : '')), uiFont(13, '#9fbdd1', { wordWrap: { width: w - 36 }, lineSpacing: 3 })).setOrigin(0, 0).setDepth(21);
       const zone = this.add.zone(left + w / 2, y + h / 2, w, h).setInteractive({ useHandCursor: true }).setDepth(22);
       zone.on('pointerdown', () => { if (c.go === 'campaign') campaignStart(this); else this.startLongHaul(); });
       if (c.go === 'campaign' && typeof campKeysToggle === 'function') { // H: the Campaign's page of every key, from this panel too (src/campkeys.js; card space-game-campaign-keys-help)

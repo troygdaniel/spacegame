@@ -5,6 +5,7 @@
 //   G2. the beam and mining hum
 //   G3. the missiles
 //   G4. the explosions and the hits
+//   G5. the sound bug: the turrets and the wing's guns can be heard (levels, the wing's pew, every shot has an event)
 //   ALL. the rules every one of them keeps: no new nodes, volume and mute, the effects volume, a share of the reverb, a name in the table
 // Run: node tests/campsounds.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -66,7 +67,8 @@ console.log('G1. the turrets: the pew');
 {
   const p = Array.from({ length: 8 }, (_, i) => R('turret', i));
   check('a pew is short: under 100 ms from the first thing to the last, so eight turrets 88 ms apart do not smear', p.every(x => x.secs <= 0.1 && x.secs > 0.03), p.map(x => Math.round(x.secs * 1000)).join());
-  check('and not louder than the laser shot of before (its loudest points added: ' + LASER.peak.toFixed(3) + ')', p.every(x => x.peak <= LASER.peak + 1e-9 && x.peak > 0.02), p[0].peak.toFixed(3));
+  const KILL1 = R('boom').peak;
+  check('and heard: 3.2 times as loud as it is written (0.054 added up, 0.173 now), above the laser of Long Haul (' + LASER.peak.toFixed(3) + ') and well under a kill\'s boom (' + KILL1.toFixed(2) + '): measured at the master output in Chrome the eight turrets were 5 dB under that laser and 24 dB under a kill (tests/campsound-probe.mjs)', p.every(x => x.peak > LASER.peak && x.peak < KILL1 * 0.5 && Math.abs(x.peak / 3.2 - 0.054) < 0.004), p[0].peak.toFixed(3));
   check('it is a bolt: a square tone that falls to under a third of its pitch, a sawtooth zip over it, and a click of noise', p[0].freqs.some(f => f.type === 'square' && f.f1 < f.f0 * 0.35) && p[0].freqs.some(f => f.type === 'sawtooth') && p[0].noise.some(f => f.type === 'highpass'), JSON.stringify(p[0].freqs));
   const base = p.map(x => x.freqs.find(f => f.type === 'square').f0);
   check('each turret has its own pitch: eight numbers give four steps of 150 Hz and the back four a little higher, all between 1.4 and 2.2 kHz', new Set(base.map(f => Math.round(f))).size === 8 && Math.min(...base) >= 1400 && Math.max(...base) <= 2200 && base[1] - base[0] === 150 && base[4] > base[0], base.map(Math.round).join());
@@ -127,9 +129,9 @@ console.log('G2. the beam and mining hum');
   check('and the filter opens with it (500 Hz to nearly 1.9 kHz)', Math.abs(J('__b.flt.frequency.ev[0][1]') - 500) < 1 && J('__b.flt.frequency.ev[__b.flt.frequency.ev.length - 1][1]') > 1800);
   check('it is retuned about 16 times a second, not every frame (a retune every 60 ms: at most 17 a second)', ev.length <= 17 * (200 * 0.016) + 2, ev.length);
   const lvl = J('__b.out.gain.ev.filter(e => e[0] === "target").map(e => e[1])');
-  check('it is quiet: its loudest level is 0.02, under a third of a laser shot, and it follows the level it is told (0.55 gives 0.011)', Math.max(...lvl) <= 0.0201 && Math.max(...lvl) >= 0.0199 && (g.run('__ac.currentTime += 1; beamHum(0.55, 1)'), Math.abs(J('__b.out.gain.ev[__b.out.gain.ev.length - 1][1]') - 0.011) < 1e-6));
+  check('it is heard but not loud: its loudest level is 0.04 (it was 0.02, and measured -41 dBFS: too quiet), about half a laser shot, and it follows the level it is told (0.55 gives 0.022)', Math.max(...lvl) <= 0.0401 && Math.max(...lvl) >= 0.0399 && (g.run('__ac.currentTime += 1; beamHum(0.55, 1)'), Math.abs(J('__b.out.gain.ev[__b.out.gain.ev.length - 1][1]') - 0.022) < 1e-6));
   g.run('FX.vol = 0.5; __ac.currentTime += 1; beamHum(1, 1)');
-  check('the effects volume of Settings > Sound follows it while it hums (half the volume, half the level)', Math.abs(J('__b.out.gain.ev[__b.out.gain.ev.length - 1][1]') - 0.01) < 1e-6);
+  check('the effects volume of Settings > Sound follows it while it hums (half the volume, half the level)', Math.abs(J('__b.out.gain.ev[__b.out.gain.ev.length - 1][1]') - 0.02) < 1e-6);
   g.run('FX.vol = 1; beamHum(0, 0)');
   check('told zero it fades away (a target of silence) and lets the loop go: no hum stays', J('AUD.beam') === null && J('__b.out.gain.ev[__b.out.gain.ev.length - 1][1]') === 0);
   g.run(`__reset(true, 1); beamHum(1, 0)`);
@@ -201,8 +203,56 @@ console.log('G4. the explosions and the hits');
   `);
   check('the scene plays them: a small kill and a big kill their own blast (a second kill within 45 ms is not played again), a hit on the carrier\'s hull the clank (once in 90 ms; a hit that did not get through plays none), a shot on the shield the zap, a shot on Earth the thump (once in 250 ms); a hit on an alien plays nothing (the turret\'s pew is its sound)', J('__plays').join() === 'blastSmall,blastBig,hullHit,shieldHit,shieldHit,earthHit,earthHit', J('__plays').join());
   const sc = src('src/campaignscene.js');
-  check('the game\'s boom is no longer the Campaign\'s kill sound, and the gaps are one table in the scene (CAMP_SND)', !/e\.type === 'boom'\) \{[^}]*sfx\('boom'\)/.test(sc) && /const CAMP_SND = \{ blast: 45, hull: 90, shield: 90, earth: 250 \}/.test(sc));
+  check('the game\'s boom is no longer the Campaign\'s kill sound, and the gaps are one table in the scene (CAMP_SND)', !/e\.type === 'boom'\) \{[^}]*sfx\('boom'\)/.test(sc) && /const CAMP_SND = \{ blast: 45, hull: 90, shield: 90, earth: 250, wing: 55, far: 1600, min: 0\.1 \}/.test(sc));
   check('their reverb: the big blast 0.4 (under the dock\'s 0.45: the kill, the jump, the arrival and the dock keep the longest tails), the small one 0.3, the Earth thump 0.3, the zap 0.15, the clank 0.1', J('SOUND.send.blastBig') === 0.4 && J('SOUND.send.blastSmall') === 0.3 && J('SOUND.send.earthHit') === 0.3 && J('SOUND.send.shieldHit') === 0.15 && J('SOUND.send.hullHit') === 0.1);
+}
+
+// ---------- G5. the sound bug: Troy could not hear the turrets or his ships' guns ----------
+console.log('G5. the turrets and the wing can be heard (card space-game-campaign-turret-sound-bug)');
+{
+  // measured in Chrome at the master output (tests/campsound-probe.mjs), music off (the Campaign has no music: only the Space scene has a mood):
+  //   the eight turrets' loudest 46 ms -40.8 dBFS RMS / -27.8 peak: 5 dB under Long Haul's laser, 24 under a kill; the wing's guns (65 shots in 6 s): no sound at all; the beam hum -41.4 / -35
+  g.run(`__reset(false, 1)`);
+  check('the level table: one line a sound group in SOUND.level, 1 for a sound not in it, the turrets 3.2 and the wing\'s gun 3.2', J('SOUND.level.turret') === 3.2 && J('SOUND.level.wingShot') === 3.2 && J(`soundLevel('boom')`) === 1 && J(`soundLevel('nope')`) === 1 && /level: \{ +\/\/ how loud each sound is against the rest, one line a group/.test(src('src/audio.js')));
+  g.run('window.__lv0 = SOUND.level.turret; SOUND.level.turret = 1'); const flat = R('turret', 3).peak; g.run('SOUND.level.turret = __lv0');
+  check('the level multiplies into every tone and burst of the sound: with it at 1 the pew adds up to 0.054, at 3.2 to 0.173', Math.abs(flat - 0.054) < 0.002 && Math.abs(R('turret', 3).peak / flat - 3.2) < 0.01, [flat.toFixed(3), R('turret', 3).peak.toFixed(3)].join());
+  check('and it is only the sound\'s own: another sound called inside one keeps its own level (the interdiction plays the siren at the siren\'s), and nothing is left set afterwards', (() => { g.run('__reset(false, 1); sfx("interdict")'); return J('AUD.lvl') === null || J('AUD.lvl === undefined'); })());
+  check('the Effects volume still scales the level (half the volume, half the pew): the level is on top of it, not instead', (() => { const full = R('turret', 3).peak, half = J(`__render('turret', 3, () => { FX.vol = 0.5; }).peak`); return Math.abs(half / full - 0.5) < 0.02; })());
+  // the wing's gun
+  const W1 = R('wingShot', 1), W5 = R('wingShot', 0.5), W0 = R('wingShot', 0), T = R('turret', 3);
+  check('the wing\'s gun is a quieter pew: under 0.7 of the turret\'s up close (about 6 dB, and the farther the softer), and not silent', W1.peak < T.peak * 0.7 && W1.peak > T.peak * 0.4 && W1.peak > 0.03, [W1.peak.toFixed(3), T.peak.toFixed(3)].join());
+  check('it is softer the farther away it is: half way is half the level, and out of reach is silent', Math.abs(W5.peak / W1.peak - 0.5) < 0.05 && W0.peak === 0, [W5.peak.toFixed(3), W0.peak].join());
+  check('it is a bolt, short and soft: a triangle tone falling 1 kHz to 350 Hz, a thin sine zip over it, a faint tick, all under 70 ms, no new node', W1.parts.some(p => p.kind === 'tone' && p.type === 'triangle' && p.f1 < p.f0 / 2.5 && p.f0 > 900 && p.f0 < 1100) && W1.parts.some(p => p.kind === 'tone' && p.type === 'sine') && W1.parts.some(p => p.type === 'highpass') && W1.secs <= 0.07 && W1.nodes === 0, JSON.stringify(W1.parts.map(p => [p.type, Math.round(p.f0)])));
+  check('and it is not the turret\'s: lower (triangle where the turret has a square), so the two can be told apart', !T.parts.some(p => p.type === 'triangle') && T.parts.some(p => p.type === 'square') && Math.min(...W1.parts.filter(p => p.kind === 'tone').map(p => p.f0)) >= 900);
+  // the events: every shot of ours says so, and every one of them has a sound
+  g.run(`
+    window.__fight = (secs) => { window.C = campNew(1, [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); C.motherSpawn = 1e12; C.ships.forEach(u => { if (u.team === 'alien') u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0);
+      const c = C.carrier, u = campSpawn(C, 'gunship', c.x + 350, c.y); u.vmax = 0; u.accel = 0; u.nextShot = 1e12; u.hp = u.maxHp = 1e7;
+      const cnt = { pd: 0, wing: 0, ev: {} }, b0 = campBullet; campBullet = function (C2, from, rot, speed, dmg, life, team, ahead, extra) { if (team === 'earth') { if (extra && extra.pd) cnt.pd++; else cnt.wing++; } return b0.apply(this, arguments); };
+      campOrder(C, 'launch'); C.input.fire = true; const seen = [];
+      for (let i = 0; i < secs * 30; i++) { if (i === 30 * 8) campOrder(C, 'attack', ''); campStep(C, 1 / 30); C.events.forEach(e => { cnt.ev[e.type] = (cnt.ev[e.type] || 0) + 1; if (['turret', 'wingshot'].includes(e.type)) seen.push(e); }); C.events.length = 0; }
+      campBullet = b0; return { cnt, seen: seen.slice(0, 400) }; };
+  `);
+  const F = J('__fight(24)');
+  check('every shot of ours has an event: the turrets\' bullets are as many as the \'turret\' events, the wing\'s as many as the \'wingshot\' events (a gun of ours with no event is a gun with no sound)', F.cnt.pd > 100 && F.cnt.wing > 30 && F.cnt.pd === F.cnt.ev.turret && F.cnt.wing === F.cnt.ev.wingshot, JSON.stringify([F.cnt.pd, F.cnt.ev.turret, F.cnt.wing, F.cnt.ev.wingshot]));
+  const code = src('src/campaign.js'), ours = (code.match(/campBullet\([^;\n]*'earth'/g) || []);
+  check('and no new gun of ours slips in without one: campaign.js has exactly two places that fire a shot of Earth\'s side (the turrets and the wing), and the test above holds each to its event', ours.length === 2, ours.length);
+  g.run(`
+    window.__plays = []; window.__sfx2 = sfx; sfx = (name, a) => { __plays.push([name, a]); };
+    window.__fakeSc2 = () => { const rec = () => { const p = new Proxy({}, { get: (t, k) => (k === 'then' ? undefined : (...a) => p) }); return p; };
+      const f = Object.create(Campaign.prototype); f.add = rec(); f.tweens = { add() {} }; f.cameras = { main: { shake() {} } }; f.boom = { explode() {} }; f.flash = () => {}; f.blipAt = undefined; f.camp = campNew(1, [], { seed: 1 }); return f; };
+  `);
+  const sounded = J(`(() => { const f = __fakeSc2(), out = {}; f.camp.t = 10000; const kinds = ['turret', 'wingshot']; let t = 10000;
+    kinds.forEach(k => { __plays.length = 0; t += 1000; f.camp.t = t; const c = f.camp.carrier; f.onEvent({ type: k, i: 2, x: c.x + 200, y: c.y, aim: 0, tx: undefined, kind: 'fighter', id: 'fighter-1' }); out[k] = __plays.map(p => p[0]); }); return out; })()`);
+  check('every one of those events is a sound in the scene: the turret event plays the turret pew, the wing\'s shot the wing\'s pew', sounded.turret.join() === 'turret' && sounded.wingshot.join() === 'wingShot', JSON.stringify(sounded));
+  const wing = J(`(() => { const f = __fakeSc2(), c = f.camp.carrier, r = {}; const at = (t, d) => { __plays.length = 0; f.camp.t = t; f.onEvent({ type: 'wingshot', x: c.x + d, y: c.y, kind: 'fighter', id: 'fighter-1' }); return __plays.map(p => [p[0], Math.round(p[1] * 100) / 100]); };
+    r.near = at(20000, 160); r.mid = at(21000, 800); r.edge = at(22000, 1600); r.far = at(23000, 2500); r.gap = [at(30000, 100).length, at(30020, 100).length, at(30060, 100).length]; return r; })()`);
+  check('the wing\'s pew is softer the farther the ship is from the carrier (a = 1 minus the distance over 1,600 px): 160 px is 0.9, 800 px is 0.5, and at 1,600 px and beyond there is none', wing.near[0][0] === 'wingShot' && wing.near[0][1] === 0.9 && wing.mid[0][1] === 0.5 && wing.edge.length === 0 && wing.far.length === 0, JSON.stringify(wing));
+  check('and not more than once in 55 ms of the battle\'s clock (two shots 20 ms apart make one pew, shots 60 ms apart each get theirs)', wing.gap.join() === '1,0,1', wing.gap.join());
+  g.run('sfx = __sfx2');
+  const SCN = src('src/campaignscene.js');
+  check('the scene plays them through the shared sound code (sfx), not a beep of its own, and the table of gaps and distances is one line (CAMP_SND)', /e\.type === 'wingshot'\) this\.wingShot\(e\)/.test(SCN) && /this\.battleSound\('wing', 'wingShot', near\)/.test(SCN) && !/beep\(1[0-9]{3}/.test(SCN));
+  check('the probe that measured it is in the tests, not in the smoke (it needs Chrome): tests/campsound-probe.mjs', /not in the smoke/.test(src('tests/campsound-probe.mjs')) && /AnalyserNode/.test(src('tests/campsound-probe.mjs')));
 }
 
 // ---------- the scene's names ----------

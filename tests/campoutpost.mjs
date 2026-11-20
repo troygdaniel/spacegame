@@ -85,7 +85,7 @@ check('low hull and no ship left: the line is "Retreat to <the nearest outpost\'
 g.run(`__at(238 + 4500 * 0.867, -137 - 4500 * 0.499);`);
 check('the nearest is the nearest by the edge of the place: from out beyond Luna it is Mars, from the far side of Earth it is Earth', J('campRetreat(C).o.id') === 'mars' && (g.run('__at(-4000, 100)'), J('campRetreat(C).o.id') === 'earth'));
 g.run(`__at(238 + 4500, -137); C.carrier.hp = C.carrier.maxHp * 0.2;`);
-check('"12 s on Fast" is what 4,500 px to a place says: the map\'s ETA at the burn (2x: 420 px/s, times 1.1)', J(`campNavEta(C, 4500, true)`) === 12);
+check('"11 s on Fast" is what 4,500 px to a place says: the map\'s ETA at the burn (2.2x: 462 px/s, times 1.1; card space-game-campaign-fast-board)', J(`campNavEta(C, 4500, true)`) === 11);
 check('the goal of the map and the HUD arrow is that outpost while it lasts; the list row of that place says outpost and is the goal row', (() => { const g1 = J('campNavGoal(C)'), rows = J('campNavRows(C)'); const goal = rows.find(r => r.goal), row = rows.find(r => r.id === 'place:' + J('campRetreat(C).o.id')); return g1 && g1.id === 'place:' + J('campRetreat(C).o.id') && goal && goal.of === g1.id && row && row.outpost === true; })());
 g.run(`C.bay.fighters = 1;`);
 check('a ship left in the bay (or out, launching or building) and there is no retreat: the line is for a carrier alone', J('campRetreat(C)') === null && (g.run('C.bay.fighters = 0; C.build.queue.push({ kind: "fighter", left: 6 })'), J('campRetreat(C)') === null) && (g.run('C.build.queue.length = 0; C.launchQ.push("fighter")'), J('campRetreat(C)') === null));

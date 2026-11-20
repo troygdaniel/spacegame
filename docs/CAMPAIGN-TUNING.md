@@ -46,6 +46,7 @@ They are listed in one small line on the pause screen (`campDebugLine`). The row
 | the cloaked caches: where they are, what they hold, how hard they are guarded | `levels[n].anomalies`: one row each (`id`, `at: [x, y]` or `place` + `off`, `hides`: weapons or tech, `guards: { raider: 2, gunship: 1 }`, `reward: { ore, missiles, turret, tech }`); a mission asks for one as a bonus: `{ id: 'find', type: 'anomaly', anomaly: '<id>' }` |
 | noticed from farther, a longer visit, a wider haze | `anomaly.sense` (px; the lens tech doubles it), `anomaly.visit` (px) and `anomaly.hold` (seconds), `anomaly.haze` (px the shimmer is drawn from), `anomaly.size` (the haze's radius), `anomaly.ring` (px the guards come out at) |
 | the loot bigger or smaller | the row's `reward` (`ore` in chunks of `anomaly.chunk`, `missiles`: more in the magazine up to `missile.max`, `turret`: 0.15 is 15 percent more damage, `tech`: `overdrive` or `lens`, offered at the refit as one more choice) and the techs themselves in `tech` (`after: 'find'`) |
+| how far + - and the wheel zoom, and how big a step is | `CAMZOOM.min`, `max`, `key`, `keyHold` (`src/camzoom.js`: the view, shared with the Long Haul); `CAMPZOOM.map.min`, `max` (`src/campzoom.js`: the Tab map) |
 
 A reload shows a change. A few small numbers still live in the code (a ship's radius, the freighter's turn): if you want one, move it into the table.
 
