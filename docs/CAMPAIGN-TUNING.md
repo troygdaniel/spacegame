@@ -84,3 +84,14 @@ What the Campaign scene calls (none of it draws, all of it is plain data and fun
 - Every key: `const id = campDebugKey(e.code); if (id) { const r = campDebugRun(this.C, this.P, id); show(r.say); if (r.go) start r.go.level with r.go.techs }`.
 - Pause screen: `campDebugLine(C)`.
 - The play log needs nothing else: it watches `campNew`, `campStep`, `campOrder` and `campPick` from outside (`playlogWrap`) and `campDebugRun` says its own steps (`campaignNote`).
+
+## Click a place, then Fly or Fast (both maps)
+
+Card `space-game-map-click-fly` (Troy, 20 Nov 2026). In the Campaign's Tab map and in Long Haul's sector map a click on a place **sets** it as the destination (a ring, the route and the distance, as before) instead of flying at once. Two small buttons by the mark say **Fly** (regular speed) and **Fast**, each with its key and its time: `Enter` is Fly, `Shift+Enter` is Fast, and a second click on the place with no button is Fly. Every existing key stays (the Campaign list's W S A D Enter X, Long Haul's N, B, X, P and C); any steering key takes the wheel back. Plain Node: `tests/mapclickfly.mjs`; a hand-run boot of both games with a real mouse: `node tests/mapclickfly-boot.mjs`.
+
+| | Fly (regular) | Fast |
+|---|---|---|
+| Campaign | the autopilot as it was: the carrier at its top speed, 210 px/s | a **burn**: the carrier's top speed and thrust times `CAMP.nav.fast` (2) while the autopilot flies it; steering, arriving or X ends it. The time on the button is `campNavEta(C, dist, true)` |
+| Long Haul | the autopilot's **local leg only**, at the ship's own top speed: no cruise, and no flying clear of a mass first (`autopilotGo(s, body, order, false)`) | the autopilot as it always was: a leg longer than 3,500 px cruises in the middle (8,000 px/s), the rest is local. On a short leg Fast is Fly and the button says "too near to cruise" |
+
+The words are in `content/text/mapfly.md` (Campaign) and in `src/map.js` (Long Haul). The Long Haul N list's Enter, P, C and the ship computer are unchanged (they pass no speed, so they go as they always did).

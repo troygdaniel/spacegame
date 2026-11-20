@@ -130,10 +130,11 @@ function cruiseNavOpen(s) { navpanelOpen(s, false); }  // src/navpanel.js draws 
 function cruiseNavClose(s) { navpanelClose(s); }
 function cruiseNavDraw(s) { navpanelDraw(s); }
 
-function cruisePick(s, b) {
+function cruisePick(s, b, quiet) {
   const cr = s.cr;
   cr.target = { id: b.id, name: b.name, type: b.type, x: b.x, y: b.y, r: b.r || 0 };
-  toast(s, 'Target: ' + b.name + '. C cruises, P flies you there.', '#ffd37a'); sfx('chime');
+  if (!quiet) toast(s, 'Target: ' + b.name + '. C cruises, P flies you there.', '#ffd37a');
+  sfx('chime');
 }
 
 // ---- engage ----

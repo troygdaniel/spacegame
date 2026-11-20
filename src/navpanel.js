@@ -277,11 +277,11 @@ function navpanelFlyWhy(s, r) {
 }
 // Enter or a click on a place, and the ship's computer's and the Tab map's "fly there": the autopilot takes the ship (the station docks, the planet you can land on
 // lands, a long leg cruises). The one confirmation line is the autopilot's own toast; a place that cannot be reached says why in one line. Returns true when it went.
-function navpanelFly(s, r) {
+function navpanelFly(s, r, fast) {
   const why = navpanelFlyWhy(s, r);
   if (why) { toast(s, why, '#ffb454'); sfx('empty'); return false; }
   if (s.np) { s.np.jump = null; s.np.jumpRow = null; }
-  return navpanelEngage(s, r);
+  return navpanelEngage(s, r, fast);
 }
 // the place nearest a world point within rad px, from the same list the panel is made of (the Tab map's click); null when none
 function navpanelNear(rows, x, y, rad) {
@@ -290,20 +290,20 @@ function navpanelNear(rows, x, y, rad) {
   return best;
 }
 function navpanelPlaceAt(s, x, y, rad) { return navpanelNear(cruiseKnown(s), x, y, rad); }
-function navpanelPick(s, r) {
+function navpanelPick(s, r, quiet) {
   const np = s.np, how = navpanelHow(r), no = m => { toast(s, m, '#ffb454'); sfx('empty'); };
   if (how === 'no') return no(navpanelHint(r, false));
   if (r.kind === 'jump') { np.jump = r.id; np.jumpRow = r; s.cr.target = null; toast(s, 'Destination: ' + r.name + ', ' + navpanelDist(r) + '. Enter jumps.', '#ffd37a'); sfx('chime'); return; }
   np.jump = null; np.jumpRow = null;
-  cruisePick(s, r); // src/cruise.js: the one target C, P, the Tab map and the HUD arrow share
+  cruisePick(s, r, quiet); // src/cruise.js: the one target C, P, the Tab map and the HUD arrow share (quiet: the Tab map sets it with no toast: the game is paused under it)
 }
 // the order a row can take: 'dock' (this system's station), 'land' (the planet you can land on) or ''
 function navpanelOrder(s, r) { return r && r.kind !== 'jump' ? autopilotOrder(r, sysBodies('station'), sysBody('planet'), s.canLand) : ''; }
-function navpanelEngage(s, r) {
+function navpanelEngage(s, r, fast) {
   const np = s.np, no = m => { toast(s, m, '#ffb454'); sfx('empty'); return false; };
   if (r.kind !== 'jump') { // a body: the autopilot flies it, and cruises the middle of a long leg
     if (s.cruising) return no('Cruising already. S cancels.');
-    const went = autopilotGo(s, r, navpanelOrder(s, r)); // the station and the planet you can land on: Dock and Land, all the way in
+    const went = autopilotGo(s, r, navpanelOrder(s, r), fast); // the station and the planet you can land on: Dock and Land, all the way in
     if (went) navpanelClose(s);
     return went;
   }
