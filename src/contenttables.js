@@ -361,6 +361,7 @@ const UI_TEXT = {
   'camp.l3.after.2': 'The first step is done. The war is not over.',
   'camp.say.convoy': 'Convoy to {name} is away.',
   'camp.say.delivered': 'The convoy has reached {name}.',
+  'camp.say.lost': 'Lost them.',
   'camp.say.convoylost': 'The convoy to {name} is lost.',
   'camp.say.wave1': 'Aliens on the Mars lane, pilot.',
   'camp.say.wave2': 'A second wave, heading for Earth.',

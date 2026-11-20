@@ -183,7 +183,12 @@ const CAMP = {
     hpScale: 1,                            // times the PIRATES hit points (src/enemies.js: raider 20, drone 30, gunship 80)
     damageScale: 1,                        // times the PIRATES shot damage (raider 6, drone 8, gunship 10 a shot, three shots)
     earthDamage: 0.25,                     // a shot that hits Earth takes this share of its damage off Earth's shield (a big planet takes a pounding)
-    distract: 4000                         // ms an alien you hit fights the ship that hit it instead of its goal
+    distract: 4000,                        // ms an alien you hit fights the ship that hit it instead of its goal
+    pursuit: {                             // a chase can be broken by a burn (card space-game-campaign-pursuit, Troy 20 Nov 2026): every alien's top speed is under the burn's (raider 430, drone 260, gunship 150 against 462; the mothership 55 and the towers do not chase). The raider is only 32 under it, so the leash is short
+      leashOf: 1.25,                       // the leash, as a share of the kind's firing range (raider 650 px, drone 810, gunship 975): an alien that has been on the carrier and is farther than this from it is out of touch. A kind that fires from a distance is not out of touch while it does
+      loseAfter: 1500,                     // ms out of touch (beyond the leash) before it gives up the chase: a short time, so a burn that opens the distance loses it, and a wobble does not
+      sayEvery: 8000                       // ms between two "Lost them." lines (one line for a pack that drops away together)
+    }
   },
   warn: [0.5, 0.25],                       // shares of Earth's shield and of the carrier's hull at which the ship's voice warns (each once, and again if it mends past the share and falls back)
   mother: {
@@ -406,7 +411,7 @@ function campNew(level, techs, opts) {
   const rr = campRng((opts.seed == null ? 1 : opts.seed) * 7919 + 13); // the rocks have a stream of their own, so ore never changes how a fight flies
   C.rocks = []; C.lasers = []; C.laserNow = []; C.laserLog = {}; // C.lasers: the beams firing now, [{ from: the ship's id, to: the rock's or the alien's id, kind: 'rock' | 'alien', since: C.t when this beam began without a break }] (data for the beam hum, src/campaign.js campBeamState of card space-game-campaign-sounds)
   (L.rocks || []).forEach(f => { for (let i = 0; i < f.n; i++) { const a = rr() * 2 * Math.PI, d = Math.sqrt(rr()) * f.spread; C.rocks.push({ id: 'rock-' + (C.nextId++), x: f.at[0] + Math.cos(a) * d, y: f.at[1] + Math.sin(a) * d, hp: CAMP.ore.rockHp, maxHp: CAMP.ore.rockHp, r: CAMP.ore.rockR, ore: CAMP.ore.rock, cutAt: -1e9 }); } }); // asteroids: a laser cuts one, and it breaks into a chunk of ore
-  (L.guards || []).forEach(g => { const a = campSpawn(C, g.kind, g.at[0], g.at[1]); if (a) { a.hold = true; a.guard = true; a.goal = 'carrier'; } }); // guard: a kill objective 'guards' counts them
+  (L.guards || []).forEach(g => { const a = campSpawn(C, g.kind, g.at[0], g.at[1]); if (a) { a.hold = true; a.guard = true; a.goal = 'carrier'; a.post = { x: g.at[0], y: g.at[1] }; } }); // guard: a kill objective 'guards' counts them; a guard's post: where it goes back to when it loses you
   return C;
 }
 
@@ -909,7 +914,15 @@ function campAlienAI(C, u, dt) {
   let tgt = null;
   if (u.hitBy && u.distractedUntil > C.t) { const h = C.by[u.hitBy]; if (h && h.hp > 0) tgt = h; }
   if (!tgt && u.goal && u.goal.indexOf('convoy:') === 0) { const f = C.by['freighter-' + u.goal.slice(7)]; if (f && f.hp > 0) tgt = f; }
-  if (!tgt) { const near = campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, def.engage * 0.7); if (near) tgt = near; }
+  if (!tgt) { const near = campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, def.engage * 0.7); if (near) { tgt = near; if (near !== C.carrier) u.lost = false; } } // one of your other ships in reach: it is on that ship (the carrier is the leash's: campPursuit)
+  if (campPursuit(C, u, tgt)) { // it has lost you: it goes back to its post (a guard) or settles where it is and guards (the rest), and an Earth wave goes on to Earth
+    if (!C.earth) { // no Earth here: a guard goes back to its post and holds there again; the rest come to rest where they are, out of it until the carrier comes within the leash again (campPursuit clears it)
+      if (u.post && campDist(u, u.post) > 90) { campSeek(u, u.post.x, u.post.y, dt); return; }
+      if (u.post) { u.hold = true; u.lost = false; return; }
+      const keep = Math.pow(0.4, dt); u.vx *= keep; u.vy *= keep; u.x += u.vx * dt; u.y += u.vy * dt; return;
+    }
+    tgt = null; // Earth is its goal as it was
+  }
   const isEarth = !tgt && !!C.earth; if (!tgt) tgt = C.earth || C.carrier; // nothing near and no Earth in this level: it comes for the carrier
   const dx = tgt.x - u.x, dy = tgt.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx), tv = isEarth ? { x: 0, y: 0 } : { x: tgt.vx || 0, y: tgt.vy || 0 };
   const m = campSteer(C, u, def, dist, target, u.vx - tv.x, u.vy - tv.y);
@@ -919,6 +932,18 @@ function campAlienAI(C, u, dt) {
     const n = def.spread || 1;
     for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet, def.dmg * CAMP.alien.damageScale, 1800, 'alien', 14);
   }
+}
+// pursuit: an alien that was on the carrier (it targeted it within the leash) and has been beyond the leash for loseAfter ms has lost it. Returns true while it has. A burn does it (every top speed is under the burn's,
+// and the aliens' are all over the carrier's regular speed, so at regular speed nothing is lost); an alien that has never been near (it is coming from afar) is not lost, it has nothing to lose.
+function campPursuit(C, u, tgt) {
+  const K = CAMP.alien.pursuit, car = C.carrier; if (!K || !car || car.hp <= 0 || (tgt && tgt !== car)) return false; // an alien fighting something else (a convoy, the ship that hit it, one of your ships in reach) is not chasing the carrier
+  const d = campDist(u, car), onCar = tgt === car || (!tgt && !C.earth), leash = ((u.def && u.def.range) || 520) * K.leashOf; // with no Earth in the level an alien with nothing near comes for the carrier
+  if (onCar && d <= leash) { u.seenAt = C.t; u.lost = false; return false; } // on the carrier and within the leash
+  if (u.lost) return true;
+  if (u.seenAt == null || d <= leash || C.t - u.seenAt < K.loseAfter) return false;
+  u.lost = true; u.seenAt = null; u.lostN = (u.lostN || 0) + 1; // lostN: how many times it has lost you
+  if (C.t - (C.lostSayAt == null ? -1e9 : C.lostSayAt) >= K.sayEvery) { C.lostSayAt = C.t; campSay(C, 'camp.say.lost'); }
+  return true;
 }
 // the mothership: it comes in toward Earth, stops at holdAt, fires volleys at your ships, and launches raiders
 function campMotherAI(C, u, dt) {
