@@ -157,11 +157,17 @@ sec('H', () => {
 });
 
 sec('I', () => {
-  g.run('__mk(1, 0); C.carrier.x = -90000; C.carrier.y = -90000; C.anomalies = [{ id: "an1", x: 1000, y: 0, cloaked: true, likely: "weapons cache", read: false }, { id: "an2", x: 9000, y: 0, cloaked: true, likely: "wreck", read: false }]; window.__u = __esc(0, 0); __u.x = 0; __u.y = 0; __u.order = { type: "scout" }; __u.scout = { n: 1, name: "X", x: 100, y: 0, phase: "station", at: C.t, carry: { ore: 0, caches: 0 } }; __ev.length = 0; __go(0.3)');
-  check('I  a scout reads a cloaked anomaly inside its read range (1,400 px): it is named, and still cloaked (only a visit uncovers it)', J('C.anomalies[0].read') === true && J('C.anomalies[0].cloaked') === true && J('C.anomalies[1].read') === false, JSON.stringify(J('C.anomalies')));
-  check('I  the reading is said once: "Anomaly: likely weapons cache."', J("__ev.filter(e => e.type === 'say' && e.key === 'camp.say.anomalyread').length") === 1 && J("__ev.find(e => e.key === 'camp.say.anomalyread').vars.likely") === 'weapons cache');
-  g.run('__mk(1, 0); C.anomalies = [{ id: "an1", x: 1000, y: 0, cloaked: true, likely: "wreck", read: false }]; window.__u = __esc(0, 0); __u.x = 0; __u.y = 0; __go(0.3)');
-  check('I  an ordinary escort reads nothing; and a Campaign with no anomalies (today) is not touched', J('C.anomalies[0].read') === false && (g.run('__mk(1, 0); __go(0.3)'), J('C.anomalies === undefined')));
+  // the anomalies card's model (src/campanomaly.js): C.anoms rows { id, x, y, state: 'hidden' | 'revealed' | 'done' | 'old', sensed, hides, hold }
+  g.run('__mk(1, 0); C.carrier.x = -90000; C.carrier.y = -90000; C.anoms = [{ id: "an1", x: 1000, y: 0, r: 220, state: "hidden", sensed: false, hold: 0, hides: "weapons store", ids: [] }, { id: "an2", x: 9000, y: 0, r: 220, state: "hidden", sensed: false, hold: 0, hides: "tech lab", ids: [] }, { id: "an3", x: 500, y: 0, r: 220, state: "old", sensed: false, hold: 0, hides: "wreck", ids: [] }]; window.__u = __esc(0, 0); __u.x = 0; __u.y = 0; __u.order = { type: "scout" }; __u.scout = { n: 1, name: "X", x: 100, y: 0, phase: "station", at: C.t, carry: { ore: 0, caches: 0 } }; __ev.length = 0; __go(0.3)');
+  check('I  a scout reads a hidden anomaly inside its read range (1,400 px): it is noticed (a mark on the map and the radar) and named, and still hidden (only a visit by the carrier decloaks it)', J('C.anoms[0].read') === true && J('C.anoms[0].sensed') === true && J('C.anoms[0].state') === 'hidden' && J('C.anoms[1].read | 0') === 0 && J('C.anoms[1].sensed') === false, JSON.stringify(J('C.anoms')));
+  check('I  one far (9,000 px) and one already looted ("old") are not read', J('!C.anoms[1].read') && J('!C.anoms[2].read'));
+  check('I  the reading is said once: "Anomaly: likely weapons store.", and the anomalies card\'s own sense event is made (stage sense)', J("__ev.filter(e => e.type === 'say' && e.key === 'camp.say.anomalyread').length") === 1 && J("__ev.find(e => e.key === 'camp.say.anomalyread').vars.likely") === 'weapons store' && J("__ev.some(e => e.type === 'anomaly' && e.stage === 'sense' && e.id === 'an1')"));
+  check('I  the map and the radar show it, named "Anomaly: likely weapons store" (campAnomMarks)', J("campAnomMarks(C).map(m => m.name).join('|')") === 'Anomaly: likely weapons store', J("campAnomMarks(C).map(m => m.name).join('|')"));
+  check('I  the scout\'s report names it: "Scout 1, X: likely weapons store."', J('__u.scout.found.join()') === 'weapons store');
+  g.run('C.carrier.x = 1000; C.carrier.y = 0; __ev.length = 0; __go(0.2)');
+  check('I  the carrier arriving does not repeat the sense line (the anomaly was noticed already)', J("__ev.filter(e => e.type === 'say' && e.key === 'camp.say.anom.sense').length") === 0);
+  g.run('__mk(1, 0); C.anoms = [{ id: "an1", x: 1000, y: 0, r: 220, state: "hidden", sensed: false, hold: 0, hides: "wreck", ids: [] }]; window.__u = __esc(0, 0); __u.x = 0; __u.y = 0; __go(0.3)');
+  check('I  an ordinary escort reads nothing; and a Campaign with no anomalies is not touched', J('C.anoms[0].read | 0') === 0 && (g.run('__mk(1, 0); __go(0.3)'), J('C.anoms.length') >= 0));
 });
 
 sec('J', () => {

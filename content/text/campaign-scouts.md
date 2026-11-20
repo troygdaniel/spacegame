@@ -12,6 +12,7 @@ The words of the Campaign's scout-escorts (card space-game-campaign-scouts): the
 | camp.say.scouthome | Scout {n} is back aboard. |
 | camp.say.scoutleft | A scout was left behind. |
 | camp.say.anomalyread | Anomaly: likely {likely}. |
+| camp.nav.anomalyread | Anomaly: likely {likely} |
 | camp.no.noscout | This mission has no scouting. |
 | camp.no.scoutsbusy | No escort is free to scout. |
 | camp.no.noscoutplace | I do not see that place, pilot. |

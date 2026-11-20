@@ -62,6 +62,7 @@ function campNavRows(C) {
   (C.scan || []).forEach((p, i) => { if (!p.got) add({ id: 'scan:' + i, kind: 'scan', group: 'finds', name: uiText('camp.nav.scan', { n: i + 1 }), x: p.x, y: p.y, r: 0 }); });
   C.caches.forEach((k, i) => { if (!k.got) add({ id: 'cache:' + i, kind: 'cache', group: 'finds', name: uiText('camp.nav.cache', { n: i + 1 }), x: k.x, y: k.y, r: 0 }); });
   if (C.relic) add({ id: 'relic', kind: 'relic', group: 'finds', name: uiText('camp.nav.relic'), x: C.relic.x, y: C.relic.y, r: 0 });
+  if (typeof campAnomMarks === 'function') campAnomMarks(C).forEach(a => add({ id: 'anom:' + a.id, kind: 'anomaly', group: 'finds', name: a.name, x: a.x, y: a.y, r: 0 })); // an anomaly that is noticed: no name but 'Anomaly' until it is decloaked (src/campanomaly.js)
   const w = campWing(C); if (w.length) add({ id: 'wing', kind: 'wing', group: 'wing', name: uiText('camp.nav.wing', { n: w.length }), x: w.reduce((a, u) => a + u.x, 0) / w.length, y: w.reduce((a, u) => a + u.y, 0) / w.length, r: 0, moving: true });
   const g = campNavGoal(C); if (g) { const row = add(Object.assign({}, g, { of: g.id, id: 'goal', group: 'goal', goal: true })); row.name = g.name; }
   const order = CAMPNAV.groups.map(x => x[0]);
@@ -75,11 +76,12 @@ function campNavTarget(C, N) {
   if (kind === 'cache') { const k = C.caches[+String(id).slice(6)]; return k && !k.got ? { x: k.x, y: k.y, r: 0 } : null; }
   if (kind === 'scan') { const k = C.scan[+String(id).slice(5)]; return k && !k.got ? { x: k.x, y: k.y, r: 0 } : null; }
   if (kind === 'relic') return C.relic ? { x: C.relic.x, y: C.relic.y, r: 0 } : null;
+  if (kind === 'anomaly') { const a = (C.anoms || []).find(q => 'anom:' + q.id === id); return a && (a.state === 'hidden' || a.state === 'revealed') ? { x: a.x, y: a.y, r: 0 } : null; }
   if (kind === 'wing') { const w = campWing(C); return w.length ? { x: w.reduce((a, u) => a + u.x, 0) / w.length, y: w.reduce((a, u) => a + u.y, 0) / w.length, r: 0 } : null; }
   const u = C.by[N.ref || String(id).replace(/^[a-z]+:/, '')] || C.ships.find(s => s.kind === kind && s.hp > 0 && (kind === 'mother' || s.id === N.ref));
   return u && u.hp > 0 ? { x: u.x, y: u.y, r: u.r || 0 } : null;
 }
-const campNavStop = (kind, t) => (kind === 'place' ? (t.r || 0) + CAMP.nav.stop : kind === 'convoy' || kind === 'mother' || kind === 'tower' ? CAMP.nav.stopShip : CAMP.nav.stopPoint);
+const campNavStop = (kind, t) => (kind === 'place' ? (t.r || 0) + CAMP.nav.stop : kind === 'anomaly' ? CAMP.anomaly.stop : kind === 'convoy' || kind === 'mother' || kind === 'tower' ? CAMP.nav.stopShip : CAMP.nav.stopPoint);
 // the burn of a Fast trip (the one place it is decided: campNavGo stores it, campCarrier and campNavDrive read it, campNavEta tells it on the map): CAMP.nav.fast times the speed, farFast times it past farFrom px; 1 for a regular trip
 const campNavBurn = (dist, fast) => (!fast ? 1 : dist > CAMP.nav.farFrom ? CAMP.nav.farFast : CAMP.nav.fast);
 const campNavEta = (C, dist, fast) => Math.round(dist / (CAMP.carrier.speed * campPowerFx(C).speed * campNavBurn(dist, fast)) * CAMP.nav.etaSlow); // fast: the map's Fast button
@@ -133,6 +135,7 @@ function campNavFind(C, text) {
   if (/\b(?:objective|goal|mission|target|destination)\b/.test(q)) { const g = by('goal'); return g ? { row: g } : { code: 'nogoal' }; }
   if (/\b(?:mothership|mother|boss|big one|flagship)\b/.test(q)) { const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); return m ? { row: { id: 'mother', kind: 'mother', name: uiText('camp.nav.mother'), x: m.x, y: m.y, r: m.r, moving: true, ref: m.id } } : { code: 'nomother' }; }
   if (/\brelic\b/.test(q)) { const r = by('relic'); return r ? { row: r } : { code: 'norelic' }; }
+  if (/\b(?:anomal(?:y|ies)|shimmer|odd (?:spot|reading|readings)|cloaked|alien cache)\b/.test(q)) { const r = first('anomaly'); return r ? { row: r } : { code: 'noanomaly' }; } // the nearest one that is noticed
   if (/\b(?:cache|caches|supplies|supply|resources?|pods?)\b/.test(q)) { const r = first('cache'); return r ? { row: r } : { code: 'nocache' }; }
   if (/\b(?:towers?|defences?|defenses?|turrets?)\b/.test(q)) {
     const t = C.ships.filter(u => u.kind === 'tower' && u.hp > 0).sort((a, b) => campDist(a, C.carrier) - campDist(b, C.carrier))[0];
