@@ -72,7 +72,7 @@ class Campaign extends Phaser.Scene {
   }
   hideCard() { if (this.card) this.card.forEach(x => x.destroy()); this.card = null; this.panel = false; }
   flash(id) { const sp = this.sp[id]; if (!sp) return; sp.setTint(0xff8a8a); this.time.delayedCall(90, () => { if (sp.active !== false) sp.clearTint(); }); } // the hull took a hit: the carrier blinks red for 90 ms (the blind critic: nothing but a red bar said so)
-  say(lines) { if (typeof shipcompSay === 'function' && lines.length) shipcompSay(lines.join(' ')); } // the ship's voice, as much as Settings > Sound allows
+  say(lines) { if (typeof shipcompSay === 'function') lines.forEach(l => { if (l) shipcompSay(l); }); } // the ship's voice, as much as Settings > Sound allows: each line on its own, because Short speaks only the first sentence or two of what it is given and one joined text lost the line that says what to do (docs/night/ux.md 1)
   showIntro() {
     this.mode = 'intro'; const lines = campStory(this.level, 'before');
     this.showCard(uiText('camp.ui.level', { n: this.level, name: CAMP.levels[this.level].name }), lines, uiText('camp.ui.begin'));
