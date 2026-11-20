@@ -22,17 +22,17 @@ g.run(`
 console.log('A. the table');
 {
   const T = J('CAMP_PANELS');
-  check('two panels: key 1 FLEET at the left, key 2 SHIP at the right', T.panels.length === 2 && T.panels[0].key === '1' && T.panels[0].side === 'left' && T.panels[0].title === 'FLEET' && T.panels[1].key === '2' && T.panels[1].side === 'right' && T.panels[1].title === 'SHIP');
+  check('two panels: Q FLEET at the left, E SHIP at the right (card space-game-campaign-panels-ui: they were 1 and 2), each with the code of its key', T.panels.length === 2 && T.panels[0].key === 'Q' && T.panels[0].code === 'KeyQ' && T.panels[0].side === 'left' && T.panels[0].title === 'FLEET' && T.panels[1].key === 'E' && T.panels[1].code === 'KeyE' && T.panels[1].side === 'right' && T.panels[1].title === 'SHIP');
   check('each has five rows, numbered 1 to 5, each with a label and a line for the help page', T.panels.every(p => p.rows.map(r => r.n).join() === '1,2,3,4,5' && p.rows.every(r => r.label && r.help && r.id)));
   check('the fleet rows are launch, attack, escort, guard, recall; the ship rows mine, recharge, build a fighter, build an escort, fly to the objective', T.panels[0].rows.map(r => r.order).join() === 'launch,attack,escort,guard,recall' && T.panels[1].rows.map(r => r.order || r.fly).join() === 'mine,recharge,build,build,objective' && T.panels[1].rows[2].arg === 'fighter' && T.panels[1].rows[3].arg === 'escort');
-  check('key 3 is reserved: no panel has it and no row is bound to it', !T.panels.some(p => p.key === '3') && J(`campPanelKey(campPanelNew(), campNew('home', [], { seed: 1 }), 'Digit3', 0).opened`) === '');
-  check('the delay is 250 ms', T.delay === 250);
+  check('no digit opens a panel: the digits only pick a row of an open one', !T.panels.some(p => /^\d$/.test(p.key)) && ['Digit1', 'Digit2', 'Digit3'].every(c => J(`campPanelKey(campPanelNew(), campNew('home', [], { seed: 1 }), '${c}', 0).opened`) === ''));
+  check('there is no hold-back: a panel is drawn at once (delay 0); its list drops in in 120 ms, a picked row flashes for 160 ms and the list goes in 100', T.delay === 0 && T.anim.fadeIn === 120 && T.anim.flash === 160 && T.anim.fadeOut === 100);
   g.run(`window.__C = __quiet(campNew('home', [], { seed: 1 }));`);
   check('every order the table names is one the game knows (campOrder never answers "what")', J(`CAMP_PANELS.panels.flatMap(p => p.rows).filter(r => r.order).every(r => campCheck(__C, r.order, r.arg || '').code !== 'what')`));
   const codes = J(`(() => { const out = new Set(); for (const lvl of [1, 2]) { const C = __quiet(campNew(lvl, [], { seed: 1 })); for (let k = 0; k < 6; k++) { CAMP_PANELS.panels.flatMap(p => p.rows).filter(r => r.order).forEach(r => { const q = campCheck(C, r.order, r.arg || ''); if (!q.ok) out.add(q.code); }); if (k === 0) campOrder(C, 'launch'); if (k === 1) __run(C, 5); if (k === 2) { C.ore = 0; } if (k === 3) { C.shield = 150; } } } return [...out]; })()`);
   check('every refusal the rows meet has its few words in the table', codes.length >= 5 && codes.every(c => J(`!!CAMP_PANELS.why['${c}']`)), codes.join());
-  check('the table is the one source: the settings and help rows are made from it (campPanelKeyRows: 10 rows, the panel key then the digit)', J(`campPanelKeyRows().length`) === 10 && J(`campPanelKeyRows()[2].k.join()`) === '1,3' && J(`campPanelKeyRows()[7].k.join()`) === '2,3');
-  check('the key line says the panels from the table: 1 Fleet   2 Ship', J('campPanelKeyLine()') === '1 Fleet   2 Ship');
+  check('the table is the one source: the settings and help rows are made from it (campPanelKeyRows: 12 rows, the panel\'s own key, then the panel key and a digit for each row)', J(`campPanelKeyRows().length`) === 12 && J(`campPanelKeyRows()[0].k.join()`) === 'Q' && J(`campPanelKeyRows()[3].k.join()`) === 'Q,3' && J(`campPanelKeyRows()[6].k.join()`) === 'E' && J(`campPanelKeyRows()[9].k.join()`) === 'E,3');
+  check('the key line says the panels from the table: Q Fleet   E Ship', J('campPanelKeyLine()') === 'Q Fleet   E Ship');
 }
 
 console.log('B. the live state of each row');
@@ -69,31 +69,37 @@ console.log('C. the keys');
 {
   g.run(`window.C3 = __quiet(campNew('home', [], { seed: 1 })); window.P = campPanelNew();`);
   const k = (code, now) => J(`__key(P, C3, '${code}', ${now})`);
-  check('Digit1 opens the FLEET panel and nothing else happens: no launch', (() => { const r = k('Digit1', 1000); return r.used && r.opened === 'fleet' && J('P.open') === 'fleet' && J('C3.launchQ.length') === 0 && J('C3.orders.launch') === 0; })());
+  check('Q opens the FLEET panel and nothing else happens: no launch', (() => { const r = k('KeyQ', 1000); return r.used && r.opened === 'fleet' && J('P.open') === 'fleet' && J('C3.launchQ.length') === 0 && J('C3.orders.launch') === 0; })());
+  check('Q again closes it', (() => { const r = k('KeyQ', 1200); return r.used && r.closed && J('P.open') === '' && J('P.closed.id') === 'fleet'; })());
+  g.run(`__key(P, C3, 'KeyQ', 1300);`);
   check('Esc closes it, and Esc is its own (the scene does not also pause)', (() => { const r = k('Escape', 1500); return r.used && r.closed && J('P.open') === ''; })());
   check('Esc with no panel open is not the panels\': the scene pauses as it always did', (() => { const r = k('Escape', 1600); return !r.used && !r.closed; })());
-  check('Digit2 opens the SHIP panel', (() => { const r = k('Digit2', 2000); return r.used && r.opened === 'ship' && J('P.open') === 'ship'; })());
-  check('another key (W) closes the panel and is not used: it goes on being itself', (() => { const r = k('KeyW', 2100); return !r.used && r.closed && J('P.open') === ''; })());
-  g.run(`P.open = ''; __key(P, C3, 'Digit1', 3000);`);
-  check('with FLEET open, Digit1 is row 1: it launches the wing and the panel closes (it cannot also close the panel: Esc does)', (() => { const r = k('Digit1', 3100); return r.used && r.ran && r.ok && r.row === 'launch' && r.closed && J('P.open') === '' && J('C3.launchQ.length') === 8; })());
-  g.run(`__run(C3, 8); __key(P, C3, 'Digit1', 4000);`);
+  check('E opens the SHIP panel', (() => { const r = k('KeyE', 2000); return r.used && r.opened === 'ship' && J('P.open') === 'ship'; })());
+  check('Q with SHIP open switches: FLEET opens and SHIP is what closed (its list is to fade out, the other\'s to come in); E with FLEET open switches back; E again closes', (() => { const a = k('KeyQ', 2100), b = J('[P.open, P.closed.id]'); const c = k('KeyE', 2200), d = J('[P.open, P.closed.id]'); const e = k('KeyE', 2300); return a.used && a.opened === 'fleet' && b.join() === 'fleet,ship' && c.opened === 'ship' && d.join() === 'ship,fleet' && e.closed && J('P.open') === ''; })());
+  check('another key (W) closes the panel and is not used: it goes on being itself', (() => { g.run(`__key(P, C3, 'KeyQ', 2400)`); const r = k('KeyW', 2500); return !r.used && r.closed && J('P.open') === ''; })());
+  g.run(`P.open = ''; __key(P, C3, 'KeyQ', 3000);`);
+  check('with FLEET open, Digit1 is row 1: it launches the wing and the panel closes (it cannot also close the panel: Esc and Q do)', (() => { const r = k('Digit1', 3100); return r.used && r.ran && r.ok && r.row === 'launch' && r.closed && J('P.open') === '' && J('C3.launchQ.length') === 8; })());
+  g.run(`__run(C3, 8); __key(P, C3, 'KeyQ', 4000);`);
   check('a pick that cannot be done says why in words, and still closes the panel', (() => { const r = k('Digit1', 4100); return r.used && r.ran && !r.ok && /out/i.test(r.say) && J('P.open') === ''; })());
-  g.run(`__key(P, C3, 'Digit1', 5000);`);
+  g.run(`__key(P, C3, 'KeyQ', 5000);`);
   check('a digit that is not a row of the open panel (6, 7, 8, 9, 0) does nothing and the panel stays', ['Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'].every(c => { const r = k(c, 5050); return r.used && !r.ran && J('P.open') === 'fleet'; }));
   g.run(`P.open = '';`);
-  check('key 3 and keys 4 to 9 with no panel open do nothing at all (key 3 is reserved; the old direct digits are gone)', ['Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9'].every(c => { const r = k(c, 6000); return r.used && !r.opened && !r.ran && J('P.open') === ''; }) && J('C3.orders.mine + C3.orders.recharge + C3.orders.build + C3.orders.guard + C3.orders.recall + C3.orders.escort') === 0);
-  check('the numeric keypad does the same as the digit row', J(`__key(campPanelNew(), C3, 'Numpad1', 7000).opened`) === 'fleet');
-  check('a key that is not a digit (a letter, Enter) with no panel is not the panels\'', (() => { const r = k('KeyF', 7100); return !r.used && !r.closed; })());
+  check('digits 1 to 9 with no panel open do nothing at all: no order, no panel, not even a closing (the digits only pick rows of an open panel)', ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9'].every(c => { const r = k(c, 6000); return r.used && !r.opened && !r.ran && J('P.open') === ''; }) && J('C3.orders.mine + C3.orders.recharge + C3.orders.build + C3.orders.guard + C3.orders.recall + C3.orders.escort') === 0);
+  check('the numeric keypad does the same as the digit row: Numpad1 with FLEET open is row 1; with none open it does nothing; its + - and 0 are not the panels\'', (() => { const P2 = 'campPanelNew()'; const none = J(`__key(${P2}, C3, 'Numpad1', 7000).opened`) === ''; g.run(`window.P7 = campPanelNew(); __key(P7, campNew('home', [], { seed: 2 }), 'KeyQ', 7000);`); const r = J(`__key(P7, campNew('home', [], { seed: 2 }), 'Numpad1', 7100)`); return none && r.ran && r.row === 'launch'; })());
+  check('a key that is not a digit or Q or E (a letter, Enter) with no panel is not the panels\'', (() => { const r = k('KeyF', 7100); return !r.used && !r.closed; })());
+  check('B (the warp blink since Q went to the panels) is not the panels\' key, and neither is N', ['KeyB', 'KeyN'].every(c => { const r = k(c, 7200); return !r.used && !r.opened && !r.closed; }));
 }
 
-console.log('D. fast typing');
+console.log('D. a fast pick: the list has not dropped in yet (it takes 120 ms)');
 {
   g.run(`window.C4 = __quiet(campNew('home', [], { seed: 1 })); window.P4 = campPanelNew(); __run(C4, 0.1);`);
-  g.run(`__key(P4, C4, 'Digit1', 10000);`);
-  check('the panel is not drawn at once, nor at 249 ms; it is at 250 ms', J(`campPanelShown(P4, 10000)`) === false && J(`campPanelShown(P4, 10249)`) === false && J(`campPanelShown(P4, 10250)`) === true);
-  check('1 then 3 typed within 150 ms: the escort order ran and the panel was never shown at any moment of it', (() => { g.run(`P4.open = ''; __key(P4, C4, 'Digit1', 20000);`); const during = J(`campPanelShown(P4, 20000) || campPanelShown(P4, 20100)`); const r = J(`__key(P4, C4, 'Digit3', 20120)`); return !during && r.ran && r.row === 'escort' && J('P4.open') === '' && J(`campPanelShown(P4, 20130)`) === false; })());
-  check('1 then 1 typed fast is "launch" with no flash; the wing is in the queue', (() => { g.run(`P4.open = ''; __key(P4, C4, 'Digit1', 30000);`); const r = J(`__key(P4, C4, 'Digit1', 30090)`); return r.ran && r.row === 'launch' && J('C4.launchQ.length') === 8; })());
-  check('a slow typist sees the panel after 250 ms and can still pick after it', (() => { g.run(`P4.open = ''; __key(P4, C4, 'Digit1', 40000);`); const shown = J(`campPanelShown(P4, 40400)`); const r = J(`__key(P4, C4, 'Digit4', 40600)`); return shown && r.ran && r.row === 'guard'; })());
+  g.run(`__key(P4, C4, 'KeyQ', 10000);`);
+  check('the panel is drawn at once (no hold-back), the list at nothing at 0 ms, half in at 60, all in at 120', J(`campPanelShown(P4, 10000)`) === true && J(`campPanelView(P4, 'fleet', 10000).list`) === 0 && J(`campPanelView(P4, 'fleet', 10060).list`) === 0.5 && J(`campPanelView(P4, 'fleet', 10120).list`) === 1 && J(`campPanelView(P4, 'ship', 10060).list`) === 0);
+  check('Q then 3 typed within 100 ms: the escort order ran, the list was not all in, so the TAB pulses and no row flashes, and the list goes from where it was', (() => { g.run(`P4.open = ''; __key(P4, C4, 'KeyQ', 20000);`); const r = J(`__key(P4, C4, 'Digit3', 20060)`); const v = J(`campPanelView(P4, 'fleet', 20100)`); return r.ran && r.row === 'escort' && J('P4.open') === '' && J('P4.flash.shown') === false && v.flash === null && v.pulse > 0.3 && v.list > 0 && v.list < 0.5 && J('P4.closed.from') === 0.5; })());
+  check('the pulse is once, 240 ms: nothing before the pick, a peak at 120 ms in, gone at 240', (() => { const at = t => J(`campPanelView(P4, 'fleet', ${20060 + t}).pulse`); return J(`campPanelView(P4, 'fleet', 20059).pulse`) === 0 && at(0) < 0.01 && at(120) > 0.99 && at(240) < 0.01 && at(300) === 0; })());
+  check('Q then 1 typed fast is "launch": the wing is in the queue', (() => { g.run(`P4.open = ''; __key(P4, C4, 'KeyQ', 30000);`); const r = J(`__key(P4, C4, 'Digit1', 30050)`); return r.ran && r.row === 'launch' && J('C4.launchQ.length') === 8; })());
+  check('a slower typist, 150 ms after Q, picks with the list all in: the row is to flash (shown), no pulse, and the list stays for the flash and goes after', (() => { g.run(`P4.open = ''; __key(P4, C4, 'KeyQ', 40000);`); const r = J(`__key(P4, C4, 'Digit4', 40150)`); const v0 = J(`campPanelView(P4, 'fleet', 40150)`), v1 = J(`campPanelView(P4, 'fleet', 40150 + 160 + 50)`), v2 = J(`campPanelView(P4, 'fleet', 40150 + 160 + 100)`); return r.ran && r.row === 'guard' && J('P4.flash.shown') === true && v0.list === 1 && v0.pulse === 0 && v1.list === 0.5 && v2.list === 0; })());
+  check('and the pick works whether or not the list had dropped in (the order does not wait for the drawing)', J(`(() => { const P = campPanelNew(), C = __quiet(campNew('home', [], { seed: 3 })); campPanelKey(P, C, 'KeyQ', 0); campPanelKey(P, C, 'Digit1', 0); return C.launchQ.length === 8; })()`));
 }
 
 console.log('E. what a pick does');

@@ -22,31 +22,36 @@
 //           fly: 'objective' is the autopilot to the goal (src/campnav.js) and not an order; label is the row's name on the panel, help its line on the H page and in Settings
 //   key 3 is RESERVED: a centre panel for a later card. It is bound to nothing now (and no digit from 4 to 9 is), and the panels replace the old direct digit keys of the Campaign.
 const CAMP_PANELS = {
-  delay: 250,                              // ms a panel waits before it is drawn: for a fast typist "1 then 3" never flashes it (the pick works whether or not the panel has been drawn)
+  delay: 0,                                // ms a panel waits before it is drawn: none (it was 250 when a digit opened it; Q and E open it now and it comes up at once). A pick made before the list has dropped in (fadeIn) pulses the tab instead of flashing a row
+  anim: { fadeIn: 120, fadeOut: 100, flash: 160, pulse: 240 }, // ms (card space-game-campaign-panels-ui): the list dropping in under its tab, going away, the chosen row's flash (two pulses) before the panel collapses, and the tab's one pulse when the pick came before the list was in
   panels: [
-    { key: '1', id: 'fleet', side: 'left', title: 'FLEET', rows: [
+    { key: 'Q', code: 'KeyQ', id: 'fleet', side: 'left', title: 'FLEET', rows: [
       { n: 1, id: 'launch', order: 'launch', label: 'Launch', help: 'Launch the wing' },
       { n: 2, id: 'attack', order: 'attack', label: 'Attack', help: 'Fighters attack the aliens' },
       { n: 3, id: 'escort', order: 'escort', label: 'Escort', help: 'Escorts go to a convoy' },
       { n: 4, id: 'guard', order: 'guard', label: 'Guard', help: 'The wing guards the carrier' },
       { n: 5, id: 'recall', order: 'recall', label: 'Recall', help: 'The wing flies home' }
     ] },
-    { key: '2', id: 'ship', side: 'right', title: 'SHIP', rows: [
+    { key: 'E', code: 'KeyE', id: 'ship', side: 'right', title: 'SHIP', rows: [
       { n: 1, id: 'mine', order: 'mine', label: 'Mine ore', help: 'The wing goes and mines ore' },
-      { n: 2, id: 'recharge', order: 'recharge', label: 'Recharge shields', help: 'Recharge a shield (costs ore)' },
-      { n: 3, id: 'buildf', order: 'build', arg: 'fighter', label: 'Build a fighter', help: 'Build a fighter (costs ore)' },
-      { n: 4, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', help: 'Build an escort (costs ore)' },
-      { n: 5, id: 'goal', fly: 'objective', label: 'Fly to the objective', help: 'Autopilot to the objective' }
+      { n: 2, id: 'recharge', order: 'recharge', label: 'Recharge shields', tag: 'Recharge', help: 'Recharge a shield (costs ore)' },
+      { n: 3, id: 'buildf', order: 'build', arg: 'fighter', label: 'Build a fighter', tag: 'Build fighter', help: 'Build a fighter (costs ore)' },
+      { n: 4, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', tag: 'Build escort', help: 'Build an escort (costs ore)' },
+      { n: 5, id: 'goal', fly: 'objective', label: 'Fly to the objective', tag: 'Fly to goal', help: 'Autopilot to the objective' }
     ] }
   ],
   // why a row cannot be done now, in a few plain words: the code of the game's own refusal (campNo in src/campaign.js) to the words under the row's name; {need} and {have} are ore
   why: { over: 'the battle is over', bay: 'the bay is empty', launching: 'still launching', baydry: 'all of it is out', nofighters: 'no fighters out', noescorts: 'no escorts out', noconvoy: 'no convoy to escort', nowing: 'no ships out',
     noore: 'no ore in reach', noore2: 'needs {need} ore', shieldfull: 'shield is full', earthfull: "Earth's shield is full", noearth: 'no Earth here', farearth: 'too far from Earth', buildfull: 'no room in the bay', what: 'cannot do that now',
-    nogoal: 'no objective', there: 'you are there' }
+    nogoal: 'no objective', there: 'you are there' },
+  // the same, a word or two, for the one-line rows of the panels (card space-game-campaign-panels-ui); tag, on a row, is its name in one line (label when there is none)
+  shortWhy: { over: 'over', bay: 'bay empty', launching: 'launching', baydry: 'all out', nofighters: 'none out', noescorts: 'none out', noconvoy: 'no convoy', nowing: 'none out',
+    noore: 'no ore near', noore2: 'needs {need} ore', shieldfull: 'full', earthfull: 'Earth full', noearth: 'no Earth', farearth: 'too far', buildfull: 'bay full', what: 'not now',
+    nogoal: 'no goal', there: 'there' }
 };
 // the rows the H page and Settings list for the panels: the panel's key then the row's digit, under the panel's heading, in the table's order
 function campPanelKeyRows() {
-  return CAMP_PANELS.panels.flatMap(p => p.rows.map(r => ({ k: [p.key, String(r.n)], t: p.title.charAt(0) + p.title.slice(1).toLowerCase() + ': ' + r.help.charAt(0).toLowerCase() + r.help.slice(1), sub: 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL' })));
+  return CAMP_PANELS.panels.flatMap(p => [{ k: [p.key], t: p.title.charAt(0) + p.title.slice(1).toLowerCase() + ': open the panel (again closes it)', sub: 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL' }].concat(p.rows.map(r => ({ k: [p.key, String(r.n)], t: p.title.charAt(0) + p.title.slice(1).toLowerCase() + ': ' + r.help.charAt(0).toLowerCase() + r.help.slice(1), sub: 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL' }))));
 }
 
 const CONTROLS = [
