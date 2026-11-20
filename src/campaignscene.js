@@ -1,7 +1,8 @@
 // ---------- The Campaign scene: reads the keys, steps src/campaign.js, draws what its numbers say (docs/CAMPAIGN.md) ----------
 // The only Phaser in the mode. Every rule, number and word comes from src/campaign.js (the tuning table CAMP, the sim, uiText for the text), so this
 // file draws and listens and decides nothing about the game. It is not run by a test in plain Node (a scene is Phaser's): tests/campaign.mjs runs the sim.
-//   K on the title opens it (campaignStart); Enter begins a level; W A S D fly, Space fires the main gun, Q blinks (the warp tech);
+//   K on the title opens it (campaignStart); Enter begins a level; W A S D fly, Space fires the main gun, F a homing missile (the magazine is C.missiles), Q blinks (the warp tech);
+//   the point guns need no key: they shoot the nearest alien in reach by themselves, and the scene draws their reach and their flash (syncRockets)
 //   1 launch, 2 attack, 3 escort, 4 guard, 5 recall; I types an order and U speaks one (the strip and the ship computer, src/shipcomputer.js, find this scene);
 //   Esc pauses (this scene's own pause, not Long Haul's: the Long Haul save is not touched here); after a win the story, the tech pick (1 2 3), then the next level.
 // Mode: 'intro' (the story before) -> 'play' <-> 'pause' -> 'won' (story after) -> 'pick' (one of three techs, when the level offers any) -> next level, or after the last level 'end' (back to the title);
@@ -86,7 +87,7 @@ class Campaign extends Phaser.Scene {
     this.mode = 'lost'; const line = uiText('camp.lose.' + why);
     this.showCard(uiText('camp.ui.title'), [line], uiText('camp.ui.retry')); this.say([line]);
   }
-  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.title'), [uiText('camp.ui.pausemap')].concat(typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), 230); } // campDebugLine: the tune kit's one short line of its keys
+  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.title'), [uiText('camp.ui.pausemap')].concat([uiText('camp.ui.pausehelp')], typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), 290); } // campDebugLine: the tune kit's one short line of its keys
   next() { // after the story (and the pick): the next level, or after the last one the end, with a new campaign waiting
     const last = !CAMP.levels[this.level + 1];
     this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) this.P.techs = []; campProgressSave(this.P);
@@ -112,12 +113,15 @@ class Campaign extends Phaser.Scene {
     const order = { Digit1: 'launch', Digit2: 'attack', Digit3: 'escort', Digit4: 'guard', Digit5: 'recall' }[c];
     if (order) { const r = campOrder(C, order, '', 'key'); toast(this, r.say, r.ok ? '#9fe9ff' : '#ffb454'); }
     else if (c === 'KeyQ') C.input.blink = true;
+    else if (c === 'KeyF') this.fireMissile();
     else if (typeof campDebugKey === 'function') { // the tune kit (src/campdebug.js): ] skip, \\ win, [ lose, ` god mode; none is a key you fly by
       const id = campDebugKey(c); if (!id) return;
       const r = campDebugRun(C, this.P, id); if (r && r.say) toast(this, r.say, '#ffd37a');
       if (r && r.go) go(this, 'Campaign', { level: r.go.level, techs: r.go.techs, via: 'skip' });
     }
   }
+
+  fireMissile() { const r = campOrder(this.camp, 'missiles', '', 'key'); toast(this, r.say, r.ok ? '#9fe9ff' : '#ffb454'); }
 
   // ----- each frame -----
   update(time, dt) {
@@ -130,6 +134,7 @@ class Campaign extends Phaser.Scene {
       campStep(C, Math.min(dt, 100) / 1000);
     }
     C.events.splice(0).forEach(e => this.onEvent(e));
+    this.syncRockets(Math.min(dt, 100));
     this.sync(); this.paintHud();
     if (this.mp) campMapPaint(this, time);
   }
@@ -141,6 +146,9 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'earthhit') this.boom.explode(6, e.x, e.y);
     else if (e.type === 'launch' || e.type === 'dock') beep(e.type === 'launch' ? 560 : 420, 0.07, 'triangle', 0.04, 160);
     else if (e.type === 'blink') { this.boom.explode(30, e.x, e.y); sfx('shieldUp'); }
+    else if (e.type === 'missile') beep(170, 0.4, 'sawtooth', 0.045, 520);
+    else if (e.type === 'mboom') { this.boom.explode(44, e.x, e.y); sfx('boom'); }
+    else if (e.type === 'mfizzle') this.boom.explode(6, e.x, e.y);
     else if (e.type === 'end') { if (e.result === 'won') this.time.delayedCall(1800, () => this.showWon()); else this.time.delayedCall(1200, () => this.showLost(e.why)); }
   }
 
@@ -165,9 +173,43 @@ class Campaign extends Phaser.Scene {
     while (this.bsp.length < C.bullets.length) this.bsp.push(this.add.image(0, 0, 'bullet').setDepth(4));
     this.bsp.forEach((im, i) => {
       const b = C.bullets[i]; if (!b) { im.setVisible(false); return; }
-      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'bullet' : 'ebullet').setScale(b.beam ? 4 : b.pd ? 0.6 : 1, b.beam ? 1.6 : 1);
-      if (b.beam) im.setTint(0x7fe9ff); else im.clearTint();
+      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'bullet' : 'ebullet').setScale(b.beam ? 4 : b.pd ? 0.9 : 1, b.beam ? 1.6 : 1);
+      if (b.beam) im.setTint(0x7fe9ff); else if (b.pd) im.setTint(0xffd37a); else im.clearTint(); // the turrets' shots are amber, so they are not mistaken for the main gun's
     });
+  }
+  // the missiles in flight (a body, a flame and a trail of smoke), the turrets (a faint ring of how far they reach, four mounts that flash when one fires) and the magazine count
+  syncRockets(ms) {
+    const C = this.camp, c = C.carrier, k = CAMP.missile, seen = {}, play = this.mode === 'play';
+    if (!this.hud.missiles) { // made the first time: the missiles in flight, the turrets' reach ring and mounts, the magazine count (bottom left, above the key line)
+      this.msp = {}; this.reachG = this.add.graphics().setDepth(2); this.mountG = this.add.graphics().setDepth(6);
+      this.hud.missiles = this.add.text(24, H - 72, '', uiFont(14, '#ffb454', { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
+    }
+    C.rockets.forEach(m => {
+      const ux = Math.cos(m.rot), uy = Math.sin(m.rot);
+      let r = this.msp[m.id];
+      if (!r) r = this.msp[m.id] = { body: this.add.rectangle(m.x, m.y, 16, 5, 0xfff1d0).setDepth(5), flame: this.add.image(m.x, m.y, 'ember').setBlendMode('ADD').setTint(0xffa040).setScale(1.6).setDepth(5), puff: 0 };
+      r.body.setPosition(m.x, m.y).setRotation(m.rot); r.flame.setPosition(m.x - ux * 11, m.y - uy * 11); seen[m.id] = true;
+      r.puff -= ms;
+      if (play && r.puff <= 0) { // smoke: a soft puff every 40 ms that grows and fades
+        r.puff = 40; const p = this.add.image(m.x - ux * 10, m.y - uy * 10, 'smoke').setScale(0.22).setTint(0xb8c2cc).setAlpha(0.55).setDepth(4);
+        this.tweens.add({ targets: p, alpha: 0, scale: 0.8, duration: 700, onComplete: () => p.destroy() });
+      }
+    });
+    Object.keys(this.msp).forEach(id => { if (!seen[id]) { this.msp[id].body.destroy(); this.msp[id].flame.destroy(); delete this.msp[id]; } });
+    const g = this.reachG, mg = this.mountG; g.clear(); mg.clear();
+    if (c.hp > 0) {
+      g.lineStyle(1, 0xffd37a, 0.16).strokeCircle(c.x, c.y, CAMP.carrier.pdRange);
+      const hot = C.t - C.pdAt < 160, aim = campWrap(C.pdAim - c.rot), cs = Math.cos(c.rot), sn = Math.sin(c.rot);
+      const MOUNTS = [[24, -20], [24, 20], [-20, -22], [-20, 22]]; // px from the carrier's centre in its own frame (x along the nose)
+      let near = -1, best = 9; if (hot) MOUNTS.forEach((p, i) => { const d = Math.abs(campWrap(aim - Math.atan2(p[1], p[0]))); if (d < best) { best = d; near = i; } });
+      MOUNTS.forEach((p, i) => {
+        const x = c.x + cs * p[0] - sn * p[1], y = c.y + sn * p[0] + cs * p[1];
+        mg.fillStyle(0x04101c, 0.9).fillCircle(x, y, 5); mg.fillStyle(i === near ? 0xffffff : 0xffd37a, 1).fillCircle(x, y, i === near ? 4 : 2.5);
+        if (i === near) mg.lineStyle(3, 0xffe9a0, 0.9).lineBetween(x, y, x + Math.cos(C.pdAim) * 18, y + Math.sin(C.pdAim) * 18);
+      });
+    }
+    this.hud.missiles.setColor(C.missiles > 0 ? '#ffb454' : '#ff4d6d').setText(uiText('camp.ui.missiles', { n: C.missiles })
+      + (C.missiles < k.magazine && C.reloadAt ? '    ' + uiText('camp.ui.missilenext', { s: Math.max(0, Math.ceil((C.reloadAt - C.t) / 1000)) }) : ''));
   }
   // the gauges and the radar
   paintHud() {

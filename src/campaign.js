@@ -36,6 +36,23 @@ const CAMP = {
     pdRange: 420,                          // px the point guns reach
     pdSpeed: 800                           // px/s of a point-defence shot
   },
+  missile: {                               // the missile launcher (F, or the order "missiles"): a homing missile for the mothership and the other big ships (card space-game-campaign-missiles)
+    magazine: 6,                           // missiles you start with, and how many the slow reload fills the magazine to
+    max: 12,                               // the most the magazine can ever hold (C.missiles, a plain number: the ore code adds to it with campMissileAdd)
+    reload: 15000,                         // ms until one missile is back in the magazine while it is below `magazine`
+    delay: 700,                            // ms between two launches (the launcher cycles)
+    lock: 2400,                            // px: a big ship this close to the carrier can be locked (the mothership first, else the nearest tower or gunship)
+    bigKinds: ['mother', 'tower', 'gunship'], // the ships that count as big: the missile aims at them, its fuze goes off on them, they take `big`
+    speed: 560,                            // px/s top speed
+    launch: 120,                           // px/s it leaves the tube at
+    accel: 800,                            // px/s per s: from there it gets up to speed
+    turn: 3.4,                             // rad/s the missile turns toward its target
+    life: 7000,                            // ms of fuel: out of it the missile dies with no bang
+    fuze: 34,                              // px from the edge of a big ship at which the missile goes off
+    blast: 80,                             // px: every alien this close to where it went off is hurt
+    big: 100,                              // hit points a big ship loses (six missiles take 600 of the mothership's 700: the guns and the wing finish it)
+    small: 10                              // hit points any other alien loses (a raider, a drone)
+  },
   bay: {
     fighters: 6,                           // fighters in the bay at the start
     escorts: 2,                            // escorts in the bay at the start
@@ -207,6 +224,7 @@ function campNew(level, techs, opts) {
     result: null, why: ''
   };
   if (campHas(C, 'bay2')) C.bay.fighters += CAMP.tech.bay2.fighters;
+  Object.assign(C, { missiles: CAMP.missile.magazine, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0, pdAt: -1e9, pdAim: 0 }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks
   const p = campPlaces(level)[L.start], c = campSpawn(C, 'carrier', p.x + L.startAt[0], p.y + L.startAt[1]);
   C.carrier = c; c.rot = 0;
   (L.towers || []).forEach(g => { // rings of towers round a place, facing outward
@@ -335,6 +353,16 @@ function campDo(C, name, arg, dry) {
     out.forEach(u => { u.order = { type: 'recall' }; u.move = null; });
     C.orders.recall++; return campYes('recall');
   }
+  if (name === 'missiles') { // the launcher: the mothership if you name it (or if it is in reach), else the nearest big ship in reach
+    if (C.missiles <= 0) return campNo('nomissiles');
+    if (C.t < C.nextRocket) return campNo('missilewait');
+    const named = t && t.kind === 'mother', mother = named && campTarget(C, t);
+    if (named && !mother) return campNo('nomother');
+    if (named && campDist(mother, C.carrier) > CAMP.missile.lock) return campNo('range');
+    const tg = named ? mother : campMissileTarget(C); if (!tg) return campNo('nobig');
+    if (dry) return campYes(tg.kind === 'mother' ? 'missilesmother' : 'missiles');
+    campFire(C, tg); C.orders.missiles++; return campYes(tg.kind === 'mother' ? 'missilesmother' : 'missiles');
+  }
   return campNo('what');
 }
 
@@ -345,6 +373,7 @@ function campIntent(text) {
   if (!q) return null;
   q = q.replace(/^(?:the |our )?(?:fighters?|wing|escorts?|squadron|ships)\s+(?=(?:attack|engage|guard|defend|protect|launch|recall|return|escort)\b)/, '');
   let m;
+  if (/\b(?:missiles?|rockets?|torpedoe?s?)\b/.test(q)) return { act: 'fleet_missiles', arg: q.replace(/\b(?:fire|launch|shoot|send|loose|use|the|our|all|some|a|one|missiles?|rockets?|torpedoe?s?|with|at|on|to)\b/g, ' ').replace(/\s+/g, ' ').trim() }; // "fire missiles", "missiles at the mothership": before "launch", which is the bay
   if (/^(?:launch|scramble|deploy|open the bay|open the bay doors|bay doors|send out the (?:wing|fighters|ships|fleet)|launch the (?:wing|fighters|ships|fleet|escorts)|get them out)(?: now)?$/.test(q) || /^launch\b/.test(q)) return { act: 'fleet_launch', arg: '' };
   if ((m = /^(?:recall|come home|come back|return(?: home| to the carrier| to base)?|land|dock|rtb|fall back|retreat|pull back|bring them (?:home|back))\b\s*(.*)$/.exec(q))) return { act: 'fleet_recall', arg: '' };
   if ((m = /^(?:send|move|put|take|set)\s+(?:the |our )?(?:escorts?|escort ships?|wing)\s*(?:to|with|beside|for|on)?\s*(.*)$/.exec(q)) && /escort/.test(q)) return { act: 'fleet_escort', arg: m[1] };
@@ -369,6 +398,7 @@ function campTick(C, dt) {
   campLaunch(C);
   C.ships.forEach(u => { if (u.hp > 0 && u.kind !== 'carrier') campAI(C, u, dt); });
   campBullets(C, dt);
+  campMissiles(C, dt);
   campCaches(C);
   campRelic(C, dt);
   campRepair(C, dt);
@@ -420,7 +450,7 @@ function campCarrier(C, dt) {
   }
   if (C.t >= C.nextPd) { // the point guns: the nearest alien inside their reach
     const a = campNearest(campAliens(C), c, k.pdRange);
-    if (a) { C.nextPd = C.t + k.pdDelay; campBullet(C, c, Math.atan2(a.y - c.y, a.x - c.x), k.pdSpeed, k.pd, k.pdRange / k.pdSpeed * 1000 + 100, 'earth', c.r * 0.6, { pd: true }); }
+    if (a) { C.nextPd = C.t + k.pdDelay; C.pdAt = C.t; C.pdAim = Math.atan2(a.y - c.y, a.x - c.x); campBullet(C, c, Math.atan2(a.y - c.y, a.x - c.x), k.pdSpeed, k.pd, k.pdRange / k.pdSpeed * 1000 + 100, 'earth', c.r * 0.6, { pd: true }); }
   }
 }
 function campBullet(C, from, rot, speed, dmg, lifeMs, team, ahead, extra) {
@@ -604,6 +634,49 @@ function campBullets(C, dt) {
   C.bullets = C.bullets.filter(b => !b.dead);
 }
 
+// ---------- the missile launcher (card space-game-campaign-missiles; the numbers are CAMP.missile) ----------
+// C.missiles is the magazine: a plain number. The slow reload brings it back up to CAMP.missile.magazine, one every `reload` ms; campMissileAdd (the ore code) can fill it up to `max`.
+// A missile goes for its target, turning at most `turn` rad/s; when the target is gone it takes the mothership or the nearest big ship in reach, else it flies on until its fuel is out.
+// Its fuze goes off near a big ship (never a raider or a drone on the way), and every alien within `blast` is hurt: a big ship `big`, any other `small`.
+const campBig = u => CAMP.missile.bigKinds.indexOf(u.kind) >= 0;
+function campMissileTarget(C, from) { // the mothership if it is in reach, else the nearest big alien in reach (of `from`: the carrier unless a missile asks)
+  const p = from || C.carrier, big = campAliens(C).filter(u => campBig(u) && campDist(u, p) <= CAMP.missile.lock);
+  return big.find(u => u.kind === 'mother') || campNearest(big, p) || null;
+}
+function campFire(C, tg) { // one missile out of the tube: the magazine is a missile less, the launcher cycles
+  const k = CAMP.missile, c = C.carrier;
+  C.missiles--; C.nextRocket = C.t + k.delay; if (!C.reloadAt) C.reloadAt = C.t + k.reload;
+  const m = { id: 'missile-' + (++C.rocketId), x: c.x + Math.cos(c.rot) * c.r, y: c.y + Math.sin(c.rot) * c.r, rot: c.rot, sp: k.launch, vx: 0, vy: 0, life: k.life, target: tg ? tg.id : '' };
+  C.rockets.push(m); C.events.push({ type: 'missile', x: m.x, y: m.y, id: m.id });
+  return m;
+}
+function campMissileAdd(C, n) { // the ore code: n more missiles into the magazine, up to `max`; how many went in
+  const k = CAMP.missile, was = C.missiles; C.missiles = Math.max(0, Math.min(k.max, was + Math.floor(n || 0)));
+  if (C.missiles >= k.magazine) C.reloadAt = 0; // a full magazine has nothing to reload
+  return C.missiles - was;
+}
+function campMissiles(C, dt) {
+  const k = CAMP.missile;
+  if (C.missiles >= k.magazine) C.reloadAt = 0; // the reload clock runs only while the magazine is below its full
+  else if (!C.reloadAt) C.reloadAt = C.t + k.reload;
+  else if (C.t >= C.reloadAt) { C.missiles++; C.reloadAt = C.missiles >= k.magazine ? 0 : C.t + k.reload; }
+  C.rockets.forEach(m => {
+    if (m.dead) return;
+    m.life -= dt * 1000;
+    let tg = m.target ? C.by[m.target] : null;
+    if (!tg || tg.hp <= 0) { tg = campMissileTarget(C, m); m.target = tg ? tg.id : ''; }
+    if (tg) m.rot = campRot(m.rot, Math.atan2(tg.y - m.y, tg.x - m.x), k.turn * dt);
+    m.sp = Math.min(k.speed, m.sp + k.accel * dt); m.vx = Math.cos(m.rot) * m.sp; m.vy = Math.sin(m.rot) * m.sp;
+    const px = m.x, py = m.y; m.x += m.vx * dt; m.y += m.vy * dt;
+    const hit = C.ships.find(u => u.team === 'alien' && u.hp > 0 && campBig(u) && campSegHit(px, py, m.x, m.y, u.x, u.y, u.r + k.fuze));
+    if (hit) { // it goes off: everything near it is hurt, a big ship most
+      m.dead = true; C.events.push({ type: 'mboom', x: m.x, y: m.y, r: k.blast });
+      campAliens(C).forEach(u => { if (campDist(u, m) <= k.blast + u.r) campHurt(C, u, campBig(u) ? k.big : k.small, C.carrier.id); });
+    } else if (m.life <= 0) { m.dead = true; C.events.push({ type: 'mfizzle', x: m.x, y: m.y, id: m.id }); }
+  });
+  C.rockets = C.rockets.filter(m => !m.dead);
+}
+
 // ---------- tech, story and the save ----------
 function campTechChoices(level) { return Object.keys(CAMP.tech).filter(id => CAMP.tech[id].after === level); }
 function campPick(P, id) {
@@ -646,6 +719,6 @@ function campSummary(C) {
   const out = campWing(C, 'fighter').length, esc = campWing(C, 'escort').length, al = campAliens(C).length, cv = campConvoys(C).map(u => campConvoyName(u));
   return 'Campaign level ' + C.level + ', ' + L.name + '. Goal: ' + campObjective(C) + ' Carrier hull ' + Math.round(c.hp) + ' of ' + Math.round(c.maxHp) + '.'
     + (C.earth ? ' Earth shield ' + Math.round(C.earth.shield / C.earth.max * 100) + ' percent.' : '') + ' In the bay: ' + C.bay.fighters + ' fighters, ' + C.bay.escorts + ' escorts. Out: '
-    + out + ' fighters, ' + esc + ' escorts. Aliens alive: ' + al + '.' + (L.convoys.length ? ' Convoys flying: ' + cv.join(', ') + (cv.length ? '' : 'none') + '.' : '')
+    + out + ' fighters, ' + esc + ' escorts. Missiles in the magazine: ' + C.missiles + ' of ' + CAMP.missile.magazine + ' (F fires one at the mothership or the nearest big ship). Aliens alive: ' + al + '.' + (L.convoys.length ? ' Convoys flying: ' + cv.join(', ') + (cv.length ? '' : 'none') + '.' : '')
     + (L.win === 'mother' ? (m ? ' The alien mothership is ' + Math.round(campDist(m, c) / 10) + ' km away.' : ' The mothership has not come yet.') : '');
 }
