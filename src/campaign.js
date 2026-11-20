@@ -1001,7 +1001,7 @@ function campWingAI(C, u, dt) {
     campMove(u, m.ang, m.face, dt);
     if (m.fire && dist < k.range + (foe.r || 0) && C.t > u.nextShot && Math.abs(campWrap(target - u.rot)) < k.aim) {
       u.nextShot = C.t + campBetween(C, k.delay[0], k.delay[1]);
-      campBullet(C, u, u.rot, k.bullet, k.damage, 1400, 'earth', 14);
+      campBullet(C, u, u.rot, k.bullet, k.damage, 1400, 'earth', 14); C.events.push({ type: 'wingshot', x: u.x, y: u.y, kind: u.kind, id: u.id }); // the wing's gun has a sound of its own (the scene scales it by the distance)
     }
     u.move = u.move || null;
   } else if (home) campSeek(u, home.x + (home.vx || 0) * 0.2, home.y + (home.vy || 0) * 0.2, dt);

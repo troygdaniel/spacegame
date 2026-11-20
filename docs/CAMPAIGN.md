@@ -72,6 +72,7 @@ All synthesized in `src/audio.js` from the game's own voices (no audio files), t
 | Name | When | Made of |
 |---|---|---|
 | `turret` | each turret shot, at most one in 70 ms | a short bright square bolt falling to under a third of its pitch in 70 ms, a thin sawtooth zip, a hair of click; the pitch is the turret's (1500 Hz plus 150 Hz a step, the back four higher) moved 3 percent at random: a staggered pew-rattle |
+| `wingShot` | each shot of a fighter or an escort (the sim's `wingshot` event), at most one in 55 ms | the wing's gun, a quieter, farther pew: a soft triangle bolt falling 1 kHz to 350 Hz in 60 ms, a thin sine zip and a faint tick; softer the farther the ship is from the carrier (1 minus the distance over 1,600 px, none beyond) |
 | `beamhum` (a loop, `beamHum`) | the Beam turrets firing; a mining laser on a rock (the belt card's `C.lasers`; a plain turret shot at an alien is also a beam there but keeps its pew, unless `CAMP.beamHum.alienLaser` is 1) | a sine root, a sine fifth and a sawtooth buzz an octave up through a low-pass that opens as it climbs, a thin band of hiss; 140 to 320 Hz over two seconds of unbroken fire |
 | `missileLaunch` | F | a whoosh that climbs for half a second (a rising noise band and a rising sawtooth), then at 0.3 s a dull thump |
 | `missileBlast` | a missile goes off | a low sine thump, a low-passed rumble, a crackle of five quick bright bursts |
@@ -80,6 +81,8 @@ All synthesized in `src/audio.js` from the game's own voices (no audio files), t
 | `shieldHit` | a shot on the carrier's shield | a bright electric zap, high and short |
 | `hullHit` | a shot that got through to the hull | a dull clank, low and short |
 | `earthHit` | a shot on Earth's shield | a deep thump felt more than heard |
+
+**Levels, measured (card `space-game-campaign-turret-sound-bug`).** Troy could not hear the turrets or the wing. `node tests/campsound-probe.mjs` (headless Chrome, one Chrome through the lock) puts an AnalyserNode on the master output and reads the loudest 46 ms of each sound. Before: the eight turrets -40.8 dBFS RMS (5 dB under Long Haul's laser, 24 under a kill), the wing's guns no sound at all (they fired no event), the beam hum -41.4. The Campaign has no music (only the Space scene has a mood), so music did not duck anything; the cause was the level and the missing event. After: turrets -31.3, the wing's pew about -37 up close (a quieter, farther sound by design), the hum -35.4, the shield zap and hull clank -34.5, the missile -25, a kill -29 to -21. The level of each group is one line of `SOUND.level` in `src/audio.js` (1 is as the sound is written); the hum's is `BEAMHUM.vol`; how often each plays and how far the wing's pew carries is `CAMP_SND` in the scene.
 
 The rules they keep (`tests/campsounds.mjs`, plain Node on a stand-in AudioContext): each is short, no louder than the game's own kill, made on the pool's voices (no new audio node however long a fight runs), silent when muted, at volume 0 or with the effects at 0, scaled by the effects volume, with a share of the reverb that leaves the kill, the jump, the arrival and the dock the longest tails. The scene limits how often each kind plays (`CAMP_BLIP`, `CAMP_SND` in `src/campaignscene.js`).
 
