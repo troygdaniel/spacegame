@@ -62,6 +62,15 @@ Card `space-game-campaign-navigate`. The Tab map is also where you choose where 
 - **By words**, with no chat key: "fly to Mars", "go to the relic", "take me to the objective", "head for the nearest cache", "cancel the course". The closed list has one more action for it, `fleet_fly`.
 - **Every number** is `CAMP.nav` in `src/campaign.js` (stop distances, the speed rule, the steer gain, the flight-time factor, the click radius, the lines of the list, the arrow's margin and keep-out rectangles).
 
+## The warp cinematic (level 2)
+
+Card `space-game-campaign-warp`. When level 2 starts the carrier warps from Earth to Alpha Centauri, and you see it: Earth and the Sun pull away behind the carrier, the stars stretch into streaks, a bright tunnel (Long Haul's own: `Hyper.prototype.drawTunnel`, its glow textures, its hum, the sounds of `src/audio.js`), a white flash, and the star resolves ahead with its two companions (the level's own picture of it, with a white-hot core). About 7 seconds, **any key or a click skips it**, three short lines of words (the ship's voice says them too). It plays when the level starts from the title (K), after level 1 ("next") and from the address (`?campaign=2`); not for a retry of the level or a debug skip (`]`), and once per start.
+
+- **Every number is `CAMP.warp`** in `src/campaign.js`: the windows in seconds (the pull-away, the stretch, the tunnel, the flash, the resolve, the total), the skip fade, the grace in which a key is ignored, the lines and the sounds with their times, where Earth, the Sun and the star sit and how big they are, the colours.
+- **Which level warps** is data: `warp: { dest, ly, star }` on the level in `CAMP.levels` (level 2 has it). Take the line away and the level starts as it did; put it on another level and that level warps in. `star` names the place that resolves ahead.
+- **The call** is one line, the first of `Campaign.create` (`if (campWarpDue(this)) return;`). The cinematic is its own scene (`CampWarp`); it ends by starting Campaign again with the same data plus `warped: true`.
+- The timeline is plain functions (`campWarpFrame(t, skippedAt)`), tested in Node (`tests/campwarp.mjs`); the scene only draws what the frame says. Long Haul's `hyperspace.js` has two optional multipliers for it (`ribbonK`, `gateK`, default 1: nothing else sets them).
+
 ## The play log
 
 Every level is in the play log (`docs/PLAYLOG.md`, the `campaign` event): the level, how it began (menu, address, next, retry or skip), the waves, each order and how it was given (key, strip, voice, click) and whether it worked, each ship lost, the tech picked, each debug key, and the end (win, lose, quit or skip, why, the wave reached, the ships lost, the hull left, the seconds). `node tools/playlog-summary.mjs` prints a **Campaign** block, one line a level. A level the tab closes on is ended as quit.

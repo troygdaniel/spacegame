@@ -109,6 +109,28 @@ const CAMP = {
     hp: 200,                               // hit points of a freighter
     speed: 120                             // px/s: the same as the MULE of the escort call
   },
+  warp: {                                  // the warp cinematic at the start of a level that warps in (src/campwarp.js): times are seconds from its start, places are fractions of the screen, sizes are px
+    total: 7.2,                            // s: the whole cinematic (6 to 8); any key skips it
+    grace: 0.4,                            // s: a key in the first moments is ignored (the key that started the level may still be down)
+    pull: [0, 2.2],                        // s: Earth and the Sun pull away behind the carrier and shrink
+    stretch: [0.9, 3.0],                   // s: the stars stretch into streaks: the speed builds from nothing to full
+    tunnel: [2.4, 5.7],                    // s: the bright tunnel (ribbons, gates, the light at the nose) comes up and runs at full speed
+    flash: [5.3, 6.1],                     // s: the white flash that hides the change; it peaks halfway
+    resolve: [5.8, 7.2],                   // s: the new star resolves ahead and the streaks slow to stars again
+    skipFade: 0.4,                         // s: after a key the flash comes up and the cinematic ends in this long
+    hold: 2.4, fade: 0.4,                  // s: a line of words stays this long, and fades in and out in this
+    lines: [{ at: 0.5, key: 'camp.warp.l1' }, { at: 3.4, key: 'camp.warp.l2', hold: 1.9 }, { at: 5.9, key: 'camp.warp.l3', hold: 0.8 }], // s: when each line comes up and, when it is not the usual hold, how long it stays (one line at a time; the words are camp.warp.* in content/text/campwarp.md; the ship's voice says them too)
+    cues: [{ at: 0.3, sfx: 'hyperCharge' }, { at: 2.5, sfx: 'hyperJump' }, { at: 5.6, sfx: 'hyperArrive' }], // s: the sounds of src/audio.js (the swell, the jump, the arrival), and when; the hum under them is Long Haul's own (src/hyperspace.js)
+    ship: { x: 0.36, y: 0.5 },             // the carrier's place across the screen
+    earth: { x: 0.22, y: 0.5, radius: 160, endX: -0.08, endScale: 0.04 }, // Earth behind the carrier: where it starts, its radius in px, where it ends, and its size then as a share of the start
+    sun: { x: 0.1, y: 0.26, size: 150, endScale: 0.1 }, // the Sun far behind: its glow's size in px at the start, and as a share of that at the end
+    star: { x: 0.8, y: 0.5, radius: 230, glow: 520 }, // the new star ahead once it has resolved: its disc's radius and its glow's size in px
+    companions: [{ dx: -0.1, dy: -0.12, size: 70, color: 0xffa860 }, { dx: 0.09, dy: 0.2, size: 26, color: 0xff6a4a }], // Alpha Centauri B (orange, near) and Proxima (red, small, far) beside the star: offsets as fractions of the screen, glow size in px
+    color: { tunnel: 0x9fe9ff, warm: 0xffe2a8, star: 0xffd98a, sun: 0xfff2c0, flash: 0xffffff }, // the tunnel's cool light, the warm light it ends in, Alpha Centauri A, the Sun, the flash
+    shake: 0.0014,                         // the camera shake while the tunnel runs
+    stars: 200, near: 24,                  // streaks across the screen, of which this many are long and close
+    textY: 0.84                            // where the words sit, down the screen
+  },
   nav: {                                   // the carrier's autopilot, the map's list and picking, and the arrow at the screen edge (src/campnav.js); the rule is the Long Haul autopilot's (src/autopilot.js AUTO)
     stop: 100,                             // px: a place is flown to until the edge of it (its radius plus this) is this near
     stopShip: 450,                         // px: a ship (a convoy, the mothership, a tower) is flown to until it is this near: inside the main gun's reach
@@ -202,6 +224,7 @@ const CAMP = {
     },
     2: {                                                          // Alpha Centauri: warp in, gather resources, recover what the ancient race left on Proxima b
       name: 'Alpha Centauri', start: 'arrival', startAt: [0, 0], win: 'relic', earth: false,
+      warp: { dest: 'Alpha Centauri', ly: 4.4, star: 'sun' },  // the warp cinematic plays when this level starts (src/campwarp.js): where to, how far, and which of the places below is the star that resolves ahead
       places: {                                                 // the carrier warps in at arrival (not drawn); Proxima b holds the relic
         arrival: { x: -4800, y: 2400, name: 'Warp point', hidden: true },                           // where the carrier warps in, south-west of the relic (not drawn)
         sun: { x: -1800, y: -3600, name: 'Alpha Centauri', kind: 'lava', seed: 4371, r: 260 },       // the star of the level, drawn as a lava world, 260 px across its radius
