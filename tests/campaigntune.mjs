@@ -5,6 +5,7 @@
 //   C. the address plan: ?campaign=N and ?campaign=N&tech=a,b become a level and its techs that campNew takes as they are
 //   D. the tuning table is at the top of src/campaign.js, has what Troy wants to change, and a comment on every line of numbers
 //   E. the play log sees a whole level through the game's own functions (campNew, campOrder, campStep, campPick, the debug keys) and says each thing once
+//   G. the scene (Phaser's, so its source is read) and the title call the kit with the arguments the log and the kit need
 // Levels 2 and 3 are built by another card; here a copy of level 1 stands in for them where a test needs a second level.
 // Run: node tests/campaigntune.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -124,6 +125,15 @@ check('the play log counts the Campaign keys as one, the debug keys by name, and
   check('the debug file reaches nothing of the page or of Phaser', !/\b(document|window|Phaser|localStorage|sessionStorage|fetch|navigator|location|setTimeout)\b/.test(dbg));
   const html = readFileSync(ROOT + '/index.html', 'utf8');
   check('index.html loads campdebug.js once, after campaign.js and before the play log', (html.match(/src\/campdebug\.js/g) || []).length === 1 && html.indexOf('src/campaign.js') < html.indexOf('src/campdebug.js') && html.indexOf('src/campdebug.js') < html.indexOf('src/playlog.js'));
+}
+// ---- G. the scene calls the kit (the scene is Phaser's, so a node test reads its source: the calls are there, with the arguments the play log and the kit need) ----
+{
+  const scene = readFileSync(ROOT + '/src/campaignscene.js', 'utf8'), title = readFileSync(ROOT + '/src/title.js', 'utf8');
+  check('the title reads the address (campAddrPlanPage), starts the Campaign with the plan\'s level, techs and via "address", and shows the plan\'s line when the address was not understood', /campAddrPlanPage\(\)/.test(title) && /scene\.start\('Campaign', \{ level: plan\.level, techs: plan\.techs, via: 'address' \}\)/.test(title) && /plan && plan\.say\) toast\(/.test(title));
+  check('the scene gives every key to campDebugKey and runs the row with campDebugRun(C, P, id); a skip starts r.go.level with r.go.techs, via "skip"', /campDebugKey\(c\)/.test(scene) && /campDebugRun\(C, this\.P, id\)/.test(scene) && /go\(this, 'Campaign', \{ level: r\.go\.level, techs: r\.go\.techs, via: 'skip' \}\)/.test(scene));
+  check('the pause card carries campDebugLine of the battle', /campDebugLine\(this\.camp\)/.test(scene));
+  check('the scene tells the log how a level began (campNew gets { via }: menu, next, retry, skip or address) and how an order was given (campOrder\'s fourth argument)', /via: this\.via/.test(scene) && /campOrder\(C, order, '', 'key'\)/.test(scene) && /via: 'next'/.test(scene) && /via: 'retry'/.test(scene) && /campOrder\(s2\.camp, name, arg, '(strip|voice)'\)/.test(readFileSync(ROOT + '/src/shipcomputer.js', 'utf8')));
+  check('the scene key is "Campaign", the name the play log counts its keys under', /super\('Campaign'\)/.test(scene) && J(`PLAYLOG.scenes.includes('Campaign')`));
 }
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `CAMPAIGN TUNE FAIL (${failed} of ${n})` : `CAMPAIGN TUNE PASS (${n} checks)`);
