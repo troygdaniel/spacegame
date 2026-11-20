@@ -42,7 +42,7 @@ All synthesized in `src/audio.js` from the game's own voices (no audio files), t
 | Name | When | Made of |
 |---|---|---|
 | `turret` | each turret shot, at most one in 70 ms | a short bright square bolt falling to under a third of its pitch in 70 ms, a thin sawtooth zip, a hair of click; the pitch is the turret's (1500 Hz plus 150 Hz a step, the back four higher) moved 3 percent at random: a staggered pew-rattle |
-| `beamhum` (a loop, `beamHum`) | the Beam turrets firing; any mining laser, on a rock or an alien (the belt card's `C.lasers`); until then a miner closing on its ore | a sine root, a sine fifth and a sawtooth buzz an octave up through a low-pass that opens as it climbs, a thin band of hiss; 140 to 320 Hz over two seconds of unbroken fire |
+| `beamhum` (a loop, `beamHum`) | the Beam turrets firing; a mining laser on a rock (the belt card's `C.lasers`; a plain turret shot at an alien is also a beam there but keeps its pew, unless `CAMP.beamHum.alienLaser` is 1); until the lasers exist, a miner closing on its ore | a sine root, a sine fifth and a sawtooth buzz an octave up through a low-pass that opens as it climbs, a thin band of hiss; 140 to 320 Hz over two seconds of unbroken fire |
 | `missileLaunch` | F | a whoosh that climbs for half a second (a rising noise band and a rising sawtooth), then at 0.3 s a dull thump |
 | `missileBlast` | a missile goes off | a low sine thump, a low-passed rumble, a crackle of five quick bright bursts |
 | `missileFizzle` | a missile runs out of fuel | a soft puff of air and a small falling tone |

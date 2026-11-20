@@ -65,7 +65,8 @@ const CAMP = {
     rise: 2,                               // s of unbroken fire (Beam turrets tech, Space held, a turret on a target) until the hum has climbed all the way
     mineRange: 320,                        // px: until the mining lasers exist (C.lasers is not there), a mining ship this close to the ore it is going for hums, softly, rising as it closes
     mineLevel: 0.55,                       // how loud that interim hum is, against the beam turrets' 1
-    laserLevel: 0.8                        // how loud the hum of a mining laser is (on a rock or on an alien: the same beam, the same hum), against the beam turrets' 1
+    laserLevel: 0.8,                       // how loud the hum of a mining laser is (the same hum on any rock), against the beam turrets' 1
+    alienLaser: 0                          // 1: a plain turret shot at an alien (a kind 'alien' beam in C.lasers) hums too, over its pew; 0: it keeps its pew only, and the hum is for rocks and the Beam turrets
   },
   missile: {                               // the missile launcher (F, or the order "missiles"): a homing missile for the mothership and the other big ships (card space-game-campaign-missiles)
     magazine: 6,                           // missiles you start with, and how many the slow reload fills the magazine to
@@ -630,7 +631,7 @@ function campTurrets(C) {
 // The beam hum (card space-game-campaign-sounds). C.beamT is how long the beam turrets have fired without a break, in seconds (to CAMP.beamHum.rise); campBeamState is what the scene tells
 // the audio each frame: { kind: 'turrets' | 'laser' | 'mine' | '', level 0 to 1, rise 0 to 1 }.
 // The mining lasers (the belt card builds them) say they fire through C.lasers, a list the sim keeps: [{ from: the ship's id, to: the rock's or the alien's id, kind: 'rock' | 'alien',
-// since: the battle's clock (ms) when this beam began without a break }], empty when none fires. One hum for all of them, on a rock or on an alien: the same beam. While C.lasers is not
+// since: the battle's clock (ms) when this beam began without a break }], empty when none fires. One hum for the beams on rocks (and, if CAMP.beamHum.alienLaser asks, those on aliens: a plain turret shot is one). While C.lasers is not
 // there at all (no mining lasers in the game yet) a mining ship closing on its ore hums instead.
 function campBeam(C, dt) {
   const on = campHas(C, 'beam') && !!C.input.fire && C.carrier.hp > 0 && C.turrets.some(t => t.target);
@@ -641,7 +642,7 @@ function campBeamState(C) {
   if (!C || C.result || C.carrier.hp <= 0) return off;
   if (campHas(C, 'beam') && C.input.fire && C.turrets.some(t => t.target)) return { kind: 'turrets', level: 1, rise: Math.min(1, (C.beamT || 0) / k.rise) };
   if (Array.isArray(C.lasers)) {
-    const ls = C.lasers.filter(l => l && Number.isFinite(l.since));
+    const ls = C.lasers.filter(l => l && Number.isFinite(l.since) && (l.kind !== 'alien' || k.alienLaser)); // a turret shot at an alien is a pulse with a pew of its own, unless alienLaser asks for the hum on it too
     return ls.length ? { kind: 'laser', level: k.laserLevel, rise: Math.min(1, Math.max(0, (C.t - Math.min(...ls.map(l => l.since))) / 1000 / k.rise)) } : off;
   }
   let best = null; // a mining ship closing on the ore it is going for: the nearest one of them, and how near

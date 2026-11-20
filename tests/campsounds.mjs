@@ -105,12 +105,17 @@ console.log('G2. the beam and mining hum');
   g.run('C.pickups[0].x = __es.x + 900; campStep(C, 0.001)');
   check('and none when the ore is far (more than 320 px) or there is none', J('campBeamState(C).kind') === '' && (g.run('C.pickups = []; campStep(C, 0.001)'), J('campBeamState(C).kind') === ''));
   g.run('__bat([]); C.lasers = []; campStep(C, 0.001)');
-  check('the mining lasers (C.lasers, from the belt card) are the same hum on a rock or on an alien: one beam of either kind gives kind laser at 0.8, climbing from when it began (half way after a second), the oldest beam counts when two fire, none gives none', (() => {
+  check('the mining lasers (C.lasers, from the belt card): a beam on a rock gives kind laser at 0.8, climbing from when it began (half way after a second), the oldest beam counts when two fire, none gives none', (() => {
     g.run('C.t = 5000; C.lasers = [{ from: "escort-1", to: "rock-1", kind: "rock", since: 4000 }]'); const a = J('campBeamState(C)');
-    g.run('C.lasers = [{ from: "escort-1", to: "raider-3", kind: "alien", since: 4000 }]'); const b = J('campBeamState(C)');
-    g.run('C.lasers = [{ from: "escort-1", to: "rock-1", kind: "rock", since: 4900 }, { from: "escort-2", to: "raider-3", kind: "alien", since: 3000 }]'); const c = J('campBeamState(C)');
+    g.run('C.lasers = [{ from: "escort-1", to: "rock-1", kind: "rock", since: 4900 }, { from: "escort-2", to: "rock-2", kind: "rock", since: 3000 }]'); const c = J('campBeamState(C)');
     g.run('C.lasers = []'); const d = J('campBeamState(C)');
-    return a.kind === 'laser' && b.kind === 'laser' && a.level === 0.8 && b.level === 0.8 && JSON.stringify(a) === JSON.stringify(b) && Math.abs(a.rise - 0.5) < 1e-9 && c.rise === 1 && d.kind === '';
+    return a.kind === 'laser' && a.level === 0.8 && Math.abs(a.rise - 0.5) < 1e-9 && c.rise === 1 && d.kind === '';
+  })());
+  check('a plain turret shot at an alien is a kind alien beam in C.lasers (2-GEN: from the carrier, one list with the rocks): it keeps its pew and does not hum, unless CAMP.beamHum.alienLaser is 1, which gives the same hum as a rock', (() => {
+    g.run('C.t = 5000; C.lasers = [{ from: "carrier-1", to: "raider-3", kind: "alien", since: 4000 }]'); const off = J('campBeamState(C)');
+    g.run('CAMP.beamHum.alienLaser = 1'); const on = J('campBeamState(C)');
+    g.run('CAMP.beamHum.alienLaser = 0; C.lasers = [{ from: "carrier-1", to: "raider-3", kind: "alien", since: 4000 }, { from: "escort-1", to: "rock-1", kind: "rock", since: 4500 }]'); const mix = J('campBeamState(C)');
+    return off.kind === '' && on.kind === 'laser' && on.level === 0.8 && Math.abs(mix.rise - 0.25) < 1e-9 && J('CAMP.beamHum.alienLaser') === 0;
   })());
   check('with C.lasers there, a miner closing on ore does not hum on its own (the beam does); the Beam turrets still hum over a laser', (() => {
     g.run('__bat(["beam"]); C.lasers = [{ from: "e", to: "r", kind: "rock", since: C.t - 500 }]; C.input.fire = true; __go(0.5)'); const x = J('campBeamState(C).kind');
@@ -147,7 +152,7 @@ console.log('G2. the beam and mining hum');
   `);
   g.run('window.__f1 = __fakeSc([]); __plays.length = 0; __f1.camp.t = 1000; __f1.onEvent({ type: "turret", i: 3, x: 0, y: 0, aim: 0 }); window.__f2 = __fakeSc(["beam"]); __f2.camp.t = 1000; __f2.onEvent({ type: "turret", i: 3, x: 0, y: 0, aim: 0 }); sfx = __sfx1');
   check('with the Beam turrets the hum is the sound: the turret event plays no pew (the flash stays); without it the pew is played with the turret\'s number', J('__plays').join() === 'turret 3', J('__plays').join());
-  check('the numbers are in the table: how long it takes to climb, how near a miner hums, how loud (a miner, a laser)', J('CAMP.beamHum.rise') === 2 && J('CAMP.beamHum.mineRange') === 320 && J('CAMP.beamHum.mineLevel') === 0.55 && J('CAMP.beamHum.laserLevel') === 0.8);
+  check('the numbers are in the table: how long it takes to climb, how near a miner hums, how loud (a miner, a laser)', J('CAMP.beamHum.rise') === 2 && J('CAMP.beamHum.mineRange') === 320 && J('CAMP.beamHum.mineLevel') === 0.55 && J('CAMP.beamHum.laserLevel') === 0.8 && J('CAMP.beamHum.alienLaser') === 0);
 }
 
 // ---------- G3. the missiles ----------
