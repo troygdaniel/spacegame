@@ -66,6 +66,10 @@ console.log('C. campRankStatus: what the hub reads');
   const w = J(`campRankStatus(__P(4000, { techs: ['bay2'], bonus: { fighters: 2, escorts: 1 } })).wing`);
   check('the wing counts everything the next mission starts with: the second-bay tech (four fighters), the extras of the refit, and the rank', w.fighters === 6 + 4 + 2 + 2 && w.escorts === 2 + 1 + 1, JSON.stringify(w));
   check('with no results at all it is a cadet with the plain bay: a new pilot', J('campRankStatus(campProgressNew()).n') === 1 && J('campRankStatus(campProgressNew()).wing.fighters') === 6 && J('campRankStatus(campProgressNew()).wing.escorts') === 2);
+  // the two cards together (the hub, src/camphub.js, reads this status): the room shows the real rank, its next rank, the score and the wing the next mission starts with
+  const hk = J('(() => { const P = __P(4000); return { r: campHubRank(P), note: CAMP_HUB.note.rank(P) }; })()');
+  check('the ready room reads the real ranks: ranked, Lieutenant 3 of 6, 4,000 points, the commander next at 6,500, and its wing note and rank row say the rank', hk.r.ranked === true && hk.r.name === 'Lieutenant' && hk.r.n === 3 && hk.r.of === 6 && hk.r.points === 4000 && hk.r.next === 6500 && hk.r.nextName === 'Commander' && hk.r.wing.fighters === 8 && hk.r.wing.escorts === 3 && hk.note === 'Lieutenant', JSON.stringify(hk));
+  check('and a new pilot in the room is a Cadet with the plain wing (6 and 2) and the next rank at 1,000', J('campHubRank(campProgressNew()).name') === 'Cadet' && J('campHubRank(campProgressNew()).next') === 1000 && J('campHubRank(campProgressNew()).wing.fighters') === 6);
 }
 
 // ---------- D. the wing ----------

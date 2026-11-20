@@ -13,6 +13,8 @@ import { nodeGame, ROOT } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const g = nodeGame();
+// the hub alone: the ranks card (src/campranks.js) is merged with it in the game, but these checks are about the room's own plain behaviour and its stand-ins, so the real campRankStatus is set aside (the two together are tests/campranks.mjs)
+g.run('window.campRankStatus = undefined');
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 
@@ -62,7 +64,7 @@ g.run(`__key(S, 'Enter');`);
 check('Enter goes to the next row: the rank page, with the plain score (no ranks card here)', J('S.hub.row') === 3 && has(/^Score so far: 0 points$/) && has(/^No rank yet\. Fly a mission\.$/) && has(/^Missions flown: 0 of 9$/) && has(/^Wing: 6 fighters, 2 escorts$/), shown().join(' | '));
 g.run(`window.campRankStatus = P => ({ name: 'Pilot Officer', n: 2, of: 6, points: 1200, next: 2500, nextName: 'Flying Officer', wing: { fighters: 7, escorts: 3 } }); __key(S, 'Digit4');`);
 check('with the ranks card the rank page shows its rank, the next one, and its wing (what the next mission starts with)', has(/^Rank: Pilot Officer {2}\(2 of 6\)$/) && has(/^Next rank Flying Officer at 2500 points$/) && has(/^Wing: 7 fighters, 3 escorts$/) && has(/^Pilot Officer$/), shown().join(' | '));
-g.run(`delete window.campRankStatus; __key(S, 'Digit5');`);
+g.run(`window.campRankStatus = undefined; __key(S, 'Digit5');`);
 check('5 picks Launch: its page names the mission and what launching does; the foot says Enter launches; the pilot goes to the pad', J('S.hub.row') === 4 && has(/^NEXT: MISSION 1 OF 3 {2}- {2}Belt survey$/) && has(/^Level 1 begins with this mission: The belt\.$/) && has(/^Enter or L launches the cruiser\.$/) && has(/^Enter {2}LAUNCH$/) && (() => { const t = J('__rec.tweens.pop()'); return t && t.x === 1028 && t.y === 394; })(), shown().join(' | '));
 check('a key that is not the hub\'s does nothing (Q, Tab, Space, 7)', ['KeyQ', 'Tab', 'Space', 'Digit7'].every(c => { const row = J('S.hub.row'), k = J('__rec.sfx.length'); g.run(`__key(S, ${JSON.stringify(c)})`); return J('S.hub.row') === row && J('__rec.sfx.length') === k && J('__rec.go.length') === 0; }));
 check('a key held down (repeat) is not a second press', (() => { g.run(`S.hub.row = 0; S.onKey({ code: 'KeyS', repeat: true })`); return J('S.hub.row') === 0; })());
@@ -84,7 +86,7 @@ check('F on another row buys nothing (the keys of the refit are the refit\'s)', 
 
 // ---- D. the board and the briefing of a campaign in progress ----
 g.run(`var S2 = __scene(); S2.hub.row = 0; S2.paint();`);
-check('the board: mission 1 is done with its score and its bonus count, mission 2 is next', (() => { const t = J('__shown(S2)'); return t.some(x => /\[x\] 1 {2}Belt survey/.test(x)) && t.some(x => /^900 pts {2}2 of 3 bonus$/.test(x)) && t.some(x => /\[>\] 2 {2}Ore haulers/.test(x)); })());
+check('the board: mission 1 is done with its score and its bonus count, mission 2 is next', (() => { const t = J('__shown(S2)'); return t.some(x => /\[x\] 1 {2}Belt survey/.test(x)) && t.some(x => /^900 pts {2}2 of 4 bonus$/.test(x)) && t.some(x => /\[>\] 2 {2}Ore haulers/.test(x)); })());
 g.run(`__key(S2, 'Digit2');`);
 check('the briefing is that of the NEXT mission (the haulers), its objectives from the HUD\'s strings, and an escort mission\'s bonus: deliver every hauler', (() => { const t = J('__shown(S2)'); return t.some(x => /^MISSION 2 OF 3 {2}- {2}Ore haulers$/.test(x)) && t.some(x => /^ESCORT {3}par 120 s$/.test(x)) && t.some(x => /^- Haulers delivered: 0 of 2\.$/.test(x)) && t.some(x => /^\+250 {2}Deliver every hauler$/.test(x)); })());
 g.run(`localStorage.setItem(CAMP.store, JSON.stringify({ level: 2, mission: 0, techs: ['shield'], ore: 0, bonus: { fighters: 0, escorts: 0 }, results: {} })); var S3 = __scene();`);
