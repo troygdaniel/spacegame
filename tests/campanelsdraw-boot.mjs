@@ -30,7 +30,8 @@ async function campaign() {
   try {
     const SC = `game.scene.getScene('Campaign')`, j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`));
     await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
-    await press(t, 'Enter'); await t.run(300);
+    for (let i = 0; i < 4 && (await j(`${SC}.mode`)) !== 'play'; i++) { await press(t, 'Enter'); await t.run(300); } // the story card, and on a tree with missions a briefing after it: Enter until the flight
+    check('the flight has started (past the story card and any briefing)', (await j(`${SC}.mode`)) === 'play');
     await t.ev(`(() => { window.__shown = false; const p0 = campPanelsPaint; campPanelsPaint = (s, now) => { p0(s, now); if (s.pnl && s.pnl.objs.length) window.__shown = true; }; return 1; })()`);
     await press(t, 'Digit1', 20); await press(t, 'Digit1', 20); await t.run(200);
     check('1 then 1 typed fast: the wing is launching and the panel was never drawn', (await j(`${SC}.camp.launchQ.length + ${SC}.camp.launched`)) >= 8 && (await j('window.__shown')) === false, JSON.stringify(await j(`[${SC}.camp.launchQ.length, ${SC}.camp.launched, window.__shown]`)));
