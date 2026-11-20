@@ -381,7 +381,7 @@ const CAMP = {
     3: {                                                          // the alien home world: scan the approach, break the outer ring, break the inner ring
       name: 'The home world', start: 'arrival', startAt: [0, 0], earth: false,
       reveal: { star: 'Tau Ceti', name: 'The outpost', place: 'Alien outpost' }, // SPOILER: after the win the ending says this was an outpost and the data points to this star; once the ending has been seen (the saved flag revealed) a replay says the true names (campReveal)
-      // no outposts here: the alien home world is the only place, so nothing friendly to dock at (build with the Fabricator, or fight on)
+      // no outposts here: the alien home world is the only place, so nothing friendly to dock at: build and repair work aboard (src/campoutpost.js campAboard), the Fabricator or not
       world: { system: 'epsilon-eridani', fit: { place: 'home', pack: 'epsilon-eridani-b' }, same: { home: 'epsilon-eridani-b' }, k: 3 }, // Epsilon Eridani's star and belts round the alien home world, which is the pack's Aegir; k: the rings are this many times the pack's (so the star is not on top of the towers)
       places: {
         arrival: { x: -7000, y: 3500, name: 'Warp point', hidden: true },                          // where the carrier warps in: 7,800 px from the world (not drawn)
