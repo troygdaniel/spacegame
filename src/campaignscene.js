@@ -36,7 +36,8 @@ class Campaign extends Phaser.Scene {
     this.cameras.main.fadeIn(300, 0, 0, 0);
     spaceBackdrop(this, true);
     this.boom = fxBoom(this);
-    this.camp = campNew(this.level, this.P.techs, this.opts);
+    const carried = this.P.level === this.level; // arrived by the chain (or a retry): the ore and the extra ships of the refit come with the cruiser; a level started by itself (an address, a skip) has its own
+    this.camp = campNew(this.level, this.P.techs, Object.assign({}, this.opts, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {}));
     this.sp = {}; this.bsp = [];
     const pl = campPlaces(this.level); Object.keys(pl).forEach(id => { if (!pl[id].hidden) this.drawPlace(pl[id]); });
     this.osp = {}; // the ore lying about (asteroid rocks and wrecks), one sprite each
@@ -90,14 +91,34 @@ class Campaign extends Phaser.Scene {
     this.mode = 'pick'; this.choices = campTechChoices(this.level);
     this.showCard(uiText('camp.ui.pick'), this.choices.map((id, i) => (i + 1) + '   ' + uiText('camp.tech.' + id + '.name') + '  -  ' + uiText('camp.tech.' + id + '.text')), '', 340);
   }
+  // the Earth refit after the belt: one of the three techs (pick again before Enter), and ore buys extra fighters and escorts for the next level (the workshop's prices)
+  showRefit() {
+    this.mode = 'refit'; this.choices = campTechChoices(this.level); this.refit = { pick: null, f: 0, e: 0, ore: Math.floor(this.camp.ore) }; this.paintRefit();
+  }
+  paintRefit() {
+    const R = this.refit, B = CAMP.build, lines = [uiText('camp.ui.refitore', { ore: R.ore, xf: R.f, xe: R.e }), uiText('camp.ui.refitpick')]
+      .concat(this.choices.map((id, i) => (i + 1) + '   ' + uiText('camp.tech.' + id + '.name') + '  -  ' + uiText('camp.tech.' + id + '.text') + (R.pick === id ? '   <' : '')), [uiText('camp.ui.refitbuy', { fc: B.fighterCost, ec: B.escortCost })]);
+    this.showCard(uiText('camp.ui.refit'), lines, R.pick ? uiText('camp.ui.refitgot', { name: uiText('camp.tech.' + R.pick + '.name') }) : '', 380);
+  }
+  refitKey(c) {
+    const R = this.refit, B = CAMP.build, i = { Digit1: 0, Digit2: 1, Digit3: 2 }[c];
+    if (i !== undefined && this.choices[i]) R.pick = this.choices[i];
+    else if (c === 'Digit4' && R.f < CAMP.refit.most && R.ore >= B.fighterCost) { R.f++; R.ore -= B.fighterCost; }
+    else if (c === 'Digit5' && R.e < CAMP.refit.most && R.ore >= B.escortCost) { R.e++; R.ore -= B.escortCost; }
+    else if (c === 'Enter' && R.pick) { campPick(this.P, R.pick); this.P.bonus = { fighters: R.f, escorts: R.e }; this.hideCard(); this.next(R.ore); return; }
+    else return;
+    this.paintRefit();
+  }
   showLost(why) {
     this.mode = 'lost'; const lines = typeof campLoseLines === 'function' ? campLoseLines(this.camp, why) : [uiText('camp.lose.' + why)]; // src/camplose.js: what happened, how far, one thing to try
     this.showCard(uiText('camp.ui.lost', { n: this.level }), lines, uiText('camp.ui.retry')); this.say([lines[0]].concat(lines.slice(2))); // the numbers are for reading: the cause and the tip are said
   }
   showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap')].concat([uiText('camp.ui.pausehelp')], typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), 322); } // the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
-  next() { // after the story (and the pick): the next level, or after the last one the end, with a new campaign waiting
+  next(ore) { // after the story (and the pick, or the refit): the next level, or after the last one the end, with a new campaign waiting. ore: what is left to carry (the refit spent some)
     const last = !CAMP.levels[this.level + 1];
-    this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) this.P.techs = []; campProgressSave(this.P);
+    this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) { this.P.techs = []; this.P.ore = 0; this.P.bonus = { fighters: 0, escorts: 0 }; }
+    else { this.P.ore = ore != null ? ore : Math.floor(this.camp.ore); if (!CAMP.levels[this.level].refit) this.P.bonus = { fighters: 0, escorts: 0 }; } // the extras of a refit are for the level after it; a level that had none carries only ore
+    campProgressSave(this.P);
     if (!last) { go(this, 'Campaign', { level: this.level + 1, via: 'next' }); return; }
     this.mode = 'end'; this.showCard(uiText('camp.ui.title'), [], uiText('camp.ui.end'), 200);
   }
@@ -107,7 +128,8 @@ class Campaign extends Phaser.Scene {
     if (e.repeat || this.leaving) return;
     const c = e.code, C = this.camp;
     if (this.mode === 'intro') { if (c === 'Enter') { this.hideCard(); this.mode = 'play'; } return; }
-    if (this.mode === 'won') { if (c === 'Enter') { if (campTechChoices(this.level).length) this.showPick(); else this.next(); } return; }
+    if (this.mode === 'won') { if (c === 'Enter') { if (CAMP.levels[this.level].refit) this.showRefit(); else if (campTechChoices(this.level).length) this.showPick(); else this.next(); } return; }
+    if (this.mode === 'refit') { this.refitKey(c); return; }
     if (this.mode === 'end') { if (c === 'Enter' || c === 'KeyT') go(this, 'Title'); return; }
     if (this.mode === 'pick') {
       const i = { Digit1: 0, Digit2: 1, Digit3: 2 }[c];
@@ -171,6 +193,7 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'hit') { if (e.id === this.camp.carrier.id) { this.cameras.main.shake(90, 0.003); this.flash(e.id); } this.boom.explode(3, e.x, e.y); }
     else if (e.type === 'earthhit') this.boom.explode(6, e.x, e.y);
     else if (e.type === 'launch' || e.type === 'dock') beep(e.type === 'launch' ? 560 : 420, 0.07, 'triangle', 0.04, 160);
+    else if (e.type === 'alarm') { sfx('siren'); this.cameras.main.flash(300, 255, 60, 60); this.cameras.main.shake(300, 0.004); } // the ambush: out of the dark
     else if (e.type === 'blink') { this.boom.explode(30, e.x, e.y); sfx('shieldUp'); }
     else if (e.type === 'missile') beep(170, 0.4, 'sawtooth', 0.045, 520);
     else if (e.type === 'mboom') { this.boom.explode(44, e.x, e.y); sfx('boom'); }
