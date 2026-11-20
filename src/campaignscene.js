@@ -224,7 +224,7 @@ class Campaign extends Phaser.Scene {
     if (m) bar(W / 2 - 150, 36, 300, m.hp / m.maxHp, 0xc9a0ff);
     const out = campWing(C, 'fighter').length + campWing(C, 'escort').length, waves = CAMP.levels[C.level].waves;
     this.hud.hull.setText(uiText('camp.ui.hull') + '  ' + Math.round(c.hp)); this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(campObjective(C));
-    this.hud.bay.setText(uiText('camp.ui.bay') + '  ' + C.bay.fighters + '+' + C.bay.escorts + '    ' + uiText('camp.ui.out') + '  ' + out);
+    this.hud.bay.setText(uiText('camp.ui.baywords', { f: C.bay.fighters, e: C.bay.escorts, out })); // "BAY  fighters 6  escorts 2   OUT 0": it used to read 6+2 (docs/night/ux.md 5)
     this.hud.wave.setText(uiText('camp.ui.wave', { n: C.waves.filter(w => w.started).length, total: waves.length }));
     this.hud.mother.setText(m ? uiText('camp.ui.mother') : '');
     this.hud.blink.setText(C.techs.indexOf('blink') >= 0 ? 'Q  ' + (C.t - C.blinkAt >= CAMP.tech.blink.cooldown ? 'READY' : Math.ceil((CAMP.tech.blink.cooldown - (C.t - C.blinkAt)) / 1000) + ' s') : '');

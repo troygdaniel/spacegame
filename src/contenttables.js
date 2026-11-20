@@ -438,6 +438,7 @@ const UI_TEXT = {
   'camp.ui.hull': 'CARRIER',
   'camp.ui.earth': 'EARTH',
   'camp.ui.bay': 'BAY',
+  'camp.ui.baywords': 'BAY  fighters {f}  escorts {e}   OUT {out}',
   'camp.ui.out': 'OUT',
   'camp.ui.wave': 'WAVE {n} OF {total}',
   'camp.ui.mother': 'MOTHERSHIP',
