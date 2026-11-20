@@ -5,8 +5,8 @@
 // Units: one unit is one px of the screen at the size the ship is drawn at (CAMP.size in src/campaign.js); x runs along the nose, y to the right, the origin is the middle of the hull. The picture is drawn
 // k times larger (the scene scales it down to the length in CAMP.size), so it is smooth, not blocky. Light comes from above: the hull is lighter along its middle, darker at the edges, the same on both sides.
 const CAMP_ART = {
-  fighter: { k: 4, len: 22, pad: 2, half: 8 },        // the wing's fighters: a dart with swept wings (the picture k times the units; the hull len long and half wide each side of the middle, over the wings)
-  escort: { k: 4, len: 28, pad: 3, half: 9.5 },       // the escorts: a small boxy gunship with two nacelles
+  fighter: { k: 4, len: 22, pad: 2, half: 8, glow: [[8, 0.13], [5.5, 0.15]] },        // the wing's fighters: a dart with swept wings (the picture k times the units; the hull len long and half wide each side of the middle, over the wings); glow: [radius in units, alpha] of the faint pale disc under a friendly ship, so the wing is found against dark space and the moon (set the alphas to 0 for none)
+  escort: { k: 4, len: 28, pad: 3, half: 9.5, glow: [[10, 0.13], [7, 0.15]] },       // the escorts: a small boxy gunship with two nacelles
   cruiser: {
     k: 2,
     len: 98,                                        // the hull's length in units: the picture of it is len * k px, and the scene scales it to CAMP.size.carrier.len
@@ -119,6 +119,7 @@ function campBayLight(C, at) {
 // the fighter: a slim grey dart with two swept wings tipped in bronze, two small engines, a pale canopy (the one light colour on it: it is what says "ours" in a crowd of red aliens)
 function campFighterDraw(g) {
   const A = CAMP_ART.fighter, k = A.k, [W, H] = campArtSize('fighter'), p = campArtPen(g, W / 2, H / 2, k), C = CAMP_HULL, S = C.steel, B = C.bronze;
+  A.glow.forEach(([r, a]) => p.dot(0, 0, r, C.glass, a)); // the faint pale disc under it
   const wing = [[3.2, -2], [-1.5, -7.8], [-7, -7.8], [-5.4, -2.4]], body = [[11, 0], [7, -1.7], [-3, -2.5], [-9, -2.5], [-9, 2.5], [-3, 2.5], [7, 1.7]];
   [1, -1].forEach(s => {
     const w = wing.map(([x, y]) => [x, y * s]);
@@ -135,6 +136,7 @@ function campFighterDraw(g) {
 // the escort: a small boxy gunship, a nacelle each side with a bronze stripe, a short nose, a lit window, the engines at the back
 function campEscortDraw(g) {
   const A = CAMP_ART.escort, k = A.k, [W, H] = campArtSize('escort'), p = campArtPen(g, W / 2, H / 2, k), C = CAMP_HULL, S = C.steel, B = C.bronze;
+  A.glow.forEach(([r, a]) => p.dot(0, 0, r, C.glass, a)); // the faint pale disc under it
   [1, -1].forEach(s => { // the nacelles: boxes along the sides, joined by a strut
     const y1 = s > 0 ? 5.6 : -9.4, y2 = s > 0 ? 9.4 : -5.6, bx = [[-12, y1 + 0.8], [-11.2, y1], [3.2, y1], [4, y1 + 0.8], [4, y2 - 0.8], [3.2, y2], [-11.2, y2], [-12, y2 - 0.8]];
     p.rect(-6, s > 0 ? 4 : -6, -2, s > 0 ? 6 : -4, C.dark); p.poly(bx, B[0]); p.rect(-11, y1 + 0.8, 3, y2 - 0.8, B[1]); p.rect(-10, (y1 + y2) / 2 - 1, 2.4, (y1 + y2) / 2 + 1, B[2], 0.9); p.outline(bx, C.edge, 0.7, 0.95);
