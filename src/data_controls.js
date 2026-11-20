@@ -112,8 +112,7 @@ const CONTROLS = [
     { k: ['+', '-', '0'], t: 'Zoom view or map (wheel too); 0 resets', sub: 'FLY AND FIRE' }, // = and the numpad keys too (src/campzoom.js)
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Click'], t: 'Map: click sets a place, again flies', sub: 'THE MAP' },
-    { k: ['W', 'S'], t: 'Map list: choose (arrows too)', sub: 'THE MAP' },
-    { k: ['A', 'D'], t: 'Map list: next or last group', sub: 'THE MAP' },
+    { k: ['W', 'S', 'A', 'D'], t: 'Map list: choose; next or last group', sub: 'THE MAP' }, // two rows in one: the page is at the size the controls panel fits (tests/controlsfit.mjs)
     { k: ['Enter'], t: 'Map: fly to the chosen place', sub: 'THE MAP' },
     { k: ['Shift', 'Enter'], t: 'Map: fly there fast (a burn)', sub: 'THE MAP' },
     { k: ['X'], t: 'Map: clear the destination', sub: 'THE MAP' },
