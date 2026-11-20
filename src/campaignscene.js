@@ -17,7 +17,7 @@ const CAMP_LOOK = {
   raider: { tex: 'raider', scale: 1 }, drone: { tex: 'drone', scale: 1 }, gunship: { tex: 'gunship', scale: 1 }, mother: { tex: 'reaver', scale: 2.6, tint: 0xc9a0ff }, tower: { tex: 'gunship', scale: 1.6, tint: 0xff9a3a }
 };
 const CAMP_REACH = { w: 2, alpha: 0.4, color: 0xffd37a }; // the ring that shows how far the point guns reach (CAMP.carrier.pdRange): its line width, how solid it is, its colour (it was 1 px at 0.16, too faint to find: 6-GEN and 8-GEN)
-const CAMP_MOUNT = { base: 3.2, dot: 1.7, hot: 2.8, aim: [7, 11], width: [1.5, 2.2], flash: 10 }; // a turret mount, drawn on the hull (it is a third smaller since the carrier is): its dark base, its amber dot (and the dot while it fires), the length of the barrel at rest and on a shot, the barrel's width at rest and on a shot, and how far in front of the mount the muzzle flash is
+const CAMP_MOUNT = { base: 3.2, dot: 1.7, hot: 2.8, aim: [7, 11], width: [1.5, 2.2], flash: 10, stub: [5, 0x9aa0a8] }; // a turret mount, drawn on the hull (it is a third smaller since the carrier is): its dark base, its amber dot (and the dot while it fires), the length of the barrel at rest and on a shot, the barrel's width at rest and on a shot, and how far in front of the mount the muzzle flash is, and the steel barrel a mount with nothing to shoot at points along the carrier's heading (its length and colour: without it a mount was a lit dot and read as a window, the blind critic)
 const CAMP_BLIP = { gap: 70, flash: 90, freq: 700, step: 45, dur: 0.035, vol: 0.012, slide: -260 }; // a turret's shot: at most one blip in gap ms of the battle's clock, its pitch (freq, and step more for each fourth turret), length, loudness and slide; the muzzle flash lasts flash ms
 const CAMP_ADDR = { used: false }; // the address (?campaign=N, src/title.js) opens the Campaign once per page load: coming back to the title from it must not open it again
 const CAMP_RADAR = { x: W - 118, y: 118, r: 98, range: 6000, fill: 0.9, rim: [2, 0.8], blip: 1 }; // the radar's centre and radius on the screen, and the px of space it shows from the carrier to its edge
@@ -261,6 +261,7 @@ class Campaign extends Phaser.Scene {
         const hot = C.t - tu.shotAt < 120;
         const M = CAMP_MOUNT;
         mg.fillStyle(0x04101c, 0.9).fillCircle(tu.x, tu.y, M.base); mg.fillStyle(hot ? 0xffffff : 0xffd37a, 1).fillCircle(tu.x, tu.y, hot ? M.hot : M.dot);
+        if (!tu.target) mg.lineStyle(M.width[0], M.stub[1], 0.95).lineBetween(tu.x, tu.y, tu.x + Math.cos(c.rot) * M.stub[0], tu.y + Math.sin(c.rot) * M.stub[0]); // nothing in reach: a steel barrel along the heading, so the mount reads as a gun and not as a lit window
         if (tu.target) mg.lineStyle(hot ? M.width[1] : M.width[0], hot ? 0xffe9a0 : 0xffd37a, hot ? 0.95 : 0.7).lineBetween(tu.x, tu.y, tu.x + Math.cos(tu.aim) * (hot ? M.aim[1] : M.aim[0]), tu.y + Math.sin(tu.aim) * (hot ? M.aim[1] : M.aim[0]));
       });
     }
