@@ -120,6 +120,10 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.say.recall | Wing, return to the carrier. |
 | camp.say.missiles | Missile away. |
 | camp.say.missilesmother | Missile away, at the mothership. |
+| camp.say.earthhalf | Earth's shield is at half, pilot. |
+| camp.say.earthlow | Earth's shield is nearly gone, pilot. |
+| camp.say.hullhalf | The carrier's hull is at half. |
+| camp.say.hulllow | The carrier's hull is critical, pilot. |
 | camp.no.over | The battle is over, pilot. |
 | camp.no.bay | The bay is empty, pilot. |
 | camp.no.launching | The wing is still launching. |

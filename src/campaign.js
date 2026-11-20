@@ -129,6 +129,7 @@ const CAMP = {
     earthDamage: 0.25,                     // a shot that hits Earth takes this share of its damage off Earth's shield (a big planet takes a pounding)
     distract: 4000                         // ms an alien you hit fights the ship that hit it instead of its goal
   },
+  warn: [0.5, 0.25],                       // shares of Earth's shield and of the carrier's hull at which the ship's voice warns (each once, and again if it mends past the share and falls back)
   mother: {
     hp: 700,                               // hit points of the mothership (was 900)
     speed: 55,                             // px/s
@@ -513,6 +514,7 @@ function campTick(C, dt) {
   campEarth(C, dt);
   campPickups(C);
   campFactory(C, dt);
+  campWarn(C);
   C.ships = C.ships.filter(u => u.hp > 0 || (delete C.by[u.id], false)); // the dead leave the list (the scene was told by the boom event)
 }
 
@@ -652,6 +654,18 @@ function campFactory(C, dt) {
   if (q[0].left <= 0) { const b = q.shift(); C.bay[b.kind + 's']++; C.events.push({ type: 'built', kind: b.kind }); campSay(C, 'camp.say.built', { kind: b.kind }); }
 }
 
+// the ship's voice says when Earth's shield or the carrier's hull first falls to half and to a quarter: until now nothing but the bars said so, and a level was lost with no word before it
+function campWarn(C) {
+  if (C.result || !C.carrier || C.carrier.hp <= 0) return;
+  const w = CAMP.warn, was = C.warned = C.warned || {};
+  const check = (id, frac, keys) => {
+    let at = -1;
+    w.forEach((share, i) => { if (frac <= share) { if (!was[id + i]) { was[id + i] = true; at = i; } } else if (frac > share + 0.15) was[id + i] = false; }); // mended well past it: it may warn again
+    if (at >= 0) campSay(C, keys[at]); // one line, the lowest share it has just fallen to (a big hit can cross both at once)
+  };
+  if (C.earth && C.earth.shield > 0) check('earth', C.earth.shield / C.earth.max, ['camp.say.earthhalf', 'camp.say.earthlow']);
+  check('hull', C.carrier.hp / C.carrier.maxHp, ['camp.say.hullhalf', 'camp.say.hulllow']);
+}
 // Earth's shield mends slowly once it has been left alone for a while (level 1; a level with no Earth has none)
 function campEarth(C, dt) {
   const e = C.earth, k = CAMP.earth; if (!e || !k.regen || e.shield <= 0 || e.shield >= e.max || C.t - (e.hitAt || 0) < k.regenDelay) return;
