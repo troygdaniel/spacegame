@@ -7,6 +7,7 @@
 // Everything here is plain numbers and strings (no Phaser), so tests/campchatter.mjs runs it in Node:
 //   chatterEventOf(C, e)    PURE: which call a sim event is (src/campaign.js events, C.events), or null
 //   chatterNew()            a fresh radio state S: { last, hold, at, q, pilot, line }
+//   chatterOrderDiff(seen, orders)  PURE: the calls the orders given since the last look bring (C.orders counters): copy for a launch, attack, escort or guard, home for a recall
 //   chatterHold(S, now)     the ship's computer spoke: the radio is quiet for CHATTER.hold ms (the scene calls it for every 'say' event)
 //   chatterPush(S, ev, now) a call is made: true when the radio takes it (mode, the 8 s, the same kind of call, one at a time), it is said CHATTER.events[ev].delay ms later
 //   chatterTick(S, now, busy) the call that is due and can be said now: { ev, call, voice, text }, else null (nothing due, or it was dropped); busy: a line is playing
@@ -22,11 +23,10 @@ const CHATTER = {
   pilots: [['HAWK', 'aura-perseus-en'], ['ROOK', 'aura-angus-en'], ['VEGA', 'aura-orpheus-en'], ['LANCE', 'aura-zeus-en']], // callsign, Aura voice: none is a voice the computer can have or a bar character has
   events: {                              // delay: ms between the call and the line. A call that answers a computer line waits until its hold is over
     splash: { delay: 400 }, hit: { delay: 200 }, ore: { delay: 200 },
-    contact: { delay: 2800 }, mother: { delay: 2800 }, copy: { delay: 2800 }, home: { delay: 2800 }, lowmissiles: { delay: 2800 },
-    relic: { delay: 2800 }, convoy: { delay: 2800 }, cache: { delay: 2800 }
+    copy: { delay: 1200 }, home: { delay: 1200 },       // an order given: the answer comes a beat later (the computer's own line, if it speaks one, is not a sim event: the radio is busy, not held)
+    contact: { delay: 2800 }, mother: { delay: 2800 }, lowmissiles: { delay: 2800 }, relic: { delay: 2800 }, convoy: { delay: 2800 }, cache: { delay: 2800 }
   },
   says: {                                // the computer's own line (a 'say' event of the sim) -> the call it brings
-    'camp.say.launch': 'copy', 'camp.say.attack': 'copy', 'camp.say.attackmother': 'copy', 'camp.say.escort': 'copy', 'camp.say.guard': 'copy', 'camp.say.recall': 'home',
     'camp.say.wave1': 'contact', 'camp.say.wave2': 'contact', 'camp.say.l2wave1': 'contact', 'camp.say.l2wave2': 'contact',
     'camp.say.l3wave1': 'contact', 'camp.say.l3wave2': 'contact', 'camp.say.l3wave3': 'contact', 'camp.say.wave3': 'mother',
     'camp.say.relicon': 'relic', 'camp.say.delivered': 'convoy', 'camp.say.cache': 'cache'
@@ -62,6 +62,14 @@ function chatterEventOf(C, e) {
   return null;
 }
 
+// the orders given since the last look (C.orders counts each one that was carried out, from a key, the strip or the map): the wing answers the first, a recall with "going home"
+function chatterOrderDiff(seen, orders) {
+  const out = [], up = k => seen && orders && (orders[k] | 0) > (seen[k] | 0);
+  if (['launch', 'attack', 'escort', 'guard'].some(up)) out.push('copy');
+  if (up('recall')) out.push('home');
+  return out;
+}
+
 function chatterHold(S, now) { if (S) S.hold = now + CHATTER.hold; }
 
 // the lines of a call: camp.chat.<call>.1, .2, ... in content/text/chatter.md
@@ -85,6 +93,7 @@ function chatterPush(S, ev, now) {
 function chatterTick(S, now, busy) {
   if (!S || !S.q.length || now < S.q[0].due) return null;
   const p = S.q.shift(), mode = chatterMode();
+  if (now > p.due + CHATTER.show) return null;                           // stale (the game was paused or held): not worth saying
   if (mode === 'off' || busy || now < S.hold) return null;              // the computer, a warning or any line has the radio: this call is dropped, not kept
   if (now - S.last < CHATTER.gap[mode]) return null;
   const pool = chatterPool(p.ev); if (!pool.length) return null;

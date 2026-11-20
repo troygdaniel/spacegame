@@ -57,7 +57,10 @@ try {
   check('C  the mothership blowing up is a splash too, the carrier or Earth\'s own ship is not', ev({ type: 'boom', id: 'm1', kind: 'mother' }) === 'splash' && ev({ type: 'boom', id: 'carrier', kind: 'carrier' }) === null && ev({ type: 'boom', id: 'f1', kind: 'fighter' }) === null);
   check('C  a hit on a wing ship is "taking fire"; a hit on the carrier (the computer warns) or on an alien is not', ev({ type: 'hit', id: 'f1' }) === 'hit' && ev({ type: 'hit', id: 'e1' }) === 'hit' && ev({ type: 'hit', id: 'carrier' }) === null && ev({ type: 'hit', id: 'a1' }) === null && ev({ type: 'hit', id: 'zz' }) === null);
   const say = k => ev({ type: 'say', key: k, vars: {} });
-  check('C  an order given (launch, attack, escort, guard) is answered with a copy; the recall with "going home"', ['launch', 'attack', 'attackmother', 'escort', 'guard'].every(k => say('camp.say.' + k) === 'copy') && say('camp.say.recall') === 'home');
+  const O = (a, b) => J(`chatterOrderDiff(${JSON.stringify(a)}, ${JSON.stringify(b)})`), z = { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, missiles: 0, mine: 0, recharge: 0, build: 0 };
+  check('C  an order carried out (launch, attack, escort, guard) is answered with a copy; the recall with "going home"', ['launch', 'attack', 'escort', 'guard'].every(k => JSON.stringify(O(z, { ...z, [k]: 1 })) === '["copy"]') && JSON.stringify(O(z, { ...z, recall: 2 })) === '["home"]');
+  check('C  the fire, mine, recharge and build orders, no change, and a first look are not calls', ['missiles', 'mine', 'recharge', 'build'].every(k => O(z, { ...z, [k]: 3 }).length === 0) && O(z, z).length === 0 && O(null, z).length === 0);
+  check('C  the computer\'s own order lines are not sim events, so they are not calls here (the order counters are)', say('camp.say.launch') === null && say('camp.say.recall') === null);
   check('C  a wave coming is a contact; the mothership jumping in has its own call', ['wave1', 'wave2', 'l2wave1', 'l2wave2', 'l3wave1', 'l3wave2', 'l3wave3'].every(k => say('camp.say.' + k) === 'contact') && say('camp.say.wave3') === 'mother');
   check('C  the story: the relic answering, the convoy through, a cache gathered', say('camp.say.relicon') === 'relic' && say('camp.say.delivered') === 'convoy' && say('camp.say.cache') === 'cache');
   check('C  the computer\'s own warnings are not calls', ['earthhalf', 'earthlow', 'hullhalf', 'hulllow', 'mine', 'recharge', 'missiles'].every(k => say('camp.say.' + k) === null));
@@ -106,7 +109,8 @@ try {
   const d = J('CHATTER.events.splash.delay');
   check('E  a line that is playing (the computer, a warning) blocks it: dropped, not queued', tick(d, true) === null && tick(d + 100, false) === null);
   check('E  the hold after the computer spoke is 2.5 s', J('CHATTER.hold') === 2500);
-  check('E  a call that answers a computer line (a wave, an order, the story) waits until its hold is over', ['contact', 'mother', 'copy', 'home', 'relic', 'convoy', 'cache', 'lowmissiles'].every(e => J(`CHATTER.events.${e}.delay`) >= 2800));
+  check('E  a call that answers a computer line (a wave, the story, the magazine) waits until its hold is over', ['contact', 'mother', 'relic', 'convoy', 'cache', 'lowmissiles'].every(e => J(`CHATTER.events.${e}.delay`) >= 2800));
+  check('E  a call that is already stale when the radio is free (the game was paused) is dropped', (g.run('window.__S = chatterNew()'), push('splash', 0), tick(60000)) === null);
 } catch (e) { check('a section of the test ran without an error', false, e && e.message); }
 
 // ---- F: the pilots and the lines ----
@@ -131,7 +135,9 @@ try {
   const sc = read('src/campaignscene.js');
   check('G  the scene feeds every sim event to the radio and plays what is due', /chatterEventOf\(/.test(sc) && /chatterPush\(/.test(sc) && /chatterTick\(/.test(sc) && /chatterHold\(/.test(sc) && /chatterPlay\(/.test(sc));
   check('G  the line is shown with the callsign, bottom left beside the strip (x under 368)', /hud\.chat\b/.test(sc) && /call/.test(sc));
-  check('G  the chatter stops with a card, the pause and the map: it is fed only while playing', /this\.mode === 'play'[^\n]*chatter|chatter[^\n]*this\.mode === 'play'|mode === 'play'/.test(sc));
+  const upd = sc.slice(sc.indexOf('  update(time, dt) {'));
+  check('G  the radio ticks only while playing (not on a card, in the pause or after the end): chatterTick sits in the play branch of update()', upd.indexOf("this.mode === 'play'") >= 0 && upd.indexOf('chatterTick(') > upd.indexOf("this.mode === 'play'") && upd.indexOf('chatterTick(') < upd.indexOf('C.events.splice(0)'));
+  check('G  orders carried out are read from the counters (key, strip or map), and every sim event is fed', /chatterOrderDiff\(/.test(sc) && /this\.chatterFeed\(e\)|chatterFeed\(e\)/.test(sc));
   const st = read('src/settings.js');
   check('G  Settings > Sound has the Chatter row: On, Quiet, Off', /CHATTER_MODES/.test(st) && /chatterSetMode\(/.test(st) && /'CHATTER'/.test(st) && /chatter_/.test(st));
   check('G  it is kept clear of the other rows: the label sits in the free space right of EFFECTS (x 640 or more)', /bx \+ 6[4-9]\d|bx \+ 7\d\d/.test(st.split("'CHATTER'")[0].slice(-200)));
