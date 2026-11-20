@@ -49,6 +49,15 @@ Level 1 is complete on its own; 2 and 3 are further rows of the same table and r
 
 Troy lost level 1 twice at wave 3, both times because Earth's shield ran out, with about seven small ships lost each time. A player who launches, escorts, attacks and guards but leaves the carrier at the Moon now wins: Earth's shield is 600 (was 300) and mends 3 a second after 6 seconds without a hit (a lull between waves heals it, a siege does not); wave 3 is two raiders and a gunship (was three and one); the mothership has 700 hull (was 900), shoots for 8 (was 12), holds 1,300 px from Earth (was 1,600, out of reach of anything at the Moon) and launches a raider every 12 s up to 3 (was 8 s, 6). `tests/campaign.mjs` K pins it: those two plain players win, nobody wins by doing nothing, and the same players lose with the old numbers.
 
+## Ore: mine it, spend it (card `space-game-campaign-resources`, Troy: "mine resources to recharge my shields and build new ships")
+
+- **Where ore is.** Asteroid fields (rocks that hold ore, level data `rocks`) and the wrecks of dead aliens (a raider 4, a drone 6, a gunship 12, a tower 20, the mothership 40; a wreck goes after 30 s). Any ship of yours that flies over a piece takes it into the one ore store of the carrier (200 at most). The ore store is shown on the HUD.
+- **Mine (key 6, "mine", "gather ore").** Your escorts fly to the nearest ore that is not under the aliens' guns and bring it in (the fighters stay for the fight; build more escorts if you want more miners). They fight back what comes within 320 px; with no safe ore left they circle the carrier and wait for more. The carrier, and any ship of yours that passes over ore, collects it too.
+- **Recharge shields (key 7, "recharge shields").** The carrier now has a shield of 150 points that takes damage before the hull and does not mend by itself. 25 ore fills it. Within 900 px of Earth, and with Earth's shield under full, the order mends Earth's shield instead (40 ore for 200 points); "recharge Earth" or "recharge the carrier" says which.
+- **Build (key 8 a fighter, key 9 an escort; "build fighters", "build an escort").** 25 ore a fighter, 45 an escort; one ship at a time (6 s, 10 s), into the bay, where Launch puts it out. The bay holds at most 14 fighters and 6 escorts, counting what is out.
+- **All three levels use it** (rocks and wrecks are in every level; Earth's shield only in level 1). Every number is a line of `CAMP` (`ore`, `shield`, `recharge`, `build`).
+- **Assumed:** Troy meant the shield bars; the carrier had none, so it has one now. Mining is flying over, not shooting rocks. Only escorts mine. Wrecks are the main income of a fight, the rocks are the reserve. The words of these orders are in `content/text/campaign.md` because `content/text/ui.md` is full (200 rows a file).
+
 ## Tech: one of three after each battle
 
 | After level 1 (their wreck) | Does |
