@@ -26,7 +26,7 @@ const CAMP = {
     turn: 1.1,                             // rad/s the nose turns (A, D)
     drag: 0.55,                            // velocity kept after one second with no thrust (0.55 is the Wren's)
     brakeDrag: 0.12,                       // the same with S held
-    radius: 56,                            // px, the hit circle
+    radius: 36,                            // px, the hit circle (it was 56: the carrier is drawn 35 percent smaller)
     gun: 20,                               // hit points one main-gun shot takes off an alien (Space)
     gunDelay: 600,                         // ms between main-gun shots
     gunSpeed: 900,                         // px/s of a main-gun shot
@@ -52,11 +52,13 @@ const CAMP = {
     bullet: 700,                           // px/s of a shot
     range: 420,                            // px it shoots from
     aim: 0.3,                              // rad: how far off its target the nose may be and still fire
-    hold: 240                              // px: the ring it circles an alien at (pirateSteer's hold)
+    hold: 240,                             // px: the ring it circles an alien at (pirateSteer's hold)
+    radius: 8                              // px, the hit circle (it was 12)
   },
   escort: {
     hp: 90, speed: 300, accel: 360, turn: 2.6, damage: 6, delay: [350, 500], bullet: 650, range: 520, aim: 0.35, hold: 300, // as a fighter: tougher, slower, longer reach
-    beside: 150                            // px: how far from its convoy an escort keeps station
+    beside: 150,                           // px: how far from its convoy an escort keeps station
+    radius: 10                             // px, the hit circle (it was 16)
   },
   convoy: {
     hp: 200,                               // hit points of a freighter
@@ -220,7 +222,7 @@ function campSpawn(C, kind, x, y) {
     const k = CAMP.carrier; Object.assign(u, { team: 'earth', hp: k.hull * (campHas(C, 'plating') ? CAMP.tech.plating.hull : 1), r: k.radius, vmax: k.speed, accel: k.accel, turn: k.turn });
   } else if (kind === 'fighter' || kind === 'escort') {
     const k = CAMP[kind];
-    Object.assign(u, { team: 'earth', hp: k.hp, r: kind === 'fighter' ? 12 : 16, vmax: k.speed, accel: k.accel, turn: k.turn,
+    Object.assign(u, { team: 'earth', hp: k.hp, r: k.radius, vmax: k.speed, accel: k.accel, turn: k.turn,
       def: { key: kind === 'fighter' ? 'raider' : 'drone', hold: k.hold, speed: k.accel, max: k.speed, hp: k.hp } }); // the shape pirateSteer reads
   } else if (kind === 'freighter') {
     Object.assign(u, { team: 'earth', hp: CAMP.convoy.hp, r: 22, vmax: CAMP.convoy.speed, accel: 400, turn: 2 });
