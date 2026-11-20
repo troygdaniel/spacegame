@@ -683,7 +683,7 @@ console.log('P. the goal of the nav list and the marks of the map follow the fir
 {
   const goal = (l, m) => { g.run(`__new2(${l}, [], 1, ${m})`); return J('campNavGoal(C)'); };
   const g11 = goal(1, 0);
-  check('1.1: the goal is the nearest point to scan ("Scan point n"); the three points are rows of the list (group finds) and marks of the map', g11 && g11.kind === 'scan' && /^Scan point \\d$/.test(g11.name) && J('campNavRows(C).filter(r => r.kind === "scan" && r.group === "finds").length') === 3 && J('campMapMarks(C).filter(m => m.type === "scan").length') === 3);
+  check('1.1: the goal is the nearest point to scan ("Scan point n"); the three points are rows of the list (group finds) and marks of the map', g11 && g11.kind === 'scan' && /^Scan point \d$/.test(g11.name) && J('campNavRows(C).filter(r => r.kind === "scan" && r.group === "finds").length') === 3 && J('campMapMarks(C).filter(m => m.type === "scan").length') === 3);
   g.run('C.scan[0].got = true; C.scan[1].got = true');
   check('two of them scanned: the goal moves on to the one left ("Scan point 3"), one row and one mark are left', J('campNavGoal(C).name') === 'Scan point 3' && J('campNavRows(C).filter(r => r.kind === "scan" && r.group === "finds").length') === 1 && J('campMapMarks(C).filter(m => m.type === "scan").length') === 1);
   const g12 = goal(1, 1); g.run('__run(5)');
