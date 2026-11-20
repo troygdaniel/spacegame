@@ -247,6 +247,16 @@ const CAMP = {
     speed: 5,                              // points a second under the par
     ship: 50                               // points lost for each ship of the wing that was lost
   },
+  pace: {                                  // BATTLE PACE (card space-game-campaign-pace; Troy: the small ships' fights are good but a bit fast). A multiplier on the SMALL ships (fighters, escorts, raiders, drones, gunships): top speed, acceleration and turn rate; their shots by the share `shots` of it. Hull, damage, fire intervals and range stay, so the fight changes only in how fast the ships close. The carrier, the mothership, the towers, the haulers, the turrets, the missiles, the Fast burn, the warp and the map trip are not scaled. campNew(level, techs, { pace }) takes an id or a number; with none it is 1 (Brisk: the numbers as they were)
+    modes: [                               // the settings, in the order the key cycles them: id, name, the multiplier
+      { id: 'calm', name: 'Calm', mult: 0.7 },   // slow enough to read every pass of the fight
+      { id: 'normal', name: 'Normal', mult: 0.85 }, // the default for a player (Troy asked for slower than the old pace)
+      { id: 'brisk', name: 'Brisk', mult: 1 }    // exactly the numbers the table above has
+    ],
+    start: 'normal',                       // the setting until the player picks one
+    shots: 0.5,                            // the power of the multiplier a shot's speed takes (0.5 is its square root: a shot does not outrun the eye, a hit still lands)
+    key: 'KeyB'                            // the quick key that cycles the setting in play (B: Battle pace; free in the Campaign)
+  },
   refit: {                                 // the Earth refit screen after level 1: one tech, and ore buys extra ships for the next level (the costs are the workshop's, CAMP.build)
     most: 3                                // most extra fighters, and most extra escorts, one refit buys
   },
@@ -441,11 +451,29 @@ function campMissionRow(level, i) {
   row.waves = row.waves || []; row.convoys = row.convoys || []; // a mission with no waves or no haulers has none
   return row;
 }
+// the multiplier of a pace setting: an id of CAMP.pace.modes or a number; anything else (none given) is 1, the numbers as the table has them
+function campPaceMult(p) {
+  if (typeof p === 'number' && p > 0 && isFinite(p)) return p;
+  const m = CAMP.pace.modes.find(x => x.id === p); return m ? m.mult : 1;
+}
+const campSmall = kind => kind === 'fighter' || kind === 'escort' || !!PIRATES[kind]; // a small ship: the ones the pace scales (fighters and escorts of the wing, the aliens that are not the mothership or a tower)
+// the pace is put on a ship from the numbers it was made with (u.base), so it can change in play and come back to Brisk exactly
+function campPaceShip(C, u) {
+  if (!u.base) return;
+  const P = C.pace, b = u.base; u.vmax = b.vmax * P; u.accel = b.accel * P; u.turn = b.turn * P;
+  u.def = P === 1 ? b.def : Object.assign({}, b.def, { speed: b.def.speed * P, max: b.def.max * P }); // pirateSteer reads the shape: its ring and its lean use the speed and the acceleration
+}
+// a new pace for the battle, from now on and for the ships already out (the quick key)
+function campPaceSet(C, p) {
+  C.pace = campPaceMult(p); C.shot = Math.pow(C.pace, CAMP.pace.shots);
+  C.ships.forEach(u => campPaceShip(C, u));
+  return C.pace;
+}
 function campNew(level, techs, opts) {
   opts = opts || {};
   const L = campMissionRow(level, opts.mission); if (!L) return null;
   const C = {
-    level, mission: L.mission, L, flags: {}, via: opts.via || 'menu', t: 0, rng: campRng(opts.seed == null ? 1 : opts.seed), god: !!opts.god, nextId: 1, ships: [], by: {}, bullets: [], events: [],
+    level, mission: L.mission, L, flags: {}, pace: campPaceMult(opts.pace), shot: Math.pow(campPaceMult(opts.pace), CAMP.pace.shots), via: opts.via || 'menu', t: 0, rng: campRng(opts.seed == null ? 1 : opts.seed), god: !!opts.god, nextId: 1, ships: [], by: {}, bullets: [], events: [],
     input: { turn: 0, thrust: 0, brake: false, fire: false, blink: false },
     techs: (techs || []).filter(t => CAMP.tech[t]),
     earth: L.defend ? campDefend(level, L.defend) : L.earth === false ? null : { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield }, caches: (L.caches || []).map(c => ({ x: c[0], y: c[1], got: false })), cachesGot: 0,
@@ -498,6 +526,7 @@ function campSpawn(C, kind, x, y) {
     const d = PIRATES[kind];
     Object.assign(u, { team: 'alien', def: d, hp: d.hp * CAMP.alien.hpScale, r: d.body[0], vmax: d.max, accel: d.speed, turn: d.turn * 60 }); // the table's turn is a Phaser step per frame at 60 a second
   } else return null;
+  if (campSmall(kind)) { u.base = { vmax: u.vmax, accel: u.accel, turn: u.turn, def: u.def }; campPaceShip(C, u); } // the small ships fly at the battle's pace
   u.maxHp = u.hp; u.nextShot = C.t + 600 + C.rng() * 900;
   C.ships.push(u); C.by[u.id] = u;
   return u;
@@ -1016,7 +1045,7 @@ function campAlienAI(C, u, dt) {
   if (m.fire && dist < def.range + (isEarth ? C.earth.r : 0) && C.t > u.nextShot && Math.abs(campWrap(target - u.rot)) < def.aim) {
     u.nextShot = C.t + campBetween(C, def.shot[0], def.shot[1]);
     const n = def.spread || 1;
-    for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet, def.dmg * CAMP.alien.damageScale, 1800, 'alien', 14);
+    for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * CAMP.alien.damageScale, 1800, 'alien', 14);
   }
 }
 // pursuit: an alien that was on the carrier (it targeted it within the leash) and has been beyond the leash for loseAfter ms has lost it. Returns true while it has. A burn does it (every top speed is under the burn's,
@@ -1095,7 +1124,7 @@ function campWingAI(C, u, dt) {
 function campWingFire(C, u, k, foe, dist, target, may) {
   if (!(may && dist < k.range + (foe.r || 0) && C.t > u.nextShot && Math.abs(campWrap(target - u.rot)) < k.aim)) return false;
   u.nextShot = C.t + campBetween(C, k.delay[0], k.delay[1]);
-  campBullet(C, u, u.rot, k.bullet, k.damage, 1400, 'earth', 14); C.events.push({ type: 'wingshot', x: u.x, y: u.y, kind: u.kind, id: u.id }); // the wing's gun has a sound of its own (the scene scales it by the distance)
+  campBullet(C, u, u.rot, k.bullet * C.shot, k.damage, 1400, 'earth', 14); C.events.push({ type: 'wingshot', x: u.x, y: u.y, kind: u.kind, id: u.id }); // the wing's gun has a sound of its own (the scene scales it by the distance)
   return true;
 }
 

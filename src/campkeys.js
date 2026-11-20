@@ -56,6 +56,7 @@ function campKeysOpen(s) {
   const g = put(s.add.graphics(), 1); hudPanel(g, P.x, P.y, P.w, P.h, 20, 0.97, CYAN);
   put(s.add.text(K.colX[0], 46, uiText('camp.keys.title'), uiFont(24, '#38e1ff', { letterSpacing: 2 })), 2);
   put(s.add.text(K.colX[0], 640, uiText('camp.keys.footer'), uiFont(14, '#5b7a92')), 2);
+  if (typeof campPaceNow === 'function') put(s.add.text(K.colX[1] + K.colW, 640, uiText('camp.keys.pace', { pace: campPaceNow().name }), uiFont(14, '#ffd37a')).setOrigin(1, 0), 2); // the battle pace, and its key (src/campace.js)
   const L = campKeysLayout(campKeysPage());
   L.cols.forEach((col, c) => {
     let y = K.top;
