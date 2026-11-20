@@ -230,7 +230,7 @@ console.log('H. nothing else moved');
   g.run('(() => { const t = C.ships.find(u => u.kind === "tower"); window.__tw = t.id; C.carrier.x = t.x - Math.cos(t.rot) * 700; C.carrier.y = t.y - Math.sin(t.rot) * 700; C.carrier.rot = t.rot; C.ships.forEach(u => { if (u.kind === "tower") u.nextShot = 1e12; }); })()');
   g.run(`__fire(''); __run(0.8); __fire(''); __run(4)`);
   check('level 3: a tower (160 hit points) takes two missiles (120 each) and falls, and the others stand', tw === 12 && J('__hp(__tw)') === 0 && J(`C.ships.filter(u => u.kind === 'tower').length`) === 11 && J('C.kills') === 1, J('__hp(__tw)'));
-  check('the turrets\' numbers: 4 a shot every 400 ms out to 500 px, eight of them; the carrier is still 36 px across its hit circle', J('CAMP.carrier.pd') === 4 && J('CAMP.carrier.pdDelay') === 400 && J('CAMP.carrier.pdRange') === 500 && J('CAMP.carrier.mounts.length') === 8 && J('CAMP.carrier.radius') === 36);
+  check('the turrets\' numbers: 4 a shot every 600 ms out to 500 px, eight of them; the carrier is still 36 px across its hit circle', J('CAMP.carrier.pd') === 4 && J('CAMP.carrier.pdDelay') === 600 && J('CAMP.carrier.pdRange') === 500 && J('CAMP.carrier.mounts.length') === 8 && J('CAMP.carrier.radius') === 36);
   const doc = src('docs/CAMPAIGN.md'), tune = src('docs/CAMPAIGN-TUNING.md');
   check('the docs say it: the weapons in CAMPAIGN.md, the numbers in CAMPAIGN-TUNING.md', /missile/i.test(doc) && /F\b/.test(doc) && /missile\./.test(tune) && /camp\.ui\.pausehelp|pause/i.test(doc + tune));
   check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
