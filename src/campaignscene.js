@@ -29,7 +29,7 @@ class Campaign extends Phaser.Scene {
   init(d) { // d: { level, techs (instead of the saved ones: the address's), via, seed, god }
     d = d || {}; this.level = d.level || 1; this.via = d.via || 'menu'; this.opts = { seed: d.seed, god: !!d.god, via: this.via };
     this.P = campProgressLoad(); if (Array.isArray(d.techs)) this.P.techs = d.techs.filter(t => CAMP.tech[t]);
-    this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null;
+    this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null; this.shown = {};
   }
   create() {
     this.cameras.main.fadeIn(300, 0, 0, 0);
@@ -135,6 +135,7 @@ class Campaign extends Phaser.Scene {
       inp.turn = ((k.D.isDown || k.RIGHT.isDown) ? 1 : 0) - ((k.A.isDown || k.LEFT.isDown) ? 1 : 0);
       inp.thrust = (k.W.isDown || k.UP.isDown) ? 1 : 0; inp.brake = k.S.isDown || k.DOWN.isDown; inp.fire = k.SPACE.isDown;
       campStep(C, Math.min(dt, 100) / 1000);
+      if (typeof campNudge === 'function') { const nd = campNudge(C, this.shown); if (nd) toast(this, nd, '#9fe9ff'); } // the first-minute hints, once each (src/campnudge.js)
     }
     C.events.splice(0).forEach(e => this.onEvent(e));
     this.syncRockets(Math.min(dt, 100));

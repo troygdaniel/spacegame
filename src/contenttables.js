@@ -444,6 +444,8 @@ const UI_TEXT = {
   'camp.ui.baywords': 'BAY  fighters {f}  escorts {e}   OUT {out}',
   'camp.ui.out': 'OUT',
   'camp.ui.wave': 'WAVE {n} OF {total}',
+  'camp.nudge.launch': 'Press 1 to launch the wing.',
+  'camp.nudge.attack': 'Press 2 to send the fighters at the aliens.',
   'camp.ui.mother': 'MOTHERSHIP',
   'camp.ui.missiles': 'F  MISSILES  {n}',
   'camp.ui.missilenext': 'next in {s} s',
