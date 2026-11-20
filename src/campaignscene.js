@@ -16,6 +16,7 @@ const CAMP_LOOK = {
   raider: { tex: 'raider', scale: 1 }, drone: { tex: 'drone', scale: 1 }, gunship: { tex: 'gunship', scale: 1 }, mother: { tex: 'reaver', scale: 2.6, tint: 0xc9a0ff }, tower: { tex: 'gunship', scale: 1.6, tint: 0xff9a3a }
 };
 const CAMP_REACH = { w: 2, alpha: 0.4, color: 0xffd37a }; // the ring that shows how far the point guns reach (CAMP.carrier.pdRange): its line width, how solid it is, its colour (it was 1 px at 0.16, too faint to find: 6-GEN and 8-GEN)
+const CAMP_BLIP = { gap: 70, flash: 90, freq: 700, step: 45, dur: 0.035, vol: 0.012, slide: -260 }; // a turret's shot: at most one blip in gap ms of the battle's clock, its pitch (freq, and step more for each fourth turret), length, loudness and slide; the muzzle flash lasts flash ms
 const CAMP_ADDR = { used: false }; // the address (?campaign=N, src/title.js) opens the Campaign once per page load: coming back to the title from it must not open it again
 const CAMP_RADAR = { x: W - 118, y: 118, r: 98, range: 6000, fill: 0.9, rim: [2, 0.8], blip: 1 }; // the radar's centre and radius on the screen, and the px of space it shows from the carrier to its edge
 
@@ -128,6 +129,12 @@ class Campaign extends Phaser.Scene {
     }
   }
 
+  // a turret fires (src/campaign.js says each shot with an event of its own): a flash at its muzzle, and a quiet blip, never more than one in CAMP_BLIP.gap ms of the battle's clock, so eight turrets rattle and do not pile up into noise
+  turretFlash(e) {
+    const C = this.camp, B = CAMP_BLIP, f = this.add.image(e.x + Math.cos(e.aim) * 14, e.y + Math.sin(e.aim) * 14, 'ember').setBlendMode('ADD').setTint(0xffe9a0).setScale(1.3).setDepth(7);
+    this.tweens.add({ targets: f, alpha: 0, scale: 0.5, duration: B.flash, onComplete: () => f.destroy() });
+    if (!(C.t - this.blipAt < B.gap)) { this.blipAt = C.t; beep(B.freq + (e.i % 4) * B.step, B.dur, 'square', B.vol, B.slide); }
+  }
   fireMissile() { const r = campOrder(this.camp, 'missiles', '', 'key'); toast(this, r.say, r.ok ? '#9fe9ff' : '#ffb454'); }
 
   // ----- each frame -----
@@ -159,7 +166,7 @@ class Campaign extends Phaser.Scene {
   onEvent(e) {
     if (e.type === 'say') { const text = uiText(e.key, e.vars); toast(this, text, '#9fe9ff'); this.say([text]); }
     else if (e.type === 'nav') { toast(this, uiText(e.key, e.vars), '#7fe9ff'); if (e.key === 'camp.nav.go' || e.key === 'camp.nav.arrived') beep(e.key === 'camp.nav.go' ? 520 : 660, 0.07, 'triangle', 0.04, 160); } // the autopilot's own lines (src/campnav.js)
-    else if (e.type === 'gun') sfx('laser');
+    else if (e.type === 'turret') this.turretFlash(e);
     else if (e.type === 'boom') { this.boom.explode(e.big ? 90 : 26, e.x, e.y); sfx('boom'); if (e.kind === 'carrier') this.cameras.main.shake(400, 0.01); }
     else if (e.type === 'hit') { if (e.id === this.camp.carrier.id) { this.cameras.main.shake(90, 0.003); this.flash(e.id); } this.boom.explode(3, e.x, e.y); }
     else if (e.type === 'earthhit') this.boom.explode(6, e.x, e.y);

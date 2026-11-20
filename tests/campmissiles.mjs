@@ -197,7 +197,7 @@ console.log('G. the scene (on a stand-in)');
   check('the turrets\' reach is drawn as a ring round the carrier at the reach (500 px)', ring && ring[3] === 500 && Math.abs(ring[1] - J('C.carrier.x')) < 1 && Math.abs(ring[2] - J('C.carrier.y')) < 1, JSON.stringify(ring));
   const mlog = J('F.mountG.log');
   check('eight turrets are drawn (a base and a dot each), and each that has an alien in reach has a barrel toward it, though Space is up and none has fired', mlog.filter(l => l[0] === 'fillCircle').length === 16 && mlog.filter(l => l[0] === 'lineBetween').length === 8 && !mlog.some(l => l[0] === 'fillStyle' && l[1] === 0xffffff), JSON.stringify([mlog.filter(l => l[0] === 'fillCircle').length, mlog.filter(l => l[0] === 'lineBetween').length]));
-  g.run('F.mountG.log.length = 0; C.input.fire = true; __run(0.05); F.syncRockets(33)');
+  g.run('F.mountG.log.length = 0; C.input.fire = true; __run(0.2); F.syncRockets(33)');
   check('Space held: the turrets that fire flash white (a bright dot and a longer barrel)', J('F.mountG.log').some(l => l[0] === 'fillStyle' && l[1] === 0xffffff));
   g.run('F.mountG.log.length = 0; __m(1); F.camp = C; F.syncRockets(33)');
   check('nothing in reach: the mounts are drawn plain, with no barrel', J('F.mountG.log').filter(l => l[0] === 'lineBetween').length === 0 && J('F.mountG.log').filter(l => l[0] === 'fillCircle').length === 16);

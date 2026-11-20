@@ -33,6 +33,8 @@ const CAMP = {
     pdRange: 500,                          // px a turret reaches (to the edge of the alien it aims at: about three and a half carrier lengths)
     pdSpeed: 800,                          // px/s of a turret shot
     lead: 1,                               // how far ahead a turret aims: 1 is where its shot and the alien meet (the alien's speed, the shot's, the carrier's drift), 0 is where the alien is now
+    stagger: 1,                            // 1: each turret fires on a slot of its own, offset from the next by pdDelay over the number of turrets, so the fire is continuous; 0: all eight on the same beat (a volley, as it was)
+    jitter: 12,                            // ms: how far a turret's slot is moved at random (a stream of its own), so the rattle is not a metronome; keep it under half of pdDelay over the number of turrets (44 ms)
     shield: 150                            // points of shield: they take damage before the hull, do not mend by themselves, and ore refills them (recharge, key 7)
   },
   ore: {                                   // ore: asteroid rocks and the wrecks of dead aliens; spent on shields and new ships (docs/CAMPAIGN.md, Ore)
@@ -270,10 +272,11 @@ function campNew(level, techs, opts) {
     result: null, why: ''
   };
   if (campHas(C, 'bay2')) C.bay.fighters += CAMP.tech.bay2.fighters;
-  Object.assign(C, { missiles: CAMP.missile.magazine, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0, gunAt: -1e9 }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks
+  Object.assign(C, { missiles: CAMP.missile.magazine, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0 }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks
   const p = campPlaces(level)[L.start], c = campSpawn(C, 'carrier', p.x + L.startAt[0], p.y + L.startAt[1]);
   C.carrier = c; c.rot = 0;
-  C.turrets = CAMP.carrier.mounts.map((m, i) => ({ x: 0, y: 0, aim: 0, target: '', at: i * CAMP.carrier.pdDelay / CAMP.carrier.mounts.length, shotAt: -1e9 })); campTurretPlace(C); // the turrets: where each is, which way it aims, at whom, when it may fire next and when it last did (the scene draws them)
+  C.turretRng = campRng((opts.seed == null ? 1 : opts.seed) * 4243 + 29); // the turrets' jitter has a stream of its own, so it never changes how a fight flies
+  C.turrets = CAMP.carrier.mounts.map((m, i) => ({ x: 0, y: 0, aim: 0, target: '', slot: 0, at: 0, shotAt: -1e9 })); C.turrets.forEach((tu, i) => { tu.at = campTurretAt(C, i, 0); }); campTurretPlace(C); // the turrets: where each is, which way it aims, at whom, when it may fire next and when it last did (the scene draws them)
   (L.towers || []).forEach(g => { // rings of towers round a place, facing outward
     const at = campPlaces(level)[g.place];
     for (let i = 0; i < g.n; i++) { const a = (g.phase || 0) + i / g.n * 2 * Math.PI, t = campSpawn(C, 'tower', at.x + Math.cos(a) * g.r, at.y + Math.sin(a) * g.r); t.rot = a; if (g.hp) t.hp = t.maxHp = g.hp; }
@@ -571,19 +574,26 @@ function campTurretPlace(C) { // each turret's place in the world, from the carr
   const c = C.carrier, cs = Math.cos(c.rot), sn = Math.sin(c.rot);
   C.turrets.forEach((tu, i) => { const m = CAMP.carrier.mounts[i]; tu.x = c.x + cs * m[0] - sn * m[1]; tu.y = c.y + sn * m[0] + cs * m[1]; });
 }
+// when turret i's slot comes: its own grid (a cycle is pdDelay; turret i is i/n of a cycle behind the first, if CAMP.carrier.stagger) and a little jitter from a stream of its own
+function campTurretAt(C, i, slot) {
+  const k = CAMP.carrier, d = k.pdDelay, ph = k.stagger ? i * d / k.mounts.length : 0;
+  return ph + slot * d + (k.jitter ? (C.turretRng() * 2 - 1) * k.jitter : 0);
+}
+// A turret fires only at its own slot: when the slot comes it shoots if it has an alien in reach and Space is held, and goes on to the next slot either way (a slot it could not use is
+// let go, so there is no catch-up burst when Space is pressed or an alien comes into reach). One shot per turret per cycle, whatever the stagger: the shots a second are the same.
 function campTurrets(C) {
   const c = C.carrier, k = CAMP.carrier, beam = campHas(C, 'beam'), reach = campReach(C), dmg = k.pd * (beam ? CAMP.tech.beam.damage : 1), al = campAliens(C);
   campTurretPlace(C);
-  let fired = false;
-  C.turrets.forEach(tu => {
+  C.turrets.forEach((tu, i) => {
     let best = null, bd = reach; al.forEach(u => { const d = campDist(u, tu) - u.r; if (d <= bd) { bd = d; best = u; } });
     tu.target = best ? best.id : ''; if (best) tu.aim = campLead(C, tu, best);
-    if (best && C.input.fire && C.t >= tu.at) {
-      tu.at = C.t + k.pdDelay; tu.shotAt = C.t; fired = true;
+    if (C.t < tu.at) return;
+    if (best && C.input.fire) {
+      tu.shotAt = C.t; C.events.push({ type: 'turret', i, x: tu.x, y: tu.y, aim: tu.aim }); // one event for each shot: the scene flashes this muzzle and blips
       campBullet(C, { x: tu.x, y: tu.y, vx: c.vx, vy: c.vy, id: c.id }, tu.aim, k.pdSpeed, dmg, (reach + 300) / k.pdSpeed * 1000, 'earth', 0, { pd: true, beam }); // a shot flies 300 px past the reach, so one led ahead of an alien at the edge still arrives
     }
+    tu.slot++; tu.at = campTurretAt(C, i, tu.slot);
   });
-  if (fired && C.t - C.gunAt >= 150) { C.gunAt = C.t; C.events.push({ type: 'gun', x: c.x, y: c.y }); } // one sound for a volley, not one for each of the eight
 }
 const campDrift = 0.3; // a shot keeps this share of its shooter's own speed (campLead reads it too)
 function campBullet(C, from, rot, speed, dmg, lifeMs, team, ahead, extra) {
