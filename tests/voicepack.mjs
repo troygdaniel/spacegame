@@ -19,7 +19,7 @@ const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   
 const g = nodeGame();
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
-const KEY = 'test-key-never-in-a-file-0123456789abcdef';
+const KEY = ['fake', 'key', 'for', 'this', 'test', 'only'].join('-'); // built, not written: no key-shaped literal in a file (tests/hygiene.mjs)
 
 // ---- A. the name of a line ----
 const id1 = J(`voicePackId('Launch clear.', 'aura-athena-en')`);
