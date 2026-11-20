@@ -181,7 +181,7 @@ function installMeta(game) {
 }
 
 // ---------- the Pause scene ----------
-const PAUSE_ROWS = ['resume', 'restart', 'volume', 'sound', 'settings', 'journal', 'new']; // top to bottom; the Controls page, Ship voice and NPC chat rows are in Settings now
+const PAUSE_ROWS = ['resume', 'restart', 'volume', 'sound', 'settings', 'journal', 'title', 'new']; // top to bottom; the Controls page, Ship voice and NPC chat rows are in Settings now
 class Pause extends Phaser.Scene {
   constructor() { super('Pause'); }
   init(d) {
@@ -217,6 +217,7 @@ class Pause extends Phaser.Scene {
     if (id === 'sound') return G.muted ? 'Sound    MUTED  (M)' : 'Sound    ON  (M)';
     if (id === 'settings') return 'Settings   (keys, controls, content)'; // src/settings.js: the ship voice and NPC chat keys, every key of the game, content, reset
     if (id === 'journal') return 'Journal   (J in the station)'; // src/journal.js: who you have met and what you learned
+    if (id === 'title') return uiText('title.pause'); // the title screen, where the Campaign can be chosen too (card space-game-title-modes); the game is saved first
     return this.confirmNew ? 'Select again to erase the save' : 'New game';
   }
 
@@ -243,6 +244,10 @@ class Pause extends Phaser.Scene {
     this.scene.stop(this.from);
     this.scene.start('Station', { arrive: false });
   }
+  toTitle() { // saved first, as the pause menu always does; the title starts the game again from the station, as a new page does
+    if (G.mission === 'rescued') G.mission = 'accepted'; // the colonist stays behind; the call is still open (as Restart from station)
+    saveGame(); this.scene.stop(this.from); this.scene.start('Title');
+  }
 
   activate(i, px) {
     const id = PAUSE_ROWS[i];
@@ -255,6 +260,7 @@ class Pause extends Phaser.Scene {
     else if (id === 'sound') { G.muted = !G.muted; saveGame(); if (!G.muted) beep(660, 0.08, 'triangle', 0.05); }
     else if (id === 'settings') settingsOpen(this, 'sound');
     else if (id === 'journal') journalOpen(this);
+    else if (id === 'title') this.toTitle();
     else if (id === 'new') {
       if (!this.confirmNew) { this.confirmNew = true; return; }
       clearSave(); newGameState(); saveGame(true); this.toStation();

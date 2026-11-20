@@ -1,4 +1,9 @@
 // ---------- Title screen, and the faint speed streaks that show while boosting ----------
+// the two choices of the title: the words (keys of content/text/title.md), the key cap's colour and the name's, and what the panel does
+const TITLE_CHOICES = [
+  { key: 'title.long.key', name: 'title.long.name', sub: 'title.long.sub', color: AMBER, css: '#ffb454', go: 'longhaul' },
+  { key: 'title.camp.key', name: 'title.camp.name', sub: 'title.camp.sub', color: CYAN, css: '#38e1ff', go: 'campaign' }
+];
 class Title extends Phaser.Scene {
   constructor() { super('Title'); }
   create() {
@@ -36,16 +41,11 @@ class Title extends Phaser.Scene {
     this.add.rectangle(W / 2 + 320, 332, 22, 2, AMBER, 1).setOrigin(1, 0.5);
     this.add.text(W / 2, 273, 'L O N G   H A U L', mono(70, '#38e1ff')).setOrigin(0.5).setPadding(40, 30, 40, 30).setShadow(0, 0, '#38e1ff', 22, false, true); // padding gives the glow room
     this.add.text(W / 2, 372, 'HALCYON STATION   >   KEPLER-4B', mono(18, '#ffb454')).setOrigin(0.5).setPadding(16, 12, 16, 12).setShadow(0, 0, '#ffb454', 8, false, true);
-    const any = this.add.text(W / 2, 520, 'PRESS ANY KEY', mono(26, '#ffffff')).setOrigin(0.5).setPadding(20, 14, 20, 14).setShadow(0, 0, '#ffffff', 10, false, true);
-    this.tweens.add({ targets: any, alpha: 0.25, yoyo: true, repeat: -1, duration: 900, ease: 'Sine.easeInOut' });
+    this.modeChoices(); // two choices, each a key and a click: Long Haul (Enter, or any key) and the Campaign (K)
     this.add.text(W / 2, H - 34, 'W A S D move    E use    Esc pause    M mute    S settings    (V ship voice, C NPC chat, O mods: optional)    K Campaign', mono(14, '#5b7a92')).setOrigin(0.5);
     this.settingsChip();
 
-    const start = () => {
-      if (this.leaving || performance.now() - this.born < 500) return;
-      beep(520, 0.12, 'triangle', 0.05, 300); beep(780, 0.2, 'triangle', 0.04, 200);
-      go(this, 'Station', { arrive: false });
-    };
+    const start = () => this.startLongHaul();
     if (typeof campAddrPlanPage === 'function' && !CAMP_ADDR.used) { // the tune kit (src/campaignaddr.js): ?campaign=N[&tech=a,b] opens the Campaign at that level; a line to say, if the address was not understood, is shown and the title carries on
       const plan = campAddrPlanPage();
       if (plan && plan.level) { CAMP_ADDR.used = true; this.leaving = true; this.scene.start('Campaign', { level: plan.level, techs: plan.techs, via: 'address' }); return; }
@@ -54,6 +54,26 @@ class Title extends Phaser.Scene {
     this.contentUi = contentTitleUi(this); // src/contentui.js: the content problems chip, its panel and the MODDED tag (nothing when all is well)
     this.input.keyboard.on('keydown', e => { if (e.repeat || this.contentUi.handleKey(e)) return; if (e.code === 'KeyV') voiceOpenSetup(this); else if (e.code === 'KeyC') chatOpenSetup(this); else if (e.code === 'KeyS') settingsOpen(this, 'sound'); else if (e.code === 'KeyO') modsOpenSetup(this); else if (e.code === 'KeyK') campaignStart(this); else if (e.code !== 'KeyM') start(); }); // K opens the Campaign (src/campaignscene.js) // P opens Settings at Content and while Settings is open the title is paused, so nothing starts the game; M still mutes; S, V and C open Settings (src/settings.js) at Sound, the Deepgram key and the chat keys; O opens the Mods screen (src/mods.js)
     this.input.on('pointerdown', (p, over) => { if (over && over.length) return; start(); }); // a click on the chip, the tag or the panel is theirs, not "press any key"
+  }
+  startLongHaul() { // Enter, any other key, a click, or the Long Haul choice: the regular game, from the station
+    if (this.leaving || performance.now() - this.born < 500) return;
+    beep(520, 0.12, 'triangle', 0.05, 300); beep(780, 0.2, 'triangle', 0.04, 200);
+    go(this, 'Station', { arrive: false });
+  }
+  // the two choices of the title (card space-game-title-modes): a glass panel each, a key cap, the name and one line of what it is; a click on a panel does what its key does.
+  // The words are in content/text/title.md; where they go is TITLE_CHOICES (the key shown, the colour, the left edge of the panel, what it does).
+  modeChoices() {
+    const w = 380, h = 100, y = 462, mono = c => ({ fontFamily: 'monospace', fontSize: '28px', color: c, fontStyle: 'bold' });
+    TITLE_CHOICES.forEach((c, i) => {
+      const left = W / 2 + (i === 0 ? -w - 18 : 18), g = this.add.graphics(), cap = keyCap(this, uiText(c.key), c.color);
+      hudPanel(g, left, y, w, h, 10, 0.88, c.color); g.setAlpha(0.85).setDepth(20);
+      cap.setPosition(left + 18 + cap.kw / 2, y + 22).setDepth(21);
+      this.add.text(left + 18 + cap.kw + 12, y + 22, uiText(c.name), mono(c.css)).setOrigin(0, 0.5).setDepth(21);
+      this.add.text(left + 18, y + 48, uiText(c.sub), uiFont(13, '#9fbdd1', { wordWrap: { width: w - 36 }, lineSpacing: 3 })).setOrigin(0, 0).setDepth(21);
+      const zone = this.add.zone(left + w / 2, y + h / 2, w, h).setInteractive({ useHandCursor: true }).setDepth(22);
+      zone.on('pointerdown', () => { if (c.go === 'campaign') campaignStart(this); else this.startLongHaul(); });
+      zone.on('pointerover', () => g.setAlpha(1)); zone.on('pointerout', () => g.setAlpha(0.85));
+    });
   }
   // a small glass chip at the top right: [S] SETTINGS. A click opens Settings; it is not "press any key"
   settingsChip() {
