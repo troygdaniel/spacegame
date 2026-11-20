@@ -144,7 +144,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.map.across | {km} km across |
 | camp.map.carrier | Your carrier |
 | camp.map.wing | Your ships out ({n}) |
-| camp.map.convoy | Convoys ({n}), a line to where each is heading |
+| camp.map.convoy | Convoys ({n}), course drawn |
 | camp.map.alien | Aliens ({n}) |
 | camp.map.mother | The alien mothership |
 | camp.map.tower | Defence towers ({n}) |

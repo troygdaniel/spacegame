@@ -44,7 +44,7 @@ function campMapOpen(s) {
   own(s.add.text(F.x, 640, uiText('camp.map.footer'), uiFont(14, '#5b7a92'))).setDepth(154);
   mp.across = own(s.add.text(F.x + F.w, 640, '', uiFont(14, '#5b7a92'))).setOrigin(1, 0).setDepth(154);
   mp.obj = own(s.add.text(CAMPMAP_SIDE.x, F.y, '', uiFont(15, '#ffffff', { wordWrap: { width: 230 }, lineSpacing: 4 }))).setDepth(154);
-  for (let i = 0; i < CAMPMAP_SIDE.rows; i++) mp.leg.push(own(s.add.text(CAMPMAP_SIDE.x + 22, CAMPMAP_SIDE.y + i * CAMPMAP_SIDE.step, '', uiFont(14, '#9fe9ff'))).setOrigin(0, 0.5).setDepth(154));
+  for (let i = 0; i < CAMPMAP_SIDE.rows; i++) mp.leg.push(own(s.add.text(CAMPMAP_SIDE.x + 22, CAMPMAP_SIDE.y + i * CAMPMAP_SIDE.step, '', uiFont(14, '#9fe9ff', { wordWrap: { width: 235 } }))).setOrigin(0, 0.5).setDepth(154)); // a row is one line (27 letters at most, tests/campmap.mjs); the wrap is only a net
   // the names of the places: they do not move, so they are put once, each on a free side of its mark
   const places = campMapMarks(C).filter(m => m.type === 'place'), names = [];
   const items = places.map(m => {
