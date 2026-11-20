@@ -28,12 +28,14 @@ function campaignStart(s, level) { // the title's K: the level reached (or the h
 class Campaign extends Phaser.Scene {
   constructor() { super('Campaign'); }
   init(d) { // d: { level, techs (instead of the saved ones: the address's), via, seed, god }
-    d = d || {}; this.level = d.level || 1; this.via = d.via || 'menu'; this.opts = { seed: d.seed, god: !!d.god, via: this.via };
+    d = d || {}; this.d0 = d; this.warped = !!d.warped; // the start's own data, for the warp cinematic to hand back (src/campwarp.js)
+    this.level = d.level || 1; this.via = d.via || 'menu'; this.opts = { seed: d.seed, god: !!d.god, via: this.via };
     this.P = campProgressLoad(); if (Array.isArray(d.techs)) this.P.techs = d.techs.filter(t => CAMP.tech[t]);
     this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null; this.shown = {};
   }
   create() {
-    this.cameras.main.fadeIn(300, 0, 0, 0);
+    if (typeof campWarpDue === 'function' && campWarpDue(this)) return; // a level that warps in starts with the warp cinematic, which comes back here with warped: true (src/campwarp.js)
+    const dark = this.warped ? 255 : 0; this.cameras.main.fadeIn(300, dark, dark, dark); // out of the warp's white flash, else out of black
     spaceBackdrop(this, true);
     this.boom = fxBoom(this);
     this.camp = this.makeCamp();

@@ -238,7 +238,7 @@ class Hyper extends Phaser.Scene {
 
     // two ribbons of colour twisting along the path, drifting left slowly
     for (let r = 0; r < 2; r++) {
-      const pts = [], top = [], bot = [], col = r ? hyperMix(tint, 0xb06bff, 0.65) : tint, f = 0.25 + 0.75 * k;
+      const pts = [], top = [], bot = [], col = r ? hyperMix(tint, 0xb06bff, 0.65) : tint, f = (0.25 + 0.75 * k) * (this.ribbonK == null ? 1 : this.ribbonK); // ribbonK and gateK: the Campaign's warp (src/campwarp.js) brings the ribbons and the gates in with its tunnel; nothing else sets them
       for (let x = -20; x <= W + 20; x += 24) {
         const env = Math.sin(Math.PI * (x + 20) / (W + 40)); // calm at the screen edges
         const y = cy + (Math.sin(x * 0.0042 + t * (0.5 + r * 0.17) + r * 2.4) * (80 + r * 26) + Math.sin(x * 0.011 - t * 0.8 + r) * 24) * (0.3 + 0.7 * env);
@@ -261,7 +261,7 @@ class Hyper extends Phaser.Scene {
       const sh = 1 - 0.92 * this.coll; // a pull-out: the rings shrink to nothing
       const ry = (60 + 380 * Math.pow(u, 1.3)) * sh, rx = (5 + 15 * u) * sh;
       const near = Math.exp(-Math.pow((x - this.cx) / 230, 2));
-      const a = Math.min(1, u / 0.08, (1 - u) / 0.1) * (0.2 + 0.8 * near) * (1 - this.coll);
+      const a = Math.min(1, u / 0.08, (1 - u) / 0.1) * (0.2 + 0.8 * near) * (1 - this.coll) * (this.gateK == null ? 1 : this.gateK);
       const pts = [], poly = [], col = hyperMix(tint, 0xffffff, 0.3 + 0.55 * near);
       for (let i = 0; i < 36; i++) { const px = x + Math.cos(TAU * i / 36) * rx, py = cy + Math.sin(TAU * i / 36) * ry; pts.push([px, py]); poly.push({ x: px, y: py }); }
       g.fillStyle(col, 0.06 * near * a); g.fillPoints(poly, true);
