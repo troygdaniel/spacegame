@@ -265,7 +265,7 @@ class Campaign extends Phaser.Scene {
     // the autopilot's readout under the goal line, and an arrow at the edge of the screen pointing at the goal with its distance (src/campnav.js; docs/night/graphics.md finding 3)
     if (this.hud.nav) this.hud.nav.setText(C.nav ? uiText('camp.nav.hud', { name: C.nav.name, km: campNavKm(Math.hypot(C.nav.x - c.x, C.nav.y - c.y)) }) : '');
     if (this.hud.arrow) {
-      const cam = this.cameras.main, ar = typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: cam.scrollX, y: cam.scrollY }, W, H) : null;
+      const cam = this.cameras && this.cameras.main, ar = cam && typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: cam.scrollX, y: cam.scrollY }, W, H) : null; // a stand-in scene in a test has no camera
       if (!ar) this.hud.arrow.setVisible(false);
       else {
         const a = ar.angle, tri = [{ x: ar.x + Math.cos(a) * 13, y: ar.y + Math.sin(a) * 13 }, { x: ar.x + Math.cos(a + 2.5) * 10, y: ar.y + Math.sin(a + 2.5) * 10 }, { x: ar.x + Math.cos(a - 2.5) * 10, y: ar.y + Math.sin(a - 2.5) * 10 }];
