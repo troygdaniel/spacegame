@@ -30,6 +30,10 @@ An order the game cannot do is answered in words and does nothing ("the bay is e
 
 Level 1 is complete on its own; 2 and 3 are further rows of the same table and reuse every piece. The kinds the engine knows are the wins (`mother`, `relic`, `towers`), waves, convoys, guards, tower rings, caches and techs; a new level is data, not code.
 
+## Easier (20 Nov 2026)
+
+Troy lost level 1 twice at wave 3, both times because Earth's shield ran out, with about seven small ships lost each time. A player who launches, escorts, attacks and guards but leaves the carrier at the Moon now wins: Earth's shield is 600 (was 300) and mends 3 a second after 6 seconds without a hit (a lull between waves heals it, a siege does not); wave 3 is two raiders and a gunship (was three and one); the mothership has 700 hull (was 900), shoots for 8 (was 12), holds 1,300 px from Earth (was 1,600, out of reach of anything at the Moon) and launches a raider every 12 s up to 3 (was 8 s, 6). `tests/campaign.mjs` K pins it: those two plain players win, nobody wins by doing nothing, and the same players lose with the old numbers.
+
 ## Tech: one of three after each battle
 
 | After level 1 (their wreck) | Does |
