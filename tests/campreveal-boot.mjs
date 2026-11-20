@@ -21,9 +21,14 @@ try {
   let txt = await cardText();
   check('level 3 opens on the home world and the last battle (nothing hints at an outpost)', /home world/i.test(txt) && /Last battle/.test(txt) && !/outpost/i.test(txt), txt);
   await shot('1-intro');
-  await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', repeat: false }); return 1; })()`); await t.run(300);
+  const toPlay = async () => { for (let i = 0; i < 4 && (await j(`${SC}.mode`)) !== 'play'; i++) { await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', repeat: false }); return 1; })()`); await t.run(300); } }; // the intro card, then the mission's briefing
+  await toPlay();
   check('while playing the place is the alien home world', await j(`campPlaces(3).home.name === 'Alien home world' && CAMP.levels[3].name === 'The home world'`));
-  await t.ev(`(() => { const S = ${SC}; campEnd(S.camp, 'won', 'towers'); return 1; })()`); await t.run(2500); // the won card comes up 1.8 s after
+  // level 3 is three missions since the missions card: fly the last one (a level is done with its last mission), win it, read the debrief, then the level's won card
+  await t.ev(`(() => { ${SC}.scene.restart({ level: 3, mission: 2 }); return 1; })()`); await t.run(1200); await toPlay();
+  await t.ev(`(() => { const S = ${SC}; campEnd(S.camp, 'won', 'towers'); return 1; })()`); await t.run(2500); // the debrief comes up 1.8 s after
+  check('the last mission of level 3 is won: the debrief is up and the level is done', await j(`${SC}.mode === 'debrief' && ${SC}.mdone === true`), await j(`${SC}.mode`));
+  await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', repeat: false }); return 1; })()`); await t.run(500); // the debrief goes to the level's won card
   txt = await cardText();
   check('the won card is the victory: "Their defences are down." "The war is won." and no outpost', /Their defences are down\./.test(txt) && /The war is won\./.test(txt) && !/outpost|not over/i.test(txt), txt);
   check('the flag is not set yet', await j(`campProgressLoad().revealed === false`));
