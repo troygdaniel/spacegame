@@ -46,7 +46,7 @@ async function campaign() {
     check('a click on row 2 (attack) does it and closes the panel', (await j(`${SC}.camp.orders.attack`)) === 1 && (await j(`${SC}.pn.open`)) === '' && (await j(`${SC}.pnl.objs.length`)) === 0);
     await press(t, 'Digit2', 20); await t.run(400);
     const ship = await j(`${SC}.pnl.rows.map(r => r.name.text + ': ' + r.state.text)`);
-    check('2 opens the SHIP panel at the right: mine, shields, what a ship costs (or the ore it needs: the belt starts with none) and the objective row', ship.length === 5 && /^Mine ore: \d+ ships, \d+ rocks/.test(ship[0]) && /^Build a fighter: (25 ore, 6 s|needs 25 ore)$/.test(ship[2]) && /^Fly to the objective: /.test(ship[4]), ship.join(' | '));
+    check('2 opens the SHIP panel at the right: mine, shields, what a ship costs (or the ore it needs: the belt starts with none) and the objective row', ship.length === 6 && /^Mine ore: \d+ ships, \d+ rocks/.test(ship[0]) && /^Build a fighter: (25 ore, 6 s|needs 25 ore|Dock at an outpost to build\.)$/.test(ship[2]) && /^Fly to the objective: /.test(ship[4]) && /^Dock at an outpost: /.test(ship[5]), ship.join(' | ')); // six rows: the sixth docks (card space-game-campaign-outposts); building is only docked, so the build rows may say where
     await snap(t, 'ship');
     await press(t, 'Escape'); await t.run(100);
     check('Esc closes the panel and does not pause', (await j(`${SC}.pn.open`)) === '' && (await j(`${SC}.mode`)) === 'play');
