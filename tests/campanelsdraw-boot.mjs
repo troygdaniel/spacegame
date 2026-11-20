@@ -58,7 +58,7 @@ async function campaign() {
     await snap(t, 'page');
     await press(t, 'KeyH'); await t.run(100);
     check('H again closes it and the battle goes on', (await j(`${SC}.ck`)) === null && (await j(`${SC}.mode`)) === 'play');
-    check('the bottom key line says the panels and H', (await j(`${SC}.hud.keys.text`)) === '' || /1 Fleet   2 Ship   Tab Map   H Keys$/.test(await j(`${SC}.hud.keys.text`)), await j(`${SC}.hud.keys.text`));
+    check('the bottom key line says the panels and H', (await j(`${SC}.hud.keys.text`)) === '' || /1 Fleet   2 Ship   Tab Map(   \+ - Zoom)?   H Keys$/.test(await j(`${SC}.hud.keys.text`)), await j(`${SC}.hud.keys.text`));
     check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
   } finally { await t.close(); }
 }
