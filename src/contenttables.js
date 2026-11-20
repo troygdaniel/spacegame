@@ -381,6 +381,7 @@ const UI_TEXT = {
   'camp.no.what': 'I cannot do that, pilot.',
   'camp.lose.carrier': 'The carrier is lost.',
   'camp.lose.earth': 'Earth\'s shield has failed.',
+  'camp.lose.debug': 'The level was ended with the debug key.',
   'camp.say.l2wave1': 'The aliens followed us through the warp, pilot.',
   'camp.say.l2wave2': 'A second group, coming in from the far side.',
   'camp.say.l3wave1': 'Defenders are launching from the planet.',
