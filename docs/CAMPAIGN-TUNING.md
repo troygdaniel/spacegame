@@ -31,6 +31,10 @@ They are listed in one small line on the pause screen (`campDebugLine`). The row
 | a bigger wing | `bay.fighters`, `bay.escorts`; `fighter.damage` up, `fighter.hp` up |
 | weaker or stronger aliens | `alien.hpScale` and `alien.damageScale` for all of them; `mother.hp` for the mothership |
 | a bigger wave | `levels[n].waves[i].ships` (`raider`, `drone`, `gunship`) |
+| stronger or weaker missiles | `missile.big` (the mothership, towers, gunships), `missile.small` (the rest), `missile.blast` |
+| more or fewer missiles | `missile.magazine` (the start and the reload's full), `missile.reload` (ms for one to come back), `missile.max` (the most ore can fill it to) |
+| easier or harder to aim | `missile.turn`, `missile.speed`, `missile.lock` (how far it can pick a target), `missile.fuze` |
+| the turrets reach further | `carrier.pdRange` (px), `carrier.pd` (damage), `carrier.pdDelay` |
 | a faster or slower level | `waves[i].at` (seconds into the level), `early` (seconds after the wave before is dead), `convoys[i].at` |
 | the map | `places` (px from Earth); the Sol distances are `docs/SOL.md` at 1 to 12 |
 
