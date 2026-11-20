@@ -29,9 +29,10 @@ const CAMP = {
     radius: 36,                            // px, the hit circle (it was 56: the carrier is drawn 35 percent smaller)
     mounts: [[42, -14], [42, 14], [12, -26], [12, 26], [-16, -30], [-16, 30], [-44, -24], [-44, 24]], // the turrets (there is no other gun): where each sits, px from the carrier's centre in its own frame (x along the nose), spread along the hull; the number of turrets is the number of rows
     pd: 4,                                 // hit points one turret shot takes off an alien
-    pdDelay: 400,                          // ms between the shots of one turret (eight of them: 80 hit points a second in all): they fire only while Space is held, each at the nearest alien in its reach, and never on their own
+    pdDelay: 700,                          // ms between the shots of one turret (eight of them: 46 hit points a second in all): they fire only while Space is held, each at the nearest alien in its reach, and never on their own
     pdRange: 500,                          // px a turret reaches (to the edge of the alien it aims at: about three and a half carrier lengths)
     pdSpeed: 800,                          // px/s of a turret shot
+    lead: 1,                               // how far ahead a turret aims: 1 is where its shot and the alien meet (the alien's speed, the shot's, the carrier's drift), 0 is where the alien is now
     shield: 150                            // points of shield: they take damage before the hull, do not mend by themselves, and ore refills them (recharge, key 7)
   },
   ore: {                                   // ore: asteroid rocks and the wrecks of dead aliens; spent on shields and new ships (docs/CAMPAIGN.md, Ore)
@@ -534,6 +535,19 @@ function campCarrier(C, dt) {
   campTurrets(C);
 }
 // the turrets: each one aims itself at the nearest alien in its reach (to the edge of it), always; it fires only while Space is held (C.input.fire), one shot every pdDelay ms
+// where to point so the shot and a moving alien meet (card space-game-campaign-turret-lead): in the frame of the shot, which keeps campDrift of the carrier's own speed, the alien
+// is at p and moves at v; the shot, at speed s, reaches it at the time t where |p + v t| = s t (the smaller positive root). No such time, or one too far for the shot's flight: aim where it is.
+function campLead(C, tu, u) {
+  const k = CAMP.carrier, c = C.carrier, px = u.x - tu.x, py = u.y - tu.y, direct = Math.atan2(py, px);
+  if (!k.lead) return direct;
+  const vx = (u.vx || 0) - (c.vx || 0) * campDrift, vy = (u.vy || 0) - (c.vy || 0) * campDrift, s = k.pdSpeed;
+  const a = vx * vx + vy * vy - s * s, b = 2 * (px * vx + py * vy), cc = px * px + py * py;
+  let t = -1;
+  if (Math.abs(a) < 1e-6) t = b < 0 ? -cc / b : -1;
+  else { const d = b * b - 4 * a * cc; if (d >= 0) { const q = Math.sqrt(d), t1 = (-b - q) / (2 * a), t2 = (-b + q) / (2 * a), lo = Math.min(t1, t2), hi = Math.max(t1, t2); t = lo > 0 ? lo : hi; } }
+  if (!(t > 0) || t * s > campReach(C) + u.r + 200) return direct; // it is gone before the shot gets there (a shot flies 300 px past the reach): aim where it is
+  t *= k.lead; return Math.atan2(py + vy * t, px + vx * t);
+}
 const campReach = C => CAMP.carrier.pdRange * (campHas(C, 'beam') ? CAMP.tech.beam.reach : 1); // px a turret reaches: the beam tech reaches further
 function campTurretPlace(C) { // each turret's place in the world, from the carrier's place and nose
   const c = C.carrier, cs = Math.cos(c.rot), sn = Math.sin(c.rot);
@@ -545,16 +559,17 @@ function campTurrets(C) {
   let fired = false;
   C.turrets.forEach(tu => {
     let best = null, bd = reach; al.forEach(u => { const d = campDist(u, tu) - u.r; if (d <= bd) { bd = d; best = u; } });
-    tu.target = best ? best.id : ''; if (best) tu.aim = Math.atan2(best.y - tu.y, best.x - tu.x);
+    tu.target = best ? best.id : ''; if (best) tu.aim = campLead(C, tu, best);
     if (best && C.input.fire && C.t >= tu.at) {
       tu.at = C.t + k.pdDelay; tu.shotAt = C.t; fired = true;
-      campBullet(C, { x: tu.x, y: tu.y, vx: c.vx, vy: c.vy, id: c.id }, tu.aim, k.pdSpeed, dmg, (reach + 120) / k.pdSpeed * 1000, 'earth', 0, { pd: true, beam });
+      campBullet(C, { x: tu.x, y: tu.y, vx: c.vx, vy: c.vy, id: c.id }, tu.aim, k.pdSpeed, dmg, (reach + 300) / k.pdSpeed * 1000, 'earth', 0, { pd: true, beam }); // a shot flies 300 px past the reach, so one led ahead of an alien at the edge still arrives
     }
   });
   if (fired && C.t - C.gunAt >= 150) { C.gunAt = C.t; C.events.push({ type: 'gun', x: c.x, y: c.y }); } // one sound for a volley, not one for each of the eight
 }
+const campDrift = 0.3; // a shot keeps this share of its shooter's own speed (campLead reads it too)
 function campBullet(C, from, rot, speed, dmg, lifeMs, team, ahead, extra) {
-  const b = Object.assign({ x: from.x + Math.cos(rot) * (ahead || 0), y: from.y + Math.sin(rot) * (ahead || 0), vx: Math.cos(rot) * speed + (from.vx || 0) * 0.3, vy: Math.sin(rot) * speed + (from.vy || 0) * 0.3, dmg, life: lifeMs, team, from: from.id, rot }, extra || {});
+  const b = Object.assign({ x: from.x + Math.cos(rot) * (ahead || 0), y: from.y + Math.sin(rot) * (ahead || 0), vx: Math.cos(rot) * speed + (from.vx || 0) * campDrift, vy: Math.sin(rot) * speed + (from.vy || 0) * campDrift, dmg, life: lifeMs, team, from: from.id, rot }, extra || {});
   C.bullets.push(b); return b;
 }
 
