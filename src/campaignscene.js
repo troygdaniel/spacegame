@@ -15,6 +15,7 @@ const CAMP_LOOK = {
   freighter: { tex: 'freighter', scale: 1 },
   raider: { tex: 'raider', scale: 1 }, drone: { tex: 'drone', scale: 1 }, gunship: { tex: 'gunship', scale: 1 }, mother: { tex: 'reaver', scale: 2.6, tint: 0xc9a0ff }, tower: { tex: 'gunship', scale: 1.6, tint: 0xff9a3a }
 };
+const CAMP_REACH = { w: 2, alpha: 0.4, color: 0xffd37a }; // the ring that shows how far the point guns reach (CAMP.carrier.pdRange): its line width, how solid it is, its colour (it was 1 px at 0.16, too faint to find: 6-GEN and 8-GEN)
 const CAMP_ADDR = { used: false }; // the address (?campaign=N, src/title.js) opens the Campaign once per page load: coming back to the title from it must not open it again
 const CAMP_RADAR = { x: W - 118, y: 118, r: 98, range: 6000, fill: 0.9, rim: [2, 0.8], blip: 1 }; // the radar's centre and radius on the screen, and the px of space it shows from the carrier to its edge
 
@@ -200,7 +201,7 @@ class Campaign extends Phaser.Scene {
     Object.keys(this.msp).forEach(id => { if (!seen[id]) { this.msp[id].body.destroy(); this.msp[id].flame.destroy(); delete this.msp[id]; } });
     const g = this.reachG, mg = this.mountG; g.clear(); mg.clear();
     if (c.hp > 0) {
-      g.lineStyle(1, 0xffd37a, 0.16).strokeCircle(c.x, c.y, CAMP.carrier.pdRange);
+      g.lineStyle(CAMP_REACH.w, CAMP_REACH.color, CAMP_REACH.alpha).strokeCircle(c.x, c.y, CAMP.carrier.pdRange);
       const hot = C.t - C.pdAt < 160, aim = campWrap(C.pdAim - c.rot), cs = Math.cos(c.rot), sn = Math.sin(c.rot);
       const MOUNTS = [[24, -20], [24, 20], [-20, -22], [-20, 22]]; // px from the carrier's centre in its own frame (x along the nose)
       let near = -1, best = 9; if (hot) MOUNTS.forEach((p, i) => { const d = Math.abs(campWrap(aim - Math.atan2(p[1], p[0]))); if (d < best) { best = d; near = i; } });
