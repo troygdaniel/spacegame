@@ -28,8 +28,9 @@ try {
   check('with the map closed the pool does not exist and nothing is kept', await j(`!${SC}.mp`));
   await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(100);
   check('Tab opens the map', await j(`!!${SC}.mp`));
-  let most = 0, drawn = 0;
-  for (let i = 0; i < 40; i++) { await t.run(100); const n = await j(`${SC}.mp.fire.slots.filter(s => s.on).length`); if (n > most) most = n; drawn = Math.max(drawn, await j(`${SC}.camp.bullets.length`)); }
+  const shot = async name => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, name), Buffer.from(r.data, 'base64')); } }; // twice: the second is the one that has drawn
+  let most = 0, drawn = 0, shotAt = 0;
+  for (let i = 0; i < 60; i++) { await t.run(100); const n = await j(`${SC}.mp.fire.slots.filter(s => s.on).length`); if (n > most) most = n; drawn = Math.max(drawn, await j(`${SC}.camp.bullets.length`)); if (n >= 8 && !shotAt) { shotAt = n; await shot('mapfire-fight.png'); } }
   check('marks are alive while the fight goes on, and never more than the pool', most > 0 && most <= await j('CAMPFIRE.pool'), 'most alive ' + most);
   check('the pool is the same size it started with', await j(`${SC}.mp.fire.slots.length === CAMPFIRE.pool`));
   // what the painting costs: campFirePaint alone, on a Graphics that does nothing, over the live battle and pool (the page clock is good to 0.1 ms, so a loop of 3000)
@@ -39,8 +40,8 @@ try {
   console.log('  paint cost: ' + cost.ms.toFixed(4) + ' ms a frame for ' + cost.things.toFixed(1) + ' things (' + cost.bullets + ' bullets in the air)');
   check('painting the fight costs well under a tenth of a millisecond a frame', cost.ms < 0.1, cost.ms.toFixed(4) + ' ms');
   for (let i = 0; i < 6; i++) await t.run(100);
-  const shot = async name => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, name), Buffer.from(r.data, 'base64')); } }; // twice: the second is the one that has drawn
-  await shot('mapfire-fight.png');
+  if (!shotAt) await shot('mapfire-fight.png'); // the fight never had eight marks at once: the last moment, then
+  console.log('  picture taken with ' + (shotAt || 'few') + ' marks alive');
   await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(300);
   check('Tab closes the map and the pool goes with it', await j(`!${SC}.mp`));
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
