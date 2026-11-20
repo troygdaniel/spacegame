@@ -19,7 +19,7 @@ g.run(`
     f.k = { W: { isDown: false }, A: { isDown: false }, S: { isDown: false }, D: { isDown: false }, UP: { isDown: false }, DOWN: { isDown: false }, LEFT: { isDown: false }, RIGHT: { isDown: false }, SPACE: { isDown: false } };
     f.init({ level }); f.camp = campNew(f.level, f.P.techs, f.opts); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); __said.length = 0; return f; };
 `);
-const tasking = { 1: 'Launch the wing', 2: 'Gather what we need', 3: 'Break the defence towers' };
+const tasking = { 1: 'press 6', 2: 'Find it first', 3: 'Break the defence towers' }; // the words of the intro that say what to do (the curt lines of the belt, card space-game-campaign-belt)
 for (const lv of [1, 2, 3]) {
   g.run(`VOICE.spoken = 'short'; window.F = __fake(${lv}); F.showIntro();`);
   const said = J('__said'), story = J(`campStory(${lv}, 'before')`);
@@ -30,7 +30,7 @@ for (const lv of [1, 2, 3]) {
   check(`level ${lv} intro, Full: everything is heard`, said.map(s => J(`voiceSpokenText(${JSON.stringify(s)})`)).join(' ') === story.join(' '));
 }
 g.run(`VOICE.spoken = 'short'; window.F = __fake(1); F.showWon();`);
-check('the win card of level 1, Short: "Choose." is heard (the second line was cut before)', J('__said.map(s => voiceSpokenText(s)).join(" ")').includes('Choose.'), J('__said').join('|'));
+check('the win card of level 1, Short: the last line ("refit.") is heard (a line was cut before)', J('__said.map(s => voiceSpokenText(s)).join(" ")').includes('refit.'), J('__said').join('|'));
 g.run(`window.F = __fake(1); F.say(['One line only.']);`);
 check('a single line (a wave, a convoy) is said exactly as before', J('__said').join('|') === 'One line only.');
 g.run(`window.F = __fake(1); F.say([]); F.say(['', 'x']);`);
