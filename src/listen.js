@@ -319,7 +319,7 @@ async function listenEarlyRun(game) {
 // ---------- one press ----------
 function listenScene(game) { // the scene the computer can open over: the Space or Station scene that is running (a paused one, behind a menu, is not)
   if (!game || !game.scene) return null;
-  return game.scene.getScenes(true).find(sc => sc.scene.key === 'Space' || sc.scene.key === 'Station') || null;
+  return game.scene.getScenes(true).find(sc => sc.scene.key === 'Space' || sc.scene.key === 'Station' || sc.scene.key === 'Campaign') || null;
 }
 // the same things that keep the strip's line from opening (src/cmdstrip.js cmdstripBlocked), asked early so the player is not asked to speak into a line that will not open
 const listenBlocked = s => !!(s.leaving || s.dead || s.panel || s.talk || s.shopOpen || s.jmp || (s.cr && s.cr.navOpen));
