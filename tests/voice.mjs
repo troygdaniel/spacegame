@@ -19,6 +19,7 @@ const MOCK = `(() => {
   window.__calls = []; window.__status = 200; window.__log = []; window.__delay = 0;
   window.fetch = (url, opts) => { __calls.push({ url: String(url), auth: opts && opts.headers && opts.headers.Authorization, body: opts && opts.body }); return new Promise(r => setTimeout(r, __delay)).then(() => new Response(__status === 200 ? wav.slice(0) : 'no', { status: __status })); };
   ['log', 'warn', 'error', 'info', 'debug'].forEach(m => { const o = console[m]; console[m] = (...a) => { __log.push(a.join(' ')); o.apply(console, a); }; });
+  if (typeof voicePackSetIndex === 'function') voicePackSetIndex({ v: 1, lines: {} }); // these cases are about the Deepgram path: no recorded line (a pack made later) may answer in its place; tests/voicepack.mjs is the pack's
   window.__active = 0; window.__max = 0; const orig = voicePlay;
   voicePlay = async (b, ...rest) => { __active++; __max = Math.max(__max, __active); try { await orig(b, ...rest); } finally { __active--; } };
   return 1;
@@ -173,6 +174,24 @@ const idle = t => t.waitFor('VOICE.playing === false && VOICE.queue.length === 0
     await t.waitFor(`__calls.some(c => JSON.parse(c.body).text === VOICE_LINES.hull)`, 10000, 'hull warning spoken');
     check('hull under 30% speaks the warning', true);
     await t.ev('(VOICE.key = "")'); // stop any later line from this run touching the mock
+    check('no console errors', t.errors.length === 0, t.errors.join(' | '));
+  } finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
+}
+
+// ---- part 4: the voice pack (card space-game-voice-pack): a recorded line plays with NO key, through the real AudioContext, from its own file, and no call goes to Deepgram ----
+{
+  const t = await pool.open('');
+  try {
+    await t.waitFor("!!(window.game && game.scene.isActive('Title'))", 20000, 'title');
+    await t.ev(MOCK);
+    // a one-line pack: the mock answers every fetch with 0.1 s of silence, whatever the URL, so the file "voicepack/<name>.mp3" decodes
+    await t.ev(`(() => { VOICE.key = ''; VOICE.on = true; G.muted = false; G.volume = 0.8; VOICE.said = {}; VOICEPACK.cache.clear(); const id = voicePackId(VOICE_LINES.launch, 'aura-athena-en'); voicePackSetIndex({ v: 1, lines: { [id]: { text: VOICE_LINES.launch, voice: 'aura-athena-en', bytes: 1700, source: 'events' } } }); window.__packId = id; return 1; })()`);
+    check('no key but a pack: the status says FIXED LINES', (await t.ev('voiceStatus()')) === 'FIXED LINES');
+    check('no key: a recorded line is accepted', (await t.ev(`voiceSay(VOICE_LINES.launch, 1)`)) === true);
+    await t.waitFor('__calls.length >= 1', 10000, 'the file fetched'); await idle(t);
+    const c = await t.ev('__calls[0]'), played = await t.ev('VOICE.packed');
+    check('it is a GET of voicepack/<name>.mp3 with no Authorization header and nothing sent to Deepgram', c.url === 'voicepack/' + (await t.ev('__packId')) + '.mp3' && !c.auth && (await t.ev('__calls.every(x => !/deepgram/.test(x.url))')) && played === 1, JSON.stringify(c));
+    check('a line that is not recorded is still refused with no key', (await t.ev(`voiceSay('Not recorded anywhere.', 1)`)) === false);
     check('no console errors', t.errors.length === 0, t.errors.join(' | '));
   } finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling when Chrome exits on a busy Mac */ } }
 }
