@@ -206,7 +206,7 @@ const SOUND = {
   send: {                           // how much of each effect goes to the reverb (0: dry). A name that is not here gets SOUND.other
     boom: 0.55, hyperJump: 0.6, hyperArrive: 0.55, dock: 0.45,                       // the big events: long tails
     hyperCharge: 0.3, interdict: 0.3, cruiseOn: 0.3, cruiseOff: 0.3, shieldDown: 0.3, thrusters: 0.3, shieldUp: 0.25,
-    hit: 0.22, bounty: 0.2, siren: 0.2, dash: 0.15, laser: 0.14, chime: 0.12, tick: 0.06,
+    hit: 0.22, bounty: 0.2, siren: 0.2, dash: 0.15, laser: 0.14, chime: 0.12, tick: 0.06, turret: 0.06,
     fuelPump: 0.05, fuelLow: 0.05, beep: 0.05,
     click: 0, uiOpen: 0, uiClose: 0, type: 0, buy: 0, sell: 0, empty: 0             // the interface: short and dry
   },
@@ -329,6 +329,10 @@ const SFX = {
   thrusters(t) { burst(t, 0.9, 0.14, 'bandpass', 300, 1200, 0.9, 0.25); tone(t, 'sine', 70, 110, 0.8, 0.07); },
   dash(t) { burst(t, 0.22, 0.13, 'bandpass', 700, 2800, 0.9, 0.2); tone(t, 'sine', 260, 820, 0.18, 0.05); },
   empty(t) { tone(t, 'square', 190, 120, 0.1, 0.035); },
+  // ---- the Campaign's sounds (card space-game-campaign-sounds; what each is built of is in SFX_BUILT below, so a change can be asked for by name) ----
+  // turret: one shot of the eight turrets, a short bright bolt, higher or lower by turret (a = the turret's number, 0 to 7), so a staggered volley rattles
+  turret(t, a) { const i = a | 0, f = (1500 + (i % 4) * 150 + (i > 3 ? 70 : 0)) * (0.97 + Math.random() * 0.06);
+    tone(t, 'square', f, f * 0.3, 0.07, 0.03); tone(t, 'sawtooth', f * 1.9, f * 0.6, 0.035, 0.012); burst(t, 0.012, 0.012, 'highpass', 4500, 4500); },
   // bounty: two bright coin pings, the second higher and longer, with a thin shimmer on top (plays just after the boom)
   bounty(t) { tone(t, 'triangle', 988, 975, 0.1, 0.06); tone(t + 0.075, 'triangle', 1319, 1300, 0.26, 0.06); tone(t + 0.075, 'sine', 2637, 2620, 0.2, 0.022); },
   // cruise: a rising whoosh as it engages, a falling one and a soft thud as it drops out (src/cruise.js)
@@ -364,10 +368,16 @@ const SFX = {
   chime(t) { [660, 880, 1320].forEach((f, i) => tone(t + i * 0.07, 'triangle', f, f * 0.995, 0.35, 0.05)); tone(t + 0.21, 'sine', 1760, 1750, 0.3, 0.025); }
 };
 
-// every effect plays with its own share of the reverb, however it is called (sfx('boom'), or SFX.boom(t) from another effect or a test)
+// What each of the Campaign's sounds is made of, in plain words (card space-game-campaign-sounds), and the group it was made in: so Troy can ask for a change by name.
+// The numbers are in the sound's own line above. tests/campsounds.mjs holds every name here to a sound that exists and to the level rules.
+const SFX_BUILT = {
+  turret: { group: 'turrets', says: 'the turret pew: a short bright square bolt that falls to under a third of its pitch in 70 ms, a thin sawtooth zip on top and a hair of click at the start; the pitch is set by the turret (four steps of 150 Hz, the back four a little higher) and moved 3 percent at random, so the eight rattle and do not smear' }
+};
+
+// every effect plays with its own share of the reverb, however it is called (sfx('boom'), or SFX.boom(t) from another effect or a test); a is the sound's own argument (the turret's number)
 Object.keys(SFX).forEach(name => {
   const play = SFX[name];
-  SFX[name] = t => { const was = AUD.sendNow; AUD.sendNow = soundSend(name); try { play(t); } finally { AUD.sendNow = was; } };
+  SFX[name] = (t, a) => { const was = AUD.sendNow; AUD.sendNow = soundSend(name); try { play(t, a); } finally { AUD.sendNow = was; } };
 });
 
 // ---------- the cruise rumble: a quiet sub-bass bed while the ship flies itself (src/cruise.js) ----------
@@ -389,10 +399,10 @@ function stopCruiseHum() {
   setTimeout(() => c.list.forEach(o => { try { o.stop(); } catch (e) { /* already stopped */ } }), 700);
 }
 
-function sfx(name) {
+function sfx(name, arg) { // arg: what a sound takes (the turret's number); most take none
   if (G.muted || G.volume <= 0 || FX.vol <= 0 || !SFX[name] || !audioReady()) return;
   resumeAudio(); syncMaster();
-  try { SFX[name](AC.currentTime); } catch (e) { /* audio is optional */ }
+  try { SFX[name](AC.currentTime, arg); } catch (e) { /* audio is optional */ }
 }
 // beep() of src/common.js made an oscillator and a gain for every call (a salvage pod, a hit on the MULE, most of the station's clicks).
 // The same call now plays on a voice of the pool, through the master gain (which is the volume, so v is not scaled here), nearly dry.
