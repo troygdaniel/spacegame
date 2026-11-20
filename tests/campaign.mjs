@@ -223,7 +223,7 @@ console.log('H. the scene: keys, modes, the pick, retry (on a stand-in)');
     window.__went = []; window.__go0 = go; go = (s, key, data) => { __went.push({ key, data }); };
     window.__toasts2 = []; window.__toast0 = toast; toast = (s, msg) => { __toasts2.push(msg); };
     window.__fake = (level, d) => { const f = Object.create(Campaign.prototype); f.add = document; f.cameras = document; f.input = document; f.textures = document; f.tweens = document;
-      f.time = { delayedCall: (ms, fn) => fn() }; f.boom = { explode() {} }; f.bgLayers = []; f.hudG = document; f.hud = { shield: document, hull: document, earth: document, bay: document, wave: document, mother: document, blink: document, obj: document, keys: document }; f.relicG = document;
+      f.time = { delayedCall: (ms, fn) => fn() }; f.boom = { explode() {} }; f.bgLayers = []; f.hudG = document; f.hud = { shield: document, ore: document, hull: document, earth: document, bay: document, wave: document, mother: document, blink: document, obj: document, keys: document }; f.relicG = document;
       f.k = { W: { isDown: false }, A: { isDown: false }, S: { isDown: false }, D: { isDown: false }, UP: { isDown: false }, DOWN: { isDown: false }, LEFT: { isDown: false }, RIGHT: { isDown: false }, SPACE: { isDown: false } };
       f.init(Object.assign({ level }, d || {})); f.camp = campNew(f.level, f.P.techs, f.opts); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); f.osp = {}; f.showIntro(); __went.length = 0; __toasts2.length = 0; return f; };
   `);
@@ -481,6 +481,8 @@ console.log('L. ore: asteroid rocks and wrecks, mining, the carrier shield, rech
   g.run(`F.onKey({ code: 'Digit6' })`); const t6 = J('__toasts2.pop()');
   check('the keys: 7 recharges the shield, 8 builds a fighter, 9 an escort (ore 100 less 25, 25, 45), 6 with no escorts out says launch first; the HUD and the ore sprites draw without error', t7 === 'Carrier shield recharged.' && t8 === 'Building 1 fighter.' && t9 === 'Building 1 escort.' && t6 === 'No escorts are out. Launch first.' && J('F.camp.ore') === 100 - 25 - 25 - 45 && J('F.camp.shield') === 150 && (g.run('F.update(0, 33)'), true));
   g.run('go = __go0; toast = __toast0');
+  g.run(`window.F = __fake(1, {}); F.onKey({ code: 'Enter' }); delete F.hud.shield; delete F.hud.ore; delete F.osp; 0`);
+  check('a stand-in scene with no shield text and no ore sprites (5-GEN\'s UX tests fake the scene that way) still draws a frame: the scene skips the gauges it has no text for and makes the ore sprites it lacks', (() => { try { g.run('F.update(0, 33); F.update(0, 33)'); return true; } catch (e) { return String(e.message).slice(0, 120); } })());
   // ore in every level, and what it is worth
   check('every level has ore to find: rocks in levels 1, 2 and 3; Earth\'s shield recharge only where there is an Earth', [1, 2, 3].every(n => J(`CAMP.levels[${n}].rocks.length`) >= 1) && (N(3), g.run('C.ore = 100; campHurt(C, C.carrier, 100, "x")'), J(`campOrder(C, 'recharge', '').ok`) === true));
   g.run(`
