@@ -4,13 +4,14 @@
 //   K on the title opens it (campaignStart); Enter begins a level; W A S D fly, Space fires the main gun, Q blinks (the warp tech);
 //   1 launch, 2 attack, 3 escort, 4 guard, 5 recall; I types an order and U speaks one (the strip and the ship computer, src/shipcomputer.js, find this scene);
 //   Esc pauses (this scene's own pause, not Long Haul's: the Long Haul save is not touched here); after a win the story, the tech pick (1 2 3), then the next level.
-// Mode: 'intro' (the story before) -> 'play' <-> 'pause' -> 'won' (story after) -> 'pick' (one of three techs) -> next level, or 'lost' (Enter tries again).
+// Mode: 'intro' (the story before) -> 'play' <-> 'pause' -> 'won' (story after) -> 'pick' (one of three techs, when the level offers any) -> next level, or after the last level 'end' (back to the title);
+// or 'lost' (Enter tries again).
 // this.camp is the game (campNew); this.panel is true while a card is up, which keeps the command strip from opening over it.
 
 // what each ship is drawn as: a texture (model: a ship model of src/shipmodels.js, else a texture of the game) and its scale
 const CAMP_LOOK = {
   carrier: { model: 'bastion', scale: 2.4 }, fighter: { model: 'talon', scale: 0.8 }, escort: { tex: 'police', scale: 1.1 }, freighter: { tex: 'freighter', scale: 1 },
-  raider: { tex: 'raider', scale: 1 }, drone: { tex: 'drone', scale: 1 }, gunship: { tex: 'gunship', scale: 1 }, mother: { tex: 'reaver', scale: 2.6, tint: 0xc9a0ff }
+  raider: { tex: 'raider', scale: 1 }, drone: { tex: 'drone', scale: 1 }, gunship: { tex: 'gunship', scale: 1 }, mother: { tex: 'reaver', scale: 2.6, tint: 0xc9a0ff }, tower: { tex: 'gunship', scale: 1.6, tint: 0xff9a3a }
 };
 const CAMP_RADAR = { x: W - 118, y: 118, r: 98, range: 6000 }; // the radar's centre and radius on the screen, and the px of space it shows from the carrier to its edge
 
@@ -32,14 +33,16 @@ class Campaign extends Phaser.Scene {
     this.boom = fxBoom(this);
     this.camp = campNew(this.level, this.P.techs, this.opts);
     this.sp = {}; this.bsp = [];
-    Object.keys(CAMP.places).forEach(id => this.drawPlace(CAMP.places[id]));
+    const pl = campPlaces(this.level); Object.keys(pl).forEach(id => { if (!pl[id].hidden) this.drawPlace(pl[id]); });
+    this.csp = this.camp.caches.map(k => this.add.image(k.x, k.y, 'pod').setScale(1.8).setDepth(3).setTint(0xffd37a)); // resource caches (level 2): gold pods that go when collected
+    this.relicG = this.add.graphics().setDepth(2); // the relic's ring (level 2), and how far the hold has got
     this.sync();
     this.cameras.main.startFollow(this.sp[this.camp.carrier.id], true, 0.12, 0.12);
     this.k = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE');
     this.hudG = this.add.graphics().setScrollFactor(0).setDepth(100);
     const t = (x, y, size, color) => this.add.text(x, y, '', uiFont(size, color, { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
     this.hud = { hull: t(24, 18, 14, '#9fe9ff'), earth: t(24, 52, 14, '#9fe9ff'), bay: t(24, 86, 14, '#9fe9ff'), wave: t(24, 108, 14, '#ffd37a'), mother: t(W / 2 - 150, 18, 14, '#ff9ec0'), blink: t(24, 130, 14, '#7fe9ff'),
-      keys: this.add.text(24, H - 44, uiText('camp.ui.keys'), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
+      obj: t(24, 152, 14, '#ffffff'), keys: this.add.text(24, H - 44, uiText('camp.ui.keys'), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
     this.input.keyboard.on('keydown', e => this.onKey(e));
     this.showIntro();
   }
@@ -81,10 +84,11 @@ class Campaign extends Phaser.Scene {
     this.showCard(uiText('camp.ui.title'), [line], uiText('camp.ui.retry')); this.say([line]);
   }
   showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.title'), typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : [], uiText('camp.ui.paused'), 200); } // campDebugLine: the tune kit's one short line of its keys
-  next() { // after the pick: the next level when it is built, else say so and stay
-    this.P.level = Math.max(this.P.level, this.level + 1); campProgressSave(this.P);
-    if (CAMP.levels[this.level + 1]) go(this, 'Campaign', { level: this.level + 1, via: 'next' });
-    else { this.mode = 'soon'; this.showCard(uiText('camp.ui.title'), [uiText('camp.ui.soon')], '', 220); }
+  next() { // after the story (and the pick): the next level, or after the last one the end, with a new campaign waiting
+    const last = !CAMP.levels[this.level + 1];
+    this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) this.P.techs = []; campProgressSave(this.P);
+    if (!last) { go(this, 'Campaign', { level: this.level + 1, via: 'next' }); return; }
+    this.mode = 'end'; this.showCard(uiText('camp.ui.title'), [], uiText('camp.ui.end'), 200);
   }
 
   // ----- keys -----
@@ -92,14 +96,14 @@ class Campaign extends Phaser.Scene {
     if (e.repeat || this.leaving) return;
     const c = e.code, C = this.camp;
     if (this.mode === 'intro') { if (c === 'Enter') { this.hideCard(); this.mode = 'play'; } return; }
-    if (this.mode === 'won') { if (c === 'Enter') this.showPick(); return; }
+    if (this.mode === 'won') { if (c === 'Enter') { if (campTechChoices(this.level).length) this.showPick(); else this.next(); } return; }
+    if (this.mode === 'end') { if (c === 'Enter' || c === 'KeyT') go(this, 'Title'); return; }
     if (this.mode === 'pick') {
       const i = { Digit1: 0, Digit2: 1, Digit3: 2 }[c];
       if (i !== undefined && this.choices[i]) { campPick(this.P, this.choices[i]); this.hideCard(); this.next(); }
       return;
     }
     if (this.mode === 'lost') { if (c === 'Enter') go(this, 'Campaign', { level: this.level, techs: this.P.techs, via: 'retry' }); else if (c === 'KeyT') go(this, 'Title'); return; }
-    if (this.mode === 'soon') { if (c === 'KeyT' || c === 'Enter') go(this, 'Title'); return; }
     if (this.mode === 'pause') { if (c === 'Escape') { this.hideCard(); this.mode = 'play'; } else if (c === 'KeyT') go(this, 'Title'); return; }
     if (c === 'Escape') { this.showPause(); return; }
     const order = { Digit1: 'launch', Digit2: 'attack', Digit3: 'escort', Digit4: 'guard', Digit5: 'recall' }[c];
@@ -150,6 +154,10 @@ class Campaign extends Phaser.Scene {
       sp.setPosition(u.x, u.y).setRotation(u.rot); seen[u.id] = true;
     });
     Object.keys(this.sp).forEach(id => { if (!seen[id]) { this.sp[id].destroy(); delete this.sp[id]; } });
+    this.camp.caches.forEach((k, i) => this.csp[i].setVisible(!k.got));
+    const rg = this.relicG, R = C.relic, L = CAMP.levels[C.level];
+    rg.clear();
+    if (R) { rg.lineStyle(2, 0x7fe9ff, 0.45).strokeCircle(R.x, R.y, L.relic.radius); if (R.hold > 0) { rg.lineStyle(6, 0x7fe9ff, 0.95).beginPath().arc(R.x, R.y, L.relic.radius, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * R.hold / L.relic.hold).strokePath(); } }
     while (this.bsp.length < C.bullets.length) this.bsp.push(this.add.image(0, 0, 'bullet').setDepth(4));
     this.bsp.forEach((im, i) => {
       const b = C.bullets[i]; if (!b) { im.setVisible(false); return; }
@@ -162,11 +170,11 @@ class Campaign extends Phaser.Scene {
     const C = this.camp, g = this.hudG, c = C.carrier, bar = (x, y, w, f, color) => { g.fillStyle(0x04101c, 0.8).fillRect(x, y, w, 12); g.fillStyle(color, 1).fillRect(x + 1, y + 1, Math.max(0, (w - 2) * Math.max(0, Math.min(1, f))), 10); g.lineStyle(1, 0x38e1ff, 0.5).strokeRect(x, y, w, 12); };
     g.clear();
     bar(24, 36, 220, c.hp / c.maxHp, c.hp / c.maxHp > 0.3 ? 0x6dff9c : 0xff4d6d);
-    bar(24, 70, 220, C.earth.shield / C.earth.max, 0x38e1ff);
+    if (C.earth) bar(24, 70, 220, C.earth.shield / C.earth.max, 0x38e1ff);
     const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
     if (m) bar(W / 2 - 150, 36, 300, m.hp / m.maxHp, 0xc9a0ff);
     const out = campWing(C, 'fighter').length + campWing(C, 'escort').length, waves = CAMP.levels[C.level].waves;
-    this.hud.hull.setText(uiText('camp.ui.hull') + '  ' + Math.round(c.hp)); this.hud.earth.setText(uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%');
+    this.hud.hull.setText(uiText('camp.ui.hull') + '  ' + Math.round(c.hp)); this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(campObjective(C));
     this.hud.bay.setText(uiText('camp.ui.bay') + '  ' + C.bay.fighters + '+' + C.bay.escorts + '    ' + uiText('camp.ui.out') + '  ' + out);
     this.hud.wave.setText(uiText('camp.ui.wave', { n: C.waves.filter(w => w.started).length, total: waves.length }));
     this.hud.mother.setText(m ? uiText('camp.ui.mother') : '');
@@ -174,7 +182,8 @@ class Campaign extends Phaser.Scene {
     // the radar: the carrier at its centre, space shown out to CAMP_RADAR.range; a ship beyond it is drawn on the rim
     const R = CAMP_RADAR; g.fillStyle(0x04101c, 0.75).fillCircle(R.x, R.y, R.r); g.lineStyle(1, 0x38e1ff, 0.6).strokeCircle(R.x, R.y, R.r);
     const dot = (p, color, size) => { let dx = (p.x - c.x) / R.range * R.r, dy = (p.y - c.y) / R.range * R.r; const d = Math.hypot(dx, dy); if (d > R.r - 3) { dx *= (R.r - 3) / d; dy *= (R.r - 3) / d; } g.fillStyle(color, 1).fillCircle(R.x + dx, R.y + dy, size); };
-    Object.keys(CAMP.places).forEach(id => dot(CAMP.places[id], id === 'earth' ? 0x4aa3ff : 0xb9a37a, id === 'earth' ? 4 : 2));
-    C.ships.forEach(u => { if (u.hp <= 0) return; dot(u, u.team === 'alien' ? (u.kind === 'mother' ? 0xff4dff : 0xff4d6d) : u.kind === 'freighter' ? 0xffb454 : u.kind === 'carrier' ? 0xffffff : 0x6dff9c, u.kind === 'mother' ? 4 : u.kind === 'carrier' ? 3 : 2); });
+    const pl = campPlaces(C.level); Object.keys(pl).forEach(id => { if (!pl[id].hidden) dot(pl[id], id === 'earth' ? 0x4aa3ff : 0xb9a37a, id === 'earth' ? 4 : 2); });
+    C.caches.forEach(k => { if (!k.got) dot(k, 0xffd37a, 2); }); if (C.relic) dot(C.relic, 0x7fe9ff, 3);
+    C.ships.forEach(u => { if (u.hp <= 0) return; dot(u, u.team === 'alien' ? (u.kind === 'mother' ? 0xff4dff : u.kind === 'tower' ? 0xff9a3a : 0xff4d6d) : u.kind === 'freighter' ? 0xffb454 : u.kind === 'carrier' ? 0xffffff : 0x6dff9c, u.kind === 'mother' ? 4 : u.kind === 'carrier' ? 3 : 2); });
   }
 }

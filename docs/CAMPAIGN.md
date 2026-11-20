@@ -2,7 +2,7 @@
 
 Card `space-game-campaign-mvp`. A new mode beside Long Haul: press **K** on the title screen. Long Haul, its trading and its save are not touched. The aim is that Troy plays all three levels fast, a few minutes each, and feels the story.
 
-**Status (19 Nov 2026).** Level 1 is built end to end: the story, the battle, the tech pick, the save. Levels 2 and 3 are card `space-game-campaign-l2l3`. The rules are tested in Node (`tests/campaign.mjs`: whole battles are flown, a sensible player wins level 1 in 1 to 2.5 minutes, doing nothing loses); the scene that draws them was **not seen on a screen**, so its look, the radar and the feel of the carrier are untried. The numbers are first guesses: they are all in the one table `CAMP` at the top of `src/campaign.js`, one line each.
+**Status (19 Nov 2026).** All three levels are built and chain: win, story, tech pick, the next level, and after level 3 an ending screen and back to the title (the save then starts a new campaign). The rules are tested in Node (`tests/campaign.mjs`: whole battles are flown; a sensible player wins each level, doing nothing loses each one; level 3 is the hard one and not every seed is won). Level 1 was booted in Chrome by 8-GEN and ran clean; the look, the radar and the feel of the carrier are otherwise **not seen on a screen**. The numbers are first guesses: they are all in the one table `CAMP` at the top of `src/campaign.js`, one line each, and a level is a row of it (`CAMP.levels[n]`).
 
 **The story.** Earth is learning to travel at warp speed when an alien race attacks. You command the flagship carrier from the Lunar base. You protect Earth and the supply convoys that fly from Earth to the colonies (the colonies pay for the tech). After each battle you salvage alien technology, choose one piece of it, and the war moves on.
 
@@ -25,10 +25,10 @@ An order the game cannot do is answered in words and does nothing ("the bay is e
 | | Where | What you do | You win when | You lose when |
 |---|---|---|---|---|
 | 1 | Home system (real Sol: Earth, Luna, Mars, Ceres; distances from `docs/SOL.md`, 1 to 12 scale) | start at the Lunar base; three waves; two convoys leave Earth | the alien mothership is dead | the carrier is destroyed, or Earth's shield is gone |
-| 2 | Alpha Centauri (real, 4.4 ly: `docs/NEAR-STARS.md`), warp unlocked | gather resources; find the tech an ancient race left | the tech is recovered and its guards are beaten | the carrier is destroyed |
-| 3 | The alien home planet (orbits Epsilon Eridani, 10.5 ly) | assault | the planet's defence ring is broken | the carrier is destroyed |
+| 2 | Alpha Centauri (real, 4.4 ly: `docs/NEAR-STARS.md`), warp unlocked | warp in; gather two of the three resource caches (fly a ship over one); fly to the ancient relic on Proxima b, past its five guards (they wait until you come close) and two waves for the carrier | the carrier holds the relic's ring for 8 s with no alien near it | the carrier is destroyed |
+| 3 | The alien home planet (orbits Epsilon Eridani, 10.5 ly) | assault: three waves of defenders, and twelve fixed towers in two rings round the planet | every tower is destroyed | the carrier is destroyed |
 
-Level 1 is built first and is complete on its own. Levels 2 and 3 are separate cards that reuse its pieces.
+Level 1 is complete on its own; 2 and 3 are further rows of the same table and reuse every piece. The kinds the engine knows are the wins (`mother`, `relic`, `towers`), waves, convoys, guards, tower rings, caches and techs; a new level is data, not code.
 
 ## Tech: one of three after each battle
 
