@@ -133,11 +133,13 @@ try {
 try {
   check('G  src/campchatter.js is a script of index.html', /<script src="src\/campchatter\.js"><\/script>/.test(read('index.html')));
   const sc = read('src/campaignscene.js');
-  check('G  the scene feeds every sim event to the radio and plays what is due', /chatterEventOf\(/.test(sc) && /chatterPush\(/.test(sc) && /chatterTick\(/.test(sc) && /chatterHold\(/.test(sc) && /chatterPlay\(/.test(sc));
+  check('G  the scene feeds every sim event to the radio and plays what is due', /chatterHear\(/.test(sc) && /chatterPush\(/.test(sc) && /chatterTick\(/.test(sc) && /chatterPlay\(/.test(sc) && /function chatterHear/.test(read('src/campchatter.js')) && /chatterEventOf\(sc\.camp, e\)/.test(read('src/campchatter.js')) && /chatterHold\(sc\.radio/.test(read('src/campchatter.js')));
   check('G  the line is shown with the callsign, bottom left beside the strip (x under 368)', /hud\.chat\b/.test(sc) && /call/.test(sc));
   const upd = sc.slice(sc.indexOf('  update(time, dt) {'));
+  g.run(`window.__sc = { camp: __C, radio: chatterNew() }; chatterHear(__sc, { type: 'say', key: 'camp.say.earthhalf' }); chatterHear(__sc, { type: 'boom', id: 'a1', kind: 'drone' });`);
+  check('G  chatterHear: a computer line holds the radio, a kill is a call; a scene with no radio (a test\'s stand-in) hears nothing and does not fail', J('__sc.radio.hold') > 0 && J('__sc.radio.q.length') === 1 && J('(chatterHear({}, { type: "boom", kind: "drone" }), chatterHear(null, null), 1)') === 1);
   check('G  the radio ticks only while playing (not on a card, in the pause or after the end): chatterTick sits in the play branch of update()', upd.indexOf("this.mode === 'play'") >= 0 && upd.indexOf('chatterTick(') > upd.indexOf("this.mode === 'play'") && upd.indexOf('chatterTick(') < upd.indexOf('C.events.splice(0)'));
-  check('G  orders carried out are read from the counters (key, strip or map), and every sim event is fed', /chatterOrderDiff\(/.test(sc) && /this\.chatterFeed\(e\)|chatterFeed\(e\)/.test(sc));
+  check('G  orders carried out are read from the counters (key, strip or map), and every sim event is fed', /chatterOrderDiff\(/.test(sc) && /chatterHear\(this, e\)/.test(sc));
   const st = read('src/settings.js');
   check('G  Settings > Sound has the Chatter row: On, Quiet, Off', /CHATTER_MODES/.test(st) && /chatterSetMode\(/.test(st) && /'CHATTER'/.test(st) && /chatter_/.test(st));
   check('G  it is kept clear of the other rows: the label sits in the free space right of EFFECTS (x 640 or more)', /bx \+ 6[4-9]\d|bx \+ 7\d\d/.test(st.split("'CHATTER'")[0].slice(-200)));

@@ -171,13 +171,9 @@ class Campaign extends Phaser.Scene {
     this.sync(); this.paintHud();
     if (this.mp) campMapPaint(this, time);
   }
-  chatterFeed(e) { // the wing's radio hears every sim event: the computer's own lines hold it for 2.5 s; the rest may be a call
-    const now = performance.now(); if (e.type === 'say') chatterHold(this.radio, now);
-    const ev = chatterEventOf(this.camp, e); if (ev) chatterPush(this.radio, ev, now);
-  }
   chatShow(line, now) { chatterPlay(line); const t = this.hud.chat; if (!t) return; t.setText(line.call + ': ' + line.text); this.chatUntil = now + CHATTER.show; } // said in the pilot's voice (prio 0), shown with his callsign
   onEvent(e) {
-    this.chatterFeed(e);
+    chatterHear(this, e); // the wing's radio hears every sim event (src/campchatter.js)
     if (e.type === 'say') { const text = uiText(e.key, e.vars); toast(this, text, '#9fe9ff'); this.say([text]); }
     else if (e.type === 'nav') { toast(this, uiText(e.key, e.vars), '#7fe9ff'); if (e.key === 'camp.nav.go' || e.key === 'camp.nav.arrived') beep(e.key === 'camp.nav.go' ? 520 : 660, 0.07, 'triangle', 0.04, 160); } // the autopilot's own lines (src/campnav.js)
     else if (e.type === 'turret') this.turretFlash(e);

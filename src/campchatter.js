@@ -8,6 +8,7 @@
 //   chatterEventOf(C, e)    PURE: which call a sim event is (src/campaign.js events, C.events), or null
 //   chatterNew()            a fresh radio state S: { last, hold, at, q, pilot, line }
 //   chatterOrderDiff(seen, orders)  PURE: the calls the orders given since the last look bring (C.orders counters): copy for a launch, attack, escort or guard, home for a recall
+//   chatterHear(sc, e)      the scene's one call for each sim event (the computer's lines hold the radio; the rest may be a call); a scene with no radio hears nothing
 //   chatterHold(S, now)     the ship's computer spoke: the radio is quiet for CHATTER.hold ms (the scene calls it for every 'say' event)
 //   chatterPush(S, ev, now) a call is made: true when the radio takes it (mode, the 8 s, the same kind of call, one at a time), it is said CHATTER.events[ev].delay ms later
 //   chatterTick(S, now, busy) the call that is due and can be said now: { ev, call, voice, text }, else null (nothing due, or it was dropped); busy: a line is playing
@@ -68,6 +69,14 @@ function chatterOrderDiff(seen, orders) {
   if (['launch', 'attack', 'escort', 'guard'].some(up)) out.push('copy');
   if (up('recall')) out.push('home');
   return out;
+}
+
+// the scene's one call for each sim event: the computer's own lines hold the radio, the rest may be a call. A stand-in scene with no radio (a test's) hears nothing
+function chatterHear(sc, e) {
+  if (!sc || !sc.radio || !e) return;
+  const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+  if (e.type === 'say') chatterHold(sc.radio, now);
+  const ev = chatterEventOf(sc.camp, e); if (ev) chatterPush(sc.radio, ev, now);
 }
 
 function chatterHold(S, now) { if (S) S.hold = now + CHATTER.hold; }
