@@ -41,6 +41,7 @@ They are listed in one small line on the pause screen (`campDebugLine`). The row
 | your ships bigger or smaller | `size`: one row each for the carrier, the fighters and the escorts, the drawn length in px (`len`, the picture is scaled to it) and the hit circle's radius (`hit`); the turret mounts, `bay.mouth` (where a launched ship appears) and `bay.dockAt` (how near a recalled ship lands) are sized for the hull as drawn, so move them with it |
 | a faster or slower level | `waves[i].at` (seconds into the level), `early` (seconds after the wave before is dead), `convoys[i].at` |
 | the map | `places` (px from Earth); the Sol distances are `docs/SOL.md` at 1 to 12 |
+| how far + - and the wheel zoom, and how big a step is | `CAMZOOM.min`, `max`, `key`, `keyHold` (`src/camzoom.js`: the view, shared with the Long Haul); `CAMPZOOM.map.min`, `max` (`src/campzoom.js`: the Tab map) |
 
 A reload shows a change. A few small numbers still live in the code (a ship's radius, the freighter's turn): if you want one, move it into the table.
 
