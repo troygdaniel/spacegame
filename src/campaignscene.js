@@ -10,7 +10,8 @@
 
 // what each ship is drawn as: a texture (model: a ship model of src/shipmodels.js, else a texture of the game) and its scale
 const CAMP_LOOK = {
-  carrier: { model: 'bastion', scale: 2.4 }, fighter: { model: 'talon', scale: 0.8 }, escort: { tex: 'police', scale: 1.1 }, freighter: { tex: 'freighter', scale: 1 },
+  carrier: { model: 'bastion', scale: 1.56 }, fighter: { model: 'talon', scale: 0.52 }, escort: { tex: 'police', scale: 0.72 }, // the carrier and the ships it launches, 35 percent smaller than they were (2.4, 0.8, 1.1); the hit circles in CAMP follow
+  freighter: { tex: 'freighter', scale: 1 },
   raider: { tex: 'raider', scale: 1 }, drone: { tex: 'drone', scale: 1 }, gunship: { tex: 'gunship', scale: 1 }, mother: { tex: 'reaver', scale: 2.6, tint: 0xc9a0ff }, tower: { tex: 'gunship', scale: 1.6, tint: 0xff9a3a }
 };
 const CAMP_ADDR = { used: false }; // the address (?campaign=N, src/title.js) opens the Campaign once per page load: coming back to the title from it must not open it again
