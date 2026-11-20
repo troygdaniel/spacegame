@@ -3,7 +3,7 @@
 // number or name the player needs stays. This test counts words (a {placeholder} is one word) in what is SPOKEN, in both games, and fails on the first line that grew back:
 //   A  the ship's event lines (VOICE_LINES in src/voice.js) and no pleasantries ("welcome", "well flown", "all systems nominal")
 //   B  the characters' scripted lines and their reactions (content/npcs/*.md), also in the code defaults of src/shop.js and in the bar line of the station file
-//   C  the Campaign's computer lines (camp.say, camp.no, camp.nav, camp.help, camp.lose.tip, camp.win.result, camp.nudge: content/text/*.md) and the MULE's and the Reaver's toasts
+//   C  the Campaign's computer lines (camp.say, camp.no, camp.nav, camp.help, camp.lose.tip, camp.nudge: content/text/*.md) and the MULE's and the Reaver's toasts
 //   D  the computer's own answers (the fixed refusals of src/shipcomputer.js, the two how-to answers: every sentence), and the rule it and the characters are given
 //   E  what Short says aloud of an answer: the first sentence, the second only when the first is tiny
 // NOT here: the Campaign's story lines (camp.l1/l2/l3 before and after: space-game-campaign-belt is rewriting them to the same rule), the shown-only text (help screens, tips, the
@@ -60,9 +60,9 @@ const tableRows = f => read(f).split('\n').map(l => /^\|\s*([^|]+?)\s*\|\s*(.*?)
 
 // ---- C: the Campaign's computer lines and the two comms toasts ----
 {
-  const OWN = /^(camp\.say\.|camp\.no\.|camp\.nav\.(go|off|cleared|arrived|lost|say|stopping|there|no\.)|camp\.help\.|camp\.lose\.tip\.|camp\.win\.result|camp\.nudge\.|toast\.mule-|toast\.reaver-)/;
+  const OWN = /^(camp\.say\.|camp\.no\.|camp\.nav\.(go|off|cleared|arrived|lost|say|stopping|there|no\.)|camp\.help\.|camp\.lose\.tip\.|camp\.nudge\.|toast\.mule-|toast\.reaver-)/;
   const STORY = /^camp\.l\d\./; // the story lines: space-game-campaign-belt's
-  const EXTRA = { 'camp.help.keys': 14, 'camp.win.resultconv': 14 }; // a list of keys, a list of numbers: two more words, no more
+  const EXTRA = { 'camp.help.keys': 17 }; // the five orders by name (the pilot asked which keys): a list, not a sentence
   const rows = [].concat(...readdirSync(ROOT + '/content/text').filter(f => f.endsWith('.md')).map(f => tableRows('content/text/' + f)));
   const mine = rows.filter(([k]) => OWN.test(k) && !STORY.test(k));
   const bad = mine.filter(([k, t]) => words(t) > (EXTRA[k] || MAX)).map(([k, t]) => k + ' ' + words(t) + ': ' + t);

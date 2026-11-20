@@ -242,7 +242,7 @@ console.log('F. the instruction, and the voice');
   check('the announcement goes through the ship voice (voiceSayThen) and the action may start when it does', J('__spoken').join() === 'Plotting a course to Kestrel, one jump.' && J('window.__started') === true);
   const plan = J(`(() => { const p = shipcompPlan('SAY: x\\nDO: plot_route kestrel', __cur); return [p.text, p.action]; })()`);
   check('what is said for an action is the game\'s announcement, not the model\'s words', plan[0] === 'Plotting a course to Kestrel, one jump.' && plan[1] === 'plot_route');
-  check('the persona file greets with what it can do', /plot a course/.test(readFileSync(new URL('../content/npcs/ship-computer.md', import.meta.url), 'utf8')));
+  check('the persona file greets with what it can do', /plot courses/.test(readFileSync(new URL('../content/npcs/ship-computer.md', import.meta.url), 'utf8')));
 }
 check('the game was quiet', g.errors.length === 0, g.errors.slice(0, 2).join(' | '));
 
