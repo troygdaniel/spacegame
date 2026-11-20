@@ -147,6 +147,11 @@ function campMapPaint(s, time) {
     else if (m.type === 'relic') {
       const r = Math.max(7, m.r * f.s); g.lineStyle(2, col.relic, 0.55).strokeCircle(p.x, p.y, r);
       if (m.hold > 0) { g.lineStyle(4, col.relic, 1); g.beginPath(); g.arc(p.x, p.y, r, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * Math.min(1, m.hold)); g.strokePath(); }
+    } else if (m.type === 'anomaly') { // unlabelled and warped: broken rings that wobble, and a question mark; decloaked, the cache's ring and a gold diamond
+      const w = Date.now() / 500;
+      if (m.shown) { g.lineStyle(1.5, m.color, 0.7).strokeCircle(p.x, p.y, Math.max(7, m.r * f.s)); g.fillStyle(m.color, 1).fillPoints([{ x: p.x, y: p.y - 5 }, { x: p.x + 5, y: p.y }, { x: p.x, y: p.y + 5 }, { x: p.x - 5, y: p.y }], true); }
+      else { for (let i = 0; i < 3; i++) { const a0 = w * (i % 2 ? -1 : 1) + i * 2.1; g.lineStyle(1.5, m.color, 0.35 + 0.25 * Math.sin(w + i)); g.beginPath(); g.arc(p.x, p.y, 8 + i * 3.5 + Math.sin(w * 1.3 + i) * 1.2, a0, a0 + 1.7); g.strokePath(); }
+        g.lineStyle(1.8, m.color, 0.95); g.beginPath(); g.arc(p.x, p.y - 2.5, 2.6, Math.PI, 2.35 * Math.PI); g.lineTo(p.x, p.y + 1.2); g.strokePath(); g.fillStyle(m.color, 1).fillCircle(p.x, p.y + 4.2, 0.9); }
     } else if (m.type === 'cache' || m.type === 'scan') g.fillStyle(m.color, 1).fillPoints([{ x: p.x, y: p.y - 4 }, { x: p.x + 4, y: p.y }, { x: p.x, y: p.y + 4 }, { x: p.x - 4, y: p.y }], true);
     else if (m.type === 'rock') g.fillStyle(m.color, 0.9).fillRect(p.x - 1.5, p.y - 1.5, 3, 3); // a rock: a small grey square
     else if (m.type === 'pickup') g.fillStyle(m.color, 1).fillPoints([{ x: p.x, y: p.y - 2.5 }, { x: p.x + 2.5, y: p.y }, { x: p.x, y: p.y + 2.5 }, { x: p.x - 2.5, y: p.y }], true); // ore lying about: a small gold diamond

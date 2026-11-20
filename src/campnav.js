@@ -62,6 +62,7 @@ function campNavRows(C) {
   (C.scan || []).forEach((p, i) => { if (!p.got) add({ id: 'scan:' + i, kind: 'scan', group: 'finds', name: uiText('camp.nav.scan', { n: i + 1 }), x: p.x, y: p.y, r: 0 }); });
   C.caches.forEach((k, i) => { if (!k.got) add({ id: 'cache:' + i, kind: 'cache', group: 'finds', name: uiText('camp.nav.cache', { n: i + 1 }), x: k.x, y: k.y, r: 0 }); });
   if (C.relic) add({ id: 'relic', kind: 'relic', group: 'finds', name: uiText('camp.nav.relic'), x: C.relic.x, y: C.relic.y, r: 0 });
+  if (typeof campAnomMarks === 'function') campAnomMarks(C).forEach(a => add({ id: 'anom:' + a.id, kind: 'anomaly', group: 'finds', name: a.name, x: a.x, y: a.y, r: 0 })); // an anomaly that is noticed: no name but 'Anomaly' until it is decloaked (src/campanomaly.js)
   const w = campWing(C); if (w.length) add({ id: 'wing', kind: 'wing', group: 'wing', name: uiText('camp.nav.wing', { n: w.length }), x: w.reduce((a, u) => a + u.x, 0) / w.length, y: w.reduce((a, u) => a + u.y, 0) / w.length, r: 0, moving: true });
   // every other mark of the map (card space-game-campaign-map-targets): your ships one by one, the aliens, the mothership and the towers, the ore lying about and the rocks. Each is a row, so a click on its mark sets it and the keys reach it too
   w.forEach(u => add({ id: 'ship:' + u.id, kind: 'ship', group: 'wing', name: campNavUnitName(u), x: u.x, y: u.y, r: u.r || 0, moving: true, ref: u.id }));
@@ -80,13 +81,14 @@ function campNavTarget(C, N) {
   if (kind === 'cache') { const k = C.caches[+String(id).slice(6)]; return k && !k.got ? { x: k.x, y: k.y, r: 0 } : null; }
   if (kind === 'scan') { const k = C.scan[+String(id).slice(5)]; return k && !k.got ? { x: k.x, y: k.y, r: 0 } : null; }
   if (kind === 'relic') return C.relic ? { x: C.relic.x, y: C.relic.y, r: 0 } : null;
+  if (kind === 'anomaly') { const a = (C.anoms || []).find(q => 'anom:' + q.id === id); return a && (a.state === 'hidden' || a.state === 'revealed') ? { x: a.x, y: a.y, r: 0 } : null; }
   if (kind === 'wing') { const w = campWing(C); return w.length ? { x: w.reduce((a, u) => a + u.x, 0) / w.length, y: w.reduce((a, u) => a + u.y, 0) / w.length, r: 0 } : null; }
   if (kind === 'pickup') { const p = (C.pickups || []).find(q => q.id === (N.ref || String(id).slice(7))); return p ? { x: p.x, y: p.y, r: 0 } : null; } // taken by a ship of yours (or gone: a wreck's ore fades)
   if (kind === 'rock') { const r = (C.rocks || []).find(q => q.id === (N.ref || String(id).slice(5))); return r && r.hp > 0 ? { x: r.x, y: r.y, r: r.r || 0 } : null; }
   const u = C.by[N.ref || String(id).replace(/^[a-z]+:/, '')] || C.ships.find(s => s.kind === kind && s.hp > 0 && (kind === 'mother' || s.id === N.ref));
   return u && u.hp > 0 ? { x: u.x, y: u.y, r: u.r || 0, vx: u.vx || 0, vy: u.vy || 0 } : null; // vx, vy: a ship's own velocity, which the autopilot leads (campNavLead)
 }
-const campNavStop = (kind, t) => (kind === 'place' ? (t.r || 0) + CAMP.nav.stop : kind === 'mother' || kind === 'tower' ? CAMP.nav.stopShip : kind === 'alien' || kind === 'guard' ? CAMP.nav.stopEnemy : kind === 'convoy' || kind === 'ship' ? CAMP.nav.stopFriend : kind === 'rock' ? CAMP.nav.stopRock : CAMP.nav.stopPoint);
+const campNavStop = (kind, t) => (kind === 'place' ? (t.r || 0) + CAMP.nav.stop : kind === 'anomaly' ? CAMP.anomaly.stop : kind === 'mother' || kind === 'tower' ? CAMP.nav.stopShip : kind === 'alien' || kind === 'guard' ? CAMP.nav.stopEnemy : kind === 'convoy' || kind === 'ship' ? CAMP.nav.stopFriend : kind === 'rock' ? CAMP.nav.stopRock : CAMP.nav.stopPoint);
 // 'Raider 3', 'Fighter 5', 'Tower 2': what a ship is, for the list and the line on the map (the kind's name is in content/text/campmaptargets.md)
 function campNavUnitName(u) { const p = String(u.id).split('-'), k = uiText('camp.nav.k.' + (u.kind || p[0])); return (k.indexOf('camp.nav.k.') === 0 ? p[0].charAt(0).toUpperCase() + p[0].slice(1) : k) + (p[1] ? ' ' + p[1] : ''); }
 // where to aim at a moving target: the point it will be at when the carrier gets there, at the speed it flies (a first guess of the time from the distance, refined twice), the lead capped at CAMP.nav.leadMax s.
@@ -163,6 +165,7 @@ function campNavFind(C, text) {
   if (/\b(?:objective|goal|mission|target|destination)\b/.test(q)) { const g = by('goal'); return g ? { row: g } : { code: 'nogoal' }; }
   if (/\b(?:mothership|mother|boss|big one|flagship)\b/.test(q)) { const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); return m ? { row: { id: 'mother', kind: 'mother', name: uiText('camp.nav.mother'), x: m.x, y: m.y, r: m.r, moving: true, ref: m.id } } : { code: 'nomother' }; }
   if (/\brelic\b/.test(q)) { const r = by('relic'); return r ? { row: r } : { code: 'norelic' }; }
+  if (/\b(?:anomal(?:y|ies)|shimmer|odd (?:spot|reading|readings)|cloaked|alien cache)\b/.test(q)) { const r = first('anomaly'); return r ? { row: r } : { code: 'noanomaly' }; } // the nearest one that is noticed
   if (/\b(?:cache|caches|supplies|supply|resources?|pods?)\b/.test(q)) { const r = first('cache'); return r ? { row: r } : { code: 'nocache' }; }
   if (/\b(?:towers?|defences?|defenses?|turrets?)\b/.test(q)) {
     const t = C.ships.filter(u => u.kind === 'tower' && u.hp > 0).sort((a, b) => campDist(a, C.carrier) - campDist(b, C.carrier))[0];
