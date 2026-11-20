@@ -8,7 +8,7 @@ Card `space-game-campaign-mvp`. A new mode beside Long Haul: press **K** on the 
 
 ## How you play
 
-You fly the carrier yourself: big, slow, heavy. **W A S D** fly it, **Space** fires its main gun, **Q** blinks (once you have that tech), and its point guns shoot anything close by themselves. **Esc** pauses, with its own menu. Your small ships do the rest, and you give them orders by **keys**, by the **command strip** (I, then type) or by **voice** (U, then say it). The three ways run the same five orders:
+You fly the carrier yourself: big, slow, heavy. **W A S D** fly it, **Space** fires its main gun, **F** fires a homing missile, **Q** blinks (once you have that tech), and its point guns shoot anything close by themselves (see The weapons below). **Esc** pauses, with its own menu. Your small ships do the rest, and you give them orders by **keys**, by the **command strip** (I, then type) or by **voice** (U, then say it). The three ways run the same five orders:
 
 | Order | Key | You can type or say | What the small ships do |
 |---|---|---|---|
@@ -20,6 +20,20 @@ You fly the carrier yourself: big, slow, heavy. **W A S D** fly it, **Space** fi
 
 An order the game cannot do is answered in words and does nothing ("the bay is empty"). The ship's voice answers each one in a short line.
 
+## The weapons (card `space-game-campaign-missiles`)
+
+The carrier has three, and only the first two were there at the start:
+
+| Weapon | How | What it is for |
+|---|---|---|
+| Point guns (turrets) | no key: four mounts on the hull fire by themselves at the nearest alien within 420 px (about three carrier lengths) | the small ships that get close; the shots are amber, the reach is a faint ring round the carrier, and the mount nearest the target flashes when one fires |
+| Main gun | **Space**, held | aimed shots along the nose, 20 hit points each |
+| Missile launcher | **F**; "fire missiles" or "missiles at the mothership" typed on the strip (I) or spoken (U) | big ships: the mothership, the towers and the gunships |
+
+A missile is a homing round. It goes for the mothership if the mothership is within 2,400 px, else the nearest tower or gunship within that reach; named ("at the mothership") it goes for the mothership only, and says so if the mothership is not there or too far. It leaves the tube slowly, gets up to speed (560 px/s) and turns at 3.4 rad/s, so one fired the wrong way still comes round. It carries 7 seconds of fuel, then it dies with no bang (a plain puff). Its fuze goes off near a big ship only: a raider or a drone on its way does not stop it. Where it goes off, every alien within 80 px is hurt: a big ship 100 hit points, any other alien 10 (a raider has 20, a drone 30). Six missiles take 600 of the mothership's 700 (see `CAMP.mother.hp`), the guns and the wing finish it; a tower (160) takes two; a gunship (80) one. A smoke trail follows it and the bang is a plain explosion.
+
+The magazine is small and the reload is slow: you start with 6, one comes back every 15 seconds while it is below 6, and the launcher cycles for 0.7 s between two launches. The HUD shows `F  MISSILES  4    next in 9 s` at the bottom left, in red when it is empty. The count is one plain number, `C.missiles`; the ore of the resources card adds to it through `campMissileAdd(C, n)` (up to 12, the most the magazine holds; the slow reload does not fill it past 6). All the numbers are `CAMP.missile` in `src/campaign.js`. The key line and the pause card name F; the ship computer has the order `fleet_missiles` (the model is told the key and the act in a battle).
+
 ## The three levels
 
 | | Where | What you do | You win when | You lose when |
@@ -29,6 +43,10 @@ An order the game cannot do is answered in words and does nothing ("the bay is e
 | 3 | The alien home planet (orbits Epsilon Eridani, 10.5 ly) | assault: three waves of defenders, and twelve fixed towers in two rings round the planet | every tower is destroyed | the carrier is destroyed |
 
 Level 1 is complete on its own; 2 and 3 are further rows of the same table and reuse every piece. The kinds the engine knows are the wins (`mother`, `relic`, `towers`), waves, convoys, guards, tower rings, caches and techs; a new level is data, not code.
+
+## Easier (20 Nov 2026)
+
+Troy lost level 1 twice at wave 3, both times because Earth's shield ran out, with about seven small ships lost each time. A player who launches, escorts, attacks and guards but leaves the carrier at the Moon now wins: Earth's shield is 600 (was 300) and mends 3 a second after 6 seconds without a hit (a lull between waves heals it, a siege does not); wave 3 is two raiders and a gunship (was three and one); the mothership has 700 hull (was 900), shoots for 8 (was 12), holds 1,300 px from Earth (was 1,600, out of reach of anything at the Moon) and launches a raider every 12 s up to 3 (was 8 s, 6). `tests/campaign.mjs` K pins it: those two plain players win, nobody wins by doing nothing, and the same players lose with the old numbers.
 
 ## Tech: one of three after each battle
 
@@ -60,4 +78,6 @@ After level 2 (ancient tech): hull plating (carrier hull +50 percent), a second 
 - The playing field is a 1 to 12 scale of the real Sol distances (Earth to Mars is about 4,100 px), not the true scale: true scale would make a level an hour.
 - The campaign has no money: the convoys that arrive only appear in the story line after the level.
 - Alpha Centauri and Epsilon Eridani are my picks; the alien home world has no real name.
+- The turrets' reach is 420 px, which is about three carrier lengths (the carrier is drawn 140 px long), not the two the card named: shortening it would weaken the carrier, which Troy found too hard already. One number, `CAMP.carrier.pdRange`.
+- Missiles are for big ships on purpose: with only raiders and drones near, F answers "No big ship in missile range" and spends nothing.
 - Left out of this cut: a map between levels, saving a level in the middle, difficulty, music of its own, and more than three techs a level.

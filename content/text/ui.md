@@ -118,6 +118,8 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.say.escort | Escorts are with the {name} convoy. |
 | camp.say.guard | The wing is guarding. |
 | camp.say.recall | Wing, return to the carrier. |
+| camp.say.missiles | Missile away. |
+| camp.say.missilesmother | Missile away, at the mothership. |
 | camp.no.over | The battle is over, pilot. |
 | camp.no.bay | The bay is empty, pilot. |
 | camp.no.launching | The wing is still launching. |
@@ -128,6 +130,10 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.no.nomother | The mothership has not come yet. |
 | camp.no.nowing | No ships are out. Launch first. |
 | camp.no.what | I cannot do that, pilot. |
+| camp.no.nomissiles | The magazine is empty, pilot. It reloads slowly. |
+| camp.no.missilewait | The launcher is still cycling. |
+| camp.no.nobig | No big ship in missile range, pilot. |
+| camp.no.range | The mothership is out of missile range, pilot. |
 | camp.lose.carrier | The carrier is lost. |
 | camp.lose.earth | Earth's shield has failed. |
 | camp.lose.debug | The level was ended with the debug key. |
@@ -135,7 +141,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.ui.level | LEVEL {n}: {name} |
 | camp.ui.won | LEVEL {n} WON |
 | camp.ui.lost | LEVEL {n} LOST |
-| camp.ui.keys | W A S D fly   Space gun   1 launch   2 attack   3 escort   4 guard   5 recall   I type an order   U speak   Tab map |
+| camp.ui.keys | W A S D fly   Space gun   F missiles   1 launch   2 attack   3 escort   4 guard   5 recall   I type an order   U speak   Tab map |
 | camp.ui.begin | Enter  begin |
 | camp.ui.pick | Choose one salvaged technology:  1  2  3 |
 | camp.ui.next | Enter  continue |
@@ -147,7 +153,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.map.across | {km} km across |
 | camp.map.carrier | Your carrier |
 | camp.map.wing | Your ships out ({n}) |
-| camp.map.convoy | Convoys ({n}), a line to where each is heading |
+| camp.map.convoy | Convoys ({n}), course drawn |
 | camp.map.alien | Aliens ({n}) |
 | camp.map.mother | The alien mothership |
 | camp.map.tower | Defence towers ({n}) |
@@ -159,6 +165,9 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.ui.out | OUT |
 | camp.ui.wave | WAVE {n} OF {total} |
 | camp.ui.mother | MOTHERSHIP |
+| camp.ui.missiles | F  MISSILES  {n} |
+| camp.ui.missilenext | next in {s} s |
+| camp.ui.pausehelp | F fires a homing missile at the mothership or the nearest big ship. Turrets fire at close ships by themselves. |
 | camp.tech.shield.name | Shield grid |
 | camp.tech.shield.text | The carrier takes 40 percent less damage. |
 | camp.tech.beam.name | Beam cannon |
