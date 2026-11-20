@@ -71,21 +71,23 @@ const CAMP = {
     distract: 4000                         // ms an alien you hit fights the ship that hit it instead of its goal
   },
   mother: {
-    hp: 900,                               // hit points of the mothership
+    hp: 700,                               // hit points of the mothership (was 900)
     speed: 55,                             // px/s
     radius: 90,                            // px, the hit circle
-    damage: 12,                            // per shot
+    damage: 8,                             // per shot (was 12)
     shots: 3,                              // a spread of this many
     range: 1000,                           // px it shoots from
     delay: [1400, 2000],                   // ms between its volleys
     bullet: 380,                           // px/s of a shot
-    holdAt: 1600,                          // px from Earth where it stops and stays
-    spawnEvery: 8000,                      // ms between the raiders it launches
-    spawnMax: 6                            // most raiders of its own alive at once
+    holdAt: 1300,                          // px from Earth where it stops and stays (was 1600: out of reach of a carrier at the Moon)
+    spawnEvery: 12000,                     // ms between the raiders it launches (was 8,000)
+    spawnMax: 3                            // most raiders of its own alive at once (was 6)
   },
   earth: {
-    shield: 300,                           // Earth's shield: zero and the level is lost (level 1 only: the later levels are far from home)
-    radius: 160                            // px, the planet's size (a shot inside it hits)
+    shield: 600,                           // Earth's shield: zero and the level is lost (level 1 only: the later levels are far from home). It was 300: Troy lost level 1 twice at wave 3 with it running out
+    radius: 160,                           // px, the planet's size (a shot inside it hits)
+    regen: 3,                              // shield points a second Earth mends once it has not been hit for regenDelay ms (slow: a lull between waves mends it, a siege does not)
+    regenDelay: 6000                       // ms without a hit before the shield starts to mend
   },
   tower: {                                 // an alien defence tower: a gun that does not move (level 3)
     hp: 160,                               // hit points (a level may give its own)
@@ -129,7 +131,7 @@ const CAMP = {
       waves: [                                                  // at: seconds into the level; early: seconds after the wave before is dead, if sooner
         { at: 20, early: 8, from: [2800, 1700], ships: { raider: 4, drone: 2 }, goal: 'convoy:mars', say: 'camp.say.wave1' },
         { at: 80, early: 10, from: [-4200, 3800], ships: { drone: 3, gunship: 2 }, goal: 'earth', say: 'camp.say.wave2' },
-        { at: 140, early: 12, needClear: true, from: [3200, -4000], ships: { raider: 3, gunship: 1 }, goal: 'earth', mother: [3500, -4400], say: 'camp.say.wave3' }
+        { at: 140, early: 12, needClear: true, from: [3200, -4000], ships: { raider: 2, gunship: 1 }, goal: 'earth', mother: [3500, -4400], say: 'camp.say.wave3' }
       ]
     },
     2: {                                                          // Alpha Centauri: warp in, gather resources, recover what the ancient race left on Proxima b
@@ -370,6 +372,7 @@ function campTick(C, dt) {
   campCaches(C);
   campRelic(C, dt);
   campRepair(C, dt);
+  campEarth(C, dt);
   C.ships = C.ships.filter(u => u.hp > 0 || (delete C.by[u.id], false)); // the dead leave the list (the scene was told by the boom event)
 }
 
@@ -455,6 +458,12 @@ function campRelic(C, dt) {
     R.hold += dt;
     if (R.hold >= r.hold) { R.hold = r.hold; campSay(C, 'camp.say.relicdone'); campEnd(C, 'won', 'relic'); }
   } else if (R.hold > 0) R.hold = Math.max(0, R.hold - dt * 2);
+}
+
+// Earth's shield mends slowly once it has been left alone for a while (level 1; a level with no Earth has none)
+function campEarth(C, dt) {
+  const e = C.earth, k = CAMP.earth; if (!e || !k.regen || e.shield <= 0 || e.shield >= e.max || C.t - (e.hitAt || 0) < k.regenDelay) return;
+  e.shield = Math.min(e.max, e.shield + k.regen * dt);
 }
 
 // the repair field (a tech)
@@ -588,7 +597,7 @@ function campBullets(C, dt) {
       if (campSegHit(px, py, b.x, b.y, u.x, u.y, u.r + 2)) { campHurt(C, u, b.dmg, b.from); if (!b.beam) { b.dead = true; return; } }
     }
     if (C.earth && b.team === 'alien' && campSegHit(px, py, b.x, b.y, C.earth.x, C.earth.y, C.earth.r)) { // Earth is hit (a level with no Earth has none to hit)
-      b.dead = true; if (!C.god) C.earth.shield -= b.dmg * CAMP.alien.earthDamage; C.events.push({ type: 'earthhit', x: b.x, y: b.y }); // god mode (a debug key, src/campdebug.js): Earth's shield does not fall either
+      b.dead = true; if (!C.god) C.earth.shield -= b.dmg * CAMP.alien.earthDamage; C.earth.hitAt = C.t; C.events.push({ type: 'earthhit', x: b.x, y: b.y }); // god mode (a debug key, src/campdebug.js): Earth's shield does not fall either
       if (C.earth.shield <= 0) { C.earth.shield = 0; campEnd(C, 'lost', 'earth'); }
     }
   });
