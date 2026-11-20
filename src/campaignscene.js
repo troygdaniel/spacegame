@@ -17,6 +17,7 @@ const CAMP_LOOK = {
   raider: { tex: 'raider', scale: 1 }, drone: { tex: 'drone', scale: 1 }, gunship: { tex: 'gunship', scale: 1 }, mother: { tex: 'reaver', scale: 2.6, tint: 0xc9a0ff }, tower: { tex: 'gunship', scale: 1.6, tint: 0xff9a3a }
 };
 const CAMP_REACH = { w: 2, alpha: 0.4, color: 0xffd37a }; // the ring that shows how far the point guns reach (CAMP.carrier.pdRange): its line width, how solid it is, its colour (it was 1 px at 0.16, too faint to find: 6-GEN and 8-GEN)
+const CAMP_MOUNT = { base: 3.2, dot: 1.7, hot: 2.8, aim: [7, 11], width: [1.5, 2.2], flash: 10 }; // a turret mount, drawn on the hull (it is a third smaller since the carrier is): its dark base, its amber dot (and the dot while it fires), the length of the barrel at rest and on a shot, the barrel's width at rest and on a shot, and how far in front of the mount the muzzle flash is
 const CAMP_BLIP = { gap: 70, flash: 90, freq: 700, step: 45, dur: 0.035, vol: 0.012, slide: -260 }; // a turret's shot: at most one blip in gap ms of the battle's clock, its pitch (freq, and step more for each fourth turret), length, loudness and slide; the muzzle flash lasts flash ms
 const CAMP_ADDR = { used: false }; // the address (?campaign=N, src/title.js) opens the Campaign once per page load: coming back to the title from it must not open it again
 const CAMP_RADAR = { x: W - 118, y: 118, r: 98, range: 6000, fill: 0.9, rim: [2, 0.8], blip: 1 }; // the radar's centre and radius on the screen, and the px of space it shows from the carrier to its edge
@@ -132,7 +133,7 @@ class Campaign extends Phaser.Scene {
 
   // a turret fires (src/campaign.js says each shot with an event of its own): a flash at its muzzle, and a quiet blip, never more than one in CAMP_BLIP.gap ms of the battle's clock, so eight turrets rattle and do not pile up into noise
   turretFlash(e) {
-    const C = this.camp, B = CAMP_BLIP, f = this.add.image(e.x + Math.cos(e.aim) * 14, e.y + Math.sin(e.aim) * 14, 'ember').setBlendMode('ADD').setTint(0xffe9a0).setScale(1.3).setDepth(7);
+    const C = this.camp, B = CAMP_BLIP, f = this.add.image(e.x + Math.cos(e.aim) * CAMP_MOUNT.flash, e.y + Math.sin(e.aim) * CAMP_MOUNT.flash, 'ember').setBlendMode('ADD').setTint(0xffe9a0).setScale(1.3).setDepth(7);
     this.tweens.add({ targets: f, alpha: 0, scale: 0.5, duration: B.flash, onComplete: () => f.destroy() });
     if (!(C.t - this.blipAt < B.gap)) { this.blipAt = C.t; beep(B.freq + (e.i % 4) * B.step, B.dur, 'square', B.vol, B.slide); }
   }
@@ -240,8 +241,9 @@ class Campaign extends Phaser.Scene {
       g.lineStyle(CAMP_REACH.w, CAMP_REACH.color, CAMP_REACH.alpha).strokeCircle(c.x, c.y, campReach(C)); // how far a turret reaches (the beam tech reaches further)
       C.turrets.forEach(tu => { // the eight turrets, where the sim put them: a dark base and an amber dot; a barrel toward the alien each has picked (it aims even when Space is not held); a bright flash and a longer barrel on the shot
         const hot = C.t - tu.shotAt < 120;
-        mg.fillStyle(0x04101c, 0.9).fillCircle(tu.x, tu.y, 5); mg.fillStyle(hot ? 0xffffff : 0xffd37a, 1).fillCircle(tu.x, tu.y, hot ? 4 : 2.5);
-        if (tu.target) mg.lineStyle(hot ? 3 : 2, hot ? 0xffe9a0 : 0xffd37a, hot ? 0.95 : 0.7).lineBetween(tu.x, tu.y, tu.x + Math.cos(tu.aim) * (hot ? 18 : 11), tu.y + Math.sin(tu.aim) * (hot ? 18 : 11));
+        const M = CAMP_MOUNT;
+        mg.fillStyle(0x04101c, 0.9).fillCircle(tu.x, tu.y, M.base); mg.fillStyle(hot ? 0xffffff : 0xffd37a, 1).fillCircle(tu.x, tu.y, hot ? M.hot : M.dot);
+        if (tu.target) mg.lineStyle(hot ? M.width[1] : M.width[0], hot ? 0xffe9a0 : 0xffd37a, hot ? 0.95 : 0.7).lineBetween(tu.x, tu.y, tu.x + Math.cos(tu.aim) * (hot ? M.aim[1] : M.aim[0]), tu.y + Math.sin(tu.aim) * (hot ? M.aim[1] : M.aim[0]));
       });
     }
     this.hud.missiles.setColor(C.missiles > 0 ? '#ffb454' : '#ff4d6d').setText(uiText('camp.ui.missiles', { n: C.missiles })
