@@ -35,14 +35,14 @@ console.log('A. what is said aloud');
 {
   const first = t => J(`voiceFirst(${JSON.stringify(t)})`);
   check('one short sentence is said whole', first('Kepler-4b is 816 km north-east.') === 'Kepler-4b is 816 km north-east.');
-  check('a first sentence under 70 letters takes the second one too', first('Press G. Pick a star, then press Enter. The jump takes four seconds.') === 'Press G. Pick a star, then press Enter.');
+  check('a first sentence under 45 letters takes the second one too', first('Press G. Pick a star, then press Enter. The jump takes four seconds.') === 'Press G. Pick a star, then press Enter.');
   const long1 = 'Kestrel is 6.3 ly away and your tank holds 4.1 of the 7.8 ly the jump needs, so you are short.';
-  check('a first sentence of 70 letters or more is said alone', first(long1 + ' Refuel at the pump.') === long1, first(long1 + ' Refuel at the pump.'));
+  check('a first sentence of 45 letters or more is said alone', first(long1 + ' Refuel at the pump.') === long1, first(long1 + ' Refuel at the pump.'));
   check('"6.3 ly" and "4.1 of the 7.8" are not sentence ends: a full stop counts only before a space or the end', first('It is 6.3 ly. Go.') === 'It is 6.3 ly. Go.');
   check('"!" and "?" end a sentence too', first('Hostiles near! Weapons ready. Fire at will, pilot, when you are in range of anything.') === 'Hostiles near! Weapons ready.');
   const huge = 'word '.repeat(80).trim() + '.';
   const cut = first(huge);
-  check('one very long sentence is cut at a space, never mid-word, to 170 letters at most, and ends with a full stop', cut.length <= 171 && /\.$/.test(cut) && /word\.$/.test(cut) && cut.length > 100, cut.length);
+  check('one very long sentence is cut at a space, never mid-word, to 120 letters at most, and ends with a full stop', cut.length <= 121 && /\.$/.test(cut) && /word\.$/.test(cut) && cut.length > 100, cut.length);
   check('nothing in, nothing out; no full stop at all is fine', first('') === '' && first('   ') === '' && first('no stops here') === 'no stops here');
   check('white space is tidied', first('Line one.\n\n  Line   two.') === 'Line one. Line two.');
   g.run(`VOICE.spoken = 'short'`);
@@ -74,8 +74,8 @@ console.log('B. the computer');
   g.run(`VOICE.spoken = 'short'; voiceSayThen = _sayThen`);
 
   const rules = J('SC_RULES + SC_ACTS');
-  check('the rules say one or two short sentences, and more only when asked', /one or two short sentences/.test(rules) && /only when the pilot asks for more/.test(rules) && !/one to four short sentences/.test(rules));
-  check('the persona file says it too', /one or two sentences/.test(src('content/npcs/ship-computer.md')) && /one or two sentences/.test(J('SHIPCOMP.persona') + src('content/npcs/ship-computer.md')));
+  check('the rules say one short sentence of about 12 words, and more only when asked', /one short sentence, about 12 words/.test(rules) && /only when the pilot asks for more/.test(rules) && !/one to four short sentences/.test(rules));
+  check('the persona file says it too', /one short sentence/.test(src('content/npcs/ship-computer.md')) && /short sentence/.test(J('SHIPCOMP.persona') + src('content/npcs/ship-computer.md')));
   check('"tell me more", "explain", "in detail" and "step by step" ask for more; a plain question does not', ['tell me more', 'Explain the jump', 'in detail please', 'step by step', 'walk me through it'].every(q => J(`scWantsMore(${JSON.stringify(q)})`)) && !['where is the Roost', 'how far is the gate', 'what does B do', 'why can\'t I jump'].some(q => J(`scWantsMore(${JSON.stringify(q)})`)));
   g.run(`chatSetKey('${KEY}'); chatSetOn(true); SHIPCOMP.limit.gap = 0; SHIPCOMP.lastAt = 0; SHIPCOMP.busy = false; SHIPCOMP.history = []; SHIPCOMP.limit.day = 400; SHIPCOMP.mem = { day: '', n: 0 }; window.__chat = []; window.__long = 'x'.repeat(1000);
     chatComplete = async o => { __chat.push({ maxTokens: o.maxTokens, maxChars: o.maxChars }); return { text: __long }; }`);

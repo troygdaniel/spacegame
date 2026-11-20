@@ -61,7 +61,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | toast.dropped | Mission dropped. The board has other calls. |
 | toast.patrol-down | Wanted pirate down  {progress} of {count} |
 | toast.patrol-done | Patrol complete. All wanted pirates destroyed. |
-| toast.mule-leaving | The MULE is leaving the hangar. Stay inside her ring: she runs faster and takes half damage. |
+| toast.mule-leaving | The MULE is leaving. Stay inside her ring: faster, half damage. |
 | toast.mule-left | You left the MULE behind. Mission failed. |
 | toast.mule-lost | The MULE was destroyed. Mission failed. |
 | toast.mule-arrived | The MULE made the Perseus gate. |
@@ -71,7 +71,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | toast.mule-wave-port | MULE: Raiders, port side. |
 | toast.mule-wave-starboard | MULE: Raiders, starboard side. |
 | toast.mule-wave-ahead | MULE: Raiders, dead ahead. |
-| toast.reaver-intro | The Reaver is south-west of Reaver's Rock. Watch for the flash before it charges. |
+| toast.reaver-intro | The Reaver waits south-west of Reaver's Rock. Watch for its flash. |
 | toast.reaver-wing | The Reaver calls in its wing. |
 | toast.reaver-burning | The Reaver is burning. It fights harder. |
 | toast.reaver-dead | The Reaver is wreckage. Bounty paid. |
