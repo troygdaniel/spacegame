@@ -4,7 +4,7 @@
 //   node tools/voicepack.mjs --dry-run      the plan: how many lines, how many characters, what it would cost. No key is read, nothing is sent. Start here.
 //   node tools/voicepack.mjs                 the plan, then it ASKS ("type yes"); only then it records what is new or changed, one line at a time, saving as it goes (stop it and run it again: it carries on)
 //   node tools/voicepack.mjs --list          every line of the catalogue with its name and whether it is recorded; --list --skipped adds the lines that are NOT recorded (a number or a name in them) and why
-//   node tools/voicepack.mjs --check         exit 1 when a line is not recorded, a recorded line is no line any more (stale), or a file is missing: for after a recording, and for a test
+//   node tools/voicepack.mjs --check         exit 1 when a line is not recorded, a recorded line is no line any more (stale), a file is missing, or a key of the content tables is not classified (spoken or silent): for after a recording
 //   node tools/voicepack.mjs --prune         the plan, then asks, and removes the stale files and entries (a line whose words changed leaves its old recording behind until you do this)
 //   --voices a,b      the ship voices to record (default aura-athena-en, the ship computer's own; the wing's four pilots are always in their own voices)
 //   --only SOURCE     only this source (events, campaign.say, campaign.no, campaign.story, campaign.brief, campaign.warp, campaign.chatter, or one a card added)
@@ -117,8 +117,10 @@ export async function main(argv, io) {
   }
   out(`The voice pack: ${plan.total} fixed lines (${Object.keys(bySource).map(k => `${k} ${bySource[k]}`).join(', ')}); ${plan.done} recorded, ${plan.todo.length} to record, ${plan.stale.length} stale entries, ${plan.orphans.length} stray files.`);
   out(`Not recorded: ${cat.skipped.length} line(s) with a number or a name in them stay live (spoken through Deepgram for a player with a key); --list --skipped says which and why.`);
+  const un = cat.unclassified || [];
+  if (un.length) out(`WARNING: ${un.length} key(s) of the content tables are not classified, so the pack cannot know if the game speaks them: ${un.slice(0, 8).join(', ')}${un.length > 8 ? ', ...' : ''}. Add a rule to VOICEPACK_FAMILIES in src/voicepack.js: spoken (a source and a voice) or silent (a reason).`);
   if (o.check) {
-    const bad = plan.todo.length + plan.stale.length + plan.orphans.length; out(bad ? `CHECK FAILED: ${plan.todo.length} to record, ${plan.stale.length} stale, ${plan.orphans.length} stray.` : 'CHECK PASSED: every fixed line is recorded and nothing else is in the pack.'); return bad ? 1 : 0;
+    const bad = plan.todo.length + plan.stale.length + plan.orphans.length + un.length; out(bad ? `CHECK FAILED: ${plan.todo.length} to record, ${plan.stale.length} stale, ${plan.orphans.length} stray, ${un.length} unclassified.` : 'CHECK PASSED: every fixed line is recorded and nothing else is in the pack.'); return bad ? 1 : 0;
   }
   if (o.prune) {
     if (!plan.stale.length && !plan.orphans.length) { out('Nothing to prune.'); return 0; }

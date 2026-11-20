@@ -10,8 +10,10 @@
 //   voicePackPick(text, voice)         what the game plays for a line: the pack's, or null; a ship line the player has no key for falls back to the pack's own voice (athena)
 //   voicePackLoad(fetchFn)             read voicepack/index.json once (the game does it at start; a missing or bad file is "no pack" and the game is as before)
 //   voicePackStatus()                  'none' | 'loading' | 'empty' (an index with no line) | 'ready' (at least one recorded line)
-//   voicePackCatalogue(opts)           { lines: [{ id, text, voice, source, key }], skipped: [{ source, key, text, why }], live: [{ where, why }] }: the fixed lines to record, the lines that are NOT (with the reason),
-//                                       and the places that speak free text; opts.voices: the ship voices to record (default the ship's own, athena)
+//   voicePackCatalogue(opts)           { lines: [{ id, text, voice, source, key }], skipped: [{ source, key, text, why }], live: [{ where, why }], silent: [{ key, why }], unclassified: [key] }: the fixed lines to record, the
+//                                       spoken lines that are NOT (with the reason), the places that speak free text, the keys the game only shows (with why), and the keys no rule has classified (a test fails on those);
+//                                       opts.voices: the ship voices to record (default the ship's own, athena)
+//   voicePackFamily(key)               the rule of VOICEPACK_FAMILIES a key matches: spoken (a source and a voice) or silent (a reason), or null: the catalogue is DERIVED from every key of the content tables
 //   voicePackSource(src)               a card adds its own source: { id, voice: 'ship' | 'pilots' | an Aura name, lines: () => [text] } or { ..., keys: () => [UI_TEXT keys] }; the text is read when the tool runs, so a changed line is a new name
 const VOICEPACK = { dir: 'voicepack', index: null, state: 'none', cache: new Map(), cacheMax: 64, version: 1, max: 6000, ship: 'aura-athena-en' }; // cache: decoded lines kept for the session (the pack's own, apart from the ship's 40); ship: the voice a player with no key and another choice hears
 
@@ -101,12 +103,45 @@ const VOICEPACK_SOURCES = [];
 function voicePackSource(src) { if (src && src.id && (typeof src.lines === 'function' || typeof src.keys === 'function')) { const i = VOICEPACK_SOURCES.findIndex(s => s.id === src.id); if (i >= 0) VOICEPACK_SOURCES[i] = src; else VOICEPACK_SOURCES.push(src); } return VOICEPACK_SOURCES.length; }
 // the sources the game has: where each one is spoken (the call that says it) and what its lines are. A key list is read from UI_TEXT at run time, so a new line in a content file is in the catalogue the next time the tool runs
 voicePackSource({ id: 'events', voice: 'ship', lines: () => { const out = []; const walk = o => Object.keys(o).forEach(k => typeof o[k] === 'string' ? out.push(o[k]) : walk(o[k])); if (typeof VOICE_LINES === 'object') walk(VOICE_LINES); return out; } }); // src/voice.js VOICE_LINES: launch, hull, hostile, docked, touchdown, the four accepted calls, failed, lost, ending, fuel, the test line
-voicePackSource({ id: 'campaign.say', voice: 'ship', keys: () => vpKeys(/^camp\.say\./) }); // the ship computer's lines on a sim event (campSay) and an order's answer
-voicePackSource({ id: 'campaign.no', voice: 'ship', keys: () => vpKeys(/^camp\.no\./) }); // the refusals the strip and the voice answer with
-voicePackSource({ id: 'campaign.story', voice: 'ship', keys: () => vpKeys(/^camp\.l\d+\.(before|after)\.\d+$/) }); // the story before and after each level, said at the cards
-voicePackSource({ id: 'campaign.brief', voice: 'ship', keys: () => vpKeys(/^camp\.m\.\d+\.\d+\.b[12]$/) }); // a mission's briefing, said when it is shown
-voicePackSource({ id: 'campaign.warp', voice: 'ship', keys: () => vpKeys(/^camp\.warp\.l\d+$/) }); // the warp cinematic's lines (two have a destination and a distance: expanded for each warp)
-voicePackSource({ id: 'campaign.chatter', voice: 'pilots', lines: null, keys: () => (typeof CHATTER === 'object' ? Object.keys(CHATTER.events) : []).reduce((a, ev) => a.concat(vpKeys(new RegExp('^camp\\.chat\\.' + ev + '\\.\\d+$'))), []) }); // the wing's radio: any pilot may say any line, so each is recorded in each pilot's voice
+// THE FAMILIES (card space-game-voice-pack-derive): the catalogue is DERIVED from the content tables, not listed by hand. Every key of UI_TEXT (the defaults of every content/text/*.md) is matched, first rule first, against this
+// table: SPOKEN (the game says it: its source and voice) or SILENT (the game only shows it, and why). A key that matches no rule is `unclassified`, and tests/voicepack.mjs FAILS on it: whoever adds a new family of lines says here
+// whether the game speaks it. A spoken key is recorded when it is fixed, expanded when the tables list its values, and skipped with the reason when it has a number or a name the tables do not list. More specific rules come first.
+const VOICEPACK_FAMILIES = [
+  // ---- spoken ----
+  { re: /^camp\.say\./, spoken: 'campaign.say', voice: 'ship' },                                   // the computer's line on a sim event (campSay) and an order's answer
+  { re: /^camp\.no\./, spoken: 'campaign.no', voice: 'ship' },                                     // the refusals the strip and the voice answer with
+  { re: /^camp\.nav\.(say|stopping|there|no\..+)$/, spoken: 'campaign.nav', voice: 'ship' },       // the autopilot's answers to the strip ("Flying to X", "I do not see that on the map")
+  { re: /^camp\.help\./, spoken: 'campaign.help', voice: 'ship' },                                  // the computer's answers to "what do I do", "which keys", "status"
+  { re: /^camp\.lose\.(carrier|earth|debug|other|convoy|base|tip\..+)$/, spoken: 'campaign.lose', voice: 'ship' }, // the lose card: the cause and the tip are said, the numbers line is not
+  { re: /^camp\.l\d+\.(before|after)\.\d+$/, spoken: 'campaign.story', voice: 'ship' },           // the story before and after each level
+  { re: /^camp\.m\.\d+\.\d+\.b[12]$/, spoken: 'campaign.brief', voice: 'ship' },                  // a mission's briefing
+  { re: /^camp\.warp\./, spoken: 'campaign.warp', voice: 'ship' },                                  // the warp cinematic's lines
+  { re: /^camp\.chat\./, spoken: 'campaign.chatter', voice: 'pilots' },                             // the wing's radio: any pilot may say any line
+  { re: /^camp\.end\./, spoken: 'campaign.end', voice: 'ship' },                                    // the reveal's ending (card space-game-campaign-reveal)
+  { re: /^camp\.(rank|stance|sys|scout|anom|reveal)\./, spoken: 'campaign.cards', voice: 'ship' },  // the cards that follow: ranks, stances, systems, scouts, anomalies: spoken until a card says a key of them is only shown (a silent rule above this line)
+  { re: /^camp\.ui\.score$/, spoken: 'campaign.debrief', voice: 'ship' },                          // the debrief says the score (a number: kept live)
+  // ---- silent: shown, never said ----
+  { re: /^camp\.m\.\d+\.\d+\.title$/, why: 'a mission\'s title: the title of its briefing and debrief cards' },
+  { re: /^camp\.lose\.reached$/, why: 'the lose card\'s numbers line: shown, and not said (the cause and the tip are)' },
+  { re: /^camp\.nav\./, why: 'the autopilot\'s toasts, the HUD line, the edge arrow and the names in the map\'s list: on the screen' },
+  { re: /^camp\.(b|o|obj)\./, why: 'the objectives and bonus objectives: the HUD, the briefing and debrief cards (the briefing\'s two lines are said, these are the list)' },
+  { re: /^camp\.nudge\./, why: 'the first-minute hints: a toast' },
+  { re: /^camp\.win\./, why: 'the won card\'s result line: shown under the story, which is what is said' },
+  { re: /^camp\.(hub|keys|map|hud|tech|ui)\./, why: 'the words of a screen: the ready room, the key page, the map, the HUD, the tech cards and every card\'s title and hint' },
+  { re: /^(chatter|hint|keys|listen|music|spoken|title|toast)\./, why: 'Settings, the title screen, Long Haul\'s hints and toasts: shown (the ship\'s voice speaks its own event lines, VOICE_LINES, not these)' }
+];
+function voicePackFamily(key) { return VOICEPACK_FAMILIES.find(f => f.re.test(key)) || null; }
+// the keys of UI_TEXT by what the table says of them: { spoken: { source -> { voice, keys } }, silent: [{ key, why }], unclassified: [key] }
+function voicePackKeys() {
+  const out = { spoken: {}, silent: [], unclassified: [] };
+  vpKeys(/./).forEach(k => {
+    const f = voicePackFamily(k);
+    if (!f) out.unclassified.push(k);
+    else if (f.spoken) { (out.spoken[f.spoken] = out.spoken[f.spoken] || { voice: f.voice, keys: [] }).keys.push(k); }
+    else out.silent.push({ key: k, why: f.why });
+  });
+  return out;
+}
 // the places that speak free or computed words: nothing to record, and why (the catalogue lists them so the reason is written down, and a test checks the list against the code)
 const VOICEPACK_LIVE = [
   { where: 'the ship computer\'s answers (src/shipcomputer.js, src/cmdstrip.js)', why: 'free text from the model: it is never the same twice' },
@@ -114,7 +149,6 @@ const VOICEPACK_LIVE = [
   { where: 'credits received (src/voice.js voicePoll)', why: 'a number in the line: "Mission complete. 400 credits received."' },
   { where: 'a call accepted (src/voice.js voicePoll)', why: 'a mission\'s title in the line: "Call accepted: <title>."' },
   { where: 'the debrief score (src/campaignscene.js showDebrief)', why: 'the score is a number' },
-  { where: 'the lose card (src/camplose.js)', why: 'how far and what to try: numbers and the level\'s own facts' },
   { where: 'a line with a distance, a count or an amount (camp.say, camp.no with {km}, {n}, {pts}, {ore}, {s}, {need}, {have})', why: 'a number in the line: kept live unless the game\'s tables enumerate it (VOICEPACK_EXPAND)' }
 ];
 
@@ -123,7 +157,8 @@ function voicePackCatalogue(opts) {
   const ship = (Array.isArray(opts.voices) && opts.voices.length ? opts.voices : [VOICEPACK.ship]), pilots = typeof CHATTER === 'object' ? CHATTER.pilots.map(p => p[1]) : [];
   const lines = [], skipped = [], seen = new Set();
   const put = (source, key, text, voice) => { const t = String(text); if (!t.trim()) return; const id = voicePackId(t, voice); if (seen.has(id)) return; seen.add(id); lines.push({ id, text: t, voice, source, key }); };
-  VOICEPACK_SOURCES.forEach(src => {
+  const kk = voicePackKeys(), derived = Object.keys(kk.spoken).sort().map(id => ({ id, voice: kk.spoken[id].voice, keys: () => kk.spoken[id].keys }));
+  VOICEPACK_SOURCES.concat(derived).forEach(src => {
     const voices = src.voice === 'pilots' ? pilots : src.voice === 'ship' ? ship : [src.voice];
     const items = src.lines ? src.lines().map(t => ({ key: '', text: t })) : src.keys().map(k => ({ key: k, text: vpText(k) }));
     items.forEach(it => {
@@ -134,7 +169,7 @@ function voicePackCatalogue(opts) {
     });
   });
   lines.sort((a, b) => (a.source < b.source ? -1 : a.source > b.source ? 1 : a.id < b.id ? -1 : 1));
-  return { lines, skipped, live: VOICEPACK_LIVE.slice() };
+  return { lines, skipped, live: VOICEPACK_LIVE.slice(), silent: kk.silent, unclassified: kk.unclassified };
 }
 // the plan against an index (the tool's and the test's): what is recorded, what is to record, and what in the index is no line of the catalogue any more
 function voicePackPlan(cat, rawIndex) {
