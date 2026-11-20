@@ -34,6 +34,8 @@ class Campaign extends Phaser.Scene {
     d = d || {}; this.d0 = d; this.warped = !!d.warped; // the start's own data, for the warp cinematic to hand back (src/campwarp.js)
     this.level = d.level || 1; this.via = d.via || 'menu'; this.opts = { seed: d.seed, god: !!d.god, via: this.via };
     this.P = campProgressLoad(); if (Array.isArray(d.techs)) this.P.techs = d.techs.filter(t => CAMP.tech[t]);
+    this.mi = d.mission != null ? d.mission | 0 : (this.P.level === this.level ? this.P.mission | 0 : 0); if (this.mi >= campMissions(this.level).length) this.mi = 0; // the mission of the level to fly: the one asked for, else the next the save has
+    this.opts.mission = this.mi;
     this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null; this.shown = {};
   }
   create() {
@@ -49,7 +51,7 @@ class Campaign extends Phaser.Scene {
     this.csp = this.camp.caches.map(k => this.add.image(k.x, k.y, 'pod').setScale(1.8).setDepth(3).setTint(0xffd37a)); // resource caches (level 2): gold pods that go when collected
     this.relicG = this.add.graphics().setDepth(2); // the relic's ring (level 2), and how far the hold has got
     this.cachel = this.camp.caches.map(k => label(this, k.x, k.y + 34, uiText('camp.nav.cachelabel'), '#ffd37a', 12)); // a word under each cache: gold pods were easy to miss (docs/night/graphics.md finding 3)
-    if (this.camp.relic) label(this, this.camp.relic.x, this.camp.relic.y - CAMP.levels[this.level].relic.radius - 24, uiText('camp.nav.relicmark'), '#7fe9ff', 14);
+    if (this.camp.relic) label(this, this.camp.relic.x, this.camp.relic.y - this.camp.L.relic.radius - 24, uiText('camp.nav.relicmark'), '#7fe9ff', 14);
     this.sync();
     this.cameras.main.startFollow(this.sp[this.camp.carrier.id], true, 0.12, 0.12);
     this.k = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE');
@@ -107,7 +109,30 @@ class Campaign extends Phaser.Scene {
   hideCard() { if (this.card) this.card.forEach(x => x.destroy()); this.card = null; this.panel = false; }
   flash(id) { const sp = this.sp[id]; if (!sp) return; sp.setTint(0xff8a8a); this.time.delayedCall(90, () => { if (sp.active !== false) sp.clearTint(); }); } // the hull took a hit: the carrier blinks red for 90 ms (the blind critic: nothing but a red bar said so)
   say(lines) { if (typeof shipcompSay === 'function') lines.forEach(l => { if (l) shipcompSay(l); }); } // the ship's voice, as much as Settings > Sound allows: each line on its own, because Short speaks only the first sentence or two of what it is given and one joined text lost the line that says what to do (docs/night/ux.md 1)
+  // a mission: the BRIEFING (its title, the objectives in plain words, the bonus objectives), the flight, the DEBRIEF (what it earned). A row with no objectives (an old-style level) has neither.
+  showBrief() {
+    const M = this.camp.L; if (!M.objectives) { this.hideCard(); this.mode = 'play'; return; }
+    const n = M.mission + 1, k = 'camp.m.' + this.level + '.' + n + '.', lines = [uiText(k + 'b1'), uiText(k + 'b2')].filter(x => !/^camp\./.test(x)), bonus = (M.bonus || []).map(b => '+' + CAMP.score.bonus + '  ' + this.bonusText(b));
+    this.mode = 'brief';
+    this.showCard(uiText('camp.ui.mission', { n, of: M.missions, title: uiText(k + 'title') }), lines.concat(bonus.length ? [uiText('camp.ui.bonushead')].concat(bonus) : []), uiText('camp.ui.briefgo'), 330);
+    this.say(lines);
+  }
+  bonusText(b) { return b.type === 'lost' && !b.n ? uiText('camp.b.nolost') : uiText('camp.b.' + b.type, { secs: b.secs, n: b.n, pct: b.pct }); }
+  showDebrief(sc) {
+    const M = this.camp.L, k = 'camp.m.' + this.level + '.' + (M.mission + 1) + '.', clock = t => Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+    const lines = [uiText('camp.ui.score', { score: sc.score })].concat(sc.bonuses.map(b => b.ok ? uiText('camp.ui.bonusmet', { pts: b.points, text: this.bonusText(b) }) : uiText('camp.ui.bonusmiss', { text: this.bonusText(b) })), [uiText('camp.ui.debriefstats', { time: clock(sc.t), hull: sc.hullLeft, lost: sc.shipsLost })]);
+    if (typeof campRankLine === 'function') { const r = campRankLine(this.P, sc); if (r) lines.push(r); } // the ranks card's: a rank for the score, when it is there
+    this.mode = 'debrief'; this.showCard(uiText('camp.ui.debrief', { title: uiText(k + 'title') }), lines, uiText(this.mdone ? 'camp.ui.next' : 'camp.ui.debriefnext'), 330);
+    this.say([lines[0]]);
+  }
+  missionWon() { // a mission won: its result is kept and the ore comes with the cruiser; the debrief, then the next mission, or after the last one the level's story and the refit
+    const C = this.camp; if (!C.L.objectives) { this.showWon(); return; }
+    const r = campMissionDone(this.P, this.level, this.mi, C.score); this.mdone = r.levelDone; this.P.ore = Math.floor(C.ore); campProgressSave(this.P);
+    this.showDebrief(C.score);
+  }
+  nextMission() { go(this, 'Campaign', { level: this.level, mission: this.mi + 1, via: 'next' }); } // the next mission of the level (no warp: only the level's start warps)
   showIntro() {
+    if (this.mi > 0) { this.showBrief(); return; } // a later mission of the level: straight to its briefing
     this.mode = 'intro'; const lines = campStory(this.level, 'before');
     this.showCard(uiText('camp.ui.level', { n: this.level, name: CAMP.levels[this.level].name }), lines, uiText('camp.ui.begin'));
     this.say(lines);
@@ -140,9 +165,9 @@ class Campaign extends Phaser.Scene {
   }
   showLost(why) {
     this.mode = 'lost'; const lines = typeof campLoseLines === 'function' ? campLoseLines(this.camp, why) : [uiText('camp.lose.' + why)]; // src/camplose.js: what happened, how far, one thing to try
-    this.showCard(uiText('camp.ui.lost', { n: this.level }), lines, uiText('camp.ui.retry')); this.say([lines[0]].concat(lines.slice(2))); // the numbers are for reading: the cause and the tip are said
+    this.showCard(uiText('camp.ui.lost', { n: this.level }), lines, uiText((this.camp && this.camp.L && this.camp.L.objectives) ? 'camp.ui.retrymission' : 'camp.ui.retry')); this.say([lines[0]].concat(lines.slice(2))); // the numbers are for reading: the cause and the tip are said
   }
-  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap'), uiText('camp.ui.pausepanels', { panels: campPanelKeyLine().replace(/   /g, ', ') })].concat([uiText('camp.ui.pausehelp')], typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), 372); } // the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
+  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap'), uiText('camp.ui.pausepanels', { panels: campPanelKeyLine().replace(/   /g, ', ') })].concat([uiText('camp.ui.pausehelp')], (this.camp && this.camp.L && this.camp.L.objectives) ? [uiText('camp.ui.pauseretry')] : [], typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), (this.camp && this.camp.L && this.camp.L.objectives) ? 402 : 372); } // the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
   next(ore) { // after the story (and the pick, or the refit): the next level, or after the last one the end, with a new campaign waiting. ore: what is left to carry (the refit spent some)
     const last = !CAMP.levels[this.level + 1];
     this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) { this.P.techs = []; this.P.ore = 0; this.P.bonus = { fighters: 0, escorts: 0 }; }
@@ -157,7 +182,9 @@ class Campaign extends Phaser.Scene {
     if (e.repeat || this.leaving) return;
     const c = e.code, C = this.camp;
     if (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) { if (c === 'KeyH' || c === 'Escape') this.closeKeys(); return; } // the H page of every key (src/campkeys.js) has the keys while it is open
-    if (this.mode === 'intro') { if (c === 'Enter') { this.hideCard(); this.mode = 'play'; } return; }
+    if (this.mode === 'intro') { if (c === 'Enter') { this.hideCard(); this.showBrief(); } return; }
+    if (this.mode === 'brief') { if (c === 'Enter') { this.hideCard(); this.mode = 'play'; } return; }
+    if (this.mode === 'debrief') { if (c === 'Enter') { this.hideCard(); if (this.mdone) this.showWon(); else this.nextMission(); } return; }
     if (this.mode === 'won') { if (c === 'Enter') { if (CAMP.levels[this.level].refit) this.showRefit(); else if (campTechChoices(this.level).length) this.showPick(); else this.next(); } return; }
     if (this.mode === 'refit') { this.refitKey(c); return; }
     if (this.mode === 'end') { if (c === 'Enter' || c === 'KeyT') go(this, 'Title'); return; }
@@ -166,8 +193,8 @@ class Campaign extends Phaser.Scene {
       if (i !== undefined && this.choices[i]) { campPick(this.P, this.choices[i]); this.hideCard(); this.next(); }
       return;
     }
-    if (this.mode === 'lost') { if (c === 'Enter') go(this, 'Campaign', { level: this.level, techs: this.P.techs, via: 'retry' }); else if (c === 'KeyT') go(this, 'Title'); return; }
-    if (this.mode === 'pause') { if (c === 'Escape') { this.hideCard(); this.mode = 'play'; } else if (c === 'KeyT') go(this, 'Title'); else if (c === 'KeyH') this.openKeys(); return; }
+    if (this.mode === 'lost') { if (c === 'Enter') go(this, 'Campaign', { level: this.level, mission: this.mi, techs: this.P.techs, via: 'retry' }); else if (c === 'KeyT') go(this, 'Title'); return; } // a lost mission is flown again; the level is not lost
+    if (this.mode === 'pause') { if (c === 'Escape') { this.hideCard(); this.mode = 'play'; } else if (c === 'KeyT') go(this, 'Title'); else if (c === 'KeyH') this.openKeys(); else if (c === 'KeyR' && (this.camp && this.camp.L && this.camp.L.objectives)) go(this, 'Campaign', { level: this.level, mission: this.mi, techs: this.P.techs, via: 'retry' }); return; } // R: restart the mission (the level is kept); H: every key
     if (c === 'KeyH') { this.openKeys(); return; } // H: every key, on one page
     const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // a word typed into the strip is not a key
     if ((typeof this.pn !== 'object' || typeof this.pn.open !== 'string') && typeof campPanelNew === 'function') this.pn = campPanelNew(); // made in create (campPanelsInstall); a stand-in scene in a test has none, and answers any property
@@ -260,7 +287,7 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'built') beep(660, 0.12, 'triangle', 0.05, 240);
     else if (e.type === 'recharge') { sfx('shieldUp'); this.boom.explode(10, e.x, e.y); }
     else if (e.type === 'shieldhit' && e.x === this.camp.carrier.x) { this.cameras.main.shake(60, 0.002); this.battleSound('shield', 'shieldHit'); }
-    else if (e.type === 'end') { if (e.result === 'won') this.time.delayedCall(1800, () => this.showWon()); else this.time.delayedCall(1200, () => this.showLost(e.why)); }
+    else if (e.type === 'end') { if (e.result === 'won') this.time.delayedCall(1800, () => this.missionWon()); else this.time.delayedCall(1200, () => this.showLost(e.why)); }
   }
 
   // the sprites follow the numbers: one per ship, one per shot, made when first seen and destroyed when the ship is gone
@@ -298,7 +325,7 @@ class Campaign extends Phaser.Scene {
     Object.keys(this.rsp).forEach(id => { if (!seenRock[id]) { this.rsp[id].destroy(); delete this.rsp[id]; } });
     if (bg && this.beams) { this.beams = this.beams.filter(b => b.until > performance.now()); this.beams.forEach(b => { // a beam: a soft wide line, a bright core, a hot spot where it lands. The same for a rock and an alien
       bg.lineStyle(7, 0x7fe9ff, 0.22).lineBetween(b.x, b.y, b.tx, b.ty); bg.lineStyle(2.5, 0xe8fbff, 0.95).lineBetween(b.x, b.y, b.tx, b.ty); bg.fillStyle(0xbff6ff, 0.8).fillCircle(b.tx, b.ty, 5); }); }
-    const rg = this.relicG, R = C.relic, L = CAMP.levels[C.level];
+    const rg = this.relicG, R = C.relic, L = C.L;
     rg.clear();
     if (R) { rg.lineStyle(2, 0x7fe9ff, 0.45).strokeCircle(R.x, R.y, L.relic.radius); if (R.hold > 0) { rg.lineStyle(6, 0x7fe9ff, 0.95).beginPath().arc(R.x, R.y, L.relic.radius, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * R.hold / L.relic.hold).strokePath(); } }
     while (this.bsp.length < C.bullets.length) this.bsp.push(this.add.image(0, 0, 'bullet').setDepth(4));
@@ -368,7 +395,7 @@ class Campaign extends Phaser.Scene {
     if (C.earth) bar(24, 70, 220, C.earth.shield / C.earth.max, 0x38e1ff);
     const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
     if (m) bar(W / 2 - 150, 36, 300, m.hp / m.maxHp, 0xc9a0ff);
-    const out = campWing(C, 'fighter').length + campWing(C, 'escort').length, waves = CAMP.levels[C.level].waves;
+    const out = campWing(C, 'fighter').length + campWing(C, 'escort').length, waves = C.L.waves;
     this.hud.hull.setText(uiText('camp.ui.hull') + '  ' + Math.round(c.hp)); this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(campObjective(C));
     this.hud.bay.setText(uiText('camp.ui.baywords', { f: C.bay.fighters, e: C.bay.escorts, out })); // "BAY  fighters 6  escorts 2   OUT 0": it used to read 6+2 (docs/night/ux.md 5)
     if (this.hud.ore) this.hud.ore.setText(uiText('camp.ui.ore') + '  ' + Math.floor(C.ore) + (C.build.queue.length ? '  +' + C.build.queue.length : '')); // the ore, under the shield gauge (a stand-in scene in a test may have no ore text)

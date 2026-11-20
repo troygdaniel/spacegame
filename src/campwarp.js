@@ -51,7 +51,7 @@ function campWarpSkip(S) { // a key: the flash comes up and it ends. Not in the 
 function campWarpDue(s) {
   try {
     const L = CAMP.levels[s.level], w = L && L.warp;
-    if (!w || s.warped || s.via === 'retry' || s.via === 'skip' || !s.scene || !s.scene.start) return false;
+    if (!w || s.warped || s.via === 'retry' || s.via === 'skip' || (s.mi | 0) > 0 || !s.scene || !s.scene.start) return false; // (not for the second mission of a level: only the level's start warps)
     s.scene.start('CampWarp', Object.assign({}, s.d0 || {}, { level: s.level, via: s.via, warped: false })); // the start's own data goes there and comes back
     return true;
   } catch (e) { return false; }

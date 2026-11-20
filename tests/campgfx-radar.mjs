@@ -2,12 +2,13 @@
 // [night] graphics, the blind critic's pictures 06, 07, 08 and 23: the disc let the planet and the fighters behind it show through, and the enemy blips were two-pixel specks. The numbers are in CAMP_RADAR.
 // The scene is Phaser's: paintHud is called on a stand-in whose graphics record every circle, with a real battle (campNew, stepped 25 s so the first wave is there) behind it.
 // Run: node tests/campgfx-radar.mjs   (exit code 1 on a failed check)
+import { readFileSync as __rf } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
 
 let failed = 0;
 const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + name + (detail ? '  ' + detail : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + detail + ')' : ''}`); } };
 const g = nodeGame();
-g.run('CAMP.levels[1] = CAMP.levels.home'); // level 1 is the asteroid belt now (card space-game-campaign-belt); this test is about the Earth level (its Earth, convoys and wave times), kept as data under "home"
+g.run(__rf(new URL('./fixtures/camplegacy.js', import.meta.url), 'utf8') + ' CAMP.levels[1] = CAMP.levels.home; CAMP.levels[2] = CAMP.levels.legacy2; CAMP.levels[3] = CAMP.levels.legacy3;'); // levels 1 to 3 as whole-level battles, the way they were before the belt and the missions (cards space-game-campaign-belt and -missions): these tests are about the Earth level and the old levels, kept as data
 const J = e => JSON.parse(g.run(`JSON.stringify(${e})`));
 const run = J(`(() => {
   const C = campNew(1, [], { seed: 3 }); campOrder(C, 'launch'); for (let i = 0; i < 25 * 30; i++) { campStep(C, 1 / 30); C.events.length = 0; }

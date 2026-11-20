@@ -8,7 +8,7 @@ function campLoseLines(C, why) {
   const has = k => uiText(k) !== k, w = String(why || '').replace(/[^a-z]/g, '');
   const out = [has('camp.lose.' + w) ? uiText('camp.lose.' + w) : uiText('camp.lose.other')];
   try {
-    const L = CAMP.levels[C.level];
+    const L = (C.L || CAMP.levels[C.level]);
     out.push(uiText('camp.lose.reached', { time: campClock(C.t), wave: C.waves.filter(x => x.started).length, total: L.waves.length, kills: C.kills }));
   } catch (e) { /* no battle: the cause alone */ }
   if (has('camp.lose.tip.' + w)) out.push(uiText('camp.lose.tip.' + w));

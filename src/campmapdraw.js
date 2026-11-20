@@ -35,7 +35,7 @@ function campMapClose(s) {
 
 function campMapOpen(s) {
   if (s.mp || !s.camp) return;
-  const C = s.camp, F = CAMPMAP.frame, P = CAMPMAP_PANEL, L = CAMP.levels[C.level];
+  const C = s.camp, F = CAMPMAP.frame, P = CAMPMAP_PANEL, L = (C.L || CAMP.levels[C.level]);
   const mp = s.mp = { objs: [], whole: false, nameObjs: [], fit: campMapFit(campMapBounds(C.level, false), F), leg: [] };
   const own = o => { o.setScrollFactor(0); mp.objs.push(o); return o; };
   own(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.84)).setDepth(150);
@@ -123,7 +123,7 @@ function campMapPaint(s, time) {
     else if (m.type === 'relic') {
       const r = Math.max(7, m.r * f.s); g.lineStyle(2, col.relic, 0.55).strokeCircle(p.x, p.y, r);
       if (m.hold > 0) { g.lineStyle(4, col.relic, 1); g.beginPath(); g.arc(p.x, p.y, r, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * Math.min(1, m.hold)); g.strokePath(); }
-    } else if (m.type === 'cache') g.fillStyle(m.color, 1).fillPoints([{ x: p.x, y: p.y - 4 }, { x: p.x + 4, y: p.y }, { x: p.x, y: p.y + 4 }, { x: p.x - 4, y: p.y }], true);
+    } else if (m.type === 'cache' || m.type === 'scan') g.fillStyle(m.color, 1).fillPoints([{ x: p.x, y: p.y - 4 }, { x: p.x + 4, y: p.y }, { x: p.x, y: p.y + 4 }, { x: p.x - 4, y: p.y }], true);
     else if (m.type === 'tower') g.fillStyle(m.color, 1).fillRect(p.x - 2.5, p.y - 2.5, 5, 5);
     else if (m.type === 'convoy') {
       if (m.to) { const q = pin(X(m.to.x), Y(m.to.y)); g.lineStyle(1, m.color, 0.55).lineBetween(p.x, p.y, q.x, q.y); } // a line to where it is heading

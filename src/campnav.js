@@ -21,8 +21,20 @@ const campNavKm = d => hudFmt(Math.round(d / 10));
 // the thing the level asks for next, or null
 function campNavGoal(C) {
   try {
-    const L = CAMP.levels[C.level], pl = campPlaces(C.level), c = C.carrier, near = list => list.slice().sort((a, b) => campDist(a, c) - campDist(b, c))[0] || null;
+    const L = (C.L || CAMP.levels[C.level]), pl = campPlaces(C.level), c = C.carrier, near = list => list.slice().sort((a, b) => campDist(a, c) - campDist(b, c))[0] || null;
     const ship = (u, kind, name) => ({ id: kind === 'mother' ? 'mother' : kind + ':' + u.id, kind, name, x: u.x, y: u.y, r: u.r || 0, moving: u.vmax > 0, ref: u.id });
+    if (L.objectives) { // a mission: the first objective not done yet (src/campaign.js campObjectives)
+      const o = campObjectives(C).find(x => !x.done); if (!o) return null;
+      if (o.type === 'scan') { const q = near(C.scan.map((p, i) => Object.assign({ i }, p)).filter(p => !p.got)); return q ? { id: 'scan:' + q.i, kind: 'scan', name: uiText('camp.nav.scan', { n: q.i + 1 }), x: q.x, y: q.y, r: 0 } : null; }
+      if (o.type === 'caches') { const k = near(C.caches.map((q, i) => Object.assign({ i }, q)).filter(q => !q.got)); return k ? { id: 'cache:' + k.i, kind: 'cache', name: uiText('camp.nav.cache', { n: k.i + 1 }), x: k.x, y: k.y, r: 0 } : null; }
+      if (o.type === 'relic') return C.relic ? { id: 'relic', kind: 'relic', name: uiText('camp.nav.relic'), x: C.relic.x, y: C.relic.y, r: 0 } : null;
+      if (o.type === 'deliver') { const cv = near(campConvoys(C)); return cv ? ship(cv, 'convoy', uiText('camp.nav.convoy', { name: campConvoyName(cv) })) : null; }
+      if (o.type === 'hold') return C.earth ? { id: 'place:base', kind: 'place', name: String(C.earth.name || ''), x: C.earth.x, y: C.earth.y, r: C.earth.r || 60 } : null;
+      if (o.what === 'mother') { const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); return m ? ship(m, 'mother', uiText('camp.nav.mother')) : null; }
+      if (o.what === 'towers') { const t = near(C.ships.filter(u => u.kind === 'tower' && u.hp > 0)); return t ? ship(t, 'tower', uiText('camp.nav.tower')) : null; }
+      if (o.what === 'guards') { const g = near(C.ships.filter(u => u.guard && u.hp > 0)); return g ? ship(g, 'guard', uiText('camp.nav.guard')) : null; }
+      const a = near(campAliens(C)); return a ? ship(a, 'alien', uiText('camp.nav.alien')) : null;
+    }
     if (L.win === 'mother') {
       const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); if (m) return ship(m, 'mother', uiText('camp.nav.mother'));
       const cv = near(campConvoys(C)); if (cv) return ship(cv, 'convoy', uiText('camp.nav.convoy', { name: campConvoyName(cv) }));
@@ -44,6 +56,7 @@ function campNavRows(C) {
   const pl = campPlaces(C.level), c = C.carrier, rows = [], add = r => { r.dist = Math.hypot(r.x - c.x, r.y - c.y); rows.push(r); return r; };
   Object.keys(pl).forEach(id => { const p = pl[id]; if (!p.hidden) add({ id: 'place:' + id, kind: 'place', group: 'places', name: String(p.name), x: p.x, y: p.y, r: p.r || 60, far: !!p.far, star: p.kind === 'star' }); });
   campConvoys(C).forEach(u => add({ id: 'convoy:' + u.id, kind: 'convoy', group: 'convoys', name: uiText('camp.nav.convoy', { name: campConvoyName(u) }), x: u.x, y: u.y, r: u.r || 22, moving: true, ref: u.id }));
+  (C.scan || []).forEach((p, i) => { if (!p.got) add({ id: 'scan:' + i, kind: 'scan', group: 'finds', name: uiText('camp.nav.scan', { n: i + 1 }), x: p.x, y: p.y, r: 0 }); });
   C.caches.forEach((k, i) => { if (!k.got) add({ id: 'cache:' + i, kind: 'cache', group: 'finds', name: uiText('camp.nav.cache', { n: i + 1 }), x: k.x, y: k.y, r: 0 }); });
   if (C.relic) add({ id: 'relic', kind: 'relic', group: 'finds', name: uiText('camp.nav.relic'), x: C.relic.x, y: C.relic.y, r: 0 });
   const w = campWing(C); if (w.length) add({ id: 'wing', kind: 'wing', group: 'wing', name: uiText('camp.nav.wing', { n: w.length }), x: w.reduce((a, u) => a + u.x, 0) / w.length, y: w.reduce((a, u) => a + u.y, 0) / w.length, r: 0, moving: true });
@@ -57,6 +70,7 @@ function campNavTarget(C, N) {
   const id = N.of || N.id, kind = N.kind;
   if (kind === 'place') { const p = campPlaces(C.level)[String(id).slice(6)]; return p ? { x: p.x, y: p.y, r: p.r || 60 } : null; }
   if (kind === 'cache') { const k = C.caches[+String(id).slice(6)]; return k && !k.got ? { x: k.x, y: k.y, r: 0 } : null; }
+  if (kind === 'scan') { const k = C.scan[+String(id).slice(5)]; return k && !k.got ? { x: k.x, y: k.y, r: 0 } : null; }
   if (kind === 'relic') return C.relic ? { x: C.relic.x, y: C.relic.y, r: 0 } : null;
   if (kind === 'wing') { const w = campWing(C); return w.length ? { x: w.reduce((a, u) => a + u.x, 0) / w.length, y: w.reduce((a, u) => a + u.y, 0) / w.length, r: 0 } : null; }
   const u = C.by[N.ref || String(id).replace(/^[a-z]+:/, '')] || C.ships.find(s => s.kind === kind && s.hp > 0 && (kind === 'mother' || s.id === N.ref));
@@ -86,7 +100,7 @@ function campNavClear(C, why) {
 function campNavDrive(C, dt) {
   const N = C.nav; if (!N || !N.on || C.result) return;
   const c = C.carrier; if (!c || c.hp <= 0) { C.nav = null; return; }
-  const t = campNavTarget(C, N); if (!t) { campNavClear(C, N.kind === 'cache' ? 'arrived' : 'lost'); return; } // a cache that has gone was gathered: that is arriving
+  const t = campNavTarget(C, N); if (!t) { campNavClear(C, N.kind === 'cache' || N.kind === 'scan' ? 'arrived' : 'lost'); return; } // a cache that has gone was gathered: that is arriving
   N.x = t.x; N.y = t.y;
   const K = CAMP.nav, dx = t.x - c.x, dy = t.y - c.y, dist = Math.hypot(dx, dy), left = Math.max(0, dist - campNavStop(N.kind, t)), speed = Math.hypot(c.vx, c.vy);
   const diff = campWrap(Math.atan2(dy, dx) - c.rot), limit = Math.min(CAMP.carrier.speed * (N.fast ? (N.burn || K.fast) : 1), K.floor + K.brake * left), inp = C.input;
