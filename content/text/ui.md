@@ -145,7 +145,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.ui.level | LEVEL {n}: {name} |
 | camp.ui.won | LEVEL {n} WON |
 | camp.ui.lost | LEVEL {n} LOST |
-| camp.ui.keys | W A S D fly   Space turrets   F missiles   {panels}   Tab Map   H Keys |
+| camp.ui.keys | W A S D fly   Space turrets   F missiles   {panels}   Tab Map   + - Zoom   H Keys |
 | camp.ui.begin | Enter  begin |
 | camp.ui.pick | Choose one salvaged technology:  1  2  3 |
 | camp.ui.next | Enter  continue |

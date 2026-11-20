@@ -106,6 +106,11 @@ const clicks = z => J(`(() => {
 })()`);
 [0.5, 1, 2, 4, 8].forEach(z => { const r = clicks(z); check('at zoom ' + z + ': a click on each place in the frame (' + r.n + ' of them, a few pixels off its mark) sets that place, and a click outside the frame sets none', r.n >= 1 && r.out.every(o => o[1] && o[2]) && r.none === false, JSON.stringify(r.out)); });
 check('at least three different places were checked across the zooms (the level has them)', [0.5, 1].every(z => clicks(z).n >= 3));
+console.log('the key table, the H page and the key line');
+const row = J(`controlsGroup('campaign').rows.find(r => r.k.includes('+'))`);
+check('the key table has one row for the zoom keys in the Campaign group: + - 0, what they do and the wheel', row && row.k.join(' ') === '+ - 0' && /zoom/i.test(row.t) && /wheel/.test(row.t) && /0 resets/.test(row.t), JSON.stringify(row));
+check('so the H page lists it (campKeysPage), once', J(`campKeysPage().flatMap(g => g.rows).filter(r => r.caps.includes('+')).length`) === 1);
+check('and the bottom key line says + - Zoom, before H Keys, and still fits the screen (8.6 px a letter from x 24 to 1272)', (l => /Tab Map {3}\+ - Zoom {3}H Keys$/.test(l) && 24 + l.length * 8.6 <= 1272)(J(`uiText('camp.ui.keys', { panels: campPanelKeyLine() })`)));
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nfailed: ${failed}` : '\nfailed: 0');
 process.exit(failed ? 1 : 0);
