@@ -29,7 +29,7 @@ function campArtBays(kind) {
 }
 
 const CAMP_HULL = { // the colours: grey steel and bronze, all muted (no colour is bright; the only light is the windows, the bays and the engines, and those are warm and small)
-  steel: [0x464a50, 0x5a5e65, 0x6e727a, 0x82868d], dark: 0x1f2226, edge: 0x15171a,
+  steel: [0x464a50, 0x5a5e65, 0x6e727a, 0x82868d, 0xa4a8af], dark: 0x1f2226, edge: 0x15171a,
   bronze: [0x4f4234, 0x6a5a45, 0x80694a, 0xa68a58],
   window: 0xffe0a0, glass: 0xb4d6d8, bay: 0xffcf7a, bayDim: 0x5a3f1e, engine: 0xb8641c, hot: 0xe9a867, red: 0xa8443c, green: 0x4d8f60
 };
@@ -122,14 +122,15 @@ function campFighterDraw(g) {
   const wing = [[3.2, -2], [-1.5, -7.8], [-7, -7.8], [-5.4, -2.4]], body = [[11, 0], [7, -1.7], [-3, -2.5], [-9, -2.5], [-9, 2.5], [-3, 2.5], [7, 1.7]];
   [1, -1].forEach(s => {
     const w = wing.map(([x, y]) => [x, y * s]);
-    p.poly(w, S[1]); p.poly([[2.4, -2.3 * s], [-1.6, -6.9 * s], [-5.6, -6.9 * s], [-4.6, -2.6 * s]], S[2]); p.outline(w, C.edge, 0.7, 0.95);
+    p.poly(w, S[2]); p.poly([[2.4, -2.3 * s], [-1.6, -6.9 * s], [-5.6, -6.9 * s], [-4.6, -2.6 * s]], S[3]); p.outline(w, C.edge, 0.7, 0.95);
+    p.dot(-6.2, 7.2 * s, 2.3, C.glass, 0.1); p.dot(-6.2, 7.2 * s, 0.7, C.glass, 0.95); // a pale light on each wing tip: in a crowd it is what finds the wing
     p.rect(-7, s > 0 ? 6.3 : -7.8, -1.6, s > 0 ? 7.8 : -6.3, B[2], 0.9); // the bronze tip of the wing
     p.rect(1, 4.4 * s - 0.35, 5.2, 4.4 * s + 0.35, C.dark); // a gun along the wing
   });
-  p.poly(body, S[2]); p.poly([[10, 0], [6.4, -1.1], [-8.2, -1.1], [-8.2, 1.1], [6.4, 1.1]], S[3], 0.85); p.outline(body, C.edge, 0.7, 0.95);
+  p.poly(body, S[3]); p.poly([[10, 0], [6.4, -1.1], [-8.2, -1.1], [-8.2, 1.1], [6.4, 1.1]], S[4], 0.85); p.outline(body, C.edge, 0.7, 0.95);
   p.line(-3, -2.5, -3, 2.5, C.edge, 0.55, 0.45);
   p.rect(-10.4, -2.7, -8.6, 2.7, C.dark); [-1.4, 1.4].forEach(y => { p.dot(-10.6, y, 1.9, C.engine, 0.07); p.rect(-10.9, y - 0.85, -9.6, y + 0.85, C.engine, 0.95); p.rect(-10.9, y - 0.35, -10.3, y + 0.35, C.hot, 0.8); });
-  p.dot(4.6, 0, 1.45, C.edge); p.dot(4.6, 0, 1.1, C.glass); p.dot(4.9, -0.3, 0.4, 0xffffff, 0.8); // the canopy
+  p.dot(4.6, 0, 2.7, C.glass, 0.1); p.dot(4.6, 0, 1.45, C.edge); p.dot(4.6, 0, 1.1, C.glass); p.dot(4.9, -0.3, 0.4, 0xffffff, 0.8); // the canopy
 }
 // the escort: a small boxy gunship, a nacelle each side with a bronze stripe, a short nose, a lit window, the engines at the back
 function campEscortDraw(g) {
@@ -140,7 +141,8 @@ function campEscortDraw(g) {
     p.rect(3.2, (y1 + y2) / 2 - 1, 4, (y1 + y2) / 2 + 1, C.bay, 0.55); // a lit slot in the front of each nacelle
   });
   const hull = [[-13, -4.2], [8, -4.2], [14, -2.2], [14, 2.2], [8, 4.2], [-13, 4.2]];
-  p.poly(hull, S[2]); p.rect(-12, -2.4, 9, 2.4, S[3], 0.9); p.poly([[8, -4], [13.4, -2.1], [13.4, 2.1], [8, 4]], S[3], 0.95); p.outline(hull, C.edge, 0.75, 0.95);
+  p.poly(hull, S[3]); p.rect(-12, -2.4, 9, 2.4, S[4], 0.9); p.poly([[8, -4], [13.4, -2.1], [13.4, 2.1], [8, 4]], S[4], 0.95); p.outline(hull, C.edge, 0.75, 0.95);
+  [-1, 1].forEach(s => { p.dot(4, 8.6 * s, 2.2, C.glass, 0.1); p.dot(4, 8.6 * s, 0.7, C.glass, 0.95); }); // a pale light at the front of each nacelle
   p.line(-4, -4.2, -4, 4.2, C.edge, 0.55, 0.45); p.line(3, -4.2, 3, 4.2, C.edge, 0.55, 0.45);
   p.rect(-13.8, -3.6, -12, 3.6, C.dark); [-1.9, 1.9].forEach(y => { p.dot(-14, y, 2.2, C.engine, 0.07); p.rect(-14.5, y - 1, -13.2, y + 1, C.engine, 0.95); p.rect(-14.5, y - 0.4, -13.8, y + 0.4, C.hot, 0.8); });
   for (let y = -1.6; y <= 1.7; y += 1.6) p.rect(8.2, y - 0.4, 9.8, y + 0.4, C.window, 0.85); // the lit window
