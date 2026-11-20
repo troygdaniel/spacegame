@@ -553,7 +553,7 @@ function scTradeHow() {
 }
 // the phrase as { act, arg } (an action of the closed list), { say } (an answer in words) or null (not one of the obvious ones: the model reads it)
 function shipcompIntent(text, s) {
-  if (scKey(s) === 'Campaign') return typeof campIntent === 'function' ? campIntent(text) : null; // in a battle the fleet's orders are the plain words; the Long Haul ones (hunt, dock, fly to) mean nothing here
+  if (scKey(s) === 'Campaign') { const it = typeof campIntent === 'function' ? campIntent(text) : null; if (it) return it; const h = typeof campHelp === 'function' ? campHelp(text, s.camp) : null; return h ? { say: h } : null; } // in a battle the fleet's orders are the plain words (the Long Haul ones, hunt, dock, fly to, mean nothing here), then the plain questions (src/camphelp.js: goal, keys, map, status)
   let q = String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9' -]+/g, ' ').replace(/\s+/g, ' ').trim();
   q = q.replace(SC_NO_FILLER, '').replace(/\s+(please|now|right now|for me|already)$/, '').trim();
   if (!q) return null;
