@@ -169,7 +169,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.say.l3wave1 | Defenders are launching from the planet. |
 | camp.say.l3wave2 | More defenders, from the north. |
 | camp.say.l3wave3 | Their last reserves are coming. |
-| camp.say.cache | Resources collected: {n} of {total}. |
+| camp.say.cache | Resources gathered: {n}. |
 | camp.say.relicon | The relic is answering. Hold the ring. |
 | camp.say.relicdone | The relic is ours. |
 | camp.obj.mother | Destroy the alien mothership. |

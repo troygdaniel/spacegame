@@ -13,6 +13,7 @@ const CAMP_LOOK = {
   carrier: { model: 'bastion', scale: 2.4 }, fighter: { model: 'talon', scale: 0.8 }, escort: { tex: 'police', scale: 1.1 }, freighter: { tex: 'freighter', scale: 1 },
   raider: { tex: 'raider', scale: 1 }, drone: { tex: 'drone', scale: 1 }, gunship: { tex: 'gunship', scale: 1 }, mother: { tex: 'reaver', scale: 2.6, tint: 0xc9a0ff }, tower: { tex: 'gunship', scale: 1.6, tint: 0xff9a3a }
 };
+const CAMP_ADDR = { used: false }; // the address (?campaign=N, src/title.js) opens the Campaign once per page load: coming back to the title from it must not open it again
 const CAMP_RADAR = { x: W - 118, y: 118, r: 98, range: 6000 }; // the radar's centre and radius on the screen, and the px of space it shows from the carrier to its edge
 
 function campaignStart(s, level) { // the title's K: the level reached (or the highest built one)
