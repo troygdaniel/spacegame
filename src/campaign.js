@@ -217,7 +217,7 @@ const CAMP = {
   // guards (aliens that wait until you come close), towers (rings of them round a place), caches, relic, say (the words of the level, in content/text/ui.md)
   levels: {                                // the levels; a wave or a convoy is one line
     1: {
-      world: { system: 'sol', fit: { place: 'earth', pack: 'sol-earth' }, star: [-17339, -2436] }, // the Sun (src/campsol.js): Earth on its ring of the Sol pack, Mars on the far side of Earth from the Sun (the level's own place, 4,100 px off), the other bodies where the pack puts them
+      world: { system: 'sol', fit: { place: 'earth', pack: 'sol-earth' }, star: [-17329, -2435] }, // the Sun (src/campsol.js): Earth on its ring of the Sol pack, Mars on the far side of Earth from the Sun (the level's own place, 4,100 px off), the other bodies where the pack puts them
       name: 'Home', start: 'luna', startAt: [130, 30],           // the base the carrier leaves, and its offset from it
       win: 'mother',                                            // the level is won when the alien mothership is dead
       rocks: [                                                  // asteroid fields: n rocks of ore within spread px of at (each holds CAMP.ore.rock); the same in every level

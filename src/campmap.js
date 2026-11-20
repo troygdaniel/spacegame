@@ -78,19 +78,28 @@ function campMapLegend(C, marks) {
 }
 
 // ---- the rings and the rocks (card space-game-campaign-sol): what is drawn of a circle and of a belt inside the frame, with no drawing in it ----
-// campMapArcs(cx, cy, r, frame): the pieces of the circle (centre and radius in screen px) that lie inside the frame, as polylines of [x, y]; none when the circle does not cross it
+// campMapArcs(cx, cy, r, frame): the pieces of the circle (centre and radius in screen px) that lie inside the frame, as polylines of [x, y]; none when the circle does not cross it. Each step of the circle is clipped to
+// the frame, so a piece reaches the edge of it however long the steps are (a ring of 20,000 px has steps of 60).
 function campMapArcs(cx, cy, r, F) {
   if (!(r > 0.5)) return [];
   const nx = Math.max(F.x, Math.min(cx, F.x + F.w)), ny = Math.max(F.y, Math.min(cy, F.y + F.h));
   const near = Math.hypot(cx - nx, cy - ny), far = Math.max(Math.hypot(cx - F.x, cy - F.y), Math.hypot(cx - F.x - F.w, cy - F.y), Math.hypot(cx - F.x, cy - F.y - F.h), Math.hypot(cx - F.x - F.w, cy - F.y - F.h));
   if (r < near || r > far) return [];
-  const n = Math.max(48, Math.min(1440, Math.ceil(r / 6))), out = []; let run = [];
-  for (let i = 0; i <= n; i++) {
-    const a = i / n * 2 * Math.PI, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
-    if (x >= F.x && x <= F.x + F.w && y >= F.y && y <= F.y + F.h) run.push([x, y]); else { if (run.length > 1) out.push(run); run = []; }
+  const n = Math.max(48, Math.min(2000, Math.ceil(r / 6))), out = []; let run = [], px = cx + r, py = cy;
+  for (let i = 1; i <= n; i++) {
+    const a = i / n * 2 * Math.PI, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r, c = campMapClip(px, py, x, y, F); // Liang-Barsky: the part of the step inside the frame
+    if (c) { if (!run.length) run.push([c[0], c[1]]); run.push([c[2], c[3]]); if (c[5] < 1) { if (run.length > 1) out.push(run); run = []; } } else { if (run.length > 1) out.push(run); run = []; }
+    px = x; py = y;
   }
   if (run.length > 1) out.push(run);
   return out;
+}
+// the part of the segment (x0, y0)-(x1, y1) inside the frame: [x0', y0', x1', y1', t0, t1] (t: where along the segment, 0 to 1), or null
+function campMapClip(x0, y0, x1, y1, F) {
+  let t0 = 0, t1 = 1; const dx = x1 - x0, dy = y1 - y0;
+  const edge = (p, q) => { if (p === 0) return q >= 0; const t = q / p; if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; } return true; };
+  if (!edge(-dx, x0 - F.x) || !edge(dx, F.x + F.w - x0) || !edge(-dy, y0 - F.y) || !edge(dy, F.y + F.h - y0)) return null;
+  return [x0 + t0 * dx, y0 + t0 * dy, x0 + t1 * dx, y0 + t1 * dy, t0, t1];
 }
 // the rocks of a belt that are in the frame, as screen points; project(x, y) -> { x, y }
 function campMapDotsIn(dots, project, F) {
