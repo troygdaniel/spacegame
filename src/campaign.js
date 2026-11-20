@@ -144,6 +144,19 @@ const CAMP = {
     stars: 200, near: 24,                  // streaks across the screen, of which this many are long and close
     textY: 0.84                            // where the words sit, down the screen
   },
+  world: {                                 // the worlds of Sol and of the other stars (src/campsol.js): the pack's bodies at the Campaign's scale, the rings round the star, the belts as rings of rocks
+    scale: 0.25,                           // px of the Campaign per unit of a system file of the Sol pack: the game spreads a file's units 3 times (SYSTEM_SCALE) and the Campaign is 1 to 12 of that
+    planetR: 0.55,                         // a body's radius in the Campaign: its radius in the pack times this (the Campaign's Earth, Mars, Luna and Eros are 0.5 to 0.8 of the pack's)
+    starR: 0.55,                           // the star's radius: Long Haul's (900 px of a size 1 star, src/universe.js) times this
+    farFrom: 9000,                         // px from where the level starts: a body this far is far (it is not in the level's own map view, the radar or the list of what to fight for)
+    ringTol: 0.02,                         // bodies whose distances from the star differ by less than this share are on one ring
+    bandJoin: 0.2,                         // belts of the pack whose rings differ by less than this share are one band of rocks (the main belt is three of them, 19 percent apart)
+    clusterTol: 0.01,                      // a belt on the ring of a planet (the Trojan camps) is a cluster of rocks round its place, not a ring
+    dots: 700,                             // rocks drawn in a band of the belt on the map
+    clusterDots: 40,                       // rocks drawn in a cluster
+    draw: 3600,                            // px: a far place is made in the world (a picture) only while the carrier is within this many px of its edge
+    skip: ['sol-pluto']                    // pack bodies the Campaign does not take (the eight planets are the card's; Pluto is a dwarf)
+  },
   nav: {                                   // the carrier's autopilot, the map's list and picking, and the arrow at the screen edge (src/campnav.js); the rule is the Long Haul autopilot's (src/autopilot.js AUTO)
     stop: 100,                             // px: a place is flown to until the edge of it (its radius plus this) is this near
     stopShip: 450,                         // px: a ship (a convoy, the mothership, a tower) is flown to until it is this near: inside the main gun's reach
@@ -155,6 +168,8 @@ const CAMP = {
     align: 0.5,                            // rad: thrust only when the nose is within this of the line (the Long Haul autopilot's aligned)
     etaSlow: 1.1,                          // the flight time on the map is distance over the carrier's top speed times this (it speeds up and brakes)
     fast: 2,                               // the map's Fast button (card space-game-map-click-fly): the carrier's top speed and thrust, times this, while the autopilot flies it; steering takes it away
+    farFrom: 8000,                         // px: a Fast trip longer than this (Earth to Mars is 4,100, Earth to Jupiter 40,000) burns at farFast instead of fast (card space-game-campaign-sol)
+    farFast: 3.2,                          // times the carrier's speed on a far trip: 672 px/s, Long Haul's own cruise (8,000 px/s) at the Campaign's 1 to 12 scale, so Earth to Neptune (112,000 px) is about 3 minutes
     pick: 28,                              // px on the map around a mark that count as a click on it
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
@@ -225,6 +240,7 @@ const CAMP = {
   levels: {                                // the levels; a wave or a convoy is one line
     1: {                                                          // THE BELT (card space-game-campaign-belt): the cruiser is a mining ship working the asteroid belt at Ceres; a quiet minute of mining, then the aliens ambush
       name: 'The belt', start: 'ceres', startAt: [130, 30],       // the works the cruiser leaves, and its offset from it
+      world: { system: 'sol', fit: { place: 'ceres', pack: 'sol-ceres' } }, // all of Sol round it (src/campsol.js): Ceres on its own ring of the Sol pack, 29,000 px from the Sun, which is placed from that; Vesta and Pallas are the level's own (same names), Earth, Mars and the rest are far bodies, and the main belt is the ring of rocks the cruiser is working in
       win: 'mother', earth: false, startOre: 0, refit: true,                   // won when the alien mothership is dead; no Earth to lose here; the store is empty at the start (30 for a level you start by itself); refit: it ends with the Earth refit screen
       places: {                                                 // Ceres, Vesta and Pallas (real; docs/SOL.md), with the belt between them (the distances are not true)
         ceres: { x: 0, y: 0, name: 'Ceres', kind: 'ice', seed: 31, r: 90, base: 'Occator Works' },  // the dwarf planet and the mining works the cruiser starts at
@@ -243,6 +259,7 @@ const CAMP = {
       ]
     },
     home: {                                                       // the Earth defence level: Earth's shield and the convoys. Not in the chain any more (Troy: they come out of level 1); kept as data, for the rules that need an Earth and for the tests
+      world: { system: 'sol', fit: { place: 'earth', pack: 'sol-earth' }, star: [-17329, -2435] }, // the Sun (src/campsol.js): Earth on its ring of the Sol pack, Mars on the far side of Earth from the Sun (the level's own place, 4,100 px off), the other bodies where the pack puts them
       name: 'Home', start: 'luna', startAt: [130, 30],           // the base the carrier leaves, and its offset from it
       win: 'mother',                                            // the level is won when the alien mothership is dead
       rocks: [                                                  // asteroid fields: n rocks of ore within spread px of at (each holds CAMP.ore.rock); the same in every level
@@ -260,6 +277,7 @@ const CAMP = {
     },
     2: {                                                          // Alpha Centauri: warp in, gather resources, recover what the ancient race left on Proxima b
       name: 'Alpha Centauri', start: 'arrival', startAt: [0, 0], win: 'relic', earth: false,
+      world: { system: 'alpha-centauri', star: 'sun', fit: { place: 'proxima', pack: 'proxima-b' }, same: { proxima: 'proxima-b' } }, // the star is the place 'sun'; the pack's other bodies round it sit on their rings and angles, fitted to Proxima b
       warp: { dest: 'Alpha Centauri', ly: 4.4, star: 'sun' },  // the warp cinematic plays when this level starts (src/campwarp.js): where to, how far, and which of the places below is the star that resolves ahead
       places: {                                                 // the carrier warps in at arrival (not drawn); Proxima b holds the relic
         arrival: { x: -4800, y: 2400, name: 'Warp point', hidden: true },                           // where the carrier warps in, south-west of the relic (not drawn)
@@ -281,6 +299,7 @@ const CAMP = {
     },
     3: {                                                          // the alien home world: break the defence rings
       name: 'The home world', start: 'arrival', startAt: [0, 0], win: 'towers', earth: false,
+      world: { system: 'epsilon-eridani', fit: { place: 'home', pack: 'epsilon-eridani-b' }, same: { home: 'epsilon-eridani-b' }, k: 3 }, // Epsilon Eridani's star and belts round the alien home world, which is the pack's Aegir; k: the rings are this many times the pack's (so the star is not on top of the towers)
       places: {
         arrival: { x: -7000, y: 3500, name: 'Warp point', hidden: true },                          // where the carrier warps in: 7,800 px from the world (not drawn)
         home: { x: 0, y: 0, name: 'Alien home world', kind: 'gas', seed: 77, r: 330 }              // the world, 330 px across its radius
@@ -621,7 +640,7 @@ function campCarrier(C, dt) {
   const c = C.carrier, k = CAMP.carrier, inp = C.input; if (c.hp <= 0) return;
   c.rot += (inp.turn || 0) * k.turn * dt;
   const th = Math.max(0, Math.min(1, inp.thrust || 0));
-  const f = C.nav && C.nav.on && C.nav.fast ? CAMP.nav.fast : 1; // the map's Fast: a burn, while the autopilot flies (campNavGo)
+  const f = C.nav && C.nav.on && C.nav.fast ? (C.nav.burn || CAMP.nav.fast) : 1; // the map's Fast: a burn, while the autopilot flies (campNavGo: N.burn, from campNavBurn)
   c.vx += Math.cos(c.rot) * k.accel * f * th * dt; c.vy += Math.sin(c.rot) * k.accel * f * th * dt;
   const keep = Math.pow(inp.brake ? k.brakeDrag : k.drag, dt); c.vx *= keep; c.vy *= keep;
   const sp = Math.hypot(c.vx, c.vy); if (sp > k.speed * f) { c.vx *= k.speed * f / sp; c.vy *= k.speed * f / sp; }
