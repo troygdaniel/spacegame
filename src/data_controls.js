@@ -32,7 +32,7 @@ const CAMP_PANELS = {
       { n: 5, id: 'recall', order: 'recall', label: 'Recall', help: 'The wing flies home' }
     ] },
     { key: '2', id: 'ship', side: 'right', title: 'SHIP', rows: [
-      { n: 1, id: 'mine', order: 'mine', label: 'Mine ore', help: 'Escorts go and mine ore' },
+      { n: 1, id: 'mine', order: 'mine', label: 'Mine ore', help: 'The wing goes and mines ore' },
       { n: 2, id: 'recharge', order: 'recharge', label: 'Recharge shields', help: 'Recharge a shield (costs ore)' },
       { n: 3, id: 'buildf', order: 'build', arg: 'fighter', label: 'Build a fighter', help: 'Build a fighter (costs ore)' },
       { n: 4, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', help: 'Build an escort (costs ore)' },
@@ -122,6 +122,7 @@ const CONTROLS = [
     { k: ['T'], t: 'Title, from the pause or end card', sub: 'ANYWHERE' },
     { k: ['Enter'], t: 'Cards: begin, continue, try again', sub: 'ANYWHERE' },
     { k: ['1-3'], t: 'Pick a salvaged tech after a level', sub: 'ANYWHERE' },
+    { k: ['4', '5'], t: 'Refit card: buy a fighter or escort', sub: 'ANYWHERE' },
     { k: ['M'], t: 'Mute sound', sub: 'ANYWHERE' }
   ] },
   { id: 'panels', title: 'PANELS', scene: 'Campaign', rows: campPanelKeyRows() }, // the Campaign's two panels, made from CAMP_PANELS above (the H page puts them first)

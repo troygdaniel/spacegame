@@ -1,0 +1,20 @@
+---
+type: text
+---
+The words of the Campaign's first level, the asteroid belt (card space-game-campaign-belt): the story lines it adds (curt: one short sentence, about 12 words at most), the ambush, the Earth refit screen. A key may be in any file of this folder; the other level 1 lines are still in ui.md (it is at its 200 rows).
+
+## Strings
+| key | text |
+|---|---|
+| camp.l1.before.3 | Quiet shift. Fill the store. |
+| camp.l1.after.3 | Earth recalls the cruiser for a refit. |
+| camp.say.ambush | Alarm. Unknown ships, coming for the cruiser. |
+| camp.say.ambush2 | Mining lasers are weapons now. Hold Space. Drones: press 2. |
+| camp.say.bwave2 | Second wave, from the north-west. |
+| camp.say.bwave3 | The mothership is here. Kill it. |
+| camp.say.escortcarrier | Escorts are with the cruiser. |
+| camp.ui.refit | EARTH REFIT |
+| camp.ui.refitpick | Choose a technology:  1  2  3 |
+| camp.ui.refitbuy | 4  +1 fighter ({fc} ore)     5  +1 escort ({ec} ore) |
+| camp.ui.refitore | ORE  {ore}     EXTRA SHIPS  {xf} fighters  {xe} escorts |
+| camp.ui.refitgot | Chosen: {name}.  Enter  continue |

@@ -135,7 +135,7 @@ const EDITS = [
   ['poi/wreck-s.md', [['guard: 2', 'guard: 3'], ['name: Cargo hulk', 'name: Cargo hulk, guarded']]],
   ['poi/signal-beacon.md', [['pays: [100, 200]', 'pays: [110, 210]']]],
   ['poi/signal-wreck.md', [['hullChance: 0.4', 'hullChance: 0.5']]],
-  ['npcs/tamsin.md', [['x: 668', 'x: 670'], ['Those drones around Kepler-4b', 'Those drones circling Kepler-4b'], ['You took the Kepler call?', 'You took the Kepler run?']]],
+  ['npcs/tamsin.md', [['x: 668', 'x: 670'], ['were survey rigs', 'were old survey rigs'], ['Six drones ring Kepler.', 'Six drones ring Kepler-4b.']]],
   ['npcs/sable.md', [['patrols>=1 and !mission-id:bounty', 'patrols>=2 and !mission-id:bounty']]],
   ['npcs/moss.md', [['| hull<50 |', '| hull<30 |']]],
   ['npcs/ida.md', [['color: pink', 'color: amber']]],
@@ -219,7 +219,7 @@ try {
   Object.assign(wj, { color: 0x38e1ff, css: '#38e1ff', x: 260, persona: wj.persona.replace('Manner: warm,', 'Manner: cheerful,') });
   wj.lines[0] = wj.lines[0].replace('Welcome to the Drift.', 'Welcome aboard the Drift.');
   wj.texts = wj.texts.map(r => r.replace('Nice shielding', 'Shiny shielding'));
-  const wt = want.npcs.tamsin; wt.x = 670; wt.lines[0] = wt.lines[0].replace('drones around', 'drones circling'); wt.texts = wt.texts.map(r => r.replace('Kepler call', 'Kepler run'));
+  const wt = want.npcs.tamsin; wt.x = 670; wt.lines[0] = wt.lines[0].replace('were survey rigs', 'were old survey rigs'); wt.texts = wt.texts.map(r => r.replace('ring Kepler.', 'ring Kepler-4b.'));
   const wu = want.ui; // the interface words: four cells edited
   wu.help.Station[0] = 'W A S D / arrows   move'; wu.raw['toast.docked'] = 'Docked. Welcome back.'; wu.raw['toast.delivered'] = 'Colonist delivered safely. +{reward} cr and thanks';
   wu.tips.Ship = wu.tips.Ship.replace('Look your ship over,', 'Check your ship over,');

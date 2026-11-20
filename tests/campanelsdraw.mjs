@@ -22,7 +22,7 @@ g.run(`
     const px = new Proxy(o, { get: (tg, k) => (k in tg ? tg[k] : typeof k === 'symbol' || k === 'then' ? undefined : () => px) }); // any other call (fillPath, closePath, setDepth ...) is a chainable nothing
     o.setText = v => { o.t = v; return px; }; o.setColor = v => { o.color = v; return px; }; o.destroy = () => { o.gone = true; }; o.setPosition = (a, b) => { o.x = a; o.y = b; return px; }; o.setVisible = v => { o.visible = v; return px; };
     __all.push(px); return px; };
-  window.__scene = () => { const s = { camp: campNew(1, [], { seed: 1, god: true }), time: { now: 0 }, add: { rectangle: (x, y) => __mkobj('rect', x, y), graphics: () => __mkobj('g'), text: (x, y, t) => __mkobj('text', x, y, t), container: (x, y, arr) => { const c = __mkobj('container', x, y), d = c.destroy; c.destroy = () => { d(); (arr || []).forEach(o => o.destroy && o.destroy()); }; return c; } },
+  window.__scene = () => { const s = { camp: campNew('home', [], { seed: 1, god: true }), time: { now: 0 }, add: { rectangle: (x, y) => __mkobj('rect', x, y), graphics: () => __mkobj('g'), text: (x, y, t) => __mkobj('text', x, y, t), container: (x, y, arr) => { const c = __mkobj('container', x, y), d = c.destroy; c.destroy = () => { d(); (arr || []).forEach(o => o.destroy && o.destroy()); }; return c; } },
       input: { handlers: [], on(e, f) { this.handlers.push([e, f]); }, off(e, f) { this.handlers = this.handlers.filter(h => h[1] !== f); } }, events: { once() {} } };
     s.camp.ships = s.camp.ships.filter(u => u.team !== 'alien'); return s; };
   window.__live = s => __all.filter(o => !o.gone);
@@ -77,7 +77,7 @@ console.log('C. the scene\'s keys');
       const h = {}; ['hull', 'earth', 'bay', 'wave', 'mother', 'blink', 'obj', 'keys', 'shield', 'ore', 'nav', 'arrow'].forEach(k => { const o = { text: '', setText(t) { o.text = t; return px; } }, px = new Proxy(o, { get: (tg, p) => (p in tg ? tg[p] : typeof p === 'symbol' || p === 'then' ? undefined : () => px) }); h[k] = px; }); f.hud = h;
       f.k = { W: { isDown: false }, A: { isDown: false }, S: { isDown: false }, D: { isDown: false }, UP: { isDown: false }, DOWN: { isDown: false }, LEFT: { isDown: false }, RIGHT: { isDown: false }, SPACE: { isDown: false } };
       f.init({ level }); f.camp = campNew(f.level, f.P.techs, f.opts); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); f.osp = {}; f.sync = () => {}; return f; };
-    window.F = __fake(1); F.onKey({ code: 'Enter' }); F.camp.ore = 200; F.update(0, 33); window.__k = c => F.onKey({ code: c });
+    window.F = __fake('home'); F.onKey({ code: 'Enter' }); F.camp.ore = 200; F.update(0, 33); window.__k = c => F.onKey({ code: c });
   `);
   const orders = () => J('Object.values(F.camp.orders).reduce((a, b) => a + b, 0) + F.camp.launchQ.length + F.camp.build.queue.length');
   check('digits 4 to 9 and key 3, pressed on their own, do nothing at all: no order, no panel, no toast, no pause', (() => { ['Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9'].forEach(c => g.run(`__k('${c}')`)); return orders() === 0 && J('F.pn.open') === '' && J('F.mode') === 'play' && J('F.camp.ore') === 200; })());

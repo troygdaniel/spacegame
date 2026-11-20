@@ -57,9 +57,9 @@ function campPanelState(C, row) {
   switch (row.id) {
     case 'launch': return C.bay.fighters + ' fighters, ' + C.bay.escorts + ' escorts';
     case 'attack': return campWing(C, 'fighter').length + ' fighters out';
-    case 'escort': { const cv = campNearest(campConvoys(C), C.carrier); return cv ? campConvoyName(cv) + ' convoy' : ''; }
+    case 'escort': { const cv = campNearest(campConvoys(C), C.carrier); return cv ? campConvoyName(cv) + ' convoy' : 'stay by the carrier'; } // a level with no convoy (the belt): the escorts stay close
     case 'guard': case 'recall': return campWing(C).length + ' ships out';
-    case 'mine': return campMiners(C).length + ' escorts, ' + C.pickups.length + ' pieces of ore';
+    case 'mine': return campMiners(C).length + ' ships, ' + C.rocks.filter(r => r.hp > 0).length + ' rocks, ' + C.pickups.length + ' ore'; // the whole wing mines (the belt, space-game-campaign-belt): rocks to cut and ore lying about
     case 'recharge': { const r = campPanelRecharge(C); return (r.what === 'Earth' ? 'Earth: ' : 'shield: ') + r.cost + ' ore'; }
     case 'buildf': return B.fighterCost + ' ore, ' + B.fighterTime + ' s';
     case 'builde': return B.escortCost + ' ore, ' + B.escortTime + ' s';

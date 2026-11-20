@@ -9,6 +9,7 @@ import { nodeGame } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame();
+g.run('CAMP.levels[1] = CAMP.levels.home'); // level 1 is the asteroid belt now (card space-game-campaign-belt); this test is about the Earth level (its Earth, convoys and wave times), kept as data under "home"
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 g.run(`var C = campNew(1, [], { seed: 3 }); var S = { scene: { key: 'Campaign' }, camp: C };`);
 const help = t => J(`campHelp(${JSON.stringify(t)}, C)`);
@@ -21,7 +22,7 @@ const kinds = {
   status: ['status', 'report', 'status report', 'how am I doing', 'how is the carrier', 'how is my hull', 'how is Earth', 'how are my fighters', 'how many fighters', 'how bad is it', 'hull', 'shield', 'how are we doing']
 };
 const goalNow = J('campObjective(C)').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // the goal line is whatever the level asks now (its wording is another change's)
-const said = { goal: new RegExp('^Your goal: ' + goalNow), keys: /^W A S D fly .* Tab is the map\.$/, map: /^Tab opens the map of the whole level/, status: /^Carrier hull 600 of 600\. Earth's shield 100 percent\. 0 ships out, 8 still in the bay\.$/ };
+const said = { goal: new RegExp('^Your goal: ' + goalNow), keys: /^W A S D fly, Space fires\. 1 Fleet panel, 2 Ship panel: a digit picks a row\.$/, map: /^Tab opens the level map\./, status: /^Hull 600 of 600\. Earth 100 percent\. 0 out, 8 in bay\.$/ };
 for (const [k, phrases] of Object.entries(kinds)) {
   const bad = phrases.filter(p => !said[k].test(help(p) || ''));
   check(`${k}: ${phrases.length} ways of asking are answered (${phrases.slice(0, 3).join(' / ')} ...)`, bad.length === 0, 'not answered: ' + bad.map(p => p + ' => ' + help(p)).join(' | '));
@@ -38,12 +39,12 @@ check('through the ship computer\'s local reader (shipcompLocal) a question is a
 // the numbers are the battle's
 g.run(`C.carrier.hp = 412; C.earth.shield = C.earth.max * 0.5; campOrder(C, 'launch', ''); for (let i = 0; i < 30 * 3; i++) campStep(C, 1 / 30);`);
 const st = help('status');
-check('a status says the carrier\'s hull now, Earth\'s shield in percent, the ships out and what is left in the bay', /^Carrier hull 4\d\d of 600\. Earth's shield \d+ percent\. \d ships out, \d still in the bay\.$/.test(st) && J('campWing(C).length') > 0 && st.includes(J('campWing(C).length') + ' ships out'), st);
+check('a status says the carrier\'s hull now, Earth\'s shield in percent, the ships out and what is left in the bay', /^Hull 4\d\d of 600\. Earth \d+ percent\. \d out, \d in bay\.$/.test(st) && J('campWing(C).length') > 0 && st.includes(J('campWing(C).length') + ' out'), st);
 g.run(`var C2 = campNew(2, [], { seed: 3 }); var S2 = { scene: { key: 'Campaign' }, camp: C2 };`);
-check('on a level with no Earth (2 and 3) the status leaves Earth out, and the goal is that level\'s', /^Carrier hull 600 of 600\. 0 ships out, 8 still in the bay\.$/.test(J('campHelp("status", C2)')) && /^Your goal: Gather resources: 0 of 2\. Press 1, then 1, to launch the wing\.$/.test(J('campHelp("what do I do", C2)')), J('campHelp("status", C2)') + ' | ' + J('campHelp("what do I do", C2)'));
+check('on a level with no Earth (2 and 3) the status leaves Earth out, and the goal is that level\'s', /^Hull 600 of 600\. 0 out, 8 in bay\.$/.test(J('campHelp("status", C2)')) && /^Your goal: Gather resources: 0 of 2\. Press 1, then 1, to launch the wing\.$/.test(J('campHelp("what do I do", C2)')), J('campHelp("status", C2)') + ' | ' + J('campHelp("what do I do", C2)'));
 g.run(`var C0 = campNew(1, [], { seed: 3 });`);
 check('with the wing still in the bay the goal adds the key to press ("Press 1, then 1, to launch the wing."); once it is out it does not', /Press 1, then 1, to launch the wing\.$/.test(J('campHelp("what do I do", C0)')) && (g.run(`campOrder(C0, 'launch', '')`), !/Press 1/.test(J('campHelp("what do I do", C0)'))), J('campHelp("what do I do", C0)'));
-check('the keys line is the real keys: the key line of the HUD names the same two panels', J(`campHelp('keys', C0)`).includes('1 opens the fleet panel and 2 the ship panel') && J(`campKeyLine()`).includes('1 Fleet   2 Ship'));
+check('the keys line is the real keys: the key line of the HUD names the same two panels', J(`campHelp('keys', C0)`).includes('1 Fleet panel, 2 Ship panel') && J(`campKeyLine()`).includes('1 Fleet   2 Ship'));
 check('every reply is short enough for the strip (three lines) and the voice: at most 140 letters, at most 3 sentences', ['what do I do', 'help', 'show the map', 'status'].every(p => { const t = help(p); return t.length <= 140 && t.split(/[.!?]\s/).length <= 3; }), ['what do I do', 'help', 'show the map', 'status'].map(p => help(p).length).join());
 
 // end to end: no chat key, the strip's own door

@@ -25,9 +25,9 @@ console.log('A. the table');
   check('two panels: key 1 FLEET at the left, key 2 SHIP at the right', T.panels.length === 2 && T.panels[0].key === '1' && T.panels[0].side === 'left' && T.panels[0].title === 'FLEET' && T.panels[1].key === '2' && T.panels[1].side === 'right' && T.panels[1].title === 'SHIP');
   check('each has five rows, numbered 1 to 5, each with a label and a line for the help page', T.panels.every(p => p.rows.map(r => r.n).join() === '1,2,3,4,5' && p.rows.every(r => r.label && r.help && r.id)));
   check('the fleet rows are launch, attack, escort, guard, recall; the ship rows mine, recharge, build a fighter, build an escort, fly to the objective', T.panels[0].rows.map(r => r.order).join() === 'launch,attack,escort,guard,recall' && T.panels[1].rows.map(r => r.order || r.fly).join() === 'mine,recharge,build,build,objective' && T.panels[1].rows[2].arg === 'fighter' && T.panels[1].rows[3].arg === 'escort');
-  check('key 3 is reserved: no panel has it and no row is bound to it', !T.panels.some(p => p.key === '3') && J(`campPanelKey(campPanelNew(), campNew(1, [], { seed: 1 }), 'Digit3', 0).opened`) === '');
+  check('key 3 is reserved: no panel has it and no row is bound to it', !T.panels.some(p => p.key === '3') && J(`campPanelKey(campPanelNew(), campNew('home', [], { seed: 1 }), 'Digit3', 0).opened`) === '');
   check('the delay is 250 ms', T.delay === 250);
-  g.run(`window.__C = __quiet(campNew(1, [], { seed: 1 }));`);
+  g.run(`window.__C = __quiet(campNew('home', [], { seed: 1 }));`);
   check('every order the table names is one the game knows (campOrder never answers "what")', J(`CAMP_PANELS.panels.flatMap(p => p.rows).filter(r => r.order).every(r => campCheck(__C, r.order, r.arg || '').code !== 'what')`));
   const codes = J(`(() => { const out = new Set(); for (const lvl of [1, 2]) { const C = __quiet(campNew(lvl, [], { seed: 1 })); for (let k = 0; k < 6; k++) { CAMP_PANELS.panels.flatMap(p => p.rows).filter(r => r.order).forEach(r => { const q = campCheck(C, r.order, r.arg || ''); if (!q.ok) out.add(q.code); }); if (k === 0) campOrder(C, 'launch'); if (k === 1) __run(C, 5); if (k === 2) { C.ore = 0; } if (k === 3) { C.shield = 150; } } } return [...out]; })()`);
   check('every refusal the rows meet has its few words in the table', codes.length >= 5 && codes.every(c => J(`!!CAMP_PANELS.why['${c}']`)), codes.join());
@@ -37,11 +37,11 @@ console.log('A. the table');
 
 console.log('B. the live state of each row');
 {
-  g.run(`window.C1 = __quiet(campNew(1, [], { seed: 1 }));`);
+  g.run(`window.C1 = __quiet(campNew('home', [], { seed: 1 }));`);
   const R = id => J(`__row(C1, '${id.split('.')[0]}', '${id.split('.')[1]}')`);
   check('fresh battle, fleet: launch is ready and says what is in the bay; the rest wait for a wing', R('fleet.launch').ok && /6 fighters, 2 escorts/.test(R('fleet.launch').state) && ['attack', 'escort', 'guard', 'recall'].every(r => !R('fleet.' + r).ok));
   check('and say why in a few words: no fighters out, no escorts out, no ships out', R('fleet.attack').state === 'no fighters out' && R('fleet.escort').state === 'no escorts out' && R('fleet.guard').state === 'no ships out' && R('fleet.recall').state === 'no ships out');
-  check('ship panel, fresh: mine cannot (no escorts out), recharge cannot (the shield is full), a fighter can be built (30 ore, 25 needed) with its cost and time, an escort cannot (needs 45 ore)', R('ship.mine').state === 'no escorts out' && !R('ship.recharge').ok && R('ship.recharge').state === 'shield is full' && R('ship.buildf').ok && R('ship.buildf').state === '25 ore, 6 s' && !R('ship.builde').ok && R('ship.builde').state === 'needs 45 ore');
+  check('ship panel, fresh: mine cannot (no ships out: the whole wing mines now), recharge cannot (the shield is full), a fighter can be built (30 ore, 25 needed) with its cost and time, an escort cannot (needs 45 ore)', R('ship.mine').state === 'no ships out' && !R('ship.recharge').ok && R('ship.recharge').state === 'shield is full' && R('ship.buildf').ok && R('ship.buildf').state === '25 ore, 6 s' && !R('ship.builde').ok && R('ship.builde').state === 'needs 45 ore');
   check('the fly row names the objective and how far: level 1 starts with Earth', R('ship.goal').ok && /^Earth  \d+ km$/.test(R('ship.goal').state), R('ship.goal').state);
   g.run(`campOrder(C1, 'launch'); __run(C1, 1);`);
   check('launching: launch says "still launching" and the others say "no fighters out" until the first one is out', !R('fleet.launch').ok && R('fleet.launch').state === 'still launching');
@@ -49,10 +49,10 @@ console.log('B. the live state of each row');
   check('wing out: launch says all of it is out; attack, guard, recall are ready with the count; escort has no convoy yet', R('fleet.launch').state === 'all of it is out' && R('fleet.attack').ok && R('fleet.attack').state === '6 fighters out' && R('fleet.guard').ok && R('fleet.guard').state === '8 ships out' && R('fleet.recall').ok && !R('fleet.escort').ok && R('fleet.escort').state === 'no convoy to escort');
   g.run(`__run(C1, 6);`);
   check('with the Mars convoy flying, escort is ready and names it', R('fleet.escort').ok && R('fleet.escort').state === 'Mars convoy', R('fleet.escort').state);
-  g.run(`C1.pickups.length = 0;`);
-  check('mine with no ore in reach says so', !R('ship.mine').ok && R('ship.mine').state === 'no ore in reach');
+  g.run(`C1.pickups.length = 0; C1.rocks.length = 0;`);
+  check('mine with no rock and no ore in reach says so', !R('ship.mine').ok && R('ship.mine').state === 'no ore in reach');
   g.run(`C1.pickups.push({ id: 'p1', kind: 'rock', x: 500, y: 0, ore: 20, born: 0 });`);
-  check('with ore lying about, mine is ready and counts the escorts and the ore', R('ship.mine').ok && /^2 escorts, 1 pieces? of ore$/.test(R('ship.mine').state), R('ship.mine').state);
+  check('with ore lying about, mine is ready and counts the ships, the rocks and the ore', R('ship.mine').ok && /^8 ships, 0 rocks, 1 ore$/.test(R('ship.mine').state), R('ship.mine').state);
   g.run(`C1.shield = 30;`);
   check('a carrier shield down: recharge is ready and says what it costs; with no ore it says what it needs', R('ship.recharge').ok && /^shield: \d+ ore$/.test(R('ship.recharge').state) && (g.run('C1.ore = 3'), !R('ship.recharge').ok && /^needs \d+ ore$/.test(R('ship.recharge').state)), R('ship.recharge').state);
   g.run(`campOrder(C1, 'recall'); C1.ore = 200; for (let i = 0; i < 12; i++) campOrder(C1, 'build', 'fighter');`);
@@ -62,9 +62,12 @@ console.log('B. the live state of each row');
   check('the head lines: the bay and the ships out; the ore and the shield', /^bay \d+\+\d+   out \d+$/.test(J(`campPanelHead(C1, 'fleet')`)) && /^ore \d+   shield \d+$/.test(J(`campPanelHead(C1, 'ship')`)));
 }
 
+g.run(`window.C8 = __quiet(campNew(1, [], { seed: 1 })); campOrder(C8, 'launch'); __run(C8, 8);`);
+check('the belt (level 1) has no convoy: escort is ready and says the escorts stay by the carrier; mine counts the ships and the rocks', J(`__row(C8, 'fleet', 'escort').ok`) && J(`__row(C8, 'fleet', 'escort').state`) === 'stay by the carrier' && /^8 ships, \d+ rocks, \d+ ore$/.test(J(`__row(C8, 'ship', 'mine').state`)), J(`__row(C8, 'fleet', 'escort').state`));
+
 console.log('C. the keys');
 {
-  g.run(`window.C3 = __quiet(campNew(1, [], { seed: 1 })); window.P = campPanelNew();`);
+  g.run(`window.C3 = __quiet(campNew('home', [], { seed: 1 })); window.P = campPanelNew();`);
   const k = (code, now) => J(`__key(P, C3, '${code}', ${now})`);
   check('Digit1 opens the FLEET panel and nothing else happens: no launch', (() => { const r = k('Digit1', 1000); return r.used && r.opened === 'fleet' && J('P.open') === 'fleet' && J('C3.launchQ.length') === 0 && J('C3.orders.launch') === 0; })());
   check('Esc closes it, and Esc is its own (the scene does not also pause)', (() => { const r = k('Escape', 1500); return r.used && r.closed && J('P.open') === ''; })());
@@ -85,7 +88,7 @@ console.log('C. the keys');
 
 console.log('D. fast typing');
 {
-  g.run(`window.C4 = __quiet(campNew(1, [], { seed: 1 })); window.P4 = campPanelNew(); __run(C4, 0.1);`);
+  g.run(`window.C4 = __quiet(campNew('home', [], { seed: 1 })); window.P4 = campPanelNew(); __run(C4, 0.1);`);
   g.run(`__key(P4, C4, 'Digit1', 10000);`);
   check('the panel is not drawn at once, nor at 249 ms; it is at 250 ms', J(`campPanelShown(P4, 10000)`) === false && J(`campPanelShown(P4, 10249)`) === false && J(`campPanelShown(P4, 10250)`) === true);
   check('1 then 3 typed within 150 ms: the escort order ran and the panel was never shown at any moment of it', (() => { g.run(`P4.open = ''; __key(P4, C4, 'Digit1', 20000);`); const during = J(`campPanelShown(P4, 20000) || campPanelShown(P4, 20100)`); const r = J(`__key(P4, C4, 'Digit3', 20120)`); return !during && r.ran && r.row === 'escort' && J('P4.open') === '' && J(`campPanelShown(P4, 20130)`) === false; })());
@@ -95,15 +98,15 @@ console.log('D. fast typing');
 
 console.log('E. what a pick does');
 {
-  g.run(`window.C5 = __quiet(campNew(1, [], { seed: 1 })); window.__how = []; window.__co0 = campOrder; campOrder = function (C, name, arg, how) { __how.push([name, arg, how]); return __co0.apply(null, arguments); };`);
+  g.run(`window.C5 = __quiet(campNew('home', [], { seed: 1 })); window.__how = []; window.__co0 = campOrder; campOrder = function (C, name, arg, how) { __how.push([name, arg, how]); return __co0.apply(null, arguments); };`);
   g.run(`campPanelRun(C5, CAMP_PANELS.panels[0].rows[0], 'key'); campPanelRun(C5, CAMP_PANELS.panels[1].rows[2], 'click'); campPanelRun(C5, CAMP_PANELS.panels[1].rows[3], 'key');`);
   check('a row is campOrder with the row\'s words and how it was given (key or click): the play log reads it', J('__how.map(h => h.join(":")).join(" ")') === 'launch::key build:fighter:click build:escort:key', J('__how.map(h => h.join(":")).join(" ")'));
   g.run(`campOrder = __co0;`);
   check('build a fighter spends 25 ore and queues it; the escort row is refused with 5 ore left, in words', J('C5.ore') === 5 && J('C5.build.queue.length') === 1 && J(`campPanelRun(C5, CAMP_PANELS.panels[1].rows[3], 'key').ok`) === false);
-  g.run(`window.C6 = __quiet(campNew(1, [], { seed: 1 })); window.__r6 = campPanelRun(C6, CAMP_PANELS.panels[1].rows[4], 'key');`);
+  g.run(`window.C6 = __quiet(campNew('home', [], { seed: 1 })); window.__r6 = campPanelRun(C6, CAMP_PANELS.panels[1].rows[4], 'key');`);
   check('fly to the objective is the autopilot: C.nav is set on the goal (Earth), and it says so', J('__r6.ok') === true && J('C6.nav && C6.nav.id') === 'place:earth' && J('C6.nav.fast') === false);
-  check('the panel row and the strip do the same thing: the same order, the same answer', J(`(() => { const a = __quiet(campNew(1, [], { seed: 5 })), b = __quiet(campNew(1, [], { seed: 5 })); const x = campPanelRun(a, CAMP_PANELS.panels[0].rows[0], 'key'), y = campOrder(b, 'launch', '', 'strip'); return x.ok === y.ok && x.say === y.say && a.launchQ.length === b.launchQ.length; })()`));
-  check('a finished battle takes no pick: the answer says it is over', (g.run(`window.C7 = campNew(1, [], { seed: 1 }); C7.result = 'won';`), J(`campPanelRun(C7, CAMP_PANELS.panels[0].rows[0], 'key').ok`) === false && J(`__row(C7, 'fleet', 'launch').state`) === 'the battle is over'));
+  check('the panel row and the strip do the same thing: the same order, the same answer', J(`(() => { const a = __quiet(campNew('home', [], { seed: 5 })), b = __quiet(campNew('home', [], { seed: 5 })); const x = campPanelRun(a, CAMP_PANELS.panels[0].rows[0], 'key'), y = campOrder(b, 'launch', '', 'strip'); return x.ok === y.ok && x.say === y.say && a.launchQ.length === b.launchQ.length; })()`));
+  check('a finished battle takes no pick: the answer says it is over', (g.run(`window.C7 = campNew('home', [], { seed: 1 }); C7.result = 'won';`), J(`campPanelRun(C7, CAMP_PANELS.panels[0].rows[0], 'key').ok`) === false && J(`__row(C7, 'fleet', 'launch').state`) === 'the battle is over'));
 }
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nCAMPAIGN PANELS FAIL (${failed} of ${n})` : `\nCAMPAIGN PANELS PASS (${n} checks)`);

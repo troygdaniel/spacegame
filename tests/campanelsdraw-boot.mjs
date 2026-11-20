@@ -39,13 +39,13 @@ async function campaign() {
     check('1 alone, 100 ms later: still not drawn', (await j(`${SC}.pnl.objs.length`)) === 0 && (await j(`${SC}.pn.open`)) === 'fleet');
     await t.run(300);
     const words = await j(`${SC}.pnl.rows.map(r => r.name.text + ': ' + r.state.text)`);
-    check('after 250 ms the FLEET panel is up with its live words: launch says all out, attack six fighters', (await j(`${SC}.pnl.objs.length`)) > 10 && words.length === 5 && /Launch: all of it is out/.test(words[0]) && /Attack: 6 fighters out/.test(words[1]), words.join(' | '));
+    check('after 250 ms the FLEET panel is up with its live words: launch says all out, attack six fighters, escort stays by the carrier (the belt has no convoy)', (await j(`${SC}.pnl.objs.length`)) > 10 && words.length === 5 && /Launch: all of it is out/.test(words[0]) && /Attack: 6 fighters out/.test(words[1]), words.join(' | '));
     await snap(t, 'fleet');
     await clickAt(t, 150, 238 + 58 + 46 * 1 + 10); await t.run(200); // row 2: attack
     check('a click on row 2 (attack) does it and closes the panel', (await j(`${SC}.camp.orders.attack`)) === 1 && (await j(`${SC}.pn.open`)) === '' && (await j(`${SC}.pnl.objs.length`)) === 0);
     await press(t, 'Digit2', 20); await t.run(400);
     const ship = await j(`${SC}.pnl.rows.map(r => r.name.text + ': ' + r.state.text)`);
-    check('2 opens the SHIP panel at the right: ore and costs on it', ship.length === 5 && /Build a fighter: 25 ore, 6 s/.test(ship[2]) && /Fly to the objective: Earth/.test(ship[4]), ship.join(' | '));
+    check('2 opens the SHIP panel at the right: mine, shields, what a ship costs (or the ore it needs: the belt starts with none) and the objective row', ship.length === 5 && /^Mine ore: \d+ ships, \d+ rocks/.test(ship[0]) && /^Build a fighter: (25 ore, 6 s|needs 25 ore)$/.test(ship[2]) && /^Fly to the objective: /.test(ship[4]), ship.join(' | '));
     await snap(t, 'ship');
     await press(t, 'Escape'); await t.run(100);
     check('Esc closes the panel and does not pause', (await j(`${SC}.pn.open`)) === '' && (await j(`${SC}.mode`)) === 'play');

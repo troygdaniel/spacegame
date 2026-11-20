@@ -9,17 +9,17 @@ y: 600
 face: -2.64
 ---
 ## Lines
-- Raiders are fast and thin, so do not chase them. Let them come to you.
-- Gunships hold out by Kepler-4b and fire in threes. Stay off their nose and they are only slow.
-- The Reaver pays twelve hundred, and it has two escorts. Do not go until you can take a gunship alone.
+- Raiders are fast and thin. Do not chase; let them come.
+- Gunships near Kepler-4b fire in threes. Stay off their nose.
+- The Reaver pays twelve hundred, with two escorts. Beat a gunship first.
 
 ## Reactions
 | when | line |
 |---|---|
 | mission:accepted and mission-id:patrol | Five marked pirates on the approach. Take them one at a time. |
-| mission:accepted and mission-id:bounty | You took the Reaver. Watch for the flash before it rams. Then get out of the way. |
-| patrols>=1 and !mission-id:bounty | You finished a patrol, so they opened the Reaver bounty. Think about it twice. |
-| kills>=10 | You have {kills} pirates on your tally already. Count them if you like. Just do not start enjoying it. |
+| mission:accepted and mission-id:bounty | The Reaver: watch for the flash before it rams, then move. |
+| patrols>=1 and !mission-id:bounty | Patrol done, so the Reaver bounty opened. Think twice. |
+| kills>=10 | {kills} pirates down. Count them if you like. Do not enjoy it. |
 
 ## Persona
 Who: Sable, forties, a retired bounty hunter who still reads every room like a target list.
