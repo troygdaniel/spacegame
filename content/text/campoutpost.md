@@ -17,8 +17,8 @@ The words of the Campaign's friendly outposts (card space-game-campaign-outposts
 | camp.say.dock | Docking at {name}. |
 | camp.say.repair | Hull mended: {pts} points for {ore} ore. |
 | camp.say.undock | Undocked. Good hunting, pilot. |
-| camp.say.retreat | Hull low and no ships left, pilot. Retreat to {name}: {s} seconds on Fast. |
-| camp.say.retreatnear | Hull low and no ships left, pilot. {name} is in range: dock with E. |
+| camp.say.retreat | Hull low, no ships. Retreat to {name}: {s} seconds on Fast. |
+| camp.say.retreatnear | Hull low, no ships. {name} is in range: dock with E. |
 | camp.hud.retreat | Retreat to {name}: {s} s on Fast. |
 | camp.hud.dockhint | E  dock at {name} |
 | camp.tech.fabricator.name | Fabricator |

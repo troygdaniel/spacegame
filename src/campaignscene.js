@@ -215,7 +215,7 @@ class Campaign extends Phaser.Scene {
     if (this.mp && typeof campMapKey === 'function' && campMapKey(this, c, e.shiftKey)) return; // the open map's list: W S choose, A D change group, Enter fly there (Shift+Enter fast), X clear (src/campmapdraw.js)
     if (c === 'KeyQ') C.input.blink = true;
     else if (c === 'KeyF') this.fireMissile();
-    else if (c === 'KeyE') { const r = campOrder(C, 'dock', '', 'key'); toast(this, r.say, r.ok ? '#9fe9ff' : '#ffb454'); } // E: dock at the outpost in range (src/campoutpost.js); the room opens from the event
+    else if (c === 'KeyE' && !typing) { const r = campOrder(C, 'dock', '', 'key'); toast(this, r.say, r.ok ? '#9fe9ff' : '#ffb454'); } // E: dock at the outpost in range (src/campoutpost.js); the room opens from the event
     else if (typeof campDebugKey === 'function') { // the tune kit (src/campdebug.js): ] skip, \\ win, [ lose, ` god mode; none is a key you fly by
       const id = campDebugKey(c); if (!id) return;
       const r = campDebugRun(C, this.P, id); if (r && r.say) toast(this, r.say, '#ffd37a');
