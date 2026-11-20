@@ -206,7 +206,7 @@ const SOUND = {
   send: {                           // how much of each effect goes to the reverb (0: dry). A name that is not here gets SOUND.other
     boom: 0.55, hyperJump: 0.6, hyperArrive: 0.55, dock: 0.45,                       // the big events: long tails
     hyperCharge: 0.3, interdict: 0.3, cruiseOn: 0.3, cruiseOff: 0.3, shieldDown: 0.3, thrusters: 0.3, shieldUp: 0.25,
-    hit: 0.22, bounty: 0.2, siren: 0.2, dash: 0.15, laser: 0.14, chime: 0.12, tick: 0.06, turret: 0.06, missileLaunch: 0.2, missileBlast: 0.4, missileFizzle: 0.1,
+    hit: 0.22, bounty: 0.2, siren: 0.2, dash: 0.15, laser: 0.14, chime: 0.12, tick: 0.06, turret: 0.06, missileLaunch: 0.2, missileBlast: 0.4, missileFizzle: 0.1, blastSmall: 0.3, blastBig: 0.4, shieldHit: 0.15, hullHit: 0.1, earthHit: 0.3,
     fuelPump: 0.05, fuelLow: 0.05, beep: 0.05,
     click: 0, uiOpen: 0, uiClose: 0, type: 0, buy: 0, sell: 0, empty: 0             // the interface: short and dry
   },
@@ -339,6 +339,17 @@ const SFX = {
   missileBlast(t) { tone(t, 'sine', 80, 30, 0.45, 0.12); burst(t, 0.3, 0.09, 'lowpass', 1000, 70); [0.02, 0.05, 0.095, 0.15, 0.22].forEach((o, i) => burst(t + o, 0.025, 0.04, 'highpass', 3600 + i * 300, 5200, 1)); },
   // missileFizzle: a missile that ran out of fuel: a soft puff of air and a small falling tone
   missileFizzle(t) { burst(t, 0.3, 0.02, 'bandpass', 1200, 200, 0.8, 0.02); tone(t, 'sine', 300, 120, 0.2, 0.01); },
+  // blastSmall: a small ship dies: a thump that falls, a short rumble, and a crackle of four quick bright bursts
+  blastSmall(t) { tone(t, 'sine', 110, 40, 0.3, 0.09); burst(t, 0.3, 0.07, 'lowpass', 1400, 90); [0.02, 0.06, 0.1, 0.14].forEach((o, i) => burst(t + o, 0.022, 0.035, 'highpass', 3800 + i * 250, 5200, 1)); },
+  // blastBig: the mothership, the carrier: two thumps (a low one that falls for a second and a higher one under it), a long rumble, and a crackle of eight bursts over half a second
+  blastBig(t) { tone(t, 'sine', 70, 24, 1.0, 0.14); tone(t, 'sine', 140, 45, 0.5, 0.09); burst(t, 1.0, 0.1, 'lowpass', 1800, 60);
+    [0.02, 0.07, 0.12, 0.19, 0.27, 0.34, 0.42, 0.5].forEach((o, i) => burst(t + o, 0.03, 0.035, 'highpass', 3400 + (i % 4) * 300, 5200, 1)); },
+  // shieldHit: the carrier's shield takes a shot: a bright electric zap (a triangle falling 1500 to 700 Hz and a sine over it) with two bursts of high crackle
+  shieldHit(t) { tone(t, 'triangle', 1500, 700, 0.12, 0.03); tone(t, 'sine', 2300, 1700, 0.09, 0.012); burst(t, 0.06, 0.02, 'highpass', 3000, 5000); burst(t + 0.045, 0.03, 0.015, 'highpass', 3500, 4500); },
+  // hullHit: the hull takes a shot: a dull clank (a sawtooth falling 190 to 60 Hz, a square under it) and a short band of metallic noise
+  hullHit(t) { tone(t, 'sawtooth', 190, 60, 0.16, 0.06); tone(t, 'square', 100, 52, 0.1, 0.03); burst(t, 0.1, 0.06, 'bandpass', 900, 250, 1.2, 0.003); },
+  // earthHit: a shot lands on Earth's shield: a deep thump that falls and a short low rumble, felt more than heard
+  earthHit(t) { tone(t, 'sine', 60, 28, 0.5, 0.09); burst(t, 0.4, 0.05, 'lowpass', 300, 60); },
   // bounty: two bright coin pings, the second higher and longer, with a thin shimmer on top (plays just after the boom)
   bounty(t) { tone(t, 'triangle', 988, 975, 0.1, 0.06); tone(t + 0.075, 'triangle', 1319, 1300, 0.26, 0.06); tone(t + 0.075, 'sine', 2637, 2620, 0.2, 0.022); },
   // cruise: a rising whoosh as it engages, a falling one and a soft thud as it drops out (src/cruise.js)
@@ -377,10 +388,15 @@ const SFX = {
 // What each of the Campaign's sounds is made of, in plain words (card space-game-campaign-sounds), and the group it was made in: so Troy can ask for a change by name.
 // The numbers are in the sound's own line above. tests/campsounds.mjs holds every name here to a sound that exists and to the level rules.
 const SFX_BUILT = {
+  blastSmall: { group: 'blasts', says: 'a small ship dying (a fighter, an escort, a raider, a drone, a freighter): a sine thump falling 110 to 40 Hz, a rumble of low-passed noise falling 1.4 kHz to 90 Hz for 0.3 s, and a crackle of four 22 ms bursts of high-passed noise' },
+  blastBig: { group: 'blasts', says: 'a big ship dying (the mothership, the carrier): two sine thumps, a low one falling 70 to 24 Hz for a second and a higher one 140 to 45 Hz for half a second, a rumble of low-passed noise for a second, and a crackle of eight 30 ms bursts of high-passed noise over half a second' },
+  shieldHit: { group: 'blasts', says: 'a shot on the carrier\'s shield: a bright electric zap, a triangle falling 1500 to 700 Hz with a sine over it (2.3 to 1.7 kHz) and two quick bursts of high-passed crackle' },
+  hullHit: { group: 'blasts', says: 'a shot on the carrier\'s hull: a dull clank, a sawtooth falling 190 to 60 Hz with a square under it (100 to 52 Hz) and a short band of metallic noise around 900 Hz' },
+  earthHit: { group: 'blasts', says: 'a shot on Earth\'s shield: a deep sine thump falling 60 to 28 Hz and a short low rumble of noise, felt more than heard' },
   missileLaunch: { group: 'missiles', says: 'the missile launch: a whoosh that climbs for half a second (a band of noise sweeping 250 Hz to 3.2 kHz and a sawtooth rising 110 to 520 Hz), then, 0.3 s in, a dull thump (a sine falling 90 to 36 Hz and a short low-passed burst of noise)' },
   missileBlast: { group: 'missiles', says: 'where a missile goes off: a low sine thump falling 80 to 30 Hz, a rumble of low-passed noise falling 1 kHz to 70 Hz for 0.3 s, and a crackle of five 25 ms bursts of high-passed noise in the first quarter second' },
   missileFizzle: { group: 'missiles', says: 'a missile out of fuel: a soft puff of band-passed air sweeping down from 1.2 kHz and a small sine falling 300 to 120 Hz, both very quiet' },
-  beamhum: { group: 'hum', loop: true, says: 'the beam hum (a loop, BEAMHUM): a sine root with a sine fifth over it and a sawtooth buzz an octave up, through a low-pass that opens as it climbs, with a thin band of hiss; it rises from 140 to 320 Hz over two seconds of unbroken fire (Beam turrets tech, Space held, a turret on a target) and fades in a quarter second when it stops; a softer one rises as a mining ship closes on its ore' },
+  beamhum: { group: 'hum', loop: true, says: 'the beam hum (a loop, BEAMHUM): a sine root with a sine fifth over it and a sawtooth buzz an octave up, through a low-pass that opens as it climbs, with a thin band of hiss; it rises from 140 to 320 Hz over two seconds of unbroken fire (Beam turrets tech with Space held and a turret on a target, or any mining laser, on a rock or an alien: the same hum) and fades in a quarter second when it stops; until the mining lasers exist, a softer one rises as a mining ship closes on its ore' },
   turret: { group: 'turrets', says: 'the turret pew: a short bright square bolt that falls to under a third of its pitch in 70 ms, a thin sawtooth zip on top and a hair of click at the start; the pitch is set by the turret (four steps of 150 Hz, the back four a little higher) and moved 3 percent at random, so the eight rattle and do not smear' }
 };
 

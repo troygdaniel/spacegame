@@ -63,8 +63,9 @@ const CAMP = {
   },
   beamHum: {                               // the hum of a beam (card space-game-campaign-sounds): what src/audio.js beamHum is told
     rise: 2,                               // s of unbroken fire (Beam turrets tech, Space held, a turret on a target) until the hum has climbed all the way
-    mineRange: 320,                        // px: a mining ship this close to the ore it is going for hums, softly, rising as it closes
-    mineLevel: 0.55                        // how loud the mining hum is, against the beam turrets' 1
+    mineRange: 320,                        // px: until the mining lasers exist (C.lasers is not there), a mining ship this close to the ore it is going for hums, softly, rising as it closes
+    mineLevel: 0.55,                       // how loud that interim hum is, against the beam turrets' 1
+    laserLevel: 0.8                        // how loud the hum of a mining laser is (on a rock or on an alien: the same beam, the same hum), against the beam turrets' 1
   },
   missile: {                               // the missile launcher (F, or the order "missiles"): a homing missile for the mothership and the other big ships (card space-game-campaign-missiles)
     magazine: 6,                           // missiles you start with, and how many the slow reload fills the magazine to
@@ -330,7 +331,7 @@ function campHurt(C, u, dmg, byId) {
     if (C.shield > 0 && dmg > 0) { const take = Math.min(C.shield, dmg); C.shield -= take; dmg -= take; C.events.push({ type: 'shieldhit', x: u.x, y: u.y }); } // the shield first
   }
   u.hp -= dmg; u.hurtAt = C.t;
-  C.events.push({ type: 'hit', x: u.x, y: u.y, id: u.id });
+  C.events.push({ type: 'hit', x: u.x, y: u.y, id: u.id, hull: dmg > 0 }); // hull: it got through to the hull (the carrier's shield takes the first of it)
   if (u.team === 'alien' && byId) { u.hitBy = byId; u.distractedUntil = C.t + CAMP.alien.distract; }
   if (u.hp <= 0) campKill(C, u);
 }
@@ -604,7 +605,10 @@ function campTurrets(C) {
   });
 }
 // The beam hum (card space-game-campaign-sounds). C.beamT is how long the beam turrets have fired without a break, in seconds (to CAMP.beamHum.rise); campBeamState is what the scene tells
-// the audio each frame: { kind: 'turrets' | 'mine' | '', level 0 to 1, rise 0 to 1 }.
+// the audio each frame: { kind: 'turrets' | 'laser' | 'mine' | '', level 0 to 1, rise 0 to 1 }.
+// The mining lasers (the belt card builds them) say they fire through C.lasers, a list the sim keeps: [{ from: the ship's id, to: the rock's or the alien's id, kind: 'rock' | 'alien',
+// since: the battle's clock (ms) when this beam began without a break }], empty when none fires. One hum for all of them, on a rock or on an alien: the same beam. While C.lasers is not
+// there at all (no mining lasers in the game yet) a mining ship closing on its ore hums instead.
 function campBeam(C, dt) {
   const on = campHas(C, 'beam') && !!C.input.fire && C.carrier.hp > 0 && C.turrets.some(t => t.target);
   C.beamT = on ? Math.min(CAMP.beamHum.rise, (C.beamT || 0) + dt) : Math.max(0, (C.beamT || 0) - dt * 3);
@@ -613,6 +617,10 @@ function campBeamState(C) {
   const off = { kind: '', level: 0, rise: 0 }, k = CAMP.beamHum;
   if (!C || C.result || C.carrier.hp <= 0) return off;
   if (campHas(C, 'beam') && C.input.fire && C.turrets.some(t => t.target)) return { kind: 'turrets', level: 1, rise: Math.min(1, (C.beamT || 0) / k.rise) };
+  if (Array.isArray(C.lasers)) {
+    const ls = C.lasers.filter(l => l && Number.isFinite(l.since));
+    return ls.length ? { kind: 'laser', level: k.laserLevel, rise: Math.min(1, Math.max(0, (C.t - Math.min(...ls.map(l => l.since))) / 1000 / k.rise)) } : off;
+  }
   let best = null; // a mining ship closing on the ore it is going for: the nearest one of them, and how near
   campWing(C, 'escort').forEach(u => {
     if (!u.order || u.order.type !== 'mine') return;

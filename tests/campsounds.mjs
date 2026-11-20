@@ -104,6 +104,19 @@ console.log('G2. the beam and mining hum');
   check('a mining ship closing on the ore it is going for: a softer hum (0.55 of the beam\'s) that climbs as it closes: a third of the way up at 200 px, three quarters at 80', m1.kind === 'mine' && Math.abs(m1.level - 0.55) < 1e-9 && m1.rise > 0.3 && m1.rise < 0.45 && m2.rise > 0.7 && m2.rise < 0.8, JSON.stringify([m1, m2]));
   g.run('C.pickups[0].x = __es.x + 900; campStep(C, 0.001)');
   check('and none when the ore is far (more than 320 px) or there is none', J('campBeamState(C).kind') === '' && (g.run('C.pickups = []; campStep(C, 0.001)'), J('campBeamState(C).kind') === ''));
+  g.run('__bat([]); C.lasers = []; campStep(C, 0.001)');
+  check('the mining lasers (C.lasers, from the belt card) are the same hum on a rock or on an alien: one beam of either kind gives kind laser at 0.8, climbing from when it began (half way after a second), the oldest beam counts when two fire, none gives none', (() => {
+    g.run('C.t = 5000; C.lasers = [{ from: "escort-1", to: "rock-1", kind: "rock", since: 4000 }]'); const a = J('campBeamState(C)');
+    g.run('C.lasers = [{ from: "escort-1", to: "raider-3", kind: "alien", since: 4000 }]'); const b = J('campBeamState(C)');
+    g.run('C.lasers = [{ from: "escort-1", to: "rock-1", kind: "rock", since: 4900 }, { from: "escort-2", to: "raider-3", kind: "alien", since: 3000 }]'); const c = J('campBeamState(C)');
+    g.run('C.lasers = []'); const d = J('campBeamState(C)');
+    return a.kind === 'laser' && b.kind === 'laser' && a.level === 0.8 && b.level === 0.8 && JSON.stringify(a) === JSON.stringify(b) && Math.abs(a.rise - 0.5) < 1e-9 && c.rise === 1 && d.kind === '';
+  })());
+  check('with C.lasers there, a miner closing on ore does not hum on its own (the beam does); the Beam turrets still hum over a laser', (() => {
+    g.run('__bat(["beam"]); C.lasers = [{ from: "e", to: "r", kind: "rock", since: C.t - 500 }]; C.input.fire = true; __go(0.5)'); const x = J('campBeamState(C).kind');
+    g.run('C.input.fire = false; __go(0.1)'); const y = J('campBeamState(C).kind');
+    return x === 'turrets' && y === 'laser';
+  })());
   check('a battle that is over hums nothing', (g.run('__bat(["beam"]); C.input.fire = true; __go(0.2); campEnd(C, "won", "mother")'), J('campBeamState(C).kind') === ''));
   // the loop itself, on the stand-in AudioContext
   g.run(`__reset(false, 1); AC = new AudioContext(); audioReady();`);
@@ -134,7 +147,7 @@ console.log('G2. the beam and mining hum');
   `);
   g.run('window.__f1 = __fakeSc([]); __plays.length = 0; __f1.camp.t = 1000; __f1.onEvent({ type: "turret", i: 3, x: 0, y: 0, aim: 0 }); window.__f2 = __fakeSc(["beam"]); __f2.camp.t = 1000; __f2.onEvent({ type: "turret", i: 3, x: 0, y: 0, aim: 0 }); sfx = __sfx1');
   check('with the Beam turrets the hum is the sound: the turret event plays no pew (the flash stays); without it the pew is played with the turret\'s number', J('__plays').join() === 'turret 3', J('__plays').join());
-  check('the numbers are in the table: how long it takes to climb, how near a miner hums, how loud', J('CAMP.beamHum.rise') === 2 && J('CAMP.beamHum.mineRange') === 320 && J('CAMP.beamHum.mineLevel') === 0.55);
+  check('the numbers are in the table: how long it takes to climb, how near a miner hums, how loud (a miner, a laser)', J('CAMP.beamHum.rise') === 2 && J('CAMP.beamHum.mineRange') === 320 && J('CAMP.beamHum.mineLevel') === 0.55 && J('CAMP.beamHum.laserLevel') === 0.8);
 }
 
 // ---------- G3. the missiles ----------
@@ -158,6 +171,42 @@ console.log('G3. the missiles');
   check('they have a share of the reverb: the blast the most (0.4), the launch a fifth, the fizzle a little', J('SOUND.send.missileBlast') === 0.4 && J('SOUND.send.missileLaunch') === 0.2 && J('SOUND.send.missileFizzle') === 0.1);
 }
 
+// ---------- G4. the explosions and the hits ----------
+console.log('G4. the explosions and the hits');
+{
+  const S = R('blastSmall'), Bg = R('blastBig'), SH = R('shieldHit'), HH = R('hullHit'), EH = R('earthHit'), BOOM = R('boom'), HIT = R('hit');
+  const crackle = x => x.parts.filter(p => p.kind === 'noise' && p.type === 'highpass').reduce((n, p) => n + p.bursts.length, 0);
+  check('a small ship dies with a thump and a crackle: a sine thump that falls (110 to 40 Hz), a low-passed rumble, four short bursts of high-passed noise, over in 0.35 s', S.parts.some(p => p.kind === 'tone' && p.type === 'sine' && p.f0 === 110 && p.f1 === 40) && S.parts.some(p => p.type === 'lowpass') && crackle(S) === 4 && S.secs <= 0.35, [crackle(S), S.secs.toFixed(2)].join());
+  check('a big ship dies with two thumps (a low one for a second, a higher one under it), a long rumble and eight bursts of crackle over half a second', Bg.parts.filter(p => p.kind === 'tone' && p.type === 'sine').length === 2 && Bg.parts.some(p => p.type === 'lowpass' && p.end >= 0.9) && crackle(Bg) === 8 && Bg.secs >= 1 && Bg.secs <= 1.1, [crackle(Bg), Bg.secs.toFixed(2)].join());
+  check('the big one is the bigger: longer, lower and louder than the small one, and neither is louder than the kill\'s boom of before (' + BOOM.peak.toFixed(2) + ')', Bg.secs > S.secs * 2.5 && Bg.peak > S.peak && Bg.peak <= BOOM.peak && S.peak < Bg.peak, [S.peak.toFixed(2), Bg.peak.toFixed(2)].join());
+  check('and neither takes more noise voices than the pool has (the crackle reuses two), so a kill and its neighbour at the same moment cut nothing', S.parts.filter(p => p.kind === 'noise').length <= 3 && Bg.parts.filter(p => p.kind === 'noise').length <= 3);
+  check('the shield hit is a bright zap: tones up high (triangle 1500 to 700, sine 2300 to 1700) and high-passed crackle, short (under 0.15 s)', SH.parts.filter(p => p.kind === 'tone').every(p => p.f0 >= 1500) && SH.parts.some(p => p.type === 'triangle' && p.f1 < p.f0 / 2) && SH.parts.some(p => p.type === 'highpass') && SH.secs <= 0.15, JSON.stringify(SH.parts.map(p => [p.type, Math.round(p.f0)])));
+  check('the hull hit is a dull clank: tones down low (sawtooth 190 to 60, square 100 to 52) and a band of noise around 900 Hz, short (under 0.2 s)', HH.parts.filter(p => p.kind === 'tone').every(p => p.f0 <= 200) && HH.parts.some(p => p.type === 'sawtooth' && p.f1 < p.f0 / 2) && HH.parts.some(p => p.type === 'bandpass' && p.f0 === 900) && HH.secs <= 0.2, JSON.stringify(HH.parts.map(p => [p.type, Math.round(p.f0)])));
+  check('so a shield hit and a hull hit are plainly two sounds: the lowest tone of one is above the highest of the other (700 Hz and 200 Hz), and neither is the game\'s own hit', Math.min(...SH.parts.filter(p => p.kind === 'tone').map(p => Math.min(p.f0, p.f1))) > Math.max(...HH.parts.filter(p => p.kind === 'tone').map(p => Math.max(p.f0, p.f1))) && JSON.stringify(SH.parts) !== JSON.stringify(HIT.parts) && JSON.stringify(HH.parts) !== JSON.stringify(HIT.parts));
+  check('neither hit is louder than the game\'s own hit effect (' + HIT.peak.toFixed(2) + ' added up): they come often', SH.peak <= HIT.peak && HH.peak <= HIT.peak && SH.peak > 0.03 && HH.peak > 0.03, [SH.peak.toFixed(3), HH.peak.toFixed(3)].join());
+  check('a shot on Earth is a deep thump felt more than heard: a sine falling 60 to 28 Hz and a low rumble under 300 Hz, half a second, under 0.15 added up', EH.parts.some(p => p.kind === 'tone' && p.type === 'sine' && p.f0 === 60 && p.f1 === 28) && EH.parts.some(p => p.type === 'lowpass' && p.f0 === 300) && EH.secs <= 0.55 && EH.peak <= 0.15, [EH.secs.toFixed(2), EH.peak.toFixed(3)].join());
+  // the sim says which: a hit on the carrier's hull and on its shield
+  g.run(`window.__hurt = (shield, dmg) => { window.C = campNew(1, [], { seed: 1 }); C.shield = shield; C.events.length = 0; campHurt(C, C.carrier, dmg, 'x'); return C.events.map(e => e.type + (e.hull === undefined ? '' : ':' + e.hull)); }`);
+  check('the sim tells the scene which: a shot the shield took whole is a shieldhit and a hit that did not reach the hull; one that got through is a hit on the hull (and a shieldhit too while the shield lasts)', J('__hurt(150, 10)').join() === 'shieldhit,hit:false' && J('__hurt(0, 10)').join() === 'hit:true' && J('__hurt(5, 10)').join() === 'shieldhit,hit:true', [J('__hurt(150, 10)').join(), J('__hurt(0, 10)').join(), J('__hurt(5, 10)').join()].join(' | '));
+  // the scene
+  g.run(`
+    window.__plays = []; window.__sfx1 = sfx; sfx = (name, a) => { __plays.push(name); };
+    window.__fakeSc = () => { const rec = () => { const p = new Proxy({}, { get: (t, k) => (k === 'then' ? undefined : (...a) => p) }); return p; };
+      const f = Object.create(Campaign.prototype); f.add = rec(); f.tweens = { add() {} }; f.cameras = { main: { shake() {} } }; f.boom = { explode() {} }; f.flash = () => {}; f.camp = campNew(1, [], { seed: 1 }); return f; };
+    window.__f = __fakeSc(); const at = (t, e) => { __f.camp.t = t; __f.onEvent(e); }; const c = __f.camp.carrier;
+    at(1000, { type: 'boom', x: 0, y: 0, big: false, kind: 'raider' }); at(1010, { type: 'boom', x: 0, y: 0, big: false, kind: 'drone' }); at(1100, { type: 'boom', x: 0, y: 0, big: true, kind: 'mother' });
+    at(2000, { type: 'hit', id: c.id, x: c.x, y: c.y, hull: true }); at(2020, { type: 'hit', id: c.id, x: c.x, y: c.y, hull: true }); at(2300, { type: 'hit', id: c.id, x: c.x, y: c.y, hull: false });
+    at(3000, { type: 'shieldhit', x: c.x, y: c.y }); at(3020, { type: 'shieldhit', x: c.x, y: c.y }); at(3200, { type: 'shieldhit', x: c.x, y: c.y });
+    at(4000, { type: 'earthhit', x: 1, y: 1 }); at(4100, { type: 'earthhit', x: 1, y: 1 }); at(4400, { type: 'earthhit', x: 1, y: 1 });
+    at(5000, { type: 'hit', id: 'raider-9', x: 1, y: 1, hull: true });
+    sfx = __sfx1;
+  `);
+  check('the scene plays them: a small kill and a big kill their own blast (a second kill within 45 ms is not played again), a hit on the carrier\'s hull the clank (once in 90 ms; a hit that did not get through plays none), a shot on the shield the zap, a shot on Earth the thump (once in 250 ms); a hit on an alien plays nothing (the turret\'s pew is its sound)', J('__plays').join() === 'blastSmall,blastBig,hullHit,shieldHit,shieldHit,earthHit,earthHit', J('__plays').join());
+  const sc = src('src/campaignscene.js');
+  check('the game\'s boom is no longer the Campaign\'s kill sound, and the gaps are one table in the scene (CAMP_SND)', !/e\.type === 'boom'\) \{[^}]*sfx\('boom'\)/.test(sc) && /const CAMP_SND = \{ blast: 45, hull: 90, shield: 90, earth: 250 \}/.test(sc));
+  check('their reverb: the big blast 0.4 (under the dock\'s 0.45: the kill, the jump, the arrival and the dock keep the longest tails), the small one 0.3, the Earth thump 0.3, the zap 0.15, the clank 0.1', J('SOUND.send.blastBig') === 0.4 && J('SOUND.send.blastSmall') === 0.3 && J('SOUND.send.earthHit') === 0.3 && J('SOUND.send.shieldHit') === 0.15 && J('SOUND.send.hullHit') === 0.1);
+}
+
 // ---------- ALL. the rules every one of them keeps ----------
 console.log('ALL. the rules');
 {
@@ -168,7 +217,8 @@ console.log('ALL. the rules');
   check('muted, or volume 0, or the effects at 0: no sound is made at all (no context, no pool)', NEW.every(k => { g.run(`__reset(true, 1); sfx('${k}', 2)`); const a = J('__made') === 0 && J('AUD.pool') === null; g.run(`__reset(false, 0); sfx('${k}', 2)`); const b = J('__made') === 0 && J('AUD.pool') === null; g.run(`__reset(false, 1, 0); sfx('${k}', 2)`); return a && b && J('__made') === 0; }));
   check('the effects volume of Settings > Sound scales every one (half the volume, half the level)', NEW.every(k => { const full = J(`(__reset(false, 1, 1), __render('${k}', 2).peak)`), half = J(`(__render('${k}', 2, () => { FX.vol = 0.5; }).peak)`); return Math.abs(half / full - 0.5) < 0.02; }));
   check('the master volume and M are the master gain, as for every effect: nothing here sets the master', !/AUD\.master\.gain\.(value|setTarget)[^\n]*campaign|SFX_BUILT[^\n]*master/i.test(src('src/audio.js')));
-  check('the ship\'s voice stays louder than the effects: the effects are all at the level of a laser or under, and the voice is not in the effects volume (it is not scaled by FX.vol)', NEW.every(k => R(k, 3).peak <= 0.3));
+  const KILL = R('boom').peak;
+  check('no sound of the Campaign is louder than the game\'s own kill (' + KILL.toFixed(2) + ' added up), and the ship\'s voice is not scaled by the effects volume, so the voice stays above them (it is on the master, not on FX.vol)', NEW.every(k => R(k, 3).peak <= KILL + 1e-9) && !/FX\./.test(src('src/voice.js')) && !/FX\.vol/.test(src('src/shipcomputer.js')));
 }
 
 console.log(failed ? `\nCAMPSOUNDS FAIL (${failed} of ${n})` : `\nCAMPSOUNDS PASS (${n})`);
