@@ -7,6 +7,7 @@ import { nodeGame } from './nodegame.mjs';
 let failed = 0;
 const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + name + (detail ? '  ' + detail : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + detail + ')' : ''}`); } };
 const g = nodeGame();
+g.run('CAMP.levels[1] = CAMP.levels.home'); // level 1 is the asteroid belt now (card space-game-campaign-belt); this test is about the Earth level (its Earth, convoys and wave times), kept as data under "home"
 const J = e => JSON.parse(g.run(`JSON.stringify(${e})`));
 const run = J(`(() => {
   const C = campNew(1, [], { seed: 3 }); campOrder(C, 'launch'); for (let i = 0; i < 25 * 30; i++) { campStep(C, 1 / 30); C.events.length = 0; }
