@@ -22,7 +22,7 @@ g.run(`
 console.log('A. the table');
 {
   const T = J('CAMP_PANELS');
-  check('two panels: key 1 FLEET at the left, key 2 SHIP at the right', T.panels.length === 2 && T.panels[0].key === '1' && T.panels[0].side === 'left' && T.panels[0].title === 'FLEET' && T.panels[1].key === '2' && T.panels[1].side === 'right' && T.panels[1].title === 'SHIP');
+  check('three panels: key 1 FLEET at the left, key 2 SHIP at the right, and SYSTEMS on the letter C (card space-game-campaign-systems)', T.panels.length === 3 && T.panels[2].key === 'C' && T.panels[2].code === 'KeyC' && T.panels[2].id === 'systems' && T.panels[2].rows.length === 5 && T.panels[0].key === '1' && T.panels[0].side === 'left' && T.panels[0].title === 'FLEET' && T.panels[1].key === '2' && T.panels[1].side === 'right' && T.panels[1].title === 'SHIP');
   check('each has five rows, numbered 1 to 5, each with a label and a line for the help page', T.panels.every(p => p.rows.map(r => r.n).join() === '1,2,3,4,5' && p.rows.every(r => r.label && r.help && r.id)));
   check('the fleet rows are launch, attack, escort, guard, recall; the ship rows mine, recharge, build a fighter, build an escort, fly to the objective', T.panels[0].rows.map(r => r.order).join() === 'launch,attack,escort,guard,recall' && T.panels[1].rows.map(r => r.order || r.fly).join() === 'mine,recharge,build,build,objective' && T.panels[1].rows[2].arg === 'fighter' && T.panels[1].rows[3].arg === 'escort');
   check('key 3 is reserved: no panel has it and no row is bound to it', !T.panels.some(p => p.key === '3') && J(`campPanelKey(campPanelNew(), campNew('home', [], { seed: 1 }), 'Digit3', 0).opened`) === '');
@@ -31,8 +31,8 @@ console.log('A. the table');
   check('every order the table names is one the game knows (campOrder never answers "what")', J(`CAMP_PANELS.panels.flatMap(p => p.rows).filter(r => r.order).every(r => campCheck(__C, r.order, r.arg || '').code !== 'what')`));
   const codes = J(`(() => { const out = new Set(); for (const lvl of [1, 2]) { const C = __quiet(campNew(lvl, [], { seed: 1 })); for (let k = 0; k < 6; k++) { CAMP_PANELS.panels.flatMap(p => p.rows).filter(r => r.order).forEach(r => { const q = campCheck(C, r.order, r.arg || ''); if (!q.ok) out.add(q.code); }); if (k === 0) campOrder(C, 'launch'); if (k === 1) __run(C, 5); if (k === 2) { C.ore = 0; } if (k === 3) { C.shield = 150; } } } return [...out]; })()`);
   check('every refusal the rows meet has its few words in the table', codes.length >= 5 && codes.every(c => J(`!!CAMP_PANELS.why['${c}']`)), codes.join());
-  check('the table is the one source: the settings and help rows are made from it (campPanelKeyRows: 10 rows, the panel key then the digit)', J(`campPanelKeyRows().length`) === 10 && J(`campPanelKeyRows()[2].k.join()`) === '1,3' && J(`campPanelKeyRows()[7].k.join()`) === '2,3');
-  check('the key line says the panels from the table: 1 Fleet   2 Ship', J('campPanelKeyLine()') === '1 Fleet   2 Ship');
+  check('the table is the one source: the settings and help rows are made from it (campPanelKeyRows: 15 rows, the panel key then the digit)', J(`campPanelKeyRows().length`) === 15 && J(`campPanelKeyRows()[12].k.join()`) === 'C,3' && J(`campPanelKeyRows()[2].k.join()`) === '1,3' && J(`campPanelKeyRows()[7].k.join()`) === '2,3');
+  check('the key line says the panels from the table: 1 Fleet   2 Ship   C Systems', J('campPanelKeyLine()') === '1 Fleet   2 Ship   C Systems');
 }
 
 console.log('B. the live state of each row');

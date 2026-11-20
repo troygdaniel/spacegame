@@ -163,17 +163,22 @@ sec('E', () => {
 });
 
 sec('F', () => {
-  g.run("localStorage.removeItem('longhaul.campaign')");
-  check('F  a save with no setting starts at 2 / 2 / 2', JSON.stringify(J('campProgressLoad().power')) === '[2,2,2]' && JSON.stringify(J('campProgressNew().power')) === '[2,2,2]');
-  g.run("campProgressSave({ level: 2, techs: [], ore: 0, bonus: { fighters: 0, escorts: 0 }, power: [3, 2, 1] })");
-  check('F  the setting is saved and read back', JSON.stringify(J('campProgressLoad().power')) === '[3,2,1]');
-  [[5, 1, 0], [4, 4, -2], [2, 2, 1], [1, 1, 1], '3,2,1', null, [2, 2], [2.5, 2, 1.5], ['a', 2, 4], [7, 0, -1]].forEach(b => {
-    store.set('longhaul.campaign', JSON.stringify({ level: 1, power: b })); g.run('0');
-    check(`F  a bad setting ${JSON.stringify(b)} is 2 / 2 / 2`, JSON.stringify(J('campProgressLoad().power')) === '[2,2,2]');
+  g.run("localStorage.removeItem('longhaul.campaign.power')");
+  check('F  with nothing saved the setting is 2 / 2 / 2', JSON.stringify(J('campPowerLoad()')) === '[2,2,2]');
+  g.run("campPowerSave([3, 2, 1])");
+  check('F  the setting is saved (in this browser, under its own key beside the campaign\'s) and read back', JSON.stringify(J('campPowerLoad()')) === '[3,2,1]' && store.get('longhaul.campaign.power') === '[3,2,1]');
+  [[5, 1, 0], [4, 4, -2], [2, 2, 1], [1, 1, 1], '3,2,1', null, [2, 2], [2.5, 2, 1.5], ['a', 2, 4], [7, 0, -1], {}].forEach(b => {
+    store.set('longhaul.campaign.power', JSON.stringify(b)); g.run('0');
+    check(`F  a bad setting ${JSON.stringify(b)} is 2 / 2 / 2`, JSON.stringify(J('campPowerLoad()')) === '[2,2,2]');
   });
-  g.run("localStorage.removeItem('longhaul.campaign'); campProgressSave({ level: 1, techs: [], ore: 0, bonus: { fighters: 0, escorts: 0 } })");
-  check('F  a save written by a caller that does not know the setting is 2 / 2 / 2, and keeps a setting that was there', JSON.stringify(J('campProgressLoad().power')) === '[2,2,2]' && (g.run("campProgressSave({ level: 1, techs: [], ore: 0, bonus: { fighters: 0, escorts: 0 }, power: [1, 2, 3] }); campProgressSave({ level: 2, techs: [], ore: 0, bonus: { fighters: 0, escorts: 0 } })"), JSON.stringify(J('campProgressLoad().power')) === '[1,2,3]'));
-  check('F  a battle starts at the saved setting (opts.power), and at 2 / 2 / 2 when it is not one', JSON.stringify((g.run(NEW([1, 2, 3])), J('C.power.p'))) === '[1,2,3]' && JSON.stringify((g.run(NEW([9, 9, 9])), J('C.power.p'))) === '[2,2,2]' && JSON.stringify((g.run(NEW([1, 2, 3])), J('C.power.base'))) === '[1,2,3]');
+  store.set('longhaul.campaign.power', '{not json'); check('F  a broken save is 2 / 2 / 2 and does not throw', JSON.stringify(J('campPowerLoad()')) === '[2,2,2]');
+  g.run("campPowerSave([3, 2, 1]); campPowerSave([9, 9, 9]); campPowerSave('x')");
+  check('F  a bad setting is never saved over a good one', JSON.stringify(J('campPowerLoad()')) === '[3,2,1]');
+  check('F  the campaign\'s own progress save is untouched (no power in it: a save from before this card still loads)', !('power' in J('campProgressLoad()')));
+  check('F  a battle starts at the setting it is given (opts.power), and at 2 / 2 / 2 when that is not one', JSON.stringify((g.run(NEW([1, 2, 3])), J('C.power.p'))) === '[1,2,3]' && JSON.stringify((g.run(NEW([9, 9, 9])), J('C.power.p'))) === '[2,2,2]' && JSON.stringify((g.run(NEW([1, 2, 3])), J('C.power.base'))) === '[1,2,3]');
+  check('F  and it starts with a full shield for that setting (225 at 4 pips, 75 at 0)', (g.run(NEW([1, 4, 1])), close(J('C.shield'), 225)) && (g.run(NEW([3, 0, 3])), close(J('C.shield'), 75)) && (g.run(NEW([2, 2, 2])), close(J('C.shield'), 150)));
+  g.run(NEW([3, 2, 1])); g.run("__go(1); campOrder(C, 'emergency', '', 'key'); __go(2)");
+  check('F  the emergency is never the setting: while it runs the setting (base) is still 3 / 2 / 1, and that is what the scene saves', JSON.stringify(J('C.power.base')) === '[3,2,1]' && JSON.stringify(J('C.power.p')) === '[1,4,1]');
 });
 
 sec('G', () => {
@@ -202,9 +207,37 @@ sec('G', () => {
   check('G  the wing\'s radio calls both (a "shields" and an "engines" call, with lines of their own)', JSON.stringify(ch) === '["shields","engines"]' && ['shields', 'engines'].every(e => J(`!!CHATTER.events.${e}`) && J(`uiText('camp.chat.${e}.1')`) !== `camp.chat.${e}.1`));
 });
 
+sec('J', () => {
+  const T = J("CAMP_PANELS.panels.find(p => p.id === 'systems')");
+  check('J  the SYSTEMS panel is data of the panels table: key C, left, five rows (weapons +, shields +, engines +, balance, emergency shields), each an order the game has', T && T.key === 'C' && T.code === 'KeyC' && T.side === 'left' && T.rows.length === 5 && T.rows.map(r => r.n).join() === '1,2,3,4,5' && T.rows.map(r => r.order + ':' + (r.arg || '')).join() === 'power:weapons,power:shields,power:engines,balance:,emergency:', JSON.stringify(T));
+  g.run(NEW([2, 2, 2])); g.run("window.__P = campPanelNew()");
+  const key = (c, t) => J(`campPanelKey(__P, C, ${JSON.stringify(c)}, ${t || 0})`);
+  let r = key('KeyC', 0);
+  check('J  the key C opens the panel (and is its own: no other action takes it)', r.used === true && r.opened === 'systems' && J('__P.open') === 'systems', JSON.stringify(r));
+  r = key('Digit2', 10);
+  check('J  then a digit picks a row: 2 is "power to shields", the panel closes and the pips move (1 / 3 / 2)', r.ran === true && r.ok === true && r.say === 'Power to shields.' && J('__P.open') === '' && JSON.stringify(J('C.power.p')) === '[1,3,2]', JSON.stringify([r, J('C.power.p')]));
+  g.run("__P.open = 'systems'");
+  const rows = J("campPanelRows(C, 'systems')");
+  check('J  each row shows its live state: the pips and what they do, "now 1 / 3 / 2", the emergency\'s length', rows.length === 5 && /^1 pips: turrets x0\.77$/.test(rows[0].state) && /^3 pips: shield 18[78]$/.test(rows[1].state) && /^2 pips: speed x1\.00$/.test(rows[2].state) && rows[3].state === 'now 1 / 3 / 2' && /10 s of shields/.test(rows[4].state) && rows.every(x => x.ok), JSON.stringify(rows));
+  check('J  the heading line says the pips (and the emergency while it runs)', J("campPanelHead(C, 'systems')") === 'W 1  S 3  E 2');
+  g.run("campOrder(C, 'power', 'shields', 'key'); campOrder(C, 'power', 'shields', 'key')");
+  const full = J("campPanelRows(C, 'systems')");
+  check('J  a system at 4 pips says so, greyed ("at full power")', full[1].ok === false && full[1].state === 'at full power', JSON.stringify(full[1]));
+  g.run("campOrder(C, 'emergency', '', 'key'); __go(1)");
+  const em = J("campPanelRows(C, 'systems')"), hd = J("campPanelHead(C, 'systems')");
+  check('J  in an emergency every row says the power is held, and the heading counts the seconds', em.every(x => x.ok === false && x.state === 'running: the power is held') && /emergency \d+ s$/.test(hd), JSON.stringify([em[0], hd]));
+  g.run("__go(10)");
+  const cool = J("campPanelRows(C, 'systems')");
+  check('J  after it, the emergency row counts down: "ready in 29 s" (40 s from its start)', cool[4].ok === false && /^ready in \d+ s$/.test(cool[4].state) && cool.slice(0, 4).every(x => x.ok !== undefined), JSON.stringify(cool[4]));
+  g.run("__P.open = 'fleet'");
+  r = key('KeyC', 20);
+  check('J  with another panel open, C closes it and does not open a second', J('__P.open') === '' && r.closed === true && !r.opened, JSON.stringify(r));
+  check('J  the key line says the three panels: "1 Fleet   2 Ship   C Systems"', J('campPanelKeyLine()') === '1 Fleet   2 Ship   C Systems');
+});
+
 sec('H', () => {
   const sc = read('src/campaignscene.js');
-  check('H  the scene starts a battle at the saved setting and saves a change of it (the setting, never the emergency: C.power.base)', /power: this\.P\.power/.test(sc) && /C\.power\.base/.test(sc) && /campProgressSave\(this\.P\)/.test(sc));
+  check('H  the scene starts a battle at the saved setting and saves a change of it (campPowerLoad / campPowerSave of C.power.base: the setting, never the emergency)', /power: campPowerLoad\(\)/.test(sc) && /campPowerSave\(C\.power\.base\)/.test(sc));
   check('H  the HUD draws the three pip bars, W S E, from the live pips (C.power.p)', /C\.power\.p/.test(sc) && /'W'/.test(sc) && /'S'/.test(sc) && /'E'/.test(sc));
   check('H  the blink\'s READY and seconds on the HUD read the engines\' recharge (campBlinkCooldown)', /campBlinkCooldown\(/.test(sc));
   check('H  no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));

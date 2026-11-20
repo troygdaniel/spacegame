@@ -101,7 +101,7 @@ console.log('C. the scene\'s keys');
   g.run(`__k('Escape');`);
   check('Esc with nothing open pauses as it always did; H on the pause card opens the page over it and Esc closes it back to the card', J('F.mode') === 'pause' && (g.run(`__k('KeyH')`), J('F.ck && F.ck.open') === true && J('F.mode') === 'pause') && (g.run(`__k('Escape')`), J('F.ck') === null && J('F.mode') === 'pause'));
   g.run(`__k('Escape');`);
-  check('the pause card names the panels and H, from the table', /1 Fleet, 2 Ship open the panels/.test(J(`uiText('camp.ui.pausepanels', { panels: campPanelKeyLine().replace(/   /g, ', ') })`)) && /H  all keys/.test(J(`uiText('camp.ui.paused')`)) && /campPanelKeyLine\(\)\.replace/.test(src('src/campaignscene.js')));
+  check('the pause card names the panels and H, from the table', /1 Fleet, 2 Ship, C Systems open the panels/.test(J(`uiText('camp.ui.pausepanels', { panels: campPanelKeyLine().replace(/   /g, ', ') })`)) && /H  all keys/.test(J(`uiText('camp.ui.paused')`)) && /campPanelKeyLine\(\)\.replace/.test(src('src/campaignscene.js')));
 }
 
 console.log('D. the H page');
