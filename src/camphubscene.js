@@ -25,7 +25,7 @@ class CampHub extends Phaser.Scene {
   constructor() { super('CampHub'); }
   init(d) { this.d = d || {}; this.leaving = false; } // d: the scene data above (all of it optional)
   create() {
-    this.P = campProgressLoad(); this.hub = campHubNew(this.P, { rows: this.d.rows, at: this.d.at }); this.msg = null; this.walls = [];
+    this.P = this.d.P || campProgressLoad(); this.hub = campHubNew(this.P, { rows: this.d.rows, at: this.d.at }); // a dock hands in the Campaign scene's own progress, so what is bought there is not overwritten at the debrief this.msg = null; this.walls = [];
     const nx = campHubNext(this.P), st = Object.assign({}, campHubStation(nx.level), this.d.station && typeof this.d.station === 'object' ? this.d.station : {}), css = /^#[0-9a-f]{6}$/i.test(st.accent) ? st.accent : campHubStation(nx.level).accent;
     this.look = { id: 'camp-hub', name: String(st.name), art: st.art, home: false, accent: parseInt(css.slice(1), 16), accentCss: css, pirate: false, // what src/stationlook.js answers for a dock: the hall's colour, and the desks in it (a mission desk and a repair bay, no bar, shop or pump)
       terminals: { missions: true, repair: true, shop: false, pump: false, bar: false }, barName: '', barLines: [], welcome: '' };
@@ -86,11 +86,11 @@ class CampHub extends Phaser.Scene {
 
   // everything on the glass from the state: rows, foot and the page of the chosen row
   paint() {
-    const P = this.P, H = this.hub, Li = CAMP_HUBS.list, rows = campHubRows(P, H.rows), id = H.rows[H.row], nx = campHubNext(P);
+    const P = this.P, H = this.hub, Li = CAMP_HUBS.list, rows = campHubRows(P, H.rows, this.d), id = H.rows[H.row], nx = campHubNext(P);
     this.titleT.setText(uiText('camp.hub.title', { name: this.look.name.toUpperCase() })); this.lvT.setText(uiText('camp.hub.level', { n: nx.level, name: CAMP.levels[nx.level].name }));
     rows.forEach((r, k) => { const o = this.rowT[k]; o.name.setText(r.name).setColor(k === H.row ? '#ffffff' : '#cfefff'); o.note.setText(r.note).setColor(k === H.row ? '#ffd37a' : '#8fb4c9'); o.cap.setBackgroundColor(k === H.row ? '#ffb454' : '#9fe9ff'); });
     this.bar.setY(Li.y + H.row * this.rowH + this.rowH / 2); this.barEdge.setY(this.bar.y);
-    this.footT.setText(campHubFoot(id));
+    this.footT.setText(campHubFoot(id, this.d));
     Object.keys(this.slots).forEach(k => this.slots[k].setVisible(false));
     const page = CAMP_HUBS.page[id]; if (page) page(this);
   }
@@ -120,6 +120,7 @@ class CampHub extends Phaser.Scene {
     this.line(i++, 0, uiText('camp.hub.refit.wing', { f: r.wing.fighters, e: r.wing.escorts }), '#e8f6ff');
     this.line(i++, 0, uiText('camp.hub.refit.extra', { xf: r.extra.fighters, xe: r.extra.escorts, most: r.most }), '#8fb4c9');
     i++; this.line(i++, 0, uiText('camp.hub.refit.buy', { fc: r.fc, ec: r.ec }), '#9fe9ff');
+    this.line(i++, 0, r.fab.owned ? uiText('camp.hub.refit.fitted') : uiText('camp.hub.refit.fab', { cost: r.fab.cost }), r.fab.owned ? '#6dff9c' : '#9fe9ff');
     if (this.msg && this.msg.until > this.time.now) this.line(i + 1, 0, this.msg.text, this.msg.ok ? '#6dff9c' : '#ffb454');
   }
   pageRank() {
@@ -152,7 +153,7 @@ class CampHub extends Phaser.Scene {
   // ----- the keys and the clicks -----
   onKey(e) {
     if (e.repeat || this.leaving) return;
-    const r = campHubKey(this.hub, this.P, e.code); if (!r.used) return;
+    const r = campHubKey(this.hub, this.P, e.code, this.d); if (!r.used) return;
     if (e.preventDefault && (e.code === 'Backspace' || e.code === 'Tab')) e.preventDefault();
     this.apply(r);
   }
@@ -162,7 +163,7 @@ class CampHub extends Phaser.Scene {
     this.hub.row = k; this.apply({ used: true, moved: true, action: '', changed: false, ok: true, say: null });
   }
   apply(r) {
-    if (r.say) { this.msg = { text: uiText(r.say.key, r.say.vars), ok: r.ok, until: this.time.now + CAMP_HUBS.msg }; sfx(r.ok ? 'chime' : 'empty'); }
+    if (r.say) { this.msg = { text: r.say.text != null ? String(r.say.text) : uiText(r.say.key, r.say.vars), ok: r.ok, until: this.time.now + CAMP_HUBS.msg }; sfx(r.ok ? 'chime' : 'empty'); }
     if (r.changed) campProgressSave(this.P); // a purchase is kept at once
     if (r.moved) { sfx('tick'); this.stand(false); }
     this.paint();

@@ -452,21 +452,21 @@ console.log('L. ore: asteroid rocks and wrecks, mining, the carrier shield, rech
   check('with no name, near Earth and Earth under 90 percent, it is Earth that is recharged; with Earth near full it is the carrier', (() => { g.run('C.earth.shield = 100; campHurt(C, C.carrier, 10, "x")'); const a = J(`campOrder(C, 'recharge', '')`); const earth1 = J('C.earth.shield'); g.run('C.earth.shield = 590; C.ore = 100; campHurt(C, C.carrier, 10, "x")'); const b = J(`campOrder(C, 'recharge', '')`); return a.say === "Earth's shield recharged." && earth1 === 300 && b.say === 'Carrier shield recharged.' && J('C.earth.shield') === 590; })());
   g.run('C.earth.shield = 100; C.carrier.x = C.earth.x + 3000; C.ore = 100');
   check('too far from Earth, Recharge Earth says so; Earth full says so; no Earth (level 2) says so', J(`campOrder(C, 'recharge', 'earth').say`) === 'We are too far from Earth to recharge it.' && (g.run('C.carrier.x = C.earth.x + 300; C.earth.shield = 600'), J(`campOrder(C, 'recharge', 'earth').say`) === "Earth's shield is already full.") && (N(2), g.run('C.ore = 100'), J(`campOrder(C, 'recharge', 'earth').say`) === 'There is no Earth here, pilot.'));
-  // build
-  N("home"); g.run('C.ore = 100');
+  // build (docked at an outpost: card space-game-campaign-outposts; tests/campoutpost.mjs has the rule itself)
+  N("home"); g.run('C.ore = 100; C.docked = "luna"');
   const b1 = J(`campOrder(C, 'build', 'fighter')`);
   check('Build a fighter: 25 ore at once, one is queued, the answer says so', b1.ok && b1.say === 'Building 1 fighter.' && J('C.ore') === 75 && J('C.build.queue.length') === 1 && J('C.orders.build') === 1);
   g.run('__run(5.9)'); const early = J('C.bay.fighters');
   g.run('__run(0.3)');
   check('it is in the bay after 6 seconds, not before, and the game says so', early === 6 && J('C.bay.fighters') === 7 && g.run('C.events.filter(e => e.type === "say").map(e => e.key).join()').includes('camp.say.built'));
-  N("home"); g.run('C.ore = 200; campOrder(C, "build", "two escorts"); __run(9.9)');
+  N("home"); g.run('C.ore = 200; C.docked = "luna"; campOrder(C, "build", "two escorts"); __run(9.9)');
   const e0 = J('C.bay.escorts'); g.run('__run(0.3)'); const e1 = J('C.bay.escorts'); g.run('__run(10)');
   check('two escorts cost 90 ore at once and are built one after the other: the first at 10 s (bay 2 to 3), the second at 20 s (to 4)', J('C.ore') === 110 && e0 === 2 && e1 === 3 && J('C.bay.escorts') === 4);
-  N("home"); g.run('C.ore = 10');
+  N("home"); g.run('C.ore = 10; C.docked = "luna"');
   check('with too little ore: "Not enough ore: 25 needed, 10 in the store." and nothing is queued', J(`campOrder(C, 'build', 'fighter').say`) === 'Not enough ore: 25 needed, 10 in the store.' && J('C.build.queue.length') === 0 && J('C.ore') === 10);
-  g.run('C.ore = 200; campOrder(C, "build", "five fighters"); __run(0.1)');
+  g.run('C.ore = 200; C.docked = "luna"; campOrder(C, "build", "five fighters"); __run(0.1)');
   check('the bay holds 14 fighters at most, counting the queue: six in the bay and five queued is eleven; three more are the last, a fourth is refused', J(`campOrder(C, 'build', 'three fighters').ok`) && J(`campOrder(C, 'build', 'fighter').say`) === 'The bay cannot hold more of those, pilot.' && J('C.build.queue.length') === 8);
-  g.run('__new2("home", [], 1); C.ore = 200; campOrder(C, "build", "fighter"); __run(6.1); campOrder(C, "launch"); __run(6)');
+  g.run('__new2("home", [], 1); C.ore = 200; C.docked = "luna"; campOrder(C, "build", "fighter"); __run(6.1); campOrder(C, "launch"); __run(6)');
   check('what is built is launched with Launch like the rest: seven fighters out', J(`campWing(C, 'fighter').length`) === 7);
   // plain words
   const I = x => J(`campIntent(${JSON.stringify(x)})`);
@@ -476,14 +476,14 @@ console.log('L. ore: asteroid rocks and wrecks, mining, the carrier shield, rech
   check('"build fighters", "build an escort", "build two fighters", "make 3 escorts" are Build, the kind and the number in the words', act('build fighters', 'fleet_build') && /escort/.test(I('build an escort').arg) && /two fighters/.test(I('build two fighters').arg) && /3 escorts/.test(I('make 3 escorts').arg) && !I('how do I build a ship') );
   check('a question about mining is the model\'s, and the Long Haul words are not taken for these ("how do I mine", "what is ore")', I('how do I mine') === null && I('what is ore') === null);
   // the doors
-  N("home"); g.run('__scene.camp = C; C.ore = 100; campHurt(C, C.carrier, 150, "x")');
+  N("home"); g.run('__scene.camp = C; C.ore = 100; C.docked = "luna"; campHurt(C, C.carrier, 150, "x")');
   const loc = x => J(`(() => { const p = shipcompLocal(${JSON.stringify(x)}, __scene); return p ? { text: p.text, action: p.action, refused: p.refused, run: !!p.run } : null; })()`);
   check('typed or spoken, they are acts of the closed list (fleet_mine, fleet_recharge, fleet_build), checked first and run after: "recharge shields" costs nothing until its run', (() => { const r = loc('recharge shields'); return r && r.action === 'fleet_recharge' && r.text === 'Carrier shield recharged.' && J('C.shield') === 0 && J('C.ore') === 100; })() && (g.run('shipcompLocal("recharge shields", __scene).run(__scene)'), J('C.shield') === 150 && J('C.ore') === 75));
   check('"build two fighters" typed: 50 ore and two queued after the run; "mine" before launch is refused in words', (() => { g.run('shipcompLocal("build two fighters", __scene).run(__scene)'); return J('C.ore') === 25 && J('C.build.queue.length') === 2 && loc('mine').refused === true; })());
   check('the model is told the eight orders, the ore and the two panels', (() => { const sys = J('shipcompSystem(__scene)'); return /fleet_mine \| fleet_recharge/.test(sys) && /fleet_build/.test(sys) && /key 2 the SHIP panel/.test(sys) && /2 recharge shields/.test(sys) && /Ore in the store/.test(sys); })());
   check('every word the new orders can say is in content/text/campaign.md (ui.md is full at 200 rows)', (() => { const md = src('content/text/ui.md') + src('content/text/campaign.md'), ks = ['mine', 'recharge', 'rechargeearth', 'build', 'built'].map(k => 'camp.say.' + k).concat(['noore', 'noore2', 'noearth', 'farearth', 'earthfull', 'shieldfull', 'buildfull'].map(k => 'camp.no.' + k), ['camp.ui.ore', 'camp.ui.shield']); const miss = ks.filter(k => !md.includes('| ' + k + ' |') || J(`uiText('${k}')`) === k); return miss.length === 0 || miss.join(); })());
   // the scene, on the stand-in
-  g.run(`go = (s, key, data) => { __went.push({ key, data }); }; toast = (s, msg) => { __toasts2.push(msg); }; window.F = __fake(1, {}); F.onKey({ code: 'Enter' }); F.onKey({ code: 'Enter' }); F.camp.ore = 100; campHurt(F.camp, F.camp.carrier, 150, 'x'); __toasts2.length = 0; 0`);
+  g.run(`go = (s, key, data) => { __went.push({ key, data }); }; toast = (s, msg) => { __toasts2.push(msg); }; window.F = __fake(1, {}); F.onKey({ code: 'Enter' }); F.onKey({ code: 'Enter' }); F.camp.ore = 100; F.camp.docked = 'luna'; campHurt(F.camp, F.camp.carrier, 150, 'x'); __toasts2.length = 0; 0`); // docked: ships are built only docked at an outpost (tests/campoutpost.mjs)
   const two = (a, b) => g.run(`F.onKey({ code: 'Digit${a}' }); F.onKey({ code: 'Digit${b}' })`);
   two(2, 2); const t7 = J('__toasts2.pop()');
   two(2, 3); const t8 = J('__toasts2.pop()');
@@ -502,7 +502,8 @@ console.log('L. ore: asteroid rocks and wrecks, mining, the carrier shield, rech
       if (s > 15 && Math.round(s * 30) % 600 === 100 && campAliens(C).length < 3) campOrder(C, 'mine');
       if (Math.round(s * 30) % 60 === 7) { if (C.shield < 60) campOrder(C, 'recharge', ''); if (C.earth && C.earth.shield < C.earth.max * 0.6) campOrder(C, 'recharge', 'earth'); if (C.ore >= 60) campOrder(C, 'build', 'fighter'); if (C.bay.fighters > 0 && !C.launchQ.length) campOrder(C, 'launch'); }
     };
-    window.__plays2 = (script, secs) => [1, 2, 3, 4, 5, 6].map(sd => { window.C = campNew("home", [], { seed: sd }); for (let i = 0; i < secs * 30 && !C.result; i++) { script(C, i / 30); campStep(C, 1 / 30); C.events.length = 0; } return { r: C.result, t: Math.round(C.t / 1000), ls: C.lostShips, built: C.orders.build, mined: C.orders.mine }; });
+    window.__plays2 = (script, secs) => [1, 2, 3, 4, 5, 6].map(sd => { window.C = campNew("home", ["fabricator"], { seed: sd }); // the Fabricator: this player builds wherever it is
+    for (let i = 0; i < secs * 30 && !C.result; i++) { script(C, i / 30); campStep(C, 1 / 30); C.events.length = 0; } return { r: C.result, t: Math.round(C.t / 1000), ls: C.lostShips, built: C.orders.build, mined: C.orders.mine }; });
   `);
   const withOre = J('__plays2(__ore, 600)'), without = J('__plays2(__stay, 600)');
   check('a player who also mines, recharges and builds wins level 1 on every seed, and loses fewer small ships than the same player without ore (6 seeds together)', withOre.every(r => r.r === 'won') && withOre.reduce((a, r) => a + r.ls, 0) < without.reduce((a, r) => a + r.ls, 0) && withOre.some(r => r.built > 0), JSON.stringify([withOre.map(r => r.ls), without.map(r => r.ls)]));

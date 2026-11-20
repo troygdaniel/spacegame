@@ -23,6 +23,7 @@ function campNavGoal(C) {
   try {
     const L = (C.L || CAMP.levels[C.level]), pl = campPlaces(C.level), c = C.carrier, near = list => list.slice().sort((a, b) => campDist(a, c) - campDist(b, c))[0] || null;
     const ship = (u, kind, name) => ({ id: kind === 'mother' ? 'mother' : kind + ':' + u.id, kind, name, x: u.x, y: u.y, r: u.r || 0, moving: u.vmax > 0, ref: u.id });
+    const rt = typeof campRetreat === 'function' ? campRetreat(C) : null; if (rt) return { id: 'place:' + rt.o.id, kind: 'place', name: rt.o.place, x: rt.o.x, y: rt.o.y, r: rt.o.r }; // low on hull with no ship left: the goal is the nearest outpost (src/campoutpost.js)
     if (L.win === 'mother') {
       const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); if (m) return ship(m, 'mother', uiText('camp.nav.mother'));
       const cv = near(campConvoys(C)); if (cv) return ship(cv, 'convoy', uiText('camp.nav.convoy', { name: campConvoyName(cv) }));
@@ -42,7 +43,8 @@ function campNavGoal(C) {
 // the one list. Each row: id (place:<id>, convoy:<ship id>, cache:<n>, relic, wing, goal), kind, group, name, x, y, r, dist (from the carrier), moving
 function campNavRows(C) {
   const pl = campPlaces(C.level), c = C.carrier, rows = [], add = r => { r.dist = Math.hypot(r.x - c.x, r.y - c.y); rows.push(r); return r; };
-  Object.keys(pl).forEach(id => { const p = pl[id]; if (!p.hidden) add({ id: 'place:' + id, kind: 'place', group: 'places', name: String(p.name), x: p.x, y: p.y, r: p.r || 60, far: !!p.far, star: p.kind === 'star' }); });
+  const posts = C.level != null && CAMP.levels[C.level] && CAMP.levels[C.level].outposts || {}; // the friendly outposts of the level: a place in the list that is one says so (the map marks it with a station)
+  Object.keys(pl).forEach(id => { const p = pl[id]; if (!p.hidden) add({ id: 'place:' + id, kind: 'place', group: 'places', name: String(p.name), x: p.x, y: p.y, r: p.r || 60, far: !!p.far, star: p.kind === 'star', outpost: !!posts[id] }); });
   campConvoys(C).forEach(u => add({ id: 'convoy:' + u.id, kind: 'convoy', group: 'convoys', name: uiText('camp.nav.convoy', { name: campConvoyName(u) }), x: u.x, y: u.y, r: u.r || 22, moving: true, ref: u.id }));
   C.caches.forEach((k, i) => { if (!k.got) add({ id: 'cache:' + i, kind: 'cache', group: 'finds', name: uiText('camp.nav.cache', { n: i + 1 }), x: k.x, y: k.y, r: 0 }); });
   if (C.relic) add({ id: 'relic', kind: 'relic', group: 'finds', name: uiText('camp.nav.relic'), x: C.relic.x, y: C.relic.y, r: 0 });
