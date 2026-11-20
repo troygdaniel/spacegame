@@ -17,7 +17,7 @@ const t = await launch('?campaign=1', ROOT);
 try {
   const SC = `game.scene.getScene('Campaign')`, j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`));
   await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
-  await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', repeat: false }); return 1; })()`); await t.run(300); // the intro card
+  for (let i = 0; i < 4 && (await j(`${SC}.mode`)) !== 'play'; i++) { await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', repeat: false }); return 1; })()`); await t.run(300); } // the intro card, and the mission's briefing after it
   // a fight: eight aliens round the carrier, the wing out and told to attack, Space held for the turrets
   await t.ev(`(() => { const S = ${SC}, C = S.camp, c = C.carrier; C.god = true;
     for (let i = 0; i < 8; i++) { const a = i / 8 * 2 * Math.PI, u = campSpawn(C, i % 2 ? 'drone' : 'raider', c.x + Math.cos(a) * 900, c.y + Math.sin(a) * 900); if (u) u.goal = 'carrier'; }

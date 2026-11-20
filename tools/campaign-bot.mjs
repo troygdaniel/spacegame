@@ -19,6 +19,7 @@ const SEEDS = Number(arg('seeds', 12));
 const SKILL = String(arg('skill', 'steady'));
 const TECH = arg('tech', null);
 const MAXSEC = Number(arg('max', 420));
+const RANK = String(arg('rank', 'auto'));                     // --rank 0..5: the pilot's rank (src/campranks.js); auto: the rank a player of ordinary scores would have on reaching that mission (1,400 a mission flown before it)
 
 // the ways of playing. launchAt/attackFrom/attackEvery are seconds into the level; escort: the seconds each convoy is named (level 1); cycle: recall the wing when the fighters
 // are on average under this share of their hit points, launch again when they have landed; defend: fly at the alien nearest Earth, not nearest the carrier
@@ -43,6 +44,7 @@ const SKILLS = { sharp: { gain: 3, thr: 0.15, noise: 0 }, steady: { gain: 2, thr
 const OLD = process.argv.includes('--old');
 const SETS = process.argv.map((a, i) => a === '--set' ? process.argv[i + 1] : null).filter(Boolean); // --set alien.hpScale=2 --set alien.damageScale=2: change the table before the run (what-if)
 const g = nodeGame();
+g.run(`window.__RANK = ${JSON.stringify(RANK)}`); // the pilot's rank for every battle of this run
 if (OLD) g.run(`(() => { CAMP.earth.shield = 300; CAMP.earth.regen = 0; CAMP.mother.hp = 900; CAMP.mother.damage = 12; CAMP.mother.holdAt = 1600; CAMP.mother.spawnEvery = 8000; CAMP.mother.spawnMax = 6; CAMP.levels[1].waves[2].ships.raider = 3; })()`); // the numbers before the easier level 1
 g.run(`(() => {
   const kindOf = id => String(id || '').split('-')[0];
@@ -96,7 +98,8 @@ g.run(`(() => {
     C.input.fire = !!a && (turrets ? campDist(a, c) - a.r < reach : Math.abs(d2) < sk.thr && campDist(a, c) < reach); // Space held while an alien is in reach
   };
   window.__run1 = (level, seed, techs, B, sk, maxSec, mission) => {
-    const C = window.C = campNew(level, techs, { seed, mission: mission | 0 });
+    const rank = window.__RANK === 'auto' ? campRankAt(((level - 1) * 3 + (mission | 0)) * 1400) : Number(window.__RANK) | 0; // the ranks card: the wing of the rank
+    const C = window.C = campNew(level, techs, { seed, mission: mission | 0, rank });
     const M = window.__M = { hitC: {}, drainE: {}, waves: [], clear: [], idle: 0, first: null, minHull: 1e9, recalls: 0, earthSum: 0 };
     const st = {}, total = maxSec * 30, hull0 = C.carrier.hp;
     let wavesSeen = 0, started = false, prevAl = 0;

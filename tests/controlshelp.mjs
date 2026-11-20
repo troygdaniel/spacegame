@@ -26,11 +26,13 @@ const read = f => readFileSync(join(ROOT, f), 'utf8');
 // ---- what the code binds, per scene ----
 const WORDS = { ONE: '1', TWO: '2', THREE: '3', FOUR: '4', FIVE: '5', SIX: '6', SEVEN: '7', EIGHT: '8', NINE: '9', ESCAPE: 'ESC', NUMPADENTER: 'ENTER' };
 const norm = k => { let s = String(k).trim().toUpperCase().replace(/^KEY(?=[A-Z]$)/, '').replace(/^DIGIT(?=\d$)/, ''); if (s === ' ') s = 'SPACE'; return WORDS[s] || s; };
+// the Earth refit card and the plain pick card between levels are screens of their own, and print their keys on themselves (refit: 1 to 3 choose a tech, 4 and 5 buy ships, 6 to 8 choose what was looted from a cloaked cache; pick: 1 to 6): their handlers are not the Campaign's flight keys
+const noRefit = src => src.replace(/  (?:refitKey|pickKey)\(c\) \{[\s\S]*?\n  \}\n/g, '');
 function bound(files) {
   const keys = new Set();
   for (const f of files) {
     const p = join(ROOT, 'src', f + '.js'); if (!existsSync(p)) continue;
-    const src = readFileSync(p, 'utf8');
+    const src = noRefit(readFileSync(p, 'utf8'));
     for (const m of src.matchAll(/addKeys?\('([^']+)'\)/g)) m[1].split(',').forEach(k => keys.add(norm(k)));
     for (const m of src.matchAll(/(?<![\w.])(?:e\.(?:code|key)|code) (?:===|!==) '([^']+)'/g)) keys.add(norm(m[1]));   // e.code === 'KeyG', code === 'KeyR' (not scene.key === 'Station')
     for (const m of src.matchAll(/\b(Key[A-Z]|Digit\d|Enter|Escape|Tab|Space): /g)) keys.add(norm(m[1]));                 // a map of codes: { KeyF: 'fleet', KeyY: 'yard' }
@@ -147,7 +149,7 @@ console.log('6. the Campaign: every bound key is on the table');
   check('no key the Campaign binds is missing from the CAMPAIGN and PANELS groups', silent.length === 0, 'bound and not named: ' + silent.join(' ') + '   bound: ' + [...bnd].join(' '));
   check('the scan saw the keys it should (fly, fire, blink, the panels\' digits, the map, cards, pause, title, help, strip, voice, mute)', ['W', 'A', 'S', 'D', 'SPACE', 'F', 'Q', '1', '2', '5', 'TAB', 'X', 'ENTER', 'ESC', 'T', 'H', 'I', 'U', 'M'].every(k => bnd.has(k)), ['W', 'A', 'S', 'D', 'SPACE', 'F', 'Q', '1', '2', '5', 'TAB', 'X', 'ENTER', 'ESC', 'T', 'H', 'I', 'U', 'M'].filter(k => !bnd.has(k)).join(' '));
   const scene = read('src/campaignscene.js');
-  check('the scene hands every digit to the panels (campPanelKey) and has no key of its own for a digit from 4 to 9 or an order: the old direct digits are gone (the refit card between levels buys with 4 and 5 on its own screen)', /campPanelKey\(/.test(scene) && !/Digit[4-9]/.test(scene.split('\n').filter(l => !/R\.ore >= B\./.test(l)).join('\n')) && !/campOrder\(C, order, ''/.test(scene) && !/Digit1: 'launch'/.test(scene));
+  check('the scene hands every digit to the panels (campPanelKey) and has no key of its own for a digit from 4 to 9 or an order: the old direct digits are gone (the refit card between levels buys with 4 and 5 on its own screen)', /campPanelKey\(/.test(scene) && !/Digit[4-9]/.test(noRefit(scene).split('\n').filter(l => !/R\.ore >= B\./.test(l)).join('\n')) && !/campOrder\(C, order, ''/.test(scene) && !/Digit1: 'launch'/.test(scene));
   const caps = (line, pick) => line.split(/ {2,}/).flatMap(seg => seg.split(' ').filter(t => pick.test(t))).map(c => c.toUpperCase());
   const keyLine = J(`uiText('camp.ui.keys', { panels: campPanelKeyLine() })`), pause = J(`uiText('camp.ui.paused')`);
   check('the bottom key line names only keys of the table and says the panels from it: ' + keyLine, caps(keyLine, /^(?:[A-Z0-9]|Tab|Space)$/).every(c => named.has(c)) && keyLine.includes(J('campPanelKeyLine()')) && /H Keys$/.test(keyLine) && !/\b6-9\b|\bI type an order\b/.test(keyLine), caps(keyLine, /^(?:[A-Z0-9]|Tab|Space)$/).filter(c => !named.has(c)).join(' '));
