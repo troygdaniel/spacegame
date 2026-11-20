@@ -1,8 +1,8 @@
 // ---------- The Campaign scene: reads the keys, steps src/campaign.js, draws what its numbers say (docs/CAMPAIGN.md) ----------
 // The only Phaser in the mode. Every rule, number and word comes from src/campaign.js (the tuning table CAMP, the sim, uiText for the text), so this
 // file draws and listens and decides nothing about the game. It is not run by a test in plain Node (a scene is Phaser's): tests/campaign.mjs runs the sim.
-//   K on the title opens it (campaignStart); Enter begins a level; W A S D fly, Space fires the main gun, F a homing missile (the magazine is C.missiles), Q blinks (the warp tech);
-//   the point guns need no key: they shoot the nearest alien in reach by themselves, and the scene draws their reach and their flash (syncRockets)
+//   K on the title opens it (campaignStart); Enter begins a level; W A S D fly, Space (held) makes the eight turrets fire, F fires a homing missile (the magazine is C.missiles), Q blinks (the warp tech);
+//   there is no other gun: the turrets aim themselves at the nearest alien in reach, always, and fire only while Space is held; the scene draws them, their reach and their flash (syncRockets)
 //   1 launch, 2 attack, 3 escort, 4 guard, 5 recall; I types an order and U speaks one (the strip and the ship computer, src/shipcomputer.js, find this scene);
 //   Esc pauses (this scene's own pause, not Long Haul's: the Long Haul save is not touched here); after a win the story, the tech pick (1 2 3), then the next level.
 // Mode: 'intro' (the story before) -> 'play' <-> 'pause' -> 'won' (story after) -> 'pick' (one of three techs, when the level offers any) -> next level, or after the last level 'end' (back to the title);
@@ -173,8 +173,8 @@ class Campaign extends Phaser.Scene {
     while (this.bsp.length < C.bullets.length) this.bsp.push(this.add.image(0, 0, 'bullet').setDepth(4));
     this.bsp.forEach((im, i) => {
       const b = C.bullets[i]; if (!b) { im.setVisible(false); return; }
-      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'bullet' : 'ebullet').setScale(b.beam ? 4 : b.pd ? 0.9 : 1, b.beam ? 1.6 : 1);
-      if (b.beam) im.setTint(0x7fe9ff); else if (b.pd) im.setTint(0xffd37a); else im.clearTint(); // the turrets' shots are amber, so they are not mistaken for the main gun's
+      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'bullet' : 'ebullet').setScale(b.beam ? 3 : b.pd ? 0.9 : 1, b.beam ? 1.2 : 1);
+      if (b.beam) im.setTint(0x7fe9ff); else if (b.pd) im.setTint(0xffd37a); else im.clearTint(); // the turrets' shots are amber; the beam tech's are cyan, long and go through
     });
   }
   // the missiles in flight (a body, a flame and a trail of smoke), the turrets (a faint ring of how far they reach, four mounts that flash when one fires) and the magazine count
@@ -198,14 +198,11 @@ class Campaign extends Phaser.Scene {
     Object.keys(this.msp).forEach(id => { if (!seen[id]) { this.msp[id].body.destroy(); this.msp[id].flame.destroy(); delete this.msp[id]; } });
     const g = this.reachG, mg = this.mountG; g.clear(); mg.clear();
     if (c.hp > 0) {
-      g.lineStyle(1, 0xffd37a, 0.16).strokeCircle(c.x, c.y, CAMP.carrier.pdRange);
-      const hot = C.t - C.pdAt < 160, aim = campWrap(C.pdAim - c.rot), cs = Math.cos(c.rot), sn = Math.sin(c.rot);
-      const MOUNTS = [[24, -20], [24, 20], [-20, -22], [-20, 22]]; // px from the carrier's centre in its own frame (x along the nose)
-      let near = -1, best = 9; if (hot) MOUNTS.forEach((p, i) => { const d = Math.abs(campWrap(aim - Math.atan2(p[1], p[0]))); if (d < best) { best = d; near = i; } });
-      MOUNTS.forEach((p, i) => {
-        const x = c.x + cs * p[0] - sn * p[1], y = c.y + sn * p[0] + cs * p[1];
-        mg.fillStyle(0x04101c, 0.9).fillCircle(x, y, 5); mg.fillStyle(i === near ? 0xffffff : 0xffd37a, 1).fillCircle(x, y, i === near ? 4 : 2.5);
-        if (i === near) mg.lineStyle(3, 0xffe9a0, 0.9).lineBetween(x, y, x + Math.cos(C.pdAim) * 18, y + Math.sin(C.pdAim) * 18);
+      g.lineStyle(1, 0xffd37a, 0.16).strokeCircle(c.x, c.y, campReach(C)); // how far a turret reaches (the beam tech reaches further)
+      C.turrets.forEach(tu => { // the eight turrets, where the sim put them: a dark base and an amber dot; a barrel toward the alien each has picked (it aims even when Space is not held); a bright flash and a longer barrel on the shot
+        const hot = C.t - tu.shotAt < 120;
+        mg.fillStyle(0x04101c, 0.9).fillCircle(tu.x, tu.y, 5); mg.fillStyle(hot ? 0xffffff : 0xffd37a, 1).fillCircle(tu.x, tu.y, hot ? 4 : 2.5);
+        if (tu.target) mg.lineStyle(hot ? 3 : 2, hot ? 0xffe9a0 : 0xffd37a, hot ? 0.95 : 0.7).lineBetween(tu.x, tu.y, tu.x + Math.cos(tu.aim) * (hot ? 18 : 11), tu.y + Math.sin(tu.aim) * (hot ? 18 : 11));
       });
     }
     this.hud.missiles.setColor(C.missiles > 0 ? '#ffb454' : '#ff4d6d').setText(uiText('camp.ui.missiles', { n: C.missiles })

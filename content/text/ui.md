@@ -138,7 +138,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.lose.earth | Earth's shield has failed. |
 | camp.ui.title | CAMPAIGN |
 | camp.ui.level | LEVEL {n}: {name} |
-| camp.ui.keys | W A S D fly   Space gun   F missiles   1 launch   2 attack   3 escort   4 guard   5 recall   I type an order   U speak   Tab map |
+| camp.ui.keys | W A S D fly   Space turrets   F missiles   1 launch   2 attack   3 escort   4 guard   5 recall   I type an order   U speak   Tab map |
 | camp.ui.begin | Enter  begin |
 | camp.ui.pick | Choose one salvaged technology:  1  2  3 |
 | camp.ui.next | Enter  continue |
@@ -164,11 +164,11 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.ui.mother | MOTHERSHIP |
 | camp.ui.missiles | F  MISSILES  {n} |
 | camp.ui.missilenext | next in {s} s |
-| camp.ui.pausehelp | F fires a homing missile at the mothership or the nearest big ship. Turrets fire at close ships by themselves. |
+| camp.ui.pausehelp | Hold Space: the turrets fire at ships close by. F fires a homing missile at the mothership or the nearest big ship. |
 | camp.tech.shield.name | Shield grid |
 | camp.tech.shield.text | The carrier takes 40 percent less damage. |
-| camp.tech.beam.name | Beam cannon |
-| camp.tech.beam.text | The main gun hits three times as hard and reaches further. |
+| camp.tech.beam.name | Beam turrets |
+| camp.tech.beam.text | The turrets fire beams: twice the damage, further, and through what they hit. |
 | camp.tech.blink.name | Warp blink |
 | camp.tech.blink.text | Press Q to hop the carrier 1,500 px ahead. Ready again after 20 seconds. |
 | camp.tech.plating.name | Hull plating |

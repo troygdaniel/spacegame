@@ -27,14 +27,11 @@ const CAMP = {
     drag: 0.55,                            // velocity kept after one second with no thrust (0.55 is the Wren's)
     brakeDrag: 0.12,                       // the same with S held
     radius: 36,                            // px, the hit circle (it was 56: the carrier is drawn 35 percent smaller)
-    gun: 20,                               // hit points one main-gun shot takes off an alien (Space)
-    gunDelay: 600,                         // ms between main-gun shots
-    gunSpeed: 900,                         // px/s of a main-gun shot
-    gunLife: 900,                          // ms a main-gun shot flies (speed times life is its range)
-    pd: 5,                                 // hit points a point-defence shot takes off (they fire by themselves at the nearest alien)
-    pdDelay: 350,                          // ms between point-defence shots
-    pdRange: 420,                          // px the point guns reach
-    pdSpeed: 800                           // px/s of a point-defence shot
+    mounts: [[42, -14], [42, 14], [12, -26], [12, 26], [-16, -30], [-16, 30], [-44, -24], [-44, 24]], // the turrets (there is no other gun): where each sits, px from the carrier's centre in its own frame (x along the nose), spread along the hull; the number of turrets is the number of rows
+    pd: 5,                                 // hit points one turret shot takes off an alien
+    pdDelay: 500,                          // ms between the shots of one turret (eight of them: 80 hit points a second in all): they fire only while Space is held, each at the nearest alien in its reach, and never on their own
+    pdRange: 450,                          // px a turret reaches (to the edge of the alien it aims at: about three carrier lengths)
+    pdSpeed: 800                           // px/s of a turret shot
   },
   missile: {                               // the missile launcher (F, or the order "missiles"): a homing missile for the mothership and the other big ships (card space-game-campaign-missiles)
     magazine: 6,                           // missiles you start with, and how many the slow reload fills the magazine to
@@ -120,7 +117,7 @@ const CAMP = {
   },
   tech: {                                  // what each tech does; names and words are in content/text/ui.md (camp.tech.<id>.name, .text)
     shield: { after: 1, taken: 0.6 },      // after level 1: the carrier takes this share of the damage it is dealt (0.6 = 40 percent less)
-    beam: { after: 1, gun: 3, life: 1.5 }, // after level 1: the main gun hits this many times harder and reaches this many times further
+    beam: { after: 1, damage: 2, reach: 1.5 }, // after level 1: the turrets fire beams: this many times the damage, this many times the reach, and a shot goes through everything it hits
     blink: { after: 1, dist: 1500, cooldown: 20000 }, // after level 1: Q hops the carrier this far ahead, ready again after this many ms
     plating: { after: 2, hull: 1.5 },      // after level 2: the carrier's hull times this
     bay2: { after: 2, fighters: 4 },       // after level 2: this many more fighters in the bay
@@ -220,13 +217,14 @@ function campNew(level, techs, opts) {
     relic: L.relic ? { x: campPlaces(level)[L.relic.place].x, y: campPlaces(level)[L.relic.place].y, hold: 0 } : null,
     bay: { fighters: CAMP.bay.fighters, escorts: CAMP.bay.escorts }, launchQ: [], nextLaunch: 0,
     waves: L.waves.map(() => ({ started: false, at: 0 })), convoys: L.convoys.map(() => ({ started: false })), delivered: 0, lost: 0, kills: 0, launched: 0, lostShips: 0,
-    orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0 }, nextMain: 0, nextPd: 0, blinkAt: -1e9, motherSpawn: 0,
+    orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0 }, blinkAt: -1e9, motherSpawn: 0,
     result: null, why: ''
   };
   if (campHas(C, 'bay2')) C.bay.fighters += CAMP.tech.bay2.fighters;
-  Object.assign(C, { missiles: CAMP.missile.magazine, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0, pdAt: -1e9, pdAim: 0 }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks
+  Object.assign(C, { missiles: CAMP.missile.magazine, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0, gunAt: -1e9 }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks
   const p = campPlaces(level)[L.start], c = campSpawn(C, 'carrier', p.x + L.startAt[0], p.y + L.startAt[1]);
   C.carrier = c; c.rot = 0;
+  C.turrets = CAMP.carrier.mounts.map((m, i) => ({ x: 0, y: 0, aim: 0, target: '', at: i * CAMP.carrier.pdDelay / CAMP.carrier.mounts.length, shotAt: -1e9 })); campTurretPlace(C); // the turrets: where each is, which way it aims, at whom, when it may fire next and when it last did (the scene draws them)
   (L.towers || []).forEach(g => { // rings of towers round a place, facing outward
     const at = campPlaces(level)[g.place];
     for (let i = 0; i < g.n; i++) { const a = (g.phase || 0) + i / g.n * 2 * Math.PI, t = campSpawn(C, 'tower', at.x + Math.cos(a) * g.r, at.y + Math.sin(a) * g.r); t.rot = a; if (g.hp) t.hp = t.maxHp = g.hp; }
@@ -443,15 +441,27 @@ function campCarrier(C, dt) {
   c.x += c.vx * dt; c.y += c.vy * dt;
   if (inp.blink && campHas(C, 'blink') && C.t - C.blinkAt >= CAMP.tech.blink.cooldown) { C.blinkAt = C.t; c.x += Math.cos(c.rot) * CAMP.tech.blink.dist; c.y += Math.sin(c.rot) * CAMP.tech.blink.dist; C.events.push({ type: 'blink', x: c.x, y: c.y }); }
   inp.blink = false;
-  const beam = campHas(C, 'beam');
-  if (inp.fire && C.t >= C.nextMain) {
-    C.nextMain = C.t + k.gunDelay; C.events.push({ type: 'gun', x: c.x, y: c.y });
-    campBullet(C, c, c.rot, k.gunSpeed, k.gun * (beam ? CAMP.tech.beam.gun : 1), k.gunLife * (beam ? CAMP.tech.beam.life : 1), 'earth', c.r, { beam });
-  }
-  if (C.t >= C.nextPd) { // the point guns: the nearest alien inside their reach
-    const a = campNearest(campAliens(C), c, k.pdRange);
-    if (a) { C.nextPd = C.t + k.pdDelay; C.pdAt = C.t; C.pdAim = Math.atan2(a.y - c.y, a.x - c.x); campBullet(C, c, Math.atan2(a.y - c.y, a.x - c.x), k.pdSpeed, k.pd, k.pdRange / k.pdSpeed * 1000 + 100, 'earth', c.r * 0.6, { pd: true }); }
-  }
+  campTurrets(C);
+}
+// the turrets: each one aims itself at the nearest alien in its reach (to the edge of it), always; it fires only while Space is held (C.input.fire), one shot every pdDelay ms
+const campReach = C => CAMP.carrier.pdRange * (campHas(C, 'beam') ? CAMP.tech.beam.reach : 1); // px a turret reaches: the beam tech reaches further
+function campTurretPlace(C) { // each turret's place in the world, from the carrier's place and nose
+  const c = C.carrier, cs = Math.cos(c.rot), sn = Math.sin(c.rot);
+  C.turrets.forEach((tu, i) => { const m = CAMP.carrier.mounts[i]; tu.x = c.x + cs * m[0] - sn * m[1]; tu.y = c.y + sn * m[0] + cs * m[1]; });
+}
+function campTurrets(C) {
+  const c = C.carrier, k = CAMP.carrier, beam = campHas(C, 'beam'), reach = campReach(C), dmg = k.pd * (beam ? CAMP.tech.beam.damage : 1), al = campAliens(C);
+  campTurretPlace(C);
+  let fired = false;
+  C.turrets.forEach(tu => {
+    let best = null, bd = reach; al.forEach(u => { const d = campDist(u, tu) - u.r; if (d <= bd) { bd = d; best = u; } });
+    tu.target = best ? best.id : ''; if (best) tu.aim = Math.atan2(best.y - tu.y, best.x - tu.x);
+    if (best && C.input.fire && C.t >= tu.at) {
+      tu.at = C.t + k.pdDelay; tu.shotAt = C.t; fired = true;
+      campBullet(C, { x: tu.x, y: tu.y, vx: c.vx, vy: c.vy, id: c.id }, tu.aim, k.pdSpeed, dmg, (reach + 120) / k.pdSpeed * 1000, 'earth', 0, { pd: true, beam });
+    }
+  });
+  if (fired && C.t - C.gunAt >= 150) { C.gunAt = C.t; C.events.push({ type: 'gun', x: c.x, y: c.y }); } // one sound for a volley, not one for each of the eight
 }
 function campBullet(C, from, rot, speed, dmg, lifeMs, team, ahead, extra) {
   const b = Object.assign({ x: from.x + Math.cos(rot) * (ahead || 0), y: from.y + Math.sin(rot) * (ahead || 0), vx: Math.cos(rot) * speed + (from.vx || 0) * 0.3, vy: Math.sin(rot) * speed + (from.vy || 0) * 0.3, dmg, life: lifeMs, team, from: from.id, rot }, extra || {});

@@ -31,7 +31,7 @@ g.run(`
     if (s > 9 && s < 9.05) campOrder(C, 'escort', 'mars convoy');
     if (s > 12 && Math.round(s * 30) % 150 === 0) campOrder(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : '');
     const c = C.carrier, a = campAliens(C).sort((p, q) => campDist(p, c) - campDist(q, c))[0];
-    if (a) { const want = Math.atan2(a.y - c.y, a.x - c.x), d = Math.atan2(Math.sin(want - c.rot), Math.cos(want - c.rot)); C.input.turn = Math.max(-1, Math.min(1, d * 3)); C.input.thrust = campDist(a, c) > 500 ? 1 : 0; C.input.fire = Math.abs(d) < 0.15 && campDist(a, c) < 800; }
+    if (a) { const want = Math.atan2(a.y - c.y, a.x - c.x), d = Math.atan2(Math.sin(want - c.rot), Math.cos(want - c.rot)); C.input.turn = Math.max(-1, Math.min(1, d * 3)); C.input.thrust = campDist(a, c) > 380 ? 1 : 0; C.input.fire = campDist(a, c) < 520; }
     else { C.input.thrust = 0; C.input.fire = false; C.input.turn = 0; }
   };
 `);
@@ -132,15 +132,31 @@ console.log('E. the numbers');
   check('S brakes it: under 20 px/s four seconds later', J('Math.hypot(C.carrier.vx, C.carrier.vy)') < 20);
   g.run('__new([], 1); C.carrier.rot = 0; C.input.turn = 1; __run(1)');
   check('it turns at 1.1 radians a second, heavy', Math.abs(J('C.carrier.rot') - 1.1) < 0.05, J('C.carrier.rot'));
-  g.run(`window.__shots = 0; window.__bullet0 = campBullet; campBullet = function (C, from, rot, speed, dmg, life, team, ahead, extra) { if (team === 'earth' && from.kind === 'carrier' && !(extra && extra.pd)) __shots++; return __bullet0.apply(null, arguments); }; __new([], 1); C.input.fire = true; __run(3.1); campBullet = __bullet0;`);
-  check('the main gun fires every 0.6 s while Space is held (six shots in three seconds)', J('__shots') === 6, J('__shots'));
+  // the turrets (card space-game-campaign-turrets): eight on the hull, no other gun; they aim themselves, and fire only while Space is held
+  g.run(`window.__shots = 0; window.__bullet0 = campBullet; campBullet = function (C, from, rot, speed, dmg, life, team, ahead, extra) { if (team === 'earth' && extra && extra.pd) __shots++; return __bullet0.apply(null, arguments); }; window.__aim = (hp) => { __new([], 1); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(v => { v.started = true; }); const u = campSpawn(C, 'gunship', C.carrier.x + 300, C.carrier.y); u.vmax = 0; u.accel = 0; u.nextShot = 1e12; u.hp = u.maxHp = hp || 9000; return u.id; };`);
+  g.run('__aim(); C.input.fire = true; __run(3.1); campBullet = __bullet0;');
+  const per = J('CAMP.carrier.pdDelay'), nT = J('CAMP.carrier.mounts.length'), want = Array.from({ length: nT }, (_, i) => Math.floor((3100 - i * per / nT) / per) + 1).reduce((a, b) => a + b, 0);
+  check('there are eight turrets, one row each in the table, and no other gun: Space held and an alien near, every turret fires once every pdDelay ms, one after another (the count is the table\'s, to within a step)', nT === 8 && J('C.turrets.length') === 8 && Math.abs(J('__shots') - want) <= 3, J('__shots') + ' of ' + want);
+  check('the main gun is gone from the table and the code: no gun, gunDelay, gunSpeed or gunLife, no nextMain', !/gunDelay|gunSpeed|gunLife|nextMain|k\.gun\b/.test(src('src/campaign.js')) && J(`'gun' in CAMP.carrier`) === false && J('C.nextMain') === null);
+  g.run('__aim(); __run(2); window.__shots2 = C.bullets.filter(b => b.pd).length');
+  check('Space not held: the turrets aim at the alien (each says whom, and the way it points) and never fire on their own', J('C.bullets.filter(b => b.pd).length') === 0 && J('C.turrets.every(t => t.target === C.ships.find(u => u.kind === "gunship").id)') && J('C.turrets.every(t => Math.abs(Math.atan2(C.ships.find(u => u.kind === "gunship").y - t.y, C.ships.find(u => u.kind === "gunship").x - t.x) - t.aim) < 0.001)'));
+  g.run('__new([], 1); C.input.fire = true; __run(2)');
+  check('Space held and nothing in reach: nothing is fired', J('C.bullets.length') === 0);
+  g.run('__aim(); C.input.fire = true; __run(0.1)');
+  check('the shots leave the turrets\' own places on the hull, not the carrier\'s centre', J('C.bullets.filter(b => b.pd).length') >= 1 && J('C.bullets.filter(b => b.pd).every(b => C.turrets.some(t => Math.hypot(b.x - t.x, b.y - t.y) < 90))'));
+  g.run('__new([], 1); C.waves.forEach(w => { w.started = true; }); C.motherSpawn = 1e12; const m = campSpawn(C, "mother", C.carrier.x + 540, C.carrier.y); m.vmax = 0; m.accel = 0; m.nextShot = 1e12; C.input.fire = true; __run(0.1)');
+  check('reach is to the edge of the alien: the mothership (90 px across its radius) 540 px off, its centre past 450 px from every turret, is fired at', J('C.turrets.filter(t => t.target).length') >= 2 && J('C.bullets.filter(b => b.pd).length') >= 1);
+  const mt = J('CAMP.carrier.mounts');
+  check('the mounts are spread along the hull, four a side and four to each end, all inside the drawn hull (140 by 100 px): no side is bare', mt.filter(m => m[1] < 0).length === 4 && mt.filter(m => m[1] > 0).length === 4 && mt.filter(m => m[0] > 0).length === 4 && mt.filter(m => m[0] < 0).length === 4 && mt.every(m => Math.abs(m[0]) <= 70 && Math.abs(m[1]) <= 50) && new Set(mt.map(m => m[0])).size >= 4, JSON.stringify(mt));
+  g.run('__new([], 1); C.carrier.rot = 1; C.carrier.x = 500; C.carrier.y = 800; campStep(C, 0.04)');
+  check('the turrets turn with the carrier: each stays at its row of the table from the nose and the centre', J('C.turrets.every((t, i) => Math.abs(Math.hypot(t.x - C.carrier.x, t.y - C.carrier.y) - Math.hypot(CAMP.carrier.mounts[i][0], CAMP.carrier.mounts[i][1])) < 0.001)'));
   // the damage
   const hit = (techs, dmg) => { g.run(`__new(${JSON.stringify(techs)}, 1); campHurt(C, C.carrier, ${dmg}, 'x')`); return J('C.carrier.hp'); };
   check('the shield grid: 40 percent less damage (50 hit takes 30, not 50)', hit([], 50) === 550 && Math.abs(hit(['shield'], 50) - 570) < 1e-6);
   check('hull plating: the hull is half as strong again (900)', (g.run(`__new(['plating'], 1)`), J('C.carrier.hp') === 900 && J('C.carrier.maxHp') === 900));
   check('the second bay: four more fighters', (g.run(`__new(['bay2'], 1)`), J('C.bay.fighters') === 10 && J('C.bay.escorts') === 2));
-  g.run(`__new(['beam'], 1); C.input.fire = true; campStep(C, 0.05)`);
-  check('the beam cannon: the main gun hits three times as hard (60) and the shot flies half as far again (1.35 s, not 0.9 s)', J('C.bullets.find(b => b.beam).dmg') === 60 && J('C.bullets.find(b => b.beam).life') > 1250 && J('C.bullets.find(b => b.beam).life') <= 1350);
+    g.run(`__new(['beam'], 1); C.waves.forEach(w => { w.started = true; }); const u = campSpawn(C, 'gunship', C.carrier.x + 560, C.carrier.y); u.vmax = 0; u.accel = 0; u.nextShot = 1e12; u.hp = u.maxHp = 9000; C.input.fire = true; campStep(C, 0.05)`);
+  check('the beam cannon: the turrets fire beams (twice the damage, 10 not 5), reach half as far again (630 px: they fire at an alien 560 px off), and a shot goes through what it hits', J('C.bullets.length') >= 1 && J('C.bullets.every(b => b.beam && b.pd)') && J('C.bullets[0].dmg') === 10 && J('C.bullets[0].life') > 850 && J('C.bullets[0].life') <= 950 && J('CAMP.tech.beam.reach') === 1.5);
   g.run(`__new(['blink'], 1); C.carrier.rot = 0; var __x0 = C.carrier.x; C.input.blink = true; campStep(C, 0.03)`);
   const dx = J('C.carrier.x - __x0');
   check('the warp blink hops the carrier 1,500 px ahead, once; ready again after 20 s', dx > 1495 && dx < 1510 && (g.run(`C.input.blink = true; campStep(C, 0.03)`), J('C.carrier.x - __x0') < 1510) && (g.run('__run(20.1); C.input.blink = true; campStep(C, 0.03)'), J('C.carrier.x - __x0') > 2990), dx);
@@ -221,7 +237,7 @@ console.log('H. the scene: keys, modes, the pick, retry (on a stand-in)');
   g.run('F.k.W.isDown = true; F.k.D.isDown = true; F.k.SPACE.isDown = true; F.update(0, 33)');
   check('W thrusts, D turns, Space fires: the keys are read into the sim\'s input every frame', J('F.camp.input.thrust') === 1 && J('F.camp.input.turn') === 1 && J('F.camp.input.fire') === true);
   g.run('F.k.W.isDown = false; F.k.D.isDown = false; F.k.A.isDown = true; F.k.S.isDown = true; F.k.SPACE.isDown = false; F.update(0, 33)');
-  check('A turns the other way, S brakes, and Space let go stops the gun', J('F.camp.input.turn') === -1 && J('F.camp.input.brake') === true && J('F.camp.input.fire') === false);
+  check('A turns the other way, S brakes, and Space let go stops the turrets', J('F.camp.input.turn') === -1 && J('F.camp.input.brake') === true && J('F.camp.input.fire') === false);
   key('Digit1'); check('1 launches the wing and says so', J('F.camp.launchQ.length') === 8 && J('__toasts2.pop()') === 'Launching the wing.');
   key('Digit2'); check('2 while the wing is still leaving the bay answers in words (a toast) and does nothing', J('__toasts2.pop()') === 'The wing is still launching.' && J('F.camp.orders.attack') === 0);
   key('Escape'); check('Esc pauses the scene\'s own way (not Long Haul\'s menu), the sim stops, the strip is kept shut', J('F.mode') === 'pause' && J('F.panel') === true && (g.run('var __t0 = F.camp.t; F.update(0, 100)'), J('F.camp.t') === J('__t0')));
@@ -266,7 +282,7 @@ console.log('I. level 2 (Alpha Centauri) and level 3 (the home world)');
       if (tgt) {
         const want = Math.atan2(tgt.y - c.y, tgt.x - c.x), d = Math.atan2(Math.sin(want - c.rot), Math.cos(want - c.rot)), dist = campDist(tgt, c);
         C.input.turn = Math.max(-1, Math.min(1, d * 3)); C.input.thrust = (near ? dist > 420 : dist > (C.level === 2 && goal === C.relic ? 60 : 300)) ? 1 : 0;
-        const w2 = al ? Math.atan2(al.y - c.y, al.x - c.x) : 0, d2 = Math.atan2(Math.sin(w2 - c.rot), Math.cos(w2 - c.rot)); C.input.fire = !!al && Math.abs(d2) < 0.15 && campDist(al, c) < 800;
+        const w2 = al ? Math.atan2(al.y - c.y, al.x - c.x) : 0, d2 = Math.atan2(Math.sin(w2 - c.rot), Math.cos(w2 - c.rot)); C.input.fire = !!al && campDist(al, c) < 520;
       } else { C.input.thrust = 0; C.input.turn = 0; C.input.fire = false; }
     };
     window.__play2 = (level, seed, script, secs, techs) => {
@@ -354,7 +370,7 @@ console.log('K. easier (Troy lost level 1 twice at wave 3, by Earth\'s shield): 
     };
     window.__stay = (C, s) => {             // the same, and the carrier turns on what comes within 800 px and fires, but never leaves the Moon
       __plain(C, s); const c = C.carrier, a = campAliens(C).sort((p, q) => campDist(p, c) - campDist(q, c))[0];
-      if (a && campDist(a, c) < 800) { const w = Math.atan2(a.y - c.y, a.x - c.x), d = Math.atan2(Math.sin(w - c.rot), Math.cos(w - c.rot)); C.input.turn = Math.max(-1, Math.min(1, d * 3)); C.input.fire = Math.abs(d) < 0.2; } else { C.input.turn = 0; C.input.fire = false; }
+      if (a && campDist(a, c) < 800) { const w = Math.atan2(a.y - c.y, a.x - c.x), d = Math.atan2(Math.sin(w - c.rot), Math.cos(w - c.rot)); C.input.turn = Math.max(-1, Math.min(1, d * 3)); C.input.fire = campDist(a, c) < 520; } else { C.input.turn = 0; C.input.fire = false; }
       C.input.thrust = 0;
     };
     window.__plays = (script, secs) => [1, 2, 3, 4, 5, 6].map(sd => { window.C = campNew(1, [], { seed: sd }); for (let i = 0; i < secs * 30 && !C.result; i++) { script(C, i / 30); campStep(C, 1 / 30); C.events.length = 0; } return { r: C.result, w: C.why, t: Math.round(C.t / 1000), earth: Math.round(C.earth.shield) }; });

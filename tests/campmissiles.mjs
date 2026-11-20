@@ -6,7 +6,7 @@
 //   C. flying: it homes, it kills a gunship in one, it takes the mothership down in six, little to the small ships, it goes off on big ships only, a new target, no fuel
 //   D. the magazine: slow reload up to the full, never past it, and the ore code can add to it (up to the most it holds)
 //   E. the words: "fire missiles", "missiles at the mothership"; the ship computer's act and what it tells the model
-//   F. the turrets: they fire by themselves at the nearest alien in reach, and the scene shows their reach, a flash and a different colour
+//   F. Space and F: Space only makes the turrets fire (it never launches a missile), F only launches missiles; the turrets are in tests/campaign.mjs B
 //   G. the scene: F fires, the count on the HUD, the key line and the pause card
 //   H. nothing else moved: no order, no missile; the same seed flies the same; tower rings fall to missiles
 // Run: node tests/campmissiles.mjs   (exit code 1 on a failed check)
@@ -152,22 +152,23 @@ console.log('E. the words, the strip and the voice');
   check('a fleet act outside the Campaign is still refused (the fleet is only yours there)', J(`shipcompPlan('SAY: ok\\nDO: fleet_missiles', { scene: { key: 'Space' } })`).refused === true);
   check('the model path: a reply "DO: fleet_missiles the mothership" is read and checked against the live battle', (() => { g.run('__nb(); window.__gun = __foe("mother", 1500, 0)'); const p = J(`(() => { const p = shipcompPlan('SAY: Firing.\\nDO: fleet_missiles the mothership', __scene); return { action: p.action, arg: p.arg, refused: p.refused, text: p.text }; })()`); return p.action === 'fleet_missiles' && !p.refused && p.text === 'Missile away, at the mothership.'; })());
   const sys = J('shipcompSystem(__scene)');
-  check('the model is told in a battle: the key (F), what it does, and the act on its list', /fleet_missiles/.test(sys) && /F fires a homing missile/.test(sys) && /F missiles/.test(sys));
+  check('the model is told in a battle: the key (F), what it does, and the act on its list', /fleet_missiles/.test(sys) && /presses F to fire a homing missile/.test(sys) && /holds Space to make its eight turrets fire/.test(sys) && /F missiles/.test(sys) && !/main gun/.test(sys));
   check('the state it is told says how many are left', /Missiles in the magazine: 6 of 6/.test(J('campSummary(C)')));
 }
 
-// ---------- F. the turrets ----------
-console.log('F. the turrets');
+// ---------- F. Space and F ----------
+console.log('F. Space and F: the turrets and the missiles do not share a key');
 {
-  g.run('__m(1); window.__a = __foe("gunship", 300, 0, 9000)');
-  g.run('__run(0.5)');
-  check('the point guns fire by themselves at the nearest alien in reach (300 px): shots of the turrets in the air or already landed, the clock says when', J('C.pdAt') > 0 && J('C.bullets.some(b => b.pd) || C.pdAt >= 0') && J('__hp(__a)') < 9000, J('__hp(__a)'));
-  check('the flash is told to the scene: when they last fired and which way', J('C.t - C.pdAt') < 500 && Math.abs(J('C.pdAim')) < 0.01, J('C.pdAim'));
-  g.run('__m(1); window.__a = __foe("gunship", 500, 0, 9000)');
-  g.run('__run(2)');
-  check('beyond their reach (420 px) they do not fire', J('__hp(__a)') === 9000 && J('C.pdAt') < 0);
-  check('the reach is about three carrier lengths: the carrier is drawn 90 px long at 1.56 (140 px), and the point guns reach 420 px, more than the two lengths the card asks', J('CAMP.carrier.pdRange') === 420 && J('CAMP.carrier.pdRange') >= 2 * 90 * J('CAMP_LOOK.carrier.scale'));
-  check('the point guns take no key and use no ammunition: no input of theirs, nothing counted (they are not the missiles)', !('pd' in J('C.input')) && J('C.missiles') === 6);
+  g.run('__m(1); window.__a = __foe("gunship", 300, 0, 9000); window.__far = __foe("gunship", 1500, 0, 90000); C.input.fire = true; __run(2)');
+  check('Space held: the turrets fire at the gunship in reach (300 px), and not one missile leaves: Space never launches', J('__hp(__a)') < 9000 && J('C.missiles') === 6 && J('C.rockets.length') === 0 && J('C.orders.missiles') === 0, J('__hp(__a)'));
+  g.run('__m(1); window.__a = __foe("gunship", 300, 0, 9000); window.__far = __foe("gunship", 1500, 0, 90000); __run(2)');
+  check('Space up: the turrets do not fire on their own (the gunship is whole) and no missile leaves by itself', J('__hp(__a)') === 9000 && J('C.bullets.filter(b => b.pd).length') === 0 && J('C.missiles') === 6);
+  g.run('__m(1); window.__far = __foe("gunship", 1500, 0, 90000); window.__a = __foe("gunship", 700, 0, 9000); C.input.fire = true; __run(2)');
+  check('a gunship 700 px off is beyond the turrets (450 px): Space held fires nothing at it', J('__hp(__a)') === 9000 && J('C.turrets.every(t => !t.target)'));
+  g.run('__m(1); window.__far = __foe("gunship", 1500, 0, 90000); window.__a = __foe("gunship", 300, 0, 9000); __run(0.1); C.input.fire = false; var __before = C.missiles; ');
+  check('F is the only key for missiles: the order launches one (and Space held at the same time does not make a second)', (g.run('C.input.fire = true; __fire("")'), J('C.missiles') === 5 && J('C.orders.missiles') === 1 && (g.run('__run(0.5)'), J('C.missiles') === 5)));
+  check('the reach is about three carrier lengths: the carrier is drawn 90 px long at 1.56 (140 px), and a turret reaches 450 px, more than two lengths', J('CAMP.carrier.pdRange') === 450 && J('CAMP.carrier.pdRange') >= 2 * 90 * J('CAMP_LOOK.carrier.scale'));
+  check('the turrets take no ammunition: nothing of theirs is counted in the magazine, and there is no second gun input', !('gun' in J('CAMP.carrier')) && J('Object.keys(C.input).sort().join()') === 'blink,brake,fire,thrust,turn');
 }
 
 // ---------- G. the scene ----------
@@ -191,18 +192,25 @@ console.log('G. the scene (on a stand-in)');
   check('an F with the launcher still cycling is answered in words, not ignored', J('__toasts[__toasts.length - 1]') === 'The launcher is still cycling.');
   g.run('C.missiles = 0; F.syncRockets(33)');
   check('an empty magazine shows in red', J('F.hud.missiles.color') === '#ff4d6d');
-  g.run('__m(1); window.F = __fake(); C.ships.filter(u => u.team === "alien").forEach(u => { u.hp = 0; }); window.__a = __foe("gunship", 300, 0, 9000); __run(0.1); F.syncRockets(33)');
+  g.run('__m(1); window.F = __fake(); window.__a = __foe("gunship", 300, 0, 9000); __run(0.1); F.syncRockets(33)');
   const log = J('F.reachG.log'), ring = log.find(l => l[0] === 'strokeCircle');
-  check('the turrets\' reach is drawn as a ring round the carrier at the point guns\' reach (420 px)', ring && ring[3] === 420 && Math.abs(ring[1] - J('C.carrier.x')) < 1 && Math.abs(ring[2] - J('C.carrier.y')) < 1, JSON.stringify(ring));
+  check('the turrets\' reach is drawn as a ring round the carrier at the reach (450 px)', ring && ring[3] === 450 && Math.abs(ring[1] - J('C.carrier.x')) < 1 && Math.abs(ring[2] - J('C.carrier.y')) < 1, JSON.stringify(ring));
   const mlog = J('F.mountG.log');
-  check('four mounts are drawn on the hull, and the one nearest the target flashes (a bright mount and a line toward the target) just after a shot', mlog.filter(l => l[0] === 'fillCircle').length === 8 && mlog.some(l => l[0] === 'lineBetween'), mlog.filter(l => l[0] === 'lineBetween').length);
+  check('eight turrets are drawn (a base and a dot each), and each that has an alien in reach has a barrel toward it, though Space is up and none has fired', mlog.filter(l => l[0] === 'fillCircle').length === 16 && mlog.filter(l => l[0] === 'lineBetween').length === 8 && !mlog.some(l => l[0] === 'fillStyle' && l[1] === 0xffffff), JSON.stringify([mlog.filter(l => l[0] === 'fillCircle').length, mlog.filter(l => l[0] === 'lineBetween').length]));
+  g.run('F.mountG.log.length = 0; C.input.fire = true; __run(0.05); F.syncRockets(33)');
+  check('Space held: the turrets that fire flash white (a bright dot and a longer barrel)', J('F.mountG.log').some(l => l[0] === 'fillStyle' && l[1] === 0xffffff));
   g.run('F.mountG.log.length = 0; __m(1); F.camp = C; F.syncRockets(33)');
-  check('no shot, no flash: the mounts are drawn plain', J('F.mountG.log').filter(l => l[0] === 'lineBetween').length === 0);
+  check('nothing in reach: the mounts are drawn plain, with no barrel', J('F.mountG.log').filter(l => l[0] === 'lineBetween').length === 0 && J('F.mountG.log').filter(l => l[0] === 'fillCircle').length === 16);
+  g.run('__m(1); window.__gun = __foe("gunship", 1500, 0, 90000); F.camp = C; F.mode = "play"; F.onKey({ code: "Space" })');
+  check('the scene: a Space key press launches nothing (Space is read as held, into the sim\'s fire input, every frame)', J('C.missiles') === 6 && J('C.rockets.length') === 0);
+  g.run('F.onKey({ code: "KeyF" })');
+  check('and F launches one', J('C.missiles') === 5 && J('C.rockets.length') === 1);
   g.run('window.G2 = __fake(); G2.hud = {}; G2.syncRockets(33)');
   check('the scene makes its own count text the first time (a scene made before this card, a test stand-in)', J('typeof G2.hud.missiles') === 'object');
   const sc = src('src/campaignscene.js'), md = src('content/text/ui.md');
   check('the scene has no word and no number of the launcher in it: it reads uiText and CAMP', !/MISSILES|Missile away|next in/.test(sc) && /uiText\('camp\.ui\.missiles'/.test(sc) && /uiText\('camp\.ui\.pausehelp'\)/.test(sc) && /CAMP\.missile/.test(sc));
-  check('the key line names F, and so does the pause card (a line of its own)', /F missiles/.test(J(`uiText('camp.ui.keys')`)) && /camp\.ui\.pausehelp \| F fires a homing missile/.test(md) && /Turrets fire at close ships by themselves/.test(md));
+  check('the key line names Space for the turrets and F for the missiles, the pause card says so too (a line of its own), and nothing says gun', /Space turrets/.test(J(`uiText('camp.ui.keys')`)) && /F missiles/.test(J(`uiText('camp.ui.keys')`)) && !/gun/i.test(J(`uiText('camp.ui.keys')`)) && /camp\.ui\.pausehelp \| Hold Space: the turrets fire at ships close by\. F fires a homing missile/.test(md));
+  check('in the scene F is the missile key and Space is not: no line gives a missile to Space', /c === 'KeyF'\) this\.fireMissile\(\)/.test(sc) && !/SPACE[^\n]*fireMissile|fireMissile[^\n]*SPACE|Space[^\n]*campOrder\(C, 'missiles'/.test(sc));
   check('the turrets\' shots are amber, so they are not mistaken for the main gun\'s', /b\.pd\) im\.setTint\(0xffd37a\)/.test(sc));
 }
 
@@ -222,7 +230,7 @@ console.log('H. nothing else moved');
   g.run('(() => { const t = C.ships.find(u => u.kind === "tower"); window.__tw = t.id; C.carrier.x = t.x - Math.cos(t.rot) * 700; C.carrier.y = t.y - Math.sin(t.rot) * 700; C.carrier.rot = t.rot; C.ships.forEach(u => { if (u.kind === "tower") u.nextShot = 1e12; }); })()');
   g.run(`__fire(''); __run(0.8); __fire(''); __run(4)`);
   check('level 3: a tower (160 hit points) takes two missiles (120 each) and falls, and the others stand', tw === 12 && J('__hp(__tw)') === 0 && J(`C.ships.filter(u => u.kind === 'tower').length`) === 11 && J('C.kills') === 1, J('__hp(__tw)'));
-  check('the turrets\' numbers did not move (point guns 5 a shot every 350 ms out to 420 px) and the carrier is still 36 px across its hit circle', J('CAMP.carrier.pd') === 5 && J('CAMP.carrier.pdDelay') === 350 && J('CAMP.carrier.pdRange') === 420 && J('CAMP.carrier.radius') === 36);
+  check('the turrets\' numbers: 5 a shot every 500 ms out to 450 px, eight of them; the carrier is still 36 px across its hit circle', J('CAMP.carrier.pd') === 5 && J('CAMP.carrier.pdDelay') === 500 && J('CAMP.carrier.pdRange') === 450 && J('CAMP.carrier.mounts.length') === 8 && J('CAMP.carrier.radius') === 36);
   const doc = src('docs/CAMPAIGN.md'), tune = src('docs/CAMPAIGN-TUNING.md');
   check('the docs say it: the weapons in CAMPAIGN.md, the numbers in CAMPAIGN-TUNING.md', /missile/i.test(doc) && /F\b/.test(doc) && /missile\./.test(tune) && /camp\.ui\.pausehelp|pause/i.test(doc + tune));
   check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
