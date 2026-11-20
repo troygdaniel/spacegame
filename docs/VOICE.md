@@ -35,10 +35,10 @@ Troy asked for voice to text so he can talk to the ship's computer. This replace
 ## The lines
 | When | Line | Priority |
 |---|---|---|
-| Launch from the hangar | "Launch clear. All systems nominal." | 1 |
+| Launch from the hangar | "Launch clear." | 1 |
 | Hull drops under 30% (re-arms above 50%) | "Warning. Hull integrity critical." | 2 |
 | First pirate within 750 px (45 s between) | "Hostile contacts detected. Weapons ready." | 1 |
-| Dock at Halcyon | "Docking complete. Welcome to Halcyon Station." | 1 |
+| Dock at Halcyon | "Docked at Halcyon Station." | 1 |
 | Land on Kepler-4b | "Touchdown confirmed." | 0 |
 | Rescue accepted | "Rescue call accepted. Proceed to Kepler-4b." | 1 |
 | Escort accepted | "Escort contract accepted. Stay close to the MULE." | 1 |
@@ -48,7 +48,7 @@ Troy asked for voice to text so he can talk to the ship's computer. This replace
 | Other payment of 100 cr or more | "Payment received. N credits." | 0 |
 | Mission failed | "Mission failed." | 1 |
 | Ship destroyed | "Ship lost. Insurance has been charged." | 2 |
-| The 2000 cr ending | "Two thousand credits earned. Well flown, pilot." | 1 |
+| The 2000 cr ending | "Two thousand credits earned." | 1 |
 | Test button | "Ship voice online." | n/a |
 
 ## Character voices (NPC chat, `space-game-npc-chat-voice`)

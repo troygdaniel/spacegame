@@ -8,10 +8,10 @@ const VOICE_URL = 'https://api.deepgram.com/v1/speak', VOICE_MODEL = 'aura-athen
 // the voices the ship computer can have (Settings > Sound): [Aura name, shown name, a few words]
 const VOICE_CHOICES = [['aura-athena-en', 'ATHENA', 'calm, the default'], ['aura-asteria-en', 'ASTERIA', 'bright and clear'], ['aura-luna-en', 'LUNA', 'warm'], ['aura-orion-en', 'ORION', 'steady, male'], ['aura-helios-en', 'HELIOS', 'deep, male']];
 const VOICE_LINES = {
-  launch: 'Launch clear. All systems nominal.',
+  launch: 'Launch clear.',
   hull: 'Warning. Hull integrity critical.',
   hostile: 'Hostile contacts detected. Weapons ready.',
-  dock: 'Docking complete. Welcome to Halcyon Station.',
+  dock: 'Docked at Halcyon Station.',
   land: 'Touchdown confirmed.',
   accept: {
     rescue: 'Rescue call accepted. Proceed to Kepler-4b.',
@@ -21,7 +21,7 @@ const VOICE_LINES = {
   },
   failed: 'Mission failed.',
   lost: 'Ship lost. Insurance has been charged.',
-  ending: 'Two thousand credits earned. Well flown, pilot.',
+  ending: 'Two thousand credits earned.',
   test: 'Ship voice online.'
 };
 // ---------- lines a content pack adds (content/voice/*.md, src/contentadd.js) ----------
