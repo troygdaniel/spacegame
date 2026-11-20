@@ -26,7 +26,7 @@ The carrier has two ways to hurt an alien, one key each (card `space-game-campai
 
 | Weapon | How | What it is for |
 |---|---|---|
-| Turrets | hold **Space**: eight turrets spread along the hull (four a side, two near the nose, two at the stern, rows of `CAMP.carrier.mounts`); each aims itself at the nearest alien within 450 px of it (to the edge of the alien), always, and fires one shot of 5 hit points every 0.5 s, but only while Space is held and only at something in reach; nothing fires on its own | the small ships that come close, and any big one you fly up to; 80 hit points a second in all |
+| Turrets | hold **Space**: eight turrets spread along the hull (four a side, two near the nose, two at the stern, rows of `CAMP.carrier.mounts`); each aims itself at the nearest alien within 500 px of it (to the edge of the alien), always, and fires one shot of 4 hit points every 0.4 s, but only while Space is held and only at something in reach; nothing fires on its own | the small ships that come close, and any big one you fly up to; 80 hit points a second in all |
 | Missile launcher | **F**; "fire missiles" or "missiles at the mothership" typed on the strip (I) or spoken (U) | big ships: the mothership, the towers and the gunships |
 
 On the screen each turret is a dark base with an amber dot; once it has picked an alien it points a short barrel at it (even with Space up), and when it shoots it flashes white with a longer barrel. A faint ring round the carrier shows how far they reach, and their shots are amber (the beam tech's are cyan). The sound is one blip for a volley, not eight.
@@ -54,7 +54,7 @@ Troy lost level 1 twice at wave 3, both times because Earth's shield ran out, wi
 | After level 1 (their wreck) | Does |
 |---|---|
 | Shield grid | the carrier takes 40 percent less damage |
-| Beam turrets | the turrets fire beams: twice the damage (10 a shot), half as far again (675 px), and a shot goes through everything it hits |
+| Beam turrets | the turrets fire beams: twice the damage (8 a shot), half as far again (750 px), and a shot goes through everything it hits |
 | Warp blink | a short warp hop of 1,500 px, ready again after 20 s |
 
 After level 2 (ancient tech): hull plating (carrier hull +50 percent), a second bay (+4 fighters), a repair field (the carrier and the ships beside it heal). The pick carries into the next level, and is kept in `localStorage` under `longhaul.campaign`, apart from the Long Haul save.
@@ -79,6 +79,6 @@ After level 2 (ancient tech): hull plating (carrier hull +50 percent), a second 
 - The playing field is a 1 to 12 scale of the real Sol distances (Earth to Mars is about 4,100 px), not the true scale: true scale would make a level an hour.
 - The campaign has no money: the convoys that arrive only appear in the story line after the level.
 - Alpha Centauri and Epsilon Eridani are my picks; the alien home world has no real name.
-- The turrets' reach is 450 px, about three carrier lengths (the carrier is drawn 140 px long). With the single gun gone, the carrier's only far reach is the missile; the numbers (450 px, 5 a shot, every 0.5 s, eight turrets) were set so the same sensible players still win level 1 and level 3 in `tests/campaign.mjs`, not by feel: one table, `CAMP.carrier`.
+- The turrets' reach is 500 px, about three and a half carrier lengths (the carrier is drawn 140 px long). With the single gun gone, the carrier's only far reach is the missile. The numbers (500 px, 4 a shot, every 0.4 s, eight turrets: 80 a second) were chosen by running the sensible players of `tests/campaign.mjs` over twelve seeds, so a carrier that stays at the Moon and holds Space still wins level 1 in 2.5 to 5 minutes, not by feel: one table, `CAMP.carrier`.
 - Missiles are for big ships on purpose: with only raiders and drones near, F answers "No big ship in missile range" and spends nothing.
 - Left out of this cut: a map between levels, saving a level in the middle, difficulty, music of its own, and more than three techs a level.

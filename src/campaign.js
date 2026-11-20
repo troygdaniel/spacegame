@@ -28,9 +28,9 @@ const CAMP = {
     brakeDrag: 0.12,                       // the same with S held
     radius: 36,                            // px, the hit circle (it was 56: the carrier is drawn 35 percent smaller)
     mounts: [[42, -14], [42, 14], [12, -26], [12, 26], [-16, -30], [-16, 30], [-44, -24], [-44, 24]], // the turrets (there is no other gun): where each sits, px from the carrier's centre in its own frame (x along the nose), spread along the hull; the number of turrets is the number of rows
-    pd: 5,                                 // hit points one turret shot takes off an alien
-    pdDelay: 500,                          // ms between the shots of one turret (eight of them: 80 hit points a second in all): they fire only while Space is held, each at the nearest alien in its reach, and never on their own
-    pdRange: 450,                          // px a turret reaches (to the edge of the alien it aims at: about three carrier lengths)
+    pd: 4,                                 // hit points one turret shot takes off an alien
+    pdDelay: 400,                          // ms between the shots of one turret (eight of them: 80 hit points a second in all): they fire only while Space is held, each at the nearest alien in its reach, and never on their own
+    pdRange: 500,                          // px a turret reaches (to the edge of the alien it aims at: about three and a half carrier lengths)
     pdSpeed: 800                           // px/s of a turret shot
   },
   missile: {                               // the missile launcher (F, or the order "missiles"): a homing missile for the mothership and the other big ships (card space-game-campaign-missiles)
