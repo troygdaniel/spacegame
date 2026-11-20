@@ -3,7 +3,7 @@ window.game = new Phaser.Game({
   type: Phaser.AUTO, width: W, height: H, parent: 'game', backgroundColor: '#05070f',
   physics: { default: 'arcade', arcade: { debug: false } },
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [Boot, Title, Station, ShipBay, Space, Surface, Pause, Overlay, Hyper, Galaxy, Settings, ModsSetup, Journal, Campaign]
+  scene: [Boot, Title, Station, ShipBay, Space, Surface, Pause, Overlay, Hyper, Galaxy, Settings, ModsSetup, Journal, Campaign, CampWarp]
 });
 installMeta(window.game); // Esc pause, M mute, autosave
 installAudio(window.game); // ambient pads, engine hum (audio.js)
