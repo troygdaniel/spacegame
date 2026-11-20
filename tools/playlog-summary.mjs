@@ -32,7 +32,7 @@ export function sessionsOf(events) {
 export function summarize(events) {
   const S = { events: events.length, build: {}, scenes: {}, samples: [], deals: { buy: 0, sell: 0, buyN: 0, sellN: 0, by: {} }, missions: { accepted: 0, done: 0, failed: 0, dropped: 0, pay: 0, by: {} }, credits: { other: 0 },
     docks: 0, systems: [], jumps: 0, deaths: [], deathCauses: {}, actions: {}, nokeys: {}, idle: [], computer: { n: 0, ms: 0, failed: 0, codes: {}, tools: {} }, listen: { starts: 0, rings: 0, ringAborts: 0, early: '', earlyMs: 0, opens: 0, openMs: 0, openFail: 0, stops: 0, held: 0, clips: 0, heard: 0, heardEmpty: 0, ends: {} }, chat: { n: 0, ms: 0, failed: 0, codes: {} },
-    errors: [], errorCount: 0, dips: [], pauses: 0, settings: 0, hidden: 0, stalls: 0, end: null, endScene: '', last: null, unclean: false };
+    campaign: [], errors: [], errorCount: 0, dips: [], pauses: 0, settings: 0, hidden: 0, stalls: 0, end: null, endScene: '', last: null, unclean: false };
   const errs = new Map();
   events.forEach(e => {
     S.last = e;
@@ -70,6 +70,18 @@ export function summarize(events) {
       case 'computer_plan': S.computer.tools[e.action || 'none'] = (S.computer.tools[e.action || 'none'] || 0) + 1; break;
       case 'npc_chat': S.chat.n++; S.chat.ms += e.ms || 0; if (e.ok === false) { S.chat.failed++; S.chat.codes[e.code || 'error'] = (S.chat.codes[e.code || 'error'] || 0) + 1; } break;
       case 'error': { S.errorCount++; const k = (e.kind || '') + '|' + String(e.msg || '').slice(0, 120); const x = errs.get(k) || { kind: e.kind, msg: e.msg, stack: e.stack, scene: e.scene, n: 0, t: e.t }; x.n++; errs.set(k, x); break; }
+      case 'campaign': { // one attempt at a level: start .. end (src/playlog.js L.campaign); a step with no start line before it (a cut log) opens an attempt of its own
+        let A = S.campaign[S.campaign.length - 1];
+        if (e.step === 'start' || !A || (A.done && e.step !== 'tech')) { A = { level: e.level, via: e.via || '', t: e.t || 0, wave: 0, orders: {}, noop: 0, lost: 0, techs: [], debug: [], result: '', why: '', secs: 0, hull: null, done: false }; S.campaign.push(A); }
+        if (e.level != null && A.level == null) A.level = e.level;
+        if (e.secs > A.secs) A.secs = e.secs;
+        if (e.step === 'wave' && e.wave > A.wave) A.wave = e.wave;
+        else if (e.step === 'order') { const k = (e.order || 'other') + (e.how && e.how !== 'other' ? '/' + e.how : ''); A.orders[k] = (A.orders[k] || 0) + 1; if (e.ok === false) A.noop++; }
+        else if (e.step === 'lost') A.lost++;
+        else if (e.step === 'tech' && e.tech) A.techs.push(e.tech);
+        else if (e.step === 'debug' && e.debug) A.debug.push(e.debug);
+        else if (e.step === 'end') { A.done = true; A.result = e.result || 'quit'; A.why = e.why || ''; if (e.wave > A.wave) A.wave = e.wave; if (e.deaths != null) A.lost = Math.max(A.lost, e.deaths); if (e.hull != null) A.hull = e.hull; }
+        break; }
       case 'fps_dip': S.dips.push(e); break;
       case 'tab': if (e.state === 'hidden') S.hidden++; break;
       case 'stall': S.stalls++; break;
@@ -112,6 +124,13 @@ export function render(S, label = '') {
   L.push(`Calls: accepted ${m.accepted}, done ${m.done} (+${num(m.pay)} cr), failed ${m.failed}, dropped ${m.dropped}${Object.keys(m.by).length ? '   (' + Object.entries(m.by).map(([k, v]) => `${k}: ${Object.entries(v).map(([s, c]) => c + ' ' + s).join(', ')}`).join('; ') + ')' : ''}.   Other credits (fees, finds): ${S.credits.other >= 0 ? '+' : ''}${num(S.credits.other)}`);
   L.push(`Docks ${S.docks}, jumps ${S.jumps}${S.systems.length ? ', systems seen: ' + S.systems.join(', ') : ''}.   Pauses ${S.pauses}, Settings ${S.settings}${S.hidden ? ', tab hidden ' + S.hidden + 'x' : ''}${S.stalls ? ', page froze ' + S.stalls + 'x' : ''}`);
   L.push(`Deaths ${S.deaths.length}${S.deaths.length ? ': ' + top(S.deathCauses, 4).map(([k, v]) => `${k} x${v}`).join(', ') + ' (in ' + [...new Set(S.deaths.map(x => x.system).filter(Boolean))].join(', ') + ')' : ''}`);
+  if (S.campaign.length) { // the Campaign (card space-game-campaign-tune): how each level went, newest last
+    const by = {}; S.campaign.forEach(x => { const k = x.done ? x.result : 'open'; by[k] = (by[k] || 0) + 1; });
+    const byName = m => { const o = {}; Object.entries(m).forEach(([k, n]) => { const w = k.split('/')[0]; o[w] = (o[w] || 0) + n; }); return o; }, ord = {}; // an order by its name; the key or voice or strip it came by stays in the JSON
+    S.campaign.forEach(x => Object.entries(byName(x.orders)).forEach(([k, n]) => { ord[k] = (ord[k] || 0) + n; }));
+    L.push(`Campaign: ${S.campaign.length} level${S.campaign.length === 1 ? '' : 's'} played (${Object.entries(by).map(([k, n]) => n + ' ' + k).join(', ')})${Object.keys(ord).length ? '; orders: ' + top(ord, 5).map(([k, n]) => k + ' x' + n).join(', ') : ''}`);
+    S.campaign.slice(-8).forEach(x => L.push(`   level ${x.level == null ? '?' : x.level}${x.via ? ' (' + x.via + ')' : ''}  ${(x.done ? x.result + (x.why ? ' / ' + x.why : '') : 'NOT ENDED').padEnd(14)} ${mmss(x.secs).padStart(6)}  wave ${x.wave}  lost ${x.lost}${x.hull != null ? '  hull ' + x.hull : ''}${Object.keys(x.orders).length ? '  orders ' + top(byName(x.orders), 4).map(([k, n]) => k + ' x' + n).join(', ') + (x.noop ? ` (${x.noop} did nothing)` : '') : ''}${x.techs.length ? '  tech ' + x.techs.join(', ') : ''}${x.debug.length ? '  DEBUG ' + x.debug.join(', ') : ''}`));
+  }
   const acts = top(S.actions, 8);
   L.push('Pressed most:  ' + (acts.length ? acts.map(([k, v]) => `${k.replace(/^key:/, '')} ${num(v)}`).join('   ') : '(nothing counted)'));
   const nk = top(S.nokeys, 8), nkTotal = Object.values(S.nokeys).reduce((a, b) => a + b, 0);

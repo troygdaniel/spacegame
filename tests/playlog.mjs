@@ -250,6 +250,65 @@ check('the pending list never grows past its cap', J(`(() => { const L = __mk({ 
   check('the wiring raised no errors', w.errors.length === 0, w.errors.join(' | '));
 }
 
+// ---- the Campaign lines (card space-game-campaign-tune): one level at a time, through the one door ----
+{
+  const C = lines(`L.start({}); L.campaign('start', { level: 2, via: 'address' }); __t += 5000; L.campaign('wave', { level: 2, wave: 1 }); __t += 20000; L.campaign('order', { order: 'launch', how: 'strip' }); L.campaign('order', { order: 'attack', how: 'voice', ok: false });
+    __t += 10000; L.campaign('lost', { what: 'fighter' }); L.campaign('lost', { what: 'escort' }); L.campaign('wave', { level: 2, wave: 3 }); L.campaign('wave', { level: 2, wave: 2 }); L.campaign('tech', { tech: 'shield_grid' }); __t += 4000; L.campaign('end', { result: 'win', why: 'mothership', hull: 61.7 })`);
+  const cl = only(C, 'campaign');
+  check('a level is a start, its waves, orders, losses, the tech and an end: each step is a line with its time and session', cl.map(l => l.step).join() === 'start,wave,order,order,lost,lost,wave,wave,tech,end' && cl.every(l => l.s === 'abcd1234' && typeof l.t === 'number'), cl.map(l => l.step).join());
+  check('start says the level and how it began (menu, address, next, retry or skip)', cl[0].level === 2 && cl[0].via === 'address' && cl[0].wave === 0, JSON.stringify(cl[0]));
+  check('the logger works out the seconds since the level began: the caller never says them', cl[1].secs === 5 && cl[2].secs === 25 && cl[4].secs === 35 && cl[9].secs === 39, cl.map(l => l.secs).join());
+  check('an order is its name, how it was given (key, strip, voice, click) and whether it did anything; the level is the open one when the caller leaves it out', cl[2].order === 'launch' && cl[2].how === 'strip' && cl[2].ok === true && cl[2].level === 2 && cl[3].ok === false && cl[3].how === 'voice', JSON.stringify(cl.slice(2, 4)));
+  const e = cl[9];
+  check('the end has the result, why, the highest wave reached (not the last said), the ships lost (counted by the logger) and the hull left', e.result === 'win' && e.why === 'mothership' && e.wave === 3 && e.deaths === 2 && e.hull === 62 && e.level === 2, JSON.stringify(e));
+  check('the tech picked is a line with its name', cl[8].tech === 'shield_grid', JSON.stringify(cl[8]));
+}
+{
+  let ls2 = lines(`L.campaign('start', { level: 1 }); L.campaign('wave', { wave: 2 }); L.campaign('start', { level: 1, via: 'retry' }); L.campaign('end', { result: 'lose', why: 'carrier', deaths: 4 })`);
+  let cl = only(ls2, 'campaign');
+  check('a level that begins while another is open ends the first as quit (why restart), with the wave it had reached', cl.map(l => l.step + ':' + (l.result || l.via || '')).join() === 'start:menu,wave:,end:quit,start:retry,end:lose' && cl[2].why === 'restart' && cl[2].wave === 2, JSON.stringify(cl));
+  check('an end that says the deaths keeps them; one that does not uses the count of lost lines', cl[4].deaths === 4 && cl[2].deaths === 0, JSON.stringify([cl[2].deaths, cl[4].deaths]));
+  ls2 = lines(`L.start({}); L.campaign('start', { level: 3 }); __t += 12000; L.campaign('wave', { wave: 1 }); __t += 3000; L.end('pagehide')`);
+  cl = only(ls2, 'campaign');
+  const iEnd = ls2.findIndex(l => l.ev === 'campaign' && l.step === 'end'), iSes = ls2.findIndex(l => l.ev === 'session' && l.phase === 'end');
+  check('the tab closing in the middle of a level ends it as quit, with the time, BEFORE the session end line', cl.length === 3 && cl[2].result === 'quit' && cl[2].why === 'pagehide' && cl[2].secs === 15 && cl[2].wave === 1 && iEnd > 0 && iEnd < iSes, JSON.stringify(cl[2]));
+  ls2 = lines(`L.end('pagehide')`);
+  check('no level open: the end of the session says nothing about a campaign', only(ls2, 'campaign').length === 0);
+  ls2 = lines(`L.campaign('nonsense', { level: 1 }); L.campaign('', {}); L.campaign('wave'); L.campaign('order')`);
+  cl = only(ls2, 'campaign');
+  check('a step that is not on the list is dropped; a step with no data still logs and never throws', cl.length === 2 && cl[0].step === 'wave' && cl[1].step === 'order' && cl[1].order === 'other' && cl[1].how === 'other', JSON.stringify(cl));
+  ls2 = lines(`L.campaign('start', { level: 1 }); L.campaign('order', { order: 'launch the fighters, please!', how: 'telepathy' }); L.campaign('tech', { tech: 'a b' }); L.campaign('lost', { what: 'SECRET words' }); L.campaign('debug', { debug: 'cheat' }); L.campaign('end', { result: 'maybe', why: 'because I said so' })`);
+  cl = only(ls2, 'campaign');
+  check('a name that is not one plain word (a sentence typed or said) is never written: it becomes "other"; a value off a closed list is "other" too', cl[1].order === 'other' && cl[1].how === 'other' && cl[2].tech === 'other' && cl[3].what === 'other' && cl[4].debug === 'other' && cl[5].result === 'other' && cl[5].why === 'other' && !JSON.stringify(cl).match(/please|secret|because/i), JSON.stringify(cl));
+  ls2 = lines(`L.campaign('start', { level: 1 }); L.campaign('wave', { level: 0, wave: 1 }); L.campaign('wave', { level: 100, wave: 2 }); L.campaign('wave', { level: 2.5, wave: 3 }); L.campaign('wave', { level: '2', wave: 4 })`);
+  cl = only(ls2, 'campaign');
+  check('a level that is not a whole number from 1 to 99 is not written as one: the open level is used instead', cl.slice(1).every(l => l.level === 1), JSON.stringify(cl));
+  ls2 = lines(`L.campaign('start', { level: 1 }); for (let i = 0; i < 400; i++) { __t += 10; L.campaign('order', { order: 'launch', how: 'key' }); } L.campaign('end', { result: 'win' })`);
+  cl = only(ls2, 'campaign');
+  check('a loop of orders cannot fill the log (120 campaign lines a minute); the start and the end of the level always get in', cl.length === 121 && cl[0].step === 'start' && cl[120].step === 'end', cl.length);
+  const off = J(`(() => { const L = __mk({ on: false }); L.campaign('start', { level: 1 }); L.campaign('end', { result: 'win' }); return __lines(L); })()`);
+  check('with the play log OFF no campaign line is written', only(off, 'campaign').length === 0, JSON.stringify(off));
+  ls2 = lines(`L.campaign('start', { level: 1 }); L.setOn(false); L.campaign('wave', { wave: 1 }); L.setOn(true); L.campaign('wave', { wave: 2 })`);
+  check('turned OFF in the middle of a level, the steps in the gap are not written', only(ls2, 'campaign').map(l => l.step + (l.wave === undefined ? '' : l.wave)).join() === 'start0,wave2', JSON.stringify(only(ls2, 'campaign')));
+  const thr = J(`(() => { const L = __mk({ storeThrows: true, sinkThrows: true }); L.campaign('start', { level: 1 }); L.campaign('end', { result: 'win' }); L.flush(); return 'ok'; })()`);
+  check('a store and a sink that throw do not make a campaign line throw', thr === 'ok');
+  ls2 = lines(`L.campaign('end', { result: 'win' }); L.campaign('start', { level: 1 }); L.campaign('end', { result: 'win', why: 'mothership' }); L.campaign('end', { result: 'quit', why: 'pagehide' }); L.end('pagehide')`);
+  cl = only(ls2, 'campaign');
+  check('a level ends once: an end with no level open (the game, a debug key and the tab closing may each say so) is not written', cl.map(l => l.step + ':' + (l.result || '')).join() === 'start:,end:win', JSON.stringify(cl));
+  ls2 = lines(`L.campaign('start', { level: 2 }); L.campaign('end', { result: 'win' }); L.campaign('tech', { tech: 'plating' })`);
+  cl = only(ls2, 'campaign');
+  check('a tech is picked after its level ended: the line has that level', cl[2].step === 'tech' && cl[2].level === 2 && cl[2].tech === 'plating', JSON.stringify(cl[2]));
+}
+{
+  const w = nodeGame();
+  check('the door campaignNote is there and quiet when no logger is running', w.run(`typeof campaignNote`) === 'function' && w.run(`campaignNote('wave', { wave: 1 })`) === undefined);
+  w.run(`var __pn = 1; var __m3 = new Map(); globalThis.PLAYLOG_LIVE = playlogCreate({ mono: () => __pn, wall: () => 1763424000000, store: { get: k => (__m3.has(k) ? __m3.get(k) : null), set: (k, v) => { __m3.set(k, String(v)); }, remove: k => { __m3.delete(k); } }, sink: null, sid: 'cafe0002' });
+    campaignNote('start', { level: 1 }); campaignNote('wave', { wave: 1 }); campaignNote('end', { result: 'win' });`);
+  const got = JSON.parse(w.run(`JSON.stringify(PLAYLOG_LIVE.text().split('\\n').filter(Boolean).map(l => JSON.parse(l)))`));
+  check('the door reaches the running logger: three steps, three lines', got.length === 3 && got.map(l => l.step).join() === 'start,wave,end', JSON.stringify(got));
+  check('the door raised no errors', w.errors.length === 0, w.errors.join(' | '));
+}
+
 // ---- the Settings row (src/settings.js): the three buttons on a stand-in scene ----
 {
   const w = nodeGame();

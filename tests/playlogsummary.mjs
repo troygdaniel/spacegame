@@ -80,6 +80,27 @@ const noEnd = summarize(events.filter(e => !(e.ev === 'session' && e.phase === '
 check('a log with no end line says so', /NO END LINE/.test(render(noEnd)));
 check('an empty session does not throw and still prints a screen', render(summarize([])).split('\n').length > 5);
 
+// ---- the Campaign block (card space-game-campaign-tune): each level an attempt, read back from what the logger wrote ----
+{
+  const ct = g.run(`play('cccc3333', (L, sec) => {
+    L.start({ scr: '1458x820', mods: 'none' });
+    L.campaign('start', { level: 1, via: 'menu' }); sec(30, __snap({}), true); L.campaign('wave', { wave: 1 }); L.campaign('order', { order: 'launch', how: 'key' }); L.campaign('order', { order: 'attack', how: 'voice' }); L.campaign('order', { order: 'recall', how: 'strip', ok: false });
+    sec(20, __snap({}), true); L.campaign('lost', { what: 'fighter' }); L.campaign('wave', { wave: 2 }); L.campaign('end', { result: 'lose', why: 'carrier', hull: 0 });
+    L.campaign('start', { level: 2, via: 'address' }); sec(10, __snap({}), true); L.campaign('debug', { debug: 'skip' }); L.campaign('tech', { tech: 'beam_cannon' }); L.campaign('end', { result: 'skip', why: 'debug' });
+    L.campaign('start', { level: 1, via: 'retry' }); sec(15, __snap({}), true); L.campaign('wave', { wave: 1 }); L.campaign('order', { order: 'launch', how: 'key' });
+    L.flush();
+  })`);
+  const C = summarize(parseLog(ct)), screen = render(C), cl = screen.split('\n').filter(l => /^Campaign:|^   level /.test(l));
+  check('the campaign is three attempts: a lose, a skip and one the log was cut in', C.campaign.length === 3 && C.campaign.map(a => a.done ? a.result : 'open').join() === 'lose,skip,open', JSON.stringify(C.campaign.map(a => [a.level, a.result, a.done])));
+  check('an attempt has its level, how it began, the highest wave, the ships lost, the time, the carrier hull, and every order by name and how (one that did nothing counted apart)', C.campaign[0].level === 1 && C.campaign[0].via === 'menu' && C.campaign[0].wave === 2 && C.campaign[0].lost === 1 && C.campaign[0].secs >= 50 && C.campaign[0].hull === 0 && C.campaign[0].orders['launch/key'] === 1 && C.campaign[0].orders['attack/voice'] === 1 && C.campaign[0].noop === 1, JSON.stringify(C.campaign[0]));
+  check('the tech picked and the debug key used are on the attempt they happened in', C.campaign[1].techs.join() === 'beam_cannon' && C.campaign[1].debug.join() === 'skip' && C.campaign[1].via === 'address' && C.campaign[1].level === 2, JSON.stringify(C.campaign[1]));
+  check('the screen has a Campaign line (levels played, how they ended, orders most used) and a line for each attempt; the open one says NOT ENDED, the debug one says DEBUG', cl.length === 4 && /Campaign: 3 levels played \(1 lose, 1 skip, 1 open\); orders: launch x2/.test(cl[0]) && /level 1 \(menu\)  lose \/ carrier/.test(cl[1]) && /DEBUG skip/.test(cl[2]) && /NOT ENDED/.test(cl[3]) && cl.every(l => l.length <= 130), cl.join('\n'));
+  check('a session with no campaign in it has no Campaign line at all', !/Campaign/.test(text));
+  const ct2 = g.run(`play('dddd4444', (L, sec) => { L.start({}); L.campaign('start', { level: 1 }); sec(5, __snap({}), true); L.campaign('end', { result: 'win', why: 'mothership' }); L.campaign('tech', { tech: 'shield' }); L.flush(); })`);
+  const C2 = summarize(parseLog(ct2));
+  check('a tech picked after the level ended is on that level, not a level of its own', C2.campaign.length === 1 && C2.campaign[0].done && C2.campaign[0].result === 'win' && C2.campaign[0].techs.join() === 'shield', JSON.stringify(C2.campaign));
+}
+
 // ---- the command line ----
 const tmp = mkdtempSync(join(tmpdir(), 'lh-summary-'));
 try {
