@@ -48,6 +48,7 @@ const SCENARIO = `
     if (C.level === 1 && !C.ships.some(u => u.kind === 'mother')) { const m = campSpawn(C, 'mother', c.x + 1100, c.y - 300); m.hp = m.maxHp = 1e9; m.goal = 'earth'; m.wave = 0; }
     if (campWing(C).length < 8 && C.launchQ.length === 0) { C.bay.fighters = 8; C.bay.escorts = 4; campOrder(C, 'launch'); }
     else if (campWing(C, 'fighter').length && Math.round(C.t / 1000) % 6 === 0) campOrder(C, 'attack');
+    if (typeof C.missiles === 'number' && !window.__nomissile) { C.missiles = Math.max(C.missiles, 6); campOrder(C, 'missiles', '', 'key'); } // the missile launcher (F), when this game has one: fired at every top-up, more often than a magazine and its reload allow a player
     c.hp = c.maxHp; C.input.fire = true; C.input.thrust = 0.5; C.input.turn = Math.sin(C.t / 1700) > 0 ? 1 : -1;
     C.events.length = 0; return C.ships.length;
   };
@@ -92,9 +93,10 @@ if (what === 'sim') {
 // ------------------------------------------------------------------ Chrome
 const { launch, sleep } = await import('../tests/cdp.mjs');
 const hashOf = k => '?campaign=' + (SCEN[k] || SCEN.busy1).level;
+const SRC = process.env.PERF_ROOT || ROOT; // PERF_ROOT=<another checkout of the game>: measure that code (the tool and the scenario stay this file's), to set an old commit beside a new one
 
 async function enter(key, opts = {}) {
-  const k = SCEN[key] || SCEN.busy1, t = await launch(hashOf(key));
+  const k = SCEN[key] || SCEN.busy1, t = await launch(hashOf(key), SRC);
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Campaign'))", 40000, 'the Campaign is up');
     await t.send('Performance.enable');
@@ -109,23 +111,24 @@ async function enter(key, opts = {}) {
 // the hooks: one table of milliseconds the game spends in each part of a frame, read and cleared by the harness
 const HOOKS = `(() => {
   if (window.__H) return 1;
-  const H = window.__H = { sim: 0, sync: 0, hud: 0, bg: 0, map: 0, upd: 0, rend: 0, ui: 0, uiN: 0, rows: [] };
+  { const D0 = Date.now() - window.__t; Date.now = () => Math.round(D0 + window.__t); } // game time for Date.now: Phaser's tweens run on it, so with the stepped clock a 700 ms puff would otherwise outlive 40 s of game time and the display list would swell
+  const H = window.__H = { sim: 0, sync: 0, hud: 0, bg: 0, map: 0, upd: 0, rend: 0, ui: 0, uiN: 0, rock: 0, rows: [] };
   const wrap = (obj, name, key) => { const f = obj[name]; obj[name] = function (...a) { const s = performance.now(); try { return f.apply(this, a); } finally { H[key] += performance.now() - s; } }; };
-  const sc = game.scene.getScene('Campaign'); wrap(Campaign.prototype, 'sync', 'sync'); wrap(Campaign.prototype, 'paintHud', 'hud'); wrap(sc.sys, 'sceneUpdate', 'upd'); // Phaser copies update() into sys.sceneUpdate when the scene is made
+  const sc = game.scene.getScene('Campaign'); wrap(Campaign.prototype, 'sync', 'sync'); wrap(Campaign.prototype, 'paintHud', 'hud'); wrap(sc.sys, 'sceneUpdate', 'upd'); if (Campaign.prototype.syncRockets) wrap(Campaign.prototype, 'syncRockets', 'rock'); // Phaser copies update() into sys.sceneUpdate when the scene is made
   const g = (name, key) => { const f = window[name]; window[name] = function (...a) { const s = performance.now(); try { return f.apply(this, a); } finally { H[key] += performance.now() - s; } }; };
   g('campStep', 'sim'); g('spaceBackdropTick', 'bg'); g('campMapPaint', 'map');
   const u = window.uiText; window.uiText = function (...a) { const s = performance.now(); H.uiN++; try { return u.apply(this, a); } finally { H.ui += performance.now() - s; } };
   const R = game.renderer; for (const m of ['preRender', 'render', 'postRender']) { const f = R[m]; R[m] = function (...x) { const s = performance.now(); try { return f.apply(this, x); } finally { H.rend += performance.now() - s; } }; }
-  window.__frames = n => { for (let i = 0; i < n; i++) { if (window.__storm && window.C) { const C = window.C, k = (window.__sn = (window.__sn || 0) + 1); C.carrier.hp = C.carrier.maxHp - (k % 90); if (C.earth) C.earth.shield = C.earth.max - (k % 77); } H.sim = H.sync = H.hud = H.bg = H.map = H.upd = H.rend = H.ui = H.uiN = 0; __t += 16.67; const s = performance.now(); game.step(__t, 16.67); const tot = performance.now() - s;
-      H.rows.push([tot, H.upd, H.rend, H.sim, H.sync, H.hud, H.bg, H.map, H.ui, H.uiN]); if (window.__keep && i % 30 === 29) window.__topup(); } };
+  window.__frames = n => { for (let i = 0; i < n; i++) { if (window.__storm && window.C) { const C = window.C, k = (window.__sn = (window.__sn || 0) + 1); C.carrier.hp = C.carrier.maxHp - (k % 90); if (C.earth) C.earth.shield = C.earth.max - (k % 77); } H.sim = H.sync = H.hud = H.bg = H.map = H.upd = H.rend = H.ui = H.uiN = H.rock = 0; __t += 16.67; const s = performance.now(); game.step(__t, 16.67); const tot = performance.now() - s;
+      H.rows.push([tot, H.upd, H.rend, H.sim, H.sync, H.hud, H.bg, H.map, H.ui, H.uiN, H.rock]); if (window.__keep && i % 30 === 29) window.__topup(); } };
   return 1; })()`;
 
 async function timeFrames(t, n) {
   await t.ev(HOOKS); await t.ev('(() => { __H.rows = []; return 1; })()');
   for (let left = n; left > 0; left -= 60) await t.ev(`(() => { __frames(${Math.min(60, left)}); return 1; })()`);
   const rows = await t.ev('__H.rows'), col = i => rows.map(r => r[i]);
-  const other = rows.map(r => Math.max(0, r[1] - r[3] - r[4] - r[5] - r[6] - r[7]));
-  return { frameMs: stat(col(0)), updateMs: stat(col(1)), renderMs: stat(col(2)), simMs: stat(col(3)), syncMs: stat(col(4)), hudMs: stat(col(5)), backdropMs: stat(col(6)), mapMs: stat(col(7)), otherUpdateMs: stat(other), uiTextMsPerFrame: stat(col(8)), uiTextCallsPerFrame: r2(col(9).reduce((a, b) => a + b, 0) / rows.length) };
+  const other = rows.map(r => Math.max(0, r[1] - r[3] - r[4] - r[5] - r[6] - r[7] - r[10]));
+  return { frameMs: stat(col(0)), updateMs: stat(col(1)), renderMs: stat(col(2)), simMs: stat(col(3)), syncMs: stat(col(4)), hudMs: stat(col(5)), backdropMs: stat(col(6)), rocketsMs: stat(col(10)), mapMs: stat(col(7)), otherUpdateMs: stat(other), uiTextMsPerFrame: stat(col(8)), uiTextCallsPerFrame: r2(col(9).reduce((a, b) => a + b, 0) / rows.length) };
 }
 const heap = async t => {
   await t.send('HeapProfiler.collectGarbage');
@@ -136,7 +139,7 @@ const counts = t => t.ev(`(() => {
   const s = game.scene.getScene('Campaign'), walk = o => { let n = 1; if (o.list) o.list.forEach(c => { n += walk(c); }); return n; }, C = s.camp, lists = s.children.list;
   return { renderer: game.renderer.type === 2 ? 'webgl' : 'canvas', textures: game.textures.getTextureKeys().length, displayList: lists.length, objects: lists.reduce((n, o) => n + walk(o), 0),
     visible: lists.filter(o => o.visible).length, shipSprites: Object.keys(s.sp).length, bulletSprites: s.bsp.length, bulletsLive: C.bullets.length, ships: C.ships.length, aliens: campAliens(C).length, wing: campWing(C).length,
-    tweens: s.tweens.getTweens ? s.tweens.getTweens().length : -1, timers: (s.time._active || []).length };
+    rockets: (C.rockets || []).length, missiles: C.missiles, tweens: s.tweens.getTweens ? s.tweens.getTweens().length : -1, timers: (s.time._active || []).length };
 })()`);
 
 const selfTimes = profile => {
@@ -203,7 +206,7 @@ if (what === 'map') {
 }
 
 if (what === 'live') { // the real loop, not stepped: the intervals between drawn frames in a fight, so the drawing and the Mac are in the number (the Chrome of the tests, headless, draws on the GPU)
-  const key = arg || 'busy1', secs = Number(arg2) || 20, k = SCEN[key] || SCEN.busy1, t = await launch(hashOf(key));
+  const key = arg || 'busy1', secs = Number(arg2) || 20, k = SCEN[key] || SCEN.busy1, t = await launch(hashOf(key), SRC);
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Campaign'))", 40000, 'the Campaign is up');
     await sleep(1500);
@@ -277,7 +280,7 @@ if (what === 'hitches') { // a level played the way a player plays it, stepped: 
 }
 
 if (what === 'fill') { // WHERE the drawing time goes, for a machine whose drawing is slow (run it with LONGHAUL_GL=software): the real loop, the busiest fight, with one kind of thing hidden at a time
-  const key = arg || 'busy1', secs = Number(arg2) || 8, k = SCEN[key] || SCEN.busy1, t = await launch(hashOf(key));
+  const key = arg || 'busy1', secs = Number(arg2) || 8, k = SCEN[key] || SCEN.busy1, t = await launch(hashOf(key), SRC);
   try {
     await t.waitFor("!!(window.game && game.scene.isActive('Campaign'))", 40000); await sleep(1500);
     await t.ev(`(() => { ${SCENARIO} const s = game.scene.getScene('Campaign'); s.hideCard(); s.mode = 'play'; __prep(s.camp); window.__keep = true; campOrder(s.camp, 'launch'); window.__topup(); setInterval(() => window.__topup(), 500);
@@ -292,6 +295,19 @@ if (what === 'fill') { // WHERE the drawing time goes, for a machine whose drawi
       const d = await t.ev('__dts'); await t.ev(`(() => { __variants[${JSON.stringify(name)}](true); return 1; })()`);
       console.log(`${name.padEnd(52)} ${r2(d.length / secs).toFixed(1).padStart(5)} fps   frame ms mean ${r2(d.reduce((a, b) => a + b, 0) / d.length)}  p95 ${r2(pct(d, .95))}`);
     }
+    noErrors(t);
+  } finally { await t.close(); }
+}
+
+if (what === 'rockets') { // the missile launcher's drawing (src/campaignscene.js syncRockets) against the same fight without it, in the one page: the reach ring and the turret mounts (two Graphics), the smoke puffs (an image and a tween each)
+  const t = await enter(arg || 'busy1');
+  try {
+    await timeFrames(t, 120);
+    const show = async (label, setup) => { await t.ev(`(() => { ${setup}; return 1; })()`); await timeFrames(t, 180); const r = await timeFrames(t, 600), c = await counts(t); console.log(label.padEnd(46), `frame ${r.frameMs.mean} ms (render ${r.renderMs.mean}, update ${r.updateMs.mean}, rockets ${r.rocketsMs.mean}), display list ${c.displayList}, tweens ${c.tweens}, rockets in flight ${c.rockets}`); };
+    await show('as it is (missiles fired every 0.5 s)', "const s = game.scene.getScene('Campaign'); window.__nomissile = false; s.reachG && s.reachG.setVisible(true); s.mountG && s.mountG.setVisible(true)");
+    await show('reach ring and turret mounts hidden', "const s = game.scene.getScene('Campaign'); s.reachG.setVisible(false); s.mountG.setVisible(false)");
+    await show('no missile fired (and ring and mounts shown)', "const s = game.scene.getScene('Campaign'); window.__nomissile = true; s.reachG.setVisible(true); s.mountG.setVisible(true); s.camp.rockets.length = 0");
+    await show('no missile, ring and mounts hidden', "const s = game.scene.getScene('Campaign'); s.reachG.setVisible(false); s.mountG.setVisible(false)");
     noErrors(t);
   } finally { await t.close(); }
 }
