@@ -67,6 +67,7 @@ console.log('B. the five orders');
   check('a new game: the carrier at the Lunar base, 600 hull, the bay full (six fighters, two escorts), nothing out, no shot fired', J('C.carrier.hp') === 600 && J('C.bay.fighters') === 6 && J('C.bay.escorts') === 2 && J('campWing(C).length') === 0 && J('Math.hypot(C.carrier.x - CAMP.places.luna.x - 90, C.carrier.y - CAMP.places.luna.y)') < 1);
   const noWing = J(`['attack', 'escort', 'guard', 'recall'].map(o => campOrder(C, o, ''))`);
   check('before launch, attack, escort, guard and recall each answer in words that say launch first, and change nothing', noWing.every(r => r.ok === false && /Launch first/.test(r.say)) && J('C.orders.attack + C.orders.escort + C.orders.guard + C.orders.recall') === 0, JSON.stringify(noWing.map(r => r.say)));
+  check('campCheck answers an order exactly as campOrder would and changes nothing (the ship computer checks, announces, then orders)', (() => { const a = J(`campCheck(C, 'launch', '')`); return a.ok && a.say === 'Launching the wing.' && J('C.launchQ.length') === 0 && J('C.bay.fighters') === 6 && J('C.orders.launch') === 0 && J(`campCheck(C, 'attack', '').say`) === 'No fighters are out. Launch first.'; })());
   const l = J(`campOrder(C, 'launch')`);
   check('Launch takes the whole bay at once and says so; the ships leave one every 0.6 s', l.ok && l.say === 'Launching the wing.' && J('C.bay.fighters + C.bay.escorts') === 0 && J('C.launchQ.length') === 8);
   g.run('__run(0.1)'); const a0 = J('campWing(C).length'); g.run('__run(0.7)'); const a1 = J('campWing(C).length'); g.run('__run(4.2)');
@@ -160,9 +161,98 @@ console.log('E. the numbers');
   check('the ship computer is told the battle: level, hull, shield, bay, aliens', /level 1, Home/.test(sm) && /hull 600 of 600/.test(sm) && /Earth shield 100 percent/.test(sm) && /6 fighters, 2 escorts/.test(sm), sm);
 }
 
+// ---------- G. the doors: the strip, the voice and the ship computer ----------
+console.log('G. the doors: typed and spoken orders reach the battle');
+{
+  g.run(`window.__scene = { scene: { key: 'Campaign' }, leaving: false, dead: false, camp: null, toasts: [] }; window.__nb = () => { __new([], 1); __scene.camp = C; };`);
+  g.run('__nb()');
+  const local = t => J(`(() => { const p = shipcompLocal(${JSON.stringify(t)}, __scene); return p ? { text: p.text, action: p.action, refused: p.refused, run: !!p.run } : null; })()`);
+  const r0 = local('launch the fighters');
+  check('"launch the fighters" typed in a battle is the fleet_launch act, said in words, with a run to do it, and it has done nothing yet', r0 && r0.action === 'fleet_launch' && r0.text === 'Launching the wing.' && r0.run && J('C.launchQ.length') === 0 && J('C.bay.fighters') === 6);
+  g.run('(() => { const p = shipcompLocal("launch", __scene); p.run(__scene); })()');
+  check('running it launches the wing, through the one door the keys use (campOrder)', J('C.launchQ.length') === 8 && J('C.orders.launch') === 1);
+  g.run('__run(6)');
+  const r1 = local('send escorts to the Mars convoy');
+  check('with the convoy not yet out, "send escorts to the Mars convoy" is refused in words and nothing changes', r1 && r1.refused && r1.text === 'There is no convoy to escort.' && J(`campWing(C, 'escort').every(u => u.order.type === 'guard')`));
+  g.run('__run(5)');
+  g.run('(() => { const p = shipcompLocal("send escorts to the Mars convoy", __scene); p.run(__scene); })()');
+  check('once it is out the same words send the escorts to it', J(`campWing(C, 'escort').every(u => u.order.type === 'escort' && u.order.target === 'freighter-mars')`));
+  check('"attack", "guard the carrier" and "recall" are acts too, and a refused one says why', local('attack').action === 'fleet_attack' && local('guard the carrier').action === 'fleet_guard' && local('come home').action === 'fleet_recall' && (g.run('__nb()'), local('attack').text === 'No fighters are out. Launch first.'));
+  check('in a battle the Long Haul words mean the fleet\'s: "hunt" is attack, "dock" is recall; "fly to Kepler" and "how do I jump" are the model\'s (no Long Haul answer such as "launch first, then I can hunt")', local('hunt').action === 'fleet_attack' && local('dock').action === 'fleet_recall' && local('fly to Kepler') === null && local('how do I jump') === null);
+  check('outside the Campaign the same words are Long Haul\'s (dock is dock, there is no fleet)', J(`shipcompIntent('dock', { scene: { key: 'Space' } })`).act === 'dock' && J(`shipcompIntent('launch the fighters', { scene: { key: 'Space' } })`) === null);
+  check('and a fleet act asked for outside the Campaign is refused in words', J(`shipcompPlan('SAY: ok\\nDO: fleet_launch', { scene: { key: 'Space' } })`).refused === true);
+  // the model path: the reply is read and checked against the live battle
+  g.run('__nb()');
+  const plan = J(`(() => { const p = shipcompPlan('SAY: Opening the bay.\\nDO: fleet_launch', __scene); return { action: p.action, refused: p.refused, text: p.text, run: !!p.run }; })()`);
+  check('the model\'s DO: fleet_launch is on the closed list: checked, announced, then run', plan.action === 'fleet_launch' && !plan.refused && plan.text === 'Launching the wing.' && plan.run);
+  check('the model is told the battle, the five orders and the Campaign keys, and not the Long Haul list', (() => { const sys = J('shipcompSystem(__scene)'); return /Campaign level 1, Home/.test(sys) && /fleet_launch \| fleet_attack/.test(sys) && /1 launch   2 attack/.test(sys) && !/plot_route/.test(sys) && !/jump_next_hop/.test(sys); })());
+  check('the strip, the microphone and the plain-command door all find the Campaign scene (src/cmdstrip.js, src/listen.js, src/shipcomputer.js)', ['src/cmdstrip.js', 'src/listen.js', 'src/shipcomputer.js'].every(f => /sc\.scene\.key === 'Campaign'/.test(src(f))));
+  check('the scene is a Phaser scene named Campaign, in the game\'s scene list; the title\'s K opens it', J(`typeof Campaign`) === 'function' && /Journal, Campaign\]/.test(src('src/main.js')) && /KeyK'\) campaignStart\(this\)/.test(src('src/title.js')) && J('typeof campaignStart') === 'function');
+  check('the tune kit\'s doors are there, guarded, so this branch runs with or without it: how an order was given (key, strip, voice), how a level was started (menu, address, next, retry, skip), the debug keys, the pause line, the address', (() => { const sc = src('src/campaignscene.js'), ti = src('src/title.js'); return /campOrder\(C, order, '', 'key'\)/.test(sc) && /via: 'retry'/.test(sc) && /via: 'next'/.test(sc) && /via: 'skip'/.test(sc) && /typeof campDebugKey === 'function'/.test(sc) && /typeof campDebugLine === 'function'/.test(sc) && /typeof campAddrPlanPage === 'function'/.test(ti) && /via: 'address'/.test(ti) && /campOrder\(s2\.camp, name, arg, 'strip'\)/.test(src('src/shipcomputer.js')); })());
+  check('a level started with techs of its own (the address) takes them instead of the saved ones; an unknown tech is dropped; via is kept on the game', J(`(() => { const C = campNew(1, ['beam', 'nope'], { via: 'address' }); return C.via === 'address' && C.techs.join() === 'beam' && campNew(1, []).via === 'menu'; })()`));
+  check('the page loads the sim, then the scene, before main.js makes the game', (() => { const h = src('index.html'), a = h.indexOf('src/campaign.js'), b = h.indexOf('src/campaignscene.js'), m = h.indexOf('src/main.js'); return a > 0 && b > a && m > b; })());
+  check('every text the scene says is a key of content/text/ui.md that the game reads (a translation changes it, the code does not)', (() => {
+    const sc = src('src/campaignscene.js'), md = src('content/text/ui.md');
+    const keys = new Set([...sc.matchAll(/'(camp\.[a-z0-9.]+)'/g)].map(m => m[1])); ['shield', 'beam', 'blink', 'plating', 'bay2', 'repair'].forEach(id => { keys.add('camp.tech.' + id + '.name'); keys.add('camp.tech.' + id + '.text'); }); ['wrong', 'carrier', 'earth'].forEach(w => w !== 'wrong' && keys.add('camp.lose.' + w));
+    const missing = [...keys].filter(k => !md.includes('| ' + k + ' |') || J(`uiText('${k}')`) === k); return missing.length === 0 || missing.join(',');
+  })());
+}
+
+// ---------- H. the scene's own decisions, on a stand-in for the scene ----------
+// A scene is Phaser's, so it cannot run here; its methods can, on an object that answers every drawing call with nothing (the page's `document` stub does that).
+// What is tested is what the scene DECIDES: which key does what in which mode, what it hands the sim, what it saves, where it goes next.
+console.log('H. the scene: keys, modes, the pick, retry (on a stand-in)');
+{
+  g.run(`
+    window.__went = []; window.__go0 = go; go = (s, key, data) => { __went.push({ key, data }); };
+    window.__toasts2 = []; window.__toast0 = toast; toast = (s, msg) => { __toasts2.push(msg); };
+    window.__fake = (level, d) => { const f = Object.create(Campaign.prototype); f.add = document; f.cameras = document; f.input = document; f.textures = document; f.tweens = document;
+      f.time = { delayedCall: (ms, fn) => fn() }; f.boom = { explode() {} }; f.bgLayers = []; f.hudG = document; f.hud = { hull: document, earth: document, bay: document, wave: document, mother: document, blink: document, keys: document };
+      f.k = { W: { isDown: false }, A: { isDown: false }, S: { isDown: false }, D: { isDown: false }, UP: { isDown: false }, DOWN: { isDown: false }, LEFT: { isDown: false }, RIGHT: { isDown: false }, SPACE: { isDown: false } };
+      f.init(Object.assign({ level }, d || {})); f.camp = campNew(f.level, f.P.techs, f.opts); f.sp = {}; f.bsp = []; f.showIntro(); __went.length = 0; __toasts2.length = 0; return f; };
+  `);
+  const mk = (level, d) => g.run(`window.F = __fake(${level}, ${JSON.stringify(d || {})}); 0`);
+  const key = c => g.run(`F.onKey({ code: '${c}' }); 0`);
+  mk(1);
+  check('it opens on the story of the level: the intro card is up, the strip is kept shut (panel), the sim has not moved', J('F.mode') === 'intro' && J('F.panel') === true && (g.run('F.update(0, 100)'), J('F.camp.t') === 0));
+  key('Digit1'); check('no order is taken while the story shows', J('F.camp.launchQ.length') === 0);
+  key('Enter');
+  check('Enter begins: the card is gone, the strip may open, the battle runs', J('F.mode') === 'play' && J('F.panel') === false && (g.run('F.update(0, 100)'), J('F.camp.t') > 90));
+  g.run('F.k.W.isDown = true; F.k.D.isDown = true; F.k.SPACE.isDown = true; F.update(0, 33)');
+  check('W thrusts, D turns, Space fires: the keys are read into the sim\'s input every frame', J('F.camp.input.thrust') === 1 && J('F.camp.input.turn') === 1 && J('F.camp.input.fire') === true);
+  g.run('F.k.W.isDown = false; F.k.D.isDown = false; F.k.A.isDown = true; F.k.S.isDown = true; F.k.SPACE.isDown = false; F.update(0, 33)');
+  check('A turns the other way, S brakes, and Space let go stops the gun', J('F.camp.input.turn') === -1 && J('F.camp.input.brake') === true && J('F.camp.input.fire') === false);
+  key('Digit1'); check('1 launches the wing and says so', J('F.camp.launchQ.length') === 8 && J('__toasts2.pop()') === 'Launching the wing.');
+  key('Digit2'); check('2 while the wing is still leaving the bay answers in words (a toast) and does nothing', J('__toasts2.pop()') === 'The wing is still launching.' && J('F.camp.orders.attack') === 0);
+  key('Escape'); check('Esc pauses the scene\'s own way (not Long Haul\'s menu), the sim stops, the strip is kept shut', J('F.mode') === 'pause' && J('F.panel') === true && (g.run('var __t0 = F.camp.t; F.update(0, 100)'), J('F.camp.t') === J('__t0')));
+  key('Escape'); check('Esc again goes back to the battle', J('F.mode') === 'play' && J('F.panel') === false);
+  key('Escape'); key('KeyT'); check('T from the pause goes to the title', J('__went.pop()').key === 'Title');
+  mk(1);
+  key('Enter');
+  g.run('F.camp.techs = ["blink"]; F.onKey({ code: "KeyQ" })');
+  check('Q asks for the blink (the sim says whether it is ready)', J('F.camp.input.blink') === true);
+  // the end of a level
+  g.run(`campHurt(F.camp, F.camp.carrier, 9999, 'x'); F.update(0, 33)`);
+  check('the carrier lost: the lost card with Enter and T, and the reason in words', J('F.mode') === 'lost' && J('F.panel') === true);
+  key('Enter'); const re = J('__went.pop()');
+  check('Enter tries the level again with the same techs, started as "retry"', re.key === 'Campaign' && re.data.level === 1 && re.data.via === 'retry' && Array.isArray(re.data.techs));
+  mk(1); key('Enter');
+  g.run(`F.camp.ships.push({ id: 'mother-9', kind: 'mother', team: 'alien', x: 99999, y: 0, vx: 0, vy: 0, hp: 10, r: 90 }); F.camp.by['mother-9'] = F.camp.ships[F.camp.ships.length - 1]; campHurt(F.camp, F.camp.by['mother-9'], 50, 'x'); F.update(0, 33)`);
+  check('the mothership dead: the story after the battle, Enter for the tech pick', J('F.mode') === 'won' && (key('Enter'), J('F.mode') === 'pick') && J('F.choices.length') === 3);
+  key('Digit9'); check('a key that is not a choice does nothing', J('F.mode') === 'pick');
+  key('Digit2');
+  check('1, 2 or 3 picks that tech: kept in the progress (level 2 reached, the tech named), and with level 2 not built the scene says so and stays', JSON.parse(store.get('longhaul.campaign')).level === 2 && JSON.parse(store.get('longhaul.campaign')).techs[0] === J('F.choices[1]') && (J('F.mode') === 'soon' || J('__went.length') === 1));
+  check('the pick is carried into the next level: a game started now has the tech', J(`campNew(1, campProgressLoad().techs).techs.length`) === 1);
+  // addresses and the tune kit
+  mk(1, { techs: ['shield', 'nope'], via: 'address' });
+  check('a level started with techs of its own and a way (the address) uses them, and the sim knows how it began', J('F.camp.techs.join()') === 'shield' && J('F.camp.via') === 'address');
+  g.run('go = __go0; toast = __toast0');
+}
+
 // ---------- F. the save, and Long Haul untouched ----------
 console.log('F. the save, and Long Haul untouched');
 {
+  store.delete('longhaul.campaign'); // H picked a tech; F starts from a browser that has never played it
   const before = g.run(`JSON.stringify(G)`);
   g.run('__play(3, [], __smart, 400)');
   check('a whole battle changes nothing of Long Haul: credits, the fleet, the mission, the saved game', g.run(`JSON.stringify(G)`) === before && ![...store.keys()].some(k => /longhaul\.(save|game)/.test(k) && store.get(k) && /campaign|camp\./i.test(store.get(k))));

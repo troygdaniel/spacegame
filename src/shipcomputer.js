@@ -213,9 +213,13 @@ function scKeys() { // the table the H page is made from (src/data_controls.js):
   return ['flight', 'station', 'ship', 'any'].map(id => { const g = controlsGroup(id); return g ? g.title + ' keys:\n' + g.rows.map(controlsLine).join('\n') : ''; }).filter(Boolean).join('\n');
 }
 function shipcompSnapshot(s) {
+  if (scKey(s) === 'Campaign') return scTry(() => campSummary(s.camp), '');
   return [scTry(() => scWhere(s), ''), scTry(scShip, ''), scTry(scJob, ''), scTry(() => scJumps(s), ''), scTry(scDock, ''), scTry(scYards, '')].filter(Boolean).join('\n').slice(0, 9000);
 }
+const SC_CAMP_HOW = 'You command the Earth carrier against the alien fleet. The pilot flies it with W A S D, fires its main gun with Space, and gives the small ships orders: 1 launch, 2 attack, 3 escort a convoy, 4 guard, 5 recall. Typing or saying the order does the same.';
+const SC_CAMP_ACTS = 'ACTIONS\nReply in exactly this form and nothing else:\nSAY: one or two short sentences for the pilot\nDO: one action from the list (leave this line out when the pilot only asked a question)\nThe list: fleet_launch | fleet_attack <the mothership, or nothing> | fleet_escort <a convoy, such as Mars> | fleet_guard <a place, or nothing> | fleet_recall.\nThe game checks every action itself and says if it cannot be done: so say only what you are doing, never that it is done.';
 function shipcompSystem(s) {
+  if (scKey(s) === 'Campaign') return 'RULES\n' + SC_RULES.replace('{name}', shipcompName()) + '\n\n<persona>\n' + scClean(SHIPCOMP.persona, 900).replace(/<\/?persona>/gi, '') + '\n</persona>\n\nSTATE\n' + shipcompSnapshot(s) + '\n\nHOW\n' + SC_CAMP_HOW + '\n\nKEYS\n' + uiText('camp.ui.keys') + '\n\n' + SC_CAMP_ACTS;
   return 'RULES\n' + SC_RULES.replace('{name}', shipcompName()) + '\n\n<persona>\n' + scClean(SHIPCOMP.persona, 900).replace(/<\/?persona>/gi, '') + '\n</persona>\n\nSTATE\n' + shipcompSnapshot(s)
     + '\n\nHOW\n' + SC_HOW + '\n\nKEYS\n' + scTry(scKeys, '') + '\n\n' + SC_ACTS;
 }
@@ -492,8 +496,19 @@ const SC_ACT = {
     if (G.mission === 'none' || !G.missionId || !m) return scNo('No job is accepted. Jobs are taken at the MISSIONS terminal in a station.');
     const step = scTry(() => missionStep(), null);
     return scYes('Your job, ' + m.title + '. ' + (step && step.text ? step.text : scTry(() => missionLine(), '')), s2 => { if (scKey(s2) === 'Space') cruiseNavOpen(s2); });
-  }
+  },
+  // the Campaign's five orders (src/campaign.js campOrder; the battle is s.camp). A dry check says what it would do and changes nothing; the run does it
+  fleet_launch: (s, arg) => scFleet(s, 'launch', arg),
+  fleet_attack: (s, arg) => scFleet(s, 'attack', arg),
+  fleet_escort: (s, arg) => scFleet(s, 'escort', arg),
+  fleet_guard: (s, arg) => scFleet(s, 'guard', arg),
+  fleet_recall: (s, arg) => scFleet(s, 'recall', arg)
 };
+function scFleet(s, name, arg) {
+  if (scKey(s) !== 'Campaign' || !s.camp || typeof campCheck !== 'function') return scNo('The fleet is only yours in the Campaign, pilot. Press K on the title screen.');
+  const r = campCheck(s.camp, name, arg);
+  return r.ok ? scYes(r.say, s2 => { campOrder(s2.camp, name, arg, 'strip'); }) : scNo(r.say);
+}
 
 // the reply made safe. text: what is said, aloud and on screen. run(s): does the action (or null). refused: the list said no (text says why). dropped: the action
 // the list does not have (the line is still said). Never throws.
@@ -537,6 +552,7 @@ function scTradeHow() {
 }
 // the phrase as { act, arg } (an action of the closed list), { say } (an answer in words) or null (not one of the obvious ones: the model reads it)
 function shipcompIntent(text, s) {
+  if (scKey(s) === 'Campaign') return typeof campIntent === 'function' ? campIntent(text) : null; // in a battle the fleet's orders are the plain words; the Long Haul ones (hunt, dock, fly to) mean nothing here
   let q = String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9' -]+/g, ' ').replace(/\s+/g, ' ').trim();
   q = q.replace(SC_NO_FILLER, '').replace(/\s+(please|now|right now|for me|already)$/, '').trim();
   if (!q) return null;
@@ -579,7 +595,7 @@ function shipcompSubmit(text, game) {
 }
 // a plain command (shipcompLocal) with no strip and no key: said and shown as a toast, and run at once. false when the words are not one, or the game is not in flight or at a station.
 function shipcompQuick(text, game) {
-  const s = game.scene.getScenes(true).find(sc => sc.scene.key === 'Space' || sc.scene.key === 'Station');
+  const s = game.scene.getScenes(true).find(sc => sc.scene.key === 'Space' || sc.scene.key === 'Station' || sc.scene.key === 'Campaign');
   if (!s || s.leaving || s.dead || s.panel || s.talk || s.shopOpen || s.jmp || (s.cr && s.cr.navOpen)) return false;
   const plan = shipcompLocal(scClean(text, SHIPCOMP.limit.line), s); if (!plan) return false;
   try { toast(s, plan.text, plan.refused ? '#ffb454' : '#9fe9ff'); } catch (e) { /* the voice still says it */ }

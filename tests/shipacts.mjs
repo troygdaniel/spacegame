@@ -191,7 +191,7 @@ console.log('D. buying is never run, whatever the model writes; names off the li
   const r2 = DO('DO: buy_ship kite');
   check('a buy with no line gets the computer\'s own: it advises, it does not buy', /own decision and your own key press/.test(r2.text) && r2.dropped === 'buy_ship');
   check('an unknown action with no line says it cannot', /^I cannot do that, pilot\.$/.test(DO('DO: fire_weapons').text));
-  check('the closed list is these thirteen (hunt, fly_to and open_sector_map came with card space-game-hunt-pirates) and nothing else, and none of them can buy', J('Object.keys(SC_ACT).sort().join()') === 'assist_order,dock,fly_to,hunt,jump_next_hop,land,open_map,open_sector_map,open_yard,plot_route,set_destination,show_job,travel');
+  check('the closed list is these thirteen (hunt, fly_to and open_sector_map came with card space-game-hunt-pirates) and the Campaign\'s five fleet orders (card space-game-campaign-mvp) and nothing else, and none of them can buy', J('Object.keys(SC_ACT).sort().join()') === 'assist_order,dock,fleet_attack,fleet_escort,fleet_guard,fleet_launch,fleet_recall,fly_to,hunt,jump_next_hop,land,open_map,open_sector_map,open_yard,plot_route,set_destination,show_job,travel');
   const src = readFileSync(new URL('../src/shipcomputer.js', import.meta.url), 'utf8'), acts = src.slice(src.indexOf('const SC_ACT = {'), src.indexOf('// the reply made safe.'));
   check('the code of the thirteen never reaches a purchase, a sale, an accept, an abandon or a payment (it names none of those functions)', !/fleetBuy|fleetSell|fleetSwitch|shopBuy|buyPart|sellPart|pickMission|abandonMission|missionTryAccept|missionAccepted|rangerCall|pumpFill|G\.credits\s*[-+]?=[^=]|G\.mission\s*=[^=]/.test(acts), (acts.match(/fleetBuy|fleetSell|shopBuy|pickMission|abandonMission|missionTryAccept|G\.credits\s*[-+]?=[^=]|G\.mission\s*=[^=]/) || [''])[0]);
   check('open_yard only opens the screen: the yard\'s own buy needs two Enters there, and the bay keeps its own checks', /HANGAR_UI\.tab = 'yard'; sfx\('dock'\); go\(s2, 'Ship'\)/.test(acts));
@@ -235,7 +235,7 @@ console.log('F. the instruction, and the voice');
 {
   g.run(`__world('wren', 40); __space(${station.x + 3000}, ${station.y})`);
   const sys = g.run(`shipcompSystem(__cur)`), names = J('Object.keys(SC_ACT)');
-  check('the prompt names every action of the closed list, and the ones it may not do', names.every(k => sys.includes(k)) && /NEVER buy, sell, accept, abandon or refuel/.test(sys));
+  check('the prompt names every action of the closed list (the Campaign\'s fleet orders are told to the model in a battle only: tests/campaign.mjs G), and the ones it may not do', names.filter(k => !/^fleet_/.test(k)).every(k => sys.includes(k)) && !/fleet_/.test(sys) && /NEVER buy, sell, accept, abandon or refuel/.test(sys));
   check('the format is told: SAY: and DO:, one action, and "say only what you are doing, never that it is done"', /SAY: one or two short sentences/.test(sys) && /DO: one action from the list/.test(sys) && /never that it is done/.test(sys));
   check('the prompt still holds the rules, the persona, the state and the keys, and never a key', /RULES\n/.test(sys) && /<persona>/.test(sys) && /STATE\n/.test(sys) && /KEYS\n/.test(sys) && !sys.includes(KEY));
   g.run(`__spoken = []; shipcompSay('Plotting a course to Kestrel, one jump.', () => { window.__started = true; })`);

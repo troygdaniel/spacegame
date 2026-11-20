@@ -1,9 +1,11 @@
 // ---------- Campaign: Earth's fleet against the aliens (docs/CAMPAIGN.md, card space-game-campaign-mvp) ----------
 // The whole mode in plain numbers, no Phaser: the tuning table, the ships, the waves, the five orders, win and lose, the tech pick and its save.
 // src/campaignscene.js reads the keys, calls campStep(C, seconds) and draws what C says; tests/campaign.mjs flies whole battles of it in Node.
-//   campNew(level, techs, opts)      a fresh game of one level: C. opts.seed makes the alien flying repeat exactly (tests); opts.god: the carrier cannot die
+//   campNew(level, techs, opts)      a fresh game of one level: C. opts.seed makes the alien flying repeat exactly (tests); opts.god: the carrier cannot die;
+//                                    opts.via: how the level was started ('menu', 'address', 'next', 'retry', 'skip'): kept on C, and read by the play log
 //   campStep(C, seconds)             the game moves on (cut into CAMP.step pieces); C.events gets what the scene should show, and the scene empties it
-//   campOrder(C, name, arg)          one of the five orders: launch, attack, escort, guard, recall -> { ok, code, say }
+//   campOrder(C, name, arg, how)     one of the five orders: launch, attack, escort, guard, recall -> { ok, code, say }; how: 'key', 'strip', 'voice' or 'click' (the play log's)
+//   campCheck(C, name, arg)          the same answer and nothing done (the ship computer checks, announces, then orders)
 //   campIntent(text)                 plain words -> { act: 'fleet_attack', arg } or null (the ship computer calls it; src/shipcomputer.js)
 //   campTechChoices(level)           the three techs offered after that level;  campPick(P, id): the pick, kept in P
 //   campProgressLoad() / campProgressSave(P)   { level, techs } in localStorage under CAMP.store, apart from the Long Haul save
@@ -93,10 +95,11 @@ const CAMP = {
   },
   // the places of the home system at 1 to 12 of the Sol pack's distances (docs/SOL.md; Earth to Mars 4,100 px), Earth at the origin, y grows downward, north is up
   places: {
-    earth: { x: 0, y: 0, name: 'Earth' },
-    luna: { x: 238, y: -137, name: 'Luna' },                  // 275 px from Earth: the Lunar base, where the carrier starts (90 px east of it)
-    mars: { x: 4064, y: 571, name: 'Mars' },                  // 4,100 px from Earth
-    eros: { x: -1705, y: -3206, name: 'Eros' }                // 3,630 px from Earth
+    // name; kind and seed: the world drawn (src/art_world.js planetTexture: rock, ice, gas, lava, ringed); r: its size in px; base: a station is drawn beside it
+    earth: { x: 0, y: 0, name: 'Earth', kind: 'ice', seed: 7, r: 160 },
+    luna: { x: 238, y: -137, name: 'Luna', kind: 'rock', seed: 3, r: 45, base: 'Lunar base' },  // 275 px from Earth: the Lunar base, where the carrier starts (90 px east of it)
+    mars: { x: 4064, y: 571, name: 'Mars', kind: 'rock', seed: 12, r: 110 },                   // 4,100 px from Earth
+    eros: { x: -1705, y: -3206, name: 'Eros', kind: 'rock', seed: 21, r: 36 }                  // 3,630 px from Earth
   },
   levels: {                                // the levels; a wave or a convoy is one line
     1: {
@@ -137,7 +140,7 @@ function campNew(level, techs, opts) {
   const L = CAMP.levels[level]; if (!L) return null;
   opts = opts || {};
   const C = {
-    level, t: 0, rng: campRng(opts.seed == null ? 1 : opts.seed), god: !!opts.god, nextId: 1, ships: [], by: {}, bullets: [], events: [],
+    level, via: opts.via || 'menu', t: 0, rng: campRng(opts.seed == null ? 1 : opts.seed), god: !!opts.god, nextId: 1, ships: [], by: {}, bullets: [], events: [],
     input: { turn: 0, thrust: 0, brake: false, fire: false, blink: false },
     techs: (techs || []).filter(t => CAMP.tech[t]),
     earth: { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield },
@@ -217,12 +220,18 @@ const campTarget = (C, t) => !t ? null : t.kind === 'mother' ? C.ships.find(u =>
 const campNo = code => ({ ok: false, code, say: uiText('camp.no.' + code) });
 const campYes = (code, vars) => ({ ok: true, code, say: uiText('camp.say.' + code, vars) });
 
-function campOrder(C, name, arg) {
+// campOrder is the one door every order goes through (the keys, the strip, the voice); how says which ('key', 'strip', 'voice', 'click'): the play log reads it
+// from outside (src/playlog.js wraps this function by name), so nothing here uses it. campCheck answers an order with the same words and does nothing: the
+// ship computer checks an order before it announces it, then runs it with campOrder.
+function campOrder(C, name, arg, how) { return campDo(C, name, arg, false); }
+function campCheck(C, name, arg) { return campDo(C, name, arg, true); }
+function campDo(C, name, arg, dry) {
   if (!C || C.result) return campNo('over');
   const t = campFind(C, arg), out = campWing(C);
   if (name === 'launch') {
     const n = C.bay.fighters + C.bay.escorts - C.launchQ.length;
     if (n <= 0) return campNo(C.launchQ.length ? 'launching' : out.length ? 'baydry' : 'bay');
+    if (dry) return campYes('launch');
     for (let i = 0; i < C.bay.fighters; i++) C.launchQ.push('fighter');
     for (let i = 0; i < C.bay.escorts; i++) C.launchQ.push('escort');
     C.bay.fighters = 0; C.bay.escorts = 0; C.orders.launch++;
@@ -232,6 +241,7 @@ function campOrder(C, name, arg) {
     const fs = campWing(C, 'fighter'); if (!fs.length) return campNo(C.launchQ.length ? 'launching' : 'nofighters');
     const mother = t && t.kind === 'mother' && campTarget(C, t);
     if (t && t.kind === 'mother' && !mother) return campNo('nomother');
+    if (dry) return campYes(mother ? 'attackmother' : 'attack');
     fs.forEach(u => { u.order = { type: 'attack', target: mother ? mother.id : '' }; u.move = null; });
     C.orders.attack++; return campYes(mother ? 'attackmother' : 'attack');
   }
@@ -239,17 +249,20 @@ function campOrder(C, name, arg) {
     const es = campWing(C, 'escort'); if (!es.length) return campNo(C.launchQ.length ? 'launching' : 'noescorts');
     const cv = t && t.kind === 'convoy' ? C.by[t.id] : t ? null : campNearest(campConvoys(C), C.carrier);
     if (!cv || cv.hp <= 0) return campNo('noconvoy');
+    if (dry) return campYes('escort', { name: campConvoyName(cv) });
     es.forEach((u, i) => { u.order = { type: 'escort', target: cv.id, slot: i }; u.move = null; });
     C.orders.escort++; return campYes('escort', { name: campConvoyName(cv) });
   }
   if (name === 'guard') {
     if (!out.length) return campNo(C.launchQ.length ? 'launching' : 'nowing');
+    if (dry) return campYes('guard');
     const at = t && (t.kind === 'place' || t.kind === 'convoy') ? t : { kind: 'carrier' };
     out.forEach(u => { u.order = { type: 'guard', at }; u.move = null; });
     C.orders.guard++; return campYes('guard');
   }
   if (name === 'recall') {
     if (!out.length) return campNo(C.launchQ.length ? 'launching' : 'nowing');
+    if (dry) return campYes('recall');
     out.forEach(u => { u.order = { type: 'recall' }; u.move = null; });
     C.orders.recall++; return campYes('recall');
   }
@@ -330,7 +343,7 @@ function campCarrier(C, dt) {
   inp.blink = false;
   const beam = campHas(C, 'beam');
   if (inp.fire && C.t >= C.nextMain) {
-    C.nextMain = C.t + k.gunDelay;
+    C.nextMain = C.t + k.gunDelay; C.events.push({ type: 'gun', x: c.x, y: c.y });
     campBullet(C, c, c.rot, k.gunSpeed, k.gun * (beam ? CAMP.tech.beam.gun : 1), k.gunLife * (beam ? CAMP.tech.beam.life : 1), 'earth', c.r, { beam });
   }
   if (C.t >= C.nextPd) { // the point guns: the nearest alien inside their reach
