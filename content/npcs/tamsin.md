@@ -9,15 +9,15 @@ y: 520
 face: 3.141592653589793
 ---
 ## Lines
-- Those drones around Kepler-4b used to be survey rigs. Somebody rewired them to shoot first and never ask.
-- Word is the drones answer to a pirate captain out past the rim. Nobody I know has seen the captain and lived to tell it.
+- The Kepler-4b drones were survey rigs. Somebody rewired them to shoot.
+- The drones answer to a captain past the rim. No witness lived.
 - Drones turn slowly. Keep circling and they never line up a shot.
 
 ## Reactions
 | when | line |
 |---|---|
-| mission:accepted | You took the Kepler call? Six drones ring that planet, so come in from the side and take them one at a time. |
-| upgrade:weapons | That is a rapid-fire rig on your ship. Faster rounds mean the drones drop before they finish turning. |
+| mission:accepted | Six drones ring Kepler. Come in from the side, one by one. |
+| upgrade:weapons | Rapid fire: the drones drop before they finish turning. |
 
 ## Persona
 Who: Tamsin, fifty, flew freighters for twenty years until pirates took her ship out by the rim.

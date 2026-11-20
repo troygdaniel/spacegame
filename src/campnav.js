@@ -26,7 +26,7 @@ function campNavGoal(C) {
     if (L.win === 'mother') {
       const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); if (m) return ship(m, 'mother', uiText('camp.nav.mother'));
       const cv = near(campConvoys(C)); if (cv) return ship(cv, 'convoy', uiText('camp.nav.convoy', { name: campConvoyName(cv) }));
-      return pl.earth ? { id: 'place:earth', kind: 'place', name: pl.earth.name, x: pl.earth.x, y: pl.earth.y, r: pl.earth.r || 60 } : null;
+      return C.earth && pl.earth ? { id: 'place:earth', kind: 'place', name: pl.earth.name, x: pl.earth.x, y: pl.earth.y, r: pl.earth.r || 60 } : null;
     }
     if (L.win === 'relic') {
       if (C.cachesGot < L.relic.caches) {

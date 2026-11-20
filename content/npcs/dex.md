@@ -9,15 +9,15 @@ y: 490
 face: 0
 ---
 ## Lines
-- I charted Kepler-4b last year. Red dust, thin air, and crawlers that hunt by heat.
-- That survey pod is still pinging its beacon. Whoever takes the call has to be quick and quiet.
-- Halcyon was a mining relay before the ore ran out. Now it is mostly mercenaries, mechanics and me.
+- Kepler-4b: red dust, thin air, and crawlers that hunt by heat.
+- The survey pod still pings its beacon. Be quick and quiet.
+- Halcyon was a mining relay. Now it is mercenaries, mechanics and me.
 
 ## Reactions
 | when | line |
 |---|---|
-| mission:accepted | You took the rescue? Find the pod, keep the colonist close, and get them back to the ship. Crawlers hunt by heat, and a walking colonist is warm. |
-| upgrade:engine | Is that a booster on your ship? You can outrun the drones now, if you keep your nerve. |
+| mission:accepted | Find the pod, keep the colonist close. Crawlers hunt by heat. |
+| upgrade:engine | A booster. Now you can outrun the drones. |
 
 ## Persona
 Who: Dex, thirty, the survey tech who charted Kepler-4b and has not slept properly since.

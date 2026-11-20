@@ -209,7 +209,7 @@ check('everything fine again: it answers', (await ask('back again?', near)).text
 g.run(`__reply = 'ok'`);
 
 console.log('G. the name, the persona file, the key, the box');
-check('the persona file reached the game: the name, the voice, four stock lines (one says it acts)', J(`[shipcompName(), SHIPCOMP.voice, SHIPCOMP.lines.length]`).join() === 'ATHENA,aura-athena-en,4' && /plot a course/.test(J('SHIPCOMP.lines')[3]));
+check('the persona file reached the game: the name, the voice, four stock lines (one says it acts)', J(`[shipcompName(), SHIPCOMP.voice, SHIPCOMP.lines.length]`).join() === 'ATHENA,aura-athena-en,4' && /plot courses/.test(J('SHIPCOMP.lines')[3]));
 check('the file content/npcs/ship-computer.md is applied with no error, and it is not a character of the bar', J(`CONTENT_STATE.applied.includes('npc:ship-computer')`) === true && J(`NPCS.some(n => n.id === 'ship-computer')`) === false, J(`NPCS.map(n => n.id)`).join());
 g.run(`localStorage.removeItem(SHIPCOMP.store.name); SHIPCOMP.you = ''`);
 check('the player renames it: letters, digits, spaces and dashes only, 16 at most, upper case, kept in this browser', J(`shipcompSetName('  vesper 2!! the great and mighty ')`) === 'VESPER 2 THE GRE' && J(`shipcompName()`) === 'VESPER 2 THE GRE' && g.run(`localStorage.getItem(SHIPCOMP.store.name)`) === 'VESPER 2 THE GRE');

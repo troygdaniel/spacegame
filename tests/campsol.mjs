@@ -17,17 +17,18 @@ const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   
 const g = nodeGame();
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const K = J('CAMP.world');
-const P = lv => J(`campPlaces(${lv})`);
+const Q = lv => JSON.stringify(lv); // a level is a number or a key ('home')
+const P = lv => J(`campPlaces(${Q(lv)})`);
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
 // ---- A. the pack and the build ----
 check('the Sol pack is in the page as MODS whether or not it is switched on: Sol, Alpha Centauri and Epsilon Eridani', ['sol', 'alpha-centauri', 'epsilon-eridani'].every(id => J(`campWorldPack('${id}') !== null && campWorldPack('${id}').bodies.length > 3`)) && J(`campWorldPack('nowhere')`) === null);
-check('each of the three levels has its world: a star, rings, and the system it is', [1, 2, 3].every(lv => { const w = J(`campWorldOf(${lv})`); return w && w.star && w.rings.length >= 1 && ['sol', 'alpha-centauri', 'epsilon-eridani'][lv - 1] === w.system; }));
-check('the rings are sorted from the star out, and no two are within the tolerance of each other (bodies at one distance share a ring)', [1, 2, 3].every(lv => J(`campWorldOf(${lv}).rings`).every((r, i, a) => r > 0 && (!i || (r - a[i - 1]) / a[i - 1] > K.ringTol - 1e-9))));
+check('each of the four levels (the belt, the Earth level, Alpha Centauri, the home world) has its world: a star, rings, and the system it is', [1, 'home', 2, 3].every(lv => { const w = J(`campWorldOf(${Q(lv)})`); return w && w.star && w.rings.length >= 1 && (lv === 1 || lv === 'home' ? 'sol' : ['sol', 'alpha-centauri', 'epsilon-eridani'][lv - 1]) === w.system; }));
+check('the rings are sorted from the star out, and no two are within the tolerance of each other (bodies at one distance share a ring)', [1, 'home', 2, 3].every(lv => J(`campWorldOf(${Q(lv)}).rings`).every((r, i, a) => r > 0 && (!i || (r - a[i - 1]) / a[i - 1] > K.ringTol - 1e-9))));
 check('the numbers are CAMP.world (the table): scale, planetR, starR, farFrom, ringTol, bandJoin, clusterTol, dots, clusterDots, draw, skip', ['scale', 'planetR', 'starR', 'farFrom', 'ringTol', 'bandJoin', 'clusterTol', 'dots', 'clusterDots', 'draw'].every(k => typeof K[k] === 'number') && Array.isArray(K.skip));
 
 // ---- B. Sol ----
-const sol = P(1), W1 = J('campWorldOf(1)'), sun = sol.sun;
+const sol = P('home'), W1 = J('campWorldOf("home")'), sun = sol.sun;
 check('the level\'s own four places have not moved: Earth (0, 0), Luna (238, -137), Mars (4064, 571), Eros (-1705, -3206)', sol.earth.x === 0 && sol.earth.y === 0 && sol.luna.x === 238 && sol.luna.y === -137 && sol.mars.x === 4064 && sol.mars.y === 571 && sol.eros.x === -1705 && sol.eros.y === -3206);
 const planets = ['mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune'];
 check('the Sun, the eight planets, Luna, Eros and the three big asteroids are all places of level 1', planets.every(id => sol[id]) && sol.luna && sol.eros && ['ceres', 'vesta', 'pallas'].every(id => sol[id]) && sun && sun.kind === 'star' && sun.name === 'Sun', Object.keys(sol).join());
@@ -40,10 +41,10 @@ check('Earth is 17,500 px from the Sun, and Mars (the level\'s own place, opposi
 check('the planets are in their order from the Sun: Mercury, Venus, Earth, Mars, Ceres, Jupiter, Saturn, Uranus, Neptune', ['mercury', 'venus', 'earth', 'mars', 'ceres', 'jupiter', 'saturn', 'uranus', 'neptune'].every((id, i, a) => !i || dist(sol[id], sun) > dist(sol[a[i - 1]], sun)));
 const toNep = dist(sol.neptune, sol.earth);
 check('Neptune is 80,000 to 125,000 px from Earth (the pack\'s ring at 1 to 12: 96,000 px from the Sun)', toNep > 80000 && toNep < 125000, Math.round(toNep));
-check('a place has the same id in the list the carrier flies to: campNavRows has every one, the far ones flagged and the Sun flagged as a star', (() => { const rows = J('(() => { const C = campNew(1, [], { seed: 3 }); return campNavRows(C).filter(r => r.group === "places").map(r => ({ id: r.id, far: r.far, star: r.star })); })()'); return planets.every(id => rows.some(r => r.id === 'place:' + id)) && rows.find(r => r.id === 'place:sun').star === true && rows.find(r => r.id === 'place:neptune').far === true && rows.find(r => r.id === 'place:mars').far === false; })());
+check('a place has the same id in the list the carrier flies to: campNavRows has every one, the far ones flagged and the Sun flagged as a star', (() => { const rows = J('(() => { const C = campNew("home", [], { seed: 3 }); return campNavRows(C).filter(r => r.group === "places").map(r => ({ id: r.id, far: r.far, star: r.star })); })()'); return planets.every(id => rows.some(r => r.id === 'place:' + id)) && rows.find(r => r.id === 'place:sun').star === true && rows.find(r => r.id === 'place:neptune').far === true && rows.find(r => r.id === 'place:mars').far === false; })());
 
 // ---- B2. fast travel across the system ----
-const trip = (id, fast) => J(`(() => { const C = campNew(1, [], { seed: 3, god: true }); C.ships = C.ships.filter(u => u.team !== 'alien'); const row = campNavRows(C).find(r => r.id === '${id}');
+const trip = (id, fast) => J(`(() => { const C = campNew("home", [], { seed: 3, god: true }); C.ships = C.ships.filter(u => u.team !== 'alien'); const row = campNavRows(C).find(r => r.id === '${id}');
   const d0 = Math.hypot(row.x - C.carrier.x, row.y - C.carrier.y), eta = campNavEta(C, d0, ${fast}), burn0 = campNavGo(C, row, ${fast}).burn; let t = 0, top = 0;
   while (C.nav && C.nav.on && t < 3000) { campStep(C, 1 / 30); t += 1 / 30; top = Math.max(top, Math.hypot(C.carrier.vx, C.carrier.vy)); }
   return { d0, eta, burn0, took: t, top, left: Math.hypot(row.x - C.carrier.x, row.y - C.carrier.y) - (row.r || 0), result: !!C.result }; })()`);
@@ -53,14 +54,20 @@ check('Earth to Mars (4,100 px) is still a Fast trip of the old burn: top speed 
 check('Earth to Neptune on Fast: the far burn (672 px/s, Long Haul\'s cruise at 1 to 12), 2 to 3.5 minutes, and the map\'s time is within 10 percent of the trip', nep.burn0 === J('CAMP.nav.farFast') && Math.abs(nep.top - J('CAMP.carrier.speed') * J('CAMP.nav.farFast')) < 3 && nep.took > 120 && nep.took < 210 && Math.abs(nep.eta - nep.took) / nep.took < 0.1, JSON.stringify(nep));
 check('it stops at the planet, not past it (the brake holds at 672 px/s): within a stop distance and a bit', nep.left > 0 && nep.left < 160, nep.left);
 check('Earth to Neptune at regular speed is the long way: about 9 minutes (the carrier\'s own 210 px/s)', nepSlow.took > 480 && nepSlow.took < 620 && nepSlow.burn0 === 1, JSON.stringify(nepSlow));
-check('the burn is decided once by the distance at the start: a trip begun far keeps its far burn when it is near', J(`(() => { const C = campNew(1, [], { seed: 3, god: true }); const row = campNavRows(C).find(r => r.id === 'place:jupiter'); campNavGo(C, row, true); C.carrier.x = row.x - 2000; C.carrier.y = row.y; return C.nav.burn === CAMP.nav.farFast; })()`));
+check('the burn is decided once by the distance at the start: a trip begun far keeps its far burn when it is near', J(`(() => { const C = campNew("home", [], { seed: 3, god: true }); const row = campNavRows(C).find(r => r.id === 'place:jupiter'); campNavGo(C, row, true); C.carrier.x = row.x - 2000; C.carrier.y = row.y; return C.nav.burn === CAMP.nav.farFast; })()`));
 
+// ---- B3. the belt level (level 1: the cruiser at Ceres, in the main belt) ----
+const bl = P(1), WB = J('campWorldOf(1)');
+check('the belt level\'s own places are Ceres, Vesta and Pallas, as the level has them (same names, not added again); Earth, Mars, Jupiter and the rest are far bodies round the Sun', ['ceres', 'vesta', 'pallas'].every(id => bl[id] && !bl[id].far && !bl[id + '-w']) && bl.vesta.x === 2700 && bl.vesta.y === -1500 && bl.pallas.x === -2400 && bl.ceres.x === 0 && ['sun', 'earth', 'mars', 'jupiter', 'neptune', 'mercury'].every(id => bl[id] && bl[id].far), Object.keys(bl).join());
+check('Ceres is on the pack\'s ring for it, 29,110 px from the Sun (k = 1: the real proportions of Sol), and the Sun is placed from that', WB.k === 1 && Math.abs(Math.hypot(bl.sun.x - bl.ceres.x, bl.sun.y - bl.ceres.y) - 116440 * K.scale) < 3, JSON.stringify([WB.k, bl.sun]));
+check('the cruiser works in a ring of rocks: the one main-belt band holds Ceres between its two radii, and Earth and Mars are inside it, Jupiter outside', WB.bands.length === 1 && (() => { const d = id => Math.hypot(bl[id].x - bl.sun.x, bl[id].y - bl.sun.y); return d('ceres') > WB.bands[0].r0 && d('ceres') < WB.bands[0].r1 && d('earth') < WB.bands[0].r0 && d('mars') < WB.bands[0].r0 && d('jupiter') > WB.bands[0].r1; })(), JSON.stringify(WB.bands.map(b => [b.name, b.r0, b.r1])));
+check('the belt level has no Earth to lose and Earth is not its goal (no goal row until the mothership comes), but Earth is a body to fly to: the list has it, far', J(`(() => { const C = campNew(1, [], { seed: 3 }); const rows = campNavRows(C).filter(r => r.group === 'places'); return C.earth === null && campNavGoal(C) === null && !campNavRows(C).some(r => r.goal) && rows.some(r => r.id === 'place:earth' && r.far) && rows.some(r => r.id === 'place:ceres' && !r.far); })()`) && J(`(() => { const C = campNew('home', [], { seed: 3 }); const g = campNavGoal(C); return !!C.earth && g && g.id === 'place:earth'; })()`));
 // ---- C. the belt ----
 const B = W1.bands;
 check('the main belt is ONE band of rocks (the pack has three belts on rings 19 percent apart), between Mars\'s ring and Jupiter\'s', B.length === 1 && B[0].r0 > dist(sol.mars, sun) && B[0].r1 < dist(sol.jupiter, sun) && /Main Belt/.test(B[0].name), JSON.stringify(B.map(b => [b.r0, b.r1])));
 check('Ceres, Vesta and Pallas are inside the band (they are the belt\'s big rocks)', ['ceres', 'vesta', 'pallas'].every(id => dist(sol[id], sun) > B[0].r0 - 400 && dist(sol[id], sun) < B[0].r1 + 400));
 check('the band has CAMP.world.dots rocks, all of them between its two radii from the Sun, and they go all the way round (every quarter has rocks)', B[0].dots.length === K.dots && B[0].dots.every(([x, y]) => { const d = Math.hypot(x - sun.x, y - sun.y); return d >= B[0].r0 - 1 && d <= B[0].r1 + 1; }) && [0, 1, 2, 3].every(q => B[0].dots.some(([x, y]) => Math.floor(((Math.atan2(y - sun.y, x - sun.x) + Math.PI) / (Math.PI / 2))) % 4 === q)));
-check('the rocks are the same every time (seeded): a second build gives the same rocks', J('JSON.stringify(campWorldBuild(Object.assign({}, CAMP.levels[1], { worldData: undefined }))).length') > 1000 && JSON.stringify(J('campWorldBuild(CAMP.levels[1]).bands[0].dots.slice(0, 20)')) === JSON.stringify(B[0].dots.slice(0, 20)));
+check('the rocks are the same every time (seeded): a second build gives the same rocks', J('JSON.stringify(campWorldBuild(Object.assign({}, CAMP.levels.home, { worldData: undefined }))).length') > 1000 && JSON.stringify(J('campWorldBuild(CAMP.levels.home).bands[0].dots.slice(0, 20)')) === JSON.stringify(B[0].dots.slice(0, 20)));
 check('the Trojan camps (belts on Jupiter\'s own ring) are clusters of rocks round their places, not rings: Greek and Trojan', W1.clusters.length === 2 && W1.clusters.every(c => c.dots.length === K.clusterDots && c.dots.every(([x, y]) => Math.hypot(x - c.x, y - c.y) <= c.r + 1) && Math.abs(Math.hypot(c.x - sun.x, c.y - sun.y) - dist(sol.jupiter, sun)) < dist(sol.jupiter, sun) * 0.01));
 
 // ---- D. the other stars ----
@@ -75,12 +82,12 @@ check('the home world is on a ring round that star (k = 3: the rings are three t
 check('the level\'s other data is untouched: the warp point, the towers\' home, the tower rings; level 2\'s caches and relic place', ee.arrival.x === -7000 && ee.arrival.hidden === true && J('CAMP.levels[3].towers.length') === 2 && J('CAMP.levels[2].relic.place') === 'proxima' && J('CAMP.levels[2].caches.length') === 3);
 
 // ---- E. the map ----
-const bounds = (lv, whole) => J(`campMapBounds(${lv}, ${!!whole})`);
-const b1 = bounds(1), b1w = bounds(1, true);
+const bounds = (lv, whole) => J(`campMapBounds(${Q(lv)}, ${!!whole})`);
+const b1 = bounds('home'), b1w = bounds('home', true);
 check('the area view of level 1 is what it was (the level\'s own places, caches, waves): the far bodies are not in it', b1.x0 === -4200 && b1.y0 === -4400 && b1.x1 === 4174 && b1.y1 === 3800, JSON.stringify(b1));
 check('the whole-system view holds the Sun and every ring to Neptune\'s: a square round the Sun as wide as the outermost ring', b1w.x0 <= sun.x - Math.max(...W1.rings) + 1 && b1w.x1 >= sun.x + Math.max(...W1.rings) - 1 && b1w.y0 <= sun.y - Math.max(...W1.rings) + 1 && b1w.y1 >= sun.y + Math.max(...W1.rings) - 1 && Math.max(...W1.rings) > 95000, JSON.stringify(b1w));
 check('the same for the other stars: the whole view is at least the area view, and holds the outermost belt', [2, 3].every(lv => { const a = bounds(lv), w = bounds(lv, true), wd = J(`campWorldOf(${lv})`), far = Math.max(...wd.rings, ...wd.bands.map(b => b.r1)); return w.x0 <= a.x0 + 1 && w.x1 >= a.x1 - 1 && w.y0 <= a.y0 + 1 && w.y1 >= a.y1 - 1 && w.x1 - w.x0 >= 2 * far - 2; }));
-g.run(`var Cm = campNew(1, [], { seed: 3 });`);
+g.run(`var Cm = campNew("home", [], { seed: 3 });`);
 const marks = whole => J(`campMapMarks(Cm, ${!!whole}).filter(m => m.type === 'place').map(m => m.id)`);
 check('the area view has the four places, the whole view all of them (and the Sun is a star: the warm colour)', marks().join() === 'earth,luna,mars,eros' && marks(true).length === Object.keys(sol).length && marks(true).includes('sun') && J(`campMapMarks(Cm, true).find(m => m.id === 'sun').color`) === J('CAMPMAP.color.star'));
 const F = J('CAMPMAP.frame'), R = { x: F.x, y: F.y, w: F.w, h: F.h }, ok = pts => pts.every(p => p.every(([x, y]) => x >= F.x - 1e-6 && x <= F.x + F.w + 1e-6 && y >= F.y - 1e-6 && y <= F.y + F.h + 1e-6));
@@ -98,27 +105,30 @@ g.run(`
   window.__sc = (level) => { const C = campNew(level, [], { seed: 3, god: true }); C.ships = C.ships.filter(u => u.team !== 'alien' || u.kind === 'tower');
     const g2 = new Proxy({}, { get: (t, k) => (...a) => { __calls.push([k, a]); return g2; } });
     return { camp: C, mode: 'play', add: { rectangle: () => __mk('r'), graphics: () => g2, text: (x, y, t) => { const o = { x, y, t, vis: true, rowId: '', setText(v) { o.t = v; return o; }, setColor() { return o; }, setVisible(v) { o.vis = v; return o; }, setPosition(a, b) { o.x = a; o.y = b; return o; }, setOrigin() { return o; }, setScrollFactor() { return o; }, setDepth() { return o; }, destroy() { o.gone = true; }, width: 100, height: 14, visible: true }; __texts.push(o); return o; } }, make: __mk('make'), input: { on() {}, off() {} } }; };
-  window.M1 = __sc(1); campMapOpen(M1); campMapPaint(M1, 0);
+  window.M1 = __sc("home"); campMapOpen(M1); campMapPaint(M1, 0);
 `);
 const names1 = J('__texts.filter(t => !t.gone && /^[A-Z ]+$/.test(t.t) && t.t.length > 2).map(t => t.t)');
 check('the area view names the places of the level (Earth, Luna, Mars, Eros) and none of the far ones', ['EARTH', 'MARS', 'EROS'].every(x => names1.includes(x)) && !names1.includes('NEPTUNE') && !names1.includes('JUPITER'), names1.join());
 g.run(`window.__n0 = __texts.filter(t => !t.gone).length; __calls.length = 0; window.__z = campMapKey(M1, 'KeyZ'); campMapPaint(M1, 300);`);
 const names2 = J('__texts.filter(t => !t.gone && /^[A-Z ]+$/.test(t.t) && t.t.length > 2).map(t => t.t)');
 check('Z: the whole system. Every body is named (Neptune, Jupiter, the Sun, the belt), the old names are taken down, and the key is the map\'s', J('__z') === true && J('M1.mp.whole') === true && ['NEPTUNE', 'JUPITER', 'SUN', 'SATURN', 'MAIN BELT'].every(x => names2.includes(x)) && J('__texts.filter(t => t.gone).length') > 3, names2.join());
-check('and the view is the whole system: the mode line says so, the fit is the whole bounds', /^SYSTEM  [\d,]+ km across  Z: area$/.test(J('M1.mp.across.t')) && Math.abs(J('M1.mp.fit.s') - J(`campMapFit(campMapBounds(1, true), CAMPMAP.frame).s`)) < 1e-12, J('M1.mp.across.t'));
+check('and the view is the whole system: the mode line says so, the fit is the whole bounds', /^SYSTEM  [\d,]+ km across  Z: area$/.test(J('M1.mp.across.t')) && Math.abs(J('M1.mp.fit.s') - J(`campMapFit(campMapBounds('home', true), CAMPMAP.frame).s`)) < 1e-12, J('M1.mp.across.t'));
 check('the map draws the rings (lines), the rocks (rects) and the planets (circles) in the whole view', J('__calls.some(c => c[0] === "strokePath")') && J('__calls.filter(c => c[0] === "fillRect").length') > 300 && J('__calls.some(c => c[0] === "fillCircle")'), J('__calls.map(c => c[0]).filter((x, i, a) => a.indexOf(x) === i).join()'));
 g.run(`campMapKey(M1, 'KeyZ'); campMapPaint(M1, 600);`);
 check('Z again: the area; its mode line says AREA', J('M1.mp.whole') === false && /^AREA  [\d,]+ km across  Z: whole$/.test(J('M1.mp.across.t')));
 check('Z with the map closed is not the map\'s key', (g.run('campMapClose(M1)'), J(`campMapKey(M1, 'KeyZ')`) === false));
 g.run(`window.M2 = __sc(2); campMapOpen(M2); campMapKey(M2, 'KeyZ'); campMapPaint(M2, 0);`);
 check('level 2 whole: the star is named and the Centauri Drift is named; level 3: the star and both belts', ['ALPHA CENTAURI', 'CENTAURI DRIFT'].every(x => J('__texts.filter(t => !t.gone).map(t => t.t)').includes(x)) && (g.run(`campMapClose(M2); window.M3 = __sc(3); campMapOpen(M3); campMapKey(M3, 'KeyZ'); campMapPaint(M3, 0);`), ['EPSILON ERIDANI STAR', 'INNER BELT', 'OUTER BELT'].every(x => J('__texts.filter(t => !t.gone).map(t => t.t)').includes(x))));
-check('a click on the list picks a far planet and the autopilot goes to it (the list has Neptune)', (() => { g.run(`window.M4 = __sc(1); campMapOpen(M4); campMapPaint(M4, 0);`); return J('M4.mp.rows.some(r => r.id === "place:neptune")'); })());
+check('a click on the list picks a far planet and the autopilot goes to it (the list has Neptune)', (() => { g.run(`window.M4 = __sc("home"); campMapOpen(M4); campMapPaint(M4, 0);`); return J('M4.mp.rows.some(r => r.id === "place:neptune")'); })());
+
+check('the area view of the belt level holds its own places and waves and not the far bodies; the whole view holds every ring', (() => { const a = bounds(1), w = bounds(1, true), far = Math.max(...WB.rings); return a.x1 - a.x0 < 12000 && w.x1 - w.x0 >= 2 * far - 2 && w.x0 <= a.x0 && w.x1 >= a.x1; })(), JSON.stringify([bounds(1), bounds(1, true)]));
+check('level 1 whole is named: Sun, Earth, Mars, Jupiter and the belt are on the Z map', (() => { g.run(`window.M5 = __sc(1); campMapOpen(M5); campMapKey(M5, 'KeyZ'); campMapPaint(M5, 0);`); const names = J('__texts.filter(t => !t.gone).map(t => t.t)'); return ['SUN', 'EARTH', 'MARS', 'JUPITER', 'CERES / OCCATOR WORKS', 'MAIN BELT'].every(x => names.includes(x)); })());
 
 // ---- F. the scene ----
 g.run(`
   window.__made = []; window.__dead = []; window.__planetTexture = planetTexture; window.__starTexture = starTexture;
   planetTexture = (s, kind, seed) => 'planet-' + kind; starTexture = (s, type) => 'star-' + type; label = () => ({ destroy() { __dead.push('label'); } });
-  window.__fs = (x, y) => { const f = Object.create(Campaign.prototype); f.level = 1; f.camp = campNew(1, [], { seed: 3 }); f.camp.carrier.x = x; f.camp.carrier.y = y; f.farObjs = {}; f.farAt = 0;
+  window.__fs = (x, y) => { const f = Object.create(Campaign.prototype); f.level = "home"; f.camp = campNew("home", [], { seed: 3 }); f.camp.carrier.x = x; f.camp.carrier.y = y; f.farObjs = {}; f.farAt = 0;
     const img = (key) => { const o = { key, scale: 1, blend: null, setScale(v) { o.scale = v; return o; }, setDepth() { return o; }, setBlendMode(b) { o.blend = b; return o; }, setTint() { return o; }, destroy() { __dead.push(key); } }; __made.push(o); return o; };
     f.add = { image: (x, y, key) => img(key) }; return f; };
 `);
@@ -133,15 +143,15 @@ check('far from it again (past 1.4 times the range) it is taken down: the image 
 g.run(`var sp = CAMP.places.sun; F1.camp.carrier.x = sp.x - 2500; F1.camp.carrier.y = sp.y; F1.syncFar(2500); window.__sunImg = __made.find(o => o.key === 'star-G');`);
 check('near the Sun it is drawn as a star, not a planet: the G star texture, added light, and made from farther off because a star is big (a star counts three times its radius)', J('Object.keys(F1.farObjs).includes("sun")') && J('!!__sunImg') && g.run('__sunImg.blend !== null') === true && Math.abs(J('__sunImg.scale') - sun.r / 48) < 1e-9, J('__sunImg && __sunImg.scale'));
 g.run(`F1.camp.carrier.x = 0; F1.camp.carrier.y = 0; F1.syncFar(3000);`);
-check('a scene that has not made its table (a stand-in, or before create) does nothing and does not throw', J(`(() => { const f = Object.create(Campaign.prototype); f.level = 1; f.camp = campNew(1, [], {}); f.syncFar(1000); return true; })()`));
+check('a scene that has not made its table (a stand-in, or before create) does nothing and does not throw', J(`(() => { const f = Object.create(Campaign.prototype); f.level = "home"; f.camp = campNew("home", [], {}); f.syncFar(1000); return true; })()`));
 const scene = readFileSync(ROOT + '/src/campaignscene.js', 'utf8');
 check('create makes only the near places (not far ones), and update asks syncFar; the radar leaves out a far body beyond its range', /!pl\[id\]\.hidden && !pl\[id\]\.far\) this\.drawPlace/.test(scene) && /this\.syncFar\(time\)/.test(scene) && /!\(pl\[id\]\.far && Math\.hypot\(pl\[id\]\.x - c\.x, pl\[id\]\.y - c\.y\) > R\.range\)/.test(scene));
 
 // ---- G. no pack ----
 const bare = nodeGame({ replace: { 'mods.generated.js': 'var MODS = { version: 1, packs: [], errors: [] };' } });
 const BJ = e => JSON.parse(bare.run(`JSON.stringify(${e}) ?? 'null'`));
-check('with the pack gone the Campaign is what it was: no world, no far places, level 1 has its four places, the area view is the same, and nothing throws', [1, 2, 3].every(lv => BJ(`campWorldOf(${lv})`) === null) && Object.keys(BJ('campPlaces(1)')).join() === 'earth,luna,mars,eros' && Object.keys(BJ('campPlaces(3)')).join() === 'arrival,home' && JSON.stringify(BJ('campMapBounds(1, false)')) === JSON.stringify(b1) && BJ('campMapBounds(1, true).x0') === b1.x0 && bare.errors.length === 0, bare.errors.join(' | '));
-check('and the map still opens and Z does nothing harmful', (() => { bare.run(`window.__mk = path => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => 0 : k === 'then' ? undefined : __mk(path + '.' + String(k))), apply: () => __mk(path + '()') }); var C = campNew(1, [], { seed: 3 }); var s = { camp: C, mode: 'play', add: { rectangle: () => __mk('r'), graphics: () => __mk('g'), text: () => { const o = { setText() { return o; }, setColor() { return o; }, setVisible() { return o; }, setPosition() { return o; }, setOrigin() { return o; }, setScrollFactor() { return o; }, setDepth() { return o; }, destroy() {}, width: 10, height: 10 }; return o; } }, make: __mk('m'), input: { on() {}, off() {} } }; campMapOpen(s); campMapKey(s, 'KeyZ'); campMapPaint(s, 0); campMapKey(s, 'KeyZ'); campMapPaint(s, 100);`); return bare.errors.length === 0; })());
+check('with the pack gone the Campaign is what it was: no world, no far places, the belt level has its three places and the Earth level its four, the area view is the same, and nothing throws', [1, 'home', 2, 3].every(lv => BJ(`campWorldOf(${JSON.stringify(lv)})`) === null) && Object.keys(BJ('campPlaces("home")')).join() === 'earth,luna,mars,eros' && Object.keys(BJ('campPlaces(1)')).join() === 'ceres,vesta,pallas' && Object.keys(BJ('campPlaces(3)')).join() === 'arrival,home' && JSON.stringify(BJ('campMapBounds("home", false)')) === JSON.stringify(b1) && BJ('campMapBounds("home", true).x0') === b1.x0 && bare.errors.length === 0, bare.errors.join(' | '));
+check('and the map still opens and Z does nothing harmful', (() => { bare.run(`window.__mk = path => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => 0 : k === 'then' ? undefined : __mk(path + '.' + String(k))), apply: () => __mk(path + '()') }); var C = campNew("home", [], { seed: 3 }); var s = { camp: C, mode: 'play', add: { rectangle: () => __mk('r'), graphics: () => __mk('g'), text: () => { const o = { setText() { return o; }, setColor() { return o; }, setVisible() { return o; }, setPosition() { return o; }, setOrigin() { return o; }, setScrollFactor() { return o; }, setDepth() { return o; }, destroy() {}, width: 10, height: 10 }; return o; } }, make: __mk('m'), input: { on() {}, off() {} } }; campMapOpen(s); campMapKey(s, 'KeyZ'); campMapPaint(s, 0); campMapKey(s, 'KeyZ'); campMapPaint(s, 100);`); return bare.errors.length === 0; })());
 
 // ---- the files ----
 const src = readFileSync(ROOT + '/src/campsol.js', 'utf8'), pure = src.replace(/\/\/.*$/gm, '');
