@@ -146,6 +146,7 @@ const CAMP = {
     steer: 3,                              // turn input per radian off the line to the target (1 is full turn, so 3 is full beyond a third of a radian)
     align: 0.5,                            // rad: thrust only when the nose is within this of the line (the Long Haul autopilot's aligned)
     etaSlow: 1.1,                          // the flight time on the map is distance over the carrier's top speed times this (it speeds up and brakes)
+    fast: 2,                               // the map's Fast button (card space-game-map-click-fly): the carrier's top speed and thrust, times this, while the autopilot flies it; steering takes it away
     pick: 28,                              // px on the map around a mark that count as a click on it
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
@@ -611,9 +612,10 @@ function campCarrier(C, dt) {
   const c = C.carrier, k = CAMP.carrier, inp = C.input; if (c.hp <= 0) return;
   c.rot += (inp.turn || 0) * k.turn * dt;
   const th = Math.max(0, Math.min(1, inp.thrust || 0));
-  c.vx += Math.cos(c.rot) * k.accel * th * dt; c.vy += Math.sin(c.rot) * k.accel * th * dt;
+  const f = C.nav && C.nav.on && C.nav.fast ? CAMP.nav.fast : 1; // the map's Fast: a burn, while the autopilot flies (campNavGo)
+  c.vx += Math.cos(c.rot) * k.accel * f * th * dt; c.vy += Math.sin(c.rot) * k.accel * f * th * dt;
   const keep = Math.pow(inp.brake ? k.brakeDrag : k.drag, dt); c.vx *= keep; c.vy *= keep;
-  const sp = Math.hypot(c.vx, c.vy); if (sp > k.speed) { c.vx *= k.speed / sp; c.vy *= k.speed / sp; }
+  const sp = Math.hypot(c.vx, c.vy); if (sp > k.speed * f) { c.vx *= k.speed * f / sp; c.vy *= k.speed * f / sp; }
   c.x += c.vx * dt; c.y += c.vy * dt;
   if (inp.blink && campHas(C, 'blink') && C.t - C.blinkAt >= CAMP.tech.blink.cooldown) { C.blinkAt = C.t; c.x += Math.cos(c.rot) * CAMP.tech.blink.dist; c.y += Math.sin(c.rot) * CAMP.tech.blink.dist; C.events.push({ type: 'blink', x: c.x, y: c.y }); }
   inp.blink = false;

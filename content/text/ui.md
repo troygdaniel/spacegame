@@ -52,7 +52,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | help.surface.3 | E   talk to the colonist, board at the pad |
 | help.surface.4 | C   show the controls panel again |
 | tips.station | Pick from the station menu, bottom right: a number, or W S and Enter. Your ship is the last row: board it to launch. The SHOP sells parts; MISSIONS has courier and haul calls. |
-| tips.space | N lists the places and B the ships: Enter or a click flies there, and so does a click on the Tab map. Near a station, slow down and press L: ore sells there. G opens the galaxy map: pick a star, press Enter to jump. |
+| tips.space | N lists the places and B the ships: Enter or a click flies there; on the Tab map a click sets the place, then Enter flies there and Shift+Enter flies fast. Near a station, slow down and press L: ore sells there. G opens the galaxy map: pick a star, press Enter to jump. |
 | tips.ship | Look your ship over, then press Enter to launch. Esc goes back to the station to take a mission or repair first. |
 | tips.surface | Aim with the mouse and click to fire. Walk back to the landing pad and press E to lift off. |
 | toast.docked | Docked. |
