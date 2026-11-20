@@ -95,6 +95,7 @@ console.log('D. the wing: the bay and the limit');
 // ---------- E. the promotion ----------
 console.log('E. the promotion: the debrief, the scene, the save');
 {
+  const sc0 = src('src/campaignscene.js');
   check('campRankPromoted says when a mission took the pilot up: from the rank it was to the rank it is, and nothing when it did not', JSON.stringify(J('campRankPromoted(0, __P(1000))')) === '{"from":0,"to":1}' && J('campRankPromoted(0, __P(999))') === null && J('campRankPromoted(1, __P(1500))') === null && JSON.stringify(J('campRankPromoted(0, __P(7000))')) === '{"from":0,"to":3}' && J('campRankPromoted(3, __P(100))') === null);
   g.run(`window.__PP = __P(1200); __PP.promo = { from: 0, to: 1 }`);
   const line = J('campRankLine(__PP, {})');
@@ -109,6 +110,10 @@ console.log('E. the promotion: the debrief, the scene, the save');
     window.__f = __sc(0); Campaign.prototype.missionWon.call(__f);
   `);
   check('a mission won at the scene: the result is kept, and the promotion is on the state for the debrief (a cadet who scores 1,100 is an ensign)', J('__f.P.results["1.1"].score') === 1100 && JSON.stringify(J('__f.P.promo')) === '{"from":0,"to":1}' && J('__f.shown[0]') === 1100, JSON.stringify(J('__f.P.promo')));
+  // the win must be in the SAVE the moment it is won: a trailing comment once swallowed this.P.ore and campProgressSave in missionWon, and the ready room (src/camphub.js), which reads the save, found no result (card space-game-campaign-ranks, found at the first boot of the bundle)
+  const won = JSON.parse(store.get('longhaul.campaign') || 'null');
+  check('the win is SAVED at once: the result of mission 1 (score 1,100, one try) is in the save, and the ore of the battle (5) is carried; a save without the result is the bug that broke the hub', won && won.results && won.results['1.1'] && won.results['1.1'].score === 1100 && won.results['1.1'].tries === 1 && won.ore === 5 && won.mission === 1 && !('promo' in won), JSON.stringify(won));
+  check('and the scene line that does it is plain code, not the tail of a comment: this.P.ore and campProgressSave each start a statement of missionWon', (() => { const m = /missionWon\(\) \{[\s\S]*?\n  \}\n/.exec(sc0)[0].split('\n'); return m.some(l => /^\s*this\.P\.ore = Math\.floor\(C\.ore\);/.test(l)) && m.some(l => /^\s*campProgressSave\(this\.P\);/.test(l)); })());
   g.run(`window.__f2 = __sc(1500); __f2.camp.score.score = 100; Campaign.prototype.missionWon.call(__f2)`);
   check('one that does not cross a rank sets none (an ensign who scores 100 more stays an ensign)', J('__f2.P.promo') === null && J('__f2.P.results["1.1"].score') >= 100);
   g.run(`window.__f3 = __sc(4200); window.__c3 = __f3.makeCamp()`);

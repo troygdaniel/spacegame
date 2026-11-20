@@ -131,7 +131,9 @@ class Campaign extends Phaser.Scene {
   missionWon() { // a mission won: its result is kept and the ore comes with the cruiser; the debrief, then the next mission, or after the last one the level's story and the refit
     const C = this.camp; if (!C.L.objectives) { this.showWon(); return; }
     const was = typeof campRank === 'function' ? campRank(this.P).i : 0, r = campMissionDone(this.P, this.level, this.mi, C.score); this.mdone = r.levelDone;
-    this.P.promo = typeof campRankPromoted === 'function' ? campRankPromoted(was, this.P) : null; // the debrief says it: campRankLine this.P.ore = Math.floor(C.ore); campProgressSave(this.P);
+    this.P.ore = Math.floor(C.ore); // the ore comes with the cruiser
+    this.P.promo = typeof campRankPromoted === 'function' ? campRankPromoted(was, this.P) : null; // the debrief says it (campRankLine)
+    campProgressSave(this.P); // the result is kept: the ready room (src/camphub.js) and the next mission read it from the save (these were a trailing comment's, once: tests/campranks.mjs holds them)
     this.showDebrief(C.score);
   }
   // docking: the ready room (src/camphubscene.js) opens over the battle, which is paused under it; its rows are the dock's (src/campdock.js). Undocking (Launch, Undock, Esc or T there) goes back to the flight
