@@ -67,7 +67,7 @@ These numbers are those of the Earth defence level (`CAMP.levels.home`), which w
 - **Recharge shields (key 7, "recharge shields").** The carrier now has a shield of 150 points that takes damage before the hull and does not mend by itself. 25 ore fills it. Within 900 px of Earth, and with Earth's shield under full, the order mends Earth's shield instead (40 ore for 200 points); "recharge Earth" or "recharge the carrier" says which.
 - **Build (key 8 a fighter, key 9 an escort; "build fighters", "build an escort").** 25 ore a fighter, 45 an escort; one ship at a time (6 s, 10 s), into the bay, where Launch puts it out. The bay holds at most 14 fighters and 6 escorts, counting what is out.
 - **All three levels use it** (rocks and wrecks are in every level; Earth's shield only in the Earth level, `home`). Every number is a line of `CAMP` (`ore`, `shield`, `recharge`, `build`).
-- **Assumed:** Troy meant the shield bars; the carrier had none, so it has one now. Mining is flying over, not shooting rocks. Only escorts mine. Wrecks are the main income of a fight, the rocks are the reserve. The words of these orders are in `content/text/campaign.md` because `content/text/ui.md` is full (200 rows a file).
+- **Assumed:** Troy meant the shield bars; the carrier had none, so it has one now. Wrecks are the income of a fight, the rocks are the quiet minute's. The words of these orders are in `content/text/campaign.md` because `content/text/ui.md` is full (200 rows a file).
 
 ## Tech: one of three after each battle
 
