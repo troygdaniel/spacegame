@@ -18,7 +18,7 @@ const MAP_CLICK = 24;         // px on the map around a mark that count as a cli
 
 const SCENE_TIPS = {
   Station: 'Pick from the station menu, bottom right: a number, or W S and Enter. Your ship is the last row: board it to launch. The SHOP sells parts; MISSIONS has courier and haul calls.',
-  Space: 'N lists the places and B the ships: Enter or a click flies there, and so does a click on the Tab map. Near a station, slow down and press L: ore sells there. G opens the galaxy map: pick a star, press Enter to jump.',
+  Space: 'N lists the places and B the ships: Enter or a click flies there; on the Tab map a click sets the place, then Enter flies there and Shift+Enter flies fast. Near a station, slow down and press L: ore sells there. G opens the galaxy map: pick a star, press Enter to jump.',
   Ship: 'Look your ship over, then press Enter to launch. Esc goes back to the station to take a mission or repair first.',
   Surface: 'Aim with the mouse and click to fire. Walk back to the landing pad and press E to lift off.'
 };
