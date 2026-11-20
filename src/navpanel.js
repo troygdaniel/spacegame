@@ -61,10 +61,10 @@ function navpanelRows(bodies, jumps, mission) {
 }
 // the lines of the panel: a heading before the first row of each group, and when there are more than max, the window that keeps the chosen row in view
 // Returns { lines: [{ head: 'STATIONS' } | { row, i }], above, below }: i is the row's place in rows; above and below count the rows out of view.
-function navpanelLines(rows, sel, max) {
+function navpanelLines(rows, sel, max, groups) { // groups: the headings of another list that uses this (the Campaign's, src/campnav.js); the nav panel's own by default
   const all = []; let last = null, selLine = 0;
   rows.forEach((row, i) => {
-    if (row.group !== last) { last = row.group; all.push({ head: (NAVPANEL.groups.find(g => g[0] === row.group) || [0, ''])[1] }); }
+    if (row.group !== last) { last = row.group; all.push({ head: ((groups || NAVPANEL.groups).find(g => g[0] === row.group) || [0, ''])[1] }); }
     if (i === sel) selLine = all.length;
     all.push({ row, i });
   });
