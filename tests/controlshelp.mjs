@@ -8,6 +8,8 @@
 //   3. a line of the H page is at most 43 characters and a scene has at most 20: what the page holds without wrapping or running off
 //   4. content/text/ui.md has exactly the table's lines; the key line in space and the README name only keys that are in the table
 //   5. nothing names a control that is gone
+//   6. the Campaign (card space-game-campaign-keys-help): every key a Campaign file binds is on the table (the CAMPAIGN and PANELS groups and the debug keys), every key the table names is bound, and the key line, the
+//      pause card and the title name only keys of the table. A key added to the Campaign scene, its map or its panels and not to src/data_controls.js fails here, so the H page cannot go stale again
 // How it knows what is bound: the literal keys of addKey / addKeys calls, the e.code and e.key tests of keydown handlers, and the keys kept
 // in tables (ASSIST.key, the assist's modes, OVERVIEW.key, GUNLOCK.key), read from the game itself.
 // Run: node tests/controlshelp.mjs   (exit code 1 on a failed check)
@@ -40,13 +42,27 @@ function bound(files) {
 }
 const SPACE_FILES = ['space', 'assist', 'assist_orbit', 'autopilot', 'cruise', 'jump', 'gunlock', 'overview', 'clickmove', 'boost', 'camzoom', 'autotarget', 'handling', 'navpanel', 'hud'];
 const EVERYWHERE = ['map', 'meta', 'shipcomputer', 'listen'];         // Tab, H, Esc, M, I (the ship's computer, src/shipcomputer.js) and U (hold to talk to it, src/listen.js): window handlers for every scene
+const CAMP_FILES = ['campaignscene', 'campmapdraw', 'campmap', 'campkeys', 'camppanel'];             // the Campaign scene, its Tab map, its H page and its panels (src/camppanel.js)
 const SCENES = {
+  campaign: CAMP_FILES.concat(EVERYWHERE),
+  panels: CAMP_FILES.concat(EVERYWHERE),
   station: ['station', 'shop', 'fuel', 'chat', 'journal', 'jump'].concat(EVERYWHERE),
   ship: ['shipmode', 'hangar'].concat(EVERYWHERE),
   flight: SPACE_FILES.concat(EVERYWHERE),
   surface: ['surface'].concat(EVERYWHERE),
   title: ['title', 'contentui', 'settings', 'mods'],
   any: EVERYWHERE
+};
+// what the Campaign binds: the literal keys of its files, the scene's own tests of the code it holds in a variable (c === 'KeyT'), the map's key (CAMPMAP.key), and the digits: the scene hands every digit
+// to campPanelKey, which opens the panel whose key it is (CAMP_PANELS) and picks the row whose n it is, so those digits are bound by that table and the test below that the scene routes them
+const campBound = () => {
+  const keys = bound(CAMP_FILES);
+  for (const m of read('src/campaignscene.js').matchAll(/(?<![\w.])c === '([^']+)'/g)) keys.add(norm(m[1]));
+  keys.add(norm(J('CAMPMAP.key')));
+  if (/\be\.shiftKey\b/.test(read('src/campaignscene.js')) && /\bshift\b/.test(read('src/campmapdraw.js'))) keys.add('SHIFT'); // Shift+Enter: the scene passes the event's shiftKey, the map reads it
+  ['M', 'I', 'U'].forEach(k => { if (bound(EVERYWHERE).has(k)) keys.add(k); }); // the window handlers that work in every scene, the Campaign's too: mute (meta), the strip (shipcomputer), the voice (listen)
+  J('CAMP_PANELS.panels.map(p => [p.key].concat(p.rows.map(r => String(r.n))))').flat().forEach(d => keys.add(d));
+  return new Set([...keys].filter(k => !k.includes('.'))); // 'e.key === camp.nav.go' is an event name, not a key
 };
 const spaceOwn = bound(SPACE_FILES);
 [J('ASSIST.key'), J('OVERVIEW.key'), J('GUNLOCK.key')].concat(J('Object.values(ASSIST_MODES).map(m => m.key).filter(Boolean)')).forEach(k => spaceOwn.add(norm(k)));
@@ -59,7 +75,7 @@ const group = id => groups.find(x => x.id === id);
 
 console.log('1. every key the help names is bound');
 for (const gr of groups) {
-  const have = gr.id === 'flight' ? new Set([...bound(SCENES.flight), ...spaceOwn]) : bound(SCENES[gr.id] || []);
+  const have = gr.id === 'flight' ? new Set([...bound(SCENES.flight), ...spaceOwn]) : (gr.id === 'campaign' || gr.id === 'panels') ? campBound() : bound(SCENES[gr.id] || []);
   if (gr.id === 'title') continue; // the Title reads keys by e.code in one long line of its own; its rows are not what changed and are checked in tests/settings.mjs
   const missing = [];
   gr.rows.forEach(r => r.k.forEach(cap => capKeys(cap).forEach(k => { if (!have.has(k)) missing.push(cap + ' (' + r.t + ')'); })));
@@ -116,6 +132,26 @@ console.log('5. nothing names a control that is gone');
   for (const [where, text] of Object.entries(texts)) for (const [re, what] of GONE) check(`${where} does not name ${what}`, !re.test(text), (re.exec(text) || [''])[0]);
   const st = J(`guideHint({ scene: { key: 'Station' } })`);
   check('the first tip in the station names the station menu', /station menu/.test(st), st);
+}
+
+console.log('6. the Campaign: every bound key is on the table');
+{
+  const named = new Set(); ['campaign', 'panels'].forEach(id => group(id).rows.forEach(r => r.k.forEach(cap => capKeys(cap).forEach(k => named.add(k)))));
+  const ALSO = { UP: 'W', DOWN: 'S', LEFT: 'A', RIGHT: 'D', ARROWUP: 'W', ARROWDOWN: 'S', ARROWLEFT: 'A', ARROWRIGHT: 'D' };
+  const bnd = campBound();
+  const silent = [...bnd].filter(k => !named.has(k) && !(ALSO[k] && named.has(ALSO[k])));
+  check('no key the Campaign binds is missing from the CAMPAIGN and PANELS groups', silent.length === 0, 'bound and not named: ' + silent.join(' ') + '   bound: ' + [...bnd].join(' '));
+  check('the scan saw the keys it should (fly, fire, blink, the panels\' digits, the map, cards, pause, title, help, strip, voice, mute)', ['W', 'A', 'S', 'D', 'SPACE', 'F', 'Q', '1', '2', '5', 'TAB', 'X', 'ENTER', 'ESC', 'T', 'H', 'I', 'U', 'M'].every(k => bnd.has(k)), ['W', 'A', 'S', 'D', 'SPACE', 'F', 'Q', '1', '2', '5', 'TAB', 'X', 'ENTER', 'ESC', 'T', 'H', 'I', 'U', 'M'].filter(k => !bnd.has(k)).join(' '));
+  const scene = read('src/campaignscene.js');
+  check('the scene hands every digit to the panels (campPanelKey) and has no key of its own for a digit from 4 to 9 or an order: the old direct digits are gone (the refit card between levels buys with 4 and 5 on its own screen)', /campPanelKey\(/.test(scene) && !/Digit[4-9]/.test(scene.split('\n').filter(l => !/R\.ore >= B\./.test(l)).join('\n')) && !/campOrder\(C, order, ''/.test(scene) && !/Digit1: 'launch'/.test(scene));
+  const caps = (line, pick) => line.split(/ {2,}/).flatMap(seg => seg.split(' ').filter(t => pick.test(t))).map(c => c.toUpperCase());
+  const keyLine = J(`uiText('camp.ui.keys', { panels: campPanelKeyLine() })`), pause = J(`uiText('camp.ui.paused')`);
+  check('the bottom key line names only keys of the table and says the panels from it: ' + keyLine, caps(keyLine, /^(?:[A-Z0-9]|Tab|Space)$/).every(c => named.has(c)) && keyLine.includes(J('campPanelKeyLine()')) && /H Keys$/.test(keyLine) && !/\b6-9\b|\bI type an order\b/.test(keyLine), caps(keyLine, /^(?:[A-Z0-9]|Tab|Space)$/).filter(c => !named.has(c)).join(' '));
+  check('the key line fits the screen: 8.6 px a letter from x 24 ends at 1272 at the latest', 24 + keyLine.length * 8.6 <= 1272, keyLine.length + ' letters');
+  check('the pause card says Esc, T and H, which are keys of the table', caps(pause, /^(?:[A-Z]|Esc)$/).every(c => named.has(c) || c === 'ESC') && /H {1,3}all keys/.test(pause) && /Esc/.test(pause), pause);
+  const debugCodes = J('CAMP_DEBUG.keys.map(r => r.code)');
+  check('the debug keys are bound by the scene through their own table (campDebugKey) and the H page lists them from it', /campDebugKey\(c\)/.test(scene) && J('campKeysPage().some(g => g.rows.length === CAMP_DEBUG.keys.length && g.rows.every((r, i) => r.caps[0] === CAMP_DEBUG.keys[i].key))') && debugCodes.length >= 4);
+  check('the H page lists every row of the two groups, in groups, once: nothing in the table is left off it', J(`(() => { const page = campKeysPage().flatMap(g => g.rows.map(r => r.caps.join(' ') + '|' + r.t)); return ['panels', 'campaign'].every(id => controlsGroup(id).rows.every(r => page.includes(r.k.join(' ') + '|' + r.t))); })()`));
 }
 
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));

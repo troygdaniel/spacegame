@@ -69,3 +69,6 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.m.3.3.title | Inner ring |
 | camp.m.3.3.b1 | Destroy the eight inner towers. |
 | camp.m.3.3.b2 | Last battle. |
+| camp.nav.scan | Scan point {n} |
+| camp.nav.guard | Relic guard |
+| camp.nav.alien | Alien |
