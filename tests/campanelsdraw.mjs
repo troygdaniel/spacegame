@@ -47,8 +47,8 @@ console.log('A. drawn after 250 ms, at its side, with live words');
   check('FLEET is at the left edge and SHIP at the right edge, each inside the screen, below the HUD\'s gauges (176) and the radar (226), above the key line (676)', geo.x === 24 && geo2.x === 1280 - 24 - geo2.w && geo.y >= 230 && geo2.y >= 230 && geo.y + geo.h <= 660 && geo2.y + geo2.h <= 660 && geo2.x + geo2.w <= 1256, JSON.stringify([geo, geo2]));
   g.run(`campPanelKey(S.pn, S.camp, 'Escape', 2000); campPanelsPaint(S, 2000);`);
   check('Esc takes it away: every object is gone', J('S.pn.open') === '' && J('__live().length') === 0);
-  g.run(`campPanelKey(S.pn, S.camp, 'Digit2', 3000); campPanelsPaint(S, 3300); window.__t2 = __texts();`);
-  check('key 2 draws SHIP: the ore and the shield, the five rows, what each costs and why not', J('__t2').includes('SHIP') && J('__t2').some(x => /^ore \d+   shield \d+$/.test(x)) && ['Mine ore', 'Recharge shields', 'Build a fighter', 'Build an escort', 'Fly to the objective'].every(r => J('__t2').includes(r)) && J('__t2').includes('25 ore, 6 s') && J('__t2').includes('needs 45 ore') && J('__t2').includes('shield is full'), J('__t2').join(' | '));
+  g.run(`S.camp.docked = 'luna'; campPanelKey(S.pn, S.camp, 'Digit2', 3000); campPanelsPaint(S, 3300); window.__t2 = __texts();`); // docked: the build rows say what they cost (undocked: "Dock at an outpost to build.")
+  check('key 2 draws SHIP: the ore and the shield, the six rows, what each costs and why not', J('__t2').includes('SHIP') && J('__t2').some(x => /^ore \d+   shield \d+$/.test(x)) && ['Mine ore', 'Recharge shields', 'Build a fighter', 'Build an escort', 'Fly to the objective', 'Dock at an outpost'].every(r => J('__t2').includes(r)) && J('__t2').includes('25 ore, 6 s') && J('__t2').includes('needs 45 ore') && J('__t2').includes('shield is full'), J('__t2').join(' | '));
   g.run(`campPanelKey(S.pn, S.camp, 'Digit4', 3400); campPanelsPaint(S, 3400);`);
   check('a pick closes it too: 2 then 4 (build an escort, refused for want of ore) and the panel is gone', J('S.pn.open') === '' && J('__live().length') === 0);
 }
@@ -65,7 +65,7 @@ console.log('B. a click on a row does it');
   g.run(`S.time.now = 8000; campPanelKey(S.pn, S.camp, 'Digit1', 8000); S.time.now = 8100;`);
   check('during the 250 ms before it is drawn a click is not the panel\'s (it is not swallowed)', J('campPanelsClick(S, 700, 400)') === false && J('S.pn.open') === 'fleet');
   g.run(`campPanelKey(S.pn, S.camp, 'Escape', 8200);`);
-  g.run(`S.time.now = 9000; window.S.camp.ore = 100; campPanelKey(S.pn, S.camp, 'Digit2', 9000); campPanelsPaint(S, 9300); S.time.now = 9300; window.__g2 = campPanelsGeometry(campPanelDef("ship")); campPanelsClick(S, __g2.x + 150, __g2.rowY(3) + 10);`);
+  g.run(`S.time.now = 9000; window.S.camp.ore = 100; S.camp.docked = 'luna'; campPanelKey(S.pn, S.camp, 'Digit2', 9000); campPanelsPaint(S, 9300); S.time.now = 9300; window.__g2 = campPanelsGeometry(campPanelDef("ship")); campPanelsClick(S, __g2.x + 150, __g2.rowY(3) + 10);`);
   check('the click on SHIP row 3 builds a fighter: 25 ore spent, one queued', J('S.camp.ore') === 75 && J('S.camp.build.queue.length') === 1);
 }
 
@@ -107,7 +107,7 @@ console.log('C. the scene\'s keys');
 console.log('D. the H page');
 {
   const page = J('campKeysPage()');
-  check('the page begins with the two panels, five rows each, then the rest of the table, then the debug keys from their table', page[0].title === 'KEY 1  -  THE FLEET PANEL' && page[1].title === 'KEY 2  -  THE SHIP PANEL' && page[0].rows.length === 5 && page[1].rows.length === 5 && page[0].rows[2].caps.join() === '1,3' && page[page.length - 1].rows.length === J('CAMP_DEBUG.keys.length') && page.some(p => p.title === 'FLY AND FIRE') && page.some(p => p.title === 'THE MAP'), page.map(p => p.title).join(' | '));
+  check('the page begins with the two panels (five rows and six), then the rest of the table, then the debug keys from their table', page[0].title === 'KEY 1  -  THE FLEET PANEL' && page[1].title === 'KEY 2  -  THE SHIP PANEL' && page[0].rows.length === 5 && page[1].rows.length === 6 && page[0].rows[2].caps.join() === '1,3' && page[page.length - 1].rows.length === J('CAMP_DEBUG.keys.length') && page.some(p => p.title === 'FLY AND FIRE') && page.some(p => p.title === 'THE MAP'), page.map(p => p.title).join(' | '));
   check('every row of the PANELS and CAMPAIGN groups of the table is on it, once', J(`(() => { const page = campKeysPage().flatMap(g => g.rows.map(r => r.caps.join(' ') + '|' + r.t)); const rows = ['panels', 'campaign'].flatMap(id => controlsGroup(id).rows.map(r => r.k.join(' ') + '|' + r.t)); return rows.length === page.length - CAMP_DEBUG.keys.length && rows.every(r => page.filter(p => p === r).length === 1); })()`));
   const L = J('campKeysLayout(campKeysPage())'), K = J('CAMPKEYS');
   check('two columns of whole groups that fit the panel: the lowest line of each is above ' + K.bottom + ' and the lines are balanced', L.cols.length === 2 && L.cols.every(col => J(`campKeysHeight(${JSON.stringify(col)})`) <= K.bottom) && Math.abs(L.lines[0] - L.lines[1]) <= 8, JSON.stringify(L.lines) + ' ' + L.cols.map(col => J(`campKeysHeight(${JSON.stringify(col)})`)).join(','));
