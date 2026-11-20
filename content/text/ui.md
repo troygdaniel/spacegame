@@ -138,7 +138,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.lose.earth | Earth's shield has failed. |
 | camp.ui.title | CAMPAIGN |
 | camp.ui.level | LEVEL {n}: {name} |
-| camp.ui.keys | W A S D fly   Space gun   F missiles   1 launch   2 attack   3 escort   4 guard   5 recall   I type an order   U speak   Tab map |
+| camp.ui.keys | W A S D fly   Space gun   F missiles   1 launch   2 attack   3 escort   4 guard   5 recall   6 mine   7 shields   8 fighter   9 escort   I type an order   U speak   Tab map |
 | camp.ui.begin | Enter  begin |
 | camp.ui.pick | Choose one salvaged technology:  1  2  3 |
 | camp.ui.next | Enter  continue |
