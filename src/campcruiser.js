@@ -99,6 +99,16 @@ function campCruiserDraw(g) {
   p.dot(px2 - 1, -py2 + 1.4, 0.9, C.red, 0.9); p.dot(px2 - 1, py2 - 1.4, 0.9, C.green, 0.9); p.dot((tx1 + tx2) / 2, 0, 0.7, 0xffffff, 0.8);
 }
 
+// how lit the bays are, 0 to 1, for the scene to draw over the picture: the launch tubes (the front of the pods) while ships are leaving and for CAMP_BAY.fade ms after the last, the landing bays (the back of the pods) while
+// any ship of the wing is coming home and for as long after one has landed. at: { launch, land }, the battle clock (C.t) of the last launch and the last landing. The picture itself has the bays dimly lit all the time.
+const CAMP_BAY = { fade: 700, slot: 0.9, halo: [[6, 0.07], [4, 0.15]], color: 0xffcf7a, core: 0xfff2d0 }; // fade: ms a bay takes to go dark; slot: how solid the lit slot is; halo: [radius px, alpha] of its glow (added); the slot's colour and the hot middle of it
+function campBayLight(C, at) {
+  const fade = dt => dt <= 0 ? 1 : Math.max(0, 1 - dt / CAMP_BAY.fade);
+  if (!C.carrier || C.carrier.hp <= 0) return { launch: 0, land: 0 };
+  const coming = C.ships.some(u => u.team === 'earth' && u.hp > 0 && u.order && u.order.type === 'recall');
+  return { launch: C.launchQ.length ? 1 : fade(C.t - at.launch), land: coming ? 1 : fade(C.t - at.land) };
+}
+
 // the texture of a ship of the Campaign's own, made once; returns its key
 function campShipTexture(scene, kind) {
   const key = 'camp-' + kind;

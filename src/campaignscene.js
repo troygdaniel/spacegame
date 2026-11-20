@@ -39,7 +39,7 @@ class Campaign extends Phaser.Scene {
     spaceBackdrop(this, true);
     this.boom = fxBoom(this);
     this.camp = campNew(this.level, this.P.techs, this.opts);
-    this.sp = {}; this.bsp = [];
+    this.sp = {}; this.bsp = []; this.bayAt = { launch: -1e9, land: -1e9 }; // the battle clock of the last launch and the last landing: the bays of the cruiser stay lit a moment after each (campBayLight)
     const pl = campPlaces(this.level); Object.keys(pl).forEach(id => { if (!pl[id].hidden) this.drawPlace(pl[id]); });
     this.osp = {}; // the ore lying about (asteroid rocks and wrecks), one sprite each
     this.csp = this.camp.caches.map(k => this.add.image(k.x, k.y, 'pod').setScale(1.8).setDepth(3).setTint(0xffd37a)); // resource caches (level 2): gold pods that go when collected
@@ -161,7 +161,7 @@ class Campaign extends Phaser.Scene {
       if (typeof campNudge === 'function') { const nd = campNudge(C, this.shown); if (nd) toast(this, nd, '#9fe9ff'); } // the first-minute hints, once each (src/campnudge.js)
     }
     C.events.splice(0).forEach(e => this.onEvent(e));
-    this.syncRockets(Math.min(dt, 100));
+    this.syncRockets(Math.min(dt, 100)); this.syncBay();
     this.sync(); this.paintHud();
     if (this.mp) campMapPaint(this, time);
   }
@@ -172,7 +172,7 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'boom') { this.boom.explode(e.big ? 90 : 26, e.x, e.y); sfx('boom'); if (e.kind === 'carrier') this.cameras.main.shake(400, 0.01); }
     else if (e.type === 'hit') { if (e.id === this.camp.carrier.id) { this.cameras.main.shake(90, 0.003); this.flash(e.id); } this.boom.explode(3, e.x, e.y); }
     else if (e.type === 'earthhit') this.boom.explode(6, e.x, e.y);
-    else if (e.type === 'launch' || e.type === 'dock') beep(e.type === 'launch' ? 560 : 420, 0.07, 'triangle', 0.04, 160);
+    else if (e.type === 'launch' || e.type === 'dock') { this.bayAt[e.type === 'launch' ? 'launch' : 'land'] = this.camp.t; beep(e.type === 'launch' ? 560 : 420, 0.07, 'triangle', 0.04, 160); }
     else if (e.type === 'blink') { this.boom.explode(30, e.x, e.y); sfx('shieldUp'); }
     else if (e.type === 'missile') beep(170, 0.4, 'sawtooth', 0.045, 520);
     else if (e.type === 'mboom') { this.boom.explode(44, e.x, e.y); sfx('boom'); }
@@ -215,6 +215,24 @@ class Campaign extends Phaser.Scene {
       const b = C.bullets[i]; if (!b) { im.setVisible(false); return; }
       im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'bullet' : 'ebullet').setScale(b.beam ? 3 : b.pd ? 0.9 : 1, b.beam ? 1.2 : 1);
       if (b.beam) im.setTint(0x7fe9ff); else if (b.pd) im.setTint(0xffd37a); else im.clearTint(); // the turrets' shots are amber; the beam tech's are cyan, long and go through
+    });
+  }
+  // the bays of the cruiser: dimly lit in the picture, and bright while the wing leaves (the launch tubes, at the front of the pods) and while it comes home (the landing bays, at the back): the order to launch or recall can be seen on the ship
+  syncBay() {
+    const C = this.camp, c = C.carrier, B = CAMP_BAY;
+    if (!this.bayG) { this.bayG = this.add.graphics().setDepth(5.2); this.bayGlow = this.add.graphics().setDepth(5.3).setBlendMode('ADD'); }
+    const g = this.bayG, h = this.bayGlow; g.clear(); h.clear();
+    if (!this.bayAt) this.bayAt = { launch: -1e9, land: -1e9 };
+    const L = campBayLight(C, this.bayAt), bays = campArtBays('cruiser'), cs = Math.cos(c.rot), sn = Math.sin(c.rot), d = bays.half[0], w = bays.half[1];
+    const pos = ([x, y]) => [c.x + cs * x - sn * y, c.y + sn * x + cs * y];
+    const quad = (x, y, x1, x2, y1, y2) => [[x + x1, y + y1], [x + x2, y + y1], [x + x2, y + y2], [x + x1, y + y2]].map(([a, b]) => [c.x + cs * a - sn * b, c.y + sn * a + cs * b]); // a box in the carrier's frame, turned with it
+    [['launch', bays.launch, -d, 0], ['land', bays.land, 0, d]].forEach(([k, at, x1, x2]) => {
+      const lv = L[k]; if (lv <= 0) return;
+      at.forEach(([x, y]) => {
+        const q = quad(x, y, x1, x2, -w, w), m = quad(x, y, x1, x2, -w * 0.45, w * 0.45);
+        g.fillStyle(B.color, B.slot * lv).fillPoints(q.map(([a, b]) => ({ x: a, y: b })), true); g.fillStyle(B.core, B.slot * lv).fillPoints(m.map(([a, b]) => ({ x: a, y: b })), true);
+        const [gx, gy] = pos([x + (k === 'launch' ? 1 : -1), y]); B.halo.forEach(([r, a]) => h.fillStyle(B.color, a * lv).fillCircle(gx, gy, r));
+      });
     });
   }
   // the missiles in flight (a body, a flame and a trail of smoke), the turrets (a faint ring of how far they reach, four mounts that flash when one fires) and the magazine count
