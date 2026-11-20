@@ -86,19 +86,25 @@ async function longhaul() {
     await t.ev(`(() => { const s = ${SP}; s.enemies.getChildren().slice().forEach(d => d.destroy()); s.calmUntil = 1e12; s.cr.target = null; return 1; })()`);
     await t.ev(`(() => { ${SP}.scene.pause(); game.scene.run('Overlay', { from: 'Space', mode: 'map' }); return 1; })()`); await t.run(300);
     check('the sector map is open over the game', await j(`game.scene.isActive('Overlay')`));
-    const mark = await j(`(() => { const ov = ${OV}, sp = ${SP}, b = cruiseKnown(sp).filter(r => r.type === 'station')[0], v = ov.view, sc = ov.MS / v.size; return { x: ov.MX + (b.x - v.x) * sc, y: ov.MY + (b.y - v.y) * sc, id: b.id, ok: b.x >= v.x && b.x <= v.x + v.size && b.y >= v.y && b.y <= v.y + v.size }; })()`);
-    check('the station is on the map to click', mark.ok, JSON.stringify(mark));
+    // the first place to fly to is a belt, an outpost or a gate a few thousand px off, never a station or a planet: those take a dock or land order, and a ship that starts a few hundred px from the station docks
+    // within a second or two of game time, so whether the steering-key check below found it still flying depended on how many game frames the map's real 80 ms timer let pass (load). A plain body means a
+    // plain local flight of several seconds.
+    const pick = await j(`(() => { const c = cruiseKnown(${SP}).filter(r => ['belt', 'scenery', 'gate'].includes(r.type) && r.dist >= 2000 && r.dist <= 15000).sort((a, b) => a.dist - b.dist)[0]; return c ? { id: c.id, name: c.name, dist: Math.round(c.dist) } : null; })()`);
+    check('there is a belt, an outpost or a gate 2,000 to 15,000 px away to fly to', !!pick, JSON.stringify(pick));
+    await t.ev(`${OV}.whole = true`); await t.run(800); // the whole system, so it is on the map to click
+    const mark = await j(`(() => { const ov = ${OV}, b = cruiseKnown(${SP}).find(r => r.id === '${pick && pick.id}'), v = ov.view, sc = ov.MS / v.size; return { x: ov.MX + (b.x - v.x) * sc, y: ov.MY + (b.y - v.y) * sc, id: b.id, ok: b.x >= v.x && b.x <= v.x + v.size && b.y >= v.y && b.y <= v.y + v.size }; })()`);
+    check('it is on the map to click', mark.ok, JSON.stringify(mark));
     await clickAt(t, mark.x, mark.y); await t.run(300);
     const st = await j(`({ set: ${SP}.cr.target && ${SP}.cr.target.id, ap: ${SP}.ap.on, open: game.scene.isActive('Overlay'), fly: ${OV}.btnFly.visible, fast: ${OV}.btnFast.visible, ft: ${OV}.btnFly.text, st: ${OV}.btnFast.text })`);
-    check('a click on the station SETS it as the destination: the map stays open, nothing flies, the two buttons are by the mark', st.set === mark.id && !st.ap && st.open && st.fly && st.fast && /Enter/.test(st.ft) && /Shift\+Enter|too near/.test(st.st), JSON.stringify(st));
+    check('a click on the place SETS it as the destination: the map stays open, nothing flies, the two buttons are by the mark', st.set === mark.id && !st.ap && st.open && st.fly && st.fast && /Enter/.test(st.ft) && /Shift\+Enter|too near/.test(st.st), JSON.stringify(st));
     await snap(t, 'longhaul-set');
     await enterKey(t, 0); await settle(t, `${SP}.ap.on`);
-    const fl = await j(`({ open: game.scene.isActive('Overlay'), on: ${SP}.ap.on, local: ${SP}.ap.local })`);
+    const fl = await j(`({ open: game.scene.isActive('Overlay'), on: ${SP}.ap.on, local: ${SP}.ap.local, stage: ${SP}.ap.stage })`);
     check('Enter closes the map and the autopilot flies there at regular speed (no cruise: ap.local)', !fl.open && fl.on && fl.local === true, JSON.stringify(fl));
-    await t.run(1500);
+    await t.run(300);
     await snap(t, 'longhaul-flying');
     await t.ev(`(() => { ${SP}.k.W.isDown = true; return 1; })()`); await t.run(600); await t.ev(`(() => { ${SP}.k.W.isDown = false; return 1; })()`);
-    check('a steering key takes the wheel back', await j(`${SP}.ap.on === false`));
+    check('a steering key takes the wheel back', await j(`${SP}.ap.on === false`), JSON.stringify(await j(`({ on: ${SP}.ap.on, stage: ${SP}.ap.stage, leaving: ${SP}.leaving })`)));
     // a far body: the leg is long, so Fast cruises and Fly does not
     await t.ev(`(() => { const s = ${SP}, far = cruiseKnown(s).filter(r => r.type !== 'star').sort((a, b) => b.dist - a.dist)[0]; navpanelPick(s, far, true); window.__far = far.id; return 1; })()`);
     await t.ev(`(() => { ${SP}.scene.pause(); game.scene.run('Overlay', { from: 'Space', mode: 'map' }); return 1; })()`); await t.run(300);
