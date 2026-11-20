@@ -134,7 +134,7 @@ g.run(`window.F = __fake(1); campNavGo(F.camp, campNavRows(F.camp).find(r => r.i
 check('in the scene the autopilot flies: no key held, the carrier gathers speed toward Mars', (g.run('__tick(3)'), J('F.camp.nav.on') && J('Math.hypot(F.camp.carrier.vx, F.camp.carrier.vy) > 50') && J('F.camp.carrier.vx > 0')));
 check('its lines are toasts: "Autopilot to Mars. Any steering key takes the wheel."', J('__toasts.includes("Autopilot to Mars. Any steering key takes the wheel.")'), JSON.stringify(J('__toasts')));
 check('the readout under the goal line says what it is flying to and how far', /^AUTOPILOT  Mars  [\d,]+ km$/.test(J('F.hud.nav.text')), J('F.hud.nav.text'));
-check('Space (the gun) and the orders do not take the wheel: it flies on while Space is held and 1 launches the wing', (g.run(`F.k.SPACE.isDown = true; F.onKey({ code: 'Digit1' }); __tick(1); F.k.SPACE.isDown = false;`), J('F.camp.nav.on') && J('F.camp.orders.launch') === 1 && J('F.camp.input.fire') === true));
+check('Space (the gun) and the orders do not take the wheel: it flies on while Space is held and 1 then 1 launches the wing', (g.run(`F.k.SPACE.isDown = true; F.onKey({ code: 'Digit1' }); F.onKey({ code: 'Digit1' }); __tick(1); F.k.SPACE.isDown = false;`), J('F.camp.nav.on') && J('F.camp.orders.launch') === 1 && J('F.camp.input.fire') === true));
 g.run(`F.k.D.isDown = true; __tick(0.1); F.k.D.isDown = false;`);
 check('a steering key (D) takes the wheel: the autopilot is off, "Autopilot off. You have the wheel.", and the key steers', J('F.camp.nav') === null && J('__toasts.includes("Autopilot off. You have the wheel.")'));
 g.run(`window.F = __fake(1); campNavGo(F.camp, campNavRows(F.camp).find(r => r.id === 'place:mars')); F.k.W.isDown = true; __tick(0.2); F.k.W.isDown = false;`);

@@ -3,14 +3,52 @@
 //   the Settings screen (src/settings.js)   lists every group, one tab each
 //   the H help page (HELP in src/meta.js)   the lines of the scene you are in, from controlsHelp()
 //   the Ship bay's key panel (BAY_CONTROLS in src/shipmode.js)   the rows marked bay, in the order they stand here
+//   the Campaign's H page (src/campkeys.js, card space-game-campaign-keys-help)   the CAMPAIGN group, grouped by each row's sub, with the debug keys of src/campdebug.js added after them
 // A group:  { id, title, scene, rows }   scene is the name of the scene whose H page lists it (null: not an H page)
 // A row:    { k: ['W'], t: 'Thrust' }    k is the key caps (one or more), t says what the keys do
 //           bay: 1    also in the Ship bay's list (twelve fit: eight of flight, then four of everywhere); bt is the short text it uses there
 //           help: 0   left out of the H page (it is long enough)
+//           sub: 'ORDERS'   the CAMPAIGN group only: the heading its page puts the row under (rows of one sub stand together; the Settings tab lists them flat)
 // When a key changes in the game, change its row here and nothing else. tests/settings.mjs checks the table's shape and that the three views agree.
 // A line of the H page is the caps, three spaces and the text: keep it to 43 characters and a scene to 20 lines, which is what the page holds
 // (20 px type, 520 px wide, 580 px high). tests/controlshelp.mjs checks that, that every key named here is bound, and that every key the
 // Space scene binds is named here.
+// ---------- the Campaign's keyboard panels (card space-game-campaign-keys-help; Troy, 20 Nov 2026) ----------
+// The digits are not orders any more: key 1 opens the FLEET panel at the left, key 2 the SHIP panel at the right, and the digit of a row does it (1 then 3 is "escort"). This table is the one source of the panels,
+// their rows, their keys and their words: src/camppanel.js reads it for what a row does and whether it can be done now, src/campkeys.js and the settings tab draw the keys from it (campPanelKeyRows below), the key line
+// and the pause card name the panels from it, and tests/campanels.mjs and tests/controlshelp.mjs check the game against it. A later card (ranks, hub, chatter) adds a row, or the centre panel, by data here.
+//   panel:  { key, id, side, title, rows }   key is the digit that opens it; side 'left' or 'right'; title is its heading and the word of the key line
+//   row:    { n, id, order, arg, fly, label, help }   n is the digit that picks it (1 to 5); order is a campOrder name (src/campaign.js: the same words the strip and the voice use; arg goes with it);
+//           fly: 'objective' is the autopilot to the goal (src/campnav.js) and not an order; label is the row's name on the panel, help its line on the H page and in Settings
+//   key 3 is RESERVED: a centre panel for a later card. It is bound to nothing now (and no digit from 4 to 9 is), and the panels replace the old direct digit keys of the Campaign.
+const CAMP_PANELS = {
+  delay: 250,                              // ms a panel waits before it is drawn: for a fast typist "1 then 3" never flashes it (the pick works whether or not the panel has been drawn)
+  panels: [
+    { key: '1', id: 'fleet', side: 'left', title: 'FLEET', rows: [
+      { n: 1, id: 'launch', order: 'launch', label: 'Launch', help: 'Launch the wing' },
+      { n: 2, id: 'attack', order: 'attack', label: 'Attack', help: 'Fighters attack the aliens' },
+      { n: 3, id: 'escort', order: 'escort', label: 'Escort', help: 'Escorts go to a convoy' },
+      { n: 4, id: 'guard', order: 'guard', label: 'Guard', help: 'The wing guards the carrier' },
+      { n: 5, id: 'recall', order: 'recall', label: 'Recall', help: 'The wing flies home' }
+    ] },
+    { key: '2', id: 'ship', side: 'right', title: 'SHIP', rows: [
+      { n: 1, id: 'mine', order: 'mine', label: 'Mine ore', help: 'The wing goes and mines ore' },
+      { n: 2, id: 'recharge', order: 'recharge', label: 'Recharge shields', help: 'Recharge a shield (costs ore)' },
+      { n: 3, id: 'buildf', order: 'build', arg: 'fighter', label: 'Build a fighter', help: 'Build a fighter (costs ore)' },
+      { n: 4, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', help: 'Build an escort (costs ore)' },
+      { n: 5, id: 'goal', fly: 'objective', label: 'Fly to the objective', help: 'Autopilot to the objective' }
+    ] }
+  ],
+  // why a row cannot be done now, in a few plain words: the code of the game's own refusal (campNo in src/campaign.js) to the words under the row's name; {need} and {have} are ore
+  why: { over: 'the battle is over', bay: 'the bay is empty', launching: 'still launching', baydry: 'all of it is out', nofighters: 'no fighters out', noescorts: 'no escorts out', noconvoy: 'no convoy to escort', nowing: 'no ships out',
+    noore: 'no ore in reach', noore2: 'needs {need} ore', shieldfull: 'shield is full', earthfull: "Earth's shield is full", noearth: 'no Earth here', farearth: 'too far from Earth', buildfull: 'no room in the bay', what: 'cannot do that now',
+    nogoal: 'no objective', there: 'you are there' }
+};
+// the rows the H page and Settings list for the panels: the panel's key then the row's digit, under the panel's heading, in the table's order
+function campPanelKeyRows() {
+  return CAMP_PANELS.panels.flatMap(p => p.rows.map(r => ({ k: [p.key, String(r.n)], t: p.title.charAt(0) + p.title.slice(1).toLowerCase() + ': ' + r.help.charAt(0).toLowerCase() + r.help.slice(1), sub: 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL' })));
+}
+
 const CONTROLS = [
   { id: 'station', title: 'STATION', scene: 'Station', rows: [
     { k: ['W', 'A', 'S', 'D'], t: 'Walk (the arrow keys work too)' },
@@ -65,6 +103,30 @@ const CONTROLS = [
     { k: ['E'], t: 'Talk to the colonist, board at the pad' },
     { k: ['C'], t: 'Show the controls panel again' }
   ] },
+  { id: 'campaign', title: 'CAMPAIGN', scene: 'Campaign', rows: [ // the Campaign's H page (src/campkeys.js) is these rows under their sub headings, the debug keys after them; the PANELS group after it is made from CAMP_PANELS above. A line is the caps and at most 36 characters (Settings fits four columns). tests/controlshelp.mjs fails when a key the Campaign binds is not here
+    { k: ['W', 'A', 'S', 'D'], t: 'Thrust, turn, brake (arrows too)', sub: 'FLY AND FIRE' },
+    { k: ['Space'], t: 'Hold: turrets fire at ships in reach', sub: 'FLY AND FIRE' },
+    { k: ['F'], t: 'Fire a homing missile', sub: 'FLY AND FIRE' },
+    { k: ['Q'], t: 'Warp blink hop (needs that tech)', sub: 'FLY AND FIRE' },
+    { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
+    { k: ['Click'], t: 'Map: click sets a place, again flies', sub: 'THE MAP' },
+    { k: ['W', 'S'], t: 'Map list: choose (arrows too)', sub: 'THE MAP' },
+    { k: ['A', 'D'], t: 'Map list: next or last group', sub: 'THE MAP' },
+    { k: ['Enter'], t: 'Map: fly to the chosen place', sub: 'THE MAP' },
+    { k: ['Shift', 'Enter'], t: 'Map: fly there fast (a burn)', sub: 'THE MAP' },
+    { k: ['X'], t: 'Map: clear the destination', sub: 'THE MAP' },
+    { k: ['Z'], t: 'Map: the area, or the whole system', sub: 'THE MAP' },
+    { k: ['I'], t: 'Type an order to the ship', sub: 'THE STRIP AND THE VOICE' },
+    { k: ['U'], t: 'Hold to speak an order', sub: 'THE STRIP AND THE VOICE' },
+    { k: ['H'], t: 'This page of keys', sub: 'ANYWHERE' },
+    { k: ['Esc'], t: 'Pause; closes the map or a panel', sub: 'ANYWHERE' },
+    { k: ['T'], t: 'Title, from the pause or end card', sub: 'ANYWHERE' },
+    { k: ['Enter'], t: 'Cards: begin, continue, try again', sub: 'ANYWHERE' },
+    { k: ['1-3'], t: 'Pick a salvaged tech after a level', sub: 'ANYWHERE' },
+    { k: ['4', '5'], t: 'Refit card: buy a fighter or escort', sub: 'ANYWHERE' },
+    { k: ['M'], t: 'Mute sound', sub: 'ANYWHERE' }
+  ] },
+  { id: 'panels', title: 'PANELS', scene: 'Campaign', rows: campPanelKeyRows() }, // the Campaign's two panels, made from CAMP_PANELS above (the H page puts them first)
   { id: 'title', title: 'TITLE', scene: null, rows: [
     { k: ['Any key'], t: 'Start the game' },
     { k: ['S'], t: 'Open Settings' },
