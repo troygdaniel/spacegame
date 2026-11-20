@@ -38,6 +38,10 @@ The words of the Campaign's radio chatter (card space-game-campaign-chatter). Th
 | camp.chat.convoy.2 | The freighters made it. |
 | camp.chat.cache.1 | Cache secured. |
 | camp.chat.cache.2 | Got the cache. |
+| camp.chat.shields.1 | Shields are failing! |
+| camp.chat.shields.2 | Shields almost gone. |
+| camp.chat.engines.1 | Engines are sluggish. |
+| camp.chat.engines.2 | We are crawling here. |
 | chatter.mode.on | Chatter on: the wing calls kills, hits and orders about every 3 seconds. |
 | chatter.mode.quiet | Chatter quiet: one call in 8 seconds, never over the computer or a warning. |
 | chatter.mode.off | Chatter off: the wing is silent. |
