@@ -9,7 +9,8 @@
 //   campNavDrive(C, dt)       once a tick, from campTick (src/campaign.js), while C.nav is on: it sets the carrier's input (turn, thrust, brake) by the Long Haul autopilot's rule
 //   campNavEta(C, dist)       the flight time in seconds;   campNavPickAt(rows, project, px, py)   the row nearest a click on the map
 //   campNavEdge(dx, dy, W, H, margin, keep) / campNavArrow(C, scroll, W, H)   where the arrow at the screen edge sits and which way it points, out of the HUD's way
-//   campNavIntent(text)       the plain words ("fly to Mars", "go to the relic", "take me to the objective", "cancel the course") as { act: 'fleet_fly', arg }
+//   campNavIntent(text)       the plain words ("fly to Mars", "go to the relic", "take me to the objective", "cancel the course", "fly fast to Mars", "burn to the relic") as { act: 'fleet_fly', arg } (a burn: arg begins "fast ")
+//   campNavFly(C, row, fast, how)   the one door every trip goes through (the map, the words, the panel): regular speed always; Fast only with the wing aboard (card space-game-campaign-fast-board, below)
 // The rule, the stop distances and every number are CAMP.nav in src/campaign.js. Steering is the player's: any steering key ends it (the scene calls campNavClear(C, 'key')); the orders go on.
 const CAMPNAV = {
   groups: [['goal', 'GOAL'], ['places', 'PLACES'], ['convoys', 'CONVOYS'], ['finds', 'CACHES AND RELIC'], ['wing', 'YOUR SHIPS']], // the list's headings, in order (navpanelLines draws them)
@@ -69,12 +70,14 @@ const campNavEta = (C, dist, fast) => Math.round(dist / (CAMP.carrier.speed * ca
 
 function campNavGo(C, row, fast) {
   if (!C || !row || C.result) return null;
+  fast = !!fast && !campNavOut(C); // a burn with a ship of the wing out cannot happen from anywhere: the small ships could not keep up
   const id = row.of || row.id;
   C.nav = { on: true, id, of: id, kind: row.kind, name: row.name, ref: row.ref || '', moving: !!row.moving, x: row.x, y: row.y, since: C.t, fast: !!fast, burn: campNavBurn(Math.hypot(row.x - C.carrier.x, row.y - C.carrier.y), fast) }; // fast: the carrier burns at N.burn times its speed while this runs (campCarrier, campNavDrive); decided once, by the distance at the start
   C.events.push({ type: 'nav', key: fast ? 'camp.nav.gofast' : 'camp.nav.go', vars: { name: row.name } });
   return C.nav;
 }
 function campNavClear(C, why) {
+  if (C && C.navWait) { C.navWait = null; C.fastAsk = null; } // steering, X or a regular trip gives up a burn that was waiting for the wing
   const N = C && C.nav; if (!N) return false;
   C.nav = null;
   const key = { key: 'camp.nav.off', clear: 'camp.nav.cleared', arrived: 'camp.nav.arrived', lost: 'camp.nav.lost' }[why];
@@ -139,20 +142,65 @@ function campNavIntent(text) {
   const q = campNavNorm(text).replace(CAMPNAV_FILLER, '').replace(/\s+(please|now|right now|already)$/, '').trim();
   if (!q) return null;
   if (/^(?:cancel|stop|end|drop|abort|clear)(?: the)? (?:course|autopilot|auto pilot|navigation|destination)$|^(?:manual|manual control)$|^i (?:have|ve got|got) the (?:wheel|helm|controls?)$/.test(q)) return { act: 'fleet_fly', arg: 'stop' };
-  for (const re of CAMPNAV_RE) { const m = re.exec(q); if (m && m[1].trim()) return { act: 'fleet_fly', arg: m[1].trim() }; }
+  if (/^(?:(?:fly|go|burn|boost|run)(?: me| us)? (?:fast|at full speed|at full burn)|(?:fast travel|full burn|burn|boost))$/.test(q)) return { act: 'fleet_fly', arg: 'fast the objective' }; // "fly fast", "burn": to the goal
+  const fastWords = /\b(?:fast|burn|boost|full speed|full burn|quickly)\b/g, fast = fastWords.test(q); // "fly fast to Mars", "fly to Mars fast", "burn to the relic": the same words with the speed taken out, and a flag
+  const plain = q.replace(/^(?:burn|boost)\b/, 'fly').replace(fastWords, ' ').replace(/\s+/g, ' ').trim();
+  for (const re of CAMPNAV_RE) { const m = re.exec(plain); if (m && m[1].trim()) return { act: 'fleet_fly', arg: (fast ? 'fast ' : '') + m[1].trim() }; }
   return null;
 }
 // the dry check: what the ship computer says it will do, or why not. arg: the words after "fly to", or "stop"
 function campNavCheck(C, arg) {
   if (!C || C.result) return { ok: false, say: uiText('camp.no.over') };
+  const fm = /^\s*fast\s+(.*)$/i.exec(String(arg == null ? '' : arg)), fast = !!fm; if (fm) arg = fm[1]; // "fast <place>": a burn (the words "fly fast to Mars")
   if (campNavNorm(arg) === 'stop') return C.nav ? { ok: true, say: uiText('camp.nav.stopping'), stop: true } : { ok: false, say: uiText('camp.nav.no.nonav') };
   const f = campNavFind(C, arg);
   if (!f.row) return { ok: false, say: uiText('camp.nav.no.' + f.code) };
   const t = campNavTarget(C, f.row) || f.row, c = C.carrier, dist = Math.hypot(t.x - c.x, t.y - c.y);
   if (!f.row.moving && dist - campNavStop(f.row.kind, t) <= CAMP.nav.arrive) return { ok: false, say: uiText('camp.nav.there', { name: f.row.name }) };
-  return { ok: true, say: uiText('camp.nav.say', { name: f.row.name, km: campNavKm(dist) }), row: f.row };
+  if (fast && campNavOut(C)) return { ok: true, say: campNavAskSay(C), row: f.row, fast: true }; // with a ship out the words are heard: the first time they are refused in words, the second time the wing is recalled
+  return { ok: true, say: uiText('camp.nav.say', { name: f.row.name, km: campNavKm(dist) }), row: f.row, fast };
 }
-function campNavDo(C, r) { if (r.stop) campNavClear(C, 'clear'); else if (r.row) campNavGo(C, r.row); }
+function campNavDo(C, r, how) { if (r.stop) campNavClear(C, 'clear'); else if (r.row) campNavFly(C, r.row, !!r.fast, how || 'strip'); }
+
+// ---- Fast needs the wing aboard (card space-game-campaign-fast-board; Troy, 20 Nov 2026) ----
+// The small ships must not be able to go as fast as the carrier burns (CAMP.nav.fast is above a fighter's top speed), so a burn starts only with every ship aboard. With a ship out, the first press of Fast
+// (the map's button, Shift+Enter, "fly fast", Shift and the objective's row) is refused in words; a second press within CAMP.nav.askFor s recalls the wing and burns by itself as soon as the last ship is
+// aboard; if a ship cannot get back within CAMP.nav.recallWait s the burn is given up and the ships still out are named. Regular speed is allowed with the wing out (they keep up). A burn that is on when a ship is
+// launched drops to regular speed. C.fastAsk and C.navWait are the state; campNavWait (once a tick, from campTick) runs the wait.
+const campNavOut = C => campWing(C).length + C.launchQ.length; // ships out of the bay, and those about to leave it
+const campNavAskSay = C => uiText(C.fastAsk && C.t - C.fastAsk.at <= CAMP.nav.askFor * 1000 ? 'camp.nav.no.wingout2' : 'camp.nav.no.wingout');
+function campNavShipName(u) { const p = String(u.id).split('-'); return p[0] + ' ' + (p[1] || ''); }
+// the trip: regular always; fast only with the wing aboard. how: 'key', 'click' or 'strip' (the play log's). -> { ok, say, waiting }
+function campNavFly(C, row, fast, how) {
+  if (!C || !row || C.result) return { ok: false, say: uiText('camp.no.over') };
+  if (!fast) { campNavClear(C, ''); campNavGo(C, row, false); return { ok: true, say: '' }; }
+  const out = campNavOut(C);
+  if (!out) { C.navWait = null; C.fastAsk = null; campNavGo(C, row, true); return { ok: true, say: '' }; }
+  const asked = C.fastAsk && C.t - C.fastAsk.at <= CAMP.nav.askFor * 1000;
+  if (!asked) { C.fastAsk = { at: C.t }; const say = uiText('camp.nav.no.wingout'); C.events.push({ type: 'nav', key: 'camp.nav.no.wingout', vars: {} }); return { ok: false, say, refused: true }; }
+  if (C.launchQ.length && !campWing(C).length) return { ok: false, say: uiText('camp.no.launching') }; // nobody out yet to recall: they are still leaving the bay
+  const r = campOrder(C, 'recall', '', how || 'key'); // the same order as the fifth of the FLEET panel: the wing flies home and lands
+  if (!r.ok) return r;
+  const id = row.of || row.id;
+  C.fastAsk = null; C.navWait = { id, row: Object.assign({}, row), since: C.t, until: C.t + CAMP.nav.recallWait * 1000, n: out, shown: out };
+  C.events.push({ type: 'nav', key: 'camp.nav.recalling', vars: { n: out } });
+  return { ok: true, say: uiText('camp.nav.recalling', { n: out }), waiting: true };
+}
+// once a tick: a burn waiting for the wing starts when the last ship is aboard, and is given up (naming who is still out) after CAMP.nav.recallWait s; a burn under way with a ship launched drops to regular
+function campNavWait(C) {
+  if (!C) return;
+  const W = C.navWait;
+  if (C.nav && C.nav.fast && campNavOut(C) > 0) { C.nav.fast = false; C.nav.burn = 1; C.events.push({ type: 'nav', key: 'camp.nav.burnoff', vars: {} }); }
+  if (!W) return;
+  if (C.result) { C.navWait = null; return; }
+  const out = campNavOut(C); W.n = out;
+  if (!out) { const row = campNavRows(C).find(r => r.id === W.id) || W.row; C.navWait = null; campNavGo(C, row, true); return; }
+  if (C.t >= W.until) {
+    const names = campWing(C).sort((a, b) => campDist(b, C.carrier) - campDist(a, C.carrier)).map(campNavShipName), shown = names.slice(0, 3).join(', ') + (names.length > 3 ? ' and ' + (names.length - 3) + ' more' : '');
+    C.navWait = null; C.events.push({ type: 'nav', key: 'camp.nav.recalltimeout', vars: { names: shown || 'none' } }); return;
+  }
+  if (out !== W.shown) { W.shown = out; C.events.push({ type: 'nav', key: 'camp.nav.recalling', vars: { n: out } }); } // each ship that lands is counted off
+}
 
 // ---- the arrow at the screen edge ----
 // dx, dy: where the target is from the middle of the screen (the carrier). Returns { x, y, angle }: on the border of the screen inset by margin, on the line from the middle to the target,

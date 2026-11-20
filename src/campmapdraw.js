@@ -154,7 +154,7 @@ function campMapPaint(s, time) {
   if (setRow && !(N && N.on && N.id === (setRow.of || setRow.id))) {
     const q = route(setRow, gc.select, 0.7), d = Math.hypot(setRow.x - C.carrier.x, setRow.y - C.carrier.y), eta = n => typeof cruiseEtaText === 'function' ? cruiseEtaText(n) : n + ' s';
     g.lineStyle(2, 0xffffff, 0.9).strokeCircle(q.x, q.y, 13 + 2 * pulse);
-    mp.btnFly.setText(uiText('camp.map.fly', { t: eta(campNavEta(C, d)) })).setVisible(true); mp.btnFast.setText(uiText('camp.map.fast', { t: eta(campNavEta(C, d, true)) })).setVisible(true);
+    mp.btnFly.setText(uiText('camp.map.fly', { t: eta(campNavEta(C, d)) })).setVisible(true); mp.btnFast.setText(campNavOut(C) ? uiText(C.fastAsk && C.t - C.fastAsk.at <= CAMP.nav.askFor * 1000 ? 'camp.map.fastask' : 'camp.map.fastout', { n: campNavOut(C) }) : uiText('camp.map.fast', { t: eta(campNavEta(C, d, true)) })).setAlpha(campNavOut(C) ? 0.6 : 1).setVisible(true);
     const w = Math.max(mp.btnFly.width, mp.btnFast.width), h = mp.btnFly.height, right = q.x + 22 + w <= F.x + F.w - 4, bx = right ? q.x + 22 : Math.max(F.x + 4, q.x - 22 - w), by = Math.max(F.y + 4, Math.min(F.y + F.h - 2 * h - 8, q.y - h - 2)); // beside the mark, on the side with room, inside the frame
     mp.btnFly.setPosition(bx, by); mp.btnFast.setPosition(bx, by + h + 4);
     if (!N) mp.dest.setText(uiText('camp.map.set', { name: setRow.name }) + '  ' + campNavKm(d) + ' km');
@@ -183,7 +183,8 @@ function campMapFly(s, row, fast) {
   const C = s.camp; if (!C || !row || C.result) return false;
   const t = campNavTarget(C, row) || row, d = Math.hypot(t.x - C.carrier.x, t.y - C.carrier.y);
   if (!row.moving && d - campNavStop(row.kind, t) <= CAMP.nav.arrive) { toast(s, uiText('camp.nav.there', { name: row.name }), '#ffd37a'); return false; }
-  campNavGo(C, row, fast); if (s.mp) { s.mp.dirty = true; s.mp.setId = ''; } return true;
+  const r = campNavFly(C, row, fast, 'click'); // regular speed, or Fast with the wing aboard; with a ship out the first press is refused (an event says so) and the second recalls the wing and burns (src/campnav.js)
+  if (s.mp) { s.mp.dirty = true; if (r.ok) s.mp.setId = ''; } return !!r.ok;
 }
 // a key while the map is open: W S and the arrows choose (flying keys are the list's while it is open, as in the Long Haul nav panel), A D and the side arrows go to the next or the last group,
 // Enter flies there, X clears the destination. true when the key was the map's.

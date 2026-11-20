@@ -167,7 +167,9 @@ const CAMP = {
     steer: 3,                              // turn input per radian off the line to the target (1 is full turn, so 3 is full beyond a third of a radian)
     align: 0.5,                            // rad: thrust only when the nose is within this of the line (the Long Haul autopilot's aligned)
     etaSlow: 1.1,                          // the flight time on the map is distance over the carrier's top speed times this (it speeds up and brakes)
-    fast: 2,                               // the map's Fast button (card space-game-map-click-fly): the carrier's top speed and thrust, times this, while the autopilot flies it; steering takes it away
+    fast: 2.2,                             // the map's Fast button (card space-game-map-click-fly): the carrier's top speed and thrust, times this, while the autopilot flies it; steering takes it away. 462 px/s: above a fighter's 430 (and an escort's 300), so a ship of the wing could not keep up: Fast needs the wing aboard (card space-game-campaign-fast-board)
+    recallWait: 20,                        // s: after a second press of Fast with ships out, how long the wing has to get back aboard before the burn is given up (the ships still out are named)
+    askFor: 8,                             // s: a first press of Fast with ships out is refused and remembered this long: a second press in that time recalls the wing and burns once the last ship is aboard
     farFrom: 8000,                         // px: a Fast trip longer than this (Earth to Mars is 4,100, Earth to Jupiter 40,000) burns at farFast instead of fast (card space-game-campaign-sol)
     farFast: 3.2,                          // times the carrier's speed on a far trip: 672 px/s, Long Haul's own cruise (8,000 px/s) at the Campaign's 1 to 12 scale, so Earth to Neptune (112,000 px) is about 3 minutes
     pick: 28,                              // px on the map around a mark that count as a click on it
@@ -589,6 +591,7 @@ function campStep(C, sec) {
 function campTick(C, dt) {
   C.t += dt * 1000; C.dt = dt; C.laserNow.length = 0;
   campSchedule(C);
+  if (typeof campNavWait === 'function') campNavWait(C); // a Fast trip waiting for the wing to come aboard (src/campnav.js)
   if (typeof campNavDrive === 'function') campNavDrive(C, dt); // the autopilot (src/campnav.js), when it is on, sets the carrier's input
   campCarrier(C, dt);
   campLaunch(C);

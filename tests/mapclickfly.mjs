@@ -30,7 +30,7 @@ g.run(`
 // ---------- A. the Campaign: the burn ----------
 console.log('A. the Campaign: Fast is a burn while the autopilot flies');
 {
-  check('the table has it: CAMP.nav.fast is 2 (the drive times 2 while the autopilot flies fast)', J('CAMP.nav.fast') === 2);
+  check('the table has it: CAMP.nav.fast is 2.2 (the drive times 2.2 while the autopilot flies fast: above a fighter\'s speed, card space-game-campaign-fast-board)', J('CAMP.nav.fast') === 2.2);
   g.run(`var C0 = __quiet(campNew(1, [], { seed: 3 })); var row0 = campNavRows(C0).find(r => r.id === 'place:mars');`);
   g.run(`campNavGo(C0, row0, false);`);
   check('regular: the autopilot as it always was, no burn, and the line is the old one', J('C0.nav.fast') === false && J(`C0.events.some(e => e.key === 'camp.nav.go')`));
@@ -38,7 +38,7 @@ console.log('A. the Campaign: Fast is a burn while the autopilot flies');
   check('fast: C.nav.fast is set and the line says full burn', J('C0.nav.fast') === true && J(`C0.events.some(e => e.key === 'camp.nav.gofast')`) && /full burn/.test(J(`uiText('camp.nav.gofast', { name: 'Mars' })`)));
   const reg = J('__fly(false)'), fast = J('__fly(true)');
   check('regular speed never passes 210 px/s (the carrier\'s top speed) and arrives', reg.top <= 211 && reg.t > 0 && !reg.left, JSON.stringify(reg));
-  check('fast passes 210 (a burn) and never 420, and arrives', fast.top > 300 && fast.top <= 421 && fast.t > 0 && !fast.left, JSON.stringify(fast));
+  check('fast passes 210 (a burn) and never 462, and arrives', fast.top > 300 && fast.top <= 463 && fast.t > 0 && !fast.left, JSON.stringify(fast));
   check('fast is about twice as quick over the 4,100 px to Mars: under 65 percent of the regular time', fast.t < reg.t * 0.65, fast.t + ' s against ' + reg.t + ' s');
   check('both stop outside Mars, in the same place within a few px, slowly (the burn brakes in time: it does not fly through it)', Math.abs(fast.d - reg.d) < 40 && fast.d > 100 && fast.speed <= 80 && reg.speed <= 80, JSON.stringify([reg.d, fast.d, reg.speed, fast.speed]));
   g.run(`var C1 = __quiet(campNew(1, [], { seed: 3 })); campNavGo(C1, campNavRows(C1).find(r => r.id === 'place:mars'), true); __sim(C1, 6);`);

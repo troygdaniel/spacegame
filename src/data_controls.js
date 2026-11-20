@@ -36,7 +36,7 @@ const CAMP_PANELS = {
       { n: 2, id: 'recharge', order: 'recharge', label: 'Recharge shields', help: 'Recharge a shield (costs ore)' },
       { n: 3, id: 'buildf', order: 'build', arg: 'fighter', label: 'Build a fighter', help: 'Build a fighter (costs ore)' },
       { n: 4, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', help: 'Build an escort (costs ore)' },
-      { n: 5, id: 'goal', fly: 'objective', label: 'Fly to the objective', help: 'Autopilot to the objective' }
+      { n: 5, id: 'goal', fly: 'objective', label: 'Fly to the objective', help: 'Autopilot to the objective', fast: 'Autopilot there fast (wing aboard)' } // fast: Shift with the digit is a burn, which needs the wing aboard (card space-game-campaign-fast-board)
     ] }
   ],
   // why a row cannot be done now, in a few plain words: the code of the game's own refusal (campNo in src/campaign.js) to the words under the row's name; {need} and {have} are ore
@@ -46,7 +46,8 @@ const CAMP_PANELS = {
 };
 // the rows the H page and Settings list for the panels: the panel's key then the row's digit, under the panel's heading, in the table's order
 function campPanelKeyRows() {
-  return CAMP_PANELS.panels.flatMap(p => p.rows.map(r => ({ k: [p.key, String(r.n)], t: p.title.charAt(0) + p.title.slice(1).toLowerCase() + ': ' + r.help.charAt(0).toLowerCase() + r.help.slice(1), sub: 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL' })));
+  const cap = (p, h) => p.title.charAt(0) + p.title.slice(1).toLowerCase() + ': ' + h.charAt(0).toLowerCase() + h.slice(1), sub = p => 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL';
+  return CAMP_PANELS.panels.flatMap(p => p.rows.flatMap(r => [{ k: [p.key, String(r.n)], t: cap(p, r.help), sub: sub(p) }].concat(r.fast ? [{ k: [p.key, 'Shift', String(r.n)], t: cap(p, r.fast), sub: sub(p) }] : [])));
 }
 
 const CONTROLS = [
