@@ -114,13 +114,16 @@ class Campaign extends Phaser.Scene {
     const M = this.camp.L; if (!M.objectives) { this.hideCard(); this.mode = 'play'; return; }
     const n = M.mission + 1, k = 'camp.m.' + this.level + '.' + n + '.', lines = [uiText(k + 'b1'), uiText(k + 'b2')].filter(x => !/^camp\./.test(x)), bonus = (M.bonus || []).map(b => '+' + CAMP.score.bonus + '  ' + this.bonusText(b));
     this.mode = 'brief';
-    this.showCard(uiText('camp.ui.mission', { n, of: M.missions, title: uiText(k + 'title') }), lines.concat(bonus.length ? [uiText('camp.ui.bonushead')].concat(bonus) : []), uiText('camp.ui.briefgo'), 330);
+    const tr = typeof campTravel === 'function' ? campTravel(this.level, M.mission) : null, pl = M.place && campPlaces(this.level)[M.place];
+    const where = !pl ? [] : [tr ? uiText('camp.ui.briefplace', { name: pl.name, km: tr.km, secs: tr.secs }) : uiText('camp.ui.briefhere', { name: pl.name })]; // the place of the mission, how far, how long by Fast
+    this.showCard(uiText('camp.ui.mission', { n, of: M.missions, title: uiText(k + 'title') }), where.concat(lines, bonus.length ? [uiText('camp.ui.bonushead')].concat(bonus) : []), uiText('camp.ui.briefgo'), 330);
     this.say(lines);
   }
   bonusText(b) { return b.type === 'lost' && !b.n ? uiText('camp.b.nolost') : uiText('camp.b.' + b.type, { secs: b.secs, n: b.n, pct: b.pct }); }
   showDebrief(sc) {
     const M = this.camp.L, k = 'camp.m.' + this.level + '.' + (M.mission + 1) + '.', clock = t => Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
     const lines = [uiText('camp.ui.score', { score: sc.score })].concat(sc.bonuses.map(b => b.ok ? uiText('camp.ui.bonusmet', { pts: b.points, text: this.bonusText(b) }) : uiText('camp.ui.bonusmiss', { text: this.bonusText(b) })), [uiText('camp.ui.debriefstats', { time: clock(sc.t), hull: sc.hullLeft, lost: sc.shipsLost })]);
+    const dk = M.dock && campPlaces(this.level)[M.dock]; if (dk && dk.outpost) lines.push(uiText('camp.ui.outpost', { outpost: dk.outpost, name: dk.name })); // the debrief is at the outpost of the mission's dock
     if (typeof campRankLine === 'function') { const r = campRankLine(this.P, sc); if (r) lines.push(r); } // the ranks card's: a rank for the score, when it is there
     this.mode = 'debrief'; this.showCard(uiText('camp.ui.debrief', { title: uiText(k + 'title') }), lines, uiText(this.mdone ? 'camp.ui.next' : 'camp.ui.debriefnext'), 330);
     this.say([lines[0]]);

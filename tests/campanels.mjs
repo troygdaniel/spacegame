@@ -58,6 +58,8 @@ console.log('B. the live state of each row');
   g.run(`campOrder(C1, 'recall'); C1.ore = 200; for (let i = 0; i < 12; i++) campOrder(C1, 'build', 'fighter');`);
   check('building more than the bay holds says so', !R('ship.buildf').ok && R('ship.buildf').state === 'no room in the bay', R('ship.buildf').state);
   g.run(`window.C2 = __quiet(campNew(2, [], { seed: 1 }));`);
+  check('level 2 starts with the trip: the objective row names the place of the mission (Alpha Centauri B) and its distance', J(`__row(C2, 'ship', 'goal').ok`) && /^Alpha Centauri B  \d+ km$/.test(J(`__row(C2, 'ship', 'goal').state`)), J(`__row(C2, 'ship', 'goal').state`));
+  g.run(`C2.arrivedAt = 0;`); // the cruiser is at the place (card space-game-campaign-mission-places)
   check('level 2 has no Earth: the objective row names the first cache', J(`__row(C2, 'ship', 'goal').ok`) && /^Resource cache 1  \d+ km$|cache/i.test(J(`__row(C2, 'ship', 'goal').state`)), J(`__row(C2, 'ship', 'goal').state`));
   check('the head lines: the bay and the ships out; the ore and the shield', /^bay \d+\+\d+   out \d+$/.test(J(`campPanelHead(C1, 'fleet')`)) && /^ore \d+   shield \d+$/.test(J(`campPanelHead(C1, 'ship')`)));
 }

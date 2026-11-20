@@ -36,7 +36,7 @@ function campMapClose(s) {
 function campMapOpen(s) {
   if (s.mp || !s.camp) return;
   const C = s.camp, F = CAMPMAP.frame, P = CAMPMAP_PANEL, L = (C.L || CAMP.levels[C.level]);
-  const mp = s.mp = { objs: [], whole: false, nameObjs: [], fit: campMapFit(campMapBounds(C.level, false), F), leg: [] };
+  const mp = s.mp = { objs: [], whole: false, nameObjs: [], fit: campMapFit(campMapBounds(C.level, false, C.L), F), leg: [] };
   const own = o => { o.setScrollFactor(0); mp.objs.push(o); return o; };
   own(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.84)).setDepth(150);
   hudPanel(own(s.add.graphics()).setDepth(151), P.x, P.y, P.w, P.h, 20, 0.97, CYAN);
@@ -82,7 +82,7 @@ function campMapNames(s) {
 // Z: the whole system (every body and every ring, to scale) and back to the level's own area
 function campMapWhole(s) {
   const mp = s.mp; if (!mp) return false;
-  mp.whole = !mp.whole; mp.fit = campMapFit(campMapBounds(s.camp.level, mp.whole), CAMPMAP.frame); campMapNames(s); mp.dirty = true; return true;
+  mp.whole = !mp.whole; mp.fit = campMapFit(campMapBounds(s.camp.level, mp.whole, s.camp.L), CAMPMAP.frame); campMapNames(s); mp.dirty = true; return true;
 }
 
 function campMapPaint(s, time) {
@@ -120,6 +120,7 @@ function campMapPaint(s, time) {
   marks.forEach(m => {
     const p = pin(X(m.x), Y(m.y));
     if (m.type === 'place') { const r = Math.max(m.color === col.star ? 7 : 5, m.r * f.s); g.fillStyle(m.color, 0.85).fillCircle(p.x, p.y, r); g.lineStyle(1, m.color, 0.5).strokeCircle(p.x, p.y, r + 4); }
+    else if (m.type === 'objective') { const r = Math.max(12, m.r * f.s); g.lineStyle(2, 0xffd24a, 0.95).strokeCircle(p.x, p.y, r); g.lineStyle(1, 0xffd24a, 0.5).strokeCircle(p.x, p.y, r + 5); } // the mission's place
     else if (m.type === 'relic') {
       const r = Math.max(7, m.r * f.s); g.lineStyle(2, col.relic, 0.55).strokeCircle(p.x, p.y, r);
       if (m.hold > 0) { g.lineStyle(4, col.relic, 1); g.beginPath(); g.arc(p.x, p.y, r, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * Math.min(1, m.hold)); g.strokePath(); }

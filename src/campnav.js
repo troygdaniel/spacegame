@@ -23,6 +23,7 @@ function campNavGoal(C) {
   try {
     const L = (C.L || CAMP.levels[C.level]), pl = campPlaces(C.level), c = C.carrier, near = list => list.slice().sort((a, b) => campDist(a, c) - campDist(b, c))[0] || null;
     const ship = (u, kind, name) => ({ id: kind === 'mother' ? 'mother' : kind + ':' + u.id, kind, name, x: u.x, y: u.y, r: u.r || 0, moving: u.vmax > 0, ref: u.id });
+    if (C.L.place && C.arrivedAt == null && pl[C.L.place]) { const p = pl[C.L.place]; return { id: 'place:' + C.L.place, kind: 'place', name: String(p.name), x: p.x, y: p.y, r: p.r || 60 }; } // not there yet: the goal is the place of the mission
     if (L.objectives) { // a mission: the first objective not done yet (src/campaign.js campObjectives)
       const o = campObjectives(C).find(x => !x.done); if (!o) return null;
       if (o.type === 'scan') { const q = near(C.scan.map((p, i) => Object.assign({ i }, p)).filter(p => !p.got)); return q ? { id: 'scan:' + q.i, kind: 'scan', name: uiText('camp.nav.scan', { n: q.i + 1 }), x: q.x, y: q.y, r: 0 } : null; }
@@ -54,7 +55,7 @@ function campNavGoal(C) {
 // the one list. Each row: id (place:<id>, convoy:<ship id>, cache:<n>, relic, wing, goal), kind, group, name, x, y, r, dist (from the carrier), moving
 function campNavRows(C) {
   const pl = campPlaces(C.level), c = C.carrier, rows = [], add = r => { r.dist = Math.hypot(r.x - c.x, r.y - c.y); rows.push(r); return r; };
-  Object.keys(pl).forEach(id => { const p = pl[id]; if (!p.hidden) add({ id: 'place:' + id, kind: 'place', group: 'places', name: String(p.name), x: p.x, y: p.y, r: p.r || 60, far: !!p.far, star: p.kind === 'star' }); });
+  Object.keys(pl).forEach(id => { const p = pl[id]; if (!p.hidden) add({ id: 'place:' + id, kind: 'place', group: 'places', name: String(p.name), x: p.x, y: p.y, r: p.r || 60, far: !!p.far, star: p.kind === 'star', moon: !!p.moon }); });
   campConvoys(C).forEach(u => add({ id: 'convoy:' + u.id, kind: 'convoy', group: 'convoys', name: uiText('camp.nav.convoy', { name: campConvoyName(u) }), x: u.x, y: u.y, r: u.r || 22, moving: true, ref: u.id }));
   (C.scan || []).forEach((p, i) => { if (!p.got) add({ id: 'scan:' + i, kind: 'scan', group: 'finds', name: uiText('camp.nav.scan', { n: i + 1 }), x: p.x, y: p.y, r: 0 }); });
   C.caches.forEach((k, i) => { if (!k.got) add({ id: 'cache:' + i, kind: 'cache', group: 'finds', name: uiText('camp.nav.cache', { n: i + 1 }), x: k.x, y: k.y, r: 0 }); });
@@ -139,7 +140,7 @@ function campNavFind(C, text) {
   const places = rows.filter(r => r.kind === 'place' && !r.goal), alias = { moon: 'luna', 'lunar base': 'luna', base: 'luna', star: 'sun', sun: 'sun' };
   const hit = places.find(p => q === p.name.toLowerCase() || q === p.id.slice(6)) || places.find(p => q.includes(p.name.toLowerCase()) || q.split(' ').includes(p.id.slice(6))) || places.find(p => alias[q] === p.id.slice(6) || Object.keys(alias).some(a => q.includes(a) && alias[a] === p.id.slice(6)));
   if (hit) return { row: hit };
-  const here = places.filter(p => !p.far && !p.star); // the planets of the level itself (the far bodies of the system are named by their names)
+  const here = places.filter(p => !p.far && !p.star && !p.moon); // the planets of the level itself (the far bodies of the system and the moons are named by their names)
   if (here.length === 1 && /\b(?:planet|world|home)\b/.test(q)) return { row: here[0] };
   return { code: 'unknown' };
 }
