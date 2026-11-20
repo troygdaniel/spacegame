@@ -132,12 +132,24 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.lose.earth | Earth's shield has failed. |
 | camp.ui.title | CAMPAIGN |
 | camp.ui.level | LEVEL {n}: {name} |
-| camp.ui.keys | W A S D fly   Space gun   1 launch   2 attack   3 escort   4 guard   5 recall   I type an order   U speak |
+| camp.ui.keys | W A S D fly   Space gun   1 launch   2 attack   3 escort   4 guard   5 recall   I type an order   U speak   Tab map |
 | camp.ui.begin | Enter  begin |
 | camp.ui.pick | Choose one salvaged technology:  1  2  3 |
 | camp.ui.next | Enter  continue |
 | camp.ui.retry | Enter  try again     T  title |
 | camp.ui.paused | PAUSED     Esc  resume     T  title |
+| camp.ui.pausemap | Tab  map of the whole level (the battle goes on behind it) |
+| camp.map.title | MAP  -  LEVEL {n}: {name} |
+| camp.map.footer | Tab or Esc closes it. The battle goes on behind it. |
+| camp.map.across | {km} km across |
+| camp.map.carrier | Your carrier |
+| camp.map.wing | Your ships out ({n}) |
+| camp.map.convoy | Convoys ({n}), a line to where each is heading |
+| camp.map.alien | Aliens ({n}) |
+| camp.map.mother | The alien mothership |
+| camp.map.tower | Defence towers ({n}) |
+| camp.map.cache | Caches left ({n}) |
+| camp.map.relic | The relic |
 | camp.ui.hull | CARRIER |
 | camp.ui.earth | EARTH |
 | camp.ui.bay | BAY |

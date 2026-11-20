@@ -36,6 +36,14 @@ They are listed in one small line on the pause screen (`campDebugLine`). The row
 
 A reload shows a change. A few small numbers still live in the code (a ship's radius, the freighter's turn): if you want one, move it into the table.
 
+## The map (Tab)
+
+Tab opens a map of the whole level over the battle (card `space-game-campaign-map`): the places (Earth, Luna and its base, Mars, Eros; the star and Proxima b; the alien home world), the convoys with a line to where each is heading, the aliens and the mothership, the carrier and the ships it has launched, and the caches, the relic (with how far the hold has got) and the towers of the later levels. It fits the level's data, so it does not zoom about while you read it; a ship that leaves it sits on the edge. The legend lists only what is on it now.
+
+- **The battle goes on behind it.** The map does not pause anything: the orders (1 to 5), the strip (I) and the voice (U) work from it. Esc or Tab closes it (Esc never pauses while it is open), and a card (the story, the end) closes it.
+- **The key is Tab, not M.** M is the mute key in every screen (`src/meta.js`), so it cannot also open a map; Tab is the sector map's own key in Long Haul. It is `CAMPMAP.key` at the top of `src/campmap.js` (a `KeyboardEvent.code`); the key line and the pause card say "Tab" in `content/text/ui.md` and `src/contenttables.js`.
+- **Reuse.** The names are placed by the sector map's `mapPlace`, the grid by `mapGridStep`, the panel and frame by `hudPanel` and `hudGlowPath` (`src/map.js`, `src/hud.js`), and the colours are the radar's (`campDotColor`). What is on the map and how it fits is `src/campmap.js` (plain functions, `tests/campmap.mjs`); the drawing is `src/campmapdraw.js`.
+
 ## The play log
 
 Every level is in the play log (`docs/PLAYLOG.md`, the `campaign` event): the level, how it began (menu, address, next, retry or skip), the waves, each order and how it was given (key, strip, voice, click) and whether it worked, each ship lost, the tech picked, each debug key, and the end (win, lose, quit or skip, why, the wave reached, the ships lost, the hull left, the seconds). `node tools/playlog-summary.mjs` prints a **Campaign** block, one line a level. A level the tab closes on is ended as quit.
