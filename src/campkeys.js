@@ -32,16 +32,19 @@ function campKeysPage() {
   return out;
 }
 
-// the groups kept whole, in order, in two columns: the split that gives the shorter longer column (a heading counts one line)
+// the groups kept whole, in their order within each column, in two columns: the assignment that gives the shortest longer column (a heading counts one line); of those, the one that keeps the groups
+// in one run (the fewest changes of column down the list), so the page reads left column first and then the right
 function campKeysLayout(groups) {
-  const size = g => g.rows.length + 1;
-  let best = 0, bestMax = Infinity;
-  for (let i = 0; i <= groups.length; i++) {
-    const a = groups.slice(0, i).reduce((n, g) => n + size(g), 0), b = groups.slice(i).reduce((n, g) => n + size(g), 0), m = Math.max(a, b);
-    if (m < bestMax) { bestMax = m; best = i; }
+  const size = g => g.rows.length + 1, n = groups.length;
+  let best = null;
+  for (let mask = 0; mask < (1 << n); mask++) {
+    const col = [0, 0]; let swaps = 0;
+    groups.forEach((g, i) => { const c = (mask >> i) & 1; col[c] += size(g); if (i && c !== ((mask >> (i - 1)) & 1)) swaps++; });
+    const m = Math.max(col[0], col[1]);
+    if (!best || m < best.m || (m === best.m && swaps < best.swaps)) best = { m, swaps, mask };
   }
-  const cols = [groups.slice(0, best), groups.slice(best)];
-  return { cols, lines: cols.map(c => c.reduce((n, g) => n + size(g), 0)) };
+  const cols = [[], []]; groups.forEach((g, i) => cols[(best.mask >> i) & 1].push(g));
+  return { cols, lines: cols.map(c => c.reduce((k, g) => k + size(g), 0)) };
 }
 // the lowest y a column reaches, from the numbers above: tests/campanelsdraw.mjs checks every column of the page against CAMPKEYS.bottom
 function campKeysHeight(col) { const K = CAMPKEYS; return K.top + col.reduce((y, g) => y + K.head + g.rows.length * K.pitch + K.gap, 0) - K.gap; }

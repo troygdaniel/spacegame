@@ -223,6 +223,8 @@ class Settings extends Phaser.Scene {
     this.button(bx + 476, by + 122, 32, '-', () => this.adjustFx(-1), { size: 18 });
     this.slots.fxPct = this.txt(bx + 540, by + 122, '', 16, '#ffd37a', { ox: 0.5, style: { fontStyle: 'bold' } });
     this.button(bx + 572, by + 122, 32, '+', () => this.adjustFx(1), { size: 18 });
+    this.label(bx + 640, by + 92, 'CHATTER'); // the wing's radio in the Campaign (src/campchatter.js, card space-game-campaign-chatter): On, Quiet (the default), Off
+    CHATTER_MODES.forEach(([id, name], i) => { this.slots['chatter_' + id] = this.button(bx + 640 + i * 64, by + 122, 60, name[0] + name.slice(1).toLowerCase(), () => { chatterSetMode(id); this.soundRefresh(); this.say(uiText('chatter.mode.' + id)); }); });
     this.txt(bx, by + 146, uiText('music.use'), 12, '#5b7a92', { oy: 0, style: { wordWrap: { width: bw } } }); // two lines under the row, above the rule
     const Y = 24; // the rows from here down sit this much lower than before the music row
     this.line(by + 166 + Y);
@@ -262,6 +264,7 @@ class Settings extends Phaser.Scene {
     const c = VOICE_CHOICES.find(x => x[0] === VOICE.voice) || VOICE_CHOICES[0];
     s.voiceName.setText(c[1]); s.voiceDesc.setText(c[2]);
     VOICE_SPOKEN_MODES.forEach(([id, name]) => { const on = VOICE.spoken === id; s['spoken_' + id].set(name[0] + name.slice(1).toLowerCase()).color(on ? '#6dff9c' : '#8fb4c9').mark(on); });
+    CHATTER_MODES.forEach(([id, name]) => { const on = chatterMode() === id; s['chatter_' + id].set(name[0] + name.slice(1).toLowerCase()).color(on ? '#6dff9c' : '#8fb4c9').mark(on); });
     s.spokenNote.setText(uiText('spoken.use') + '  ' + uiText('spoken.' + VOICE.spoken).replace(/^./, c0 => c0.toUpperCase()) + '.');
     this.railDraw(); this.tagDraw();
   }

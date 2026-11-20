@@ -115,6 +115,7 @@ const CONTROLS = [
     { k: ['Enter'], t: 'Map: fly to the chosen place', sub: 'THE MAP' },
     { k: ['Shift', 'Enter'], t: 'Map: fly there fast (a burn)', sub: 'THE MAP' },
     { k: ['X'], t: 'Map: clear the destination', sub: 'THE MAP' },
+    { k: ['Z'], t: 'Map: the area, or the whole system', sub: 'THE MAP' },
     { k: ['I'], t: 'Type an order to the ship', sub: 'THE STRIP AND THE VOICE' },
     { k: ['U'], t: 'Hold to speak an order', sub: 'THE STRIP AND THE VOICE' },
     { k: ['H'], t: 'This page of keys', sub: 'ANYWHERE' },
