@@ -19,6 +19,11 @@
 const CAMP = {
   store: 'longhaul.campaign',              // the localStorage key of the campaign progress (the level reached and the techs picked)
   step: 1 / 30,                            // s: the longest step the sim takes at once (a longer frame is cut into steps)
+  size: {                                  // how big your ships are: the one place for it (card space-game-campaign-look: another 30 percent smaller than the 140 x 100, 31 x 23 and 40 x 29 px they were drawn at). len: the drawn length in px (the scene scales the picture to it); hit: the hit circle's radius in px, about half of len over two, as it always was
+    carrier: { len: 98, hit: 25 },         // it was 140 and 36
+    fighter: { len: 22, hit: 6 },          // it was 31 and 8
+    escort: { len: 28, hit: 7 }            // it was 40 and 10
+  },
   carrier: {
     hull: 600,                             // hit points of the flagship; zero and the level is lost
     speed: 210,                            // px/s, top speed: big, slow, heavy
@@ -26,8 +31,7 @@ const CAMP = {
     turn: 1.1,                             // rad/s the nose turns (A, D)
     drag: 0.55,                            // velocity kept after one second with no thrust (0.55 is the Wren's)
     brakeDrag: 0.12,                       // the same with S held
-    radius: 36,                            // px, the hit circle (it was 56: the carrier is drawn 35 percent smaller)
-    mounts: [[42, -14], [42, 14], [12, -26], [12, 26], [-16, -30], [-16, 30], [-44, -24], [-44, 24]], // the turrets (there is no other gun): where each sits, px from the carrier's centre in its own frame (x along the nose), spread along the hull; the number of turrets is the number of rows
+    mounts: [[30, -7], [30, 7], [10, -20], [10, 20], [-6, -20], [-6, 20], [-22, -20], [-22, 20]], // the turrets (there is no other gun): where each sits, px from the carrier's centre in its own frame (x along the nose), spread along the hull; the number of turrets is the number of rows
     pd: 4,                                 // hit points one turret shot takes off an alien
     pdDelay: 700,                          // ms between the shots of one turret (eight of them: 46 hit points a second in all): they fire only while Space is held, each at the nearest alien in its reach, and never on their own
     pdRange: 500,                          // px a turret reaches (to the edge of the alien it aims at: about three and a half carrier lengths)
@@ -69,6 +73,11 @@ const CAMP = {
     maxEscorts: 6,                         // most escorts, the same way
     most: 5                                // most ships one order queues
   },
+  beamHum: {                               // the hum of a beam (card space-game-campaign-sounds): what src/audio.js beamHum is told
+    rise: 2,                               // s of unbroken fire (Beam turrets tech, Space held, a turret on a target) until the hum has climbed all the way
+    laserLevel: 0.8,                       // how loud the hum of a mining laser is (the same hum on any rock), against the beam turrets' 1
+    alienLaser: 0                          // 1: a plain turret shot at an alien (a kind 'alien' beam in C.lasers) hums too, over its pew; 0: it keeps its pew only, and the hum is for rocks and the Beam turrets
+  },
   missile: {                               // the missile launcher (F, or the order "missiles"): a homing missile for the mothership and the other big ships (card space-game-campaign-missiles)
     magazine: 6,                           // missiles you start with, and how many the slow reload fills the magazine to
     max: 12,                               // the most the magazine can ever hold (C.missiles, a plain number: the ore code adds to it with campMissileAdd)
@@ -90,7 +99,8 @@ const CAMP = {
     fighters: 6,                           // fighters in the bay at the start
     escorts: 2,                            // escorts in the bay at the start
     launchEvery: 600,                      // ms between ships leaving the bay once Launch is ordered
-    dockAt: 90                             // px: a recalled ship this close to the carrier lands (and is whole again when next launched)
+    mouth: [21, 19.5],                     // px from the carrier's centre (x along the nose, y to the side): where a launched ship appears, one side and then the other: just in front of the launch tube of a hangar pod (CAMP_ART.cruiser.launch)
+    dockAt: 63                             // px: a recalled ship this close to the carrier lands (and is whole again when next launched)
   },
   fighter: {
     hp: 36,                                // hit points
@@ -102,13 +112,11 @@ const CAMP = {
     bullet: 700,                           // px/s of a shot
     range: 420,                            // px it shoots from
     aim: 0.3,                              // rad: how far off its target the nose may be and still fire
-    hold: 240,                             // px: the ring it circles an alien at (pirateSteer's hold)
-    radius: 8                              // px, the hit circle (it was 12)
+    hold: 240                              // px: the ring it circles an alien at (pirateSteer's hold)
   },
   escort: {
     hp: 90, speed: 300, accel: 360, turn: 2.6, damage: 6, delay: [350, 500], bullet: 650, range: 520, aim: 0.35, hold: 300, // as a fighter: tougher, slower, longer reach
-    beside: 150,                           // px: how far from its convoy an escort keeps station
-    radius: 10                             // px, the hit circle (it was 16)
+    beside: 150                            // px: how far from its convoy an escort keeps station
   },
   convoy: {
     hp: 200,                               // hit points of a freighter
@@ -136,6 +144,19 @@ const CAMP = {
     stars: 200, near: 24,                  // streaks across the screen, of which this many are long and close
     textY: 0.84                            // where the words sit, down the screen
   },
+  world: {                                 // the worlds of Sol and of the other stars (src/campsol.js): the pack's bodies at the Campaign's scale, the rings round the star, the belts as rings of rocks
+    scale: 0.25,                           // px of the Campaign per unit of a system file of the Sol pack: the game spreads a file's units 3 times (SYSTEM_SCALE) and the Campaign is 1 to 12 of that
+    planetR: 0.55,                         // a body's radius in the Campaign: its radius in the pack times this (the Campaign's Earth, Mars, Luna and Eros are 0.5 to 0.8 of the pack's)
+    starR: 0.55,                           // the star's radius: Long Haul's (900 px of a size 1 star, src/universe.js) times this
+    farFrom: 9000,                         // px from where the level starts: a body this far is far (it is not in the level's own map view, the radar or the list of what to fight for)
+    ringTol: 0.02,                         // bodies whose distances from the star differ by less than this share are on one ring
+    bandJoin: 0.2,                         // belts of the pack whose rings differ by less than this share are one band of rocks (the main belt is three of them, 19 percent apart)
+    clusterTol: 0.01,                      // a belt on the ring of a planet (the Trojan camps) is a cluster of rocks round its place, not a ring
+    dots: 700,                             // rocks drawn in a band of the belt on the map
+    clusterDots: 40,                       // rocks drawn in a cluster
+    draw: 3600,                            // px: a far place is made in the world (a picture) only while the carrier is within this many px of its edge
+    skip: ['sol-pluto']                    // pack bodies the Campaign does not take (the eight planets are the card's; Pluto is a dwarf)
+  },
   nav: {                                   // the carrier's autopilot, the map's list and picking, and the arrow at the screen edge (src/campnav.js); the rule is the Long Haul autopilot's (src/autopilot.js AUTO)
     stop: 100,                             // px: a place is flown to until the edge of it (its radius plus this) is this near
     stopShip: 450,                         // px: a ship (a convoy, the mothership, a tower) is flown to until it is this near: inside the main gun's reach
@@ -147,6 +168,8 @@ const CAMP = {
     align: 0.5,                            // rad: thrust only when the nose is within this of the line (the Long Haul autopilot's aligned)
     etaSlow: 1.1,                          // the flight time on the map is distance over the carrier's top speed times this (it speeds up and brakes)
     fast: 2,                               // the map's Fast button (card space-game-map-click-fly): the carrier's top speed and thrust, times this, while the autopilot flies it; steering takes it away
+    farFrom: 8000,                         // px: a Fast trip longer than this (Earth to Mars is 4,100, Earth to Jupiter 40,000) burns at farFast instead of fast (card space-game-campaign-sol)
+    farFast: 3.2,                          // times the carrier's speed on a far trip: 672 px/s, Long Haul's own cruise (8,000 px/s) at the Campaign's 1 to 12 scale, so Earth to Neptune (112,000 px) is about 3 minutes
     pick: 28,                              // px on the map around a mark that count as a click on it
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
@@ -225,6 +248,7 @@ const CAMP = {
   levels: {                                // the levels; a wave or a convoy is one line
     1: {                                                          // THE BELT (card space-game-campaign-belt): the cruiser is a mining ship working the asteroid belt at Ceres. Three missions (card space-game-campaign-missions): survey, haulers, the mothership
       name: 'The belt', start: 'ceres', startAt: [130, 30],       // the works the cruiser leaves, and its offset from it
+      world: { system: 'sol', fit: { place: 'ceres', pack: 'sol-ceres' } }, // all of Sol round it (src/campsol.js): Ceres on its own ring of the Sol pack, 29,000 px from the Sun, which is placed from that; Vesta and Pallas are the level's own (same names), Earth, Mars and the rest are far bodies, and the main belt is the ring of rocks the cruiser is working in
       earth: false, startOre: 0, refit: true,                   // no Earth to lose here; the store is empty at the start of the level (30 for a level you start by itself); the level ends with the Earth refit screen
       places: {                                                 // Ceres, Vesta and Pallas (real; docs/SOL.md), with the belt between them (the distances are not true)
         ceres: { x: 0, y: 0, name: 'Ceres', kind: 'ice', seed: 31, r: 90, base: 'Occator Works' },  // the dwarf planet and the mining works the cruiser starts at
@@ -253,6 +277,7 @@ const CAMP = {
       ]
     },
     home: {                                                       // the Earth defence level: Earth's shield and the convoys. Not in the chain any more (Troy: they come out of level 1); kept as data, for the rules that need an Earth and for the tests
+      world: { system: 'sol', fit: { place: 'earth', pack: 'sol-earth' }, star: [-17329, -2435] }, // the Sun (src/campsol.js): Earth on its ring of the Sol pack, Mars on the far side of Earth from the Sun (the level's own place, 4,100 px off), the other bodies where the pack puts them
       name: 'Home', start: 'luna', startAt: [130, 30],           // the base the carrier leaves, and its offset from it
       win: 'mother',                                            // the level is won when the alien mothership is dead
       rocks: [                                                  // asteroid fields: n rocks of ore within spread px of at (each holds CAMP.ore.rock); the same in every level
@@ -270,6 +295,7 @@ const CAMP = {
     },
     2: {                                                          // Alpha Centauri: warp in, gather resources, break the relic's guards, hold the relic until it answers
       name: 'Alpha Centauri', start: 'arrival', startAt: [0, 0], earth: false,
+      world: { system: 'alpha-centauri', star: 'sun', fit: { place: 'proxima', pack: 'proxima-b' }, same: { proxima: 'proxima-b' } }, // the star is the place 'sun'; the pack's other bodies round it sit on their rings and angles, fitted to Proxima b
       warp: { dest: 'Alpha Centauri', ly: 4.4, star: 'sun' },  // the warp cinematic plays when this level starts (src/campwarp.js): where to, how far, and which of the places below is the star that resolves ahead
       places: {                                                 // the carrier warps in at arrival (not drawn); Proxima b holds the relic
         arrival: { x: -4800, y: 2400, name: 'Warp point', hidden: true },                           // where the carrier warps in, south-west of the relic (not drawn)
@@ -294,6 +320,7 @@ const CAMP = {
     },
     3: {                                                          // the alien home world: scan the approach, break the outer ring, break the inner ring
       name: 'The home world', start: 'arrival', startAt: [0, 0], earth: false,
+      world: { system: 'epsilon-eridani', fit: { place: 'home', pack: 'epsilon-eridani-b' }, same: { home: 'epsilon-eridani-b' }, k: 3 }, // Epsilon Eridani's star and belts round the alien home world, which is the pack's Aegir; k: the rings are this many times the pack's (so the star is not on top of the towers)
       places: {
         arrival: { x: -7000, y: 3500, name: 'Warp point', hidden: true },                          // where the carrier warps in: 7,800 px from the world (not drawn)
         home: { x: 0, y: 0, name: 'Alien home world', kind: 'gas', seed: 77, r: 330 }              // the world, 330 px across its radius
@@ -385,10 +412,10 @@ function campNew(level, techs, opts) {
 function campSpawn(C, kind, x, y) {
   const u = { id: kind + '-' + (C.nextId++), kind, x, y, vx: 0, vy: 0, rot: 0, move: null, moveUntil: 0, ran: false, side: C.rng() < 0.5 ? -1 : 1, nextShot: 0, order: null, goal: '', distractedUntil: 0 };
   if (kind === 'carrier') {
-    const k = CAMP.carrier; Object.assign(u, { team: 'earth', hp: k.hull * (campHas(C, 'plating') ? CAMP.tech.plating.hull : 1), r: k.radius, vmax: k.speed, accel: k.accel, turn: k.turn });
+    const k = CAMP.carrier; Object.assign(u, { team: 'earth', hp: k.hull * (campHas(C, 'plating') ? CAMP.tech.plating.hull : 1), r: CAMP.size.carrier.hit, vmax: k.speed, accel: k.accel, turn: k.turn });
   } else if (kind === 'fighter' || kind === 'escort') {
     const k = CAMP[kind];
-    Object.assign(u, { team: 'earth', hp: k.hp, r: k.radius, vmax: k.speed, accel: k.accel, turn: k.turn,
+    Object.assign(u, { team: 'earth', hp: k.hp, r: CAMP.size[kind].hit, vmax: k.speed, accel: k.accel, turn: k.turn,
       def: { key: kind === 'fighter' ? 'raider' : 'drone', hold: k.hold, speed: k.accel, max: k.speed, hp: k.hp } }); // the shape pirateSteer reads
   } else if (kind === 'freighter') {
     Object.assign(u, { team: 'earth', hp: CAMP.convoy.hp, r: 22, vmax: CAMP.convoy.speed, accel: 400, turn: 2 });
@@ -418,7 +445,7 @@ function campHurt(C, u, dmg, byId) {
     if (C.shield > 0 && dmg > 0) { const take = Math.min(C.shield, dmg); C.shield -= take; dmg -= take; C.events.push({ type: 'shieldhit', x: u.x, y: u.y }); } // the shield first
   }
   u.hp -= dmg; u.hurtAt = C.t;
-  C.events.push({ type: 'hit', x: u.x, y: u.y, id: u.id });
+  C.events.push({ type: 'hit', x: u.x, y: u.y, id: u.id, hull: dmg > 0 }); // hull: it got through to the hull (the carrier's shield takes the first of it)
   if (u.team === 'alien' && byId) { u.hitBy = byId; u.distractedUntil = C.t + CAMP.alien.distract; }
   if (u.hp <= 0) campKill(C, u);
 }
@@ -608,6 +635,7 @@ function campTick(C, dt) {
   campLaunch(C);
   C.ships.forEach(u => { if (u.hp > 0 && u.kind !== 'carrier') campAI(C, u, dt); });
   campBullets(C, dt);
+  campBeam(C, dt);
   campMissiles(C, dt);
   campCaches(C);
   campRelic(C, dt);
@@ -663,7 +691,7 @@ function campCarrier(C, dt) {
   const c = C.carrier, k = CAMP.carrier, inp = C.input; if (c.hp <= 0) return;
   c.rot += (inp.turn || 0) * k.turn * dt;
   const th = Math.max(0, Math.min(1, inp.thrust || 0));
-  const f = C.nav && C.nav.on && C.nav.fast ? CAMP.nav.fast : 1; // the map's Fast: a burn, while the autopilot flies (campNavGo)
+  const f = C.nav && C.nav.on && C.nav.fast ? (C.nav.burn || CAMP.nav.fast) : 1; // the map's Fast: a burn, while the autopilot flies (campNavGo: N.burn, from campNavBurn)
   c.vx += Math.cos(c.rot) * k.accel * f * th * dt; c.vy += Math.sin(c.rot) * k.accel * f * th * dt;
   const keep = Math.pow(inp.brake ? k.brakeDrag : k.drag, dt); c.vx *= keep; c.vy *= keep;
   const sp = Math.hypot(c.vx, c.vy); if (sp > k.speed * f) { c.vx *= k.speed * f / sp; c.vy *= k.speed * f / sp; }
@@ -718,6 +746,21 @@ function campTurrets(C) {
     tu.slot++; tu.at = campTurretAt(C, i, tu.slot);
   });
 }
+// The beam hum (card space-game-campaign-sounds). C.beamT is how long the beam turrets have fired without a break, in seconds (to CAMP.beamHum.rise); campBeamState is what the scene tells
+// the audio each frame: { kind: 'turrets' | 'laser' | '', level 0 to 1, rise 0 to 1 }.
+// The mining lasers (the belt card) say they fire through C.lasers, a list the sim keeps: [{ from: the ship's id, to: the rock's or the alien's id, kind: 'rock' | 'alien',
+// since: the battle's clock (ms) when this beam began without a break }], empty when none fires. One hum for the beams on rocks (and, if CAMP.beamHum.alienLaser asks, those on aliens: a plain turret shot is one).
+function campBeam(C, dt) {
+  const on = campHas(C, 'beam') && !!C.input.fire && C.carrier.hp > 0 && C.turrets.some(t => t.target);
+  C.beamT = on ? Math.min(CAMP.beamHum.rise, (C.beamT || 0) + dt) : Math.max(0, (C.beamT || 0) - dt * 3);
+}
+function campBeamState(C) {
+  const off = { kind: '', level: 0, rise: 0 }, k = CAMP.beamHum;
+  if (!C || C.result || C.carrier.hp <= 0) return off;
+  if (campHas(C, 'beam') && C.input.fire && C.turrets.some(t => t.target)) return { kind: 'turrets', level: 1, rise: Math.min(1, (C.beamT || 0) / k.rise) };
+  const ls = (C.lasers || []).filter(l => l && Number.isFinite(l.since) && (l.kind !== 'alien' || k.alienLaser)); // a turret shot at an alien is a pulse with a pew of its own, unless alienLaser asks for the hum on it too
+  return ls.length ? { kind: 'laser', level: k.laserLevel, rise: Math.min(1, Math.max(0, (C.t - Math.min(...ls.map(l => l.since))) / 1000 / k.rise)) } : off;
+}
 const k_laser_turret = C => CAMP.laser.turret * (campHas(C, 'beam') ? CAMP.tech.beam.damage : 1); // what a turret shot does to a rock (the beam tech cuts faster too)
 const campDrift = 0.3; // a shot keeps this share of its shooter's own speed (campLead reads it too)
 function campBullet(C, from, rot, speed, dmg, lifeMs, team, ahead, extra) {
@@ -729,8 +772,8 @@ function campBullet(C, from, rot, speed, dmg, lifeMs, team, ahead, extra) {
 function campLaunch(C) {
   if (!C.launchQ.length || C.t < C.nextLaunch || C.carrier.hp <= 0) return;
   C.nextLaunch = C.t + CAMP.bay.launchEvery;
-  const kind = C.launchQ.shift(), c = C.carrier, side = (C.launched % 2 ? 1 : -1), a = c.rot + side * 1.2;
-  const u = campSpawn(C, kind, c.x + Math.cos(a) * 70, c.y + Math.sin(a) * 70); C.launched++;
+  const kind = C.launchQ.shift(), c = C.carrier, side = (C.launched % 2 ? 1 : -1), m = CAMP.bay.mouth, cs = Math.cos(c.rot), sn = Math.sin(c.rot); // out of the mouth of a hangar pod, one side and then the other
+  const u = campSpawn(C, kind, c.x + cs * m[0] - sn * side * m[1], c.y + sn * m[0] + cs * side * m[1]); C.launched++;
   u.vx = c.vx + Math.cos(c.rot) * 140; u.vy = c.vy + Math.sin(c.rot) * 140; u.rot = c.rot;
   const cv = kind === 'escort' ? campNearest(campConvoys(C), c) : null;
   u.order = cv ? { type: 'escort', target: cv.id, slot: campWing(C, 'escort').length - 1 } : { type: 'guard', at: { kind: 'carrier' } };

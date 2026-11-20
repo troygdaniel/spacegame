@@ -59,6 +59,24 @@ A missile is a homing round. It goes for the mothership if the mothership is wit
 
 The magazine is small and the reload is slow: you start with 6, one comes back every 15 seconds while it is below 6, and the launcher cycles for 0.7 s between two launches. The HUD shows `F  MISSILES  4    next in 9 s` at the bottom left, in red when it is empty. The count is one plain number, `C.missiles`; the ore of the resources card adds to it through `campMissileAdd(C, n)` (up to 12, the most the magazine holds; the slow reload does not fill it past 6). All the numbers are `CAMP.missile` in `src/campaign.js`. The key line and the pause card name F; the ship computer has the order `fleet_missiles` (the model is told the key and the act in a battle).
 
+## The sounds (card `space-game-campaign-sounds`)
+
+All synthesized in `src/audio.js` from the game's own voices (no audio files), through the effects volume of Settings > Sound, the master volume and M, like every effect. `SFX_BUILT` in that file says in words what each is made of; the numbers are in each sound's own line. To ask for a change, use the name.
+
+| Name | When | Made of |
+|---|---|---|
+| `turret` | each turret shot, at most one in 70 ms | a short bright square bolt falling to under a third of its pitch in 70 ms, a thin sawtooth zip, a hair of click; the pitch is the turret's (1500 Hz plus 150 Hz a step, the back four higher) moved 3 percent at random: a staggered pew-rattle |
+| `beamhum` (a loop, `beamHum`) | the Beam turrets firing; a mining laser on a rock (the belt card's `C.lasers`; a plain turret shot at an alien is also a beam there but keeps its pew, unless `CAMP.beamHum.alienLaser` is 1) | a sine root, a sine fifth and a sawtooth buzz an octave up through a low-pass that opens as it climbs, a thin band of hiss; 140 to 320 Hz over two seconds of unbroken fire |
+| `missileLaunch` | F | a whoosh that climbs for half a second (a rising noise band and a rising sawtooth), then at 0.3 s a dull thump |
+| `missileBlast` | a missile goes off | a low sine thump, a low-passed rumble, a crackle of five quick bright bursts |
+| `missileFizzle` | a missile runs out of fuel | a soft puff of air and a small falling tone |
+| `blastSmall` / `blastBig` | a ship dies / the mothership or the carrier dies | a thump and a rumble with a crackle of four / eight bursts; the big one is two thumps and a second long |
+| `shieldHit` | a shot on the carrier's shield | a bright electric zap, high and short |
+| `hullHit` | a shot that got through to the hull | a dull clank, low and short |
+| `earthHit` | a shot on Earth's shield | a deep thump felt more than heard |
+
+The rules they keep (`tests/campsounds.mjs`, plain Node on a stand-in AudioContext): each is short, no louder than the game's own kill, made on the pool's voices (no new audio node however long a fight runs), silent when muted, at volume 0 or with the effects at 0, scaled by the effects volume, with a share of the reverb that leaves the kill, the jump, the arrival and the dock the longest tails. The scene limits how often each kind plays (`CAMP_BLIP`, `CAMP_SND` in `src/campaignscene.js`).
+
 ## The three levels
 
 | | Where | What you do | You win when | You lose when |
@@ -121,6 +139,6 @@ After level 2 (ancient tech): hull plating (carrier hull +50 percent), a second 
 - The playing field is a 1 to 12 scale of the real Sol distances (Earth to Mars is about 4,100 px), not the true scale: true scale would make a level an hour.
 - The campaign has no money: the convoys that arrive only appear in the story line after the level.
 - Alpha Centauri and Epsilon Eridani are my picks; the alien home world has no real name.
-- The turrets' reach is 500 px, about three and a half carrier lengths (the carrier is drawn 140 px long). With the single gun gone, the carrier's only far reach is the missile. The numbers (500 px, 4 a shot, every 0.7 s, eight turrets: 46 a second) were fitted to the sensible players of `tests/campaign.mjs` twice: first with shots aimed where the alien is (80 a second), then, when `space-game-campaign-turret-lead` made the shots hit moving aliens, lowered, because a shot that lands is worth more than one that misses. A carrier that stays at the Moon and holds Space still wins level 1 in 2.5 to 5 minutes; with the old, harder numbers (Earth's shield 300, no mending) it wins at most half the seeds. One table, `CAMP.carrier`.
+- The turrets' reach is 500 px, about three and a half carrier lengths (the carrier is drawn 98 px long). With the single gun gone, the carrier's only far reach is the missile. The numbers (500 px, 4 a shot, every 0.7 s, eight turrets: 46 a second) were fitted to the sensible players of `tests/campaign.mjs` twice: first with shots aimed where the alien is (80 a second), then, when `space-game-campaign-turret-lead` made the shots hit moving aliens, lowered, because a shot that lands is worth more than one that misses. A carrier that stays at the Moon and holds Space still wins level 1 in 2.5 to 5 minutes; with the old, harder numbers (Earth's shield 300, no mending) it wins at most half the seeds. One table, `CAMP.carrier`.
 - Missiles are for big ships on purpose: with only raiders and drones near, F answers "No big ship in missile range" and spends nothing.
 - Left out of this cut: a map between levels, saving a level in the middle, difficulty, music of its own, and more than three techs a level.

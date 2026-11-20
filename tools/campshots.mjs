@@ -6,6 +6,7 @@
 //   node tools/campshots.mjs 3      the cards (won story, tech pick, lost, pause) and the Tab map
 //   node tools/campshots.mjs fx     explosions as the game makes them, at 60, 160, 320 and 520 ms (2x crops), and the guns
 //   node tools/campshots.mjs mars   Mars and the Earth-Luna start, up close
+//   node tools/campshots.mjs look   the new look of the ships: 2x crops round the carrier (start, launch, recall, a crowd, the turrets firing)
 // Some pictures are STAGED (the carrier or the aliens are put in place, the hull and the shield are set low): the fight after the staging is the game's. The blind critic gets the PNG files and nothing else (docs/CRITIC.md).
 // Exit code 1 when a picture could not be taken or the game logged an error.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -120,6 +121,24 @@ try {
     await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; campSpawn(C, 'raider', c.x + 420, c.y + 20); campSpawn(C, 'drone', c.x + 520, c.y - 120); ${SC}.k.SPACE.isDown = true; return 1; })()`);
     await t.run(1100); const w2 = await where(); await crop('fx-guns', w2.sx + 230, w2.sy); await snap('c15-guns');
     await t.run(900); const w3 = await where(); await crop('fx-guns2', w3.sx + 230, w3.sy);
+  } else if (part === 'look') {
+    // the new look of the ships (card space-game-campaign-look): 2x crops round the carrier. The carrier at the start, a launch (the tubes at the front of the pods lit), the wing out, a recall (the landing bays at the back lit), a crowd (the wing and
+    // aliens close round it), and the turrets firing. The carrier is not moved except to put aliens near it (staged: positions only).
+    await enter(); await t.run(600);
+    const where = async () => j(`(() => { const s = ${SC}, v = s.cameras.main.worldView, c = s.camp.carrier; return { sx: (c.x - v.x) * s.cameras.main.zoom + 77, sy: (c.y - v.y) * s.cameras.main.zoom }; })()`);
+    const crop = async (name, w = 400, h = 260, dx = 0, dy = 0) => { const p = await where(); for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png', clip: { x: p.sx + dx - w / 2, y: p.sy + dy - h / 2, width: w, height: h, scale: 2 } }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(34); } note('crop', name); };
+    await crop('look-01-start');
+    await keyOn('Digit1'); await t.run(500); await crop('look-02-launch');
+    await t.run(1100); await crop('look-03-launch-later');
+    await t.run(3500); await crop('look-04-wing-out', 520, 320);
+    await keyOn('Digit5'); await t.run(1400); await crop('look-05-recall', 520, 320);
+    // a crowd: the wing is out again, aliens come in close, the turrets fire
+    await t.run(2500); await keyOn('Digit1'); await t.run(4800);
+    await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; ['raider', 'raider', 'drone', 'raider', 'drone', 'gunship'].forEach((k, i) => { const a = i * 1.05 + 0.4, d = 230 + (i % 3) * 70; const u = campSpawn(C, k, c.x + Math.cos(a) * d, c.y + Math.sin(a) * d); u.hp = u.maxHp = 400; }); return 1; })()`);
+    await keyOn('Digit2'); await t.ev(`(() => { ${SC}.k.SPACE.isDown = true; return 1; })()`); await t.run(1300); await crop('look-06-crowd', 640, 400);
+    await t.run(900); await crop('look-07-crowd-later', 640, 400);
+    await snap('look-08-whole-screen');
+    note('sizes', JSON.stringify(await sizes()));
   } else if (part === 'mars') {
     await enter(); await t.run(500);
     await t.ev(`(() => { const c = ${SC}.camp.carrier; c.x = 3500; c.y = 450; c.vx = c.vy = 0; c.rot = 0; return 1; })()`); await t.run(900); await snap('c40-mars');
