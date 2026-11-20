@@ -212,6 +212,19 @@ console.log('G4. the explosions and the hits');
   check('their reverb: the big blast 0.4 (under the dock\'s 0.45: the kill, the jump, the arrival and the dock keep the longest tails), the small one 0.3, the Earth thump 0.3, the zap 0.15, the clank 0.1', J('SOUND.send.blastBig') === 0.4 && J('SOUND.send.blastSmall') === 0.3 && J('SOUND.send.earthHit') === 0.3 && J('SOUND.send.shieldHit') === 0.15 && J('SOUND.send.hullHit') === 0.1);
 }
 
+// ---------- the scene's names ----------
+console.log('the scene\'s method names');
+{
+  // Phaser sets these on every scene at boot (this.sound is the sound manager, this.add the factory ...); a method of ours with the same name is shadowed by the instance property and fails only in a browser:
+  // this.sound is not a function (8-GEN found it in Chrome). A stand-in on Campaign.prototype cannot see it, so the names are held apart here.
+  const PHASER = ['sys', 'game', 'anims', 'cache', 'registry', 'sound', 'textures', 'events', 'cameras', 'add', 'make', 'scene', 'children', 'lights', 'data', 'input', 'load', 'time', 'tweens', 'physics', 'matter', 'scale', 'plugins', 'renderer', 'facebook'];
+  const mine = J('Object.getOwnPropertyNames(Campaign.prototype)').filter(k => k !== 'constructor');
+  check('no method of the Campaign scene has the name of a property Phaser puts on every scene (sound, add, cameras, input, time, tweens ...)', !mine.some(k => PHASER.includes(k)), mine.filter(k => PHASER.includes(k)).join());
+  check('the battle\'s rate-limited sound is battleSound, and the scene calls nothing named this.sound', mine.includes('battleSound') && !/this\.sound\b/.test(src('src/campaignscene.js')));
+  const own = J('Object.getOwnPropertyNames(Title.prototype).concat(Object.getOwnPropertyNames(Pause.prototype))').filter(k => k !== 'constructor');
+  check('and the same for the Title and the Pause scenes, which this branch\'s neighbours added methods to', !own.some(k => PHASER.includes(k)), own.filter(k => PHASER.includes(k)).join());
+}
+
 // ---------- ALL. the rules every one of them keeps ----------
 console.log('ALL. the rules');
 {
