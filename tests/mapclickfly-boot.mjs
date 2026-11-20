@@ -9,7 +9,7 @@ import { join, dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const { launch } = await import('./cdp.mjs');
+const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.MAPFLY_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
@@ -25,6 +25,9 @@ const enterKey = async (t, modifiers) => { // a real Enter, and with modifiers 8
   const k = { windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13, code: 'Enter', key: 'Enter', modifiers };
   await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, k)); await t.run(50); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, k)); await t.run(150);
 };
+// the map hands the flight over on a real timer (80 ms, "after the scene runs again": src/map.js go) while this test steps the game clock by hand, so a check made a few stepped frames after Enter can
+// come before the timer has fired. Wait for the condition in real time too: a pause, a few frames, again.
+const settle = async (t, expr, tries = 40) => { for (let i = 0; i < tries; i++) { if (JSON.parse(await t.ev(`JSON.stringify(!!(${expr}))`))) return true; await sleep(60); await t.run(100); } return false; };
 const snap = async (t, name) => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, 'mapfly-' + name + '.png'), Buffer.from(r.data, 'base64')); await t.run(34); } console.log('  picture mapfly-' + name + '.png'); };
 
 async function campaign() {
@@ -75,7 +78,7 @@ async function longhaul() {
     const st = await j(`({ set: ${SP}.cr.target && ${SP}.cr.target.id, ap: ${SP}.ap.on, open: game.scene.isActive('Overlay'), fly: ${OV}.btnFly.visible, fast: ${OV}.btnFast.visible, ft: ${OV}.btnFly.text, st: ${OV}.btnFast.text })`);
     check('a click on the station SETS it as the destination: the map stays open, nothing flies, the two buttons are by the mark', st.set === mark.id && !st.ap && st.open && st.fly && st.fast && /Enter/.test(st.ft) && /Shift\+Enter|too near/.test(st.st), JSON.stringify(st));
     await snap(t, 'longhaul-set');
-    await enterKey(t, 0); await t.run(400);
+    await enterKey(t, 0); await settle(t, `${SP}.ap.on`);
     const fl = await j(`({ open: game.scene.isActive('Overlay'), on: ${SP}.ap.on, local: ${SP}.ap.local })`);
     check('Enter closes the map and the autopilot flies there at regular speed (no cruise: ap.local)', !fl.open && fl.on && fl.local === true, JSON.stringify(fl));
     await t.run(1500);
@@ -87,7 +90,7 @@ async function longhaul() {
     await t.ev(`(() => { ${SP}.scene.pause(); game.scene.run('Overlay', { from: 'Space', mode: 'map' }); return 1; })()`); await t.run(300);
     await snap(t, 'longhaul-far');
     check('the far place has a Fast time (a long leg) and the buttons are on the map', await j(`${OV}.btnFast.visible && !/too near/.test(${OV}.btnFast.text)`), await j(`${OV}.btnFast.text`));
-    await enterKey(t, 8); await t.run(1500);
+    await enterKey(t, 8); await settle(t, `${SP}.ap.on || ${SP}.cruising`); await t.run(300);
     const fs = await j(`({ open: game.scene.isActive('Overlay'), on: ${SP}.ap.on, local: ${SP}.ap.local, cruising: ${SP}.cruising, stage: ${SP}.ap.stage })`);
     check('Shift+Enter flies fast: the autopilot is on, not at regular speed, and cruise takes the middle of the leg', !fs.open && (fs.on || fs.cruising) && fs.local !== true && (fs.cruising || fs.stage === 'cruise' || fs.stage === 'clear'), JSON.stringify(fs));
     await snap(t, 'longhaul-fast');
