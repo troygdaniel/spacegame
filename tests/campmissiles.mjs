@@ -200,7 +200,7 @@ console.log('G. the scene (on a stand-in)');
   g.run('F.mountG.log.length = 0; C.input.fire = true; __run(0.2); F.syncRockets(33)');
   check('Space held: the turrets that fire flash white (a bright dot and a longer barrel)', J('F.mountG.log').some(l => l[0] === 'fillStyle' && l[1] === 0xffffff));
   g.run('F.mountG.log.length = 0; __m(1); F.camp = C; F.syncRockets(33)');
-  check('nothing in reach: the mounts are drawn plain, with no barrel', J('F.mountG.log').filter(l => l[0] === 'lineBetween').length === 0 && J('F.mountG.log').filter(l => l[0] === 'fillCircle').length === 16);
+  check('nothing in reach: the mounts are drawn plain, with no aiming barrel: no amber line, only the eight steel stubs along the heading (CAMP_MOUNT.stub, card space-game-campaign-look)', J('F.mountG.log').filter(l => l[0] === 'lineBetween').length === 8 && J('F.mountG.log').filter(l => l[0] === 'lineStyle').every(l => l[2] === J('CAMP_MOUNT.stub[1]')) && J('F.mountG.log').filter(l => l[0] === 'fillCircle').length === 16);
   g.run('__m(1); window.__gun = __foe("gunship", 1500, 0, 90000); F.camp = C; F.mode = "play"; F.onKey({ code: "Space" })');
   check('the scene: a Space key press launches nothing (Space is read as held, into the sim\'s fire input, every frame)', J('C.missiles') === 6 && J('C.rockets.length') === 0);
   g.run('F.onKey({ code: "KeyF" })');
