@@ -43,13 +43,14 @@ const CAMP_PANELS = {
       { n: 2, id: 'recharge', order: 'recharge', label: 'Recharge shields', help: 'Recharge a shield (costs ore)' },
       { n: 3, id: 'buildf', order: 'build', arg: 'fighter', label: 'Build a fighter', help: 'Build a fighter (costs ore)' },
       { n: 4, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', help: 'Build an escort (costs ore)' },
-      { n: 5, id: 'goal', fly: 'objective', label: 'Fly to the objective', help: 'Autopilot to the objective' }
+      { n: 5, id: 'goal', fly: 'objective', label: 'Fly to the objective', help: 'Autopilot to the objective' },
+      { n: 6, id: 'dock', order: 'dock', label: 'Dock at an outpost', help: 'Dock at a friendly outpost (E)' } // ships are built and the hull mended only docked (card space-game-campaign-outposts); docking opens the ready room
     ] }
   ],
   // why a row cannot be done now, in a few plain words: the code of the game's own refusal (campNo in src/campaign.js) to the words under the row's name; {need} and {have} are ore
   why: { over: 'the battle is over', bay: 'the bay is empty', launching: 'still launching', baydry: 'all of it is out', nofighters: 'no fighters out', noescorts: 'no escorts out', noconvoy: 'no convoy to escort', nowing: 'no ships out',
     noore: 'no ore in reach', noore2: 'needs {need} ore', shieldfull: 'shield is full', earthfull: "Earth's shield is full", noearth: 'no Earth here', farearth: 'too far from Earth', buildfull: 'no room in the bay', what: 'cannot do that now',
-    nogoal: 'no objective', there: 'you are there' }
+    nogoal: 'no objective', there: 'you are there', nodock: 'Dock at an outpost to build.', norepair: 'Dock at an outpost to repair.', docked: 'already docked', noposts: 'no outpost here', whichpost: 'no such outpost', farpost: 'no outpost in range', hotdock: 'aliens too close', hullfull: 'the hull is sound' }
 };
 // the rows the H page and Settings list for the panels: the panel's key then the row's digit, under the panel's heading, in the table's order
 function campPanelKeyRows() {
@@ -115,12 +116,12 @@ const CONTROLS = [
     { k: ['Space'], t: 'Hold: turrets fire at ships in reach', sub: 'FLY AND FIRE' },
     { k: ['F'], t: 'Fire a homing missile', sub: 'FLY AND FIRE' },
     { k: ['Q'], t: 'Warp blink hop (needs that tech)', sub: 'FLY AND FIRE' },
+    { k: ['E'], t: 'Dock at the outpost in range', sub: 'FLY AND FIRE' },
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Click'], t: 'Map: click sets a place, again flies', sub: 'THE MAP' },
     { k: ['W', 'S'], t: 'Map list: choose (arrows too)', sub: 'THE MAP' },
     { k: ['A', 'D'], t: 'Map list: next or last group', sub: 'THE MAP' },
-    { k: ['Enter'], t: 'Map: fly to the chosen place', sub: 'THE MAP' },
-    { k: ['Shift', 'Enter'], t: 'Map: fly there fast (a burn)', sub: 'THE MAP' },
+    { k: ['Shift', 'Enter'], t: 'Map: Enter flies, Shift+Enter fast', sub: 'THE MAP' }, // (the two rows were one too many for Settings' four columns once E docked)
     { k: ['X'], t: 'Map: clear the destination', sub: 'THE MAP' },
     { k: ['Z'], t: 'Map: the area, or the whole system', sub: 'THE MAP' },
     { k: ['I'], t: 'Type an order to the ship', sub: 'THE STRIP AND THE VOICE' },

@@ -71,6 +71,7 @@ function campPanelState(C, row) {
     case 'buildf': return B.fighterCost + ' ore, ' + B.fighterTime + ' s';
     case 'builde': return B.escortCost + ' ore, ' + B.escortTime + ' s';
     case 'free': case 'orbit': case 'keep': case 'match': case 'hold': return C.stance === row.id ? 'in force' : ''; // the wing's stance: the one in force is marked
+    case 'dock': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? 'dock at ' + n.o.name : ''; } // the outpost in range
     case 'goal': { const g = campNavGoal(C); return g ? g.name + '  ' + campNavKm(Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y)) + ' km' : ''; }
   }
   return '';
