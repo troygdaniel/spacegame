@@ -53,6 +53,7 @@ class Campaign extends Phaser.Scene {
       obj: t(24, 152, 14, '#ffffff'), nav: t(24, 174, 14, '#7fe9ff'), arrow: t(0, 0, 13, '#ffd37a').setOrigin(0.5), keys: this.add.text(24, H - 44, uiText('camp.ui.keys'), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
     this.input.keyboard.on('keydown', e => this.onKey(e));
     if (typeof campMapInstall === 'function') campMapInstall(this); // Tab: the map of the level, over the battle, which goes on behind it (src/campmap.js, src/campmapdraw.js)
+    this.events.once('shutdown', () => { if (typeof stopBeamHum === 'function') stopBeamHum(); }); // no hum left behind when the level ends or the title comes
     this.showIntro();
   }
   drawPlace(p) {
@@ -133,7 +134,7 @@ class Campaign extends Phaser.Scene {
   turretFlash(e) {
     const C = this.camp, B = CAMP_BLIP, f = this.add.image(e.x + Math.cos(e.aim) * 14, e.y + Math.sin(e.aim) * 14, 'ember').setBlendMode('ADD').setTint(0xffe9a0).setScale(1.3).setDepth(7);
     this.tweens.add({ targets: f, alpha: 0, scale: 0.5, duration: B.flash, onComplete: () => f.destroy() });
-    if (!(C.t - this.blipAt < B.gap)) { this.blipAt = C.t; sfx('turret', e.i); }
+    if (!(C.t - this.blipAt < B.gap) && !campHas(C, 'beam')) { this.blipAt = C.t; sfx('turret', e.i); } // with the Beam turrets the hum is the sound (src/audio.js beamHum), not a pew a shot
   }
   fireMissile() { const r = campOrder(this.camp, 'missiles', '', 'key'); toast(this, r.say, r.ok ? '#9fe9ff' : '#ffb454'); }
 
@@ -158,6 +159,7 @@ class Campaign extends Phaser.Scene {
       campStep(C, Math.min(dt, 100) / 1000);
       if (typeof campNudge === 'function') { const nd = campNudge(C, this.shown); if (nd) toast(this, nd, '#9fe9ff'); } // the first-minute hints, once each (src/campnudge.js)
     }
+    const bs = this.mode === 'play' ? campBeamState(C) : null; beamHum(bs ? bs.level : 0, bs ? bs.rise : 0); // the beam hum (src/audio.js): the Beam turrets firing, or a miner closing on its ore
     C.events.splice(0).forEach(e => this.onEvent(e));
     this.syncRockets(Math.min(dt, 100));
     this.sync(); this.paintHud();

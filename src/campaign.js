@@ -61,6 +61,11 @@ const CAMP = {
     maxEscorts: 6,                         // most escorts, the same way
     most: 5                                // most ships one order queues
   },
+  beamHum: {                               // the hum of a beam (card space-game-campaign-sounds): what src/audio.js beamHum is told
+    rise: 2,                               // s of unbroken fire (Beam turrets tech, Space held, a turret on a target) until the hum has climbed all the way
+    mineRange: 320,                        // px: a mining ship this close to the ore it is going for hums, softly, rising as it closes
+    mineLevel: 0.55                        // how loud the mining hum is, against the beam turrets' 1
+  },
   missile: {                               // the missile launcher (F, or the order "missiles"): a homing missile for the mothership and the other big ships (card space-game-campaign-missiles)
     magazine: 6,                           // missiles you start with, and how many the slow reload fills the magazine to
     max: 12,                               // the most the magazine can ever hold (C.missiles, a plain number: the ore code adds to it with campMissileAdd)
@@ -507,6 +512,7 @@ function campTick(C, dt) {
   campLaunch(C);
   C.ships.forEach(u => { if (u.hp > 0 && u.kind !== 'carrier') campAI(C, u, dt); });
   campBullets(C, dt);
+  campBeam(C, dt);
   campMissiles(C, dt);
   campCaches(C);
   campRelic(C, dt);
@@ -596,6 +602,24 @@ function campTurrets(C) {
     }
     tu.slot++; tu.at = campTurretAt(C, i, tu.slot);
   });
+}
+// The beam hum (card space-game-campaign-sounds). C.beamT is how long the beam turrets have fired without a break, in seconds (to CAMP.beamHum.rise); campBeamState is what the scene tells
+// the audio each frame: { kind: 'turrets' | 'mine' | '', level 0 to 1, rise 0 to 1 }.
+function campBeam(C, dt) {
+  const on = campHas(C, 'beam') && !!C.input.fire && C.carrier.hp > 0 && C.turrets.some(t => t.target);
+  C.beamT = on ? Math.min(CAMP.beamHum.rise, (C.beamT || 0) + dt) : Math.max(0, (C.beamT || 0) - dt * 3);
+}
+function campBeamState(C) {
+  const off = { kind: '', level: 0, rise: 0 }, k = CAMP.beamHum;
+  if (!C || C.result || C.carrier.hp <= 0) return off;
+  if (campHas(C, 'beam') && C.input.fire && C.turrets.some(t => t.target)) return { kind: 'turrets', level: 1, rise: Math.min(1, (C.beamT || 0) / k.rise) };
+  let best = null; // a mining ship closing on the ore it is going for: the nearest one of them, and how near
+  campWing(C, 'escort').forEach(u => {
+    if (!u.order || u.order.type !== 'mine') return;
+    const p = campNearest(C.pickups.filter(q => !campAliens(C).some(a => campDist(a, q) < CAMP.ore.danger)), u, k.mineRange);
+    if (p) { const d = campDist(u, p); if (!best || d < best) best = d; }
+  });
+  return best === null ? off : { kind: 'mine', level: k.mineLevel, rise: Math.min(1, Math.max(0, 1 - best / k.mineRange)) };
 }
 const campDrift = 0.3; // a shot keeps this share of its shooter's own speed (campLead reads it too)
 function campBullet(C, from, rot, speed, dmg, lifeMs, team, ahead, extra) {

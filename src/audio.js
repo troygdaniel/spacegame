@@ -5,7 +5,7 @@
 // installAudio(game) hooks each scene's create, update, pause, resume and shutdown events,
 // so the scenes need no code for loops; only sfx('name') calls replace beep() at a few spots.
 
-const AUD = { master: null, noise: null, amb: null, eng: null, cru: null, ducked: false, gesture: false, rev: null, pool: null, sendNow: undefined };
+const AUD = { master: null, noise: null, amb: null, eng: null, cru: null, beam: null, ducked: false, gesture: false, rev: null, pool: null, sendNow: undefined };
 // Each pad has its own level on top of the master volume (G.volume and mute), so a pad that is only noise can sit low
 // without turning the others down. The planet wind is hiss with no pitch, so it reads much louder than a tone of the same
 // size: it sits about 8 dB under the quietest effect (it was 16 dB over a laser shot at level 1) (tests/surface.mjs measures it against laser, tick, hit and boom).
@@ -211,7 +211,7 @@ const SOUND = {
     click: 0, uiOpen: 0, uiClose: 0, type: 0, buy: 0, sell: 0, empty: 0             // the interface: short and dry
   },
   other: 0.1,
-  loop: { engine: 0.18, space: 0.3, station: 0.08, wind: 0 }   // the loops: the engine hum and each scene's pad
+  loop: { engine: 0.18, space: 0.3, station: 0.08, wind: 0, beam: 0.1 }   // the loops: the engine hum, each scene's pad and the Campaign's beam hum
 };
 const soundSend = name => SOUND.send[name] === undefined ? SOUND.other : SOUND.send[name];
 
@@ -371,6 +371,7 @@ const SFX = {
 // What each of the Campaign's sounds is made of, in plain words (card space-game-campaign-sounds), and the group it was made in: so Troy can ask for a change by name.
 // The numbers are in the sound's own line above. tests/campsounds.mjs holds every name here to a sound that exists and to the level rules.
 const SFX_BUILT = {
+  beamhum: { group: 'hum', loop: true, says: 'the beam hum (a loop, BEAMHUM): a sine root with a sine fifth over it and a sawtooth buzz an octave up, through a low-pass that opens as it climbs, with a thin band of hiss; it rises from 140 to 320 Hz over two seconds of unbroken fire (Beam turrets tech, Space held, a turret on a target) and fades in a quarter second when it stops; a softer one rises as a mining ship closes on its ore' },
   turret: { group: 'turrets', says: 'the turret pew: a short bright square bolt that falls to under a third of its pitch in 70 ms, a thin sawtooth zip on top and a hair of click at the start; the pitch is set by the turret (four steps of 150 Hz, the back four a little higher) and moved 3 percent at random, so the eight rattle and do not smear' }
 };
 
@@ -397,6 +398,33 @@ function stopCruiseHum() {
   const c = AUD.cru; if (!c) return; AUD.cru = null;
   try { c.out.gain.cancelScheduledValues(0); c.out.gain.setTargetAtTime(0, AC.currentTime, 0.12); } catch (e) { /* audio is optional */ }
   setTimeout(() => c.list.forEach(o => { try { o.stop(); } catch (e) { /* already stopped */ } }), 700);
+}
+
+// ---------- the beam hum: a sustained, rising hum while a beam fires (card space-game-campaign-sounds) ----------
+// The Campaign's Beam turrets tech (held Space, a turret has a target) and a mining ship closing on its ore. The scene calls beamHum(level, rise) each frame (src/campaign.js campBeamState):
+// level 0 to 1 is how loud (0 is off: it fades away), rise 0 to 1 is how far up it has climbed. Through AUD.master and the effects volume like everything else; one loop, no new nodes after it.
+const BEAMHUM = { vol: 0.02, f0: 140, f1: 320, flt0: 500, flt1: 1900, fade: 0.25, step: 0.06 }; // its loudest level before the effects volume; its pitch (Hz) from f0 to f1 as it rises; the low-pass's opening (Hz); the fade-out and how often it is retuned (s)
+function startBeamHum() {
+  const out = AC.createGain(), list = []; out.gain.value = 0.0001; out.connect(AUD.master);
+  const flt = AC.createBiquadFilter(); flt.type = 'lowpass'; flt.frequency.value = BEAMHUM.flt0; flt.Q.value = 2; flt.connect(out);
+  const o1 = aOsc(list, 'sine', BEAMHUM.f0, flt, 0.5), o2 = aOsc(list, 'sine', BEAMHUM.f0 * 1.5, flt, 0.25), o3 = aOsc(list, 'sawtooth', BEAMHUM.f0 * 2, flt, 0.12); // the root, a fifth over it, and a buzz an octave up
+  aNoise(list, out, 'bandpass', 2400, 3, 0.08); // a thin hiss of energy over it
+  revSend(out, SOUND.loop.beam);
+  AUD.beam = { out, list, flt, o1, o2, o3, nextAt: 0 };
+}
+function stopBeamHum() {
+  const b = AUD.beam; if (!b) return; AUD.beam = null;
+  try { b.out.gain.cancelScheduledValues(AC.currentTime); b.out.gain.setTargetAtTime(0, AC.currentTime, BEAMHUM.fade / 3); } catch (e) { /* audio is optional */ }
+  setTimeout(() => { b.list.forEach(o => { try { o.stop(); } catch (e) { /* already stopped */ } }); try { b.out.disconnect(); } catch (e) { /* gone */ } }, BEAMHUM.fade * 1000 + 100);
+}
+function beamHum(level, rise) {
+  if (!(level > 0.001) || G.muted || G.volume <= 0 || FX.vol <= 0) { if (AUD.beam) stopBeamHum(); return; }
+  if (!AUD.beam) { if (!audioReady()) return; resumeAudio(); try { startBeamHum(); } catch (e) { return; } }
+  const b = AUD.beam, now = AC.currentTime; if (now < b.nextAt) return; b.nextAt = now + BEAMHUM.step;
+  const r = Math.min(1, Math.max(0, rise || 0)), f = BEAMHUM.f0 + (BEAMHUM.f1 - BEAMHUM.f0) * r;
+  b.out.gain.setTargetAtTime(BEAMHUM.vol * level * fxScale(), now, 0.08);
+  b.o1.frequency.setTargetAtTime(f, now, 0.1); b.o2.frequency.setTargetAtTime(f * 1.5, now, 0.1); b.o3.frequency.setTargetAtTime(f * 2, now, 0.1);
+  b.flt.frequency.setTargetAtTime(BEAMHUM.flt0 + (BEAMHUM.flt1 - BEAMHUM.flt0) * r, now, 0.1);
 }
 
 function sfx(name, arg) { // arg: what a sound takes (the turret's number); most take none

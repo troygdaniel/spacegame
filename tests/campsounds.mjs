@@ -39,7 +39,7 @@ g.run(`
   }
   var __made = 0; window.AudioContext = function () { __made++; return (__ac = __fake()); }; window.webkitAudioContext = undefined;
   var __ac = null;
-  function __reset(muted, volume, fx) { AC = null; __ac = null; __made = 0; Object.assign(AUD, { master: null, noise: null, amb: null, eng: null, cru: null, rev: null, pool: null, sendNow: undefined, gesture: true, ducked: false }); G.muted = !!muted; G.volume = volume === undefined ? 1 : volume; FX.vol = fx === undefined ? 1 : fx; }
+  function __reset(muted, volume, fx) { AC = null; __ac = null; __made = 0; Object.assign(AUD, { master: null, noise: null, amb: null, eng: null, cru: null, beam: null, rev: null, pool: null, sendNow: undefined, gesture: true, ducked: false }); G.muted = !!muted; G.volume = volume === undefined ? 1 : volume; FX.vol = fx === undefined ? 1 : fx; }
   // one sound on a fresh pool: what it asks of the voices. voices: those it touched (a gain that went above silence); peak: the sum of their loudest points (an upper bound of how loud it gets);
   // secs: from its start to the last thing scheduled; freqs: each tone voice's first and last pitch; noise: each noise voice's filter type and sweep
   window.__render = (name, arg, setup) => {
@@ -77,11 +77,70 @@ console.log('G1. the turrets: the pew');
   check('the scene plays it for each turret event, with the turret\'s number, no more than once in CAMP_BLIP.gap ms; the loud laser and the beep are gone from the turrets', /sfx\('turret', e\.i\)/.test(sc) && /C\.t - this\.blipAt < B\.gap/.test(sc) && !/B\.freq|B\.step/.test(sc));
 }
 
+// ---------- G2. the beam and mining hum ----------
+console.log('G2. the beam and mining hum');
+{
+  g.run(`
+    window.__bat = (techs) => { window.C = campNew(1, techs || [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); C.motherSpawn = 1e12; C.pickups = [];
+      const u = campSpawn(C, 'gunship', C.carrier.x + 300, C.carrier.y); u.vmax = 0; u.accel = 0; u.nextShot = 1e12; u.hp = u.maxHp = 90000; return u.id; };
+    window.__go = sec => { for (let i = 0; i < Math.round(sec * 30); i++) { campStep(C, 1 / 30); C.events.length = 0; } };
+  `);
+  g.run('__bat(["beam"]); C.input.fire = true; __go(0.5)');
+  const s1 = J('campBeamState(C)');
+  g.run('__go(0.5)'); const s2 = J('campBeamState(C)');
+  g.run('__go(3)'); const s3 = J('campBeamState(C)');
+  check('Beam turrets, Space held, a turret on a target: the beam hum is on at full level and climbs with unbroken fire: a quarter up at half a second, half at one, all the way by two seconds', s1.kind === 'turrets' && s1.level === 1 && Math.abs(s1.rise - 0.25) < 0.05 && Math.abs(s2.rise - 0.5) < 0.05 && s3.rise === 1, JSON.stringify([s1, s2, s3]));
+  g.run('C.input.fire = false; __go(0.2)'); const s4 = J('campBeamState(C)'), t4 = J('C.beamT');
+  check('Space let go: the hum is off, and the climb falls back three times as fast as it rose (so a tap does not start from the top)', s4.kind === '' && s4.level === 0 && t4 < 1.5 && t4 > 0.9, JSON.stringify([s4, t4]));
+  g.run('__bat([]); C.input.fire = true; __go(2)');
+  check('without the Beam turrets tech the turrets only pew: no hum', J('campBeamState(C).kind') === '' && J('C.beamT') === 0);
+  g.run('__bat(["beam"]); C.input.fire = true; C.ships.forEach(u => { if (u.team === "alien") u.x += 5000; }); __go(1)');
+  check('nothing in reach, no hum (a turret with no target does not fire)', J('campBeamState(C).kind') === '');
+  g.run('__bat([]); C.ships.forEach(u => { if (u.team === "alien") u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0); campOrder(C, "launch"); __go(8);');
+  g.run('window.__es = campWing(C, "escort")[0]; C.pickups = [{ id: "rock-h", kind: "rock", x: __es.x + 200, y: __es.y, ore: 20, born: 0 }]; campOrder(C, "mine"); C.carrier.x = 99999; campStep(C, 0.001)'); // the order needs ore to be in reach
+  const m1 = J('campBeamState(C)');
+  g.run('__es.x = C.pickups[0].x - 80; __es.y = C.pickups[0].y; campStep(C, 0.001)'); const m2 = J('campBeamState(C)');
+  check('a mining ship closing on the ore it is going for: a softer hum (0.55 of the beam\'s) that climbs as it closes: a third of the way up at 200 px, three quarters at 80', m1.kind === 'mine' && Math.abs(m1.level - 0.55) < 1e-9 && m1.rise > 0.3 && m1.rise < 0.45 && m2.rise > 0.7 && m2.rise < 0.8, JSON.stringify([m1, m2]));
+  g.run('C.pickups[0].x = __es.x + 900; campStep(C, 0.001)');
+  check('and none when the ore is far (more than 320 px) or there is none', J('campBeamState(C).kind') === '' && (g.run('C.pickups = []; campStep(C, 0.001)'), J('campBeamState(C).kind') === ''));
+  check('a battle that is over hums nothing', (g.run('__bat(["beam"]); C.input.fire = true; __go(0.2); campEnd(C, "won", "mother")'), J('campBeamState(C).kind') === ''));
+  // the loop itself, on the stand-in AudioContext
+  g.run(`__reset(false, 1); AC = new AudioContext(); audioReady();`);
+  g.run(`beamHum(1, 0); window.__n1 = __ac.count(); window.__b = AUD.beam`);
+  check('beamHum starts one loop the first time it is told: a root, a fifth and a buzz (three oscillators), one band of hiss, a low-pass, a gain into the master', J('!!AUD.beam') && J('__b.list.length') === 4 && J('__b.out.to.includes(AUD.master)') && J('__b.flt.type') === 'lowpass' && J('__b.o1.type') === 'sine' && J('__b.o3.type') === 'sawtooth');
+  g.run('for (let i = 0; i < 200; i++) { __ac.currentTime += 0.016; beamHum(1, i / 200); }');
+  check('told again and again as it climbs (200 frames) it makes no new node: it retunes the one loop', J('__ac.count()') === J('__n1'));
+  const ev = J('__b.o1.frequency.ev.filter(e => e[0] === "target").map(e => e[1])');
+  check('it climbs: the root goes from 140 Hz up to 320 Hz as the rise goes from 0 to 1, never down, and the fifth and the buzz follow at 1.5 and 2 times', Math.abs(ev[0] - 140) < 1 && ev[ev.length - 1] > 300 && ev[ev.length - 1] <= 320 + 1e-9 && ev.every((f, i) => i === 0 || f >= ev[i - 1] - 1e-9) && Math.abs(J('__b.o2.frequency.ev[__b.o2.frequency.ev.length - 1][1]') - 1.5 * ev[ev.length - 1]) < 1e-6 && Math.abs(J('__b.o3.frequency.ev[__b.o3.frequency.ev.length - 1][1]') - 2 * ev[ev.length - 1]) < 1e-6, [ev[0], ev[ev.length - 1]].join());
+  check('and the filter opens with it (500 Hz to nearly 1.9 kHz)', Math.abs(J('__b.flt.frequency.ev[0][1]') - 500) < 1 && J('__b.flt.frequency.ev[__b.flt.frequency.ev.length - 1][1]') > 1800);
+  check('it is retuned about 16 times a second, not every frame (a retune every 60 ms: at most 17 a second)', ev.length <= 17 * (200 * 0.016) + 2, ev.length);
+  const lvl = J('__b.out.gain.ev.filter(e => e[0] === "target").map(e => e[1])');
+  check('it is quiet: its loudest level is 0.02, under a third of a laser shot, and it follows the level it is told (0.55 gives 0.011)', Math.max(...lvl) <= 0.0201 && Math.max(...lvl) >= 0.0199 && (g.run('__ac.currentTime += 1; beamHum(0.55, 1)'), Math.abs(J('__b.out.gain.ev[__b.out.gain.ev.length - 1][1]') - 0.011) < 1e-6));
+  g.run('FX.vol = 0.5; __ac.currentTime += 1; beamHum(1, 1)');
+  check('the effects volume of Settings > Sound follows it while it hums (half the volume, half the level)', Math.abs(J('__b.out.gain.ev[__b.out.gain.ev.length - 1][1]') - 0.01) < 1e-6);
+  g.run('FX.vol = 1; beamHum(0, 0)');
+  check('told zero it fades away (a target of silence) and lets the loop go: no hum stays', J('AUD.beam') === null && J('__b.out.gain.ev[__b.out.gain.ev.length - 1][1]') === 0);
+  g.run(`__reset(true, 1); beamHum(1, 0)`);
+  check('muted, or volume 0, or the effects at 0: it does not start', J('__made') === 0 && J('AUD.beam') === null && (g.run('__reset(false, 0); beamHum(1, 0)'), J('AUD.beam') === null) && (g.run('__reset(false, 1, 0); beamHum(1, 0)'), J('AUD.beam') === null));
+  g.run(`__reset(false, 1); AC = new AudioContext(); audioReady(); beamHum(1, 0.5); G.muted = true; beamHum(1, 0.5)`);
+  check('and M pressed while it hums stops it', J('AUD.beam') === null);
+  const sc = src('src/campaignscene.js');
+  check('the scene asks for it every frame while it plays (and for silence when it does not: the pause card), and stops it when the scene shuts down', /campBeamState\(C\) : null; beamHum\(bs \? bs\.level : 0/.test(sc) && /events\.once\('shutdown', \(\) => \{ if \(typeof stopBeamHum/.test(sc));
+  g.run(`
+    window.__plays = []; window.__sfx1 = sfx; sfx = (name, a) => { __plays.push(name + ' ' + a); };
+    window.__fakeSc = (techs) => { const rec = () => { const p = new Proxy({}, { get: (t, k) => (k === 'then' ? undefined : (...a) => p) }); return p; };
+      const f = Object.create(Campaign.prototype); f.add = rec(); f.tweens = { add() {} }; f.blipAt = undefined; f.camp = campNew(1, techs, { seed: 1 }); return f; };
+  `);
+  g.run('window.__f1 = __fakeSc([]); __plays.length = 0; __f1.camp.t = 1000; __f1.onEvent({ type: "turret", i: 3, x: 0, y: 0, aim: 0 }); window.__f2 = __fakeSc(["beam"]); __f2.camp.t = 1000; __f2.onEvent({ type: "turret", i: 3, x: 0, y: 0, aim: 0 }); sfx = __sfx1');
+  check('with the Beam turrets the hum is the sound: the turret event plays no pew (the flash stays); without it the pew is played with the turret\'s number', J('__plays').join() === 'turret 3', J('__plays').join());
+  check('the numbers are in the table: how long it takes to climb, how near a miner hums, how loud', J('CAMP.beamHum.rise') === 2 && J('CAMP.beamHum.mineRange') === 320 && J('CAMP.beamHum.mineLevel') === 0.55);
+}
+
 // ---------- ALL. the rules every one of them keeps ----------
 console.log('ALL. the rules');
 {
-  const NEW = J('Object.keys(SFX_BUILT)');
-  check('every sound of the Campaign is a sound that exists and has its words in the table of what it is made of, with its group', NEW.length >= 1 && NEW.every(k => J(`!!SFX['${k}']`)) && NEW.every(k => J(`SFX_BUILT['${k}'].says.length`) > 40 && /^(turrets|hum|missiles|blasts)$/.test(J(`SFX_BUILT['${k}'].group`))), NEW.join());
+  const ALLN = J('Object.keys(SFX_BUILT)'), NEW = ALLN.filter(k => !J(`!!SFX_BUILT['${k}'].loop`)); // the one-shot sounds; the loops (the hum) have their own section
+  check('every sound of the Campaign has its words in the table of what it is made of, with its group, and a one-shot is a sound that exists', ALLN.length >= 1 && NEW.every(k => J(`!!SFX['${k}']`)) && ALLN.every(k => J(`SFX_BUILT['${k}'].says.length`) > 40 && /^(turrets|hum|missiles|blasts)$/.test(J(`SFX_BUILT['${k}'].group`))), ALLN.join());
   check('each draws on the pool and makes no node of its own, and nothing it schedules is not a number', NEW.every(k => { const r = R(k, 3); return r.nodes === 0 && r.finite && r.voices >= 1; }));
   check('each has its share of the reverb in SOUND.send (not left to the default)', NEW.every(k => J(`SOUND.send['${k}'] !== undefined`)));
   check('muted, or volume 0, or the effects at 0: no sound is made at all (no context, no pool)', NEW.every(k => { g.run(`__reset(true, 1); sfx('${k}', 2)`); const a = J('__made') === 0 && J('AUD.pool') === null; g.run(`__reset(false, 0); sfx('${k}', 2)`); const b = J('__made') === 0 && J('AUD.pool') === null; g.run(`__reset(false, 1, 0); sfx('${k}', 2)`); return a && b && J('__made') === 0; }));
