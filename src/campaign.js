@@ -82,8 +82,20 @@ const CAMP = {
     spawnMax: 6                            // most raiders of its own alive at once
   },
   earth: {
-    shield: 300,                           // Earth's shield: zero and the level is lost
+    shield: 300,                           // Earth's shield: zero and the level is lost (level 1 only: the later levels are far from home)
     radius: 160                            // px, the planet's size (a shot inside it hits)
+  },
+  tower: {                                 // an alien defence tower: a gun that does not move (level 3)
+    hp: 160,                               // hit points (a level may give its own)
+    radius: 26,                            // px, the hit circle
+    damage: 10,                            // per shot
+    delay: [1300, 1900],                   // ms between shots
+    bullet: 440,                           // px/s of a shot
+    range: 800,                            // px it shoots from
+    turn: 3                                // rad/s the gun turns
+  },
+  cache: {
+    radius: 160                            // px: any of your ships this close to a resource cache collects it (level 2)
   },
   tech: {                                  // what each tech does; names and words are in content/text/ui.md (camp.tech.<id>.name, .text)
     shield: { after: 1, taken: 0.6 },      // after level 1: the carrier takes this share of the damage it is dealt (0.6 = 40 percent less)
@@ -101,6 +113,9 @@ const CAMP = {
     mars: { x: 4064, y: 571, name: 'Mars', kind: 'rock', seed: 12, r: 110 },                   // 4,100 px from Earth
     eros: { x: -1705, y: -3206, name: 'Eros', kind: 'rock', seed: 21, r: 36 }                  // 3,630 px from Earth
   },
+  // A level is data. Kinds the engine knows: win 'mother' (kill the mothership), 'relic' (collect the caches, then hold the carrier on the relic), 'towers' (break every tower);
+  // places (else the table above), start (a place of its own, drawn or not) and startAt, convoys, waves (goal: 'earth', 'convoy:<id>' or 'carrier'), earth (false: no Earth),
+  // guards (aliens that wait until you come close), towers (rings of them round a place), caches, relic, say (the words of the level, in content/text/ui.md)
   levels: {                                // the levels; a wave or a convoy is one line
     1: {
       name: 'Home', start: 'luna', startAt: [90, 0],           // the base the carrier leaves, and its offset from it
@@ -114,11 +129,48 @@ const CAMP = {
         { at: 80, early: 10, from: [-4200, 3800], ships: { drone: 3, gunship: 2 }, goal: 'earth', say: 'camp.say.wave2' },
         { at: 140, early: 12, needClear: true, from: [3200, -4000], ships: { raider: 3, gunship: 1 }, goal: 'earth', mother: [3500, -4400], say: 'camp.say.wave3' }
       ]
+    },
+    2: {                                                          // Alpha Centauri: warp in, gather resources, recover what the ancient race left on Proxima b
+      name: 'Alpha Centauri', start: 'arrival', startAt: [0, 0], win: 'relic', earth: false,
+      places: {                                                 // the carrier warps in at arrival (not drawn); Proxima b holds the relic
+        arrival: { x: -4800, y: 2400, name: 'Warp point', hidden: true },                           // where the carrier warps in, south-west of the relic (not drawn)
+        sun: { x: -1800, y: -3600, name: 'Alpha Centauri', kind: 'lava', seed: 4371, r: 260 },       // the star of the level, drawn as a lava world, 260 px across its radius
+        proxima: { x: 1200, y: 800, name: 'Proxima b', kind: 'rock', seed: 4244, r: 150 }           // the world with the relic on it
+      },
+      caches: [[-2800, 2000], [-600, 3200], [200, -1800]],       // resource caches (px): collect this many (relic.caches) before the relic will answer
+      relic: { place: 'proxima', radius: 240, hold: 8, caches: 2, clear: 650 }, // hold the carrier within radius of the relic for hold seconds, with no alien within clear px of it
+      guards: [                                                 // the guards of the relic: they wait until your ships come within reach
+        { kind: 'gunship', at: [1700, 400] }, { kind: 'gunship', at: [700, 1300] },                 // two gunships, north-east and south-west of the relic
+        { kind: 'drone', at: [1500, 1300] }, { kind: 'drone', at: [500, 300] }, { kind: 'drone', at: [1900, 900] } // three drones round it
+      ],
+      convoys: [],
+      waves: [
+        { at: 25, early: 10, from: [-5600, 600], ships: { raider: 3, drone: 2 }, goal: 'carrier', say: 'camp.say.l2wave1' },
+        { at: 75, early: 12, from: [4500, -2500], ships: { drone: 3, gunship: 1 }, goal: 'carrier', say: 'camp.say.l2wave2' }
+      ]
+    },
+    3: {                                                          // the alien home world: break the defence rings
+      name: 'The home world', start: 'arrival', startAt: [0, 0], win: 'towers', earth: false,
+      places: {
+        arrival: { x: -7000, y: 3500, name: 'Warp point', hidden: true },                          // where the carrier warps in: 7,800 px from the world (not drawn)
+        home: { x: 0, y: 0, name: 'Alien home world', kind: 'gas', seed: 77, r: 330 }              // the world, 330 px across its radius
+      },
+      towers: [                                                 // rings of towers round the place: n towers at r px from it, hp each (omit for the table's)
+        { place: 'home', r: 1000, n: 8, phase: 0.2 },                                             // the inner ring: 8 towers 1,000 px from the world
+        { place: 'home', r: 1500, n: 4, phase: 0.7, hp: 260 }                                      // the outer ring: 4 tougher towers (260 hit points) 1,500 px out
+      ],
+      convoys: [],
+      waves: [
+        { at: 15, early: 8, from: [-3500, 1800], ships: { raider: 4, drone: 2 }, goal: 'carrier', say: 'camp.say.l3wave1' },
+        { at: 70, early: 12, from: [2800, -2800], ships: { drone: 3, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave2' },
+        { at: 120, early: 14, from: [-2500, -3000], ships: { raider: 3, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave3' }
+      ]
     }
   }
 };
 
 // ---------- small helpers ----------
+const campPlaces = level => (CAMP.levels[level] && CAMP.levels[level].places) || CAMP.places; // the places of a level: its own, else the home system's
 const campTry = (fn, fallback) => { try { const v = fn(); return v === undefined ? fallback : v; } catch (e) { return fallback; } };
 function campRng(seed) { // mulberry32: the same seed gives the same flight
   let a = (seed | 0) >>> 0;
@@ -143,15 +195,21 @@ function campNew(level, techs, opts) {
     level, via: opts.via || 'menu', t: 0, rng: campRng(opts.seed == null ? 1 : opts.seed), god: !!opts.god, nextId: 1, ships: [], by: {}, bullets: [], events: [],
     input: { turn: 0, thrust: 0, brake: false, fire: false, blink: false },
     techs: (techs || []).filter(t => CAMP.tech[t]),
-    earth: { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield },
+    earth: L.earth === false ? null : { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield }, caches: (L.caches || []).map(c => ({ x: c[0], y: c[1], got: false })), cachesGot: 0,
+    relic: L.relic ? { x: campPlaces(level)[L.relic.place].x, y: campPlaces(level)[L.relic.place].y, hold: 0 } : null,
     bay: { fighters: CAMP.bay.fighters, escorts: CAMP.bay.escorts }, launchQ: [], nextLaunch: 0,
     waves: L.waves.map(() => ({ started: false, at: 0 })), convoys: L.convoys.map(() => ({ started: false })), delivered: 0, lost: 0, kills: 0, launched: 0, lostShips: 0,
     orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0 }, nextMain: 0, nextPd: 0, blinkAt: -1e9, motherSpawn: 0,
     result: null, why: ''
   };
   if (campHas(C, 'bay2')) C.bay.fighters += CAMP.tech.bay2.fighters;
-  const p = CAMP.places[L.start], c = campSpawn(C, 'carrier', p.x + L.startAt[0], p.y + L.startAt[1]);
+  const p = campPlaces(level)[L.start], c = campSpawn(C, 'carrier', p.x + L.startAt[0], p.y + L.startAt[1]);
   C.carrier = c; c.rot = 0;
+  (L.towers || []).forEach(g => { // rings of towers round a place, facing outward
+    const at = campPlaces(level)[g.place];
+    for (let i = 0; i < g.n; i++) { const a = (g.phase || 0) + i / g.n * 2 * Math.PI, t = campSpawn(C, 'tower', at.x + Math.cos(a) * g.r, at.y + Math.sin(a) * g.r); t.rot = a; if (g.hp) t.hp = t.maxHp = g.hp; }
+  });
+  (L.guards || []).forEach(g => { const a = campSpawn(C, g.kind, g.at[0], g.at[1]); if (a) { a.hold = true; a.goal = 'carrier'; } });
   return C;
 }
 
@@ -168,6 +226,8 @@ function campSpawn(C, kind, x, y) {
     Object.assign(u, { team: 'earth', hp: CAMP.convoy.hp, r: 22, vmax: CAMP.convoy.speed, accel: 400, turn: 2 });
   } else if (kind === 'mother') {
     const k = CAMP.mother; Object.assign(u, { team: 'alien', hp: k.hp * CAMP.alien.hpScale, r: k.radius, vmax: k.speed, accel: 200, turn: 0.5 });
+  } else if (kind === 'tower') {
+    const k = CAMP.tower; Object.assign(u, { team: 'alien', hp: k.hp * CAMP.alien.hpScale, r: k.radius, vmax: 0, accel: 0, turn: k.turn, fixed: true });
   } else if (PIRATES[kind]) {
     const d = PIRATES[kind];
     Object.assign(u, { team: 'alien', def: d, hp: d.hp * CAMP.alien.hpScale, r: d.body[0], vmax: d.max, accel: d.speed, turn: d.turn * 60 }); // the table's turn is a Phaser step per frame at 60 a second
@@ -194,7 +254,11 @@ function campHurt(C, u, dmg, byId) {
 function campKill(C, u) {
   u.hp = 0;
   C.events.push({ type: 'boom', x: u.x, y: u.y, big: u.kind === 'carrier' || u.kind === 'mother', id: u.id, kind: u.kind });
-  if (u.team === 'alien') { C.kills++; if (u.kind === 'mother') campEnd(C, 'won', 'mother'); }
+  if (u.team === 'alien') {
+    C.kills++;
+    if (u.kind === 'mother') campEnd(C, 'won', 'mother');
+    else if (u.kind === 'tower' && CAMP.levels[C.level].win === 'towers' && !C.ships.some(s => s.kind === 'tower' && s.hp > 0)) campEnd(C, 'won', 'towers'); // the last tower of the level
+  }
   else if (u.kind === 'carrier') campEnd(C, 'lost', 'carrier');
   else if (u.kind === 'freighter') { C.lost++; campSay(C, 'camp.say.convoylost', { name: campConvoyName(u) }); }
   else { C.lostShips++; }
@@ -212,11 +276,12 @@ function campFind(C, text) {
   const cv = campConvoys(C);
   for (const u of cv) { const n = String(u.id).split('-')[1]; if (q.indexOf(n) >= 0 || q.indexOf(campConvoyName(u).toLowerCase()) >= 0) return { kind: 'convoy', id: u.id }; }
   if (/\b(convoy|convoys|freighter|freighters|cargo|supplies)\b/.test(q)) { const n = campNearest(cv, C.carrier); return n ? { kind: 'convoy', id: n.id } : null; }
-  for (const id of Object.keys(CAMP.places)) if (q.indexOf(id) >= 0 || q.indexOf(CAMP.places[id].name.toLowerCase()) >= 0) return { kind: 'place', id };
+  const pl = campPlaces(C.level);
+  for (const id of Object.keys(pl)) if (!pl[id].hidden && (q.indexOf(id) >= 0 || q.indexOf(pl[id].name.toLowerCase()) >= 0)) return { kind: 'place', id };
   if (/\bmoon\b/.test(q)) return { kind: 'place', id: 'luna' };
   return null;
 }
-const campTarget = (C, t) => !t ? null : t.kind === 'mother' ? C.ships.find(u => u.kind === 'mother' && u.hp > 0) || null : t.kind === 'carrier' ? C.carrier : t.kind === 'convoy' ? C.by[t.id] : t.kind === 'place' ? CAMP.places[t.id] : null;
+const campTarget = (C, t) => !t ? null : t.kind === 'mother' ? C.ships.find(u => u.kind === 'mother' && u.hp > 0) || null : t.kind === 'carrier' ? C.carrier : t.kind === 'convoy' ? C.by[t.id] : t.kind === 'place' ? campPlaces(C.level)[t.id] : null;
 const campNo = code => ({ ok: false, code, say: uiText('camp.no.' + code) });
 const campYes = (code, vars) => ({ ok: true, code, say: uiText('camp.say.' + code, vars) });
 
@@ -300,6 +365,8 @@ function campTick(C, dt) {
   campLaunch(C);
   C.ships.forEach(u => { if (u.hp > 0 && u.kind !== 'carrier') campAI(C, u, dt); });
   campBullets(C, dt);
+  campCaches(C);
+  campRelic(C, dt);
   campRepair(C, dt);
   C.ships = C.ships.filter(u => u.hp > 0 || (delete C.by[u.id], false)); // the dead leave the list (the scene was told by the boom event)
 }
@@ -310,7 +377,7 @@ function campSchedule(C) {
   L.convoys.forEach((cv, i) => {
     if (C.convoys[i].started || sec < cv.at) return;
     C.convoys[i].started = true;
-    const to = CAMP.places[cv.to], a = Math.atan2(to.y, to.x), f = campSpawn(C, 'freighter', Math.cos(a) * (C.earth.r + 50), Math.sin(a) * (C.earth.r + 50));
+    const to = campPlaces(C.level)[cv.to], a = Math.atan2(to.y, to.x), f = campSpawn(C, 'freighter', Math.cos(a) * (C.earth.r + 50), Math.sin(a) * (C.earth.r + 50));
     f.id = 'freighter-' + cv.id; C.by[f.id] = f; f.dest = { x: to.x, y: to.y }; f.rot = a;
     campSay(C, 'camp.say.convoy', { name: to.name });
   });
@@ -368,6 +435,26 @@ function campLaunch(C) {
   C.events.push({ type: 'launch', id: u.id, kind });
 }
 
+// resource caches (level 2): any ship of yours that comes close picks one up
+function campCaches(C) {
+  C.caches.forEach(k => {
+    if (k.got) return;
+    if (!C.ships.some(u => u.team === 'earth' && u.hp > 0 && Math.hypot(u.x - k.x, u.y - k.y) <= CAMP.cache.radius)) return;
+    k.got = true; C.cachesGot++; C.events.push({ type: 'cache', x: k.x, y: k.y });
+    campSay(C, 'camp.say.cache', { n: C.cachesGot, total: C.caches.length });
+  });
+}
+// the relic (level 2): with enough caches collected, the carrier holds within its ring, with no alien near it, until it answers; leave or let an alien close and it loses ground twice as fast
+function campRelic(C, dt) {
+  const L = CAMP.levels[C.level], r = L.relic; if (!r || !C.relic || C.carrier.hp <= 0) return;
+  const R = C.relic, ready = C.cachesGot >= r.caches, near = campDist(C.carrier, R) <= r.radius, clear = !campAliens(C).some(u => campDist(u, R) <= r.clear);
+  if (ready && near && clear) {
+    if (R.hold === 0) campSay(C, 'camp.say.relicon');
+    R.hold += dt;
+    if (R.hold >= r.hold) { R.hold = r.hold; campSay(C, 'camp.say.relicdone'); campEnd(C, 'won', 'relic'); }
+  } else if (R.hold > 0) R.hold = Math.max(0, R.hold - dt * 2);
+}
+
 // the repair field (a tech)
 function campRepair(C, dt) {
   if (!campHas(C, 'repair') || C.carrier.hp <= 0) return;
@@ -397,6 +484,7 @@ function campSeek(u, px, py, dt, face) {
   campMove(u, Math.atan2(ey, ex), face == null ? (d > 40 ? ang : u.rot) : face, dt, Math.min(1, Math.hypot(ex, ey) / 120));
 }
 function campAI(C, u, dt) {
+  if (u.kind === 'tower') return campTowerAI(C, u, dt);
   if (u.kind === 'freighter') return campConvoyAI(C, u, dt);
   if (u.kind === 'mother') return campMotherAI(C, u, dt);
   if (u.team === 'alien') return campAlienAI(C, u, dt);
@@ -409,13 +497,22 @@ function campConvoyAI(C, u, dt) {
 }
 
 // an alien: goes for its goal (Earth, or a convoy), turns on whatever hits it for a few seconds, else on the nearest ship of yours that comes close
+function campTowerAI(C, u, dt) { // a gun on a post: turns on the nearest of your ships inside its range and fires
+  const k = CAMP.tower, tgt = campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, k.range); if (!tgt) return;
+  const aim = Math.atan2(tgt.y - u.y, tgt.x - u.x); u.rot = campRot(u.rot, aim, k.turn * dt);
+  if (C.t > u.nextShot && Math.abs(campWrap(aim - u.rot)) < 0.12) { u.nextShot = C.t + campBetween(C, k.delay[0], k.delay[1]); campBullet(C, u, u.rot, k.bullet, k.damage * CAMP.alien.damageScale, 1900, 'alien', u.r); }
+}
 function campAlienAI(C, u, dt) {
   const def = u.def;
+  if (u.hold) { // a guard: it waits where it is until one of your ships comes within reach, then it is an ordinary alien
+    if (!campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, def.engage * 0.9)) { const keep = Math.pow(0.5, dt); u.vx *= keep; u.vy *= keep; u.x += u.vx * dt; u.y += u.vy * dt; return; }
+    u.hold = false;
+  }
   let tgt = null;
   if (u.hitBy && u.distractedUntil > C.t) { const h = C.by[u.hitBy]; if (h && h.hp > 0) tgt = h; }
   if (!tgt && u.goal && u.goal.indexOf('convoy:') === 0) { const f = C.by['freighter-' + u.goal.slice(7)]; if (f && f.hp > 0) tgt = f; }
   if (!tgt) { const near = campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, def.engage * 0.7); if (near) tgt = near; }
-  const isEarth = !tgt; if (isEarth) tgt = C.earth;
+  const isEarth = !tgt && !!C.earth; if (!tgt) tgt = C.earth || C.carrier; // nothing near and no Earth in this level: it comes for the carrier
   const dx = tgt.x - u.x, dy = tgt.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx), tv = isEarth ? { x: 0, y: 0 } : { x: tgt.vx || 0, y: tgt.vy || 0 };
   const m = campSteer(C, u, def, dist, target, u.vx - tv.x, u.vy - tv.y);
   campMove(u, m.ang, m.face, dt);
@@ -460,7 +557,7 @@ function campWingAI(C, u, dt) {
     if (!cv || cv.hp <= 0) { u.order = { type: 'guard', at: { kind: 'carrier' } }; return; }
     foe = campNearest(aliens, cv, 650); if (!foe) { const a = (o.slot || 0) * 2.4 + C.t / 4000; home = { x: cv.x + Math.cos(a) * k.beside, y: cv.y + Math.sin(a) * k.beside, vx: cv.vx, vy: cv.vy }; }
   } else { // guard: a point (the carrier, a place, a convoy) is circled; an alien that comes within reach of it, or of this ship, is fought
-    const at = o.at || { kind: 'carrier' }, p = at.kind === 'carrier' ? c : at.kind === 'place' ? CAMP.places[at.id] : C.by[at.id] || c;
+    const at = o.at || { kind: 'carrier' }, p = at.kind === 'carrier' ? c : at.kind === 'place' ? campPlaces(C.level)[at.id] : C.by[at.id] || c;
     foe = campNearest(aliens, p, 700) || campNearest(aliens, u, 450);
     if (!foe) { const a = (u.id.length * 1.7 + (parseInt(u.id.split('-')[1], 10) || 0) * 0.9) + C.t / 3500; home = { x: p.x + Math.cos(a) * 330, y: p.y + Math.sin(a) * 330, vx: p.vx || 0, vy: p.vy || 0 }; }
   }
@@ -488,7 +585,7 @@ function campBullets(C, dt) {
       if (u.hp <= 0) continue;
       if (campSegHit(px, py, b.x, b.y, u.x, u.y, u.r + 2)) { campHurt(C, u, b.dmg, b.from); if (!b.beam) { b.dead = true; return; } }
     }
-    if (b.team === 'alien' && campSegHit(px, py, b.x, b.y, C.earth.x, C.earth.y, C.earth.r)) { // Earth is hit
+    if (C.earth && b.team === 'alien' && campSegHit(px, py, b.x, b.y, C.earth.x, C.earth.y, C.earth.r)) { // Earth is hit (a level with no Earth has none to hit)
       b.dead = true; if (!C.god) C.earth.shield -= b.dmg * CAMP.alien.earthDamage; C.events.push({ type: 'earthhit', x: b.x, y: b.y }); // god mode (a debug key, src/campdebug.js): Earth's shield does not fall either
       if (C.earth.shield <= 0) { C.earth.shield = 0; campEnd(C, 'lost', 'earth'); }
     }
@@ -519,12 +616,25 @@ function campProgressLoad() {
 }
 function campProgressSave(P) { campTry(() => localStorage.setItem(CAMP.store, JSON.stringify({ level: P.level, techs: P.techs })), 0); }
 
+// what the level asks of you, in the words of content/text/ui.md (camp.obj.<win>): the HUD shows it, the ship computer is told it
+function campObjective(C) {
+  const L = CAMP.levels[C.level], win = L.win;
+  if (win === 'mother') return uiText('camp.obj.mother');
+  if (win === 'towers') return uiText('camp.obj.towers', { n: C.ships.filter(u => u.kind === 'tower' && u.hp > 0).length });
+  if (win === 'relic') {
+    if (C.cachesGot < L.relic.caches) return uiText('camp.obj.caches', { n: C.cachesGot, need: L.relic.caches });
+    return uiText('camp.obj.relic', { pct: Math.round(C.relic.hold / L.relic.hold * 100) });
+  }
+  return '';
+}
+
 // what the ship computer is told about a battle in progress (STATE in src/shipcomputer.js)
 function campSummary(C) {
   if (!C) return 'Campaign: not in a battle.';
   const L = CAMP.levels[C.level], c = C.carrier, m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
-  const out = campWing(C, 'fighter').length, esc = campWing(C, 'escort').length, al = campAliens(C).length;
-  return 'Campaign level ' + C.level + ', ' + L.name + '. Carrier hull ' + Math.round(c.hp) + ' of ' + Math.round(c.maxHp) + '. Earth shield ' + Math.round(C.earth.shield / C.earth.max * 100) + ' percent. In the bay: ' + C.bay.fighters + ' fighters, ' + C.bay.escorts + ' escorts. Out: '
-    + out + ' fighters, ' + esc + ' escorts. Aliens alive: ' + al + '. Convoys flying: ' + campConvoys(C).map(u => campConvoyName(u)).join(', ') + (campConvoys(C).length ? '' : 'none') + '. '
-    + (m ? 'The alien mothership is ' + Math.round(campDist(m, c) / 10) + ' km away.' : 'The mothership has not come yet.');
+  const out = campWing(C, 'fighter').length, esc = campWing(C, 'escort').length, al = campAliens(C).length, cv = campConvoys(C).map(u => campConvoyName(u));
+  return 'Campaign level ' + C.level + ', ' + L.name + '. Goal: ' + campObjective(C) + ' Carrier hull ' + Math.round(c.hp) + ' of ' + Math.round(c.maxHp) + '.'
+    + (C.earth ? ' Earth shield ' + Math.round(C.earth.shield / C.earth.max * 100) + ' percent.' : '') + ' In the bay: ' + C.bay.fighters + ' fighters, ' + C.bay.escorts + ' escorts. Out: '
+    + out + ' fighters, ' + esc + ' escorts. Aliens alive: ' + al + '.' + (L.convoys.length ? ' Convoys flying: ' + cv.join(', ') + (cv.length ? '' : 'none') + '.' : '')
+    + (L.win === 'mother' ? (m ? ' The alien mothership is ' + Math.round(campDist(m, c) / 10) + ' km away.' : ' The mothership has not come yet.') : '');
 }

@@ -137,7 +137,6 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.ui.pick | Choose one salvaged technology:  1  2  3 |
 | camp.ui.next | Enter  continue |
 | camp.ui.retry | Enter  try again     T  title |
-| camp.ui.soon | The next level is not built yet. Your pick is saved. T  title |
 | camp.ui.paused | PAUSED     Esc  resume     T  title |
 | camp.ui.hull | CARRIER |
 | camp.ui.earth | EARTH |
@@ -157,3 +156,24 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.tech.bay2.text | Four more fighters in the bay. |
 | camp.tech.repair.name | Repair field |
 | camp.tech.repair.text | The carrier and the ships beside it mend as they fly. |
+| camp.l2.before.1 | The warp drive works. The nearest star is Alpha Centauri, four light years out. |
+| camp.l2.before.2 | Something old waits on Proxima b. Gather what we need, and find it before they do. |
+| camp.l2.after.1 | It was a machine left by a race older than the aliens. |
+| camp.l2.after.2 | It shows us where the aliens live. Choose what to build from it. |
+| camp.l3.before.1 | The way to their home world is open. This is the last battle, pilot. |
+| camp.l3.before.2 | Break the defence towers round their world. |
+| camp.l3.after.1 | Their defences are down. Earth is safe. |
+| camp.l3.after.2 | The first step is done. The war is not over. |
+| camp.say.l2wave1 | The aliens followed us through the warp, pilot. |
+| camp.say.l2wave2 | A second group, coming in from the far side. |
+| camp.say.l3wave1 | Defenders are launching from the planet. |
+| camp.say.l3wave2 | More defenders, from the north. |
+| camp.say.l3wave3 | Their last reserves are coming. |
+| camp.say.cache | Resources collected: {n} of {total}. |
+| camp.say.relicon | The relic is answering. Hold the ring. |
+| camp.say.relicdone | The relic is ours. |
+| camp.obj.mother | Destroy the alien mothership. |
+| camp.obj.towers | Break the defence towers: {n} left. |
+| camp.obj.caches | Gather resources: {n} of {need}. |
+| camp.obj.relic | Hold the ring at the relic: {pct}%. |
+| camp.ui.end | THE FIRST CAMPAIGN IS WON     Enter  title |
