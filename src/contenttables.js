@@ -393,7 +393,7 @@ const UI_TEXT = {
   'camp.no.range': 'The mothership is out of missile range, pilot.',
   'camp.help.goal': 'Your goal: {goal}',
   'camp.help.goalbay': 'Your goal: {goal} Press 1, then 1, to launch the wing.',
-  'camp.help.keys': 'W A S D fly, Space fires. 1 Fleet panel, 2 Ship panel: a digit picks a row.',
+  'camp.help.keys': 'W A S D fly, Space fires. 1 Fleet, 2 Ship panels.',
   'camp.help.map': 'Tab opens the level map. Tab or Esc closes it.',
   'camp.help.status': 'Hull {hull} of {max}. Earth {earth} percent. {out} out, {bay} in bay.',
   'camp.help.status2': 'Hull {hull} of {max}. {out} out, {bay} in bay.',
