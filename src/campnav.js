@@ -71,8 +71,9 @@ const campNavEta = (C, dist, fast) => Math.round(dist / (CAMP.carrier.speed * ca
 function campNavGo(C, row, fast) {
   if (!C || !row || C.result) return null;
   fast = !!fast && !campNavOut(C); // a burn with a ship of the wing out cannot happen from anywhere: the small ships could not keep up
-  const id = row.of || row.id;
-  C.nav = { on: true, id, of: id, kind: row.kind, name: row.name, ref: row.ref || '', moving: !!row.moving, x: row.x, y: row.y, since: C.t, fast: !!fast, burn: campNavBurn(Math.hypot(row.x - C.carrier.x, row.y - C.carrier.y), fast) }; // fast: the carrier burns at N.burn times its speed while this runs (campCarrier, campNavDrive); decided once, by the distance at the start
+  const id = row.of || row.id, burn = campNavBurn(Math.hypot(row.x - C.carrier.x, row.y - C.carrier.y), fast);
+  if (C.nav && C.nav.on && C.nav.id === id) Object.assign(C.nav, { fast: !!fast, burn }); // the same place again, mid-flight (Fly then Fast, or back): the trip is kept and only the speed changes (Troy, 20 Nov 2026)
+  else C.nav = { on: true, id, of: id, kind: row.kind, name: row.name, ref: row.ref || '', moving: !!row.moving, x: row.x, y: row.y, since: C.t, fast: !!fast, burn }; // fast: the carrier burn
   C.events.push({ type: 'nav', key: fast ? 'camp.nav.gofast' : 'camp.nav.go', vars: { name: row.name } });
   return C.nav;
 }
@@ -92,9 +93,10 @@ function campNavDrive(C, dt) {
   const t = campNavTarget(C, N); if (!t) { campNavClear(C, N.kind === 'cache' ? 'arrived' : 'lost'); return; } // a cache that has gone was gathered: that is arriving
   N.x = t.x; N.y = t.y;
   const K = CAMP.nav, dx = t.x - c.x, dy = t.y - c.y, dist = Math.hypot(dx, dy), left = Math.max(0, dist - campNavStop(N.kind, t)), speed = Math.hypot(c.vx, c.vy);
-  const diff = campWrap(Math.atan2(dy, dx) - c.rot), limit = Math.min(CAMP.carrier.speed * (N.fast ? (N.burn || K.fast) : 1), K.floor + K.brake * left), inp = C.input;
-  inp.turn = Math.max(-1, Math.min(1, diff * K.steer));
-  inp.thrust = Math.abs(diff) < K.align && speed < limit ? 1 : 0;
+  const hold = !!(C.navWait && C.navWait.id === N.id); // a burn to this place is waiting for the wing: the trip is kept, but the carrier stops, because a ship cannot land on a carrier that is flying away (they hover just behind it)
+  const diff = campWrap(Math.atan2(dy, dx) - c.rot), limit = hold ? 0 : Math.min(CAMP.carrier.speed * (N.fast ? (N.burn || K.fast) : 1), K.floor + K.brake * left), inp = C.input;
+  inp.turn = hold ? 0 : Math.max(-1, Math.min(1, diff * K.steer));
+  inp.thrust = !hold && Math.abs(diff) < K.align && speed < limit ? 1 : 0;
   inp.brake = speed > limit + 5;
   if (!N.moving && left <= K.arrive && speed <= K.drop) campNavClear(C, 'arrived');
 }
@@ -173,7 +175,7 @@ function campNavShipName(u) { const p = String(u.id).split('-'); return p[0] + '
 // the trip: regular always; fast only with the wing aboard. how: 'key', 'click' or 'strip' (the play log's). -> { ok, say, waiting }
 function campNavFly(C, row, fast, how) {
   if (!C || !row || C.result) return { ok: false, say: uiText('camp.no.over') };
-  if (!fast) { campNavClear(C, ''); campNavGo(C, row, false); return { ok: true, say: '' }; }
+  if (!fast) { C.navWait = null; C.fastAsk = null; campNavGo(C, row, false); return { ok: true, say: '' }; } // regular: a trip to a new place, or the speed of this one back to regular
   const out = campNavOut(C);
   if (!out) { C.navWait = null; C.fastAsk = null; campNavGo(C, row, true); return { ok: true, say: '' }; }
   const asked = C.fastAsk && C.t - C.fastAsk.at <= CAMP.nav.askFor * 1000;
@@ -182,6 +184,7 @@ function campNavFly(C, row, fast, how) {
   const r = campOrder(C, 'recall', '', how || 'key'); // the same order as the fifth of the FLEET panel: the wing flies home and lands
   if (!r.ok) return r;
   const id = row.of || row.id;
+  if (C.nav && C.nav.id !== id) campNavClear(C, ''); // a trip to somewhere else is given up; a regular trip to this place is kept, but the carrier stops while the wing comes home (campNavDrive), and the burn takes it over
   C.fastAsk = null; C.navWait = { id, row: Object.assign({}, row), since: C.t, until: C.t + CAMP.nav.recallWait * 1000, n: out, shown: out };
   C.events.push({ type: 'nav', key: 'camp.nav.recalling', vars: { n: out } });
   return { ok: true, say: uiText('camp.nav.recalling', { n: out }), waiting: true };

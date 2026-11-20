@@ -383,7 +383,7 @@ class Campaign extends Phaser.Scene {
     C.rocks.forEach(o => dot(o, 0x8c8c8c, 1)); C.pickups.forEach(o => dot(o, 0xffd37a, 1)); C.caches.forEach(k => { if (!k.got) dot(k, 0xffd37a, 2); }); if (C.relic) dot(C.relic, 0x7fe9ff, 3);
     C.ships.forEach(u => { if (u.hp <= 0) return; dot(u, campDotColor(u), u.kind === 'mother' ? 4 : u.kind === 'carrier' ? 3 : 2); }); // campDotColor (src/campmap.js): the map's colours too
     // the autopilot's readout under the goal line, and an arrow at the edge of the screen pointing at the goal with its distance (src/campnav.js; docs/night/graphics.md finding 3)
-    if (this.hud.nav) this.hud.nav.setText(C.nav ? uiText('camp.nav.hud', { name: C.nav.name, km: campNavKm(Math.hypot(C.nav.x - c.x, C.nav.y - c.y)) }) : C.navWait ? uiText('camp.nav.recalling', { n: C.navWait.n }) : '');
+    if (this.hud.nav) this.hud.nav.setText(C.navWait ? uiText('camp.nav.recalling', { n: C.navWait.n }) : C.nav ? uiText('camp.nav.hud', { name: C.nav.name, km: campNavKm(Math.hypot(C.nav.x - c.x, C.nav.y - c.y)) }) : '');
     if (this.hud.arrow) {
       const cam = this.cameras && this.cameras.main, ar = cam && typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: cam.scrollX, y: cam.scrollY }, W, H) : null; // a stand-in scene in a test has no camera
       if (!ar) this.hud.arrow.setVisible(false);

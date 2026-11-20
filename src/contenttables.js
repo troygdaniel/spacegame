@@ -558,6 +558,7 @@ const UI_TEXT = {
   'camp.nav.burnoff': 'Wing launched: burn off.',
   'camp.map.fastout': 'FAST   Shift+Enter    wing is out',
   'camp.map.fastask': 'FAST   press again: recall, then burn',
+  'camp.map.on': 'ON',
   'camp.map.fly': 'FLY    Enter          {t}',
   'camp.map.fast': 'FAST   Shift+Enter    {t}',
   'camp.map.set': 'SET: {name}',

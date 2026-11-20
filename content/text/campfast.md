@@ -13,3 +13,4 @@ The words of the Campaign's Fast rule (card space-game-campaign-fast-board): a b
 | camp.nav.burnoff | Wing launched: burn off. |
 | camp.map.fastout | FAST   Shift+Enter    wing is out |
 | camp.map.fastask | FAST   press again: recall, then burn |
+| camp.map.on | ON |

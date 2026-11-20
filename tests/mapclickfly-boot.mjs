@@ -59,6 +59,15 @@ async function campaign() {
     const eros = await at('place:pallas'); await clickAt(t, eros.x, eros.y); await t.run(200);
     await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', shiftKey: false, repeat: false }); return 1; })()`); await t.run(200);
     check('Enter on the set place flies there at regular speed', await j(`!!${SC}.camp.nav && ${SC}.camp.nav.fast === false`));
+    // Troy, 20 Nov 2026: mid-flight the two buttons and Enter / Shift+Enter stay live; the active one is marked; the target is kept and only the speed changes
+    await t.run(300);
+    check('mid-flight the two buttons are still on the map, with Fly marked ON (regular speed)', (await j(`${SC}.mp.btnFly.visible && ${SC}.mp.btnFast.visible && /ON$/.test(${SC}.mp.btnFly.text) && !/ON$/.test(${SC}.mp.btnFast.text)`)) === true, JSON.stringify(await j(`[${SC}.mp.btnFly.text, ${SC}.mp.btnFast.text, ${SC}.mp.setId]`)));
+    await t.ev(`(() => { window.__trip = ${SC}.camp.nav; return 1; })()`);
+    await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', shiftKey: true, repeat: false }); return 1; })()`); await t.run(300);
+    check('Shift+Enter on the same place: the same trip, now a burn, and Fast is marked ON', (await j(`${SC}.camp.nav === window.__trip && ${SC}.camp.nav.fast === true && /ON$/.test(${SC}.mp.btnFast.text) && !/ON$/.test(${SC}.mp.btnFly.text)`)) === true, JSON.stringify(await j(`[${SC}.mp.btnFly.text, ${SC}.mp.btnFast.text]`)));
+    const fb2 = await j(`({ x: ${SC}.mp.btnFly.x + 12, y: ${SC}.mp.btnFly.y + 8 })`); await clickAt(t, fb2.x, fb2.y); await t.run(300);
+    check('a click on Fly: back to regular speed, the same trip, Fly marked ON', (await j(`${SC}.camp.nav === window.__trip && ${SC}.camp.nav.fast === false && /ON$/.test(${SC}.mp.btnFly.text)`)) === true);
+    await snap(t, 'campaign-switch');
     // card space-game-campaign-fast-board: Fast needs the wing aboard. Launch the wing, then ask for Fast on the map twice: refused, then recalled and burning
     await t.ev(`(() => { campNavClear(${SC}.camp, 'clear'); ${SC}.onKey({ code: 'Digit1', repeat: false }); ${SC}.onKey({ code: 'Digit1', repeat: false }); return 1; })()`); await t.run(9000);
     check('the wing is out (eight ships)', (await j(`campNavOut(${SC}.camp)`)) === 8);
@@ -102,6 +111,13 @@ async function longhaul() {
     const fl = await j(`({ open: game.scene.isActive('Overlay'), on: ${SP}.ap.on, local: ${SP}.ap.local, stage: ${SP}.ap.stage })`);
     check('Enter closes the map and the autopilot flies there at regular speed (no cruise: ap.local)', !fl.open && fl.on && fl.local === true, JSON.stringify(fl));
     await t.run(300);
+    // Troy, 20 Nov 2026: reopen the map mid-flight: the destination is kept, the buttons are there with the active one marked, and Shift+Enter changes the speed of the same trip
+    await t.ev(`(() => { ${SP}.scene.pause(); game.scene.run('Overlay', { from: 'Space', mode: 'map' }); return 1; })()`); await t.run(300);
+    const mid = await j(`({ tgt: ${SP}.cr.target && ${SP}.cr.target.id, fly: ${OV}.btnFly.visible, fast: ${OV}.btnFast.visible, ft: ${OV}.btnFly.text, st: ${OV}.btnFast.text })`);
+    check('mid-flight the map shows the same destination, the two buttons, and Fly marked ON', mid.tgt === mark.id && mid.fly && mid.fast && /ON$/.test(mid.ft) && !/ON$/.test(mid.st), JSON.stringify(mid));
+    await enterKey(t, 8); await settle(t, `${SP}.ap.on && ${SP}.ap.local === false`, 60); await t.run(200); // Shift+Enter on the reopened map: the same destination, now the autopilot as it always was (cruise for the middle of a long leg)
+    const sw = await j(`({ open: game.scene.isActive('Overlay'), on: ${SP}.ap.on || ${SP}.cruising, local: ${SP}.ap.local, tgt: ${SP}.cr.target && ${SP}.cr.target.id })`);
+    check('Shift+Enter on the reopened map switches the same trip to Fast: same destination, not regular speed any more', !sw.open && sw.on && sw.local === false && sw.tgt === mark.id, JSON.stringify(sw));
     await snap(t, 'longhaul-flying');
     await t.ev(`(() => { ${SP}.k.W.isDown = true; return 1; })()`); await t.run(600); await t.ev(`(() => { ${SP}.k.W.isDown = false; return 1; })()`);
     check('a steering key takes the wheel back', await j(`${SP}.ap.on === false`), JSON.stringify(await j(`({ on: ${SP}.ap.on, stage: ${SP}.ap.stage, leaving: ${SP}.leaving })`)));

@@ -150,11 +150,14 @@ function campMapPaint(s, time) {
   if (N) { route({ x: N.x, y: N.y }, gc.select, 0.85); mp.dest.setText(uiText('camp.map.dest', { name: N.name }) + '  ' + campNavKm(Math.hypot(N.x - C.carrier.x, N.y - C.carrier.y)) + ' km'); } else mp.dest.setText('');
   const chosen = mp.rows[sel]; if (chosen) { const q = pin(X(chosen.x), Y(chosen.y)); g.lineStyle(2, gc.select, 1).strokeRect(q.x - 9, q.y - 9, 18, 18); }
   // ---- set by a click (card space-game-map-click-fly): the place has a ring and a line from the carrier, its distance, and two small buttons beside it: Fly (regular speed) and Fast (a burn) ----
+  if (mp.flewId && mp.setId === mp.flewId && !(N && N.on) && !C.navWait) { mp.setId = ''; mp.flewId = ''; } // the trip is over (arrived, cleared, a steering key): the place is no longer set
   const setRow = mp.setId ? mp.rows.find(r => r.id === mp.setId) : null; if (mp.setId && !setRow) mp.setId = '';
-  if (setRow && !(N && N.on && N.id === (setRow.of || setRow.id))) {
+  if (setRow) { // the buttons stay live for the whole flight: the active one is marked, the target is kept and a press only changes the speed (Troy, 20 Nov 2026; card space-game-campaign-fast-board)
     const q = route(setRow, gc.select, 0.7), d = Math.hypot(setRow.x - C.carrier.x, setRow.y - C.carrier.y), eta = n => typeof cruiseEtaText === 'function' ? cruiseEtaText(n) : n + ' s';
     g.lineStyle(2, 0xffffff, 0.9).strokeCircle(q.x, q.y, 13 + 2 * pulse);
-    mp.btnFly.setText(uiText('camp.map.fly', { t: eta(campNavEta(C, d)) })).setVisible(true); mp.btnFast.setText(campNavOut(C) ? uiText(C.fastAsk && C.t - C.fastAsk.at <= CAMP.nav.askFor * 1000 ? 'camp.map.fastask' : 'camp.map.fastout', { n: campNavOut(C) }) : uiText('camp.map.fast', { t: eta(campNavEta(C, d, true)) })).setAlpha(campNavOut(C) ? 0.6 : 1).setVisible(true);
+    const here = N && N.on && N.id === (setRow.of || setRow.id), waiting = !!(C.navWait && C.navWait.id === (setRow.of || setRow.id)), on = uiText('camp.map.on'), flyOn = here && !N.fast, fastOn = here && N.fast; // which one is going
+    mp.btnFly.setText(uiText('camp.map.fly', { t: eta(campNavEta(C, d)) }) + (flyOn ? '  ' + on : '')).setBackgroundColor(flyOn ? '#1f7f95' : '#0a3a4a').setVisible(true);
+    mp.btnFast.setText(waiting ? uiText('camp.nav.recalling', { n: C.navWait.n }) : campNavOut(C) ? uiText(C.fastAsk && C.t - C.fastAsk.at <= CAMP.nav.askFor * 1000 ? 'camp.map.fastask' : 'camp.map.fastout', { n: campNavOut(C) }) : uiText('camp.map.fast', { t: eta(campNavEta(C, d, true)) }) + (fastOn ? '  ' + on : '')).setBackgroundColor(fastOn ? '#1f7f95' : '#0a3a4a').setAlpha(campNavOut(C) ? 0.6 : 1).setVisible(true);
     const w = Math.max(mp.btnFly.width, mp.btnFast.width), h = mp.btnFly.height, right = q.x + 22 + w <= F.x + F.w - 4, bx = right ? q.x + 22 : Math.max(F.x + 4, q.x - 22 - w), by = Math.max(F.y + 4, Math.min(F.y + F.h - 2 * h - 8, q.y - h - 2)); // beside the mark, on the side with room, inside the frame
     mp.btnFly.setPosition(bx, by); mp.btnFast.setPosition(bx, by + h + 4);
     if (!N) mp.dest.setText(uiText('camp.map.set', { name: setRow.name }) + '  ' + campNavKm(d) + ' km');
@@ -184,7 +187,7 @@ function campMapFly(s, row, fast) {
   const t = campNavTarget(C, row) || row, d = Math.hypot(t.x - C.carrier.x, t.y - C.carrier.y);
   if (!row.moving && d - campNavStop(row.kind, t) <= CAMP.nav.arrive) { toast(s, uiText('camp.nav.there', { name: row.name }), '#ffd37a'); return false; }
   const r = campNavFly(C, row, fast, 'click'); // regular speed, or Fast with the wing aboard; with a ship out the first press is refused (an event says so) and the second recalls the wing and burns (src/campnav.js)
-  if (s.mp) { s.mp.dirty = true; if (r.ok) s.mp.setId = ''; } return !!r.ok;
+  if (s.mp) { s.mp.dirty = true; if (r.ok) { s.mp.setId = s.mp.flewId = row.id; } } return !!r.ok; // the place stays set, with its buttons, while the trip lasts
 }
 // a key while the map is open: W S and the arrows choose (flying keys are the list's while it is open, as in the Long Haul nav panel), A D and the side arrows go to the next or the last group,
 // Enter flies there, X clears the destination. true when the key was the map's.
@@ -201,7 +204,7 @@ function campMapKey(s, code, shift) {
   }
   if (code === 'Enter' || code === 'NumpadEnter') { if (rows[at]) campMapFly(s, rows[at], !!shift); return true; } // Enter: regular speed; Shift+Enter: fast
   if (code === 'KeyZ') return campMapWhole(s);
-  if (code === 'KeyX') { if (s.camp && s.camp.nav) { campNavClear(s.camp, 'clear'); mp.dirty = true; } return true; }
+  if (code === 'KeyX') { if (s.camp && (s.camp.nav || s.camp.navWait)) { campNavClear(s.camp, 'clear'); mp.dirty = true; } if (mp.flewId && mp.setId === mp.flewId) { mp.setId = ''; mp.flewId = ''; } return true; }
   return false;
 }
 // a click: on one of the two buttons by a place you have set (Fly, Fast), on a line of the list, or on a mark of the map. A place is SET by the first click (ring, line, distance, the two buttons)
