@@ -19,7 +19,7 @@ const CAMP_LOOK = {
 const CAMP_REACH = { w: 2, alpha: 0.4, color: 0xffd37a }; // the ring that shows how far the point guns reach (CAMP.carrier.pdRange): its line width, how solid it is, its colour (it was 1 px at 0.16, too faint to find: 6-GEN and 8-GEN)
 const CAMP_MOUNT = { base: 3.2, dot: 1.7, hot: 2.8, aim: [7, 11], width: [1.5, 2.2], flash: 10, flashScale: 0.9, stub: [6.5, 0x9aa0a8] }; // a turret mount, drawn on the hull (it is a third smaller since the carrier is): its dark base, its amber dot (and the dot while it fires), the length of the barrel at rest and on a shot, the barrel's width at rest and on a shot, and how far in front of the mount the muzzle flash is and how big (it was 1.3 on the 140 px carrier and hid the bow of the 98 px one), and the steel barrel a mount with nothing to shoot at points along the carrier's heading (its length and colour: without it a mount was a lit dot and read as a window, the blind critic)
 const CAMP_BLIP = { gap: 70, flash: 90 }; // a turret's shot: at most one sound (sfx('turret', its number), src/audio.js) in gap ms of the battle's clock; the muzzle flash lasts flash ms
-const CAMP_SND = { blast: 45, hull: 90, shield: 90, earth: 250 }; // the least gap, in ms of the battle's clock, between two sounds of one kind (a kill, a hull hit, a shield hit, a shot on Earth), so a busy fight does not pile them up
+const CAMP_SND = { blast: 45, hull: 90, shield: 90, earth: 250, wing: 55, far: 1600, min: 0.1 }; // the least gap, in ms of the battle's clock, between two sounds of one kind (a kill, a hull hit, a shield hit, a shot on Earth), so a busy fight does not pile them up
 const CAMP_ADDR = { used: false }; // the address (?campaign=N, src/title.js) opens the Campaign once per page load: coming back to the title from it must not open it again
 const CAMP_RADAR = { x: W - 118, y: 118, r: 98, range: 6000, fill: 0.9, rim: [2, 0.8], blip: 1 }; // the radar's centre and radius on the screen, and the px of space it shows from the carrier to its edge
 
@@ -200,10 +200,13 @@ class Campaign extends Phaser.Scene {
     this.tweens.add({ targets: f, alpha: 0, scale: CAMP_MOUNT.flashScale * 0.4, duration: B.flash, onComplete: () => f.destroy() });
     if (!(C.t - this.blipAt < B.gap) && !campHas(C, 'beam')) { this.blipAt = C.t; sfx('turret', e.i); } // with the Beam turrets the hum is the sound (src/audio.js beamHum), not a pew a shot
   }
-  battleSound(kind, name) { // one of the battle's sounds, no more often than CAMP_SND[kind] ms of the battle's clock
+  wingShot(e) { // a fighter's or an escort's shot: a quieter, farther pew, softer the farther the ship is from the carrier (CAMP_SND.far px and it is gone), at most one in CAMP_SND.wing ms
+    const c = this.camp.carrier, near = 1 - Math.hypot(e.x - c.x, e.y - c.y) / CAMP_SND.far; if (near >= CAMP_SND.min) this.battleSound('wing', 'wingShot', near);
+  }
+  battleSound(kind, name, arg) { // one of the battle's sounds, no more often than CAMP_SND[kind] ms of the battle's clock
     if (!Object.prototype.hasOwnProperty.call(this, 'sndAt')) this.sndAt = {};
     if (this.camp.t - (this.sndAt[kind] === undefined ? -1e9 : this.sndAt[kind]) < CAMP_SND[kind]) return;
-    this.sndAt[kind] = this.camp.t; sfx(name);
+    this.sndAt[kind] = this.camp.t; sfx(name, arg);
   }
   fireMissile() { const r = campOrder(this.camp, 'missiles', '', 'key'); toast(this, r.say, r.ok ? '#9fe9ff' : '#ffb454'); }
 
@@ -244,6 +247,7 @@ class Campaign extends Phaser.Scene {
     chatterHear(this, e); // the wing's radio hears every sim event (src/campchatter.js)
     if (e.type === 'say') { const text = uiText(e.key, e.vars); toast(this, text, '#9fe9ff'); this.say([text]); }
     else if (e.type === 'nav') { toast(this, uiText(e.key, e.vars), '#7fe9ff'); if (e.key === 'camp.nav.go' || e.key === 'camp.nav.arrived') beep(e.key === 'camp.nav.go' ? 520 : 660, 0.07, 'triangle', 0.04, 160); } // the autopilot's own lines (src/campnav.js)
+    else if (e.type === 'wingshot') this.wingShot(e);
     else if (e.type === 'turret') { this.turretFlash(e); if (e.tx !== undefined) this.beam(e, 120); } // a turret shot at an alien is the same laser: a beam flash
     else if (e.type === 'laser') this.beam(e, e.src === 'turret' ? 220 : 90);
     else if (e.type === 'rockbreak') { this.boom.explode(16, e.x, e.y); beep(520, 0.09, 'triangle', 0.04, 260); }
