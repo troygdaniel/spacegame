@@ -333,6 +333,15 @@ console.log('I. level 2 (Alpha Centauri) and level 3 (the home world)');
   g.run('go = __go0; toast = __toast0');
 }
 
+// ---------- J. the sizes ----------
+console.log('J. the carrier and the ships it launches: 35 percent smaller');
+{
+  check('drawn 35 percent smaller: the carrier 1.56 (was 2.4), a fighter 0.52 (was 0.8), an escort 0.72 (was 1.1), in the one look table of the scene', J('CAMP_LOOK.carrier.scale') === 1.56 && J('CAMP_LOOK.fighter.scale') === 0.52 && J('CAMP_LOOK.escort.scale') === 0.72 && [[1.56, 2.4], [0.52, 0.8], [0.72, 1.1]].every(([n, o]) => Math.abs(n / o - 0.65) < 0.01));
+  g.run('__new2(1, [], 1); campOrder(C, "launch"); __run(6)');
+  check('their hit circles match: the carrier 36 px (was 56), a fighter 8 (was 12), an escort 10 (was 16); they are table values (CAMP), not numbers in the code', J('C.carrier.r') === 36 && J('CAMP.carrier.radius') === 36 && J(`campWing(C, 'fighter').every(u => u.r === 8)`) && J(`campWing(C, 'escort').every(u => u.r === 10)`) && J('CAMP.fighter.radius') === 8 && J('CAMP.escort.radius') === 10 && !/r: kind === 'fighter' \? 12 : 16/.test(src('src/campaign.js')));
+  check('nothing else changed: the aliens, the mothership, the towers and the freighter keep their size', J(`PIRATES.raider.body[0]`) === 10 && J('CAMP.mother.radius') === 90 && J('CAMP.tower.radius') === 26 && J(`CAMP_LOOK.raider.scale + CAMP_LOOK.drone.scale + CAMP_LOOK.gunship.scale + CAMP_LOOK.freighter.scale`) === 4 && J('CAMP_LOOK.mother.scale') === 2.6 && J('CAMP_LOOK.tower.scale') === 1.6);
+}
+
 // ---------- F. the save, and Long Haul untouched ----------
 console.log('F. the save, and Long Haul untouched');
 {
