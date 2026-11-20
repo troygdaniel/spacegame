@@ -407,6 +407,7 @@ const UI_TEXT = {
   'camp.say.relicon': 'The relic is answering. Hold the ring.',
   'camp.say.relicdone': 'The relic is ours.',
   'camp.obj.mother': 'Destroy the alien mothership.',
+  'camp.obj.motherwait': 'Hold off the waves; the mothership comes last.',
   'camp.obj.towers': 'Break the defence towers: {n} left.',
   'camp.obj.caches': 'Gather resources: {n} of {need}.',
   'camp.obj.relic': 'Hold the ring at the relic: {pct}%.',

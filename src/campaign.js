@@ -703,7 +703,7 @@ function campProgressSave(P) { campTry(() => localStorage.setItem(CAMP.store, JS
 // what the level asks of you, in the words of content/text/ui.md (camp.obj.<win>): the HUD shows it, the ship computer is told it
 function campObjective(C) {
   const L = CAMP.levels[C.level], win = L.win;
-  if (win === 'mother') return uiText('camp.obj.mother');
+  if (win === 'mother') return uiText(C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'camp.obj.mother' : 'camp.obj.motherwait'); // the mothership comes with the last wave: until then the goal is to hold
   if (win === 'towers') return uiText('camp.obj.towers', { n: C.ships.filter(u => u.kind === 'tower' && u.hp > 0).length });
   if (win === 'relic') {
     if (C.cachesGot < L.relic.caches) return uiText('camp.obj.caches', { n: C.cachesGot, need: L.relic.caches });
