@@ -2,7 +2,7 @@
 // The whole mode in plain numbers, no Phaser: the tuning table, the ships, the waves, the five orders, win and lose, the tech pick and its save.
 // src/campaignscene.js reads the keys, calls campStep(C, seconds) and draws what C says; tests/campaign.mjs flies whole battles of it in Node.
 //   campNew(level, techs, opts)      a fresh game of one level: C. opts.seed makes the alien flying repeat exactly (tests); opts.god: the carrier cannot die;
-//                                    opts.via: how the level was started ('menu', 'address', 'next', 'retry', 'skip'): kept on C, and read by the play log
+//                                    opts.via: how the level was started ('menu', 'address', 'next', 'retry', 'skip', 'hub': Launch in the ready room, src/camphubscene.js): kept on C, and read by the play log
 //   campStep(C, seconds)             the game moves on (cut into CAMP.step pieces); C.events gets what the scene should show, and the scene empties it
 //   campOrder(C, name, arg, how)     one of the five orders: launch, attack, escort, guard, recall -> { ok, code, say }; how: 'key', 'strip', 'voice' or 'click' (the play log's)
 //   campCheck(C, name, arg)          the same answer and nothing done (the ship computer checks, announces, then orders)

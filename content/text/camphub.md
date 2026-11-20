@@ -53,7 +53,7 @@ The words of the Campaign's ready room, the hub between missions (card space-gam
 | camp.hub.nothing | Nothing to give back. |
 | camp.hub.rank.head | RANK |
 | camp.hub.rank.name | Rank: {name}  ({n} of {of}) |
-| camp.hub.rank.next | Next rank {nextName} at {next} points |
+| camp.hub.rank.next | Next rank {to} at {next} points |
 | camp.hub.rank.top | The highest rank. |
 | camp.hub.rank.none | No rank yet. Fly a mission. |
 | camp.hub.rank.points | Score so far: {points} points |
@@ -64,3 +64,4 @@ The words of the Campaign's ready room, the hub between missions (card space-gam
 | camp.hub.launch.level | Level {n} begins with this mission: {name}. |
 | camp.hub.launch.pad | The cruiser stands ready on the pad. |
 | camp.hub.pilot | YOU |
+| camp.hub.cruiser | THE CRUISER |

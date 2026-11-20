@@ -23,8 +23,9 @@ const CAMP_SND = { blast: 45, hull: 90, shield: 90, earth: 250 }; // the least g
 const CAMP_ADDR = { used: false }; // the address (?campaign=N, src/title.js) opens the Campaign once per page load: coming back to the title from it must not open it again
 const CAMP_RADAR = { x: W - 118, y: 118, r: 98, range: 6000, fill: 0.9, rim: [2, 0.8], blip: 1 }; // the radar's centre and radius on the screen, and the px of space it shows from the carrier to its edge
 
-function campaignStart(s, level) { // the title's K: the level reached (or the highest built one)
-  let n = level || campProgressLoad().level; while (n > 1 && !CAMP.levels[n]) n--;
+function campaignStart(s, level) { // the title's K: the ready room (src/camphubscene.js) of the mission the save says is next; a level asked for by number goes straight to that level, as the tune kit does
+  if (!level) { go(s, 'CampHub'); return; }
+  let n = level; while (n > 1 && !CAMP.levels[n]) n--;
   go(s, 'Campaign', { level: n });
 }
 
@@ -128,9 +129,10 @@ class Campaign extends Phaser.Scene {
     const r = campMissionDone(this.P, this.level, this.mi, C.score); this.mdone = r.levelDone; this.P.ore = Math.floor(C.ore); campProgressSave(this.P);
     this.showDebrief(C.score);
   }
-  nextMission() { go(this, 'Campaign', { level: this.level, mission: this.mi + 1, via: 'next' }); } // the next mission of the level (no warp: only the level's start warps)
+  nextMission() { go(this, 'CampHub'); } // after a debrief: the ready room (src/camphubscene.js), where the next mission's board, briefing and refit are and Launch flies it (no warp: only a level's first mission warps)
+  afterIntro() { if (this.via === 'hub') { this.hideCard(); this.mode = 'play'; } else this.showBrief(); } // a mission launched from the ready room was briefed there: it goes straight to the flight
   showIntro() {
-    if (this.mi > 0) { this.showBrief(); return; } // a later mission of the level: straight to its briefing
+    if (this.mi > 0) { this.afterIntro(); return; } // a later mission of the level: straight to its briefing (read in the ready room already, when it was launched from there)
     this.mode = 'intro'; const lines = campStory(this.level, 'before');
     this.showCard(uiText('camp.ui.level', { n: this.level, name: CAMP.levels[this.level].name }), lines, uiText('camp.ui.begin'));
     this.say(lines);
@@ -171,7 +173,7 @@ class Campaign extends Phaser.Scene {
     this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) { this.P.techs = []; this.P.ore = 0; this.P.bonus = { fighters: 0, escorts: 0 }; }
     else { this.P.ore = ore != null ? ore : Math.floor(this.camp.ore); if (!CAMP.levels[this.level].refit) this.P.bonus = { fighters: 0, escorts: 0 }; } // the extras of a refit are for the level after it; a level that had none carries only ore
     campProgressSave(this.P);
-    if (!last) { go(this, 'Campaign', { level: this.level + 1, via: 'next' }); return; }
+    if (!last) { go(this, 'CampHub'); return; } // the next level begins in its ready room: Launch flies its first mission (and the warp, if it has one)
     this.mode = 'end'; this.showCard(uiText('camp.ui.title'), [], uiText('camp.ui.end'), 200);
   }
 
@@ -179,7 +181,7 @@ class Campaign extends Phaser.Scene {
   onKey(e) {
     if (e.repeat || this.leaving) return;
     const c = e.code, C = this.camp;
-    if (this.mode === 'intro') { if (c === 'Enter') { this.hideCard(); this.showBrief(); } return; }
+    if (this.mode === 'intro') { if (c === 'Enter') { this.hideCard(); this.afterIntro(); } return; }
     if (this.mode === 'brief') { if (c === 'Enter') { this.hideCard(); this.mode = 'play'; } return; }
     if (this.mode === 'debrief') { if (c === 'Enter') { this.hideCard(); if (this.mdone) this.showWon(); else this.nextMission(); } return; }
     if (this.mode === 'won') { if (c === 'Enter') { if (CAMP.levels[this.level].refit) this.showRefit(); else if (campTechChoices(this.level).length) this.showPick(); else this.next(); } return; }

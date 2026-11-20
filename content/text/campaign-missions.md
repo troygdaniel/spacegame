@@ -39,7 +39,7 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.ui.debrief | MISSION COMPLETE: {title} |
 | camp.ui.score | SCORE {score} |
 | camp.ui.debriefstats | Time {time}   Hull {hull}   Ships lost {lost} |
-| camp.ui.debriefnext | Enter  next mission |
+| camp.ui.debriefnext | Enter  ready room |
 | camp.ui.retrymission | Enter  fly the mission again     T  title |
 | camp.ui.pauseretry | R  restart the mission |
 | camp.m.1.1.title | Belt survey |
