@@ -27,7 +27,7 @@ class Campaign extends Phaser.Scene {
   init(d) { // d: { level, techs (instead of the saved ones: the address's), via, seed, god }
     d = d || {}; this.level = d.level || 1; this.via = d.via || 'menu'; this.opts = { seed: d.seed, god: !!d.god, via: this.via };
     this.P = campProgressLoad(); if (Array.isArray(d.techs)) this.P.techs = d.techs.filter(t => CAMP.tech[t]);
-    this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null;
+    this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null;
   }
   create() {
     this.cameras.main.fadeIn(300, 0, 0, 0);
@@ -46,6 +46,7 @@ class Campaign extends Phaser.Scene {
     this.hud = { hull: t(24, 18, 14, '#9fe9ff'), earth: t(24, 52, 14, '#9fe9ff'), bay: t(24, 86, 14, '#9fe9ff'), wave: t(24, 108, 14, '#ffd37a'), mother: t(W / 2 - 150, 18, 14, '#ff9ec0'), blink: t(24, 130, 14, '#7fe9ff'),
       obj: t(24, 152, 14, '#ffffff'), keys: this.add.text(24, H - 44, uiText('camp.ui.keys'), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
     this.input.keyboard.on('keydown', e => this.onKey(e));
+    if (typeof campMapInstall === 'function') campMapInstall(this); // Tab: the map of the level, over the battle, which goes on behind it (src/campmap.js, src/campmapdraw.js)
     this.showIntro();
   }
   drawPlace(p) {
@@ -57,7 +58,7 @@ class Campaign extends Phaser.Scene {
 
   // ----- the cards: the story, the pick, the end -----
   showCard(title, lines, hint, tall) {
-    this.hideCard();
+    this.hideCard(); if (typeof campMapClose === 'function') campMapClose(this); // a card (the story, the end) comes up over the map: the map goes
     const o = [], cx = W / 2, cy = H / 2 - 20, h = tall || 300;
     o.push(this.add.rectangle(cx, cy, 800, h, 0x04101c, 0.95).setStrokeStyle(2, CYAN, 0.85));
     o.push(this.add.text(cx, cy - h / 2 + 34, title, uiFont(24, '#38e1ff', { letterSpacing: 3 })).setOrigin(0.5));
@@ -85,7 +86,7 @@ class Campaign extends Phaser.Scene {
     this.mode = 'lost'; const line = uiText('camp.lose.' + why);
     this.showCard(uiText('camp.ui.title'), [line], uiText('camp.ui.retry')); this.say([line]);
   }
-  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.title'), typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : [], uiText('camp.ui.paused'), 200); } // campDebugLine: the tune kit's one short line of its keys
+  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.title'), [uiText('camp.ui.pausemap')].concat(typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), 230); } // campDebugLine: the tune kit's one short line of its keys
   next() { // after the story (and the pick): the next level, or after the last one the end, with a new campaign waiting
     const last = !CAMP.levels[this.level + 1];
     this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) this.P.techs = []; campProgressSave(this.P);
@@ -107,7 +108,7 @@ class Campaign extends Phaser.Scene {
     }
     if (this.mode === 'lost') { if (c === 'Enter') go(this, 'Campaign', { level: this.level, techs: this.P.techs, via: 'retry' }); else if (c === 'KeyT') go(this, 'Title'); return; }
     if (this.mode === 'pause') { if (c === 'Escape') { this.hideCard(); this.mode = 'play'; } else if (c === 'KeyT') go(this, 'Title'); return; }
-    if (c === 'Escape') { this.showPause(); return; }
+    if (c === 'Escape') { if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc closes the map first; it never pauses while the map is open
     const order = { Digit1: 'launch', Digit2: 'attack', Digit3: 'escort', Digit4: 'guard', Digit5: 'recall' }[c];
     if (order) { const r = campOrder(C, order, '', 'key'); toast(this, r.say, r.ok ? '#9fe9ff' : '#ffb454'); }
     else if (c === 'KeyQ') C.input.blink = true;
@@ -130,6 +131,7 @@ class Campaign extends Phaser.Scene {
     }
     C.events.splice(0).forEach(e => this.onEvent(e));
     this.sync(); this.paintHud();
+    if (this.mp) campMapPaint(this, time);
   }
   onEvent(e) {
     if (e.type === 'say') { const text = uiText(e.key, e.vars); toast(this, text, '#9fe9ff'); this.say([text]); }
@@ -186,6 +188,6 @@ class Campaign extends Phaser.Scene {
     const dot = (p, color, size) => { let dx = (p.x - c.x) / R.range * R.r, dy = (p.y - c.y) / R.range * R.r; const d = Math.hypot(dx, dy); if (d > R.r - 3) { dx *= (R.r - 3) / d; dy *= (R.r - 3) / d; } g.fillStyle(color, 1).fillCircle(R.x + dx, R.y + dy, size); };
     const pl = campPlaces(C.level); Object.keys(pl).forEach(id => { if (!pl[id].hidden) dot(pl[id], id === 'earth' ? 0x4aa3ff : 0xb9a37a, id === 'earth' ? 4 : 2); });
     C.caches.forEach(k => { if (!k.got) dot(k, 0xffd37a, 2); }); if (C.relic) dot(C.relic, 0x7fe9ff, 3);
-    C.ships.forEach(u => { if (u.hp <= 0) return; dot(u, u.team === 'alien' ? (u.kind === 'mother' ? 0xff4dff : u.kind === 'tower' ? 0xff9a3a : 0xff4d6d) : u.kind === 'freighter' ? 0xffb454 : u.kind === 'carrier' ? 0xffffff : 0x6dff9c, u.kind === 'mother' ? 4 : u.kind === 'carrier' ? 3 : 2); });
+    C.ships.forEach(u => { if (u.hp <= 0) return; dot(u, campDotColor(u), u.kind === 'mother' ? 4 : u.kind === 'carrier' ? 3 : 2); }); // campDotColor (src/campmap.js): the map's colours too
   }
 }
