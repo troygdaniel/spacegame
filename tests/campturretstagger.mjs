@@ -128,7 +128,7 @@ console.log('F. a flash per shot, a quiet rate-limited blip');
   const bp = J('__beeps');
   check('each pew is told which turret fired (its number), so its pitch differs from turret to turret and it rattles and does not drone (the sound itself is tests/campsounds.mjs)', new Set(bp.map(b => b.a)).size === 8 && bp.every(b => Number.isInteger(b.a)), JSON.stringify(bp.map(b => b.a)));
   g.run('F.add.log.length = 0; F.tweens.added.length = 0; F.blipAt = undefined; for (let i = 0; i < 8; i++) { C.t = 9000; F.onEvent({ type: "turret", i, x: 10 * i, y: 5, aim: 0 }); }');
-  check('a muzzle flash for each shot, even when the pew is held back: eight flashes (an additive spark at the barrel tip, 14 px along the aim) that fade out in 90 ms', J('F.add.log.filter(l => l[0] === "image").length') === 8 && J('F.tweens.added.length') === 8 && J('F.tweens.added.every(t => t.duration === CAMP_BLIP.flash && t.alpha === 0)') && Math.abs(J('F.add.log.filter(l => l[0] === "image")[3][1]') - (30 + 14)) < 1e-6);
+  check('a muzzle flash for each shot, even when the pew is held back: eight flashes (an additive spark at the barrel tip, CAMP_MOUNT.flash px along the aim) that fade out in 90 ms', J('F.add.log.filter(l => l[0] === "image").length') === 8 && J('F.tweens.added.length') === 8 && J('F.tweens.added.every(t => t.duration === CAMP_BLIP.flash && t.alpha === 0)') && Math.abs(J('F.add.log.filter(l => l[0] === "image")[3][1]') - (30 + J('CAMP_MOUNT.flash'))) < 1e-6);
   g.run('sfx = __sfx0');
   const sc = src('src/campaignscene.js');
   check('the numbers of the sound are one table in the scene (CAMP_BLIP), and the turrets no longer use the loud laser', /const CAMP_BLIP = \{ gap: 70, flash: 90/.test(sc) && !/sfx\('laser'\)/.test(sc));

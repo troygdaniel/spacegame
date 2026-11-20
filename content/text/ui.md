@@ -52,7 +52,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | help.surface.3 | E   talk to the colonist, board at the pad |
 | help.surface.4 | C   show the controls panel again |
 | tips.station | Pick from the station menu, bottom right: a number, or W S and Enter. Your ship is the last row: board it to launch. The SHOP sells parts; MISSIONS has courier and haul calls. |
-| tips.space | N lists the places and B the ships: Enter or a click flies there, and so does a click on the Tab map. Near a station, slow down and press L: ore sells there. G opens the galaxy map: pick a star, press Enter to jump. |
+| tips.space | N lists the places and B the ships: Enter or a click flies there; on the Tab map a click sets the place, then Enter flies there and Shift+Enter flies fast. Near a station, slow down and press L: ore sells there. G opens the galaxy map: pick a star, press Enter to jump. |
 | tips.ship | Look your ship over, then press Enter to launch. Esc goes back to the station to take a mission or repair first. |
 | tips.surface | Aim with the mouse and click to fire. Walk back to the landing pad and press E to lift off. |
 | toast.docked | Docked. |
@@ -61,7 +61,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | toast.dropped | Mission dropped. The board has other calls. |
 | toast.patrol-down | Wanted pirate down  {progress} of {count} |
 | toast.patrol-done | Patrol complete. All wanted pirates destroyed. |
-| toast.mule-leaving | The MULE is leaving the hangar. Stay inside her ring: she runs faster and takes half damage. |
+| toast.mule-leaving | The MULE is leaving. Stay inside her ring: faster, half damage. |
 | toast.mule-left | You left the MULE behind. Mission failed. |
 | toast.mule-lost | The MULE was destroyed. Mission failed. |
 | toast.mule-arrived | The MULE made the Perseus gate. |
@@ -71,7 +71,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | toast.mule-wave-port | MULE: Raiders, port side. |
 | toast.mule-wave-starboard | MULE: Raiders, starboard side. |
 | toast.mule-wave-ahead | MULE: Raiders, dead ahead. |
-| toast.reaver-intro | The Reaver is south-west of Reaver's Rock. Watch for the flash before it charges. |
+| toast.reaver-intro | The Reaver waits south-west of Reaver's Rock. Watch for its flash. |
 | toast.reaver-wing | The Reaver calls in its wing. |
 | toast.reaver-burning | The Reaver is burning. It fights harder. |
 | toast.reaver-dead | The Reaver is wreckage. Bounty paid. |
@@ -102,10 +102,10 @@ To translate, change the text column here, or copy this file to a name after ui 
 | spoken.full | the whole answer is said |
 | spoken.off | answers are never said aloud |
 | music.use | Music is made by the game as you fly and steps back when the ship speaks. Effects is the engine, the drone and every shot and click; they ease off a little while music plays. M mutes all. |
-| camp.l1.before.1 | Unknown ships at the edge of the system, heading for Earth. |
-| camp.l1.before.2 | You have the Lunar carrier, pilot. Launch the wing, cover the convoys, and kill their mothership. |
-| camp.l1.after.1 | The mothership is gone. Their wreck holds working technology. |
-| camp.l1.after.2 | Our engineers can build one piece of it. Choose. |
+| camp.l1.before.1 | Ceres belt. The cruiser is mining. |
+| camp.l1.before.2 | Fly over ore, or press 6 to send the drones. |
+| camp.l1.after.1 | Mothership destroyed. The belt is clear. |
+| camp.l1.after.2 | Their wreck holds alien technology. |
 | camp.say.convoy | Convoy to {name} is away. |
 | camp.say.delivered | The convoy has reached {name}. |
 | camp.say.convoylost | The convoy to {name} is lost. |
@@ -185,11 +185,11 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.tech.bay2.text | Four more fighters in the bay. |
 | camp.tech.repair.name | Repair field |
 | camp.tech.repair.text | The carrier and the ships beside it mend as they fly. |
-| camp.l2.before.1 | The warp drive works. The nearest star is Alpha Centauri, four light years out. |
-| camp.l2.before.2 | Something old waits on Proxima b. Gather what we need, and find it before they do. |
-| camp.l2.after.1 | It was a machine left by a race older than the aliens. |
-| camp.l2.after.2 | It shows us where the aliens live. Choose what to build from it. |
-| camp.l3.before.1 | The way to their home world is open. This is the last battle, pilot. |
+| camp.l2.before.1 | Warp drive ready. Next star: Alpha Centauri. |
+| camp.l2.before.2 | Something old waits on Proxima b. Find it first. |
+| camp.l2.after.1 | The relic is a machine from an older race. |
+| camp.l2.after.2 | It shows where the aliens live. Choose a technology. |
+| camp.l3.before.1 | Their home world is open. Last battle. |
 | camp.l3.before.2 | Break the defence towers round their world. |
 | camp.l3.after.1 | Their defences are down. Earth is safe. |
 | camp.l3.after.2 | The first step is done. The war is not over. |

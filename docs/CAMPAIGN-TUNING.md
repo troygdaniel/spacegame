@@ -37,7 +37,8 @@ They are listed in one small line on the pause screen (`campDebugLine`). The row
 | the turrets hit harder, reach further or fire faster | `carrier.pd` (damage of one shot), `carrier.pdRange` (px), `carrier.pdDelay` (ms between a turret's shots); eight turrets means 8 times `pd` over `pdDelay`; `tech.beam` for the beam tech |
 | the turrets fire as one volley, or as a rattle | `carrier.stagger`: 1 gives each turret its own slot in the cycle, 0 puts all eight on one beat; `carrier.jitter` (ms of random on each slot; under half of `pdDelay` over the turret count). The shots a second are `8 / pdDelay` either way. Their sound and flash: `CAMP_BLIP` at the top of `src/campaignscene.js` (the least gap between blips, the flash time, pitch, length, loudness) |
 | the turrets miss moving ships (or hit too well) | `carrier.lead`: 1 aims where the shot and the alien meet, 0 where the alien is now, 0.5 half way; `carrier.pdSpeed` (a faster shot needs less lead) |
-| more or fewer turrets, or somewhere else on the hull | `carrier.mounts`: one `[x, y]` row each, px from the carrier's centre in its own frame (x along the nose); the hull is drawn 140 by 100 px |
+| more or fewer turrets, or somewhere else on the hull | `carrier.mounts`: one `[x, y]` row each, px from the carrier's centre in its own frame (x along the nose); the hull is drawn 98 by 70 px; a turret has to lie on it |
+| your ships bigger or smaller | `size`: one row each for the carrier, the fighters and the escorts, the drawn length in px (`len`, the picture is scaled to it) and the hit circle's radius (`hit`); the turret mounts, `bay.mouth` (where a launched ship appears) and `bay.dockAt` (how near a recalled ship lands) are sized for the hull as drawn, so move them with it |
 | a faster or slower level | `waves[i].at` (seconds into the level), `early` (seconds after the wave before is dead), `convoys[i].at` |
 | the map | `places` (px from Earth); the Sol distances are `docs/SOL.md` at 1 to 12 |
 
@@ -83,3 +84,14 @@ What the Campaign scene calls (none of it draws, all of it is plain data and fun
 - Every key: `const id = campDebugKey(e.code); if (id) { const r = campDebugRun(this.C, this.P, id); show(r.say); if (r.go) start r.go.level with r.go.techs }`.
 - Pause screen: `campDebugLine(C)`.
 - The play log needs nothing else: it watches `campNew`, `campStep`, `campOrder` and `campPick` from outside (`playlogWrap`) and `campDebugRun` says its own steps (`campaignNote`).
+
+## Click a place, then Fly or Fast (both maps)
+
+Card `space-game-map-click-fly` (Troy, 20 Nov 2026). In the Campaign's Tab map and in Long Haul's sector map a click on a place **sets** it as the destination (a ring, the route and the distance, as before) instead of flying at once. Two small buttons by the mark say **Fly** (regular speed) and **Fast**, each with its key and its time: `Enter` is Fly, `Shift+Enter` is Fast, and a second click on the place with no button is Fly. Every existing key stays (the Campaign list's W S A D Enter X, Long Haul's N, B, X, P and C); any steering key takes the wheel back. Plain Node: `tests/mapclickfly.mjs`; a hand-run boot of both games with a real mouse: `node tests/mapclickfly-boot.mjs`.
+
+| | Fly (regular) | Fast |
+|---|---|---|
+| Campaign | the autopilot as it was: the carrier at its top speed, 210 px/s | a **burn**: the carrier's top speed and thrust times `CAMP.nav.fast` (2) while the autopilot flies it; steering, arriving or X ends it. The time on the button is `campNavEta(C, dist, true)` |
+| Long Haul | the autopilot's **local leg only**, at the ship's own top speed: no cruise, and no flying clear of a mass first (`autopilotGo(s, body, order, false)`) | the autopilot as it always was: a leg longer than 3,500 px cruises in the middle (8,000 px/s), the rest is local. On a short leg Fast is Fly and the button says "too near to cruise" |
+
+The words are in `content/text/mapfly.md` (Campaign) and in `src/map.js` (Long Haul). The Long Haul N list's Enter, P, C and the ship computer are unchanged (they pass no speed, so they go as they always did).

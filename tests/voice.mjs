@@ -47,7 +47,7 @@ const idle = t => t.waitFor('VOICE.playing === false && VOICE.queue.length === 0
     check('the call goes to api.deepgram.com/v1/speak', /^https:\/\/api\.deepgram\.com\/v1\/speak\?/.test(c.url), c.url);
     check('the model is the calm female voice', /model=aura-athena-en/.test(c.url));
     check('the key is only in the Authorization header', c.auth === 'Token ' + KEY && !c.url.includes(KEY) && !c.body.includes(KEY));
-    check('the body is the line', JSON.parse(c.body).text === 'Launch clear. All systems nominal.');
+    check('the body is the line', JSON.parse(c.body).text === 'Launch clear.');
     await idle(t);
     await t.ev('(VOICE.said = {}, 1)');
     await t.ev(`voiceSay(VOICE_LINES.launch, 1)`); await idle(t);

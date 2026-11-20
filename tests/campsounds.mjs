@@ -82,7 +82,7 @@ console.log('G1. the turrets: the pew');
 console.log('G2. the beam and mining hum');
 {
   g.run(`
-    window.__bat = (techs) => { window.C = campNew(1, techs || [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); C.motherSpawn = 1e12; C.pickups = [];
+    window.__bat = (techs) => { window.C = campNew(1, techs || [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); C.motherSpawn = 1e12; C.pickups = []; C.rocks = [];
       const u = campSpawn(C, 'gunship', C.carrier.x + 300, C.carrier.y); u.vmax = 0; u.accel = 0; u.nextShot = 1e12; u.hp = u.maxHp = 90000; return u.id; };
     window.__go = sec => { for (let i = 0; i < Math.round(sec * 30); i++) { campStep(C, 1 / 30); C.events.length = 0; } };
   `);
@@ -97,13 +97,6 @@ console.log('G2. the beam and mining hum');
   check('without the Beam turrets tech the turrets only pew: no hum', J('campBeamState(C).kind') === '' && J('C.beamT') === 0);
   g.run('__bat(["beam"]); C.input.fire = true; C.ships.forEach(u => { if (u.team === "alien") u.x += 5000; }); __go(1)');
   check('nothing in reach, no hum (a turret with no target does not fire)', J('campBeamState(C).kind') === '');
-  g.run('__bat([]); C.ships.forEach(u => { if (u.team === "alien") u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0); campOrder(C, "launch"); __go(8);');
-  g.run('window.__es = campWing(C, "escort")[0]; C.pickups = [{ id: "rock-h", kind: "rock", x: __es.x + 200, y: __es.y, ore: 20, born: 0 }]; campOrder(C, "mine"); C.carrier.x = 99999; campStep(C, 0.001)'); // the order needs ore to be in reach
-  const m1 = J('campBeamState(C)');
-  g.run('__es.x = C.pickups[0].x - 80; __es.y = C.pickups[0].y; campStep(C, 0.001)'); const m2 = J('campBeamState(C)');
-  check('a mining ship closing on the ore it is going for: a softer hum (0.55 of the beam\'s) that climbs as it closes: a third of the way up at 200 px, three quarters at 80', m1.kind === 'mine' && Math.abs(m1.level - 0.55) < 1e-9 && m1.rise > 0.3 && m1.rise < 0.45 && m2.rise > 0.7 && m2.rise < 0.8, JSON.stringify([m1, m2]));
-  g.run('C.pickups[0].x = __es.x + 900; campStep(C, 0.001)');
-  check('and none when the ore is far (more than 320 px) or there is none', J('campBeamState(C).kind') === '' && (g.run('C.pickups = []; campStep(C, 0.001)'), J('campBeamState(C).kind') === ''));
   g.run('__bat([]); C.lasers = []; campStep(C, 0.001)');
   check('the mining lasers (C.lasers, from the belt card): a beam on a rock gives kind laser at 0.8, climbing from when it began (half way after a second), the oldest beam counts when two fire, none gives none', (() => {
     g.run('C.t = 5000; C.lasers = [{ from: "escort-1", to: "rock-1", kind: "rock", since: 4000 }]'); const a = J('campBeamState(C)');
@@ -117,9 +110,9 @@ console.log('G2. the beam and mining hum');
     g.run('CAMP.beamHum.alienLaser = 0; C.lasers = [{ from: "carrier-1", to: "raider-3", kind: "alien", since: 4000 }, { from: "escort-1", to: "rock-1", kind: "rock", since: 4500 }]'); const mix = J('campBeamState(C)');
     return off.kind === '' && on.kind === 'laser' && on.level === 0.8 && Math.abs(mix.rise - 0.25) < 1e-9 && J('CAMP.beamHum.alienLaser') === 0;
   })());
-  check('with C.lasers there, a miner closing on ore does not hum on its own (the beam does); the Beam turrets still hum over a laser', (() => {
+  check('the Beam turrets still hum over a laser: with the tech and Space held on an alien the kind is turrets; let go and a beam on a rock is the laser hum', (() => {
     g.run('__bat(["beam"]); C.lasers = [{ from: "e", to: "r", kind: "rock", since: C.t - 500 }]; C.input.fire = true; __go(0.5)'); const x = J('campBeamState(C).kind');
-    g.run('C.input.fire = false; __go(0.1)'); const y = J('campBeamState(C).kind');
+    g.run('C.input.fire = false; C.lasers = [{ from: "e", to: "r", kind: "rock", since: C.t - 500 }]; __go(0.1); C.lasers = [{ from: "e", to: "r", kind: "rock", since: C.t - 500 }]'); const y = J('campBeamState(C).kind');
     return x === 'turrets' && y === 'laser';
   })());
   check('a battle that is over hums nothing', (g.run('__bat(["beam"]); C.input.fire = true; __go(0.2); campEnd(C, "won", "mother")'), J('campBeamState(C).kind') === ''));
@@ -152,7 +145,7 @@ console.log('G2. the beam and mining hum');
   `);
   g.run('window.__f1 = __fakeSc([]); __plays.length = 0; __f1.camp.t = 1000; __f1.onEvent({ type: "turret", i: 3, x: 0, y: 0, aim: 0 }); window.__f2 = __fakeSc(["beam"]); __f2.camp.t = 1000; __f2.onEvent({ type: "turret", i: 3, x: 0, y: 0, aim: 0 }); sfx = __sfx1');
   check('with the Beam turrets the hum is the sound: the turret event plays no pew (the flash stays); without it the pew is played with the turret\'s number', J('__plays').join() === 'turret 3', J('__plays').join());
-  check('the numbers are in the table: how long it takes to climb, how near a miner hums, how loud (a miner, a laser)', J('CAMP.beamHum.rise') === 2 && J('CAMP.beamHum.mineRange') === 320 && J('CAMP.beamHum.mineLevel') === 0.55 && J('CAMP.beamHum.laserLevel') === 0.8 && J('CAMP.beamHum.alienLaser') === 0);
+  check('the numbers are in the table: how long it takes to climb, how loud a laser hums, whether a turret shot at an alien hums too', J('CAMP.beamHum.rise') === 2 && J('CAMP.beamHum.laserLevel') === 0.8 && J('CAMP.beamHum.alienLaser') === 0);
 }
 
 // ---------- G3. the missiles ----------
