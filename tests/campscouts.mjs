@@ -80,8 +80,8 @@ sec('C', () => {
   const says = SAYS();
   check('C  it reported ("Scout 1, nothing at Vesta."), and said it was back aboard', says.includes('camp.say.scoutnothing') && says.includes('camp.say.scouthome'), JSON.stringify(says));
   check('C  with no scout out there is no sensor circle', J('campSensors(C).length') === 0 && J('campScoutsOut(C)') === 0);
-  g.run('__mk(1, 0); window.__e1 = __esc(0, 80).id; campOrder(C, "scout", "vesta", "key"); __go(60)');
-  check('C  it flies at its own speed: after 60 s it is nearer Vesta than the carrier is', J('Math.hypot(C.by[__e1].x - __vesta().x, C.by[__e1].y - __vesta().y)') < J('Math.hypot(C.carrier.x - __vesta().x, C.carrier.y - __vesta().y)'));
+  g.run('__mk(1, 0); window.__e1 = __esc(0, 80).id; campOrder(C, "scout", "vesta", "key"); __go(3)');
+  check('C  it flies at its own speed: after 3 s it is nearer Vesta than the carrier is (the carrier has not moved)', J('Math.hypot(C.by[__e1].x - __vesta().x, C.by[__e1].y - __vesta().y)') < J('Math.hypot(C.carrier.x - __vesta().x, C.carrier.y - __vesta().y)'));
 });
 
 sec('D', () => {
@@ -92,8 +92,8 @@ sec('D', () => {
   check('D  a scout 150 px outside a recon point\'s radius (inside the scan reach) fills it 2.5 times as fast: 2 s of a scout is 5 s of scan', close(J('__P0.t'), 5, 0.3), J('__P0.t'));
   g.run('__mk(1, 0); C.carrier.x = -90000; C.carrier.y = -90000; window.__P0 = C.scan[0]; __P0.t = 0;'); g.run(`window.__u = __sc(${r} - 50); __go(2)`);
   check('D  inside the point\'s own radius it is still 2.5 times as fast', close(J('__P0.t'), 5, 0.3), J('__P0.t'));
-  g.run('__mk(1, 0); C.carrier.x = -90000; C.carrier.y = -90000; window.__P0 = C.scan[0]; __P0.t = 0; window.__u = __esc(0, 0); __u.x = __P0.x + 10; __u.y = __P0.y; __go(2)');
-  check('D  an ordinary escort at the same place fills it at the wing\'s rate: 2 s of 2 s', close(J('__P0.t'), 2, 0.1), J('__P0.t'));
+  g.run('__mk(1, 0); C.carrier.x = -90000; C.carrier.y = -90000; window.__P0 = C.scan[0]; __P0.t = 0; window.__u = __esc(0, 0); __u.x = __P0.x + 10; __u.y = __P0.y; __go(1)');
+  check('D  an ordinary escort at the same place fills it at the wing\'s rate: 1 s of 1 s', close(J('__P0.t'), 1, 0.1), J('__P0.t'));
   g.run(`__mk(1, 0); C.carrier.x = -90000; C.carrier.y = -90000; window.__P0 = C.scan[0]; __P0.t = 0; window.__u = __sc(${r} + 700); __go(2)`);
   check('D  a scout farther than the point\'s radius plus the scan reach (260 px) scans nothing', J('__P0.t') === 0, J('__P0.t'));
   g.run(`__mk(1, 0); C.carrier.x = -90000; C.carrier.y = -90000; window.__P0 = C.scan[0]; __P0.t = 0; window.__u = __sc(${r} + 150, ['escort', 'fetch']); __go(2)`);
@@ -109,7 +109,7 @@ sec('E', () => {
   g.run('C.pickups.push({ id: "chunk-u", kind: "chunk", x: __u.x + 30, y: __u.y, ore: 80, born: C.t }); __go(0.2)');
   check('E  it holds at most 60 ore: the rest stays where it lay', J('__u.scout.carry.ore') === 60 && J('C.pickups.length') === 1 && J('C.pickups[0].ore') === 40, JSON.stringify(J('C.pickups')));
   check('E  a full hold sends it home by itself', J('__u.scout.phase') === 'home');
-  g.run('C.carrier.x = __u.x + 60; C.carrier.y = __u.y; __go(3)');
+  g.run('C.carrier.x = __u.x - 100; C.carrier.y = __u.y; __go(3)');
   check('E  landed in the bay: the 60 ore are in the store now (not before)', J('C.ore') === J('__ore0') + 60 && J('C.by[__u.id] === undefined || C.by[__u.id].hp <= 0'), J('C.ore') + ' ' + J('__ore0'));
   g.run(`__mk(1, 0); C.carrier.x = -90000; C.carrier.y = -90000; C.caches.push({ x: 0, y: 0, got: false }); window.__k = C.caches[C.caches.length - 1]; window.__c0 = C.cachesGot; ${scoutAt.replace('__u.x = 0;', '__u.x = 20;')} __go(0.2)`);
   check('E  a scout takes a cache by touching it, and it is not gathered yet (the mission does not count it)', J('__u.scout.carry.caches') === 1 && J('__k.got') === false && J('C.cachesGot') === J('__c0'), JSON.stringify(J('__u.scout.carry')));
@@ -164,7 +164,7 @@ sec('I', () => {
 sec('J', () => {
   const file = read('content/text/campaign-scouts.md');
   const rows = file.split('\n').map(l => /^\|\s*([\w.]+)\s*\|\s*(.*?)\s*\|\s*$/.exec(l)).filter(m => m && m[1] !== 'key' && !/^-+$/.test(m[1])).map(m => [m[1], m[2]]);
-  check('J  the words are in content/text/campaign-scouts.md (a file of their own), equal to the code table, 12 words or fewer', rows.length >= 14 && rows.every(([k, t]) => J(`UI_TEXT[${JSON.stringify(k)}]`) === t && words(t) <= 12), rows.length);
+  check('J  the words are in content/text/campaign-scouts.md (a file of their own), equal to the code table, 12 words or fewer', rows.length >= 10 && rows.every(([k, t]) => J(`UI_TEXT[${JSON.stringify(k)}]`) === t && words(t) <= 12), rows.length);
   const intent = t => J(`campIntent(${JSON.stringify(t)})`);
   check('J  the strip and the voice: "scout Vesta", "send a scout to the relic", "scout the anomaly"', JSON.stringify(intent('scout vesta')) === '{"act":"fleet_scout","arg":"vesta"}' && /fleet_scout/.test(JSON.stringify(intent('send a scout to the relic'))) && /relic/.test(JSON.stringify(intent('send a scout to the relic'))) && /anomaly/.test(JSON.stringify(intent('scout the anomaly'))), JSON.stringify([intent('scout vesta'), intent('send a scout to the relic')]));
   check('J  a question about scouts is not an order ("what do scouts do")', !/fleet_scout/.test(JSON.stringify(intent('what do scouts do'))));

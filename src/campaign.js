@@ -102,6 +102,18 @@ const CAMP = {
     mouth: [21, 19.5],                     // px from the carrier's centre (x along the nose, y to the side): where a launched ship appears, one side and then the other: just in front of the launch tube of a hangar pod (CAMP_ART.cruiser.launch)
     dockAt: 63                             // px: a recalled ship this close to the carrier lands (and is whole again when next launched)
   },
+  scout: {                                 // scout-escorts (card space-game-campaign-scouts; docs/CAMPAIGN.md "Scout-escorts"): an escort sent out with the Scout order to look, scan and fetch
+    sense: 2600,                           // px: the sensor circle round a scout that is out (the map draws it, the radar marks the scout)
+    read: 1400,                            // px: how close a scout must be to a cloaked anomaly to read what it likely is (reading is not uncovering)
+    scanReach: 260,                        // px beyond a recon point's own radius from which a scout scans it
+    scanRate: 2.5,                         // how many times as fast as the wing a scout fills a recon point (a point of 8 s in 3.2 s)
+    pickup: 90,                            // px: a scout touches ore, an ore chunk or a cache from this far, and carries it home
+    carry: 60,                             // ore a scout holds; a full hold sends it home
+    station: 6,                            // s a scout stays at its place, reading, before it reports and goes home
+    fragile: 2.5,                          // damage a scout out takes, times this (an escort's 90 hit points feel like 36)
+    leash: 5200,                           // px: a scout this far from the carrier when the carrier is on a Fast burn is left behind: lost
+    tasks: ['recon', 'escort', 'fetch']    // what a mission allows when its row says nothing (a mission row may have scouts: [...])
+  },
   fighter: {
     hp: 36,                                // hit points
     speed: 430,                            // px/s top speed
@@ -260,16 +272,16 @@ const CAMP = {
         { at: [-1800, 1500], n: 6, spread: 300 }, { at: [300, -1600], n: 6, spread: 300 }  // one row of the list above: numbers as in its header
       ],
       missions: [                                               // a mission is a row laid over this one: kind, objectives, bonus objectives (bonus), par (s), its own waves, convoys ... (docs/CAMPAIGN.md, Missions)
-        { id: 'survey', kind: 'recon', par: 150,                  // M1: scan three rock fields; the ambush hits when the second is scanned
+        { id: 'survey', kind: 'recon', par: 150, scouts: ['recon', 'fetch'],                  // M1: scan three rock fields; the ambush hits when the second is scanned
           objectives: [{ type: 'scan', points: [{ at: [900, 700], r: 320, secs: 8 }, { at: [-1100, -400], r: 320, secs: 8 }, { at: [300, -1600], r: 320, secs: 8 }] }, { type: 'kill', what: 'wave:0' }],  // what the mission asks (scan points: where, how close, how many seconds), all of it
           bonus: [{ id: 'swift', type: 'time', secs: 150 }, { id: 'clean', type: 'lost', n: 0 }, { id: 'ore', type: 'ore', n: 60 }],  // bonus objectives: each met earns CAMP.score.bonus
           waves: [{ on: { scanned: 2 }, ambush: true, from: [3200, 1800], ships: { raider: 4, drone: 3 }, goal: 'carrier', say: 'camp.say.ambush', say2: 'camp.say.ambush2', say2At: 5 }] }, // the ambush: an alarm, out of the dark, two lines
-        { id: 'haulers', kind: 'escort', par: 120,                // M2: three ore haulers fly from Vesta to Ceres; two must arrive; raiders go for them
+        { id: 'haulers', kind: 'escort', par: 120, scouts: ['escort', 'fetch'],                // M2: three ore haulers fly from Vesta to Ceres; two must arrive; raiders go for them
           objectives: [{ type: 'deliver', n: 2 }],  // what the mission asks (scan points: where, how close, how many seconds), all of it
           bonus: [{ id: 'all', type: 'delivered' }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
           convoys: [{ id: 'h1', name: 'Hauler 1', say: 'camp.say.hauler', at: 3, from: 'vesta', to: 'ceres' }, { id: 'h2', name: 'Hauler 2', say: 'camp.say.hauler', at: 18, from: 'vesta', to: 'ceres' }, { id: 'h3', name: 'Hauler 3', say: 'camp.say.hauler', at: 33, from: 'vesta', to: 'ceres' }],  // the haulers: when they leave, from and to which place
           waves: [{ at: 10, from: [1900, -1050], ships: { raider: 7, drone: 3 }, goal: 'convoy:h1', say: 'camp.say.raid' }, { at: 26, from: [1500, -800], ships: { raider: 7, drone: 3 }, goal: 'convoy:h2', say: 'camp.say.raid2' }, { at: 42, from: [1200, -650], ships: { raider: 6, drone: 4 }, goal: 'convoy:h3', say: 'camp.say.raid2' }] },  // the waves: when, from where, how many of each kind
-        { id: 'mothership', kind: 'attack', par: 150, win: 'mother',   // M3: three waves, the last with the mothership
+        { id: 'mothership', kind: 'attack', par: 150, win: 'mother', scouts: ['recon', 'fetch'],   // M3: three waves, the last with the mothership
           objectives: [{ type: 'kill', what: 'mother' }],
           bonus: [{ id: 'swift', type: 'time', secs: 150 }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'clean', type: 'lost', n: 1 }],  // bonus objectives: each met earns CAMP.score.bonus
           waves: [{ at: 5, from: [3200, 1800], ships: { raider: 4, drone: 3 }, goal: 'carrier', say: 'camp.say.ambush' }, { at: 40, early: 20, from: [-3400, -2600], ships: { drone: 4, gunship: 3 }, goal: 'carrier', say: 'camp.say.bwave2' },  // the waves: when, from where, how many of each kind
@@ -304,7 +316,7 @@ const CAMP = {
       },
       rocks: [{ at: [-3500, 1200], n: 5, spread: 260 }, { at: [-300, 2400], n: 5, spread: 260 }], // two asteroid fields on the way in
       missions: [
-        { id: 'resources', kind: 'recon', par: 100,               // M1: gather two of the three resource caches, with the aliens that followed through the warp
+        { id: 'resources', kind: 'recon', par: 100, scouts: ['recon', 'fetch'],               // M1: gather two of the three resource caches, with the aliens that followed through the warp
           caches: [[-2800, 2000], [-600, 3200], [200, -1800]], objectives: [{ type: 'caches', n: 2 }, { type: 'kill', what: 'wave:0' }],  // the resource caches
           bonus: [{ id: 'swift', type: 'time', secs: 100 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
           waves: [{ at: 20, from: [-5600, 600], ships: { raider: 3, drone: 2 }, goal: 'carrier', say: 'camp.say.l2wave1' }] },  // the waves: when, from where, how many of each kind
@@ -327,7 +339,7 @@ const CAMP = {
       },
       rocks: [{ at: [-4500, 2200], n: 5, spread: 260 }, { at: [-2500, -500], n: 5, spread: 260 }], // two asteroid fields on the approach
       missions: [
-        { id: 'approach', kind: 'recon', par: 120,                // M1: three points on the way in; defenders come when the first is scanned
+        { id: 'approach', kind: 'recon', par: 120, scouts: ['recon'],                // M1: three points on the way in; defenders come when the first is scanned
           objectives: [{ type: 'scan', points: [{ at: [-4800, 2300], r: 420, secs: 7 }, { at: [-3300, 1000], r: 420, secs: 7 }, { at: [-2200, -100], r: 420, secs: 7 }] }, { type: 'kill', what: 'wave:0' }],  // what the mission asks (scan points: where, how close, how many seconds), all of it
           bonus: [{ id: 'swift', type: 'time', secs: 120 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
           waves: [{ on: { scanned: 1 }, from: [-3500, 1800], ships: { raider: 4, drone: 2 }, goal: 'carrier', say: 'camp.say.l3wave1' }] },  // the waves: when, from where, how many of each kind
@@ -444,13 +456,14 @@ function campHurt(C, u, dmg, byId) {
     if (campHas(C, 'shield')) dmg *= CAMP.tech.shield.taken; if (C.god) dmg = 0;
     if (C.shield > 0 && dmg > 0) { const take = Math.min(C.shield, dmg); C.shield -= take; dmg -= take; C.events.push({ type: 'shieldhit', x: u.x, y: u.y }); } // the shield first
   }
+  if (u.scout) dmg *= CAMP.scout.fragile; // a scout out is fragile
   u.hp -= dmg; u.hurtAt = C.t;
   C.events.push({ type: 'hit', x: u.x, y: u.y, id: u.id, hull: dmg > 0 }); // hull: it got through to the hull (the carrier's shield takes the first of it)
   if (u.team === 'alien' && byId) { u.hitBy = byId; u.distractedUntil = C.t + CAMP.alien.distract; }
   if (u.hp <= 0) campKill(C, u);
 }
 function campKill(C, u) {
-  u.hp = 0;
+  u.hp = 0; if (u.scout) campScoutDrop(C, u);
   C.events.push({ type: 'boom', x: u.x, y: u.y, big: u.kind === 'carrier' || u.kind === 'mother', id: u.id, kind: u.kind });
   if (u.team === 'alien') {
     C.kills++;
@@ -496,6 +509,7 @@ function campCheck(C, name, arg) { return campDo(C, name, arg, true); }
 function campDo(C, name, arg, dry) {
   if (!C || C.result) return campNo('over');
   const t = campFind(C, arg), out = campWing(C);
+  if (name === 'scout') return campScoutDo(C, arg, dry); // the Scout order (below)
   if (name === 'launch') {
     const n = C.bay.fighters + C.bay.escorts - C.launchQ.length;
     if (n <= 0) return campNo(C.launchQ.length ? 'launching' : out.length ? 'baydry' : 'bay');
@@ -514,7 +528,7 @@ function campDo(C, name, arg, dry) {
     C.orders.attack++; return campYes(mother ? 'attackmother' : 'attack');
   }
   if (name === 'escort') {
-    const es = campWing(C, 'escort'); if (!es.length) return campNo(C.launchQ.length ? 'launching' : 'noescorts');
+    const es = campFree(C, 'escort'); if (!es.length) return campNo(C.launchQ.length ? 'launching' : 'noescorts');
     if (!C.L.convoys.length) { // no convoys in this level: Escort keeps the escorts close to the carrier
       if (dry) return campYes('escortcarrier');
       es.forEach(u => { u.order = { type: 'guard', at: { kind: 'carrier' } }; u.move = null; }); C.orders.escort++; return campYes('escortcarrier');
@@ -526,10 +540,10 @@ function campDo(C, name, arg, dry) {
     C.orders.escort++; return campYes('escort', { name: campConvoyName(cv) });
   }
   if (name === 'guard') {
-    if (!out.length) return campNo(C.launchQ.length ? 'launching' : 'nowing');
+    const free = campFree(C); if (!free.length) return campNo(C.launchQ.length ? 'launching' : 'nowing');
     if (dry) return campYes('guard');
     const at = t && (t.kind === 'place' || t.kind === 'convoy') ? t : { kind: 'carrier' };
-    out.forEach(u => { u.order = { type: 'guard', at }; u.move = null; });
+    free.forEach(u => { u.order = { type: 'guard', at }; u.move = null; });
     C.orders.guard++; return campYes('guard');
   }
   if (name === 'recall') {
@@ -560,7 +574,7 @@ function campDo(C, name, arg, dry) {
   return campNo('what');
 }
 // the ships that mine: the whole wing that is out. In the belt the fighters are the cruiser's mining drones; an attack order (key 2) turns them back to the fight
-function campMiners(C) { return campWing(C); }
+function campMiners(C) { return campFree(C); }
 // recharge: the carrier's shield (ore in proportion to what is missing), or Earth's (the carrier must be near it). arg: 'earth', 'carrier', or nothing (Earth when near it and under 90 percent, else the carrier)
 function campRecharge(C, arg, dry) {
   const q = String(arg == null ? '' : arg).toLowerCase(), R = CAMP.recharge, c = C.carrier;
@@ -606,6 +620,7 @@ function campIntent(text) {
   if (!q) return null;
   q = q.replace(/^(?:the |our )?(?:fighters?|wing|escorts?|squadron|ships)\s+(?=(?:attack|engage|guard|defend|protect|launch|recall|return|escort)\b)/, '');
   let m;
+  if ((m = /^(?:scout|reconnoitre|reconnoiter)\s+(?:the |our )?(.+)$/.exec(q)) || (m = /^send (?:a |an |the |our )?scouts?(?: out)?\s+(?:to|at|toward|towards|for)\s+(?:the |our )?(.+)$/.exec(q))) return { act: 'fleet_scout', arg: m[1] }; // "scout Mars", "send a scout to the relic": the Scout order (card space-game-campaign-scouts)
   if (/\b(?:missiles?|rockets?|torpedoe?s?)\b/.test(q)) return { act: 'fleet_missiles', arg: q.replace(/\b(?:fire|launch|shoot|send|loose|use|the|our|all|some|a|one|missiles?|rockets?|torpedoe?s?|with|at|on|to)\b/g, ' ').replace(/\s+/g, ' ').trim() }; // "fire missiles", "missiles at the mothership": before "launch", which is the bay
   if (/^(?:launch|scramble|deploy|open the bay|open the bay doors|bay doors|send out the (?:wing|fighters|ships|fleet)|launch the (?:wing|fighters|ships|fleet|escorts)|get them out)(?: now)?$/.test(q) || /^launch\b/.test(q)) return { act: 'fleet_launch', arg: '' };
   if ((m = /^(?:recall|come home|come back|return(?: home| to the carrier| to base)?|land|dock|rtb|fall back|retreat|pull back|bring them (?:home|back))\b\s*(.*)$/.exec(q))) return { act: 'fleet_recall', arg: '' };
@@ -637,6 +652,7 @@ function campTick(C, dt) {
   campBullets(C, dt);
   campBeam(C, dt);
   campMissiles(C, dt);
+  campScoutsStep(C, dt); // the scouts take what they touch before anyone else does (and a Fast burn leaves them behind)
   campCaches(C);
   campRelic(C, dt);
   campRepair(C, dt);
@@ -783,8 +799,8 @@ function campLaunch(C) {
 // resource caches (level 2): any ship of yours that comes close picks one up
 function campCaches(C) {
   C.caches.forEach(k => {
-    if (k.got) return;
-    if (!C.ships.some(u => u.team === 'earth' && u.hp > 0 && Math.hypot(u.x - k.x, u.y - k.y) <= CAMP.cache.radius)) return;
+    if (k.got || k.carried) return;
+    if (!C.ships.some(u => u.team === 'earth' && u.hp > 0 && !u.scout && Math.hypot(u.x - k.x, u.y - k.y) <= CAMP.cache.radius)) return; // a scout out carries a cache home instead (campScoutsStep)
     k.got = true; C.cachesGot++; C.events.push({ type: 'cache', x: k.x, y: k.y });
     campSay(C, 'camp.say.cache', { n: C.cachesGot, total: C.caches.length });
   });
@@ -814,7 +830,7 @@ function campRockHit(C, rock, dmg) {
 }
 // ore: a ship of yours that comes close takes it (unless the store is full); a wreck's ore goes after wreckLife
 function campPickups(C) {
-  const k = CAMP.ore, mine = C.ships.filter(u => u.team === 'earth' && u.hp > 0);
+  const k = CAMP.ore, mine = C.ships.filter(u => u.team === 'earth' && u.hp > 0 && !u.scout); // a scout out carries ore home itself (campScoutsStep)
   C.rocks = C.rocks.filter(r => r.hp > 0); // a broken rock is gone (its chunk lies where it was)
   C.pickups = C.pickups.filter(p => {
     if (p.kind === 'wreck' && C.t - p.born > k.wreckLife) return false;
@@ -936,12 +952,87 @@ function campMotherAI(C, u, dt) {
   }
 }
 
+// ---------- scout-escorts (card space-game-campaign-scouts; docs/CAMPAIGN.md "Scout-escorts") ----------
+// A scout is an escort whose order is { type: 'scout' } and whose u.scout is { n (its number), name (its place), x, y, phase: 'out' | 'station' | 'home', at, carry: { ore, caches }, found: [what it read] }.
+// The Scout order (campOrder(C, 'scout', 'vesta')) sends the nearest free escort that is out: it flies to the place at its own speed, stays CAMP.scout.station seconds reading (a sensor circle round it), reports, and
+// comes home; on the way it takes ore and caches it touches (they count when it lands), scans recon points faster than the wing, and is fragile; a Fast burn leaves it behind beyond the leash.
+//   campScoutTasks(C)  what the mission allows ('recon', 'escort', 'fetch'; its row's scouts: [...] or the table's)     campScouts(C) / campScoutsOut(C)  the scouts out     campSensors(C)  their sensor circles
+//   campFree(C, kind)  the wing without the scouts: Guard, Escort and Mine do not take a scout from its task (Recall does)
+const campScoutTasks = C => (C && C.L && Array.isArray(C.L.scouts)) ? C.L.scouts : CAMP.scout.tasks;
+const campScouts = C => C.ships.filter(u => u.scout && u.hp > 0);
+const campScoutsOut = C => campScouts(C).length;
+const campSensors = C => campScouts(C).map(u => ({ id: u.id, x: u.x, y: u.y, r: CAMP.scout.sense }));
+const campFree = (C, kind) => campWing(C, kind).filter(u => !u.scout);
+function campScoutDo(C, arg, dry) {
+  const tasks = campScoutTasks(C);
+  if (!tasks.includes('recon') && !tasks.includes('fetch')) return campNo('noscout');
+  const es = campWing(C, 'escort'); if (!es.length) return campNo(C.launchQ.length ? 'launching' : 'noescorts');
+  const free = es.filter(u => !u.scout && !(u.order && u.order.type === 'recall')); if (!free.length) return campNo('scoutsbusy');
+  const f = arg && typeof arg === 'object' && Number.isFinite(arg.x) && Number.isFinite(arg.y) ? { row: arg } : typeof campNavFind === 'function' ? campNavFind(C, arg) : null; // a map row (the Tab map's Scout button) or the words
+  if (!f || !f.row) return campNo('noscoutplace');
+  const row = f.row, n = (C.scoutN | 0) + 1;
+  if (dry) return campYes('scout', { n, name: row.name });
+  const u = campNearest(free, row);
+  u.order = { type: 'scout' }; u.move = null; u.scout = { n, name: row.name, x: row.x, y: row.y, phase: 'out', at: C.t, carry: { ore: 0, caches: 0 }, found: [] };
+  C.scoutN = n; C.orders.scout = (C.orders.scout | 0) + 1; C.events.push({ type: 'scout', id: u.id, n, name: row.name });
+  return campYes('scout', { n, name: row.name });
+}
+// a scout lands: what it carries is delivered (the ore into the store, a cache gathered), the escort is back in the bay
+function campScoutDock(C, u) {
+  const s = u.scout; u.hp = 0; u.docked = true; C.bay.escorts++;
+  if (s && s.carry) {
+    if (s.carry.ore > 0) { C.ore = Math.min(CAMP.ore.cap, C.ore + s.carry.ore); C.events.push({ type: 'ore', x: u.x, y: u.y, n: s.carry.ore, id: u.id }); }
+    C.caches.forEach(k => { if (k.carried === u.id) { k.carried = ''; k.got = true; C.cachesGot++; C.events.push({ type: 'cache', x: k.x, y: k.y }); campSay(C, 'camp.say.cache', { n: C.cachesGot, total: C.caches.length }); } });
+  }
+  C.events.push({ type: 'dock', id: u.id }); if (s) campSay(C, 'camp.say.scouthome', { n: s.n });
+}
+// a scout that is destroyed (or left behind) drops its load: the ore lies where it died, a cache is back where it was
+function campScoutDrop(C, u) {
+  const s = u.scout; if (!s || !s.carry) return;
+  if (s.carry.ore > 0) C.pickups.push({ id: 'chunk-' + (C.nextId++), kind: 'chunk', x: u.x, y: u.y, ore: s.carry.ore, born: C.t });
+  C.caches.forEach(k => { if (k.carried === u.id) k.carried = ''; });
+  s.carry.ore = 0; s.carry.caches = 0;
+}
+function campScoutAI(C, u, dt) {
+  const K = CAMP.scout, s = u.scout, c = C.carrier;
+  if (s.phase === 'out') { if (campDist(u, s) < 110) { s.phase = 'station'; s.at = C.t; C.events.push({ type: 'scoutreach', id: u.id, n: s.n }); } else return campSeek(u, s.x, s.y, dt); }
+  if (s.phase === 'station') {
+    if (C.t - s.at < K.station * 1000) { const a = C.t / 900; return campSeek(u, s.x + Math.cos(a) * 70, s.y + Math.sin(a) * 70, dt); } // it hovers round its place, reading
+    s.phase = 'home';
+    if (s.found && s.found.length) campSay(C, 'camp.say.scoutfound', { n: s.n, name: s.name, likely: s.found[0] }); else campSay(C, 'camp.say.scoutnothing', { n: s.n, name: s.name });
+  }
+  if (campDist(u, c) < CAMP.bay.dockAt) return campScoutDock(C, u);
+  return campSeek(u, c.x, c.y, dt);
+}
+// each tick, before the ore and the caches are taken by anyone else: a scout takes what it touches (if the mission allows fetch), reads anomalies in range, and one left behind by a Fast burn is lost
+function campScoutsStep(C, dt) {
+  const K = CAMP.scout, scouts = campScouts(C); if (!scouts.length) return;
+  const tasks = campScoutTasks(C), fast = C.nav && C.nav.on && C.nav.fast, anomalies = Array.isArray(C.anomalies) ? C.anomalies : null;
+  scouts.forEach(u => {
+    const s = u.scout;
+    if (fast && campDist(u, C.carrier) > K.leash) { campScoutDrop(C, u); u.hp = 0; C.lostShips++; C.events.push({ type: 'scoutlost', id: u.id, n: s.n, x: u.x, y: u.y }); campSay(C, 'camp.say.scoutleft', { n: s.n }); return; }
+    if (tasks.includes('fetch')) {
+      for (let i = C.pickups.length - 1; i >= 0 && s.carry.ore < K.carry; i--) {
+        const p = C.pickups[i]; if (Math.hypot(u.x - p.x, u.y - p.y) > K.pickup + u.r) continue;
+        const take = Math.min(p.ore, K.carry - s.carry.ore); s.carry.ore += take; p.ore -= take; if (p.ore <= 0) C.pickups.splice(i, 1);
+        if (s.carry.ore >= K.carry && s.phase !== 'home') s.phase = 'home'; // a full hold: home
+      }
+      C.caches.forEach(k => { if (k.got || k.carried || Math.hypot(u.x - k.x, u.y - k.y) > K.pickup + u.r) return; k.carried = u.id; s.carry.caches++; });
+    }
+    if (anomalies) anomalies.forEach(a => { // the anomalies card's table: a cloaked one inside the read range is named (read), not uncovered; said once
+      if (a.read || !a.cloaked || Math.hypot(u.x - a.x, u.y - a.y) > K.read) return;
+      a.read = true; (s.found = s.found || []).push(a.likely); C.events.push({ type: 'anomalyread', id: a.id, x: a.x, y: a.y }); campSay(C, 'camp.say.anomalyread', { n: s.n, likely: a.likely });
+    });
+  });
+}
+
 // a ship of yours, by its order (fighters and escorts)
 function campWingAI(C, u, dt) {
   const k = CAMP[u.kind], c = C.carrier, o = u.order || { type: 'guard', at: { kind: 'carrier' } }, aliens = campAliens(C);
   let foe = null, home = null;
+  if (o.type === 'scout' && u.scout) return campScoutAI(C, u, dt);
   if (o.type === 'recall') {
-    if (campDist(u, c) < CAMP.bay.dockAt) { u.hp = 0; u.docked = true; C.bay[u.kind + 's']++; C.events.push({ type: 'dock', id: u.id }); return; }
+    if (campDist(u, c) < CAMP.bay.dockAt) { if (u.scout) return campScoutDock(C, u); u.hp = 0; u.docked = true; C.bay[u.kind + 's']++; C.events.push({ type: 'dock', id: u.id }); return; }
     return campSeek(u, c.x, c.y, dt);
   }
   if (o.type === 'attack') {
@@ -1110,7 +1201,14 @@ function campObjectives(C) {
 function campMissions_tick(C, dt) {
   if (C.result || !C.L.objectives) return;
   const mine = C.ships.filter(u => u.team === 'earth' && u.hp > 0 && u.kind !== 'freighter');
-  C.scan.forEach(p => { if (p.got) return; if (mine.some(u => Math.hypot(u.x - p.x, u.y - p.y) <= p.r)) { p.t += dt; if (p.t >= p.secs) { p.got = true; C.events.push({ type: 'scanned', x: p.x, y: p.y, n: C.scan.filter(q => q.got).length, of: C.scan.length }); campSay(C, 'camp.say.scanned', { n: C.scan.filter(q => q.got).length, of: C.scan.length }); } } });
+  const scouting = campScoutTasks(C).includes('recon') ? mine.filter(u => u.scout) : []; // scouts fill a recon point CAMP.scout.scanRate times as fast, from CAMP.scout.scanReach farther than the wing, if the mission allows recon
+  C.scan.forEach(p => {
+    if (p.got) return;
+    const scouted = scouting.some(u => Math.hypot(u.x - p.x, u.y - p.y) <= p.r + CAMP.scout.scanReach);
+    if (!scouted && !mine.some(u => Math.hypot(u.x - p.x, u.y - p.y) <= p.r)) return;
+    p.t += dt * (scouted ? CAMP.scout.scanRate : 1);
+    if (p.t >= p.secs) { p.got = true; C.events.push({ type: 'scanned', x: p.x, y: p.y, n: C.scan.filter(q => q.got).length, of: C.scan.length }); campSay(C, 'camp.say.scanned', { n: C.scan.filter(q => q.got).length, of: C.scan.length }); }
+  });
   if (C.guardsStart == null) C.guardsStart = C.ships.some(u => u.guard);
   const st = campObjectives(C);
   st.forEach(o => { if (o.type === 'deliver' && C.delivered + campConvoys(C).length + C.L.convoys.filter((cv, i) => !C.convoys[i].started).length < o.need) campEnd(C, 'lost', 'convoy'); }); // too many haulers lost
