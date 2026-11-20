@@ -51,7 +51,8 @@ g.run(`
     pool.tones.concat(pool.noises).forEach(v => { if (lvl(v).length) used.push(v); });
     const peak = used.reduce((s, v) => s + Math.max(...lvl(v).map(e => e[1])), 0);
     const end = Math.max(0, ...used.map(v => Math.max(...v.g.gain.ev.slice(base.get(v)).map(e => e[2])))) - t0;
-    return { voices: used.length, peak, secs: end, nodes: __ac.count() - before,
+    const t00 = t0, part = v => { const e = lvl(v), all = v.g.gain.ev.slice(base.get(v)), f = v.o ? v.o.frequency.ev : v.flt.frequency.ev, ff = f.filter(x => x[2] >= t00 - 0.0001); return { kind: v.o ? 'tone' : 'noise', type: v.o ? v.o.type : v.flt.type, start: Math.min(...all.map(x => x[2])) - t00, end: Math.max(...all.map(x => x[2])) - t00, bursts: all.filter(x => x[0] === 'set' && x[1] === 0.0001).map(x => x[2] - t00), ends: all.filter(x => x[0] === 'exp').map(x => x[2] - t00), peak: Math.max(...e.map(x => x[1])), f0: ff[0] && ff[0][1], f1: ff[ff.length - 1] && ff[ff.length - 1][1] }; };
+    return { parts: used.map(part), voices: used.length, peak, secs: end, nodes: __ac.count() - before,
       freqs: used.filter(v => v.o).map(v => { const e = v.o.frequency.ev.filter(x => x[2] >= t0 - 0.0001); return { type: v.o.type, f0: e[0] && e[0][1], f1: e[e.length - 1] && e[e.length - 1][1] }; }),
       noise: used.filter(v => v.flt).map(v => { const e = v.flt.frequency.ev.filter(x => x[2] >= t0 - 0.0001); return { type: v.flt.type, f0: e[0] && e[0][1], f1: e[e.length - 1] && e[e.length - 1][1] }; }),
       finite: used.every(v => v.g.gain.ev.every(e => Number.isFinite(e[1]) && Number.isFinite(e[2])) && (!v.o || v.o.frequency.ev.every(e => Number.isFinite(e[1])))) };
@@ -134,6 +135,27 @@ console.log('G2. the beam and mining hum');
   g.run('window.__f1 = __fakeSc([]); __plays.length = 0; __f1.camp.t = 1000; __f1.onEvent({ type: "turret", i: 3, x: 0, y: 0, aim: 0 }); window.__f2 = __fakeSc(["beam"]); __f2.camp.t = 1000; __f2.onEvent({ type: "turret", i: 3, x: 0, y: 0, aim: 0 }); sfx = __sfx1');
   check('with the Beam turrets the hum is the sound: the turret event plays no pew (the flash stays); without it the pew is played with the turret\'s number', J('__plays').join() === 'turret 3', J('__plays').join());
   check('the numbers are in the table: how long it takes to climb, how near a miner hums, how loud', J('CAMP.beamHum.rise') === 2 && J('CAMP.beamHum.mineRange') === 320 && J('CAMP.beamHum.mineLevel') === 0.55);
+}
+
+// ---------- G3. the missiles ----------
+console.log('G3. the missiles');
+{
+  const L = R('missileLaunch'), B = R('missileBlast'), F = R('missileFizzle'), BOOM = R('boom');
+  const sweepN = L.parts.find(p => p.kind === 'noise' && p.type === 'bandpass' && p.f1 > p.f0 * 8), rise = L.parts.find(p => p.kind === 'tone' && p.type === 'sawtooth' && p.f1 > p.f0 * 3), thump = L.parts.find(p => p.kind === 'tone' && p.type === 'sine' && p.f1 < p.f0 / 2);
+  check('the launch is a whoosh with a rising pitch: a band of noise that sweeps up (250 Hz to 3.2 kHz) and a sawtooth that climbs (110 to 520 Hz), both starting at once', !!sweepN && !!rise && sweepN.start < 0.02 && rise.start < 0.02, JSON.stringify(L.parts.map(p => [p.type, Math.round(p.f0), Math.round(p.f1)])));
+  check('then a dull thump: a sine that falls under half its pitch (90 to 36 Hz), starting 0.3 s in, after the whoosh has climbed', !!thump && thump.start >= 0.25 && thump.start <= 0.35 && thump.f0 <= 100 && L.parts.some(p => p.kind === 'noise' && p.type === 'lowpass' && p.start >= 0.25), JSON.stringify(thump));
+  check('the launch is over in under 0.65 s (the whoosh half a second, the thump to 0.55) and no louder than 0.25 added up, a fifth of a kill', L.secs <= 0.65 && L.secs >= 0.5 && L.peak <= 0.25 && L.peak > 0.1, [L.secs.toFixed(2), L.peak.toFixed(3)].join());
+  const th = B.parts.find(p => p.kind === 'tone' && p.type === 'sine'), rum = B.parts.find(p => p.kind === 'noise' && p.type === 'lowpass'), crack = B.parts.filter(p => p.kind === 'noise' && p.type === 'highpass');
+  const cs = crack.flatMap(p => p.bursts.map((b, i) => ({ at: b, dur: p.ends[i] - b }))).sort((a, b) => a.at - b.at);
+  check('the blast is a low thump with a crackle: a sine that falls (80 to 30 Hz), a rumble of low-passed noise that falls (1 kHz to 70 Hz), and five short bright bursts of high-passed noise (the voices are reused, so they are counted as bursts)', !!th && th.f0 === 80 && th.f1 === 30 && !!rum && rum.f0 === 1000 && cs.length === 5, JSON.stringify(B.parts.map(p => [p.type, Math.round(p.f0), Math.round(p.f1), p.bursts.length])));
+  check('the crackle is quick and spread out: each burst under 40 ms, five different starts inside the first quarter second', cs.every(c => c.dur > 0 && c.dur <= 0.04) && new Set(cs.map(c => c.at.toFixed(3))).size === 5 && cs[4].at <= 0.25, cs.map(c => c.at.toFixed(3)).join());
+  check('the blast is under 0.6 s and, like a kill, big: louder than the launch and no louder than the kill\'s own boom (' + BOOM.peak.toFixed(2) + ')', B.secs <= 0.6 && B.peak > L.peak && B.peak <= BOOM.peak, [B.secs.toFixed(2), B.peak.toFixed(3)].join());
+  check('and it is its own sound, not the kill\'s: different parts and a shorter tail', B.parts.length !== BOOM.parts.length && B.secs < BOOM.secs);
+  check('a fizzle is a soft puff: under 0.05 added up and under half a second', F.peak <= 0.05 && F.secs <= 0.5 && F.parts.some(p => p.kind === 'noise' && p.type === 'bandpass'), [F.peak.toFixed(3), F.secs.toFixed(2)].join());
+  check('the blast never takes more noise voices than the pool has (8), so even with a kill at the same moment nothing is cut', B.parts.filter(p => p.kind === 'noise').length <= 4 && L.parts.filter(p => p.kind === 'noise').length <= 3);
+  const sc = src('src/campaignscene.js');
+  check('the scene plays the launch for the missile event, the blast for the missile that goes off and the fizzle for the one that ran dry; the beep and the ship\'s boom are gone from them', /e\.type === 'missile'\) sfx\('missileLaunch'\)/.test(sc) && /e\.type === 'mboom'\) \{[^}]*sfx\('missileBlast'\)/.test(sc) && /e\.type === 'mfizzle'\) \{[^}]*sfx\('missileFizzle'\)/.test(sc) && !/e\.type === 'mboom'\) \{[^}]*sfx\('boom'\)/.test(sc) && !/beep\(170/.test(sc));
+  check('they have a share of the reverb: the blast the most (0.4), the launch a fifth, the fizzle a little', J('SOUND.send.missileBlast') === 0.4 && J('SOUND.send.missileLaunch') === 0.2 && J('SOUND.send.missileFizzle') === 0.1);
 }
 
 // ---------- ALL. the rules every one of them keeps ----------

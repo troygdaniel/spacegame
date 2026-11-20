@@ -174,9 +174,9 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'earthhit') this.boom.explode(6, e.x, e.y);
     else if (e.type === 'launch' || e.type === 'dock') beep(e.type === 'launch' ? 560 : 420, 0.07, 'triangle', 0.04, 160);
     else if (e.type === 'blink') { this.boom.explode(30, e.x, e.y); sfx('shieldUp'); }
-    else if (e.type === 'missile') beep(170, 0.4, 'sawtooth', 0.045, 520);
-    else if (e.type === 'mboom') { this.boom.explode(44, e.x, e.y); sfx('boom'); }
-    else if (e.type === 'mfizzle') this.boom.explode(6, e.x, e.y);
+    else if (e.type === 'missile') sfx('missileLaunch');
+    else if (e.type === 'mboom') { this.boom.explode(44, e.x, e.y); sfx('missileBlast'); }
+    else if (e.type === 'mfizzle') { this.boom.explode(6, e.x, e.y); sfx('missileFizzle'); }
     else if (e.type === 'ore') beep(900, 0.05, 'triangle', 0.035, 200);
     else if (e.type === 'built') beep(660, 0.12, 'triangle', 0.05, 240);
     else if (e.type === 'recharge') { sfx('shieldUp'); this.boom.explode(10, e.x, e.y); }
