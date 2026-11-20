@@ -198,9 +198,9 @@ const CAMP = {
       ],
       convoys: [],
       waves: [                                                  // at: seconds into the level; early: seconds after the wave before is dead, if sooner
-        { at: 60, ambush: true, from: [3200, 1800], ships: { raider: 4, drone: 2 }, goal: 'carrier', say: 'camp.say.ambush', say2: 'camp.say.ambush2', say2At: 5 }, // the ambush: at 60 s, with an alarm, out of the dark; say2: a second line 5 s after
-        { at: 140, early: 30, from: [-3400, -2600], ships: { drone: 3, gunship: 2 }, goal: 'carrier', say: 'camp.say.bwave2' },
-        { at: 220, early: 30, needClear: true, from: [2600, -3300], ships: { raider: 2, gunship: 1 }, goal: 'carrier', mother: [3000, -3600], say: 'camp.say.bwave3' }
+        { at: 60, ambush: true, from: [3200, 1800], ships: { raider: 5, drone: 3 }, goal: 'carrier', say: 'camp.say.ambush', say2: 'camp.say.ambush2', say2At: 5 }, // the ambush: at 60 s, with an alarm, out of the dark; say2: a second line 5 s after
+        { at: 150, early: 85, from: [-3400, -2600], ships: { drone: 4, gunship: 3 }, goal: 'carrier', say: 'camp.say.bwave2' },
+        { at: 280, early: 90, needClear: true, from: [2600, -3300], ships: { raider: 4, gunship: 2 }, goal: 'carrier', mother: [3000, -3600], say: 'camp.say.bwave3' }
       ]
     },
     home: {                                                       // the Earth defence level: Earth's shield and the convoys. Not in the chain any more (Troy: they come out of level 1); kept as data, for the rules that need an Earth and for the tests

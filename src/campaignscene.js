@@ -36,8 +36,7 @@ class Campaign extends Phaser.Scene {
     this.cameras.main.fadeIn(300, 0, 0, 0);
     spaceBackdrop(this, true);
     this.boom = fxBoom(this);
-    const carried = this.P.level === this.level; // arrived by the chain (or a retry): the ore and the extra ships of the refit come with the cruiser; a level started by itself (an address, a skip) has its own
-    this.camp = campNew(this.level, this.P.techs, Object.assign({}, this.opts, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {}));
+    this.camp = this.makeCamp();
     this.sp = {}; this.bsp = [];
     const pl = campPlaces(this.level); Object.keys(pl).forEach(id => { if (!pl[id].hidden) this.drawPlace(pl[id]); });
     this.osp = {}; // the ore lying about (asteroid rocks and wrecks), one sprite each
@@ -55,6 +54,10 @@ class Campaign extends Phaser.Scene {
     this.input.keyboard.on('keydown', e => this.onKey(e));
     if (typeof campMapInstall === 'function') campMapInstall(this); // Tab: the map of the level, over the battle, which goes on behind it (src/campmap.js, src/campmapdraw.js)
     this.showIntro();
+  }
+  makeCamp() { // a new battle of this level: arrived by the chain (or a retry), the ore and the extra ships of the refit come with the cruiser; a level started by itself (an address, a skip) has its own
+    const carried = this.P.level === this.level;
+    return campNew(this.level, this.P.techs, Object.assign({}, this.opts, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {}));
   }
   drawPlace(p) {
     const r = p.r || 60;

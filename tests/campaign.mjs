@@ -225,7 +225,7 @@ console.log('H. the scene: keys, modes, the pick, retry (on a stand-in)');
     window.__fake = (level, d) => { const f = Object.create(Campaign.prototype); f.add = document; f.cameras = document; f.input = document; f.textures = document; f.tweens = document;
       f.time = { delayedCall: (ms, fn) => fn() }; f.boom = { explode() {} }; f.bgLayers = []; f.hudG = document; f.hud = { shield: document, ore: document, hull: document, earth: document, bay: document, wave: document, mother: document, blink: document, obj: document, keys: document }; f.relicG = document;
       f.k = { W: { isDown: false }, A: { isDown: false }, S: { isDown: false }, D: { isDown: false }, UP: { isDown: false }, DOWN: { isDown: false }, LEFT: { isDown: false }, RIGHT: { isDown: false }, SPACE: { isDown: false } };
-      f.init(Object.assign({ level }, d || {})); f.camp = campNew(f.level, f.P.techs, f.opts); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); f.osp = {}; f.showIntro(); __went.length = 0; __toasts2.length = 0; return f; };
+      f.init(Object.assign({ level }, d || {})); f.camp = f.makeCamp(); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); f.osp = {}; f.showIntro(); __went.length = 0; __toasts2.length = 0; return f; };
   `);
   const mk = (level, d) => g.run(`window.F = __fake(${level}, ${JSON.stringify(d || {})}); 0`);
   const key = c => g.run(`F.onKey({ code: '${c}' }); 0`);
@@ -501,6 +501,51 @@ console.log('L. ore: asteroid rocks and wrecks, mining, the carrier shield, rech
   `);
   const withOre = J('__plays2(__ore, 600)'), without = J('__plays2(__stay, 600)');
   check('a player who also mines, recharges and builds wins level 1 on every seed, and loses fewer small ships than the same player without ore (6 seeds together)', withOre.every(r => r.r === 'won') && withOre.reduce((a, r) => a + r.ls, 0) < without.reduce((a, r) => a + r.ls, 0) && withOre.some(r => r.built > 0), JSON.stringify([withOre.map(r => r.ls), without.map(r => r.ls)]));
+}
+
+// ---------- M. level 1 is the asteroid belt ----------
+console.log('M. level 1, the belt: a mining cruiser, a quiet minute, the ambush, the refit');
+{
+  g.run(`
+    window.__belt = (C, s) => {           // a plain player of the belt: launches, sends the wing at the aliens every 5 s, flies the cruiser at the nearest alien and holds Space
+      if (s > 1 && s < 1.05) campOrder(C, 'launch');
+      if (s > 12 && Math.round(s * 30) % 150 === 0) campOrder(C, 'attack', '');
+      const c = C.carrier, a = campAliens(C).sort((p, q) => campDist(p, c) - campDist(q, c))[0];
+      if (a) { const w = Math.atan2(a.y - c.y, a.x - c.x), d = Math.atan2(Math.sin(w - c.rot), Math.cos(w - c.rot)); C.input.turn = Math.max(-1, Math.min(1, d * 3)); C.input.thrust = campDist(a, c) > 500 ? 1 : 0; C.input.fire = Math.abs(d) < 0.22 && campDist(a, c) < 800; } else { C.input.turn = 0; C.input.thrust = 0; C.input.fire = false; }
+    };
+    window.__beltplays = (script, secs, seeds) => (seeds || [1, 2, 3, 4, 5, 6]).map(sd => { window.C = campNew(1, [], { seed: sd }); for (let i = 0; i < secs * 30 && !C.result; i++) { script(C, i / 30); campStep(C, 1 / 30); C.events.length = 0; } return { r: C.result, w: C.why, t: Math.round(C.t / 1000), hull: Math.round(C.carrier.hp), ore: Math.floor(C.ore) }; });
+  `);
+  check('level 1 is "The belt": at Ceres (Occator Works), Vesta and Pallas; no Earth, no convoys, a store that starts empty; won by the mothership; ends with the Earth refit', J('CAMP.levels[1].name') === 'The belt' && J('CAMP.levels[1].start') === 'ceres' && J('CAMP.levels[1].places.ceres.base') === 'Occator Works' && J('CAMP.levels[1].places.vesta.name') === 'Vesta' && J('CAMP.levels[1].places.pallas.name') === 'Pallas' && J('CAMP.levels[1].earth') === false && J('CAMP.levels[1].convoys.length') === 0 && J('CAMP.levels[1].startOre') === 0 && J('CAMP.levels[1].win') === 'mother' && J('CAMP.levels[1].refit') === true);
+  g.run('__new2(1, [], 1)');
+  check('the cruiser starts at Ceres with no ore, no Earth to lose, thirty-two rocks of ore in the belt (640 ore, more than the store holds), nothing hunting it', J('C.ore') === 0 && J('C.earth') === null && J(`C.pickups.filter(p => p.kind === 'rock').length`) === 32 && J('campAliens(C).length') === 0 && Math.hypot(J('C.carrier.x'), J('C.carrier.y')) < 200);
+  g.run('__run(59)');
+  check('a quiet minute: for the first 59 seconds there is not an alien in the sky and no wave has started', J('campAliens(C).length') === 0 && J('C.waves.every(w => !w.started)') && g.run('C.events.filter(e => e.type === "alarm").length') !== undefined);
+  g.run('C.events.length = 0; __run(1.1)');
+  check('at 60 seconds the ambush: the alarm sounds, the ambush line is said, five raiders and three drones come out of the dark, all for the cruiser', J('C.waves[0].started') && g.run('C.events.some(e => e.type === "alarm")') && g.run('C.events.filter(e => e.type === "say").map(e => e.key).join()').includes('camp.say.ambush') && J(`campAliens(C).filter(u => u.kind === 'raider').length`) === 5 && J(`campAliens(C).filter(u => u.kind === 'drone').length`) === 3 && J('campAliens(C).every(u => u.goal === "carrier")'));
+  g.run('C.events.length = 0; __run(5)');
+  check('five seconds after it a second line says what the cruiser has: the mining lasers are weapons now, hold Space, the drones answer to 2', g.run('C.events.filter(e => e.type === "say").map(e => e.key).join()').includes('camp.say.ambush2') && /Hold Space/.test(J(`uiText('camp.say.ambush2')`)) && /press 2/.test(J(`uiText('camp.say.ambush2')`)));
+  // the mining opening
+  g.run('__new2(1, [], 1); campOrder(C, "launch"); __run(5); campOrder(C, "mine")');
+  g.run('__run(50)');
+  check('the quiet minute earns ore: a wing sent to mine brings in a good share of the belt (at least 100 ore in under a minute) and the store never passes 200', J('C.ore') >= 100 && J('C.ore') <= 200, J('C.ore'));
+  g.run('__new2(1, [], 1); campOrder(C, "launch"); __run(6)');
+  check('with no convoys in the level, Escort keeps the escorts close to the cruiser, and says so (the key is never dead)', J(`campOrder(C, 'escort', '').say`) === 'Escorts are with the cruiser.' && J(`campWing(C, 'escort').every(u => u.order.type === 'guard' && u.order.at.kind === 'carrier')`) && J(`campOrder(C, 'recharge', 'earth').say`) === 'There is no Earth here, pilot.');
+  // balance
+  const belt = J('__beltplays(__belt, 600)'), idle = J('__beltplays(() => {}, 600, [1, 2, 3])');
+  check('a plain player (launch, attack, the cruiser at the nearest alien, Space held) wins the belt on every seed, in four to six minutes', belt.every(r => r.r === 'won' && r.w === 'mother' && r.t >= 240 && r.t <= 360), JSON.stringify(belt.map(r => r.r + ' ' + r.t)));
+  check('a passive player loses, and the only way to lose is the cruiser: nothing points at an Earth shield that is gone', idle.every(r => r.r === 'lost' && r.w === 'carrier') && J(`campLoseLines(C, 'carrier').join(' ')`).indexOf('Earth') < 0 || (idle.every(r => r.r === 'lost' && r.w === 'carrier')), JSON.stringify(idle.map(r => r.r + ' ' + r.w + ' ' + r.t)));
+  check('the belt has no Earth to point at anywhere: no Earth bar (null), no goal line about Earth, no Earth in the model prompt of level 1', (() => { g.run('__new2(1, [], 1); __scene.camp = C'); return J('C.earth') === null && !/Earth/.test(J('campObjective(C)')) && !/Earth shield/.test(J('campSummary(C)')); })());
+  // what the next level inherits
+  check('the ore and the extra ships of the refit come with the cruiser into the next level: 120 ore and 2 fighters and an escort more in the bay (8 and 3); the cap of 200 holds; a level started by itself has its own 30', (() => { return J(`(() => { const a = campNew(2, [], { ore: 120, bonus: { fighters: 2, escorts: 1 } }), b = campNew(2, [], { ore: 9999 }), c = campNew(2, []); return [a.ore, a.bay.fighters, a.bay.escorts, b.ore, c.ore, c.bay.fighters, c.bay.escorts]; })()`).join() === '120,8,3,200,30,6,2'; })());
+  store.set('longhaul.campaign', JSON.stringify({ level: 2, techs: ['beam'], ore: 99999, bonus: { fighters: 99, escorts: -1 } }));
+  check('the save keeps the ore and the extras in range: the ore is cut to the 200 the store holds, the extras to 0 to 3', J('campProgressLoad().ore') === 200 && J('campProgressLoad().bonus.fighters') === 3 && J('campProgressLoad().bonus.escorts') === 0);
+  store.delete('longhaul.campaign');
+  g.run(`go = (s, key, data) => { __went.push({ key, data }); }; toast = (s, msg) => { __toasts2.push(msg); }; campProgressSave({ level: 2, techs: ['beam'], ore: 77, bonus: { fighters: 2, escorts: 1 } }); window.F = __fake(2, {}); 0`);
+  check('the scene gives a level reached by the chain its carried ore and extras (the save is at that level); a level started by itself gets the 30 of its own', J('F.camp.ore') === 77 && J('F.camp.bay.fighters') === 8 && J('F.camp.bay.escorts') === 3 && (g.run('campProgressSave({ level: 1, techs: [], ore: 77, bonus: { fighters: 2, escorts: 1 } }); window.F = __fake(2, {}); 0'), J('F.camp.ore') === 30 && J('F.camp.bay.fighters') === 6));
+  store.delete('longhaul.campaign'); g.run('go = __go0; toast = __toast0');
+  check('plain words: "send the drones to mine", "mine the belt", "drones, mine" are Mine', ['send the drones to mine', 'mine the belt', 'drones mine', 'go mining'].every(x => J(`campIntent(${JSON.stringify(x)})`) && J(`campIntent(${JSON.stringify(x)})`).act === 'fleet_mine'));
+  check('the lines of all three levels are curt: one short sentence each, 12 words at most', [1, 2, 3].every(n => ['before', 'after'].every(w => J(`campStory(${n}, '${w}')`).every(x => x.split(' ').length <= 12 && /[.]$/.test(x)))) && ['ambush', 'ambush2', 'bwave2', 'bwave3', 'escortcarrier'].every(k => J(`uiText('camp.say.${k}')`).split(' ').length <= 12));
+  check('every new word of the belt is in its own file, content/text/campaign-belt.md (ui.md is full), and the game reads it', (() => { const md = src('content/text/campaign-belt.md'); const keys = ['camp.l1.before.3', 'camp.l1.after.3', 'camp.say.ambush', 'camp.say.ambush2', 'camp.say.bwave2', 'camp.say.bwave3', 'camp.say.escortcarrier', 'camp.ui.refit', 'camp.ui.refitpick', 'camp.ui.refitbuy', 'camp.ui.refitore', 'camp.ui.refitgot']; const miss = keys.filter(k => !md.includes('| ' + k + ' |') || J(`uiText('${k}')`) === k); return miss.length === 0 || miss.join(); })());
 }
 
 // ---------- F. the save, and Long Haul untouched ----------
