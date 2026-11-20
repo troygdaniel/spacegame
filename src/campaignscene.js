@@ -42,7 +42,7 @@ class Campaign extends Phaser.Scene {
     this.boom = fxBoom(this);
     this.camp = this.makeCamp();
     this.sp = {}; this.bsp = []; this.bayAt = { launch: -1e9, land: -1e9 }; // the battle clock of the last launch and the last landing: the bays of the cruiser stay lit a moment after each (campBayLight)
-    const pl = campPlaces(this.level); Object.keys(pl).forEach(id => { if (!pl[id].hidden) this.drawPlace(pl[id]); });
+    const pl = campPlaces(this.level); this.farObjs = {}; this.farAt = 0; Object.keys(pl).forEach(id => { if (!pl[id].hidden && !pl[id].far) this.drawPlace(pl[id]); }); // the far bodies of the system (Sol's planets) are made when the carrier comes near (syncFar)
     this.osp = {}; this.rsp = {}; this.beams = []; // the ore lying about (chunks and wrecks), one sprite each; the rocks of the belt, one each; the beams on this frame
     this.beamG = this.add.graphics().setDepth(3.5); // the cracks and the beams
     this.csp = this.camp.caches.map(k => this.add.image(k.x, k.y, 'pod').setScale(1.8).setDepth(3).setTint(0xffd37a)); // resource caches (level 2): gold pods that go when collected
@@ -65,11 +65,25 @@ class Campaign extends Phaser.Scene {
     const carried = this.P.level === this.level;
     return campNew(this.level, this.P.techs, Object.assign({}, this.opts, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {}));
   }
-  drawPlace(p) {
-    const r = p.r || 60;
-    const im = this.add.image(p.x, p.y, planetTexture(this, p.kind || 'rock', p.seed || 1)).setScale(r / 300).setDepth(1); if (p.tint) im.setTint(p.tint); // the place's own colour (CAMP.places tint): Mars is not grey like Luna
-    label(this, p.x, p.y - r - 36, String(p.name).toUpperCase(), '#ffb454', 16);
-    if (p.base) { this.add.image(p.x + 70, p.y - 60, 'station').setScale(0.16).setDepth(2); label(this, p.x + 70, p.y - 100, String(p.base).toUpperCase(), '#38e1ff', 13); }
+  drawPlace(p) { // returns what it made, so a far place can be taken down again (syncFar)
+    const r = p.r || 60, made = [];
+    const im = p.kind === 'star' && typeof starTexture === 'function'
+      ? this.add.image(p.x, p.y, starTexture(this, p.star || 'G')).setScale(r / 48).setDepth(1).setBlendMode(Phaser.BlendModes.ADD) // a star: the corona and the hot core (src/art_world.js), its disc r px across
+      : this.add.image(p.x, p.y, planetTexture(this, p.kind || 'rock', p.seed || 1)).setScale(r / 300).setDepth(1); if (p.tint) im.setTint(p.tint); // the place's own colour (CAMP.places tint): Mars is not grey like Luna
+    made.push(im, label(this, p.x, p.y - r - 36, String(p.name).toUpperCase(), '#ffb454', 16));
+    if (p.base) { made.push(this.add.image(p.x + 70, p.y - 60, 'station').setScale(0.16).setDepth(2), label(this, p.x + 70, p.y - 100, String(p.base).toUpperCase(), '#38e1ff', 13)); }
+    return made;
+  }
+  // the far bodies of the system (CAMP.world, src/campsol.js): a picture only while the carrier is within CAMP.world.draw px of the edge of it, a few times a second
+  syncFar(time) {
+    if (!this.farObjs || time < this.farAt) return; this.farAt = time + 250;
+    const pl = campPlaces(this.level), c = this.camp.carrier, near = CAMP.world.draw;
+    Object.keys(pl).forEach(id => {
+      const p = pl[id]; if (!p.far || p.hidden) return;
+      const d = Math.hypot(p.x - c.x, p.y - c.y) - (p.r || 60) * (p.kind === 'star' ? 3 : 1), on = this.farObjs[id];
+      if (d < near && !on) this.farObjs[id] = this.drawPlace(p);
+      else if (d > near * 1.4 && on) { on.forEach(o => { try { o.destroy(); } catch (e) { /* gone */ } }); delete this.farObjs[id]; }
+    });
   }
 
   // ----- the cards: the story, the pick, the end -----
@@ -190,7 +204,7 @@ class Campaign extends Phaser.Scene {
       if (typeof campNudge === 'function') { const nd = campNudge(C, this.shown); if (nd) toast(this, nd, '#9fe9ff'); } // the first-minute hints, once each (src/campnudge.js)
     }
     C.events.splice(0).forEach(e => this.onEvent(e));
-    this.syncRockets(Math.min(dt, 100)); this.syncBay();
+    this.syncFar(time); this.syncRockets(Math.min(dt, 100)); this.syncBay();
     this.sync(); this.paintHud();
     if (this.mp) campMapPaint(this, time);
   }
@@ -332,7 +346,7 @@ class Campaign extends Phaser.Scene {
     // the radar: the carrier at its centre, space shown out to CAMP_RADAR.range; a ship beyond it is drawn on the rim
     const R = CAMP_RADAR; g.fillStyle(0x04101c, R.fill).fillCircle(R.x, R.y, R.r); g.lineStyle(R.rim[0], 0x38e1ff, R.rim[1]).strokeCircle(R.x, R.y, R.r);
     const dot = (p, color, size) => { let dx = (p.x - c.x) / R.range * R.r, dy = (p.y - c.y) / R.range * R.r; const d = Math.hypot(dx, dy); if (d > R.r - 3) { dx *= (R.r - 3) / d; dy *= (R.r - 3) / d; } g.fillStyle(color, 1).fillCircle(R.x + dx, R.y + dy, size + R.blip); };
-    const pl = campPlaces(C.level); Object.keys(pl).forEach(id => { if (!pl[id].hidden) dot(pl[id], id === 'earth' ? 0x4aa3ff : 0xb9a37a, id === 'earth' ? 4 : 2); });
+    const pl = campPlaces(C.level); Object.keys(pl).forEach(id => { if (!pl[id].hidden && !(pl[id].far && Math.hypot(pl[id].x - c.x, pl[id].y - c.y) > R.range)) dot(pl[id], id === 'earth' ? 0x4aa3ff : 0xb9a37a, id === 'earth' ? 4 : 2); });
     C.rocks.forEach(o => dot(o, 0x8c8c8c, 1)); C.pickups.forEach(o => dot(o, 0xffd37a, 1)); C.caches.forEach(k => { if (!k.got) dot(k, 0xffd37a, 2); }); if (C.relic) dot(C.relic, 0x7fe9ff, 3);
     C.ships.forEach(u => { if (u.hp <= 0) return; dot(u, campDotColor(u), u.kind === 'mother' ? 4 : u.kind === 'carrier' ? 3 : 2); }); // campDotColor (src/campmap.js): the map's colours too
     // the autopilot's readout under the goal line, and an arrow at the edge of the screen pointing at the goal with its distance (src/campnav.js; docs/night/graphics.md finding 3)

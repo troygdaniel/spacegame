@@ -26,7 +26,7 @@ function campNavGoal(C) {
     if (L.win === 'mother') {
       const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); if (m) return ship(m, 'mother', uiText('camp.nav.mother'));
       const cv = near(campConvoys(C)); if (cv) return ship(cv, 'convoy', uiText('camp.nav.convoy', { name: campConvoyName(cv) }));
-      return pl.earth ? { id: 'place:earth', kind: 'place', name: pl.earth.name, x: pl.earth.x, y: pl.earth.y, r: pl.earth.r || 60 } : null;
+      return C.earth && pl.earth ? { id: 'place:earth', kind: 'place', name: pl.earth.name, x: pl.earth.x, y: pl.earth.y, r: pl.earth.r || 60 } : null;
     }
     if (L.win === 'relic') {
       if (C.cachesGot < L.relic.caches) {
@@ -42,7 +42,7 @@ function campNavGoal(C) {
 // the one list. Each row: id (place:<id>, convoy:<ship id>, cache:<n>, relic, wing, goal), kind, group, name, x, y, r, dist (from the carrier), moving
 function campNavRows(C) {
   const pl = campPlaces(C.level), c = C.carrier, rows = [], add = r => { r.dist = Math.hypot(r.x - c.x, r.y - c.y); rows.push(r); return r; };
-  Object.keys(pl).forEach(id => { const p = pl[id]; if (!p.hidden) add({ id: 'place:' + id, kind: 'place', group: 'places', name: String(p.name), x: p.x, y: p.y, r: p.r || 60 }); });
+  Object.keys(pl).forEach(id => { const p = pl[id]; if (!p.hidden) add({ id: 'place:' + id, kind: 'place', group: 'places', name: String(p.name), x: p.x, y: p.y, r: p.r || 60, far: !!p.far, star: p.kind === 'star' }); });
   campConvoys(C).forEach(u => add({ id: 'convoy:' + u.id, kind: 'convoy', group: 'convoys', name: uiText('camp.nav.convoy', { name: campConvoyName(u) }), x: u.x, y: u.y, r: u.r || 22, moving: true, ref: u.id }));
   C.caches.forEach((k, i) => { if (!k.got) add({ id: 'cache:' + i, kind: 'cache', group: 'finds', name: uiText('camp.nav.cache', { n: i + 1 }), x: k.x, y: k.y, r: 0 }); });
   if (C.relic) add({ id: 'relic', kind: 'relic', group: 'finds', name: uiText('camp.nav.relic'), x: C.relic.x, y: C.relic.y, r: 0 });
@@ -63,12 +63,14 @@ function campNavTarget(C, N) {
   return u && u.hp > 0 ? { x: u.x, y: u.y, r: u.r || 0 } : null;
 }
 const campNavStop = (kind, t) => (kind === 'place' ? (t.r || 0) + CAMP.nav.stop : kind === 'convoy' || kind === 'mother' || kind === 'tower' ? CAMP.nav.stopShip : CAMP.nav.stopPoint);
-const campNavEta = (C, dist, fast) => Math.round(dist / (CAMP.carrier.speed * (fast ? CAMP.nav.fast : 1)) * CAMP.nav.etaSlow); // fast: the map's Fast button (a burn: CAMP.nav.fast times the speed)
+// the burn of a Fast trip (the one place it is decided: campNavGo stores it, campCarrier and campNavDrive read it, campNavEta tells it on the map): CAMP.nav.fast times the speed, farFast times it past farFrom px; 1 for a regular trip
+const campNavBurn = (dist, fast) => (!fast ? 1 : dist > CAMP.nav.farFrom ? CAMP.nav.farFast : CAMP.nav.fast);
+const campNavEta = (C, dist, fast) => Math.round(dist / (CAMP.carrier.speed * campNavBurn(dist, fast)) * CAMP.nav.etaSlow); // fast: the map's Fast button
 
 function campNavGo(C, row, fast) {
   if (!C || !row || C.result) return null;
   const id = row.of || row.id;
-  C.nav = { on: true, id, of: id, kind: row.kind, name: row.name, ref: row.ref || '', moving: !!row.moving, x: row.x, y: row.y, since: C.t, fast: !!fast }; // fast: the carrier burns at CAMP.nav.fast times its speed while this runs (campCarrier)
+  C.nav = { on: true, id, of: id, kind: row.kind, name: row.name, ref: row.ref || '', moving: !!row.moving, x: row.x, y: row.y, since: C.t, fast: !!fast, burn: campNavBurn(Math.hypot(row.x - C.carrier.x, row.y - C.carrier.y), fast) }; // fast: the carrier burns at N.burn times its speed while this runs (campCarrier, campNavDrive); decided once, by the distance at the start
   C.events.push({ type: 'nav', key: fast ? 'camp.nav.gofast' : 'camp.nav.go', vars: { name: row.name } });
   return C.nav;
 }
@@ -87,7 +89,7 @@ function campNavDrive(C, dt) {
   const t = campNavTarget(C, N); if (!t) { campNavClear(C, N.kind === 'cache' ? 'arrived' : 'lost'); return; } // a cache that has gone was gathered: that is arriving
   N.x = t.x; N.y = t.y;
   const K = CAMP.nav, dx = t.x - c.x, dy = t.y - c.y, dist = Math.hypot(dx, dy), left = Math.max(0, dist - campNavStop(N.kind, t)), speed = Math.hypot(c.vx, c.vy);
-  const diff = campWrap(Math.atan2(dy, dx) - c.rot), limit = Math.min(CAMP.carrier.speed * (N.fast ? K.fast : 1), K.floor + K.brake * left), inp = C.input;
+  const diff = campWrap(Math.atan2(dy, dx) - c.rot), limit = Math.min(CAMP.carrier.speed * (N.fast ? (N.burn || K.fast) : 1), K.floor + K.brake * left), inp = C.input;
   inp.turn = Math.max(-1, Math.min(1, diff * K.steer));
   inp.thrust = Math.abs(diff) < K.align && speed < limit ? 1 : 0;
   inp.brake = speed > limit + 5;
@@ -123,7 +125,8 @@ function campNavFind(C, text) {
   const places = rows.filter(r => r.kind === 'place' && !r.goal), alias = { moon: 'luna', 'lunar base': 'luna', base: 'luna', star: 'sun', sun: 'sun' };
   const hit = places.find(p => q === p.name.toLowerCase() || q === p.id.slice(6)) || places.find(p => q.includes(p.name.toLowerCase()) || q.split(' ').includes(p.id.slice(6))) || places.find(p => alias[q] === p.id.slice(6) || Object.keys(alias).some(a => q.includes(a) && alias[a] === p.id.slice(6)));
   if (hit) return { row: hit };
-  if (places.length === 1 && /\b(?:planet|world|home)\b/.test(q)) return { row: places[0] };
+  const here = places.filter(p => !p.far && !p.star); // the planets of the level itself (the far bodies of the system are named by their names)
+  if (here.length === 1 && /\b(?:planet|world|home)\b/.test(q)) return { row: here[0] };
   return { code: 'unknown' };
 }
 const CAMPNAV_RE = [
