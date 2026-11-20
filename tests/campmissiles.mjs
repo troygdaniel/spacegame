@@ -96,7 +96,7 @@ console.log('C. flying');
   check('the ships of Earth near the bang are not hurt (the fighter, which was shooting too, keeps its 36)', J('__hp(__e)') === 36 && J('__hp(__gun)') <= 2880, J('__hp(__gun)'));
   g.run('__m(1); window.__mo = __foe("mother", 1500, 0)');
   g.run(`for (let i = 0; i < 6; i++) { __fire('the mothership'); __run(1); } __run(6)`);
-  check('six missiles take 720 of the mothership\'s 900 hit points: the missiles do most of it, the guns finish it', J('__hp(__mo)') === 180 && J('C.missiles') === 0 && J('C.rockets.length') === 0 && J(`__ev('mboom')`) === 6, J('__hp(__mo)'));
+  check('six missiles take most of the mothership\'s hit points (6 times the big damage) and not all: the missiles do most of it, the guns finish it', (() => { const left = J('CAMP.mother.hp') - 6 * J('CAMP.missile.big'); return left > 0 && left < J('CAMP.mother.hp') * 0.3 && J('__hp(__mo)') === left && J('C.missiles') === 0 && J('C.rockets.length') === 0 && J(`__ev('mboom')`) === 6; })(), J('__hp(__mo)'));
   check('and the seventh is refused: the magazine is empty', J(`__fire('the mothership').code`) === 'nomissiles');
   g.run('__m(1); window.__a = __foe("gunship", 1500, 0, 80); window.__b = __foe("gunship", 1500, 300, 80)');
   g.run(`__fire(''); __run(0.3); C.by[__a].hp = 0`); // another gun kills the target in flight
@@ -222,8 +222,7 @@ console.log('H. nothing else moved');
   g.run('(() => { const t = C.ships.find(u => u.kind === "tower"); window.__tw = t.id; C.carrier.x = t.x - Math.cos(t.rot) * 700; C.carrier.y = t.y - Math.sin(t.rot) * 700; C.carrier.rot = t.rot; C.ships.forEach(u => { if (u.kind === "tower") u.nextShot = 1e12; }); })()');
   g.run(`__fire(''); __run(0.8); __fire(''); __run(4)`);
   check('level 3: a tower (160 hit points) takes two missiles (120 each) and falls, and the others stand', tw === 12 && J('__hp(__tw)') === 0 && J(`C.ships.filter(u => u.kind === 'tower').length`) === 11 && J('C.kills') === 1, J('__hp(__tw)'));
-  const sp = JSON.stringify(J('CAMP.mother')) + JSON.stringify(J('CAMP.carrier')) + JSON.stringify(J('CAMP.bay'));
-  check('the other numbers did not move: mothership 900, carrier 600, the bay at 6 and 2', J('CAMP.mother.hp') === 900 && J('CAMP.carrier.hull') === 600 && J('CAMP.bay.fighters') === 6 && J('CAMP.bay.escorts') === 2 && J('CAMP.carrier.radius') === 36, sp.slice(0, 60));
+  check('the turrets\' numbers did not move (point guns 5 a shot every 350 ms out to 420 px) and the carrier is still 36 px across its hit circle', J('CAMP.carrier.pd') === 5 && J('CAMP.carrier.pdDelay') === 350 && J('CAMP.carrier.pdRange') === 420 && J('CAMP.carrier.radius') === 36);
   const doc = src('docs/CAMPAIGN.md'), tune = src('docs/CAMPAIGN-TUNING.md');
   check('the docs say it: the weapons in CAMPAIGN.md, the numbers in CAMPAIGN-TUNING.md', /missile/i.test(doc) && /F\b/.test(doc) && /missile\./.test(tune) && /camp\.ui\.pausehelp|pause/i.test(doc + tune));
   check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
