@@ -58,7 +58,7 @@ const PLAYLOG = {
     campaign: ['step', 'level', 'wave', 'secs', 'via', 'order', 'how', 'ok', 'what', 'tech', 'debug', 'result', 'why', 'deaths', 'hull']
   },
   // the Campaign lines (L.campaign): the steps, and the values that are a closed list; anything else is "other". A name (an order, a tech, a loss) is a plain word of 1 to 24 letters.
-  campaign: { steps: ['start', 'wave', 'order', 'lost', 'tech', 'debug', 'end'], via: ['menu', 'address', 'next', 'retry', 'skip'], how: ['key', 'strip', 'voice', 'click'], debug: ['skip', 'win', 'lose', 'god'], result: ['win', 'lose', 'quit', 'skip'], perMin: 120, levelMax: 99 }
+  campaign: { steps: ['start', 'wave', 'order', 'lost', 'tech', 'debug', 'end'], via: ['menu', 'address', 'next', 'retry', 'skip', 'hub'], how: ['key', 'strip', 'voice', 'click'], debug: ['skip', 'win', 'lose', 'god'], result: ['win', 'lose', 'quit', 'skip'], perMin: 120, levelMax: 99 }
 };
 
 // ---- clean values: numbers, booleans, short plain strings, and one flat map of counts ----
@@ -349,7 +349,7 @@ function playlogWrap(L, root) {
   });
   wrap('listenLine', orig => function (text) { try { const k = Object.keys(LS().say).find(n => String(text).indexOf(lsSay(n).split('{')[0]) === 0); lsEv({ step: 'end', why: k || 'other' }); } catch (e) { /* never */ } return orig.apply(this, arguments); });
   wrap('listenGo', orig => function () { const r = orig.apply(this, arguments); if (r) lsEv({ step: 'end', why: 'sent' }); return r; });
-  // the Campaign (src/campaign.js), watched from outside like the rest: campNew starts a level (opts.via says how: menu, address, next, retry or skip), campStep says the waves that
+  // the Campaign (src/campaign.js), watched from outside like the rest: campNew starts a level (opts.via says how: menu, address, next, retry, skip or hub), campStep says the waves that
   // began and the ships that were lost and when the level ended, campOrder an order (a fourth argument says how it was given: key, strip, voice or click), campPick a tech.
   // campDebugRun (src/campdebug.js) says its own steps. A level's end is said once: the logger ignores a second one.
   const campEnded = new WeakSet();

@@ -23,21 +23,21 @@ console.log('A. the table');
 {
   const T = J('CAMP_PANELS');
   check('two panels: key 1 FLEET at the left, key 2 SHIP at the right', T.panels.length === 2 && T.panels[0].key === '1' && T.panels[0].side === 'left' && T.panels[0].title === 'FLEET' && T.panels[1].key === '2' && T.panels[1].side === 'right' && T.panels[1].title === 'SHIP');
-  check('each has five rows, numbered 1 to 5, each with a label and a line for the help page', T.panels.every(p => p.rows.map(r => r.n).join() === '1,2,3,4,5' && p.rows.every(r => r.label && r.help && r.id)));
-  check('the fleet rows are launch, attack, escort, guard, recall; the ship rows mine, recharge, build a fighter, build an escort, fly to the objective', T.panels[0].rows.map(r => r.order).join() === 'launch,attack,escort,guard,recall' && T.panels[1].rows.map(r => r.order || r.fly).join() === 'mine,recharge,build,build,objective' && T.panels[1].rows[2].arg === 'fighter' && T.panels[1].rows[3].arg === 'escort');
+  check('the fleet panel has five rows and the ship panel six, numbered from 1, each with a label and a line for the help page', T.panels.every(p => p.rows.map(r => r.n).join() === (p.id === 'ship' ? '1,2,3,4,5,6' : '1,2,3,4,5') && p.rows.every(r => r.label && r.help && r.id))); // the SHIP panel has a sixth row: Dock (card space-game-campaign-outposts)
+  check('the fleet rows are launch, attack, escort, guard, recall; the ship rows mine, recharge, build a fighter, build an escort, fly to the objective, dock', T.panels[0].rows.map(r => r.order).join() === 'launch,attack,escort,guard,recall' && T.panels[1].rows.map(r => r.order || r.fly).join() === 'mine,recharge,build,build,objective,dock' && T.panels[1].rows[2].arg === 'fighter' && T.panels[1].rows[3].arg === 'escort');
   check('key 3 is reserved: no panel has it and no row is bound to it', !T.panels.some(p => p.key === '3') && J(`campPanelKey(campPanelNew(), campNew('home', [], { seed: 1 }), 'Digit3', 0).opened`) === '');
   check('the delay is 250 ms', T.delay === 250);
   g.run(`window.__C = __quiet(campNew('home', [], { seed: 1 }));`);
   check('every order the table names is one the game knows (campOrder never answers "what")', J(`CAMP_PANELS.panels.flatMap(p => p.rows).filter(r => r.order).every(r => campCheck(__C, r.order, r.arg || '').code !== 'what')`));
   const codes = J(`(() => { const out = new Set(); for (const lvl of [1, 2]) { const C = __quiet(campNew(lvl, [], { seed: 1 })); for (let k = 0; k < 6; k++) { CAMP_PANELS.panels.flatMap(p => p.rows).filter(r => r.order).forEach(r => { const q = campCheck(C, r.order, r.arg || ''); if (!q.ok) out.add(q.code); }); if (k === 0) campOrder(C, 'launch'); if (k === 1) __run(C, 5); if (k === 2) { C.ore = 0; } if (k === 3) { C.shield = 150; } } } return [...out]; })()`);
   check('every refusal the rows meet has its few words in the table', codes.length >= 5 && codes.every(c => J(`!!CAMP_PANELS.why['${c}']`)), codes.join());
-  check('the table is the one source: the settings and help rows are made from it (campPanelKeyRows: 11 rows, the panel key then the digit, and Shift for the burn)', J(`campPanelKeyRows().length`) === 11 && J(`campPanelKeyRows()[2].k.join()`) === '1,3' && J(`campPanelKeyRows()[7].k.join()`) === '2,3');
+  check('the table is the one source: the settings and help rows are made from it (campPanelKeyRows: 12 rows, the panel key then the digit, Shift for the burn, and the dock row)', J(`campPanelKeyRows().length`) === 12 && J(`campPanelKeyRows()[2].k.join()`) === '1,3' && J(`campPanelKeyRows()[7].k.join()`) === '2,3');
   check('the key line says the panels from the table: 1 Fleet   2 Ship', J('campPanelKeyLine()') === '1 Fleet   2 Ship');
 }
 
 console.log('B. the live state of each row');
 {
-  g.run(`window.C1 = __quiet(campNew('home', [], { seed: 1 }));`);
+  g.run(`window.C1 = __quiet(campNew('home', [], { seed: 1 })); C1.docked = 'luna';`); // docked: the build rows can be built (undocked they say "Dock at an outpost to build.": tests/campoutpost.mjs)
   const R = id => J(`__row(C1, '${id.split('.')[0]}', '${id.split('.')[1]}')`);
   check('fresh battle, fleet: launch is ready and says what is in the bay; the rest wait for a wing', R('fleet.launch').ok && /6 fighters, 2 escorts/.test(R('fleet.launch').state) && ['attack', 'escort', 'guard', 'recall'].every(r => !R('fleet.' + r).ok));
   check('and say why in a few words: no fighters out, no escorts out, no ships out', R('fleet.attack').state === 'no fighters out' && R('fleet.escort').state === 'no escorts out' && R('fleet.guard').state === 'no ships out' && R('fleet.recall').state === 'no ships out');
@@ -98,7 +98,7 @@ console.log('D. fast typing');
 
 console.log('E. what a pick does');
 {
-  g.run(`window.C5 = __quiet(campNew('home', [], { seed: 1 })); window.__how = []; window.__co0 = campOrder; campOrder = function (C, name, arg, how) { __how.push([name, arg, how]); return __co0.apply(null, arguments); };`);
+  g.run(`window.C5 = __quiet(campNew('home', [], { seed: 1 })); C5.docked = 'luna'; window.__how = []; window.__co0 = campOrder; campOrder = function (C, name, arg, how) { __how.push([name, arg, how]); return __co0.apply(null, arguments); };`);
   g.run(`campPanelRun(C5, CAMP_PANELS.panels[0].rows[0], 'key'); campPanelRun(C5, CAMP_PANELS.panels[1].rows[2], 'click'); campPanelRun(C5, CAMP_PANELS.panels[1].rows[3], 'key');`);
   check('a row is campOrder with the row\'s words and how it was given (key or click): the play log reads it', J('__how.map(h => h.join(":")).join(" ")') === 'launch::key build:fighter:click build:escort:key', J('__how.map(h => h.join(":")).join(" ")'));
   g.run(`campOrder = __co0;`);

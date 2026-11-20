@@ -20,7 +20,7 @@ function campMapInstall(s, target) {
   const on = e => {
     if (!e || e.code !== CAMPMAP.key || e.repeat || typing(e.target)) return;
     if (s.mp) { campMapClose(s); return; }
-    if (s.mode === 'play' && !s.leaving && !s.panel) campMapOpen(s); // only in the battle: not over the story, the pick, the pause or the end
+    if (s.mode === 'play' && !s.leaving && !s.panel && !s.docked) campMapOpen(s); // only in the battle: not over the story, the pick, the pause, the end, or the dock's ready room (the scene is paused under it)
   };
   w.addEventListener('keydown', on);
   const off = () => { try { w.removeEventListener('keydown', on); } catch (e) { /* gone */ } };
@@ -142,7 +142,7 @@ function campMapPaint(s, time) {
   marks.forEach(m => {
     if (mp.z > 1.01 && !CAMPMAP_PINNED.includes(m.type) && (X(m.x) < F.x || X(m.x) > F.x + F.w || Y(m.y) < F.y || Y(m.y) > F.y + F.h)) return; // zoomed in, what is out of the frame is not drawn on its edge (that was for the whole level); the carrier, the mothership and the convoys still are
     const p = pin(X(m.x), Y(m.y));
-    if (m.type === 'place') { const r = Math.max(m.color === col.star ? 7 : 5, m.r * f.s); g.fillStyle(m.color, 0.85).fillCircle(p.x, p.y, r); g.lineStyle(1, m.color, 0.5).strokeCircle(p.x, p.y, r + 4); }
+    if (m.type === 'place') { const r = Math.max(m.color === col.star ? 7 : 5, m.r * f.s); g.fillStyle(m.color, 0.85).fillCircle(p.x, p.y, r); g.lineStyle(1, m.color, 0.5).strokeCircle(p.x, p.y, r + 4); if (m.outpost) { const q = r + 9; g.lineStyle(2, 0x6dff9c, 0.95).strokeRect(p.x - q, p.y - q, q * 2, q * 2); g.fillStyle(0x6dff9c, 0.95).fillRect(p.x - 2, p.y - q - 5, 4, 4); } } // a friendly outpost (the level's `outposts`) wears a green frame and a beacon: the dock
     else if (m.type === 'relic') {
       const r = Math.max(7, m.r * f.s); g.lineStyle(2, col.relic, 0.55).strokeCircle(p.x, p.y, r);
       if (m.hold > 0) { g.lineStyle(4, col.relic, 1); g.beginPath(); g.arc(p.x, p.y, r, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * Math.min(1, m.hold)); g.strokePath(); }

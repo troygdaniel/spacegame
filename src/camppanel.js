@@ -63,6 +63,7 @@ function campPanelState(C, row) {
     case 'recharge': { const r = campPanelRecharge(C); return (r.what === 'Earth' ? 'Earth: ' : 'shield: ') + r.cost + ' ore'; }
     case 'buildf': return B.fighterCost + ' ore, ' + B.fighterTime + ' s';
     case 'builde': return B.escortCost + ' ore, ' + B.escortTime + ' s';
+    case 'dock': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? 'dock at ' + n.o.name : ''; } // the outpost in range
     case 'goal': { const g = campNavGoal(C); return g ? g.name + '  ' + campNavKm(Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y)) + ' km' : ''; }
   }
   return '';
