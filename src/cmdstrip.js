@@ -70,7 +70,7 @@ function cmdstripZone() { return cmdstripUp() ? Object.assign({}, CMDSTRIP.zone)
 function cmdstripScene(game) {
   game = game || CMDSTRIP.s.game || (typeof window !== 'undefined' ? window.game : null);
   if (!game || !game.scene || typeof game.scene.getScenes !== 'function') return null;
-  const s = game.scene.getScenes(true).find(sc => sc.scene && (sc.scene.key === 'Space' || sc.scene.key === 'Station'));
+  const s = game.scene.getScenes(true).find(sc => sc.scene && (sc.scene.key === 'Space' || sc.scene.key === 'Station' || sc.scene.key === 'Campaign'));
   return s && !s.leaving && !s.dead ? s : null;
 }
 // what keeps the line from opening: a panel, a talk, the shop, a jump charging, or the navigation list holding the keys

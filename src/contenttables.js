@@ -381,6 +381,7 @@ const UI_TEXT = {
   'camp.ui.next': 'Enter  continue',
   'camp.ui.retry': 'Enter  try again     T  title',
   'camp.ui.soon': 'The next level is not built yet. Your pick is saved. T  title',
+  'camp.ui.paused': 'PAUSED     Esc  resume     T  title',
   'camp.ui.hull': 'CARRIER',
   'camp.ui.earth': 'EARTH',
   'camp.ui.bay': 'BAY',

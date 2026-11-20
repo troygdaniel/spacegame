@@ -1,12 +1,14 @@
 # Campaign: Earth's fleet against the aliens (the first cut)
 
-Card `space-game-campaign-mvp`. A new mode beside Long Haul: press **K** on the title screen. Long Haul, its trading and its save are not touched. The aim is that Troy plays all three levels fast, a few minutes each, and feels the story. Nothing here has been played yet; the numbers are first guesses.
+Card `space-game-campaign-mvp`. A new mode beside Long Haul: press **K** on the title screen. Long Haul, its trading and its save are not touched. The aim is that Troy plays all three levels fast, a few minutes each, and feels the story.
+
+**Status (19 Nov 2026).** Level 1 is built end to end: the story, the battle, the tech pick, the save. Levels 2 and 3 are card `space-game-campaign-l2l3`. The rules are tested in Node (`tests/campaign.mjs`: whole battles are flown, a sensible player wins level 1 in 1 to 2.5 minutes, doing nothing loses); the scene that draws them was **not seen on a screen**, so its look, the radar and the feel of the carrier are untried. The numbers are first guesses: they are all in the one table `CAMP` at the top of `src/campaign.js`, one line each.
 
 **The story.** Earth is learning to travel at warp speed when an alien race attacks. You command the flagship carrier from the Lunar base. You protect Earth and the supply convoys that fly from Earth to the colonies (the colonies pay for the tech). After each battle you salvage alien technology, choose one piece of it, and the war moves on.
 
 ## How you play
 
-You fly the carrier yourself: big, slow, heavy. **W A S D** fly it, **Space** fires its main gun, and its point guns shoot anything close by themselves. Your small ships do the rest, and you give them orders by **keys**, by the **command strip** (I, then type) or by **voice** (U, then say it). The three ways run the same five orders:
+You fly the carrier yourself: big, slow, heavy. **W A S D** fly it, **Space** fires its main gun, **Q** blinks (once you have that tech), and its point guns shoot anything close by themselves. **Esc** pauses, with its own menu. Your small ships do the rest, and you give them orders by **keys**, by the **command strip** (I, then type) or by **voice** (U, then say it). The three ways run the same five orders:
 
 | Order | Key | You can type or say | What the small ships do |
 |---|---|---|---|
