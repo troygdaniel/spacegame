@@ -69,6 +69,7 @@ class Campaign extends Phaser.Scene {
     this.card = o; this.panel = true;
   }
   hideCard() { if (this.card) this.card.forEach(x => x.destroy()); this.card = null; this.panel = false; }
+  flash(id) { const sp = this.sp[id]; if (!sp) return; sp.setTint(0xff8a8a); this.time.delayedCall(90, () => { if (sp.active !== false) sp.clearTint(); }); } // the hull took a hit: the carrier blinks red for 90 ms (the blind critic: nothing but a red bar said so)
   say(lines) { if (typeof shipcompSay === 'function' && lines.length) shipcompSay(lines.join(' ')); } // the ship's voice, as much as Settings > Sound allows
   showIntro() {
     this.mode = 'intro'; const lines = campStory(this.level, 'before');
@@ -138,7 +139,7 @@ class Campaign extends Phaser.Scene {
     if (e.type === 'say') { const text = uiText(e.key, e.vars); toast(this, text, '#9fe9ff'); this.say([text]); }
     else if (e.type === 'gun') sfx('laser');
     else if (e.type === 'boom') { this.boom.explode(e.big ? 90 : 26, e.x, e.y); sfx('boom'); if (e.kind === 'carrier') this.cameras.main.shake(400, 0.01); }
-    else if (e.type === 'hit') { if (e.id === this.camp.carrier.id) this.cameras.main.shake(90, 0.003); this.boom.explode(3, e.x, e.y); }
+    else if (e.type === 'hit') { if (e.id === this.camp.carrier.id) { this.cameras.main.shake(90, 0.003); this.flash(e.id); } this.boom.explode(3, e.x, e.y); }
     else if (e.type === 'earthhit') this.boom.explode(6, e.x, e.y);
     else if (e.type === 'launch' || e.type === 'dock') beep(e.type === 'launch' ? 560 : 420, 0.07, 'triangle', 0.04, 160);
     else if (e.type === 'blink') { this.boom.explode(30, e.x, e.y); sfx('shieldUp'); }
