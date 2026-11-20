@@ -3,13 +3,15 @@
 // So nothing the player sees while playing changes: the place stays "Alien home world" on the map, the nav list, the briefing and the level text. The won card of level 3 says it is over; the
 // ending screen turns ("This is not their home. It is an outpost." "The war is not over." and the star the data points to, a distant star drawn on it); a saved flag, revealed, is set only when
 // the ending shows, and after it a replay of level 3 may call the place the outpost. Checks:
-//   A  before the flag no string of the Campaign (keys, level data, the map, the nav, the story) says "outpost": a test that fails the moment someone names it early
+//   A  before the flag nothing that names or describes the ALIEN world (level 3 and its missions, towers, briefings, chatter, the story, the nav and map of level 3) says "outpost". The word is Troy's for OUR docks too
+//      (his first brief: ships to the outposts of the solar system; decision of 20 Nov 2026: keep it on both), so the friendly-outpost lines (the docks, the camp.no.* refusals, the retreat, the nav and map rows of Earth, Luna,
+//      Mars, Ceres) are exempt: they are the rows of content/text/campoutpost.md, and the check is by scope, not by word
 //   B  the won card of level 3 is the victory ("Their defences are down." "The war is won."), the ending is the reveal and is spoken line by line; levels 1 and 2 reveal nothing
 //   C  the flag: false at the start, true (saved) only when the ending shows, kept by a new campaign
 //   D  after the flag the true name is used: the level, the place, the briefing; "Last battle" is not said again; before it the old names
 //   E  the data: the star is a field of the level's data; the lines are short (12 words) and in a file of their own; ui.md did not grow
 //   F  the title's Campaign panel and the ending's hint drop the finality ("Earth is safe", "first campaign is won") and the panel changes after the flag
-//   G  the docs: a SPOILER section in docs/CAMPAIGN.md, and nothing before it says outpost
+//   G  the docs: a SPOILER section in docs/CAMPAIGN.md, and nothing before it says outpost of the alien world (the friendly outposts' own section is exempt)
 // Run: node tests/campreveal.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
@@ -36,8 +38,11 @@ const cardsText = () => J('__cards.map(c => [c.title].concat(c.lines, [c.hint]).
 sec('A', () => {
   g.run("localStorage.removeItem('longhaul.campaign'); campReveal && campReveal(false)");
   const keys = J("Object.keys(UI_TEXT).filter(k => /^camp\\./.test(k) && !/^camp\\.end\\./.test(k) && !/\\.r\\.\\d/.test(k))");
-  const bad = keys.filter(k => /outpost/i.test(J(`UI_TEXT[${JSON.stringify(k)}]`)));
-  check(`A  no Campaign string (${keys.length} keys) says "outpost" before the flag`, keys.length > 150 && bad.length === 0, bad.join(','));
+  const friendlyKeys = new Set(read('content/text/campoutpost.md').split('\n').map(l => /^\|\s*(camp\.[\w.]+)\s*\|/.exec(l)).filter(Boolean).map(m => m[1])); // our docks' words: the exempt scope
+  const bad = keys.filter(k => !friendlyKeys.has(k) && /outpost/i.test(J(`UI_TEXT[${JSON.stringify(k)}]`)));
+  check(`A  outside the friendly-outpost lines (${friendlyKeys.size} rows of campoutpost.md), no Campaign string (${keys.length} keys) says "outpost" before the flag`, keys.length > 150 && friendlyKeys.size > 10 && bad.length === 0, bad.join(','));
+  const alienWords = [...friendlyKeys].filter(k => /alien home|home world|not their home|level 3|\btower|mothership/i.test(J(`UI_TEXT[${JSON.stringify(k)}]`)));
+  check('A  and the friendly-outpost lines never name or describe the alien world (no home world, no level 3, no towers, no mothership): they are about our docks', alienWords.length === 0, alienWords.join(','));
   const lv = J("CAMP.levels[3].name + '|' + Object.keys(campPlaces(3)).map(k => campPlaces(3)[k].name).join('|') + '|' + campStory(3, 'before').join('|') + '|' + campStory(3, 'after').join('|')");
   check('A  level 3\'s name, its places, its briefing and its won card say nothing of an outpost, and the place is still the alien home world', !/outpost/i.test(lv) && /Alien home world/.test(lv) && /The home world/.test(lv), lv);
   const nav = J("(() => { const C = campNew(3, [], { seed: 1 }); const rows = typeof campNavRows === 'function' ? campNavRows(C) : []; const marks = typeof campMapMarks === 'function' ? campMapMarks(C, false) : []; return rows.map(r => r.name).concat(marks.map(m => m.name || '')).join('|'); })()");
@@ -45,7 +50,9 @@ sec('A', () => {
   const story = [1, 2, 3].map(l => ['before', 'after'].map(w => J(`campStory(${l}, '${w}')`).join('|')).join('|')).join('|');
   check('A  the stories of the three levels before the flag: none says outpost', !/outpost/i.test(story));
   const src = ['src/campaign.js', 'src/campaignscene.js', 'src/campnav.js', 'src/campmap.js', 'src/campmapdraw.js', 'src/camphelp.js', 'src/campnudge.js', 'src/campchatter.js'].filter(f => /outpost/i.test(read(f).replace(/\/\/[^\n]*/g, '')));
-  check('A  the Campaign scripts name the outpost only in the reveal data and the ending (campaign.js and campaignscene.js), nowhere else', src.every(f => f === 'src/campaign.js' || f === 'src/campaignscene.js'), src.join(','));
+  check('A  the Campaign scripts name the outpost only where it is ours or the reveal: the reveal data and the ending (campaign.js, campaignscene.js) and our docks (the nav and map rows of campnav.js, campmap.js, campmapdraw.js); never the help, the nudge or the chatter', src.every(f => ['src/campaign.js', 'src/campaignscene.js', 'src/campnav.js', 'src/campmap.js', 'src/campmapdraw.js'].includes(f)), src.join(','));
+  const level3Code = ['src/campnav.js', 'src/campmap.js', 'src/campmapdraw.js'].map(f => read(f).replace(/\/\/[^\n]*/g, '').split('\n').filter(l => /outpost/i.test(l) && /home world|alien world|level 3|towers|reveal/i.test(l)).join('|')).join('');
+  check('A  and no line of the nav and map scripts that says outpost is about level 3, the alien world, the towers or the reveal', level3Code === '', level3Code);
   const chat = J("Object.keys(UI_TEXT).filter(k => /^camp\\.chat\\./.test(k)).map(k => UI_TEXT[k]).join('|')");
   check('A  the radio chatter says neither "home world", "last battle" nor "outpost"', !/outpost|last battle|home world/i.test(chat));
 });
@@ -121,7 +128,8 @@ sec('F', () => {
 sec('G', () => {
   const d = read('docs/CAMPAIGN.md'), i = d.search(/^#+ .*SPOILER/m);
   check('G  docs/CAMPAIGN.md has a SPOILER section', i > 0, i);
-  check('G  it holds the reveal (outpost, the flag, the star) and nothing before it says "outpost" or "not their home"', i > 0 && /outpost/i.test(d.slice(i)) && /revealed/.test(d.slice(i)) && !/outpost|not their home/i.test(d.slice(0, i)));
+  const early = d.slice(0, i).split('\n').filter(l => /outpost|not their home/i.test(l) && /alien outpost|their outpost|not their home|it is an outpost|(home world|level 3)\W.{0,24}(is|was|turns out to be) an? (alien )?outpost|tau ceti/i.test(l)); // our outposts (docks, the retreat, "the last outpost before the home world") are exempt: they are the friendly kind; what is not is the alien world being one
+  check('G  it holds the reveal (outpost, the flag, the star) and nothing before it says that the alien world is an outpost, or "not their home"', i > 0 && /outpost/i.test(d.slice(i)) && /revealed/.test(d.slice(i)) && early.length === 0, early.join(' | ').slice(0, 300));
   check('G  the story list of the doc (after the level 3 lines) is the victory as the player first reads it', /The war is won\./.test(d) && !/Earth is safe/.test(d));
   check('G  no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 });
