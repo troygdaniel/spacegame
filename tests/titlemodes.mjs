@@ -67,7 +67,7 @@ console.log('C. the title');
       return f; };
   `);
   g.run('__calls.length = 0; __caps.length = 0; __texts.length = 0; __zones.length = 0; window.T = __scene(); T.modeChoices()');
-  check('two choices are drawn, with the key caps ENTER and K and their names and lines', J('__caps').join() === 'ENTER,K' && J('__texts').includes('LONG HAUL') && J('__texts').includes('CAMPAIGN') && J('__zones.length') === 2 && J('__texts').length === 4, J('__texts').join(' | '));
+  check('two choices are drawn, with the key caps ENTER and K, their names and lines, and the Campaign panel\'s "H  all the keys"', J('__caps').join() === 'ENTER,K' && J('__texts').includes('LONG HAUL') && J('__texts').includes('CAMPAIGN') && J('__zones.length') === 2 && J('__texts').length === 5 && J('__texts').includes('H  all the keys'), J('__texts').join(' | '));
   g.run('__zones[0].h.pointerdown()');
   check('a click on the Long Haul panel starts Long Haul from the station', J('__calls').join() === 'go Station');
   g.run('__calls.length = 0; __zones[1].h.pointerdown()');
