@@ -117,10 +117,10 @@ const CONTROLS = [
     { k: ['Q'], t: 'Warp blink hop (needs that tech)', sub: 'FLY AND FIRE' },
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Click'], t: 'Map: click sets a place, again flies', sub: 'THE MAP' },
-    { k: ['W', 'S'], t: 'Map list: choose (arrows too)', sub: 'THE MAP' },
-    { k: ['A', 'D'], t: 'Map list: next or last group', sub: 'THE MAP' },
+    { k: ['W', 'S', 'A', 'D'], t: 'Map list: choose, change group', sub: 'THE MAP' }, // W S choose, A D the next or last group (one row: the Campaign group has 22 rows at most, or Settings > Controls goes to three columns)
     { k: ['Enter'], t: 'Map: fly to the chosen place', sub: 'THE MAP' },
     { k: ['Shift', 'Enter'], t: 'Map: fly there fast (a burn)', sub: 'THE MAP' },
+    { k: ['V'], t: 'Map: send a scout there', sub: 'THE MAP' },
     { k: ['X'], t: 'Map: clear the destination', sub: 'THE MAP' },
     { k: ['Z'], t: 'Map: the area, or the whole system', sub: 'THE MAP' },
     { k: ['I'], t: 'Type an order to the ship', sub: 'THE STRIP AND THE VOICE' },
