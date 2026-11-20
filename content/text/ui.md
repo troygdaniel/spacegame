@@ -145,13 +145,13 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.ui.level | LEVEL {n}: {name} |
 | camp.ui.won | LEVEL {n} WON |
 | camp.ui.lost | LEVEL {n} LOST |
-| camp.ui.keys | W A S D fly   Space turrets   F missiles   1 launch   2 attack   3 escort   4 guard   5 recall   6-9 ore   I type an order   U speak   Tab map |
+| camp.ui.keys | W A S D fly   Space turrets   F missiles   {panels}   Tab Map   H Keys |
 | camp.ui.begin | Enter  begin |
 | camp.ui.pick | Choose one salvaged technology:  1  2  3 |
 | camp.ui.next | Enter  continue |
 | camp.ui.retry | Enter  try again     T  title |
 | camp.ui.pausetitle | PAUSED |
-| camp.ui.paused | Esc  resume     T  title |
+| camp.ui.paused | Esc  resume     T  title     H  all keys |
 | camp.ui.pausemap | Tab  map of the whole level (the battle goes on behind it) |
 | camp.map.title | MAP  -  LEVEL {n}: {name} |
 | camp.map.footer | Tab or Esc closes it. The battle goes on behind it. |

@@ -59,7 +59,7 @@ const open = async (t, press, key, section) => { await press(key); await t.waitF
     const tb = await t.ev(`(() => ({ ids: CONTROLS.map(g => g.id), ok: CONTROLS.every(g => g.title && g.rows.length && g.rows.every(r => Array.isArray(r.k) && r.k.length && r.k.every(x => typeof x === 'string' && x) && typeof r.t === 'string' && r.t)),
       bay: BAY_CONTROLS.length, bayBack: JSON.stringify(BAY_CONTROLS) === JSON.stringify(controlsBay()), marked: CONTROLS.reduce((n, g) => n + g.rows.filter(r => r.bay).length, 0),
       help: ['Station', 'Ship', 'Space', 'Surface'].every(s => HELP[s].length && JSON.stringify(HELP[s]) === JSON.stringify(controlsHelp(s))), flight: HELP.Space.length }))()`);
-    check('six groups with unique ids, every row has keys and words', tb.ids.length === 6 && new Set(tb.ids).size === 6 && tb.ok, tb.ids.join());
+    check('eight groups with unique ids, every row has keys and words', tb.ids.length === 8 && new Set(tb.ids).size === 8 && tb.ok, tb.ids.join());
     check('the Ship bay list is the rows marked bay, twelve of them', tb.bay === 12 && tb.marked === 12 && tb.bayBack);
     check('the H page lines of every scene come from the table', tb.help);
     check('the table has the keys the game uses (a sample)', await t.ev(`['W', 'Shift', 'N', 'T', 'J', 'Tab', 'H', 'M', 'Esc', 'S', 'V', 'C', 'P'].every(k => CONTROLS.some(g => g.rows.some(r => r.k.includes(k))))`));
