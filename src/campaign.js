@@ -130,7 +130,7 @@ const CAMP = {
   places: {
     // name; kind and seed: the world drawn (src/art_world.js planetTexture: rock, ice, gas, lava, ringed); r: its size in px; base: a station is drawn beside it; tint: a colour the picture is multiplied by (Mars is rock, rust-coloured)
     earth: { x: 0, y: 0, name: 'Earth', kind: 'ice', seed: 7, r: 160 },                         // the origin: everything else is placed from Earth
-    luna: { x: 238, y: -137, name: 'Luna', kind: 'rock', seed: 3, r: 45, base: 'Lunar base' },  // 275 px from Earth: the Lunar base, where the carrier starts (90 px east of it)
+    luna: { x: 238, y: -137, name: 'Luna', kind: 'rock', seed: 3, r: 45, base: 'Lunar base' },  // 275 px from Earth: the Lunar base, where the carrier starts (130 px east and 30 south of it, clear of the moon and the base ring: drawn 140 px long it lay across both at 90 px)
     mars: { x: 4064, y: 571, name: 'Mars', kind: 'rock', seed: 12, r: 110, tint: 0xe0825a },                   // 4,100 px from Earth
     eros: { x: -1705, y: -3206, name: 'Eros', kind: 'rock', seed: 21, r: 36 }                  // 3,630 px from Earth
   },
@@ -139,7 +139,7 @@ const CAMP = {
   // guards (aliens that wait until you come close), towers (rings of them round a place), caches, relic, say (the words of the level, in content/text/ui.md)
   levels: {                                // the levels; a wave or a convoy is one line
     1: {
-      name: 'Home', start: 'luna', startAt: [90, 0],           // the base the carrier leaves, and its offset from it
+      name: 'Home', start: 'luna', startAt: [130, 30],           // the base the carrier leaves, and its offset from it
       win: 'mother',                                            // the level is won when the alien mothership is dead
       convoys: [                                                // at: seconds into the level the freighter leaves Earth; to: the place it flies to
         { id: 'mars', at: 10, to: 'mars' },
