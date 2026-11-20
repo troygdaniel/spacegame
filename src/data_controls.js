@@ -121,6 +121,7 @@ const CONTROLS = [
     { k: ['H'], t: 'This page of keys', sub: 'ANYWHERE' },
     { k: ['Esc'], t: 'Pause; closes the map or a panel', sub: 'ANYWHERE' },
     { k: ['T'], t: 'Title, from the pause or end card', sub: 'ANYWHERE' },
+    { k: ['R'], t: 'Pause: restart the mission', sub: 'ANYWHERE' },
     { k: ['Enter'], t: 'Cards: begin, continue, try again', sub: 'ANYWHERE' },
     { k: ['1-3'], t: 'Pick a salvaged tech after a level', sub: 'ANYWHERE' },
     { k: ['4', '5'], t: 'Refit card: buy a fighter or escort', sub: 'ANYWHERE' },
