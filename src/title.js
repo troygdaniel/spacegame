@@ -46,9 +46,9 @@ class Title extends Phaser.Scene {
       beep(520, 0.12, 'triangle', 0.05, 300); beep(780, 0.2, 'triangle', 0.04, 200);
       go(this, 'Station', { arrive: false });
     };
-    if (typeof campAddrPlanPage === 'function') { // the tune kit (src/campaignaddr.js): ?campaign=N[&tech=a,b] opens the Campaign at that level; a line to say, if the address was not understood, is shown and the title carries on
+    if (typeof campAddrPlanPage === 'function' && !CAMP_ADDR.used) { // the tune kit (src/campaignaddr.js): ?campaign=N[&tech=a,b] opens the Campaign at that level; a line to say, if the address was not understood, is shown and the title carries on
       const plan = campAddrPlanPage();
-      if (plan && plan.level) { this.leaving = true; this.scene.start('Campaign', { level: plan.level, techs: plan.techs, via: 'address' }); return; }
+      if (plan && plan.level) { CAMP_ADDR.used = true; this.leaving = true; this.scene.start('Campaign', { level: plan.level, techs: plan.techs, via: 'address' }); return; }
       if (plan && plan.say) toast(this, plan.say, '#ffd37a');
     }
     this.contentUi = contentTitleUi(this); // src/contentui.js: the content problems chip, its panel and the MODDED tag (nothing when all is well)

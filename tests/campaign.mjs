@@ -319,6 +319,17 @@ console.log('I. level 2 (Alpha Centauri) and level 3 (the home world)');
   g.run(`F.onKey({ code: 'Enter' }); campEnd(F.camp, 'won', 'towers'); F.update(0, 33)`);
   check('level 3 won: the story after, no pick, then the end card, and the title on Enter; the save starts a fresh campaign (level 1, no techs)', J('F.mode') === 'won' && (g.run(`F.onKey({ code: 'Enter' })`), J('F.mode') === 'end') && J('F.panel') === true && JSON.parse(store.get('longhaul.campaign')).level === 1 && JSON.parse(store.get('longhaul.campaign')).techs.length === 0 && (g.run(`F.onKey({ code: 'Enter' })`), J('__went.pop()').key === 'Title'));
   check('K on the title opens the highest built level reached, and never one that does not exist', (() => { g.run(`campProgressSave({ level: 3, techs: ['beam'] })`); g.run(`__went.length = 0; campaignStart({}, 0)`); const a = J('__went.pop()'); g.run(`campProgressSave({ level: 9, techs: [] })`); g.run(`campaignStart({}, 0)`); const b = J('__went.pop()'); return a.data.level === 3 && b.data.level === 3; })());
+  // the two nits of 8-GEN's boot (a51ca77)
+  g.run('__new2(2, [], 1); C.carrier.x = -2800 + 100; C.carrier.y = 2000; __run(0.2)');
+  check('the cache toast says what you have gathered and never "of 3", while the goal line says how many the relic needs: "Resources gathered: 1." and "Gather resources: 1 of 2."', (() => { const key = g.run('C.events.filter(e => e.type === "say" && e.key === "camp.say.cache").map(e => JSON.stringify(e.vars))[0]'); const vars = JSON.parse(key); return J(`uiText('camp.say.cache', ${JSON.stringify(vars)})`) === 'Resources gathered: 1.' && /Gather resources: 1 of 2/.test(J('campObjective(C)')) && !/of 3/.test(J(`uiText('camp.say.cache', ${JSON.stringify(vars)})`)); })());
+  // the title, on a stand-in: the address opens the Campaign once; coming back to the title from it does not open it again
+  g.run(`
+    window.__started = []; window.__plan0 = campAddrPlanPage; campAddrPlanPage = () => ({ level: 2, techs: ['beam'], via: 'address' }); CAMP_ADDR.used = false;
+    window.__title = () => { const f = Object.create(Title.prototype); f.add = document; f.cameras = document; f.tweens = document; f.time = document; f.input = document; f.textures = document; f.scene = { start: (k, d) => __started.push({ key: k, data: d }) }; f.settingsChip = () => {}; return f; };
+  `);
+  g.run('__title().create(); __title().create();');
+  check('the address opens the Campaign the first time the title is made, with its level, techs and via "address"; the second time (back from the Campaign) the title stays', J('__started.length') === 1 && J('__started[0].key') === 'Campaign' && J('__started[0].data.level') === 2 && J('__started[0].data.via') === 'address' && J('__started[0].data.techs.join()') === 'beam' && J('CAMP_ADDR.used') === true);
+  g.run('campAddrPlanPage = __plan0; CAMP_ADDR.used = false');
   g.run('go = __go0; toast = __toast0');
 }
 
