@@ -1,0 +1,109 @@
+// ---------- The Campaign's own ship pictures: the carrier drawn as a cruiser (card space-game-campaign-look) ----------
+// Troy: "less arcade and more like Battlestar Galactica": a boxy, utilitarian hull in muted grey and bronze, a long spine, a flight pod down each side with a lit bay, a big engine block with a dull glow,
+// panel lines and a few running lights; no neon outline, no bright tint. Nothing here knows the game: it draws into a Phaser Graphics (a texture, made once by campShipTexture) and says where its parts are
+// (CAMP_ART), so the scene can light the bays and the tests can check the turret mounts lie on the hull. The Long Haul's own Bastion (src/shipmodels.js) is not touched.
+// Units: one unit is one px of the screen at the size the ship is drawn at (CAMP.size in src/campaign.js); x runs along the nose, y to the right, the origin is the middle of the hull. The picture is drawn
+// k times larger (the scene scales it down to CAMP.size.carrier.len), so it is smooth, not blocky. Light comes from above: the hull is lighter along its middle, darker at the edges, the same on both sides.
+const CAMP_ART = {
+  k: 2,
+  cruiser: {
+    len: 98,                                        // the hull's length in units: the picture of it is len * k px, and the scene scales it to CAMP.size.carrier.len
+    pad: 6,                                         // units of margin round the hull in the picture, for the engine's glow
+    half: 26,                                       // the hull's half-width, over the pods
+    core: [[-34, -11], [34, -11], [43, -10], [49, -6.5], [49, 6.5], [43, 10], [34, 11], [-34, 11]], // the long middle of the hull and its blunt head
+    engine: [-49, -13, -33, 13],                    // the engine block at the stern: x1, y1, x2, y2
+    pod: [-34, 13, 18, 26],                         // a flight pod (the starboard one; the port one is its mirror): x1, y1, x2, y2; the pods are the hangars
+    tower: [-20, -6, -8, 6],                        // the bridge tower on the spine
+    launch: [18, 19.5],                             // the mouth of a pod's launch tube, in the front face of the pod: x, y of the starboard one (CAMP.bay.mouth is a little in front of it)
+    land: [-34, 19.5],                              // the landing bay in the aft face: x, y of the starboard one
+    bay: [2.2, 4.2]                                 // how deep and how wide (half) a bay opening is
+  }
+};
+// the picture's size in px: the hull and its margin
+function campArtSize(kind) { const a = CAMP_ART[kind], k = CAMP_ART.k; return [Math.round((a.len + 2 * a.pad) * k), Math.round((2 * a.half + 2 * a.pad) * k)]; }
+// where a point of the hull is in the carrier's frame (x along the nose, y to the right), for the scene: the bays lie in the pods' faces, one on each side
+function campArtBays(kind) {
+  const a = CAMP_ART[kind]; return { launch: [[a.launch[0], -a.launch[1]], [a.launch[0], a.launch[1]]], land: [[a.land[0], -a.land[1]], [a.land[0], a.land[1]]], half: a.bay };
+}
+
+const CAMP_HULL = { // the colours: grey steel and bronze, all muted (no colour is bright; the only light is the windows, the bays and the engines, and those are warm and small)
+  steel: [0x464a50, 0x5a5e65, 0x6e727a, 0x82868d], dark: 0x1f2226, edge: 0x15171a,
+  bronze: [0x4f4234, 0x6a5a45, 0x80694a, 0xa68a58],
+  window: 0xffe0a0, bay: 0xffcf7a, bayDim: 0x5a3f1e, engine: 0xb8641c, hot: 0xe9a867, red: 0xa8443c, green: 0x4d8f60
+};
+
+// a pen that draws in units: the origin is the middle of the hull, k px to the unit
+function campArtPen(g, ox, oy, k) {
+  const X = x => ox + x * k, Y = y => oy + y * k, P = pts => pts.map(([x, y]) => [X(x), Y(y)]);
+  const poly = (pts, color, a = 1) => { const p = P(pts); g.fillStyle(color, a); g.beginPath(); g.moveTo(p[0][0], p[0][1]); for (let i = 1; i < p.length; i++) g.lineTo(p[i][0], p[i][1]); g.closePath(); g.fillPath(); };
+  const outline = (pts, color, w = 1, a = 1) => { const p = P(pts); g.lineStyle(w * k, color, a); g.beginPath(); g.moveTo(p[0][0], p[0][1]); for (let i = 1; i < p.length; i++) g.lineTo(p[i][0], p[i][1]); g.closePath(); g.strokePath(); };
+  const rect = (x1, y1, x2, y2, color, a = 1) => { g.fillStyle(color, a); g.fillRect(X(x1), Y(y1), (x2 - x1) * k, (y2 - y1) * k); };
+  const line = (x1, y1, x2, y2, color, a = 1, w = 0.6) => { g.lineStyle(w * k, color, a); g.lineBetween(X(x1), Y(y1), X(x2), Y(y2)); };
+  const dot = (x, y, r, color, a = 1) => { g.fillStyle(color, a); g.fillCircle(X(x), Y(y), r * k); };
+  return { poly, outline, rect, line, dot };
+}
+
+// a box of the hull, shaded: darker at the edges and lighter along the middle (a plate with a raised centre), with its seam lines; the box is x1, y1, x2, y2
+function campArtPlate(p, x1, y1, x2, y2, tone, cham = 1.2) {
+  const bx = [[x1 + cham, y1], [x2 - cham, y1], [x2, y1 + cham], [x2, y2 - cham], [x2 - cham, y2], [x1 + cham, y2], [x1, y2 - cham], [x1, y1 + cham]];
+  p.poly(bx, tone[0]); p.rect(x1 + 0.8, y1 + 0.8, x2 - 0.8, y2 - 0.8, tone[1]);
+  const mid = (y1 + y2) / 2, h = (y2 - y1) / 4; p.rect(x1 + 1.4, mid - h, x2 - 1.4, mid + h, tone[2], 0.9);
+  p.outline(bx, CAMP_HULL.edge, 0.7, 0.9);
+}
+
+// the cruiser: texture size campArtSize('cruiser'), the hull's middle at the middle of the picture
+function campCruiserDraw(g) {
+  const A = CAMP_ART.cruiser, k = CAMP_ART.k, [W, H] = campArtSize('cruiser'), p = campArtPen(g, W / 2, H / 2, k), C = CAMP_HULL, S = C.steel, B = C.bronze;
+  const both = fn => { fn(1); fn(-1); }, my = (v, s) => v * s; // the same on both sides of the spine
+  const [px1, py1, px2, py2] = A.pod, [ex1, ey1, ex2, ey2] = A.engine, [tx1, ty1, tx2, ty2] = A.tower;
+  // the struts that hold each pod to the spine, under everything
+  both(s => { [-26, -4, 12].forEach(x => { p.rect(x - 2, Math.min(my(11, s), my(py1, s)) - 0.4, x + 2, Math.max(my(11, s), my(py1, s)) + 0.4, C.dark); }); });
+  // the flight pods: bronze-grey boxes with a bronze deck stripe along the outer edge, panel lines across, and a bay opening in the front and the back of each
+  both(s => {
+    const y1 = Math.min(my(py1, s), my(py2, s)), y2 = Math.max(my(py1, s), my(py2, s));
+    campArtPlate(p, px1, y1, px2, y2, [B[0], B[1], B[2]]);
+    p.rect(px1 + 2, my(py2, s) - s * 2.6, px2 - 2, my(py2, s) - s * 1.4, B[3], 0.55); // the deck stripe on the outer edge
+    for (let x = px1 + 6; x < px2 - 3; x += 7.4) p.line(x, y1 + 1.4, x, y2 - 1.4, C.edge, 0.55, 0.5);
+    for (let x = px1 + 5; x < px2 - 4; x += 3.7) p.rect(x, my(py2, s) - s * 5.2, x + 1.7, my(py2, s) - s * 4.2, C.dark, 0.75); // a row of ports along the outer edge
+    p.line(px1 + 2, my(py1, s) + s * 3.2, px2 - 2, my(py1, s) + s * 3.2, C.edge, 0.5, 0.5);
+    [[A.launch, 1], [A.land, -1]].forEach(([at, dir]) => { // a bay opening: a dark slot in the face with a dim warm light in it (the scene lights it on launch and recall)
+      const x = at[0], yc = my(at[1], s), d = A.bay[0], hw = A.bay[1];
+      p.rect(x - (dir > 0 ? d : 0) - 0.6, yc - hw - 0.6, x + (dir > 0 ? 0 : d) + 0.6, yc + hw + 0.6, C.edge);
+      p.rect(x - (dir > 0 ? d : 0), yc - hw, x + (dir > 0 ? 0 : d), yc + hw, C.bayDim);
+      p.rect(x - (dir > 0 ? d : 0), yc - hw * 0.45, x + (dir > 0 ? 0 : d), yc + hw * 0.45, C.bay, 0.45);
+    });
+  });
+  // the engine block at the stern: a dark box with a lighter top, vents, and four nozzles with a dull glow
+  campArtPlate(p, ex1, ey1, ex2, ey2, [S[0], S[1], S[2]], 1.6);
+  for (let y = ey1 + 3; y < ey2 - 2; y += 3.6) p.line(ex2 - 6.5, y, ex2 - 1.5, y, C.edge, 0.5, 0.45);
+  [-9, -3, 3, 9].forEach(y => {
+    p.dot(ex1 - 0.5, y, 5.4, C.engine, 0.05); p.dot(ex1 - 0.5, y, 3.8, C.engine, 0.08);
+    p.rect(ex1 - 0.2, y - 2.3, ex1 + 3.2, y + 2.3, C.edge); p.rect(ex1 + 0.3, y - 1.7, ex1 + 3.2, y + 1.7, B[1]);
+    p.rect(ex1 - 0.1, y - 1.5, ex1 + 1.2, y + 1.5, C.engine, 0.9); p.rect(ex1 - 0.1, y - 0.7, ex1 + 0.5, y + 0.7, C.hot, 0.75);
+  });
+  // the long middle: panel plates end to end, a bronze edge, and the spine along the centre line
+  p.poly(A.core, S[1]); p.outline(A.core, C.edge, 0.8, 0.95);
+  const plates = [[-34, -22], [-22, -10], [-10, 3], [3, 16], [16, 28], [28, 36]];
+  plates.forEach(([a, b], i) => { p.rect(a + 0.5, -10, b - 0.5, 10, i % 2 ? S[1] : S[2], 0.9); p.line(a, -10.5, a, 10.5, C.edge, 0.55, 0.5); });
+  p.poly([[34, -10.4], [43, -9.4], [48, -6.2], [48, 6.2], [43, 9.4], [34, 10.4]], S[2], 0.95); p.line(41, -9.6, 41, 9.6, C.edge, 0.5, 0.5); p.line(45.5, -7.6, 45.5, 7.6, C.edge, 0.45, 0.5);
+  both(s => { p.rect(-33, my(10.2, s) - 0.5, 34, my(10.2, s) + 0.5, B[2], 0.85); }); // a bronze edge strip on each side of the middle
+  p.rect(-30, -2.4, 42, 2.4, S[0], 0.95); p.line(-30, -2.4, 42, -2.4, S[3], 0.5, 0.5); p.line(-30, 2.4, 42, 2.4, C.edge, 0.7, 0.5); // the spine
+  for (let x = -26; x < 40; x += 6.5) p.rect(x, -1.2, x + 2.4, 1.2, S[3], 0.55);
+  // the bridge tower: a raised block aft of the middle, bronze on top, its windows lit along the front
+  campArtPlate(p, tx1, ty1, tx2, ty2, [B[0], B[2], B[3]], 1.4);
+  for (let y = ty1 + 1.6; y < ty2 - 1; y += 1.9) p.rect(tx2 - 2.2, y, tx2 - 0.9, y + 0.9, C.window, 0.9);
+  // the pods' ends against the spine, and the greebles: a couple of dishes, an antenna array
+  p.dot(24, 0, 2.2, C.edge); p.dot(24, 0, 1.6, S[3], 0.95); p.dot(24, 0, 0.6, S[0]);
+  p.rect(10, -7, 18, -5.2, S[3], 0.6); p.rect(10, 5.2, 18, 7, S[3], 0.6); p.rect(-6, -8, 0, -6.6, B[3], 0.6); p.rect(-6, 6.6, 0, 8, B[3], 0.6);
+  // running lights: one at each pod's front corner (port red, starboard green), a white one on the tower
+  p.dot(px2 - 1, -py2 + 1.4, 0.9, C.red, 0.9); p.dot(px2 - 1, py2 - 1.4, 0.9, C.green, 0.9); p.dot((tx1 + tx2) / 2, 0, 0.7, 0xffffff, 0.8);
+}
+
+// the texture of a ship of the Campaign's own, made once; returns its key
+function campShipTexture(scene, kind) {
+  const key = 'camp-' + kind;
+  if (scene.textures.exists(key)) return key;
+  const [W, H] = campArtSize(kind), g = scene.make.graphics({ x: 0, y: 0, add: false });
+  ({ cruiser: campCruiserDraw })[kind](g); g.generateTexture(key, W, H); g.destroy();
+  return key;
+}

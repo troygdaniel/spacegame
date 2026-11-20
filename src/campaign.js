@@ -31,7 +31,7 @@ const CAMP = {
     turn: 1.1,                             // rad/s the nose turns (A, D)
     drag: 0.55,                            // velocity kept after one second with no thrust (0.55 is the Wren's)
     brakeDrag: 0.12,                       // the same with S held
-    mounts: [[29, -10], [29, 10], [8, -18], [8, 18], [-11, -21], [-11, 21], [-31, -17], [-31, 17]], // the turrets (there is no other gun): where each sits, px from the carrier's centre in its own frame (x along the nose), spread along the hull; the number of turrets is the number of rows
+    mounts: [[30, -7], [30, 7], [10, -20], [10, 20], [-6, -20], [-6, 20], [-22, -20], [-22, 20]], // the turrets (there is no other gun): where each sits, px from the carrier's centre in its own frame (x along the nose), spread along the hull; the number of turrets is the number of rows
     pd: 4,                                 // hit points one turret shot takes off an alien
     pdDelay: 700,                          // ms between the shots of one turret (eight of them: 46 hit points a second in all): they fire only while Space is held, each at the nearest alien in its reach, and never on their own
     pdRange: 500,                          // px a turret reaches (to the edge of the alien it aims at: about three and a half carrier lengths)
@@ -86,7 +86,7 @@ const CAMP = {
     fighters: 6,                           // fighters in the bay at the start
     escorts: 2,                            // escorts in the bay at the start
     launchEvery: 600,                      // ms between ships leaving the bay once Launch is ordered
-    mouth: [17, 18],                       // px from the carrier's centre (x along the nose, y to the side): where a launched ship appears, one side and then the other
+    mouth: [21, 19.5],                     // px from the carrier's centre (x along the nose, y to the side): where a launched ship appears, one side and then the other: just in front of the launch tube of a hangar pod (CAMP_ART.cruiser.launch)
     dockAt: 63                             // px: a recalled ship this close to the carrier lands (and is whole again when next launched)
   },
   fighter: {

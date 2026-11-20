@@ -26,8 +26,8 @@ const look = J('CAMP_LOOK.carrier'), len = size.carrier.len, wid = len * (look.h
 check('the carrier picture is as long as CAMP.size.carrier.len', Math.abs(look.scale * look.w - len) < 1e-9, look.scale.toFixed(4) + ' x ' + look.w);
 const mounts = J('CAMP.carrier.mounts');
 check('eight turret mounts, every one on the hull (inside its drawn length and width)', mounts.length === 8 && mounts.every(([x, y]) => Math.abs(x) <= len / 2 && Math.abs(y) <= wid / 2), JSON.stringify(mounts) + ' in ' + len + ' x ' + wid.toFixed(0));
-check('they are spread along the hull: four fore and aft of the middle, from near the bow to near the stern, none on top of another (each 14 px or more from the next)',
-  Math.max(...mounts.map(m => m[0])) >= len * 0.25 && Math.min(...mounts.map(m => m[0])) <= -len * 0.25 && mounts.every((a, i) => mounts.every((b, j) => i === j || Math.hypot(a[0] - b[0], a[1] - b[1]) >= 14)));
+check('they are spread along the hull: from near the bow to well aft of the middle, none on top of another (each 14 px or more from the next)',
+  Math.max(...mounts.map(m => m[0])) >= len * 0.25 && Math.min(...mounts.map(m => m[0])) <= -len * 0.2 && mounts.every((a, i) => mounts.every((b, j) => i === j || Math.hypot(a[0] - b[0], a[1] - b[1]) >= 14)));
 
 // the bay: a launched ship appears at the mouth, one side and then the other
 const mouth = J('CAMP.bay.mouth');
