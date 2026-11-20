@@ -19,7 +19,8 @@ try {
   const shot = async name => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, 'systems-' + name + '.png'), Buffer.from(r.data, 'base64')); } }; // twice: the second has drawn
   const key = code => t.ev(`(() => { ${SC}.onKey({ code: '${code}', repeat: false }); return 1; })()`);
   await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
-  await key('Enter'); await t.run(300); // the intro card
+  for (let i = 0; i < 4 && (await j(`${SC}.mode`)) !== 'play'; i++) { await key('Enter'); await t.run(300); } // the intro card, and the missions' briefing after it
+  check('the battle is on (the cards are out of the way)', (await j(`${SC}.mode`)) === 'play', await j(`${SC}.mode`));
   check('a new battle starts at 2 / 2 / 2 with the three pip bars on the HUD (W S E)', await j(`JSON.stringify(${SC}.camp.power.p) === '[2,2,2]' && ['pw', 'ps', 'pe'].every(k => ${SC}.hud[k] && ${SC}.hud[k].text.length === 1)`));
   await key('KeyC'); await t.run(500);
   check('C opens the SYSTEMS panel and it is drawn (the words, five rows)', await j(`${SC}.pn.open === 'systems' && ${SC}.pnl.id === 'systems' && ${SC}.pnl.rows.length === 5`));
@@ -36,6 +37,9 @@ try {
   check('the panel says the emergency is cooling down (ready in N s) and the saved setting never held the emergency', await j(`${SC}.pnl.rows[4].state.text.length > 0 && JSON.stringify(campPowerLoad()) === '[1,3,2]'`), await j(`${SC}.pnl.rows[4].state.text`));
   await shot('3-cooling');
   await key('KeyC'); await t.run(100);
+  await key('KeyH'); await t.run(400);
+  check('H opens the page of every key and it lists the SYSTEMS panel (the page grew: its lines are 18 px apart now)', await j(`!!${SC}.ck && ${SC}.ck.open === true`));
+  await shot('4-keys'); await key('KeyH'); await t.run(200);
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
 } finally { await t.close(); }
 console.log(bad ? `CAMP SYSTEMS BOOT FAIL (${bad})` : 'CAMP SYSTEMS BOOT PASS');
