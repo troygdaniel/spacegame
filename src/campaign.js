@@ -1130,7 +1130,7 @@ function campProgressLoad() {
     if (Number.isFinite(raw.ore)) P.ore = Math.max(0, Math.min(CAMP.ore.cap, Math.floor(raw.ore)));
     P.revealed = raw.revealed === true; // the ending has been seen (SPOILER: campReveal)
     if (raw.bonus && typeof raw.bonus === 'object') { const b = x => Number.isInteger(x) ? Math.max(0, Math.min(CAMP.refit.most, x)) : 0; P.bonus = { fighters: b(raw.bonus.fighters), escorts: b(raw.bonus.escorts) }; }
-    if (raw.results && typeof raw.results === 'object') Object.keys(raw.results).slice(0, 40).forEach(k => { const r = raw.results[k]; if (/^[1-9]\.[1-9]$/.test(k) && r && Number.isFinite(r.score)) P.results[k] = { score: Math.max(0, Math.min(99999, Math.floor(r.score))), bonuses: Array.isArray(r.bonuses) ? r.bonuses.filter(x => typeof x === 'string').slice(0, 6).map(x => x.slice(0, 24)) : [], t: Math.max(0, r.t | 0), hull: Math.max(0, r.hull | 0), lost: Math.max(0, r.lost | 0), tries: Math.max(1, Math.min(99, r.tries | 0 || 1)) }; });
+    if (raw.results && typeof raw.results === 'object') Object.keys(raw.results).slice(0, 40).forEach(k => { const r = raw.results[k]; if (/^[1-9]\.[1-9]$/.test(k) && r && Number.isFinite(r.score)) P.results[k] = { score: Math.max(0, Math.min(99999, Math.floor(r.score))), bonuses: Array.isArray(r.bonuses) ? r.bonuses.filter(x => typeof x === 'string').slice(0, 6).map(x => x.slice(0, 24)) : [], t: Math.max(0, r.t | 0), hull: Math.max(0, r.hull | 0), lost: Math.max(0, r.lost | 0), tries: Math.max(1, Math.min(99, r.tries | 0 || 1)), replays: Math.max(0, Math.min(999, r.replays | 0)) }; if (Number.isInteger(r.rank) && r.rank >= 0 && r.rank < 12) P.results[k].rank = r.rank; }); // replays: how many times it was flown again (card space-game-campaign-replay); rank: the rank the best run gave, an index (the ranks card)
   }, 0);
   if (P.mission >= campMissions(P.level).length) P.mission = 0;
   return P;
@@ -1139,11 +1139,24 @@ function campProgressSave(P) { campTry(() => localStorage.setItem(CAMP.store, JS
 // a mission won: its result is kept (the best score, how many tries), and the mission to fly next moves on. Answers { levelDone }: true when it was the last mission of its level (the caller goes to the level's story and refit, then the next level)
 function campMissionDone(P, level, i, sc) {
   const k = campResultKey(level, i), old = P.results[k], res = { score: sc.score, bonuses: sc.bonuses.filter(b => b.ok).map(b => b.id), t: sc.t, hull: sc.hullLeft, lost: sc.shipsLost, tries: (old ? old.tries : 0) + 1 };
-  if (old && old.score > res.score) { res.score = old.score; res.bonuses = old.bonuses; res.t = old.t; res.hull = old.hull; res.lost = old.lost; }
-  P.results[k] = res;
+  if (old && old.score > res.score) { res.score = old.score; res.bonuses = old.bonuses; res.t = old.t; res.hull = old.hull; res.lost = old.lost; if (old.rank != null) res.rank = old.rank; }
+  if (old && old.replays) res.replays = old.replays;
+  P.results[k] = res; if (res.rank == null && typeof campRank === 'function') res.rank = campRank(P).i; // the rank this mission's best run gave (the ranks card: the points are the sum of the best scores)
   const last = i + 1 >= campMissions(level).length;
   if (!last) { P.level = level; P.mission = i + 1; } else P.mission = 0;
   return { levelDone: last };
+}
+// a mission flown AGAIN (card space-game-campaign-replay; Troy: "it would be nice to be able to replay the missions completed"). The result keeps the BEST of the runs, the bonus objectives found are every one any run met,
+// and the progress does not move: the level and the mission to fly next stay where they are, the story is not told again. The ranks' points are the sum of the best scores, so a replay raises them only by what it beat the old
+// best by. Answers { old: the best before, now: this run's score, best, improved, found: bonus ids new to the mission }.
+function campReplayDone(P, level, i, sc) {
+  const k = campResultKey(level, i), old = P.results[k], oldBest = old ? old.score : 0, met = sc.bonuses.filter(b => b.ok).map(b => b.id), had = old ? old.bonuses : [];
+  const order = (campMissionRow(level, i).bonus || []).map(b => b.id), all = had.concat(met.filter(x => had.indexOf(x) < 0)), bonuses = order.filter(id => all.indexOf(id) >= 0).concat(all.filter(id => order.indexOf(id) < 0)).slice(0, 6);
+  const improved = !old || sc.score > old.score, res = improved ? { score: sc.score, bonuses, t: sc.t, hull: sc.hullLeft, lost: sc.shipsLost, tries: old ? old.tries : 1, replays: (old ? old.replays | 0 : 0) + 1 }
+    : { score: old.score, bonuses, t: old.t, hull: old.hull, lost: old.lost, tries: old.tries, replays: (old.replays | 0) + 1 };
+  if (old && old.rank != null && !improved) res.rank = old.rank;
+  P.results[k] = res; if (improved && typeof campRank === 'function') res.rank = campRank(P).i;
+  return { old: oldBest, now: sc.score, best: res.score, improved: !!old && improved, first: !old, found: met.filter(x => had.indexOf(x) < 0) };
 }
 // a mission tried and lost: the tries count (the mission is flown again; the level is not lost)
 function campMissionTried(P, level, i) { const k = campResultKey(level, i); if (P.results[k]) P.results[k].tries++; }

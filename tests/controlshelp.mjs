@@ -50,6 +50,7 @@ const SCENES = {
   ship: ['shipmode', 'hangar'].concat(EVERYWHERE),
   flight: SPACE_FILES.concat(EVERYWHERE),
   surface: ['surface'].concat(EVERYWHERE),
+  readyroom: ['camphub', 'camphubscene', 'campdock', 'campkeys'].concat(EVERYWHERE), // the ready room (card space-game-campaign-replay): its keys are in camphub.js (the row keys), camphubscene.js and campdock.js (the dock's rows); the digits are routed by campHubDigit, so 1 to 5 are added below
   title: ['title', 'contentui', 'settings', 'mods'],
   any: EVERYWHERE
 };
@@ -77,7 +78,8 @@ const group = id => groups.find(x => x.id === id);
 
 console.log('1. every key the help names is bound');
 for (const gr of groups) {
-  const have = gr.id === 'flight' ? new Set([...bound(SCENES.flight), ...spaceOwn]) : (gr.id === 'campaign' || gr.id === 'panels') ? campBound() : bound(SCENES[gr.id] || []);
+  const roomBound = () => { const k = bound(SCENES.readyroom); ['1', '2', '3', '4', '5'].forEach(d => k.add(d)); return k; }; // the room hands every digit to campHubKey, which picks the row whose place it is
+  const have = gr.id === 'readyroom' ? roomBound() : gr.id === 'flight' ? new Set([...bound(SCENES.flight), ...spaceOwn]) : (gr.id === 'campaign' || gr.id === 'panels') ? campBound() : bound(SCENES[gr.id] || []);
   if (gr.id === 'title') continue; // the Title reads keys by e.code in one long line of its own; its rows are not what changed and are checked in tests/settings.mjs
   const missing = [];
   gr.rows.forEach(r => r.k.forEach(cap => capKeys(cap).forEach(k => { if (!have.has(k)) missing.push(cap + ' (' + r.t + ')'); })));
