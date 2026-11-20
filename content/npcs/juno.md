@@ -10,16 +10,16 @@ y: 652
 face: -1.5707963267948966
 ---
 ## Lines
-- Welcome to the Drift. The drinks are synthetic, but the gossip is genuine.
-- Halcyon turns once every three minutes. If your drink slides toward the hangar, you are not drunk, just late.
-- The repair bay on the main deck charges half a credit a point of hull. It is the only honest price on this station.
+- Welcome to the Drift. Synthetic drinks, genuine gossip.
+- Halcyon turns every three minutes. A sliding drink means you are late.
+- The repair bay charges half a credit a point. Honest price.
 
 ## Reactions
 | when | line |
 |---|---|
-| mission:failed | Heard you lost the colonist out there. It happens to every pilot once, so sit, drink, and go again. |
+| mission:failed | Lost the colonist? Happens to every pilot once. Drink, go again. |
 | upgrade:shields | Nice shielding on that ship. Try not to scratch my doorframe. |
-| credits>=800 | You are carrying a lot of credits. The hangar shop would love to meet them. |
+| credits>=800 | Lots of credits on you. The hangar shop would love them. |
 
 ## Persona
 Who: Juno, forty, has run the Drift for nine years; the bar is the one warm room on Halcyon.

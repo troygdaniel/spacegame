@@ -9,75 +9,75 @@ const NPCS = [
   {
     id: 'juno', voice: 'aura-luna-en', name: 'JUNO', role: 'bartender', color: AMBER, css: '#ffb454', x: 255, y: 652, face: -Math.PI / 2,
     lines: [
-      'Welcome to the Drift. The drinks are synthetic, but the gossip is genuine.',
-      'Halcyon turns once every three minutes. If your drink slides toward the hangar, you are not drunk, just late.',
-      'The repair bay on the main deck charges half a credit a point of hull. It is the only honest price on this station.'
+      'Welcome to the Drift. Synthetic drinks, genuine gossip.',
+      'Halcyon turns every three minutes. A sliding drink means you are late.',
+      'The repair bay charges half a credit a point. Honest price.'
     ],
-    react: () => G.mission === 'failed' ? 'Heard you lost the colonist out there. It happens to every pilot once, so sit, drink, and go again.'
+    react: () => G.mission === 'failed' ? 'Lost the colonist? Happens to every pilot once. Drink, go again.'
       : partTier('shields') ? 'Nice shielding on that ship. Try not to scratch my doorframe.'
-      : G.credits >= 800 ? 'You are carrying a lot of credits. The hangar shop would love to meet them.' : null,
+      : G.credits >= 800 ? 'Lots of credits on you. The hangar shop would love them.' : null,
     persona: "Who: Juno, forty, has run the Drift for nine years; the bar is the one warm room on Halcyon.\nManner: warm, dry, short sentences, calls everyone \"pilot\" until she likes them, then by name.\nKnows: station gossip, who owes whom, the repair bay's prices, that pirates never come inside the police ring.\nWants: regulars who come back alive; a story she has not heard.\nWill not: talk about her sister on the mining crews, or badmouth the police where they can hear."
   },
   {
     id: 'tamsin', voice: 'aura-athena-en', name: 'TAMSIN', role: 'ex-freighter pilot', color: RED, css: '#ff4d6d', x: 668, y: 520, face: Math.PI,
     lines: [
-      'Those drones around Kepler-4b used to be survey rigs. Somebody rewired them to shoot first and never ask.',
-      'Word is the drones answer to a pirate captain out past the rim. Nobody I know has seen the captain and lived to tell it.',
+      'The Kepler-4b drones were survey rigs. Somebody rewired them to shoot.',
+      'The drones answer to a captain past the rim. No witness lived.',
       'Drones turn slowly. Keep circling and they never line up a shot.'
     ],
-    react: () => G.mission === 'accepted' ? 'You took the Kepler call? Six drones ring that planet, so come in from the side and take them one at a time.'
-      : partTier('weapons') ? 'That is a rapid-fire rig on your ship. Faster rounds mean the drones drop before they finish turning.' : null,
+    react: () => G.mission === 'accepted' ? 'Six drones ring Kepler. Come in from the side, one by one.'
+      : partTier('weapons') ? 'Rapid fire: the drones drop before they finish turning.' : null,
     persona: "Who: Tamsin, fifty, flew freighters for twenty years until pirates took her ship out by the rim.\nManner: blunt, proud, short answers; warms up slowly and never says thanks out loud.\nKnows: how drones turn slowly and circle, where the gunships hold, the MULE's runs to the Perseus gate, who got out alive.\nWants: a pilot who finishes what they start; a ship of her own again, someday.\nWill not: talk about the crew she lost, or admit she misses flying."
   },
   {
     id: 'dex', voice: 'aura-orion-en', name: 'DEX', role: 'survey tech', color: GREEN, css: '#6dff9c', x: 140, y: 490, face: 0,
     lines: [
-      'I charted Kepler-4b last year. Red dust, thin air, and crawlers that hunt by heat.',
-      'That survey pod is still pinging its beacon. Whoever takes the call has to be quick and quiet.',
-      'Halcyon was a mining relay before the ore ran out. Now it is mostly mercenaries, mechanics and me.'
+      'Kepler-4b: red dust, thin air, and crawlers that hunt by heat.',
+      'The survey pod still pings its beacon. Be quick and quiet.',
+      'Halcyon was a mining relay. Now it is mercenaries, mechanics and me.'
     ],
-    react: () => G.mission === 'accepted' ? 'You took the rescue? Find the pod, keep the colonist close, and get them back to the ship. Crawlers hunt by heat, and a walking colonist is warm.'
-      : partTier('engine') ? 'Is that a booster on your ship? You can outrun the drones now, if you keep your nerve.' : null,
+    react: () => G.mission === 'accepted' ? 'Find the pod, keep the colonist close. Crawlers hunt by heat.'
+      : partTier('engine') ? 'A booster. Now you can outrun the drones.' : null,
     persona: "Who: Dex, thirty, the survey tech who charted Kepler-4b and has not slept properly since.\nManner: nervous, precise, answers in measurements, then apologises for rambling.\nKnows: Kepler-4b's red dust, thin air and heat-hunting crawlers, the survey pod's beacon, the salvage sites, Halcyon's mining past.\nWants: someone to bring the survey data home safely; one night without a crawler in his dreams.\nWill not: guess when he can measure, or go back down to the surface."
   },
   { // the repair bay mechanic, off shift, on a stool at the counter
     id: 'moss', voice: 'aura-arcas-en', name: 'MOSS', role: 'repair bay mechanic, off shift', color: CYAN, css: '#38e1ff', x: 340, y: 570, face: Math.PI / 2,
     lines: [
-      'I am off shift, so you get half my attention and none of my tools. The repair bay charges half a credit a point of hull, and I stand by that price.',
-      'A shield generator soaks up the first hits and then comes back by itself. Pilots buy guns first and shields after their first bad day.',
-      'A booster does not make you faster so much as harder to hit. Boost, dash, and let the drones guess.'
+      'Off shift. The repair bay charges half a credit a point.',
+      'Shields soak the first hits and recharge. Pilots buy them late.',
+      'A booster makes you harder to hit, not faster.'
     ],
-    react: () => G.hull < G.maxHull * 0.5 ? 'That hull is hanging on by habit. The repair bay is two doors up, and I will not charge extra for the lecture.'
-      : partTier('shields') >= 2 ? 'A proper shield generator, nice. The hull behind it costs the same to patch, but you will need it less.'
-      : G.credits >= 800 && !partTier('engine') ? 'You are carrying enough credits for a booster and a bad idea. Buy the booster.'
-      : partTier('weapons') ? 'Rapid fire, nice. The guns are the easy part. Keep the hull to match.'
-      : G.mission === 'accepted' ? 'You have a call open, so I will keep this short. Check your hull before you go, not after.' : null,
+    react: () => G.hull < G.maxHull * 0.5 ? 'That hull hangs on by habit. Repair bay: two doors up.'
+      : partTier('shields') >= 2 ? 'Proper shields. You will need the hull patched less.'
+      : G.credits >= 800 && !partTier('engine') ? 'Enough credits for a booster and a bad idea. Buy the booster.'
+      : partTier('weapons') ? 'Rapid fire, nice. Keep the hull to match.'
+      : G.mission === 'accepted' ? 'Check your hull before you go, not after.' : null,
     persona: "Who: Moss, fifties, runs the repair bay and is off shift, with grease still under the nails.\nManner: tired, kind, practical; says what a part costs before what it does; dry jokes at their own expense.\nKnows: hull damage, what shields, rapid fire and engines really do, the shop prices, the bay's half a credit a point.\nWants: pilots who come back with all their hull; one full night's sleep.\nWill not: lie about what a repair costs, or touch a ship that is not theirs without asking."
   },
   { // the retired bounty hunter, alone in the east corner with a view of the door
     id: 'sable', voice: 'aura-stella-en', name: 'SABLE', role: 'retired bounty hunter', color: 0xc08cff, css: '#c08cff', x: 790, y: 600, face: -2.64,
     lines: [
-      'Raiders are fast and thin, so do not chase them. Let them come to you.',
-      'Gunships hold out by Kepler-4b and fire in threes. Stay off their nose and they are only slow.',
-      'The Reaver pays twelve hundred, and it has two escorts. Do not go until you can take a gunship alone.'
+      'Raiders are fast and thin. Do not chase; let them come.',
+      'Gunships near Kepler-4b fire in threes. Stay off their nose.',
+      'The Reaver pays twelve hundred, with two escorts. Beat a gunship first.'
     ],
     react: () => G.mission === 'accepted' && G.missionId === 'patrol' ? 'Five marked pirates on the approach. Take them one at a time.'
-      : G.mission === 'accepted' && G.missionId === 'bounty' ? 'You took the Reaver. Watch for the flash before it rams. Then get out of the way.'
-      : G.patrolsDone > 0 && G.missionId !== 'bounty' ? 'You finished a patrol, so they opened the Reaver bounty. Think about it twice.'
-      : (G.stats.drones | 0) >= 10 ? 'You have ' + (G.stats.drones | 0) + ' pirates on your tally already. Count them if you like. Just do not start enjoying it.' : null,
+      : G.mission === 'accepted' && G.missionId === 'bounty' ? 'The Reaver: watch for the flash before it rams, then move.'
+      : G.patrolsDone > 0 && G.missionId !== 'bounty' ? 'Patrol done, so the Reaver bounty opened. Think twice.'
+      : (G.stats.drones | 0) >= 10 ? (G.stats.drones | 0) + ' pirates down. Count them if you like. Do not enjoy it.' : null,
     persona: "Who: Sable, forties, a retired bounty hunter who still reads every room like a target list.\nManner: quiet, watchful, short sentences, long pauses; never raises her voice.\nKnows: pirate habits, how raiders strafe and gunships fire in threes, what the Reaver and the bounties pay, how the police ring works.\nWants: to see someone else take the Reaver and live; to finish her drink in peace.\nWill not: say how she retired, or who her last bounty was."
   },
   { // the colonist you rescued: in the bar once the first rescue has been paid (the station counts it on docking)
     id: 'ida', voice: 'aura-hera-en', name: 'IDA KETTER', sprite: 'ida', role: 'rescued colonist', color: 0xff4fd8, css: '#ff9ad8', x: 236, y: 500, face: Math.PI,
     when: () => (G.stats.missions | 0) >= 1,
     lines: [
-      'You came all the way down for me. I still have not found the right way to say thank you.',
-      'On the ground the crawlers feel like a second wind. You hear them before you see them, and then they are everywhere.',
-      'The thin air makes everything sound far away. When I closed my eyes in the pod I could still hear the beacon.'
+      'You came down for me. Thank you.',
+      'You hear the crawlers before you see them. Then they are everywhere.',
+      'Thin air makes everything sound far away. I still hear the beacon.'
     ],
-    react: () => G.mission === 'failed' ? 'I heard the last call did not go well. Take it from someone who was on the other end: keep going back.'
-      : G.mission === 'accepted' && G.missionId === 'rescue' ? 'Another pod? Tell them to keep the beacon on and the door shut. That is what saved me.'
-      : G.mission === 'accepted' ? 'You are heading out again already? Please come back. I would like to hear how it goes.' : null,
+    react: () => G.mission === 'failed' ? 'The call failed? I was on the other end. Keep going back.'
+      : G.mission === 'accepted' && G.missionId === 'rescue' ? 'Another pod? Tell them: beacon on, door shut. That saved me.'
+      : G.mission === 'accepted' ? 'Heading out again? Please come back and tell me how it goes.' : null,
     persona: "Who: Ida Ketter, a colonist rescued from a survey pod on Kepler-4b, shaken but safe on Halcyon.\nManner: grateful, curious, a little shaky; asks the player questions back and thanks them too often.\nKnows: the surface from the ground: the red dust, the thin air, crawlers hunting by heat, the pod's beacon, the long wait.\nWants: to thank the pilot who came for her; to know who else is still out there.\nWill not: blame anyone for the crash, or go back down to the planet."
   },
   { // the keeper of every other bar (Meridian, Brass, Ember, the Roost): she says what the station's file says (its Bar lines, src/stationlook.js), a line at a time
