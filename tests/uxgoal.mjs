@@ -3,12 +3,13 @@
 // third wave at 140 s: a player who had beaten wave 1 had nothing to aim at. Until it is there the goal is "Hold off the waves; the mothership comes last."; once it is there, it is the old line.
 // Levels 2 and 3 were already state-aware and are not touched.
 // Run: node tests/uxgoal.mjs   (exit code 1 on a failed check)
+import { readFileSync as __rf } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame();
-g.run('CAMP.levels[1] = CAMP.levels.home'); // level 1 is the asteroid belt now (card space-game-campaign-belt); this test is about the Earth level (its convoys, Earth's shield, its wave times), which is kept as data under "home"
+g.run(__rf(new URL('./fixtures/camplegacy.js', import.meta.url), 'utf8') + ' CAMP.levels[1] = CAMP.levels.home; CAMP.levels[2] = CAMP.levels.legacy2; CAMP.levels[3] = CAMP.levels.legacy3;'); // levels 1 to 3 as whole-level battles, the way they were before the belt and the missions (cards space-game-campaign-belt and -missions): these tests are about the Earth level and the old levels, kept as data
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 g.run(`var C = campNew(1, [], { seed: 3, god: true });`);
 check('at the start of level 1 the goal is to hold off the waves, and the mothership comes last', J('campObjective(C)') === 'Hold off the waves; the mothership comes last.');

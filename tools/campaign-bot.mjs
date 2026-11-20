@@ -15,6 +15,7 @@ import { nodeGame } from '../tests/nodegame.mjs';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i < 0 ? d : (process.argv[i + 1] || '').startsWith('--') || i + 1 >= process.argv.length ? true : process.argv[i + 1]; };
 const LEVELS = String(arg('level', '1,2,3')).split(',').map(Number);
+const MISSION = arg('mission', null);                        // --mission 2: only mission 2 of each level (the missions of a level are flown one by one, card space-game-campaign-missions); without it every mission of the level is flown
 const SEEDS = Number(arg('seeds', 12));
 const SKILL = String(arg('skill', 'steady'));
 const TECH = arg('tech', null);
@@ -77,22 +78,27 @@ g.run(`(() => {
     if (st.sitOff) B = Object.assign({}, B, { sit: false });
     if (B.sit && a && campDist(a, c) > 900) a = null; // a carrier that stays where it is and fights only what comes close
     if (B.sit && !a) { C.input.thrust = 0; C.input.turn = 0; C.input.fire = false; return; }
-    const L = CAMP.levels[C.level]; let goal = a;
-    if (C.level === 2) { const k = C.caches.filter(k => !k.got).sort((p, q) => campDist(p, c) - campDist(q, c))[0]; goal = C.cachesGot < L.relic.caches && k ? k : C.relic; if (a && campDist(a, c) < 700) goal = a; }
-    if (C.level === 3) { const near = campAliens(C).sort((p, q) => campDist(p, c) - campDist(q, c))[0]; goal = near; a = near; }
+    const L = C.L; let goal = a;
+    if (L.objectives) { // a mission: fly at what its first open objective asks (a point to scan, a cache, the relic, the haulers), and at what comes near
+      const first = campObjectives(C).find(o => !o.done) || {}, byD = list => list.sort((p, q) => campDist(p, c) - campDist(q, c))[0];
+      if (first.type === 'scan') goal = byD(C.scan.filter(p => !p.got)) || goal; else if (first.type === 'caches') goal = byD(C.caches.filter(k => !k.got)) || goal; else if (first.type === 'relic') goal = C.relic;
+      else if (first.type === 'deliver') goal = byD(campConvoys(C).slice()) || goal || { x: 1000, y: -500 }; else if (first.type === 'hold') goal = C.earth || goal;
+      if (a && campDist(a, c) < 900) goal = a;
+    } else if (C.level === 2) { const k = C.caches.filter(k => !k.got).sort((p, q) => campDist(p, c) - campDist(q, c))[0]; goal = C.cachesGot < L.relic.caches && k ? k : C.relic; if (a && campDist(a, c) < 700) goal = a; }
+    else if (C.level === 3) { const near = campAliens(C).sort((p, q) => campDist(p, c) - campDist(q, c))[0]; goal = near; a = near; }
     if (!goal) { C.input.thrust = 0; C.input.turn = 0; C.input.fire = false; return; }
     st.err = (st.err || 0) * 0.97 + (C.rng() - 0.5) * sk.noise * 0.25;
     const want = Math.atan2(goal.y - c.y, goal.x - c.x) + st.err, d = Math.atan2(Math.sin(want - c.rot), Math.cos(want - c.rot)), dist = campDist(goal, c);
     C.input.turn = clampi(d * sk.gain);
     const turrets = typeof campReach === 'function', reach = turrets ? campReach(C) : 800 * (campHas(C, 'beam') ? 1.5 : 1); // the turrets (6-GEN) fire in every direction, to 500 px from the edge of the target; the old main gun fired along the nose to about 800
-    const hold = C.level === 2 && goal === C.relic ? 60 : (a && goal === a ? (turrets ? reach * 0.6 : 420) : 300);
+    const hold = goal === C.relic ? 60 : (goal && goal.got === false ? 40 : (a && goal === a ? (turrets ? reach * 0.6 : 420) : 300));
     C.input.thrust = dist > hold ? 1 : 0;
     const tgt = a || goal, w2 = Math.atan2(tgt.y - c.y, tgt.x - c.x) + st.err, d2 = Math.atan2(Math.sin(w2 - c.rot), Math.cos(w2 - c.rot));
     C.input.blink = !!(campHas(C, 'blink') && dist > 2200 && Math.abs(d) < 0.25 && C.t - C.blinkAt >= campBlinkCooldown(C));
     C.input.fire = !!a && (turrets ? campDist(a, c) - a.r < reach : Math.abs(d2) < sk.thr && campDist(a, c) < reach); // Space held while an alien is in reach
   };
-  window.__run1 = (level, seed, techs, B, sk, maxSec) => {
-    const C = window.C = campNew(level, techs, { seed, power: ${JSON.stringify(POWER)} });
+  window.__run1 = (level, seed, techs, B, sk, maxSec, mission) => {
+    const C = window.C = campNew(level, techs, { seed, mission: mission | 0, power: ${JSON.stringify(POWER)} });
     const M = window.__M = { hitC: {}, drainE: {}, waves: [], clear: [], idle: 0, first: null, minHull: 1e9, recalls: 0, earthSum: 0 };
     const st = {}, total = maxSec * 30, hull0 = C.carrier.hp;
     let wavesSeen = 0, started = false, prevAl = 0;
@@ -126,9 +132,9 @@ export function techsFor(level, override) {
   if (override && override !== true) return String(override).split(',').filter(Boolean);
   return JSON.parse(g.run(`JSON.stringify([1, 2].filter(n => n < ${level}).map(n => campTechChoices(n)[0]))`)); // the first tech each earlier level offers, as the address does
 }
-export function run(level, seed, botName, skill, techs, maxSec = MAXSEC) {
+export function run(level, seed, botName, skill, techs, maxSec = MAXSEC, mission = 0) {
   const B = BOTS[botName], sk = SKILLS[skill];
-  return JSON.parse(g.run(`JSON.stringify(__run1(${level}, ${seed}, ${JSON.stringify(techs)}, ${JSON.stringify(B)}, ${JSON.stringify(sk)}, ${maxSec}))`));
+  return JSON.parse(g.run(`JSON.stringify(__run1(${level}, ${seed}, ${JSON.stringify(techs)}, ${JSON.stringify(B)}, ${JSON.stringify(sk)}, ${maxSec}, ${mission | 0}))`));
 }
 const med = a => { const s = a.filter(x => x != null).sort((p, q) => p - q); return s.length ? s[Math.floor((s.length - 1) / 2)] : null; };
 const pct = (a, f) => Math.round(a.filter(f).length / Math.max(1, a.length) * 100);
@@ -145,18 +151,22 @@ export function summarise(rs) {
 if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs')) {
   const botList = String(arg('bots', Object.keys(BOTS).join(','))).split(',');
   const out = {};
+  const missionsOf = level => MISSION ? [Number(MISSION) - 1] : Array.from({ length: g.run(`campMissions(${level}).length`) }, (_, i) => i);
+  const keys = [];
   for (const level of LEVELS) {
     const techs = techsFor(level, TECH);
-    out[level] = {};
-    for (const b of botList) {
-      const rs = []; for (let seed = 1; seed <= SEEDS; seed++) rs.push(run(level, seed, b, SKILL, techs));
-      out[level][b] = summarise(rs);
+    for (const m of missionsOf(level)) {
+      const key = level + '.' + (m + 1); keys.push([key, level, m]); out[key] = {};
+      for (const b of botList) {
+        const rs = []; for (let seed = 1; seed <= SEEDS; seed++) rs.push(run(level, seed, b, SKILL, techs, MAXSEC, m));
+        out[key][b] = summarise(rs);
+      }
     }
   }
   if (arg('json', false)) console.log(JSON.stringify(out, null, 1));
-  else for (const level of LEVELS) {
-    console.log(`\nLevel ${level}  skill ${SKILL}  techs [${techsFor(level, TECH).join(',')}]  ${SEEDS} seeds`);
+  else for (const [key, level] of keys) {
+    console.log(`\nLevel ${key} (mission ${key.split('.')[1]})  skill ${SKILL}  techs [${techsFor(level, TECH).join(',')}]  ${SEEDS} seeds`);
     console.log('bot       won%  lost%  t(win)  hull  taken  earth  kills  shipsLost  deliv  idle  lost because');
-    for (const b of botList) { const s = out[level][b]; console.log(b.padEnd(9), String(s.won).padStart(4), String(s.lost).padStart(6), String(s.tWin == null ? '-' : s.tWin).padStart(7), String(s.hull).padStart(5), String(s.taken).padStart(6), String(s.earth == null ? '-' : s.earth).padStart(6), String(s.kills).padStart(6), String(s.shipsLost).padStart(10), String(s.delivered).padStart(6), String(s.idle).padStart(5), ' ' + JSON.stringify(s.why)); }
+    for (const b of botList) { const s = out[key][b]; console.log(b.padEnd(9), String(s.won).padStart(4), String(s.lost).padStart(6), String(s.tWin == null ? '-' : s.tWin).padStart(7), String(s.hull).padStart(5), String(s.taken).padStart(6), String(s.earth == null ? '-' : s.earth).padStart(6), String(s.kills).padStart(6), String(s.shipsLost).padStart(10), String(s.delivered).padStart(6), String(s.idle).padStart(5), ' ' + JSON.stringify(s.why)); }
   }
 }

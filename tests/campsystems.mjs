@@ -2,7 +2,7 @@
 // Card space-game-campaign-systems (Troy: manage my ship's resources and systems, energy, shields, engine, like X-Wing; the design lines are docs/CAMPAIGN.md "Ship systems"). The whole thing is plain numbers in
 // src/campaign.js, one table CAMP.power by pips 0 to 4. Checks:
 //   A  the table: every effect is 1 (regeneration 0) at 2 pips, runs the right way with the pips, and zero pips is weak but never dead
-//   B  the default is today's numbers EXACTLY: a seeded battle of level 1 and one of level 3, flown by the same script, ends in the very state it ended in before this card (pinned below, taken from main);
+//   B  the default is today's numbers EXACTLY: a seeded battle of level 1 and one of level 3 (eight aliens put on the carrier, the turrets, the wing, a missile, the blink), flown by the same script, ends in the very state it ended in before this card (pinned below, taken from main be704b4: the missions merged);
 //      an explicit 2/2/2 is the same battle
 //   C  the budget rule: 6 pips, 0 to 4 each, one moves at a time from the system with the most (or a chosen one); balance is 2/2/2
 //   D  each effect: the turrets' interval and the missile reload (weapons); the shield cap and regeneration (shields); speed, thrust, turn, the Fast burn and the blink's recharge (engines)
@@ -40,12 +40,13 @@ sec('A', () => {
 });
 
 sec('B', () => {
-  const GOLD = {"l1": {"t": 120000, "x": -9809.020067, "y": 2569.733087, "vx": 0.014763, "vy": 0.012298, "rot": 3.292307, "hp": 600, "shield": 144, "kills": 7, "missiles": 5, "reloadAt": 134967, "shots": 16, "blinkAt": 50033.333333334114, "aliens": 1, "ships": 10, "turretAt": [120390.166, 120478.758, 120566.542, 120655.123, 120040.933, 120131.702, 120228.194, 120303.698]}, "l3": {"t": 120000, "x": -16939.020067, "y": 6039.733087, "vx": 0.014763, "vy": 0.012298, "rot": 3.292307, "hp": 600, "shield": 150, "kills": 11, "missiles": 5, "reloadAt": 134967, "shots": 0, "blinkAt": 50033.333333334114, "aliens": 17, "ships": 26, "turretAt": [120390.166, 120478.758, 120566.542, 120655.123, 120040.933, 120131.702, 120228.194, 120303.698]}};
+  const GOLD = {"l1": {"t": 120000, "x": -9809.020067, "y": 2569.733087, "vx": 0.014763, "vy": 0.012298, "rot": 3.292307, "hp": 600, "shield": 138, "kills": 8, "missiles": 5, "reloadAt": 134967, "shots": 35, "blinkAt": 50033.333333334114, "aliens": 0, "ships": 9, "turretAt": [120390.166, 120478.758, 120566.542, 120655.123, 120040.933, 120131.702, 120228.194, 120303.698]}, "l3": {"t": 120000, "x": -16939.020067, "y": 6039.733087, "vx": 0.014763, "vy": 0.012298, "rot": 3.292307, "hp": 600, "shield": 132, "kills": 8, "missiles": 5, "reloadAt": 134967, "shots": 54, "blinkAt": 50033.333333334114, "aliens": 0, "ships": 9, "turretAt": [120390.166, 120478.758, 120566.542, 120655.123, 120040.933, 120131.702, 120228.194, 120303.698]}};
   const run = (lvl, power) => { const opt = power ? ', power: ' + JSON.stringify(power) : ''; return J(`(() => {
     const C = campNew(${lvl}, ['blink'], { seed: 7${opt} }); let shots = 0;
     for (let i = 0; i < 30 * 120 && !C.result; i++) {
       const s = i / 30;
       C.input.thrust = (s % 20 < 12) ? 1 : 0; C.input.turn = Math.sin(s / 3) * 0.6; C.input.fire = s > 8; C.input.brake = (s % 20 > 17);
+      if (i === 10) { for (let k = 0; k < 8; k++) { const ang = k / 8 * 6.283, u = campSpawn(C, ['raider', 'drone', 'gunship', 'raider'][k % 4], C.carrier.x + Math.cos(ang) * 700, C.carrier.y + Math.sin(ang) * 700); if (u) u.goal = 'carrier'; } } // a fight whatever the level's own waves wait for
       if (i === 30) campOrder(C, 'launch', '', 'key'); if (i === 60 * 30 / 2) campOrder(C, 'attack', '', 'key'); if (i % 600 === 599) campFire(C, campNearest(campAliens(C), C.carrier)); if (i === 1500) C.input.blink = true;
       campStep(C, 1 / 30); C.events.forEach(e => { if (e.type === 'turret') shots++; }); C.events.length = 0;
     }

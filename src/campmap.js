@@ -34,6 +34,7 @@ function campMapBounds(level, whole) { // whole: the whole of the star's system 
   if (whole && typeof campWorldOf === 'function') { const w = campWorldOf(level); if (w) { const far = Math.max(0, ...w.rings, ...w.bands.map(b => b.r1)); add(w.star.x, w.star.y, far); } } // the rings and the belts round the star (src/campsol.js)
   const st = pl[L.start]; if (st) add(st.x + ((L.startAt || [])[0] || 0), st.y + ((L.startAt || [])[1] || 0), 0);
   (L.caches || []).forEach(c => add(c[0], c[1], 0));
+  ((L.objectives || []).find(o => o.type === 'scan') || { points: [] }).points.forEach(p => add(p.at[0], p.at[1], p.r || 0)); // the points of a survey
   if (L.relic && pl[L.relic.place]) add(pl[L.relic.place].x, pl[L.relic.place].y, L.relic.radius);
   (L.guards || []).forEach(g => add(g.at[0], g.at[1], 0));
   (L.towers || []).forEach(t => { const p = pl[t.place]; if (p) add(p.x, p.y, t.r); });
@@ -53,11 +54,12 @@ function campMapFit(b, frame, pad) {
 }
 const campMapPoint = (fit, frame, x, y) => ({ x: frame.x + frame.w / 2 + (x - fit.cx) * fit.s, y: frame.y + frame.h / 2 + (y - fit.cy) * fit.s });
 
-const CAMPMAP_RANK = { place: 0, relic: 1, cache: 2, tower: 3, convoy: 4, alien: 5, wing: 6, mother: 7, carrier: 8 }; // drawn in this order: the carrier on top
+const CAMPMAP_RANK = { place: 0, relic: 1, cache: 2, scan: 2, tower: 3, convoy: 4, alien: 5, wing: 6, mother: 7, carrier: 8 }; // drawn in this order: the carrier on top
 function campMapMarks(C, whole) { // whole: the far places too (the whole system); else only the level's own area
-  const L = CAMP.levels[C.level], pl = campPlaces(C.level), c = CAMPMAP.color, out = [];
+  const L = (C.L || CAMP.levels[C.level]), pl = campPlaces(C.level), c = CAMPMAP.color, out = [];
   Object.keys(pl).forEach(id => { const p = pl[id]; if (p.hidden || (p.far && !whole)) return; out.push({ type: 'place', id, x: p.x, y: p.y, r: p.r || 60, name: String(p.name) + (p.base ? ' / ' + p.base : ''), color: p.kind === 'star' ? c.star : id === 'earth' ? c.earth : c.place }); });
   (C.caches || []).forEach(k => { if (!k.got) out.push({ type: 'cache', x: k.x, y: k.y, color: c.cache }); });
+  (C.scan || []).forEach(p => { if (!p.got) out.push({ type: 'scan', x: p.x, y: p.y, r: p.r, color: c.cache }); }); // the points to scan: gold diamonds like the caches
   if (C.relic && L.relic) out.push({ type: 'relic', x: C.relic.x, y: C.relic.y, r: L.relic.radius, hold: L.relic.hold ? C.relic.hold / L.relic.hold : 0, color: c.relic });
   C.ships.forEach(u => {
     if (u.hp <= 0) return;
