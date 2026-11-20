@@ -678,6 +678,20 @@ console.log('O. missions: a level is a run of missions (a fixture level, so the 
   g.run('delete CAMP.levels.t');
 }
 
+// ---------- P. the nav list and the map follow the mission ----------
+console.log('P. the goal of the nav list and the marks of the map follow the first open objective of the mission');
+{
+  const goal = (l, m) => { g.run(`__new2(${l}, [], 1, ${m})`); return J('campNavGoal(C)'); };
+  const g11 = goal(1, 0);
+  check('1.1: the goal is the nearest point to scan ("Scan point n"); the three points are rows of the list (group finds) and marks of the map', g11 && g11.kind === 'scan' && /^Scan point \d$/.test(g11.name) && J('campNavRows(C).filter(r => r.kind === "scan" && r.group === "finds").length') === 3 && J('campMapMarks(C).filter(m => m.type === "scan").length') === 3);
+  g.run('C.scan[0].got = true; C.scan[1].got = true');
+  check('two of them scanned: the goal moves on to the one left ("Scan point 3"), one row and one mark are left', J('campNavGoal(C).name') === 'Scan point 3' && J('campNavRows(C).filter(r => r.kind === "scan" && r.group === "finds").length') === 1 && J('campMapMarks(C).filter(m => m.type === "scan").length') === 1);
+  const g12 = goal(1, 1); g.run('__run(5)');
+  check('1.2: the goal is the nearest hauler once one is under way', (() => { const a = J('campNavGoal(C)'); return a && a.kind === 'convoy' && /Hauler/.test(a.name); })());
+  check('1.3: the mothership; 2.1: the nearest cache; 2.2: a guard; 2.3: the relic; 3.2 and 3.3: a tower', (() => { const k = (l, m) => { g.run(`__new2(${l}, [], 1, ${m})`); if (l === 1 && m === 2) g.run('C.waves.forEach(w => { w.started = true; }); campSpawn(C, "mother", 4000, 0)'); const a = J('campNavGoal(C)'); return a ? a.kind : null; }; return k(1, 2) === 'mother' && k(2, 0) === 'cache' && k(2, 1) === 'guard' && k(2, 2) === 'relic' && k(3, 1) === 'tower' && k(3, 2) === 'tower' && k(3, 0) === 'scan'; })());
+  check('a point to scan is a place the autopilot can be sent to (the list gives its row a target) and when it is scanned the row is gone', (() => { g.run('__new2(1, [], 1, 0)'); const r = J('campNavRows(C).find(r => r.kind === "scan" && r.group === "finds")'); const t = J(`campNavTarget(C, ${JSON.stringify(r)})`); g.run('C.scan[+String(' + JSON.stringify(r.id) + ').slice(5)].got = true'); return !!t && t.x === r.x && J(`campNavTarget(C, ${JSON.stringify(r)})`) === null; })());
+}
+
 // ---------- F. the save, and Long Haul untouched ----------
 console.log('F. the save, and Long Haul untouched');
 {
