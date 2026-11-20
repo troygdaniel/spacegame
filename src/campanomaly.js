@@ -96,7 +96,7 @@ function campAnomTechs(found, picked) { return campAnomUpgrades(found).techs.fil
 
 // what the map and the radar show: an unlabelled warped mark for what is noticed and hidden; the cache, once decloaked, until its guards are dead and it is looted
 function campAnomMarks(C) {
-  return (C.anoms || []).filter(a => a.sensed && (a.state === 'hidden' || a.state === 'revealed')).map(a => ({ id: a.id, x: a.x, y: a.y, r: a.r, state: a.state, shown: a.state === 'revealed', name: uiText(a.state === 'hidden' ? 'camp.nav.anomaly' : 'camp.nav.anomrev') }));
+  return (C.anoms || []).filter(a => a.sensed && (a.state === 'hidden' || a.state === 'revealed')).map(a => ({ id: a.id, x: a.x, y: a.y, r: a.r, state: a.state, shown: a.state === 'revealed', name: a.read && a.state === 'hidden' ? uiText('camp.nav.anomalyread', { likely: a.hides || 'cache' }) : uiText(a.state === 'hidden' ? 'camp.nav.anomaly' : 'camp.nav.anomrev') })); // a scout that has read it names it (card space-game-campaign-scouts)
 }
 
 // a line for the ship computer's picture of the battle: what is noticed and how far (nothing when nothing is)

@@ -101,7 +101,7 @@ function campNavLead(c, t, speed) {
 }
 // the burn of a Fast trip (the one place it is decided: campNavGo stores it, campCarrier and campNavDrive read it, campNavEta tells it on the map): CAMP.nav.fast times the speed, farFast times it past farFrom px; 1 for a regular trip
 const campNavBurn = (dist, fast) => (!fast ? 1 : dist > CAMP.nav.farFrom ? CAMP.nav.farFast : CAMP.nav.fast);
-const campNavEta = (C, dist, fast) => Math.round(dist / (CAMP.carrier.speed * campNavBurn(dist, fast)) * CAMP.nav.etaSlow); // fast: the map's Fast button
+const campNavEta = (C, dist, fast) => Math.round(dist / (CAMP.carrier.speed * campPowerFx(C).speed * campNavBurn(dist, fast)) * CAMP.nav.etaSlow); // fast: the map's Fast button
 
 function campNavGo(C, row, fast) {
   if (!C || !row || C.result) return null;
@@ -127,7 +127,7 @@ function campNavDrive(C, dt) {
   const c = C.carrier; if (!c || c.hp <= 0) { C.nav = null; return; }
   const t = campNavTarget(C, N); if (!t) { campNavClear(C, N.kind === 'cache' || N.kind === 'scan' || N.kind === 'pickup' ? 'arrived' : 'lost'); return; } // a cache or ore that has gone was gathered: that is arriving; a ship that is gone (dead) or a rock that broke is lost
   N.x = t.x; N.y = t.y;
-  const K = CAMP.nav, maxSp = CAMP.carrier.speed * (N.fast ? (N.burn || K.fast) : 1), tvx = t.vx || 0, tvy = t.vy || 0, flies = !!(tvx || tvy);
+  const K = CAMP.nav, maxSp = CAMP.carrier.speed * (typeof campPowerFx === 'function' ? campPowerFx(C).speed : 1) * (N.fast ? (N.burn || K.fast) : 1), tvx = t.vx || 0, tvy = t.vy || 0, flies = !!(tvx || tvy);
   const dx0 = t.x - c.x, dy0 = t.y - c.y, dist = Math.hypot(dx0, dy0), left = Math.max(0, dist - campNavStop(N.kind, t)), speed = Math.hypot(c.vx, c.vy);
   const aim = flies ? campNavLead(c, t, Math.max(speed, maxSp * 0.6)) : t, dx = aim.x - c.x, dy = aim.y - c.y; // a ship that flies is led: the carrier aims where it will be (card space-game-campaign-map-targets)
   const hold = !!(C.navWait && C.navWait.id === N.id); // a burn to this place is waiting for the wing: the trip is kept, but the carrier stops, because a ship cannot land on a carrier that is flying away (they hover just behind it)

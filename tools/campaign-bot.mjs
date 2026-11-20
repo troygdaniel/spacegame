@@ -2,6 +2,7 @@
 // Card space-game-night-gameplay (docs/night/gameplay.md). It reads the game (src/campaign.js) and changes nothing in it.
 //   node tools/campaign-bot.mjs                      the whole table: levels 1 to 3, every bot, seeds 1 to 12
 //   node tools/campaign-bot.mjs --level 1 --seeds 20 --bots plain,carrier --skill steady
+//   node tools/campaign-bot.mjs --power 4,1,1        the ship's systems for every run: weapons, shields, engines, 6 pips (default 2,2,2: today's numbers exactly)
 //   node tools/campaign-bot.mjs --tech beam          start with these techs (a level's table row says which a player would have)
 //   node tools/campaign-bot.mjs --old               level 1 with the numbers it had before the easier level 1 (Earth's shield 300 and the rest): what Troy's first tries were played on
 //   node tools/campaign-bot.mjs --set alien.hpScale=2 --set alien.damageScale=2   what if: change numbers of the table (CAMP.<path> = a number) for this run only
@@ -18,6 +19,7 @@ const MISSION = arg('mission', null);                        // --mission 2: onl
 const SEEDS = Number(arg('seeds', 12));
 const SKILL = String(arg('skill', 'steady'));
 const TECH = arg('tech', null);
+const POWER = arg('power', null) === null ? null : String(arg('power')).split(',').map(Number); // --power 4,1,1: the ship's systems for every run (weapons, shields, engines; card space-game-campaign-systems); none: 2,2,2, today's numbers
 const MAXSEC = Number(arg('max', 420));
 const RANK = String(arg('rank', 'auto'));                     // --rank 0..5: the pilot's rank (src/campranks.js); auto: the rank a player of ordinary scores would have on reaching that mission (1,400 a mission flown before it)
 
@@ -94,12 +96,12 @@ g.run(`(() => {
     const hold = goal === C.relic ? 60 : (goal && goal.got === false ? 40 : (a && goal === a ? (turrets ? reach * 0.6 : 420) : 300));
     C.input.thrust = dist > hold ? 1 : 0;
     const tgt = a || goal, w2 = Math.atan2(tgt.y - c.y, tgt.x - c.x) + st.err, d2 = Math.atan2(Math.sin(w2 - c.rot), Math.cos(w2 - c.rot));
-    C.input.blink = !!(campHas(C, 'blink') && dist > 2200 && Math.abs(d) < 0.25 && C.t - C.blinkAt >= CAMP.tech.blink.cooldown);
+    C.input.blink = !!(campHas(C, 'blink') && dist > 2200 && Math.abs(d) < 0.25 && C.t - C.blinkAt >= campBlinkCooldown(C));
     C.input.fire = !!a && (turrets ? campDist(a, c) - a.r < reach : Math.abs(d2) < sk.thr && campDist(a, c) < reach); // Space held while an alien is in reach
   };
   window.__run1 = (level, seed, techs, B, sk, maxSec, mission) => {
     const rank = window.__RANK === 'auto' ? campRankAt(((level - 1) * 3 + (mission | 0)) * 1400) : Number(window.__RANK) | 0; // the ranks card: the wing of the rank
-    const C = window.C = campNew(level, techs, { seed, mission: mission | 0, rank });
+    const C = window.C = campNew(level, techs, { seed, mission: mission | 0, rank, power: ${JSON.stringify(POWER)} });
     const M = window.__M = { hitC: {}, drainE: {}, waves: [], clear: [], idle: 0, first: null, minHull: 1e9, recalls: 0, earthSum: 0 };
     const st = {}, total = maxSec * 30, hull0 = C.carrier.hp;
     let wavesSeen = 0, started = false, prevAl = 0;

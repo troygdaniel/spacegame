@@ -17,12 +17,13 @@ const CAMPMAP = {
   pad: 0.08,                                // the share of the level's width and height left empty round it
   minExtent: 3000,                          // px of space: never zoom in closer than this across (a level with only one place in it)
   km: 10,                                   // px of space in a km (the ship computer's "the mothership is N km away" says px / 10)
-  color: { star: 0xffe29a, earth: 0x4aa3ff, place: 0xb9a37a, cache: 0xffd37a, relic: 0x7fe9ff, alien: 0xff4d6d, mother: 0xff4dff, tower: 0xff9a3a, convoy: 0xffb454, carrier: 0xffffff, wing: 0x6dff9c, anomaly: 0xc58cff, rock: 0x8c8c8c, pickup: 0xffd37a }
+  color: { star: 0xffe29a, earth: 0x4aa3ff, place: 0xb9a37a, cache: 0xffd37a, relic: 0x7fe9ff, alien: 0xff4d6d, mother: 0xff4dff, tower: 0xff9a3a, convoy: 0xffb454, carrier: 0xffffff, wing: 0x6dff9c, anomaly: 0xc58cff, scout: 0xb8f0ff, rock: 0x8c8c8c, pickup: 0xffd37a }
 };
 
 // the colour of a ship (u: a ship of the battle): the radar and the map agree
 function campDotColor(u) {
   const c = CAMPMAP.color;
+  if (u.scout) return c.scout; // a scout out (card space-game-campaign-scouts): pale cyan, on the map and the radar alike
   return u.team === 'alien' ? (u.kind === 'mother' ? c.mother : u.kind === 'tower' ? c.tower : c.alien) : u.kind === 'freighter' ? c.convoy : u.kind === 'carrier' ? c.carrier : c.wing;
 }
 

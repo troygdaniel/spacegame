@@ -27,7 +27,11 @@ function campPanelKey(P, C, code, now, shift) {
   if (P.open && (code === 'ArrowLeft' || code === 'ArrowRight')) { // the arrows flip the pages of a panel that has more than one (FLEET: the orders, the stances); with one page they are an ordinary key
     const pg = campPanelPages(P.open); if (pg > 1) { P.page = ((P.page | 0) + (code === 'ArrowRight' ? 1 : pg - 1)) % pg; res.used = true; res.page = P.page; return res; }
   }
-  if (d == null) { if (P.open) { P.open = ''; res.closed = true; } return res; } // another key closes the panel and is itself (W flies, Tab opens the map)
+  if (d == null) {
+    const lp = !P.open && code ? CAMP_PANELS.panels.find(p => p.code === code) : null; // a panel with a letter key of its own (SYSTEMS on C): the key opens it
+    if (lp) { P.open = lp.id; P.at = now; res.used = true; res.opened = lp.id; return res; }
+    if (P.open) { P.open = ''; res.closed = true; } return res; // another key closes the panel and is itself (W flies, Tab opens the map)
+  }
   res.used = true; // a digit is the panels' in the Campaign: none of them is an order on its own any more
   if (P.open) {
     const def = campPanelDef(P.open), row = def && campPanelPageRows(def, campPanelPages(P.open) > 1 ? P.page | 0 : 0).find(r => r.n === d);
@@ -51,13 +55,14 @@ function campPanelRun(C, row, how, fast) {
 function campPanelWhy(r) {
   const W = CAMP_PANELS.why; let t = W[r.code] || W.what;
   if (r.code === 'noore2') { const m = /(\d+) needed/.exec(r.say || ''); t = t.replace('{need}', m ? m[1] : '?'); }
+  if (r.code === 'cooling') { const m = /in (\d+) seconds/.exec(r.say || ''); t = t.replace('{s}', m ? m[1] : '?'); }
   return t;
 }
 // what the carrier's recharge would do: Earth's shield when it is near and not full, else the carrier's own; and what it costs
 function campPanelRecharge(C) {
   const R = CAMP.recharge, near = !!C.earth && campDist(C.carrier, C.earth) <= R.earthReach;
   if (near && C.earth.shield < C.earth.max * 0.9) return { what: 'Earth', cost: R.earth };
-  return { what: 'carrier', cost: Math.max(5, Math.ceil(R.carrier * (CAMP.carrier.shield - C.shield) / CAMP.carrier.shield)) };
+  const max = campShieldMax(C); return { what: 'carrier', cost: Math.max(5, Math.ceil(R.carrier * (max - C.shield) / max)) };
 }
 function campPanelState(C, row) {
   const B = CAMP.build;
@@ -71,6 +76,9 @@ function campPanelState(C, row) {
     case 'buildf': return B.fighterCost + ' ore, ' + B.fighterTime + ' s';
     case 'builde': return B.escortCost + ' ore, ' + B.escortTime + ' s';
     case 'free': case 'orbit': case 'keep': case 'match': case 'hold': return C.stance === row.id ? 'in force' : ''; // the wing's stance: the one in force is marked
+    case 'weapons': case 'shields': case 'engines': { const i = { weapons: 0, shields: 1, engines: 2 }[row.id], fx = campPowerFx(C); return C.power.p[i] + ' pips: ' + (i === 0 ? 'turrets x' + (1 / fx.delay).toFixed(2) : i === 1 ? 'shield ' + Math.round(campShieldMax(C)) : 'speed x' + fx.speed.toFixed(2)); }
+    case 'balance': return 'now ' + C.power.p.join(' / ');
+    case 'emergency': return CAMP.power.emergency.ms / 1000 + ' s of shields, then back';
     case 'dock': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? 'dock at ' + n.o.name : ''; } // the outpost in range
     case 'goal': { const g = campNavGoal(C); return g ? g.name + '  ' + campNavKm(Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y)) + ' km' : ''; }
   }
@@ -93,5 +101,6 @@ function campPanelHead(C, id, page) {
   if (id === 'fleet' && page === 1) return 'stance ' + (CAMP_PANELS.panels[0].page2.rows.find(r => r.id === C.stance) || { label: 'Free' }).label.toLowerCase();
   if (id === 'fleet') return 'bay ' + C.bay.fighters + '+' + C.bay.escorts + '   out ' + campWing(C).length;
   if (id === 'ship') return 'ore ' + Math.floor(C.ore) + '   shield ' + Math.round(C.shield);
+  if (id === 'systems') return 'W ' + C.power.p[0] + '  S ' + C.power.p[1] + '  E ' + C.power.p[2] + (C.t < C.power.until ? '   emergency ' + Math.ceil((C.power.until - C.t) / 1000) + ' s' : '');
   return '';
 }

@@ -45,12 +45,19 @@ const CAMP_PANELS = {
       { n: 4, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', help: 'Build an escort (costs ore)' },
       { n: 5, id: 'goal', fly: 'objective', label: 'Fly to the objective', help: 'Autopilot to the objective', fast: 'Autopilot there fast (wing aboard)' }, // fast: Shift with the digit is a burn, which needs the wing aboard (card space-game-campaign-fast-board)
       { n: 6, id: 'dock', order: 'dock', label: 'Dock at an outpost', help: 'Dock at a friendly outpost (E)' } // ships are built and the hull mended only docked (card space-game-campaign-outposts); docking opens the ready room
+    ] },
+    { key: 'C', code: 'KeyC', id: 'systems', side: 'left', slot: 1, title: 'SYSTEMS', rows: [ // the ship's power (card space-game-campaign-systems; docs/CAMPAIGN.md "Ship systems"): a letter key, as the tabs of the panels card; a row's digit moves a pip
+      { n: 1, id: 'weapons', order: 'power', arg: 'weapons', label: 'Weapons +', help: 'A pip to the weapons' },
+      { n: 2, id: 'shields', order: 'power', arg: 'shields', label: 'Shields +', help: 'A pip to the shields' },
+      { n: 3, id: 'engines', order: 'power', arg: 'engines', label: 'Engines +', help: 'A pip to the engines' },
+      { n: 4, id: 'balance', order: 'balance', label: 'Balance', help: 'Back to 2 / 2 / 2' },
+      { n: 5, id: 'emergency', order: 'emergency', label: 'Emergency shields', help: 'Shields get 4 pips for 10 s' }
     ] }
   ],
   // why a row cannot be done now, in a few plain words: the code of the game's own refusal (campNo in src/campaign.js) to the words under the row's name; {need} and {have} are ore
   why: { over: 'the battle is over', bay: 'the bay is empty', launching: 'still launching', baydry: 'all of it is out', nofighters: 'no fighters out', noescorts: 'no escorts out', noconvoy: 'no convoy to escort', nowing: 'no ships out',
     noore: 'no ore in reach', noore2: 'needs {need} ore', shieldfull: 'shield is full', earthfull: "Earth's shield is full", noearth: 'no Earth here', farearth: 'too far from Earth', buildfull: 'no room in the bay', what: 'cannot do that now',
-    nogoal: 'no objective', there: 'you are there', nodock: 'Dock at an outpost to build.', norepair: 'Dock at an outpost to repair.', docked: 'already docked', noposts: 'no outpost here', whichpost: 'no such outpost', farpost: 'no outpost in range', hotdock: 'aliens too close', hullfull: 'the hull is sound' }
+    nogoal: 'no objective', there: 'you are there', nodock: 'Dock at an outpost to build.', norepair: 'Dock at an outpost to repair.', docked: 'already docked', noposts: 'no outpost here', whichpost: 'no such outpost', farpost: 'no outpost in range', hotdock: 'aliens too close', hullfull: 'the hull is sound', powermax: 'at full power', powernone: 'no power to take', powerwhat: 'which system?', locked: 'running: the power is held', cooling: 'ready in {s} s' }
 };
 // the rows the H page and Settings list for the panels: the panel's key then the row's digit, under the panel's heading, in the table's order
 function campPanelKeyRows() {
@@ -123,8 +130,8 @@ const CONTROLS = [
     { k: ['Click'], t: 'Map: click a mark sets it, again flies', sub: 'THE MAP' },
     { k: ['W', 'S', 'A', 'D'], t: 'Map list: choose; next or last group', sub: 'THE MAP' }, // two rows in one: the page is at the size the controls panel fits (tests/controlsfit.mjs)
     { k: ['Shift', 'Enter'], t: 'Map: Enter flies, Shift+Enter fast', sub: 'THE MAP' }, // (the Enter and Shift+Enter rows were one too many for Settings' four columns once E docked)
-    { k: ['X'], t: 'Map: clear the destination', sub: 'THE MAP' },
-    { k: ['Z'], t: 'Map: the area, or the whole system', sub: 'THE MAP' },
+    { k: ['V'], t: 'Map: send a scout there', sub: 'THE MAP' },
+    { k: ['X', 'Z'], t: 'Map: X clears the goal, Z zooms', sub: 'THE MAP' }, // two rows in one (the Campaign group is at the size Settings > Controls fits: tests/controlsfit.mjs)
     { k: ['I'], t: 'Type an order to the ship', sub: 'THE STRIP AND THE VOICE' },
     { k: ['U'], t: 'Hold to speak an order', sub: 'THE STRIP AND THE VOICE' },
     { k: ['H'], t: 'This page of keys', sub: 'ANYWHERE' },
