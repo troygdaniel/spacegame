@@ -790,7 +790,10 @@ function campBullets(C, dt) {
     const targets = b.team === 'earth' ? al : el;
     for (const u of targets) {
       if (u.hp <= 0) continue;
-      if (campSegHit(px, py, b.x, b.y, u.x, u.y, u.r + 2)) { campHurt(C, u, b.dmg, b.from); if (!b.beam) { b.dead = true; return; } }
+      if (campSegHit(px, py, b.x, b.y, u.x, u.y, u.r + 2)) {
+        if (b.beam) { b.hit = b.hit || {}; if (b.hit[u.id]) continue; b.hit[u.id] = true; } // a beam goes through every ship in its line, but hurts each one once (it hurt a big one every step it was inside: 21 times as much on the mothership)
+        campHurt(C, u, b.dmg, b.from); if (!b.beam) { b.dead = true; return; }
+      }
     }
     if (C.earth && b.team === 'alien' && campSegHit(px, py, b.x, b.y, C.earth.x, C.earth.y, C.earth.r)) { // Earth is hit (a level with no Earth has none to hit)
       b.dead = true; if (!C.god) C.earth.shield -= b.dmg * CAMP.alien.earthDamage; C.earth.hitAt = C.t; C.events.push({ type: 'earthhit', x: b.x, y: b.y }); // god mode (a debug key, src/campdebug.js): Earth's shield does not fall either
