@@ -9,12 +9,14 @@
 //   F. the scene: a far body is made when the carrier comes near and taken down when it leaves; stars are drawn as stars; the radar leaves the far ones out
 //   G. with the pack gone the Campaign is what it was
 // Run: node tests/campsol.mjs   (exit code 1 on a failed check)
+import { readFileSync as __rf } from 'node:fs';
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const g = nodeGame();
+g.run(__rf(new URL('./fixtures/camplegacy.js', import.meta.url), 'utf8') + ' CAMP.levels[2] = CAMP.levels.legacy2; CAMP.levels[3] = CAMP.levels.legacy3;'); // levels 2 and 3 as whole-level rows (card space-game-campaign-missions): this test reads their guards, towers and caches; level 1 stays the belt
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const K = J('CAMP.world');
 const Q = lv => JSON.stringify(lv); // a level is a number or a key ('home')
