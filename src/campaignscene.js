@@ -77,7 +77,7 @@ class Campaign extends Phaser.Scene {
   }
   showWon() {
     this.mode = 'won'; const lines = campStory(this.level, 'after');
-    this.showCard(uiText('camp.ui.title'), lines, uiText('camp.ui.next')); this.say(lines);
+    this.showCard(uiText('camp.ui.won', { n: this.level }), lines, uiText('camp.ui.next')); this.say(lines);
   }
   showPick() {
     this.mode = 'pick'; this.choices = campTechChoices(this.level);
@@ -85,7 +85,7 @@ class Campaign extends Phaser.Scene {
   }
   showLost(why) {
     this.mode = 'lost'; const line = uiText('camp.lose.' + why);
-    this.showCard(uiText('camp.ui.title'), [line], uiText('camp.ui.retry')); this.say([line]);
+    this.showCard(uiText('camp.ui.lost', { n: this.level }), [line], uiText('camp.ui.retry')); this.say([line]);
   }
   showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.title'), [uiText('camp.ui.pausemap')].concat(typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), 230); } // campDebugLine: the tune kit's one short line of its keys
   next() { // after the story (and the pick): the next level, or after the last one the end, with a new campaign waiting
