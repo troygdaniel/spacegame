@@ -52,7 +52,7 @@ class Title extends Phaser.Scene {
       if (plan && plan.say) toast(this, plan.say, '#ffd37a');
     }
     this.contentUi = contentTitleUi(this); // src/contentui.js: the content problems chip, its panel and the MODDED tag (nothing when all is well)
-    this.input.keyboard.on('keydown', e => { if (e.repeat || this.contentUi.handleKey(e)) return; if (e.code === 'KeyV') voiceOpenSetup(this); else if (e.code === 'KeyC') chatOpenSetup(this); else if (e.code === 'KeyS') settingsOpen(this, 'sound'); else if (e.code === 'KeyO') modsOpenSetup(this); else if (e.code === 'KeyK') campaignStart(this); else if (e.code !== 'KeyM') start(); }); // K opens the Campaign (src/campaignscene.js) // P opens Settings at Content and while Settings is open the title is paused, so nothing starts the game; M still mutes; S, V and C open Settings (src/settings.js) at Sound, the Deepgram key and the chat keys; O opens the Mods screen (src/mods.js)
+    this.input.keyboard.on('keydown', e => { if (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) { campKeysKey(this, e.code); return; } if (e.repeat || this.contentUi.handleKey(e)) return; if (e.code === 'KeyH' && typeof campKeysToggle === 'function') campKeysToggle(this); else if (e.code === 'KeyV') voiceOpenSetup(this); else if (e.code === 'KeyC') chatOpenSetup(this); else if (e.code === 'KeyS') settingsOpen(this, 'sound'); else if (e.code === 'KeyO') modsOpenSetup(this); else if (e.code === 'KeyK') campaignStart(this); else if (e.code !== 'KeyM') start(); }); // K opens the Campaign (src/campaignscene.js) // P opens Settings at Content and while Settings is open the title is paused, so nothing starts the game; M still mutes; S, V and C open Settings (src/settings.js) at Sound, the Deepgram key and the chat keys; O opens the Mods screen (src/mods.js)
     this.input.on('pointerdown', (p, over) => { if (over && over.length) return; start(); }); // a click on the chip, the tag or the panel is theirs, not "press any key"
   }
   startLongHaul() { // Enter, any other key, a click, or the Long Haul choice: the regular game, from the station
@@ -72,6 +72,10 @@ class Title extends Phaser.Scene {
       this.add.text(left + 18, y + 48, uiText(c.sub), uiFont(13, '#9fbdd1', { wordWrap: { width: w - 36 }, lineSpacing: 3 })).setOrigin(0, 0).setDepth(21);
       const zone = this.add.zone(left + w / 2, y + h / 2, w, h).setInteractive({ useHandCursor: true }).setDepth(22);
       zone.on('pointerdown', () => { if (c.go === 'campaign') campaignStart(this); else this.startLongHaul(); });
+      if (c.go === 'campaign' && typeof campKeysToggle === 'function') { // H: the Campaign's page of every key, from this panel too (src/campkeys.js; card space-game-campaign-keys-help)
+        const hk = this.add.text(left + w - 16, y + h - 10, uiText('title.camp.keys'), uiFont(12, '#ffb454')).setOrigin(1, 1).setDepth(23).setInteractive({ useHandCursor: true });
+        hk.on('pointerdown', (p, lx, ly, e) => { if (e && e.stopPropagation) e.stopPropagation(); campKeysToggle(this); });
+      }
       zone.on('pointerover', () => g.setAlpha(1)); zone.on('pointerout', () => g.setAlpha(0.85));
     });
   }

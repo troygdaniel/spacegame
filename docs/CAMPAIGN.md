@@ -12,11 +12,13 @@ You fly the carrier yourself: big, slow, heavy. **W A S D** fly it, hold **Space
 
 | Order | Key | You can type or say | What the small ships do |
 |---|---|---|---|
-| Launch | 1 | "launch", "launch fighters" | the bay opens: one ship out every 0.6 s, six fighters and two escorts |
-| Attack | 2 | "attack", "attack the mothership" | fighters go for the nearest alien, or the mothership if you name it |
-| Escort | 3 | "send escorts to the Mars convoy" | escorts fly beside the convoy you name (or the nearest one) and shoot what comes at it |
-| Guard | 4 | "guard the carrier", "defend Earth" | the wing circles what you name |
-| Recall | 5 | "recall", "come home" | they fly back, land in the bay and are repaired; a ship lost stays lost |
+| Launch | 1 then 1 | "launch", "launch fighters" | the bay opens: one ship out every 0.6 s, six fighters and two escorts |
+| Attack | 1 then 2 | "attack", "attack the mothership" | fighters go for the nearest alien, or the mothership if you name it |
+| Escort | 1 then 3 | "send escorts to the Mars convoy" | escorts fly beside the convoy you name (or the nearest one) and shoot what comes at it |
+| Guard | 1 then 4 | "guard the carrier", "defend Earth" | the wing circles what you name |
+| Recall | 1 then 5 | "recall", "come home" | they fly back, land in the bay and are repaired; a ship lost stays lost |
+
+**The keyboard panels (card `space-game-campaign-keys-help`, Troy, 20 Nov 2026).** The digits are not orders on their own any more. **1** opens the FLEET panel at the left edge (rows 1 to 5: launch, attack, escort, guard, recall) and **2** the SHIP panel at the right (mine ore, recharge shields, build a fighter, build an escort, fly to the objective); a row's digit does it, so *1 then 3* is "escort", and the panel closes. Each row has its number, its name and its live state under it (what it will do, or why it cannot, greyed: "needs 45 ore", "no fighters out"). A panel is drawn only **250 ms** after its key, so a fast "1 then 3" never flashes it; a click on a row does it, a click anywhere else or Esc closes it. Digits 4 to 9 and key 3 do nothing (**3** is reserved for a centre panel), B and N do nothing in the Campaign (the Tab map's list is where the places are), and typing or saying an order is unchanged. **H** opens one page of every key (two columns, the panels first); it is on the pause card and the title's Campaign panel, and the bottom key line ends "1 Fleet   2 Ship   Tab Map   H Keys". One table feeds all of it: `CAMP_PANELS` and the CAMPAIGN and PANELS groups of `src/data_controls.js` (the panels, their rows, keys and words), read by `src/camppanel.js` (what a row does and whether it can be done now), `src/campanelsdraw.js` (the drawing), `src/campkeys.js` (the page), the key line, the pause card, the ship computer's rules and the tests; a later card adds a row, or the centre panel, there.
 
 An order the game cannot do is answered in words and does nothing ("the bay is empty"). The ship's voice answers each one in a short line.
 
@@ -52,9 +54,9 @@ Troy lost level 1 twice at wave 3, both times because Earth's shield ran out, wi
 ## Ore: mine it, spend it (card `space-game-campaign-resources`, Troy: "mine resources to recharge my shields and build new ships")
 
 - **Where ore is.** Asteroid fields (rocks that hold ore, level data `rocks`) and the wrecks of dead aliens (a raider 4, a drone 6, a gunship 12, a tower 20, the mothership 40; a wreck goes after 30 s). Any ship of yours that flies over a piece takes it into the one ore store of the carrier (200 at most). The ore store is shown on the HUD.
-- **Mine (key 6, "mine", "gather ore").** Your escorts fly to the nearest ore that is not under the aliens' guns and bring it in (the fighters stay for the fight; build more escorts if you want more miners). They fight back what comes within 320 px; with no safe ore left they circle the carrier and wait for more. The carrier, and any ship of yours that passes over ore, collects it too.
-- **Recharge shields (key 7, "recharge shields").** The carrier now has a shield of 150 points that takes damage before the hull and does not mend by itself. 25 ore fills it. Within 900 px of Earth, and with Earth's shield under full, the order mends Earth's shield instead (40 ore for 200 points); "recharge Earth" or "recharge the carrier" says which.
-- **Build (key 8 a fighter, key 9 an escort; "build fighters", "build an escort").** 25 ore a fighter, 45 an escort; one ship at a time (6 s, 10 s), into the bay, where Launch puts it out. The bay holds at most 14 fighters and 6 escorts, counting what is out.
+- **Mine (keys 2 then 1, "mine", "gather ore").** Your escorts fly to the nearest ore that is not under the aliens' guns and bring it in (the fighters stay for the fight; build more escorts if you want more miners). They fight back what comes within 320 px; with no safe ore left they circle the carrier and wait for more. The carrier, and any ship of yours that passes over ore, collects it too.
+- **Recharge shields (keys 2 then 2, "recharge shields").** The carrier now has a shield of 150 points that takes damage before the hull and does not mend by itself. 25 ore fills it. Within 900 px of Earth, and with Earth's shield under full, the order mends Earth's shield instead (40 ore for 200 points); "recharge Earth" or "recharge the carrier" says which.
+- **Build (keys 2 then 3 a fighter, 2 then 4 an escort; "build fighters", "build an escort").** 25 ore a fighter, 45 an escort; one ship at a time (6 s, 10 s), into the bay, where Launch puts it out. The bay holds at most 14 fighters and 6 escorts, counting what is out.
 - **All three levels use it** (rocks and wrecks are in every level; Earth's shield only in level 1). Every number is a line of `CAMP` (`ore`, `shield`, `recharge`, `build`).
 - **Assumed:** Troy meant the shield bars; the carrier had none, so it has one now. Mining is flying over, not shooting rocks. Only escorts mine. Wrecks are the main income of a fight, the rocks are the reserve. The words of these orders are in `content/text/campaign.md` because `content/text/ui.md` is full (200 rows a file).
 

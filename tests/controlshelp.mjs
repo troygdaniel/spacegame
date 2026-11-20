@@ -149,6 +149,9 @@ console.log('6. the Campaign: every bound key is on the table');
   check('the bottom key line names only keys of the table and says the panels from it: ' + keyLine, caps(keyLine, /^(?:[A-Z0-9]|Tab|Space)$/).every(c => named.has(c)) && keyLine.includes(J('campPanelKeyLine()')) && /H Keys$/.test(keyLine) && !/\b6-9\b|\bI type an order\b/.test(keyLine), caps(keyLine, /^(?:[A-Z0-9]|Tab|Space)$/).filter(c => !named.has(c)).join(' '));
   check('the key line fits the screen: 8.6 px a letter from x 24 ends at 1272 at the latest', 24 + keyLine.length * 8.6 <= 1272, keyLine.length + ' letters');
   check('the pause card says Esc, T and H, which are keys of the table', caps(pause, /^(?:[A-Z]|Esc)$/).every(c => named.has(c) || c === 'ESC') && /H {1,3}all keys/.test(pause) && /Esc/.test(pause), pause);
+  const debugCodes = J('CAMP_DEBUG.keys.map(r => r.code)');
+  check('the debug keys are bound by the scene through their own table (campDebugKey) and the H page lists them from it', /campDebugKey\(c\)/.test(scene) && J('campKeysPage().some(g => g.rows.length === CAMP_DEBUG.keys.length && g.rows.every((r, i) => r.caps[0] === CAMP_DEBUG.keys[i].key))') && debugCodes.length >= 4);
+  check('the H page lists every row of the two groups, in groups, once: nothing in the table is left off it', J(`(() => { const page = campKeysPage().flatMap(g => g.rows.map(r => r.caps.join(' ') + '|' + r.t)); return ['panels', 'campaign'].every(id => controlsGroup(id).rows.every(r => page.includes(r.k.join(' ') + '|' + r.t))); })()`));
 }
 
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
