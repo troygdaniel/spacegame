@@ -191,8 +191,8 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.l2.after.2 | It shows where the aliens live. Choose a technology. |
 | camp.l3.before.1 | Their home world is open. Last battle. |
 | camp.l3.before.2 | Break the defence towers round their world. |
-| camp.l3.after.1 | Their defences are down. Earth is safe. |
-| camp.l3.after.2 | The first step is done. The war is not over. |
+| camp.l3.after.1 | Their defences are down. |
+| camp.l3.after.2 | The war is won. |
 | camp.say.l2wave1 | The aliens followed us through the warp, pilot. |
 | camp.say.l2wave2 | A second group, coming in from the far side. |
 | camp.say.l3wave1 | Defenders are launching from the planet. |
@@ -206,4 +206,4 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.obj.towers | Break the defence towers: {n} left. |
 | camp.obj.caches | Gather resources: {n} of {need}. |
 | camp.obj.relic | Hold the ring at the relic: {pct}%. |
-| camp.ui.end | THE FIRST CAMPAIGN IS WON     Enter  title |
+| camp.ui.end | THE WAR IS NOT OVER     Enter  title |

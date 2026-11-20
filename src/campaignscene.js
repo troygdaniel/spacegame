@@ -36,6 +36,7 @@ class Campaign extends Phaser.Scene {
     this.P = campProgressLoad(); if (Array.isArray(d.techs)) this.P.techs = d.techs.filter(t => CAMP.tech[t]);
     this.mi = d.mission != null ? d.mission | 0 : (this.P.level === this.level ? this.P.mission | 0 : 0); if (this.mi >= campMissions(this.level).length) this.mi = 0; // the mission of the level to fly: the one asked for, else the next the save has
     this.opts.mission = this.mi;
+    campReveal(!!this.P.revealed); // after the ending has been seen, level 3 is called the outpost (SPOILER, src/campaign.js)
     this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null; this.shown = {};
   }
   create() {
@@ -138,12 +139,12 @@ class Campaign extends Phaser.Scene {
   nextMission() { go(this, 'Campaign', { level: this.level, mission: this.mi + 1, via: 'next' }); } // the next mission of the level (no warp: only the level's start warps)
   showIntro() {
     if (this.mi > 0) { this.showBrief(); return; } // a later mission of the level: straight to its briefing
-    this.mode = 'intro'; const lines = campStory(this.level, 'before');
+    this.mode = 'intro'; const lines = campStory(this.level, 'before', !!(this.P && this.P.revealed));
     this.showCard(uiText('camp.ui.level', { n: this.level, name: CAMP.levels[this.level].name }), lines, uiText('camp.ui.begin'));
     this.say(lines);
   }
   showWon() {
-    this.mode = 'won'; const lines = campStory(this.level, 'after'), res = typeof campWinLine === 'function' ? campWinLine(this.camp) : ''; // src/campwin.js: how it went, for reading
+    this.mode = 'won'; const lines = campStory(this.level, 'after', !!(this.P && this.P.revealed)), res = typeof campWinLine === 'function' ? campWinLine(this.camp) : ''; // src/campwin.js: how it went, for reading
     this.showCard(uiText('camp.ui.won', { n: this.level }), res ? lines.concat([res]) : lines, uiText('camp.ui.next')); this.say(lines);
   }
   showPick() {
@@ -175,11 +176,22 @@ class Campaign extends Phaser.Scene {
   showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap'), uiText('camp.ui.pausepanels', { panels: campPanelKeyLine().replace(/   /g, ', ') })].concat([uiText('camp.ui.pausehelp')], (this.camp && this.camp.L && this.camp.L.objectives) ? [uiText('camp.ui.pauseretry')] : [], typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), (this.camp && this.camp.L && this.camp.L.objectives) ? 402 : 372); } // the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
   next(ore) { // after the story (and the pick, or the refit): the next level, or after the last one the end, with a new campaign waiting. ore: what is left to carry (the refit spent some)
     const last = !CAMP.levels[this.level + 1];
-    this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) { this.P.techs = []; this.P.ore = 0; this.P.bonus = { fighters: 0, escorts: 0 }; }
+    this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) { this.P.techs = []; this.P.ore = 0; this.P.bonus = { fighters: 0, escorts: 0 }; this.P.revealed = true; } // the ending is about to show: from now on a replay says the outpost (SPOILER)
     else { this.P.ore = ore != null ? ore : Math.floor(this.camp.ore); if (!CAMP.levels[this.level].refit) this.P.bonus = { fighters: 0, escorts: 0 }; } // the extras of a refit are for the level after it; a level that had none carries only ore
     campProgressSave(this.P);
     if (!last) { go(this, 'Campaign', { level: this.level + 1, via: 'next' }); return; }
-    this.mode = 'end'; this.showCard(uiText('camp.ui.title'), [], uiText('camp.ui.end'), 200);
+    this.showEnd();
+  }
+  // SPOILER (card space-game-campaign-outpost-reveal): the ending turns. Level 3 was an outpost, not their home, and the war is not over; the data points to a star, drawn small and far on the card. Spoken line by line
+  showEnd() {
+    this.mode = 'end'; campReveal(true); const lines = campEnding(), R = CAMP.levels[3].reveal || {};
+    this.showCard(uiText('camp.ui.title'), lines, uiText('camp.ui.end'), 300);
+    const x = W / 2 + 320, y = H / 2 - 100, sg = this.add.graphics().setScrollFactor(0).setDepth(201); // the distant star, up in the corner of the card: a glow, a point, a faint cross
+    sg.fillStyle(0xffe29a, 0.12).fillCircle(x, y, 26); sg.fillStyle(0xffe29a, 0.3).fillCircle(x, y, 12); sg.fillStyle(0xfff6d6, 1).fillCircle(x, y, 3.2);
+    sg.lineStyle(1, 0xffe29a, 0.45); sg.lineBetween(x - 34, y, x + 34, y); sg.lineBetween(x, y - 34, x, y + 34);
+    const tx = this.add.text(x, y + 44, String(R.star || '').toUpperCase(), uiFont(13, '#ffe29a', { letterSpacing: 2 })).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+    if (this.card && this.card.push) this.card.push(sg, tx); // hideCard takes them down with the card
+    this.say(lines);
   }
 
   // ----- keys -----

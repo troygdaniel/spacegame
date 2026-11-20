@@ -9,7 +9,7 @@
 //   campIntent(text)                 plain words -> { act: 'fleet_attack', arg } or null (the ship computer calls it; src/shipcomputer.js)
 //   campTechChoices(level)           the three techs offered after that level;  campPick(P, id): the pick, kept in P
 //   campProgressLoad() / campProgressSave(P)   { level, techs } in localStorage under CAMP.store, apart from the Long Haul save
-//   campStory(level, 'before' | 'after')       the plain lines of the story, from content/text/ui.md (keys camp.l<level>.<before|after>.<n>)
+//   campStory(level, 'before' | 'after', revealed)  the plain lines of the story, from content/text/ui.md (keys camp.l<level>.<before|after>.<n>; after the ending has been seen, .r. lines where a level has them)
 // C: { level, t (ms), ships, bullets, events, input, earth, bay, techs, carrier, result ('won' | 'lost' | null), why, delivered, lost, kills, ... }
 // A ship: { id, kind, team ('earth' | 'alien'), x, y, vx, vy, rot, hp, maxHp, r, vmax, accel, turn, def, order }  (the alien ones are src/enemies.js PIRATES)
 // The aliens fly with the game's own pirateSteer (circle, pass, break, run), so a fight here moves like a fight in Long Haul.
@@ -327,6 +327,7 @@ const CAMP = {
     },
     3: {                                                          // the alien home world: scan the approach, break the outer ring, break the inner ring
       name: 'The home world', start: 'arrival', startAt: [0, 0], earth: false,
+      reveal: { star: 'Tau Ceti', name: 'The outpost', place: 'Alien outpost' }, // SPOILER: after the win the ending says this was an outpost and the data points to this star; once the ending has been seen (the saved flag revealed) a replay says the true names (campReveal)
       world: { system: 'epsilon-eridani', fit: { place: 'home', pack: 'epsilon-eridani-b' }, same: { home: 'epsilon-eridani-b' }, k: 3 }, // Epsilon Eridani's star and belts round the alien home world, which is the pack's Aegir; k: the rings are this many times the pack's (so the star is not on top of the towers)
       places: {
         arrival: { x: -7000, y: 3500, name: 'Warp point', hidden: true },                          // where the carrier warps in: 7,800 px from the world (not drawn)
@@ -1079,12 +1080,26 @@ function campPick(P, id) {
   if (!CAMP.tech[id] || P.techs.indexOf(id) >= 0) return false;
   P.techs.push(id); return true;
 }
-function campStory(level, when) {
-  const out = [];
-  for (let n = 1; n <= 6; n++) { const key = 'camp.l' + level + '.' + when + '.' + n; if (Object.prototype.hasOwnProperty.call(UI_TEXT, key)) out.push(uiText(key)); }
+// the story lines of a level, before or after it. revealed: the ending has been seen (the saved flag), so a level that has lines of its own for it (camp.lN.when.r.n) says those instead
+function campStory(level, when, revealed) {
+  const out = [], has = k => Object.prototype.hasOwnProperty.call(UI_TEXT, k), base = 'camp.l' + level + '.' + when + '.', pre = revealed && has(base + 'r.1') ? base + 'r.' : base;
+  for (let n = 1; n <= 6; n++) if (has(pre + n)) out.push(uiText(pre + n));
   return out;
 }
-function campProgressNew() { return { level: 1, mission: 0, techs: [], ore: 0, bonus: { fighters: 0, escorts: 0 }, results: {} }; } // level and mission: the next one to fly; ore: carried into the next level; bonus: the extra ships the Earth refit bought for it; results: { '<level>.<mission>': { score, bonuses: [ids], t, hull, lost, tries } }, one for each mission flown (the best score is kept)
+// SPOILER (card space-game-campaign-outpost-reveal): level 3 is an outpost, not their home world, and the player finds out only after winning. campReveal(true) gives the level and its place their
+// true names (CAMP.levels[3].reveal), campReveal(false) the old ones; the scene calls it from the saved flag when it starts and when the ending shows. Nothing before the flag says outpost.
+function campReveal(on) {
+  const L = CAMP.levels[3], R = L && L.reveal; if (!R || !L.places || !L.places.home) return false;
+  if (!R.was) R.was = { name: L.name, place: L.places.home.name };
+  L.name = on ? R.name : R.was.name; L.places.home.name = on ? R.place : R.was.place;
+  return !!on;
+}
+// the ending's lines (content/text/campaign-reveal.md): this is not their home, the war is not over, the star the data points to
+function campEnding() {
+  const R = (CAMP.levels[3] && CAMP.levels[3].reveal) || {};
+  return [uiText('camp.end.1'), uiText('camp.end.2'), uiText('camp.end.3', { star: R.star || '' })];
+}
+function campProgressNew() { return { level: 1, mission: 0, techs: [], ore: 0, bonus: { fighters: 0, escorts: 0 }, results: {}, revealed: false }; } // level and mission: the next one to fly; ore: carried into the next level; bonus: the extra ships the Earth refit bought for it; results: { '<level>.<mission>': { score, bonuses: [ids], t, hull, lost, tries } }, one for each mission flown (the best score is kept)
 const campResultKey = (level, i) => level + '.' + ((i | 0) + 1);
 function campProgressLoad() {
   const P = campProgressNew();
@@ -1094,13 +1109,14 @@ function campProgressLoad() {
     if (Number.isInteger(raw.mission) && raw.mission >= 0 && raw.mission < 9) P.mission = raw.mission;
     if (Array.isArray(raw.techs)) raw.techs.forEach(t => { if (CAMP.tech[t] && P.techs.indexOf(t) < 0) P.techs.push(t); });
     if (Number.isFinite(raw.ore)) P.ore = Math.max(0, Math.min(CAMP.ore.cap, Math.floor(raw.ore)));
+    P.revealed = raw.revealed === true; // the ending has been seen (SPOILER: campReveal)
     if (raw.bonus && typeof raw.bonus === 'object') { const b = x => Number.isInteger(x) ? Math.max(0, Math.min(CAMP.refit.most, x)) : 0; P.bonus = { fighters: b(raw.bonus.fighters), escorts: b(raw.bonus.escorts) }; }
     if (raw.results && typeof raw.results === 'object') Object.keys(raw.results).slice(0, 40).forEach(k => { const r = raw.results[k]; if (/^[1-9]\.[1-9]$/.test(k) && r && Number.isFinite(r.score)) P.results[k] = { score: Math.max(0, Math.min(99999, Math.floor(r.score))), bonuses: Array.isArray(r.bonuses) ? r.bonuses.filter(x => typeof x === 'string').slice(0, 6).map(x => x.slice(0, 24)) : [], t: Math.max(0, r.t | 0), hull: Math.max(0, r.hull | 0), lost: Math.max(0, r.lost | 0), tries: Math.max(1, Math.min(99, r.tries | 0 || 1)) }; });
   }, 0);
   if (P.mission >= campMissions(P.level).length) P.mission = 0;
   return P;
 }
-function campProgressSave(P) { campTry(() => localStorage.setItem(CAMP.store, JSON.stringify({ level: P.level, mission: P.mission | 0, techs: P.techs, ore: P.ore | 0, bonus: P.bonus, results: P.results || {} })), 0); }
+function campProgressSave(P) { campTry(() => localStorage.setItem(CAMP.store, JSON.stringify({ level: P.level, mission: P.mission | 0, techs: P.techs, ore: P.ore | 0, bonus: P.bonus, results: P.results || {}, revealed: P.revealed === undefined ? campProgressLoad().revealed : P.revealed === true })), 0); } // revealed: the ending has been seen (SPOILER: campReveal)
 // a mission won: its result is kept (the best score, how many tries), and the mission to fly next moves on. Answers { levelDone }: true when it was the last mission of its level (the caller goes to the level's story and refit, then the next level)
 function campMissionDone(P, level, i, sc) {
   const k = campResultKey(level, i), old = P.results[k], res = { score: sc.score, bonuses: sc.bonuses.filter(b => b.ok).map(b => b.id), t: sc.t, hull: sc.hullLeft, lost: sc.shipsLost, tries: (old ? old.tries : 0) + 1 };
