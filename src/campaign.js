@@ -81,6 +81,23 @@ const CAMP = {
     hp: 200,                               // hit points of a freighter
     speed: 120                             // px/s: the same as the MULE of the escort call
   },
+  nav: {                                   // the carrier's autopilot, the map's list and picking, and the arrow at the screen edge (src/campnav.js); the rule is the Long Haul autopilot's (src/autopilot.js AUTO)
+    stop: 100,                             // px: a place is flown to until the edge of it (its radius plus this) is this near
+    stopShip: 450,                         // px: a ship (a convoy, the mothership, a tower) is flown to until it is this near: inside the main gun's reach
+    stopPoint: 40,                         // px: a point (a cache, the relic ring, your wing) is flown to until it is this near
+    arrive: 60,                            // px: this much past the stop distance still counts as arrived
+    drop: 70,                              // px/s: under this speed, and arrived, the autopilot lets go
+    floor: 40, brake: 1.2,                 // the speed limit is floor plus brake times the px left (the Long Haul autopilot's own rule), so it keeps moving to the end and brakes in time
+    steer: 3,                              // turn input per radian off the line to the target (1 is full turn, so 3 is full beyond a third of a radian)
+    align: 0.5,                            // rad: thrust only when the nose is within this of the line (the Long Haul autopilot's aligned)
+    etaSlow: 1.1,                          // the flight time on the map is distance over the carrier's top speed times this (it speeds up and brakes)
+    pick: 28,                              // px on the map around a mark that count as a click on it
+    list: 9,                               // lines of the list on the map at once (a heading is a line)
+    arrow: {
+      margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
+      keep: [[0, 0, 360, 176], [1056, 0, 1280, 226], [360, 0, 920, 152], [0, 656, 1020, 720]] // screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges, the radar, the message band, the key line
+    }
+  },
   alien: {
     hpScale: 1,                            // times the PIRATES hit points (src/enemies.js: raider 20, drone 30, gunship 80)
     damageScale: 1,                        // times the PIRATES shot damage (raider 6, drone 8, gunship 10 a shot, three shots)
@@ -394,6 +411,7 @@ function campStep(C, sec) {
 function campTick(C, dt) {
   C.t += dt * 1000;
   campSchedule(C);
+  if (typeof campNavDrive === 'function') campNavDrive(C, dt); // the autopilot (src/campnav.js), when it is on, sets the carrier's input
   campCarrier(C, dt);
   campLaunch(C);
   C.ships.forEach(u => { if (u.hp > 0 && u.kind !== 'carrier') campAI(C, u, dt); });

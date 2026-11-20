@@ -6,7 +6,7 @@
 // stepping the sim and every key but Esc and Tab still does what it does, so the orders (1 to 5), the strip (I) and the voice (U) work from the map.
 // Nothing here uses a Phaser feature the Campaign scene does not already use (no mask: a ship outside the frame is drawn on its edge, as the radar draws it on the rim).
 const CAMPMAP_PANEL = { x: 70, y: 35, w: 1140, h: 650 }; // the glass panel: the sector map's own size and place (src/map.js)
-const CAMPMAP_SIDE = { x: 925, y: 170, step: 28, rows: 8 }; // the column on the right: the objective above, the legend below
+const CAMPMAP_SIDE = { x: 925, y: 424, step: 24, rows: 8, destY: 166, listY: 192, listStep: 22, hintY: 398 }; // the column on the right: the objective, where you are flying, the list to pick from (card space-game-campaign-navigate), then the legend
 
 function campMapToggle(s) { if (s.mp) campMapClose(s); else campMapOpen(s); }
 
@@ -28,6 +28,7 @@ function campMapInstall(s, target) {
 
 function campMapClose(s) {
   if (!s || !s.mp) return;
+  if (s.mp.onPointer && s.input && s.input.off) { try { s.input.off('pointerdown', s.mp.onPointer); } catch (e) { /* gone */ } }
   s.mp.objs.forEach(o => { try { o.destroy(); } catch (e) { /* already gone with the scene */ } });
   s.mp = null;
 }
@@ -44,6 +45,15 @@ function campMapOpen(s) {
   own(s.add.text(F.x, 640, uiText('camp.map.footer'), uiFont(14, '#5b7a92'))).setDepth(154);
   mp.across = own(s.add.text(F.x + F.w, 640, '', uiFont(14, '#5b7a92'))).setOrigin(1, 0).setDepth(154);
   mp.obj = own(s.add.text(CAMPMAP_SIDE.x, F.y, '', uiFont(15, '#ffffff', { wordWrap: { width: 230 }, lineSpacing: 4 }))).setDepth(154);
+  // pick and fly (card space-game-campaign-navigate): the list is the Long Haul nav panel's idea (src/navpanel.js: W S choose, Enter flies there, X clears) on the one list the map and the keys share
+  mp.dest = own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.destY, '', uiFont(14, '#7fe9ff', { wordWrap: { width: 250 } }))).setDepth(154);
+  mp.list = []; for (let i = 0; i < CAMP.nav.list; i++) mp.list.push(own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.listY + i * CAMPMAP_SIDE.listStep, '', uiFont(14, '#9fe9ff'))).setOrigin(0, 0.5).setDepth(154));
+  own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.hintY, uiText('camp.map.keys'), uiFont(13, '#5b7a92'))).setDepth(154);
+  mp.goalText = own(s.add.text(0, 0, uiText('camp.map.goalmark'), uiFont(12, '#ffd37a'))).setOrigin(0.5).setDepth(154);
+  mp.routeText = own(s.add.text(0, 0, '', uiFont(12, '#ffd37a'))).setOrigin(0.5).setDepth(154);
+  mp.rows = []; mp.rowsAt = -1e9; mp.selId = '';
+  mp.onPointer = p => campMapClick(s, p.x, p.y);
+  if (s.input && s.input.on) s.input.on('pointerdown', mp.onPointer);
   for (let i = 0; i < CAMPMAP_SIDE.rows; i++) mp.leg.push(own(s.add.text(CAMPMAP_SIDE.x + 22, CAMPMAP_SIDE.y + i * CAMPMAP_SIDE.step, '', uiFont(14, '#9fe9ff', { wordWrap: { width: 235 } }))).setOrigin(0, 0.5).setDepth(154)); // a row is one line (27 letters at most, tests/campmap.mjs); the wrap is only a net
   // the names of the places: they do not move, so they are put once, each on a free side of its mark
   const places = campMapMarks(C).filter(m => m.type === 'place'), names = [];
@@ -96,10 +106,67 @@ function campMapPaint(s, time) {
       g.fillStyle(m.color, 1).fillPoints(tri, true); g.lineStyle(1, CYAN, 1).strokePoints(tri, true);
     }
   });
+  // ---- navigate (card space-game-campaign-navigate): the goal pulses with a line from the carrier and its distance and flight time; the chosen row has a frame; the place you are flying to has a line ----
+  if (time - mp.rowsAt >= 250 || mp.dirty) { mp.rows = campNavRows(C); mp.rowsAt = time; mp.dirty = false; } // the list is rebuilt four times a second: ships move
+  let sel = mp.rows.findIndex(r => r.id === mp.selId); if (sel < 0) { sel = 0; mp.selId = mp.rows[0] ? mp.rows[0].id : ''; }
+  const me = marks.find(m => m.type === 'carrier'), cp = me ? pin(X(me.x), Y(me.y)) : null, goal = mp.rows.find(r => r.goal), N = C.nav, pulse = 0.5 + 0.5 * Math.sin(time / 220), gc = CAMPNAV.color;
+  const route = (r, color, alpha) => { const q = pin(X(r.x), Y(r.y)); if (cp) g.lineStyle(1.5, color, alpha).lineBetween(cp.x, cp.y, q.x, q.y); return q; };
+  if (goal) {
+    const q = route(goal, gc.goal, 0.55), d = cp ? Math.hypot(goal.x - C.carrier.x, goal.y - C.carrier.y) : 0;
+    g.lineStyle(2, gc.goal, 0.5 + 0.5 * pulse).strokeCircle(q.x, q.y, 11 + 4 * pulse);
+    mp.goalText.setVisible(true).setPosition(q.x, q.y - 22);
+    mp.routeText.setVisible(!!cp).setText(uiText('camp.map.route', { km: campNavKm(d), s: campNavEta(C, d) })).setPosition(cp ? (cp.x + q.x) / 2 : 0, cp ? (cp.y + q.y) / 2 - 10 : 0);
+  } else { mp.goalText.setVisible(false); mp.routeText.setVisible(false); }
+  if (N) { route({ x: N.x, y: N.y }, gc.select, 0.85); mp.dest.setText(uiText('camp.map.dest', { name: N.name }) + '  ' + campNavKm(Math.hypot(N.x - C.carrier.x, N.y - C.carrier.y)) + ' km'); } else mp.dest.setText('');
+  const chosen = mp.rows[sel]; if (chosen) { const q = pin(X(chosen.x), Y(chosen.y)); g.lineStyle(2, gc.select, 1).strokeRect(q.x - 9, q.y - 9, 18, 18); }
+  const win = navpanelLines(mp.rows, sel, CAMP.nav.list, CAMPNAV.groups); // the Long Haul nav panel's own windowing: headings, and the chosen row kept in view
+  mp.list.forEach((t, k) => {
+    const ln = win.lines[k]; t.rowId = '';
+    if (!ln) { t.setVisible(false); return; }
+    t.setVisible(true);
+    if (ln.head) { t.setText('  ' + ln.head).setColor('#5b7a92'); return; }
+    const r = ln.row; t.rowId = r.id;
+    t.setText((ln.i === sel ? '> ' : '  ') + String(r.name).slice(0, 16).padEnd(16) + (campNavKm(r.dist) + ' km').padStart(9)).setColor(ln.i === sel ? '#ffffff' : r.goal ? '#ffd37a' : '#9fe9ff');
+  });
   // the legend: what is on the map now
   const rows = campMapLegend(C, marks);
   mp.leg.forEach((t, i) => {
     const r = rows[i]; if (!r) { t.setVisible(false); return; }
     t.setVisible(true).setText(r.text); g.fillStyle(r.color, 1).fillCircle(CAMPMAP_SIDE.x + 6, t.y, 4);
   });
+}
+
+// ---- picking (card space-game-campaign-navigate): the keys and the clicks of the open map ----
+// fly there: the same for a key, a click and the words (src/campnav.js campNavGo). A place you are already at says so and does nothing.
+function campMapFly(s, row) {
+  const C = s.camp; if (!C || !row || C.result) return false;
+  const t = campNavTarget(C, row) || row, d = Math.hypot(t.x - C.carrier.x, t.y - C.carrier.y);
+  if (!row.moving && d - campNavStop(row.kind, t) <= CAMP.nav.arrive) { toast(s, uiText('camp.nav.there', { name: row.name }), '#ffd37a'); return false; }
+  campNavGo(C, row); if (s.mp) s.mp.dirty = true; return true;
+}
+// a key while the map is open: W S and the arrows choose (flying keys are the list's while it is open, as in the Long Haul nav panel), A D and the side arrows go to the next or the last group,
+// Enter flies there, X clears the destination. true when the key was the map's.
+function campMapKey(s, code) {
+  const mp = s.mp; if (!mp) return false;
+  const rows = mp.rows, at = Math.max(0, rows.findIndex(r => r.id === mp.selId));
+  const set = i => { if (rows.length) mp.selId = rows[((i % rows.length) + rows.length) % rows.length].id; return true; };
+  if (code === 'KeyW' || code === 'ArrowUp') return set(at - 1);
+  if (code === 'KeyS' || code === 'ArrowDown') return set(at + 1);
+  if (code === 'KeyA' || code === 'ArrowLeft' || code === 'KeyD' || code === 'ArrowRight') {
+    const groups = rows.map(r => r.group).filter((g, i, a) => a.indexOf(g) === i); if (!groups.length) return true;
+    const gi = groups.indexOf(rows[at] ? rows[at].group : ''), next = groups[(gi + (code === 'KeyD' || code === 'ArrowRight' ? 1 : -1) + groups.length) % groups.length];
+    return set(rows.findIndex(r => r.group === next));
+  }
+  if (code === 'Enter' || code === 'NumpadEnter') { if (rows[at]) campMapFly(s, rows[at]); return true; }
+  if (code === 'KeyX') { if (s.camp && s.camp.nav) { campNavClear(s.camp, 'clear'); mp.dirty = true; } return true; }
+  return false;
+}
+// a click: on a line of the list, or on a mark of the map. true when it picked something.
+function campMapClick(s, px, py) {
+  const mp = s.mp; if (!mp) return false;
+  const F = CAMPMAP.frame, hit = mp.list.find(t => t.rowId && px >= t.x && px <= t.x + 260 && Math.abs(py - t.y) <= 11);
+  let row = hit ? mp.rows.find(r => r.id === hit.rowId) : null;
+  if (!row && px >= F.x && px <= F.x + F.w && py >= F.y && py <= F.y + F.h) row = campNavPickAt(mp.rows, (x, y) => campMapPoint(mp.fit, F, x, y), px, py);
+  if (!row) return false;
+  mp.selId = row.id; campMapFly(s, row); return true;
 }

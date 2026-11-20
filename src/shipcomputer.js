@@ -216,8 +216,8 @@ function shipcompSnapshot(s) {
   if (scKey(s) === 'Campaign') return scTry(() => campSummary(s.camp), '');
   return [scTry(() => scWhere(s), ''), scTry(scShip, ''), scTry(scJob, ''), scTry(() => scJumps(s), ''), scTry(scDock, ''), scTry(scYards, '')].filter(Boolean).join('\n').slice(0, 9000);
 }
-const SC_CAMP_HOW = 'You command the Earth carrier against the alien fleet. The pilot flies it with W A S D, fires its main gun with Space, and gives the small ships orders: 1 launch, 2 attack, 3 escort a convoy, 4 guard, 5 recall, F fires a homing missile at the mothership or the nearest big ship (a small magazine that reloads slowly). Typing or saying the order does the same.';
-const SC_CAMP_ACTS = 'ACTIONS\nReply in exactly this form and nothing else:\nSAY: one or two short sentences for the pilot\nDO: one action from the list (leave this line out when the pilot only asked a question)\nThe list: fleet_launch | fleet_attack <the mothership, or nothing> | fleet_escort <a convoy, such as Mars> | fleet_guard <a place, or nothing> | fleet_recall | fleet_missiles <the mothership, or nothing>.\nThe game checks every action itself and says if it cannot be done: so say only what you are doing, never that it is done.';
+const SC_CAMP_HOW = 'You command the Earth carrier against the alien fleet. The pilot flies it with W A S D, fires its main gun with Space, and gives the small ships orders: 1 launch, 2 attack, 3 escort a convoy, 4 guard, 5 recall, F fires a homing missile at the mothership or the nearest big ship (a small magazine that reloads slowly). Typing or saying the order does the same. Tab opens the map of the level: W S choose a place on its list, Enter flies the carrier there by itself, X clears it, and any steering key takes the wheel back.';
+const SC_CAMP_ACTS = 'ACTIONS\nReply in exactly this form and nothing else:\nSAY: one or two short sentences for the pilot\nDO: one action from the list (leave this line out when the pilot only asked a question)\nThe list: fleet_launch | fleet_attack <the mothership, or nothing> | fleet_escort <a convoy, such as Mars> | fleet_guard <a place, or nothing> | fleet_recall | fleet_missiles <the mothership, or nothing> | fleet_fly <a place such as Mars, the objective, the relic, a cache, a convoy, the mothership, or stop>.\nThe game checks every action itself and says if it cannot be done: so say only what you are doing, never that it is done.';
 function shipcompSystem(s) {
   if (scKey(s) === 'Campaign') return 'RULES\n' + SC_RULES.replace('{name}', shipcompName()) + '\n\n<persona>\n' + scClean(SHIPCOMP.persona, 900).replace(/<\/?persona>/gi, '') + '\n</persona>\n\nSTATE\n' + shipcompSnapshot(s) + '\n\nHOW\n' + SC_CAMP_HOW + '\n\nKEYS\n' + uiText('camp.ui.keys') + '\n\n' + SC_CAMP_ACTS;
   return 'RULES\n' + SC_RULES.replace('{name}', shipcompName()) + '\n\n<persona>\n' + scClean(SHIPCOMP.persona, 900).replace(/<\/?persona>/gi, '') + '\n</persona>\n\nSTATE\n' + shipcompSnapshot(s)
@@ -503,12 +503,19 @@ const SC_ACT = {
   fleet_escort: (s, arg) => scFleet(s, 'escort', arg),
   fleet_guard: (s, arg) => scFleet(s, 'guard', arg),
   fleet_recall: (s, arg) => scFleet(s, 'recall', arg),
-  fleet_missiles: (s, arg) => scFleet(s, 'missiles', arg) // F: a homing missile at the mothership or the nearest big ship
+  fleet_missiles: (s, arg) => scFleet(s, 'missiles', arg), // F: a homing missile at the mothership or the nearest big ship
+  fleet_fly: (s, arg) => scNav(s, arg) // the carrier flies by itself to a place, the goal, the relic, a cache or a convoy; "stop" gives the wheel back (src/campnav.js; card space-game-campaign-navigate)
 };
 function scFleet(s, name, arg) {
   if (scKey(s) !== 'Campaign' || !s.camp || typeof campCheck !== 'function') return scNo('The fleet is only yours in the Campaign, pilot. Press K on the title screen.');
   const r = campCheck(s.camp, name, arg);
   return r.ok ? scYes(r.say, s2 => { campOrder(s2.camp, name, arg, 'strip'); }) : scNo(r.say);
+}
+
+function scNav(s, arg) {
+  if (scKey(s) !== 'Campaign' || !s.camp || typeof campNavCheck !== 'function') return scNo('The carrier is only yours in the Campaign, pilot. Press K on the title screen.');
+  const r = campNavCheck(s.camp, arg);
+  return r.ok ? scYes(r.say, s2 => { campNavDo(s2.camp, r); }) : scNo(r.say);
 }
 
 // the reply made safe. text: what is said, aloud and on screen. run(s): does the action (or null). refused: the list said no (text says why). dropped: the action
@@ -553,7 +560,7 @@ function scTradeHow() {
 }
 // the phrase as { act, arg } (an action of the closed list), { say } (an answer in words) or null (not one of the obvious ones: the model reads it)
 function shipcompIntent(text, s) {
-  if (scKey(s) === 'Campaign') { const it = typeof campIntent === 'function' ? campIntent(text) : null; if (it) return it; const h = typeof campHelp === 'function' ? campHelp(text, s.camp) : null; return h ? { say: h } : null; } // in a battle the fleet's orders are the plain words (the Long Haul ones, hunt, dock, fly to, mean nothing here), then the plain questions (src/camphelp.js: goal, keys, map, status)
+  if (scKey(s) === 'Campaign') { const it = typeof campIntent === 'function' ? campIntent(text) : null; if (it) return it; const nv = typeof campNavIntent === 'function' ? campNavIntent(text) : null; if (nv) return nv; const h = typeof campHelp === 'function' ? campHelp(text, s.camp) : null; return h ? { say: h } : null; } // in a battle the fleet's orders are the plain words (the Long Haul ones, hunt, dock, fly to, mean nothing here), then the plain questions (src/camphelp.js: goal, keys, map, status)
   let q = String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9' -]+/g, ' ').replace(/\s+/g, ' ').trim();
   q = q.replace(SC_NO_FILLER, '').replace(/\s+(please|now|right now|for me|already)$/, '').trim();
   if (!q) return null;
