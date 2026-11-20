@@ -93,7 +93,7 @@ const CAMP = {
   },
   // the places of the home system at 1 to 12 of the Sol pack's distances (docs/SOL.md; Earth to Mars 4,100 px), Earth at the origin, y grows downward, north is up
   places: {
-    earth: { x: 0, y: 0, name: 'Earth' },
+    earth: { x: 0, y: 0, name: 'Earth' },                    // the origin: everything else is placed from Earth
     luna: { x: 238, y: -137, name: 'Luna' },                  // 275 px from Earth: the Lunar base, where the carrier starts (90 px east of it)
     mars: { x: 4064, y: 571, name: 'Mars' },                  // 4,100 px from Earth
     eros: { x: -1705, y: -3206, name: 'Eros' }                // 3,630 px from Earth
@@ -476,7 +476,7 @@ function campBullets(C, dt) {
       if (campSegHit(px, py, b.x, b.y, u.x, u.y, u.r + 2)) { campHurt(C, u, b.dmg, b.from); if (!b.beam) { b.dead = true; return; } }
     }
     if (b.team === 'alien' && campSegHit(px, py, b.x, b.y, C.earth.x, C.earth.y, C.earth.r)) { // Earth is hit
-      b.dead = true; C.earth.shield -= b.dmg * CAMP.alien.earthDamage; C.events.push({ type: 'earthhit', x: b.x, y: b.y });
+      b.dead = true; if (!C.god) C.earth.shield -= b.dmg * CAMP.alien.earthDamage; C.events.push({ type: 'earthhit', x: b.x, y: b.y }); // god mode (a debug key, src/campdebug.js): Earth's shield does not fall either
       if (C.earth.shield <= 0) { C.earth.shield = 0; campEnd(C, 'lost', 'earth'); }
     }
   });

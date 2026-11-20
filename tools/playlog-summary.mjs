@@ -72,7 +72,7 @@ export function summarize(events) {
       case 'error': { S.errorCount++; const k = (e.kind || '') + '|' + String(e.msg || '').slice(0, 120); const x = errs.get(k) || { kind: e.kind, msg: e.msg, stack: e.stack, scene: e.scene, n: 0, t: e.t }; x.n++; errs.set(k, x); break; }
       case 'campaign': { // one attempt at a level: start .. end (src/playlog.js L.campaign); a step with no start line before it (a cut log) opens an attempt of its own
         let A = S.campaign[S.campaign.length - 1];
-        if (e.step === 'start' || !A || A.done) { A = { level: e.level, via: e.via || '', t: e.t || 0, wave: 0, orders: {}, noop: 0, lost: 0, techs: [], debug: [], result: '', why: '', secs: 0, hull: null, done: false }; S.campaign.push(A); }
+        if (e.step === 'start' || !A || (A.done && e.step !== 'tech')) { A = { level: e.level, via: e.via || '', t: e.t || 0, wave: 0, orders: {}, noop: 0, lost: 0, techs: [], debug: [], result: '', why: '', secs: 0, hull: null, done: false }; S.campaign.push(A); }
         if (e.level != null && A.level == null) A.level = e.level;
         if (e.secs > A.secs) A.secs = e.secs;
         if (e.step === 'wave' && e.wave > A.wave) A.wave = e.wave;

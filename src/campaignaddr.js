@@ -36,3 +36,30 @@ function campaignAddr(search, levels) {
 function campaignAddrPage(levels, search) {
   try { return campaignAddr(typeof search === 'string' ? search : (typeof location !== 'undefined' && location && typeof location.search === 'string' ? location.search : ''), levels); } catch (e) { return null; }
 }
+
+// ---------- the plan the Campaign follows when the address names a level (needs src/campaign.js: CAMP, campTechChoices) ----------
+// campAddrPlan(search) -> null            no "campaign" in the address: nothing to do
+//                      -> { bad, say }    a wrong address: the line to show; the game starts as it always does
+//                      -> { level, techs, via: 'address', say? }   start this level now: campNew(plan.level, plan.techs, { via: plan.via }). techs are what a player would have by then: the first tech
+//                                         each earlier level offers; ?campaign=2&tech=blink,bay2 names them instead (a plain list of tech ids; one that is not a tech is left out, and say says so)
+// The number of levels is the level table's (CAMP.levels), so a level added there can be asked for the moment it is in.
+function campAddrPlan(search) {
+  try {
+    const levels = Math.max(0, ...Object.keys(CAMP.levels).map(Number).filter(Number.isInteger)), a = campaignAddr(search, levels);
+    if (!a) return null;
+    if (a.bad) return { bad: a.bad, say: a.say };
+    let techs = [], say = '';
+    const q = String(search).replace(/^[?#]/, '').split('&').find(p => /^tech=/i.test(p));
+    if (q) {
+      let raw = q.slice(5); try { raw = decodeURIComponent(raw.replace(/\+/g, ' ')); } catch (e) { /* as it came */ }
+      const want = raw.toLowerCase().split(/[\s,]+/).filter(Boolean), known = want.filter((t, i) => CAMP.tech[t] && want.indexOf(t) === i), unknown = want.filter(t => !CAMP.tech[t]);
+      techs = known;
+      if (unknown.length) say = 'The address names a tech that is not there: ' + unknown.slice(0, 3).map(t => t.replace(/[^\w.-]/g, '?').slice(0, 12)).join(', ') + '. Techs: ' + Object.keys(CAMP.tech).join(', ') + '.';
+    } else for (let l = 1; l < a.level; l++) { const first = campTechChoices(l)[0]; if (first) techs.push(first); }
+    return say ? { level: a.level, techs, via: 'address', say } : { level: a.level, techs, via: 'address' };
+  } catch (e) { return null; }
+}
+// the page's own address (a test passes one)
+function campAddrPlanPage(search) {
+  try { return campAddrPlan(typeof search === 'string' ? search : (typeof location !== 'undefined' && location && typeof location.search === 'string' ? location.search : '')); } catch (e) { return null; }
+}

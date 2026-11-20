@@ -45,7 +45,7 @@ const PLAYLOG = {
   errors: { perMin: 30, msg: 300, stack: 600 },
   url: '/__playlog', sinkFails: 3,
   // the priority of the screens: the first one that is running (or paused under another) is "the scene" for the time spent
-  scenes: ['Pause', 'Settings', 'ModsSetup', 'ShipComputer', 'Galaxy', 'Journal', 'Overlay', 'Ending', 'Hyper', 'Ship', 'Surface', 'Space', 'Station', 'Title', 'Boot'],
+  scenes: ['Pause', 'Settings', 'ModsSetup', 'ShipComputer', 'Galaxy', 'Journal', 'Overlay', 'Ending', 'Campaign', 'Hyper', 'Ship', 'Surface', 'Space', 'Station', 'Title', 'Boot'],
   // the events and the only fields each may carry
   fields: {
     session: ['phase', 'why', 'secs', 'prev', 'build', 'mods', 'scr', 'w', 'scene', 'system'],
@@ -161,7 +161,7 @@ function playlogCreate(env) {
 
   // the Campaign (src/campaign.js says it through campaignNote): one level at a time. The level that is open knows when it began, the wave it reached and the ships it lost,
   // so a step needs only what it knows (the logger works out secs) and a level the tab closed on is still ended (L.end).
-  let camp = null, campRate = { n: 0, at: t0 };
+  let camp = null, campLast, campRate = { n: 0, at: t0 };
   const campWord = v => { const w = String(v == null ? '' : v).toLowerCase(); return /^[a-z_]{1,24}$/.test(w) ? w : (w ? 'other' : undefined); }; // a plain name, or "other": a sentence never gets in
   const campOf = (v, list) => { const w = String(v == null ? '' : v).toLowerCase(); return list.includes(w) ? w : (w ? 'other' : undefined); };
   const campLevel = v => (Number.isInteger(v) && v >= 1 && v <= P.campaign.levelMax ? v : undefined);
@@ -172,10 +172,11 @@ function playlogCreate(env) {
       const now = mono(); if (now - campRate.at > 60000) campRate = { n: 0, at: now };
       if (++campRate.n > C.perMin && step !== 'start' && step !== 'end') return; // a runaway loop cannot fill the log; a level's start and end always get in
       const open = (v) => (v === undefined || !camp ? true : camp.level === v);
-      let level = campLevel(d.level); if (level === undefined && camp) level = camp.level;
+      let level = campLevel(d.level); if (level === undefined) level = camp ? camp.level : (step === 'tech' ? campLast : undefined); // a tech is picked after its level has ended
+      if (step === 'end' && !camp) return; // a level ends once: the game, a debug key and the page closing may each say so
       if (step === 'start') {
         if (camp) L.campaign('end', { result: 'quit', why: 'restart' }); // a level began while another was open: the first one is over
-        camp = { level, since: now, wave: 0, deaths: 0 };
+        camp = { level, since: now, wave: 0, deaths: 0 }; campLast = level;
         L.ev('campaign', { step, level, via: campOf(d.via, C.via) || 'menu', wave: 0 });
         return;
       }
@@ -348,6 +349,24 @@ function playlogWrap(L, root) {
   });
   wrap('listenLine', orig => function (text) { try { const k = Object.keys(LS().say).find(n => String(text).indexOf(lsSay(n).split('{')[0]) === 0); lsEv({ step: 'end', why: k || 'other' }); } catch (e) { /* never */ } return orig.apply(this, arguments); });
   wrap('listenGo', orig => function () { const r = orig.apply(this, arguments); if (r) lsEv({ step: 'end', why: 'sent' }); return r; });
+  // the Campaign (src/campaign.js), watched from outside like the rest: campNew starts a level (opts.via says how: menu, address, next, retry or skip), campStep says the waves that
+  // began and the ships that were lost and when the level ended, campOrder an order (a fourth argument says how it was given: key, strip, voice or click), campPick a tech.
+  // campDebugRun (src/campdebug.js) says its own steps. A level's end is said once: the logger ignores a second one.
+  const campEnded = new WeakSet();
+  const campResult = C => { try { if (C && C.result && !campEnded.has(C)) { campEnded.add(C); L.campaign('end', { level: C.level, result: C.result === 'won' ? 'win' : 'lose', why: C.why, hull: C.carrier && C.carrier.hp }); } } catch (e) { /* never */ } };
+  wrap('campNew', orig => function (level, techs, opts) { const C = orig.apply(this, arguments); try { if (C) L.campaign('start', { level, via: opts && opts.via }); } catch (e) { /* never */ } return C; });
+  wrap('campStep', orig => function (C) {
+    let w0 = 0, n0 = 0; try { w0 = C.waves.filter(w => w.started).length; n0 = C.events.length; } catch (e) { /* never */ }
+    const r = orig.apply(this, arguments);
+    try {
+      const w1 = C.waves.filter(w => w.started).length; for (let w = w0 + 1; w <= w1; w++) L.campaign('wave', { level: C.level, wave: w });
+      C.events.slice(n0).forEach(e => { if (e && e.type === 'boom' && ['fighter', 'escort', 'freighter', 'carrier'].includes(e.kind)) L.campaign('lost', { level: C.level, what: e.kind }); });
+      campResult(C);
+    } catch (e) { /* never */ }
+    return r;
+  });
+  wrap('campOrder', orig => function (C, name, arg, how) { const r = orig.apply(this, arguments); try { L.campaign('order', { level: C && C.level, order: name, how, ok: !!(r && r.ok) }); } catch (e) { /* never */ } return r; });
+  wrap('campPick', orig => function (P, id) { const r = orig.apply(this, arguments); try { if (r) L.campaign('tech', { tech: id }); } catch (e) { /* never */ } return r; });
   wrap('shipcompPlan', orig => function () {
     const r = orig.apply(this, arguments);
     try { const a = r && r.action, name = typeof a === 'string' ? a : a && a.name; L.ev('computer_plan', { action: /^[a-z_]{1,24}$/.test(name || '') ? name : (a ? 'other' : 'none'), refused: !!(r && r.refused), dropped: !!(r && r.dropped) }); } catch (e) { /* never */ }
@@ -398,6 +417,7 @@ function playlogInstall(game) {
         L.input(); if (e.repeat || e.isComposing || typing(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
         const sc = P.scenes.find(k => game.scene.isActive(k)) || '';
         const act = playlogAction(typeof CONTROLS !== 'undefined' ? CONTROLS : [], sc === 'Space' || sc === 'Station' || sc === 'Ship' || sc === 'Surface' ? sc : '', e);
+        if (sc === 'Campaign') { const dk = typeof campDebugKey === 'function' ? campDebugKey(e.code) : null; L.count(dk ? 'key:campaign: debug ' + dk : 'key:campaign'); return; } // the Campaign has no table of keys here: its keys are counted as one, its debug keys by name, and none is a "key that did nothing"
         L.count(act);
         if (act === 'key:other') { const raw = playlogRawKey(sc, e); if (raw) L.count(raw); } // which key it was, for a key that did nothing (never from a text box: returned above)
       } catch (er) { /* never */ }

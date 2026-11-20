@@ -96,6 +96,9 @@ check('an empty session does not throw and still prints a screen', render(summar
   check('the tech picked and the debug key used are on the attempt they happened in', C.campaign[1].techs.join() === 'beam_cannon' && C.campaign[1].debug.join() === 'skip' && C.campaign[1].via === 'address' && C.campaign[1].level === 2, JSON.stringify(C.campaign[1]));
   check('the screen has a Campaign line (levels played, how they ended, orders most used) and a line for each attempt; the open one says NOT ENDED, the debug one says DEBUG', cl.length === 4 && /Campaign: 3 levels played \(1 lose, 1 skip, 1 open\); orders: launch x2/.test(cl[0]) && /level 1 \(menu\)  lose \/ carrier/.test(cl[1]) && /DEBUG skip/.test(cl[2]) && /NOT ENDED/.test(cl[3]) && cl.every(l => l.length <= 130), cl.join('\n'));
   check('a session with no campaign in it has no Campaign line at all', !/Campaign/.test(text));
+  const ct2 = g.run(`play('dddd4444', (L, sec) => { L.start({}); L.campaign('start', { level: 1 }); sec(5, __snap({}), true); L.campaign('end', { result: 'win', why: 'mothership' }); L.campaign('tech', { tech: 'shield' }); L.flush(); })`);
+  const C2 = summarize(parseLog(ct2));
+  check('a tech picked after the level ended is on that level, not a level of its own', C2.campaign.length === 1 && C2.campaign[0].done && C2.campaign[0].result === 'win' && C2.campaign[0].techs.join() === 'shield', JSON.stringify(C2.campaign));
 }
 
 // ---- the command line ----

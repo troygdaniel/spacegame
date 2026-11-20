@@ -277,9 +277,9 @@ check('the pending list never grows past its cap', J(`(() => { const L = __mk({ 
   ls2 = lines(`L.campaign('nonsense', { level: 1 }); L.campaign('', {}); L.campaign('wave'); L.campaign('order')`);
   cl = only(ls2, 'campaign');
   check('a step that is not on the list is dropped; a step with no data still logs and never throws', cl.length === 2 && cl[0].step === 'wave' && cl[1].step === 'order' && cl[1].order === 'other' && cl[1].how === 'other', JSON.stringify(cl));
-  ls2 = lines(`L.campaign('order', { order: 'launch the fighters, please!', how: 'telepathy' }); L.campaign('tech', { tech: 'a b' }); L.campaign('lost', { what: 'SECRET words' }); L.campaign('debug', { debug: 'cheat' }); L.campaign('end', { result: 'maybe', why: 'because I said so' })`);
+  ls2 = lines(`L.campaign('start', { level: 1 }); L.campaign('order', { order: 'launch the fighters, please!', how: 'telepathy' }); L.campaign('tech', { tech: 'a b' }); L.campaign('lost', { what: 'SECRET words' }); L.campaign('debug', { debug: 'cheat' }); L.campaign('end', { result: 'maybe', why: 'because I said so' })`);
   cl = only(ls2, 'campaign');
-  check('a name that is not one plain word (a sentence typed or said) is never written: it becomes "other"; a value off a closed list is "other" too', cl[0].order === 'other' && cl[0].how === 'other' && cl[1].tech === 'other' && cl[2].what === 'other' && cl[3].debug === 'other' && cl[4].result === 'other' && cl[4].why === 'other' && !JSON.stringify(cl).match(/please|secret|because/i), JSON.stringify(cl));
+  check('a name that is not one plain word (a sentence typed or said) is never written: it becomes "other"; a value off a closed list is "other" too', cl[1].order === 'other' && cl[1].how === 'other' && cl[2].tech === 'other' && cl[3].what === 'other' && cl[4].debug === 'other' && cl[5].result === 'other' && cl[5].why === 'other' && !JSON.stringify(cl).match(/please|secret|because/i), JSON.stringify(cl));
   ls2 = lines(`L.campaign('start', { level: 1 }); L.campaign('wave', { level: 0, wave: 1 }); L.campaign('wave', { level: 100, wave: 2 }); L.campaign('wave', { level: 2.5, wave: 3 }); L.campaign('wave', { level: '2', wave: 4 })`);
   cl = only(ls2, 'campaign');
   check('a level that is not a whole number from 1 to 99 is not written as one: the open level is used instead', cl.slice(1).every(l => l.level === 1), JSON.stringify(cl));
@@ -292,6 +292,12 @@ check('the pending list never grows past its cap', J(`(() => { const L = __mk({ 
   check('turned OFF in the middle of a level, the steps in the gap are not written', only(ls2, 'campaign').map(l => l.step + (l.wave === undefined ? '' : l.wave)).join() === 'start0,wave2', JSON.stringify(only(ls2, 'campaign')));
   const thr = J(`(() => { const L = __mk({ storeThrows: true, sinkThrows: true }); L.campaign('start', { level: 1 }); L.campaign('end', { result: 'win' }); L.flush(); return 'ok'; })()`);
   check('a store and a sink that throw do not make a campaign line throw', thr === 'ok');
+  ls2 = lines(`L.campaign('end', { result: 'win' }); L.campaign('start', { level: 1 }); L.campaign('end', { result: 'win', why: 'mothership' }); L.campaign('end', { result: 'quit', why: 'pagehide' }); L.end('pagehide')`);
+  cl = only(ls2, 'campaign');
+  check('a level ends once: an end with no level open (the game, a debug key and the tab closing may each say so) is not written', cl.map(l => l.step + ':' + (l.result || '')).join() === 'start:,end:win', JSON.stringify(cl));
+  ls2 = lines(`L.campaign('start', { level: 2 }); L.campaign('end', { result: 'win' }); L.campaign('tech', { tech: 'plating' })`);
+  cl = only(ls2, 'campaign');
+  check('a tech is picked after its level ended: the line has that level', cl[2].step === 'tech' && cl[2].level === 2 && cl[2].tech === 'plating', JSON.stringify(cl[2]));
 }
 {
   const w = nodeGame();
