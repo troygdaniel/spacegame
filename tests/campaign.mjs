@@ -246,8 +246,8 @@ console.log('H. the scene: keys, modes, the pick, retry (on a stand-in)');
   key('Escape'); key('KeyT'); check('T from the pause goes to the title', J('__went.pop()').key === 'Title');
   mk(1);
   key('Enter');
-  g.run('F.camp.techs = ["blink"]; F.onKey({ code: "KeyQ" })');
-  check('Q asks for the blink (the sim says whether it is ready)', J('F.camp.input.blink') === true);
+  g.run('F.camp.techs = ["blink"]; F.onKey({ code: "KeyB" })');
+  check('B asks for the blink (the sim says whether it is ready; it was Q until Q and E opened the panels)', J('F.camp.input.blink') === true);
   // the end of a level
   g.run(`campHurt(F.camp, F.camp.carrier, 9999, 'x'); F.update(0, 33)`);
   check('the carrier lost: the lost card with Enter and T, and the reason in words', J('F.mode') === 'lost' && J('F.panel') === true);

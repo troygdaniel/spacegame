@@ -221,7 +221,7 @@ const CAMP = {
   tech: {                                  // what each tech does; names and words are in content/text/ui.md (camp.tech.<id>.name, .text)
     shield: { after: 1, taken: 0.6 },      // after level 1: the carrier takes this share of the damage it is dealt (0.6 = 40 percent less)
     beam: { after: 1, damage: 2, reach: 1.5 }, // after level 1: the turrets fire beams: this many times the damage, this many times the reach, and a shot goes through everything it hits
-    blink: { after: 1, dist: 1500, cooldown: 20000 }, // after level 1: Q hops the carrier this far ahead, ready again after this many ms
+    blink: { after: 1, dist: 1500, cooldown: 20000 }, // after level 1: B hops the carrier this far ahead, ready again after this many ms
     plating: { after: 2, hull: 1.5 },      // after level 2: the carrier's hull times this
     bay2: { after: 2, fighters: 4 },       // after level 2: this many more fighters in the bay
     repair: { after: 2, rate: 4, reach: 220 } // after level 2: hit points a second the carrier and the ships within this many px of it heal

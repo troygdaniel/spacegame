@@ -107,7 +107,7 @@ const CONTROLS = [
     { k: ['W', 'A', 'S', 'D'], t: 'Thrust, turn, brake (arrows too)', sub: 'FLY AND FIRE' },
     { k: ['Space'], t: 'Hold: turrets fire at ships in reach', sub: 'FLY AND FIRE' },
     { k: ['F'], t: 'Fire a homing missile', sub: 'FLY AND FIRE' },
-    { k: ['Q'], t: 'Warp blink hop (needs that tech)', sub: 'FLY AND FIRE' },
+    { k: ['B'], t: 'Warp blink hop (needs that tech)', sub: 'FLY AND FIRE' },
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Click'], t: 'Map: click sets a place, again flies', sub: 'THE MAP' },
     { k: ['W', 'S'], t: 'Map list: choose (arrows too)', sub: 'THE MAP' },

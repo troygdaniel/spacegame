@@ -176,7 +176,7 @@ class Campaign extends Phaser.Scene {
     if (pr.used) return;
     if (c === 'Escape') { if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc closes the map first; it never pauses while the map is open
     if (this.mp && typeof campMapKey === 'function' && campMapKey(this, c, e.shiftKey)) return; // the open map's list: W S choose, A D change group, Enter fly there (Shift+Enter fast), X clear (src/campmapdraw.js)
-    if (c === 'KeyQ') C.input.blink = true;
+    if (c === 'KeyB') C.input.blink = true; // the warp blink (it was Q: Q and E open the panels now)
     else if (c === 'KeyF') this.fireMissile();
     else if (typeof campDebugKey === 'function') { // the tune kit (src/campdebug.js): ] skip, \\ win, [ lose, ` god mode; none is a key you fly by
       const id = campDebugKey(c); if (!id) return;
@@ -375,7 +375,7 @@ class Campaign extends Phaser.Scene {
     if (this.hud.shield) this.hud.shield.setText(uiText('camp.ui.shield') + '  ' + Math.round(C.shield)); // (a stand-in scene in a test may have no shield text)
     this.hud.wave.setText(uiText('camp.ui.wave', { n: C.waves.filter(w => w.started).length, total: waves.length }));
     this.hud.mother.setText(m ? uiText('camp.ui.mother') : '');
-    this.hud.blink.setText(C.techs.indexOf('blink') >= 0 ? 'Q  ' + (C.t - C.blinkAt >= CAMP.tech.blink.cooldown ? 'READY' : Math.ceil((CAMP.tech.blink.cooldown - (C.t - C.blinkAt)) / 1000) + ' s') : '');
+    this.hud.blink.setText(C.techs.indexOf('blink') >= 0 ? 'B  ' + (C.t - C.blinkAt >= CAMP.tech.blink.cooldown ? 'READY' : Math.ceil((CAMP.tech.blink.cooldown - (C.t - C.blinkAt)) / 1000) + ' s') : '');
     // the radar: the carrier at its centre, space shown out to CAMP_RADAR.range; a ship beyond it is drawn on the rim
     const R = CAMP_RADAR; g.fillStyle(0x04101c, R.fill).fillCircle(R.x, R.y, R.r); g.lineStyle(R.rim[0], 0x38e1ff, R.rim[1]).strokeCircle(R.x, R.y, R.r);
     const dot = (p, color, size) => { let dx = (p.x - c.x) / R.range * R.r, dy = (p.y - c.y) / R.range * R.r; const d = Math.hypot(dx, dy); if (d > R.r - 3) { dx *= (R.r - 3) / d; dy *= (R.r - 3) / d; } g.fillStyle(color, 1).fillCircle(R.x + dx, R.y + dy, size + R.blip); };
