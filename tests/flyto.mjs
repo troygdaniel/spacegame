@@ -217,8 +217,8 @@ console.log('E. the Tab map\'s click');
   check('the place under a click: the nearest inside the radius', near(105, 98, 20) === 'a' && near(309, 100, 30) === 'c' && near(299, 100, 30) === 'b');
   check('a click on nothing: no place', near(200, 400, 20) === null && near(0, 0, 5) === null);
   const src = readFileSync(new URL('../src/map.js', import.meta.url), 'utf8');
-  check('the map forwards the click to the navigation panel\'s own rule and has no picker of its own', /navpanelPlaceAt\(sp,/.test(src) && /navpanelFly\(sp, b\)/.test(src) && !/autopilotGo|cruisePick|cruiseKnown/.test(src.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n')));
-  check('the map says what a click does, and the tips and the key table say Enter or a click flies there', /Click a place on the map to fly there/.test(src) && J(`CONTROLS.find(g => g.id === 'flight').rows.some(r => /^Places\\. Enter: fly there/.test(r.t))`) && J(`CONTROLS.find(g => g.id === 'flight').rows.some(r => /^Overview of ships: Enter flies/.test(r.t))`) && J(`SCENE_TIPS.Space`).includes('Enter or a click flies there'));
+  check('the map forwards the click to the navigation panel\'s own rule and has no picker of its own', /navpanelPlaceAt\(sp,/.test(src) && /navpanelFly\(sp, b, /.test(src) && !/autopilotGo|cruisePick|cruiseKnown/.test(src.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n')));
+  check('the map says what a click does, and the tips and the key table say Enter or a click flies there', /Click a place on the map to set it as the destination/.test(src) && J(`CONTROLS.find(g => g.id === 'flight').rows.some(r => /^Places\\. Enter: fly there/.test(r.t))`) && J(`CONTROLS.find(g => g.id === 'flight').rows.some(r => /^Overview of ships: Enter flies/.test(r.t))`) && J(`SCENE_TIPS.Space`).includes('Enter or a click flies there'));
 }
 
 console.log('F. no chat key: the plain commands still run, and cost no question');

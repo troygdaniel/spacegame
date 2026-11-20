@@ -58,7 +58,7 @@ const SC_HOW = [
   'Repairs: the repair bay in a station charges credits for each point of hull. Parts: the shop in the hangar sells the next tier of each part.',
   'Jobs: the MISSIONS terminal in a station (E at it): choose a call with its number key and press E to accept it. Docking: fly slowly close to the station and press L.',
   'Trade: there is no goods market. Ore: shoot the rocks of an asteroid belt with Space, collect the ore, dock, and it sells by itself at the station\'s price. Jobs: courier and haul runs from the MISSIONS terminal pay most.',
-  'Flying to things: N lists the places (a station, a planet, a belt, a gate, a signal) and B lists the ships; Enter or a click on a row flies there at once, and a raider is fought. A click on a place of the Tab map flies there too. Pirates: "hunt" flies to the nearest and fights it.'
+  'Flying to things: N lists the places (a station, a planet, a belt, a gate, a signal) and B lists the ships; Enter or a click on a row flies there at once, and a raider is fought. On the Tab map a click sets a place as the destination: Enter flies there, Shift+Enter flies there fast, and a second click flies. Pirates: "hunt" flies to the nearest and fights it.'
 ].join('\n');
 
 // the format instruction: how the model writes an action. Only the words are the model's: the game checks the action itself (SC_ACT) and says if it cannot.
@@ -478,7 +478,7 @@ const SC_ACT = {
   },
   open_sector_map(s) {
     if (scKey(s) !== 'Space' && scKey(s) !== 'Station') return scNo('The sector map opens from the flight or the station screen.');
-    return scYes('Opening the sector map. A click on a place flies there.', s2 => { if (typeof toggleOverlay === 'function') toggleOverlay(s2.game, 'map'); });
+    return scYes('Opening the sector map. A click on a place sets it: Enter flies there, Shift+Enter flies fast.', s2 => { if (typeof toggleOverlay === 'function') toggleOverlay(s2.game, 'map'); });
   },
   open_map(s, arg) {
     if (arg && !scStar(arg)) return scNo('I have no star called "' + scClean(arg, 30) + '" on my charts.');
