@@ -12,7 +12,7 @@ const d = J(`(() => { const C = campNew(1, [], { seed: 1 }), L = CAMP.places.lun
 const W = 90 * d.scale, H = 64 * d.scale; // the drawn size, from the texture size the live scene reported (90 x 64 at scale 1)
 // the carrier's outline as a box turned to its heading; the distance from a point to that box (0 when inside it)
 const gap = (px, py) => { const dx = px - d.cx, dy = py - d.cy, c = Math.cos(-d.rot), s = Math.sin(-d.rot), x = dx * c - dy * s, y = dx * s + dy * c; const ox = Math.max(Math.abs(x) - W / 2, 0), oy = Math.max(Math.abs(y) - H / 2, 0); return Math.hypot(ox, oy); };
-check('the carrier is drawn about 140 x 100 px (the scale in CAMP_LOOK)', Math.abs(W - 140) < 2 && Math.abs(H - 100) < 2, W.toFixed(0) + ' x ' + H.toFixed(0));
+check('the carrier is drawn about 98 x 70 px (CAMP.size.carrier.len through the scale in CAMP_LOOK)', Math.abs(W - 98) < 2 && Math.abs(H - 70) < 2, W.toFixed(0) + ' x ' + H.toFixed(0));
 check('the drawn carrier is clear of the moon (more than 4 px from its edge)', gap(d.lx, d.ly) - d.lr > 4, (gap(d.lx, d.ly) - d.lr).toFixed(1) + ' px');
 check('the drawn carrier is clear of the base ring (more than 4 px from its edge)', gap(d.lx + 70, d.ly - 60) - 32 > 4, (gap(d.lx + 70, d.ly - 60) - 32).toFixed(1) + ' px');
 check('it still starts at the Lunar base, within 200 px of Luna', Math.hypot(d.cx - d.lx, d.cy - d.ly) < 200, Math.hypot(d.cx - d.lx, d.cy - d.ly).toFixed(0) + ' px');
