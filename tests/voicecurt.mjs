@@ -93,9 +93,9 @@ const tableRows = f => read(f).split('\n').map(l => /^\|\s*([^|]+?)\s*\|\s*(.*?)
 {
   const first = t => J(`voiceFirst(${JSON.stringify(t)})`);
   const lim = J('VOICE_SPOKEN_LIMIT');
-  check('E  Short: the first sentence is said, the second only when the first is under 40 letters', lim.min === 40, JSON.stringify(lim));
+  check('E  Short: the first sentence is said, the second only when the first is under 45 letters', lim.min === 45, JSON.stringify(lim));
   check('E  Short: nothing longer than 120 letters is said in one go', lim.max === 120, JSON.stringify(lim));
-  check('E  a first sentence of normal length is said alone', first('Press G for the galaxy map, then pick a star. It needs fuel and range.') === 'Press G for the galaxy map, then pick a star.', first('Press G for the galaxy map, then pick a star. It needs fuel and range.'));
+  check('E  a first sentence of normal length is said alone', first('Press G for the galaxy map, then pick a star and press Enter. It needs fuel.') === 'Press G for the galaxy map, then pick a star and press Enter.', first('Press G for the galaxy map, then pick a star and press Enter. It needs fuel.'));
   check('E  a tiny first sentence takes the second', first('Yes. Press G for the map.') === 'Yes. Press G for the map.', first('Yes. Press G for the map.'));
 }
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));

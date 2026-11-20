@@ -156,15 +156,15 @@ console.log('C. refused, in plain words, doing nothing');
   refuse(`__world('wren', 40); __station()`, 'DO: dock', /^We are already docked, pilot\.$/, 'dock while docked');
   refuse(`__world('wren', 40); __space(${station.x + 3000}, ${station.y}); __cur.canLand = false`, 'DO: land', /^There is no planet here that we can land on\.$/, 'land where no planet can be landed on');
   refuse(`__world('wren', 40, 2580, 'hollow'); __space(100, 100)`, 'DO: dock', /^There is no station in this system\.$/, 'dock in a system with no station');
-  refuse(sp, 'DO: assist_order orbit', /^Nothing is selected\. Press N and pick a target, or tell me where\.$/, 'assist_order with nothing selected');
+  refuse(sp, 'DO: assist_order orbit', /^Nothing is selected\. Press N and pick a target\.$/, 'assist_order with nothing selected');
   refuse(sp, 'DO: assist_order cruise_to', /^Select a ship first/, 'assist_order cruise_to with no ship selected');
-  refuse(sp, 'DO: assist_order dance', /^I can approach, keep range, orbit, match speed or cruise to the selected target\. Which one\?$/, 'assist_order with an order the assist does not have');
+  refuse(sp, 'DO: assist_order dance', /^Approach, keep range, orbit, match speed or cruise\. Which one\?$/, 'assist_order with an order the assist does not have');
   refuse(sp, 'DO: open_map Narnia', /^I have no star called "Narnia" on my charts\.$/, 'open_map to a star that does not exist');
-  refuse(sp, 'DO: open_yard', /^The yard is at a station, pilot: dock first, then ask me again\.$/, 'open_yard in space');
+  refuse(sp, 'DO: open_yard', /^The yard is at a station, pilot\. Dock first\.$/, 'open_yard in space');
   g.run(`var __yard = stationYard;`);
   refuse(`__world('wren', 40); __station(); G.lastDock = 'ember-foundry'; stationYard = () => []`, 'DO: open_yard', /^This station's yard sells no ships\.$/, 'open_yard at a station with no yard');
   g.run(`stationYard = __yard;`);
-  refuse(sp, 'DO: show_job', /^No job is accepted\. Jobs are taken at the MISSIONS terminal in a station\.$/, 'show_job with no job');
+  refuse(sp, 'DO: show_job', /^No job accepted\. Take one at a station's MISSIONS terminal\.$/, 'show_job with no job');
   check('a refusal does not leave the box or the game in a half state: no jump charge, no autopilot, no assist order', J('__cur.jmp === null && __cur.ap.on === false && __cur.as.mode === ""'));
 }
 
@@ -189,7 +189,7 @@ console.log('D. buying is never run, whatever the model writes; names off the li
   const r1 = DO('SAY: The Kite is sold at the Halcyon yard for 4,500 credits.\nDO: buy_ship kite');
   check('the line is still said when its action is dropped: advice stands', r1.text === 'The Kite is sold at the Halcyon yard for 4,500 credits.' && r1.dropped === 'buy_ship' && r1.runs === false, JSON.stringify(r1));
   const r2 = DO('DO: buy_ship kite');
-  check('a buy with no line gets the computer\'s own: it advises, it does not buy', /own decision and your own key press/.test(r2.text) && r2.dropped === 'buy_ship');
+  check('a buy with no line gets the computer\'s own: it advises, it does not buy', /your call and your key press/.test(r2.text) && r2.dropped === 'buy_ship');
   check('an unknown action with no line says it cannot', /^I cannot do that, pilot\.$/.test(DO('DO: fire_weapons').text));
   check('the closed list is these thirteen (hunt, fly_to and open_sector_map came with card space-game-hunt-pirates) and the Campaign\'s ten fleet orders (cards space-game-campaign-mvp, -missiles, -resources and -navigate) and nothing else, and none of them can buy', J('Object.keys(SC_ACT).sort().join()') === 'assist_order,dock,fleet_attack,fleet_build,fleet_escort,fleet_fly,fleet_guard,fleet_launch,fleet_mine,fleet_missiles,fleet_recall,fleet_recharge,fly_to,hunt,jump_next_hop,land,open_map,open_sector_map,open_yard,plot_route,set_destination,show_job,travel');
   const src = readFileSync(new URL('../src/shipcomputer.js', import.meta.url), 'utf8'), acts = src.slice(src.indexOf('const SC_ACT = {'), src.indexOf('// the reply made safe.'));
@@ -236,7 +236,7 @@ console.log('F. the instruction, and the voice');
   g.run(`__world('wren', 40); __space(${station.x + 3000}, ${station.y})`);
   const sys = g.run(`shipcompSystem(__cur)`), names = J('Object.keys(SC_ACT)');
   check('the prompt names every action of the closed list (the Campaign\'s fleet orders are told to the model in a battle only: tests/campaign.mjs G), and the ones it may not do', names.filter(k => !/^fleet_/.test(k)).every(k => sys.includes(k)) && !/fleet_/.test(sys) && /NEVER buy, sell, accept, abandon or refuel/.test(sys));
-  check('the format is told: SAY: and DO:, one action, and "say only what you are doing, never that it is done"', /SAY: one or two short sentences/.test(sys) && /DO: one action from the list/.test(sys) && /never that it is done/.test(sys));
+  check('the format is told: SAY: and DO:, one action, and "say only what you are doing, never that it is done"', /SAY: one short sentence/.test(sys) && /DO: one action from the list/.test(sys) && /never that it is done/.test(sys));
   check('the prompt still holds the rules, the persona, the state and the keys, and never a key', /RULES\n/.test(sys) && /<persona>/.test(sys) && /STATE\n/.test(sys) && /KEYS\n/.test(sys) && !sys.includes(KEY));
   g.run(`__spoken = []; shipcompSay('Plotting a course to Kestrel, one jump.', () => { window.__started = true; })`);
   check('the announcement goes through the ship voice (voiceSayThen) and the action may start when it does', J('__spoken').join() === 'Plotting a course to Kestrel, one jump.' && J('window.__started') === true);

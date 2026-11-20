@@ -74,8 +74,8 @@ console.log('B. the computer');
   g.run(`VOICE.spoken = 'short'; voiceSayThen = _sayThen`);
 
   const rules = J('SC_RULES + SC_ACTS');
-  check('the rules say one or two short sentences, and more only when asked', /one or two short sentences/.test(rules) && /only when the pilot asks for more/.test(rules) && !/one to four short sentences/.test(rules));
-  check('the persona file says it too', /one or two sentences/.test(src('content/npcs/ship-computer.md')) && /one or two sentences/.test(J('SHIPCOMP.persona') + src('content/npcs/ship-computer.md')));
+  check('the rules say one short sentence of about 12 words, and more only when asked', /one short sentence, about 12 words/.test(rules) && /only when the pilot asks for more/.test(rules) && !/one to four short sentences/.test(rules));
+  check('the persona file says it too', /one short sentence/.test(src('content/npcs/ship-computer.md')) && /short sentence/.test(J('SHIPCOMP.persona') + src('content/npcs/ship-computer.md')));
   check('"tell me more", "explain", "in detail" and "step by step" ask for more; a plain question does not', ['tell me more', 'Explain the jump', 'in detail please', 'step by step', 'walk me through it'].every(q => J(`scWantsMore(${JSON.stringify(q)})`)) && !['where is the Roost', 'how far is the gate', 'what does B do', 'why can\'t I jump'].some(q => J(`scWantsMore(${JSON.stringify(q)})`)));
   g.run(`chatSetKey('${KEY}'); chatSetOn(true); SHIPCOMP.limit.gap = 0; SHIPCOMP.lastAt = 0; SHIPCOMP.busy = false; SHIPCOMP.history = []; SHIPCOMP.limit.day = 400; SHIPCOMP.mem = { day: '', n: 0 }; window.__chat = []; window.__long = 'x'.repeat(1000);
     chatComplete = async o => { __chat.push({ maxTokens: o.maxTokens, maxChars: o.maxChars }); return { text: __long }; }`);
