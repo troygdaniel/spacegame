@@ -91,12 +91,17 @@ function campCruiserDraw(g) {
   both(s => { p.rect(-33, my(10.2, s) - 0.5, 34, my(10.2, s) + 0.5, B[2], 0.85); }); // a bronze edge strip on each side of the middle
   p.rect(-30, -2.4, 42, 2.4, S[0], 0.95); p.line(-30, -2.4, 42, -2.4, S[3], 0.5, 0.5); p.line(-30, 2.4, 42, 2.4, C.edge, 0.7, 0.5); // the spine
   for (let x = -26; x < 40; x += 6.5) p.rect(x, -1.2, x + 2.4, 1.2, S[3], 0.55);
-  // the bridge tower: a raised block aft of the middle, bronze on top, its windows lit along the front
-  campArtPlate(p, tx1, ty1, tx2, ty2, [B[0], B[2], B[3]], 1.4);
-  for (let y = ty1 + 1.6; y < ty2 - 1; y += 1.9) p.rect(tx2 - 2.2, y, tx2 - 0.9, y + 0.9, C.window, 0.9);
+  // the bridge tower: a raised, stepped block aft of the middle. It throws a shadow on the hull; its lower deck is steel, the upper deck is smaller with a bronze roof; windows are lit along the front of each, and a mast with a cross-bar stands behind it
+  p.rect(tx1 + 1.2, ty1 + 1.6, tx2 + 1.8, ty2 + 1.8, C.edge, 0.4);
+  campArtPlate(p, tx1, ty1, tx2, ty2, [S[0], S[1], S[2]], 1.4);
+  campArtPlate(p, tx1 + 2.2, ty1 + 2, tx2 - 2.6, ty2 - 2, [B[0], B[1], B[2]], 0.9);
+  for (let y = ty1 + 1.4; y < ty2 - 1; y += 1.9) p.rect(tx2 - 1.7, y, tx2 - 0.5, y + 0.9, C.window, 0.9);
+  p.rect(tx2 - 3.6, ty1 + 2.8, tx2 - 2.8, ty2 - 2.8, C.window, 0.8);
+  p.line(tx1 + 3, 0, tx1 - 3, 0, S[3], 0.9, 0.5); p.line(tx1 - 1.5, -2.2, tx1 - 1.5, 2.2, S[3], 0.9, 0.5);
   // the pods' ends against the spine, and the greebles: a couple of dishes, an antenna array
   p.dot(24, 0, 2.2, C.edge); p.dot(24, 0, 1.6, S[3], 0.95); p.dot(24, 0, 0.6, S[0]);
   p.rect(10, -7, 18, -5.2, S[3], 0.6); p.rect(10, 5.2, 18, 7, S[3], 0.6); p.rect(-6, -8, 0, -6.6, B[3], 0.6); p.rect(-6, 6.6, 0, 8, B[3], 0.6);
+  p.rect(1, -9.4, 12, -8.6, S[3], 0.75); p.rect(20, 7.6, 27, 8.6, B[3], 0.7); p.rect(34.5, -10, 36.5, 10, B[1], 0.9); // a sensor boom on the port side only, a bronze plate across the head: the two sides are not copies
   // running lights: one at each pod's front corner (port red, starboard green), a white one on the tower
   p.dot(px2 - 1, -py2 + 1.4, 0.9, C.red, 0.9); p.dot(px2 - 1, py2 - 1.4, 0.9, C.green, 0.9); p.dot((tx1 + tx2) / 2, 0, 0.7, 0xffffff, 0.8);
 }

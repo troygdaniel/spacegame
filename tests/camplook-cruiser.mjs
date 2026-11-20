@@ -60,6 +60,12 @@ check('the scene is told where the bays are, one on each side: four places in th
 const mouth = J('CAMP.bay.mouth');
 check('ships are launched from just in front of the launch tube (CAMP.bay.mouth: 1 to 6 units ahead of it, level with it)', mouth[0] - cr.launch[0] >= 1 && mouth[0] - cr.launch[0] <= 6 && Math.abs(mouth[1] - cr.launch[1]) < 0.01, JSON.stringify(mouth));
 check('the hull is as long as the table says: the engine block at the stern and the head at the bow make len, and the scene scales it to CAMP.size.carrier.len', Math.abs(ex1 + cr.len / 2) < 1e-9 && Math.max(...core.map(p => p[0])) === cr.len / 2 && J('CAMP_LOOK.carrier.scale * CAMP_LOOK.carrier.w') === J('CAMP.size.carrier.len'));
+// the bridge tower reads as a tower and not as a crate (the blind critic): a shadow on the hull under it, two decks, a row of lit windows across its front
+(() => {
+  const [tx1, ty1, tx2, ty2] = cr.tower, X = x => W / 2 + x * k, Y = y => Ht / 2 + y * k; let fc = 0, fa = 1; const near = [], wins = [];
+  ops.forEach(([n, a, b, c, d]) => { if (n === 'fillStyle') { fc = a; fa = b === undefined ? 1 : b; } if (n === 'fillRect' && a >= X(tx1) - 1 && a <= X(tx2 + 3) && b >= Y(ty1) - 1 && b <= Y(ty2 + 3)) { near.push({ c: fc, a: fa, w: c, h: d }); if (fc === H.window) wins.push(1); } });
+  check('the bridge tower throws a shadow on the hull (a dark, faint block under it), has a lower and an upper deck, and a row of at least five lit windows across its front', near.some(r => r.c === H.edge && r.a <= 0.5) && wins.length >= 5, wins.length + ' windows');
+})();
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nfailed: ${failed}` : '\nfailed: 0');
 process.exit(failed ? 1 : 0);
