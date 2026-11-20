@@ -30,6 +30,7 @@ const CHATTER = {
   says: {                                // the computer's own line (a 'say' event of the sim) -> the call it brings
     'camp.say.wave1': 'contact', 'camp.say.wave2': 'contact', 'camp.say.l2wave1': 'contact', 'camp.say.l2wave2': 'contact',
     'camp.say.l3wave1': 'contact', 'camp.say.l3wave2': 'contact', 'camp.say.l3wave3': 'contact', 'camp.say.wave3': 'mother',
+    'camp.say.ambush': 'contact', 'camp.say.bwave2': 'contact', 'camp.say.bwave3': 'mother', // the belt level's (content/text/campaign-belt.md); its ambush2 line is a hint, not a call
     'camp.say.relicon': 'relic', 'camp.say.delivered': 'convoy', 'camp.say.cache': 'cache'
   },
   earth: ['carrier', 'fighter', 'escort', 'freighter'] // the kinds on Earth's side: anything else that blows up is theirs (splash)
