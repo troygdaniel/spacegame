@@ -24,7 +24,7 @@ g.run(`
     const u = campSpawn(C, kind, c.x + dx, c.y + dy); u.accel = 0; u.vmax = 1e9; u.nextShot = 1e12; u.hp = u.maxHp = 5000;
     let shots = 0; const b0 = campBullet; campBullet = function (C2, from, rot, speed, dmg, life, team, ahead, extra) { if (team === 'earth' && extra && extra.pd) shots++; return b0.apply(null, arguments); };
     C.input.fire = true;
-    for (let i = 0; i < secs * 30; i++) { u.vx = vx; u.vy = vy; if (opts.carrierV) { c.vx = opts.carrierV[0]; c.vy = opts.carrierV[1]; } campStep(C, 1 / 30); C.events.length = 0; }
+    const tail = opts.tail === 0 ? 0 : 30; for (let i = 0; i < secs * 30 + tail; i++) { if (i === secs * 30) C.input.fire = false; u.vx = vx; u.vy = vy; if (opts.carrierV) { c.vx = opts.carrierV[0]; c.vy = opts.carrierV[1]; } campStep(C, 1 / 30); C.events.length = 0; } // fire for secs, then a second more for the shots in the air to land
     campBullet = b0; return { shots, hits: Math.round((5000 - u.hp) / CAMP.carrier.pd), left: Math.round(u.hp) };
   };
   window.__sec = (kind, dx, dy, vx, vy) => { window.C = campNew(1, [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); const c = C.carrier, u = campSpawn(C, kind, c.x + dx, c.y + dy); u.vx = vx; u.vy = vy; u.accel = 0; u.vmax = 1e9; u.nextShot = 1e12;
@@ -88,9 +88,9 @@ console.log('D. nothing else moved');
 {
   const sta = J(`__duel('tower', 400, 0, 0, 0, 3)`);
   check('a standing tower is hit by nearly every shot, as before', ratio(sta) >= 0.85, JSON.stringify(sta));
-  g.run('__duel("gunship", 450, 0, 0, 100, 0.01); C.input.fire = false; C.bullets.length = 0; for (let i = 0; i < 60; i++) { C.ships.find(u => u.kind === "gunship").vy = 100; campStep(C, 1 / 30); }');
+  g.run('__duel("gunship", 450, 0, 0, 100, 0.01, { tail: 0 }); C.input.fire = false; C.bullets.length = 0; for (let i = 0; i < 60; i++) { C.ships.find(u => u.kind === "gunship").vy = 100; campStep(C, 1 / 30); }');
   check('Space up: the turrets lead, aim and point, and fire nothing', J('C.bullets.filter(b => b.pd).length') === 0 && J('C.turrets.filter(t => t.target).length') >= 4);
-  g.run('__duel("gunship", 450, 0, 0, 100, 0.15)');
+  g.run('__duel("gunship", 450, 0, 0, 100, 0.15, { tail: 0 })');
   check('the shots still leave each turret\'s own mount (the spread is kept) and the turrets are still eight', J('C.turrets.length') === 8 && J('C.bullets.filter(b => b.pd).length') >= 2 && J('C.bullets.filter(b => b.pd).every(b => C.turrets.some(t => Math.hypot(b.x - t.x, b.y - t.y) < 150))'));
   check('the other numbers did not move: 4 a shot, every 0.7 s, out to 500 px; shots at 800 px/s', J('CAMP.carrier.pd') === 4 && J('CAMP.carrier.pdDelay') === 700 && J('CAMP.carrier.pdRange') === 500 && J('CAMP.carrier.pdSpeed') === 800);
   check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
