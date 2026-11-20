@@ -57,7 +57,8 @@ function campMapOpen(s) {
   own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.hintY, uiText('camp.map.keys'), uiFont(13, '#5b7a92'))).setDepth(154);
   mp.goalText = own(s.add.text(0, 0, uiText('camp.map.goalmark'), uiFont(12, '#ffd37a'))).setOrigin(0.5).setDepth(154);
   mp.routeText = own(s.add.text(0, 0, '', uiFont(12, '#ffd37a'))).setOrigin(0.5).setDepth(154);
-  mp.rows = []; mp.rowsAt = -1e9; mp.selId = ''; mp.setId = '';
+  mp.rows = []; mp.rowsAt = -1e9; mp.selId = ''; mp.setId = ''; mp.flewId = '';
+  if (C.nav && C.nav.on) { mp.setId = mp.flewId = C.nav.of || C.nav.id; mp.selId = mp.setId; } // a trip is on when the map is opened: its place is set again, with the buttons (Fly or Fast marked ON), and chosen in the list
   mp.btnFly = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false); // the two small buttons by a place you have set (card space-game-map-click-fly)
   mp.btnFast = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false);
   mp.onPointer = p => campMapClick(s, p.x, p.y);
@@ -147,6 +148,8 @@ function campMapPaint(s, time) {
       const r = Math.max(7, m.r * f.s); g.lineStyle(2, col.relic, 0.55).strokeCircle(p.x, p.y, r);
       if (m.hold > 0) { g.lineStyle(4, col.relic, 1); g.beginPath(); g.arc(p.x, p.y, r, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * Math.min(1, m.hold)); g.strokePath(); }
     } else if (m.type === 'cache' || m.type === 'scan') g.fillStyle(m.color, 1).fillPoints([{ x: p.x, y: p.y - 4 }, { x: p.x + 4, y: p.y }, { x: p.x, y: p.y + 4 }, { x: p.x - 4, y: p.y }], true);
+    else if (m.type === 'rock') g.fillStyle(m.color, 0.9).fillRect(p.x - 1.5, p.y - 1.5, 3, 3); // a rock: a small grey square
+    else if (m.type === 'pickup') g.fillStyle(m.color, 1).fillPoints([{ x: p.x, y: p.y - 2.5 }, { x: p.x + 2.5, y: p.y }, { x: p.x, y: p.y + 2.5 }, { x: p.x - 2.5, y: p.y }], true); // ore lying about: a small gold diamond
     else if (m.type === 'tower') g.fillStyle(m.color, 1).fillRect(p.x - 2.5, p.y - 2.5, 5, 5);
     else if (m.type === 'convoy') {
       if (m.to) { const q = pin(X(m.to.x), Y(m.to.y)); g.lineStyle(1, m.color, 0.55).lineBetween(p.x, p.y, q.x, q.y); } // a line to where it is heading
@@ -240,9 +243,14 @@ function campMapClick(s, px, py) {
   const F = CAMPMAP.frame, hit = mp.list.find(t => t.rowId && px >= t.x && px <= t.x + 260 && Math.abs(py - t.y) <= 11);
   let row = hit ? mp.rows.find(r => r.id === hit.rowId) : null;
   const inF = r => { const q = campMapPoint(mp.fit, F, r.x, r.y); return q.x >= F.x && q.x <= F.x + F.w && q.y >= F.y && q.y <= F.y + F.h; };
-  if (!row && px >= F.x && px <= F.x + F.w && py >= F.y && py <= F.y + F.h) row = campNavPickAt(mp.rows.filter(inF), (x, y) => campMapPoint(mp.fit, F, x, y), px, py);
+  let cycled = false;
+  if (!row && px >= F.x && px <= F.x + F.w && py >= F.y && py <= F.y + F.h) { // a mark of the map: every row has one (ships, enemies, ore, rocks, places); the first click sets the nearest, the next on the same spot takes the next of the stack
+    const stack = campNavPickStack(mp.rows.filter(inF), (x, y) => campMapPoint(mp.fit, F, x, y), px, py), at = stack.findIndex(r => r.id === mp.setId), same = !!mp.lastClick && Math.hypot(px - mp.lastClick.x, py - mp.lastClick.y) <= CAMP.nav.stackSame;
+    if (stack.length > 1 && at >= 0 && same) { row = stack[(at + 1) % stack.length]; cycled = true; } else row = stack[0] || null;
+  }
+  mp.lastClick = row && !hit ? { x: px, y: py } : null;
   if (!row) return false;
   mp.selId = row.id; mp.userSel = true;
-  if (mp.setId === row.id) campMapFly(s, row, false); else { mp.setId = row.id; mp.dirty = true; } // a second click on the same place: regular speed
+  if (mp.setId === row.id && !cycled) campMapFly(s, row, false); else { mp.setId = row.id; mp.dirty = true; } // a second click on the same lone mark: regular speed; on a stack it takes the next one
   return true;
 }

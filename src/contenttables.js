@@ -362,6 +362,8 @@ const UI_TEXT = {
   'camp.say.convoy': 'Convoy to {name} is away.',
   'camp.say.delivered': 'The convoy has reached {name}.',
   'camp.say.lost': 'Lost them.',
+  'camp.nav.k.raider': 'Raider', 'camp.nav.k.drone': 'Drone', 'camp.nav.k.gunship': 'Gunship', 'camp.nav.k.fighter': 'Fighter', 'camp.nav.k.escort': 'Escort', 'camp.nav.k.tower': 'Tower', 'camp.nav.k.freighter': 'Freighter',
+  'camp.nav.wreck': 'Wreck', 'camp.nav.chunk': 'Ore', 'camp.nav.rock': 'Rock {n}',
   'camp.say.convoylost': 'The convoy to {name} is lost.',
   'camp.say.wave1': 'Aliens on the Mars lane, pilot.',
   'camp.say.wave2': 'A second wave, heading for Earth.',
