@@ -40,11 +40,19 @@ const CAMP = {
   ore: {                                   // ore: asteroid rocks and the wrecks of dead aliens; spent on shields and new ships (docs/CAMPAIGN.md, Ore)
     start: 30,                             // ore in the store at the start of a level
     cap: 200,                              // most ore the carrier's store holds
-    rock: 20,                              // ore in one rock of an asteroid field
+    rock: 20,                              // ore in one rock of an asteroid field: a mining laser cuts the rock and it breaks into a chunk of this much ore
+    rockHp: 100,                           // hit points of a rock: a laser takes them off, the rock glows and cracks, and at zero it breaks
+    rockR: 22,                             // px, a rock's size (its hit circle, and how far from its middle a beam lands)
     reach: 70,                             // px: any ship of yours this close to a piece of ore takes it
     wreck: { raider: 4, drone: 6, gunship: 12, tower: 20, mother: 40 }, // ore a dead alien leaves where it died (a kind not listed leaves none)
     wreckLife: 30000,                      // ms a wreck's ore lies there before it is gone
     danger: 500                            // px: a mining ship keeps away from ore that has an alien this close to it
+  },
+  laser: {                                 // the mining lasers: the wing's (the drones), and the turrets' (Space held beside a rock, with no alien in reach)
+    dps: 5,                                // hit points a second one mining ship takes off the rock it works (a rock is cut in 100 / 5 = 20 s by one, 4 s by five)
+    range: 230,                            // px a mining ship's laser reaches (to the edge of the rock)
+    hold: 150,                             // px from the rock a mining ship keeps while it works
+    turret: 0.35                           // the share of a turret shot's damage that cuts a rock (the turrets are the same lasers: they do less to rock than to an alien)
   },
   recharge: {
     carrier: 25,                           // ore for a full carrier shield (a part refill costs the same share of it, at least 5)
@@ -306,7 +314,8 @@ function campNew(level, techs, opts) {
     for (let i = 0; i < g.n; i++) { const a = (g.phase || 0) + i / g.n * 2 * Math.PI, t = campSpawn(C, 'tower', at.x + Math.cos(a) * g.r, at.y + Math.sin(a) * g.r); t.rot = a; if (g.hp) t.hp = t.maxHp = g.hp; }
   });
   const rr = campRng((opts.seed == null ? 1 : opts.seed) * 7919 + 13); // the rocks have a stream of their own, so ore never changes how a fight flies
-  (L.rocks || []).forEach(f => { for (let i = 0; i < f.n; i++) { const a = rr() * 2 * Math.PI, d = Math.sqrt(rr()) * f.spread; C.pickups.push({ id: 'rock-' + (C.nextId++), kind: 'rock', x: f.at[0] + Math.cos(a) * d, y: f.at[1] + Math.sin(a) * d, ore: CAMP.ore.rock, born: 0 }); } });
+  C.rocks = []; C.lasers = []; C.laserNow = []; C.laserLog = {}; // C.lasers: the beams firing now, [{ from: the ship's id, to: the rock's or the alien's id, kind: 'rock' | 'alien', since: C.t when this beam began without a break }] (data for the beam hum, src/campaign.js campBeamState of card space-game-campaign-sounds)
+  (L.rocks || []).forEach(f => { for (let i = 0; i < f.n; i++) { const a = rr() * 2 * Math.PI, d = Math.sqrt(rr()) * f.spread; C.rocks.push({ id: 'rock-' + (C.nextId++), x: f.at[0] + Math.cos(a) * d, y: f.at[1] + Math.sin(a) * d, hp: CAMP.ore.rockHp, maxHp: CAMP.ore.rockHp, r: CAMP.ore.rockR, ore: CAMP.ore.rock, cutAt: -1e9 }); } }); // asteroids: a laser cuts one, and it breaks into a chunk of ore
   (L.guards || []).forEach(g => { const a = campSpawn(C, g.kind, g.at[0], g.at[1]); if (a) { a.hold = true; a.goal = 'carrier'; } });
   return C;
 }
@@ -449,7 +458,7 @@ function campDo(C, name, arg, dry) {
   }
   if (name === 'mine') {
     const ms = campMiners(C); if (!ms.length) return campNo(C.launchQ.length ? 'launching' : 'nowing');
-    if (!C.pickups.length) return campNo('noore');
+    if (!C.pickups.length && !C.rocks.some(r => r.hp > 0)) return campNo('noore');
     if (dry) return campYes('mine');
     ms.forEach(u => { u.order = { type: 'mine' }; u.move = null; });
     C.orders.mine++; return campYes('mine');
@@ -527,7 +536,7 @@ function campStep(C, sec) {
   while (sec > 1e-9 && !C.result) { const d = Math.min(sec, CAMP.step); campTick(C, d); sec -= d; }
 }
 function campTick(C, dt) {
-  C.t += dt * 1000;
+  C.t += dt * 1000; C.dt = dt; C.laserNow.length = 0;
   campSchedule(C);
   if (typeof campNavDrive === 'function') campNavDrive(C, dt); // the autopilot (src/campnav.js), when it is on, sets the carrier's input
   campCarrier(C, dt);
@@ -541,6 +550,7 @@ function campTick(C, dt) {
   campEarth(C, dt);
   campPickups(C);
   campFactory(C, dt);
+  campLasers(C);
   campWarn(C);
   C.ships = C.ships.filter(u => u.hp > 0 || (delete C.by[u.id], false)); // the dead leave the list (the scene was told by the boom event)
 }
@@ -618,14 +628,21 @@ function campTurrets(C) {
   C.turrets.forEach((tu, i) => {
     let best = null, bd = reach; al.forEach(u => { const d = campDist(u, tu) - u.r; if (d <= bd) { bd = d; best = u; } });
     tu.target = best ? best.id : ''; if (best) tu.aim = campLead(C, tu, best);
+    let rock = null; // no alien in reach: the same lasers cut the nearest rock (docs/CAMPAIGN.md, Mining)
+    if (!best) { let rd = reach; C.rocks.forEach(r => { const d = campDist(r, tu) - r.r; if (r.hp > 0 && d <= rd) { rd = d; rock = r; } }); if (rock) tu.aim = Math.atan2(rock.y - tu.y, rock.x - tu.x); }
+    tu.rock = rock ? rock.id : '';
     if (C.t < tu.at) return;
+    if (rock && C.input.fire) {
+      tu.shotAt = C.t; campRockHit(C, rock, k.pd * k_laser_turret(C)); C.laserNow.push({ from: c.id, to: rock.id, kind: 'rock' }); C.events.push({ type: 'laser', src: 'turret', i, x: tu.x, y: tu.y, tx: rock.x - Math.cos(tu.aim) * rock.r * 0.6, ty: rock.y - Math.sin(tu.aim) * rock.r * 0.6, rock: rock.id }); // the beam of this turret lands on the rock's near side
+    }
     if (best && C.input.fire) {
-      tu.shotAt = C.t; C.events.push({ type: 'turret', i, x: tu.x, y: tu.y, aim: tu.aim }); // one event for each shot: the scene flashes this muzzle and blips
+      tu.shotAt = C.t; C.laserNow.push({ from: c.id, to: best.id, kind: 'alien' }); C.events.push({ type: 'turret', i, x: tu.x, y: tu.y, aim: tu.aim, tx: best.x, ty: best.y }); // one event for each shot: the scene flashes this muzzle and blips
       campBullet(C, { x: tu.x, y: tu.y, vx: c.vx, vy: c.vy, id: c.id }, tu.aim, k.pdSpeed, dmg, (reach + 300) / k.pdSpeed * 1000, 'earth', 0, { pd: true, beam }); // a shot flies 300 px past the reach, so one led ahead of an alien at the edge still arrives
     }
     tu.slot++; tu.at = campTurretAt(C, i, tu.slot);
   });
 }
+const k_laser_turret = C => CAMP.laser.turret * (campHas(C, 'beam') ? CAMP.tech.beam.damage : 1); // what a turret shot does to a rock (the beam tech cuts faster too)
 const campDrift = 0.3; // a shot keeps this share of its shooter's own speed (campLead reads it too)
 function campBullet(C, from, rot, speed, dmg, lifeMs, team, ahead, extra) {
   const b = Object.assign({ x: from.x + Math.cos(rot) * (ahead || 0), y: from.y + Math.sin(rot) * (ahead || 0), vx: Math.cos(rot) * speed + (from.vx || 0) * campDrift, vy: Math.sin(rot) * speed + (from.vy || 0) * campDrift, dmg, life: lifeMs, team, from: from.id, rot }, extra || {});
@@ -664,9 +681,22 @@ function campRelic(C, dt) {
   } else if (R.hold > 0) R.hold = Math.max(0, R.hold - dt * 2);
 }
 
+// C.lasers from this tick's beams: a beam stays on the list for 250 ms after its last pulse (a turret fires every 0.7 s, eight of them: it reads as one beam), and its since is when it began
+function campLasers(C) {
+  C.laserNow.forEach(b => { const key = b.from + '>' + b.to, old = C.laserLog[key]; C.laserLog[key] = { from: b.from, to: b.to, kind: b.kind, since: old && C.t - old.last <= 250 ? old.since : C.t, last: C.t }; });
+  C.lasers = Object.keys(C.laserLog).map(k => C.laserLog[k]).filter(b => C.t - b.last <= 250).map(b => ({ from: b.from, to: b.to, kind: b.kind, since: b.since }));
+  Object.keys(C.laserLog).forEach(k => { if (C.t - C.laserLog[k].last > 1000) delete C.laserLog[k]; });
+}
+// a laser on a rock: it takes hit points off; at zero the rock breaks into a chunk of ore where it was (any ship of yours that flies over it takes it). by: who cut it (the scene draws the beam)
+function campRockHit(C, rock, dmg) {
+  if (rock.hp <= 0) return;
+  rock.hp -= dmg; rock.cutAt = C.t;
+  if (rock.hp <= 0) { rock.hp = 0; C.pickups.push({ id: 'chunk-' + (C.nextId++), kind: 'chunk', x: rock.x, y: rock.y, ore: rock.ore, born: C.t }); C.events.push({ type: 'rockbreak', x: rock.x, y: rock.y, id: rock.id }); C.rocksBroken = (C.rocksBroken | 0) + 1; }
+}
 // ore: a ship of yours that comes close takes it (unless the store is full); a wreck's ore goes after wreckLife
 function campPickups(C) {
   const k = CAMP.ore, mine = C.ships.filter(u => u.team === 'earth' && u.hp > 0);
+  C.rocks = C.rocks.filter(r => r.hp > 0); // a broken rock is gone (its chunk lies where it was)
   C.pickups = C.pickups.filter(p => {
     if (p.kind === 'wreck' && C.t - p.born > k.wreckLife) return false;
     if (C.ore >= k.cap) return true;
@@ -802,10 +832,17 @@ function campWingAI(C, u, dt) {
     const cv = C.by[o.target];
     if (!cv || cv.hp <= 0) { u.order = { type: 'guard', at: { kind: 'carrier' } }; return; }
     foe = campNearest(aliens, cv, 650); if (!foe) { const a = (o.slot || 0) * 2.4 + C.t / 4000; home = { x: cv.x + Math.cos(a) * k.beside, y: cv.y + Math.sin(a) * k.beside, vx: cv.vx, vy: cv.vy }; }
-  } else if (o.type === 'mine') { // fight what comes within 320 px; else fly to the nearest ore that has no alien near it; with none, circle the carrier and wait for more
+  } else if (o.type === 'mine') { // fight what comes within 320 px; else take a chunk or a wreck lying about, or cut the nearest rock (a laser from the ship); with none, circle the carrier and wait for more
     foe = campNearest(aliens, u, 320);
-    const safe = C.pickups.filter(p => !aliens.some(a => campDist(a, p) < CAMP.ore.danger)), p = campNearest(safe, u);
-    if (!foe) { if (p) home = p; else { const a = (parseInt(u.id.split('-')[1], 10) || 0) * 0.9 + C.t / 3500; home = { x: c.x + Math.cos(a) * 330, y: c.y + Math.sin(a) * 330, vx: c.vx || 0, vy: c.vy || 0 }; } }
+    const safe = r => !aliens.some(a => campDist(a, r) < CAMP.ore.danger), pk = campNearest(C.pickups.filter(safe), u), rk = campNearest(C.rocks.filter(r => r.hp > 0 && safe(r)), u);
+    if (!foe) {
+      if (pk && (!rk || campDist(pk, u) <= campDist(rk, u) + 150)) home = pk; // ore lying about first: fly over it
+      else if (rk) { // a rock: go to the laser's hold distance from it and cut it
+        const dx = u.x - rk.x, dy = u.y - rk.y, d = Math.hypot(dx, dy) || 1, L = CAMP.laser;
+        home = { x: rk.x + dx / d * L.hold, y: rk.y + dy / d * L.hold, vx: 0, vy: 0 };
+        if (d - rk.r <= L.range) { campRockHit(C, rk, L.dps * (C.dt || CAMP.step)); C.laserNow.push({ from: u.id, to: rk.id, kind: 'rock' }); u.rot = campRot(u.rot, Math.atan2(rk.y - u.y, rk.x - u.x), 0.4); C.events.push({ type: 'laser', src: 'drone', id: u.id, x: u.x, y: u.y, tx: rk.x + dx / d * rk.r * 0.6, ty: rk.y + dy / d * rk.r * 0.6, rock: rk.id }); }
+      } else { const a = (parseInt(u.id.split('-')[1], 10) || 0) * 0.9 + C.t / 3500; home = { x: c.x + Math.cos(a) * 330, y: c.y + Math.sin(a) * 330, vx: c.vx || 0, vy: c.vy || 0 }; }
+    }
   } else { // guard: a point (the carrier, a place, a convoy) is circled; an alien that comes within reach of it, or of this ship, is fought
     const at = o.at || { kind: 'carrier' }, p = at.kind === 'carrier' ? c : at.kind === 'place' ? campPlaces(C.level)[at.id] : C.by[at.id] || c;
     foe = campNearest(aliens, p, 700) || campNearest(aliens, u, 450);

@@ -39,7 +39,8 @@ class Campaign extends Phaser.Scene {
     this.camp = this.makeCamp();
     this.sp = {}; this.bsp = [];
     const pl = campPlaces(this.level); Object.keys(pl).forEach(id => { if (!pl[id].hidden) this.drawPlace(pl[id]); });
-    this.osp = {}; // the ore lying about (asteroid rocks and wrecks), one sprite each
+    this.osp = {}; this.rsp = {}; this.beams = []; // the ore lying about (chunks and wrecks), one sprite each; the rocks of the belt, one each; the beams on this frame
+    this.beamG = this.add.graphics().setDepth(3.5); // the cracks and the beams
     this.csp = this.camp.caches.map(k => this.add.image(k.x, k.y, 'pod').setScale(1.8).setDepth(3).setTint(0xffd37a)); // resource caches (level 2): gold pods that go when collected
     this.relicG = this.add.graphics().setDepth(2); // the relic's ring (level 2), and how far the hold has got
     this.cachel = this.camp.caches.map(k => label(this, k.x, k.y + 34, uiText('camp.nav.cachelabel'), '#ffd37a', 12)); // a word under each cache: gold pods were easy to miss (docs/night/graphics.md finding 3)
@@ -55,6 +56,7 @@ class Campaign extends Phaser.Scene {
     if (typeof campMapInstall === 'function') campMapInstall(this); // Tab: the map of the level, over the battle, which goes on behind it (src/campmap.js, src/campmapdraw.js)
     this.showIntro();
   }
+  beam(e, ms) { if (!this.beams) this.beams = []; this.beams.push({ x: e.x, y: e.y, tx: e.tx, ty: e.ty, until: performance.now() + ms }); } // (the beam hum is the sound card's: it reads C.lasers)
   makeCamp() { // a new battle of this level: arrived by the chain (or a retry), the ore and the extra ships of the refit come with the cruiser; a level started by itself (an address, a skip) has its own
     const carried = this.P.level === this.level;
     return campNew(this.level, this.P.techs, Object.assign({}, this.opts, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {}));
@@ -191,7 +193,9 @@ class Campaign extends Phaser.Scene {
   onEvent(e) {
     if (e.type === 'say') { const text = uiText(e.key, e.vars); toast(this, text, '#9fe9ff'); this.say([text]); }
     else if (e.type === 'nav') { toast(this, uiText(e.key, e.vars), '#7fe9ff'); if (e.key === 'camp.nav.go' || e.key === 'camp.nav.arrived') beep(e.key === 'camp.nav.go' ? 520 : 660, 0.07, 'triangle', 0.04, 160); } // the autopilot's own lines (src/campnav.js)
-    else if (e.type === 'turret') this.turretFlash(e);
+    else if (e.type === 'turret') { this.turretFlash(e); if (e.tx !== undefined) this.beam(e, 120); } // a turret shot at an alien is the same laser: a beam flash
+    else if (e.type === 'laser') this.beam(e, e.src === 'turret' ? 220 : 90);
+    else if (e.type === 'rockbreak') { this.boom.explode(16, e.x, e.y); beep(520, 0.09, 'triangle', 0.04, 260); }
     else if (e.type === 'boom') { this.boom.explode(e.big ? 90 : 26, e.x, e.y); sfx('boom'); if (e.kind === 'carrier') this.cameras.main.shake(400, 0.01); }
     else if (e.type === 'hit') { if (e.id === this.camp.carrier.id) { this.cameras.main.shake(90, 0.003); this.flash(e.id); } this.boom.explode(3, e.x, e.y); }
     else if (e.type === 'earthhit') this.boom.explode(6, e.x, e.y);
@@ -231,6 +235,18 @@ class Campaign extends Phaser.Scene {
       seenOre[o.id] = true;
     });
     Object.keys(this.osp).forEach(id => { if (!seenOre[id]) { this.osp[id].destroy(); delete this.osp[id]; } });
+    // the rocks of the belt: asteroids that glow where a laser is on them, redden and crack as they are cut (a broken one is gone: its chunk of ore lies there), with the beams on top
+    if (!this.rsp) this.rsp = {}; const seenRock = {}, now = C.t, bg = this.beamG; if (bg) bg.clear();
+    C.rocks.forEach(r => {
+      let im = this.rsp[r.id];
+      if (!im) im = this.rsp[r.id] = this.add.image(r.x, r.y, ['asteroid', 'asteroid2', 'asteroid3'][parseInt(String(r.id).split('-')[1], 10) % 3]).setDepth(2).setRotation(r.x).setScale(r.r * 2.4 / 64);
+      const cut = Math.max(0, Math.min(1, 1 - r.hp / r.maxHp)), hot = now - r.cutAt < 160;
+      im.setTint(hot ? 0xfff0b0 : cut > 0 ? (0xff << 16) | (Math.round(255 - 90 * cut) << 8) | Math.round(255 - 160 * cut) : 0xffffff).setRotation(r.x + (hot ? Math.sin(now / 25) * 0.04 : 0)); seenRock[r.id] = true;
+      if (bg && cut > 0) { const n = 1 + Math.floor(cut * 4); bg.lineStyle(1.5, 0x2a1408, 0.9); for (let i = 0; i < n; i++) { const a = (parseInt(String(r.id).split('-')[1], 10) * 1.7 + i * 2.1), l = r.r * (0.5 + 0.5 * cut); bg.lineBetween(r.x + Math.cos(a) * 2, r.y + Math.sin(a) * 2, r.x + Math.cos(a) * l, r.y + Math.sin(a) * l + (i % 2 ? 3 : -3)); } } // the cracks
+    });
+    Object.keys(this.rsp).forEach(id => { if (!seenRock[id]) { this.rsp[id].destroy(); delete this.rsp[id]; } });
+    if (bg && this.beams) { this.beams = this.beams.filter(b => b.until > performance.now()); this.beams.forEach(b => { // a beam: a soft wide line, a bright core, a hot spot where it lands. The same for a rock and an alien
+      bg.lineStyle(7, 0x7fe9ff, 0.22).lineBetween(b.x, b.y, b.tx, b.ty); bg.lineStyle(2.5, 0xe8fbff, 0.95).lineBetween(b.x, b.y, b.tx, b.ty); bg.fillStyle(0xbff6ff, 0.8).fillCircle(b.tx, b.ty, 5); }); }
     const rg = this.relicG, R = C.relic, L = CAMP.levels[C.level];
     rg.clear();
     if (R) { rg.lineStyle(2, 0x7fe9ff, 0.45).strokeCircle(R.x, R.y, L.relic.radius); if (R.hold > 0) { rg.lineStyle(6, 0x7fe9ff, 0.95).beginPath().arc(R.x, R.y, L.relic.radius, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * R.hold / L.relic.hold).strokePath(); } }
@@ -293,7 +309,7 @@ class Campaign extends Phaser.Scene {
     const R = CAMP_RADAR; g.fillStyle(0x04101c, R.fill).fillCircle(R.x, R.y, R.r); g.lineStyle(R.rim[0], 0x38e1ff, R.rim[1]).strokeCircle(R.x, R.y, R.r);
     const dot = (p, color, size) => { let dx = (p.x - c.x) / R.range * R.r, dy = (p.y - c.y) / R.range * R.r; const d = Math.hypot(dx, dy); if (d > R.r - 3) { dx *= (R.r - 3) / d; dy *= (R.r - 3) / d; } g.fillStyle(color, 1).fillCircle(R.x + dx, R.y + dy, size + R.blip); };
     const pl = campPlaces(C.level); Object.keys(pl).forEach(id => { if (!pl[id].hidden) dot(pl[id], id === 'earth' ? 0x4aa3ff : 0xb9a37a, id === 'earth' ? 4 : 2); });
-    C.pickups.forEach(o => dot(o, o.kind === 'wreck' ? 0xffd37a : 0x8c8c8c, 1)); C.caches.forEach(k => { if (!k.got) dot(k, 0xffd37a, 2); }); if (C.relic) dot(C.relic, 0x7fe9ff, 3);
+    C.rocks.forEach(o => dot(o, 0x8c8c8c, 1)); C.pickups.forEach(o => dot(o, 0xffd37a, 1)); C.caches.forEach(k => { if (!k.got) dot(k, 0xffd37a, 2); }); if (C.relic) dot(C.relic, 0x7fe9ff, 3);
     C.ships.forEach(u => { if (u.hp <= 0) return; dot(u, campDotColor(u), u.kind === 'mother' ? 4 : u.kind === 'carrier' ? 3 : 2); }); // campDotColor (src/campmap.js): the map's colours too
     // the autopilot's readout under the goal line, and an arrow at the edge of the screen pointing at the goal with its distance (src/campnav.js; docs/night/graphics.md finding 3)
     if (this.hud.nav) this.hud.nav.setText(C.nav ? uiText('camp.nav.hud', { name: C.nav.name, km: campNavKm(Math.hypot(C.nav.x - c.x, C.nav.y - c.y)) }) : '');
