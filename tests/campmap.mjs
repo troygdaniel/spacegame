@@ -19,7 +19,7 @@ g.run(`var __run = (C, s) => { for (let i = 0; i < s; i++) campStep(C, 1); };`);
 // ---- A. the bounds ----
 for (const lv of [1, 2, 3]) {
   const pts = J(`(() => { const L = CAMP.levels[${lv}], pl = campPlaces(${lv}), o = [];
-    Object.keys(pl).forEach(id => { if (!pl[id].hidden) { const p = pl[id], r = p.r || 0; o.push([p.x - r, p.y - r], [p.x + r, p.y + r]); } });
+    Object.keys(pl).forEach(id => { if (!pl[id].hidden && !pl[id].far) { const p = pl[id], r = p.r || 0; o.push([p.x - r, p.y - r], [p.x + r, p.y + r]); } });
     (L.caches || []).forEach(c => o.push([c[0], c[1]])); (L.guards || []).forEach(q => o.push([q.at[0], q.at[1]]));
     (L.waves || []).forEach(w => { o.push([w.from[0], w.from[1]]); if (w.mother) o.push(w.mother); });
     (L.towers || []).forEach(t => { const p = pl[t.place]; o.push([p.x - t.r, p.y - t.r], [p.x + t.r, p.y + t.r]); });
@@ -54,7 +54,7 @@ check('the mothership is a mark of its own when it has come (wave 3 at 140 s), a
 check('the order of the marks is the order they are drawn: places first, the carrier last', ms[0].type === 'place' && ms.at(-1).type === 'carrier' && ms.findIndex(m => m.type === 'mother') > ms.findIndex(m => m.type === 'alien'), ms.map(m => m.type).join());
 g.run(`var C2 = campNew(2, [], { seed: 7 });`);
 ms = J(`campMapMarks(C2)`); t = types(ms);
-check('level 2: the star and Proxima b are places, the warp point is not on the map, three caches, the relic ring, the guards are aliens, the carrier', t.place === 2 && ms.filter(m => m.type === 'place').map(m => m.name).join() === 'Alpha Centauri,Proxima b' && t.cache === 3 && t.relic === 1 && t.alien === 5 && t.carrier === 1, JSON.stringify(t));
+check('level 2: the star, Proxima b and the pack\'s other bodies round them are places, the warp point is not on the map, three caches, the relic ring, the guards are aliens, the carrier', t.place === 5 && ms.filter(m => m.type === 'place').map(m => m.name).sort().join() === 'Alpha Centauri,Alpha Centauri B,Proxima Centauri,Proxima b,Proxima d' && t.cache === 3 && t.relic === 1 && t.alien === 5 && t.carrier === 1, JSON.stringify(t));
 g.run(`C2.caches[0].got = true; C2.relic.hold = 4;`);
 ms = J(`campMapMarks(C2)`);
 check('a cache that is picked up leaves the map, and the relic carries how far the hold has got (4 of 8 seconds: a half)', ms.filter(m => m.type === 'cache').length === 2 && ms.find(m => m.type === 'relic').hold === 0.5 && ms.find(m => m.type === 'relic').r === J(`CAMP.levels[2].relic.radius`));

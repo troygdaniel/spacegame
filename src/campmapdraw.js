@@ -36,14 +36,14 @@ function campMapClose(s) {
 function campMapOpen(s) {
   if (s.mp || !s.camp) return;
   const C = s.camp, F = CAMPMAP.frame, P = CAMPMAP_PANEL, L = CAMP.levels[C.level];
-  const mp = s.mp = { objs: [], fit: campMapFit(campMapBounds(C.level), F), leg: [] };
+  const mp = s.mp = { objs: [], whole: false, nameObjs: [], fit: campMapFit(campMapBounds(C.level, false), F), leg: [] };
   const own = o => { o.setScrollFactor(0); mp.objs.push(o); return o; };
   own(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.84)).setDepth(150);
   hudPanel(own(s.add.graphics()).setDepth(151), P.x, P.y, P.w, P.h, 20, 0.97, CYAN);
   mp.g = own(s.add.graphics()).setDepth(152);
   own(s.add.text(F.x, 46, uiText('camp.map.title', { n: C.level, name: L.name }), uiFont(24, '#38e1ff', { letterSpacing: 2 }))).setDepth(154);
   own(s.add.text(F.x, 640, uiText('camp.map.footer'), uiFont(14, '#5b7a92'))).setDepth(154);
-  mp.across = own(s.add.text(F.x + F.w, 640, '', uiFont(14, '#5b7a92'))).setOrigin(1, 0).setDepth(154);
+  mp.across = own(s.add.text(F.x + F.w, 640, '', uiFont(14, '#5b7a92'))).setOrigin(1, 0).setDepth(154); // the area or the whole system, how wide, and Z (the footer is on the left: 410 px, this 260)
   mp.obj = own(s.add.text(CAMPMAP_SIDE.x, F.y, '', uiFont(15, '#ffffff', { wordWrap: { width: 230 }, lineSpacing: 4 }))).setDepth(154);
   // pick and fly (card space-game-campaign-navigate): the list is the Long Haul nav panel's idea (src/navpanel.js: W S choose, Enter flies there, X clears) on the one list the map and the keys share
   mp.dest = own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.destY, '', uiFont(14, '#7fe9ff', { wordWrap: { width: 250 } }))).setDepth(154);
@@ -55,14 +55,32 @@ function campMapOpen(s) {
   mp.onPointer = p => campMapClick(s, p.x, p.y);
   if (s.input && s.input.on) s.input.on('pointerdown', mp.onPointer);
   for (let i = 0; i < CAMPMAP_SIDE.rows; i++) mp.leg.push(own(s.add.text(CAMPMAP_SIDE.x + 22, CAMPMAP_SIDE.y + i * CAMPMAP_SIDE.step, '', uiFont(14, '#9fe9ff', { wordWrap: { width: 235 } }))).setOrigin(0, 0.5).setDepth(154)); // a row is one line (27 letters at most, tests/campmap.mjs); the wrap is only a net
-  // the names of the places: they do not move, so they are put once, each on a free side of its mark
-  const places = campMapMarks(C).filter(m => m.type === 'place'), names = [];
+  campMapNames(s);
+  campMapPaint(s, 0);
+}
+
+// the names of the places (and of the belts), put once for a view: they do not move, each on a free side of its mark. The area has the level's own places; Z adds the far ones (the whole system)
+function campMapNames(s) {
+  const mp = s.mp, C = s.camp, F = CAMPMAP.frame;
+  mp.nameObjs.forEach(o => { try { o.destroy(); } catch (e) { /* gone */ } }); mp.nameObjs = [];
+  const own = o => { o.setScrollFactor(0); mp.objs.push(o); mp.nameObjs.push(o); return o; };
+  const places = campMapMarks(C, mp.whole).filter(m => m.type === 'place'), names = [];
   const items = places.map(m => {
-    const t = own(s.add.text(0, 0, m.name.toUpperCase(), uiFont(13, '#ffb454'))).setOrigin(0.5).setDepth(154), p = campMapPoint(mp.fit, F, m.x, m.y);
+    const t = own(s.add.text(0, 0, m.name.toUpperCase(), uiFont(13, m.color === CAMPMAP.color.star ? '#ffe29a' : '#ffb454'))).setOrigin(0.5).setDepth(154), p = campMapPoint(mp.fit, F, m.x, m.y);
     names.push(t); return { x: p.x, y: p.y, r: Math.max(5, m.r * mp.fit.s) + 4, w: t.width, h: t.height, side: 'below' };
   });
   const at = mapPlace(items, F); names.forEach((t, i) => t.setPosition(at[i].x, at[i].y));
-  campMapPaint(s, 0);
+  const wd = typeof campWorldOf === 'function' ? campWorldOf(C.level) : null; // a belt is named where its ring is nearest the middle of the frame
+  if (wd) wd.bands.forEach(b => {
+    const mid = (b.r0 + b.r1) / 2, c = { x: F.x + F.w / 2, y: F.y + F.h / 2 }, st = campMapPoint(mp.fit, F, wd.star.x, wd.star.y), a = Math.atan2(c.y - st.y, c.x - st.x);
+    const x = st.x + Math.cos(a) * mid * mp.fit.s, y = st.y + Math.sin(a) * mid * mp.fit.s;
+    if (x > F.x + 30 && x < F.x + F.w - 30 && y > F.y + 10 && y < F.y + F.h - 10) own(s.add.text(x, y - 12, String(b.name.split(/,| \+/)[0]).toUpperCase(), uiFont(11, '#b9a37a'))).setOrigin(0.5).setDepth(154);
+  });
+}
+// Z: the whole system (every body and every ring, to scale) and back to the level's own area
+function campMapWhole(s) {
+  const mp = s.mp; if (!mp) return false;
+  mp.whole = !mp.whole; mp.fit = campMapFit(campMapBounds(s.camp.level, mp.whole), CAMPMAP.frame); campMapNames(s); mp.dirty = true; return true;
 }
 
 function campMapPaint(s, time) {
@@ -83,13 +101,23 @@ function campMapPaint(s, time) {
     const x = F.x + ox - sx * 6, y = F.y + oy - sy * 6;
     g.beginPath(); g.moveTo(x, y + sy * 20); g.lineTo(x, y); g.lineTo(x + sx * 20, y); g.strokePath();
   });
-  mp.across.setText(uiText('camp.map.across', { km: hudFmt(Math.round(F.w / f.s / CAMPMAP.km / 10) * 10) }));
+  mp.across.setText(uiText(mp.whole ? 'camp.map.whole' : 'camp.map.local', { km: hudFmt(Math.round(F.w / f.s / CAMPMAP.km / 10) * 10) }));
   mp.obj.setText(typeof campObjective === 'function' ? campObjective(C) : '');
+  // the rings round the star and the belts as rings of rocks (src/campsol.js; card space-game-campaign-sol), under everything else, clipped to the frame
+  const wd = typeof campWorldOf === 'function' ? campWorldOf(C.level) : null;
+  if (wd) {
+    const sp = { x: X(wd.star.x), y: Y(wd.star.y) }, proj = (x, y) => ({ x: X(x), y: Y(y) });
+    g.lineStyle(1, 0x7fa8c8, 0.24);
+    wd.rings.forEach(r => campMapArcs(sp.x, sp.y, r * f.s, F).forEach(pts => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.strokePath(); }));
+    g.fillStyle(0xb9a37a, 0.8);
+    wd.bands.forEach(b => campMapDotsIn(b.dots, proj, F).forEach(p => g.fillRect(p.x - 0.5, p.y - 0.5, 1.7, 1.7)));
+    wd.clusters.forEach(c => campMapDotsIn(c.dots, proj, F).forEach(p => g.fillRect(p.x - 0.5, p.y - 0.5, 1.7, 1.7)));
+  }
   // the marks, the places first and the carrier last (campMapMarks sorts them)
-  const marks = campMapMarks(C);
+  const marks = campMapMarks(C, mp.whole);
   marks.forEach(m => {
     const p = pin(X(m.x), Y(m.y));
-    if (m.type === 'place') { const r = Math.max(5, m.r * f.s); g.fillStyle(m.color, 0.85).fillCircle(p.x, p.y, r); g.lineStyle(1, m.color, 0.5).strokeCircle(p.x, p.y, r + 4); }
+    if (m.type === 'place') { const r = Math.max(m.color === col.star ? 7 : 5, m.r * f.s); g.fillStyle(m.color, 0.85).fillCircle(p.x, p.y, r); g.lineStyle(1, m.color, 0.5).strokeCircle(p.x, p.y, r + 4); }
     else if (m.type === 'relic') {
       const r = Math.max(7, m.r * f.s); g.lineStyle(2, col.relic, 0.55).strokeCircle(p.x, p.y, r);
       if (m.hold > 0) { g.lineStyle(4, col.relic, 1); g.beginPath(); g.arc(p.x, p.y, r, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * Math.min(1, m.hold)); g.strokePath(); }
@@ -158,6 +186,7 @@ function campMapKey(s, code) {
     return set(rows.findIndex(r => r.group === next));
   }
   if (code === 'Enter' || code === 'NumpadEnter') { if (rows[at]) campMapFly(s, rows[at]); return true; }
+  if (code === 'KeyZ') return campMapWhole(s);
   if (code === 'KeyX') { if (s.camp && s.camp.nav) { campNavClear(s.camp, 'clear'); mp.dirty = true; } return true; }
   return false;
 }
@@ -166,7 +195,8 @@ function campMapClick(s, px, py) {
   const mp = s.mp; if (!mp) return false;
   const F = CAMPMAP.frame, hit = mp.list.find(t => t.rowId && px >= t.x && px <= t.x + 260 && Math.abs(py - t.y) <= 11);
   let row = hit ? mp.rows.find(r => r.id === hit.rowId) : null;
-  if (!row && px >= F.x && px <= F.x + F.w && py >= F.y && py <= F.y + F.h) row = campNavPickAt(mp.rows, (x, y) => campMapPoint(mp.fit, F, x, y), px, py);
+  const inF = r => { const q = campMapPoint(mp.fit, F, r.x, r.y); return q.x >= F.x && q.x <= F.x + F.w && q.y >= F.y && q.y <= F.y + F.h; };
+  if (!row && px >= F.x && px <= F.x + F.w && py >= F.y && py <= F.y + F.h) row = campNavPickAt(mp.rows.filter(inF), (x, y) => campMapPoint(mp.fit, F, x, y), px, py);
   if (!row) return false;
   mp.selId = row.id; campMapFly(s, row); return true;
 }
