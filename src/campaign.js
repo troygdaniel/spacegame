@@ -73,6 +73,14 @@ const CAMP = {
     maxEscorts: 6,                         // most escorts, the same way
     most: 5                                // most ships one order queues
   },
+  ranks: [                                 // the ranks (card space-game-campaign-ranks, src/campranks.js): the best scores of the missions flown, added up, are the points; a rank is held from `at` points; its extras are added to the bay and to the wing limit (CAMP.build.maxFighters, maxEscorts)
+    { id: 'cadet', at: 0, fighters: 0, escorts: 0 },           // the start: the wing of the bay, no more
+    { id: 'ensign', at: 1000, fighters: 1, escorts: 0 },        // one good mission (1,000 for the objectives)
+    { id: 'lieutenant', at: 3500, fighters: 2, escorts: 1 },    // about three missions at a good score
+    { id: 'commander', at: 6500, fighters: 3, escorts: 1 },     // about five
+    { id: 'captain', at: 10000, fighters: 4, escorts: 2 },      // about seven: late in the second level
+    { id: 'commodore', at: 14000, fighters: 5, escorts: 3 }     // the nine missions flown well (a mission is worth 1,000 to 1,900)
+  ],
   beamHum: {                               // the hum of a beam (card space-game-campaign-sounds): what src/audio.js beamHum is told
     rise: 2,                               // s of unbroken fire (Beam turrets tech, Space held, a turret on a target) until the hum has climbed all the way
     laserLevel: 0.8,                       // how loud the hum of a mining laser is (the same hum on any rock), against the beam turrets' 1
@@ -391,6 +399,8 @@ function campNew(level, techs, opts) {
   };
   if (campHas(C, 'bay2')) C.bay.fighters += CAMP.tech.bay2.fighters;
   if (opts.bonus) { C.bay.fighters += Math.max(0, opts.bonus.fighters | 0); C.bay.escorts += Math.max(0, opts.bonus.escorts | 0); } // the extras bought at the Earth refit
+  C.rank = Math.max(0, Math.min(CAMP.ranks.length - 1, opts.rank | 0)); // the rank of the pilot (src/campranks.js: from the scores of the missions flown): its extras fill the bay and lift the wing limit
+  { const rk = CAMP.ranks[C.rank]; C.bay.fighters += rk.fighters; C.bay.escorts += rk.escorts; C.cap = { fighters: CAMP.build.maxFighters + rk.fighters, escorts: CAMP.build.maxEscorts + rk.escorts }; }
   Object.assign(C, { missiles: CAMP.missile.magazine, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0 }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks
   const p = campPlaces(level)[L.start], c = campSpawn(C, 'carrier', p.x + L.startAt[0], p.y + L.startAt[1]);
   C.carrier = c; c.rot = 0;
@@ -591,7 +601,7 @@ function campBuild(C, arg, dry) {
   const n = Math.max(1, Math.min(B.most, m ? (m[1] ? parseInt(m[1], 10) : words[m[2]]) : 1));
   const have = (kind === 'fighter' ? C.bay.fighters + campWing(C, 'fighter').length + C.launchQ.filter(k => k === 'fighter').length : C.bay.escorts + campWing(C, 'escort').length + C.launchQ.filter(k => k === 'escort').length)
     + C.build.queue.filter(b => b.kind === kind).length;
-  if (have + n > (kind === 'fighter' ? B.maxFighters : B.maxEscorts)) return campNo('buildfull', { kind });
+  if (have + n > (kind === 'fighter' ? C.cap.fighters : C.cap.escorts)) return campNo('buildfull', { kind }); // the wing limit: the workshop's, and the rank's extras
   const cost = n * (kind === 'fighter' ? B.fighterCost : B.escortCost);
   if (C.ore < cost) return campNo('noore2', { need: cost, have: Math.floor(C.ore) });
   if (dry) return campYes('build', { n, kind: n === 1 ? kind : kind + 's' });

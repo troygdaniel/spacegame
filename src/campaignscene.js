@@ -69,7 +69,8 @@ class Campaign extends Phaser.Scene {
   beam(e, ms) { if (!this.beams) this.beams = []; this.beams.push({ x: e.x, y: e.y, tx: e.tx, ty: e.ty, until: performance.now() + ms }); } // (the beam hum is the sound card's: it reads C.lasers)
   makeCamp() { // a new battle of this level: arrived by the chain (or a retry), the ore and the extra ships of the refit come with the cruiser; a level started by itself (an address, a skip) has its own
     const carried = this.P.level === this.level;
-    return campNew(this.level, this.P.techs, Object.assign({}, this.opts, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {}));
+    this.P.promo = null; // the promotion of the last debrief is told once
+    return campNew(this.level, this.P.techs, Object.assign({}, this.opts, { rank: typeof campRank === 'function' ? campRank(this.P).i : 0 }, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {})); // the rank (src/campranks.js) fills the bay and lifts the wing limit
   }
   drawPlace(p) { // returns what it made, so a far place can be taken down again (syncFar)
     const r = p.r || 60, made = [];
@@ -125,7 +126,8 @@ class Campaign extends Phaser.Scene {
   }
   missionWon() { // a mission won: its result is kept and the ore comes with the cruiser; the debrief, then the next mission, or after the last one the level's story and the refit
     const C = this.camp; if (!C.L.objectives) { this.showWon(); return; }
-    const r = campMissionDone(this.P, this.level, this.mi, C.score); this.mdone = r.levelDone; this.P.ore = Math.floor(C.ore); campProgressSave(this.P);
+    const was = typeof campRank === 'function' ? campRank(this.P).i : 0, r = campMissionDone(this.P, this.level, this.mi, C.score); this.mdone = r.levelDone;
+    this.P.promo = typeof campRankPromoted === 'function' ? campRankPromoted(was, this.P) : null; // the debrief says it: campRankLine this.P.ore = Math.floor(C.ore); campProgressSave(this.P);
     this.showDebrief(C.score);
   }
   nextMission() { go(this, 'Campaign', { level: this.level, mission: this.mi + 1, via: 'next' }); } // the next mission of the level (no warp: only the level's start warps)

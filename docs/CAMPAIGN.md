@@ -30,6 +30,25 @@ A level row with no `missions` is one mission of its own (kind `waves`, no objec
 
 **The nine missions.** The belt: 1 *Belt survey* (recon: scan three rock fields; the ambush hits when the second is scanned and must be beaten), 2 *Ore haulers* (escort: three haulers fly Vesta to Ceres, two must arrive, the raiders go for them), 3 *The mothership* (attack: three waves, the last with the mothership). Alpha Centauri: 1 *Resources* (recon: two of three caches, and the attackers who followed), 2 *The guards* (attack: seven guards round the relic), 3 *The relic* (defend: hold its ring 14 s with no alien near it). The home world: 1 *Approach* (recon: three points on the way in; the defenders come on the first), 2 *Outer ring* (attack: four towers), 3 *Inner ring* (attack: eight towers). A plain bot (`node tools/campaign-bot.mjs`, which flies the missions one by one, `--mission N` for one) wins each in 45 to 75 seconds; a person takes longer; a player who does nothing never wins one (the survey and the approach are never finished, the others are lost).
 
+## Ranks (card `space-game-campaign-ranks`)
+
+You are promoted as you fly. Six ranks, plain names: **Cadet, Ensign, Lieutenant, Commander, Captain, Commodore**. The points are the **best scores of the missions flown, added up** (a mission score already counts its objectives, its bonus objectives, the hull left and the time; a mission flown again for a better score can only raise the total). Nothing is saved for the rank: it is read from the saved results.
+
+| Rank | From points | Extra fighters | Extra escorts | About |
+|---|---|---|---|---|
+| Cadet | 0 | 0 | 0 | the start |
+| Ensign | 1,000 | 1 | 0 | one good mission |
+| Lieutenant | 3,500 | 2 | 1 | about three missions |
+| Commander | 6,500 | 3 | 1 | about five |
+| Captain | 10,000 | 4 | 2 | about seven |
+| Commodore | 14,000 | 5 | 3 | the nine missions flown well |
+
+The effect is on the wing you command: the extras are added to the **bay** at the start of every mission (on top of the bay of six fighters and two escorts, the second-bay tech and the extras of the Earth refit) and to the **wing limit** of the workshop (14 fighters and 6 escorts, plus the extras), so the orders (launch, attack, escort, guard, recall) matter more as you rise. The debrief says the promotion when a mission's score takes you up (`PROMOTED: Lieutenant. The bay holds 8 fighters and 3 escorts.` and a line of the rank's own), and the rank and what the next needs otherwise; the hub (the ready room) shows the rank through `campRankStatus(P)`: `{ name, n, of, points, next, nextName, wing: { fighters, escorts } }`.
+
+The ranks are data: `CAMP.ranks` in `src/campaign.js` (the points and the extras of each), the code is `src/campranks.js`, the words are `content/text/campaign-ranks.md`. A battle is made with `campNew(level, techs, { rank })` (the scene passes the rank of the saved results; no rank is a cadet, so every old battle of a test is as it was). **Balance**: `node tools/campaign-bot.mjs --rank 0|1..5|auto` flies the missions at a rank (auto: 1,400 points a mission flown before it). The missions were already won by every bot at the lowest rank, so the ranks do not change who wins; at the top rank the wing takes about half the damage on the hard missions (the home world's second and third: 60 to 29 and 30 to 18 on average) and the missions end 5 to 10 percent sooner. A battle with no action still loses at every rank (`tests/campranks.mjs`).
+
+**Left for later (the idea bench, `space-game-idea-bench`): a second carrier at a high rank.** Not built; the table has no room for one yet on purpose.
+
 ## How you play
 
 You fly the carrier yourself: big, slow, heavy. **W A S D** fly it, hold **Space** to make its eight turrets fire at the ships close by, **F** fires a homing missile, and **Q** blinks (once you have that tech). There is no other gun (see The weapons below). **Esc** pauses, with its own menu. Your small ships do the rest, and you give them orders by **keys**, by the **command strip** (I, then type) or by **voice** (U, then say it). The three ways run the same five orders:
