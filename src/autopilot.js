@@ -45,25 +45,26 @@ function autopilotStop(t) {
 }
 
 function autopilotSetup(s) {
-  const ap = s.ap = { on: false, stage: '', order: '', target: null, since: 0, speed: 0, hull: 0, sh: 0, readAt: 0 };
+  const ap = s.ap = { on: false, stage: '', order: '', local: false, target: null, since: 0, speed: 0, hull: 0, sh: 0, readAt: 0 };
   ap.k = s.input.keyboard.addKeys('P');
   ap.read = s.add.text(W / 2, TOAST.readY, '', { fontFamily: 'monospace', fontSize: '20px', fontStyle: 'bold', color: '#ffd37a' }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setStroke('#02060d', 4).setVisible(false);
 }
 
 // fly to this body (a row of cruiseKnown, or a cr.target). order: '' (stop outside it), 'dock' or 'land' (all the way in; only where
-// autopilotOrder allows it, else it is the plain order). Returns true when the autopilot took the ship.
-function autopilotGo(s, b, order) {
+// autopilotOrder allows it, else it is the plain order). fast: false is regular speed (the Tab map's Fly button, card space-game-map-click-fly): the local leg only, at the
+// ship's own top speed, no cruise and no flying clear of a mass for one; anything else is as it always was (a long leg cruises the middle). Returns true when the autopilot took the ship.
+function autopilotGo(s, b, order, fast) {
   const ap = s.ap, cr = s.cr; if (!ap || !cr || !b || s.dead || s.leaving || s.jmp || G.deep) return false;
   const t = { id: b.id, name: b.name, type: b.type, x: b.x, y: b.y, r: b.r || 0 };
   order = order && order === autopilotOrder(t, sysBodies('station'), sysBody('planet'), s.canLand) ? order : '';
-  ap.order = order;
+  ap.order = order; ap.local = fast === false;
   if (!order && Math.hypot(t.x - s.ship.x, t.y - s.ship.y) <= autopilotStop(t) + 60) { toast(s, t.name + ': you are there.', '#ffd37a'); sfx('empty'); return false; }
   if (cr.active) cruiseEnd(s, 'quiet');
   cr.target = t; ap.target = t; // the HUD's objective arrow and the brackets follow cr.target (cruise clears it near the body; ap.target stays)
   const mass = autopilotMass(s);
-  if (mass && Math.hypot(t.x - s.ship.x, t.y - s.ship.y) - autopilotStop(t) > AUTO.cruiseLeg) return autopilotClear(s, t, 'auto', mass); // a long leg from inside a mass limit: out the short way first
+  if (!ap.local && mass && Math.hypot(t.x - s.ship.x, t.y - s.ship.y) - autopilotStop(t) > AUTO.cruiseLeg) return autopilotClear(s, t, 'auto', mass); // a long leg from inside a mass limit: out the short way first
   ap.on = true; ap.stage = 'local'; ap.since = s.time.now; ap.speed = s.ship.body.speed; ap.hull = G.hull; ap.sh = s.sh ? s.sh.pts : 0;
-  toast(s, (order === 'dock' ? 'Docking at ' : order === 'land' ? 'Landing on ' : 'Autopilot to ') + t.name + '. Any key takes the stick back.', '#ffd37a'); sfx('chime');
+  toast(s, (order === 'dock' ? 'Docking at ' : order === 'land' ? 'Landing on ' : 'Autopilot to ') + t.name + (ap.local ? ' at regular speed' : '') + '. Any key takes the stick back.', '#ffd37a'); sfx('chime');
   return true;
 }
 
@@ -102,7 +103,7 @@ function autopilotClear(s, t, then, mass) {
 function autopilotEnd(s, why) {
   const ap = s.ap, ship = s.ship, t = ap.target;
   if (ap.stage === 'final' && s.k && s.k.L) s.k.L._justDown = false; // an L the dock code did not take is not left lying about
-  ap.on = false; ap.stage = ''; ap.order = ''; ap.read.setVisible(false);
+  ap.on = false; ap.stage = ''; ap.order = ''; ap.local = false; ap.read.setVisible(false);
   if (!s.cruising) {
     const sp = Math.min(ship.body.speed, shipStat('vmax'));
     ship.body.setVelocity(Math.cos(ship.rotation) * sp, Math.sin(ship.rotation) * sp).setDrag(0.55).setAcceleration(0, 0);
@@ -131,6 +132,14 @@ function autopilotCruiseOk(s) {
 
 // hand the leg to cruise: the one place the autopilot gives cruise its target back (cruise drops it near a body; ours stays)
 function autopilotCruise(s, t) { s.cr.target = t; s.cr.endWhy = ''; cruiseEngage(s); }
+
+// the two times the Tab map offers for a place t ({ x, y, type, r }) from the ship: seconds at regular speed (Fly: the local leg at the ship's top speed, plus 1.5 s to turn onto it)
+// and seconds fast (Fast: cruise for the middle, then the local approach), or null for fast when the leg is too short to cruise (AUTO.cruiseLeg: Fast would be Fly)
+function autopilotLegTimes(s, t) {
+  const left = Math.max(0, Math.hypot(t.x - s.ship.x, t.y - s.ship.y) - autopilotStop(t)), v = Math.max(1, shipStat('vmax'));
+  const slow = left / v + 1.5;
+  return { slow, fast: left > AUTO.cruiseLeg ? cruiseEta(left + autopilotStop(t)) + Math.max(0, CRUISE.stop - autopilotStop(t)) / v : null };
+}
 
 // one call per frame from Space.update, right after cruiseFrame (crs is what it returned)
 function autopilotFrame(s, time, dt, crs) {
@@ -170,7 +179,7 @@ function autopilotFrame(s, time, dt, crs) {
     if (s.k && s.k.L) s.k.L._justDown = true;
     return 'auto';
   }
-  if (dist - autopilotStop(t) > AUTO.cruiseLeg && autopilotCruiseOk(s)) { // a long leg: cruise the middle
+  if (!ap.local && dist - autopilotStop(t) > AUTO.cruiseLeg && autopilotCruiseOk(s)) { // a long leg: cruise the middle (not at regular speed)
     autopilotCruise(s, t);
     if (s.cruising) { ap.stage = 'cruise'; ap.read.setVisible(false); return 'cruise'; }
   }
