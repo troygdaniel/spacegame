@@ -39,7 +39,7 @@ console.log('A. the aim');
   check('a gunship 450 px off crossing at 100 px/s is aimed ahead of: the turret points past where it is, by about asin(100 / 800) = 0.125 rad', cross.target && Math.abs(cross.aim - cross.direct) > 0.08 && Math.abs(cross.aim - cross.direct) < 0.2 && cross.aim > cross.direct, JSON.stringify(cross));
   const stand = J(`__sec('gunship', 450, 0, 0, 0)`);
   check('a standing one is aimed at where it is (towers are hit as before)', stand.target && Math.abs(stand.aim - stand.direct) < 1e-9, JSON.stringify(stand));
-  const toward = J(`__sec('raider', 450, -14, -200, 0)`); // along the line of the first turret (its mount is 14 px north of the carrier's centre)
+  const toward = J(`__sec('raider', 450, CAMP.carrier.mounts[0][1], -200, 0)`); // along the line of the first turret (its mount is that far north of the carrier's centre: the row of the table)
   check('one flying straight at a turret is aimed straight at: the lead is along the line, not off it', toward.target && Math.abs(toward.aim - toward.direct) < 1e-6, JSON.stringify(toward));
   const fast = J(`__sec('raider', 450, 0, 1500, 0)`);
   check('one faster than the shot and running away has no meeting: it is aimed at where it is, with a number and not NaN', fast.target && Number.isFinite(fast.aim) && Math.abs(fast.aim - fast.direct) < 1e-9, JSON.stringify(fast));
