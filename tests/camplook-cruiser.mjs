@@ -10,7 +10,7 @@ const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + n
 const g = nodeGame();
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 g.run(`window.__rec = () => { const ops = []; const gfx = new Proxy({}, { get: (t, name) => (...a) => { ops.push([name].concat(a)); return gfx; } }); campCruiserDraw(gfx); return ops; };`);
-const ops = J('__rec()'), A = J('CAMP_ART'), H = J('CAMP_HULL'), [W, Ht] = J(`campArtSize('cruiser')`), k = A.k, cr = A.cruiser;
+const ops = J('__rec()'), A = J('CAMP_ART'), H = J('CAMP_HULL'), [W, Ht] = J(`campArtSize('cruiser')`), cr = A.cruiser, k = cr.k;
 
 const names = new Set(ops.map(o => o[0]));
 check('it draws only with fills, plain lines and paths (no gradient, no stroked circle, no glow filter)', [...names].every(n => ['fillStyle', 'lineStyle', 'fillRect', 'fillCircle', 'beginPath', 'moveTo', 'lineTo', 'closePath', 'fillPath', 'strokePath', 'lineBetween'].includes(n)), [...names].join(' '));
@@ -44,7 +44,7 @@ check('the only glow is the engines\': at most eight faint circles (two a nozzle
 // the area of what is lit (windows, bays, the engines' fire) against the area of the hull
 let lit = 0;
 ops.forEach((o, i) => { if (o[0] === 'fillRect') { for (let j = i - 1; j >= 0; j--) if (ops[j][0] === 'fillStyle') { if ([H.window, H.bay, H.engine, H.hot].includes(ops[j][1]) && (ops[j][2] === undefined || ops[j][2] >= 0.4)) lit += o[3] * o[4]; break; } } });
-const hull = J(`(() => { const a = CAMP_ART.cruiser, pod = a.pod; return (a.len * 20 + 2 * (pod[2] - pod[0]) * (pod[3] - pod[1])) * CAMP_ART.k * CAMP_ART.k; })()`);
+const hull = J(`(() => { const a = CAMP_ART.cruiser, pod = a.pod; return (a.len * 20 + 2 * (pod[2] - pod[0]) * (pod[3] - pod[1])) * CAMP_ART.cruiser.k * CAMP_ART.cruiser.k; })()`);
 check('what is lit is a small part of the hull: under 3 percent of its area (a few windows, the bays, four nozzles)', lit / hull < 0.03, (lit / hull * 100).toFixed(2) + ' percent');
 
 // the geometry the scene and the sim lean on

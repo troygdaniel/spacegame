@@ -19,7 +19,7 @@ check('another 30 percent smaller than before: 98 px (was 140), 22 (was 31), 28 
 check('the hit circle is about half the drawn half-length, as it always was (carrier 25 of 49, fighter 6 of 11, escort 7 of 14)', ['carrier', 'fighter', 'escort'].every(k => Math.abs(size[k].hit / (size[k].len / 2) - 0.5) < 0.06));
 check('the ships in the game take their hit circle from the table (a ship in a fight is as big as it says)', J(`(() => { const C = campNew(1, [], { seed: 1 }); return C.carrier.r === CAMP.size.carrier.hit && campSpawn(C, 'fighter', 0, 0).r === CAMP.size.fighter.hit && campSpawn(C, 'escort', 0, 0).r === CAMP.size.escort.hit; })()`));
 check('and the numbers are not written a second time: no radius row for them in CAMP, no scale number in CAMP_LOOK (the scale is the table length over the picture width)',
-  J('CAMP.carrier.radius') === null && J('CAMP.fighter.radius') === null && J('CAMP.escort.radius') === null && ['carrier', 'fighter', 'escort'].every(k => Math.abs(J(`CAMP_LOOK.${k}.scale * CAMP_LOOK.${k}.w - CAMP.size.${k}.len`)) < 1e-9) && /CAMP\.size\.carrier\.len/.test(src('src/campaignscene.js')));
+  J('CAMP.carrier.radius') === null && J('CAMP.fighter.radius') === null && J('CAMP.escort.radius') === null && ['carrier', 'fighter', 'escort'].every(k => Math.abs(J(`CAMP_LOOK.${k}.scale * CAMP_LOOK.${k}.w - CAMP.size.${k}.len`)) < 1e-9) && /CAMP\.size\[kind\]\.len/.test(src('src/campcruiser.js')) && ['carrier', 'fighter', 'escort'].every(k => new RegExp("campArtLook\\('" + k + "'").test(src('src/campaignscene.js'))));
 
 // the hull as drawn: its length is the table's, its width the picture's height over its width
 const look = J('CAMP_LOOK.carrier'), len = size.carrier.len, wid = len * (look.h || look.w * 0.7) / look.w;

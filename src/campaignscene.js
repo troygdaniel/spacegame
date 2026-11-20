@@ -12,7 +12,7 @@
 // what each ship is drawn as: a texture (art: a ship picture of the Campaign's own, src/campcruiser.js; model: a ship model of src/shipmodels.js; else a texture of the game) and its scale
 const CAMP_LOOK = {
   // the carrier and the ships it launches: how big they are is CAMP.size (the drawn length and the hit circle, one table); the scale is that length over the picture's own width w (h is its height)
-  carrier: { art: 'cruiser', w: CAMP_ART.cruiser.len * CAMP_ART.k, h: 2 * CAMP_ART.cruiser.half * CAMP_ART.k, scale: CAMP.size.carrier.len / (CAMP_ART.cruiser.len * CAMP_ART.k) }, fighter: { model: 'talon', w: 60, h: 44, scale: CAMP.size.fighter.len / 60 }, escort: { tex: 'police', w: 56, h: 40, scale: CAMP.size.escort.len / 56 },
+  carrier: campArtLook('carrier', 'cruiser'), fighter: campArtLook('fighter', 'fighter'), escort: campArtLook('escort', 'escort'), // the pictures are the Campaign's own (src/campcruiser.js)
   freighter: { tex: 'freighter', scale: 1 },
   raider: { tex: 'raider', scale: 1 }, drone: { tex: 'drone', scale: 1 }, gunship: { tex: 'gunship', scale: 1 }, mother: { tex: 'reaver', scale: 2.6, tint: 0xc9a0ff }, tower: { tex: 'gunship', scale: 1.6, tint: 0xff9a3a }
 };
