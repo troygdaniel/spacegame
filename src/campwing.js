@@ -86,7 +86,7 @@ function campWingByWords(C, text) {
 function campWingTarget(C, spec) {
   if (spec == null || spec === '') return null;
   let r = null;
-  if (typeof spec === 'string') r = campWingById(C, spec) || campWingByWords(C, spec);
+  if (typeof spec === 'string') r = campWingById(C, spec) || (/^[a-z]+[-:][a-z0-9:_-]+$/.test(spec) ? null : campWingByWords(C, spec)); // an id that names nothing is not words ("rock-999" is not "the nearest rock")
   else if (typeof spec === 'object') {
     if (typeof spec.id === 'string' && (r = campWingById(C, spec.id))) { /* an id or a nav row */ }
     else if (typeof spec.ref === 'string' && (r = campWingById(C, spec.ref))) { /* a target of this file, handed back */ }
