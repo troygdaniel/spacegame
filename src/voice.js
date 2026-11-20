@@ -22,6 +22,7 @@ const VOICE_LINES = {
   failed: 'Mission failed.',
   lost: 'Ship lost. Insurance has been charged.',
   ending: 'Two thousand credits earned.',
+  fuel: 'Warning. Fuel reserves low.',
   test: 'Ship voice online.'
 };
 // ---------- lines a content pack adds (content/voice/*.md, src/contentadd.js) ----------
@@ -87,7 +88,10 @@ function voiceSpokenText(text) {
 }
 function voiceSetOn(on) { VOICE.on = !!on; try { localStorage.setItem(VOICE_FLAG, on ? '1' : '0'); } catch (e) { /* storage is optional */ } }
 function voiceUsable() { return !!VOICE.key && VOICE.on && !VOICE.bad && !G.muted && G.volume > 0 && performance.now() >= VOICE.pauseUntil; }
-function voiceStatus() { return !VOICE.key ? 'NO KEY' : VOICE.bad ? 'KEY REJECTED' : VOICE.on ? 'ON' : 'OFF'; }
+// a line from the voice pack (src/voicepack.js, tools/voicepack.mjs) needs no key and no network call: only that the voice is on and the sound is not muted. The key's trouble (rejected, backing off) is not the pack's.
+function voicePlayable() { return VOICE.on && !G.muted && G.volume > 0; }
+function voiceOkFor(line) { return line && line.pack ? voicePlayable() : voiceUsable(); }
+function voiceStatus() { return !VOICE.key ? (VOICE.on && typeof voicePackStatus === 'function' && voicePackStatus() === 'ready' ? 'FIXED LINES' : 'NO KEY') : VOICE.bad ? 'KEY REJECTED' : VOICE.on ? 'ON' : 'OFF'; }
 
 // ---------- speaking ----------
 // One line at a time, whoever says it. A line that arrives while another plays is dropped, unless it is a warning or a character's
@@ -97,8 +101,9 @@ function voiceStatus() { return !VOICE.key ? 'NO KEY' : VOICE.bad ? 'KEY REJECTE
 const VOICE_NAME = /^aura(-2)?-[a-z]{3,12}-en$/; // the name goes into a URL, so anything else falls back to the ship computer's voice
 const voiceModelOf = m => (typeof m === 'string' && VOICE_NAME.test(m) ? m : voiceShip());
 function voiceSay(text, prio = 0, model, onStart, meta) {
-  if (!voiceUsable()) return false;
-  const line = { text, voice: voiceModelOf(model), onStart, prio, at: performance.now(), meta: meta || null, gen: VOICE.gen }, id = line.voice + '|' + text;
+  const voice = voiceModelOf(model), pack = typeof voicePackPick === 'function' ? voicePackPick(text, voice, voiceShip(), !!VOICE.key) : null; // the recorded line, when there is one for these words in this voice
+  if (!(voiceUsable() || (pack && voicePlayable()))) return false;
+  const line = { text, voice, onStart, prio, at: performance.now(), meta: meta || null, gen: VOICE.gen, pack }, id = line.voice + '|' + text;
   if (VOICE.said[id] && line.at - VOICE.said[id] < 8000) return false;
   VOICE.said[id] = line.at;
   if (VOICE.playing) {
@@ -134,16 +139,17 @@ function voiceStop(how) {
 function voiceSpoke(info) { return info; }
 async function voiceRun(line) {
   VOICE.playing = true; VOICE.cur = line;
-  try { const buf = await voiceBuffer(line.text, line.voice); if (buf && voiceUsable() && line.gen === VOICE.gen) await voicePlay(buf, line.onStart, line); } catch (e) { /* the voice must never break the game */ }
+  try { const buf = await voiceBuffer(line.text, line.voice, line.pack); if (buf && voiceOkFor(line) && line.gen === VOICE.gen) await voicePlay(buf, line.onStart, line); } catch (e) { /* the voice must never break the game */ }
   if (line.gen !== VOICE.gen) return; // stopped meanwhile: voiceStop has already put everything back, and a newer line may be running
   VOICE.playing = false; VOICE.cur = null; VOICE.src = null; VOICE.finish = null;
   const now = performance.now(); let next = null;
   while (VOICE.queue.length && !next) { const q = VOICE.queue.shift(); if (now - q.at < 6000) next = q; }
-  if (next && voiceUsable()) voiceRun(next);
+  if (next && voiceOkFor(next)) voiceRun(next);
 }
 // a line's audio: from the memory cache, or one call to Deepgram (the only network call in the game). Only the ship computer's lines are
 // cached: they repeat. A character's reply is free text and is spoken once.
-async function voiceBuffer(text, voice = voiceShip()) {
+async function voiceBuffer(text, voice = voiceShip(), pack) {
+  if (pack) { const b = await voicePackBuffer(pack); if (b) return b; if (!VOICE.key) return null; } // the recorded line first; a file that cannot be read falls through to Deepgram when there is a key
   const keep = voice === voiceShip();
   if (keep && VOICE.cache.has(text)) return VOICE.cache.get(text);
   if (!audioReady()) return null; // audio.js: the shared AudioContext
@@ -160,6 +166,17 @@ async function voiceBuffer(text, voice = voiceShip()) {
   VOICE.fails = 0;
   if (keep) { VOICE.cache.set(text, buf); if (VOICE.cache.size > 40) VOICE.cache.delete(VOICE.cache.keys().next().value); }
   return buf;
+}
+// a recorded line's audio: its file in voicepack/, decoded once and kept for the session (a plain GET of a file of the game: no key, nothing sent about the player)
+async function voicePackBuffer(hit) {
+  const C = VOICEPACK.cache; if (C.has(hit.id)) return C.get(hit.id);
+  if (!audioReady() || typeof fetch !== 'function') return null;
+  try {
+    const res = await fetch(VOICEPACK.dir + '/' + voicePackFile(hit.id)); if (!res.ok) return null;
+    const buf = await AC.decodeAudioData(await res.arrayBuffer());
+    C.set(hit.id, buf); if (C.size > VOICEPACK.cacheMax) C.delete(C.keys().next().value); VOICE.packed = (VOICE.packed | 0) + 1;
+    return buf;
+  } catch (e) { return null; }
 }
 function voicePlay(buf, onStart, line) { // through audio.js's master gain, so the volume and mute settings apply
   return new Promise(res => {
@@ -200,6 +217,7 @@ async function voiceTest(voice) {
 // ---------- the events ----------
 function voiceInstall(game) {
   voiceLoad();
+  if (typeof voicePackLoad === 'function') voicePackLoad(); // the recorded lines (voicepack/index.json): none is no change
   const L = VOICE_LINES, st = { hullLow: false, fuelLow: false, hostile: false, hostileAt: -1e9, mission: G.mission, credits: G.credits, dead: false, ending: !!G.endingSeen };
   const wire = () => game.scene.scenes.forEach(sc => {
     const k = sc.scene.key;
@@ -220,7 +238,7 @@ function voicePoll(game, st, now) {
     if (near < 750 && !st.hostile && now - st.hostileAt > 45000) { st.hostile = true; st.hostileAt = now; voiceSay(voiceLine('pirates-detected', L.hostile), 1); } else if (near > 1300) st.hostile = false;
     if (sp.dead && !st.dead) voiceSay(L.lost, 2);
     const fs = typeof fuelState === 'function' ? fuelState() : 'ok'; // src/fuel.js
-    if (fs !== 'ok' && !st.fuelLow) { st.fuelLow = true; voiceSay(voiceLine('fuel-low', 'Warning. Fuel reserves low.'), 1); } else if (fs === 'ok' && fuelFrac() > 0.4) st.fuelLow = false;
+    if (fs !== 'ok' && !st.fuelLow) { st.fuelLow = true; voiceSay(voiceLine('fuel-low', L.fuel), 1); } else if (fs === 'ok' && fuelFrac() > 0.4) st.fuelLow = false;
     st.dead = !!sp.dead;
   } else st.dead = false;
   const dc = G.credits - st.credits;

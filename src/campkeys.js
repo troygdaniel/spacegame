@@ -11,7 +11,7 @@
 const CAMPKEYS = {
   panel: { x: 70, y: 35, w: 1140, h: 650 },      // the glass panel: the sector map's own size and place
   colX: [104, 660], colW: 500,                   // left edge and width of the two columns
-  top: 104, pitch: 18, head: 26, gap: 12,        // first line's y, a line's pitch (19 until the SYSTEMS panel's five rows made a column 643 px deep), the room a heading takes, the room between two groups
+  top: 104, pitch: 17, head: 26, gap: 12,        // first line's y, a line's pitch (19, then 18, until the SYSTEMS panel's five rows made a column 643 px deep), the room a heading takes, the room between two groups
   capsW: 126, size: 14, bottom: 630,             // the space the key caps take at the left of a line, the size of the words, the lowest y a column may reach (the footer is at 650)
   depth: 300,                                    // over the cards (200), the map (150 to 156) and the panels (160)
   groups: ['panels', 'campaign']                 // the groups of the table (src/data_controls.js) the page lists, in this order: the two panels first

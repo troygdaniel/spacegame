@@ -53,6 +53,15 @@ function campMapFit(b, frame, pad) {
   const ex = (b.x1 - b.x0) * (1 + 2 * pad), ey = (b.y1 - b.y0) * (1 + 2 * pad);
   return { s: Math.min(frame.w / ex, frame.h / ey), cx: (b.x0 + b.x1) / 2, cy: (b.y0 + b.y1) / 2 };
 }
+// the view at zoom z (1: the level fitted to the frame): the scale and centre to draw with. view is the last one and z0 the zoom it had; focus, a world point or null, is what is zoomed about, which stays where it was on the screen
+// (null: the middle of the frame stays). Zoomed in, the view is held inside the fitted extent; zoomed out past 1, it is the fitted centre, so zooming back out returns to the whole level.
+function campMapView(base, frame, z, view, z0, focus) {
+  const s = base.s * z; let cx = view.cx, cy = view.cy;
+  if (focus && z0 > 0) { const k = z0 / z; cx = focus.x - (focus.x - cx) * k; cy = focus.y - (focus.y - cy) * k; }
+  const vx = frame.w / 2 / s, vy = frame.h / 2 / s, bx = frame.w / 2 / base.s, by = frame.h / 2 / base.s;
+  const hold = (c, v, b, mid) => v >= b ? mid : Math.max(mid - (b - v), Math.min(mid + (b - v), c));
+  return { s, cx: hold(cx, vx, bx, base.cx), cy: hold(cy, vy, by, base.cy) };
+}
 const campMapPoint = (fit, frame, x, y) => ({ x: frame.x + frame.w / 2 + (x - fit.cx) * fit.s, y: frame.y + frame.h / 2 + (y - fit.cy) * fit.s });
 
 const CAMPMAP_RANK = { place: 0, relic: 1, cache: 2, scan: 2, tower: 3, convoy: 4, alien: 5, wing: 6, mother: 7, carrier: 8 }; // drawn in this order: the carrier on top

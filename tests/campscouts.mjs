@@ -11,7 +11,7 @@
 //   H  the other orders: a scout out is not taken from its task by Guard or Attack; Recall brings it home with its load
 //   I  the anomaly hook: a cloaked anomaly inside the read range is read, not uncovered (the table is 6-GEN's card)
 //   J  the words, the strip and the voice, the radio; the HUD, the radar and the map's third button (source)
-//   K  nothing changes unless a Scout order is given: the pinned battles of tests/campsystems.mjs (taken from main be704b4) end in the same state
+//   K  nothing changes unless a Scout order is given: the pinned battles of tests/campsystems.mjs (taken from main b721fe3) end in the same state
 // Run: node tests/campscouts.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
@@ -133,9 +133,12 @@ sec('F', () => {
 });
 
 sec('G', () => {
-  const setup = (dx, fast) => g.run(`__mk(1, 0); window.__u = __esc(0, 0); __u.x = C.carrier.x + ${dx}; __u.y = C.carrier.y; __u.order = { type: "scout" }; __u.scout = { n: 1, name: "X", x: __u.x, y: __u.y, phase: "station", at: C.t, carry: { ore: 0, caches: 0 } }; window.__l0 = C.lostShips; __ev.length = 0; ${fast ? "campNavGo(C, campNavFind(C, 'pallas').row, true);" : ''} __go(0.3)`);
+  // main's board-before-fast rule (card space-game-campaign-fast-board) refuses a burn while a ship is out, so a normal Fast never leaves a scout behind; the leash is the safety net when a burn is on anyway (set by hand here)
+  const setup = (dx, fast) => g.run(`__mk(1, 0); window.__u = __esc(0, 0); __u.x = C.carrier.x + ${dx}; __u.y = C.carrier.y; __u.order = { type: "scout" }; __u.scout = { n: 1, name: "X", x: __u.x, y: __u.y, phase: "station", at: C.t, carry: { ore: 0, caches: 0 } }; window.__l0 = C.lostShips; __ev.length = 0; ${fast ? "campNavGo(C, campNavFind(C, 'pallas').row, false); C.nav.fast = true; C.nav.burn = 2;" : ''} ${fast ? 'campScoutsStep(C, 1 / 30); __ev.push(...C.events); C.events.length = 0;' : '__go(0.3)'}`); // (campTick itself switches a burn off when a ship is out: the leash is called directly)
+  g.run(`__mk(1, 0); window.__u = __esc(0, 0); __u.order = { type: "scout" }; __u.scout = { n: 1, name: "X", x: 0, y: 0, phase: "station", at: C.t, carry: { ore: 0, caches: 0 } }; campNavGo(C, campNavFind(C, 'pallas').row, true)`);
+  check('G  main\'s rule: a Fast burn is refused while a scout is out (it stays a regular trip), so a scout is not left behind by a normal Fast', J('C.nav.fast') === false);
   setup(6500, true);
-  check('G  a scout 6,500 px behind (past the 5,200 px leash) when the carrier is on a Fast burn is left behind: lost, with a line', J('C.by[__u.id] === undefined') && J('C.lostShips') === J('__l0') + 1 && SAYS().includes('camp.say.scoutleft'), JSON.stringify([J('C.lostShips'), J('__l0'), SAYS()]));
+  check('G  a scout 6,500 px behind (past the 5,200 px leash) when the carrier is on a Fast burn is left behind: lost, with a line', J('C.by[__u.id] === undefined || C.by[__u.id].hp === 0') && J('C.lostShips') === J('__l0') + 1 && SAYS().includes('camp.say.scoutleft'), JSON.stringify([J('C.lostShips'), J('__l0'), SAYS()]));
   setup(3000, true);
   check('G  a scout inside the leash (3,000 px) is not', J('C.by[__u.id] !== undefined && C.by[__u.id].hp > 0'));
   setup(6500, false);
@@ -178,7 +181,7 @@ sec('J', () => {
 });
 
 sec('K', () => {
-  const GOLD = {"l1":{"t":120000,"x":-9809.020067,"y":2569.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":138,"kills":8,"missiles":5,"reloadAt":134967,"shots":35,"blinkAt":50033.333333334114,"aliens":0,"ships":9,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]},"l3":{"t":120000,"x":-16939.020067,"y":6039.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":132,"kills":8,"missiles":5,"reloadAt":134967,"shots":54,"blinkAt":50033.333333334114,"aliens":0,"ships":9,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]}};
+  const GOLD = {"l1":{"t":120000,"x":-9809.020067,"y":2569.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":138,"kills":8,"missiles":5,"reloadAt":134967,"shots":23,"blinkAt":50033.333333334114,"aliens":0,"ships":8,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]},"l3":{"t":120000,"x":-16939.020067,"y":6039.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":128,"kills":8,"missiles":5,"reloadAt":134967,"shots":53,"blinkAt":50033.333333334114,"aliens":0,"ships":9,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]}};
   const run = lvl => J(`(() => {
     const C = campNew(${lvl}, ['blink'], { seed: 7 }); let shots = 0;
     for (let i = 0; i < 30 * 120 && !C.result; i++) {
@@ -190,7 +193,7 @@ sec('K', () => {
     }
     const c = C.carrier; return { t: Math.round(C.t), x: +c.x.toFixed(6), y: +c.y.toFixed(6), vx: +c.vx.toFixed(6), vy: +c.vy.toFixed(6), rot: +c.rot.toFixed(6), hp: +c.hp.toFixed(4), shield: +C.shield.toFixed(4), kills: C.kills, missiles: C.missiles, reloadAt: Math.round(C.reloadAt), shots, blinkAt: C.blinkAt, aliens: campAliens(C).length, ships: C.ships.length, turretAt: C.turrets.map(t => +t.at.toFixed(3)) };
   })()`);
-  [1, 3].forEach(l => { const a = run(l); check(`K  level ${l}: with no Scout order given a 120 s battle ends in the very state main (be704b4) ends in`, JSON.stringify(a) === JSON.stringify(GOLD['l' + l]), JSON.stringify(a)); });
+  [1, 3].forEach(l => { const a = run(l); check(`K  level ${l}: with no Scout order given a 120 s battle ends in the very state main (b721fe3) ends in`, JSON.stringify(a) === JSON.stringify(GOLD['l' + l]), JSON.stringify(a)); });
 });
 console.log(failed ? `CAMP SCOUTS FAIL (${failed} of ${n})` : `CAMP SCOUTS PASS (${n} checks)`);
 process.exit(failed ? 1 : 0);

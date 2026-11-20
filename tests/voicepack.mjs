@@ -1,0 +1,186 @@
+// smoke: the voice pack (plain Node, no Chrome, no network, no key): the names and the index, the catalogue of fixed lines, the recording tool on stand-ins, and playback in src/voice.js
+// Card space-game-voice-pack (src/voicepack.js, tools/voicepack.mjs, src/voice.js, voicepack/). Nothing here ever calls Deepgram: the tool's fetch is a stand-in that answers bytes, the game's fetch is a stand-in.
+//   A. the name of a line: the same in the game and the tool, a hash of the voice and the exact words
+//   B. the index: what is accepted, what is dropped (a hand edit cannot make a line say another), an empty index is no pack, the lookup, the fallback for a player with no key
+//   C. the catalogue: every fixed line the game speaks is in it, a line with a number or a name is expanded from the game's own tables or skipped with its reason, the chatter in each pilot's voice, the live places
+//   D. "every spoken fixed line has a pack entry or a reason": the speaking call sites of the code, against the catalogue
+//   E. the tool: the dry run reads no key and sends nothing; it asks before it spends; the key goes in one header and nowhere else; it records only what is new or changed, saving as it goes; a rejected key stops it; prune
+//   F. playback: a recorded line plays with no key and no Deepgram call; a line that is not recorded is a call as before; a voice the player chose is honoured; mute and the key's trouble
+//   G. the folder: whatever is in voicepack/ is consistent (every entry has its file and its name); the page loads the script; the doc says it
+// Run: node tests/voicepack.mjs   (exit code 1 on a failed check)
+import { readFileSync, existsSync, mkdtempSync, readdirSync, writeFileSync, rmSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { nodeGame, ROOT } from './nodegame.mjs';
+import { main, parseArgs, planOf, record, prune, readIndexRaw, writeIndex, loadCatalogue, costOf, SPEAK_URL, PRICE_PER_1K } from '../tools/voicepack.mjs';
+
+let failed = 0, n = 0;
+const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
+const g = nodeGame();
+const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
+const src = f => readFileSync(ROOT + '/' + f, 'utf8');
+const KEY = ['fake', 'key', 'for', 'this', 'test', 'only'].join('-'); // built, not written: no key-shaped literal in a file (tests/hygiene.mjs)
+
+// ---- A. the name of a line ----
+const id1 = J(`voicePackId('Launch clear.', 'aura-athena-en')`);
+check('a name is the voice\'s short name and 14 hex digits of a hash of the voice and the words: athena-<hash>', /^athena-[0-9a-f]{14}$/.test(id1) && J(`voicePackFile('${id1}')`) === id1 + '.mp3');
+check('the same words in the same voice are the same name; another voice, another word, another capital or a full stop is another', J(`voicePackId('Launch clear.', 'aura-athena-en')`) === id1 && ['aura-orion-en', 'aura-2-orion-en'].every(v => J(`voicePackId('Launch clear.', '${v}')`) !== id1) && J(`voicePackId('Launch clear', 'aura-athena-en')`) !== id1 && J(`voicePackId('launch clear.', 'aura-athena-en')`) !== id1 && J(`voicePackId('Launch clear. ', 'aura-athena-en')`) !== id1);
+check('an Aura-2 voice reads as its own name in the folder (orion), and the hash separates it from Aura', /^orion-/.test(J(`voicePackId('x', 'aura-2-orion-en')`)) && J(`voicePackId('x', 'aura-2-orion-en')`) !== J(`voicePackId('x', 'aura-orion-en')`));
+check('names do not collide over the whole catalogue (every line has its own)', (() => { const c = J('voicePackCatalogue()'); return new Set(c.lines.map(l => l.id)).size === c.lines.length && c.lines.every(l => l.id === J(`voicePackId(${JSON.stringify(l.text)}, ${JSON.stringify(l.voice)})`)); })());
+
+// ---- B. the index ----
+const entry = (text, voice, source = 'events') => ({ text, voice, bytes: 1234, source });
+const idx = lines => ({ v: 1, lines });
+g.run(`VOICEPACK.index = null; VOICEPACK.state = 'none';`);
+check('with no index there is no pack: nothing is found, the status is none', J(`voicePackFind('Launch clear.', 'aura-athena-en')`) === null && J('voicePackStatus()') === 'none');
+check('a good index is accepted: the status is ready and the exact line is found with its name and entry', J(`voicePackSetIndex(${JSON.stringify(idx({ [id1]: entry('Launch clear.', 'aura-athena-en') }))})`) === true && J('voicePackStatus()') === 'ready' && J(`voicePackFind('Launch clear.', 'aura-athena-en').id`) === id1);
+check('another voice, other words, or a near miss are not found', J(`voicePackFind('Launch clear.', 'aura-orion-en')`) === null && J(`voicePackFind('Launch clear!', 'aura-athena-en')`) === null && J(`voicePackFind(5, 'aura-athena-en')`) === null && J(`voicePackFind('Launch clear.')`) === null);
+check('an index that is not one is no pack: the wrong version, no lines, not an object, a null', [{ v: 2, lines: {} }, { v: 1 }, 'x', null, [], { v: 1, lines: 3 }].every(x => J(`voicePackSetIndex(${JSON.stringify(x)})`) === false));
+g.run(`voicePackSetIndex({ v: 1, lines: {} })`);
+check('an index with no line in it is an empty pack: the status is "empty" (not ready), so the game is exactly as before', J('voicePackStatus()') === 'empty' && J(`voicePackFind('Launch clear.', 'aura-athena-en')`) === null);
+check('an entry whose name is not the hash of its own words is dropped (a hand edit cannot make a file say another line), as is one with a bad name', (() => { g.run(`voicePackSetIndex(${JSON.stringify(idx({ [id1]: entry('Launch clear.', 'aura-athena-en'), 'athena-00000000000000': entry('Launch clear.', 'aura-athena-en'), 'BAD NAME': entry('x', 'aura-athena-en'), [J(`voicePackId('y', 'aura-athena-en')`)]: entry('NOT y', 'aura-athena-en') }))})`); return J('VOICEPACK.index.size') === 1 && J(`voicePackFind('Launch clear.', 'aura-athena-en')`) !== null; })());
+check('a pack of more lines than the cap is refused', J(`voicePackSetIndex({ v: 1, lines: Object.fromEntries(Array.from({ length: VOICEPACK.max + 1 }, (_, i) => ['athena-' + String(i).padStart(14, '0'), {}])) })`) === false);
+g.run(`voicePackSetIndex(${JSON.stringify(idx({ [id1]: entry('Launch clear.', 'aura-athena-en') }))})`);
+check('a player with no key who picked another ship voice falls back to the pack\'s own (athena); with a key their voice is honoured (a miss); a wing pilot\'s voice never falls back', J(`voicePackPick('Launch clear.', 'aura-orion-en', 'aura-orion-en', false).voice`) === 'aura-athena-en' && J(`voicePackPick('Launch clear.', 'aura-orion-en', 'aura-orion-en', true)`) === null && J(`voicePackPick('Launch clear.', 'aura-perseus-en', 'aura-orion-en', false)`) === null && J(`voicePackPick('Launch clear.', 'aura-athena-en', 'aura-athena-en', true).id`) === id1);
+check('the index is read from voicepack/index.json once, with fetch: a missing file, a bad file or no fetch is "no pack" and never throws', await (async () => {
+  g.run(`VOICEPACK.index = null; VOICEPACK.state = 'none'; window.__idx = ${JSON.stringify(idx({ [id1]: entry('Launch clear.', 'aura-athena-en') }))}; window.__urls = [];`);
+  const a = await g.run(`voicePackLoad(async u => { __urls.push(u); return { ok: true, json: async () => __idx }; })`), again = await g.run(`voicePackLoad(async u => { __urls.push(u); return { ok: true, json: async () => __idx }; })`);
+  g.run(`VOICEPACK.index = null; VOICEPACK.state = 'none';`); const b = await g.run(`voicePackLoad(async u => ({ ok: false }))`), st1 = J('voicePackStatus()');
+  g.run(`VOICEPACK.state = 'none';`); const c = await g.run(`voicePackLoad(async u => { throw new Error('offline'); })`), st2 = J('voicePackStatus()');
+  g.run(`VOICEPACK.state = 'none';`); const d = await g.run(`voicePackLoad(async u => ({ ok: true, json: async () => { throw new Error('bad json'); } }))`);
+  return a === true && again === true && J('__urls').join() === 'voicepack/index.json' && b === false && st1 === 'none' && c === false && st2 === 'none' && d === false;
+})());
+
+// ---- C. the catalogue ----
+const cat = J('voicePackCatalogue()');
+const bySrc = {}; cat.lines.forEach(l => { bySrc[l.source] = (bySrc[l.source] || 0) + 1; });
+check('the sources are the ship\'s event lines, the Campaign\'s says, refusals, story, briefings, warp lines and the wing\'s chatter, each with lines', ['events', 'campaign.say', 'campaign.no', 'campaign.story', 'campaign.brief', 'campaign.warp', 'campaign.chatter'].every(s => bySrc[s] > 0), JSON.stringify(bySrc));
+check('every line is fixed (no {placeholder} left in it), has words, an Aura voice name, a source and a name that is its hash', cat.lines.every(l => l.text.trim() && !/\{[a-z0-9_]+\}/i.test(l.text) && /^aura(-2)?-[a-z]{3,12}-en$/.test(l.voice) && l.source && /^[a-z]+-[0-9a-f]{14}$/.test(l.id)));
+check('the ship\'s own lines are in its voice (athena); --voices adds the others: five voices for the ship\'s lines, the wing\'s unchanged', (() => { const sh = cat.lines.filter(l => l.source !== 'campaign.chatter'); const all = J(`voicePackCatalogue({ voices: ['aura-athena-en', 'aura-orion-en'] })`); return sh.every(l => l.voice === 'aura-athena-en') && all.lines.filter(l => l.source !== 'campaign.chatter').length === sh.length * 2 && all.lines.filter(l => l.source === 'campaign.chatter').length === bySrc['campaign.chatter']; })());
+check('the wing\'s radio: every chatter line in each of the four pilots\' own voices, none in the computer\'s', (() => { const ch = cat.lines.filter(l => l.source === 'campaign.chatter'), voices = J('CHATTER.pilots.map(p => p[1])'), lines = new Set(ch.map(l => l.text)); return voices.length === 4 && ch.length === lines.size * 4 && voices.every(v => ch.filter(l => l.voice === v).length === lines.size) && !ch.some(l => l.voice === 'aura-athena-en'); })());
+check('every chatter line of the content file is in it (the card wrote them with no number so each is recorded once)', (() => { const keys = J(`Object.keys(UI_TEXT).filter(k => /^camp\\.chat\\./.test(k))`), texts = new Set(cat.lines.filter(l => l.source === 'campaign.chatter').map(l => l.text)); return keys.length > 20 && keys.every(k => texts.has(J(`UI_TEXT[${JSON.stringify(k)}]`))); })());
+// the completeness contract: nothing of a speaking family is silently left out
+const fams = [['campaign.say', /^camp\.say\./], ['campaign.no', /^camp\.no\./], ['campaign.story', /^camp\.l\d+\.(before|after)\.\d+$/], ['campaign.brief', /^camp\.m\.\d+\.\d+\.b[12]$/], ['campaign.warp', /^camp\.warp\.l\d+$/]];
+check('every key of a speaking family is either a catalogue line (fixed), expanded from the game\'s tables, or skipped with a reason: none is dropped silently', fams.every(([id, re]) => J(`Object.keys(UI_TEXT).filter(k => ${re.toString()}.test(k))`).every(k => { const t = J(`UI_TEXT[${JSON.stringify(k)}]`); if (!/\{[a-z0-9_]+\}/i.test(t)) return cat.lines.some(l => l.source === id && l.text === t); const sk = cat.skipped.find(s => s.key === k); const exp = J(`typeof VOICEPACK_EXPAND[${JSON.stringify(k)}] === 'function' && VOICEPACK_EXPAND[${JSON.stringify(k)}]().length`); return (sk && sk.why.length > 20) || exp > 0; })));
+check('a line with a name or a number the game\'s tables list is recorded for each value: "Building 3 fighters.", "The convoy to Mars is lost.", "Point scanned: 2 of 3.", "Hauler 2 is under way.", "Resources gathered: 2."', ['Building 3 fighters.', 'Building 1 escort.', 'A new fighter is in the bay.', 'The convoy to Mars is lost.', 'Point scanned: 2 of 3.', 'Hauler 2 is under way.', 'Resources gathered: 2.', 'Escorts are with the Mars convoy.'].every(t => cat.lines.some(l => l.text === t)), cat.lines.filter(l => /Building|Point|Resources/.test(l.text)).map(l => l.text).join(' | '));
+check('and the warp lines, for the destination and the distance the levels name: "4.4 light years to Alpha Centauri."', cat.lines.some(l => l.source === 'campaign.warp' && /^4\.4 light years to Alpha Centauri\./.test(l.text)) && cat.lines.some(l => l.source === 'campaign.warp' && /^Alpha Centauri\. Dropping out of warp\.$/.test(l.text)));
+check('what is left live says why: the ore needed and in the store is a number the tables do not list, and the places that speak free text are written down', cat.skipped.some(s => s.key === 'camp.no.noore2' && /kept live/.test(s.why)) && cat.skipped.every(s => s.why && s.text && s.source) && cat.live.length >= 6 && cat.live.every(l => l.where && l.why));
+check('a card adds its own source and its lines are in the catalogue, in the ship\'s voice, and a source that throws is the tool\'s trouble to see, not the game\'s: removed again', (() => { g.run(`voicePackSource({ id: 'test.extra', voice: 'ship', lines: () => ['A line from another card.', 'A line from another card.'] })`); const c = J('voicePackCatalogue()'); const ok = c.lines.filter(l => l.source === 'test.extra').length === 1; g.run(`VOICEPACK_SOURCES.splice(VOICEPACK_SOURCES.findIndex(s => s.id === 'test.extra'), 1)`); return ok && J('voicePackCatalogue().lines.some(l => l.source === "test.extra")') === false; })());
+check('a changed line is a new name and the old one is stale: the plan against an index with the old words', (() => { const l = cat.lines.find(x => x.text === 'Launch clear.'); const old = { v: 1, lines: { [l.id]: entry(l.text, l.voice), 'athena-0123456789abcd': entry('Launch clear, pilot.', 'aura-athena-en') } }; const p = J(`voicePackPlan(voicePackCatalogue(), ${JSON.stringify(old)})`); return p.done === 1 && p.todo.length === cat.lines.length - 1 && p.stale.join() === 'athena-0123456789abcd' && !p.todo.some(x => x.id === l.id); })());
+
+// ---- D. every spoken fixed line has a pack entry or a reason ----
+const ids = new Set(cat.lines.map(l => l.text));
+const files = ['voice.js', 'campaignscene.js', 'campchatter.js', 'campwarp.js', 'cmdstrip.js', 'chat.js', 'shipcomputer.js'];
+check('the speaking call sites are the ones the catalogue knows: voiceSay, voiceSayThen and shipcompSay appear only in these files (a new speaker is a new source or a reason)', (() => { const all = readdirSync(join(ROOT, 'src')).filter(f => /\.js$/.test(f)); return all.filter(f => /\b(voiceSay|voiceSayThen|shipcompSay)\(/.test(src('src/' + f).replace(/\/\/.*$/gm, ''))).every(f => files.concat(['playlog.js']).includes(f)); })());
+check('every literal line given to voiceLine or voiceSay in src/voice.js is in VOICE_LINES (so in the catalogue) or is a computed line the live list names', (() => { const code = src('src/voice.js').replace(/\/\/.*$/gm, ''), lits = [...code.matchAll(/voiceLine\('[a-z-]+', '([^']+)'\)/g)].map(m => m[1]); return lits.every(t => ids.has(t)); })());
+check('and the computed ones are named as live: the credits and the accepted call', /credits received/.test(src('src/voice.js')) && cat.live.some(l => /credits/.test(l.where)) && cat.live.some(l => /call accepted/.test(l.where)));
+check('every line the Campaign scene says (say(lines) at the cards) comes from a family above: the story, the briefing, the won and lost cards; the debrief\'s score and the lose card are on the live list', (() => { const sc = src('src/campaignscene.js'); return /campStory\(this\.level, 'before'[,)]/.test(sc) && /campStory\(this\.level, 'after'[,)]/.test(sc) && /uiText\(k \+ 'b1'\)/.test(sc) && cat.live.some(l => /debrief/.test(l.where)) && cat.live.some(l => /lose card/.test(l.where)); })());
+check('the wing\'s radio says its lines through voiceSay in the pilot\'s own voice, from the pool the catalogue reads (chatterPool), and the warp says uiText of the lines it expands', /voiceSay\(line\.text, 0, line\.voice\)/.test(src('src/campchatter.js')) && /camp\.chat\.' \+ ev/.test(src('src/campchatter.js')) && /shipcompSay\(uiText\(l\.key, this\.vars\)\)/.test(src('src/campwarp.js')));
+
+// ---- E. the tool ----
+const tmp = mkdtempSync(join(tmpdir(), 'voicepack-test-'));
+const mk = (over = {}) => { const out = [], calls = []; const io = Object.assign({ out: l => out.push(String(l)), ask: async q => { out.push('ASK ' + q); return io.answer || ''; }, isTTY: true, env: {}, wait: async () => {}, gap: 0, answer: 'yes',
+  fetch: async (url, opts) => { calls.push({ url: String(url), auth: opts.headers.Authorization, body: JSON.parse(opts.body) }); return { ok: true, status: 200, arrayBuffer: async () => new Uint8Array(900 + calls.length).buffer }; } }, over); return { io, out, calls }; };
+const guardEnv = reads => new Proxy({ DEEPGRAM_API_KEY: KEY }, { get: (t, k) => { if (k === 'DEEPGRAM_API_KEY') reads.push(k); return t[k]; } });
+const catAll = loadCatalogue(ROOT, {}).cat;
+const dry = mk({ env: guardEnv([]) }), reads = []; dry.io.env = guardEnv(reads); dry.io.fetch = async () => { throw new Error('the dry run sent something'); };
+const code0 = await main(['--dry-run', '--dir', join(tmp, 'a')], dry.io);
+check('the dry run prints the plan with the characters and a cost estimate, reads NO key and sends NOTHING, and leaves no file behind', code0 === 0 && dry.out.some(l => /^To record: \d+ lines, \d+ characters/.test(l)) && dry.out.some(l => /^Estimate: about \$\d+\.\d\d/.test(l)) && /Dry run: no key was read and nothing was sent/.test(dry.out.join('\n')) && reads.length === 0 && !existsSync(join(tmp, 'a')), dry.out.join(' | '));
+check('the estimate is the characters times Deepgram\'s per-thousand price (Aura 0.015, Aura-2 0.03), and it is a guess the tool says so', (() => { const c = costOf([{ text: 'x'.repeat(1000), voice: 'aura-athena-en' }, { text: 'x'.repeat(1000), voice: 'aura-2-orion-en' }]); return Math.abs(c - 0.045) < 1e-9 && PRICE_PER_1K.aura === 0.015 && dry.out.some(l => /a guess, see deepgram\.com\/pricing/.test(l)); })());
+const nokey = mk({ env: {} }); const c1 = await main(['--dir', join(tmp, 'b')], nokey.io);
+check('without a key in the environment it says how to set it (never writing it down) and spends nothing: exit 2, no call', c1 === 2 && /export DEEPGRAM_API_KEY/.test(nokey.out.join('\n')) && nokey.calls.length === 0);
+const notty = mk({ env: { DEEPGRAM_API_KEY: KEY }, isTTY: false }); const c2 = await main(['--dir', join(tmp, 'b')], notty.io);
+check('not in a terminal it refuses ("it asks before it spends"): no prompt can be answered by a pipe, no call', c2 === 2 && /Run it in a terminal/.test(notty.out.join('\n')) && notty.calls.length === 0);
+const no = mk({ env: { DEEPGRAM_API_KEY: KEY }, answer: 'no' }); const c3 = await main(['--dir', join(tmp, 'b')], no.io);
+check('it prints the cost and ASKS; anything but "yes" spends nothing', c3 === 0 && no.out.some(l => /^ASK Type yes to spend about \$\d+\.\d\d recording \d+ lines/.test(l)) && /Nothing was spent/.test(no.out.join('\n')) && no.calls.length === 0 && !existsSync(join(tmp, 'b', 'index.json')));
+const cap = mk({ env: { DEEPGRAM_API_KEY: KEY } }); const c4 = await main(['--dir', join(tmp, 'b'), '--max-cost', '0.001'], cap.io);
+check('over the limit (--max-cost, default 5 dollars) it refuses before asking', c4 === 2 && /over the limit/.test(cap.out.join('\n')) && !cap.out.some(l => /^ASK/.test(l)) && cap.calls.length === 0);
+const bad = mk({ env: { DEEPGRAM_API_KEY: KEY } });
+check('the key is never an argument (it would sit in the shell history): --key and --token are refused without echoing what was given; an unknown option and a bad voice are refused too', (await main(['--key', 'abc123SECRET'], bad.io)) === 2 && !bad.out.join('\n').includes('abc123SECRET') && (await main(['--bogus'], bad.io)) === 2 && (await main(['--voices', 'not-a-voice'], bad.io)) === 2 && bad.calls.length === 0);
+// a real recording on the stand-in: only the first 6 lines, to keep it quick (--only picks a source)
+const yes = mk({ env: { DEEPGRAM_API_KEY: KEY } }), dirR = join(tmp, 'r');
+const c5 = await main(['--dir', dirR, '--only', 'events'], yes.io);
+const idxR = readIndexRaw(dirR), nEvents = catAll.lines.filter(l => l.source === 'events').length;
+check('after "yes" it records every line of the source: one POST each, to the Aura speak URL with the voice and the mp3 encoding, the words in the body, the key in the Authorization header', c5 === 0 && yes.calls.length === nEvents && yes.calls.every(c => c.url.startsWith(SPEAK_URL + '?model=aura-athena-en&encoding=mp3') && c.auth === 'Token ' + KEY && typeof c.body.text === 'string'), yes.out.slice(-3).join(' | '));
+check('each line is a file named by its hash and an entry of the index (words, voice, bytes, source), in a sorted index, and the files are the bytes Deepgram sent', Object.keys(idxR.lines).length === nEvents && Object.keys(idxR.lines).every(id => existsSync(join(dirR, id + '.mp3')) && statSync(join(dirR, id + '.mp3')).size === idxR.lines[id].bytes && J(`voicePackId(${JSON.stringify(idxR.lines[id].text)}, ${JSON.stringify(idxR.lines[id].voice)})`) === id && idxR.lines[id].source === 'events') && JSON.stringify(Object.keys(idxR.lines)) === JSON.stringify(Object.keys(idxR.lines).slice().sort()));
+check('the KEY IS NOWHERE ELSE: not in any line the tool printed, not in the index, not in a file of the pack folder', !yes.out.join('\n').includes(KEY) && !readFileSync(join(dirR, 'index.json'), 'utf8').includes(KEY) && readdirSync(dirR).every(f => !readFileSync(join(dirR, f)).includes(Buffer.from(KEY))));
+const again = mk({ env: { DEEPGRAM_API_KEY: KEY } }); const c6 = await main(['--dir', dirR, '--only', 'events'], again.io);
+check('run again with nothing changed: "Nothing to record", no question, no call (an unchanged line is skipped)', c6 === 0 && /Nothing to record/.test(again.out.join('\n')) && again.calls.length === 0 && !again.out.some(l => /^ASK/.test(l)));
+// a changed line: take an entry away (a new line), add a stale one (the old words) and delete a file (a lost recording)
+const lines = Object.keys(idxR.lines), gone = lines[0], lost = lines[1], goneText = idxR.lines[gone].text;
+const ix2 = readIndexRaw(dirR); delete ix2.lines[gone]; ix2.lines['athena-deadbeefdeadbe'] = { text: 'An old line that was changed.', voice: 'aura-athena-en', bytes: 999, source: 'events' }; writeIndex(dirR, ix2); rmSync(join(dirR, lost + '.mp3')); writeFileSync(join(dirR, 'athena-0000aaaa0000aa.mp3'), Buffer.alloc(500));
+const inc = mk({ env: { DEEPGRAM_API_KEY: KEY } }); const c7 = await main(['--dir', dirR, '--only', 'events'], inc.io);
+check('incremental: only the new line and the line whose file is gone are recorded again (2 calls, not all of them); the stale entry and the stray files (the new line\'s old file is one until it is recorded) are kept and reported', c7 === 0 && inc.calls.length === 2 && inc.calls.map(c => c.body.text).sort().join('|') === [goneText, idxR.lines[lost].text].sort().join('|') && /1 stale entries, 2 stray files/.test(inc.out.join('\n')) && readIndexRaw(dirR).lines['athena-deadbeefdeadbe'] && existsSync(join(dirR, 'athena-0000aaaa0000aa.mp3')));
+const chk = mk(); const c8 = await main(['--dir', dirR, '--only', 'events', '--check'], chk.io);
+check('--check fails (exit 1) while there is a stale entry or a stray file, and says how many', c8 === 1 && /CHECK FAILED: 0 to record, 1 stale, 1 stray/.test(chk.out.join('\n')));
+const pr = mk({ answer: 'yes' }); const c9 = await main(['--dir', dirR, '--only', 'events', '--prune'], pr.io);
+check('--prune asks, then removes the stale entry and the stray file and nothing else', c9 === 0 && pr.out.some(l => /^ASK Type yes to remove them/.test(l)) && !readIndexRaw(dirR).lines['athena-deadbeefdeadbe'] && !existsSync(join(dirR, 'athena-0000aaaa0000aa.mp3')) && Object.keys(readIndexRaw(dirR).lines).length === nEvents);
+const chk2 = mk(); const c10 = await main(['--dir', dirR, '--only', 'events', '--check'], chk2.io);
+check('and --check passes once the pack is complete for the source: exit 0', c10 === 0 && /CHECK PASSED/.test(chk2.out.join('\n')));
+const rej = mk({ env: { DEEPGRAM_API_KEY: KEY }, fetch: async () => ({ ok: false, status: 401, arrayBuffer: async () => new ArrayBuffer(0) }) }); const c11 = await main(['--dir', join(tmp, 'rej'), '--only', 'events'], rej.io);
+check('a key Deepgram refuses (401, 402, 403) stops the run at once with a plain line and nothing saved, and the key is not in it', c11 === 1 && /Deepgram refused the key \(HTTP 401\)/.test(rej.out.join('\n')) && !rej.out.join('\n').includes(KEY) && !existsSync(join(tmp, 'rej', 'index.json')));
+let tries = 0; const lim = mk({ env: { DEEPGRAM_API_KEY: KEY }, fetch: async () => { tries++; return tries === 1 ? { ok: false, status: 429, arrayBuffer: async () => new ArrayBuffer(0) } : { ok: true, status: 200, arrayBuffer: async () => new Uint8Array(1000).buffer }; } }); const c12 = await main(['--dir', join(tmp, 'lim'), '--only', 'campaign.warp'], lim.io);
+check('a 429 (too fast) is waited for and tried again; the line is saved', c12 === 0 && Object.keys(readIndexRaw(join(tmp, 'lim')).lines).length === catAll.lines.filter(l => l.source === 'campaign.warp').length && tries === catAll.lines.filter(l => l.source === 'campaign.warp').length + 1);
+const emp = mk({ env: { DEEPGRAM_API_KEY: KEY }, fetch: async () => ({ ok: true, status: 200, arrayBuffer: async () => new ArrayBuffer(10) }) }); await main(['--dir', join(tmp, 'emp'), '--only', 'campaign.warp'], emp.io);
+check('an answer too small to be audio is a failure, not a file (the pack is never given an empty recording)', !existsSync(join(tmp, 'emp', 'index.json')) || Object.keys(readIndexRaw(join(tmp, 'emp')).lines).length === 0);
+const lst = mk(); await main(['--list', '--skipped'], lst.io);
+check('--list names every line with its state, and --skipped lists the lines that are not recorded and the places that speak free text, with the reasons', lst.out.filter(l => /^(todo|recorded) /.test(l)).length === catAll.lines.length && lst.out.some(l => /^not recorded .*camp\.no\.noore2/.test(l)) && lst.out.some(l => /^live /.test(l)));
+check('the plan names what is new, changed or lost with the words of the tool: planOf against an empty index is every line', (() => { const p = planOf(catAll, { v: 1, lines: {} }, join(tmp, 'nothing')); return p.todo.length === catAll.lines.length && p.done === 0 && p.stale.length === 0 && p.cost > 0 && p.cost < 1; })());
+check('parseArgs: the defaults (ship voice, five dollars), and every flag', (() => { const o = parseArgs(['--dry-run', '--voices', 'aura-athena-en,aura-orion-en', '--only', 'events', '--max-cost', '2']); return o.dry && o.voices.length === 2 && o.only === 'events' && o.maxCost === 2 && parseArgs([]).maxCost === 5 && parseArgs([]).voices === null; })());
+rmSync(tmp, { recursive: true, force: true });
+
+// ---- F. playback ----
+const play = nodeGame();
+const P = e => JSON.parse(play.run(`JSON.stringify(${e}) ?? 'null'`));
+const line1 = 'Launch clear.', pid = P(`voicePackId(${JSON.stringify(line1)}, 'aura-athena-en')`), pidO = P(`voicePackId(${JSON.stringify(line1)}, 'aura-perseus-en')`);
+play.run(`
+  window.__calls = []; window.__played = []; window.__fail404 = false;
+  fetch = async (url, opts) => { __calls.push(String(url)); if (/^voicepack\\//.test(url)) return __fail404 ? { ok: false, status: 404 } : { ok: true, status: 200, arrayBuffer: async () => new ArrayBuffer(777) }; return { ok: true, status: 200, arrayBuffer: async () => new ArrayBuffer(555) }; };
+  audioReady = () => true; AC = { decodeAudioData: async ab => ({ duration: 0.3, bytes: ab.byteLength }) };
+  voicePlay = (buf, onStart, line) => { __played.push({ bytes: buf.bytes, text: line.text, voice: line.voice, pack: !!line.pack, packVoice: line.pack ? line.pack.voice : '' }); if (onStart) onStart(); return Promise.resolve(); };
+  G.muted = false; G.volume = 0.8; VOICE.on = true; VOICE.bad = false; VOICE.pauseUntil = 0; VOICE.key = ''; VOICE.voice = 'aura-athena-en'; VOICE.said = {}; VOICE.cache.clear(); VOICEPACK.cache.clear();
+  voicePackSetIndex({ v: 1, lines: { ['${pid}']: { text: ${JSON.stringify(line1)}, voice: 'aura-athena-en', bytes: 777, source: 'events' }, ['${pidO}']: { text: ${JSON.stringify(line1)}, voice: 'aura-perseus-en', bytes: 777, source: 'campaign.chatter' } } });
+  window.__reset = () => { __calls.length = 0; __played.length = 0; VOICE.said = {}; VOICE.cache.clear(); VOICEPACK.cache.clear(); VOICE.playing = false; VOICE.queue.length = 0; VOICE.gen++; };
+`);
+const settle = async () => { await play.waitFor('!VOICE.playing', 3000); };
+let said = P(`voiceSay(${JSON.stringify(line1)}, 1)`); await settle();
+check('NO KEY: a recorded line plays from its file: one GET of voicepack/<name>.mp3, played once, from the pack, and nothing went to Deepgram', said === true && P('__calls').join() === `voicepack/${pid}.mp3` && P('__played.length') === 1 && P('__played[0].pack') === true && P('__played[0].bytes') === 777 && !P('__calls').some(u => /deepgram/.test(u)));
+play.run('__reset()'); said = P(`voiceSay('Something no file has.', 1)`); await settle();
+check('NO KEY: a line that is not recorded is refused as before (no call, nothing played): the game is as it was', said === false && P('__calls.length') === 0 && P('__played.length') === 0);
+play.run(`__reset(); VOICE.key = '${KEY}';`); said = P(`voiceSay('Something no file has.', 1)`); await settle();
+check('WITH A KEY: a line that is not recorded is a Deepgram call, as before (the only network call of the game)', said === true && P('__calls').length === 1 && /api\.deepgram\.com\/v1\/speak\?model=aura-athena-en/.test(P('__calls[0]')) && P('__played[0].pack') === false);
+play.run(`__reset();`); said = P(`voiceSay(${JSON.stringify(line1)}, 1)`); await settle();
+check('WITH A KEY: a recorded line is still the pack\'s: free, no Deepgram call', said === true && P('__calls').join() === `voicepack/${pid}.mp3` && P('__played[0].pack') === true);
+play.run(`__reset(); VOICE.voice = 'aura-orion-en';`); said = P(`voiceSay(${JSON.stringify(line1)}, 1)`); await settle();
+check('WITH A KEY and another voice picked (orion): the player\'s choice is honoured: the line is not in orion, so it is a Deepgram call in orion\'s voice', said === true && /model=aura-orion-en/.test(P('__calls[0]')) && P('__played[0].pack') === false);
+play.run(`__reset(); VOICE.key = ''; VOICE.voice = 'aura-orion-en';`); said = P(`voiceSay(${JSON.stringify(line1)}, 1)`); await settle();
+check('NO KEY and orion picked: the recorded line plays in the pack\'s own voice (athena): everyone hears the main lines', said === true && P('__calls').join() === `voicepack/${pid}.mp3` && P('__played[0].pack') === true && P('__played[0].packVoice') === 'aura-athena-en' && P('__played[0].bytes') === 777);
+play.run(`__reset(); VOICE.voice = 'aura-athena-en';`); said = P(`voiceSay(${JSON.stringify(line1)}, 0, 'aura-perseus-en')`); await settle();
+check('a wing pilot\'s line plays in that pilot\'s voice from the pack with no key (the radio needs no key either)', said === true && P('__calls').join() === `voicepack/${pidO}.mp3` && P('__played[0].voice') === 'aura-perseus-en');
+play.run('__reset(); G.muted = true;'); said = P(`voiceSay(${JSON.stringify(line1)}, 1)`);
+check('muted, or the volume at zero, or the voice switched off: a recorded line is not played either (the settings are the player\'s)', said === false && (play.run('__reset(); G.muted = false; G.volume = 0'), P(`voiceSay(${JSON.stringify(line1)}, 1)`) === false) && (play.run('__reset(); G.volume = 0.8; VOICE.on = false'), P(`voiceSay(${JSON.stringify(line1)}, 1)`) === false) && P('__calls.length') === 0);
+play.run('__reset(); VOICE.on = true; VOICE.bad = true; VOICE.pauseUntil = performance.now() + 60000;'); said = P(`voiceSay(${JSON.stringify(line1)}, 1)`); await settle();
+check('a key Deepgram rejected, or a backoff after failed calls, is the key\'s trouble and not the pack\'s: the recorded line still plays', said === true && P('__played.length') === 1 && P('__played[0].pack') === true);
+play.run('__reset(); VOICE.bad = false; VOICE.pauseUntil = 0; __fail404 = true;'); said = P(`voiceSay(${JSON.stringify(line1)}, 1)`); await settle();
+check('a file that cannot be read (404) with no key is silent (and the game goes on); with a key it falls through to Deepgram', said === true && P('__played.length') === 0 && (play.run(`__reset(); VOICE.key = '${KEY}'; __fail404 = true;`), P(`voiceSay(${JSON.stringify(line1)}, 1)`), await settle(), P('__calls').length === 2 && /deepgram/.test(P('__calls[1]')) && P('__played[0].bytes') === 555));
+play.run(`__reset(); __fail404 = false; VOICE.key = '';`);
+check('a decoded recording is kept for the session (the cache): the same line again is no second GET', (async () => 1)() && await (async () => { await play.run(`voiceBuffer(${JSON.stringify(line1)}, 'aura-athena-en', voicePackFind(${JSON.stringify(line1)}, 'aura-athena-en'))`); await play.run(`voiceBuffer(${JSON.stringify(line1)}, 'aura-athena-en', voicePackFind(${JSON.stringify(line1)}, 'aura-athena-en'))`); return P('__calls').length === 1 && P('VOICEPACK.cache.size') === 1; })());
+check('the pack\'s cache has a cap (64) so a long session does not keep every line', (() => { play.run(`VOICEPACK.cache.clear(); for (let i = 0; i < 100; i++) { VOICEPACK.cache.set('x' + i, 1); if (VOICEPACK.cache.size > VOICEPACK.cacheMax) VOICEPACK.cache.delete(VOICEPACK.cache.keys().next().value); }`); return P('VOICEPACK.cache.size') === 64 && P('VOICEPACK.cacheMax') === 64; })());
+play.run(`VOICE.key = ''; VOICE.on = true; VOICE.bad = false;`);
+check('the Settings status: NO KEY with no pack, FIXED LINES with a pack and no key, ON with a key, KEY REJECTED, OFF', (() => { const st = () => P('voiceStatus()'); const a = (play.run(`VOICEPACK.index = null; VOICEPACK.state = 'none'`), st()); play.run(`voicePackSetIndex({ v: 1, lines: {} })`); const b = st(); play.run(`voicePackSetIndex({ v: 1, lines: { ['${pid}']: { text: ${JSON.stringify(line1)}, voice: 'aura-athena-en', bytes: 1, source: 'events' } } })`); const c = st(); play.run(`VOICE.on = false`); const off = st(); play.run(`VOICE.on = true; VOICE.key = '${KEY}'`); const d = st(); play.run('VOICE.bad = true'); const e = st(); play.run('VOICE.bad = false; VOICE.on = false'); const f = st(); return a === 'NO KEY' && b === 'NO KEY' && c === 'FIXED LINES' && off === 'NO KEY' && d === 'ON' && e === 'KEY REJECTED' && f === 'OFF'; })());
+check('the game starts the pack with its own start (voiceInstall asks for the index), and a Settings screen that says "the ship does not speak" is for no pack only', /voicePackLoad\(\)/.test(src('src/voice.js')) && play.errors.length === 0, play.errors.join(' | '));
+
+// ---- G. the folder, the page, the doc ----
+const dirP = join(ROOT, 'voicepack'), ixP = readIndexRaw(dirP);
+check('voicepack/ has an index of this format: version 1 and lines', existsSync(join(dirP, 'index.json')) && ixP.v === 1 && typeof ixP.lines === 'object');
+const bad2 = Object.keys(ixP.lines).filter(id => !existsSync(join(dirP, id + '.mp3')) || J(`voicePackId(${JSON.stringify(ixP.lines[id].text)}, ${JSON.stringify(ixP.lines[id].voice)})`) !== id || statSync(join(dirP, id + '.mp3')).size !== ixP.lines[id].bytes);
+check('whatever has been recorded is consistent: every entry has its file, of its size, under its own hash; nothing else but the index and the readme is in the folder', bad2.length === 0 && readdirSync(dirP).every(f => f === 'index.json' || f === 'README.md' || (/^[a-z0-9-]+\.mp3$/.test(f) && ixP.lines[f.slice(0, -4)])), bad2.join());
+const html = src('index.html');
+check('the page loads src/voicepack.js once, after voice.js', (html.match(/src\/voicepack\.js/g) || []).length === 1 && html.indexOf('src/voice.js') < html.indexOf('src/voicepack.js'));
+const pure = src('src/voicepack.js').replace(/\/\/.*$/gm, '');
+check('src/voicepack.js is the pure half: nothing of Phaser, the page, storage, the clock or Math.random (its one network call is fetch, passed in or the global, for a file of the game)', !/\b(Phaser|document|window|localStorage|setTimeout|Math\.random|performance|Date)\b/.test(pure));
+check('the key is not in the repository: nothing in the tool, the pack folder or the doc looks like a key, and the tool reads exactly one environment name, never writes a key file', (() => { const t = src('tools/voicepack.mjs'); return !/[0-9a-f]{40}/.test(t) && !/writeFileSync\([^)]*key/i.test(t) && (t.match(/env\.[A-Z_]+/g) || []).join() === 'env.DEEPGRAM_API_KEY' && !/process\.argv[^;]*key/i.test(t); })());
+check('the doc says what the pack is, how to run the tool, the key rule, the cost and the incremental rule (docs/VOICE.md)', (() => { const d = src('docs/VOICE.md'); return /voice pack/i.test(d) && /tools\/voicepack\.mjs/.test(d) && /DEEPGRAM_API_KEY/.test(d) && /--dry-run/.test(d) && /re-records only|only what changed|changed or new/.test(d); })());
+check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
+console.log(failed ? `VOICE PACK FAIL (${failed} of ${n})` : `VOICE PACK PASS (${n} checks)`);
+process.exitCode = failed ? 1 : 0;

@@ -25,14 +25,19 @@ const CAMZOOM = {
   ease: 0.008,          // per ms: about 90% of the way in 0.3 s
   far: 0.75, farFull: 0.55, // the ship's chevron starts to show under this zoom and is solid by this one
   labelMax: 2.5,        // a world label is never drawn more than this many times its size
+  key: 1.2, keyHold: 1.03, // the + and - keys (card space-game-campaign-zoom): a press is this step (about a notch and a half of the wheel), and each repeat of a held key this much
   want: 1               // where the wheel has put the zoom: kept for the session
 };
-function camzoomClamp(z) { return Math.min(CAMZOOM.max, Math.max(CAMZOOM.min, +z || 1)); }
+function camzoomClamp(z, lo, hi) { return Math.min(hi === undefined ? CAMZOOM.max : hi, Math.max(lo === undefined ? CAMZOOM.min : lo, +z || 1)); } // lo and hi: another range (the Campaign's map)
 // the wheel moved by deltaY: the new setting. Multiplicative, so every notch feels the same size near and far.
-function camzoomWheel(want, deltaY) {
+function camzoomWheel(want, deltaY, lo, hi) {
   const d = Math.max(-CAMZOOM.notch, Math.min(CAMZOOM.notch, +deltaY || 0));
-  return camzoomClamp(want * Math.exp(-d * CAMZOOM.wheel));
+  return camzoomClamp(want * Math.exp(-d * CAMZOOM.wheel), lo, hi);
 }
+// the + (dir 1) or - (dir -1) key: the new setting; repeat is a held key's repeat. The same multiplicative steps as the wheel, so + then - is where you began
+function camzoomKey(want, dir, repeat, lo, hi) { return camzoomClamp(want * Math.pow(repeat ? CAMZOOM.keyHold : CAMZOOM.key, dir < 0 ? -1 : 1), lo, hi); }
+// whether the wheel is the camera's now: not while the scene is leaving or the ship is dead, and not while the scene says it has the wheel for something else (s.camzoomHold: the Campaign's open map)
+function camzoomCanWheel(s) { return !s.leaving && !s.dead && !s.camzoomHold; }
 // one frame of easing from cur toward target: never overshoots, the same curve at any frame rate, and it lands exactly
 function camzoomEase(cur, target, dt) {
   const k = 1 - Math.exp(-Math.max(0, dt) * CAMZOOM.ease), z = cur + (target - cur) * k;
@@ -71,7 +76,7 @@ function camzoomSetup(s) {
   bg.inputEnabled = false;
   const down = p => { const w = main.getWorldPoint(p.x, p.y); p.worldX = w.x; p.worldY = w.y; };
   s.input.on('gameobjectdown', down);
-  const wheel = (p, over, dx, dy) => { if (!s.leaving && !s.dead) CAMZOOM.want = camzoomWheel(CAMZOOM.want, dy); };
+  const wheel = (p, over, dx, dy) => { if (camzoomCanWheel(s)) CAMZOOM.want = camzoomWheel(CAMZOOM.want, dy); };
   const frame = () => camzoomFrame(s);
   s.input.on('wheel', wheel); s.events.on('postupdate', frame);
   s.events.once('shutdown', () => { s.input.off('wheel', wheel); s.input.off('gameobjectdown', down); s.events.off('postupdate', frame); s._cz = null; }); // the scene object is used again on the next launch
