@@ -51,7 +51,7 @@ class Campaign extends Phaser.Scene {
   }
   drawPlace(p) {
     const r = p.r || 60;
-    this.add.image(p.x, p.y, planetTexture(this, p.kind || 'rock', p.seed || 1)).setScale(r / 300).setDepth(1);
+    const im = this.add.image(p.x, p.y, planetTexture(this, p.kind || 'rock', p.seed || 1)).setScale(r / 300).setDepth(1); if (p.tint) im.setTint(p.tint); // the place's own colour (CAMP.places tint): Mars is not grey like Luna
     label(this, p.x, p.y - r - 36, String(p.name).toUpperCase(), '#ffb454', 16);
     if (p.base) { this.add.image(p.x + 70, p.y - 60, 'station').setScale(0.16).setDepth(2); label(this, p.x + 70, p.y - 100, String(p.base).toUpperCase(), '#38e1ff', 13); }
   }
