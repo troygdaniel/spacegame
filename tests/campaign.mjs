@@ -617,7 +617,7 @@ console.log('F. the save, and Long Haul untouched');
   check('a saved line with rubbish in it is read as far as it makes sense: level of 99 is dropped to 1, the one real tech kept once', J('campProgressLoad().level') === 1 && J('campProgressLoad().techs').join() === 'beam');
   store.set('longhaul.campaign', 'not json');
   check('and one that is not JSON starts again from level 1', J('campProgressLoad().level') === 1);
-  check('the save has no words and no numbers of the battle', Object.keys(JSON.parse((g.run(`campProgressSave({ level: 2, techs: ['shield'], ore: 0, bonus: { fighters: 0, escorts: 0 } })`), store.get('longhaul.campaign')))).sort().join() === 'bonus,level,ore,techs');
+  check('the save has no words and no numbers of the battle (the wing\'s stance is one word of the pilot\'s choice)', Object.keys(JSON.parse((g.run(`campProgressSave({ level: 2, techs: ['shield'], ore: 0, bonus: { fighters: 0, escorts: 0 } })`), store.get('longhaul.campaign')))).sort().join() === 'bonus,level,ore,stance,techs');
   check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 }
 

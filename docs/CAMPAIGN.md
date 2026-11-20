@@ -22,6 +22,22 @@ You fly the carrier yourself: big, slow, heavy. **W A S D** fly it, hold **Space
 
 An order the game cannot do is answered in words and does nothing ("the bay is empty"). The ship's voice answers each one in a short line.
 
+## Stances (card `space-game-campaign-stances`)
+
+A stance is **how the wing moves when it attacks or guards**. One for the whole wing, kept across orders (launch, attack, guard, recall do not change it) and saved with the progress, so it comes with every mission. Five, set by the order `stance` (the strip, the voice, and the FLEET panel's second page):
+
+| Stance | Words | What the wing does |
+|---|---|---|
+| Free | "free", "fight freely" | the pirates' own steering (circle, pass, break, run): how the wing always flew |
+| Orbit | "orbit", "orbit the mothership", "circle" | circle the target at `CAMP.stance.orbit` px (from its edge), the nose on it, firing; half the ships go round each way at `orbitSpeed` |
+| Keep distance | "keep distance", "keep your distance from the mothership", "stand off" | stand off at `stand` (0.85) of each ship's own gun range from the target: farther off it comes in, closer it backs away, and it sidesteps back and forth (`weave`, 140 px/s) so it is not a still target; the ships take the towers and the mothership about a fifth faster than free |
+| Match speed | "match speed", "in formation" | fly in formation, a ring of `formation` px (200) round the carrier that turns with it, at the carrier's speed, and fire at what comes into range; it is what Escort does with no convoy (Troy asked for the Escort row to be called "Escort / match speed"; the label does not fit the panel's column as drawn today, so it is renamed with the panels' redraw) |
+| Hold position | "hold position", "stay put" | stay where they are (brake hard), fire at what comes into range; when the carrier has gone `leash` px (1,400) they come back to it |
+
+Orbit and Keep follow the order's target (the nearest alien, or the one you named; "orbit the mothership" also sends the fighters at it) and are as free when there is none. Match and Hold fight what is in range of the ship whatever the order's target. A stance applies to **Attack and Guard** (and Escort with no convoy, which is Guard at the carrier); Escort to a convoy, Recall and Mine are the same in every stance. The old words are as they were ("guard", "hold", "stay with me" are Guard); only "orbit" moved, from Guard to the stance. All the numbers are `CAMP.stance`; the ids and their order `CAMP.stances`.
+
+**The FLEET panel's second page.** Page 1 is the orders (Launch, Attack, Escort, Guard, Recall); page 2 (`CAMP_PANELS.panels[0].page2`) is the stances as rows 1 to 5 with the one in force marked, flipped with the Left and Right arrows while the panel is open; the collapsed tab says it (`FLEET - ORBIT`, `campPanelTab`). The logic is done and tested (`src/camppanel.js`, `tests/campstances.mjs`); it is switched on by `CAMP_PANELS.pages = 2`, which waits for the panels' redraw (`space-game-campaign-panels-ui`) to draw the second page: until then the stances are the strip's and the voice's, and the H page does not list the stance keys.
+
 ## The weapons (card `space-game-campaign-missiles`)
 
 The carrier has two ways to hurt an alien, one key each (card `space-game-campaign-turrets` took away the single main gun):
