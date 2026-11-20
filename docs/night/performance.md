@@ -1,6 +1,6 @@
 # Night: Campaign performance (card `space-game-night-performance`, 1-GEN, 20 Nov 2026)
 
-Main at `aa86295` (tag `campaign-before-night` is the way back). Everything below was measured on Troy's Mac, headless Chrome, one at a time through the lock, `--mute-audio`, load 5 to 14 (always under 18).
+Measured on main at `aa86295`, and again on `b452fca` after the missile launcher on F and the easier level 1 landed while I worked (section "After main moved"). Tag `campaign-before-night` is the way back. Everything below was measured on Troy's Mac, headless Chrome, one at a time through the lock, `--mute-audio`, load 5 to 14 (always under 18).
 
 ## The answer
 
@@ -8,7 +8,7 @@ Main at `aa86295` (tag `campaign-before-night` is the way back). Everything belo
 
 ## How it was measured
 
-`tools/perfcampaign.mjs` (header says each mode). Scenarios: `busy1` / `busy3` keep a full fight going (level 1 with the mothership; level 3 with its twelve towers; carrier cannot die, nothing can end the level), `natural1` is level 1 played like a player (launch at 3 s, attack and escort at 14 s, fly at the nearest alien and fire). Frame times are 600 stepped frames with the parts timed apart; per-call costs come from tight loops (the page clock is only good to 0.1 ms); the real loop is run for 20 to 100 s and the gaps between drawn frames are recorded. A Node mode (`sim`) runs the sim alone: **use it only for allocation and for A/B, not for time** (a vm context looks globals up slowly: 0.75 ms a step in Node, 0.068 ms in Chrome for the same fight).
+`tools/perfcampaign.mjs` (header says each mode). Scenarios: `busy1` / `busy3` keep a full fight going (level 1 with the mothership; level 3 with its twelve towers; carrier cannot die, nothing can end the level), `natural1` is level 1 played like a player (launch at 3 s, attack and escort at 14 s, fly at the nearest alien and fire). Frame times are 600 stepped frames with the parts timed apart; per-call costs come from tight loops (the page clock is only good to 0.1 ms); the real loop is run for 20 to 100 s and the gaps between drawn frames are recorded. `PERF_ROOT=<another checkout>` measures that code with the same tool, so an old commit and a new one can be run in turn. Stepped frames have one trap: Phaser's tweens run on `Date.now`, so with the stepped clock a 700 ms smoke puff outlives 40 s of game time and the display list swells (419 objects and 313 tweens in one run, against 127 and 21 once `Date.now` follows game time, and 165 and 22 in the real loop); the tool now gives `Date.now` game time while stepping. The first table below was taken before that fix and before the missile code (it has no puffs; the explosion flashes it has were inflated a little). A Node mode (`sim`) runs the sim alone: **use it only for allocation and for A/B, not for time** (a vm context looks globals up slowly: 0.75 ms a step in Node, 0.068 ms in Chrome for the same fight).
 
 ## Numbers (GPU drawing, the Chrome of the tests)
 
@@ -24,6 +24,20 @@ Main at `aa86295` (tag `campaign-before-night` is the way back). Everything belo
 | Heap after a full collection | 7.2 MB | 7.0 MB | 6.5 MB |
 
 Where a stepped frame goes (busy1, mean 0.57 ms): drawing submit 0.45, sim 0.05, HUD 0.02, sprites 0.01, backdrop 0.00, the text calls 0.01. A frame is 16.7 ms.
+
+## After main moved: `b452fca` (missiles on F, the turrets drawn, the easier level 1)
+
+Two alternating pairs of the old commit and the new one on the same busy fight (stepped frames; the scenario now fires a missile every 0.5 s, more often than the magazine and its 15 s reload let a player):
+
+| | old `aa86295` | new `b452fca` |
+|---|---|---|
+| A frame of JS, mean (run 1, run 2) | 0.81, 0.80 ms | 1.16, 1.07 ms |
+| of which drawing submit / update | 0.65, 0.65 / 0.13, 0.12 | 0.85, 0.80 / 0.22, 0.20 |
+| Allocation a frame (sampled profile) | 834 KB | 1,047 KB |
+| Real loop, 30 s busy1 / 20 s busy3 | (above) | 60 a second, longest gap 18.7 / 19.7 ms, none over 20 ms |
+| Ten game minutes, heap after a collection | 7.68 to 8.15, then flat | 8.03 to 8.55 (minute 7), then 8.48, 8.41, 8.42: flat; tweens 1 and listeners 64 at the end |
+
+So the launcher and the turret drawing cost about **0.3 ms a frame in the busiest fight (+35 %, 2 % of a frame)**, and nothing in the real loop shows it. Inside one page the reach ring and the four turret mounts hidden, or no missile fired, move the frame by less than the noise (plus or minus 0.15 ms), so the cost is spread (two more Graphics objects drawn every frame, a smoke puff of one image and one tween every 40 ms for each missile, about 14 alive at a time) and there is no single thing to change. The Mac itself drifts: the same old commit read 0.57 ms in the first session and 0.80 ms an hour later, so only the alternating pairs compare. The easier level 1 only makes fights smaller. My finding 1 and the "no change" answer stand on the new main.
 
 ## Findings, in the order they matter
 
@@ -41,6 +55,7 @@ Where a stepped frame goes (busy1, mean 0.57 ms): drawing submit 0.45, sim 0.05,
 |---|---|---|---|---|
 | `tools/perfcampaign.mjs` (new file) | see `git log --oneline -- tools/perfcampaign.mjs` | measures the Campaign (modes in its header) | `git revert <hash>`: nothing loads it | nothing in the game |
 | `docs/night/performance.md` (this file) | same branch | the findings | delete it | nothing |
+| later commits of the tool: missile launcher in the scenario, `PERF_ROOT`, game-time `Date.now` | `git log --oneline -- tools/perfcampaign.mjs` | measuring only | `git revert` | nothing |
 
 No game file was touched (no `src/` line), so there is nothing to revert in the game.
 
@@ -61,6 +76,8 @@ No game file was touched (no `src/` line), so there is nothing to revert in the 
 
 ```
 node --expose-gc --max-semi-space-size=128 tools/perfcampaign.mjs sim busy1 1800 [--profile]   (no Chrome: allocation and A/B only)
+PERF_ROOT=<another checkout> node tools/perfcampaign.mjs frames busy1     the same tool on an older commit, to alternate old and new
+node tools/perfcampaign.mjs rockets busy1        the missile launcher's drawing against the same fight without it
 node tools/perfcampaign.mjs all busy1            frames, per-call costs, allocation and CPU profile in one Chrome
 node tools/perfcampaign.mjs live busy1 20        the real loop: gaps between drawn frames (natural1 [secs] plays the level)
 node tools/perfcampaign.mjs soak 10 busy1        ten game minutes, heap after a collection each minute
