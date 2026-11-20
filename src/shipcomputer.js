@@ -216,8 +216,8 @@ function shipcompSnapshot(s) {
   if (scKey(s) === 'Campaign') return scTry(() => campSummary(s.camp), '');
   return [scTry(() => scWhere(s), ''), scTry(scShip, ''), scTry(scJob, ''), scTry(() => scJumps(s), ''), scTry(scDock, ''), scTry(scYards, '')].filter(Boolean).join('\n').slice(0, 9000);
 }
-const SC_CAMP_HOW = 'You command the Earth carrier against the alien fleet. The pilot flies it with W A S D, fires its main gun with Space, and gives the small ships orders: 1 launch, 2 attack, 3 escort a convoy, 4 guard, 5 recall, F fires a homing missile at the mothership or the nearest big ship (a small magazine that reloads slowly). Typing or saying the order does the same.';
-const SC_CAMP_ACTS = 'ACTIONS\nReply in exactly this form and nothing else:\nSAY: one or two short sentences for the pilot\nDO: one action from the list (leave this line out when the pilot only asked a question)\nThe list: fleet_launch | fleet_attack <the mothership, or nothing> | fleet_escort <a convoy, such as Mars> | fleet_guard <a place, or nothing> | fleet_recall | fleet_missiles <the mothership, or nothing>.\nThe game checks every action itself and says if it cannot be done: so say only what you are doing, never that it is done.';
+const SC_CAMP_HOW = 'You command the Earth carrier against the alien fleet. The pilot flies it with W A S D, fires its main gun with Space, and gives the small ships orders: 1 launch, 2 attack, 3 escort a convoy, 4 guard, 5 recall, 6 mine ore, 7 recharge the shields (of the carrier, or of Earth when near it), 8 build a fighter, 9 build an escort; ore comes from rocks and alien wrecks. F fires a homing missile at the mothership or the nearest big ship (a small magazine that reloads slowly). Typing or saying the order does the same.';
+const SC_CAMP_ACTS = 'ACTIONS\nReply in exactly this form and nothing else:\nSAY: one or two short sentences for the pilot\nDO: one action from the list (leave this line out when the pilot only asked a question)\nThe list: fleet_launch | fleet_attack <the mothership, or nothing> | fleet_escort <a convoy, such as Mars> | fleet_guard <a place, or nothing> | fleet_recall | fleet_missiles <the mothership, or nothing> | fleet_mine | fleet_recharge <earth, carrier, or nothing> | fleet_build <fighter or escort, with a number>.\nThe game checks every action itself and says if it cannot be done: so say only what you are doing, never that it is done.';
 function shipcompSystem(s) {
   if (scKey(s) === 'Campaign') return 'RULES\n' + SC_RULES.replace('{name}', shipcompName()) + '\n\n<persona>\n' + scClean(SHIPCOMP.persona, 900).replace(/<\/?persona>/gi, '') + '\n</persona>\n\nSTATE\n' + shipcompSnapshot(s) + '\n\nHOW\n' + SC_CAMP_HOW + '\n\nKEYS\n' + uiText('camp.ui.keys') + '\n\n' + SC_CAMP_ACTS;
   return 'RULES\n' + SC_RULES.replace('{name}', shipcompName()) + '\n\n<persona>\n' + scClean(SHIPCOMP.persona, 900).replace(/<\/?persona>/gi, '') + '\n</persona>\n\nSTATE\n' + shipcompSnapshot(s)
@@ -503,7 +503,10 @@ const SC_ACT = {
   fleet_escort: (s, arg) => scFleet(s, 'escort', arg),
   fleet_guard: (s, arg) => scFleet(s, 'guard', arg),
   fleet_recall: (s, arg) => scFleet(s, 'recall', arg),
-  fleet_missiles: (s, arg) => scFleet(s, 'missiles', arg) // F: a homing missile at the mothership or the nearest big ship
+  fleet_missiles: (s, arg) => scFleet(s, 'missiles', arg), // F: a homing missile at the mothership or the nearest big ship
+  fleet_mine: (s, arg) => scFleet(s, 'mine', arg),
+  fleet_recharge: (s, arg) => scFleet(s, 'recharge', arg),
+  fleet_build: (s, arg) => scFleet(s, 'build', arg)
 };
 function scFleet(s, name, arg) {
   if (scKey(s) !== 'Campaign' || !s.camp || typeof campCheck !== 'function') return scNo('The fleet is only yours in the Campaign, pilot. Press K on the title screen.');
