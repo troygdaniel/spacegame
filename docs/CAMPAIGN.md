@@ -2,9 +2,9 @@
 
 Card `space-game-campaign-mvp`. A new mode beside Long Haul: the title screen offers both as two panels, a click each: **Long Haul** (Enter, or any other key, as it always was) and the **Campaign** (**K**); `?campaign=N` in the address still opens a level at once. The pause menu of either game goes back to the title: Long Haul's has a **Title screen** row (it saves first, as the pause menu always does; New game stays last) and the Campaign's pause card has **T**; from the title either game starts again (card `space-game-title-modes`, words in `content/text/title.md`). Long Haul, its trading and its save are not touched. The aim is that Troy plays all three levels fast, a few minutes each, and feels the story.
 
-**Status (19 Nov 2026).** All three levels are built and chain: win, story, tech pick, the next level, and after level 3 an ending screen and back to the title (the save then starts a new campaign). The rules are tested in Node (`tests/campaign.mjs`: whole battles are flown; a sensible player wins each level, doing nothing loses each one; level 3 is the hard one and not every seed is won). Level 1 was booted in Chrome by 8-GEN and ran clean; the look, the radar and the feel of the carrier are otherwise **not seen on a screen**. The numbers are first guesses: they are all in the one table `CAMP` at the top of `src/campaign.js`, one line each, and a level is a row of it (`CAMP.levels[n]`).
+**Status (20 Nov 2026).** Level 1 is now the asteroid belt (card `space-game-campaign-belt`, Troy's new story): the chain is the belt, the Earth refit, Alpha Centauri, the home world, an ending. The Earth defence level (Earth's shield, the Mars and Eros convoys) is out of the chain; its rules still work and it is kept as data under `CAMP.levels.home` for the tests and for a later campaign. The rules are tested in Node (`tests/campaign.mjs`; a plain bot, `tools/campaign-bot.mjs`, wins level 1 in about four to four and a half minutes, a passive player loses). The look, the radar and the feel are seen only by whoever boots it in Chrome. Every number is a line of the `CAMP` table at the top of `src/campaign.js`, and a level is a row of it.
 
-**The story.** Earth is learning to travel at warp speed when an alien race attacks. You command the flagship carrier from the Lunar base. You protect Earth and the supply convoys that fly from Earth to the colonies (the colonies pay for the tech). After each battle you salvage alien technology, choose one piece of it, and the war moves on.
+**The story.** The cruiser is a mining ship working the asteroid belt at Ceres, out of the Occator Works. Its fighters are its mining drones, its eight turrets are mining lasers. A quiet minute of mining, then an alien fleet ambushes the belt out of the dark. The mining tools are turned to weapons (the story says so; the keys stay: Space, F, 2, and the ore keys 6 to 9). Three waves and a mothership later the belt is clear; the cruiser flies home, Earth refits it with one of three alien techs (and the ore it mined buys extra ships), and it warps to Alpha Centauri, then to the alien home world. All the story lines are curt (one short sentence, about 12 words at most, fact first: Troy's rule), shown and spoken.
 
 ## How you play
 
@@ -14,7 +14,7 @@ You fly the carrier yourself: big, slow, heavy. **W A S D** fly it, hold **Space
 |---|---|---|---|
 | Launch | 1 | "launch", "launch fighters" | the bay opens: one ship out every 0.6 s, six fighters and two escorts |
 | Attack | 2 | "attack", "attack the mothership" | fighters go for the nearest alien, or the mothership if you name it |
-| Escort | 3 | "send escorts to the Mars convoy" | escorts fly beside the convoy you name (or the nearest one) and shoot what comes at it |
+| Escort | 3 | "send escorts to the Mars convoy" | escorts fly beside the convoy you name (or the nearest one) and shoot what comes at it; in a level with no convoys (the belt) they stay close to the cruiser |
 | Guard | 4 | "guard the carrier", "defend Earth" | the wing circles what you name |
 | Recall | 5 | "recall", "come home" | they fly back, land in the bay and are repaired; a ship lost stays lost |
 
@@ -39,24 +39,35 @@ The magazine is small and the reload is slow: you start with 6, one comes back e
 
 | | Where | What you do | You win when | You lose when |
 |---|---|---|---|---|
-| 1 | Home system (real Sol: Earth, Luna, Mars, Ceres; distances from `docs/SOL.md`, 1 to 12 scale) | start at the Lunar base; three waves; two convoys leave Earth | the alien mothership is dead | the carrier is destroyed, or Earth's shield is gone |
+| 1 | The belt at Ceres (real Sol: Ceres, Vesta, Pallas; `docs/SOL.md`), the rocks from the ore card | a quiet minute of mining (fly over ore, or press 6 to send the drones); at 60 s the aliens ambush, with an alarm; three waves (an ambush of 8, then 7, then 6) and the mothership; then the Earth refit | the alien mothership is dead | the cruiser is destroyed (there is no Earth shield or convoy here any more) |
 | 2 | Alpha Centauri (real, 4.4 ly: `docs/NEAR-STARS.md`), warp unlocked | warp in; gather two of the three resource caches (fly a ship over one); fly to the ancient relic on Proxima b, past its five guards (they wait until you come close) and two waves for the carrier | the carrier holds the relic's ring for 8 s with no alien near it | the carrier is destroyed |
 | 3 | The alien home planet (orbits Epsilon Eridani, 10.5 ly) | assault: three waves of defenders, and twelve fixed towers in two rings round the planet | every tower is destroyed | the carrier is destroyed |
 
-Level 1 is complete on its own; 2 and 3 are further rows of the same table and reuse every piece. The kinds the engine knows are the wins (`mother`, `relic`, `towers`), waves, convoys, guards, tower rings, caches and techs; a new level is data, not code.
+### Level 1, the belt, in order
 
-## Easier (20 Nov 2026)
+1. **Quiet** (0 to 60 s). No alien in the sky. Ore comes in: 32 rocks (640 ore, more than the 200-ore store) in five fields round Ceres, Vesta and Pallas; the store starts empty. Fly over ore, or launch and press 6 (or say "mine") and the whole wing, which is the drones, fetches it. The aim is ore for what follows: shields (7), new ships (8, 9).
+2. **The ambush** (60 s). An alarm, "Alarm. Unknown ships, coming for the cruiser.", and five raiders and three drones come out of the dark, all for the cruiser. Five seconds on: "Mining lasers are weapons now. Hold Space. Drones: press 2."
+3. **Three waves and the mothership.** Wave 2 (four drones and three gunships) at 150 s or 85 s after the ambush began once it is dead, wave 3 (four raiders and two gunships, with the mothership) at 280 s or 90 s after wave 2 began once it is dead and wave 2 is dead. Win: the mothership.
+4. **Home.** The win card has three lines ("Mothership destroyed. The belt is clear." / "Their wreck holds alien technology." / "Earth recalls the cruiser for a refit."). The trip back is a fast transition, not a flight: the card, then the refit screen.
+5. **The Earth refit.** One of the three alien techs (1, 2, 3; choose again before Enter), and the ore you mined buys extra ships for the next level (4: a fighter, 25 ore; 5: an escort, 45 ore; at most three of each). Enter takes the choice. The ore left, and the extra ships, come with the cruiser into level 2 (the save keeps them; level 3 gets the ore the same way). A level started by itself (`?campaign=2`, a debug skip) has its own 30 ore and no extras.
 
-Troy lost level 1 twice at wave 3, both times because Earth's shield ran out, with about seven small ships lost each time. A player who launches, escorts, attacks and guards but leaves the carrier at the Moon now wins: Earth's shield is 600 (was 300) and mends 3 a second after 6 seconds without a hit (a lull between waves heals it, a siege does not); wave 3 is two raiders and a gunship (was three and one); the mothership has 700 hull (was 900), shoots for 8 (was 12), holds 1,300 px from Earth (was 1,600, out of reach of anything at the Moon) and launches a raider every 12 s up to 3 (was 8 s, 6). `tests/campaign.mjs` K pins it: those two plain players win, nobody wins by doing nothing, and the same players lose with the old numbers.
+The chain is: belt, refit, warp to Alpha Centauri (the warp cinematic is 5-GEN's, one line in `Campaign.create` and a `warp` row in the level's data), the relic, the pick, the home world, the ending.
+
+Levels 1, 2 and 3 are rows of the same table and reuse every piece. The kinds the engine knows are the wins (`mother`, `relic`, `towers`), waves, convoys, guards, tower rings, caches and techs; a new level is data, not code.
+
+## Easier (20 Nov 2026; the Earth level)
+
+These numbers are those of the Earth defence level (`CAMP.levels.home`), which was level 1 until the belt. Troy lost level 1 twice at wave 3, both times because Earth's shield ran out, with about seven small ships lost each time. A player who launches, escorts, attacks and guards but leaves the carrier at the Moon now wins: Earth's shield is 600 (was 300) and mends 3 a second after 6 seconds without a hit (a lull between waves heals it, a siege does not); wave 3 is two raiders and a gunship (was three and one); the mothership has 700 hull (was 900), shoots for 8 (was 12), holds 1,300 px from Earth (was 1,600, out of reach of anything at the Moon) and launches a raider every 12 s up to 3 (was 8 s, 6). `tests/campaign.mjs` K pins it: those two plain players win, nobody wins by doing nothing, and the same players lose with the old numbers.
 
 ## Ore: mine it, spend it (card `space-game-campaign-resources`, Troy: "mine resources to recharge my shields and build new ships")
 
-- **Where ore is.** Asteroid fields (rocks that hold ore, level data `rocks`) and the wrecks of dead aliens (a raider 4, a drone 6, a gunship 12, a tower 20, the mothership 40; a wreck goes after 30 s). Any ship of yours that flies over a piece takes it into the one ore store of the carrier (200 at most). The ore store is shown on the HUD.
-- **Mine (key 6, "mine", "gather ore").** Your escorts fly to the nearest ore that is not under the aliens' guns and bring it in (the fighters stay for the fight; build more escorts if you want more miners). They fight back what comes within 320 px; with no safe ore left they circle the carrier and wait for more. The carrier, and any ship of yours that passes over ore, collects it too.
+- **Where ore is.** Asteroid rocks (fields of them, level data `rocks`; each has 100 hit points and 20 ore) and the wrecks of dead aliens (a raider 4, a drone 6, a gunship 12, a tower 20, the mothership 40; a wreck goes after 30 s). A rock is cut by a laser (below) and breaks into a chunk of ore; a chunk, or a wreck's ore, is taken by any ship of yours that flies over it, into the one ore store of the carrier (200 at most). The ore store is shown on the HUD.
+- **Mining lasers (Troy: "mining must be by lasers").** A mining ship works a rock with a visible beam: the rock glows where the beam lands, reddens and cracks as it is cut, and breaks into ore. The drones (the fighters; in the belt they are the cruiser's mining drones, so the whole wing mines) stop 150 px from a rock and take 5 hit points a second off it from up to 230 px: one drone cuts a rock in 20 s, eight in about 3. The carrier's eight turrets are the same lasers: **hold Space beside a rock** with no alien in reach and each cuts it (a turret shot does 35 percent of its damage to rock), and the beam tech cuts faster. With an alien in reach the turrets shoot the alien, the same beam flash, the same hum. The sim keeps the beams firing as `C.lasers`, `[{ from, to, kind: 'rock' | 'alien', since }]`, for the hum (card `space-game-campaign-sounds`) and the scene draws them. The numbers are `CAMP.ore` (rockHp, rock, rockR) and `CAMP.laser` (dps, range, hold, turret).
+- **Mine (key 6, "mine", "send the drones to mine").** Your whole wing flies to the nearest rock that is not under the aliens' guns and cuts it, or takes a chunk or a wreck lying about; they fight back what comes within 320 px; with nothing safe left they circle the carrier and wait. An attack order (key 2) turns the drones back to the fight. A full minute of mining by the wing brings the store from empty to full.
 - **Recharge shields (key 7, "recharge shields").** The carrier now has a shield of 150 points that takes damage before the hull and does not mend by itself. 25 ore fills it. Within 900 px of Earth, and with Earth's shield under full, the order mends Earth's shield instead (40 ore for 200 points); "recharge Earth" or "recharge the carrier" says which.
 - **Build (key 8 a fighter, key 9 an escort; "build fighters", "build an escort").** 25 ore a fighter, 45 an escort; one ship at a time (6 s, 10 s), into the bay, where Launch puts it out. The bay holds at most 14 fighters and 6 escorts, counting what is out.
-- **All three levels use it** (rocks and wrecks are in every level; Earth's shield only in level 1). Every number is a line of `CAMP` (`ore`, `shield`, `recharge`, `build`).
-- **Assumed:** Troy meant the shield bars; the carrier had none, so it has one now. Mining is flying over, not shooting rocks. Only escorts mine. Wrecks are the main income of a fight, the rocks are the reserve. The words of these orders are in `content/text/campaign.md` because `content/text/ui.md` is full (200 rows a file).
+- **All three levels use it** (rocks and wrecks are in every level; Earth's shield only in the Earth level, `home`). Every number is a line of `CAMP` (`ore`, `shield`, `recharge`, `build`).
+- **Assumed:** Troy meant the shield bars; the carrier had none, so it has one now. Wrecks are the income of a fight, the rocks are the quiet minute's. The words of these orders are in `content/text/campaign.md` because `content/text/ui.md` is full (200 rows a file).
 
 ## Tech: one of three after each battle
 
@@ -70,11 +81,9 @@ After level 2 (ancient tech): hull plating (carrier hull +50 percent), a second 
 
 ## Story lines (plain, two or three before and after each level; shown on screen and spoken in the ship voice)
 
-1. *Before:* "Unknown ships at the edge of the system, heading for Earth." "You have the Lunar carrier, pilot. Launch the wing, cover the convoys, kill their mothership."
-   *After:* "The mothership is gone. Their wreck holds working technology." "Our engineers can build one piece of it. Choose."
-2. *Before:* "The warp drive works. The nearest star is Alpha Centauri, four light years out." "Something old is waiting there. Find it before they do."
-   *After:* "It was a machine left by a race older than the aliens." "It shows us where they live."
-3. *Before:* "The way to their home is open. This is the last battle, pilot." *After:* "Their defences are down. Earth is safe." "The first step is done. The war is not over."
+1. *Before (the belt):* "Ceres belt. The cruiser is mining." "Fly over ore, or press 6 to send the drones." "Quiet shift. Fill the store." *The ambush:* "Alarm. Unknown ships, coming for the cruiser." "Mining lasers are weapons now. Hold Space. Drones: press 2." *After:* "Mothership destroyed. The belt is clear." "Their wreck holds alien technology." "Earth recalls the cruiser for a refit."
+2. *Before (Alpha Centauri):* "Warp drive ready. Next star: Alpha Centauri." "Something old waits on Proxima b. Find it first." *After:* "The relic is a machine from an older race." "It shows where the aliens live. Choose a technology."
+3. *Before (the home world):* "Their home world is open. Last battle." "Break the defence towers round their world." *After:* "Their defences are down. Earth is safe." "The first step is done. The war is not over."
 
 ## How it is built
 

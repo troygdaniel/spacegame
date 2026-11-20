@@ -8,10 +8,10 @@ const VOICE_URL = 'https://api.deepgram.com/v1/speak', VOICE_MODEL = 'aura-athen
 // the voices the ship computer can have (Settings > Sound): [Aura name, shown name, a few words]
 const VOICE_CHOICES = [['aura-athena-en', 'ATHENA', 'calm, the default'], ['aura-asteria-en', 'ASTERIA', 'bright and clear'], ['aura-luna-en', 'LUNA', 'warm'], ['aura-orion-en', 'ORION', 'steady, male'], ['aura-helios-en', 'HELIOS', 'deep, male']];
 const VOICE_LINES = {
-  launch: 'Launch clear. All systems nominal.',
+  launch: 'Launch clear.',
   hull: 'Warning. Hull integrity critical.',
   hostile: 'Hostile contacts detected. Weapons ready.',
-  dock: 'Docking complete. Welcome to Halcyon Station.',
+  dock: 'Docked at Halcyon Station.',
   land: 'Touchdown confirmed.',
   accept: {
     rescue: 'Rescue call accepted. Proceed to Kepler-4b.',
@@ -21,7 +21,7 @@ const VOICE_LINES = {
   },
   failed: 'Mission failed.',
   lost: 'Ship lost. Insurance has been charged.',
-  ending: 'Two thousand credits earned. Well flown, pilot.',
+  ending: 'Two thousand credits earned.',
   test: 'Ship voice online.'
 };
 // ---------- lines a content pack adds (content/voice/*.md, src/contentadd.js) ----------
@@ -40,7 +40,7 @@ function voiceLine(event, builtin) {
 }
 // Spoken replies (card space-game-voice-shorter; Troy, 18 Nov 2026: "the ship is long winded"): how much of the computer's ANSWER is said aloud. short: the first sentence or
 // two (the strip shows it all); full: everything; off: never aloud. The key moments of a run (launch, hull, docking) are short lines of their own and are not affected.
-const VOICE_SPOKEN_MODES = [['short', 'SHORT'], ['full', 'FULL'], ['off', 'OFF']], VOICE_SPOKEN_LIMIT = { min: 70, max: 170 }; // a first sentence under min takes the next one too; never past max
+const VOICE_SPOKEN_MODES = [['short', 'SHORT'], ['full', 'FULL'], ['off', 'OFF']], VOICE_SPOKEN_LIMIT = { min: 45, max: 120 }; // a first sentence under min takes the next one too; never past max
 const VOICE = { key: '', on: true, voice: VOICE_MODEL, bad: false, playing: false, queue: [], cache: new Map(), fails: 0, pauseUntil: 0, said: {}, calls: 0,
   spoken: 'short', gen: 0, src: null, cur: null, finish: null, stopping: '', stops: 0 }; // gen: a stop bumps it, so a line still on its way never plays; src and cur: what is playing now
 
@@ -71,7 +71,7 @@ function voiceSetSpoken(m) {
   try { localStorage.setItem(VOICE_SPOKEN, m); } catch (e) { /* storage is optional */ }
   return true;
 }
-// PURE. The first sentence or two of an answer, to be said aloud: a first sentence under 70 letters takes the second one too when both fit in 170; a first sentence longer than 170 is
+// PURE. The first sentence or two of an answer, to be said aloud: a first sentence under 45 letters takes the second one too when both fit in 120 (card space-game-voice-curt: it was 70 and 170); a first sentence longer than 120 is
 // cut at the last space before it (and ends with a full stop). "4.1 of the 7.8 ly" is not a sentence end: a stop counts only when a space or the end follows it.
 function voiceFirst(text) {
   const t = String(text == null ? '' : text).replace(/\s+/g, ' ').trim(), L = VOICE_SPOKEN_LIMIT;
