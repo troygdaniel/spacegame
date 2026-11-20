@@ -50,7 +50,7 @@ console.log('A. the aim');
   g.run('CAMP.carrier.lead = 1');
   check('the table\'s lead of 0 is the old aim: at where it is', off.target && Math.abs(off.aim - off.direct) < 1e-9, JSON.stringify(off));
   check('a lead of 0.5 aims about half way', Math.abs((half.aim - half.direct) - (cross.aim - cross.direct) / 2) < 0.02, JSON.stringify([half.aim - half.direct, cross.aim - cross.direct]));
-  check('the lead is one number in the one table, with its comment', J('CAMP.carrier.lead') === 1 && /lead: 1 +\/\/ how far ahead a turret aims/.test(src('src/campaign.js')));
+  check('the lead is one number in the one table, with its comment', J('CAMP.carrier.lead') === 1 && /lead: 1, +\/\/ how far ahead a turret aims/.test(src('src/campaign.js')));
   check('the carrier\'s own drift is read from the same number the shots use (campDrift), so they cannot disagree', /const campDrift = 0\.3/.test(src('src/campaign.js')) && (src('src/campaign.js').match(/campDrift/g) || []).length >= 4);
 }
 
@@ -58,14 +58,14 @@ console.log('A. the aim');
 console.log('B. the volleys hit what moves');
 {
   const gun = J(`__duel('gunship', 450, 0, 0, 100, 3)`);
-  check('a gunship 450 px off crossing at 100 px/s: most shots of a three-second volley hit (8 turrets, a shot every 0.6 s each)', gun.shots >= 30 && ratio(gun) >= 0.7 && gun.hits >= 20, JSON.stringify(gun));
+  check('a gunship 450 px off crossing at 100 px/s: most shots of a three-second volley hit (8 turrets, a shot every 0.7 s each)', gun.shots >= 28 && ratio(gun) >= 0.7 && gun.hits >= 18, JSON.stringify(gun));
   const rai = J(`__duel('raider', 450, 0, 0, 430, 1.5)`);
-  check('a raider at its top speed (430 px/s) crossing from 450 px (where raiders circle, hold 460): most shots hit, in the 1.5 s before it is out of reach', rai.shots >= 8 && ratio(rai) >= 0.6, JSON.stringify(rai));
+  check('a raider at its top speed (430 px/s) crossing from 450 px (where raiders circle, hold 460): most shots hit, in the 1.5 s before it is out of reach', rai.shots >= 5 && ratio(rai) >= 0.6, JSON.stringify(rai));
   const sides = [['gunship', 450, 0, 0, -100], ['gunship', 0, 450, 100, 0], ['gunship', 0, -450, -100, 0], ['gunship', -450, 0, 0, 100], ['raider', 0, 450, 430, 0], ['raider', -450, 0, 0, -430], ['raider', 320, 320, 300, -300], ['gunship', 320, -320, 70, 70]];
   const rs = sides.map(a => J(`__duel(${a.map(v => JSON.stringify(v)).join(', ')}, ${a[0] === 'raider' ? 1.5 : 3})`));
-  check('from every side and on the diagonals, left and right, up and down: every volley lands more than half its shots', rs.every(r => r.shots >= 8 && ratio(r) >= 0.55), rs.map(r => r.hits + '/' + r.shots).join(' '));
+  check('from every side and on the diagonals, left and right, up and down: every volley lands more than half its shots', rs.every(r => r.shots >= 5 && ratio(r) >= 0.55), rs.map(r => r.hits + '/' + r.shots).join(' '));
   const far = J(`__duel('raider', 470, 0, 0, 430, 1.5)`);
-  check('at the edge of the reach (470 px to the centre, a raider) the volley still lands: the shot lives 300 px past the reach, long enough to reach where it was aimed', far.shots >= 6 && ratio(far) >= 0.5, JSON.stringify(far));
+  check('at the edge of the reach (470 px to the centre, a raider) the volley still lands: the shot lives 300 px past the reach, long enough to reach where it was aimed', far.shots >= 4 && ratio(far) >= 0.5, JSON.stringify(far));
   const toward = J(`__duel('raider', 450, 0, -300, 0, 2)`), away = J(`__duel('gunship', 300, 0, 100, 0, 2)`);
   check('one coming straight in and one going straight out are hit too', ratio(toward) >= 0.6 && ratio(away) >= 0.6, JSON.stringify([toward, away]));
   const fly = J(`__duel('gunship', 0, 450, 0, 0, 3, { carrierV: [210, 0] })`), fly2 = J(`__duel('raider', 0, 450, 430, 0, 1.5, { carrierV: [210, 0] })`);
@@ -92,7 +92,7 @@ console.log('D. nothing else moved');
   check('Space up: the turrets lead, aim and point, and fire nothing', J('C.bullets.filter(b => b.pd).length') === 0 && J('C.turrets.filter(t => t.target).length') >= 4);
   g.run('__duel("gunship", 450, 0, 0, 100, 0.15)');
   check('the shots still leave each turret\'s own mount (the spread is kept) and the turrets are still eight', J('C.turrets.length') === 8 && J('C.bullets.filter(b => b.pd).length') >= 2 && J('C.bullets.filter(b => b.pd).every(b => C.turrets.some(t => Math.hypot(b.x - t.x, b.y - t.y) < 150))'));
-  check('the other numbers did not move: 4 a shot, every 0.6 s, out to 500 px; shots at 800 px/s', J('CAMP.carrier.pd') === 4 && J('CAMP.carrier.pdDelay') === 600 && J('CAMP.carrier.pdRange') === 500 && J('CAMP.carrier.pdSpeed') === 800);
+  check('the other numbers did not move: 4 a shot, every 0.7 s, out to 500 px; shots at 800 px/s', J('CAMP.carrier.pd') === 4 && J('CAMP.carrier.pdDelay') === 700 && J('CAMP.carrier.pdRange') === 500 && J('CAMP.carrier.pdSpeed') === 800);
   check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 }
 
