@@ -31,4 +31,19 @@ What is already good, so nobody "fixes" it: every refusal says why in plain word
 
 ## What changed, and how to undo each
 
-_Filled in as the commits are made (below)._
+Eight changes, in this order, each ONE commit that reverts alone (`git revert <hash>`). Proved on a scratch copy: each one reverted by itself leaves every Campaign, content and hygiene test green. A commit that adds words has them in a file of its own, `content/text/ux-<name>.md`, and a revert of one of those meets one conflict, in the sealed `content.generated.js`: take either side and run `node tools/build-content.mjs --seal` (it rebuilds the file from the markdown; `--check` says when it is right). The words are not in `content/text/ui.md` because that file is at 194 of the 200 rows a content file may have (`LIMITS.rows` in `src/content.js`): **a new string in ui.md now needs a new file or a bigger limit.**
+
+| # | Change | Commit | What it does | Undo | Look at in the morning |
+|---|---|---|---|---|---|
+| 1 | Story spoken line by line | `8bc05b7` | The scene gives the voice each story line on its own, so Short mode says the tasking too. One line in `say()` of `src/campaignscene.js`. `tests/uxvoice.mjs` | `git revert 8bc05b7` (clean) | Start level 1 with Spoken replies on Short: the ship says "...Launch the wing, cover the convoys, and kill their mothership." |
+| 2 | Local answers in the strip and voice | `95bce58` | "help", "what do I do", "what keys", "how do I fire", "show the map", "status": answered with no chat key. `src/camphelp.js`, one line in `shipcompIntent`. `tests/uxhelp.mjs` | `git revert 95bce58` (+ reseal) | In the Campaign press I and type `help`, `what do I do`, `status`: a plain line each, no key needed |
+| 3 | Lose card: how far and what to try | `e6d304b` | Cause, "You lasted 1:42: wave 2 of 3, 5 aliens down.", and a tip. `src/camplose.js`, `showLost`. `tests/uxlose.mjs` | `git revert e6d304b` (+ reseal) | Lose a level (or press `[`): the card has three lines |
+| 4 | Goal before the mothership comes | `1fe2a88` | Level 1's goal line reads "Hold off the waves; the mothership comes last." until the mothership is there. One line in `campObjective` (`src/campaign.js`). `tests/uxgoal.mjs` | `git revert 1fe2a88` (+ reseal) | The line under the HUD at the start of level 1, and again when wave 3 brings the mothership |
+| 5 | Bay gauge in words | `6315877` | `BAY  fighters 6  escorts 2   OUT 0` for `6+2`. One line in `paintHud`. `tests/uxbay.mjs` | `git revert 6315877` (clean) | The HUD, top left, before and after pressing 1 |
+| 6 | Goal on the pause card | `7224e4b` | `Goal: ...` is the first line of the Esc card. One line in `showPause`. `tests/uxpause.mjs` | `git revert 7224e4b` (+ reseal) | Press Esc in a level |
+| 7 | Win card result line | `0e8f28c` | "Won in 3:12. Carrier hull 420 of 600, 2 of 2 convoys delivered, 1 of your ships lost." under the story, not spoken. `src/campwin.js`, `showWon`. `tests/uxwin.mjs` | `git revert 0e8f28c` (+ reseal) | Win a level (or press `\`): the card has a third line |
+| 8 | Two first-minute hints | `b2b1569` | Level 1 only, once each: "Press 1 to launch the wing." at 6 s if the wing is still in the bay; "Press 2 to send the fighters at the aliens." at 26 s with the wing out and aliens about. `src/campnudge.js`, one line in `update`. `tests/uxnudge.mjs` | `git revert b2b1569` (clean) | Start level 1 and wait 6 s without pressing anything |
+
+No key was changed or added. Each change touches the scene by one or two lines and keeps its own logic in a small file of its own (`camphelp.js`, `camplose.js`, `campwin.js`, `campnudge.js`), so a revert takes nothing else with it.
+
+Not done because they change how it plays or what a key does: everything under Proposals above. Each of the eight findings has its change in the table; nothing was left out for lack of time.
