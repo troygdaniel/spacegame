@@ -51,6 +51,7 @@ class Campaign extends Phaser.Scene {
     this.osp = {}; this.rsp = {}; this.beams = []; // the ore lying about (chunks and wrecks), one sprite each; the rocks of the belt, one each; the beams on this frame
     this.beamG = this.add.graphics().setDepth(3.5); // the cracks and the beams
     this.csp = this.camp.caches.map(k => this.add.image(k.x, k.y, 'pod').setScale(1.8).setDepth(3).setTint(0xffd37a)); // resource caches (level 2): gold pods that go when collected
+    this.anomG = this.add.graphics().setDepth(1.5); // the haze of the anomalies and the decloaked caches (src/campanomalydraw.js)
     this.relicG = this.add.graphics().setDepth(2); // the relic's ring (level 2), and how far the hold has got
     this.cachel = this.camp.caches.map(k => label(this, k.x, k.y + 34, uiText('camp.nav.cachelabel'), '#ffd37a', 12)); // a word under each cache: gold pods were easy to miss (docs/night/graphics.md finding 3)
     if (this.camp.relic) label(this, this.camp.relic.x, this.camp.relic.y - this.camp.L.relic.radius - 24, uiText('camp.nav.relicmark'), '#7fe9ff', 14);
@@ -77,7 +78,8 @@ class Campaign extends Phaser.Scene {
   beam(e, ms) { if (!this.beams) this.beams = []; this.beams.push({ x: e.x, y: e.y, tx: e.tx, ty: e.ty, until: performance.now() + ms }); } // (the beam hum is the sound card's: it reads C.lasers)
   makeCamp() { // a new battle of this level: arrived by the chain (or a retry), the ore and the extra ships of the refit come with the cruiser; a level started by itself (an address, a skip) has its own
     const carried = this.P.level === this.level;
-    return campNew(this.level, this.P.techs, Object.assign({}, this.opts, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {}));
+    this.P.promo = null; // the promotion of the last debrief is told once
+    return campNew(this.level, this.P.techs, Object.assign({}, this.opts, { found: this.P.found, rank: typeof campRank === 'function' ? campRank(this.P).i : 0, stance: this.P.stance }, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {})); // the rank (src/campranks.js) fills the bay and lifts the wing limit; found: the cloaked caches looted so far (their weapons stay with the pilot); the wing's stance is the pilot's: it comes with every battle
   }
   drawPlace(p) { // returns what it made, so a far place can be taken down again (syncFar)
     const r = p.r || 60, made = [];
@@ -134,7 +136,10 @@ class Campaign extends Phaser.Scene {
   }
   missionWon() { // a mission won: its result is kept and the ore comes with the cruiser; the debrief, then the next mission, or after the last one the level's story and the refit
     const C = this.camp; if (!C.L.objectives) { this.showWon(); return; }
-    const r = campMissionDone(this.P, this.level, this.mi, C.score); this.mdone = r.levelDone; this.P.ore = Math.floor(C.ore); campProgressSave(this.P);
+    const was = typeof campRank === 'function' ? campRank(this.P).i : 0, r = campMissionDone(this.P, this.level, this.mi, C.score); this.mdone = r.levelDone;
+    this.P.ore = Math.floor(C.ore); // the ore comes with the cruiser
+    this.P.promo = typeof campRankPromoted === 'function' ? campRankPromoted(was, this.P) : null; // the debrief says it (campRankLine)
+    campProgressSave(this.P); // the result is kept: the ready room (src/camphub.js) and the next mission read it from the save (these were a trailing comment's, once: tests/campranks.mjs holds them)
     this.showDebrief(C.score);
   }
   // docking: the ready room (src/camphubscene.js) opens over the battle, which is paused under it; its rows are the dock's (src/campdock.js). Undocking (Launch, Undock, Esc or T there) goes back to the flight
@@ -158,26 +163,35 @@ class Campaign extends Phaser.Scene {
     this.showCard(uiText('camp.ui.won', { n: this.level }), res ? lines.concat([res]) : lines, uiText('camp.ui.next')); this.say(lines);
   }
   showPick() {
-    this.mode = 'pick'; this.choices = campTechChoices(this.level);
+    this.mode = 'pick'; this.choices = campTechChoices(this.level, this.P);
     this.showCard(uiText('camp.ui.pick'), this.choices.map((id, i) => (i + 1) + '   ' + uiText('camp.tech.' + id + '.name') + '  -  ' + uiText('camp.tech.' + id + '.text')), '', 340);
   }
   // the Earth refit after the belt: one of the three techs (pick again before Enter), and ore buys extra fighters and escorts for the next level (the workshop's prices)
   showRefit() {
-    this.mode = 'refit'; this.choices = campTechChoices(this.level); this.refit = { pick: null, f: 0, e: 0, ore: Math.floor(this.camp.ore) }; this.paintRefit();
+    this.mode = 'refit'; this.choices = campTechChoices(this.level, this.P); this.refit = { pick: null, f: 0, e: 0, ore: Math.floor(this.camp.ore) }; this.paintRefit();
   }
   paintRefit() {
     const R = this.refit, B = CAMP.build, lines = [uiText('camp.ui.refitore', { ore: R.ore, xf: R.f, xe: R.e }), uiText('camp.ui.refitpick')]
-      .concat(this.choices.map((id, i) => (i + 1) + '   ' + uiText('camp.tech.' + id + '.name') + '  -  ' + uiText('camp.tech.' + id + '.text') + (R.pick === id ? '   <' : '')), [uiText('camp.ui.refitbuy', { fc: B.fighterCost, ec: B.escortCost })]);
+      .concat(this.choices.map((id, i) => (i < 3 ? i + 1 : i + 3) + '   ' + uiText('camp.tech.' + id + '.name') + '  -  ' + uiText('camp.tech.' + id + '.text') + (R.pick === id ? '   <' : '')), [uiText('camp.ui.refitbuy', { fc: B.fighterCost, ec: B.escortCost })]);
     this.showCard(uiText('camp.ui.refit'), lines, R.pick ? uiText('camp.ui.refitgot', { name: uiText('camp.tech.' + R.pick + '.name') }) : '', 380);
   }
   refitKey(c) {
-    const R = this.refit, B = CAMP.build, i = { Digit1: 0, Digit2: 1, Digit3: 2 }[c];
+    const R = this.refit, B = CAMP.build, i = { Digit1: 0, Digit2: 1, Digit3: 2, Digit6: 3, Digit7: 4, Digit8: 5 }[c]; // 4 and 5 buy ships, so what was looted from the cloaked caches (src/campanomaly.js) is chosen with 6, 7 and 8
     if (i !== undefined && this.choices[i]) R.pick = this.choices[i];
     else if (c === 'Digit4' && R.f < CAMP.refit.most && R.ore >= B.fighterCost) { R.f++; R.ore -= B.fighterCost; }
     else if (c === 'Digit5' && R.e < CAMP.refit.most && R.ore >= B.escortCost) { R.e++; R.ore -= B.escortCost; }
     else if (c === 'Enter' && R.pick) { campPick(this.P, R.pick); this.P.bonus = { fighters: R.f, escorts: R.e }; this.hideCard(); this.next(R.ore); return; }
     else return;
     this.paintRefit();
+  }
+  pickKey(c) { // the plain pick after the later levels: one of the level's techs, or what was looted from a cloaked cache, with 1 to 6 (no ships are bought on this card)
+    const i = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4, Digit6: 5 }[c];
+    if (i !== undefined && this.choices[i]) { campPick(this.P, this.choices[i]); this.hideCard(); this.next(); }
+  }
+  anomalyEvent(e) { // the cloaked caches (src/campanomaly.js): noticed (a soft ping), decloaked (the cloak breaks: a flash and a shock), looted (a rise; what is kept is saved at once)
+    if (e.stage === 'sense') beep(880, 0.08, 'sine', 0.035, 240);
+    else if (e.stage === 'reveal') { this.cameras.main.flash(260, 190, 150, 255); this.cameras.main.shake(260, 0.004); this.boom.explode(34, e.x, e.y); sfx('shieldUp'); }
+    else if (e.stage === 'done') { this.boom.explode(18, e.x, e.y); beep(660, 0.1, 'triangle', 0.05, 200); beep(990, 0.14, 'triangle', 0.05, 340); this.P.found = this.P.found || []; if (this.P.found.indexOf(e.key) < 0) this.P.found.push(e.key); campProgressSave(this.P); }
   }
   showLost(why) {
     this.mode = 'lost'; const lines = typeof campLoseLines === 'function' ? campLoseLines(this.camp, why) : [uiText('camp.lose.' + why)]; // src/camplose.js: what happened, how far, one thing to try
@@ -217,11 +231,7 @@ class Campaign extends Phaser.Scene {
     if (this.mode === 'won') { if (c === 'Enter') { if (CAMP.levels[this.level].refit) this.showRefit(); else if (campTechChoices(this.level).length) this.showPick(); else this.next(); } return; }
     if (this.mode === 'refit') { this.refitKey(c); return; }
     if (this.mode === 'end') { if (c === 'Enter' || c === 'KeyT') go(this, 'Title'); return; }
-    if (this.mode === 'pick') {
-      const i = { Digit1: 0, Digit2: 1, Digit3: 2 }[c];
-      if (i !== undefined && this.choices[i]) { campPick(this.P, this.choices[i]); this.hideCard(); this.next(); }
-      return;
-    }
+    if (this.mode === 'pick') { this.pickKey(c); return; }
     if (this.mode === 'lost') { if (c === 'Enter') go(this, 'Campaign', { level: this.level, mission: this.mi, techs: this.P.techs, via: 'retry' }); else if (c === 'KeyT') go(this, 'Title'); return; } // a lost mission is flown again; the level is not lost
     if (this.mode === 'pause') { if (c === 'Escape') { this.hideCard(); this.mode = 'play'; } else if (c === 'KeyT') go(this, 'Title'); else if (c === 'KeyH') this.openKeys(); else if (c === 'KeyR' && (this.camp && this.camp.L && this.camp.L.objectives)) go(this, 'Campaign', { level: this.level, mission: this.mi, techs: this.P.techs, via: 'retry' }); return; } // R: restart the mission (the level is kept); H: every key
     if (c === 'KeyH') { this.openKeys(); return; } // H: every key, on one page
@@ -305,6 +315,7 @@ class Campaign extends Phaser.Scene {
     chatterHear(this, e); // the wing's radio hears every sim event (src/campchatter.js)
     if (e.type === 'say') { const text = uiText(e.key, e.vars); toast(this, text, '#9fe9ff'); this.say([text]); }
     else if (e.type === 'nav') { toast(this, uiText(e.key, e.vars), '#7fe9ff'); if (e.key === 'camp.nav.go' || e.key === 'camp.nav.arrived') beep(e.key === 'camp.nav.go' ? 520 : 660, 0.07, 'triangle', 0.04, 160); } // the autopilot's own lines (src/campnav.js)
+    else if (e.type === 'stance') { this.P.stance = e.stance; campProgressSave(this.P); } // the wing's stance is the pilot's choice: kept across missions (src/campaign.js)
     else if (e.type === 'wingshot') this.wingShot(e);
     else if (e.type === 'turret') { this.turretFlash(e); if (e.tx !== undefined) this.beam(e, 120); } // a turret shot at an alien is the same laser: a beam flash
     else if (e.type === 'laser') this.beam(e, e.src === 'turret' ? 220 : 90);
@@ -317,6 +328,7 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'launch' || e.type === 'dock') { this.bayAt[e.type === 'launch' ? 'launch' : 'land'] = this.camp.t; beep(e.type === 'launch' ? 560 : 420, 0.07, 'triangle', 0.04, 160); }
     else if (e.type === 'alarm') { sfx('siren'); this.cameras.main.flash(300, 255, 60, 60); this.cameras.main.shake(300, 0.004); } // the ambush: out of the dark
     else if (e.type === 'blink') { this.boom.explode(30, e.x, e.y); sfx('shieldUp'); }
+    else if (e.type === 'anomaly') this.anomalyEvent(e);
     else if (e.type === 'missile') sfx('missileLaunch');
     else if (e.type === 'mboom') { this.boom.explode(44, e.x, e.y); sfx('missileBlast'); }
     else if (e.type === 'mfizzle') { this.boom.explode(6, e.x, e.y); sfx('missileFizzle'); }
@@ -362,6 +374,7 @@ class Campaign extends Phaser.Scene {
     Object.keys(this.rsp).forEach(id => { if (!seenRock[id]) { this.rsp[id].destroy(); delete this.rsp[id]; } });
     if (bg && this.beams) { this.beams = this.beams.filter(b => b.until > performance.now()); this.beams.forEach(b => { // a beam: a soft wide line, a bright core, a hot spot where it lands. The same for a rock and an alien
       bg.lineStyle(7, 0x7fe9ff, 0.22).lineBetween(b.x, b.y, b.tx, b.ty); bg.lineStyle(2.5, 0xe8fbff, 0.95).lineBetween(b.x, b.y, b.tx, b.ty); bg.fillStyle(0xbff6ff, 0.8).fillCircle(b.tx, b.ty, 5); }); }
+    if (this.anomG && typeof campAnomDraw === 'function') { this.anomG.clear(); campAnomDraw(this.anomG, C, this.cameras.main.worldView, performance.now()); }
     const rg = this.relicG, R = C.relic, L = C.L;
     rg.clear();
     if (R) { rg.lineStyle(2, 0x7fe9ff, 0.45).strokeCircle(R.x, R.y, L.relic.radius); if (R.hold > 0) { rg.lineStyle(6, 0x7fe9ff, 0.95).beginPath().arc(R.x, R.y, L.relic.radius, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * R.hold / L.relic.hold).strokePath(); } }
@@ -445,6 +458,7 @@ class Campaign extends Phaser.Scene {
     const dot = (p, color, size) => { let dx = (p.x - c.x) / R.range * R.r, dy = (p.y - c.y) / R.range * R.r; const d = Math.hypot(dx, dy); if (d > R.r - 3) { dx *= (R.r - 3) / d; dy *= (R.r - 3) / d; } g.fillStyle(color, 1).fillCircle(R.x + dx, R.y + dy, size + R.blip); };
     const pl = campPlaces(C.level); Object.keys(pl).forEach(id => { if (!pl[id].hidden && !(pl[id].far && Math.hypot(pl[id].x - c.x, pl[id].y - c.y) > R.range)) dot(pl[id], id === 'earth' ? 0x4aa3ff : 0xb9a37a, id === 'earth' ? 4 : 2); });
     C.rocks.forEach(o => dot(o, 0x8c8c8c, 1)); C.pickups.forEach(o => dot(o, 0xffd37a, 1)); C.caches.forEach(k => { if (!k.got) dot(k, 0xffd37a, 2); }); if (C.relic) dot(C.relic, 0x7fe9ff, 3);
+    if (typeof campAnomMarks === 'function') campAnomMarks(C).forEach(a => { if (a.shown) dot(a, 0xffd37a, 3); else if (Math.sin(C.t / 260 + a.x) > -0.4) dot(a, 0xc58cff, 2); }); // an anomaly: a violet blip that flickers (the cloak), gold once it is decloaked
     C.ships.forEach(u => { if (u.hp <= 0) return; dot(u, campDotColor(u), u.kind === 'mother' ? 4 : u.kind === 'carrier' ? 3 : 2); }); // campDotColor (src/campmap.js): the map's colours too
     // the autopilot's readout under the goal line, and an arrow at the edge of the screen pointing at the goal with its distance (src/campnav.js; docs/night/graphics.md finding 3)
     if (this.hud.post) { // the outposts: where to retreat when the hull is low and no ship is left, else a hint when one is in range (src/campoutpost.js)
