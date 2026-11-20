@@ -68,18 +68,21 @@ try {
 // ---- D: the radio ----
 const push = (e, t) => J(`chatterPush(__S, ${JSON.stringify(e)}, ${t})`);
 const tick = (t, busy) => J(`chatterTick(__S, ${t}, ${!!busy})`);
+const said1 = (e, t) => { push(e, t); return tick(t + J(`CHATTER.events.${e}.delay`)); }; // a call, and the line when it falls due
 try {
   check('D  the setting is Quiet until the player picks another', J('CHATTER.mode') === 'quiet' && J('chatterMode()') === 'quiet');
   g.run('window.__S = chatterNew(); CHATTER.mode = "quiet"');
   check('D  Quiet: a call is taken, and said when it is due (a short beat later)', J('CHATTER.events.splash.delay') > 0 && push('splash', 1000) === true && tick(1000) === null && tick(1000 + J('CHATTER.events.splash.delay')) !== null);
-  g.run('window.__S = chatterNew()'); push('splash', 0); tick(0);
-  check('D  Quiet: another call 5 s later is dropped (one line in 8 s)', push('hit', 5000) === false);
-  check('D  Quiet: 8 s later a call is taken', push('hit', 8100) === true);
-  g.run('window.__S = chatterNew()'); push('splash', 0); tick(0);
+  g.run('window.__S = chatterNew()'); said1('splash', 0);
+  check('D  Quiet: another call 5 s after a line is dropped (one line in 8 s)', push('hit', 5000) === false);
+  check('D  Quiet: 8 s after a line a call is taken', push('hit', 8500) === true);
+  g.run('window.__S = chatterNew()'); said1('splash', 0);
   check('D  Quiet: the same kind of call is not made twice in 24 s even when the 8 s are over', push('splash', 9000) === false && push('splash', 24100) === true);
-  g.run('CHATTER.mode = "on"; window.__S = chatterNew()'); push('splash', 0); tick(1000);
-  check('D  On: a call 3 s after the last line is taken', push('hit', 4100) === true);
-  tick(4500);
+  g.run('window.__S = chatterNew()'); push('splash', 0);
+  check('D  one at a time: a call made while another waits for its beat is dropped, not queued behind', push('hit', 100) === false && J('__S.q.length') === 1);
+  g.run('CHATTER.mode = "on"; window.__S = chatterNew()'); said1('splash', 0);
+  check('D  On: a call 3 s after a line is taken', push('hit', 4100) === true);
+  tick(4300);
   check('D  On: the same kind of call again within 10 s is not taken, and after 10 s it is', push('splash', 6000) === false && push('splash', 10100) === true);
   g.run('CHATTER.mode = "off"; window.__S = chatterNew()');
   check('D  Off: nothing is taken, nothing is said', push('splash', 0) === false && tick(99999) === null);
