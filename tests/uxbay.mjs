@@ -19,7 +19,7 @@ g.run(`
   window.F = __fake(1); F.onKey({ code: 'Enter' }); F.update(0, 33);
 `);
 check('at the start: six fighters, two escorts, none out, in words', J('F.hud.bay.text') === 'BAY  fighters 6  escorts 2   OUT 0', J('F.hud.bay.text'));
-g.run(`F.onKey({ code: 'Digit1' }); for (let i = 0; i < 30 * 6; i++) F.update(0, 1000 / 30);`);
+g.run(`F.onKey({ code: 'Digit1' }); F.onKey({ code: 'Digit1' }); for (let i = 0; i < 30 * 6; i++) F.update(0, 1000 / 30);`);
 check('after Launch the bay is empty and eight are out', J('F.hud.bay.text') === 'BAY  fighters 0  escorts 0   OUT 8', J('F.hud.bay.text'));
 g.run(`window.F = __fake(1); F.onKey({ code: 'Enter' }); F.camp.bay.fighters = 1; F.camp.bay.escorts = 1; F.update(0, 33);`);
 check('one of each has no plural to get wrong', J('F.hud.bay.text') === 'BAY  fighters 1  escorts 1   OUT 0');

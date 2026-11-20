@@ -52,8 +52,9 @@ class Campaign extends Phaser.Scene {
     this.hudG = this.add.graphics().setScrollFactor(0).setDepth(100);
     const t = (x, y, size, color) => this.add.text(x, y, '', uiFont(size, color, { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
     this.hud = { shield: t(252, 18, 14, '#7fe9ff'), ore: t(252, 52, 14, '#ffd37a'), hull: t(24, 18, 14, '#9fe9ff'), earth: t(24, 52, 14, '#9fe9ff'), bay: t(24, 86, 14, '#9fe9ff'), wave: t(24, 108, 14, '#ffd37a'), mother: t(W / 2 - 150, 18, 14, '#ff9ec0'), blink: t(24, 130, 14, '#7fe9ff'),
-      obj: t(24, 152, 14, '#ffffff'), nav: t(24, 174, 14, '#7fe9ff'), arrow: t(0, 0, 13, '#ffd37a').setOrigin(0.5), keys: this.add.text(24, H - 44, uiText('camp.ui.keys'), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
+      obj: t(24, 152, 14, '#ffffff'), nav: t(24, 174, 14, '#7fe9ff'), arrow: t(0, 0, 13, '#ffd37a').setOrigin(0.5), keys: this.add.text(24, H - 44, campKeyLine(), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
     this.input.keyboard.on('keydown', e => this.onKey(e));
+    if (typeof campPanelsInstall === 'function') campPanelsInstall(this); // the keyboard panels: 1 the FLEET panel at the left, 2 the SHIP panel at the right (src/camppanel.js, src/campanelsdraw.js)
     if (typeof campMapInstall === 'function') campMapInstall(this); // Tab: the map of the level, over the battle, which goes on behind it (src/campmap.js, src/campmapdraw.js)
     this.showIntro();
   }
@@ -67,6 +68,7 @@ class Campaign extends Phaser.Scene {
   // ----- the cards: the story, the pick, the end -----
   showCard(title, lines, hint, tall) {
     this.hideCard(); if (typeof campMapClose === 'function') campMapClose(this); // a card (the story, the end) comes up over the map: the map goes
+    if (typeof campPanelsClose === 'function') campPanelsClose(this); // and a panel
     const o = [], cx = W / 2, cy = H / 2 - 20, h = tall || 300;
     o.push(this.add.rectangle(W / 2, H / 2, W, H, 0x02060d, 0.5)); // a veil over the battle and its gauges, so the card is the one thing to read (the blind critic: HUD and planet labels showed through the card)
     o.push(this.add.rectangle(cx, cy, 800, h, 0x04101c, 1).setStrokeStyle(2, CYAN, 0.85));
@@ -96,7 +98,7 @@ class Campaign extends Phaser.Scene {
     this.mode = 'lost'; const lines = typeof campLoseLines === 'function' ? campLoseLines(this.camp, why) : [uiText('camp.lose.' + why)]; // src/camplose.js: what happened, how far, one thing to try
     this.showCard(uiText('camp.ui.lost', { n: this.level }), lines, uiText('camp.ui.retry')); this.say([lines[0]].concat(lines.slice(2))); // the numbers are for reading: the cause and the tip are said
   }
-  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap')].concat([uiText('camp.ui.pausehelp')], typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), 322); } // the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
+  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap'), uiText('camp.ui.pausepanels', { panels: campPanelKeyLine().replace(/   /g, ', ') })].concat([uiText('camp.ui.pausehelp')], typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), 372); } // the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
   next() { // after the story (and the pick): the next level, or after the last one the end, with a new campaign waiting
     const last = !CAMP.levels[this.level + 1];
     this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) this.P.techs = []; campProgressSave(this.P);
@@ -108,6 +110,7 @@ class Campaign extends Phaser.Scene {
   onKey(e) {
     if (e.repeat || this.leaving) return;
     const c = e.code, C = this.camp;
+    if (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) { if (c === 'KeyH' || c === 'Escape') this.closeKeys(); return; } // the H page of every key (src/campkeys.js) has the keys while it is open
     if (this.mode === 'intro') { if (c === 'Enter') { this.hideCard(); this.mode = 'play'; } return; }
     if (this.mode === 'won') { if (c === 'Enter') { if (campTechChoices(this.level).length) this.showPick(); else this.next(); } return; }
     if (this.mode === 'end') { if (c === 'Enter' || c === 'KeyT') go(this, 'Title'); return; }
@@ -117,12 +120,16 @@ class Campaign extends Phaser.Scene {
       return;
     }
     if (this.mode === 'lost') { if (c === 'Enter') go(this, 'Campaign', { level: this.level, techs: this.P.techs, via: 'retry' }); else if (c === 'KeyT') go(this, 'Title'); return; }
-    if (this.mode === 'pause') { if (c === 'Escape') { this.hideCard(); this.mode = 'play'; } else if (c === 'KeyT') go(this, 'Title'); return; }
+    if (this.mode === 'pause') { if (c === 'Escape') { this.hideCard(); this.mode = 'play'; } else if (c === 'KeyT') go(this, 'Title'); else if (c === 'KeyH') this.openKeys(); return; }
+    if (c === 'KeyH') { this.openKeys(); return; } // H: every key, on one page
+    const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // a word typed into the strip is not a key
+    if ((typeof this.pn !== 'object' || typeof this.pn.open !== 'string') && typeof campPanelNew === 'function') this.pn = campPanelNew(); // made in create (campPanelsInstall); a stand-in scene in a test has none, and answers any property
+    const pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0) : { used: false }; // the digits are the panels': 1 opens FLEET, 2 SHIP, then a digit picks a row (src/camppanel.js); Esc closes a panel first
+    if (pr.ran) toast(this, pr.say, pr.ok ? '#9fe9ff' : '#ffb454');
+    if (pr.used) return;
     if (c === 'Escape') { if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc closes the map first; it never pauses while the map is open
     if (this.mp && typeof campMapKey === 'function' && campMapKey(this, c, e.shiftKey)) return; // the open map's list: W S choose, A D change group, Enter fly there (Shift+Enter fast), X clear (src/campmapdraw.js)
-    const order = { Digit1: 'launch', Digit2: 'attack', Digit3: 'escort', Digit4: 'guard', Digit5: 'recall', Digit6: 'mine', Digit7: 'recharge', Digit8: 'build', Digit9: 'build' }[c];
-    if (order) { const r = c === 'Digit9' ? campOrder(C, 'build', 'escort', 'key') : campOrder(C, order, '', 'key'); toast(this, r.say, r.ok ? '#9fe9ff' : '#ffb454'); } // 8 builds a fighter, 9 an escort
-    else if (c === 'KeyQ') C.input.blink = true;
+    if (c === 'KeyQ') C.input.blink = true;
     else if (c === 'KeyF') this.fireMissile();
     else if (typeof campDebugKey === 'function') { // the tune kit (src/campdebug.js): ] skip, \\ win, [ lose, ` god mode; none is a key you fly by
       const id = campDebugKey(c); if (!id) return;
@@ -130,6 +137,15 @@ class Campaign extends Phaser.Scene {
       if (r && r.go) go(this, 'Campaign', { level: r.go.level, techs: r.go.techs, via: 'skip' });
     }
   }
+
+  // the H page of every key (src/campkeys.js): from the battle it waits for the page (the pause card's own mode), from the pause card it comes up over it
+  openKeys() {
+    if (typeof campPanelsClose === 'function') campPanelsClose(this);
+    if (typeof campKeysOpen !== 'function' || (typeof document !== 'undefined' && document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))) return; // not while a word is typed into the strip
+    if (this.mode === 'play') { this.mode = 'pause'; this.keysPaused = true; }
+    campKeysOpen(this);
+  }
+  closeKeys() { campKeysClose(this); if (this.keysPaused) { this.keysPaused = false; this.mode = 'play'; } }
 
   // a turret fires (src/campaign.js says each shot with an event of its own): a flash at its muzzle, and a quiet blip, never more than one in CAMP_BLIP.gap ms of the battle's clock, so eight turrets rattle and do not pile up into noise
   turretFlash(e) {
@@ -142,6 +158,7 @@ class Campaign extends Phaser.Scene {
   // ----- each frame -----
   update(time, dt) {
     spaceBackdropTick(this);
+    if (typeof campPanelsPaint === 'function') campPanelsPaint(this, this.time.now); // the open panel, once it is due (250 ms after its key)
     const C = this.camp;
     if (this.mode === 'play' && !C.result) {
       const k = this.k, inp = C.input;
