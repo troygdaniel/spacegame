@@ -76,6 +76,7 @@ class Campaign extends Phaser.Scene {
     const pp = CAMP.hud.pips; this.hud.pw = t(pp.x, pp.y, 11, '#ffb454').setText('W'); this.hud.ps = t(pp.x, pp.y + 12, 11, '#7fe9ff').setText('S'); this.hud.pe = t(pp.x, pp.y + 24, 11, '#6dff9c').setText('E'); // the ship's systems (card space-game-campaign-systems): W S E, their pips are drawn in paintHud
     this.powerKey = this.camp.power.base.join(); // the setting as it was saved: a change of it is saved when it is made (update)
     this.hud.scouts = t(24, 196, 14, '#b8f0ff'); // the scouts out (card space-game-campaign-scouts): "SCOUTS 1"
+    this.hud.repair = t(130, 196, 14, '#9fe9ff'); // the fighters being mended in the bay (card space-game-fighter-repair): "REPAIR 2  7 s"
     this.radio = chatterNew(); this.orderSeen = Object.assign({}, this.camp.orders); this.chatUntil = 0; // the wing's radio (src/campchatter.js): its state, the orders seen so far, when its line goes
     this.hud.chat = this.add.text(24, H - 112, '', uiFont(15, '#ffd37a', { stroke: '#02060d', strokeThickness: 3, wordWrap: { width: 330 } })).setScrollFactor(0).setDepth(101).setAlpha(0); // bottom left, beside the command strip (which starts at x 368)
     this.input.keyboard.on('keydown', e => this.onKey(e));
@@ -495,6 +496,7 @@ class Campaign extends Phaser.Scene {
     if (this.hud.shield) this.hud.shield.setText(uiText('camp.ui.shield') + '  ' + Math.round(C.shield)); // (a stand-in scene in a test may have no shield text)
     this.hud.wave.setText(uiText('camp.ui.wave', { n: C.waves.filter(w => w.started).length, total: waves.length }));
     this.hud.mother.setText(m ? uiText('camp.ui.mother') : '');
+    if (this.hud.repair) { const rp = campRepairState(C); this.hud.repair.setText(rp.n ? uiText('camp.ui.repair', { n: rp.n, s: rp.next }) : ''); } // (a stand-in scene in a test may have no repair text)
     if (this.hud.scouts) { const so = campScoutsOut(C); this.hud.scouts.setText(so ? uiText('camp.ui.scouts', { n: so }) : ''); } // (a stand-in scene in a test may have no scouts text)
     this.hud.blink.setText(C.techs.indexOf('blink') >= 0 ? 'B  ' + (C.t - C.blinkAt >= campBlinkCooldown(C) ? 'READY' : Math.ceil((campBlinkCooldown(C) - (C.t - C.blinkAt)) / 1000) + ' s') : '');
     // the radar: the carrier at its centre, space shown out to CAMP_RADAR.range; a ship beyond it is drawn on the rim
