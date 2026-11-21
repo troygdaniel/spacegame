@@ -30,8 +30,8 @@ async function campaign() {
   try {
     const SC = `game.scene.getScene('Campaign')`, j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`));
     await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
-    await press(t, 'Enter'); await t.run(300);
-    check('the two tabs are on the screen from the start: Q FLEET at the left, E SHIP at the right, no list', (await j(`Object.keys(${SC}.pnl.p).join()`)) === 'fleet,ship' && (await j(`${SC}.pnl.p.fleet.cap.visible && ${SC}.pnl.p.ship.cap.visible && ${SC}.pnl.p.fleet.rows.every(r => !r.name.visible)`)) === true);
+    await press(t, 'Enter'); await t.run(300); await press(t, 'Enter'); await t.run(300); // the story card, then the briefing
+    check('the three tabs are on the screen from the start: Q FLEET and C SYSTEMS at the left, E SHIP at the right, no list', (await j(`Object.keys(${SC}.pnl.p).join()`)) === 'fleet,ship,systems' && (await j(`${SC}.pnl.p.fleet.cap.visible && ${SC}.pnl.p.ship.cap.visible && ${SC}.pnl.p.systems.cap.visible && ${SC}.pnl.p.fleet.rows.every(r => !r.name.visible)`)) === true);
     await snap(t, 'tabs');
     await press(t, 'Digit1', 20); await t.run(300);
     check('a digit with no panel open does nothing: no order, no panel', (await j(`${SC}.camp.launchQ.length + ${SC}.camp.launched + (${SC}.pn.open ? 1 : 0)`)) === 0);
@@ -50,7 +50,7 @@ async function campaign() {
     check('and then it is a tab again: the list is gone', (await j(`${SC}.pnl.p.fleet.rows.every(r => !r.name.visible)`)) === true);
     await press(t, 'KeyE', 20); await t.run(400);
     const ship = await j(`${SC}.pnl.p.ship.rows.map(r => r.name.text + ': ' + r.suffix.text)`);
-    check('E opens the SHIP list at the right: mine, recharge, what a ship costs (or the ore it needs: the belt starts with none) and the objective row', ship.length === 5 && /^Mine ore: \d+ ships$/.test(ship[0]) && /^New fighter: (25 ore|needs 25 ore)$/.test(ship[2]) && /^Fly to goal: /.test(ship[4]), ship.join(' | '));
+    check('E opens the SHIP list at the right: mine, recharge, what a ship costs (or the ore it needs, or "dock first": ships are built docked, and the belt starts with no ore) the objective row and the dock row', ship.length === 6 && /^Mine ore: \d+ ships$/.test(ship[0]) && /^New fighter: (25 ore|needs 25 ore|dock first)$/.test(ship[2]) && /^Fly to goal: /.test(ship[4]), ship.join(' | '));
     check('every row of the open SHIP list fits its column as the browser draws it: the name, its word and the digit side by side with room to spare (the critic saw two of them run together)', (await j(`${SC}.pnl.p.ship.rows.every(r => 30 + r.name.width + r.suffix.width + 10 <= CAMPPANELS_LOOK.list.w)`)) === true, await j(`${SC}.pnl.p.ship.rows.map(r => Math.round(30 + r.name.width + r.suffix.width + 10)).join(' ') + ' of ' + CAMPPANELS_LOOK.list.w`));
     await snap(t, 'ship');
     await press(t, 'KeyQ', 20); await t.run(60); await snap(t, 'crossfade');
@@ -67,7 +67,7 @@ async function campaign() {
     await snap(t, 'page');
     await press(t, 'KeyH'); await t.run(100);
     check('H again closes it and the battle goes on', (await j(`${SC}.ck`)) === null && (await j(`${SC}.mode`)) === 'play');
-    check('the bottom key line says the panels and H, and has a backing strip', /Q Fleet   E Ship   Tab Map   (\+ - Zoom   )?H Keys$/.test(await j(`${SC}.hud.keys.text`)) && (await j(`!!${SC}.keysBack && ${SC}.keysBack.width >= 1280`)) === true, await j(`${SC}.hud.keys.text`));
+    check('the bottom key line says the panels and H, and has a backing strip', /Q Fleet   E Ship   C Systems   Tab Map   (\+ - Zoom   )?H Keys$/.test(await j(`${SC}.hud.keys.text`)) && (await j(`!!${SC}.keysBack && ${SC}.keysBack.width >= 1280`)) === true, await j(`${SC}.hud.keys.text`));
     check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
   } finally { await t.close(); }
 }

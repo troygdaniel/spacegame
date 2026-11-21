@@ -127,6 +127,7 @@ function campPanelShortState(C, row) {
     case 'recharge': return campPanelRecharge(C).cost + ' ore';
     case 'buildf': return B.fighterCost + ' ore';
     case 'builde': return B.escortCost + ' ore';
+    case 'dock': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name : ''; } // the outpost in range, by name (the row had no word of its own when it could be done: wrap-up, 8-GEN)
     case 'goal': { const g = campNavGoal(C); return g ? campNavKm(Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y)) + ' km' : ''; }
   }
   return '';
