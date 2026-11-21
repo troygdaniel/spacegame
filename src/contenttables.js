@@ -634,6 +634,8 @@ const UI_TEXT = {
   'camp.nav.pirate': 'Pirate',
   'camp.nav.k.skiff': 'Skiff', 'camp.nav.k.cutter': 'Cutter', 'camp.nav.k.brute': 'Brute', 'camp.nav.k.patrol': 'Patrol', 'camp.nav.k.miner': 'Miner',
   'camp.map.pirate': 'Pirates ({n})', 'camp.map.patrol': 'Patrols ({n})', 'camp.map.miner': 'Miners ({n})',
+  // The rival ship (card space-game-rival-duel, content/text/campaign-rival.md)
+  'camp.say.rival.leader': 'Pirate leader ahead. Heavy ship.', 'camp.say.rival.dead': '{name} is down.', 'camp.nav.k.pirateleader': 'Pirate leader',
   'camp.no.wnogroup': 'Which group? Fighters, escorts or all.',
   'camp.no.wnotarget': 'I cannot find that target.',
   'camp.no.wbadpair': '{group} cannot {verb} {what}.',
