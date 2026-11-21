@@ -72,10 +72,11 @@ function campSell(C, o) {
 function campUndock(C) { if (!C.docked) return false; const id = C.docked; C.docked = ''; C.events.push({ type: 'undocked', id }); return true; }
 
 // ---- mending the hull: docked only, for ore, in proportion to what is missing ----
+const campMendQuote = C => { const c = C.carrier, missing = Math.max(0, c.maxHp - c.hp); return { missing, cost: Math.max(5, Math.ceil(CAMP.outpost.repairOre * missing / c.maxHp)) }; }; // what mending the hull would take: the points missing and the ore it costs
 function campMend(C, arg, dry) {
   if (!C.docked && !campAboard(C)) return campNo('norepair');
-  const c = C.carrier, missing = c.maxHp - c.hp; if (missing <= 0.5) return campNo('hullfull');
-  const cost = Math.max(5, Math.ceil(CAMP.outpost.repairOre * missing / c.maxHp));
+  const c = C.carrier, q = campMendQuote(C), missing = q.missing; if (missing <= 0.5) return campNo('hullfull');
+  const cost = q.cost;
   if (campFunds(C) < cost) return campNo('noore2', { need: cost, have: campFunds(C) });
   if (dry) return campYes('repair', { pts: Math.round(missing), ore: cost });
   campPay(C, cost); c.hp = c.maxHp; C.orders.repair = (C.orders.repair | 0) + 1;
