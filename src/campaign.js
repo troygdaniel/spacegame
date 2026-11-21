@@ -122,6 +122,14 @@ const CAMP = {
     mouth: [21, 19.5],                     // px from the carrier's centre (x along the nose, y to the side): where a launched ship appears, one side and then the other: just in front of the launch tube of a hangar pod (CAMP_ART.cruiser.launch)
     dockAt: 63                             // px: a recalled ship this close to the carrier lands (and is whole again when next launched)
   },
+  repair: {                                // a hurt fighter lands to be mended (card space-game-fighter-repair; src/camprepair.js, docs/CAMPAIGN.md "Repair"): the wing's fighters only, the enemy's never do
+    kinds: ['fighter'],                    // who breaks off (an escort stays in the fight, a scout has its task)
+    below: 0.3,                            // the share of its hull under which a fighter breaks off and flies home
+    within: 15,                            // s of flight (the way home over its top speed): a cruiser farther off than this and the fighter fights on
+    time: 10,                              // s a landed fighter is mended, then it is whole again
+    fight: 1800,                           // px: an alien this close to the cruiser, or any ship of the wing still out on an order, sends the mended fighter out again (else it stays in the bay)
+    sayEvery: 5                            // s between two radio lines of the same kind (four fighters hurt together are one call)
+  },
   scout: {                                 // scout-escorts (card space-game-campaign-scouts; docs/CAMPAIGN.md "Scout-escorts"): an escort sent out with the Scout order to look, scan and fetch
     sense: 2600,                           // px: the sensor circle round a scout that is out (the map draws it, the radar marks the scout)
     read: 1400,                            // px: how close a scout must be to a cloaked anomaly to read what it likely is (reading is not uncovering)
@@ -197,6 +205,13 @@ const CAMP = {
   convoy: {
     hp: 200,                               // hit points of a freighter
     speed: 120                             // px/s: the same as the MULE of the escort call
+  },
+  convoyOrders: {                          // orders for the escorted ships (card space-game-convoy-orders; src/campconvoy.js; docs/CAMPAIGN.md "Convoy orders"): Tuck in, Hold here, Run for it, Carry on; the page CONVOY of the FLEET panel, the strip and the voice
+    kinds: ['freighter', 'miner'],         // the ships that take them: the convoys (the transport, the haulers) and the neutral miners
+    bubble: 120,                           // px: Tuck in. A ship this close to the cruiser is under its shield: a hit on it is a hit on the cruiser's shield instead (then its hull). It flies to the cruiser, and goes on along its road only while it stays inside
+    run: 1.6,                              // times its own top speed: Run for it, full speed to its goal (a miner goes home), and no cover
+    accel: 160,                            // px/s per s: how fast a ship under an order gains or loses speed (a held ship stops in a second or so); without an order a convoy ship goes at its speed at once, as ever
+    slots: [[-46, -44], [-46, 44], [-84, -44], [-84, 44], [-122, 0], [-10, -58]] // px, in the cruiser's frame (x along its nose, y to its right): where the tucked miners lie under the shield (a convoy ship holds its road and only keeps inside the bubble)
   },
   warp: {                                  // the warp cinematic at the start of a level that warps in (src/campwarp.js): times are seconds from its start, places are fractions of the screen, sizes are px
     total: 7.2,                            // s: the whole cinematic (6 to 8); any key skips it
@@ -669,9 +684,9 @@ function campNew(level, techs, opts) {
     earth: L.defend ? campDefend(level, L.defend) : L.earth === false ? null : { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield }, caches: (L.caches || []).map(c => ({ x: c[0], y: c[1], got: false })), cachesGot: 0,
     ore: Math.max(0, Math.min(CAMP.ore.cap, opts.ore != null ? opts.ore : (L.startOre != null ? L.startOre : CAMP.ore.start))), shield: CAMP.carrier.shield, pickups: [], build: { queue: [] },
     relic: L.relic ? { x: campPlaces(level)[L.relic.place].x, y: campPlaces(level)[L.relic.place].y, hold: 0 } : null,
-    bay: { fighters: CAMP.bay.fighters, escorts: CAMP.bay.escorts }, launchQ: [], nextLaunch: 0,
+    bay: { fighters: CAMP.bay.fighters, escorts: CAMP.bay.escorts }, launchQ: [], nextLaunch: 0, repairs: [], // repairs: the fighters landed and being mended, { kind, until, order, stay } (src/camprepair.js)
     waves: L.waves.map(() => ({ started: false, at: 0 })), convoys: L.convoys.map(() => ({ started: false })), delivered: 0, lost: 0, kills: 0, launched: 0, lostShips: 0, lane: {}, cash: 0, sold: 0, oreBest: 0,
-    orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, build: 0, power: 0, balance: 0, emergency: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
+    orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, build: 0, power: 0, balance: 0, emergency: 0, convoy: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
     result: null, why: '', docked: '' // docked: the id of the outpost the carrier is docked at ('' in flight; src/campoutpost.js)
   };
   if (campHas(C, 'bay2')) C.bay.fighters += CAMP.tech.bay2.fighters;
@@ -751,6 +766,7 @@ function campNearest(list, p, max) { let best = null, bd = max == null ? Infinit
 // ---------- damage and deaths ----------
 function campHurt(C, u, dmg, byId) {
   if (u.hp <= 0 || C.result) return;
+  if (u.cord === 'tuck' && typeof campConvoyCover === 'function') { const c = campConvoyCover(C, u); if (c) u = c; } // a ship tucked in under the cruiser's shield: the hit is the cruiser's (src/campconvoy.js)
   if (u.kind === 'carrier') {
     if (campHas(C, 'shield')) dmg *= CAMP.tech.shield.taken; if (C.god) dmg = 0;
     if (C.shield > 0 && dmg > 0) { const take = Math.min(C.shield, dmg); C.shield -= take; dmg -= take; C.shieldHitAt = C.t; C.events.push({ type: 'shieldhit', x: u.x, y: u.y }); } // the shield first
@@ -813,13 +829,14 @@ function campDo(C, name, arg, dry, how) {
   if (name === 'power' || name === 'balance' || name === 'emergency') return campPowerDo(C, name, arg, dry); // the ship's systems (below)
   const t = campFind(C, arg), out = campWing(C);
   if (name === 'scout') return campScoutDo(C, arg, dry); // the Scout order (below)
+  if (name === 'convoy') return campConvoyOrder(C, arg, dry); // Tuck in, Hold here, Run for it, Carry on: the escorted ships (src/campconvoy.js)
   if (name === 'launch') {
     const n = C.bay.fighters + C.bay.escorts - C.launchQ.length;
     if (n <= 0) return campNo(C.launchQ.length ? 'launching' : out.length ? 'baydry' : 'bay');
     if (dry) return campYes('launch');
     for (let i = 0; i < C.bay.fighters; i++) C.launchQ.push('fighter');
     for (let i = 0; i < C.bay.escorts; i++) C.launchQ.push('escort');
-    C.bay.fighters = 0; C.bay.escorts = 0; C.orders.launch++;
+    C.bay.fighters = 0; C.bay.escorts = 0; C.orders.launch++; (C.repairs || []).forEach(r => { r.stay = false; }); // a fighter still being mended goes out too when it is whole
     return campYes('launch');
   }
   // Attack, Escort, Guard and Recall are the wing orders of src/campwing.js (campWingOrder) with no group and no target named: today's groups and today's answers
@@ -879,7 +896,7 @@ function campBuild(C, arg, dry) {
   const words = { one: 1, a: 1, an: 1, two: 2, three: 3, four: 4, five: 5 }, m = /(\d+)|\b(one|two|three|four|five)\b/.exec(q);
   const n = Math.max(1, Math.min(B.most, m ? (m[1] ? parseInt(m[1], 10) : words[m[2]]) : 1));
   const have = (kind === 'fighter' ? C.bay.fighters + campWing(C, 'fighter').length + C.launchQ.filter(k => k === 'fighter').length : C.bay.escorts + campWing(C, 'escort').length + C.launchQ.filter(k => k === 'escort').length)
-    + C.build.queue.filter(b => b.kind === kind).length;
+    + C.build.queue.filter(b => b.kind === kind).length + campRepairing(C, kind); // (a fighter being mended is still one of the wing)
   if (have + n > (kind === 'fighter' ? C.cap.fighters : C.cap.escorts)) return campNo('buildfull', { kind }); // the wing limit: the workshop's, and the rank's extras
   const cost = n * (kind === 'fighter' ? B.fighterCost : B.escortCost);
   if (campFunds(C) < cost) return campNo('noore2', { need: cost, have: campFunds(C) });
@@ -893,6 +910,13 @@ function campIntent(text) {
   const SC_FILLER = /^(?:(?:please|hey|ok|okay|computer|athena|can you|could you|would you|will you|i want to|i wanna|i need to|lets|let's|go ahead and|all|everyone)\s+)+/;
   let q = String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9' -]+/g, ' ').replace(/\s+/g, ' ').trim().replace(SC_FILLER, '').replace(/\s+(please|now|right now|already)$/, '').trim();
   if (!q) return null;
+  { // the convoy orders (card space-game-convoy-orders): "tuck in", "run for it", "carry on", and with a convoy word ("haulers hold", "hold the transport") hold: the plain "hold here" stays the wing's stance. The words go to campConvoyOrder whole: it finds the verb and a ship's name
+    const cw = /\b(?:convoys?|transport|haulers?|freighters?|cargo|miners?)\b/.test(q), wing = /\b(?:escort|attack|guard|mine|build|launch|recall|scout|dock)\b/.test(q);
+    if (/^(?:tuck|close up|snug up|take cover|get under (?:the |our )?(?:shield|cover))/.test(q) || (cw && !wing && /\btuck\b/.test(q))) return { act: 'fleet_convoy', arg: q };
+    if (/^(?:run for it|make a run(?: for it)?)$/.test(q) || (cw && !wing && /\b(?:run for it|make a run|run|flee|full speed)\b/.test(q))) return { act: 'fleet_convoy', arg: q.indexOf('run') >= 0 || q.indexOf('flee') >= 0 || q.indexOf('full speed') >= 0 ? q : 'run for it' };
+    if (/^(?:carry on|as you were|resume course|release the (?:convoy|haulers|transport))$/.test(q) || (cw && !wing && /\b(?:carry on|as you were|resume|release)\b/.test(q))) return { act: 'fleet_convoy', arg: q.indexOf('carry on') >= 0 ? q : 'carry on' };
+    if (cw && !wing && (/^(?:convoys?|haulers?|transport|freighters?|miners?)\s+(?:hold|stop|halt|stay put|wait)\b/.test(q) || /^(?:hold|stop|halt)\s+(?:the |our )?(?:convoys?|haulers?|transport|freighters?|miners?)\b/.test(q))) return { act: 'fleet_convoy', arg: q };
+  }
   { // a group named first, in words the old forms below would lose the group of: "all attack the mothership", "escorts scout the anomaly", "fighters hold at Ceres", "cancel the fighters" (src/campwing.js)
     const wp = typeof campWingParse === 'function' ? campWingParse(String(text).toLowerCase().replace(/^(?:(?:please|hey|ok|okay|computer|athena|can you|could you|would you|will you|go ahead and)\s+)+/, '')) : null;
     const same = wp && ((wp.group === 'fighters' && wp.verb === 'attack') || (wp.group === 'escorts' && wp.verb === 'escort') || (wp.group === 'all' && (wp.verb === 'guard' || !wp.verb)) || (wp.group === 'escorts' && !wp.verb && /\b(?:convoys?|freighters?|cargo|supplies|haulers?)\b/.test(wp.target))); // the old forms mean the same: their own words and answers
@@ -942,6 +966,7 @@ function campTick(C, dt) {
   campLaserStep(C, dt); // the turrets' charge mends at the rate of the weapons' power
   campCarrier(C, dt);
   campLaunch(C);
+  campRepairTick(C); // the fighters mended in the bay are whole again (src/camprepair.js)
   campDogPair(C); // the fighters and the raiders pair off, one on one (src/campdogfight.js)
   C.ships.forEach(u => { if (u.hp > 0 && u.kind !== 'carrier') campAI(C, u, dt); });
   campBullets(C, dt);
@@ -960,6 +985,7 @@ function campTick(C, dt) {
   campFactory(C, dt);
   campLasers(C);
   campMissions_tick(C, dt);
+  if (typeof campCallsTick === 'function') campCallsTick(C, dt); // the pilots ask for orders: the call that waits, the call that may open (src/camporders.js)
   campWarn(C);
   if (typeof campOutpostTick === 'function') campOutpostTick(C, dt); // the retreat line (src/campoutpost.js)
   C.ships = C.ships.filter(u => u.hp > 0 || (delete C.by[u.id], false)); // the dead leave the list (the scene was told by the boom event)
@@ -1171,14 +1197,14 @@ function campBullet(C, from, rot, speed, dmg, lifeMs, team, ahead, extra) {
 }
 
 // the bay: Launch queues the ships, one leaves every launchEvery ms
-function campLaunch(C) {
-  if (!C.launchQ.length || C.t < C.nextLaunch || C.carrier.hp <= 0) return;
+function campLaunch(C, again, order) { // again: the kind of a fighter that was mended aboard (src/camprepair.js): it goes out at once, with the order it had
+  if (!again && (!C.launchQ.length || C.t < C.nextLaunch || C.carrier.hp <= 0)) return;
   C.nextLaunch = C.t + CAMP.bay.launchEvery;
-  const kind = C.launchQ.shift(), c = C.carrier, side = (C.launched % 2 ? 1 : -1), m = CAMP.bay.mouth, cs = Math.cos(c.rot), sn = Math.sin(c.rot); // out of the mouth of a hangar pod, one side and then the other
+  const kind = again || C.launchQ.shift(), c = C.carrier, side = (C.launched % 2 ? 1 : -1), m = CAMP.bay.mouth, cs = Math.cos(c.rot), sn = Math.sin(c.rot); // out of the mouth of a hangar pod, one side and then the other
   const u = campSpawn(C, kind, c.x + cs * m[0] - sn * side * m[1], c.y + sn * m[0] + cs * side * m[1]); C.launched++;
   u.vx = c.vx + Math.cos(c.rot) * 140; u.vy = c.vy + Math.sin(c.rot) * 140; u.rot = c.rot;
   const cv = kind === 'escort' ? campNearest(campConvoys(C), c) : null;
-  u.order = cv ? { type: 'escort', target: cv.id, slot: campWing(C, 'escort').length - 1 } : { type: 'guard', at: { kind: 'carrier' } };
+  u.order = order || (cv ? { type: 'escort', target: cv.id, slot: campWing(C, 'escort').length - 1 } : { type: 'guard', at: { kind: 'carrier' } });
   C.events.push({ type: 'launch', id: u.id, kind });
 }
 
@@ -1295,6 +1321,7 @@ function campConvoyAI(C, u, dt) {
   const d = campDist(u, u.dest), ang = Math.atan2(u.dest.y - u.y, u.dest.x - u.x);
   if (u.cid != null && u.lane > 0) C.lane[u.cid] = Math.max(C.lane[u.cid] || 0, Math.max(0, Math.min(1, 1 - (d - 90) / u.lane))); // how much of its road it has flown (the best it has done: the arrival removes the ship, the share stays)
   if (d < 90) { if (u.cid != null) C.lane[u.cid] = 1; C.delivered++; u.hp = 0; u.arrived = true; C.events.push({ type: 'arrive', x: u.x, y: u.y, id: u.id }); campSay(C, u.named ? 'camp.say.shiparrived' : 'camp.say.delivered', { name: campConvoyName(u) }); return; }
+  if (u.cord && typeof campConvoyStep === 'function') return campConvoyStep(C, u, ang, dt); // under an order (Tuck in, Hold here, Run for it: src/campconvoy.js)
   u.rot = ang; u.vx = Math.cos(ang) * u.vmax; u.vy = Math.sin(ang) * u.vmax; u.x += u.vx * dt; u.y += u.vy * dt;
 }
 
@@ -1443,6 +1470,7 @@ function campScoutsStep(C, dt) {
 function campWingAI(C, u, dt) {
   const k = CAMP[u.kind], c = C.carrier, o = u.order || { type: 'guard', at: { kind: 'carrier' } }, aliens = campAliens(C);
   let foe = null, home = null;
+  if (campRepairRun(C, u, dt)) return; // a fighter under 30 percent hull breaks off, flies home and lands to be mended, whatever its order (src/camprepair.js)
   if (o.type === 'scout' && u.scout) return campScoutAI(C, u, dt);
   if (o.type === 'recall') {
     if (campDist(u, c) < CAMP.bay.dockAt) { if (u.scout) return campScoutDock(C, u); u.hp = 0; u.docked = true; C.bay[u.kind + 's']++; C.events.push({ type: 'dock', id: u.id }); return; }
@@ -1765,7 +1793,7 @@ function campSummary(C) {
   const L = C.L, c = C.carrier, m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
   const out = campWing(C, 'fighter').length, esc = campWing(C, 'escort').length, al = campAliens(C).filter(u => u.faction !== 'pirate').length, pi = campAliens(C).length - al, cv = campConvoys(C).map(u => campConvoyName(u));
   return 'Campaign level ' + C.level + ', ' + L.name + '. Goal: ' + campObjective(C) + ' Carrier hull ' + Math.round(c.hp) + ' of ' + Math.round(c.maxHp) + ', shield ' + Math.round(C.shield) + ' of ' + CAMP.carrier.shield + '. Ore in the store: ' + Math.floor(C.ore) + ' of ' + CAMP.ore.cap + (C.build.queue.length ? ', building ' + C.build.queue.length + ' ship' + (C.build.queue.length === 1 ? '' : 's') : '') + '.'
-    + (C.earth ? ' Earth shield ' + Math.round(C.earth.shield / C.earth.max * 100) + ' percent.' : '') + ' In the bay: ' + C.bay.fighters + ' fighters, ' + C.bay.escorts + ' escorts. Out: '
+    + (C.earth ? ' Earth shield ' + Math.round(C.earth.shield / C.earth.max * 100) + ' percent.' : '') + ' In the bay: ' + C.bay.fighters + ' fighters, ' + C.bay.escorts + ' escorts' + (campRepairing(C) ? ', ' + campRepairing(C) + ' being mended' : '') + '. Out: '
     + out + ' fighters, ' + esc + ' escorts. Missiles in the magazine: ' + C.missiles + ' of ' + C.magazine + ' (F fires one at ' + (L.win === 'mother' || m ? 'the mothership or ' : '') + 'the nearest big ship).' + (al || C.alienSeen ? ' Aliens alive: ' + al + '.' : '') + (pi ? ' Pirates alive: ' + pi + '.' : '') + campAnomLine(C) + (L.convoys.length ? ' Convoys flying: ' + cv.join(', ') + (cv.length ? '' : 'none') + '.' : '')
     + (L.win === 'mother' ? (m ? ' The alien mothership is ' + Math.round(campDist(m, c) / 10) + ' km away.' : ' The mothership has not come yet.') : '');
 }

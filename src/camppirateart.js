@@ -4,6 +4,7 @@
 // light bar (white and cyan); a MINER is an industrial hull with a cargo pod, a boom and orange hazard marks. None of them is red or green (the aliens' and yours), so the eye tells them apart in a crowd.
 //   skiff    a thin dart with forward-swept stubs and one big engine     cutter   a wedge with welded plates and a pair of guns     brute    a blocky heavy gun with three barrels
 //   patrol   a sleek police ship with two nacelles                       miner    a boxy hull, a pod and a mining boom
+//   tboat    the pirates' TORPEDO BOAT (card space-game-torpedo-art): a long armoured tube with the warhead showing at the nose, hooked stubs, two engines      lancer   the aliens' torpedo boat: a violet spear with a glowing lance
 // campPirateArt(kind) -> the drawing function of that kind (or null); src/campcruiser.js campShipTexture asks it for a kind it does not know. CAMP_ART has a row for each (the picture's size and the glow).
 Object.assign(CAMP_ART, {
   skiff:  { k: 4, len: 22, pad: 3, half: 7,  glow: [] },
@@ -11,12 +12,15 @@ Object.assign(CAMP_ART, {
   brute:  { k: 4, len: 38, pad: 3, half: 12, glow: [] },
   patrol: { k: 4, len: 30, pad: 3, half: 10, glow: [] },
   miner:  { k: 4, len: 32, pad: 3, half: 10, glow: [] },
-  pirateleader: { k: 4, len: 70, pad: 3, half: 20, glow: [] } // the rival ship (card space-game-rival-duel): the cruiser's own size
+  pirateleader: { k: 4, len: 70, pad: 3, half: 20, glow: [] }, // the rival ship (card space-game-rival-duel): the cruiser's own size
+  tboat:  { k: 4, len: 37, pad: 3, half: 9.2, glow: [] },
+  lancer: { k: 4, len: 36, pad: 3, half: 8.6, glow: [] }
 });
 const CAMP_PIRATE = { // the colours: rust and ochre for the pirates, pale steel and teal for the patrols, blue-grey and orange for the miners
   rust: [0x4a3828, 0x6c5236, 0x8e6c44, 0xb08a58, 0xd2ac70], ochre: 0xe8d24a, ochreDim: 0x9c8a2e, dark: 0x1a1612, edge: 0x100d0a, ember: 0xe28a3a, hot: 0xffd9a0,
   pale: [0x6a7480, 0x8a95a2, 0xaab4bf, 0xc9d2db, 0xe4eaf0], teal: 0x5fd8c0, tealDim: 0x2f8a7a, lightA: 0xffffff, lightB: 0x7fe9ff,
-  ind: [0x4c5a6a, 0x66788c, 0x8497ab, 0xa3b4c6], orange: 0xe8873a, orangeDim: 0x9a5a28, glass: 0xb4d6d8
+  ind: [0x4c5a6a, 0x66788c, 0x8497ab, 0xa3b4c6], orange: 0xe8873a, orangeDim: 0x9a5a28, glass: 0xb4d6d8,
+  alien: [0x3a2c52, 0x54407a, 0x7358a6, 0x9378c8], glowRed: 0xff4d6d, glowDim: 0x9a2a48, pink: 0xffc0cc, vein: 0xc58cff, void: 0x140c20 // the aliens' torpedo boat: violet plates with a red-pink glow (never green, never the pirates' rust)
 };
 
 function campSkiffDraw(g) { // a thin dart: needle nose, stubs swept forward, one big engine, an ochre stripe
@@ -100,4 +104,39 @@ function campPirateLeaderDraw(g) { // the pirate leader: a scavenged capital shi
   [-3, 0, 3].forEach(y => p.dot(7, y * 0.9, 0.9, P.glass)); p.dot(7, 0, 1.6, P.edge, 0.5);
   p.rect(-37, -9, -34, 9, P.dark); [-5.6, 0, 5.6].forEach(y => { p.dot(-37.2, y, 3.2, P.ember, 0.08); p.rect(-38.6, y - 1.7, -36.6, y + 1.7, P.ember, 0.95); p.rect(-38.6, y - 0.7, -37.4, y + 0.7, P.hot, 0.8); }); // three engines
 }
-function campPirateArt(kind) { return { skiff: campSkiffDraw, cutter: campCutterDraw, brute: campBruteDraw, patrol: campPatrolDraw, miner: campMinerDraw, pirateleader: campPirateLeaderDraw }[kind] || null; }
+function campTboatDraw(g) { // the pirates' torpedo boat: a long armoured tube, the warhead showing at the nose, hooked stubs with hazard marks, bolted plates, two big engines
+  const A = CAMP_ART.tboat, k = A.k, [W, H] = campArtSize('tboat'), p = campArtPen(g, W / 2, H / 2, k), P = CAMP_PIRATE, R = P.rust;
+  A.glow.forEach(([r, a]) => p.dot(0, 0, r, P.ochre, a));
+  [1, -1].forEach(s => { // a hooked stub each side: the boat is a tube with things bolted on
+    const w = [[1, 3.6 * s], [-3, 8.8 * s], [-11, 9 * s], [-13.4, 5.2 * s], [-9, 3.6 * s]];
+    p.poly(w, R[1]); p.poly([[0, 4.2 * s], [-3, 7.8 * s], [-10, 8 * s], [-11.8, 5.6 * s], [-8, 4.2 * s]], R[2], 0.9); p.outline(w, P.edge, 0.7, 0.95);
+    for (let x = -10; x < -2; x += 3) p.poly([[x, 8.6 * s], [x + 1.5, 8.6 * s], [x + 2.4, 7 * s], [x + 0.9, 7 * s]], P.ochre, 0.85); // hazard marks along the edge
+    p.dot(-7, 5.4 * s, 0.45, P.edge); p.dot(-3, 5 * s, 0.45, P.edge); p.dot(-9.4, 7.2 * s, 0.4, P.ochre, 0.9); // bolts and a lamp
+  });
+  const hull = [[9, -3.9], [-13, -5.3], [-16.4, -3.9], [-16.4, 3.9], [-13, 5.3], [9, 3.9]];
+  p.poly(hull, R[2]); p.rect(-14.6, -3.7, 8, 3.7, R[3], 0.9); p.outline(hull, P.edge, 0.9, 0.95);
+  p.line(-9, -5, -9, 5, P.edge, 0.55, 0.45); p.line(-2.6, -4.2, -2.6, 4.2, P.edge, 0.55, 0.45); // plate seams
+  p.rect(-8, -3.9, -5.6, 3.9, P.ochre, 0.9); p.rect(-8, -0.6, -5.6, 0.6, P.ochreDim, 0.9); // the stripe
+  p.rect(2, -2.7, 13.4, 2.7, P.dark); [4.4, 8.4].forEach(x => { p.rect(x, -3.1, x + 1.3, 3.1, R[1]); p.rect(x + 0.2, -2.8, x + 1.1, 2.8, R[2], 0.9); }); // the tube and its rust bands
+  const wh = [[13, -2.2], [16, -2], [18.6, 0], [16, 2], [13, 2.2]]; // the warhead, loaded: pale and ochre with a hot tip, so the eye finds the danger
+  p.poly(wh, P.ochre); p.poly([[13.4, -1.5], [16, -1.3], [17.8, 0], [16, 1.3], [13.4, 1.5]], P.hot, 0.9); p.outline(wh, P.edge, 0.6, 0.95); p.rect(14.4, -2.1, 15.2, 2.1, P.edge, 0.85);
+  p.dot(18, 0, 1.9, P.ember, 0.14); p.dot(18, 0, 0.7, P.ember, 0.95);
+  p.dot(-1, -2.2, 1.1, P.edge); p.dot(-1, -2.2, 0.8, P.glass); // a small canopy off the tube
+  p.rect(-17.8, -4.6, -16, 4.6, P.dark); [-2.6, 2.6].forEach(y => { p.dot(-18, y, 2.5, P.ember, 0.08); p.rect(-19, y - 1.2, -17.6, y + 1.2, P.ember, 0.95); p.rect(-19, y - 0.45, -18.1, y + 0.45, P.hot, 0.8); }); // two big engines
+}
+function campLancerDraw(g) { // the aliens' torpedo boat: a long violet spear with swept blades and a glowing lance along its axis
+  const A = CAMP_ART.lancer, k = A.k, [W, H] = campArtSize('lancer'), p = campArtPen(g, W / 2, H / 2, k), P = CAMP_PIRATE, V = P.alien;
+  A.glow.forEach(([r, a]) => p.dot(0, 0, r, P.glowRed, a));
+  [1, -1].forEach(s => { // a blade swept back each side, with a vein of light
+    const bl = [[6, 2.4 * s], [-2, 6.4 * s], [-13, 8.6 * s], [-9.6, 4 * s], [-4, 3 * s]];
+    p.poly(bl, V[1]); p.poly([[5, 2.8 * s], [-2, 6 * s], [-11.6, 8 * s], [-8.6, 4.2 * s], [-3.6, 3.4 * s]], V[2], 0.9); p.outline(bl, P.void, 0.7, 0.95);
+    p.line(4, 3 * s, -10, 7.4 * s, P.vein, 0.7, 0.4); p.dot(-12.4, 8.2 * s, 0.7, P.glowRed, 0.95); p.dot(-12.4, 8.2 * s, 2, P.glowRed, 0.1);
+  });
+  const hull = [[17.5, 0], [8, -2.4], [-8, -3.8], [-15.6, -2.6], [-15.6, 2.6], [-8, 3.8], [8, 2.4]];
+  p.poly(hull, V[1]); p.poly([[16.4, 0], [7.6, -1.7], [-8, -2.8], [-14.8, -1.9], [-14.8, 1.9], [-8, 2.8], [7.6, 1.7]], V[2], 0.95); p.outline(hull, P.void, 0.8, 0.95);
+  for (let x = -13; x < -3; x += 2.6) p.line(x, -3.4, x, 3.4, P.void, 0.55, 0.5); // ribs on the tail
+  p.line(-6, 0, 18.6, 0, P.glowRed, 0.95, 1.7); p.line(-6, 0, 18.6, 0, P.pink, 0.9, 0.6); p.dot(18.8, 0, 2.3, P.glowRed, 0.14); p.dot(18.8, 0, 0.8, P.pink, 0.95); // the lance: a charged line from the tail to the tip
+  p.dot(-6.4, 0, 1.2, P.glowRed, 0.95); p.dot(2, 0, 0.9, P.vein, 0.95); // two cells along it
+  p.rect(-16.8, -2.8, -15.2, 2.8, P.void); [-1.4, 1.4].forEach(y => { p.dot(-17, y, 2, P.glowRed, 0.1); p.rect(-17.8, y - 0.8, -16.4, y + 0.8, P.glowRed, 0.9); }); // the drive
+}
+function campPirateArt(kind) { return { skiff: campSkiffDraw, cutter: campCutterDraw, brute: campBruteDraw, patrol: campPatrolDraw, miner: campMinerDraw, pirateleader: campPirateLeaderDraw, tboat: campTboatDraw, lancer: campLancerDraw }[kind] || null; }

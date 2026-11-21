@@ -37,17 +37,22 @@ const BOTS = {
   defend: { name: 'defend', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, defend: true },              // plain, flying at what is nearest Earth
   late: { name: 'late', launchAt: 30, escort: [40], attackFrom: 40, attackEvery: 20 },                            // a slow player: launches at 30 s, attacks every 20 s
   missile: { name: 'missile', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, missiles: true },         // plain, and it presses F whenever a big ship is in reach
+  tuck: { name: 'tuck', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, tuck: true },                    // plain, and the convoy orders (card space-game-convoy-orders): when a hostile comes within 1,600 px of an escorted ship the cruiser goes to it and the ships tuck in under its shield; when the sky is clear they carry on
   mguard: { name: 'mguard', launchAt: 1, missiles: true },                                                       // launches (the wing only guards) and fires missiles
   troy: { name: 'troy', launchAt: 45, escort: [81], sit: true },                                                   // Troy's first try (play log 20 Nov): launches at 45 s, escorts at 81 s, never attacks, the carrier stays at the base and shoots what comes close
   troyh: { name: 'troyh', launchAt: 45, escort: [81], sit: true, reactive: 3 },                                      // troy, and when the first real damage comes (Earth under 90 percent, or the hull under 80) it reads a hint 3 s later: launch if need be, attack every 5 s, fly out
   strong: { name: 'strong', launchAt: 1, escort: [9, 56], attackFrom: 12, attackEvery: 5, missiles: true, cycle: 0.45, skill: 'sharp' }, // a strong player (card space-game-wrapup-difficulty): escorts both convoys, missiles on every big ship, recalls and relaunches the hurt wing, and flies sharp
-  mcarrier: { name: 'mcarrier', launch: false, missiles: true }                                                  // no wing at all, missiles only
+  mcarrier: { name: 'mcarrier', launch: false, missiles: true },
+  plains: { name: 'plains', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'smart' },                  // plain, and it answers the pilots' calls (src/camporders.js) with the pick a player who thinks would make
+  plainf: { name: 'plainf', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'first' }                   // plain, and it answers every call with 1                                                  // no wing at all, missiles only
 };
 const SKILLS = { sharp: { gain: 3, thr: 0.15, noise: 0 }, steady: { gain: 2, thr: 0.22, noise: 0.1 }, rough: { gain: 1.5, thr: 0.3, noise: 0.2 } };
 
 const OLD = process.argv.includes('--old');
 const SETS = process.argv.map((a, i) => a === '--set' ? process.argv[i + 1] : null).filter(Boolean); // --set alien.hpScale=2 --set alien.damageScale=2: change the table before the run (what-if)
 const g = nodeGame();
+if (process.argv.includes('--nocalls')) g.run('campCallsTick = null'); // --nocalls: the battle as it was before the pilots asked for orders (to compare)
+g.run(`window.__SMART = { cruiser: 3, wounded: 2, breakaway: 1, second: 1, running: 1, opportunity: 1 }`); // the 'smart' bot's picks by call type (1, 2 or 3)
 g.run(`window.__PACE = ${isNaN(Number(PACE)) ? JSON.stringify(PACE) : Number(PACE)}`); // the battle pace of every battle of this run
 g.run(`window.__RANK = ${JSON.stringify(RANK)}`); // the pilot's rank for every battle of this run
 if (OLD) g.run(`(() => { CAMP.earth.shield = 300; CAMP.earth.regen = 0; CAMP.mother.hp = 900; CAMP.mother.damage = 12; CAMP.mother.holdAt = 1600; CAMP.mother.spawnEvery = 8000; CAMP.mother.spawnMax = 6; CAMP.levels[1].waves[2].ships.raider = 3; })()`); // the numbers before the easier level 1
@@ -62,7 +67,8 @@ g.run(`(() => {
   };
   const clampi = v => Math.max(-1, Math.min(1, v));
   window.__botStep = (C, s, B, sk, st) => {
-    if (B.idle) return;
+    if (B.idle) return; // (an idle player never answers a pilot's call: the pilot takes the cautious pick after his 8 s)
+    if (C.call && C.call.open) campCallAnswer(C, B.answer === 'first' ? 1 : B.answer === 'smart' ? (window.__SMART[C.call.open.id] | 0) : campCallView(C).def, 'bot'); // the pilots ask for orders (src/camporders.js): the plain bot answers at once with the cautious pick (0), 'first' always says 1, 'smart' picks by call type
     if (C.arrivedAt == null) return; // the trip first, with the wing aboard (a Fast burn needs it: card space-game-campaign-fast-board); the plan runs from the arrival, as a player's does
     s -= C.arrivedAt / 1000;
     if (B.reactive != null && st.react == null && ((C.earth && C.earth.shield <= C.earth.max * 0.9) || C.carrier.hp <= C.carrier.maxHp * 0.8)) st.react = s + B.reactive;
@@ -75,6 +81,10 @@ g.run(`(() => {
       if (st.landAt && s >= st.landAt) { st.landAt = 0; campOrder(C, 'launch'); st.nextAtk = s + 2; }
       const fs = campWing(C, 'fighter');
       if (!st.landAt && fs.length >= 3 && Math.round(s * 30) % 60 === 0 && fs.reduce((a, u) => a + u.hp / u.maxHp, 0) / fs.length < B.cycle && C.carrier.hp > 0) { campOrder(C, 'recall'); st.landAt = s + 14; st.recalls = (st.recalls || 0) + 1; }
+    }
+    if (B.tuck && typeof campConvoyShips === 'function' && Math.round(s * 30) % 15 === 0) { // the convoy orders: tuck in while a hostile is near an escorted ship, carry on when it is clear
+      const cs = campConvoyShips(C), threat = cs.some(f => campAliens(C).some(a => !a.hold && campDist(a, f) < 1600)), clear = !cs.some(f => campAliens(C).some(a => !a.hold && campDist(a, f) < 2600));
+      if (threat && !st.tuck) { st.tuck = true; campOrder(C, 'convoy', 'tuck in'); } else if (clear && st.tuck) { st.tuck = false; campOrder(C, 'convoy', 'carry on'); }
     }
     if (B.missiles && Math.round(s * 30) % 21 === 0 && typeof campOrder === 'function') campOrder(C, 'missiles', C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'mothership' : '');
     if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight)) {
@@ -105,12 +115,13 @@ g.run(`(() => {
       if (a && campDist(a, c) < 900) goal = a;
     } else if (C.level === 2) { const k = C.caches.filter(k => !k.got).sort((p, q) => campDist(p, c) - campDist(q, c))[0]; goal = C.cachesGot < L.relic.caches && k ? k : C.relic; if (a && campDist(a, c) < 700) goal = a; }
     else if (C.level === 3) { const near = campAliens(C).sort((p, q) => campDist(p, c) - campDist(q, c))[0]; goal = near; a = near; }
+    if (st.tuck && typeof campConvoyShips === 'function') { const f = campConvoyShips(C).sort((p, q) => campDist(p, c) - campDist(q, c))[0]; if (f) goal = f; } // tucked in: the cruiser goes to the escorted ship and stays by it, firing at what is in reach
     if (!goal) { C.input.thrust = 0; C.input.turn = 0; C.input.fire = false; return; }
     st.err = (st.err || 0) * 0.97 + (C.rng() - 0.5) * sk.noise * 0.25;
     const want = Math.atan2(goal.y - c.y, goal.x - c.x) + st.err, d = Math.atan2(Math.sin(want - c.rot), Math.cos(want - c.rot)), dist = campDist(goal, c);
     C.input.turn = clampi(d * sk.gain);
     const turrets = typeof campReach === 'function', reach = turrets ? campReach(C) : 800 * (campHas(C, 'beam') ? 1.5 : 1); // the turrets (6-GEN) fire in every direction, to 500 px from the edge of the target; the old main gun fired along the nose to about 800
-    const hold = goal === C.relic ? 60 : (goal && goal.got === false ? 40 : (a && goal === a ? (turrets ? reach * 0.6 : 420) : 300));
+    const hold = st.tuck && goal && goal.kind === 'freighter' ? 70 : goal === C.relic ? 60 : (goal && goal.got === false ? 40 : (a && goal === a ? (turrets ? reach * 0.6 : 420) : 300));
     C.input.thrust = dist > hold ? 1 : 0;
     const tgt = a || goal, w2 = Math.atan2(tgt.y - c.y, tgt.x - c.x) + st.err, d2 = Math.atan2(Math.sin(w2 - c.rot), Math.cos(w2 - c.rot));
     C.input.blink = !!(campHas(C, 'blink') && dist > 2200 && Math.abs(d) < 0.25 && C.t - C.blinkAt >= campBlinkCooldown(C));
@@ -141,8 +152,9 @@ g.run(`(() => {
     }
     M.recalls = st.recalls || 0;
     const r = { level, seed, result: C.result || 'timeout', why: C.why, t: Math.round(C.t / 1000), hull: Math.round(C.carrier.hp), hull0: Math.round(hull0), minHull: Math.round(M.minHull), earth: C.earth ? Math.round(C.earth.shield) : null,
-      kills: C.kills, delivered: C.delivered, convoyLost: C.lost, shipsLost: C.lostShips, caches: C.cachesGot, towers: C.ships.filter(u => u.kind === 'tower').length, waves: M.waves, idle: Math.round(M.idle), first: M.first, recalls: M.recalls,
-      hitC: Object.fromEntries(Object.entries(M.hitC).map(([k, v]) => [k, Math.round(v)])), drainE: Object.fromEntries(Object.entries(M.drainE).map(([k, v]) => [k, Math.round(v * 10) / 10])), orders: Object.assign({}, C.orders) };
+      kills: C.kills, delivered: C.delivered, convoyLost: C.lost, shipsLost: C.lostShips, mended: C.mended | 0, // mended: the fighters that landed hurt and went out whole (src/camprepair.js: every bot gets the repair, there is nothing to teach it)
+      caches: C.cachesGot, towers: C.ships.filter(u => u.kind === 'tower').length, waves: M.waves, idle: Math.round(M.idle), first: M.first, recalls: M.recalls,
+      hitC: Object.fromEntries(Object.entries(M.hitC).map(([k, v]) => [k, Math.round(v)])), drainE: Object.fromEntries(Object.entries(M.drainE).map(([k, v]) => [k, Math.round(v * 10) / 10])), orders: Object.assign({}, C.orders), calls: ((C.call && C.call.log) || []).map(l => l.id + ':' + l.pick + ':' + l.way) };
     window.__M = null; return r;
   };
 })()`);
@@ -167,7 +179,7 @@ export function summarise(rs) {
   const sum = (key) => { const o = {}; rs.forEach(r => Object.entries(r[key] || {}).forEach(([k, v]) => { o[k] = (o[k] || 0) + v; })); Object.keys(o).forEach(k => { o[k] = Math.round(o[k] / rs.length); }); return o; };
   return { n: rs.length, won: pct(rs, r => r.result === 'won'), lost: pct(rs, r => r.result === 'lost'), timeout: pct(rs, r => r.result === 'timeout'), tWin: med(won.map(r => r.t)), tAll: med(rs.map(r => r.t)),
     hull: med(rs.map(r => r.hull)), taken: med(rs.map(r => Object.values(r.hitC || {}).reduce((a, b) => a + b, 0))), // taken: the damage the carrier was dealt in all (its shield, 150 from the ore card, takes it before the hull does, so hull is 600 until the shield is gone)
- minHull: med(rs.map(r => r.minHull)), earth: med(rs.map(r => r.earth)), kills: med(rs.map(r => r.kills)), shipsLost: med(rs.map(r => r.shipsLost)), delivered: med(rs.map(r => r.delivered)), idle: med(rs.map(r => r.idle)),
+ minHull: med(rs.map(r => r.minHull)), earth: med(rs.map(r => r.earth)), kills: med(rs.map(r => r.kills)), shipsLost: med(rs.map(r => r.shipsLost)), mended: med(rs.map(r => r.mended)), delivered: med(rs.map(r => r.delivered)), idle: med(rs.map(r => r.idle)),
     why, hitC: sum('hitC'), drainE: sum('drainE'), waves: rs[0] && rs[0].waves };
 }
 

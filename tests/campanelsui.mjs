@@ -166,10 +166,15 @@ console.log('F. the FLEET panel\'s second page: the stances (card space-game-wra
   check('Q opens FLEET on page 1: the five orders, the hint says the arrows go to the stances', rowsT().map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall' && tabT().hintVis === true && tabT().hint === '← →  stances' && tabT().name === 'FLEET', JSON.stringify([rowsT().map(r => r.name), tabT()]));
   check('the open tab does not show the stance word (the list is open)', tabT().noteVis === false);
   keyT('ArrowRight', 400); paintT(400);
-  check('the Right arrow flips: the five stances in their rows, the tab says STANCES, the hint offers the orders', rowsT().map(r => r.name).join() === 'Free,Orbit,Keep distance,Match speed,Hold position' && tabT().name === 'STANCES' && tabT().hint === '← →  fleet orders', JSON.stringify([rowsT().map(r => r.name), tabT()]));
+  check('the Right arrow flips: the five stances in their rows, the tab says STANCES, the hint offers the convoy page (the third)', rowsT().map(r => r.name).join() === 'Free,Orbit,Keep distance,Match speed,Hold position' && tabT().name === 'STANCES' && tabT().hint === '← →  convoy', JSON.stringify([rowsT().map(r => r.name), tabT()]));
   check('the one in force says so ("in force", in the digit\'s colour); the others say nothing; all five can be chosen (not greyed)', rowsT()[1].suffix === 'in force' && rowsT()[1].suffixColor === J('CAMPPANELS_LOOK.rowInk.digit') && [0, 2, 3, 4].every(i => rowsT()[i].suffix === '') && rowsT().every(r => r.nameColor === J('CAMPPANELS_LOOK.rowInk.ok')), JSON.stringify(rowsT().map(r => [r.suffix, r.nameColor])));
   keyT('ArrowLeft', 500); paintT(500);
   check('the Left arrow flips back to the orders at once (not at the next quarter second)', rowsT().map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall' && tabT().name === 'FLEET', JSON.stringify(rowsT().map(r => r.name)));
+  keyT('ArrowRight', 520); keyT('ArrowRight', 540); paintT(540); // the stances, then the convoy page (card space-game-convoy-orders)
+  check('the Right arrow once more flips to the CONVOY page: four rows, the fifth blank, the tab says CONVOY, the hint offers the fleet orders', rowsT().slice(0, 4).map(r => r.name).join() === 'Tuck in,Hold here,Run for it,Carry on' && rowsT()[4].name === '' && rowsT()[4].suffix === '' && tabT().name === 'CONVOY' && tabT().hint === '← →  fleet orders', JSON.stringify([rowsT().map(r => r.name), tabT()]));
+  check('with no escorted ship to command the four rows are greyed and say "no convoy"', rowsT().slice(0, 4).every(r => r.suffix === 'no convoy' && r.nameColor === J('CAMPPANELS_LOOK.rowInk.no')), JSON.stringify(rowsT().map(r => [r.suffix, r.nameColor])));
+  keyT('ArrowRight', 560); paintT(560);
+  check('and once more it is back at the orders (the pages go round)', rowsT().map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall' && tabT().name === 'FLEET', JSON.stringify(rowsT().map(r => r.name)));
   keyT('ArrowRight', 600); paintT(600); keyT('Digit3', 700);   // the third stance: keep distance
   check('a digit on the stance page picks the stance: it is set, and the panel collapses', J('T.camp.stance') === 'keep' && J('T.pn.open') === '', J('T.camp.stance'));
   paintT(700 + 40);
