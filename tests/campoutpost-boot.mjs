@@ -7,6 +7,9 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { beltSource } from './fixtures/campbelt.mjs';
+// the old Level 1, the belt, as level 1 (card space-game-l1-rim-boots): this boot was written for it and pins its missions and words; the rim run is checked in tests/camprim.mjs. The address started the Campaign scene on the rim run, so it starts again.
+const belt = async t => { await t.ev(beltSource(1)); await t.ev(`(() => { game.scene.stop('Campaign'); game.scene.start('Campaign', { level: 1, techs: [], via: 'address' }); return 1; })()`); };
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.OUTPOST_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
@@ -22,7 +25,7 @@ try {
   const settle = async (expr, tries = 40) => { for (let i = 0; i < tries; i++) { if (await j(`!!(${expr})`)) return true; await sleep(60); await t.run(100); } return false; };
   const shown = () => j(`(() => { const s = ${HUB}; return Object.keys(s.slots).map(k => s.slots[k]).filter(o => o.visible && o.text).map(o => o.text); })()`);
 
-  await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 30000, 'the Campaign scene'); await t.clock(); await t.run(800);
+  await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 30000, 'the Campaign scene'); await belt(t); await t.clock(); await t.run(800);
   await key('Enter'); await key('Enter'); await settle(`${SCN}.mode === 'play'`); await t.ev(`(() => { const C = ${SCN}.camp; C.ships = C.ships.filter(u => u.team !== 'alien'); C.waves.forEach(w => { w.started = true; }); return 1; })()`);
   check('the belt starts at Occator Works: the carrier is in range of that outpost, and the HUD says E dock there', await j(`campOutpostNear(${SCN}.camp) && campOutpostNear(${SCN}.camp).o.name === 'Occator Works'`));
   await t.run(300); await snap('1-start-in-range');

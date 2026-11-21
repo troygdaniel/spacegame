@@ -48,11 +48,12 @@ export const BELT_ID = 11;
 // belt(g): the old Level 1 as the fixture level 11 (and its words as camp.m.11.*, camp.bf.11.*, camp.l11.*), beside the real levels: a plain arena for a suite that needs Ceres, rocks, caches, a convoy to Mars, a mothership.
 // belt(g, 1): the old Level 1 AS level 1, in place of the rim run, with its old words: for a suite of the machinery of the scenes (the hub, the briefing, the replay, the voice) that was written when level 1 was the belt
 //             and pins its nine missions' text and numbers. It tests the machinery, not the rim run's data (tests/camprim.mjs does that).
-export function belt(g, as = 11) {
+// the script that installs it (a string of JavaScript, for g.run in Node or t.ev in a Chrome boot: the page's own CAMP, UI_TEXT and CAMP_HUB are the ones changed)
+export function beltSource(as = 11) {
   const words = as === 1 ? BELT_WORDS : Object.fromEntries(Object.entries(BELT_WORDS).map(([k, v]) => [k.replace('camp.m.1.', 'camp.m.11.').replace('camp.bf.1.', 'camp.bf.11.').replace('camp.l1.', 'camp.l11.'), v]));
-  g.run('CAMP.levels[' + as + '] = (' + BELT + '); campWorldInstall(); Object.assign(UI_TEXT, ' + JSON.stringify(words) + '); CAMP_HUB.stations[11] = CAMP_HUB.stations[1];');
-  return g;
+  return '(() => { CAMP.levels[' + as + '] = (' + BELT + '); campWorldInstall(); Object.assign(UI_TEXT, ' + JSON.stringify(words) + '); CAMP_HUB.stations[11] = CAMP_HUB.stations[1]; return 1; })()';
 }
+export function belt(g, as = 11) { g.run(beltSource(as)); return g; }
 // the words of the old Level 1 under the number 11 (camp.m.11.*, camp.bf.11.*, camp.l11.*: the titles, the briefing lines, the story), so a scene suite that flew level 1 can fly level 11 and read what it read
 export const BELT_WORDS = {
  "camp.l1.before.3": "Quiet shift. Fill the store.",

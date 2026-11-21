@@ -7,6 +7,9 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { beltSource } from './fixtures/campbelt.mjs';
+// the old Level 1, the belt, as level 1 (card space-game-l1-rim-boots): this boot was written for it and pins its missions and words; the rim run is checked in tests/camprim.mjs. The address started the Campaign scene on the rim run, so it starts again.
+const belt = async t => { await t.ev(beltSource(1)); await t.ev(`(() => { game.scene.stop('Campaign'); game.scene.start('Campaign', { level: 1, techs: [], via: 'address' }); return 1; })()`); };
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const { launch } = await import('./cdp.mjs');
 const OUT = process.env.KEYS_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
@@ -29,7 +32,7 @@ async function campaign() {
   const t = await launch('?campaign=1', ROOT);
   try {
     const SC = `game.scene.getScene('Campaign')`, j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`));
-    await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
+    await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await belt(t); await t.clock(); await t.run(700);
     await press(t, 'Enter'); await t.run(300); await press(t, 'Enter'); await t.run(300); // the story card, then the briefing
     check('the three tabs are on the screen from the start: Q FLEET and C SYSTEMS at the left, E SHIP at the right, no list', (await j(`Object.keys(${SC}.pnl.p).join()`)) === 'fleet,ship,systems' && (await j(`${SC}.pnl.p.fleet.cap.visible && ${SC}.pnl.p.ship.cap.visible && ${SC}.pnl.p.systems.cap.visible && ${SC}.pnl.p.fleet.rows.every(r => !r.name.visible)`)) === true);
     await snap(t, 'tabs');
