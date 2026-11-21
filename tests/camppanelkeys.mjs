@@ -57,8 +57,10 @@ check('Esc closes it; the next time it opens on the first row', (() => { g.run('
 // ---- B. the pages and the wheel
 console.log('B. the pages');
 g.run('__fresh(); __k("KeyQ", 100); __k("ArrowDown", 110); __k("ArrowDown", 120);');
-check('Right flips FLEET to the stances, back at the first row; Left flips back; with two pages they go round', (() => { const r = J("__k('ArrowRight', 200)"); const a = [r.page, J('P.sel')]; g.run("__k('ArrowDown', 210);"); const l = J("__k('ArrowLeft', 220)"); const b = [l.page, J('P.sel')]; const r2 = J("__k('ArrowRight', 230)"); const r3 = J("__k('ArrowRight', 240)"); return a.join() === '1,0' && b.join() === '0,0' && r2.page === 1 && r3.page === 0; })());
-g.run('__k("ArrowRight", 300); __k("ArrowDown", 310); __k("ArrowDown", 320);');
+check('Right flips FLEET to the stances, back at the first row; Left flips back; the pages go round (three now: orders, stances, convoy)', (() => { const r = J("__k('ArrowRight', 200)"); const a = [r.page, J('P.sel')]; g.run("__k('ArrowDown', 210);"); const l = J("__k('ArrowLeft', 220)"); const b = [l.page, J('P.sel')]; const r2 = J("__k('ArrowRight', 230)"); const r3 = J("__k('ArrowRight', 240)"); const r4 = J("__k('ArrowRight', 250)"); return a.join() === '1,0' && b.join() === '0,0' && r2.page === 1 && r3.page === 2 && r4.page === 0; })());
+g.run('__fresh(); __k("KeyQ", 100); __k("ArrowRight", 110); __k("ArrowRight", 120); __k("ArrowUp", 130);');
+check('on the convoy page (four rows) Up from the first goes round to the fourth, and Enter does it (Carry on: with no escorted ship it is refused in words)', J('P.sel') === 3 && (() => { const r = J("__k('Enter', 140)"); return r.used && r.ran && r.ok === false && J('P.open') === ''; })());
+g.run('__fresh(); __k("KeyQ", 290); __k("ArrowRight", 300); __k("ArrowDown", 310); __k("ArrowDown", 320);');
 check('on the stances page the highlight goes round five rows and Enter picks the lit stance (Keep distance, the third)', (() => { const r = J("__k('Enter', 330)"); return r.row === 'keep' && r.ran && J('C.stance') === 'keep' && J('P.open') === ''; })());
 g.run('__fresh(); __k("KeyQ", 100); __k("ArrowRight", 110); __k("ArrowUp", 120);');
 check('on the stances page Up from the first goes round to the fifth, not to a sixth row it does not have', J('P.sel') === 4);
@@ -109,9 +111,9 @@ g.run(`campPanelKey(S.pn, S.camp, 'ArrowDown', 1400); campPanelKey(S.pn, S.camp,
 check('after Down, Down it is on the third row', bar(2) === 1 && bar(0) === 0 && J('S.pn.sel') === 2);
 check('FLEET draws its six rows, the sixth named Mine ore, with its digit', J(`S.pnl.p.fleet.rows.map(r => r.name.t).join()`) === 'Launch,Attack,Escort,Guard,Recall,Mine ore' && J(`S.pnl.p.fleet.rows[5].digit.t`) === '6');
 g.run(`campPanelKey(S.pn, S.camp, 'ArrowRight', 1600); __paint(1700);`);
-check('on the stances page the sixth line is empty and not drawn (five stances), and the highlight is on the first', J(`S.pnl.p.fleet.rows.map(r => r.name.vis ? r.name.t : '').join()`) === 'Free,Orbit,Keep distance,Match speed,Hold position,' && J('S.pn.sel') === 0 && J(`S.pnl.p.fleet.rows[5].name.t`) === '' && J(`S.pnl.p.fleet.rows[5].digit.t`) === '');
+check('on the stances page the sixth line is empty and not drawn (five stances), and the highlight is on the first', J(`S.pnl.p.fleet.rows.map(r => r.name.vis ? r.name.t : '').join()`) === 'Free,Orbit,Keep distance,Match speed,Hold position,' && J('S.pn.sel') === 0 && J(`S.pnl.p.fleet.rows[5].name.t`) === '' && J(`S.pnl.p.fleet.rows[5].digit.vis`) === false);
 g.run(`campPanelKey(S.pn, S.camp, 'ArrowLeft', 1800); __paint(1900);`);
-check('and the orders come back with Mine ore on the sixth line', J(`S.pnl.p.fleet.rows.map(r => r.name.t).join()`) === 'Launch,Attack,Escort,Guard,Recall,Mine ore' && J(`S.pnl.p.fleet.rows[5].digit.t`) === '6' && J(`S.pnl.p.fleet.rows[5].name.vis`) === true);
+check('and the orders come back with Mine ore on the sixth line', J(`S.pnl.p.fleet.rows.map(r => r.name.t).join()`) === 'Launch,Attack,Escort,Guard,Recall,Mine ore' && J(`S.pnl.p.fleet.rows[5].digit.t`) === '6' && J(`S.pnl.p.fleet.rows[5].digit.vis`) === true && J(`S.pnl.p.fleet.rows[5].name.vis`) === true);
 g.run(`campPanelKey(S.pn, S.camp, 'Escape', 2000); __paint(2300);`);
 check('closed again: no highlight is drawn', J(`__bars('fleet')`).filter(b => b.w === J('CAMPPANELS_LOOK.pick.width')).length === 0);
 

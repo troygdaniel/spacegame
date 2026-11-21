@@ -2,8 +2,10 @@
 // The room is Long Haul's own station hall (src/interior.js builds it: the baked floor, walls and props, the lights, the hologram desks, the repair arm, the hangar with its beacons and its bay door; the look
 // of this station, src/stationlook.js style, is made here from the level's station in src/camphub.js). Nobody walks: the pilot stands at the desk of the row that is chosen (the Long Haul lounge's quick-go,
 // station.js) and the cruiser stands on the pad. The rows, what each shows and the keys are src/camphub.js (pure, tests/camphub.mjs); this file draws them and sends the keys there.
-//   Missions and Briefing and Rank are read at the mission desk (left), the Refit at the repair bay (middle), Launch at the pad (right). A dark glass panel lies over the lower deck: the five rows at the left,
-//   the chosen row's page at the right, the amber line under the rows says what Enter does. The key line is in the south wall.
+//   Missions and Rank are read at the mission desk (left), the Refit at the repair bay (middle), Launch at the pad (right). A dark glass panel lies over the lower deck: the four rows at the left, a sentence
+//   or two about the chosen row at the right (what it is and what can be done there), the amber line under the rows says what Enter does. The key line is in the south wall.
+//   ENTER OPENS THE ROW as an OVERLAY that takes the top of the screen (card space-game-ready-room-simple; Troy, 21 Nov 2026): the missions with the chosen one's briefing beside them, the refit's choices each with
+//   what it changes (the numbers), its cost and what you have, the rank and the ranks above it. Up Down move in it, Enter does the thing, Left or Esc closes it. A dock's room has no overlays (its rows keep their pages).
 //   Launch rolls the bay door up and starts the Campaign scene on the next mission (via 'hub': the briefing was read here, so the scene does not show it again). A debrief comes back here (campaignscene.js).
 //   THE ROOM IS DATA (src/camphub.js has the rows: CAMP_HUB.note, .act, .rowKey): this file has the rest, by row id: CAMP_HUBS.page[id] (draws the row's page), .stops[id] and .face[id] (where the pilot stands), and
 //   CAMP_HUBS.run[action] (what an action does). The scene is started with data { rows: [ids], at: id, station: { name, accent, art }, onLaunch(scene), onLeave(scene) }: a dock at an outpost (card
@@ -17,8 +19,9 @@ const CAMP_HUBS = {
   walk: { ms: 1.6, min: 260 },                 // the pilot's walk to a desk: ms for each px of the way (a brisk walk: 600 px a second), and the shortest walk in ms
   msg: 3200,                                   // ms a purchase's answer stays on the page
   cruiser: { x: 1090, y: 360, len: 190, name: 502 }, // the cruiser on the pad: where, how long it is drawn (nose up), and the y of its name under the pad's BAY 01
-  stops: { board: [200, 246], brief: [236, 246], rank: [336, 312], refit: [640, 246], launch: [1028, 394] }, // where the pilot stands for each row: at the desk's front, in the open hall, at the pad
-  face: { board: -1.5708, brief: -1.5708, rank: -1.5708, refit: -1.5708, launch: -0.5 } // which way the pilot looks there, in radians (the art looks east at 0): up at a desk, at the cruiser from the pad
+  over: { x: 36, y: 24, w: 1208, h: 408, pad: 20, top: 46, line: 18, col2: 640, hint: 26 }, // the overlay: the glass at the top of the screen, the room inside it (from the left and from the top), a line's height, where the second column starts, and how far above its bottom the hint stands
+  stops: { board: [200, 246], rank: [336, 312], refit: [640, 246], launch: [1028, 394] }, // where the pilot stands for each row: at the desk's front, in the open hall, at the pad
+  face: { board: -1.5708, rank: -1.5708, refit: -1.5708, launch: -0.5 } // which way the pilot looks there, in radians (the art looks east at 0): up at a desk, at the cruiser from the pad
 };
 
 class CampHub extends Phaser.Scene {
@@ -77,6 +80,23 @@ class CampHub extends Phaser.Scene {
     this.slots = {}; // the page's lines, made when first used: one Text for each column of each line
     this.add.rectangle(CAMP_HUBS.keys.x, CAMP_HUBS.keys.y, 560, 24, 0x04101c, 0.88).setDepth(89); // a dark band: the south wall's machines are busy behind a line of text
     this.keyT = this.add.text(CAMP_HUBS.keys.x, CAMP_HUBS.keys.y, campHubKeyLine(), uiFont(14, '#bfe9ff')).setOrigin(0.5).setDepth(90);
+    const O = CAMP_HUBS.over; // the overlay, made once and shown when a row is opened: the glass over the top of the screen, its title, a bar behind the refit's choice, and its lines (made when first used)
+    this.ovGlass = this.add.rectangle(O.x + O.w / 2, O.y + O.h / 2, O.w, O.h, 0x04101c, 0.97).setStrokeStyle(1, hex, 0.9).setDepth(86);
+    this.ovTitle = this.add.text(O.x + O.pad, O.y + 12, '', uiFont(16, this.accent, { letterSpacing: 2 })).setDepth(87);
+    this.ovBar = this.add.rectangle(O.x + O.w / 2, O.y + O.top, O.w - 2 * O.pad + 12, O.line * 2 + 6, 0xffb454, 0.14).setDepth(86.5);
+    this.ovSlots = {}; this.ovShow(false);
+  }
+  ovShow(on) { this.ovGlass.setVisible(on); this.ovTitle.setVisible(on); this.ovBar.setVisible(false); Object.keys(this.ovSlots).forEach(k => this.ovSlots[k].setVisible(false)); }
+  ovLine(i, x, text, color, right) { // one line of the overlay: i the line, x from the left of its room (the glass's right edge when right: aligned to it), the text and its colour
+    const O = CAMP_HUBS.over, k = i + ':' + x + (right ? 'r' : '');
+    let t = this.ovSlots[k];
+    if (!t) t = this.ovSlots[k] = this.add.text(right ? O.x + x : O.x + O.pad + x, O.y + O.top + i * O.line, '', uiFont(14, '#e8f6ff')).setOrigin(right ? 1 : 0, 0).setDepth(87);
+    t.setText(text == null ? '' : String(text)).setColor(color || '#e8f6ff').setVisible(text != null && text !== '');
+  }
+  wrap(text, max) { // a sentence or two in lines of at most max characters
+    const out = []; let cur = '';
+    String(text).split(' ').forEach(w => { if (cur && (cur + ' ' + w).length > max) { out.push(cur); cur = w; } else cur = cur ? cur + ' ' + w : w; });
+    if (cur) out.push(cur); return out;
   }
   line(i, col, text, color, right) { // one line of the page: col 0 is the left column, 1 the second column; right: aligned to the page's right edge
     const k = i + ':' + col + (right ? 'r' : ''), Pg = CAMP_HUBS.pane;
@@ -91,9 +111,15 @@ class CampHub extends Phaser.Scene {
     this.titleT.setText(uiText('camp.hub.title', { name: this.look.name.toUpperCase() })); this.lvT.setText(uiText('camp.hub.level', { n: nx.level, name: CAMP.levels[nx.level].name }));
     rows.forEach((r, k) => { const o = this.rowT[k]; o.name.setText(r.name).setColor(k === H.row ? '#ffffff' : '#cfefff'); o.note.setText(r.note).setColor(k === H.row ? '#ffd37a' : '#8fb4c9'); o.cap.setBackgroundColor(k === H.row ? '#ffb454' : '#9fe9ff'); });
     this.bar.setY(Li.y + H.row * this.rowH + this.rowH / 2); this.barEdge.setY(this.bar.y);
-    this.footT.setText(campHubFoot(id, this.d));
+    const open = !this.d.dock && H.open && CAMP_HUBS.overlay[H.open] ? H.open : '';
+    this.footT.setText(open ? uiText('camp.room.foot.close') : campHubFoot(id, this.d));
     Object.keys(this.slots).forEach(k => this.slots[k].setVisible(false));
-    const page = CAMP_HUBS.page[id]; if (page) page(this);
+    const page = !this.d.dock && CAMP_HUBS.desc[id] ? s => s.pageDesc(id) : CAMP_HUBS.page[id]; if (page) page(this); // a dock's rows keep their pages; the hall's rows say in a sentence or two what they are (the overlay has the rest)
+    this.ovShow(!!open); if (open) { this.ovTitle.setText(uiText('camp.hub.row.' + open)); CAMP_HUBS.overlay[open](this); }
+  }
+  pageDesc(id) { // the sentence or two about the chosen row (Launch names the mission, or the replay it flies)
+    const P = this.P, t = campHubTarget(P, this.hub), b = id === 'launch' ? campHubBrief(P, t.level, t.i) : null;
+    this.wrap(uiText(id === 'launch' && t.replay ? 'camp.room.desc.replay' : 'camp.room.desc.' + id, b ? { n: b.n, of: b.of, title: b.title } : {}), 62).forEach((l, i) => this.line(i, 0, l, '#e8f6ff'));
   }
   pageBoard() {
     const H = this.hub, sel = campHubSelectable(this.P), legend = sel.length > 0 && !(this.d && this.d.dock), pk = H.pick;
@@ -108,41 +134,53 @@ class CampHub extends Phaser.Scene {
     });
     if (legend) { const m = this.msg && this.msg.until > this.time.now && this.hub.rows[this.hub.row] === 'board' ? this.msg : null; this.line(CAMP_HUBS.pane.lines - 1, 0, m ? m.text : uiText('camp.hub.replay.keys'), m ? (m.ok ? '#6dff9c' : '#ffb454') : '#8fb4c9'); } // the keys, or the answer of the last one
   }
-  pageBrief() {
-    const nx = campHubTarget(this.P, this.hub), b = campHubBrief(this.P, nx.level, nx.i); if (!b) return;
-    this.line(0, 0, uiText(nx.replay ? 'camp.hub.replay.head' : 'camp.hub.brief.head', { n: b.n, of: b.of, title: b.title }), nx.replay ? '#6dff9c' : '#38e1ff'); // a replay says so in its heading
-    this.line(1, 0, uiText('camp.hub.brief.kind', { kind: b.kindText, par: b.par }), '#8fb4c9');
-    b.lines.forEach((l, i) => this.line(3 + i, 0, l, '#e8f6ff'));
-    this.line(6, 0, uiText('camp.hub.brief.obj'), '#38e1ff'); b.objectives.slice(0, 4).forEach((o, i) => this.line(7 + i, 0, '- ' + o, '#e8f6ff'));
-    this.line(6, 1, uiText('camp.ui.bonushead'), '#ffd37a'); b.bonus.slice(0, 4).forEach((x, i) => this.line(7 + i, 1, '+' + x.points + '  ' + x.text, '#ffd37a'));
-    if (nx.replay) { this.line(CAMP_HUBS.pane.lines - 3, 0, uiText('camp.hub.replay.rule1'), '#8fb4c9'); this.line(CAMP_HUBS.pane.lines - 2, 0, uiText('camp.hub.replay.rule2'), '#8fb4c9'); }
-    this.line(CAMP_HUBS.pane.lines - 1, 0, b.tries ? uiText('camp.hub.brief.best', { score: b.best, n: b.tries }) : uiText('camp.hub.brief.new'), '#8fb4c9');
+  // ----- the overlays: the top of the screen, opened by Enter on a row -----
+  ovFoot() { const m = this.msg && this.msg.until > this.time.now ? this.msg : null, O = CAMP_HUBS.over; return m ? { text: m.text, color: m.ok ? '#6dff9c' : '#ffb454' } : { text: uiText('camp.room.hint.' + this.hub.open), color: '#8fb4c9' }; }
+  ovHint(line) { const f = this.ovFoot(); this.ovLine(line, 0, f.text, f.color); }
+  overBoard() { // the missions on the left, the chosen one's briefing beside them
+    const P = this.P, H = this.hub, O = CAMP_HUBS.over, sel = campHubSelectable(P), pk = H.pick;
+    if (sel.length) H.cur = Math.max(0, Math.min(sel.length - 1, H.cur | 0));
+    const cur = sel[H.cur] || null, view = campHubBoardView(campHubBoard(P), 19);
+    view.forEach((r, i) => {
+      if (r.head) { this.ovLine(i, 0, uiText('camp.hub.level', { n: r.level, name: r.name }), '#38e1ff'); return; }
+      const isCur = !!(cur && r.level === cur.level && r.i === cur.i), isPick = !!(pk && r.level === pk.level && r.i === pk.i);
+      const mark = isPick ? '[R]' : { done: '[x]', next: '[>]', passed: '[-]', later: '[ ]' }[r.state], col = isPick ? '#6dff9c' : isCur ? '#ffffff' : r.state === 'next' ? '#ffd37a' : r.state === 'later' ? '#6f8aa0' : '#e8f6ff';
+      this.ovLine(i, 0, (isCur ? '> ' : '  ') + mark + ' ' + r.n + '  ' + r.title + '  (' + uiText('camp.hub.kind.' + r.kind) + ')', col);
+      this.ovLine(i, O.col2 - 60 - O.pad, r.state === 'next' ? uiText('camp.hub.next') : r.state === 'done' ? uiText('camp.hub.score', { score: r.score }) + (r.of ? '  ' + uiText('camp.hub.bonuses', { got: r.bonus, of: r.of }) : '') + (r.rank ? '  ' + r.rank : '') : '', isPick ? '#6dff9c' : r.state === 'next' ? '#ffb454' : '#9fe9ff', true);
+    });
+    const b = cur ? campHubBrief(P, cur.level, cur.i) : null, X = O.col2 - O.pad; if (b) {
+      const replay = cur.state === 'done';
+      this.ovLine(0, X, uiText(replay ? 'camp.hub.replay.head' : 'camp.hub.brief.head', { n: b.n, of: b.of, title: b.title }), replay ? '#6dff9c' : '#38e1ff');
+      this.ovLine(1, X, uiText('camp.hub.brief.kind', { kind: b.kindText, par: b.par }), '#8fb4c9');
+      b.lines.forEach((l, i) => this.ovLine(3 + i, X, l, '#e8f6ff'));
+      this.ovLine(6, X, uiText('camp.hub.brief.obj'), '#38e1ff'); b.objectives.slice(0, 4).forEach((o, i) => this.ovLine(7 + i, X, ('- ' + o).slice(0, 74), '#e8f6ff'));
+      this.ovLine(12, X, uiText('camp.ui.bonushead'), '#ffd37a'); b.bonus.slice(0, 4).forEach((x, i) => this.ovLine(13 + i, X, ('+' + x.points + '  ' + x.text).slice(0, 74), '#ffd37a'));
+      this.ovLine(18, X, b.tries ? uiText('camp.hub.brief.best', { score: b.best, n: b.tries }) : uiText('camp.hub.brief.new'), '#8fb4c9');
+    }
+    this.ovHint(19);
   }
-  pageRefit() {
-    const r = campHubRefit(this.P); let i = 0;
-    this.line(i++, 0, uiText('camp.hub.refit.head'), '#6dff9c');
-    this.line(i++, 0, uiText('camp.hub.refit.ore', { ore: r.ore }), '#ffd37a');
-    if (!r.techs.length) this.line(i++, 0, uiText('camp.hub.refit.notech'), '#8fb4c9'); else r.techs.slice(0, 4).forEach(t => this.line(i++, 0, (t.name + '  -  ' + t.text).slice(0, 66), '#e8f6ff'));
-    this.line(i++, 0, uiText('camp.hub.refit.wing', { f: r.wing.fighters, e: r.wing.escorts }), '#e8f6ff');
-    this.line(i++, 0, uiText('camp.hub.refit.extra', { xf: r.extra.fighters, xe: r.extra.escorts, most: r.most }), '#8fb4c9');
-    i++; this.line(i++, 0, uiText('camp.hub.refit.buy', { fc: r.fc, ec: r.ec }), '#9fe9ff');
-    this.line(i++, 0, r.fab.owned ? uiText('camp.hub.refit.fitted') : uiText('camp.hub.refit.fab', { cost: r.fab.cost }), r.fab.owned ? '#6dff9c' : '#9fe9ff');
-    if (this.msg && this.msg.until > this.time.now) this.line(i + 1, 0, this.msg.text, this.msg.ok ? '#6dff9c' : '#ffb454');
+  overRefit() { // the choices: what each changes (the numbers), what it costs, what you have; then the tech already fitted
+    const P = this.P, H = this.hub, O = CAMP_HUBS.over, r = campHubRefit(P), at = Math.max(0, Math.min(2, H.sel | 0)), X = [24, 230, 790];
+    this.ovLine(0, 0, uiText('camp.hub.refit.ore', { ore: r.ore }), '#ffd37a'); this.ovLine(0, 360, uiText('camp.hub.refit.wing', { f: r.wing.fighters, e: r.wing.escorts }), '#e8f6ff');
+    this.ovLine(2, X[0], uiText('camp.room.col.choice'), '#6f8aa0'); this.ovLine(2, X[1], uiText('camp.room.col.change'), '#6f8aa0'); this.ovLine(2, X[2], uiText('camp.room.col.cost'), '#6f8aa0');
+    r.items.forEach((it, k) => {
+      const y = 3 + k * 3, on = k === at;
+      this.ovLine(y, 0, on ? '>' : '', '#ffb454'); this.ovLine(y, X[0], it.name, on ? '#ffffff' : '#cfefff'); this.ovLine(y, X[1], it.change, on ? '#ffffff' : '#e8f6ff'); this.ovLine(y, X[2], uiText('camp.room.cost', { cost: it.cost }), '#ffd37a');
+      this.ovLine(y + 1, X[1], it.have, '#8fb4c9'); this.ovLine(y + 1, X[2], it.status, it.ok ? '#6dff9c' : '#ffb454');
+      if (on) { this.ovBar.setY(O.y + O.top + (y + 0.5) * O.line + 3).setVisible(true); }
+    });
+    this.ovLine(13, 0, uiText('camp.room.refit.techs'), '#38e1ff');
+    if (!r.techs.length) this.ovLine(14, X[0], uiText('camp.room.refit.notech'), '#8fb4c9'); else r.techs.slice(0, 5).forEach((t, i) => { this.ovLine(14 + i, X[0], t.name, '#6dff9c'); this.ovLine(14 + i, X[1], t.change || t.text, '#e8f6ff'); });
+    this.ovHint(19);
   }
-  pageRank() {
-    const r = campHubRank(this.P); let i = 0;
-    this.line(i++, 0, uiText('camp.hub.rank.head'), '#38e1ff');
-    if (r.ranked) { this.line(i++, 0, uiText('camp.hub.rank.name', { name: r.name, n: r.n, of: r.of }), '#ffd37a'); this.line(i++, 0, r.next != null ? uiText('camp.hub.rank.next', { to: r.nextName, next: r.next }) : uiText('camp.hub.rank.top'), '#8fb4c9'); }
-    else this.line(i++, 0, uiText('camp.hub.rank.none'), '#8fb4c9');
-    i++; this.line(i++, 0, uiText('camp.hub.rank.points', { points: r.points }), '#e8f6ff'); this.line(i++, 0, uiText('camp.hub.rank.flown', { n: r.flown, all: r.all }), '#e8f6ff');
-    this.line(i++, 0, uiText('camp.hub.rank.wing', { f: r.wing.fighters, e: r.wing.escorts }), '#e8f6ff');
-  }
-  pageLaunch() {
-    const nx = campHubTarget(this.P, this.hub), b = campHubBrief(this.P, nx.level, nx.i); if (!b) return; let i = 0;
-    this.line(i++, 0, uiText(nx.replay ? 'camp.hub.replay.head' : 'camp.hub.launch.head', { n: b.n, of: b.of, title: b.title }), nx.replay ? '#6dff9c' : '#ffd37a');
-    b.lines.forEach(l => this.line(i++, 0, l, '#e8f6ff'));
-    i++; if (nx.replay) { this.line(i++, 0, uiText('camp.hub.replay.rule1'), '#8fb4c9'); this.line(i++, 0, uiText('camp.hub.replay.rule2'), '#8fb4c9'); } else if (nx.i === 0) this.line(i++, 0, uiText('camp.hub.launch.level', { n: nx.level, name: CAMP.levels[nx.level].name }), '#8fb4c9');
-    this.line(i++, 0, uiText('camp.hub.launch.pad'), '#8fb4c9'); this.line(i++, 0, uiText('camp.hub.launch.go'), '#ffb454');
+  overRank() { // the rank, what the next one needs, and the ranks above (the ships each adds to the wing)
+    const P = this.P, r = campHubRank(P); let i = 0;
+    if (r.ranked) { this.ovLine(i++, 0, uiText('camp.hub.rank.name', { name: r.name, n: r.n, of: r.of }), '#ffd37a'); this.ovLine(i++, 0, r.next != null ? uiText('camp.hub.rank.next', { to: r.nextName, next: r.next }) + '   (' + uiText('camp.room.rank.togo', { n: Math.max(0, r.next - r.points) }) + ')' : uiText('camp.hub.rank.top'), '#8fb4c9'); }
+    else this.ovLine(i++, 0, uiText('camp.hub.rank.none'), '#8fb4c9');
+    i++; this.ovLine(i++, 0, uiText('camp.hub.rank.points', { points: r.points }), '#e8f6ff'); this.ovLine(i++, 0, uiText('camp.hub.rank.flown', { n: r.flown, all: r.all }), '#e8f6ff');
+    this.ovLine(i++, 0, uiText('camp.hub.rank.wing', { f: r.wing.fighters, e: r.wing.escorts }), '#e8f6ff');
+    if (r.ladder.length) { i++; this.ovLine(i++, 0, uiText('camp.room.rank.ladder'), '#38e1ff'); r.ladder.forEach(l => this.ovLine(i++, 0, (l.here ? '> ' : '  ') + uiText('camp.room.rank.rung', { name: l.name, at: l.at, f: l.fighters, e: l.escorts }), l.here ? '#ffd37a' : '#e8f6ff')); }
+    this.ovHint(19);
   }
 
   // the pilot walks to the desk of the chosen row (straight lines: the hall's doors are in line with the desks)
@@ -167,10 +205,11 @@ class CampHub extends Phaser.Scene {
     if (e.preventDefault && (e.code === 'Backspace' || e.code === 'Tab')) e.preventDefault();
     this.apply(r);
   }
-  click(k) { // a click on a row picks it; a second click on Launch launches
+  click(k) { // a click on a row picks it (and closes an overlay that was up); a second click on the chosen row is Enter: it opens the row, or launches on Launch
     if (this.leaving) return;
-    const id = this.hub.rows[k]; if (k === this.hub.row && CAMP_HUB.act[id]) { this.apply({ used: true, action: CAMP_HUB.act[id], moved: false, changed: false, ok: true, say: null }); return; }
-    this.hub.row = k; this.apply({ used: true, moved: true, action: '', changed: false, ok: true, say: null });
+    const H = this.hub;
+    if (k === H.row && !H.open) { this.apply(campHubKey(H, this.P, 'Enter', this.d)); return; }
+    H.row = k; H.open = ''; this.apply({ used: true, moved: true, action: '', changed: false, ok: true, say: null });
   }
   apply(r) {
     if (r.say) { this.msg = { text: r.say.text != null ? String(r.say.text) : uiText(r.say.key, r.say.vars), ok: r.ok, until: this.time.now + CAMP_HUBS.msg }; sfx(r.ok ? 'chime' : 'empty'); }
@@ -187,10 +226,12 @@ class CampHub extends Phaser.Scene {
   leave() { if (typeof this.d.onLeave === 'function') this.d.onLeave(this); else go(this, 'Title'); }
   update(time) {
     interiorTick(this, time);
-    if (this.msg && this.msg.until <= time && this.hub.rows[this.hub.row] === 'refit' && !this.msg.gone) { this.msg.gone = true; this.paint(); } // the answer fades from the page
+    if (this.msg && this.msg.until <= time && !this.msg.gone) { this.msg.gone = true; this.paint(); } // the answer fades from the page
   }
 }
 
 // the registries the room reads by row id and action: the five rows' pages, and what an action does. A dock at an outpost adds its own (CAMP_HUBS.page.build = scene => { scene.line(0, 0, ...) }).
-CAMP_HUBS.page = { board: s => s.pageBoard(), brief: s => s.pageBrief(), refit: s => s.pageRefit(), rank: s => s.pageRank(), launch: s => s.pageLaunch() };
-CAMP_HUBS.run = { launch: s => s.launch(), title: s => s.leave(), brief: s => { if (typeof campBriefOpen === 'function') campBriefOpen(s); } }; // brief: the big briefing of the mission Launch would fly (src/campbriefdraw.js)
+CAMP_HUBS.page = { board: s => s.pageBoard() }; // a dock's room has the board's page; the hall's rows are in the desc and overlay tables
+CAMP_HUBS.desc = { board: 1, refit: 1, rank: 1, launch: 1 }; // the rows of the hall that say in a sentence or two what they are (camp.room.desc.<id>, pageDesc); a dock's room does not
+CAMP_HUBS.overlay = { board: s => s.overBoard(), refit: s => s.overRefit(), rank: s => s.overRank() }; // the rows that open an overlay on Enter, by id (CAMP_HUB.over in src/camphub.js has their keys)
+CAMP_HUBS.run = { launch: s => s.launch(), title: s => s.leave(), brief: s => { if (typeof campBriefOpen === 'function') campBriefOpen(s); } }; // brief: the big briefing of the mission under the cursor (src/campbriefdraw.js), opened from the missions overlay
