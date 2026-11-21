@@ -299,10 +299,10 @@ const CAMP = {
   rival: {                                 // RIVAL ships (card space-game-rival-duel; src/camprival.js): an enemy the cruiser's size, with a hull and a shield of its own, that duels the cruiser. A mission row's `rivals` names them (the hook: src/camprival.js)
     comeFrom: 2600,                        // px from the carrier a rival comes from when its row gives no place
     kinds: {
-      pirateleader: { name: 'Pirate leader', base: 'gunship', hull: 1500, shield: 600, dmg: 9, ore: 60, color: 0xe8b84a, // the first: the pirate leader at the end of mission 1.1 (a small, forgiving one). base: the PIRATES row its guns and aim come from; ore: its wreck
+      pirateleader: { name: 'Pirate leader', base: 'gunship', hull: 1500, shield: 600, dmg: 9, ore: 60, color: 0xe8b84a, say: 'camp.say.rival.leader', // the first: the pirate leader at the end of mission 1.1 (a small, forgiving one). base: the PIRATES row its guns and aim come from; ore: its wreck
         move: { speed: 190, accel: 150, turn: 1 },       // a cruiser's way of flying: a little slower than the carrier's 210 at the default power, a ship that has to turn to point its side
         phase: {                                           // stalk (circles at `hold` px and shoots a little) -> charge (stops, turns its side on you; `charge` s of warning) -> fires the broadside -> down (shield off `down` s) -> ram or run -> stalk again
-          hold: 620, first: 6, stalk: 4,                 // the range it keeps; seconds before the first charge, and between a ram or a run and the next charge
+          hold: 340, first: 6, stalk: 4,                 // the range it keeps (inside the turrets' 500 px and inside the screen: at 620 it was off the edge); seconds before the first charge, and between a ram or a run and the next charge
           charge: 3.2, down: 6, back: 0.6,               // seconds of warning; seconds the shield is off (every hit goes to the hull, `exposed` times over); the share of the shield that comes back
           exposed: 1.3,
           ram: { secs: 4.5, speed: 1.5, accel: 1.4, turn: 0.55, dmg: 40, push: 160 },    // it turns to ram at 1.5 times its speed but 0.55 of its turn: a carrier that moves off its line is missed; a hit is `dmg` to the shield then the hull, and shoves both ships

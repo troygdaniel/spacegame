@@ -2,7 +2,7 @@
 // An enemy ship the cruiser's size, with a hull and a shield of its own, that hunts the cruiser and duels it in readable phases, so power management matters. The pure half (no Phaser, no page;
 // tests/camprival.mjs runs it in Node). Every number is CAMP.rival in src/campaign.js, a kind of it is a row, so there can be several rivals (the first, and for now the only, is the pirate leader).
 // THE PHASES (a cycle; each is announced on the screen and by the ship's voice, and fires a cue):
-//   stalk    it circles the cruiser at `hold` px and shoots a little. After `first` s (then `stalk` s after each ram or run) it begins to charge.
+//   stalk    it circles the cruiser at `hold` px (340: on the screen and in the turrets' reach) and shoots a little. After `first` s (then `stalk` s after each ram or run) it begins to charge.
 //   charge   it stops and turns its side on you; a ring grows round it for `charge` s (the event { type: 'rival', stage: 'charge', secs }); "Broadside charging. Power to shields." Then it fires the broadside:
 //            six shots in a fan at where you are, 108 hit points in all. The answer is power to the shields (the cap and the mending), or moving off its line.
 //   down     after it fires its shield DROPS for `down` s: every hit goes to the hull, `exposed` times over. "Its shields are down. Power to weapons." Then the shield comes back at `back` of its cap.
@@ -64,7 +64,7 @@ function campRivals(C, dt) {
     u.rival.id = r.id; u.rival.leaves = r.leaves !== false; u.goal = goal; u.prey = r.prey || 'carrier'; u.rot = Math.atan2(car.y - u.y, car.x - u.x); u.nextShot = C.t + 1500;
     Object.keys(r.escorts || {}).forEach(kind => { for (let n = 0; n < r.escorts[kind]; n++) { const e = campSpawn(C, kind, org[0] + campBetween(C, -260, 260), org[1] + campBetween(C, -260, 260)); if (e) { e.goal = goal; e.prey = u.prey; e.rot = u.rot; e.rivalEscort = r.id; } } });
     C.events.push({ type: 'rival', stage: 'appear', id: r.id, x: u.x, y: u.y });
-    campCue(C, 'rival:' + r.id + ':appear'); campSay(C, r.say, { name: u.rival.name });
+    campCue(C, 'rival:' + r.id + ':appear'); const say = r.say || CAMP.rival.kinds[r.kind].say; if (say) campSay(C, say, { name: u.rival.name }); // a row's own line, else the kind's
   });
 }
 function campRivalDied(C, u) {

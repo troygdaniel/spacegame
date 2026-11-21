@@ -4,7 +4,7 @@
 // The sim says what is true (campRivalState); this file only draws it. A test with a stand-in scene (tests/camprival.mjs H) holds the shapes it draws.
 // The colours: the pirates' ochre for the hull, cyan for the shield (as the cruiser's), amber and ember for a charge, a pale blue when the shield is down. Never red (the aliens') or green (yours).
 const CAMP_RIVAL_DRAW = {
-  hud: { x: W / 2 - 150, w: 300, shieldY: 36, hullY: 50, nameY: 18, phaseY: 68 },
+  hud: { x: W / 2 - 150, w: 300, shieldY: 24, hullY: 38, nameY: 4, phaseY: 53 }, // above the toast, which opens at about y 75
   color: { hull: 0xe8b84a, hullLow: 0xe8873a, shield: 0x7fe9ff, down: 0x6a8aa8, charge: 0xffa83a, warn: 0xffd9a0, line: 0xff8a3a },
   bubble: { grow: 20, alpha: [0.22, 0.4], hit: 0.95, hitMs: 160 },              // the shield bubble: px beyond the hull, how solid (empty, full), how solid on a hit and for how long
   ring: { from: 120, to: 34, w: 3, spin: 2.4 },                                  // the charge ring: it closes from `from` px to `to` px as the charge runs out

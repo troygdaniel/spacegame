@@ -244,7 +244,7 @@ A **rival** is one ship, the cruiser's size, with a hull and a **shield** of its
 
 | Phase | What it does | The answer |
 |---|---|---|
-| **stalk** | circles the cruiser at 620 px and shoots a little (5 damage a shot) for 6 s the first time, 4 s after | close in; turrets reach 500 px |
+| **stalk** | circles the cruiser at 340 px (on the screen and inside the turrets' 500) and shoots a little (5 damage a shot) for 6 s the first time, 4 s after | close in; turrets reach 500 px |
 | **charge** | stops, turns its side on you, a ring closes on it and a line of fire grows toward you for 3.2 s; "Broadside charging. Power to shields." Then six shots in a fan at where you are (18 each, 108 in all) | power to the shields (the cap and the mending), or move off its line: a moving carrier takes under half |
 | **down** | its shield drops for 6 s; every hit goes to the hull, 1.3 times over; "Its shields are down. Power to weapons." The shield comes back at 60 percent | power to weapons, and fire |
 | **ram** or **run** | by turns, the first is a ram. RAM: it turns on you at 1.5 times its speed but only 0.55 of its turn, for 4.5 s; a hit is 40 and shoves both ships; "It is ramming. Power to engines." RUN: it flees for 6 s and comes back; "It is running. Chase it." | engines: a carrier that runs from the ram at full speed is missed; to catch a runner, engines or missiles |

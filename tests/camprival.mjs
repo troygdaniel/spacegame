@@ -132,7 +132,7 @@ g.run(`
   const run = (move) => { g.run('__duel({ god: false })'); if (move) g.run('C.input.thrust = 1'); g.run(`(() => { for (let i = 0; i < 30 * 16; i++) { if (${move}) { const a = Math.atan2(__rv() ? __rv().y - C.carrier.y : 0, __rv() ? __rv().x - C.carrier.x : 1) + Math.PI / 2; C.carrier.rot = a; C.input.thrust = 1; } campStep(C, 1 / 30); C.events.length = 0; } })()`); return J('({ shield: C.shield, hull: C.carrier.hp, max: campShieldMax(C) })'); };
   const still = run(false), moving = run(true);
   const lostStill = still.max - still.shield + (600 - still.hull), lostMoving = moving.max - moving.shield + (600 - moving.hull);
-  check('a still carrier takes the broadside on the shield (more than 60 of the 108)', lostStill > 60 && lostStill <= 125, JSON.stringify(still));
+  check('a still carrier takes the broadside on the shield (more than 60 of the 108, and its small gun on top)', lostStill > 60 && lostStill <= 145, JSON.stringify(still));
   check('a carrier that moves across its line takes under half of it', lostMoving < lostStill / 2, JSON.stringify([lostStill, lostMoving]));
   check('a full shield at the default power keeps the hull whole against one broadside', still.hull === 600, JSON.stringify(still));
   g.run('__duel({ god: false }); C.shield = 30');
