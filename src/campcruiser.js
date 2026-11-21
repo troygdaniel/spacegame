@@ -158,6 +158,7 @@ function campShipTexture(scene, kind) {
   const key = 'camp-' + kind;
   if (scene.textures.exists(key)) return key;
   const [W, H] = campArtSize(kind), g = scene.make.graphics({ x: 0, y: 0, add: false });
-  ({ cruiser: campCruiserDraw, fighter: campFighterDraw, escort: campEscortDraw })[kind](g); g.generateTexture(key, W, H); g.destroy();
+  const draw = ({ cruiser: campCruiserDraw, fighter: campFighterDraw, escort: campEscortDraw })[kind] || (typeof campPirateArt === 'function' ? campPirateArt(kind) : null); // the pirates' and the neutrals' pictures: src/camppirateart.js
+  draw(g); g.generateTexture(key, W, H); g.destroy();
   return key;
 }
