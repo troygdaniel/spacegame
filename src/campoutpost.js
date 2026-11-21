@@ -92,13 +92,13 @@ function campRetreat(C) {
   const n = campOutpostNear(C, true), far = n ? null : campOutpostNearest(C, true), o = n ? n.o : far && far.o;
   if (!o) { // none is open: if the level has outposts, say they are covered (the pilot is not sent into the aliens at the gate); a level with none says nothing
     const any = campOutpostNearest(C, false); if (!any) return null;
-    return { o: any.o, d: any.d, secs: 0, near: false, hot: true, line: uiText('camp.hud.retreathot', { name: any.o.place }) };
+    return { o: any.o, d: any.d, secs: 0, near: false, hot: true, line: uiText('camp.hud.retreathot', { name: any.o.name }) };
   }
   const secs = n ? 0 : far.secs;
-  return { o, d: n ? n.d : far.d, secs, near: !!n, hot: false, line: n ? uiText('camp.hud.dockhint', { name: o.place }) : uiText('camp.hud.retreat', { name: o.place, s: secs }) };
+  return { o, d: n ? n.d : far.d, secs, near: !!n, hot: false, line: n ? uiText('camp.hud.dockhint', { name: o.name }) : uiText('camp.hud.retreat', { name: o.name, s: secs }) };
 }
 function campOutpostTick(C, dt) {
   const r = campRetreat(C), kind = !r ? false : r.hot ? 'hot' : r.near ? 'near' : 'go'; // what the retreat is now: covered, in range, or a flight
-  if (kind && kind !== C.flags.retreat) campSay(C, kind === 'hot' ? 'camp.say.retreathot' : kind === 'near' ? 'camp.say.retreatnear' : 'camp.say.retreat', { name: r.o.place, s: r.secs }); // said once when it begins, and again when it becomes another (the guards are dead: a safe gate)
+  if (kind && kind !== C.flags.retreat) campSay(C, kind === 'hot' ? 'camp.say.retreathot' : kind === 'near' ? 'camp.say.retreatnear' : 'camp.say.retreat', { name: r.o.name, s: r.secs }); // said once when it begins, and again when it becomes another (the guards are dead: a safe gate)
   C.flags.retreat = kind; // cleared (false): a second time is a new one
 }
