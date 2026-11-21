@@ -82,13 +82,13 @@ console.log('C. the words');
 
 console.log('D. the SHIP panel row');
 {
-  g.run(`window.C = __new(); window.P = campPanelNew(); campPanelKey(P, C, 'Digit2', 0, false); window.__p1 = campPanelKey(P, C, 'Digit5', 100, true);`);
+  g.run(`window.C = __new(); window.P = campPanelNew(); campPanelKey(P, C, 'KeyE', 0, false); window.__p1 = campPanelKey(P, C, 'Digit5', 100, true);`);
   check('Shift with 5 on the SHIP panel is a burn to the objective (wing aboard)', J('__p1.ran') === true && J('C.nav && C.nav.fast') === true);
-  g.run(`window.C = __new(); window.P = campPanelNew(); campPanelKey(P, C, 'Digit2', 0, false); campPanelKey(P, C, 'Digit5', 100, false);`);
+  g.run(`window.C = __new(); window.P = campPanelNew(); campPanelKey(P, C, 'KeyE', 0, false); campPanelKey(P, C, 'Digit5', 100, false);`);
   check('5 alone is regular speed, as it was', J('C.nav && C.nav.fast') === false);
-  g.run(`window.C = __new(); campOrder(C, 'launch'); __run(C, 7); window.P = campPanelNew(); campPanelKey(P, C, 'Digit2', 0, false); window.__p2 = campPanelKey(P, C, 'Digit5', 100, true);`);
-  check('Shift and 5 with the wing out is refused the first time ("Wing is out"), and 5 alone still flies at regular speed', J('C.nav') === null && J('__ev(C, "camp.nav.no.wingout").length') >= 1 && (g.run(`campPanelKey(P, C, 'Digit2', 200, false); campPanelKey(P, C, 'Digit5', 300, false);`), J('C.nav && C.nav.fast') === false));
-  check('the table has the row for it, and the key line and pages read it: "2 Shift 5  Ship: autopilot there fast (wing aboard)"', J(`campPanelKeyRows().some(r => r.k.join(' ') === '2 Shift 5' && /fast/.test(r.t))`));
+  g.run(`window.C = __new(); campOrder(C, 'launch'); __run(C, 7); window.P = campPanelNew(); campPanelKey(P, C, 'KeyE', 0, false); window.__p2 = campPanelKey(P, C, 'Digit5', 100, true);`);
+  check('Shift and 5 with the wing out is refused the first time ("Wing is out"), and 5 alone still flies at regular speed', J('C.nav') === null && J('__ev(C, "camp.nav.no.wingout").length') >= 1 && (g.run(`campPanelKey(P, C, 'KeyE', 200, false); campPanelKey(P, C, 'Digit5', 300, false);`), J('C.nav && C.nav.fast') === false));
+  check('the table has the row for it, and the key line and pages read it: "E 5  Ship: autopilot (Shift: fast)"', J(`campPanelKeyRows().some(r => r.k.join(' ') === 'E 5' && /Shift: fast/.test(r.t))`));
 }
 
 console.log('E. the map\'s Fast button');

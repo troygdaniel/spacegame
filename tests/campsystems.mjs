@@ -232,8 +232,8 @@ sec('J', () => {
   check('J  after it, the emergency row counts down: "ready in 29 s" (40 s from its start)', cool[4].ok === false && /^ready in \d+ s$/.test(cool[4].state) && cool.slice(0, 4).every(x => x.ok !== undefined), JSON.stringify(cool[4]));
   g.run("__P.open = 'fleet'");
   r = key('KeyC', 20);
-  check('J  with another panel open, C closes it and does not open a second', J('__P.open') === '' && r.closed === true && !r.opened, JSON.stringify(r));
-  check('J  the key line says the three panels: "1 Fleet   2 Ship   C Systems"', J('campPanelKeyLine()') === '1 Fleet   2 Ship   C Systems');
+  check('J  with another panel open, C switches to SYSTEMS (the two lists cross-fade: card space-game-campaign-panels-ui)', J('__P.open') === 'systems' && r.opened === 'systems', JSON.stringify(r));
+  check('J  the key line says the three panels: "Q Fleet   E Ship   C Systems"', J('campPanelKeyLine()') === 'Q Fleet   E Ship   C Systems');
 });
 
 sec('H', () => {

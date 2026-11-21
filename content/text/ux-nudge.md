@@ -6,5 +6,5 @@ The words of one change of the Campaign's UX night (card space-game-night-ux, do
 ## Strings
 | key | text |
 |---|---|
-| camp.nudge.launch | Press 1, then 1, to launch the wing. |
-| camp.nudge.attack | Press 1, then 2, to send the fighters at the aliens. |
+| camp.nudge.launch | Press Q, then 1, to launch the wing. |
+| camp.nudge.attack | Press Q, then 2, to send the fighters at the aliens. |
