@@ -20,6 +20,17 @@ const CAMPMAP = {
   color: { star: 0xffe29a, earth: 0x4aa3ff, place: 0xb9a37a, cache: 0xffd37a, relic: 0x7fe9ff, alien: 0xff4d6d, mother: 0xff4dff, tower: 0xff9a3a, convoy: 0xffb454, carrier: 0xffffff, wing: 0x6dff9c, anomaly: 0xc58cff, scout: 0xb8f0ff, rock: 0x8c8c8c, pickup: 0xffd37a }
 };
 
+// a place for a small label among others: the first of the candidate centres (a list of { x, y }) where a w by h box overlaps none of the boxes ({ x, y, w, h }: top left and size); null when every one is taken.
+// The route label on the whole-system map used to sit on the middle of its line, on top of a belt's name (wrap-up hunt of level 3).
+function campMapFreeSpot(cands, w, h, boxes) {
+  return (cands || []).find(c => !(boxes || []).some(b => c.x - w / 2 < b.x + b.w && c.x + w / 2 > b.x && c.y - h / 2 < b.y + b.h && c.y + h / 2 > b.y)) || null;
+}
+// the centres to try for the route label of a line from a to b: the middle, then along the line either side of it, above and below it
+function campMapRouteSpots(a, b, off) {
+  off = off == null ? 11 : off; const out = [];
+  [0.5, 0.38, 0.62, 0.26, 0.74, 0.14, 0.86].forEach(t => { const x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t; out.push({ x, y: y - off }, { x, y: y + off });  });
+  return out;
+}
 // the colour of a ship (u: a ship of the battle): the radar and the map agree
 function campDotColor(u) {
   const c = CAMPMAP.color;
