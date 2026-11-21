@@ -1059,6 +1059,12 @@ const UI_TEXT = {
   'camp.say.rim8': 'They are back. Cover the haulers.',
   'camp.say.rim9': 'Another raid. Hold the line.',
   'camp.say.rim10': 'They keep coming. Stay on her.',
+  // The three gauges (card space-game-systems-gauges, content/text/campaign-gauges.md)
+  'camp.gauge.shields': 'SHIELDS',
+  'camp.gauge.speed': 'SPEED',
+  'camp.gauge.lasers': 'LASERS',
+  'camp.gauge.hull': 'HULL',
+  'camp.say.lasersdry': 'Lasers are running dry. More power to weapons.',
   'camp.say.contact': 'Unknown ships. Not pirates. Weapons hot.',
   'camp.say.sold': 'Sold {ore} ore for {cash}.',
   'camp.o.ore': 'Mine ore: {got} of {need}.',
