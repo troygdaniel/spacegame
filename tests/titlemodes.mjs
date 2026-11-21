@@ -1,5 +1,5 @@
 // smoke: the title offers Long Haul or the Campaign, and the Long Haul pause menu has a Title row that saves first (plain Node, no Chrome)
-// Card space-game-title-modes. (1) The title (src/title.js) shows two choices, each a key and a click: Long Haul (Enter, or any other key as before) and the Campaign (K, as before);
+// Card space-game-title-modes. (1) The title (src/title.js) shows two choices, each a key and a click: Long Haul (Enter; not any other key since card space-game-title-any-key, tests/titlekeys.mjs) and the Campaign (K, as before);
 // the words are in content/text/title.md. (2) The Long Haul pause menu (src/meta.js) gains a Title row, which saves and goes back to the title (the Campaign's pause card already had
 // T title). From the title either game starts again; ?campaign=N and every other key of the title are as they were.
 //   A. the words: in the file, in the table, short enough for the panels
@@ -24,7 +24,7 @@ console.log('A. the words');
   check('every word is in content/text/title.md (a file of its own: ui.md is at its 200 rows) and the game says it, not the key', keys.every(k => md.includes('| ' + k + ' |') && J(`uiText('${k}')`) !== k), keys.filter(k => !md.includes('| ' + k + ' |') || J(`uiText('${k}')`) === k).join());
   check('the keys shown on the choices are Enter and K', J(`uiText('title.long.key')`) === 'ENTER' && J(`uiText('title.camp.key')`) === 'K');
   check('the names are LONG HAUL and CAMPAIGN, and a line says what each is (two lines of a panel at most: 85 characters)', J(`uiText('title.long.name')`) === 'LONG HAUL' && J(`uiText('title.camp.name')`) === 'CAMPAIGN' && J(`uiText('title.long.sub')`).length <= 85 && J(`uiText('title.camp.sub')`).length <= 85, [J(`uiText('title.long.sub')`).length, J(`uiText('title.camp.sub')`).length].join());
-  check('Long Haul\'s line says any other key starts it too (that still does)', /Any other key starts it too/.test(J(`uiText('title.long.sub')`)));
+  check('Long Haul\'s line says Enter starts it and the arrows pick (it no longer says any other key does: card space-game-title-any-key)', /Enter starts it; the arrows pick/.test(J(`uiText('title.long.sub')`)) && !/Any other key/.test(J(`uiText('title.long.sub')`)));
   check('ui.md is within its 200 rows (it was 199 on main, so these words could not go there) and the words are a file of their own that the content merge reads', (md0 => md0.split('\n').filter(l => /^\| [a-z]/.test(l)).length)(src('content/text/ui.md')) <= 200 && /^type: text/m.test(src('content/text/title.md')));
 }
 
@@ -91,7 +91,7 @@ console.log('C. the title');
   g.run('__calls.length = 0; __keys({ code: "Enter", repeat: false })');
   check('Enter starts Long Haul', J('__calls').join() === 'go Station');
   g.run('__calls.length = 0; __keys({ code: "KeyZ", repeat: false })');
-  check('so does any other key, as it did ("press any key" is still true)', J('__calls').join() === 'go Station');
+  check('and any other key does NOT start it now (Z here: a mode starts only on its own key, the arrows and Enter, or a click; tests/titlekeys.mjs has the rest)', J('__calls').join() === '');
   g.run('__calls.length = 0; __opened.length = 0; ["KeyV", "KeyC", "KeyS", "KeyO", "KeyM"].forEach(c => __keys({ code: c, repeat: false }))');
   check('V, C, S, O open what they opened, and M (mute) starts nothing: the other keys of the title are as they were', J('__opened').join() === 'voiceOpenSetup,chatOpenSetup,settingsOpen,modsOpenSetup' && J('__calls.length') === 0, J('__opened').join());
   g.run('__calls.length = 0; __keys({ code: "KeyK", repeat: true })');

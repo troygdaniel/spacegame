@@ -515,7 +515,7 @@ const UI_TEXT = {
   // The title screen's two choices and the pause menu's Title row (card space-game-title-modes, content/text/title.md)
   'title.long.key': 'ENTER',
   'title.long.name': 'LONG HAUL',
-  'title.long.sub': 'The trading run, Halcyon Station to Kepler-4b. Any other key starts it too.',
+  'title.long.sub': 'The trading run, Halcyon Station to Kepler-4b. Enter starts it; the arrows pick.',
   // The pilots' calls for orders (card space-game-order-calls, content/text/camporders.md)
   'camp.call.line.cruiser': 'Your shields are failing. Orders?',
   'camp.call.line.wounded': 'Wingman hit and burning. Orders?',
