@@ -12,7 +12,7 @@ g.run(`window.__card = (title, lines, hint, tall) => {
   const made = [], mk = (kind, o) => { const t = Object.assign({ kind, setOrigin() { return t; }, setStrokeStyle() { return t; }, setScrollFactor() { return t; }, setDepth() { return t; }, destroy() {},
     setSize(w, h) { t.w = w; t.h = h; return t; }, setPosition(x, y) { t.x = x; t.y = y; return t; }, setY(y) { t.y = y; return t; } }, o); made.push(t); return t; };
   const s = Object.create(Campaign.prototype);
-  s.add = { rectangle: (x, y, w, h) => mk('rect', { x, y, w, h }), text: (x, y, txt) => mk('text', { x, y, txt, h: String(txt).split('\\n').length * 24 + 6, setText(v) { this.txt = v; this.h = String(v).split('\\n').length * 24 + 6; return this; } }), };
+  s.add = { rectangle: (x, y, w, h) => mk('rect', { x, y, w, h }), text: (x, y, txt) => mk('text', { x, y, txt, h: String(txt).split('\\n').length * 24 + 6, height: String(txt).split('\\n').length * 24 + 6, setText(v) { this.txt = v; this.h = this.height = String(v).split('\\n').length * 24 + 6; return this; } }), };
   s.showCard(title, lines, hint, tall);
   const texts = made.filter(o => o.kind === 'text'), rects = made.filter(o => o.kind === 'rect'), card = rects[1];
   return { title: { y: texts[0].y, h: 30 }, body: { y: texts[1].y, h: texts[1].h }, hint: { y: texts[2].y, h: 20 }, card: { y: card.y, h: card.h }, H };
