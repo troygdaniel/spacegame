@@ -65,6 +65,7 @@ function campSell(C, o) {
   const ore = Math.floor(C.ore), cash = Math.round(ore * o.market.rate);
   C.ore -= ore; C.cash = (C.cash || 0) + cash; C.sold = (C.sold || 0) + ore;
   C.events.push({ type: 'sold', id: o.id, name: o.name, ore, cash });
+  campSay(C, 'camp.say.sold', { ore, cash });
   return { ore, cash };
 }
 function campUndock(C) { if (!C.docked) return false; const id = C.docked; C.docked = ''; C.events.push({ type: 'undocked', id }); return true; }

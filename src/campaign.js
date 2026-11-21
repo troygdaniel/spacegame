@@ -369,46 +369,36 @@ const CAMP = {
   // places (else the table above), start (a place of its own, drawn or not) and startAt, convoys, waves (goal: 'earth', 'convoy:<id>' or 'carrier'), earth (false: no Earth),
   // guards (aliens that wait until you come close), towers (rings of them round a place), caches, relic, say (the words of the level, in content/text/ui.md)
   levels: {                                // the levels; a wave or a convoy is one line
-    1: {                                                          // THE BELT (card space-game-campaign-belt): the cruiser is a mining ship working the asteroid belt at Ceres. Three missions (card space-game-campaign-missions): survey, haulers, the mothership
-      moons: ['luna', 'phobos', 'deimos', 'io', 'europa', 'ganymede', 'callisto', 'titan', 'enceladus'],  // the moons the level shows (CAMP.moons): the missions go to Mars's two and Europa, the rest are places to fly to
-      docks: { ceres: 'Occator Works', earth: 'Earth Orbital' },  // the dock names of the level's own bodies (a mission's `dock`; card space-game-campaign-mission-places). The friendly outposts of the level (building and mending) are `outposts`, below
-      name: 'The belt', start: 'ceres', startAt: [130, 30],       // the works the cruiser leaves, and its offset from it
-      outposts: { ceres: { name: 'Occator Works' }, vesta: { name: 'Vesta Depot' }, earth: {}, mars: { name: 'Mars base' } }, // the friendly outposts: a place of this level, and what it is called (else the place's own name); the map marks them with a station and the carrier docks within CAMP.outpost.range of one
-      world: { system: 'sol', fit: { place: 'ceres', pack: 'sol-ceres' } }, // all of Sol round it (src/campsol.js): Ceres on its own ring of the Sol pack, 29,000 px from the Sun, which is placed from that; Vesta and Pallas are the level's own (same names), Earth, Mars and the rest are far bodies, and the main belt is the ring of rocks the cruiser is working in
-      earth: false, startOre: 0, refit: true,                   // no Earth to lose here; the store is empty at the start of the level (30 for a level you start by itself); the level ends with the Earth refit screen
-      places: {                                                 // Ceres, Vesta and Pallas (real; docs/SOL.md), with the belt between them (the distances are not true)
-        ceres: { x: 0, y: 0, name: 'Ceres', kind: 'ice', seed: 31, r: 90, base: 'Occator Works' },  // the dwarf planet and the mining works the cruiser starts at
+    1: {                                                          // THE RIM RUN (card space-game-l1-rim-missions; Troy, 21 Nov 2026): the cruiser leaves the Lunar Base with a transport for Ceres on the rim, mines and defends there, and brings the haulers home. It was the belt
+      moons: ['luna'],                                            // the moons the level shows (CAMP.moons): the Lunar Base is Luna, where the run starts
+      docks: { ceres: 'Occator Works', earth: 'Earth Orbital', luna: 'Lunar Base' },  // the dock names of the level's own bodies (a mission's `dock`; card space-game-campaign-mission-places). The friendly outposts of the level (building and mending) are `outposts`, below
+      name: 'The rim run', start: 'luna', startAt: [130, 30],     // the base the cruiser leaves, and its offset from it
+      outposts: { luna: { name: 'Lunar Base' }, ceres: { name: 'Occator Works', market: { rate: 3 } }, earth: {} }, // the friendly outposts: a place of this level, and what it is called (else the place's own name); the map marks them with a station and the carrier docks within CAMP.outpost.range of one. Ceres is a market: docking there sells the store for 3 cash an ore (campSell), more than the ore is worth anywhere else
+      world: { system: 'sol', fit: { place: 'ceres', pack: 'sol-ceres' } }, // all of Sol round it (src/campsol.js): Ceres on its own ring of the Sol pack, 29,000 px from the Sun, which is placed from that; Vesta and Pallas are the level's own (same names), Earth, Mars and the rest are far bodies; Luna is Earth's moon, 16,500 px from Ceres
+      earth: false, startOre: 0, refit: true,                     // no Earth to lose here; the store is empty at the start of the level (30 for a level you start by itself); the level ends with the Earth refit screen
+      places: {                                                   // Ceres, Vesta and Pallas (real; docs/SOL.md), with the belt between them (the distances are not true)
+        ceres: { x: 0, y: 0, name: 'Ceres', kind: 'ice', seed: 31, r: 90, base: 'Occator Works' },  // the dwarf planet and the mining works at the rim
         vesta: { x: 2700, y: -1500, name: 'Vesta', kind: 'rock', seed: 41, r: 60 },                  // a large asteroid, north-east
         pallas: { x: -2400, y: 2000, name: 'Pallas', kind: 'rock', seed: 43, r: 60 }                 // another, south-west
       },
-      rocks: [                                                  // the belt: n rocks of ore within spread px of at (each holds CAMP.ore.rock); thirty-two in all, 640 ore, more than the store holds
-        { at: [900, 700], n: 7, spread: 300 }, { at: [-1100, -400], n: 7, spread: 300 }, { at: [2000, -900], n: 6, spread: 300 },  // one row of the list above: numbers as in its header
-        { at: [-1800, 1500], n: 6, spread: 300 }, { at: [300, -1600], n: 6, spread: 300 }  // one row of the list above: numbers as in its header
-      ],
-      anomalies: [                                              // the cloaked caches (card space-game-campaign-anomalies; src/campanomaly.js): at [x, y] or place + off (the far ones round Mars and Jupiter's moons are a long Fast trip); r the haze; hides the words; guards come out when it is decloaked; reward once
-        { id: 'veil', at: [-1900, -1700], hides: 'weapons', guards: { raider: 2 }, reward: { ore: 60, missiles: 2 } },                      // north-west of the survey's first field
-        { id: 'lee', at: [-1000, 2800], hides: 'tech', guards: { raider: 2, gunship: 1 }, reward: { ore: 80, turret: 0.15 } },               // between Ceres and Pallas: a lab
-        { id: 'shade', at: [4200, 300], hides: 'weapons', guards: { raider: 3, gunship: 1 }, reward: { ore: 100, missiles: 2, tech: 'overdrive' } }, // east of Vesta: the mothership's side of the belt
-        { id: 'marsdust', place: 'mars', off: [-700, 600], hides: 'weapons', guards: { raider: 3, gunship: 1 }, reward: { ore: 120, missiles: 2 } },   // far: round Mars, 31,000 px away (a Fast trip of under a minute)
-        { id: 'io', place: 'jupiter', off: [900, -700], hides: 'tech', guards: { raider: 4, gunship: 2 }, reward: { ore: 150, turret: 0.2, tech: 'lens' } } // far: Jupiter's moon Io, 23,000 px away
-      ],
-      missions: [                                               // a mission is a row laid over this one: kind, objectives, bonus objectives (bonus), par (s), its own waves, convoys ... (docs/CAMPAIGN.md, Missions)
-        { id: 'survey', kind: 'recon', par: 150, hpScale: 1, dmgScale: 1, scouts: ['recon', 'fetch'], place: 'ceres', dock: 'ceres',  // M1 at Ceres, where the cruiser is (no travel); its points are offsets from Ceres                  // M1: scan three rock fields; the ambush hits when the second is scanned
-          objectives: [{ type: 'scan', points: [{ at: [900, 700], r: 320, secs: 8 }, { at: [-1100, -400], r: 320, secs: 8 }, { at: [300, -1600], r: 320, secs: 8 }] }, { type: 'kill', what: 'wave:0' }],  // what the mission asks (scan points: where, how close, how many seconds), all of it
-          bonus: [{ id: 'find', type: 'anomaly', anomaly: 'veil' }, { id: 'swift', type: 'time', secs: 150 }, { id: 'clean', type: 'lost', n: 0 }, { id: 'ore', type: 'ore', n: 60 }],  // bonus objectives: each met earns CAMP.score.bonus
-          waves: [{ on: { scanned: 2 }, ambush: true, from: [3200, 1800], ships: { raider: 4, drone: 3 }, goal: 'carrier', say: 'camp.say.ambush', say2: 'camp.say.ambush2', say2At: 5 }] }, // the ambush: an alarm, out of the dark, two lines
-        { id: 'haulers', kind: 'escort', par: 120, hpScale: 1, dmgScale: 1, scouts: ['escort', 'fetch'], place: 'mars', dock: 'phobos',  // M2 at Mars (a trip of about 46 s by Fast): three ore haulers fly from Deimos to Phobos; two must arrive; raiders go for them
-          objectives: [{ type: 'deliver', n: 2 }],  // what the mission asks: two haulers must arrive
-          bonus: [{ id: 'find', type: 'anomaly', anomaly: 'lee' }, { id: 'all', type: 'delivered' }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
-          convoys: [{ id: 'h1', name: 'Hauler 1', say: 'camp.say.hauler', at: 3, from: 'deimos', to: 'phobos' }, { id: 'h2', name: 'Hauler 2', say: 'camp.say.hauler', at: 18, from: 'deimos', to: 'phobos' }, { id: 'h3', name: 'Hauler 3', say: 'camp.say.hauler', at: 33, from: 'deimos', to: 'phobos' }],  // the haulers: when they leave (s after arrival), from and to which moon of Mars
-          waves: [{ at: 10, from: [-1000, -350], ships: { raider: 7, drone: 3 }, goal: 'convoy:h1', say: 'camp.say.raid' }, { at: 26, from: [200, 100], ships: { raider: 7, drone: 3 }, goal: 'convoy:h2', say: 'camp.say.raid2' }, { at: 42, from: [-600, -250], ships: { raider: 6, drone: 4 }, goal: 'convoy:h3', say: 'camp.say.raid2' }],  // the waves: when (s after arrival), from where (offsets from Mars), how many of each kind
-          rocks: [{ at: [-1500, 900], n: 6, spread: 300 }, { at: [1200, -900], n: 6, spread: 300 }] },  // two rock fields at Mars, offsets from it
-        { id: 'mothership', kind: 'attack', par: 150, hpScale: 1.6, dmgScale: 1.8, scouts: ['recon', 'fetch'], win: 'mother', place: 'europa', dock: 'europa',  // M3 at Europa, a moon of Jupiter (a trip of about 37 s by Fast)   // M3: three waves, the last with the mothership
-          objectives: [{ type: 'kill', what: 'mother' }],
-          bonus: [{ id: 'find', type: 'anomaly', anomaly: 'shade' }, { id: 'swift', type: 'time', secs: 150 }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'clean', type: 'lost', n: 1 }],  // bonus objectives: each met earns CAMP.score.bonus
-          rocks: [{ at: [1500, 1200], n: 6, spread: 300 }, { at: [-1700, -900], n: 6, spread: 300 }],  // two rock fields at Europa, offsets from it
-          waves: [{ at: 5, from: [3200, 1800], ships: { raider: 4, drone: 3 }, goal: 'carrier', say: 'camp.say.ambush' }, { at: 40, early: 20, from: [-3400, -2600], ships: { drone: 4, gunship: 3 }, goal: 'carrier', say: 'camp.say.bwave2' },  // the waves: when, from where, how many of each kind
-            { at: 80, early: 25, needClear: true, from: [2200, -2000], ships: { raider: 4, gunship: 2 }, goal: 'carrier', mother: [2000, -1800], say: 'camp.say.bwave3' }] }  // one row of the list above: numbers as in its header
+      rocks: [],                                                  // the missions have their own (the belt is at Ceres, 1.2)
+      anomalies: [],                                              // none: no cloaked alien caches before first contact (1.3); the later levels have them
+      missions: [                                                 // a mission is a row laid over this one: kind, objectives, bonus objectives (bonus), par (s), its own waves, convoys ... (docs/CAMPAIGN.md, Missions)
+        { id: 'escort', kind: 'escort', par: 220, hpScale: 1, dmgScale: 1, scouts: ['escort'], place: 'luna', dock: 'ceres',  // 1.1 ESCORT: from the Lunar Base (no travel) one transport flies to Ceres, 16,500 px at 100 px/s; pirates raid her three times on the way (a wave comes by how far she has flown, from ahead of her); she dying loses it
+          convoys: [{ id: 't1', name: 'Transport', say: 'camp.say.transport', at: 4, from: 'luna', to: 'ceres', speed: 100 }],  // the transport: when she leaves (s after arrival), from and to which place, her speed
+          objectives: [{ type: 'deliver', n: 1 }],  // what the mission asks: the transport must arrive
+          bonus: [{ id: 'swift', type: 'time', secs: 220 }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
+          waves: [{ on: { lane: 0.15 }, ahead: 2000, ships: { skiff: 2 }, goal: 'convoy:t1', say: 'camp.say.rim1' }, { on: { lane: 0.4 }, ahead: 2000, ships: { skiff: 3, cutter: 1 }, goal: 'convoy:t1', say: 'camp.say.rim2' }, { on: { lane: 0.7 }, ahead: 2000, ships: { skiff: 3, cutter: 2 }, goal: 'convoy:t1', say: 'camp.say.rim3' }] },  // the raids: when (the share of her road flown), how far ahead of her, how many of each kind
+        { id: 'mine', kind: 'defend', par: 260, hpScale: 1, dmgScale: 1, scouts: ['fetch'], place: 'ceres', dock: 'ceres', start: 'ceres', startAt: [130, 30],  // 1.2 MINE AND DEFEND at Ceres: the ore is worth 3 cash at the Works but the rim is not safe: pirates go for the miners; the cruiser starts at Ceres
+          rocks: [{ at: [900, 700], n: 7, spread: 300 }, { at: [-1100, -400], n: 7, spread: 300 }, { at: [300, -1600], n: 6, spread: 300 }],  // three rock fields, offsets from Ceres
+          objectives: [{ type: 'ore', n: 120 }, { type: 'kill', what: 'wave:2' }, { type: 'cashin', n: 100 }],  // mine 120, beat the third raid, sell 100 at the Works (the doors are shut with a pirate near, so the fight comes first)
+          bonus: [{ id: 'sold', type: 'sold', n: 180 }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'clean', type: 'lost', n: 0 }, { id: 'swift', type: 'time', secs: 260 }],  // bonus objectives: each met earns CAMP.score.bonus
+          waves: [{ at: 40, from: [2800, 1500], ships: { skiff: 2, cutter: 1 }, goal: 'carrier', say: 'camp.say.rim4' }, { at: 100, early: 30, from: [-2600, 1800], ships: { skiff: 3, cutter: 1 }, goal: 'carrier', say: 'camp.say.rim5' }, { at: 160, early: 35, needClear: true, from: [2200, -2400], ships: { skiff: 3, cutter: 2 }, goal: 'carrier', say: 'camp.say.rim6' }] },  // the raids: when, from where (offsets from Ceres), how many of each kind
+        { id: 'haulers', kind: 'escort', par: 260, hpScale: 1.2, dmgScale: 1.2, scouts: ['escort'], place: 'ceres', dock: 'earth', start: 'ceres', startAt: [130, 30],  // 1.3 HAULERS HOME: three ore haulers fly from Ceres toward Earth; pirates raid and break off; then FIRST CONTACT: a small alien scout force
+          convoys: [{ id: 'h1', name: 'Hauler 1', say: 'camp.say.hauler', at: 4, from: 'ceres', to: 'earth', speed: 110 }, { id: 'h2', name: 'Hauler 2', say: 'camp.say.hauler', at: 16, from: 'ceres', to: 'earth', speed: 110 }, { id: 'h3', name: 'Hauler 3', say: 'camp.say.hauler', at: 28, from: 'ceres', to: 'earth', speed: 110 }],  // the haulers: when they leave (s after arrival), from and to which place
+          objectives: [{ type: 'deliver', n: 1 }, { type: 'kill', what: 'wave:2' }],  // one hauler must get home (only all lost fails it; each lost hauler costs CAMP.score.hauler), and the aliens of first contact must be beaten
+          bonus: [{ id: 'all', type: 'delivered' }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
+          waves: [{ on: { lane: 0.2 }, ahead: 2000, ships: { skiff: 3, cutter: 1 }, goal: 'convoy:h1', say: 'camp.say.rim7' }, { on: { lane: 0.45 }, ahead: 2000, ships: { skiff: 3, cutter: 2 }, goal: 'convoy:h2', say: 'camp.say.rim8' }, { on: { lane: 0.65 }, ahead: 2400, ships: { raider: 2, drone: 1 }, goal: 'carrier', ambush: true, say: 'camp.say.contact' }] }  // the raids (pirates), then the third wave: an unknown ship, the scouts of the aliens; the first aliens of the game
       ]
     },
     home: {                                                       // the Earth defence level: Earth's shield and the convoys. Not in the chain any more (Troy: they come out of level 1); kept as data, for the rules that need an Earth and for the tests
@@ -1609,12 +1599,12 @@ function campMissions_tick(C, dt) {
   st.forEach(o => { if (o.type === 'deliver' && C.delivered + campConvoys(C).length + C.L.convoys.filter((cv, i) => !C.convoys[i].started).length < o.need) campEnd(C, 'lost', 'convoy'); }); // too many haulers lost
   if (!C.result && st.length && st.every(o => o.done)) campEnd(C, 'won', C.L.win || (st[st.length - 1].what || st[st.length - 1].type));
 }
-// the bonus objectives of a mission row (`bonus`): { id, type: 'time' (secs) | 'lost' (n: at most this many ships lost) | 'hull' (pct: at least) | 'ore' (n) | 'delivered' (all of the haulers), text }
+// the bonus objectives of a mission row (`bonus`): { id, type: 'time' (secs) | 'lost' (n: at most this many ships lost) | 'hull' (pct: at least) | 'ore' (n) | 'sold' (n: at least this much ore sold at a market) | 'delivered' (all of the haulers), text }
 function campBonuses(C) {
   return (C.L.bonus || []).map(b => {
     let ok = false;
     if (b.type === 'time') ok = campMissionClock(C) <= b.secs; else if (b.type === 'lost') ok = C.lostShips <= b.n; else if (b.type === 'hull') ok = C.carrier.hp >= C.carrier.maxHp * b.pct / 100;
-    else if (b.type === 'ore') ok = C.ore >= b.n; else if (b.type === 'anomaly') ok = campAnomFound(C, b.anomaly); else if (b.type === 'delivered') ok = C.delivered >= C.L.convoys.length;
+    else if (b.type === 'ore') ok = C.ore >= b.n; else if (b.type === 'sold') ok = C.sold >= b.n; else if (b.type === 'anomaly') ok = campAnomFound(C, b.anomaly); else if (b.type === 'delivered') ok = C.delivered >= C.L.convoys.length;
     return { id: b.id, type: b.type, text: b.text, secs: b.secs, n: b.n, pct: b.pct, anomaly: b.anomaly, ok, points: ok ? CAMP.score.bonus : 0 };
   });
 }

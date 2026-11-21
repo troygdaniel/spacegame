@@ -6,7 +6,7 @@ The words of the Campaign's first level, the asteroid belt (card space-game-camp
 ## Strings
 | key | text |
 |---|---|
-| camp.l1.before.3 | Quiet shift. Fill the store. |
+| camp.l1.before.3 | Then mine at the rim and bring the haulers home. |
 | camp.l1.after.3 | Earth recalls the cruiser for a refit. |
 | camp.say.ambush | Alarm. Unknown ships, coming for the cruiser. |
 | camp.say.ambush2 | Mining lasers are weapons now. Hold Space. Drones: FLEET panel, Attack. |
