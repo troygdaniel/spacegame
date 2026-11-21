@@ -354,7 +354,7 @@ const CAMP = {
     },
     2: {                                                          // Alpha Centauri: warp in, gather resources, break the relic's guards, hold the relic until it answers
       name: 'Alpha Centauri', start: 'arrival', startAt: [0, 0], earth: false,
-      outposts: { proxima: { name: 'Proxima Gate' } },        // the one friendly outpost: the gate at Proxima b, where the relic is
+      outposts: { proxima: { name: 'Proxima Gate' }, 'alpha-cen-b': { name: 'Alpha B relay' } }, // the friendly outposts: the gate at Proxima b, where the relic is, and a relay at Alpha Centauri B, far from the guards that sit round Proxima b (mission 2): while they live the gate's doors are shut, so the relay is the retreat (card space-game-outpost-hot-gate)
       world: { system: 'alpha-centauri', star: 'sun', fit: { place: 'proxima', pack: 'proxima-b' }, same: { proxima: 'proxima-b' } }, // the star is the place 'sun'; the pack's other bodies round it sit on their rings and angles, fitted to Proxima b
       warp: { dest: 'Alpha Centauri', ly: 4.4, star: 'sun' },  // the warp cinematic plays when this level starts (src/campwarp.js): where to, how far, and which of the places below is the star that resolves ahead
       places: {                                                 // the carrier warps in at arrival (not drawn); Proxima b holds the relic

@@ -5,14 +5,15 @@
 //   THE DATA: CAMP.levels[n].outposts = { <place id>: { name?, range? } }: the friendly outposts of a level, places of that level (a hidden place is not one). name is what the room is called (else the place's
 //   base, else "<place> outpost"). CAMP.outpost has the numbers (range, clear, repairOre, retreatHull, fabricator). The map marks them with a station and the list flags them (outpost: true).
 //   campOutposts(level)        [{ id, name, place, x, y, r, range }] the outposts of the level, nearest to nothing in particular (the table's order)
-//   campOutpostNear(C)         { o, d } the outpost the carrier is within the range of (d: px from its edge), or null
-//   campOutpostNearest(C)      { o, d, secs } the nearest outpost to the carrier whatever the range (d: px from its edge; secs: the flight on Fast), or null
+//   campOutpostHot(C, o)       an alien is within CAMP.outpost.clear of the outpost: its doors are shut (a retreat to it would fly into them)
+//   campOutpostNear(C, safe)   { o, d } the outpost the carrier is within the range of (d: px from its edge), or null; safe: leaving out the hot ones
+//   campOutpostNearest(C, safe) { o, d, secs } the nearest outpost to the carrier whatever the range (d: px from its edge; secs: the flight on Fast), or null; safe: leaving out the hot ones
 //   campCanBuild(C)            docked, or the Fabricator
 //   campDock(C, arg, dry)      the order "dock": the outpost named (arg) or the near one; { ok, code, say } like every order; docked: C.docked = id, an event { type: 'docked' } for the scene
 //   campUndock(C)              the carrier is free again
 //   campMend(C, arg, dry)      the order "repair": the hull, docked only, for ore
-//   campRetreat(C)             null, or { o, d, secs, line, near } when the hull is low and no ship of the wing is left: the HUD line and what to say
-//   campOutpostTick(C, dt)     every tick: the retreat line is said once when it begins (campSay), and again only after it has cleared
+//   campRetreat(C)             null, or { o, d, secs, line, near, hot } when the hull is low and no ship of the wing is left: the HUD line and what to say. It names only an outpost whose doors are open: when every one is covered by aliens (level 2's gate while the guards live) hot is true, o is the nearest of them and the line says there is no safe dock (card space-game-outpost-hot-gate)
+//   campOutpostTick(C, dt)     every tick: the retreat line is said once when it begins (campSay), and again only after it has changed (to a safe outpost, or to none) or cleared
 const campOutpostBase = (L, id, pl) => { const p = pl[id], cfg = L.outposts[id] || {}; return { id, name: String(cfg.name || p.base || (p.name + ' outpost')), place: String(p.name), x: p.x, y: p.y, r: p.r || 60, range: Math.max(0, cfg.range != null ? cfg.range : CAMP.outpost.range) }; };
 function campOutposts(level) {
   const L = CAMP.levels[level], pl = campPlaces(level), out = [];
@@ -21,14 +22,15 @@ function campOutposts(level) {
   return out;
 }
 const campOutpostEdge = (C, o) => Math.max(0, Math.hypot(o.x - C.carrier.x, o.y - C.carrier.y) - o.r); // px from the carrier to the edge of the outpost's place
-function campOutpostNear(C) {
+const campOutpostHot = (C, o) => C.ships.some(u => u.team === 'alien' && u.hp > 0 && Math.hypot(u.x - o.x, u.y - o.y) <= CAMP.outpost.clear); // the dock's own rule (no alien within clear of the carrier) asked of the outpost: the carrier would arrive among them
+function campOutpostNear(C, safe) {
   let best = null;
-  campOutposts(C.level).forEach(o => { const d = campOutpostEdge(C, o); if (d <= o.range && (!best || d < best.d)) best = { o, d }; });
+  campOutposts(C.level).forEach(o => { const d = campOutpostEdge(C, o); if (d <= o.range && (!best || d < best.d) && !(safe && campOutpostHot(C, o))) best = { o, d }; });
   return best;
 }
-function campOutpostNearest(C) {
+function campOutpostNearest(C, safe) {
   let best = null;
-  campOutposts(C.level).forEach(o => { const d = campOutpostEdge(C, o); if (!best || d < best.d) best = { o, d }; });
+  campOutposts(C.level).forEach(o => { const d = campOutpostEdge(C, o); if ((!best || d < best.d) && !(safe && campOutpostHot(C, o))) best = { o, d }; });
   if (best) best.secs = typeof campNavEta === 'function' ? campNavEta(C, Math.hypot(best.o.x - C.carrier.x, best.o.y - C.carrier.y), true) : 0; // the flight on Fast, as the map says it
   return best;
 }
@@ -73,12 +75,16 @@ const campNoShips = C => !(C.bay.fighters + C.bay.escorts) && !campWing(C).lengt
 function campRetreat(C) {
   if (!C || C.result || C.docked || !C.carrier || C.carrier.hp <= 0) return null;
   if (C.carrier.hp >= C.carrier.maxHp * CAMP.outpost.retreatHull || !campNoShips(C)) return null;
-  const n = campOutpostNear(C), far = n ? null : campOutpostNearest(C), o = n ? n.o : far && far.o; if (!o) return null;
+  const n = campOutpostNear(C, true), far = n ? null : campOutpostNearest(C, true), o = n ? n.o : far && far.o;
+  if (!o) { // none is open: if the level has outposts, say they are covered (the pilot is not sent into the aliens at the gate); a level with none says nothing
+    const any = campOutpostNearest(C, false); if (!any) return null;
+    return { o: any.o, d: any.d, secs: 0, near: false, hot: true, line: uiText('camp.hud.retreathot', { name: any.o.place }) };
+  }
   const secs = n ? 0 : far.secs;
-  return { o, d: n ? n.d : far.d, secs, near: !!n, line: n ? uiText('camp.hud.dockhint', { name: o.place }) : uiText('camp.hud.retreat', { name: o.place, s: secs }) };
+  return { o, d: n ? n.d : far.d, secs, near: !!n, hot: false, line: n ? uiText('camp.hud.dockhint', { name: o.place }) : uiText('camp.hud.retreat', { name: o.place, s: secs }) };
 }
 function campOutpostTick(C, dt) {
-  const r = campRetreat(C);
-  if (r && !C.flags.retreat) { C.flags.retreat = true; campSay(C, r.near ? 'camp.say.retreatnear' : 'camp.say.retreat', { name: r.o.place, s: r.secs }); } // said once when it begins
-  else if (!r && C.flags.retreat) C.flags.retreat = false; // cleared: a second time is a new one
+  const r = campRetreat(C), kind = !r ? false : r.hot ? 'hot' : r.near ? 'near' : 'go'; // what the retreat is now: covered, in range, or a flight
+  if (kind && kind !== C.flags.retreat) campSay(C, kind === 'hot' ? 'camp.say.retreathot' : kind === 'near' ? 'camp.say.retreatnear' : 'camp.say.retreat', { name: r.o.place, s: r.secs }); // said once when it begins, and again when it becomes another (the guards are dead: a safe gate)
+  C.flags.retreat = kind; // cleared (false): a second time is a new one
 }

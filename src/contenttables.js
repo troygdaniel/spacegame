@@ -704,6 +704,8 @@ const UI_TEXT = {
   'camp.say.retreat': 'Hull low, no ships. Retreat to {name}: {s} seconds on Fast.',
   'camp.say.retreatnear': 'Hull low, no ships. {name} is in range: dock with E.',
   'camp.hud.retreat': 'Retreat to {name}: {s} s on Fast.',
+  'camp.hud.retreathot': '{name} is covered by aliens: no safe dock.',
+  'camp.say.retreathot': 'Hull low, no ships. {name} is covered by aliens: no safe dock.',
   'camp.hud.dockhint': 'E  dock at {name}',
   'camp.tech.fabricator.name': 'Fabricator',
   'camp.tech.fabricator.text': 'Build fighters and escorts anywhere, not only docked.',
