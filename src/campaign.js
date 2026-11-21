@@ -430,10 +430,10 @@ const CAMP = {
       { id: 'brisk', name: 'Brisk', mult: 0.85 } // the quickest a player can have it. Card space-game-command-slowtime (Troy, 21 Nov 2026: fights slower, so there is time to direct the fleet) took the three values down by 15 percent (they were 0.7, 0.85, 1). A battle made with no pace, or with the number 1, is still the table's own numbers: the sim's pins, the bots with --pace 1 and the tests use that
     ],
     start: 'normal',                       // the setting until the player picks one
-    shots: 0.5,                            // the power of the multiplier a shot's speed takes (0.5 is its square root: a shot does not outrun the eye, a hit still lands)
-    key: 'KeyP'                            // the quick key that cycles the setting in play (P: Pace; B is the warp blink since the panels card, and G the map's group)
+    shots: 0.5                             // the power of the multiplier a shot's speed takes (0.5 is its square root: a shot does not outrun the eye, a hit still lands). There is no key and no setting for the pace any more (card space-game-two-hands-keys: command time, src/campslow.js, replaces it): the Campaign flies at CAMP.pace.start, and campNew's opts.pace still takes a mode for the tests, the bots and the sims
   },
   slow: {                                  // COMMAND TIME (card space-game-command-slowtime; src/campslow.js; Troy, 21 Nov 2026: fights were not interactive, he wants to direct the fleet more): while the FLEET, SHIP or SYSTEMS panel, the Tab map or an order-call prompt is open the battle runs at this share of its pace (Homeworld style), with a sign on the screen. Closing returns to pace. Flying between places is not slowed: with nothing open, the carrier and the autopilot are as they were
+    after: 2000,                           // ms the battle stays slowed after a FLEET key (card space-game-two-hands-keys: the panels are always open now, so a fleet key is what takes a command: the time to give the next one)
     scale: 0.25                            // a quarter speed: the whole battle (every ship, wave clock, reload and cooldown), not only the small ships the pace scales
   },
   refit: {                                 // the Earth refit screen after level 1: one tech, and ore buys extra ships for the next level (the costs are the workshop's, CAMP.build)
@@ -698,7 +698,7 @@ function campNew(level, techs, opts) {
     earth: L.defend ? campDefend(level, L.defend) : L.earth === false ? null : { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield }, caches: (L.caches || []).map(c => ({ x: c[0], y: c[1], got: false })), cachesGot: 0,
     ore: Math.max(0, Math.min(CAMP.ore.cap, opts.ore != null ? opts.ore : (L.startOre != null ? L.startOre : CAMP.ore.start))), shield: CAMP.carrier.shield, pickups: [], build: { queue: [] },
     relic: L.relic ? { x: campPlaces(level)[L.relic.place].x, y: campPlaces(level)[L.relic.place].y, hold: 0 } : null,
-    bay: { fighters: CAMP.bay.fighters, escorts: CAMP.bay.escorts }, launchQ: [], nextLaunch: 0, repairs: [], // repairs: the fighters landed and being mended, { kind, until, order, stay } (src/camprepair.js)
+    bay: { fighters: CAMP.bay.fighters, escorts: CAMP.bay.escorts }, launchQ: [], nextLaunch: 0, tgt: '', repairs: [], // repairs: the fighters landed and being mended, { kind, until, order, stay } (src/camprepair.js)
     waves: L.waves.map(() => ({ started: false, at: 0 })), convoys: L.convoys.map(() => ({ started: false })), delivered: 0, lost: 0, kills: 0, launched: 0, lostShips: 0, lane: {}, cash: 0, sold: 0, oreBest: 0,
     orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, build: 0, power: 0, balance: 0, emergency: 0, convoy: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
     result: null, why: '', docked: '' // docked: the id of the outpost the carrier is docked at ('' in flight; src/campoutpost.js)
@@ -844,6 +844,7 @@ function campCheck(C, name, arg) { return campDo(C, name, arg, true); }
 function campDo(C, name, arg, dry, how) {
   if (!C || C.result) return campNo('over');
   if (name === 'power' || name === 'balance' || name === 'emergency') return campPowerDo(C, name, arg, dry); // the ship's systems (below)
+  if (arg === CAMP_TGT && (name === 'attack' || name === 'missiles')) return name === 'attack' ? campTgtAttack(C, how, dry) : campTgtMissile(C, dry); // the target A D S picked (src/camptarget.js): key 2 and Enter
   const t = campFind(C, arg), out = campWing(C);
   if (name === 'scout') return campScoutDo(C, arg, dry); // the Scout order (below)
   if (name === 'lane') return campRouteDo(C, arg, dry); // the pick at a fork in the road (src/camproute.js)

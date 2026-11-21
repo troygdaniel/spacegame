@@ -626,11 +626,16 @@ function shipcompQuick(text, game) {
   if (plan.run) { try { plan.run(s); } catch (e) { /* the game says when it cannot */ } }
   return true;
 }
+// the key: I in the Long Haul; in the Campaign I is the SHIP panel's warp blink, so the strip opens on the slash (CAMP_KEYS.strip in src/data_controls.js; card space-game-two-hands-keys)
+function shipcompCode(game) {
+  const camp = !!(game && game.scene && typeof game.scene.getScenes === 'function' && game.scene.getScenes(true).some(sc => sc.scene && sc.scene.key === 'Campaign') && typeof campKeyCodes === 'function');
+  return camp ? campKeyCodes('strip')[0] : SHIPCOMP.key;
+}
 // I, once for the whole game: in space or in a station, not while typing in a field, a terminal, the shop or a talk is open. It opens the strip's line.
 function shipcompInstall(game) {
   shipcompLoad();
   window.addEventListener('keydown', e => {
-    if (e.repeat || e.code !== 'KeyI' || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.repeat || e.code !== shipcompCode(game) || e.ctrlKey || e.metaKey || e.altKey) return;
     const el = document.activeElement;
     if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return; // typing in a field (the key setup, a chat line, the strip's own line)
     if (!shipcompAvailable()) { shipcompNoKey(game); return; } // no chat key (or the chat is off, or the key was refused): the line cannot open, and the key says so (it used to do nothing)
