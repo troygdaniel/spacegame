@@ -232,7 +232,20 @@ const CAMP = {
     draw: 3600,                            // px: a far place is made in the world (a picture) only while the carrier is within this many px of its edge
     skip: ['sol-pluto']                    // pack bodies the Campaign does not take (the eight planets are the card's; Pluto is a dwarf)
   },
-  hud: { pips: { x: 366, y: 40, w: 13, step: 16 } }, // the ship systems' pips (W S E): beside the shield bar, above the toast band (a toast is up to 552 px wide, centred, from y 86: it ran over the pips when they sat at y 72 to 108)
+  tank: {                                  // the turrets' charge (card space-game-systems-gauges): every shot a turret fires, at an alien or a rock, spends `cost` of it; it mends by itself at refill[pips of the weapons] a second, so a starved weapon system runs dry and the turrets fire only as fast as it mends
+    max: 100,                              // the most charge: a full tank is about nine seconds of all eight turrets at the default (they fire 11.4 shots a second)
+    cost: 1,                               // charge a shot spends
+    refill: [2, 5, 8, 11, 14],             // charge a second, by the weapons' pips 0 to 4 (a turret at 2 pips fires 11.4 shots a second, so the default tank runs down in about half a minute of steady fire and then the turrets fire at 8 a second)
+    low: 0.2                               // the computer says so when the charge falls under this share of the tank (and again after it has been over twice this)
+  },
+  hud: {                                   // the left of the HUD (card space-game-systems-gauges, src/camphud.js): three Long Haul style dials in a row, SHIELDS (with the hull as a thin bar under it), SPEED, LASERS, each with a bar of power segments beside it (the pips of that system, like X-Wing); then the lines of text under them
+    x: 8, y: 8, cell: 118,                 // the first dial's cell: its left and top, and the width of a cell (three of them: 354 px, clear of the toast band, which starts at x 364)
+    r: 22, bar: { w: 10, h: 9, gap: 2 },   // the dial's radius (its bezel is 12 px outside it) and a power segment; the bar sits to the right of the dial, level with its middle
+    hullBar: { y: 78, h: 7 },              // the thin hull bar under the shield dial (and its bar): its top, relative to the cell's top, and its height
+    ore: { x: 130, y: 74 },                // the ore line (and the cash), under the speed and laser dials
+    text: { x: 24, y: 96, pitch: 22 },     // the lines of text under the gauges: the first one's y, and the step to the next (a line that has nothing to say gives its place back)
+    plate: { w: 372, min: 90, pad: 4 }     // the dim plate under the column: its width, its least height, and how far it reaches past the last line
+  },
   nav: {                                   // the carrier's autopilot, the map's list and picking, and the arrow at the screen edge (src/campnav.js); the rule is the Long Haul autopilot's (src/autopilot.js AUTO)
     stop: 100,                             // px: a place is flown to until the edge of it (its radius plus this) is this near
     stopShip: 450,                         // px: a ship (a convoy, the mothership, a tower) is flown to until it is this near: inside the main gun's reach
@@ -257,7 +270,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 206], [1056, 0, 1280, 226], [360, 0, 920, 152], [0, 656, 1020, 720], [18, 232, 336, 272], [1100, 232, 1262, 272]] // screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 238], [1056, 0, 1280, 226], [360, 0, 920, 152], [0, 656, 1020, 720], [18, 232, 336, 272], [1100, 232, 1262, 272]] // screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {
@@ -372,13 +385,16 @@ const CAMP = {
   ],
   pace: {                                  // BATTLE PACE (card space-game-campaign-pace; Troy: the small ships' fights are good but a bit fast). A multiplier on the SMALL ships (fighters, escorts, raiders, drones, gunships): top speed, acceleration and turn rate; their shots by the share `shots` of it. Hull, damage, fire intervals and range stay, so the fight changes only in how fast the ships close. The carrier, the mothership, the towers, the haulers, the turrets, the missiles, the Fast burn, the warp and the map trip are not scaled. campNew(level, techs, { pace }) takes an id or a number; with none it is 1 (Brisk: the numbers as they were)
     modes: [                               // the settings, in the order the key cycles them: id, name, the multiplier
-      { id: 'calm', name: 'Calm', mult: 0.7 },   // slow enough to read every pass of the fight
-      { id: 'normal', name: 'Normal', mult: 0.85 }, // the default for a player (Troy asked for slower than the old pace)
-      { id: 'brisk', name: 'Brisk', mult: 1 }    // exactly the numbers the table above has
+      { id: 'calm', name: 'Calm', mult: 0.6 },   // slow enough to read every pass of the fight
+      { id: 'normal', name: 'Normal', mult: 0.72 }, // the default for a player
+      { id: 'brisk', name: 'Brisk', mult: 0.85 } // the quickest a player can have it. Card space-game-command-slowtime (Troy, 21 Nov 2026: fights slower, so there is time to direct the fleet) took the three values down by 15 percent (they were 0.7, 0.85, 1). A battle made with no pace, or with the number 1, is still the table's own numbers: the sim's pins, the bots with --pace 1 and the tests use that
     ],
     start: 'normal',                       // the setting until the player picks one
     shots: 0.5,                            // the power of the multiplier a shot's speed takes (0.5 is its square root: a shot does not outrun the eye, a hit still lands)
     key: 'KeyP'                            // the quick key that cycles the setting in play (P: Pace; B is the warp blink since the panels card, and G the map's group)
+  },
+  slow: {                                  // COMMAND TIME (card space-game-command-slowtime; src/campslow.js; Troy, 21 Nov 2026: fights were not interactive, he wants to direct the fleet more): while the FLEET, SHIP or SYSTEMS panel, the Tab map or an order-call prompt is open the battle runs at this share of its pace (Homeworld style), with a sign on the screen. Closing returns to pace. Flying between places is not slowed: with nothing open, the carrier and the autopilot are as they were
+    scale: 0.25                            // a quarter speed: the whole battle (every ship, wave clock, reload and cooldown), not only the small ships the pace scales
   },
   refit: {                                 // the Earth refit screen after level 1: one tech, and ore buys extra ships for the next level (the costs are the workshop's, CAMP.build)
     most: 3                                // most extra fighters, and most extra escorts, one refit buys
@@ -629,6 +645,7 @@ function campNew(level, techs, opts) {
   const C = {
     level, mission: L.mission, L, flags: {}, arrivedAt: campHere(level, L) ? 0 : null, hpS: CAMP.alien.hpScale * (L.hpScale || 1), dmgS: CAMP.alien.damageScale * (L.dmgScale || 1), pace: campPaceMult(opts.pace), shot: Math.pow(campPaceMult(opts.pace), CAMP.pace.shots), via: opts.via || 'menu', t: 0, rng: campRng(opts.seed == null ? 1 : opts.seed), god: !!opts.god, nextId: 1, ships: [], by: {}, bullets: [], events: [],
     input: { turn: 0, thrust: 0, brake: false, fire: false, blink: false },
+    timeScale: 1,                                   // command time (src/campslow.js): 1 at the battle's own pace, CAMP.slow.scale while a panel, the map or a call is open; the scene sets it each frame and steps the battle by dt times it, and a clock of the player's seconds (the order calls') counts dt over it
     techs: (techs || []).filter(t => CAMP.tech[t]),
     earth: L.defend ? campDefend(level, L.defend) : L.earth === false ? null : { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield }, caches: (L.caches || []).map(c => ({ x: c[0], y: c[1], got: false })), cachesGot: 0,
     ore: Math.max(0, Math.min(CAMP.ore.cap, opts.ore != null ? opts.ore : (L.startOre != null ? L.startOre : CAMP.ore.start))), shield: CAMP.carrier.shield, pickups: [], build: { queue: [] },
@@ -651,6 +668,7 @@ function campNew(level, techs, opts) {
   C.scan = ((L.objectives || []).find(o => o.type === 'scan') || { points: [] }).points.map(q => ({ x: q.at[0], y: q.at[1], r: q.r || 260, secs: q.secs || 5, t: 0, got: false })); // recon: the points to scan
   C.turretRng = campRng((opts.seed == null ? 1 : opts.seed) * 4243 + 29); // the turrets' jitter has a stream of its own, so it never changes how a fight flies
   C.turrets = CAMP.carrier.mounts.map((m, i) => ({ x: 0, y: 0, aim: 0, target: '', slot: 0, at: 0, shotAt: -1e9 })); C.turrets.forEach((tu, i) => { tu.at = campTurretAt(C, i, 0); }); campTurretPlace(C); // the turrets: where each is, which way it aims, at whom, when it may fire next and when it last did (the scene draws them)
+  C.charge = CAMP.tank.max; C.chargeLow = false; // the turrets' charge (campLaserStep, campLaserSpend), full at the start of a battle
   (L.towers || []).forEach(g => { // rings of towers round a place, facing outward
     const at = campPlaces(level)[g.place];
     for (let i = 0; i < g.n; i++) { const a = (g.phase || 0) + i / g.n * 2 * Math.PI, t = campSpawn(C, 'tower', at.x + Math.cos(a) * g.r, at.y + Math.sin(a) * g.r); t.rot = a; if (g.hp) t.hp = t.maxHp = g.hp; }
@@ -899,6 +917,7 @@ function campTick(C, dt) {
   if (typeof campNavWait === 'function') campNavWait(C); // a Fast trip waiting for the wing to come aboard (src/campnav.js)
   if (typeof campNavDrive === 'function') campNavDrive(C, dt); // the autopilot (src/campnav.js), when it is on, sets the carrier's input
   campPowerStep(C, dt); // the ship's systems: the emergency's end, the shield's cap and its mending, the low lines
+  campLaserStep(C, dt); // the turrets' charge mends at the rate of the weapons' power
   campCarrier(C, dt);
   campLaunch(C);
   campDogPair(C); // the fighters and the raiders pair off, one on one (src/campdogfight.js)
@@ -1012,6 +1031,21 @@ function campPowerStep(C, dt) {
 }
 function campPowerLoad() { let p = CAMP.power.start.slice(); campTry(() => { const raw = JSON.parse(localStorage.getItem(CAMP.store + '.power') || 'null'); if (campPowerOk(raw)) p = raw.slice(); }, 0); return p; }
 function campPowerSave(p) { if (campPowerOk(p)) campTry(() => localStorage.setItem(CAMP.store + '.power', JSON.stringify(p)), 0); }
+// The turrets' charge (card space-game-systems-gauges): C.charge, 0 to CAMP.tank.max. campLaserSpend(C) is a shot: true and the cost is paid, or false when there is not that much (C.dryAt is the clock of the last refusal).
+// campLaserStep(C, dt) mends it at CAMP.tank.refill[the weapons' pips] a second and says so once when it falls low; campLaserFrac(C) is its share of the tank, campLaserRate(C) the charge a second it mends at now.
+const campLaserRate = C => CAMP.tank.refill[C && C.power && C.power.p ? C.power.p[0] : CAMP.power.start[0]];
+const campLaserFrac = C => Math.max(0, Math.min(1, (C.charge === undefined ? CAMP.tank.max : C.charge) / CAMP.tank.max));
+function campLaserSpend(C) {
+  const k = CAMP.tank; if (C.charge === undefined) C.charge = k.max;
+  if (C.charge + 1e-9 < k.cost) { C.dryAt = C.t; return false; }
+  C.charge = Math.max(0, C.charge - k.cost); return true;
+}
+function campLaserStep(C, dt) {
+  const k = CAMP.tank; if (C.charge === undefined) C.charge = k.max;
+  C.charge = Math.min(k.max, C.charge + campLaserRate(C) * dt);
+  const f = C.charge / k.max;
+  if (!C.chargeLow && f < k.low) { C.chargeLow = true; campSay(C, 'camp.say.lasersdry'); } else if (C.chargeLow && f > k.low * 2) C.chargeLow = false;
+}
 
 const campLane = (C, id) => id ? (C.lane[id] || 0) : Object.keys(C.lane).reduce((a, k) => Math.max(a, C.lane[k]), 0);
 // when a wave that waits for an event starts: on { scanned: k } (k recon points scanned), { delivered: k } (k haulers arrived), { t: s } (s seconds in), { lane: f, convoy? } (a convoy has flown f of its road)
@@ -1080,10 +1114,11 @@ function campTurrets(C) {
     if (!best) { let rd = reach; C.rocks.forEach(r => { const d = campDist(r, tu) - r.r; if (r.hp > 0 && d <= rd) { rd = d; rock = r; } }); if (rock) tu.aim = Math.atan2(rock.y - tu.y, rock.x - tu.x); }
     tu.rock = rock ? rock.id : '';
     if (C.t < tu.at) return;
-    if (rock && C.input.fire) {
+    const go = !!(best || rock) && !!C.input.fire && campLaserSpend(C); // a shot at something in reach spends charge; with none left the slot is let go, so the turrets fire as fast as the charge mends
+    if (rock && go) {
       tu.shotAt = C.t; campRockHit(C, rock, k.pd * k_laser_turret(C)); C.laserNow.push({ from: c.id, to: rock.id, kind: 'rock' }); C.events.push({ type: 'laser', src: 'turret', i, x: tu.x, y: tu.y, tx: rock.x - Math.cos(tu.aim) * rock.r * 0.6, ty: rock.y - Math.sin(tu.aim) * rock.r * 0.6, rock: rock.id }); // the beam of this turret lands on the rock's near side
     }
-    if (best && C.input.fire) {
+    if (best && go) {
       tu.shotAt = C.t; C.laserNow.push({ from: c.id, to: best.id, kind: 'alien' }); C.events.push({ type: 'turret', i, x: tu.x, y: tu.y, aim: tu.aim, tx: best.x, ty: best.y }); // one event for each shot: the scene flashes this muzzle and blips
       campBullet(C, { x: tu.x, y: tu.y, vx: c.vx, vy: c.vy, id: c.id }, tu.aim, k.pdSpeed, dmg, (reach + 300) / k.pdSpeed * 1000, 'earth', 0, { pd: true, beam }); // a shot flies 300 px past the reach, so one led ahead of an alien at the edge still arrives
     }
