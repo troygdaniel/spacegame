@@ -111,6 +111,14 @@ console.log('E. a target lost');
   check('Fly then Fast on the same moving target keeps the trip (same trip, only the speed changes), as for a place', J('C.nav === __n0') && J('C.nav.fast') === true);
 }
 
+console.log('E2. the route label is clear of the Fly and Fast buttons (card space-game-l1-mine-goal)');
+{
+  g.run(`window.C3 = __new(11); window.GL = campNavGoal(C3); window.S3 = __scx(C3); campMapOpen(S3); S3.mp.dirty = true; campMapPaint(S3, 0); campMapPaint(S3, 400); window.P3 = campMapPoint(S3.mp.fit, CAMPMAP.frame, GL.x, GL.y); campMapClick(S3, P3.x, P3.y); S3.mp.dirty = true; campMapPaint(S3, 900); campMapPaint(S3, 1200);`);
+  const boxes = ['btnFly', 'btnFast', 'btnScout'].map(k => J(`(() => { const b = S3.mp.${k}; return b.visible ? { x: b.x, y: b.y, w: b.width, h: b.height } : null; })()`)).filter(Boolean), r = J('(() => { const t = S3.mp.routeText; return { v: t.visible, x: t.x, y: t.y, w: t.width, h: t.height }; })()');
+  const hit = b => r.x - r.w / 2 < b.x + b.w && r.x + r.w / 2 > b.x && r.y - r.h / 2 < b.y + b.h && r.y + r.h / 2 > b.y;
+  check('the goal is set (its Fly and Fast buttons are up) and the route label is drawn; the label is under none of the buttons', boxes.length >= 2 && r.v === true && !boxes.some(hit), JSON.stringify({ r, boxes }));
+}
+
 console.log('F. the words');
 {
   const md = src('content/text/campmaptargets.md');

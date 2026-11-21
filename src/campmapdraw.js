@@ -192,12 +192,9 @@ function campMapPaint(s, time) {
     g.lineStyle(2, gc.goal, 0.5 + 0.5 * pulse).strokeCircle(q.x, q.y, 11 + 4 * pulse);
     mp.goalText.setVisible(true).setPosition(q.x, q.y - 22);
     mp.routeText.setVisible(!!cp).setText(uiText('camp.map.route', { km: campNavKm(d), s: campNavEta(C, campNavFlight(C, goal, d)) }));
-    if (cp) { // beside the line, where it is on no name: the whole-system map has the belts' names on the route
-      const boxes = (mp.nameObjs || []).filter(t => t && t.visible !== false && !t.gone).map(t => ({ x: t.x - t.width / 2, y: t.y - t.height / 2, w: t.width, h: t.height }));
-      const spot = campMapFreeSpot(campMapRouteSpots(cp, q), mp.routeText.width || 120, mp.routeText.height || 16, boxes) || { x: (cp.x + q.x) / 2, y: (cp.y + q.y) / 2 - 10 };
-      mp.routeText.setPosition(spot.x, spot.y);
-    } else mp.routeText.setPosition(0, 0);
-  } else { mp.goalText.setVisible(false); mp.routeText.setVisible(false); }
+    mp.routeAt = cp ? { cp, q } : null; // where the label goes is decided below, once the Fly and Fast buttons are placed (card space-game-l1-mine-goal: it sat under them when the goal was near)
+    if (!cp) mp.routeText.setPosition(0, 0);
+  } else { mp.goalText.setVisible(false); mp.routeText.setVisible(false); mp.routeAt = null; }
   if (N) { route({ x: N.x, y: N.y }, gc.select, 0.85); campMapFitOne(mp.dest, uiText('camp.map.dest', { name: N.name }) + '  ' + campNavKm(Math.hypot(N.x - C.carrier.x, N.y - C.carrier.y)) + ' km'); } else mp.dest.setText('');
   const chosen = mp.rows[sel]; if (chosen) { const q = pin(X(chosen.x), Y(chosen.y)); g.lineStyle(2, gc.select, 1).strokeRect(q.x - 9, q.y - 9, 18, 18); }
   // ---- set by a click (card space-game-map-click-fly): the place has a ring and a line from the carrier, its distance, and two small buttons beside it: Fly (regular speed) and Fast (a burn) ----
@@ -214,6 +211,11 @@ function campMapPaint(s, time) {
     mp.btnFly.setPosition(bx, by); mp.btnFast.setPosition(bx, by + h + 4); mp.btnScout.setPosition(bx, by + 2 * (h + 4));
     if (!N) campMapFitOne(mp.dest, uiText('camp.map.set', { name: setRow.name }) + '  ' + campNavKm(d) + ' km');
   } else { mp.btnFly.setVisible(false); mp.btnFast.setVisible(false); mp.btnScout.setVisible(false); }
+  if (mp.routeAt) { // the route label, beside the line, where it is on no name and under no button: the whole-system map has the belts' names on the route; the buttons are boxes like the names
+    const names = (mp.nameObjs || []).filter(t => t && t.visible !== false && !t.gone).map(t => ({ x: t.x - t.width / 2, y: t.y - t.height / 2, w: t.width, h: t.height })), btns = [mp.btnFly, mp.btnFast, mp.btnScout].filter(b => b && b.visible && b.width).map(b => ({ x: b.x, y: b.y, w: b.width, h: b.height }));
+    const { cp: c0, q: q0 } = mp.routeAt, spot = campMapFreeSpot(campMapRouteSpots(c0, q0), mp.routeText.width || 120, mp.routeText.height || 16, names.concat(btns)) || { x: (c0.x + q0.x) / 2, y: (c0.y + q0.y) / 2 - 10 };
+    mp.routeText.setPosition(spot.x, spot.y); mp.routeAt = null;
+  }
   const win = navpanelLines(mp.rows, sel, CAMP.nav.list, CAMPNAV.groups); // the Long Haul nav panel's own windowing: headings, and the chosen row kept in view
   mp.list.forEach((t, k) => {
     const ln = win.lines[k]; t.rowId = '';

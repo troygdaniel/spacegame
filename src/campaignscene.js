@@ -68,6 +68,7 @@ class Campaign extends Phaser.Scene {
     this.cameras.main.startFollow(this.sp[this.camp.carrier.id], true, 0.12, 0.12);
     this.k = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE');
     this.hudG = this.add.graphics().setScrollFactor(0).setDepth(100);
+    this.hudBack = this.add.rectangle(0, 8, 372, 232, 0x02060d, 0.4).setOrigin(0, 0).setScrollFactor(0).setDepth(99); // a dim plate under the left HUD column: a bright planet (Ceres at the start of 1.2) drawn through the white objective line and the bay line made them hard to read (card space-game-l1-mine-goal, docs/night/hunt-l1-rim.md D)
     this.keysBack = this.add.rectangle(W / 2, H - 35, W, 26, 0x02060d, 0.75).setScrollFactor(0).setDepth(99); // a thin strip under the bottom key line: a ship or a rock drawn through 'Tab Map  H Keys' was hard to read (card space-game-campaign-panels-ui)
     const t = (x, y, size, color) => this.add.text(x, y, '', uiFont(size, color, { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
     this.hud = { shield: t(252, 18, 14, '#7fe9ff'), ore: t(252, 52, 14, '#ffd37a'), hull: t(24, 18, 14, '#9fe9ff'), earth: t(24, 52, 14, '#9fe9ff'), bay: t(24, 86, 14, '#9fe9ff'), wave: t(24, 108, 14, '#ffd37a'), mother: t(W / 2 - 150, 18, 14, '#ff9ec0'), blink: t(24, 130, 14, '#7fe9ff'),
@@ -346,6 +347,7 @@ class Campaign extends Phaser.Scene {
     if (!on && this.hudG) this.hudG.clear();
     Object.keys(this.hud || {}).forEach(k => { const t = this.hud[k]; if (t && t.setVisible && (!on || k !== 'arrow')) t.setVisible(on); });
     if (this.keysBack && this.keysBack.setVisible) this.keysBack.setVisible(on);
+    if (this.hudBack && this.hudBack.setVisible) this.hudBack.setVisible(on);
   }
   chatShow(line, now) { chatterPlay(line); const t = this.hud.chat; if (!t) return; t.setText(line.call + ': ' + line.text); this.chatUntil = now + CHATTER.show; } // said in the pilot's voice (prio 0), shown with his callsign
   onEvent(e) {
