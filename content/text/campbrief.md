@@ -76,7 +76,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.1.1.n1 | Welcome aboard, Commander. The transport is ours to bring to Ceres. A patrol sees her off, then she is on her own. |
 | camp.bf.1.1.n2 | The road forks. Send a scout down each lane, then pick one on the map ({map}). Pirates may hide on the short one. |
 | camp.bf.1.1.n3 | W A S D fly the cruiser. {fleetkey} opens the fleet panel: {nlaunch} launches the wing, {nescort} sends the escorts to her. When a pilot calls, answer 1, 2 or 3. |
-| camp.bf.1.2.w1 | Mine the rock fields round Ceres. E then 1 sends the wing. |
+| camp.bf.1.2.w1 | Mine the rock fields round Ceres. {fleetkey} then {nmine} sends the wing. |
 | camp.bf.1.2.w2 | Ore sells for triple at the Works. Pirates hunt the miners. |
 | camp.bf.1.2.w3 | Beat the 3 raids, then dock at Occator Works: SHIP panel, Dock. |
 | camp.bf.1.2.w4 | The Works keeps its doors shut while a pirate is near. |
