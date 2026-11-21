@@ -8,7 +8,7 @@ let failed = 0;
 const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + name + (detail ? '  ' + detail : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + detail + ')' : ''}`); } };
 const g = nodeGame();
 const J = e => JSON.parse(g.run(`JSON.stringify(${e})`));
-const d = J(`(() => { const C = campNew(1, [], { seed: 1 }), L = CAMP.places.luna, c = C.carrier; return { cx: c.x, cy: c.y, rot: c.rot, lx: L.x, ly: L.y, lr: L.r, scale: CAMP_LOOK.carrier.scale, w: CAMP_LOOK.carrier.w, h: CAMP_LOOK.carrier.h }; })()`);
+const d = J(`(() => { const C = campNew('home', [], { seed: 1 }), L = CAMP.places.luna, c = C.carrier; return { cx: c.x, cy: c.y, rot: c.rot, lx: L.x, ly: L.y, lr: L.r, scale: CAMP_LOOK.carrier.scale, w: CAMP_LOOK.carrier.w, h: CAMP_LOOK.carrier.h }; })()`);
 const W = d.w * d.scale, H = d.h * d.scale; // the drawn size of the hull, over its pods: the length of the hull and its width in the picture, through the scale
 // the carrier's outline as a box turned to its heading; the distance from a point to that box (0 when inside it)
 const gap = (px, py) => { const dx = px - d.cx, dy = py - d.cy, c = Math.cos(-d.rot), s = Math.sin(-d.rot), x = dx * c - dy * s, y = dx * s + dy * c; const ox = Math.max(Math.abs(x) - W / 2, 0), oy = Math.max(Math.abs(y) - H / 2, 0); return Math.hypot(ox, oy); };

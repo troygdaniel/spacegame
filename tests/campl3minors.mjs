@@ -10,9 +10,9 @@ const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 
 // ---- an anomaly is not noticed at second 0 ----
 const starts = [];
-for (const lv of [1, 2, 3]) for (let m = 0; m < J(`campMissions(${lv}).length`); m++) starts.push([lv, m, J(`(() => { const C = campNew(${lv}, [], { seed: 1, mission: ${m} }); return C.anoms.map(a => [a.id, Math.round(campDist(C.carrier, a))]); })()`)]);
+for (const lv of [2, 3]) for (let m = 0; m < J(`campMissions(${lv}).length`); m++) starts.push([lv, m, J(`(() => { const C = campNew(${lv}, [], { seed: 1, mission: ${m} }); return C.anoms.map(a => [a.id, Math.round(campDist(C.carrier, a))]); })()`)]);
 const sense = J('CAMP.anomaly.sense');
-check('no anomaly is within the sense range of a mission\'s start (2,400 px), on any level, so none is noticed at second 0 (it was `core`, in missions 2 and 3 of level 3)', starts.length === 9 && starts.every(([lv, m, rows]) => rows.length >= 3 && rows.every(r => r[1] > sense)), JSON.stringify(starts.map(([lv, m, rows]) => [lv, m, rows.filter(r => r[1] <= sense)]).filter(x => x[2].length)));
+check('no anomaly is within the sense range of a mission\'s start (2,400 px), on any level, so none is noticed at second 0 (it was `core`, in missions 2 and 3 of level 3; level 1, the rim run, has none: no aliens before first contact)', starts.length === 6 && starts.every(([lv, m, rows]) => rows.length >= 3 && rows.every(r => r[1] > sense)), JSON.stringify(starts.map(([lv, m, rows]) => [lv, m, rows.filter(r => r[1] <= sense)]).filter(x => x[2].length)));
 g.run(`window.C = campNew(3, [], { seed: 1, mission: 2 }); for (let i = 0; i < 90; i++) campStep(C, 1 / 30);`);
 check('and the toast "Odd readings ahead" is not the first line of mission 3 (nothing noticed in the first three seconds)', J('C.anoms.every(a => !a.sensed)') && !J('C.events.some(e => e.type === "say" && e.key === "camp.say.anom.sense")'));
 check('the anomaly is still there to find: `core` is reachable (south of the inner ring, 3,000 px from the start) and has its guards and its reward', J('campAnomalyRows(3).find(a => a.id === "core").reward.missiles') === 3 && J('campAnomalyRows(3).find(a => a.id === "core").y') === 4300);
@@ -20,7 +20,7 @@ check('the anomaly is still there to find: `core` is reachable (south of the inn
 // ---- a tech looted in the last level would never be offered ----
 const last = J('Math.max(...Object.keys(CAMP.levels).map(Number).filter(Number.isFinite))');
 check('no anomaly of the last level has a tech in its reward (no refit or pick comes after it: its find counts as score, and its ore and missiles are the loot)', last === 3 && J(`CAMP.levels[3].anomalies.every(a => !a.reward.tech)`) && J(`CAMP.levels[3].anomalies.every(a => a.reward.ore > 0)`));
-check('the other levels keep theirs (Overdrive from the shade and the echo, Lens from Io): a refit or a pick follows', ['overdrive', 'lens'].every(t => J(`[1, 2].some(l => CAMP.levels[l].anomalies.some(a => a.reward.tech === '${t}'))`)));
+check('the other levels keep theirs (Overdrive from the echo, Lens from the lab of level 2, since level 1 has no caches): a refit or a pick follows', ['overdrive', 'lens'].every(t => J(`[2].some(l => CAMP.levels[l].anomalies.some(a => a.reward.tech === '${t}'))`)));
 
 // ---- a new campaign forgets what the last one looted ----
 g.run(`window.__fin = () => { const f = Object.create(Campaign.prototype); f.level = 3; f.P = campProgressNew(); f.P.found = ['1.veil', '2.echo', '3.core']; f.P.techs = ['shield', 'lens']; f.P.ore = 90; f.P.bonus = { fighters: 2, escorts: 1 }; f.camp = { ore: 40 }; f.shown = []; f.showEnd = function () { this.shown.push('end'); }; return f; }`);

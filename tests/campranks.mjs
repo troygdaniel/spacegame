@@ -11,11 +11,12 @@
 // Run: node tests/campranks.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
+import { belt } from './fixtures/campbelt.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name + (detail ? '  ' + String(detail).slice(0, 200) : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 300) + ')' : ''}`); } };
 const store = new Map();
-const g = nodeGame({ store });
+const g = nodeGame({ store }); belt(g, 1); // the old Level 1, the belt, as level 1: this suite was written for it and pins its missions (card space-game-l1-rim-missions)
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
@@ -113,7 +114,7 @@ console.log('E. the promotion: the debrief, the scene, the save');
   // the win must be in the SAVE the moment it is won: a trailing comment once swallowed this.P.ore and campProgressSave in missionWon, and the ready room (src/camphub.js), which reads the save, found no result (card space-game-campaign-ranks, found at the first boot of the bundle)
   const won = JSON.parse(store.get('longhaul.campaign') || 'null');
   check('the win is SAVED at once: the result of mission 1 (score 1,100, one try) is in the save, and the ore of the battle (5) is carried; a save without the result is the bug that broke the hub', won && won.results && won.results['1.1'] && won.results['1.1'].score === 1100 && won.results['1.1'].tries === 1 && won.ore === 5 && won.mission === 1 && !('promo' in won), JSON.stringify(won));
-  check('and the scene line that does it is plain code, not the tail of a comment: this.P.ore and campProgressSave each start a statement of missionWon', (() => { const m = /missionWon\(\) \{[\s\S]*?\n  \}\n/.exec(sc0)[0].split('\n'); return m.some(l => /^\s*this\.P\.ore = Math\.floor\(C\.ore\);/.test(l)) && m.some(l => /^\s*campProgressSave\(this\.P\);/.test(l)); })());
+  check('and the scene line that does it is plain code, not the tail of a comment: this.P.ore and campProgressSave each start a statement of missionWon', (() => { const m = /missionWon\(\) \{[\s\S]*?\n  \}\n/.exec(sc0)[0].split('\n'); return m.some(l => /^\s*this\.P\.ore = campFunds\(C\);/.test(l)) && m.some(l => /^\s*campProgressSave\(this\.P\);/.test(l)); })());
   g.run(`window.__f2 = __sc(1500); __f2.camp.score.score = 100; Campaign.prototype.missionWon.call(__f2)`);
   check('one that does not cross a rank sets none (an ensign who scores 100 more stays an ensign)', J('__f2.P.promo') === null && J('__f2.P.results["1.1"].score') >= 100);
   g.run(`window.__f3 = __sc(4200); window.__c3 = __f3.makeCamp()`);
