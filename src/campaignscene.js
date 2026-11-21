@@ -90,8 +90,8 @@ class Campaign extends Phaser.Scene {
     if (typeof campMapInstall === 'function') campMapInstall(this); // Tab: the map of the level, over the battle, which goes on behind it (src/campmap.js, src/campmapdraw.js)
     this.events.once('shutdown', () => { if (typeof stopBeamHum === 'function') stopBeamHum(); }); // no hum left behind when the level ends or the title comes
     if (typeof camzoomSetup === 'function') { // the Long Haul's own camera zoom (src/camzoom.js): the world on one camera, the HUD, panels and strip on another that never scales; + - = 0 and the wheel zoom the world (src/campzoom.js)
-      this.lhZoom = CAMZOOM.want; CAMZOOM.want = campZoomStart(this.level); camzoomSetup(this); // the zoom is kept for the level and starts at the default on a new one; the Long Haul's own is put back when this scene is left
-      this.events.once('shutdown', () => { campZoomKeep(this.level, CAMZOOM.want); CAMZOOM.want = this.lhZoom; });
+      this.lhZoom = CAMZOOM.want; if (typeof campZoomRange === 'function') campZoomRange(true); CAMZOOM.want = campZoomStart(this.level); camzoomSetup(this); // the view goes out to 0.2 here (campZoomRange; the Long Haul's 0.4 is put back below) // the zoom is kept for the level and starts at the default on a new one; the Long Haul's own is put back when this scene is left
+      this.events.once('shutdown', () => { campZoomKeep(this.level, CAMZOOM.want); CAMZOOM.want = this.lhZoom; if (typeof campZoomRange === 'function') campZoomRange(false); });
     }
     if (this.resume) { this.mdone = true; this.showWon(true); } else this.showIntro();
   }
@@ -411,6 +411,7 @@ class Campaign extends Phaser.Scene {
       let sp = this.sp[u.id];
       if (!sp) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone; sp = this.sp[u.id] = this.add.image(u.x, u.y, this.texOf(u.kind)).setScale(look.scale).setDepth(u.kind === 'carrier' ? 5 : u.team === 'earth' ? 4 : 3); if (look.tint) sp.setTint(look.tint); }
       sp.setPosition(u.x, u.y).setRotation(u.rot); seen[u.id] = true;
+      if (typeof campZoomShipScale === 'function' && this.cameras && this.cameras.main && sp.width) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone, k = campZoomShipScale(this.cameras.main.zoom, sp.width * look.scale); if (sp._k !== k) { sp._k = k; sp.setScale(look.scale * k); } } // zoomed far out a small ship is drawn no smaller than CAMPZOOM.view.minShip px (src/campzoom.js)
     });
     Object.keys(this.sp).forEach(id => { if (!seen[id]) { this.sp[id].destroy(); delete this.sp[id]; } });
     this.camp.caches.forEach((k, i) => { this.csp[i].setVisible(!k.got); if (this.cachel && this.cachel[i]) this.cachel[i].setVisible(!k.got); });
@@ -441,7 +442,8 @@ class Campaign extends Phaser.Scene {
     while (this.bsp.length < C.bullets.length) this.bsp.push(this.add.image(0, 0, 'bullet').setDepth(4));
     this.bsp.forEach((im, i) => {
       const b = C.bullets[i]; if (!b) { im.setVisible(false); return; }
-      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'bullet' : b.team === 'neutral' ? 'shot-neutral' : b.fac === 'pirate' ? 'shot-pirate' : 'ebullet').setScale(b.beam ? 3 : b.pd ? 0.9 : 1, b.beam ? 1.2 : 1);
+      const kb = typeof campZoomShotScale === 'function' && this.cameras && this.cameras.main ? campZoomShotScale(this.cameras.main.zoom) : 1; // thicker when the view is far out (src/campzoom.js)
+      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'bullet' : b.team === 'neutral' ? 'shot-neutral' : b.fac === 'pirate' ? 'shot-pirate' : 'ebullet').setScale((b.beam ? 3 : b.pd ? 0.9 : 1) * kb, (b.beam ? 1.2 : 1) * kb);
       if (b.beam) im.setTint(0x7fe9ff); else if (b.pd) im.setTint(0xffd37a); else im.clearTint(); // the turrets' shots are amber; the beam tech's are cyan, long and go through
     });
   }

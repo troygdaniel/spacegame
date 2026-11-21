@@ -15,6 +15,7 @@ const CAMPMAP = {
   key: 'Tab',                               // KeyboardEvent.code of the key that opens and closes the map (the key line and the pause card say "Tab": src/campaignscene.js, content/text/ui.md camp.ui.*)
   frame: { x: 100, y: 100, w: 790, h: 520 },// px: where the map is drawn on the screen (inside the glass panel of 1140 by 650 that src/campmapdraw.js draws)
   pad: 0.08,                                // the share of the level's width and height left empty round it
+  crowdZ: 0.6,                              // under this zoom a place's name that cannot be put clear of the others is not drawn (the whole system: the inner planets are a few pixels apart)
   minExtent: 3000,                          // px of space: never zoom in closer than this across (a level with only one place in it)
   km: 10,                                   // px of space in a km (the ship computer's "the mothership is N km away" says px / 10)
   color: { star: 0xffe29a, earth: 0x4aa3ff, place: 0xb9a37a, cache: 0xffd37a, relic: 0x7fe9ff, alien: 0xff4d6d, mother: 0xff4dff, tower: 0xff9a3a, convoy: 0xffb454, carrier: 0xffffff, wing: 0x6dff9c, anomaly: 0xc58cff, scout: 0xb8f0ff, rock: 0x8c8c8c, pickup: 0xffd37a, pirate: 0xe8d24a, patrol: 0x5fd8c0, miner: 0xc9d4e8, torpedo: 0xffe08a }
@@ -70,14 +71,25 @@ function campMapFit(b, frame, pad) {
   return { s: Math.min(frame.w / ex, frame.h / ey), cx: (b.x0 + b.x1) / 2, cy: (b.y0 + b.y1) / 2 };
 }
 // the view at zoom z (1: the level fitted to the frame): the scale and centre to draw with. view is the last one and z0 the zoom it had; focus, a world point or null, is what is zoomed about, which stays where it was on the screen
-// (null: the middle of the frame stays). Zoomed in, the view is held inside the fitted extent; zoomed out past 1, it is the fitted centre, so zooming back out returns to the whole level.
-function campMapView(base, frame, z, view, z0, focus) {
+// (null: the middle of the frame stays). Zoomed in, the view is held inside the fitted extent. Zoomed out past 1 it is the fitted centre, so zooming back in returns to the whole level; with `whole` (the whole system fitted
+// to the frame, campMapFit of campMapBounds(level, true)) the centre moves from the level's to the system's as the zoom goes out, and at the zoom where the whole system just fits (campMapWholeZ) it is the system's own.
+function campMapView(base, frame, z, view, z0, focus, whole) {
   const s = base.s * z; let cx = view.cx, cy = view.cy;
   if (focus && z0 > 0) { const k = z0 / z; cx = focus.x - (focus.x - cx) * k; cy = focus.y - (focus.y - cy) * k; }
   const vx = frame.w / 2 / s, vy = frame.h / 2 / s, bx = frame.w / 2 / base.s, by = frame.h / 2 / base.s;
+  const w = whole && z < 1 ? campMapOutShare(base, whole, z) : 0, mx = base.cx + (whole ? (whole.cx - base.cx) * w : 0), my = base.cy + (whole ? (whole.cy - base.cy) * w : 0);
   const hold = (c, v, b, mid) => v >= b ? mid : Math.max(mid - (b - v), Math.min(mid + (b - v), c));
-  return { s, cx: hold(cx, vx, bx, base.cx), cy: hold(cy, vy, by, base.cy) };
+  return { s, cx: hold(cx, vx, bx, mx), cy: hold(cy, vy, by, my) };
 }
+// how far along the way out from the level (0) to the whole system (1) a zoom is: by the log of the zoom, so every step out moves the centre the same share of the way
+function campMapOutShare(base, whole, z) {
+  const zw = campMapWholeZ(base, whole); if (!(zw < 1) || !(z < 1)) return 0;
+  return Math.max(0, Math.min(1, Math.log(z) / Math.log(zw)));
+}
+// the zoom at which the whole system just fits the frame (the level fitted is 1): under 1 for any system larger than the level's own area
+const campMapWholeZ = (base, whole) => whole && whole.s > 0 && base && base.s > 0 ? whole.s / base.s : 1;
+// the smallest zoom the map goes to: the one at which the whole system fits, but never less far out than `floor` (the old limit, 0.5: a level whose system is no larger than its own area still goes out that far)
+const campMapZMin = (base, whole, floor) => Math.min(floor == null ? 1 : floor, campMapWholeZ(base, whole));
 const campMapPoint = (fit, frame, x, y) => ({ x: frame.x + frame.w / 2 + (x - fit.cx) * fit.s, y: frame.y + frame.h / 2 + (y - fit.cy) * fit.s });
 
 const CAMPMAP_RANK = { place: 0, objective: 0, relic: 1, anomaly: 2, cache: 2, scan: 2, rock: 2, pickup: 2, tower: 3, convoy: 4, patrol: 4, miner: 4, pirate: 5, alien: 5, tboat: 5, wing: 6, rival: 7, mother: 7, torpedo: 7, carrier: 8 }; // drawn in this order: the carrier on top
