@@ -9,7 +9,7 @@ The words of mission 1.1 in four beats (card space-game-l1-1-beats; src/campbeat
 | camp.say.patrolleave | Patrol turning back. You are on your own from here. |
 | camp.say.distress | Miner under attack, west of our course! Pirates on him. |
 | camp.say.thanks | The miner is safe and sends {ore} ore. Thanks! |
-| camp.say.ambush | Pirates and torpedo boats behind the rocks! Cover the transport. |
+| camp.say.rimambush | Pirates and torpedo boats behind the rocks! Cover the transport. |
 | camp.call.line.distress | Miner under attack off our course. Orders? |
 | camp.call.fx.rescue | Fighters help the miner |
 | camp.call.fx.rescueall | Everyone helps the miner |
@@ -23,3 +23,9 @@ The words of mission 1.1 in four beats (card space-game-l1-1-beats; src/campbeat
 | camp.hint.take | The transport waits at the fork. Pick a lane on the map, press {take}. |
 | camp.hint.fast | A long quiet road. On the map ({map}), pick the transport and burn Fast. |
 | camp.hint.fleet | Press {fleet} to open the FLEET panel. |
+| camp.bf.enemy.tboat.one | {n} pirate torpedo boat |
+| camp.bf.enemy.tboat.many | {n} pirate torpedo boats |
+| camp.bf.enemy.lancer.one | {n} alien lancer |
+| camp.bf.enemy.lancer.many | {n} alien lancers |
+| camp.bf.enemy.pirateleader.one | the pirate leader, a heavy ship |
+| camp.bf.enemy.pirateleader.many | {n} pirate leaders |

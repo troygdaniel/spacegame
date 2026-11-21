@@ -10,7 +10,7 @@
 //   campBeats(C)               each tick: the pirates wear a crippled miner down (the wave row's `harry`: hit points a second for each pirate within CAMP_BEATS.harryNear of it), and a miner that was saved gives its thanks (once: the ore, the radio)
 //   CAMP_CALL_TYPES / CAMP_CALL_FX  get the call `distress` (rescue, rescueall, stay) when src/camporders.js is there
 //   campBeatKey(id)            the key a hint names, from the key table (CAMP_PANELS: fleet, ship, systems; the Campaign's CONTROLS rows: map, scout, take), never a letter of its own
-//   campBeatHint(C, id)        the words of a hint with its keys in them (camp.hint.<id>)            CAMPNUDGE gets the hints of the mission (the first-minute hints, src/campnudge.js)
+//   campBeatHint(C, id)        the words of a hint with its keys in them (camp.hint.<id>)            campBeatNudge(C, shown)  the hint that is due (CAMPBEATHINTS), which campNudge (src/campnudge.js) asks for
 
 const CAMP_BEATS = { harryNear: 700 }; // px: a pirate this near the crippled miner is on it
 function campBeatsNew(C) { C.beats = { patrolSaid: false, asked: false, thanked: false }; return C.beats; }
@@ -25,7 +25,8 @@ function campBeatKey(id) {
   if (id === 'take') { const r = pick(/scout/i); return r && r.k[1] ? r.k[1] : 'T'; }
   return '';
 }
-const campBeatHint = (C, id) => uiText('camp.hint.' + id, { fleet: campBeatKey('fleet'), ship: campBeatKey('ship'), systems: campBeatKey('systems'), map: campBeatKey('map'), scout: campBeatKey('scout'), take: campBeatKey('take') });
+const campBeatKeys = () => ({ fleet: campBeatKey('fleet'), ship: campBeatKey('ship'), systems: campBeatKey('systems'), map: campBeatKey('map'), scout: campBeatKey('scout'), take: campBeatKey('take') }); // every key a line may name, as the table says it
+const campBeatHint = (C, id) => uiText('camp.hint.' + id, campBeatKeys());
 
 // beat 2: the thanks of a miner that was saved
 function campBeats(C) {
@@ -46,7 +47,7 @@ if (typeof CAMP_CALL_TYPES === 'object' && typeof CAMP_CALL_FX === 'object' && !
   CAMP_CALL_FX.rescue = { do: campCallAt('fighters', 'attack') };                // the fighters go for the pirates at the miner
   CAMP_CALL_FX.rescueall = { do: campCallAt('all', 'attack') };                  // everyone goes: the transport is left to the cruiser's turrets
   CAMP_CALL_FX.stay = { do: () => true };                                         // nothing is done: the wing stays with the transport
-  CAMP_CALL_TYPES.unshift({ id: 'distress', pick: ['rescue', 'rescueall', 'stay'], def: 2,
+  CAMP_CALL_TYPES.unshift({ id: 'distress', scripted: true, pick: ['rescue', 'rescueall', 'stay'], def: 2,
     when: C => {
       const B = C.beats; if (!B || B.asked || !C.cues || C.cues.distress == null) return null;
       const w = C.L.waves.findIndex(x => x.beat === 'distress'); if (w < 0 || !C.waves[w] || !C.waves[w].started) return null;
@@ -56,12 +57,21 @@ if (typeof CAMP_CALL_TYPES === 'object' && typeof CAMP_CALL_FX === 'object' && !
     } });
 }
 
-// the hints of the mission (src/campnudge.js): each once, in 1.1 only, and only while they are still true
-if (typeof CAMPNUDGE === 'object') {
-  const mine = C => !!C.route && C.L.mid === 'escort';
-  CAMPNUDGE.push(
-    { id: 'b-scout', level: 1, at: 14, until: 55, text: C => campBeatHint(C, 'scout'), when: C => mine(C) && C.orders.scout === 0 && !C.route.lane && !C.route.passed },
-    { id: 'b-take', level: 1, at: 50, until: 140, text: C => campBeatHint(C, 'take'), when: C => mine(C) && !C.route.lane && !C.route.passed && !!campRouteHolding(C) },
-    { id: 'b-fast', level: 1, at: 24, until: 120, text: C => campBeatHint(C, 'fast'), when: C => mine(C) && !(C.nav && C.nav.on) && !C.route.passed && !campAliens(C).length && C.carrier && campConvoys(C)[0] && campDist(C.carrier, campConvoys(C)[0]) > 2500 }
-  );
+// the hints of the mission: plain data like src/campnudge.js's, but each is `wait`ed for until `until` (it shows when it is true, not only at its second), and its words carry keys from the key table.
+// campNudge (src/campnudge.js) asks for one when it has none of its own to give; each is shown once, in 1.1 only
+const CAMPBEATHINTS = [
+  { id: 'b-scout', at: 14, until: 55, hint: 'scout', when: C => C.orders.scout === 0 && !C.route.lane && !C.route.passed },
+  { id: 'b-fast', at: 24, until: 120, hint: 'fast', when: C => !(C.nav && C.nav.on) && !C.route.passed && !campAliens(C).length && !!C.carrier && !!campConvoys(C)[0] && campDist(C.carrier, campConvoys(C)[0]) > 2500 },
+  { id: 'b-take', at: 50, until: 140, hint: 'take', when: C => !C.route.lane && !C.route.passed && !!campRouteHolding(C) }
+];
+function campBeatNudge(C, shown) {
+  try {
+    if (!C || C.result || !shown || C.level !== 1 || !C.route || C.L.mid !== 'escort') return null;
+    for (const h of CAMPBEATHINTS) {
+      if (shown[h.id] || C.t < h.at * 1000) continue;
+      if (!h.when(C)) { if (C.t >= h.until * 1000) shown[h.id] = true; continue; } // not true yet: it waits; its time is up, it is never shown
+      shown[h.id] = true; return campBeatHint(C, h.hint);
+    }
+  } catch (e) { /* a hint is a nicety */ }
+  return null;
 }

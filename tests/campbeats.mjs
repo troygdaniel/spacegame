@@ -114,11 +114,11 @@ sec('F', () => {
 
 sec('G', () => {
   console.log('G. the words, the hints and the bots');
-  const keys = ['camp.say.patrolleave', 'camp.say.distress', 'camp.say.thanks', 'camp.say.ambush', 'camp.call.line.distress', 'camp.call.fx.rescue', 'camp.call.fx.rescueall', 'camp.call.fx.stay', 'camp.call.r.rescue', 'camp.call.r.rescueall', 'camp.call.r.stay', 'camp.b.rival'];
+  const keys = ['camp.say.patrolleave', 'camp.say.distress', 'camp.say.thanks', 'camp.say.rimambush', 'camp.call.line.distress', 'camp.call.fx.rescue', 'camp.call.fx.rescueall', 'camp.call.fx.stay', 'camp.call.r.rescue', 'camp.call.r.rescueall', 'camp.call.r.stay', 'camp.b.rival'];
   const miss = keys.filter(k => J(`uiText(${JSON.stringify(k)}) === ${JSON.stringify(k)}`));
   check('G  every new line has its words (content/text/campbeats.md)', miss.length === 0, miss.join(' '));
   const words = s => String(s).replace(/\{[^}]*\}/g, 'N').split(/\s+/).filter(Boolean).length;
-  const spoken = ['camp.say.patrolleave', 'camp.say.distress', 'camp.say.thanks', 'camp.say.ambush'].map(k => J(`uiText(${JSON.stringify(k)})`));
+  const spoken = ['camp.say.patrolleave', 'camp.say.distress', 'camp.say.thanks', 'camp.say.rimambush'].map(k => J(`uiText(${JSON.stringify(k)})`));
   check('G  the lines the ship speaks are about twelve words at most', spoken.every(s => words(s) <= 12), JSON.stringify(spoken));
   const hint = J('(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); return typeof campBeatHint === "function" ? campBeatHint(C, "fleet") : ""; })()');
   check('G  the hints name their keys from the key table (CAMP_PANELS), not in letters of their own: campBeatHint(C, "fleet") carries the FLEET panel key', typeof hint === 'string' && hint.indexOf(J('CAMP_PANELS.panels.find(p => p.id === "fleet").key')) >= 0, hint);

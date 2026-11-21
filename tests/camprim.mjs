@@ -97,7 +97,7 @@ console.log('B. the real Level 1: the rim run');
   check('no cloaked caches on Level 1 (no aliens before first contact); the later levels have theirs, and the Lens is in level 2', L.anomalies.length === 0 && J('CAMP.levels[2].anomalies.length') === 3 && J('CAMP.levels[2].anomalies.some(a => a.reward.tech === "lens")'));
   // no alien before the contact: the waves of 1.1 and 1.2 and the first two of 1.3 are pirates; the third of 1.3 is the first alien thing
   const kinds = (i, k) => J(`Object.keys(campMissionRow(1, ${i}).waves[${k}].ships)`);
-  const pirate = k => J(`!!CAMP.pirate.kinds["${k}"]`);
+  const pirate = k => J(`!!CAMP.pirate.kinds["${k}"] || (CAMP.torpedo.boats["${k}"] || {}).faction === "pirate"`); // (the torpedo boats of 1.1's ambush are the pirates' too)
   check('the waves of 1.1 and 1.2, and the first two of 1.3, are all pirates; the third of 1.3 (the contact) is the first alien in the game: raiders and a drone, on the cue "contact"', [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1]].every(([i, k]) => kinds(i, k).every(pirate)) && kinds(2, 2).every(x => !pirate(x)) && J('campMissionRow(1, 2).waves[2].on.cue') === 'contact' && J('campMissionRow(1, 2).cues[0].name') === 'contact');
   // 1.1 played: the idle cruiser loses the transport; the contact never comes in 1.1 or 1.2
   g.run('window.C = campNew(1, [], { seed: 3, mission: 0 }); __run(400)');

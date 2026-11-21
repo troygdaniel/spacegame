@@ -16,7 +16,7 @@ const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 g.run(`
   window.__lost = C => C.events.filter(e => e.type === 'say' && e.key === 'camp.say.lost').length;
-  window.__setup = (level, kind, dx, burn) => { const C = campNew(level, [], { seed: 1, god: true }); C.ships = C.ships.filter(u => u.team !== 'alien'); C.caches = [];
+  window.__setup = (level, kind, dx, burn) => { const row = campMissions(level)[0], tr = row.traffic; row.traffic = []; const C = campNew(level, [], { seed: 1, god: true }); row.traffic = tr; C.ships = C.ships.filter(u => u.team !== 'alien'); C.caches = []; // (1.1 has a patrol and a miner of its own now: they are left out, the pursuit is what is tested, card space-game-l1-1-beats)
     C.carrier.x = 0; C.carrier.y = 0; C.carrier.vx = C.carrier.vy = 0; C.carrier.rot = 0; window.C = C;
     window.R = campSpawn(C, kind, dx, 0); R.nextShot = 1e9; R.vx = 0; R.hitBy = null;
     const P = campNavRows(C).find(r => r.group === 'places' && r.dist > 3000 && r.dist < 8000); campNavFly(C, P, burn, 'key'); return C; };
