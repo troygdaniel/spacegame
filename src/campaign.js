@@ -109,7 +109,7 @@ const CAMP = {
     reload: 15000,                         // ms until one missile is back in the magazine while it is below `magazine`
     delay: 700,                            // ms between two launches (the launcher cycles)
     lock: 2400,                            // px: a big ship this close to the carrier can be locked (the mothership first, else the nearest tower or gunship)
-    bigKinds: ['mother', 'tower', 'gunship'], // the ships that count as big: the missile aims at them, its fuze goes off on them, they take `big`
+    bigKinds: ['mother', 'tower', 'gunship', 'pirateleader'], // the ships that count as big: the missile aims at them, its fuze goes off on them, they take `big`
     speed: 560,                            // px/s top speed
     launch: 120,                           // px/s it leaves the tube at
     accel: 800,                            // px/s per s: from there it gets up to speed
@@ -299,7 +299,19 @@ const CAMP = {
   rival: {                                 // RIVAL ships (card space-game-rival-duel; src/camprival.js): an enemy the cruiser's size, with a hull and a shield of its own, that duels the cruiser. A mission row's `rivals` names them (the hook: src/camprival.js)
     comeFrom: 2600,                        // px from the carrier a rival comes from when its row gives no place
     kinds: {
-      pirateleader: { name: 'Pirate leader', base: 'gunship', hull: 240, shield: 120, dmg: 9, ore: 60, color: 0xe8b84a } // the first: the pirate leader at the end of mission 1.1 (a small, forgiving one). base: the PIRATES row whose way of flying and shooting it takes until its phases are made; ore: its wreck
+      pirateleader: { name: 'Pirate leader', base: 'gunship', hull: 1500, shield: 600, dmg: 9, ore: 60, color: 0xe8b84a, // the first: the pirate leader at the end of mission 1.1 (a small, forgiving one). base: the PIRATES row its guns and aim come from; ore: its wreck
+        move: { speed: 190, accel: 150, turn: 1 },       // a cruiser's way of flying: a little slower than the carrier's 210 at the default power, a ship that has to turn to point its side
+        phase: {                                           // stalk (circles at `hold` px and shoots a little) -> charge (stops, turns its side on you; `charge` s of warning) -> fires the broadside -> down (shield off `down` s) -> ram or run -> stalk again
+          hold: 620, first: 6, stalk: 4,                 // the range it keeps; seconds before the first charge, and between a ram or a run and the next charge
+          charge: 3.2, down: 6, back: 0.6,               // seconds of warning; seconds the shield is off (every hit goes to the hull, `exposed` times over); the share of the shield that comes back
+          exposed: 1.3,
+          ram: { secs: 4.5, speed: 1.5, accel: 1.4, turn: 0.55, dmg: 40, push: 160 },    // it turns to ram at 1.5 times its speed but 0.55 of its turn: a carrier that moves off its line is missed; a hit is `dmg` to the shield then the hull, and shoves both ships
+          run: { secs: 6, speed: 1.2, min: 3 },          // it flees at 1.2 times its speed for `secs` and comes back; for good (below `runHp` of its hull) it flees until it is `gone` px off (CAMP.pirate.gone) and is gone
+          runHp: 0.3, ramFirst: true                     // under this share of its hull it runs for good (a row's `leaves: false` fights to the death); the first turn is a ram, then run and ram by turns
+        },
+        gun: { dmg: 5, delay: [900, 1400], speed: 520, range: 760, aim: 0.22 },                 // the small gun it shoots while it circles
+        broadside: { shots: 6, dmg: 18, spread: 0.05, speed: 620, life: 1500, reach: 1000 }     // the heavy hit: six shots in a fan (108 in all; the carrier's shield at the default is 150), fired where the carrier is when the charge ends
+      }
     }
   },
   warn: [0.5, 0.25],                       // shares of Earth's shield and of the carrier's hull at which the ship's voice warns (each once, and again if it mends past the share and falls back)
@@ -705,7 +717,7 @@ function campHurt(C, u, dmg, byId) {
     if (C.shield > 0 && dmg > 0) { const take = Math.min(C.shield, dmg); C.shield -= take; dmg -= take; C.shieldHitAt = C.t; C.events.push({ type: 'shieldhit', x: u.x, y: u.y }); } // the shield first
   }
   if (u.scout) dmg *= CAMP.scout.fragile; // a scout out is fragile
-  if (u.rival && u.rival.sh > 0 && dmg > 0) { const take = Math.min(u.rival.sh, dmg); u.rival.sh -= take; dmg -= take; u.rival.hitAt = C.t; } // a rival's shield takes the hit first, as the carrier's does
+  if (u.rival) dmg = campRivalHurt(C, u, dmg); // a rival's shield takes the hit first, as the carrier's does; with it down every hit goes through, and harder (src/camprival.js)
   u.hp -= dmg; u.hurtAt = C.t;
   C.events.push({ type: 'hit', x: u.x, y: u.y, id: u.id, hull: dmg > 0 }); // hull: it got through to the hull (the carrier's shield takes the first of it)
   if (u.team === 'alien' && byId) { u.hitBy = byId; u.distractedUntil = C.t + CAMP.alien.distract; }
@@ -1237,6 +1249,7 @@ function campAI(C, u, dt) {
   if (u.kind === 'tower') return campTowerAI(C, u, dt);
   if (u.kind === 'freighter') return campConvoyAI(C, u, dt);
   if (u.kind === 'mother') return campMotherAI(C, u, dt);
+  if (u.rival) return campRivalAI(C, u, dt); // a rival ship fights in phases (src/camprival.js)
   if (u.faction === 'pirate') return campPirateAI(C, u, dt);
   if (u.team === 'neutral') return campTrafficAI(C, u, dt);
   if (u.team === 'alien') return campAlienAI(C, u, dt);
