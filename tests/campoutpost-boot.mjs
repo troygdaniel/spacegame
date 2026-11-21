@@ -41,7 +41,7 @@ try {
   check('F, F: two fighters are queued (50 ore), the page says so', await j(`${SCN}.camp.build.queue.length === 2 && ${SCN}.camp.ore === 50`) && (await shown()).some(x => /2 in the yard$/.test(x)), (await shown()).join(' | '));
   await t.ev(`(() => { ${SCN}.camp.carrier.hp = ${SCN}.camp.carrier.maxHp * 0.4; return 1; })()`); await key('Digit2'); await key('KeyR'); await t.run(300); await snap('5-dock-room-repair');
   check('REPAIR: R mends the hull for ore, the battle\'s hull is whole', await j(`${SCN}.camp.carrier.hp === ${SCN}.camp.carrier.maxHp && ${SCN}.camp.ore < 50`));
-  await t.ev(`(() => { ${SCN}.camp.ore = 150; return 1; })()`); await key('Digit3'); await key('KeyU'); await t.run(300); await snap('6-dock-room-fabricator');
+  await t.ev(`(() => { ${SCN}.camp.ore = 400; return 1; })()`); await key('Digit3'); await key('KeyU'); await t.run(300); await snap('6-dock-room-fabricator'); // 400: the Fabricator costs 300 since card space-game-ore-bay-bigger (the store holds 500)
   check('REFIT: U fits the Fabricator: the battle and the progress both have it', await j(`campHas(${SCN}.camp, 'fabricator') && ${SCN}.P.techs.includes('fabricator')`) && await j(`JSON.parse(localStorage.getItem('longhaul.campaign')).techs.includes('fabricator')`));
   await key('Digit5'); await t.run(1400); await snap('7-dock-room-undock');
   await key('KeyL');
