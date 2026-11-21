@@ -250,6 +250,29 @@ console.log('G. the map, the list and the words');
   check('the table is documented in CAMP (pirate, traffic)', /pirate: \{/.test(src('src/campaign.js')) && /traffic: \{/.test(src('src/campaign.js')));
 }
 
+// ---------- I. the colour of their shots (card space-game-l1-pirate-shot-colour) ----------
+console.log('I. the colour of their shots');
+{
+  g.run('__new(); __quiet()');
+  const sh = J(`(() => { const p = __still(__spawn('skiff', 300, 0)); p.nextShot = 0; p.vmax = p.accel = 0; p.hp = p.maxHp = 1e6; p.def = Object.assign({}, p.def, { engage: 5000 }); const seen = []; for (let i = 0; i < 30 * 6; i++) { campStep(C, 1 / 30); C.events.length = 0; C.bullets.forEach(b => { if (b.from === p.id && seen.indexOf(b) < 0) seen.push(b); }); } return { n: seen.length, fac: seen.map(b => b.fac), team: seen.map(b => b.team) } })()`);
+  check('a pirate\'s shots carry fac "pirate" (and are still the hostile side\'s, team alien)', sh.n >= 1 && sh.fac.every(f => f === 'pirate') && sh.team.every(t => t === 'alien'), JSON.stringify(sh));
+  g.run('__new(); __quiet()');
+  const al = J(`(() => { const a = __still(__spawn('raider', 300, 0)); a.nextShot = 0; a.hp = a.maxHp = 1e6; const seen = []; for (let i = 0; i < 30 * 6; i++) { campStep(C, 1 / 30); C.events.length = 0; C.bullets.forEach(b => { if (b.from === a.id && seen.indexOf(b) < 0) seen.push(b); }); } return { n: seen.length, fac: seen.map(b => b.fac || '') } })()`);
+  check('an alien\'s shots carry no fac: they stay red', al.n === 0 || al.fac.every(f => f === ''), JSON.stringify(al));
+  const pt = J(`(() => { const p = C.ships.find(u => u.kind === 'patrol'); const h = __still(campSpawn(C, 'cutter', p.x + 400, p.y)); h.hp = h.maxHp = 1e6; const seen = []; for (let i = 0; i < 30 * 5; i++) { campStep(C, 1 / 30); C.events.length = 0; C.bullets.forEach(b => { if (b.from === p.id && seen.indexOf(b) < 0) seen.push(b); }); } return { n: seen.length, team: seen.map(b => b.team) } })()`);
+  check('a patrol\'s shots are team neutral (the scene draws them cyan)', pt.n >= 1 && pt.team.every(t => t === 'neutral'), JSON.stringify(pt));
+  const col = J('CAMP_SHOT'), hsv = c => { const r = (c >> 16 & 255) / 255, gg = (c >> 8 & 255) / 255, b = (c & 255) / 255, mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), d = mx - mn; let h = 0; if (d) h = mx === r ? ((gg - b) / d + 6) % 6 : mx === gg ? (b - r) / d + 2 : (r - gg) / d + 4; return { h: h * 60, s: mx ? d / mx : 0 }; };
+  const ph = hsv(col.pirate), nh = hsv(col.neutral);
+  check('a pirate\'s shot is amber: orange hue, not red (the aliens\'), not pale yellow (your guns\')', ph.h >= 25 && ph.h <= 45 && ph.s > 0.7, JSON.stringify(ph));
+  check('a neutral\'s shot is cyan, not green (the wing\'s)', nh.h >= 170 && nh.h <= 200, JSON.stringify(nh));
+  const scene = src('src/campaignscene.js'), fire = src('src/campmapfire.js');
+  check('the scene picks the texture by team and fac (shot-neutral, shot-pirate; the alien keeps ebullet)', /b\.team === 'neutral' \? 'shot-neutral' : b\.fac === 'pirate' \? 'shot-pirate' : 'ebullet'/.test(scene));
+  check('the textures are made when the scene is created', /campShotTextures\(this\)/.test(scene) && /function campShotTextures/.test(scene));
+  check('the Tab map draws the same: a neutral\'s bullet teal, a pirate\'s yellow, an alien\'s red', /b\.team === 'neutral' \? K\.patrol : b\.fac === 'pirate' \? K\.pirate : K\.alien/.test(fire));
+  const tex = J(`(() => { const made = {}; const sc = { textures: { exists: k => !!made[k] }, make: { graphics: () => { const g = new Proxy({}, { get: (t, n) => n === 'generateTexture' ? (k, w, h) => { made[k] = [w, h]; } : () => g }); return g; } } }; campShotTextures(sc); campShotTextures(sc); return made })()`);
+  check('campShotTextures makes shot-pirate and shot-neutral, 14 by 4, once', tex['shot-pirate'] && tex['shot-pirate'].join() === '14,4' && tex['shot-neutral'] && tex['shot-neutral'].join() === '14,4' && Object.keys(tex).length === 2, JSON.stringify(tex));
+}
+
 // ---------- H. their own pictures (src/camppirateart.js) ----------
 console.log('H. their own pictures');
 {

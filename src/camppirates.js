@@ -68,7 +68,7 @@ function campPirateAI(C, u, dt) {
   if (m.fire && dist < def.range && C.t > u.nextShot && Math.abs(campWrap(target - u.rot)) < def.aim) {
     u.nextShot = C.t + campBetween(C, def.shot[0], def.shot[1]);
     const n = def.spread || 1;
-    for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * C.dmgS, 1800, 'alien', 14);
+    for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * C.dmgS, 1800, 'alien', 14, { fac: 'pirate' }); // fac: the scene and the map draw a pirate's shot in amber, not the aliens' red
   }
 }
 
