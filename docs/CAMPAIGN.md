@@ -133,7 +133,7 @@ A stance is **how the wing moves when it attacks or guards**. One for the whole 
 
 | Stance | Words | What the wing does |
 |---|---|---|
-| Free | "free", "fight freely" | the pirates' own steering (circle, pass, break, run): how the wing always flew |
+| Free | "free", "fight freely" | the pirates' own steering (circle, pass, break, run) against the drones, gunships and mothership; a fighter against a raider is a dogfight (next section) |
 | Orbit | "orbit", "orbit the mothership", "circle" | circle the target at `CAMP.stance.orbit` px (from its edge), the nose on it, firing; half the ships go round each way at `orbitSpeed` |
 | Keep distance | "keep distance", "keep your distance from the mothership", "stand off" | stand off at `stand` (0.85) of each ship's own gun range from the target: farther off it comes in, closer it backs away, and it sidesteps back and forth (`weave`, 140 px/s) so it is not a still target; the ships take the towers and the mothership about a fifth faster than free |
 | Match speed | "match speed", "in formation" | fly in formation, a ring of `formation` px (200) round the carrier that turns with it, at the carrier's speed, and fire at what comes into range; it is what Escort does with no convoy (Troy asked for the Escort row to be called "Escort / match speed"; the label does not fit the panel's column as drawn today, so it is renamed with the panels' redraw) |
@@ -142,6 +142,30 @@ A stance is **how the wing moves when it attacks or guards**. One for the whole 
 Orbit and Keep follow the order's target (the nearest alien, or the one you named; "orbit the mothership" also sends the fighters at it) and are as free when there is none. Match and Hold fight what is in range of the ship whatever the order's target. A stance applies to **Attack and Guard** (and Escort with no convoy, which is Guard at the carrier); Escort to a convoy, Recall and Mine are the same in every stance. The old words are as they were ("guard", "hold", "stay with me" are Guard); only "orbit" moved, from Guard to the stance. All the numbers are `CAMP.stance`; the ids and their order `CAMP.stances`.
 
 **The FLEET panel's second page.** Page 1 is the orders (Launch, Attack, Escort, Guard, Recall); page 2 (`CAMP_PANELS.panels[0].page2`) is the stances as rows 1 to 5 with the one in force marked, flipped with the Left and Right arrows while the panel is open; the collapsed tab says it (`FLEET - ORBIT`, `campPanelTab`). The logic is done and tested (`src/camppanel.js`, `tests/campstances.mjs`); it is switched on by `CAMP_PANELS.pages = 2`, which waits for the panels' redraw (`space-game-campaign-panels-ui`) to draw the second page: until then the stances are the strip's and the voice's, and the H page does not list the stance keys.
+
+## Dogfights: fighters fly like Vipers (card `space-game-fighter-dogfights`; Troy, 21 Nov 2026: "the fighters should fight more, like the Vipers in Battlestar Galactica: as manoeuvrable, and dogfight like that")
+
+**Who.** The wing's fighters and the aliens' raiders (`CAMP.dog.kinds`), against **each other** only. A drone, a gunship, an escort, the mothership, a hauler, the carrier and Earth are not dogfights: a ship that flies at one of those keeps the pirates' own circle and pass (`pirateSteer`, `src/enemies.js`). **The wing's orders and stances still win**: only a fighter on the `free` stance steers like this, and the foe it flies at is the one its order names (an Attack on a named alien is that alien; on "the nearest", or on guard, it is the ship's partner when the nearest is a raider).
+
+**The flight** (`src/campdogfight.js`, numbers in `CAMP.dog`). The engine pushes **along the nose**: a push backwards has `retro` (0.45) of the accel, a push sideways `side` (0.35). So a ship turns to where it means to burn, and one that wants to stop turns its nose round and burns (the **flip and burn**: nose on the target, the main engine against the way it was going, firing as it comes round). A dogfighter keeps more of its speed than the game's ships (`drag` 0.62 a second, the game's own is 0.5), so it drifts and overshoots, and its nose turns `snap` (1.7) times as fast for a break, a flip or a jink. Pace (P) scales speed, accel and turn as it always did.
+
+**The moves**, each with a time drawn from the battle's own seeded numbers (a seed repeats a fight exactly):
+
+| Move | When | What |
+|---|---|---|
+| approach | farther than `far` (1,100 px) | burn in on the lead point |
+| attack | in range | nose on the lead point (the aim is `lead` of the exact lead: the wing 0.8, the raiders 0.55), the push to the speed that closes on the target (never under `pass`, so it drives in for a pass); the nose goes to the push instead when it is more than `cone` off the aim (a ship sliding round its target turns to kill the slide) |
+| break | inside `near` (120 px): it is past | a hard turn `angle` off the line, 0.5 to 0.9 s, then round again |
+| flip | the target is more than `flip.off` behind the nose, inside `flip.range`, once in `flip.every` s | the turn on the spot and the burn |
+| jink | any enemy that has its nose on it (`jink.aspect`, within `jink.range`: not only its partner, a drone's guns hurt too) | a hard turn square to that enemy, a chance of `rate` a second (the wing 2, the raiders 0.8), once in `every` s |
+
+**The pairs** (`campDogPair`, every `pair.every` ms): each fighter and raider within `pair.range` px is matched with the nearest unmatched ship of the other side, nearest pairs first, and the pair holds until one is lost or they are `pair.keep` px apart: a duel, not a crowd on one ship. More raiders than fighters: the extra raiders have no partner and go on as the pirates did.
+
+**What it did to the numbers** (tools: a duel harness in the card's review; `node tools/campaign-bot.mjs` for the table). One fighter against one raider at Normal: before, half of them never ended (they circled at the ring and missed); now every one ends, in 3 to 70 s, the middle one in about 19 s, with 2 or 3 flips, 8 breaks and 7 jinks. Three against three: decided in about 25 s. The wing takes the same hit points as before (the home level's plain player: 125 against 135 in 200 s) and deals about 25 percent more, because a fighter now goes for a partner and not for the crowd; the missions' bot table is as it was.
+
+**Pictures.** The wing's fighter (`campFighterDraw`, `src/campcruiser.js`) and the raider (`shRaiderDraw`, `src/ships.js`) are one drawn shape in two colour schemes: a long needle of a nose, a narrow blade of a body, two short fins forward, two swept wings reaching to the tail, a gun in front of each wing and **three engines in a row at the stern** (the raider has three flames, `SHIPS.nozzles.raider`). An original drawing: nothing of the show's ship is copied, no name or mark. The fighter keeps the muted steel and bronze with the pale canopy; the raider the pirates' dark red and hot pink.
+
+**Not done (parked).** The drone and the gunship keep their old circling (they are not fighters); the Long Haul's own pirates (`pirateAI`, Phaser physics) are unchanged; the stances other than Free do not dogfight; no sound for a flip.
 
 ## The weapons (card `space-game-campaign-missiles`)
 

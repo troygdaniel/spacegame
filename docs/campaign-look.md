@@ -57,3 +57,6 @@ The hit circles are 30 percent smaller, so alien shots hit the carrier less. Ove
 ## Retaking the pictures
 
 `TAG=after node tools/campshots.mjs look` (and `1` for the melee): one muted Chrome through the test lock, about 20 seconds each.
+
+## The fighters, again (card `space-game-fighter-dogfights`, 21 Nov 2026)
+Troy: the fighters should look and fight like the Vipers of Battlestar Galactica. `campFighterDraw` (the wing) and `shRaiderDraw` (the pirates' raider) are one new, original shape: a long needle nose, a narrow blade body, short fins forward, long swept wings, three engines in a row at the stern. Same sizes (`CAMP.size.fighter` 22 x 6 px), same muted palette and pale canopy for the wing (`camplook-small.mjs` still holds), pink on dark red for the raider. How they fly is in `docs/CAMPAIGN.md`, "Dogfights".
