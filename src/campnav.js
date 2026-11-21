@@ -9,10 +9,11 @@
 //   campNavDrive(C, dt)       once a tick, from campTick (src/campaign.js), while C.nav is on: it sets the carrier's input (turn, thrust, brake) by the Long Haul autopilot's rule
 //   campNavEta(C, dist)       the flight time in seconds;   campNavPickAt(rows, project, px, py)   the row nearest a click on the map
 //   campNavEdge(dx, dy, W, H, margin, keep) / campNavArrow(C, scroll, W, H)   where the arrow at the screen edge sits and which way it points, out of the HUD's way
-//   campNavIntent(text)       the plain words ("fly to Mars", "go to the relic", "take me to the objective", "cancel the course") as { act: 'fleet_fly', arg }
+//   campNavIntent(text)       the plain words ("fly to Mars", "go to the relic", "take me to the objective", "cancel the course", "fly fast to Mars", "burn to the relic") as { act: 'fleet_fly', arg } (a burn: arg begins "fast ")
+//   campNavFly(C, row, fast, how)   the one door every trip goes through (the map, the words, the panel): regular speed always; Fast only with the wing aboard (card space-game-campaign-fast-board, below)
 // The rule, the stop distances and every number are CAMP.nav in src/campaign.js. Steering is the player's: any steering key ends it (the scene calls campNavClear(C, 'key')); the orders go on.
 const CAMPNAV = {
-  groups: [['goal', 'GOAL'], ['places', 'PLACES'], ['convoys', 'CONVOYS'], ['finds', 'CACHES AND RELIC'], ['wing', 'YOUR SHIPS']], // the list's headings, in order (navpanelLines draws them)
+  groups: [['goal', 'GOAL'], ['places', 'PLACES'], ['convoys', 'CONVOYS'], ['enemies', 'ENEMIES'], ['finds', 'CACHES AND RELIC'], ['ore', 'ORE AND ROCKS'], ['wing', 'YOUR SHIPS']], // the list's headings, in order (navpanelLines draws them); nearest first in each (card space-game-campaign-map-targets: every mark of the map is a row)
   color: { goal: 0xffd37a, select: 0x7fe9ff }
 };
 const campNavNorm = t => String(t == null ? '' : t).toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/'/g, ' ').replace(/\s+/g, ' ').trim();
@@ -23,7 +24,8 @@ function campNavGoal(C) {
   try {
     const L = (C.L || CAMP.levels[C.level]), pl = campPlaces(C.level), c = C.carrier, near = list => list.slice().sort((a, b) => campDist(a, c) - campDist(b, c))[0] || null;
     const ship = (u, kind, name) => ({ id: kind === 'mother' ? 'mother' : kind + ':' + u.id, kind, name, x: u.x, y: u.y, r: u.r || 0, moving: u.vmax > 0, ref: u.id });
-    const rt = typeof campRetreat === 'function' ? campRetreat(C) : null; if (rt) return { id: 'place:' + rt.o.id, kind: 'place', name: rt.o.place, x: rt.o.x, y: rt.o.y, r: rt.o.r }; // low on hull with no ship left: the goal is the nearest outpost (src/campoutpost.js)
+    const rt = typeof campRetreat === 'function' ? campRetreat(C) : null; if (rt && !rt.hot) return { id: 'place:' + rt.o.id, kind: 'place', name: rt.o.place, x: rt.o.x, y: rt.o.y, r: rt.o.r }; // low on hull with no ship left: the goal is the nearest outpost with its doors open (src/campoutpost.js); none open (hot) is no goal: the autopilot is not sent into the aliens
+    if (C.L.place && C.arrivedAt == null && pl[C.L.place]) { const p = pl[C.L.place]; return { id: 'place:' + C.L.place, kind: 'place', name: String(p.name), x: p.x, y: p.y, r: p.r || 60 }; } // not there yet: the goal is the place of the mission
     if (L.objectives) { // a mission: the first objective not done yet (src/campaign.js campObjectives)
       const o = campObjectives(C).find(x => !x.done); if (!o) return null;
       if (o.type === 'scan') { const q = near(C.scan.map((p, i) => Object.assign({ i }, p)).filter(p => !p.got)); return q ? { id: 'scan:' + q.i, kind: 'scan', name: uiText('camp.nav.scan', { n: q.i + 1 }), x: q.x, y: q.y, r: 0 } : null; }
@@ -56,12 +58,18 @@ function campNavGoal(C) {
 function campNavRows(C) {
   const pl = campPlaces(C.level), c = C.carrier, rows = [], add = r => { r.dist = Math.hypot(r.x - c.x, r.y - c.y); rows.push(r); return r; };
   const posts = C.level != null && CAMP.levels[C.level] && CAMP.levels[C.level].outposts || {}; // the friendly outposts of the level: a place in the list that is one says so (the map marks it with a station)
-  Object.keys(pl).forEach(id => { const p = pl[id]; if (!p.hidden) add({ id: 'place:' + id, kind: 'place', group: 'places', name: String(p.name), x: p.x, y: p.y, r: p.r || 60, far: !!p.far, star: p.kind === 'star', outpost: !!posts[id] }); });
+  Object.keys(pl).forEach(id => { const p = pl[id]; if (!p.hidden) add({ id: 'place:' + id, kind: 'place', group: 'places', name: String(p.name), x: p.x, y: p.y, r: p.r || 60, far: !!p.far, star: p.kind === 'star', outpost: !!posts[id], moon: !!p.moon }); });
   campConvoys(C).forEach(u => add({ id: 'convoy:' + u.id, kind: 'convoy', group: 'convoys', name: uiText('camp.nav.convoy', { name: campConvoyName(u) }), x: u.x, y: u.y, r: u.r || 22, moving: true, ref: u.id }));
   (C.scan || []).forEach((p, i) => { if (!p.got) add({ id: 'scan:' + i, kind: 'scan', group: 'finds', name: uiText('camp.nav.scan', { n: i + 1 }), x: p.x, y: p.y, r: 0 }); });
   C.caches.forEach((k, i) => { if (!k.got) add({ id: 'cache:' + i, kind: 'cache', group: 'finds', name: uiText('camp.nav.cache', { n: i + 1 }), x: k.x, y: k.y, r: 0 }); });
   if (C.relic) add({ id: 'relic', kind: 'relic', group: 'finds', name: uiText('camp.nav.relic'), x: C.relic.x, y: C.relic.y, r: 0 });
+  if (typeof campAnomMarks === 'function') campAnomMarks(C).forEach(a => add({ id: 'anom:' + a.id, kind: 'anomaly', group: 'finds', name: a.name, x: a.x, y: a.y, r: 0 })); // an anomaly that is noticed: no name but 'Anomaly' until it is decloaked (src/campanomaly.js)
   const w = campWing(C); if (w.length) add({ id: 'wing', kind: 'wing', group: 'wing', name: uiText('camp.nav.wing', { n: w.length }), x: w.reduce((a, u) => a + u.x, 0) / w.length, y: w.reduce((a, u) => a + u.y, 0) / w.length, r: 0, moving: true });
+  // every other mark of the map (card space-game-campaign-map-targets): your ships one by one, the aliens, the mothership and the towers, the ore lying about and the rocks. Each is a row, so a click on its mark sets it and the keys reach it too
+  w.forEach(u => add({ id: 'ship:' + u.id, kind: 'ship', group: 'wing', name: campNavUnitName(u), x: u.x, y: u.y, r: u.r || 0, moving: true, ref: u.id }));
+  campAliens(C).forEach(u => { const k = u.kind === 'mother' ? 'mother' : u.kind === 'tower' ? 'tower' : 'alien'; add({ id: k === 'mother' ? 'mother' : k + ':' + u.id, kind: k, group: 'enemies', name: k === 'mother' ? uiText('camp.nav.mother') : campNavUnitName(u), x: u.x, y: u.y, r: u.r || 0, moving: u.vmax > 0, ref: u.id }); });
+  (C.pickups || []).forEach(p => add({ id: 'pickup:' + p.id, kind: 'pickup', group: 'ore', name: uiText(p.kind === 'wreck' ? 'camp.nav.wreck' : 'camp.nav.chunk'), x: p.x, y: p.y, r: 0, ref: p.id }));
+  (C.rocks || []).forEach(r => { if (r.hp > 0) add({ id: 'rock:' + r.id, kind: 'rock', group: 'ore', name: uiText('camp.nav.rock', { n: String(r.id).replace(/^rock-/, '') }), x: r.x, y: r.y, r: r.r || 0, ref: r.id }); });
   const g = campNavGoal(C); if (g) { const row = add(Object.assign({}, g, { of: g.id, id: 'goal', group: 'goal', goal: true })); row.name = g.name; }
   const order = CAMPNAV.groups.map(x => x[0]);
   return rows.sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || a.dist - b.dist);
@@ -74,23 +82,39 @@ function campNavTarget(C, N) {
   if (kind === 'cache') { const k = C.caches[+String(id).slice(6)]; return k && !k.got ? { x: k.x, y: k.y, r: 0 } : null; }
   if (kind === 'scan') { const k = C.scan[+String(id).slice(5)]; return k && !k.got ? { x: k.x, y: k.y, r: 0 } : null; }
   if (kind === 'relic') return C.relic ? { x: C.relic.x, y: C.relic.y, r: 0 } : null;
+  if (kind === 'anomaly') { const a = (C.anoms || []).find(q => 'anom:' + q.id === id); return a && (a.state === 'hidden' || a.state === 'revealed') ? { x: a.x, y: a.y, r: 0 } : null; }
   if (kind === 'wing') { const w = campWing(C); return w.length ? { x: w.reduce((a, u) => a + u.x, 0) / w.length, y: w.reduce((a, u) => a + u.y, 0) / w.length, r: 0 } : null; }
+  if (kind === 'pickup') { const p = (C.pickups || []).find(q => q.id === (N.ref || String(id).slice(7))); return p ? { x: p.x, y: p.y, r: 0 } : null; } // taken by a ship of yours (or gone: a wreck's ore fades)
+  if (kind === 'rock') { const r = (C.rocks || []).find(q => q.id === (N.ref || String(id).slice(5))); return r && r.hp > 0 ? { x: r.x, y: r.y, r: r.r || 0 } : null; }
   const u = C.by[N.ref || String(id).replace(/^[a-z]+:/, '')] || C.ships.find(s => s.kind === kind && s.hp > 0 && (kind === 'mother' || s.id === N.ref));
-  return u && u.hp > 0 ? { x: u.x, y: u.y, r: u.r || 0 } : null;
+  return u && u.hp > 0 ? { x: u.x, y: u.y, r: u.r || 0, vx: u.vx || 0, vy: u.vy || 0 } : null; // vx, vy: a ship's own velocity, which the autopilot leads (campNavLead)
 }
-const campNavStop = (kind, t) => (kind === 'place' ? (t.r || 0) + CAMP.nav.stop : kind === 'convoy' || kind === 'mother' || kind === 'tower' ? CAMP.nav.stopShip : CAMP.nav.stopPoint);
+const campNavStop = (kind, t) => (kind === 'place' ? (t.r || 0) + CAMP.nav.stop : kind === 'anomaly' ? CAMP.anomaly.stop : kind === 'mother' || kind === 'tower' ? CAMP.nav.stopShip : kind === 'alien' || kind === 'guard' ? CAMP.nav.stopEnemy : kind === 'convoy' || kind === 'ship' ? CAMP.nav.stopFriend : kind === 'rock' ? CAMP.nav.stopRock : CAMP.nav.stopPoint);
+// 'Raider 3', 'Fighter 5', 'Tower 2': what a ship is, for the list and the line on the map (the kind's name is in content/text/campmaptargets.md)
+function campNavUnitName(u) { const p = String(u.id).split('-'), k = uiText('camp.nav.k.' + (u.kind || p[0])); return (k.indexOf('camp.nav.k.') === 0 ? p[0].charAt(0).toUpperCase() + p[0].slice(1) : k) + (p[1] ? ' ' + p[1] : ''); }
+// where to aim at a moving target: the point it will be at when the carrier gets there, at the speed it flies (a first guess of the time from the distance, refined twice), the lead capped at CAMP.nav.leadMax s.
+// c: the carrier { x, y }, t: { x, y, vx, vy }, speed: px/s it can fly. A target that does not move (or is not a ship) is where it is.
+function campNavLead(c, t, speed) {
+  const vx = t.vx || 0, vy = t.vy || 0; if (!vx && !vy) return { x: t.x, y: t.y, t: 0 };
+  let T = 0, x = t.x, y = t.y;
+  for (let i = 0; i < 3; i++) { T = Math.min(CAMP.nav.leadMax, Math.hypot(x - c.x, y - c.y) / Math.max(40, speed)); x = t.x + vx * T; y = t.y + vy * T; }
+  return { x, y, t: T };
+}
 // the burn of a Fast trip (the one place it is decided: campNavGo stores it, campCarrier and campNavDrive read it, campNavEta tells it on the map): CAMP.nav.fast times the speed, farFast times it past farFrom px; 1 for a regular trip
 const campNavBurn = (dist, fast) => (!fast ? 1 : dist > CAMP.nav.farFrom ? CAMP.nav.farFast : CAMP.nav.fast);
-const campNavEta = (C, dist, fast) => Math.round(dist / (CAMP.carrier.speed * campNavBurn(dist, fast)) * CAMP.nav.etaSlow); // fast: the map's Fast button
+const campNavEta = (C, dist, fast) => Math.round(dist / (CAMP.carrier.speed * campPowerFx(C).speed * campNavBurn(dist, fast)) * CAMP.nav.etaSlow); // fast: the map's Fast button
 
 function campNavGo(C, row, fast) {
   if (!C || !row || C.result) return null;
-  const id = row.of || row.id;
-  C.nav = { on: true, id, of: id, kind: row.kind, name: row.name, ref: row.ref || '', moving: !!row.moving, x: row.x, y: row.y, since: C.t, fast: !!fast, burn: campNavBurn(Math.hypot(row.x - C.carrier.x, row.y - C.carrier.y), fast) }; // fast: the carrier burns at N.burn times its speed while this runs (campCarrier, campNavDrive); decided once, by the distance at the start
+  fast = !!fast && !campNavOut(C); // a burn with a ship of the wing out cannot happen from anywhere: the small ships could not keep up
+  const id = row.of || row.id, burn = campNavBurn(Math.hypot(row.x - C.carrier.x, row.y - C.carrier.y), fast);
+  if (C.nav && C.nav.on && C.nav.id === id) Object.assign(C.nav, { fast: !!fast, burn }); // the same place again, mid-flight (Fly then Fast, or back): the trip is kept and only the speed changes (Troy, 20 Nov 2026)
+  else C.nav = { on: true, id, of: id, kind: row.kind, name: row.name, ref: row.ref || '', moving: !!row.moving, x: row.x, y: row.y, since: C.t, fast: !!fast, burn }; // fast: the carrier burn
   C.events.push({ type: 'nav', key: fast ? 'camp.nav.gofast' : 'camp.nav.go', vars: { name: row.name } });
   return C.nav;
 }
 function campNavClear(C, why) {
+  if (C && C.navWait) { C.navWait = null; C.fastAsk = null; } // steering, X or a regular trip gives up a burn that was waiting for the wing
   const N = C && C.nav; if (!N) return false;
   C.nav = null;
   const key = { key: 'camp.nav.off', clear: 'camp.nav.cleared', arrived: 'camp.nav.arrived', lost: 'camp.nav.lost' }[why];
@@ -102,21 +126,35 @@ function campNavClear(C, why) {
 function campNavDrive(C, dt) {
   const N = C.nav; if (!N || !N.on || C.result) return;
   const c = C.carrier; if (!c || c.hp <= 0) { C.nav = null; return; }
-  const t = campNavTarget(C, N); if (!t) { campNavClear(C, N.kind === 'cache' || N.kind === 'scan' ? 'arrived' : 'lost'); return; } // a cache that has gone was gathered: that is arriving
+  const t = campNavTarget(C, N); if (!t) { campNavClear(C, N.kind === 'cache' || N.kind === 'scan' || N.kind === 'pickup' ? 'arrived' : 'lost'); return; } // a cache or ore that has gone was gathered: that is arriving; a ship that is gone (dead) or a rock that broke is lost
   N.x = t.x; N.y = t.y;
-  const K = CAMP.nav, dx = t.x - c.x, dy = t.y - c.y, dist = Math.hypot(dx, dy), left = Math.max(0, dist - campNavStop(N.kind, t)), speed = Math.hypot(c.vx, c.vy);
-  const diff = campWrap(Math.atan2(dy, dx) - c.rot), limit = Math.min(CAMP.carrier.speed * (N.fast ? (N.burn || K.fast) : 1), K.floor + K.brake * left), inp = C.input;
-  inp.turn = Math.max(-1, Math.min(1, diff * K.steer));
-  inp.thrust = Math.abs(diff) < K.align && speed < limit ? 1 : 0;
-  inp.brake = speed > limit + 5;
+  const K = CAMP.nav, maxSp = CAMP.carrier.speed * (typeof campPowerFx === 'function' ? campPowerFx(C).speed : 1) * (N.fast ? (N.burn || K.fast) : 1), tvx = t.vx || 0, tvy = t.vy || 0, flies = !!(tvx || tvy);
+  const dx0 = t.x - c.x, dy0 = t.y - c.y, dist = Math.hypot(dx0, dy0), left = Math.max(0, dist - campNavStop(N.kind, t)), speed = Math.hypot(c.vx, c.vy);
+  const aim = flies ? campNavLead(c, t, Math.max(speed, maxSp * 0.6)) : t, dx = aim.x - c.x, dy = aim.y - c.y; // a ship that flies is led: the carrier aims where it will be (card space-game-campaign-map-targets)
+  const hold = !!(C.navWait && C.navWait.id === N.id); // a burn to this place is waiting for the wing: the trip is kept, but the carrier stops, because a ship cannot land on a carrier that is flying away (they hover just behind it)
+  const near = !!N.moving && left <= 0; // at its stand-off range from a ship: the carrier matches its speed and keeps station, following until the trip is ended (a steering key, X, a new place, or the ship is gone)
+  const diff = campWrap(Math.atan2(dy, dx) - c.rot), inp = C.input;
+  const ux = dx0 / (dist || 1), uy = dy0 / (dist || 1), closing = (c.vx - tvx) * ux + (c.vy - tvy) * uy; // how fast it is closing on the target (a still target: the speed along the line)
+  const limit = hold || near ? 0 : Math.min(maxSp, K.floor + K.brake * left); // the speed it may close at: the Long Haul autopilot's rule, in the target's frame
+  inp.turn = hold ? 0 : Math.max(-1, Math.min(1, diff * K.steer));
+  if (!flies) { // a place, a point or a ship that is not moving: as it always was, on the speed itself
+    inp.thrust = !hold && !near && Math.abs(diff) < K.align && speed < limit ? 1 : 0;
+    inp.brake = speed > limit + 5;
+  } else if (near) { // alongside a ship that moves: close up if it draws away, ease off if it comes in, else coast with it
+    inp.thrust = !hold && closing < -10 && Math.abs(diff) < K.align && speed < maxSp ? 1 : 0;
+    inp.brake = hold || closing > 10;
+  } else { // on the way to one: thrust until closing at the limit (a target that is faster than the carrier is chased at the carrier's top speed), brake when closing too fast
+    inp.thrust = !hold && Math.abs(diff) < K.align && closing < limit && speed < maxSp ? 1 : 0;
+    inp.brake = hold || closing > limit + 5;
+  }
   if (!N.moving && left <= K.arrive && speed <= K.drop) campNavClear(C, 'arrived');
 }
 
-// the row nearest a click on the map: project(x, y) -> { x, y } on the screen; px, py the click
-function campNavPickAt(rows, project, px, py) {
-  let best = null, bd = CAMP.nav.pick;
-  rows.forEach(r => { const p = project(r.x, r.y), d = Math.hypot(p.x - px, p.y - py); if (d <= bd) { bd = d; best = r; } });
-  return best;
+// every row under a click on the map, nearest the cursor first: the stack of marks there (card space-game-campaign-map-targets). A mark is under the click within CAMP.nav.pick px; a row that only repeats another
+// (the goal's) is left out when the thing it repeats is there. The first is what a click sets; a second click on the same spot takes the next (campMapClick).
+function campNavPickStack(rows, project, px, py) {
+  const real = rows.filter(r => !r.goal || !rows.some(o => o !== r && !o.goal && o.x === r.x && o.y === r.y));
+  return real.map((r, i) => { const p = project(r.x, r.y); return { r, i, d: Math.hypot(p.x - px, p.y - py) }; }).filter(o => o.d <= CAMP.nav.pick).sort((a, b) => a.d - b.d || a.i - b.i).map(o => o.r);
 }
 
 // ---- the words ----
@@ -128,6 +166,7 @@ function campNavFind(C, text) {
   if (/\b(?:objective|goal|mission|target|destination)\b/.test(q)) { const g = by('goal'); return g ? { row: g } : { code: 'nogoal' }; }
   if (/\b(?:mothership|mother|boss|big one|flagship)\b/.test(q)) { const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); return m ? { row: { id: 'mother', kind: 'mother', name: uiText('camp.nav.mother'), x: m.x, y: m.y, r: m.r, moving: true, ref: m.id } } : { code: 'nomother' }; }
   if (/\brelic\b/.test(q)) { const r = by('relic'); return r ? { row: r } : { code: 'norelic' }; }
+  if (/\b(?:anomal(?:y|ies)|shimmer|odd (?:spot|reading|readings)|cloaked|alien cache)\b/.test(q)) { const r = first('anomaly'); return r ? { row: r } : { code: 'noanomaly' }; } // the nearest one that is noticed
   if (/\b(?:cache|caches|supplies|supply|resources?|pods?)\b/.test(q)) { const r = first('cache'); return r ? { row: r } : { code: 'nocache' }; }
   if (/\b(?:towers?|defences?|defenses?|turrets?)\b/.test(q)) {
     const t = C.ships.filter(u => u.kind === 'tower' && u.hp > 0).sort((a, b) => campDist(a, C.carrier) - campDist(b, C.carrier))[0];
@@ -141,7 +180,7 @@ function campNavFind(C, text) {
   const places = rows.filter(r => r.kind === 'place' && !r.goal), alias = { moon: 'luna', 'lunar base': 'luna', base: 'luna', star: 'sun', sun: 'sun' };
   const hit = places.find(p => q === p.name.toLowerCase() || q === p.id.slice(6)) || places.find(p => q.includes(p.name.toLowerCase()) || q.split(' ').includes(p.id.slice(6))) || places.find(p => alias[q] === p.id.slice(6) || Object.keys(alias).some(a => q.includes(a) && alias[a] === p.id.slice(6)));
   if (hit) return { row: hit };
-  const here = places.filter(p => !p.far && !p.star); // the planets of the level itself (the far bodies of the system are named by their names)
+  const here = places.filter(p => !p.far && !p.star && !p.moon); // the planets of the level itself (the far bodies of the system and the moons are named by their names)
   if (here.length === 1 && /\b(?:planet|world|home)\b/.test(q)) return { row: here[0] };
   return { code: 'unknown' };
 }
@@ -155,20 +194,66 @@ function campNavIntent(text) {
   const q = campNavNorm(text).replace(CAMPNAV_FILLER, '').replace(/\s+(please|now|right now|already)$/, '').trim();
   if (!q) return null;
   if (/^(?:cancel|stop|end|drop|abort|clear)(?: the)? (?:course|autopilot|auto pilot|navigation|destination)$|^(?:manual|manual control)$|^i (?:have|ve got|got) the (?:wheel|helm|controls?)$/.test(q)) return { act: 'fleet_fly', arg: 'stop' };
-  for (const re of CAMPNAV_RE) { const m = re.exec(q); if (m && m[1].trim()) return { act: 'fleet_fly', arg: m[1].trim() }; }
+  if (/^(?:(?:fly|go|burn|boost|run)(?: me| us)? (?:fast|at full speed|at full burn)|(?:fast travel|full burn|burn|boost))$/.test(q)) return { act: 'fleet_fly', arg: 'fast the objective' }; // "fly fast", "burn": to the goal
+  const fastWords = /\b(?:fast|burn|boost|full speed|full burn|quickly)\b/g, fast = fastWords.test(q); // "fly fast to Mars", "fly to Mars fast", "burn to the relic": the same words with the speed taken out, and a flag
+  const plain = q.replace(/^(?:burn|boost)\b/, 'fly').replace(fastWords, ' ').replace(/\s+/g, ' ').trim();
+  for (const re of CAMPNAV_RE) { const m = re.exec(plain); if (m && m[1].trim()) return { act: 'fleet_fly', arg: (fast ? 'fast ' : '') + m[1].trim() }; }
   return null;
 }
 // the dry check: what the ship computer says it will do, or why not. arg: the words after "fly to", or "stop"
 function campNavCheck(C, arg) {
   if (!C || C.result) return { ok: false, say: uiText('camp.no.over') };
+  const fm = /^\s*fast\s+(.*)$/i.exec(String(arg == null ? '' : arg)), fast = !!fm; if (fm) arg = fm[1]; // "fast <place>": a burn (the words "fly fast to Mars")
   if (campNavNorm(arg) === 'stop') return C.nav ? { ok: true, say: uiText('camp.nav.stopping'), stop: true } : { ok: false, say: uiText('camp.nav.no.nonav') };
   const f = campNavFind(C, arg);
   if (!f.row) return { ok: false, say: uiText('camp.nav.no.' + f.code) };
   const t = campNavTarget(C, f.row) || f.row, c = C.carrier, dist = Math.hypot(t.x - c.x, t.y - c.y);
   if (!f.row.moving && dist - campNavStop(f.row.kind, t) <= CAMP.nav.arrive) return { ok: false, say: uiText('camp.nav.there', { name: f.row.name }) };
-  return { ok: true, say: uiText('camp.nav.say', { name: f.row.name, km: campNavKm(dist) }), row: f.row };
+  if (fast && campNavOut(C)) return { ok: true, say: campNavAskSay(C), row: f.row, fast: true }; // with a ship out the words are heard: the first time they are refused in words, the second time the wing is recalled
+  return { ok: true, say: uiText('camp.nav.say', { name: f.row.name, km: campNavKm(dist) }), row: f.row, fast };
 }
-function campNavDo(C, r) { if (r.stop) campNavClear(C, 'clear'); else if (r.row) campNavGo(C, r.row); }
+function campNavDo(C, r, how) { if (r.stop) campNavClear(C, 'clear'); else if (r.row) campNavFly(C, r.row, !!r.fast, how || 'strip'); }
+
+// ---- Fast needs the wing aboard (card space-game-campaign-fast-board; Troy, 20 Nov 2026) ----
+// The small ships must not be able to go as fast as the carrier burns (CAMP.nav.fast is above a fighter's top speed), so a burn starts only with every ship aboard. With a ship out, the first press of Fast
+// (the map's button, Shift+Enter, "fly fast", Shift and the objective's row) is refused in words; a second press within CAMP.nav.askFor s recalls the wing and burns by itself as soon as the last ship is
+// aboard; if a ship cannot get back within CAMP.nav.recallWait s the burn is given up and the ships still out are named. Regular speed is allowed with the wing out (they keep up). A burn that is on when a ship is
+// launched drops to regular speed. C.fastAsk and C.navWait are the state; campNavWait (once a tick, from campTick) runs the wait.
+const campNavOut = C => campWing(C).length + C.launchQ.length; // ships out of the bay, and those about to leave it
+const campNavAskSay = C => uiText(C.fastAsk && C.t - C.fastAsk.at <= CAMP.nav.askFor * 1000 ? 'camp.nav.no.wingout2' : 'camp.nav.no.wingout');
+function campNavShipName(u) { const p = String(u.id).split('-'); return p[0] + ' ' + (p[1] || ''); }
+// the trip: regular always; fast only with the wing aboard. how: 'key', 'click' or 'strip' (the play log's). -> { ok, say, waiting }
+function campNavFly(C, row, fast, how) {
+  if (!C || !row || C.result) return { ok: false, say: uiText('camp.no.over') };
+  if (!fast) { C.navWait = null; C.fastAsk = null; campNavGo(C, row, false); return { ok: true, say: '' }; } // regular: a trip to a new place, or the speed of this one back to regular
+  const out = campNavOut(C);
+  if (!out) { C.navWait = null; C.fastAsk = null; campNavGo(C, row, true); return { ok: true, say: '' }; }
+  const asked = C.fastAsk && C.t - C.fastAsk.at <= CAMP.nav.askFor * 1000;
+  if (!asked) { C.fastAsk = { at: C.t }; const say = uiText('camp.nav.no.wingout'); C.events.push({ type: 'nav', key: 'camp.nav.no.wingout', vars: {} }); return { ok: false, say, refused: true }; }
+  if (C.launchQ.length && !campWing(C).length) return { ok: false, say: uiText('camp.no.launching') }; // nobody out yet to recall: they are still leaving the bay
+  const r = campOrder(C, 'recall', '', how || 'key'); // the same order as the fifth of the FLEET panel: the wing flies home and lands
+  if (!r.ok) return r;
+  const id = row.of || row.id;
+  if (C.nav && C.nav.id !== id) campNavClear(C, ''); // a trip to somewhere else is given up; a regular trip to this place is kept, but the carrier stops while the wing comes home (campNavDrive), and the burn takes it over
+  C.fastAsk = null; C.navWait = { id, row: Object.assign({}, row), since: C.t, until: C.t + CAMP.nav.recallWait * 1000, n: out, shown: out };
+  C.events.push({ type: 'nav', key: 'camp.nav.recalling', vars: { n: out } });
+  return { ok: true, say: uiText('camp.nav.recalling', { n: out }), waiting: true };
+}
+// once a tick: a burn waiting for the wing starts when the last ship is aboard, and is given up (naming who is still out) after CAMP.nav.recallWait s; a burn under way with a ship launched drops to regular
+function campNavWait(C) {
+  if (!C) return;
+  const W = C.navWait;
+  if (C.nav && C.nav.fast && campNavOut(C) > 0) { C.nav.fast = false; C.nav.burn = 1; C.events.push({ type: 'nav', key: 'camp.nav.burnoff', vars: {} }); }
+  if (!W) return;
+  if (C.result) { C.navWait = null; return; }
+  const out = campNavOut(C); W.n = out;
+  if (!out) { const row = campNavRows(C).find(r => r.id === W.id) || W.row; C.navWait = null; campNavGo(C, row, true); return; }
+  if (C.t >= W.until) {
+    const names = campWing(C).sort((a, b) => campDist(b, C.carrier) - campDist(a, C.carrier)).map(campNavShipName), shown = names.slice(0, 3).join(', ') + (names.length > 3 ? ' and ' + (names.length - 3) + ' more' : '');
+    C.navWait = null; C.events.push({ type: 'nav', key: 'camp.nav.recalltimeout', vars: { names: shown || 'none' } }); return;
+  }
+  if (out !== W.shown) { W.shown = out; C.events.push({ type: 'nav', key: 'camp.nav.recalling', vars: { n: out } }); } // each ship that lands is counted off
+}
 
 // ---- the arrow at the screen edge ----
 // dx, dy: where the target is from the middle of the screen (the carrier). Returns { x, y, angle }: on the border of the screen inset by margin, on the line from the middle to the target,
@@ -186,10 +271,10 @@ function campNavEdge(dx, dy, W_, H_, m, keep) {
   return { x, y, angle: Math.atan2(cy + dy - y, cx + dx - x) };
 }
 // the arrow at the goal: scroll { x, y }: the camera's top left in the world. null when the goal is on the screen, near, or there is none. { x, y, angle, dist, name }
-function campNavArrow(C, scroll, W_, H_) {
+function campNavArrow(C, scroll, W_, H_, zoom) { // zoom: the camera's (1 when it has none): a point is (its offset from the middle of the view) times the zoom from the middle of the screen
   const g = campNavGoal(C); if (!g || !C.carrier) return null;
   const A = CAMP.nav.arrow, c = C.carrier, dist = Math.hypot(g.x - c.x, g.y - c.y); if (dist < A.min) return null;
-  const sx = g.x - scroll.x, sy = g.y - scroll.y;
+  const z = zoom > 0 ? zoom : 1, sx = (g.x - scroll.x - W_ / 2) * z + W_ / 2, sy = (g.y - scroll.y - H_ / 2) * z + H_ / 2;
   if (sx > A.margin && sx < W_ - A.margin && sy > A.margin && sy < H_ - A.margin && !(A.keep || []).some(r => sx >= r[0] && sx <= r[2] && sy >= r[1] && sy <= r[3])) return null; // on the screen and clear of the HUD: seen
   const e = campNavEdge(sx - W_ / 2, sy - H_ / 2, W_, H_, A.margin, A.keep); if (!e) return null;
   return { x: e.x, y: e.y, angle: e.angle, dist, name: g.name };

@@ -11,22 +11,23 @@
 const CAMPKEYS = {
   panel: { x: 70, y: 35, w: 1140, h: 650 },      // the glass panel: the sector map's own size and place
   colX: [104, 660], colW: 500,                   // left edge and width of the two columns
-  top: 104, pitch: 19, head: 26, gap: 12,        // first line's y, a line's pitch, the room a heading takes, the room between two groups
+  top: 104, pitch: 17, head: 26, gap: 12,        // first line's y, a line's pitch (19, then 18, until the SYSTEMS panel's five rows made a column 643 px deep), the room a heading takes, the room between two groups
   capsW: 126, size: 14, bottom: 630,             // the space the key caps take at the left of a line, the size of the words, the lowest y a column may reach (the footer is at 650)
   depth: 300,                                    // over the cards (200), the map (150 to 156) and the panels (160)
-  groups: ['panels', 'campaign']                 // the groups of the table (src/data_controls.js) the page lists, in this order: the two panels first
+  groups: ['panels', 'campaign'],                // the groups of the table (src/data_controls.js) the Campaign's page lists, in this order: the two panels first
+  room: ['readyroom']                            // the page H opens in the ready room (src/camphubscene.js): its own keys
 };
 
-function campKeysPage() {
-  const out = [];
-  CAMPKEYS.groups.forEach(id => {
+function campKeysPage(ids) { // ids: the groups of the table to list (the ready room passes CAMPKEYS.room); else the Campaign's
+  const out = [], room = Array.isArray(ids);
+  (room ? ids : CAMPKEYS.groups).forEach(id => {
     const g = typeof controlsGroup === 'function' ? controlsGroup(id) : null;
     (g ? g.rows : []).forEach(r => {
       let grp = out[out.length - 1]; if (!grp || grp.title !== (r.sub || '')) { grp = { title: r.sub || '', rows: [] }; out.push(grp); }
       grp.rows.push({ caps: r.k.slice(), t: r.t });
     });
   });
-  if (typeof CAMP_DEBUG !== 'undefined' && CAMP_DEBUG.keys && CAMP_DEBUG.keys.length) { // the tune kit's keys have their own table (src/campdebug.js): they are listed from it, so a new one is on the page
+  if (!room && typeof CAMP_DEBUG !== 'undefined' && CAMP_DEBUG.keys && CAMP_DEBUG.keys.length) { // the tune kit's keys have their own table (src/campdebug.js): they are listed from it, so a new one is on the page
     out.push({ title: uiText('camp.keys.debug'), rows: CAMP_DEBUG.keys.map(r => ({ caps: [r.key], t: r.text.charAt(0).toUpperCase() + r.text.slice(1) })) });
   }
   return out;
@@ -49,14 +50,16 @@ function campKeysLayout(groups) {
 // the lowest y a column reaches, from the numbers above: tests/campanelsdraw.mjs checks every column of the page against CAMPKEYS.bottom
 function campKeysHeight(col) { const K = CAMPKEYS; return K.top + col.reduce((y, g) => y + K.head + g.rows.length * K.pitch + K.gap, 0) - K.gap; }
 
-function campKeysOpen(s) {
+function campKeysOpen(s, ids) { // ids: the groups to list (the ready room's); the Campaign and the title list its own
   if (!s || campKeysIsOpen(s) || !s.add) return false;
   const K = CAMPKEYS, P = K.panel, objs = [], put = (o, d) => { o.setScrollFactor(0).setDepth(K.depth + (d || 0)); objs.push(o); return o; };
   put(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.88).setInteractive(), 0);       // a veil that takes the clicks: the game under it is not clicked
   const g = put(s.add.graphics(), 1); hudPanel(g, P.x, P.y, P.w, P.h, 20, 0.97, CYAN);
-  put(s.add.text(K.colX[0], 46, uiText('camp.keys.title'), uiFont(24, '#38e1ff', { letterSpacing: 2 })), 2);
-  put(s.add.text(K.colX[0], 640, uiText('camp.keys.footer'), uiFont(14, '#5b7a92')), 2);
-  const L = campKeysLayout(campKeysPage());
+  const room = Array.isArray(ids); // the ready room's page has its own heading and footer (nothing is waiting behind it)
+  put(s.add.text(K.colX[0], 46, uiText(room ? 'camp.keys.roomtitle' : 'camp.keys.title'), uiFont(24, '#38e1ff', { letterSpacing: 2 })), 2);
+  put(s.add.text(K.colX[0], 640, uiText(room ? 'camp.keys.roomfooter' : 'camp.keys.footer'), uiFont(14, '#5b7a92')), 2);
+  if (typeof campPaceNow === 'function') put(s.add.text(K.colX[1] + K.colW, 640, uiText('camp.keys.pace', { pace: campPaceNow().name }), uiFont(14, '#ffd37a')).setOrigin(1, 0), 2); // the battle pace, and its key (src/campace.js)
+  const L = campKeysLayout(campKeysPage(ids));
   L.cols.forEach((col, c) => {
     let y = K.top;
     col.forEach(grp => {

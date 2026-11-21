@@ -311,7 +311,7 @@ await reset(); keys();
 console.log('I. Settings');
 await reset(); keys();
 {
-  check('the section is on the rail, after Keys', J('SETTINGS.sections.map(s => s[0]).join()') === 'sound,keys,listen,controls,flight,content,reset');
+  check('the section is on the rail, after Keys', J('SETTINGS.sections.map(s => s[0]).join()') === 'sound,keys,listen,controls,flight,game,content,reset');
   check('it has a drawing, a refresh and the microphone test', J('typeof Settings.prototype.draw_listen') === 'function' && J('typeof Settings.prototype.listenRefresh') === 'function' && J('typeof Settings.prototype.testMic') === 'function');
   const st = J('listenStatus()'); check('with both keys the status says how to use it', st.ok && /hold U in space or in a station/.test(st.line), st.line);
   g.run('voiceSetKey("")'); check('without the Deepgram key the status says where to add it', /Deepgram key: Settings > Keys/.test(J('listenStatus().line')) && J('listenStatus().ok') === false); keys();

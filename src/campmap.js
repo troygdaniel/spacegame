@@ -17,22 +17,24 @@ const CAMPMAP = {
   pad: 0.08,                                // the share of the level's width and height left empty round it
   minExtent: 3000,                          // px of space: never zoom in closer than this across (a level with only one place in it)
   km: 10,                                   // px of space in a km (the ship computer's "the mothership is N km away" says px / 10)
-  color: { star: 0xffe29a, earth: 0x4aa3ff, place: 0xb9a37a, cache: 0xffd37a, relic: 0x7fe9ff, alien: 0xff4d6d, mother: 0xff4dff, tower: 0xff9a3a, convoy: 0xffb454, carrier: 0xffffff, wing: 0x6dff9c }
+  color: { star: 0xffe29a, earth: 0x4aa3ff, place: 0xb9a37a, cache: 0xffd37a, relic: 0x7fe9ff, alien: 0xff4d6d, mother: 0xff4dff, tower: 0xff9a3a, convoy: 0xffb454, carrier: 0xffffff, wing: 0x6dff9c, anomaly: 0xc58cff, scout: 0xb8f0ff, rock: 0x8c8c8c, pickup: 0xffd37a }
 };
 
 // the colour of a ship (u: a ship of the battle): the radar and the map agree
 function campDotColor(u) {
   const c = CAMPMAP.color;
+  if (u.scout) return c.scout; // a scout out (card space-game-campaign-scouts): pale cyan, on the map and the radar alike
   return u.team === 'alien' ? (u.kind === 'mother' ? c.mother : u.kind === 'tower' ? c.tower : c.alien) : u.kind === 'freighter' ? c.convoy : u.kind === 'carrier' ? c.carrier : c.wing;
 }
 
-function campMapBounds(level, whole) { // whole: the whole of the star's system (Z on the map), else the level's own area (far bodies are not in it)
-  const L = CAMP.levels[level], pl = campPlaces(level), box = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+function campMapBounds(level, whole, row) { // whole: the whole of the star's system (Z on the map), else the level's own area (far bodies are not in it); row: the mission's row (C.L), else the level's
+  const L = row || CAMP.levels[level], pl = campPlaces(level), box = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
   const add = (x, y, r) => { r = r || 0; box.x0 = Math.min(box.x0, x - r); box.y0 = Math.min(box.y0, y - r); box.x1 = Math.max(box.x1, x + r); box.y1 = Math.max(box.y1, y + r); };
   if (!L) return { x0: -CAMPMAP.minExtent / 2, y0: -CAMPMAP.minExtent / 2, x1: CAMPMAP.minExtent / 2, y1: CAMPMAP.minExtent / 2 };
   Object.keys(pl).forEach(id => { const p = pl[id]; if (!p.hidden && (whole || !p.far)) add(p.x, p.y, p.r); });
   if (whole && typeof campWorldOf === 'function') { const w = campWorldOf(level); if (w) { const far = Math.max(0, ...w.rings, ...w.bands.map(b => b.r1)); add(w.star.x, w.star.y, far); } } // the rings and the belts round the star (src/campsol.js)
   const st = pl[L.start]; if (st) add(st.x + ((L.startAt || [])[0] || 0), st.y + ((L.startAt || [])[1] || 0), 0);
+  if (L.place && pl[L.place]) add(pl[L.place].x, pl[L.place].y, (pl[L.place].r || 60) + 300); // where the mission happens, even when it is far
   (L.caches || []).forEach(c => add(c[0], c[1], 0));
   ((L.objectives || []).find(o => o.type === 'scan') || { points: [] }).points.forEach(p => add(p.at[0], p.at[1], p.r || 0)); // the points of a survey
   if (L.relic && pl[L.relic.place]) add(pl[L.relic.place].x, pl[L.relic.place].y, L.relic.radius);
@@ -52,14 +54,27 @@ function campMapFit(b, frame, pad) {
   const ex = (b.x1 - b.x0) * (1 + 2 * pad), ey = (b.y1 - b.y0) * (1 + 2 * pad);
   return { s: Math.min(frame.w / ex, frame.h / ey), cx: (b.x0 + b.x1) / 2, cy: (b.y0 + b.y1) / 2 };
 }
+// the view at zoom z (1: the level fitted to the frame): the scale and centre to draw with. view is the last one and z0 the zoom it had; focus, a world point or null, is what is zoomed about, which stays where it was on the screen
+// (null: the middle of the frame stays). Zoomed in, the view is held inside the fitted extent; zoomed out past 1, it is the fitted centre, so zooming back out returns to the whole level.
+function campMapView(base, frame, z, view, z0, focus) {
+  const s = base.s * z; let cx = view.cx, cy = view.cy;
+  if (focus && z0 > 0) { const k = z0 / z; cx = focus.x - (focus.x - cx) * k; cy = focus.y - (focus.y - cy) * k; }
+  const vx = frame.w / 2 / s, vy = frame.h / 2 / s, bx = frame.w / 2 / base.s, by = frame.h / 2 / base.s;
+  const hold = (c, v, b, mid) => v >= b ? mid : Math.max(mid - (b - v), Math.min(mid + (b - v), c));
+  return { s, cx: hold(cx, vx, bx, base.cx), cy: hold(cy, vy, by, base.cy) };
+}
 const campMapPoint = (fit, frame, x, y) => ({ x: frame.x + frame.w / 2 + (x - fit.cx) * fit.s, y: frame.y + frame.h / 2 + (y - fit.cy) * fit.s });
 
-const CAMPMAP_RANK = { place: 0, relic: 1, cache: 2, scan: 2, tower: 3, convoy: 4, alien: 5, wing: 6, mother: 7, carrier: 8 }; // drawn in this order: the carrier on top
+const CAMPMAP_RANK = { place: 0, objective: 0, relic: 1, anomaly: 2, cache: 2, scan: 2, rock: 2, pickup: 2, tower: 3, convoy: 4, alien: 5, wing: 6, mother: 7, carrier: 8 }; // drawn in this order: the carrier on top
 function campMapMarks(C, whole) { // whole: the far places too (the whole system); else only the level's own area
   const L = (C.L || CAMP.levels[C.level]), pl = campPlaces(C.level), c = CAMPMAP.color, out = [];
   Object.keys(pl).forEach(id => { const p = pl[id]; if (p.hidden || (p.far && !whole)) return; out.push({ type: 'place', id, x: p.x, y: p.y, r: p.r || 60, name: String(p.name) + (p.base ? ' / ' + p.base : ''), color: p.kind === 'star' ? c.star : id === 'earth' ? c.earth : c.place, outpost: !!(L && L.outposts && L.outposts[id]) }); }); // outpost: a friendly station (the map draws a mark on it)
   (C.caches || []).forEach(k => { if (!k.got) out.push({ type: 'cache', x: k.x, y: k.y, color: c.cache }); });
+  if (L.place && pl[L.place]) out.push({ type: 'objective', x: pl[L.place].x, y: pl[L.place].y, r: (pl[L.place].r || 60) + 260, color: c.relic }); // the mission's place: a ring round it, the objective
   (C.scan || []).forEach(p => { if (!p.got) out.push({ type: 'scan', x: p.x, y: p.y, r: p.r, color: c.cache }); }); // the points to scan: gold diamonds like the caches
+  (C.rocks || []).forEach(r => { if (r.hp > 0) out.push({ type: 'rock', id: r.id, x: r.x, y: r.y, color: c.rock }); }); // the asteroids a laser cuts, and the ore lying about (a wreck's, a broken rock's): small marks, clickable like the rest (card space-game-campaign-map-targets)
+  (C.pickups || []).forEach(p => out.push({ type: 'pickup', id: p.id, x: p.x, y: p.y, color: c.pickup }));
+  if (typeof campAnomMarks === 'function') campAnomMarks(C).forEach(a => out.push({ type: 'anomaly', id: 'anom:' + a.id, x: a.x, y: a.y, r: a.r, shown: a.shown, color: a.shown ? c.cache : c.anomaly })); // noticed: an unlabelled warped mark; decloaked: the cache (src/campanomaly.js)
   if (C.relic && L.relic) out.push({ type: 'relic', x: C.relic.x, y: C.relic.y, r: L.relic.radius, hold: L.relic.hold ? C.relic.hold / L.relic.hold : 0, color: c.relic });
   C.ships.forEach(u => {
     if (u.hp <= 0) return;
@@ -75,7 +90,7 @@ function campMapMarks(C, whole) { // whole: the far places too (the whole system
 function campMapLegend(C, marks) {
   marks = marks || campMapMarks(C);
   const n = t => marks.filter(m => m.type === t).length, c = CAMPMAP.color;
-  const rows = [['carrier', c.carrier, 0], ['wing', c.wing, 1], ['convoy', c.convoy, 1], ['alien', c.alien, 1], ['mother', c.mother, 0], ['tower', c.tower, 1], ['cache', c.cache, 1], ['relic', c.relic, 0]];
+  const rows = [['carrier', c.carrier, 0], ['wing', c.wing, 1], ['convoy', c.convoy, 1], ['alien', c.alien, 1], ['mother', c.mother, 0], ['tower', c.tower, 1], ['cache', c.cache, 1], ['anomaly', c.anomaly, 1], ['relic', c.relic, 0]];
   return rows.filter(r => n(r[0]) > 0).map(r => ({ type: r[0], color: r[1], text: uiText('camp.map.' + r[0], { n: n(r[0]) }) }));
 }
 

@@ -113,7 +113,8 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.nav\.(say|stopping|there|no\..+)$/, spoken: 'campaign.nav', voice: 'ship' },       // the autopilot's answers to the strip ("Flying to X", "I do not see that on the map")
   { re: /^camp\.help\./, spoken: 'campaign.help', voice: 'ship' },                                  // the computer's answers to "what do I do", "which keys", "status"
   { re: /^camp\.lose\.(carrier|earth|debug|other|convoy|base|tip\..+)$/, spoken: 'campaign.lose', voice: 'ship' }, // the lose card: the cause and the tip are said, the numbers line is not
-  { re: /^camp\.l\d+\.(before|after)\.\d+$/, spoken: 'campaign.story', voice: 'ship' },           // the story before and after each level
+  { re: /^camp\.l\d+\.(before|after)\.(r\.)?\d+$/, spoken: 'campaign.story', voice: 'ship' },    // the story before and after each level (r.: level 3 once the reveal has been seen, campStory)
+  { re: /^camp\.bf\.\d+\.\d+\.w1$/, spoken: 'campaign.walk', voice: 'ship' },                     // the first step of a mission's walkthrough: the ship reads it once when the big briefing opens (src/campbriefdraw.js, card space-game-campaign-briefing)
   { re: /^camp\.m\.\d+\.\d+\.b[12]$/, spoken: 'campaign.brief', voice: 'ship' },                  // a mission's briefing
   { re: /^camp\.warp\./, spoken: 'campaign.warp', voice: 'ship' },                                  // the warp cinematic's lines
   { re: /^camp\.chat\./, spoken: 'campaign.chatter', voice: 'pilots' },                             // the wing's radio: any pilot may say any line
@@ -121,6 +122,10 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.(rank|stance|sys|scout|anom|reveal)\./, spoken: 'campaign.cards', voice: 'ship' },  // the cards that follow: ranks, stances, systems, scouts, anomalies: spoken until a card says a key of them is only shown (a silent rule above this line)
   { re: /^camp\.ui\.score$/, spoken: 'campaign.debrief', voice: 'ship' },                          // the debrief says the score (a number: kept live)
   // ---- silent: shown, never said ----
+  { re: /^camp\.bf\.\d+\.\d+\.w\d$/, why: 'the other steps of a mission\'s walkthrough: on the big briefing, for the eyes (only the first is read, once, when it opens)' },
+  { re: /^camp\.bf\./, why: 'the big briefing\'s headings, its enemies, readiness and warning lines, the route and its key line: on the screen, and a key line or a number is not a fixed spoken line' },
+  { re: /^camp\.pow\./, why: 'the power setting\'s three labels on the ship panel: shown (the ship answers the setting itself with camp.say lines)' },
+  { re: /^camp\.pace\./, why: 'the battle pace setting\'s line, toast, key hint and notes: on the card and the pause screen, not said' },
   { re: /^camp\.m\.\d+\.\d+\.title$/, why: 'a mission\'s title: the title of its briefing and debrief cards' },
   { re: /^camp\.lose\.reached$/, why: 'the lose card\'s numbers line: shown, and not said (the cause and the tip are)' },
   { re: /^camp\.nav\./, why: 'the autopilot\'s toasts, the HUD line, the edge arrow and the names in the map\'s list: on the screen' },

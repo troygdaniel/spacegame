@@ -6,6 +6,8 @@
 //   node tools/campshots.mjs 3      the cards (won story, tech pick, lost, pause) and the Tab map
 //   node tools/campshots.mjs fx     explosions as the game makes them, at 60, 160, 320 and 520 ms (2x crops), and the guns
 //   node tools/campshots.mjs mars   Mars and the Earth-Luna start, up close
+//   node tools/campshots.mjs zoom   + - 0 and the wheel: the view, the edge arrow and the map at several zooms, a click on a place at a zoom
+//   node tools/campshots.mjs panels the keyboard panels: the tabs, Q and E open them, the pick's flash, the cross-fade, the tab's pulse, with the zoom and the map, the key line
 //   node tools/campshots.mjs look   the new look of the ships: 2x crops round the carrier (start, launch, recall, a crowd, the turrets firing)
 // Some pictures are STAGED (the carrier or the aliens are put in place, the hull and the shield are set low): the fight after the staging is the game's. The blind critic gets the PNG files and nothing else (docs/CRITIC.md).
 // Exit code 1 when a picture could not be taken or the game logged an error.
@@ -22,7 +24,7 @@ const SC = `game.scene.getScene('Campaign')`;
 const up = `!!(window.game && game.scene.isActive('Campaign'))`;
 const log = []; const note = (...a) => { const s = a.join(' '); console.log('  ' + s); log.push(s); };
 
-const t = await launch('?campaign=' + (part === '2' ? '2' : '1'), ROOT);
+const t = await launch('?campaign=' + (part === '2' || part === 'zoom' ? '2' : '1'), ROOT); // zoom: level 2, which has a goal off the screen (the arrow); the belt's goal is a mothership that has not come
 const j = async expr => JSON.parse(await t.ev(`JSON.stringify(${expr})`));
 const snap = async name => { // taken twice: the first capture after a step can be a frame behind
   for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(34); }
@@ -138,6 +140,55 @@ try {
     await keyOn('Digit2'); await t.ev(`(() => { ${SC}.k.SPACE.isDown = true; return 1; })()`); await t.run(1300); await crop('look-06-crowd', 640, 400);
     await t.run(900); await crop('look-07-crowd-later', 640, 400);
     await snap('look-08-whole-screen');
+    note('sizes', JSON.stringify(await sizes()));
+  } else if (part === 'zoom') {
+    // + - = 0 and the wheel (card space-game-campaign-zoom): the view in and out with the HUD at its own size, the edge arrow, the map at several zooms, and a click on a place at a zoom (the scene reads the click through the map's own view)
+    await enter(); await t.run(600); await keyOn('Digit1'); await t.run(3000);
+    const zs = () => j(`(() => { const s = ${SC}; return { cam: +s.cameras.main.zoom.toFixed(3), want: +CAMZOOM.want.toFixed(3), mp: s.mp ? { z: +s.mp.z.toFixed(3), want: +s.mp.zWant.toFixed(3), s: +s.mp.fit.s.toFixed(4) } : null }; })()`);
+    note('start', JSON.stringify(await zs())); await snap('zoom-01-start');
+    for (let i = 0; i < 3; i++) await keyOn('Equal'); await t.run(900); note('in', JSON.stringify(await zs())); await snap('zoom-02-in');
+    for (let i = 0; i < 8; i++) await keyOn('Minus'); await t.run(1200); note('out', JSON.stringify(await zs())); await snap('zoom-03-out');
+    await keyOn('Digit0'); await t.run(1000); note('reset', JSON.stringify(await zs()));
+    // the edge arrow (level 2: the goal is the nearest cache): seen at 1, at 1.6 and at 0.5 (it points where the goal is on the screen, so it is on the edge at one zoom and gone at another)
+    await t.run(300); await snap('zoom-04-arrow-1'); note('arrow at 1', JSON.stringify(await j(`(() => { const s = ${SC}, a = s.hud.arrow; return { visible: a.visible, x: Math.round(a.x), y: Math.round(a.y), text: a.text }; })()`)));
+    for (let i = 0; i < 2; i++) await keyOn('Equal'); await t.run(900); await snap('zoom-05-arrow-in'); note('arrow at 1.44', JSON.stringify(await j(`(() => { const s = ${SC}, a = s.hud.arrow; return { visible: a.visible, x: Math.round(a.x), y: Math.round(a.y), text: a.text }; })()`)));
+    await keyOn('Digit0'); for (let i = 0; i < 3; i++) await keyOn('Minus'); await t.run(900); await snap('zoom-06-arrow-out'); note('arrow at 0.58', JSON.stringify(await j(`(() => { const s = ${SC}, a = s.hud.arrow; return { visible: a.visible, x: Math.round(a.x), y: Math.round(a.y), text: a.text }; })()`)));
+    await keyOn('Digit0'); await t.run(900);
+    // the map
+    await t.key('TAB'); await t.run(300); note('map open', JSON.stringify(await zs())); await snap('zoom-07-map-1');
+    for (let i = 0; i < 4; i++) await keyOn('Equal'); await t.run(1200); note('map in (middle)', JSON.stringify(await zs())); await snap('zoom-08-map-in-middle');
+    await keyOn('Digit0'); await t.run(1000); await keyOn('KeyS'); await keyOn('KeyS'); await t.run(300);
+    for (let i = 0; i < 6; i++) await keyOn('Equal'); await t.run(1400); note('map in (the place I chose)', JSON.stringify(await zs())); await snap('zoom-09-map-in-place');
+    // a click on a place that is in the frame at this zoom and has no other row within 20 px of it (the relic sits on its planet): the screen point of the nearest such place to the frame's middle
+    const hit = await j(`(() => { const s = ${SC}, mp = s.mp, F = CAMPMAP.frame, all = mp.rows, rows = all.filter(r => r.kind === 'place' && all.every(o => o === r || Math.hypot(o.x - r.x, o.y - r.y) * mp.fit.s > 20)); let best = null, bd = 1e9; rows.forEach(r => { const p = campMapPoint(mp.fit, F, r.x, r.y), d = Math.hypot(p.x - F.x - F.w / 2, p.y - F.y - F.h / 2); if (p.x > F.x + 6 && p.x < F.x + F.w - 6 && p.y > F.y + 6 && p.y < F.y + F.h - 6 && d < bd) { bd = d; best = { id: r.id, px: p.x, py: p.y }; } }); if (!best) return null; mp.setId = ''; s.input.emit('pointerdown', { x: best.px + 2, y: best.py + 1 }); return { want: best.id, got: mp.setId }; })()`);
+    note('click at zoom', JSON.stringify(hit)); await t.run(300); await snap('zoom-10-map-click');
+    await keyOn('Digit0'); for (let i = 0; i < 4; i++) await keyOn('Minus'); await t.run(1200); note('map out', JSON.stringify(await zs())); await snap('zoom-11-map-out');
+    // the wheel: the map's when it is open, the camera's when it is not
+    await keyOn('Digit0'); await t.run(700);
+    await t.ev(`(() => { ${SC}.input.emit('wheel', {}, [], 0, -240); return 1; })()`); await t.run(900); note('wheel over the map', JSON.stringify(await zs()));
+    await t.key('TAB'); await t.run(300); const before = await zs();
+    await t.ev(`(() => { ${SC}.input.emit('wheel', {}, [], 0, -240); return 1; })()`); await t.run(900); note('wheel, map shut', JSON.stringify(before), '->', JSON.stringify(await zs()));
+  } else if (part === 'panels') {
+    // the panels (card space-game-campaign-panels-ui): the collapsed tabs, FLEET open, the pick's flash, SHIP open, the cross-fade, the tab's pulse, with the zoom, with the map, and the key line's backing strip. Q and E open the panels.
+    await enter(); await t.run(600);
+    const clipShot = async (name, x, y, w, h) => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png', clip: { x, y, width: w, height: h, scale: 2 } }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(34); } note('crop', name); };
+    const st = () => j(`(() => { const s = ${SC}, P = s.pn; return { open: P.open, flash: P.flash && P.flash.row, shown: P.flash && P.flash.shown, closed: P.closed && P.closed.id, ships: s.camp.ships.filter(u => u.team === 'earth').length }; })()`);
+    await t.run(300); await snap('panels-01-collapsed'); await clipShot('panels-01b-tabs-left', 77, 200, 330, 120);
+    await keyOn('KeyQ'); await t.run(400); note('Q', JSON.stringify(await st())); await snap('panels-02-fleet-open'); await clipShot('panels-02b-fleet-crop', 77, 200, 330, 250);
+    await keyOn('Digit1'); await t.run(6); note('pick', JSON.stringify(await st())); await clipShot('panels-03-flash-40ms', 77, 200, 330, 250); // the second capture of a pair is 34 ms after the first: this one is the flash's first peak (40 ms)
+    await t.run(46); await clipShot('panels-03b-flash-120ms', 77, 200, 330, 250); // and the second peak (120 ms)
+    await t.run(400); await clipShot('panels-03c-collapsed-after', 77, 200, 330, 250);
+    await t.run(2500);
+    await keyOn('KeyE'); await t.run(400); await snap('panels-04-ship-open'); await clipShot('panels-04b-ship-crop', 880, 200, 330, 250);
+    await keyOn('KeyQ'); await t.run(26); note('switch', JSON.stringify(await st())); await clipShot('panels-05-crossfade', 77, 190, 1130, 270); // 60 ms in: both lists half there
+    await t.run(300); await keyOn('KeyQ'); await t.run(300);
+    await keyOn('KeyQ'); await t.run(40); await keyOn('Digit5'); await t.run(86); note('fast pick', JSON.stringify(await st())); await clipShot('panels-06-tab-pulse', 77, 200, 330, 120); // the pulse peaks 120 ms after the pick
+    await t.run(1500);
+    for (let i = 0; i < 3; i++) await keyOn('Equal'); await t.run(900); await keyOn('KeyE'); await t.run(400); await snap('panels-07-zoomed-in'); await keyOn('Escape'); await t.run(300);
+    await t.key('TAB'); await t.run(400); await snap('panels-08-map-open'); await t.key('TAB'); await t.run(300); await keyOn('Digit0'); await t.run(900);
+    // the key line: a ship under it
+    await t.ev(`(() => { const s = ${SC}, C = s.camp, c = C.carrier; const sp = s.sp[c.id]; return 1; })()`);
+    await clipShot('panels-09-keyline', 77, 575, 1130, 58); // the viewport is 633 px high (the canvas fits it at 0.88): the key line is at about y 590 to 610
     note('sizes', JSON.stringify(await sizes()));
   } else if (part === 'mars') {
     await enter(); await t.run(500);

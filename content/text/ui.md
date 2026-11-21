@@ -103,7 +103,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | spoken.off | answers are never said aloud |
 | music.use | Music is made by the game as you fly and steps back when the ship speaks. Effects is the engine, the drone and every shot and click; they ease off a little while music plays. M mutes all. |
 | camp.l1.before.1 | Ceres belt. The cruiser is mining. |
-| camp.l1.before.2 | Fly over ore, or press 6 to send the drones. |
+| camp.l1.before.2 | Fly over ore, or send the drones: SHIP panel, Mine ore. |
 | camp.l1.after.1 | Mothership destroyed. The belt is clear. |
 | camp.l1.after.2 | Their wreck holds alien technology. |
 | camp.say.convoy | Convoy to {name} is away. |
@@ -145,7 +145,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.ui.level | LEVEL {n}: {name} |
 | camp.ui.won | LEVEL {n} WON |
 | camp.ui.lost | LEVEL {n} LOST |
-| camp.ui.keys | W A S D fly   Space turrets   F missiles   {panels}   Tab Map   H Keys |
+| camp.ui.keys | W A S D fly   Space turrets   F missiles   {panels}   Tab Map   + - Zoom   H Keys |
 | camp.ui.begin | Enter  begin |
 | camp.ui.pick | Choose one salvaged technology:  1  2  3 |
 | camp.ui.next | Enter  continue |
@@ -178,21 +178,21 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.tech.beam.name | Beam turrets |
 | camp.tech.beam.text | The turrets fire beams: twice the damage, further, and through what they hit. |
 | camp.tech.blink.name | Warp blink |
-| camp.tech.blink.text | Press Q to hop the carrier 1,500 px ahead. Ready again after 20 seconds. |
+| camp.tech.blink.text | Press B to hop the carrier 1,500 px ahead. Ready again after 20 seconds. |
 | camp.tech.plating.name | Hull plating |
 | camp.tech.plating.text | The carrier's hull is half as strong again. |
 | camp.tech.bay2.name | Second bay |
 | camp.tech.bay2.text | Four more fighters in the bay. |
 | camp.tech.repair.name | Repair field |
 | camp.tech.repair.text | The carrier and the ships beside it mend as they fly. |
-| camp.l2.before.1 | Warp drive ready. Next star: Alpha Centauri. |
+| camp.l2.before.1 | We are through the warp. This is Alpha Centauri. |
 | camp.l2.before.2 | Something old waits on Proxima b. Find it first. |
 | camp.l2.after.1 | The relic is a machine from an older race. |
 | camp.l2.after.2 | It shows where the aliens live. Choose a technology. |
 | camp.l3.before.1 | Their home world is open. Last battle. |
 | camp.l3.before.2 | Break the defence towers round their world. |
-| camp.l3.after.1 | Their defences are down. Earth is safe. |
-| camp.l3.after.2 | The first step is done. The war is not over. |
+| camp.l3.after.1 | Their defences are down. |
+| camp.l3.after.2 | The war is won. |
 | camp.say.l2wave1 | The aliens followed us through the warp, pilot. |
 | camp.say.l2wave2 | A second group, coming in from the far side. |
 | camp.say.l3wave1 | Defenders are launching from the planet. |
@@ -206,4 +206,4 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.obj.towers | Break the defence towers: {n} left. |
 | camp.obj.caches | Gather resources: {n} of {need}. |
 | camp.obj.relic | Hold the ring at the relic: {pct}%. |
-| camp.ui.end | THE FIRST CAMPAIGN IS WON     Enter  title |
+| camp.ui.end | THE WAR IS NOT OVER     Enter  title |

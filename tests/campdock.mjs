@@ -8,10 +8,12 @@
 // Run: node tests/campdock.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
+import { BRIEF_STAND } from './briefstand.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const g = nodeGame();
+g.run(BRIEF_STAND);
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 const O = J('CAMP.outpost');
@@ -30,6 +32,7 @@ g.run(`
     s.add = { rectangle: (x, y) => { const o = __obj(); o.x = x; o.y = y; return o; }, text: (x, y, t) => { const o = __obj(); o.x = x; o.y = y; o.t = t; __rec.texts.push(o); return o; }, image: (x, y, k) => { const o = __obj(); o.x = x; o.y = y; return o; } };
     s.cameras = { main: { fadeIn() {}, fadeOut() {} } }; s.tweens = { add: cfg => { __rec.tweens.push(cfg); return { stop() {} }; } }; s.time = { now: 1000 };
     s.input = { keyboard: { on: (e, fn) => { s.kb = fn; }, off() {} } }; s.events = { once() {} };
+    if (window.__briefStand) __briefStand(s);
     s.init(d || {}); s.create(); return s;
   };
   window.__shown = s => __rec.texts.filter(o => o.vis && o.t !== '').map(o => o.t);
@@ -115,7 +118,7 @@ g.run(`var SC3 = __camp(); SC3.camp.docked = 'luna'; SC3.onEvent({ type: 'docked
 check('Esc and T in the room (onLeave) undock the same way', J('SC3.log.join()') === 'hub stop,resume' && J('SC3.docked') === false && J('SC3.camp.docked') === '');
 check('while docked, Tab does not open the map over the paused scene (the map\'s window listener asks)', (() => { const a = src('src/campmapdraw.js'); return /!s\.panel && !s\.docked\) campMapOpen\(s\)/.test(a); })());
 const sc = src('src/campaignscene.js');
-check('E is the dock key in the Campaign (not while a word is typed into the strip; the order, the answer in a toast), and the HUD line below the goal is the retreat or the dock hint', /c === 'KeyE' && !typing\) \{ const r = campOrder\(C, 'dock'/.test(sc) && /this\.hud\.post\.setText\(rt \? rt\.line/.test(sc) && /post: t\(24, 206/.test(sc));
+check('docking is E then 6 (the SHIP panel\'s dock row, which runs the order "dock"; E opens the panel since card space-game-campaign-panels-ui), and the HUD line below the goal is the retreat or the dock hint', J("CAMP_PANELS.panels.find(p => p.id === 'ship').rows.find(r => r.n === 6).order") === 'dock' && /this\.hud\.post\.setText\(rt \? rt\.line/.test(sc) && /post: t\(24, 206/.test(sc));
 const dock = src('src/campdock.js').replace(/\/\/.*$/gm, '');
 check('src/campdock.js is the registry half: it draws only through the scene\'s line() and touches nothing of the page or the clock', !/\b(document|window|localStorage|setTimeout|Math\.random|performance|Date)\b/.test(dock));
 check('it is loaded once, after camphubscene.js (which has CAMP_HUBS)', (() => { const h = src('index.html'); return (h.match(/src\/campdock\.js/g) || []).length === 1 && h.indexOf('src/camphubscene.js') < h.indexOf('src/campdock.js') && h.indexOf('src/campdock.js') < h.indexOf('src/main.js'); })());

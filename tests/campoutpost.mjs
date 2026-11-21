@@ -15,13 +15,13 @@ const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   
 const g = nodeGame();
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
-g.run(`window.N = (lv, techs) => { window.C = campNew(lv, techs || [], { seed: 1 }); C.ships = C.ships.filter(u => u.team !== 'alien'); return C; }; window.__at = (x, y) => { C.carrier.x = x; C.carrier.y = y; C.carrier.vx = 0; C.carrier.vy = 0; };`);
+g.run(`window.N = (lv, techs) => { window.C = campNew(lv, techs || [], { seed: 1 }); C.arrivedAt = 0; C.ships = C.ships.filter(u => u.team !== 'alien'); return C; }; window.__at = (x, y) => { C.carrier.x = x; C.carrier.y = y; C.carrier.vx = 0; C.carrier.vy = 0; };`);
 const O = J('CAMP.outpost');
 
 // ---- A. the data ----
 check('the table of numbers is CAMP.outpost: range, clear, repairOre, retreatHull, fabricator', ['range', 'clear', 'repairOre', 'retreatHull', 'fabricator'].every(k => typeof O[k] === 'number') && O.retreatHull > 0 && O.retreatHull < 1 && O.fabricator < J('CAMP.ore.cap'));
 const ids = lv => J(`campOutposts(${JSON.stringify(lv)}).map(o => o.id)`);
-check('the Earth level has Earth, Luna and the Mars base; the belt has Ceres, Vesta, Earth and the Mars base; Alpha Centauri the gate at Proxima b; the home world none', ids('home').join() === 'earth,luna,mars' && ids(1).join() === 'ceres,vesta,earth,mars' && ids(2).join() === 'proxima' && ids(3).length === 0);
+check('the Earth level has Earth, Luna and the Mars base; the belt has Ceres, Vesta, Earth and the Mars base; Alpha Centauri the gate at Proxima b; the home world none', ids('home').join() === 'earth,luna,mars' && ids(1).join() === 'ceres,vesta,earth,mars' && ids(2).join() === 'proxima,alpha-cen-b' && ids(3).length === 0);
 check('an outpost is a place of its level with its name and size: the Lunar base is Luna, 45 px, 238, -137; the gate at Proxima b is called Proxima Gate', (() => { const l = J(`campOutposts('home').find(o => o.id === 'luna')`), p = J(`campOutposts(2)[0]`); return l.name === 'Lunar base' && l.place === 'Luna' && l.x === 238 && l.y === -137 && l.r === 45 && l.range === O.range && p.name === 'Proxima Gate' && p.place === 'Proxima b'; })());
 check('every outpost of every level is a place that exists and is not hidden (a hidden place is not one)', ['home', 1, 2, 3].every(lv => J(`Object.keys(CAMP.levels[${JSON.stringify(lv)}].outposts || {}).every(id => !!campPlaces(${JSON.stringify(lv)})[id] && !campPlaces(${JSON.stringify(lv)})[id].hidden)`)));
 check('a level with no outposts table, or an unknown level, has none and nothing throws', J(`campOutposts('nowhere').length`) === 0 && J(`(() => { const L = CAMP.levels[3]; return campOutposts(3).length; })()`) === 0);
@@ -78,6 +78,27 @@ g.run(`C.carrier.hp = C.carrier.maxHp * 0.3; C.ore = 3;`);
 check('too little ore: "Not enough ore: N needed, 3 in the store." and the hull stays hurt', (() => { const r = J(`campOrder(C, 'repair', '')`); return !r.ok && /^Not enough ore: \d+ needed, 3 in the store\.$/.test(r.say) && J('C.carrier.hp') < J('C.carrier.maxHp'); })());
 check('mending the whole hull from nothing costs CAMP.outpost.repairOre', (() => { g.run(`N('home'); C.docked = 'luna'; C.ore = 200; C.carrier.hp = 1;`); const r = J(`campCheck(C, 'repair', '')`); const m = /for (\d+) ore/.exec(r.say); return m && Math.abs(+m[1] - O.repairOre) <= 1; })());
 
+// ---- C2. a level with no outposts: build and repair work aboard (card space-game-campaign-no-outpost-rule; wrap-up fix) ----
+// The rule is data: the level's own outpost list. The alien home world (3) lists none, so nothing could ever be docked at: building and repairing work aboard there, at the same ore costs, with no
+// reason greyed and no retreat line. Sol (every level that lists outposts) is unchanged. Alpha Centauri (2) lists one, the gate at the relic, and keeps the rule: a level with an outpost has somewhere to go.
+g.run(`N(3); C.ore = 200;`);
+check('C2 the alien home world lists no outposts: campAboard(C) is true there, false in Sol and in Alpha Centauri (the gate at the relic is an outpost)', J('campAboard(C)') === true && J(`campAboard(campNew('home', [], { seed: 1 }))`) === false && J(`campAboard(campNew(1, [], { seed: 1 }))`) === false && J(`campAboard(campNew(2, [], { seed: 1 }))`) === false);
+const ab = J(`campOrder(C, 'build', 'fighter')`);
+check('C2 there, undocked, building works aboard: 25 ore, one queued, no refusal', ab.ok && ab.code !== 'nodock' && J('C.ore') === 175 && J('C.build.queue.length') === 1, JSON.stringify(ab));
+check('C2 the dry check says it can too (the panel row and the strip ask it first): no greyed reason for a fighter or for an escort', J(`campCheck(C, 'build', 'fighter').ok`) === true && J(`campCheck(C, 'build', 'escort').code`) !== 'nodock' && J('campCanBuild(C)') === true);
+g.run(`C.carrier.hp = C.carrier.maxHp / 2; C.ore = 200; window.__r0 = C.ore;`);
+const rp = J(`campOrder(C, 'repair', '', 'key')`);
+check('C2 repair works aboard too, for the same ore as at an outpost (in proportion to what is missing: half a hull is half of the whole)', rp.ok && J('C.carrier.hp === C.carrier.maxHp') && J('__r0 - C.ore') === Math.max(5, Math.ceil(J('CAMP.outpost.repairOre') / 2)) && J(`campCheck(C, 'repair', '').code`) !== 'norepair', JSON.stringify(rp));
+check('C2 the other rules of building are as they were: too little ore says so ("noore2"), a full hull says it is sound, a full bay says so', (() => { g.run('C.ore = 5'); return J(`campOrder(C, 'build', 'fighter').code`) === 'noore2' && J(`campOrder(C, 'repair', '').code`) === 'hullfull'; })());
+g.run(`C.bay.fighters = 0; C.bay.escorts = 0; C.build.queue.length = 0; C.carrier.hp = C.carrier.maxHp * 0.2; __at(2000, 2000);`);
+check('C2 low hull and no ship left, with no outpost in the level: there is no retreat line (nowhere to retreat to), not said, not in the HUD', J('campRetreat(C)') === null && (g.run('campOutpostTick(C, 0.1)'), J('C.flags.retreat') !== true));
+g.run(`N(1); C.ore = 200; __at(campPlaces(1).pallas.x + 3000, campPlaces(1).pallas.y + 3000);`);
+check('C2 Sol is unchanged: the belt still says "Dock at an outpost to build." and "Dock at an outpost to repair." away from a dock', J(`campOrder(C, 'build', 'fighter').say`) === 'Dock at an outpost to build.' && (g.run('C.carrier.hp = 100'), J(`campOrder(C, 'repair', '').say`) === 'Dock at an outpost to repair.'));
+g.run(`N(2); C.ore = 200; __at(-4800, 2400);`);
+check('C2 Alpha Centauri keeps the rule (it lists the gate at Proxima b): away from it building is refused, docked there it works', J(`campOrder(C, 'build', 'fighter').code`) === 'nodock' && (g.run(`C.docked = 'proxima'`), J(`campOrder(C, 'build', 'fighter').ok`)));
+g.run(`N(3, ['fabricator']); C.ore = 200;`);
+check('C2 the Fabricator still does what it did: it builds anywhere at the same price (and in a no-outpost level the rule gives the same as the tech: nothing doubles)', J(`campOrder(C, 'build', 'escort').ok`) === true && J('C.ore') === 155);
+
 // ---- E. the retreat ----
 g.run(`N('home'); C.bay.fighters = 0; C.bay.escorts = 0; C.carrier.hp = C.carrier.maxHp * 0.2; __at(4800, -2000);`);
 const rt = J('campRetreat(C)'), eta = J(`campNavEta(C, Math.hypot(campPlaces('home')[campRetreat(C).o.id].x - C.carrier.x, campPlaces('home')[campRetreat(C).o.id].y - C.carrier.y), true)`);
@@ -85,20 +106,36 @@ check('low hull and no ship left: the line is "Retreat to <the nearest outpost\'
 g.run(`__at(238 + 4500 * 0.867, -137 - 4500 * 0.499);`);
 check('the nearest is the nearest by the edge of the place: from out beyond Luna it is Mars, from the far side of Earth it is Earth', J('campRetreat(C).o.id') === 'mars' && (g.run('__at(-4000, 100)'), J('campRetreat(C).o.id') === 'earth'));
 g.run(`__at(238 + 4500, -137); C.carrier.hp = C.carrier.maxHp * 0.2;`);
-check('"12 s on Fast" is what 4,500 px to a place says: the map\'s ETA at the burn (2x: 420 px/s, times 1.1)', J(`campNavEta(C, 4500, true)`) === 12);
+check('"11 s on Fast" is what 4,500 px to a place says: the map\'s ETA at the burn (2.2x: 462 px/s, times 1.1; card space-game-campaign-fast-board)', J(`campNavEta(C, 4500, true)`) === 11);
 check('the goal of the map and the HUD arrow is that outpost while it lasts; the list row of that place says outpost and is the goal row', (() => { const g1 = J('campNavGoal(C)'), rows = J('campNavRows(C)'); const goal = rows.find(r => r.goal), row = rows.find(r => r.id === 'place:' + J('campRetreat(C).o.id')); return g1 && g1.id === 'place:' + J('campRetreat(C).o.id') && goal && goal.of === g1.id && row && row.outpost === true; })());
 g.run(`C.bay.fighters = 1;`);
 check('a ship left in the bay (or out, launching or building) and there is no retreat: the line is for a carrier alone', J('campRetreat(C)') === null && (g.run('C.bay.fighters = 0; C.build.queue.push({ kind: "fighter", left: 6 })'), J('campRetreat(C)') === null) && (g.run('C.build.queue.length = 0; C.launchQ.push("fighter")'), J('campRetreat(C)') === null));
 g.run(`C.launchQ.length = 0; C.carrier.hp = C.carrier.maxHp * 0.5;`);
 check('a hull above CAMP.outpost.retreatHull is not low, alone or not', J('campRetreat(C)') === null && (g.run('C.carrier.hp = C.carrier.maxHp * (CAMP.outpost.retreatHull + 0.01)'), J('campRetreat(C)') === null) && (g.run('C.carrier.hp = C.carrier.maxHp * (CAMP.outpost.retreatHull - 0.01)'), J('campRetreat(C)') !== null));
 g.run(`__at(238 + 100, -137 + 150);`);
-check('in range of an outpost the line says to dock: "E  dock at <place>"; docked, there is none; a level with no outposts has none', (() => { const r = J('campRetreat(C)'); const a = r && r.near && r.line === `E  dock at ${r.o.place}`; g.run(`C.docked = 'luna'`); const b = J('campRetreat(C)') === null; g.run(`N(3); C.bay.fighters = 0; C.bay.escorts = 0; C.carrier.hp = 10;`); return a && b && J('campRetreat(C)') === null; })());
+check('in range of an outpost the line says to dock: "E 6  dock at <place>" (E opens the SHIP panel, 6 is its dock row); docked, there is none; a level with no outposts has none', (() => { const r = J('campRetreat(C)'); const a = r && r.near && r.line === `E 6  dock at ${r.o.place}`; g.run(`C.docked = 'luna'`); const b = J('campRetreat(C)') === null; g.run(`N(3); C.bay.fighters = 0; C.bay.escorts = 0; C.carrier.hp = 10;`); return a && b && J('campRetreat(C)') === null; })());
 g.run(`N('home'); C.bay.fighters = 0; C.bay.escorts = 0; __at(3000, 3000); C.events.length = 0; C.carrier.hp = C.carrier.maxHp * 0.2; campOutpostTick(C, 0.03); campOutpostTick(C, 0.03); window.__s1 = C.events.filter(e => e.type === 'say' && /retreat/.test(e.key)).length;`);
 check('the ship says it once when it begins ("Hull low, no ships. Retreat to ...")', J('__s1') === 1 && /^Hull low, no ships\. Retreat to [A-Za-z ]+: \d+ seconds on Fast\.$/.test(J(`uiText(C.events.find(e => e.type === 'say').key, C.events.find(e => e.type === 'say').vars)`)));
 g.run(`C.carrier.hp = C.carrier.maxHp; campOutpostTick(C, 0.03); C.carrier.hp = C.carrier.maxHp * 0.1; campOutpostTick(C, 0.03);`);
 check('and again only after it has cleared: mended, then hurt again is a new one (two lines in all)', J(`C.events.filter(e => e.type === 'say' && /retreat/.test(e.key)).length`) === 2);
 g.run(`N('home'); C.bay.fighters = 0; C.bay.escorts = 0; C.carrier.hp = C.carrier.maxHp * 0.2; C.events.length = 0; campStep(C, 0.5);`);
 check('the sim ticks it itself (campStep): the line is said without the scene', J(`C.events.some(e => e.type === 'say' && /retreat/.test(e.key))`));
+
+// ---- E2. a hot gate (card space-game-outpost-hot-gate): the guards of Alpha Centauri mission 2 sit round Proxima b ----
+g.run(`window.G2 = () => { window.C = campNew(2, [], { seed: 1, mission: 1 }); C.arrivedAt = 0; C.bay.fighters = 0; C.bay.escorts = 0; C.carrier.hp = C.carrier.maxHp * 0.2; return C; };`);
+g.run('G2();');
+check('the gate at Proxima b is hot while the guards live (an alien within CAMP.outpost.clear of it: seven are, at 583 to 894 px), the relay at Alpha Centauri B is not', J(`campOutpostHot(C, campOutposts(2).find(o => o.id === 'proxima'))`) === true && J(`campOutpostHot(C, campOutposts(2).find(o => o.id === 'alpha-cen-b'))`) === false);
+check('the retreat skips the hot gate: low hull, no ship left, the guards alive: it names the relay at Alpha Centauri B, with its flight on Fast, not the gate, and it is not "hot"', (() => { const r = J('campRetreat(C)'); return r && r.o.id === 'alpha-cen-b' && r.hot === false && r.near === false && r.line === `Retreat to Alpha Centauri B: ${r.secs} s on Fast.` && r.secs > 0; })(), JSON.stringify(J('campRetreat(C)')));
+check('the autopilot\'s goal is the relay too, not the gate (it is not sent into the guards)', J('campNavGoal(C).id') === 'place:alpha-cen-b');
+g.run(`window.__o2 = CAMP.levels[2].outposts; CAMP.levels[2].outposts = { proxima: __o2.proxima }; G2(); C.events.length = 0; campOutpostTick(C, 0.03); campOutpostTick(C, 0.03);`);
+check('with the gate the only outpost (as the level was) and the guards alive, the retreat says so instead: hot, the gate named, the line "<place> is covered by aliens: no safe dock.", and the pilot is sent nowhere', (() => { const r = J('campRetreat(C)'); return r && r.hot === true && r.o.id === 'proxima' && r.near === false && r.line === 'Proxima b is covered by aliens: no safe dock.' && J('campNavGoal(C).kind') !== 'place' && J(`campNavRows(C).filter(x => x.goal).every(x => x.id !== 'place:proxima')`); })(), JSON.stringify(J('campRetreat(C)')));
+check('the ship says it once ("Hull low, no ships. Proxima b is covered by aliens: no safe dock.")', J(`C.events.filter(e => e.type === 'say' && /retreat/.test(e.key)).length`) === 1 && J(`C.events.find(e => e.type === 'say').key`) === 'camp.say.retreathot' && J(`uiText(C.events.find(e => e.type === 'say').key, C.events.find(e => e.type === 'say').vars)`) === 'Hull low, no ships. Proxima b is covered by aliens: no safe dock.');
+g.run(`C.ships = C.ships.filter(u => u.team !== 'alien'); C.events.length = 0; campOutpostTick(C, 0.03); campOutpostTick(C, 0.03);`);
+check('the guards dead, the gate is open: the retreat is the gate and the ship says it again (it became another line), once; and docking there works', (() => { const r = J('campRetreat(C)'); return r && r.hot === false && r.o.id === 'proxima' && J(`C.events.filter(e => e.type === 'say' && /retreat/.test(e.key)).map(e => e.key).join()`) === 'camp.say.retreat'; })() && (g.run(`C.carrier.x = 1200; C.carrier.y = 1000; C.carrier.vx = 0; C.carrier.vy = 0;`), J(`campDock(C, '').ok`) === true));
+g.run(`CAMP.levels[2].outposts = __o2; G2();`);
+check('docking at the relay needs no more than the dock rule says: in range and no alien within the clear distance (the guards are far from it)', (() => { g.run(`const rl = campOutposts(2).find(o => o.id === 'alpha-cen-b'); C.carrier.x = rl.x + rl.r + 50; C.carrier.y = rl.y;`); const r = J(`campDock(C, '')`); return r.ok === true && J(`C.docked`) === 'alpha-cen-b'; })());
+g.run(`C = campNew(2, [], { seed: 1, mission: 2 }); C.bay.fighters = 0; C.bay.escorts = 0; C.carrier.hp = C.carrier.maxHp * 0.2; C.ships = C.ships.filter(u => u.team !== 'alien');`);
+check('the relic mission (no guards) and the resources mission are as they were: nothing alien near the gate, so it is the retreat there, and hot only when an alien comes within the clear distance of it', (() => { const a = J('campRetreat(C)'); g.run(`campSpawn(C, 'raider', 1200 + 300, 800);`); const b = J('campRetreat(C)'); return a && a.hot === false && a.o.id === 'proxima' && b && b.o.id === 'alpha-cen-b' && b.hot === false; })());
 
 g.run(`N('home');`);
 check('the map and the list know the outposts: marks and list rows carry outpost: true for the level\'s outposts and for no other place', (() => { const marks = J(`campMapMarks(C, true).filter(m => m.type === 'place')`), rows = J(`campNavRows(C).filter(r => r.group === 'places')`); return marks.filter(m => m.outpost).map(m => m.id).sort().join() === 'earth,luna,mars' && marks.some(m => !m.outpost) && rows.filter(r => r.outpost).map(r => r.id.slice(6)).sort().join() === 'earth,luna,mars' && rows.some(r => !r.outpost); })());

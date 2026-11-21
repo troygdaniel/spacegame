@@ -11,6 +11,7 @@
 //             Test microphone button (opens the microphone for an instant, sends nothing) and the one-line hint about `node tools/serve.mjs`
 //   CONTROLS  every key of the game, from the one table in src/data_controls.js, a tab for each group
 //   FLIGHT    the flight feel: Classic or Heavy (src/handling.js), one row; kept in this browser, not in the save
+//   GAME      the Campaign's battle pace: Calm, Normal or Brisk (src/campace.js, CAMP.pace), one row; kept in this browser, not in the save
 //   CONTENT   which content pack is running and what it ignored (src/contentui.js builds the lines)
 //   RESET     Reset game (erase the save and start again) and Forget all keys, each with a second press; and the PLAY LOG: ON or OFF, Download log, Forget log (src/playlog.js)
 // Nothing here calls a service by itself. Test and Hear it are the only buttons that do, and only when the player presses them, on the key they
@@ -20,7 +21,7 @@
 
 const SETTINGS = {
   w: 1120, h: 640, railW: 232,
-  sections: [['sound', 'SOUND'], ['keys', 'KEYS'], ['listen', 'LISTEN'], ['controls', 'CONTROLS'], ['flight', 'FLIGHT'], ['content', 'CONTENT'], ['reset', 'RESET']],
+  sections: [['sound', 'SOUND'], ['keys', 'KEYS'], ['listen', 'LISTEN'], ['controls', 'CONTROLS'], ['flight', 'FLIGHT'], ['game', 'GAME'], ['content', 'CONTENT'], ['reset', 'RESET']],
   keys: { warnH: 78, top: 104, block: 96, linkDy: 64, bodyFoot: 44 }, // the Keys section: the note on top, the first field's centre, the height of a key's block, where its link row is, the footer under the body
   keyRows: [ // the three keys: where each is kept, what it is for, how to tell a wrong paste
     { id: 'deepgram', name: 'DEEPGRAM' }, // what each is for, its cost line and its address are content/text/ui.md's (keys.<id>.use, .cost, .url)
@@ -150,7 +151,7 @@ class Settings extends Phaser.Scene {
       it.t.setColor(on ? '#ffb454' : '#9fe9ff');
     });
     const keys = SETTINGS.keyRows.filter(r => this.keyOf(r.id)).length, n = typeof CONTENT_ERRORS !== 'undefined' ? CONTENT_ERRORS.length : 0, st = typeof CONTENT_STATE !== 'undefined' ? CONTENT_STATE : {};
-    const status = { sound: G.muted ? 'MUTED' : Math.round(G.volume * 100) + '%', keys: keys + ' of 3', listen: !LISTEN.on ? 'OFF' : listenReady().ok ? 'ON' : 'NEEDS KEYS', controls: '', flight: handlingNow().name.toUpperCase(), content: n ? n + (n === 1 ? ' PROBLEM' : ' PROBLEMS') : st.modded ? 'MODDED' : 'CORE PACK', reset: '' };
+    const status = { sound: G.muted ? 'MUTED' : Math.round(G.volume * 100) + '%', keys: keys + ' of 3', listen: !LISTEN.on ? 'OFF' : listenReady().ok ? 'ON' : 'NEEDS KEYS', controls: '', flight: handlingNow().name.toUpperCase(), game: campPaceNow().name.toUpperCase(), content: n ? n + (n === 1 ? ' PROBLEM' : ' PROBLEMS') : st.modded ? 'MODDED' : 'CORE PACK', reset: '' };
     this.railItems.forEach(it => it.st.setText(status[it.id]).setColor(it.id === 'content' && n ? '#ffb454' : '#5b7a92'));
   }
   keyOf(id) { return id === 'deepgram' ? VOICE.key : CHAT.keys[id] || ''; }
@@ -163,7 +164,7 @@ class Settings extends Phaser.Scene {
     this.focusFirst();
   }
   tagDraw() {
-    const tag = { sound: G.muted ? 'MUTED' : 'VOLUME ' + Math.round(G.volume * 100) + '%', keys: 'STAY IN THIS BROWSER', listen: 'HOLD ' + LISTEN.cap + ' TO TALK', controls: controlsGroup(this.ctab).title, flight: 'FEEL ' + handlingNow().name.toUpperCase(), content: '', reset: 'AUTOSAVE ON' }[this.section];
+    const tag = { sound: G.muted ? 'MUTED' : 'VOLUME ' + Math.round(G.volume * 100) + '%', keys: 'STAY IN THIS BROWSER', listen: 'HOLD ' + LISTEN.cap + ' TO TALK', controls: controlsGroup(this.ctab).title, flight: 'FEEL ' + handlingNow().name.toUpperCase(), game: 'PACE ' + campPaceNow().name.toUpperCase(), content: '', reset: 'AUTOSAVE ON' }[this.section];
     this.ui.tagText.setText(tag || '');
   }
 
@@ -444,6 +445,19 @@ class Settings extends Phaser.Scene {
     });
     this.txt(bx, by + 372, 'Top speed, boost, dash and the autopilot are the same in both. The choice stays in this browser and takes hold at once.', 12, '#5b7a92', { oy: 0, style: { wordWrap: { width: bw } } });
   }
+  // ---------- GAME ----------
+  // one row: the Campaign's battle pace (src/campace.js, CAMP.pace): Calm, Normal or Brisk. Left, right or Enter switch it; it is kept in this browser and takes hold in the next battle (the B key in a battle changes it at once)
+  draw_game() {
+    const bx = this.bx, by = this.by, bw = this.bw, ms = CAMP.pace.modes, now = campPaceNow();
+    this.label(bx, by + 10, uiText('camp.pace.head'));
+    this.slots.pace = ms.map((m, i) => this.button(bx + i * 176, by + 44, 168, m.name, () => this.setPace(m.id), { size: 16 }).mark(m.id === now.id));
+    this.txt(bx, by + 96, uiText('camp.pace.note.' + now.id), 14, '#cfefff', { style: { wordWrap: { width: bw } } });
+    this.line(by + 132);
+    this.txt(bx, by + 152, uiText('camp.pace.fine'), 13, '#8fb4c9', { oy: 0, style: { wordWrap: { width: bw }, lineSpacing: 4 } });
+    this.txt(bx, by + 232, uiText('camp.pace.stays') + ' ' + uiText('camp.pace.key'), 12, '#5b7a92', { oy: 0, style: { wordWrap: { width: bw } } });
+  }
+  setPace(id) { campPaceChoose(id); beep(660, 0.08, 'triangle', 0.05); if (this.section === 'game') this.show('game'); }
+  stepPace(d) { const ms = CAMP.pace.modes; this.setPace(ms[(ms.findIndex(m => m.id === campPaceNow().id) + d + ms.length) % ms.length].id); }
   setFeel(id) { handlingSet(id); beep(660, 0.08, 'triangle', 0.05); if (this.section === 'flight') this.show('flight'); }
   stepFeel(d) { const ids = Object.keys(HANDLING); this.setFeel(ids[(ids.indexOf(handlingNow().id) + d + ids.length) % ids.length]); }
 
@@ -529,12 +543,14 @@ class Settings extends Phaser.Scene {
       const d = code === 'ArrowLeft' || code === 'KeyA' ? -1 : 1;
       if (this.section === 'sound') this.adjustVolume(d);
       else if (this.section === 'flight') this.stepFeel(d);
+      else if (this.section === 'game') this.stepPace(d);
       else if (this.section === 'controls') { const ids = CONTROLS.map(g => g.id); this.ctab = ids[(ids.indexOf(this.ctab) + d + ids.length) % ids.length]; this.show('controls'); }
     } else if (code === 'Enter' || code === 'Space' || code === 'NumpadEnter') {
       if (this.section === 'sound') this.toggleMute();
       else if (this.section === 'keys') { const el = this.inputs.deepgram; if (el) el.focus(); }
       else if (this.section === 'listen') { listenSetOn(!LISTEN.on); this.listenRefresh(); }
       else if (this.section === 'flight') this.stepFeel(1);
+      else if (this.section === 'game') this.stepPace(1);
       else if (this.section === 'reset') this.press('reset');
     }
   }

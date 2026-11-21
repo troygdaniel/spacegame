@@ -51,7 +51,7 @@ function campWarpSkip(S) { // a key: the flash comes up and it ends. Not in the 
 function campWarpDue(s) {
   try {
     const L = CAMP.levels[s.level], w = L && L.warp;
-    if (!w || s.warped || s.via === 'retry' || s.via === 'skip' || (s.mi | 0) > 0 || !s.scene || !s.scene.start) return false; // (not for the second mission of a level: only the level's start warps)
+    if (!w || s.warped || s.replay === true || s.via === 'retry' || s.via === 'skip' || (s.mi | 0) > 0 || !s.scene || !s.scene.start) return false; // (not for the second mission of a level: only the level's start warps)
     s.scene.start('CampWarp', Object.assign({}, s.d0 || {}, { level: s.level, via: s.via, warped: false })); // the start's own data goes there and comes back
     return true;
   } catch (e) { return false; }
@@ -72,13 +72,14 @@ class CampWarp extends Phaser.Scene {
     hyperGlowTex(this, 'hyper-glow', 128); hyperVignetteTex(this, 'hyper-vig');
     const glow = (tint, depth) => this.add.image(0, 0, 'hyper-glow').setBlendMode(Phaser.BlendModes.ADD).setTint(tint).setDepth(depth);
     // the places: Earth and the Sun behind, the new star ahead with its companions, drawn with the same planet art the levels use
-    const E = CAMP.places.earth, star = (L.places && L.places[w.star]) || {};
+    const E = w.behind || CAMP.places.earth, star = (w.star && typeof w.star === 'object') ? w.star : (L.places && L.places[w.star]) || {}; // a level's warp may name the pictures of what is behind and ahead (level 3: Alpha Centauri behind, Epsilon Eridani ahead), else Earth and the level's own star
+    this.l1 = w.l1 || ''; this.compData = Array.isArray(w.companions) ? w.companions : K.companions;
     this.earth = this.add.image(0, 0, planetTexture(this, E.kind || 'ice', E.seed || 7)).setDepth(1);
     this.sun = glow(K.color.sun, 1);
     this.starGlow = glow(K.color.star, 0).setAlpha(0);
     this.star = this.add.image(0, 0, planetTexture(this, star.kind || 'lava', star.seed || 4371)).setDepth(1).setAlpha(0);
     this.core = glow(0xfff4d0, 2).setAlpha(0); // the star is a sun: a white-hot core over the level's own picture of it (its cracked surface shows round the edge)
-    this.comp = K.companions.map(c => glow(c.color, 1).setAlpha(0));
+    this.comp = this.compData.map(c => glow(c.color, 1).setAlpha(0));
     this.g = this.add.graphics().setDepth(2).setBlendMode(Phaser.BlendModes.ADD);
     this.far = glow(K.color.tunnel, 0).setScale(10, 7).setAlpha(0); this.far.setPosition(W + 30, this.cy);
     const carrier = typeof shipPreviewTexture === 'function' ? shipPreviewTexture(this, 'bastion') : 'ship';
@@ -100,6 +101,7 @@ class CampWarp extends Phaser.Scene {
     this.frame(f, dt);
     if (f.done) this.finish();
   }
+  lineKey(i) { return i === 0 && this.l1 ? this.l1 : CAMP.warp.lines[i].key; } // the level's own first line (level 3 leaves Alpha Centauri, not Earth), else the table's
   frame(f, dt) {
     const K = CAMP.warp, E = K.earth, S = K.sun, T = K.star;
     this.t = f.t;
@@ -112,11 +114,11 @@ class CampWarp extends Phaser.Scene {
     this.star.setPosition(W * f.star.x, H * f.star.y).setScale(px(T.radius) * f.star.scale).setAlpha(0.5 * f.star.alpha);
     this.core.setPosition(W * f.star.x, H * f.star.y).setScale(T.radius * 4.4 / 128 * f.star.scale).setAlpha(f.star.alpha);
     this.starGlow.setPosition(W * f.star.x, H * f.star.y).setScale(T.glow / 128 * f.star.glow).setAlpha(0.8 * f.star.alpha);
-    K.companions.forEach((c, i) => this.comp[i].setPosition(W * (f.star.x + c.dx), H * (f.star.y + c.dy)).setScale(c.size / 128 * f.star.glow).setAlpha(f.star.alpha));
+    this.compData.forEach((c, i) => this.comp[i].setPosition(W * (f.star.x + c.dx), H * (f.star.y + c.dy)).setScale(c.size / 128 * f.star.glow).setAlpha(f.star.alpha));
     this.white.setAlpha(f.flash);
     // the words (and the ship's voice, once each) and the sounds (once each)
-    K.lines.forEach((l, i) => { if (f.t >= l.at && !this.said[i]) { this.said[i] = true; if (typeof shipcompSay === 'function') shipcompSay(uiText(l.key, this.vars)); } });
-    if (f.line >= 0) { this.words.setText(uiText(K.lines[f.line].key, this.vars)).setAlpha(f.lineAlpha); this.band.setAlpha(0.6 * f.lineAlpha); } else { this.words.setAlpha(0); this.band.setAlpha(0); }
+    K.lines.forEach((l, i) => { if (f.t >= l.at && !this.said[i]) { this.said[i] = true; if (typeof shipcompSay === 'function') shipcompSay(uiText(this.lineKey(i), this.vars)); } });
+    if (f.line >= 0) { this.words.setText(uiText(this.lineKey(f.line), this.vars)).setAlpha(f.lineAlpha); this.band.setAlpha(0.6 * f.lineAlpha); } else { this.words.setAlpha(0); this.band.setAlpha(0); }
     K.cues.forEach((c, i) => { if (f.t >= c.at && !this.cued[i]) { this.cued[i] = true; if (!HYPER_QUIET && typeof sfx === 'function') sfx(c.sfx); } });
   }
   finish() { // the level begins under the white: Campaign comes back with its own data and warped: true (it then fades in from white, not from black)

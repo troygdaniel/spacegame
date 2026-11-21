@@ -103,7 +103,7 @@ console.log('wiring');
   check('space.js turns through handlingTurn at the base rate 0.0036', /handlingTurn\(this, \(right \? 1 : 0\) - \(left \? 1 : 0\), dt\) \* 0\.0036 \* shipStat\('turn'\) \* dt/.test(space));
   check('space.js takes its drag from handlingDrag', space.includes('setDrag(handlingDrag(brake && !locked))'));
   check('space.js scales its thrust by handlingThrust', space.includes('* handlingThrust(this, locked || up, dt)'));
-  check('Settings has the Flight section, between Controls and Content', /\['controls', 'CONTROLS'\], \['flight', 'FLIGHT'\], \['content', 'CONTENT'\]/.test(settings) && settings.includes('draw_flight()'));
+  check('Settings has the Flight section, after Controls (the Game section of the battle pace follows it)', /\['controls', 'CONTROLS'\], \['flight', 'FLIGHT'\], \['game', 'GAME'\], \['content', 'CONTENT'\]/.test(settings) && settings.includes('draw_flight()'));
   check('the save does not carry the feel (it is a browser preference)', !read('src/meta.js').includes('handling'));
 }
 

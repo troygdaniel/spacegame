@@ -25,13 +25,16 @@ const CHATTER = {
   events: {                              // delay: ms between the call and the line. A call that answers a computer line waits until its hold is over
     splash: { delay: 400 }, hit: { delay: 200 }, ore: { delay: 200 },
     copy: { delay: 1200 }, home: { delay: 1200 },       // an order given: the answer comes a beat later (the computer's own line, if it speaks one, is not a sim event: the radio is busy, not held)
-    contact: { delay: 2800 }, mother: { delay: 2800 }, lowmissiles: { delay: 2800 }, relic: { delay: 2800 }, convoy: { delay: 2800 }, cache: { delay: 2800 }
+    contact: { delay: 2800 }, mother: { delay: 2800 }, lowmissiles: { delay: 2800 }, relic: { delay: 2800 }, convoy: { delay: 2800 }, cache: { delay: 2800 }, anomaly: { delay: 2800 }, // anomaly: a cloaked cache noticed (card space-game-campaign-anomalies)
+    shields: { delay: 2800 }, engines: { delay: 2800 },   // the ship's systems (card space-game-campaign-systems): the computer's low-shields and low-engines lines
+    scouts: { delay: 2800 }, scoutlost: { delay: 2800 }   // the scout-escorts (card space-game-campaign-scouts): a report, and one left behind
   },
   says: {                                // the computer's own line (a 'say' event of the sim) -> the call it brings
     'camp.say.wave1': 'contact', 'camp.say.wave2': 'contact', 'camp.say.l2wave1': 'contact', 'camp.say.l2wave2': 'contact',
     'camp.say.l3wave1': 'contact', 'camp.say.l3wave2': 'contact', 'camp.say.l3wave3': 'contact', 'camp.say.wave3': 'mother',
     'camp.say.ambush': 'contact', 'camp.say.bwave2': 'contact', 'camp.say.bwave3': 'mother', // the belt level's (content/text/campaign-belt.md); its ambush2 line is a hint, not a call
-    'camp.say.relicon': 'relic', 'camp.say.delivered': 'convoy', 'camp.say.cache': 'cache'
+    'camp.say.relicon': 'relic', 'camp.say.delivered': 'convoy', 'camp.say.cache': 'cache', 'camp.say.shieldlow': 'shields', 'camp.say.enginelow': 'engines', 'camp.say.scoutnothing': 'scouts', 'camp.say.scoutfound': 'scouts', 'camp.say.scoutleft': 'scoutlost', 'camp.say.anomalyread': 'anomaly',
+    'camp.say.anom.sense': 'anomaly', 'camp.say.anom.reveal': 'contact', 'camp.say.anom.done': 'cache' // the cloaked caches: noticed, decloaked (its guards are contacts), looted
   },
   earth: ['carrier', 'fighter', 'escort', 'freighter'] // the kinds on Earth's side: anything else that blows up is theirs (splash)
 };

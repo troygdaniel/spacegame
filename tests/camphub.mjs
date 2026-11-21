@@ -13,6 +13,8 @@ import { nodeGame, ROOT } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const g = nodeGame();
+// the hub alone: the ranks card (src/campranks.js) is merged with it in the game, but these checks are about the room's own plain behaviour and its stand-ins, so the real campRankStatus is set aside (the two together are tests/campranks.mjs)
+g.run('window.campRankStatus = undefined');
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const levels = J('Object.keys(CAMP.levels).map(Number).filter(Number.isInteger)').sort();
 const missions = J('campHubAll()');
@@ -25,7 +27,7 @@ check('the hub has five rows: Missions, Briefing, Refit, Rank, Launch, and start
 check('a digit 1 to 5 picks its row and the keypad digits do too', ['Digit3', 'Numpad4', 'Digit1', 'Digit5'].every((c, i) => { const r = key(c); return r.used && r.moved && row() === ['refit', 'rank', 'board', 'launch'][i]; }));
 check('6 to 9 and 0 pick nothing: the row stays and nothing is done', ['Digit6', 'Digit9', 'Digit0'].every(c => { g.run('hubH.row = 2'); const r = key(c); return !r.used && !r.moved && row() === 'refit' && r.action === ''; }));
 check('W and S (and the arrows) move the row, and wrap round the ends', (() => { g.run('hubH.row = 0'); key('KeyW'); const a = row(); key('KeyS'); const b = row(); key('ArrowDown'); const c = row(); key('ArrowUp'); key('ArrowUp'); return a === 'launch' && b === 'board' && c === 'brief' && row() === 'launch'; })());
-check('Enter goes to the next row, one after the other, to Launch', (() => { g.run('hubH.row = 0'); const seen = [row()]; for (let i = 0; i < 4; i++) { const r = key('Enter'); seen.push(row()); if (r.action) return false; } return seen.join() === 'board,brief,refit,rank,launch'; })());
+check('Enter on the Board and Briefing rows asks for the big briefing (action brief) and stays on the row (card space-game-campaign-briefing); from Refit it goes to the next row, one after the other, to Launch', (() => { g.run('hubH.row = 0'); const a = key('Enter'); const b = row() === 'board' && a.action === 'brief'; g.run('hubH.row = 1'); const c = key('Enter'); const d = row() === 'brief' && c.action === 'brief'; g.run('hubH.row = 2'); const seen = [row()]; for (let i = 0; i < 2; i++) { const r = key('Enter'); seen.push(row()); if (r.action) return false; } return b && d && seen.join() === 'refit,rank,launch'; })());
 check('Enter on Launch launches (and does not move the row); NumpadEnter is Enter', key('Enter').action === 'launch' && row() === 'launch' && key('NumpadEnter').action === 'launch');
 check('L launches from any row', [0, 1, 2, 3, 4].every(i => { g.run(`hubH.row = ${i}`); return key('KeyL').action === 'launch'; }));
 check('Esc and T leave for the title; the progress is saved already, so nothing else happens', key('Escape').action === 'title' && key('KeyT').action === 'title');
@@ -54,7 +56,7 @@ check('a board longer than the lines it has is a window of them that holds the n
 const b1 = J('campHubBrief(campProgressNew(), 1, 0)'), b2 = J('campHubBrief(hubP1, 1, 0)'), b3 = J('campHubBrief(hubP1, 1, 1)');
 check('the briefing of belt mission 1: its title, "RECON", the two lines of words, the par', b1.title === 'Belt survey' && b1.kindText === 'RECON' && b1.n === 1 && b1.of === 3 && b1.lines.length === 2 && b1.lines[0] === 'Scan three rock fields.' && b1.par === 150, JSON.stringify(b1));
 check('its objectives are in plain words from the HUD\'s own strings, with nothing done yet: scan three, destroy the attackers', b1.objectives.length === 2 && b1.objectives[0] === 'Scan the points: 0 of 3.' && b1.objectives[1] === 'Destroy the attackers.', b1.objectives.join(' | '));
-check('its bonus objectives each say what they earn and what they ask: finish in 150 seconds, lose no ships, mine 60 ore', b1.bonus.length === 3 && b1.bonus.every(b => b.points === J('CAMP.score.bonus')) && b1.bonus[0].text === 'Finish in 150 seconds' && b1.bonus[1].text === 'Lose no ships' && b1.bonus[2].text === 'Mine 60 ore', JSON.stringify(b1.bonus));
+check('its bonus objectives each say what they earn and what they ask: find the cloaked cache (card space-game-campaign-anomalies), finish in 150 seconds, lose no ships, mine 60 ore', b1.bonus.length === 4 && b1.bonus.every(b => b.points === J('CAMP.score.bonus')) && b1.bonus[0].text === 'Find the cloaked cache' && b1.bonus[1].text === 'Finish in 150 seconds' && b1.bonus[2].text === 'Lose no ships' && b1.bonus[3].text === 'Mine 60 ore', JSON.stringify(b1.bonus));
 check('a mission not flown has no best; one flown has its best score and its tries; the escort mission (kind escort) asks for deliveries', b1.best === 0 && b1.tries === 0 && b2.best === 900 && b2.tries === 2 && b3.kindText === 'ESCORT' && /Haulers delivered: 0 of 2/.test(b3.objectives[0]), b3.objectives.join());
 check('every mission of every level has a briefing with a title, a kind word, at least one objective and no leftover key as a word', levels.every(lv => J(`campMissions(${lv}).map((m, i) => campHubBrief(campProgressNew(), ${lv}, i))`).every(b => b && b.title && !/^camp\./.test(b.title) && !/^camp\./.test(b.kindText) && b.objectives.length >= 1 && b.objectives.every(o => !/^camp\./.test(o)) && b.bonus.every(x => !/^camp\./.test(x.text)))));
 check('a level or a mission that is not there has no briefing', J('campHubBrief(campProgressNew(), 9, 0)') === null);
@@ -86,7 +88,7 @@ g.run(`window.campRankStatus = hubP => { throw new Error('ranks card broke'); };
 check('a ranks card that throws is not the room\'s trouble: the plain score and wing again', (() => { const r = J('campHubRank(hubP1)'); return !r.ranked && r.points === 1540 && r.wing.fighters === 6; })());
 g.run(`window.campRankStatus = hubP => ({ name: '', wing: { fighters: 'many' } });`);
 check('a ranks card with nothing usable in it is ignored the same way', (() => { const r = J('campHubRank(hubP1)'); return !r.ranked && r.wing.fighters === 6; })());
-g.run(`delete window.campRankStatus;`);
+g.run(`window.campRankStatus = undefined;`);
 
 // ---- the rows and the launch ----
 const rows = J('campHubRows(hubP1)');
