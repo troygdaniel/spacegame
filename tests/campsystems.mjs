@@ -241,6 +241,7 @@ sec('J', () => {
 });
 
 sec('H', () => {
+  check('H  the SYSTEMS panel\'s emergency row, while it cools, says the seconds ("28 s"), not the template "{s} s" (the short why filled only the ore cases)', (() => { const r = J(`(() => { const C = campNew(1, [], { seed: 1 }); campOrder(C, 'emergency', '', 'key'); C.power.until = 0; C.power.p = C.power.base.slice(); C.t = 12000; return campPanelRows(C, 'systems', 0).find(x => x.id === 'emergency').short; })()`); return r === '28 s'; })());
   const sc = read('src/campaignscene.js');
   check('H  the scene starts a battle at the saved setting and saves a change of it (campPowerLoad / campPowerSave of C.power.base: the setting, never the emergency)', /power: campPowerLoad\(\)/.test(sc) && /campPowerSave\(C\.power\.base\)/.test(sc));
   check('H  the HUD draws a bar of power segments beside each of the three gauges (SHIELDS, SPEED, LASERS) from the live pips (C.power.p), which replaced the small W S E pips (card space-game-systems-gauges, tests/campgauges.mjs)', /C\.power\.p/.test(sc) && /campGaugesPaint\(/.test(sc) && /pips: P\.p\[1\]/.test(read('src/camphud.js')) && !/'W'/.test(sc));
