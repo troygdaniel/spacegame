@@ -7,6 +7,7 @@
 //   - nothing not finite, and an end: no sound goes on longer than its length plus a tail
 // and that mute and volume 0 make sfx() start nothing at all.
 import { launch } from './cdp.mjs';
+import { readFileSync } from 'node:fs';
 
 const NEW = ['interdict', 'hyperCharge', 'hyperJump', 'hyperArrive', 'fuelPump', 'fuelLow', 'buy', 'sell', 'shieldDown', 'shieldUp', 'click', 'uiOpen', 'uiClose', 'type', 'siren', 'cruiseOn', 'cruiseOff'];
 const t = await launch('#space');
@@ -50,11 +51,13 @@ try {
   ok(c.includes('uiOpen') && c.includes('uiClose'), 'the Journal opens with uiOpen and closes with uiClose', JSON.stringify(c));
   // the rest are one-line calls in handlers a test cannot reach without a full station walk: check that the handlers still make them
   const uses = async (fn, name) => E(`String(${fn}).includes("sfx('${name}')")`);
+  // buyFuel and buyUpgrade are wrapped by the play log (src/playlog.js: the page's name is the wrapper, which does not hold the real one), so their source is read from the file
+  const inFile = (file, fn, name) => { const src = readFileSync(new URL('../src/' + file, import.meta.url), 'utf8'), i = src.indexOf('function ' + fn + '('); if (i < 0) return false; const j = src.indexOf('\nfunction ', i + 1); return src.slice(i, j < 0 ? undefined : j).includes("sfx('" + name + "')"); };
   ok(await uses('ShipBay.prototype.hangarTab', 'click') && await uses('ShipBay.prototype.hangarPick', 'click'), 'the hangar tabs and rows click');
   ok(await uses('cruiseInterdict', 'interdict'), 'an interdiction plays interdict');
-  ok(await uses('buyFuel', 'fuelPump'), 'the pump plays fuelPump');
+  ok(inFile('fuel.js', 'buyFuel', 'fuelPump'), 'the pump plays fuelPump');
   ok(await uses('Hyper.prototype.create', 'hyperCharge') && await uses('Hyper.prototype.create', 'hyperJump') && await uses('Hyper.prototype.arrive', 'hyperArrive'), 'the #hyper demo plays the charge, the jump and the arrival (silent in headless Chrome, so checked in the source)');
-  ok(await uses('buyUpgrade', 'buy'), 'buying a part plays buy');
+  ok(inFile('shop.js', 'buyUpgrade', 'buy'), 'buying a part plays buy');
   ok(await uses('ShipBay.prototype.hangarDone', 'buy') && await uses('ShipBay.prototype.hangarDone', 'sell'), 'buying and selling a ship play buy and sell');
   await E(`(() => { window.sfx = window.__sfx0; return 1; })()`);
 
