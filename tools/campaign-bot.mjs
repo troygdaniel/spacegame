@@ -40,6 +40,7 @@ const BOTS = {
   mguard: { name: 'mguard', launchAt: 1, missiles: true },                                                       // launches (the wing only guards) and fires missiles
   troy: { name: 'troy', launchAt: 45, escort: [81], sit: true },                                                   // Troy's first try (play log 20 Nov): launches at 45 s, escorts at 81 s, never attacks, the carrier stays at the base and shoots what comes close
   troyh: { name: 'troyh', launchAt: 45, escort: [81], sit: true, reactive: 3 },                                      // troy, and when the first real damage comes (Earth under 90 percent, or the hull under 80) it reads a hint 3 s later: launch if need be, attack every 5 s, fly out
+  strong: { name: 'strong', launchAt: 1, escort: [9, 56], attackFrom: 12, attackEvery: 5, missiles: true, cycle: 0.45, skill: 'sharp' }, // a strong player (card space-game-wrapup-difficulty): escorts both convoys, missiles on every big ship, recalls and relaunches the hurt wing, and flies sharp
   mcarrier: { name: 'mcarrier', launch: false, missiles: true }                                                  // no wing at all, missiles only
 };
 const SKILLS = { sharp: { gain: 3, thr: 0.15, noise: 0 }, steady: { gain: 2, thr: 0.22, noise: 0.1 }, rough: { gain: 1.5, thr: 0.3, noise: 0.2 } };
@@ -140,7 +141,7 @@ export function techsFor(level, override) {
 }
 export function setPace(p) { g.run(`window.__PACE = ${typeof p === 'number' ? p : JSON.stringify(p)}`); } // the battle pace of the runs that follow (a test uses it; the CLI has --pace)
 export function run(level, seed, botName, skill, techs, maxSec = MAXSEC, mission = 0) {
-  const B = BOTS[botName], sk = SKILLS[skill];
+  const B = BOTS[botName], sk = SKILLS[B.skill || skill]; // a bot may bring its own skill
   return JSON.parse(g.run(`JSON.stringify(__run1(${level}, ${seed}, ${JSON.stringify(techs)}, ${JSON.stringify(B)}, ${JSON.stringify(sk)}, ${maxSec}, ${mission | 0}))`));
 }
 const med = a => { const s = a.filter(x => x != null).sort((p, q) => p - q); return s.length ? s[Math.floor((s.length - 1) / 2)] : null; };
