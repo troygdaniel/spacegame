@@ -134,6 +134,7 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.slow\./, why: 'command time\'s sign (COMMAND TIME x0.25) and its one-line hint: a label on the screen and a toast, not said' },
   { re: /^camp\.m\.\d+\.\d+\.title$/, why: 'a mission\'s title: the title of its briefing and debrief cards' },
   { re: /^camp\.lose\.reached$/, why: 'the lose card\'s numbers line: shown, and not said (the cause and the tip are)' },
+  { re: /^camp\.hint\./, why: 'the first-minute hints of mission 1.1 (the scout, the lane, the Fast burn): toasts, with the keys of the key table in them' },
   { re: /^camp\.route\./, why: 'the words a scout\'s report is made of ("ambush, 3 pirates", "quiet") and the list\'s mark of the chosen lane: they are put into the line camp.say.lanefound, which is said' },
   { re: /^camp\.nav\./, why: 'the autopilot\'s toasts, the HUD line, the edge arrow and the names in the map\'s list: on the screen' },
   { re: /^camp\.(b|o|obj)\./, why: 'the objectives and bonus objectives: the HUD, the briefing and debrief cards (the briefing\'s two lines are said, these are the list)' },

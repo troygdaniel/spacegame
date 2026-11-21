@@ -12,8 +12,8 @@ function campNudge(C, shown) {
     if (!C || C.result || !shown) return null;
     for (const h of CAMPNUDGE) {
       if (shown[h.id] || C.level !== h.level || C.t < h.at * 1000) continue;
-      if (!h.when(C)) { shown[h.id] = true; continue; } // no longer true (the player did it): never hinted
-      shown[h.id] = true; return uiText(h.key);
+      if (!h.when(C)) { if (h.until && C.t < h.until * 1000) continue; shown[h.id] = true; continue; } // no longer true (the player did it): never hinted; a hint with `until` waits for its moment (card space-game-l1-1-beats)
+      shown[h.id] = true; return h.text ? h.text(C) : uiText(h.key); // `text`: a hint whose words carry keys from the key table (src/campbeats.js)
     }
   } catch (e) { /* a hint is a nicety */ }
   return null;

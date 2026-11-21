@@ -494,14 +494,18 @@ const CAMP = {
       rocks: [],                                                  // the missions have their own (the belt is at Ceres, 1.2)
       anomalies: [],                                              // none: no cloaked alien caches before first contact (1.3); the later levels have them
       missions: [                                                 // a mission is a row laid over this one: kind, objectives, bonus objectives (bonus), par (s), its own waves, convoys ... (docs/CAMPAIGN.md, Missions)
-        { id: 'escort', kind: 'escort', par: 400, hpScale: 1, dmgScale: 1, scouts: ['escort'], place: 'luna', dock: 'ceres',  // 1.1 ESCORT: from the Lunar Base (no travel) one transport flies to Ceres, 16,500 px at 100 px/s; pirates raid her three times on the way (a wave comes by how far she has flown, from ahead of her); she dying loses it
+        { id: 'escort', kind: 'escort', par: 400, hpScale: 1, dmgScale: 1, scouts: ['escort'], place: 'luna', dock: 'ceres',  // 1.1 ESCORT in four beats (card space-game-l1-1-beats; docs/CAMPAIGN.md "Mission 1.1 in four beats"): from the Lunar Base one transport flies to Ceres, 16,500 px at 52 px/s; something happens about every minute and the player directs the fleet in each
           convoys: [{ id: 't1', name: 'Transport', say: 'camp.say.transport', at: 4, from: 'luna', to: 'ceres', speed: 52 }],  // the transport: when she leaves (s after arrival), from and to which place, her speed
-          objectives: [{ type: 'deliver', n: 1 }],  // what the mission asks: the transport must arrive
-          bonus: [{ id: 'swift', type: 'time', secs: 400 }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
+          objectives: [{ type: 'deliver', n: 1 }],  // what the mission asks: the transport must arrive (the pirate leader is a bonus: kill it, or get her past)
+          bonus: [{ id: 'swift', type: 'time', secs: 400 }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'miner', type: 'neutrals', n: 0 }, { id: 'leader', type: 'rival', what: 'leader' }, { id: 'torp', type: 'torpedoes', n: 0 }],  // the debrief follows the beats: the miner saved, the leader killed, no torpedo hit
+          traffic: [{ id: 'patrol', kind: 'patrol', place: 'luna', off: [160, -120], n: 2, name: 'Patrol', escort: { convoy: 't1', until: 0.12, say: 'camp.say.patrolleave' } },  // BEAT 1: a patrol of two flies with her to the edge of safe space (12 percent of the road) and turns back
+                    { id: 'dm', kind: 'miner', at: [415, 5630], n: 1, name: 'Miner', home: 'luna', stay: true, hp: 24 }],  // BEAT 2: a miner works off the route, 2,600 px west of the road at 30 percent of it (an offset from Luna)
+          cues: [{ name: 'distress', on: { lane: 0.28 } }],  // BEAT 2: at 28 percent of the road the pirates fall on the miner and the pilots ask for orders (an order call, src/campbeats.js)
           route: { fork: 0.2, join: 0.8, wait: 45, pick: 'short', lanes: [  // the road forks at a fifth of the way and meets again at four fifths (card space-game-scout-route; src/camproute.js): the player picks the lane, a scout can read them first
-            { id: 'short', name: 'Short lane', bend: 0, hides: { waves: [{ on: { lane: 0.28 }, ahead: 2000, ships: { skiff: 3 }, goal: 'convoy:t1', say: 'camp.say.rim2' }, { on: { lane: 0.46 }, ahead: 2000, ships: { skiff: 3, cutter: 1 }, goal: 'convoy:t1', ambush: true, say: 'camp.say.rim9' }, { on: { lane: 0.64 }, ahead: 2000, ships: { skiff: 3, cutter: 2 }, goal: 'convoy:t1', say: 'camp.say.rim10' }] } },  // straight, and where the pirates wait: the three raids the whole road had before the fork
+            { id: 'short', name: 'Short lane', bend: 0, hides: { waves: [{ on: { lane: 0.46 }, ahead: 2000, ships: { skiff: 4, tboat: 2 }, goal: 'convoy:t1', ambush: true, say: 'camp.say.ambush' }] } },  // BEAT 3: straight, and the ambush behind the rocks: skiffs tie up the wing while two torpedo boats go for the transport
             { id: 'long', name: 'Long lane', bend: -4200, hides: { waves: [{ on: { lane: 0.5 }, ahead: 2000, ships: { skiff: 3 }, goal: 'convoy:t1', say: 'camp.say.rim2' }], caches: [{ at: 0.5, ore: 40 }] } }] },  // a minute longer round the rocks, one small raid, and a cache of ore at its middle
-          waves: [{ on: { lane: 0.03 }, ahead: 1500, ships: { skiff: 2 }, goal: 'convoy:t1', say: 'camp.say.rim1' }, { on: { lane: 0.82 }, ahead: 2000, ships: { skiff: 4, cutter: 2 }, goal: 'convoy:t1', say: 'camp.say.rim3' }] },  // the raids on every lane: before the fork and after the join (when: the share of her road flown, how far ahead of her, how many of each kind)
+          waves: [{ on: { lane: 0.28 }, beat: 'distress', victim: 'dm', thanks: 40, harry: 0.4, from: [-437, 6155], ships: { skiff: 2 }, prey: 'miners', say: 'camp.say.distress' }],  // BEAT 2: two skiffs come out of the dark by the miner (an offset from Luna); they go for miners
+          rivals: [{ id: 'leader', kind: 'pirateleader', on: { lane: 0.7 }, ahead: 3000, along: 't1', escorts: { skiff: 2 }, say: 'camp.say.rival.leader' }] },  // BEAT 4: the pirate leader (a rival ship: src/camprival.js) waits for her near Ceres: kill it, or get her past
         { id: 'mine', kind: 'defend', par: 380, hpScale: 1.4, dmgScale: 1.8, scouts: ['fetch'], place: 'ceres', dock: 'ceres', start: 'ceres', startAt: [130, 30],  // 1.2 MINE AND DEFEND at Ceres: the ore is worth 3 cash at the Works but the rim is not safe: pirates go for the miners; the cruiser starts at Ceres
           rocks: [{ at: [900, 700], n: 7, spread: 300 }, { at: [-1100, -400], n: 7, spread: 300 }, { at: [300, -1600], n: 6, spread: 300 }],  // three rock fields, offsets from Ceres
           objectives: [{ type: 'ore', n: 190 }, { type: 'kill', what: 'wave:2' }, { type: 'cashin', n: 160 }],  // mine 120, beat the third raid, sell 100 at the Works (the doors are shut with a pirate near, so the fight comes first)
@@ -703,6 +707,7 @@ function campNew(level, techs, opts) {
   C.rank = Math.max(0, Math.min(CAMP.ranks.length - 1, opts.rank | 0)); // the rank of the pilot (src/campranks.js: from the scores of the missions flown): its extras fill the bay and lift the wing limit
   { const rk = CAMP.ranks[C.rank]; C.bay.fighters += rk.fighters; C.bay.escorts += rk.escorts; C.cap = { fighters: CAMP.build.maxFighters + rk.fighters, escorts: CAMP.build.maxEscorts + rk.escorts }; }
   Object.assign(C, { missiles: CAMP.missile.magazine, magazine: CAMP.missile.magazine, turretMul: 1, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0 }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks
+  if (typeof campBeatsNew === 'function') campBeatsNew(C); // the beats of the mission (src/campbeats.js)
   C.route = null; if (typeof campRouteNew === 'function') campRouteNew(C); // a fork in the road (src/camproute.js): C.route, and the lanes' caches in C.caches
   Object.assign(C, { cues: {}, piratesEscaped: 0, neutralsLost: 0 }); // the named cues a script has fired (campCue), the pirates that broke off and got away, the neutral ships lost (src/camppirates.js)
   C.stance = campStanceId(opts.stance); C.orders.stance = 0; // the wing's stance: one for the whole wing, kept across orders and saved with the progress (card space-game-campaign-stances)
@@ -990,6 +995,7 @@ function campTick(C, dt) {
   campCaches(C);
   campAnomalies(C, dt);
   if (typeof campRivals === 'function') campRivals(C, dt); // the rival ships of the mission row (src/camprival.js)
+  if (typeof campBeats === 'function') campBeats(C); // a saved miner's thanks (src/campbeats.js)
   if (typeof campPirates === 'function') campPirates(C, dt); // the cues, the pirates that break off and run, and the ones that got away (src/camppirates.js)
   campRelic(C, dt);
   campRepair(C, dt);
@@ -1776,7 +1782,7 @@ function campBonuses(C) {
   return (C.L.bonus || []).map(b => {
     let ok = false;
     if (b.type === 'time') ok = campMissionClock(C) <= b.secs; else if (b.type === 'lost') ok = C.lostShips <= b.n; else if (b.type === 'hull') ok = C.carrier.hp >= C.carrier.maxHp * b.pct / 100;
-    else if (b.type === 'ore') ok = C.ore >= b.n; else if (b.type === 'sold') ok = C.sold >= b.n; else if (b.type === 'anomaly') ok = campAnomFound(C, b.anomaly); else if (b.type === 'delivered') ok = C.delivered >= C.L.convoys.length; else if (b.type === 'neutrals') ok = C.neutralsLost <= (b.n | 0); else if (b.type === 'torpedoes') ok = ((C.torpStat || {}).hit | 0) <= (b.n | 0);
+    else if (b.type === 'ore') ok = C.ore >= b.n; else if (b.type === 'sold') ok = C.sold >= b.n; else if (b.type === 'anomaly') ok = campAnomFound(C, b.anomaly); else if (b.type === 'delivered') ok = C.delivered >= C.L.convoys.length; else if (b.type === 'neutrals') ok = C.neutralsLost <= (b.n | 0); else if (b.type === 'torpedoes') ok = ((C.torpStat || {}).hit | 0) <= (b.n | 0); else if (b.type === 'rival') ok = !!C.rivalEnd && C.rivalEnd[b.what] === 'dead'; // the rival is destroyed, not only chased off (src/camprival.js)
     return { id: b.id, type: b.type, text: b.text, secs: b.secs, n: b.n, pct: b.pct, anomaly: b.anomaly, ok, points: ok ? CAMP.score.bonus : 0 };
   });
 }

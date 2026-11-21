@@ -52,7 +52,7 @@ const OLD = process.argv.includes('--old');
 const SETS = process.argv.map((a, i) => a === '--set' ? process.argv[i + 1] : null).filter(Boolean); // --set alien.hpScale=2 --set alien.damageScale=2: change the table before the run (what-if)
 const g = nodeGame();
 if (process.argv.includes('--nocalls')) g.run('campCallsTick = null'); // --nocalls: the battle as it was before the pilots asked for orders (to compare)
-g.run(`window.__SMART = { cruiser: 3, wounded: 2, breakaway: 1, second: 1, running: 1, opportunity: 1 }`); // the 'smart' bot's picks by call type (1, 2 or 3)
+g.run(`window.__SMART = { distress: 1, cruiser: 3, wounded: 2, breakaway: 1, second: 1, running: 1, opportunity: 1 }`); // the 'smart' bot's picks by call type (1, 2 or 3)
 g.run(`window.__PACE = ${isNaN(Number(PACE)) ? JSON.stringify(PACE) : Number(PACE)}`); // the battle pace of every battle of this run
 g.run(`window.__RANK = ${JSON.stringify(RANK)}`); // the pilot's rank for every battle of this run
 if (OLD) g.run(`(() => { CAMP.earth.shield = 300; CAMP.earth.regen = 0; CAMP.mother.hp = 900; CAMP.mother.damage = 12; CAMP.mother.holdAt = 1600; CAMP.mother.spawnEvery = 8000; CAMP.mother.spawnMax = 6; CAMP.levels[1].waves[2].ships.raider = 3; })()`); // the numbers before the easier level 1

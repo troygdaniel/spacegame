@@ -1,0 +1,67 @@
+// ---------- Campaign: the beats of mission 1.1 (card space-game-l1-1-beats; Troy, 21 Nov 2026) ----------
+// Troy found 1.1 boring: lots of flying and fights that were not his. It is now the one finished example of the fleet-command systems, four beats about a minute apart, each a place for the player to direct
+// the fleet (docs/CAMPAIGN.md "Mission 1.1 in four beats"). The pure half (no Phaser, no page; tests/campbeats.mjs runs it in Node). The beats are mission DATA; what is here is what the data needs:
+//   1  Leaving Luna: a patrol of two flies with the transport and turns back at the edge of safe space.  traffic: [{ kind: 'patrol', escort: { convoy: 't1', until: 0.12, say } }]  (campPatrolAI, src/camppirates.js)
+//   2  The distress call: a miner works off the route; at a share of the road a wave of pirates falls on it and the pilots ask for orders (an order call, src/camporders.js): send the fighters, send the whole
+//      wing (the transport is left to the cruiser), or stay. A wave row says  beat: 'distress', victim: '<traffic id>', thanks: 40 (the ore a saved miner gives) and a cue  { name: 'distress', on: { lane } }.
+//   3  The ambush: a lane's wave with fighters and torpedo boats (src/camproute.js, src/camptorpedo.js): the fork and a scout can find it first.
+//   4  The pirate leader: a rival ship near Ceres (src/camprival.js): kill it (the bonus), or get her past.
+//   campBeatsNew(C)            at campNew: C.beats = { patrolSaid, asked, thanked }
+//   campBeats(C)               each tick: the pirates wear a crippled miner down (the wave row's `harry`: hit points a second for each pirate within CAMP_BEATS.harryNear of it), and a miner that was saved gives its thanks (once: the ore, the radio)
+//   CAMP_CALL_TYPES / CAMP_CALL_FX  get the call `distress` (rescue, rescueall, stay) when src/camporders.js is there
+//   campBeatKey(id)            the key a hint names, from the key table (CAMP_PANELS: fleet, ship, systems; the Campaign's CONTROLS rows: map, scout, take), never a letter of its own
+//   campBeatHint(C, id)        the words of a hint with its keys in them (camp.hint.<id>)            CAMPNUDGE gets the hints of the mission (the first-minute hints, src/campnudge.js)
+
+const CAMP_BEATS = { harryNear: 700 }; // px: a pirate this near the crippled miner is on it
+function campBeatsNew(C) { C.beats = { patrolSaid: false, asked: false, thanked: false }; return C.beats; }
+
+// the key of a panel or of a map key, as the key table says it (the panels move: nothing here names a letter)
+function campBeatKey(id) {
+  const P = typeof CAMP_PANELS === 'object' && CAMP_PANELS.panels.find(p => p.id === id); if (P) return P.key;
+  const rows = ((typeof CONTROLS === 'object' && CONTROLS.find(c => c.id === 'campaign')) || { rows: [] }).rows;
+  const pick = re => rows.find(r => re.test(r.t));
+  if (id === 'map') { const r = pick(/Open or close the map/); return r ? r.k[0] : 'Tab'; }
+  if (id === 'scout') { const r = pick(/scout/i); return r ? r.k[0] : 'V'; }
+  if (id === 'take') { const r = pick(/scout/i); return r && r.k[1] ? r.k[1] : 'T'; }
+  return '';
+}
+const campBeatHint = (C, id) => uiText('camp.hint.' + id, { fleet: campBeatKey('fleet'), ship: campBeatKey('ship'), systems: campBeatKey('systems'), map: campBeatKey('map'), scout: campBeatKey('scout'), take: campBeatKey('take') });
+
+// beat 2: the thanks of a miner that was saved
+function campBeats(C) {
+  const B = C.beats; if (!B || B.thanked || !C.cues || C.cues.distress == null) return;
+  const w = C.L.waves.findIndex(x => x.beat === 'distress'); if (w < 0 || !C.waves[w] || !C.waves[w].started) return;
+  const wv = C.L.waves[w], m = C.ships.find(u => u.team === 'neutral' && u.hp > 0 && u.tid === wv.victim);
+  if (!m) { B.thanked = true; return; } // the miner is lost: no thanks
+  const foes = C.ships.filter(u => u.team === 'alien' && u.hp > 0 && u.wave === w);
+  if (wv.harry > 0 && foes.length) { const near = foes.filter(u => campDist(u, m) < CAMP_BEATS.harryNear).length; if (near) campHurt(C, m, wv.harry * Math.min(near, 3) * (C.dt || 1 / 30), foes[0].id); } // the pirates have him: a crippled miner is wasted, hit points a second for each pirate about him, a shot cannot be counted on to hit a ship that sits still
+  if (foes.length) return; // the pirates are still at it
+  B.thanked = true; const ore = wv.thanks | 0;
+  if (ore > 0) C.ore = Math.min(CAMP.ore.cap, C.ore + ore);
+  C.events.push({ type: 'thanks', id: m.id, ore, x: m.x, y: m.y }); campSay(C, 'camp.say.thanks', { ore });
+}
+
+// beat 2 as an order call: first in the table (a scripted call goes before the ones that watch the fight)
+if (typeof CAMP_CALL_TYPES === 'object' && typeof CAMP_CALL_FX === 'object' && !CAMP_CALL_TYPES.some(t => t.id === 'distress')) {
+  CAMP_CALL_FX.rescue = { do: campCallAt('fighters', 'attack') };                // the fighters go for the pirates at the miner
+  CAMP_CALL_FX.rescueall = { do: campCallAt('all', 'attack') };                  // everyone goes: the transport is left to the cruiser's turrets
+  CAMP_CALL_FX.stay = { do: () => true };                                         // nothing is done: the wing stays with the transport
+  CAMP_CALL_TYPES.unshift({ id: 'distress', pick: ['rescue', 'rescueall', 'stay'], def: 2,
+    when: C => {
+      const B = C.beats; if (!B || B.asked || !C.cues || C.cues.distress == null) return null;
+      const w = C.L.waves.findIndex(x => x.beat === 'distress'); if (w < 0 || !C.waves[w] || !C.waves[w].started) return null;
+      const m = C.ships.find(u => u.team === 'neutral' && u.hp > 0 && u.tid === C.L.waves[w].victim), foes = C.ships.filter(u => u.team === 'alien' && u.hp > 0 && u.wave === w);
+      if (!m || !foes.length) return null;
+      B.asked = true; return { who: m.id, ids: campCallIds(foes, m, 3) };
+    } });
+}
+
+// the hints of the mission (src/campnudge.js): each once, in 1.1 only, and only while they are still true
+if (typeof CAMPNUDGE === 'object') {
+  const mine = C => !!C.route && C.L.mid === 'escort';
+  CAMPNUDGE.push(
+    { id: 'b-scout', level: 1, at: 14, until: 55, text: C => campBeatHint(C, 'scout'), when: C => mine(C) && C.orders.scout === 0 && !C.route.lane && !C.route.passed },
+    { id: 'b-take', level: 1, at: 50, until: 140, text: C => campBeatHint(C, 'take'), when: C => mine(C) && !C.route.lane && !C.route.passed && !!campRouteHolding(C) },
+    { id: 'b-fast', level: 1, at: 24, until: 120, text: C => campBeatHint(C, 'fast'), when: C => mine(C) && !(C.nav && C.nav.on) && !C.route.passed && !campAliens(C).length && C.carrier && campConvoys(C)[0] && campDist(C.carrier, campConvoys(C)[0]) > 2500 }
+  );
+}

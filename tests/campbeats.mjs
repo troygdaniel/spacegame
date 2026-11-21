@@ -23,11 +23,12 @@ const sec = (name, fn) => { try { fn(); } catch (e) { check(name + ' ran without
 g.run(`
   window.__ev = [];
   window.__go = (s, fn) => { const k = Math.round(s * 30); for (let i = 0; i < k && !C.result; i++) { if (fn) fn(i); campStep(C, 1 / 30); __ev.push(...C.events); C.events.length = 0; } };
-  window.__mk = (lane, seed) => { window.C = campNew(1, [], { seed: seed == null ? 1 : seed, mission: 0 }); C.god = true; __ev.length = 0; if (lane) C.route.pick = lane; return !!C; };
+  window.__mk = (lane, seed) => { window.C = campNew(1, [], { seed: seed == null ? 1 : seed, mission: 0 }); C.god = true; __ev.length = 0; if (lane) campRoutePick(C, lane, "order"); return !!C; };
   window.__tt = () => campConvoys(C)[0];
+  window.__tough = () => campConvoys(C).forEach(f => { f.hp = f.maxHp = 1e6; });
   window.__says = () => __ev.filter(e => e.type === 'say').map(e => e.key);
   window.__share = () => C.lane.t1 || 0;
-  window.__until = (share, maxSec) => { const k = Math.round((maxSec || 400) * 30); for (let i = 0; i < k && !C.result && __share() < share; i++) { campStep(C, 1 / 30); __ev.push(...C.events); C.events.length = 0; } return __share(); };
+  window.__until = (share, maxSec) => { const k = Math.round((maxSec || 400) * 30); for (let i = 0; i < k && !C.result && __share() < share; i++) { __tough(); campStep(C, 1 / 30); __ev.push(...C.events); C.events.length = 0; } return __share(); };
 `);
 
 sec('A', () => {
@@ -83,10 +84,10 @@ sec('C', () => {
 
 sec('D', () => {
   console.log('D. beat 3: the ambush');
-  g.run('__mk("short"); __until(0.46)');
+  g.run('__mk("short"); __until(0.46); __go(1)');
   check('D  on the short lane at 46 percent the ambush comes out of the dark: skiffs and two torpedo boats, with the alarm', J('campAliens(C).filter(u => u.kind === "tboat").length') === 2 && J('campAliens(C).filter(u => u.kind === "skiff").length') >= 4 && J("__ev.some(e => e.type === 'alarm')"));
   check('D  the torpedo boats go for the transport (their goal is her), the skiffs for her too: the wing cannot cover both', J('campAliens(C).filter(u => u.kind === "tboat").every(u => String(u.goal) === "convoy:t1")'));
-  g.run('__mk("long"); __until(0.52)');
+  g.run('__mk("long"); __until(0.52); __go(1)');
   check('D  on the long lane there is no torpedo boat: only the small raid of skiffs (the long lane is quiet and has a cache)', J('campAliens(C).filter(u => u.kind === "tboat").length') === 0 && J('C.caches.filter(k => k.lane === "long").length') === 1);
 });
 
@@ -104,7 +105,7 @@ sec('E', () => {
 
 sec('F', () => {
   console.log('F. the pace');
-  g.run('__mk("short"); window.__T = {}; for (let i = 0; i < 300 * 30 && !C.result; i++) { campStep(C, 1 / 30); const s = C.t / 1000; C.events.forEach(e => { if (e.type === "say") { if (e.key === "camp.say.patrolleave") __T.patrol = s; if (e.key === "camp.say.distress") __T.distress = s; if (/ambush/.test(e.key)) __T.ambush = s; if (/rival\\.leader/.test(e.key)) __T.leader = s; } }); C.events.length = 0; }');
+  g.run('__mk("short"); window.__T = {}; for (let i = 0; i < 300 * 30 && !C.result; i++) { __tough(); campStep(C, 1 / 30); const s = C.t / 1000; C.events.forEach(e => { if (e.type === "say") { if (e.key === "camp.say.patrolleave") __T.patrol = s; if (e.key === "camp.say.distress") __T.distress = s; if (/ambush/.test(e.key)) __T.ambush = s; if (/rival\\.leader/.test(e.key)) __T.leader = s; } }); C.events.length = 0; }');
   const T = J('__T');
   check('F  the four beats come in order: the patrol turns back, the distress call, the ambush, the leader', T.patrol && T.distress && T.ambush && T.leader && T.patrol < T.distress && T.distress < T.ambush && T.ambush < T.leader, JSON.stringify(T));
   const gaps = [T.distress - T.patrol, T.ambush - T.distress, T.leader - T.ambush];
