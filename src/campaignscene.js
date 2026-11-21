@@ -505,7 +505,7 @@ class Campaign extends Phaser.Scene {
     // the autopilot's readout under the goal line, and an arrow at the edge of the screen pointing at the goal with its distance (src/campnav.js; docs/night/graphics.md finding 3)
     if (this.hud.post) { // the outposts: where to retreat when the hull is low and no ship is left, else a hint when one is in range (src/campoutpost.js)
       const rt = typeof campRetreat === 'function' ? campRetreat(C) : null, nr = !rt && typeof campOutpostNear === 'function' && !C.docked ? campOutpostNear(C) : null;
-      this.hud.post.setText(rt ? rt.line : nr ? uiText('camp.hud.dockhint', { name: nr.o.place }) : '').setColor(rt ? '#ff9ec0' : '#ffb454');
+      this.hud.post.setText(rt ? rt.line : nr ? uiText('camp.hud.dockhint', { name: nr.o.name }) : '').setColor(rt ? '#ff9ec0' : '#ffb454');
     }
     if (this.hud.nav) this.hud.nav.setText(C.navWait ? uiText('camp.nav.recalling', { n: C.navWait.n }) : C.nav ? uiText('camp.nav.hud', { name: C.nav.name, km: campNavKm(Math.hypot(C.nav.x - c.x, C.nav.y - c.y)) }) : '');
     if (this.hud.arrow) {

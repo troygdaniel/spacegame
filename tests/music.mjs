@@ -16,6 +16,9 @@ import { nodeGame } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const g = nodeGame();
+// the engine starts each piece from Math.random: with the game's own random the loudest-instant check below saw a different seed every run and failed one run in six (card space-game-night-cosmetics, finding I).
+// The game's random is seeded here (the same run every time); the bus's clamp is checked on a hundred and twenty seeds of its own, below
+g.run(`(function () { let a = 20261121; Math.random = () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();`);
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const read = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
@@ -179,6 +182,19 @@ console.log('the engine: it stops when it should, and a new start is a new piece
   check('M (mute): it stops and makes nothing more; unmuted it comes back', J('MUS.bus') === null && (g.run(`G.muted = false; __run(2, 0.4);`), J('MUS.bus') !== null));
   g.run(`musicSetVol(0); __run(1, 0.4);`);
   check('Music volume 0 is off', J('MUS.bus') === null);
+}
+
+console.log('the bus: the loudest instant is under the cap for every seed');
+{
+  g.run(`function __plan(seed, minutes) { const m = musicMaker(seed, 'space'), notes = []; for (let t = 100; t < 100 + minutes * 60; t += 0.4) notes.push(...m.take(t, 4)); return notes; }
+    window.__fit = seed => { const notes = __plan(seed, 20), played = []; notes.forEach(n => { musicFit(played, n); played.push(n); if (played.length > 200) played.shift(); }); return notes; };`);
+  const cap = J('MUSIC.cap'), level = J('MUSIC.level'), raw = [], fit = [];
+  for (let sd = 1; sd <= 120; sd++) { raw.push(J(`musicWorst(__plan(${sd}, 20)).peak`)); fit.push(J(`musicWorst(__fit(${sd})).peak`)); }
+  check('the plan alone is NOT always under the cap: some seeds play a hair over (this is the flake the test had: one run in six)', raw.filter(p => p * level > cap).length >= 5, raw.filter(p => p * level > cap).length + ' of 120 seeds, loudest ' + Math.max(...raw).toFixed(3));
+  check('through the bus (musicFit) the loudest instant of twenty minutes is under the cap on all 120 seeds', fit.every(p => p * level <= cap), 'loudest ' + Math.max(...fit).toFixed(4) + ' on the bus, ' + (Math.max(...fit) * level).toFixed(4) + ' after it, cap ' + cap);
+  check('and the clamp only ever quietens: no note is louder than the plan made it, none is below zero, and a seed that was under the cap is not touched at all', J(`(() => { let ok = true, same = 0; for (let sd = 1; sd <= 40; sd++) { const a = __plan(sd, 20), b = __fit(sd); a.forEach((n, i) => { if (b[i].vel > n.vel + 1e-12 || b[i].vel < 0) ok = false; }); if (musicWorst(a).peak * MUSIC.level <= MUSIC.cap && a.every((n, i) => b[i].vel === n.vel)) same++; } return ok && same >= 20; })()`));
+  check('the engine uses it: every note goes through musicFit before it is voiced', /musicFit\(b\.played, n\); musicVoice\(b\.out, n\)/.test(read('src/music.js')));
+  check('the plan itself is untouched by it (pure, in its mood\'s bounds): musicMaker does not call musicFit', !/musicFit/.test(read('src/music.js').slice(read('src/music.js').indexOf('function musicMaker'), read('src/music.js').indexOf('function musicWorst'))));
 }
 
 console.log('the engine: never loud, however long it plays; and the nodes do not pile up');

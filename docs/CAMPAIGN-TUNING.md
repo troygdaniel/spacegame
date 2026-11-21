@@ -85,7 +85,7 @@ Card `space-game-campaign-warp`. When level 2 starts the carrier warps from Eart
 - **Every number is `CAMP.warp`** in `src/campaign.js`: the windows in seconds (the pull-away, the stretch, the tunnel, the flash, the resolve, the total), the skip fade, the grace in which a key is ignored, the lines and the sounds with their times, where Earth, the Sun and the star sit and how big they are, the colours.
 - **Which level warps** is data: `warp: { dest, ly, star }` on the level in `CAMP.levels` (level 2 has it). Take the line away and the level starts as it did; put it on another level and that level warps in. `star` names the place that resolves ahead.
 - **The call** is one line, the first of `Campaign.create` (`if (campWarpDue(this)) return;`). The cinematic is its own scene (`CampWarp`); it ends by starting Campaign again with the same data plus `warped: true`.
-- The timeline is plain functions (`campWarpFrame(t, skippedAt)`), tested in Node (`tests/campwarp.mjs`); the scene only draws what the frame says. Long Haul's `hyperspace.js` has two optional multipliers for it (`ribbonK`, `gateK`, default 1: nothing else sets them).
+- The timeline is plain functions (`campWarpFrame(t, skippedAt)`), tested in Node (`tests/campwarp.mjs`); the scene only draws what the frame says. Long Haul's `hyperspace.js` has two optional multipliers for it (`ribbonK`, `gateK`, default 1: nothing else sets them) and two optional parts of the ship (`nozzles`, `noseDx`: the warp's cruiser brings its four nozzles and its nose; the scene's `CAMP.warp.ship.scale` and `.flame` size it and its flames; without them the tunnel flies the player's nozzles and a nose at 24 px, as before).
 
 ## The worlds of Sol and of the other stars
 

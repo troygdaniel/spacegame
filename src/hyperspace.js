@@ -276,12 +276,12 @@ class Hyper extends Phaser.Scene {
       ship.x = P.x + (bx - P.x) * m; ship.y = P.y + (by - P.y) * m; ship.rotation = Phaser.Math.Angle.Wrap(P.rot) * (1 - m) + br * m; ship.setScale(P.sc + (1.15 - P.sc) * m);
     } else { ship.x = bx; ship.y = by; ship.rotation = br; }
     const sc = ship.scaleX, r = ship.rotation, c = Math.cos(r), n = Math.sin(r), flame = hyperMix(0x9fe9ff, tint, 0.3);
-    (SHIPS.nozzles.ship || [[-14, 0, 1]]).forEach(([dx, dy, size]) => {
+    (this.nozzles || SHIPS.nozzles.ship || [[-14, 0, 1]]).forEach(([dx, dy, size]) => { // a scene with its own ship (the Campaign's warp) brings its own nozzles
       shipsFlame(g, ship.x + (c * dx - n * dy) * sc, ship.y + (n * dx + c * dy) * sc, r, 0.55 + 0.45 * v, size * sc, flame, 1.1 + 1.3 * v);
     });
 
     // the light: a bloom bleeding from the nose that breathes, a thin lens flare across it, the glow of the distance ahead
-    const nx = ship.x + 24 * sc, ny = ship.y;
+    const nx = ship.x + (this.noseDx == null ? 24 : this.noseDx) * sc, ny = ship.y; // the nose (a scene with its own ship says where it is)
     const mx = this.mix;
     this.halo.setPosition(ship.x, ship.y).setScale(1.9, 1.1).setAlpha(0.32 * (0.3 + 0.7 * k) * mx);
     this.bloom.setPosition(nx, ny).setScale((1.6 + 0.25 * breath) * (0.5 + 0.5 * k)).setAlpha((0.65 + 0.25 * breath) * (0.3 + 0.7 * k) * mx);
