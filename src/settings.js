@@ -521,7 +521,7 @@ class Settings extends Phaser.Scene {
     clearSave(); newGameState(); saveGame(true);
     const pause = this.from === 'Pause' ? this.scene.get('Pause') : null;
     if (pause) { this.closing = true; this.dropInputs(); this.scene.stop(); pause.toStation(); return; } // the run in front of the pause menu is gone: back to the station, new game
-    this.slots.reset.set('Reset game').color('#ff8da0').mark(false); this.say('Game reset. Press any key on the title screen to start again.', '#6dff9c');
+    this.slots.reset.set('Reset game').color('#ff8da0').mark(false); this.say('Game reset. Press Enter on the title screen to start again.', '#6dff9c');
   }
 
   // ---------- keys, inputs, closing ----------
