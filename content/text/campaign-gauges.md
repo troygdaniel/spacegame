@@ -10,4 +10,5 @@ The words of the Campaign's three gauges (card space-game-systems-gauges): SHIEL
 | camp.gauge.speed | SPEED |
 | camp.gauge.lasers | LASERS |
 | camp.gauge.hull | HULL |
+| camp.gauge.even | EVEN |
 | camp.say.lasersdry | Lasers are running dry. More power to weapons. |

@@ -17,8 +17,9 @@
 const campPanelDigit = code => { const m = /^(?:Digit|Numpad)(\d)$/.exec(String(code || '')); return m ? +m[1] : null; };
 const campPanelDef = id => CAMP_PANELS.panels.find(p => p.id === id) || null;
 const campPanelNew = () => ({ open: '', at: 0, flash: null, closed: null, page: 0 }); // flash: { id, row, at, shown } the last pick (shown: the list had dropped in); closed: { id, at, from } the last panel to close and how far its list was shown: the drawing fades them
-const campPanelPages = id => { const d = campPanelDef(id); return d && d.page2 && CAMP_PANELS.pages > 1 ? 2 : 1; };
-const campPanelPageRows = (def, page) => page === 1 && def.page2 ? def.page2.rows : def.rows;
+const campPanelPages = id => { const d = campPanelDef(id); return d ? Math.min(Math.max(1, CAMP_PANELS.pages | 0), 1 + (d.page2 ? 1 : 0) + (d.page3 ? 1 : 0)) : 1; }; // the pages of a panel: its rows, its page2 (FLEET: the stances) and its page3 (the convoy orders), as many as CAMP_PANELS.pages allows
+const campPanelPageRows = (def, page) => page === 1 && def.page2 ? def.page2.rows : page === 2 && def.page3 ? def.page3.rows : def.rows;
+const campPanelPageTitle = (def, page) => page === 1 && def.page2 ? def.page2.title : page === 2 && def.page3 ? def.page3.title : def.title; // what a page is called (on its tab while it is open, and in the hint under the list)
 // the page a panel is drawn on: the open one's, or while it fades after a pick or a close the page it was picked on (the list does not change words as it goes)
 const campPanelPageOf = (P, id) => campPanelPages(id) < 2 ? 0 : P.open === id ? P.page | 0 : P.flash && P.flash.id === id ? P.flash.page | 0 : P.closed && P.closed.id === id ? P.closed.page | 0 : 0;
 const campPanelCase = t => t.charAt(0) + t.slice(1).toLowerCase();
@@ -100,6 +101,7 @@ function campPanelState(C, row) {
     case 'buildf': return B.fighterCost + ' ore, ' + B.fighterTime + ' s';
     case 'builde': return B.escortCost + ' ore, ' + B.escortTime + ' s';
     case 'free': case 'orbit': case 'keep': case 'match': case 'hold': return C.stance === row.id ? 'in force' : ''; // the wing's stance: the one in force is marked
+    case 'ctuck': case 'chold': case 'crun': case 'ccarry': return campPanelConvoyMarked(C, row) ? 'in force' : campPanelShips(campConvoyShips(C).length); // the convoy orders: the one in force is marked (src/campconvoy.js)
     case 'weapons': case 'shields': case 'engines': { const i = { weapons: 0, shields: 1, engines: 2 }[row.id], fx = campPowerFx(C); return C.power.p[i] + ' pips: ' + (i === 0 ? 'turrets x' + (1 / fx.delay).toFixed(2) : i === 1 ? 'shield ' + Math.round(campShieldMax(C)) + (fx.regen > 0 ? ', mends ' + fx.regen + '/s' : ', no mend') : 'speed x' + fx.speed.toFixed(2)); }
     case 'balance': return 'now ' + C.power.p.join(' / ');
     case 'emergency': return CAMP.power.emergency.ms / 1000 + ' s of shields, then back';
@@ -126,6 +128,7 @@ function campPanelShortState(C, row) {
     case 'builde': return B.escortCost + ' ore';
     case 'dock': { if (campPanelAs(C, row).order === 'repair') return campMendQuote(C).cost + ' ore'; const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name : ''; } // the outpost in range, by name (the row had no word of its own when it could be done: wrap-up, 8-GEN)
     case 'goal': { const g = campNavGoal(C); return g ? campNavKm(Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y)) + ' km' : ''; }
+    case 'ctuck': case 'chold': case 'crun': case 'ccarry': return campPanelConvoyMarked(C, row) ? 'in force' : campPanelShips(campConvoyShips(C).length);
   }
   return '';
 }
@@ -138,9 +141,11 @@ function campPanelRowState(C, row) {
   const r = campCheck(C, row.order, row.arg || '');
   return r.ok ? { ok: true, state: campPanelState(C, row), short: campPanelShortState(C, row) } : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) };
 }
+const campPanelShips = n => n + (n === 1 ? ' ship' : ' ships'); // "1 ship", "3 ships"
+const campPanelConvoyMarked = (C, row) => row.order === 'convoy' && campConvoyState(C) === campConvoyVerb(String(row.arg || '')); // the convoy order that all the escorted ships are under
 function campPanelRows(C, id, page) {
   const def = campPanelDef(id); if (!def || !C) return [];
-  return campPanelPageRows(def, page | 0).map(row => { const as = campPanelAs(C, row); return Object.assign({ n: as.n, id: as.id, label: as.label, tag: as.tag || as.label, marked: as.order === 'stance' && C.stance === as.id }, campPanelRowState(C, row)); });
+  return campPanelPageRows(def, page | 0).map(row => { const as = campPanelAs(C, row); return Object.assign({ n: as.n, id: as.id, label: as.label, tag: as.tag || as.label, marked: (as.order === 'stance' && C.stance === as.id) || campPanelConvoyMarked(C, as) }, campPanelRowState(C, row)); });
 }
 const campPanelTab = (C, id) => { const d = campPanelDef(id); if (!d) return ''; const st = id === 'fleet' && C && C.stance ? d.page2.rows.find(r => r.id === C.stance) : null; return d.title + (st ? ' - ' + st.label.toUpperCase() : ''); };
 function campPanelHead(C, id, page) {

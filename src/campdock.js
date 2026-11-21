@@ -5,7 +5,7 @@
 // (CAMP_HUB.note, .act, .rowKey) and src/camphubscene.js (CAMP_HUBS.page, .stops, .face, .run).
 const CAMP_DOCK = { rows: ['build', 'repair', 'upgrade', 'board', 'undock'] }; // the rows of a dock's room, in order: a digit picks each (the Campaign's panels: a digit picks)
 const campDockC = ctx => (ctx && ctx.camp) || null;
-const campDockWing = C => ({ f: C.bay.fighters + campWing(C, 'fighter').length + C.launchQ.filter(k => k === 'fighter').length, e: C.bay.escorts + campWing(C, 'escort').length + C.launchQ.filter(k => k === 'escort').length, q: C.build.queue.length });
+const campDockWing = C => ({ f: C.bay.fighters + campWing(C, 'fighter').length + C.launchQ.filter(k => k === 'fighter').length + campRepairing(C, 'fighter'), e: C.bay.escorts + campWing(C, 'escort').length + C.launchQ.filter(k => k === 'escort').length, q: C.build.queue.length });
 
 CAMP_HUB.note.build = (P, ctx) => { const C = campDockC(ctx); return C ? uiText('camp.hub.note.build', { ore: campFunds(C) }) : ''; };
 CAMP_HUB.note.repair = (P, ctx) => { const C = campDockC(ctx); return C ? uiText('camp.hub.note.repair', { pct: Math.round(C.carrier.hp / C.carrier.maxHp * 100) }) : ''; };
