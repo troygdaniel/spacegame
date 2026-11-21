@@ -28,7 +28,7 @@ Main `505c2c3`. The rim run (1.1 Rim escort, 1.2 Mine and defend, 1.3 Haulers ho
 
 ### For 2-GEN's tune card (what feels off; no numbers changed)
 
-- **1.1 is 167 s for every bot that plays** (par 220), about 28 s of nothing before the first pirates: the transport's 100 px/s over 16,500 px. For the first mission of the game that is the longest of the three at the sim's pace (1.2: 122 to 127 s, 1.3: 177 s).
+- **1.1 is 167 s for every bot that plays** (par 220), about 28 s of nothing before the first pirates: the transport's 100 px/s over 16,500 px. For the first mission of the game that is long: about as long as the last one (1.3: 177 s) and 40 s longer than the mining mission (1.2: 122 to 127 s).
 - **1.2 is won in 122 to 127 s against a par of 260**: 120 ore mined by 60 s, then the third raid at 105 s; the "finish in 260 s" bonus is free. The store caps at 200 ore, so 200 ore is sold for 600 and the "sell 180" bonus is free too.
 - **The carrier-only bot and the never-orders bot cannot win 1.2** (they time out at 420 s): the wing's mining is the only way to ore, and nothing in the HUD says so before the briefing's keys box (fixed there in the L2/L3 hunt).
 
