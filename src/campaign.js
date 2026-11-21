@@ -24,6 +24,7 @@ const CAMP = {
     fighter: { len: 22, hit: 6 },          // it was 31 and 8
     escort: { len: 28, hit: 7 },           // it was 40 and 10
     skiff: { len: 28, hit: 9 }, cutter: { len: 34, hit: 12 }, brute: { len: 46, hit: 17 }, // the pirates (card space-game-l1-pirates-traffic): about the hit circles of the raider, the drone and the gunship they fly like (10, 14, 19), a little smaller
+    pirateleader: { len: 98, hit: 25 },    // a rival ship (card space-game-rival-duel): the cruiser's own size
     patrol: { len: 38, hit: 12 }, miner: { len: 36, hit: 14 },                         // the neutral ships
     tboat: { len: 44, hit: 16 }, lancer: { len: 44, hit: 16 }                          // the torpedo boats (card space-game-torpedo-boats): the pirates' and the aliens'
   },
@@ -103,7 +104,7 @@ const CAMP = {
     reload: 15000,                         // ms until one missile is back in the magazine while it is below `magazine`
     delay: 700,                            // ms between two launches (the launcher cycles)
     lock: 2400,                            // px: a big ship this close to the carrier can be locked (the mothership first, else the nearest tower or gunship)
-    bigKinds: ['mother', 'tower', 'gunship'], // the ships that count as big: the missile aims at them, its fuze goes off on them, they take `big`
+    bigKinds: ['mother', 'tower', 'gunship', 'pirateleader'], // the ships that count as big: the missile aims at them, its fuze goes off on them, they take `big`
     speed: 560,                            // px/s top speed
     launch: 120,                           // px/s it leaves the tube at
     accel: 800,                            // px/s per s: from there it gets up to speed
@@ -316,6 +317,24 @@ const CAMP = {
     kinds: {
       patrol: { name: 'Patrol', hp: 120, speed: 320, accel: 400, turn: 2.2, color: 0x5fd8c0, range: 720, dmg: 5, shot: [650, 950], bullet: 520, help: 2600, r: 500 }, // armed: it ranges round its post (r px), shoots a pirate or an alien within range of it, and goes to a hauler or miner under fire within `help` px of its post
       miner:  { name: 'Miner', hp: 70, speed: 130, accel: 170, turn: 1.4, color: 0xc9d4e8, fear: 900, work: [9, 15], dock: [3, 6], r: 400 }                                          // unarmed: it works the nearest rocks of the mission (or the row's `field`), goes home to its place and docks, and goes out again; it runs home when a hostile comes within `fear` px
+    }
+  },
+  rival: {                                 // RIVAL ships (card space-game-rival-duel; src/camprival.js): an enemy the cruiser's size, with a hull and a shield of its own, that duels the cruiser. A mission row's `rivals` names them (the hook: src/camprival.js)
+    comeFrom: 2600,                        // px from the carrier a rival comes from when its row gives no place
+    kinds: {
+      pirateleader: { name: 'Pirate leader', base: 'gunship', hull: 1500, shield: 600, dmg: 9, ore: 60, color: 0xe8b84a, say: 'camp.say.rival.leader', // the first: the pirate leader at the end of mission 1.1 (a small, forgiving one). base: the PIRATES row its guns and aim come from; ore: its wreck
+        move: { speed: 190, accel: 150, turn: 1 },       // a cruiser's way of flying: a little slower than the carrier's 210 at the default power, a ship that has to turn to point its side
+        phase: {                                           // stalk (circles at `hold` px and shoots a little) -> charge (stops, turns its side on you; `charge` s of warning) -> fires the broadside -> down (shield off `down` s) -> ram or run -> stalk again
+          hold: 340, first: 6, stalk: 4,                 // the range it keeps (inside the turrets' 500 px and inside the screen: at 620 it was off the edge); seconds before the first charge, and between a ram or a run and the next charge
+          charge: 3.2, down: 6, back: 0.6,               // seconds of warning; seconds the shield is off (every hit goes to the hull, `exposed` times over); the share of the shield that comes back
+          exposed: 1.3,                                  // every hit on the hull while its shield is down does this much more
+          ram: { secs: 4.5, speed: 1.5, accel: 1.4, turn: 0.55, dmg: 40, push: 160 },    // it turns to ram at 1.5 times its speed but 0.55 of its turn: a carrier that moves off its line is missed; a hit is `dmg` to the shield then the hull, and shoves both ships
+          run: { secs: 6, speed: 1.2, min: 3 },          // it flees at 1.2 times its speed for `secs` and comes back; for good (below `runHp` of its hull) it flees until it is `gone` px off (CAMP.pirate.gone) and is gone
+          runHp: 0.3, ramFirst: true                     // under this share of its hull it runs for good (a row's `leaves: false` fights to the death); the first turn is a ram, then run and ram by turns
+        },
+        gun: { dmg: 5, delay: [900, 1400], speed: 520, range: 760, aim: 0.22 },                 // the small gun it shoots while it circles
+        broadside: { shots: 6, dmg: 18, spread: 0.05, speed: 620, life: 1500, reach: 1000 }     // the heavy hit: six shots in a fan (108 in all; the carrier's shield at the default is 150), fired where the carrier is when the charge ends
+      }
     }
   },
   torpedo: {                               // torpedo boats and their torpedoes (card space-game-torpedo-boats; src/camptorpedo.js; docs/CAMPAIGN.md "Torpedo boats"): a slow hull that ignores the fighters and runs at the convoy, the miners or the cruiser and launches a heavy torpedo at close range. A wave row names a boat in `ships`
@@ -641,7 +660,7 @@ function campPaceMult(p) {
   if (typeof p === 'number' && p > 0 && isFinite(p)) return p;
   const m = CAMP.pace.modes.find(x => x.id === p); return m ? m.mult : 1;
 }
-const campSmall = kind => kind === 'fighter' || kind === 'escort' || !!PIRATES[kind] || !!CAMP.pirate.kinds[kind] || !!CAMP.torpedo.boats[kind]; // a small ship: the ones the pace scales (fighters and escorts of the wing, the aliens that are not the mothership or a tower)
+const campSmall = kind => kind === 'fighter' || kind === 'escort' || !!PIRATES[kind] || !!CAMP.pirate.kinds[kind] || !!CAMP.torpedo.boats[kind] || !!CAMP.rival.kinds[kind]; // a small ship: the ones the pace scales (fighters and escorts of the wing, the aliens that are not the mothership or a tower)
 // the pace is put on a ship from the numbers it was made with (u.base), so it can change in play and come back to Brisk exactly
 function campPaceShip(C, u) {
   if (!u.base) return;
@@ -713,6 +732,7 @@ function campSpawn(C, kind, x, y) {
     const k = CAMP.mother; Object.assign(u, { team: 'alien', hp: k.hp * C.hpS, r: k.radius, vmax: k.speed, accel: 200, turn: 0.5 });
   } else if (kind === 'tower') {
     const k = CAMP.tower; Object.assign(u, { team: 'alien', hp: k.hp * C.hpS, r: k.radius, vmax: 0, accel: 0, turn: k.turn, fixed: true });
+  } else if (CAMP.rival.kinds[kind]) { campRivalMake(C, u, kind); // a rival ship (src/camprival.js): a pirate the cruiser's size, with a shield
   } else if (CAMP.pirate.kinds[kind]) { // a pirate: it flies and shoots like its base kind of PIRATES, with its own hull and damage; the hostile side, faction 'pirate'
     const k = CAMP.pirate.kinds[kind], d = Object.assign({}, PIRATES[k.base], { hp: k.hp, dmg: k.dmg, radar: k.color });
     Object.assign(u, { team: 'alien', faction: 'pirate', def: d, hp: k.hp * C.hpS, r: CAMP.size[kind].hit, vmax: d.max, accel: d.speed, turn: d.turn * 60 });
@@ -752,6 +772,7 @@ function campHurt(C, u, dmg, byId) {
     if (C.shield > 0 && dmg > 0) { const take = Math.min(C.shield, dmg); C.shield -= take; dmg -= take; C.shieldHitAt = C.t; C.events.push({ type: 'shieldhit', x: u.x, y: u.y }); } // the shield first
   }
   if (u.scout) dmg *= CAMP.scout.fragile; // a scout out is fragile
+  if (u.rival) dmg = campRivalHurt(C, u, dmg); // a rival's shield takes the hit first, as the carrier's does; with it down every hit goes through, and harder (src/camprival.js)
   u.hp -= dmg; u.hurtAt = C.t;
   C.events.push({ type: 'hit', x: u.x, y: u.y, id: u.id, hull: dmg > 0 }); // hull: it got through to the hull (the carrier's shield takes the first of it)
   if (u.team === 'alien' && byId) { u.hitBy = byId; u.distractedUntil = C.t + CAMP.alien.distract; }
@@ -762,7 +783,8 @@ function campKill(C, u) {
   C.events.push({ type: 'boom', x: u.x, y: u.y, big: u.kind === 'carrier' || u.kind === 'mother', id: u.id, kind: u.kind });
   if (u.team === 'alien') {
     C.kills++;
-    const ore = CAMP.ore.wreck[u.kind] || (CAMP.pirate.kinds[u.kind] || {}).ore || (CAMP.torpedo.boats[u.kind] || {}).ore; if (ore) C.pickups.push({ id: 'wreck-' + (C.nextId++), kind: 'wreck', x: u.x, y: u.y, ore, born: C.t });
+    if (u.rival) campRivalDied(C, u);
+    const ore = CAMP.ore.wreck[u.kind] || (CAMP.pirate.kinds[u.kind] || {}).ore || (CAMP.torpedo.boats[u.kind] || {}).ore || (CAMP.rival.kinds[u.kind] || {}).ore; if (ore) C.pickups.push({ id: 'wreck-' + (C.nextId++), kind: 'wreck', x: u.x, y: u.y, ore, born: C.t });
     if (u.kind === 'mother') campWin(C, 'mother');
     else if (u.kind === 'tower' && (C.L.win === 'towers' || C.L.objectives) && !C.ships.some(s => s.kind === 'tower' && s.hp > 0)) campWin(C, 'towers'); // the last tower of the level
   }
@@ -954,6 +976,7 @@ function campTick(C, dt) {
   campScoutsStep(C, dt); // the scouts take what they touch before anyone else does (and a Fast burn leaves them behind)
   campCaches(C);
   campAnomalies(C, dt);
+  if (typeof campRivals === 'function') campRivals(C, dt); // the rival ships of the mission row (src/camprival.js)
   if (typeof campPirates === 'function') campPirates(C, dt); // the cues, the pirates that break off and run, and the ones that got away (src/camppirates.js)
   campRelic(C, dt);
   campRepair(C, dt);
@@ -1287,6 +1310,7 @@ function campAI(C, u, dt) {
   if (u.kind === 'tower') return campTowerAI(C, u, dt);
   if (u.kind === 'freighter') return campConvoyAI(C, u, dt);
   if (u.kind === 'mother') return campMotherAI(C, u, dt);
+  if (u.rival) return campRivalAI(C, u, dt); // a rival ship fights in phases (src/camprival.js)
   if (u.boat) return campTorpedoBoatAI(C, u, dt);
   if (u.faction === 'pirate') return campPirateAI(C, u, dt);
   if (u.team === 'neutral') return campTrafficAI(C, u, dt);
@@ -1697,6 +1721,7 @@ function campObjectives(C) {
       if (o.what === 'mother') got = C.flags.mother ? 1 : 0;
       else if (o.what === 'towers') got = C.flags.towers ? 1 : 0;
       else if (o.what === 'guards') got = C.guardsStart && !C.ships.some(u => u.guard && u.hp > 0) ? 1 : 0;
+      else if (/^rival:/.test(o.what)) got = campRivalDone(C, o.what.slice(6)) ? 1 : 0; // the rival is dead or has got away (src/camprival.js)
       else if (/^wave:/.test(o.what)) { const w = parseInt(o.what.slice(5), 10); got = C.waves[w] && C.waves[w].started && !C.ships.some(u => u.team === 'alien' && u.hp > 0 && u.wave === w) ? 1 : 0; }
     } else if (o.type === 'hold') { need = o.secs; got = Math.min(o.secs, Math.floor(campMissionClock(C))); }
     else if (o.type === 'ore') { need = o.n; got = Math.min(o.n, Math.floor(C.oreBest)); } // the store held this much at some time (selling it afterwards does not undo it)

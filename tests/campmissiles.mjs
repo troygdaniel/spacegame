@@ -37,7 +37,7 @@ console.log('A. the table and the words');
   const m = J('CAMP.missile');
   check('the launcher is in the one table, CAMP.missile: a magazine of 6, a slow reload, big damage to big ships and little to the others', m.magazine === 6 && m.reload >= 10000 && m.big >= 100 && m.small <= 20 && m.big > m.small * 5, JSON.stringify(m));
   check('every number the card names is there: magazine, reload, damage, speed, turn rate (and the lock, fuel, fuze and blast)', ['magazine', 'max', 'reload', 'delay', 'lock', 'speed', 'accel', 'turn', 'life', 'fuze', 'blast', 'big', 'small', 'launch'].every(k => typeof m[k] === 'number'));
-  check('the big ships are the mothership, the towers and the gunships', m.bigKinds.slice().sort().join() === 'gunship,mother,tower');
+  check('the big ships are the mothership, the towers, the gunships and the rival pirate leader (card space-game-rival-duel: the answer to a rival that runs)', m.bigKinds.slice().sort().join() === 'gunship,mother,pirateleader,tower');
   check('every line of the table has a comment', (() => { const s = src('src/campaign.js'), i = s.indexOf('  missile: {'), j = s.indexOf('  bay: {'); return s.slice(i, j).split('\n').slice(1, -2).every(l => l.includes('//')); })());
   g.run('__m(1)');
   check('a new battle: six missiles in the magazine as a plain number (C.missiles), none in the air, the launcher ready', J('C.missiles') === 6 && J('C.rockets.length') === 0 && J('C.nextRocket') === 0 && J('C.orders.missiles') === 0);

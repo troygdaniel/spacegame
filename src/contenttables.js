@@ -675,6 +675,11 @@ const UI_TEXT = {
   'camp.nav.pirate': 'Pirate',
   'camp.nav.k.skiff': 'Skiff', 'camp.nav.k.cutter': 'Cutter', 'camp.nav.k.brute': 'Brute', 'camp.nav.k.patrol': 'Patrol', 'camp.nav.k.miner': 'Miner',
   'camp.map.pirate': 'Pirates ({n})', 'camp.map.patrol': 'Patrols ({n})', 'camp.map.miner': 'Miners ({n})',
+  // The rival ship (card space-game-rival-duel, content/text/campaign-rival.md)
+  'camp.say.rival.leader': 'Pirate leader ahead. Heavy ship.', 'camp.say.rival.dead': '{name} is down.', 'camp.nav.k.pirateleader': 'Pirate leader',
+  'camp.say.rival.charge': 'Broadside charging. Power to shields.', 'camp.say.rival.down': 'Its shields are down. Power to weapons.', 'camp.say.rival.ram': 'It is ramming. Power to engines.',
+  'camp.ui.rival.charge': 'BROADSIDE CHARGING', 'camp.ui.rival.down': 'SHIELDS DOWN', 'camp.ui.rival.ram': 'RAMMING', 'camp.ui.rival.run': 'RUNNING', 'camp.map.rival': 'Pirate leader',
+  'camp.say.rival.run': 'It is running. Chase it.', 'camp.say.rival.run.final': 'It is running for good. Chase it.', 'camp.say.rival.gone': '{name} got away.',
   // The torpedo boats (card space-game-torpedo-boats, content/text/campaign-torpedo.md)
   'camp.say.torp.arm.name': 'Torpedo boat arming on {name}.',
   'camp.say.torp.arm.us': 'Torpedo boat arming on us.',
