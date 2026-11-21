@@ -56,8 +56,16 @@ try {
   const r = await bf();
   check('A then R picks the second mission as a replay and opens its briefing, headed REPLAY, with its own story line', await j(`campBriefIsOpen(${HUB})`) && r.some(x => /^REPLAY\s+-\s+MISSION 2\s+-\s+Ore haulers/.test(x)) && r.some(x => /^Escort the haulers/.test(x)), r.join(' | ').slice(0, 300));
   await snap('3-replay-briefing');
-  await key('Enter'); await t.run(400); await snap('6-replay-what-to-do'); await key('Enter'); await t.run(300); await snap('7-replay-how'); await key('Enter');
-  check('Enter on the last screen launches the replay: the Campaign scene is on belt mission 2 as a replay and goes to the flight', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.camp && ${CAMPS}.mode === 'play'`) && await j(`${CAMPS}.replay === true && ${CAMPS}.mi === 1`));
+  await key('Enter'); await t.run(400); await snap('6-replay-what-to-do'); await key('Enter'); await t.run(300); await snap('7-replay-how');
+  await key('Escape'); await key('KeyA'); await key('KeyR'); await t.run(600);
+  const m1 = await bf(), note = () => j(`${HUB}.bf.text.filter(o => o.text).map(o => o.text).filter(x => /^SHIP:/.test(x))`);
+  check('mission 1 (the belt survey) carries the ship\'s lines over its three screens, the basics in the story\'s voice: the map and the rings, the scan, then fly, fire, the panel and the map', (await note()).some(x => /Welcome aboard, Commander/.test(x)));
+  await snap('8-tutorial-1');
+  await key('Enter'); await t.run(300); await snap('8-tutorial-2'); const n2 = await note();
+  await key('Enter'); await t.run(300); await snap('8-tutorial-3'); const n3 = await note();
+  check('the second screen says how a ring is scanned and the third the keys: W A S D, Space, Q and the wing, Tab', n2.some(x => /inside a ring scans it/.test(x)) && n3.some(x => /W A S D fly the cruiser/.test(x) && /Space/.test(x) && /Tab/.test(x)), n3.join(' | '));
+  await key('Enter');
+  check('Enter on the last screen launches the replay: the Campaign scene is on belt mission 1 as a replay and goes to the flight', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.camp && ${CAMPS}.mode === 'play'`) && await j(`${CAMPS}.replay === true && ${CAMPS}.mi === 0`));
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
 } catch (e) { console.log('  FAIL the boot stopped: ' + (e && e.message)); bad++; }
 finally { await t.close(); }
