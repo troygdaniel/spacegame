@@ -118,29 +118,29 @@ g.run(`
   const st = J('__stages()');
   check('the cycle runs in order: appear, charge, broadside, down, ram, ramhit, charge, broadside, down, run', st.join(' ').startsWith('appear charge broadside down ram ramhit stalk charge broadside down run'), st.join(' '));
   const ch = J(`__ev.find(e => e.type === 'rival' && e.stage === 'charge')`);
-  check('the charge announces its length (3.2 s) for the ring', ch && ch.secs === 3.2, JSON.stringify(ch));
+  check('the charge announces its length (4 s: card space-game-fleet-command-tune made the leader forgiving, it was 3.2) for the ring', ch && ch.secs === 4, JSON.stringify(ch));
   const say = J(`__ev.filter(e => e.type === 'say').map(e => e.key)`);
   check('the ship says charge, down, ram and run in turn', ['camp.say.rival.charge', 'camp.say.rival.down', 'camp.say.rival.ram', 'camp.say.rival.run'].every(k => say.includes(k)), say.join());
   check('every phase fired its cue', J(`['charge', 'down', 'ram', 'run'].every(k => C.cues['rival:leader:' + k] != null)`));
   // the time from the charge to the broadside
-  g.run('__duel(); __runE(14)');
+  g.run('__duel(); __runE(18)');
   const t = J(`(() => { const a = __ev.findIndex(e => e.stage === 'charge'), b = __ev.findIndex(e => e.stage === 'broadside'); return a >= 0 && b >= 0 })()`);
-  check('it fires within 14 s of the start (6 s of stalk, 3.2 of charge)', t);
+  check('it fires within 18 s of the start (10 s of stalk, 4 of charge)', t);
 }
 {
   // the broadside: six shots; a still carrier is hit by most of them, a moving one by far fewer
-  const run = (move) => { g.run('__duel({ god: false })'); if (move) g.run('C.input.thrust = 1'); g.run(`(() => { for (let i = 0; i < 30 * 16; i++) { if (${move}) { const a = Math.atan2(__rv() ? __rv().y - C.carrier.y : 0, __rv() ? __rv().x - C.carrier.x : 1) + Math.PI / 2; C.carrier.rot = a; C.input.thrust = 1; } campStep(C, 1 / 30); C.events.length = 0; } })()`); return J('({ shield: C.shield, hull: C.carrier.hp, max: campShieldMax(C) })'); };
+  const run = (move) => { g.run('__duel({ god: false })'); if (move) g.run('C.input.thrust = 1'); g.run(`(() => { for (let i = 0; i < 30 * 18; i++) { if (${move}) { const a = Math.atan2(__rv() ? __rv().y - C.carrier.y : 0, __rv() ? __rv().x - C.carrier.x : 1) + Math.PI / 2; C.carrier.rot = a; C.input.thrust = 1; } campStep(C, 1 / 30); C.events.length = 0; } })()`); return J('({ shield: C.shield, hull: C.carrier.hp, max: campShieldMax(C) })'); };
   const still = run(false), moving = run(true);
   const lostStill = still.max - still.shield + (600 - still.hull), lostMoving = moving.max - moving.shield + (600 - moving.hull);
-  check('a still carrier takes the broadside on the shield (more than 60 of the 108, and its small gun on top)', lostStill > 60 && lostStill <= 145, JSON.stringify(still));
+  check('a still carrier takes the broadside on the shield (more than 60 of the 90, and its small gun on top)', lostStill > 60 && lostStill <= 145, JSON.stringify(still));
   check('a carrier that moves across its line takes under half of it', lostMoving < lostStill / 2, JSON.stringify([lostStill, lostMoving]));
   check('a full shield at the default power keeps the hull whole against one broadside', still.hull === 600, JSON.stringify(still));
   g.run('__duel({ god: false }); C.shield = 30');
-  g.run('__runE(12)');
+  g.run('__runE(17)');
   check('with the shield low the broadside reaches the hull', J('C.carrier.hp') < 600, J('C.carrier.hp'));
 }
 {
-  g.run('__duel()'); g.run('__runE(10.5)');
+  g.run('__duel()'); g.run('__runE(16)'); // the shield is down once the first charge has run (10 s of stalk and 4 of charge, a second to appear)
   const R = () => J(`(() => { const u = __rv(); return { ph: u.rival.ph, sh: u.rival.sh, max: u.rival.shMax, hp: u.hp, mx: u.maxHp } })()`);
   check('after it fires the shield is down', R().ph === 'down' && R().sh === 0, JSON.stringify(R()));
   const hp0 = R().hp; g.run(`campHurt(C, __rv(), 10, 'x')`);
@@ -172,13 +172,13 @@ g.run(`
 }
 {
   // a charge cannot be turned into a run: hurt in the charge or while its shield is down it keeps to the phase
-  g.run('__duel(); __runE(8)');
+  g.run('__duel(); __runE(12)');
   g.run(`__rv().hp = __rv().maxHp * 0.2; __runE(0.3)`);
   check('hurt badly in a charge it still charges (the punishment is for the player)', J(`__rv().rival.ph`) === 'charge', J(`__rv().rival.ph`));
 }
 {
   // the state the scene draws
-  g.run('__duel(); __runE(8)');
+  g.run('__duel(); __runE(12)');
   const s = J(`campRivalState(C, __rv())`);
   check('the scene is told the phase, how far into it, the shield and the hull', s.phase === 'charge' && s.frac > 0 && s.frac < 1 && s.shield === 1 && s.hull === 1 && s.name === 'Pirate leader', JSON.stringify(s));
 }
@@ -221,7 +221,7 @@ g.run(`
   check('and its two small bars over it', stalk.filter(c => c[0] === 'fillRect').length >= 3);
   g.run(`campRivalHud(S, S.hudG = __mk(), __bar)`);
   check('the HUD names it and draws a shield bar and a hull bar, both full', J(`S.hud.rivalName.calls.some(c => c[0] === 'setText' && c[1] === 'PIRATE LEADER')`) && J('__bars.length') === 2 && J('__bars.every(b => b.f === 1)'), J('__bars'));
-  g.run(`__runE(5.5); S.rivalG.calls.length = 0; campRivalWorld(S); __bars = []; campRivalHud(S, S.hudG, __bar)`);
+  g.run(`__runE(11); S.rivalG.calls.length = 0; campRivalWorld(S); __bars = []; campRivalHud(S, S.hudG, __bar)`); // 11 s: the first charge begins at 10 (6 before card space-game-fleet-command-tune)
   const ch = J(`S.rivalG.calls`);
   check('in the charge a ring closes on it and a line of fire runs at the cruiser', J(`__rv().rival.ph`) === 'charge' && ch.some(c => c[0] === 'strokeCircle' && c[3] > 34 && c[3] < 121) && ch.some(c => c[0] === 'lineBetween'), J(`__rv().rival.ph`));
   check('the HUD warns BROADSIDE CHARGING', J(`S.hud.rivalPhase.calls.some(c => c[0] === 'setText' && c[1] === 'BROADSIDE CHARGING')`));
