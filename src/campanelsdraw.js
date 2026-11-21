@@ -33,7 +33,7 @@ function campPanelsBuild(s, def) {
   O.cap = own(keyCap(s, def.key, AMBER), 2); O.cap.setPosition(G.tab.x + 20, G.tab.y + G.tab.h / 2);
   O.name = own(s.add.text(G.tab.x + 38, G.tab.y + G.tab.h / 2, def.title, uiFont(14, '#9fbdd1', { letterSpacing: 2 })).setOrigin(0, 0.5), 2);
   O.note = own(s.add.text(G.tab.x + G.tab.w - 8, G.tab.y + G.tab.h / 2, '', uiFont(11, K.ink[def.side], { letterSpacing: 1 })).setOrigin(1, 0.5), 2); // the stance in force (FLEET): a word, not Free
-  O.hint = def.page2 ? own(s.add.text(G.list.x + 30, G.list.y + G.list.h + K.hint.gap, '', uiFont(K.hint.size, K.hint.ink)).setOrigin(0, 0), 2) : null; // "<- ->  stances" under the list, "<- ->  orders" on the second page
+  O.hint = def.page2 || def.page3 ? own(s.add.text(G.list.x + 30, G.list.y + G.list.h + K.hint.gap, '', uiFont(K.hint.size, K.hint.ink)).setOrigin(0, 0), 2) : null; // "<- ->  stances" under the list, "<- ->  orders" on the second page
   O.rows = def.rows.map(r => {
     const y = G.rowY(r.n) + K.list.row / 2;
     return { id: r.id, digit: own(s.add.text(G.list.x + 15, y, String(r.n), uiFont(14, K.rowInk.digit, { fontStyle: 'bold' })).setOrigin(0.5), 2),
@@ -69,15 +69,16 @@ function campPanelsPaintOne(s, O, now, play) {
     g.lineStyle(1 + 1.5 * beat, col, 0.42 + 0.58 * beat); g.strokeRoundedRect(T.x, T.y, T.w, T.h, 7);
     O.name.setColor(beat > 0.45 ? '#ffffff' : '#9fbdd1');
   }
-  O.name.setText(v.list > 0 && page === 1 && def.page2 ? def.page2.title : def.title); // an open panel on its second page says so on its tab; collapsed it is its own name again
-  if (O.hint) O.hint.setVisible(v.list > 0 && pages > 1).setAlpha(v.list).setText('\u2190 \u2192  ' + (page === 1 ? def.title.toLowerCase() + ' orders' : def.page2.title.toLowerCase()));
+  O.name.setText(v.list > 0 ? campPanelPageTitle(def, page) : def.title); // an open panel on another page says so on its tab; collapsed it is its own name again
+  if (O.hint) O.hint.setVisible(v.list > 0 && pages > 1).setAlpha(v.list).setText('\u2190 \u2192  ' + (page + 1 >= pages ? def.title.toLowerCase() + ' orders' : campPanelPageTitle(def, page + 1).toLowerCase())); // the hint names the page the right arrow goes to: stances, convoy, then the orders again
   const show = v.list > 0;
   O.rows.forEach(r => { [r.digit, r.name, r.suffix].forEach(o => { o.setVisible(show); if (show) o.setAlpha(v.list); }); });
   if (!show) { O.live = -1e9; return; }
   if (O.page !== page) { O.page = page; O.live = -1e9; } // flipped: the words are made again now, not at the next quarter second
   if (O.live < 0 || now - O.live >= K.every) { // the words are live: made on the first frame of the list and four times a second after that
     O.live = now;
-    campPanelRows(s.camp, def.id, page).forEach((r, i) => { const o = O.rows[i]; if (!o) return; o.name.setText(r.tag || r.label).setColor(r.ok ? K.rowInk.ok : K.rowInk.no); o.digit.setColor(r.ok ? K.rowInk.digit : K.rowInk.no); o.suffix.setText(r.marked ? r.state : (r.short || '')).setColor(r.marked ? K.rowInk.digit : r.ok ? K.rowInk.suffix : K.rowInk.why); }); // a stance in force says so ("in force", in the digit's colour)
+    campPanelRows(s.camp, def.id, page).forEach((r, i) => { const o = O.rows[i]; if (!o) return; o.digit.setVisible(true); o.name.setText(r.tag || r.label).setColor(r.ok ? K.rowInk.ok : K.rowInk.no); o.digit.setColor(r.ok ? K.rowInk.digit : K.rowInk.no); o.suffix.setText(r.marked ? r.state : (r.short || '')).setColor(r.marked ? K.rowInk.digit : r.ok ? K.rowInk.suffix : K.rowInk.why); }); // a stance in force says so ("in force", in the digit's colour)
+    for (let i = campPanelPageRows(def, page).length; i < O.rows.length; i++) { const o = O.rows[i]; o.name.setText(''); o.digit.setVisible(false); o.suffix.setText(''); } // a page with fewer rows than the panel's first (the convoy page has four): the rows it has no use for are blank, not the last page's words
   }
   campPanelPageRows(def, page).forEach(r => { // the rows: a translucent back with the panel's colour at its edge; the one just picked flashes
     const y = G.rowY(r.n), on = v.flash && v.flash.row === r.id ? v.flash.lit : 0;

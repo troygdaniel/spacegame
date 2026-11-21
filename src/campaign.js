@@ -197,6 +197,13 @@ const CAMP = {
     hp: 200,                               // hit points of a freighter
     speed: 120                             // px/s: the same as the MULE of the escort call
   },
+  convoyOrders: {                          // orders for the escorted ships (card space-game-convoy-orders; src/campconvoy.js; docs/CAMPAIGN.md "Convoy orders"): Tuck in, Hold here, Run for it, Carry on; the page CONVOY of the FLEET panel, the strip and the voice
+    kinds: ['freighter', 'miner'],         // the ships that take them: the convoys (the transport, the haulers) and the neutral miners
+    bubble: 120,                           // px: Tuck in. A ship this close to the cruiser is under its shield: a hit on it is a hit on the cruiser's shield instead (then its hull). It flies to the cruiser, and goes on along its road only while it stays inside
+    run: 1.6,                              // times its own top speed: Run for it, full speed to its goal (a miner goes home), and no cover
+    accel: 160,                            // px/s per s: how fast a ship under an order gains or loses speed (a held ship stops in a second or so); without an order a convoy ship goes at its speed at once, as ever
+    slots: [[-46, -44], [-46, 44], [-84, -44], [-84, 44], [-122, 0], [-10, -58]] // px, in the cruiser's frame (x along its nose, y to its right): where the tucked miners lie under the shield (a convoy ship holds its road and only keeps inside the bubble)
+  },
   warp: {                                  // the warp cinematic at the start of a level that warps in (src/campwarp.js): times are seconds from its start, places are fractions of the screen, sizes are px
     total: 7.2,                            // s: the whole cinematic (6 to 8); any key skips it
     grace: 0.4,                            // s: a key in the first moments is ignored (the key that started the level may still be down)
@@ -648,7 +655,7 @@ function campNew(level, techs, opts) {
     relic: L.relic ? { x: campPlaces(level)[L.relic.place].x, y: campPlaces(level)[L.relic.place].y, hold: 0 } : null,
     bay: { fighters: CAMP.bay.fighters, escorts: CAMP.bay.escorts }, launchQ: [], nextLaunch: 0,
     waves: L.waves.map(() => ({ started: false, at: 0 })), convoys: L.convoys.map(() => ({ started: false })), delivered: 0, lost: 0, kills: 0, launched: 0, lostShips: 0, lane: {}, cash: 0, sold: 0, oreBest: 0,
-    orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, build: 0, power: 0, balance: 0, emergency: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
+    orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, build: 0, power: 0, balance: 0, emergency: 0, convoy: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
     result: null, why: '', docked: '' // docked: the id of the outpost the carrier is docked at ('' in flight; src/campoutpost.js)
   };
   if (campHas(C, 'bay2')) C.bay.fighters += CAMP.tech.bay2.fighters;
@@ -727,6 +734,7 @@ function campNearest(list, p, max) { let best = null, bd = max == null ? Infinit
 // ---------- damage and deaths ----------
 function campHurt(C, u, dmg, byId) {
   if (u.hp <= 0 || C.result) return;
+  if (u.cord === 'tuck' && typeof campConvoyCover === 'function') { const c = campConvoyCover(C, u); if (c) u = c; } // a ship tucked in under the cruiser's shield: the hit is the cruiser's (src/campconvoy.js)
   if (u.kind === 'carrier') {
     if (campHas(C, 'shield')) dmg *= CAMP.tech.shield.taken; if (C.god) dmg = 0;
     if (C.shield > 0 && dmg > 0) { const take = Math.min(C.shield, dmg); C.shield -= take; dmg -= take; C.shieldHitAt = C.t; C.events.push({ type: 'shieldhit', x: u.x, y: u.y }); } // the shield first
@@ -787,6 +795,7 @@ function campDo(C, name, arg, dry, how) {
   if (name === 'power' || name === 'balance' || name === 'emergency') return campPowerDo(C, name, arg, dry); // the ship's systems (below)
   const t = campFind(C, arg), out = campWing(C);
   if (name === 'scout') return campScoutDo(C, arg, dry); // the Scout order (below)
+  if (name === 'convoy') return campConvoyOrder(C, arg, dry); // Tuck in, Hold here, Run for it, Carry on: the escorted ships (src/campconvoy.js)
   if (name === 'launch') {
     const n = C.bay.fighters + C.bay.escorts - C.launchQ.length;
     if (n <= 0) return campNo(C.launchQ.length ? 'launching' : out.length ? 'baydry' : 'bay');
@@ -867,6 +876,13 @@ function campIntent(text) {
   const SC_FILLER = /^(?:(?:please|hey|ok|okay|computer|athena|can you|could you|would you|will you|i want to|i wanna|i need to|lets|let's|go ahead and|all|everyone)\s+)+/;
   let q = String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9' -]+/g, ' ').replace(/\s+/g, ' ').trim().replace(SC_FILLER, '').replace(/\s+(please|now|right now|already)$/, '').trim();
   if (!q) return null;
+  { // the convoy orders (card space-game-convoy-orders): "tuck in", "run for it", "carry on", and with a convoy word ("haulers hold", "hold the transport") hold: the plain "hold here" stays the wing's stance. The words go to campConvoyOrder whole: it finds the verb and a ship's name
+    const cw = /\b(?:convoys?|transport|haulers?|freighters?|cargo|miners?)\b/.test(q), wing = /\b(?:escort|attack|guard|mine|build|launch|recall|scout|dock)\b/.test(q);
+    if (/^(?:tuck|close up|snug up|take cover|get under (?:the |our )?(?:shield|cover))/.test(q) || (cw && !wing && /\btuck\b/.test(q))) return { act: 'fleet_convoy', arg: q };
+    if (/^(?:run for it|make a run(?: for it)?)$/.test(q) || (cw && !wing && /\b(?:run for it|make a run|run|flee|full speed)\b/.test(q))) return { act: 'fleet_convoy', arg: q.indexOf('run') >= 0 || q.indexOf('flee') >= 0 || q.indexOf('full speed') >= 0 ? q : 'run for it' };
+    if (/^(?:carry on|as you were|resume course|release the (?:convoy|haulers|transport))$/.test(q) || (cw && !wing && /\b(?:carry on|as you were|resume|release)\b/.test(q))) return { act: 'fleet_convoy', arg: q.indexOf('carry on') >= 0 ? q : 'carry on' };
+    if (cw && !wing && (/^(?:convoys?|haulers?|transport|freighters?|miners?)\s+(?:hold|stop|halt|stay put|wait)\b/.test(q) || /^(?:hold|stop|halt)\s+(?:the |our )?(?:convoys?|haulers?|transport|freighters?|miners?)\b/.test(q))) return { act: 'fleet_convoy', arg: q };
+  }
   { // a group named first, in words the old forms below would lose the group of: "all attack the mothership", "escorts scout the anomaly", "fighters hold at Ceres", "cancel the fighters" (src/campwing.js)
     const wp = typeof campWingParse === 'function' ? campWingParse(String(text).toLowerCase().replace(/^(?:(?:please|hey|ok|okay|computer|athena|can you|could you|would you|will you|go ahead and)\s+)+/, '')) : null;
     const same = wp && ((wp.group === 'fighters' && wp.verb === 'attack') || (wp.group === 'escorts' && wp.verb === 'escort') || (wp.group === 'all' && (wp.verb === 'guard' || !wp.verb)) || (wp.group === 'escorts' && !wp.verb && /\b(?:convoys?|freighters?|cargo|supplies|haulers?)\b/.test(wp.target))); // the old forms mean the same: their own words and answers
@@ -1267,6 +1283,7 @@ function campConvoyAI(C, u, dt) {
   const d = campDist(u, u.dest), ang = Math.atan2(u.dest.y - u.y, u.dest.x - u.x);
   if (u.cid != null && u.lane > 0) C.lane[u.cid] = Math.max(C.lane[u.cid] || 0, Math.max(0, Math.min(1, 1 - (d - 90) / u.lane))); // how much of its road it has flown (the best it has done: the arrival removes the ship, the share stays)
   if (d < 90) { if (u.cid != null) C.lane[u.cid] = 1; C.delivered++; u.hp = 0; u.arrived = true; C.events.push({ type: 'arrive', x: u.x, y: u.y, id: u.id }); campSay(C, u.named ? 'camp.say.shiparrived' : 'camp.say.delivered', { name: campConvoyName(u) }); return; }
+  if (u.cord && typeof campConvoyStep === 'function') return campConvoyStep(C, u, ang, dt); // under an order (Tuck in, Hold here, Run for it: src/campconvoy.js)
   u.rot = ang; u.vx = Math.cos(ang) * u.vmax; u.vy = Math.sin(ang) * u.vmax; u.x += u.vx * dt; u.y += u.vy * dt;
 }
 

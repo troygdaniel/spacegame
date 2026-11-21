@@ -252,6 +252,20 @@ A slow enemy that **ignores the fighters** and runs at the convoy, the transport
 - **Words** are `content/text/campaign-torpedo.md` (seven radio lines and two names).
 - **Pictures, the map's marks and the torpedo's drawing** follow in their own card: until then a boat is drawn as the drone and a torpedo is not drawn on the scene.
 
+## Convoy orders: tuck in, hold here, run for it (card `space-game-convoy-orders`; Troy, 21 Nov 2026: "escorts were boring; I want to direct the fleet more")
+
+The escorted ships (the transport, the haulers, the neutral miners) take orders now, to all of them or to one by name. The pure half is `src/campconvoy.js` (`tests/campconvoy.mjs`, 73 checks); the numbers are `CAMP.convoyOrders`; the scene half is `src/campconvoyscene.js`. The undo anchor is the git tag `fleet-command-before`. Every level, pirates and aliens alike.
+
+- **Tuck in.** The ship flies to the cruiser and stays inside its shield bubble (`bubble` 120 px). A hit on a tucked ship inside the bubble is a hit on the cruiser: the shield takes it, then the hull (shots, torpedoes and their blast; `campHurt` asks `campConvoyCover`). The convoy ship goes on along its road, but only while it stays inside the bubble, so the cruiser sets the pace; a tucked miner lies under the cruiser in a slot of its own (`slots`). The price is the cruiser's shield and being tied to the convoy.
+- **Hold here.** It brakes (`accel`, about a second) and waits where it is, with no cover. A held ship never arrives. A miner stops working.
+- **Run for it.** Full speed to its goal (`run`, 1.6 times its speed; a miner goes home), with no cover: it is out from under the shield and the escorts must keep the way clear. It still arrives and counts as delivered.
+- **Carry on.** Back to its own course: the order is cancelled.
+- **The hull blocks.** A shot or a torpedo flies on until it touches a ship, so a cruiser between the shooter and the ship behind it is the first it touches: shots and torpedoes aimed at a transport behind the cruiser hit the cruiser (the test holds it).
+- **Where.** `campOrder(C, 'convoy', words)` is the one door: the words say the verb and may name a ship ("tuck in Hauler 2"). The keys: the FLEET panel has a **third page**, CONVOY (the arrows flip: orders, stances, convoy), rows 1 to 4 (Tuck in, Hold here, Run for it, Carry on); the one in force is marked. The strip and the ship's voice: "tuck in", "tuck in close", "take cover", "run for it", "carry on", and hold with a convoy word ("haulers hold", "hold the transport", "stop the convoy"): a plain "hold here" is still the wing's stance. The key letters are read from `CAMP_PANELS`, never typed.
+- **What you see.** While any ship is tucked in, the cruiser's bubble is drawn (a soft ring) with a thin link to each tucked ship (dashes when the ship is outside it: no cover); a hit taken for a tucked ship flashes a line from it to the cruiser. The radio says the order ("Convoy, tuck in under our shield.", "Hauler 2, run for it. No cover.").
+- **The bot** (`tools/campaign-bot.mjs`, `tuck`): when a hostile comes within 1,600 px of an escorted ship the cruiser goes to it and the ships tuck in; when the sky is clear they carry on. It wins 1.1, 1.2 and 1.3 (10 seeds) as the plain bot does; on 1.3 it brings all three haulers home.
+- **Words** are `content/text/campaign-convoy.md`.
+
 ## The three levels
 
 | | Where | What you do | You win when | You lose when |
