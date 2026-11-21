@@ -16,7 +16,7 @@ const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
 // a battle of the belt's second mission (haulers fly from Vesta to Ceres), the wing out, nothing of theirs alive; a gunship that stands still can be put anywhere
 g.run(`
-  window.__new = (level, mission) => { window.C = campNew(level || 1, [], { seed: 2, god: true, mission: mission == null ? 1 : mission }); C.waves.forEach(w => { w.started = true; }); C.motherSpawn = 1e12; C.ships.forEach(u => { if (u.team === 'alien') u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0);
+  window.__new = (level, mission) => { window.C = campNew(level || 1, [], { seed: 2, god: true, mission: mission == null ? 1 : mission }); C.arrivedAt = 0; C.waves.forEach(w => { w.started = true; }); C.motherSpawn = 1e12; C.ships.forEach(u => { if (u.team === 'alien') u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0);
     campOrder(C, 'launch'); __run(10); return C; };
   window.__run = sec => { for (let i = 0; i < Math.round(sec * 30); i++) { campStep(C, 1 / 30); C.events.length = 0; } };
   window.__foe = (dx, dy, kind) => { var u = campSpawn(C, kind || 'gunship', C.carrier.x + dx, C.carrier.y + dy); u.vmax = 0; u.accel = 0; u.nextShot = 1e12; u.hp = u.maxHp = 1e7; return u; };
@@ -111,7 +111,7 @@ console.log('E. the wing flies the order');
   check('and a held ship fires at what comes into its range without leaving the point', J('__s') >= 8 && J('__f().every((u, i) => Math.hypot(u.x - __p[i][0], u.y - __p[i][1]) < 40)'), J('__s'));
   g.run('__new(1, 1)'); g.run('C.pickups.push({ id: "chunk-901", kind: "chunk", x: C.carrier.x + 700, y: C.carrier.y - 500, ore: 25, born: C.t }); var o0 = C.ore; __r("escorts", "fetch", "chunk-901"); __run(14); window.__got = C.ore - o0');
   check('Fetch the ore: an escort flies over it and takes it (25 ore into the store), the chunk is gone, and the escorts are back to guarding the carrier', J('__got') === 25 && J('C.pickups.some(p => p.id === "chunk-901")') === false && J('__e().every(u => u.order.type === "guard" && u.order.at.kind === "carrier")'), J('__got'));
-  g.run('__new(1, 1)'); g.run('var rk = C.rocks[0]; window.__rid = rk.id; window.__hp0 = rk.hp; C.carrier.x = rk.x + 1200; C.carrier.y = rk.y; __run(0.5); __r("all", "mine", __rid); __run(20); window.__rk = C.rocks.find(r => r.id === __rid)');
+  g.run('__new(1, 1)'); g.run('var rk = C.rocks[0]; window.__rid = rk.id; window.__hp0 = rk.hp; var dx = rk.x + 1200 - C.carrier.x, dy = rk.y - C.carrier.y; C.ships.forEach(u => { if (u.team === "earth") { u.x += dx; u.y += dy; } }); __run(0.5); __r("all", "mine", __rid); __run(20); window.__rk = C.rocks.find(r => r.id === __rid)');
   check('Mine that rock: the ships cut the named rock (it is cut or broken, with its ore lying about or taken) while others of the belt stand', J('!__rk || __rk.hp < __hp0'), J('__rk && __rk.hp'));
   g.run('__new(1, 1)'); g.run('C.stance = "orbit"; window.__a = __foe(900, 0); __r("fighters", "attack", "the gunship"); __run(14)');
   const R = J('CAMP.stance.orbit + __a.r'), d = J('__f().map(u => __d(u, __a))');

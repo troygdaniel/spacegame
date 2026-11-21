@@ -46,7 +46,7 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.m.1.1.b1 | Scan three rock fields. |
 | camp.m.1.1.b2 | Expect company. |
 | camp.m.1.2.title | Ore haulers |
-| camp.m.1.2.b1 | Escort the haulers from Vesta to Ceres. |
+| camp.m.1.2.b1 | Escort the haulers from Deimos to Phobos. |
 | camp.m.1.2.b2 | Two must arrive. |
 | camp.m.1.3.title | The mothership |
 | camp.m.1.3.b1 | Destroy the alien mothership. |
@@ -72,3 +72,8 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.nav.scan | Scan point {n} |
 | camp.nav.guard | Relic guard |
 | camp.nav.alien | Alien |
+| camp.say.arrived | Arrived at {name}. |
+| camp.o.travel | Fly to {name}: {km} km. |
+| camp.ui.briefplace | PLACE  {name}     {km} km     about {secs} s by Fast |
+| camp.ui.briefhere | PLACE  {name}     you start there |
+| camp.ui.outpost | Docked at {outpost}, {name}. |

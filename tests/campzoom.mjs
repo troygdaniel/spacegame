@@ -87,7 +87,7 @@ check('W S A D and a click in the list or on the map mark the choice (userSel) t
 const md = src('src/campmapdraw.js');
 check('the paint steps the zoom first (before it reads mp.fit), moves the names with the marks while it eases, and places them afresh when it has arrived', md.indexOf('campMapZoomStep(mp, F, dt)') > 0 && md.indexOf('campMapZoomStep(mp, F, dt)') < md.indexOf('const C = s.camp, f = mp.fit') && /if \(moving\) campMapNamesMove\(s\); else if \(mp\.z === mp\.zWant && mp\.namesZ !== mp\.z\) \{ campMapNames\(s\)/.test(md));
 check('the wheel is taken by the map when it opens and given back when it closes', /s\.input\.on\('wheel', mp\.onWheel\)/.test(md) && /s\.input\.off\('wheel', s\.mp\.onWheel\)/.test(md));
-check('Z (the whole system) is a new extent: the zoom goes back to 1', /mp\.base = campMapFit\(campMapBounds\(s\.camp\.level, mp\.whole\), CAMPMAP\.frame\); mp\.fit = Object\.assign\(\{\}, mp\.base\); mp\.z = mp\.zWant = mp\.namesZ = 1;/.test(md));
+check('Z (the whole system) is a new extent: the zoom goes back to 1', /mp\.base = campMapFit\(campMapBounds\(s\.camp\.level, mp\.whole(?:, s\.camp\.L)?\), CAMPMAP\.frame\); mp\.fit = Object\.assign\(\{\}, mp\.base\); mp\.z = mp\.zWant = mp\.namesZ = 1;/.test(md));
 const zt = J(`uiText('camp.map.zoom', { pct: 800 })`);
 check('the corner says the zoom level and the keys, one short line that fits beside the title (40 letters at most)', zt === 'ZOOM 800%   + - zoom   0 reset' && zt.length <= 40 && /ui\.zoomText\.setText|mp\.zoomText\.setText\(uiText\('camp\.map\.zoom', \{ pct: Math\.round\(mp\.zWant \* 100\) \}\)\)/.test(md), zt);
 

@@ -81,6 +81,7 @@ g.run(`(() => {
     if (B.sit && a && campDist(a, c) > 900) a = null; // a carrier that stays where it is and fights only what comes close
     if (B.sit && !a) { C.input.thrust = 0; C.input.turn = 0; C.input.fire = false; return; }
     const L = C.L; let goal = a;
+    if (L.place && C.arrivedAt == null) { if (!C.nav || !C.nav.on) { const gp = campNavGoal(C); if (gp) campNavGo(C, gp, true); } return; } // the trip to the mission's place first: the map's Fast click, which the autopilot flies (it sets the input itself)
     if (L.objectives) { // a mission: fly at what its first open objective asks (a point to scan, a cache, the relic, the haulers), and at what comes near
       const first = campObjectives(C).find(o => !o.done) || {}, byD = list => list.sort((p, q) => campDist(p, c) - campDist(q, c))[0];
       if (first.type === 'scan') goal = byD(C.scan.filter(p => !p.got)) || goal; else if (first.type === 'caches') goal = byD(C.caches.filter(k => !k.got)) || goal; else if (first.type === 'relic') goal = C.relic;

@@ -17,7 +17,7 @@ const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
 g.run(`
-  window.__new = (level, mission, found, techs) => { window.C = campNew(level, techs || [], { seed: 5, mission: mission || 0, god: true, found: found || [] }); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); C.motherSpawn = 1e12; C.ships.forEach(u => { if (u.team === 'alien') u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0); return C; };
+  window.__new = (level, mission, found, techs) => { window.C = campNew(level, techs || [], { seed: 5, mission: mission || 0, god: true, found: found || [] }); C.arrivedAt = 0; C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); C.motherSpawn = 1e12; C.ships.forEach(u => { if (u.team === 'alien') u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0); return C; };
   window.__run = sec => { for (let i = 0; i < Math.round(sec * 30); i++) { campStep(C, 1 / 30); } };
   window.__A = id => C.anoms.find(a => a.id === id);
   window.__at = (id, d) => { const a = __A(id), c = C.carrier; c.x = a.x - d; c.y = a.y; c.vx = 0; c.vy = 0; };

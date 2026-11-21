@@ -130,7 +130,7 @@ console.log('F. balance: a higher rank is an easier fight and never a walk');
 {
   // the sensible player of tests/campaign.mjs on the last mission of the belt (the mothership), seeds 1 to 3, at the lowest and the highest rank; the idle one does nothing
   g.run(`
-    window.__fly = (rank, seed, idle, mission) => { window.C = campNew(1, [], { seed, rank, mission: mission == null ? 2 : mission });
+    window.__fly = (rank, seed, idle, mission) => { window.C = campNew(1, [], { seed, rank, mission: mission == null ? 2 : mission }); C.arrivedAt = 0;
       for (let i = 0; i < 400 * 30 && !C.result; i++) { const s = i / 30, c = C.carrier;
         if (!idle) { if (s > 1 && s < 1.05) campOrder(C, 'launch'); if (s > 12 && Math.round(s * 30) % 150 === 0) campOrder(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : '');
           const a = campAliens(C).sort((p, q) => campDist(p, c) - campDist(q, c))[0];
