@@ -6,7 +6,7 @@ rule, voice-pack derive) and the three hunts' fixes are all on it. Feature freez
 
 ## For Troy, in one line
 
-**Play it: title, K, the ready room (Enter on the board, L to launch), Q then 1 to launch the wing, Tab for the map, E then 6 to dock; no blocker and no crash anywhere I
+**Play it: title, K, the ready room (Enter for the briefing, L to launch), Q then 1 to launch the wing, Tab for the map, E then 6 to dock; no blocker and no crash anywhere I
 looked; what is still rough is the difficulty of the escort mission (1.2) for a player who does not give orders, three small label and words things, and the debug keys on the
 pause card (`\` wins a mission).**
 
@@ -22,9 +22,11 @@ pause card (`\` wins a mission).**
 - **Not flown by me on the final build**: 1.3, 2.1 and 3.1 (my script does not wait out the warp, and 1.3 was not finished at 244 s), the replay and retreat screens in Chrome.
   Those are covered by the hunts and the gate's boots (below); the retreat line ("Retreat to ...: 14 s on Fast") is checked in the sim by 1-GEN, and I did not
   reproduce it in a forced Chrome state (it needs the aliens near).
-- **The gate**: 142 plain-Node suites, `economy-sim check`, `build-content --check`, and 25 Chrome boots (Campaign, chain, map, missiles, turrets, resources, nav, gameplay, title,
-  warp, click-fly, ux, sol, chatter, sounds, panels, missions, hub, outposts, voice, pursuit, map fire, reveal, rank, anomaly, targets, and Long Haul inside the boot) all pass on
-  the build before this doc. The official bots (`node tools/campaign-bot.mjs --level N`) win every mission with every bot that plays; see the table at the end.
+- **The gate**: 142 plain-Node suites, `economy-sim check` and `build-content --check` pass on this build. The **last full Chrome gate** (25 boots: Campaign, chain, map,
+  missiles, turrets, resources, nav, gameplay, title, warp, click-fly, ux, sol, chatter, sounds, panels, missions, hub, outposts, voice, pursuit, map fire, reveal, rank, anomaly,
+  targets, and Long Haul inside the first) passed on `2b43ed6`; three small commits came after it (a docs file, the test pins, the arrow-label keep list) and ran the Node suites,
+  plus my real-game check of the label. No console error in any boot. The official bots (`node tools/campaign-bot.mjs --level N`) win every mission with every bot that plays
+  and gives orders; see the table at the end.
 
 ## Ranked findings
 
@@ -34,7 +36,7 @@ None. No crash, no dead end, no console error in any run; every mission is winna
 ### Major: all FIXED and on main
 | # | what | how it was seen | state |
 |---|---|---|---|
-| 1 | The debrief card (with a rank line), the pause card and the Earth refit were **taller than their box**: the score over the title, the last lines under the frame, the hint overwritten. | Win any mission; Esc; finish level 1. | fixed (`showCard` grows to its words; `tests/campcardfit.mjs`). Three hunters found it; I found it first and dropped my copy for 7-GEN's. |
+| 1 | The debrief card (with a rank line), the pause card and the Earth refit were **taller than their box**: the score over the title, the last lines under the frame, the hint overwritten. | Win any mission; Esc; finish level 1. | fixed (`showCard` grows to its words; `tests/campcardfit.mjs`). Four of us found it; the fix on main is 7-GEN's (I dropped my own copy). |
 | 2 | **Help lines named keys the panels took away** ("press 6", "Press 3", "(2)"). The first screen of the first mission said "press 6". | K, Enter, L: the story card; lose a hauler mission. | fixed (lines name the panel and the row; `tests/campkeytext.mjs`). |
 | 3 | After the ending a **later page still said "The home world"** in the ready room. | Finish the Campaign, reload, K. | fixed (the room applies the reveal flag when it opens). |
 | 4 | The **FLEET panel's stance page** (Free, Orbit, Keep distance, Match speed, Hold position) existed in the model and had no key. | Q, then Left or Right. | fixed (`space-game-wrapup-stance-page`). |
@@ -44,7 +46,7 @@ None. No crash, no dead end, no console error in any run; every mission is winna
 ### Major (a decision, not a bug): difficulty of 1.2 for a player who gives no orders
 The escort mission (1.2, three haulers to Mars) was **lost by two independent scripted players** on the train builds (7-GEN's, and mine: lost at 192 s, hauler 3 gone, 12 aliens
 down), and the carrier-only bot loses it too, while every official bot that escorts wins 100 percent (114 s). 2-GEN tuned the scales; the plain bot wins all nine at three paces.
-**What Troy sees**: a player who launches and attacks but never uses Escort on the haulers will lose 1.2 on Normal. The lose card says what to do ("Keep the wing on the
+**What a player sees**: a player who launches and attacks but never uses Escort on the haulers will lose 1.2 on Normal. The lose card says what to do ("Keep the wing on the
 haulers: FLEET panel, Escort."). **P changes the pace to Calm.** See it: K, Enter on the board at mission 2, L; fly to Mars at regular speed (about 150 s) or with Fast (Shift
 and the SHIP panel's goal row, 47 s); do not order Escort. My scripted player also lost **2.3** (hold the ring at the relic, carrier lost at 77 s, 13 aliens near) and **3.2**
 (147 s, "Destroy the towers", carrier lost); the official `strong` bot wins both (94 s and 37 s), so these are about orders (missiles at the towers, the wing out early), not luck.
@@ -54,12 +56,14 @@ for Calm as a visible choice (it is on P and on the pause card).
 ### Minor: FIXED since the hunts
 Mission 3 of level 2 had the second wave's words (now its own); "Lose at most 1 ships" (now "Ships lost: 1 or fewer"); the level 2 card said the warp had not happened (now
 "We are through the warp. This is Alpha Centauri."); level 3 had no warp cinematic (it has one: "Alpha Centauri falls behind us"); the map list ended on an orphan heading; the
-route label sat over the belts' names; **the edge arrow's label sat under the SHIP tab (2.3, 3.3) and over the AUTOPILOT line (1.2)** (`948f034`, checked in the real game); the
+route label sat over the belts' names (3-GEN's labels, Node-tested, not seen by me); **the edge arrow's label sat under the SHIP tab (2.3, 3.3) and over the AUTOPILOT line (1.2)** (`948f034`, checked in the real game); the
 briefing and the HUD gave two distances for one trip (407 and 707 km: one function now) and the briefing said the route twice; the SHIP panel said "Dock at an outpost to build"
 on a level with no outpost (build and repair work aboard now); a toast over the debrief title; the same toast twice in one box; the lose tip on tower missions is now specific
 ("Fire missiles (F) at the towers. Send the wing at them.").
 
 ### Minor: OPEN (none blocks; each is one line for an owner)
+I saw 1, 2, 7 and 15 myself on the final build; 3 to 6 and 8 to 12 are from the level hunts (their docs have the detail, and I did not re-check them); 13 and 14 are mine, from
+earlier builds.
 | # | what | how to see it |
 |---|---|---|
 | 1 | A lost mission says **"LEVEL 1 LOST"**, a won one "MISSION COMPLETE: Ore haulers" (the lost title takes the level). | Lose mission 2 (it is on the 1.2 card above). |
