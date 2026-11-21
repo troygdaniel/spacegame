@@ -4,11 +4,12 @@
 // mission's name and kind, the goals (the primary ones, then the bonus objectives with what they earn), a short walkthrough, the enemies to expect, and your readiness with a warning when something is off.
 // This file is the PURE half (no Phaser, no page; tests/campbrief.mjs runs it in Node); src/campbriefdraw.js draws it and src/camphubscene.js opens it.
 //   campBriefLayers(level, i)         what the mission has on the map, from its row of the mission table: { start, focus: { x, y, kind, label }, scan, convoys, caches, towers, relic, defend, places, outposts }
-//   campBriefBounds(L, whole, level)  the area the map shows: the objects of the mission (with the start), or the whole system with its rings
-//   campBriefRoute(L)                 { px, km, regular, fast, near }: from the start to the mission's place, the flight in seconds on regular speed and on Fast (the map's own numbers: campNavEta)
+//   campBriefBounds(Y, zoom)          the area the map shows: 0 the route (the start, the place and the objective points), 1 the mission area (the place and its points), 2 the whole system with its rings
+//   campBriefZoomNext(Y, zoom)        the view M goes to next: the next of the three whose area differs from this one (a mission at its place has no separate route view)
+//   campBriefRoute(Y)                 { px, km, regular, fast, near }: from the start to the mission's place: km and the Fast flight are campTravel's (the HUD's own), the regular flight the map's rule (campNavEta)
 //   campBriefWalk(level, i)           { steps: [text], data: bool }: the walkthrough from the content file (camp.bf.<level>.<mission>.w1 ...), or a plain fallback line when the mission has none
 //   campBriefEnemies(level, i)        { list: [{ kind, n, text }], line }: what the mission's waves, guards and towers add up to, in words
-//   campBriefReady(P, level, i)       { lines: [text], warnings: [text] }: the wing, the rank, the stance, the missiles, the ore, the shield, and a warning for what is off (the Hold stance: the only thing that can be off in the ready room, where the whole wing is in the bay and the magazine and shield are full; there is no power setting in the game to show)
+//   campBriefReady(P, level, i)       { lines: [text], warnings: [text] }: the wing, the rank, the stance, the missiles, the ore, the power setting, the shield, and a warning for what is off (the Hold stance: the only thing that can be off in the ready room, where the whole wing is in the bay and the magazine and shield are full; the power setting is a line, the saved one)
 //   campBriefPage(steps, page)        { items, page, pages }: a long walkthrough is paged (Left and Right)
 // The numbers are CAMPBRIEF. The words are camp.bf.* in content/text/campbrief.md; the walkthrough lines are fixed lines (the voice pack records them: the family camp.bf.<level>.<mission>.w<n>).
 const CAMPBRIEF = {
@@ -18,7 +19,7 @@ const CAMPBRIEF = {
   text: { top: 90 },                          // px: the first line of the two text columns at the right (campbriefdraw.js CAMPBRIEF_COL: their left edges and widths)
   pad: 0.14,                                  // the share of the area's width and height left empty round the objects of the mission
   minExtent: 2600,                            // px of space: never zoom in closer than this across (a mission with its objects close together)
-  near: 250,                                  // px: a mission whose place is this near where you start has no route to speak of
+  near: 250,                                  // px: a mission with no place of its row whose first objective is this near where you start has no route to speak of (a mission with a place is near when campTravel says none: within CAMP.mission.arrive)
   per: 5,                                     // steps of the walkthrough on a page: more is paged with Left and Right
   walkMax: 6                                  // the most steps read from the data for a mission
 };
@@ -35,9 +36,11 @@ function campBriefLayers(level, i) {
   const guards = (L.guards || []).map(g => ({ kind: String(g.kind), x: g.at[0], y: g.at[1] }));
   const mw = (L.waves || []).find(w => w.mother), mother = mw ? { x: mw.mother[0], y: mw.mother[1] } : null; // where the mothership comes in (the mission is named for it)
   const dp = L.defend && campBriefPlace(pl, L.defend.place), defend = dp ? { x: dp.x, y: dp.y, r: L.defend.r || dp.r || 0, name: String(L.defend.name || dp.name) } : null;
-  // the mission's place: the first of what it asks you to go to
+  // the mission's place: the place the mission happens at (its row's `place`, the one the HUD's "Fly to <place>" names and campTravel measures: ONE place, ONE distance), else the first of what it asks you to go to
+  const mp = campBriefPlace(pl, L.place), trip = typeof campTravel === 'function' ? campTravel(level, i) : null;
   let focus = { x: start.x, y: start.y, kind: 'start', label: '' };
-  if (scan.length) focus = { x: scan[0].x, y: scan[0].y, kind: 'scan', label: uiText('camp.nav.scan', { n: 1 }) };
+  if (mp) focus = { x: mp.x, y: mp.y, kind: 'place', label: String(mp.name) };
+  else if (scan.length) focus = { x: scan[0].x, y: scan[0].y, kind: 'scan', label: uiText('camp.nav.scan', { n: 1 }) };
   else if (convoys.length) focus = { x: convoys[0].a.x, y: convoys[0].a.y, kind: 'convoy', label: String((pl[convoys[0].from] || { name: 'Earth' }).name) };
   else if (relic) focus = { x: relic.x, y: relic.y, kind: 'relic', label: uiText('camp.bf.at.relic') };
   else if (towers.length) focus = { x: towers[0].x, y: towers[0].y, kind: 'tower', label: uiText('camp.bf.at.tower') };
@@ -46,13 +49,16 @@ function campBriefLayers(level, i) {
   else if (guards.length) focus = { x: guards.reduce((a, g) => a + g.x, 0) / guards.length, y: guards.reduce((a, g) => a + g.y, 0) / guards.length, kind: 'guards', label: uiText('camp.bf.at.guards') }; // the middle of the guards
   else if (mother) focus = { x: mother.x, y: mother.y, kind: 'mother', label: uiText('camp.bf.at.mother') };
   const places = Object.keys(pl).filter(id => !pl[id].hidden).map(id => ({ id, x: pl[id].x, y: pl[id].y, r: pl[id].r || 60, name: String(pl[id].name), far: !!pl[id].far, star: pl[id].kind === 'star', outpost: !!(L.outposts && L.outposts[id]) }));
-  return { level, i, start, focus, scan, convoys, caches, towers, relic, defend, guards, mother, places, startPlace: L.start };
+  return { level, i, start, focus, trip, scan, convoys, caches, towers, relic, defend, guards, mother, places, startPlace: L.start };
 }
 
-function campBriefBounds(Y, whole) {
+// zoom: 0 the route (where you start, the mission's place and its objective points: what you fly), 1 the mission area (the place and its points, without the start: what you fight at), 2 the whole system; true is 2 and false 0 (as before). A place a long way from the start makes 0 and 1 very different; a mission at its place makes them the same.
+function campBriefBounds(Y, zoom) {
+  zoom = zoom === true ? 2 : zoom | 0;
   const b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }, add = (x, y, r) => { r = r || 0; b.x0 = Math.min(b.x0, x - r); b.y0 = Math.min(b.y0, y - r); b.x1 = Math.max(b.x1, x + r); b.y1 = Math.max(b.y1, y + r); };
-  if (whole && typeof campMapBounds === 'function') return campMapBounds(Y.level, true);
-  add(Y.start.x, Y.start.y, 0); add(Y.focus.x, Y.focus.y, 0);
+  if (zoom === 2 && typeof campMapBounds === 'function') return campMapBounds(Y.level, true);
+  if (zoom !== 1) add(Y.start.x, Y.start.y, 0);
+  add(Y.focus.x, Y.focus.y, 0);
   Y.scan.forEach(p => add(p.x, p.y, p.r)); Y.convoys.forEach(c => { add(c.a.x, c.a.y, 0); add(c.b.x, c.b.y, 0); }); Y.caches.forEach(c => add(c.x, c.y, 0));
   Y.guards.forEach(g => add(g.x, g.y, 0)); if (Y.mother) add(Y.mother.x, Y.mother.y, 0);
   Y.towers.forEach(t => add(t.x, t.y, t.r)); if (Y.relic) add(Y.relic.x, Y.relic.y, Y.relic.r); if (Y.defend) add(Y.defend.x, Y.defend.y, Y.defend.r);
@@ -60,10 +66,15 @@ function campBriefBounds(Y, whole) {
   if (w < ex) { b.x0 = cx - ex / 2; b.x1 = cx + ex / 2; } if (h < ex) { b.y0 = cy - ex / 2; b.y1 = cy + ex / 2; }
   return b;
 }
-// the route from where you start to the mission's place
+const campBriefSame = (a, b) => { const wa = a.x1 - a.x0, wb = b.x1 - b.x0, ha = a.y1 - a.y0, hb = b.y1 - b.y0, big = Math.max(wa, wb, ha, hb); return Math.max(wa, wb) / Math.min(wa, wb) < 1.15 && Math.max(ha, hb) / Math.min(ha, hb) < 1.15 && Math.hypot((a.x0 + a.x1 - b.x0 - b.x1) / 2, (a.y0 + a.y1 - b.y0 - b.y1) / 2) < 0.15 * big; }; // two views are the same when they are about the same size and in about the same place
+function campBriefZoomNext(Y, zoom) { const cur = campBriefBounds(Y, zoom); for (let k = 1; k <= 3; k++) { const z = ((zoom === true ? 2 : zoom | 0) + k) % 3; if (!campBriefSame(campBriefBounds(Y, z), cur)) return z; } return zoom | 0; }
+// the route from where you start to the mission's place: the trip campTravel (src/campaign.js) measures, which is also what the HUD's "Fly to <place>: N km" says (campKmText, to the centre of the place): the km and the flight on Fast are ITS numbers, the flight on regular speed is the map's own rule (campNavEta) over the same distance. A mission whose place is where you start (campTravel says none) has no route. A mission with no place of its row keeps the straight line to its first objective.
 function campBriefRoute(Y) {
-  const px = Math.hypot(Y.focus.x - Y.start.x, Y.focus.y - Y.start.y), near = px < CAMPBRIEF.near;
-  return { px, km: Math.round(px / 10), near, regular: near ? 0 : campNavEta(null, px, false), fast: near ? 0 : campNavEta(null, px, true) };
+  const T = Y.trip, px = Math.hypot(Y.focus.x - Y.start.x, Y.focus.y - Y.start.y);
+  if (T) return { px, km: T.km, near: false, regular: campNavEta(null, T.dist, false), fast: T.secs };
+  if (Y.focus.kind === 'place') return { px, km: '0', near: true, regular: 0, fast: 0 };
+  const near = px < CAMPBRIEF.near;
+  return { px, km: typeof campKmText === 'function' ? campKmText(px) : String(Math.round(px / 10)), near, regular: near ? 0 : campNavEta(null, px, false), fast: near ? 0 : campNavEta(null, px, true) };
 }
 
 // ---- the words: the walkthrough is data ----
@@ -89,10 +100,11 @@ function campBriefReady(P, level, i) {
   const missiles = CAMP.missile.magazine, ore = P.ore | 0; // (a mission starts with the full magazine, a full shield and the whole wing in the bay: the ready room has no ship out, so none of that is ever a warning here)
   const lines = [uiText('camp.bf.ready.bay', { f: wing.fighters, e: wing.escorts })];
   if (rank) lines.push(uiText('camp.bf.ready.rank', { name: rank }));
-  lines.push(uiText('camp.bf.ready.stance', { name: uiText('camp.bf.stance.' + stance) }), uiText('camp.bf.ready.stock', { missiles, ore }), uiText('camp.bf.ready.shield'));
+  const pw = typeof campPowerLoad === 'function' ? campPowerLoad() : CAMP.power.start.slice(), cap = Math.round(CAMP.carrier.shield * CAMP.power.shields.cap[pw[1]]); // the ship's systems (card space-game-campaign-systems): the setting saved in this browser is what the battle starts with, and the shield's cap follows the shields' pips
+  lines.push(uiText('camp.bf.ready.stance', { name: uiText('camp.bf.stance.' + stance) }), uiText('camp.bf.ready.stock', { missiles, ore }), uiText('camp.bf.ready.power', { w: pw[0], s: pw[1], e: pw[2] }), uiText('camp.bf.ready.shield', { cap }));
   const warnings = [];
   if (stance === 'hold') warnings.push(uiText('camp.bf.warn.hold'));
-  return { lines, warnings, wing, rank, stance };
+  return { lines, warnings, wing, rank, stance, power: pw, shield: cap };
 }
 
 // a long walkthrough is paged: page is clamped
