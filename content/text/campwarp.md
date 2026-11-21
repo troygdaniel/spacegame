@@ -7,6 +7,7 @@ The words of the Campaign's warp cinematic (card space-game-campaign-warp): the 
 | key | text |
 |---|---|
 | camp.warp.l1 | Warp drive engaged. Earth and the Sun fall behind us. |
+| camp.warp.l1b | Warp drive engaged. Alpha Centauri falls behind us. |
 | camp.warp.l2 | {ly} light years to {dest}. Hold on. |
 | camp.warp.l3 | {dest}. Dropping out of warp. |
 | camp.warp.skip | Any key skips |

@@ -110,17 +110,16 @@ class Campaign extends Phaser.Scene {
   // ----- the cards: the story, the pick, the end -----
   showCard(title, lines, hint, tall) {
     this.hideCard(); if (typeof campMapClose === 'function') campMapClose(this); // a card (the story, the end) comes up over the map: the map goes
+    (this.toasts || []).forEach(o => { if (o && o.t && o.t.destroy) { o.t.destroy(); o.bg.destroy(); o.tab.destroy(); } }); this.toasts = []; // and the toast of the moment before (it floats above a card and ran through the debrief's title)
     if (typeof campPanelsClose === 'function') campPanelsClose(this); // and a panel
-    const o = [], cx = W / 2, cy = H / 2 - 20; let h = tall || 300;
+    const body = lines.join('\n\n'), bodyStyle = uiFont(20, '#e8f6ff', { align: 'center', wordWrap: { width: 720 }, lineSpacing: 4 });
+    const bh = body.split('\n').reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 56)), 0) * 26; // the height of the words: a line is about 56 letters wide and 26 px high (20 px type and its spacing)
+    const o = [], cx = W / 2, cy = H / 2 - 20, h = Math.min(H - 60, Math.max(tall || 300, bh + 150)); // the card grows to its words: a debrief with four bonus lines and a promotion ran out of the card (card space-game-wrapup-hunt-l3)
     o.push(this.add.rectangle(W / 2, H / 2, W, H, 0x02060d, 0.5)); // a veil over the battle and its gauges, so the card is the one thing to read (the blind critic: HUD and planet labels showed through the card)
-    const box = this.add.rectangle(cx, cy, 800, h, 0x04101c, 1).setStrokeStyle(2, CYAN, 0.85); o.push(box);
-    const ttl = this.add.text(cx, cy - h / 2 + 34, title, uiFont(24, '#38e1ff', { letterSpacing: 3 })).setOrigin(0.5); o.push(ttl);
-    const body = this.add.text(cx, cy + 6, lines.join('\n\n'), uiFont(20, '#e8f6ff', { align: 'center', wordWrap: { width: 720 }, lineSpacing: 4 })).setOrigin(0.5); o.push(body);
-    const hnt = this.add.text(cx, cy + h / 2 - 30, hint, uiFont(16, '#ffd37a')).setOrigin(0.5); o.push(hnt);
-    // the card grows to its text (a briefing with three bonuses is eleven rows: it ran over its 330 px, the title over the first line, the last bonus over the hint); too tall for the screen even so: no blank line between the lines
-    const room = 124; // the title above the text and the hint below it
-    if (body.height + room > H - 40) body.setText(lines.join('\n'));
-    if (body.height + room > h) { h = Math.min(H - 40, Math.ceil(body.height) + room); box.setSize(800, h); ttl.setY(cy - h / 2 + 34); hnt.setY(cy + h / 2 - 30); }
+    o.push(this.add.rectangle(cx, cy, 800, h, 0x04101c, 1).setStrokeStyle(2, CYAN, 0.85));
+    o.push(this.add.text(cx, cy - h / 2 + 34, title, uiFont(24, '#38e1ff', { letterSpacing: 3 })).setOrigin(0.5));
+    o.push(this.add.text(cx, cy + 6, body, bodyStyle).setOrigin(0.5));
+    o.push(this.add.text(cx, cy + h / 2 - 30, hint, uiFont(16, '#ffd37a')).setOrigin(0.5));
     o.forEach(x => x.setScrollFactor(0).setDepth(200));
     this.card = o; this.panel = true;
   }
@@ -217,7 +216,7 @@ class Campaign extends Phaser.Scene {
   showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap'), uiText('camp.ui.pausepanels', { panels: campPanelKeyLine().replace(/   /g, ', ') })].concat([uiText('camp.ui.pausehelp')], typeof campPaceLine === 'function' ? [campPaceLine() + '   ' + uiText('camp.pace.key')] : [], (this.camp && this.camp.L && this.camp.L.objectives) ? [uiText('camp.ui.pauseretry')] : [], typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), (this.camp && this.camp.L && this.camp.L.objectives) ? 428 : 398); } // the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
   next(ore) { // after the story (and the pick, or the refit): the next level, or after the last one the end, with a new campaign waiting. ore: what is left to carry (the refit spent some)
     const last = !CAMP.levels[this.level + 1];
-    this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) { this.P.techs = []; this.P.ore = 0; this.P.bonus = { fighters: 0, escorts: 0 }; this.P.revealed = true; } // the ending is about to show: from now on a replay says the outpost (SPOILER)
+    this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) { this.P.techs = []; this.P.found = []; this.P.ore = 0; this.P.bonus = { fighters: 0, escorts: 0 }; this.P.revealed = true; } // a new campaign: the techs and the loot of the last one are gone with the ore and the ships (the rank is the pilot's career and stays) // the ending is about to show: from now on a replay says the outpost (SPOILER)
     else { this.P.ore = ore != null ? ore : Math.floor(this.camp.ore); if (!CAMP.levels[this.level].refit) this.P.bonus = { fighters: 0, escorts: 0 }; } // the extras of a refit are for the level after it; a level that had none carries only ore
     campProgressSave(this.P);
     if (!last) { go(this, 'CampHub'); return; } // the next level begins in its ready room: Launch flies its first mission (and the warp, if it has one)
