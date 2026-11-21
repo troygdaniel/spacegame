@@ -122,7 +122,7 @@ g.run(`N('home'); C.bay.fighters = 0; C.bay.escorts = 0; C.carrier.hp = C.carrie
 check('the sim ticks it itself (campStep): the line is said without the scene', J(`C.events.some(e => e.type === 'say' && /retreat/.test(e.key))`));
 
 // ---- E2. a hot gate (card space-game-outpost-hot-gate): the guards of Alpha Centauri mission 2 sit round Proxima b ----
-g.run(`window.G2 = () => { window.C = campNew(2, [], { seed: 1, mission: 1 }); C.bay.fighters = 0; C.bay.escorts = 0; C.carrier.hp = C.carrier.maxHp * 0.2; return C; };`);
+g.run(`window.G2 = () => { window.C = campNew(2, [], { seed: 1, mission: 1 }); C.arrivedAt = 0; C.bay.fighters = 0; C.bay.escorts = 0; C.carrier.hp = C.carrier.maxHp * 0.2; return C; };`);
 g.run('G2();');
 check('the gate at Proxima b is hot while the guards live (an alien within CAMP.outpost.clear of it: seven are, at 583 to 894 px), the relay at Alpha Centauri B is not', J(`campOutpostHot(C, campOutposts(2).find(o => o.id === 'proxima'))`) === true && J(`campOutpostHot(C, campOutposts(2).find(o => o.id === 'alpha-cen-b'))`) === false);
 check('the retreat skips the hot gate: low hull, no ship left, the guards alive: it names the relay at Alpha Centauri B, with its flight on Fast, not the gate, and it is not "hot"', (() => { const r = J('campRetreat(C)'); return r && r.o.id === 'alpha-cen-b' && r.hot === false && r.near === false && r.line === `Retreat to Alpha Centauri B: ${r.secs} s on Fast.` && r.secs > 0; })(), JSON.stringify(J('campRetreat(C)')));
