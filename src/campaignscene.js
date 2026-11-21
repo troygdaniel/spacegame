@@ -14,6 +14,8 @@ const CAMP_LOOK = {
   // the carrier and the ships it launches: how big they are is CAMP.size (the drawn length and the hit circle, one table); the scale is that length over the picture's own width w (h is its height)
   carrier: campArtLook('carrier', 'cruiser'), fighter: campArtLook('fighter', 'fighter'), escort: campArtLook('escort', 'escort'), // the pictures are the Campaign's own (src/campcruiser.js)
   freighter: { tex: 'freighter', scale: 1 },
+  skiff: { tex: 'raider', scale: 1, tint: 0xe8d24a }, cutter: { tex: 'drone', scale: 1, tint: 0xe8d24a }, brute: { tex: 'gunship', scale: 1.1, tint: 0xe8b84a }, // the pirates (card space-game-l1-pirates-traffic): yellow, not the aliens' red; the first look is the alien shapes tinted, a picture of their own comes after
+  patrol: { tex: 'ship', scale: 0.5, tint: 0x5fd8c0 }, miner: { tex: 'freighter', scale: 0.8, tint: 0xc9d4e8 }, // the neutral ships: a teal patrol, a pale miner
   raider: { tex: 'raider', scale: 1 }, drone: { tex: 'drone', scale: 1 }, gunship: { tex: 'gunship', scale: 1 }, mother: { tex: 'reaver', scale: 2.6, tint: 0xc9a0ff }, tower: { tex: 'gunship', scale: 1.6, tint: 0xff9a3a }
 };
 const CAMP_REACH = { w: 2, alpha: 0.4, color: 0xffd37a }; // the ring that shows how far the point guns reach (CAMP.carrier.pdRange): its line width, how solid it is, its colour (it was 1 px at 0.16, too faint to find: 6-GEN and 8-GEN)

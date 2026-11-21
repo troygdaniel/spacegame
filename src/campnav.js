@@ -13,7 +13,7 @@
 //   campNavFly(C, row, fast, how)   the one door every trip goes through (the map, the words, the panel): regular speed always; Fast only with the wing aboard (card space-game-campaign-fast-board, below)
 // The rule, the stop distances and every number are CAMP.nav in src/campaign.js. Steering is the player's: any steering key ends it (the scene calls campNavClear(C, 'key')); the orders go on.
 const CAMPNAV = {
-  groups: [['goal', 'GOAL'], ['places', 'PLACES'], ['convoys', 'CONVOYS'], ['enemies', 'ENEMIES'], ['finds', 'CACHES AND RELIC'], ['ore', 'ORE AND ROCKS'], ['wing', 'YOUR SHIPS']], // the list's headings, in order (navpanelLines draws them); nearest first in each (card space-game-campaign-map-targets: every mark of the map is a row)
+  groups: [['goal', 'GOAL'], ['places', 'PLACES'], ['convoys', 'CONVOYS'], ['traffic', 'TRAFFIC'], ['enemies', 'ENEMIES'], ['finds', 'CACHES AND RELIC'], ['ore', 'ORE AND ROCKS'], ['wing', 'YOUR SHIPS']], // the list's headings, in order (navpanelLines draws them); nearest first in each (card space-game-campaign-map-targets: every mark of the map is a row)
   color: { goal: 0xffd37a, select: 0x7fe9ff }
 };
 const campNavNorm = t => String(t == null ? '' : t).toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/'/g, ' ').replace(/\s+/g, ' ').trim();
@@ -36,7 +36,7 @@ function campNavGoal(C) {
       if (o.what === 'mother') { const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); return m ? ship(m, 'mother', uiText('camp.nav.mother')) : null; }
       if (o.what === 'towers') { const t = near(C.ships.filter(u => u.kind === 'tower' && u.hp > 0)); return t ? ship(t, 'tower', uiText('camp.nav.tower')) : null; }
       if (o.what === 'guards') { const g = near(C.ships.filter(u => u.guard && u.hp > 0)); return g ? ship(g, 'guard', uiText('camp.nav.guard')) : null; }
-      const a = near(campAliens(C)); return a ? ship(a, 'alien', uiText('camp.nav.alien')) : null;
+      const a = near(campAliens(C)); return a ? ship(a, 'alien', uiText(a.faction === 'pirate' ? 'camp.nav.pirate' : 'camp.nav.alien')) : null;
     }
     if (L.win === 'mother') {
       const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); if (m) return ship(m, 'mother', uiText('camp.nav.mother'));
@@ -60,6 +60,7 @@ function campNavRows(C) {
   const posts = C.level != null && CAMP.levels[C.level] && CAMP.levels[C.level].outposts || {}; // the friendly outposts of the level: a place in the list that is one says so (the map marks it with a station)
   Object.keys(pl).forEach(id => { const p = pl[id]; if (!p.hidden) add({ id: 'place:' + id, kind: 'place', group: 'places', name: String(p.name), x: p.x, y: p.y, r: p.r || 60, far: !!p.far, star: p.kind === 'star', outpost: !!posts[id], moon: !!p.moon }); });
   campConvoys(C).forEach(u => add({ id: 'convoy:' + u.id, kind: 'convoy', group: 'convoys', name: uiText('camp.nav.convoy', { name: campConvoyName(u) }), x: u.x, y: u.y, r: u.r || 22, moving: true, ref: u.id }));
+  C.ships.forEach(u => { if (u.hp > 0 && u.team === 'neutral') add({ id: 'neutral:' + u.id, kind: 'neutral', group: 'traffic', name: u.cname || campNavUnitName(u), x: u.x, y: u.y, r: u.r || 0, moving: true, ref: u.id }); }); // the neutral ships: the patrols and the other miners (src/camppirates.js)
   (C.scan || []).forEach((p, i) => { if (!p.got) add({ id: 'scan:' + i, kind: 'scan', group: 'finds', name: uiText('camp.nav.scan', { n: i + 1 }), x: p.x, y: p.y, r: 0 }); });
   C.caches.forEach((k, i) => { if (!k.got) add({ id: 'cache:' + i, kind: 'cache', group: 'finds', name: uiText('camp.nav.cache', { n: i + 1 }), x: k.x, y: k.y, r: 0 }); });
   if (C.relic) add({ id: 'relic', kind: 'relic', group: 'finds', name: uiText('camp.nav.relic'), x: C.relic.x, y: C.relic.y, r: 0 });
@@ -89,7 +90,7 @@ function campNavTarget(C, N) {
   const u = C.by[N.ref || String(id).replace(/^[a-z]+:/, '')] || C.ships.find(s => s.kind === kind && s.hp > 0 && (kind === 'mother' || s.id === N.ref));
   return u && u.hp > 0 ? { x: u.x, y: u.y, r: u.r || 0, vx: u.vx || 0, vy: u.vy || 0 } : null; // vx, vy: a ship's own velocity, which the autopilot leads (campNavLead)
 }
-const campNavStop = (kind, t) => (kind === 'place' ? (t.r || 0) + CAMP.nav.stop : kind === 'anomaly' ? CAMP.anomaly.stop : kind === 'mother' || kind === 'tower' ? CAMP.nav.stopShip : kind === 'alien' || kind === 'guard' ? CAMP.nav.stopEnemy : kind === 'convoy' || kind === 'ship' ? CAMP.nav.stopFriend : kind === 'rock' ? CAMP.nav.stopRock : CAMP.nav.stopPoint);
+const campNavStop = (kind, t) => (kind === 'place' ? (t.r || 0) + CAMP.nav.stop : kind === 'anomaly' ? CAMP.anomaly.stop : kind === 'mother' || kind === 'tower' ? CAMP.nav.stopShip : kind === 'alien' || kind === 'guard' ? CAMP.nav.stopEnemy : kind === 'convoy' || kind === 'ship' || kind === 'neutral' ? CAMP.nav.stopFriend : kind === 'rock' ? CAMP.nav.stopRock : CAMP.nav.stopPoint);
 // 'Raider 3', 'Fighter 5', 'Tower 2': what a ship is, for the list and the line on the map (the kind's name is in content/text/campmaptargets.md)
 function campNavUnitName(u) { const p = String(u.id).split('-'), k = uiText('camp.nav.k.' + (u.kind || p[0])); return (k.indexOf('camp.nav.k.') === 0 ? p[0].charAt(0).toUpperCase() + p[0].slice(1) : k) + (p[1] ? ' ' + p[1] : ''); }
 // where to aim at a moving target: the point it will be at when the carrier gets there, at the speed it flies (a first guess of the time from the distance, refined twice), the lead capped at CAMP.nav.leadMax s.
