@@ -312,7 +312,7 @@ const CAMP = {
         phase: {                                           // stalk (circles at `hold` px and shoots a little) -> charge (stops, turns its side on you; `charge` s of warning) -> fires the broadside -> down (shield off `down` s) -> ram or run -> stalk again
           hold: 340, first: 6, stalk: 4,                 // the range it keeps (inside the turrets' 500 px and inside the screen: at 620 it was off the edge); seconds before the first charge, and between a ram or a run and the next charge
           charge: 3.2, down: 6, back: 0.6,               // seconds of warning; seconds the shield is off (every hit goes to the hull, `exposed` times over); the share of the shield that comes back
-          exposed: 1.3,
+          exposed: 1.3,                                  // every hit on the hull while its shield is down does this much more
           ram: { secs: 4.5, speed: 1.5, accel: 1.4, turn: 0.55, dmg: 40, push: 160 },    // it turns to ram at 1.5 times its speed but 0.55 of its turn: a carrier that moves off its line is missed; a hit is `dmg` to the shield then the hull, and shoves both ships
           run: { secs: 6, speed: 1.2, min: 3 },          // it flees at 1.2 times its speed for `secs` and comes back; for good (below `runHp` of its hull) it flees until it is `gone` px off (CAMP.pirate.gone) and is gone
           runHp: 0.3, ramFirst: true                     // under this share of its hull it runs for good (a row's `leaves: false` fights to the death); the first turn is a ram, then run and ram by turns
