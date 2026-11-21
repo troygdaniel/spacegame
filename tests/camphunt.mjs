@@ -78,8 +78,8 @@ check('and the rim\'s other missions still list the keys they need: the escort (
   && J('campBriefKeys(2, 1).map(k => k.id).join()') === 'fly,fire,wing,map,attack,missile,shield,zoom' && J('campBriefKeys(3, 0).map(k => k.id).join()') === 'fly,fire,wing,map,attack,zoom');
 
 // ---- 8. the goals of the mining mission read their numbers in the briefing and on the board ----
-check('1.2\'s goals say what they ask: "Mine ore: 0 of 120." and "Sell your ore at the Works: 0 of 100." (they said "0 of 1"), the HUD\'s own words with the objective\'s own n',
-  J('campHubBrief(campProgressNew(), 1, 1).objectives').join('|') === 'Mine ore: 0 of 120.|Destroy the attackers.|Sell your ore at the Works: 0 of 100.' && J('campHubBrief(campProgressNew(), 2, 0).objectives[0]') === 'Gather resources: 0 of 2.');
+check('1.2\'s goals say what they ask: "Mine ore: 0 of 190." and "Sell your ore at the Works: 0 of 160." (the numbers of the rim tune, card space-game-l1-rim-tune)" (they said "0 of 1"), the HUD\'s own words with the objective\'s own n',
+  J('campHubBrief(campProgressNew(), 1, 1).objectives').join('|') === 'Mine ore: 0 of 190.|Destroy the attackers.|Sell your ore at the Works: 0 of 160.' && J('campHubBrief(campProgressNew(), 2, 0).objectives[0]') === 'Gather resources: 0 of 2.');
 
 // ---- 9. the map's "Flying:" header is one line (it wrapped over the first row of the list for "Transport convoy") ----
 g.run(`window.__fit = str => { const t = { size: 14, str: '', setFontSize(z) { t.size = z; return t; }, setText(x) { t.str = x; return t; }, getWrappedText(x) { return Array(Math.ceil(String(x).length * 0.6 * t.size / 250)).fill('l'); } }; campMapFitOne(t, str); return { size: t.size, str: t.str, lines: t.getWrappedText(t.str).length }; };`);

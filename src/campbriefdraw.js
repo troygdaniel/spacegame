@@ -105,12 +105,14 @@ function campBriefPaintMap(s) {
   const items = [], texts = [];
   const a = X(Y.start.x, Y.start.y), b = X(Y.focus.x, Y.focus.y), R = bf.route; // the start and the mission's place: their labels are placed first, the names of the places go round them
   const label = (txt, color, anchor, r, bold) => { const t = own(s.add.text(0, 0, txt, uiFont(11, color, bold ? { fontStyle: 'bold' } : undefined))).setOrigin(0.5).setDepth(136); texts.push(t); items.push({ x: anchor.x, y: anchor.y, r, w: t.width, h: t.height, side: 'below' }); return t; };
-  label(uiText('camp.bf.mission') + (Y.focus.label ? '  ' + Y.focus.label.toUpperCase() : ''), '#ffb454', b, 16, true);
+  const mark = Y.focus.label ? Y.focus.label.toUpperCase() : ''; // the name the mission mark carries
+  label(uiText('camp.bf.mission') + (mark ? '  ' + mark : ''), '#ffb454', b, 16, true);
   if (inF(a)) label(uiText('camp.bf.you'), '#ffffff', a, 9, false);
   Y.places.forEach(p => {
     const q = X(p.x, p.y); if (!inF(q)) return; const r = Math.max(p.star ? 7 : 4, p.r * fit.s);
     g.fillStyle(p.star ? 0xffe29a : 0xb9a37a, 0.85).fillCircle(q.x, q.y, r); g.lineStyle(1, p.star ? 0xffe29a : 0xb9a37a, 0.5).strokeCircle(q.x, q.y, r + 3);
     if (p.outpost) { const e = r + 8; g.lineStyle(2, 0x6dff9c, 0.95).strokeRect(q.x - e, q.y - e, e * 2, e * 2); }
+    if (mark && p.name.toUpperCase() === mark && Math.hypot(q.x - b.x, q.y - b.y) < 40) return; // the mission mark already names this place ("MISSION  KOLGA"): its own label under it would name it twice (card space-game-night-cosmetics, finding D)
     const t = own(s.add.text(0, 0, p.name.toUpperCase(), uiFont(11, p.star ? '#ffe29a' : '#ffb454'))).setOrigin(0.5).setDepth(134); texts.push(t); items.push({ x: q.x, y: q.y, r: r + 4, w: t.width, h: t.height });
   });
   if (items.length) { const at = mapPlace(items, F); texts.forEach((t, i) => t.setPosition(at[i].x, at[i].y)); }

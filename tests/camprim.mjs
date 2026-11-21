@@ -103,13 +103,13 @@ console.log('B. the real Level 1: the rim run');
   g.run('window.C = campNew(1, [], { seed: 3, mission: 0 }); __run(400)');
   check('1.1, nobody at the guns: the transport is shot by the pirates on the way and the mission is lost, "convoy"; every hostile it met was a pirate', J('C.result') === 'lost' && J('C.why') === 'convoy' && J('C.ships.every(u => u.team !== "alien" || u.faction === "pirate")'));
   g.run('window.C = campNew(1, [], { seed: 3, mission: 0 }); __run(12)');
-  check('1.1 begins at Luna with the transport leaving at 4 s for Ceres at 100 px/s, and nothing hostile in the sky yet', J('campConvoys(C).length') === 1 && J('campConvoys(C)[0].cname') === 'Transport' && J('campConvoys(C)[0].vmax') === 100 && J('campAliens(C).length') === 0 && J('C.arrivedAt') === 0);
+  check('1.1 begins at Luna with the transport leaving at 4 s for Ceres at 52 px/s (the road takes five minutes: card space-game-l1-rim-tune), and nothing hostile in the sky yet', J('campConvoys(C).length') === 1 && J('campConvoys(C)[0].cname') === 'Transport' && J('campConvoys(C)[0].vmax') === 52 && J('campAliens(C).length') === 0 && J('C.arrivedAt') === 0);
   // 1.2
   g.run('window.C = campNew(1, [], { seed: 3, mission: 1 }); __run(2)');
-  check('1.2 begins at Ceres with an empty store, three rock fields (20 rocks), two other miners at work, no pirate before 40 s', J('C.ore') === 0 && J('C.rocks.length') === 20 && J('C.ships.filter(u => u.team === "neutral" && u.kind === "miner").length') === 2 && J('campAliens(C).length') === 0 && J('C.L.waves[0].at') === 40);
-  check('the pirates of 1.2 go for the miners (prey "miners"), the objectives are: mine 120, beat the third raid, sell 100 at the Works', J('C.L.waves.every(w => w.prey === "miners")') && J('campObjectives(C).map(o => o.type + ":" + o.need).join()') === 'ore:120,kill:1,cashin:100');
-  g.run('C.ore = 150; C.carrier.x = campPlaces(1).ceres.x + 200; C.carrier.y = campPlaces(1).ceres.y; campDock(C, "ceres"); campUndock(C); campMissions_tick(C, 0.1)');
-  check('1.2: selling 150 ore at the Works pays 450 cash; "ore" and "cashin" are met, the raid is still to beat so the mission is not won yet', J('C.cash') === 450 && J('campObjectives(C).map(o => o.done).join()') === 'true,false,true' && J('C.result') === null);
+  check('1.2 begins at Ceres with an empty store, three rock fields (20 rocks), two other miners at work, no pirate before 70 s', J('C.ore') === 0 && J('C.rocks.length') === 20 && J('C.ships.filter(u => u.team === "neutral" && u.kind === "miner").length') === 2 && J('campAliens(C).length') === 0 && J('C.L.waves[0].at') === 70);
+  check('the pirates of 1.2 go for the miners (prey "miners"), the objectives are: mine 190, beat the third raid, sell 160 at the Works', J('C.L.waves.every(w => w.prey === "miners")') && J('campObjectives(C).map(o => o.type + ":" + o.need).join()') === 'ore:190,kill:1,cashin:160');
+  g.run('C.ore = 190; C.carrier.x = campPlaces(1).ceres.x + 200; C.carrier.y = campPlaces(1).ceres.y; campDock(C, "ceres"); campUndock(C); campMissions_tick(C, 0.1)');
+  check('1.2: selling 190 ore at the Works pays 570 cash; "ore" and "cashin" are met, the raid is still to beat so the mission is not won yet', J('C.cash') === 570 && J('campObjectives(C).map(o => o.done).join()') === 'true,false,true' && J('C.result') === null);
   // 1.3
   g.run('window.C = campNew(1, [], { seed: 3, mission: 2 }); __run(40)');
   check('1.3: three haulers leave Ceres for Earth 12 s apart; the contact has not come; no alien in the sky', J('C.L.convoys.map(c => c.at).join()') === '4,16,28' && J('campConvoys(C).length') === 3 && J('campAliens(C).every(u => u.faction === "pirate")'));
