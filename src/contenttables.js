@@ -621,6 +621,12 @@ const UI_TEXT = {
   'camp.tech.lens.name': 'Lens',
   'camp.tech.lens.text': 'From the aliens\' lab: the sensors notice an anomaly twice as far.',
   // The Campaign's wing orders with groups and explicit targets (card space-game-campaign-wing-targets, content/text/campaign-wingorders.md)
+  'camp.say.pirate.break': 'They are breaking off.',
+  'camp.say.pirate.run': 'A pirate is running.',
+  'camp.say.neutral.lost': 'We lost {name}.',
+  'camp.nav.pirate': 'Pirate',
+  'camp.nav.k.skiff': 'Skiff', 'camp.nav.k.cutter': 'Cutter', 'camp.nav.k.brute': 'Brute', 'camp.nav.k.patrol': 'Patrol', 'camp.nav.k.miner': 'Miner',
+  'camp.map.pirate': 'Pirates ({n})', 'camp.map.patrol': 'Patrols ({n})', 'camp.map.miner': 'Miners ({n})',
   'camp.no.wnogroup': 'Which group? Fighters, escorts or all.',
   'camp.no.wnotarget': 'I cannot find that target.',
   'camp.no.wbadpair': '{group} cannot {verb} {what}.',

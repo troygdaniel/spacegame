@@ -161,7 +161,9 @@ function campMapPaint(s, time) {
     else if (m.type === 'convoy') {
       if (m.to) { const q = pin(X(m.to.x), Y(m.to.y)); g.lineStyle(1, m.color, 0.55).lineBetween(p.x, p.y, q.x, q.y); } // a line to where it is heading
       g.fillStyle(m.color, 1).fillCircle(p.x, p.y, 3.5);
-    } else if (m.type === 'alien') g.fillStyle(m.color, 1).fillCircle(p.x, p.y, 2.5);
+    } else if (m.type === 'alien' || m.type === 'pirate') g.fillStyle(m.color, 1).fillCircle(p.x, p.y, 2.5);
+    else if (m.type === 'patrol') { g.fillStyle(m.color, 1).fillCircle(p.x, p.y, 2.5); g.lineStyle(1, m.color, 0.8).strokeCircle(p.x, p.y, 5); } // a neutral patrol: a dot in a ring
+    else if (m.type === 'miner') g.fillStyle(m.color, 1).fillRect(p.x - 2.5, p.y - 2.5, 5, 5); // a neutral miner: a small pale square
     else if (m.type === 'wing') g.fillStyle(m.color, 1).fillCircle(p.x, p.y, 2);
     else if (m.type === 'mother') g.fillStyle(m.color, 1).fillPoints([{ x: p.x, y: p.y - 7 }, { x: p.x + 7, y: p.y }, { x: p.x, y: p.y + 7 }, { x: p.x - 7, y: p.y }], true);
     else if (m.type === 'carrier') {
