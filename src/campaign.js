@@ -219,6 +219,7 @@ const CAMP = {
     draw: 3600,                            // px: a far place is made in the world (a picture) only while the carrier is within this many px of its edge
     skip: ['sol-pluto']                    // pack bodies the Campaign does not take (the eight planets are the card's; Pluto is a dwarf)
   },
+  hud: { pips: { x: 366, y: 40, w: 13, step: 16 } }, // the ship systems' pips (W S E): beside the shield bar, above the toast band (a toast is up to 552 px wide, centred, from y 86: it ran over the pips when they sat at y 72 to 108)
   nav: {                                   // the carrier's autopilot, the map's list and picking, and the arrow at the screen edge (src/campnav.js); the rule is the Long Haul autopilot's (src/autopilot.js AUTO)
     stop: 100,                             // px: a place is flown to until the edge of it (its radius plus this) is this near
     stopShip: 450,                         // px: a ship (a convoy, the mothership, a tower) is flown to until it is this near: inside the main gun's reach
@@ -919,6 +920,8 @@ function campPowerFx(C) {
 }
 const campShieldMax = C => CAMP.carrier.shield * campPowerFx(C).cap;
 const campBlinkCooldown = C => CAMP.tech.blink.cooldown * campPowerFx(C).blink;
+// B with no blink to make: '' when it goes, else the words (no technology yet, or the seconds left)
+const campBlinkWhy = C => !campHas(C, 'blink') ? uiText('camp.say.noblink') : (C.t - C.blinkAt >= campBlinkCooldown(C) ? '' : uiText('camp.say.blinkwait', { s: Math.ceil((campBlinkCooldown(C) - (C.t - C.blinkAt)) / 1000) }));
 const campReload = C => CAMP.missile.reload * campPowerFx(C).reload;
 const campPowerSys = w => /^(?:weapons?|guns?|turrets?)$/.test(w) ? 0 : /^shields?$/.test(w) ? 1 : /^(?:engines?|thrusters?|drives?)$/.test(w) ? 2 : -1;
 const CAMP_POWER_NAMES = ['weapons', 'shields', 'engines'];
