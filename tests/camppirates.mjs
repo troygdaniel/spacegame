@@ -244,9 +244,35 @@ console.log('G. the map, the list and the words');
   const md = src('content/text/campaign-pirates.md');
   check('the words are in their own file, content/text/campaign-pirates.md', keys.every(k => md.includes('| ' + k + ' |')));
   const scene = src('src/campaignscene.js');
-  check('every new kind has a look in the scene (not the alien drone\'s)', ['skiff', 'cutter', 'brute', 'patrol', 'miner'].every(k => new RegExp('\\b' + k + ': \\{ tex:').test(scene)));
+  check('every new kind has a look in the scene (not the alien drone\'s)', ['skiff', 'cutter', 'brute', 'patrol', 'miner'].every(k => new RegExp('\\b' + k + ': campArtLook\\(').test(scene)));
   check('the script is in index.html', /src\/camppirates\.js/.test(src('index.html')));
   check('the table is documented in CAMP (pirate, traffic)', /pirate: \{/.test(src('src/campaign.js')) && /traffic: \{/.test(src('src/campaign.js')));
+}
+
+// ---------- H. their own pictures (src/camppirateart.js) ----------
+console.log('H. their own pictures');
+{
+  g.run(`window.__rec = fn => { const ops = []; const gfx = new Proxy({}, { get: (t, name) => (...a) => { ops.push([name].concat(a)); return gfx; } }); window[fn](gfx); return ops; };`);
+  const hsv = c => { const r = (c >> 16 & 255) / 255, gg = (c >> 8 & 255) / 255, b = (c & 255) / 255, mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), d = mx - mn; let h = 0; if (d) h = mx === r ? ((gg - b) / d + 6) % 6 : mx === gg ? (b - r) / d + 2 : (r - gg) / d + 4; return { h: h * 60, s: mx ? d / mx : 0, v: mx }; };
+  const fns = { skiff: 'campSkiffDraw', cutter: 'campCutterDraw', brute: 'campBruteDraw', patrol: 'campPatrolDraw', miner: 'campMinerDraw' };
+  Object.keys(fns).forEach(kind => {
+    const ops = J(`__rec('${fns[kind]}')`), [W, Ht] = J(`campArtSize('${kind}')`), a = J(`CAMP_ART.${kind}`), k = a.k;
+    check(kind + ': it draws with fills, plain lines and paths only', [...new Set(ops.map(o => o[0]))].every(o => ['fillStyle', 'lineStyle', 'fillRect', 'fillCircle', 'beginPath', 'moveTo', 'lineTo', 'closePath', 'fillPath', 'strokePath', 'lineBetween'].includes(o)));
+    check(kind + ': the picture is the hull plus a margin each side, k times the units', W === Math.round((a.len + 2 * a.pad) * k) && Ht === Math.round((2 * a.half + 2 * a.pad) * k), W + ' x ' + Ht);
+    const out = []; ops.forEach(([o, ...p]) => { const inside = (x, y) => x >= -0.5 && y >= -0.5 && x <= W + 0.5 && y <= Ht + 0.5; if (o === 'fillRect' && !(inside(p[0], p[1]) && inside(p[0] + p[2], p[1] + p[3]))) out.push([o, ...p]); if (o === 'fillCircle' && !(inside(p[0] - p[2], p[1] - p[2]) && inside(p[0] + p[2], p[1] + p[2]))) out.push([o, ...p]); if (o === 'moveTo' || o === 'lineTo') { if (!inside(p[0], p[1])) out.push([o, ...p]); } });
+    check(kind + ': every mark lies inside the picture', out.length === 0, out.length + ' outside, first ' + JSON.stringify(out[0]));
+    const used = new Set(); ops.forEach(([o, x, y]) => { if (o === 'fillStyle') used.add(x); if (o === 'lineStyle') used.add(y); });
+    check(kind + ': nothing red or pink (the aliens are)', [...used].every(c => { const x = hsv(c); return !((x.h >= 330 || x.h <= 15) && x.s > 0.3); }), [...used].filter(c => { const x = hsv(c); return (x.h >= 330 || x.h <= 15) && x.s > 0.3; }).map(c => c.toString(16)).join(' '));
+    if (kind !== 'patrol' && kind !== 'miner') check(kind + ': a pirate has no green, cyan or blue (those are the wing\'s and the neutrals\') beyond its canopy glass', [...used].every(c => { const x = hsv(c); return !(x.h >= 80 && x.h <= 260 && x.s > 0.3); }));
+    const look = J(`campArtLook('${kind}', '${kind}')`);
+    check(kind + ': the scene scales it to the table length CAMP.size.' + kind + '.len', Math.abs(look.scale * look.w - J(`CAMP.size.${kind}.len`)) < 1e-9 && look.art === kind, JSON.stringify(look));
+    check(kind + ': the hit circle is inside the drawn ship (under its half length)', J(`CAMP.size.${kind}.hit`) <= J(`CAMP.size.${kind}.len`) / 2, J(`CAMP.size.${kind}.hit`));
+  });
+  const tex = J(`(() => { const made = {}; const sc = { textures: { exists: k => !!made[k] }, make: { graphics: () => { const g = new Proxy({}, { get: (t, n) => n === 'generateTexture' ? (k, w, h) => { made[k] = [w, h]; } : () => g }); return g; } } }; return ['skiff', 'cutter', 'brute', 'patrol', 'miner'].map(k => [campShipTexture(sc, k), made['camp-' + k]]) })()`);
+  check('campShipTexture makes each under its own key (camp-skiff ...) at the size campArtSize says', tex.every(([key, size], i) => key === 'camp-' + ['skiff', 'cutter', 'brute', 'patrol', 'miner'][i] && size && size[0] === J(`campArtSize('${['skiff', 'cutter', 'brute', 'patrol', 'miner'][i]}')`)[0]), JSON.stringify(tex));
+  check('the pirates are bigger than your fighter and smaller than the cruiser; a brute is the biggest pirate', J('CAMP.size.skiff.len > CAMP.size.fighter.len && CAMP.size.brute.len > CAMP.size.cutter.len && CAMP.size.cutter.len > CAMP.size.skiff.len && CAMP.size.brute.len < CAMP.size.carrier.len'));
+  check('a pirate\'s hit circle is about the raider\'s, the drone\'s and the gunship\'s it flies like (within a third)', [['skiff', 'raider'], ['cutter', 'drone'], ['brute', 'gunship']].every(([k, b]) => Math.abs(J(`CAMP.size.${k}.hit`) - J(`PIRATES.${b}.body[0]`)) <= J(`PIRATES.${b}.body[0]`) / 3));
+  check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
 }
 
 console.log(`\n${n - failed} of ${n} checks pass`);
