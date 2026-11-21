@@ -91,7 +91,7 @@ sec('C', () => {
   check('C  the words work: "the long lane", "short", "Short lane" all find a lane; nonsense is refused with its own words', J('campCheck(C, "lane", "the long lane").ok') && J('campCheck(C, "lane", "short").ok') && J('campCheck(C, "lane", "Short lane").ok') && J('campCheck(C, "lane", "purple").ok') === false && J('campCheck(C, "lane", "purple").code') === 'lanewhat');
   g.run('__go(8)');
   const r = J('campOrder(C, "lane", "long", "key")');
-  check('C  the order picks the lane before the convoy is at the fork: ok, said ("Taking the long lane"), the route says long, event lane (not auto)', r.ok === true && J('C.route.lane') === 'long' && /long/i.test(r.say) && J("__ev.some(e => e.type === 'lane' && e.lane === 'long' && !e.auto)") !== null);
+  check('C  the order picks the lane before the convoy is at the fork: ok, said ("Taking the long lane"), the route says long, event lane (not auto)', r.ok === true && J('C.route.lane') === 'long' && /long/i.test(r.say) && J("C.events.some(e => e.type === 'lane' && e.lane === 'long' && !e.auto)") === true);
   const r2 = J('campOrder(C, "lane", "short")');
   check('C  a pick can be changed until she has passed the fork (she is not there yet): now short', r2.ok === true && J('C.route.lane') === 'short');
   g.run('campOrder(C, "lane", "long"); __go(60)');
@@ -147,7 +147,7 @@ sec('E', () => {
   g.run('__mk(0); __esc(); campOrder(C, "scout", campNavRows(C).find(r => r.id === "lane:long")); __go(60)');
   const K2 = J('C.route.known');
   check('E  the long lane read: quiet, with a cache of 40 ore; the radio said so ("quiet")', !!K2.long && K2.long.caches === 1 && Object.keys(K2.long.ships).length === 0 && J("__ev.some(e => e.type === 'say' && e.key === 'camp.say.lanefound')"), JSON.stringify(K2));
-  g.run('__mk(0); __esc(); campOrder(C, "scout", campNavRows(C).find(r => r.id === "lane:long")); __go(70)');
+  g.run('__mk(0); __esc(); campOrder(C, "scout", campNavRows(C).find(r => r.id === "lane:long")); __go(90)');
   check('E  the scout carries the cache home: when it lands the 40 ore are in the store and the cache is counted (it may fetch on a lane)', J('C.ore') >= 40 && J('C.cachesGot') === 1, J('C.ore') + ' ' + J('C.cachesGot'));
   g.run('__mk(0); __esc(); __go(1)');
   check('E  a lane row stays in the list until she has passed the fork, then it goes (nothing to scout)', J('campNavRows(C).filter(r => r.kind === "lane").length') === 2 && (g.run('campOrder(C, "lane", "long"); __go(80)'), J('campNavRows(C).filter(r => r.kind === "lane").length') === 0));
@@ -159,9 +159,9 @@ sec('F', () => {
   const intent = t => J(`campIntent(${JSON.stringify(t)})`);
   check('F  the voice: "take the long lane" is the act fleet_lane with the lane as its word; "use the short route", "go by the short lane" too', JSON.stringify(intent('take the long lane')) === '{"act":"fleet_lane","arg":"long"}' && JSON.stringify(intent('go by the short lane')) === '{"act":"fleet_lane","arg":"short"}' && JSON.stringify(intent('long lane')) === '{"act":"fleet_lane","arg":"long"}', JSON.stringify([intent('take the long lane'), intent('go by the short lane'), intent('long lane')]));
   check('F  a question about lanes is not an order ("what is the long lane")', !/fleet_lane/.test(JSON.stringify(intent('what is the long lane'))));
-  check('F  "scout the long lane" is still a scout order (the lane is a place to scout)', /fleet_scout/.test(JSON.stringify(intent('scout the long lane'))));
+  check('F  "scout the long lane" and "send a scout to the short route" are scout orders (a lane is a place to scout)', JSON.stringify(intent('scout the long lane')) === '{"act":"fleet_scout","arg":"long lane"}' && JSON.stringify(intent('send a scout to the short route')) === '{"act":"fleet_scout","arg":"short route"}');
   check('F  the computer\'s closed list has fleet_lane and runs it (scFleet)', /fleet_lane/.test(sc) && /fleet_lane: \(s, arg\) => scFleet\(s, 'lane', arg\)/.test(sc));
-  check('F  the map draws the lanes: campMapMarks gives each lane a mark with its points, the chosen one flagged; the Take button and the key T are in campmapdraw', /type: 'lane'/.test(mp) && /btnTake/.test(md) && /KeyT/.test(md));
+  check('F  the map draws the lanes: campMapMarks gives each lane a mark with its points, the chosen one flagged; the Take button and the key T are in campmapdraw', /campRouteMarks/.test(mp) && /type: 'lane'/.test(read('src/camproute.js')) && /m\.type === 'lane'/.test(md) && /btnTake/.test(md) && /KeyT/.test(md));
   check('F  the bot answers the fork: it picks a lane (campaign-bot says lane)', /'lane'/.test(bot));
   g.run('__mk(0); campOrder(C, "lane", "long")');
   const marks = J('campMapMarks(C).filter(m => m.type === "lane").map(m => ({ id: m.id, chosen: !!m.chosen, n: m.pts.length }))');

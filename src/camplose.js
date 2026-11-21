@@ -9,7 +9,7 @@ function campLoseLines(C, why) {
   const out = [has('camp.lose.' + w) ? uiText('camp.lose.' + w) : uiText('camp.lose.other')];
   try {
     const L = (C.L || CAMP.levels[C.level]);
-    out.push(uiText('camp.lose.reached', { time: campClock(C.t), wave: C.waves.filter(x => x.started).length, total: L.waves.length, kills: C.kills }));
+    out.push(uiText('camp.lose.reached', { time: campClock(C.t), wave: typeof campWaveCount === 'function' ? campWaveCount(C).n : C.waves.filter(x => x.started).length, total: typeof campWaveCount === 'function' ? campWaveCount(C).total : L.waves.length, kills: C.kills }));
   } catch (e) { /* no battle: the cause alone */ }
   const towers = w === 'carrier' && C && ((C.L || CAMP.levels[C.level]) || {}).win === 'towers'; // the tower missions: the tip that helps against towers
   if (towers && has('camp.lose.tip.towers')) out.push(uiText('camp.lose.tip.towers'));

@@ -1066,6 +1066,21 @@ const UI_TEXT = {
   'camp.bf.enemy.cutter.many': '{n} pirate cutters',
   'camp.bf.enemy.brute.one': '{n} pirate brute',
   'camp.bf.enemy.brute.many': '{n} pirate brutes',
+  'camp.say.fork': 'The road forks ahead. Scout the lanes, then pick one.',
+  'camp.say.forkhold': '{name} holds at the fork. Which lane?',
+  'camp.say.lanepick': 'Taking the {lane}.',
+  'camp.say.laneauto': 'No word. Taking the {lane}.',
+  'camp.say.lanefound': 'Scout {n}, {name}: {what}.',
+  'camp.no.lanewhat': 'Which lane, pilot?',
+  'camp.no.lanelocked': 'Too late, pilot. We are on the {lane}.',
+  'camp.no.nolane': 'There is no fork on this road.',
+  'camp.route.pirates': 'ambush, {n} pirates',
+  'camp.route.aliens': 'ambush, {n} aliens',
+  'camp.route.ships': 'ambush, {n} ships',
+  'camp.route.cache': 'a cache',
+  'camp.route.quiet': 'quiet',
+  'camp.route.chosen': '(chosen)',
+  'camp.map.take': 'TAKE   T   this lane',
 };
 function uiText(key, vars) { return contentFill(CT_HAS(UI_TEXT, key) ? UI_TEXT[key] : key, vars); }
 function ctTextKeys() { // every string the game reads: key -> { get, set }

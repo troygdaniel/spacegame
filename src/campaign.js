@@ -126,6 +126,10 @@ const CAMP = {
     mouth: [21, 19.5],                     // px from the carrier's centre (x along the nose, y to the side): where a launched ship appears, one side and then the other: just in front of the launch tube of a hangar pod (CAMP_ART.cruiser.launch)
     dockAt: 63                             // px: a recalled ship this close to the carrier lands (and is whole again when next launched)
   },
+  route: {                                 // the fork in an escort's road (card space-game-scout-route; src/camproute.js, docs/CAMPAIGN.md "Scouting the route")
+    wait: 45,                              // s a convoy holds at the fork for the player's word when the mission's route says nothing; then it takes the route's default lane
+    reach: 70                              // px: a convoy is at a waypoint (the fork, a lane's middle, the join) when it is this near it
+  },
   scout: {                                 // scout-escorts (card space-game-campaign-scouts; docs/CAMPAIGN.md "Scout-escorts"): an escort sent out with the Scout order to look, scan and fetch
     sense: 2600,                           // px: the sensor circle round a scout that is out (the map draws it, the radar marks the scout)
     read: 1400,                            // px: how close a scout must be to a cloaked anomaly to read what it likely is (reading is not uncovering)
@@ -426,7 +430,10 @@ const CAMP = {
           convoys: [{ id: 't1', name: 'Transport', say: 'camp.say.transport', at: 4, from: 'luna', to: 'ceres', speed: 52 }],  // the transport: when she leaves (s after arrival), from and to which place, her speed
           objectives: [{ type: 'deliver', n: 1 }],  // what the mission asks: the transport must arrive
           bonus: [{ id: 'swift', type: 'time', secs: 400 }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
-          waves: [{ on: { lane: 0.1 }, ahead: 2000, ships: { skiff: 2 }, goal: 'convoy:t1', say: 'camp.say.rim1' }, { on: { lane: 0.28 }, ahead: 2000, ships: { skiff: 3 }, goal: 'convoy:t1', say: 'camp.say.rim2' }, { on: { lane: 0.46 }, ahead: 2000, ships: { skiff: 3, cutter: 1 }, goal: 'convoy:t1', say: 'camp.say.rim9' }, { on: { lane: 0.64 }, ahead: 2000, ships: { skiff: 3, cutter: 2 }, goal: 'convoy:t1', say: 'camp.say.rim10' }, { on: { lane: 0.82 }, ahead: 2000, ships: { skiff: 4, cutter: 2 }, goal: 'convoy:t1', say: 'camp.say.rim3' }] },  // the raids: when (the share of her road flown), how far ahead of her, how many of each kind
+          route: { fork: 0.2, join: 0.8, wait: 45, pick: 'short', lanes: [  // the road forks at a fifth of the way and meets again at four fifths (card space-game-scout-route; src/camproute.js): the player picks the lane, a scout can read them first
+            { id: 'short', name: 'Short lane', bend: 0, hides: { waves: [{ on: { lane: 0.28 }, ahead: 2000, ships: { skiff: 3 }, goal: 'convoy:t1', say: 'camp.say.rim2' }, { on: { lane: 0.46 }, ahead: 2000, ships: { skiff: 3, cutter: 1 }, goal: 'convoy:t1', ambush: true, say: 'camp.say.rim9' }, { on: { lane: 0.64 }, ahead: 2000, ships: { skiff: 3, cutter: 2 }, goal: 'convoy:t1', say: 'camp.say.rim10' }] } },  // straight, and where the pirates wait: the three raids the whole road had before the fork
+            { id: 'long', name: 'Long lane', bend: -4200, hides: { waves: [{ on: { lane: 0.5 }, ahead: 2000, ships: { skiff: 3 }, goal: 'convoy:t1', say: 'camp.say.rim2' }], caches: [{ at: 0.5, ore: 40 }] } }] },  // a minute longer round the rocks, one small raid, and a cache of ore at its middle
+          waves: [{ on: { lane: 0.1 }, ahead: 2000, ships: { skiff: 2 }, goal: 'convoy:t1', say: 'camp.say.rim1' }, { on: { lane: 0.82 }, ahead: 2000, ships: { skiff: 4, cutter: 2 }, goal: 'convoy:t1', say: 'camp.say.rim3' }] },  // the raids on every lane: before the fork and after the join (when: the share of her road flown, how far ahead of her, how many of each kind)
         { id: 'mine', kind: 'defend', par: 380, hpScale: 1.4, dmgScale: 1.8, scouts: ['fetch'], place: 'ceres', dock: 'ceres', start: 'ceres', startAt: [130, 30],  // 1.2 MINE AND DEFEND at Ceres: the ore is worth 3 cash at the Works but the rim is not safe: pirates go for the miners; the cruiser starts at Ceres
           rocks: [{ at: [900, 700], n: 7, spread: 300 }, { at: [-1100, -400], n: 7, spread: 300 }, { at: [300, -1600], n: 6, spread: 300 }],  // three rock fields, offsets from Ceres
           objectives: [{ type: 'ore', n: 190 }, { type: 'kill', what: 'wave:2' }, { type: 'cashin', n: 160 }],  // mine 120, beat the third raid, sell 100 at the Works (the doors are shut with a pirate near, so the fight comes first)
@@ -559,6 +566,7 @@ function campMissionRow(level, i) {
   const ms = campMissions(level), at = Math.max(0, Math.min(ms.length - 1, i | 0)), row = Object.assign({}, base, ms[at]);
   row.missions = ms.length; row.mission = at; row.mid = ms[at].id; row.kind = ms[at].kind || 'waves';
   row.waves = row.waves || []; row.convoys = row.convoys || []; // a mission with no waves or no haulers has none
+  if (row.route && typeof campRouteRow === 'function') campRouteRow(row); // a fork in the road: the lanes' hidden waves join the row's waves, each with its lane's id (src/camproute.js)
   if (row.place && !campPlaces(level)[row.place]) { // the place is not there (a system pack is missing): the mission happens where the cruiser starts, and its haulers go between the first two places
     const pl = campPlaces(level), ids = Object.keys(pl).filter(id => !pl[id].hidden); row.place = ''; row.dock = '';
     row.convoys = row.convoys.map(c => pl[c.from] && pl[c.to] ? c : Object.assign({}, c, { from: ids[0], to: ids[1] || ids[0] }));
@@ -626,6 +634,7 @@ function campNew(level, techs, opts) {
   C.rank = Math.max(0, Math.min(CAMP.ranks.length - 1, opts.rank | 0)); // the rank of the pilot (src/campranks.js: from the scores of the missions flown): its extras fill the bay and lift the wing limit
   { const rk = CAMP.ranks[C.rank]; C.bay.fighters += rk.fighters; C.bay.escorts += rk.escorts; C.cap = { fighters: CAMP.build.maxFighters + rk.fighters, escorts: CAMP.build.maxEscorts + rk.escorts }; }
   Object.assign(C, { missiles: CAMP.missile.magazine, magazine: CAMP.missile.magazine, turretMul: 1, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0 }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks
+  C.route = null; if (typeof campRouteNew === 'function') campRouteNew(C); // a fork in the road (src/camproute.js): C.route, and the lanes' caches in C.caches
   Object.assign(C, { cues: {}, piratesEscaped: 0, neutralsLost: 0 }); // the named cues a script has fired (campCue), the pirates that broke off and got away, the neutral ships lost (src/camppirates.js)
   C.stance = campStanceId(opts.stance); C.orders.stance = 0; // the wing's stance: one for the whole wing, kept across orders and saved with the progress (card space-game-campaign-stances)
   const p = campPlaces(level)[L.start], c = campSpawn(C, 'carrier', p.x + L.startAt[0], p.y + L.startAt[1]);
@@ -752,6 +761,7 @@ function campDo(C, name, arg, dry, how) {
   if (name === 'power' || name === 'balance' || name === 'emergency') return campPowerDo(C, name, arg, dry); // the ship's systems (below)
   const t = campFind(C, arg), out = campWing(C);
   if (name === 'scout') return campScoutDo(C, arg, dry); // the Scout order (below)
+  if (name === 'lane') return campRouteDo(C, arg, dry); // the pick at a fork in the road (src/camproute.js)
   if (name === 'launch') {
     const n = C.bay.fighters + C.bay.escorts - C.launchQ.length;
     if (n <= 0) return campNo(C.launchQ.length ? 'launching' : out.length ? 'baydry' : 'bay');
@@ -855,6 +865,7 @@ function campIntent(text) {
   const SC_FILLER = /^(?:(?:please|hey|ok|okay|computer|athena|can you|could you|would you|will you|i want to|i wanna|i need to|lets|let's|go ahead and|all|everyone)\s+)+/;
   let q = String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9' -]+/g, ' ').replace(/\s+/g, ' ').trim().replace(SC_FILLER, '').replace(/\s+(please|now|right now|already)$/, '').trim();
   if (!q) return null;
+  { const ml = /^(?:(?:scout|reconnoitre|reconnoiter)|send (?:a |an |the |our )?scouts?(?: out)?\s+(?:to|at|down|along|toward|towards|for))\s+(?:the |our )?(.*\b(?:lane|route))$/.exec(q); if (ml) return { act: 'fleet_scout', arg: ml[1] }; } // "scout the long lane": a lane of a fork in the road is a place to scout (card space-game-scout-route; before the wing's words, which know no lanes)
   { // a group named first, in words the old forms below would lose the group of: "all attack the mothership", "escorts scout the anomaly", "fighters hold at Ceres", "cancel the fighters" (src/campwing.js)
     const wp = typeof campWingParse === 'function' ? campWingParse(String(text).toLowerCase().replace(/^(?:(?:please|hey|ok|okay|computer|athena|can you|could you|would you|will you|go ahead and)\s+)+/, '')) : null;
     const same = wp && ((wp.group === 'fighters' && wp.verb === 'attack') || (wp.group === 'escorts' && wp.verb === 'escort') || (wp.group === 'all' && (wp.verb === 'guard' || !wp.verb)) || (wp.group === 'escorts' && !wp.verb && /\b(?:convoys?|freighters?|cargo|supplies|haulers?)\b/.test(wp.target))); // the old forms mean the same: their own words and answers
@@ -863,6 +874,7 @@ function campIntent(text) {
   q = q.replace(/^(?:the |our )?(?:fighters?|wing|escorts?|squadron|ships)\s+(?=(?:attack|engage|guard|defend|protect|launch|recall|return|escort)\b)/, '');
   let m;
   if ((m = /^(?:scout|reconnoitre|reconnoiter)\s+(?:the |our )?(.+)$/.exec(q)) || (m = /^send (?:a |an |the |our )?scouts?(?: out)?\s+(?:to|at|toward|towards|for)\s+(?:the |our )?(.+)$/.exec(q))) return { act: 'fleet_scout', arg: m[1] }; // "scout Mars", "send a scout to the relic": the Scout order (card space-game-campaign-scouts)
+  if ((m = /^(?:(?:take|use|pick|choose|go|fly|run|send (?:her|it|them|the transport|the convoy|the haulers))\s+(?:by |along |down |via |on |through |over )?)?(?:the |our )?([a-z]+(?: [a-z]+)?)\s+(?:lane|route)$/.exec(q))) return { act: 'fleet_lane', arg: m[1] }; // "take the long lane", "go by the short lane", "long lane": the pick at a fork in the road (card space-game-scout-route)
   if (/\b(?:missiles?|rockets?|torpedoe?s?)\b/.test(q)) return { act: 'fleet_missiles', arg: q.replace(/\b(?:fire|launch|shoot|send|loose|use|the|our|all|some|a|one|missiles?|rockets?|torpedoe?s?|with|at|on|to)\b/g, ' ').replace(/\s+/g, ' ').trim() }; // "fire missiles", "missiles at the mothership": before "launch", which is the bay
   if (/^(?:launch|scramble|deploy|open the bay|open the bay doors|bay doors|send out the (?:wing|fighters|ships|fleet)|launch the (?:wing|fighters|ships|fleet|escorts)|get them out)(?: now)?$/.test(q) || /^launch\b/.test(q)) return { act: 'fleet_launch', arg: '' };
   if ((m = /^(?:dock|land|put in|moor|berth)\s+(?:at|in|on|with|to)\s+(.+)$/.exec(q)) && !/^(?:the )?(?:carrier|cruiser|ship|base|bay)$/.test(m[1])) return { act: 'fleet_dock', arg: m[1].replace(/^(?:the |an? )/, '').replace(/^(?:outpost|station)$/, '') }; // "dock at Luna", "land at the lunar base", "dock at an outpost": the CARRIER docks at an outpost (card space-game-campaign-outposts); a bare "dock" or "land" is the wing's, below
@@ -928,6 +940,7 @@ function campTick(C, dt) {
 function campAhead(C, w) { // where a wave with `ahead` comes from: that far in front of a convoy along its road; a convoy gone (or none flying) and it comes from its own `from`, so a wave never spawns nowhere
   const f = w.along ? C.by['freighter-' + w.along] : campConvoys(C)[0];
   if (!f || f.hp <= 0 || !f.dest) return w.from ? { x: w.from[0], y: w.from[1] } : null;
+  if (f.rt) { const q = campRouteAhead(C, f, w.ahead); if (q) return q; } // a convoy on a route: ahead along the road it will fly, round the fork and the bend of its lane
   const dx = f.dest.x - f.x, dy = f.dest.y - f.y, d = Math.hypot(dx, dy) || 1, k = Math.min(w.ahead, Math.max(0, d - 400)) / d;
   return { x: f.x + dx * k, y: f.y + dy * k };
 }
@@ -941,13 +954,14 @@ function campSchedule(C) {
     const a = from ? Math.atan2(to.y - from.y, to.x - from.x) : Math.atan2(to.y, to.x), sx = from ? from.x + Math.cos(a) * ((from.r || 60) + 50) : Math.cos(a) * (C.earth.r + 50), sy = from ? from.y + Math.sin(a) * ((from.r || 60) + 50) : Math.sin(a) * (C.earth.r + 50);
     const f = campSpawn(C, 'freighter', sx, sy); f.id = 'freighter-' + cv.id; C.by[f.id] = f; f.dest = { x: to.x, y: to.y }; f.rot = a; f.cname = cv.name || to.name; f.named = !!cv.name; // a convoy with a name of its own (Transport, Hauler 1) is a ship: its arrival and its loss read "Transport has arrived", not "The convoy has reached Transport" (the old lines name the place it flies to: Mars)
     f.cid = cv.id; f.from = { x: sx, y: sy }; f.lane = Math.hypot(to.x - sx, to.y - sy); if (cv.speed) f.vmax = cv.speed; // its own way: where it began and how long the road is (a wave can come by how far it has flown: on { lane }), and its own speed (a row's `speed`, else the table's)
+    if (C.route) campRouteConvoy(C, f); // on a route the convoy flies the fork and the lane (src/camproute.js)
     campSay(C, cv.say || 'camp.say.convoy', { name: f.cname });
   });
   L.waves.forEach((w, i) => {
     const st = C.waves[i]; if (st.started) return;
     const prev = i > 0 ? C.waves[i - 1] : null, prevDead = !prev || (prev.started && !C.ships.some(u => u.team === 'alien' && u.hp > 0 && u.wave === i - 1));
-    const due = (w.on ? campWaveOn(C, w.on) : sec >= w.at) && (!w.needClear || prevDead);
-    const early = w.early != null && prev && prev.started && prevDead && sec - prev.at >= w.early;
+    const due = (w.on ? campWaveOn(C, w.on) : sec >= w.at) && (!w.needClear || prevDead) && (!w.lane || campRouteWaveOk(C, w)); // a wave of a lane comes only to a convoy on that lane (src/camproute.js)
+    const early = w.early != null && prev && prev.started && prevDead && sec - prev.at >= w.early && (!w.lane || campRouteWaveOk(C, w));
     if (!due && !early) return;
     st.started = true; st.at = sec;
     const goal = w.goal || 'earth', ahead = w.ahead != null ? campAhead(C, w) : null, org = ahead ? [ahead.x, ahead.y] : (w.from || [C.carrier.x + 2500, C.carrier.y]); // ahead: the wave comes out of the dark this many px in front of a convoy (its heading), the one named (along) or the first flying
@@ -1129,7 +1143,7 @@ function campCaches(C) {
   C.caches.forEach(k => {
     if (k.got || k.carried) return;
     if (!C.ships.some(u => u.team === 'earth' && u.hp > 0 && !u.scout && Math.hypot(u.x - k.x, u.y - k.y) <= CAMP.cache.radius)) return; // a scout out carries a cache home instead (campScoutsStep)
-    k.got = true; C.cachesGot++; C.events.push({ type: 'cache', x: k.x, y: k.y });
+    k.got = true; C.cachesGot++; if (k.ore) C.ore = Math.min(CAMP.ore.cap, C.ore + k.ore); C.events.push({ type: 'cache', x: k.x, y: k.y }); // a cache on a lane holds ore (src/camproute.js)
     campSay(C, 'camp.say.cache', { n: C.cachesGot, total: C.caches.length });
   });
 }
@@ -1232,6 +1246,7 @@ function campAI(C, u, dt) {
   return campWingAI(C, u, dt);
 }
 function campConvoyAI(C, u, dt) {
+  if (u.rt) return campRouteFly(C, u, dt); // on a route (a fork in the road): src/camproute.js
   const d = campDist(u, u.dest), ang = Math.atan2(u.dest.y - u.y, u.dest.x - u.x);
   if (u.cid != null && u.lane > 0) C.lane[u.cid] = Math.max(C.lane[u.cid] || 0, Math.max(0, Math.min(1, 1 - (d - 90) / u.lane))); // how much of its road it has flown (the best it has done: the arrival removes the ship, the share stays)
   if (d < 90) { if (u.cid != null) C.lane[u.cid] = 1; C.delivered++; u.hp = 0; u.arrived = true; C.events.push({ type: 'arrive', x: u.x, y: u.y, id: u.id }); campSay(C, u.named ? 'camp.say.shiparrived' : 'camp.say.delivered', { name: campConvoyName(u) }); return; }
@@ -1316,15 +1331,17 @@ const campSensors = C => campScouts(C).map(u => ({ id: u.id, x: u.x, y: u.y, r: 
 const campFree = (C, kind) => campWing(C, kind).filter(u => !u.scout);
 function campScoutDo(C, arg, dry) {
   const tasks = campScoutTasks(C);
-  if (!tasks.includes('recon') && !tasks.includes('fetch')) return campNo('noscout');
+  const lanes = !!(C.route && !C.route.passed); // a fork in the road: the lanes are for scouting whatever the mission's tasks say (src/camproute.js)
+  if (!tasks.includes('recon') && !tasks.includes('fetch') && !lanes) return campNo('noscout');
   const es = campWing(C, 'escort'); if (!es.length) return campNo(C.launchQ.length ? 'launching' : 'noescorts');
   const free = es.filter(u => !u.scout && !(u.order && u.order.type === 'recall')); if (!free.length) return campNo('scoutsbusy');
   const f = arg && typeof arg === 'object' && Number.isFinite(arg.x) && Number.isFinite(arg.y) ? { row: arg } : typeof campNavFind === 'function' ? campNavFind(C, arg) : null; // a map row (the Tab map's Scout button) or the words
   if (!f || !f.row) return campNo('noscoutplace');
+  if (!tasks.includes('recon') && !tasks.includes('fetch') && f.row.kind !== 'lane') return campNo('noscout');
   const row = f.row, n = (C.scoutN | 0) + 1;
   if (dry) return campYes('scout', { n, name: row.name });
   const u = campNearest(free, row);
-  u.order = { type: 'scout' }; u.move = null; u.scout = { n, name: row.name, x: row.x, y: row.y, phase: 'out', at: C.t, carry: { ore: 0, caches: 0 }, found: [] };
+  u.order = { type: 'scout' }; u.move = null; u.scout = { n, name: row.name, x: row.x, y: row.y, phase: 'out', at: C.t, carry: { ore: 0, caches: 0 }, found: [], lane: row.kind === 'lane' ? row.lane : '' };
   C.scoutN = n; C.orders.scout = (C.orders.scout | 0) + 1; C.events.push({ type: 'scout', id: u.id, n, name: row.name });
   return campYes('scout', { n, name: row.name });
 }
@@ -1333,7 +1350,7 @@ function campScoutDock(C, u) {
   const s = u.scout; u.hp = 0; u.docked = true; C.bay.escorts++;
   if (s && s.carry) {
     if (s.carry.ore > 0) { C.ore = Math.min(CAMP.ore.cap, C.ore + s.carry.ore); C.events.push({ type: 'ore', x: u.x, y: u.y, n: s.carry.ore, id: u.id }); }
-    C.caches.forEach(k => { if (k.carried === u.id) { k.carried = ''; k.got = true; C.cachesGot++; C.events.push({ type: 'cache', x: k.x, y: k.y }); campSay(C, 'camp.say.cache', { n: C.cachesGot, total: C.caches.length }); } });
+    C.caches.forEach(k => { if (k.carried === u.id) { k.carried = ''; k.got = true; C.cachesGot++; if (k.ore) C.ore = Math.min(CAMP.ore.cap, C.ore + k.ore); C.events.push({ type: 'cache', x: k.x, y: k.y }); campSay(C, 'camp.say.cache', { n: C.cachesGot, total: C.caches.length }); } });
   }
   C.events.push({ type: 'dock', id: u.id }); if (s) campSay(C, 'camp.say.scouthome', { n: s.n });
 }
@@ -1350,7 +1367,8 @@ function campScoutAI(C, u, dt) {
   if (s.phase === 'station') {
     if (C.t - s.at < K.station * 1000) { const a = C.t / 900; return campSeek(u, s.x + Math.cos(a) * 70, s.y + Math.sin(a) * 70, dt); } // it hovers round its place, reading
     s.phase = 'home';
-    if (s.found && s.found.length) campSay(C, 'camp.say.scoutfound', { n: s.n, name: s.name, likely: s.found[0] }); else campSay(C, 'camp.say.scoutnothing', { n: s.n, name: s.name });
+    if (s.lane && typeof campRouteRead === 'function') campRouteRead(C, u); // a lane: what it hides is read and said (src/camproute.js)
+    else if (s.found && s.found.length) campSay(C, 'camp.say.scoutfound', { n: s.n, name: s.name, likely: s.found[0] }); else campSay(C, 'camp.say.scoutnothing', { n: s.n, name: s.name });
   }
   if (campDist(u, c) < CAMP.bay.dockAt) return campScoutDock(C, u);
   return campSeek(u, c.x, c.y, dt);
@@ -1362,7 +1380,7 @@ function campScoutsStep(C, dt) {
   scouts.forEach(u => {
     const s = u.scout;
     if (fast && campDist(u, C.carrier) > K.leash) { campScoutDrop(C, u); u.hp = 0; C.lostShips++; C.events.push({ type: 'scoutlost', id: u.id, n: s.n, x: u.x, y: u.y }); campSay(C, 'camp.say.scoutleft', { n: s.n }); return; }
-    if (tasks.includes('fetch')) {
+    if (tasks.includes('fetch') || s.lane) { // (a scout sent to a lane may fetch what lies there)
       for (let i = C.pickups.length - 1; i >= 0 && s.carry.ore < K.carry; i--) {
         const p = C.pickups[i]; if (Math.hypot(u.x - p.x, u.y - p.y) > K.pickup + u.r) continue;
         const take = Math.min(p.ore, K.carry - s.carry.ore); s.carry.ore += take; p.ore -= take; if (p.ore <= 0) C.pickups.splice(i, 1);

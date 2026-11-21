@@ -69,6 +69,11 @@ g.run(`(() => {
     if (st.react != null && s >= st.react) { B = Object.assign({}, B, { sit: false, launchAt: st.launched ? B.launchAt : 0, attackFrom: 0, attackEvery: 5 }); st.sitOff = true; }
     if (B.launch !== false && B.launchAt != null && !st.launched && s >= B.launchAt) { st.launched = true; campOrder(C, 'launch'); }
     (B.escort || []).forEach((at, i) => { if (!st['e' + i] && s >= at && campConvoys(C).length) { st['e' + i] = true; campOrder(C, 'escort', 'convoy'); } }); // the wing goes to the nearest convoy ship (the transport, the haulers)
+    if (C.route && !C.route.passed && !B.noroute) { // a fork in the road (card space-game-scout-route): scout both lanes as soon as an escort is out, then take the quieter one when the transport holds at the fork
+      C.route.geo.order.forEach(id => { if (st.launched && !C.route.known[id] && !st['lane' + id]) { const row = campNavRows(C).find(x => x.id === 'lane:' + id); if (row && campOrder(C, 'scout', row).ok) st['lane' + id] = true; } });
+      const hold = campRouteHolding(C), all = C.route.geo.order.every(id => C.route.known[id]);
+      if (hold && !st.picked && (all || hold.left < 8)) { st.picked = true; const n = id => C.route.known[id] ? C.route.known[id].pirates + C.route.known[id].aliens : 99; campOrder(C, 'lane', hold.lanes.map(l => l.id).sort((a, b) => n(a) - n(b))[0]); }
+    }
     const mineOpen = campObjectives(C).some(o => !o.done && o.type === 'ore') && !B.nomine, fight = campAliens(C).some(u => !u.hold);
     if (B.launch !== false && st.launched && mineOpen && !st.mining && !fight && s >= (st.mineAt || 0)) { if (campOrder(C, 'mine').ok) st.mining = true; else st.mineAt = s + 1; } // while the mission asks for ore the wing mines, and goes to the fight only when one comes (then mines again) // a mission that asks for ore: the wing mines (E then 1)
     if (B.cycle && st.launched) {
