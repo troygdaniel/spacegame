@@ -38,6 +38,7 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.ui.bonusmet | +{pts}  {text} |
 | camp.ui.bonusmiss | --   {text} |
 | camp.ui.debrief | MISSION COMPLETE: {title} |
+| camp.ui.lostmission | MISSION LOST: {title} |
 | camp.ui.score | SCORE {score} |
 | camp.ui.debriefstats | Time {time}   Hull {hull}   Ships lost {lost} |
 | camp.ui.debriefnext | Enter  ready room |

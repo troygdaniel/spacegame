@@ -631,7 +631,17 @@ function shipcompInstall(game) {
     if (e.repeat || e.code !== 'KeyI' || e.ctrlKey || e.metaKey || e.altKey) return;
     const el = document.activeElement;
     if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return; // typing in a field (the key setup, a chat line, the strip's own line)
+    if (!shipcompAvailable()) { shipcompNoKey(game); return; } // no chat key (or the chat is off, or the key was refused): the line cannot open, and the key says so (it used to do nothing)
     shipcompOpen(game);
   });
+}
+// I when the ship's computer cannot answer: one line in the flight or the station, the same words as U's (src/listen.js), not twice in two seconds
+let shipcompNoKeyAt = 0;
+function shipcompNoKey(game) {
+  const sc = typeof cmdstripScene === 'function' ? cmdstripScene(game) : null; if (!sc || sc.panel || sc.talk || sc.shopOpen || sc.jmp || sc.mode === 'won' || sc.mode === 'lost' || sc.mode === 'end') return false;
+  const now = Date.now(); if (now - shipcompNoKeyAt < 2000) return false; shipcompNoKeyAt = now;
+  const code = typeof CHAT === 'undefined' || !CHAT.key ? 'nochat' : !CHAT.on ? 'chatoff' : 'chatbad', text = typeof lsSay === 'function' ? lsSay(code) : '';
+  if (text) { try { toast(sc, text, '#ffb454'); } catch (e) { /* the key is only a key then */ } }
+  return !!text;
 }
 if (typeof window !== 'undefined' && window.game && window.game.scene && typeof window.game.scene.add === 'function') shipcompInstall(window.game);

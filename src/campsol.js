@@ -67,7 +67,7 @@ function campWorldBuild(L) {
   if (starPlace) data.star = { id: W_.star, x: starPlace.x, y: starPlace.y, r: starPlace.r || 200, type: starType };
   else {
     const sid = W_.system === 'sol' ? 'sun' : 'star';
-    if (!pl[sid]) pl[sid] = { x: Math.round(S.x), y: Math.round(S.y), name: W_.system === 'sol' ? 'Sun' : String(sd.name || 'The') + ' star', kind: 'star', star: starType, r: Math.round(900 * size * K.starR), far: true, world: true };
+    if (!pl[sid]) pl[sid] = { x: Math.round(S.x), y: Math.round(S.y), name: W_.system === 'sol' ? 'Sun' : String(sd.name || 'The star'), kind: 'star', star: starType, r: Math.round(900 * size * K.starR), far: true, world: true };
     data.star = { id: sid, x: pl[sid].x, y: pl[sid].y, r: pl[sid].r, type: starType };
   }
   planets.forEach(({ pid, b, q }) => {
