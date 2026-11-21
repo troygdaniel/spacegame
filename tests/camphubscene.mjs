@@ -43,6 +43,7 @@ g.run(`
 `);
 const shown = () => J('__shown(S)');
 const has = (re) => shown().some(t => re.test(t));
+const has9 = re => J('__shown(S9)').some(t => re.test(t));
 const rec = () => J('__rec');
 
 // ---- A. create ----
@@ -141,6 +142,11 @@ const sc = src('src/campaignscene.js'), ti = src('src/title.js');
 check('the Campaign scene still starts a lost mission again by itself (via retry); it goes to the hub in exactly four places: after a debrief, at the end of a level, the title\'s choice, and the dock\'s room over the paused battle (card space-game-campaign-outposts)', /via: 'retry'/.test(sc) && (sc.replace(/\/\/.*$/gm, '').match(/'CampHub'/g) || []).length === 4);
 check('the title\'s Campaign choice and K go to the hub (campaignStart); the address ?campaign=N still opens the battle', /function campaignStart\(s, level\) \{[^]*?if \(!level\) \{ go\(s, 'CampHub'\)/.test(sc) && /campAddrPlanPage/.test(ti) && /'Campaign', \{ level: plan\.level/.test(ti));
 check('the scene is in the game\'s list, its script is loaded once, after camphub.js and the cruiser art, and before main.js', (() => { const m = src('src/main.js'), h = src('index.html'); return /CampWarp, CampHub\]/.test(m) && (h.match(/src\/camphubscene\.js/g) || []).length === 1 && h.indexOf('src/camphub.js') < h.indexOf('src/camphubscene.js') && h.indexOf('src/campcruiser.js') < h.indexOf('src/camphubscene.js') && h.indexOf('src/camphubscene.js') < h.indexOf('src/main.js'); })());
+// ---- after the ending: a page loaded later still says the outpost on the board (card space-game-wrapup-hunt-l3: the hub did not apply the reveal, only the Campaign scene did) ----
+g.run(`campReveal(false); localStorage.setItem(CAMP.store, JSON.stringify({ level: 1, mission: 0, techs: [], ore: 0, bonus: { fighters: 0, escorts: 0 }, results: {}, revealed: true })); var S9 = __scene();`);
+check('after the ending has been seen (the saved flag) the board of a page that has just loaded calls level 3 the outpost, as the ending said, and not the home world', has9(/LEVEL 3\s+-\s+The outpost/) && !has9(/home world/) && J('CAMP.levels[3].name') === 'The outpost', J('__shown(S9)').filter(t => /LEVEL/.test(t)).join(' / '));
+g.run(`campReveal(false); localStorage.removeItem(CAMP.store); var S10 = __scene();`);
+check('and before it (no flag) the board says the home world: nothing is given away', J('__shown(S10)').some(t => /LEVEL 3\s+-\s+The home world/.test(t)) && !J('__shown(S10)').some(t => /outpost/i.test(t)));
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `CAMPAIGN HUB SCENE FAIL (${failed} of ${n})` : `CAMPAIGN HUB SCENE PASS (${n} checks)`);
 process.exitCode = failed ? 1 : 0;
