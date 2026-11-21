@@ -190,6 +190,13 @@ function musicStart(mood) {
   const seed = (Math.random() * 4294967296) >>> 0;
   MUS.bus = musicBus(seed, mood);
 }
+// the bus keeps the loudest instant under the cap whatever the seed (card space-game-night-cosmetics, finding I: one seed in six played a hair over, 0.51 against 0.5 before the bus): a note that would take
+// the notes sounding with it past MUSIC.cap / MUSIC.level (counted as musicWorst counts) is quietened by the excess. The plan (musicMaker) is not touched: it stays pure and in its mood's bounds
+function musicFit(played, n) {
+  const limit = MUSIC.cap / MUSIC.level * 0.999, near = played.filter(p => p.at < n.end && p.end > n.at), w = musicWorst(near.concat([n])).peak;
+  if (w > limit) n.vel = Math.max(0, n.vel - (w - limit) / MUSIC.peak[n.kind]);
+  return n;
+}
 function musicStop() {
   const b = MUS.bus; if (!b) return; MUS.bus = null;
   try { b.out.gain.cancelScheduledValues(AC.currentTime); b.out.gain.setTargetAtTime(0, AC.currentTime, MUSIC.fade.out); } catch (e) { /* gone */ }
@@ -203,7 +210,7 @@ function musicTick() {
   if (!b) { musicStart(mood); return musicTick(); }
   if (b.mood !== mood) { b.maker.setMood(mood, AC.currentTime); b.mood = mood; }
   if (!b.send) b.send = revSend(b.out, MUSIC.send); // the reverb is made the first time it is wanted: with the sound off it was not
-  b.maker.take(AC.currentTime, MUSIC.ahead).forEach(n => { try { musicVoice(b.out, n); b.played.push(n); if (b.played.length > 200) b.played.shift(); } catch (e) { /* audio is optional */ } });
+  b.maker.take(AC.currentTime, MUSIC.ahead).forEach(n => { try { musicFit(b.played, n); musicVoice(b.out, n); b.played.push(n); if (b.played.length > 200) b.played.shift(); } catch (e) { /* audio is optional */ } });
   musicLevel(b);
 }
 // the Music row's own sound, when its volume or switch is pressed in Settings: two bells at the level the music will have, from a bus of their
