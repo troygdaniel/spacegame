@@ -120,5 +120,4 @@ function campBriefKey(s, code) {
   if (code === 'KeyM') { bf.whole = !bf.whole; campBriefPaintMap(s); if (bf.keys) bf.keys.setText(uiText('camp.bf.keys') + '    ' + (bf.walk.steps.length > CAMPBRIEF.per ? uiText('camp.bf.keys2') + '    ' : '') + uiText(bf.whole ? 'camp.bf.zoomarea' : 'camp.bf.zoomwhole')); if (typeof sfx === 'function') sfx('tick'); return true; }
   return true;
 }
-// the voice pack: the first step of a mission's walkthrough is read once when the briefing opens, so it is a line of the ship's, recorded once (tools/voicepack.mjs reads this at run time; the other steps are for the eyes)
-if (typeof voicePackSource === 'function' && typeof vpKeys === 'function') voicePackSource({ id: 'campaign.walk', voice: 'ship', keys: () => vpKeys(/^camp\.bf\.\d+\.\d+\.w1$/) });
+// the voice pack: the first step of a mission's walkthrough is read once when the briefing opens, so camp.bf.<level>.<mission>.w1 is a spoken line of the ship's, recorded once: it is the family 'campaign.walk' of VOICEPACK_FAMILIES (src/voicepack.js), and the other steps are silent there (for the eyes)

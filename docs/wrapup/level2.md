@@ -32,6 +32,23 @@ Card `space-game-wrapup-hunt-l2`, 1-GEN, 20 Nov 2026, on main `1ec26c1` (the mer
 
 - Chrome parts for missions 2 and 3 (guard fight, relic hold): the logic sim and the bot cover the rules; one Chrome walk was used for the screens a player meets first. The ready room, the panels (stances), systems and scouts are not on main yet: they come with the merge-train tip (second pass).
 
-## Second pass (merge-train tip)
+## Second pass (merge-train tip 128379e, 20 Nov 2026)
 
-To do when 3-GEN publishes the tip: re-run the bot for level 2, the card-fit test, and look for the features fighting each other (systems power with Fast, scouts with the guards' hold, stances with the panels, the ready room after each mission).
+The train carries the hunt fixes (card growth, the three lines), the hot-gate fix with the new **Alpha B relay**, the mission places, the panels on Q / E / C, systems, scouts, replay and the pace and difficulty scales. Hunted again the same way: all plain-Node suites, the bot (5 seeds, five ways of playing), scripts on the sim for the outposts at each mission's own place, a scout fetch on mission 1, and **one muted Chrome walk through the lock** (warp, level card, briefing, the three panels, a won mission, the debrief, the ready room and its briefing, Launch to mission 2, a replay of mission 1 and its debrief; pictures `~/dev/spacegame-night/shots/hunt2b-*.png`).
+
+### Re-checked: fixed or fine
+
+- **The hot gate (finding 2) is fixed**: in mission 2 the gate is `hot` (guards within 900 px), the retreat names the **Alpha B relay** (14 s on Fast from Proxima d; "Retreat to Alpha Centauri B: 14 s on Fast."), and the gate stays the dock for missions 1 and 3. Mission 1 starts its flight at Alpha Centauri B where the relay is (35 px from the carrier at arrival: "E 6  dock at Alpha Centauri B"); mission 3 at Proxima b, 50 px from the gate: "E 6  dock at Proxima b". The outposts are reachable and useful in every mission.
+- **Briefing and debrief cards fit** (the mission briefing, the debrief, and the replay debrief: text between title and hint, measured in Chrome), and the level card reads "We are through the warp. This is Alpha Centauri." (findings 1 and 3 fixed). Mission 3 says its own wave line.
+- **Panels:** Q opens FLEET, E SHIP, C SYSTEMS (each with its rows and live states, greyed ones with the reason), Esc closes; the key line reads "Q Fleet   E Ship   C Systems". **Systems:** the C panel shows weapons / shields / engines pips at 2 / 2 / 2, Balance and Emergency. **Scouts:** mission 1 allows recon and fetch; a scout sent to a cache fetched it (1 of 2 counted after it landed, no ship lost).
+- **Ready room and replay:** Enter at the debrief opens the ready room (rows board, brief, refit, rank, launch); its briefing opens; Launch flies mission 2 straight (no second briefing, mode play); a replay of mission 1 flies with the replay flag and its debrief says "Your best stands at 2,300 points." No page error in the walk.
+- **The bot:** missions 1 and 2: plain and missile bots win 100 percent, mission 3 100 percent for plain, missile and late; the carrier-only bot wins mission 2 only 20 percent (the same bot artefact as before: it never wakes a guard on hold) and mission 3 80 percent (one lost carrier of five: fair for no wing).
+
+### New findings (second pass)
+
+8. **MINOR: two distances for the same trip.** The briefing and the ready room say the trip to Proxima d is **407 km** (about 10 s by Fast: `campTravel`, which counts to the edge of the 3,000 px arrival circle), the HUD's goal line says "Fly to Proxima d: **707 km**." (the carrier's distance to the place's middle). Mission 1: 279 km against 579 km. Both are true and the mission starts at 300 km, but a player sees two numbers for one trip. *See it:* `?campaign=2`, the hub's briefing, then the first HUD line. *Owner:* 3-GEN (mission places): the HUD line could count to the arrival circle, or the briefing could say "then the mission begins within 300 km".
+9. **INFO (for 2-GEN's difficulty card, not a fault):** on the train the plain bot loses **10 ships** in mission 3 (8 for the missile bot) and 3 in mission 2; the carrier survives (hull 464 of 600). The wing is spent hard by the new scales; the "lost" bonus of mission 2 (at most 1 ship) is out of reach for the plain bot.
+
+### Not hunted
+
+- Missions 2 and 3 in Chrome (the guard fight and the relic hold): the sim and the bot cover the rules; the walk covered every screen a player meets between missions.
