@@ -176,6 +176,13 @@ function campMapPaint(s, time) {
       if (m.to) { const q = pin(X(m.to.x), Y(m.to.y)); g.lineStyle(1, m.color, 0.55).lineBetween(p.x, p.y, q.x, q.y); } // a line to where it is heading
       g.fillStyle(m.color, 1).fillCircle(p.x, p.y, 3.5);
     } else if (m.type === 'alien' || m.type === 'pirate') g.fillStyle(m.color, 1).fillCircle(p.x, p.y, 2.5);
+    else if (m.type === 'tboat') { // a torpedo boat: a dart pointing the way it flies, with a bar across its tail (the tube); a ring pulses while it arms
+      const a = m.rot || 0, c = Math.cos(a), sn = Math.sin(a), q = (x, y) => ({ x: p.x + c * x - sn * y, y: p.y + sn * x + c * y });
+      g.fillStyle(m.color, 1).fillPoints([q(5, 0), q(-3.5, -3), q(-3.5, 3)], true); g.lineStyle(1.5, m.color, 1).lineBetween(q(-5, -3.6).x, q(-5, -3.6).y, q(-5, 3.6).x, q(-5, 3.6).y);
+      if (m.arming) g.lineStyle(1.5, 0xffe08a, 0.5 + 0.5 * Math.sin(time / 120)).strokeCircle(p.x, p.y, 8 + 2 * Math.sin(time / 120));
+    } else if (m.type === 'torpedo') { // a torpedo in flight: a bright diamond with a pulsing ring, bigger than any other mark but the mothership's
+      const r = 4 + 1.5 * Math.sin(time / 110); g.fillStyle(m.color, 1).fillPoints([{ x: p.x, y: p.y - 4 }, { x: p.x + 4, y: p.y }, { x: p.x, y: p.y + 4 }, { x: p.x - 4, y: p.y }], true); g.lineStyle(1.5, m.color, 0.8).strokeCircle(p.x, p.y, r + 4);
+    }
     else if (m.type === 'patrol') { g.fillStyle(m.color, 1).fillCircle(p.x, p.y, 2.5); g.lineStyle(1, m.color, 0.8).strokeCircle(p.x, p.y, 5); } // a neutral patrol: a dot in a ring
     else if (m.type === 'miner') g.fillStyle(m.color, 1).fillRect(p.x - 2.5, p.y - 2.5, 5, 5); // a neutral miner: a small pale square
     else if (m.type === 'wing') g.fillStyle(m.color, 1).fillCircle(p.x, p.y, 2);
