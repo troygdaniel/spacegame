@@ -26,7 +26,8 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.o.clear | Survive the attack. |
 | camp.o.done | Objectives met. |
 | camp.b.time | Finish in {secs} seconds |
-| camp.b.lost | Lose at most {n} ships |
+| camp.b.lost | Ships lost: {n} or fewer |
+| camp.say.l2wave3 | Aliens coming for the relic, pilot. |
 | camp.b.nolost | Lose no ships |
 | camp.b.hull | Keep the hull above {pct} percent |
 | camp.b.ore | Mine {n} ore |

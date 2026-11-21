@@ -185,7 +185,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.tech.bay2.text | Four more fighters in the bay. |
 | camp.tech.repair.name | Repair field |
 | camp.tech.repair.text | The carrier and the ships beside it mend as they fly. |
-| camp.l2.before.1 | Warp drive ready. Next star: Alpha Centauri. |
+| camp.l2.before.1 | We are through the warp. This is Alpha Centauri. |
 | camp.l2.before.2 | Something old waits on Proxima b. Find it first. |
 | camp.l2.after.1 | The relic is a machine from an older race. |
 | camp.l2.after.2 | It shows where the aliens live. Choose a technology. |

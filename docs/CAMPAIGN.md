@@ -286,7 +286,7 @@ After level 2 (ancient tech): hull plating (carrier hull +50 percent), a second 
 ## Story lines (plain, two or three before and after each level; shown on screen and spoken in the ship voice)
 
 1. *Before (the belt):* "Ceres belt. The cruiser is mining." "Fly over ore, or press 6 to send the drones." "Quiet shift. Fill the store." *The ambush:* "Alarm. Unknown ships, coming for the cruiser." "Mining lasers are weapons now. Hold Space. Drones: press 2." *After:* "Mothership destroyed. The belt is clear." "Their wreck holds alien technology." "Earth recalls the cruiser for a refit."
-2. *Before (Alpha Centauri):* "Warp drive ready. Next star: Alpha Centauri." "Something old waits on Proxima b. Find it first." *After:* "The relic is a machine from an older race." "It shows where the aliens live. Choose a technology."
+2. *Before (Alpha Centauri):* "We are through the warp. This is Alpha Centauri." (the card comes after the warp cinematic) "Something old waits on Proxima b. Find it first." *After:* "The relic is a machine from an older race." "It shows where the aliens live. Choose a technology."
 3. *Before (the home world):* "Their home world is open. Last battle." "Break the defence towers round their world." *After:* "Their defences are down." "The war is won." (then the ending: see the SPOILER section at the end of this file)
 
 ## How it is built
