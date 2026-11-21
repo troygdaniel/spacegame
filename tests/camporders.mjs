@@ -27,7 +27,7 @@ const text = f => readFileSync(join(ROOT, f), 'utf8');
 // ---- A. the table ----
 const MINE = /\.(distress|rescue|rescueall|stay)$/; // the scripted distress call of mission 1.1 (src/campbeats.js)
 const types = J('CAMP_CALL_TYPES.filter(t => !t.scripted).map(t => ({ id: t.id, pick: t.pick, def: t.def }))'); // (a call a mission scripts itself, with scripted: true, is not one of the six that watch the fight: src/campbeats.js)
-const fxIds = J('Object.keys(CAMP_CALL_FX)');
+const fxIds = J('Object.keys(CAMP_CALL_FX)').filter(f => !/^(rescue|rescueall|stay)$/.test(f)); // (the effects of 1.1's scripted call are not the ones that watch the fight)
 check('six call types, each with three choices, every choice an effect of the table, and a cautious pick among them', types.length === 6 && types.every(t => t.pick.length === 3 && t.pick.every(p => fxIds.includes(p)) && t.def >= 0 && t.def <= 2 && new Set(t.pick).size === 3), JSON.stringify(types));
 check('the types are the five of the card (a breakaway at the escort, a wounded wingman, the enemy running, a second group sighted, a target of opportunity) and the cruiser\'s shield', ['breakaway', 'wounded', 'running', 'second', 'opportunity', 'cruiser'].every(id => types.some(t => t.id === id)));
 const words = id => J(`uiText('${id}')`);
