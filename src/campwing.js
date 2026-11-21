@@ -128,6 +128,7 @@ function campWingOrder(C, group, verb, target, how, dry) {
   if (verb === 'recall') {
     if (dry) return campYes('recall');
     ships.forEach(u => { u.order = { type: 'recall' }; u.move = null; }); C.orders.recall++;
+    if (id !== 'escorts') (C.repairs || []).forEach(r => { r.stay = true; }); // a fighter still being mended stays aboard when it is whole (src/camprepair.js)
     return campWingDone(C, id, verb, null, ships, how, 'recall');
   }
   if (tg && V.kinds.indexOf(tg.kind) < 0) return campWingNo('wbadpair', { group: gname, verb, what: CAMPWING_KIND_WORDS[tg.kind] || tg.kind });
