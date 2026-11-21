@@ -71,16 +71,20 @@ Only numbers (the aliens' hull and damage per mission, and the sizes of the wave
 | mission | hpScale | dmgScale | waves |
 |---|---|---|---|
 | 1.1 survey | 1 | 1 | as before |
-| 1.2 haulers | 1.2 | 1.3 | as before |
+| 1.2 haulers | 1 | 1 | as before (7 raiders and 3 drones, three times; a first try at 1.2 and 1.3 scales left the haulers lost on one seed in six at Calm) |
 | 1.3 mothership | 1.6 | 1.8 | as before |
 | 2.1 resources | 1.5 | 1.8 | the first wave 4 raiders and 3 drones (was 3 and 2) |
-| 2.2 guards | 2.4 | 3 | 4 drones and 3 gunships (was 3 and 2), and a second wave at 40 s: 4 raiders and 3 drones |
-| 2.3 relic | 2.8 | 3.4 | three waves (6 s: 4 drones, 3 raiders; 24 s: 3 gunships, 3 raiders; 42 s: 4 drones, 3 gunships) in place of one of 3 and 2 |
+| 2.2 guards | 2 | 2.4 | 4 drones and 3 gunships (was 3 and 2), and a second wave at 40 s: 4 raiders and 3 drones |
+| 2.3 relic | 2.6 | 3 | three waves (6 s: 4 drones, 3 raiders; 24 s: 3 gunships, 3 raiders; 42 s: 4 drones, 2 gunships) in place of one of 3 and 2 |
 | 3.1 approach | 2.2 | 2.6 | 5 raiders and 3 drones on the first point (was 4 and 2) |
 | 3.2 outer ring | 2.4 | 3 | the wave at 25 s: 4 drones, 3 gunships (was 3 and 2) |
-| 3.3 inner ring | 2.4 | 3.2 | as before |
+| 3.3 inner ring | 2.4 | 3 | as before |
 
-The hull scale also lifts the towers' and the mothership's hit points; the damage scale their shots. The scales never fall from a level's first mission to its third (`tests/camppace.mjs`, section F). The first try of 3.3 at 3 and 4 was far too hard (the plain bot won none); 2.4 and 3.2 is a win on every seed with the hull at half.
+The hull scale also lifts the towers' and the mothership's hit points; the damage scale their shots. The scales never fall from a level's first mission to its third (`tests/camppace.mjs`, section F). Tries that were wrong, kept for the next tuner: 3.3 at 3 and 4 was far too hard (the plain bot won none); 2.2 at 2.4 and 3, and 2.3 at 2.8 and 3.4, cost the plain player 6 to 10 of the wing (a plain player should keep some of it), so they were eased to 2 and 2.4, and 2.6 and 3; 2.3 at 2.4 and 2.8 was too easy again (90 damage). With 2.6 and 3 the plain player loses 4 to 10 of the wing (about 6 on average).
+
+## The bot and the merge train
+
+The first full table on the merge train's tip (pace, mission places, fast-board) showed the plain bot with wins at 200 seconds and 1.2 lost on a seed in three: since the fast-board card a Fast trip needs the wing aboard, and the bot launched at 1 s, so it flew the trip to Mars at the cruiser's ordinary speed (about 140 s). A player flies the trip with the wing aboard and launches on arrival, so the bot does the same: `tools/campaign-bot.mjs` makes no order before the cruiser has arrived and times its plan (launch, escort, attack) from the arrival. The win times above are the trip (7 to 46 s by Fast) and the fight.
 
 ## After (the table now, at the three paces)
 
@@ -89,35 +93,35 @@ The hull scale also lifts the towers' and the mothership's hit points; the damag
 | 1.1 | plain | 100% 63s hull 600 hit 0 lost 0 | 100% 59s hull 600 hit 0 lost 0 | 100% 59s hull 600 hit 0 lost 0 |
 | 1.1 | strong | 100% 65s hull 600 hit 0 lost 0 | 100% 62s hull 600 hit 0 lost 0 | 100% 67s hull 600 hit 0 lost 0 |
 | 1.1 | idle | 0% hull 600 hit 0 lost 0 | 0% hull 600 hit 0 lost 0 | 0% hull 600 hit 0 lost 0 |
-| 1.2 | plain | 100% 57s hull 600 hit 41 lost 0 | 100% 57s hull 600 hit 62 lost 0 | 100% 57s hull 600 hit 52 lost 0 |
-| 1.2 | strong | 100% 57s hull 600 hit 68 lost 0 | 100% 57s hull 600 hit 49 lost 0 | 100% 57s hull 600 hit 70 lost 0 |
-| 1.2 | idle | 0% hull 600 hit 42 lost 0 | 0% hull 600 hit 31 lost 0 | 0% hull 600 hit 73 lost 0 |
-| 1.3 | plain | 100% 93s hull 397 hit 248 lost 7 | 100% 89s hull 487 hit 234 lost 5 | 100% 94s hull 556 hit 191 lost 6 |
-| 1.3 | strong | 100% 74s hull 530 hit 89 lost 2 | 100% 84s hull 541 hit 191 lost 6 | 100% 77s hull 600 hit 79 lost 4 |
-| 1.3 | idle | 0% hull 0 hit 763 lost 0 | 0% hull 0 hit 763 lost 0 | 0% hull 0 hit 759 lost 0 |
-| 2.1 | plain | 100% 48s hull 600 hit 0 lost 0 | 100% 46s hull 600 hit 0 lost 0 | 100% 59s hull 600 hit 0 lost 0 |
-| 2.1 | strong | 100% 45s hull 600 hit 0 lost 0 | 100% 44s hull 600 hit 9 lost 0 | 100% 52s hull 600 hit 0 lost 0 |
-| 2.1 | idle | 0% hull 154 hit 588 lost 0 | 0% hull 467 hit 281 lost 0 | 0% hull 249 hit 490 lost 0 |
-| 2.2 | plain | 100% 61s hull 599 hit 148 lost 3 | 100% 75s hull 577 hit 173 lost 6 | 100% 84s hull 556 hit 173 lost 5 |
-| 2.2 | strong | 100% 48s hull 600 hit 29 lost 1 | 100% 52s hull 600 hit 43 lost 1 | 100% 55s hull 600 hit 98 lost 1 |
-| 2.2 | idle | 0% hull 0 hit 763 lost 0 | 0% hull 0 hit 760 lost 0 | 0% hull 0 hit 763 lost 0 |
-| 2.3 | plain | 100% 113s hull 501 hit 232 lost 7 | 100% 114s hull 264 hit 286 lost 7 | 100% 113s hull 383 hit 298 lost 7 |
-| 2.3 | strong | 100% 101s hull 570 hit 171 lost 3 | 100% 101s hull 477 hit 224 lost 6 | 100% 103s hull 530 hit 167 lost 7 |
-| 2.3 | idle | 0% hull 0 hit 751 lost 0 | 0% hull 0 hit 754 lost 0 | 0% hull 0 hit 759 lost 0 |
-| 3.1 | plain | 100% 59s hull 900 hit 19 lost 1 | 100% 65s hull 900 hit 9 lost 2 | 100% 60s hull 900 hit 9 lost 1 |
-| 3.1 | strong | 100% 52s hull 900 hit 9 lost 1 | 100% 55s hull 900 hit 9 lost 2 | 100% 62s hull 900 hit 19 lost 1 |
+| 1.2 | plain | 100% 114s hull 600 hit 12 lost 0 | 100% 114s hull 600 hit 12 lost 0 | 100% 114s hull 600 hit 6 lost 0 |
+| 1.2 | strong | 83% 114s hull 600 hit 28 lost 0 | 100% 114s hull 600 hit 18 lost 0 | 100% 114s hull 600 hit 14 lost 0 |
+| 1.2 | idle | 0% hull 600 hit 0 lost 0 | 0% hull 600 hit 0 lost 0 | 0% hull 600 hit 0 lost 0 |
+| 1.3 | plain | 100% 131s hull 563 hit 165 lost 5 | 100% 132s hull 491 hit 169 lost 6 | 100% 121s hull 574 hit 158 lost 4 |
+| 1.3 | strong | 100% 117s hull 600 hit 97 lost 3 | 100% 119s hull 588 hit 65 lost 3 | 100% 128s hull 595 hit 151 lost 4 |
+| 1.3 | idle | 0% hull 600 hit 0 lost 0 | 0% hull 600 hit 0 lost 0 | 0% hull 600 hit 0 lost 0 |
+| 2.1 | plain | 100% 59s hull 600 hit 13 lost 0 | 100% 55s hull 600 hit 11 lost 0 | 100% 65s hull 600 hit 13 lost 0 |
+| 2.1 | strong | 100% 58s hull 600 hit 13 lost 1 | 100% 51s hull 600 hit 15 lost 0 | 100% 56s hull 600 hit 13 lost 0 |
+| 2.1 | idle | 0% hull 600 hit 0 lost 0 | 0% hull 600 hit 0 lost 0 | 0% hull 600 hit 0 lost 0 |
+| 2.2 | plain | 100% 61s hull 600 hit 43 lost 1 | 100% 63s hull 600 hit 55 lost 4 | 100% 60s hull 600 hit 93 lost 4 |
+| 2.2 | strong | 100% 60s hull 600 hit 37 lost 1 | 100% 56s hull 600 hit 26 lost 0 | 100% 55s hull 600 hit 37 lost 0 |
+| 2.2 | idle | 0% hull 600 hit 0 lost 0 | 0% hull 600 hit 0 lost 0 | 0% hull 600 hit 0 lost 0 |
+| 2.3 | plain | 100% 104s hull 600 hit 86 lost 6 | 100% 106s hull 538 hit 144 lost 6 | 100% 96s hull 595 hit 137 lost 5 |
+| 2.3 | strong | 100% 95s hull 600 hit 100 lost 4 | 100% 95s hull 600 hit 69 lost 5 | 100% 94s hull 600 hit 54 lost 5 |
+| 2.3 | idle | 0% hull 0 hit 763 lost 0 | 0% hull 0 hit 760 lost 0 | 0% hull 0 hit 763 lost 0 |
+| 3.1 | plain | 100% 72s hull 900 hit 9 lost 1 | 100% 72s hull 900 hit 21 lost 1 | 100% 68s hull 900 hit 31 lost 0 |
+| 3.1 | strong | 100% 75s hull 900 hit 31 lost 1 | 100% 67s hull 900 hit 21 lost 1 | 100% 65s hull 900 hit 21 lost 1 |
 | 3.1 | idle | 0% hull 900 hit 0 lost 0 | 0% hull 900 hit 0 lost 0 | 0% hull 900 hit 0 lost 0 |
-| 3.2 | plain | 100% 76s hull 787 hit 252 lost 2 | 100% 80s hull 773 hit 245 lost 3 | 100% 79s hull 805 hit 227 lost 1 |
-| 3.2 | strong | 100% 65s hull 888 hit 151 lost 1 | 100% 70s hull 900 hit 90 lost 1 | 100% 65s hull 900 hit 86 lost 1 |
-| 3.2 | idle | 0% hull 0 hit 1051 lost 0 | 0% hull 0 hit 1062 lost 0 | 0% hull 0 hit 1055 lost 0 |
-| 3.3 | plain | 100% 83s hull 570 hit 454 lost 5 | 100% 93s hull 405 hit 638 lost 7 | 100% 95s hull 462 hit 557 lost 6 |
-| 3.3 | strong | 100% 58s hull 766 hit 276 lost 1 | 100% 77s hull 681 hit 311 lost 2 | 100% 65s hull 747 hit 285 lost 2 |
-| 3.3 | idle | 0% hull 313 hit 707 lost 0 | 0% hull 0 hit 1056 lost 0 | 0% hull 0 hit 1060 lost 0 |
+| 3.2 | plain | 100% 79s hull 870 hit 162 lost 1 | 100% 77s hull 834 hit 212 lost 3 | 100% 74s hull 859 hit 176 lost 1 |
+| 3.2 | strong | 100% 37s hull 900 hit 36 lost 0 | 100% 37s hull 900 hit 18 lost 0 | 100% 37s hull 900 hit 36 lost 0 |
+| 3.2 | idle | 0% hull 900 hit 0 lost 0 | 0% hull 900 hit 0 lost 0 | 0% hull 900 hit 0 lost 0 |
+| 3.3 | plain | 100% 83s hull 600 hit 425 lost 5 | 100% 93s hull 445 hit 597 lost 7 | 100% 95s hull 499 hit 522 lost 6 |
+| 3.3 | strong | 100% 58s hull 784 hit 259 lost 1 | 100% 77s hull 704 hit 292 lost 2 | 100% 65s hull 766 hit 266 lost 2 |
+| 3.3 | idle | 0% hull 359 hit 662 lost 0 | 0% hull 0 hit 1051 lost 0 | 0% hull 0 hit 1054 lost 0 |
 
-Reading it at the normal pace: the plain player goes from 0 damage at 1.1 through 234 at 1.3, 173 at 2.2 and 286 at 2.3 to 638 at 3.3 (the hull 405 of 900 left, seven of the wing lost); every mission is won on every seed at every pace by both the plain and the strong player, the plain player in 46 to 114 seconds; the idle player never wins; the strong player takes about half the damage of the plain one at the real fights (3.3: 311 against 638) and wins faster. Calm and Brisk keep the same curve (3.3 costs the plain player 454 at Calm, 638 at Normal, 557 at Brisk): the pace changes the look of the fight more than its balance.
+Reading it at the normal pace (the table was run on the merge train's tip 128379e plus this commit): the plain player goes from 0 damage at 1.1 and 12 at 1.2 through 169 at 1.3 (6 of the wing lost); 11 at 2.1, 55 at 2.2 and 144 at 2.3 (6 lost); 21 at 3.1, 212 at 3.2 to 597 at 3.3 (the hull 445 of 900 left, 7 of the wing lost). Every mission is won on every seed at every pace by the plain player, in 55 to 132 seconds (the trip included); the idle player never wins; the strong player wins every mission at every pace but one seed of six at 1.2 on Calm, and takes about half the damage of the plain one at the real fights (3.3: 292 against 597). Level 2's third mission is no harder than 1.3 by the damage taken (144 against 169; the two lose the same 6 ships): the second level climbs inside itself, and level 3 is the hard one. Calm and Brisk keep the same curve (3.3 costs the plain player 425 at Calm, 597 at Normal, 522 at Brisk): the pace changes the look of the fight more than its balance. Seeds vary a lot in the real fights (2.3: 4 to 10 of the wing lost, 50 to 350 damage over twelve seeds); the table is the median of six.
 
 ## Pinned, and re-run
 
-- `tests/camppace.mjs` (sections E and F): the plain bot wins all nine at Normal and Calm in 25 to 180 seconds, idle never wins, and the scales of the curve.
-- `tests/campaign.mjs`: the crude test player is pinned only on the five gentler missions; the four real fights are for the bot tool.
-- Re-run on the merge train's tip (the pace card and the mission places add a trip of 7 to 46 seconds by Fast before a mission, the wave clocks count from arrival): see the foot of this file.
+- `tests/camppace.mjs` (sections E and F): the plain bot wins all nine at Normal and Calm in 25 to 180 seconds, idle never wins, and the scales of the curve never fall inside a level.
+- `tests/campaign.mjs`: the crude test player is pinned only on the five gentler missions; the four real fights are for the bot tool. The briefing's distance and the HUD's are one number (`campKmText`, the centre of the place, as the map reads it).
+- Re-run it with `node tools/campaign-bot.mjs --pace normal --bots plain,strong,idle --seeds 6` (and `calm`, `brisk`); `--set alien.hpScale=1.2` tries a what-if.

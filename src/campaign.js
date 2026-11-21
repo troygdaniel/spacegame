@@ -396,7 +396,7 @@ const CAMP = {
           objectives: [{ type: 'scan', points: [{ at: [900, 700], r: 320, secs: 8 }, { at: [-1100, -400], r: 320, secs: 8 }, { at: [300, -1600], r: 320, secs: 8 }] }, { type: 'kill', what: 'wave:0' }],  // what the mission asks (scan points: where, how close, how many seconds), all of it
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'veil' }, { id: 'swift', type: 'time', secs: 150 }, { id: 'clean', type: 'lost', n: 0 }, { id: 'ore', type: 'ore', n: 60 }],  // bonus objectives: each met earns CAMP.score.bonus
           waves: [{ on: { scanned: 2 }, ambush: true, from: [3200, 1800], ships: { raider: 4, drone: 3 }, goal: 'carrier', say: 'camp.say.ambush', say2: 'camp.say.ambush2', say2At: 5 }] }, // the ambush: an alarm, out of the dark, two lines
-        { id: 'haulers', kind: 'escort', par: 120, hpScale: 1.2, dmgScale: 1.3, scouts: ['escort', 'fetch'], place: 'mars', dock: 'phobos',  // M2 at Mars (a trip of about 46 s by Fast): three ore haulers fly from Deimos to Phobos; two must arrive; raiders go for them
+        { id: 'haulers', kind: 'escort', par: 120, hpScale: 1, dmgScale: 1, scouts: ['escort', 'fetch'], place: 'mars', dock: 'phobos',  // M2 at Mars (a trip of about 46 s by Fast): three ore haulers fly from Deimos to Phobos; two must arrive; raiders go for them
           objectives: [{ type: 'deliver', n: 2 }],  // what the mission asks: two haulers must arrive
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'lee' }, { id: 'all', type: 'delivered' }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
           convoys: [{ id: 'h1', name: 'Hauler 1', say: 'camp.say.hauler', at: 3, from: 'deimos', to: 'phobos' }, { id: 'h2', name: 'Hauler 2', say: 'camp.say.hauler', at: 18, from: 'deimos', to: 'phobos' }, { id: 'h3', name: 'Hauler 3', say: 'camp.say.hauler', at: 33, from: 'deimos', to: 'phobos' }],  // the haulers: when they leave (s after arrival), from and to which moon of Mars
@@ -450,14 +450,14 @@ const CAMP = {
           caches: [[-1500, 900], [800, 1600], [1600, -700]], rocks: [{ at: [-900, -1100], n: 5, spread: 260 }, { at: [1100, 600], n: 5, spread: 260 }], objectives: [{ type: 'caches', n: 2 }, { type: 'kill', what: 'wave:0' }],  // the resource caches
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'wreck' }, { id: 'swift', type: 'time', secs: 100 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
           waves: [{ at: 20, from: [-3000, 1200], ships: { raider: 4, drone: 3 }, goal: 'carrier', say: 'camp.say.l2wave1' }] },  // the waves: when, from where, how many of each kind
-        { id: 'guards', kind: 'attack', par: 100, hpScale: 2.4, dmgScale: 3, place: 'proxima-d', dock: 'proxima-w',  // M2 at Proxima d (a trip of about 11 s by Fast): the relic's guards                  // M2: five guards wait round the relic until your ships come within reach
+        { id: 'guards', kind: 'attack', par: 100, hpScale: 2, dmgScale: 2.4, place: 'proxima-d', dock: 'proxima-w',  // M2 at Proxima d (a trip of about 11 s by Fast): the relic's guards                  // M2: five guards wait round the relic until your ships come within reach
           guards: [{ kind: 'gunship', at: [900, -300] }, { kind: 'gunship', at: [-700, 500] }, { kind: 'gunship', at: [1100, 700] }, { kind: 'drone', at: [-300, -700] }, { kind: 'drone', at: [300, 900] }, { kind: 'drone', at: [-1000, -200] }, { kind: 'drone', at: [700, -900] }],  // the guards (kind, offset from Proxima d)
           objectives: [{ type: 'kill', what: 'guards' }], bonus: [{ id: 'find', type: 'anomaly', anomaly: 'ghost' }, { id: 'swift', type: 'time', secs: 100 }, { id: 'hull', type: 'hull', pct: 70 }, { id: 'clean', type: 'lost', n: 1 }],  // what the mission asks (scan points: where, how close, how many seconds), all of it
           waves: [{ at: 18, from: [2600, -2200], ships: { drone: 4, gunship: 3 }, goal: 'carrier', say: 'camp.say.l2wave2' }, { at: 40, from: [-2500, 2000], ships: { raider: 4, drone: 3 }, goal: 'carrier', say: 'camp.say.l2wave2' }] },  // the waves: when, from where, how many of each kind
-        { id: 'relic', kind: 'defend', par: 90, hpScale: 2.8, dmgScale: 3.4, win: 'relic', place: 'proxima', dock: 'proxima-w',  // M3 at Proxima b, the relic's world (the cruiser starts there)      // M3: hold the carrier on the relic's ring until it answers, with no alien near it
+        { id: 'relic', kind: 'defend', par: 90, hpScale: 2.6, dmgScale: 3, win: 'relic', place: 'proxima', dock: 'proxima-w',  // M3 at Proxima b, the relic's world (the cruiser starts there)      // M3: hold the carrier on the relic's ring until it answers, with no alien near it
           start: 'proxima', startAt: [-600, 300], relic: { place: 'proxima', radius: 240, hold: 14, caches: 0, clear: 650 }, objectives: [{ type: 'relic' }],  // where the cruiser starts, and the relic
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'echo' }, { id: 'swift', type: 'time', secs: 90 }, { id: 'hull', type: 'hull', pct: 70 }],  // bonus objectives: each met earns CAMP.score.bonus
-          waves: [{ at: 6, from: [2800, -2800], ships: { drone: 4, raider: 3 }, goal: 'carrier', say: 'camp.say.l2wave3' }, { at: 24, from: [-2500, 1800], ships: { gunship: 3, raider: 3 }, goal: 'carrier', say: 'camp.say.l2wave3' }, { at: 42, from: [2200, 2400], ships: { drone: 4, gunship: 3 }, goal: 'carrier', say: 'camp.say.l2wave3' }] }  // the waves: when, from where, how many of each kind
+          waves: [{ at: 6, from: [2800, -2800], ships: { drone: 4, raider: 3 }, goal: 'carrier', say: 'camp.say.l2wave3' }, { at: 24, from: [-2500, 1800], ships: { gunship: 3, raider: 3 }, goal: 'carrier', say: 'camp.say.l2wave3' }, { at: 42, from: [2200, 2400], ships: { drone: 4, gunship: 2 }, goal: 'carrier', say: 'camp.say.l2wave3' }] }  // the waves: when, from where, how many of each kind
       ]
     },
     3: {                                                          // the alien home world: scan the approach, break the outer ring, break the inner ring
@@ -486,7 +486,7 @@ const CAMP = {
           start: 'home', startAt: [-3300, 1900], towers: [{ place: 'ran', r: 1100, n: 4, phase: 0.7, hp: 260 }], objectives: [{ type: 'kill', what: 'towers' }],  // where the cruiser starts, and the relic
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'vault' }, { id: 'swift', type: 'time', secs: 120 }, { id: 'hull', type: 'hull', pct: 60 }],  // bonus objectives: each met earns CAMP.score.bonus
           waves: [{ at: 25, from: [2800, -2800], ships: { drone: 4, gunship: 3 }, goal: 'carrier', say: 'camp.say.l3wave2' }] },  // the waves: when, from where, how many of each kind
-        { id: 'inner', kind: 'attack', par: 150, hpScale: 2.4, dmgScale: 3.2, win: 'towers', place: 'home', dock: 'tyr',  // M3 at the alien world itself (the cruiser starts there): the eight inner towers, the last reserves;   // M3: the eight inner towers, with the last reserves
+        { id: 'inner', kind: 'attack', par: 150, hpScale: 2.4, dmgScale: 3, win: 'towers', place: 'home', dock: 'tyr',  // M3 at the alien world itself (the cruiser starts there): the eight inner towers, the last reserves;   // M3: the eight inner towers, with the last reserves
           start: 'home', startAt: [-2400, 1300], towers: [{ place: 'home', r: 1000, n: 8, phase: 0.2 }], objectives: [{ type: 'kill', what: 'towers' }],  // where the cruiser starts, and the relic
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'core' }, { id: 'swift', type: 'time', secs: 150 }, { id: 'hull', type: 'hull', pct: 50 }, { id: 'clean', type: 'lost', n: 2 }],  // bonus objectives: each met earns CAMP.score.bonus
           waves: [{ at: 20, from: [-2500, -3000], ships: { raider: 3, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave3' }, { at: 75, early: 20, from: [2800, -2800], ships: { drone: 3, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave2' }] }  // the waves: when, from where, how many of each kind
@@ -548,11 +548,13 @@ const campMissionPlace = C => C.L.place ? campPlaces(C.level)[C.L.place] || null
 // true when the cruiser starts within CAMP.mission.arrive of the mission's place (or the mission has none): it has arrived at once, no trip
 const campHere = (level, L) => { const pl = campPlaces(level), p = L.place && pl[L.place], st = pl[L.start]; return !p || !st || Math.hypot(p.x - (st.x + L.startAt[0]), p.y - (st.y + L.startAt[1])) <= CAMP.mission.arrive; };
 // the way to a mission's place, from where the cruiser starts: { place (the row), name, dist (px), secs (by Fast, the map's own rule), km } or null when it starts there. For the briefing and the map; pure
+// the km a place is away, as every number of distance in the Campaign reads it (src/campnav.js campNavKm: a tenth of the px, to the CENTRE of the place); the briefing, the objective line and the map all use this one
+const campKmText = d => typeof campNavKm === 'function' ? campNavKm(d) : String(Math.round(d / 10));
 function campTravel(level, i) {
   const L = campMissionRow(level, i), pl = campPlaces(level), p = L && L.place && pl[L.place], st = L && pl[L.start]; if (!p || !st) return null;
-  const dist = Math.hypot(p.x - (st.x + L.startAt[0]), p.y - (st.y + L.startAt[1])) - CAMP.mission.arrive; if (dist <= 0) return null;
+  const centre = Math.hypot(p.x - (st.x + L.startAt[0]), p.y - (st.y + L.startAt[1])), dist = centre - CAMP.mission.arrive; if (dist <= 0) return null;
   const burn = dist > CAMP.nav.farFrom ? CAMP.nav.farFast : CAMP.nav.fast;
-  return { place: p, id: L.place, name: p.name, dist: Math.round(dist), km: Math.round(dist / 10), secs: Math.round(dist / (CAMP.carrier.speed * burn) * CAMP.nav.etaSlow), outpost: L.outpost || p.outpost || '' };
+  return { place: p, id: L.place, name: p.name, dist: Math.round(dist), km: campKmText(centre), secs: Math.round(dist / (CAMP.carrier.speed * burn) * CAMP.nav.etaSlow), outpost: L.outpost || p.outpost || '' };
 }
 // the multiplier of a pace setting: an id of CAMP.pace.modes or a number; anything else (none given) is 1, the numbers as the table has them
 function campPaceMult(p) {
@@ -1609,7 +1611,7 @@ function campScore(C) {
 // what the level asks of you, in the words of content/text/ui.md (camp.obj.<win>): the HUD shows it, the ship computer is told it
 function campObjective(C) {
   const L = C.L, win = L.win;
-  if (L.place && C.arrivedAt == null) { const p = campMissionPlace(C); return uiText('camp.o.travel', { name: p ? p.name : '', km: p ? Math.round(Math.hypot(C.carrier.x - p.x, C.carrier.y - p.y) / 10) : 0 }); } // the trip first
+  if (L.place && C.arrivedAt == null) { const p = campMissionPlace(C); return uiText('camp.o.travel', { name: p ? p.name : '', km: p ? campKmText(Math.hypot(C.carrier.x - p.x, C.carrier.y - p.y)) : '0' }); } // the trip first
   if (L.objectives) { // a mission: the first objective that is not done yet
     const o = campObjectives(C).find(x => !x.done); if (!o) return uiText('camp.o.done');
     const key = 'camp.o.' + o.type + (o.type === 'kill' ? '.' + String(o.what).replace(/:.*/, '') : '');
