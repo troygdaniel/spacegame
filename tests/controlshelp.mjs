@@ -24,7 +24,7 @@ const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefin
 const read = f => readFileSync(join(ROOT, f), 'utf8');
 
 // ---- what the code binds, per scene ----
-const WORDS = { ONE: '1', TWO: '2', THREE: '3', FOUR: '4', FIVE: '5', SIX: '6', SEVEN: '7', EIGHT: '8', NINE: '9', ESCAPE: 'ESC', NUMPADENTER: 'ENTER' };
+const WORDS = { SEMICOLON: ';', ONE: '1', TWO: '2', THREE: '3', FOUR: '4', FIVE: '5', SIX: '6', SEVEN: '7', EIGHT: '8', NINE: '9', ESCAPE: 'ESC', NUMPADENTER: 'ENTER' };
 const norm = k => { let s = String(k).trim().toUpperCase().replace(/^KEY(?=[A-Z]$)/, '').replace(/^DIGIT(?=\d$)/, ''); if (s === ' ') s = 'SPACE'; return WORDS[s] || s; };
 // the Earth refit card and the plain pick card between levels are screens of their own, and print their keys on themselves (refit: 1 to 3 choose a tech, 4 and 5 buy ships, 6 to 8 choose what was looted from a cloaked cache; pick: 1 to 6): their handlers are not the Campaign's flight keys
 const noRefit = src => src.replace(/  (?:refitKey|pickKey)\(c\) \{[\s\S]*?\n  \}\n/g, '');
@@ -35,7 +35,7 @@ function bound(files) {
     const src = noRefit(readFileSync(p, 'utf8'));
     for (const m of src.matchAll(/addKeys?\('([^']+)'\)/g)) m[1].split(',').forEach(k => keys.add(norm(k)));
     for (const m of src.matchAll(/(?<![\w.])(?:e\.(?:code|key)|code) (?:===|!==) '([^']+)'/g)) keys.add(norm(m[1]));   // e.code === 'KeyG', code === 'KeyR' (not scene.key === 'Station')
-    for (const m of src.matchAll(/\b(Key[A-Z]|Digit\d|Enter|Escape|Tab|Space): /g)) keys.add(norm(m[1]));                 // a map of codes: { KeyF: 'fleet', KeyY: 'yard' }
+    for (const m of src.matchAll(/\b(Key[A-Z]|Digit\d|Enter|Escape|Tab|Space|Semicolon): /g)) keys.add(norm(m[1]));                 // a map of codes: { KeyF: 'fleet', KeyY: 'yard' }
     for (const m of src.matchAll(/\bcode: '(Key[A-Z]|Digit\d)'/g)) keys.add(norm(m[1]));                                 // a table that holds the code to read: LISTEN.code of src/listen.js
     for (const m of src.matchAll(/keydown-([A-Z]+)/g)) keys.add(norm(m[1]));
     for (const m of src.matchAll(/\/\^\[(\d)-(\d)\]\$\/\.test\(e\.key\)/g)) for (let d = +m[1]; d <= +m[2]; d++) keys.add(String(d)); // a number row read from e.key

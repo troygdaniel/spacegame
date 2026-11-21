@@ -15,6 +15,7 @@ const CAMP_LOOK = {
   carrier: campArtLook('carrier', 'cruiser'), fighter: campArtLook('fighter', 'fighter'), escort: campArtLook('escort', 'escort'), // the pictures are the Campaign's own (src/campcruiser.js)
   freighter: { tex: 'freighter', scale: 1 },
   skiff: campArtLook('skiff', 'skiff'), cutter: campArtLook('cutter', 'cutter'), brute: campArtLook('brute', 'brute'), // the pirates (card space-game-l1-pirates-traffic): scavenged rust and ochre, pictures of their own (src/camppirateart.js), not the aliens' red
+  tboat: campArtLook('tboat', 'tboat'), lancer: campArtLook('lancer', 'lancer'), // the torpedo boats (card space-game-torpedo-art): the pirates' rust tube with the warhead showing, the aliens' violet spear (src/camppirateart.js)
   patrol: campArtLook('patrol', 'patrol'), miner: campArtLook('miner', 'miner'), // the neutral ships: a pale police hull with a teal stripe, an industrial miner
   raider: { tex: 'raider', scale: 1 }, drone: { tex: 'drone', scale: 1 }, gunship: { tex: 'gunship', scale: 1 }, mother: { tex: 'reaver', scale: 2.6, tint: 0xc9a0ff }, tower: { tex: 'gunship', scale: 1.6, tint: 0xff9a3a }
 };
@@ -266,11 +267,12 @@ class Campaign extends Phaser.Scene {
     if (c === 'KeyH') { this.openKeys(); return; } // H: every key, on one page
     const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // a word typed into the strip is not a key
     if ((typeof this.pn !== 'object' || typeof this.pn.open !== 'string') && typeof campPanelNew === 'function') this.pn = campPanelNew(); // made in create (campPanelsInstall); a stand-in scene in a test has none, and answers any property
-    const pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0, e.shiftKey) : { used: false }; // Z, X and C open the panels (FLEET, SHIP, SYSTEMS), the digits pick a row of the open one, the arrows and Enter too, then a digit picks a row (src/camppanel.js); Esc closes a panel first
+    if (!typing && typeof campCallKey === 'function' && !(this.pn && this.pn.open) && campCallKey(this, c)) return; // 1 2 3 answer a pilot's call for orders while one waits and no panel is open (src/camporders.js, src/camporderdraw.js; the panels' digits are theirs)
+    const pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0, e.shiftKey) : { used: false }; // the panel keys (the table's: Q, E, C) open the panels (FLEET, SHIP, SYSTEMS), a digit picks a row of the open one, and so do Up, Down and Enter (src/camppanel.js); Esc closes a panel first
     if (pr.ran) toast(this, pr.say, pr.ok ? '#9fe9ff' : '#ffb454');
     if (pr.used) return;
     const dk = !typing && this.mode === 'play' && typeof campPowerKey === 'function' ? campPowerKey(C, c) : { used: false }; // J K L: a pip to the shields, the engines, the weapons (the order of the dials), without the SYSTEMS panel (src/camphud.js; the same order as its rows)
-    if (dk.used) { if (dk.ran) toast(this, dk.say, dk.ok ? '#9fe9ff' : '#ffb454'); return; }
+    if (dk.used) { if (dk.ran) toast(this, dk.say, dk.ok ? '#9fe9ff' : '#ffb454'); if (dk.ok && dk.sys === 'balance' && this.gaugeAnim) this.gaugeAnim.flash = this.gaugeAnim.flash.map(() => 1); return; } // the balance key flashes all three bars, even when the power was even already
     if (c === 'Escape') { if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc closes the map first; it never pauses while the map is open
     if (this.mp && typeof campMapKey === 'function' && campMapKey(this, c, e.shiftKey)) return; // the open map's list: W S choose, A D change group, Enter fly there (Shift+Enter fast), X clear (src/campmapdraw.js)
     if (c === 'KeyB') { C.input.blink = true; const bw = campBlinkWhy(C); if (bw) toast(this, bw, '#ffb454'); } // the warp blink (it was Q; Q and E are free now: the panels are Z, X and C); without the technology, or while it cools, the key says so
@@ -341,7 +343,9 @@ class Campaign extends Phaser.Scene {
     C.events.splice(0).forEach(e => this.onEvent(e));
     this.syncFar(time); this.syncRockets(Math.min(dt, 100)); this.syncBay();
     if (typeof campSlowPaint === 'function') campSlowPaint(this);
+    if (typeof campTorpedoSync === 'function') campTorpedoSync(this, Math.min(dt, 100)); // the torpedoes and the boats that arm (src/camptorpedoscene.js)
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
+    if (typeof campCallPaint === 'function') campCallPaint(this); // the plate of a pilot's call for orders, while one waits (src/camporderdraw.js)
     if (this.mp) campMapPaint(this, time);
   }
   arrowKeep() { // the places the edge arrow's label keeps out of: the table's, and the open panel's column (a panel is up for a moment; the label sits beside it)
@@ -361,6 +365,7 @@ class Campaign extends Phaser.Scene {
   onEvent(e) {
     if (this.mp) campFireHear(this.mp.fire, this.camp, e, performance.now()); // the Tab map shows the fight too: its marks come from the events, only while it is open (src/campmapfire.js)
     chatterHear(this, e); // the wing's radio hears every sim event (src/campchatter.js)
+    if (e.type === 'call' && typeof campCallHear === 'function') campCallHear(this, e); // a pilot's call for orders, or his answer (src/camporderdraw.js)
     if (e.type === 'say') { const text = uiText(e.key, e.vars); toast(this, text, '#9fe9ff'); this.say([text]); }
     else if (e.type === 'nav') { toast(this, uiText(e.key, e.vars), '#7fe9ff'); if (e.key === 'camp.nav.go' || e.key === 'camp.nav.arrived') beep(e.key === 'camp.nav.go' ? 520 : 660, 0.07, 'triangle', 0.04, 160); } // the autopilot's own lines (src/campnav.js)
     else if (e.type === 'stance') { this.P.stance = e.stance; campProgressSave(this.P); } // the wing's stance is the pilot's choice: kept across missions (src/campaign.js)
@@ -381,6 +386,7 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'missile') sfx('missileLaunch');
     else if (e.type === 'mboom') { this.boom.explode(44, e.x, e.y); sfx('missileBlast'); }
     else if (e.type === 'mfizzle') { this.boom.explode(6, e.x, e.y); sfx('missileFizzle'); }
+    else if (e.type === 'torpedo' || e.type === 'tboom') { if (typeof campTorpedoEvent === 'function') campTorpedoEvent(this, e); } // a torpedo boat arms, a torpedo is away, goes off, is shot down (src/camptorpedoscene.js)
     else if (e.type === 'ore') beep(900, 0.05, 'triangle', 0.035, 200);
     else if (e.type === 'built') beep(660, 0.12, 'triangle', 0.05, 240);
     else if (e.type === 'shieldhit' && e.x === this.camp.carrier.x) { this.cameras.main.shake(60, 0.002); this.battleSound('shield', 'shieldHit'); }
@@ -519,6 +525,7 @@ class Campaign extends Phaser.Scene {
     C.rocks.forEach(o => dot(o, 0x8c8c8c, 1)); C.pickups.forEach(o => dot(o, 0xffd37a, 1)); C.caches.forEach(k => { if (!k.got) dot(k, 0xffd37a, 2); }); if (C.relic) dot(C.relic, 0x7fe9ff, 3);
     if (typeof campAnomMarks === 'function') campAnomMarks(C).forEach(a => { if (a.shown) dot(a, 0xffd37a, 3); else if (Math.sin(C.t / 260 + a.x) > -0.4) dot(a, 0xc58cff, 2); }); // an anomaly: a violet blip that flickers (the cloak), gold once it is decloaked
     C.ships.forEach(u => { if (u.hp <= 0) return; dot(u, campDotColor(u), u.kind === 'mother' ? 4 : u.kind === 'carrier' ? 3 : u.scout ? 3 : 2); }); // campDotColor (src/campmap.js): the map's colours too
+    (C.torpedoes || []).forEach(t => { if (!t.dead && Math.floor(C.t / 180) % 2 === 0) dot(t, CAMPMAP.color.torpedo, 2); }); // a torpedo in flight blinks bright on the radar: it is the one thing to look for (the dot is the map's colour for it)
     // the autopilot's readout under the goal line, and an arrow at the edge of the screen pointing at the goal with its distance (src/campnav.js; docs/night/graphics.md finding 3)
     if (this.hud.post) { // the outposts: where to retreat when the hull is low and no ship is left, else a hint when one is in range (src/campoutpost.js)
       const rt = typeof campRetreat === 'function' ? campRetreat(C) : null, nr = !rt && typeof campOutpostNear === 'function' && !C.docked ? campOutpostNear(C) : null;

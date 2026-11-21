@@ -50,7 +50,7 @@ const CAMP_PANELS = {
       { n: 1, id: 'weapons', order: 'power', arg: 'weapons', label: 'Weapons +', help: 'A pip to the weapons' },
       { n: 2, id: 'shields', order: 'power', arg: 'shields', label: 'Shields +', help: 'A pip to the shields' },
       { n: 3, id: 'engines', order: 'power', arg: 'engines', label: 'Engines +', help: 'A pip to the engines' },
-      { n: 4, id: 'balance', order: 'balance', label: 'Balance', help: 'Back to 2 / 2 / 2' },
+      { n: 4, id: 'balance', order: 'balance', label: 'Balance', help: 'Back to 2 / 2 / 2 (key ;)' },
       { n: 5, id: 'emergency', order: 'emergency', label: 'Emergency shields', tag: 'Emergency', help: 'Shields get 4 pips for 10 s' }
     ] }
   ],
@@ -146,7 +146,7 @@ const CONTROLS = [
     { k: ['Space'], t: 'Hold: turrets fire at ships in reach', sub: 'FLY AND FIRE' },
     { k: ['F'], t: 'Fire a homing missile', sub: 'FLY AND FIRE' },
     { k: ['B'], t: 'Warp blink hop (needs that tech)', sub: 'FLY AND FIRE' },
-    { k: ['J', 'K', 'L'], t: 'A power pip: shields, engines, weapons', sub: 'FLY AND FIRE' }, // direct keys, in the order of the gauges, for the SYSTEMS panel's rows (src/camphud.js campPowerKey; card space-game-systems-gauges)
+    { k: ['J', 'K', 'L', ';'], t: 'Power: shields, engines, weapons, even', sub: 'FLY AND FIRE' }, // direct keys, in the order of the gauges (a pip to each) and the balance key, back to 2 / 2 / 2: one row, the Campaign group is at the size Settings fits (src/camphud.js; cards space-game-systems-gauges, space-game-power-balance-key) // direct keys, in the order of the gauges, for the SYSTEMS panel's rows (src/camphud.js campPowerKey; card space-game-systems-gauges)
     { k: ['+', '-', '0'], t: 'Zoom view or map (wheel too); 0 resets', sub: 'FLY AND FIRE' }, // = and the numpad keys too (src/campzoom.js)
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Click'], t: 'Map: click a mark sets it, again flies', sub: 'THE MAP' },
@@ -161,7 +161,7 @@ const CONTROLS = [
     { k: ['T'], t: 'Title, from the pause or end card', sub: 'ANYWHERE' },
     { k: ['R'], t: 'Pause: restart the mission', sub: 'ANYWHERE' },
     { k: ['Enter'], t: 'Cards: begin, continue, try again', sub: 'ANYWHERE' },
-    { k: ['1-3'], t: 'Pick a salvaged tech after a level', sub: 'ANYWHERE' },
+    { k: ['1-3'], t: 'Answer a pilot\'s call; pick a tech', sub: 'ANYWHERE' }, // 1 2 3 answer a pilot's call for orders while one waits (src/camporders.js), and pick the salvaged tech after a level
     { k: ['4', '5'], t: 'Refit card: buy a fighter or escort', sub: 'ANYWHERE' },
     { k: ['M', 'P'], t: 'Mute sound; P: battle pace', sub: 'ANYWHERE' }
   ] },
