@@ -213,7 +213,7 @@ function campMapPaint(s, time) {
   } else { mp.btnFly.setVisible(false); mp.btnFast.setVisible(false); mp.btnScout.setVisible(false); }
   if (mp.routeAt) { // the route label, beside the line, where it is on no name and under no button: the whole-system map has the belts' names on the route; the buttons are boxes like the names
     const names = (mp.nameObjs || []).filter(t => t && t.visible !== false && !t.gone).map(t => ({ x: t.x - t.width / 2, y: t.y - t.height / 2, w: t.width, h: t.height })), btns = [mp.btnFly, mp.btnFast, mp.btnScout].filter(b => b && b.visible && b.width).map(b => ({ x: b.x, y: b.y, w: b.width, h: b.height }));
-    const { cp: c0, q: q0 } = mp.routeAt, spot = campMapFreeSpot(campMapRouteSpots(c0, q0), mp.routeText.width || 120, mp.routeText.height || 16, names.concat(btns)) || { x: (c0.x + q0.x) / 2, y: (c0.y + q0.y) / 2 - 10 };
+    const { cp, q } = mp.routeAt, spot = campMapFreeSpot(campMapRouteSpots(cp, q), mp.routeText.width || 120, mp.routeText.height || 16, names.concat(btns)) || { x: (cp.x + q.x) / 2, y: (cp.y + q.y) / 2 - 10 };
     mp.routeText.setPosition(spot.x, spot.y); mp.routeAt = null;
   }
   const win = navpanelLines(mp.rows, sel, CAMP.nav.list, CAMPNAV.groups); // the Long Haul nav panel's own windowing: headings, and the chosen row kept in view
