@@ -21,7 +21,7 @@ const SKILL = String(arg('skill', 'steady'));
 const TECH = arg('tech', null);
 const POWER = arg('power', null) === null ? null : String(arg('power')).split(',').map(Number); // --power 4,1,1: the ship's systems for every run (weapons, shields, engines; card space-game-campaign-systems); none: 2,2,2, today's numbers
 const MAXSEC = Number(arg('max', 420));
-const PACE = String(arg('pace', 'brisk'));                     // --pace calm|normal|brisk (or a number): the battle pace (card space-game-campaign-pace); brisk is the numbers of the table as they were
+const PACE = String(arg('pace', 'brisk'));                     // --pace calm|normal|brisk (or a number): the battle pace (card space-game-campaign-pace); brisk is 0.85 of the table's numbers since card space-game-command-slowtime (Calm 0.6, Normal 0.72, Brisk 0.85); --pace 1 is the table as it was. The bots step the sim themselves, so command time (a panel, the map or a call open: src/campslow.js, the scene's frame) never touches them: they need no teaching for it
 const RANK = String(arg('rank', 'auto'));                     // --rank 0..5: the pilot's rank (src/campranks.js); auto: the rank a player of ordinary scores would have on reaching that mission (1,400 a mission flown before it)
 
 // the ways of playing. launchAt/attackFrom/attackEvery are seconds into the level; escort: the seconds each convoy is named (level 1); cycle: recall the wing when the fighters
@@ -82,7 +82,11 @@ g.run(`(() => {
       if (!st.landAt && fs.length >= 3 && Math.round(s * 30) % 60 === 0 && fs.reduce((a, u) => a + u.hp / u.maxHp, 0) / fs.length < B.cycle && C.carrier.hp > 0) { campOrder(C, 'recall'); st.landAt = s + 14; st.recalls = (st.recalls || 0) + 1; }
     }
     if (B.missiles && Math.round(s * 30) % 21 === 0 && typeof campOrder === 'function') campOrder(C, 'missiles', C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'mothership' : '');
-    if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight)) { campOrder(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : ''); st.mining = false; }
+    if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight)) {
+      const boat = typeof campTorpedoBoats === 'function' ? campTorpedoBoats(C).filter(u => !u.running).sort((p, q) => campDist(p, C.carrier) - campDist(q, C.carrier))[0] : null; // torpedo boats (card space-game-torpedo-boats): the plain answer is to send the fighters at the nearest boat that still has a torpedo, before anything else
+      if (boat) campWingOrder(C, 'fighters', 'attack', boat.id); else campOrder(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : '');
+      st.mining = false;
+    }
   };
   window.__fly = (C, B, sk, st) => {
     if (B.idle) return;
@@ -116,6 +120,7 @@ g.run(`(() => {
     const tgt = a || goal, w2 = Math.atan2(tgt.y - c.y, tgt.x - c.x) + st.err, d2 = Math.atan2(Math.sin(w2 - c.rot), Math.cos(w2 - c.rot));
     C.input.blink = !!(campHas(C, 'blink') && dist > 2200 && Math.abs(d) < 0.25 && C.t - C.blinkAt >= campBlinkCooldown(C));
     C.input.fire = !!a && (turrets ? campDist(a, c) - a.r < reach : Math.abs(d2) < sk.thr && campDist(a, c) < reach); // Space held while an alien is in reach
+    if (turrets && (C.torpedoes || []).some(t => !t.dead && campDist(t, c) - t.r < reach)) C.input.fire = true; // and while a torpedo is: the turrets shoot it down (card space-game-torpedo-boats)
   };
   window.__run1 = (level, seed, techs, B, sk, maxSec, mission) => {
     const rank = window.__RANK === 'auto' ? campRankAt(((level - 1) * 3 + (mission | 0)) * 1400) : Number(window.__RANK) | 0; // the ranks card: the wing of the rank
