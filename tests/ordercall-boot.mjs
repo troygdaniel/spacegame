@@ -14,7 +14,7 @@ const LEVEL = Number(arg('level', 2)), MISSION = Number(arg('mission', 2));
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const note = s => console.log('  note ' + s);
-const VK = { KeyQ: 81, KeyE: 69, KeyK: 75, Digit1: 49, Digit2: 50, Digit3: 51, Enter: 13, Escape: 27, Tab: 9 };
+const VK = { KeyQ: 81, KeyE: 69, KeyK: 75, KeyL: 76, Digit1: 49, Digit2: 50, Digit3: 51, Enter: 13, Escape: 27, Tab: 9 };
 const t = await launch('', ROOT);
 try {
   const j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`)), S = `game.scene.getScene('Campaign')`;
@@ -30,7 +30,7 @@ try {
   for (let l = 1; l <= LEVEL; l++) for (let m = 1; m <= 3; m++) if (l < LEVEL || m < MISSION) results[l + '.' + m] = res;
   await t.ev(`localStorage.setItem('longhaul.campaign', ${JSON.stringify(JSON.stringify({ level: LEVEL, mission: MISSION - 1, techs: LEVEL === 1 ? [] : ['shield'], ore: 60, bonus: { fighters: 0, escorts: 0 }, results }))})`);
   await key('KeyK'); await settle(`game.scene.isActive('CampHub') && game.scene.getScene('CampHub').player`); await t.run(900);
-  await key('Enter'); await t.run(700); for (let s = 0; s < 2; s++) { await key('Enter'); await t.run(500); } await key('Enter');
+  await key('KeyL'); // L launches the next mission from the ready room (it is four rows now, Enter opens an overlay: card space-game-ready-room-simple)
   if (await settle(`game.scene.isActive('CampWarp')`, 30)) { await t.run(1500); await key('Enter'); }
   check('the Campaign scene starts on the mission', await settle(`game.scene.isActive('Campaign') && ${S}.camp`));
   for (let i = 0; i < 4 && (await j(`${S}.mode`)) !== 'play'; i++) { await key('Enter'); await t.run(700); }
