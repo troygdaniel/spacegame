@@ -37,6 +37,7 @@ const BOTS = {
   defend: { name: 'defend', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, defend: true },              // plain, flying at what is nearest Earth
   late: { name: 'late', launchAt: 30, escort: [40], attackFrom: 40, attackEvery: 20 },                            // a slow player: launches at 30 s, attacks every 20 s
   missile: { name: 'missile', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, missiles: true },         // plain, and it presses F whenever a big ship is in reach
+  tuck: { name: 'tuck', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, tuck: true },                    // plain, and the convoy orders (card space-game-convoy-orders): when a hostile comes within 1,600 px of an escorted ship the cruiser goes to it and the ships tuck in under its shield; when the sky is clear they carry on
   mguard: { name: 'mguard', launchAt: 1, missiles: true },                                                       // launches (the wing only guards) and fires missiles
   troy: { name: 'troy', launchAt: 45, escort: [81], sit: true },                                                   // Troy's first try (play log 20 Nov): launches at 45 s, escorts at 81 s, never attacks, the carrier stays at the base and shoots what comes close
   troyh: { name: 'troyh', launchAt: 45, escort: [81], sit: true, reactive: 3 },                                      // troy, and when the first real damage comes (Earth under 90 percent, or the hull under 80) it reads a hint 3 s later: launch if need be, attack every 5 s, fly out
@@ -81,6 +82,10 @@ g.run(`(() => {
       const fs = campWing(C, 'fighter');
       if (!st.landAt && fs.length >= 3 && Math.round(s * 30) % 60 === 0 && fs.reduce((a, u) => a + u.hp / u.maxHp, 0) / fs.length < B.cycle && C.carrier.hp > 0) { campOrder(C, 'recall'); st.landAt = s + 14; st.recalls = (st.recalls || 0) + 1; }
     }
+    if (B.tuck && typeof campConvoyShips === 'function' && Math.round(s * 30) % 15 === 0) { // the convoy orders: tuck in while a hostile is near an escorted ship, carry on when it is clear
+      const cs = campConvoyShips(C), threat = cs.some(f => campAliens(C).some(a => !a.hold && campDist(a, f) < 1600)), clear = !cs.some(f => campAliens(C).some(a => !a.hold && campDist(a, f) < 2600));
+      if (threat && !st.tuck) { st.tuck = true; campOrder(C, 'convoy', 'tuck in'); } else if (clear && st.tuck) { st.tuck = false; campOrder(C, 'convoy', 'carry on'); }
+    }
     if (B.missiles && Math.round(s * 30) % 21 === 0 && typeof campOrder === 'function') campOrder(C, 'missiles', C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'mothership' : '');
     if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight)) {
       const boat = typeof campTorpedoBoats === 'function' ? campTorpedoBoats(C).filter(u => !u.running).sort((p, q) => campDist(p, C.carrier) - campDist(q, C.carrier))[0] : null; // torpedo boats (card space-game-torpedo-boats): the plain answer is to send the fighters at the nearest boat that still has a torpedo, before anything else
@@ -110,12 +115,13 @@ g.run(`(() => {
       if (a && campDist(a, c) < 900) goal = a;
     } else if (C.level === 2) { const k = C.caches.filter(k => !k.got).sort((p, q) => campDist(p, c) - campDist(q, c))[0]; goal = C.cachesGot < L.relic.caches && k ? k : C.relic; if (a && campDist(a, c) < 700) goal = a; }
     else if (C.level === 3) { const near = campAliens(C).sort((p, q) => campDist(p, c) - campDist(q, c))[0]; goal = near; a = near; }
+    if (st.tuck && typeof campConvoyShips === 'function') { const f = campConvoyShips(C).sort((p, q) => campDist(p, c) - campDist(q, c))[0]; if (f) goal = f; } // tucked in: the cruiser goes to the escorted ship and stays by it, firing at what is in reach
     if (!goal) { C.input.thrust = 0; C.input.turn = 0; C.input.fire = false; return; }
     st.err = (st.err || 0) * 0.97 + (C.rng() - 0.5) * sk.noise * 0.25;
     const want = Math.atan2(goal.y - c.y, goal.x - c.x) + st.err, d = Math.atan2(Math.sin(want - c.rot), Math.cos(want - c.rot)), dist = campDist(goal, c);
     C.input.turn = clampi(d * sk.gain);
     const turrets = typeof campReach === 'function', reach = turrets ? campReach(C) : 800 * (campHas(C, 'beam') ? 1.5 : 1); // the turrets (6-GEN) fire in every direction, to 500 px from the edge of the target; the old main gun fired along the nose to about 800
-    const hold = goal === C.relic ? 60 : (goal && goal.got === false ? 40 : (a && goal === a ? (turrets ? reach * 0.6 : 420) : 300));
+    const hold = st.tuck && goal && goal.kind === 'freighter' ? 70 : goal === C.relic ? 60 : (goal && goal.got === false ? 40 : (a && goal === a ? (turrets ? reach * 0.6 : 420) : 300));
     C.input.thrust = dist > hold ? 1 : 0;
     const tgt = a || goal, w2 = Math.atan2(tgt.y - c.y, tgt.x - c.x) + st.err, d2 = Math.atan2(Math.sin(w2 - c.rot), Math.cos(w2 - c.rot));
     C.input.blink = !!(campHas(C, 'blink') && dist > 2200 && Math.abs(d) < 0.25 && C.t - C.blinkAt >= campBlinkCooldown(C));
