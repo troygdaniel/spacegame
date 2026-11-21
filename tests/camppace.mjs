@@ -4,7 +4,7 @@
 //   B. Brisk is the numbers as they were, bit for bit: a battle with no pace, "brisk" and 1 is the same battle, and the ships carry the table's own numbers
 //   C. the scaling: the five small kinds by the multiplier, the shots by its square root, the carrier, mothership, towers, haulers, turrets and Fast not at all; a change in play and back is exact
 //   D. the setting: Normal until picked, kept in this browser apart from the save, the cycle, a bad value; the P key, the pause card, the H page, the controls table; Settings > Game
-//   E. the balance: a plain bot wins every mission at Normal and Calm in about one to two minutes, a player who does nothing never wins
+//   E. the balance: a plain bot wins every mission at Normal and Calm (levels 2 and 3 in about one to two minutes, the rim run of level 1 in four to seven), a player who does nothing never wins
 // Run: node tests/camppace.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
@@ -84,13 +84,13 @@ check('the words are in content/text/ (the file mirrors the table): the line, th
 check('a mission row may bring hpScale and dmgScale (times the table\'s alien scales); a row with none is as it was (the Earth level "home" has none), so C.hpS and C.dmgS are the table\'s', J(`(() => { const a = campNew('home', [], { seed: 1 }); return a.hpS === CAMP.alien.hpScale && a.dmgS === CAMP.alien.damageScale; })()`) && J(`(() => { const C = campNew(11, [], { seed: 1, mission: 2 }), r = campMissionRow(11, 2); const u = campSpawn(C, 'raider', 0, 0); return C.hpS === CAMP.alien.hpScale * r.hpScale && C.dmgS === CAMP.alien.damageScale * r.dmgScale && u.hp === PIRATES.raider.hp * C.hpS; })()`));
 check('the curve: in every level the scales never fall from the first mission to the third, the third is a real fight (both above 1.5); the first mission of the belt is the gentlest (1). How hard level 3 is comes from its eight towers, not from its scales: docs/WRAPUP-DIFFICULTY.md', [1, 2, 3].every(n => J(`(() => { const r = [0, 1, 2].map(i => campMissionRow(${n}, i)); return r[0].hpScale <= r[1].hpScale && r[1].hpScale <= r[2].hpScale && r[0].dmgScale <= r[1].dmgScale && r[1].dmgScale <= r[2].dmgScale && r[2].hpScale >= 1.5 && r[2].dmgScale >= 1.5; })()`)) && J(`campMissionRow(1, 0).hpScale === 1 && campMissionRow(1, 0).dmgScale === 1`));
 
-// ---- E. the balance (the plain bot, tools/campaign-bot.mjs): every mission still won in about one to two minutes, a player who does nothing never wins
+// ---- E. the balance (the plain bot, tools/campaign-bot.mjs): every mission still won (levels 2 and 3 in about one to two minutes, the rim run of level 1 in four to seven), a player who does nothing never wins
 const plan = [[1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2], [3, 0], [3, 1], [3, 2]];
 for (const pace of ['normal', 'calm']) {
   setPace(pace);
-  const res = plan.map(([l, m]) => ({ l, m, rs: [1, 2, 3].map(sd => botRun(l, sd, 'plain', 'steady', techsFor(l), 300, m)) }));
-  check(`${pace}: the plain bot wins every one of the nine missions on at least two of three seeds, each in 25 seconds to 4 minutes (on the train tip 1.2 loses one seed in three: the hauler lane at Mars with the difficulty scales; for 2-GEN's re-run) (the aim is about one to two, and a mission with a trip counts it: 1.2 is a 46 s trip to Mars; card space-game-campaign-mission-places)`, res.every(x => x.rs.filter(r => r.result === 'won').length >= 2 && x.rs.every(r => r.t >= 25 && r.t <= 240)), JSON.stringify(res.map(x => x.l + '.' + (x.m + 1) + ' ' + x.rs.map(r => r.result[0] + r.t).join(' '))));
-  const idle = plan.map(([l, m]) => botRun(l, 1, 'idle', 'steady', techsFor(l), 200, m));
+  const res = plan.map(([l, m]) => ({ l, m, rs: [1, 2, 3].map(sd => botRun(l, sd, 'plain', 'steady', techsFor(l), 420, m)) }));
+  check(`${pace}: the plain bot wins every one of the nine missions on at least two of three seeds, each in 25 seconds to 4 minutes (the rim run's level 1, which is a long road and a long mine, in 4 to 7 minutes: card space-game-l1-rim-tune) (the aim for levels 2 and 3 is about one to two minutes, and a mission with a trip counts it)`, res.every(x => x.rs.filter(r => r.result === 'won').length >= 2 && x.rs.every(r => x.l === 1 ? (r.t >= 240 && r.t <= 420) : (r.t >= 25 && r.t <= 240))), JSON.stringify(res.map(x => x.l + '.' + (x.m + 1) + ' ' + x.rs.map(r => r.result[0] + r.t).join(' '))));
+  const idle = plan.map(([l, m]) => botRun(l, 1, 'idle', 'steady', techsFor(l), l === 1 ? 420 : 200, m)); // level 1's roads take five minutes: the idle player is given the time to be beaten on them
   check(`${pace}: a player who does nothing never wins a mission`, idle.every(r => r.result !== 'won'), JSON.stringify(idle.map(r => r.result)));
 }
 setPace('brisk');
