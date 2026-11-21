@@ -235,6 +235,7 @@ const CAMP = {
     draw: 3600,                            // px: a far place is made in the world (a picture) only while the carrier is within this many px of its edge
     skip: ['sol-pluto']                    // pack bodies the Campaign does not take (the eight planets are the card's; Pluto is a dwarf)
   },
+  hud: { pips: { x: 366, y: 40, w: 13, step: 16 } }, // the ship systems' pips (W S E): beside the shield bar, above the toast band (a toast is up to 552 px wide, centred, from y 86: it ran over the pips when they sat at y 72 to 108)
   nav: {                                   // the carrier's autopilot, the map's list and picking, and the arrow at the screen edge (src/campnav.js); the rule is the Long Haul autopilot's (src/autopilot.js AUTO)
     stop: 100,                             // px: a place is flown to until the edge of it (its radius plus this) is this near
     stopShip: 450,                         // px: a ship (a convoy, the mothership, a tower) is flown to until it is this near: inside the main gun's reach
@@ -457,7 +458,7 @@ const CAMP = {
       },
       rocks: [{ at: [-3500, 1200], n: 5, spread: 260 }, { at: [-300, 2400], n: 5, spread: 260 }], // two asteroid fields on the way in
       anomalies: [                                              // the cloaked caches (src/campanomaly.js)
-        { id: 'wreck', at: [-3600, -400], hides: 'weapons', guards: { raider: 2, gunship: 1 }, reward: { ore: 80, missiles: 2 } },             // beyond the first resource cache: the wreck of a warship, cloaked
+        { id: 'wreck', at: [-3300, -1100], hides: 'weapons', guards: { raider: 2, gunship: 1 }, reward: { ore: 80, missiles: 2 } },           // between the first two resource caches, off the Fast burn's line: the wreck of a warship, cloaked (it was at [-3600, -400], 293 px from where the burn to mission 1's place ends, so the cruiser decloaked it with the wing still in the bay: card space-game-night-hunt-l2-l3)
         { id: 'ghost', at: [3600, 2800], hides: 'tech', guards: { raider: 2, drone: 2, gunship: 1 }, reward: { ore: 100, turret: 0.15 } },      // south-east of the relic: a lab
         { id: 'echo', at: [2800, -3300], hides: 'weapons', guards: { gunship: 2, drone: 3 }, reward: { ore: 120, missiles: 2, tech: 'overdrive' } } // north of Proxima: the best of them
       ],
@@ -936,6 +937,8 @@ function campPowerFx(C) {
 }
 const campShieldMax = C => CAMP.carrier.shield * campPowerFx(C).cap;
 const campBlinkCooldown = C => CAMP.tech.blink.cooldown * campPowerFx(C).blink;
+// B with no blink to make: '' when it goes, else the words (no technology yet, or the seconds left)
+const campBlinkWhy = C => !campHas(C, 'blink') ? uiText('camp.say.noblink') : (C.t - C.blinkAt >= campBlinkCooldown(C) ? '' : uiText('camp.say.blinkwait', { s: Math.ceil((campBlinkCooldown(C) - (C.t - C.blinkAt)) / 1000) }));
 const campReload = C => CAMP.missile.reload * campPowerFx(C).reload;
 const campPowerSys = w => /^(?:weapons?|guns?|turrets?)$/.test(w) ? 0 : /^shields?$/.test(w) ? 1 : /^(?:engines?|thrusters?|drives?)$/.test(w) ? 2 : -1;
 const CAMP_POWER_NAMES = ['weapons', 'shields', 'engines'];

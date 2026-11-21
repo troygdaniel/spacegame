@@ -64,7 +64,7 @@ class Campaign extends Phaser.Scene {
     const t = (x, y, size, color) => this.add.text(x, y, '', uiFont(size, color, { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
     this.hud = { shield: t(252, 18, 14, '#7fe9ff'), ore: t(252, 52, 14, '#ffd37a'), hull: t(24, 18, 14, '#9fe9ff'), earth: t(24, 52, 14, '#9fe9ff'), bay: t(24, 86, 14, '#9fe9ff'), wave: t(24, 108, 14, '#ffd37a'), mother: t(W / 2 - 150, 18, 14, '#ff9ec0'), blink: t(24, 130, 14, '#7fe9ff'),
       obj: t(24, 152, 14, '#ffffff'), nav: t(24, 174, 14, '#7fe9ff'), post: t(24, 206, 14, '#ffb454'), arrow: t(0, 0, 13, '#ffd37a').setOrigin(0.5), keys: this.add.text(24, H - 44, campKeyLine(), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
-    this.hud.pw = t(352, 72, 11, '#ffb454').setText('W'); this.hud.ps = t(352, 84, 11, '#7fe9ff').setText('S'); this.hud.pe = t(352, 96, 11, '#6dff9c').setText('E'); // the ship's systems (card space-game-campaign-systems): W S E, their pips are drawn in paintHud
+    const pp = CAMP.hud.pips; this.hud.pw = t(pp.x, pp.y, 11, '#ffb454').setText('W'); this.hud.ps = t(pp.x, pp.y + 12, 11, '#7fe9ff').setText('S'); this.hud.pe = t(pp.x, pp.y + 24, 11, '#6dff9c').setText('E'); // the ship's systems (card space-game-campaign-systems): W S E, their pips are drawn in paintHud
     this.powerKey = this.camp.power.base.join(); // the setting as it was saved: a change of it is saved when it is made (update)
     this.hud.scouts = t(24, 196, 14, '#b8f0ff'); // the scouts out (card space-game-campaign-scouts): "SCOUTS 1"
     this.radio = chatterNew(); this.orderSeen = Object.assign({}, this.camp.orders); this.chatUntil = 0; // the wing's radio (src/campchatter.js): its state, the orders seen so far, when its line goes
@@ -189,7 +189,7 @@ class Campaign extends Phaser.Scene {
     this.mode = 'refit'; this.choices = campTechChoices(this.level, this.P); this.refit = { pick: null, f: 0, e: 0, ore: Math.floor(this.camp.ore) }; this.paintRefit();
   }
   paintRefit() {
-    const R = this.refit, B = CAMP.build, lines = [uiText('camp.ui.refitore', { ore: R.ore, xf: R.f, xe: R.e }), uiText('camp.ui.refitpick')]
+    const R = this.refit, B = CAMP.build, lines = [uiText('camp.ui.refitore', { ore: R.ore, xf: R.f, xe: R.e }), uiText('camp.ui.refitpick', { keys: this.choices.map((id, i) => i < 3 ? i + 1 : i + 3).join('  ') })]
       .concat(this.choices.map((id, i) => (i < 3 ? i + 1 : i + 3) + '   ' + uiText('camp.tech.' + id + '.name') + '  -  ' + uiText('camp.tech.' + id + '.text') + (R.pick === id ? '   <' : '')), [uiText('camp.ui.refitbuy', { fc: B.fighterCost, ec: B.escortCost })]);
     this.showCard(uiText('camp.ui.refit'), lines, R.pick ? uiText('camp.ui.refitgot', { name: uiText('camp.tech.' + R.pick + '.name') }) : '', 380);
   }
@@ -213,7 +213,7 @@ class Campaign extends Phaser.Scene {
   }
   showLost(why) {
     this.mode = 'lost'; const lines = typeof campLoseLines === 'function' ? campLoseLines(this.camp, why) : [uiText('camp.lose.' + why)]; // src/camplose.js: what happened, how far, one thing to try
-    this.showCard(uiText('camp.ui.lost', { n: this.level }), lines, uiText((this.camp && this.camp.L && this.camp.L.objectives) ? 'camp.ui.retrymission' : 'camp.ui.retry')); this.say([lines[0]].concat(lines.slice(2))); // the numbers are for reading: the cause and the tip are said
+    const ms = !!(this.camp && this.camp.L && this.camp.L.objectives); this.showCard(ms ? uiText('camp.ui.lostmission', { title: uiText('camp.m.' + this.level + '.' + (this.camp.L.mission + 1) + '.title') }) : uiText('camp.ui.lost', { n: this.level }), lines, uiText(ms ? 'camp.ui.retrymission' : 'camp.ui.retry')); this.say([lines[0]].concat(lines.slice(2))); // the numbers are for reading: the cause and the tip are said
   }
   showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap'), uiText('camp.ui.pausepanels', { panels: campPanelKeyLine().replace(/   /g, ', ') })].concat([uiText('camp.ui.pausehelp')], typeof campPaceLine === 'function' ? [campPaceLine() + '   ' + uiText('camp.pace.key')] : [], (this.camp && this.camp.L && this.camp.L.objectives) ? [uiText('camp.ui.pauseretry')] : [], typeof campDebugOn === 'function' && campDebugOn() && typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), (this.camp && this.camp.L && this.camp.L.objectives) ? 428 : 398); } // the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
   next(ore) { // after the story (and the pick, or the refit): the next level, or after the last one the end, with a new campaign waiting. ore: what is left to carry (the refit spent some)
@@ -260,7 +260,7 @@ class Campaign extends Phaser.Scene {
     if (pr.used) return;
     if (c === 'Escape') { if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc closes the map first; it never pauses while the map is open
     if (this.mp && typeof campMapKey === 'function' && campMapKey(this, c, e.shiftKey)) return; // the open map's list: W S choose, A D change group, Enter fly there (Shift+Enter fast), X clear (src/campmapdraw.js)
-    if (c === 'KeyB') C.input.blink = true; // the warp blink (it was Q: Q and E open the panels now)
+    if (c === 'KeyB') { C.input.blink = true; const bw = campBlinkWhy(C); if (bw) toast(this, bw, '#ffb454'); } // the warp blink (it was Q: Q and E open the panels now); without the technology, or while it cools, the key says so
     else if (c === 'KeyF') this.fireMissile();
     else if (c === CAMP.pace.key && !typing && this.mode === 'play') { const m = campPaceStep(1); campPaceSet(C, m.id); toast(this, uiText('camp.pace.toast', { pace: m.name }), '#9fe9ff'); } // B: the battle pace, calm, normal, brisk (card space-game-campaign-pace): it takes hold on the ships already out
     else if (typeof campDebugKey === 'function') { // the tune kit (src/campdebug.js): ] skip, \\ win, [ lose, ` god mode; none is a key you fly by
@@ -325,8 +325,19 @@ class Campaign extends Phaser.Scene {
     if (this.hud.chat) { const left = this.chatUntil - performance.now(); this.hud.chat.setAlpha(this.mode === 'play' && left > 0 ? Math.min(1, left / 500) : 0); } // the line fades; a card, the pause and the map hide it
     C.events.splice(0).forEach(e => this.onEvent(e));
     this.syncFar(time); this.syncRockets(Math.min(dt, 100)); this.syncBay();
-    this.sync(); this.paintHud();
+    this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
     if (this.mp) campMapPaint(this, time);
+  }
+  arrowKeep() { // the places the edge arrow's label keeps out of: the table's, and the open panel's column (a panel is up for a moment; the label sits beside it)
+    const keep = CAMP.nav.arrow.keep, o = this.pn && typeof this.pn.open === 'string' && this.pn.open && typeof campPanelDef === 'function' && typeof campPanelsGeometry === 'function' ? campPanelDef(this.pn.open) : null;
+    if (!o) return keep; const G = campPanelsGeometry(o); return keep.concat([[G.x - 8, G.y, G.x + G.w + 8, G.y + G.h + 8]]);
+  }
+  hudHides() { return ['won', 'lost', 'debrief', 'refit', 'pick', 'end'].indexOf(this.mode) >= 0; } // the modes of a result card
+  hudShow(on) { // the HUD's texts, gauges and radar: off behind a result card, back when it goes; the arrow's own label is set by paintHud, so it is only hidden here
+    if (this.hudOn === on) return; this.hudOn = on;
+    if (!on && this.hudG) this.hudG.clear();
+    Object.keys(this.hud || {}).forEach(k => { const t = this.hud[k]; if (t && t.setVisible && (!on || k !== 'arrow')) t.setVisible(on); });
+    if (this.keysBack && this.keysBack.setVisible) this.keysBack.setVisible(on);
   }
   chatShow(line, now) { chatterPlay(line); const t = this.hud.chat; if (!t) return; t.setText(line.call + ': ' + line.text); this.chatUntil = now + CHATTER.show; } // said in the pilot's voice (prio 0), shown with his callsign
   onEvent(e) {
@@ -463,7 +474,7 @@ class Campaign extends Phaser.Scene {
     bar(24, 36, 220, c.hp / c.maxHp, c.hp / c.maxHp > 0.3 ? 0x6dff9c : 0xff4d6d);
     bar(252, 36, 90, C.shield / campShieldMax(C), 0x7fe9ff);
     const pw = C.power, emer = C.t < pw.until, PC = [0xffb454, emer ? 0xffffff : 0x7fe9ff, 0x6dff9c]; // the pips of the ship's systems, W S E, under the shield gauge: lit as many as the system has (the shields white in an emergency)
-    for (let r = 0; r < 3; r++) for (let i = 0; i < CAMP.power.max; i++) g.fillStyle(i < C.power.p[r] ? PC[r] : 0x1a2a3a, i < C.power.p[r] ? 1 : 0.9).fillRect(366 + i * 16, 74 + r * 12, 13, 7);
+    for (let r = 0; r < 3; r++) for (let i = 0; i < CAMP.power.max; i++) g.fillStyle(i < C.power.p[r] ? PC[r] : 0x1a2a3a, i < C.power.p[r] ? 1 : 0.9).fillRect(CAMP.hud.pips.x + 14 + i * CAMP.hud.pips.step, CAMP.hud.pips.y + 2 + r * 12, CAMP.hud.pips.w, 7);
     if (C.earth) bar(24, 70, 220, C.earth.shield / C.earth.max, 0x38e1ff);
     const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
     if (m) bar(W / 2 - 150, 36, 300, m.hp / m.maxHp, 0xc9a0ff);
@@ -496,7 +507,7 @@ class Campaign extends Phaser.Scene {
         const a = ar.angle, tri = [{ x: ar.x + Math.cos(a) * 13, y: ar.y + Math.sin(a) * 13 }, { x: ar.x + Math.cos(a + 2.5) * 10, y: ar.y + Math.sin(a + 2.5) * 10 }, { x: ar.x + Math.cos(a - 2.5) * 10, y: ar.y + Math.sin(a - 2.5) * 10 }];
         g.fillStyle(0xffd37a, 0.95).fillPoints(tri, true); g.lineStyle(1, 0x02060d, 1).strokePoints(tri, true);
         this.hud.arrow.setVisible(true).setText(uiText('camp.nav.arrow', { name: ar.name, km: campNavKm(ar.dist) }));
-        const lp = typeof campNavLabelAt === 'function' ? campNavLabelAt(ar.x - Math.cos(a) * 64, ar.y - Math.sin(a) * 28, this.hud.arrow.width || 160, this.hud.arrow.height || 18, CAMP.nav.arrow.keep, W, H) : { x: Math.max(80, Math.min(W - 80, ar.x - Math.cos(a) * 64)), y: Math.max(14, Math.min(H - 14, ar.y - Math.sin(a) * 28)) };
+        const lp = typeof campNavLabelAt === 'function' ? campNavLabelAt(ar.x - Math.cos(a) * 64, ar.y - Math.sin(a) * 28, this.hud.arrow.width || 160, this.hud.arrow.height || 18, this.arrowKeep(), W, H) : { x: Math.max(80, Math.min(W - 80, ar.x - Math.cos(a) * 64)), y: Math.max(14, Math.min(H - 14, ar.y - Math.sin(a) * 28)) };
         this.hud.arrow.setPosition(lp.x, lp.y); // the label keeps out of the radar, the gauges, the message band and the key line
       }
     }
