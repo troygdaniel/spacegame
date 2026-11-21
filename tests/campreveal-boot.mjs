@@ -40,6 +40,8 @@ try {
   check('the flag is set and saved (revealed: true) and a new campaign starts at level 1', await j(`(() => { const p = JSON.parse(localStorage.getItem(CAMP.store)); return p.revealed === true && p.level === 1; })()`));
   await shot('3-ending');
   await t.ev(`(() => { ${SC}.scene.restart({ level: 3 }); return 1; })()`); await t.run(1200); // level 3 again, from the save (a new page would start from a clean storage in this harness)
+  for (let i = 0; i < 12 && await j(`game.scene.isActive('CampWarp')`); i++) await t.run(1000); // level 3 opens with its warp cinematic (about 6 s): wait for the Campaign's own card
+  await t.run(500);
   txt = await cardText();
   check('a replay of level 3 after the reveal opens on the outpost, not on the last battle', /outpost/i.test(txt) && !/Last battle|home world/i.test(txt), txt);
   await shot('4-replay');
