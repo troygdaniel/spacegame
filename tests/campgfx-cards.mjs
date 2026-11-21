@@ -28,7 +28,7 @@ check('hideCard takes the veil away too: nothing is left drawn', out.left === 0,
 // the card grows to its words (card space-game-wrapup-hunt-l3: a debrief with four bonus lines and a promotion ran out of the card and over its title), and a toast that is up goes
 const grow = JSON.parse(g.run(`JSON.stringify((() => {
   const run = (lines, tall, toasts) => { const made = [];
-    const obj = (kind, a) => { const o = { kind, a, destroyed: false, setStrokeStyle() { return this; }, setOrigin() { return this; }, setScrollFactor() { return this; }, setDepth() { return this; }, destroy() { this.destroyed = true; } }; made.push(o); return o; };
+    const obj = (kind, a) => { const o = { kind, a, destroyed: false, setStrokeStyle() { return this; }, setOrigin() { return this; }, setScrollFactor() { return this; }, setDepth() { return this; }, destroy() { this.destroyed = true; } }; if (kind === 'text') o.height = String(a[2] == null ? '' : a[2]).split('\\n').length * 24; /* the height of its lines: what the card measures its words with */ made.push(o); return o; };
     const sc = { card: null, panel: false, toasts, add: { rectangle: (...a) => obj('rect', a), text: (...a) => obj('text', a) }, hideCard: Campaign.prototype.hideCard };
     Campaign.prototype.showCard.call(sc, 'MISSION COMPLETE: Inner ring', lines, 'Enter  continue', tall); const r = made.filter(o => o.kind === 'rect')[1];
     const tx = made.filter(o => o.kind === 'text' && o.a[0] > -9000); // (not the throwaway text the card measures its words with, at -9999)
