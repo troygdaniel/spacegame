@@ -675,6 +675,7 @@ function campSpawn(C, kind, x, y) {
   } else return null;
   if (campSmall(kind)) { u.base = { vmax: u.vmax, accel: u.accel, turn: u.turn, def: u.def }; campPaceShip(C, u); } // the small ships fly at the battle's pace
   u.faction = u.faction || (u.team === 'alien' ? 'alien' : u.team); // who it belongs to: 'earth', 'alien', 'pirate' or 'neutral'
+  if (u.faction === 'alien') C.alienSeen = true; // the first alien of the battle: from here the ship computer's summary counts them (before it, on the rim, it does not name them: card space-game-night-hunt-l1-rim)
   u.maxHp = u.hp; u.nextShot = C.t + 600 + C.rng() * 900;
   C.ships.push(u); C.by[u.id] = u;
   return u;
@@ -1233,7 +1234,7 @@ function campAI(C, u, dt) {
 function campConvoyAI(C, u, dt) {
   const d = campDist(u, u.dest), ang = Math.atan2(u.dest.y - u.y, u.dest.x - u.x);
   if (u.cid != null && u.lane > 0) C.lane[u.cid] = Math.max(C.lane[u.cid] || 0, Math.max(0, Math.min(1, 1 - (d - 90) / u.lane))); // how much of its road it has flown (the best it has done: the arrival removes the ship, the share stays)
-  if (d < 90) { if (u.cid != null) C.lane[u.cid] = 1; C.delivered++; u.hp = 0; u.arrived = true; C.events.push({ type: 'arrive', x: u.x, y: u.y, id: u.id }); campSay(C, u.named ? 'camp.say.arrived' : 'camp.say.delivered', { name: campConvoyName(u) }); return; }
+  if (d < 90) { if (u.cid != null) C.lane[u.cid] = 1; C.delivered++; u.hp = 0; u.arrived = true; C.events.push({ type: 'arrive', x: u.x, y: u.y, id: u.id }); campSay(C, u.named ? 'camp.say.shiparrived' : 'camp.say.delivered', { name: campConvoyName(u) }); return; }
   u.rot = ang; u.vx = Math.cos(ang) * u.vmax; u.vy = Math.sin(ang) * u.vmax; u.x += u.vx * dt; u.y += u.vy * dt;
 }
 
@@ -1682,6 +1683,7 @@ function campObjective(C) {
   if (L.place && C.arrivedAt == null) { const p = campMissionPlace(C); return uiText('camp.o.travel', { name: p ? p.name : '', km: p ? campKmText(Math.hypot(C.carrier.x - p.x, C.carrier.y - p.y)) : '0' }); } // the trip first
   if (L.objectives) { // a mission: the first objective that is not done yet
     const o = campObjectives(C).find(x => !x.done); if (!o) return uiText('camp.o.done');
+    if (o.type === 'deliver' && C.delivered >= o.need) return uiText('camp.o.deliverleft', { n: C.delivered, left: campConvoys(C).length + C.L.convoys.filter((cv, k) => !C.convoys[k].started).length }); // the haulers needed are home but the mission waits for the rest of them: say so (it read "0 of 1" with two haulers home; card space-game-night-hunt-l1-rim)
     const key = 'camp.o.' + o.type + (o.type === 'kill' ? '.' + String(o.what).replace(/:.*/, '') : '');
     return uiText(key, { got: o.got, need: o.need, secs: o.need });
   }
@@ -1701,6 +1703,6 @@ function campSummary(C) {
   const out = campWing(C, 'fighter').length, esc = campWing(C, 'escort').length, al = campAliens(C).filter(u => u.faction !== 'pirate').length, pi = campAliens(C).length - al, cv = campConvoys(C).map(u => campConvoyName(u));
   return 'Campaign level ' + C.level + ', ' + L.name + '. Goal: ' + campObjective(C) + ' Carrier hull ' + Math.round(c.hp) + ' of ' + Math.round(c.maxHp) + ', shield ' + Math.round(C.shield) + ' of ' + CAMP.carrier.shield + '. Ore in the store: ' + Math.floor(C.ore) + ' of ' + CAMP.ore.cap + (C.build.queue.length ? ', building ' + C.build.queue.length + ' ship' + (C.build.queue.length === 1 ? '' : 's') : '') + '.'
     + (C.earth ? ' Earth shield ' + Math.round(C.earth.shield / C.earth.max * 100) + ' percent.' : '') + ' In the bay: ' + C.bay.fighters + ' fighters, ' + C.bay.escorts + ' escorts. Out: '
-    + out + ' fighters, ' + esc + ' escorts. Missiles in the magazine: ' + C.missiles + ' of ' + C.magazine + ' (F fires one at the mothership or the nearest big ship). Aliens alive: ' + al + '.' + (pi ? ' Pirates alive: ' + pi + '.' : '') + campAnomLine(C) + (L.convoys.length ? ' Convoys flying: ' + cv.join(', ') + (cv.length ? '' : 'none') + '.' : '')
+    + out + ' fighters, ' + esc + ' escorts. Missiles in the magazine: ' + C.missiles + ' of ' + C.magazine + ' (F fires one at ' + (L.win === 'mother' || m ? 'the mothership or ' : '') + 'the nearest big ship).' + (al || C.alienSeen ? ' Aliens alive: ' + al + '.' : '') + (pi ? ' Pirates alive: ' + pi + '.' : '') + campAnomLine(C) + (L.convoys.length ? ' Convoys flying: ' + cv.join(', ') + (cv.length ? '' : 'none') + '.' : '')
     + (L.win === 'mother' ? (m ? ' The alien mothership is ' + Math.round(campDist(m, c) / 10) + ' km away.' : ' The mothership has not come yet.') : '');
 }

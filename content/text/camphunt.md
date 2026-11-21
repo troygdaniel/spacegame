@@ -6,5 +6,6 @@ The words of the night hunt's small fixes on the Campaign (card space-game-night
 ## Strings
 | key | text |
 |---|---|
-| camp.say.arrived | {name} has arrived. |
+| camp.say.shiparrived | {name} has arrived. |
 | camp.say.shiplost | {name} is lost. |
+| camp.o.deliverleft | Haulers home: {n}. Still flying: {left}. |

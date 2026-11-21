@@ -139,6 +139,13 @@ try {
     const drive = async secs => {
       for (let s = 0; s < secs; s += 5) {
         await t.ev(`(() => { const C = ${S}.camp; if (C.result) return 0; const g = campNavGoal(C); if (g) { const row = campNavRows(C).find(r => r.id === 'goal') || g; if (!C.nav || !C.nav.on) campNavGo(C, row); } ${S}.k.SPACE = { isDown: campAliens(C).some(u => Math.hypot(u.x - C.carrier.x, u.y - C.carrier.y) < 700) }; return 1; })()`);
+        if (!drive.mapped && (await j(`campAliens(${S}.camp).length`)) > 0) { // the first raid is on: the Tab map in a fight (its list, its legend, its marks) and the ship computer's view of it
+          drive.mapped = true; await key('Tab'); await t.run(500); await snap('9-map-in-raid');
+          note('map rows in the raid: ' + await j(`campNavRows(${S}.camp).map(r => r.group + ':' + r.name).join(' | ')`).then(v => String(v).slice(0, 700)));
+          note('map legend: ' + await j(`(${S}.mp && ${S}.mp.legend ? [].concat(${S}.mp.legend).filter(o => o && o.text).map(o => o.text).join(' | ') : (${S}.mp ? Object.keys(${S}.mp).join() : 'no map'))`).then(v => String(v).slice(0, 500)));
+          note('ship computer is told: ' + await j(`campSummary(${S}.camp)`).then(v => String(v).slice(0, 700)));
+          await key('Tab'); await t.run(300);
+        }
         if (s % 10 === 5) { await key('KeyQ'); await key('Digit2'); }
         await t.run(5000);
         if (s % 15 === 10) { const q = await state(); note('t+' + (s + 5) + ': ' + JSON.stringify(q) + ' | HUD ' + (await hud()).filter(x => /goal|obj|toast|say/i.test(x)).join(' | ').slice(0, 300)); }

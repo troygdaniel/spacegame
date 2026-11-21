@@ -1,6 +1,9 @@
 // smoke: the fixes of the overnight bug hunt on Levels 2 and 3 (card space-game-night-hunt-l2-l3, docs/night/hunt-l2-l3.md), each pinned (plain Node, no Chrome)
 // Run: node tests/camphunt.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 let failed = 0;
 const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
@@ -63,7 +66,7 @@ check('a convoy with no name of its own (the Mars convoy of the Earth defence le
   (g.run(`window.C9 = __cv('home'); window.F9 = C9.ships.find(u => u.kind === 'freighter'); C9.events.length = 0; F9.x = F9.dest.x; F9.y = F9.dest.y; campStep(C9, 1 / 30); window.S9 = __says(C9); window.C10 = __cv('home'); window.F10 = C10.ships.find(u => u.kind === 'freighter'); C10.events.length = 0; campHurt(C10, F10, 99999, 'raider-1');`),
     J('F9.named === false && S9.includes("The convoy has reached " + F9.cname + ".") && __says(C10).includes("The convoy to " + F10.cname + " is lost.")')), J('[S9, __says(C10)]'));
 check('the radio calls the arrival like the old one ("Convoy is through."), the voice pack lists the new lines for the named convoys only (and the old ones for the places), 0 unclassified',
-  J(`(() => { const E = VOICEPACK_EXPAND; const named = E['camp.say.arrived']().map(x => x.name), lost = E['camp.say.shiplost']().map(x => x.name), placed = E['camp.say.delivered']().map(x => x.name); return named.includes('Transport') && named.includes('Hauler 1') && named.length === 4 && lost.length === 4 && !placed.includes('Transport') && !placed.includes('Hauler 1') && CHATTER.says['camp.say.arrived'] === 'convoy'; })()`));
+  J(`(() => { const E = VOICEPACK_EXPAND; const named = E['camp.say.shiparrived']().map(x => x.name), lost = E['camp.say.shiplost']().map(x => x.name), placed = E['camp.say.delivered']().map(x => x.name); return named.includes('Transport') && named.includes('Hauler 1') && named.length === 4 && lost.length === 4 && !placed.includes('Transport') && !placed.includes('Hauler 1') && CHATTER.says['camp.say.shiparrived'] === 'convoy'; })()`));
 
 // ---- 7. the keys box of the rim run's mining mission lists the key that wins it ----
 // 1.2 asks for ore as its goal (objective type 'ore', then 'cashin' at the Works): the keys box listed fly, fire, wing, map, attack, shield and zoom, without E then 1 (the wing mines) or E then 6 (dock to sell).
@@ -77,5 +80,35 @@ check('and the rim\'s other missions still list the keys they need: the escort (
 // ---- 8. the goals of the mining mission read their numbers in the briefing and on the board ----
 check('1.2\'s goals say what they ask: "Mine ore: 0 of 120." and "Sell your ore at the Works: 0 of 100." (they said "0 of 1"), the HUD\'s own words with the objective\'s own n',
   J('campHubBrief(campProgressNew(), 1, 1).objectives').join('|') === 'Mine ore: 0 of 120.|Destroy the attackers.|Sell your ore at the Works: 0 of 100.' && J('campHubBrief(campProgressNew(), 2, 0).objectives[0]') === 'Gather resources: 0 of 2.');
+
+// ---- 9. the map's "Flying:" header is one line (it wrapped over the first row of the list for "Transport convoy") ----
+g.run(`window.__fit = str => { const t = { size: 14, str: '', setFontSize(z) { t.size = z; return t; }, setText(x) { t.str = x; return t; }, getWrappedText(x) { return Array(Math.ceil(String(x).length * 0.6 * t.size / 250)).fill('l'); } }; campMapFitOne(t, str); return { size: t.size, str: t.str, lines: t.getWrappedText(t.str).length }; };`);
+check('a short header keeps its 14 px; "Flying: Transport convoy  13 km" (31 letters) steps down to 12 px and stays one line; a very long name is cut with an ellipsis and fits',
+  J('__fit("Flying: Luna  3 km").size') === 14 && J('__fit("Flying: Transport convoy  13 km").size') === 12 && J('__fit("Flying: Transport convoy  13 km").lines') === 1
+  && (() => { const r = J('__fit("Flying: The Alpha Centauri B relay outpost on Proxima  1,234 km")'); return r.lines === 1 && /\u2026$/.test(r.str); })());
+check('and a text object with no wrapping to ask (the tests\' stand-in) is just set', J(`(() => { const t = { setFontSize() { return t; }, setText(x) { t.s = x; return t; } }; campMapFitOne(t, 'abc'); return t.s; })()`) === 'abc');
+
+// ---- 10. no alien is named before the first contact: the ship computer is not told of aliens that are not there ----
+// The summary the ship computer answers from said "Aliens alive: 0." and "(F fires one at the mothership ...)" in the rim run's first missions, where there are pirates and no mothership.
+g.run(`window.__sum = (level, mission, t) => { const C = campNew(level, [], { seed: 1, mission }); for (let i = 0; i < 30 * t; i++) campStep(C, 1 / 30); return [C, campSummary(C)]; };`);
+check('1.1 in a raid: "Pirates alive: n." and nothing about aliens or a mothership', (g.run(`window.S1 = __sum(1, 0, 34)[1];`), J('/Pirates alive: \\d+\\./.test(S1) && !/alien|mothership/i.test(S1)')), J('S1'));
+check('1.2 the same (pirates after the miners): the summary says pirates, not aliens', (g.run(`window.S2 = __sum(1, 1, 45)[1];`), J('/Pirates alive/.test(S2) && !/alien|mothership/i.test(S2)')), J('S2'));
+check('1.3 before the contact: no aliens named; once the contact cue has fired and its wave is out the count is there, "Aliens alive: n." next to the pirates',
+  (g.run(`window.R3 = __sum(1, 2, 40); window.S3a = R3[1]; campCue(R3[0], 'contact'); for (let i = 0; i < 90; i++) campStep(R3[0], 1 / 30); window.S3b = campSummary(R3[0]);`), J('!/alien|mothership/i.test(S3a) && R3[0].alienSeen === true && /Aliens alive: [1-9]\\d*\\./.test(S3b)')), J('[S3a, S3b]'));
+check('a level with aliens from the start (the guards of 2.2) reports them, and its F note says what F fires at', (g.run(`window.S4 = __sum(2, 1, 2)[1];`), J('/Aliens alive: \\d+\\./.test(S4) && /F fires one at the nearest big ship/.test(S4)')), J('S4'));
+
+// ---- 11. the haulers' goal counts the haulers home while the mission waits for the rest ----
+// 1.3 needs one hauler home ("deliver 1") and ends when none is still on the way; the HUD said "Haulers delivered: 0 of 1." with two of them home.
+check('1.3: "Haulers delivered: 0 of 1." until one is home, then "Haulers home: 1. Still flying: 2." and after the second "Haulers home: 2. Still flying: 1."; 1.1\'s single transport still ends the mission when she arrives',
+  (g.run(`window.C11 = __cv(1, 2); for (let i = 0; i < 30 * 30; i++) campStep(C11, 1 / 30); window.H0 = campObjective(C11); window.__arrive = C => { const f = C.ships.filter(u => u.kind === 'freighter' && u.hp > 0).sort((a, b) => a.id < b.id ? -1 : 1)[0]; f.x = f.dest.x; f.y = f.dest.y; campStep(C, 1 / 30); return campObjective(C); }; window.H1 = __arrive(C11); window.H2 = __arrive(C11);`),
+    J('H0 === "Haulers delivered: 0 of 1." && H1 === "Haulers home: 1. Still flying: 2." && H2 === "Haulers home: 2. Still flying: 1."')) && (g.run(`window.C12 = __cv(1, 0); campStep(C12, 1 / 30); const f = C12.ships.find(u => u.kind === 'freighter'); f.x = f.dest.x; f.y = f.dest.y; campStep(C12, 1 / 30);`), J('C12.result === "won"')), J('[H0, H1, H2]'));
+
+// ---- 12. no string key is defined twice (my camp.say.arrived took the mission arrival line's key: the second definition wins, silently) ----
+const ROOT12 = join(dirname(fileURLToPath(import.meta.url)), '..');
+const seen12 = new Map(), dup12 = [];
+const tally = (key, where) => { if (seen12.has(key) && seen12.get(key) === where && where === 'src/contenttables.js') dup12.push(key + ' twice in ' + where); else if (seen12.has(key) && seen12.get(key) !== where && where !== 'src/contenttables.js' && seen12.get(key) !== 'src/contenttables.js') dup12.push(key + ' in ' + seen12.get(key) + ' and ' + where); seen12.set(key, where); };
+for (const m of readFileSync(join(ROOT12, 'src/contenttables.js'), 'utf8').matchAll(/^\s*'([^']+)':/gm)) tally(m[1], 'src/contenttables.js');
+const mdkeys = new Map(); for (const f of readdirSync(join(ROOT12, 'content/text')).filter(x => x.endsWith('.md'))) for (const m of readFileSync(join(ROOT12, 'content/text', f), 'utf8').matchAll(/^\|\s*([A-Za-z0-9_.]+)\s*\|/gm)) { if (m[1] === 'key') continue; if (mdkeys.has(m[1]) && mdkeys.get(m[1]) !== f) dup12.push(m[1] + ' in ' + mdkeys.get(m[1]) + ' and ' + f); mdkeys.set(m[1], f); }
+check('no string key is defined twice: not in the default table (src/contenttables.js) and not in two files of content/text', dup12.length === 0, dup12.join('; '));
 
 process.exit(failed ? 1 : (console.log('\nHUNT FIXES PASS'), 0));

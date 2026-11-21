@@ -8,6 +8,15 @@
 const CAMPMAP_PANEL = { x: 70, y: 35, w: 1140, h: 650 }; // the glass panel: the sector map's own size and place (src/map.js)
 const CAMPMAP_SIDE = { x: 925, y: 424, step: 24, rows: 8, destY: 166, listY: 192, listStep: 22, hintY: 398 }; // the column on the right: the objective, where you are flying, the list to pick from (card space-game-campaign-navigate), then the legend
 
+// one line for the "Flying: <name>  <km> km" header: a long name ("Flying: Transport convoy  13 km") wrapped to a second line over the first row of the list (card space-game-night-hunt-l1-rim).
+// The type steps down (14, 12, 11 px) and then the name is cut; a text object with no wrapping to ask (a test's stand-in) is just set.
+function campMapFitOne(t, str) {
+  if (typeof t.getWrappedText !== 'function' || typeof t.setFontSize !== 'function') { t.setText(str); return; }
+  t.setFontSize(14); t.setText(str);
+  const one = () => t.getWrappedText(str).length <= 1;
+  for (const z of [12, 11]) { if (one()) return; t.setFontSize(z); }
+  if (one()) return; let cut = str; while (cut.length > 8 && t.getWrappedText(cut).length > 1) cut = cut.slice(0, -2); t.setText(cut.slice(0, -1) + '\u2026');
+}
 const CAMPMAP_PINNED = ['carrier', 'mother', 'convoy']; // the marks that are drawn on the edge of the frame when they are past it and the map is zoomed in
 
 function campMapToggle(s) { if (s.mp) campMapClose(s); else campMapOpen(s); }
@@ -50,7 +59,7 @@ function campMapOpen(s) {
   own(s.add.text(F.x, 640, uiText('camp.map.footer'), uiFont(14, '#5b7a92'))).setDepth(154);
   mp.zoomText = own(s.add.text(F.x + F.w, 46, '', uiFont(14, '#7fe9ff'))).setOrigin(1, 0).setDepth(154); // the zoom level and its keys, in the corner (card space-game-campaign-zoom)
   mp.across = own(s.add.text(F.x + F.w, 640, '', uiFont(14, '#5b7a92'))).setOrigin(1, 0).setDepth(154); // the area or the whole system, how wide, and Z (the footer is on the left: 410 px, this 260)
-  mp.obj = own(s.add.text(CAMPMAP_SIDE.x, F.y, '', uiFont(15, '#ffffff', { wordWrap: { width: 230 }, lineSpacing: 4 }))).setDepth(154);
+  mp.obj = own(s.add.text(CAMPMAP_SIDE.x, F.y, '', uiFont(15, '#ffffff', { wordWrap: { width: 246 }, lineSpacing: 4 }))).setDepth(154);
   // pick and fly (card space-game-campaign-navigate): the list is the Long Haul nav panel's idea (src/navpanel.js: W S choose, Enter flies there, X clears) on the one list the map and the keys share
   mp.dest = own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.destY, '', uiFont(14, '#7fe9ff', { wordWrap: { width: 250 } }))).setDepth(154);
   mp.list = []; for (let i = 0; i < CAMP.nav.list; i++) mp.list.push(own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.listY + i * CAMPMAP_SIDE.listStep, '', uiFont(14, '#9fe9ff'))).setOrigin(0, 0.5).setDepth(154));
@@ -189,7 +198,7 @@ function campMapPaint(s, time) {
       mp.routeText.setPosition(spot.x, spot.y);
     } else mp.routeText.setPosition(0, 0);
   } else { mp.goalText.setVisible(false); mp.routeText.setVisible(false); }
-  if (N) { route({ x: N.x, y: N.y }, gc.select, 0.85); mp.dest.setText(uiText('camp.map.dest', { name: N.name }) + '  ' + campNavKm(Math.hypot(N.x - C.carrier.x, N.y - C.carrier.y)) + ' km'); } else mp.dest.setText('');
+  if (N) { route({ x: N.x, y: N.y }, gc.select, 0.85); campMapFitOne(mp.dest, uiText('camp.map.dest', { name: N.name }) + '  ' + campNavKm(Math.hypot(N.x - C.carrier.x, N.y - C.carrier.y)) + ' km'); } else mp.dest.setText('');
   const chosen = mp.rows[sel]; if (chosen) { const q = pin(X(chosen.x), Y(chosen.y)); g.lineStyle(2, gc.select, 1).strokeRect(q.x - 9, q.y - 9, 18, 18); }
   // ---- set by a click (card space-game-map-click-fly): the place has a ring and a line from the carrier, its distance, and two small buttons beside it: Fly (regular speed) and Fast (a burn) ----
   if (mp.flewId && mp.setId === mp.flewId && !(N && N.on) && !C.navWait) { mp.setId = ''; mp.flewId = ''; } // the trip is over (arrived, cleared, a steering key): the place is no longer set
@@ -203,7 +212,7 @@ function campMapPaint(s, time) {
     mp.btnScout.setText(uiText('camp.map.scout', { t: eta(Math.round(campNavFlight(C, setRow, d) / CAMP.escort.speed)) })).setVisible(campScoutTasks(C).some(k => k !== 'escort')); // the escort's own speed: a scout is faster than the carrier (card space-game-campaign-scouts)
     const w = Math.max(mp.btnFly.width, mp.btnFast.width, mp.btnScout.width), h = mp.btnFly.height, right = q.x + 22 + w <= F.x + F.w - 4, bx = right ? q.x + 22 : Math.max(F.x + 4, q.x - 22 - w), by = Math.max(F.y + 4, Math.min(F.y + F.h - 3 * h - 12, q.y - h - 2)); // beside the mark, on the side with room, inside the frame
     mp.btnFly.setPosition(bx, by); mp.btnFast.setPosition(bx, by + h + 4); mp.btnScout.setPosition(bx, by + 2 * (h + 4));
-    if (!N) mp.dest.setText(uiText('camp.map.set', { name: setRow.name }) + '  ' + campNavKm(d) + ' km');
+    if (!N) campMapFitOne(mp.dest, uiText('camp.map.set', { name: setRow.name }) + '  ' + campNavKm(d) + ' km');
   } else { mp.btnFly.setVisible(false); mp.btnFast.setVisible(false); mp.btnScout.setVisible(false); }
   const win = navpanelLines(mp.rows, sel, CAMP.nav.list, CAMPNAV.groups); // the Long Haul nav panel's own windowing: headings, and the chosen row kept in view
   mp.list.forEach((t, k) => {
