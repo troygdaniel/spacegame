@@ -37,6 +37,16 @@ console.log('the arrow\'s label');
   check('the scene uses it for the arrow\'s label, with the keep rectangles of CAMP.nav.arrow', /campNavLabelAt\(ar\.x - Math\.cos\(a\) \* 64, ar\.y - Math\.sin\(a\) \* 28, this\.hud\.arrow\.width/.test(src('src/campaignscene.js')) && /CAMP\.nav\.arrow\.keep/.test(src('src/campaignscene.js')));
 }
 
+console.log('the keep-out rectangles hold the panel tabs and the left HUD rows (8-GEN: the label sat under the SHIP tab and over the AUTOPILOT line)');
+{
+  const tabs = J('CAMP_PANELS.panels.map(d => campPanelsGeometry(d).tab)'), K = J('CAMP.nav.arrow.keep');
+  check('every panel tab is inside a keep rectangle (the tabs may move: then this says the rectangles must)', tabs.every(t => K.some(r => t.x >= r[0] && t.x + t.w <= r[2] && t.y >= r[1] && t.y + t.h <= r[3])), JSON.stringify([tabs, K]));
+  check('the left HUD\'s objective line (y 152) and the autopilot line (y 174, 14 px type) are inside the first rectangle', K.some(r => r[0] === 0 && r[1] === 0 && r[3] >= 174 + 18));
+  const W = 1280, H = 720, L = (x, y) => J(`campNavLabelAt(${x}, ${y}, 190, 18, ${JSON.stringify(K)}, ${W}, ${H})`), hit = (p, r) => p.x + 95 > r[0] && p.x - 95 < r[2] && p.y + 9 > r[1] && p.y - 9 < r[3];
+  const a = L(1144, 222), b = L(85, 164);
+  check('the label wanted at the SHIP tab (2.3 and 3.3 starts) or on the AUTOPILOT line (1.2) ends out of every rectangle', !K.some(r => hit(a, r)) && !K.some(r => hit(b, r)), JSON.stringify([a, b]));
+}
+
 console.log('the list');
 check('a name cut to fit the list says so with an ellipsis: "Epsilon Eridani\u2026" for the star, not the name without its word', /\.slice\(0, 15\) \+ '\\u2026'/.test(src('src/campmapdraw.js')));
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
