@@ -442,7 +442,7 @@ const CAMP = {
       },
       rocks: [{ at: [-3500, 1200], n: 5, spread: 260 }, { at: [-300, 2400], n: 5, spread: 260 }], // two asteroid fields on the way in
       anomalies: [                                              // the cloaked caches (src/campanomaly.js)
-        { id: 'wreck', at: [-3600, -400], hides: 'weapons', guards: { raider: 2, gunship: 1 }, reward: { ore: 80, missiles: 2 } },             // beyond the first resource cache: the wreck of a warship, cloaked
+        { id: 'wreck', at: [-3300, -1100], hides: 'weapons', guards: { raider: 2, gunship: 1 }, reward: { ore: 80, missiles: 2 } },           // between the first two resource caches, off the Fast burn's line: the wreck of a warship, cloaked (it was at [-3600, -400], 293 px from where the burn to mission 1's place ends, so the cruiser decloaked it with the wing still in the bay: card space-game-night-hunt-l2-l3)
         { id: 'ghost', at: [3600, 2800], hides: 'tech', guards: { raider: 2, drone: 2, gunship: 1 }, reward: { ore: 100, turret: 0.15 } },      // south-east of the relic: a lab
         { id: 'echo', at: [2800, -3300], hides: 'weapons', guards: { gunship: 2, drone: 3 }, reward: { ore: 120, missiles: 2, tech: 'overdrive' } } // north of Proxima: the best of them
       ],
