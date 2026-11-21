@@ -264,6 +264,7 @@ class Campaign extends Phaser.Scene {
     if (c === 'KeyH') { this.openKeys(); return; } // H: every key, on one page
     const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // a word typed into the strip is not a key
     if ((typeof this.pn !== 'object' || typeof this.pn.open !== 'string') && typeof campPanelNew === 'function') this.pn = campPanelNew(); // made in create (campPanelsInstall); a stand-in scene in a test has none, and answers any property
+    if (!typing && typeof campCallKey === 'function' && !(this.pn && this.pn.open) && campCallKey(this, c)) return; // 1 2 3 answer a pilot's call for orders while one waits and no panel is open (src/camporders.js, src/camporderdraw.js; the panels' digits are theirs)
     const pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0, e.shiftKey) : { used: false }; // Q and E open the panels (FLEET, SHIP), the digits pick a row of the open one, then a digit picks a row (src/camppanel.js); Esc closes a panel first
     if (pr.ran) toast(this, pr.say, pr.ok ? '#9fe9ff' : '#ffb454');
     if (pr.used) return;
@@ -335,6 +336,7 @@ class Campaign extends Phaser.Scene {
     C.events.splice(0).forEach(e => this.onEvent(e));
     this.syncFar(time); this.syncRockets(Math.min(dt, 100)); this.syncBay();
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
+    if (typeof campCallPaint === 'function') campCallPaint(this); // the plate of a pilot's call for orders, while one waits (src/camporderdraw.js)
     if (this.mp) campMapPaint(this, time);
   }
   arrowKeep() { // the places the edge arrow's label keeps out of: the table's, and the open panel's column (a panel is up for a moment; the label sits beside it)
@@ -353,6 +355,7 @@ class Campaign extends Phaser.Scene {
   onEvent(e) {
     if (this.mp) campFireHear(this.mp.fire, this.camp, e, performance.now()); // the Tab map shows the fight too: its marks come from the events, only while it is open (src/campmapfire.js)
     chatterHear(this, e); // the wing's radio hears every sim event (src/campchatter.js)
+    if (e.type === 'call' && typeof campCallHear === 'function') campCallHear(this, e); // a pilot's call for orders, or his answer (src/camporderdraw.js)
     if (e.type === 'say') { const text = uiText(e.key, e.vars); toast(this, text, '#9fe9ff'); this.say([text]); }
     else if (e.type === 'nav') { toast(this, uiText(e.key, e.vars), '#7fe9ff'); if (e.key === 'camp.nav.go' || e.key === 'camp.nav.arrived') beep(e.key === 'camp.nav.go' ? 520 : 660, 0.07, 'triangle', 0.04, 160); } // the autopilot's own lines (src/campnav.js)
     else if (e.type === 'stance') { this.P.stance = e.stance; campProgressSave(this.P); } // the wing's stance is the pilot's choice: kept across missions (src/campaign.js)

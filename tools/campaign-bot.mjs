@@ -41,13 +41,17 @@ const BOTS = {
   troy: { name: 'troy', launchAt: 45, escort: [81], sit: true },                                                   // Troy's first try (play log 20 Nov): launches at 45 s, escorts at 81 s, never attacks, the carrier stays at the base and shoots what comes close
   troyh: { name: 'troyh', launchAt: 45, escort: [81], sit: true, reactive: 3 },                                      // troy, and when the first real damage comes (Earth under 90 percent, or the hull under 80) it reads a hint 3 s later: launch if need be, attack every 5 s, fly out
   strong: { name: 'strong', launchAt: 1, escort: [9, 56], attackFrom: 12, attackEvery: 5, missiles: true, cycle: 0.45, skill: 'sharp' }, // a strong player (card space-game-wrapup-difficulty): escorts both convoys, missiles on every big ship, recalls and relaunches the hurt wing, and flies sharp
-  mcarrier: { name: 'mcarrier', launch: false, missiles: true }                                                  // no wing at all, missiles only
+  mcarrier: { name: 'mcarrier', launch: false, missiles: true },
+  plains: { name: 'plains', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'smart' },                  // plain, and it answers the pilots' calls (src/camporders.js) with the pick a player who thinks would make
+  plainf: { name: 'plainf', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'first' }                   // plain, and it answers every call with 1                                                  // no wing at all, missiles only
 };
 const SKILLS = { sharp: { gain: 3, thr: 0.15, noise: 0 }, steady: { gain: 2, thr: 0.22, noise: 0.1 }, rough: { gain: 1.5, thr: 0.3, noise: 0.2 } };
 
 const OLD = process.argv.includes('--old');
 const SETS = process.argv.map((a, i) => a === '--set' ? process.argv[i + 1] : null).filter(Boolean); // --set alien.hpScale=2 --set alien.damageScale=2: change the table before the run (what-if)
 const g = nodeGame();
+if (process.argv.includes('--nocalls')) g.run('campCallsTick = null'); // --nocalls: the battle as it was before the pilots asked for orders (to compare)
+g.run(`window.__SMART = { cruiser: 2, wounded: 2, breakaway: 1, second: 1, running: 1, opportunity: 1 }`); // the 'smart' bot's picks by call type (1, 2 or 3)
 g.run(`window.__PACE = ${isNaN(Number(PACE)) ? JSON.stringify(PACE) : Number(PACE)}`); // the battle pace of every battle of this run
 g.run(`window.__RANK = ${JSON.stringify(RANK)}`); // the pilot's rank for every battle of this run
 if (OLD) g.run(`(() => { CAMP.earth.shield = 300; CAMP.earth.regen = 0; CAMP.mother.hp = 900; CAMP.mother.damage = 12; CAMP.mother.holdAt = 1600; CAMP.mother.spawnEvery = 8000; CAMP.mother.spawnMax = 6; CAMP.levels[1].waves[2].ships.raider = 3; })()`); // the numbers before the easier level 1
@@ -62,7 +66,8 @@ g.run(`(() => {
   };
   const clampi = v => Math.max(-1, Math.min(1, v));
   window.__botStep = (C, s, B, sk, st) => {
-    if (B.idle) return;
+    if (B.idle) return; // (an idle player never answers a pilot's call: the pilot takes the cautious pick after his 8 s)
+    if (C.call && C.call.open) campCallAnswer(C, B.answer === 'first' ? 1 : B.answer === 'smart' ? (window.__SMART[C.call.open.id] | 0) : campCallView(C).def, 'bot'); // the pilots ask for orders (src/camporders.js): the plain bot answers at once with the cautious pick (0), 'first' always says 1, 'smart' picks by call type
     if (C.arrivedAt == null) return; // the trip first, with the wing aboard (a Fast burn needs it: card space-game-campaign-fast-board); the plan runs from the arrival, as a player's does
     s -= C.arrivedAt / 1000;
     if (B.reactive != null && st.react == null && ((C.earth && C.earth.shield <= C.earth.max * 0.9) || C.carrier.hp <= C.carrier.maxHp * 0.8)) st.react = s + B.reactive;
@@ -137,7 +142,7 @@ g.run(`(() => {
     M.recalls = st.recalls || 0;
     const r = { level, seed, result: C.result || 'timeout', why: C.why, t: Math.round(C.t / 1000), hull: Math.round(C.carrier.hp), hull0: Math.round(hull0), minHull: Math.round(M.minHull), earth: C.earth ? Math.round(C.earth.shield) : null,
       kills: C.kills, delivered: C.delivered, convoyLost: C.lost, shipsLost: C.lostShips, caches: C.cachesGot, towers: C.ships.filter(u => u.kind === 'tower').length, waves: M.waves, idle: Math.round(M.idle), first: M.first, recalls: M.recalls,
-      hitC: Object.fromEntries(Object.entries(M.hitC).map(([k, v]) => [k, Math.round(v)])), drainE: Object.fromEntries(Object.entries(M.drainE).map(([k, v]) => [k, Math.round(v * 10) / 10])), orders: Object.assign({}, C.orders) };
+      hitC: Object.fromEntries(Object.entries(M.hitC).map(([k, v]) => [k, Math.round(v)])), drainE: Object.fromEntries(Object.entries(M.drainE).map(([k, v]) => [k, Math.round(v * 10) / 10])), orders: Object.assign({}, C.orders), calls: ((C.call && C.call.log) || []).map(l => l.id + ':' + l.pick + ':' + l.way) };
     window.__M = null; return r;
   };
 })()`);

@@ -919,6 +919,7 @@ function campTick(C, dt) {
   campFactory(C, dt);
   campLasers(C);
   campMissions_tick(C, dt);
+  if (typeof campCallsTick === 'function') campCallsTick(C, dt); // the pilots ask for orders: the call that waits, the call that may open (src/camporders.js)
   campWarn(C);
   if (typeof campOutpostTick === 'function') campOutpostTick(C, dt); // the retreat line (src/campoutpost.js)
   C.ships = C.ships.filter(u => u.hp > 0 || (delete C.by[u.id], false)); // the dead leave the list (the scene was told by the boom event)
