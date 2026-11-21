@@ -178,6 +178,11 @@ const CAMP = {
     stop: 100,                             // px: a place is flown to until the edge of it (its radius plus this) is this near
     stopShip: 450,                         // px: a ship (a convoy, the mothership, a tower) is flown to until it is this near: inside the main gun's reach
     stopPoint: 40,                         // px: a point (a cache, the relic ring, your wing) is flown to until it is this near
+    stopEnemy: 400,                        // px: an alien ship (card space-game-campaign-map-targets) is followed to about turret range of it, and held there: not on top of it
+    stopFriend: 130,                       // px: one of your own ships or a convoy is followed until it is alongside, this near
+    stopRock: 200,                         // px: a rock is flown to until it is this near: inside the mining laser's reach (CAMP.laser.range 230) for the turrets
+    leadMax: 8,                            // s: the most a moving target is led by (the carrier aims where it will be in this long at most, or in the time it takes to get there)
+    stackSame: 6,                          // px: a second click this near the first is on the same stack of marks, and picks the next one in it (a second click on a lone mark flies there, as it did)
     arrive: 60,                            // px: this much past the stop distance still counts as arrived
     drop: 70,                              // px/s: under this speed, and arrived, the autopilot lets go
     floor: 40, brake: 1.2,                 // the speed limit is floor plus brake times the px left (the Long Haul autopilot's own rule), so it keeps moving to the end and brakes in time
