@@ -47,7 +47,7 @@ console.log('A. collapsed: the two tabs');
   const gl = geo('fleet'), gr = geo('ship');
   check('install makes the three panels\' objects once and listens for the pointer', J('Object.keys(S.pnl.p).join()') === 'fleet,ship,systems' && J('S.input.handlers.length') === 1 && J('S.pnl.objs.length') > 20);
   check('in the battle both tabs are on the screen with nothing open: the key cap and the name of each, no row', ['fleet', 'ship'].every(id => J(`__tab(S, '${id}')`).cap && J(`__tab(S, '${id}')`).name) && ['fleet', 'ship'].every(id => J(`__rows(S, '${id}')`).every(r => !r.vis)));
-  check('the tab is narrow (110 px, about), FLEET at the left edge and SHIP at the right, both inside the screen', K.tab.w <= 120 && gl.tab.x === K.edge && gr.tab.x + gr.tab.w === 1280 - K.edge && gl.tab.w === K.tab.w && gr.tab.w === K.tab.w, JSON.stringify([gl.tab, gr.tab]));
+  check('the tab is narrow (150 px: a key cap, the name and the stance in force), FLEET at the left edge and SHIP at the right, both inside the screen', K.tab.w <= 160 && gl.tab.x === K.edge && gr.tab.x + gr.tab.w === 1280 - K.edge && gl.tab.w === K.tab.w && gr.tab.w === K.tab.w, JSON.stringify([gl.tab, gr.tab]));
   check('they sit below the gauges at the top left (176) and the radar at the top right (226): nothing is covered, and above the key line', gl.tab.y >= 230 && gr.tab.y >= 230 && gl.tab.y + gl.tab.h < 600);
   const fill = J(`__fills(S, 'fleet')`)[0];
   check('collapsed it is translucent and quiet: the fill under 70 percent, the border thin and under half', fill.a < 0.7 && J(`__lineW(S, 'fleet')`).w <= 1.01 && J(`__lineW(S, 'fleet')`).a < 0.5, JSON.stringify([fill, J(`__lineW(S, 'fleet')`)]));
@@ -152,6 +152,38 @@ console.log('E. the screen\'s own camera, the key line');
   check('the bottom key line has a thin backing strip under it, over the whole width, on the screen\'s camera, below the text', /this\.keysBack = this\.add\.rectangle\(W \/ 2, H - 35, W, 26, 0x02060d, 0\.75\)\.setScrollFactor\(0\)\.setDepth\(99\)/.test(cr) && /keys: this\.add\.text\(24, H - 44, campKeyLine\(\)[^;]*\.setScrollFactor\(0\)\.setDepth\(100\)/.test(cr));
   check('the strip covers the line: the line\'s text (at H - 44, 14 px) lies inside the strip (H - 48 to H - 22)', 720 - 44 >= 720 - 35 - 13 && 720 - 44 + 18 <= 720 - 35 + 13);
   check('the scene gives the panels the time of the scene, and the tabs are painted every frame', /campPanelsPaint\(this, this\.time\.now\)/.test(sc));
+}
+console.log('F. the FLEET panel\'s second page: the stances (card space-game-wrapup-stance-page)');
+{
+  g.run(`window.T = __scene(); campPanelsInstall(T); T.camp.stance = 'orbit';`);
+  const paintT = now => g.run(`T.time.now = ${now}; campPanelsPaint(T, ${now});`), rowsT = () => J(`__rows(T, 'fleet')`), tabT = () => J(`({ name: T.pnl.p.fleet.name.t, note: T.pnl.p.fleet.note.t, noteVis: T.pnl.p.fleet.note.vis, hint: T.pnl.p.fleet.hint.t, hintVis: T.pnl.p.fleet.hint.vis })`);
+  const keyT = (code, now) => g.run(`campPanelKey(T.pn, T.camp, '${code}', ${now}); T.time.now = ${now};`);
+  paintT(0);
+  check('collapsed with the stance Orbit in force: the FLEET tab names it ("ORBIT"), the SHIP tab does not', tabT().note === 'ORBIT' && tabT().noteVis === true && J(`T.pnl.p.ship.note.t`) === '', JSON.stringify(tabT()));
+  g.run(`T.camp.stance = 'free'`); paintT(10); check('with Free (the default) the tab names nothing', tabT().note === '' || tabT().noteVis === false, JSON.stringify(tabT())); g.run(`T.camp.stance = 'keep'`); paintT(20); check('Keep distance is "KEEP" (the first word, in capitals: the tab is 150 px)', tabT().note === 'KEEP', JSON.stringify(tabT()));
+  g.run(`T.camp.stance = 'orbit'`);
+  keyT('KeyQ', 100); paintT(100 + 200);
+  check('Q opens FLEET on page 1: the five orders, the hint says the arrows go to the stances', rowsT().map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall' && tabT().hintVis === true && tabT().hint === '← →  stances' && tabT().name === 'FLEET', JSON.stringify([rowsT().map(r => r.name), tabT()]));
+  check('the open tab does not show the stance word (the list is open)', tabT().noteVis === false);
+  keyT('ArrowRight', 400); paintT(400);
+  check('the Right arrow flips: the five stances in their rows, the tab says STANCES, the hint offers the orders', rowsT().map(r => r.name).join() === 'Free,Orbit,Keep distance,Match speed,Hold position' && tabT().name === 'STANCES' && tabT().hint === '← →  fleet orders', JSON.stringify([rowsT().map(r => r.name), tabT()]));
+  check('the one in force says so ("in force", in the digit\'s colour); the others say nothing; all five can be chosen (not greyed)', rowsT()[1].suffix === 'in force' && rowsT()[1].suffixColor === J('CAMPPANELS_LOOK.rowInk.digit') && [0, 2, 3, 4].every(i => rowsT()[i].suffix === '') && rowsT().every(r => r.nameColor === J('CAMPPANELS_LOOK.rowInk.ok')), JSON.stringify(rowsT().map(r => [r.suffix, r.nameColor])));
+  keyT('ArrowLeft', 500); paintT(500);
+  check('the Left arrow flips back to the orders at once (not at the next quarter second)', rowsT().map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall' && tabT().name === 'FLEET', JSON.stringify(rowsT().map(r => r.name)));
+  keyT('ArrowRight', 600); paintT(600); keyT('Digit3', 700);   // the third stance: keep distance
+  check('a digit on the stance page picks the stance: it is set, and the panel collapses', J('T.camp.stance') === 'keep' && J('T.pn.open') === '', J('T.camp.stance'));
+  paintT(700 + 40);
+  check('while the pick flashes and the list fades, the rows are still the stances (the page it was picked on)', rowsT().map(r => r.name).join() === 'Free,Orbit,Keep distance,Match speed,Hold position' && rowsT()[2].vis === true, JSON.stringify(rowsT().map(r => r.name)));
+  paintT(700 + 1000);
+  check('collapsed again: the tab says FLEET and names the new stance ("KEEP")', tabT().name === 'FLEET' && tabT().note === 'KEEP', JSON.stringify(tabT()));
+  keyT('KeyQ', 2000); paintT(2000 + 200);
+  check('it opens on the orders every time (the page is not remembered)', rowsT().map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall', JSON.stringify(rowsT().map(r => r.name)));
+  check('SHIP has no second page: no hint, no flip (its arrows stay ordinary keys)', (keyT('KeyE', 2300), paintT(2300 + 200), J(`T.pnl.p.ship.hint`) === null) && J(`campPanelKey(T.pn, T.camp, 'ArrowRight', 2500).used`) === false);
+  // a click on a stance row, with the stances showing
+  keyT('KeyQ', 3000); keyT('ArrowRight', 3100); paintT(3200);
+  const gl = geo('fleet'); const y = gl.list.y + (K.list.row + K.list.gap) + K.list.row / 2; // the second row: Orbit
+  g.run(`T.camp.stance = 'free'; T.time.now = 3200; campPanelsClick(T, ${gl.list.x + 60}, ${y})`);
+  check('a click on a stance row picks it from the page that is showing (Orbit), not the order of the same number (Attack)', J('T.camp.stance') === 'orbit', J('T.camp.stance'));
 }
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nCAMPAIGN PANELS UI FAIL (${failed} of ${n})` : `\nCAMPAIGN PANELS UI PASS (${n} checks)`);

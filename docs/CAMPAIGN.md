@@ -126,7 +126,7 @@ An order the game cannot do is answered in words and does nothing ("the bay is e
 
 ## Stances (card `space-game-campaign-stances`)
 
-A stance is **how the wing moves when it attacks or guards**. One for the whole wing, kept across orders (launch, attack, guard, recall do not change it) and saved with the progress, so it comes with every mission. Five, set by the order `stance` (the strip, the voice, and the FLEET panel's second page):
+A stance is **how the wing moves when it attacks or guards**. One for the whole wing, kept across orders (launch, attack, guard, recall do not change it) and saved with the progress, so it comes with every mission. Five, set by the order `stance` (the strip, the voice, and the FLEET panel's second page: Q, then the Left or Right arrow flips between the orders and the stances, `CAMP_PANELS.pages` is 2; the tab then says STANCES and a hint line under the list says where the arrows go, the stance in force is marked "in force", a digit or a click picks one, and the collapsed FLEET tab names the stance when it is not Free; a panel always opens on its first page):
 
 | Stance | Words | What the wing does |
 |---|---|---|

@@ -10,7 +10,8 @@
 //   campPanelsClose(s)         a card coming up, the map, the end: the panels go back to their tabs at once
 // Everything is on the screen's own camera (scroll factor 0), so the zoom (src/camzoom.js) never scales it. tests/campanelsui.mjs checks the states and their timing on stand-ins.
 const CAMPPANELS_LOOK = {
-  tab: { w: 110, h: 28 }, slotGap: 6,                       // px: a collapsed tab: a key cap and the name; the gap between two tabs on one side (a panel's slot in the table)
+  tab: { w: 150, h: 28 }, slotGap: 6,                       // px: a collapsed tab: a key cap, the name and, on FLEET, the stance in force when it is not Free (card space-game-wrapup-stance-page: 110 wide until then); the gap between two tabs on one side (a panel's slot in the table)
+  hint: { gap: 5, size: 12, ink: '#8fb4c8' },              // px, px, colour: the line under a list whose panel has a second page: the arrows flip it (it names the page they go to)
   list: { w: 232, row: 24, gap: 3, pad: 6 },               // px: the column of rows under the tab: its width (a name, its word and the digit have to fit: tests/campanelsui.mjs measures every row of the table), a row's height, the gap between rows, the gap under the tab
   top: 238, edge: 24, depth: 160, every: 250,              // the tab's y (the gauges take the top left to 176 and the radar the top right to 226), its distance from the screen's edge, the depth (over the map, 150 to 156), ms between the words being made live
   color: { left: CYAN, right: AMBER }, ink: { left: '#7fe9ff', right: '#ffd37a' },
@@ -31,6 +32,8 @@ function campPanelsBuild(s, def) {
   const O = { def, live: -1e9, g: own(s.add.graphics()) };
   O.cap = own(keyCap(s, def.key, AMBER), 2); O.cap.setPosition(G.tab.x + 20, G.tab.y + G.tab.h / 2);
   O.name = own(s.add.text(G.tab.x + 38, G.tab.y + G.tab.h / 2, def.title, uiFont(14, '#9fbdd1', { letterSpacing: 2 })).setOrigin(0, 0.5), 2);
+  O.note = own(s.add.text(G.tab.x + G.tab.w - 8, G.tab.y + G.tab.h / 2, '', uiFont(11, K.ink[def.side], { letterSpacing: 1 })).setOrigin(1, 0.5), 2); // the stance in force (FLEET): a word, not Free
+  O.hint = def.page2 ? own(s.add.text(G.list.x + 30, G.list.y + G.list.h + K.hint.gap, '', uiFont(K.hint.size, K.hint.ink)).setOrigin(0, 0), 2) : null; // "<- ->  stances" under the list, "<- ->  orders" on the second page
   O.rows = def.rows.map(r => {
     const y = G.rowY(r.n) + K.list.row / 2;
     return { id: r.id, digit: own(s.add.text(G.list.x + 15, y, String(r.n), uiFont(14, K.rowInk.digit, { fontStyle: 'bold' })).setOrigin(0.5), 2),
@@ -57,21 +60,26 @@ const campPanelsTabsOn = s => s.mode === 'play' && !s.mp && !(typeof campKeysIsO
 function campPanelsPaintOne(s, O, now, play) {
   const K = CAMPPANELS_LOOK, def = O.def, G = campPanelsGeometry(def), v = campPanelView(s.pn, def.id, now), col = K.color[def.side], g = O.g, T = G.tab;
   const tabOn = play || v.list > 0, lit = v.list, beat = Math.max(lit, v.pulse);
+  const page = campPanelPageOf(s.pn, def.id), pages = campPanelPages(def.id); // the page the list is on: the open one's, or the one a pick was made on while it fades
   g.clear(); O.cap.setVisible(tabOn); O.name.setVisible(tabOn);
+  { const st = pages > 1 && s.camp && s.camp.stance && s.camp.stance !== 'free' ? def.page2.rows.find(r => r.id === s.camp.stance) : null; O.note.setVisible(tabOn && !!st && v.list <= 0).setText(st ? st.label.split(' ')[0].toUpperCase() : ''); } // the collapsed tab names the stance in force
   if (tabOn) { // the tab: translucent and quiet when collapsed; brighter fill and border when its panel is open; one pulse when a pick came before the panel was drawn
     g.fillStyle(0x04101c, 0.55 + 0.4 * lit); g.fillRoundedRect(T.x, T.y, T.w, T.h, 7);
     if (beat > 0) { g.fillStyle(col, 0.18 * lit + 0.4 * v.pulse); g.fillRoundedRect(T.x, T.y, T.w, T.h, 7); }
     g.lineStyle(1 + 1.5 * beat, col, 0.42 + 0.58 * beat); g.strokeRoundedRect(T.x, T.y, T.w, T.h, 7);
     O.name.setColor(beat > 0.45 ? '#ffffff' : '#9fbdd1');
   }
+  O.name.setText(v.list > 0 && page === 1 && def.page2 ? def.page2.title : def.title); // an open panel on its second page says so on its tab; collapsed it is its own name again
+  if (O.hint) O.hint.setVisible(v.list > 0 && pages > 1).setAlpha(v.list).setText('\u2190 \u2192  ' + (page === 1 ? def.title.toLowerCase() + ' orders' : def.page2.title.toLowerCase()));
   const show = v.list > 0;
   O.rows.forEach(r => { [r.digit, r.name, r.suffix].forEach(o => { o.setVisible(show); if (show) o.setAlpha(v.list); }); });
   if (!show) { O.live = -1e9; return; }
+  if (O.page !== page) { O.page = page; O.live = -1e9; } // flipped: the words are made again now, not at the next quarter second
   if (O.live < 0 || now - O.live >= K.every) { // the words are live: made on the first frame of the list and four times a second after that
     O.live = now;
-    campPanelRows(s.camp, def.id).forEach((r, i) => { const o = O.rows[i]; if (!o) return; o.name.setColor(r.ok ? K.rowInk.ok : K.rowInk.no); o.digit.setColor(r.ok ? K.rowInk.digit : K.rowInk.no); o.suffix.setText(r.short || '').setColor(r.ok ? K.rowInk.suffix : K.rowInk.why); });
+    campPanelRows(s.camp, def.id, page).forEach((r, i) => { const o = O.rows[i]; if (!o) return; o.name.setText(r.tag || r.label).setColor(r.ok ? K.rowInk.ok : K.rowInk.no); o.digit.setColor(r.ok ? K.rowInk.digit : K.rowInk.no); o.suffix.setText(r.marked ? r.state : (r.short || '')).setColor(r.marked ? K.rowInk.digit : r.ok ? K.rowInk.suffix : K.rowInk.why); }); // a stance in force says so ("in force", in the digit's colour)
   }
-  def.rows.forEach(r => { // the rows: a translucent back with the panel's colour at its edge; the one just picked flashes
+  campPanelPageRows(def, page).forEach(r => { // the rows: a translucent back with the panel's colour at its edge; the one just picked flashes
     const y = G.rowY(r.n), on = v.flash && v.flash.row === r.id ? v.flash.lit : 0;
     g.fillStyle(0x04101c, 0.8 * v.list); g.fillRoundedRect(G.list.x, y, G.list.w, G.rowH, 5);
     g.fillStyle(col, 0.9 * v.list); g.fillRect(G.list.x, y + 3, 3, G.rowH - 6);
@@ -94,7 +102,7 @@ function campPanelsClick(s, px, py) {
     for (const def of CAMP_PANELS.panels) { if (inR(campPanelsGeometry(def).tab, px, py)) { campPanelToggle(P, def.id, now); return true; } }
   }
   if (!shown) return false;
-  const def = campPanelDef(P.open), G = campPanelsGeometry(def), hit = inR(G.list, px, py) ? def.rows.find(r => py >= G.rowY(r.n) - 1 && py < G.rowY(r.n) + K.list.row + 1) : null;
+  const def = campPanelDef(P.open), G = campPanelsGeometry(def), hit = inR(G.list, px, py) ? campPanelPageRows(def, campPanelPageOf(P, def.id)).find(r => py >= G.rowY(r.n) - 1 && py < G.rowY(r.n) + K.list.row + 1) : null;
   if (hit) { const r = campPanelRun(s.camp, hit, 'click'); if (r && r.say) toast(s, r.say, r.ok ? '#9fe9ff' : '#ffb454'); campPanelPick(P, def.id, hit.id, now); }
   else { P.closed = { id: def.id, at: now, shown: true }; P.open = ''; }
   return true;
