@@ -102,8 +102,8 @@ console.log('B. the real Level 1: the rim run');
   // 1.1 played: the idle cruiser loses the transport; the contact never comes in 1.1 or 1.2
   g.run('window.C = campNew(1, [], { seed: 3, mission: 0 }); __run(400)');
   check('1.1, nobody at the guns: the transport is shot by the pirates on the way and the mission is lost, "convoy"; every hostile it met was a pirate', J('C.result') === 'lost' && J('C.why') === 'convoy' && J('C.ships.every(u => u.team !== "alien" || u.faction === "pirate")'));
-  g.run('window.C = campNew(1, [], { seed: 3, mission: 0 }); __run(12)');
-  check('1.1 begins at Luna with the transport leaving at 4 s for Ceres at 52 px/s (the road takes five minutes: card space-game-l1-rim-tune), and nothing hostile in the sky yet', J('campConvoys(C).length') === 1 && J('campConvoys(C)[0].cname') === 'Transport' && J('campConvoys(C)[0].vmax') === 52 && J('campAliens(C).length') === 0 && J('C.arrivedAt') === 0);
+  g.run('window.C = campNew(1, [], { seed: 3, mission: 0 }); __run(8)');
+  check('1.1 begins at Luna with the transport leaving at 4 s for Ceres at 52 px/s (the road takes five minutes: card space-game-l1-rim-tune), and nothing hostile in the sky yet (the first raid comes at about 12 s: card space-game-scout-route moved it before the fork)', J('campConvoys(C).length') === 1 && J('campConvoys(C)[0].cname') === 'Transport' && J('campConvoys(C)[0].vmax') === 52 && J('campAliens(C).length') === 0 && J('C.arrivedAt') === 0);
   // 1.2
   g.run('window.C = campNew(1, [], { seed: 3, mission: 1 }); __run(2)');
   check('1.2 begins at Ceres with an empty store, three rock fields (20 rocks), two other miners at work, no pirate before 70 s', J('C.ore') === 0 && J('C.rocks.length') === 20 && J('C.ships.filter(u => u.team === "neutral" && u.kind === "miner").length') === 2 && J('campAliens(C).length') === 0 && J('C.L.waves[0].at') === 70);

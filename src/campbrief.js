@@ -99,7 +99,8 @@ const CAMPBRIEF_ORDER = ['skiff', 'cutter', 'brute', 'raider', 'drone', 'gunship
 function campBriefEnemies(level, i) {
   const L = campMissionRow(level, i), n = {}; if (!L) return { list: [], line: '' };
   let unknown = false; // a wave row with `secret: true` (1.3's first contact) is not listed: the briefing does not tell what the surprise is (card space-game-night-hunt-l1-rim)
-  (L.waves || []).forEach(w => { if (w.secret) { unknown = true; return; } Object.keys(w.ships || {}).forEach(k => { n[k] = (n[k] || 0) + w.ships[k]; }); if (w.mother) n.mother = (n.mother || 0) + 1; });
+  const lane0 = L.route && L.route.lanes && L.route.lanes.length ? (L.route.pick || L.route.lanes[0].id) : null; // a fork in the road: the briefing counts what the lane she takes unless told meets (the default), not both lanes' raids (card space-game-scout-route)
+  (L.waves || []).forEach(w => { if (w.lane && lane0 && w.lane !== lane0) return; if (w.secret) { unknown = true; return; } Object.keys(w.ships || {}).forEach(k => { n[k] = (n[k] || 0) + w.ships[k]; }); if (w.mother) n.mother = (n.mother || 0) + 1; });
   if ((L.guards || []).length) n.guard = (n.guard || 0) + L.guards.length;
   (L.towers || []).forEach(t => { n.tower = (n.tower || 0) + (t.n || 1); });
   const list = CAMPBRIEF_ORDER.concat(Object.keys(n).filter(k => CAMPBRIEF_ORDER.indexOf(k) < 0)).filter(k => n[k] > 0).map(k => ({ kind: k, n: n[k], text: uiText('camp.bf.enemy.' + k + (n[k] === 1 ? '.one' : '.many'), { n: n[k] }) }));
