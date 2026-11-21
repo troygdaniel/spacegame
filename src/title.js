@@ -4,10 +4,31 @@ const TITLE_CHOICES = [
   { key: 'title.long.key', name: 'title.long.name', sub: 'title.long.sub', color: AMBER, css: '#ffb454', go: 'longhaul' },
   { key: 'title.camp.key', name: 'title.camp.name', sub: 'title.camp.sub', color: CYAN, css: '#38e1ff', go: 'campaign' }
 ];
+// the keys of the title (card space-game-title-any-key; Troy, 21 Nov 2026: pretty much any key started Long Haul, Alt+Tab did it). A mode starts only on a choice: its own key (Long Haul keeps ENTER, the Campaign keeps K),
+// or the arrows to move the highlight between the two and Enter to do the highlighted one (Long Haul is lit at first, so a plain Enter is Long Haul as it always was), or a click on its panel. A modifier key does nothing, a key held
+// with Alt, Ctrl, Meta or Shift does nothing (Cmd+K, Ctrl+S, Alt+Enter), and nothing is taken in the first TITLE_KEYS.grace ms after the window gets focus back (the end of an Alt+Tab is not a choice).
+const TITLE_KEYS = { grace: 600, enter: ['Enter', 'NumpadEnter'], prev: ['ArrowUp', 'ArrowLeft'], next: ['ArrowDown', 'ArrowRight'], other: { KeyH: 'help', KeyV: 'voice', KeyC: 'chat', KeyS: 'settings', KeyO: 'mods', KeyK: 'campaign' } };
+// PURE. S: { sel: the highlighted choice (an index of TITLE_CHOICES), focusAt: ms the window last got focus back }; e: a keydown { code, repeat, altKey, ctrlKey, metaKey, shiftKey }; now: ms.
+// -> { act, sel }: act is 'long', 'campaign', 'help', 'voice', 'chat', 'settings', 'mods' (what the key does), 'move' (the highlight goes to sel) or '' (nothing: every other key, M too, which the sound keeps)
+function titleKeyAct(S, e, now) {
+  const none = { act: '', sel: S.sel };
+  if (!e || e.repeat || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return none;
+  if (now - (S.focusAt == null ? -1e9 : S.focusAt) < TITLE_KEYS.grace) return none;
+  if (TITLE_KEYS.enter.indexOf(e.code) >= 0) return { act: TITLE_CHOICES[S.sel].go === 'campaign' ? 'campaign' : 'long', sel: S.sel };
+  const n = TITLE_CHOICES.length, step = TITLE_KEYS.prev.indexOf(e.code) >= 0 ? -1 : TITLE_KEYS.next.indexOf(e.code) >= 0 ? 1 : 0;
+  if (step) return { act: 'move', sel: (S.sel + step + n) % n };
+  const act = Object.prototype.hasOwnProperty.call(TITLE_KEYS.other, e.code) ? TITLE_KEYS.other[e.code] : '';
+  return act ? { act, sel: S.sel } : none;
+}
 class Title extends Phaser.Scene {
   constructor() { super('Title'); }
   create() {
-    this.leaving = false; this.born = performance.now();
+    this.leaving = false; this.born = performance.now(); this.sel = 0; this.focusAt = -1e9;
+    if (typeof window !== 'undefined' && window.addEventListener && typeof document !== 'undefined') { // the window got its focus back: the keys of the next moments are the way back's (Alt+Tab), not a choice
+      const back = () => { this.focusAt = performance.now(); }, vis = () => { if (!document.hidden) back(); };
+      window.addEventListener('focus', back); document.addEventListener('visibilitychange', vis);
+      if (this.events && this.events.once) this.events.once('shutdown', () => { window.removeEventListener('focus', back); document.removeEventListener('visibilitychange', vis); });
+    }
     this.cameras.main.fadeIn(700, 0, 0, 0);
     this.s1 = this.add.tileSprite(0, 0, W, H, 'stars1').setOrigin(0);
     this.s2 = this.add.tileSprite(0, 0, W, H, 'stars2').setOrigin(0);
@@ -41,8 +62,8 @@ class Title extends Phaser.Scene {
     this.add.rectangle(W / 2 + 320, 332, 22, 2, AMBER, 1).setOrigin(1, 0.5);
     this.add.text(W / 2, 273, 'L O N G   H A U L', mono(70, '#38e1ff')).setOrigin(0.5).setPadding(40, 30, 40, 30).setShadow(0, 0, '#38e1ff', 22, false, true); // padding gives the glow room
     this.add.text(W / 2, 372, 'HALCYON STATION   >   KEPLER-4B', mono(18, '#ffb454')).setOrigin(0.5).setPadding(16, 12, 16, 12).setShadow(0, 0, '#ffb454', 8, false, true);
-    this.modeChoices(); // two choices, each a key and a click: Long Haul (Enter, or any key) and the Campaign (K)
-    this.add.text(W / 2, H - 34, 'W A S D move    E use    Esc pause    M mute    S settings    (V ship voice, C NPC chat, O mods: optional)    K Campaign', mono(14, '#5b7a92')).setOrigin(0.5);
+    this.modeChoices(); // two choices, each a key and a click: Long Haul (Enter) and the Campaign (K); the arrows move the highlight, Enter does it
+    this.add.text(W / 2, H - 34, 'W A S D move    E use    Esc pause    M mute    S settings    (V ship voice, C NPC chat, O mods: optional)    Up Down choose    K Campaign', mono(14, '#5b7a92')).setOrigin(0.5);
     this.settingsChip();
 
     const start = () => this.startLongHaul();
@@ -52,10 +73,16 @@ class Title extends Phaser.Scene {
       if (plan && plan.say) toast(this, plan.say, '#ffd37a');
     }
     this.contentUi = contentTitleUi(this); // src/contentui.js: the content problems chip, its panel and the MODDED tag (nothing when all is well)
-    this.input.keyboard.on('keydown', e => { if (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) { campKeysKey(this, e.code); return; } if (e.repeat || this.contentUi.handleKey(e)) return; if (e.code === 'KeyH' && typeof campKeysToggle === 'function') campKeysToggle(this); else if (e.code === 'KeyV') voiceOpenSetup(this); else if (e.code === 'KeyC') chatOpenSetup(this); else if (e.code === 'KeyS') settingsOpen(this, 'sound'); else if (e.code === 'KeyO') modsOpenSetup(this); else if (e.code === 'KeyK') campaignStart(this); else if (e.code !== 'KeyM') start(); }); // K opens the Campaign (src/campaignscene.js) // P opens Settings at Content and while Settings is open the title is paused, so nothing starts the game; M still mutes; S, V and C open Settings (src/settings.js) at Sound, the Deepgram key and the chat keys; O opens the Mods screen (src/mods.js)
-    this.input.on('pointerdown', (p, over) => { if (over && over.length) return; start(); }); // a click on the chip, the tag or the panel is theirs, not "press any key"
+    this.input.keyboard.on('keydown', e => {
+      if (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) { campKeysKey(this, e.code); return; }
+      if (e.repeat || this.contentUi.handleKey(e)) return;
+      const r = titleKeyAct({ sel: this.sel, focusAt: this.focusAt }, e, performance.now()); // only a choice does anything (above): not any key, not a modifier, not a key held with one
+      if (r.act === 'move') this.pickChoice(r.sel); else if (r.act === 'long') start(); else if (r.act === 'campaign') campaignStart(this);
+      else if (r.act === 'help') { if (typeof campKeysToggle === 'function') campKeysToggle(this); } else if (r.act === 'voice') voiceOpenSetup(this); else if (r.act === 'chat') chatOpenSetup(this); else if (r.act === 'settings') settingsOpen(this, 'sound'); else if (r.act === 'mods') modsOpenSetup(this);
+    }); // K opens the Campaign (src/campaignscene.js); while Settings is open the title is paused, so nothing starts the game; M still mutes (the sound's own key); S, V and C open Settings (src/settings.js) at Sound, the Deepgram key and the chat keys; O opens the Mods screen (src/mods.js)
+    // (no click on the empty sky starts anything now: a click on a panel is that panel's, a click on the chip or the tag is theirs: card space-game-title-any-key)
   }
-  startLongHaul() { // Enter, any other key, a click, or the Long Haul choice: the regular game, from the station
+  startLongHaul() { // Enter on the Long Haul choice, or a click on its panel: the regular game, from the station
     if (this.leaving || performance.now() - this.born < 500) return;
     beep(520, 0.12, 'triangle', 0.05, 300); beep(780, 0.2, 'triangle', 0.04, 200);
     go(this, 'Station', { arrive: false });
@@ -64,8 +91,10 @@ class Title extends Phaser.Scene {
   // The words are in content/text/title.md; where they go is TITLE_CHOICES (the key shown, the colour, the left edge of the panel, what it does).
   modeChoices() {
     const w = 380, h = 100, y = 462, mono = c => ({ fontFamily: 'monospace', fontSize: '28px', color: c, fontStyle: 'bold' });
+    this.choiceBox = []; this.pick = this.add.graphics().setDepth(24); // the highlight: a thin frame round the choice Enter would do (the arrows move it)
     TITLE_CHOICES.forEach((c, i) => {
       const left = W / 2 + (i === 0 ? -w - 18 : 18), g = this.add.graphics(), cap = keyCap(this, uiText(c.key), c.color);
+      this.choiceBox.push({ left, y, w, h, color: c.color });
       hudPanel(g, left, y, w, h, 10, 0.88, c.color); g.setAlpha(0.85).setDepth(20);
       cap.setPosition(left + 18 + cap.kw / 2, y + 22).setDepth(21);
       this.add.text(left + 18 + cap.kw + 12, y + 22, uiText(c.name), mono(c.css)).setOrigin(0, 0.5).setDepth(21);
@@ -78,6 +107,11 @@ class Title extends Phaser.Scene {
       }
       zone.on('pointerover', () => g.setAlpha(1)); zone.on('pointerout', () => g.setAlpha(0.85));
     });
+    this.pickChoice(this.sel || 0);
+  }
+  pickChoice(i) { // the highlight goes to choice i
+    this.sel = i; const b = this.choiceBox && this.choiceBox[i]; if (!b || !this.pick) return;
+    this.pick.clear(); this.pick.lineStyle(2, b.color, 0.95); this.pick.strokeRoundedRect(b.left - 5, b.y - 5, b.w + 10, b.h + 10, 13);
   }
   // a small glass chip at the top right: [S] SETTINGS. A click opens Settings; it is not "press any key"
   settingsChip() {
