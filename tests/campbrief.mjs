@@ -136,6 +136,13 @@ check('+ and - zoom the map in and out as the Tab map\'s keys do (a press is the
   g.run(`__key(Z, 'Digit0');`); const e = z() === 1 && J('JSON.stringify(Z.bf.fit) === JSON.stringify(Z.bf.base)'); g.run(`__key(Z, 'Equal'); __key(Z, 'Equal'); __key(Z, 'Numpad0');`); const f = z() === 1;
   return a && Math.hypot(p0[0] - p1[0], p0[1] - p1[1]) < 2 && b && c && d && e && f && n0 > 0;
 })(), JSON.stringify(zoomText()));
+check('the glass holds the map: zoomed in until the start is off it, the label YOU is not made (it hung under the panel, with the route\'s dashes over the keys line: card space-game-night-hunt-l2-l3), and the mission\'s own label and the zoom read are still there; 0 brings YOU back; the points of the mission (the pods, the place) stay inside it', (() => {
+  const onGlass = () => J('(() => { const b = Z.bf, F = CAMPBRIEF.frame, q = campMapPoint(b.fit, F, b.Y.start.x, b.Y.start.y); return q.x >= F.x && q.x <= F.x + F.w && q.y >= F.y && q.y <= F.y + F.h; })()');
+  g.run(`__key(Z, 'Digit0');`); const a0 = onGlass() && shown('Z').includes('YOU');
+  g.run(`for (let k = 0; k < 40; k++) __key(Z, 'Equal');`); const off = !onGlass() && !shown('Z').includes('YOU') && shown('Z').some(t => /^MISSION /.test(t)) && zoomText()[0] === 'ZOOM 800%   + - zoom   0 reset';
+  g.run(`__key(Z, 'Digit0');`); const back = shown('Z').includes('YOU');
+  return a0 && off && back;
+})(), JSON.stringify(shown('Z').filter(t => /YOU|MISSION|ZOOM/.test(t))));
 check('a held + repeats at the smaller step (the Tab map\'s own) and a held Enter does nothing; the mouse wheel zooms the map while the first screen is up (up is in), and is the map\'s only there; the wheel listener is taken away when the briefing closes', (() => {
   g.run(`Z.onKey({ code: 'Equal', repeat: true });`); const a = Math.abs(J('Z.bf.z') - J('camzoomKey(1, 1, true, 0.5, 8)')) < 1e-9; g.run(`Z.onKey({ code: 'Enter', repeat: true });`); const b = J('Z.bf.screen') === 0; g.run(`__key(Z, 'Digit0'); __wh(null, [], 0, -100);`); const c = J('Z.bf.z') > 1 && Math.abs(J('Z.bf.z') - J('camzoomWheel(1, -100, 0.5, 8)')) < 1e-9; g.run(`__wh(null, [], 0, 100); __wh(null, [], 0, 100);`); const d = J('Z.bf.z') < 1;
   g.run(`__key(Z, 'Digit0'); __key(Z, 'Enter'); var zw = Z.bf.z; __wh(null, [], 0, -100); __key(Z, 'Equal');`); const e = J('Z.bf.z') === J('zw') && J('Z.bf.screen') === 1; const had = J('typeof __wh') === 'function'; g.run(`__key(Z, 'Escape');`);

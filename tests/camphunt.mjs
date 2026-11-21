@@ -50,4 +50,19 @@ check('the card of a mission shown before a retry\'s flight reads MISSION 2: The
 check('mission 2.2\'s second wave has a line of its own ("A third group, from the other side."), not the first one\'s again; both resolve to words',
   J('(() => { const w = campMissionRow(2, 1).waves; return [w.length, w[0].say !== w[1].say, uiText(w[0].say), uiText(w[1].say)]; })()').join('|') === '2|true|A second group, coming in from the far side.|A third group, from the other side.');
 
+// ---- 6. a convoy with a name of its own (the rim run's Transport and Haulers) arrives and is lost as a ship ----
+// "The convoy has reached Transport." and "The convoy to Hauler 2 is lost." read as if Transport and Hauler 2 were places (the lines name the place a convoy flies to: Mars). The rim's convoys are ships:
+// "Transport has arrived." and "Hauler 2 is lost." A convoy with no name of its own keeps the old lines.
+g.run(`window.__cv = (level, mission) => { const C = campNew(level, [], { seed: 1, mission }); for (let i = 0; i < 30 * 70 && !C.ships.some(u => u.kind === 'freighter'); i++) campStep(C, 1 / 30); return C; }; window.__says = C => C.events.filter(e => e.type === 'say').map(e => uiText(e.key, e.vars));`);
+check('the transport of the rim run is a named convoy: its arrival reads "Transport has arrived." (not "The convoy has reached Transport.")',
+  (g.run(`window.C6 = __cv(1, 0); window.F6 = C6.ships.find(u => u.kind === 'freighter'); C6.events.length = 0; F6.x = F6.dest.x; F6.y = F6.dest.y; campStep(C6, 1 / 30);`), J('F6.named === true && F6.cname === "Transport" && __says(C6).includes("Transport has arrived.") && !__says(C6).some(t => /convoy has reached/.test(t))')), J('__says(C6)'));
+check('and its loss reads "Transport is lost." (not "The convoy to Transport is lost."); the lost mission is the debrief\'s business, as before',
+  (g.run(`window.C7 = __cv(1, 0); window.F7 = C7.ships.find(u => u.kind === 'freighter'); C7.events.length = 0; campHurt(C7, F7, 99999, 'skiff-1');`), J('__says(C7).includes("Transport is lost.") && !__says(C7).some(t => /convoy to/.test(t))')), J('__says(C7)'));
+check('the haulers of 1.3 the same: "Hauler 1 has arrived."', (g.run(`window.C8 = __cv(1, 2); window.F8 = C8.ships.find(u => u.kind === 'freighter'); C8.events.length = 0; F8.x = F8.dest.x; F8.y = F8.dest.y; campStep(C8, 1 / 30);`), J('F8.cname === "Hauler 1" && __says(C8).includes("Hauler 1 has arrived.")')), J('__says(C8)'));
+check('a convoy with no name of its own (the Mars convoy of the Earth defence level, `home`, kept as data) keeps the lines of the place: "The convoy has reached Mars." and "The convoy to Mars is lost."',
+  (g.run(`window.C9 = __cv('home'); window.F9 = C9.ships.find(u => u.kind === 'freighter'); C9.events.length = 0; F9.x = F9.dest.x; F9.y = F9.dest.y; campStep(C9, 1 / 30); window.S9 = __says(C9); window.C10 = __cv('home'); window.F10 = C10.ships.find(u => u.kind === 'freighter'); C10.events.length = 0; campHurt(C10, F10, 99999, 'raider-1');`),
+    J('F9.named === false && S9.includes("The convoy has reached " + F9.cname + ".") && __says(C10).includes("The convoy to " + F10.cname + " is lost.")')), J('[S9, __says(C10)]'));
+check('the radio calls the arrival like the old one ("Convoy is through."), the voice pack lists the new lines for the named convoys only (and the old ones for the places), 0 unclassified',
+  J(`(() => { const E = VOICEPACK_EXPAND; const named = E['camp.say.arrived']().map(x => x.name), lost = E['camp.say.shiplost']().map(x => x.name), placed = E['camp.say.delivered']().map(x => x.name); return named.includes('Transport') && named.includes('Hauler 1') && named.length === 4 && lost.length === 4 && !placed.includes('Transport') && !placed.includes('Hauler 1') && CHATTER.says['camp.say.arrived'] === 'convoy'; })()`));
+
 process.exit(failed ? 1 : (console.log('\nHUNT FIXES PASS'), 0));
