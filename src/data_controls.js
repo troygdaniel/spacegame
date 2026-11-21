@@ -169,7 +169,9 @@ const CONTROLS = [
     { k: ['M'], t: 'Briefing map: area, system, route', sub: 'THE BRIEFING' }
   ] },
   { id: 'title', title: 'TITLE', scene: null, rows: [
-    { k: ['Any key'], t: 'Start the game' },
+    { k: ['Enter'], t: 'Start Long Haul (or the choice the arrows picked)' },
+    { k: ['Up', 'Down'], t: 'Pick Long Haul or the Campaign (Left, Right too)' },
+    { k: ['K'], t: 'Open the Campaign' },
     { k: ['S'], t: 'Open Settings' },
     { k: ['V'], t: 'Ship voice key (Settings, Keys)' },
     { k: ['C'], t: 'NPC chat key (Settings, Keys)' },
