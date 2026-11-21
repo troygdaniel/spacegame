@@ -172,7 +172,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.ui.mother | MOTHERSHIP |
 | camp.ui.missiles | F  MISSILES  {n} |
 | camp.ui.missilenext | next in {s} s |
-| camp.ui.pausehelp | Hold Space: the turrets fire at ships close by. F fires a homing missile at the mothership or the nearest big ship. |
+| camp.ui.pausehelp | Hold Space: the turrets fire at ships close by. F fires a homing missile at the nearest big ship. |
 | camp.tech.shield.name | Shield grid |
 | camp.tech.shield.text | The carrier takes 40 percent less damage. |
 | camp.tech.beam.name | Beam turrets |
