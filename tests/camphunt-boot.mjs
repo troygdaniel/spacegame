@@ -1,7 +1,9 @@
 // not in the smoke: one mission of the Campaign flown by hand as a player, in the real game (one Chrome, muted, through the test lock; card space-game-night-hunt-l2-l3)
 // It boots the game with a save that stands at the mission, opens the ready room with K, reads the briefing (three screens), launches, and flies with the keys a player uses
 // (the panels Q E C, the map on Tab, the pace on P, W A D and Space held), then lets the autopilot carry the rest and writes down what the game says: the HUD line, the goal, the toasts.
-//   node tests/camphunt-boot.mjs --level 2 --mission 1 [--secs 90] [--fight | --quickwin | --lose | --dock | --retreat]      the mission number is the one on the board (1 to 3)
+//   node tests/camphunt-boot.mjs --level 2 --mission 1 [--secs 90] [--fight | --quickwin | --lose | --dock | --retreat | --panels | --replay]      the mission number is the one on the board (1 to 3)
+// --replay: the mission before the next one is picked in the ready room as a REPLAY (A, then R), briefed, flown (use --quickwin with it) and its debrief and the saved progress are read: the progress must not move
+// --panels: every row of the FLEET, SHIP and SYSTEMS panels pressed once in the flight, the stance page, the missile, the map's whole-system view: what each one says (the toasts are written down at the end)
 // --retreat: the wing is gone and the hull is at 30 percent: the HUD says where to retreat, E then Shift+5 burns there, E then 6 docks, the dock mends the hull (ore), Esc and the flight goes on
 // --dock: after the burn, E then 6 at the outpost of the mission (the ready room opens over the paused battle: its rows and words), then Esc and the flight goes on
 // --lose: the cruiser is destroyed after the burn, with the wing out: the lost card, Enter (the mission again, from its brief), the pause card on Esc and its keys page on H, R from the pause
@@ -16,7 +18,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.HUNT_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i < 0 ? d : process.argv[i + 1]; };
-const LEVEL = Number(arg('level', 2)), MISSION = Number(arg('mission', 1)), SECS = Number(arg('secs', 90)), FIGHT = process.argv.includes('--fight'), QUICK = process.argv.includes('--quickwin'), LOSE = process.argv.includes('--lose'), DOCK = process.argv.includes('--dock'), RETREAT = process.argv.includes('--retreat');
+const LEVEL = Number(arg('level', 2)), MISSION = Number(arg('mission', 1)), SECS = Number(arg('secs', 90)), FIGHT = process.argv.includes('--fight'), QUICK = process.argv.includes('--quickwin'), LOSE = process.argv.includes('--lose'), DOCK = process.argv.includes('--dock'), RETREAT = process.argv.includes('--retreat'), PANELS = process.argv.includes('--panels'), REPLAY = process.argv.includes('--replay');
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const note = s => console.log('  note ' + s);
@@ -43,7 +45,8 @@ try {
   await key('KeyK');
   check('K on the title opens the ready room', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`));
   await t.run(900); note('board: ' + (await shown()).join(' | ').slice(0, 600)); await snap('1-board');
-  await key('Enter'); await t.run(700);
+  if (REPLAY) { await key('KeyA'); await key('KeyR'); } else await key('Enter');
+  await t.run(700);
   for (let s = 0; s < 3; s++) {
     const b = await shown(); note('briefing screen ' + (s + 1) + ': ' + b.join(' | ').slice(0, 900)); await snap('2-brief-' + (s + 1));
     if (s < 2) { await key('Enter'); await t.run(500); }
@@ -72,6 +75,18 @@ try {
   note('after E, Shift+5: nav ' + await j(`JSON.stringify(${S}.camp.nav || null)`).then(v => String(v).slice(0, 160)) + ' state ' + JSON.stringify(await state()));
   await t.run(9000); const st1 = await state(); note('9 s later: ' + JSON.stringify(st1)); await snap('9-arrived'); note('HUD: ' + (await hud()).join(' | ').slice(0, 700));
 
+  if (PANELS) {
+    let mark = 0; const say = async what => { await t.run(300); const all = await j('window.__toasts'); note(what + ' -> ' + (all.slice(mark).join(' || ') || '(no toast)')); mark = all.length; };
+    for (const [k, d, what] of [['KeyQ', 'Digit1', 'Q 1 launch'], ['KeyQ', 'Digit2', 'Q 2 attack'], ['KeyQ', 'Digit3', 'Q 3 escort (no convoy here)'], ['KeyQ', 'Digit4', 'Q 4 guard'], ['KeyQ', 'Digit5', 'Q 5 recall'],
+      ['KeyE', 'Digit1', 'E 1 mine'], ['KeyE', 'Digit2', 'E 2 recharge shields'], ['KeyE', 'Digit3', 'E 3 build a fighter (not docked)'], ['KeyE', 'Digit4', 'E 4 build an escort'], ['KeyE', 'Digit6', 'E 6 dock (away from it)'],
+      ['KeyC', 'Digit1', 'C 1 weapons pip'], ['KeyC', 'Digit2', 'C 2 shields pip'], ['KeyC', 'Digit3', 'C 3 engines pip'], ['KeyC', 'Digit5', 'C 5 emergency shields'], ['KeyC', 'Digit4', 'C 4 balance']]) {
+      mark = await j('window.__toasts.length'); await key(k); await key(d); await say(what); await t.run(1200);
+    }
+    mark = await j('window.__toasts.length'); await key('KeyQ'); await key('ArrowRight'); await t.run(400); await snap('11-stances'); await key('Digit2'); await say('Q, Right, 2 (stance orbit)'); await t.run(600);
+    mark = await j('window.__toasts.length'); await key('KeyF'); await say('F missile (nothing big in reach)'); 
+    await key('Tab'); await t.run(400); await key('KeyZ'); await t.run(600); await snap('12-map-whole'); await key('KeyZ'); await t.run(300); await key('Equal'); await key('Equal'); await t.run(400); await snap('13-map-zoom'); await key('Digit0'); await key('Tab'); await t.run(300);
+    note('mode after the map: ' + await j(`${S}.mode`));
+  }
   if (RETREAT) {
     await t.ev(`(() => { const C = ${S}.camp; C.ships.filter(u => u.team === 'earth' && u.kind !== 'carrier').forEach(u => { u.hp = 0; }); C.bay.fighters = 0; C.bay.escorts = 0; C.carrier.hp = Math.round(C.carrier.maxHp * 0.3); return 1; })()`); await t.run(900);
     note('HUD at 30 percent, no wing: ' + (await hud()).filter(x => /^(post|obj|arrow|bay|hull)=/.test(x)).join(' | ')); await snap('11-low');
@@ -112,7 +127,7 @@ try {
     await settle(`${S}.mode === 'debrief'`, 60); note('debrief: ' + await card()); await snap('11-debrief');
     for (let i = 0; i < 8 && (await j(`game.scene.isActive('Campaign')`)); i++) {
       const m = await j(`${S}.mode`); note('Enter on mode ' + m + ' (' + (await card()).slice(0, 300) + ')'); await snap('12-card-' + i);
-      if (m === 'pick' || m === 'refit') await key('Digit1'); else await key('Enter');
+      if (m === 'pick') await key('Digit1'); else if (m === 'refit') { await key('Digit1'); await t.run(300); await key('Enter'); } else await key('Enter'); // the refit: the tech is marked with its digit, Enter takes it
       await t.run(1200);
     }
     const sv = await j(`JSON.parse(localStorage.getItem('longhaul.campaign'))`); note('save: ' + JSON.stringify({ level: sv.level, mission: sv.mission, techs: sv.techs, ore: sv.ore, bonus: sv.bonus, revealed: sv.revealed, results: Object.keys(sv.results || {}).join() }));

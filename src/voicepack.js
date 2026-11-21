@@ -75,9 +75,10 @@ const vpText = k => String(UI_TEXT[k]);
 function vpOutposts() { const names = [], places = []; if (typeof campOutposts === 'function' && typeof CAMP === 'object') Object.keys(CAMP.levels).forEach(lv => campOutposts(lv).forEach(o => { if (names.indexOf(o.name) < 0) names.push(o.name); if (places.indexOf(o.place) < 0) places.push(o.place); })); return { names, places }; }
 function vpWarps() { const out = []; if (typeof CAMP === 'object') Object.keys(CAMP.levels).forEach(lv => { const w = CAMP.levels[lv].warp; if (w && w.dest) out.push({ dest: w.dest || '', ly: w.ly || '' }); }); return out; }
 // the convoys' names (a level's own and its missions': the haulers, Mars, Eros ...), the most caches of a level, and the scan points of each mission: what the sim says in the words of camp.say.convoy, .cache, .scanned
-function vpConvoyNames() {
+// which: 'named' = the convoys with a name of their own (Transport, Hauler 1: the lines "Transport has arrived" and "Transport is lost"), 'placed' = the others, named for the place they fly to (Mars: "The convoy has reached Mars"); none = both and the destinations (the escort lines)
+function vpConvoyNames(which) {
   const out = []; if (typeof CAMP !== 'object') return out;
-  const add = (L, cv) => { const pl = (L.places || CAMP.places || {}), n = cv.name || (pl[cv.to] && pl[cv.to].name); if (n && out.indexOf(String(n)) < 0) out.push(String(n)); const d = pl[cv.to] && pl[cv.to].name; if (d && out.indexOf(String(d)) < 0) out.push(String(d)); };
+  const add = (L, cv) => { if (which === 'named' && !cv.name) return; if (which === 'placed' && cv.name) return; const pl = (L.places || CAMP.places || {}), n = cv.name || (pl[cv.to] && pl[cv.to].name); if (n && out.indexOf(String(n)) < 0) out.push(String(n)); const d = !which && pl[cv.to] && pl[cv.to].name; if (d && out.indexOf(String(d)) < 0) out.push(String(d)); };
   Object.keys(CAMP.levels).forEach(lv => { const L = CAMP.levels[lv]; (L.convoys || []).forEach(cv => add(L, cv)); (L.missions || []).forEach(m => (m.convoys || []).forEach(cv => add(L, cv))); });
   return out;
 }
@@ -91,7 +92,8 @@ const VOICEPACK_EXPAND = {
   'camp.no.hotdock': () => vpOutposts().names.map(name => ({ name })),
   'camp.say.build': () => ['fighter', 'escort'].reduce((acc, k) => acc.concat(vpRange(1, (typeof CAMP === 'object' ? CAMP.build.most : 5)).map(n => ({ n, kind: n === 1 ? k : k + 's' }))), []), // "Building 3 fighters."
   'camp.say.built': () => ['fighter', 'escort'].map(kind => ({ kind })),
-  'camp.say.convoy': () => vpConvoyNames().map(name => ({ name })), 'camp.say.convoylost': () => vpConvoyNames().map(name => ({ name })), 'camp.say.delivered': () => vpConvoyNames().map(name => ({ name })),
+  'camp.say.convoy': () => vpConvoyNames('placed').map(name => ({ name })), 'camp.say.convoylost': () => vpConvoyNames('placed').map(name => ({ name })), 'camp.say.delivered': () => vpConvoyNames('placed').map(name => ({ name })),
+  'camp.say.arrived': () => vpConvoyNames('named').map(name => ({ name })), 'camp.say.shiplost': () => vpConvoyNames('named').map(name => ({ name })),
   'camp.say.escort': () => vpConvoyNames().map(name => ({ name })), 'camp.say.hauler': () => vpConvoyNames().map(name => ({ name })),
   'camp.say.cache': () => vpRange(1, vpCaches()).map(n => ({ n })),
   'camp.say.scanned': () => vpScans(),

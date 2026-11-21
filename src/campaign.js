@@ -695,7 +695,7 @@ function campKill(C, u) {
     else if (u.kind === 'tower' && (C.L.win === 'towers' || C.L.objectives) && !C.ships.some(s => s.kind === 'tower' && s.hp > 0)) campWin(C, 'towers'); // the last tower of the level
   }
   else if (u.kind === 'carrier') campEnd(C, 'lost', 'carrier');
-  else if (u.kind === 'freighter') { C.lost++; campSay(C, 'camp.say.convoylost', { name: campConvoyName(u) }); }
+  else if (u.kind === 'freighter') { C.lost++; campSay(C, u.named ? 'camp.say.shiplost' : 'camp.say.convoylost', { name: campConvoyName(u) }); }
   else if (u.team === 'neutral') campNeutralLost(C, u); // a patrol or a miner: not one of your ships (src/camppirates.js)
   else { C.lostShips++; }
 }
@@ -921,7 +921,7 @@ function campSchedule(C) {
     C.convoys[i].started = true;
     const pl = campPlaces(C.level), to = pl[cv.to], from = cv.from ? pl[cv.from] : null;
     const a = from ? Math.atan2(to.y - from.y, to.x - from.x) : Math.atan2(to.y, to.x), sx = from ? from.x + Math.cos(a) * ((from.r || 60) + 50) : Math.cos(a) * (C.earth.r + 50), sy = from ? from.y + Math.sin(a) * ((from.r || 60) + 50) : Math.sin(a) * (C.earth.r + 50);
-    const f = campSpawn(C, 'freighter', sx, sy); f.id = 'freighter-' + cv.id; C.by[f.id] = f; f.dest = { x: to.x, y: to.y }; f.rot = a; f.cname = cv.name || to.name;
+    const f = campSpawn(C, 'freighter', sx, sy); f.id = 'freighter-' + cv.id; C.by[f.id] = f; f.dest = { x: to.x, y: to.y }; f.rot = a; f.cname = cv.name || to.name; f.named = !!cv.name; // a convoy with a name of its own (Transport, Hauler 1) is a ship: its arrival and its loss read "Transport has arrived", not "The convoy has reached Transport" (the old lines name the place it flies to: Mars)
     f.cid = cv.id; f.from = { x: sx, y: sy }; f.lane = Math.hypot(to.x - sx, to.y - sy); if (cv.speed) f.vmax = cv.speed; // its own way: where it began and how long the road is (a wave can come by how far it has flown: on { lane }), and its own speed (a row's `speed`, else the table's)
     campSay(C, cv.say || 'camp.say.convoy', { name: f.cname });
   });
@@ -1216,7 +1216,7 @@ function campAI(C, u, dt) {
 function campConvoyAI(C, u, dt) {
   const d = campDist(u, u.dest), ang = Math.atan2(u.dest.y - u.y, u.dest.x - u.x);
   if (u.cid != null && u.lane > 0) C.lane[u.cid] = Math.max(C.lane[u.cid] || 0, Math.max(0, Math.min(1, 1 - (d - 90) / u.lane))); // how much of its road it has flown (the best it has done: the arrival removes the ship, the share stays)
-  if (d < 90) { if (u.cid != null) C.lane[u.cid] = 1; C.delivered++; u.hp = 0; u.arrived = true; C.events.push({ type: 'arrive', x: u.x, y: u.y, id: u.id }); campSay(C, 'camp.say.delivered', { name: campConvoyName(u) }); return; }
+  if (d < 90) { if (u.cid != null) C.lane[u.cid] = 1; C.delivered++; u.hp = 0; u.arrived = true; C.events.push({ type: 'arrive', x: u.x, y: u.y, id: u.id }); campSay(C, u.named ? 'camp.say.arrived' : 'camp.say.delivered', { name: campConvoyName(u) }); return; }
   u.rot = ang; u.vx = Math.cos(ang) * u.vmax; u.vy = Math.sin(ang) * u.vmax; u.x += u.vx * dt; u.y += u.vy * dt;
 }
 
