@@ -10,7 +10,7 @@ The words of replaying a mission (card space-game-campaign-replay): the ready ro
 | camp.hub.replay.none | Nothing to replay yet: finish a mission first. |
 | camp.hub.replay.cleared | Back to the next mission. |
 | camp.hub.replay.mark | (replay) |
-| camp.hub.replay.keys | A D choose   R replay it   X back to the next mission |
+| camp.hub.replay.keys | A D choose   Enter or R open the briefing   X back to the next mission |
 | camp.hub.note.replay | replay {n} |
 | camp.hub.replay.head | REPLAY  -  MISSION {n} OF {of}  -  {title} |
 | camp.hub.replay.rule1 | Standard start, with your wing, rank and techs. |

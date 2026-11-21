@@ -173,7 +173,7 @@ function installMeta(game) {
   window.addEventListener('keydown', e => {
     if (e.repeat) return;
     if (e.code === 'Escape') openPause(game);
-    else if (e.code === 'KeyM') toggleMute(game);
+    else if (e.code === 'KeyM' && !(typeof campBriefHoldsM === 'function' && campBriefHoldsM(game))) toggleMute(game); // (the big briefing in the ready room takes M for its map zoom, src/campbriefdraw.js)
   });
   setInterval(() => saveGame(), 1000); // credits, hull, mission or volume changed: save within a second
   window.addEventListener('pagehide', () => saveGame());
