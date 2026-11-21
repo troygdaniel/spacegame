@@ -5,7 +5,7 @@ Thanks for looking. Small, readable changes are the easiest to merge.
 ## Ground rules
 
 - **No build step to play.** `index.html` loads plain scripts; there is no bundler and no `npm install` for the game. Node is only for the tests (and, later, content tools).
-- **Small files, one job each.** A new file gets its own `<script>` tag in `index.html` and a row in the code map in `README.md`.
+- **Small files, one job each.** A new file gets its own `<script>` tag in `index.html` and, if it is a Campaign file, a row in the feature table of `ARCHITECTURE.md` (a Long Haul file: the code map in `README.md`).
 - **Everything is drawn or synthesized in code.** No image or audio files, no new libraries, no network requests.
 - **Markdown carries words and numbers, code carries behaviour.** This is the content rule in [`docs/MODDING.md`](docs/MODDING.md) (section 1): a mission's title, reward and lines can be data; what a mission *does* is code.
 - **Never change two of these in one change:** the save format, a coordinate frame, the scene flow ([`docs/UNIVERSE.md`](docs/UNIVERSE.md) section 10.1 has the reasons).

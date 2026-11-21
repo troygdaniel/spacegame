@@ -126,6 +126,7 @@ function campPanelState(C, row) {
 function campPanelShortWhy(r) {
   const W = CAMP_PANELS.shortWhy; let t = W[r.code] || W.what;
   if (r.code === 'noore2') { const m = /(\d+) needed/.exec(r.say || ''); t = t.replace('{need}', m ? m[1] : '?'); }
+  if (r.code === 'cooling') { const m = /in (\d+) seconds/.exec(r.say || ''); t = t.replace('{s}', m ? m[1] : '?'); } // the emergency's row said "{s} s": campPanelWhy fills it, this one did not
   return t;
 }
 function campPanelShortState(C, row) {

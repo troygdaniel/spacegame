@@ -1,0 +1,119 @@
+# Architecture
+
+How the game is built, for someone (a person or an AI) who has never seen it. It points to the detailed docs instead of repeating them. For *what the game does* read `README.md`; for *where the work stands* read `PROJECT_STATUS.md`.
+
+## The shape in six lines
+
+1. **No build step.** `index.html` loads Phaser 3 (vendored as `phaser.min.js`) and then every game file as a plain `<script>`, in order. Edit a file, reload the page. A new file needs its own `<script>` tag in `index.html`.
+2. **Everything is drawn or synthesized in code.** No image or sound files: ships, stations, planets and the cruiser are drawn with canvas shapes; every sound is synthesized (`src/audio.js`). Nothing is fetched from the network.
+3. **Two modes share one engine.** *Long Haul* (the trader and rescue game: station, ship bay, space, surface) and *the Campaign* (the commander game). The title screen starts either.
+4. **The Campaign is a pure simulation plus thin scenes.** `src/campaign.js` holds the rules and every number, with no Phaser. `src/campaignscene.js` reads keys, steps the simulation and draws what it says.
+5. **Words live in markdown, numbers live in one table.** Player-visible text is in `content/text/*.md`, sealed into `content.generated.js`. Tuning numbers are the `CAMP` table at the top of `src/campaign.js`.
+6. **Tests run mostly in plain Node.** The game's scripts load into a Node `vm` (`tests/nodegame.mjs`), so almost every rule is tested in a second without a browser.
+
+## Loading and scenes
+
+- `src/main.js` is the Phaser config and the scene list; `src/boot.js` draws every texture, then starts the title (`src/title.js`).
+- Shared helpers and global state are in `src/common.js` (`G`, `toast()`, `go()`, the `uiText()` word lookup is in `src/contenttables.js`; the parser and checker are `src/content.js`).
+- Long Haul scenes: `station.js`, `shipmode.js` (the ship bay), `space.js`, `surface.js`, `hyperspace.js`. The Campaign scenes: `campaignscene.js` (flight and battle), `camphubscene.js` (the ready room between missions), `campwarp.js` (the warp cinematic).
+- The Campaign reuses Long Haul's art code (the station hall is the ready room; the gauges copy Long Haul's dials) but never its game state or its save.
+
+## The Campaign: simulation versus scene
+
+**The simulation** (`src/campaign.js`, no Phaser). `campNew(level, techs, opts)` makes one game `C`; `campStep(C, seconds)` advances it in fixed small steps; `campOrder(C, name, arg, how)` runs an order and `campCheck` says whether it could (so panels, the command strip, voice and bots all ask the same question). `C.events` collects what the scene should show or play; the scene empties it every frame. A level is a row of `CAMP.levels`, a mission is a row of its `missions`, enemies come as `waves` or scripted `cues`. A seeded random stream (`opts.seed`) makes a battle repeat exactly, which is what lets tests pin a whole fight.
+
+**Satellite rule files** keep `campaign.js` from growing without end. Each is plain functions the sim calls, one feature each, many with a *scene half* that draws it (`x.js` for rules, `xdraw.js` or `xscene.js` for Phaser):
+
+| Feature | Rules | Drawing |
+|---|---|---|
+| Panels (FLEET, SHIP, SYSTEMS) and their rows | `camppanel.js` | `campanelsdraw.js` |
+| Orders to the wing, groups and targets | `campwing.js`, `campconvoy.js` (escorted ships), `campdogfight.js`, `camprepair.js` | `campconvoyscene.js` |
+| Pilots ask for orders (timed calls) | `camporders.js` | `camporderdraw.js` |
+| Mission 1.1's beats, route forks, scouting | `campbeats.js`, `camproute.js`, `campanomaly.js` | `campanomalydraw.js` |
+| Enemies: pirates, torpedo boats, the rival | `camppirates.js`, `camptorpedo.js`, `camprival.js` | `camppirateart.js`, `camptorpedoscene.js`, `camprivaldraw.js` |
+| Command time (battle slows while you order) | `campslow.js` | its sign, same file |
+| The three gauges and power bars | `camphud.js` | same file |
+| Maps and navigation | `campmap.js`, `campnav.js`, `campsol.js`, `campzoom.js` | `campmapdraw.js`, `campmapfire.js` |
+| The ready room, ranks, outposts, docking | `camphub.js`, `campranks.js`, `campoutpost.js`, `campdock.js` | `camphubscene.js` |
+| Briefing, hints, win and lose cards | `campbrief.js`, `campnudge.js`, `campwin.js`, `camplose.js`, `camphelp.js` | `campbriefdraw.js` |
+| The ship's voice and radio | `campchatter.js`, `src/voice.js`, `src/voicepack.js` | |
+| Command strip, typed and spoken orders | `src/cmdstrip.js`, `src/shipcomputer.js`, `src/listen.js` | |
+
+The command strip, the ship computer and voice reach the simulation through one closed list of actions (`SC_ACT` in `shipcomputer.js`), so a typed "launch", a spoken one and the panel row do the same thing and are refused for the same reasons.
+
+**The scene** (`src/campaignscene.js`) is deliberately thin: it reads the keyboard, decides how fast time runs (command time slows it to a quarter while a panel, the map or a call is open), calls `campStep`, and draws the state. It is the only place with Phaser in the mode and no test runs it directly; tests drive it on a stand-in object, and a few Chrome boots run the real thing.
+
+Every rule, number and level row is described in `docs/CAMPAIGN.md` (one section per feature, with the card and the reason). Balance and the bots are `docs/CAMPAIGN-TUNING.md` and `docs/WRAPUP-DIFFICULTY.md`.
+
+## Data and words
+
+- **Numbers:** the `CAMP` table (`src/campaign.js`). A level, a mission, a wave, a ship, a pace are all rows. The rule is "markdown carries words and numbers of content, code carries behaviour"; tuning numbers stay in the one table so a tune is a diff of numbers.
+- **Words:** `content/text/*.md` (one table per file, a file may hold at most 200 rows), defaults in `src/contenttables.js`. `node tools/build-content.mjs --seal` rebuilds `content.generated.js`; `--check` fails if it is stale. A key may be in any file; a file that sorts later wins a key two files give, so grep for a key before adding it. Ship-voice lines are curt (about 12 words, fact first).
+- **The voice pack** (`src/voicepack.js`, `voicepack/`): lines that repeat are recorded once. Every text key is classified there as spoken or shown-only; a new key with no rule fails `tests/voicepack.mjs`.
+- **Content packs and mods** (`mods/`, `mods.generated.js`, `docs/MODDING.md`, `docs/MODS.md`): a folder of markdown laid over the game. The Campaign is meant to become a swappable pack too (see `ROADMAP.md`).
+- **Keys:** `src/data_controls.js` is the one table of every key (`CONTROLS`, and `CAMP_PANELS` for the three Campaign panels). Settings, the H help page, the key lines, the briefing hints and the README controls are all checked against it, so move a key there first.
+
+## Saving
+
+Long Haul saves in the browser (`localStorage`, key `longhaul.save.v1`). The Campaign saves its own progress under its own key (`CAMP.store`): level, mission, techs, ore, wing, scores, the level-done flag. Nothing leaves the machine. The save format, a coordinate frame and the scene flow are never changed in the same change.
+
+## Tests and bots
+
+- `tests/nodegame.mjs` runs `index.html`'s scripts in a Node `vm` with stubs for the browser; a test file is a plain `.mjs` with a first line `// smoke: <what it checks>`. About 160 suites run this way in under two minutes.
+- Chrome boots (`tests/*-boot.mjs`, `tests/cdp.mjs`) drive a real headless Chrome through one shared lock (only one runs at a time), muted, and are run for pictures and at the merge gate, not on every change.
+- `bash tests/smoke.sh` runs everything (`docs/SMOKE.md`, `docs/TESTING.md`). Also checked on every landing: `node tools/economy-sim.mjs check` (the Long Haul economy's pinned numbers) and `node tools/build-content.mjs --check`.
+- **Bots** (`tools/campaign-bot.mjs`) fly the Campaign in the simulation: a plain bot that gives orders, an idle one, and a player model. They win or lose each mission and print the time and the hull, which is how difficulty is tuned (`node tools/campaign-bot.mjs --level 1 --seeds 12`). A new system must teach the plain bot an answer so the suite can still say "a player who plays reasonably wins".
+- `tests/hygiene.mjs` fails on anything that looks like a key, an email, a phone number or a home path in any tracked file. The repository is public.
+
+## Decisions that shaped it (and why)
+
+- **No build step, no dependencies for the game.** A new person or an AI can read one file, change a number and reload. Node is only for tests and tools.
+- **The simulation knows nothing about the screen.** That is what makes a fight testable to the last digit, tunable by bots, and safe to change at speed with many hands.
+- **One table for numbers, one for keys, one place for words.** Each has a test that notices drift (a key named in a hint that is not in the table, a word key with no voice classification, a pin of a number that changed).
+- **Deterministic by seed.** Randomness comes from seeded streams; the scene's real-time pieces (radio chatter timing, pictures) never feed back into the simulation. Command time slows the simulation by scaling the step, not by changing any rule.
+- **Small files with one job.** A feature is one rules file and, if it draws, one drawing file. Several people (and agents) edit at once, so files rarely collide.
+- **Feature freeze, then the bench.** New ideas are parked in `ROADMAP.md`; the freeze since 20 Nov 2026 means bug fixes and the fleet-command batch only. The test for any idea: *what does the player decide, and what does it cost?*
+- **Undo anchors.** Big batches are tagged (`fleet-command-before` marks the start of the current one) so a change can be backed out as a set.
+
+## Appendix: file inventory (older, Long Haul-centred)
+
+The list below is the README's former file map, kept as a reference. It predates most Campaign files; the table above and the header of each `src/camp*.js` file are the current source for those.
+
+- src/common.js  shared helpers, global state G, beep(), toast(), go()
+- src/boot.js    every texture is drawn here with shapes (no image files)
+- src/station.js station interior scene
+- src/data_parts.js the five ship parts (shields, weapons, engine, tank, cargo), three tiers each: names, prices, what each tier does, what a station sells; shipStat() in fleet.js applies them, space.js has the shield (points that take hits before the hull, recharging after a pause), the shop in shop.js sells them to the ship you fly (its fit limit and its price multiplier) at the station's stock (docs/UNIVERSE.md 7); tests/parts.mjs checks every effect
+- src/shipmodels.js the six player ships (wren, kite, ox, talon, pathfinder, bastion): each hull drawn in code with its upgrade tiers, its physics circle, nozzles, flame colours and the anchors for the Ship bay callouts (table SHIP_LOOK); shipRefresh() in ships.js draws the active one into the texture 'ship'; tests/shipsheet.mjs makes the picture sheet and checks them
+- src/journal.js the Journal: J in the station (or the Journal row in Pause) lists everyone met in the Drift with their mood, what they think of you, the last thing said and what you learned, from G.chat (docs/NPC-CHAT.md 4 and 5); works with no key; Forget everything needs a second press; tests/journal.mjs checks it
+- src/shipmode.js the Ship bay scene between boarding and flight: the ship in view, its status, the mission, LAUNCH; tests/shipmode.mjs checks it
+- src/hangar.js the hangar terminal inside the Ship bay (docs/UNIVERSE.md 6.3): a panel with FLEET (your six berths: board, move, sell with a second S, rename with R), YARD (the ships this station sells, buy with a second Enter) and CONTROLS; the stage and the status panel show the selected ship and the amber button does what Enter does for it (LAUNCH, BOARD, MOVE HERE, BUY); the rules are src/fleet.js; tests/hangar.mjs checks it
+- src/space.js   flight, combat, dock/land
+- src/surface.js planet surface, colonist escort
+- src/hud.js, src/ui.js credits are one look everywhere: a gold coin and "N CR" (hudStrip and hudCoin in hud.js, crTag for the panels in ui.js; +N green and -N red float on every change); tests/credits.mjs checks it
+- src/enemies.js the pirate types, their AI, salvage pods and the bounty a kill pays (bountyPay on a kill, bountyDock on docking); tests/bounty.mjs checks it
+- src/ships.js   every ship texture (player with upgrade tiers, pirates, Reaver, MULE, civilian, police) and their flames, trails, shield flash, smoke and sparks
+- src/stationart.js Halcyon Station and Kestrel Outpost art (canvas gradients, drawn in code) and their animation: spinning hub and ring, beacons, docking lane; stationBuild picks what a system's station looks like from its `art` (ring, outpost or a look)
+  and the four looks for other systems (stationLook / stationLookFx: hub, foundry, nest, derelict, drawn on first use; Meridian, Brass Reach, Ember and the Roost use them)
+- src/cruise.js in-system fast travel: N nav list, C cruise (8000 px/s, stops 900 px out), and the far bodies of a system; Halcyon is 36000 px in the data and SYSTEM_SCALE (3) times that in the game (src/data_systems.js); tests/cruise.mjs checks it. Interdiction (pirates pull you out of cruise, INTERDICT in cruise.js, dark until two jumps) and the pirate table per system (pirateTable in enemies.js) are checked by tests/interdict.mjs
+- src/art_world.js world art: backdrop, Kepler-4b, asteroids, surface, effects; also planetTexture (rock, ice, gas, lava, ringed; at most six alive) and starTexture (types M K G F A) for other systems; tests/systemart.mjs checks the new art
+- src/art_world.js the world art, drawn in code on 2D canvases (seeded, same every boot): nebula and parallax star layers (no sun, planet or moon in the backdrop: what you see in space is a real body), Kepler-4b, asteroids and ore, the surface (ground, terrain, boulders, pad, crash site, colonist, crawlers) and the effects fxBoom (every s.boom), fxDash, fxPickup, fxDebris
+- src/hyperspace.js the Hyper scene, the watched hyperspace tunnel (star streaks, gates, ribbons, nose bloom, readout). The jump (src/jump.js) plays it; index.html#hyper (or #hyper<ly>, e.g. #hyper24) still opens it on its own, with no game effect
+- src/galaxymap.js the galaxy map overlay (docs/UNIVERSE.md 4.3): the stars as glowing nodes, links and a dashed ring for your jump range, a card with distance, fuel cost, time, pump, danger and why you cannot go; G opens it (src/jump.js), and Enter on a star charges a jump (index.html#galaxy opens it on its own); the eight systems come from a stub table until the systems card; tests/galaxymap.mjs checks it
+- src/jump.js the jump (docs/UNIVERSE.md 2.3): G opens the galaxy map, Enter charges for 4 s (Esc, S or a hit cancels; no charge near a station, a planet or a hostile), the fuel burns when the charge ends, the Hyper scene plays, enterSystem (src/universe.js) puts the ship at the edge facing the star it came from; F calls the fuel ranger; tests/jump.mjs
+- src/pullout.js the pull-out (docs/UNIVERSE.md 5.2): 2% + 1% x the higher danger of the jump's two systems, the tunnel is cut at 40 to 70% (flicker, alarm, collapse in src/hyperspace.js) and the ship drops into deep space (an empty 16000 px system while G.deep is set, src/universe.js): 3 to 5 pirates by danger, no docking, cruise or jump; clear them and the tunnel resumes for the time that was left; a death wakes you at the last station you docked at; a nest has pirates waiting at the entry point; index.html#pullout plays it without the dice; tests/pullout.mjs
+- src/voice.js  optional ship voice (Deepgram text-to-speech, only with the player's own key, see docs/VOICE.md)
+- mods/, mods.generated.js, src/mods.js, tests/mods.mjs  mod packs (docs/MODDING.md 13, docs/MODS.md 9): a folder in mods/ is a pack laid over the game, built on its own and turned on in the Mods screen (O on the Title screen), or picked from a folder with no Node at all; off until turned on; `mods/example/` is a small one to copy; tests/mods.mjs runs it in headless Chrome
+- docs/MODS.md, tools/mods-fields.mjs  the ten-minute guide for modders (change a mission, a character, a pirate, a part, a salvage site, the dock and the interface's words; what the game reads today; the errors you will meet). The field reference at the end is written from the schema in src/content.js by `node tools/mods-fields.mjs --write`; tests/modsdoc.mjs (no browser) fails when that table is stale, an example file in the guide is invalid, or a claim about the game's ids or messages is no longer true
+- tools/economy-sim.mjs, docs/ECONOMY.md  the economy in numbers: `node tools/economy-sim.mjs` prints what each loop earns an hour, the prices, the pacing against the plan and the per-system multipliers, from the game's own data files; docs/ECONOMY.md explains them and proposes the numbers for card u-e4-economy. It changes no gameplay; `node tools/economy-sim.mjs check` (smoke step 4y) fails when a code line it copies has changed
+- tools/retro-stats.py, docs/RETRO.md, docs/RETRO-NUMBERS.md  how the build went (14 Nov 2026): `python3 tools/retro-stats.py --logs <test logs>` reads the agentboard board, its chat snapshots, the git history and the test logs and prints the per-card timings, merge conflicts, test-lock waits and idle time; RETRO.md reads them and ranks ten changes by hours saved
+- src/chat.js   optional NPC chat: the adapter (OpenAI or Anthropic, one key per provider, only with the player's own key); the setup is in Settings; the bar chat box, memory and Journal follow in later cards (see docs/NPC-CHAT.md)
+- src/settings.js the Settings screen (Title S, Pause > Settings): SOUND (volume, mute, ship voice and its voice), KEYS (Deepgram, OpenAI, Anthropic: paste, last four only, Test, Forget; chat provider and model; the cost note), CONTROLS (every key, from src/data_controls.js), CONTENT (which pack runs, what it ignored), RESET (Reset game and Forget all keys, each with a second press); V, C and P on the title open the matching section; tests/settings.mjs checks it with a mocked fetch
+- src/data_controls.js the one table of every key of the game: Settings > Controls, the H help page and the Ship bay's key list are built from it
+- src/interior.js the station interior art and animation
+- the bar's six characters (JUNO, TAMSIN, DEX, MOSS, SABLE, IDA KETTER) are rows of NPCS in src/shop.js with their lines, reactions, voice name and persona card (docs/NPC-CHAT.md 3.1); IDA is there only after the first rescue is paid; their sprites are drawn in src/interior.js; tests/npcs.mjs checks them
+- src/main.js    Phaser config and scene list
+- src/content.js, tools/build-content.mjs, content/, content.generated.js  content in markdown (docs/MODDING.md): src/content.js is the parser, schema and validator (no Phaser; Node and the browser use the same file), `node tools/build-content.mjs` turns content/*.md into content.generated.js (`--watch`, `--strict`, `--check`), content/_templates/ has one starting file per type; tests/content.mjs checks it. The game reads the pirates (raider, drone), the four calls, the bar's six characters, nine ship part tiers, the salvage sites and signals, the interface words (text/ui.md) and the dock through src/contenttables.js; tests/contentproof.mjs pins that the files over their defaults change nothing and that edits change exactly what they say. The eight systems and six stations are read and kept, and `worldAt(systemId)` in src/contenttables.js gives any of them in the shape of a `SYSTEMS` row (nothing plays from it yet; tests/worldat.mjs pins that Halcyon built from its files is the code's row)
+- tests/nodegame.mjs  the game's scripts in plain Node (no Chrome, no Phaser, no lock): a test that only calls functions and reads tables uses `nodeGame()` and runs in a second; which tests are which, and why: docs/TESTING.md
+- tests/cdp.mjs, tests/lock.mjs  the headless Chrome harness; lock.mjs lets only one Chrome run at a time across worktrees (a busy Mac made DevTools calls time out), hands the lock out in the order runs arrived, optionally lets two run while the Mac is quiet (`LONGHAUL_LOCK_SLOTS=2`), `node tests/lock.mjs status` shows who holds it and who waits, and it removes orphan longhaul-* Chrome profiles; tests/locktest.mjs checks it
+- tests/ledger.mjs, tests/ledger-on.mjs, tools/test-ledger.mjs  the test-run ledger: every test run appends one line (suite, seconds, seconds waited for the Chrome lock, result, who; counts and times only) to one file shared by every worktree, kept out of git, and `node tools/test-ledger.mjs` prints totals per suite and per day; docs/TESTING.md "The run ledger"
+New files get their own script tag in index.html. Keep edits inside the files your card names.
