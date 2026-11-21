@@ -103,6 +103,9 @@ function campNavLead(c, t, speed) {
 // the burn of a Fast trip (the one place it is decided: campNavGo stores it, campCarrier and campNavDrive read it, campNavEta tells it on the map): CAMP.nav.fast times the speed, farFast times it past farFrom px; 1 for a regular trip
 const campNavBurn = (dist, fast) => (!fast ? 1 : dist > CAMP.nav.farFrom ? CAMP.nav.farFast : CAMP.nav.fast);
 const campNavEta = (C, dist, fast) => Math.round(dist / (CAMP.carrier.speed * campPowerFx(C).speed * campNavBurn(dist, fast)) * CAMP.nav.etaSlow); // fast: the map's Fast button
+// the distance a trip to a row really flies (card space-game-night-hunt-l2-l3): the mission's own place, before the cruiser has reached it, is flown to the edge of its arrival circle (the mission begins there and the autopilot lets go: campMissions_tick), not to its middle;
+// every other target is flown to where it is. The km a row says stay the distance to the middle (the HUD's own); the briefing's seconds (campTravel) already count to the edge, and the map's now do too
+const campNavFlight = (C, row, d) => C && C.L && C.L.place && C.arrivedAt == null && row && (row.of || row.id) === 'place:' + C.L.place ? Math.max(0, d - CAMP.mission.arrive) : d;
 
 function campNavGo(C, row, fast) {
   if (!C || !row || C.result) return null;
