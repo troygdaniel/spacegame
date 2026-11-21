@@ -9,11 +9,12 @@
 // Run: node tests/campaign.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
+import { belt } from './fixtures/campbelt.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name + (detail ? '  ' + String(detail).slice(0, 200) : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 300) + ')' : ''}`); } };
 const store = new Map();
-const g = nodeGame({ store });
+const g = nodeGame({ store }); belt(g, 1); // the old Level 1, the belt, as level 1: this suite was written for it and pins its missions (card space-game-l1-rim-missions; the rim run is tests/camprim.mjs)
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
@@ -715,7 +716,7 @@ console.log('F. the save, and Long Haul untouched');
   check('a saved line with rubbish in it is read as far as it makes sense: level of 99 is dropped to 1, the one real tech kept once', J('campProgressLoad().level') === 1 && J('campProgressLoad().techs').join() === 'beam');
   store.set('longhaul.campaign', 'not json');
   check('and one that is not JSON starts again from level 1', J('campProgressLoad().level') === 1);
-  check('the save has no words and no numbers of the battle (the wing\'s stance is one word of the pilot\'s choice)', Object.keys(JSON.parse((g.run(`campProgressSave({ level: 2, techs: ['shield'], ore: 0, bonus: { fighters: 0, escorts: 0 } })`), store.get('longhaul.campaign')))).sort().join() === 'bonus,found,level,mission,ore,results,revealed,stance,techs'); // revealed: the ending has been seen (card space-game-campaign-outpost-reveal): a flag, no words, no battle
+  check('the save has no words and no numbers of the battle (the wing\'s stance is one word of the pilot\'s choice)', Object.keys(JSON.parse((g.run(`campProgressSave({ level: 2, techs: ['shield'], ore: 0, bonus: { fighters: 0, escorts: 0 } })`), store.get('longhaul.campaign')))).sort().join() === 'bonus,found,level,levelDone,mission,ore,results,revealed,stance,techs'); // revealed: the ending has been seen (card space-game-campaign-outpost-reveal): a flag, no words, no battle
   // --- Q. the places of the missions (card space-game-campaign-mission-places): a place in every mission row, the trip, the briefing, the map, the dock
   check('every mission has a place that is a body of its level, and a dock with an outpost name; level 1 has the moons it lists (Mars\'s two, Jupiter\'s four, Saturn\'s two, Luna), level 3 its three, level 2 none added', [1, 2, 3].every(n => [0, 1, 2].every(i => J(`(() => { const L = campMissionRow(${n}, ${i}), pl = campPlaces(${n}); return !!pl[L.place] && !!pl[L.dock] && !!pl[L.dock].outpost && !!pl[L.dock].name; })()`))) && J(`['luna', 'phobos', 'deimos', 'io', 'europa', 'ganymede', 'callisto', 'titan', 'enceladus'].every(id => campPlaces(1)[id] && campPlaces(1)[id].moon)`) && J(`['ran', 'kolga', 'tyr'].every(id => campPlaces(3)[id] && campPlaces(3)[id].moon === 'home')`) && J(`Object.keys(campPlaces(2)).every(id => !campPlaces(2)[id].moon)`));
   check('across a level the missions use at least four different bodies (their places, docks and where the haulers go), and the three levels use at least ten between them', [1, 2, 3].every(n => J(`(() => { const set = {}; [0, 1, 2].forEach(i => { const L = campMissionRow(${n}, i); set[L.place] = 1; set[L.dock] = 1; L.convoys.forEach(c => { set[c.from] = 1; set[c.to] = 1; }); }); return Object.keys(set).length; })()`) >= 4) && J(`(() => { const set = {}; [1, 2, 3].forEach(n => [0, 1, 2].forEach(i => { const L = campMissionRow(n, i); set[n + L.place] = 1; set[n + L.dock] = 1; })); return Object.keys(set).length; })()`) >= 10);

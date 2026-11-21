@@ -10,14 +10,15 @@
 // Run: node tests/campmaptargets.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
+import { belt } from './fixtures/campbelt.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
-const g = nodeGame();
+const g = nodeGame(); belt(g); // the old Level 1, the asteroid belt, as a fixture level: this suite flies on it (card space-game-l1-rim-missions)
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 g.run(`
-  window.__new = (level) => { const C = campNew(level || 1, [], { seed: 3, god: true }); C.ships = C.ships.filter(u => u.team !== 'alien'); C.carrier.x = 0; C.carrier.y = 0; C.carrier.vx = C.carrier.vy = 0; C.carrier.rot = 0; return C; };
+  window.__new = (level) => { const C = campNew(level || 11, [], { seed: 3, god: true }); C.ships = C.ships.filter(u => u.team !== 'alien'); C.carrier.x = 0; C.carrier.y = 0; C.carrier.vx = C.carrier.vy = 0; C.carrier.rot = 0; return C; };
   window.__row = (C, id) => campNavRows(C).find(r => r.id === id);
   window.__ev = (C, key) => C.events.filter(e => e.type === 'nav' && e.key === key);
   // a scripted target: a ship that flies a straight line whatever the AI says, so the follow can be measured
@@ -27,7 +28,7 @@ g.run(`
 
 console.log('A. the list');
 {
-  g.run(`window.C = __new(1); campOrder(C, 'launch'); for (let i = 0; i < 7 * 30; i++) campStep(C, 1 / 30);
+  g.run(`window.C = __new(11); campOrder(C, 'launch'); for (let i = 0; i < 7 * 30; i++) campStep(C, 1 / 30);
     window.R3 = campSpawn(C, 'raider', 2000, 300); window.G1 = campSpawn(C, 'gunship', -1500, -400); window.T1 = campSpawn(C, 'tower', 900, -900); window.D1 = campSpawn(C, 'drone', 600, 800);
     C.pickups.push({ id: 'wreck-90', kind: 'wreck', x: 300, y: 100, ore: 5, born: C.t }); C.pickups.push({ id: 'chunk-91', kind: 'chunk', x: -200, y: 500, ore: 20, born: C.t });`);
   const names = J('campNavRows(C).map(r => r.kind + "|" + r.name)');
@@ -40,7 +41,7 @@ console.log('A. the list');
 
 console.log('B. the pick');
 {
-  g.run(`window.C = __new(1); window.A = campSpawn(C, 'raider', -300, 1500); window.B = campSpawn(C, 'raider', -290, 1504); window.Z = campSpawn(C, 'drone', 2300, -300); A.nextShot = B.nextShot = Z.nextShot = 1e9;
+  g.run(`window.C = __new(11); window.A = campSpawn(C, 'raider', -300, 1500); window.B = campSpawn(C, 'raider', -290, 1504); window.Z = campSpawn(C, 'drone', 2300, -300); A.nextShot = B.nextShot = Z.nextShot = 1e9;
     window.__proj = (x, y) => ({ x: x * 0.1, y: y * 0.1 });`);
   const stack = J('campNavPickStack(campNavRows(C), __proj, -30, 150).map(r => r.ref)');
   check('a click near two marks lists both, the nearest to the cursor first, and not the far one', stack.length === 2 && stack[0] === J('A.id') && stack[1] === J('B.id'), stack.join());
@@ -52,7 +53,7 @@ console.log('B. the pick');
     window.__mk = path => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => 0 : k === 'then' ? undefined : k === 'visible' ? true : __mk(path + '.' + String(k))), apply: () => __mk(path + '()') });
     window.__said = []; toast = (s, m) => { __said.push(m); };
     window.__scx = C => ({ camp: C, mode: 'play', add: { rectangle: () => __mk('r'), graphics: () => __mk('g'), text: (x, y, t) => { const o = { x, y, t, visible: true, rowId: '', width: 190, height: 24, alpha: 1, setText(v) { o.t = v; return o; }, setBackgroundColor() { return o; }, setColor() { return o; }, setAlpha(a) { o.alpha = a; return o; }, setVisible(v) { o.visible = v; return o; }, setPosition(a, b) { o.x = a; o.y = b; return o; }, setOrigin() { return o; }, setScrollFactor() { return o; }, setDepth() { return o; }, destroy() { o.gone = true; } }; return o; } }, make: __mk('make'), input: { on() {}, off() {} } });
-    window.C = __new(1); window.A = campSpawn(C, 'raider', -300, 1500); window.B = campSpawn(C, 'raider', -296, 1502); A.nextShot = B.nextShot = 1e9; window.S = __scx(C); campMapOpen(S); S.mp.dirty = true; campMapPaint(S, 0); campMapPaint(S, 400);
+    window.C = __new(11); window.A = campSpawn(C, 'raider', -300, 1500); window.B = campSpawn(C, 'raider', -296, 1502); A.nextShot = B.nextShot = 1e9; window.S = __scx(C); campMapOpen(S); S.mp.dirty = true; campMapPaint(S, 0); campMapPaint(S, 400);
     window.P = campMapPoint(S.mp.fit, CAMPMAP.frame, -300, 1500);`);
   g.run(`window.c1 = campMapClick(S, P.x - 1, P.y); window.s1 = S.mp.setId; window.n1 = !!C.nav;`);
   check('the first click on a stack sets the nearest mark: marked, no flight', J('c1') === true && J('s1') === 'alien:' + J('A.id') && J('n1') === false, J('s1'));
@@ -70,13 +71,13 @@ console.log('C. the stand-off');
   check('the numbers are in CAMP.nav: an enemy 400 px (turret range), a friend alongside (130), a rock inside the laser (200 of 230), a point 40, a ship (mothership, tower) 450 as before; the lead is capped', J(`${K}.stopEnemy`) === 400 && J(`${K}.stopFriend`) < 200 && J(`${K}.stopRock`) < J('CAMP.laser.range') && J(`${K}.stopPoint`) === 40 && J(`${K}.stopShip`) === 450 && J(`${K}.leadMax`) > 0);
   const st = (kind, r) => J(`campNavStop('${kind}', { r: ${r || 0} })`);
   check('alien and guard: stopEnemy; ship and convoy: stopFriend; rock: stopRock; pickup, cache, scan, relic, wing: stopPoint; mother and tower: stopShip; a place: its radius plus stop', st('alien') === 400 && st('guard') === 400 && st('ship') === 130 && st('convoy') === 130 && st('rock') === 200 && ['pickup', 'cache', 'scan', 'relic', 'wing'].every(k => st(k) === 40) && st('mother') === 450 && st('tower') === 450 && st('place', 60) === 60 + J(`${K}.stop`));
-  g.run(`window.C = __new(1); window.A = campSpawn(C, 'raider', 3000, 0); A.nextShot = 1e9; A.hold = true; campNavFly(C, __row(C, 'alien:' + A.id), false, 'key'); __run(C, 30);`);
+  g.run(`window.C = __new(11); window.A = campSpawn(C, 'raider', 3000, 0); A.nextShot = 1e9; A.hold = true; campNavFly(C, __row(C, 'alien:' + A.id), false, 'key'); __run(C, 30);`);
   check('a regular trip to a (still) alien ends about 400 px from it, and the carrier keeps station: the trip is on, it has not "arrived"', Math.abs(J('campDist(C.carrier, A)') - 400) < 120 && J('!!C.nav') && J('Math.hypot(C.carrier.vx, C.carrier.vy)') < 60, J('campDist(C.carrier, A)'));
-  g.run(`window.C = __new(1); window.RK = C.rocks.find(r => r.hp > 0); window.__rk = campNavRows(C).find(r => r.kind === 'rock'); C.carrier.x = __rk.x - 2500; C.carrier.y = __rk.y; campNavFly(C, __rk, false, 'key'); __run(C, 30);`);
+  g.run(`window.C = __new(11); window.RK = C.rocks.find(r => r.hp > 0); window.__rk = campNavRows(C).find(r => r.kind === 'rock'); C.carrier.x = __rk.x - 2500; C.carrier.y = __rk.y; campNavFly(C, __rk, false, 'key'); __run(C, 30);`);
   check('a trip to a rock ends inside the laser\'s reach of it (stopRock), and arrives', J(`campDist(C.carrier, C.rocks.find(r => r.id === __rk.ref))`) < 300 && J('C.nav') === null, J(`campDist(C.carrier, C.rocks.find(r => r.id === __rk.ref))`));
-  g.run(`window.C = __new(1); C.pickups.push({ id: 'chunk-77', kind: 'chunk', x: 1800, y: 500, ore: 20, born: C.t }); campNavFly(C, __row(C, 'pickup:chunk-77'), false, 'key'); __run(C, 25);`);
+  g.run(`window.C = __new(11); C.pickups.push({ id: 'chunk-77', kind: 'chunk', x: 1800, y: 500, ore: 20, born: C.t }); campNavFly(C, __row(C, 'pickup:chunk-77'), false, 'key'); __run(C, 25);`);
   check('a trip to ore ends in pickup range and the ore is taken (arrived, not lost)', J('C.pickups.length') === 0 && J('C.nav') === null && J('__ev(C, "camp.nav.arrived").length') === 1 && J('__ev(C, "camp.nav.lost").length') === 0);
-  g.run(`window.C = __new(1); campOrder(C, 'launch'); __run(C, 7); window.F = campWing(C, 'fighter')[0]; F.x = 2500; F.y = 0; F.vx = F.vy = 0; F.order = { type: 'guard', at: { x: 2500, y: 0 } }; campNavFly(C, __row(C, 'ship:' + F.id), false, 'key'); __run(C, 25);`);
+  g.run(`window.C = __new(11); campOrder(C, 'launch'); __run(C, 7); window.F = campWing(C, 'fighter')[0]; F.x = 2500; F.y = 0; F.vx = F.vy = 0; F.order = { type: 'guard', at: { x: 2500, y: 0 } }; campNavFly(C, __row(C, 'ship:' + F.id), false, 'key'); __run(C, 25);`);
   check('a friendly ship is followed until alongside (about 130 px)', J('C.nav') !== null ? J('campDist(C.carrier, F)') < 400 : true, J('campDist(C.carrier, F)'));
 }
 
@@ -86,27 +87,27 @@ console.log('D. a moving target');
   const l1 = lead({ x: 0, y: 0 }, { x: 1000, y: 0, vx: 0, vy: 100 }, 200);
   check('the lead aims ahead of a crossing target: further along its course, and the time to get there is about the distance over the speed', l1.y > 100 && l1.x >= 1000 && Math.abs(Math.hypot(l1.x, l1.y) / 200 - l1.t) < 0.4, JSON.stringify(l1));
   check('a target that does not move is where it is (no lead), and the lead is capped at leadMax seconds', JSON.stringify(lead({ x: 0, y: 0 }, { x: 500, y: 0, vx: 0, vy: 0 }, 200)) === JSON.stringify({ x: 500, y: 0, t: 0 }) && lead({ x: 0, y: 0 }, { x: 100000, y: 0, vx: 0, vy: 100 }, 200).t <= J('CAMP.nav.leadMax'));
-  g.run(`window.C = __new(1); window.A = campSpawn(C, 'raider', 2500, -2000); __script(A, 0, 120); campNavFly(C, __row(C, 'alien:' + A.id), false, 'key'); __run(C, 40);`);
+  g.run(`window.C = __new(11); window.A = campSpawn(C, 'raider', 2500, -2000); __script(A, 0, 120); campNavFly(C, __row(C, 'alien:' + A.id), false, 'key'); __run(C, 40);`);
   const d1 = J('campDist(C.carrier, A)');
   check('a target crossing at 120 px/s is intercepted and followed to about turret range (400 px) and held there: within 600 px, the trip still on', d1 < 600 && d1 > 200 && J('!!C.nav') && J('C.nav.moving') === true, d1);
   g.run(`__run(C, 10);`);
   const sp = J('Math.hypot(C.carrier.vx - A.vx, C.carrier.vy - A.vy)');
   check('and the speed is matched: the carrier moves with it (a speed against it under 60 px/s), the distance steady', sp < 60 && Math.abs(J('campDist(C.carrier, A)') - d1) < 150, sp + ' ' + J('campDist(C.carrier, A)'));
-  g.run(`window.C = __new(1); window.A = campSpawn(C, 'raider', 1200, 0); __script(A, 300, 0); campNavFly(C, __row(C, 'alien:' + A.id), false, 'key'); __run(C, 20);`);
+  g.run(`window.C = __new(11); window.A = campSpawn(C, 'raider', 1200, 0); __script(A, 300, 0); campNavFly(C, __row(C, 'alien:' + A.id), false, 'key'); __run(C, 20);`);
   check('a target faster than the carrier (300 against 210, flying away) is followed all the time without a fault: the trip stays on, the carrier flies at its top speed after it', J('!!C.nav') && J('Math.hypot(C.carrier.vx, C.carrier.vy)') > 150 && g.errors.length === 0, JSON.stringify(J('[!!C.nav, C.result, C.t, C.carrier.x, A.x, C.carrier.hp, C.input.thrust]')));
-  g.run(`window.C = __new(1); window.A = campSpawn(C, 'raider', 1200, 0); __script(A, 0, 0); campNavFly(C, __row(C, 'alien:' + A.id), true, 'key'); __run(C, 30);`);
+  g.run(`window.C = __new(11); window.A = campSpawn(C, 'raider', 1200, 0); __script(A, 0, 0); campNavFly(C, __row(C, 'alien:' + A.id), true, 'key'); __run(C, 30);`);
   check('Fast to a still enemy (wing aboard) does not overshoot into it: it stops about 400 px from it', J('campDist(C.carrier, A)') > 250 && J('campDist(C.carrier, A)') < 650, J('campDist(C.carrier, A)'));
 }
 
 console.log('E. a target lost');
 {
-  g.run(`window.C = __new(1); window.A = campSpawn(C, 'raider', 2500, 0); __script(A, 0, 0); campNavFly(C, __row(C, 'alien:' + A.id), false, 'key'); __run(C, 3); A.hp = 0; C.events.length = 0; __run(C, 1);`);
+  g.run(`window.C = __new(11); window.A = campSpawn(C, 'raider', 2500, 0); __script(A, 0, 0); campNavFly(C, __row(C, 'alien:' + A.id), false, 'key'); __run(C, 3); A.hp = 0; C.events.length = 0; __run(C, 1);`);
   check('a ship killed ends the trip with a line: "Autopilot off: Raider N is gone."', J('C.nav') === null && J('__ev(C, "camp.nav.lost").length') === 1 && /^Autopilot off: Raider \d+ is gone\.$/.test(J('uiText("camp.nav.lost", __ev(C, "camp.nav.lost")[0].vars)')));
-  g.run(`window.C = __new(1); window.__rk = campNavRows(C).find(r => r.kind === 'rock'); campNavFly(C, __rk, false, 'key'); __run(C, 2); C.rocks.find(r => r.id === __rk.ref).hp = 0; C.events.length = 0; __run(C, 1);`);
+  g.run(`window.C = __new(11); window.__rk = campNavRows(C).find(r => r.kind === 'rock'); campNavFly(C, __rk, false, 'key'); __run(C, 2); C.rocks.find(r => r.id === __rk.ref).hp = 0; C.events.length = 0; __run(C, 1);`);
   check('a rock that breaks ends it too (lost)', J('C.nav') === null && J('__ev(C, "camp.nav.lost").length') === 1);
-  g.run(`window.C = __new(1); campOrder(C, 'launch'); __run(C, 7); window.A = campSpawn(C, 'raider', 2500, 0); __script(A, 0, 0); window.__r1 = campNavFly(C, __row(C, 'alien:' + A.id), true, 'key');`);
+  g.run(`window.C = __new(11); campOrder(C, 'launch'); __run(C, 7); window.A = campSpawn(C, 'raider', 2500, 0); __script(A, 0, 0); window.__r1 = campNavFly(C, __row(C, 'alien:' + A.id), true, 'key');`);
   check('the wing rule is the same as for a place: Fast to an enemy with the wing out is refused the first time (the regular trip is allowed)', J('__r1.ok') === false && J('__r1.refused') === true && J('campNavFly(C, __row(C, "alien:" + A.id), false, "key").ok') === true);
-  g.run(`window.C = __new(1); window.A = campSpawn(C, 'raider', 2500, 0); __script(A, 0, 0); campNavFly(C, __row(C, 'alien:' + A.id), false, 'key'); __run(C, 3); window.__n0 = C.nav; campNavFly(C, __row(C, 'alien:' + A.id), true, 'key');`);
+  g.run(`window.C = __new(11); window.A = campSpawn(C, 'raider', 2500, 0); __script(A, 0, 0); campNavFly(C, __row(C, 'alien:' + A.id), false, 'key'); __run(C, 3); window.__n0 = C.nav; campNavFly(C, __row(C, 'alien:' + A.id), true, 'key');`);
   check('Fly then Fast on the same moving target keeps the trip (same trip, only the speed changes), as for a place', J('C.nav === __n0') && J('C.nav.fast') === true);
 }
 

@@ -16,7 +16,7 @@ Off main `eec8146`. Feature freeze: bugs and rough edges only; level 1's mission
 | 9 | A tech looted in level 3 can never be picked | **already fixed** on main (`tests/campl3minors.mjs`: no tech nothing could offer; a new campaign forgets its loot) |
 | 10 | The nav list says "Epsilon Eridani", the map "EPSILON ERIDANI STAR" | **fixed**: the star of a system with a name is named by it, no added word (`src/campsol.js`); the map and the list read "Epsilon Eridani" |
 | 11 | The open SHIP panel covers the edge-arrow label | **fixed**: the label keeps out of the open panel's column too (`arrowKeep`) |
-| 12 | Quit at the tech pick after mission 3 and the next launch resumes the level's mission 1 | see the end of this file |
+| 12 | Quit at the tech pick after mission 3 and the next launch resumes the level's mission 1 | **fixed** (batch 2): the save has `levelDone` (the level whose last mission is won and whose story and pick are not done); the ready room's next mission is then the level's last one, the Launch row says "the tech pick", and the scene shows the level's won card (no battle) and the pick; `next()` clears it. An old save reads 0 |
 | 13 | The "Odd readings ahead" toast covers the W S E power pips | **fixed**: the pips sit beside the shield bar, above the toast band (`CAMP.hud.pips`: x 366, y 40; the band is y 86 to 150) |
 | 14 | Two toasts stack and cut each other | **already fixed** on main (one box, `tests/toastband.mjs`) |
 | 15 | After a win or a loss the HUD stays under the card | **fixed**: the won, lost, debrief, refit, pick and ending cards hide the gauges, the radar, the goal line and the arrow (`hudHides`, `hudShow`) |

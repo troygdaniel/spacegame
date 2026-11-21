@@ -8,10 +8,11 @@
 // Run: node tests/campturretlead.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
+import { belt } from './fixtures/campbelt.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name + (detail ? '  ' + String(detail).slice(0, 200) : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 300) + ')' : ''}`); } };
-const g = nodeGame();
+const g = nodeGame(); belt(g); // the old Level 1, the asteroid belt, as a fixture level: this suite flies on it (card space-game-l1-rim-missions)
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
@@ -19,7 +20,7 @@ const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 // It answers: shots (turret shots fired), hits (the damage it took over the damage of one shot)
 g.run(`
   window.__duel = (kind, dx, dy, vx, vy, secs, opts) => {
-    opts = opts || {}; window.C = campNew(1, [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); C.motherSpawn = 1e12;
+    opts = opts || {}; window.C = campNew(11, [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); C.motherSpawn = 1e12;
     const c = C.carrier; if (opts.carrierV) { c.vx = opts.carrierV[0]; c.vy = opts.carrierV[1]; }
     const u = campSpawn(C, kind, c.x + dx, c.y + dy); u.accel = 0; u.vmax = 1e9; u.nextShot = 1e12; u.hp = u.maxHp = 5000;
     let shots = 0; const b0 = campBullet; campBullet = function (C2, from, rot, speed, dmg, life, team, ahead, extra) { if (team === 'earth' && extra && extra.pd) shots++; return b0.apply(null, arguments); };
@@ -27,7 +28,7 @@ g.run(`
     const tail = opts.tail === 0 ? 0 : 30; for (let i = 0; i < secs * 30 + tail; i++) { if (i === secs * 30) C.input.fire = false; u.vx = vx; u.vy = vy; if (opts.carrierV) { c.vx = opts.carrierV[0]; c.vy = opts.carrierV[1]; } campStep(C, 1 / 30); C.events.length = 0; } // fire for secs, then a second more for the shots in the air to land
     campBullet = b0; return { shots, hits: Math.round((5000 - u.hp) / CAMP.carrier.pd), left: Math.round(u.hp) };
   };
-  window.__sec = (kind, dx, dy, vx, vy) => { window.C = campNew(1, [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); const c = C.carrier, u = campSpawn(C, kind, c.x + dx, c.y + dy); u.vx = vx; u.vy = vy; u.accel = 0; u.vmax = 1e9; u.nextShot = 1e12;
+  window.__sec = (kind, dx, dy, vx, vy) => { window.C = campNew(11, [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); const c = C.carrier, u = campSpawn(C, kind, c.x + dx, c.y + dy); u.vx = vx; u.vy = vy; u.accel = 0; u.vmax = 1e9; u.nextShot = 1e12;
     const tu = C.turrets[0], direct = Math.atan2(u.y - tu.y, u.x - tu.x); campStep(C, 1 / 30); return { aim: tu.aim, direct, target: tu.target === u.id }; }; // the aim is made before the alien moves in a tick, so the bearing is taken before it
 `);
 const ratio = r => r.shots ? r.hits / r.shots : 0;

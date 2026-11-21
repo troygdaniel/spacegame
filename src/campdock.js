@@ -7,7 +7,7 @@ const CAMP_DOCK = { rows: ['build', 'repair', 'upgrade', 'board', 'undock'] }; /
 const campDockC = ctx => (ctx && ctx.camp) || null;
 const campDockWing = C => ({ f: C.bay.fighters + campWing(C, 'fighter').length + C.launchQ.filter(k => k === 'fighter').length, e: C.bay.escorts + campWing(C, 'escort').length + C.launchQ.filter(k => k === 'escort').length, q: C.build.queue.length });
 
-CAMP_HUB.note.build = (P, ctx) => { const C = campDockC(ctx); return C ? uiText('camp.hub.note.build', { ore: Math.floor(C.ore) }) : ''; };
+CAMP_HUB.note.build = (P, ctx) => { const C = campDockC(ctx); return C ? uiText('camp.hub.note.build', { ore: campFunds(C) }) : ''; };
 CAMP_HUB.note.repair = (P, ctx) => { const C = campDockC(ctx); return C ? uiText('camp.hub.note.repair', { pct: Math.round(C.carrier.hp / C.carrier.maxHp * 100) }) : ''; };
 CAMP_HUB.note.upgrade = (P, ctx) => { const C = campDockC(ctx); return C && campHas(C, 'fabricator') ? uiText('camp.hub.note.fabbed') : uiText('camp.hub.note.fab', { cost: CAMP.outpost.fabricator }); };
 CAMP_HUB.note.undock = (P, ctx) => uiText('camp.hub.note.undock', { name: ctx && ctx.station && ctx.station.name ? ctx.station.name : '' });
@@ -26,16 +26,16 @@ CAMP_HUB.rowKey.upgrade = (H, P, code, res, ctx) => {
   const C = campDockC(ctx); if (!C || code !== 'KeyU') return null;
   res.used = true; const cost = CAMP.outpost.fabricator;
   if (campHas(C, 'fabricator')) { res.ok = false; res.say = { key: 'camp.hub.nothing', vars: {} }; return res; }
-  if (C.ore < cost) { res.ok = false; res.say = { key: 'camp.hub.upgrade.no', vars: { need: cost, have: Math.floor(C.ore) } }; return res; }
-  C.ore -= cost; C.techs.push('fabricator'); campPick(P, 'fabricator'); // the battle has it now and the progress keeps it (campPick: once)
-  res.ok = true; res.changed = true; res.say = { key: 'camp.hub.upgrade.bought', vars: { ore: Math.floor(C.ore) } }; return res;
+  if (campFunds(C) < cost) { res.ok = false; res.say = { key: 'camp.hub.upgrade.no', vars: { need: cost, have: campFunds(C) } }; return res; }
+  campPay(C, cost); C.techs.push('fabricator'); campPick(P, 'fabricator'); // the battle has it now and the progress keeps it (campPick: once)
+  res.ok = true; res.changed = true; res.say = { key: 'camp.hub.upgrade.bought', vars: { ore: campFunds(C) } }; return res;
 };
 
 // the pages
 CAMP_HUBS.page.build = s => {
   const C = campDockC(s.d); if (!C) return; const w = campDockWing(C), B = CAMP.build; let i = 0;
   s.line(i++, 0, uiText('camp.hub.build.head', { name: s.look.name.toUpperCase() }), '#6dff9c');
-  s.line(i++, 0, uiText('camp.hub.build.ore', { ore: Math.floor(C.ore) }), '#ffd37a');
+  s.line(i++, 0, uiText('camp.hub.build.ore', { ore: campFunds(C) }), '#ffd37a');
   s.line(i++, 0, uiText('camp.hub.build.wing', { f: w.f, e: w.e, q: w.q }), '#e8f6ff');
   i++; s.line(i++, 0, uiText('camp.hub.build.keys', { fc: B.fighterCost, ec: B.escortCost }), '#9fe9ff');
   s.line(i++, 0, uiText('camp.hub.build.room', { ft: B.fighterTime, et: B.escortTime }), '#8fb4c9');
@@ -45,7 +45,7 @@ CAMP_HUBS.page.repair = s => {
   const C = campDockC(s.d); if (!C) return; const c = C.carrier; let i = 0;
   s.line(i++, 0, uiText('camp.hub.repair.head'), '#6dff9c');
   s.line(i++, 0, uiText('camp.hub.repair.hull', { hp: Math.round(c.hp), max: Math.round(c.maxHp) }), '#e8f6ff');
-  s.line(i++, 0, uiText('camp.hub.build.ore', { ore: Math.floor(C.ore) }), '#ffd37a');
+  s.line(i++, 0, uiText('camp.hub.build.ore', { ore: campFunds(C) }), '#ffd37a');
   const r = campCheck(C, 'repair', ''); i++;
   s.line(i++, 0, c.maxHp - c.hp <= 0.5 ? uiText('camp.hub.repair.sound') : uiText('camp.hub.repair.key', { ore: Math.max(5, Math.ceil(CAMP.outpost.repairOre * (c.maxHp - c.hp) / c.maxHp)) }), r.ok ? '#9fe9ff' : '#8fb4c9');
   if (s.msg && s.msg.until > s.time.now) s.line(i + 1, 0, s.msg.text, s.msg.ok ? '#6dff9c' : '#ffb454');
@@ -53,7 +53,7 @@ CAMP_HUBS.page.repair = s => {
 CAMP_HUBS.page.upgrade = s => {
   const C = campDockC(s.d); if (!C) return; let i = 0, fab = campHas(C, 'fabricator');
   s.line(i++, 0, uiText('camp.hub.upgrade.head'), '#6dff9c');
-  s.line(i++, 0, uiText('camp.hub.upgrade.ore', { ore: Math.floor(C.ore) }), '#ffd37a');
+  s.line(i++, 0, uiText('camp.hub.upgrade.ore', { ore: campFunds(C) }), '#ffd37a');
   const techs = C.techs.map(t => uiText('camp.tech.' + t + '.name'));
   s.line(i++, 0, techs.length ? uiText('camp.hub.upgrade.have', { list: techs.join(', ') }) : uiText('camp.hub.upgrade.none'), '#e8f6ff');
   i++; s.line(i++, 0, fab ? uiText('camp.hub.upgrade.fitted') : uiText('camp.hub.upgrade.fab', { cost: CAMP.outpost.fabricator }), fab ? '#6dff9c' : '#9fe9ff');
