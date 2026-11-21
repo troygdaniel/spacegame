@@ -25,8 +25,9 @@ window.__tick = (C, n) => { for (let i = 0; i < (n || 1); i++) campCallsTick(C, 
 const text = f => readFileSync(join(ROOT, f), 'utf8');
 
 // ---- A. the table ----
-const types = J('CAMP_CALL_TYPES.map(t => ({ id: t.id, pick: t.pick, def: t.def }))');
-const fxIds = J('Object.keys(CAMP_CALL_FX)');
+const MINE = /\.(distress|rescue|rescueall|stay)$/; // the scripted distress call of mission 1.1 (src/campbeats.js)
+const types = J('CAMP_CALL_TYPES.filter(t => !t.scripted).map(t => ({ id: t.id, pick: t.pick, def: t.def }))'); // (a call a mission scripts itself, with scripted: true, is not one of the six that watch the fight: src/campbeats.js)
+const fxIds = J('Object.keys(CAMP_CALL_FX)').filter(f => !/^(rescue|rescueall|stay)$/.test(f)); // (the effects of 1.1's scripted call are not the ones that watch the fight)
 check('six call types, each with three choices, every choice an effect of the table, and a cautious pick among them', types.length === 6 && types.every(t => t.pick.length === 3 && t.pick.every(p => fxIds.includes(p)) && t.def >= 0 && t.def <= 2 && new Set(t.pick).size === 3), JSON.stringify(types));
 check('the types are the five of the card (a breakaway at the escort, a wounded wingman, the enemy running, a second group sighted, a target of opportunity) and the cruiser\'s shield', ['breakaway', 'wounded', 'running', 'second', 'opportunity', 'cruiser'].every(id => types.some(t => t.id === id)));
 const words = id => J(`uiText('${id}')`);
@@ -34,7 +35,7 @@ const spoken = [].concat(types.map(t => 'camp.call.line.' + t.id), fxIds.map(f =
 check('every call, choice and answer has its words (a key with no text reads as its own name): ' + spoken.length + ' spoken lines and ' + fxIds.length + ' labels', spoken.every(k => words(k) !== k) && fxIds.every(f => words('camp.call.fx.' + f) !== 'camp.call.fx.' + f));
 check('the spoken lines are curt (12 words at most), fixed (no placeholder: the voice pack records each once) and name no alien and no pirate (the calls are on every level)', spoken.every(k => { const t = words(k); return t.split(/\s+/).length <= 12 && !/[{}]/.test(t) && !/alien|pirate|raider|mothership/i.test(t); }), spoken.filter(k => !/^[^{}]*$/.test(words(k)) || words(k).split(/\s+/).length > 12).join());
 check('the labels on the prompt are short (24 characters at most) and every type has an effect for each of its three rows', fxIds.every(f => words('camp.call.fx.' + f).length <= 24));
-check('the voice pack says the calls and their answers are said (in the pilots\' voices) and the labels are only shown: 0 unclassified', (() => { const k = J('voicePackKeys()'); return k.unclassified.length === 0 && (k.spoken['campaign.chatter'] || { keys: [] }).keys.filter(x => /^camp\.call\./.test(x)).length === spoken.length && k.silent.filter(x => /^camp\.call\./.test(x.key)).length === fxIds.length + 2; })());
+check('the voice pack says the calls and their answers are said (in the pilots\' voices) and the labels are only shown: 0 unclassified', (() => { const k = J('voicePackKeys()'); return k.unclassified.length === 0 && (k.spoken['campaign.chatter'] || { keys: [] }).keys.filter(x => /^camp\.call\./.test(x) && !MINE.test(x)).length === spoken.length && k.silent.filter(x => /^camp\.call\./.test(x.key) && !MINE.test(x.key)).length === fxIds.length + 2; })()); // (MINE: the scripted call of mission 1.1, src/campbeats.js, has words of its own)
 
 // ---- B. the triggers ----
 const open = e => J(`(() => { const C = ${e}; __tick(C); return C.call.open ? { id: C.call.open.id, ctx: C.call.open.ctx } : null; })()`);

@@ -157,7 +157,7 @@ const CONTROLS = [
     { k: ['Click'], t: 'Map: click a mark sets it, again flies', sub: 'THE MAP' },
     { k: ['W', 'S', 'A', 'D'], t: 'Map list: choose; next or last group', sub: 'THE MAP' }, // two rows in one: the page is at the size the controls panel fits (tests/controlsfit.mjs)
     { k: ['Shift', 'Enter'], t: 'Map: Enter flies, Shift+Enter fast', sub: 'THE MAP' }, // (the Enter and Shift+Enter rows were one too many for Settings' four columns once E docked)
-    { k: ['V'], t: 'Map: send a scout there', sub: 'THE MAP' },
+    { k: ['V', 'T'], t: 'Map: V scouts there, T takes a lane', sub: 'THE MAP' }, // two keys in one row (the group is at the size Settings > Controls fits: tests/controlsfit.mjs); T is the pick at a fork in the road (card space-game-scout-route)
     { k: ['X'], t: 'Map: X clears the goal', sub: 'THE MAP' }, // (Z used to zoom the map to the whole system: minus and the wheel go all the way out now, card space-game-zoom-out-more)
     { k: ['I'], t: 'Type an order to the ship', sub: 'THE STRIP AND THE VOICE' },
     { k: ['U'], t: 'Hold to speak an order', sub: 'THE STRIP AND THE VOICE' },

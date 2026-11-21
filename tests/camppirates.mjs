@@ -178,7 +178,7 @@ console.log('F. patrols and miners (neutral traffic)');
   const pat = rows.find(r => r.kind === 'patrol');
   check('`at` is an offset from the mission\'s place (the patrol is at Ceres + [-500, 400])', Math.abs(pat.x - (pl.x - 500)) < 5 && Math.abs(pat.y - (pl.y + 400)) < 5, JSON.stringify([pat, pl]));
   check('a row with n: 2 names them "Miner 1", "Miner 2"', rows.filter(r => r.kind === 'miner').map(r => r.name).sort().join() === 'Miner 1,Miner 2');
-  check('a mission with no traffic rows has no neutral ships', J(`(() => { const D = campNew(1, [], { seed: 5, mission: 0 }); return D.ships.filter(u => u.team === 'neutral').length })()`) === 0);
+  check('a mission with no traffic rows has no neutral ships', J(`(() => { const D = campNew(1, [], { seed: 5, mission: 2 }); return D.ships.filter(u => u.team === 'neutral').length })()`) === 0);
   // the patrol ranges round its post
   g.run('__new(); __quiet(); __run(20)');
   const ranged = J(`(() => { const p = C.ships.find(u => u.kind === 'patrol'); return __d(p, p.post) })()`);

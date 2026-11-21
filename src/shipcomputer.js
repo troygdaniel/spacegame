@@ -515,6 +515,7 @@ const SC_ACT = {
   fleet_balance: (s, arg) => scFleet(s, 'balance', arg),
   fleet_emergency: (s, arg) => scFleet(s, 'emergency', arg),
   fleet_scout: (s, arg) => scFleet(s, 'scout', arg), // an escort scouts a place (card space-game-campaign-scouts)
+  fleet_lane: (s, arg) => scFleet(s, 'lane', arg), // the pick at a fork in the road (card space-game-scout-route)
   fleet_build: (s, arg) => scFleet(s, 'build', arg),
   fleet_dock: (s, arg) => scFleet(s, 'dock', arg), // card space-game-campaign-outposts: the carrier docks at the outpost in range (or the one named); the ready room opens
   fleet_repair: (s, arg) => scFleet(s, 'repair', arg), // the hull, docked only

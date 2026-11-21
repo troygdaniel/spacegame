@@ -13,7 +13,7 @@
 //   campNavFly(C, row, fast, how)   the one door every trip goes through (the map, the words, the panel): regular speed always; Fast only with the wing aboard (card space-game-campaign-fast-board, below)
 // The rule, the stop distances and every number are CAMP.nav in src/campaign.js. Steering is the player's: any steering key ends it (the scene calls campNavClear(C, 'key')); the orders go on.
 const CAMPNAV = {
-  groups: [['goal', 'GOAL'], ['places', 'PLACES'], ['convoys', 'CONVOYS'], ['traffic', 'TRAFFIC'], ['enemies', 'ENEMIES'], ['finds', 'CACHES AND RELIC'], ['ore', 'ORE AND ROCKS'], ['wing', 'YOUR SHIPS']], // the list's headings, in order (navpanelLines draws them); nearest first in each (card space-game-campaign-map-targets: every mark of the map is a row)
+  groups: [['goal', 'GOAL'], ['places', 'PLACES'], ['routes', 'ROUTE'], ['convoys', 'CONVOYS'], ['traffic', 'TRAFFIC'], ['enemies', 'ENEMIES'], ['finds', 'CACHES AND RELIC'], ['ore', 'ORE AND ROCKS'], ['wing', 'YOUR SHIPS']], // the list's headings, in order (navpanelLines draws them); nearest first in each (card space-game-campaign-map-targets: every mark of the map is a row)
   color: { goal: 0xffd37a, select: 0x7fe9ff }
 };
 const campNavNorm = t => String(t == null ? '' : t).toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/'/g, ' ').replace(/\s+/g, ' ').trim();
@@ -65,6 +65,7 @@ function campNavRows(C) {
   const pl = campPlaces(C.level), c = C.carrier, rows = [], add = r => { r.dist = Math.hypot(r.x - c.x, r.y - c.y); rows.push(r); return r; };
   const posts = C.level != null && CAMP.levels[C.level] && CAMP.levels[C.level].outposts || {}; // the friendly outposts of the level: a place in the list that is one says so (the map marks it with a station)
   Object.keys(pl).forEach(id => { const p = pl[id]; if (!p.hidden) add({ id: 'place:' + id, kind: 'place', group: 'places', name: String(p.name), x: p.x, y: p.y, r: p.r || 60, far: !!p.far, star: p.kind === 'star', outpost: !!posts[id], moon: !!p.moon }); });
+  if (typeof campRouteRows === 'function') campRouteRows(C).forEach(r => add(r)); // the lanes of a fork in the road, to scout and to pick (src/camproute.js)
   campConvoys(C).forEach(u => add({ id: 'convoy:' + u.id, kind: 'convoy', group: 'convoys', name: uiText('camp.nav.convoy', { name: campConvoyName(u) }), x: u.x, y: u.y, r: u.r || 22, moving: true, ref: u.id }));
   C.ships.forEach(u => { if (u.hp > 0 && u.team === 'neutral') add({ id: 'neutral:' + u.id, kind: 'neutral', group: 'traffic', name: u.cname || campNavUnitName(u), x: u.x, y: u.y, r: u.r || 0, moving: true, ref: u.id }); }); // the neutral ships: the patrols and the other miners (src/camppirates.js)
   (C.scan || []).forEach((p, i) => { if (!p.got) add({ id: 'scan:' + i, kind: 'scan', group: 'finds', name: uiText('camp.nav.scan', { n: i + 1 }), x: p.x, y: p.y, r: 0 }); });
@@ -86,6 +87,7 @@ function campNavRows(C) {
 function campNavTarget(C, N) {
   const id = N.of || N.id, kind = N.kind;
   if (kind === 'place') { const p = campPlaces(C.level)[String(id).slice(6)]; return p ? { x: p.x, y: p.y, r: p.r || 60 } : null; }
+  if (kind === 'lane') { const l = C.route && C.route.geo.lanes[String(id).slice(5)]; return l ? { x: l.mid.x, y: l.mid.y, r: 0 } : null; } // the middle of a lane (src/camproute.js)
   if (kind === 'cache') { const k = C.caches[+String(id).slice(6)]; return k && !k.got ? { x: k.x, y: k.y, r: 0 } : null; }
   if (kind === 'scan') { const k = C.scan[+String(id).slice(5)]; return k && !k.got ? { x: k.x, y: k.y, r: 0 } : null; }
   if (kind === 'relic') return C.relic ? { x: C.relic.x, y: C.relic.y, r: 0 } : null;
@@ -176,6 +178,7 @@ function campNavFind(C, text) {
   if (/\b(?:objective|goal|mission|target|destination)\b/.test(q)) { const g = by('goal'); return g ? { row: g } : { code: 'nogoal' }; }
   if (/\b(?:mothership|mother|boss|big one|flagship)\b/.test(q)) { const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); return m ? { row: { id: 'mother', kind: 'mother', name: uiText('camp.nav.mother'), x: m.x, y: m.y, r: m.r, moving: true, ref: m.id } } : { code: 'nomother' }; }
   if (/\brelic\b/.test(q)) { const r = by('relic'); return r ? { row: r } : { code: 'norelic' }; }
+  if (C.route && /\b(?:lane|route)\b/.test(q)) { const l = campRouteFind(C, q), r = l && by('lane:' + l.id); if (r) return { row: r }; } // "the long lane": a lane of the fork (src/camproute.js)
   if (/\b(?:anomal(?:y|ies)|shimmer|odd (?:spot|reading|readings)|cloaked|alien cache)\b/.test(q)) { const r = first('anomaly'); return r ? { row: r } : { code: 'noanomaly' }; } // the nearest one that is noticed
   if (/\b(?:cache|caches|supplies|supply|resources?|pods?)\b/.test(q)) { const r = first('cache'); return r ? { row: r } : { code: 'nocache' }; }
   if (/\b(?:towers?|defences?|defenses?|turrets?)\b/.test(q)) {

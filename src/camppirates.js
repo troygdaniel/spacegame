@@ -121,7 +121,10 @@ function campTrafficNew(C) {
     for (let i = 0; i < n; i++) {
       const a = i / n * 2 * Math.PI + ti, d = n > 1 ? 60 : 0, u = campSpawn(C, t.kind, x + Math.cos(a) * d, y + Math.sin(a) * d);
       if (!u) continue;
+      if (t.escort) u.escort = Object.assign({}, t.escort); // a patrol that flies with a convoy up to a share of its road, then turns back to its post (card space-game-l1-1-beats)
       u.tid = t.id || ('t' + ti); u.cname = (t.name || kd.name) + (n > 1 ? ' ' + (i + 1) : ''); u.post = { x, y }; u.range = t.r || kd.r; u.rot = a; u.slot = i;
+      if (t.hp) u.hp = u.maxHp = t.hp; // a row may say how tough the ship is (the crippled miner of 1.1 is not 70)
+      if (t.stay) u.stay = true; // a miner that works where it is and never goes home (until it is frightened): the distress call of 1.1 (card space-game-l1-1-beats)
       if (t.kind === 'miner') { u.home = home ? { x: home.x, y: home.y, r: home.r || 60 } : { x, y, r: 0 }; u.field = Array.isArray(t.field) ? { x: t.field[0], y: t.field[1] } : null; u.phase = 'out'; u.until = 0; u.beam = ''; }
     }
   });
@@ -139,6 +142,11 @@ function campTrafficAI(C, u, dt) {
 }
 function campPatrolAI(C, u, dt) {
   const k = CAMP.traffic.kinds.patrol, hs = campHostiles(C);
+  if (u.escort) { // it flies with the transport (beside her, ahead of her nose) until she has flown `until` of her road, says it turns back and goes home
+    const E = u.escort, f = C.by['freighter-' + E.convoy], started = !!f || C.convoys.some(c => c.started);
+    if (started && (!f || f.hp <= 0 || campLane(C, E.convoy) >= E.until)) { u.escort = null; if (E.say && C.beats && !C.beats.patrolSaid) { C.beats.patrolSaid = true; campSay(C, E.say); } }
+    else if (f) { const side = (u.slot | 0) % 2 ? 1 : -1, h = f.rot || 0; campSeek(u, f.x + Math.cos(h) * 140 - Math.sin(h) * 170 * side, f.y + Math.sin(h) * 140 + Math.cos(h) * 170 * side, dt, h); return; }
+  }
   let foe = campNearest(hs, u, k.range);
   if (!foe) foe = campNearest(hs.filter(h => campDist(h, u.post) <= k.help), u); // one within the help of its post (a hauler or a miner under fire): it goes there
   if (foe && campDist(foe, u.post) <= k.help + k.range) {
@@ -158,6 +166,7 @@ function campMinerRock(C, u) {
 function campMinerAI(C, u, dt) {
   if (u.cord && typeof campConvoyMiner === 'function' && campConvoyMiner(C, u, dt)) return; // an order of the pilot's (Tuck in, Hold here, Run for it: src/campconvoy.js)
   const k = CAMP.traffic.kinds.miner, hs = campHostiles(C), scared = campNearest(hs, u, k.fear);
+  if (u.stay) { u.beam = ''; return; } // a crippled miner (the distress call of 1.1) cannot run: it sits where it is until the pirates have it or the wing comes (card space-game-l1-1-beats)
   if (scared) { u.phase = 'run'; u.beam = ''; } else if (u.phase === 'run' && !campNearest(hs, u, k.fear * 1.6)) u.phase = 'out';
   if (u.phase === 'run') { campSeek(u, u.home.x, u.home.y, dt); return; } // home as fast as it goes
   if (u.phase === 'out') {
@@ -169,7 +178,7 @@ function campMinerAI(C, u, dt) {
   if (u.phase === 'work') {
     const rock = (C.rocks || []).find(r => r.id === u.rockId && r.hp > 0); if (!rock) { u.beam = ''; u.rockId = ''; }
     campSeek(u, (rock || u.post).x + 90, (rock || u.post).y + 40, dt, rock ? Math.atan2(rock.y - u.y, rock.x - u.x) : undefined);
-    if (C.t >= u.until) { u.phase = 'home'; u.beam = ''; }
+    if (C.t >= u.until && !u.stay) { u.phase = 'home'; u.beam = ''; }
     return;
   }
   if (u.phase === 'home') {

@@ -70,12 +70,12 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.keys.launch | Enter or L: launch    Left: back    Esc: the board |
 | camp.bf.keys.zoom | + - 0 zoom |
 | camp.bf.1.1.w1 | 1 transport flies from the Lunar Base to Ceres. |
-| camp.bf.1.1.w2 | Pirates raid her again and again on the way. Stay close. |
-| camp.bf.1.1.w3 | Hold Space to fire. {fleetkey} then {nescort}: escorts guard her. |
-| camp.bf.1.1.w4 | She must arrive. If she dies, the mission is lost. |
-| camp.bf.1.1.n1 | Welcome aboard, Commander. The transport is ours to bring to Ceres. Stay close to her. |
-| camp.bf.1.1.n2 | Pirates will come at her from ahead. Hold Space to fire the turrets, and shoot what comes. |
-| camp.bf.1.1.n3 | W A S D fly the cruiser. {fleetkey} opens the fleet panel: {nlaunch} launches the wing, {nescort} sends the escorts to her. Tab opens the map. |
+| camp.bf.1.1.w2 | The road forks. Scout both lanes, then pick one. |
+| camp.bf.1.1.w3 | Pirates hide on the short lane. Shoot the torpedo boats first. |
+| camp.bf.1.1.w4 | A pirate leader waits near Ceres. Kill it, or get her past. |
+| camp.bf.1.1.n1 | Welcome aboard, Commander. The transport is ours to bring to Ceres. A patrol sees her off, then she is on her own. |
+| camp.bf.1.1.n2 | The road forks. Send a scout down each lane, then pick one on the map ({map}). Pirates may hide on the short one. |
+| camp.bf.1.1.n3 | W A S D fly the cruiser. {fleetkey} opens the fleet panel: {nlaunch} launches the wing, {nescort} sends the escorts to her. When a pilot calls, answer 1, 2 or 3. |
 | camp.bf.1.2.w1 | Mine the rock fields round Ceres. {fleetkey} then {nmine} sends the wing. |
 | camp.bf.1.2.w2 | Ore sells for triple at the Works. Pirates hunt the miners. |
 | camp.bf.1.2.w3 | Beat the 3 raids, then dock at Occator Works: SHIP panel, Dock. |

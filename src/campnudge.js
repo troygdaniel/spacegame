@@ -16,5 +16,5 @@ function campNudge(C, shown) {
       shown[h.id] = true; return uiText(h.key);
     }
   } catch (e) { /* a hint is a nicety */ }
-  return null;
+  return typeof campBeatNudge === 'function' ? campBeatNudge(C, shown) : null; // the hints of mission 1.1's beats, with their keys from the key table (src/campbeats.js)
 }

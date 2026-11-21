@@ -92,14 +92,16 @@ function campBriefRoute(Y) {
 // ---- the words: the walkthrough is data ----
 function campBriefWalk(level, i) {
   const steps = [];
-  for (let k = 1; k <= CAMPBRIEF.walkMax; k++) { const key = 'camp.bf.' + level + '.' + (i + 1) + '.w' + k; if (!Object.prototype.hasOwnProperty.call(UI_TEXT, key)) break; steps.push(uiText(key)); }
+  for (let k = 1; k <= CAMPBRIEF.walkMax; k++) { const key = 'camp.bf.' + level + '.' + (i + 1) + '.w' + k; if (!Object.prototype.hasOwnProperty.call(UI_TEXT, key)) break; steps.push(uiText(key, typeof campBeatKeys === 'function' ? campBeatKeys() : {})); } // (the keys of the panels and the map come from the key table: src/campbeats.js)
   return steps.length ? { steps, data: true } : { steps: [uiText('camp.bf.nowalk')], data: false };
 }
-const CAMPBRIEF_ORDER = ['skiff', 'cutter', 'brute', 'raider', 'drone', 'gunship', 'guard', 'tower', 'mother'];
+const CAMPBRIEF_ORDER = ['skiff', 'cutter', 'brute', 'tboat', 'lancer', 'pirateleader', 'raider', 'drone', 'gunship', 'guard', 'tower', 'mother'];
 function campBriefEnemies(level, i) {
   const L = campMissionRow(level, i), n = {}; if (!L) return { list: [], line: '' };
   let unknown = false; // a wave row with `secret: true` (1.3's first contact) is not listed: the briefing does not tell what the surprise is (card space-game-night-hunt-l1-rim)
-  (L.waves || []).forEach(w => { if (w.secret) { unknown = true; return; } Object.keys(w.ships || {}).forEach(k => { n[k] = (n[k] || 0) + w.ships[k]; }); if (w.mother) n.mother = (n.mother || 0) + 1; });
+  const lane0 = L.route && L.route.lanes && L.route.lanes.length ? (L.route.pick || L.route.lanes[0].id) : null; // a fork in the road: the briefing counts what the lane she takes unless told meets (the default), not both lanes' raids (card space-game-scout-route)
+  (L.waves || []).forEach(w => { if (w.lane && lane0 && w.lane !== lane0) return; if (w.secret) { unknown = true; return; } Object.keys(w.ships || {}).forEach(k => { n[k] = (n[k] || 0) + w.ships[k]; }); if (w.mother) n.mother = (n.mother || 0) + 1; });
+  (L.rivals || []).forEach(r => { n[r.kind] = (n[r.kind] || 0) + 1; }); // the rival ships of the row (the pirate leader of 1.1: src/camprival.js)
   if ((L.guards || []).length) n.guard = (n.guard || 0) + L.guards.length;
   (L.towers || []).forEach(t => { n.tower = (n.tower || 0) + (t.n || 1); });
   const list = CAMPBRIEF_ORDER.concat(Object.keys(n).filter(k => CAMPBRIEF_ORDER.indexOf(k) < 0)).filter(k => n[k] > 0).map(k => ({ kind: k, n: n[k], text: uiText('camp.bf.enemy.' + k + (n[k] === 1 ? '.one' : '.many'), { n: n[k] }) }));
@@ -215,5 +217,5 @@ function campBriefStory(P, level, i) {
 // the ship's line over a screen of a mission (screen 0 to 2): fixed lines of the content file, or '' (mission 1.1 has them: the basics, in the story's voice)
 function campBriefNote(level, i, screen) {
   const key = 'camp.bf.' + level + '.' + (i + 1) + '.n' + ((screen | 0) + 1);
-  return Object.prototype.hasOwnProperty.call(UI_TEXT, key) ? uiText(key) : '';
+  return Object.prototype.hasOwnProperty.call(UI_TEXT, key) ? uiText(key, typeof campBeatKeys === 'function' ? campBeatKeys() : {}) : '';
 }

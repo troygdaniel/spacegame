@@ -39,8 +39,8 @@ const BOTS = {
   missile: { name: 'missile', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, missiles: true },         // plain, and it presses F whenever a big ship is in reach
   tuck: { name: 'tuck', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, tuck: true },                    // plain, and the convoy orders (card space-game-convoy-orders): when a hostile comes within 1,600 px of an escorted ship the cruiser goes to it and the ships tuck in under its shield; when the sky is clear they carry on
   mguard: { name: 'mguard', launchAt: 1, missiles: true },                                                       // launches (the wing only guards) and fires missiles
-  troy: { name: 'troy', launchAt: 45, escort: [81], sit: true },                                                   // Troy's first try (play log 20 Nov): launches at 45 s, escorts at 81 s, never attacks, the carrier stays at the base and shoots what comes close
-  troyh: { name: 'troyh', launchAt: 45, escort: [81], sit: true, reactive: 3 },                                      // troy, and when the first real damage comes (Earth under 90 percent, or the hull under 80) it reads a hint 3 s later: launch if need be, attack every 5 s, fly out
+  troy: { name: 'troy', launchAt: 45, escort: [81], sit: true, noroute: true },                                                   // Troy's first try (play log 20 Nov): launches at 45 s, escorts at 81 s, never attacks, the carrier stays at the base and shoots what comes close
+  troyh: { name: 'troyh', launchAt: 45, escort: [81], sit: true, reactive: 3, noroute: true },                                      // troy, and when the first real damage comes (Earth under 90 percent, or the hull under 80) it reads a hint 3 s later: launch if need be, attack every 5 s, fly out
   strong: { name: 'strong', launchAt: 1, escort: [9, 56], attackFrom: 12, attackEvery: 5, missiles: true, cycle: 0.45, skill: 'sharp' }, // a strong player (card space-game-wrapup-difficulty): escorts both convoys, missiles on every big ship, recalls and relaunches the hurt wing, and flies sharp
   mcarrier: { name: 'mcarrier', launch: false, missiles: true },
   plains: { name: 'plains', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'smart' },                  // plain, and it answers the pilots' calls (src/camporders.js) with the pick a player who thinks would make
@@ -52,7 +52,7 @@ const OLD = process.argv.includes('--old');
 const SETS = process.argv.map((a, i) => a === '--set' ? process.argv[i + 1] : null).filter(Boolean); // --set alien.hpScale=2 --set alien.damageScale=2: change the table before the run (what-if)
 const g = nodeGame();
 if (process.argv.includes('--nocalls')) g.run('campCallsTick = null'); // --nocalls: the battle as it was before the pilots asked for orders (to compare)
-g.run(`window.__SMART = { cruiser: 3, wounded: 2, breakaway: 1, second: 1, running: 1, opportunity: 1 }`); // the 'smart' bot's picks by call type (1, 2 or 3)
+g.run(`window.__SMART = { distress: 1, cruiser: 3, wounded: 2, breakaway: 1, second: 1, running: 1, opportunity: 1 }`); // the 'smart' bot's picks by call type (1, 2 or 3)
 g.run(`window.__PACE = ${isNaN(Number(PACE)) ? JSON.stringify(PACE) : Number(PACE)}`); // the battle pace of every battle of this run
 g.run(`window.__RANK = ${JSON.stringify(RANK)}`); // the pilot's rank for every battle of this run
 if (OLD) g.run(`(() => { CAMP.earth.shield = 300; CAMP.earth.regen = 0; CAMP.mother.hp = 900; CAMP.mother.damage = 12; CAMP.mother.holdAt = 1600; CAMP.mother.spawnEvery = 8000; CAMP.mother.spawnMax = 6; CAMP.levels[1].waves[2].ships.raider = 3; })()`); // the numbers before the easier level 1
@@ -75,6 +75,11 @@ g.run(`(() => {
     if (st.react != null && s >= st.react) { B = Object.assign({}, B, { sit: false, launchAt: st.launched ? B.launchAt : 0, attackFrom: 0, attackEvery: 5 }); st.sitOff = true; }
     if (B.launch !== false && B.launchAt != null && !st.launched && s >= B.launchAt) { st.launched = true; campOrder(C, 'launch'); }
     (B.escort || []).forEach((at, i) => { if (!st['e' + i] && s >= at && campConvoys(C).length) { st['e' + i] = true; campOrder(C, 'escort', 'convoy'); } }); // the wing goes to the nearest convoy ship (the transport, the haulers)
+    if (C.route && !C.route.passed && !B.noroute) { // a fork in the road (card space-game-scout-route): scout both lanes as soon as an escort is out, then take the quieter one when the transport holds at the fork
+      C.route.geo.order.forEach(id => { if (st.launched && !C.route.known[id] && !st['lane' + id]) { const row = campNavRows(C).find(x => x.id === 'lane:' + id); if (row && campOrder(C, 'scout', row).ok) st['lane' + id] = true; } });
+      const hold = campRouteHolding(C), all = C.route.geo.order.every(id => C.route.known[id]);
+      if (hold && !st.picked && (all || hold.left < 8)) { st.picked = true; const n = id => C.route.known[id] ? C.route.known[id].pirates + C.route.known[id].aliens : 99; campOrder(C, 'lane', hold.lanes.map(l => l.id).sort((a, b) => n(a) - n(b))[0]); }
+    }
     const mineOpen = campObjectives(C).some(o => !o.done && o.type === 'ore') && !B.nomine, fight = campAliens(C).some(u => !u.hold);
     if (B.launch !== false && st.launched && mineOpen && !st.mining && !fight && s >= (st.mineAt || 0)) { if (campOrder(C, 'mine').ok) st.mining = true; else st.mineAt = s + 1; } // while the mission asks for ore the wing mines, and goes to the fight only when one comes (then mines again) // a mission that asks for ore: the wing mines (E then 1)
     if (B.cycle && st.launched) {

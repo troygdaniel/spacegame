@@ -58,6 +58,7 @@ function campMapBounds(level, whole, row) { // whole: the whole of the star's sy
   (L.towers || []).forEach(t => { const p = pl[t.place]; if (p) add(p.x, p.y, t.r); });
   (L.waves || []).forEach(w => { if (w.from) add(w.from[0], w.from[1], 0); if (w.mother) add(w.mother[0], w.mother[1], 0); });
   (L.convoys || []).forEach(c => { const to = pl[c.to]; if (to) add(to.x, to.y, to.r); });
+  if (L.route && typeof campRoutePoints === 'function') campRoutePoints(level, L).forEach(p => add(p.x, p.y, 0)); // the bend of a lane is on the map
   if (!isFinite(box.x0)) return { x0: -CAMPMAP.minExtent / 2, y0: -CAMPMAP.minExtent / 2, x1: CAMPMAP.minExtent / 2, y1: CAMPMAP.minExtent / 2 };
   const m = CAMPMAP.minExtent, cx = (box.x0 + box.x1) / 2, cy = (box.y0 + box.y1) / 2;
   if (box.x1 - box.x0 < m) { box.x0 = cx - m / 2; box.x1 = cx + m / 2; }
@@ -92,11 +93,12 @@ const campMapWholeZ = (base, whole) => whole && whole.s > 0 && base && base.s > 
 const campMapZMin = (base, whole, floor) => Math.min(floor == null ? 1 : floor, campMapWholeZ(base, whole));
 const campMapPoint = (fit, frame, x, y) => ({ x: frame.x + frame.w / 2 + (x - fit.cx) * fit.s, y: frame.y + frame.h / 2 + (y - fit.cy) * fit.s });
 
-const CAMPMAP_RANK = { place: 0, objective: 0, relic: 1, anomaly: 2, cache: 2, scan: 2, rock: 2, pickup: 2, tower: 3, convoy: 4, patrol: 4, miner: 4, pirate: 5, alien: 5, tboat: 5, wing: 6, rival: 7, mother: 7, torpedo: 7, carrier: 8 }; // drawn in this order: the carrier on top
+const CAMPMAP_RANK = { lane: 0, place: 0, objective: 0, relic: 1, anomaly: 2, cache: 2, scan: 2, rock: 2, pickup: 2, tower: 3, convoy: 4, patrol: 4, miner: 4, pirate: 5, alien: 5, tboat: 5, wing: 6, rival: 7, mother: 7, torpedo: 7, carrier: 8 }; // drawn in this order: the carrier on top
 function campMapMarks(C, whole) { // whole: the far places too (the whole system); else only the level's own area
   const L = (C.L || CAMP.levels[C.level]), pl = campPlaces(C.level), c = CAMPMAP.color, out = [];
   Object.keys(pl).forEach(id => { const p = pl[id]; if (p.hidden || (p.far && !whole && !campMapUsed(L, id))) return; out.push({ type: 'place', id, x: p.x, y: p.y, r: p.r || 60, name: String(p.name) + (p.base ? ' / ' + p.base : ''), color: p.kind === 'star' ? c.star : id === 'earth' ? c.earth : c.place, outpost: !!(L && L.outposts && L.outposts[id]) }); }); // outpost: a friendly station (the map draws a mark on it)
   (C.caches || []).forEach(k => { if (!k.got) out.push({ type: 'cache', x: k.x, y: k.y, color: c.cache }); });
+  if (typeof campRouteMarks === 'function') campRouteMarks(C).forEach(m => out.push(m)); // the lanes of a fork in the road (src/camproute.js)
   if (L.place && pl[L.place]) out.push({ type: 'objective', x: pl[L.place].x, y: pl[L.place].y, r: (pl[L.place].r || 60) + 260, color: c.relic }); // the mission's place: a ring round it, the objective
   (C.scan || []).forEach(p => { if (!p.got) out.push({ type: 'scan', x: p.x, y: p.y, r: p.r, color: c.cache }); }); // the points to scan: gold diamonds like the caches
   (C.rocks || []).forEach(r => { if (r.hp > 0) out.push({ type: 'rock', id: r.id, x: r.x, y: r.y, color: c.rock }); }); // the asteroids a laser cuts, and the ore lying about (a wreck's, a broken rock's): small marks, clickable like the rest (card space-game-campaign-map-targets)
