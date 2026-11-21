@@ -15,7 +15,7 @@ const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   
 const g = nodeGame();
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
-g.run(`window.N = (lv, techs) => { window.C = campNew(lv, techs || [], { seed: 1 }); C.ships = C.ships.filter(u => u.team !== 'alien'); return C; }; window.__at = (x, y) => { C.carrier.x = x; C.carrier.y = y; C.carrier.vx = 0; C.carrier.vy = 0; };`);
+g.run(`window.N = (lv, techs) => { window.C = campNew(lv, techs || [], { seed: 1 }); C.arrivedAt = 0; C.ships = C.ships.filter(u => u.team !== 'alien'); return C; }; window.__at = (x, y) => { C.carrier.x = x; C.carrier.y = y; C.carrier.vx = 0; C.carrier.vy = 0; };`);
 const O = J('CAMP.outpost');
 
 // ---- A. the data ----
