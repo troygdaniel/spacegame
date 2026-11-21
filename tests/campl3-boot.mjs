@@ -13,7 +13,7 @@ const PART = Number((process.argv.indexOf('--part') > 0 && process.argv[process.
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const note = s => console.log('  note ' + s);
-const VK = { Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, KeyK: 75, KeyL: 76, Enter: 13, Escape: 27, Tab: 9, KeyH: 72 };
+const VK = { KeyQ: 81, KeyC: 67, KeyP: 80, KeyB: 66, KeyV: 86, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, KeyK: 75, KeyL: 76, Enter: 13, Escape: 27, Tab: 9, KeyH: 72 };
 
 const t = await launch('', ROOT);
 try {
@@ -46,11 +46,11 @@ try {
 
   // the pilot's play: the wing out and attacking, the carrier on the autopilot to the goal, Space held near an alien
   await t.ev(`(() => { ${S}.k.SPACE = { isDown: true }; return 1; })()`);
-  await key('Digit1'); await key('Digit1'); await t.run(600);
+  await key('KeyQ'); await key('Digit1'); await t.run(600); // Q opens the Fleet panel, 1 launches the wing
   const drive = async secs => { // fly to the goal, one leg at a time, re-pick each 5 s; log what the game says
     for (let s = 0; s < secs; s += 5) {
       await t.ev(`(() => { const C = ${S}.camp; if (C.result) return 0; const g = campNavGoal(C); if (g) { const row = campNavRows(C).find(r => r.id === 'goal') || g; if (!C.nav || !C.nav.on) campNavGo(C, row); } return 1; })()`);
-      if (s % 10 === 5) await key('Digit1'), await key('Digit2');
+      if (s % 10 === 5) await key('KeyQ'), await key('Digit2'); // Fleet, Attack
       await t.run(5000);
       if (await j(`${S}.camp.result || ${S}.mode !== 'play'`)) break;
     }

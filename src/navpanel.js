@@ -71,6 +71,7 @@ function navpanelLines(rows, sel, max, groups) { // groups: the headings of anot
   let start = Math.max(0, Math.min(selLine - Math.floor(max / 2), all.length - max));
   if (start > 0 && all[start - 1].head && start === selLine) start--; // never cut a heading off its chosen row
   const lines = all.slice(start, start + max), count = l => l.filter(x => x.row).length;
+  if (lines.length > 1 && lines[lines.length - 1].head) lines.pop(); // a window that ends on a heading shows the heading and none of its rows: it goes (card space-game-wrapup-hunt-l3)
   return { lines, above: count(all.slice(0, start)), below: count(all.slice(start + max)) };
 }
 // where the panel starts: under whatever the HUD has on the left (its zones: the gauges, the mission checklist open or shut), never above NAVPANEL.y
