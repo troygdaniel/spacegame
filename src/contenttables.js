@@ -1022,7 +1022,7 @@ const UI_TEXT = {
   'camp.tech.repair.name': 'Repair field',
   'camp.tech.repair.text': 'The carrier and the ships beside it mend as they fly.',
   // Settings > Sound > Music (card space-game-music, src/music.js): the one sentence under the row
-  'music.use': 'Music is made by the game as you fly and steps back when the ship speaks. Effects is the engine, the drone and every shot and click; they ease off a little while music plays. M mutes all.'
+  'music.use': 'Music is made by the game as you fly and steps back when the ship speaks. Effects is the engine, the drone and every shot and click; they ease off a little while music plays. M mutes all.',
   'camp.bf.1.3.w4': 'Something else is out there. Be ready.',
   'camp.say.transport': '{name} is under way. Stay with her.',
   'camp.say.rim1': 'Pirates ahead of the transport. Cover her.',
