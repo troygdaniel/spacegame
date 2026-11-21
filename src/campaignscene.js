@@ -107,7 +107,8 @@ class Campaign extends Phaser.Scene {
     this.hideCard(); if (typeof campMapClose === 'function') campMapClose(this); // a card (the story, the end) comes up over the map: the map goes
     (this.toasts || []).forEach(o => { if (o && o.t && o.t.destroy) { o.t.destroy(); o.bg.destroy(); o.tab.destroy(); } }); this.toasts = []; // and the toast of the moment before (it floats above a card and ran through the debrief's title)
     if (typeof campPanelsClose === 'function') campPanelsClose(this); // and a panel
-    const body = lines.join('\n\n'), bodyStyle = uiFont(20, '#e8f6ff', { align: 'center', wordWrap: { width: 720 }, lineSpacing: 4 }), probe = this.add.text(0, -999, body, bodyStyle), bh = Number.isFinite(probe.height) ? probe.height : 0; probe.destroy();
+    const body = lines.join('\n\n'), bodyStyle = uiFont(20, '#e8f6ff', { align: 'center', wordWrap: { width: 720 }, lineSpacing: 4 });
+    const bh = body.split('\n').reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 56)), 0) * 26; // the height of the words: a line is about 56 letters wide and 26 px high (20 px type and its spacing)
     const o = [], cx = W / 2, cy = H / 2 - 20, h = Math.min(H - 60, Math.max(tall || 300, bh + 150)); // the card grows to its words: a debrief with four bonus lines and a promotion ran out of the card (card space-game-wrapup-hunt-l3)
     o.push(this.add.rectangle(W / 2, H / 2, W, H, 0x02060d, 0.5)); // a veil over the battle and its gauges, so the card is the one thing to read (the blind critic: HUD and planet labels showed through the card)
     o.push(this.add.rectangle(cx, cy, 800, h, 0x04101c, 1).setStrokeStyle(2, CYAN, 0.85));
