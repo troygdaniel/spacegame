@@ -266,14 +266,14 @@ class Campaign extends Phaser.Scene {
     if (c === 'KeyH') { this.openKeys(); return; } // H: every key, on one page
     const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // a word typed into the strip is not a key
     if ((typeof this.pn !== 'object' || typeof this.pn.open !== 'string') && typeof campPanelNew === 'function') this.pn = campPanelNew(); // made in create (campPanelsInstall); a stand-in scene in a test has none, and answers any property
-    const pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0, e.shiftKey) : { used: false }; // Q and E open the panels (FLEET, SHIP), the digits pick a row of the open one, then a digit picks a row (src/camppanel.js); Esc closes a panel first
+    const pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0, e.shiftKey) : { used: false }; // Z, X and C open the panels (FLEET, SHIP, SYSTEMS), the digits pick a row of the open one, the arrows and Enter too, then a digit picks a row (src/camppanel.js); Esc closes a panel first
     if (pr.ran) toast(this, pr.say, pr.ok ? '#9fe9ff' : '#ffb454');
     if (pr.used) return;
     const dk = !typing && this.mode === 'play' && typeof campPowerKey === 'function' ? campPowerKey(C, c) : { used: false }; // J K L: a pip to the shields, the engines, the weapons (the order of the dials), without the SYSTEMS panel (src/camphud.js; the same order as its rows)
     if (dk.used) { if (dk.ran) toast(this, dk.say, dk.ok ? '#9fe9ff' : '#ffb454'); return; }
     if (c === 'Escape') { if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc closes the map first; it never pauses while the map is open
     if (this.mp && typeof campMapKey === 'function' && campMapKey(this, c, e.shiftKey)) return; // the open map's list: W S choose, A D change group, Enter fly there (Shift+Enter fast), X clear (src/campmapdraw.js)
-    if (c === 'KeyB') { C.input.blink = true; const bw = campBlinkWhy(C); if (bw) toast(this, bw, '#ffb454'); } // the warp blink (it was Q: Q and E open the panels now); without the technology, or while it cools, the key says so
+    if (c === 'KeyB') { C.input.blink = true; const bw = campBlinkWhy(C); if (bw) toast(this, bw, '#ffb454'); } // the warp blink (it was Q; Q and E are free now: the panels are Z, X and C); without the technology, or while it cools, the key says so
     else if (c === 'KeyF') this.fireMissile();
     else if (c === CAMP.pace.key && !typing && this.mode === 'play') { const m = campPaceStep(1); campPaceSet(C, m.id); toast(this, uiText('camp.pace.toast', { pace: m.name }), '#9fe9ff'); } // B: the battle pace, calm, normal, brisk (card space-game-campaign-pace): it takes hold on the ships already out
     else if (typeof campDebugKey === 'function') { // the tune kit (src/campdebug.js): ] skip, \\ win, [ lose, ` god mode; none is a key you fly by
@@ -317,13 +317,14 @@ class Campaign extends Phaser.Scene {
       const k = this.k, inp = C.input;
       // the autopilot (src/campnav.js, card space-game-campaign-navigate): while the map is open W A S D and the arrows are the list's, not the wheel's; with it closed any of them takes the wheel back
       const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // the strip's own box: the letters typed there are not the wheel
-      const wheel = !this.mp && !typing && [k.W, k.A, k.S, k.D, k.UP, k.DOWN, k.LEFT, k.RIGHT].some(x => x && x.isDown);
+      const arrows = !(this.pn && typeof this.pn.open === 'string' && this.pn.open); // while a panel is open the arrows are the panel's (Up and Down move its highlight, Left and Right its pages: card space-game-panel-keys-zxc), not the wheel's; W A S D still fly
+      const wheel = !this.mp && !typing && [k.W, k.A, k.S, k.D].concat(arrows ? [k.UP, k.DOWN, k.LEFT, k.RIGHT] : []).some(x => x && x.isDown);
       if (wheel && (C.nav || C.navWait) && typeof campNavClear === 'function') campNavClear(C, 'key'); // a steering key gives up the trip, and a burn that was waiting for the wing
       if (!(C.nav && C.nav.on)) {
         if (this.mp) { inp.turn = 0; inp.thrust = 0; inp.brake = false; }
         else {
-          inp.turn = ((k.D.isDown || k.RIGHT.isDown) ? 1 : 0) - ((k.A.isDown || k.LEFT.isDown) ? 1 : 0);
-          inp.thrust = (k.W.isDown || k.UP.isDown) ? 1 : 0; inp.brake = k.S.isDown || k.DOWN.isDown;
+          inp.turn = ((k.D.isDown || (arrows && k.RIGHT.isDown)) ? 1 : 0) - ((k.A.isDown || (arrows && k.LEFT.isDown)) ? 1 : 0);
+          inp.thrust = (k.W.isDown || (arrows && k.UP.isDown)) ? 1 : 0; inp.brake = k.S.isDown || (arrows && k.DOWN.isDown);
         }
       }
       inp.fire = k.SPACE.isDown;

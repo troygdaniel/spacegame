@@ -1,9 +1,9 @@
 // ---------- Campaign: the keyboard panels, the drawing (cards space-game-campaign-keys-help and space-game-campaign-panels-ui; Troy, 20 Nov 2026) ----------
 // The Phaser half of src/camppanel.js, which says WHAT a panel holds, what a key does and what the drawing shows when (campPanelView). Troy, from a screenshot of the open FLEET panel (a wide box with two lines to a row and the numbers
-// repeated, covering a lot of the screen): both panels are always on the screen as narrow collapsed TABS, '1 FLEET' at the left edge and '2 SHIP' at the right, below the gauges and the radar so nothing is covered. Key 1 (or a click on the tab)
-// opens FLEET: its tab lights and its five rows drop under it as one-line bulleted rows in a narrower column (the digit, the name, and at the right a word or two of the live state, or the reason it cannot, greyed); key 2 does the same for SHIP,
+// repeated, covering a lot of the screen): both panels are always on the screen as narrow collapsed TABS, 'Z FLEET' at the left edge and 'X SHIP' at the right (and 'C SYSTEMS' beside FLEET), below the gauges and the radar so nothing is covered. Its key (or a click on the tab)
+// opens FLEET: its tab lights and its rows drop under it as one-line bulleted rows in a narrower column (the digit, the name, and at the right a word or two of the live state, or the reason it cannot, greyed); X does the same for SHIP,
 // mirrored. Picking a row (its digit or a click) does it at once, flashes the chosen row twice in 160 ms and collapses the panel to its tab; a pick made before the panel was drawn (1 then 3 typed inside the 250 ms) pulses the TAB once instead.
-// Esc, any other key or a click elsewhere closes it. Keys and behaviour are camppanel.js's and did not change; this is the drawing, one component for both panels, its words from the table (CAMP_PANELS in src/data_controls.js),
+// In an open panel one row is lit as the HIGHLIGHT (Up and Down move it, Enter does it: card space-game-panel-keys-zxc). Esc, any other key or a click elsewhere closes it. Keys and behaviour are camppanel.js's and did not change; this is the drawing, one component for both panels, its words from the table (CAMP_PANELS in src/data_controls.js),
 // so a row added by data (a rank, a hub, a fabricator) is drawn without a line of code. The scene calls three things:
 //   campPanelsInstall(s)       once, in create: s.pn is the state (campPanelNew), s.pnl the objects of both panels (made once, shown and moved after that); the pointer is listened for and given back when the scene shuts down
 //   campPanelsPaint(s, now)    every frame: the two tabs (while the battle is on the screen), and a list under a tab while its panel is open, flashing or going away; the words are live, four times a second
@@ -15,7 +15,8 @@ const CAMPPANELS_LOOK = {
   list: { w: 232, row: 24, gap: 3, pad: 6 },               // px: the column of rows under the tab: its width (a name, its word and the digit have to fit: tests/campanelsui.mjs measures every row of the table), a row's height, the gap between rows, the gap under the tab
   top: 238, edge: 24, depth: 160, every: 250,              // the tab's y (the gauges take the top left to 176 and the radar the top right to 226), its distance from the screen's edge, the depth (over the map, 150 to 156), ms between the words being made live
   color: { left: CYAN, right: AMBER }, ink: { left: '#7fe9ff', right: '#ffd37a' },
-  rowInk: { ok: '#e8f6ff', no: '#7f95a8', suffix: '#8fb4c8', why: '#ff9e7a', digit: '#ffd37a' }, flash: 0xffffff
+  rowInk: { ok: '#e8f6ff', no: '#7f95a8', suffix: '#8fb4c8', why: '#ff9e7a', digit: '#ffd37a' }, flash: 0xffffff,
+  pick: { fill: 0.24, bar: 0.95, width: 4 }                 // the highlighted row of the open panel: a wash of the panel's colour and a bright bar at its edge (alpha, alpha, px)
 };
 
 // where a panel is: its tab, the column of rows under it and the rows' places. x, y, w, h are the whole of it open (the tab and the list), as they were when it was one box
@@ -72,12 +73,14 @@ function campPanelsPaintOne(s, O, now, play) {
   O.name.setText(v.list > 0 && page === 1 && def.page2 ? def.page2.title : def.title); // an open panel on its second page says so on its tab; collapsed it is its own name again
   if (O.hint) O.hint.setVisible(v.list > 0 && pages > 1).setAlpha(v.list).setText('\u2190 \u2192  ' + (page === 1 ? def.title.toLowerCase() + ' orders' : def.page2.title.toLowerCase()));
   const show = v.list > 0;
-  O.rows.forEach(r => { [r.digit, r.name, r.suffix].forEach(o => { o.setVisible(show); if (show) o.setAlpha(v.list); }); });
+  const nrows = campPanelPageRows(def, page).length; // the rows of the page: FLEET's orders are six, its stances five, so the sixth line is not drawn on the second page
+  O.rows.forEach((r, i) => { [r.digit, r.name, r.suffix].forEach(o => { o.setVisible(show && i < nrows); if (show) o.setAlpha(v.list); }); });
   if (!show) { O.live = -1e9; return; }
   if (O.page !== page) { O.page = page; O.live = -1e9; } // flipped: the words are made again now, not at the next quarter second
   if (O.live < 0 || now - O.live >= K.every) { // the words are live: made on the first frame of the list and four times a second after that
     O.live = now;
-    campPanelRows(s.camp, def.id, page).forEach((r, i) => { const o = O.rows[i]; if (!o) return; o.name.setText(r.tag || r.label).setColor(r.ok ? K.rowInk.ok : K.rowInk.no); o.digit.setColor(r.ok ? K.rowInk.digit : K.rowInk.no); o.suffix.setText(r.marked ? r.state : (r.short || '')).setColor(r.marked ? K.rowInk.digit : r.ok ? K.rowInk.suffix : K.rowInk.why); }); // a stance in force says so ("in force", in the digit's colour)
+    for (let i = campPanelPageRows(def, page).length; i < O.rows.length; i++) { const o = O.rows[i]; o.name.setText(''); o.suffix.setText(''); o.digit.setText(''); } // a shorter page (FLEET's five stances after its six orders): the rows it has not are empty, not stale
+    campPanelRows(s.camp, def.id, page).forEach((r, i) => { const o = O.rows[i]; if (!o) return; o.digit.setText(String(r.n)); o.name.setText(r.tag || r.label).setColor(r.ok ? K.rowInk.ok : K.rowInk.no); o.digit.setColor(r.ok ? K.rowInk.digit : K.rowInk.no); o.suffix.setText(r.marked ? r.state : (r.short || '')).setColor(r.marked ? K.rowInk.digit : r.ok ? K.rowInk.suffix : K.rowInk.why); }); // a stance in force says so ("in force", in the digit's colour)
   }
   campPanelPageRows(def, page).forEach(r => { // the rows: a translucent back with the panel's colour at its edge; the one just picked flashes
     const y = G.rowY(r.n), on = v.flash && v.flash.row === r.id ? v.flash.lit : 0;
@@ -85,6 +88,10 @@ function campPanelsPaintOne(s, O, now, play) {
     g.fillStyle(col, 0.9 * v.list); g.fillRect(G.list.x, y + 3, 3, G.rowH - 6);
     if (on > 0) { g.fillStyle(K.flash, 0.85 * on); g.fillRoundedRect(G.list.x, y, G.list.w, G.rowH, 5); }
   });
+  if (s.pn.open === def.id && v.open) { // the highlight: the row Enter would do
+    const hl = campPanelPageRows(def, page)[Math.min(s.pn.sel | 0, nrows - 1)];
+    if (hl) { const y = G.rowY(hl.n); g.fillStyle(col, K.pick.fill * v.list); g.fillRoundedRect(G.list.x, y, G.list.w, G.rowH, 5); g.fillStyle(0xffffff, K.pick.bar * v.list); g.fillRect(G.list.x, y + 2, K.pick.width, G.rowH - 4); }
+  }
 }
 function campPanelsPaint(s, now) {
   const P = s.pn, L = s.pnl; if (!P || !L) return;

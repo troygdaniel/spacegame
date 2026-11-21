@@ -61,8 +61,8 @@ console.log('B. a click on a tab or a row');
   check('a click anywhere else closes the panel and does nothing', J('S.pn.open') === '' && J('S.camp.orders.launch') === J('__o'));
   g.run(`S.time.now = 8000; campPanelsClick(S, 700, 400);`);
   check('with no panel open a click on the screen is not the panels\' (it is not swallowed)', J('campPanelsClick(S, 700, 400)') === false && J('S.pn.open') === '');
-  g.run(`S.time.now = 9000; window.S.camp.ore = 100; S.camp.docked = 'luna'; campPanelKey(S.pn, S.camp, 'KeyE', 9000); campPanelsPaint(S, 9300); S.time.now = 9300; window.__g2 = campPanelsGeometry(campPanelDef("ship")); campPanelsClick(S, __g2.x + 150, __g2.rowY(2) + 10);`);
-  check('the click on SHIP row 2 builds a fighter: 25 ore spent, one queued', J('S.camp.ore') === 75 && J('S.camp.build.queue.length') === 1);
+  g.run(`S.time.now = 9000; window.S.camp.ore = 100; S.camp.docked = 'luna'; campPanelKey(S.pn, S.camp, 'KeyE', 9000); campPanelsPaint(S, 9300); S.time.now = 9300; window.__g2 = campPanelsGeometry(campPanelDef("ship")); campPanelsClick(S, __g2.x + 150, __g2.rowY(1) + 10);`);
+  check('the click on SHIP row 1 builds a fighter: 25 ore spent, one queued', J('S.camp.ore') === 75 && J('S.camp.build.queue.length') === 1);
 }
 
 console.log('C. the scene\'s keys');
@@ -82,8 +82,8 @@ console.log('C. the scene\'s keys');
   check('Q opens the fleet panel: it launches nothing', J('F.pn.open') === 'fleet' && orders() === 0);
   g.run(`__k('Escape');`);
   check('Esc closes the panel and the battle goes on: it did not also pause', J('F.pn.open') === '' && J('F.mode') === 'play');
-  g.run(`__k('KeyE'); __k('Digit4');`);
-  check('E then 4 flies to the objective: the autopilot is on', J('F.camp.nav && F.camp.nav.id') === 'place:earth' && J('F.pn.open') === '');
+  g.run(`__k('KeyE'); __k('Digit3');`);
+  check('E then 3 flies to the objective: the autopilot is on', J('F.camp.nav && F.camp.nav.id') === 'place:earth' && J('F.pn.open') === '');
   g.run(`F.camp.nav = null; __k('KeyQ'); __k('KeyW');`);
   check('another key with a panel open closes it, and the key is itself (W flies: the panel does not eat it)', J('F.pn.open') === '');
   g.run(`__k('KeyH');`);
@@ -104,7 +104,7 @@ console.log('D. the H page');
 {
   g.run('campDebugSet(true)'); // the page lists the tune kit's keys only while it is on (?debug=1; card space-game-debug-keys-off): on here, as the check below says "then the debug keys"
   const page = J('campKeysPage()');
-  check('the page begins with the three panels (the panel own key, then its rows: five and the flip line, five with the dock row, five), then the rest of the table, then the debug keys from their table', page[0].title === 'KEY Q  -  THE FLEET PANEL' && page[1].title === 'KEY E  -  THE SHIP PANEL' && page[2].title === 'KEY C  -  THE SYSTEMS PANEL' && page[0].rows.length === 7 && page[1].rows.length === 6 && page[2].rows.length === 6 && page[0].rows[0].caps.join() === 'Q' && page[0].rows[3].caps.join() === 'Q,3' && page[page.length - 1].rows.length === J('CAMP_DEBUG.keys.length') && page.some(p => p.title === 'FLY AND FIRE') && page.some(p => p.title === 'THE MAP'), page.map(p => p.title).join(' | '));
+  check('the page begins with the three panels (the panel own key, then its rows: six and the flip line, four with the dock row, five), then the rest of the table, then the debug keys from their table', page[0].title === 'KEY Q  -  THE FLEET PANEL' && page[1].title === 'KEY E  -  THE SHIP PANEL' && page[2].title === 'KEY C  -  THE SYSTEMS PANEL' && page[0].rows.length === 8 && page[1].rows.length === 5 && page[2].rows.length === 6 && page[0].rows[0].caps.join() === 'Q' && page[0].rows[3].caps.join() === 'Q,3' && page[page.length - 1].rows.length === J('CAMP_DEBUG.keys.length') && page.some(p => p.title === 'FLY AND FIRE') && page.some(p => p.title === 'THE MAP'), page.map(p => p.title).join(' | '));
   check('every row of the PANELS and CAMPAIGN groups of the table is on it, once', J(`(() => { const page = campKeysPage().flatMap(g => g.rows.map(r => r.caps.join(' ') + '|' + r.t)); const rows = ['panels', 'campaign'].flatMap(id => controlsGroup(id).rows.map(r => r.k.join(' ') + '|' + r.t)); return rows.length === page.length - CAMP_DEBUG.keys.length && rows.every(r => page.filter(p => p === r).length === 1); })()`));
   const L = J('campKeysLayout(campKeysPage())'), K = J('CAMPKEYS');
   check('two columns of whole groups that fit the panel: the lowest line of each is above ' + K.bottom + ' and the lines are balanced', L.cols.length === 2 && L.cols.every(col => J(`campKeysHeight(${JSON.stringify(col)})`) <= K.bottom) && Math.abs(L.lines[0] - L.lines[1]) <= 8, JSON.stringify(L.lines) + ' ' + L.cols.map(col => J(`campKeysHeight(${JSON.stringify(col)})`)).join(','));

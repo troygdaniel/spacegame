@@ -33,7 +33,7 @@ try {
   const texts = await j(`(() => { const s = ${SCN}; return (s.pnl && s.pnl.objs || []).map(o => o.text).filter(Boolean); })()`);
   check('the SHIP panel undocked: New fighter and New escort say "dock first", the Dock row is ready and names the outpost ("Occator Works")', texts.filter(x => x === 'dock first').length === 2 && texts.includes('Dock') && texts.includes('Occator Works'), texts.join(' | '));
   await key('Escape');
-  await key('KeyE'); await key('Digit5'); // E, then the dock row (5)
+  await key('KeyE'); await key('Digit4'); // E, then the dock row (4: Mine ore is on the FLEET panel now)
   check('E, 5 docks: the Campaign scene is paused and the ready room opens as that outpost', await settle(`game.scene.isActive('CampHub') && ${HUB}.hub && ${HUB}.look && ${HUB}.look.name === 'Occator Works'`) && await j(`${SCN}.scene.isPaused() && ${SCN}.docked === true && ${SCN}.camp.docked === 'ceres'`));
   await t.run(1200); await snap('3-dock-room-build');
   check('the room has the dock\'s five rows, BUILD first, the ore of the battle on its page', (await shown()).some(x => /^BUILD {2}- {2}OCCATOR WORKS$/.test(x)) && (await shown()).some(x => /^Ore in the store: 100$/.test(x)), (await shown()).join(' | '));
