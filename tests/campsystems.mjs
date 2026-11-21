@@ -9,7 +9,7 @@
 //   E  emergency shields: 1/4/1 for 10 s, then back; locked meanwhile; ready again 40 s after it started
 //   F  the save: the setting is in the Campaign's save and is how a level starts; a bad one is the default; the emergency is never saved
 //   G  the words: the orders say short lines, the strip and the voice understand "power to shields", "balance power" and "emergency shields"; low shields and low engines are said, and the radio calls them
-//   H  the wiring: the scene saves the setting and draws the three pip bars (W S E)
+//   H  the wiring: the scene saves the setting and draws the three power bars (beside the gauges: src/camphud.js)
 // Run: node tests/campsystems.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
@@ -243,7 +243,7 @@ sec('J', () => {
 sec('H', () => {
   const sc = read('src/campaignscene.js');
   check('H  the scene starts a battle at the saved setting and saves a change of it (campPowerLoad / campPowerSave of C.power.base: the setting, never the emergency)', /power: campPowerLoad\(\)/.test(sc) && /campPowerSave\(C\.power\.base\)/.test(sc));
-  check('H  the HUD draws the three pip bars, W S E, from the live pips (C.power.p)', /C\.power\.p/.test(sc) && /'W'/.test(sc) && /'S'/.test(sc) && /'E'/.test(sc));
+  check('H  the HUD draws a bar of power segments beside each of the three gauges (SHIELDS, SPEED, LASERS) from the live pips (C.power.p), which replaced the small W S E pips (card space-game-systems-gauges, tests/campgauges.mjs)', /C\.power\.p/.test(sc) && /campGaugesPaint\(/.test(sc) && /pips: P\.p\[1\]/.test(read('src/camphud.js')) && !/'W'/.test(sc));
   check('H  the blink\'s READY and seconds on the HUD read the engines\' recharge (campBlinkCooldown)', /campBlinkCooldown\(/.test(sc));
   check('H  no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 });

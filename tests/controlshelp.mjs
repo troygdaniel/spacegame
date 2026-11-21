@@ -44,7 +44,7 @@ function bound(files) {
 }
 const SPACE_FILES = ['space', 'assist', 'assist_orbit', 'autopilot', 'cruise', 'jump', 'gunlock', 'overview', 'clickmove', 'boost', 'camzoom', 'autotarget', 'handling', 'navpanel', 'hud'];
 const EVERYWHERE = ['map', 'meta', 'shipcomputer', 'listen'];         // Tab, H, Esc, M, I (the ship's computer, src/shipcomputer.js) and U (hold to talk to it, src/listen.js): window handlers for every scene
-const CAMP_FILES = ['campaignscene', 'campmapdraw', 'campmap', 'campkeys', 'camppanel'];             // the Campaign scene, its Tab map, its H page and its panels (src/camppanel.js)
+const CAMP_FILES = ['campaignscene', 'campmapdraw', 'campmap', 'campkeys', 'camppanel', 'camphud'];   // the Campaign scene, its Tab map, its H page, its panels (src/camppanel.js) and its gauges, whose J K L keys are a table of codes (src/camphud.js)
 const SCENES = {
   campaign: CAMP_FILES.concat(EVERYWHERE),
   panels: CAMP_FILES.concat(EVERYWHERE),
