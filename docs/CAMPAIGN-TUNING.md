@@ -35,6 +35,7 @@ They are listed in one small line on the pause screen (`campDebugLine`). The row
 | easier on the carrier | `carrier.hull` up, `carrier.speed` up, the `shield` tech's `taken` down (0.6 is 40 percent less damage) |
 | easier on Earth | `earth.shield` up, `alien.earthDamage` down |
 | a bigger wing | `bay.fighters`, `bay.escorts`; `fighter.damage` up, `fighter.hp` up |
+| hurt fighters land and come back sooner, later or never | `repair.below` (the hull share a fighter breaks off under, 0.3; 0 turns the repair off), `repair.time` (s mended, 10), `repair.within` (s of flight it may be from the cruiser, 15), `repair.fight` (px: the fight that sends a mended one out again, 1,800) |
 | weaker or stronger aliens | `alien.hpScale` and `alien.damageScale` for all of them; `mother.hp` for the mothership |
 | a bigger wave | `levels[n].waves[i].ships` (`raider`, `drone`, `gunship`) |
 | stronger or weaker missiles | `missile.big` (the mothership, towers, gunships), `missile.small` (the rest), `missile.blast` |
