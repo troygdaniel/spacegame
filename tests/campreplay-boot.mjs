@@ -26,10 +26,11 @@ try {
   await t.waitFor(`!!(window.game && game.scene.isActive('Title'))`, 30000, 'the title'); await t.clock(); await t.run(900);
   await t.ev(`localStorage.setItem('longhaul.campaign', JSON.stringify({ level: 1, mission: 2, techs: ['shield', 'bay2'], ore: 77, bonus: { fighters: 1, escorts: 1 }, results: { '1.1': { score: 900, bonuses: ['swift', 'clean'], t: 100, hull: 500, lost: 0, tries: 2 }, '1.2': { score: 640, bonuses: [], t: 90, hull: 300, lost: 1, tries: 1 } } }))`);
   await key('KeyK');
-  check('K opens the ready room; the board shows the two missions done with their best scores and a cursor on the first, and the keys', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`) && (await shown()).some(x => /^> \[x\] 1\s+Belt survey/.test(x)) && (await shown()).some(x => /^900 pts/.test(x)) && (await shown()).some(x => /R replay it/.test(x)), (await shown()).join(' | '));
+  check('K opens the ready room; the board shows the two missions done with their best scores, the cursor on the next mission, and the keys', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`) && (await shown()).some(x => /^> \[>\] 3\s+The mothership/.test(x)) && (await shown()).some(x => /^900 pts/.test(x)) && (await shown()).some(x => /Enter or R open the briefing/.test(x)), (await shown()).join(' | '));
   await t.run(900); await snap('1-board');
-  await key('KeyD'); await key('KeyR'); await t.run(400); await snap('2-board-picked');
-  check('D moves to the second mission done and R picks it: its row is marked [R] and the line says Replay: Ore haulers', (await shown()).some(x => /^(> )?\[R\] 2\s+Ore haulers/.test(x)) && (await shown()).some(x => /^Replay: Ore haulers\./.test(x)), (await shown()).join(' | '));
+  await key('KeyA'); await key('KeyR'); await t.run(400);
+  check('A moves to the second mission done and R picks it and opens its big briefing at once (card space-game-campaign-briefing); Esc takes it away', await j(`campBriefIsOpen(${HUB})`)); await key('Escape'); await t.run(300); await snap('2-board-picked');
+  check('...and the board has it picked: its row is marked [R] and the line says Replay: Ore haulers', (await shown()).some(x => /^(> )?\[R\] 2\s+Ore haulers/.test(x)) && (await shown()).some(x => /^Replay: Ore haulers\./.test(x)), (await shown()).join(' | '));
   await key('Digit2'); await t.run(900); await snap('3-briefing');
   check('2: the briefing is that of the replay, headed REPLAY, with the rule: your wing, rank and techs, story and progress stay, your best is kept', (await shown()).some(x => /^REPLAY\s+-\s+MISSION 2 OF 3\s+-\s+Ore haulers/.test(x)) && (await shown()).some(x => /best is kept/.test(x)), (await shown()).join(' | '));
   await key('KeyH'); await t.run(500); await snap('4-keys-page');

@@ -140,16 +140,20 @@ const CONTROLS = [
   { id: 'readyroom', title: 'READY ROOM', scene: 'CampHub', rows: [ // the ready room between missions (src/camphub.js keys, src/camphubscene.js); the Campaign's H page lists them last, and H opens it in the room
     { k: ['1-5'], t: 'Pick a row: board, briefing ...', sub: 'THE READY ROOM' },
     { k: ['W', 'S'], t: 'Move between the rows (arrows too)', sub: 'THE READY ROOM' },
-    { k: ['Enter'], t: 'On to the next row; on Launch, go', sub: 'THE READY ROOM' },
+    { k: ['Enter'], t: 'On to the next row (Board: briefing)', sub: 'THE READY ROOM' },
     { k: ['L'], t: 'Launch the mission, or the replay', sub: 'THE READY ROOM' },
-    { k: ['A', 'D'], t: 'Board: choose a mission done', sub: 'THE READY ROOM' },
-    { k: ['R'], t: 'Board: replay the chosen mission', sub: 'THE READY ROOM' },
+    { k: ['A', 'D'], t: 'Board: choose a mission', sub: 'THE READY ROOM' },
+    { k: ['R'], t: 'Board: pick it, open its briefing', sub: 'THE READY ROOM' },
     { k: ['X'], t: 'Board: back to the next mission', sub: 'THE READY ROOM' },
     { k: ['F', 'E'], t: 'Refit: buy a fighter or an escort', sub: 'THE READY ROOM' },
     { k: ['U'], t: 'Refit: fit the Fabricator', sub: 'THE READY ROOM' },
     { k: ['Backspace'], t: 'Refit: give the last one back', sub: 'THE READY ROOM' },
     { k: ['H'], t: 'This page of keys', sub: 'THE READY ROOM' },
-    { k: ['Esc'], t: 'Leave for the title (T too)', sub: 'THE READY ROOM' }
+    { k: ['Esc'], t: 'Leave for the title (T too)', sub: 'THE READY ROOM' },
+    { k: ['Enter', 'L'], t: 'Briefing: launch the mission', sub: 'THE BRIEFING' }, // the big briefing (src/campbriefdraw.js), opened from the board
+    { k: ['Esc'], t: 'Briefing: back to the board', sub: 'THE BRIEFING' },
+    { k: ['Left', 'Right'], t: 'Briefing: page the walkthrough', sub: 'THE BRIEFING' },
+    { k: ['M'], t: 'Map: the mission area, or the system', sub: 'THE BRIEFING' }
   ] },
   { id: 'title', title: 'TITLE', scene: null, rows: [
     { k: ['Any key'], t: 'Start the game' },

@@ -52,7 +52,7 @@ const SCENES = {
   ship: ['shipmode', 'hangar'].concat(EVERYWHERE),
   flight: SPACE_FILES.concat(EVERYWHERE),
   surface: ['surface'].concat(EVERYWHERE),
-  readyroom: ['camphub', 'camphubscene', 'campdock', 'campkeys'].concat(EVERYWHERE), // the ready room (card space-game-campaign-replay): its keys are in camphub.js (the row keys), camphubscene.js and campdock.js (the dock's rows); the digits are routed by campHubDigit, so 1 to 5 are added below
+  readyroom: ['camphub', 'camphubscene', 'campdock', 'campkeys', 'campbriefdraw'].concat(EVERYWHERE), // the ready room (cards space-game-campaign-replay, -briefing: the big briefing's keys are in campbriefdraw.js): its keys are in camphub.js (the row keys), camphubscene.js and campdock.js (the dock's rows); the digits are routed by campHubDigit, so 1 to 5 are added below
   title: ['title', 'contentui', 'settings', 'mods'],
   any: EVERYWHERE
 };

@@ -70,7 +70,7 @@ check('a changed line is a new name and the old one is stale: the plan against a
 
 // ---- D. every spoken fixed line has a pack entry or a reason ----
 const ids = new Set(cat.lines.map(l => l.text));
-const files = ['voice.js', 'campaignscene.js', 'campchatter.js', 'campwarp.js', 'cmdstrip.js', 'chat.js', 'shipcomputer.js'];
+const files = ['voice.js', 'campaignscene.js', 'campchatter.js', 'campwarp.js', 'cmdstrip.js', 'chat.js', 'shipcomputer.js', 'campbriefdraw.js']; // (campbriefdraw.js: the first step of a mission's walkthrough, the source campaign.walk it registers itself)
 check('the speaking call sites are the ones the catalogue knows: voiceSay, voiceSayThen and shipcompSay appear only in these files (a new speaker is a new source or a reason)', (() => { const all = readdirSync(join(ROOT, 'src')).filter(f => /\.js$/.test(f)); return all.filter(f => /\b(voiceSay|voiceSayThen|shipcompSay)\(/.test(src('src/' + f).replace(/\/\/.*$/gm, ''))).every(f => files.concat(['playlog.js']).includes(f)); })());
 check('every literal line given to voiceLine or voiceSay in src/voice.js is in VOICE_LINES (so in the catalogue) or is a computed line the live list names', (() => { const code = src('src/voice.js').replace(/\/\/.*$/gm, ''), lits = [...code.matchAll(/voiceLine\('[a-z-]+', '([^']+)'\)/g)].map(m => m[1]); return lits.every(t => ids.has(t)); })());
 check('and the computed ones are named as live: the credits and the accepted call', /credits received/.test(src('src/voice.js')) && cat.live.some(l => /credits/.test(l.where)) && cat.live.some(l => /call accepted/.test(l.where)));

@@ -95,14 +95,14 @@ class CampHub extends Phaser.Scene {
     const page = CAMP_HUBS.page[id]; if (page) page(this);
   }
   pageBoard() {
-    const H = this.hub, done = campHubDone(this.P), legend = done.length > 0 && !(this.d && this.d.dock), pk = H.pick;
-    if (done.length) H.cur = Math.max(0, Math.min(done.length - 1, H.cur | 0));
-    const cur = legend ? done[H.cur] : null, view = campHubBoardView(campHubBoard(this.P), CAMP_HUBS.pane.lines - (legend ? 1 : 0));
+    const H = this.hub, sel = campHubSelectable(this.P), legend = sel.length > 0 && !(this.d && this.d.dock), pk = H.pick;
+    if (sel.length) H.cur = Math.max(0, Math.min(sel.length - 1, H.cur | 0));
+    const cur = legend ? sel[H.cur] : null, view = campHubBoardView(campHubBoard(this.P), CAMP_HUBS.pane.lines - (legend ? 1 : 0));
     view.forEach((r, i) => {
       if (r.head) { this.line(i, 0, uiText('camp.hub.level', { n: r.level, name: r.name }), '#38e1ff'); return; }
       const isCur = !!(cur && r.level === cur.level && r.i === cur.i), isPick = !!(pk && r.level === pk.level && r.i === pk.i);
       const mark = isPick ? '[R]' : { done: '[x]', next: '[>]', passed: '[-]', later: '[ ]' }[r.state], col = isPick ? '#6dff9c' : isCur ? '#ffffff' : r.state === 'next' ? '#ffd37a' : r.state === 'later' ? '#6f8aa0' : '#e8f6ff';
-      this.line(i, 0, (isCur ? '> ' : '  ') + mark + ' ' + r.n + '  ' + r.title + '  (' + uiText('camp.hub.kind.' + r.kind) + ')', col); // the cursor: > on a mission done, which R makes the replay ([R])
+      this.line(i, 0, (isCur ? '> ' : '  ') + mark + ' ' + r.n + '  ' + r.title + '  (' + uiText('camp.hub.kind.' + r.kind) + ')', col); // the cursor: > on a mission done or the next one; Enter or R opens its briefing, and a mission done is then the replay ([R])
       this.line(i, 0, r.state === 'next' ? uiText('camp.hub.next') : r.state === 'done' ? uiText('camp.hub.score', { score: r.score }) + (r.of ? '  ' + uiText('camp.hub.bonuses', { got: r.bonus, of: r.of }) : '') + (r.rank ? '  ' + r.rank : '') : '', isPick ? '#6dff9c' : r.state === 'next' ? '#ffb454' : '#9fe9ff', true);
     });
     if (legend) { const m = this.msg && this.msg.until > this.time.now && this.hub.rows[this.hub.row] === 'board' ? this.msg : null; this.line(CAMP_HUBS.pane.lines - 1, 0, m ? m.text : uiText('camp.hub.replay.keys'), m ? (m.ok ? '#6dff9c' : '#ffb454') : '#8fb4c9'); } // the keys, or the answer of the last one
@@ -159,6 +159,7 @@ class CampHub extends Phaser.Scene {
   onKey(e) {
     if (e.repeat || this.leaving) return;
     if (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) { campKeysKey(this, e.code); return; } // the H page of every key is open: any key closes it, and it takes the key
+    if (typeof campBriefIsOpen === 'function' && campBriefIsOpen(this)) { if (e.code === 'KeyH' && typeof campKeysOpen === 'function') { campKeysOpen(this, CAMPKEYS.room); return; } campBriefKey(this, e.code); if (e.preventDefault) e.preventDefault(); return; } // the big briefing is up (src/campbriefdraw.js): it takes the keys: Enter or L launch, Esc back to the board, Left Right page the walkthrough, M the map's zoom
     if (e.code === 'KeyH' && typeof campKeysOpen === 'function') { campKeysOpen(this, CAMPKEYS.room); return; } // H: the ready room's keys, on one page (src/campkeys.js)
     const r = campHubKey(this.hub, this.P, e.code, this.d); if (!r.used) return;
     if (e.preventDefault && (e.code === 'Backspace' || e.code === 'Tab')) e.preventDefault();
@@ -190,4 +191,4 @@ class CampHub extends Phaser.Scene {
 
 // the registries the room reads by row id and action: the five rows' pages, and what an action does. A dock at an outpost adds its own (CAMP_HUBS.page.build = scene => { scene.line(0, 0, ...) }).
 CAMP_HUBS.page = { board: s => s.pageBoard(), brief: s => s.pageBrief(), refit: s => s.pageRefit(), rank: s => s.pageRank(), launch: s => s.pageLaunch() };
-CAMP_HUBS.run = { launch: s => s.launch(), title: s => s.leave() };
+CAMP_HUBS.run = { launch: s => s.launch(), title: s => s.leave(), brief: s => { if (typeof campBriefOpen === 'function') campBriefOpen(s); } }; // brief: the big briefing of the mission Launch would fly (src/campbriefdraw.js)

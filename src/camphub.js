@@ -31,7 +31,7 @@ const CAMP_HUB = {
     3: { name: 'Aegir Watch', accent: '#ffb454', art: 'foundry' }
   },
   boardLines: 12,                                        // lines of the mission board shown at once (a level's name is a line): three levels of three missions fit
-  act: { launch: 'launch' },                             // what Enter does on a row, by id: the action the scene carries out; a row with none goes on to the next one
+  act: { launch: 'launch', board: 'brief', brief: 'brief' }, // (board and brief: Enter opens the big briefing, src/campbriefdraw.js; in a dock's room they go on to the next row as ever)                             // what Enter does on a row, by id: the action the scene carries out; a row with none goes on to the next one
   note: {},                                              // the live note under a row's name, by id: (P) => text (filled below, where the helpers are)
   rowKey: {}                                             // a row's own keys, by id: (H, P, code, res, ctx) => res when the key was the row's (the refit's F, E, U and Backspace are here)
 };
@@ -42,7 +42,7 @@ const campHubLevels = () => Object.keys(CAMP.levels).map(Number).filter(n => Num
 function campHubStation(level) { const s = CAMP_HUB.stations[level] || CAMP_HUB.stations[1]; return { name: s.name, accent: s.accent, art: s.art }; }
 // the rows this visit shows: the ids asked for that the table knows (a note is what makes a row known), else the five; at: the id to stand on
 const campHubIds = ids => { const ok = (Array.isArray(ids) ? ids : []).filter((id, i, a) => typeof id === 'string' && typeof CAMP_HUB.note[id] === 'function' && a.indexOf(id) === i); return ok.length ? ok : CAMP_HUB.rows.slice(); };
-function campHubNew(P, opts) { const rows = campHubIds(opts && opts.rows), at = opts && opts.at ? rows.indexOf(opts.at) : 0; return { row: at > 0 ? at : 0, rows, last: '', cur: 0, pick: null }; } // cur: the board's cursor among the missions that can be replayed; pick: the replay chosen, { level, i }, or null
+function campHubNew(P, opts) { const rows = campHubIds(opts && opts.rows), at = opts && opts.at ? rows.indexOf(opts.at) : 0; return { row: at > 0 ? at : 0, rows, last: '', cur: Math.max(0, campHubSelectable(P).findIndex(r => r.state === 'next')), pick: null }; } // cur: the board's cursor among the missions that can be picked (the ones done and the next one; it starts on the next); pick: the replay chosen, { level, i }, or null
 
 // the mission the Launch row flies: the one the save says is next, kept inside what exists
 function campHubNext(P) {
@@ -93,17 +93,27 @@ function campHubTarget(P, H) {
   if (pk && campHubDone(P).some(r => r.level === pk.level && r.i === pk.i)) return { level: pk.level, i: pk.i, replay: true };
   const nx = campHubNext(P); return { level: nx.level, i: nx.i, replay: false };
 }
-// the board's own keys: A D (or the arrows) move the cursor over the done missions, R picks the one under it to replay, X goes back to the next mission. Not in a dock's room (nothing there launches a mission)
+// the missions the board's cursor can stand on: the ones done (they can be replayed) and the next one
+const campHubSelectable = P => campHubBoard(P).filter(r => !r.head && (r.state === 'done' || r.state === 'next'));
+// the mission under the cursor becomes the one Launch flies: a mission done is a replay (picked), the next one is the road (nothing picked); the answer says which
+function campHubSelect(H, P) {
+  const sel = campHubSelectable(P); if (!sel.length) return null;
+  H.cur = Math.max(0, Math.min(sel.length - 1, H.cur | 0)); const t = sel[H.cur];
+  if (t.state === 'done') { H.pick = { level: t.level, i: t.i }; return { key: 'camp.hub.replay.set', vars: { n: t.n, title: t.title } }; }
+  H.pick = null; return null;
+}
+// the board's own keys: A D (or the arrows) move the cursor over the missions done and the next one; Enter or R picks the one under it AND opens its briefing at once (a mission done is a replay); X goes back to the next
+// mission. Not in a dock's room (nothing there launches a mission)
 CAMP_HUB.rowKey.board = (H, P, code, res, ctx) => {
   if (ctx && ctx.dock) return null;
   const left = code === 'KeyA' || code === 'ArrowLeft', right = code === 'KeyD' || code === 'ArrowRight', pick = code === 'KeyR', clear = code === 'KeyX';
   if (!left && !right && !pick && !clear) return null;
-  const done = campHubDone(P); res.used = true;
+  const sel = campHubSelectable(P); res.used = true;
   if (clear) { if (H.pick) { H.pick = null; res.say = { key: 'camp.hub.replay.cleared', vars: {} }; } return res; }
-  if (!done.length) { res.ok = false; res.say = { key: 'camp.hub.replay.none', vars: {} }; return res; }
-  H.cur = Math.max(0, Math.min(done.length - 1, H.cur | 0));
-  if (left || right) { H.cur = (H.cur + (right ? 1 : -1) + done.length) % done.length; return res; }
-  const t = done[H.cur]; H.pick = { level: t.level, i: t.i }; res.say = { key: 'camp.hub.replay.set', vars: { n: t.n, title: t.title } }; return res;
+  if (!sel.length) { res.ok = false; res.say = { key: 'camp.hub.replay.none', vars: {} }; return res; }
+  H.cur = Math.max(0, Math.min(sel.length - 1, H.cur | 0));
+  if (left || right) { H.cur = (H.cur + (right ? 1 : -1) + sel.length) % sel.length; return res; }
+  const say = campHubSelect(H, P); if (say) res.say = say; res.action = CAMP_HUB.act.board; return res; // R: the same as Enter on the board: pick it and open its briefing
 };
 
 // ---- the briefing ----
@@ -198,7 +208,9 @@ function campHubKey(H, P, code, ctx) {
   if (code === 'KeyS' || code === 'ArrowDown') { H.row = (H.row + 1) % n; res.used = res.moved = true; return res; }
   if (code === 'Enter' || code === 'NumpadEnter') {
     res.used = true;
-    if (CAMP_HUB.act[id]) res.action = CAMP_HUB.act[id]; else { H.row = (H.row + 1) % n; res.moved = true; }
+    const act = ctx && ctx.dock && (id === 'board' || id === 'brief') ? '' : CAMP_HUB.act[id]; // (a dock's room has no briefing to open)
+    if (id === 'board' && act) { const say = campHubSelect(H, P); if (say) res.say = say; } // Enter on the board picks the mission under the cursor
+    if (act) res.action = act; else { H.row = (H.row + 1) % n; res.moved = true; }
     return res;
   }
   if (code === 'KeyL') { const out = rows.find(r => CAMP_HUB.act[r] === 'launch' || CAMP_HUB.act[r] === 'undock'); if (out) { res.used = true; res.action = CAMP_HUB.act[out]; } return res; } // L: from any row, when the room has a way out (Launch, or Undock in a dock)
