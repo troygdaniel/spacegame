@@ -1,6 +1,6 @@
 // not in the smoke: a boot of the big briefing, run by hand (one Chrome, muted, through the test lock; card space-game-campaign-briefing)
 // The rules are in tests/campbrief.mjs (plain Node). This boots the real game with a campaign in progress (belt missions 1 and 2 done, 3 next), opens the ready room with K, picks the next mission with Enter and reads the
-// big briefing, zooms its map with M (the sound is NOT muted by it), closes it with Esc (the pause menu does not open), picks a replay with A and R, and launches it from the briefing.
+// big briefing (three screens: where and why, what to do, how; card space-game-briefing-walkthrough), zooms its map with + - 0 and M (the sound is NOT muted by it), walks through the screens with Right and Left, closes it with Esc (the pause menu does not open), picks a replay with A and R, and launches it from the last screen with Enter.
 //   node tests/campbrief-boot.mjs
 // Pictures go to the folder in BRIEF_SHOTS (default ~/dev/spacegame-night/shots/brief-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -12,7 +12,7 @@ const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.BRIEF_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { KeyK: 75, KeyA: 65, KeyR: 82, KeyL: 76, KeyM: 77, KeyH: 72, Enter: 13, Escape: 27, ArrowRight: 39, ArrowLeft: 37, Digit2: 50 };
+const VK = { Equal: 187, Minus: 189, Digit0: 48, KeyK: 75, KeyA: 65, KeyR: 82, KeyL: 76, KeyM: 77, KeyH: 72, Enter: 13, Escape: 27, ArrowRight: 39, ArrowLeft: 37, Left: 37, Digit2: 50 };
 
 const t = await launch('', ROOT);
 try {
@@ -30,20 +30,34 @@ try {
   await t.run(900);
   await key('Enter'); await t.run(700);
   const a = await bf();
-  check('Enter on the board opens the briefing at once: the mission, the goals, the walkthrough, the enemies, the readiness and the route are on the glass', await j(`campBriefIsOpen(${HUB})`) && a.some(x => /^MISSION 3 OF 3\s+-\s+The mothership/.test(x)) && a.includes('GOALS') && a.includes('WALKTHROUGH') && a.includes('ENEMIES') && a.includes('READINESS') && a.some(x => /^Route [\d,]+ km: \d+ s regular, \d+ s on Fast\./.test(x)) && a.includes('YOU'), a.join(' | ').slice(0, 400));
+  check('Enter on the board opens the briefing at once on its first screen: Mission 3 (not 3 of 3), the three screens named, the map, the place, the route and the story line are on the glass', await j(`campBriefIsOpen(${HUB})`) && await j(`${HUB}.bf.screen === 0`) && a.some(x => /^MISSION 3\s+-\s+The mothership/.test(x)) && !a.some(x => /OF 3/.test(x)) && a.includes('WHERE') && a.includes('WHY') && a.some(x => /^Route /.test(x)) && a.includes('1  WHERE AND WHY') && a.includes('3  HOW'), a.join(' | ').slice(0, 400));
   await snap('1-briefing');
-  await key('KeyM'); await t.run(500);
-  check('M zooms the map (route, then the mission area), and does NOT mute the sound; the briefing is still up', await j(`${HUB}.bf.zoom === 1`) && (await j('G.muted')) === muted0);
+  await key('Equal'); await key('Equal'); await key('Equal'); await t.run(300);
+  check('+ zooms the map in (the zoom reads in its corner) and does not mute the sound; 0 puts it back', await j(`${HUB}.bf.z > 1.6`) && (await j('G.muted')) === muted0 && (await bf()).some(x => /^ZOOM 17\d%/.test(x)));
+  await snap('1b-zoomed-in');
+  await key('Digit0'); await key('KeyM'); await t.run(500);
+  check('0 resets, M goes to the mission area (the zoom back to 100%), and does NOT mute the sound; the briefing is still up', await j(`${HUB}.bf.zoom === 1 && ${HUB}.bf.z === 1`) && (await j('G.muted')) === muted0);
   await snap('2-mission-area');
   await key('KeyM'); await t.run(400); await snap('2b-whole-system');
-  check('M again is the whole system', await j(`${HUB}.bf.zoom === 2`)); await key('KeyM'); await key('Escape'); await t.run(400);
-  check('M once more is the route again; Esc closes the briefing and is NOT the pause menu or the title: the ready room is still the room', await j(`!${HUB}.bf`) && await j(`game.scene.isActive('CampHub') && !game.scene.isActive('Pause')`));
+  check('M again is the whole system', await j(`${HUB}.bf.zoom === 2`)); await key('KeyM');
+  await key('Enter'); await t.run(500);
+  const w = await bf();
+  check('Enter goes on to the second screen, WHAT TO DO: the goal as a step with its picture, the bonus with points and pictures', await j(`${HUB}.bf.screen === 1 && ${HUB}.bf.pics.length > 3`) && w.includes('GOALS') && w.includes('BONUS') && w.some(x => /^Destroy the mothership/.test(x)) && w.some(x => /^\+250\s/.test(x)), w.join(' | ').slice(0, 300));
+  await snap('4-what-to-do');
+  await key('Enter'); await t.run(500);
+  const h = await bf();
+  check('Enter goes on to the third screen, HOW: the walkthrough, the keys the mission needs, the enemies and the readiness', await j(`${HUB}.bf.screen === 2`) && h.includes('WALKTHROUGH') && h.includes('KEYS THIS MISSION NEEDS') && h.includes('ENEMIES') && h.includes('READINESS') && h.some(x => /^Fire a homing missile/.test(x)), h.join(' | ').slice(0, 300));
+  await snap('5-how');
+  await key('ArrowLeft'); await key('ArrowLeft'); await t.run(300);
+  check('Left twice is back on the first screen, which has its map again; Esc closes the briefing and is NOT the pause menu or the title: the ready room is still the room', await j(`${HUB}.bf.screen === 0 && ${HUB}.bf.map.length > 5`));
+  await key('Escape'); await t.run(400);
+  check('Esc closed it, and the ready room is still the room', await j(`!${HUB}.bf`) && await j(`game.scene.isActive('CampHub') && !game.scene.isActive('Pause')`));
   await key('KeyA'); await key('KeyR'); await t.run(700);
   const r = await bf();
-  check('A then R picks the second mission as a replay and opens its briefing, headed REPLAY, with its own walkthrough', await j(`campBriefIsOpen(${HUB})`) && r.some(x => /^REPLAY\s+-\s+MISSION 2 OF 3\s+-\s+Ore haulers/.test(x)) && r.some(x => /^1\. 3 haulers leave Vesta for Ceres/.test(x)), r.join(' | ').slice(0, 300));
+  check('A then R picks the second mission as a replay and opens its briefing, headed REPLAY, with its own story line', await j(`campBriefIsOpen(${HUB})`) && r.some(x => /^REPLAY\s+-\s+MISSION 2\s+-\s+Ore haulers/.test(x)) && r.some(x => /^Escort the haulers/.test(x)), r.join(' | ').slice(0, 300));
   await snap('3-replay-briefing');
-  await key('KeyL');
-  check('L in the briefing launches the replay: the Campaign scene is on belt mission 2 as a replay and goes to the flight', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.camp && ${CAMPS}.mode === 'play'`) && await j(`${CAMPS}.replay === true && ${CAMPS}.mi === 1`));
+  await key('Enter'); await t.run(400); await snap('6-replay-what-to-do'); await key('Enter'); await t.run(300); await snap('7-replay-how'); await key('Enter');
+  check('Enter on the last screen launches the replay: the Campaign scene is on belt mission 2 as a replay and goes to the flight', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.camp && ${CAMPS}.mode === 'play'`) && await j(`${CAMPS}.replay === true && ${CAMPS}.mi === 1`));
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
 } catch (e) { console.log('  FAIL the boot stopped: ' + (e && e.message)); bad++; }
 finally { await t.close(); }

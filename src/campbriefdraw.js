@@ -172,20 +172,21 @@ function campBriefDrawPic(s, parts, cx, cy, sc) {
 }
 function campBriefPaintWhat(s) {
   const bf = s.bf, St = bf.steps, G = CAMPBRIEF_COL.goals, Bn = CAMPBRIEF_COL.bonus, K = CAMPBRIEF.pic, g = bf.g, top = CAMPBRIEF.text.top;
-  const box = (x, y, w, h) => { g.fillStyle(0x03070f, 1).fillRect(x, y, w, h); g.lineStyle(1, CYAN, 0.45).strokeRect(x, y, w, h); };
+  const frames = [], box = (x, y, w, h) => { g.fillStyle(0x03070f, 1).fillRect(x, y, w, h); frames.push([x, y, w, h]); }; // the frames of the pictures are drawn after the pictures (a frame drawn first lost its bottom edge once a ring was drawn after it)
+  const gw = Math.round(K.w * K.goal), gh = Math.round(K.h * K.goal), bw = Math.round(K.w * K.bonus), bh = Math.round(K.h * K.bonus);
   campBriefFlow(s, G, top, uiText('camp.bf.goals'), 14, '#38e1ff'); campBriefFlow(s, Bn, top, uiText('camp.ui.bonushead'), 14, '#ffd37a');
   St.goals.forEach((st, k) => {
-    const y = top + 32 + k * (K.h + 22);
-    box(G.x, y, K.w, K.h); campBriefDrawPic(s, st.parts, G.x + K.w / 2, y + K.h / 2, 1);
-    campBriefOwn(s, s.add.text(G.x + 8, y + 5, String(st.n), uiFont(16, '#ffd37a', { fontStyle: 'bold' })));
-    campBriefFlow(s, { x: G.x + K.w + 20, w: G.w - K.w - 20 }, y + K.h / 2 - 14, st.text, 18, '#e8f6ff');
+    const y = top + 32 + k * (gh + 22);
+    box(G.x, y, gw, gh); campBriefDrawPic(s, st.parts, G.x + gw / 2, y + gh / 2, K.goal);
+    campBriefOwn(s, s.add.text(G.x + 10, y + 6, String(st.n), uiFont(18, '#ffd37a', { fontStyle: 'bold' })));
+    campBriefFlow(s, { x: G.x + gw + 22, w: G.w - gw - 22 }, y + gh / 2 - 16, st.text, 20, '#e8f6ff');
   });
-  const sw = Math.round(K.w * K.small), sh = Math.round(K.h * K.small);
   St.bonus.forEach((st, k) => {
-    const y = top + 32 + k * (sh + 16);
-    box(Bn.x, y, sw, sh); campBriefDrawPic(s, st.parts, Bn.x + sw / 2, y + sh / 2, K.small);
-    campBriefFlow(s, { x: Bn.x + sw + 16, w: Bn.w - sw - 16 }, y + sh / 2 - 10, '+' + st.points + '  ' + st.text, 15, '#ffd37a');
+    const y = top + 32 + k * (bh + 14);
+    box(Bn.x, y, bw, bh); campBriefDrawPic(s, st.parts, Bn.x + bw / 2, y + bh / 2, K.bonus);
+    campBriefFlow(s, { x: Bn.x + bw + 16, w: Bn.w - bw - 16 }, y + bh / 2 - 10, '+' + st.points + '  ' + st.text, 15, '#ffd37a');
   });
+  g.lineStyle(1, CYAN, 0.45); frames.forEach(f => g.strokeRect(f[0] + 0.5, f[1] + 0.5, f[2] - 1, f[3] - 1));
 }
 
 // ---------- screen 3: how ----------

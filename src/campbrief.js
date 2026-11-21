@@ -33,7 +33,7 @@ const CAMPBRIEF = {
   near: 250,                                  // px: a mission with no place of its row whose first objective is this near where you start has no route to speak of (a mission with a place is near when campTravel says none: within CAMP.mission.arrive)
   walkMax: 6,                                 // the most steps read from the data for a mission
   keysMax: 8,                                 // the most keys listed on the third screen
-  pic: { w: 132, h: 76, small: 0.7 }          // px: the box of a goal's picture, and the share of it a bonus objective's picture is drawn at
+  pic: { w: 132, h: 76, goal: 1.6, bonus: 1.1 } // px: the box the pictures are drawn in, and the scale a goal's and a bonus objective's picture are drawn at
 };
 
 const campBriefPlace = (pl, id) => (id && pl[id] && !pl[id].hidden ? pl[id] : null);
@@ -147,22 +147,22 @@ const CAMPBRIEF_LOOKS = ['carrier', 'fighter', 'escort', 'freighter', 'raider', 
 const campBriefPicture = (() => {
   const C = CAMPBRIEF_COL_PIC, img = (look, x, y, k, rot, tint) => ({ look, x, y, k, rot: rot || 0, tint: tint || 0 }), ring = (x, y, r, color, a, dash, fill) => ({ ring: true, x, y, r, color, a: a == null ? 0.9 : a, dash: !!dash, fill: !!fill }), ret = (x, y, r) => ({ reticle: true, x, y, r }), arrow = (x0, y0, x1, y1, color) => ({ arrow: true, x0, y0, x1, y1, color });
   const T = {
-    'scan': [ring(0, 0, 31, C.cyan, 0.9), ring(0, 0, 31, C.cyan, 0.14, false, true), ring(0, 0, 19, C.cyan, 0.4, true), img('fighter', 2, 3, 0.8, -0.5)],
+    'scan': [ring(0, 0, 31, C.cyan, 0.9), ring(0, 0, 31, C.cyan, 0.14, false, true), ring(0, 0, 19, C.cyan, 0.4, true), img('fighter', 2, 3, 1.0, -0.5)],
     'kill.wave': [img('raider', -24, -12, 0.8, 0.3), img('raider', -22, 18, 0.8, -0.2), img('drone', 22, -10, 0.7, 0), ret(22, -10, 17)],
     'kill.guards': [img('gunship', -22, 2, 0.7, 0.1), img('drone', 14, -17, 0.6, 0), img('drone', 18, 17, 0.6, 0), ret(-22, 2, 22)],
     'kill.mother': [img('mother', 0, 0, 0.2, 0, 0xc9a0ff), ret(0, 0, 33)],
-    'kill.towers': [img('tower', -32, 8, 0.3, 0.5), img('tower', 0, -10, 0.3, 1.2), img('tower', 32, 8, 0.3, 2.4), ret(0, -10, 19)],
+    'kill.towers': [img('tower', -32, 8, 0.36, 0.5), img('tower', 0, -10, 0.36, 1.2), img('tower', 32, 8, 0.36, 2.4), ret(0, -10, 19)],
     'deliver': [img('freighter', -34, -14, 0.5, 0), img('freighter', -34, 14, 0.5, 0), arrow(-8, 0, 28, 0, C.amber), { disc: true, x: 48, y: 0, r: 13, color: C.rock }],
-    'caches': [img('pod', -32, -6, 1.5, 0), img('pod', 2, 14, 1.5, 0), img('pod', 30, -12, 1.5, 0), img('fighter', -8, -18, 0.7, 0.4)],
-    'relic': [ring(0, 0, 32, C.cyan, 0.9), { disc: true, x: 0, y: 0, r: 7, color: C.cyan }, img('carrier', -13, 12, 0.3, -0.5)],
-    'hold': [ring(0, 0, 32, C.green, 0.9), img('carrier', 0, 0, 0.32, 0.2)],
-    'clear': [ring(0, 0, 33, C.green, 0.5, true), img('carrier', 0, 0, 0.3, 0.3), img('raider', -42, -20, 0.6, 0.6), img('raider', -42, 20, 0.6, -0.6)],
+    'caches': [img('pod', -32, -6, 1.8, 0), img('pod', 2, 14, 1.8, 0), img('pod', 30, -12, 1.8, 0), img('fighter', -8, -18, 0.9, 0.4)],
+    'relic': [ring(0, 0, 32, C.cyan, 0.9), { disc: true, x: 0, y: 0, r: 7, color: C.cyan }, img('carrier', -13, 12, 0.38, -0.5)],
+    'hold': [ring(0, 0, 32, C.green, 0.9), img('carrier', 0, 0, 0.4, 0.2)],
+    'clear': [ring(0, 0, 33, C.green, 0.5, true), img('carrier', 0, 0, 0.36, 0.3), img('raider', -42, -20, 0.7, 0.6), img('raider', -42, 20, 0.7, -0.6)],
     // the bonus objectives
     'b.time': [{ clock: true, x: 0, y: 0, r: 27 }],
-    'b.lost': [ring(0, 0, 33, C.green, 0.16, false, true), ring(0, 0, 33, C.green, 0.8, true), img('fighter', -14, 3, 0.9, 0), img('escort', 15, -3, 0.8, 0)],
-    'b.ore': [img('rock', 24, -8, 0.6, 0.5), img('carrier', -26, 12, 0.3, -0.45), { line: true, x0: -8, y0: 4, x1: 17, y1: -5, color: C.cyan, w: 2 }, img('ore', 6, 18, 1.2, 0)],
-    'b.hull': [img('carrier', 0, -8, 0.36, 0), { bar: true, x: -30, y: 18, w: 60, h: 8, f: 0.7, color: C.green }],
-    'b.delivered': [img('freighter', -40, -17, 0.34, 0), img('freighter', -40, 0, 0.34, 0), img('freighter', -40, 17, 0.34, 0), arrow(-18, 0, 20, 0, C.amber), { disc: true, x: 40, y: 0, r: 11, color: C.rock }],
+    'b.lost': [ring(0, 0, 33, C.green, 0.16, false, true), ring(0, 0, 33, C.green, 0.8, true), img('fighter', -14, 3, 1.1, 0), img('escort', 15, -3, 1.0, 0)],
+    'b.ore': [img('rock', 24, -8, 0.7, 0.5), img('carrier', -26, 12, 0.4, -0.45), { line: true, x0: -8, y0: 4, x1: 17, y1: -5, color: C.cyan, w: 2 }, img('ore', 6, 18, 1.2, 0)],
+    'b.hull': [img('carrier', 0, -8, 0.5, 0), { bar: true, x: -30, y: 18, w: 60, h: 8, f: 0.7, color: C.green }],
+    'b.delivered': [img('freighter', -40, -17, 0.4, 0), img('freighter', -40, 0, 0.4, 0), img('freighter', -40, 17, 0.4, 0), arrow(-18, 0, 20, 0, C.amber), { disc: true, x: 40, y: 0, r: 11, color: C.rock }],
     'b.anomaly': [img('pod', 0, 0, 2, 0), ring(0, 0, 24, C.violet, 0.9, true)]
   };
   const fallback = [ring(0, 0, 24, C.cyan, 0.7), { disc: true, x: 0, y: 0, r: 4, color: C.cyan }];
