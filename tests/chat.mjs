@@ -189,7 +189,7 @@ const call = async (t, req = REQ) => {
     await t.ev(`openPause(game)`);
     await t.waitFor("game.scene.isActive('Pause')", 8000, 'pause menu');
     const rows = await t.ev(`game.scene.getScene('Pause').rows.map(r => r.text.trim()).join(' | ')`);
-    check('the pause menu lists Settings before New game (the Journal row may sit between them)', /Settings[^|]*\| (Journal[^|]*\| )?New game/.test(rows), rows);
+    check('the pause menu lists Settings before New game (the Journal and Title screen rows may sit between them)', /Settings[^|]*\| (Journal[^|]*\| )?(Title screen[^|]*\| )?New game/.test(rows), rows);
     await t.ev(`(() => { const p = game.scene.getScene('Pause'); p.sel = PAUSE_ROWS.indexOf('settings'); p.activate(p.sel); return 1; })()`);
     await t.waitFor("game.scene.isActive('Settings')", 8000, 'settings from pause');
     check('the Settings row opens Settings over the pause menu', (await t.ev("game.scene.isPaused('Pause')")) === true);
