@@ -155,6 +155,9 @@ console.log('6. the Campaign: every bound key is on the table');
   check('the pause card says Esc, T and H, which are keys of the table', caps(pause, /^(?:[A-Z]|Esc)$/).every(c => named.has(c) || c === 'ESC') && /H {1,3}all keys/.test(pause) && /Esc/.test(pause), pause);
   const debugCodes = J('CAMP_DEBUG.keys.map(r => r.code)');
   check('the debug keys are bound by the scene through their own table (campDebugKey) and the H page lists them from it', /campDebugKey\(c\)/.test(scene) && J('campKeysPage().some(g => g.rows.length === CAMP_DEBUG.keys.length && g.rows.every((r, i) => r.caps[0] === CAMP_DEBUG.keys[i].key))') && debugCodes.length >= 4);
+  // the panels took the direct digits (key 3 and keys 4 to 9 do nothing on their own: 1 or 2 opens a panel, a digit then picks a row), but the lines of the lose cards and the story still said "press 3" and "press 6" (card space-game-wrapup-hunt-l3)
+  const stale = J(`Object.keys(UI_TEXT).filter(k => /^camp\\./.test(k) && /[Pp]ress [3-9]\\b|[Pp]ress [1-9][.!]|\\([1-9]\\)/.test(UI_TEXT[k])).map(k => k + ': ' + UI_TEXT[k])`);
+  check('no Campaign line names a digit key the panels took away: "press 3", "press 6", "(2)" alone are gone (the way is 1 or 2, then a digit: "press 1, then 3")', stale.length === 0, stale.join(' | '));
   check('the H page lists every row of the two groups, in groups, once: nothing in the table is left off it', J(`(() => { const page = campKeysPage().flatMap(g => g.rows.map(r => r.caps.join(' ') + '|' + r.t)); return ['panels', 'campaign'].every(id => controlsGroup(id).rows.every(r => page.includes(r.k.join(' ') + '|' + r.t))); })()`));
 }
 
