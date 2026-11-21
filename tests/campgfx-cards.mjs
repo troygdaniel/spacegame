@@ -31,7 +31,8 @@ const grow = JSON.parse(g.run(`JSON.stringify((() => {
     const obj = (kind, a) => { const o = { kind, a, destroyed: false, setStrokeStyle() { return this; }, setOrigin() { return this; }, setScrollFactor() { return this; }, setDepth() { return this; }, destroy() { this.destroyed = true; } }; made.push(o); return o; };
     const sc = { card: null, panel: false, toasts, add: { rectangle: (...a) => obj('rect', a), text: (...a) => obj('text', a) }, hideCard: Campaign.prototype.hideCard };
     Campaign.prototype.showCard.call(sc, 'MISSION COMPLETE: Inner ring', lines, 'Enter  continue', tall); const r = made.filter(o => o.kind === 'rect')[1];
-    const body = made.filter(o => o.kind === 'text')[1], title = made.filter(o => o.kind === 'text')[0], hint = made.filter(o => o.kind === 'text')[2];
+    const tx = made.filter(o => o.kind === 'text' && o.a[0] > -9000); // (not the throwaway text the card measures its words with, at -9999)
+    const body = tx[1], title = tx[0], hint = tx[2];
     return { h: r.a[3], cy: r.a[1], titleY: title.a[1], bodyY: body.a[1], hintY: hint.a[1], sc }; };
   const debrief = ['SCORE 2520', '--   Find the cloaked cache', '+250  Finish in 150 seconds', '+250  Keep the hull above 50 percent', '+250  Lose at most 2 ships', 'Time 0:56   Hull 900   Ships lost 0', 'PROMOTED: Commodore. The bay holds 11 fighters and 5 escorts.\\nThe whole fleet answers to you.'];
   const gone = []; const t = { t: { destroy() { gone.push('t'); } }, bg: { destroy() { gone.push('bg'); } }, tab: { destroy() { gone.push('tab'); } } };

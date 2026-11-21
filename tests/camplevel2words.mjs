@@ -12,7 +12,7 @@ const before = J(`campStory(2, 'before', false)`);
 check('1  the level 2 card (shown after the warp cinematic) does not talk of the warp as to come: no "ready", no "Next star"', before.length === 2 && !/ready|next star/i.test(before.join(' ')) && /Alpha Centauri/.test(before.join(' ')), before.join(' | '));
 check('1  it is short enough to be spoken (12 words or fewer a line)', before.every(l => l.split(/\s+/).length <= 12), before.join(' | '));
 const says = J(`CAMP.levels[2].missions.map(m => (m.waves || []).map(w => w.say))`);
-check('2  every wave of level 2 says its own line: the three missions use three different keys', new Set(says.flat()).size === 3 && says.flat().length === 3, JSON.stringify(says));
+check('2  every wave of level 2 says its own line: each mission uses one key of its own, three different keys (the difficulty pass gave missions 2 and 3 more waves: card space-game-wrapup-difficulty)', new Set(says.flat()).size === 3 && says.every(m => new Set(m).size === 1), JSON.stringify(says));
 check('2  every one of them is a real line (not the key), at most 12 words', says.flat().every(k => { const t = J(`uiText(${JSON.stringify(k)})`); return t !== k && t.split(/\s+/).length <= 12; }));
 check('2  mission 3\'s line does not say "second group"', !/second group/i.test(J(`uiText(CAMP.levels[2].missions[2].waves[0].say)`)));
 const lost = [0, 1, 2, 3].map(k => J(`campHubBonusText({ type: 'lost', n: ${k} })`));
