@@ -38,6 +38,7 @@ class Campaign extends Phaser.Scene {
     this.mi = d.mission != null ? d.mission | 0 : (this.P.level === this.level ? this.P.mission | 0 : 0); if (this.mi >= campMissions(this.level).length) this.mi = 0; // the mission of the level to fly: the one asked for, else the next the save has
     this.opts.mission = this.mi;
     this.replay = !!d.replay && !!(this.P.results && this.P.results[campResultKey(this.level, this.mi)]); // a mission flown AGAIN from the ready room (card space-game-campaign-replay): only one that has a result; its story and progress do not move
+    this.resume = !this.replay && this.via !== 'retry' && (this.P.levelDone | 0) === this.level && this.P.level === this.level && this.mi === campMissions(this.level).length - 1; // the level was won and the tab closed at the pick: the launch shows the level's story and the pick again, not a battle
     campReveal(!!this.P.revealed); // after the ending has been seen, level 3 is called the outpost (SPOILER, src/campaign.js)
     this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null; this.shown = {};
   }
@@ -77,7 +78,7 @@ class Campaign extends Phaser.Scene {
       this.lhZoom = CAMZOOM.want; CAMZOOM.want = campZoomStart(this.level); camzoomSetup(this); // the zoom is kept for the level and starts at the default on a new one; the Long Haul's own is put back when this scene is left
       this.events.once('shutdown', () => { campZoomKeep(this.level, CAMZOOM.want); CAMZOOM.want = this.lhZoom; });
     }
-    this.showIntro();
+    if (this.resume) { this.mdone = true; this.showWon(true); } else this.showIntro();
   }
   get camzoomHold() { return !!this.mp; } // with the map open the wheel is the map's (camzoomCanWheel, src/camzoom.js)
   beam(e, ms) { if (!this.beams) this.beams = []; this.beams.push({ x: e.x, y: e.y, tx: e.tx, ty: e.ty, until: performance.now() + ms }); } // (the beam hum is the sound card's: it reads C.lasers)
@@ -176,8 +177,8 @@ class Campaign extends Phaser.Scene {
     this.showCard(uiText('camp.ui.level', { n: this.level, name: CAMP.levels[this.level].name }), lines, uiText('camp.ui.begin'));
     this.say(lines);
   }
-  showWon() {
-    this.mode = 'won'; const lines = campStory(this.level, 'after', !!(this.P && this.P.revealed)), res = typeof campWinLine === 'function' ? campWinLine(this.camp) : ''; // src/campwin.js: how it went, for reading
+  showWon(resumed) {
+    this.mode = 'won'; const lines = campStory(this.level, 'after', !!(this.P && this.P.revealed)), res = typeof campWinLine === 'function' && !resumed ? campWinLine(this.camp) : ''; // src/campwin.js: how it went, for reading
     this.showCard(uiText('camp.ui.won', { n: this.level }), res ? lines.concat([res]) : lines, uiText('camp.ui.next')); this.say(lines);
   }
   showPick() {
@@ -217,7 +218,7 @@ class Campaign extends Phaser.Scene {
   }
   showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap'), uiText('camp.ui.pausepanels', { panels: campPanelKeyLine().replace(/   /g, ', ') })].concat([uiText('camp.ui.pausehelp')], typeof campPaceLine === 'function' ? [campPaceLine() + '   ' + uiText('camp.pace.key')] : [], (this.camp && this.camp.L && this.camp.L.objectives) ? [uiText('camp.ui.pauseretry')] : [], typeof campDebugOn === 'function' && campDebugOn() && typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), (this.camp && this.camp.L && this.camp.L.objectives) ? 428 : 398); } // the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
   next(ore) { // after the story (and the pick, or the refit): the next level, or after the last one the end, with a new campaign waiting. ore: what is left to carry (the refit spent some)
-    const last = !CAMP.levels[this.level + 1];
+    const last = !CAMP.levels[this.level + 1]; this.P.levelDone = 0; // the story and the pick are done: the level is over
     this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) { this.P.techs = []; this.P.found = []; this.P.ore = 0; this.P.bonus = { fighters: 0, escorts: 0 }; this.P.revealed = true; } // a new campaign: the techs and the loot of the last one are gone with the ore and the ships (the rank is the pilot's career and stays) // the ending is about to show: from now on a replay says the outpost (SPOILER)
     else { this.P.ore = ore != null ? ore : Math.floor(this.camp.ore); if (!CAMP.levels[this.level].refit) this.P.bonus = { fighters: 0, escorts: 0 }; } // the extras of a refit are for the level after it; a level that had none carries only ore
     campProgressSave(this.P);
