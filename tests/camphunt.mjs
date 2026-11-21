@@ -65,4 +65,17 @@ check('a convoy with no name of its own (the Mars convoy of the Earth defence le
 check('the radio calls the arrival like the old one ("Convoy is through."), the voice pack lists the new lines for the named convoys only (and the old ones for the places), 0 unclassified',
   J(`(() => { const E = VOICEPACK_EXPAND; const named = E['camp.say.arrived']().map(x => x.name), lost = E['camp.say.shiplost']().map(x => x.name), placed = E['camp.say.delivered']().map(x => x.name); return named.includes('Transport') && named.includes('Hauler 1') && named.length === 4 && lost.length === 4 && !placed.includes('Transport') && !placed.includes('Hauler 1') && CHATTER.says['camp.say.arrived'] === 'convoy'; })()`));
 
+// ---- 7. the keys box of the rim run's mining mission lists the key that wins it ----
+// 1.2 asks for ore as its goal (objective type 'ore', then 'cashin' at the Works): the keys box listed fly, fire, wing, map, attack, shield and zoom, without E then 1 (the wing mines) or E then 6 (dock to sell).
+// A pilot who never sends the wing cannot win it (the sim's carrier-only and never-orders bots time out).
+const k12 = J('campBriefKeys(1, 1).map(k => k.id)');
+check('mission 1.2 lists E 1 (mine) and E 6 (dock) among its keys, zoom stays last and the box stays at 8 keys or fewer', k12.includes('mine') && k12.includes('dock') && k12[k12.length - 1] === 'zoom' && k12.length <= J('CAMPBRIEF.keysMax'), k12.join());
+check('and the rim\'s other missions still list the keys they need: the escort (Q 3) in 1.1 and 1.3, and every mission ends with the zoom keys; the missions of levels 2 and 3 are as they were',
+  ['campBriefKeys(1, 0)', 'campBriefKeys(1, 2)'].every(e => J(e + '.some(k => k.id === "escort")')) && [[1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2], [3, 0], [3, 1], [3, 2]].every(([l, m]) => J(`campBriefKeys(${l}, ${m}).pop().id`) === 'zoom')
+  && J('campBriefKeys(2, 1).map(k => k.id).join()') === 'fly,fire,wing,map,attack,missile,shield,zoom' && J('campBriefKeys(3, 0).map(k => k.id).join()') === 'fly,fire,wing,map,attack,zoom');
+
+// ---- 8. the goals of the mining mission read their numbers in the briefing and on the board ----
+check('1.2\'s goals say what they ask: "Mine ore: 0 of 120." and "Sell your ore at the Works: 0 of 100." (they said "0 of 1"), the HUD\'s own words with the objective\'s own n',
+  J('campHubBrief(campProgressNew(), 1, 1).objectives').join('|') === 'Mine ore: 0 of 120.|Destroy the attackers.|Sell your ore at the Works: 0 of 100.' && J('campHubBrief(campProgressNew(), 2, 0).objectives[0]') === 'Gather resources: 0 of 2.');
+
 process.exit(failed ? 1 : (console.log('\nHUNT FIXES PASS'), 0));

@@ -121,7 +121,8 @@ CAMP_HUB.rowKey.board = (H, P, code, res, ctx) => {
 function campHubBrief(P, level, i) {
   const L = campMissionRow(level, i); if (!L) return null;
   const k = 'camp.m.' + level + '.' + (i + 1) + '.', res = campHubResults(P)[campResultKey(level, i)] || null;
-  const need = o => (o.type === 'scan' ? (o.points || []).length : o.type === 'deliver' || o.type === 'caches' ? o.n : o.type === 'hold' ? o.secs : 1) | 0;
+  const need = o => (o.type === 'scan' ? (o.points || []).length : o.type === 'deliver' || o.type === 'caches' || o.type === 'ore' || o.type === 'cashin' ? o.n : // the rim run's mining mission: 120 ore to mine, 100 to sell (the goal read "0 of 1": card space-game-night-hunt-l2-l3)
+     o.type === 'hold' ? o.secs : 1) | 0;
   const objectives = (L.objectives || []).map(o => uiText('camp.o.' + o.type + (o.type === 'kill' ? '.' + String(o.what).replace(/:.*/, '') : ''), { got: 0, need: need(o), secs: need(o) }));
   return {
     level, i, n: i + 1, of: L.missions, id: L.mid, title: campHubTitle(level, i), kind: L.kind, kindText: uiText('camp.hub.kind.' + L.kind),
