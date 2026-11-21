@@ -8,7 +8,7 @@
 //   4  The pirate leader: a rival ship near Ceres (src/camprival.js): kill it (the bonus), or get her past.
 //   campBeatsNew(C)            at campNew: C.beats = { patrolSaid, asked, thanked }
 //   campBeats(C)               each tick: the pirates wear a crippled miner down (the wave row's `harry`: hit points a second for each pirate within CAMP_BEATS.harryNear of it), and a miner that was saved gives its thanks (once: the ore, the radio)
-//   CAMP_CALL_TYPES / CAMP_CALL_FX  get the call `distress` (rescue, rescueall, stay) when src/camporders.js is there
+//   CAMP_CALL_TYPES / CAMP_CALL_FX  get the scripted call `distress` (rescue, rescueall, stay) when src/camporders.js is there; campBeats opens it (campCallStart)
 //   campBeatKey(id)            the key a hint names, from the key table (CAMP_PANELS: fleet, ship, systems; the Campaign's CONTROLS rows: map, scout, take), never a letter of its own
 //   campBeatHint(C, id)        the words of a hint with its keys in them (camp.hint.<id>)            campBeatNudge(C, shown)  the hint that is due (CAMPBEATHINTS), which campNudge (src/campnudge.js) asks for
 
@@ -35,6 +35,7 @@ function campBeats(C) {
   const wv = C.L.waves[w], m = C.ships.find(u => u.team === 'neutral' && u.hp > 0 && u.tid === wv.victim);
   if (!m) { B.thanked = true; return; } // the miner is lost: no thanks
   const foes = C.ships.filter(u => u.team === 'alien' && u.hp > 0 && u.wave === w);
+  if (!B.asked && foes.length && typeof campCallStart === 'function' && campCallStart(C, 'distress', { who: m.id, ids: campCallIds(foes, m, 3) })) B.asked = true; // the pilots ask for orders (a call that waits is not interrupted: it is tried again)
   if (wv.harry > 0 && foes.length) { const near = foes.filter(u => campDist(u, m) < CAMP_BEATS.harryNear).length; if (near) campHurt(C, m, wv.harry * Math.min(near, 3) * (C.dt || 1 / 30), foes[0].id); } // the pirates have him: a crippled miner is wasted, hit points a second for each pirate about him, a shot cannot be counted on to hit a ship that sits still
   if (foes.length) return; // the pirates are still at it
   B.thanked = true; const ore = wv.thanks | 0;
@@ -42,19 +43,12 @@ function campBeats(C) {
   C.events.push({ type: 'thanks', id: m.id, ore, x: m.x, y: m.y }); campSay(C, 'camp.say.thanks', { ore });
 }
 
-// beat 2 as an order call: first in the table (a scripted call goes before the ones that watch the fight)
+// beat 2 as an order call: a type with scripted: true (src/camporders.js): its trigger is never asked, campBeats opens it with campCallStart when the pirates have fallen on the miner
 if (typeof CAMP_CALL_TYPES === 'object' && typeof CAMP_CALL_FX === 'object' && !CAMP_CALL_TYPES.some(t => t.id === 'distress')) {
   CAMP_CALL_FX.rescue = { do: campCallAt('fighters', 'attack') };                // the fighters go for the pirates at the miner
   CAMP_CALL_FX.rescueall = { do: campCallAt('all', 'attack') };                  // everyone goes: the transport is left to the cruiser's turrets
   CAMP_CALL_FX.stay = { do: () => true };                                         // nothing is done: the wing stays with the transport
-  CAMP_CALL_TYPES.unshift({ id: 'distress', scripted: true, pick: ['rescue', 'rescueall', 'stay'], def: 2,
-    when: C => {
-      const B = C.beats; if (!B || B.asked || !C.cues || C.cues.distress == null) return null;
-      const w = C.L.waves.findIndex(x => x.beat === 'distress'); if (w < 0 || !C.waves[w] || !C.waves[w].started) return null;
-      const m = C.ships.find(u => u.team === 'neutral' && u.hp > 0 && u.tid === C.L.waves[w].victim), foes = C.ships.filter(u => u.team === 'alien' && u.hp > 0 && u.wave === w);
-      if (!m || !foes.length) return null;
-      B.asked = true; return { who: m.id, ids: campCallIds(foes, m, 3) };
-    } });
+  CAMP_CALL_TYPES.push({ id: 'distress', scripted: true, pick: ['rescue', 'rescueall', 'stay'], def: 2 });
 }
 
 // the hints of the mission: plain data like src/campnudge.js's, but each is `wait`ed for until `until` (it shows when it is true, not only at its second), and its words carry keys from the key table.
