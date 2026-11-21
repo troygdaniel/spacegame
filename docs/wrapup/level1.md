@@ -56,3 +56,42 @@ The H page lists both under "THE STRIP AND THE VOICE". With no key set `cmdstrip
 - Pause (Esc), resume, R (back to the briefing), T, H and the keys page, Tab and the map (W S choose, Enter flies, Z, X, + - 0), the zoom keys (1.2 steps, 0 resets), the panels with a card up (they close), docking at Ceres mid-mission and undocking back to the same mission clock, Fast (Shift+digit with the wing aboard burns; with the wing out it asks), mining by the panel (40 ore per 10 s, the store caps at 200, so "Mine 60 ore" is easy), lose by doing nothing (mission 2 at 0:39, mission 3 at 1:41), retry through the briefing.
 - Every `camp.*` key the code names has a line in the table (a scan of src/camp*.js and shipcomputer.js).
 - Saves: 17 odd values for `longhaul.campaign` open the room, and Launch starts a mission, with no console error.
+
+---
+
+# Second pass: level 1 on the train (tip `128379e`, branch `wrapup-hunt-l1b`)
+
+Played again on `train` 128379e (71 commits past main: the Q, E and C panels, systems, scouts, the big briefing, replay, pace on P, mission places and their trips, the belt story, the
+difficulty scales, the ranks). Same method: the bot (`tools/campaign-bot.mjs`, 4 seeds), the code, and Chrome through the lock (the stepped clock, muted). **No blocker; no new
+code fix is needed from this pass** (the three first-pass fixes are in the train and hold: the cards fit, the six lines name the panels, the toast pairs differ). One real gap (the
+stances have no key), five minors.
+
+## What was checked and works
+- **Fresh start**: title K, the room (`Enter` the briefing), the big briefing (the system map with the route, GOALS, BONUS, WALKTHROUGH, ENEMIES "Expect 4 raiders, 3 drones", READINESS), L, the belt story, Enter: all clean, no overlap (pictures in `~/dev/spacegame-night/shots/hunt1b/`: `a-briefing.png`, `a-play.png`).
+- **Q, E and C**: each opens its panel at once, the same key closes it, another panel's key switches, Esc closes (a second Esc pauses), any other key closes it. Rows and their words (FLEET: Launch "8 in bay", Attack "none out"; SHIP: Fly to goal "102 km", Dock; SYSTEMS: Weapons +, Shields +, Engines +, Balance, Emergency), the digit picks, the pick flashes and the panel collapses. Pictures: `h-ship-bay.png`.
+- **SYSTEMS**: the pips move (2/2/2 to 3/1/2 to 4/1/1 with "Engines are low on power, pilot."), Balance restores 2/2/2, Emergency gives 1/4/1 for 10 s and says "Emergency shields off." when it ends.
+- **Pace on P**: Normal, Calm, back to Normal (and the pause card says "Pace: Normal   P changes the battle pace."); the keys page ends with "Battle pace: Normal (P)".
+- **Scouts**: on the map V sends a scout to the selected mark ("SCOUTS 1", then "SCOUTS 2" for the next mark); the wing's orders show two `scout`.
+- **Replay**: choose an earlier mission in the room (A D, Enter or R), "Belt survey (replay)", the briefing is headed "REPLAY", the debrief says "this run 2,530, your best was 3,000. Your best stands at 3,000 points", and the save keeps the best and counts `replays`.
+- **Mission places and trips**: mission 2 starts at Ceres with "Fly to Mars: 3140 km." (the briefing says 2840 km: the trip ends at the arrival ring, 300 km out, so the two are the same trip); at regular speed it is 150 s, with Fast (Shift+E 5, wing aboard) 47 s; the mission clock starts on arrival ("Mars: arrived."), and the haulers launch two seconds later. Mission 3: Fast to Europa in 38 s, the waves, the mothership, a win at 2:43, the level-won card, the refit, level 2's room at Proxima Gate.
+- **The cards** (the first pass's major) on the train: every card fits (the debrief of mission 3 is 587 px tall on the 720 screen, the pause card 533, the refit 506).
+- **The keys page** (H): three panel groups, the map, the strip, anywhere, the debug keys; no overlap, nothing cut (`t-keys.png`).
+- **Saves**: 21 odd values for `longhaul.campaign`, with the new fields too (`rank: "general"`, `replays: -5`, a score of 1e15, `found` with junk, the mission as a string), open the room and launch with no console error.
+- **The bot on the train** (`--level 1`, 4 seeds): mission 1 won 100% by every bot that plays (57 to 67 s); mission 2 won 100% by plain, guard, cycle and late (149 to 208 s including the trip), lost 100% by the carrier-only bot and 100% by the idle one; mission 3 won 100% by plain, guard, cycle and late (154 to 210 s), 50% by the carrier-only bot. The plain bot now loses 4 ships in mission 3 (it lost 1 before the difficulty card): a number for the difficulty card, not a bug.
+- A hand-made player (a script: Fast to the place, launch, escort and attack on a timer) lost mission 2 twice on the train (once flying the trip at regular speed, once with Fast: with Fast hauler 1 was lost at 72 s and hauler 3 at 114 s, 27 aliens down): the lose card names the tip ("Keep the wing on the haulers: FLEET panel, Escort."). Winnable by the bots; the pass left the balance to the difficulty card.
+
+## Findings
+### 9. MAJOR (a gap, not a small fix): the stances have no key
+The FLEET panel's second page (Free, Orbit, Keep distance, Match speed, Hold position) is built in the model (`campPanelRows(C, 'fleet', 1)`, the arrows in `campPanelKey`, `tests/campstances.mjs` J) and documented ("set by the order `stance` (the strip, the voice, and the FLEET panel's second page)", docs/CAMPAIGN.md), but `CAMP_PANELS.pages` is 1 and `src/campanelsdraw.js` never draws a page: it was waiting for "the panels are drawn with their second page", and neither the panels card nor the stances card did it. See it: Q, then the Right arrow: the panel closes (the arrow is an ordinary key); there is no way to set a stance but typing or speaking it (I, U), which need a chat key (6).
+Turning it on is NOT small: I tried `pages: 2` and four tests fail on the cascade (the keys page gets five "Stance: ..." lines and its lowest line is at 669 and 690 against a limit of 630; `campanels` counts 19 rows, 24 now; `controlshelp` wants a key cap for the arrows; `campstances` pins one page) before any drawing. It needs the page drawn (the rows' names and the one in force marked), a cue that the arrows flip, and the keys page and Settings made to fit five more lines. A card for the owner (mine, the panels): it is the same redraw as the benched `space-game-campaign-mine-to-fleet`.
+
+### 10. MINOR: "The belt is clear." after mission 3, which is at Europa
+Level 1 is called "The belt" and its story ends "Mothership destroyed. The belt is clear." but with the mission places the three missions are at Ceres, Mars and Europa. See it: win mission 3. Owner: the mission-places and belt text (`camp.l1.after.1`, the level's name).
+
+### 11. MINOR: the SHIP panel covers the edge-arrow label while it is open (1-GEN, level 2)
+The open SHIP list (x 977 to 1180, y 238 to 380) hides the edge arrow's label when the target is on the right edge in that band. Transient (the panel closes on the pick or Esc). Mine, not fixed: raising the label above the panel would put it over the rows.
+
+### 12. MINOR: B (warp blink) says nothing without the tech
+The keys page says "(needs that tech)"; pressing B before choosing Warp blink at the refit does nothing and says nothing (it was Q on main). One toast would do. Owner: the blink card.
+
+### Still true from the first pass (nothing changed on the train): 4 "LEVEL 1 LOST" on a lost mission; 5 the refit header "Choose a technology: 1 2 3" with looted techs on 6, 7, 8; 6 I and U silent without a chat key; 7 the debug keys on the pause card and the keys page (`\` wins the mission); 8 `tests/contentproof.mjs` red on the train too (3 of 47: the 13 file-only rows are 14).
