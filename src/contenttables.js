@@ -532,6 +532,10 @@ const UI_TEXT = {
   'camp.say.mine': 'Mining ships are on their way.',
   'camp.say.build': 'Building {n} {kind}.',
   'camp.say.built': 'A new {kind} is in the bay.',
+  'camp.say.repairoff': 'Fighter hit hard. Breaking off to land.',
+  'camp.say.repairback': 'Fighter mended and launching again.',
+  'camp.say.repairdone': 'Fighter mended. It is in the bay.',
+  'camp.ui.repair': 'REPAIR {n}  {s} s',
   'camp.no.noore': 'There is no ore in reach, pilot.',
   'camp.no.noore2': 'Not enough ore: {need} needed, {have} in the store.',
   'camp.no.noearth': 'There is no Earth here, pilot.',
@@ -641,6 +645,7 @@ const UI_TEXT = {
   'camp.say.torp.hit.name': '{name} took a torpedo.',
   'camp.say.torp.hit.us': 'Torpedo hit the cruiser.',
   'camp.nav.k.tboat': 'Torpedo boat', 'camp.nav.k.lancer': 'Lancer',
+  'camp.map.tboat': 'Torpedo boats ({n})', 'camp.map.torpedo': 'Torpedoes ({n})',
   // The convoy orders (card space-game-convoy-orders, content/text/campaign-convoy.md)
   'camp.say.ctuck': '{who}, tuck in under our shield.',
   'camp.say.chold': '{who}, hold here.',

@@ -112,7 +112,7 @@ const CAMP_BAY = { fade: 700, slot: 0.9, halo: [[6, 0.07], [4, 0.15]], color: 0x
 function campBayLight(C, at) {
   const fade = dt => dt <= 0 ? 1 : Math.max(0, 1 - dt / CAMP_BAY.fade);
   if (!C.carrier || C.carrier.hp <= 0) return { launch: 0, land: 0 };
-  const coming = C.ships.some(u => u.team === 'earth' && u.hp > 0 && u.order && u.order.type === 'recall');
+  const coming = C.ships.some(u => u.team === 'earth' && u.hp > 0 && ((u.order && u.order.type === 'recall') || u.repair)); // (a hurt fighter flying home to be mended is coming home too)
   return { launch: C.launchQ.length ? 1 : fade(C.t - at.launch), land: coming ? 1 : fade(C.t - at.land) };
 }
 
