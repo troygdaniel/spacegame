@@ -57,7 +57,7 @@ function campUndock(C) { if (!C.docked) return false; const id = C.docked; C.doc
 
 // ---- mending the hull: docked only, for ore, in proportion to what is missing ----
 function campMend(C, arg, dry) {
-  if (!C.docked) return campNo('norepair');
+  if (!C.docked) return campNo(campOutposts(C.level).length ? 'norepair' : 'norepairpost'); // (a level with no outpost at all says so)
   const c = C.carrier, missing = c.maxHp - c.hp; if (missing <= 0.5) return campNo('hullfull');
   const cost = Math.max(5, Math.ceil(CAMP.outpost.repairOre * missing / c.maxHp));
   if (C.ore < cost) return campNo('noore2', { need: cost, have: Math.floor(C.ore) });

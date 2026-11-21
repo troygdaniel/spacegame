@@ -50,7 +50,7 @@ const CAMP_PANELS = {
   // why a row cannot be done now, in a few plain words: the code of the game's own refusal (campNo in src/campaign.js) to the words under the row's name; {need} and {have} are ore
   why: { over: 'the battle is over', bay: 'the bay is empty', launching: 'still launching', baydry: 'all of it is out', nofighters: 'no fighters out', noescorts: 'no escorts out', noconvoy: 'no convoy to escort', nowing: 'no ships out',
     noore: 'no ore in reach', noore2: 'needs {need} ore', shieldfull: 'shield is full', earthfull: "Earth's shield is full", noearth: 'no Earth here', farearth: 'too far from Earth', buildfull: 'no room in the bay', what: 'cannot do that now',
-    nogoal: 'no objective', there: 'you are there', nodock: 'Dock at an outpost to build.', norepair: 'Dock at an outpost to repair.', docked: 'already docked', noposts: 'no outpost here', whichpost: 'no such outpost', farpost: 'no outpost in range', hotdock: 'aliens too close', hullfull: 'the hull is sound' }
+    nogoal: 'no objective', there: 'you are there', nodock: 'Dock at an outpost to build.', norepair: 'Dock at an outpost to repair.', nobuildpost: 'No outpost here. Only the Fabricator builds.', norepairpost: 'No outpost here to repair at.', docked: 'already docked', noposts: 'no outpost here', whichpost: 'no such outpost', farpost: 'no outpost in range', hotdock: 'aliens too close', hullfull: 'the hull is sound' }
 };
 // the rows the H page and Settings list for the panels: the panel's key then the row's digit, under the panel's heading, in the table's order
 function campPanelKeyRows() {

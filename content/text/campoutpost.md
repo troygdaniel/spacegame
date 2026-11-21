@@ -8,6 +8,8 @@ The words of the Campaign's friendly outposts (card space-game-campaign-outposts
 |---|---|
 | camp.no.nodock | Dock at an outpost to build. |
 | camp.no.norepair | Dock at an outpost to repair. |
+| camp.no.nobuildpost | No outpost here. Only the Fabricator builds. |
+| camp.no.norepairpost | No outpost here to repair at. |
 | camp.no.docked | Already docked, pilot. |
 | camp.no.noposts | There is no outpost in this system, pilot. |
 | camp.no.whichpost | I know no outpost called {name}, pilot. |

@@ -11,6 +11,8 @@ function campLoseLines(C, why) {
     const L = (C.L || CAMP.levels[C.level]);
     out.push(uiText('camp.lose.reached', { time: campClock(C.t), wave: C.waves.filter(x => x.started).length, total: L.waves.length, kills: C.kills }));
   } catch (e) { /* no battle: the cause alone */ }
-  if (has('camp.lose.tip.' + w)) out.push(uiText('camp.lose.tip.' + w));
+  const towers = w === 'carrier' && C && ((C.L || CAMP.levels[C.level]) || {}).win === 'towers'; // the tower missions: the tip that helps against towers
+  if (towers && has('camp.lose.tip.towers')) out.push(uiText('camp.lose.tip.towers'));
+  else if (has('camp.lose.tip.' + w)) out.push(uiText('camp.lose.tip.' + w));
   return out;
 }

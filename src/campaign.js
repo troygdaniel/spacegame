@@ -386,6 +386,7 @@ const CAMP = {
     3: {                                                          // the alien home world: scan the approach, break the outer ring, break the inner ring
       name: 'The home world', start: 'arrival', startAt: [0, 0], earth: false,
       reveal: { star: 'Tau Ceti', name: 'The outpost', place: 'Alien outpost' }, // SPOILER: after the win the ending says this was an outpost and the data points to this star; once the ending has been seen (the saved flag revealed) a replay says the true names (campReveal)
+      warp: { dest: 'Epsilon Eridani', ly: 9.3, star: { kind: 'lava', seed: 551 }, behind: { kind: 'lava', seed: 4371 }, companions: [], l1: 'camp.warp.l1b' }, // the warp cinematic (src/campwarp.js) from Alpha Centauri to Epsilon Eridani: the star ahead and the one behind as pictures (kind, seed) since neither is a place of this level, no companion stars, and its own first line
       // no outposts here: the alien home world is the only place, so nothing friendly to dock at (build with the Fabricator, or fight on)
       world: { system: 'epsilon-eridani', fit: { place: 'home', pack: 'epsilon-eridani-b' }, same: { home: 'epsilon-eridani-b' }, k: 3 }, // Epsilon Eridani's star and belts round the alien home world, which is the pack's Aegir; k: the rings are this many times the pack's (so the star is not on top of the towers)
       places: {
@@ -394,9 +395,9 @@ const CAMP = {
       },
       rocks: [{ at: [-4500, 2200], n: 5, spread: 260 }, { at: [-2500, -500], n: 5, spread: 260 }], // two asteroid fields on the approach
       anomalies: [                                              // the cloaked caches (card space-game-campaign-anomalies; src/campanomaly.js): at [x, y] or place + off; r the haze; hides the words; guards come out when it is decloaked; reward once
-        { id: 'nest', at: [-4200, -2800], hides: 'tech', guards: { raider: 3, gunship: 1 }, reward: { ore: 100, missiles: 2, tech: 'lens' } },   // west of the approach: a lab of theirs
+        { id: 'nest', at: [-4200, -2800], hides: 'tech', guards: { raider: 3, gunship: 1 }, reward: { ore: 100, missiles: 2 } },   // west of the approach: a lab of theirs (no tech in the reward: nothing after the last level could offer it, so the find counts as score)
         { id: 'vault', at: [3200, 4200], hides: 'weapons', guards: { raider: 3, gunship: 2 }, reward: { ore: 120, turret: 0.2 } },              // south-east of the home world: a store of heavy guns
-        { id: 'core', at: [-1800, 3600], hides: 'weapons', guards: { gunship: 3, drone: 3 }, reward: { ore: 150, missiles: 3 } }               // south, outside the inner ring: the last of them
+        { id: 'core', at: [-1800, 4300], hides: 'weapons', guards: { gunship: 3, drone: 3 }, reward: { ore: 150, missiles: 3 } }               // south, well outside the inner ring and out of the sense range of the missions' starts (card space-game-wrapup-hunt-l3: it was noticed at second 0): the last of them
       ],
       missions: [
         { id: 'approach', kind: 'recon', par: 120,                // M1: three points on the way in; defenders come when the first is scanned
@@ -673,7 +674,7 @@ function campRecharge(C, arg, dry) {
 }
 // build: queue new fighters or escorts (arg 'fighter', 'escort', with a count: 'escort 2'); one at a time, into the bay, ore paid now
 function campBuild(C, arg, dry) {
-  if (typeof campCanBuild === 'function' && !campCanBuild(C)) return campNo('nodock'); // ships are built docked at an outpost, or anywhere with the Fabricator (src/campoutpost.js)
+  if (typeof campCanBuild === 'function' && !campCanBuild(C)) return campNo(typeof campOutposts === 'function' && !campOutposts(C.level).length ? 'nobuildpost' : 'nodock'); // (a level with no outpost at all says so: only the Fabricator builds there) // ships are built docked at an outpost, or anywhere with the Fabricator (src/campoutpost.js)
   const q = String(arg == null ? '' : arg).toLowerCase(), B = CAMP.build, kind = /escort/.test(q) ? 'escort' : 'fighter';
   const words = { one: 1, a: 1, an: 1, two: 2, three: 3, four: 4, five: 5 }, m = /(\d+)|\b(one|two|three|four|five)\b/.exec(q);
   const n = Math.max(1, Math.min(B.most, m ? (m[1] ? parseInt(m[1], 10) : words[m[2]]) : 1));
