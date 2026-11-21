@@ -130,7 +130,7 @@ for (const f of ex) check(`${f} exists, and the guide names the example pack`, e
 check('the example pack makes Rescue pay 650, as the guide says', /reward: 650/.test(read('mods/example/missions/rescue.md')) && doc.includes('Rescue pays 650'));
 check('the guide names the label file, the generated file and the keys it tells the reader to press (O, F, R)', doc.includes('_pack.md') && doc.includes('mods.generated.js') && ['**O**', '**F**', '**R**'].every(k => doc.includes(k)));
 const titleJs = read('src/title.js'), modsJs = read('src/mods.js');
-check('O on the Title screen opens the Mods screen (src/title.js)', /KeyO'\)\s*modsOpenSetup/.test(titleJs));
+check('O on the Title screen opens the Mods screen (src/title.js)', /KeyO: 'mods'/.test(titleJs) && /r\.act === 'mods'\) modsOpenSetup/.test(titleJs));
 check('the Mods screen takes F (pick a folder), R (restart) and 1 to 6 (turn on or off) (src/mods.js)', /addKeys\('ESC,F,R,ONE,TWO,THREE,FOUR,FIVE,SIX'\)/.test(modsJs) && /this\.k\.F\)\) this\.pick\(\)/.test(modsJs) && /this\.k\.R\)\) this\.restart\(\)/.test(modsJs));
 check('the folder picker is an input with webkitdirectory (the guide says no Node is needed)', /setAttribute\('webkitdirectory'/.test(modsJs));
 check('packs are off until turned on and laid over in name order (the guide says so): modsAvailable sorts by name and only the on list is applied', /\.sort\(\(a, b\) => \(a\.name < b\.name/.test(modsJs) && /if \(!row\.on\) return;/.test(modsJs));
