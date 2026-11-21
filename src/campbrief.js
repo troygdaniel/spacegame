@@ -184,7 +184,7 @@ function campBriefSteps(P, level, i) {
 // ---- how: the keys this mission needs ----
 // The basics are for every mission, in the order they are used; what the mission's goals and bonus ask for is added. Q 1, Q 2, Q 3, E 1 and C 5 are the panels' own rows (src/data_controls.js CAMP_PANELS: tests/campbrief.mjs checks they are there).
 const CAMPBRIEF_KEYS = {
-  fly: ['W', 'A', 'S', 'D'], fire: ['Space'], wing: ['Q', '1'], map: ['Tab'], zoom: ['+', '-', '0'], attack: ['Q', '2'], escort: ['Q', '3'], missile: ['F'], mine: ['E', '1'], shield: ['C', '5']
+  fly: ['W', 'A', 'S', 'D'], fire: ['Space'], wing: ['Q', '1'], map: ['Tab'], zoom: ['+', '-', '0'], attack: ['Q', '2'], escort: ['Q', '3'], missile: ['F'], mine: ['E', '1'], dock: ['E', '6'], shield: ['C', '5']
 };
 function campBriefKeys(level, i) {
   const L = campMissionRow(level, i); if (!L) return [];
@@ -193,10 +193,10 @@ function campBriefKeys(level, i) {
   if (kinds.some(k => /^kill|^clear|^relic|^hold/.test(k)) || (L.waves || []).length) add('attack');
   if (kinds.indexOf('deliver') >= 0 || (L.convoys || []).length) add('escort');
   if (kinds.some(k => k === 'kill.mother' || k === 'kill.towers' || k === 'kill.guards')) add('missile');
-  if (bonus.indexOf('ore') >= 0) add('mine');
+  if (bonus.indexOf('ore') >= 0 || kinds.indexOf('ore') >= 0) add('mine'); // the rim run's mining mission asks for ore as its goal (card space-game-night-hunt-l2-l3: its keys box did not list E 1, and a pilot who never sends the wing to mine cannot win it)
+  if (kinds.indexOf('cashin') >= 0) add('dock'); // and the ore is sold at the Works: docked
   if (bonus.indexOf('hull') >= 0) add('shield');
-  add('zoom');
-  return ids.slice(0, CAMPBRIEF.keysMax).map(id => ({ id, k: CAMPBRIEF_KEYS[id], text: uiText('camp.bf.key.' + id) }));
+  return ids.slice(0, CAMPBRIEF.keysMax - 1).concat('zoom').map(id => ({ id, k: CAMPBRIEF_KEYS[id], text: uiText('camp.bf.key.' + id) }));
 }
 
 // ---- where and why: the story line ----

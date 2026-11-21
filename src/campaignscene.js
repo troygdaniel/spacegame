@@ -18,6 +18,10 @@ const CAMP_LOOK = {
   patrol: campArtLook('patrol', 'patrol'), miner: campArtLook('miner', 'miner'), // the neutral ships: a pale police hull with a teal stripe, an industrial miner
   raider: { tex: 'raider', scale: 1 }, drone: { tex: 'drone', scale: 1 }, gunship: { tex: 'gunship', scale: 1 }, mother: { tex: 'reaver', scale: 2.6, tint: 0xc9a0ff }, tower: { tex: 'gunship', scale: 1.6, tint: 0xff9a3a }
 };
+const CAMP_SHOT = { pirate: 0xffa83a, neutral: 0x7fe9ff }; // the colour of a pirate's shot (amber: not the aliens' red, not the guns' pale yellow) and of a neutral patrol's (cyan), as the textures 'shot-pirate' and 'shot-neutral' (campShotTextures)
+function campShotTextures(scene) { // made once, 14 by 4 like the game's own bullet
+  Object.keys(CAMP_SHOT).forEach(k => { const key = 'shot-' + k; if (scene.textures.exists(key)) return; const g = scene.make.graphics({ x: 0, y: 0, add: false }); g.fillStyle(CAMP_SHOT[k], 1); g.fillRect(0, 0, 14, 4); g.generateTexture(key, 14, 4); g.destroy(); });
+}
 const CAMP_REACH = { w: 2, alpha: 0.4, color: 0xffd37a }; // the ring that shows how far the point guns reach (CAMP.carrier.pdRange): its line width, how solid it is, its colour (it was 1 px at 0.16, too faint to find: 6-GEN and 8-GEN)
 const CAMP_MOUNT = { base: 3.2, dot: 1.7, hot: 2.8, aim: [7, 11], width: [1.5, 2.2], flash: 10, flashScale: 0.9, stub: [6.5, 0x9aa0a8] }; // a turret mount, drawn on the hull (it is a third smaller since the carrier is): its dark base, its amber dot (and the dot while it fires), the length of the barrel at rest and on a shot, the barrel's width at rest and on a shot, and how far in front of the mount the muzzle flash is and how big (it was 1.3 on the 140 px carrier and hid the bow of the 98 px one), and the steel barrel a mount with nothing to shoot at points along the carrier's heading (its length and colour: without it a mount was a lit dot and read as a window, the blind critic)
 const CAMP_BLIP = { gap: 70, flash: 90 }; // a turret's shot: at most one sound (sfx('turret', its number), src/audio.js) in gap ms of the battle's clock; the muzzle flash lasts flash ms
@@ -48,6 +52,7 @@ class Campaign extends Phaser.Scene {
     if (typeof campWarpDue === 'function' && campWarpDue(this)) return; // a level that warps in starts with the warp cinematic, which comes back here with warped: true (src/campwarp.js)
     const dark = this.warped ? 255 : 0; this.cameras.main.fadeIn(300, dark, dark, dark); // out of the warp's white flash, else out of black
     spaceBackdrop(this, true);
+    campShotTextures(this); // the pirates' and the neutrals' shots
     this.boom = fxBoom(this);
     this.camp = this.makeCamp();
     this.sp = {}; this.bsp = []; this.bayAt = { launch: -1e9, land: -1e9 }; // the battle clock of the last launch and the last landing: the bays of the cruiser stay lit a moment after each (campBayLight)
@@ -415,7 +420,7 @@ class Campaign extends Phaser.Scene {
     while (this.bsp.length < C.bullets.length) this.bsp.push(this.add.image(0, 0, 'bullet').setDepth(4));
     this.bsp.forEach((im, i) => {
       const b = C.bullets[i]; if (!b) { im.setVisible(false); return; }
-      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'bullet' : 'ebullet').setScale(b.beam ? 3 : b.pd ? 0.9 : 1, b.beam ? 1.2 : 1);
+      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'bullet' : b.team === 'neutral' ? 'shot-neutral' : b.fac === 'pirate' ? 'shot-pirate' : 'ebullet').setScale(b.beam ? 3 : b.pd ? 0.9 : 1, b.beam ? 1.2 : 1);
       if (b.beam) im.setTint(0x7fe9ff); else if (b.pd) im.setTint(0xffd37a); else im.clearTint(); // the turrets' shots are amber; the beam tech's are cyan, long and go through
     });
   }

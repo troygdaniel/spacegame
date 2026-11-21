@@ -22,7 +22,7 @@ const CAMPFIRE = {
   ring: { min: 7, max: 26, big: 260, small: 70 }, // a ring's size in px (from its world radius), and the world radius of a big and a small ship's explosion
   flash: 6,                          // px: a hit's flash
   color: { volley: 0xffd37a, beam: 0x7fe9ff, missile: 0xffd37a, friend: 0x9fe9ff, foe: 0xff9aa8, ringFriend: 0x9fe9ff, ringFoe: 0xff4d6d, blast: 0xffd37a, shield: 0x7fe9ff,
-    wing: CAMPMAP.color.wing, alien: CAMPMAP.color.alien }, // friend and foe as the map's own marks (campDotColor): the wing green, the aliens red
+    wing: CAMPMAP.color.wing, alien: CAMPMAP.color.alien, pirate: CAMPMAP.color.pirate, patrol: CAMPMAP.color.patrol }, // friend and foe as the map's own marks (campDotColor): the wing green, the aliens red, the pirates yellow, a patrol teal
   earth: ['carrier', 'fighter', 'escort', 'freighter'] // the kinds on Earth's side; anything else that blows up is theirs
 };
 const CF_TMP = { t0: 0, t1: 1, x0: 0, y0: 0, x1: 0, y1: 0 }; // the scratch the clip writes into: one object for ever
@@ -110,7 +110,7 @@ function campFirePaint(P, C, g, F, f, now) {
     const x0 = cfX(F, f, b.x), y0 = cfY(F, f, b.y); if (x0 < F.x || x0 > F.x + F.w || y0 < F.y || y0 > F.y + F.h) continue;
     const sp = Math.hypot(b.vx, b.vy); if (!(sp > 0)) continue;
     const tl = Math.min(CAMPFIRE.tailMax, Math.max(CAMPFIRE.tailMin, sp * CAMPFIRE.tail * s)); // the tail in px: a few, never a streak
-    n += cfLine(g, F, x0, y0, x0 - b.vx / sp * tl, y0 - b.vy / sp * tl, b.team === 'earth' ? (b.beam ? K.beam : K.wing) : K.alien, 0.9);
+    n += cfLine(g, F, x0, y0, x0 - b.vx / sp * tl, y0 - b.vy / sp * tl, b.team === 'earth' ? (b.beam ? K.beam : K.wing) : b.team === 'neutral' ? K.patrol : b.fac === 'pirate' ? K.pirate : K.alien, 0.9);
     drawn++;
   }
   // the missiles: a dot and a short trail behind it
