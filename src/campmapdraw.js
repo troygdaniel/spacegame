@@ -182,7 +182,7 @@ function campMapPaint(s, time) {
     const q = route(goal, gc.goal, 0.55), d = cp ? Math.hypot(goal.x - C.carrier.x, goal.y - C.carrier.y) : 0;
     g.lineStyle(2, gc.goal, 0.5 + 0.5 * pulse).strokeCircle(q.x, q.y, 11 + 4 * pulse);
     mp.goalText.setVisible(true).setPosition(q.x, q.y - 22);
-    mp.routeText.setVisible(!!cp).setText(uiText('camp.map.route', { km: campNavKm(d), s: campNavEta(C, d) }));
+    mp.routeText.setVisible(!!cp).setText(uiText('camp.map.route', { km: campNavKm(d), s: campNavEta(C, campNavFlight(C, goal, d)) }));
     if (cp) { // beside the line, where it is on no name: the whole-system map has the belts' names on the route
       const boxes = (mp.nameObjs || []).filter(t => t && t.visible !== false && !t.gone).map(t => ({ x: t.x - t.width / 2, y: t.y - t.height / 2, w: t.width, h: t.height }));
       const spot = campMapFreeSpot(campMapRouteSpots(cp, q), mp.routeText.width || 120, mp.routeText.height || 16, boxes) || { x: (cp.x + q.x) / 2, y: (cp.y + q.y) / 2 - 10 };
@@ -198,9 +198,9 @@ function campMapPaint(s, time) {
     const q = route(setRow, gc.select, 0.7), d = Math.hypot(setRow.x - C.carrier.x, setRow.y - C.carrier.y), eta = n => typeof cruiseEtaText === 'function' ? cruiseEtaText(n) : n + ' s';
     g.lineStyle(2, 0xffffff, 0.9).strokeCircle(q.x, q.y, 13 + 2 * pulse);
     const here = N && N.on && N.id === (setRow.of || setRow.id), waiting = !!(C.navWait && C.navWait.id === (setRow.of || setRow.id)), on = uiText('camp.map.on'), flyOn = here && !N.fast, fastOn = here && N.fast; // which one is going
-    mp.btnFly.setText(uiText('camp.map.fly', { t: eta(campNavEta(C, d)) }) + (flyOn ? '  ' + on : '')).setBackgroundColor(flyOn ? '#1f7f95' : '#0a3a4a').setVisible(true);
-    mp.btnFast.setText(waiting ? uiText('camp.nav.recalling', { n: C.navWait.n }) : campNavOut(C) ? uiText(C.fastAsk && C.t - C.fastAsk.at <= CAMP.nav.askFor * 1000 ? 'camp.map.fastask' : 'camp.map.fastout', { n: campNavOut(C) }) : uiText('camp.map.fast', { t: eta(campNavEta(C, d, true)) }) + (fastOn ? '  ' + on : '')).setBackgroundColor(fastOn ? '#1f7f95' : '#0a3a4a').setAlpha(campNavOut(C) ? 0.6 : 1).setVisible(true);
-    mp.btnScout.setText(uiText('camp.map.scout', { t: eta(Math.round(d / CAMP.escort.speed)) })).setVisible(campScoutTasks(C).some(k => k !== 'escort')); // the escort's own speed: a scout is faster than the carrier (card space-game-campaign-scouts)
+    mp.btnFly.setText(uiText('camp.map.fly', { t: eta(campNavEta(C, campNavFlight(C, setRow, d))) }) + (flyOn ? '  ' + on : '')).setBackgroundColor(flyOn ? '#1f7f95' : '#0a3a4a').setVisible(true);
+    mp.btnFast.setText(waiting ? uiText('camp.nav.recalling', { n: C.navWait.n }) : campNavOut(C) ? uiText(C.fastAsk && C.t - C.fastAsk.at <= CAMP.nav.askFor * 1000 ? 'camp.map.fastask' : 'camp.map.fastout', { n: campNavOut(C) }) : uiText('camp.map.fast', { t: eta(campNavEta(C, campNavFlight(C, setRow, d), true)) }) + (fastOn ? '  ' + on : '')).setBackgroundColor(fastOn ? '#1f7f95' : '#0a3a4a').setAlpha(campNavOut(C) ? 0.6 : 1).setVisible(true);
+    mp.btnScout.setText(uiText('camp.map.scout', { t: eta(Math.round(campNavFlight(C, setRow, d) / CAMP.escort.speed)) })).setVisible(campScoutTasks(C).some(k => k !== 'escort')); // the escort's own speed: a scout is faster than the carrier (card space-game-campaign-scouts)
     const w = Math.max(mp.btnFly.width, mp.btnFast.width, mp.btnScout.width), h = mp.btnFly.height, right = q.x + 22 + w <= F.x + F.w - 4, bx = right ? q.x + 22 : Math.max(F.x + 4, q.x - 22 - w), by = Math.max(F.y + 4, Math.min(F.y + F.h - 3 * h - 12, q.y - h - 2)); // beside the mark, on the side with room, inside the frame
     mp.btnFly.setPosition(bx, by); mp.btnFast.setPosition(bx, by + h + 4); mp.btnScout.setPosition(bx, by + 2 * (h + 4));
     if (!N) mp.dest.setText(uiText('camp.map.set', { name: setRow.name }) + '  ' + campNavKm(d) + ' km');
