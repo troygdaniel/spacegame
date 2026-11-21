@@ -10,13 +10,14 @@
 // pilot's answer, said on the radio), and camp.call.late and camp.call.fail are the answers to no answer and to a pick that could not be done (content/text/camporders.md).
 //   C.call = { n, next, open, last, seen, log }  made at the first tick:  n calls made, next: the battle clock (ms) before which none opens, open: the call that waits { id, ctx, pilot, at, left, total, def }
 //   campCallsTick(C, dt)        every tick (campTick): the waiting call's clock, the call that may open now
+//   campCallStart(C, id, ctx)   a script opens a call of a type that has `scripted: true` (its trigger is not asked); false while one waits
 //   campCallAnswer(C, n, how)   n: 1, 2 or 3 (0: the pilot's own pick); how: 'key', 'bot', 'late'; { ok, id, pick } and an event { type: 'call', stage: 'answer', ... }
 //   campCallView(C)             what the prompt draws: null, or { id, pilot, line, left, total, def, rows: [{ n, pick, label, def }] }
 //   campCallOpen(C)             a call is waiting for an answer (the slow-time card reads this: the battle runs slow while it is true)
 //   campCallKeyNum(code)        1 to 3 for Digit1 to Digit3 and Numpad1 to Numpad3, else 0
 //   C.timeScale                 (optional, set by the command-time card) the battle's speed against the player's seconds: the pilot's clock counts the player's seconds, not the slowed battle's
 const CAMP_CALLS = {
-  first: 20,       // s of the mission's clock before the first call may come
+  first: 40,       // s of the mission's clock before the first call may come (the first minute's hints, src/campnudge.js, are said first: a call at 20 s took their turn)
   gap: 25,         // s from one call opening to the next one that may open
   answer: 8,       // s the pilot waits for a 1, 2 or 3
   again: 70,       // s before the same type of call is made again
@@ -56,7 +57,6 @@ const CAMP_CALL_FX = {
     let n = 0; ((x && x.ids) || []).forEach(id => { const u = C.by[id]; if (u && u.hp > 0 && u.team === 'alien') { u.goal = ''; u.prey = 'carrier'; u.hitBy = C.carrier.id; u.distractedUntil = C.t + CAMP_CALLS.draw * 1000; if (u.lost) { u.lost = false; u.seenAt = C.t; } n++; } });
     return n > 0; } },
   missile: { do: (C, x) => { const f = campCallFoe(C, x); if (!f || C.missiles <= 0 || C.t < C.nextRocket || campDist(f, C.carrier) > CAMP.missile.lock) return false; campFire(C, f); C.orders.missiles++; return true; } }, // one missile out of the magazine
-  recharge: { do: C => campOrder(C, 'recharge', 'carrier', 'call').ok },       // the shield from the store: ore
   emergency: { do: C => campOrder(C, 'emergency', '', 'call').ok },             // the emergency power: shields up, weapons and engines down for a while, and the cooldown
   hold: { do: () => true },                                                      // nothing is done: the wing stays as it is, nobody breaks off
   fight: { do: () => true },                                                     // nothing is done: the pilot goes on
@@ -66,7 +66,7 @@ const CAMP_CALL_FX = {
 
 // ---- the call types ----
 const CAMP_CALL_TYPES = [
-  { id: 'cruiser', pick: ['guard', 'recharge', 'emergency'], def: 0, // the cruiser's shield is going and an enemy is in reach
+  { id: 'cruiser', pick: ['guard', 'strike', 'emergency'], def: 0, // the cruiser's shield is going and an enemy is in reach: the wing comes home to guard it / the fighters go for the nearest enemy / the emergency power (shields up, weapons and engines down for a while)
     when: C => { if (C.carrier.hp <= 0 || !(C.shield <= campShieldMax(C) * CAMP_CALLS.shield)) return null; const f = campNearest(campAliens(C), C.carrier, CAMP_CALLS.shieldNear); return f ? { ids: [f.id] } : null; } },
   { id: 'wounded', pick: ['cover', 'home', 'fight'], def: 1, // a wingman is hit and an enemy is on him
     when: C => { const foes = campCallFoes(C), w = campCallWing(C).filter(u => !u.scout && u.hp <= u.maxHp * CAMP_CALLS.wound && !(u.order && u.order.type === 'recall') && foes.some(f => campDist(f, u) < CAMP_CALLS.woundNear)); return w.length ? { who: campCallByDist(w, C.carrier)[0].id, ids: campCallIds(foes, w[0], 3) } : null; } },
@@ -86,7 +86,7 @@ const campCallType = id => CAMP_CALL_TYPES.find(t => t.id === id) || null;
 
 // ---- the state and the tick ----
 function campCallsNew(C) { return { n: 0, next: 0, open: null, last: {}, seen: {}, log: [] }; }
-const campCallOpen = C => !!(C && C.call && C.call.open);
+function campCallOpen(C) { return !!(C && C.call && C.call.open); } // (a function declaration: the command-time card's test puts its own in its place)
 function campCallKeyNum(code) { const m = /^(?:Digit|Numpad)([123])$/.exec(String(code || '')); return m ? +m[1] : 0; }
 
 function campCallsTick(C, dt) {
@@ -103,6 +103,7 @@ function campCallsTick(C, dt) {
   }
   if (C.arrivedAt == null || campMissionClock(C) < CAMP_CALLS.first || C.t < S.next || C.carrier.hp <= 0) return;
   for (const T of CAMP_CALL_TYPES) {
+    if (T.scripted) continue; // a call a script opens itself (campCallStart), never by its trigger
     if (S.last[T.id] != null && C.t - S.last[T.id] < CAMP_CALLS.again * 1000) continue;
     const ctx = campTry(() => T.when(C, S), null); if (!ctx) continue;
     S.n++; S.last[T.id] = C.t; S.next = C.t + CAMP_CALLS.gap * 1000;
@@ -110,6 +111,16 @@ function campCallsTick(C, dt) {
     C.events.push({ type: 'call', stage: 'open', id: T.id, pilot: S.open.pilot });
     return;
   }
+}
+
+// a script opens a call by hand (a type with `scripted: true` in the table: its trigger is never asked): true when it opened (none waits, the type is in the table)
+function campCallStart(C, id, ctx) {
+  const T = campCallType(id); if (!C || C.result || !T) return false;
+  const S = C.call || (C.call = campCallsNew(C)); if (S.open) return false;
+  S.n++; S.last[T.id] = C.t; S.next = Math.max(S.next, C.t + CAMP_CALLS.gap * 1000);
+  S.open = { id: T.id, ctx: ctx || {}, pilot: (S.n - 1) % CAMP_CALLS.pilots, at: C.t, left: CAMP_CALLS.answer, total: CAMP_CALLS.answer, def: T.def };
+  C.events.push({ type: 'call', stage: 'open', id: T.id, pilot: S.open.pilot });
+  return true;
 }
 
 // the answer: 1, 2 or 3; 0 (or anything else) is no answer: the pilot's own, cautious pick. A pick that cannot be done is not done: the cautious one is, and the answer says so.

@@ -21,7 +21,6 @@ The words of the pilots' calls for orders (card space-game-order-calls, src/camp
 | camp.call.fx.home | Bring him home |
 | camp.call.fx.draw | Cruiser's turrets |
 | camp.call.fx.missile | Fire a missile |
-| camp.call.fx.recharge | Recharge shields |
 | camp.call.fx.emergency | Emergency power |
 | camp.call.fx.hold | Hold formation |
 | camp.call.fx.fight | Keep fighting |
@@ -36,7 +35,6 @@ The words of the pilots' calls for orders (card space-game-order-calls, src/camp
 | camp.call.r.home | Copy. He is heading home. |
 | camp.call.r.draw | Copy. They are coming for you. |
 | camp.call.r.missile | Copy. Missile away. |
-| camp.call.r.recharge | Copy. Shields topped up. |
 | camp.call.r.emergency | Emergency power. Hold on. |
 | camp.call.r.hold | Copy. Holding formation. |
 | camp.call.r.fight | Copy. Fighting on. |

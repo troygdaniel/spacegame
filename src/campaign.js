@@ -24,7 +24,8 @@ const CAMP = {
     fighter: { len: 22, hit: 6 },          // it was 31 and 8
     escort: { len: 28, hit: 7 },           // it was 40 and 10
     skiff: { len: 28, hit: 9 }, cutter: { len: 34, hit: 12 }, brute: { len: 46, hit: 17 }, // the pirates (card space-game-l1-pirates-traffic): about the hit circles of the raider, the drone and the gunship they fly like (10, 14, 19), a little smaller
-    patrol: { len: 38, hit: 12 }, miner: { len: 36, hit: 14 }                          // the neutral ships
+    patrol: { len: 38, hit: 12 }, miner: { len: 36, hit: 14 },                         // the neutral ships
+    tboat: { len: 44, hit: 16 }, lancer: { len: 44, hit: 16 }                          // the torpedo boats (card space-game-torpedo-boats): the pirates' and the aliens'
   },
   carrier: {
     hull: 600,                             // hit points of the flagship; zero and the level is lost
@@ -41,14 +42,14 @@ const CAMP = {
     lead: 1,                               // how far ahead a turret aims: 1 is where its shot and the alien meet (the alien's speed, the shot's, the carrier's drift), 0 is where the alien is now
     stagger: 1,                            // 1: each turret fires on a slot of its own, offset from the next by pdDelay over the number of turrets, so the fire is continuous; 0: all eight on the same beat (a volley, as it was)
     jitter: 12,                            // ms: how far a turret's slot is moved at random (a stream of its own), so the rattle is not a metronome; keep it under half of pdDelay over the number of turrets (44 ms)
-    shield: 150                            // points of shield: they take damage before the hull, do not mend by themselves, and ore refills them (recharge, key 7)
+    shield: 150                            // points of shield: they take damage before the hull and mend by themselves, at a rate the shield pips set (CAMP.power.shields.regen; card space-game-shield-auto: the ore recharge is gone)
   },
   power: {                                 // ship systems (card space-game-campaign-systems; docs/CAMPAIGN.md "Ship systems"): power to weapons, shields and engines, like X-Wing
-    budget: 6, max: 4, start: [2, 2, 2],   // the pips to share, the most in one system, and the default: weapons, shields, engines. Every factor is 1 (regeneration 0) at 2 pips: today's numbers exactly
+    budget: 6, max: 4, start: [2, 2, 2],   // the pips to share, the most in one system, and the default: weapons, shields, engines. Every factor is 1 at 2 pips (the shield mends at its base rate there)
     weapons: { delay: [1.6, 1.3, 1, 0.8, 0.65],   // x the turrets' pdDelay, by pips 0 to 4
                reload: [1.6, 1.3, 1, 0.75, 0.55] }, // x the missile reload
     shields: { cap: [0.5, 0.75, 1, 1.25, 1.5],    // x the carrier's shield points
-               regen: [0, 0, 0, 3, 6],            // points a second the shield mends by itself (today it does not), once regenDelay ms have passed with no hit
+               regen: [0, 1.5, 3, 6, 10],         // points a second the shield mends by itself, by pips 0 to 4 (none at 0, slow at 2, fast at 4: 10 a second of its 225), once regenDelay ms have passed with no hit (card space-game-shield-auto)
                regenDelay: 3000 },                 // ms with no hit before the shield starts to mend
     engines: { speed: [0.75, 0.88, 1, 1.12, 1.25],  // x the top speed (the Fast burn's too: it is this times CAMP.nav.fast)
                accel: [0.7, 0.85, 1, 1.15, 1.3],    // x the thrust
@@ -57,7 +58,7 @@ const CAMP = {
     emergency: { shields: 4, ms: 10000, cooldown: 40000 }, // emergency shields: 4 pips to shields (the other two get 1 each) for ms, ready again cooldown ms after it started
     low: { shield: 0.3, rearm: 0.6, engines: 1 }           // the computer says so when the shield is under 30 percent of its cap (and again after it has been over 60), or when the engines are set to 1 pip or less
   },
-  ore: {                                   // ore: asteroid rocks and the wrecks of dead aliens; spent on shields and new ships (docs/CAMPAIGN.md, Ore)
+  ore: {                                   // ore: asteroid rocks and the wrecks of dead aliens; spent on new ships and the hull's mend (docs/CAMPAIGN.md, Ore)
     start: 30,                             // ore in the store at the start of a level
     cap: 200,                              // most ore the carrier's store holds
     rock: 20,                              // ore in one rock of an asteroid field: a mining laser cuts the rock and it breaks into a chunk of this much ore
@@ -73,12 +74,6 @@ const CAMP = {
     range: 230,                            // px a mining ship's laser reaches (to the edge of the rock)
     hold: 150,                             // px from the rock a mining ship keeps while it works
     turret: 0.35                           // the share of a turret shot's damage that cuts a rock (the turrets are the same lasers: they do less to rock than to an alien)
-  },
-  recharge: {
-    carrier: 25,                           // ore for a full carrier shield (a part refill costs the same share of it, at least 5)
-    earth: 40,                             // ore for one recharge of Earth's shield
-    earthPoints: 200,                      // shield points that gives Earth
-    earthReach: 900                        // px: the carrier must be this close to Earth to recharge Earth's shield
   },
   build: {
     fighterCost: 25,                       // ore for a new fighter
@@ -237,7 +232,20 @@ const CAMP = {
     draw: 3600,                            // px: a far place is made in the world (a picture) only while the carrier is within this many px of its edge
     skip: ['sol-pluto']                    // pack bodies the Campaign does not take (the eight planets are the card's; Pluto is a dwarf)
   },
-  hud: { pips: { x: 366, y: 40, w: 13, step: 16 } }, // the ship systems' pips (W S E): beside the shield bar, above the toast band (a toast is up to 552 px wide, centred, from y 86: it ran over the pips when they sat at y 72 to 108)
+  tank: {                                  // the turrets' charge (card space-game-systems-gauges): every shot a turret fires, at an alien or a rock, spends `cost` of it; it mends by itself at refill[pips of the weapons] a second, so a starved weapon system runs dry and the turrets fire only as fast as it mends
+    max: 100,                              // the most charge: a full tank is about nine seconds of all eight turrets at the default (they fire 11.4 shots a second)
+    cost: 1,                               // charge a shot spends
+    refill: [2, 5, 8, 11, 14],             // charge a second, by the weapons' pips 0 to 4 (a turret at 2 pips fires 11.4 shots a second, so the default tank runs down in about half a minute of steady fire and then the turrets fire at 8 a second)
+    low: 0.2                               // the computer says so when the charge falls under this share of the tank (and again after it has been over twice this)
+  },
+  hud: {                                   // the left of the HUD (card space-game-systems-gauges, src/camphud.js): three Long Haul style dials in a row, SHIELDS (with the hull as a thin bar under it), SPEED, LASERS, each with a bar of power segments beside it (the pips of that system, like X-Wing); then the lines of text under them
+    x: 8, y: 8, cell: 118,                 // the first dial's cell: its left and top, and the width of a cell (three of them: 354 px, clear of the toast band, which starts at x 364)
+    r: 22, bar: { w: 10, h: 9, gap: 2 },   // the dial's radius (its bezel is 12 px outside it) and a power segment; the bar sits to the right of the dial, level with its middle
+    hullBar: { y: 78, h: 7 },              // the thin hull bar under the shield dial (and its bar): its top, relative to the cell's top, and its height
+    ore: { x: 130, y: 74 },                // the ore line (and the cash), under the speed and laser dials
+    text: { x: 24, y: 96, pitch: 22 },     // the lines of text under the gauges: the first one's y, and the step to the next (a line that has nothing to say gives its place back)
+    plate: { w: 372, min: 90, pad: 4 }     // the dim plate under the column: its width, its least height, and how far it reaches past the last line
+  },
   nav: {                                   // the carrier's autopilot, the map's list and picking, and the arrow at the screen edge (src/campnav.js); the rule is the Long Haul autopilot's (src/autopilot.js AUTO)
     stop: 100,                             // px: a place is flown to until the edge of it (its radius plus this) is this near
     stopShip: 450,                         // px: a ship (a convoy, the mothership, a tower) is flown to until it is this near: inside the main gun's reach
@@ -262,7 +270,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 206], [1056, 0, 1280, 226], [360, 0, 920, 152], [0, 656, 1020, 720], [18, 232, 336, 272], [1100, 232, 1262, 272]] // screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 238], [1056, 0, 1280, 226], [360, 0, 920, 152], [0, 656, 1020, 720], [18, 232, 336, 272], [1100, 232, 1262, 272]] // screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {
@@ -294,6 +302,28 @@ const CAMP = {
       patrol: { name: 'Patrol', hp: 120, speed: 320, accel: 400, turn: 2.2, color: 0x5fd8c0, range: 720, dmg: 5, shot: [650, 950], bullet: 520, help: 2600, r: 500 }, // armed: it ranges round its post (r px), shoots a pirate or an alien within range of it, and goes to a hauler or miner under fire within `help` px of its post
       miner:  { name: 'Miner', hp: 70, speed: 130, accel: 170, turn: 1.4, color: 0xc9d4e8, fear: 900, work: [9, 15], dock: [3, 6], r: 400 }                                          // unarmed: it works the nearest rocks of the mission (or the row's `field`), goes home to its place and docks, and goes out again; it runs home when a hostile comes within `fear` px
     }
+  },
+  torpedo: {                               // torpedo boats and their torpedoes (card space-game-torpedo-boats; src/camptorpedo.js; docs/CAMPAIGN.md "Torpedo boats"): a slow hull that ignores the fighters and runs at the convoy, the miners or the cruiser and launches a heavy torpedo at close range. A wave row names a boat in `ships`
+    boats: {                               // the kinds a wave row's `ships` may name. faction: 'pirate' (the pirates' words, breaks off like a pirate) or 'alien'. hp, speed (px/s), accel, turn (rad/s): the hull and the flying; color: its mark on the radar and the map; ore: what its wreck holds; the picture is CAMP_ART's
+      tboat:  { faction: 'pirate', name: 'Torpedo boat', hp: 60, speed: 150, accel: 130, turn: 1.4, color: 0xe8b84a, ore: 14, // the pirates' boat: a slow hull, the pirates' amber
+                prey: { freighter: 0.5, miner: 0.6, carrier: 1.1 },        // what it goes for, by distance times weight, the least wins: the haulers and the miners before the cruiser; fighters and escorts are not in it (it flies past them)
+                tube: { n: 2, reload: 9000, range: 640, windup: 1200, aim: 0.5 } }, // n torpedoes in all; reload ms between two; range px it fires from; windup ms it holds still to arm (kill it then and it fires nothing); aim rad the nose may be off its prey
+      lancer: { faction: 'alien',  name: 'Lancer',       hp: 75, speed: 160, accel: 140, turn: 1.3, color: 0xff8c3a, ore: 16, // the aliens' boat: a little tougher and quicker, the gunship's orange
+                prey: { freighter: 0.5, miner: 0.6, carrier: 1.1 },        // the same prey
+                tube: { n: 2, reload: 8000, range: 700, windup: 1000, aim: 0.5 } } // a longer reach and a quicker tube
+    },
+    torp: {                                // the torpedo
+      hp: 14,                              // hit points: a turret shot takes off 4 (so four shots), a missile or its blast kills it
+      speed: 250, launch: 90, accel: 200,  // px/s top speed, px/s it leaves the tube at, px/s per s (slower than the carrier's burn, faster than a hauler)
+      turn: 1.3,                           // rad/s it turns toward its prey (it can be dodged by a fast ship, not by a hauler)
+      life: 8000,                          // ms of fuel: out of it the torpedo goes out with no bang (a 'fizzle' event)
+      dmg: 70,                             // hit points the ship it hits loses (the cruiser's shield first; a hauler has 200, a miner 70, a fighter 36)
+      blast: 90, splash: 0.4,              // px: every other ship of yours or the neutrals this close takes splash (0.4) of the damage
+      fuze: 6, r: 8,                       // px: how far from a ship's edge it goes off, and its own hit circle (a shot or a missile that touches it hurts it)
+      bias: 200,                           // px: the turrets shoot a torpedo before an alien that is nearer by up to this much
+      lock: 1400                           // px: F flies at a torpedo this close to the carrier when there is no mothership in reach; a torpedo with no prey takes the nearest ship inside this
+    },
+    sayEvery: { arming: 10000, launch: 6000, down: 5000, hit: 3000 } // ms: the radio says each kind of line at most this often
   },
   warn: [0.5, 0.25],                       // shares of Earth's shield and of the carrier's hull at which the ship's voice warns (each once, and again if it mends past the share and falls back)
   mother: {
@@ -355,13 +385,16 @@ const CAMP = {
   ],
   pace: {                                  // BATTLE PACE (card space-game-campaign-pace; Troy: the small ships' fights are good but a bit fast). A multiplier on the SMALL ships (fighters, escorts, raiders, drones, gunships): top speed, acceleration and turn rate; their shots by the share `shots` of it. Hull, damage, fire intervals and range stay, so the fight changes only in how fast the ships close. The carrier, the mothership, the towers, the haulers, the turrets, the missiles, the Fast burn, the warp and the map trip are not scaled. campNew(level, techs, { pace }) takes an id or a number; with none it is 1 (Brisk: the numbers as they were)
     modes: [                               // the settings, in the order the key cycles them: id, name, the multiplier
-      { id: 'calm', name: 'Calm', mult: 0.7 },   // slow enough to read every pass of the fight
-      { id: 'normal', name: 'Normal', mult: 0.85 }, // the default for a player (Troy asked for slower than the old pace)
-      { id: 'brisk', name: 'Brisk', mult: 1 }    // exactly the numbers the table above has
+      { id: 'calm', name: 'Calm', mult: 0.6 },   // slow enough to read every pass of the fight
+      { id: 'normal', name: 'Normal', mult: 0.72 }, // the default for a player
+      { id: 'brisk', name: 'Brisk', mult: 0.85 } // the quickest a player can have it. Card space-game-command-slowtime (Troy, 21 Nov 2026: fights slower, so there is time to direct the fleet) took the three values down by 15 percent (they were 0.7, 0.85, 1). A battle made with no pace, or with the number 1, is still the table's own numbers: the sim's pins, the bots with --pace 1 and the tests use that
     ],
     start: 'normal',                       // the setting until the player picks one
     shots: 0.5,                            // the power of the multiplier a shot's speed takes (0.5 is its square root: a shot does not outrun the eye, a hit still lands)
     key: 'KeyP'                            // the quick key that cycles the setting in play (P: Pace; B is the warp blink since the panels card, and G the map's group)
+  },
+  slow: {                                  // COMMAND TIME (card space-game-command-slowtime; src/campslow.js; Troy, 21 Nov 2026: fights were not interactive, he wants to direct the fleet more): while the FLEET, SHIP or SYSTEMS panel, the Tab map or an order-call prompt is open the battle runs at this share of its pace (Homeworld style), with a sign on the screen. Closing returns to pace. Flying between places is not slowed: with nothing open, the carrier and the autopilot are as they were
+    scale: 0.25                            // a quarter speed: the whole battle (every ship, wave clock, reload and cooldown), not only the small ships the pace scales
   },
   refit: {                                 // the Earth refit screen after level 1: one tech, and ore buys extra ships for the next level (the costs are the workshop's, CAMP.build)
     most: 3                                // most extra fighters, and most extra escorts, one refit buys
@@ -593,7 +626,7 @@ function campPaceMult(p) {
   if (typeof p === 'number' && p > 0 && isFinite(p)) return p;
   const m = CAMP.pace.modes.find(x => x.id === p); return m ? m.mult : 1;
 }
-const campSmall = kind => kind === 'fighter' || kind === 'escort' || !!PIRATES[kind] || !!CAMP.pirate.kinds[kind]; // a small ship: the ones the pace scales (fighters and escorts of the wing, the aliens that are not the mothership or a tower)
+const campSmall = kind => kind === 'fighter' || kind === 'escort' || !!PIRATES[kind] || !!CAMP.pirate.kinds[kind] || !!CAMP.torpedo.boats[kind]; // a small ship: the ones the pace scales (fighters and escorts of the wing, the aliens that are not the mothership or a tower)
 // the pace is put on a ship from the numbers it was made with (u.base), so it can change in play and come back to Brisk exactly
 function campPaceShip(C, u) {
   if (!u.base) return;
@@ -612,13 +645,14 @@ function campNew(level, techs, opts) {
   const C = {
     level, mission: L.mission, L, flags: {}, arrivedAt: campHere(level, L) ? 0 : null, hpS: CAMP.alien.hpScale * (L.hpScale || 1), dmgS: CAMP.alien.damageScale * (L.dmgScale || 1), pace: campPaceMult(opts.pace), shot: Math.pow(campPaceMult(opts.pace), CAMP.pace.shots), via: opts.via || 'menu', t: 0, rng: campRng(opts.seed == null ? 1 : opts.seed), god: !!opts.god, nextId: 1, ships: [], by: {}, bullets: [], events: [],
     input: { turn: 0, thrust: 0, brake: false, fire: false, blink: false },
+    timeScale: 1,                                   // command time (src/campslow.js): 1 at the battle's own pace, CAMP.slow.scale while a panel, the map or a call is open; the scene sets it each frame and steps the battle by dt times it, and a clock of the player's seconds (the order calls') counts dt over it
     techs: (techs || []).filter(t => CAMP.tech[t]),
     earth: L.defend ? campDefend(level, L.defend) : L.earth === false ? null : { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield }, caches: (L.caches || []).map(c => ({ x: c[0], y: c[1], got: false })), cachesGot: 0,
     ore: Math.max(0, Math.min(CAMP.ore.cap, opts.ore != null ? opts.ore : (L.startOre != null ? L.startOre : CAMP.ore.start))), shield: CAMP.carrier.shield, pickups: [], build: { queue: [] },
     relic: L.relic ? { x: campPlaces(level)[L.relic.place].x, y: campPlaces(level)[L.relic.place].y, hold: 0 } : null,
     bay: { fighters: CAMP.bay.fighters, escorts: CAMP.bay.escorts }, launchQ: [], nextLaunch: 0,
     waves: L.waves.map(() => ({ started: false, at: 0 })), convoys: L.convoys.map(() => ({ started: false })), delivered: 0, lost: 0, kills: 0, launched: 0, lostShips: 0, lane: {}, cash: 0, sold: 0, oreBest: 0,
-    orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, recharge: 0, build: 0, power: 0, balance: 0, emergency: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
+    orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, build: 0, power: 0, balance: 0, emergency: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
     result: null, why: '', docked: '' // docked: the id of the outpost the carrier is docked at ('' in flight; src/campoutpost.js)
   };
   if (campHas(C, 'bay2')) C.bay.fighters += CAMP.tech.bay2.fighters;
@@ -634,6 +668,7 @@ function campNew(level, techs, opts) {
   C.scan = ((L.objectives || []).find(o => o.type === 'scan') || { points: [] }).points.map(q => ({ x: q.at[0], y: q.at[1], r: q.r || 260, secs: q.secs || 5, t: 0, got: false })); // recon: the points to scan
   C.turretRng = campRng((opts.seed == null ? 1 : opts.seed) * 4243 + 29); // the turrets' jitter has a stream of its own, so it never changes how a fight flies
   C.turrets = CAMP.carrier.mounts.map((m, i) => ({ x: 0, y: 0, aim: 0, target: '', slot: 0, at: 0, shotAt: -1e9 })); C.turrets.forEach((tu, i) => { tu.at = campTurretAt(C, i, 0); }); campTurretPlace(C); // the turrets: where each is, which way it aims, at whom, when it may fire next and when it last did (the scene draws them)
+  C.charge = CAMP.tank.max; C.chargeLow = false; // the turrets' charge (campLaserStep, campLaserSpend), full at the start of a battle
   (L.towers || []).forEach(g => { // rings of towers round a place, facing outward
     const at = campPlaces(level)[g.place];
     for (let i = 0; i < g.n; i++) { const a = (g.phase || 0) + i / g.n * 2 * Math.PI, t = campSpawn(C, 'tower', at.x + Math.cos(a) * g.r, at.y + Math.sin(a) * g.r); t.rot = a; if (g.hp) t.hp = t.maxHp = g.hp; }
@@ -643,6 +678,7 @@ function campNew(level, techs, opts) {
   (L.rocks || []).forEach(f => { for (let i = 0; i < f.n; i++) { const a = rr() * 2 * Math.PI, d = Math.sqrt(rr()) * f.spread; C.rocks.push({ id: 'rock-' + (C.nextId++), x: f.at[0] + Math.cos(a) * d, y: f.at[1] + Math.sin(a) * d, hp: CAMP.ore.rockHp, maxHp: CAMP.ore.rockHp, r: CAMP.ore.rockR, ore: CAMP.ore.rock, cutAt: -1e9 }); } }); // asteroids: a laser cuts one, and it breaks into a chunk of ore
   (L.guards || []).forEach(g => { const a = campSpawn(C, g.kind, g.at[0], g.at[1]); if (a) { a.hold = true; a.guard = true; a.goal = 'carrier'; a.post = { x: g.at[0], y: g.at[1] }; } }); // guard: a kill objective 'guards' counts them; a guard's post: where it goes back to when it loses you
   if (typeof campTrafficNew === 'function') campTrafficNew(C); // the neutral ships of the level: patrols and other miners (src/camppirates.js)
+  if (typeof campTorpedoNew === 'function') campTorpedoNew(C); // the torpedoes in flight and their counts (src/camptorpedo.js)
   campAnomNew(C, opts.found); // the cloaked caches of the level (src/campanomaly.js); what was looted in earlier flights stays looted, and its weapons are yours
   return C;
 }
@@ -665,6 +701,9 @@ function campSpawn(C, kind, x, y) {
   } else if (CAMP.pirate.kinds[kind]) { // a pirate: it flies and shoots like its base kind of PIRATES, with its own hull and damage; the hostile side, faction 'pirate'
     const k = CAMP.pirate.kinds[kind], d = Object.assign({}, PIRATES[k.base], { hp: k.hp, dmg: k.dmg, radar: k.color });
     Object.assign(u, { team: 'alien', faction: 'pirate', def: d, hp: k.hp * C.hpS, r: CAMP.size[kind].hit, vmax: d.max, accel: d.speed, turn: d.turn * 60 });
+  } else if (CAMP.torpedo.boats[kind]) { // a torpedo boat: slow, no gun, a tube (src/camptorpedo.js); the hostile side, the pirates' or the aliens'
+    const k = CAMP.torpedo.boats[kind];
+    Object.assign(u, { team: 'alien', faction: k.faction, boat: true, def: { key: kind, speed: k.accel, max: k.speed, hp: k.hp }, hp: k.hp * C.hpS, r: CAMP.size[kind].hit, vmax: k.speed, accel: k.accel, turn: k.turn, tubes: k.tube.n, tubeAt: 0, arming: 0, tgt: '' });
   } else if (CAMP.traffic.kinds[kind]) { // a neutral ship: a patrol or a miner
     const k = CAMP.traffic.kinds[kind];
     Object.assign(u, { team: 'neutral', faction: 'neutral', hp: k.hp, r: CAMP.size[kind].hit, vmax: k.speed, accel: k.accel, turn: k.turn });
@@ -680,7 +719,7 @@ function campSpawn(C, kind, x, y) {
   C.ships.push(u); C.by[u.id] = u;
   return u;
 }
-// the money of the dock: the cash (what ore sold at a market came to) and the ore in the store; a price is paid from the cash first, then the ore (the shield recharge is ore only)
+// the money of the dock: the cash (what ore sold at a market came to) and the ore in the store; a price is paid from the cash first, then the ore
 const campFunds = C => Math.floor(C.cash || 0) + Math.floor(C.ore);
 function campPay(C, cost) { const c = Math.min(C.cash || 0, cost); C.cash = (C.cash || 0) - c; C.ore -= cost - c; }
 const campAlive = C => C.ships.filter(u => u.hp > 0);
@@ -707,7 +746,7 @@ function campKill(C, u) {
   C.events.push({ type: 'boom', x: u.x, y: u.y, big: u.kind === 'carrier' || u.kind === 'mother', id: u.id, kind: u.kind });
   if (u.team === 'alien') {
     C.kills++;
-    const ore = CAMP.ore.wreck[u.kind] || (CAMP.pirate.kinds[u.kind] || {}).ore; if (ore) C.pickups.push({ id: 'wreck-' + (C.nextId++), kind: 'wreck', x: u.x, y: u.y, ore, born: C.t });
+    const ore = CAMP.ore.wreck[u.kind] || (CAMP.pirate.kinds[u.kind] || {}).ore || (CAMP.torpedo.boats[u.kind] || {}).ore; if (ore) C.pickups.push({ id: 'wreck-' + (C.nextId++), kind: 'wreck', x: u.x, y: u.y, ore, born: C.t });
     if (u.kind === 'mother') campWin(C, 'mother');
     else if (u.kind === 'tower' && (C.L.win === 'towers' || C.L.objectives) && !C.ships.some(s => s.kind === 'tower' && s.hp > 0)) campWin(C, 'towers'); // the last tower of the level
   }
@@ -794,7 +833,7 @@ function campDo(C, name, arg, dry, how) {
     ms.forEach(u => { u.order = { type: 'mine' }; u.move = null; });
     C.orders.mine++; return campYes('mine');
   }
-  if (name === 'recharge') return campRecharge(C, arg, dry);
+  if (name === 'recharge') return campNo('shieldauto'); // the old pay-ore recharge (card space-game-shield-auto): the shield mends by itself now, and "recharge shields" says so
   if (name === 'build') return campBuild(C, arg, dry);
   if (name === 'stance') { // the wing's stance: how Attack and Guard move (orbit, keep distance, match speed, hold position, free); "orbit the mothership" also sends the fighters at it
     const q = String(arg == null ? '' : arg).toLowerCase(), id = /\b(?:orbit|circle)\b/.test(q) ? 'orbit' : /\b(?:distance|stand off|keep away|kite)\b|^keep\b/.test(q) ? 'keep' : /\b(?:match|formation)\b/.test(q) ? 'match' : /\b(?:hold|stay put)\b/.test(q) ? 'hold' : /\b(?:free|at will|freely)\b/.test(q) ? 'free' : null;
@@ -811,29 +850,6 @@ function campDo(C, name, arg, dry, how) {
 }
 // the ships that mine: the whole wing that is out. In the belt the fighters are the cruiser's mining drones; an attack order (key 2) turns them back to the fight
 function campMiners(C) { return campFree(C); }
-// recharge: the carrier's shield (ore in proportion to what is missing), or Earth's (the carrier must be near it). arg: 'earth', 'carrier', or nothing (Earth when near it and under 90 percent, else the carrier)
-function campRecharge(C, arg, dry) {
-  const q = String(arg == null ? '' : arg).toLowerCase(), R = CAMP.recharge, c = C.carrier;
-  const near = !!C.earth && campDist(c, C.earth) <= R.earthReach;
-  let target = /earth|planet|home/.test(q) ? 'earth' : /carrier|ship|me\b/.test(q) ? 'carrier' : (near && C.earth.shield < C.earth.max * 0.9 ? 'earth' : 'carrier');
-  if (target === 'earth') {
-    if (!C.earth) return campNo('noearth');
-    if (!near) return campNo('farearth');
-    if (C.earth.shield >= C.earth.max) return campNo('earthfull');
-    if (C.ore < R.earth) return campNo('noore2', { need: R.earth, have: Math.floor(C.ore) });
-    if (dry) return campYes('rechargeearth');
-    C.ore -= R.earth; C.earth.shield = Math.min(C.earth.max, C.earth.shield + R.earthPoints); C.orders.recharge++;
-    C.events.push({ type: 'recharge', x: C.earth.x, y: C.earth.y, target: 'earth' });
-    return campYes('rechargeearth');
-  }
-  const max = campShieldMax(C), missing = max - C.shield; if (missing <= 0.5) return campNo('shieldfull');
-  const cost = Math.max(5, Math.ceil(R.carrier * missing / max));
-  if (C.ore < cost) return campNo('noore2', { need: cost, have: Math.floor(C.ore) });
-  if (dry) return campYes('recharge');
-  C.ore -= cost; C.shield = max; C.orders.recharge++;
-  C.events.push({ type: 'recharge', x: c.x, y: c.y, target: 'carrier' });
-  return campYes('recharge');
-}
 // build: queue new fighters or escorts (arg 'fighter', 'escort', with a count: 'escort 2'); one at a time, into the bay, ore paid now
 function campBuild(C, arg, dry) {
   if (typeof campCanBuild === 'function' && !campCanBuild(C)) return campNo('nodock'); // (a level with no outpost builds aboard: campCanBuild says yes there, card space-game-campaign-no-outpost-rule: the refusal is never shown there) // ships are built docked at an outpost, or anywhere with the Fabricator (src/campoutpost.js)
@@ -901,11 +917,13 @@ function campTick(C, dt) {
   if (typeof campNavWait === 'function') campNavWait(C); // a Fast trip waiting for the wing to come aboard (src/campnav.js)
   if (typeof campNavDrive === 'function') campNavDrive(C, dt); // the autopilot (src/campnav.js), when it is on, sets the carrier's input
   campPowerStep(C, dt); // the ship's systems: the emergency's end, the shield's cap and its mending, the low lines
+  campLaserStep(C, dt); // the turrets' charge mends at the rate of the weapons' power
   campCarrier(C, dt);
   campLaunch(C);
   campDogPair(C); // the fighters and the raiders pair off, one on one (src/campdogfight.js)
   C.ships.forEach(u => { if (u.hp > 0 && u.kind !== 'carrier') campAI(C, u, dt); });
   campBullets(C, dt);
+  if (typeof campTorpedoes === 'function') campTorpedoes(C, dt); // the torpedoes fly, hit and go off (src/camptorpedo.js)
   campBeam(C, dt);
   campMissiles(C, dt);
   campScoutsStep(C, dt); // the scouts take what they touch before anyone else does (and a Fast burn leaves them behind)
@@ -953,7 +971,7 @@ function campSchedule(C) {
     st.started = true; st.at = sec;
     const goal = w.goal || 'earth', ahead = w.ahead != null ? campAhead(C, w) : null, org = ahead ? [ahead.x, ahead.y] : (w.from || [C.carrier.x + 2500, C.carrier.y]); // ahead: the wave comes out of the dark this many px in front of a convoy (its heading), the one named (along) or the first flying
     Object.keys(w.ships).forEach(kind => {
-      for (let k = 0; k < w.ships[kind]; k++) { const a = campSpawn(C, kind, org[0] + campBetween(C, -300, 300), org[1] + campBetween(C, -300, 300)); if (a) { a.goal = goal; a.wave = i; a.rot = ahead ? Math.atan2(ahead.y - a.y, ahead.x - a.x) : Math.atan2(-a.y, -a.x); if (a.faction === 'pirate') { a.prey = w.prey || 'any'; if (w.breakAt != null) a.breakAt = w.breakAt; } } }
+      for (let k = 0; k < w.ships[kind]; k++) { const a = campSpawn(C, kind, org[0] + campBetween(C, -300, 300), org[1] + campBetween(C, -300, 300)); if (a) { a.goal = goal; a.wave = i; a.rot = ahead ? Math.atan2(ahead.y - a.y, ahead.x - a.x) : Math.atan2(-a.y, -a.x); if (a.faction === 'pirate' || a.boat) { a.prey = w.prey || 'any'; if (w.breakAt != null && a.faction === 'pirate') a.breakAt = w.breakAt; } } }
     });
     if (w.mother) { const m = campSpawn(C, 'mother', w.mother[0], w.mother[1]); m.goal = 'earth'; m.wave = i; const hp = campMissionPlace(C) || { x: 0, y: 0 }; m.rot = Math.atan2(hp.y - m.y, hp.x - m.x); }
     if (w.ambush) C.events.push({ type: 'alarm' }); // the surprise: the scene sounds the alarm
@@ -1014,6 +1032,21 @@ function campPowerStep(C, dt) {
 }
 function campPowerLoad() { let p = CAMP.power.start.slice(); campTry(() => { const raw = JSON.parse(localStorage.getItem(CAMP.store + '.power') || 'null'); if (campPowerOk(raw)) p = raw.slice(); }, 0); return p; }
 function campPowerSave(p) { if (campPowerOk(p)) campTry(() => localStorage.setItem(CAMP.store + '.power', JSON.stringify(p)), 0); }
+// The turrets' charge (card space-game-systems-gauges): C.charge, 0 to CAMP.tank.max. campLaserSpend(C) is a shot: true and the cost is paid, or false when there is not that much (C.dryAt is the clock of the last refusal).
+// campLaserStep(C, dt) mends it at CAMP.tank.refill[the weapons' pips] a second and says so once when it falls low; campLaserFrac(C) is its share of the tank, campLaserRate(C) the charge a second it mends at now.
+const campLaserRate = C => CAMP.tank.refill[C && C.power && C.power.p ? C.power.p[0] : CAMP.power.start[0]];
+const campLaserFrac = C => Math.max(0, Math.min(1, (C.charge === undefined ? CAMP.tank.max : C.charge) / CAMP.tank.max));
+function campLaserSpend(C) {
+  const k = CAMP.tank; if (C.charge === undefined) C.charge = k.max;
+  if (C.charge + 1e-9 < k.cost) { C.dryAt = C.t; return false; }
+  C.charge = Math.max(0, C.charge - k.cost); return true;
+}
+function campLaserStep(C, dt) {
+  const k = CAMP.tank; if (C.charge === undefined) C.charge = k.max;
+  C.charge = Math.min(k.max, C.charge + campLaserRate(C) * dt);
+  const f = C.charge / k.max;
+  if (!C.chargeLow && f < k.low) { C.chargeLow = true; campSay(C, 'camp.say.lasersdry'); } else if (C.chargeLow && f > k.low * 2) C.chargeLow = false;
+}
 
 const campLane = (C, id) => id ? (C.lane[id] || 0) : Object.keys(C.lane).reduce((a, k) => Math.max(a, C.lane[k]), 0);
 // when a wave that waits for an event starts: on { scanned: k } (k recon points scanned), { delivered: k } (k haulers arrived), { t: s } (s seconds in), { lane: f, convoy? } (a convoy has flown f of its road)
@@ -1076,15 +1109,17 @@ function campTurrets(C) {
   campTurretPlace(C);
   C.turrets.forEach((tu, i) => {
     let best = null, bd = reach; al.forEach(u => { const d = campDist(u, tu) - u.r; if (d <= bd) { bd = d; best = u; } });
+    if (C.torpedoes && C.torpedoes.length) { const tp = campTorpedoPick(C, tu, reach); if (tp && (!best || tp.d <= bd + CAMP.torpedo.torp.bias)) best = tp.t; } // a torpedo in reach is shot before an alien that is nearer by less than torp.bias (src/camptorpedo.js)
     tu.target = best ? best.id : ''; if (best) tu.aim = campLead(C, tu, best);
     let rock = null; // no alien in reach: the same lasers cut the nearest rock (docs/CAMPAIGN.md, Mining)
     if (!best) { let rd = reach; C.rocks.forEach(r => { const d = campDist(r, tu) - r.r; if (r.hp > 0 && d <= rd) { rd = d; rock = r; } }); if (rock) tu.aim = Math.atan2(rock.y - tu.y, rock.x - tu.x); }
     tu.rock = rock ? rock.id : '';
     if (C.t < tu.at) return;
-    if (rock && C.input.fire) {
+    const go = !!(best || rock) && !!C.input.fire && campLaserSpend(C); // a shot at something in reach spends charge; with none left the slot is let go, so the turrets fire as fast as the charge mends
+    if (rock && go) {
       tu.shotAt = C.t; campRockHit(C, rock, k.pd * k_laser_turret(C)); C.laserNow.push({ from: c.id, to: rock.id, kind: 'rock' }); C.events.push({ type: 'laser', src: 'turret', i, x: tu.x, y: tu.y, tx: rock.x - Math.cos(tu.aim) * rock.r * 0.6, ty: rock.y - Math.sin(tu.aim) * rock.r * 0.6, rock: rock.id }); // the beam of this turret lands on the rock's near side
     }
-    if (best && C.input.fire) {
+    if (best && go) {
       tu.shotAt = C.t; C.laserNow.push({ from: c.id, to: best.id, kind: 'alien' }); C.events.push({ type: 'turret', i, x: tu.x, y: tu.y, aim: tu.aim, tx: best.x, ty: best.y }); // one event for each shot: the scene flashes this muzzle and blips
       campBullet(C, { x: tu.x, y: tu.y, vx: c.vx, vy: c.vy, id: c.id }, tu.aim, k.pdSpeed, dmg, (reach + 300) / k.pdSpeed * 1000, 'earth', 0, { pd: true, beam }); // a shot flies 300 px past the reach, so one led ahead of an alien at the edge still arrives
     }
@@ -1227,6 +1262,7 @@ function campAI(C, u, dt) {
   if (u.kind === 'tower') return campTowerAI(C, u, dt);
   if (u.kind === 'freighter') return campConvoyAI(C, u, dt);
   if (u.kind === 'mother') return campMotherAI(C, u, dt);
+  if (u.boat) return campTorpedoBoatAI(C, u, dt);
   if (u.faction === 'pirate') return campPirateAI(C, u, dt);
   if (u.team === 'neutral') return campTrafficAI(C, u, dt);
   if (u.team === 'alien') return campAlienAI(C, u, dt);
@@ -1497,6 +1533,7 @@ function campBullets(C, dt) {
         campHurt(C, u, b.dmg, b.from); if (!b.beam) { b.dead = true; return; }
       }
     }
+    if (C.torpedoes && C.torpedoes.length && (b.team === 'earth' || b.team === 'neutral') && campTorpedoShot(C, b, px, py)) return; // a torpedo in the way (src/camptorpedo.js)
     if (C.earth && b.team === 'alien' && campSegHit(px, py, b.x, b.y, C.earth.x, C.earth.y, C.earth.r)) { // Earth is hit (a level with no Earth has none to hit)
       b.dead = true; if (!C.god) C.earth.shield -= b.dmg * CAMP.alien.earthDamage; C.earth.hitAt = C.t; C.events.push({ type: 'earthhit', x: b.x, y: b.y }); // god mode (a debug key, src/campdebug.js): Earth's shield does not fall either
       if (C.earth.shield <= 0) { C.earth.shield = 0; if (C.earth.loseWhy === 'base') campEnd(C, 'lost', 'base'); else campEnd(C, 'lost', 'earth'); }
@@ -1512,7 +1549,7 @@ function campBullets(C, dt) {
 const campBig = u => CAMP.missile.bigKinds.indexOf(u.kind) >= 0;
 function campMissileTarget(C, from) { // the mothership if it is in reach, else the nearest big alien in reach (of `from`: the carrier unless a missile asks)
   const p = from || C.carrier, big = campAliens(C).filter(u => campBig(u) && campDist(u, p) <= CAMP.missile.lock);
-  return big.find(u => u.kind === 'mother') || campNearest(big, p) || null;
+  return big.find(u => u.kind === 'mother') || (typeof campTorpedoLock === 'function' && campTorpedoLock(C, p)) || campNearest(big, p) || null; // a torpedo inside torp.lock goes before the nearest big ship (src/camptorpedo.js)
 }
 function campFire(C, tg) { // one missile out of the tube: the magazine is a missile less, the launcher cycles
   const k = CAMP.missile, c = C.carrier;
@@ -1539,10 +1576,11 @@ function campMissiles(C, dt) {
     if (tg) m.rot = campRot(m.rot, Math.atan2(tg.y - m.y, tg.x - m.x), k.turn * dt);
     m.sp = Math.min(k.speed, m.sp + k.accel * dt); m.vx = Math.cos(m.rot) * m.sp; m.vy = Math.sin(m.rot) * m.sp;
     const px = m.x, py = m.y; m.x += m.vx * dt; m.y += m.vy * dt;
-    const hit = C.ships.find(u => u.team === 'alien' && u.hp > 0 && campBig(u) && campSegHit(px, py, m.x, m.y, u.x, u.y, u.r + k.fuze));
+    const hit = C.ships.find(u => u.team === 'alien' && u.hp > 0 && campBig(u) && campSegHit(px, py, m.x, m.y, u.x, u.y, u.r + k.fuze)) || (C.torpedoes && C.torpedoes.length ? campTorpedoFuze(C, px, py, m) : null); // a torpedo sets the fuze off too
     if (hit) { // it goes off: everything near it is hurt, a big ship most
       m.dead = true; C.events.push({ type: 'mboom', x: m.x, y: m.y, r: k.blast });
       campAliens(C).forEach(u => { if (campDist(u, m) <= k.blast + u.r) campHurt(C, u, campBig(u) ? k.big : k.small, C.carrier.id); });
+      if (C.torpedoes && C.torpedoes.length) campTorpedoBlast(C, m, k.blast, k.big); // a torpedo in the blast is gone
     } else if (m.life <= 0) { m.dead = true; C.events.push({ type: 'mfizzle', x: m.x, y: m.y, id: m.id }); }
   });
   C.rockets = C.rockets.filter(m => !m.dead);
@@ -1667,7 +1705,7 @@ function campBonuses(C) {
   return (C.L.bonus || []).map(b => {
     let ok = false;
     if (b.type === 'time') ok = campMissionClock(C) <= b.secs; else if (b.type === 'lost') ok = C.lostShips <= b.n; else if (b.type === 'hull') ok = C.carrier.hp >= C.carrier.maxHp * b.pct / 100;
-    else if (b.type === 'ore') ok = C.ore >= b.n; else if (b.type === 'sold') ok = C.sold >= b.n; else if (b.type === 'anomaly') ok = campAnomFound(C, b.anomaly); else if (b.type === 'delivered') ok = C.delivered >= C.L.convoys.length; else if (b.type === 'neutrals') ok = C.neutralsLost <= (b.n | 0);
+    else if (b.type === 'ore') ok = C.ore >= b.n; else if (b.type === 'sold') ok = C.sold >= b.n; else if (b.type === 'anomaly') ok = campAnomFound(C, b.anomaly); else if (b.type === 'delivered') ok = C.delivered >= C.L.convoys.length; else if (b.type === 'neutrals') ok = C.neutralsLost <= (b.n | 0); else if (b.type === 'torpedoes') ok = ((C.torpStat || {}).hit | 0) <= (b.n | 0);
     return { id: b.id, type: b.type, text: b.text, secs: b.secs, n: b.n, pct: b.pct, anomaly: b.anomaly, ok, points: ok ? CAMP.score.bonus : 0 };
   });
 }
