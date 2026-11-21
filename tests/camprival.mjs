@@ -229,6 +229,9 @@ g.run(`
   const dn = J(`S.rivalG.calls`);
   check('with the shield down there is no bubble, and the HUD says SHIELDS DOWN with an empty shield bar', J(`__rv().rival.ph`) === 'down' && !dn.some(c => c[0] === 'strokeCircle' && Math.abs(c[3] - 45) < 1e-6) && J(`S.hud.rivalPhase.calls.some(c => c[0] === 'setText' && c[1] === 'SHIELDS DOWN')`) && J('__bars[0].f') === 0, J(`__rv().rival.ph`));
   g.run(`__runE(30); S.rivalG.calls.length = 0; campRivalWorld(S)`);
+  g.run(`S.rivalG = { scene: undefined }`); // what a destroyed Phaser layer is: it has no scene
+  g.run(`S.add.graphics = () => { const q = __mk(); window.__made = (window.__made || 0) + 1; return q; }; campRivalWorld(S)`);
+  check('a layer left over from a scene that started again (it has no scene) is made anew', J('window.__made') === 1);
   check('it draws nothing but its own bars for a ship that is gone', J('true'));
 }
 {

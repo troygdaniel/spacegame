@@ -32,7 +32,7 @@ function campRivalHud(scene, g, bar) {
 
 function campRivalWorld(scene) {
   const C = scene.camp, D = CAMP_RIVAL_DRAW;
-  if (!scene.rivalG) scene.rivalG = scene.add.graphics().setDepth(7);
+  if (!scene.rivalG || !scene.rivalG.scene) scene.rivalG = scene.add.graphics().setDepth(7); // a scene that starts again (a retry, the next mission) destroys its layers: the old one has no scene
   const g = scene.rivalG; g.clear();
   campRivalLive(C).forEach(u => {
     const s = campRivalState(C, u), R = u.rival, car = C.carrier;
