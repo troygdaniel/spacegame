@@ -22,7 +22,7 @@
 //           fly: 'objective' is the autopilot to the goal (src/campnav.js) and not an order; label is the row's name on the panel, help its line on the H page and in Settings
 //   key 3 is RESERVED: a centre panel for a later card. It is bound to nothing now (and no digit from 4 to 9 is), and the panels replace the old direct digit keys of the Campaign.
 const CAMP_PANELS = {
-  pages: 1,                                // how many pages a panel with a second one shows: 1 until the panels are drawn with their second page (card space-game-campaign-stances); 2 turns the flip on (the arrows) and the stance rows with it
+  pages: 2,                                // how many pages a panel with a second one shows: 2 (card space-game-wrapup-stance-page): the arrows flip FLEET between its orders and its stances (page2), the page is drawn, the stance in force is marked and the tab names it; 1 turns the flip off
   delay: 0,                                // ms a panel waits before it is drawn: none (it was 250 when a digit opened it; Q and E open it now and it comes up at once). A pick made before the list has dropped in (fadeIn) pulses the tab instead of flashing a row
   anim: { fadeIn: 120, fadeOut: 100, flash: 160, pulse: 240 }, // ms (card space-game-campaign-panels-ui): the list dropping in under its tab, going away, the chosen row's flash (two pulses) before the panel collapses, and the tab's one pulse when the pick came before the list was in
   panels: [
@@ -67,7 +67,7 @@ const CAMP_PANELS = {
 // the rows the H page and Settings list for the panels: the panel's key (Q, E, C), then the row's digit, under the panel's heading, in the table's order
 function campPanelKeyRows() {
   const cap = (p, h) => p.title.charAt(0) + p.title.slice(1).toLowerCase() + ': ' + h.charAt(0).toLowerCase() + h.slice(1), sub = p => 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL';
-  return CAMP_PANELS.panels.flatMap(p => [{ k: [p.key], t: cap(p, 'open the panel (again closes it)'), sub: sub(p) }].concat(p.rows.map(r => ({ k: [p.key, String(r.n)], t: cap(p, r.fast || r.help), sub: sub(p) })))).concat(CAMP_PANELS.pages > 1 ? CAMP_PANELS.panels.filter(p => p.page2).flatMap(p => p.page2.rows.map(r => ({ k: [p.key, '\u2192', String(r.n)], t: 'Stance: ' + r.help.charAt(0).toLowerCase() + r.help.slice(1), sub: 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL, PAGE 2 (ARROWS FLIP)' }))) : []); // the stances (page 2) are listed once the panels show them
+  return CAMP_PANELS.panels.flatMap(p => [{ k: [p.key], t: cap(p, 'open the panel (again closes it)'), sub: sub(p) }].concat(p.rows.map(r => ({ k: [p.key, String(r.n)], t: cap(p, r.fast || r.help), sub: sub(p) }))).concat(CAMP_PANELS.pages > 1 && p.page2 ? [{ k: [p.key, '\u2190', '\u2192'], t: cap(p, 'flip to the ' + p.page2.title.toLowerCase() + ' (1-5)'), sub: sub(p) }] : [])); // a panel with a second page lists one more line, in its own group: the arrows flip it (the stances are on the page, not on the keys page: it has no room for five lines more)
 }
 
 const CONTROLS = [

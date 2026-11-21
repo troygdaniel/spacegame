@@ -71,6 +71,15 @@ check('a jump says the fuel it burns', /jump/.test(J(`navpanelHint(${JSON.string
 check('distances read as km for a body and ly for a jump', / km$/.test(J(`navpanelDist(${JSON.stringify(mid)})`)) && J(`navpanelDist({ kind: 'jump', ly: 4.26 })`) === '4.3 ly');
 check('the controls table and the help page name the panel on N', J(`CONTROLS.some(g => g.rows.some(r => r.k.includes('N') && /^Places/.test(r.t)))`) && J(`HELP.Space.some(l => /^N X   places/.test(l))`));
 
+// a window of the list never ends on a heading with none of its rows (card space-game-wrapup-hunt-l3: level 3's map list showed "CACHES AND RELIC" and nothing under it)
+{
+  const rows = [{ group: 'a', name: 'goal' }].concat([1, 2, 3, 4, 5].map(i => ({ group: 'b', name: 'place' + i })), [1, 2, 3].map(i => ({ group: 'c', name: 'find' + i })));
+  const G = JSON.stringify([['a', 'GOAL'], ['b', 'PLACES'], ['c', 'FINDS']]), w = max => J(`navpanelLines(${JSON.stringify(rows)}, 0, ${max}, ${G})`);
+  const a9 = w(9), a10 = w(10), a8 = w(8);
+  check('a window that would end on the heading of the next group (9 lines: GOAL, goal, PLACES, five places, FINDS) drops that heading: it ends on a row', a9.lines.length === 8 && !!a9.lines[a9.lines.length - 1].row && a9.lines.filter(l => l.head).length === 2, JSON.stringify(a9.lines.map(l => l.head || l.row.name)));
+  check('a window that has a row under the heading keeps it (10 lines), and one that ends on a row (8) is as it was', a10.lines.length === 10 && a10.lines[8].head === 'FINDS' && a10.lines[9].row.name === 'find1' && a8.lines.length === 8 && a8.lines[7].row.name === 'place5');
+  check('the count of rows below is still right when the heading is dropped (the three finds are below)', a9.below === 3, String(a9.below));
+}
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(`\n${n - failed} of ${n} checks passed`);
 process.exit(failed ? 1 : 0);

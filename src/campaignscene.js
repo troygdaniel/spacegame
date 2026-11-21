@@ -495,7 +495,9 @@ class Campaign extends Phaser.Scene {
       else {
         const a = ar.angle, tri = [{ x: ar.x + Math.cos(a) * 13, y: ar.y + Math.sin(a) * 13 }, { x: ar.x + Math.cos(a + 2.5) * 10, y: ar.y + Math.sin(a + 2.5) * 10 }, { x: ar.x + Math.cos(a - 2.5) * 10, y: ar.y + Math.sin(a - 2.5) * 10 }];
         g.fillStyle(0xffd37a, 0.95).fillPoints(tri, true); g.lineStyle(1, 0x02060d, 1).strokePoints(tri, true);
-        this.hud.arrow.setVisible(true).setText(uiText('camp.nav.arrow', { name: ar.name, km: campNavKm(ar.dist) })).setPosition(Math.max(80, Math.min(W - 80, ar.x - Math.cos(a) * 64)), Math.max(14, Math.min(H - 14, ar.y - Math.sin(a) * 28)));
+        this.hud.arrow.setVisible(true).setText(uiText('camp.nav.arrow', { name: ar.name, km: campNavKm(ar.dist) }));
+        const lp = typeof campNavLabelAt === 'function' ? campNavLabelAt(ar.x - Math.cos(a) * 64, ar.y - Math.sin(a) * 28, this.hud.arrow.width || 160, this.hud.arrow.height || 18, CAMP.nav.arrow.keep, W, H) : { x: Math.max(80, Math.min(W - 80, ar.x - Math.cos(a) * 64)), y: Math.max(14, Math.min(H - 14, ar.y - Math.sin(a) * 28)) };
+        this.hud.arrow.setPosition(lp.x, lp.y); // the label keeps out of the radar, the gauges, the message band and the key line
       }
     }
   }
