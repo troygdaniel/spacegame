@@ -22,12 +22,12 @@ The words of mission 1.1 in four beats (card space-game-l1-1-beats; src/campbeat
 | camp.hint.scout | Open the map ({map}), pick a lane, press {scout} to send a scout. |
 | camp.hint.take | The transport waits at the fork. Pick a lane on the map, press {take}. |
 | camp.hint.fast | A long quiet road. On the map ({map}), pick the transport and burn Fast. |
-| camp.hint.fleet | Press {fleet} to open the FLEET panel. |
+| camp.hint.fleet | Press {fleetkey} to open the FLEET panel. |
 | camp.bf.enemy.tboat.one | {n} pirate torpedo boat |
 | camp.bf.enemy.tboat.many | {n} pirate torpedo boats |
 | camp.bf.enemy.lancer.one | {n} alien lancer |
 | camp.bf.enemy.lancer.many | {n} alien lancers |
 | camp.bf.enemy.pirateleader.one | the pirate leader, a heavy ship |
 | camp.bf.enemy.pirateleader.many | {n} pirate leaders |
-| camp.hint.tuck | Torpedo boats! Tuck the transport in under your shield: press {fleet}, flip to CONVOY, 1. |
-| camp.hint.run | The leader blocks the way. Send the transport past it: {fleet}, CONVOY, 3 is Run for it. |
+| camp.hint.tuck | Torpedo boats! Tuck the transport in under your shield: press {fleetkey}, flip to CONVOY, {tuck}. |
+| camp.hint.run | The leader blocks the way. Send the transport past it: {fleetkey}, CONVOY, {run} is Run for it. |

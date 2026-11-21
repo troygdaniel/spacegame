@@ -25,7 +25,8 @@ function campBeatKey(id) {
   if (id === 'take') { const r = pick(/scout/i); return r && r.k[1] ? r.k[1] : 'T'; }
   return '';
 }
-const campBeatKeys = () => ({ fleet: campBeatKey('fleet'), ship: campBeatKey('ship'), systems: campBeatKey('systems'), map: campBeatKey('map'), scout: campBeatKey('scout'), take: campBeatKey('take') }); // every key a line may name, as the table says it
+const campBeatRow = id => { const P = typeof CAMP_PANELS === 'object' && CAMP_PANELS.panels.find(p => p.id === 'fleet'), r = P && P.page3 && P.page3.rows.find(x => x.id === id); return r ? String(r.n) : ''; }; // the digit of a row of the FLEET panel's CONVOY page
+const campBeatKeys = () => ({ fleet: campBeatKey('fleet'), ship: campBeatKey('ship'), systems: campBeatKey('systems'), map: campBeatKey('map'), scout: campBeatKey('scout'), take: campBeatKey('take'), tuck: campBeatRow('ctuck'), run: campBeatRow('crun') }); // every key a line may name, as the key table says it (the panels' own are {fleetkey} {nlaunch} ... of src/data_controls.js campKeyVar)
 const campBeatHint = (C, id) => uiText('camp.hint.' + id, campBeatKeys());
 
 // beat 2: the thanks of a miner that was saved

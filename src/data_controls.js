@@ -14,16 +14,16 @@
 // (20 px type, 520 px wide, 580 px high). tests/controlshelp.mjs checks that, that every key named here is bound, and that every key the
 // Space scene binds is named here.
 // ---------- the Campaign's keyboard panels (card space-game-campaign-keys-help; Troy, 20 Nov 2026) ----------
-// The digits are not orders any more: key 1 opens the FLEET panel at the left, key 2 the SHIP panel at the right, and the digit of a row does it (1 then 3 is "escort"). This table is the one source of the panels,
+// The digits are not orders any more: the panel's key (its letter below: Q the FLEET panel at the left, E the SHIP panel at the right, C the SYSTEMS panel) opens a panel and the digit of a row does it (Q then 3 is "escort"); in an open panel Up and Down move a highlight, Enter does the highlighted row and Left and Right change the page (card space-game-panel-keys-zxc). THE LETTERS ARE THIS TABLE'S ONLY: every hint that names a key (the briefing's key boxes, the nudges, the dock hint, the help lines, the pause card, the H page, the model's prompt) reads them from here (campKeyVar in src/camppanel.js, the {fleetkey} {shipkey} {nlaunch} ... placeholders of the texts), so moving a panel to another letter is one change in this table (and the keys of the map, if the letter was one of its own). This table is the one source of the panels,
 // their rows, their keys and their words: src/camppanel.js reads it for what a row does and whether it can be done now, src/campkeys.js and the settings tab draw the keys from it (campPanelKeyRows below), the key line
 // and the pause card name the panels from it, and tests/campanels.mjs and tests/controlshelp.mjs check the game against it. A later card (ranks, hub, chatter) adds a row, or the centre panel, by data here.
-//   panel:  { key, id, side, title, rows }   key is the digit that opens it; side 'left' or 'right'; title is its heading and the word of the key line
-//   row:    { n, id, order, arg, fly, label, help }   n is the digit that picks it (1 to 5); order is a campOrder name (src/campaign.js: the same words the strip and the voice use; arg goes with it);
+//   panel:  { key, id, side, title, rows }   key is the letter that opens it (code: its KeyboardEvent.code); side 'left' or 'right'; title is its heading and the word of the key line
+//   row:    { n, id, order, arg, fly, label, help }   n is the digit that picks it (1 to 6: FLEET has six); order is a campOrder name (src/campaign.js: the same words the strip and the voice use; arg goes with it);
 //           fly: 'objective' is the autopilot to the goal (src/campnav.js) and not an order; label is the row's name on the panel, help its line on the H page and in Settings
 //   key 3 is RESERVED: a centre panel for a later card. It is bound to nothing now (and no digit from 4 to 9 is), and the panels replace the old direct digit keys of the Campaign.
 const CAMP_PANELS = {
   pages: 3,                                // how many pages a panel with more than one shows: 3 (cards space-game-wrapup-stance-page and space-game-convoy-orders): the arrows flip FLEET between its orders, its stances (page2) and the orders for the escorted ships (page3), the page is drawn, the one in force is marked; 2 leaves the convoy page out, 1 turns the flip off
-  delay: 0,                                // ms a panel waits before it is drawn: none (it was 250 when a digit opened it; Q and E open it now and it comes up at once). A pick made before the list has dropped in (fadeIn) pulses the tab instead of flashing a row
+  delay: 0,                                // ms a panel waits before it is drawn: none (it was 250 when a digit opened it; the panel keys open it now and it comes up at once). A pick made before the list has dropped in (fadeIn) pulses the tab instead of flashing a row
   anim: { fadeIn: 120, fadeOut: 100, flash: 160, pulse: 240 }, // ms (card space-game-campaign-panels-ui): the list dropping in under its tab, going away, the chosen row's flash (two pulses) before the panel collapses, and the tab's one pulse when the pick came before the list was in
   panels: [
     { key: 'Q', code: 'KeyQ', id: 'fleet', side: 'left', title: 'FLEET', rows: [
@@ -31,7 +31,8 @@ const CAMP_PANELS = {
       { n: 2, id: 'attack', order: 'attack', label: 'Attack', help: 'Fighters attack the enemy' },
       { n: 3, id: 'escort', order: 'escort', label: 'Escort', help: 'Escorts go to a convoy' }, // the row to be called "Escort / match speed" when the panels are redrawn: that label does not fit the column of the panel as drawn today
       { n: 4, id: 'guard', order: 'guard', label: 'Guard', help: 'The wing guards the carrier' },
-      { n: 5, id: 'recall', order: 'recall', label: 'Recall', help: 'The wing flies home' }
+      { n: 5, id: 'recall', order: 'recall', label: 'Recall', help: 'The wing flies home' },
+      { n: 6, id: 'mine', order: 'mine', label: 'Mine ore', help: 'The wing goes and mines ore' } // it was the first row of the SHIP panel: the wing mines, so it is a fleet order (card space-game-panel-keys-zxc); the other rows keep their digits
     ], page2: { title: 'STANCES', rows: [ // the second page of the FLEET panel (the arrows flip it): how Attack and Guard move; the current one is marked
       { n: 1, id: 'free', order: 'stance', arg: 'free', label: 'Free', help: 'The wing fights its own way' },
       { n: 2, id: 'orbit', order: 'stance', arg: 'orbit', label: 'Orbit', help: 'Circle the target, firing' },
@@ -45,11 +46,10 @@ const CAMP_PANELS = {
       { n: 4, id: 'ccarry', order: 'convoy', arg: 'carry on', label: 'Carry on', help: 'Convoy ships go their own way' }
     ] } },
     { key: 'E', code: 'KeyE', id: 'ship', side: 'right', title: 'SHIP', rows: [
-      { n: 1, id: 'mine', order: 'mine', label: 'Mine ore', help: 'The wing goes and mines ore' },
-      { n: 2, id: 'buildf', order: 'build', arg: 'fighter', label: 'Build a fighter', tag: 'New fighter', help: 'Build a fighter (costs ore)' },
-      { n: 3, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', tag: 'New escort', help: 'Build an escort (costs ore)' },
-      { n: 4, id: 'goal', fly: 'objective', label: 'Fly to the objective', tag: 'Fly to goal', help: 'Autopilot to the objective', fast: 'Autopilot (Shift: fast)' }, // fast: Shift with the digit is a burn, which needs the wing aboard (card space-game-campaign-fast-board)
-      { n: 5, id: 'dock', order: 'dock', label: 'Dock at an outpost', tag: 'Dock', help: 'Dock at a friendly outpost' } // ships are built and the hull mended only docked (card space-game-campaign-outposts); docking opens the ready room (E then 5)
+      { n: 1, id: 'buildf', order: 'build', arg: 'fighter', label: 'Build a fighter', tag: 'New fighter', help: 'Build a fighter (costs ore)' },
+      { n: 2, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', tag: 'New escort', help: 'Build an escort (costs ore)' },
+      { n: 3, id: 'goal', fly: 'objective', label: 'Fly to the objective', tag: 'Fly to goal', help: 'Autopilot to the objective', fast: 'Autopilot (Shift: fast)' }, // fast: Shift with the digit is a burn, which needs the wing aboard (card space-game-campaign-fast-board)
+      { n: 4, id: 'dock', order: 'dock', label: 'Dock at an outpost', tag: 'Dock', help: 'Dock at a friendly outpost' } // ships are built and the hull mended only docked (card space-game-campaign-outposts); docking opens the ready room (the SHIP panel, then its fourth row)
     ] },
     { key: 'C', code: 'KeyC', id: 'systems', side: 'left', slot: 1, title: 'SYSTEMS', rows: [ // the ship's power (card space-game-campaign-systems; docs/CAMPAIGN.md "Ship systems"): a letter key, as the tabs of the panels card; a row's digit moves a pip
       { n: 1, id: 'weapons', order: 'power', arg: 'weapons', label: 'Weapons +', help: 'A pip to the weapons' },
@@ -72,6 +72,24 @@ const CAMP_PANELS = {
 function campPanelKeyRows() {
   const cap = (p, h) => p.title.charAt(0) + p.title.slice(1).toLowerCase() + ': ' + h.charAt(0).toLowerCase() + h.slice(1), sub = p => 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL';
   return CAMP_PANELS.panels.flatMap(p => [{ k: [p.key], t: cap(p, 'open the panel (again closes it)'), sub: sub(p) }].concat(p.rows.map(r => ({ k: [p.key, String(r.n)], t: cap(p, r.fast || r.help), sub: sub(p) }))).concat(CAMP_PANELS.pages > 1 && p.page2 ? [{ k: [p.key, '\u2190', '\u2192'], t: cap(p, 'flip: ' + [p.page2, CAMP_PANELS.pages > 2 ? p.page3 : null].filter(Boolean).map(x => x.title.toLowerCase()).join(', ') + ' (1-5)'), sub: sub(p) }] : [])); // a panel with a second page lists one more line, in its own group: the arrows flip it (the stances are on the page, not on the keys page: it has no room for five lines more)
+}
+
+// the keys of the panels as the hints say them, ALL read from CAMP_PANELS above: a remap (a panel on another letter, a row on another digit) is one change in the table and every text follows.
+//   campKeyVar(name)         a {placeholder} of a text (contentFill, src/contenttables.js, asks for the names it does not know): {fleetkey} {shipkey} {systemskey} are a panel's letter (its id + "key"), {nlaunch} {nmine} {ndock}
+//                            {nemergency} ... a row's digit ("n" + the row's id), {panels} the key line's words ("Q Fleet, E Ship, C Systems"); '' when the name is none of these (the text keeps its braces)
+//   campKeyCaps(panel, row)  the key caps of a row as the briefing's boxes draw them: ['Q', '1'] for ('fleet', 'launch'); [] when there is no such row
+function campKeyVar(name) {
+  if (typeof CAMP_PANELS !== 'object' || !CAMP_PANELS) return '';
+  if (name === 'panels') return CAMP_PANELS.panels.map(p => p.key + ' ' + p.title.charAt(0) + p.title.slice(1).toLowerCase()).join(', ');
+  let m = /^([a-z]+)key$/.exec(name);
+  if (m) { const p = CAMP_PANELS.panels.find(q => q.id === m[1]); return p ? p.key : ''; }
+  m = /^n([a-z]+)$/.exec(name);
+  if (m) for (const p of CAMP_PANELS.panels) { const r = p.rows.find(x => x.id === m[1]); if (r) return String(r.n); }
+  return '';
+}
+function campKeyCaps(panelId, rowId) {
+  const p = CAMP_PANELS.panels.find(q => q.id === panelId), r = p && p.rows.find(x => x.id === rowId);
+  return p && r ? [p.key, String(r.n)] : [];
 }
 
 const CONTROLS = [
@@ -134,13 +152,13 @@ const CONTROLS = [
     { k: ['F'], t: 'Fire a homing missile', sub: 'FLY AND FIRE' },
     { k: ['B'], t: 'Warp blink hop (needs that tech)', sub: 'FLY AND FIRE' },
     { k: ['J', 'K', 'L', ';'], t: 'Power: shields, engines, weapons, even', sub: 'FLY AND FIRE' }, // direct keys, in the order of the gauges (a pip to each) and the balance key, back to 2 / 2 / 2: one row, the Campaign group is at the size Settings fits (src/camphud.js; cards space-game-systems-gauges, space-game-power-balance-key) // direct keys, in the order of the gauges, for the SYSTEMS panel's rows (src/camphud.js campPowerKey; card space-game-systems-gauges)
-    { k: ['+', '-', '0'], t: 'Zoom view or map (wheel too); 0 resets', sub: 'FLY AND FIRE' }, // = and the numpad keys too (src/campzoom.js)
+    { k: ['+', '-', '0'], t: 'Zoom view or map (wheel too); 0 resets', sub: 'FLY AND FIRE' }, // - and the wheel go out to the whole system on the map, and twice as far as before in the flight // = and the numpad keys too (src/campzoom.js)
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Click'], t: 'Map: click a mark sets it, again flies', sub: 'THE MAP' },
     { k: ['W', 'S', 'A', 'D'], t: 'Map list: choose; next or last group', sub: 'THE MAP' }, // two rows in one: the page is at the size the controls panel fits (tests/controlsfit.mjs)
     { k: ['Shift', 'Enter'], t: 'Map: Enter flies, Shift+Enter fast', sub: 'THE MAP' }, // (the Enter and Shift+Enter rows were one too many for Settings' four columns once E docked)
     { k: ['V', 'T'], t: 'Map: V scouts there, T takes a lane', sub: 'THE MAP' }, // two keys in one row (the group is at the size Settings > Controls fits: tests/controlsfit.mjs); T is the pick at a fork in the road (card space-game-scout-route)
-    { k: ['X', 'Z'], t: 'Map: X clears the goal, Z zooms', sub: 'THE MAP' }, // two rows in one (the Campaign group is at the size Settings > Controls fits: tests/controlsfit.mjs)
+    { k: ['X'], t: 'Map: X clears the goal', sub: 'THE MAP' }, // (Z used to zoom the map to the whole system: minus and the wheel go all the way out now, card space-game-zoom-out-more)
     { k: ['I'], t: 'Type an order to the ship', sub: 'THE STRIP AND THE VOICE' },
     { k: ['U'], t: 'Hold to speak an order', sub: 'THE STRIP AND THE VOICE' },
     { k: ['H'], t: 'This page of keys', sub: 'ANYWHERE' },

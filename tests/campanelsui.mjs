@@ -69,7 +69,7 @@ console.log('B. open: the list under the lit tab');
   const open = J(`__lineW(S, 'fleet')`);
   check('the tab is HIGHLIGHTED while its panel is open: a thicker, brighter border, the name white, and it stays where it is', open.w > 2 && open.a > 0.95 && J(`__tab(S, 'fleet')`).nameColor === '#ffffff' && J('S.pnl.p.fleet.name.y') === geo('fleet').tab.y + geo('fleet').tab.h / 2, JSON.stringify(open));
   const rows = J(`__rows(S, 'fleet')`), tx = J(`__texts()`);
-  check('five rows under the tab, one line each: the name (Launch, Attack, Escort, Guard, Recall) and at the right a word or two of the live state', rows.length === 5 && rows.map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall' && rows[0].suffix === '8 in bay', JSON.stringify(rows.map(r => [r.name, r.suffix])));
+  check('six rows under the tab, one line each: the name (Launch, Attack, Escort, Guard, Recall, Mine ore) and at the right a word or two of the live state', rows.length === 6 && rows.map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall,Mine ore' && rows[0].suffix === '8 in bay', JSON.stringify(rows.map(r => [r.name, r.suffix])));
   check('no second line and no second big header: the old words (the bay line, "fighters, escorts", a heading in 18 px) are gone; the digits 1 to 5 are the only numbers', !tx.some(t => /bay \d\+\d|fighters,|^ore \d|shield \d/.test(t)) && ['1', '2', '3', '4', '5'].every(d => tx.includes(d)));
   const G = geo('fleet');
   check('the column is narrower than before (232 px, it was 300), starts under the tab, and its rows are 24 px high with 3 between', G.w === 232 && K.list.w < 300 && G.list.y >= G.tab.y + G.tab.h && G.rowH === 24 && near(J(`campPanelsGeometry(campPanelDef('fleet')).rowY(2) - campPanelsGeometry(campPanelDef('fleet')).rowY(1)`), 24 + 3) && G.list.y + G.list.h < 600, JSON.stringify(G));
@@ -83,8 +83,8 @@ console.log('B. open: the list under the lit tab');
   check('Esc closes it: the list fades in 100 ms (half way at 50) and the tab is a tab again', half.every(a => near(a, 0.5, 0.01)) && (paint(3000 + A.fadeOut), J(`__rows(S, 'fleet')`).every(r => !r.vis)) && J(`__lineW(S, 'fleet')`).w <= 1.01);
   g.run(`__key(S, 'KeyE', 4000);`); paint(4000 + A.fadeIn + 20);
   const rs = J(`__rows(S, 'ship')`), gs = geo('ship');
-  check('E does the same for SHIP at the right: the tab lit, five rows (Mine ore, New fighter, New escort, Fly to goal, Dock), the column at the right edge', rs.map(r => r.name).join() === 'Mine ore,New fighter,New escort,Fly to goal,Dock' && rs.every(r => r.vis && r.alpha === 1) && gs.list.x + gs.list.w === 1280 - K.edge && J(`__lineW(S, 'ship')`).w > 2 && !J(`__rows(S, 'fleet')`).some(r => r.vis), JSON.stringify(rs.map(r => [r.name, r.suffix])));
-  check('SHIP\'s words are short too: what a ship costs (or the ore it needs), the objective\'s distance', rs[1].suffix === '25 ore' && rs[2].suffix === 'needs 45 ore' && /^[\d,]+ km$/.test(rs[3].suffix) && rs.every(r => r.suffix.length <= 14), JSON.stringify(rs.map(r => r.suffix)));
+  check('X does the same for SHIP at the right: the tab lit, four rows (New fighter, New escort, Fly to goal, Dock), the column at the right edge', rs.map(r => r.name).join() === 'New fighter,New escort,Fly to goal,Dock' && rs.every(r => r.vis && r.alpha === 1) && gs.list.x + gs.list.w === 1280 - K.edge && J(`__lineW(S, 'ship')`).w > 2 && !J(`__rows(S, 'fleet')`).some(r => r.vis), JSON.stringify(rs.map(r => [r.name, r.suffix])));
+  check('SHIP\'s words are short too: what a ship costs (or the ore it needs), the objective\'s distance', rs[0].suffix === '25 ore' && rs[1].suffix === 'needs 45 ore' && /^[\d,]+ km$/.test(rs[2].suffix) && rs.every(r => r.suffix.length <= 14), JSON.stringify(rs.map(r => r.suffix)));
   g.run(`campPanelKey(S.pn, S.camp, 'KeyW', 5000); campPanelsPaint(S, 5000);`);
   check('any other key closes it too (W is itself: it flies)', J('S.pn.open') === '');
   paint(6000);
@@ -132,16 +132,16 @@ console.log('D. two panels, one component, one table');
   g.run(`S.pn = campPanelNew(); __key(S, 'KeyE', 40000); S.time.now = 40100;`);
   check('with a panel open a click elsewhere on the screen closes it; with none open a click on the screen is not the panels\' (it is not swallowed), but a click on a tab is theirs', (() => { g.run(`campPanelsClick(S, 640, 500);`); const closed = J('S.pn.open') === ''; const free = J('campPanelsClick(S, 640, 400)') === false; const tab = J(`campPanelsClick(S, ${tabs[0].x + 10}, ${tabs[0].y + 10})`) === true && J('S.pn.open') === 'fleet'; return closed && free && tab; })());
   g.run(`S.pn = campPanelNew(); S.camp.ore = 100; S.time.now = 50000; campPanelToggle(S.pn, 'ship', 50000); __p(50000 + 200); window.__gs = campPanelsGeometry(campPanelDef('ship')); window.__said.length = 0;`);
-  g.run(`S.time.now = 50300; campPanelsClick(S, __gs.list.x + 100, __gs.rowY(2) + 10);`);
-  check('a click on SHIP row 2 builds a fighter (25 ore spent), the panel closes and the row is to flash', J('S.camp.ore') === 75 && J('S.camp.build.queue.length') === 1 && J('S.pn.open') === '' && J('S.pn.flash.row') === 'buildf' && J('S.pn.flash.shown') === true);
+  g.run(`S.time.now = 50300; campPanelsClick(S, __gs.list.x + 100, __gs.rowY(1) + 10);`);
+  check('a click on SHIP row 1 builds a fighter (25 ore spent), the panel closes and the row is to flash', J('S.camp.ore') === 75 && J('S.camp.build.queue.length') === 1 && J('S.pn.open') === '' && J('S.pn.flash.row') === 'buildf' && J('S.pn.flash.shown') === true);
   check('FLEET and SHIP are one component: the two panels\' objects are made by the same function from the same table (CAMP_PANELS), and SHIP is FLEET mirrored', (src('src/campanelsdraw.js').match(/function campPanelsBuild/g) || []).length === 1 && (src('src/campanelsdraw.js').match(/function campPanelsPaintOne/g) || []).length === 1 && J(`(() => { const a = campPanelsGeometry(campPanelDef('fleet')), b = campPanelsGeometry(campPanelDef('ship')); return a.tab.x + b.tab.x + b.tab.w === 1280 && a.tab.y === b.tab.y && a.list.w === b.list.w && a.list.x + b.list.x + b.list.w === 1280; })()`));
-  g.run(`window.__T = CAMP_PANELS.panels[0]; __T.rows.push({ n: 6, id: 'launch', order: 'launch', label: 'Sixth row', tag: 'Sixth', help: 'A row from the data' }); window.S2 = __scene(); campPanelsInstall(S2); S2.pn.open = 'fleet'; S2.pn.at = 0; S2.time.now = 1000; campPanelsPaint(S2, 1000);`);
-  check('a sixth row put in the table is drawn, with its own name and a place under the fifth (no line of drawing code knows it)', J('S2.pnl.p.fleet.rows.length') === 6 && J('S2.pnl.p.fleet.rows[5].name.t') === 'Sixth' && J('S2.pnl.p.fleet.rows[5].digit.t') === '6' && J(`campPanelsGeometry(campPanelDef('fleet')).rowY(6)`) > J(`campPanelsGeometry(campPanelDef('fleet')).rowY(5)`));
+  g.run(`window.__T = CAMP_PANELS.panels[0]; __T.rows.push({ n: 7, id: 'launch', order: 'launch', label: 'Seventh row', tag: 'Seventh', help: 'A row from the data' }); window.S2 = __scene(); campPanelsInstall(S2); S2.pn.open = 'fleet'; S2.pn.at = 0; S2.time.now = 1000; campPanelsPaint(S2, 1000);`);
+  check('a seventh row put in the table is drawn, with its own name and a place under the sixth (no line of drawing code knows it)', J('S2.pnl.p.fleet.rows.length') === 7 && J('S2.pnl.p.fleet.rows[6].name.t') === 'Seventh' && J('S2.pnl.p.fleet.rows[6].digit.t') === '7' && J(`campPanelsGeometry(campPanelDef('fleet')).rowY(7)`) > J(`campPanelsGeometry(campPanelDef('fleet')).rowY(6)`));
   g.run(`__T.rows.pop();`);
   g.run(`window.__third = { key: 'C', code: 'KeyC', id: 'systems', side: 'left', slot: 1, title: 'SYSTEMS', rows: [{ n: 1, id: 'launch', order: 'launch', label: 'Weapons plus', tag: 'Weapons+', help: 'x' }] }; CAMP_PANELS.panels.push(__third); window.S3 = __scene(); campPanelsInstall(S3);`);
   check('a third panel put in the table (a key, a side and a slot) is drawn as a tab beside the first: its tab does not cover FLEET\'s, its column hangs from it', J('Object.keys(S3.pnl.p).join()') === 'fleet,ship,systems' && J(`(() => { const a = campPanelsGeometry(campPanelDef('fleet')).tab, c = campPanelsGeometry(campPanelDef('systems')).tab; return c.x >= a.x + a.w && c.y === a.y && c.x + c.w < 640; })()`) && J(`campPanelsGeometry(campPanelDef('systems')).list.x`) === J(`campPanelsGeometry(campPanelDef('systems')).tab.x`));
   g.run(`CAMP_PANELS.panels.pop();`);
-  check('and the table is as it was', J(`CAMP_PANELS.panels.length`) === 3 && J(`CAMP_PANELS.panels[0].rows.length`) === 5);
+  check('and the table is as it was', J(`CAMP_PANELS.panels.length`) === 3 && J(`CAMP_PANELS.panels[0].rows.length`) === 6);
 }
 
 console.log('E. the screen\'s own camera, the key line');
@@ -156,25 +156,26 @@ console.log('E. the screen\'s own camera, the key line');
 console.log('F. the FLEET panel\'s second page: the stances (card space-game-wrapup-stance-page)');
 {
   g.run(`window.T = __scene(); campPanelsInstall(T); T.camp.stance = 'orbit';`);
-  const paintT = now => g.run(`T.time.now = ${now}; campPanelsPaint(T, ${now});`), rowsT = () => J(`__rows(T, 'fleet')`), tabT = () => J(`({ name: T.pnl.p.fleet.name.t, note: T.pnl.p.fleet.note.t, noteVis: T.pnl.p.fleet.note.vis, hint: T.pnl.p.fleet.hint.t, hintVis: T.pnl.p.fleet.hint.vis })`);
+  const paintT = now => g.run(`T.time.now = ${now}; campPanelsPaint(T, ${now});`), rowsT = () => J(`__rows(T, 'fleet')`).filter(r => r.vis), // (the lines on the screen: the stances page has five, the orders page six)
+     tabT = () => J(`({ name: T.pnl.p.fleet.name.t, note: T.pnl.p.fleet.note.t, noteVis: T.pnl.p.fleet.note.vis, hint: T.pnl.p.fleet.hint.t, hintVis: T.pnl.p.fleet.hint.vis })`);
   const keyT = (code, now) => g.run(`campPanelKey(T.pn, T.camp, '${code}', ${now}); T.time.now = ${now};`);
   paintT(0);
   check('collapsed with the stance Orbit in force: the FLEET tab names it ("ORBIT"), the SHIP tab does not', tabT().note === 'ORBIT' && tabT().noteVis === true && J(`T.pnl.p.ship.note.t`) === '', JSON.stringify(tabT()));
   g.run(`T.camp.stance = 'free'`); paintT(10); check('with Free (the default) the tab names nothing', tabT().note === '' || tabT().noteVis === false, JSON.stringify(tabT())); g.run(`T.camp.stance = 'keep'`); paintT(20); check('Keep distance is "KEEP" (the first word, in capitals: the tab is 150 px)', tabT().note === 'KEEP', JSON.stringify(tabT()));
   g.run(`T.camp.stance = 'orbit'`);
   keyT('KeyQ', 100); paintT(100 + 200);
-  check('Q opens FLEET on page 1: the five orders, the hint says the arrows go to the stances', rowsT().map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall' && tabT().hintVis === true && tabT().hint === '← →  stances' && tabT().name === 'FLEET', JSON.stringify([rowsT().map(r => r.name), tabT()]));
+  check('Q opens FLEET on page 1: the six orders, the hint says the arrows go to the stances', rowsT().map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall,Mine ore' && tabT().hintVis === true && tabT().hint === '← →  stances' && tabT().name === 'FLEET', JSON.stringify([rowsT().map(r => r.name), tabT()]));
   check('the open tab does not show the stance word (the list is open)', tabT().noteVis === false);
   keyT('ArrowRight', 400); paintT(400);
   check('the Right arrow flips: the five stances in their rows, the tab says STANCES, the hint offers the convoy page (the third)', rowsT().map(r => r.name).join() === 'Free,Orbit,Keep distance,Match speed,Hold position' && tabT().name === 'STANCES' && tabT().hint === '← →  convoy', JSON.stringify([rowsT().map(r => r.name), tabT()]));
   check('the one in force says so ("in force", in the digit\'s colour); the others say nothing; all five can be chosen (not greyed)', rowsT()[1].suffix === 'in force' && rowsT()[1].suffixColor === J('CAMPPANELS_LOOK.rowInk.digit') && [0, 2, 3, 4].every(i => rowsT()[i].suffix === '') && rowsT().every(r => r.nameColor === J('CAMPPANELS_LOOK.rowInk.ok')), JSON.stringify(rowsT().map(r => [r.suffix, r.nameColor])));
   keyT('ArrowLeft', 500); paintT(500);
-  check('the Left arrow flips back to the orders at once (not at the next quarter second)', rowsT().map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall' && tabT().name === 'FLEET', JSON.stringify(rowsT().map(r => r.name)));
+  check('the Left arrow flips back to the orders at once (not at the next quarter second)', rowsT().map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall,Mine ore' && tabT().name === 'FLEET', JSON.stringify(rowsT().map(r => r.name)));
   keyT('ArrowRight', 520); keyT('ArrowRight', 540); paintT(540); // the stances, then the convoy page (card space-game-convoy-orders)
-  check('the Right arrow once more flips to the CONVOY page: four rows, the fifth blank, the tab says CONVOY, the hint offers the fleet orders', rowsT().slice(0, 4).map(r => r.name).join() === 'Tuck in,Hold here,Run for it,Carry on' && rowsT()[4].name === '' && rowsT()[4].suffix === '' && tabT().name === 'CONVOY' && tabT().hint === '← →  fleet orders', JSON.stringify([rowsT().map(r => r.name), tabT()]));
+  check('the Right arrow once more flips to the CONVOY page: four rows (the others are not drawn), the tab says CONVOY, the hint offers the fleet orders', rowsT().map(r => r.name).join() === 'Tuck in,Hold here,Run for it,Carry on' && tabT().name === 'CONVOY' && tabT().hint === '← →  fleet orders', JSON.stringify([rowsT().map(r => r.name), tabT()]));
   check('with no escorted ship to command the four rows are greyed and say "no convoy"', rowsT().slice(0, 4).every(r => r.suffix === 'no convoy' && r.nameColor === J('CAMPPANELS_LOOK.rowInk.no')), JSON.stringify(rowsT().map(r => [r.suffix, r.nameColor])));
   keyT('ArrowRight', 560); paintT(560);
-  check('and once more it is back at the orders (the pages go round)', rowsT().map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall' && tabT().name === 'FLEET', JSON.stringify(rowsT().map(r => r.name)));
+  check('and once more it is back at the orders (the pages go round)', rowsT().map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall,Mine ore' && tabT().name === 'FLEET', JSON.stringify(rowsT().map(r => r.name)));
   keyT('ArrowRight', 600); paintT(600); keyT('Digit3', 700);   // the third stance: keep distance
   check('a digit on the stance page picks the stance: it is set, and the panel collapses', J('T.camp.stance') === 'keep' && J('T.pn.open') === '', J('T.camp.stance'));
   paintT(700 + 40);
@@ -182,8 +183,8 @@ console.log('F. the FLEET panel\'s second page: the stances (card space-game-wra
   paintT(700 + 1000);
   check('collapsed again: the tab says FLEET and names the new stance ("KEEP")', tabT().name === 'FLEET' && tabT().note === 'KEEP', JSON.stringify(tabT()));
   keyT('KeyQ', 2000); paintT(2000 + 200);
-  check('it opens on the orders every time (the page is not remembered)', rowsT().map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall', JSON.stringify(rowsT().map(r => r.name)));
-  check('SHIP has no second page: no hint, no flip (its arrows stay ordinary keys)', (keyT('KeyE', 2300), paintT(2300 + 200), J(`T.pnl.p.ship.hint`) === null) && J(`campPanelKey(T.pn, T.camp, 'ArrowRight', 2500).used`) === false);
+  check('it opens on the orders every time (the page is not remembered)', rowsT().map(r => r.name).join() === 'Launch,Attack,Escort,Guard,Recall,Mine ore', JSON.stringify(rowsT().map(r => r.name)));
+  check('SHIP has no second page: no hint, no flip (with it open its Left and Right are kept and do nothing: the ship does not steer while a panel is open)', (keyT('KeyE', 2300), paintT(2300 + 200), J(`T.pnl.p.ship.hint`) === null) && J(`campPanelKey(T.pn, T.camp, 'ArrowRight', 2500).used`) === true && J('T.pn.page') === 0 && J('T.pn.open') === 'ship');
   // a click on a stance row, with the stances showing
   keyT('KeyQ', 3000); keyT('ArrowRight', 3100); paintT(3200);
   const gl = geo('fleet'); const y = gl.list.y + (K.list.row + K.list.gap) + K.list.row / 2; // the second row: Orbit
