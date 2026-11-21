@@ -6,7 +6,7 @@ rule, voice-pack derive) and the three hunts' fixes are all on it. Feature freez
 
 ## For Troy, in one line
 
-**Play it: title, K, the ready room (Enter for the briefing, L to launch), Q then 1 to launch the wing, Tab for the map, E then 6 to dock; no blocker and no crash anywhere I
+**Play it: title, K, the ready room (Enter for the briefing, L to launch), Q then 1 to launch the wing, Tab for the map, E then 5 to dock; no blocker and no crash anywhere I
 looked; what is still rough is the difficulty of the escort mission (1.2) for a player who does not give orders, three small label and words things, and the debug keys on the
 pause card (`\` wins a mission).**
 
@@ -16,7 +16,7 @@ pause card (`\` wins a mission).**
   title; K to the ready room and every page of it (board, brief, refit, rank, launch), Esc back to the title; the pause card and the keys page (H); mission **1.1** to a win in
   83 s with Q then 1 (launch), Q then 2 (attack), Space and the map's goal row; the debrief, the level's won card, the **Earth refit** (tech, ships bought) and the room after it;
   mission **2.2** to a win (86 s); the lost cards of **1.2**, **2.3** and **3.2** (the scripted player lost them: see the difficulty note); the start of **2.3** and **3.3**; docking at
-  Ceres with **E then 6** and Esc back to the same flight; zoom in and out; the **ending** ("This is not their home. It is an outpost. ... Tau Ceti") and the title after it.
+  Ceres with **E then 5** and Esc back to the same flight; zoom in and out; the **ending** ("This is not their home. It is an outpost. ... Tau Ceti") and the title after it.
 - **Flown earlier on the pre-train main `1ec26c1`**: all nine missions won by the scripted player (47 to 115 s), the warp cinematic, the reveal. The train changed the missions
   (they start away from their place, the difficulty scales), so those wins are not repeated here.
 - **Not flown by me on the final build**: 1.3, 2.1 and 3.1 (my script does not wait out the warp, and 1.3 was not finished at 244 s), the replay and retreat screens in Chrome.
@@ -84,7 +84,7 @@ earlier builds.
 
 ## What to know before playing (not bugs, but they confuse a first minute)
 - A mission **starts away from its place** ("Fly to Mars: 3,140 km"); the battle begins when the carrier arrives. Fast needs the wing aboard. The briefing is the page for it.
-- **Orders are two keys**: Q (FLEET), E (SHIP), C (SYSTEMS), then a row digit; a digit alone does nothing. **Dock is E then 6.** **B is the blink, P the pace.**
+- **Orders are two keys**: Q (FLEET), E (SHIP), C (SYSTEMS), then a row digit; a digit alone does nothing. **Dock is E then 5.** **B is the blink, P the pace.**
 - The **"cloaked cache" bonus** is on every mission, because every level has anomalies.
 - The ready room's board starts on the next mission; Enter or R on a finished one replays it (best score kept).
 
