@@ -16,7 +16,7 @@ const SHIPS = {
   pad: { ship: [6, 5], police: [6, 5], drone: [5, 5], raider: [5, 4], gunship: [6, 5], reaver: [8, 7], freighter: [6, 6], civilian: [6, 6] },
   // engine nozzles per texture: [along (px behind the centre), across, size]; the flame and trail come out of these
   nozzles: {
-    ship: [[-14, 0, 1]], police: [[-14, 0, 1]], raider: [[-10, 0, 0.7]], drone: [[-15, 0, 0.8]],
+    ship: [[-14, 0, 1]], police: [[-14, 0, 1]], raider: [[-10, 0, 0.7], [-9, -6.4, 0.4], [-9, 6.4, 0.4]], drone: [[-15, 0, 0.8]],
     gunship: [[-21, -5.5, 0.8], [-21, 5.5, 0.8]], reaver: [[-45, -9, 1.2], [-45, 0, 1.4], [-45, 9, 1.2]],
     freighter: [[-30, -3.5, 0.8], [-30, 3.5, 0.8]], civilian: [[-29, -4, 0.6], [-29, 4, 0.6]]
   },
@@ -69,6 +69,22 @@ function shLight(g, x, y, color, r = 1.8) { shHalo(g, x, y, color, r * 3, 0.1); 
 function shLine(g, x1, y1, x2, y2, color, a = 0.5, w = 1) { g.lineStyle(w, color, a); g.lineBetween(x1, y1, x2, y2); }
 const shMirror = (pts, cy) => pts.map(([x, y]) => [x, 2 * cy - y]);
 
+// the pirate raider (card space-game-fighter-dogfights: the fighters look like the Vipers of Battlestar Galactica, ours and theirs, drawn by us): a long needle of a nose, a narrow blade of a body, two short fins
+// forward, two swept wings reaching back to the tail and three engines in a row at the stern, in the pirates' dark red with the hot pink edge. The same shape as the wing's fighter (src/campcruiser.js), in the other colours.
+// The canvas is 40 x 30: the hull's middle is at (20, 15), the nose at x 37, the tail at x 9; the middle engine is at x 11 where the flame comes out (SHIPS.nozzles).
+function shRaiderDraw(g) {
+  const PK = 0xff6b8a, cy = 15;
+  const wing = [[23, 12.3], [14, 5], [9, 4.6], [10, 11.6]], canard = [[31, 13.7], [27.5, 10], [25.6, 10], [27, 13.2]];
+  const body = [[37, 15], [31, 14.1], [26, 13.2], [20, 12], [12, 11.4], [9.6, 11.6], [9.6, 18.4], [12, 18.6], [20, 18], [26, 16.8], [31, 15.9]];
+  [wing, canard].forEach(pts => { shFill(g, pts, 0x3a0c18, 1); shFill(g, shMirror(pts, cy), 0x3a0c18, 1); shNeon(g, pts, PK, 1.1, 0.5); shNeon(g, shMirror(pts, cy), PK, 1.1, 0.5); });
+  shFill(g, body, 0x2a0b14, 1);
+  shFill(g, [[34.5, 15], [26, 14.2], [12, 13.2], [12, 16.8], [26, 15.8]], 0x6a1e34, 1);
+  shLine(g, 14, 15, 33, 15, 0xff9db3, 0.5);
+  shNeon(g, body, PK, 1.4);
+  shNozzle(g, 11, 15, 4, 5, PK, 0xffd0dc); shNozzle(g, 11, 8.6, 3, 3, PK, 0xffd0dc); shNozzle(g, 11, 21.4, 3, 3, PK, 0xffd0dc); // three engines
+  shCockpit(g, 24.5, 15, 2, PK);
+}
+
 // ---- the textures ----
 function shipsTextures(scene) {
   const mk = (key, w, h, fn) => {
@@ -91,18 +107,7 @@ function shipsTextures(scene) {
     shLight(g, 9, 6, 0xff4d6d, 1.6); shLight(g, 9, 34, 0x7fb8ff, 1.6);
   });
 
-  mk('raider', 40, 30, g => { // pirate raider: a thin dart with forward-swept fins, hot pink edge
-    const PK = 0xff6b8a, cy = 15;
-    const hull = [[37, 15], [26, 11.5], [8, 9], [13, 15], [8, 21], [26, 18.5]];
-    const fin = [[16, 12], [9, 4], [20, 11]];
-    shFill(g, fin, 0x3a0c18, 1); shFill(g, shMirror(fin, cy), 0x3a0c18, 1);
-    shNeon(g, fin, PK, 1.2, 0.6); shNeon(g, shMirror(fin, cy), PK, 1.2, 0.6);
-    shShade(g, hull, 0x2a0b14, 0x6a1e34, 20, cy, 3);
-    shLine(g, 14, 15, 34, 15, 0xff9db3, 0.55);
-    shNeon(g, hull, PK, 1.5);
-    shNozzle(g, 11, 15, 4, 5, PK, 0xffd0dc);
-    shCockpit(g, 25, 15, 2.3, PK);
-  });
+  mk('raider', 40, 30, shRaiderDraw); // pirate raider: a Viper-style lance (see shRaiderDraw)
 
   mk('drone', 44, 44, g => { // pirate drone: a rewired survey rig, four rotor pads on a hex core and one red eye
     const c = 22;

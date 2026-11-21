@@ -41,7 +41,8 @@ sec('A', () => {
 });
 
 sec('B', () => {
-  const GOLD = {"l1":{"t":120000,"x":-9809.020067,"y":2569.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":138,"kills":8,"missiles":5,"reloadAt":134967,"shots":23,"blinkAt":50033.333333334114,"aliens":0,"ships":8,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]},"l3":{"t":120000,"x":-16939.020067,"y":6039.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":568,"shield":0,"kills":8,"missiles":5,"reloadAt":134967,"shots":163,"blinkAt":50033.333333334114,"aliens":0,"ships":5,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]}};
+  // re-pinned by card space-game-fighter-dogfights (21 Nov 2026): the wing's fighters and the raiders now dogfight, so this seeded fight ends in another state than main b721fe3's. What the pin proves is unchanged: an explicit default is the same battle, and nothing else moves it.
+  const GOLD = {"l1":{"t":120000,"x":-9809.020067,"y":2569.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":136,"kills":8,"missiles":5,"reloadAt":134967,"shots":26,"blinkAt":50033.333333334114,"aliens":0,"ships":9,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]},"l3":{"t":120000,"x":-16939.020067,"y":6039.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":113.6,"kills":8,"missiles":5,"reloadAt":134967,"shots":98,"blinkAt":50033.333333334114,"aliens":0,"ships":3,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]}};
   const run = (lvl, power) => { const opt = power ? ', power: ' + JSON.stringify(power) : ''; return J(`(() => {
     const C = campNew(${lvl}, ['blink'], { seed: 7${opt} }); let shots = 0;
     for (let i = 0; i < 30 * 120 && !C.result; i++) {

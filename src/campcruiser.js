@@ -116,22 +116,26 @@ function campBayLight(C, at) {
   return { launch: C.launchQ.length ? 1 : fade(C.t - at.launch), land: coming ? 1 : fade(C.t - at.land) };
 }
 
-// the fighter: a slim grey dart with two swept wings tipped in bronze, two small engines, a pale canopy (the one light colour on it: it is what says "ours" in a crowd of red aliens)
+// the fighter (card space-game-fighter-dogfights; Troy: look like the Vipers of Battlestar Galactica, but ours): a long needle of a nose, a narrow blade of a body with a pale canopy behind the nose, two
+// short fins forward and two long swept wings reaching back to the tail, a gun in front of each wing, and three engines in a row at the stern (one in the middle, one out on each side). An original drawing:
+// the proportions and the three engines are what say "Viper" at 22 px; nothing of the show's ship is copied. The pale canopy and the two pale wing-tip lights are what say "ours" in a crowd of red aliens.
 function campFighterDraw(g) {
   const A = CAMP_ART.fighter, k = A.k, [W, H] = campArtSize('fighter'), p = campArtPen(g, W / 2, H / 2, k), C = CAMP_HULL, S = C.steel, B = C.bronze;
   A.glow.forEach(([r, a]) => p.dot(0, 0, r, C.glass, a)); // the faint pale disc under it
-  const wing = [[3.2, -2], [-1.5, -7.8], [-7, -7.8], [-5.4, -2.4]], body = [[11, 0], [7, -1.7], [-3, -2.5], [-9, -2.5], [-9, 2.5], [-3, 2.5], [7, 1.7]];
+  const wing = [[1.2, -2.1], [-5.6, -7.8], [-9.6, -7.8], [-8.8, -2.9]], canard = [[5.2, -1.1], [3.2, -3.9], [1.9, -3.9], [2.6, -1.5]], body = [[11, 0], [6.2, -0.8], [2, -1.5], [-3, -2.4], [-9.6, -3], [-9.6, 3], [-3, 2.4], [2, 1.5], [6.2, 0.8]];
   [1, -1].forEach(s => {
-    const w = wing.map(([x, y]) => [x, y * s]);
-    p.poly(w, S[2]); p.poly([[2.4, -2.3 * s], [-1.6, -6.9 * s], [-5.6, -6.9 * s], [-4.6, -2.6 * s]], S[3]); p.outline(w, C.edge, 0.7, 0.95);
-    p.dot(-6.2, 7.2 * s, 2.3, C.glass, 0.1); p.dot(-6.2, 7.2 * s, 0.7, C.glass, 0.95); // a pale light on each wing tip: in a crowd it is what finds the wing
-    p.rect(-7, s > 0 ? 6.3 : -7.8, -1.6, s > 0 ? 7.8 : -6.3, B[2], 0.9); // the bronze tip of the wing
-    p.rect(1, 4.4 * s - 0.35, 5.2, 4.4 * s + 0.35, C.dark); // a gun along the wing
+    const w = wing.map(([x, y]) => [x, y * s]), c = canard.map(([x, y]) => [x, y * s]);
+    p.poly(w, S[2]); p.poly([[0.6, -2.3 * s], [-5.4, -7.0 * s], [-8.9, -7.0 * s], [-8.2, -3.1 * s]], S[3]); p.outline(w, C.edge, 0.7, 0.95);
+    p.poly(c, S[1]); p.outline(c, C.edge, 0.6, 0.9);
+    p.rect(-9.5, s > 0 ? 6.2 : -7.8, -6.4, s > 0 ? 7.8 : -6.2, B[2], 0.9); // the bronze tip of the wing
+    p.rect(1.4, 4.3 * s - 0.35, 5.4, 4.3 * s + 0.35, C.dark); // a gun in front of the wing
+    p.dot(-7.6, 7.3 * s, 2.3, C.glass, 0.1); p.dot(-7.6, 7.3 * s, 0.7, C.glass, 0.95); // a pale light on each wing tip: in a crowd it is what finds the wing
   });
-  p.poly(body, S[3]); p.poly([[10, 0], [6.4, -1.1], [-8.2, -1.1], [-8.2, 1.1], [6.4, 1.1]], S[4], 0.85); p.outline(body, C.edge, 0.7, 0.95);
-  p.line(-3, -2.5, -3, 2.5, C.edge, 0.55, 0.45);
-  p.rect(-10.4, -2.7, -8.6, 2.7, C.dark); [-1.4, 1.4].forEach(y => { p.dot(-10.6, y, 1.9, C.engine, 0.07); p.rect(-10.9, y - 0.85, -9.6, y + 0.85, C.engine, 0.95); p.rect(-10.9, y - 0.35, -10.3, y + 0.35, C.hot, 0.8); });
-  p.dot(4.6, 0, 2.7, C.glass, 0.1); p.dot(4.6, 0, 1.45, C.edge); p.dot(4.6, 0, 1.1, C.glass); p.dot(4.9, -0.3, 0.4, 0xffffff, 0.8); // the canopy
+  p.poly(body, S[3]); p.poly([[10.2, 0], [6.4, -0.45], [-8.4, -1.1], [-8.4, 1.1], [6.4, 0.45]], S[4], 0.8); p.outline(body, C.edge, 0.7, 0.95);
+  p.line(-3.4, -2.4, -3.4, 2.4, C.edge, 0.55, 0.45);
+  p.poly([[4.9, 0], [2.7, -0.95], [0.3, -0.95], [0.3, 0.95], [2.7, 0.95]], C.edge); p.poly([[4.3, 0], [2.6, -0.6], [0.8, -0.6], [0.8, 0.6], [2.6, 0.6]], C.glass); p.dot(1.6, -0.25, 0.28, 0xffffff, 0.8); // the canopy: a long drop of glass
+  p.rect(-10.6, -2.7, -9.4, 2.7, C.dark);
+  [[0, 1.05], [-4.7, 0.85], [4.7, 0.85]].forEach(([y, h]) => { p.dot(-10.8, y, 1.9, C.engine, 0.07); p.rect(-11, y - h, -9.7, y + h, C.engine, 0.95); p.rect(-11, y - h * 0.4, -10.4, y + h * 0.4, C.hot, 0.8); }); // the three engines
 }
 // the escort: a small boxy gunship, a nacelle each side with a bronze stripe, a short nose, a lit window, the engines at the back
 function campEscortDraw(g) {

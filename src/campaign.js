@@ -181,6 +181,22 @@ const CAMP = {
     formation: 200,                        // px: MATCH SPEED keeps its place this far from the carrier, spread round it, at the carrier's speed
     leash: 1400                            // px: HOLD POSITION stays where it is, until the carrier has gone this far; then the ship comes back to it
   },
+  dog: {                                   // DOGFIGHTS (card space-game-fighter-dogfights; src/campdogfight.js): how the fighters (the wing's, and the aliens' raiders) fly a duel, as the Vipers do: the engine pushes along the nose, so a ship turns to where it means to go, swoops past, breaks, comes round again, and flips to fire back at one on its tail
+    kinds: ['fighter', 'raider'],          // who flies it (and the pirates whose base is the raider: the skiff): they fight one another this way; against a drone, a gunship, an escort, the mothership or Earth they keep the pirates' own circle and pass
+    retro: 0.45, side: 0.35,               // the share of its accel a ship has backwards and sideways (the nose is where the big engine points): to brake or to turn it has to bring the nose round first
+    drag: 0.62,                            // the share of its speed a dogfighter keeps after a second (the game's own is 0.5): it carries some of it round a turn and drifts through a flip
+    snap: 1.7,                             // times the table's turn rate while the nose comes round for a break, a flip or a jink
+    hold: 330,                             // px: the gun range a ship tries to keep to its target (it slows to this on the way in, and follows a target that runs)
+    pass: 150,                             // px/s: the least closing speed it flies in at: it drives in for a pass, it does not stop at the gun range
+    cone: 0.6,                             // rad: the nose stays on the lead point while the push it wants is within this of it; further round, the nose goes to the push
+    near: 120,                             // px: this close it is past, and breaks away
+    far: 1100,                             // px: farther than this it just flies in, burning
+    lead: { fighter: 0.8, raider: 0.55 },  // how much of the lead (where the target will be when the shot gets there) the ship aims with: 1 is the exact lead, 0 aims where the target is
+    breakOff: { angle: 1.9, time: [0.5, 0.9], to: 330 }, // the break after a pass: rad off the line to the target, how long (s), and how far (px) it must be before it comes round again
+    flip: { off: 2.2, range: 420, time: [0.9, 1.5], every: 4.5 }, // the flip and burn: when the target is this far (rad) off the nose, i.e. behind, and within range px, the ship turns on the spot and brakes with the main engine, firing as it comes round; for time s, at most once in every s
+    jink: { aspect: 0.32, range: 520, rate: { fighter: 2, raider: 0.8 }, time: [0.45, 0.85], every: { fighter: 1.2, raider: 2.5 } }, // a ship with an enemy's nose on it (within aspect rad, range px) throws itself aside: a chance of rate a second (the wing's pilots do it more than the aliens'), once in every s, for time s
+    pair: { range: 1500, keep: 2400, every: 600 } // the pairing: a fighter and a raider within range px of each other fight one on one, and the pair holds until a ship is lost or they are keep px apart; looked at every ms
+  },
   stances: ['free', 'orbit', 'keep', 'match', 'hold'], // the stances, in the order of the panel's second page: free is how the wing always flew (the pirates' own steering)
   convoy: {
     hp: 200,                               // hit points of a freighter
@@ -886,6 +902,7 @@ function campTick(C, dt) {
   campPowerStep(C, dt); // the ship's systems: the emergency's end, the shield's cap and its mending, the low lines
   campCarrier(C, dt);
   campLaunch(C);
+  campDogPair(C); // the fighters and the raiders pair off, one on one (src/campdogfight.js)
   C.ships.forEach(u => { if (u.hp > 0 && u.kind !== 'carrier') campAI(C, u, dt); });
   campBullets(C, dt);
   campBeam(C, dt);
@@ -1235,7 +1252,7 @@ function campAlienAI(C, u, dt) {
   let tgt = null;
   if (u.hitBy && u.distractedUntil > C.t) { const h = C.by[u.hitBy]; if (h && h.hp > 0) tgt = h; }
   if (!tgt && u.goal && u.goal.indexOf('convoy:') === 0) { const f = C.by['freighter-' + u.goal.slice(7)]; if (f && f.hp > 0) tgt = f; }
-  if (!tgt) { const near = campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, def.engage * 0.7); if (near) { tgt = near; if (near !== C.carrier) u.lost = false; } } // one of your other ships in reach: it is on that ship (the carrier is the leash's: campPursuit)
+  if (!tgt) { const near = campDogFoe(C, u, campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, def.engage * 0.7)); if (near) { tgt = near; if (near !== C.carrier) u.lost = false; } } // one of your other ships in reach: it is on that ship (the carrier is the leash's: campPursuit)
   if (campPursuit(C, u, tgt)) { // it has lost you: it goes back to its post (a guard) or settles where it is and guards (the rest), and an Earth wave goes on to Earth
     if (!C.earth) { // no Earth here: a guard goes back to its post and holds there again; the rest come to rest where they are, out of it until the carrier comes within the leash again (campPursuit clears it)
       if (u.post && campDist(u, u.post) > 90) { campSeek(u, u.post.x, u.post.y, dt); return; }
@@ -1246,9 +1263,9 @@ function campAlienAI(C, u, dt) {
   }
   const isEarth = !tgt && !!C.earth; if (!tgt) tgt = C.earth || C.carrier; // nothing near and no Earth in this level: it comes for the carrier
   const dx = tgt.x - u.x, dy = tgt.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx), tv = isEarth ? { x: 0, y: 0 } : { x: tgt.vx || 0, y: tgt.vy || 0 };
-  const m = campSteer(C, u, def, dist, target, u.vx - tv.x, u.vy - tv.y);
-  campMove(u, m.ang, m.face, dt);
-  if (m.fire && dist < def.range + (isEarth ? C.earth.r : 0) && C.t > u.nextShot && Math.abs(campWrap(target - u.rot)) < def.aim) {
+  const dog = !isEarth && campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campSteer(C, u, def, dist, target, u.vx - tv.x, u.vy - tv.y); // a raider against a fighter is a dogfight (src/campdogfight.js)
+  if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
+  if (m.fire && dist < def.range + (isEarth ? C.earth.r : 0) && C.t > u.nextShot && Math.abs(campWrap((dog ? m.aim : target) - u.rot)) < def.aim) {
     u.nextShot = C.t + campBetween(C, def.shot[0], def.shot[1]);
     const n = def.spread || 1;
     for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * C.dmgS, 1800, 'alien', 14);
@@ -1371,7 +1388,7 @@ function campWingAI(C, u, dt) {
     return campSeek(u, c.x, c.y, dt);
   }
   if (o.type === 'attack') {
-    foe = o.target && C.by[o.target] && C.by[o.target].hp > 0 ? C.by[o.target] : campNearest(aliens, u);
+    foe = o.target && C.by[o.target] && C.by[o.target].hp > 0 ? C.by[o.target] : campDogFoe(C, u, campNearest(aliens, u)); // a named alien is the order's; with none named, a fighter flies at its partner (src/campdogfight.js)
     if (!foe) home = c; // nothing left to hit: back to the carrier's side
   } else if (o.type === 'escort') {
     const cv = C.by[o.target];
@@ -1399,15 +1416,15 @@ function campWingAI(C, u, dt) {
     }
   } else { // guard: a point (the carrier, a place, a convoy) is circled; an alien that comes within reach of it, or of this ship, is fought
     const at = o.at || { kind: 'carrier' }, p = at.kind === 'carrier' ? c : at.kind === 'place' ? campPlaces(C.level)[at.id] : at.kind === 'point' ? at : C.by[at.id] || c;
-    foe = campNearest(aliens, p, 700) || campNearest(aliens, u, 450);
+    foe = campNearest(aliens, p, 700) || campNearest(aliens, u, 450); if (foe) foe = campDogFoe(C, u, foe, 1000); // a partner within reach is the one it fights
     if (!foe) { const a = (u.id.length * 1.7 + (parseInt(u.id.split('-')[1], 10) || 0) * 0.9) + C.t / 3500; home = { x: p.x + Math.cos(a) * 330, y: p.y + Math.sin(a) * 330, vx: p.vx || 0, vy: p.vy || 0 }; }
   }
   if (C.stance !== 'free' && (o.type === 'attack' || o.type === 'guard')) return campStanceMove(C, u, k, foe, home, dt); // a stance: how this ship moves while it attacks or guards (below)
   if (foe) {
     const dx = foe.x - u.x, dy = foe.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx);
-    const m = campSteer(C, u, u.def, dist, target, u.vx - (foe.vx || 0), u.vy - (foe.vy || 0));
-    campMove(u, m.ang, m.face, dt);
-    campWingFire(C, u, k, foe, dist, target, m.fire);
+    const dog = campDogOn(C, u, foe), m = dog ? campDogSteer(C, u, foe, k.bullet * C.shot) : campSteer(C, u, u.def, dist, target, u.vx - (foe.vx || 0), u.vy - (foe.vy || 0)); // a duel is flown as a dogfight (src/campdogfight.js), the rest as the pirates fly
+    if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
+    campWingFire(C, u, k, foe, dist, dog ? m.aim : target, m.fire);
     u.move = u.move || null;
   } else if (home) campSeek(u, home.x + (home.vx || 0) * 0.2, home.y + (home.vy || 0) * 0.2, dt);
 }
