@@ -214,7 +214,7 @@ const CAMP = {
     hold: 2.4, fade: 0.4,                  // s: a line of words stays this long, and fades in and out in this
     lines: [{ at: 0.5, key: 'camp.warp.l1' }, { at: 3.4, key: 'camp.warp.l2', hold: 1.9 }, { at: 5.9, key: 'camp.warp.l3', hold: 0.8 }], // s: when each line comes up and, when it is not the usual hold, how long it stays (one line at a time; the words are camp.warp.* in content/text/campwarp.md; the ship's voice says them too)
     cues: [{ at: 0.3, sfx: 'hyperCharge' }, { at: 2.5, sfx: 'hyperJump' }, { at: 5.6, sfx: 'hyperArrive' }], // s: the sounds of src/audio.js (the swell, the jump, the arrival), and when; the hum under them is Long Haul's own (src/hyperspace.js)
-    ship: { x: 0.36, y: 0.5 },             // the carrier's place across the screen
+    ship: { x: 0.36, y: 0.5, scale: 1.25, flame: 0.7 }, // the carrier's place across the screen; its picture's scale (the cruiser of campShipTexture is 196 px long at 1: 245 px on the screen); the size of each of its four flames
     earth: { x: 0.22, y: 0.5, radius: 160, endX: -0.08, endScale: 0.04 }, // Earth behind the carrier: where it starts, its radius in px, where it ends, and its size then as a share of the start
     sun: { x: 0.1, y: 0.26, size: 150, endScale: 0.1 }, // the Sun far behind: its glow's size in px at the start, and as a share of that at the end
     star: { x: 0.8, y: 0.5, radius: 230, glow: 520 }, // the new star ahead once it has resolved: its disc's radius and its glow's size in px

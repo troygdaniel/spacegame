@@ -82,8 +82,11 @@ class CampWarp extends Phaser.Scene {
     this.comp = this.compData.map(c => glow(c.color, 1).setAlpha(0));
     this.g = this.add.graphics().setDepth(2).setBlendMode(Phaser.BlendModes.ADD);
     this.far = glow(K.color.tunnel, 0).setScale(10, 7).setAlpha(0); this.far.setPosition(W + 30, this.cy);
-    const carrier = typeof shipPreviewTexture === 'function' ? shipPreviewTexture(this, 'bastion') : 'ship';
-    this.ship = this.add.image(this.cx, this.cy, this.textures.exists(carrier) ? carrier : 'ship').setDepth(5).setScale(1.15);
+    // the ship is the cruiser of the flight and the briefing (src/campcruiser.js), not Long Haul's Bastion (card space-game-night-cosmetics, finding E: the warp drew a small old hull); its four nozzles are the cruiser's, at the
+    // stern of the picture, and the light of the tunnel comes from its nose (Hyper.prototype.drawTunnel reads this.nozzles and this.noseDx when a scene has them; Long Haul's own has neither)
+    const carrier = typeof campShipTexture === 'function' ? campShipTexture(this, 'cruiser') : typeof shipPreviewTexture === 'function' ? shipPreviewTexture(this, 'bastion') : 'ship';
+    this.ship = this.add.image(this.cx, this.cy, this.textures.exists(carrier) ? carrier : 'ship').setDepth(5).setScale(K.ship.scale || 1.15);
+    if (typeof CAMP_ART !== 'undefined' && CAMP_ART.cruiser) { const A = CAMP_ART.cruiser; this.nozzles = [-9, -3, 3, 9].map(y => [(A.engine[0] - 0.5) * A.k, y * A.k, K.ship.flame || 0.7]); this.noseDx = Math.max(...A.core.map(q => q[0])) * A.k; }
     this.halo = glow(K.color.tunnel, 4).setAlpha(0); this.bloom = glow(0xffffff, 6).setAlpha(0); this.flare = glow(K.color.tunnel, 6).setAlpha(0);
     this.vig = this.add.image(W / 2, H / 2, 'hyper-vig').setDisplaySize(W, H).setDepth(50);
     this.band = this.add.rectangle(W / 2, H * K.textY, 1040, 60, 0x02060d, 1).setDepth(59).setAlpha(0); // a dark band under the words: they are read over a bright tunnel
