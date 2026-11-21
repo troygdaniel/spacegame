@@ -156,6 +156,7 @@ function campMinerRock(C, u) {
   return rocks.length ? rocks[(u.slot | 0) % Math.min(3, rocks.length)] : null;
 }
 function campMinerAI(C, u, dt) {
+  if (u.cord && typeof campConvoyMiner === 'function' && campConvoyMiner(C, u, dt)) return; // an order of the pilot's (Tuck in, Hold here, Run for it: src/campconvoy.js)
   const k = CAMP.traffic.kinds.miner, hs = campHostiles(C), scared = campNearest(hs, u, k.fear);
   if (scared) { u.phase = 'run'; u.beam = ''; } else if (u.phase === 'run' && !campNearest(hs, u, k.fear * 1.6)) u.phase = 'out';
   if (u.phase === 'run') { campSeek(u, u.home.x, u.home.y, dt); return; } // home as fast as it goes

@@ -86,7 +86,7 @@ function campMend(C, arg, dry) {
 
 // ---- the retreat ----
 // no ship of the wing is left to fight for the carrier: none in the bay, out, launching or being built
-const campNoShips = C => !(C.bay.fighters + C.bay.escorts) && !campWing(C).length && !C.launchQ.length && !C.build.queue.length;
+const campNoShips = C => !(C.bay.fighters + C.bay.escorts) && !campWing(C).length && !C.launchQ.length && !C.build.queue.length && !campRepairing(C);
 function campRetreat(C) {
   if (!C || C.result || C.docked || !C.carrier || C.carrier.hp <= 0) return null;
   if (C.carrier.hp >= C.carrier.maxHp * CAMP.outpost.retreatHull || !campNoShips(C)) return null;

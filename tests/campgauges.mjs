@@ -2,7 +2,7 @@
 // Card space-game-systems-gauges (Troy, 21 Nov 2026). The code is src/camphud.js (the gauges), src/campaign.js (CAMP.tank, C.charge, campLaserSpend / campLaserStep, the turrets that pay for a shot) and the scene's
 // wiring (src/campaignscene.js). What is tested:
 //   A. the turrets' charge: full at the start, a shot spends it, it mends by the weapons' pips, a starved weapon system fires as fast as it mends, the computer says so once
-//   B. the direct keys J K L: a pip to the shields, the engines, the weapons (the dials' order; the SYSTEMS panel's rows), and only in flight
+//   B. the direct keys J K L: a pip to the shields, the engines, the weapons (the dials' order; the SYSTEMS panel's rows), and ; back to 2 / 2 / 2 (card space-game-power-balance-key), and only in flight
 //   C. the numbers of the three dials (shields, speed, lasers) and the hull bar, and the bars' pips
 //   D. where things are: nothing under the toast band, nothing on another thing, the lines of text start under the gauges and stay above the left tab
 //   E. the bars' animation: easing, a flash when the pips change
@@ -71,8 +71,19 @@ console.log('B. the direct keys J K L');
   check('during an emergency the key is refused, like the panel row', em.used && !em.ok, JSON.stringify(em));
   const sc = src('src/campaignscene.js');
   check('the scene reads them in flight only, and never while a word is typed into the strip', /const dk = !typing && this\.mode === 'play' && typeof campPowerKey === 'function' \? campPowerKey\(C, c\)/.test(sc));
-  check('and the table names them in the dials\' order: CAMP_GAUGE.keys is J shields, K engines, L weapons, free of every other key the Campaign binds', J('Object.entries(CAMP_GAUGE.keys).map(e => e.join(":")).join()') === 'KeyJ:shields,KeyK:engines,KeyL:weapons');
-  check('the H page has a row for them (and Settings, which is built from the same table)', J(`controlsGroup('campaign').rows.some(r => r.k.join() === 'J,K,L')`));
+  check('and the table names them in the dials\' order: CAMP_GAUGE.keys is J shields, K engines, L weapons, free of every other key the Campaign binds', J('Object.entries(CAMP_GAUGE.keys).map(e => e.join(":")).join()') === 'KeyJ:shields,KeyK:engines,KeyL:weapons,Semicolon:balance');
+  check('the H page has a row for them (and Settings, which is built from the same table)', J(`controlsGroup('campaign').rows.some(r => r.k.join() === 'J,K,L,;')`));
+}
+
+{
+  const b = J(`(() => { const C = campNew(1, [], { seed: 1 }); C.power.p = [1, 3, 2]; C.power.base = [1, 3, 2]; const r = campPowerKey(C, 'Semicolon'); const after = C.power.p.slice(), base = C.power.base.slice(); const again = campPowerKey(C, 'Semicolon'); const o = C.orders.balance; return { r, after, base, again, o }; })()`);
+  check('; puts the power back to 2 / 2 / 2 at once (and the setting that is kept), the voice says "Power balanced."', b.r.used && b.r.ok && b.r.sys === 'balance' && b.after.join() === '2,2,2' && b.base.join() === '2,2,2' && b.r.say === 'Power balanced.', JSON.stringify(b));
+  check('; when the power is even already is not an error: the same words, and nothing moves', b.again.ok && b.again.say === 'Power balanced.' && b.o === 2, JSON.stringify(b.again));
+  const e = J(`(() => { const C = campNew(1, [], { seed: 1 }); campOrder(C, 'emergency', '', 'key'); const r = campPowerKey(C, 'Semicolon'); return { r, p: C.power.p }; })()`);
+  check('during an emergency ; is refused like the panel row (the shields keep their 4 pips)', e.r.used && !e.r.ok && e.p[1] === 4, JSON.stringify(e));
+  check('the scene flashes the three bars on a balance, even when nothing moved', /dk\.sys === 'balance' && this\.gaugeAnim\) this\.gaugeAnim\.flash = this\.gaugeAnim\.flash\.map\(\(\) => 1\)/.test(src('src/campaignscene.js')));
+  check('its letter and word stand under the last bar\'s key: ";  EVEN"', J('campHudGeom().balance.x') === J('campHudGeom().cells[2].bar.x1') && J('campHudGeom().balance.y') > J('campHudGeom().cells[2].key.y'));
+  check('the H page row says it (J K L ;), and the SYSTEMS panel\'s Balance row names the key', J(`controlsGroup('campaign').rows.some(r => r.k.join() === 'J,K,L,;' && r.t === 'Power: shields, engines, weapons, even')`) && /key ;/.test(J(`CAMP_PANELS.panels.find(p => p.id === 'systems').rows.find(r => r.id === 'balance').help`)));
 }
 
 console.log('C. the numbers of the dials');
@@ -100,6 +111,8 @@ console.log('D. where things are');
   check('three cells, each with a dial and a bar beside it, level with the dial\'s middle', Z.cells.length === 3 && Z.cells.every(c => c.bar.x0 > c.dial.x1 && Math.abs((c.bar.y0 + c.bar.y1) / 2 - c.cy) <= 1), JSON.stringify(Z.cells[0]));
   check('no box is on another (dials, bars, the hull bar)', boxes.every((a, i) => boxes.every((b, j) => i === j || !hit(a, b))), JSON.stringify(boxes));
   check('the widest toast (from the band\'s top) touches none of them, and the right edge of the gauges is left of the toast band', boxes.every(b => !hit(band, b)) && Math.max(...boxes.map(b => b.x1)) < band.x0, JSON.stringify([band, Math.max(...boxes.map(b => b.x1))]));
+  { const bal = { x0: Z.balance.x - 44, x1: Z.balance.x, y0: Z.balance.y - 6, y1: Z.balance.y + 6 };
+    check('the ; word (about 44 px wide, 12 high, right-aligned) is clear of every dial, bar, the hull bar, the toast band and the ore line, and inside the gauges\' columns', boxes.every(b => !hit(bal, b)) && !hit(bal, band) && bal.x1 <= Math.max(...boxes.map(b => b.x1)) && bal.y1 <= J('CAMP.hud.ore.y'), JSON.stringify([bal, J('CAMP.hud.ore')])); }
   check('the hull bar is under the shield dial and its bar, and starts where the dial does', Z.hull.y0 >= Z.cells[0].dial.y1 && Z.hull.x0 === Z.cells[0].dial.x0 && Z.hull.x1 === Z.cells[0].bar.x1, JSON.stringify(Z.hull));
   check('the whole block is left of the radar (the radar is at the right) and every box is on the screen', boxes.every(b => b.x0 >= 0 && b.y0 >= 0 && b.x1 <= radar.x - radar.r && b.y1 <= J('H')), JSON.stringify(radar));
   const f0 = J(`campHudFlow([{ id: 'a', show: true }, { id: 'b', show: false }, { id: 'c', show: true, h: 12 }, { id: 'd', show: true }])`);
@@ -126,17 +139,17 @@ console.log('F. drawing and the scene');
   const r = g.run(`(() => {
     const calls = []; const rec = new Proxy({}, { get: (o, k) => (...a) => { calls.push(k); return rec; } });
     const mkT = () => { const t = { text: '', col: '', setText(s) { t.text = s; return t; }, setColor(c) { t.col = c; return t; }, setVisible(v) { t.vis = v; return t; } }; return t; };
-    const T = { n: [mkT(), mkT(), mkT()], l: [mkT(), mkT(), mkT()], k: [mkT(), mkT(), mkT()], hull: mkT(), hullN: mkT() };
+    const T = { n: [mkT(), mkT(), mkT()], l: [mkT(), mkT(), mkT()], k: [mkT(), mkT(), mkT()], hull: mkT(), hullN: mkT(), bal: mkT() };
     const C = campNew(1, [], { seed: 1 }); C.charge = 12; C.shield = 50;
     const A = campGaugeAnimNew(C.power.p);
     campGaugesPaint(rec, T, C, A, 1000);
-    const words = [T.n.map(t => t.text), T.l.map(t => t.text), T.k.map(t => t.text), T.hull.text, T.hullN.text, T.n[2].col];
-    campGaugesVisible(T, false); const hid = T.n.every(t => t.vis === false) && T.hull.vis === false && T.hullN.vis === false;
+    const words = [T.n.map(t => t.text), T.l.map(t => t.text), T.k.map(t => t.text), T.hull.text, T.hullN.text, T.n[2].col, T.bal.text];
+    campGaugesVisible(T, false); const hid = T.n.every(t => t.vis === false) && T.hull.vis === false && T.hullN.vis === false && T.bal.vis === false;
     campGaugesVisible(T, true); const shown = T.n.every(t => t.vis === true) && T.k.every(t => t.vis === true);
     return JSON.stringify({ words, hid, shown, rects: calls.filter(c => c === 'fillRect').length, arcs: calls.filter(c => c === 'strokePath').length });
   })()`);
   const o = JSON.parse(r);
-  check('the numbers and words reach the texts: 50, 0, 12 in the dials; SHIELDS SPEED LASERS under them; J K L under the bars; HULL 600; the low tank in red', JSON.stringify(o.words) === JSON.stringify([['50', '0', '12'], ['SHIELDS', 'SPEED', 'LASERS'], ['J', 'K', 'L'], 'HULL', '600', '#ff4d6d']), JSON.stringify(o.words));
+  check('the numbers and words reach the texts: 50, 0, 12 in the dials; SHIELDS SPEED LASERS under them; J K L under the bars; HULL 600; the low tank in red', JSON.stringify(o.words) === JSON.stringify([['50', '0', '12'], ['SHIELDS', 'SPEED', 'LASERS'], ['J', 'K', 'L'], 'HULL', '600', '#ff4d6d', ';  EVEN']), JSON.stringify(o.words));
   check('the drawing makes the three bars of four segments (a dark one each, the lit ones over them), the hull bar, the dials\' segments, and hides and shows with the HUD', o.rects >= 3 * 4 + 2 && o.arcs > 3 * 20 && o.hid && o.shown, JSON.stringify(o));
   const sc = src('src/campaignscene.js'), paint = J(`Campaign.prototype.paintHud.toString()`);
   check('paintHud draws the gauges (campGaugesPaint) and the lines flow under them (flowHud); the W S E pips, the hull and shield texts and the fixed hull and shield bars are gone', /campGaugesPaint\(g, this\.hud\.gauges/.test(paint) && /this\.flowHud\(bar\)/.test(paint) && !/hud\.hull|hud\.shield|hud\.pw|hud\.ps|hud\.pe|CAMP\.hud\.pips/.test(sc) && !/bar\(252, 36/.test(paint) && !/bar\(24, 36/.test(paint));

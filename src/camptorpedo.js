@@ -121,7 +121,8 @@ function campTorpedoBoom(C, t, hit) {
   if (hit) {
     campHurt(C, hit, t.dmg);
     C.ships.forEach(u => { if (u !== hit && u.hp > 0 && (u.team === 'earth' || u.team === 'neutral') && campDist(u, t) <= T.blast + u.r) campHurt(C, u, t.dmg * T.splash); });
-    if (hit.kind === 'carrier' || hit.kind === 'freighter' || hit.team === 'neutral') campTorpSay(C, 'hit', campTorpKey(hit, 'camp.say.torp.hit'), { name: campTorpName(hit) });
+    const took = hit.cord === 'tuck' && typeof campConvoyCover === 'function' && campConvoyCover(C, hit, true) || hit; // a tucked ship's hit is the cruiser's (src/campconvoy.js)
+    if (took.kind === 'carrier' || took.kind === 'freighter' || took.team === 'neutral') campTorpSay(C, 'hit', campTorpKey(took, 'camp.say.torp.hit'), { name: campTorpName(took) });
   } else if (C.earth) {
     if (!C.god) C.earth.shield -= t.dmg * CAMP.alien.earthDamage; C.earth.hitAt = C.t; C.events.push({ type: 'earthhit', x: t.x, y: t.y });
     if (C.earth.shield <= 0) { C.earth.shield = 0; campEnd(C, 'lost', C.earth.loseWhy === 'base' ? 'base' : 'earth'); }
