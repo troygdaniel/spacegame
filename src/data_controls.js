@@ -143,7 +143,7 @@ const CONTROLS = [
     { k: ['T'], t: 'Title, from the pause or end card', sub: 'ANYWHERE' },
     { k: ['R'], t: 'Pause: restart the mission', sub: 'ANYWHERE' },
     { k: ['Enter'], t: 'Cards: begin, continue, try again', sub: 'ANYWHERE' },
-    { k: ['1-3'], t: 'Pick a salvaged tech after a level', sub: 'ANYWHERE' },
+    { k: ['1-3'], t: 'Answer a pilot\'s call; pick a tech', sub: 'ANYWHERE' }, // 1 2 3 answer a pilot's call for orders while one waits (src/camporders.js), and pick the salvaged tech after a level
     { k: ['4', '5'], t: 'Refit card: buy a fighter or escort', sub: 'ANYWHERE' },
     { k: ['M', 'P'], t: 'Mute sound; P: battle pace', sub: 'ANYWHERE' }
   ] },
