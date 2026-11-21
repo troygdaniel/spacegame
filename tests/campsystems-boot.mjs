@@ -1,6 +1,6 @@
 // not in the smoke: the Campaign's ship systems in a real fight, one picture, run by hand (one Chrome, muted, through the test lock; card space-game-campaign-systems)
-// The rules are in tests/campsystems.mjs (plain Node). This boots level 1, opens the SYSTEMS panel with C, moves pips by the digits, fires the emergency shields, and takes pictures of the HUD pips and of the panel
-// (the draw is Phaser's: the panel on a fight's background, the three pip bars W S E under the shield gauge). It also looks at what the screen holds: the panel is on the screen, the pips are the sim's, the saved
+// The rules are in tests/campsystems.mjs (plain Node). This boots level 1, opens the SYSTEMS panel with C, moves pips by the digits, fires the emergency shields, and takes pictures of the HUD gauges (their power bars) and of the panel
+// (the draw is Phaser's: the panel on a fight's background, the three gauges with a bar of power segments beside each). It also looks at what the screen holds: the panel is on the screen, the pips are the sim's, the saved
 // setting is kept, the emergency is not.
 //   node tests/campsystems-boot.mjs
 // The pictures go to the folder in SYSTEMS_SHOTS (default ~/dev/spacegame-night/shots/systems-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
@@ -21,9 +21,9 @@ try {
   await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
   for (let i = 0; i < 4 && (await j(`${SC}.mode`)) !== 'play'; i++) { await key('Enter'); await t.run(300); } // the intro card, and the missions' briefing after it
   check('the battle is on (the cards are out of the way)', (await j(`${SC}.mode`)) === 'play', await j(`${SC}.mode`));
-  check('a new battle starts at 2 / 2 / 2 with the three pip bars on the HUD (W S E)', await j(`JSON.stringify(${SC}.camp.power.p) === '[2,2,2]' && ['pw', 'ps', 'pe'].every(k => ${SC}.hud[k] && ${SC}.hud[k].text.length === 1)`));
+  check('a new battle starts at 2 / 2 / 2 with the three gauges and their power bars on the HUD (SHIELDS, SPEED, LASERS: card space-game-systems-gauges replaced the W S E pips)', await j(`JSON.stringify(${SC}.camp.power.p) === '[2,2,2]' && !!${SC}.hud.gauges && ${SC}.hud.gauges.l.map(t => t.text).join() === 'SHIELDS,SPEED,LASERS' && JSON.stringify(${SC}.gaugeAnim.shown) === '[2,2,2]'`));
   await key('KeyC'); await t.run(500);
-  check('C opens the SYSTEMS panel and it is drawn (the words, five rows)', await j(`${SC}.pn.open === 'systems' && ${SC}.pnl.id === 'systems' && ${SC}.pnl.rows.length === 5`));
+  check('C opens the SYSTEMS panel and it is drawn (the words, five rows)', await j(`${SC}.pn.open === 'systems' && ${SC}.pnl.p.systems.rows.length === 5 && ${SC}.pnl.p.systems.rows.map(r => r.id).join() === 'weapons,shields,engines,balance,emergency'`)); // (the panels are built once, one object each: s.pnl.p[id], since card space-game-campaign-keys-help)
   await shot('1-panel');
   await key('Digit2'); await t.run(300);
   check('2 is "power to shields": 1 / 3 / 2, the panel closes, the pips follow on the HUD', await j(`JSON.stringify(${SC}.camp.power.p) === '[1,3,2]' && ${SC}.pn.open === ''`));
@@ -34,7 +34,7 @@ try {
   await t.run(9500);
   check('after ten seconds the pips are back to the setting', await j(`JSON.stringify(${SC}.camp.power.p) === '[1,3,2]'`));
   await key('KeyC'); await t.run(500);
-  check('the panel says the emergency is cooling down (ready in N s) and the saved setting never held the emergency', await j(`${SC}.pnl.rows[4].state.text.length > 0 && JSON.stringify(campPowerLoad()) === '[1,3,2]'`), await j(`${SC}.pnl.rows[4].state.text`));
+  check('the panel says the emergency is cooling down (ready in N s) and the saved setting never held the emergency', await j(`/^[0-9]+ s$/.test(${SC}.pnl.p.systems.rows[4].suffix.text) && JSON.stringify(campPowerLoad()) === '[1,3,2]'`), await j(`${SC}.pnl.p.systems.rows[4].suffix.text`));
   await shot('3-cooling');
   await key('KeyC'); await t.run(100);
   await key('KeyH'); await t.run(400);
