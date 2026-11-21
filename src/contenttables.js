@@ -1155,6 +1155,9 @@ const UI_TEXT = {
   'camp.say.lasersdry': 'Lasers are running dry. More power to weapons.',
   // The bigger ore bay (card space-game-ore-bay-bigger, content/text/campaign-orebay.md)
   'camp.say.orefull': 'Ore bay full.',
+  // What an answer is worth (card space-game-fleet-command-tune, content/text/camporders-mood.md)
+  'camp.say.callgood': 'Good call. The wing is sharp.',
+  'camp.say.callbad': 'Bad call. The wing is rattled.',
   'camp.say.contact': 'Unknown ships. Not pirates. Weapons hot.',
   'camp.say.sold': 'Sold {ore} ore for {cash}.',
   'camp.o.ore': 'Mine ore: {got} of {need}.',

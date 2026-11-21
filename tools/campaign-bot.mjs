@@ -44,7 +44,11 @@ const BOTS = {
   strong: { name: 'strong', launchAt: 1, escort: [9, 56], attackFrom: 12, attackEvery: 5, missiles: true, cycle: 0.45, skill: 'sharp' }, // a strong player (card space-game-wrapup-difficulty): escorts both convoys, missiles on every big ship, recalls and relaunches the hurt wing, and flies sharp
   mcarrier: { name: 'mcarrier', launch: false, missiles: true },
   plains: { name: 'plains', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'smart' },                  // plain, and it answers the pilots' calls (src/camporders.js) with the pick a player who thinks would make
-  plainf: { name: 'plainf', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'first' }                   // plain, and it answers every call with 1                                                  // no wing at all, missiles only
+  plainf: { name: 'plainf', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'first' },
+  plainw: { name: 'plainw', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'wrong' },             // plain, and it answers every call with the wrong pick (what the answers cost)
+  plainu: { name: 'plainu', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, noroute: true },            // plain, and it never scouts the fork: the default lane (what a player who ignores the new tools meets; card space-game-fleet-command-tune)
+  thinks: { name: 'thinks', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'smart', tuck: 'torp' },   // a player who directs the fleet: answers the calls with the best pick and uses the convoy orders (and scouts the fork)
+  thinku: { name: 'thinku', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'smart', tuck: 'torp', noroute: true } // the same on the default lane                   // plain, and it answers every call with 1                                                  // no wing at all, missiles only
 };
 const SKILLS = { sharp: { gain: 3, thr: 0.15, noise: 0 }, steady: { gain: 2, thr: 0.22, noise: 0.1 }, rough: { gain: 1.5, thr: 0.3, noise: 0.2 } };
 
@@ -52,7 +56,7 @@ const OLD = process.argv.includes('--old');
 const SETS = process.argv.map((a, i) => a === '--set' ? process.argv[i + 1] : null).filter(Boolean); // --set alien.hpScale=2 --set alien.damageScale=2: change the table before the run (what-if)
 const g = nodeGame();
 if (process.argv.includes('--nocalls')) g.run('campCallsTick = null'); // --nocalls: the battle as it was before the pilots asked for orders (to compare)
-g.run(`window.__SMART = { distress: 1, cruiser: 3, wounded: 2, breakaway: 1, second: 1, running: 1, opportunity: 1 }`); // the 'smart' bot's picks by call type (1, 2 or 3)
+g.run(`window.__SMART = { distress: 1, cruiser: 3, wounded: 3, breakaway: 1, second: 3, running: 1, opportunity: 1 }; window.__WRONG = { distress: 2, cruiser: 2, wounded: 1, breakaway: 3, second: 1, running: 3, opportunity: 2 }`); // the 'smart' bot's picks by call type (1, 2 or 3): the right pick of each (CAMP_CALL_RATE in src/camporders.js, card space-game-fleet-command-tune); __WRONG: the wrong one of each (the 'plainw' bot)
 g.run(`window.__PACE = ${isNaN(Number(PACE)) ? JSON.stringify(PACE) : Number(PACE)}`); // the battle pace of every battle of this run
 g.run(`window.__RANK = ${JSON.stringify(RANK)}`); // the pilot's rank for every battle of this run
 if (OLD) g.run(`(() => { CAMP.earth.shield = 300; CAMP.earth.regen = 0; CAMP.mother.hp = 900; CAMP.mother.damage = 12; CAMP.mother.holdAt = 1600; CAMP.mother.spawnEvery = 8000; CAMP.mother.spawnMax = 6; CAMP.levels[1].waves[2].ships.raider = 3; })()`); // the numbers before the easier level 1
@@ -68,7 +72,7 @@ g.run(`(() => {
   const clampi = v => Math.max(-1, Math.min(1, v));
   window.__botStep = (C, s, B, sk, st) => {
     if (B.idle) return; // (an idle player never answers a pilot's call: the pilot takes the cautious pick after his 8 s)
-    if (C.call && C.call.open) campCallAnswer(C, B.answer === 'first' ? 1 : B.answer === 'smart' ? (window.__SMART[C.call.open.id] | 0) : campCallView(C).def, 'bot'); // the pilots ask for orders (src/camporders.js): the plain bot answers at once with the cautious pick (0), 'first' always says 1, 'smart' picks by call type
+    if (C.call && C.call.open) campCallAnswer(C, B.answer === 'first' ? 1 : B.answer === 'smart' ? (window.__SMART[C.call.open.id] | 0) : B.answer === 'wrong' ? (window.__WRONG[C.call.open.id] | 0) : campCallView(C).def, 'bot'); // the pilots ask for orders (src/camporders.js): the plain bot answers at once with the cautious pick (0), 'first' always says 1, 'smart' picks by call type
     if (C.arrivedAt == null) return; // the trip first, with the wing aboard (a Fast burn needs it: card space-game-campaign-fast-board); the plan runs from the arrival, as a player's does
     s -= C.arrivedAt / 1000;
     if (B.reactive != null && st.react == null && ((C.earth && C.earth.shield <= C.earth.max * 0.9) || C.carrier.hp <= C.carrier.maxHp * 0.8)) st.react = s + B.reactive;
@@ -88,7 +92,8 @@ g.run(`(() => {
       if (!st.landAt && fs.length >= 3 && Math.round(s * 30) % 60 === 0 && fs.reduce((a, u) => a + u.hp / u.maxHp, 0) / fs.length < B.cycle && C.carrier.hp > 0) { campOrder(C, 'recall'); st.landAt = s + 14; st.recalls = (st.recalls || 0) + 1; }
     }
     if (B.tuck && typeof campConvoyShips === 'function' && Math.round(s * 30) % 15 === 0) { // the convoy orders: tuck in while a hostile is near an escorted ship, carry on when it is clear
-      const cs = campConvoyShips(C), threat = cs.some(f => campAliens(C).some(a => !a.hold && campDist(a, f) < 1600)), clear = !cs.some(f => campAliens(C).some(a => !a.hold && campDist(a, f) < 2600));
+      const big = x => B.tuck !== 'torp' || x.kind === 'tboat' || x.kind === 'lancer' || x.kind === 'pirateleader'; // tuck: 'torp': only against the boats and the leader, the threats a tucked ship is safe from (the skiffs of a distress call are the fighters' to deal with, and the cruiser goes to the miner)
+      const cs = campConvoyShips(C), threat = cs.some(f => campAliens(C).some(a => big(a) && !a.hold && campDist(a, f) < 1600)), clear = !cs.some(f => campAliens(C).some(a => big(a) && !a.hold && campDist(a, f) < 2600));
       if (threat && !st.tuck) { st.tuck = true; campOrder(C, 'convoy', 'tuck in'); } else if (clear && st.tuck) { st.tuck = false; campOrder(C, 'convoy', 'carry on'); }
     }
     if (B.missiles && Math.round(s * 30) % 21 === 0 && typeof campOrder === 'function') campOrder(C, 'missiles', C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'mothership' : '');

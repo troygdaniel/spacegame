@@ -788,6 +788,7 @@ function campHurt(C, u, dmg, byId) {
     if (C.shield > 0 && dmg > 0) { const take = Math.min(C.shield, dmg); C.shield -= take; dmg -= take; C.shieldHitAt = C.t; C.events.push({ type: 'shieldhit', x: u.x, y: u.y }); } // the shield first
   }
   if (u.scout) dmg *= CAMP.scout.fragile; // a scout out is fragile
+  { const M = C.call && C.call.mood; if (M && C.t < M.until) { const wing = x => x && x.team === 'earth' && (x.kind === 'fighter' || x.kind === 'escort'); if (wing(u)) dmg *= M.take; else if (u.team === 'alien' && wing(C.by[byId])) dmg *= M.deal; } } // the wing fights by the answer of the last order call (src/camporders.js CAMP_CALLS.mood): a right pick makes it hit harder and take less, a wrong one the opposite
   if (u.rival) dmg = campRivalHurt(C, u, dmg); // a rival's shield takes the hit first, as the carrier's does; with it down every hit goes through, and harder (src/camprival.js)
   u.hp -= dmg; u.hurtAt = C.t;
   C.events.push({ type: 'hit', x: u.x, y: u.y, id: u.id, hull: dmg > 0 }); // hull: it got through to the hull (the carrier's shield takes the first of it)

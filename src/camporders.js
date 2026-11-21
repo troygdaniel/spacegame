@@ -10,6 +10,7 @@
 // pilot's answer, said on the radio), and camp.call.late and camp.call.fail are the answers to no answer and to a pick that could not be done (content/text/camporders.md).
 //   C.call = { n, next, open, last, seen, log }  made at the first tick:  n calls made, next: the battle clock (ms) before which none opens, open: the call that waits { id, ctx, pilot, at, left, total, def }
 //   campCallsTick(C, dt)        every tick (campTick): the waiting call's clock, the call that may open now
+//   C.call.mood = { until, deal, take, rate }  the answer's worth (CAMP_CALLS.mood, CAMP_CALL_RATE): until the battle clock `until` the wing (fighters and escorts) deals `deal` times the damage and takes `take` times (campHurt, src/campaign.js)
 //   campCallStart(C, id, ctx)   a script opens a call of a type that has `scripted: true` (its trigger is not asked); false while one waits
 //   campCallAnswer(C, n, how)   n: 1, 2 or 3 (0: the pilot's own pick); how: 'key', 'bot', 'late'; { ok, id, pick } and an event { type: 'call', stage: 'answer', ... }
 //   campCallView(C)             what the prompt draws: null, or { id, pilot, line, left, total, def, rows: [{ n, pick, label, def }] }
@@ -33,7 +34,11 @@ const CAMP_CALLS = {
   solo: 700,       // px: a big ship is alone when no other enemy is this close to it
   shield: 0.4,     // the cruiser's shield at this share of its cap or less, with an enemy in reach
   shieldNear: 900, // px: "in reach"
-  draw: 8          // s the enemy keeps its eye on the cruiser after "leave them to the cruiser's turrets" (and its own goal is dropped: it stays on the cruiser)
+  draw: 8,         // s the enemy keeps its eye on the cruiser after "leave them to the cruiser's turrets" (and its own goal is dropped: it stays on the cruiser)
+  mood: {          // what an answer is worth (card space-game-fleet-command-tune; Troy: what does the player decide, and what does it cost?): the wing (fighters and escorts) fights by it for `secs` after an answer
+    good: { secs: 25, deal: 1.8, take: 0.6 },   // the right pick for the moment (CAMP_CALL_RATE): the wing hits 1.8 times as hard and takes 0.6 of the damage
+    bad:  { secs: 20, deal: 0.6, take: 1.6 }    // the wrong pick: it hits 0.6 as hard and takes 1.6 times the damage. The cautious pick, and no answer, are neither: nothing changes
+  }
 };
 
 // ---- who is about ----
@@ -42,6 +47,17 @@ const campCallFoes = C => campAliens(C).filter(u => u.kind !== 'tower' && u.kind
 const campCallByDist = (list, p) => list.slice().sort((a, b) => campDist(a, p) - campDist(b, p) || (a.id < b.id ? -1 : 1));
 const campCallIds = (list, p, n) => campCallByDist(list, p).slice(0, n).map(u => u.id);
 const campCallFoe = (C, x) => { for (const id of (x && x.ids) || []) { const u = C.by[id]; if (u && u.hp > 0) return u; } return null; };
+
+// ---- which picks are right and which are wrong (indexes into a type's `pick`; the cautious pick `def` and the rest are neither) ----
+const CAMP_CALL_RATE = {
+  cruiser:     { good: [2], bad: [1] },  // the shield is going: the emergency power is the right answer (it costs the weapons and the engines for a while); sending the fighters off is wrong
+  wounded:     { good: [2], bad: [0] },  // a wingman is hit: the pilot who keeps fighting is right (the repair brings him in by himself when he is low); the whole wing standing guard over him is wrong
+  breakaway:   { good: [0], bad: [2] },  // enemies on a convoy ship: the fighters intercept; leaving them to the cruiser's turrets is wrong
+  second:      { good: [2], bad: [] },   // a second group: everyone attacks; holding, the cautious pick, and the fighters alone are neither
+  running:     { good: [0], bad: [2] },  // pirates run: the fighters give chase; a missile after a runner is wasted
+  opportunity: { good: [0], bad: [1] },  // a big ship alone: the missile; the fighters alone on it are wrong
+  distress:    { good: [0], bad: [1] }   // the miner (beat 2 of 1.1): the fighters help him; everyone going leaves the transport
+};
 
 // ---- the effects: each says whether it could be done ----
 const campCallAt = (group, verb) => (C, x) => { const f = campCallFoe(C, x); return !!f && campWingOrder(C, group, verb, f.id, 'call').ok; };
@@ -130,9 +146,11 @@ function campCallAnswer(C, n, how) {
   if (!campTry(() => CAMP_CALL_FX[T.pick[i]].do(C, o.ctx), false) && i !== T.def) { failed = true; i = T.def; campTry(() => CAMP_CALL_FX[T.pick[i]].do(C, o.ctx), false); }
   S.open = null; S.next = Math.max(S.next, C.t + 3000); // a quiet moment after an answer: its own radio line is said first
   const way = asked < 0 ? 'late' : failed ? 'fail' : (how || 'key');
+  const R = CAMP_CALL_RATE[T.id], rate = way === 'late' || way === 'fail' || i === T.def || !R ? '' : R.good.indexOf(i) >= 0 ? 'good' : R.bad.indexOf(i) >= 0 ? 'bad' : ''; // the pick the pilot was asked for and got, rated: right, wrong, or neither
+  if (rate) { const M = CAMP_CALLS.mood[rate]; S.mood = { until: C.t + M.secs * 1000, deal: M.deal, take: M.take, rate }; C.events.push({ type: 'say', key: 'camp.say.call' + rate, vars: {} }); }
   S.log.push({ id: T.id, pick: T.pick[i], way, at: Math.round(C.t) });
-  C.events.push({ type: 'call', stage: 'answer', id: T.id, pick: T.pick[i], n: i + 1, pilot: o.pilot, how: way });
-  return { ok: true, id: T.id, pick: T.pick[i], n: i + 1, how: way };
+  C.events.push({ type: 'call', stage: 'answer', id: T.id, pick: T.pick[i], n: i + 1, pilot: o.pilot, how: way, rate });
+  return { ok: true, id: T.id, pick: T.pick[i], n: i + 1, how: way, rate };
 }
 
 function campCallView(C) {
