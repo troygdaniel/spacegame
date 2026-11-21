@@ -720,6 +720,7 @@ const UI_TEXT = {
   'camp.hub.note.refit': '{ore} ore',
   'camp.hub.note.points': '{points} points',
   'camp.hub.note.launch': 'mission {n}',
+  'camp.hub.note.pick': 'the tech pick',
   'camp.hub.foot.board': 'Enter  the briefing',
   'camp.hub.foot.brief': 'Enter  the refit',
   'camp.hub.foot.refit': 'Enter  your rank',
