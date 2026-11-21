@@ -63,3 +63,29 @@ function campAddrPlan(search) {
 function campAddrPlanPage(search) {
   try { return campAddrPlan(typeof search === 'string' ? search : (typeof location !== 'undefined' && location && typeof location.search === 'string' ? location.search : '')); } catch (e) { return null; }
 }
+
+// ---------- the debug switch (card space-game-debug-keys-off; Troy, 20 Nov 2026) ----------
+// The tune kit's keys (src/campdebug.js) are off in the normal game: one slip on the backslash ended Troy's Mission 1. The address turns them on:
+//     index.html?campaign=1&debug=1       (also ?debug, ?debug=on, ?debug=true, ?debug=yes; anything else, ?debug=0 among it, is off)
+// campDebugAddr(search) -> true or false, pure. campDebugAddrPage(search) is the page's own address (false when there is no page, in a test in Node); campDebugOn() asks it once.
+const CAMP_DEBUG_PARAM = 'debug';
+
+function campDebugAddr(search) {
+  try {
+    if (typeof search !== 'string') return false;
+    const parts = search.replace(/^[?#]/, '').split('&');
+    for (let i = 0; i < parts.length; i++) {
+      const eq = parts[i].indexOf('='), k = (eq < 0 ? parts[i] : parts[i].slice(0, eq));
+      let key = k; try { key = decodeURIComponent(k.replace(/\+/g, ' ')); } catch (e) { key = k; }
+      if (key.trim().toLowerCase() !== CAMP_DEBUG_PARAM) continue;
+      let raw = eq < 0 ? '' : parts[i].slice(eq + 1); try { raw = decodeURIComponent(raw.replace(/\+/g, ' ')); } catch (e) { /* kept as it came */ }
+      raw = raw.trim().toLowerCase();
+      return raw === '' || raw === '1' || raw === 'on' || raw === 'true' || raw === 'yes';
+    }
+    return false;
+  } catch (e) { return false; /* an address nobody can read is the normal game: the keys stay off */ }
+}
+
+function campDebugAddrPage(search) {
+  try { return campDebugAddr(typeof search === 'string' ? search : (typeof location !== 'undefined' && location && typeof location.search === 'string' ? location.search : '')); } catch (e) { return false; }
+}

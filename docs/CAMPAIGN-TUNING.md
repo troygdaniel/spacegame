@@ -9,7 +9,13 @@ Card `space-game-campaign-tune`. Troy plays the Campaign to feel out how it play
 
 You start with the techs a player would have by then (the first one each earlier level offers); `&tech=a,b` names them instead (ids from `CAMP.tech`: shield, beam, blink, plating, bay2, repair). A wrong level (`?campaign=9`) or a tech that is not there is answered with a plain line and the game starts as it always does. The parser is `src/campaignaddr.js` (`campaignAddr`, `campAddrPlan`); the number of levels is the level table's, so a level added to `CAMP.levels` can be asked for at once.
 
-## Debug keys (in the Campaign only)
+## Debug keys (in the Campaign only, OFF unless the address says so)
+
+Card `space-game-debug-keys-off`. The four keys sit beside Enter, and one slip on the backslash ended a real Mission 1 at 108 s. So they do **nothing** in the normal game: no key, no DEBUG line on the pause card, no debug group on the H page. Turn them on with the address:
+
+    index.html?campaign=1&debug=1       (also ?debug, ?debug=on, ?debug=true, ?debug=yes; ?debug=0 and anything else is off)
+
+A bot, a tool or a test turns the kit on in code with `campDebugSet(true)` (off again with `campDebugSet(false)`); `campDebugOn()` says which. Chrome tools that press a debug key open the page with `&debug=1` (`tools/campshots.mjs` part 3 does). `campDebugKey`, `campDebugRun` and `campDebugLine` all answer "nothing" while the kit is off, so no caller can slip past the switch.
 
 | Key | Does |
 |---|---|
@@ -104,7 +110,7 @@ What the Campaign scene calls (none of it draws, all of it is plain data and fun
 - `campNew(level, techs, { via })`: `via` is `'menu' | 'address' | 'next' | 'retry' | 'skip'`, for the log. `campOrder(C, name, arg, how)`: `how` is `'key' | 'strip' | 'voice' | 'click'`, for the log.
 - Title: `const plan = campAddrPlanPage()`; a plan with a `level` starts the Campaign scene with it (`{ level, techs, via }`); a plan with only `say` shows that line and the title goes on.
 - Every key: `const id = campDebugKey(e.code); if (id) { const r = campDebugRun(this.C, this.P, id); show(r.say); if (r.go) start r.go.level with r.go.techs }`.
-- Pause screen: `campDebugLine(C)`.
+- Pause screen: `campDebugLine(C)` (empty while the kit is off: the scene leaves the line out when `campDebugOn()` is false).
 - The play log needs nothing else: it watches `campNew`, `campStep`, `campOrder` and `campPick` from outside (`playlogWrap`) and `campDebugRun` says its own steps (`campaignNote`).
 
 ## Click a place, then Fly or Fast (both maps)

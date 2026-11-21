@@ -17,11 +17,14 @@ g.run(`
     f.k = { W: { isDown: false }, A: { isDown: false }, S: { isDown: false }, D: { isDown: false }, UP: { isDown: false }, DOWN: { isDown: false }, LEFT: { isDown: false }, RIGHT: { isDown: false }, SPACE: { isDown: false } };
     f.showCard = function (title, lines, hint, tall) { __cards.push({ title, lines, hint, tall }); this.card = [{ destroy() {} }]; this.panel = true; };
     f.init({ level }); f.camp = campNew(f.level, f.P.techs, f.opts); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); f.sync = () => {}; return f; };
-  window.F = __fake(1); F.onKey({ code: 'Enter' }); __cards.length = 0; F.onKey({ code: 'Escape' });
+  window.F = __fake(1); F.onKey({ code: 'Enter' }); __cards.length = 0; campDebugSet(true); F.onKey({ code: 'Escape' }); campDebugSet(false); // the debug line is there only while the tune kit is on (?debug=1; card space-game-debug-keys-off): on for this card, off for the next
 `);
 let card = J('__cards.pop()');
 check('Esc in level 1: the pause card has the goal first, then the map key line, and the debug line last (other lines may sit between), with the title and hint the pause card has now (read from the table)', J('F.mode') === 'pause' && card.title === J("uiText('camp.ui.pausetitle')") && card.lines.length >= 3 && card.lines[0] === 'Goal: ' + J('campObjective(F.camp)') && /^Goal: .{8,}/.test(card.lines[0]) && /^Tab  map of the whole level/.test(card.lines[1]) && /^DEBUG  /.test(card.lines[card.lines.length - 1]) && card.hint === J("uiText('camp.ui.paused')"), JSON.stringify(card));
 check('the card is tall enough for its lines (262 px for three)', card.tall >= 262);
+g.run(`window.F = __fake(1); F.onKey({ code: 'Enter' }); __cards.length = 0; F.onKey({ code: 'Escape' });`);
+const plain = J('__cards.pop()');
+check('with the tune kit off (the normal game) the pause card has no debug line: the goal, the map line and the rest, and the last line is not DEBUG', plain.lines.length === card.lines.length - 1 && !plain.lines.some(l => /DEBUG/.test(l)) && plain.lines[0] === card.lines[0] && plain.lines[1] === card.lines[1], JSON.stringify(plain));
 g.run(`window.F = __fake(2); F.onKey({ code: 'Enter' }); __cards.length = 0; F.onKey({ code: 'Escape' });`);
 check('level 2: the goal is that level\'s ("Gather resources: 0 of 2.")', J('__cards.pop().lines[0]') === 'Goal: Gather resources: 0 of 2.');
 g.run(`window.F = __fake(3); F.onKey({ code: 'Enter' }); __cards.length = 0; F.onKey({ code: 'Escape' });`);

@@ -27,7 +27,7 @@ function campKeysPage(ids) { // ids: the groups of the table to list (the ready 
       grp.rows.push({ caps: r.k.slice(), t: r.t });
     });
   });
-  if (!room && typeof CAMP_DEBUG !== 'undefined' && CAMP_DEBUG.keys && CAMP_DEBUG.keys.length) { // the tune kit's keys have their own table (src/campdebug.js): they are listed from it, so a new one is on the page
+  if (!room && typeof CAMP_DEBUG !== 'undefined' && CAMP_DEBUG.keys && CAMP_DEBUG.keys.length && typeof campDebugOn === 'function' && campDebugOn()) { // only while the kit is on (?debug=1, src/campaignaddr.js) // the tune kit's keys have their own table (src/campdebug.js): they are listed from it, so a new one is on the page
     out.push({ title: uiText('camp.keys.debug'), rows: CAMP_DEBUG.keys.map(r => ({ caps: [r.key], t: r.text.charAt(0).toUpperCase() + r.text.slice(1) })) });
   }
   return out;

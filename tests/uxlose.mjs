@@ -37,7 +37,17 @@ check('the lost card shows the cause, how far, and the tip, with Enter and T as 
 check('the voice says the cause and the tip, not the numbers (however the lines are split into utterances)', /The carrier is lost\./.test(J('__said.join(" ")')) && /Launch the wing early/.test(J('__said.join(" ")')) && !/lasted|aliens down/.test(J('__said.join(" ")')), JSON.stringify(J('__said')));
 g.run(`F.onKey({ code: 'Enter' })`);
 check('Enter still tries again as "retry", T still goes to the title', J('__went.pop()').data.via === 'retry' && (g.run(`window.F = __fake(1); F.onKey({ code: 'Enter' }); campHurt(F.camp, F.camp.carrier, 9999, 'x'); F.update(0, 33); F.onKey({ code: 'KeyT' })`), J('__went.pop()').key === 'Title'));
-g.run(`window.F = __fake(1); F.onKey({ code: 'Enter' }); __cards.length = 0; campDebugRun(F.camp, F.P, 'lose'); F.update(0, 33);`);
+// the tune kit is off in the normal game (card space-game-debug-keys-off): the backslash that ended Troy's Mission 1 at 108 s now does nothing, and the pause card has no DEBUG line
+g.run(`campDebugSet(false); window.F = __fake(1); F.onKey({ code: 'Enter' }); __cards.length = 0; F.onKey({ code: 'Backslash' }); F.onKey({ code: 'BracketLeft' }); F.onKey({ code: 'BracketRight' }); F.onKey({ code: 'Backquote' }); F.update(0, 33);`);
+check('with the kit off the four keys do nothing in the scene: the battle is still on, no card came up, no god mode', J('[F.camp.result, F.mode, __cards.length, !!F.camp.god]').join() === ',play,0,false', J('[F.camp.result, F.mode, __cards.length, !!F.camp.god]').join());
+g.run(`__cards.length = 0; F.showPause();`);
+check('and the pause card has no DEBUG line', !J('__cards.pop().lines').some(l => /DEBUG/.test(l)));
+g.run(`campDebugSet(true); window.F = __fake(1); F.onKey({ code: 'Enter' }); __cards.length = 0; F.showPause();`);
+check('with the kit on the pause card has the DEBUG line', J('__cards.pop().lines').some(l => /^DEBUG {2}\] next level/.test(l)));
+g.run(`window.F = __fake(1); F.onKey({ code: 'Enter' }); __cards.length = 0; F.onKey({ code: 'Backslash' }); F.update(0, 33);`);
+check('and the backslash wins the level, as it did', J('F.camp.result') === 'won', J('[F.camp.result, F.mode]').join());
+g.run('campDebugSet(false)');
+g.run(`campDebugSet(true); window.F = __fake(1); F.onKey({ code: 'Enter' }); __cards.length = 0; campDebugRun(F.camp, F.P, 'lose'); F.update(0, 33); campDebugSet(false);`); // the tune kit is off in the normal game (card space-game-debug-keys-off): this check turns it on, as a bot would
 check('the debug lose key shows its own words on the card, not "camp.lose.debug"', J('__cards.pop().lines.join("|")').startsWith('The level was ended with the debug key.|You lasted'), '');
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `UX LOSE FAIL (${failed} of ${n})` : `UX LOSE PASS (${n} checks)`);

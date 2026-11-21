@@ -6,6 +6,7 @@
 //   D. the tuning table is at the top of src/campaign.js, has what Troy wants to change, and a comment on every line of numbers
 //   E. the play log sees a whole level through the game's own functions (campNew, campOrder, campStep, campPick, the debug keys) and says each thing once
 //   G. the scene (Phaser's, so its source is read) and the title call the kit with the arguments the log and the kit need
+//   H. the kit is OFF unless the address says ?debug=1 (or a bot or tool calls campDebugSet(true)): no key, no line, no row on the H page (card space-game-debug-keys-off)
 // Levels 2 and 3 are built by another card; here a copy of level 1 stands in for them where a test needs a second level.
 // Run: node tests/campaigntune.mjs   (exit code 1 on a failed check)
 import { readFileSync as __rf } from 'node:fs';
@@ -23,6 +24,7 @@ g.run(`
   var __run = (C, s) => { for (let i = 0; i < s; i++) campStep(C, 1); };
 `);
 
+g.run('campDebugSet(true)'); // the kit is off in the normal game (section H below); every check from A to G is about what the keys do, so the kit is on, as a bot or ?debug=1 would have it
 // ---- A. the keys ----
 const rows = J(`CAMP_DEBUG.keys`);
 check('four debug keys: skip, win, lose and god, each with a physical key code, what it says on the pause line and what it does', rows.map(r => r.id).join() === 'skip,win,lose,god' && rows.every(r => /^[A-Za-z0-9]{2,20}$/.test(r.code) && r.key.length === 1 && r.text.length > 2), JSON.stringify(rows));
@@ -136,6 +138,25 @@ check('the play log counts the Campaign keys as one, the debug keys by name, and
   check('the pause card carries campDebugLine of the battle', /campDebugLine\(this\.camp\)/.test(scene));
   check('the scene tells the log how a level began (campNew gets { via }: menu, hub, retry, skip or address) and how an order was given (campOrder\'s fourth argument: the panels pass key or click, the strip and voice theirs)', /via: this\.via/.test(scene) && /campPanelKey\(this\.pn, C, c,/.test(scene) && /campOrder\(C, row\.order, row\.arg \|\| '', how \|\| 'key'\)/.test(readFileSync(ROOT + '/src/camppanel.js', 'utf8')) && /via: 'hub'/.test(readFileSync(ROOT + '/src/camphub.js', 'utf8')) && /via: 'retry'/.test(scene) && /campOrder\(s2\.camp, name, arg, '(strip|voice)'\)/.test(readFileSync(ROOT + '/src/shipcomputer.js', 'utf8')));
   check('the scene key is "Campaign", the name the play log counts its keys under', /super\('Campaign'\)/.test(scene) && J(`PLAYLOG.scenes.includes('Campaign')`));
+}
+// ---- H. the kit is off unless the address says so (card space-game-debug-keys-off: one slip on the backslash ended Troy's Mission 1 at 108 s) ----
+{
+  const g2 = nodeGame(); g2.run(__rf(new URL('./fixtures/camplegacy.js', import.meta.url), 'utf8') + ' CAMP.levels[1] = CAMP.levels.home;');
+  const J2 = e => JSON.parse(g2.run(`JSON.stringify(${e}) ?? 'null'`)), codes = J('CAMP_DEBUG.keys.map(r => r.code)');
+  g2.run(`var Ch = campNew(1, [], { seed: 2 }), Ph = campProgressNew();`);
+  check('a fresh game has the kit off: no page address, so no key is a debug key, no key does anything and the pause line is empty', J2('campDebugOn()') === false && codes.every(c => J2(`campDebugKey(${JSON.stringify(c)})`) === null) && ['skip', 'win', 'lose', 'god'].every(id => { const r = J2(`campDebugRun(Ch, Ph, ${JSON.stringify(id)})`); return r.ok === false && r.say === '' && r.go === null; }) && J2('[Ch.result, !!Ch.god, Ph.level]').join() === ',false,1' && J2('campDebugLine(Ch)') === '');
+  check('the address turns it on: ?debug, ?debug=1, on, true, yes (any case, anywhere in the address); nothing else does', ['?debug', '?debug=1', '?campaign=2&debug=1', '?campaign=2&tech=blink&DEBUG=On', '#debug=true', '?x=1&debug=yes'].every(a => J(`campDebugAddr(${JSON.stringify(a)})`) === true) && ['', '?', '?campaign=2', '?debug=0', '?debug=off', '?debug=no', '?debug=2', '?debugging=1', '?x=debug', '?campaign=debug', '?debug%zz=1'].every(a => J(`campDebugAddr(${JSON.stringify(a)})`) === false) && J('[campDebugAddr(), campDebugAddr(null), campDebugAddr(7)]').every(v => v === false) && J(`campDebugAddrPage('?campaign=1&debug=1')`) === true && J(`campDebugAddrPage('?campaign=1')`) === false);
+  const g4 = nodeGame(); g4.run(__rf(new URL('./fixtures/camplegacy.js', import.meta.url), 'utf8') + ' CAMP.levels[1] = CAMP.levels.home; location = { search: \'?campaign=1&debug=1\' }; var Ch = campNew(1, [], { seed: 2 });');
+  const J4 = e => JSON.parse(g4.run(`JSON.stringify(${e}) ?? 'null'`));
+  check('campDebugOn asks the page address on the first key: ?debug=1 in it and the keys are on, and the line is there', J4('campDebugOn()') === true && J4(`campDebugKey('Backslash')`) === 'win' && J4('campDebugLine(Ch)').startsWith('DEBUG  '));
+  g4.run(`location = { search: '' };`);
+  check('and it stays as it was read (the address is not read again on every key)', J4('campDebugOn()') === true);
+  const g3 = nodeGame(); g3.run(`location = { search: '?campaign=1' };`);
+  check('an address with no debug in it: off', JSON.parse(g3.run(`JSON.stringify([campDebugOn(), campDebugKey('Backslash'), campDebugKey('BracketLeft')])`)).join() === 'false,,');
+  g3.run('campDebugSet(true)');
+  check('campDebugSet(true) is how a bot, a tool or a test turns it on, and campDebugSet(false) off again', JSON.parse(g3.run(`JSON.stringify([campDebugOn(), campDebugKey('Backslash'), campDebugSet(false), campDebugOn(), campDebugKey('Backslash')])`)).join() === 'true,win,false,false,');
+  const addr = readFileSync(ROOT + '/src/campaignaddr.js', 'utf8'), scene = readFileSync(ROOT + '/src/campaignscene.js', 'utf8'), keys = readFileSync(ROOT + '/src/campkeys.js', 'utf8');
+  check('the pause card and the H page leave the debug line and group out unless campDebugOn(); the address is read in campaignaddr.js, which loads before campdebug.js', /campDebugOn\(\) && typeof campDebugLine === 'function'/.test(scene) && /campDebugOn\(\)/.test(keys) && __rf(ROOT + '/index.html', 'utf8').indexOf('src/campaignaddr.js') < __rf(ROOT + '/index.html', 'utf8').indexOf('src/campdebug.js') && /function campDebugAddrPage/.test(addr));
 }
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `CAMPAIGN TUNE FAIL (${failed} of ${n})` : `CAMPAIGN TUNE PASS (${n} checks)`);

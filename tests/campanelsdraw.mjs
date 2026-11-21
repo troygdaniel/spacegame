@@ -102,6 +102,7 @@ console.log('C. the scene\'s keys');
 
 console.log('D. the H page');
 {
+  g.run('campDebugSet(true)'); // the page lists the tune kit's keys only while it is on (?debug=1; card space-game-debug-keys-off): on here, as the check below says "then the debug keys"
   const page = J('campKeysPage()');
   check('the page begins with the three panels (the panel own key, then its rows: five and the flip line, six with the dock row, five), then the rest of the table, then the debug keys from their table', page[0].title === 'KEY Q  -  THE FLEET PANEL' && page[1].title === 'KEY E  -  THE SHIP PANEL' && page[2].title === 'KEY C  -  THE SYSTEMS PANEL' && page[0].rows.length === 7 && page[1].rows.length === 7 && page[2].rows.length === 6 && page[0].rows[0].caps.join() === 'Q' && page[0].rows[3].caps.join() === 'Q,3' && page[page.length - 1].rows.length === J('CAMP_DEBUG.keys.length') && page.some(p => p.title === 'FLY AND FIRE') && page.some(p => p.title === 'THE MAP'), page.map(p => p.title).join(' | '));
   check('every row of the PANELS and CAMPAIGN groups of the table is on it, once', J(`(() => { const page = campKeysPage().flatMap(g => g.rows.map(r => r.caps.join(' ') + '|' + r.t)); const rows = ['panels', 'campaign'].flatMap(id => controlsGroup(id).rows.map(r => r.k.join(' ') + '|' + r.t)); return rows.length === page.length - CAMP_DEBUG.keys.length && rows.every(r => page.filter(p => p === r).length === 1); })()`));
