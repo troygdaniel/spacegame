@@ -308,5 +308,65 @@ console.log('K. the wing\'s words and the plain bot');
   check('and the boats did fire in those runs (the test is not empty), and the cruiser\'s turrets shot torpedoes down', torp.some(t => t.launched >= 1) && torp.some(t => t.shot >= 1), JSON.stringify(torp));
 }
 
+// ---------- L. the map (card space-game-torpedo-art) ----------
+console.log('L. the map\'s marks and legend');
+{
+  g.run('__new(); __quiet(); C.carrier.vx = C.carrier.vy = 0');
+  g.run(`window.__b = __spawn('tboat', 1500, 0); window.__l = __spawn('lancer', 1500, 300); __b.rot = 1; __b.arming = C.t + 500; __b.tubes = 1; window.__t = campTorpedoLaunch(C, __b, C.carrier); __b.tubes = 0;`);
+  const marks = J('campMapMarks(C)');
+  const tb = marks.filter(m => m.type === 'tboat'), tp = marks.filter(m => m.type === 'torpedo');
+  check('a torpedo boat (either side) is a mark of its own, type tboat, not a pirate or an alien dot', tb.length === 2 && !marks.some(m => (m.type === 'pirate' || m.type === 'alien') && /^(tboat|lancer)-/.test(m.id)), JSON.stringify(marks.map(m => [m.type, m.id])));
+  check('the pirates\' boat is yellow like the pirates and the aliens\' is red like the aliens', tb.find(m => /^tboat-/.test(m.id)).color === J('CAMPMAP.color.pirate') && tb.find(m => /^lancer-/.test(m.id)).color === J('CAMPMAP.color.alien'));
+  check('a boat that arms says so on its mark (the map pulses a ring), with its heading', tb.find(m => /^tboat-/.test(m.id)).arming === true && tb.find(m => /^lancer-/.test(m.id)).arming === false && Math.abs(tb.find(m => /^tboat-/.test(m.id)).rot - 1) < 1e-9);
+  check('a torpedo in flight is a mark, type torpedo, with its heading, in its own bright colour', tp.length === 1 && tp[0].id === J('__t.id') && tp[0].color === J('CAMPMAP.color.torpedo') && typeof tp[0].rot === 'number', JSON.stringify(tp));
+  check('the torpedo is drawn above the ships and under the carrier (the carrier is last)', marks[marks.length - 1].type === 'carrier' && marks.findIndex(m => m.type === 'torpedo') > marks.findIndex(m => m.type === 'tboat'));
+  const lg = J('campMapLegend(C)');
+  check('the legend has a row for the boats and one for the torpedoes, with their words and counts', lg.some(r => r.type === 'tboat' && r.text === 'Torpedo boats (2)') && lg.some(r => r.type === 'torpedo' && r.text === 'Torpedoes (1)'), JSON.stringify(lg.map(r => r.text)));
+  g.run('C.torpedoes.forEach(t => { t.dead = true }); ');
+  check('a torpedo that is gone is no mark', J(`campMapMarks(C).filter(m => m.type === 'torpedo').length`) === 0);
+  check('the boats are in the nav list of the map as enemies, by name ("Torpedo boat 3")', J('campNavRows(C)').some(r => /^Torpedo boat \d+$/.test(r.name)) && J('campNavRows(C)').some(r => /^Lancer \d+$/.test(r.name)), JSON.stringify(J('campNavRows(C)').map(r => r.name)));
+  check('the two legend words are in their own file and the content tables', (() => { const md = src('content/text/campaign-torpedo.md'), tab = src('src/contenttables.js'); return ['camp.map.tboat', 'camp.map.torpedo'].every(k => md.includes('| ' + k + ' |') && tab.includes("'" + k + "'")); })());
+}
+
+// ---------- M. the pictures and the scene's drawing ----------
+console.log('M. the pictures, the torpedo\'s drawing, the arming glow');
+{
+  g.run(`window.__rec = fn => { const ops = []; const gfx = new Proxy({}, { get: (t, name) => (...a) => { ops.push([name].concat(a)); return gfx; } }); window[fn](gfx); return ops; };`);
+  const hsv = c => { const r = (c >> 16 & 255) / 255, gg = (c >> 8 & 255) / 255, b = (c & 255) / 255, mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), d = mx - mn; let h = 0; if (d) h = mx === r ? ((gg - b) / d + 6) % 6 : mx === gg ? (b - r) / d + 2 : (r - gg) / d + 4; return { h: h * 60, s: mx ? d / mx : 0, v: mx }; };
+  const fns = { tboat: 'campTboatDraw', lancer: 'campLancerDraw' };
+  Object.keys(fns).forEach(kind => {
+    const ops = J(`__rec('${fns[kind]}')`), [W, Ht] = J(`campArtSize('${kind}')`), a = J(`CAMP_ART.${kind}`), k = a.k;
+    check(kind + ': it is the picture campPirateArt gives for the kind, and campShipTexture falls back to it', J(`campPirateArt('${kind}') === ${fns[kind]}`));
+    check(kind + ': it draws with fills, plain lines and paths only', [...new Set(ops.map(o => o[0]))].every(o => ['fillStyle', 'lineStyle', 'fillRect', 'fillCircle', 'beginPath', 'moveTo', 'lineTo', 'closePath', 'fillPath', 'strokePath', 'lineBetween'].includes(o)));
+    check(kind + ': the picture is the hull plus a margin each side, k times the units', W === Math.round((a.len + 2 * a.pad) * k) && Ht === Math.round((2 * a.half + 2 * a.pad) * k), W + ' x ' + Ht);
+    const out = []; ops.forEach(([o, ...p]) => { const inside = (x, y) => x >= -0.5 && y >= -0.5 && x <= W + 0.5 && y <= Ht + 0.5; if (o === 'fillRect' && !(inside(p[0], p[1]) && inside(p[0] + p[2], p[1] + p[3]))) out.push([o, ...p]); if (o === 'fillCircle' && !(inside(p[0] - p[2], p[1] - p[2]) && inside(p[0] + p[2], p[1] + p[2]))) out.push([o, ...p]); if (o === 'moveTo' || o === 'lineTo') { if (!inside(p[0], p[1])) out.push([o, ...p]); } if (o === 'lineBetween' && !(inside(p[0], p[1]) && inside(p[2], p[3]))) out.push([o, ...p]); });
+    check(kind + ': every mark lies inside the picture', out.length === 0, out.length + ' outside, first ' + JSON.stringify(out[0]));
+    const used = new Set(); ops.forEach(([o, x, y]) => { if (o === 'fillStyle') used.add(x); if (o === 'lineStyle') used.add(y); });
+    check(kind + ': no green (it is yours) and nothing cyan or blue but a canopy glass', [...used].every(c => { const x = hsv(c); return !(x.h >= 90 && x.h <= 200 && x.s > 0.3); }));
+    if (kind === 'tboat') check('tboat: nothing red or pink (the aliens\' own), it is rust and ochre', [...used].every(c => { const x = hsv(c); return !((x.h >= 330 || x.h <= 15) && x.s > 0.3); }));
+    if (kind === 'lancer') check('lancer: it is violet with a red-pink glow: some of its colours are violet and some red', [...used].some(c => { const x = hsv(c); return x.h >= 250 && x.h <= 290 && x.s > 0.3; }) && [...used].some(c => { const x = hsv(c); return (x.h >= 330 || x.h <= 15) && x.s > 0.3; }));
+    const look = J(`campArtLook('${kind}', '${kind}')`);
+    check(kind + ': the scene scales it to the table length CAMP.size.' + kind + '.len, and CAMP_LOOK has it', Math.abs(look.scale * look.w - J(`CAMP.size.${kind}.len`)) < 1e-9 && look.art === kind && J(`CAMP_LOOK.${kind}.art`) === kind);
+    check(kind + ': the hit circle is inside the drawn ship (under its half length)', J(`CAMP.size.${kind}.hit`) <= J(`CAMP.size.${kind}.len`) / 2);
+  });
+  check('a boat is bigger than a pirate cutter and smaller than the cruiser', J('CAMP.size.tboat.len > CAMP.size.cutter.len && CAMP.size.tboat.len < CAMP.size.carrier.len && CAMP.size.lancer.len < CAMP.size.carrier.len'));
+  check('campShipTexture makes each under its own key at the size campArtSize says', (() => { const tex = J(`(() => { const made = {}; const sc = { textures: { exists: k => !!made[k] }, make: { graphics: () => { const g = new Proxy({}, { get: (t, n) => n === 'generateTexture' ? (k, w, h) => { made[k] = [w, h]; } : () => g }); return g; } } }; return ['tboat', 'lancer'].map(k => [campShipTexture(sc, k), made['camp-' + k]]) })()`); return tex.every(([key, size], i) => key === 'camp-' + ['tboat', 'lancer'][i] && size && size[0] === J(`campArtSize('${['tboat', 'lancer'][i]}')`)[0]); })());
+  // the scene half, in a stand-in scene (a Proxy that takes any call): the torpedo's texture, its sprites made and destroyed with it, the arming glow, the events
+  g.run('__new(); __quiet(); C.carrier.vx = C.carrier.vy = 0');
+  g.run(`window.__mk = () => { const live = new Set(), made = {}, booms = []; const mkObj = () => { const o = new Proxy(function () {}, { get: (t, k) => k === 'destroy' ? () => { live.delete(o); } : () => o, apply: () => o }); live.add(o); return o; };
+    return { live, made, booms, camp: C, mode: 'play', textures: { exists: k => !!made[k] }, make: { graphics: () => { const g = new Proxy({}, { get: (t, n) => n === 'generateTexture' ? (k, w, h) => { made[k] = [w, h]; } : () => g }); return g; } },
+      add: { graphics: () => mkObj(), image: () => mkObj() }, tweens: { add: () => {} }, boom: { explode: (...a) => booms.push(a) }, cameras: { main: { shake: () => {} } } }; }; window.__sc = __mk();`);
+  g.run(`window.__b = __spawn('tboat', 700, 0); __b.rot = Math.PI; __b.tubes = 1; window.__t = campTorpedoLaunch(C, __b, C.carrier); __b.tubes = 1; __b.arming = C.t + 600; campTorpedoSync(__sc, 16)`);
+  check('the torpedo texture is made once, ' + J('CAMP_TORP.size.join(" x ")'), J('JSON.stringify(__sc.made.torpedo)') === J('JSON.stringify(CAMP_TORP.size)'));
+  check('a torpedo in flight gets a body and a flame (two sprites), and the arming boat does not break the frame', J('Object.keys(__sc.tsp).length') === 1 && J('__sc.live.size') >= 4);
+  const live = J('__sc.live.size');
+  g.run('__t.dead = true; campTorpedoSync(__sc, 16)');
+  check('when the torpedo is gone its two sprites are destroyed', J('Object.keys(__sc.tsp).length') === 0 && J('__sc.live.size') === live - 2, J('[__sc.live.size, ' + live + ']'));
+  g.run(`campTorpedoEvent(__sc, { type: 'tboom', x: C.carrier.x + 100, y: C.carrier.y, r: 90 }); campTorpedoEvent(__sc, { type: 'torpedo', stage: 'launch', x: 0, y: 0 }); campTorpedoEvent(__sc, { type: 'torpedo', stage: 'arming', x: 0, y: 0 }); campTorpedoEvent(__sc, { type: 'torpedo', stage: 'fizzle', x: 5, y: 5 }); campTorpedoEvent(__sc, { type: 'torpedo', stage: 'shot', x: 5, y: 5 })`);
+  check('the events: a blast near the cruiser makes a big bang, a fizzle a small one, the other stages no bang of their own', J('__sc.booms.length') === 2 && J('__sc.booms[0][0]') >= 40 && J('__sc.booms[1][0]') <= 10, J('JSON.stringify(__sc.booms)'));
+  check('the scene calls them: the file is registered before the scene, and campaignscene.js calls campTorpedoSync and campTorpedoEvent and draws a blip for a torpedo', (() => { const h = src('index.html'), sc = src('src/campaignscene.js'); return h.indexOf('src/camptorpedoscene.js') > 0 && h.indexOf('src/camptorpedoscene.js') < h.indexOf('src/campaignscene.js') && sc.includes('campTorpedoSync(this') && sc.includes('campTorpedoEvent(this, e)') && sc.includes('C.torpedoes') && sc.includes('CAMPMAP.color.torpedo'); })());
+  check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
+}
+
 console.log(failed ? `\n${failed} of ${n} checks FAILED` : `\nall ${n} checks passed`);
 process.exit(failed ? 1 : 0);
