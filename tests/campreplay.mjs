@@ -1,0 +1,156 @@
+// smoke: replaying a completed mission from the ready room (plain Node, no Chrome; tests/campreplay-boot.mjs is the real game)
+// Card space-game-campaign-replay (campReplayDone and the results in src/campaign.js, the board's keys in src/camphub.js, the pages in src/camphubscene.js, the flight in src/campaignscene.js).
+//   A. the results: a replay keeps the BEST score, the bonus objectives found are every one any run met, the rank the best run gave, how many replays; junk in the save is cleaned and the save's keys are as pinned
+//   B. ranks: the points are the sum of the best scores, so a replay raises them only by what it beat the old best by
+//   C. the progress does not move: the level and the mission to fly next, the techs, the extras; nothing of the story
+//   D. the board: the missions done can be chosen (A D), picked (R), put back (X); the briefing and Launch are for the pick; the launch data says replay
+//   E. the Campaign scene: a replay is only of a mission with a result, flies from its standard start with the CURRENT ore, extras, techs and rank, tells no story, plays no warp, a lost one costs nothing and restarts as a replay,
+//      the debrief says Replay with the old best against this run, and Enter returns to the ready room with nothing else done (no story, no refit, no pick)
+// Run: node tests/campreplay.mjs   (exit code 1 on a failed check)
+import { readFileSync } from 'node:fs';
+import { nodeGame, ROOT } from './nodegame.mjs';
+
+let failed = 0, n = 0;
+const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
+const g = nodeGame();
+const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
+const src = f => readFileSync(ROOT + '/' + f, 'utf8');
+g.run(`localStorage.removeItem(CAMP.store);`);
+
+// a score as the battle makes one: { score, bonuses: [{ id, ok }], t, hullLeft, shipsLost }
+const SC = (score, met, extra = {}) => JSON.stringify(Object.assign({ score, base: 1000, bonuses: ['swift', 'clean', 'ore'].map(id => ({ id, ok: met.includes(id), points: met.includes(id) ? 250 : 0 })), t: 120, hullLeft: 400, shipsLost: 1 }, extra));
+const fresh = () => g.run(`var P = campProgressNew(); P.level = 1; P.mission = 2; P.techs = ['shield']; P.ore = 55; P.bonus = { fighters: 1, escorts: 0 }; P.results = { '1.1': { score: 900, bonuses: ['swift', 'clean'], t: 100, hull: 500, lost: 0, tries: 2, replays: 0 }, '1.2': { score: 640, bonuses: [], t: 90, hull: 300, lost: 1, tries: 1, replays: 0 } };`);
+
+// ---- A. the results ----
+fresh(); g.run(`var R1 = campReplayDone(P, 1, 0, ${SC(700, ['ore'])});`);
+check('a worse run keeps the best: the score and the run stay (900), the bonus objectives found are the union (swift, clean and ore, in the mission\'s own order), one more replay, the tries stay', J('R1.old') === 900 && J('R1.now') === 700 && J('R1.best') === 900 && J('R1.improved') === false && J('P.results["1.1"].score') === 900 && J('P.results["1.1"].t') === 100 && J('P.results["1.1"].hull') === 500 && J('P.results["1.1"].bonuses.join()') === 'swift,clean,ore' && J('P.results["1.1"].replays') === 1 && J('P.results["1.1"].tries') === 2 && J('R1.found.join()') === 'ore');
+g.run(`var R2 = campReplayDone(P, 1, 0, ${SC(1200, ['swift'], { t: 80, hullLeft: 550, shipsLost: 0 })});`);
+check('a better run is the new best: its score, time, hull and ships lost; the bonus objectives found only grow (still all three); two replays', J('R2.improved') === true && J('R2.best') === 1200 && J('P.results["1.1"].score') === 1200 && J('P.results["1.1"].t') === 80 && J('P.results["1.1"].hull') === 550 && J('P.results["1.1"].lost') === 0 && J('P.results["1.1"].bonuses.join()') === 'swift,clean,ore' && J('P.results["1.1"].replays') === 2 && J('R2.found.length') === 0);
+g.run(`var R3 = campReplayDone(P, 1, 0, ${SC(1200, [])});`);
+check('the same score is not a new best (the old run stands); a run that finds nothing new finds nothing', J('R3.improved') === false && J('R3.best') === 1200 && J('P.results["1.1"].t') === 80 && J('P.results["1.1"].replays') === 3);
+check('a mission is only ever flown again with a result: an unknown one gets one (first: true) without moving anything, as a guard', (() => { fresh(); g.run(`var R4 = campReplayDone(P, 2, 0, ${SC(500, ['swift'])});`); return J('R4.first') === true && J('P.results["2.1"].score') === 500 && J('P.level') === 1 && J('P.mission') === 2; })());
+g.run(`window.__rank0 = campRank; window.__pts0 = campPoints; window.campRank = P0 => ({ i: campPoints(P0) >= 3000 ? 2 : campPoints(P0) >= 1900 ? 1 : 0 }); window.campPoints = P0 => Object.keys(P0.results).reduce((a, k) => a + P0.results[k].score, 0);`); // a stand-in rule of three ranks: the real ranks (src/campranks.js) are put back after section B
+check('with the ranks card the result carries the rank the best run gave (an index) and keeps it when the old best stands; the first win of a mission sets it', (() => { fresh(); g.run(`P.results['1.1'].rank = 0; var Ra = campReplayDone(P, 1, 0, ${SC(2100, ['swift'])});`); const up = J('P.results["1.1"].rank'); g.run(`var Rb = campReplayDone(P, 1, 0, ${SC(100, [])});`); const kept = J('P.results["1.1"].rank'); g.run(`P.results['2.1'] = undefined; delete P.results['2.1']; campMissionDone(P, 1, 2, ${SC(2500, ['swift'])});`); return up === 1 && kept === 1 && J('P.results["1.3"].rank') === 2; })());
+fresh();
+// the save: what is kept, what is cleaned
+g.run(`localStorage.setItem(CAMP.store, JSON.stringify({ level: 1, mission: 2, techs: [], ore: 0, bonus: { fighters: 0, escorts: 0 }, results: { '1.1': { score: 900, bonuses: ['swift'], t: 1, hull: 1, lost: 0, tries: 2, replays: 4, rank: 3 }, '1.2': { score: 10, tries: 1, replays: -5, rank: 99 }, '1.3': { score: 10, tries: 1, replays: 'many', rank: 'x' } } })); var L1 = campProgressLoad();`);
+check('the save keeps replays (a count) and rank (an index) of a result and cleans junk: a rank that is no index goes, a negative or a word is no replays', J('L1.results["1.1"].replays') === 4 && J('L1.results["1.1"].rank') === 3 && J('L1.results["1.2"].replays') === 0 && !('rank' in J('L1.results["1.2"]')) && J('L1.results["1.3"].replays') === 0 && !('rank' in J('L1.results["1.3"]')));
+check('the top-level keys of the save are as pinned by the other cards (found, stance, revealed ...): nothing new from a replay, which is a result\'s field and not a place in the save', Object.keys(JSON.parse((g.run(`campProgressSave(L1)`), g.run(`localStorage.getItem(CAMP.store)`)))).sort().join() === 'bonus,found,level,mission,ore,results,revealed,stance,techs');
+check('and the fields of a result in the save are score, bonuses, t, hull, lost, tries, replays and rank, and nothing else', Object.keys(JSON.parse(g.run(`localStorage.getItem(CAMP.store)`)).results['1.1']).sort().join() === 'bonuses,hull,lost,rank,replays,score,t,tries');
+
+// ---- B. ranks ----
+fresh(); g.run(`var pts0 = campPoints(P);`);
+g.run(`campReplayDone(P, 1, 0, ${SC(100, [])});`);
+check('a worse replay changes no points: the sum of the best scores is the same', J('campPoints(P)') === J('pts0'));
+g.run(`campReplayDone(P, 1, 0, ${SC(1300, [])});`);
+check('a better one adds what it beat the old best by (1,300 against 900: 400), not its whole score', J('campPoints(P)') === J('pts0') + 400);
+g.run(`for (let k = 0; k < 30; k++) campReplayDone(P, 1, 0, ${SC(1300, [])});`);
+check('flying the same score again and again farms nothing: the points stay, the replays count', J('campPoints(P)') === J('pts0') + 400 && J('P.results["1.1"].replays') === 32 && J('campRank(P).i') === J('campRank(P).i'));
+check('the ranks\' own rule reads the results, so a replay cannot raise a rank by anything but a better best: 640 + 900 is rank 0, a best of 1,300 on mission one (1,940, over the 1,900 of the stand-in rank 1) is rank 1', (() => { fresh(); const a = J('campRank(P).i'); g.run(`campReplayDone(P, 1, 0, ${SC(1300, [])})`); return a === 0 && J('campRank(P).i') === 1; })());
+g.run(`campRank = __rank0; campPoints = __pts0;`);
+
+// ---- C. the progress does not move ----
+fresh(); g.run(`var snap = JSON.stringify({ level: P.level, mission: P.mission, techs: P.techs, bonus: P.bonus, ore: P.ore });`);
+g.run(`campReplayDone(P, 1, 1, ${SC(1500, ['swift', 'clean'])}); campReplayDone(P, 1, 0, ${SC(900, [])}); campReplayDone(P, 1, 1, ${SC(100, [])});`);
+check('after replays the level and the mission to fly next, the techs, the extras and the ore are exactly what they were (replaying belt mission 1 and 2 with mission 3 next)', JSON.stringify({ level: J('P.level'), mission: J('P.mission'), techs: J('P.techs'), bonus: J('P.bonus'), ore: J('P.ore') }) === J('snap') && (() => { const s = JSON.parse(J('snap')); return J('P.level') === s.level && J('P.mission') === 2; })());
+check('campMissionDone (the story\'s road) is unchanged: it still moves the mission on and says when a level is done; campReplayDone never does either', (() => { fresh(); g.run(`var Md = campMissionDone(P, 1, 2, ${SC(2000, ['swift'])});`); return J('Md.levelDone') === true && J('P.mission') === 0; })());
+
+// ---- D. the board ----
+fresh(); g.run(`var HH = campHubNew(P); HH.row = 0;`);
+const K = c => J(`campHubKey(HH, P, ${JSON.stringify(c)}, { hub: HH })`);
+check('the missions that can be flown again are the ones with a result that are not the next one: here the first two of the belt', J('campHubDone(P).map(r => r.level + "." + r.n).join()') === '1.1,1.2' && J('campHubBoard(P).filter(r => !r.head && r.state === "done").length') === 2);
+check('the board\'s rows carry what the card asks for: the best score, the bonus objectives found of all, how many replays, and the rank it gave (its name, when there are ranks)', (() => { const r = J('campHubBoard(P).find(x => !x.head && x.level === 1 && x.n === 1)'); return r.score === 900 && r.bonus === 2 && r.of === J('campMissions(1)[0].bonus.length') && r.replays === 0 && r.rank === ''; })());
+g.run(`P.results['1.1'].rank = 1;`);
+check('with the ranks card the row has the name of the rank its best run gave (the real second rank)', J('campHubBoard(P).find(x => !x.head && x.level === 1 && x.n === 1).rank') === J(`uiText('camp.rank.' + CAMP.ranks[1].id)`) && J('campHubBoard(P).find(x => !x.head && x.level === 1 && x.n === 1).rank') !== '');
+g.run(`delete P.results['1.1'].rank;`);
+check('D and A move the cursor over the done missions and wrap (the arrows too); nothing is picked by moving', (() => { const a = K('KeyD'), c1 = J('HH.cur'), b = K('KeyD'), c2 = J('HH.cur'), c = K('ArrowLeft'), c3 = J('HH.cur'); return a.used && b.used && c1 === 1 && c2 === 0 && c3 === 1 && J('HH.pick') === null; })());
+check('R picks the mission under the cursor as the replay and says so; the target is then that mission, as a replay', (() => { g.run('HH.cur = 1'); const r = K('KeyR'); return r.used && r.ok && r.say.key === 'camp.hub.replay.set' && r.say.vars.title === 'Ore haulers' && J('HH.pick.level') === 1 && J('HH.pick.i') === 1 && J('campHubTarget(P, HH).replay') === true && J('campHubTarget(P, HH).i') === 1; })());
+check('the Briefing and Launch rows say it: the briefing\'s note is the title and "(replay)", Launch\'s is "replay 2", and the launch data is the mission, via the hub, replay true', (() => { const rows = J('campHubRows(P, undefined, { hub: HH })'), l = J('campHubLaunch(P, HH)'); return rows[1].note === 'Ore haulers (replay)' && rows[4].note === 'replay 2' && l.level === 1 && l.mission === 1 && l.via === 'hub' && l.replay === true; })());
+check('X puts it back: the next mission again (the haulers are done, so the third), launch data without replay; with nothing picked X says nothing', (() => { const r = K('KeyX'); const t = J('campHubTarget(P, HH)'), l = J('campHubLaunch(P, HH)'), r2 = K('KeyX'); return r.used && r.say.key === 'camp.hub.replay.cleared' && J('HH.pick') === null && t.replay === false && t.i === 2 && l.replay === false && l.mission === 2 && r2.used && r2.say === null; })());
+check('a pick that is no longer a done mission is ignored (a stale one): the next mission is the target', (() => { g.run(`HH.pick = { level: 3, i: 2 }`); const t = J('campHubTarget(P, HH)'); g.run('HH.pick = null'); return t.replay === false && t.level === 1 && t.i === 2; })());
+check('with nothing done R says so (and picks nothing); A D do nothing', (() => { const P0 = 'campProgressNew()'; g.run(`var Pn = ${P0}, Hn = campHubNew(Pn); Hn.row = 0;`); const r = J(`campHubKey(Hn, Pn, 'KeyR', { hub: Hn })`); return r.used && !r.ok && r.say.key === 'camp.hub.replay.none' && J('Hn.pick') === null && J(`campHubKey(Hn, Pn, 'KeyD', { hub: Hn }).used`) === true && J('Hn.cur') === 0; })());
+check('the keys are the board row\'s only: on the Refit row A, D, R and X are not the hub\'s, and in a dock\'s room (nothing there launches a mission) not even on the board', (() => { g.run('HH.row = 2'); const a = ['KeyA', 'KeyD', 'KeyR', 'KeyX'].every(c => !J(`campHubKey(HH, P, '${c}', { hub: HH }).used`)); g.run('HH.row = 0'); const b = ['KeyR', 'KeyD'].every(c => !J(`campHubKey(HH, P, '${c}', { hub: HH, dock: 'luna' }).used`)); return a && b; })());
+check('Esc, T, L, the digits, W, S and Enter are as they were (the replay keys took none of them)', (() => { g.run('HH.row = 0'); return J(`campHubKey(HH, P, 'KeyL', { hub: HH }).action`) === 'launch' && J(`campHubKey(HH, P, 'Escape', { hub: HH }).action`) === 'title' && J(`campHubKey(HH, P, 'Digit3', { hub: HH }).moved`) === true && J('HH.row') === 2; })());
+
+// ---- the hub's pages, on the recording stand-in ----
+g.run(`
+  window.__rec = { go: [], sfx: [], texts: [] };
+  go = (s, key, data) => { __rec.go.push({ key, data }); }; sfx = name => { __rec.sfx.push(name); };
+  interiorBuild = s => { s.in = { door: {} }; }; interiorTick = () => {}; interiorLaunch = s => {};
+  campShipTexture = () => 'camp-cruiser'; label = (s, x, y, t) => ({ t, x, y });
+  window.__obj = () => { const o = { x: 0, y: 0, t: '', vis: true, handlers: {}, setText(v) { o.t = v; return o; }, setColor() { return o; }, setVisible(v) { o.vis = v; return o; }, setY() { return o; }, setPosition() { return o; }, setRotation() { return o; }, setBackgroundColor() { return o; }, setAngle() { return o; }, setScale() { return o; }, setDepth() { return o; }, setOrigin() { return o; }, setPadding() { return o; }, setStrokeStyle() { return o; }, setInteractive() { return o; }, setAlpha() { return o; }, on(ev, fn) { o.handlers[ev] = fn; return o; }, destroy() {} }; return o; };
+  window.__room = d => { __rec.go.length = 0; __rec.sfx.length = 0; __rec.texts.length = 0; const s = Object.create(CampHub.prototype);
+    s.add = { rectangle: () => __obj(), text: (x, y, t) => { const o = __obj(); o.t = t; __rec.texts.push(o); return o; }, image: () => __obj() };
+    s.cameras = { main: { fadeIn() {}, fadeOut() {} } }; s.tweens = { add: c => ({ stop() {} }) }; s.time = { now: 1000 }; s.input = { keyboard: { on() {}, off() {} } }; s.events = { once() {} }; s.init(d || {}); s.create(); return s; };
+  window.__shown = s => __rec.texts.filter(o => o.vis && o.t !== '').map(o => o.t);
+  localStorage.setItem(CAMP.store, JSON.stringify({ level: 1, mission: 2, techs: ['shield'], ore: 40, bonus: { fighters: 0, escorts: 0 }, results: { '1.1': { score: 900, bonuses: ['swift', 'clean'], t: 100, hull: 500, lost: 0, tries: 2, replays: 1 }, '1.2': { score: 640, bonuses: [], t: 90, hull: 300, lost: 1, tries: 1 } } }));
+  var S = __room();
+`);
+const shown = () => J('__shown(S)'), has = re => shown().some(t => re.test(t));
+check('the board page marks the cursor with > on a mission done and shows the keys on its last line: A D choose   R replay it   X back to the next mission', has(/^> \[x\] 1 {2}Belt survey/) && has(/^ {2}\[x\] 2 {2}Ore haulers/) && has(/^A D choose {3}R replay it {3}X back to the next mission$/) && has(/^900 pts {2}2 of \d bonus$/), shown().join(' | '));
+g.run(`S.onKey({ code: 'KeyD', repeat: false });`);
+check('D moves the > to the next mission done', has(/^> \[x\] 2 {2}Ore haulers/) && has(/^ {2}\[x\] 1 {2}Belt survey/));
+g.run(`S.onKey({ code: 'KeyR', repeat: false });`);
+check('R picks it: its row is marked [R] and the page\'s last line is the answer, "Replay: mission 2, Ore haulers..."', has(/^(> )?\[R\] 2 {2}Ore haulers/) && has(/^Replay: Ore haulers\. Briefing and Launch are for it\. X: back\.$/), shown().join(' | '));
+g.run(`S.onKey({ code: 'Digit2', repeat: false });`);
+check('2: the briefing is the haulers\' (not the next mission\'s), headed REPLAY, with what a replay is', has(/^REPLAY {2}- {2}MISSION 2 OF 3 {2}- {2}Ore haulers$/) && has(/^Standard start, with your wing, rank and techs\.$/) && has(/^The story and your progress stay; your best is kept\.$/) && has(/^Haulers delivered|^- Haulers delivered/), shown().join(' | '));
+g.run(`S.onKey({ code: 'Digit5', repeat: false });`);
+check('5: Launch says it too: REPLAY, the mission, what a replay is; its row\'s note is "replay 2"', has(/^REPLAY {2}- {2}MISSION 2 OF 3 {2}- {2}Ore haulers$/) && has(/^replay 2$/) && has(/^Enter or L launches the cruiser\.$/), shown().join(' | '));
+g.run(`S.onKey({ code: 'KeyL', repeat: false });`);
+check('L launches the REPLAY: the Campaign scene is started on belt mission 2 via the hub with replay true (the next mission and the story are untouched)', J('__rec.go.length') === 1 && J('__rec.go[0].key') === 'Campaign' && J('__rec.go[0].data.level') === 1 && J('__rec.go[0].data.mission') === 1 && J('__rec.go[0].data.via') === 'hub' && J('__rec.go[0].data.replay') === true, JSON.stringify(J('__rec.go')));
+g.run(`var S2 = __room(); S2.onKey({ code: 'Digit5', repeat: false }); S2.onKey({ code: 'KeyL', repeat: false });`);
+check('without a pick Launch is the next mission as ever: mission 3, replay false', J('__rec.go[0].data.mission') === 2 && J('__rec.go[0].data.replay') === false);
+g.run(`var S3 = __room(); S3.onKey({ code: 'KeyD', repeat: false }); S3.onKey({ code: 'KeyR', repeat: false }); S3.onKey({ code: 'KeyX', repeat: false });`);
+check('X in the room puts the pick back: the board has no [R] and the line says "Back to the next mission."', !J('__shown(S3)').some(t => /\[R\]/.test(t)) && J('__shown(S3)').some(t => /^Back to the next mission\.$/.test(t)) && J('S3.hub.pick') === null);
+
+// ---- E. the Campaign scene ----
+g.run(`
+  window.__went = []; window.__cards = []; window.__said = []; go = (s, key, data) => { __went.push({ key, data }); }; toast = () => {};
+  window.__mk = (d, store) => { if (store) localStorage.setItem(CAMP.store, JSON.stringify(store)); const f = Object.create(Campaign.prototype);
+    f.time = { delayedCall: (ms, fn) => fn() }; f.scene = { start: (k, dd) => __went.push({ key: k, data: dd }) };
+    f.showCard = (title, lines, hint, tall) => { __cards.push({ title, lines, hint, tall }); f.card = true; f.panel = true; }; f.hideCard = () => { f.card = null; f.panel = false; }; f.say = lines => { __said.push(lines.slice()); };
+    f.init(d); f.camp = f.makeCamp(); return f; };
+`);
+const STORE = { level: 1, mission: 2, techs: ['shield', 'bay2'], ore: 77, bonus: { fighters: 2, escorts: 1 }, results: { '1.1': { score: 900, bonuses: ['swift', 'clean'], t: 100, hull: 500, lost: 0, tries: 2 }, '1.2': { score: 640, bonuses: [], t: 90, hull: 300, lost: 1, tries: 1 } } };
+g.run(`var F = __mk({ level: 1, mission: 1, via: 'hub', replay: true }, ${JSON.stringify(STORE)});`);
+check('a replay is a replay when the mission has a result: the scene says so', J('F.replay') === true && J('F.mi') === 1 && J('F.level') === 1);
+g.run(`var F2 = __mk({ level: 1, mission: 2, via: 'hub', replay: true }, ${JSON.stringify(STORE)});`);
+check('and is not when it has none (the next mission cannot be a "replay": it is the story\'s mission, flown for the first time)', J('F2.replay') === false);
+g.run(`var F3 = __mk({ level: 1, mission: 1, via: 'hub' }, ${JSON.stringify(STORE)});`);
+check('no replay flag is no replay: a mission with a result flown by an address or a retry is flown as before', J('F3.replay') === false);
+check('it flies with the CURRENT state: the saved ore (77), the extra ships (2 and 1), the techs (shield, second bay) and the pilot\'s rank: the bay is the wing the ready room shows (campRankWing: the bay, the second bay, the extras, the rank\'s), 77 ore', J('F.camp.ore') === 77 && J('F.camp.bay.fighters') === J('campRankWing(F.P).fighters') && J('F.camp.bay.escorts') === J('campRankWing(F.P).escorts') && J('F.camp.bay.fighters') >= J('CAMP.bay.fighters') + 2 + J('CAMP.tech.bay2.fighters') && J('F.camp.techs.join()') === 'shield,bay2', JSON.stringify(J('F.camp.bay')));
+g.run(`var Fo = __mk({ level: 2, mission: 0, via: 'hub', replay: true }, ${JSON.stringify(Object.assign({}, STORE, { results: Object.assign({}, STORE.results, { '2.1': { score: 800, bonuses: [], t: 1, hull: 1, lost: 0, tries: 1 } }) }))});`);
+check('a replay of a mission of another level than the one the save is at also flies with the current ore and extras (the level you have not finished: allowed once the mission itself is done)', J('Fo.replay') === true && J('Fo.camp.ore') === 77 && J('Fo.camp.bay.fighters') === J('campRankWing(Fo.P).fighters') && J('Fo.camp.bay.fighters') >= J('CAMP.bay.fighters') + 2 + J('CAMP.tech.bay2.fighters'));
+check('no story is told: the intro of a replay goes straight to the flight (the first mission of a level too), and the warp does not play again', (() => { g.run('Fo.mode = "intro"; Fo.showIntro();'); const noCard = J('__cards.length') === 0; g.run(`window.__starts = []; Fo.d0 = { level: 2 }; Fo.scene = { start: (k, d) => __starts.push(k) }; Fo.warped = false; Fo.via = 'hub'; Fo.mi = 0; var wd = campWarpDue(Fo);`); return noCard && J('Fo.mode') === 'play' && J('wd') === false && J('__starts.length') === 0; })());
+check('without the replay the first mission of level 2 still tells its story and plays the warp (the old road is untouched)', (() => { g.run(`var Fn = __mk({ level: 2, mission: 0, via: 'hub' }, ${JSON.stringify(STORE)}); window.__cards.length = 0; Fn.showIntro(); window.__starts = []; Fn.scene = { start: (k, d) => __starts.push(k) }; Fn.warped = false; Fn.mi = 0; var wd2 = campWarpDue(Fn);`); return J('__cards.length') === 1 && J('wd2') === true && J('__starts.join()') === 'CampWarp'; })());
+// winning the replay of mission 2 (best 640) with 1,430
+g.run(`window.__cards.length = 0; __went.length = 0; F.camp.ore = 130; campEnd(F.camp, 'won', 'test'); F.camp.score.score = 1430; F.missionWon();`);
+const card = () => J('__cards[__cards.length - 1]');
+check('the replay\'s debrief says Replay: the card is "REPLAY - Ore haulers", with the old best against this run and that it is a new best, and the card is taller', /^REPLAY {2}- {2}Ore haulers$/.test(card().title) && card().lines.some(l => /^SCORE 1,?430\nReplay: this run 1,430, your best was 640\. A new best: 1,430 points\.$/i.test(l) || /Replay: this run 1,430, your best was 640\. A new best: 1,430 points\.$/.test(l)) && card().tall === 380 && card().hint === 'Enter  ready room', JSON.stringify(card()));
+check('the best is kept in the save, the progress did not move (the level, the mission to fly next 3, the techs, the extras), the ore came with the cruiser (130)', (() => { const sv = JSON.parse(g.run('localStorage.getItem(CAMP.store)')); return sv.results['1.2'].score === 1430 && sv.results['1.2'].replays === 1 && sv.level === 1 && sv.mission === 2 && sv.techs.join() === 'shield,bay2' && sv.bonus.fighters === 2 && sv.bonus.escorts === 1 && sv.ore === 130 && sv.results['1.1'].score === 900; })());
+check('the voice says the score line as a debrief does (one line), and the scene is not at the end of a level: no story, no refit, no pick', J('F.mdone') === false && J('__said[__said.length - 1].length') === 1 && J('F.mode') === 'debrief');
+g.run(`F.onKey({ code: 'Enter' });`);
+check('Enter at the replay\'s debrief is the ready room: nothing else is shown or chosen (not the level\'s story, not the refit, not a tech pick), and the progress is still the third mission', J('__went.length') === 1 && J('__went[0].key') === 'CampHub' && J('F.mode') !== 'won' && J('F.mode') !== 'pick' && J('F.mode') !== 'refit' && JSON.parse(g.run('localStorage.getItem(CAMP.store)')).mission === 2);
+g.run(`window.__cards.length = 0; __went.length = 0; var Fl = __mk({ level: 1, mission: 1, via: 'hub', replay: true }, ${JSON.stringify(STORE)}); campEnd(Fl.camp, 'won', 'test'); Fl.camp.score.score = 300; Fl.missionWon();`);
+check('a replay that scores less keeps the old best and says so: "Your best stands at 640 points."; the result is unchanged but for the count', card().lines.some(l => /Replay: this run 300, your best was 640\. Your best stands at 640 points\.$/.test(l)) && JSON.parse(g.run('localStorage.getItem(CAMP.store)')).results['1.2'].score === 640);
+g.run(`__went.length = 0; var Fx = __mk({ level: 1, mission: 1, via: 'hub', replay: true }, ${JSON.stringify(STORE)}); campEnd(Fx.camp, 'lost', 'carrier'); Fx.showLost('carrier'); Fx.onKey({ code: 'Enter' });`);
+check('losing a replay costs nothing: the result is as it was (score, tries, replays), and Enter flies it again AS a replay', (() => { const sv = JSON.parse(g.run('localStorage.getItem(CAMP.store)')).results['1.2']; return sv.score === 640 && sv.tries === 1 && !sv.replays && J('__went[0].key') === 'Campaign' && J('__went[0].data.replay') === true && J('__went[0].data.via') === 'retry' && J('__went[0].data.mission') === 1; })());
+g.run(`__went.length = 0; var Fp = __mk({ level: 1, mission: 1, via: 'hub', replay: true }, ${JSON.stringify(STORE)}); Fp.mode = 'pause'; Fp.camp.L.objectives = Fp.camp.L.objectives || [{ type: 'clear' }]; Fp.onKey({ code: 'KeyR' });`);
+check('R at the pause restarts it as a replay too', J('__went.length') === 1 && J('__went[0].data.replay') === true && J('__went[0].data.via') === 'retry');
+check('a normal win still moves the road: the next mission, its debrief is the old one (no Replay in it), the level\'s end is as it was', (() => { g.run(`__cards.length = 0; __went.length = 0; var Fm = __mk({ level: 1, mission: 2, via: 'hub' }, ${JSON.stringify(STORE)}); campEnd(Fm.camp, 'won', 'test'); Fm.missionWon();`); const sv = JSON.parse(g.run('localStorage.getItem(CAMP.store)')); return !/REPLAY/.test(card().title) && /^MISSION COMPLETE/.test(card().title) && J('Fm.mdone') === true && sv.mission === 0 && !!sv.results['1.3'] && !card().lines.some(l => /^Replay:/.test(l)); })());
+
+// ---- the key table and the H page ----
+const page = J('campKeysPage(CAMPKEYS.room)'), camp = J('campKeysPage()');
+check('the ready room\'s keys are in the table as a group of their own (READY ROOM, scene CampHub) with the replay keys A D, R and X, and every row has keys and words of at most 36 letters', (() => { const gr = J(`controlsGroup('readyroom')`); const caps = gr.rows.map(r => r.k.join('+')); return gr && gr.scene === 'CampHub' && gr.title === 'READY ROOM' && ['A+D', 'R', 'X', 'L', 'W+S', '1-5', 'Esc', 'H'].every(c => caps.includes(c)) && gr.rows.every(r => r.k.length && r.t && r.t.length <= 36); })());
+check('H in the ready room opens the page of ITS keys: one heading, the ready room, with the group\'s rows; the Campaign\'s own page is unchanged (no ready room rows on it, so it still fits)', page.length === 1 && page[0].title === 'THE READY ROOM' && page[0].rows.length === J(`controlsGroup('readyroom').rows.length`) && page[0].rows.some(r => r.caps.join('+') === 'R' && /replay/i.test(r.t)) && !camp.some(g => g.title === 'THE READY ROOM') && J('campKeysLayout(campKeysPage(CAMPKEYS.room)).lines[0]') < 20);
+g.run(`window.__ck = []; campKeysOpen = (s, ids) => { __ck.push(ids); s.ck = { open: true }; return true; }; campKeysKey = (s, code) => { __ck.push('key ' + code); s.ck = null; return true; };`);
+g.run(`var Sk = __room(); Sk.onKey({ code: 'KeyH', repeat: false }); Sk.onKey({ code: 'KeyW', repeat: false });`);
+check('the room\'s scene opens that page on H (with the room\'s groups), the next key closes it and is not the room\'s (W does not move a row while the page is open)', J('__ck[0].join()') === 'readyroom' && J('__ck[1]') === 'key KeyW' && J('Sk.hub.row') === 0);
+
+// ---- the files ----
+const sc = src('src/campaignscene.js'), ch = src('src/camphub.js');
+check('the words are in a content file of their own (ui.md is full), and no leftover key reads as itself', (() => { const md = src('content/text/campreplay.md'); return ['camp.hub.replay.set', 'camp.hub.replay.none', 'camp.hub.replay.cleared', 'camp.hub.replay.mark', 'camp.hub.replay.keys', 'camp.hub.note.replay', 'camp.hub.replay.head', 'camp.hub.replay.rule1', 'camp.hub.replay.rule2', 'camp.ui.replay', 'camp.ui.replayscore', 'camp.ui.replaybest', 'camp.ui.replaykept'].every(k => md.indexOf('| ' + k + ' |') >= 0 && !/^camp\./.test(J(`uiText(${JSON.stringify(k)}, { n: 1, of: 3, title: 'T', now: 1, old: 2, best: 3 })`))); })());
+check('the scene goes to the ready room at a replay\'s debrief by the one nextMission it has (no new way out)', /nextMission\(\) \{ go\(this, 'CampHub'\); \}/.test(sc) && /replay: this\.replay/.test(sc));
+check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
+console.log(failed ? `CAMPAIGN REPLAY FAIL (${failed} of ${n})` : `CAMPAIGN REPLAY PASS (${n} checks)`);
+process.exitCode = failed ? 1 : 0;

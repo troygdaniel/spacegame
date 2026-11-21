@@ -19,6 +19,8 @@
 //   campHubRank(P)                 { ranked, name, n, of, points, next, nextName, wing, flown, all }: campRankStatus(P) (the ranks card, src/campranks.js) when it is there, else the plain score
 //   campHubBuy(P, what) / campHubGiveBack(P, what)   what: 'fighters' | 'escorts'  -> { ok, key, vars }
 //   campHubKey(H, P, code, ctx)    one key -> { used, moved, action: '' | 'launch' | 'undock' | 'title', changed, ok, say: { key, vars } | { text } | null }; ctx: the scene's data, handed to a row's keys
+//   REPLAYS (card space-game-campaign-replay): on the board A D (or the arrows) choose a mission already done, R makes it the one the Briefing and Launch are for, X goes back to the next mission. campHubDone(P) is the list
+//   of missions that can be replayed; campHubTarget(P, H) is the mission Launch flies: the replay picked, else the next one; campHubLaunch(P, H) says { level, mission, via: 'hub', replay }. The story and the progress do not move.
 //   campHubLaunch(P)               what the Campaign scene is started with: { level, mission, via: 'hub' }
 //   campHubStation(level)          the station the level's ready room is: { name, accent, art }
 const CAMP_HUB = {
@@ -40,7 +42,7 @@ const campHubLevels = () => Object.keys(CAMP.levels).map(Number).filter(n => Num
 function campHubStation(level) { const s = CAMP_HUB.stations[level] || CAMP_HUB.stations[1]; return { name: s.name, accent: s.accent, art: s.art }; }
 // the rows this visit shows: the ids asked for that the table knows (a note is what makes a row known), else the five; at: the id to stand on
 const campHubIds = ids => { const ok = (Array.isArray(ids) ? ids : []).filter((id, i, a) => typeof id === 'string' && typeof CAMP_HUB.note[id] === 'function' && a.indexOf(id) === i); return ok.length ? ok : CAMP_HUB.rows.slice(); };
-function campHubNew(P, opts) { const rows = campHubIds(opts && opts.rows), at = opts && opts.at ? rows.indexOf(opts.at) : 0; return { row: at > 0 ? at : 0, rows, last: '' }; }
+function campHubNew(P, opts) { const rows = campHubIds(opts && opts.rows), at = opts && opts.at ? rows.indexOf(opts.at) : 0; return { row: at > 0 ? at : 0, rows, last: '', cur: 0, pick: null }; } // cur: the board's cursor among the missions that can be replayed; pick: the replay chosen, { level, i }, or null
 
 // the mission the Launch row flies: the one the save says is next, kept inside what exists
 function campHubNext(P) {
@@ -59,6 +61,8 @@ function campHubFlown(P) { return Object.keys(campHubResults(P)).length; }
 function campHubAll() { return campHubLevels().reduce((a, l) => a + campMissions(l).length, 0); }
 function campHubTotal(P) { const r = campHubResults(P); return Object.keys(r).reduce((a, k) => a + ((r[k] && r[k].score) | 0), 0); }
 
+// the name of a rank by its index (the ranks card, CAMP.ranks): '' when there are no ranks
+const campHubRankName = i => (typeof CAMP === 'object' && CAMP.ranks && CAMP.ranks[i] ? uiText('camp.rank.' + CAMP.ranks[i].id) : '');
 // ---- the mission board ----
 function campHubBoard(P) {
   const nx = campHubNext(P), res = campHubResults(P), out = [];
@@ -68,7 +72,7 @@ function campHubBoard(P) {
     ms.forEach((m, i) => {
       const r = res[campResultKey(level, i)] || null, here = level === nx.level && i === nx.i, before = level < nx.level || (level === nx.level && i < nx.i);
       out.push({ level, i, n: i + 1, id: m.id, title: campHubTitle(level, i), kind: m.kind || 'waves', state: here ? 'next' : r ? 'done' : before ? 'passed' : 'later',
-        score: r ? r.score | 0 : 0, bonus: r && Array.isArray(r.bonuses) ? r.bonuses.length : 0, of: (m.bonus || []).length, tries: r ? r.tries | 0 : 0 });
+        score: r ? r.score | 0 : 0, bonus: r && Array.isArray(r.bonuses) ? r.bonuses.length : 0, of: (m.bonus || []).length, tries: r ? r.tries | 0 : 0, replays: r ? r.replays | 0 : 0, rank: r && Number.isInteger(r.rank) ? campHubRankName(r.rank) : '' });
     });
   });
   return out;
@@ -80,6 +84,27 @@ function campHubBoardView(rows, max) {
   if (a > 0 && !rows[a].head) { const h = rows.slice(0, a + 1).map((r, i) => r.head ? i : -1).filter(i => i >= 0).pop(); if (h != null && h >= 0 && a - h <= 1) a = h; } // start on the heading of the level when it is the line above
   return rows.slice(a, a + max);
 }
+
+// ---- replays ----
+const campHubDone = P => campHubBoard(P).filter(r => !r.head && r.state === 'done'); // the missions with a result that are not the next one: they can be flown again
+// the mission Launch flies: the replay picked on the board (if it is still a done mission), else the next one the save says
+function campHubTarget(P, H) {
+  const pk = H && H.pick;
+  if (pk && campHubDone(P).some(r => r.level === pk.level && r.i === pk.i)) return { level: pk.level, i: pk.i, replay: true };
+  const nx = campHubNext(P); return { level: nx.level, i: nx.i, replay: false };
+}
+// the board's own keys: A D (or the arrows) move the cursor over the done missions, R picks the one under it to replay, X goes back to the next mission. Not in a dock's room (nothing there launches a mission)
+CAMP_HUB.rowKey.board = (H, P, code, res, ctx) => {
+  if (ctx && ctx.dock) return null;
+  const left = code === 'KeyA' || code === 'ArrowLeft', right = code === 'KeyD' || code === 'ArrowRight', pick = code === 'KeyR', clear = code === 'KeyX';
+  if (!left && !right && !pick && !clear) return null;
+  const done = campHubDone(P); res.used = true;
+  if (clear) { if (H.pick) { H.pick = null; res.say = { key: 'camp.hub.replay.cleared', vars: {} }; } return res; }
+  if (!done.length) { res.ok = false; res.say = { key: 'camp.hub.replay.none', vars: {} }; return res; }
+  H.cur = Math.max(0, Math.min(done.length - 1, H.cur | 0));
+  if (left || right) { H.cur = (H.cur + (right ? 1 : -1) + done.length) % done.length; return res; }
+  const t = done[H.cur]; H.pick = { level: t.level, i: t.i }; res.say = { key: 'camp.hub.replay.set', vars: { n: t.n, title: t.title } }; return res;
+};
 
 // ---- the briefing ----
 function campHubBrief(P, level, i) {
@@ -142,16 +167,16 @@ function campHubRank(P) {
 
 // ---- the rows ----
 CAMP_HUB.note.board = P => uiText('camp.hub.note.board', { done: campHubFlown(P), all: campHubAll() });
-CAMP_HUB.note.brief = P => { const nx = campHubNext(P); return campHubTitle(nx.level, nx.i); };
+CAMP_HUB.note.brief = (P, ctx) => { const t = campHubTarget(P, ctx && ctx.hub); return campHubTitle(t.level, t.i) + (t.replay ? ' ' + uiText('camp.hub.replay.mark') : ''); };
 CAMP_HUB.note.refit = P => uiText('camp.hub.note.refit', { ore: P.ore | 0 });
 CAMP_HUB.note.rank = P => { const rk = campHubRank(P); return rk.ranked ? rk.name : uiText('camp.hub.note.points', { points: rk.points }); };
-CAMP_HUB.note.launch = P => uiText('camp.hub.note.launch', { n: campHubNext(P).i + 1 });
+CAMP_HUB.note.launch = (P, ctx) => { const t = campHubTarget(P, ctx && ctx.hub); return uiText(t.replay ? 'camp.hub.note.replay' : 'camp.hub.note.launch', { n: t.i + 1 }); };
 function campHubRows(P, ids, ctx) { // ctx: the scene's data (a dock passes { dock, camp, P }): what a row's note may read besides the progress
   return campHubIds(ids).map((id, k) => { let note = ''; try { note = String(CAMP_HUB.note[id](P, ctx)); } catch (e) { note = ''; } return { id, n: k + 1, name: uiText('camp.hub.row.' + id), note }; });
 }
 const campHubFoot = (row, ctx) => { const k = 'camp.hub.dockfoot.' + row, t = ctx && ctx.dock ? uiText(k) : k; return /^camp\./.test(t) ? uiText('camp.hub.foot.' + row) : t; }; // a dock's room has its own foot lines for the rows that go on to another one
 const campHubKeyLine = () => uiText('camp.hub.keys');
-const campHubLaunch = P => { const n = campHubNext(P); return { level: n.level, mission: n.i, via: 'hub' }; };
+const campHubLaunch = (P, H) => { const t = campHubTarget(P, H); return { level: t.level, mission: t.i, via: 'hub', replay: t.replay }; }; // replay: the Campaign scene flies it from its standard start and moves nothing
 
 // ---- the keys ----
 // the refit's own keys: F buys a fighter, E an escort, Backspace gives the last one back
