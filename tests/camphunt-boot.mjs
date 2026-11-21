@@ -148,6 +148,7 @@ try {
         }
         if (s % 10 === 5) { await key('KeyQ'); await key('Digit2'); }
         await t.run(5000);
+        if ((s + 5) % 20 === 0) await snap('fight-' + (s + 5)); // a picture every 20 s of the fight: the pirates, the neutral miners, the wing
         if (s % 15 === 10) { const q = await state(); note('t+' + (s + 5) + ': ' + JSON.stringify(q) + ' | HUD ' + (await hud()).filter(x => /goal|obj|toast|say/i.test(x)).join(' | ').slice(0, 300)); }
         if (await j(`${S}.camp.result || ${S}.mode !== 'play'`)) break;
       }

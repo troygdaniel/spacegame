@@ -11,7 +11,9 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.enemies | ENEMIES |
 | camp.bf.readiness | READINESS |
 | camp.bf.expect | Expect {list}. |
-| camp.bf.expectnone | No aliens are listed for this mission. |
+| camp.bf.expectnone | No enemies are listed for this mission. |
+| camp.bf.expectunknown | Expect {list}, and unknown ships. |
+| camp.bf.unknownonly | Unknown ships may come. |
 | camp.bf.nowalk | No walkthrough for this mission. Read the goals and the map. |
 | camp.bf.enemy.raider.one | {n} raider |
 | camp.bf.enemy.raider.many | {n} raiders |

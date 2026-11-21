@@ -111,4 +111,11 @@ for (const m of readFileSync(join(ROOT12, 'src/contenttables.js'), 'utf8').match
 const mdkeys = new Map(); for (const f of readdirSync(join(ROOT12, 'content/text')).filter(x => x.endsWith('.md'))) for (const m of readFileSync(join(ROOT12, 'content/text', f), 'utf8').matchAll(/^\|\s*([A-Za-z0-9_.]+)\s*\|/gm)) { if (m[1] === 'key') continue; if (mdkeys.has(m[1]) && mdkeys.get(m[1]) !== f) dup12.push(m[1] + ' in ' + mdkeys.get(m[1]) + ' and ' + f); mdkeys.set(m[1], f); }
 check('no string key is defined twice: not in the default table (src/contenttables.js) and not in two files of content/text', dup12.length === 0, dup12.join('; '));
 
+// ---- 13. the rim's briefing draws pirates for pirate raids and keeps the first contact a surprise ----
+check('1.3\'s ENEMIES line lists the pirates and says "and unknown ships" (the contact wave is secret: 2 raiders and a drone are not named); 1.1 and 1.2 list only pirates; levels 2 and 3 list all of theirs',
+  J('campBriefEnemies(1, 2).line') === 'Expect 6 pirate skiffs, 3 pirate cutters, and unknown ships.' && J('campBriefEnemies(1, 2).unknown') === true && !/raider|drone/.test(J('campBriefEnemies(1, 2).line'))
+  && J('campBriefEnemies(1, 0).unknown') === false && /pirate skiff/.test(J('campBriefEnemies(1, 0).line')) && /raider/.test(J('campBriefEnemies(2, 0).line')) && /gunship/.test(J('campBriefEnemies(3, 1).line') + J('campBriefEnemies(2, 1).line')), J('campBriefEnemies(1, 2).line'));
+check('the goal "Destroy the attackers." is drawn with skiffs and a cutter on the rim (1.1 to 1.3: the contact wave included, the picture does not give it away), and with the aliens\' raiders and drone on level 2',
+  [0, 1, 2].every(m => J(`campBriefSteps(null, 1, ${m}).goals.filter(x => x.kind === 'kill.wave').every(x => x.pic === 'kill.wave.pirate' && x.parts.some(p => p.look === 'skiff') && !x.parts.some(p => p.look === 'raider' || p.look === 'drone'))`)) && J(`campBriefSteps(null, 2, 0).goals.filter(x => x.kind === 'kill.wave').every(x => x.pic === 'kill.wave' && x.parts.some(p => p.look === 'raider'))`));
+
 process.exit(failed ? 1 : (console.log('\nHUNT FIXES PASS'), 0));
