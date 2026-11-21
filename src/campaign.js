@@ -380,7 +380,7 @@ const CAMP = {
         { id: 'relic', kind: 'defend', par: 90, win: 'relic',      // M3: hold the carrier on the relic's ring until it answers, with no alien near it
           start: 'proxima', startAt: [-600, 300], relic: { place: 'proxima', radius: 240, hold: 14, caches: 0, clear: 650 }, objectives: [{ type: 'relic' }],  // where the cruiser starts, and the relic
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'echo' }, { id: 'swift', type: 'time', secs: 90 }, { id: 'hull', type: 'hull', pct: 70 }],  // bonus objectives: each met earns CAMP.score.bonus
-          waves: [{ at: 6, from: [4000, -2000], ships: { drone: 3, raider: 2 }, goal: 'carrier', say: 'camp.say.l2wave2' }] }  // the waves: when, from where, how many of each kind
+          waves: [{ at: 6, from: [4000, -2000], ships: { drone: 3, raider: 2 }, goal: 'carrier', say: 'camp.say.l2wave3' }] }  // the waves: when, from where, how many of each kind
       ]
     },
     3: {                                                          // the alien home world: scan the approach, break the outer ring, break the inner ring
