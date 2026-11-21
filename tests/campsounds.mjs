@@ -10,10 +10,11 @@
 // Run: node tests/campsounds.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
+import { belt } from './fixtures/campbelt.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name + (detail ? '  ' + String(detail).slice(0, 200) : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 300) + ')' : ''}`); } };
-const g = nodeGame();
+const g = nodeGame(); belt(g); // the old Level 1, the asteroid belt, as a fixture level: this suite flies on it (card space-game-l1-rim-missions)
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
@@ -84,7 +85,7 @@ console.log('G1. the turrets: the pew');
 console.log('G2. the beam and mining hum');
 {
   g.run(`
-    window.__bat = (techs) => { window.C = campNew(1, techs || [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); C.motherSpawn = 1e12; C.pickups = []; C.rocks = [];
+    window.__bat = (techs) => { window.C = campNew(11, techs || [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); C.motherSpawn = 1e12; C.pickups = []; C.rocks = [];
       const u = campSpawn(C, 'gunship', C.carrier.x + 300, C.carrier.y); u.vmax = 0; u.accel = 0; u.nextShot = 1e12; u.hp = u.maxHp = 90000; return u.id; };
     window.__go = sec => { for (let i = 0; i < Math.round(sec * 30); i++) { campStep(C, 1 / 30); C.events.length = 0; } };
   `);
@@ -143,7 +144,7 @@ console.log('G2. the beam and mining hum');
   g.run(`
     window.__plays = []; window.__sfx1 = sfx; sfx = (name, a) => { __plays.push(name + ' ' + a); };
     window.__fakeSc = (techs) => { const rec = () => { const p = new Proxy({}, { get: (t, k) => (k === 'then' ? undefined : (...a) => p) }); return p; };
-      const f = Object.create(Campaign.prototype); f.add = rec(); f.tweens = { add() {} }; f.blipAt = undefined; f.camp = campNew(1, techs, { seed: 1 }); return f; };
+      const f = Object.create(Campaign.prototype); f.add = rec(); f.tweens = { add() {} }; f.blipAt = undefined; f.camp = campNew(11, techs, { seed: 1 }); return f; };
   `);
   g.run('window.__f1 = __fakeSc([]); __plays.length = 0; __f1.camp.t = 1000; __f1.onEvent({ type: "turret", i: 3, x: 0, y: 0, aim: 0 }); window.__f2 = __fakeSc(["beam"]); __f2.camp.t = 1000; __f2.onEvent({ type: "turret", i: 3, x: 0, y: 0, aim: 0 }); sfx = __sfx1');
   check('with the Beam turrets the hum is the sound: the turret event plays no pew (the flash stays); without it the pew is played with the turret\'s number', J('__plays').join() === 'turret 3', J('__plays').join());
@@ -186,13 +187,13 @@ console.log('G4. the explosions and the hits');
   check('neither hit is louder than the game\'s own hit effect (' + HIT.peak.toFixed(2) + ' added up): they come often', SH.peak <= HIT.peak && HH.peak <= HIT.peak && SH.peak > 0.03 && HH.peak > 0.03, [SH.peak.toFixed(3), HH.peak.toFixed(3)].join());
   check('a shot on Earth is a deep thump felt more than heard: a sine falling 60 to 28 Hz and a low rumble under 300 Hz, half a second, under 0.15 added up', EH.parts.some(p => p.kind === 'tone' && p.type === 'sine' && p.f0 === 60 && p.f1 === 28) && EH.parts.some(p => p.type === 'lowpass' && p.f0 === 300) && EH.secs <= 0.55 && EH.peak <= 0.15, [EH.secs.toFixed(2), EH.peak.toFixed(3)].join());
   // the sim says which: a hit on the carrier's hull and on its shield
-  g.run(`window.__hurt = (shield, dmg) => { window.C = campNew(1, [], { seed: 1 }); C.shield = shield; C.events.length = 0; campHurt(C, C.carrier, dmg, 'x'); return C.events.map(e => e.type + (e.hull === undefined ? '' : ':' + e.hull)); }`);
+  g.run(`window.__hurt = (shield, dmg) => { window.C = campNew(11, [], { seed: 1 }); C.shield = shield; C.events.length = 0; campHurt(C, C.carrier, dmg, 'x'); return C.events.map(e => e.type + (e.hull === undefined ? '' : ':' + e.hull)); }`);
   check('the sim tells the scene which: a shot the shield took whole is a shieldhit and a hit that did not reach the hull; one that got through is a hit on the hull (and a shieldhit too while the shield lasts)', J('__hurt(150, 10)').join() === 'shieldhit,hit:false' && J('__hurt(0, 10)').join() === 'hit:true' && J('__hurt(5, 10)').join() === 'shieldhit,hit:true', [J('__hurt(150, 10)').join(), J('__hurt(0, 10)').join(), J('__hurt(5, 10)').join()].join(' | '));
   // the scene
   g.run(`
     window.__plays = []; window.__sfx1 = sfx; sfx = (name, a) => { __plays.push(name); };
     window.__fakeSc = () => { const rec = () => { const p = new Proxy({}, { get: (t, k) => (k === 'then' ? undefined : (...a) => p) }); return p; };
-      const f = Object.create(Campaign.prototype); f.add = rec(); f.tweens = { add() {} }; f.cameras = { main: { shake() {} } }; f.boom = { explode() {} }; f.flash = () => {}; f.camp = campNew(1, [], { seed: 1 }); return f; };
+      const f = Object.create(Campaign.prototype); f.add = rec(); f.tweens = { add() {} }; f.cameras = { main: { shake() {} } }; f.boom = { explode() {} }; f.flash = () => {}; f.camp = campNew(11, [], { seed: 1 }); return f; };
     window.__f = __fakeSc(); const at = (t, e) => { __f.camp.t = t; __f.onEvent(e); }; const c = __f.camp.carrier;
     at(1000, { type: 'boom', x: 0, y: 0, big: false, kind: 'raider' }); at(1010, { type: 'boom', x: 0, y: 0, big: false, kind: 'drone' }); at(1100, { type: 'boom', x: 0, y: 0, big: true, kind: 'mother' });
     at(2000, { type: 'hit', id: c.id, x: c.x, y: c.y, hull: true }); at(2020, { type: 'hit', id: c.id, x: c.x, y: c.y, hull: true }); at(2300, { type: 'hit', id: c.id, x: c.x, y: c.y, hull: false });
@@ -226,7 +227,7 @@ console.log('G5. the turrets and the wing can be heard (card space-game-campaign
   check('and it is not the turret\'s: lower (triangle where the turret has a square), so the two can be told apart', !T.parts.some(p => p.type === 'triangle') && T.parts.some(p => p.type === 'square') && Math.min(...W1.parts.filter(p => p.kind === 'tone').map(p => p.f0)) >= 900);
   // the events: every shot of ours says so, and every one of them has a sound
   g.run(`
-    window.__fight = (secs) => { window.C = campNew(1, [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); C.motherSpawn = 1e12; C.ships.forEach(u => { if (u.team === 'alien') u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0);
+    window.__fight = (secs) => { window.C = campNew(11, [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); C.motherSpawn = 1e12; C.ships.forEach(u => { if (u.team === 'alien') u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0);
       const c = C.carrier, u = campSpawn(C, 'gunship', c.x + 350, c.y); u.vmax = 0; u.accel = 0; u.nextShot = 1e12; u.hp = u.maxHp = 1e7;
       const cnt = { pd: 0, wing: 0, ev: {} }, b0 = campBullet; campBullet = function (C2, from, rot, speed, dmg, life, team, ahead, extra) { if (team === 'earth') { if (extra && extra.pd) cnt.pd++; else cnt.wing++; } return b0.apply(this, arguments); };
       campOrder(C, 'launch'); C.input.fire = true; const seen = [];
@@ -240,7 +241,7 @@ console.log('G5. the turrets and the wing can be heard (card space-game-campaign
   g.run(`
     window.__plays = []; window.__sfx2 = sfx; sfx = (name, a) => { __plays.push([name, a]); };
     window.__fakeSc2 = () => { const rec = () => { const p = new Proxy({}, { get: (t, k) => (k === 'then' ? undefined : (...a) => p) }); return p; };
-      const f = Object.create(Campaign.prototype); f.add = rec(); f.tweens = { add() {} }; f.cameras = { main: { shake() {} } }; f.boom = { explode() {} }; f.flash = () => {}; f.blipAt = undefined; f.camp = campNew(1, [], { seed: 1 }); return f; };
+      const f = Object.create(Campaign.prototype); f.add = rec(); f.tweens = { add() {} }; f.cameras = { main: { shake() {} } }; f.boom = { explode() {} }; f.flash = () => {}; f.blipAt = undefined; f.camp = campNew(11, [], { seed: 1 }); return f; };
   `);
   const sounded = J(`(() => { const f = __fakeSc2(), out = {}; f.camp.t = 10000; const kinds = ['turret', 'wingshot']; let t = 10000;
     kinds.forEach(k => { __plays.length = 0; t += 1000; f.camp.t = t; const c = f.camp.carrier; f.onEvent({ type: k, i: 2, x: c.x + 200, y: c.y, aim: 0, tx: undefined, kind: 'fighter', id: 'fighter-1' }); out[k] = __plays.map(p => p[0]); }); return out; })()`);

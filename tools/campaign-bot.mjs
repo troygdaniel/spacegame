@@ -68,7 +68,8 @@ g.run(`(() => {
     if (B.reactive != null && st.react == null && ((C.earth && C.earth.shield <= C.earth.max * 0.9) || C.carrier.hp <= C.carrier.maxHp * 0.8)) st.react = s + B.reactive;
     if (st.react != null && s >= st.react) { B = Object.assign({}, B, { sit: false, launchAt: st.launched ? B.launchAt : 0, attackFrom: 0, attackEvery: 5 }); st.sitOff = true; }
     if (B.launch !== false && B.launchAt != null && !st.launched && s >= B.launchAt) { st.launched = true; campOrder(C, 'launch'); }
-    (B.escort || []).forEach((at, i) => { if (!st['e' + i] && s >= at && C.level === 1) { const id = i === 0 ? 'mars' : 'eros'; if (campConvoys(C).some(u => u.id === 'freighter-' + id)) { st['e' + i] = true; campOrder(C, 'escort', id + ' convoy'); } } });
+    (B.escort || []).forEach((at, i) => { if (!st['e' + i] && s >= at && campConvoys(C).length) { st['e' + i] = true; campOrder(C, 'escort', 'convoy'); } }); // the wing goes to the nearest convoy ship (the transport, the haulers)
+    if (B.launch !== false && st.launched && !st.mining && campObjectives(C).some(o => !o.done && o.type === 'ore') && !B.nomine) { st.mining = true; campOrder(C, 'mine'); } // a mission that asks for ore: the wing mines (E then 1)
     if (B.cycle && st.launched) {
       if (st.landAt && s >= st.landAt) { st.landAt = 0; campOrder(C, 'launch'); st.nextAtk = s + 2; }
       const fs = campWing(C, 'fighter');
@@ -91,6 +92,11 @@ g.run(`(() => {
       const first = campObjectives(C).find(o => !o.done) || {}, byD = list => list.sort((p, q) => campDist(p, c) - campDist(q, c))[0];
       if (first.type === 'scan') goal = byD(C.scan.filter(p => !p.got)) || goal; else if (first.type === 'caches') goal = byD(C.caches.filter(k => !k.got)) || goal; else if (first.type === 'relic') goal = C.relic;
       else if (first.type === 'deliver') goal = byD(campConvoys(C).slice()) || goal || { x: 1000, y: -500 }; else if (first.type === 'hold') goal = C.earth || goal;
+      else if (first.type === 'ore') goal = byD(C.rocks.filter(r => r.hp > 0)) || goal; // mine: fly to the nearest rock (the carrier's lasers cut it; the wing mines too)
+      else if (first.type === 'kill' && !goal) goal = byD(C.rocks.filter(r => r.hp > 0)) || goal; // wait for the raid at the rocks, not in the open
+      else if (first.type === 'cashin') { // sell the store: fly to the market outpost and dock (campDock refuses with an alien near: the fight comes first)
+        const o = campOutposts(C.level).find(x => x.market); if (o) { goal = { x: o.x, y: o.y, got: false }; if (campOutpostNear(C) && !campAliens(C).length) { campDock(C, o.id); campUndock(C); } }
+      }
       if (a && campDist(a, c) < 900) goal = a;
     } else if (C.level === 2) { const k = C.caches.filter(k => !k.got).sort((p, q) => campDist(p, c) - campDist(q, c))[0]; goal = C.cachesGot < L.relic.caches && k ? k : C.relic; if (a && campDist(a, c) < 700) goal = a; }
     else if (C.level === 3) { const near = campAliens(C).sort((p, q) => campDist(p, c) - campDist(q, c))[0]; goal = near; a = near; }
