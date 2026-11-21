@@ -103,7 +103,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | spoken.off | answers are never said aloud |
 | music.use | Music is made by the game as you fly and steps back when the ship speaks. Effects is the engine, the drone and every shot and click; they ease off a little while music plays. M mutes all. |
 | camp.l1.before.1 | Ceres belt. The cruiser is mining. |
-| camp.l1.before.2 | Fly over ore, or press 6 to send the drones. |
+| camp.l1.before.2 | Fly over ore, or send the drones: SHIP panel, Mine ore. |
 | camp.l1.after.1 | Mothership destroyed. The belt is clear. |
 | camp.l1.after.2 | Their wreck holds alien technology. |
 | camp.say.convoy | Convoy to {name} is away. |
