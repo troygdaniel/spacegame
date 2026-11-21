@@ -88,7 +88,7 @@ function campPirateRun(C, u, dt) {
   if (C.t - u.running.since >= K.runMin && (!near || campDist(u, near) >= K.gone)) campPirateGone(C, u);
 }
 function campPirateGone(C, u) { // out of the battle: not killed (no kill, no wreck), counted as escaped
-  u.hp = 0; u.gone = true; C.piratesEscaped++;
+  u.hp = 0; u.gone = true; if (u.faction === 'pirate') C.piratesEscaped++; else C.aliensEscaped = (C.aliensEscaped | 0) + 1; // an alien boat that is out of torpedoes goes the same way
   C.events.push({ type: 'pirates', stage: 'gone', id: u.id, kind: u.kind, x: u.x, y: u.y, wave: u.wave });
 }
 // break off by hand (a script, or the wave's own `breaks` / `breakOn`): who is 'all' or 'wave:N'; how many pirates turned to run

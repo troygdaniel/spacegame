@@ -1,5 +1,5 @@
 // ---------- Campaign: the keyboard panels, the logic (card space-game-campaign-keys-help; Troy, 20 Nov 2026) ----------
-// Key Q opens the FLEET panel (launch, attack, escort, guard, recall) at the left, key E the SHIP panel (mine, recharge, build a fighter, build an escort, fly to the objective) at the right (it was 1 and 2 until card
+// Key Q opens the FLEET panel (launch, attack, escort, guard, recall) at the left, key E the SHIP panel (mine, build a fighter, build an escort, fly to the objective, dock) at the right (it was 1 and 2 until card
 // space-game-campaign-panels-ui: Troy); Q again closes the left one, E again the right, and Q with the right one open switches. A row's digit (1 to 5) does it and the panel closes; a digit with no panel open does nothing.
 // The digits are not orders any more. The panels, their rows and their words are CAMP_PANELS (src/data_controls.js): this file only reads it. It is plain data and functions, no Phaser
 // (tests/campanels.mjs runs it in Node); src/campanelsdraw.js draws the panels and src/campaignscene.js gives it the keys and the clicks.
@@ -89,12 +89,6 @@ function campPanelWhy(r) {
   if (r.code === 'cooling') { const m = /in (\d+) seconds/.exec(r.say || ''); t = t.replace('{s}', m ? m[1] : '?'); }
   return t;
 }
-// what the carrier's recharge would do: Earth's shield when it is near and not full, else the carrier's own; and what it costs
-function campPanelRecharge(C) {
-  const R = CAMP.recharge, near = !!C.earth && campDist(C.carrier, C.earth) <= R.earthReach;
-  if (near && C.earth.shield < C.earth.max * 0.9) return { what: 'Earth', cost: R.earth };
-  const max = campShieldMax(C); return { what: 'carrier', cost: Math.max(5, Math.ceil(R.carrier * (max - C.shield) / max)) };
-}
 function campPanelState(C, row) {
   const B = CAMP.build;
   switch (row.id) {
@@ -103,11 +97,10 @@ function campPanelState(C, row) {
     case 'escort': { const cv = campNearest(campConvoys(C), C.carrier); return cv ? campConvoyName(cv) + ' convoy' : 'stay by the carrier'; } // a level with no convoy (the belt): the escorts stay close
     case 'guard': case 'recall': return campWing(C).length + ' ships out';
     case 'mine': return campMiners(C).length + ' ships, ' + C.rocks.filter(r => r.hp > 0).length + ' rocks, ' + C.pickups.length + ' ore'; // the whole wing mines (the belt, space-game-campaign-belt): rocks to cut and ore lying about
-    case 'recharge': { const r = campPanelRecharge(C); return (r.what === 'Earth' ? 'Earth: ' : 'shield: ') + r.cost + ' ore'; }
     case 'buildf': return B.fighterCost + ' ore, ' + B.fighterTime + ' s';
     case 'builde': return B.escortCost + ' ore, ' + B.escortTime + ' s';
     case 'free': case 'orbit': case 'keep': case 'match': case 'hold': return C.stance === row.id ? 'in force' : ''; // the wing's stance: the one in force is marked
-    case 'weapons': case 'shields': case 'engines': { const i = { weapons: 0, shields: 1, engines: 2 }[row.id], fx = campPowerFx(C); return C.power.p[i] + ' pips: ' + (i === 0 ? 'turrets x' + (1 / fx.delay).toFixed(2) : i === 1 ? 'shield ' + Math.round(campShieldMax(C)) : 'speed x' + fx.speed.toFixed(2)); }
+    case 'weapons': case 'shields': case 'engines': { const i = { weapons: 0, shields: 1, engines: 2 }[row.id], fx = campPowerFx(C); return C.power.p[i] + ' pips: ' + (i === 0 ? 'turrets x' + (1 / fx.delay).toFixed(2) : i === 1 ? 'shield ' + Math.round(campShieldMax(C)) + (fx.regen > 0 ? ', mends ' + fx.regen + '/s' : ', no mend') : 'speed x' + fx.speed.toFixed(2)); }
     case 'balance': return 'now ' + C.power.p.join(' / ');
     case 'emergency': return CAMP.power.emergency.ms / 1000 + ' s of shields, then back';
     case 'dock': { if (campPanelAs(C, row).order === 'repair') { const q = campMendQuote(C); return Math.round(q.missing) + ' hull for ' + q.cost + ' ore'; } const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? 'dock at ' + n.o.name : ''; } // the outpost in range (aboard: the mend)
@@ -129,7 +122,6 @@ function campPanelShortState(C, row) {
     case 'escort': { const cv = campNearest(campConvoys(C), C.carrier); return cv ? campConvoyName(cv) : 'stay close'; }
     case 'guard': case 'recall': return campWing(C).length + ' out';
     case 'mine': return campMiners(C).length + ' ships';
-    case 'recharge': return campPanelRecharge(C).cost + ' ore';
     case 'buildf': return B.fighterCost + ' ore';
     case 'builde': return B.escortCost + ' ore';
     case 'dock': { if (campPanelAs(C, row).order === 'repair') return campMendQuote(C).cost + ' ore'; const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name : ''; } // the outpost in range, by name (the row had no word of its own when it could be done: wrap-up, 8-GEN)
