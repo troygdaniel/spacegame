@@ -377,7 +377,6 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'torpedo' || e.type === 'tboom') { if (typeof campTorpedoEvent === 'function') campTorpedoEvent(this, e); } // a torpedo boat arms, a torpedo is away, goes off, is shot down (src/camptorpedoscene.js)
     else if (e.type === 'ore') beep(900, 0.05, 'triangle', 0.035, 200);
     else if (e.type === 'built') beep(660, 0.12, 'triangle', 0.05, 240);
-    else if (e.type === 'recharge') { sfx('shieldUp'); this.boom.explode(10, e.x, e.y); }
     else if (e.type === 'shieldhit' && e.x === this.camp.carrier.x) { this.cameras.main.shake(60, 0.002); this.battleSound('shield', 'shieldHit'); }
     else if (e.type === 'end') { if (e.result === 'won') this.time.delayedCall(1800, () => this.missionWon()); else this.time.delayedCall(1200, () => this.showLost(e.why)); }
   }

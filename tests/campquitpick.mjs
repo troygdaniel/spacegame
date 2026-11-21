@@ -1,6 +1,6 @@
 // smoke: card space-game-night-quit-at-pick (findings A and F of docs/night/hunt-l2-l3.md), plain Node, no Chrome
 //   A  quitting at the tech pick or the Earth refit: the save's levelDone sends the pilot back to the level's story and pick (the flag itself is pinned in tests/campnightminors.mjs; here the refit of level 1 too)
-//   F  a level with no outpost (level 3): the SHIP panel's sixth row is "Repair the hull" and E then 6 mends the hull aboard for ore; a level with outposts keeps "Dock at an outpost"
+//   F  a level with no outpost (level 3): the SHIP panel's fifth row (its sixth until card space-game-shield-auto took the recharge row out) is "Repair the hull" and E then 5 mends the hull aboard for ore; a level with outposts keeps "Dock at an outpost"
 // Run: node tests/campquitpick.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
 
@@ -19,17 +19,17 @@ check('closing the tab at the refit leaves the flag set (only next() clears it),
 console.log('F. level 3 mends the hull aboard from the SHIP panel');
 g.run(`window.mk = lv => { const C = campNew(lv, [], { seed: 1, mission: 0 }); C.arrivedAt = 0; C.ore = 200; return C; }; window.shipRow = C => campPanelRows(C, 'ship').find(r => r.id === 'dock');`);
 const f3 = J(`(() => { const C = mk(3), whole = shipRow(C); C.carrier.hp = C.carrier.maxHp * 0.25; const hurt = shipRow(C); C.ore = 0; const poor = shipRow(C); C.ore = 200; return { aboard: campAboard(C), whole, hurt, poor, max: C.carrier.maxHp }; })()`);
-check('level 3 has no outpost: the sixth row reads "Repair the hull" (the tab says Repair)', f3.aboard === true && f3.whole.label === 'Repair the hull' && f3.whole.tag === 'Repair', JSON.stringify(f3.whole));
+check('level 3 has no outpost: the fifth row reads "Repair the hull" (the tab says Repair)', f3.aboard === true && f3.whole.label === 'Repair the hull' && f3.whole.tag === 'Repair', JSON.stringify(f3.whole));
 check('with the hull whole it says why in two words ("hull sound") and is not ok', f3.whole.ok === false && f3.whole.short === 'hull sound', JSON.stringify(f3.whole));
 check('hurt: ok, what it does ("450 hull for N ore") and the cost in the short word', f3.hurt.ok === true && /^\d+ hull for \d+ ore$/.test(f3.hurt.state) && /^\d+ ore$/.test(f3.hurt.short), JSON.stringify(f3.hurt));
 check('hurt with no ore: not ok, and it says what it needs', f3.poor.ok === false && /ore/.test(f3.poor.short), JSON.stringify(f3.poor));
 const run = J(`(() => { const C = mk(3), P = campPanelNew(); C.carrier.hp = C.carrier.maxHp * 0.25; const was = C.carrier.hp, ore = C.ore, quote = campMendQuote(C);
-  const a = campPanelKey(P, C, 'KeyE', 1000, false), b = campPanelKey(P, C, 'Digit6', 1100, false);
+  const a = campPanelKey(P, C, 'KeyE', 1000, false), b = campPanelKey(P, C, 'Digit5', 1100, false);
   return { opened: a.opened, ran: b.ran, ok: b.ok, say: b.say, hp: C.carrier.hp, max: C.carrier.maxHp, paid: ore - C.ore, quote, was, mends: C.orders.repair | 0, row: b.row }; })()`);
-check('E then 6 on level 3 mends the hull to full for the quoted ore', run.opened === 'ship' && run.ran === true && run.ok === true && run.hp === run.max && run.paid === run.quote.cost && run.mends === 1, JSON.stringify(run));
+check('E then 5 on level 3 mends the hull to full for the quoted ore', run.opened === 'ship' && run.ran === true && run.ok === true && run.hp === run.max && run.paid === run.quote.cost && run.mends === 1, JSON.stringify(run));
 check('and says so in the words of the repair order (not "There is no outpost in this system")', /\b(mend|repair|hull)/i.test(run.say) && !/no outpost/i.test(run.say), run.say);
-const again = J(`(() => { const C = mk(3), P = campPanelNew(); campPanelKey(P, C, 'KeyE', 1000, false); const b = campPanelKey(P, C, 'Digit6', 1100, false); return { ok: b.ok, say: b.say, hp: C.carrier.hp, max: C.carrier.maxHp }; })()`);
-check('with the hull whole, E then 6 mends nothing and says the hull is sound', again.ok === false && /sound|whole|full/i.test(again.say) && again.hp === again.max, JSON.stringify(again));
+const again = J(`(() => { const C = mk(3), P = campPanelNew(); campPanelKey(P, C, 'KeyE', 1000, false); const b = campPanelKey(P, C, 'Digit5', 1100, false); return { ok: b.ok, say: b.say, hp: C.carrier.hp, max: C.carrier.maxHp }; })()`);
+check('with the hull whole, E then 5 mends nothing and says the hull is sound', again.ok === false && /sound|whole|full/i.test(again.say) && again.hp === again.max, JSON.stringify(again));
 const click = J(`(() => { const C = mk(3); C.carrier.hp = 100; const row = CAMP_PANELS.panels.find(p => p.id === 'ship').rows.find(r => r.id === 'dock'); const r = campPanelRun(C, row, 'click'); return { ok: r.ok, hp: C.carrier.hp, max: C.carrier.maxHp }; })()`);
 check('a click on the row does the same as the key (campPanelRun is the one way in)', click.ok === true && click.hp === click.max, JSON.stringify(click));
 

@@ -42,14 +42,14 @@ const CAMP = {
     lead: 1,                               // how far ahead a turret aims: 1 is where its shot and the alien meet (the alien's speed, the shot's, the carrier's drift), 0 is where the alien is now
     stagger: 1,                            // 1: each turret fires on a slot of its own, offset from the next by pdDelay over the number of turrets, so the fire is continuous; 0: all eight on the same beat (a volley, as it was)
     jitter: 12,                            // ms: how far a turret's slot is moved at random (a stream of its own), so the rattle is not a metronome; keep it under half of pdDelay over the number of turrets (44 ms)
-    shield: 150                            // points of shield: they take damage before the hull, do not mend by themselves, and ore refills them (recharge, key 7)
+    shield: 150                            // points of shield: they take damage before the hull and mend by themselves, at a rate the shield pips set (CAMP.power.shields.regen; card space-game-shield-auto: the ore recharge is gone)
   },
   power: {                                 // ship systems (card space-game-campaign-systems; docs/CAMPAIGN.md "Ship systems"): power to weapons, shields and engines, like X-Wing
-    budget: 6, max: 4, start: [2, 2, 2],   // the pips to share, the most in one system, and the default: weapons, shields, engines. Every factor is 1 (regeneration 0) at 2 pips: today's numbers exactly
+    budget: 6, max: 4, start: [2, 2, 2],   // the pips to share, the most in one system, and the default: weapons, shields, engines. Every factor is 1 at 2 pips (the shield mends at its base rate there)
     weapons: { delay: [1.6, 1.3, 1, 0.8, 0.65],   // x the turrets' pdDelay, by pips 0 to 4
                reload: [1.6, 1.3, 1, 0.75, 0.55] }, // x the missile reload
     shields: { cap: [0.5, 0.75, 1, 1.25, 1.5],    // x the carrier's shield points
-               regen: [0, 0, 0, 3, 6],            // points a second the shield mends by itself (today it does not), once regenDelay ms have passed with no hit
+               regen: [0, 1.5, 3, 6, 10],         // points a second the shield mends by itself, by pips 0 to 4 (none at 0, slow at 2, fast at 4: 10 a second of its 225), once regenDelay ms have passed with no hit (card space-game-shield-auto)
                regenDelay: 3000 },                 // ms with no hit before the shield starts to mend
     engines: { speed: [0.75, 0.88, 1, 1.12, 1.25],  // x the top speed (the Fast burn's too: it is this times CAMP.nav.fast)
                accel: [0.7, 0.85, 1, 1.15, 1.3],    // x the thrust
@@ -58,7 +58,7 @@ const CAMP = {
     emergency: { shields: 4, ms: 10000, cooldown: 40000 }, // emergency shields: 4 pips to shields (the other two get 1 each) for ms, ready again cooldown ms after it started
     low: { shield: 0.3, rearm: 0.6, engines: 1 }           // the computer says so when the shield is under 30 percent of its cap (and again after it has been over 60), or when the engines are set to 1 pip or less
   },
-  ore: {                                   // ore: asteroid rocks and the wrecks of dead aliens; spent on shields and new ships (docs/CAMPAIGN.md, Ore)
+  ore: {                                   // ore: asteroid rocks and the wrecks of dead aliens; spent on new ships and the hull's mend (docs/CAMPAIGN.md, Ore)
     start: 30,                             // ore in the store at the start of a level
     cap: 200,                              // most ore the carrier's store holds
     rock: 20,                              // ore in one rock of an asteroid field: a mining laser cuts the rock and it breaks into a chunk of this much ore
@@ -74,12 +74,6 @@ const CAMP = {
     range: 230,                            // px a mining ship's laser reaches (to the edge of the rock)
     hold: 150,                             // px from the rock a mining ship keeps while it works
     turret: 0.35                           // the share of a turret shot's damage that cuts a rock (the turrets are the same lasers: they do less to rock than to an alien)
-  },
-  recharge: {
-    carrier: 25,                           // ore for a full carrier shield (a part refill costs the same share of it, at least 5)
-    earth: 40,                             // ore for one recharge of Earth's shield
-    earthPoints: 200,                      // shield points that gives Earth
-    earthReach: 900                        // px: the carrier must be this close to Earth to recharge Earth's shield
   },
   build: {
     fighterCost: 25,                       // ore for a new fighter
@@ -641,7 +635,7 @@ function campNew(level, techs, opts) {
     relic: L.relic ? { x: campPlaces(level)[L.relic.place].x, y: campPlaces(level)[L.relic.place].y, hold: 0 } : null,
     bay: { fighters: CAMP.bay.fighters, escorts: CAMP.bay.escorts }, launchQ: [], nextLaunch: 0,
     waves: L.waves.map(() => ({ started: false, at: 0 })), convoys: L.convoys.map(() => ({ started: false })), delivered: 0, lost: 0, kills: 0, launched: 0, lostShips: 0, lane: {}, cash: 0, sold: 0, oreBest: 0,
-    orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, recharge: 0, build: 0, power: 0, balance: 0, emergency: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
+    orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, build: 0, power: 0, balance: 0, emergency: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
     result: null, why: '', docked: '' // docked: the id of the outpost the carrier is docked at ('' in flight; src/campoutpost.js)
   };
   if (campHas(C, 'bay2')) C.bay.fighters += CAMP.tech.bay2.fighters;
@@ -707,7 +701,7 @@ function campSpawn(C, kind, x, y) {
   C.ships.push(u); C.by[u.id] = u;
   return u;
 }
-// the money of the dock: the cash (what ore sold at a market came to) and the ore in the store; a price is paid from the cash first, then the ore (the shield recharge is ore only)
+// the money of the dock: the cash (what ore sold at a market came to) and the ore in the store; a price is paid from the cash first, then the ore
 const campFunds = C => Math.floor(C.cash || 0) + Math.floor(C.ore);
 function campPay(C, cost) { const c = Math.min(C.cash || 0, cost); C.cash = (C.cash || 0) - c; C.ore -= cost - c; }
 const campAlive = C => C.ships.filter(u => u.hp > 0);
@@ -821,7 +815,7 @@ function campDo(C, name, arg, dry, how) {
     ms.forEach(u => { u.order = { type: 'mine' }; u.move = null; });
     C.orders.mine++; return campYes('mine');
   }
-  if (name === 'recharge') return campRecharge(C, arg, dry);
+  if (name === 'recharge') return campNo('shieldauto'); // the old pay-ore recharge (card space-game-shield-auto): the shield mends by itself now, and "recharge shields" says so
   if (name === 'build') return campBuild(C, arg, dry);
   if (name === 'stance') { // the wing's stance: how Attack and Guard move (orbit, keep distance, match speed, hold position, free); "orbit the mothership" also sends the fighters at it
     const q = String(arg == null ? '' : arg).toLowerCase(), id = /\b(?:orbit|circle)\b/.test(q) ? 'orbit' : /\b(?:distance|stand off|keep away|kite)\b|^keep\b/.test(q) ? 'keep' : /\b(?:match|formation)\b/.test(q) ? 'match' : /\b(?:hold|stay put)\b/.test(q) ? 'hold' : /\b(?:free|at will|freely)\b/.test(q) ? 'free' : null;
@@ -838,29 +832,6 @@ function campDo(C, name, arg, dry, how) {
 }
 // the ships that mine: the whole wing that is out. In the belt the fighters are the cruiser's mining drones; an attack order (key 2) turns them back to the fight
 function campMiners(C) { return campFree(C); }
-// recharge: the carrier's shield (ore in proportion to what is missing), or Earth's (the carrier must be near it). arg: 'earth', 'carrier', or nothing (Earth when near it and under 90 percent, else the carrier)
-function campRecharge(C, arg, dry) {
-  const q = String(arg == null ? '' : arg).toLowerCase(), R = CAMP.recharge, c = C.carrier;
-  const near = !!C.earth && campDist(c, C.earth) <= R.earthReach;
-  let target = /earth|planet|home/.test(q) ? 'earth' : /carrier|ship|me\b/.test(q) ? 'carrier' : (near && C.earth.shield < C.earth.max * 0.9 ? 'earth' : 'carrier');
-  if (target === 'earth') {
-    if (!C.earth) return campNo('noearth');
-    if (!near) return campNo('farearth');
-    if (C.earth.shield >= C.earth.max) return campNo('earthfull');
-    if (C.ore < R.earth) return campNo('noore2', { need: R.earth, have: Math.floor(C.ore) });
-    if (dry) return campYes('rechargeearth');
-    C.ore -= R.earth; C.earth.shield = Math.min(C.earth.max, C.earth.shield + R.earthPoints); C.orders.recharge++;
-    C.events.push({ type: 'recharge', x: C.earth.x, y: C.earth.y, target: 'earth' });
-    return campYes('rechargeearth');
-  }
-  const max = campShieldMax(C), missing = max - C.shield; if (missing <= 0.5) return campNo('shieldfull');
-  const cost = Math.max(5, Math.ceil(R.carrier * missing / max));
-  if (C.ore < cost) return campNo('noore2', { need: cost, have: Math.floor(C.ore) });
-  if (dry) return campYes('recharge');
-  C.ore -= cost; C.shield = max; C.orders.recharge++;
-  C.events.push({ type: 'recharge', x: c.x, y: c.y, target: 'carrier' });
-  return campYes('recharge');
-}
 // build: queue new fighters or escorts (arg 'fighter', 'escort', with a count: 'escort 2'); one at a time, into the bay, ore paid now
 function campBuild(C, arg, dry) {
   if (typeof campCanBuild === 'function' && !campCanBuild(C)) return campNo('nodock'); // (a level with no outpost builds aboard: campCanBuild says yes there, card space-game-campaign-no-outpost-rule: the refusal is never shown there) // ships are built docked at an outpost, or anywhere with the Fabricator (src/campoutpost.js)

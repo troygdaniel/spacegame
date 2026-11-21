@@ -7,16 +7,11 @@ The words of the Campaign's ore, shield and workshop orders (card space-game-cam
 | key | text |
 |---|---|
 | camp.say.mine | Mining ships are on their way. |
-| camp.say.recharge | Carrier shield recharged. |
-| camp.say.rechargeearth | Earth's shield recharged. |
 | camp.say.build | Building {n} {kind}. |
 | camp.say.built | A new {kind} is in the bay. |
 | camp.no.noore | There is no ore in reach, pilot. |
 | camp.no.noore2 | Not enough ore: {need} needed, {have} in the store. |
 | camp.no.noearth | There is no Earth here, pilot. |
-| camp.no.farearth | We are too far from Earth to recharge it. |
-| camp.no.earthfull | Earth's shield is already full. |
-| camp.no.shieldfull | The carrier's shield is already full. |
 | camp.no.buildfull | The bay cannot hold more of those, pilot. |
 | camp.ui.ore | ORE |
 | camp.ui.shield | SHIELD |

@@ -2,7 +2,7 @@
 // Card space-game-night-gameplay (docs/night/gameplay.md). It reads the game (src/campaign.js) and changes nothing in it.
 //   node tools/campaign-bot.mjs                      the whole table: levels 1 to 3, every bot, seeds 1 to 12
 //   node tools/campaign-bot.mjs --level 1 --seeds 20 --bots plain,carrier --skill steady
-//   node tools/campaign-bot.mjs --power 4,1,1        the ship's systems for every run: weapons, shields, engines, 6 pips (default 2,2,2: today's numbers exactly)
+//   node tools/campaign-bot.mjs --power 4,1,1        the ship's systems for every run: weapons, shields, engines, 6 pips (default 2,2,2: every factor 1, the shield mending at its base rate)
 //   node tools/campaign-bot.mjs --tech beam          start with these techs (a level's table row says which a player would have)
 //   node tools/campaign-bot.mjs --old               level 1 with the numbers it had before the easier level 1 (Earth's shield 300 and the rest): what Troy's first tries were played on
 //   node tools/campaign-bot.mjs --set alien.hpScale=2 --set alien.damageScale=2   what if: change numbers of the table (CAMP.<path> = a number) for this run only
