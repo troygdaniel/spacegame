@@ -23,7 +23,7 @@
 //   campRouteNew(C)                 at campNew: C.route = { lane: null, passed: false, known: {}, holdAt: null, wait, pick, geo, ... } (null when the mission has no route), and the lanes' caches in C.caches
 //   campRouteConvoy(C, f, cv)       at the convoy's start: it is on the route (f.rt), the radio says the road forks (once)
 //   campRouteFly(C, u, dt)          one tick of a convoy on the route: to the fork, the hold, the lane, the join, the place
-//   campRoutePick(C, id, how)       the pick ('order' | 'auto'): C.route.lane, an event { type: 'lane', lane, auto }         campRouteDo(C, arg, dry)  the order 'lane' (campOrder(C, 'lane', 'long'))
+//   campRoutePick(C, id, how)       the pick ('order' | 'auto' after the wait | 'panic' with an enemy within CAMP.route.panic px of the holding convoy): C.route.lane, an event { type: 'lane', lane, auto }         campRouteDo(C, arg, dry)  the order 'lane' (campOrder(C, 'lane', 'long'))
 //   campRouteFind(C, words)         a lane by its id or its name: "long", "the short lane", a map row                        campRouteHolding(C)  null, or { lanes, left, convoy } while a convoy waits at the fork
 //   campRouteHides(C, id)           what a lane hides now: { ships: { skiff: 3 }, aliens, pirates, caches }                  campRouteRead(C, u)   a scout that has reached a lane reads it (C.route.known[id], the radio)
 //   campRouteRows(C)                the lanes as rows of the Tab map's list (campNavRows)                                    campRouteMarks(C)    the lanes as marks of the map (campMapMarks): { type: 'lane', id, pts, chosen, known }
@@ -106,13 +106,15 @@ function campRouteFly(C, u, dt) {
   let i = Math.min(u.rt.i, ways.length - 1), w = ways[i], d = campDist(u, w);
   const prev = i === 0 ? { x: g.a.x, y: g.a.y, t: 0 } : ways[i - 1], seg = Math.hypot(w.x - prev.x, w.y - prev.y) || 1;
   const last = !!R.lane && i === ways.length - 1;
-  if (u.cid != null) C.lane[u.cid] = Math.max(C.lane[u.cid] || 0, Math.max(0, Math.min(1, prev.t + (w.t - prev.t) * (1 - (d - (last ? 90 : 0)) / seg))));
-  if (last && d < 90) { if (u.cid != null) C.lane[u.cid] = 1; C.delivered++; u.hp = 0; u.arrived = true; C.events.push({ type: 'arrive', x: u.x, y: u.y, id: u.id }); campSay(C, u.named ? 'camp.say.shiparrived' : 'camp.say.delivered', { name: campConvoyName(u) }); return; }
+  if (u.cid != null) C.lane[u.cid] = Math.max(C.lane[u.cid] || 0, Math.max(0, Math.min(1, prev.t + (w.t - prev.t) * (1 - (d - 90) / seg)))); // (the 90 px of the plain road's rule: she has "flown" it when she is within 90 px of the end, so a wave comes when it always came)
+  if (campDist(u, u.dest) < 90) { // she is at her place (whatever the state of the fork: a ship put there arrives too)
+    if (u.cid != null) C.lane[u.cid] = 1; C.delivered++; u.hp = 0; u.arrived = true; C.events.push({ type: 'arrive', x: u.x, y: u.y, id: u.id }); campSay(C, u.named ? 'camp.say.shiparrived' : 'camp.say.delivered', { name: campConvoyName(u) }); return; }
   if (!last && d <= Math.max(CAMP.route.reach, u.vmax * dt * 1.1)) { // at a waypoint
     if (i === 0 && !R.lane) { // the fork, and no lane chosen: she holds for the player's word, then takes the default lane
       u.vx = u.vy = 0;
       if (R.holdAt == null) { R.holdAt = C.t; C.events.push({ type: 'fork', id: u.id, x: u.x, y: u.y }); campSay(C, 'camp.say.forkhold', { name: campConvoyName(u) }); }
-      if (C.t - R.holdAt >= R.wait * 1000) campRoutePick(C, R.pick, 'auto');
+      if (C.ships.some(a => a.team === 'alien' && a.hp > 0 && !a.hold && campDist(a, u) < CAMP.route.panic)) campRoutePick(C, R.pick, 'panic'); // under fire she does not sit still
+      else if (C.t - R.holdAt >= R.wait * 1000) campRoutePick(C, R.pick, 'auto');
       return;
     }
     if (i === 0) R.passed = true; // she leaves the fork on a lane: the pick is locked
@@ -140,8 +142,8 @@ function campRouteFind(C, arg) {
 }
 function campRoutePick(C, id, how) {
   const R = C.route; if (!R || !R.geo.lanes[id]) return false;
-  R.lane = id; C.events.push({ type: 'lane', lane: id, auto: how === 'auto' });
-  if (how === 'auto') campSay(C, 'camp.say.laneauto', { lane: R.geo.lanes[id].name.toLowerCase() });
+  R.lane = id; C.events.push({ type: 'lane', lane: id, auto: how === 'auto' || how === 'panic', panic: how === 'panic' });
+  if (how === 'auto' || how === 'panic') campSay(C, how === 'panic' ? 'camp.say.lanepanic' : 'camp.say.laneauto', { lane: R.geo.lanes[id].name.toLowerCase() });
   return true;
 }
 function campRouteDo(C, arg, dry) {

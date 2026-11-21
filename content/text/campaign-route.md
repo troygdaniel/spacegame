@@ -10,6 +10,7 @@ The words of the fork in an escort's road (card space-game-scout-route): what th
 | camp.say.forkhold | {name} holds at the fork. Which lane? |
 | camp.say.lanepick | Taking the {lane}. |
 | camp.say.laneauto | No word. Taking the {lane}. |
+| camp.say.lanepanic | Under fire. Taking the {lane}. |
 | camp.say.lanefound | Scout {n}, {name}: {what}. |
 | camp.no.lanewhat | Which lane, pilot? |
 | camp.no.lanelocked | Too late, pilot. We are on the {lane}. |

@@ -130,6 +130,7 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.pace\./, why: 'the battle pace setting\'s line, toast, key hint and notes: on the card and the pause screen, not said' },
   { re: /^camp\.m\.\d+\.\d+\.title$/, why: 'a mission\'s title: the title of its briefing and debrief cards' },
   { re: /^camp\.lose\.reached$/, why: 'the lose card\'s numbers line: shown, and not said (the cause and the tip are)' },
+  { re: /^camp\.route\./, why: 'the words a scout\'s report is made of ("ambush, 3 pirates", "quiet") and the list\'s mark of the chosen lane: they are put into the line camp.say.lanefound, which is said' },
   { re: /^camp\.nav\./, why: 'the autopilot\'s toasts, the HUD line, the edge arrow and the names in the map\'s list: on the screen' },
   { re: /^camp\.(b|o|obj)\./, why: 'the objectives and bonus objectives: the HUD, the briefing and debrief cards (the briefing\'s two lines are said, these are the list)' },
   { re: /^camp\.nudge\./, why: 'the first-minute hints: a toast' },

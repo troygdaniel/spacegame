@@ -80,6 +80,8 @@ sec('B', () => {
   check('B  after the wait the default lane is taken for her ("Short lane"): chosen, event lane with auto, the radio says it', J('C.route.lane') === 'short' && J("__ev.some(e => e.type === 'lane' && e.lane === 'short' && e.auto === true)") && J("__ev.some(e => e.type === 'say' && e.key === 'camp.say.laneauto')"));
   g.run('__go(8)');
   check('B  and she goes on: past the fork, the route is passed, no more holding', J('C.route.passed') === true && J('campRouteHolding(C)') === null && Math.hypot(J('__tt().x') - F.x, J('__tt().y') - F.y) > 300);
+  g.run('__mk(0); __go(45)');
+  check('B  under fire she does not sit still: with a pirate inside 1,400 px of the holding convoy she takes the default lane at once, and the radio says so', (g.run('campSpawn(C, "skiff", __tt().x + 600, __tt().y + 200); C.events.length = 0; __ev.length = 0; __go(0.2)'), J('C.route.lane') === 'short' && J("__ev.some(e => e.type === 'lane' && e.panic === true)") && J("__ev.some(e => e.type === 'say' && e.key === 'camp.say.lanepanic')")));
   g.run('__mk(1); __go(60)');
   check('B  a mission with no route: the convoy never holds, flies the straight road (60 s: past 5,000 px) and there is no route state', J('C.route') === null && J('__tt().x') !== undefined && Math.hypot(J('__tt().x') - J('__tt().from.x'), J('__tt().y') - J('__tt().from.y')) > 5000);
 });

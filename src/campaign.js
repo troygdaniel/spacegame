@@ -128,7 +128,8 @@ const CAMP = {
   },
   route: {                                 // the fork in an escort's road (card space-game-scout-route; src/camproute.js, docs/CAMPAIGN.md "Scouting the route")
     wait: 45,                              // s a convoy holds at the fork for the player's word when the mission's route says nothing; then it takes the route's default lane
-    reach: 70                              // px: a convoy is at a waypoint (the fork, a lane's middle, the join) when it is this near it
+    reach: 70,                             // px: a convoy is at a waypoint (the fork, a lane's middle, the join) when it is this near it
+    panic: 1400                            // px: a convoy holding at the fork does not sit still with an enemy this close: she takes the default lane at once
   },
   scout: {                                 // scout-escorts (card space-game-campaign-scouts; docs/CAMPAIGN.md "Scout-escorts"): an escort sent out with the Scout order to look, scan and fetch
     sense: 2600,                           // px: the sensor circle round a scout that is out (the map draws it, the radar marks the scout)

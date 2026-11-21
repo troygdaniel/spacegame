@@ -1081,6 +1081,7 @@ const UI_TEXT = {
   'camp.route.quiet': 'quiet',
   'camp.route.chosen': '(chosen)',
   'camp.map.take': 'TAKE   T   this lane',
+  'camp.say.lanepanic': 'Under fire. Taking the {lane}.',
 };
 function uiText(key, vars) { return contentFill(CT_HAS(UI_TEXT, key) ? UI_TEXT[key] : key, vars); }
 function ctTextKeys() { // every string the game reads: key -> { get, set }
