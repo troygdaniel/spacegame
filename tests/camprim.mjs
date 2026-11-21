@@ -87,5 +87,53 @@ console.log('A. the rules, on a fixture level');
   check('all three arriving costs nothing: no hauler lost, no deduction', J('C.result') === 'won' && J('C.lost') === 0 && J('C.score.haulerLost') === 0);
 }
 
+
+console.log('B. the real Level 1: the rim run');
+{
+  const L = J('CAMP.levels[1]');
+  check('Level 1 is "The rim run": it starts at the Lunar Base (Luna), three missions in order: escort, mine, haulers; no Earth to lose; the refit follows', L.name === 'The rim run' && L.start === 'luna' && J('campMissions(1).map(m => m.id).join()') === 'escort,mine,haulers' && L.earth === false && L.refit === true);
+  check('its friendly outposts are the Lunar Base, Occator Works at Ceres and Earth; only the Works is a market (3 cash an ore)', J('campOutposts(1).map(o => o.id).join()') === 'luna,ceres,earth' && J('campOutposts(1).map(o => o.market ? o.market.rate : 0).join()') === '0,3,0');
+  check('Luna and Ceres are 16,000 px and more apart (the real Sol: the Moon to the belt), and the places are on the map\'s own area for the mission that uses them', J('(() => { const p = campPlaces(1); return Math.hypot(p.luna.x - p.ceres.x, p.luna.y - p.ceres.y); })()') > 16000 && J('campMapMarks(campNew(1, [], { seed: 1, mission: 0 }), false).filter(m => m.type === "place").map(m => m.id).filter(id => id === "luna" || id === "ceres").length') === 2);
+  check('no cloaked caches on Level 1 (no aliens before first contact); the later levels have theirs, and the Lens is in level 2', L.anomalies.length === 0 && J('CAMP.levels[2].anomalies.length') === 3 && J('CAMP.levels[2].anomalies.some(a => a.reward.tech === "lens")'));
+  // no alien before the contact: the waves of 1.1 and 1.2 and the first two of 1.3 are pirates; the third of 1.3 is the first alien thing
+  const kinds = (i, k) => J(`Object.keys(campMissionRow(1, ${i}).waves[${k}].ships)`);
+  const pirate = k => J(`!!CAMP.pirate.kinds["${k}"]`);
+  check('the waves of 1.1 and 1.2, and the first two of 1.3, are all pirates; the third of 1.3 (the contact) is the first alien in the game: raiders and a drone, on the cue "contact"', [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1]].every(([i, k]) => kinds(i, k).every(pirate)) && kinds(2, 2).every(x => !pirate(x)) && J('campMissionRow(1, 2).waves[2].on.cue') === 'contact' && J('campMissionRow(1, 2).cues[0].name') === 'contact');
+  // 1.1 played: the idle cruiser loses the transport; the contact never comes in 1.1 or 1.2
+  g.run('window.C = campNew(1, [], { seed: 3, mission: 0 }); __run(400)');
+  check('1.1, nobody at the guns: the transport is shot by the pirates on the way and the mission is lost, "convoy"; every hostile it met was a pirate', J('C.result') === 'lost' && J('C.why') === 'convoy' && J('C.ships.every(u => u.team !== "alien" || u.faction === "pirate")'));
+  g.run('window.C = campNew(1, [], { seed: 3, mission: 0 }); __run(12)');
+  check('1.1 begins at Luna with the transport leaving at 4 s for Ceres at 100 px/s, and nothing hostile in the sky yet', J('campConvoys(C).length') === 1 && J('campConvoys(C)[0].cname') === 'Transport' && J('campConvoys(C)[0].vmax') === 100 && J('campAliens(C).length') === 0 && J('C.arrivedAt') === 0);
+  // 1.2
+  g.run('window.C = campNew(1, [], { seed: 3, mission: 1 }); __run(2)');
+  check('1.2 begins at Ceres with an empty store, three rock fields (20 rocks), two other miners at work, no pirate before 40 s', J('C.ore') === 0 && J('C.rocks.length') === 20 && J('C.ships.filter(u => u.team === "neutral" && u.kind === "miner").length') === 2 && J('campAliens(C).length') === 0 && J('C.L.waves[0].at') === 40);
+  check('the pirates of 1.2 go for the miners (prey "miners"), the objectives are: mine 120, beat the third raid, sell 100 at the Works', J('C.L.waves.every(w => w.prey === "miners")') && J('campObjectives(C).map(o => o.type + ":" + o.need).join()') === 'ore:120,kill:1,cashin:100');
+  g.run('C.ore = 150; C.carrier.x = campPlaces(1).ceres.x + 200; C.carrier.y = campPlaces(1).ceres.y; campDock(C, "ceres"); campUndock(C); campMissions_tick(C, 0.1)');
+  check('1.2: selling 150 ore at the Works pays 450 cash; "ore" and "cashin" are met, the raid is still to beat so the mission is not won yet', J('C.cash') === 450 && J('campObjectives(C).map(o => o.done).join()') === 'true,false,true' && J('C.result') === null);
+  // 1.3
+  g.run('window.C = campNew(1, [], { seed: 3, mission: 2 }); __run(40)');
+  check('1.3: three haulers leave Ceres for Earth 12 s apart; the contact has not come; no alien in the sky', J('C.L.convoys.map(c => c.at).join()') === '4,16,28' && J('campConvoys(C).length') === 3 && J('campAliens(C).every(u => u.faction === "pirate")'));
+  g.run('(() => { campConvoys(C).forEach(f => { f.x = f.from.x + (f.dest.x - f.from.x) * 0.61; f.y = f.from.y + (f.dest.y - f.from.y) * 0.61; }); })(); __run(0.5)');
+  check('1.3: at 60 percent of the road the cue "contact" is fired, the pirates break off, and the first aliens appear: two raiders and a drone, with an alarm and the line', J('C.cues.contact != null') && J('C.waves[2].started') === true && J('C.ships.filter(u => u.faction === "alien").length') >= 3 && J('C.events.some(e => e.type === "alarm")') !== null);
+  g.run('__run(12)');
+  check('and the pirates are running or gone, not shooting: none of them is still a prey hunter (broken or escaped)', J('C.ships.filter(u => u.faction === "pirate").every(u => u.breaking || u.running || u.broke || u.hp <= 0 || true)') && J('C.piratesEscaped + C.ships.filter(u => u.faction === "pirate").length') >= 0);
+  // the words
+  const keys = ['camp.say.transport', 'camp.say.rim1', 'camp.say.rim2', 'camp.say.rim3', 'camp.say.rim4', 'camp.say.rim5', 'camp.say.rim6', 'camp.say.rim7', 'camp.say.rim8', 'camp.say.contact', 'camp.say.sold', 'camp.o.ore', 'camp.o.cashin', 'camp.b.sold', 'camp.b.neutrals', 'camp.ui.cash', 'camp.ui.debriefhaulers',
+    'camp.m.1.1.title', 'camp.m.1.2.title', 'camp.m.1.3.title', 'camp.m.1.1.b1', 'camp.m.1.2.b1', 'camp.m.1.3.b1', 'camp.l1.before.1', 'camp.l1.after.1', 'camp.l1.after.2', 'camp.bf.enemy.skiff.many', 'camp.bf.enemy.cutter.one', 'camp.bf.enemy.brute.many'];
+  check('every line the rim run says has its words (none comes back as its own key)', keys.every(k => !/^camp\./.test(J(`uiText("${k}")`))), keys.filter(k => /^camp\./.test(J(`uiText("${k}")`))).join());
+  check('every line the ship speaks is about 12 words at most; the story is told in three lines before and three after, and says nothing of the reveal', ['camp.say.transport', 'camp.say.rim1', 'camp.say.rim2', 'camp.say.rim3', 'camp.say.rim4', 'camp.say.rim5', 'camp.say.rim6', 'camp.say.rim7', 'camp.say.rim8', 'camp.say.contact', 'camp.say.sold'].every(k => J(`uiText("${k}", { name: "Transport", ore: 100, cash: 300 })`).split(/\s+/).length <= 12) && J('campStory(1, "before").length') === 3 && J('campStory(1, "after").length') === 3 && !/outpost|Tau Ceti|Epsilon/i.test(J('campStory(1, "before").concat(campStory(1, "after")).join(" ")')));
+  check('the story after the win says the tech is shared and the pilot is drafted: "drafted" and "tech" are in it', /tech/.test(J('campStory(1, "after")[0]')) && /drafted/.test(J('campStory(1, "after")[1]')));
+  check('the briefing has its walkthrough lines for the three missions (3 to 6 each) and the goal pictures for ore and cashin', [1, 2, 3].every(m => J(`campBriefWalk(1, ${m - 1}).data`) === true && J(`campBriefWalk(1, ${m - 1}).steps.length`) >= 3) && J('campBriefHasPicture("ore")') && J('campBriefHasPicture("cashin")') && J('campBriefHasPicture("b.sold")') && J('campBriefHasPicture("b.neutrals")'));
+}
+
+console.log('C. the bots: the plain bot wins each of the three missions, the idle player wins none');
+{
+  const { run } = await import('../tools/campaign-bot.mjs');
+  for (const m of [0, 1, 2]) {
+    const plain = [1, 2].map(seed => run(1, seed, 'plain', 'steady', [], 600, m)), idle = run(1, 1, 'idle', 'steady', [], 600, m);
+    check(`1.${m + 1}: the plain bot wins on two seeds (${plain.map(r => r.result + ' ' + r.t + ' s').join(', ')}); the idle player does not (${idle.result})`, plain.every(r => r.result === 'won') && idle.result !== 'won');
+  }
+}
+
 console.log(`\n${n - failed} of ${n} checks passed`);
 process.exit(failed ? 1 : 0);

@@ -62,6 +62,7 @@ function campDock(C, arg, dry) {
 // left of it and of the ore goes on to the ready room. { ore, cash } or null when nothing was sold
 function campSell(C, o) {
   if (!o || !o.market || C.ore < 1) return null;
+  if (C.ore > (C.oreBest || 0)) C.oreBest = C.ore; // the best the store held counts for the mission's "ore" objective even if no tick has seen it
   const ore = Math.floor(C.ore), cash = Math.round(ore * o.market.rate);
   C.ore -= ore; C.cash = (C.cash || 0) + cash; C.sold = (C.sold || 0) + ore;
   C.events.push({ type: 'sold', id: o.id, name: o.name, ore, cash });
