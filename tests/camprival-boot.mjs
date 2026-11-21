@@ -30,8 +30,8 @@ try {
   await t.run(400);
   await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier, u = C.ships.find(s => s.rival); c.vx = 0; c.vy = 0; c.rot = 0; u.x = c.x + 700; u.y = c.y - 60; u.vx = 0; u.vy = 0; u.rot = Math.PI; return 1; })()`);
   await t.run(1200);
-  const s1 = await j(`({ mode: ${SC}.mode, ph: ${SC}.camp.ships.find(s => s.rival).rival.ph, name: ${SC}.hud.rivalName && ${SC}.hud.rivalName.text, cmds: ${SC}.rivalG ? ${SC}.rivalG.commandBuffer.length : -1, bars: 2 })`);
-  check('in play, the leader stalks: its name is at the top and its layer is drawn (a bubble and small bars)', s1.mode === 'play' && s1.ph === 'stalk' && s1.name === 'PIRATE LEADER' && s1.cmds > 8, JSON.stringify(s1));
+  const s1 = await j(`({ mode: ${SC}.mode, ph: ${SC}.camp.ships.find(s => s.rival).rival.ph, name: ${SC}.hud.rivalName && ${SC}.hud.rivalName.text, cmds: ${SC}.rivalG ? ${SC}.rivalG.commandBuffer.length : -1, shown: !!${SC}.rivalG && ${SC}.rivalG.visible && ${SC}.rivalG.active && ${SC}.children.list.indexOf(${SC}.rivalG) >= 0 })`);
+  check('in play, the leader stalks: its name is at the top and its layer is drawn (a bubble and small bars) and is in the scene, visible', s1.mode === 'play' && s1.ph === 'stalk' && s1.name === 'PIRATE LEADER' && s1.cmds > 8 && s1.shown, JSON.stringify(s1));
   await snap(t, '1-stalk');
   const until = async (ph, max = 24000) => { for (let ms = 0; ms < max; ms += 250) { if ((await j(`${SC}.camp.ships.find(s => s.rival) && ${SC}.camp.ships.find(s => s.rival).rival.ph`)) === ph) return true; await t.run(250); } return false; };
   check('it comes to its charge', await until('charge'));
