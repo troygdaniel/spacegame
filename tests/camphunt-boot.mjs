@@ -71,14 +71,14 @@ try {
   for (const [k, name] of [['KeyQ', 'fleet'], ['KeyE', 'ship'], ['KeyC', 'systems']]) { await key(k); await t.run(500); await snap('7-panel-' + name); await key('Escape'); await t.run(200); }
   await key('KeyP'); await t.run(300); note('P: pace now ' + await j(`${S}.pace !== undefined ? ${S}.pace : (typeof G !== 'undefined' && G.pace)`)); await snap('8-pace'); await key('KeyP');
   // the autopilot: E then Shift+4, the burn to the mission's place
-  await key('KeyE'); await key('Digit4', 50, 8); await t.run(1500);
+  await key('KeyE'); await key('Digit3', 50, 8); await t.run(1500); // E, Shift+3: the goal row, fast
   note('after E, Shift+4: nav ' + await j(`JSON.stringify(${S}.camp.nav || null)`).then(v => String(v).slice(0, 160)) + ' state ' + JSON.stringify(await state()));
   await t.run(9000); const st1 = await state(); note('9 s later: ' + JSON.stringify(st1)); await snap('9-arrived'); note('HUD: ' + (await hud()).join(' | ').slice(0, 700));
 
   if (PANELS) {
     let mark = 0; const say = async what => { await t.run(300); const all = await j('window.__toasts'); note(what + ' -> ' + (all.slice(mark).join(' || ') || '(no toast)')); mark = all.length; };
-    for (const [k, d, what] of [['KeyQ', 'Digit1', 'Q 1 launch'], ['KeyQ', 'Digit2', 'Q 2 attack'], ['KeyQ', 'Digit3', 'Q 3 escort (no convoy here)'], ['KeyQ', 'Digit4', 'Q 4 guard'], ['KeyQ', 'Digit5', 'Q 5 recall'],
-      ['KeyE', 'Digit1', 'E 1 mine'], ['KeyE', 'Digit2', 'E 2 build a fighter (not docked)'], ['KeyE', 'Digit3', 'E 3 build an escort'], ['KeyE', 'Digit5', 'E 5 dock (away from it)'],
+    for (const [k, d, what] of [['KeyQ', 'Digit1', 'Q 1 launch'], ['KeyQ', 'Digit2', 'Q 2 attack'], ['KeyQ', 'Digit3', 'Q 3 escort (no convoy here)'], ['KeyQ', 'Digit4', 'Q 4 guard'], ['KeyQ', 'Digit5', 'Q 5 recall'], ['KeyQ', 'Digit6', 'Q 6 mine'],
+      ['KeyE', 'Digit1', 'E 1 build a fighter (not docked)'], ['KeyE', 'Digit2', 'E 2 build an escort'], ['KeyE', 'Digit4', 'E 4 dock (away from it)'],
       ['KeyC', 'Digit1', 'C 1 weapons pip'], ['KeyC', 'Digit2', 'C 2 shields pip'], ['KeyC', 'Digit3', 'C 3 engines pip'], ['KeyC', 'Digit5', 'C 5 emergency shields'], ['KeyC', 'Digit4', 'C 4 balance']]) {
       mark = await j('window.__toasts.length'); await key(k); await key(d); await say(what); await t.run(1200);
     }
@@ -90,10 +90,10 @@ try {
   if (RETREAT) {
     await t.ev(`(() => { const C = ${S}.camp; C.ships.filter(u => u.team === 'earth' && u.kind !== 'carrier').forEach(u => { u.hp = 0; }); C.bay.fighters = 0; C.bay.escorts = 0; C.carrier.hp = Math.round(C.carrier.maxHp * 0.3); return 1; })()`); await t.run(900);
     note('HUD at 30 percent, no wing: ' + (await hud()).filter(x => /^(post|obj|arrow|bay|hull)=/.test(x)).join(' | ')); await snap('11-low');
-    await key('KeyE'); await key('Digit4', 50, 8); await t.run(1500); note('nav now: ' + await j(`JSON.stringify(${S}.camp.nav || null)`).then(v => String(v).slice(0, 200)));
+    await key('KeyE'); await key('Digit3', 50, 8); await t.run(1500); note('nav now: ' + await j(`JSON.stringify(${S}.camp.nav || null)`).then(v => String(v).slice(0, 200)));
     for (let i = 0; i < 12 && (await j(`!!(${S}.camp.nav && ${S}.camp.nav.on)`)); i++) await t.run(2000);
     note('after the burn: ' + JSON.stringify(await state()) + ' | ' + (await hud()).filter(x => /^(post|obj|arrow)=/.test(x)).join(' | ')); await snap('12-there');
-    await key('KeyE'); await key('Digit5'); await settle(`game.scene.isActive('CampHub')`, 30); await t.run(900);
+    await key('KeyE'); await key('Digit4'); await settle(`game.scene.isActive('CampHub')`, 30); await t.run(900);
     note('docked: ' + (await shown()).join(' | ').slice(0, 900)); await snap('13-docked-low');
     await key('Digit2'); await t.run(700); note('repair page: ' + (await shown()).join(' | ').slice(0, 600)); await snap('13b-repair-page');
     await key('KeyR'); await t.run(900); note('after R on the repair page: ' + (await shown()).join(' | ').slice(0, 500) + ' | hull ' + await j(`Math.round(${S}.camp.carrier.hp)`) + ' ore ' + await j(`Math.floor(${S}.camp.ore)`)); await snap('14-mended');
@@ -102,8 +102,8 @@ try {
   if (DOCK) {
     note('outposts: ' + await j(`campOutposts(${S}.camp.level).map(o => o.id + ' ' + o.name + ' ' + Math.round(campDist(${S}.camp.carrier, o))).join(' | ')`));
     await t.ev(`(() => { const C = ${S}.camp, o = campOutposts(C.level).slice().sort((a, b) => campDist(C.carrier, a) - campDist(C.carrier, b))[0]; C.carrier.x = o.x + (o.r || 60) + 120; C.carrier.y = o.y; C.carrier.vx = 0; C.carrier.vy = 0; return 1; })()`); await t.run(600); // the cruiser beside the nearest outpost (the arrival circle is 300 km wide: the relay is 250 km off)
-    await key('KeyE'); await t.run(500); await snap('11-ship-panel'); note('E panel dock row: ' + await j(`(typeof campPanelRows === 'function' ? campPanelRows(${S}.camp, 'ship') : []).filter(r => r.id === 'dock' || r.n === 5).map(r => JSON.stringify(r)).join(' ')`).then(v => String(v).slice(0, 300)));
-    await key('Digit5'); await settle(`game.scene.isActive('CampHub')`, 30); await t.run(900);
+    await key('KeyE'); await t.run(500); await snap('11-ship-panel'); note('E panel dock row: ' + await j(`(typeof campPanelRows === 'function' ? campPanelRows(${S}.camp, 'ship') : []).filter(r => r.id === 'dock' || r.n === 4).map(r => JSON.stringify(r)).join(' ')`).then(v => String(v).slice(0, 300)));
+    await key('Digit4'); await settle(`game.scene.isActive('CampHub')`, 30); await t.run(900);
     note('docked: ' + (await shown()).join(' | ').slice(0, 800)); await snap('12-docked');
     await key('Escape'); await t.run(900);
     note('after Esc: Campaign ' + await j(`game.scene.isActive('Campaign')`) + ' hub ' + await j(`game.scene.isActive('CampHub')`) + ' mode ' + await j(`${S}.mode`) + ' docked ' + await j(`${S}.docked`));
