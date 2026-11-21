@@ -250,7 +250,7 @@ if (what === 'storm') { // the HUD's text changes every frame (a fight where the
     await timeFrames(t, 120);
     const a = await timeFrames(t, 600); await t.ev('(() => { window.__storm = true; return 1; })()'); await timeFrames(t, 60);
     const b = await timeFrames(t, 600); await t.ev('(() => { window.__storm = false; return 1; })()');
-    const m = await t.ev(`(() => { const s = game.scene.getScene('Campaign'); let i = 0; const a = performance.now(); for (let k = 0; k < 500; k++) s.hud.hull.setText('Hull  ' + (i++)); return (performance.now() - a) / 500; })()`);
+    const m = await t.ev(`(() => { const s = game.scene.getScene('Campaign'); let i = 0; const a = performance.now(); for (let k = 0; k < 500; k++) s.hud.bay.setText('Bay  ' + (i++)); return (performance.now() - a) / 500; })()`);
     console.log('text still   ', JSON.stringify({ frameMs: a.frameMs, updateMs: a.updateMs, renderMs: a.renderMs, hudMs: a.hudMs }));
     console.log('text changing', JSON.stringify({ frameMs: b.frameMs, updateMs: b.updateMs, renderMs: b.renderMs, hudMs: b.hudMs }));
     console.log('one setText with a new string (CPU part, from a loop): ' + r2(m) + ' ms'); noErrors(t);
