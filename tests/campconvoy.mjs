@@ -186,7 +186,7 @@ console.log('F. the FLEET panel\'s page CONVOY');
   check('the row ids are their own (they do not clash with the stances\' "hold")', new Set(J('CAMP_PANELS.panels[0].rows.concat(CAMP_PANELS.panels[0].page2.rows, CAMP_PANELS.panels[0].page3.rows).map(r => r.id)')).size === 14);
   const r1 = J(`campPanelKey(__P, C, 'Digit1', 30)`);
   check('a digit on the third page does the row: Tuck in, the panel closes, the ship is under the order', r1.ran && r1.ok && r1.row === 'ctuck' && J('__t.cord') === 'tuck' && J('__P.open') === '', JSON.stringify(r1));
-  check('the row of the order in force is marked "in force"; the others are not', (() => { const rs = J('campPanelRows(C, "fleet", 2)'); return rs[0].marked && rs[0].state === 'in force' && !rs[1].marked && !rs[2].marked && !rs[3].marked && rs[1].state === '1 ships'; })(), J('JSON.stringify(campPanelRows(C, "fleet", 2))'));
+  check('the row of the order in force is marked "in force"; the others are not', (() => { const rs = J('campPanelRows(C, "fleet", 2)'); return rs[0].marked && rs[0].state === 'in force' && !rs[1].marked && !rs[2].marked && !rs[3].marked && rs[1].state === '1 ship'; })(), J('JSON.stringify(campPanelRows(C, "fleet", 2))'));
   g.run(`campPanelKey(__P, C, 'KeyQ', 40); campPanelKey(__P, C, 'ArrowLeft', 50)`);
   check('Left from the orders goes round to the convoy page (three pages go round both ways)', J('__P.page') === 2);
   g.run(`campPanelKey(__P, C, 'Escape', 60); campPanelKey(__P, C, 'KeyQ', 70); campPanelKey(__P, C, 'ArrowRight', 80); campPanelKey(__P, C, 'ArrowRight', 90); campPanelKey(__P, C, 'ArrowRight', 100)`);

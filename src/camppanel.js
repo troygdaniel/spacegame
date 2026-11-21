@@ -101,7 +101,7 @@ function campPanelState(C, row) {
     case 'buildf': return B.fighterCost + ' ore, ' + B.fighterTime + ' s';
     case 'builde': return B.escortCost + ' ore, ' + B.escortTime + ' s';
     case 'free': case 'orbit': case 'keep': case 'match': case 'hold': return C.stance === row.id ? 'in force' : ''; // the wing's stance: the one in force is marked
-    case 'ctuck': case 'chold': case 'crun': case 'ccarry': return campPanelConvoyMarked(C, row) ? 'in force' : campConvoyShips(C).length + ' ships'; // the convoy orders: the one in force is marked (src/campconvoy.js)
+    case 'ctuck': case 'chold': case 'crun': case 'ccarry': return campPanelConvoyMarked(C, row) ? 'in force' : campPanelShips(campConvoyShips(C).length); // the convoy orders: the one in force is marked (src/campconvoy.js)
     case 'weapons': case 'shields': case 'engines': { const i = { weapons: 0, shields: 1, engines: 2 }[row.id], fx = campPowerFx(C); return C.power.p[i] + ' pips: ' + (i === 0 ? 'turrets x' + (1 / fx.delay).toFixed(2) : i === 1 ? 'shield ' + Math.round(campShieldMax(C)) + (fx.regen > 0 ? ', mends ' + fx.regen + '/s' : ', no mend') : 'speed x' + fx.speed.toFixed(2)); }
     case 'balance': return 'now ' + C.power.p.join(' / ');
     case 'emergency': return CAMP.power.emergency.ms / 1000 + ' s of shields, then back';
@@ -128,7 +128,7 @@ function campPanelShortState(C, row) {
     case 'builde': return B.escortCost + ' ore';
     case 'dock': { if (campPanelAs(C, row).order === 'repair') return campMendQuote(C).cost + ' ore'; const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name : ''; } // the outpost in range, by name (the row had no word of its own when it could be done: wrap-up, 8-GEN)
     case 'goal': { const g = campNavGoal(C); return g ? campNavKm(Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y)) + ' km' : ''; }
-    case 'ctuck': case 'chold': case 'crun': case 'ccarry': return campPanelConvoyMarked(C, row) ? 'in force' : campConvoyShips(C).length + ' ships';
+    case 'ctuck': case 'chold': case 'crun': case 'ccarry': return campPanelConvoyMarked(C, row) ? 'in force' : campPanelShips(campConvoyShips(C).length);
   }
   return '';
 }
@@ -141,6 +141,7 @@ function campPanelRowState(C, row) {
   const r = campCheck(C, row.order, row.arg || '');
   return r.ok ? { ok: true, state: campPanelState(C, row), short: campPanelShortState(C, row) } : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) };
 }
+const campPanelShips = n => n + (n === 1 ? ' ship' : ' ships'); // "1 ship", "3 ships"
 const campPanelConvoyMarked = (C, row) => row.order === 'convoy' && campConvoyState(C) === campConvoyVerb(String(row.arg || '')); // the convoy order that all the escorted ships are under
 function campPanelRows(C, id, page) {
   const def = campPanelDef(id); if (!def || !C) return [];
