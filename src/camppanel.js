@@ -73,8 +73,11 @@ function campPanelView(P, id, now) {
 }
 
 // do a row: the order with the row's words, so the keys, the strip and the voice are one set of rules; fly: the autopilot to the objective
+// a level that lists no outpost has nowhere to dock: its SHIP panel's sixth row mends the hull aboard instead (card space-game-night-quit-at-pick, finding F of docs/night/hunt-l2-l3.md; the rule is src/campoutpost.js campAboard)
+const campPanelAs = (C, row) => row && row.id === 'dock' && C && typeof campAboard === 'function' && campAboard(C) ? Object.assign({}, row, { order: 'repair', arg: '', label: 'Repair the hull', tag: 'Repair', help: 'Mend the hull aboard (costs ore)' }) : row;
 function campPanelRun(C, row, how, fast) {
   if (!C || !row) return { ok: false, say: '' };
+  row = campPanelAs(C, row);
   if (row.fly === 'objective') { const r = campNavCheck(C, (fast && row.fast ? 'fast ' : '') + 'the objective'); if (r.ok) campNavDo(C, r, how); return r; } // Shift: a burn (a row that has `fast` in the table)
   return campOrder(C, row.order, row.arg || '', how || 'key');
 }
@@ -107,7 +110,7 @@ function campPanelState(C, row) {
     case 'weapons': case 'shields': case 'engines': { const i = { weapons: 0, shields: 1, engines: 2 }[row.id], fx = campPowerFx(C); return C.power.p[i] + ' pips: ' + (i === 0 ? 'turrets x' + (1 / fx.delay).toFixed(2) : i === 1 ? 'shield ' + Math.round(campShieldMax(C)) : 'speed x' + fx.speed.toFixed(2)); }
     case 'balance': return 'now ' + C.power.p.join(' / ');
     case 'emergency': return CAMP.power.emergency.ms / 1000 + ' s of shields, then back';
-    case 'dock': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? 'dock at ' + n.o.name : ''; } // the outpost in range
+    case 'dock': { if (campPanelAs(C, row).order === 'repair') { const q = campMendQuote(C); return Math.round(q.missing) + ' hull for ' + q.cost + ' ore'; } const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? 'dock at ' + n.o.name : ''; } // the outpost in range (aboard: the mend)
     case 'goal': { const g = campNavGoal(C); return g ? g.name + '  ' + campNavKm(Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y)) + ' km' : ''; }
   }
   return '';
@@ -129,12 +132,13 @@ function campPanelShortState(C, row) {
     case 'recharge': return campPanelRecharge(C).cost + ' ore';
     case 'buildf': return B.fighterCost + ' ore';
     case 'builde': return B.escortCost + ' ore';
-    case 'dock': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name : ''; } // the outpost in range, by name (the row had no word of its own when it could be done: wrap-up, 8-GEN)
+    case 'dock': { if (campPanelAs(C, row).order === 'repair') return campMendQuote(C).cost + ' ore'; const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name : ''; } // the outpost in range, by name (the row had no word of its own when it could be done: wrap-up, 8-GEN)
     case 'goal': { const g = campNavGoal(C); return g ? campNavKm(Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y)) + ' km' : ''; }
   }
   return '';
 }
 function campPanelRowState(C, row) {
+  row = campPanelAs(C, row);
   if (row.fly === 'objective') {
     const f = campNavFind(C, 'the objective'); if (!f.row) return { ok: false, state: CAMP_PANELS.why.nogoal, short: CAMP_PANELS.shortWhy.nogoal };
     return campNavCheck(C, 'the objective').ok ? { ok: true, state: campPanelState(C, row), short: campPanelShortState(C, row) } : { ok: false, state: CAMP_PANELS.why.there, short: CAMP_PANELS.shortWhy.there };
@@ -144,7 +148,7 @@ function campPanelRowState(C, row) {
 }
 function campPanelRows(C, id, page) {
   const def = campPanelDef(id); if (!def || !C) return [];
-  return campPanelPageRows(def, page | 0).map(row => Object.assign({ n: row.n, id: row.id, label: row.label, tag: row.tag || row.label, marked: row.order === 'stance' && C.stance === row.id }, campPanelRowState(C, row)));
+  return campPanelPageRows(def, page | 0).map(row => { const as = campPanelAs(C, row); return Object.assign({ n: as.n, id: as.id, label: as.label, tag: as.tag || as.label, marked: as.order === 'stance' && C.stance === as.id }, campPanelRowState(C, row)); });
 }
 const campPanelTab = (C, id) => { const d = campPanelDef(id); if (!d) return ''; const st = id === 'fleet' && C && C.stance ? d.page2.rows.find(r => r.id === C.stance) : null; return d.title + (st ? ' - ' + st.label.toUpperCase() : ''); };
 function campPanelHead(C, id, page) {
