@@ -24,7 +24,7 @@ function campNavGoal(C) {
   try {
     const L = (C.L || CAMP.levels[C.level]), pl = campPlaces(C.level), c = C.carrier, near = list => list.slice().sort((a, b) => campDist(a, c) - campDist(b, c))[0] || null;
     const ship = (u, kind, name) => ({ id: kind === 'mother' ? 'mother' : kind + ':' + u.id, kind, name, x: u.x, y: u.y, r: u.r || 0, moving: u.vmax > 0, ref: u.id });
-    const rt = typeof campRetreat === 'function' ? campRetreat(C) : null; if (rt) return { id: 'place:' + rt.o.id, kind: 'place', name: rt.o.place, x: rt.o.x, y: rt.o.y, r: rt.o.r }; // low on hull with no ship left: the goal is the nearest outpost (src/campoutpost.js)
+    const rt = typeof campRetreat === 'function' ? campRetreat(C) : null; if (rt && !rt.hot) return { id: 'place:' + rt.o.id, kind: 'place', name: rt.o.place, x: rt.o.x, y: rt.o.y, r: rt.o.r }; // low on hull with no ship left: the goal is the nearest outpost with its doors open (src/campoutpost.js); none open (hot) is no goal: the autopilot is not sent into the aliens
     if (C.L.place && C.arrivedAt == null && pl[C.L.place]) { const p = pl[C.L.place]; return { id: 'place:' + C.L.place, kind: 'place', name: String(p.name), x: p.x, y: p.y, r: p.r || 60 }; } // not there yet: the goal is the place of the mission
     if (L.objectives) { // a mission: the first objective not done yet (src/campaign.js campObjectives)
       const o = campObjectives(C).find(x => !x.done); if (!o) return null;
