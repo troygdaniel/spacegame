@@ -73,7 +73,7 @@ function mapPlace(items, frame) {
       if (bad < bestBad) { bestBad = bad; best = box; }
       if (!bad) break;
     }
-    placed.push(best); out.push({ x: best.x, y: best.y });
+    placed.push(best); out.push({ x: best.x, y: best.y, bad: bestBad }); // bad: how much of it still lies over another name or mark (0: clear): a map zoomed far out leaves such a name out (src/campmapdraw.js)
   });
   return out;
 }

@@ -129,13 +129,13 @@ const CONTROLS = [
     { k: ['F'], t: 'Fire a homing missile', sub: 'FLY AND FIRE' },
     { k: ['B'], t: 'Warp blink hop (needs that tech)', sub: 'FLY AND FIRE' },
     { k: ['J', 'K', 'L'], t: 'A power pip: shields, engines, weapons', sub: 'FLY AND FIRE' }, // direct keys, in the order of the gauges, for the SYSTEMS panel's rows (src/camphud.js campPowerKey; card space-game-systems-gauges)
-    { k: ['+', '-', '0'], t: 'Zoom view or map (wheel too); 0 resets', sub: 'FLY AND FIRE' }, // = and the numpad keys too (src/campzoom.js)
+    { k: ['+', '-', '0'], t: 'Zoom view or map (wheel too); 0 resets', sub: 'FLY AND FIRE' }, // - and the wheel go out to the whole system on the map, and twice as far as before in the flight // = and the numpad keys too (src/campzoom.js)
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Click'], t: 'Map: click a mark sets it, again flies', sub: 'THE MAP' },
     { k: ['W', 'S', 'A', 'D'], t: 'Map list: choose; next or last group', sub: 'THE MAP' }, // two rows in one: the page is at the size the controls panel fits (tests/controlsfit.mjs)
     { k: ['Shift', 'Enter'], t: 'Map: Enter flies, Shift+Enter fast', sub: 'THE MAP' }, // (the Enter and Shift+Enter rows were one too many for Settings' four columns once E docked)
     { k: ['V'], t: 'Map: send a scout there', sub: 'THE MAP' },
-    { k: ['X', 'Z'], t: 'Map: X clears the goal, Z zooms', sub: 'THE MAP' }, // two rows in one (the Campaign group is at the size Settings > Controls fits: tests/controlsfit.mjs)
+    { k: ['X'], t: 'Map: X clears the goal', sub: 'THE MAP' }, // (Z used to zoom the map to the whole system: minus and the wheel go all the way out now, card space-game-zoom-out-more)
     { k: ['I'], t: 'Type an order to the ship', sub: 'THE STRIP AND THE VOICE' },
     { k: ['U'], t: 'Hold to speak an order', sub: 'THE STRIP AND THE VOICE' },
     { k: ['H'], t: 'This page of keys', sub: 'ANYWHERE' },

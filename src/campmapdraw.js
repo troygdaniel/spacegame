@@ -48,8 +48,8 @@ function campMapClose(s) {
 function campMapOpen(s) {
   if (s.mp || !s.camp) return;
   const C = s.camp, F = CAMPMAP.frame, P = CAMPMAP_PANEL, L = (C.L || CAMP.levels[C.level]);
-  const base = campMapFit(campMapBounds(C.level, false, C.L), F);
-  const mp = s.mp = { objs: [], whole: false, nameObjs: [], base, fit: Object.assign({}, base), z: 1, zWant: 1, namesZ: 1, tAt: null, userSel: false, leg: [] }; // base: the level fitted to the frame; fit: what is drawn and clicked through, the base at zoom z (src/campzoom.js, campMapView)
+  const base = campMapFit(campMapBounds(C.level, false, C.L), F), wholeBase = campMapFit(campMapBounds(C.level, true, C.L), F); // wholeBase: the whole system fitted: where zooming out ends (zMin), and where the view's centre goes as it does
+  const mp = s.mp = { objs: [], whole: false, wholeBase, zMin: campMapZMin(base, wholeBase, CAMPZOOM.map.min), nameObjs: [], base, fit: Object.assign({}, base), z: 1, zWant: 1, namesZ: 1, tAt: null, userSel: false, leg: [] }; // base: the level fitted to the frame; fit: what is drawn and clicked through, the base at zoom z (src/campzoom.js, campMapView)
   mp.fire = campFireNew(); // the fight on the map (src/campmapfire.js): a pool of marks made once, per open map; the scene feeds it while the map is open
   const own = o => { o.setScrollFactor(0); mp.objs.push(o); return o; };
   own(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.84)).setDepth(150);
@@ -91,7 +91,9 @@ function campMapNames(s) {
     const t = own(s.add.text(0, 0, m.name.toUpperCase(), uiFont(13, m.color === CAMPMAP.color.star ? '#ffe29a' : '#ffb454'))).setOrigin(0.5).setDepth(154), p = campMapPoint(mp.fit, F, m.x, m.y);
     names.push(t); pts.push(p); t.world = { x: m.x, y: m.y }; return { x: p.x, y: p.y, r: Math.max(5, m.r * mp.fit.s) + 4, w: t.width, h: t.height, side: 'below' };
   });
-  const at = mapPlace(items, F); names.forEach((t, i) => { t.setPosition(at[i].x, at[i].y); t.off = { x: at[i].x - pts[i].x, y: at[i].y - pts[i].y }; }); // off: where the name sits from its mark, kept while the zoom eases
+  const crowd = mp.z < CAMPMAP.crowdZ, L = C.L || CAMP.levels[C.level], keep = places.map(m => !!m.outpost || m.id === L.place); // far out, the inner system is a few pixels across: a name that cannot be put clear of the others is left out (the mission's place and the outposts keep theirs, and are placed first; zoom in and the rest are there)
+  const ord = items.map((_, i) => i).sort((a, b) => (crowd ? (keep[b] ? 1 : 0) - (keep[a] ? 1 : 0) : 0) || a - b), put = mapPlace(ord.map(i => items[i]), F), at = []; ord.forEach((i, k) => { at[i] = put[k]; });
+  names.forEach((t, i) => { t.setPosition(at[i].x, at[i].y); t.off = { x: at[i].x - pts[i].x, y: at[i].y - pts[i].y }; t.drop = crowd && at[i].bad > 0.5 && !keep[i]; if (t.drop) t.setVisible(false); }); // off: where the name sits from its mark, kept while the zoom eases
   const wd = typeof campWorldOf === 'function' ? campWorldOf(C.level) : null; // a belt is named where its ring is nearest the middle of the frame
   if (wd) wd.bands.forEach(b => {
     const mid = (b.r0 + b.r1) / 2, c = { x: F.x + F.w / 2, y: F.y + F.h / 2 }, st = campMapPoint(mp.fit, F, wd.star.x, wd.star.y), a = Math.atan2(c.y - st.y, c.x - st.x);
@@ -105,19 +107,21 @@ function campMapNamesMove(s) {
   mp.nameObjs.forEach(t => {
     if (!t.world) { t.setVisible(!t.band); return; }
     const p = campMapPoint(mp.fit, F, t.world.x, t.world.y), x = p.x + t.off.x, y = p.y + t.off.y;
-    t.setPosition(x, y).setVisible(x >= F.x && x <= F.x + F.w && y >= F.y && y <= F.y + F.h);
+    t.setPosition(x, y).setVisible(!t.drop && x >= F.x && x <= F.x + F.w && y >= F.y && y <= F.y + F.h);
   });
 }
-// Z: the whole system (every body and every ring, to scale) and back to the level's own area
-function campMapWhole(s) {
+// zooming out past the level's own area shows the far bodies too (card space-game-zoom-out-more; Z used to switch to the whole system): mp.whole is true while the zoom is under 1, and the names are placed afresh when it changes
+function campMapFar(s) {
   const mp = s.mp; if (!mp) return false;
-  mp.whole = !mp.whole; mp.base = campMapFit(campMapBounds(s.camp.level, mp.whole, s.camp.L), CAMPMAP.frame); mp.fit = Object.assign({}, mp.base); mp.z = mp.zWant = mp.namesZ = 1; campMapNames(s); mp.dirty = true; return true; // another extent: the zoom goes back to 1
+  const far = mp.z < 0.995; if (far === mp.whole) return false;
+  mp.whole = far; campMapNames(s); mp.namesZ = mp.z; return true;
 }
 
 function campMapPaint(s, time) {
   const mp = s.mp; if (!mp) return;
   const F = CAMPMAP.frame, dt = mp.tAt == null ? 0 : Math.max(0, Math.min(100, time - mp.tAt)); mp.tAt = time;
   const moving = campMapZoomStep(mp, F, dt); // the zoom eases to where + - 0 or the wheel put it, and mp.fit is the view at that zoom: everything below and every click reads it
+  campMapFar(s); // the far bodies and their names come in when the zoom goes under 1 and go when it is back
   if (moving) campMapNamesMove(s); else if (mp.z === mp.zWant && mp.namesZ !== mp.z) { campMapNames(s); mp.namesZ = mp.z; } // the names move with the marks while it eases, and are placed afresh (clear of one another) when it has arrived
   mp.zoomText.setText(uiText('camp.map.zoom', { pct: Math.round(mp.zWant * 100) }));
   const C = s.camp, f = mp.fit, g = mp.g, col = CAMPMAP.color;
@@ -263,7 +267,6 @@ function campMapKey(s, code, shift) {
   }
   if (code === 'Enter' || code === 'NumpadEnter') { if (rows[at]) campMapFly(s, rows[at], !!shift); return true; } // Enter: regular speed; Shift+Enter: fast
   if (code === 'KeyV') { const row = mp.setId ? rows.find(r => r.id === mp.setId) : rows[at]; if (row) campMapScout(s, row); return true; } // V: send a scout to the chosen place (or the one set by a click)
-  if (code === 'KeyZ') return campMapWhole(s);
   if (code === 'KeyX') { if (s.camp && (s.camp.nav || s.camp.navWait)) { campNavClear(s.camp, 'clear'); mp.dirty = true; } if (mp.flewId && mp.setId === mp.flewId) { mp.setId = ''; mp.flewId = ''; } return true; }
   return false;
 }
