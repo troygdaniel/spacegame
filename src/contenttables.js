@@ -1063,6 +1063,8 @@ const UI_TEXT = {
   'camp.gauge.lasers': 'LASERS',
   'camp.gauge.hull': 'HULL',
   'camp.say.lasersdry': 'Lasers are running dry. More power to weapons.',
+  // The bigger ore bay (card space-game-ore-bay-bigger, content/text/campaign-orebay.md)
+  'camp.say.orefull': 'Ore bay full.',
   'camp.say.contact': 'Unknown ships. Not pirates. Weapons hot.',
   'camp.say.sold': 'Sold {ore} ore for {cash}.',
   'camp.o.ore': 'Mine ore: {got} of {need}.',
