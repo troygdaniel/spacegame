@@ -14,7 +14,7 @@
 //   campHubNext(P)                 the mission the Launch row flies: { level, i }
 //   campHubBoard(P)                every level and mission, in order: [{ head: true, level, name, n } | { level, i, n, id, title, kind, state: 'done' | 'next' | 'passed' | 'later', score, bonus, of, tries }]
 //   campHubBoardView(rows, max)    the window of the board that fits max lines and holds the next mission
-//   campHubBrief(P, level, i)      one mission's briefing: { title, kindText, lines, objectives, bonus: [{ points, text }], par, best, tries }
+//   campHubBrief(P, level, i)      one mission's briefing: { title, kindText, lines, objectives, kinds, bonus: [{ type, points, text }], par, best, tries }
 //   campHubRefit(P)                { ore, techs, wing: { fighters, escorts }, extra: { fighters, escorts }, most, fc, ec }
 //   campHubRank(P)                 { ranked, name, n, of, points, next, nextName, wing, flown, all }: campRankStatus(P) (the ranks card, src/campranks.js) when it is there, else the plain score
 //   campHubBuy(P, what) / campHubGiveBack(P, what)   what: 'fighters' | 'escorts'  -> { ok, key, vars }
@@ -124,8 +124,8 @@ function campHubBrief(P, level, i) {
   const objectives = (L.objectives || []).map(o => uiText('camp.o.' + o.type + (o.type === 'kill' ? '.' + String(o.what).replace(/:.*/, '') : ''), { got: 0, need: need(o), secs: need(o) }));
   return {
     level, i, n: i + 1, of: L.missions, id: L.mid, title: campHubTitle(level, i), kind: L.kind, kindText: uiText('camp.hub.kind.' + L.kind),
-    lines: [uiText(k + 'b1'), uiText(k + 'b2')].filter(campHubPlain), objectives,
-    bonus: (L.bonus || []).map(b => ({ id: b.id, points: CAMP.score.bonus, text: campHubBonusText(b) })), par: L.par || CAMP.score.par,
+    lines: [uiText(k + 'b1'), uiText(k + 'b2')].filter(campHubPlain), objectives, kinds: (L.objectives || []).map(o => o.type + (o.type === 'kill' ? '.' + String(o.what).replace(/:.*/, '') : '')), // kinds: the same objectives by kind (scan, deliver, kill.mother ...), for the briefing's pictures
+    bonus: (L.bonus || []).map(b => ({ id: b.id, type: b.type, points: CAMP.score.bonus, text: campHubBonusText(b) })), par: L.par || CAMP.score.par,
     best: res ? res.score | 0 : 0, tries: res ? res.tries | 0 : 0
   };
 }

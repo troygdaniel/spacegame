@@ -158,9 +158,10 @@ class CampHub extends Phaser.Scene {
 
   // ----- the keys and the clicks -----
   onKey(e) {
-    if (e.repeat || this.leaving) return;
+    if (this.leaving) return;
+    if (e.repeat && !(typeof campBriefIsOpen === 'function' && campBriefIsOpen(this) && typeof campZoomKey === 'function' && campZoomKey(e.code))) return; // a held key repeats only for the briefing map's zoom
     if (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) { campKeysKey(this, e.code); return; } // the H page of every key is open: any key closes it, and it takes the key
-    if (typeof campBriefIsOpen === 'function' && campBriefIsOpen(this)) { if (e.code === 'KeyH' && typeof campKeysOpen === 'function') { campKeysOpen(this, CAMPKEYS.room); return; } campBriefKey(this, e.code); if (e.preventDefault) e.preventDefault(); return; } // the big briefing is up (src/campbriefdraw.js): it takes the keys: Enter or L launch, Esc back to the board, Left Right page the walkthrough, M the map's zoom
+    if (typeof campBriefIsOpen === 'function' && campBriefIsOpen(this)) { if (e.code === 'KeyH' && typeof campKeysOpen === 'function') { campKeysOpen(this, CAMPKEYS.room); return; } campBriefKey(this, e.code, e.repeat); if (e.preventDefault) e.preventDefault(); return; } // the big briefing is up (src/campbriefdraw.js): it takes the keys: Enter or L launch, Esc back to the board, Left Right page the walkthrough, M the map's zoom
     if (e.code === 'KeyH' && typeof campKeysOpen === 'function') { campKeysOpen(this, CAMPKEYS.room); return; } // H: the ready room's keys, on one page (src/campkeys.js)
     const r = campHubKey(this.hub, this.P, e.code, this.d); if (!r.used) return;
     if (e.preventDefault && (e.code === 'Backspace' || e.code === 'Tab')) e.preventDefault();
