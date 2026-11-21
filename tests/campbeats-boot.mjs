@@ -26,7 +26,7 @@ try {
   check('beat 1: two patrol ships are about, neutral, on the map list', (await j(`${SC}.camp.ships.filter(u => u.kind === 'patrol').length`)) === 2);
   await snap(t, 'patrol');
   // beat 2: the distress call
-  await toShare(0.285); await t.run(2500);
+  await toShare(0.315); await t.run(2500);
   check('beat 2: the miner is under attack and the pilots ask for orders (the call is open)', (await j(`campCallView(${SC}.camp) && campCallView(${SC}.camp).id`)) === 'distress');
   await snap(t, 'call');
   await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1' }))`); await t.run(3000);
@@ -34,14 +34,14 @@ try {
   await snap(t, 'rescue');
   await t.run(20000);
   // beat 3: the ambush
-  await toShare(0.465); await t.run(2500);
+  await toShare(0.525); await t.run(2500);
   check('beat 3: the ambush is out: skiffs and two torpedo boats', (await j(`campAliens(${SC}.camp).filter(u => u.kind === 'tboat').length`)) === 2);
   await snap(t, 'ambush');
   await t.run(9000);
   await snap(t, 'torpedo');
   await t.ev(`(() => { const C = ${SC}.camp; C.ships.filter(u => u.team === 'alien').forEach(u => { u.hp = 0; }); return 1; })()`); await t.run(800);
   // beat 4: the leader
-  await toShare(0.705); await t.run(3000);
+  await toShare(0.755); await t.run(3000);
   check('beat 4: the pirate leader is out, a rival ship', (await j(`!!campRivalOf(${SC}.camp, 'leader')`)) === true);
   await snap(t, 'leader');
   await t.run(9000);
