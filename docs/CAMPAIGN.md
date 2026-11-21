@@ -167,6 +167,22 @@ Orbit and Keep follow the order's target (the nearest alien, or the one you name
 
 **Not done (parked).** The drone and the gunship keep their old circling (they are not fighters); the Long Haul's own pirates (`pirateAI`, Phaser physics) are unchanged; the stances other than Free do not dogfight; no sound for a flip.
 
+## Repair: a hurt fighter lands and comes back (card `space-game-fighter-repair`; Troy, 21 Nov 2026: "fights were not interactive and escorts were boring, I want to direct the fleet more")
+
+**The rule** (`src/camprepair.js`, numbers in `CAMP.repair`). A **fighter** of the wing under **30 percent** of its hull breaks off, flies home, lands on the cruiser, is mended for **10 s** and goes out again whole, with the order it had. If the cruiser is more than **15 s of flight** away (the way over the fighter's own top speed) it fights on, and breaks off when the cruiser comes within reach. Every level, pirates and aliens alike. The enemy's fighters never do it (the wing's AI calls it first; the raiders' and the pirates' AI do not). The escorts and the scouts do not break off.
+
+**A radio line each way** (the ship's voice, `content/text/campaign-repair.md`): "Fighter hit hard. Breaking off to land." and "Fighter mended and launching again." (or "Fighter mended. It is in the bay." when it stays aboard). Four fighters hurt in one pass are one call (`sayEvery` 5 s). **The wing strip** (the bay line's column of the HUD) shows `REPAIR 2  7 s`: how many are being mended and the seconds until the first is whole. The ship computer's status adds "n being mended".
+
+**Out again, or in the bay.** When the 10 s are over the fighter goes out at once if there is a fight: an alien within `fight` (1,800 px) of the cruiser, or a ship of the wing out on an order (not a scout, not a recalled one). Otherwise it is in the bay, whole, and Launch takes it. A **Recall** given while it is mended keeps it aboard (it is in the bay when whole, whatever the fight); a **Launch** takes that back.
+
+**Orders on the way home.** The repair wins over an order: an Attack given to a fighter that is flying home is kept, and is the order it goes out with; a Recall given to it is kept too. A fighter **above** 30 percent that is recalled lands as it always did: whole at once, in the bay. Under 30 percent a recalled fighter is mended for the 10 s like any hurt one.
+
+**What it counts as.** A fighter being mended is still one of the wing: the build limit counts it, a dock counts it, "no ships left" does not say so. It is not in `C.ships` (nothing can hit it, find it or count it as out), as a landed ship never is; `C.repairs` holds it (`{ kind, until, order, stay }`). `C.mended` counts the fighters made whole (the bot table has it as `mended` in `--json`).
+
+**What it did to the numbers** (`node tools/campaign-bot.mjs --seeds 6`). Every bot still wins every mission it won, in about the same time, with **fewer ships lost** (the plain bot's level 1.3 and 3.x runs lose 1 to 2 fighters where they lost 3 to 8) and the carrier hurt a little more or less as the fights fall. Level 3 of the pinned fight (tests/campsystems.mjs B, tests/campscouts.mjs K) ends in another state: 40 turret shots where there were 98, as the wing kills the eight sooner. The one check that moved is tests/campaign.mjs's "still not a walk": the same player on the old harsh numbers (Earth's shield 300, no mending) won one seed of six before the easier card and wins five of six now (it lost three of them by Earth's shield); the guard is now "not all six, and at least one lost by Earth's shield". If the repair is too kind, the levers are `below` (0.3), `time` (10) and `within` (15).
+
+**Not done (parked).** An outpost's repair bay does not mend fighters faster; the escorts do not repair; no picture of a fighter on the landing deck, and the landing lights use the recall's (a hurt fighter flying home lights the bays as a recalled one does); the map's wing list does not show the ships being mended; the stances other than Free break off like any other (the repair runs before the stance).
+
 ## The weapons (card `space-game-campaign-missiles`)
 
 The carrier has two ways to hurt an alien, one key each (card `space-game-campaign-turrets` took away the single main gun):
