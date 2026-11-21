@@ -645,6 +645,7 @@ const UI_TEXT = {
   'camp.say.torp.hit.name': '{name} took a torpedo.',
   'camp.say.torp.hit.us': 'Torpedo hit the cruiser.',
   'camp.nav.k.tboat': 'Torpedo boat', 'camp.nav.k.lancer': 'Lancer',
+  'camp.map.tboat': 'Torpedo boats ({n})', 'camp.map.torpedo': 'Torpedoes ({n})',
   'camp.no.wnogroup': 'Which group? Fighters, escorts or all.',
   'camp.no.wnotarget': 'I cannot find that target.',
   'camp.no.wbadpair': '{group} cannot {verb} {what}.',
