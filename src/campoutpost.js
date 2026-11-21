@@ -1,5 +1,5 @@
 // ---------- Campaign: friendly outposts (card space-game-campaign-outposts; Troy, 20 Nov 2026) ----------
-// Troy: fighters and escorts can only be BUILT, and the hull MENDED, DOCKED at a friendly outpost; the shield is recharged in the ship, anywhere, with ore; mining works anywhere. A Fabricator
+// Troy: fighters and escorts can only be BUILT, and the hull MENDED, DOCKED at a friendly outpost; the shield mends by itself, anywhere (the pips set how fast); mining works anywhere. A Fabricator
 // upgrade lets the ship build anywhere. Low on hull with no ships left, the HUD says where to retreat and how long it takes on Fast. This file is the PURE half (no Phaser, no page;
 // tests/campoutpost.mjs runs it in Node); the scene (src/campaignscene.js) opens the ready room (src/camphubscene.js, with the dock's rows, src/campdock.js) when the carrier docks.
 //   THE DATA: CAMP.levels[n].outposts = { <place id>: { name?, range? } }: the friendly outposts of a level, places of that level (a hidden place is not one). name is what the room is called (else the place's

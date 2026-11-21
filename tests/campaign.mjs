@@ -409,10 +409,10 @@ console.log('K. easier (Troy lost level 1 twice at wave 3, by Earth\'s shield): 
 }
 
 // ---------- L. ore: mine it, spend it ----------
-console.log('L. ore: asteroid rocks and wrecks, mining, the carrier shield, recharge, build');
+console.log('L. ore: asteroid rocks and wrecks, mining, the carrier shield (it mends by itself), build');
 {
   const N = (level, techs, seed) => g.run(`__new2(${JSON.stringify(level)}, ${JSON.stringify(techs || [])}, ${seed == null ? 1 : seed})`);
-  check('the numbers are in the table: ore (start, cap, rock, reach, wrecks, danger), the shield, recharge and build costs and times', J('CAMP.ore.start') === 30 && J('CAMP.ore.cap') === 200 && J('CAMP.ore.rock') === 20 && J('CAMP.ore.reach') === 70 && J('CAMP.ore.wreck.raider') === 4 && J('CAMP.ore.wreck.mother') === 40 && J('CAMP.ore.danger') === 500 && J('CAMP.carrier.shield') === 150 && J('CAMP.recharge.carrier') === 25 && J('CAMP.recharge.earth') === 40 && J('CAMP.recharge.earthPoints') === 200 && J('CAMP.build.fighterCost') === 25 && J('CAMP.build.escortCost') === 45 && J('CAMP.build.fighterTime') === 6 && J('CAMP.build.escortTime') === 10 && J('CAMP.build.maxFighters') === 14 && J('CAMP.build.maxEscorts') === 6);
+  check('the numbers are in the table: ore (start, cap, rock, reach, wrecks, danger), the shield and its mend, and the build costs and times', J('CAMP.ore.start') === 30 && J('CAMP.ore.cap') === 200 && J('CAMP.ore.rock') === 20 && J('CAMP.ore.reach') === 70 && J('CAMP.ore.wreck.raider') === 4 && J('CAMP.ore.wreck.mother') === 40 && J('CAMP.ore.danger') === 500 && J('CAMP.carrier.shield') === 150 && J('CAMP.power.shields.regen[2]') > 0 && J('CAMP.power.shields.regen[0]') === 0 && J('CAMP.build.fighterCost') === 25 && J('CAMP.build.escortCost') === 45 && J('CAMP.build.fighterTime') === 6 && J('CAMP.build.escortTime') === 10 && J('CAMP.build.maxFighters') === 14 && J('CAMP.build.maxEscorts') === 6);
   N("home");
   check('a new level: 30 ore in the store, a carrier shield of 150, fifteen rocks (100 hit points, 20 ore each) in three fields in level 1; ten rocks in each of levels 2 and 3; no ore lying about yet', J('C.ore') === 30 && J('C.shield') === 150 && J('C.rocks.length') === 15 && J('C.rocks.every(r => r.ore === 20 && r.hp === 100 && r.r === 22)') && J('C.pickups.length') === 0 && (N(2), J('C.rocks.length') === 10) && (N(3), J('C.rocks.length') === 10));
   N("home");
@@ -446,19 +446,14 @@ console.log('L. ore: asteroid rocks and wrecks, mining, the carrier shield, rech
   check('the carrier\'s shield takes damage first: 100 off 150 leaves 50 shield and the hull whole; the rest goes through to the hull', J('C.shield') === 50 && J('C.carrier.hp') === 600 && (g.run('campHurt(C, C.carrier, 80, "x")'), J('C.shield') === 0 && J('C.carrier.hp') === 570));
   g.run('__new2("home", ["shield"], 1); campHurt(C, C.carrier, 100, "x")');
   check('with the shield grid tech, 40 percent less of it first (100 hits as 60)', Math.abs(J('C.shield') - 90) < 1e-6);
-  g.run('__new2("home", [], 1); campHurt(C, C.carrier, 60, "x"); __run(15)');
-  check('the shield does not mend by itself (15 seconds on, before the first wave, it is still 90)', J('C.shield') === 90);
-  // recharge
+  g.run('__new2("home", [], 1); campHurt(C, C.carrier, 60, "x"); __run(2)');
+  check('the shield does not mend within 3 s of a hit (2 seconds on, it is still 90)', J('C.shield') === 90);
+  g.run('__run(13)');
+  check('then it mends by itself at the base rate, 3 points a second (15 seconds on, before the first wave: about 90 + 12 x 3 = 126), and nothing is paid for it', Math.abs(J('C.shield') - 126) < 1.5 && J('C.ore') === 30, J('C.shield'));
+  // recharge: the old pay-ore order is gone (card space-game-shield-auto)
   g.run('__new2("home", [], 1); campHurt(C, C.carrier, 75, "x")');
-  check('Recharge: the carrier shield is filled for a share of 25 ore in proportion to what is missing (half missing: 13 ore), and the answer says so', (() => { const r = J(`campOrder(C, 'recharge', '')`); return r.ok && r.say === 'Carrier shield recharged.' && J('C.shield') === 150 && J('C.ore') === 30 - 13 && J('C.orders.recharge') === 1; })());
-  check('a full shield says so and costs nothing', J(`campOrder(C, 'recharge', '').say`) === "The carrier's shield is already full." && J('C.ore') === 17);
-  g.run('campHurt(C, C.carrier, 150, "x")');
-  check('with too little ore it says how much is needed and how much there is, and takes nothing', J(`campOrder(C, 'recharge', 'carrier').say`) === 'Not enough ore: 25 needed, 17 in the store.' && J('C.ore') === 17 && J('C.shield') === 0);
-  g.run('__new2("home", [], 1); C.ore = 100; C.earth.shield = 100; C.carrier.x = C.earth.x + 500; C.carrier.y = C.earth.y');
-  check('Recharge Earth: near Earth (within 900 px) and under full, 40 ore gives Earth\'s shield 200 points (never past 600)', (() => { const r = J(`campOrder(C, 'recharge', 'earth')`); return r.ok && r.say === "Earth's shield recharged." && J('C.earth.shield') === 300 && J('C.ore') === 60; })());
-  check('with no name, near Earth and Earth under 90 percent, it is Earth that is recharged; with Earth near full it is the carrier', (() => { g.run('C.earth.shield = 100; campHurt(C, C.carrier, 10, "x")'); const a = J(`campOrder(C, 'recharge', '')`); const earth1 = J('C.earth.shield'); g.run('C.earth.shield = 590; C.ore = 100; campHurt(C, C.carrier, 10, "x")'); const b = J(`campOrder(C, 'recharge', '')`); return a.say === "Earth's shield recharged." && earth1 === 300 && b.say === 'Carrier shield recharged.' && J('C.earth.shield') === 590; })());
-  g.run('C.earth.shield = 100; C.carrier.x = C.earth.x + 3000; C.ore = 100');
-  check('too far from Earth, Recharge Earth says so; Earth full says so; no Earth (level 2) says so', J(`campOrder(C, 'recharge', 'earth').say`) === 'We are too far from Earth to recharge it.' && (g.run('C.carrier.x = C.earth.x + 300; C.earth.shield = 600'), J(`campOrder(C, 'recharge', 'earth').say`) === "Earth's shield is already full.") && (N(2), g.run('C.ore = 100'), J(`campOrder(C, 'recharge', 'earth').say`) === 'There is no Earth here, pilot.'));
+  check('Recharge is gone: the order says the shield mends by itself, fills nothing and takes no ore (typed or spoken "recharge shields" reaches it)', (() => { const r = J(`campOrder(C, 'recharge', '')`); return r.ok === false && r.code === 'shieldauto' && /mend/.test(r.say) && J('C.shield') === 75 && J('C.ore') === 30; })());
+  check('Earth\'s ore recharge went with it (Earth mends by itself, slowly: CAMP.earth.regen) and the table of its prices is gone', J('typeof CAMP.recharge') === 'undefined' && J(`campOrder(C, 'recharge', 'earth').code`) === 'shieldauto' && J('C.earth.shield') === 600);
   // build (docked at an outpost: card space-game-campaign-outposts; tests/campoutpost.mjs has the rule itself)
   N("home"); g.run('C.ore = 100; C.docked = "luna"');
   const b1 = J(`campOrder(C, 'build', 'fighter')`);
@@ -479,41 +474,40 @@ console.log('L. ore: asteroid rocks and wrecks, mining, the carrier shield, rech
   const I = x => J(`campIntent(${JSON.stringify(x)})`);
   const act = (x, a, arg) => { const r = I(x); return !!r && r.act === a && (arg === undefined || r.arg === arg); };
   check('plain words: "mine", "go mining", "collect the ore", "send the escorts to mine" are Mine', ['mine', 'go mining', 'collect the ore', 'send the escorts to mine', 'gather ore', 'start mining please'].every(x => act(x, 'fleet_mine')));
-  check('"recharge shields", "recharge the shield", "recharge Earth\'s shield", "shields up" are Recharge, with Earth or the carrier when named', act('recharge shields', 'fleet_recharge', '') && act('recharge the shield', 'fleet_recharge') && act("recharge Earth's shield", 'fleet_recharge', 'earth') && act('recharge the carrier shields', 'fleet_recharge', 'carrier') && act('shields up', 'fleet_recharge'));
+  check('"recharge shields", "recharge the shield", "recharge Earth\'s shield", "shields up" are still understood: they reach the old Recharge order, which says the shield mends by itself (card space-game-shield-auto)', act('recharge shields', 'fleet_recharge', '') && act('recharge the shield', 'fleet_recharge') && act("recharge Earth's shield", 'fleet_recharge', 'earth') && act('recharge the carrier shields', 'fleet_recharge', 'carrier') && act('shields up', 'fleet_recharge'));
   check('"build fighters", "build an escort", "build two fighters", "make 3 escorts" are Build, the kind and the number in the words', act('build fighters', 'fleet_build') && /escort/.test(I('build an escort').arg) && /two fighters/.test(I('build two fighters').arg) && /3 escorts/.test(I('make 3 escorts').arg) && !I('how do I build a ship') );
   check('a question about mining is the model\'s, and the Long Haul words are not taken for these ("how do I mine", "what is ore")', I('how do I mine') === null && I('what is ore') === null);
   // the doors
   N("home"); g.run('__scene.camp = C; C.ore = 100; C.docked = "luna"; campHurt(C, C.carrier, 150, "x")');
   const loc = x => J(`(() => { const p = shipcompLocal(${JSON.stringify(x)}, __scene); return p ? { text: p.text, action: p.action, refused: p.refused, run: !!p.run } : null; })()`);
-  check('typed or spoken, they are acts of the closed list (fleet_mine, fleet_recharge, fleet_build), checked first and run after: "recharge shields" costs nothing until its run', (() => { const r = loc('recharge shields'); return r && r.action === 'fleet_recharge' && r.text === 'Carrier shield recharged.' && J('C.shield') === 0 && J('C.ore') === 100; })() && (g.run('shipcompLocal("recharge shields", __scene).run(__scene)'), J('C.shield') === 150 && J('C.ore') === 75));
-  check('"build two fighters" typed: 50 ore and two queued after the run; "mine" before launch is refused in words', (() => { g.run('shipcompLocal("build two fighters", __scene).run(__scene)'); return J('C.ore') === 25 && J('C.build.queue.length') === 2 && loc('mine').refused === true; })());
-  check('the model is told the eight orders, the ore and the two panels', (() => { const sys = J('shipcompSystem(__scene)'); return /fleet_mine \| fleet_recharge/.test(sys) && /fleet_build/.test(sys) && /key E the SHIP panel/.test(sys) && /2 recharge shields/.test(sys) && /Ore in the store/.test(sys); })());
-  check('every word the new orders can say is in content/text/campaign.md (ui.md is full at 200 rows)', (() => { const md = src('content/text/ui.md') + src('content/text/campaign.md'), ks = ['mine', 'recharge', 'rechargeearth', 'build', 'built'].map(k => 'camp.say.' + k).concat(['noore', 'noore2', 'noearth', 'farearth', 'earthfull', 'shieldfull', 'buildfull'].map(k => 'camp.no.' + k), ['camp.ui.ore', 'camp.ui.shield']); const miss = ks.filter(k => !md.includes('| ' + k + ' |') || J(`uiText('${k}')`) === k); return miss.length === 0 || miss.join(); })());
+  check('typed or spoken, they are acts of the closed list (fleet_mine, fleet_build), checked first and run after; "recharge shields" is refused in words (no run) and costs nothing', (() => { const r = loc('recharge shields'); return r && /mend on their own/.test(r.text) && !r.run && J('C.shield') === 0 && J('C.ore') === 100; })());
+  check('"build two fighters" typed: 50 ore and two queued after the run; "mine" before launch is refused in words', (() => { g.run('shipcompLocal("build two fighters", __scene).run(__scene)'); return J('C.ore') === 50 && J('C.build.queue.length') === 2 && loc('mine').refused === true; })());
+  check('the model is told the eight orders, the ore and the two panels', (() => { const sys = J('shipcompSystem(__scene)'); return /fleet_mine \| fleet_power/.test(sys) && !/fleet_recharge/.test(sys) && /fleet_build/.test(sys) && /key E the SHIP panel/.test(sys) && /2 build a fighter/.test(sys) && !/recharge shields/.test(sys) && /Ore in the store/.test(sys); })());
+  check('every word the new orders can say is in content/text/campaign.md (ui.md is full at 200 rows)', (() => { const md = src('content/text/ui.md') + src('content/text/campaign.md') + src('content/text/campshield.md'), ks = ['mine', 'build', 'built'].map(k => 'camp.say.' + k).concat(['noore', 'noore2', 'noearth', 'shieldauto', 'buildfull'].map(k => 'camp.no.' + k), ['camp.ui.ore', 'camp.ui.shield']); const miss = ks.filter(k => !md.includes('| ' + k + ' |') || J(`uiText('${k}')`) === k); return miss.length === 0 || miss.join(); })());
   // the scene, on the stand-in
   g.run(`go = (s, key, data) => { __went.push({ key, data }); }; toast = (s, msg) => { __toasts2.push(msg); }; window.F = __fake(1, {}); F.onKey({ code: 'Enter' }); F.onKey({ code: 'Enter' }); F.camp.ore = 100; F.camp.docked = 'luna'; campHurt(F.camp, F.camp.carrier, 150, 'x'); __toasts2.length = 0; 0`); // docked: ships are built only docked at an outpost (tests/campoutpost.mjs)
   const two = (a, b) => g.run(`F.onKey({ code: '${a === 2 ? 'KeyE' : 'KeyQ'}' }); F.onKey({ code: 'Digit${b}' })`); // the panel key (E: SHIP, Q: FLEET) then the digit of the row
-  two(2, 2); const t7 = J('__toasts2.pop()');
-  two(2, 3); const t8 = J('__toasts2.pop()');
-  two(2, 4); const t9 = J('__toasts2.pop()');
+  two(2, 2); const t8 = J('__toasts2.pop()');
+  two(2, 3); const t9 = J('__toasts2.pop()');
   two(2, 1); const t6 = J('__toasts2.pop()');
-  check('the keys: E then 2 recharges the shield, E then 3 builds a fighter, E then 4 an escort (ore 100 less 25, 25, 45), E then 1 with no escorts out says launch first; the HUD and the ore sprites draw without error', t7 === 'Carrier shield recharged.' && t8 === 'Building 1 fighter.' && t9 === 'Building 1 escort.' && t6 === 'No ships are out. Launch first.' && J('F.camp.ore') === 100 - 25 - 25 - 45 && J('F.camp.shield') === 150 && (g.run('F.update(0, 33)'), true));
+  check('the keys: E then 2 builds a fighter, E then 3 an escort (ore 100 less 25, 45; the recharge row is gone), E then 1 with no escorts out says launch first; the HUD and the ore sprites draw without error', t8 === 'Building 1 fighter.' && t9 === 'Building 1 escort.' && t6 === 'No ships are out. Launch first.' && J('F.camp.ore') === 100 - 25 - 45 && J('F.camp.shield') === 0 && (g.run('F.update(0, 33)'), true));
   g.run('go = __go0; toast = __toast0');
   g.run(`window.F = __fake(1, {}); F.onKey({ code: 'Enter' }); delete F.hud.shield; delete F.hud.ore; delete F.osp; 0`);
   check('a stand-in scene with no shield text and no ore sprites (5-GEN\'s UX tests fake the scene that way) still draws a frame: the scene skips the gauges it has no text for and makes the ore sprites it lacks', (() => { try { g.run('F.update(0, 33); F.update(0, 33)'); return true; } catch (e) { return String(e.message).slice(0, 120); } })());
   check('the bottom key line fits the screen: 8.6 px a letter from x 24 ends at 1272 at the latest (8-GEN measured 1512 px for 176 letters, which was cut off at "I type a"), and it ends with "H Keys" and names the two panels', (() => { const k = J(`campKeyLine()`); return 24 + k.length * 8.6 <= 1272 && /H Keys$/.test(k) && /Q Fleet   E Ship/.test(k) && /Tab Map/.test(k) && /Space turrets/.test(k) && /F missiles/.test(k); })());
   // ore in every level, and what it is worth
-  check('every level has ore to find: rocks in levels 1, 2 and 3; Earth\'s shield recharge only where there is an Earth', [1, 2, 3].every(n => J(`CAMP.levels[${n}].rocks.length`) >= 1) && (N(3), g.run('C.ore = 100; campHurt(C, C.carrier, 100, "x")'), J(`campOrder(C, 'recharge', '').ok`) === true));
+  check('every level has ore to find: rocks in levels 1, 2 and 3', [1, 2, 3].every(n => J(`CAMP.levels[${n}].rocks.length`) >= 1));
   g.run(`
-    window.__ore = (C, s) => {               // the same player, who also uses ore: mines now and then when the sky is quiet, recharges a low shield, builds fighters and launches them
+    window.__ore = (C, s) => {               // the same player, who also uses ore: mines now and then when the sky is quiet, builds fighters and launches them
       __stay(C, s);
       if (s > 15 && Math.round(s * 30) % 600 === 100 && campAliens(C).length < 3) campOrder(C, 'mine');
-      if (Math.round(s * 30) % 60 === 7) { if (C.shield < 60) campOrder(C, 'recharge', ''); if (C.earth && C.earth.shield < C.earth.max * 0.6) campOrder(C, 'recharge', 'earth'); if (C.ore >= 60) campOrder(C, 'build', 'fighter'); if (C.bay.fighters > 0 && !C.launchQ.length) campOrder(C, 'launch'); }
+      if (Math.round(s * 30) % 60 === 7) { if (C.ore >= 60) campOrder(C, 'build', 'fighter'); if (C.bay.fighters > 0 && !C.launchQ.length) campOrder(C, 'launch'); }
     };
     window.__plays2 = (script, secs) => [1, 2, 3, 4, 5, 6].map(sd => { window.C = campNew("home", ["fabricator"], { seed: sd }); // the Fabricator: this player builds wherever it is
     for (let i = 0; i < secs * 30 && !C.result; i++) { script(C, i / 30); campStep(C, 1 / 30); C.events.length = 0; } return { r: C.result, t: Math.round(C.t / 1000), ls: C.lostShips, built: C.orders.build, mined: C.orders.mine }; });
   `);
   const withOre = J('__plays2(__ore, 600)'), without = J('__plays2(__stay, 600)');
-  check('a player who also mines, recharges and builds wins level 1 on every seed, and loses fewer small ships than the same player without ore (6 seeds together)', withOre.every(r => r.r === 'won') && withOre.reduce((a, r) => a + r.ls, 0) < without.reduce((a, r) => a + r.ls, 0) && withOre.some(r => r.built > 0), JSON.stringify([withOre.map(r => r.ls), without.map(r => r.ls)]));
+  check('a player who also mines and builds wins level 1 on every seed, and loses fewer small ships than the same player without ore (6 seeds together)', withOre.every(r => r.r === 'won') && withOre.reduce((a, r) => a + r.ls, 0) < without.reduce((a, r) => a + r.ls, 0) && withOre.some(r => r.built > 0), JSON.stringify([withOre.map(r => r.ls), without.map(r => r.ls)]));
 }
 
 // ---------- M. level 1 is the asteroid belt, in three missions ----------
@@ -539,7 +533,7 @@ console.log('M. level 1, the belt: survey, haulers, the mothership; the refit');
   g.run('__new2(1, [], 1, 0); campOrder(C, "launch"); __run(5); campOrder(C, "mine"); __run(25)');
   const mid = J('C.ore'); g.run('__run(35)');
   check('mining goes on in the survey: launch at once and Mine, and the wing brings the store from empty to full (200) in about a minute, not in ten seconds', mid >= 40 && mid < 200 && J('C.ore') >= 160);
-  check('Escort with no hauler in the level keeps the escorts close to the cruiser, and says so; there is no Earth to recharge', J(`campOrder(C, 'escort', '').say`) === 'Escorts are with the cruiser.' && J(`campOrder(C, 'recharge', 'earth').say`) === 'There is no Earth here, pilot.');
+  check('Escort with no hauler in the level keeps the escorts close to the cruiser, and says so; there is no Earth in this level', J(`campOrder(C, 'escort', '').say`) === 'Escorts are with the cruiser.' && J('C.earth') === null);
   // 1.2 the haulers
   g.run('__new2(1, [], 1, 1)');
   check('1.2 the haulers: three ore haulers (Hauler 1, 2, 3) leave Deimos for Phobos (the two moons of Mars) at 3, 18 and 33 seconds after you arrive; two must arrive and none may be on its way; the raiders go for them', J('C.L.convoys.length') === 3 && J('C.L.convoys.map(c => c.name).join()') === 'Hauler 1,Hauler 2,Hauler 3' && J('C.L.convoys.every(c => c.from === "deimos" && c.to === "phobos")') && J('C.L.place') === 'mars' && J('C.L.objectives[0].n') === 2 && J('C.L.waves.every(w => /^convoy:h/.test(w.goal))'));

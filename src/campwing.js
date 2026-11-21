@@ -73,7 +73,7 @@ function campWingByWords(C, text) {
   if (/\b(?:ore|chunks?|wrecks?|salvage|loot)\b/.test(q)) { const p = near(C.pickups, () => true); return p ? campWingById(C, p.id) : null; }
   if (/\b(?:cache|caches|supplies|pods?)\b/.test(q) && !/\bconvoy\b/.test(q)) { const i = C.caches.map((k, n) => [k, n]).filter(x => !x[0].got).sort((a, b) => campDist(a[0], C.carrier) - campDist(b[0], C.carrier))[0]; return i ? campWingById(C, 'cache:' + i[1]) : null; }
   if (/\b(?:rock|rocks|asteroid|asteroids)\b/.test(q)) { const r = near(C.rocks, o => o.hp > 0); return r ? campWingById(C, r.id) : null; }
-  if (/\b(?:gunship|raider|drone|tower|enemy|alien|bandit|pirate)s?\b/.test(q)) { const kind = (/\b(gunship|raider|drone|tower)/.exec(q) || [])[1]; const e = near(C.ships, u => u.team === 'alien' && u.hp > 0 && (!kind || u.kind === kind)); return e ? campWingShipTarget(C, e) : null; }
+  if (/\b(?:gunship|raider|drone|tower|enemy|alien|bandit|pirate|skiff|cutter|brute|lancer|torpedo boat|boat)s?\b/.test(q)) { const w = (/\b(gunship|raider|drone|tower|skiff|cutter|brute|lancer|torpedo boat|boat)/.exec(q) || [])[1], kinds = !w ? null : /boat/.test(w) ? ['tboat', 'lancer'] : [w]; const e = near(C.ships, u => u.team === 'alien' && u.hp > 0 && (!kinds || kinds.indexOf(u.kind) >= 0)); return e ? campWingShipTarget(C, e) : null; } // the pirates' kinds and the torpedo boats by name too (card space-game-torpedo-boats): "attack the torpedo boat" is the nearest of them
   const t = typeof campFind === 'function' ? campFind(C, text) : null;
   if (!t) return null;
   if (t.kind === 'mother') return campWingById(C, 'mother');

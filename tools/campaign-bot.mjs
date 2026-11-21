@@ -2,7 +2,7 @@
 // Card space-game-night-gameplay (docs/night/gameplay.md). It reads the game (src/campaign.js) and changes nothing in it.
 //   node tools/campaign-bot.mjs                      the whole table: levels 1 to 3, every bot, seeds 1 to 12
 //   node tools/campaign-bot.mjs --level 1 --seeds 20 --bots plain,carrier --skill steady
-//   node tools/campaign-bot.mjs --power 4,1,1        the ship's systems for every run: weapons, shields, engines, 6 pips (default 2,2,2: today's numbers exactly)
+//   node tools/campaign-bot.mjs --power 4,1,1        the ship's systems for every run: weapons, shields, engines, 6 pips (default 2,2,2: every factor 1, the shield mending at its base rate)
 //   node tools/campaign-bot.mjs --tech beam          start with these techs (a level's table row says which a player would have)
 //   node tools/campaign-bot.mjs --old               level 1 with the numbers it had before the easier level 1 (Earth's shield 300 and the rest): what Troy's first tries were played on
 //   node tools/campaign-bot.mjs --set alien.hpScale=2 --set alien.damageScale=2   what if: change numbers of the table (CAMP.<path> = a number) for this run only
@@ -77,7 +77,11 @@ g.run(`(() => {
       if (!st.landAt && fs.length >= 3 && Math.round(s * 30) % 60 === 0 && fs.reduce((a, u) => a + u.hp / u.maxHp, 0) / fs.length < B.cycle && C.carrier.hp > 0) { campOrder(C, 'recall'); st.landAt = s + 14; st.recalls = (st.recalls || 0) + 1; }
     }
     if (B.missiles && Math.round(s * 30) % 21 === 0 && typeof campOrder === 'function') campOrder(C, 'missiles', C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'mothership' : '');
-    if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight)) { campOrder(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : ''); st.mining = false; }
+    if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight)) {
+      const boat = typeof campTorpedoBoats === 'function' ? campTorpedoBoats(C).filter(u => !u.running).sort((p, q) => campDist(p, C.carrier) - campDist(q, C.carrier))[0] : null; // torpedo boats (card space-game-torpedo-boats): the plain answer is to send the fighters at the nearest boat that still has a torpedo, before anything else
+      if (boat) campWingOrder(C, 'fighters', 'attack', boat.id); else campOrder(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : '');
+      st.mining = false;
+    }
   };
   window.__fly = (C, B, sk, st) => {
     if (B.idle) return;
@@ -111,6 +115,7 @@ g.run(`(() => {
     const tgt = a || goal, w2 = Math.atan2(tgt.y - c.y, tgt.x - c.x) + st.err, d2 = Math.atan2(Math.sin(w2 - c.rot), Math.cos(w2 - c.rot));
     C.input.blink = !!(campHas(C, 'blink') && dist > 2200 && Math.abs(d) < 0.25 && C.t - C.blinkAt >= campBlinkCooldown(C));
     C.input.fire = !!a && (turrets ? campDist(a, c) - a.r < reach : Math.abs(d2) < sk.thr && campDist(a, c) < reach); // Space held while an alien is in reach
+    if (turrets && (C.torpedoes || []).some(t => !t.dead && campDist(t, c) - t.r < reach)) C.input.fire = true; // and while a torpedo is: the turrets shoot it down (card space-game-torpedo-boats)
   };
   window.__run1 = (level, seed, techs, B, sk, maxSec, mission) => {
     const rank = window.__RANK === 'auto' ? campRankAt(((level - 1) * 3 + (mission | 0)) * 1400) : Number(window.__RANK) | 0; // the ranks card: the wing of the rank
