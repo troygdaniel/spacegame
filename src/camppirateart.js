@@ -10,7 +10,8 @@ Object.assign(CAMP_ART, {
   cutter: { k: 4, len: 26, pad: 2.5, half: 9.5, glow: [] },
   brute:  { k: 4, len: 38, pad: 3, half: 12, glow: [] },
   patrol: { k: 4, len: 30, pad: 3, half: 10, glow: [] },
-  miner:  { k: 4, len: 32, pad: 3, half: 10, glow: [] }
+  miner:  { k: 4, len: 32, pad: 3, half: 10, glow: [] },
+  pirateleader: { k: 4, len: 70, pad: 3, half: 20, glow: [] } // the rival ship (card space-game-rival-duel): the cruiser's own size
 });
 const CAMP_PIRATE = { // the colours: rust and ochre for the pirates, pale steel and teal for the patrols, blue-grey and orange for the miners
   rust: [0x4a3828, 0x6c5236, 0x8e6c44, 0xb08a58, 0xd2ac70], ochre: 0xe8d24a, ochreDim: 0x9c8a2e, dark: 0x1a1612, edge: 0x100d0a, ember: 0xe28a3a, hot: 0xffd9a0,
@@ -83,4 +84,20 @@ function campMinerDraw(g) { // an industrial hauler: a boxy hull, a cargo pod, a
   for (let x = -13; x < -3; x += 3) p.poly([[x, -4.4], [x + 1.5, -4.4], [x + 2.4, -3], [x + 0.9, -3]], P.orange, 0.85); // hazard marks
   p.rect(-15.4, -3.8, -13.8, 3.8, P.dark); [-1.8, 1.8].forEach(y => { p.dot(-15.6, y, 2, P.glass, 0.08); p.rect(-16.4, y - 0.9, -15, y + 0.9, P.glass, 0.9); });
 }
-function campPirateArt(kind) { return { skiff: campSkiffDraw, cutter: campCutterDraw, brute: campBruteDraw, patrol: campPatrolDraw, miner: campMinerDraw }[kind] || null; }
+function campPirateLeaderDraw(g) { // the pirate leader: a scavenged capital ship the cruiser's size, rust plates and an ochre stripe, a bank of four broadside guns on each side (their tips glow ember), a bridge block, three engines
+  const A = CAMP_ART.pirateleader, k = A.k, [W, H] = campArtSize('pirateleader'), p = campArtPen(g, W / 2, H / 2, k), P = CAMP_PIRATE, R = P.rust;
+  A.glow.forEach(([r, a]) => p.dot(0, 0, r, P.ochre, a));
+  [1, -1].forEach(s => { // the broadside banks: a bolted gun deck along each side, four barrels pointing out, an ember at each tip
+    const deck = [[18, s * 11], [-18, s * 11], [-18, s * 16], [18, s * 16]]; p.poly(deck, R[1]); p.rect(-17, s > 0 ? 11.6 : -15.4, 17, s > 0 ? 15.4 : -11.6, R[2], 0.9); p.outline(deck, P.edge, 0.9, 0.95);
+    [-14, -5, 4, 13].forEach(x => { p.rect(x - 1.1, s > 0 ? 15.4 : -19.4, x + 1.1, s > 0 ? 19.4 : -15.4, P.dark); p.rect(x - 1.5, s > 0 ? 18.2 : -19.6, x + 1.5, s > 0 ? 19.6 : -18.2, R[1]); p.dot(x, s * 19.8, 1.1, P.ember, 0.95); p.dot(x, s * 19.8, 2.4, P.ember, 0.1); });
+    for (let x = -16; x < 16; x += 6) p.poly([[x, s * 11.2], [x + 2.4, s * 11.2], [x + 3.4, s * 13.2], [x + 1, s * 13.2]], P.ochre, 0.8); // hazard marks along the deck
+  });
+  const hull = [[35, 0], [26, -6], [-22, -11], [-32, -9], [-34, -4], [-34, 4], [-32, 9], [-22, 11], [26, 6]];
+  p.poly(hull, R[1]); p.poly([[33, 0], [25, -4.6], [-22, -9], [-31, -7.4], [-31, 7.4], [-22, 9], [25, 4.6]], R[2], 0.95); p.outline(hull, P.edge, 1, 0.95);
+  p.rect(-24, -1.4, 28, 1.4, P.ochre, 0.9); p.rect(-24, -0.5, 28, 0.5, P.ochreDim, 0.7); // the stripe down the spine
+  [-18, -8, 2, 12, 20].forEach(x => p.line(x, -9, x, 9, P.edge, 0.55, 0.4)); // plate seams
+  p.poly([[8, -4.8], [-6, -5.6], [-8, -3], [-8, 3], [-6, 5.6], [8, 4.8], [11, 0]], R[3], 0.95); p.outline([[8, -4.8], [-6, -5.6], [-8, -3], [-8, 3], [-6, 5.6], [8, 4.8], [11, 0]], P.edge, 0.8, 0.9); // the bridge block
+  [-3, 0, 3].forEach(y => p.dot(7, y * 0.9, 0.9, P.glass)); p.dot(7, 0, 1.6, P.edge, 0.5);
+  p.rect(-37, -9, -34, 9, P.dark); [-5.6, 0, 5.6].forEach(y => { p.dot(-37.2, y, 3.2, P.ember, 0.08); p.rect(-38.6, y - 1.7, -36.6, y + 1.7, P.ember, 0.95); p.rect(-38.6, y - 0.7, -37.4, y + 0.7, P.hot, 0.8); }); // three engines
+}
+function campPirateArt(kind) { return { skiff: campSkiffDraw, cutter: campCutterDraw, brute: campBruteDraw, patrol: campPatrolDraw, miner: campMinerDraw, pirateleader: campPirateLeaderDraw }[kind] || null; }

@@ -15,3 +15,8 @@ The words of the rival ship (card space-game-rival-duel, src/camprival.js): the 
 | camp.say.rival.run | It is running. Chase it. |
 | camp.say.rival.run.final | It is running for good. Chase it. |
 | camp.say.rival.gone | {name} got away. |
+| camp.ui.rival.charge | BROADSIDE CHARGING |
+| camp.ui.rival.down | SHIELDS DOWN |
+| camp.ui.rival.ram | RAMMING |
+| camp.ui.rival.run | RUNNING |
+| camp.map.rival | Pirate leader |

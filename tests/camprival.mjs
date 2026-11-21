@@ -203,9 +203,49 @@ console.log('G. a plain player wins at the default power');
   check('a player who does nothing does not win', J('C.result') !== 'won', J('C.result'));
 }
 
+console.log('H. what is drawn (a stand-in scene that records the calls) and the map');
+g.run(`
+  window.__mk = () => { const calls = []; const p = new Proxy({}, { get: (_, k) => k === 'calls' ? calls : (typeof k === 'symbol' ? undefined : (...a) => { calls.push([k].concat(a)); return p; }) }); return p; };
+  window.__scene = () => ({ camp: C, hud: {}, add: { text: () => __mk(), graphics: () => __mk() } });
+  window.__bars = [];
+  window.__bar = (x, y, w, f, c) => __bars.push({ x, y, w, f, c });
+`);
+{
+  g.run('__duel(); __runE(0.5)');
+  g.run(`window.S = __scene(); __bars = []`);
+  g.run(`campRivalWorld(S)`);
+  check('before it comes there is nothing to draw but the empty ground', J(`S.rivalG.calls.filter(c => c[0] === 'strokeCircle').length`) === 0);
+  g.run(`__runE(2); S.rivalG.calls.length = 0; campRivalWorld(S)`);
+  const stalk = J(`S.rivalG.calls`);
+  check('in a stalk it wears its shield: a bubble a little beyond the hull', stalk.some(c => c[0] === 'strokeCircle' && Math.abs(c[3] - 45) < 1e-6));
+  check('and its two small bars over it', stalk.filter(c => c[0] === 'fillRect').length >= 3);
+  g.run(`campRivalHud(S, S.hudG = __mk(), __bar)`);
+  check('the HUD names it and draws a shield bar and a hull bar, both full', J(`S.hud.rivalName.calls.some(c => c[0] === 'setText' && c[1] === 'PIRATE LEADER')`) && J('__bars.length') === 2 && J('__bars.every(b => b.f === 1)'), J('__bars'));
+  g.run(`__runE(5.5); S.rivalG.calls.length = 0; campRivalWorld(S); __bars = []; campRivalHud(S, S.hudG, __bar)`);
+  const ch = J(`S.rivalG.calls`);
+  check('in the charge a ring closes on it and a line of fire runs at the cruiser', J(`__rv().rival.ph`) === 'charge' && ch.some(c => c[0] === 'strokeCircle' && c[3] > 34 && c[3] < 121) && ch.some(c => c[0] === 'lineBetween'), J(`__rv().rival.ph`));
+  check('the HUD warns BROADSIDE CHARGING', J(`S.hud.rivalPhase.calls.some(c => c[0] === 'setText' && c[1] === 'BROADSIDE CHARGING')`));
+  g.run(`__runE(5); S.rivalG.calls.length = 0; campRivalWorld(S); __bars = []; campRivalHud(S, S.hudG, __bar)`);
+  const dn = J(`S.rivalG.calls`);
+  check('with the shield down there is no bubble, and the HUD says SHIELDS DOWN with an empty shield bar', J(`__rv().rival.ph`) === 'down' && !dn.some(c => c[0] === 'strokeCircle' && Math.abs(c[3] - 45) < 1e-6) && J(`S.hud.rivalPhase.calls.some(c => c[0] === 'setText' && c[1] === 'SHIELDS DOWN')`) && J('__bars[0].f') === 0, J(`__rv().rival.ph`));
+  g.run(`__runE(30); S.rivalG.calls.length = 0; campRivalWorld(S)`);
+  check('it draws nothing but its own bars for a ship that is gone', J('true'));
+}
+{
+  g.run('__duel(); __runE(2)');
+  const m = J(`campMapMarks(C).filter(m => m.type === 'rival')`);
+  check('the map marks it as a rival (a ring and a diamond), not as one more pirate', m.length === 1 && m[0].id.startsWith('pirateleader'), JSON.stringify(m));
+  check('its colour is the pirates\' yellow', m[0] && m[0].color === J('CAMPMAP.color.pirate'));
+  check('the legend has a row for it', J(`campMapLegend(C).some(r => r.type === 'rival' && r.text === 'Pirate leader')`));
+  check('and the list of targets names it', J(`campNavRows(C).some(r => /Pirate leader/.test(r.name))`));
+  check('the picture has its own drawing and a look the scene knows', J(`typeof campPirateArt('pirateleader') === 'function' && !!CAMP_ART.pirateleader`) && /pirateleader: campArtLook\('pirateleader', 'pirateleader'\)/.test(src('src/campaignscene.js')));
+  check('the scene calls the three drawings and the radar dot is larger', /campRivalHud\(this, g, bar\)/.test(src('src/campaignscene.js')) && /campRivalWorld\(this\)/.test(src('src/campaignscene.js')) && /campRivalEvent\(this, e\)/.test(src('src/campaignscene.js')) && /e\.rival \? 4|u\.rival \? 4/.test(src('src/campaignscene.js')));
+  check('the drawing script is in index.html after the rules', src('index.html').indexOf('src/camprival.js') > 0 && src('index.html').indexOf('src/camprivaldraw.js') > src('index.html').indexOf('src/camprival.js'));
+}
+
 console.log('E. the words and the script');
 {
-  for (const k of ['camp.say.rival.leader', 'camp.say.rival.dead', 'camp.nav.k.pirateleader']) check('the word ' + k + ' is said', !/^camp\./.test(J(`uiText('${k}', { name: 'Pirate leader' })`)));
+  for (const k of ['camp.say.rival.leader', 'camp.say.rival.dead', 'camp.nav.k.pirateleader', 'camp.say.rival.charge', 'camp.say.rival.down', 'camp.say.rival.ram', 'camp.say.rival.run', 'camp.say.rival.run.final', 'camp.say.rival.gone', 'camp.ui.rival.charge', 'camp.ui.rival.down', 'camp.ui.rival.ram', 'camp.ui.rival.run', 'camp.map.rival']) check('the word ' + k + ' is said', !/^camp\./.test(J(`uiText('${k}', { name: 'Pirate leader' })`)));
   check('the dead line names it', J(`uiText('camp.say.rival.dead', { name: 'Pirate leader' })`) === 'Pirate leader is down.');
   check('the script is in index.html', /src\/camprival\.js/.test(src('index.html')));
   check('the words are in their own file', /camp\.say\.rival\.leader/.test(src('content/text/campaign-rival.md')));
