@@ -61,7 +61,8 @@ const CAMP = {
   },
   ore: {                                   // ore: asteroid rocks and the wrecks of dead aliens; spent on new ships and the hull's mend (docs/CAMPAIGN.md, Ore)
     start: 30,                             // ore in the store at the start of a level
-    cap: 200,                              // most ore the carrier's store holds
+    cap: 500,                              // most ore the carrier's store holds (200 until card space-game-ore-bay-bigger: Troy hit it; a rim field holds 400 and a market pays 3 cash an ore, so a full bay sells for 1,500)
+    fullAt: 0.9,                           // the computer says "Ore bay full." once when the store fills, and again after it has been under this share of the cap
     rock: 20,                              // ore in one rock of an asteroid field: a mining laser cuts the rock and it breaks into a chunk of this much ore
     rockHp: 100,                           // hit points of a rock: a laser takes them off, the rock glows and cracks, and at zero it breaks
     rockR: 22,                             // px, a rock's size (its hit circle, and how far from its middle a beam lands)
@@ -449,7 +450,7 @@ const CAMP = {
     clear: 900,                            // px: no alien within this of the carrier, or the outpost keeps its doors shut (docking stops the battle: it must not be a free breather in a fight)
     repairOre: 60,                         // ore for mending the whole hull from nothing; a part costs its share, at least 5
     retreatHull: 0.35,                     // below this share of the hull, with no ship of the wing left (in the bay, out, launching or building), the HUD says where to retreat
-    fabricator: 120                        // ore for the Fabricator at a refit (the tech 'fabricator'): the carrier then builds fighters and escorts anywhere; the store holds 200
+    fabricator: 300                        // ore for the Fabricator at a refit (the tech 'fabricator'): the carrier then builds fighters and escorts anywhere (120 while the store held 200: the bay holds 500 now, and the extra ships of a refit are 210, so one full bay no longer buys the whole refit)
   },
   tech: {                                  // what each tech does; names and words are in content/text/ui.md (camp.tech.<id>.name, .text)
     shield: { after: 1, taken: 0.6 },      // after level 1: the carrier takes this share of the damage it is dealt (0.6 = 40 percent less)
@@ -498,7 +499,7 @@ const CAMP = {
           rocks: [{ at: [900, 700], n: 7, spread: 300 }, { at: [-1100, -400], n: 7, spread: 300 }, { at: [300, -1600], n: 6, spread: 300 }],  // three rock fields, offsets from Ceres
           objectives: [{ type: 'ore', n: 190 }, { type: 'kill', what: 'wave:2' }, { type: 'cashin', n: 160 }],  // mine 120, beat the third raid, sell 100 at the Works (the doors are shut with a pirate near, so the fight comes first)
           traffic: [{ id: 'm1', kind: 'miner', place: 'ceres', off: [260, 120], n: 2, name: 'Miner' }],  // two other mining ships work the rocks round Ceres and dock at the Works (src/camppirates.js); the pirates go for them (prey 'miners'), and the bonus below asks for none lost
-          bonus: [{ id: 'sold', type: 'sold', n: 260 }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'miners', type: 'neutrals', n: 0 }, { id: 'swift', type: 'time', secs: 380 }],  // bonus objectives: each met earns CAMP.score.bonus
+          bonus: [{ id: 'sold', type: 'sold', n: 400 }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'miners', type: 'neutrals', n: 0 }, { id: 'swift', type: 'time', secs: 380 }],  // bonus objectives: each met earns CAMP.score.bonus
           waves: [{ at: 70, from: [2800, 1500], ships: { skiff: 3, cutter: 1 }, prey: 'miners', say: 'camp.say.rim4' }, { at: 170, early: 100, from: [-2600, 1800], ships: { skiff: 4, cutter: 2 }, prey: 'miners', say: 'camp.say.rim5' }, { at: 270, early: 100, needClear: true, from: [2200, -2400], ships: { skiff: 4, cutter: 3, brute: 2 }, prey: 'miners', say: 'camp.say.rim6' }] },  // the raids: when, from where (offsets from Ceres), how many of each kind
         { id: 'haulers', kind: 'escort', par: 380, hpScale: 2.2, dmgScale: 2.4, scouts: ['escort'], place: 'ceres', dock: 'earth', start: 'ceres', startAt: [130, 30],  // 1.3 HAULERS HOME: three ore haulers fly from Ceres toward Earth; pirates raid and break off; then FIRST CONTACT: a small alien scout force
           convoys: [{ id: 'h1', name: 'Hauler 1', say: 'camp.say.hauler', at: 4, from: 'ceres', to: 'earth', speed: 62 }, { id: 'h2', name: 'Hauler 2', say: 'camp.say.hauler', at: 16, from: 'ceres', to: 'earth', speed: 62 }, { id: 'h3', name: 'Hauler 3', say: 'camp.say.hauler', at: 28, from: 'ceres', to: 'earth', speed: 62 }],  // the haulers: when they leave (s after arrival), from and to which place
@@ -982,6 +983,7 @@ function campTick(C, dt) {
   campRepair(C, dt);
   campEarth(C, dt);
   campPickups(C);
+  campOreFull(C); // the store has filled: "Ore bay full.", once
   campFactory(C, dt);
   campLasers(C);
   campMissions_tick(C, dt);
@@ -1088,6 +1090,11 @@ function campLaserSpend(C) {
   const k = CAMP.tank; if (C.charge === undefined) C.charge = k.max;
   if (C.charge + 1e-9 < k.cost) { C.dryAt = C.t; return false; }
   C.charge = Math.max(0, C.charge - k.cost); return true;
+}
+// "Ore bay full." once when the store fills (card space-game-ore-bay-bigger); it can say it again after the store has been under CAMP.ore.fullAt of the cap
+function campOreFull(C) {
+  const k = CAMP.ore;
+  if (!C.oreFull && C.ore >= k.cap - 1e-9) { C.oreFull = true; campSay(C, 'camp.say.orefull'); } else if (C.oreFull && C.ore < k.cap * k.fullAt) C.oreFull = false;
 }
 function campLaserStep(C, dt) {
   const k = CAMP.tank; if (C.charge === undefined) C.charge = k.max;
