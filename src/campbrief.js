@@ -95,7 +95,7 @@ function campBriefWalk(level, i) {
   for (let k = 1; k <= CAMPBRIEF.walkMax; k++) { const key = 'camp.bf.' + level + '.' + (i + 1) + '.w' + k; if (!Object.prototype.hasOwnProperty.call(UI_TEXT, key)) break; steps.push(uiText(key)); }
   return steps.length ? { steps, data: true } : { steps: [uiText('camp.bf.nowalk')], data: false };
 }
-const CAMPBRIEF_ORDER = ['raider', 'drone', 'gunship', 'guard', 'tower', 'mother'];
+const CAMPBRIEF_ORDER = ['skiff', 'cutter', 'brute', 'raider', 'drone', 'gunship', 'guard', 'tower', 'mother'];
 function campBriefEnemies(level, i) {
   const L = campMissionRow(level, i), n = {}; if (!L) return { list: [], line: '' };
   (L.waves || []).forEach(w => { Object.keys(w.ships || {}).forEach(k => { n[k] = (n[k] || 0) + w.ships[k]; }); if (w.mother) n.mother = (n.mother || 0) + 1; });
@@ -163,6 +163,10 @@ const campBriefPicture = (() => {
     'b.ore': [img('rock', 24, -8, 0.7, 0.5), img('carrier', -26, 12, 0.4, -0.45), { line: true, x0: -8, y0: 4, x1: 17, y1: -5, color: C.cyan, w: 2 }, img('ore', 6, 18, 1.2, 0)],
     'b.hull': [img('carrier', 0, -8, 0.5, 0), { bar: true, x: -30, y: 18, w: 60, h: 8, f: 0.7, color: C.green }],
     'b.delivered': [img('freighter', -40, -17, 0.4, 0), img('freighter', -40, 0, 0.4, 0), img('freighter', -40, 17, 0.4, 0), arrow(-18, 0, 20, 0, C.amber), { disc: true, x: 40, y: 0, r: 11, color: C.rock }],
+    'ore': [img('rock', 24, -8, 0.7, 0.5), img('carrier', -26, 12, 0.4, -0.45), { line: true, x0: -8, y0: 4, x1: 17, y1: -5, color: C.cyan, w: 2 }, img('ore', 6, 18, 1.2, 0)],
+    'cashin': [img('ore', -34, 0, 1.4, 0), arrow(-12, 0, 24, 0, C.amber), { disc: true, x: 44, y: 0, r: 12, color: C.rock }],
+    'b.sold': [img('ore', -34, 0, 1.2, 0), arrow(-12, 0, 24, 0, C.amber), { disc: true, x: 44, y: 0, r: 10, color: C.rock }],
+    'b.neutrals': [ring(0, 0, 33, C.green, 0.16, false, true), ring(0, 0, 33, C.green, 0.8, true), img('freighter', 0, 0, 0.5, 0)],
     'b.anomaly': [img('pod', 0, 0, 2, 0), ring(0, 0, 24, C.violet, 0.9, true)]
   };
   const fallback = [ring(0, 0, 24, C.cyan, 0.7), { disc: true, x: 0, y: 0, r: 4, color: C.cyan }];

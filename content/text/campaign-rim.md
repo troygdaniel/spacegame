@@ -22,3 +22,10 @@ The words of Level 1 as the rim run (card space-game-l1-rim-missions): what the 
 | camp.b.sold | Sell {n} ore |
 | camp.ui.cash | CASH |
 | camp.ui.debriefhaulers | Haulers lost {n}   (-{pts}) |
+| camp.b.neutrals | Miners lost: {n} or fewer |
+| camp.bf.enemy.skiff.one | {n} pirate skiff |
+| camp.bf.enemy.skiff.many | {n} pirate skiffs |
+| camp.bf.enemy.cutter.one | {n} pirate cutter |
+| camp.bf.enemy.cutter.many | {n} pirate cutters |
+| camp.bf.enemy.brute.one | {n} pirate brute |
+| camp.bf.enemy.brute.many | {n} pirate brutes |

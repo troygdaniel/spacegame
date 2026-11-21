@@ -1046,6 +1046,13 @@ const UI_TEXT = {
   'camp.b.sold': 'Sell {n} ore',
   'camp.ui.cash': 'CASH',
   'camp.ui.debriefhaulers': 'Haulers lost {n}   (-{pts})',
+  'camp.b.neutrals': 'Miners lost: {n} or fewer',
+  'camp.bf.enemy.skiff.one': '{n} pirate skiff',
+  'camp.bf.enemy.skiff.many': '{n} pirate skiffs',
+  'camp.bf.enemy.cutter.one': '{n} pirate cutter',
+  'camp.bf.enemy.cutter.many': '{n} pirate cutters',
+  'camp.bf.enemy.brute.one': '{n} pirate brute',
+  'camp.bf.enemy.brute.many': '{n} pirate brutes',
 };
 function uiText(key, vars) { return contentFill(CT_HAS(UI_TEXT, key) ? UI_TEXT[key] : key, vars); }
 function ctTextKeys() { // every string the game reads: key -> { get, set }

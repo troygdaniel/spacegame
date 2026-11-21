@@ -69,14 +69,15 @@ g.run(`(() => {
     if (st.react != null && s >= st.react) { B = Object.assign({}, B, { sit: false, launchAt: st.launched ? B.launchAt : 0, attackFrom: 0, attackEvery: 5 }); st.sitOff = true; }
     if (B.launch !== false && B.launchAt != null && !st.launched && s >= B.launchAt) { st.launched = true; campOrder(C, 'launch'); }
     (B.escort || []).forEach((at, i) => { if (!st['e' + i] && s >= at && campConvoys(C).length) { st['e' + i] = true; campOrder(C, 'escort', 'convoy'); } }); // the wing goes to the nearest convoy ship (the transport, the haulers)
-    if (B.launch !== false && st.launched && !st.mining && campObjectives(C).some(o => !o.done && o.type === 'ore') && !B.nomine) { st.mining = true; campOrder(C, 'mine'); } // a mission that asks for ore: the wing mines (E then 1)
+    const mineOpen = campObjectives(C).some(o => !o.done && o.type === 'ore') && !B.nomine, fight = campAliens(C).some(u => !u.hold);
+    if (B.launch !== false && st.launched && mineOpen && !st.mining && !fight && s >= (st.mineAt || 0)) { if (campOrder(C, 'mine').ok) st.mining = true; else st.mineAt = s + 1; } // while the mission asks for ore the wing mines, and goes to the fight only when one comes (then mines again) // a mission that asks for ore: the wing mines (E then 1)
     if (B.cycle && st.launched) {
       if (st.landAt && s >= st.landAt) { st.landAt = 0; campOrder(C, 'launch'); st.nextAtk = s + 2; }
       const fs = campWing(C, 'fighter');
       if (!st.landAt && fs.length >= 3 && Math.round(s * 30) % 60 === 0 && fs.reduce((a, u) => a + u.hp / u.maxHp, 0) / fs.length < B.cycle && C.carrier.hp > 0) { campOrder(C, 'recall'); st.landAt = s + 14; st.recalls = (st.recalls || 0) + 1; }
     }
     if (B.missiles && Math.round(s * 30) % 21 === 0 && typeof campOrder === 'function') campOrder(C, 'missiles', C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'mothership' : '');
-    if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0) campOrder(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : '');
+    if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight)) { campOrder(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : ''); st.mining = false; }
   };
   window.__fly = (C, B, sk, st) => {
     if (B.idle) return;
@@ -148,6 +149,7 @@ export function techsFor(level, override) {
   return JSON.parse(g.run(`JSON.stringify([1, 2].filter(n => n < ${level}).map(n => campTechChoices(n)[0]))`)); // the first tech each earlier level offers, as the address does
 }
 export function setPace(p) { g.run(`window.__PACE = ${typeof p === 'number' ? p : JSON.stringify(p)}`); } // the battle pace of the runs that follow (a test uses it; the CLI has --pace)
+export const botGame = g; // the game the bots fly in (a script that wants to look inside a run)
 export function run(level, seed, botName, skill, techs, maxSec = MAXSEC, mission = 0) {
   const B = BOTS[botName], sk = SKILLS[B.skill || skill]; // a bot may bring its own skill
   return JSON.parse(g.run(`JSON.stringify(__run1(${level}, ${seed}, ${JSON.stringify(techs)}, ${JSON.stringify(B)}, ${JSON.stringify(sk)}, ${maxSec}, ${mission | 0}))`));
