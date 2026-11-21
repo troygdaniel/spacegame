@@ -180,7 +180,7 @@ const CAMP = {
     leash: 1400                            // px: HOLD POSITION stays where it is, until the carrier has gone this far; then the ship comes back to it
   },
   dog: {                                   // DOGFIGHTS (card space-game-fighter-dogfights; src/campdogfight.js): how the fighters (the wing's, and the aliens' raiders) fly a duel, as the Vipers do: the engine pushes along the nose, so a ship turns to where it means to go, swoops past, breaks, comes round again, and flips to fire back at one on its tail
-    kinds: ['fighter', 'raider'],          // who flies it: they fight one another this way; against a drone, a gunship, an escort, the mothership or Earth they keep the pirates' own circle and pass
+    kinds: ['fighter', 'raider'],          // who flies it (and the pirates whose base is the raider: the skiff): they fight one another this way; against a drone, a gunship, an escort, the mothership or Earth they keep the pirates' own circle and pass
     retro: 0.45, side: 0.35,               // the share of its accel a ship has backwards and sideways (the nose is where the big engine points): to brake or to turn it has to bring the nose round first
     drag: 0.62,                            // the share of its speed a dogfighter keeps after a second (the game's own is 0.5): it carries some of it round a turn and drifts through a flip
     snap: 1.7,                             // times the table's turn rate while the nose comes round for a break, a flip or a jink

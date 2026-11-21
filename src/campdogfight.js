@@ -1,6 +1,6 @@
 // ---------- Dogfights: how the Campaign's fighters fly a duel (card space-game-fighter-dogfights; the numbers are CAMP.dog) ----------
 // Troy (21 Nov 2026): the fighters should fight like the Vipers in Battlestar Galactica: fast turns, flip and burn, break and come round again, and the fights one on one, lasting longer.
-// Who: the wing's fighters and the aliens' raiders (CAMP.dog.kinds), against one another: that is a dogfight. A drone, a gunship, the mothership, an escort, a freighter, the carrier and Earth are not:
+// Who: the wing's fighters, the aliens' raiders and the pirates' skiffs (CAMP.dog.kinds; a skiff is a pirate whose base is the raider), against one another: that is a dogfight. A drone, a gunship, the mothership, an escort, a freighter, the carrier and Earth are not:
 // a ship that flies at one of those keeps the pirates' own circle and pass (src/enemies.js pirateSteer). The wing's orders and stances win: only a ship on a "free" stance
 // (the default) steers like this, and the foe it flies at is still the one its order names (an Attack on a named alien is that alien; with none named, or on guard, it is the ship's partner, if it has one).
 //   The flight  The engine pushes along the nose: the part of a push that is backwards has CAMP.dog.retro of the accel, the part that is sideways CAMP.dog.side. So a ship must turn to where it means to burn,
@@ -14,11 +14,16 @@
 //   campDogMove(C, u, m, dt)     the ship's own push, as that: the engine along the nose, the drag, the turn
 //   campDogPair(C)               the pairing, once a tick      campDogOn(C, u, tgt)  whether this ship flies this fight as a dogfight      campDogFoe(C, u, foe)  the foe a ship that picked `foe` by "the nearest" flies at: its partner when `foe` is a
 //                                dogfighter too (a drone or a gunship that is nearer is still the nearest: it is not a duel, and it is fought as it always was), else `foe`
-const campDogOn = (C, u, tgt) => !!(u && tgt && CAMP.dog.kinds.indexOf(u.kind) >= 0 && u.team !== tgt.team && tgt.hp > 0 && CAMP.dog.kinds.indexOf(tgt.kind) >= 0);
+// a dogfighter: the wing's fighter, the aliens' raider, or a pirate that flies like the raider (the skiff: CAMP.pirate.kinds[kind].base). Its role is its base kind: 'fighter' or 'raider'
+const campDogRole = u => !u ? null : CAMP.dog.kinds.indexOf(u.kind) >= 0 ? u.kind : (u.faction === 'pirate' && CAMP.pirate.kinds[u.kind] && CAMP.dog.kinds.indexOf(CAMP.pirate.kinds[u.kind].base) >= 0) ? CAMP.pirate.kinds[u.kind].base : null;
+const campDogIs = u => campDogRole(u) !== null;
+const campDogOn = (C, u, tgt) => !!(u && tgt && campDogIs(u) && campDogIs(tgt) && u.team !== tgt.team && tgt.hp > 0);
+// who is at war with whom, for the ones that point their guns: the aliens and the pirates (team 'alien') against everyone else, the neutrals (patrols, miners) included
+const campDogFoes = (a, b) => a.team !== b.team && (a.team === 'alien' || b.team === 'alien');
 
 // the foe a ship that chose `foe` as the nearest flies at: its partner while it has one that is alive and not far off
 function campDogFoe(C, u, foe, max) {
-  if (!u.mate || CAMP.dog.kinds.indexOf(u.kind) < 0 || (foe && CAMP.dog.kinds.indexOf(foe.kind) < 0)) return foe; // a ship with no partner, or a nearest foe that is no dogfighter (a drone, a gunship, the carrier): it is fought as it was
+  if (!u.mate || !campDogIs(u) || (foe && !campDogIs(foe))) return foe; // a ship with no partner, or a nearest foe that is no dogfighter (a drone, a gunship, the carrier): it is fought as it was
   const m = C.by[u.mate];
   return m && m.hp > 0 && Math.hypot(m.x - u.x, m.y - u.y) <= (max || CAMP.dog.pair.keep) ? m : foe;
 }
@@ -28,7 +33,7 @@ function campDogPair(C) {
   const K = CAMP.dog.pair;
   if (C.t < (C.dogPairAt || 0)) return;
   C.dogPairAt = C.t + K.every;
-  const live = C.ships.filter(u => u.hp > 0 && CAMP.dog.kinds.indexOf(u.kind) >= 0);
+  const live = C.ships.filter(u => u.hp > 0 && campDogIs(u));
   live.forEach(u => { const m = u.mate && C.by[u.mate]; if (!m || m.hp <= 0 || m.mate !== u.id || Math.hypot(m.x - u.x, m.y - u.y) > K.keep) { if (m && m.mate === u.id) m.mate = null; u.mate = null; } });
   const free = live.filter(u => !u.mate), ours = free.filter(u => u.team === 'earth'), theirs = free.filter(u => u.team === 'alien'), pairs = [];
   ours.forEach(a => theirs.forEach(b => { const d = Math.hypot(a.x - b.x, a.y - b.y); if (d <= K.range) pairs.push([d, a, b]); }));
@@ -54,7 +59,7 @@ function campDogLead(u, tgt, bs, share) {
 function campDogThreat(C, u) {
   const J = CAMP.dog.jink; let best = null, bd = J.range;
   for (const s of C.ships) {
-    if (s.hp <= 0 || s.team === u.team || s.rot == null || s.kind === 'mother' || s.kind === 'tower' || s.kind === 'freighter' || s.kind === 'carrier') continue;
+    if (s.hp <= 0 || !campDogFoes(u, s) || s.rot == null || s.kind === 'mother' || s.kind === 'tower' || s.kind === 'freighter' || s.kind === 'carrier') continue;
     const d = Math.hypot(u.x - s.x, u.y - s.y); if (d >= bd) continue;
     if (Math.abs(campWrap(Math.atan2(u.y - s.y, u.x - s.x) - s.rot)) < J.aspect) { best = s; bd = d; }
   }
@@ -66,7 +71,7 @@ function campDogSteer(C, u, tgt, bs) {
   const K = CAMP.dog, d = u.dog || (u.dog = { mode: 'approach', until: 0, side: u.side || 1, flipAt: -1e9, jinkAt: -1e9 }), t = C.t;
   const dx = tgt.x - u.x, dy = tgt.y - u.y, dist = Math.hypot(dx, dy) || 1, th = Math.atan2(dy, dx), dt = C.dt || CAMP.step;
   const tvx = tgt.vx || 0, tvy = tgt.vy || 0, off = campWrap(th - u.rot);
-  const aim = campDogLead(u, tgt, bs, K.lead[u.kind] == null ? 0.8 : K.lead[u.kind]);
+  const role = campDogRole(u), aim = campDogLead(u, tgt, bs, K.lead[role] == null ? 0.8 : K.lead[role]);
   const away = -((u.vx - tvx) * Math.cos(th) + (u.vy - tvy) * Math.sin(th)); // my speed away from the target along the line (positive: I am leaving it)
   // the moves end
   if (d.mode === 'break' && (t > d.until || dist > K.breakOff.to) && t > d.from + 450) d.mode = 'attack';
@@ -78,7 +83,7 @@ function campDogSteer(C, u, tgt, bs) {
     if (d.mode === 'attack') {
       if (dist < K.near) { d.mode = 'break'; d.from = t; d.until = t + campDogDraw(C, K.breakOff.time[0], K.breakOff.time[1]) * 1000; d.side = C.rng() < 0.5 ? -1 : 1; }
       else if (Math.abs(off) > K.flip.off && dist < K.flip.range && t - d.flipAt >= K.flip.every * 1000) { d.mode = 'flip'; d.flipAt = t; d.until = t + campDogDraw(C, K.flip.time[0], K.flip.time[1]) * 1000; }
-      else if (t - d.jinkAt >= (K.jink.every[u.kind] == null ? 2 : K.jink.every[u.kind]) * 1000 && C.rng() < (K.jink.rate[u.kind] == null ? 1 : K.jink.rate[u.kind]) * dt) { const thr = campDogThreat(C, u); if (thr) { d.mode = 'jink'; d.jinkAt = t; d.until = t + campDogDraw(C, K.jink.time[0], K.jink.time[1]) * 1000; d.side = C.rng() < 0.5 ? -1 : 1; d.from = Math.atan2(thr.y - u.y, thr.x - u.x); } }
+      else if (t - d.jinkAt >= (K.jink.every[role] == null ? 2 : K.jink.every[role]) * 1000 && C.rng() < (K.jink.rate[role] == null ? 1 : K.jink.rate[role]) * dt) { const thr = campDogThreat(C, u); if (thr) { d.mode = 'jink'; d.jinkAt = t; d.until = t + campDogDraw(C, K.jink.time[0], K.jink.time[1]) * 1000; d.side = C.rng() < 0.5 ? -1 : 1; d.from = Math.atan2(thr.y - u.y, thr.x - u.x); } }
     }
   }
   if (d.mode === 'break') { const a = th + Math.PI - d.side * K.breakOff.angle; return { mode: 'break', ang: a, face: a, fire: false, aim: th, thrust: 1, snap: true }; }

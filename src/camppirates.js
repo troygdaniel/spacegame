@@ -60,12 +60,12 @@ function campPirateAI(C, u, dt) {
     u.hold = false;
   }
   if (u.hp < u.maxHp * (u.breakAt != null ? u.breakAt : K.breakHp)) { campPirateBreakOne(C, u, 'hurt'); return campPirateRun(C, u, dt); }
-  const def = u.def, tgt = campPirateTarget(C, u) || C.carrier;
+  const def = u.def, tgt0 = campPirateTarget(C, u) || C.carrier, tgt = tgt0 && campDogFoe(C, u, tgt0); // a skiff that picked one of your fighters flies at its partner (src/campdogfight.js)
   if (!tgt) return;
   const dx = tgt.x - u.x, dy = tgt.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx);
-  const m = campSteer(C, u, def, dist, target, u.vx - (tgt.vx || 0), u.vy - (tgt.vy || 0));
-  campMove(u, m.ang, m.face, dt);
-  if (m.fire && dist < def.range && C.t > u.nextShot && Math.abs(campWrap(target - u.rot)) < def.aim) {
+  const dog = campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campSteer(C, u, def, dist, target, u.vx - (tgt.vx || 0), u.vy - (tgt.vy || 0)); // a skiff against a fighter is a dogfight
+  if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
+  if (m.fire && dist < def.range && C.t > u.nextShot && Math.abs(campWrap((dog ? m.aim : target) - u.rot)) < def.aim) {
     u.nextShot = C.t + campBetween(C, def.shot[0], def.shot[1]);
     const n = def.spread || 1;
     for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * C.dmgS, 1800, 'alien', 14);
