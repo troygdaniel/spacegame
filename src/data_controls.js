@@ -129,6 +129,7 @@ const CONTROLS = [
     { k: ['Space'], t: 'Hold: turrets fire at ships in reach', sub: 'FLY AND FIRE' },
     { k: ['F'], t: 'Fire a homing missile', sub: 'FLY AND FIRE' },
     { k: ['B'], t: 'Warp blink hop (needs that tech)', sub: 'FLY AND FIRE' },
+    { k: ['J', 'K', 'L'], t: 'A power pip: shields, engines, weapons', sub: 'FLY AND FIRE' }, // direct keys, in the order of the gauges, for the SYSTEMS panel's rows (src/camphud.js campPowerKey; card space-game-systems-gauges)
     { k: ['+', '-', '0'], t: 'Zoom view or map (wheel too); 0 resets', sub: 'FLY AND FIRE' }, // = and the numpad keys too (src/campzoom.js)
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Click'], t: 'Map: click a mark sets it, again flies', sub: 'THE MAP' },
