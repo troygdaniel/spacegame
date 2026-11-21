@@ -67,7 +67,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.keys.launch | Enter or L: launch    Left: back    Esc: the board |
 | camp.bf.keys.zoom | + - 0 zoom |
 | camp.bf.1.1.w1 | 1 transport flies from the Lunar Base to Ceres. |
-| camp.bf.1.1.w2 | Pirates raid her 3 times on the way. Stay close. |
+| camp.bf.1.1.w2 | Pirates raid her again and again on the way. Stay close. |
 | camp.bf.1.1.w3 | Hold Space to fire. Q then 3: escorts guard her. |
 | camp.bf.1.1.w4 | She must arrive. If she dies, the mission is lost. |
 | camp.bf.1.1.n1 | Welcome aboard, Commander. The transport is ours to bring to Ceres. Stay close to her. |
