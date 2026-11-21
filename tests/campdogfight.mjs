@@ -10,6 +10,7 @@ import { nodeGame } from './nodegame.mjs';
 let failed = 0;
 const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + name + (detail ? '  ' + String(detail).slice(0, 200) : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 300) + ')' : ''}`); } };
 const g = nodeGame({ store: new Map() });
+g.run(`CAMP.levels.duelfix = Object.assign({}, CAMP.levels[1], { missions: [] });`); // level 1's own numbers (the earth, the pirates, the scales) with none of its missions' rows
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const near = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
 
@@ -113,7 +114,7 @@ check('a raider that comes at the carrier (not a fighter) flies the pirates\' pa
 // ---- F. the fights
 console.log('F. the fights in the sim');
 g.run(`window.__duel = (seed, nw, na, pace) => {
-  const C = campNew(1, [], { seed, mission: 0, pace: pace || 'normal' });
+  const C = campNew('duelfix', [], { seed, mission: 0, pace: pace || 'normal' }); // (a level of its own: 1.1 of the rim run has a patrol, a miner and beats now, which are not what a duel tests: card space-game-l1-1-beats)
   C.ships.filter(u => u.kind !== 'carrier').forEach(u => { u.hp = 0; }); C.ships = C.ships.filter(u => u.kind === 'carrier'); C.by = { [C.carrier.id]: C.carrier };
   C.carrier.x = 20000; C.carrier.y = 20000; C.carrier.hp = 9999; C.carrier.maxHp = 9999; C.arrivedAt = null;
   const wing = [], al = [];
@@ -135,7 +136,7 @@ check('one on one at Normal: the fight ENDS, in 24 of 24 seeds, in under 100 s (
 check('and it lasts a good while: the middle duel is over 12 s, none is over 90 s (a fighter and a raider used to meet and be done in a few seconds, or never)', med >= 12 && ts[ts.length - 1] < 90, 'median ' + med.toFixed(1) + ' s, from ' + ts[0].toFixed(1) + ' to ' + ts[ts.length - 1].toFixed(1));
 check('the wing\'s fighter wins most of them (it has 36 hit points to the raider\'s 20) and the raider does win some or hit hard', duels.filter(d => d.alLeft === 0).length >= 16 && duels.some(d => d.wingLeft === 0 || d.alLeft === 0), duels.filter(d => d.alLeft === 0).length + ' of 24');
 check('the fighters flip and break and jink as they fight: every duel has at least two of the moves, on average four or more of each of flip and break', duels.every(d => d.flips + d.breaks + d.jinks >= 2) && duels.reduce((a, d) => a + d.flips, 0) / 24 >= 2 && duels.reduce((a, d) => a + d.breaks, 0) / 24 >= 2, 'flips ' + (duels.reduce((a, d) => a + d.flips, 0) / 24).toFixed(1) + ' breaks ' + (duels.reduce((a, d) => a + d.breaks, 0) / 24).toFixed(1) + ' jinks ' + (duels.reduce((a, d) => a + d.jinks, 0) / 24).toFixed(1));
-g.run(`window.__duelK = (seed, kind) => { const C = campNew(1, [], { seed, mission: 0, pace: 'normal' }); C.ships.filter(u => u.kind !== 'carrier').forEach(u => { u.hp = 0; }); C.ships = C.ships.filter(u => u.kind === 'carrier'); C.by = { [C.carrier.id]: C.carrier }; C.rng = campRng(seed); // (1.1 has a patrol and a miner of its own now: the stream of the duel is the seed's again, card space-game-l1-1-beats) C.carrier.x = 20000; C.carrier.y = 20000; C.arrivedAt = null;
+g.run(`window.__duelK = (seed, kind) => { const C = campNew('duelfix', [], { seed, mission: 0, pace: 'normal' }); C.ships.filter(u => u.kind !== 'carrier').forEach(u => { u.hp = 0; }); C.ships = C.ships.filter(u => u.kind === 'carrier'); C.by = { [C.carrier.id]: C.carrier }; C.rng = campRng(seed); // (1.1 has a patrol and a miner of its own now: the stream of the duel is the seed's again, card space-game-l1-1-beats) C.carrier.x = 20000; C.carrier.y = 20000; C.arrivedAt = null;
   const w = campSpawn(C, 'fighter', 0, 0), a = campSpawn(C, kind, 520, 100); w.rot = C.rng() * 6.28; a.rot = C.rng() * 6.28; w.order = { type: 'attack', target: null }; let modes = 0, was = null;
   for (let i = 0; i < 30 * 100 && w.hp > 0 && a.hp > 0 && !a.gone; i++) { campStep(C, 1 / 30); C.events.length = 0; const m = a.dog && a.dog.mode; if (m !== was) { modes++; was = m; } } return { t: C.t / 1000, wing: w.hp > 0, alien: a.hp > 0 && !a.gone, gone: !!a.gone, modes, mated: !!a.mate || !!w.mate }; };`);
 const sk1 = []; for (let s = 1; s <= 16; s++) sk1.push(J(`__duelK(${s}, 'skiff')`));
