@@ -575,6 +575,7 @@ const UI_TEXT = {
   'camp.b.time': 'Finish in {secs} seconds',
   'camp.b.lost': 'Ships lost: {n} or fewer',
   'camp.say.l2wave3': 'Aliens coming for the relic, pilot.',
+  'camp.say.l2wave2b': 'A third group, from the other side.',
   'camp.b.nolost': 'Lose no ships',
   'camp.b.hull': 'Keep the hull above {pct} percent',
   'camp.b.ore': 'Mine {n} ore',

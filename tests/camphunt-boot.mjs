@@ -1,7 +1,8 @@
 // not in the smoke: one mission of the Campaign flown by hand as a player, in the real game (one Chrome, muted, through the test lock; card space-game-night-hunt-l2-l3)
 // It boots the game with a save that stands at the mission, opens the ready room with K, reads the briefing (three screens), launches, and flies with the keys a player uses
 // (the panels Q E C, the map on Tab, the pace on P, W A D and Space held), then lets the autopilot carry the rest and writes down what the game says: the HUD line, the goal, the toasts.
-//   node tests/camphunt-boot.mjs --level 2 --mission 1 [--secs 90] [--fight | --quickwin | --lose | --dock]      the mission number is the one on the board (1 to 3)
+//   node tests/camphunt-boot.mjs --level 2 --mission 1 [--secs 90] [--fight | --quickwin | --lose | --dock | --retreat]      the mission number is the one on the board (1 to 3)
+// --retreat: the wing is gone and the hull is at 30 percent: the HUD says where to retreat, E then Shift+5 burns there, E then 6 docks, the dock mends the hull (ore), Esc and the flight goes on
 // --dock: after the burn, E then 6 at the outpost of the mission (the ready room opens over the paused battle: its rows and words), then Esc and the flight goes on
 // --lose: the cruiser is destroyed after the burn, with the wing out: the lost card, Enter (the mission again, from its brief), the pause card on Esc and its keys page on H, R from the pause
 // --quickwin: the win is forced after the first seconds of flight (the score of the moment), to walk the cards that follow a mission quickly: the debrief, the level won card, the pick or the refit, the next level's room
@@ -15,7 +16,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.HUNT_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i < 0 ? d : process.argv[i + 1]; };
-const LEVEL = Number(arg('level', 2)), MISSION = Number(arg('mission', 1)), SECS = Number(arg('secs', 90)), FIGHT = process.argv.includes('--fight'), QUICK = process.argv.includes('--quickwin'), LOSE = process.argv.includes('--lose'), DOCK = process.argv.includes('--dock');
+const LEVEL = Number(arg('level', 2)), MISSION = Number(arg('mission', 1)), SECS = Number(arg('secs', 90)), FIGHT = process.argv.includes('--fight'), QUICK = process.argv.includes('--quickwin'), LOSE = process.argv.includes('--lose'), DOCK = process.argv.includes('--dock'), RETREAT = process.argv.includes('--retreat');
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const note = s => console.log('  note ' + s);
@@ -71,6 +72,18 @@ try {
   note('after E, Shift+5: nav ' + await j(`JSON.stringify(${S}.camp.nav || null)`).then(v => String(v).slice(0, 160)) + ' state ' + JSON.stringify(await state()));
   await t.run(9000); const st1 = await state(); note('9 s later: ' + JSON.stringify(st1)); await snap('9-arrived'); note('HUD: ' + (await hud()).join(' | ').slice(0, 700));
 
+  if (RETREAT) {
+    await t.ev(`(() => { const C = ${S}.camp; C.ships.filter(u => u.team === 'earth' && u.kind !== 'carrier').forEach(u => { u.hp = 0; }); C.bay.fighters = 0; C.bay.escorts = 0; C.carrier.hp = Math.round(C.carrier.maxHp * 0.3); return 1; })()`); await t.run(900);
+    note('HUD at 30 percent, no wing: ' + (await hud()).filter(x => /^(post|obj|arrow|bay|hull)=/.test(x)).join(' | ')); await snap('11-low');
+    await key('KeyE'); await key('Digit5', 50, 8); await t.run(1500); note('nav now: ' + await j(`JSON.stringify(${S}.camp.nav || null)`).then(v => String(v).slice(0, 200)));
+    for (let i = 0; i < 12 && (await j(`!!(${S}.camp.nav && ${S}.camp.nav.on)`)); i++) await t.run(2000);
+    note('after the burn: ' + JSON.stringify(await state()) + ' | ' + (await hud()).filter(x => /^(post|obj|arrow)=/.test(x)).join(' | ')); await snap('12-there');
+    await key('KeyE'); await key('Digit6'); await settle(`game.scene.isActive('CampHub')`, 30); await t.run(900);
+    note('docked: ' + (await shown()).join(' | ').slice(0, 900)); await snap('13-docked-low');
+    await key('Digit2'); await t.run(700); note('repair page: ' + (await shown()).join(' | ').slice(0, 600)); await snap('13b-repair-page');
+    await key('KeyR'); await t.run(900); note('after R on the repair page: ' + (await shown()).join(' | ').slice(0, 500) + ' | hull ' + await j(`Math.round(${S}.camp.carrier.hp)`) + ' ore ' + await j(`Math.floor(${S}.camp.ore)`)); await snap('14-mended');
+    await key('Escape'); await t.run(900); note('after Esc: mode ' + await j(`${S}.mode`) + ' docked ' + await j(`${S}.docked`) + ' hull ' + await j(`Math.round(${S}.camp.carrier.hp)`));
+  }
   if (DOCK) {
     note('outposts: ' + await j(`campOutposts(${S}.camp.level).map(o => o.id + ' ' + o.name + ' ' + Math.round(campDist(${S}.camp.carrier, o))).join(' | ')`));
     await t.ev(`(() => { const C = ${S}.camp, o = campOutposts(C.level).slice().sort((a, b) => campDist(C.carrier, a) - campDist(C.carrier, b))[0]; C.carrier.x = o.x + (o.r || 60) + 120; C.carrier.y = o.y; C.carrier.vx = 0; C.carrier.vy = 0; return 1; })()`); await t.run(600); // the cruiser beside the nearest outpost (the arrival circle is 300 km wide: the relay is 250 km off)

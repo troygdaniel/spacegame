@@ -46,4 +46,8 @@ check('its hint still says what Enter does: fly the mission again', J('(() => { 
 check('the card of a mission shown before a retry\'s flight reads MISSION 2: The guards (no "OF 3"), its words and bonuses still under it',
   J('(() => { const f = __sc(2, 1); f.showBrief(); return [f.card.title, f.card.lines.length > 2]; })()').join('|') === 'MISSION 2: The guards|true');
 
+// ---- 5. the two waves of mission 2.2 do not say the same line ----
+check('mission 2.2\'s second wave has a line of its own ("A third group, from the other side."), not the first one\'s again; both resolve to words',
+  J('(() => { const w = campMissionRow(2, 1).waves; return [w.length, w[0].say !== w[1].say, uiText(w[0].say), uiText(w[1].say)]; })()').join('|') === '2|true|A second group, coming in from the far side.|A third group, from the other side.');
+
 process.exit(failed ? 1 : (console.log('\nHUNT FIXES PASS'), 0));
