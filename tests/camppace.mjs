@@ -8,7 +8,7 @@
 // Run: node tests/camppace.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
-import { run as botRun, setPace } from '../tools/campaign-bot.mjs';
+import { run as botRun, setPace, techsFor } from '../tools/campaign-bot.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name + (detail ? '  ' + String(detail).slice(0, 200) : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 300) + ')' : ''}`); } };
@@ -79,13 +79,17 @@ check('the H page draws the setting at the foot of the page', /campPaceNow\(\)/.
 check('Settings has a GAME section with the three settings, Left, Right and Enter step it, its rail status and tag name the pace', J(`SETTINGS.sections.some(s => s[0] === 'game')`) && /draw_game\(\)/.test(src('src/settings.js')) && /stepPace\(d\)/.test(src('src/settings.js')) && /game: campPaceNow\(\)\.name\.toUpperCase\(\)/.test(src('src/settings.js')) && /game: 'PACE '/.test(src('src/settings.js')));
 check('the words are in content/text/ (the file mirrors the table): the line, the toast, the key, the three notes', ['camp.pace.line', 'camp.pace.toast', 'camp.pace.key', 'camp.pace.note.calm', 'camp.pace.note.normal', 'camp.pace.note.brisk', 'camp.keys.pace'].every(k => src('content/text/campaign-pace.md').includes('| ' + k + ' |')));
 
+// ---- F. the difficulty curve (card space-game-wrapup-difficulty): per-mission hull and damage scales of the aliens, rising through each level; no row, no change
+check('a mission row may bring hpScale and dmgScale (times the table\'s alien scales); a row with none is as it was (the Earth level "home" has none), so C.hpS and C.dmgS are the table\'s', J(`(() => { const a = campNew('home', [], { seed: 1 }); return a.hpS === CAMP.alien.hpScale && a.dmgS === CAMP.alien.damageScale; })()`) && J(`(() => { const C = campNew(1, [], { seed: 1, mission: 2 }), r = campMissionRow(1, 2); const u = campSpawn(C, 'raider', 0, 0); return C.hpS === CAMP.alien.hpScale * r.hpScale && C.dmgS === CAMP.alien.damageScale * r.dmgScale && u.hp === PIRATES.raider.hp * C.hpS; })()`));
+check('the curve: in every level the scales never fall from the first mission to the third, the third is a real fight (both above 1.5); the first mission of the belt is the gentlest (1). How hard level 3 is comes from its eight towers, not from its scales: docs/WRAPUP-DIFFICULTY.md', [1, 2, 3].every(n => J(`(() => { const r = [0, 1, 2].map(i => campMissionRow(${n}, i)); return r[0].hpScale <= r[1].hpScale && r[1].hpScale <= r[2].hpScale && r[0].dmgScale <= r[1].dmgScale && r[1].dmgScale <= r[2].dmgScale && r[2].hpScale >= 1.5 && r[2].dmgScale >= 1.5; })()`)) && J(`campMissionRow(1, 0).hpScale === 1 && campMissionRow(1, 0).dmgScale === 1`));
+
 // ---- E. the balance (the plain bot, tools/campaign-bot.mjs): every mission still won in about one to two minutes, a player who does nothing never wins
 const plan = [[1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2], [3, 0], [3, 1], [3, 2]];
 for (const pace of ['normal', 'calm']) {
   setPace(pace);
-  const res = plan.map(([l, m]) => ({ l, m, rs: [1, 2, 3].map(sd => botRun(l, sd, 'plain', 'steady', [], 300, m)) }));
+  const res = plan.map(([l, m]) => ({ l, m, rs: [1, 2, 3].map(sd => botRun(l, sd, 'plain', 'steady', techsFor(l), 300, m)) }));
   check(`${pace}: the plain bot wins every one of the nine missions on all of three seeds, each in 25 seconds to 3 minutes (the aim is about one to two)`, res.every(x => x.rs.every(r => r.result === 'won' && r.t >= 25 && r.t <= 180)), JSON.stringify(res.map(x => x.l + '.' + (x.m + 1) + ' ' + x.rs.map(r => r.result[0] + r.t).join(' '))));
-  const idle = plan.map(([l, m]) => botRun(l, 1, 'idle', 'steady', [], 200, m));
+  const idle = plan.map(([l, m]) => botRun(l, 1, 'idle', 'steady', techsFor(l), 200, m));
   check(`${pace}: a player who does nothing never wins a mission`, idle.every(r => r.result !== 'won'), JSON.stringify(idle.map(r => r.result)));
 }
 setPace('brisk');
