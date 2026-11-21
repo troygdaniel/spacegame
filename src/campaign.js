@@ -22,7 +22,9 @@ const CAMP = {
   size: {                                  // how big your ships are: the one place for it (card space-game-campaign-look: another 30 percent smaller than the 140 x 100, 31 x 23 and 40 x 29 px they were drawn at). len: the drawn length in px (the scene scales the picture to it); hit: the hit circle's radius in px, about half of len over two, as it always was
     carrier: { len: 98, hit: 25 },         // it was 140 and 36
     fighter: { len: 22, hit: 6 },          // it was 31 and 8
-    escort: { len: 28, hit: 7 }            // it was 40 and 10
+    escort: { len: 28, hit: 7 },           // it was 40 and 10
+    skiff: { len: 28, hit: 9 }, cutter: { len: 34, hit: 12 }, brute: { len: 46, hit: 17 }, // the pirates (card space-game-l1-pirates-traffic): about the hit circles of the raider, the drone and the gunship they fly like (10, 14, 19), a little smaller
+    patrol: { len: 38, hit: 12 }, miner: { len: 36, hit: 14 }                          // the neutral ships
   },
   carrier: {
     hull: 600,                             // hit points of the flagship; zero and the level is lost
@@ -259,7 +261,7 @@ const CAMP = {
     }
   },
   pirate: {                                // the PIRATES of Level 1 (card space-game-l1-pirates-traffic; src/camppirates.js): human raiders. They are on the hostile side (team 'alien', so the turrets, the wing, the kill objectives, the map marks and the wrecks all treat them as foes) but u.faction is 'pirate', and nothing in the words calls them aliens
-    kinds: {                               // the kinds a wave row's `ships` may name. base: the PIRATES row (src/enemies.js) whose way of flying and shooting it takes; hp and dmg replace its numbers; hit: the hit circle (else the base's); ore: what its wreck holds; color: its mark on the radar and the map (the picture is CAMP_LOOK's); name: its words are camp.nav.k.<kind>
+    kinds: {                               // the kinds a wave row's `ships` may name. base: the PIRATES row (src/enemies.js) whose way of flying and shooting it takes; hp and dmg replace its numbers (the size and the hit circle are CAMP.size); ore: what its wreck holds; color: its mark on the radar and the map (the picture is CAMP_LOOK's); name: its words are camp.nav.k.<kind>
       skiff:  { base: 'raider',  hp: 16, dmg: 5, ore: 6,  color: 0xe8d24a },   // fast and light: it goes for the haulers and the miners
       cutter: { base: 'drone',   hp: 36, dmg: 7, ore: 10, color: 0xe8d24a },   // the medium raider
       brute:  { base: 'gunship', hp: 90, dmg: 9, ore: 18, color: 0xe8b84a }    // a slow heavy gun, a three-shot spread
@@ -273,8 +275,8 @@ const CAMP = {
   },
   traffic: {                               // the neutral ships (team 'neutral': not your wing, not at war with you; the pirates and the aliens are at war with them): the patrols and the other miners. A row of a level or mission `traffic` names one
     kinds: {
-      patrol: { name: 'Patrol', hp: 120, hit: 12, speed: 320, accel: 400, turn: 2.2, color: 0x5fd8c0, range: 720, dmg: 5, shot: [650, 950], bullet: 520, help: 2600, r: 500 }, // armed: it ranges round its post (r px), shoots a pirate or an alien within range of it, and goes to a hauler or miner under fire within `help` px of its post
-      miner:  { name: 'Miner', hp: 70, hit: 14, speed: 130, accel: 170, turn: 1.4, color: 0xc9d4e8, fear: 900, work: [9, 15], dock: [3, 6], r: 400 }                                          // unarmed: it works the nearest rocks of the mission (or the row's `field`), goes home to its place and docks, and goes out again; it runs home when a hostile comes within `fear` px
+      patrol: { name: 'Patrol', hp: 120, speed: 320, accel: 400, turn: 2.2, color: 0x5fd8c0, range: 720, dmg: 5, shot: [650, 950], bullet: 520, help: 2600, r: 500 }, // armed: it ranges round its post (r px), shoots a pirate or an alien within range of it, and goes to a hauler or miner under fire within `help` px of its post
+      miner:  { name: 'Miner', hp: 70, speed: 130, accel: 170, turn: 1.4, color: 0xc9d4e8, fear: 900, work: [9, 15], dock: [3, 6], r: 400 }                                          // unarmed: it works the nearest rocks of the mission (or the row's `field`), goes home to its place and docks, and goes out again; it runs home when a hostile comes within `fear` px
     }
   },
   warn: [0.5, 0.25],                       // shares of Earth's shield and of the carrier's hull at which the ship's voice warns (each once, and again if it mends past the share and falls back)
@@ -646,10 +648,10 @@ function campSpawn(C, kind, x, y) {
     const k = CAMP.tower; Object.assign(u, { team: 'alien', hp: k.hp * C.hpS, r: k.radius, vmax: 0, accel: 0, turn: k.turn, fixed: true });
   } else if (CAMP.pirate.kinds[kind]) { // a pirate: it flies and shoots like its base kind of PIRATES, with its own hull and damage; the hostile side, faction 'pirate'
     const k = CAMP.pirate.kinds[kind], d = Object.assign({}, PIRATES[k.base], { hp: k.hp, dmg: k.dmg, radar: k.color });
-    Object.assign(u, { team: 'alien', faction: 'pirate', def: d, hp: k.hp * C.hpS, r: k.hit || d.body[0], vmax: d.max, accel: d.speed, turn: d.turn * 60 });
+    Object.assign(u, { team: 'alien', faction: 'pirate', def: d, hp: k.hp * C.hpS, r: CAMP.size[kind].hit, vmax: d.max, accel: d.speed, turn: d.turn * 60 });
   } else if (CAMP.traffic.kinds[kind]) { // a neutral ship: a patrol or a miner
     const k = CAMP.traffic.kinds[kind];
-    Object.assign(u, { team: 'neutral', faction: 'neutral', hp: k.hp, r: k.hit, vmax: k.speed, accel: k.accel, turn: k.turn });
+    Object.assign(u, { team: 'neutral', faction: 'neutral', hp: k.hp, r: CAMP.size[kind].hit, vmax: k.speed, accel: k.accel, turn: k.turn });
     Object.assign(u, { post: { x, y }, range: k.r, slot: 0, cname: k.name }); if (kind === 'miner') Object.assign(u, { home: { x, y, r: 0 }, field: null, phase: 'out', until: 0, beam: '', rockId: '' }); // a neutral made by hand stays where it was made (src/camppirates.js campTrafficNew gives a row's own post and home)
   } else if (PIRATES[kind]) {
     const d = PIRATES[kind];
