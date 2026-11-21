@@ -69,12 +69,12 @@ function toastFit(msg) {
   const keep = fit.lines.slice(0, 2); keep[1] = keep[1].slice(0, fit.cols - 3) + '...';
   return { size: fit.size, cols: fit.cols, lines: keep };
 }
-// what the box shows: the new message, with the one before it on top when the two belong together. prev: { msg, at } or null
+// what the box shows: the new message, with the one before it on top when the two belong together (and say something else: the same line twice is one line). prev: { msg, at } or null
 function toastPlan(prev, msg, now) {
   const fit = toastFit(msg);
   if (prev && now - prev.at < TOAST.pair && fit.lines.length === 1) {
     const before = toastFit(prev.last || prev.msg);
-    if (before.lines.length === 1) { const size = Math.min(fit.size, before.size); return { size, lines: [before.lines[0], fit.lines[0]] }; }
+    if (before.lines.length === 1 && before.lines[0] !== fit.lines[0]) { const size = Math.min(fit.size, before.size); return { size, lines: [before.lines[0], fit.lines[0]] }; }
   }
   return { size: fit.size, lines: fit.lines };
 }
