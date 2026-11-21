@@ -1,7 +1,10 @@
 // not in the smoke: one mission of the Campaign flown by hand as a player, in the real game (one Chrome, muted, through the test lock; card space-game-night-hunt-l2-l3)
 // It boots the game with a save that stands at the mission, opens the ready room with K, reads the briefing (three screens), launches, and flies with the keys a player uses
 // (the panels Q E C, the map on Tab, the pace on P, W A D and Space held), then lets the autopilot carry the rest and writes down what the game says: the HUD line, the goal, the toasts.
-//   node tests/camphunt-boot.mjs --level 2 --mission 1 [--secs 90] [--fight]      the mission number is the one on the board (1 to 3)
+//   node tests/camphunt-boot.mjs --level 2 --mission 1 [--secs 90] [--fight | --quickwin | --lose | --dock]      the mission number is the one on the board (1 to 3)
+// --dock: after the burn, E then 6 at the outpost of the mission (the ready room opens over the paused battle: its rows and words), then Esc and the flight goes on
+// --lose: the cruiser is destroyed after the burn, with the wing out: the lost card, Enter (the mission again, from its brief), the pause card on Esc and its keys page on H, R from the pause
+// --quickwin: the win is forced after the first seconds of flight (the score of the moment), to walk the cards that follow a mission quickly: the debrief, the level won card, the pick or the refit, the next level's room
 // Without --fight the walk stops after the first 25 seconds of flight (keys, panels, map: well under five minutes); with it the mission is flown to its debrief and the ready room.
 // Pictures go to HUNT_SHOTS (default ~/dev/spacegame-night/shots/hunt-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -12,7 +15,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.HUNT_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i < 0 ? d : process.argv[i + 1]; };
-const LEVEL = Number(arg('level', 2)), MISSION = Number(arg('mission', 1)), SECS = Number(arg('secs', 90)), FIGHT = process.argv.includes('--fight');
+const LEVEL = Number(arg('level', 2)), MISSION = Number(arg('mission', 1)), SECS = Number(arg('secs', 90)), FIGHT = process.argv.includes('--fight'), QUICK = process.argv.includes('--quickwin'), LOSE = process.argv.includes('--lose'), DOCK = process.argv.includes('--dock');
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const note = s => console.log('  note ' + s);
@@ -68,6 +71,41 @@ try {
   note('after E, Shift+5: nav ' + await j(`JSON.stringify(${S}.camp.nav || null)`).then(v => String(v).slice(0, 160)) + ' state ' + JSON.stringify(await state()));
   await t.run(9000); const st1 = await state(); note('9 s later: ' + JSON.stringify(st1)); await snap('9-arrived'); note('HUD: ' + (await hud()).join(' | ').slice(0, 700));
 
+  if (DOCK) {
+    note('outposts: ' + await j(`campOutposts(${S}.camp.level).map(o => o.id + ' ' + o.name + ' ' + Math.round(campDist(${S}.camp.carrier, o))).join(' | ')`));
+    await t.ev(`(() => { const C = ${S}.camp, o = campOutposts(C.level).slice().sort((a, b) => campDist(C.carrier, a) - campDist(C.carrier, b))[0]; C.carrier.x = o.x + (o.r || 60) + 120; C.carrier.y = o.y; C.carrier.vx = 0; C.carrier.vy = 0; return 1; })()`); await t.run(600); // the cruiser beside the nearest outpost (the arrival circle is 300 km wide: the relay is 250 km off)
+    await key('KeyE'); await t.run(500); await snap('11-ship-panel'); note('E panel dock row: ' + await j(`(typeof campPanelRows === 'function' ? campPanelRows(${S}.camp, 'ship') : []).filter(r => r.id === 'dock' || r.n === 6).map(r => JSON.stringify(r)).join(' ')`).then(v => String(v).slice(0, 300)));
+    await key('Digit6'); await settle(`game.scene.isActive('CampHub')`, 30); await t.run(900);
+    note('docked: ' + (await shown()).join(' | ').slice(0, 800)); await snap('12-docked');
+    await key('Escape'); await t.run(900);
+    note('after Esc: Campaign ' + await j(`game.scene.isActive('Campaign')`) + ' hub ' + await j(`game.scene.isActive('CampHub')`) + ' mode ' + await j(`${S}.mode`) + ' docked ' + await j(`${S}.docked`));
+    await t.run(1200); await snap('13-undocked'); note('HUD: ' + (await hud()).join(' | ').slice(0, 400));
+  }
+  if (LOSE) {
+    await key('KeyQ'); await key('Digit1'); await t.run(2500);
+    await t.ev(`(() => { const C = ${S}.camp; campHurt(C, C.carrier, 99999, 'alien-0'); return 1; })()`);
+    await settle(`${S}.mode === 'lost'`, 60); note('lost card: ' + await card()); await snap('11-lost');
+    await key('Enter'); await t.run(1500);
+    note('after Enter on the lost card: scene ' + await j(`['CampHub', 'Campaign', 'Title', 'CampWarp'].filter(k => game.scene.isActive(k)).join()`) + ' mode ' + await j(`${S}.mode`) + ' via ' + await j(`${S}.via`));
+    for (let i = 0; i < 3 && (await j(`${S}.mode`)) !== 'play'; i++) { note('card: ' + await card()); await snap('12-retry-' + i); await key('Enter'); await t.run(900); }
+    check('the mission is flown again, in play, with the wing in the bay and the hull whole', (await j(`${S}.mode`)) === 'play' && (await state()).hull === (await j(`${S}.camp.carrier.maxHp`)), JSON.stringify(await state()));
+    await t.run(900); note('HUD after the retry: ' + (await hud()).join(' | ').slice(0, 500));
+    await key('Escape'); await t.run(500); note('pause: ' + await j(`['Pause', 'Campaign'].filter(k => game.scene.isActive(k)).join()`) + ' | ' + await j(`(game.scene.getScene('Pause').children ? game.scene.getScene('Pause').children.list.filter(o => o.text).map(o => o.text) : [])`).then(v => String(v).slice(0, 600))); await snap('13-pause');
+    await key('KeyH'); await t.run(500); await snap('14-keys-page'); await key('Escape'); await t.run(300); await key('Escape'); await t.run(300);
+    note('after Esc Esc: ' + await j(`['Pause', 'Campaign', 'Title'].filter(k => game.scene.isActive(k)).join()`) + ' mode ' + await j(`${S}.mode`));
+  }
+  if (QUICK) {
+    await t.ev(`(() => { const C = ${S}.camp; C.result = 'won'; C.why = 'quick'; C.score = campScore(C); ${S}.missionWon(); return 1; })()`);
+    await settle(`${S}.mode === 'debrief'`, 60); note('debrief: ' + await card()); await snap('11-debrief');
+    for (let i = 0; i < 8 && (await j(`game.scene.isActive('Campaign')`)); i++) {
+      const m = await j(`${S}.mode`); note('Enter on mode ' + m + ' (' + (await card()).slice(0, 300) + ')'); await snap('12-card-' + i);
+      if (m === 'pick' || m === 'refit') await key('Digit1'); else await key('Enter');
+      await t.run(1200);
+    }
+    const sv = await j(`JSON.parse(localStorage.getItem('longhaul.campaign'))`); note('save: ' + JSON.stringify({ level: sv.level, mission: sv.mission, techs: sv.techs, ore: sv.ore, bonus: sv.bonus, revealed: sv.revealed, results: Object.keys(sv.results || {}).join() }));
+    const where = await j(`['CampHub', 'Campaign', 'Title', 'CampWarp'].filter(k => game.scene.isActive(k)).join()`); note('then the scene is ' + where);
+    if (where === 'CampHub') { await t.run(900); note('hub board: ' + (await shown()).join(' | ').slice(0, 700)); await snap('13-hub-next'); await key('Enter'); await t.run(700); note('next briefing: ' + (await shown()).slice(0, 12).join(' | ').slice(0, 500)); await snap('14-next-brief'); }
+  }
   if (FIGHT) {
     await key('KeyQ'); await key('Digit1'); await t.run(800); // the wing out
     const drive = async secs => {

@@ -32,12 +32,13 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.b.hull | Keep the hull above {pct} percent |
 | camp.b.ore | Mine {n} ore |
 | camp.b.delivered | Deliver every hauler |
-| camp.ui.mission | MISSION {n} OF {of}: {title} |
+| camp.ui.mission | MISSION {n}: {title} |
 | camp.ui.briefgo | Enter  fly |
 | camp.ui.bonushead | BONUS |
 | camp.ui.bonusmet | +{pts}  {text} |
 | camp.ui.bonusmiss | --   {text} |
 | camp.ui.debrief | MISSION COMPLETE: {title} |
+| camp.ui.lostmission | MISSION LOST: {title} |
 | camp.ui.score | SCORE {score} |
 | camp.ui.debriefstats | Time {time}   Hull {hull}   Ships lost {lost} |
 | camp.ui.debriefnext | Enter  ready room |
