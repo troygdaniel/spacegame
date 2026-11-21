@@ -56,6 +56,8 @@ if (typeof CAMP_CALL_TYPES === 'object' && typeof CAMP_CALL_FX === 'object' && !
 const CAMPBEATHINTS = [
   { id: 'b-scout', at: 14, until: 55, hint: 'scout', when: C => C.orders.scout === 0 && !C.route.lane && !C.route.passed },
   { id: 'b-fast', at: 24, until: 120, hint: 'fast', when: C => !(C.nav && C.nav.on) && !C.route.passed && !campAliens(C).length && !!C.carrier && !!campConvoys(C)[0] && campDist(C.carrier, campConvoys(C)[0]) > 2500 },
+  { id: 'b-tuck', at: 60, until: 400, hint: 'tuck', when: C => typeof campTorpedoBoats === 'function' && campTorpedoBoats(C).some(u => !u.running) && typeof campConvoyState === 'function' && campConvoyState(C) !== 'tuck' }, // torpedo boats about: tuck the transport in under the shield (src/campconvoy.js)
+  { id: 'b-run', at: 60, until: 400, hint: 'run', when: C => !!campRivalOf(C, 'leader') && typeof campConvoyState === 'function' && campConvoyState(C) !== 'run' }, // the leader is out: run the transport past it
   { id: 'b-take', at: 50, until: 140, hint: 'take', when: C => !C.route.lane && !C.route.passed && !!campRouteHolding(C) }
 ];
 function campBeatNudge(C, shown) {

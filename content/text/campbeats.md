@@ -29,3 +29,5 @@ The words of mission 1.1 in four beats (card space-game-l1-1-beats; src/campbeat
 | camp.bf.enemy.lancer.many | {n} alien lancers |
 | camp.bf.enemy.pirateleader.one | the pirate leader, a heavy ship |
 | camp.bf.enemy.pirateleader.many | {n} pirate leaders |
+| camp.hint.tuck | Torpedo boats! Tuck the transport in under your shield: press {fleet}, flip to CONVOY, 1. |
+| camp.hint.run | The leader blocks the way. Send the transport past it: {fleet}, CONVOY, 3 is Run for it. |

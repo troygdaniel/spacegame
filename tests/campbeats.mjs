@@ -122,6 +122,14 @@ sec('G', () => {
   check('G  the lines the ship speaks are about twelve words at most', spoken.every(s => words(s) <= 12), JSON.stringify(spoken));
   const hint = J('(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); return typeof campBeatHint === "function" ? campBeatHint(C, "fleet") : ""; })()');
   check('G  the hints name their keys from the key table (CAMP_PANELS), not in letters of their own: campBeatHint(C, "fleet") carries the FLEET panel key', typeof hint === 'string' && hint.indexOf(J('CAMP_PANELS.panels.find(p => p.id === "fleet").key')) >= 0, hint);
+  g.run('__mk("short"); __until(0.465); __go(1)');
+  const shown = {}; const h1 = J('(() => { const sh = {}; const a = campBeatNudge(C, sh); return a; })()');
+  check('G  with torpedo boats out the hint says to tuck the transport in, with the FLEET key from the table in it', typeof h1 === 'string' && /Tuck the transport in/.test(h1) && h1.indexOf(J('CAMP_PANELS.panels.find(p => p.id === "fleet").key')) >= 0, JSON.stringify(h1));
+  g.run('campOrder(C, "convoy", "tuck in")');
+  check('G  tucked in (Tuck in is in force) the hint is not shown: the player has done it', !/Tuck the transport in/.test(J('campBeatNudge(C, {}) || ""')));
+  g.run('C.ships.filter(u => u.team === "alien").forEach(u => { u.hp = 0; }); __mk("short"); __until(0.705); __go(1)');
+  const h2 = J('campBeatNudge(C, {})');
+  check('G  with the leader out the hint says to run the transport past it (Run for it, the CONVOY page)', typeof h2 === 'string' && /Run for it/.test(h2), JSON.stringify(h2));
   const src = read('src/campbeats.js');
   check('G  and the code of the beats has no key letter of its own for a panel (it asks the table)', !/Press [QEC]\b/.test(src) && /CAMP_PANELS/.test(src));
   const bot = read('tools/campaign-bot.mjs');

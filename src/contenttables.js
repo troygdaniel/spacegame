@@ -1205,6 +1205,8 @@ const UI_TEXT = {
   'camp.bf.enemy.lancer.many': '{n} alien lancers',
   'camp.bf.enemy.pirateleader.one': 'the pirate leader, a heavy ship',
   'camp.bf.enemy.pirateleader.many': '{n} pirate leaders',
+  'camp.hint.tuck': 'Torpedo boats! Tuck the transport in under your shield: press {fleet}, flip to CONVOY, 1.',
+  'camp.hint.run': 'The leader blocks the way. Send the transport past it: {fleet}, CONVOY, 3 is Run for it.',
 };
 function uiText(key, vars) { return contentFill(CT_HAS(UI_TEXT, key) ? UI_TEXT[key] : key, vars); }
 function ctTextKeys() { // every string the game reads: key -> { get, set }
