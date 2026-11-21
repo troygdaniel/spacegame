@@ -106,11 +106,15 @@ class Campaign extends Phaser.Scene {
   showCard(title, lines, hint, tall) {
     this.hideCard(); if (typeof campMapClose === 'function') campMapClose(this); // a card (the story, the end) comes up over the map: the map goes
     if (typeof campPanelsClose === 'function') campPanelsClose(this); // and a panel
-    const o = [], cx = W / 2, cy = H / 2 - 20, h = tall || 300;
+    const o = [], cx = W / 2, cy = H / 2 - 20, style = uiFont(20, '#e8f6ff', { align: 'center', wordWrap: { width: 720 }, lineSpacing: 4 }), text = lines.join('\n\n');
+    // the card is as tall as its words: the refit with the three techs (two lines each) was 376 px of text in a 380 px card, so the title sat on its first line and the hint on its last, and with the looted techs
+    // (up to six choices) it ran off the screen. A throwaway text says how tall they are (130 px is the title above and the hint below); past the screen the type steps down to fit.
+    let h = tall || 300, fit = 1; const probe = this.add.text(-9999, -9999, text, style), bodyH = probe.height || 0; probe.destroy();
+    if (bodyH + 130 > h) { h = Math.min(bodyH + 130, H - 40); fit = Math.min(1, (h - 130) / bodyH); }
     o.push(this.add.rectangle(W / 2, H / 2, W, H, 0x02060d, 0.5)); // a veil over the battle and its gauges, so the card is the one thing to read (the blind critic: HUD and planet labels showed through the card)
     o.push(this.add.rectangle(cx, cy, 800, h, 0x04101c, 1).setStrokeStyle(2, CYAN, 0.85));
     o.push(this.add.text(cx, cy - h / 2 + 34, title, uiFont(24, '#38e1ff', { letterSpacing: 3 })).setOrigin(0.5));
-    o.push(this.add.text(cx, cy + 6, lines.join('\n\n'), uiFont(20, '#e8f6ff', { align: 'center', wordWrap: { width: 720 }, lineSpacing: 4 })).setOrigin(0.5));
+    const body = this.add.text(cx, cy + 6, text, style).setOrigin(0.5); if (fit < 1) body.setScale(fit); o.push(body);
     o.push(this.add.text(cx, cy + h / 2 - 30, hint, uiFont(16, '#ffd37a')).setOrigin(0.5));
     o.forEach(x => x.setScrollFactor(0).setDepth(200));
     this.card = o; this.panel = true;

@@ -14,7 +14,7 @@ const out = JSON.parse(g.run(`JSON.stringify((() => {
     setStrokeStyle() { this.stroke = true; return this; }, setOrigin() { return this; }, setScrollFactor(v) { this.scroll = v; return this; }, setDepth(d) { this.depth = d; return this; }, destroy() { this.destroyed = true; } }; made.push(o); return o; };
   const sc = { card: null, panel: false, add: { rectangle: (...a) => obj('rect', a), text: (...a) => obj('text', a) }, hideCard: Campaign.prototype.hideCard };
   Campaign.prototype.showCard.call(sc, 'TITLE', ['one line'], 'Enter  go');
-  const shown = made.map(o => ({ kind: o.kind, w: o.a[2], h: o.a[3], alpha: o.kind === 'rect' ? o.a[5] : null, depth: o.depth, scroll: o.scroll, stroke: o.stroke }));
+  const shown = made.filter(o => !o.destroyed).map(o => ({ kind: o.kind, w: o.a[2], h: o.a[3], alpha: o.kind === 'rect' ? o.a[5] : null, depth: o.depth, scroll: o.scroll, stroke: o.stroke }));
   const panel = sc.panel; sc.hideCard();
   return { shown, panel, left: made.filter(o => !o.destroyed).length, W, H };
 })())`));
