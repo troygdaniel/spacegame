@@ -7,10 +7,11 @@
 //   E. what a pick does: the same as the strip's order (the same campOrder), the costs, the autopilot to the objective, the play log's "how"
 // Run: node tests/campanels.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
+import { belt } from './fixtures/campbelt.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
-const g = nodeGame();
+const g = nodeGame(); belt(g); // the old Level 1, the asteroid belt, as a fixture level: this suite flies on it (card space-game-l1-rim-missions)
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 g.run(`
   window.__quiet = C => { C.ships = C.ships.filter(u => u.team !== 'alien'); return C; };
@@ -66,8 +67,8 @@ console.log('B. the live state of each row');
   check('the head lines: the bay and the ships out; the ore and the shield', /^bay \d+\+\d+   out \d+$/.test(J(`campPanelHead(C1, 'fleet')`)) && /^ore \d+   shield \d+$/.test(J(`campPanelHead(C1, 'ship')`)));
 }
 
-g.run(`window.C8 = __quiet(campNew(1, [], { seed: 1 })); campOrder(C8, 'launch'); __run(C8, 8);`);
-check('the belt (level 1) has no convoy: escort is ready and says the escorts stay by the carrier; mine counts the ships and the rocks', J(`__row(C8, 'fleet', 'escort').ok`) && J(`__row(C8, 'fleet', 'escort').state`) === 'stay by the carrier' && /^8 ships, \d+ rocks, \d+ ore$/.test(J(`__row(C8, 'ship', 'mine').state`)), J(`__row(C8, 'fleet', 'escort').state`));
+g.run(`window.C8 = __quiet(campNew(11, [], { seed: 1 })); campOrder(C8, 'launch'); __run(C8, 8);`);
+check('the belt (the old level 1, fixture 11) has no convoy: escort is ready and says the escorts stay by the carrier; mine counts the ships and the rocks', J(`__row(C8, 'fleet', 'escort').ok`) && J(`__row(C8, 'fleet', 'escort').state`) === 'stay by the carrier' && /^8 ships, \d+ rocks, \d+ ore$/.test(J(`__row(C8, 'ship', 'mine').state`)), J(`__row(C8, 'fleet', 'escort').state`));
 
 console.log('C. the keys');
 {

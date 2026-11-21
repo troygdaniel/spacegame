@@ -14,17 +14,18 @@
 // Run: node tests/campstances.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
+import { belt } from './fixtures/campbelt.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name + (detail ? '  ' + String(detail).slice(0, 200) : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 300) + ')' : ''}`); } };
 const store = new Map();
-const g = nodeGame({ store });
+const g = nodeGame({ store }); belt(g); // the old Level 1, the asteroid belt, as a fixture level: this suite flies on it (card space-game-l1-rim-missions)
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
 // a battle with nothing scheduled, the carrier unkillable, and a wing out: `foeAt` puts a tough gunship that stands still (and never fires) at dx, dy from the carrier
 g.run(`
-  window.__bat = (stance, foeAt, level) => { window.C = campNew(level || 1, [], { seed: 1, god: true, stance: stance }); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); C.motherSpawn = 1e12;
+  window.__bat = (stance, foeAt, level) => { window.C = campNew(level || 11, [], { seed: 1, god: true, stance: stance }); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); C.motherSpawn = 1e12;
     C.ships.forEach(u => { if (u.team === 'alien') u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0);
     window.__foe = null; if (foeAt) { const c = C.carrier, u = campSpawn(C, 'gunship', c.x + foeAt[0], c.y + foeAt[1]); u.vmax = 0; u.accel = 0; u.nextShot = 1e12; u.hp = u.maxHp = 1e7; window.__foe = u; }
     campOrder(C, 'launch'); for (let i = 0; i < 30 * 8; i++) { campStep(C, 1 / 30); C.events.length = 0; } return C.stance; };
@@ -39,8 +40,8 @@ console.log('A. the table and the order');
 {
   const S = J('CAMP.stance');
   check('the numbers are in the one table (CAMP.stance), each with a comment: the orbit radius, its speed, the stand-off share, the sidestep of keep distance, the formation radius, the leash', ['orbit', 'orbitSpeed', 'stand', 'weave', 'formation', 'leash'].every(k => typeof S[k] === 'number') && (() => { const s = src('src/campaign.js'), i = s.indexOf('  stance: {'), j = s.indexOf('  convoy: {'); return s.slice(i, j).split('\n').filter(l => l.includes(':')).every(l => l.includes('//')); })(), JSON.stringify(S));
-  check('the stances and their order: free, orbit, keep, match, hold (the order of the panel\'s second page), and free is the default of a new battle', J('CAMP.stances.join()') === 'free,orbit,keep,match,hold' && (g.run('window.C = campNew(1, [], { seed: 1 })'), J('C.stance') === 'free'));
-  g.run('window.C = campNew(1, [], { seed: 1 })');
+  check('the stances and their order: free, orbit, keep, match, hold (the order of the panel\'s second page), and free is the default of a new battle', J('CAMP.stances.join()') === 'free,orbit,keep,match,hold' && (g.run('window.C = campNew(11, [], { seed: 1 })'), J('C.stance') === 'free'));
+  g.run('window.C = campNew(11, [], { seed: 1 })');
   const say = w => J(`(() => { const r = campOrder(C, 'stance', ${JSON.stringify(w)}); return { ok: r.ok, say: r.say, stance: C.stance }; })()`);
   const rows = [['orbit', 'orbit', 'Wing, circle your target.'], ['keep distance', 'keep', 'Wing, keep your distance.'], ['match speed', 'match', 'Wing, match speed and form on me.'], ['hold position', 'hold', 'Wing, hold your position.'], ['free', 'free', 'Wing, fight as you see fit.']];
   check('each stance is set by its words, and answered in words: orbit, keep distance, match speed, hold position, free', rows.every(([w, id, s]) => { const r = say(w); return r.ok && r.stance === id && r.say === s; }), JSON.stringify(rows.map(r => say(r[0]).stance)));
@@ -129,7 +130,7 @@ console.log('G. a stance is for Attack and Guard');
   g.run('__bat("orbit", [700, 0]); campOrder(C, "guard", ""); __run(12)');
   check('Guard with ORBIT: the wing that guards the carrier circles what comes near it (the gunship is inside 700 px of the carrier)', J('__fighters().some(u => __dist(u, __foe) < 450)'));
   g.run('__bat("hold", null, 2); campOrder(C, "launch")');
-  g.run('window.C = campNew(1, [], { seed: 1, god: true, stance: "hold" }); C.waves.forEach(w => { w.started = true; }); campOrder(C, "launch"); for (let i = 0; i < 300; i++) { campStep(C, 1 / 30); C.events.length = 0; } campOrder(C, "escort", ""); __run(2)');
+  g.run('window.C = campNew(11, [], { seed: 1, god: true, stance: "hold" }); C.waves.forEach(w => { w.started = true; }); campOrder(C, "launch"); for (let i = 0; i < 300; i++) { campStep(C, 1 / 30); C.events.length = 0; } campOrder(C, "escort", ""); __run(2)');
   check('Escort with no convoy to go to (the belt) keeps the escorts by the carrier, as before (the order is guard at the carrier), and a stance shapes how: here HOLD', J('campWing(C, "escort").every(u => u.order.type === "guard")') && J('C.L.convoys.length') === 0);
   g.run('window.C = campNew(2, [], { seed: 1, god: true, stance: "hold" }); C.waves.forEach(w => { w.started = true; }); campOrder(C, "launch"); for (let i = 0; i < 300; i++) { campStep(C, 1 / 30); C.events.length = 0; } window.__ec = campWing(C, "escort").length');
   check('the escort order with a convoy is not a stance: it is the convoy\'s (the code does not take the stance for it)', !/o\.type === 'escort'[^\n]*campStanceMove/.test(src('src/campaign.js')));
@@ -144,7 +145,7 @@ console.log('H. the strip and the voice');
   check('"keep distance", "keep your distance from the mothership", "stand off" are the keep stance', I('keep distance').act === 'fleet_stance' && /^keep/.test(I('keep distance').arg) && /mothership/.test(I('keep your distance from the mothership').arg) && I('stand off').act === 'fleet_stance');
   check('"match speed", "match my speed", "in formation" are the match stance; "hold position", "stay put" the hold stance; "free", "fight freely" the free stance', ['match speed', 'match my speed', 'in formation'].every(t => I(t).act === 'fleet_stance' && I(t).arg === 'match') && ['hold position', 'stay put'].every(t => I(t).act === 'fleet_stance' && I(t).arg === 'hold') && ['free', 'fight freely'].every(t => I(t).act === 'fleet_stance' && I(t).arg === 'free'));
   check('the old words still mean what they meant: "guard the carrier", "hold" and "stay with me" are guard, "attack the mothership" is attack, "launch" is launch (only "orbit" moved, to the stance)', I('guard the carrier').act === 'fleet_guard' && I('hold').act === 'fleet_guard' && I('stay with me').act === 'fleet_guard' && I('attack the mothership').act === 'fleet_attack' && I('launch').act === 'fleet_launch');
-  g.run(`window.__scene = { scene: { key: 'Campaign' }, leaving: false, dead: false, camp: null, toasts: [] }; window.__nb = () => { window.C = campNew(1, [], { seed: 1 }); __scene.camp = C; };`);
+  g.run(`window.__scene = { scene: { key: 'Campaign' }, leaving: false, dead: false, camp: null, toasts: [] }; window.__nb = () => { window.C = campNew(11, [], { seed: 1 }); __scene.camp = C; };`);
   g.run('__nb()');
   const local = t => J(`(() => { const p = shipcompLocal(${JSON.stringify(t)}, __scene); return p ? { text: p.text, action: p.action, refused: p.refused, run: !!p.run } : null; })()`);
   const r0 = local('hold position');
@@ -161,7 +162,7 @@ console.log('I. the save and the scene');
   check('the stance is saved with the progress (a plain word) and read back: a reload of an orbit pilot is an orbit pilot', JSON.parse(store.get('longhaul.campaign')).stance === 'orbit' && J('__L.stance') === 'orbit');
   store.set('longhaul.campaign', JSON.stringify({ level: 1, techs: [], stance: 'sing a song' }));
   check('rubbish in the save is free (only the table\'s stances are taken), and no stance in an old save is free', J('campProgressLoad().stance') === 'free' && (store.set('longhaul.campaign', JSON.stringify({ level: 1, techs: [] })), J('campProgressLoad().stance') === 'free'));
-  check('a battle starts in the stance it is given, and a stance it does not know is free', (g.run('window.C = campNew(1, [], { seed: 1, stance: "hold" })'), J('C.stance') === 'hold') && (g.run('window.C = campNew(1, [], { seed: 1, stance: "nope" })'), J('C.stance') === 'free'));
+  check('a battle starts in the stance it is given, and a stance it does not know is free', (g.run('window.C = campNew(11, [], { seed: 1, stance: "hold" })'), J('C.stance') === 'hold') && (g.run('window.C = campNew(11, [], { seed: 1, stance: "nope" })'), J('C.stance') === 'free'));
   g.run(`window.__f = Object.create(Campaign.prototype); __f.P = campProgressNew(); __f.P.stance = 'keep'; __f.level = 1; __f.opts = { seed: 1 }; window.__c = __f.makeCamp();`);
   check('the scene makes each battle with the stance of the state (the pilot\'s choice comes with every mission)', J('__c.stance') === 'keep');
   g.run(`__f.camp = __c; __f.onEvent({ type: 'stance', stance: 'match' })`);
@@ -171,7 +172,7 @@ console.log('I. the save and the scene');
 // ---------- J. the panel's second page ----------
 console.log('J. the FLEET panel, page 2: the stances');
 {
-  g.run('window.C = campNew(1, [], { seed: 1, stance: "orbit" }); window.__PP = campPanelNew(); window.__pg0 = CAMP_PANELS.pages');
+  g.run('window.C = campNew(11, [], { seed: 1, stance: "orbit" }); window.__PP = campPanelNew(); window.__pg0 = CAMP_PANELS.pages');
   const d = J('CAMP_PANELS.panels[0].page2.rows.map(r => r.n + ":" + r.id + ":" + r.arg)');
   check('the FLEET panel has a second page of five rows, 1 to 5: free, orbit, keep distance, match speed, hold position, each the order "stance"', d.join() === '1:free:free,2:orbit:orbit,3:keep:keep distance,4:match:match speed,5:hold:hold position' && J('CAMP_PANELS.panels[0].page2.rows.every(r => r.order === "stance")') && J('CAMP_PANELS.panels[0].page2.title') === 'STANCES');
   check('the Escort row is as it was (its label "Escort / match speed" waits for the panels\' redraw: it does not fit the column as drawn now); it shares the code with the stance: Escort with no convoy is Guard at the carrier, and under MATCH SPEED that is the formation', J('CAMP_PANELS.panels[0].rows[2].label') === 'Escort' && J('CAMP_PANELS.panels[0].rows[2].order') === 'escort');

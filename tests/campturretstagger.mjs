@@ -12,17 +12,18 @@
 // Run: node tests/campturretstagger.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
+import { belt } from './fixtures/campbelt.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name + (detail ? '  ' + String(detail).slice(0, 200) : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 300) + ')' : ''}`); } };
-const g = nodeGame();
+const g = nodeGame(); belt(g); // the old Level 1, the asteroid belt, as a fixture level: this suite flies on it (card space-game-l1-rim-missions)
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
 // a battle with a standing gunship (a lot of hit points) in reach, the carrier holding Space from `from` seconds, every shot noted as [time in ms, turret] from its event
 g.run(`
   window.__fire = (secs, opts) => {
-    opts = opts || {}; window.C = campNew(1, [], { seed: opts.seed == null ? 1 : opts.seed, god: true }); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); C.motherSpawn = 1e12;
+    opts = opts || {}; window.C = campNew(11, [], { seed: opts.seed == null ? 1 : opts.seed, god: true }); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); C.motherSpawn = 1e12;
     const c = C.carrier; let u = null;
     const foe = () => { u = campSpawn(C, 'gunship', c.x + 300, c.y); u.vmax = 0; u.accel = 0; u.nextShot = 1e12; u.hp = u.maxHp = 90000; return u; };
     if (!opts.foeAt) foe();
@@ -111,7 +112,7 @@ console.log('E. the jitter has a stream of its own');
 console.log('F. a flash per shot, a quiet rate-limited blip');
 {
   const ev = J(`(() => { __fire(2, { from: 0 }); window.C2 = C; return 1; })()`);
-  g.run(`window.__ev = []; window.C = campNew(1, [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); C.motherSpawn = 1e12; const u = campSpawn(C, 'gunship', C.carrier.x + 300, C.carrier.y); u.vmax = 0; u.accel = 0; u.nextShot = 1e12; u.hp = u.maxHp = 90000; C.input.fire = true; window.__bul = 0; for (let i = 0; i < 90; i++) { campStep(C, 1 / 30); C.events.forEach(e => { if (e.type === 'turret') __ev.push(e); }); __bul = __bul; C.events.length = 0; }`);
+  g.run(`window.__ev = []; window.C = campNew(11, [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); C.motherSpawn = 1e12; const u = campSpawn(C, 'gunship', C.carrier.x + 300, C.carrier.y); u.vmax = 0; u.accel = 0; u.nextShot = 1e12; u.hp = u.maxHp = 90000; C.input.fire = true; window.__bul = 0; for (let i = 0; i < 90; i++) { campStep(C, 1 / 30); C.events.forEach(e => { if (e.type === 'turret') __ev.push(e); }); __bul = __bul; C.events.length = 0; }`);
   const evs = J('__ev');
   check('the sim says each shot with an event of its own: the turret, where it is, the way it points', evs.length >= 30 && evs.every(e => Number.isInteger(e.i) && e.i >= 0 && e.i < 8 && Number.isFinite(e.x) && Number.isFinite(e.y) && Number.isFinite(e.aim)), evs.length);
   check('one event for each shot, no event for a volley: eight turrets, many events, no old "gun" event', !/type: 'gun'/.test(src('src/campaign.js')) && !/e\.type === 'gun'/.test(src('src/campaignscene.js')));
@@ -119,7 +120,7 @@ console.log('F. a flash per shot, a quiet rate-limited blip');
     window.__beeps = []; window.__sfx0 = sfx; sfx = function (name, a) { __beeps.push({ name, a }); }; // the pew is sfx('turret', the turret's number)
     window.__fake = () => { const rec = () => { const log = []; const p = new Proxy({}, { get: (t, k) => (k === 'log' ? log : (...a) => { log.push([k, ...a]); return p; }) }); return p; };
       const f = Object.create(Campaign.prototype); f.add = rec(); f.tweens = { added: [], add(o) { this.added.push(o); } }; f.blipAt = undefined; return f; };
-    window.F = __fake(); window.C = campNew(1, [], { seed: 1 }); F.camp = C;
+    window.F = __fake(); window.C = campNew(11, [], { seed: 1 }); F.camp = C;
   `);
   g.run('for (let i = 0; i < 8; i++) { C.t = 1000 + i * 4; F.onEvent({ type: "turret", i, x: 10 * i, y: 5, aim: 0.5 }); }');
   check('eight turrets firing within 30 ms make one pew, not eight (the sound is rate limited to one in 70 ms of the battle\'s clock)', J('__beeps.length') === 1 && J('__beeps[0].name') === 'turret', J('__beeps.length'));
