@@ -3,16 +3,17 @@
 // inside the ship's circle: on a 90 px mothership about 7 times (56 for a shot meant to do 8), on a tower or a gunship 2 to 3 times, on a raider once or twice.
 // Run: node tests/campgameplay-beam.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
+import { belt } from './fixtures/campbelt.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name + (detail ? '  ' + String(detail).slice(0, 200) : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 300) + ')' : ''}`); } };
-const g = nodeGame();
+const g = nodeGame(); belt(g); // the old Level 1, the asteroid belt, as a fixture level: this suite flies on it (card space-game-l1-rim-missions)
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 
 // the carrier holds fire for 2 s at still targets east of it (kinds at distances), then 3 s more so every shot has landed. Back: { shots, took: [hit points each target lost] }.
 // The targets cannot move or shoot and have hit points to spare; the carrier's own battle is empty.
 g.run(`window.__fire = (techs, targets) => {
-  const C = campNew(1, techs, { seed: 1 }); C.ships = C.ships.filter(u => u.kind === 'carrier'); C.by = { [C.carrier.id]: C.carrier };
+  const C = campNew(11, techs, { seed: 1 }); C.ships = C.ships.filter(u => u.kind === 'carrier'); C.by = { [C.carrier.id]: C.carrier };
   const c = C.carrier; c.x = 0; c.y = 0; c.rot = 0; c.vx = 0; c.vy = 0; C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(cv => { cv.started = true; }); C.motherSpawn = 1e12;
   const ts = targets.map(([k, d, dy]) => { const t = campSpawn(C, k, d, dy || 0); t.hold = true; t.hp = t.maxHp = 100000; t.vmax = 0; t.accel = 0; t.nextShot = 1e12; t.fixed = true; t.home = [d, dy || 0]; return t; });
   const b0 = campBullet; let shots = 0; campBullet = function (C, from, rot, speed, dmg, life, team, ahead, extra) { if (team === 'earth' && extra && extra.pd) shots++; return b0.apply(null, arguments); };

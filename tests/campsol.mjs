@@ -12,10 +12,11 @@
 import { readFileSync as __rf } from 'node:fs';
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
+import { belt } from './fixtures/campbelt.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
-const g = nodeGame();
+const g = nodeGame(); belt(g, 1); // the old Level 1, the belt, as level 1: this suite pins its world (card space-game-l1-rim-missions)
 g.run(__rf(new URL('./fixtures/camplegacy.js', import.meta.url), 'utf8') + ' CAMP.levels[2] = CAMP.levels.legacy2; CAMP.levels[3] = CAMP.levels.legacy3;'); // levels 2 and 3 as whole-level rows (card space-game-campaign-missions): this test reads their guards, towers and caches; level 1 stays the belt
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const K = J('CAMP.world');
@@ -120,7 +121,7 @@ g.run(`campMapKey(M1, 'KeyZ'); campMapPaint(M1, 600);`);
 check('Z again: the area; its mode line says AREA', J('M1.mp.whole') === false && /^AREA  [\d,]+ km across  Z: whole$/.test(J('M1.mp.across.t')));
 check('Z with the map closed is not the map\'s key', (g.run('campMapClose(M1)'), J(`campMapKey(M1, 'KeyZ')`) === false));
 g.run(`window.M2 = __sc(2); campMapOpen(M2); campMapKey(M2, 'KeyZ'); campMapPaint(M2, 0);`);
-check('level 2 whole: the star is named and the Centauri Drift is named; level 3: the star and both belts', ['ALPHA CENTAURI', 'CENTAURI DRIFT'].every(x => J('__texts.filter(t => !t.gone).map(t => t.t)').includes(x)) && (g.run(`campMapClose(M2); window.M3 = __sc(3); campMapOpen(M3); campMapKey(M3, 'KeyZ'); campMapPaint(M3, 0);`), ['EPSILON ERIDANI STAR', 'INNER BELT', 'OUTER BELT'].every(x => J('__texts.filter(t => !t.gone).map(t => t.t)').includes(x))));
+check('level 2 whole: the star is named and the Centauri Drift is named; level 3: the star and both belts', ['ALPHA CENTAURI', 'CENTAURI DRIFT'].every(x => J('__texts.filter(t => !t.gone).map(t => t.t)').includes(x)) && (g.run(`campMapClose(M2); window.M3 = __sc(3); campMapOpen(M3); campMapKey(M3, 'KeyZ'); campMapPaint(M3, 0);`), ['EPSILON ERIDANI', 'INNER BELT', 'OUTER BELT'].every(x => J('__texts.filter(t => !t.gone).map(t => t.t)').includes(x))));
 check('a click on the list picks a far planet and the autopilot goes to it (the list has Neptune)', (() => { g.run(`window.M4 = __sc("home"); campMapOpen(M4); campMapPaint(M4, 0);`); return J('M4.mp.rows.some(r => r.id === "place:neptune")'); })());
 
 check('the area view of the belt level holds its own places and waves and not the far bodies; the whole view holds every ring', (() => { const a = bounds(1), w = bounds(1, true), far = Math.max(...WB.rings); return a.x1 - a.x0 < 12000 && w.x1 - w.x0 >= 2 * far - 2 && w.x0 <= a.x0 && w.x1 >= a.x1; })(), JSON.stringify([bounds(1), bounds(1, true)]));

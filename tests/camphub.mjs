@@ -9,10 +9,11 @@
 // Run: node tests/camphub.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
+import { belt } from './fixtures/campbelt.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
-const g = nodeGame();
+const g = nodeGame(); belt(g, 1); // the old Level 1, the belt, as level 1: this suite was written for it and pins its missions (card space-game-l1-rim-missions)
 // the hub alone: the ranks card (src/campranks.js) is merged with it in the game, but these checks are about the room's own plain behaviour and its stand-ins, so the real campRankStatus is set aside (the two together are tests/campranks.mjs)
 g.run('window.campRankStatus = undefined');
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));

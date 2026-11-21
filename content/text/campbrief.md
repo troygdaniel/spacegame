@@ -66,20 +66,20 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.keys.next | Enter or Right: next    Left: back    L: launch now    Esc: the board |
 | camp.bf.keys.launch | Enter or L: launch    Left: back    Esc: the board |
 | camp.bf.keys.zoom | + - 0 zoom |
-| camp.bf.1.1.w1 | Fly to each of the 3 marked rings on the map. |
-| camp.bf.1.1.w2 | Any ship of yours inside a ring scans it: 8 seconds. |
-| camp.bf.1.1.w3 | Aliens answer your scans. Keep the wing close. |
-| camp.bf.1.1.w4 | Finish by destroying every alien that comes. |
-| camp.bf.1.1.n1 | Welcome aboard, Commander. The three rings to scan are on the map: Tab opens it in flight. |
-| camp.bf.1.1.n2 | Any ship of ours inside a ring scans it. Raiders will answer, so keep the wing close and shoot what comes. |
-| camp.bf.1.1.n3 | W A S D fly the cruiser. Hold Space to fire the turrets. Q opens the fleet panel: 1 launches the wing. Tab opens the map. |
-| camp.bf.1.2.w1 | 3 haulers leave Vesta for Ceres, 15 seconds apart. |
-| camp.bf.1.2.w2 | 2 must reach Ceres. All 3 earns a bonus. |
-| camp.bf.1.2.w3 | 3 waves of raiders come in from the east. |
-| camp.bf.1.2.w4 | Fly along the lane and kill raiders before they close. |
-| camp.bf.1.3.w1 | 3 waves come, at 5, 40 and 80 seconds. |
-| camp.bf.1.3.w2 | The mothership arrives with the last wave. |
-| camp.bf.1.3.w3 | Destroy the mothership to win. Missiles (F) help. |
+| camp.bf.1.1.w1 | 1 transport flies from the Lunar Base to Ceres. |
+| camp.bf.1.1.w2 | Pirates raid her 3 times on the way. Stay close. |
+| camp.bf.1.1.w3 | Hold Space to fire. Q then 3: escorts guard her. |
+| camp.bf.1.1.w4 | She must arrive. If she dies, the mission is lost. |
+| camp.bf.1.1.n1 | Welcome aboard, Commander. The transport is ours to bring to Ceres. Stay close to her. |
+| camp.bf.1.1.n2 | Pirates will come at her from ahead. Hold Space to fire the turrets, and shoot what comes. |
+| camp.bf.1.1.n3 | W A S D fly the cruiser. Q opens the fleet panel: 1 launches the wing, 3 sends the escorts to her. Tab opens the map. |
+| camp.bf.1.2.w1 | Mine the rock fields round Ceres. E then 1 sends the wing. |
+| camp.bf.1.2.w2 | Ore sells for triple at the Works. Pirates hunt the miners. |
+| camp.bf.1.2.w3 | Beat the 3 raids, then dock at Occator Works: SHIP panel, Dock. |
+| camp.bf.1.2.w4 | The Works keeps its doors shut while a pirate is near. |
+| camp.bf.1.3.w1 | 3 haulers leave Ceres for Earth, 12 seconds apart. |
+| camp.bf.1.3.w2 | 1 must get home. Each hauler lost costs points. |
+| camp.bf.1.3.w3 | Pirates raid them twice. Q then 3: escorts cover them. |
 | camp.bf.2.1.w1 | Find 2 of the 3 resource pods in the system. |
 | camp.bf.2.1.w2 | Any ship of yours that flies close picks one up. |
 | camp.bf.2.1.w3 | Aliens come from the west after 20 seconds. |
@@ -106,3 +106,4 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.at.cache | RESOURCE POD |
 | camp.bf.at.guards | GUARDS |
 | camp.bf.at.mother | MOTHERSHIP |
+| camp.bf.1.3.w4 | Something else is out there. Be ready. |

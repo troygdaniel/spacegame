@@ -12,9 +12,9 @@ const rows = JSON.parse(g.run(`JSON.stringify(Object.keys(UI_TEXT).filter(k => /
 check('the table has the Campaign lines to read', rows.length > 200, String(rows.length));
 const stale = rows.filter(([k, v]) => !/^camp\.nudge\./.test(k) && !/^camp\.(hub|keys|ui\.(pick|refit))/.test(k) && /\b[Pp]ress \d\b|\((?:[1-9])\)|\bkey [1-9]\b/.test(v.replace(/[Pp]ress \d, then \d/g, '')));
 check('no Campaign line says "press <digit>", "(<digit>)" or "key <digit>" (the hub, the keys page and the refit cards name their own digits)', stale.length === 0, JSON.stringify(stale));
-const six = ['camp.l1.before.2', 'camp.say.ambush2', 'camp.lose.tip.convoy', 'camp.lose.tip.base', 'camp.lose.tip.carrier', 'camp.lose.tip.earth'];
+const six = ['camp.say.ambush2', 'camp.lose.tip.convoy', 'camp.lose.tip.base', 'camp.lose.tip.carrier', 'camp.lose.tip.earth'];
 const byKey = Object.fromEntries(rows);
-check('the six lines name a panel, not a key', six.every(k => /panel/i.test(byKey[k] || '')), JSON.stringify(six.map(k => byKey[k])));
+check('the five lines name a panel, not a key (the sixth, the old level 1 story line, is a different line now: the rim run)', six.every(k => /panel/i.test(byKey[k] || '')), JSON.stringify(six.map(k => byKey[k])));
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nfailed: ${failed}` : '\nfailed: 0');
 process.exit(failed ? 1 : 0);

@@ -28,30 +28,32 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.b.time | Finish in {secs} seconds |
 | camp.b.lost | Ships lost: {n} or fewer |
 | camp.say.l2wave3 | Aliens coming for the relic, pilot. |
+| camp.say.l2wave2b | A third group, from the other side. |
 | camp.b.nolost | Lose no ships |
 | camp.b.hull | Keep the hull above {pct} percent |
 | camp.b.ore | Mine {n} ore |
 | camp.b.delivered | Deliver every hauler |
-| camp.ui.mission | MISSION {n} OF {of}: {title} |
+| camp.ui.mission | MISSION {n}: {title} |
 | camp.ui.briefgo | Enter  fly |
 | camp.ui.bonushead | BONUS |
 | camp.ui.bonusmet | +{pts}  {text} |
 | camp.ui.bonusmiss | --   {text} |
 | camp.ui.debrief | MISSION COMPLETE: {title} |
+| camp.ui.lostmission | MISSION LOST: {title} |
 | camp.ui.score | SCORE {score} |
 | camp.ui.debriefstats | Time {time}   Hull {hull}   Ships lost {lost} |
 | camp.ui.debriefnext | Enter  ready room |
 | camp.ui.retrymission | Enter  fly the mission again     T  title |
 | camp.ui.pauseretry | R  restart the mission |
-| camp.m.1.1.title | Belt survey |
-| camp.m.1.1.b1 | Scan three rock fields. |
-| camp.m.1.1.b2 | Expect company. |
-| camp.m.1.2.title | Ore haulers |
-| camp.m.1.2.b1 | Escort the haulers from Deimos to Phobos. |
-| camp.m.1.2.b2 | Two must arrive. |
-| camp.m.1.3.title | The mothership |
-| camp.m.1.3.b1 | Destroy the alien mothership. |
-| camp.m.1.3.b2 | Three waves first. |
+| camp.m.1.1.title | Rim escort |
+| camp.m.1.1.b1 | Escort the transport from the Lunar Base to Ceres. |
+| camp.m.1.1.b2 | Pirates will raid her on the way. |
+| camp.m.1.2.title | Mine and defend |
+| camp.m.1.2.b1 | Mine ore at Ceres and sell it at the Works. |
+| camp.m.1.2.b2 | Pirates go for the miners. |
+| camp.m.1.3.title | Haulers home |
+| camp.m.1.3.b1 | Escort the ore haulers home toward Earth. |
+| camp.m.1.3.b2 | One must arrive. Expect company. |
 | camp.m.2.1.title | Resources |
 | camp.m.2.1.b1 | Gather two resource caches. |
 | camp.m.2.1.b2 | The aliens followed us. |

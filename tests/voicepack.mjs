@@ -12,11 +12,12 @@ import { readFileSync, existsSync, mkdtempSync, readdirSync, writeFileSync, rmSy
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { nodeGame, ROOT } from './nodegame.mjs';
+import { belt } from './fixtures/campbelt.mjs';
 import { main, parseArgs, planOf, record, prune, readIndexRaw, writeIndex, loadCatalogue, costOf, SPEAK_URL, PRICE_PER_1K } from '../tools/voicepack.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
-const g = nodeGame();
+const g = nodeGame(); belt(g, 1); // the old Level 1, the belt, as level 1: this suite was written for it and pins its missions (card space-game-l1-rim-missions)
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 const KEY = ['fake', 'key', 'for', 'this', 'test', 'only'].join('-'); // built, not written: no key-shaped literal in a file (tests/hygiene.mjs)

@@ -49,6 +49,7 @@ function campHubNext(P) {
   const lv = campHubLevels(); let level = P && P.level | 0, i = P && P.mission | 0;
   if (lv.indexOf(level) < 0) level = lv[0] || 1;
   const n = campMissions(level).length; if (i < 0 || i >= n) i = 0;
+  if (P && (P.levelDone | 0) === level && level === (P.level | 0)) i = n - 1; // the level is won and its story and pick wait (a tab was closed at the pick): Launch goes to them, not to mission 1
   return { level, i };
 }
 function campHubTitle(level, i) {
@@ -180,7 +181,7 @@ CAMP_HUB.note.board = P => uiText('camp.hub.note.board', { done: campHubFlown(P)
 CAMP_HUB.note.brief = (P, ctx) => { const t = campHubTarget(P, ctx && ctx.hub); return campHubTitle(t.level, t.i) + (t.replay ? ' ' + uiText('camp.hub.replay.mark') : ''); };
 CAMP_HUB.note.refit = P => uiText('camp.hub.note.refit', { ore: P.ore | 0 });
 CAMP_HUB.note.rank = P => { const rk = campHubRank(P); return rk.ranked ? rk.name : uiText('camp.hub.note.points', { points: rk.points }); };
-CAMP_HUB.note.launch = (P, ctx) => { const t = campHubTarget(P, ctx && ctx.hub); return uiText(t.replay ? 'camp.hub.note.replay' : 'camp.hub.note.launch', { n: t.i + 1 }); };
+CAMP_HUB.note.launch = (P, ctx) => { const t = campHubTarget(P, ctx && ctx.hub); return uiText(t.replay ? 'camp.hub.note.replay' : (P && (P.levelDone | 0) === t.level && t.level === (P.level | 0)) ? 'camp.hub.note.pick' : 'camp.hub.note.launch', { n: t.i + 1 }); };
 function campHubRows(P, ids, ctx) { // ctx: the scene's data (a dock passes { dock, camp, P }): what a row's note may read besides the progress
   return campHubIds(ids).map((id, k) => { let note = ''; try { note = String(CAMP_HUB.note[id](P, ctx)); } catch (e) { note = ''; } return { id, n: k + 1, name: uiText('camp.hub.row.' + id), note }; });
 }
