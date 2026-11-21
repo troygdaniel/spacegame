@@ -1,53 +1,70 @@
-# Long Haul (working title)
+# Spacegame (working title: Long Haul)
 
-A browser 2D top-down space game, Elite Dangerous flavoured. Walk around a station, take a call from the board, fly out, fight pirates, land on a planet, bring someone home and get paid. Plain JavaScript on Phaser 3, **no build step, no network, no image or sound files**: every ship, station and planet is drawn in code and every sound is synthesized.
+A browser 2D top-down space game with two modes on one title screen, in plain JavaScript on Phaser 3. **No build step, no network, no image or sound files**: every ship, station and planet is drawn in code and every sound is synthesized.
+
+- **The Campaign** is where the work is now: a **Homeworld-style commander game** with **X-Wing's scripted missions and power management**. You fly Earth's cruiser, a big slow carrier, and direct its small ships. Three levels, nine missions, a story about an alien outpost.
+- **Long Haul** is the first game, an Elite-flavoured trader and rescue game: walk a station, take a call from the board, fly out, fight pirates, land on a planet, bring someone home and get paid. It is finished and shares the engine.
 
 Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.md`).
 
-## The loop (v0.1)
-Station (walk, take the rescue call, board ship) -> Ship bay (the hangar terminal: look the ship over, read the mission, switch, buy, sell, rename and move ships, Enter to launch, Esc to go back) -> Space (fly, fight drones, dock/land with L) -> Surface (walk, find the colonist, protect them, return to ship) -> fly home, dock, get paid.
+## Start here
+
+| If you want to know | Read |
+|---|---|
+| What works today, what is being built, what is open | [`PROJECT_STATUS.md`](PROJECT_STATUS.md) |
+| What comes next, what is benched, what is out | [`ROADMAP.md`](ROADMAP.md) |
+| How it is built and why | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
+| Every Campaign rule and number | [`docs/CAMPAIGN.md`](docs/CAMPAIGN.md) (balance: [`docs/CAMPAIGN-TUNING.md`](docs/CAMPAIGN-TUNING.md)) |
+| How an AI helper (you, ChatGPT) should work with this project | [`docs/WORKING-WITH-AI.md`](docs/WORKING-WITH-AI.md) |
+| Rules for AI agents that change the code | [`CLAUDE.md`](CLAUDE.md) |
+| How to contribute a change | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| Long Haul's design | [`docs/UNIVERSE.md`](docs/UNIVERSE.md), [`docs/ECONOMY.md`](docs/ECONOMY.md) |
+
+## The Campaign in short
+
+**Premise.** The Earth cruiser, a mining ship turned warship, is drafted into a war with an alien fleet. Missions run from the Moon to the asteroid rim (level 1), through the warp to Alpha Centauri and an ancient relic (level 2), to the alien home world (level 3), and end on a reveal: *this is not their home, it is an outpost.*
+
+**What you do.** You fly the cruiser yourself (W A S D, hold Space to fire its eight turrets, F a homing missile) and **command the rest**: fighters (attack, guard, mine), escorts (screen a convoy), the convoys themselves (tuck in, hold, run), scouts. You give orders from three keyboard panels, by typing to the ship's computer, or by voice. Between missions you are in a **ready room** where you read briefings, spend ore on ships, and see your rank. After each battle you pick one of three alien technologies.
+
+**The ideas that make it a commander game.**
+
+- **Power management.** Six pips shared between weapons, shields and engines (like X-Wing's); shields mend by themselves at a rate the shield pips set; three gauges show where the energy goes.
+- **Command time.** While a panel, the map or an order-call prompt is open, the battle slows to a quarter speed, so you have time to decide.
+- **Pilots ask for orders.** Timed radio calls with three choices and real costs.
+- **A mission is a sequence of questions.** Mission 1.1 is the finished example: a patrol turns back, a fork in the road (scout it first), a distress call, an ambush with torpedo boats, a pirate leader who duels your cruiser. Something happens about every minute.
+- **Objectives and bonuses**, a score, and ranks that grow your wing.
+
+The state of each system is in [`PROJECT_STATUS.md`](PROJECT_STATUS.md).
+
 ## Play
 
-Open `index.html` in a browser (Chrome is what it is tested in). Double-clicking the file works; if you prefer a server, run `python3 -m http.server` in this folder and open http://localhost:8000. If you are editing the markdown in `content/`, run `node tools/serve.mjs` instead: it rebuilds `content.generated.js` when you save and the page reloads on **R** (see `docs/MODDING.md` section 4).
-## Files and who owns them
-- src/common.js  shared helpers, global state G, beep(), toast(), go()
-- src/boot.js    every texture is drawn here with shapes (no image files)
-- src/station.js station interior scene
-- src/data_parts.js the five ship parts (shields, weapons, engine, tank, cargo), three tiers each: names, prices, what each tier does, what a station sells; shipStat() in fleet.js applies them, space.js has the shield (points that take hits before the hull, recharging after a pause), the shop in shop.js sells them to the ship you fly (its fit limit and its price multiplier) at the station's stock (docs/UNIVERSE.md 7); tests/parts.mjs checks every effect
-- src/shipmodels.js the six player ships (wren, kite, ox, talon, pathfinder, bastion): each hull drawn in code with its upgrade tiers, its physics circle, nozzles, flame colours and the anchors for the Ship bay callouts (table SHIP_LOOK); shipRefresh() in ships.js draws the active one into the texture 'ship'; tests/shipsheet.mjs makes the picture sheet and checks them
-- src/journal.js the Journal: J in the station (or the Journal row in Pause) lists everyone met in the Drift with their mood, what they think of you, the last thing said and what you learned, from G.chat (docs/NPC-CHAT.md 4 and 5); works with no key; Forget everything needs a second press; tests/journal.mjs checks it
-- src/shipmode.js the Ship bay scene between boarding and flight: the ship in view, its status, the mission, LAUNCH; tests/shipmode.mjs checks it
-- src/hangar.js the hangar terminal inside the Ship bay (docs/UNIVERSE.md 6.3): a panel with FLEET (your six berths: board, move, sell with a second S, rename with R), YARD (the ships this station sells, buy with a second Enter) and CONTROLS; the stage and the status panel show the selected ship and the amber button does what Enter does for it (LAUNCH, BOARD, MOVE HERE, BUY); the rules are src/fleet.js; tests/hangar.mjs checks it
-- src/space.js   flight, combat, dock/land
-- src/surface.js planet surface, colonist escort
-- src/hud.js, src/ui.js credits are one look everywhere: a gold coin and "N CR" (hudStrip and hudCoin in hud.js, crTag for the panels in ui.js; +N green and -N red float on every change); tests/credits.mjs checks it
-- src/enemies.js the pirate types, their AI, salvage pods and the bounty a kill pays (bountyPay on a kill, bountyDock on docking); tests/bounty.mjs checks it
-- src/ships.js   every ship texture (player with upgrade tiers, pirates, Reaver, MULE, civilian, police) and their flames, trails, shield flash, smoke and sparks
-- src/stationart.js Halcyon Station and Kestrel Outpost art (canvas gradients, drawn in code) and their animation: spinning hub and ring, beacons, docking lane; stationBuild picks what a system's station looks like from its `art` (ring, outpost or a look)
-  and the four looks for other systems (stationLook / stationLookFx: hub, foundry, nest, derelict, drawn on first use; Meridian, Brass Reach, Ember and the Roost use them)
-- src/cruise.js in-system fast travel: N nav list, C cruise (8000 px/s, stops 900 px out), and the far bodies of a system; Halcyon is 36000 px in the data and SYSTEM_SCALE (3) times that in the game (src/data_systems.js); tests/cruise.mjs checks it. Interdiction (pirates pull you out of cruise, INTERDICT in cruise.js, dark until two jumps) and the pirate table per system (pirateTable in enemies.js) are checked by tests/interdict.mjs
-- src/art_world.js world art: backdrop, Kepler-4b, asteroids, surface, effects; also planetTexture (rock, ice, gas, lava, ringed; at most six alive) and starTexture (types M K G F A) for other systems; tests/systemart.mjs checks the new art
-- src/art_world.js the world art, drawn in code on 2D canvases (seeded, same every boot): nebula and parallax star layers (no sun, planet or moon in the backdrop: what you see in space is a real body), Kepler-4b, asteroids and ore, the surface (ground, terrain, boulders, pad, crash site, colonist, crawlers) and the effects fxBoom (every s.boom), fxDash, fxPickup, fxDebris
-- src/hyperspace.js the Hyper scene, the watched hyperspace tunnel (star streaks, gates, ribbons, nose bloom, readout). The jump (src/jump.js) plays it; index.html#hyper (or #hyper<ly>, e.g. #hyper24) still opens it on its own, with no game effect
-- src/galaxymap.js the galaxy map overlay (docs/UNIVERSE.md 4.3): the stars as glowing nodes, links and a dashed ring for your jump range, a card with distance, fuel cost, time, pump, danger and why you cannot go; G opens it (src/jump.js), and Enter on a star charges a jump (index.html#galaxy opens it on its own); the eight systems come from a stub table until the systems card; tests/galaxymap.mjs checks it
-- src/jump.js the jump (docs/UNIVERSE.md 2.3): G opens the galaxy map, Enter charges for 4 s (Esc, S or a hit cancels; no charge near a station, a planet or a hostile), the fuel burns when the charge ends, the Hyper scene plays, enterSystem (src/universe.js) puts the ship at the edge facing the star it came from; F calls the fuel ranger; tests/jump.mjs
-- src/pullout.js the pull-out (docs/UNIVERSE.md 5.2): 2% + 1% x the higher danger of the jump's two systems, the tunnel is cut at 40 to 70% (flicker, alarm, collapse in src/hyperspace.js) and the ship drops into deep space (an empty 16000 px system while G.deep is set, src/universe.js): 3 to 5 pirates by danger, no docking, cruise or jump; clear them and the tunnel resumes for the time that was left; a death wakes you at the last station you docked at; a nest has pirates waiting at the entry point; index.html#pullout plays it without the dice; tests/pullout.mjs
-- src/voice.js  optional ship voice (Deepgram text-to-speech, only with the player's own key, see docs/VOICE.md)
-- mods/, mods.generated.js, src/mods.js, tests/mods.mjs  mod packs (docs/MODDING.md 13, docs/MODS.md 9): a folder in mods/ is a pack laid over the game, built on its own and turned on in the Mods screen (O on the Title screen), or picked from a folder with no Node at all; off until turned on; `mods/example/` is a small one to copy; tests/mods.mjs runs it in headless Chrome
-- docs/MODS.md, tools/mods-fields.mjs  the ten-minute guide for modders (change a mission, a character, a pirate, a part, a salvage site, the dock and the interface's words; what the game reads today; the errors you will meet). The field reference at the end is written from the schema in src/content.js by `node tools/mods-fields.mjs --write`; tests/modsdoc.mjs (no browser) fails when that table is stale, an example file in the guide is invalid, or a claim about the game's ids or messages is no longer true
-- tools/economy-sim.mjs, docs/ECONOMY.md  the economy in numbers: `node tools/economy-sim.mjs` prints what each loop earns an hour, the prices, the pacing against the plan and the per-system multipliers, from the game's own data files; docs/ECONOMY.md explains them and proposes the numbers for card u-e4-economy. It changes no gameplay; `node tools/economy-sim.mjs check` (smoke step 4y) fails when a code line it copies has changed
-- tools/retro-stats.py, docs/RETRO.md, docs/RETRO-NUMBERS.md  how the build went (14 Nov 2026): `python3 tools/retro-stats.py --logs <test logs>` reads the agentboard board, its chat snapshots, the git history and the test logs and prints the per-card timings, merge conflicts, test-lock waits and idle time; RETRO.md reads them and ranks ten changes by hours saved
-- src/chat.js   optional NPC chat: the adapter (OpenAI or Anthropic, one key per provider, only with the player's own key); the setup is in Settings; the bar chat box, memory and Journal follow in later cards (see docs/NPC-CHAT.md)
-- src/settings.js the Settings screen (Title S, Pause > Settings): SOUND (volume, mute, ship voice and its voice), KEYS (Deepgram, OpenAI, Anthropic: paste, last four only, Test, Forget; chat provider and model; the cost note), CONTROLS (every key, from src/data_controls.js), CONTENT (which pack runs, what it ignored), RESET (Reset game and Forget all keys, each with a second press); V, C and P on the title open the matching section; tests/settings.mjs checks it with a mocked fetch
-- src/data_controls.js the one table of every key of the game: Settings > Controls, the H help page and the Ship bay's key list are built from it
-- src/interior.js the station interior art and animation
-- the bar's six characters (JUNO, TAMSIN, DEX, MOSS, SABLE, IDA KETTER) are rows of NPCS in src/shop.js with their lines, reactions, voice name and persona card (docs/NPC-CHAT.md 3.1); IDA is there only after the first rescue is paid; their sprites are drawn in src/interior.js; tests/npcs.mjs checks them
-- src/main.js    Phaser config and scene list
-- src/content.js, tools/build-content.mjs, content/, content.generated.js  content in markdown (docs/MODDING.md): src/content.js is the parser, schema and validator (no Phaser; Node and the browser use the same file), `node tools/build-content.mjs` turns content/*.md into content.generated.js (`--watch`, `--strict`, `--check`), content/_templates/ has one starting file per type; tests/content.mjs checks it. The game reads the pirates (raider, drone), the four calls, the bar's six characters, nine ship part tiers, the salvage sites and signals, the interface words (text/ui.md) and the dock through src/contenttables.js; tests/contentproof.mjs pins that the files over their defaults change nothing and that edits change exactly what they say. The eight systems and six stations are read and kept, and `worldAt(systemId)` in src/contenttables.js gives any of them in the shape of a `SYSTEMS` row (nothing plays from it yet; tests/worldat.mjs pins that Halcyon built from its files is the code's row)
-- tests/nodegame.mjs  the game's scripts in plain Node (no Chrome, no Phaser, no lock): a test that only calls functions and reads tables uses `nodeGame()` and runs in a second; which tests are which, and why: docs/TESTING.md
-- tests/cdp.mjs, tests/lock.mjs  the headless Chrome harness; lock.mjs lets only one Chrome run at a time across worktrees (a busy Mac made DevTools calls time out), hands the lock out in the order runs arrived, optionally lets two run while the Mac is quiet (`LONGHAUL_LOCK_SLOTS=2`), `node tests/lock.mjs status` shows who holds it and who waits, and it removes orphan longhaul-* Chrome profiles; tests/locktest.mjs checks it
-- tests/ledger.mjs, tests/ledger-on.mjs, tools/test-ledger.mjs  the test-run ledger: every test run appends one line (suite, seconds, seconds waited for the Chrome lock, result, who; counts and times only) to one file shared by every worktree, kept out of git, and `node tools/test-ledger.mjs` prints totals per suite and per day; docs/TESTING.md "The run ledger"
-New files get their own script tag in index.html. Keep edits inside the files your card names.
+Open `index.html` in a browser (Chrome is what it is tested in). Double-clicking the file works; if you prefer a server, run `python3 -m http.server` in this folder and open http://localhost:8000. If you are editing the markdown in `content/`, run `node tools/serve.mjs` instead (http://127.0.0.1:8787/): it rebuilds `content.generated.js` when you save and the page reloads on **R** (see `docs/MODDING.md` section 4).
+
+On the title screen, **K** opens the Campaign; **Enter** starts Long Haul (or the choice the arrows picked, Up and Down or Left and Right); a click on a panel starts that mode. No other key starts a mode (so Alt+Tab or a stray key does nothing). Address options: `?campaign=N` opens Campaign level N at once; `?debug=1` turns on the Campaign's tuning keys.
+
+## Controls
+
+The game's own **H** page lists every key; it is built from `src/data_controls.js`, the one table of keys.
+
+### Campaign
+
+| Key | What it does |
+|---|---|
+| `W A S D` (arrows too) | thrust, turn, brake the cruiser |
+| `Space` (hold) | the turrets fire at ships in reach; they never fire on their own |
+| `F` | fire a homing missile at a big ship |
+| `B` | warp blink hop (once you have that tech) |
+| `Q` `E` `C`, then a row's digit | open the FLEET, SHIP or SYSTEMS panel and pick a row. In an open panel Up and Down highlight a row, Enter does it, Left and Right change the page. FLEET: launch, attack, escort, guard, recall, mine; its pages are stances and convoy orders. SHIP: build a fighter, build an escort, autopilot (Shift for the fast burn), dock at an outpost. SYSTEMS: a pip to weapons, shields or engines, balance, emergency shields |
+| `J` `K` `L`, `;` | direct power keys: a pip to shields, engines, weapons; `;` puts the power back to 2, 2, 2 |
+| `1` `2` `3` | answer a pilot's radio call (while its plate is up); pick a tech on its card |
+| `Tab` | the map of the level: click a mark to set it, Enter flies there, Shift+Enter burns; `V` scouts, `T` takes a lane, `X` clears the goal |
+| `+` `-` `0`, mouse wheel | zoom the view or the map |
+| `I`, `U` | type an order to the ship's computer; hold U and say it |
+| `Esc`, `H`, `P`, `M` | pause, the page of keys, the battle pace (Calm, Normal, Brisk), mute |
+
+(Panel keys are about to move to Z X C so the three panels sit under the left hand; `PROJECT_STATUS.md` says when it has landed.)
+
+### Long Haul
 
 | Where | Keys |
 |---|---|
@@ -62,6 +79,22 @@ New files get their own script tag in index.html. Keep edits inside the files yo
 
 **Saving:** the game saves itself in your browser (`localStorage`, key `longhaul.save.v1`); nothing leaves your machine. To start over, pause with `Esc` and choose *New game* (select it twice to confirm), or clear this site's data in the browser.
 
+## Tech stack
+
+Plain JavaScript (no modules, no bundler) on **Phaser 3** (vendored: `phaser.min.js`). Content text in markdown sealed into `content.generated.js`. Node 22+ for the tests and tools, Chrome for the browser tests. No network access: the optional ship voice (Deepgram) and NPC chat (OpenAI or Anthropic) work only if a player pastes their own key in Settings, and the key stays in that browser. How it fits together: [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+## Tests
+
+```
+node tests/campaign.mjs        # one plain-Node suite, about a second; there are about 160
+bash tests/smoke.sh            # everything (the Chrome ones too), about a minute
+node tools/build-content.mjs --check   # the sealed content is up to date
+node tools/economy-sim.mjs check       # the economy's pinned numbers
+node tools/campaign-bot.mjs --level 1  # bots fly the Campaign: win rate and times per mission
+```
+
+See [`docs/TESTING.md`](docs/TESTING.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## Mod it
 
 - **Today, change the code.** `src/` is about two dozen small plain-JS files, one job each (map below). Edit a number, reload the page. There is nothing to install or compile.
@@ -71,7 +104,7 @@ New files get their own script tag in index.html. Keep edits inside the files yo
 
 Developer shortcuts: `index.html#space`, `#surface`, `#escort` and `#patrol` jump straight into that scene with the mission accepted and do not touch your save. `#hyper` (or `#hyper24` for a 24 light year jump) plays the hyperspace tunnel on its own. `#pullout` plays a jump that is pulled out at half way: the tunnel breaks, deep space with four pirates, then the rest of the tunnel. `#station` and `#bounty` also work but use your save.
 
-## Easy first tweaks
+## Easy first tweaks (Long Haul)
 
 Ten numbers that change how the game feels. Open the file, change the number, reload the page. The ship rows are for the Wren, the ship you start in; the other five hulls have the same fields in the same table.
 
@@ -90,7 +123,7 @@ Ten numbers that change how the game feels. Open the file, change the number, re
 
 The tests pin some of these numbers, so `bash tests/smoke.sh` can fail after a tweak: that is the tests noticing, not the game breaking.
 
-## Code map
+## Code map (Long Haul and the shared engine)
 
 | File | What it does |
 |---|---|
@@ -110,6 +143,8 @@ The tests pin some of these numbers, so `bash tests/smoke.sh` can fail after a t
 | `src/hud.js`, `src/ui.js`, `src/map.js`, `src/meta.js`, `src/audio.js` | the cockpit HUD, the shared panel style, the Tab map and `H` help, the pause menu and save, synthesized sound |
 | `tests/` | tests, in plain Node where no scene is needed and in headless Chrome where one is (`docs/TESTING.md`); `bash tests/smoke.sh` runs them (see `CONTRIBUTING.md`) |
 
+The Campaign has about fifty `src/camp*.js` files; [`ARCHITECTURE.md`](ARCHITECTURE.md) lists what each one does and the file inventory this README used to carry.
+
 ## Contributing
 
-Welcome: see [`CONTRIBUTING.md`](CONTRIBUTING.md). The project's own AI-agent workflow is described in [`docs/AGENTS.md`](docs/AGENTS.md); you do not need it.
+Welcome: see [`CONTRIBUTING.md`](CONTRIBUTING.md). Working with an AI helper: [`docs/WORKING-WITH-AI.md`](docs/WORKING-WITH-AI.md). The project's own AI-agent workflow is described in [`docs/AGENTS.md`](docs/AGENTS.md) and [`CLAUDE.md`](CLAUDE.md); you do not need them to play, mod or contribute.

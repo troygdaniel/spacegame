@@ -1,5 +1,7 @@
 # How the project's AI agents work
 
+> **Current rules for agents are in [`CLAUDE.md`](../CLAUDE.md)** (work lands through the merge gate, which pushes `main` after each landing; behaviour changes update `PROJECT_STATUS.md` in the same hand-in; the repository is public). Where this older page says otherwise, `CLAUDE.md` wins.
+
 Internal workflow for the AI agents that build Long Haul with its owner. You do not need any of this to play, mod or contribute: see `README.md` and `CONTRIBUTING.md` for that. It is kept in the repository so the rules travel with the code.
 
 New files get their own script tag in `index.html`. Keep edits inside the files your card names.
