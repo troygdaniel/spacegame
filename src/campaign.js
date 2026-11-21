@@ -24,7 +24,8 @@ const CAMP = {
     fighter: { len: 22, hit: 6 },          // it was 31 and 8
     escort: { len: 28, hit: 7 },           // it was 40 and 10
     skiff: { len: 28, hit: 9 }, cutter: { len: 34, hit: 12 }, brute: { len: 46, hit: 17 }, // the pirates (card space-game-l1-pirates-traffic): about the hit circles of the raider, the drone and the gunship they fly like (10, 14, 19), a little smaller
-    patrol: { len: 38, hit: 12 }, miner: { len: 36, hit: 14 }                          // the neutral ships
+    patrol: { len: 38, hit: 12 }, miner: { len: 36, hit: 14 },                         // the neutral ships
+    tboat: { len: 44, hit: 16 }, lancer: { len: 44, hit: 16 }                          // the torpedo boats (card space-game-torpedo-boats): the pirates' and the aliens'
   },
   carrier: {
     hull: 600,                             // hit points of the flagship; zero and the level is lost
@@ -294,6 +295,28 @@ const CAMP = {
       patrol: { name: 'Patrol', hp: 120, speed: 320, accel: 400, turn: 2.2, color: 0x5fd8c0, range: 720, dmg: 5, shot: [650, 950], bullet: 520, help: 2600, r: 500 }, // armed: it ranges round its post (r px), shoots a pirate or an alien within range of it, and goes to a hauler or miner under fire within `help` px of its post
       miner:  { name: 'Miner', hp: 70, speed: 130, accel: 170, turn: 1.4, color: 0xc9d4e8, fear: 900, work: [9, 15], dock: [3, 6], r: 400 }                                          // unarmed: it works the nearest rocks of the mission (or the row's `field`), goes home to its place and docks, and goes out again; it runs home when a hostile comes within `fear` px
     }
+  },
+  torpedo: {                               // torpedo boats and their torpedoes (card space-game-torpedo-boats; src/camptorpedo.js; docs/CAMPAIGN.md "Torpedo boats"): a slow hull that ignores the fighters and runs at the convoy, the miners or the cruiser and launches a heavy torpedo at close range. A wave row names a boat in `ships`
+    boats: {                               // the kinds a wave row's `ships` may name. faction: 'pirate' (the pirates' words, breaks off like a pirate) or 'alien'. hp, speed (px/s), accel, turn (rad/s): the hull and the flying; color: its mark on the radar and the map; ore: what its wreck holds; the picture is CAMP_ART's
+      tboat:  { faction: 'pirate', name: 'Torpedo boat', hp: 60, speed: 150, accel: 130, turn: 1.4, color: 0xe8b84a, ore: 14, // the pirates' boat: a slow hull, the pirates' amber
+                prey: { freighter: 0.5, miner: 0.6, carrier: 1.1 },        // what it goes for, by distance times weight, the least wins: the haulers and the miners before the cruiser; fighters and escorts are not in it (it flies past them)
+                tube: { n: 2, reload: 9000, range: 640, windup: 1200, aim: 0.5 } }, // n torpedoes in all; reload ms between two; range px it fires from; windup ms it holds still to arm (kill it then and it fires nothing); aim rad the nose may be off its prey
+      lancer: { faction: 'alien',  name: 'Lancer',       hp: 75, speed: 160, accel: 140, turn: 1.3, color: 0xff8c3a, ore: 16, // the aliens' boat: a little tougher and quicker, the gunship's orange
+                prey: { freighter: 0.5, miner: 0.6, carrier: 1.1 },        // the same prey
+                tube: { n: 2, reload: 8000, range: 700, windup: 1000, aim: 0.5 } } // a longer reach and a quicker tube
+    },
+    torp: {                                // the torpedo
+      hp: 14,                              // hit points: a turret shot takes off 4 (so four shots), a missile or its blast kills it
+      speed: 250, launch: 90, accel: 200,  // px/s top speed, px/s it leaves the tube at, px/s per s (slower than the carrier's burn, faster than a hauler)
+      turn: 1.3,                           // rad/s it turns toward its prey (it can be dodged by a fast ship, not by a hauler)
+      life: 8000,                          // ms of fuel: out of it the torpedo goes out with no bang (a 'fizzle' event)
+      dmg: 70,                             // hit points the ship it hits loses (the cruiser's shield first; a hauler has 200, a miner 70, a fighter 36)
+      blast: 90, splash: 0.4,              // px: every other ship of yours or the neutrals this close takes splash (0.4) of the damage
+      fuze: 6, r: 8,                       // px: how far from a ship's edge it goes off, and its own hit circle (a shot or a missile that touches it hurts it)
+      bias: 200,                           // px: the turrets shoot a torpedo before an alien that is nearer by up to this much
+      lock: 1400                           // px: F flies at a torpedo this close to the carrier when there is no mothership in reach; a torpedo with no prey takes the nearest ship inside this
+    },
+    sayEvery: { arming: 10000, launch: 6000, down: 5000, hit: 3000 } // ms: the radio says each kind of line at most this often
   },
   warn: [0.5, 0.25],                       // shares of Earth's shield and of the carrier's hull at which the ship's voice warns (each once, and again if it mends past the share and falls back)
   mother: {
@@ -593,7 +616,7 @@ function campPaceMult(p) {
   if (typeof p === 'number' && p > 0 && isFinite(p)) return p;
   const m = CAMP.pace.modes.find(x => x.id === p); return m ? m.mult : 1;
 }
-const campSmall = kind => kind === 'fighter' || kind === 'escort' || !!PIRATES[kind] || !!CAMP.pirate.kinds[kind]; // a small ship: the ones the pace scales (fighters and escorts of the wing, the aliens that are not the mothership or a tower)
+const campSmall = kind => kind === 'fighter' || kind === 'escort' || !!PIRATES[kind] || !!CAMP.pirate.kinds[kind] || !!CAMP.torpedo.boats[kind]; // a small ship: the ones the pace scales (fighters and escorts of the wing, the aliens that are not the mothership or a tower)
 // the pace is put on a ship from the numbers it was made with (u.base), so it can change in play and come back to Brisk exactly
 function campPaceShip(C, u) {
   if (!u.base) return;
@@ -643,6 +666,7 @@ function campNew(level, techs, opts) {
   (L.rocks || []).forEach(f => { for (let i = 0; i < f.n; i++) { const a = rr() * 2 * Math.PI, d = Math.sqrt(rr()) * f.spread; C.rocks.push({ id: 'rock-' + (C.nextId++), x: f.at[0] + Math.cos(a) * d, y: f.at[1] + Math.sin(a) * d, hp: CAMP.ore.rockHp, maxHp: CAMP.ore.rockHp, r: CAMP.ore.rockR, ore: CAMP.ore.rock, cutAt: -1e9 }); } }); // asteroids: a laser cuts one, and it breaks into a chunk of ore
   (L.guards || []).forEach(g => { const a = campSpawn(C, g.kind, g.at[0], g.at[1]); if (a) { a.hold = true; a.guard = true; a.goal = 'carrier'; a.post = { x: g.at[0], y: g.at[1] }; } }); // guard: a kill objective 'guards' counts them; a guard's post: where it goes back to when it loses you
   if (typeof campTrafficNew === 'function') campTrafficNew(C); // the neutral ships of the level: patrols and other miners (src/camppirates.js)
+  if (typeof campTorpedoNew === 'function') campTorpedoNew(C); // the torpedoes in flight and their counts (src/camptorpedo.js)
   campAnomNew(C, opts.found); // the cloaked caches of the level (src/campanomaly.js); what was looted in earlier flights stays looted, and its weapons are yours
   return C;
 }
@@ -665,6 +689,9 @@ function campSpawn(C, kind, x, y) {
   } else if (CAMP.pirate.kinds[kind]) { // a pirate: it flies and shoots like its base kind of PIRATES, with its own hull and damage; the hostile side, faction 'pirate'
     const k = CAMP.pirate.kinds[kind], d = Object.assign({}, PIRATES[k.base], { hp: k.hp, dmg: k.dmg, radar: k.color });
     Object.assign(u, { team: 'alien', faction: 'pirate', def: d, hp: k.hp * C.hpS, r: CAMP.size[kind].hit, vmax: d.max, accel: d.speed, turn: d.turn * 60 });
+  } else if (CAMP.torpedo.boats[kind]) { // a torpedo boat: slow, no gun, a tube (src/camptorpedo.js); the hostile side, the pirates' or the aliens'
+    const k = CAMP.torpedo.boats[kind];
+    Object.assign(u, { team: 'alien', faction: k.faction, boat: true, def: { key: kind, speed: k.accel, max: k.speed, hp: k.hp }, hp: k.hp * C.hpS, r: CAMP.size[kind].hit, vmax: k.speed, accel: k.accel, turn: k.turn, tubes: k.tube.n, tubeAt: 0, arming: 0, tgt: '' });
   } else if (CAMP.traffic.kinds[kind]) { // a neutral ship: a patrol or a miner
     const k = CAMP.traffic.kinds[kind];
     Object.assign(u, { team: 'neutral', faction: 'neutral', hp: k.hp, r: CAMP.size[kind].hit, vmax: k.speed, accel: k.accel, turn: k.turn });
@@ -707,7 +734,7 @@ function campKill(C, u) {
   C.events.push({ type: 'boom', x: u.x, y: u.y, big: u.kind === 'carrier' || u.kind === 'mother', id: u.id, kind: u.kind });
   if (u.team === 'alien') {
     C.kills++;
-    const ore = CAMP.ore.wreck[u.kind] || (CAMP.pirate.kinds[u.kind] || {}).ore; if (ore) C.pickups.push({ id: 'wreck-' + (C.nextId++), kind: 'wreck', x: u.x, y: u.y, ore, born: C.t });
+    const ore = CAMP.ore.wreck[u.kind] || (CAMP.pirate.kinds[u.kind] || {}).ore || (CAMP.torpedo.boats[u.kind] || {}).ore; if (ore) C.pickups.push({ id: 'wreck-' + (C.nextId++), kind: 'wreck', x: u.x, y: u.y, ore, born: C.t });
     if (u.kind === 'mother') campWin(C, 'mother');
     else if (u.kind === 'tower' && (C.L.win === 'towers' || C.L.objectives) && !C.ships.some(s => s.kind === 'tower' && s.hp > 0)) campWin(C, 'towers'); // the last tower of the level
   }
@@ -906,6 +933,7 @@ function campTick(C, dt) {
   campDogPair(C); // the fighters and the raiders pair off, one on one (src/campdogfight.js)
   C.ships.forEach(u => { if (u.hp > 0 && u.kind !== 'carrier') campAI(C, u, dt); });
   campBullets(C, dt);
+  if (typeof campTorpedoes === 'function') campTorpedoes(C, dt); // the torpedoes fly, hit and go off (src/camptorpedo.js)
   campBeam(C, dt);
   campMissiles(C, dt);
   campScoutsStep(C, dt); // the scouts take what they touch before anyone else does (and a Fast burn leaves them behind)
@@ -952,7 +980,7 @@ function campSchedule(C) {
     st.started = true; st.at = sec;
     const goal = w.goal || 'earth', ahead = w.ahead != null ? campAhead(C, w) : null, org = ahead ? [ahead.x, ahead.y] : (w.from || [C.carrier.x + 2500, C.carrier.y]); // ahead: the wave comes out of the dark this many px in front of a convoy (its heading), the one named (along) or the first flying
     Object.keys(w.ships).forEach(kind => {
-      for (let k = 0; k < w.ships[kind]; k++) { const a = campSpawn(C, kind, org[0] + campBetween(C, -300, 300), org[1] + campBetween(C, -300, 300)); if (a) { a.goal = goal; a.wave = i; a.rot = ahead ? Math.atan2(ahead.y - a.y, ahead.x - a.x) : Math.atan2(-a.y, -a.x); if (a.faction === 'pirate') { a.prey = w.prey || 'any'; if (w.breakAt != null) a.breakAt = w.breakAt; } } }
+      for (let k = 0; k < w.ships[kind]; k++) { const a = campSpawn(C, kind, org[0] + campBetween(C, -300, 300), org[1] + campBetween(C, -300, 300)); if (a) { a.goal = goal; a.wave = i; a.rot = ahead ? Math.atan2(ahead.y - a.y, ahead.x - a.x) : Math.atan2(-a.y, -a.x); if (a.faction === 'pirate' || a.boat) { a.prey = w.prey || 'any'; if (w.breakAt != null && a.faction === 'pirate') a.breakAt = w.breakAt; } } }
     });
     if (w.mother) { const m = campSpawn(C, 'mother', w.mother[0], w.mother[1]); m.goal = 'earth'; m.wave = i; const hp = campMissionPlace(C) || { x: 0, y: 0 }; m.rot = Math.atan2(hp.y - m.y, hp.x - m.x); }
     if (w.ambush) C.events.push({ type: 'alarm' }); // the surprise: the scene sounds the alarm
@@ -1075,6 +1103,7 @@ function campTurrets(C) {
   campTurretPlace(C);
   C.turrets.forEach((tu, i) => {
     let best = null, bd = reach; al.forEach(u => { const d = campDist(u, tu) - u.r; if (d <= bd) { bd = d; best = u; } });
+    if (C.torpedoes && C.torpedoes.length) { const tp = campTorpedoPick(C, tu, reach); if (tp && (!best || tp.d <= bd + CAMP.torpedo.torp.bias)) best = tp.t; } // a torpedo in reach is shot before an alien that is nearer by less than torp.bias (src/camptorpedo.js)
     tu.target = best ? best.id : ''; if (best) tu.aim = campLead(C, tu, best);
     let rock = null; // no alien in reach: the same lasers cut the nearest rock (docs/CAMPAIGN.md, Mining)
     if (!best) { let rd = reach; C.rocks.forEach(r => { const d = campDist(r, tu) - r.r; if (r.hp > 0 && d <= rd) { rd = d; rock = r; } }); if (rock) tu.aim = Math.atan2(rock.y - tu.y, rock.x - tu.x); }
@@ -1226,6 +1255,7 @@ function campAI(C, u, dt) {
   if (u.kind === 'tower') return campTowerAI(C, u, dt);
   if (u.kind === 'freighter') return campConvoyAI(C, u, dt);
   if (u.kind === 'mother') return campMotherAI(C, u, dt);
+  if (u.boat) return campTorpedoBoatAI(C, u, dt);
   if (u.faction === 'pirate') return campPirateAI(C, u, dt);
   if (u.team === 'neutral') return campTrafficAI(C, u, dt);
   if (u.team === 'alien') return campAlienAI(C, u, dt);
@@ -1496,6 +1526,7 @@ function campBullets(C, dt) {
         campHurt(C, u, b.dmg, b.from); if (!b.beam) { b.dead = true; return; }
       }
     }
+    if (C.torpedoes && C.torpedoes.length && (b.team === 'earth' || b.team === 'neutral') && campTorpedoShot(C, b, px, py)) return; // a torpedo in the way (src/camptorpedo.js)
     if (C.earth && b.team === 'alien' && campSegHit(px, py, b.x, b.y, C.earth.x, C.earth.y, C.earth.r)) { // Earth is hit (a level with no Earth has none to hit)
       b.dead = true; if (!C.god) C.earth.shield -= b.dmg * CAMP.alien.earthDamage; C.earth.hitAt = C.t; C.events.push({ type: 'earthhit', x: b.x, y: b.y }); // god mode (a debug key, src/campdebug.js): Earth's shield does not fall either
       if (C.earth.shield <= 0) { C.earth.shield = 0; if (C.earth.loseWhy === 'base') campEnd(C, 'lost', 'base'); else campEnd(C, 'lost', 'earth'); }
@@ -1511,7 +1542,7 @@ function campBullets(C, dt) {
 const campBig = u => CAMP.missile.bigKinds.indexOf(u.kind) >= 0;
 function campMissileTarget(C, from) { // the mothership if it is in reach, else the nearest big alien in reach (of `from`: the carrier unless a missile asks)
   const p = from || C.carrier, big = campAliens(C).filter(u => campBig(u) && campDist(u, p) <= CAMP.missile.lock);
-  return big.find(u => u.kind === 'mother') || campNearest(big, p) || null;
+  return big.find(u => u.kind === 'mother') || (typeof campTorpedoLock === 'function' && campTorpedoLock(C, p)) || campNearest(big, p) || null; // a torpedo inside torp.lock goes before the nearest big ship (src/camptorpedo.js)
 }
 function campFire(C, tg) { // one missile out of the tube: the magazine is a missile less, the launcher cycles
   const k = CAMP.missile, c = C.carrier;
@@ -1538,10 +1569,11 @@ function campMissiles(C, dt) {
     if (tg) m.rot = campRot(m.rot, Math.atan2(tg.y - m.y, tg.x - m.x), k.turn * dt);
     m.sp = Math.min(k.speed, m.sp + k.accel * dt); m.vx = Math.cos(m.rot) * m.sp; m.vy = Math.sin(m.rot) * m.sp;
     const px = m.x, py = m.y; m.x += m.vx * dt; m.y += m.vy * dt;
-    const hit = C.ships.find(u => u.team === 'alien' && u.hp > 0 && campBig(u) && campSegHit(px, py, m.x, m.y, u.x, u.y, u.r + k.fuze));
+    const hit = C.ships.find(u => u.team === 'alien' && u.hp > 0 && campBig(u) && campSegHit(px, py, m.x, m.y, u.x, u.y, u.r + k.fuze)) || (C.torpedoes && C.torpedoes.length ? campTorpedoFuze(C, px, py, m) : null); // a torpedo sets the fuze off too
     if (hit) { // it goes off: everything near it is hurt, a big ship most
       m.dead = true; C.events.push({ type: 'mboom', x: m.x, y: m.y, r: k.blast });
       campAliens(C).forEach(u => { if (campDist(u, m) <= k.blast + u.r) campHurt(C, u, campBig(u) ? k.big : k.small, C.carrier.id); });
+      if (C.torpedoes && C.torpedoes.length) campTorpedoBlast(C, m, k.blast, k.big); // a torpedo in the blast is gone
     } else if (m.life <= 0) { m.dead = true; C.events.push({ type: 'mfizzle', x: m.x, y: m.y, id: m.id }); }
   });
   C.rockets = C.rockets.filter(m => !m.dead);
@@ -1666,7 +1698,7 @@ function campBonuses(C) {
   return (C.L.bonus || []).map(b => {
     let ok = false;
     if (b.type === 'time') ok = campMissionClock(C) <= b.secs; else if (b.type === 'lost') ok = C.lostShips <= b.n; else if (b.type === 'hull') ok = C.carrier.hp >= C.carrier.maxHp * b.pct / 100;
-    else if (b.type === 'ore') ok = C.ore >= b.n; else if (b.type === 'sold') ok = C.sold >= b.n; else if (b.type === 'anomaly') ok = campAnomFound(C, b.anomaly); else if (b.type === 'delivered') ok = C.delivered >= C.L.convoys.length; else if (b.type === 'neutrals') ok = C.neutralsLost <= (b.n | 0);
+    else if (b.type === 'ore') ok = C.ore >= b.n; else if (b.type === 'sold') ok = C.sold >= b.n; else if (b.type === 'anomaly') ok = campAnomFound(C, b.anomaly); else if (b.type === 'delivered') ok = C.delivered >= C.L.convoys.length; else if (b.type === 'neutrals') ok = C.neutralsLost <= (b.n | 0); else if (b.type === 'torpedoes') ok = ((C.torpStat || {}).hit | 0) <= (b.n | 0);
     return { id: b.id, type: b.type, text: b.text, secs: b.secs, n: b.n, pct: b.pct, anomaly: b.anomaly, ok, points: ok ? CAMP.score.bonus : 0 };
   });
 }
