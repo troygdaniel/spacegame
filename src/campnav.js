@@ -270,6 +270,17 @@ function campNavEdge(dx, dy, W_, H_, m, keep) {
   }
   return { x, y, angle: Math.atan2(cy + dy - y, cx + dx - x) };
 }
+// where a label of w by h px, centred on (x, y), sits so that it stays on the screen and out of the keep rectangles (the HUD's gauges, the radar, the message band, the key line: CAMP.nav.arrow.keep):
+// it is pushed out of each one it overlaps by the shortest way, then back inside the screen; { x, y } (wrap-up hunt of level 3: the arrow's label ran into the radar's rim)
+function campNavLabelAt(x, y, w, h, keep, W_, H_) {
+  const hw = w / 2, hh = h / 2, ox = Math.max(hw + 4, Math.min(W_ - hw - 4, x)), oy = Math.max(hh + 4, Math.min(H_ - hh - 4, y)), K = keep || [];
+  const hits = (cx, cy) => K.some(r => cx + hw > r[0] && cx - hw < r[2] && cy + hh > r[1] && cy - hh < r[3]);
+  const onScreen = (cx, cy) => cx - hw >= 4 && cx + hw <= W_ - 4 && cy - hh >= 4 && cy + hh <= H_ - 4;
+  const cands = [{ x: ox, y: oy }];
+  K.forEach(r => { cands.push({ x: r[0] - hw - 6, y: oy }, { x: r[2] + hw + 6, y: oy }, { x: ox, y: r[1] - hh - 6 }, { x: ox, y: r[3] + hh + 6 }); });
+  const best = cands.filter(c => onScreen(c.x, c.y) && !hits(c.x, c.y)).sort((a, b) => Math.hypot(a.x - ox, a.y - oy) - Math.hypot(b.x - ox, b.y - oy))[0];
+  return best ? { x: best.x, y: best.y } : { x: ox, y: oy }; // the nearest place that is on the screen and out of every rectangle; none (a screen full of them): where it was put
+}
 // the arrow at the goal: scroll { x, y }: the camera's top left in the world. null when the goal is on the screen, near, or there is none. { x, y, angle, dist, name }
 function campNavArrow(C, scroll, W_, H_, zoom) { // zoom: the camera's (1 when it has none): a point is (its offset from the middle of the view) times the zoom from the middle of the screen
   const g = campNavGoal(C); if (!g || !C.carrier) return null;

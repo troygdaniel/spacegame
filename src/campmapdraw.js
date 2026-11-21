@@ -180,7 +180,12 @@ function campMapPaint(s, time) {
     const q = route(goal, gc.goal, 0.55), d = cp ? Math.hypot(goal.x - C.carrier.x, goal.y - C.carrier.y) : 0;
     g.lineStyle(2, gc.goal, 0.5 + 0.5 * pulse).strokeCircle(q.x, q.y, 11 + 4 * pulse);
     mp.goalText.setVisible(true).setPosition(q.x, q.y - 22);
-    mp.routeText.setVisible(!!cp).setText(uiText('camp.map.route', { km: campNavKm(d), s: campNavEta(C, d) })).setPosition(cp ? (cp.x + q.x) / 2 : 0, cp ? (cp.y + q.y) / 2 - 10 : 0);
+    mp.routeText.setVisible(!!cp).setText(uiText('camp.map.route', { km: campNavKm(d), s: campNavEta(C, d) }));
+    if (cp) { // beside the line, where it is on no name: the whole-system map has the belts' names on the route
+      const boxes = (mp.nameObjs || []).filter(t => t && t.visible !== false && !t.gone).map(t => ({ x: t.x - t.width / 2, y: t.y - t.height / 2, w: t.width, h: t.height }));
+      const spot = campMapFreeSpot(campMapRouteSpots(cp, q), mp.routeText.width || 120, mp.routeText.height || 16, boxes) || { x: (cp.x + q.x) / 2, y: (cp.y + q.y) / 2 - 10 };
+      mp.routeText.setPosition(spot.x, spot.y);
+    } else mp.routeText.setPosition(0, 0);
   } else { mp.goalText.setVisible(false); mp.routeText.setVisible(false); }
   if (N) { route({ x: N.x, y: N.y }, gc.select, 0.85); mp.dest.setText(uiText('camp.map.dest', { name: N.name }) + '  ' + campNavKm(Math.hypot(N.x - C.carrier.x, N.y - C.carrier.y)) + ' km'); } else mp.dest.setText('');
   const chosen = mp.rows[sel]; if (chosen) { const q = pin(X(chosen.x), Y(chosen.y)); g.lineStyle(2, gc.select, 1).strokeRect(q.x - 9, q.y - 9, 18, 18); }
@@ -205,7 +210,7 @@ function campMapPaint(s, time) {
     t.setVisible(true);
     if (ln.head) { t.setText('  ' + ln.head).setColor('#5b7a92'); return; }
     const r = ln.row; t.rowId = r.id;
-    t.setText((ln.i === sel ? '> ' : '  ') + String(r.name).slice(0, 16).padEnd(16) + (campNavKm(r.dist) + ' km').padStart(9)).setColor(ln.i === sel ? '#ffffff' : r.goal ? '#ffd37a' : '#9fe9ff');
+    t.setText((ln.i === sel ? '> ' : '  ') + (String(r.name).length > 16 ? String(r.name).slice(0, 15) + '\u2026' : String(r.name)).padEnd(16) + (campNavKm(r.dist) + ' km').padStart(9)).setColor(ln.i === sel ? '#ffffff' : r.goal ? '#ffd37a' : '#9fe9ff');
   });
   // the legend: what is on the map now
   const rows = campMapLegend(C, marks);
