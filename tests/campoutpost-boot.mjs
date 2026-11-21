@@ -31,10 +31,10 @@ try {
   await t.run(300); await snap('1-start-in-range');
   await t.ev(`(() => { ${SCN}.camp.ore = 100; return 1; })()`); await key('KeyE'); await t.run(500); await snap('2-ship-panel-undocked'); // E opens the SHIP panel
   const texts = await j(`(() => { const s = ${SCN}; return (s.pnl && s.pnl.objs || []).map(o => o.text).filter(Boolean); })()`);
-  check('the SHIP panel undocked: New fighter and New escort say "dock first", the Dock row is ready and names the outpost ("Occator Works"), the recharge row is not a dock matter', texts.filter(x => x === 'dock first').length === 2 && texts.includes('Dock') && texts.includes('Occator Works'), texts.join(' | '));
+  check('the SHIP panel undocked: New fighter and New escort say "dock first", the Dock row is ready and names the outpost ("Occator Works")', texts.filter(x => x === 'dock first').length === 2 && texts.includes('Dock') && texts.includes('Occator Works'), texts.join(' | '));
   await key('Escape');
-  await key('KeyE'); await key('Digit6'); // E, then the dock row (6)
-  check('E, 6 docks: the Campaign scene is paused and the ready room opens as that outpost', await settle(`game.scene.isActive('CampHub') && ${HUB}.hub && ${HUB}.look && ${HUB}.look.name === 'Occator Works'`) && await j(`${SCN}.scene.isPaused() && ${SCN}.docked === true && ${SCN}.camp.docked === 'ceres'`));
+  await key('KeyE'); await key('Digit5'); // E, then the dock row (5)
+  check('E, 5 docks: the Campaign scene is paused and the ready room opens as that outpost', await settle(`game.scene.isActive('CampHub') && ${HUB}.hub && ${HUB}.look && ${HUB}.look.name === 'Occator Works'`) && await j(`${SCN}.scene.isPaused() && ${SCN}.docked === true && ${SCN}.camp.docked === 'ceres'`));
   await t.run(1200); await snap('3-dock-room-build');
   check('the room has the dock\'s five rows, BUILD first, the ore of the battle on its page', (await shown()).some(x => /^BUILD {2}- {2}OCCATOR WORKS$/.test(x)) && (await shown()).some(x => /^Ore in the store: 100$/.test(x)), (await shown()).join(' | '));
   await key('KeyF'); await key('KeyF'); await t.run(300); await snap('4-dock-room-built');

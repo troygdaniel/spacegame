@@ -189,7 +189,7 @@ sec('J', () => {
 
 sec('K', () => {
   // re-pinned by card space-game-fighter-dogfights (21 Nov 2026): the wing's fighters and the raiders now dogfight, so this seeded fight ends in another state than main b721fe3's. What the pin proves is unchanged: an explicit default is the same battle, and nothing else moves it.
-  const GOLD = {"l1":{"t":120000,"x":-9809.020067,"y":2569.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":136,"kills":8,"missiles":5,"reloadAt":134967,"shots":26,"blinkAt":50033.333333334114,"aliens":0,"ships":9,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]},"l3":{"t":120000,"x":-16939.020067,"y":6039.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":113.6,"kills":8,"missiles":5,"reloadAt":134967,"shots":98,"blinkAt":50033.333333334114,"aliens":0,"ships":3,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]}};
+  const GOLD = {"l1":{"t":120000,"x":-9809.020067,"y":2569.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":150,"kills":8,"missiles":5,"reloadAt":134967,"shots":26,"blinkAt":50033.333333334114,"aliens":0,"ships":9,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]},"l3":{"t":120000,"x":-16939.020067,"y":6039.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":150,"kills":8,"missiles":5,"reloadAt":134967,"shots":98,"blinkAt":50033.333333334114,"aliens":0,"ships":3,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]}};
   const run = lvl => J(`(() => {
     const C = campNew(${lvl}, ['blink'], { seed: 7 }); let shots = 0;
     for (let i = 0; i < 30 * 120 && !C.result; i++) {
@@ -201,7 +201,7 @@ sec('K', () => {
     }
     const c = C.carrier; return { t: Math.round(C.t), x: +c.x.toFixed(6), y: +c.y.toFixed(6), vx: +c.vx.toFixed(6), vy: +c.vy.toFixed(6), rot: +c.rot.toFixed(6), hp: +c.hp.toFixed(4), shield: +C.shield.toFixed(4), kills: C.kills, missiles: C.missiles, reloadAt: Math.round(C.reloadAt), shots, blinkAt: C.blinkAt, aliens: campAliens(C).length, ships: C.ships.length, turretAt: C.turrets.map(t => +t.at.toFixed(3)) };
   })()`);
-  [11, 3].forEach(l => { const a = run(l); check(`K  level ${l === 11 ? '1 (the old belt, fixture 11)' : l}: with no Scout order given a 120 s battle ends in the very pinned state (tests/campsystems.mjs, re-pinned by the dogfights card)`, JSON.stringify(a) === JSON.stringify(GOLD['l' + (l === 11 ? 1 : l)]), JSON.stringify(a)); });
+  [11, 3].forEach(l => { const a = run(l); check(`K  level ${l === 11 ? '1 (the old belt, fixture 11)' : l}: with no Scout order given a 120 s battle ends in the very pinned state (tests/campsystems.mjs, re-pinned by the dogfights card and the shield-auto card)`, JSON.stringify(a) === JSON.stringify(GOLD['l' + (l === 11 ? 1 : l)]), JSON.stringify(a)); });
 });
 console.log(failed ? `CAMP SCOUTS FAIL (${failed} of ${n})` : `CAMP SCOUTS PASS (${n} checks)`);
 process.exit(failed ? 1 : 0);

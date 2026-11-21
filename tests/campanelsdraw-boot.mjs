@@ -53,7 +53,7 @@ async function campaign() {
     check('and then it is a tab again: the list is gone', (await j(`${SC}.pnl.p.fleet.rows.every(r => !r.name.visible)`)) === true);
     await press(t, 'KeyE', 20); await t.run(400);
     const ship = await j(`${SC}.pnl.p.ship.rows.map(r => r.name.text + ': ' + r.suffix.text)`);
-    check('E opens the SHIP list at the right: mine, recharge, what a ship costs (or the ore it needs, or "dock first": ships are built docked, and the belt starts with no ore) the objective row and the dock row', ship.length === 6 && /^Mine ore: \d+ ships$/.test(ship[0]) && /^New fighter: (25 ore|needs 25 ore|dock first)$/.test(ship[2]) && /^Fly to goal: /.test(ship[4]), ship.join(' | '));
+    check('E opens the SHIP list at the right: mine, what a ship costs (or the ore it needs, or "dock first": ships are built docked, and the belt starts with no ore) the objective row and the dock row', ship.length === 5 && /^Mine ore: \d+ ships$/.test(ship[0]) && /^New fighter: (25 ore|needs 25 ore|dock first)$/.test(ship[1]) && /^Fly to goal: /.test(ship[3]), ship.join(' | '));
     check('every row of the open SHIP list fits its column as the browser draws it: the name, its word and the digit side by side with room to spare (the critic saw two of them run together)', (await j(`${SC}.pnl.p.ship.rows.every(r => 30 + r.name.width + r.suffix.width + 10 <= CAMPPANELS_LOOK.list.w)`)) === true, await j(`${SC}.pnl.p.ship.rows.map(r => Math.round(30 + r.name.width + r.suffix.width + 10)).join(' ') + ' of ' + CAMPPANELS_LOOK.list.w`));
     await snap(t, 'ship');
     await press(t, 'KeyQ', 20); await t.run(60); await snap(t, 'crossfade');
