@@ -58,6 +58,7 @@ function campKeysOpen(s, ids) { // ids: the groups to list (the ready room's); t
   const room = Array.isArray(ids); // the ready room's page has its own heading and footer (nothing is waiting behind it)
   put(s.add.text(K.colX[0], 46, uiText(room ? 'camp.keys.roomtitle' : 'camp.keys.title'), uiFont(24, '#38e1ff', { letterSpacing: 2 })), 2);
   put(s.add.text(K.colX[0], 640, uiText(room ? 'camp.keys.roomfooter' : 'camp.keys.footer'), uiFont(14, '#5b7a92')), 2);
+  if (typeof campPaceNow === 'function') put(s.add.text(K.colX[1] + K.colW, 640, uiText('camp.keys.pace', { pace: campPaceNow().name }), uiFont(14, '#ffd37a')).setOrigin(1, 0), 2); // the battle pace, and its key (src/campace.js)
   const L = campKeysLayout(campKeysPage(ids));
   L.cols.forEach((col, c) => {
     let y = K.top;

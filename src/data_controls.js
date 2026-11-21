@@ -145,7 +145,7 @@ const CONTROLS = [
     { k: ['Enter'], t: 'Cards: begin, continue, try again', sub: 'ANYWHERE' },
     { k: ['1-3'], t: 'Pick a salvaged tech after a level', sub: 'ANYWHERE' },
     { k: ['4', '5'], t: 'Refit card: buy a fighter or escort', sub: 'ANYWHERE' },
-    { k: ['M'], t: 'Mute sound', sub: 'ANYWHERE' }
+    { k: ['M', 'P'], t: 'Mute sound; P: battle pace', sub: 'ANYWHERE' }
   ] },
   { id: 'panels', title: 'PANELS', scene: 'Campaign', rows: campPanelKeyRows() }, // the Campaign's two panels, made from CAMP_PANELS above (the H page puts them first)
   { id: 'readyroom', title: 'READY ROOM', scene: 'CampHub', rows: [ // the ready room between missions (src/camphub.js keys, src/camphubscene.js); the Campaign's H page lists them last, and H opens it in the room

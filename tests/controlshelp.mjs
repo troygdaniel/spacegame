@@ -61,7 +61,7 @@ const SCENES = {
 const campBound = () => {
   const keys = bound(CAMP_FILES);
   for (const m of read('src/campaignscene.js').matchAll(/(?<![\w.])c === '([^']+)'/g)) keys.add(norm(m[1]));
-  keys.add(norm(J('CAMPMAP.key')));
+  keys.add(norm(J('CAMPMAP.key'))); keys.add(norm(J('CAMP.pace.key'))); // the battle pace key (src/campace.js), read by the scene as CAMP.pace.key
   const ZOOMCAP = { Equal: '+', Minus: '-', NumpadAdd: '+', NumpadSubtract: '-' }; // the zoom keys (card space-game-campaign-zoom): src/campzoom.js holds them in a table of codes, the table names the caps
   J('Object.keys(CAMPZOOM.keys)').forEach(c => keys.add(ZOOMCAP[c] || norm(c))); J('CAMPZOOM.reset').forEach(c => keys.add(norm(c.replace(/^Numpad/, 'Digit'))));
   if (/\be\.shiftKey\b/.test(read('src/campaignscene.js')) && /\bshift\b/.test(read('src/campmapdraw.js'))) keys.add('SHIFT'); // Shift+Enter: the scene passes the event's shiftKey, the map reads it
