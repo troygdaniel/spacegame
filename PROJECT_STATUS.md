@@ -1,6 +1,6 @@
 # Project status
 
-**Updated: 21 Nov 2026, main at `02a5afa`.** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
+**Updated: 21 Nov 2026, written against main `eb490ec`.** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
 
 ## In one minute
 
@@ -13,7 +13,7 @@ The owner is Troy. He plays the build himself and gives feedback in chat; his fe
 
 ## Running version
 
-There is **no hosted deploy**. Troy runs the game on his own computer with `node tools/serve.mjs` (http://127.0.0.1:8787/), which serves a checkout of `main`. The running version is the commit named at the top of this file; if the page and this file disagree, ask Troy which commit he is on. Anyone else runs it the same way (see `README.md`).
+There is **no hosted deploy**. Troy runs the game on his own computer with `node tools/serve.mjs` (http://127.0.0.1:8787/), which serves a checkout of `main`. The running version is `main` at or just after the commit named at the top of this file (a landing moves `main` by one merge commit); if the page and this file disagree, ask Troy which commit he is on. Anyone else runs it the same way (see `README.md`).
 
 ## What works now, level by level
 
