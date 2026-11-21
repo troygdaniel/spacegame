@@ -2,6 +2,7 @@
 // Card space-game-night-gameplay (docs/night/gameplay.md). It reads the game (src/campaign.js) and changes nothing in it.
 //   node tools/campaign-bot.mjs                      the whole table: levels 1 to 3, every bot, seeds 1 to 12
 //   node tools/campaign-bot.mjs --level 1 --seeds 20 --bots plain,carrier --skill steady
+//   node tools/campaign-bot.mjs --power 4,1,1        the ship's systems for every run: weapons, shields, engines, 6 pips (default 2,2,2: today's numbers exactly)
 //   node tools/campaign-bot.mjs --tech beam          start with these techs (a level's table row says which a player would have)
 //   node tools/campaign-bot.mjs --old               level 1 with the numbers it had before the easier level 1 (Earth's shield 300 and the rest): what Troy's first tries were played on
 //   node tools/campaign-bot.mjs --set alien.hpScale=2 --set alien.damageScale=2   what if: change numbers of the table (CAMP.<path> = a number) for this run only
@@ -18,7 +19,9 @@ const MISSION = arg('mission', null);                        // --mission 2: onl
 const SEEDS = Number(arg('seeds', 12));
 const SKILL = String(arg('skill', 'steady'));
 const TECH = arg('tech', null);
+const POWER = arg('power', null) === null ? null : String(arg('power')).split(',').map(Number); // --power 4,1,1: the ship's systems for every run (weapons, shields, engines; card space-game-campaign-systems); none: 2,2,2, today's numbers
 const MAXSEC = Number(arg('max', 420));
+const PACE = String(arg('pace', 'brisk'));                     // --pace calm|normal|brisk (or a number): the battle pace (card space-game-campaign-pace); brisk is the numbers of the table as they were
 const RANK = String(arg('rank', 'auto'));                     // --rank 0..5: the pilot's rank (src/campranks.js); auto: the rank a player of ordinary scores would have on reaching that mission (1,400 a mission flown before it)
 
 // the ways of playing. launchAt/attackFrom/attackEvery are seconds into the level; escort: the seconds each convoy is named (level 1); cycle: recall the wing when the fighters
@@ -37,6 +40,7 @@ const BOTS = {
   mguard: { name: 'mguard', launchAt: 1, missiles: true },                                                       // launches (the wing only guards) and fires missiles
   troy: { name: 'troy', launchAt: 45, escort: [81], sit: true },                                                   // Troy's first try (play log 20 Nov): launches at 45 s, escorts at 81 s, never attacks, the carrier stays at the base and shoots what comes close
   troyh: { name: 'troyh', launchAt: 45, escort: [81], sit: true, reactive: 3 },                                      // troy, and when the first real damage comes (Earth under 90 percent, or the hull under 80) it reads a hint 3 s later: launch if need be, attack every 5 s, fly out
+  strong: { name: 'strong', launchAt: 1, escort: [9, 56], attackFrom: 12, attackEvery: 5, missiles: true, cycle: 0.45, skill: 'sharp' }, // a strong player (card space-game-wrapup-difficulty): escorts both convoys, missiles on every big ship, recalls and relaunches the hurt wing, and flies sharp
   mcarrier: { name: 'mcarrier', launch: false, missiles: true }                                                  // no wing at all, missiles only
 };
 const SKILLS = { sharp: { gain: 3, thr: 0.15, noise: 0 }, steady: { gain: 2, thr: 0.22, noise: 0.1 }, rough: { gain: 1.5, thr: 0.3, noise: 0.2 } };
@@ -44,6 +48,7 @@ const SKILLS = { sharp: { gain: 3, thr: 0.15, noise: 0 }, steady: { gain: 2, thr
 const OLD = process.argv.includes('--old');
 const SETS = process.argv.map((a, i) => a === '--set' ? process.argv[i + 1] : null).filter(Boolean); // --set alien.hpScale=2 --set alien.damageScale=2: change the table before the run (what-if)
 const g = nodeGame();
+g.run(`window.__PACE = ${isNaN(Number(PACE)) ? JSON.stringify(PACE) : Number(PACE)}`); // the battle pace of every battle of this run
 g.run(`window.__RANK = ${JSON.stringify(RANK)}`); // the pilot's rank for every battle of this run
 if (OLD) g.run(`(() => { CAMP.earth.shield = 300; CAMP.earth.regen = 0; CAMP.mother.hp = 900; CAMP.mother.damage = 12; CAMP.mother.holdAt = 1600; CAMP.mother.spawnEvery = 8000; CAMP.mother.spawnMax = 6; CAMP.levels[1].waves[2].ships.raider = 3; })()`); // the numbers before the easier level 1
 g.run(`(() => {
@@ -79,6 +84,7 @@ g.run(`(() => {
     if (B.sit && a && campDist(a, c) > 900) a = null; // a carrier that stays where it is and fights only what comes close
     if (B.sit && !a) { C.input.thrust = 0; C.input.turn = 0; C.input.fire = false; return; }
     const L = C.L; let goal = a;
+    if (L.place && C.arrivedAt == null) { if (!C.nav || !C.nav.on) { const gp = campNavGoal(C); if (gp) campNavGo(C, gp, true); } return; } // the trip to the mission's place first: the map's Fast click, which the autopilot flies (it sets the input itself)
     if (L.objectives) { // a mission: fly at what its first open objective asks (a point to scan, a cache, the relic, the haulers), and at what comes near
       const first = campObjectives(C).find(o => !o.done) || {}, byD = list => list.sort((p, q) => campDist(p, c) - campDist(q, c))[0];
       if (first.type === 'scan') goal = byD(C.scan.filter(p => !p.got)) || goal; else if (first.type === 'caches') goal = byD(C.caches.filter(k => !k.got)) || goal; else if (first.type === 'relic') goal = C.relic;
@@ -94,12 +100,12 @@ g.run(`(() => {
     const hold = goal === C.relic ? 60 : (goal && goal.got === false ? 40 : (a && goal === a ? (turrets ? reach * 0.6 : 420) : 300));
     C.input.thrust = dist > hold ? 1 : 0;
     const tgt = a || goal, w2 = Math.atan2(tgt.y - c.y, tgt.x - c.x) + st.err, d2 = Math.atan2(Math.sin(w2 - c.rot), Math.cos(w2 - c.rot));
-    C.input.blink = !!(campHas(C, 'blink') && dist > 2200 && Math.abs(d) < 0.25 && C.t - C.blinkAt >= CAMP.tech.blink.cooldown);
+    C.input.blink = !!(campHas(C, 'blink') && dist > 2200 && Math.abs(d) < 0.25 && C.t - C.blinkAt >= campBlinkCooldown(C));
     C.input.fire = !!a && (turrets ? campDist(a, c) - a.r < reach : Math.abs(d2) < sk.thr && campDist(a, c) < reach); // Space held while an alien is in reach
   };
   window.__run1 = (level, seed, techs, B, sk, maxSec, mission) => {
     const rank = window.__RANK === 'auto' ? campRankAt(((level - 1) * 3 + (mission | 0)) * 1400) : Number(window.__RANK) | 0; // the ranks card: the wing of the rank
-    const C = window.C = campNew(level, techs, { seed, mission: mission | 0, rank });
+    const C = window.C = campNew(level, techs, { seed, mission: mission | 0, rank, power: ${JSON.stringify(POWER)}, pace: window.__PACE });
     const M = window.__M = { hitC: {}, drainE: {}, waves: [], clear: [], idle: 0, first: null, minHull: 1e9, recalls: 0, earthSum: 0 };
     const st = {}, total = maxSec * 30, hull0 = C.carrier.hp;
     let wavesSeen = 0, started = false, prevAl = 0;
@@ -133,8 +139,9 @@ export function techsFor(level, override) {
   if (override && override !== true) return String(override).split(',').filter(Boolean);
   return JSON.parse(g.run(`JSON.stringify([1, 2].filter(n => n < ${level}).map(n => campTechChoices(n)[0]))`)); // the first tech each earlier level offers, as the address does
 }
+export function setPace(p) { g.run(`window.__PACE = ${typeof p === 'number' ? p : JSON.stringify(p)}`); } // the battle pace of the runs that follow (a test uses it; the CLI has --pace)
 export function run(level, seed, botName, skill, techs, maxSec = MAXSEC, mission = 0) {
-  const B = BOTS[botName], sk = SKILLS[skill];
+  const B = BOTS[botName], sk = SKILLS[B.skill || skill]; // a bot may bring its own skill
   return JSON.parse(g.run(`JSON.stringify(__run1(${level}, ${seed}, ${JSON.stringify(techs)}, ${JSON.stringify(B)}, ${JSON.stringify(sk)}, ${maxSec}, ${mission | 0}))`));
 }
 const med = a => { const s = a.filter(x => x != null).sort((p, q) => p - q); return s.length ? s[Math.floor((s.length - 1) / 2)] : null; };

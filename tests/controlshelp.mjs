@@ -52,6 +52,7 @@ const SCENES = {
   ship: ['shipmode', 'hangar'].concat(EVERYWHERE),
   flight: SPACE_FILES.concat(EVERYWHERE),
   surface: ['surface'].concat(EVERYWHERE),
+  readyroom: ['camphub', 'camphubscene', 'campdock', 'campkeys', 'campbriefdraw'].concat(EVERYWHERE), // the ready room (cards space-game-campaign-replay, -briefing: the big briefing's keys are in campbriefdraw.js): its keys are in camphub.js (the row keys), camphubscene.js and campdock.js (the dock's rows); the digits are routed by campHubDigit, so 1 to 5 are added below
   title: ['title', 'contentui', 'settings', 'mods'],
   any: EVERYWHERE
 };
@@ -60,7 +61,7 @@ const SCENES = {
 const campBound = () => {
   const keys = bound(CAMP_FILES);
   for (const m of read('src/campaignscene.js').matchAll(/(?<![\w.])c === '([^']+)'/g)) keys.add(norm(m[1]));
-  keys.add(norm(J('CAMPMAP.key')));
+  keys.add(norm(J('CAMPMAP.key'))); keys.add(norm(J('CAMP.pace.key'))); // the battle pace key (src/campace.js), read by the scene as CAMP.pace.key
   const ZOOMCAP = { Equal: '+', Minus: '-', NumpadAdd: '+', NumpadSubtract: '-' }; // the zoom keys (card space-game-campaign-zoom): src/campzoom.js holds them in a table of codes, the table names the caps
   J('Object.keys(CAMPZOOM.keys)').forEach(c => keys.add(ZOOMCAP[c] || norm(c))); J('CAMPZOOM.reset').forEach(c => keys.add(norm(c.replace(/^Numpad/, 'Digit'))));
   if (/\be\.shiftKey\b/.test(read('src/campaignscene.js')) && /\bshift\b/.test(read('src/campmapdraw.js'))) keys.add('SHIFT'); // Shift+Enter: the scene passes the event's shiftKey, the map reads it
@@ -79,7 +80,8 @@ const group = id => groups.find(x => x.id === id);
 
 console.log('1. every key the help names is bound');
 for (const gr of groups) {
-  const have = gr.id === 'flight' ? new Set([...bound(SCENES.flight), ...spaceOwn]) : (gr.id === 'campaign' || gr.id === 'panels') ? campBound() : bound(SCENES[gr.id] || []);
+  const roomBound = () => { const k = bound(SCENES.readyroom); ['1', '2', '3', '4', '5'].forEach(d => k.add(d)); return k; }; // the room hands every digit to campHubKey, which picks the row whose place it is
+  const have = gr.id === 'readyroom' ? roomBound() : gr.id === 'flight' ? new Set([...bound(SCENES.flight), ...spaceOwn]) : (gr.id === 'campaign' || gr.id === 'panels') ? campBound() : bound(SCENES[gr.id] || []);
   if (gr.id === 'title') continue; // the Title reads keys by e.code in one long line of its own; its rows are not what changed and are checked in tests/settings.mjs
   const missing = [];
   gr.rows.forEach(r => r.k.forEach(cap => capKeys(cap).forEach(k => { if (!have.has(k)) missing.push(cap + ' (' + r.t + ')'); })));
@@ -145,7 +147,7 @@ console.log('6. the Campaign: every bound key is on the table');
   const bnd = campBound();
   const silent = [...bnd].filter(k => !named.has(k) && !(ALSO[k] && named.has(ALSO[k])));
   check('no key the Campaign binds is missing from the CAMPAIGN and PANELS groups', silent.length === 0, 'bound and not named: ' + silent.join(' ') + '   bound: ' + [...bnd].join(' '));
-  check('the scan saw the keys it should (fly, fire, blink, the panels\' digits, the map, cards, pause, title, help, strip, voice, mute)', ['W', 'A', 'S', 'D', 'SPACE', 'F', 'Q', '1', '2', '5', 'TAB', 'X', 'ENTER', 'ESC', 'T', 'H', 'I', 'U', 'M'].every(k => bnd.has(k)), ['W', 'A', 'S', 'D', 'SPACE', 'F', 'Q', '1', '2', '5', 'TAB', 'X', 'ENTER', 'ESC', 'T', 'H', 'I', 'U', 'M'].filter(k => !bnd.has(k)).join(' '));
+  check('the scan saw the keys it should (fly, fire, blink, the panels\' digits, the map, cards, pause, title, help, strip, voice, mute)', ['W', 'A', 'S', 'D', 'SPACE', 'F', 'B', '1', '2', '5', 'TAB', 'X', 'ENTER', 'ESC', 'T', 'H', 'I', 'U', 'M'].every(k => bnd.has(k)), ['W', 'A', 'S', 'D', 'SPACE', 'F', 'B', '1', '2', '5', 'TAB', 'X', 'ENTER', 'ESC', 'T', 'H', 'I', 'U', 'M'].filter(k => !bnd.has(k)).join(' '));
   const scene = read('src/campaignscene.js');
   check('the scene hands every digit to the panels (campPanelKey) and has no key of its own for a digit from 4 to 9 or an order: the old direct digits are gone (the refit card between levels buys with 4 and 5 on its own screen)', /campPanelKey\(/.test(scene) && !/Digit[4-9]/.test(noRefit(scene).split('\n').filter(l => !/R\.ore >= B\./.test(l)).join('\n')) && !/campOrder\(C, order, ''/.test(scene) && !/Digit1: 'launch'/.test(scene));
   const caps = (line, pick) => line.split(/ {2,}/).flatMap(seg => seg.split(' ').filter(t => pick.test(t))).map(c => c.toUpperCase());
@@ -155,6 +157,9 @@ console.log('6. the Campaign: every bound key is on the table');
   check('the pause card says Esc, T and H, which are keys of the table', caps(pause, /^(?:[A-Z]|Esc)$/).every(c => named.has(c) || c === 'ESC') && /H {1,3}all keys/.test(pause) && /Esc/.test(pause), pause);
   const debugCodes = J('CAMP_DEBUG.keys.map(r => r.code)');
   check('the debug keys are bound by the scene through their own table (campDebugKey) and the H page lists them from it', /campDebugKey\(c\)/.test(scene) && J('campKeysPage().some(g => g.rows.length === CAMP_DEBUG.keys.length && g.rows.every((r, i) => r.caps[0] === CAMP_DEBUG.keys[i].key))') && debugCodes.length >= 4);
+  // the panels took the direct digits (key 3 and keys 4 to 9 do nothing on their own: 1 or 2 opens a panel, a digit then picks a row), but the lines of the lose cards and the story still said "press 3" and "press 6" (card space-game-wrapup-hunt-l3)
+  const stale = J(`Object.keys(UI_TEXT).filter(k => /^camp\\./.test(k) && /[Pp]ress [3-9]\\b|[Pp]ress [1-9][.!]|\\([1-9]\\)/.test(UI_TEXT[k])).map(k => k + ': ' + UI_TEXT[k])`);
+  check('no Campaign line names a digit key the panels took away: "press 3", "press 6", "(2)" alone are gone (the way is 1 or 2, then a digit: "press 1, then 3")', stale.length === 0, stale.join(' | '));
   check('the H page lists every row of the two groups, in groups, once: nothing in the table is left off it', J(`(() => { const page = campKeysPage().flatMap(g => g.rows.map(r => r.caps.join(' ') + '|' + r.t)); return ['panels', 'campaign'].every(id => controlsGroup(id).rows.every(r => page.includes(r.k.join(' ') + '|' + r.t))); })()`));
 }
 

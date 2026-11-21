@@ -25,7 +25,8 @@ class CampHub extends Phaser.Scene {
   constructor() { super('CampHub'); }
   init(d) { this.d = d || {}; this.leaving = false; } // d: the scene data above (all of it optional)
   create() {
-    this.P = this.d.P || campProgressLoad(); this.hub = campHubNew(this.P, { rows: this.d.rows, at: this.d.at }); this.msg = null; this.walls = []; // a dock hands in the Campaign scene's own progress, so what is bought there is not overwritten at the debrief
+    this.P = this.d.P || campProgressLoad(); if (typeof campReveal === 'function') campReveal(!!this.P.revealed); // after the ending has been seen, level 3 is the outpost on the board too (the Campaign scene did this only when it began: a page loaded after the ending showed the old name)
+    this.hub = campHubNew(this.P, { rows: this.d.rows, at: this.d.at }); this.msg = null; this.walls = []; // a dock hands in the Campaign scene's own progress, so what is bought there is not overwritten at the debrief
     const nx = campHubNext(this.P), st = Object.assign({}, campHubStation(nx.level), this.d.station && typeof this.d.station === 'object' ? this.d.station : {}), css = /^#[0-9a-f]{6}$/i.test(st.accent) ? st.accent : campHubStation(nx.level).accent;
     this.look = { id: 'camp-hub', name: String(st.name), art: st.art, home: false, accent: parseInt(css.slice(1), 16), accentCss: css, pirate: false, // what src/stationlook.js answers for a dock: the hall's colour, and the desks in it (a mission desk and a repair bay, no bar, shop or pump)
       terminals: { missions: true, repair: true, shop: false, pump: false, bar: false }, barName: '', barLines: [], welcome: '' };
@@ -86,7 +87,7 @@ class CampHub extends Phaser.Scene {
 
   // everything on the glass from the state: rows, foot and the page of the chosen row
   paint() {
-    const P = this.P, H = this.hub, Li = CAMP_HUBS.list, rows = campHubRows(P, H.rows, this.d), id = H.rows[H.row], nx = campHubNext(P);
+    const P = this.P, H = this.hub, Li = CAMP_HUBS.list, rows = campHubRows(P, H.rows, Object.assign({}, this.d, { hub: H })), id = H.rows[H.row], nx = campHubNext(P);
     this.titleT.setText(uiText('camp.hub.title', { name: this.look.name.toUpperCase() })); this.lvT.setText(uiText('camp.hub.level', { n: nx.level, name: CAMP.levels[nx.level].name }));
     rows.forEach((r, k) => { const o = this.rowT[k]; o.name.setText(r.name).setColor(k === H.row ? '#ffffff' : '#cfefff'); o.note.setText(r.note).setColor(k === H.row ? '#ffd37a' : '#8fb4c9'); o.cap.setBackgroundColor(k === H.row ? '#ffb454' : '#9fe9ff'); });
     this.bar.setY(Li.y + H.row * this.rowH + this.rowH / 2); this.barEdge.setY(this.bar.y);
@@ -95,21 +96,26 @@ class CampHub extends Phaser.Scene {
     const page = CAMP_HUBS.page[id]; if (page) page(this);
   }
   pageBoard() {
-    const view = campHubBoardView(campHubBoard(this.P), CAMP_HUBS.pane.lines);
+    const H = this.hub, sel = campHubSelectable(this.P), legend = sel.length > 0 && !(this.d && this.d.dock), pk = H.pick;
+    if (sel.length) H.cur = Math.max(0, Math.min(sel.length - 1, H.cur | 0));
+    const cur = legend ? sel[H.cur] : null, view = campHubBoardView(campHubBoard(this.P), CAMP_HUBS.pane.lines - (legend ? 1 : 0));
     view.forEach((r, i) => {
       if (r.head) { this.line(i, 0, uiText('camp.hub.level', { n: r.level, name: r.name }), '#38e1ff'); return; }
-      const mark = { done: '[x]', next: '[>]', passed: '[-]', later: '[ ]' }[r.state], col = r.state === 'next' ? '#ffd37a' : r.state === 'later' ? '#6f8aa0' : '#e8f6ff';
-      this.line(i, 0, '  ' + mark + ' ' + r.n + '  ' + r.title + '  (' + uiText('camp.hub.kind.' + r.kind) + ')', col);
-      this.line(i, 0, r.state === 'next' ? uiText('camp.hub.next') : r.state === 'done' ? uiText('camp.hub.score', { score: r.score }) + (r.of ? '  ' + uiText('camp.hub.bonuses', { got: r.bonus, of: r.of }) : '') : '', r.state === 'next' ? '#ffb454' : '#9fe9ff', true);
+      const isCur = !!(cur && r.level === cur.level && r.i === cur.i), isPick = !!(pk && r.level === pk.level && r.i === pk.i);
+      const mark = isPick ? '[R]' : { done: '[x]', next: '[>]', passed: '[-]', later: '[ ]' }[r.state], col = isPick ? '#6dff9c' : isCur ? '#ffffff' : r.state === 'next' ? '#ffd37a' : r.state === 'later' ? '#6f8aa0' : '#e8f6ff';
+      this.line(i, 0, (isCur ? '> ' : '  ') + mark + ' ' + r.n + '  ' + r.title + '  (' + uiText('camp.hub.kind.' + r.kind) + ')', col); // the cursor: > on a mission done or the next one; Enter or R opens its briefing, and a mission done is then the replay ([R])
+      this.line(i, 0, r.state === 'next' ? uiText('camp.hub.next') : r.state === 'done' ? uiText('camp.hub.score', { score: r.score }) + (r.of ? '  ' + uiText('camp.hub.bonuses', { got: r.bonus, of: r.of }) : '') + (r.rank ? '  ' + r.rank : '') : '', isPick ? '#6dff9c' : r.state === 'next' ? '#ffb454' : '#9fe9ff', true);
     });
+    if (legend) { const m = this.msg && this.msg.until > this.time.now && this.hub.rows[this.hub.row] === 'board' ? this.msg : null; this.line(CAMP_HUBS.pane.lines - 1, 0, m ? m.text : uiText('camp.hub.replay.keys'), m ? (m.ok ? '#6dff9c' : '#ffb454') : '#8fb4c9'); } // the keys, or the answer of the last one
   }
   pageBrief() {
-    const nx = campHubNext(this.P), b = campHubBrief(this.P, nx.level, nx.i); if (!b) return;
-    this.line(0, 0, uiText('camp.hub.brief.head', { n: b.n, of: b.of, title: b.title }), '#38e1ff');
+    const nx = campHubTarget(this.P, this.hub), b = campHubBrief(this.P, nx.level, nx.i); if (!b) return;
+    this.line(0, 0, uiText(nx.replay ? 'camp.hub.replay.head' : 'camp.hub.brief.head', { n: b.n, of: b.of, title: b.title }), nx.replay ? '#6dff9c' : '#38e1ff'); // a replay says so in its heading
     this.line(1, 0, uiText('camp.hub.brief.kind', { kind: b.kindText, par: b.par }), '#8fb4c9');
     b.lines.forEach((l, i) => this.line(3 + i, 0, l, '#e8f6ff'));
     this.line(6, 0, uiText('camp.hub.brief.obj'), '#38e1ff'); b.objectives.slice(0, 4).forEach((o, i) => this.line(7 + i, 0, '- ' + o, '#e8f6ff'));
     this.line(6, 1, uiText('camp.ui.bonushead'), '#ffd37a'); b.bonus.slice(0, 4).forEach((x, i) => this.line(7 + i, 1, '+' + x.points + '  ' + x.text, '#ffd37a'));
+    if (nx.replay) { this.line(CAMP_HUBS.pane.lines - 3, 0, uiText('camp.hub.replay.rule1'), '#8fb4c9'); this.line(CAMP_HUBS.pane.lines - 2, 0, uiText('camp.hub.replay.rule2'), '#8fb4c9'); }
     this.line(CAMP_HUBS.pane.lines - 1, 0, b.tries ? uiText('camp.hub.brief.best', { score: b.best, n: b.tries }) : uiText('camp.hub.brief.new'), '#8fb4c9');
   }
   pageRefit() {
@@ -132,10 +138,10 @@ class CampHub extends Phaser.Scene {
     this.line(i++, 0, uiText('camp.hub.rank.wing', { f: r.wing.fighters, e: r.wing.escorts }), '#e8f6ff');
   }
   pageLaunch() {
-    const nx = campHubNext(this.P), b = campHubBrief(this.P, nx.level, nx.i); if (!b) return; let i = 0;
-    this.line(i++, 0, uiText('camp.hub.launch.head', { n: b.n, of: b.of, title: b.title }), '#ffd37a');
+    const nx = campHubTarget(this.P, this.hub), b = campHubBrief(this.P, nx.level, nx.i); if (!b) return; let i = 0;
+    this.line(i++, 0, uiText(nx.replay ? 'camp.hub.replay.head' : 'camp.hub.launch.head', { n: b.n, of: b.of, title: b.title }), nx.replay ? '#6dff9c' : '#ffd37a');
     b.lines.forEach(l => this.line(i++, 0, l, '#e8f6ff'));
-    i++; if (nx.i === 0) this.line(i++, 0, uiText('camp.hub.launch.level', { n: nx.level, name: CAMP.levels[nx.level].name }), '#8fb4c9');
+    i++; if (nx.replay) { this.line(i++, 0, uiText('camp.hub.replay.rule1'), '#8fb4c9'); this.line(i++, 0, uiText('camp.hub.replay.rule2'), '#8fb4c9'); } else if (nx.i === 0) this.line(i++, 0, uiText('camp.hub.launch.level', { n: nx.level, name: CAMP.levels[nx.level].name }), '#8fb4c9');
     this.line(i++, 0, uiText('camp.hub.launch.pad'), '#8fb4c9'); this.line(i++, 0, uiText('camp.hub.launch.go'), '#ffb454');
   }
 
@@ -153,6 +159,9 @@ class CampHub extends Phaser.Scene {
   // ----- the keys and the clicks -----
   onKey(e) {
     if (e.repeat || this.leaving) return;
+    if (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) { campKeysKey(this, e.code); return; } // the H page of every key is open: any key closes it, and it takes the key
+    if (typeof campBriefIsOpen === 'function' && campBriefIsOpen(this)) { if (e.code === 'KeyH' && typeof campKeysOpen === 'function') { campKeysOpen(this, CAMPKEYS.room); return; } campBriefKey(this, e.code); if (e.preventDefault) e.preventDefault(); return; } // the big briefing is up (src/campbriefdraw.js): it takes the keys: Enter or L launch, Esc back to the board, Left Right page the walkthrough, M the map's zoom
+    if (e.code === 'KeyH' && typeof campKeysOpen === 'function') { campKeysOpen(this, CAMPKEYS.room); return; } // H: the ready room's keys, on one page (src/campkeys.js)
     const r = campHubKey(this.hub, this.P, e.code, this.d); if (!r.used) return;
     if (e.preventDefault && (e.code === 'Backspace' || e.code === 'Tab')) e.preventDefault();
     this.apply(r);
@@ -172,7 +181,7 @@ class CampHub extends Phaser.Scene {
   launch() {
     sfx('dock'); if (typeof interiorLaunch === 'function') interiorLaunch(this); // the bay door rolls up as the cruiser goes
     if (typeof this.d.onLaunch === 'function') { this.d.onLaunch(this); return; } // a dock's own launch (the outposts card): back to the flight it came from
-    go(this, 'Campaign', campHubLaunch(this.P));
+    go(this, 'Campaign', campHubLaunch(this.P, this.hub)); // the mission to fly: the next one, or the replay picked on the board
   }
   leave() { if (typeof this.d.onLeave === 'function') this.d.onLeave(this); else go(this, 'Title'); }
   update(time) {
@@ -183,4 +192,4 @@ class CampHub extends Phaser.Scene {
 
 // the registries the room reads by row id and action: the five rows' pages, and what an action does. A dock at an outpost adds its own (CAMP_HUBS.page.build = scene => { scene.line(0, 0, ...) }).
 CAMP_HUBS.page = { board: s => s.pageBoard(), brief: s => s.pageBrief(), refit: s => s.pageRefit(), rank: s => s.pageRank(), launch: s => s.pageLaunch() };
-CAMP_HUBS.run = { launch: s => s.launch(), title: s => s.leave() };
+CAMP_HUBS.run = { launch: s => s.launch(), title: s => s.leave(), brief: s => { if (typeof campBriefOpen === 'function') campBriefOpen(s); } }; // brief: the big briefing of the mission Launch would fly (src/campbriefdraw.js)

@@ -24,7 +24,8 @@ function campNavGoal(C) {
   try {
     const L = (C.L || CAMP.levels[C.level]), pl = campPlaces(C.level), c = C.carrier, near = list => list.slice().sort((a, b) => campDist(a, c) - campDist(b, c))[0] || null;
     const ship = (u, kind, name) => ({ id: kind === 'mother' ? 'mother' : kind + ':' + u.id, kind, name, x: u.x, y: u.y, r: u.r || 0, moving: u.vmax > 0, ref: u.id });
-    const rt = typeof campRetreat === 'function' ? campRetreat(C) : null; if (rt) return { id: 'place:' + rt.o.id, kind: 'place', name: rt.o.place, x: rt.o.x, y: rt.o.y, r: rt.o.r }; // low on hull with no ship left: the goal is the nearest outpost (src/campoutpost.js)
+    const rt = typeof campRetreat === 'function' ? campRetreat(C) : null; if (rt && !rt.hot) return { id: 'place:' + rt.o.id, kind: 'place', name: rt.o.place, x: rt.o.x, y: rt.o.y, r: rt.o.r }; // low on hull with no ship left: the goal is the nearest outpost with its doors open (src/campoutpost.js); none open (hot) is no goal: the autopilot is not sent into the aliens
+    if (C.L.place && C.arrivedAt == null && pl[C.L.place]) { const p = pl[C.L.place]; return { id: 'place:' + C.L.place, kind: 'place', name: String(p.name), x: p.x, y: p.y, r: p.r || 60 }; } // not there yet: the goal is the place of the mission
     if (L.objectives) { // a mission: the first objective not done yet (src/campaign.js campObjectives)
       const o = campObjectives(C).find(x => !x.done); if (!o) return null;
       if (o.type === 'scan') { const q = near(C.scan.map((p, i) => Object.assign({ i }, p)).filter(p => !p.got)); return q ? { id: 'scan:' + q.i, kind: 'scan', name: uiText('camp.nav.scan', { n: q.i + 1 }), x: q.x, y: q.y, r: 0 } : null; }
@@ -57,7 +58,7 @@ function campNavGoal(C) {
 function campNavRows(C) {
   const pl = campPlaces(C.level), c = C.carrier, rows = [], add = r => { r.dist = Math.hypot(r.x - c.x, r.y - c.y); rows.push(r); return r; };
   const posts = C.level != null && CAMP.levels[C.level] && CAMP.levels[C.level].outposts || {}; // the friendly outposts of the level: a place in the list that is one says so (the map marks it with a station)
-  Object.keys(pl).forEach(id => { const p = pl[id]; if (!p.hidden) add({ id: 'place:' + id, kind: 'place', group: 'places', name: String(p.name), x: p.x, y: p.y, r: p.r || 60, far: !!p.far, star: p.kind === 'star', outpost: !!posts[id] }); });
+  Object.keys(pl).forEach(id => { const p = pl[id]; if (!p.hidden) add({ id: 'place:' + id, kind: 'place', group: 'places', name: String(p.name), x: p.x, y: p.y, r: p.r || 60, far: !!p.far, star: p.kind === 'star', outpost: !!posts[id], moon: !!p.moon }); });
   campConvoys(C).forEach(u => add({ id: 'convoy:' + u.id, kind: 'convoy', group: 'convoys', name: uiText('camp.nav.convoy', { name: campConvoyName(u) }), x: u.x, y: u.y, r: u.r || 22, moving: true, ref: u.id }));
   (C.scan || []).forEach((p, i) => { if (!p.got) add({ id: 'scan:' + i, kind: 'scan', group: 'finds', name: uiText('camp.nav.scan', { n: i + 1 }), x: p.x, y: p.y, r: 0 }); });
   C.caches.forEach((k, i) => { if (!k.got) add({ id: 'cache:' + i, kind: 'cache', group: 'finds', name: uiText('camp.nav.cache', { n: i + 1 }), x: k.x, y: k.y, r: 0 }); });
@@ -101,7 +102,7 @@ function campNavLead(c, t, speed) {
 }
 // the burn of a Fast trip (the one place it is decided: campNavGo stores it, campCarrier and campNavDrive read it, campNavEta tells it on the map): CAMP.nav.fast times the speed, farFast times it past farFrom px; 1 for a regular trip
 const campNavBurn = (dist, fast) => (!fast ? 1 : dist > CAMP.nav.farFrom ? CAMP.nav.farFast : CAMP.nav.fast);
-const campNavEta = (C, dist, fast) => Math.round(dist / (CAMP.carrier.speed * campNavBurn(dist, fast)) * CAMP.nav.etaSlow); // fast: the map's Fast button
+const campNavEta = (C, dist, fast) => Math.round(dist / (CAMP.carrier.speed * campPowerFx(C).speed * campNavBurn(dist, fast)) * CAMP.nav.etaSlow); // fast: the map's Fast button
 
 function campNavGo(C, row, fast) {
   if (!C || !row || C.result) return null;
@@ -127,7 +128,7 @@ function campNavDrive(C, dt) {
   const c = C.carrier; if (!c || c.hp <= 0) { C.nav = null; return; }
   const t = campNavTarget(C, N); if (!t) { campNavClear(C, N.kind === 'cache' || N.kind === 'scan' || N.kind === 'pickup' ? 'arrived' : 'lost'); return; } // a cache or ore that has gone was gathered: that is arriving; a ship that is gone (dead) or a rock that broke is lost
   N.x = t.x; N.y = t.y;
-  const K = CAMP.nav, maxSp = CAMP.carrier.speed * (N.fast ? (N.burn || K.fast) : 1), tvx = t.vx || 0, tvy = t.vy || 0, flies = !!(tvx || tvy);
+  const K = CAMP.nav, maxSp = CAMP.carrier.speed * (typeof campPowerFx === 'function' ? campPowerFx(C).speed : 1) * (N.fast ? (N.burn || K.fast) : 1), tvx = t.vx || 0, tvy = t.vy || 0, flies = !!(tvx || tvy);
   const dx0 = t.x - c.x, dy0 = t.y - c.y, dist = Math.hypot(dx0, dy0), left = Math.max(0, dist - campNavStop(N.kind, t)), speed = Math.hypot(c.vx, c.vy);
   const aim = flies ? campNavLead(c, t, Math.max(speed, maxSp * 0.6)) : t, dx = aim.x - c.x, dy = aim.y - c.y; // a ship that flies is led: the carrier aims where it will be (card space-game-campaign-map-targets)
   const hold = !!(C.navWait && C.navWait.id === N.id); // a burn to this place is waiting for the wing: the trip is kept, but the carrier stops, because a ship cannot land on a carrier that is flying away (they hover just behind it)
@@ -179,7 +180,7 @@ function campNavFind(C, text) {
   const places = rows.filter(r => r.kind === 'place' && !r.goal), alias = { moon: 'luna', 'lunar base': 'luna', base: 'luna', star: 'sun', sun: 'sun' };
   const hit = places.find(p => q === p.name.toLowerCase() || q === p.id.slice(6)) || places.find(p => q.includes(p.name.toLowerCase()) || q.split(' ').includes(p.id.slice(6))) || places.find(p => alias[q] === p.id.slice(6) || Object.keys(alias).some(a => q.includes(a) && alias[a] === p.id.slice(6)));
   if (hit) return { row: hit };
-  const here = places.filter(p => !p.far && !p.star); // the planets of the level itself (the far bodies of the system are named by their names)
+  const here = places.filter(p => !p.far && !p.star && !p.moon); // the planets of the level itself (the far bodies of the system and the moons are named by their names)
   if (here.length === 1 && /\b(?:planet|world|home)\b/.test(q)) return { row: here[0] };
   return { code: 'unknown' };
 }

@@ -23,9 +23,10 @@
 //   key 3 is RESERVED: a centre panel for a later card. It is bound to nothing now (and no digit from 4 to 9 is), and the panels replace the old direct digit keys of the Campaign.
 const CAMP_PANELS = {
   pages: 1,                                // how many pages a panel with a second one shows: 1 until the panels are drawn with their second page (card space-game-campaign-stances); 2 turns the flip on (the arrows) and the stance rows with it
-  delay: 250,                              // ms a panel waits before it is drawn: for a fast typist "1 then 3" never flashes it (the pick works whether or not the panel has been drawn)
+  delay: 0,                                // ms a panel waits before it is drawn: none (it was 250 when a digit opened it; Q and E open it now and it comes up at once). A pick made before the list has dropped in (fadeIn) pulses the tab instead of flashing a row
+  anim: { fadeIn: 120, fadeOut: 100, flash: 160, pulse: 240 }, // ms (card space-game-campaign-panels-ui): the list dropping in under its tab, going away, the chosen row's flash (two pulses) before the panel collapses, and the tab's one pulse when the pick came before the list was in
   panels: [
-    { key: '1', id: 'fleet', side: 'left', title: 'FLEET', rows: [
+    { key: 'Q', code: 'KeyQ', id: 'fleet', side: 'left', title: 'FLEET', rows: [
       { n: 1, id: 'launch', order: 'launch', label: 'Launch', help: 'Launch the wing' },
       { n: 2, id: 'attack', order: 'attack', label: 'Attack', help: 'Fighters attack the aliens' },
       { n: 3, id: 'escort', order: 'escort', label: 'Escort', help: 'Escorts go to a convoy' }, // the row to be called "Escort / match speed" when the panels are redrawn: that label does not fit the column of the panel as drawn today
@@ -38,24 +39,35 @@ const CAMP_PANELS = {
       { n: 4, id: 'match', order: 'stance', arg: 'match speed', label: 'Match speed', help: 'Fly beside the carrier' },
       { n: 5, id: 'hold', order: 'stance', arg: 'hold position', label: 'Hold position', help: 'Stay put, fire at what comes' }
     ] } },
-    { key: '2', id: 'ship', side: 'right', title: 'SHIP', rows: [
+    { key: 'E', code: 'KeyE', id: 'ship', side: 'right', title: 'SHIP', rows: [
       { n: 1, id: 'mine', order: 'mine', label: 'Mine ore', help: 'The wing goes and mines ore' },
-      { n: 2, id: 'recharge', order: 'recharge', label: 'Recharge shields', help: 'Recharge a shield (costs ore)' },
-      { n: 3, id: 'buildf', order: 'build', arg: 'fighter', label: 'Build a fighter', help: 'Build a fighter (costs ore)' },
-      { n: 4, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', help: 'Build an escort (costs ore)' },
-      { n: 5, id: 'goal', fly: 'objective', label: 'Fly to the objective', help: 'Autopilot to the objective', fast: 'Autopilot there fast (wing aboard)' }, // fast: Shift with the digit is a burn, which needs the wing aboard (card space-game-campaign-fast-board)
-      { n: 6, id: 'dock', order: 'dock', label: 'Dock at an outpost', help: 'Dock at a friendly outpost (E)' } // ships are built and the hull mended only docked (card space-game-campaign-outposts); docking opens the ready room
+      { n: 2, id: 'recharge', order: 'recharge', label: 'Recharge shields', tag: 'Recharge', help: 'Recharge a shield (costs ore)' },
+      { n: 3, id: 'buildf', order: 'build', arg: 'fighter', label: 'Build a fighter', tag: 'New fighter', help: 'Build a fighter (costs ore)' },
+      { n: 4, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', tag: 'New escort', help: 'Build an escort (costs ore)' },
+      { n: 5, id: 'goal', fly: 'objective', label: 'Fly to the objective', tag: 'Fly to goal', help: 'Autopilot to the objective', fast: 'Autopilot (Shift: fast)' }, // fast: Shift with the digit is a burn, which needs the wing aboard (card space-game-campaign-fast-board)
+      { n: 6, id: 'dock', order: 'dock', label: 'Dock at an outpost', tag: 'Dock', help: 'Dock at a friendly outpost' } // ships are built and the hull mended only docked (card space-game-campaign-outposts); docking opens the ready room (E then 6)
+    ] },
+    { key: 'C', code: 'KeyC', id: 'systems', side: 'left', slot: 1, title: 'SYSTEMS', rows: [ // the ship's power (card space-game-campaign-systems; docs/CAMPAIGN.md "Ship systems"): a letter key, as the tabs of the panels card; a row's digit moves a pip
+      { n: 1, id: 'weapons', order: 'power', arg: 'weapons', label: 'Weapons +', help: 'A pip to the weapons' },
+      { n: 2, id: 'shields', order: 'power', arg: 'shields', label: 'Shields +', help: 'A pip to the shields' },
+      { n: 3, id: 'engines', order: 'power', arg: 'engines', label: 'Engines +', help: 'A pip to the engines' },
+      { n: 4, id: 'balance', order: 'balance', label: 'Balance', help: 'Back to 2 / 2 / 2' },
+      { n: 5, id: 'emergency', order: 'emergency', label: 'Emergency shields', tag: 'Emergency', help: 'Shields get 4 pips for 10 s' }
     ] }
   ],
   // why a row cannot be done now, in a few plain words: the code of the game's own refusal (campNo in src/campaign.js) to the words under the row's name; {need} and {have} are ore
   why: { over: 'the battle is over', bay: 'the bay is empty', launching: 'still launching', baydry: 'all of it is out', nofighters: 'no fighters out', noescorts: 'no escorts out', noconvoy: 'no convoy to escort', nowing: 'no ships out',
     noore: 'no ore in reach', noore2: 'needs {need} ore', shieldfull: 'shield is full', earthfull: "Earth's shield is full", noearth: 'no Earth here', farearth: 'too far from Earth', buildfull: 'no room in the bay', what: 'cannot do that now',
-    nogoal: 'no objective', there: 'you are there', nodock: 'Dock at an outpost to build.', norepair: 'Dock at an outpost to repair.', docked: 'already docked', noposts: 'no outpost here', whichpost: 'no such outpost', farpost: 'no outpost in range', hotdock: 'aliens too close', hullfull: 'the hull is sound' }
+    nogoal: 'no objective', there: 'you are there', nodock: 'Dock at an outpost to build.', norepair: 'Dock at an outpost to repair.', docked: 'already docked', noposts: 'no outpost here', whichpost: 'no such outpost', farpost: 'no outpost in range', hotdock: 'aliens too close', hullfull: 'the hull is sound', powermax: 'at full power', powernone: 'no power to take', powerwhat: 'which system?', locked: 'running: the power is held', cooling: 'ready in {s} s' },
+  // the same, a word or two, for the one-line rows of the panels (card space-game-campaign-panels-ui); tag, on a row, is its name in one line (label when there is none)
+  shortWhy: { over: 'over', bay: 'bay empty', launching: 'launching', baydry: 'all out', nofighters: 'none out', noescorts: 'none out', noconvoy: 'no convoy', nowing: 'none out',
+    noore: 'no ore near', noore2: 'needs {need} ore', shieldfull: 'full', earthfull: 'Earth full', noearth: 'no Earth', farearth: 'too far', buildfull: 'bay full', what: 'not now',
+    nogoal: 'no goal', there: 'there', nodock: 'dock first', norepair: 'dock first', docked: 'docked', noposts: 'no outpost', whichpost: 'no post', farpost: 'too far', hotdock: 'foes near', hullfull: 'hull sound', powermax: 'at full', powernone: 'none free', powerwhat: 'which?', locked: 'held', cooling: '{s} s' }
 };
-// the rows the H page and Settings list for the panels: the panel's key then the row's digit, under the panel's heading, in the table's order
+// the rows the H page and Settings list for the panels: the panel's key (Q, E, C), then the row's digit, under the panel's heading, in the table's order
 function campPanelKeyRows() {
   const cap = (p, h) => p.title.charAt(0) + p.title.slice(1).toLowerCase() + ': ' + h.charAt(0).toLowerCase() + h.slice(1), sub = p => 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL';
-  return CAMP_PANELS.panels.flatMap(p => p.rows.flatMap(r => [{ k: [p.key, String(r.n)], t: cap(p, r.help), sub: sub(p) }].concat(r.fast ? [{ k: [p.key, 'Shift', String(r.n)], t: cap(p, r.fast), sub: sub(p) }] : []))).concat(CAMP_PANELS.pages > 1 ? CAMP_PANELS.panels.filter(p => p.page2).flatMap(p => p.page2.rows.map(r => ({ k: [p.key, '\u2192', String(r.n)], t: 'Stance: ' + r.help.charAt(0).toLowerCase() + r.help.slice(1), sub: 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL, PAGE 2 (ARROWS FLIP)' }))) : []); // the stances (page 2) are listed once the panels show them
+  return CAMP_PANELS.panels.flatMap(p => [{ k: [p.key], t: cap(p, 'open the panel (again closes it)'), sub: sub(p) }].concat(p.rows.map(r => ({ k: [p.key, String(r.n)], t: cap(p, r.fast || r.help), sub: sub(p) })))).concat(CAMP_PANELS.pages > 1 ? CAMP_PANELS.panels.filter(p => p.page2).flatMap(p => p.page2.rows.map(r => ({ k: [p.key, '\u2192', String(r.n)], t: 'Stance: ' + r.help.charAt(0).toLowerCase() + r.help.slice(1), sub: 'KEY ' + p.key + '  -  THE ' + p.title + ' PANEL, PAGE 2 (ARROWS FLIP)' }))) : []); // the stances (page 2) are listed once the panels show them
 }
 
 const CONTROLS = [
@@ -116,15 +128,14 @@ const CONTROLS = [
     { k: ['W', 'A', 'S', 'D'], t: 'Thrust, turn, brake (arrows too)', sub: 'FLY AND FIRE' },
     { k: ['Space'], t: 'Hold: turrets fire at ships in reach', sub: 'FLY AND FIRE' },
     { k: ['F'], t: 'Fire a homing missile', sub: 'FLY AND FIRE' },
-    { k: ['Q'], t: 'Warp blink hop (needs that tech)', sub: 'FLY AND FIRE' },
-    { k: ['E'], t: 'Dock at the outpost in range', sub: 'FLY AND FIRE' },
+    { k: ['B'], t: 'Warp blink hop (needs that tech)', sub: 'FLY AND FIRE' },
     { k: ['+', '-', '0'], t: 'Zoom view or map (wheel too); 0 resets', sub: 'FLY AND FIRE' }, // = and the numpad keys too (src/campzoom.js)
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Click'], t: 'Map: click a mark sets it, again flies', sub: 'THE MAP' },
     { k: ['W', 'S', 'A', 'D'], t: 'Map list: choose; next or last group', sub: 'THE MAP' }, // two rows in one: the page is at the size the controls panel fits (tests/controlsfit.mjs)
     { k: ['Shift', 'Enter'], t: 'Map: Enter flies, Shift+Enter fast', sub: 'THE MAP' }, // (the Enter and Shift+Enter rows were one too many for Settings' four columns once E docked)
-    { k: ['X'], t: 'Map: clear the destination', sub: 'THE MAP' },
-    { k: ['Z'], t: 'Map: the area, or the whole system', sub: 'THE MAP' },
+    { k: ['V'], t: 'Map: send a scout there', sub: 'THE MAP' },
+    { k: ['X', 'Z'], t: 'Map: X clears the goal, Z zooms', sub: 'THE MAP' }, // two rows in one (the Campaign group is at the size Settings > Controls fits: tests/controlsfit.mjs)
     { k: ['I'], t: 'Type an order to the ship', sub: 'THE STRIP AND THE VOICE' },
     { k: ['U'], t: 'Hold to speak an order', sub: 'THE STRIP AND THE VOICE' },
     { k: ['H'], t: 'This page of keys', sub: 'ANYWHERE' },
@@ -134,9 +145,27 @@ const CONTROLS = [
     { k: ['Enter'], t: 'Cards: begin, continue, try again', sub: 'ANYWHERE' },
     { k: ['1-3'], t: 'Pick a salvaged tech after a level', sub: 'ANYWHERE' },
     { k: ['4', '5'], t: 'Refit card: buy a fighter or escort', sub: 'ANYWHERE' },
-    { k: ['M'], t: 'Mute sound', sub: 'ANYWHERE' }
+    { k: ['M', 'P'], t: 'Mute sound; P: battle pace', sub: 'ANYWHERE' }
   ] },
   { id: 'panels', title: 'PANELS', scene: 'Campaign', rows: campPanelKeyRows() }, // the Campaign's two panels, made from CAMP_PANELS above (the H page puts them first)
+  { id: 'readyroom', title: 'READY ROOM', scene: 'CampHub', rows: [ // the ready room between missions (src/camphub.js keys, src/camphubscene.js); the Campaign's H page lists them last, and H opens it in the room
+    { k: ['1-5'], t: 'Pick a row: board, briefing ...', sub: 'THE READY ROOM' },
+    { k: ['W', 'S'], t: 'Move between the rows (arrows too)', sub: 'THE READY ROOM' },
+    { k: ['Enter'], t: 'On to the next row (Board: briefing)', sub: 'THE READY ROOM' },
+    { k: ['L'], t: 'Launch the mission, or the replay', sub: 'THE READY ROOM' },
+    { k: ['A', 'D'], t: 'Board: choose a mission', sub: 'THE READY ROOM' },
+    { k: ['R'], t: 'Board: pick it, open its briefing', sub: 'THE READY ROOM' },
+    { k: ['X'], t: 'Board: back to the next mission', sub: 'THE READY ROOM' },
+    { k: ['F', 'E'], t: 'Refit: buy a fighter or an escort', sub: 'THE READY ROOM' },
+    { k: ['U'], t: 'Refit: fit the Fabricator', sub: 'THE READY ROOM' },
+    { k: ['Backspace'], t: 'Refit: give the last one back', sub: 'THE READY ROOM' },
+    { k: ['H'], t: 'This page of keys', sub: 'THE READY ROOM' },
+    { k: ['Esc'], t: 'Leave for the title (T too)', sub: 'THE READY ROOM' },
+    { k: ['Enter', 'L'], t: 'Briefing: launch the mission', sub: 'THE BRIEFING' }, // the big briefing (src/campbriefdraw.js), opened from the board
+    { k: ['Esc'], t: 'Briefing: back to the board', sub: 'THE BRIEFING' },
+    { k: ['Left', 'Right'], t: 'Briefing: page the walkthrough', sub: 'THE BRIEFING' },
+    { k: ['M'], t: 'Map: the mission area, or the system', sub: 'THE BRIEFING' }
+  ] },
   { id: 'title', title: 'TITLE', scene: null, rows: [
     { k: ['Any key'], t: 'Start the game' },
     { k: ['S'], t: 'Open Settings' },

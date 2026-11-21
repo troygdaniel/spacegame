@@ -62,7 +62,7 @@ ms = J(`campMapMarks(C2)`);
 check('a cache that is picked up leaves the map, and the relic carries how far the hold has got (4 of 8 seconds: a half)', ms.filter(m => m.type === 'cache').length === 2 && ms.find(m => m.type === 'relic').hold === 0.5 && ms.find(m => m.type === 'relic').r === J(`CAMP.levels[2].relic.radius`));
 g.run(`var C3 = campNew(3, [], { seed: 7 });`);
 ms = J(`campMapMarks(C3)`); t = types(ms);
-check('level 3: the alien home world, twelve towers (8 and 4), the carrier; no Earth and no warp point', t.place === 1 && t.tower === 12 && t.carrier === 1 && !ms.some(m => m.id === 'earth' || m.id === 'arrival'), JSON.stringify(t));
+check('level 3: the alien home world and two of its moons (Kolga, Tyr; Ran is far from the warp point), twelve towers (8 and 4), the carrier; no Earth and no warp point', t.place === 3 && t.tower === 12 && t.carrier === 1 && !ms.some(m => m.id === 'earth' || m.id === 'arrival'), JSON.stringify(t));
 g.run(`C3.ships.filter(u => u.kind === 'tower').slice(0, 5).forEach(u => { u.hp = 0; });`);
 check('a dead tower is not on the map', J(`campMapMarks(C3)`).filter(m => m.type === 'tower').length === 7);
 

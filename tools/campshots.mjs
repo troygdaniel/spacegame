@@ -7,6 +7,7 @@
 //   node tools/campshots.mjs fx     explosions as the game makes them, at 60, 160, 320 and 520 ms (2x crops), and the guns
 //   node tools/campshots.mjs mars   Mars and the Earth-Luna start, up close
 //   node tools/campshots.mjs zoom   + - 0 and the wheel: the view, the edge arrow and the map at several zooms, a click on a place at a zoom
+//   node tools/campshots.mjs panels the keyboard panels: the tabs, Q and E open them, the pick's flash, the cross-fade, the tab's pulse, with the zoom and the map, the key line
 //   node tools/campshots.mjs look   the new look of the ships: 2x crops round the carrier (start, launch, recall, a crowd, the turrets firing)
 // Some pictures are STAGED (the carrier or the aliens are put in place, the hull and the shield are set low): the fight after the staging is the game's. The blind critic gets the PNG files and nothing else (docs/CRITIC.md).
 // Exit code 1 when a picture could not be taken or the game logged an error.
@@ -167,6 +168,28 @@ try {
     await t.ev(`(() => { ${SC}.input.emit('wheel', {}, [], 0, -240); return 1; })()`); await t.run(900); note('wheel over the map', JSON.stringify(await zs()));
     await t.key('TAB'); await t.run(300); const before = await zs();
     await t.ev(`(() => { ${SC}.input.emit('wheel', {}, [], 0, -240); return 1; })()`); await t.run(900); note('wheel, map shut', JSON.stringify(before), '->', JSON.stringify(await zs()));
+  } else if (part === 'panels') {
+    // the panels (card space-game-campaign-panels-ui): the collapsed tabs, FLEET open, the pick's flash, SHIP open, the cross-fade, the tab's pulse, with the zoom, with the map, and the key line's backing strip. Q and E open the panels.
+    await enter(); await t.run(600);
+    const clipShot = async (name, x, y, w, h) => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png', clip: { x, y, width: w, height: h, scale: 2 } }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(34); } note('crop', name); };
+    const st = () => j(`(() => { const s = ${SC}, P = s.pn; return { open: P.open, flash: P.flash && P.flash.row, shown: P.flash && P.flash.shown, closed: P.closed && P.closed.id, ships: s.camp.ships.filter(u => u.team === 'earth').length }; })()`);
+    await t.run(300); await snap('panels-01-collapsed'); await clipShot('panels-01b-tabs-left', 77, 200, 330, 120);
+    await keyOn('KeyQ'); await t.run(400); note('Q', JSON.stringify(await st())); await snap('panels-02-fleet-open'); await clipShot('panels-02b-fleet-crop', 77, 200, 330, 250);
+    await keyOn('Digit1'); await t.run(6); note('pick', JSON.stringify(await st())); await clipShot('panels-03-flash-40ms', 77, 200, 330, 250); // the second capture of a pair is 34 ms after the first: this one is the flash's first peak (40 ms)
+    await t.run(46); await clipShot('panels-03b-flash-120ms', 77, 200, 330, 250); // and the second peak (120 ms)
+    await t.run(400); await clipShot('panels-03c-collapsed-after', 77, 200, 330, 250);
+    await t.run(2500);
+    await keyOn('KeyE'); await t.run(400); await snap('panels-04-ship-open'); await clipShot('panels-04b-ship-crop', 880, 200, 330, 250);
+    await keyOn('KeyQ'); await t.run(26); note('switch', JSON.stringify(await st())); await clipShot('panels-05-crossfade', 77, 190, 1130, 270); // 60 ms in: both lists half there
+    await t.run(300); await keyOn('KeyQ'); await t.run(300);
+    await keyOn('KeyQ'); await t.run(40); await keyOn('Digit5'); await t.run(86); note('fast pick', JSON.stringify(await st())); await clipShot('panels-06-tab-pulse', 77, 200, 330, 120); // the pulse peaks 120 ms after the pick
+    await t.run(1500);
+    for (let i = 0; i < 3; i++) await keyOn('Equal'); await t.run(900); await keyOn('KeyE'); await t.run(400); await snap('panels-07-zoomed-in'); await keyOn('Escape'); await t.run(300);
+    await t.key('TAB'); await t.run(400); await snap('panels-08-map-open'); await t.key('TAB'); await t.run(300); await keyOn('Digit0'); await t.run(900);
+    // the key line: a ship under it
+    await t.ev(`(() => { const s = ${SC}, C = s.camp, c = C.carrier; const sp = s.sp[c.id]; return 1; })()`);
+    await clipShot('panels-09-keyline', 77, 575, 1130, 58); // the viewport is 633 px high (the canvas fits it at 0.88): the key line is at about y 590 to 610
+    note('sizes', JSON.stringify(await sizes()));
   } else if (part === 'mars') {
     await enter(); await t.run(500);
     await t.ev(`(() => { const c = ${SC}.camp.carrier; c.x = 3500; c.y = 450; c.vx = c.vy = 0; c.rot = 0; return 1; })()`); await t.run(900); await snap('c40-mars');

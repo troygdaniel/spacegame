@@ -39,7 +39,7 @@ sec('A', () => {
   g.run("localStorage.removeItem('longhaul.campaign'); campReveal && campReveal(false)");
   const keys = J("Object.keys(UI_TEXT).filter(k => /^camp\\./.test(k) && !/^camp\\.end\\./.test(k) && !/\\.r\\.\\d/.test(k))");
   const friendlyKeys = new Set(read('content/text/campoutpost.md').split('\n').map(l => /^\|\s*(camp\.[\w.]+)\s*\|/.exec(l)).filter(Boolean).map(m => m[1])); // our docks' words: the exempt scope
-  const bad = keys.filter(k => !friendlyKeys.has(k) && /outpost/i.test(J(`UI_TEXT[${JSON.stringify(k)}]`)));
+  const bad = keys.filter(k => !friendlyKeys.has(k) && /outpost/i.test(String(J(`UI_TEXT[${JSON.stringify(k)}]`)).replace(/\{[^}]*\}/g, ''))); // a {placeholder} named outpost is not the word (the debrief's "Docked at {outpost}, {name}")
   check(`A  outside the friendly-outpost lines (${friendlyKeys.size} rows of campoutpost.md), no Campaign string (${keys.length} keys) says "outpost" before the flag`, keys.length > 150 && friendlyKeys.size > 10 && bad.length === 0, bad.join(','));
   const alienWords = [...friendlyKeys].filter(k => /alien home|home world|not their home|level 3|\btower|mothership/i.test(J(`UI_TEXT[${JSON.stringify(k)}]`)));
   check('A  and the friendly-outpost lines never name or describe the alien world (no home world, no level 3, no towers, no mothership): they are about our docks', alienWords.length === 0, alienWords.join(','));

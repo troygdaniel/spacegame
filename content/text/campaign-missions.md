@@ -8,8 +8,8 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 |---|---|
 | camp.lose.convoy | The haulers are lost. |
 | camp.lose.base | The works are lost. |
-| camp.lose.tip.convoy | Keep the wing on the haulers. Press 3. |
-| camp.lose.tip.base | Guard the works. Press 4, then hold Space. |
+| camp.lose.tip.convoy | Keep the wing on the haulers: FLEET panel, Escort. |
+| camp.lose.tip.base | Guard the works: FLEET panel, Guard, then hold Space. |
 | camp.say.scanned | Point scanned: {n} of {of}. |
 | camp.say.hauler | {name} is under way. |
 | camp.say.raid | Raiders on the haulers. Escort them. |
@@ -26,7 +26,8 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.o.clear | Survive the attack. |
 | camp.o.done | Objectives met. |
 | camp.b.time | Finish in {secs} seconds |
-| camp.b.lost | Lose at most {n} ships |
+| camp.b.lost | Ships lost: {n} or fewer |
+| camp.say.l2wave3 | Aliens coming for the relic, pilot. |
 | camp.b.nolost | Lose no ships |
 | camp.b.hull | Keep the hull above {pct} percent |
 | camp.b.ore | Mine {n} ore |
@@ -46,7 +47,7 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.m.1.1.b1 | Scan three rock fields. |
 | camp.m.1.1.b2 | Expect company. |
 | camp.m.1.2.title | Ore haulers |
-| camp.m.1.2.b1 | Escort the haulers from Vesta to Ceres. |
+| camp.m.1.2.b1 | Escort the haulers from Deimos to Phobos. |
 | camp.m.1.2.b2 | Two must arrive. |
 | camp.m.1.3.title | The mothership |
 | camp.m.1.3.b1 | Destroy the alien mothership. |
@@ -72,3 +73,8 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.nav.scan | Scan point {n} |
 | camp.nav.guard | Relic guard |
 | camp.nav.alien | Alien |
+| camp.say.arrived | Arrived at {name}. |
+| camp.o.travel | Fly to {name}: {km} km. |
+| camp.ui.briefplace | PLACE  {name}     {km} km     about {secs} s by Fast |
+| camp.ui.briefhere | PLACE  {name}     you start there |
+| camp.ui.outpost | Docked at {outpost}, {name}. |

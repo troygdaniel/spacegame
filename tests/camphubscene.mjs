@@ -9,10 +9,12 @@
 // Run: node tests/camphubscene.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
+import { BRIEF_STAND } from './briefstand.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const g = nodeGame();
+g.run(BRIEF_STAND);
 // the hub alone: the ranks card (src/campranks.js) is merged with it in the game, but these checks are about the room's own plain behaviour and its stand-ins, so the real campRankStatus is set aside (the two together are tests/campranks.mjs)
 g.run('window.campRankStatus = undefined');
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
@@ -35,6 +37,7 @@ g.run(`
     s.add = { rectangle: (x, y) => { const o = __obj(); o.x = x; o.y = y; return o; }, text: (x, y, t) => { const o = __obj(); o.x = x; o.y = y; o.t = t; __rec.texts.push(o); return o; }, image: (x, y, k) => { const o = __obj(); o.x = x; o.y = y; o.key = k; return o; } };
     s.cameras = { main: { fadeIn() {}, fadeOut() {} } }; s.tweens = { add: cfg => { __rec.tweens.push(cfg); return { stop() { cfg.stopped = true; } }; } }; s.time = { now: 1000 };
     s.input = { keyboard: { on: (e, fn) => { s.kb = fn; }, off() {} } }; s.events = { once() {} };
+    if (window.__briefStand) __briefStand(s);
     s.init(d || {}); s.create(); return s;
   };
   window.__shown = s => __rec.texts.filter(o => o.vis && o.t !== '').map(o => o.t);
@@ -43,6 +46,7 @@ g.run(`
 `);
 const shown = () => J('__shown(S)');
 const has = (re) => shown().some(t => re.test(t));
+const has9 = re => J('__shown(S9)').some(t => re.test(t));
 const rec = () => J('__rec');
 
 // ---- A. create ----
@@ -96,7 +100,7 @@ check('level 2 has its own station: Proxima Gate, the colour of its trim, and th
 g.run(`localStorage.setItem(CAMP.store, JSON.stringify({ level: 1, mission: 2, techs: [], ore: 40, bonus: { fighters: 0, escorts: 0 }, results: {} })); var S4 = __scene(); __key(S4, 'KeyL');`);
 check('L launches from any row: the bay door rolls up and the Campaign scene starts on level 1, mission 3 (index 2), via the hub', J('__rec.door') === 1 && J('__rec.go').length === 1 && J('__rec.go[0].key') === 'Campaign' && J('__rec.go[0].data.level') === 1 && J('__rec.go[0].data.mission') === 2 && J('__rec.go[0].data.via') === 'hub' && J('__rec.sfx').includes('dock'), JSON.stringify(rec().go));
 g.run(`var S5 = __scene(); __key(S5, 'Digit5'); __key(S5, 'Enter');`);
-check('Enter on the Launch row launches (and from any row only goes on)', J('__rec.go').length === 1 && J('__rec.go[0].data.mission') === 2 && (() => { g.run(`var S6 = __scene(); __key(S6, 'Enter');`); return J('__rec.go').length === 0 && J('S6.hub.row') === 1; })());
+check('Enter on the Launch row launches (and from a row with nothing to do, the Refit row, it only goes on; on the Board and Briefing rows it opens the big briefing, card space-game-campaign-briefing)', J('__rec.go').length === 1 && J('__rec.go[0].data.mission') === 2 && (() => { g.run(`var S6 = __scene(); S6.hub.row = 2; __key(S6, 'Enter');`); return J('__rec.go').length === 0 && J('S6.hub.row') === 3 && J('campBriefIsOpen(S6)') === false; })() && (() => { g.run(`var S7 = __scene(); __key(S7, 'Enter');`); return J('__rec.go').length === 0 && J('campBriefIsOpen(S7)') === true && J('S7.hub.row') === 0; })());
 g.run(`var S7 = __scene(); S7.rowT[1].hit.handlers.pointerdown();`);
 check('a click on a row picks it (the page changes); a second click on the Launch row launches, a click on another row twice does not', J('S7.hub.row') === 1 && J('__rec.go').length === 0 && (() => { g.run(`S7.rowT[4].hit.handlers.pointerdown();`); const picked = J('S7.hub.row') === 4 && J('__rec.go').length === 0; g.run(`S7.rowT[4].hit.handlers.pointerdown();`); return picked && J('__rec.go').length === 1 && J('__rec.go[0].key') === 'Campaign'; })());
 g.run(`var S8 = __scene(); __key(S8, 'Escape');`);
@@ -124,7 +128,7 @@ g.run(`__key(D, 'Digit3'); __key(D, 'Enter'); __key(D, 'KeyL');`);
 check('Launch in a dock\'s room is the dock\'s (onLaunch), twice here, with the door rolled up and no Campaign scene started', J('__dock.out').join() === 'launch,launch' && J('__rec.door') === 2 && J('__rec.go.length') === 0);
 g.run(`__dock.out.length = 0; __key(D, 'Escape'); __key(D, 'KeyT');`);
 check('Esc and T are the dock\'s onLeave, not the title', J('__dock.out').join() === 'leave,leave' && J('__rec.go.length') === 0);
-g.run(`var D2 = __scene({ rows: ['board'], station: { name: 'X', accent: 'not a colour' } });`);
+g.run(`var D2 = __scene({ rows: ['rank'], station: { name: 'X', accent: 'not a colour' } });`);
 check('a room of one row and a colour that is not one still stand: the level\'s own colour is used, S and Enter wrap on the one row, L does nothing without a Launch row', J('D2.look.accentCss') === '#6dff9c' && J('D2.rowT.length') === 1 && (() => { g.run(`__key(D2, 'KeyS'); __key(D2, 'Enter'); __key(D2, 'KeyL');`); return J('D2.hub.row') === 0 && J('__rec.go.length') === 0 && J('__rec.door') === 0; })());
 g.run(`var D3 = __scene({ rows: ['board', 'brief', 'refit', 'rank', 'launch', 'build'] });`);
 check('six rows fit the glass: each row is closer than five rows\' (the height of the list is shared) and the sixth has its stop', J('D3.rowT.length') === 6 && J('D3.rowH') < 34 && J('D3.rowH') * 6 <= 170);
@@ -141,6 +145,11 @@ const sc = src('src/campaignscene.js'), ti = src('src/title.js');
 check('the Campaign scene still starts a lost mission again by itself (via retry); it goes to the hub in exactly four places: after a debrief, at the end of a level, the title\'s choice, and the dock\'s room over the paused battle (card space-game-campaign-outposts)', /via: 'retry'/.test(sc) && (sc.replace(/\/\/.*$/gm, '').match(/'CampHub'/g) || []).length === 4);
 check('the title\'s Campaign choice and K go to the hub (campaignStart); the address ?campaign=N still opens the battle', /function campaignStart\(s, level\) \{[^]*?if \(!level\) \{ go\(s, 'CampHub'\)/.test(sc) && /campAddrPlanPage/.test(ti) && /'Campaign', \{ level: plan\.level/.test(ti));
 check('the scene is in the game\'s list, its script is loaded once, after camphub.js and the cruiser art, and before main.js', (() => { const m = src('src/main.js'), h = src('index.html'); return /CampWarp, CampHub\]/.test(m) && (h.match(/src\/camphubscene\.js/g) || []).length === 1 && h.indexOf('src/camphub.js') < h.indexOf('src/camphubscene.js') && h.indexOf('src/campcruiser.js') < h.indexOf('src/camphubscene.js') && h.indexOf('src/camphubscene.js') < h.indexOf('src/main.js'); })());
+// ---- after the ending: a page loaded later still says the outpost on the board (card space-game-wrapup-hunt-l3: the hub did not apply the reveal, only the Campaign scene did) ----
+g.run(`campReveal(false); localStorage.setItem(CAMP.store, JSON.stringify({ level: 1, mission: 0, techs: [], ore: 0, bonus: { fighters: 0, escorts: 0 }, results: {}, revealed: true })); var S9 = __scene();`);
+check('after the ending has been seen (the saved flag) the board of a page that has just loaded calls level 3 the outpost, as the ending said, and not the home world', has9(/LEVEL 3\s+-\s+The outpost/) && !has9(/home world/) && J('CAMP.levels[3].name') === 'The outpost', J('__shown(S9)').filter(t => /LEVEL/.test(t)).join(' / '));
+g.run(`campReveal(false); localStorage.removeItem(CAMP.store); var S10 = __scene();`);
+check('and before it (no flag) the board says the home world: nothing is given away', J('__shown(S10)').some(t => /LEVEL 3\s+-\s+The home world/.test(t)) && !J('__shown(S10)').some(t => /outpost/i.test(t)));
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `CAMPAIGN HUB SCENE FAIL (${failed} of ${n})` : `CAMPAIGN HUB SCENE PASS (${n} checks)`);
 process.exitCode = failed ? 1 : 0;
