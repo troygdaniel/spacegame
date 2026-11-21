@@ -161,10 +161,12 @@ const CONTROLS = [
     { k: ['Backspace'], t: 'Refit: give the last one back', sub: 'THE READY ROOM' },
     { k: ['H'], t: 'This page of keys', sub: 'THE READY ROOM' },
     { k: ['Esc'], t: 'Leave for the title (T too)', sub: 'THE READY ROOM' },
-    { k: ['Enter', 'L'], t: 'Briefing: launch the mission', sub: 'THE BRIEFING' }, // the big briefing (src/campbriefdraw.js), opened from the board
+    { k: ['Enter', 'Right'], t: 'Briefing: next screen, then launch', sub: 'THE BRIEFING' }, // the big briefing (src/campbriefdraw.js), opened from the board: three screens (where and why, what to do, how); Enter on the last one launches
+    { k: ['Left'], t: 'Briefing: back a screen', sub: 'THE BRIEFING' },
+    { k: ['L'], t: 'Briefing: launch the mission now', sub: 'THE BRIEFING' },
     { k: ['Esc'], t: 'Briefing: back to the board', sub: 'THE BRIEFING' },
-    { k: ['Left', 'Right'], t: 'Briefing: page the walkthrough', sub: 'THE BRIEFING' },
-    { k: ['M'], t: 'Map: the mission area, or the system', sub: 'THE BRIEFING' }
+    { k: ['+', '-', '0'], t: 'Briefing map: zoom (wheel too)', sub: 'THE BRIEFING' },
+    { k: ['M'], t: 'Briefing map: area, system, route', sub: 'THE BRIEFING' }
   ] },
   { id: 'title', title: 'TITLE', scene: null, rows: [
     { k: ['Any key'], t: 'Start the game' },

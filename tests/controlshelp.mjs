@@ -81,7 +81,7 @@ const group = id => groups.find(x => x.id === id);
 
 console.log('1. every key the help names is bound');
 for (const gr of groups) {
-  const roomBound = () => { const k = bound(SCENES.readyroom); ['1', '2', '3', '4', '5'].forEach(d => k.add(d)); return k; }; // the room hands every digit to campHubKey, which picks the row whose place it is
+  const roomBound = () => { const k = bound(SCENES.readyroom); ['1', '2', '3', '4', '5'].forEach(d => k.add(d)); const ZC = { Equal: '+', Minus: '-', NumpadAdd: '+', NumpadSubtract: '-' }; if (/campZoomKey\(code\)/.test(read('src/campbriefdraw.js'))) { J('Object.keys(CAMPZOOM.keys)').forEach(c => k.add(ZC[c] || norm(c))); J('CAMPZOOM.reset').forEach(c => k.add(norm(c.replace(/^Numpad/, 'Digit')))); } return k; }; // the room hands every digit to campHubKey, which picks the row whose place it is; the briefing's map takes the zoom keys of src/campzoom.js (the Tab map's own: card space-game-briefing-walkthrough)
   const have = gr.id === 'readyroom' ? roomBound() : gr.id === 'flight' ? new Set([...bound(SCENES.flight), ...spaceOwn]) : (gr.id === 'campaign' || gr.id === 'panels') ? campBound() : bound(SCENES[gr.id] || []);
   if (gr.id === 'title') continue; // the Title reads keys by e.code in one long line of its own; its rows are not what changed and are checked in tests/settings.mjs
   const missing = [];
