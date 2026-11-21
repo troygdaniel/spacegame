@@ -78,6 +78,10 @@ g.run(`
   check('the reward and "Docked." share the box; a toast that comes later has it to itself', later[0] === 'Colonist delivered safely. +500 cr\nDocked.' && later[1] === 'Mission accepted.' && later[2] === 1, JSON.stringify(later));
   const long = J(`(() => { const s = __scene(); toast(s, 'Target: Halcyon Station. C cruises, P flies you there.'); s.time.now = 10; toast(s, __MSGS[4]); return s.toasts[0].t.text.split('\\n'); })()`);
   check('a two-line message does not take a second one in with it', long.length === 2 && long.join(' ') === MSGS[4], JSON.stringify(long));
+  const twice = J(`(() => { const s = __scene(); toast(s, 'No ships are out. Launch first.'); s.time.now = 400; toast(s, 'No ships are out. Launch first.'); return s.toasts[0].t.text.split('\\n'); })()`);
+  check('the same message again, soon after, is one line: not the line twice in one box (a refused key pressed twice)', twice.length === 1, JSON.stringify(twice));
+  const other = J(`(() => { const s = __scene(); toast(s, 'No ships are out. Launch first.'); s.time.now = 400; toast(s, 'The shield is already full.'); return s.toasts[0].t.text.split('\\n'); })()`);
+  check('a different message soon after still shares the box with the first', other.length === 2, JSON.stringify(other));
   check('s.toasts keeps the shape other files read: t, bg, tab, y, h', J(`(() => { const s = __scene(); toast(s, 'x'); const o = s.toasts[0]; return ['t', 'bg', 'tab', 'y', 'h'].every(k => o[k] !== undefined) && typeof o.y === 'number' && typeof o.h === 'number'; })()`));
 }
 

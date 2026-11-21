@@ -9,5 +9,5 @@ The words of one change of the Campaign's UX night (card space-game-night-ux, do
 | camp.lose.other | The level is lost. |
 | camp.lose.reached | You lasted {time}: wave {wave} of {total}, {kills} aliens down. |
 | camp.lose.tip.towers | Fire missiles (F) at the towers. Send the wing at them. |
-| camp.lose.tip.carrier | Launch the wing early (1, then 1): fighters draw fire. Keep moving. |
-| camp.lose.tip.earth | Aliens shell Earth. Fighters (1, then 2) or guard (1, then 4). |
+| camp.lose.tip.carrier | Launch the wing early (FLEET panel): fighters draw fire. Keep moving. |
+| camp.lose.tip.earth | Aliens at Earth shell it. FLEET panel: Attack or Guard early. |

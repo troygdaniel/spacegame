@@ -19,7 +19,7 @@ g.run(`
     f.k = { W: { isDown: false }, A: { isDown: false }, S: { isDown: false }, D: { isDown: false }, UP: { isDown: false }, DOWN: { isDown: false }, LEFT: { isDown: false }, RIGHT: { isDown: false }, SPACE: { isDown: false } };
     f.init({ level }); f.camp = campNew(f.level, f.P.techs, f.opts); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); __said.length = 0; return f; };
 `);
-const tasking = { 1: 'press 2, then 1', 2: 'Find it first', 3: 'Break the defence towers' }; // the words of the intro that say what to do (the curt lines of the belt, card space-game-campaign-belt)
+const tasking = { 1: 'SHIP panel', 2: 'Find it first', 3: 'Break the defence towers' }; // the words of the intro that say what to do (the curt lines of the belt, card space-game-campaign-belt)
 for (const lv of [1, 2, 3]) {
   g.run(`VOICE.spoken = 'short'; window.F = __fake(${lv}); F.showIntro();`);
   const said = J('__said'), story = J(`campStory(${lv}, 'before')`);
