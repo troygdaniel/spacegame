@@ -78,6 +78,27 @@ g.run(`C.carrier.hp = C.carrier.maxHp * 0.3; C.ore = 3;`);
 check('too little ore: "Not enough ore: N needed, 3 in the store." and the hull stays hurt', (() => { const r = J(`campOrder(C, 'repair', '')`); return !r.ok && /^Not enough ore: \d+ needed, 3 in the store\.$/.test(r.say) && J('C.carrier.hp') < J('C.carrier.maxHp'); })());
 check('mending the whole hull from nothing costs CAMP.outpost.repairOre', (() => { g.run(`N('home'); C.docked = 'luna'; C.ore = 200; C.carrier.hp = 1;`); const r = J(`campCheck(C, 'repair', '')`); const m = /for (\d+) ore/.exec(r.say); return m && Math.abs(+m[1] - O.repairOre) <= 1; })());
 
+// ---- C2. a level with no outposts: build and repair work aboard (card space-game-campaign-no-outpost-rule; wrap-up fix) ----
+// The rule is data: the level's own outpost list. The alien home world (3) lists none, so nothing could ever be docked at: building and repairing work aboard there, at the same ore costs, with no
+// reason greyed and no retreat line. Sol (every level that lists outposts) is unchanged. Alpha Centauri (2) lists one, the gate at the relic, and keeps the rule: a level with an outpost has somewhere to go.
+g.run(`N(3); C.ore = 200;`);
+check('C2 the alien home world lists no outposts: campAboard(C) is true there, false in Sol and in Alpha Centauri (the gate at the relic is an outpost)', J('campAboard(C)') === true && J(`campAboard(campNew('home', [], { seed: 1 }))`) === false && J(`campAboard(campNew(1, [], { seed: 1 }))`) === false && J(`campAboard(campNew(2, [], { seed: 1 }))`) === false);
+const ab = J(`campOrder(C, 'build', 'fighter')`);
+check('C2 there, undocked, building works aboard: 25 ore, one queued, no refusal', ab.ok && ab.code !== 'nodock' && J('C.ore') === 175 && J('C.build.queue.length') === 1, JSON.stringify(ab));
+check('C2 the dry check says it can too (the panel row and the strip ask it first): no greyed reason for a fighter or for an escort', J(`campCheck(C, 'build', 'fighter').ok`) === true && J(`campCheck(C, 'build', 'escort').code`) !== 'nodock' && J('campCanBuild(C)') === true);
+g.run(`C.carrier.hp = C.carrier.maxHp / 2; C.ore = 200; window.__r0 = C.ore;`);
+const rp = J(`campOrder(C, 'repair', '', 'key')`);
+check('C2 repair works aboard too, for the same ore as at an outpost (in proportion to what is missing: half a hull is half of the whole)', rp.ok && J('C.carrier.hp === C.carrier.maxHp') && J('__r0 - C.ore') === Math.max(5, Math.ceil(J('CAMP.outpost.repairOre') / 2)) && J(`campCheck(C, 'repair', '').code`) !== 'norepair', JSON.stringify(rp));
+check('C2 the other rules of building are as they were: too little ore says so ("noore2"), a full hull says it is sound, a full bay says so', (() => { g.run('C.ore = 5'); return J(`campOrder(C, 'build', 'fighter').code`) === 'noore2' && J(`campOrder(C, 'repair', '').code`) === 'hullfull'; })());
+g.run(`C.bay.fighters = 0; C.bay.escorts = 0; C.build.queue.length = 0; C.carrier.hp = C.carrier.maxHp * 0.2; __at(2000, 2000);`);
+check('C2 low hull and no ship left, with no outpost in the level: there is no retreat line (nowhere to retreat to), not said, not in the HUD', J('campRetreat(C)') === null && (g.run('campOutpostTick(C, 0.1)'), J('C.flags.retreat') !== true));
+g.run(`N(1); C.ore = 200; __at(campPlaces(1).pallas.x + 3000, campPlaces(1).pallas.y + 3000);`);
+check('C2 Sol is unchanged: the belt still says "Dock at an outpost to build." and "Dock at an outpost to repair." away from a dock', J(`campOrder(C, 'build', 'fighter').say`) === 'Dock at an outpost to build.' && (g.run('C.carrier.hp = 100'), J(`campOrder(C, 'repair', '').say`) === 'Dock at an outpost to repair.'));
+g.run(`N(2); C.ore = 200; __at(-4800, 2400);`);
+check('C2 Alpha Centauri keeps the rule (it lists the gate at Proxima b): away from it building is refused, docked there it works', J(`campOrder(C, 'build', 'fighter').code`) === 'nodock' && (g.run(`C.docked = 'proxima'`), J(`campOrder(C, 'build', 'fighter').ok`)));
+g.run(`N(3, ['fabricator']); C.ore = 200;`);
+check('C2 the Fabricator still does what it did: it builds anywhere at the same price (and in a no-outpost level the rule gives the same as the tech: nothing doubles)', J(`campOrder(C, 'build', 'escort').ok`) === true && J('C.ore') === 155);
+
 // ---- E. the retreat ----
 g.run(`N('home'); C.bay.fighters = 0; C.bay.escorts = 0; C.carrier.hp = C.carrier.maxHp * 0.2; __at(4800, -2000);`);
 const rt = J('campRetreat(C)'), eta = J(`campNavEta(C, Math.hypot(campPlaces('home')[campRetreat(C).o.id].x - C.carrier.x, campPlaces('home')[campRetreat(C).o.id].y - C.carrier.y), true)`);

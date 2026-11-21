@@ -8,10 +8,11 @@
 //   campOutpostHot(C, o)       an alien is within CAMP.outpost.clear of the outpost: its doors are shut (a retreat to it would fly into them)
 //   campOutpostNear(C, safe)   { o, d } the outpost the carrier is within the range of (d: px from its edge), or null; safe: leaving out the hot ones
 //   campOutpostNearest(C, safe) { o, d, secs } the nearest outpost to the carrier whatever the range (d: px from its edge; secs: the flight on Fast), or null; safe: leaving out the hot ones
-//   campCanBuild(C)            docked, or the Fabricator
+//   campAboard(C)              true when the level lists no outposts: build and repair work aboard (nowhere to dock)
+//   campCanBuild(C)            docked, or the Fabricator, or aboard
 //   campDock(C, arg, dry)      the order "dock": the outpost named (arg) or the near one; { ok, code, say } like every order; docked: C.docked = id, an event { type: 'docked' } for the scene
 //   campUndock(C)              the carrier is free again
-//   campMend(C, arg, dry)      the order "repair": the hull, docked only, for ore
+//   campMend(C, arg, dry)      the order "repair": the hull, docked (or aboard, in a level with no outposts), for ore
 //   campRetreat(C)             null, or { o, d, secs, line, near, hot } when the hull is low and no ship of the wing is left: the HUD line and what to say. It names only an outpost whose doors are open: when every one is covered by aliens (level 2's gate while the guards live) hot is true, o is the nearest of them and the line says there is no safe dock (card space-game-outpost-hot-gate)
 //   campOutpostTick(C, dt)     every tick: the retreat line is said once when it begins (campSay), and again only after it has changed (to a safe outpost, or to none) or cleared
 const campOutpostBase = (L, id, pl) => { const p = pl[id], cfg = L.outposts[id] || {}; return { id, name: String(cfg.name || p.base || (p.name + ' outpost')), place: String(p.name), x: p.x, y: p.y, r: p.r || 60, range: Math.max(0, cfg.range != null ? cfg.range : CAMP.outpost.range) }; };
@@ -34,7 +35,9 @@ function campOutpostNearest(C, safe) {
   if (best) best.secs = typeof campNavEta === 'function' ? campNavEta(C, Math.hypot(best.o.x - C.carrier.x, best.o.y - C.carrier.y), true) : 0; // the flight on Fast, as the map says it
   return best;
 }
-const campCanBuild = C => !!C.docked || (typeof campHas === 'function' && campHas(C, 'fabricator'));
+// a level whose data lists NO outposts (the alien home world) has nowhere to dock: building and repairing work aboard the carrier there, at the same ore costs (card space-game-campaign-no-outpost-rule; the rule is the level's own list)
+const campAboard = C => campOutposts(C.level).length === 0;
+const campCanBuild = C => !!C.docked || campAboard(C) || (typeof campHas === 'function' && campHas(C, 'fabricator'));
 
 // ---- docking ----
 function campDock(C, arg, dry) {
@@ -59,7 +62,7 @@ function campUndock(C) { if (!C.docked) return false; const id = C.docked; C.doc
 
 // ---- mending the hull: docked only, for ore, in proportion to what is missing ----
 function campMend(C, arg, dry) {
-  if (!C.docked) return campNo('norepair');
+  if (!C.docked && !campAboard(C)) return campNo('norepair');
   const c = C.carrier, missing = c.maxHp - c.hp; if (missing <= 0.5) return campNo('hullfull');
   const cost = Math.max(5, Math.ceil(CAMP.outpost.repairOre * missing / c.maxHp));
   if (C.ore < cost) return campNo('noore2', { need: cost, have: Math.floor(C.ore) });
