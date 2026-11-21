@@ -1,7 +1,7 @@
-// smoke: the Campaign's ship systems: power to weapons, shields and engines, 6 pips, 2/2/2 is today's numbers exactly (plain Node, no Chrome)
+// smoke: the Campaign's ship systems: power to weapons, shields and engines, 6 pips, 2/2/2 is the base setting (plain Node, no Chrome)
 // Card space-game-campaign-systems (Troy: manage my ship's resources and systems, energy, shields, engine, like X-Wing; the design lines are docs/CAMPAIGN.md "Ship systems"). The whole thing is plain numbers in
 // src/campaign.js, one table CAMP.power by pips 0 to 4. Checks:
-//   A  the table: every effect is 1 (regeneration 0) at 2 pips, runs the right way with the pips, and zero pips is weak but never dead
+//   A  the table: every effect is 1 at 2 pips (the shield mends at its base rate there: card space-game-shield-auto), runs the right way with the pips, and zero pips is weak but never dead
 //   B  the default is today's numbers EXACTLY: a seeded battle of level 1 and one of level 3 (eight aliens put on the carrier, the turrets, the wing, a missile, the blink), flown by the same script, ends in the very state it ended in before this card (pinned below, taken from main b721fe3: the missions, the hub and the outposts merged);
 //      an explicit 2/2/2 is the same battle
 //   C  the budget rule: 6 pips, 0 to 4 each, one moves at a time from the system with the most (or a chosen one); balance is 2/2/2
@@ -32,17 +32,17 @@ sec('A', () => {
   check('A  CAMP.power is the one table: a budget of 6 pips, 4 at most in a system, 2 / 2 / 2 to start', P && P.budget === 6 && P.max === 4 && JSON.stringify(P.start) === '[2,2,2]');
   const rows = { delay: P.weapons.delay, reload: P.weapons.reload, cap: P.shields.cap, regen: P.shields.regen, speed: P.engines.speed, accel: P.engines.accel, turn: P.engines.turn, blink: P.engines.blink };
   check('A  every effect has a value for 0, 1, 2, 3 and 4 pips', Object.values(rows).every(r => Array.isArray(r) && r.length === 5 && r.every(Number.isFinite)));
-  check('A  at 2 pips every effect is today\'s: a multiplier of 1, and no regeneration', ['delay', 'reload', 'cap', 'speed', 'accel', 'turn', 'blink'].every(k => rows[k][2] === 1) && rows.regen[2] === 0);
+  check('A  at 2 pips every effect is a multiplier of 1, and the shield mends at a slow base rate (none at 0 pips: card space-game-shield-auto)', ['delay', 'reload', 'cap', 'speed', 'accel', 'turn', 'blink'].every(k => rows[k][2] === 1) && rows.regen[0] === 0 && rows.regen[2] > 0 && rows.regen[2] <= 4);
   const inc = a => a.every((v, i) => i === 0 || v >= a[i - 1]), dec = a => a.every((v, i) => i === 0 || v <= a[i - 1]);
   check('A  more pips is better: shorter intervals, reloads and recharges, a bigger cap, more regeneration, speed, thrust and turn', dec(rows.delay) && dec(rows.reload) && dec(rows.blink) && inc(rows.cap) && inc(rows.regen) && inc(rows.speed) && inc(rows.accel) && inc(rows.turn));
-  check('A  and strictly different at 0, 1, 3 and 4 pips from 2 (a pip always matters), except the shields\' regeneration, which starts at 3', ['delay', 'reload', 'cap', 'speed', 'accel', 'turn', 'blink'].every(k => [0, 1, 3, 4].every(i => rows[k][i] !== 1)) && rows.regen[3] > 0 && rows.regen[4] > rows.regen[3]);
+  check('A  and strictly different at 0, 1, 3 and 4 pips from 2 (a pip always matters), the shields\' regeneration too: none at 0, slow at 2, fast at 4', ['delay', 'reload', 'cap', 'speed', 'accel', 'turn', 'blink'].every(k => [0, 1, 3, 4].every(i => rows[k][i] !== 1)) && [0, 1, 2, 3, 4].every(i => i === 0 || rows.regen[i] > rows.regen[i - 1]) && rows.regen[4] >= 3 * rows.regen[2]);
   check('A  zero pips is weak, never dead: the turrets still fire, the shield is not nothing, the carrier still moves (every factor is above 0 and a time is at most 2 times)', rows.delay[0] <= 2 && rows.reload[0] <= 2 && rows.blink[0] <= 2 && rows.cap[0] >= 0.25 && rows.speed[0] >= 0.5 && rows.accel[0] >= 0.5 && rows.turn[0] >= 0.5);
   check('A  the emergency is data too: 4 pips to shields, 10 s, a 40 s cooldown', P.emergency.shields === 4 && P.emergency.ms === 10000 && P.emergency.cooldown === 40000);
 });
 
 sec('B', () => {
-  // re-pinned by card space-game-fighter-dogfights (21 Nov 2026): the wing's fighters and the raiders now dogfight, so this seeded fight ends in another state than main b721fe3's. What the pin proves is unchanged: an explicit default is the same battle, and nothing else moves it.
-  const GOLD = {"l1":{"t":120000,"x":-9809.020067,"y":2569.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":136,"kills":8,"missiles":5,"reloadAt":134967,"shots":26,"blinkAt":50033.333333334114,"aliens":0,"ships":9,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]},"l3":{"t":120000,"x":-16939.020067,"y":6039.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":113.6,"kills":8,"missiles":5,"reloadAt":134967,"shots":98,"blinkAt":50033.333333334114,"aliens":0,"ships":3,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]}};
+  // re-pinned by card space-game-shield-auto (21 Nov 2026): the shield mends by itself at 2 pips now, so it ends whole (150) where it ended at 136 and 113.6; nothing else in the fight moved (hull, position, kills, missiles, turrets are the pins of before). Earlier, by card space-game-fighter-dogfights: the wing's fighters and the raiders now dogfight, so this seeded fight ends in another state than main b721fe3's. What the pin proves is unchanged: an explicit default is the same battle, and nothing else moves it.
+  const GOLD = {"l1":{"t":120000,"x":-9809.020067,"y":2569.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":150,"kills":8,"missiles":5,"reloadAt":134967,"shots":26,"blinkAt":50033.333333334114,"aliens":0,"ships":9,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]},"l3":{"t":120000,"x":-16939.020067,"y":6039.733087,"vx":0.014763,"vy":0.012298,"rot":3.292307,"hp":600,"shield":150,"kills":8,"missiles":5,"reloadAt":134967,"shots":98,"blinkAt":50033.333333334114,"aliens":0,"ships":3,"turretAt":[120390.166,120478.758,120566.542,120655.123,120040.933,120131.702,120228.194,120303.698]}};
   const run = (lvl, power) => { const opt = power ? ', power: ' + JSON.stringify(power) : ''; return J(`(() => {
     const C = campNew(${lvl}, ['blink'], { seed: 7${opt} }); let shots = 0;
     for (let i = 0; i < 30 * 120 && !C.result; i++) {
@@ -114,12 +114,14 @@ sec('D', () => {
     check(`D  shields at ${sp} pips: no mending within 3 s of a hit, then ${D.shields.regen[sp]} points a second (gained ${gained.toFixed(1)} in 10 s)`, close(held, 50, 0.01) && Math.abs(gained - want) <= D.shields.regen[sp] * 0.3 + 0.01, JSON.stringify([held, gained, want]));
   });
   mk(2, 2, 2); g.run('C.shield = 10; C.shieldHitAt = -1e9; __go(60)');
-  check('D  at 2 pips the shield does not mend by itself, as today', close(J('C.shield'), 10));
+  check('D  at 2 pips the shield mends by itself, at the base rate and to its cap (10 in 60 s: 3 a second takes it to 150)', close(J('C.shield'), 150, 0.01), J('C.shield'));
+  mk(2, 0, 4); g.run('C.shield = 10; C.shieldHitAt = -1e9; __go(60)');
+  check('D  at 0 pips it does not mend at all (the shield\'s cap is 75 and it stays at 10)', close(J('C.shield'), 10), J('C.shield'));
   mk(1, 4, 1); g.run('C.shield = 140; C.shieldHitAt = -1e9; __go(60)');
   check('D  mending stops at the cap (4 pips: 225)', close(J('C.shield'), 225, 0.01), J('C.shield'));
   mk(2, 3, 1); g.run('C.shield = 0; C.ore = 200');
   const cost0 = J('C.ore'), rr = J("campOrder(C, 'recharge', '', 'key')");
-  check('D  the ore refills a bigger cap and costs the share of it that was missing (all of it: 25 ore)', rr.ok === true && close(J('C.shield'), 187.5) && close(cost0 - J('C.ore'), 25), JSON.stringify([rr, J('C.shield'), cost0 - J('C.ore')]));
+  check('D  the old ore recharge is gone: the order only says the shield mends by itself, and takes no ore and changes no shield', rr.ok === false && rr.code === 'shieldauto' && rr.say === 'Shields mend on their own. More pips on shields mend faster.' && close(J('C.shield'), 0) && J('C.ore') === cost0 && J('C.orders.recharge') === null, JSON.stringify([rr, J('C.shield'), J('C.ore')]));
   // ENGINES (weapons 4 - e, shields 2)
   const speedAt = (e, nav) => { mk(4 - e, 2, e); g.run(`${nav ? 'C.nav = { on: true, fast: true, burn: 2 };' : ''} C.input.thrust = 1; for (let i = 0; i < 900; i++) campCarrier(C, 1 / 30)`); return J('Math.hypot(C.carrier.vx, C.carrier.vy)'); };
   [0, 1, 2, 3, 4].forEach(e => { const a = speedAt(e, false), b = speedAt(e, true); check(`D  engines at ${e} pips: top speed ${210 * D.engines.speed[e]} px/s, and the Fast burn twice that`, close(a, 210 * D.engines.speed[e], 0.01) && close(b, 420 * D.engines.speed[e], 0.05), a + ' ' + b); });
@@ -195,7 +197,7 @@ sec('G', () => {
   const intent = t => J(`campIntent(${JSON.stringify(t)})`);
   check('G  the strip and the voice: "power to shields", "more power to the engines", "power to weapons from engines"', JSON.stringify(intent('power to shields')) === '{"act":"fleet_power","arg":"shields"}' && JSON.stringify(intent('more power to the engines')) === '{"act":"fleet_power","arg":"engines"}' && JSON.stringify(intent('power to weapons from engines')) === '{"act":"fleet_power","arg":"weapons:engines"}', JSON.stringify([intent('power to shields'), intent('more power to the engines')]));
   check('G  "balance power" and "emergency shields" are acts of their own', JSON.stringify(intent('balance power')) === '{"act":"fleet_balance","arg":""}' && JSON.stringify(intent('emergency shields')) === '{"act":"fleet_emergency","arg":""}' && JSON.stringify(intent('balance the power')) === '{"act":"fleet_balance","arg":""}', JSON.stringify([intent('balance power'), intent('emergency shields')]));
-  check('G  "recharge the shields" is still the ore\'s (fleet_recharge), not the power\'s', JSON.stringify(intent('recharge the shields')).includes('fleet_recharge') && JSON.stringify(intent('power up the shields')).includes('fleet_recharge'));
+  check('G  "recharge the shields" is not the power\'s: it still reaches the old recharge order (fleet_recharge), which now only says the shield mends by itself', JSON.stringify(intent('recharge the shields')).includes('fleet_recharge') && JSON.stringify(intent('power up the shields')).includes('fleet_recharge'));
   const sc = read('src/shipcomputer.js');
   check('G  the computer\'s closed list names the three acts, and it runs them (scFleet)', /fleet_power/.test(sc) && /fleet_balance/.test(sc) && /fleet_emergency/.test(sc) && /fleet_power: \(s, arg\) => scFleet\(s, 'power', arg\)/.test(sc) && /fleet_emergency: \(s, arg\) => scFleet\(s, 'emergency', arg\)/.test(sc));
   // low shields, low engines
@@ -221,7 +223,7 @@ sec('J', () => {
   check('J  then a digit picks a row: 2 is "power to shields", the panel closes and the pips move (1 / 3 / 2)', r.ran === true && r.ok === true && r.say === 'Power to shields.' && J('__P.open') === '' && JSON.stringify(J('C.power.p')) === '[1,3,2]', JSON.stringify([r, J('C.power.p')]));
   g.run("__P.open = 'systems'");
   const rows = J("campPanelRows(C, 'systems')");
-  check('J  each row shows its live state: the pips and what they do, "now 1 / 3 / 2", the emergency\'s length', rows.length === 5 && /^1 pips: turrets x0\.77$/.test(rows[0].state) && /^3 pips: shield 18[78]$/.test(rows[1].state) && /^2 pips: speed x1\.00$/.test(rows[2].state) && rows[3].state === 'now 1 / 3 / 2' && /10 s of shields/.test(rows[4].state) && rows.every(x => x.ok), JSON.stringify(rows));
+  check('J  each row shows its live state: the pips and what they do, "now 1 / 3 / 2", the emergency\'s length', rows.length === 5 && /^1 pips: turrets x0\.77$/.test(rows[0].state) && /^3 pips: shield 18[78], mends 6\/s$/.test(rows[1].state) && /^2 pips: speed x1\.00$/.test(rows[2].state) && rows[3].state === 'now 1 / 3 / 2' && /10 s of shields/.test(rows[4].state) && rows.every(x => x.ok), JSON.stringify(rows));
   check('J  the heading line says the pips (and the emergency while it runs)', J("campPanelHead(C, 'systems')") === 'W 1  S 3  E 2');
   g.run("campOrder(C, 'power', 'shields', 'key'); campOrder(C, 'power', 'shields', 'key')");
   const full = J("campPanelRows(C, 'systems')");

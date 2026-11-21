@@ -41,11 +41,10 @@ const CAMP_PANELS = {
     ] } },
     { key: 'E', code: 'KeyE', id: 'ship', side: 'right', title: 'SHIP', rows: [
       { n: 1, id: 'mine', order: 'mine', label: 'Mine ore', help: 'The wing goes and mines ore' },
-      { n: 2, id: 'recharge', order: 'recharge', label: 'Recharge shields', tag: 'Recharge', help: 'Recharge a shield (costs ore)' },
-      { n: 3, id: 'buildf', order: 'build', arg: 'fighter', label: 'Build a fighter', tag: 'New fighter', help: 'Build a fighter (costs ore)' },
-      { n: 4, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', tag: 'New escort', help: 'Build an escort (costs ore)' },
-      { n: 5, id: 'goal', fly: 'objective', label: 'Fly to the objective', tag: 'Fly to goal', help: 'Autopilot to the objective', fast: 'Autopilot (Shift: fast)' }, // fast: Shift with the digit is a burn, which needs the wing aboard (card space-game-campaign-fast-board)
-      { n: 6, id: 'dock', order: 'dock', label: 'Dock at an outpost', tag: 'Dock', help: 'Dock at a friendly outpost' } // ships are built and the hull mended only docked (card space-game-campaign-outposts); docking opens the ready room (E then 6)
+      { n: 2, id: 'buildf', order: 'build', arg: 'fighter', label: 'Build a fighter', tag: 'New fighter', help: 'Build a fighter (costs ore)' },
+      { n: 3, id: 'builde', order: 'build', arg: 'escort', label: 'Build an escort', tag: 'New escort', help: 'Build an escort (costs ore)' },
+      { n: 4, id: 'goal', fly: 'objective', label: 'Fly to the objective', tag: 'Fly to goal', help: 'Autopilot to the objective', fast: 'Autopilot (Shift: fast)' }, // fast: Shift with the digit is a burn, which needs the wing aboard (card space-game-campaign-fast-board)
+      { n: 5, id: 'dock', order: 'dock', label: 'Dock at an outpost', tag: 'Dock', help: 'Dock at a friendly outpost' } // ships are built and the hull mended only docked (card space-game-campaign-outposts); docking opens the ready room (E then 5)
     ] },
     { key: 'C', code: 'KeyC', id: 'systems', side: 'left', slot: 1, title: 'SYSTEMS', rows: [ // the ship's power (card space-game-campaign-systems; docs/CAMPAIGN.md "Ship systems"): a letter key, as the tabs of the panels card; a row's digit moves a pip
       { n: 1, id: 'weapons', order: 'power', arg: 'weapons', label: 'Weapons +', help: 'A pip to the weapons' },
@@ -57,11 +56,11 @@ const CAMP_PANELS = {
   ],
   // why a row cannot be done now, in a few plain words: the code of the game's own refusal (campNo in src/campaign.js) to the words under the row's name; {need} and {have} are ore
   why: { over: 'the battle is over', bay: 'the bay is empty', launching: 'still launching', baydry: 'all of it is out', nofighters: 'no fighters out', noescorts: 'no escorts out', noconvoy: 'no convoy to escort', nowing: 'no ships out',
-    noore: 'no ore in reach', noore2: 'needs {need} ore', shieldfull: 'shield is full', earthfull: "Earth's shield is full", noearth: 'no Earth here', farearth: 'too far from Earth', buildfull: 'no room in the bay', what: 'cannot do that now',
+    noore: 'no ore in reach', noore2: 'needs {need} ore', noearth: 'no Earth here', buildfull: 'no room in the bay', what: 'cannot do that now',
     nogoal: 'no objective', there: 'you are there', nodock: 'Dock at an outpost to build.', norepair: 'Dock at an outpost to repair.', docked: 'already docked', noposts: 'no outpost here', whichpost: 'no such outpost', farpost: 'no outpost in range', hotdock: 'aliens too close', hullfull: 'the hull is sound', powermax: 'at full power', powernone: 'no power to take', powerwhat: 'which system?', locked: 'running: the power is held', cooling: 'ready in {s} s' },
   // the same, a word or two, for the one-line rows of the panels (card space-game-campaign-panels-ui); tag, on a row, is its name in one line (label when there is none)
   shortWhy: { over: 'over', bay: 'bay empty', launching: 'launching', baydry: 'all out', nofighters: 'none out', noescorts: 'none out', noconvoy: 'no convoy', nowing: 'none out',
-    noore: 'no ore near', noore2: 'needs {need} ore', shieldfull: 'full', earthfull: 'Earth full', noearth: 'no Earth', farearth: 'too far', buildfull: 'bay full', what: 'not now',
+    noore: 'no ore near', noore2: 'needs {need} ore', noearth: 'no Earth', buildfull: 'bay full', what: 'not now',
     nogoal: 'no goal', there: 'there', nodock: 'dock first', norepair: 'dock first', docked: 'docked', noposts: 'no outpost', whichpost: 'no post', farpost: 'too far', hotdock: 'foes near', hullfull: 'hull sound', powermax: 'at full', powernone: 'none free', powerwhat: 'which?', locked: 'held', cooling: '{s} s' }
 };
 // the rows the H page and Settings list for the panels: the panel's key (Q, E, C), then the row's digit, under the panel's heading, in the table's order
