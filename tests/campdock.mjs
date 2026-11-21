@@ -95,7 +95,7 @@ check('a click on a row picks it, a second click on UNDOCK undocks', (() => { g.
 
 // ---- D. the Fabricator at the between-missions refit ----
 g.run(`localStorage.setItem(CAMP.store, JSON.stringify({ level: 1, mission: 1, techs: ['shield'], ore: 150, bonus: { fighters: 0, escorts: 0 }, results: {} })); var S3 = __room({}); __key(S3, 'Digit2'); __key(S3, 'Enter');`); // (the refit overlay of the hall)
-check('the hall\'s refit overlay offers it (what it does, its price) and does not offer it twice', has(/^Build fighters and escorts anywhere, not only docked \(120 ore, once\)$/, 'S3') && has(/^Fabricator$/, 'S3') && has(/^You can buy it\.$/, 'S3'), shown('S3').join(' | '));
+check('the hall\'s refit overlay offers it (what it does, its price) and does not offer it twice', has(/^Build ships anywhere, not only docked \(120 ore, once\)$/, 'S3') && has(/^Fabricator$/, 'S3') && has(/^You can buy it\.$/, 'S3'), shown('S3').join(' | '));
 g.run(`__key(S3, 'KeyU');`);
 check('U buys it with the progress\'s ore (150 - 120 = 30), once, and the save has it', (() => { const sv = JSON.parse(g.run('localStorage.getItem(CAMP.store)')); return sv.ore === 30 && sv.techs.includes('fabricator') && sv.techs.includes('shield') && has(/^Fitted\.$/, 'S3') && has(/^Fabricator fitted\. 30 ore left\.$/, 'S3'); })(), shown('S3').join(' | '));
 g.run(`__key(S3, 'KeyU');`);

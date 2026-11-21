@@ -19,7 +19,7 @@ const CAMP_HUBS = {
   walk: { ms: 1.6, min: 260 },                 // the pilot's walk to a desk: ms for each px of the way (a brisk walk: 600 px a second), and the shortest walk in ms
   msg: 3200,                                   // ms a purchase's answer stays on the page
   cruiser: { x: 1090, y: 360, len: 190, name: 502 }, // the cruiser on the pad: where, how long it is drawn (nose up), and the y of its name under the pad's BAY 01
-  over: { x: 36, y: 24, w: 1208, h: 396, pad: 20, top: 46, line: 18, col2: 640, hint: 26 }, // the overlay: the glass at the top of the screen, the room inside it (from the left and from the top), a line's height, where the second column starts, and how far above its bottom the hint stands
+  over: { x: 36, y: 24, w: 1208, h: 408, pad: 20, top: 46, line: 18, col2: 640, hint: 26 }, // the overlay: the glass at the top of the screen, the room inside it (from the left and from the top), a line's height, where the second column starts, and how far above its bottom the hint stands
   stops: { board: [200, 246], rank: [336, 312], refit: [640, 246], launch: [1028, 394] }, // where the pilot stands for each row: at the desk's front, in the open hall, at the pad
   face: { board: -1.5708, rank: -1.5708, refit: -1.5708, launch: -0.5 } // which way the pilot looks there, in radians (the art looks east at 0): up at a desk, at the cruiser from the pad
 };

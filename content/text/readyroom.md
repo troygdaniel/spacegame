@@ -42,4 +42,4 @@ The words of the ready room's menu and its overlays (card space-game-ready-room-
 | camp.room.tech.repair | The carrier and ships within {reach} px mend {rate} hit points a second |
 | camp.room.tech.overdrive | Carrier top speed: {from} to {to} px a second |
 | camp.room.tech.lens | Anomaly sense range: {from} to {to} px |
-| camp.room.tech.fabricator | Build fighters and escorts anywhere, not only docked ({cost} ore, once) |
+| camp.room.tech.fabricator | Build ships anywhere, not only docked ({cost} ore, once) |

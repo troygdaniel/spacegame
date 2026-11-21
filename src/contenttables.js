@@ -986,7 +986,7 @@ const UI_TEXT = {
   'camp.room.tech.repair': 'The carrier and ships within {reach} px mend {rate} hit points a second',
   'camp.room.tech.overdrive': 'Carrier top speed: {from} to {to} px a second',
   'camp.room.tech.lens': 'Anomaly sense range: {from} to {to} px',
-  'camp.room.tech.fabricator': 'Build fighters and escorts anywhere, not only docked ({cost} ore, once)',
+  'camp.room.tech.fabricator': 'Build ships anywhere, not only docked ({cost} ore, once)',
   'camp.warp.l1': 'Warp drive engaged. Earth and the Sun fall behind us.',
   'camp.warp.l1b': 'Warp drive engaged. Alpha Centauri falls behind us.',
   'camp.warp.l2': '{ly} light years to {dest}. Hold on.',
