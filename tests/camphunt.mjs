@@ -35,4 +35,19 @@ check('a row that is not the mission\'s place is flown to where it is (the dista
 check('and the goal row (which stands for the place: its `of` is the place\'s id) is shortened the same way, to nothing when the edge of the circle is already reached',
   (g.run('C.arrivedAt = null'), J('campNavFlight(C, { id: "goal", of: "place:alpha-cen-b" }, 5000) === 2000 && campNavFlight(C, row, 2500) === 0')));
 
+// ---- 3. a mission lost is called a mission lost; the mission card of a retry does not say "of 3" ----
+// The lost card said "LEVEL 2 LOST" when a MISSION was lost (the level goes on: Enter flies the mission again), while the win says "MISSION COMPLETE: <title>". The card a retry shows before the flight said
+// "MISSION 2 OF 3", the label Troy asked the briefing to drop (card space-game-briefing-walkthrough); the board's and the HUD's pages keep "of 3".
+g.run(`window.__sc = (level, mi) => { const f = Object.create(Campaign.prototype); f.level = level; f.camp = campNew(level, [], { seed: 1, mission: mi }); f.P = campProgressNew(); f.card = null; f.hideCard = () => {}; f.say = () => {}; f.showCard = (title, lines, hint) => { f.card = { title, lines, hint }; }; return f; }`);
+check('a lost mission\'s card is MISSION LOST: and the mission\'s title, for the missions of levels 2 and 3 (the old-style rows with no objectives keep LEVEL n LOST)',
+  J('(() => { const out = []; [[2, 1], [2, 2], [3, 0]].forEach(([l, m]) => { const f = __sc(l, m); f.showLost("carrier"); out.push(f.card.title); }); return out; })()').join('|') === 'MISSION LOST: The guards|MISSION LOST: The relic|MISSION LOST: Approach'
+  && J('(() => { const f = __sc(2, 0); f.camp.L = Object.assign({}, f.camp.L, { objectives: null }); f.showLost("carrier"); return f.card.title; })()') === 'LEVEL 2 LOST');
+check('its hint still says what Enter does: fly the mission again', J('(() => { const f = __sc(2, 1); f.showLost("carrier"); return f.card.hint; })()') === 'Enter  fly the mission again     T  title');
+check('the card of a mission shown before a retry\'s flight reads MISSION 2: The guards (no "OF 3"), its words and bonuses still under it',
+  J('(() => { const f = __sc(2, 1); f.showBrief(); return [f.card.title, f.card.lines.length > 2]; })()').join('|') === 'MISSION 2: The guards|true');
+
+// ---- 5. the two waves of mission 2.2 do not say the same line ----
+check('mission 2.2\'s second wave has a line of its own ("A third group, from the other side."), not the first one\'s again; both resolve to words',
+  J('(() => { const w = campMissionRow(2, 1).waves; return [w.length, w[0].say !== w[1].say, uiText(w[0].say), uiText(w[1].say)]; })()').join('|') === '2|true|A second group, coming in from the far side.|A third group, from the other side.');
+
 process.exit(failed ? 1 : (console.log('\nHUNT FIXES PASS'), 0));

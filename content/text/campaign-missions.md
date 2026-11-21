@@ -28,11 +28,12 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.b.time | Finish in {secs} seconds |
 | camp.b.lost | Ships lost: {n} or fewer |
 | camp.say.l2wave3 | Aliens coming for the relic, pilot. |
+| camp.say.l2wave2b | A third group, from the other side. |
 | camp.b.nolost | Lose no ships |
 | camp.b.hull | Keep the hull above {pct} percent |
 | camp.b.ore | Mine {n} ore |
 | camp.b.delivered | Deliver every hauler |
-| camp.ui.mission | MISSION {n} OF {of}: {title} |
+| camp.ui.mission | MISSION {n}: {title} |
 | camp.ui.briefgo | Enter  fly |
 | camp.ui.bonushead | BONUS |
 | camp.ui.bonusmet | +{pts}  {text} |
