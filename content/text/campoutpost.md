@@ -12,7 +12,7 @@ The words of the Campaign's friendly outposts (card space-game-campaign-outposts
 | camp.no.noposts | There is no outpost in this system, pilot. |
 | camp.no.whichpost | I know no outpost called {name}, pilot. |
 | camp.no.farpost | No outpost in range. {name} is {km} km away. |
-| camp.no.hotdock | Aliens too close to dock at {name}, pilot. |
+| camp.no.hotdock | Enemies too close to dock at {name}, pilot. |
 | camp.no.hullfull | The hull is sound, pilot. |
 | camp.say.dock | Docking at {name}. |
 | camp.say.repair | Hull mended: {pts} points for {ore} ore. |
@@ -20,8 +20,8 @@ The words of the Campaign's friendly outposts (card space-game-campaign-outposts
 | camp.say.retreat | Hull low, no ships. Retreat to {name}: {s} seconds on Fast. |
 | camp.say.retreatnear | Hull low, no ships. {name} is in range: E, then 6. |
 | camp.hud.retreat | Retreat to {name}: {s} s on Fast. |
-| camp.hud.retreathot | {name} is covered by aliens: no safe dock. |
-| camp.say.retreathot | Hull low, no ships. {name} is covered by aliens: no safe dock. |
+| camp.hud.retreathot | {name} is covered by enemies: no safe dock. |
+| camp.say.retreathot | Hull low, no ships. {name} is covered by enemies: no safe dock. |
 | camp.hud.dockhint | E 6  dock at {name} |
 | camp.tech.fabricator.name | Fabricator |
 | camp.tech.fabricator.text | Build fighters and escorts anywhere, not only docked. |

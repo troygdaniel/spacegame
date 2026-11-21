@@ -98,11 +98,12 @@ function campBriefWalk(level, i) {
 const CAMPBRIEF_ORDER = ['skiff', 'cutter', 'brute', 'raider', 'drone', 'gunship', 'guard', 'tower', 'mother'];
 function campBriefEnemies(level, i) {
   const L = campMissionRow(level, i), n = {}; if (!L) return { list: [], line: '' };
-  (L.waves || []).forEach(w => { Object.keys(w.ships || {}).forEach(k => { n[k] = (n[k] || 0) + w.ships[k]; }); if (w.mother) n.mother = (n.mother || 0) + 1; });
+  let unknown = false; // a wave row with `secret: true` (1.3's first contact) is not listed: the briefing does not tell what the surprise is (card space-game-night-hunt-l1-rim)
+  (L.waves || []).forEach(w => { if (w.secret) { unknown = true; return; } Object.keys(w.ships || {}).forEach(k => { n[k] = (n[k] || 0) + w.ships[k]; }); if (w.mother) n.mother = (n.mother || 0) + 1; });
   if ((L.guards || []).length) n.guard = (n.guard || 0) + L.guards.length;
   (L.towers || []).forEach(t => { n.tower = (n.tower || 0) + (t.n || 1); });
   const list = CAMPBRIEF_ORDER.concat(Object.keys(n).filter(k => CAMPBRIEF_ORDER.indexOf(k) < 0)).filter(k => n[k] > 0).map(k => ({ kind: k, n: n[k], text: uiText('camp.bf.enemy.' + k + (n[k] === 1 ? '.one' : '.many'), { n: n[k] }) }));
-  return { list, line: list.length ? uiText('camp.bf.expect', { list: list.map(e => e.text).join(', ') }) : uiText('camp.bf.expectnone'), total: list.reduce((a, e) => a + (e.kind === 'mother' || e.kind === 'tower' ? 0 : e.n), 0) };
+  return { list, unknown, line: list.length ? uiText(unknown ? 'camp.bf.expectunknown' : 'camp.bf.expect', { list: list.map(e => e.text).join(', ') }) : uiText(unknown ? 'camp.bf.unknownonly' : 'camp.bf.expectnone'), total: list.reduce((a, e) => a + (e.kind === 'mother' || e.kind === 'tower' ? 0 : e.n), 0) };
 }
 
 // ---- readiness: what you fly it with, and what is off ----
@@ -143,12 +144,13 @@ function campBriefView(Y, zoom, z, view, z0) {
 // A picture is a list of parts in a box of CAMPBRIEF.pic.w by .h round (0, 0): { look, x, y, k, rot, tint } a sprite of the game (look: a CAMP_LOOK name, or 'pod', 'rock', 'ore'; k times the size it has in the battle), { ring, x, y, r, color, a, dash, fill }, { disc }, { line }, { arrow }, { reticle }, { clock }, { bar }.
 // The sprites are the game's own, so a picture is always of what is in the mission: the wing in a ring, the haulers on their lane, the mothership in the reticle, the cruiser mining.
 const CAMPBRIEF_COL_PIC = { cyan: 0x38e1ff, amber: 0xffb454, green: 0x6dff9c, red: 0xff7aa8, gold: 0xffd37a, white: 0xffffff, rock: 0xb9a37a, violet: 0xc9a0ff };
-const CAMPBRIEF_LOOKS = ['carrier', 'fighter', 'escort', 'freighter', 'raider', 'drone', 'gunship', 'mother', 'tower', 'pod', 'rock', 'ore'];
+const CAMPBRIEF_LOOKS = ['carrier', 'fighter', 'escort', 'freighter', 'raider', 'drone', 'gunship', 'mother', 'tower', 'pod', 'rock', 'ore', 'skiff', 'cutter'];
 const campBriefPicture = (() => {
   const C = CAMPBRIEF_COL_PIC, img = (look, x, y, k, rot, tint) => ({ look, x, y, k, rot: rot || 0, tint: tint || 0 }), ring = (x, y, r, color, a, dash, fill) => ({ ring: true, x, y, r, color, a: a == null ? 0.9 : a, dash: !!dash, fill: !!fill }), ret = (x, y, r) => ({ reticle: true, x, y, r }), arrow = (x0, y0, x1, y1, color) => ({ arrow: true, x0, y0, x1, y1, color });
   const T = {
     'scan': [ring(0, 0, 31, C.cyan, 0.9), ring(0, 0, 31, C.cyan, 0.14, false, true), ring(0, 0, 19, C.cyan, 0.4, true), img('fighter', 2, 3, 1.0, -0.5)],
     'kill.wave': [img('raider', -24, -12, 0.8, 0.3), img('raider', -22, 18, 0.8, -0.2), img('drone', 22, -10, 0.7, 0), ret(22, -10, 17)],
+    'kill.wave.pirate': [img('skiff', -24, -12, 1.0, 0.3), img('skiff', -22, 18, 1.0, -0.2), img('cutter', 22, -10, 0.9, 0), ret(22, -10, 17)], // the rim's raids: pirates, brown and ochre, never the aliens' red
     'kill.guards': [img('gunship', -22, 2, 0.7, 0.1), img('drone', 14, -17, 0.6, 0), img('drone', 18, 17, 0.6, 0), ret(-22, 2, 22)],
     'kill.mother': [img('mother', 0, 0, 0.2, 0, 0xc9a0ff), ret(0, 0, 33)],
     'kill.towers': [img('tower', -32, 8, 0.36, 0.5), img('tower', 0, -10, 0.36, 1.2), img('tower', 32, 8, 0.36, 2.4), ret(0, -10, 19)],
@@ -157,6 +159,7 @@ const campBriefPicture = (() => {
     'relic': [ring(0, 0, 32, C.cyan, 0.9), { disc: true, x: 0, y: 0, r: 7, color: C.cyan }, img('carrier', -13, 12, 0.38, -0.5)],
     'hold': [ring(0, 0, 32, C.green, 0.9), img('carrier', 0, 0, 0.4, 0.2)],
     'clear': [ring(0, 0, 33, C.green, 0.5, true), img('carrier', 0, 0, 0.36, 0.3), img('raider', -42, -20, 0.7, 0.6), img('raider', -42, 20, 0.7, -0.6)],
+    'clear.pirate': [ring(0, 0, 33, C.green, 0.5, true), img('carrier', 0, 0, 0.36, 0.3), img('skiff', -42, -20, 0.9, 0.6), img('skiff', -42, 20, 0.9, -0.6)],
     // the bonus objectives
     'b.time': [{ clock: true, x: 0, y: 0, r: 27 }],
     'b.lost': [ring(0, 0, 33, C.green, 0.16, false, true), ring(0, 0, 33, C.green, 0.8, true), img('fighter', -14, 3, 1.1, 0), img('escort', 15, -3, 1.0, 0)],
@@ -176,7 +179,8 @@ const campBriefHasPicture = key => !!(campBriefPicture(key) && campBriefPicture(
 // the goals of a mission as steps and its bonus, each with the picture's key and parts: the words are the HUD's own (campHubBrief, camp.o.* and camp.b.*)
 function campBriefSteps(P, level, i) {
   const B = campHubBrief(P, level, i); if (!B) return { goals: [], bonus: [] };
-  const goals = B.objectives.map((text, k) => { const kind = B.kinds[k]; return { n: k + 1, kind, text, pic: kind, parts: campBriefPicture(kind) }; });
+  const L = campMissionRow(level, i), waves = ((L && L.waves) || []).filter(w => !w.secret), pirates = waves.length > 0 && waves.every(w => Object.keys(w.ships || {}).every(k => typeof CAMP === 'object' && CAMP.pirate && CAMP.pirate.kinds && CAMP.pirate.kinds[k])); // a mission whose raids are all pirates draws pirates (the rim run), not the aliens' ships
+  const goals = B.objectives.map((text, k) => { const kind = B.kinds[k], pic = pirates && (kind === 'kill.wave' || kind === 'clear') ? kind + '.pirate' : kind; return { n: k + 1, kind, text, pic, parts: campBriefPicture(pic) }; });
   const bonus = B.bonus.map(b => { const kind = 'b.' + b.type; return { kind, points: b.points, text: b.text, pic: kind, parts: campBriefPicture(kind) }; });
   return { goals, bonus };
 }

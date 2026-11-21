@@ -93,7 +93,7 @@ const VOICEPACK_EXPAND = {
   'camp.say.build': () => ['fighter', 'escort'].reduce((acc, k) => acc.concat(vpRange(1, (typeof CAMP === 'object' ? CAMP.build.most : 5)).map(n => ({ n, kind: n === 1 ? k : k + 's' }))), []), // "Building 3 fighters."
   'camp.say.built': () => ['fighter', 'escort'].map(kind => ({ kind })),
   'camp.say.convoy': () => vpConvoyNames('placed').map(name => ({ name })), 'camp.say.convoylost': () => vpConvoyNames('placed').map(name => ({ name })), 'camp.say.delivered': () => vpConvoyNames('placed').map(name => ({ name })),
-  'camp.say.arrived': () => vpConvoyNames('named').map(name => ({ name })), 'camp.say.shiplost': () => vpConvoyNames('named').map(name => ({ name })),
+  'camp.say.shiparrived': () => vpConvoyNames('named').map(name => ({ name })), 'camp.say.shiplost': () => vpConvoyNames('named').map(name => ({ name })),
   'camp.say.escort': () => vpConvoyNames().map(name => ({ name })), 'camp.say.hauler': () => vpConvoyNames().map(name => ({ name })),
   'camp.say.cache': () => vpRange(1, vpCaches()).map(n => ({ n })),
   'camp.say.scanned': () => vpScans(),

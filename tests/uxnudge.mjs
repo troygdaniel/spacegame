@@ -1,6 +1,6 @@
 // smoke: the Campaign's first-minute hints: press 1, then press 2, once each, level 1 only (plain Node, no Chrome)
 // Card space-game-night-ux, finding 6 (docs/night/ux.md; src/campnudge.js, update in src/campaignscene.js). A player who reads "Launch the wing" and then flies about is told, at 6 s, "Press Q, then 1, to
-// launch the wing."; with the wing out and aliens about, at 26 s, "Press Q, then 2, to send the fighters at the aliens." Each is shown once, never if the player has already done it, and only in level 1.
+// launch the wing."; with the wing out and aliens about, at 26 s, "Press Q, then 2, to send the fighters at the enemy." Each is shown once, never if the player has already done it, and only in level 1.
 // Run: node tests/uxnudge.mjs   (exit code 1 on a failed check)
 import { readFileSync as __rf } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
@@ -30,7 +30,7 @@ g.run(`window.F = __fake(1); __tick(3); F.onKey({ code: 'KeyQ' }); F.onKey({ cod
 check('a player who launched at 3 s is never told to', !J('__toasts.some(t => /Press Q, then 1/.test(t[1]))'), JSON.stringify(J('__toasts')));
 // the attack hint
 g.run(`__tick(14);`);
-check('with the wing out and aliens about, at 26 s, the second hint: "Press Q, then 2, to send the fighters at the aliens."', J('__toasts.some(t => t[1] === "Press Q, then 2, to send the fighters at the aliens.")') && J('__toasts.find(t => /Press Q, then 2/.test(t[1]))[0]') >= 26, JSON.stringify(J('__toasts')));
+check('with the wing out and aliens about, at 26 s, the second hint: "Press Q, then 2, to send the fighters at the enemy."', J('__toasts.some(t => t[1] === "Press Q, then 2, to send the fighters at the enemy.")') && J('__toasts.find(t => /Press Q, then 2/.test(t[1]))[0]') >= 26, JSON.stringify(J('__toasts')));
 g.run(`__tick(20);`);
 check('and not again', J('__toasts.filter(t => /Press Q, then 2/.test(t[1])).length') === 1);
 g.run(`window.F = __fake(1); __tick(3); F.onKey({ code: 'KeyQ' }); F.onKey({ code: 'Digit1' }); __tick(20); F.onKey({ code: 'KeyQ' }); F.onKey({ code: 'Digit2' }); __toasts.length = 0; __tick(15);`);
