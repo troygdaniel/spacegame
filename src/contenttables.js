@@ -1062,6 +1062,7 @@ const UI_TEXT = {
   'camp.gauge.speed': 'SPEED',
   'camp.gauge.lasers': 'LASERS',
   'camp.gauge.hull': 'HULL',
+  'camp.gauge.even': 'EVEN',
   'camp.say.lasersdry': 'Lasers are running dry. More power to weapons.',
   'camp.say.contact': 'Unknown ships. Not pirates. Weapons hot.',
   'camp.say.sold': 'Sold {ore} ore for {cash}.',
