@@ -109,9 +109,10 @@ function campRouteFly(C, u, dt) {
   if (u.cid != null) C.lane[u.cid] = Math.max(C.lane[u.cid] || 0, Math.max(0, Math.min(1, prev.t + (w.t - prev.t) * (1 - (d - 90) / seg)))); // (the 90 px of the plain road's rule: she has "flown" it when she is within 90 px of the end, so a wave comes when it always came)
   if (campDist(u, u.dest) < 90) { // she is at her place (whatever the state of the fork: a ship put there arrives too)
     if (u.cid != null) C.lane[u.cid] = 1; C.delivered++; u.hp = 0; u.arrived = true; C.events.push({ type: 'arrive', x: u.x, y: u.y, id: u.id }); campSay(C, u.named ? 'camp.say.shiparrived' : 'camp.say.delivered', { name: campConvoyName(u) }); return; }
-  if (!last && d <= Math.max(CAMP.route.reach, u.vmax * dt * 1.1)) { // at a waypoint
+  if (!last && d <= Math.max(CAMP.route.reach, Math.max(u.vmax, Math.hypot(u.vx, u.vy)) * dt * 1.1)) { // at a waypoint
     if (i === 0 && !R.lane) { // the fork, and no lane chosen: she holds for the player's word, then takes the default lane
       u.vx = u.vy = 0;
+      if (u.cord === 'run') { campRoutePick(C, R.pick, 'auto'); return; } // Run for it (src/campconvoy.js): she will not wait for a word, the default lane
       if (R.holdAt == null) { R.holdAt = C.t; C.events.push({ type: 'fork', id: u.id, x: u.x, y: u.y }); campSay(C, 'camp.say.forkhold', { name: campConvoyName(u) }); }
       if (C.ships.some(a => a.team === 'alien' && a.hp > 0 && !a.hold && campDist(a, u) < CAMP.route.panic)) campRoutePick(C, R.pick, 'panic'); // under fire she does not sit still
       else if (C.t - R.holdAt >= R.wait * 1000) campRoutePick(C, R.pick, 'auto');
@@ -121,6 +122,7 @@ function campRouteFly(C, u, dt) {
     u.rt.i = i + 1; return;
   }
   const ang = Math.atan2(w.y - u.y, w.x - u.x);
+  if (u.cord && typeof campConvoyStep === 'function') return campConvoyStep(C, u, ang, dt); // under an order (Tuck in, Hold here, Run for it: src/campconvoy.js): it moves her at the speed the order says, toward the waypoint
   u.rot = ang; u.vx = Math.cos(ang) * u.vmax; u.vy = Math.sin(ang) * u.vmax; u.x += u.vx * dt; u.y += u.vy * dt;
 }
 // a point `px` ahead of a convoy on the road she will fly (the fork and the lane, when one is chosen: before that, the straight road to the fork and on)

@@ -135,6 +135,24 @@ sec('D', () => {
   check('D  before any pick the counter counts the default lane (short): 2 waves', J('campWaveCount(C).total') === 2);
 });
 
+sec('C2', () => {
+  console.log('C2. the convoy orders on the route (card space-game-convoy-orders)');
+  g.run('__mk(0); campOrder(C, "lane", "long"); __go(20)');
+  const x0 = J('({ x: __tt().x, y: __tt().y })');
+  g.run('campOrder(C, "convoy", "hold here"); __go(3)');
+  const x1 = J('({ x: __tt().x, y: __tt().y })');
+  g.run('__go(6)');
+  const x2 = J('({ x: __tt().x, y: __tt().y })');
+  check('C2 Hold here stops her on the lane: after the brake she does not move (6 s later within 5 px)', Math.hypot(x2.x - x1.x, x2.y - x1.y) < 5 && Math.hypot(x1.x - x0.x, x1.y - x0.y) > 20, JSON.stringify([x0, x1, x2]));
+  g.run('campOrder(C, "convoy", "carry on"); __go(6)');
+  const x3 = J('({ x: __tt().x, y: __tt().y })');
+  check('C2 Carry on: she flies on along her road again', Math.hypot(x3.x - x2.x, x3.y - x2.y) > 150);
+  g.run('campOrder(C, "convoy", "run for it"); __go(8)');
+  check('C2 Run for it: she flies faster than her own speed (52 px/s), on the same road', J('Math.hypot(__tt().vx, __tt().vy)') > 52 * 1.3, J('Math.hypot(__tt().vx, __tt().vy)'));
+  g.run('__mk(0); __go(72)');
+  check('C2 at the fork with no lane chosen she holds; Run for it does not wait for a word: the default lane, said, and she goes on', !!J('campRouteHolding(C)') && (g.run('campOrder(C, "convoy", "run for it"); __go(3)'), J('C.route.lane') === 'short' && J('Math.hypot(__tt().vx, __tt().vy)') > 52));
+});
+
 sec('E', () => {
   console.log('E. the scout');
   g.run('__mk(0)');
