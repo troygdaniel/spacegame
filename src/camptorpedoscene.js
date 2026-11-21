@@ -26,13 +26,13 @@ function campTorpedoTexture(scene) { // made once
 
 function campTorpedoSync(scene, ms) {
   const C = scene.camp, K = CAMP_TORP; if (!C || !C.torpedoes) return;
-  if (!scene.tpG) { campTorpedoTexture(scene); scene.tpG = scene.add.graphics().setDepth(4.6); scene.tpGlow = scene.add.graphics().setDepth(5.4).setBlendMode('ADD'); scene.tsp = {}; }
-  const g = scene.tpG, h = scene.tpGlow, play = scene.mode === 'play', seen = {}, now = C.t; g.clear(); h.clear();
+  if (!scene.hud.tp) { campTorpedoTexture(scene); scene.hud.tp = { g: scene.add.graphics().setDepth(4.6), h: scene.add.graphics().setDepth(5.4).setBlendMode('ADD'), sp: {} }; } // kept in scene.hud: a scene that starts again has a new hud, and its old graphics are gone with it (a scene object of its own would outlive them)
+  const T = scene.hud.tp, g = T.g, h = T.h, play = scene.mode === 'play', seen = {}, now = C.t; g.clear(); h.clear();
   C.torpedoes.forEach(t => {
     if (t.dead) return;
     const col = K.color[t.fac] || K.color.pirate, ux = Math.cos(t.rot), uy = Math.sin(t.rot);
-    let r = scene.tsp[t.id];
-    if (!r) r = scene.tsp[t.id] = { body: scene.add.image(t.x, t.y, K.tex).setScale(K.scale).setDepth(5), flame: scene.add.image(t.x, t.y, 'ember').setBlendMode('ADD').setTint(col).setScale(K.flame.scale).setDepth(5), puff: 0 };
+    let r = T.sp[t.id];
+    if (!r) r = T.sp[t.id] = { body: scene.add.image(t.x, t.y, K.tex).setScale(K.scale).setDepth(5), flame: scene.add.image(t.x, t.y, 'ember').setBlendMode('ADD').setTint(col).setScale(K.flame.scale).setDepth(5), puff: 0 };
     r.body.setPosition(t.x, t.y).setRotation(t.rot); r.flame.setPosition(t.x - ux * K.flame.back, t.y - uy * K.flame.back).setTint(col); seen[t.id] = true;
     const pulse = Math.sin(now / K.ring[2] * Math.PI * 2); // the warning ring: it swells and fades
     g.lineStyle(K.width, col, K.ringAlpha * (0.65 + 0.35 * pulse)).strokeCircle(t.x, t.y, K.ring[0] + K.ring[1] * pulse);
@@ -40,7 +40,7 @@ function campTorpedoSync(scene, ms) {
     r.puff -= ms;
     if (play && r.puff <= 0) { r.puff = K.puffEvery; const p = scene.add.image(t.x - ux * 14, t.y - uy * 14, 'smoke').setScale(0.2).setTint(0xb8c2cc).setAlpha(0.5).setDepth(4); scene.tweens.add({ targets: p, alpha: 0, scale: 0.75, duration: 650, onComplete: () => p.destroy() }); }
   });
-  Object.keys(scene.tsp).forEach(id => { if (!seen[id]) { scene.tsp[id].body.destroy(); scene.tsp[id].flame.destroy(); delete scene.tsp[id]; } });
+  Object.keys(T.sp).forEach(id => { if (!seen[id]) { T.sp[id].body.destroy(); T.sp[id].flame.destroy(); delete T.sp[id]; } });
   C.ships.forEach(u => { // a boat that arms: the glow at its tube grows with the windup and a ring pulses round it
     if (!u.boat || u.hp <= 0 || !(u.arming > 0)) return;
     const bk = CAMP.torpedo.boats[u.kind], col = K.color[u.faction] || K.color.pirate, left = Math.max(0, Math.min(1, (u.arming - C.t) / bk.tube.windup)), pulse = Math.sin(now / K.arm.ring[2] * Math.PI * 2);
