@@ -77,7 +77,11 @@ g.run(`(() => {
       if (!st.landAt && fs.length >= 3 && Math.round(s * 30) % 60 === 0 && fs.reduce((a, u) => a + u.hp / u.maxHp, 0) / fs.length < B.cycle && C.carrier.hp > 0) { campOrder(C, 'recall'); st.landAt = s + 14; st.recalls = (st.recalls || 0) + 1; }
     }
     if (B.missiles && Math.round(s * 30) % 21 === 0 && typeof campOrder === 'function') campOrder(C, 'missiles', C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'mothership' : '');
-    if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight)) { campOrder(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : ''); st.mining = false; }
+    if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight)) {
+      const boat = typeof campTorpedoBoats === 'function' ? campTorpedoBoats(C).filter(u => !u.running).sort((p, q) => campDist(p, C.carrier) - campDist(q, C.carrier))[0] : null; // torpedo boats (card space-game-torpedo-boats): the plain answer is to send the fighters at the nearest boat that still has a torpedo, before anything else
+      if (boat) campWingOrder(C, 'fighters', 'attack', boat.id); else campOrder(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : '');
+      st.mining = false;
+    }
   };
   window.__fly = (C, B, sk, st) => {
     if (B.idle) return;
@@ -111,6 +115,7 @@ g.run(`(() => {
     const tgt = a || goal, w2 = Math.atan2(tgt.y - c.y, tgt.x - c.x) + st.err, d2 = Math.atan2(Math.sin(w2 - c.rot), Math.cos(w2 - c.rot));
     C.input.blink = !!(campHas(C, 'blink') && dist > 2200 && Math.abs(d) < 0.25 && C.t - C.blinkAt >= campBlinkCooldown(C));
     C.input.fire = !!a && (turrets ? campDist(a, c) - a.r < reach : Math.abs(d2) < sk.thr && campDist(a, c) < reach); // Space held while an alien is in reach
+    if (turrets && (C.torpedoes || []).some(t => !t.dead && campDist(t, c) - t.r < reach)) C.input.fire = true; // and while a torpedo is: the turrets shoot it down (card space-game-torpedo-boats)
   };
   window.__run1 = (level, seed, techs, B, sk, maxSec, mission) => {
     const rank = window.__RANK === 'auto' ? campRankAt(((level - 1) * 3 + (mission | 0)) * 1400) : Number(window.__RANK) | 0; // the ranks card: the wing of the rank
