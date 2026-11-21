@@ -295,7 +295,8 @@ const CAMP = {
     hull: 300,                             // points for a whole hull (in proportion to the hull left at the end)
     par: 120,                              // s: finish under it and each second saved is worth speed points (a mission has its own par, `par`, else this)
     speed: 5,                              // points a second under the par
-    ship: 50                               // points lost for each ship of the wing that was lost
+    ship: 50,                              // points lost for each ship of the wing that was lost
+    hauler: 100                            // points lost for each hauler or transport lost (a convoy ship: card space-game-l1-rim-missions; it is not a ship of the wing, and a mission can still be won with some of them lost)
   },
   mission: {                               // where a mission happens (docs/CAMPAIGN.md, Mission places)
     arrive: 3000                           // px: the cruiser within this of the mission's place has arrived; the mission's clock (waves, haulers, par, the hold) starts then, not before
@@ -585,7 +586,7 @@ function campNew(level, techs, opts) {
     ore: Math.max(0, Math.min(CAMP.ore.cap, opts.ore != null ? opts.ore : (L.startOre != null ? L.startOre : CAMP.ore.start))), shield: CAMP.carrier.shield, pickups: [], build: { queue: [] },
     relic: L.relic ? { x: campPlaces(level)[L.relic.place].x, y: campPlaces(level)[L.relic.place].y, hold: 0 } : null,
     bay: { fighters: CAMP.bay.fighters, escorts: CAMP.bay.escorts }, launchQ: [], nextLaunch: 0,
-    waves: L.waves.map(() => ({ started: false, at: 0 })), convoys: L.convoys.map(() => ({ started: false })), delivered: 0, lost: 0, kills: 0, launched: 0, lostShips: 0,
+    waves: L.waves.map(() => ({ started: false, at: 0 })), convoys: L.convoys.map(() => ({ started: false })), delivered: 0, lost: 0, kills: 0, launched: 0, lostShips: 0, lane: {}, cash: 0, sold: 0, oreBest: 0,
     orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, recharge: 0, build: 0, power: 0, balance: 0, emergency: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
     result: null, why: '', docked: '' // docked: the id of the outpost the carrier is docked at ('' in flight; src/campoutpost.js)
   };
@@ -637,6 +638,9 @@ function campSpawn(C, kind, x, y) {
   C.ships.push(u); C.by[u.id] = u;
   return u;
 }
+// the money of the dock: the cash (what ore sold at a market came to) and the ore in the store; a price is paid from the cash first, then the ore (the shield recharge is ore only)
+const campFunds = C => Math.floor(C.cash || 0) + Math.floor(C.ore);
+function campPay(C, cost) { const c = Math.min(C.cash || 0, cost); C.cash = (C.cash || 0) - c; C.ore -= cost - c; }
 const campAlive = C => C.ships.filter(u => u.hp > 0);
 const campAliens = C => C.ships.filter(u => u.team === 'alien' && u.hp > 0);
 const campWing = (C, kind) => C.ships.filter(u => u.team === 'earth' && u.hp > 0 && (kind ? u.kind === kind : (u.kind === 'fighter' || u.kind === 'escort')));
@@ -797,9 +801,9 @@ function campBuild(C, arg, dry) {
     + C.build.queue.filter(b => b.kind === kind).length;
   if (have + n > (kind === 'fighter' ? C.cap.fighters : C.cap.escorts)) return campNo('buildfull', { kind }); // the wing limit: the workshop's, and the rank's extras
   const cost = n * (kind === 'fighter' ? B.fighterCost : B.escortCost);
-  if (C.ore < cost) return campNo('noore2', { need: cost, have: Math.floor(C.ore) });
+  if (campFunds(C) < cost) return campNo('noore2', { need: cost, have: campFunds(C) });
   if (dry) return campYes('build', { n, kind: n === 1 ? kind : kind + 's' });
-  C.ore -= cost; for (let i = 0; i < n; i++) C.build.queue.push({ kind, left: kind === 'fighter' ? B.fighterTime : B.escortTime }); C.orders.build++;
+  campPay(C, cost); for (let i = 0; i < n; i++) C.build.queue.push({ kind, left: kind === 'fighter' ? B.fighterTime : B.escortTime }); C.orders.build++;
   return campYes('build', { n, kind: n === 1 ? kind : kind + 's' });
 }
 
@@ -876,6 +880,12 @@ function campTick(C, dt) {
 }
 
 // convoys leave Earth and waves arrive, by the level's own clock
+function campAhead(C, w) { // where a wave with `ahead` comes from: that far in front of a convoy along its road; a convoy gone (or none flying) and it comes from its own `from`, so a wave never spawns nowhere
+  const f = w.along ? C.by['freighter-' + w.along] : campConvoys(C)[0];
+  if (!f || f.hp <= 0 || !f.dest) return w.from ? { x: w.from[0], y: w.from[1] } : null;
+  const dx = f.dest.x - f.x, dy = f.dest.y - f.y, d = Math.hypot(dx, dy) || 1, k = Math.min(w.ahead, Math.max(0, d - 400)) / d;
+  return { x: f.x + dx * k, y: f.y + dy * k };
+}
 function campSchedule(C) {
   if (C.arrivedAt == null) return; // nothing comes before the cruiser is at the mission's place
   const L = C.L, sec = campMissionClock(C);
@@ -885,6 +895,7 @@ function campSchedule(C) {
     const pl = campPlaces(C.level), to = pl[cv.to], from = cv.from ? pl[cv.from] : null;
     const a = from ? Math.atan2(to.y - from.y, to.x - from.x) : Math.atan2(to.y, to.x), sx = from ? from.x + Math.cos(a) * ((from.r || 60) + 50) : Math.cos(a) * (C.earth.r + 50), sy = from ? from.y + Math.sin(a) * ((from.r || 60) + 50) : Math.sin(a) * (C.earth.r + 50);
     const f = campSpawn(C, 'freighter', sx, sy); f.id = 'freighter-' + cv.id; C.by[f.id] = f; f.dest = { x: to.x, y: to.y }; f.rot = a; f.cname = cv.name || to.name;
+    f.cid = cv.id; f.from = { x: sx, y: sy }; f.lane = Math.hypot(to.x - sx, to.y - sy); if (cv.speed) f.vmax = cv.speed; // its own way: where it began and how long the road is (a wave can come by how far it has flown: on { lane }), and its own speed (a row's `speed`, else the table's)
     campSay(C, cv.say || 'camp.say.convoy', { name: f.cname });
   });
   L.waves.forEach((w, i) => {
@@ -894,9 +905,9 @@ function campSchedule(C) {
     const early = w.early != null && prev && prev.started && prevDead && sec - prev.at >= w.early;
     if (!due && !early) return;
     st.started = true; st.at = sec;
-    const goal = w.goal || 'earth';
+    const goal = w.goal || 'earth', ahead = w.ahead != null ? campAhead(C, w) : null, org = ahead ? [ahead.x, ahead.y] : (w.from || [C.carrier.x + 2500, C.carrier.y]); // ahead: the wave comes out of the dark this many px in front of a convoy (its heading), the one named (along) or the first flying
     Object.keys(w.ships).forEach(kind => {
-      for (let k = 0; k < w.ships[kind]; k++) { const a = campSpawn(C, kind, w.from[0] + campBetween(C, -300, 300), w.from[1] + campBetween(C, -300, 300)); if (a) { a.goal = goal; a.wave = i; a.rot = Math.atan2(-a.y, -a.x); } }
+      for (let k = 0; k < w.ships[kind]; k++) { const a = campSpawn(C, kind, org[0] + campBetween(C, -300, 300), org[1] + campBetween(C, -300, 300)); if (a) { a.goal = goal; a.wave = i; a.rot = ahead ? Math.atan2(ahead.y - a.y, ahead.x - a.x) : Math.atan2(-a.y, -a.x); } }
     });
     if (w.mother) { const m = campSpawn(C, 'mother', w.mother[0], w.mother[1]); m.goal = 'earth'; m.wave = i; const hp = campMissionPlace(C) || { x: 0, y: 0 }; m.rot = Math.atan2(hp.y - m.y, hp.x - m.x); }
     if (w.ambush) C.events.push({ type: 'alarm' }); // the surprise: the scene sounds the alarm
@@ -956,11 +967,13 @@ function campPowerStep(C, dt) {
 function campPowerLoad() { let p = CAMP.power.start.slice(); campTry(() => { const raw = JSON.parse(localStorage.getItem(CAMP.store + '.power') || 'null'); if (campPowerOk(raw)) p = raw.slice(); }, 0); return p; }
 function campPowerSave(p) { if (campPowerOk(p)) campTry(() => localStorage.setItem(CAMP.store + '.power', JSON.stringify(p)), 0); }
 
-// when a wave that waits for an event starts: on { scanned: k } (k recon points scanned), { delivered: k } (k haulers arrived), { t: s } (s seconds in)
+const campLane = (C, id) => id ? (C.lane[id] || 0) : Object.keys(C.lane).reduce((a, k) => Math.max(a, C.lane[k]), 0);
+// when a wave that waits for an event starts: on { scanned: k } (k recon points scanned), { delivered: k } (k haulers arrived), { t: s } (s seconds in), { lane: f, convoy? } (a convoy has flown f of its road)
 function campWaveOn(C, on) {
   if (on.scanned != null) return C.scan.filter(p => p.got).length >= on.scanned;
   if (on.delivered != null) return C.delivered >= on.delivered;
   if (on.t != null) return campMissionClock(C) >= on.t;
+  if (on.lane != null) return campLane(C, on.convoy) >= on.lane; // the share (0 to 1) of its road a convoy has flown: the one named (on.convoy: its id), else the farthest of them; nothing while no convoy has left
   return false;
 }
 
@@ -1169,7 +1182,8 @@ function campAI(C, u, dt) {
 }
 function campConvoyAI(C, u, dt) {
   const d = campDist(u, u.dest), ang = Math.atan2(u.dest.y - u.y, u.dest.x - u.x);
-  if (d < 90) { C.delivered++; u.hp = 0; u.arrived = true; C.events.push({ type: 'arrive', x: u.x, y: u.y, id: u.id }); campSay(C, 'camp.say.delivered', { name: campConvoyName(u) }); return; }
+  if (u.cid != null && u.lane > 0) C.lane[u.cid] = Math.max(C.lane[u.cid] || 0, Math.max(0, Math.min(1, 1 - (d - 90) / u.lane))); // how much of its road it has flown (the best it has done: the arrival removes the ship, the share stays)
+  if (d < 90) { if (u.cid != null) C.lane[u.cid] = 1; C.delivered++; u.hp = 0; u.arrived = true; C.events.push({ type: 'arrive', x: u.x, y: u.y, id: u.id }); campSay(C, 'camp.say.delivered', { name: campConvoyName(u) }); return; }
   u.rot = ang; u.vx = Math.cos(ang) * u.vmax; u.vy = Math.sin(ang) * u.vmax; u.x += u.vx * dt; u.y += u.vy * dt;
 }
 
@@ -1567,6 +1581,8 @@ function campObjectives(C) {
       else if (o.what === 'guards') got = C.guardsStart && !C.ships.some(u => u.guard && u.hp > 0) ? 1 : 0;
       else if (/^wave:/.test(o.what)) { const w = parseInt(o.what.slice(5), 10); got = C.waves[w] && C.waves[w].started && !C.ships.some(u => u.team === 'alien' && u.hp > 0 && u.wave === w) ? 1 : 0; }
     } else if (o.type === 'hold') { need = o.secs; got = Math.min(o.secs, Math.floor(campMissionClock(C))); }
+    else if (o.type === 'ore') { need = o.n; got = Math.min(o.n, Math.floor(C.oreBest)); } // the store held this much at some time (selling it afterwards does not undo it)
+    else if (o.type === 'cashin') { need = o.n || 1; got = Math.min(need, Math.floor(C.sold)); } // this much ore sold at a market outpost (campSell)
     else if (o.type === 'relic') got = C.flags.relic ? 1 : 0;
     else if (o.type === 'caches') { need = o.n; got = Math.min(o.n, C.cachesGot); }
     else if (o.type === 'clear') got = C.waves.length && C.waves.every(w => w.started) && !campAliens(C).length ? 1 : 0;
@@ -1576,6 +1592,7 @@ function campObjectives(C) {
 // every tick: the recon points fill up while a ship of yours is near them; a mission whose objectives are all met is won; one that can no longer be met is lost (haulers)
 function campMissions_tick(C, dt) {
   if (C.result) return;
+  if (C.ore > C.oreBest) C.oreBest = C.ore;
   if (C.arrivedAt == null) { const p = campMissionPlace(C); if (!p || Math.hypot(C.carrier.x - p.x, C.carrier.y - p.y) <= CAMP.mission.arrive) { C.arrivedAt = C.t; if (C.nav && p && C.nav.id === 'place:' + C.L.place && typeof campNavClear === 'function') campNavClear(C, 'arrived'); C.events.push({ type: 'arrived', place: p ? p.name : '' }); campSay(C, 'camp.say.arrived', { name: p ? p.name : '' }); } return; } // the mission begins when the cruiser is there
   if (!C.L.objectives) return;
   const mine = C.ships.filter(u => u.team === 'earth' && u.hp > 0 && u.kind !== 'freighter');
@@ -1604,8 +1621,8 @@ function campBonuses(C) {
 // the score of a won mission: { score, base, bonuses, hull, speed, lost, t, hullLeft, shipsLost }
 function campScore(C) {
   const K = CAMP.score, bonuses = campBonuses(C), t = Math.round(campMissionClock(C)), par = C.L.par || K.par, hullShare = C.carrier.hp / C.carrier.maxHp;
-  const hull = Math.round(K.hull * Math.max(0, hullShare)), speed = Math.max(0, par - t) * K.speed, lost = C.lostShips * K.ship, bonus = bonuses.reduce((a, b) => a + b.points, 0);
-  return { score: Math.max(0, K.base + bonus + hull + speed - lost), base: K.base, bonuses, bonus, hull, speed, lost, t, hullLeft: Math.round(C.carrier.hp), shipsLost: C.lostShips };
+  const hull = Math.round(K.hull * Math.max(0, hullShare)), speed = Math.max(0, par - t) * K.speed, lost = C.lostShips * K.ship, haulerLost = C.lost * K.hauler, bonus = bonuses.reduce((a, b) => a + b.points, 0);
+  return { score: Math.max(0, K.base + bonus + hull + speed - lost - haulerLost), base: K.base, bonuses, bonus, hull, speed, lost, haulerLost, haulersLost: C.lost, t, hullLeft: Math.round(C.carrier.hp), shipsLost: C.lostShips };
 }
 
 // what the level asks of you, in the words of content/text/ui.md (camp.obj.<win>): the HUD shows it, the ship computer is told it

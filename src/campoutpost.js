@@ -15,7 +15,7 @@
 //   campMend(C, arg, dry)      the order "repair": the hull, docked (or aboard, in a level with no outposts), for ore
 //   campRetreat(C)             null, or { o, d, secs, line, near, hot } when the hull is low and no ship of the wing is left: the HUD line and what to say. It names only an outpost whose doors are open: when every one is covered by aliens (level 2's gate while the guards live) hot is true, o is the nearest of them and the line says there is no safe dock (card space-game-outpost-hot-gate)
 //   campOutpostTick(C, dt)     every tick: the retreat line is said once when it begins (campSay), and again only after it has changed (to a safe outpost, or to none) or cleared
-const campOutpostBase = (L, id, pl) => { const p = pl[id], cfg = L.outposts[id] || {}; return { id, name: String(cfg.name || p.base || (p.name + ' outpost')), place: String(p.name), x: p.x, y: p.y, r: p.r || 60, range: Math.max(0, cfg.range != null ? cfg.range : CAMP.outpost.range) }; };
+const campOutpostBase = (L, id, pl) => { const p = pl[id], cfg = L.outposts[id] || {}; return { id, name: String(cfg.name || p.base || (p.name + ' outpost')), place: String(p.name), x: p.x, y: p.y, r: p.r || 60, market: cfg.market && cfg.market.rate > 0 ? { rate: cfg.market.rate } : null, range: Math.max(0, cfg.range != null ? cfg.range : CAMP.outpost.range) }; };
 function campOutposts(level) {
   const L = CAMP.levels[level], pl = campPlaces(level), out = [];
   if (!L || !L.outposts) return out;
@@ -53,10 +53,19 @@ function campDock(C, arg, dry) {
   if (C.ships.some(u => u.team === 'alien' && u.hp > 0 && Math.hypot(u.x - C.carrier.x, u.y - C.carrier.y) <= CAMP.outpost.clear)) return campNo('hotdock', { name: o.name });
   if (dry) return campYes('dock', { name: o.name });
   if (C.nav) { if (typeof campNavClear === 'function') campNavClear(C, 'arrived'); else C.nav = null; } // an autopilot trip ends: the carrier is in the outpost's bay
-  C.docked = o.id;
+  C.docked = o.id; campSell(C, o); // a market buys the store on the spot
   C.input.thrust = 0; C.input.turn = 0; C.carrier.vx = 0; C.carrier.vy = 0;
   C.events.push({ type: 'docked', id: o.id, name: o.name }); // (the event 'dock' is a wing ship landing in the bay)
   return campYes('dock', { name: o.name });
+}
+// a market outpost (CAMP.levels[n].outposts[id].market = { rate }) buys the ore in the store when the carrier docks: rate cash for each, the store empty after. The cash pays for building, repair and the refit (campPay), and what is
+// left of it and of the ore goes on to the ready room. { ore, cash } or null when nothing was sold
+function campSell(C, o) {
+  if (!o || !o.market || C.ore < 1) return null;
+  const ore = Math.floor(C.ore), cash = Math.round(ore * o.market.rate);
+  C.ore -= ore; C.cash = (C.cash || 0) + cash; C.sold = (C.sold || 0) + ore;
+  C.events.push({ type: 'sold', id: o.id, name: o.name, ore, cash });
+  return { ore, cash };
 }
 function campUndock(C) { if (!C.docked) return false; const id = C.docked; C.docked = ''; C.events.push({ type: 'undocked', id }); return true; }
 
@@ -65,9 +74,9 @@ function campMend(C, arg, dry) {
   if (!C.docked && !campAboard(C)) return campNo('norepair');
   const c = C.carrier, missing = c.maxHp - c.hp; if (missing <= 0.5) return campNo('hullfull');
   const cost = Math.max(5, Math.ceil(CAMP.outpost.repairOre * missing / c.maxHp));
-  if (C.ore < cost) return campNo('noore2', { need: cost, have: Math.floor(C.ore) });
+  if (campFunds(C) < cost) return campNo('noore2', { need: cost, have: campFunds(C) });
   if (dry) return campYes('repair', { pts: Math.round(missing), ore: cost });
-  C.ore -= cost; c.hp = c.maxHp; C.orders.repair = (C.orders.repair | 0) + 1;
+  campPay(C, cost); c.hp = c.maxHp; C.orders.repair = (C.orders.repair | 0) + 1;
   C.events.push({ type: 'mend', x: c.x, y: c.y });
   return campYes('repair', { pts: Math.round(missing), ore: cost });
 }
