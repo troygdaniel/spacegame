@@ -24,7 +24,7 @@ const SC = `game.scene.getScene('Campaign')`;
 const up = `!!(window.game && game.scene.isActive('Campaign'))`;
 const log = []; const note = (...a) => { const s = a.join(' '); console.log('  ' + s); log.push(s); };
 
-const t = await launch('?campaign=' + (part === '2' || part === 'zoom' ? '2' : '1'), ROOT); // zoom: level 2, which has a goal off the screen (the arrow); the belt's goal is a mothership that has not come
+const t = await launch('?campaign=' + (part === '2' || part === 'zoom' ? '2' : '1') + (part === '3' ? '&debug=1' : ''), ROOT); // part 3 presses the tune kit's win key: the kit is off unless the address says &debug=1 (card space-game-debug-keys-off) // zoom: level 2, which has a goal off the screen (the arrow); the belt's goal is a mothership that has not come
 const j = async expr => JSON.parse(await t.ev(`JSON.stringify(${expr})`));
 const snap = async name => { // taken twice: the first capture after a step can be a frame behind
   for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(34); }
@@ -199,7 +199,7 @@ try {
     await enter(); await t.run(600);
     await keyOn('Backslash'); await t.run(2600); await snap('c30-won-story');
     await keyOn('Enter'); await t.run(600); await snap('c31-tech-pick');
-    await t.goto('?campaign=1', ROOT); await begin(); await enter(); await t.run(500);
+    await t.goto('?campaign=1&debug=1', ROOT); await begin(); await enter(); await t.run(500);
     await keyOn('BracketLeft'); await t.run(1800); await snap('c32-lost');
     await t.goto('?campaign=1', ROOT); await begin(); await enter(); await t.run(1500);
     await keyOn('Digit1'); await t.run(2500);

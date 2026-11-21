@@ -70,7 +70,7 @@ earlier builds.
 | 2 | The refit header says **"Choose a technology: 1 2 3"** while looted techs are chosen with 6, 7, 8 (4 and 5 buy ships). | Win level 1 with a cloaked cache found. |
 | 3 | **I (type an order) and U (hold to speak) do nothing and say nothing** without a chat key. | Fresh browser, mission 1, press I. |
 | 4 | **B (warp blink) says nothing** before the tech is chosen. | Press B in level 1. |
-| 5 | The **debug keys** are listed on the pause card and the keys page, and `\` wins the mission. Fine for the tune kit; ship or hide is a decision. | Esc in any mission. |
+| 5 | The **debug keys** are listed on the pause card and the keys page, and `\` wins the mission. Fine for the tune kit; ship or hide is a decision. **Hidden now:** card `space-game-debug-keys-off` makes the keys do nothing unless the address says `?debug=1`. | Esc in any mission. |
 | 6 | After the reveal the **win card still says "The war is won."** (no variant) while the ending says the war is not over. | Replay level 3 after the ending; win; read the card. |
 | 7 | **"The belt is clear."** ends mission 3, which is at Europa; level 1 is still called "The belt". | Win 1.3. |
 | 8 | The anomaly **`core` is noticed at second 0** of missions 2 and 3 of level 3 (the carrier starts inside its range): "Odd readings ahead" is the first toast. | Start 3.2 or 3.3. |
