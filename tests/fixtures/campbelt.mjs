@@ -45,4 +45,43 @@ export const BELT = String.raw`{                                                
       ]
     }`;
 export const BELT_ID = 11;
-export function belt(g) { g.run('CAMP.levels[11] = (' + BELT + '); campWorldInstall();'); return g; }
+// belt(g): the old Level 1 as the fixture level 11 (and its words as camp.m.11.*, camp.bf.11.*, camp.l11.*), beside the real levels: a plain arena for a suite that needs Ceres, rocks, caches, a convoy to Mars, a mothership.
+// belt(g, 1): the old Level 1 AS level 1, in place of the rim run, with its old words: for a suite of the machinery of the scenes (the hub, the briefing, the replay, the voice) that was written when level 1 was the belt
+//             and pins its nine missions' text and numbers. It tests the machinery, not the rim run's data (tests/camprim.mjs does that).
+export function belt(g, as = 11) {
+  const words = as === 1 ? BELT_WORDS : Object.fromEntries(Object.entries(BELT_WORDS).map(([k, v]) => [k.replace('camp.m.1.', 'camp.m.11.').replace('camp.bf.1.', 'camp.bf.11.').replace('camp.l1.', 'camp.l11.'), v]));
+  g.run('CAMP.levels[' + as + '] = (' + BELT + '); campWorldInstall(); Object.assign(UI_TEXT, ' + JSON.stringify(words) + '); CAMP_HUB.stations[11] = CAMP_HUB.stations[1];');
+  return g;
+}
+// the words of the old Level 1 under the number 11 (camp.m.11.*, camp.bf.11.*, camp.l11.*: the titles, the briefing lines, the story), so a scene suite that flew level 1 can fly level 11 and read what it read
+export const BELT_WORDS = {
+ "camp.l1.before.3": "Quiet shift. Fill the store.",
+ "camp.l1.after.3": "Earth recalls the cruiser for a refit.",
+ "camp.m.1.1.title": "Belt survey",
+ "camp.m.1.1.b1": "Scan three rock fields.",
+ "camp.m.1.1.b2": "Expect company.",
+ "camp.m.1.2.title": "Ore haulers",
+ "camp.m.1.2.b1": "Escort the haulers from Deimos to Phobos.",
+ "camp.m.1.2.b2": "Two must arrive.",
+ "camp.m.1.3.title": "The mothership",
+ "camp.m.1.3.b1": "Destroy the alien mothership.",
+ "camp.m.1.3.b2": "Three waves first.",
+ "camp.bf.1.1.w1": "Fly to each of the 3 marked rings on the map.",
+ "camp.bf.1.1.w2": "Any ship of yours inside a ring scans it: 8 seconds.",
+ "camp.bf.1.1.w3": "Aliens answer your scans. Keep the wing close.",
+ "camp.bf.1.1.w4": "Finish by destroying every alien that comes.",
+ "camp.bf.1.1.n1": "Welcome aboard, Commander. The three rings to scan are on the map: Tab opens it in flight.",
+ "camp.bf.1.1.n2": "Any ship of ours inside a ring scans it. Raiders will answer, so keep the wing close and shoot what comes.",
+ "camp.bf.1.1.n3": "W A S D fly the cruiser. Hold Space to fire the turrets. Q opens the fleet panel: 1 launches the wing. Tab opens the map.",
+ "camp.bf.1.2.w1": "3 haulers leave Vesta for Ceres, 15 seconds apart.",
+ "camp.bf.1.2.w2": "2 must reach Ceres. All 3 earns a bonus.",
+ "camp.bf.1.2.w3": "3 waves of raiders come in from the east.",
+ "camp.bf.1.2.w4": "Fly along the lane and kill raiders before they close.",
+ "camp.bf.1.3.w1": "3 waves come, at 5, 40 and 80 seconds.",
+ "camp.bf.1.3.w2": "The mothership arrives with the last wave.",
+ "camp.bf.1.3.w3": "Destroy the mothership to win. Missiles (F) help.",
+ "camp.l1.before.1": "Ceres belt. The cruiser is mining.",
+ "camp.l1.before.2": "Fly over ore, or send the drones: SHIP panel, Mine ore.",
+ "camp.l1.after.1": "Mothership destroyed. The belt is clear.",
+ "camp.l1.after.2": "Their wreck holds alien technology."
+};

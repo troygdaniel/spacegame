@@ -200,7 +200,7 @@ sec('K', () => {
     }
     const c = C.carrier; return { t: Math.round(C.t), x: +c.x.toFixed(6), y: +c.y.toFixed(6), vx: +c.vx.toFixed(6), vy: +c.vy.toFixed(6), rot: +c.rot.toFixed(6), hp: +c.hp.toFixed(4), shield: +C.shield.toFixed(4), kills: C.kills, missiles: C.missiles, reloadAt: Math.round(C.reloadAt), shots, blinkAt: C.blinkAt, aliens: campAliens(C).length, ships: C.ships.length, turretAt: C.turrets.map(t => +t.at.toFixed(3)) };
   })()`);
-  [1, 3].forEach(l => { const a = run(l); check(`K  level ${l}: with no Scout order given a 120 s battle ends in the very state main (b721fe3) ends in`, JSON.stringify(a) === JSON.stringify(GOLD['l' + l]), JSON.stringify(a)); });
+  [11, 3].forEach(l => { const a = run(l); check(`K  level ${l === 11 ? '1 (the old belt, fixture 11)' : l}: with no Scout order given a 120 s battle ends in the very state main (b721fe3) ends in`, JSON.stringify(a) === JSON.stringify(GOLD['l' + (l === 11 ? 1 : l)]), JSON.stringify(a)); });
 });
 console.log(failed ? `CAMP SCOUTS FAIL (${failed} of ${n})` : `CAMP SCOUTS PASS (${n} checks)`);
 process.exit(failed ? 1 : 0);

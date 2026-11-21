@@ -12,10 +12,11 @@
 import { readFileSync as __rf } from 'node:fs';
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
+import { belt } from './fixtures/campbelt.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
-const g = nodeGame();
+const g = nodeGame(); belt(g, 1); // the old Level 1, the belt, as level 1: this suite pins its world (card space-game-l1-rim-missions)
 g.run(__rf(new URL('./fixtures/camplegacy.js', import.meta.url), 'utf8') + ' CAMP.levels[2] = CAMP.levels.legacy2; CAMP.levels[3] = CAMP.levels.legacy3;'); // levels 2 and 3 as whole-level rows (card space-game-campaign-missions): this test reads their guards, towers and caches; level 1 stays the belt
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const K = J('CAMP.world');
