@@ -127,6 +127,21 @@ console.log('B. the real Level 1: the rim run');
   check('the briefing has its walkthrough lines for the three missions (3 to 6 each) and the goal pictures for ore and cashin', [1, 2, 3].every(m => J(`campBriefWalk(1, ${m - 1}).data`) === true && J(`campBriefWalk(1, ${m - 1}).steps.length`) >= 3) && J('campBriefHasPicture("ore")') && J('campBriefHasPicture("cashin")') && J('campBriefHasPicture("b.sold")') && J('campBriefHasPicture("b.neutrals")'));
 }
 
+console.log('D. 1.2 has a goal to fly to (card space-game-l1-mine-goal)');
+{
+  g.run('window.C = campNew(1, [], { seed: 3, mission: 1 }); __run(1)');
+  const goal = () => J('campNavGoal(C)');
+  const rocksNear = J('C.rocks.map(r => Math.hypot(r.x - C.carrier.x, r.y - C.carrier.y)).sort((a, b) => a - b)[0]');
+  check('1.2 at the start: the goal is the nearest rock (the field to mine), as a rock mark the list has, and E then 5 has something to fly to', (() => { const q = goal(); return q && q.kind === 'rock' && /^rock:/.test(q.id) && Math.abs(Math.hypot(q.x - J('C.carrier.x'), q.y - J('C.carrier.y')) - rocksNear) < 1 && J('campNavRows(C).some(r => r.id === ' + JSON.stringify(q.id) + ')'); })());
+  check('the goal row is the one the map and the list mark as the goal (so the edge arrow and the list line say where to fly)', (() => { const q = goal(), r = J('campNavRows(C).find(r => r.goal)'); return !!q && !!r && r.of === q.id; })());
+  g.run('C.rocks.forEach((r, i) => { if (i % 2 === 0) r.hp = 0; })');
+  check('the goal follows the rocks: it is a rock that is still there', (() => { const q = goal(); return q && J('C.rocks.find(r => "rock:" + r.id === ' + JSON.stringify(q.id) + ').hp') > 0; })());
+  g.run('C.ore = campObjectives(C)[0].need + 10; campMissions_tick(C, 0.1)');
+  check('ore mined (the objective\'s amount): with no pirate in the sky the goal is the Works at Ceres (to sell); with a pirate about it is the pirate', (() => { const w = goal(); g.run('window.__p = campSpawn(C, "skiff", C.carrier.x + 900, C.carrier.y); __p.hold = false'); const a = goal(); g.run('__p.hp = 0; C.ships = C.ships.filter(u => u.hp > 0)'); return w && w.id === 'place:ceres' && w.kind === 'place' && w.name === 'Occator Works' && a && a.kind === 'alien'; })());
+  g.run('C.carrier.x = campPlaces(1).ceres.x + 200; C.carrier.y = campPlaces(1).ceres.y; C.waves.forEach(w => { w.started = true; }); campDock(C, "ceres"); campUndock(C); campMissions_tick(C, 0.1)');
+  check('sold and the raids beaten: the mission is won and there is no goal left (nothing is open)', J('C.result') === 'won' || goal() === null);
+}
+
 console.log('C. the bots: the plain bot wins each of the three missions, the idle player wins none');
 {
   const { run } = await import('../tools/campaign-bot.mjs');

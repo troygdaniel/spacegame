@@ -26,17 +26,23 @@ function campNavGoal(C) {
     const ship = (u, kind, name) => ({ id: kind === 'mother' ? 'mother' : kind + ':' + u.id, kind, name, x: u.x, y: u.y, r: u.r || 0, moving: u.vmax > 0, ref: u.id });
     const rt = typeof campRetreat === 'function' ? campRetreat(C) : null; if (rt && !rt.hot) return { id: 'place:' + rt.o.id, kind: 'place', name: rt.o.place, x: rt.o.x, y: rt.o.y, r: rt.o.r }; // low on hull with no ship left: the goal is the nearest outpost with its doors open (src/campoutpost.js); none open (hot) is no goal: the autopilot is not sent into the aliens
     if (C.L.place && C.arrivedAt == null && pl[C.L.place]) { const p = pl[C.L.place]; return { id: 'place:' + C.L.place, kind: 'place', name: String(p.name), x: p.x, y: p.y, r: p.r || 60 }; } // not there yet: the goal is the place of the mission
+    const mineGoal = type => { // ore: the nearest rock that is still there (a mark the list has: flying to it puts the cruiser in the field); cashin: the market outpost, to sell the store
+      if (type === 'ore') { const r = near((C.rocks || []).filter(q => q.hp > 0)); return r ? { id: 'rock:' + r.id, kind: 'rock', name: uiText('camp.nav.rock', { n: String(r.id).replace(/^rock-/, '') }), x: r.x, y: r.y, r: r.r || 0, ref: r.id } : null; }
+      const w = campOutposts(C.level).find(x => x.market); return w ? { id: 'place:' + w.id, kind: 'place', name: w.name, x: w.x, y: w.y, r: w.r } : null;
+    };
     if (L.objectives) { // a mission: the first objective not done yet (src/campaign.js campObjectives)
       const o = campObjectives(C).find(x => !x.done); if (!o) return null;
       if (o.type === 'scan') { const q = near(C.scan.map((p, i) => Object.assign({ i }, p)).filter(p => !p.got)); return q ? { id: 'scan:' + q.i, kind: 'scan', name: uiText('camp.nav.scan', { n: q.i + 1 }), x: q.x, y: q.y, r: 0 } : null; }
       if (o.type === 'caches') { const k = near(C.caches.map((q, i) => Object.assign({ i }, q)).filter(q => !q.got)); return k ? { id: 'cache:' + k.i, kind: 'cache', name: uiText('camp.nav.cache', { n: k.i + 1 }), x: k.x, y: k.y, r: 0 } : null; }
       if (o.type === 'relic') return C.relic ? { id: 'relic', kind: 'relic', name: uiText('camp.nav.relic'), x: C.relic.x, y: C.relic.y, r: 0 } : null;
+      if (o.type === 'ore' || o.type === 'cashin') return mineGoal(o.type); // the rim run's 1.2 (card space-game-l1-mine-goal): the nearest rock while ore is short, the Works for the sale
       if (o.type === 'deliver') { const cv = near(campConvoys(C)); return cv ? ship(cv, 'convoy', uiText('camp.nav.convoy', { name: campConvoyName(cv) })) : null; }
       if (o.type === 'hold') return C.earth ? { id: 'place:base', kind: 'place', name: String(C.earth.name || ''), x: C.earth.x, y: C.earth.y, r: C.earth.r || 60 } : null;
       if (o.what === 'mother') { const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); return m ? ship(m, 'mother', uiText('camp.nav.mother')) : null; }
       if (o.what === 'towers') { const t = near(C.ships.filter(u => u.kind === 'tower' && u.hp > 0)); return t ? ship(t, 'tower', uiText('camp.nav.tower')) : null; }
       if (o.what === 'guards') { const g = near(C.ships.filter(u => u.guard && u.hp > 0)); return g ? ship(g, 'guard', uiText('camp.nav.guard')) : null; }
-      const a = near(campAliens(C)); return a ? ship(a, 'alien', uiText(a.faction === 'pirate' ? 'camp.nav.pirate' : 'camp.nav.alien')) : null;
+      const a = near(campAliens(C)); if (a) return ship(a, 'alien', uiText(a.faction === 'pirate' ? 'camp.nav.pirate' : 'camp.nav.alien'));
+      const next = campObjectives(C).find(x => !x.done && (x.type === 'ore' || x.type === 'cashin')); return next ? mineGoal(next.type) : null; // waiting for a raid with ore still to mine or sell: that is where to be
     }
     if (L.win === 'mother') {
       const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); if (m) return ship(m, 'mother', uiText('camp.nav.mother'));
