@@ -1,14 +1,13 @@
 ---
 type: text
 ---
-The words of the Campaign's ready room, the hub between missions (card space-game-campaign-hub): the rows, the board, the briefing, the refit, the rank and the keys. They are strings of the game like those of ui.md, kept in a file of their own because ui.md is at the 200-row limit of a content file.
+The words of the Campaign's ready room, the hub between missions (card space-game-campaign-hub): the rows, the board, the briefing, the refit, the rank and the keys (the words of the overlays and of the plain descriptions are in readyroom.md). They are strings of the game like those of ui.md, kept in a file of their own because ui.md is at the 200-row limit of a content file.
 
 ## Strings
 | key | text |
 |---|---|
 | camp.hub.title | READY ROOM  -  {name} |
 | camp.hub.row.board | MISSIONS |
-| camp.hub.row.brief | BRIEFING |
 | camp.hub.row.refit | REFIT |
 | camp.hub.row.rank | RANK |
 | camp.hub.row.launch | LAUNCH |
@@ -16,12 +15,11 @@ The words of the Campaign's ready room, the hub between missions (card space-gam
 | camp.hub.note.refit | {ore} ore |
 | camp.hub.note.points | {points} points |
 | camp.hub.note.launch | mission {n} |
-| camp.hub.foot.board | Enter  the briefing |
-| camp.hub.foot.brief | Enter  the refit |
-| camp.hub.foot.refit | Enter  your rank |
-| camp.hub.foot.rank | Enter  to the launch pad |
+| camp.hub.foot.board | Enter  open the missions |
+| camp.hub.foot.refit | Enter  open the refit |
+| camp.hub.foot.rank | Enter  open your rank |
 | camp.hub.foot.launch | Enter  LAUNCH |
-| camp.hub.keys | 1 to 5 pick   W S move   Enter next   L launch   Esc title |
+| camp.hub.keys | 1 to 4 pick   Up Down move   Enter open   Left back   L launch   Esc title |
 | camp.hub.kind.recon | RECON |
 | camp.hub.kind.escort | ESCORT |
 | camp.hub.kind.attack | ATTACK |
@@ -37,13 +35,8 @@ The words of the Campaign's ready room, the hub between missions (card space-gam
 | camp.hub.brief.obj | OBJECTIVES |
 | camp.hub.brief.best | Best so far: {score} points, flown {n} |
 | camp.hub.brief.new | Not flown yet. |
-| camp.hub.refit.head | REFIT |
 | camp.hub.refit.ore | Ore in the store: {ore} |
-| camp.hub.refit.tech | Tech: {list} |
-| camp.hub.refit.notech | Tech: none yet. The refit after a level gives one. |
 | camp.hub.refit.wing | Wing for the next mission: {f} fighters, {e} escorts |
-| camp.hub.refit.extra | Bought here: {xf} fighters, {xe} escorts (at most {most} of each) |
-| camp.hub.refit.buy | F  fighter {fc} ore     E  escort {ec} ore     Backspace  give one back |
 | camp.hub.boughtf | A fighter joins the wing. {ore} ore left. |
 | camp.hub.boughte | An escort joins the wing. {ore} ore left. |
 | camp.hub.soldf | A fighter given back. {ore} ore. |
@@ -51,7 +44,6 @@ The words of the Campaign's ready room, the hub between missions (card space-gam
 | camp.hub.noore | Not enough ore: {need} needed, {have} in the store. |
 | camp.hub.most | No more: {most} extra of each at most. |
 | camp.hub.nothing | Nothing to give back. |
-| camp.hub.rank.head | RANK |
 | camp.hub.rank.name | Rank: {name}  ({n} of {of}) |
 | camp.hub.rank.next | Next rank {to} at {next} points |
 | camp.hub.rank.top | The highest rank. |

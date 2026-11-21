@@ -138,7 +138,7 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.(b|o|obj)\./, why: 'the objectives and bonus objectives: the HUD, the briefing and debrief cards (the briefing\'s two lines are said, these are the list)' },
   { re: /^camp\.nudge\./, why: 'the first-minute hints: a toast' },
   { re: /^camp\.win\./, why: 'the won card\'s result line: shown under the story, which is what is said' },
-  { re: /^camp\.(hub|keys|map|hud|tech|ui)\./, why: 'the words of a screen: the ready room, the key page, the map, the HUD, the tech cards and every card\'s title and hint' },
+  { re: /^camp\.(hub|keys|map|hud|tech|ui|room)\./, why: 'the words of a screen: the ready room and its overlays, the key page, the map, the HUD, the tech cards and every card\'s title and hint' },
   { re: /^(chatter|hint|keys|listen|music|spoken|title|toast)\./, why: 'Settings, the title screen, Long Haul\'s hints and toasts: shown (the ship\'s voice speaks its own event lines, VOICE_LINES, not these)' }
 ];
 function voicePackFamily(key) { return VOICEPACK_FAMILIES.find(f => f.re.test(key)) || null; }

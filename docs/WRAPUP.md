@@ -6,7 +6,7 @@ rule, voice-pack derive) and the three hunts' fixes are all on it. Feature freez
 
 ## For Troy, in one line
 
-**Play it: title, K, the ready room (Enter for the briefing, L to launch), Q then 1 to launch the wing, Tab for the map, E then 5 to dock; no blocker and no crash anywhere I
+**Play it: title, K, the ready room (Enter opens a row, Enter on a mission its briefing, L to launch), Q then 1 to launch the wing, Tab for the map, E then 5 to dock; no blocker and no crash anywhere I
 looked; what is still rough is the difficulty of the escort mission (1.2) for a player who does not give orders, three small label and words things, and the debug keys on the
 pause card (`\` wins a mission).**
 
