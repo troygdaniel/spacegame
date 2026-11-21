@@ -519,7 +519,7 @@ class Campaign extends Phaser.Scene {
       this.hud.post.setText(rt ? rt.line : nr ? uiText('camp.hud.dockhint', { name: nr.o.name }) : '').setColor(rt ? '#ff9ec0' : '#ffb454');
     }
     if (this.hud.nav) this.hud.nav.setText(C.navWait ? uiText('camp.nav.recalling', { n: C.navWait.n }) : C.nav ? uiText('camp.nav.hud', { name: C.nav.name, km: campNavKm(Math.hypot(C.nav.x - c.x, C.nav.y - c.y)) }) : '');
-    this.flowHud(bar); // the lines under the gauges, each where the lines above it end (and Earth's bar under its line)
+    if (this.flowHud) this.flowHud(bar); // (a stand-in scene in a test has none) the lines under the gauges, each where the lines above it end (and Earth's bar under its line)
     if (this.hud.arrow) {
       const cam = this.cameras && this.cameras.main, ar = cam && typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: cam.scrollX, y: cam.scrollY }, W, H, cam.zoom) : null; // a stand-in scene in a test has no camera
       if (!ar) this.hud.arrow.setVisible(false);
