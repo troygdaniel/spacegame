@@ -30,7 +30,8 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.ready.rank | Rank: {name} |
 | camp.bf.ready.stance | Stance: {name} |
 | camp.bf.ready.stock | Missiles {missiles}    Ore {ore} |
-| camp.bf.ready.shield | Shield: full |
+| camp.bf.ready.power | Power: weapons {w}, shields {s}, engines {e} |
+| camp.bf.ready.shield | Shield: full, {cap} points |
 | camp.bf.stance.free | Free |
 | camp.bf.stance.orbit | Orbit |
 | camp.bf.stance.keep | Keep distance |
@@ -43,6 +44,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.mission | MISSION |
 | camp.bf.zoomarea | M: the mission area |
 | camp.bf.zoomwhole | M: the whole system |
+| camp.bf.zoomroute | M: the route |
 | camp.bf.keys | Enter or L launch    Esc back to the board |
 | camp.bf.keys2 | Left Right page the walkthrough |
 | camp.bf.1.1.w1 | Fly to each of the 3 marked rings on the map. |

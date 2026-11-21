@@ -74,7 +74,8 @@ const spaceOwn = bound(SPACE_FILES);
 
 // a key cap of the table as the keys it stands for; a cap that is not a keyboard key (the mouse) stands for none
 const NOT_KEYS = ['CLICK', 'MOUSE', 'WHEEL', 'ANY KEY'];
-const capKeys = cap => { const c = cap.toUpperCase(); if (NOT_KEYS.includes(c)) return []; const r = /^(\d)-(\d)$/.exec(c); if (r) { const out = []; for (let d = +r[1]; d <= +r[2]; d++) out.push(String(d)); return out; } return [norm(c)]; };
+const ARROWCAP = { '\u2190': 'LEFT', '\u2192': 'RIGHT' }; // the arrows' caps on the keys page (the FLEET panel's flip line)
+const capKeys = cap => { if (ARROWCAP[cap]) return [ARROWCAP[cap]]; const c = cap.toUpperCase(); if (NOT_KEYS.includes(c)) return []; const r = /^(\d)-(\d)$/.exec(c); if (r) { const out = []; for (let d = +r[1]; d <= +r[2]; d++) out.push(String(d)); return out; } return [norm(c)]; };
 const groups = J(`CONTROLS.map(g => ({ id: g.id, scene: g.scene, rows: g.rows.map(r => ({ k: r.k, t: r.t, help: r.help })) }))`);
 const group = id => groups.find(x => x.id === id);
 

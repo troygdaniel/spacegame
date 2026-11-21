@@ -5,9 +5,10 @@
 // readiness with its warnings. It opens at once when a mission is picked on the board, and the ship reads the first line of the walkthrough once (the voice's own settings rule: muted, off or no voice is silent).
 //   campBriefOpen(s)         open the briefing of the mission the room's Launch would fly (campHubTarget): false when there is none
 //   campBriefClose(s)        take it away
-//   campBriefKey(s, code)    a key while it is open: Enter and L launch, Esc closes, Left and Right page the walkthrough, M zooms the map between the mission's area and the whole system; every other key is the screen's (nothing under it moves)
+//   campBriefKey(s, code)    a key while it is open: Enter and L launch, Esc closes, Left and Right page the walkthrough, M zooms the map: the route, the mission's area, the whole system, round; every other key is the screen's (nothing under it moves)
 //   campBriefIsOpen(s)       is it open
 const CAMPBRIEF_COL = { a: { x: 646, w: 336 }, b: { x: 1002, w: 216 } }; // px: the two text columns at the right of the map (the map is CAMPBRIEF.frame, which ends at 622)
+const CAMPBRIEF_ZOOM = ['camp.bf.zoomroute', 'camp.bf.zoomarea', 'camp.bf.zoomwhole']; // the words of the key line for the view M goes to: the route, the mission area, the whole system
 const campBriefIsOpen = s => !!s && !!s.bf && s.bf.open === true;
 const campBriefHoldsM = game => !!(game && game.scene && typeof game.scene.getScenes === 'function' && game.scene.getScenes(true).some(campBriefIsOpen)); // meta.js: M mutes the sound everywhere, except while the briefing is up: there it zooms the map
 const campBriefProj = (fit, F) => (x, y) => campMapPoint(fit, F, x, y);
@@ -16,13 +17,13 @@ function campBriefOpen(s) {
   if (!s || !s.add || campBriefIsOpen(s)) return false;
   const t = campHubTarget(s.P, s.hub), Y = campBriefLayers(t.level, t.i); if (!Y) return false;
   const K = CAMPBRIEF, P = K.panel, objs = [], put = (o, d) => { o.setScrollFactor(0).setDepth(130 + (d || 0)); objs.push(o); return o; };
-  const bf = s.bf = { open: true, objs, t, Y, whole: false, page: 0, walk: campBriefWalk(t.level, t.i), ready: campBriefReady(s.P, t.level, t.i), foes: campBriefEnemies(t.level, t.i), brief: campHubBrief(s.P, t.level, t.i), route: campBriefRoute(Y), map: [], text: [] };
+  const bf = s.bf = { open: true, objs, t, Y, zoom: 0, page: 0, walk: campBriefWalk(t.level, t.i), ready: campBriefReady(s.P, t.level, t.i), foes: campBriefEnemies(t.level, t.i), brief: campHubBrief(s.P, t.level, t.i), route: campBriefRoute(Y), map: [], text: [] };
   put(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.97).setInteractive(), 0); // a veil that takes the clicks
   hudPanel(put(s.add.graphics(), 1), P.x, P.y, P.w, P.h, 22, 0.98, s.accent ? parseInt(s.accent.slice(1), 16) : CYAN);
   bf.g = put(s.add.graphics(), 2);
   campBriefPaintMap(s);
   campBriefPaintText(s);
-  const keys = put(s.add.text(P.x + P.w / 2, P.y + P.h - 20, uiText('camp.bf.keys') + '    ' + (bf.walk.steps.length > K.per ? uiText('camp.bf.keys2') + '    ' : '') + uiText('camp.bf.zoomwhole'), uiFont(13, '#bfe9ff')).setOrigin(0.5), 4); bf.keys = keys;
+  const keys = put(s.add.text(P.x + P.w / 2, P.y + P.h - 20, uiText('camp.bf.keys') + '    ' + (bf.walk.steps.length > K.per ? uiText('camp.bf.keys2') + '    ' : '') + uiText(CAMPBRIEF_ZOOM[campBriefZoomNext(Y, 0)]), uiFont(13, '#bfe9ff')).setOrigin(0.5), 4); bf.keys = keys;
   if (typeof sfx === 'function') sfx('uiOpen');
   if (typeof shipcompSay === 'function' && bf.walk.data && bf.walk.steps[0]) { try { shipcompSay(bf.walk.steps[0]); } catch (e) { /* the voice never stops the screen */ } } // the ship reads the first step once; the voice's own settings (muted, off, no voice) decide if it is heard
   return true;
@@ -36,7 +37,7 @@ function campBriefClose(s) {
 // the map, once and again at a zoom: the grid, the rings and the belts, the places, the objective points, the route, you
 function campBriefPaintMap(s) {
   const bf = s.bf, Y = bf.Y, F = CAMPBRIEF.frame, g = bf.g; g.clear(); bf.map.forEach(o => { try { o.destroy(); } catch (e) { /* gone */ } }); bf.map = [];
-  const fit = campMapFit(campBriefBounds(Y, bf.whole), F, bf.whole ? 0.06 : CAMPBRIEF.pad), X = (x, y) => campBriefProj(fit, F)(x, y), inF = p => p.x >= F.x && p.x <= F.x + F.w && p.y >= F.y && p.y <= F.y + F.h;
+  const fit = campMapFit(campBriefBounds(Y, bf.zoom), F, bf.zoom === 2 ? 0.06 : CAMPBRIEF.pad), X = (x, y) => campBriefProj(fit, F)(x, y), inF = p => p.x >= F.x && p.x <= F.x + F.w && p.y >= F.y && p.y <= F.y + F.h;
   const own = o => { o.setScrollFactor(0).setDepth(133); bf.map.push(o); return o; };
   g.fillStyle(0x03070f, 1); g.fillRect(F.x, F.y, F.w, F.h);
   const w0 = fit.cx - F.w / 2 / fit.s, w1 = fit.cx + F.w / 2 / fit.s, h0 = fit.cy - F.h / 2 / fit.s, h1 = fit.cy + F.h / 2 / fit.s, gs = mapGridStep(F.w / fit.s, 1e12);
@@ -78,7 +79,6 @@ function campBriefPaintMap(s) {
   const a = X(Y.start.x, Y.start.y), b = X(Y.focus.x, Y.focus.y), R = bf.route;
   if (!R.near) {
     g.lineStyle(2, 0xffffff, 0.75); const d = Math.hypot(b.x - a.x, b.y - a.y) || 1; for (let k = 0; k < d; k += 12) g.lineBetween(a.x + (b.x - a.x) * k / d, a.y + (b.y - a.y) * k / d, a.x + (b.x - a.x) * Math.min(d, k + 7) / d, a.y + (b.y - a.y) * Math.min(d, k + 7) / d);
-    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; if (!bf.whole && inF(mid)) own(s.add.text(mid.x, mid.y - 10, uiText('camp.bf.route', { km: R.km, regular: R.regular, fast: R.fast }), uiFont(11, '#ffffff', { backgroundColor: '#03070f', padding: { x: 3, y: 1 } }))).setOrigin(0.5).setDepth(136);
   }
   g.fillStyle(0xffffff, 1).fillCircle(a.x, a.y, 4); g.lineStyle(1, 0xffffff, 0.8).strokeCircle(a.x, a.y, 8); own(s.add.text(a.x, a.y + 16, uiText('camp.bf.you'), uiFont(11, '#ffffff'))).setOrigin(0.5).setDepth(136);
   g.lineStyle(3, AMBER, 1); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { const x = b.x + sx * 14, y = b.y + sy * 14; g.beginPath(); g.moveTo(x, y - sy * 9); g.lineTo(x, y); g.lineTo(x - sx * 9, y); g.strokePath(); }); // the mission's place: the amber brackets of the sector map
@@ -117,7 +117,7 @@ function campBriefKey(s, code) {
   if (code === 'Escape') { campBriefClose(s); return true; }
   if (code === 'Enter' || code === 'NumpadEnter' || code === 'KeyL') { campBriefClose(s); if (typeof s.launch === 'function') s.launch(); return true; }
   if (code === 'ArrowLeft' || code === 'ArrowRight') { const pg = campBriefPage(bf.walk.steps, bf.page + (code === 'ArrowRight' ? 1 : -1)); if (pg.page !== bf.page) { bf.page = pg.page; campBriefRepaintText(s); if (typeof sfx === 'function') sfx('tick'); } return true; }
-  if (code === 'KeyM') { bf.whole = !bf.whole; campBriefPaintMap(s); if (bf.keys) bf.keys.setText(uiText('camp.bf.keys') + '    ' + (bf.walk.steps.length > CAMPBRIEF.per ? uiText('camp.bf.keys2') + '    ' : '') + uiText(bf.whole ? 'camp.bf.zoomarea' : 'camp.bf.zoomwhole')); if (typeof sfx === 'function') sfx('tick'); return true; }
+  if (code === 'KeyM') { bf.zoom = campBriefZoomNext(bf.Y, bf.zoom); campBriefPaintMap(s); if (bf.keys) bf.keys.setText(uiText('camp.bf.keys') + '    ' + (bf.walk.steps.length > CAMPBRIEF.per ? uiText('camp.bf.keys2') + '    ' : '') + uiText(CAMPBRIEF_ZOOM[campBriefZoomNext(bf.Y, bf.zoom)])); if (typeof sfx === 'function') sfx('tick'); return true; }
   return true;
 }
 // the voice pack: the first step of a mission's walkthrough is read once when the briefing opens, so camp.bf.<level>.<mission>.w1 is a spoken line of the ship's, recorded once: it is the family 'campaign.walk' of VOICEPACK_FAMILIES (src/voicepack.js), and the other steps are silent there (for the eyes)

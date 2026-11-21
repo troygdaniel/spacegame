@@ -19,19 +19,21 @@ const campPanelDef = id => CAMP_PANELS.panels.find(p => p.id === id) || null;
 const campPanelNew = () => ({ open: '', at: 0, flash: null, closed: null, page: 0 }); // flash: { id, row, at, shown } the last pick (shown: the list had dropped in); closed: { id, at, from } the last panel to close and how far its list was shown: the drawing fades them
 const campPanelPages = id => { const d = campPanelDef(id); return d && d.page2 && CAMP_PANELS.pages > 1 ? 2 : 1; };
 const campPanelPageRows = (def, page) => page === 1 && def.page2 ? def.page2.rows : def.rows;
+// the page a panel is drawn on: the open one's, or while it fades after a pick or a close the page it was picked on (the list does not change words as it goes)
+const campPanelPageOf = (P, id) => campPanelPages(id) < 2 ? 0 : P.open === id ? P.page | 0 : P.flash && P.flash.id === id ? P.flash.page | 0 : P.closed && P.closed.id === id ? P.closed.page | 0 : 0;
 const campPanelCase = t => t.charAt(0) + t.slice(1).toLowerCase();
 const campPanelKeyLine = () => CAMP_PANELS.panels.map(p => p.key + ' ' + campPanelCase(p.title)).join('   ');
 const campKeyLine = () => uiText('camp.ui.keys', { panels: campPanelKeyLine() });
 
 function campPanelKey(P, C, code, now, shift) {
   const d = campPanelDigit(code), res = { used: false, opened: '', closed: false, ran: false, ok: false, say: '', row: '' };
-  const close = () => { P.closed = { id: P.open, at: now, from: campPanelView(P, P.open, now).list }; P.open = ''; }; // from: how far the list was shown, for it to fade from
+  const close = () => { P.closed = { id: P.open, at: now, from: campPanelView(P, P.open, now).list, page: P.page | 0 }; P.open = ''; }; // from: how far the list was shown, for it to fade from
   const pk = CAMP_PANELS.panels.find(p => p.code === code);
   if (pk) { // Q or E: that panel opens; its key again closes it; the other panel's key switches (the two lists cross-fade)
     res.used = true;
     if (P.open === pk.id) { close(); res.closed = true; return res; }
     if (P.open) close();
-    P.open = pk.id; P.at = now; P.flash = null; res.opened = pk.id; return res;
+    P.open = pk.id; P.at = now; P.flash = null; P.page = 0; res.opened = pk.id; return res; // a panel opens on its first page every time: the page is not remembered
   }
   if (P.open && (code === 'ArrowLeft' || code === 'ArrowRight')) { // the arrows flip the pages of a panel that has more than one (FLEET: the orders, the stances); with one page they are an ordinary key
     const pg = campPanelPages(P.open); if (pg > 1) { P.page = ((P.page | 0) + (code === 'ArrowRight' ? 1 : pg - 1)) % pg; res.used = true; res.page = P.page; return res; }
@@ -50,14 +52,14 @@ const campPanelShown = (P, now) => !!P.open && now - P.at >= CAMP_PANELS.delay;
 // a pick: the panel closes; the row it was is to flash if the list had dropped in (shown), else (a fast typist: Q then 3 inside the list's 120 ms) the tab pulses and the list goes from where it was
 function campPanelPick(P, id, rowId, now) {
   const v = campPanelView(P, id, now), shown = v.list >= 1;
-  P.flash = { id, row: rowId, at: now, shown }; P.closed = shown ? null : { id, at: now, from: v.list }; P.open = '';
+  P.flash = { id, row: rowId, at: now, shown, page: P.page | 0 }; P.closed = shown ? null : { id, at: now, from: v.list, page: P.page | 0 }; P.open = '';
 }
 // a click on a tab: it opens its panel, with the other panel's list going away as this one comes in; or, when it is the one open, closes it (what Q and E do)
 function campPanelToggle(P, id, now) {
-  const close = () => { P.closed = { id: P.open, at: now, from: campPanelView(P, P.open, now).list }; };
+  const close = () => { P.closed = { id: P.open, at: now, from: campPanelView(P, P.open, now).list, page: P.page | 0 }; };
   if (P.open === id) { close(); P.open = ''; return 'closed'; }
   if (P.open) close();
-  P.open = id; P.at = now; P.flash = null; return 'opened';
+  P.open = id; P.at = now; P.flash = null; P.page = 0; return 'opened';
 }
 // what the drawing shows of a panel at this moment. list: how far its rows are shown under the tab (0 to 1: they drop in over anim.fadeIn after the panel is drawn, stay while it is open or its pick flashes, and go over anim.fadeOut);
 // flash: the row just picked and how lit it is (two pulses in anim.flash ms); pulse: the tab's one pulse when the pick came before the list had dropped in. The tab is lit as far as the list is shown.
