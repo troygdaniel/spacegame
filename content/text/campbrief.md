@@ -64,7 +64,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.key.escort | Q then 3: the escorts go to a convoy |
 | camp.bf.key.missile | Fire a homing missile |
 | camp.bf.key.mine | E then 1: the wing mines ore |
-| camp.bf.key.dock | E then 6: dock to build, mend and sell |
+| camp.bf.key.dock | E then 5: dock to build, mend and sell |
 | camp.bf.key.shield | C then 5: emergency shields |
 | camp.bf.keys.next | Enter or Right: next    Left: back    L: launch now    Esc: the board |
 | camp.bf.keys.launch | Enter or L: launch    Left: back    Esc: the board |
