@@ -28,7 +28,7 @@ const CAMP_PANELS = {
   panels: [
     { key: 'Q', code: 'KeyQ', id: 'fleet', side: 'left', title: 'FLEET', rows: [
       { n: 1, id: 'launch', order: 'launch', label: 'Launch', help: 'Launch the wing' },
-      { n: 2, id: 'attack', order: 'attack', label: 'Attack', help: 'Fighters attack the aliens' },
+      { n: 2, id: 'attack', order: 'attack', label: 'Attack', help: 'Fighters attack the enemy' },
       { n: 3, id: 'escort', order: 'escort', label: 'Escort', help: 'Escorts go to a convoy' }, // the row to be called "Escort / match speed" when the panels are redrawn: that label does not fit the column of the panel as drawn today
       { n: 4, id: 'guard', order: 'guard', label: 'Guard', help: 'The wing guards the carrier' },
       { n: 5, id: 'recall', order: 'recall', label: 'Recall', help: 'The wing flies home' }

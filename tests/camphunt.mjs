@@ -118,4 +118,24 @@ check('1.3\'s ENEMIES line lists the pirates and says "and unknown ships" (the c
 check('the goal "Destroy the attackers." is drawn with skiffs and a cutter on the rim (1.1 to 1.3: the contact wave included, the picture does not give it away), and with the aliens\' raiders and drone on level 2',
   [0, 1, 2].every(m => J(`campBriefSteps(null, 1, ${m}).goals.filter(x => x.kind === 'kill.wave').every(x => x.pic === 'kill.wave.pirate' && x.parts.some(p => p.look === 'skiff') && !x.parts.some(p => p.look === 'raider' || p.look === 'drone'))`)) && J(`campBriefSteps(null, 2, 0).goals.filter(x => x.kind === 'kill.wave').every(x => x.pic === 'kill.wave' && x.parts.some(p => p.look === 'raider'))`));
 
+// ---- 14. nothing a new player reads before the first contact (1.3) names the aliens (card space-game-title-subline; docs/night/hunt-l1-rim.md open C) ----
+// Level 1 is a pirate run until 1.3's contact: "Earth's fleet against the aliens" on the title, "Fighters attack the aliens" on the H page, "mothership" on the pause card and in Settings gave the surprise away.
+const ALIEN = /alien|mothership|invader/i;
+check('the title\'s Campaign line says "Earth\'s fleet on the rim" (and no alien); after the reveal it may say the war goes on', /^Earth's fleet on the rim: fly the carrier, command the wing\. Three levels\.$/.test(J("uiText('title.camp.sub')")) && /war/.test(J("uiText('title.camp.sub.r')")));
+const words14 = [];
+const walk14 = (where, x) => { if (typeof x === 'string') words14.push([where, x]); else if (Array.isArray(x)) x.forEach(v => walk14(where, v)); else if (x && typeof x === 'object') Object.values(x).forEach(v => walk14(where, v)); };
+walk14('title', J("['title.camp.name', 'title.camp.sub', 'title.camp.keys', 'title.long.name', 'title.long.sub', 'title.pause'].map(k => uiText(k))"));
+walk14('the title\'s H page', J('campKeysPage()'));
+walk14('the ready room\'s H page', J('campKeysPage(CAMPKEYS.room)'));
+g.run('window.P14 = campProgressNew();');
+walk14('the ready room board', J('campHubBoard(P14)'));
+for (let i = 0; i < 3; i++) walk14('the ready room, briefing 1.' + (i + 1), J(`campHubBrief(P14, 1, ${i})`));
+walk14('Settings, the pace note', J("uiText('camp.pace.fine')"));
+walk14('the pause card', J("uiText('camp.ui.pausehelp')"));
+walk14('the fleet panel', J("controlsGroup('panels').rows"));
+walk14('what the ship computer answers from', J('SC_CAMP_HOW'));
+const hit14 = words14.filter(([, t]) => ALIEN.test(t));
+check('the title, its H page, the ready room of Level 1 (the board and the three briefings, the H page there), Settings\' pace note, the pause card, the fleet panel and the ship computer\'s brief name no alien, no mothership: ' + words14.length + ' strings read', words14.length > 150 && hit14.length === 0, hit14.map(([w, t]) => w + ': ' + t.slice(0, 80)).join(' | '));
+check('the sweep would catch the old words (a mutation check on the pattern)', ['Earth\'s fleet against the aliens: fly', 'Fighters attack the aliens', 'F fires a homing missile at the mothership or the nearest big ship.'].every(t => ALIEN.test(t)));
+
 process.exit(failed ? 1 : (console.log('\nHUNT FIXES PASS'), 0));
