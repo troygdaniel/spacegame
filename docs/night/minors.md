@@ -20,3 +20,11 @@ Off main `eec8146`. Feature freeze: bugs and rough edges only; level 1's mission
 | 13 | The "Odd readings ahead" toast covers the W S E power pips | **fixed**: the pips sit beside the shield bar, above the toast band (`CAMP.hud.pips`: x 366, y 40; the band is y 86 to 150) |
 | 14 | Two toasts stack and cut each other | **already fixed** on main (one box, `tests/toastband.mjs`) |
 | 15 | After a win or a loss the HUD stays under the card | **fixed**: the won, lost, debrief, refit, pick and ending cards hide the gauges, the radar, the goal line and the arrow (`hudHides`, `hudShow`) |
+
+## Card `space-game-night-quit-at-pick` (findings A and F of `docs/night/hunt-l2-l3.md`), off main `505c2c3`
+
+- **A (quit at the pick or the refit refights the level)**: this is minor 12 above, already on main (`4000fee`): the save's `levelDone` is set by the last mission of a level and cleared
+  by `Campaign.next`, so it also holds at the Earth refit after level 1. `tests/campquitpick.mjs` pins level 1 (the refit) as well as level 2.
+- **F (level 3 had no key to mend the hull)**: on a level that lists no outpost (`campAboard`) the SHIP panel's sixth row reads **"Repair the hull"** (tab "Repair"; the live word is
+  "450 hull for 45 ore", "hull sound" when whole, "needs 45 ore" when poor) and E then 6, or a click, runs the repair order. A level with outposts keeps "Dock at an outpost". The row is
+  made over at the moment from the table (`campPanelAs`, `src/camppanel.js`); the table, the keys page (H) and the typed order are unchanged.
