@@ -35,8 +35,8 @@ try {
   check('the Campaign scene starts on the mission', await settle(`game.scene.isActive('Campaign') && ${S}.camp`));
   for (let i = 0; i < 4 && (await j(`${S}.mode`)) !== 'play'; i++) { await key('Enter'); await t.run(700); }
   check('the battle is in play', (await j(`${S}.mode`)) === 'play');
-  // a state in which a pilot would call: 60 s of the mission gone, a wounded fighter with a raider on him, a few shots from the cruiser
-  const make = `(() => { const C = ${S}.camp, c = C.carrier; if (C.arrivedAt == null) C.arrivedAt = C.t - 60000; C.call = null; const f = campSpawn(C, 'fighter', c.x + 260, c.y - 120); f.order = { type: 'guard', at: { kind: 'carrier' } }; f.hp = f.maxHp * 0.25; const r = campSpawn(C, 'raider', c.x + 520, c.y - 120); r.goal = ''; C.shield = campShieldMax(C); return f.id; })()`;
+  // a state in which a pilot would call: 60 s of the mission gone, a wounded fighter with a raider on him, a few shots from the cruiser (hit and burning, CAMP_CALLS.wound, but not yet under CAMP.repair.below: under that he flies home to be mended by himself and the pilots do not call about him)
+  const make = `(() => { const C = ${S}.camp, c = C.carrier; if (C.arrivedAt == null) C.arrivedAt = C.t - 60000; C.call = null; const f = campSpawn(C, 'fighter', c.x + 260, c.y - 120); f.order = { type: 'guard', at: { kind: 'carrier' } }; f.hp = f.maxHp * (CAMP_CALLS.wound + CAMP.repair.below) / 2; const r = campSpawn(C, 'raider', c.x + 520, c.y - 120); r.goal = ''; C.shield = campShieldMax(C); return f.id; })()`;
   const fid = await t.ev(make); await t.run(300);
   const v1 = await view(); check('a wounded fighter with a raider on him makes the pilot call (the plate is up)', !!v1 && v1.id === 'wounded', JSON.stringify(v1 && { id: v1.id, left: Math.round(v1.left * 10) / 10 }));
   const shapes = await j(`(() => { const O = ${S}.pnl.p.fleet; return O.callHead && O.callHead.visible ? { head: O.callHead.text, texts: [O.callLine.text].concat(O.callRows.filter(r => r.visible).map(r => r.text)), rowsHidden: O.rows.every(r => !r.name.visible) } : null; })()`);
