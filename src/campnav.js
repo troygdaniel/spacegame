@@ -159,7 +159,7 @@ function campNavDrive(C, dt) {
     inp.thrust = !hold && Math.abs(diff) < K.align && closing < limit && speed < maxSp ? 1 : 0;
     inp.brake = hold || closing > limit + 5;
   }
-  if (!N.moving && left <= K.arrive && speed <= K.drop) campNavClear(C, 'arrived');
+  if (!N.moving && left <= K.arrive && speed <= K.drop) campNavClear(C, C.arrivedAt == null && C.L && N.id === 'place:' + C.L.place ? 'mission' : 'arrived'); // at the mission's own place the ship says "Arrived at X." (campTick): the autopilot lets go without saying it a second time
 }
 
 // every row under a click on the map, nearest the cursor first: the stack of marks there (card space-game-campaign-map-targets). A mark is under the click within CAMP.nav.pick px; a row that only repeats another

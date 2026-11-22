@@ -13,7 +13,7 @@ const PART = Number((process.argv.indexOf('--part') > 0 && process.argv[process.
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const note = s => console.log('  note ' + s);
-const VK = { Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, KeyK: 75, KeyL: 76, KeyQ: 81, KeyP: 80, Enter: 13, Escape: 27, Tab: 9, KeyH: 72, ArrowLeft: 37, ArrowDown: 40 };
+const VK = { Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, KeyK: 75, KeyL: 76, KeyQ: 81, KeyW: 87, KeyE: 69, KeyR: 82, KeyP: 80, KeyO: 79, KeyI: 73, KeyU: 85, Enter: 13, Escape: 27, Tab: 9, KeyH: 72, ArrowLeft: 37, ArrowDown: 40 };
 
 const t = await launch('', ROOT);
 try {
@@ -46,20 +46,29 @@ try {
 
   // the pilot's play: the wing out and attacking, the carrier on the autopilot to the goal, Space held near an alien
   await t.ev(`(() => { ${S}.k.SPACE = { isDown: true }; return 1; })()`);
-  // an order is given through its list (card one-list-keys): the list's key (Q the fleet's, P the ship's), Down to the row, Enter. The row's place is read from the list of THIS mission in the page, never a number written here
-  const listOrder = async (id, row) => {
+  // an order is given through the list its row is in (cards one-list-keys and list-shortcuts): that list's own key (Q W E R, P O I U), Down to the row, Enter; a list with no key of its own (the stances) is opened from its parent:
+  // the parent's key, Down to the part's row, Enter. The list is read from the key table (campKeyVia) and the row's place from the list of THIS mission in the page, never a letter or a number written here
+  // listWay(row): { list, keys: [[the key to press, how many Downs after it], ...] }, or null when the row is not in this mission's list;   listGo(row): the list open with the highlight on the row (not given);   listOrder(row): and Enter
+  const listWay = row => j(`(() => { const C = ${S}.camp, id = ${JSON.stringify(row)}, p = campKeyVia(id); if (!p) return null; const at = campPanelList(C, p.id).findIndex(r => r.id === id); if (at < 0) return null;
+    if (p.code) return { list: p.id, keys: [[p.code, at]] };
+    const up = campKeyList(p.parent), pat = up ? campPanelList(C, up.id).findIndex(r => r.open === p.id) : -1; return up && up.code && pat >= 0 ? { list: p.id, keys: [[up.code, pat], ['Enter', at]] } : null; })()`);
+  const listGo = async row => {
     if ((await j(`${S}.mode`)) !== 'play') return false; // a card has the keys: Enter would be the card's
-    const at = await j(`campPanelList(${S}.camp, ${JSON.stringify(id)}).findIndex(r => r.id === ${JSON.stringify(row)})`); if (at < 0) return false; // the row is not in this mission's list
+    const way = await listWay(row); if (!way) return false; // the row is not in this mission's list
     if (await j(`campPanelOpen(${S}.pn)`)) await key('Escape'); // an open list is closed first (Esc pauses only when none is open)
-    await key(await j(`CAMP_PANELS.panels.find(p => p.id === ${JSON.stringify(id)}).code`)); for (let i = 0; i < at; i++) await key('ArrowDown'); await key('Enter');
-    if (await j(`campPanelOpen(${S}.pn)`)) await key('Escape'); // an order that is refused leaves the list open: it is closed, the keys go back to the ship
+    for (const [code, downs] of way.keys) { await key(code); for (let i = 0; i < downs; i++) await key('ArrowDown'); }
     return true;
   };
-  await listOrder('fleet', 'launch'); await t.run(600); // Q, Down to "Launch the wing", Enter
+  const listOrder = async row => {
+    if (!(await listGo(row))) return false; await key('Enter');
+    if (await j(`campPanelOpen(${S}.pn)`)) await key('Escape'); // an order that is refused leaves the list open, and so does a power row: it is closed, the keys go back to the ship
+    return true;
+  };
+  await listOrder('launch'); await t.run(600); // Q, Down to "Launch the wing", Enter
   const drive = async secs => { // fly to the goal, one leg at a time, re-pick each 5 s; log what the game says
     for (let s = 0; s < secs; s += 5) {
       await t.ev(`(() => { const C = ${S}.camp; if (C.result) return 0; const g = campNavGoal(C); if (g) { const row = campNavRows(C).find(r => r.id === 'goal') || g; if (!C.nav || !C.nav.on) campNavGo(C, row); } return 1; })()`);
-      if (s % 10 === 5) await listOrder('fleet', 'attack'); // Q, Enter on "Attack the target"
+      if (s % 10 === 5) await listOrder('attack'); // E (the fighters list), Enter on "Attack the target"
       await t.run(5000);
       if (await j(`${S}.camp.result || ${S}.mode !== 'play'`)) break;
     }

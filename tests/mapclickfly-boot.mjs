@@ -69,9 +69,9 @@ async function campaign() {
     check('a click on Fly: back to regular speed, the same trip, Fly marked ON', (await j(`${SC}.camp.nav === window.__trip && ${SC}.camp.nav.fast === false && /ON$/.test(${SC}.mp.btnFly.text)`)) === true);
     await snap(t, 'campaign-switch');
     // card space-game-campaign-fast-board: Fast needs the wing aboard. Launch the wing, then ask for Fast on the map twice: refused, then recalled and burning
-    // the wing is launched through the fleet list (card one-list-keys): Q, Down to "Launch the wing" (its place is read from the list), Enter. Q over the map closes the map, so Tab opens it again after the order
-    const launchedByList = await j(`(() => { const S = ${SC}, k = code => S.onKey({ code, repeat: false }); campNavClear(S.camp, 'clear'); const at = campPanelList(S.camp, 'fleet').findIndex(r => r.id === 'launch'); if (at < 0) return 'no launch row';
-      k(CAMP_PANELS.panels.find(p => p.id === 'fleet').code); const overMap = !S.mp && campPanelOpen(S.pn) === 'fleet'; for (let i = 0; i < at; i++) k('ArrowDown'); k('Enter'); const closed = campPanelOpen(S.pn) === '';
+    // the wing is launched through the list its row is in (cards one-list-keys and list-shortcuts: the fleet list, read with campKeyVia): Q, Down to "Launch the wing" (its place is read from the list), Enter. Q over the map closes the map, so Tab opens it again after the order
+    const launchedByList = await j(`(() => { const S = ${SC}, k = code => S.onKey({ code, repeat: false }); campNavClear(S.camp, 'clear'); const via = campKeyVia('launch'); if (!via || via.id !== 'fleet' || !via.code) return 'the launch row is not in the fleet list: ' + (via && via.id); const at = campPanelList(S.camp, via.id).findIndex(r => r.id === 'launch'); if (at < 0) return 'no launch row';
+      k(via.code); const overMap = !S.mp && campPanelOpen(S.pn) === via.id; for (let i = 0; i < at; i++) k('ArrowDown'); k('Enter'); const closed = campPanelOpen(S.pn) === '';
       return overMap && closed ? 'ok' : 'map closed and list opened: ' + overMap + ', list closed by the order: ' + closed; })()`);
     check('Q over the open map closes the map and opens the fleet list; Down to the launch row and Enter give the order and close the list', launchedByList === 'ok', String(launchedByList));
     await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(300);
