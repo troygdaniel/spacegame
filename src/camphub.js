@@ -131,7 +131,7 @@ function campHubBrief(P, level, i) {
   const k = 'camp.m.' + level + '.' + (i + 1) + '.', res = campHubResults(P)[campResultKey(level, i)] || null;
   const need = o => (o.type === 'scan' ? (o.points || []).length : o.type === 'deliver' || o.type === 'caches' || o.type === 'ore' || o.type === 'cashin' ? o.n : // the rim run's mining mission: 120 ore to mine, 100 to sell (the goal read "0 of 1": card space-game-night-hunt-l2-l3)
      o.type === 'hold' ? o.secs : 1) | 0;
-  const objectives = (L.objectives || []).map(o => uiText(campObjKey(o), { got: o.type === 'ore' ? Math.min(need(o), Math.max(0, P.ore | 0)) : 0, need: need(o), secs: need(o) }));
+  const objectives = (L.objectives || []).map(o => uiText(campObjKey(o), { got: o.type === 'ore' ? Math.min(need(o), Math.max(0, (P && P.ore) | 0)) : 0, need: need(o), secs: need(o) }));
   return {
     level, i, n: i + 1, of: L.missions, id: L.mid, title: campHubTitle(level, i), kind: L.kind, kindText: uiText('camp.hub.kind.' + L.kind),
     lines: [uiText(k + 'b1'), uiText(k + 'b2')].filter(campHubPlain), objectives, kinds: (L.objectives || []).map(o => o.type + (o.type === 'kill' ? '.' + String(o.what).replace(/:.*/, '') : '')), // kinds: the same objectives by kind (scan, deliver, kill.mother ...), for the briefing's pictures
