@@ -90,7 +90,7 @@ class Campaign extends Phaser.Scene {
     if (typeof campMapInstall === 'function') campMapInstall(this); // Tab: the map of the level, over the battle, which goes on behind it (src/campmap.js, src/campmapdraw.js)
     this.events.once('shutdown', () => { if (typeof stopBeamHum === 'function') stopBeamHum(); }); // no hum left behind when the level ends or the title comes
     if (typeof camzoomSetup === 'function') { // the Long Haul's own camera zoom (src/camzoom.js): the world on one camera, the HUD, panels and strip on another that never scales; + - = 0 and the wheel zoom the world (src/campzoom.js)
-      this.lhZoom = CAMZOOM.want; if (typeof campZoomRange === 'function') campZoomRange(true); CAMZOOM.want = campZoomStart(this.level); camzoomSetup(this); // the view goes out to 0.2 here (campZoomRange; the Long Haul's 0.4 is put back below) // the zoom is kept for the level and starts at the default on a new one; the Long Haul's own is put back when this scene is left
+      this.lhZoom = CAMZOOM.want; if (typeof campZoomRange === 'function') campZoomRange(true, typeof campZoomFloor === 'function' ? campZoomFloor(this.level, this.mi) : 0); CAMZOOM.want = campZoomStart(this.level); camzoomSetup(this); // the view goes out to 0.2 here, or to where this mission's route fits on a long one (campZoomRange, campZoomFloor; the Long Haul's 0.4 is put back below) // the zoom is kept for the level and starts at the default on a new one; the Long Haul's own is put back when this scene is left
       this.events.once('shutdown', () => { campZoomKeep(this.level, CAMZOOM.want); CAMZOOM.want = this.lhZoom; if (typeof campZoomRange === 'function') campZoomRange(false); });
     }
     if (this.resume) { this.mdone = true; this.showWon(true); } else this.showIntro();
@@ -343,6 +343,7 @@ class Campaign extends Phaser.Scene {
     C.events.splice(0).forEach(e => this.onEvent(e));
     this.syncFar(time); this.syncRockets(Math.min(dt, 100)); this.syncBay(); if (typeof campRivalWorld === 'function') campRivalWorld(this); // (src/camprivaldraw.js)
     if (typeof campConvoySync === 'function') campConvoySync(this); // the shield bubble and the links of the ships that are tucked in (src/campconvoyscene.js)
+    if (typeof campFarSync === 'function') campFarSync(this); // the names of the places and the escorted ships when the view is out so far that the world's labels are specks (src/campfarscene.js)
     if (typeof campTgtPaint === 'function') campTgtPaint(this); // the bracket round the target A D S picked (src/camptargetdraw.js)
     if (typeof campTorpedoSync === 'function') campTorpedoSync(this, Math.min(dt, 100)); // the torpedoes and the boats that arm (src/camptorpedoscene.js)
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
