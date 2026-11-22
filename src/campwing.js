@@ -33,6 +33,22 @@ function campWingShips(C, id, free) {
   return C.ships.filter(u => u.team === 'earth' && u.hp > 0 && (u.kind === 'fighter' || u.kind === 'escort') && (sp.ships ? sp.ships.indexOf(u.id) >= 0 : (sp.kinds || []).indexOf(u.kind) >= 0) && !(free && u.scout));
 }
 
+// Recall and the bay (card space-game-recall-while-launching; found by 3-GEN): Launch queues every ship in C.launchQ and one leaves every CAMP.bay.launchEvery ms, so a Recall given while the bay is still emptying
+// found the ships out and sent them home, and the ships still in the queue came out afterwards with the guard and escort orders of a launch, as if there had been no Recall (and a burn that waits for the wing aboard
+// waited for ships that were never recalled: campNavOut counts the queue). Now the ships of the group that are still in the queue are put back in the bay (C.bay.fighters, C.bay.escorts) and counted aboard; the group's
+// kinds say which: Fighters the fighters, Escorts the escorts, All both; a group of named ships (C.groups) has none in the queue, which has no ids yet. Returns how many went back.
+function campWingQueueBack(C, id) {
+  const sp = campWingGroupSpec(C, id), kinds = sp && !sp.ships ? sp.kinds || [] : [];
+  if (!C.launchQ.length || !kinds.length) return 0;
+  let n = 0;
+  C.launchQ = C.launchQ.filter(k => {
+    if (kinds.indexOf(k) < 0) return true;
+    if (k === 'fighter') C.bay.fighters++; else C.bay.escorts++;
+    n++; return false;
+  });
+  return n;
+}
+
 // ---- targets ----
 const campWingKindOf = u => u.team === 'alien' ? 'enemy' : u.kind === 'freighter' ? 'convoy' : 'friend';
 const CAMPWING_KIND_WORDS = { enemy: 'an enemy', friend: 'one of ours', convoy: 'a convoy', place: 'a place', point: 'a point', pickup: 'ore', cache: 'a cache', anomaly: 'an anomaly', rock: 'a rock' };
@@ -128,8 +144,9 @@ function campWingOrder(C, group, verb, target, how, dry) {
   if (verb === 'recall') {
     if (dry) return campYes('recall');
     ships.forEach(u => { u.order = { type: 'recall' }; u.move = null; }); C.orders.recall++;
+    const back = campWingQueueBack(C, id); // the ships of the group still waiting to leave the bay stay aboard (card space-game-recall-while-launching)
     if (id !== 'escorts') (C.repairs || []).forEach(r => { r.stay = true; }); // a fighter still being mended stays aboard when it is whole (src/camprepair.js)
-    return campWingDone(C, id, verb, null, ships, how, 'recall');
+    const r = campWingDone(C, id, verb, null, ships, how, 'recall'); r.queued = back; return r;
   }
   if (tg && V.kinds.indexOf(tg.kind) < 0) return campWingNo('wbadpair', { group: gname, verb, what: CAMPWING_KIND_WORDS[tg.kind] || tg.kind });
   if (!tg && V.need) return campWingNo('wneed', { verb });

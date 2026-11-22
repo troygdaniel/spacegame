@@ -248,9 +248,10 @@ function campNavFly(C, row, fast, how) {
   if (!r.ok) return r;
   const id = row.of || row.id;
   if (C.nav && C.nav.id !== id) campNavClear(C, ''); // a trip to somewhere else is given up; a regular trip to this place is kept, but the carrier stops while the wing comes home (campNavDrive), and the burn takes it over
-  C.fastAsk = null; C.navWait = { id, row: Object.assign({}, row), since: C.t, until: C.t + CAMP.nav.recallWait * 1000, n: out, shown: out };
-  C.events.push({ type: 'nav', key: 'camp.nav.recalling', vars: { n: out } });
-  return { ok: true, say: uiText('camp.nav.recalling', { n: out }), waiting: true };
+  const left = campNavOut(C); // the ships still in the bay's queue went back aboard with the recall (src/campwing.js campWingQueueBack): only the ships out are waited for
+  C.fastAsk = null; C.navWait = { id, row: Object.assign({}, row), since: C.t, until: C.t + CAMP.nav.recallWait * 1000, n: left, shown: left };
+  C.events.push({ type: 'nav', key: 'camp.nav.recalling', vars: { n: left } });
+  return { ok: true, say: uiText('camp.nav.recalling', { n: left }), waiting: true };
 }
 // once a tick: a burn waiting for the wing starts when the last ship is aboard, and is given up (naming who is still out) after CAMP.nav.recallWait s; a burn under way with a ship launched drops to regular
 function campNavWait(C) {
