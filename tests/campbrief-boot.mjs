@@ -28,9 +28,9 @@ try {
   await key('KeyK');
   check('K opens the ready room, the cursor on the next mission', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`) && await j(`${HUB}.hub.cur === 2 && !${HUB}.bf`));
   await t.run(900);
-  await key('Enter'); await t.run(700);
+  await key('Enter'); await t.run(700); await key('Enter'); await t.run(700); // the board opens the missions overlay, Enter on the mission in it opens the big briefing (card space-game-ready-room-simple)
   const a = await bf();
-  check('Enter on the board opens the briefing at once on its first screen: Mission 3 (not 3 of 3), the three screens named, the map, the place, the route and the story line are on the glass', await j(`campBriefIsOpen(${HUB})`) && await j(`${HUB}.bf.screen === 0`) && a.some(x => /^MISSION 3\s+-\s+The mothership/.test(x)) && !a.some(x => /OF 3/.test(x)) && a.includes('WHERE') && a.includes('WHY') && a.some(x => /^Route /.test(x)) && a.includes('1  WHERE AND WHY') && a.includes('3  HOW'), a.join(' | ').slice(0, 400));
+  check('Enter on the board, then on the mission: the briefing opens on its first screen on its first screen: Mission 3 (not 3 of 3), the three screens named, the map, the place, the route and the story line are on the glass', await j(`campBriefIsOpen(${HUB})`) && await j(`${HUB}.bf.screen === 0`) && a.some(x => /^MISSION 3\s+-\s+The mothership/.test(x)) && !a.some(x => /OF 3/.test(x)) && a.includes('WHERE') && a.includes('WHY') && a.some(x => /^Route /.test(x)) && a.includes('1  WHERE AND WHY') && a.includes('3  HOW'), a.join(' | ').slice(0, 400));
   await snap('1-briefing');
   await key('Equal'); await key('Equal'); await key('Equal'); await t.run(300);
   check('+ zooms the map in (the zoom reads in its corner) and does not mute the sound; 0 puts it back', await j(`${HUB}.bf.z > 1.6`) && (await j('G.muted')) === muted0 && (await bf()).some(x => /^ZOOM 17\d%/.test(x)));
