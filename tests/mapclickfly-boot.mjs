@@ -69,7 +69,7 @@ async function campaign() {
     check('a click on Fly: back to regular speed, the same trip, Fly marked ON', (await j(`${SC}.camp.nav === window.__trip && ${SC}.camp.nav.fast === false && /ON$/.test(${SC}.mp.btnFly.text)`)) === true);
     await snap(t, 'campaign-switch');
     // card space-game-campaign-fast-board: Fast needs the wing aboard. Launch the wing, then ask for Fast on the map twice: refused, then recalled and burning
-    await t.ev(`(() => { campNavClear(${SC}.camp, 'clear'); ${SC}.onKey({ code: 'Digit1', repeat: false }); ${SC}.onKey({ code: 'Digit1', repeat: false }); return 1; })()`); await t.run(9000);
+    await t.ev(`(() => { campNavClear(${SC}.camp, 'clear'); ${SC}.onKey({ code: 'Digit1', repeat: false }); ${SC}.onKey({ code: 'Digit1', repeat: false }); return 1; })()`); await settle(t, `${SC}.camp.launchQ.length === 0 && campWing(${SC}.camp).length === 8`, 200); // every ship out (a ship still in the launch queue when the wing is recalled is not recalled: it comes out later; the map's open, so the battle runs at command time, a quarter speed, and 9 s is not enough)
     check('the wing is out (eight ships)', (await j(`campNavOut(${SC}.camp)`)) === 8);
     // the place is chosen on the map's list and set (not by a click on its mark: the carrier is by Vesta now), and the keys do the rest: the Fast button, Shift+Enter, Shift+Enter
     await t.ev(`(() => { ${SC}.mp.selId = 'place:pallas'; ${SC}.mp.setId = 'place:pallas'; ${SC}.mp.dirty = true; return 1; })()`); await t.run(300);
