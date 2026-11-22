@@ -25,11 +25,12 @@
 // so moving an order to another key is one change in this table, and src/camppanel.js, src/campaignscene.js and src/campanelsdraw.js read the table for what the keys DO. This file is the one source of the panels, their rows, their keys and their words; tests/campanels.mjs and tests/controlshelp.mjs check the game against it.
 //   panel:  { id, side, key, code, title, rows, page2, page3 }   side 'left' or 'right'; key and code (a KeyboardEvent.code) are the PAGE key of the panel; page2 and page3 are the lists the page key flips to ({ title, rows })
 //   row:    { n, id, k, code, order, arg, fly, label, tag, help }   n is the row's place in its list (1 is at the top); k is the key cap the panel shows and the hints say, code its KeyboardEvent.code (a digit's also answers to the keypad's);
-//           order is a campOrder name (src/campaign.js: the words the strip and the voice use; arg goes with it); fly: 'objective' or 'target' is the autopilot (src/campnav.js), not an order; burn: 1 makes it a fast burn; cycle: 'stance' or 'convoy' steps through that page's rows;
+//           order is a campOrder name (src/campaign.js: the words the strip and the voice use; arg goes with it); fly: 'objective' or 'target' is the autopilot (src/campnav.js), not an order; burn: 1 makes it a fast burn; cycle: 'stance' or 'convoy' steps through that page's rows, the choice is given as an order when the key has rested CAMP_PANELS.settle ms;
 //           blink: 1 is the warp blink; label is the row's name, tag its name in one line, help its line on the H page and in Settings
 const CAMP_PANELS = {
   pages: 3,                                // how many pages a panel with more than one shows: FLEET has its orders, its stances (page2) and the convoy orders (page3); SHIP has its keys and BUILD (page2). 1 turns the page key off
   back: 6000,                              // ms a panel left on another page goes back to its first one
+  settle: 700,                             // ms a CYCLING key (E the next stance, R the next convoy order) must rest before its choice is given as an order: a press moves the choice on the panel row, so passing through Hold here to reach Run for it gives no order to the one passed (card space-game-two-hands-followups)
   anim: { flash: 160 },                    // ms: a row lights up (two pulses) when its key is pressed
   panels: [
     { id: 'fleet', side: 'left', key: 'Q', code: 'KeyQ', title: 'FLEET', rows: [
@@ -189,8 +190,8 @@ const CONTROLS = [
     { k: ['7', '9', 'Enter'], t: 'Map: 7 or Enter flies, 9 burns', sub: 'THE MAP' }, // (Shift+Enter is a burn too)
     { k: ['V', 'T'], t: 'Map: V scouts there, T takes a lane', sub: 'THE MAP' }, // T is the pick at a fork in the road (card space-game-scout-route)
     { k: ['X'], t: 'Map: X clears the goal', sub: 'THE MAP' },
-    { k: ['/'], t: 'Type an order to the ship', sub: 'THE STRIP AND THE VOICE' },
-    { k: ['.'], t: 'Hold to speak an order', sub: 'THE STRIP AND THE VOICE' },
+    { k: ['/'], t: 'Type an order (needs a chat key)', sub: 'THE STRIP AND THE VOICE' }, // the same words the Long Haul rows say: the strip and the voice answer through the chat key (Settings > Keys); the panels, the map and the calls need none
+    { k: ['.'], t: 'Hold to speak (needs a chat key)', sub: 'THE STRIP AND THE VOICE' },
     { k: ['H'], t: 'This page of keys', sub: 'ANYWHERE' },
     { k: ['Esc'], t: 'Pause; closes the map', sub: 'ANYWHERE' },
     { k: ['T'], t: 'Title, from the pause or end card', sub: 'ANYWHERE' },

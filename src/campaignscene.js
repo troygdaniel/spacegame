@@ -314,6 +314,7 @@ class Campaign extends Phaser.Scene {
     spaceBackdropTick(this);
     if (typeof campPanelsPaint === 'function') campPanelsPaint(this, this.time.now); // the two panels (always on the screen: src/campanelsdraw.js)
     const C = this.camp;
+    if (this.mode === 'play' && !C.result && typeof campPanelSettle === 'function' && this.pn && this.pn.pend && typeof this.pn.pend.at === 'number') { const sr = campPanelSettle(this.pn, C, this.time.now); if (sr.ran) toast(this, sr.say, sr.ok ? '#9fe9ff' : '#ffb454'); } // E or R: the choice that waited for the key to rest is given now (src/camppanel.js)
     if (this.mode === 'play' && !C.result) {
       const k = this.k, inp = C.input;
       // the autopilot (src/campnav.js, card space-game-campaign-navigate): while the map is open the arrows are the list's, not the wheel's; with it closed any of them takes the wheel back

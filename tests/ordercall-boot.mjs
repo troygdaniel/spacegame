@@ -42,8 +42,8 @@ try {
   const shapes = await j(`(() => { const O = ${S}.pnl.p.fleet; return O.callHead && O.callHead.visible ? { head: O.callHead.text, texts: [O.callLine.text].concat(O.callRows.filter(r => r.visible).map(r => r.text)), rowsHidden: O.rows.every(r => !r.name.visible) } : null; })()`);
   note('FLEET panel: ' + JSON.stringify(shapes)); check('the FLEET panel shows the call in place of its rows: the callsign and the line, three rows', !!shapes && shapes.rowsHidden && /Wingman hit and burning/.test(shapes.texts[0]) && /^1  Cover him/.test(shapes.texts[1]) && /^2  Bring him home/.test(shapes.texts[2]) && /^3  Keep fighting/.test(shapes.texts[3]));
   await snap('1-plate');
-  await snap('2-panel-with-call'); const st0 = await j(`${S}.camp.stance`); await key('KeyE'); await t.run(300);
-  check('a letter key of the panel while the call waits is the panel\'s (E, the next stance), and the call still waits', (await j(`campCallOpen(${S}.camp)`)) === true && (await j(`${S}.camp.stance`)) !== st0);
+  await snap('2-panel-with-call'); const st0 = await j(`${S}.camp.stance`); await key('KeyE'); await t.run(1000);
+  check('a letter key of the panel while the call waits is the panel\'s (E, the next stance, given once the key has rested), and the call still waits', (await j(`campCallOpen(${S}.camp)`)) === true && (await j(`${S}.camp.stance`)) !== st0);
   await key('Digit2'); await t.run(400);
   const after = await j(`({ open: campCallOpen(${S}.camp), order: ${S}.camp.by[${JSON.stringify(String(fid))}] && ${S}.camp.by[${JSON.stringify(String(fid))}].order, log: ${S}.camp.call.log })`);
   check('2 answers "Bring him home": the call is closed, the fighter is ordered to recall', after.open === false && after.order && after.order.type === 'recall' && after.log.length === 1 && after.log[0].pick === 'home', JSON.stringify(after));
