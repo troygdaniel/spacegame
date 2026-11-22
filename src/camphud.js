@@ -8,7 +8,7 @@
 //   campHudGeom()            where the dials, bars and the hull bar are, in screen px, from CAMP.hud: { cells: [{ cx, cy, R, dial, bar, key }], hull, bottom }
 //   campHudFlow(items)       the lines of text under the gauges: [{ id, show, h }] -> { ys: { id: y }, bottom }; a line with nothing to say gives its place back
 //   campGaugeAnim(A, pips, ms)   the bars' animation: the lit share of each bar eases to its pips, a flash runs when they change;  campGaugeAnimNew(pips) starts one
-//   campPowerKey(C, code)    a direct key: J shields, K engines, L weapons (the dials' order), ; back to 2 / 2 / 2: the order the SHIP panel's power rows give; { used, ran, ok, say, sys }
+//   campPowerKey(C, code)    a direct key: J shields, K engines, L weapons (the dials' order), ; back to 2 / 2 / 2: the same orders the strip and the voice give; { used, ran, ok, say, sys }
 // the code -> system of the keys of the SHIP panel's power rows (J K L ; in the table today)
 function campPowerKeys() { const k = {}; ['shields', 'engines', 'weapons', 'balance'].forEach(id => CAMP_KEYS[id].codes.forEach(c => { k[c] = CAMP_KEYS[id].sys; })); return k; }
 const CAMP_GAUGE = {

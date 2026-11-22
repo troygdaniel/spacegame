@@ -1,7 +1,7 @@
 ---
 type: text
 ---
-The words of mission 1.1 in four beats (card space-game-l1-1-beats; src/campbeats.js): the patrol that turns back, the distress call and its three answers, the thanks, the ambush, the bonuses, and the hints, whose keys come from the key table (the panels' own keys, the map's). Lines the ship speaks are about 12 words at most.
+The words of mission 1.1 in four beats (card space-game-l1-1-beats; src/campbeats.js): the patrol that turns back, the distress call and its three answers, the thanks, the ambush, the bonuses, and the hints, whose keys come from the key table (the lists' keys and rows, the map's). Lines the ship speaks are about 12 words at most.
 
 ## Strings
 | key | text |

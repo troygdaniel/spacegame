@@ -451,7 +451,7 @@ const CAMP = {
     chunk: 25                              // ore a chunk of the reward holds (the ore reward is that many chunks lying on the cache, for any ship of yours to pick up)
   },
   outpost: {                               // friendly outposts (card space-game-campaign-outposts, src/campoutpost.js): ships are built and the hull mended only docked at one, which a level lists in its `outposts`
-    range: 280,                            // px from the edge of an outpost within which the carrier can dock (X, the SHIP panel's Dock row, "dock at Luna"): a place's own size is added
+    range: 280,                            // px from the edge of an outpost within which the carrier can dock (the ship list's Dock row, "dock at Luna"): a place's own size is added
     clear: 900,                            // px: no alien within this of the carrier, or the outpost keeps its doors shut (docking stops the battle: it must not be a free breather in a fight)
     repairOre: 60,                         // ore for mending the whole hull from nothing; a part costs its share, at least 5
     retreatHull: 0.35,                     // below this share of the hull, with no ship of the wing left (in the bay, out, launching or building), the HUD says where to retreat
