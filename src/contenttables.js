@@ -632,6 +632,7 @@ const UI_TEXT = {
   'camp.o.deliverleft': 'Haulers home: {n}. Still flying: {left}.',
   'camp.o.deliver.transport': 'Transport arrived: {got} of {need}.',
   'camp.lose.convoy.transport': 'The transport is lost.',
+  'camp.lose.tip.convoy.transport': 'Keep the wing on the transport: {keyescort} escorts.',
   'camp.no.scoutlanes': 'Scouts only read the lanes here, pilot.',
   'camp.no.scoutpast': 'The fork is behind us. Nothing to scout.',
   'camp.b.nolost': 'Lose no ships',
