@@ -56,7 +56,7 @@ function campPanelsPaint(s, now) {
   L.tgtKeys.setVisible(true).setPosition(tx, T.y + 18).setText(uiText(tg ? 'camp.ui.tgtclear' : 'camp.ui.tgtkeys'));
   if (tg) { g.fillStyle(0x16293d, 1); g.fillRect(tx - T.w, T.y + 9, T.w, T.bar); g.fillStyle(0xff7a6a, 1); g.fillRect(tx - T.w, T.y + 9, Math.max(1, T.w * tg.hp), T.bar); }
   const id = campPanelOpen(P), def = id ? campPanelDef(id) : null; if (!def) { L.live = -1e9; L.key = ''; return; }
-  const col = K.color[def.side], key = id + ':' + P.at + ':' + P.top;
+  const col = K.color[def.side], key = id + ':' + P.at + ':' + P.top + ':' + Object.keys(P.lit || {}).map(k => P.lit[k]).join(); // (an order just given is in the key too: a power row stays open, and its pips are right at once)
   if (L.live < 0 || now - L.live >= K.every || L.key !== key) { L.live = now; L.key = key; L.view = campPanelView(P, C); } // the words are live: made when the list opens or the highlight moves, and four times a second
   const V = L.view; if (!V) return;
   const G = campPanelsGeometry(def, V.total);
