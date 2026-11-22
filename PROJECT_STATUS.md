@@ -1,6 +1,6 @@
 # Project status
 
-**Updated: 21 Nov 2026, written against main `eb490ec`.** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
+**Updated: 21 Nov 2026, written against main `79e9f14`.** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
 
 ## In one minute
 
@@ -51,6 +51,7 @@ The batch is the answer to "I want to direct the fleet more". Each item has its 
 ## Known issues and rough edges
 
 - **Balance is mid-retune.** Levels 2 and 3 were tuned before the fleet-command batch; expect them to feel easier or odd until the retune lands. The last all-nine playthrough with findings is `docs/WRAPUP.md` (20 Nov, before the batch); the night's fixes are in `docs/night/*.md`.
+- **Levels 2 and 3 after the fleet-command batch** were flown by hand (`docs/night/hunt-l23-fleet.md`, 21 Nov): all six missions win and nothing crashes, but 2.1, 2.2, 3.1 and 3.2 are won in about half a minute with the hull untouched and no pilot ever calls in them (calls start at 40 s of a mission); only 2.3 and 3.3 ask anything of the shield, the power pips and the calls. Tuning notes are in that doc for the retune; two small fixes (the second bay's numbers on the pick card, a call about a pilot already flying home) landed with it.
 - **Debug keys** (the backslash wins a mission) exist for testing and are **off** unless the address says `?debug=1`.
 - **Chrome tests are run rarely** by choice (they are slow and take a shared lock). The Node suites (about 160) run on every landing, and some Chrome boots are updated by hand when keys move and run only at the gate. A red boot after a key change is usually a stale key in the script, not a game bug.
 - **Only mission 1.1 has the full set of beats.** Asking "why are the other eight plainer" is fair; that is the cut-list rule below.
