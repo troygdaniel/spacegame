@@ -61,6 +61,8 @@ class Campaign extends Phaser.Scene {
     spaceBackdrop(this, true);
     campShotTextures(this); // the pirates' and the neutrals' shots
     this.boom = fxBoom(this);
+    if (typeof campTuneLoadOnce === 'function') campTuneLoadOnce(); // the tuning panel's overrides (src/camptune.js) go into the CAMP table before the battle is made: a page reads them once; a bot or a test never does
+    this.tuned = false; // a mission flown with any override on is a tuned run: its score and rank are not kept (update sets it)
     this.camp = this.makeCamp();
     this.sp = {}; this.bsp = []; this.bayAt = { launch: -1e9, land: -1e9 }; // the battle clock of the last launch and the last landing: the bays of the cruiser stay lit a moment after each (campBayLight)
     const pl = campPlaces(this.level); this.farObjs = {}; this.farAt = 0; Object.keys(pl).forEach(id => { if (!pl[id].hidden && !pl[id].far) this.drawPlace(pl[id]); }); // the far bodies of the system (Sol's planets) are made when the carrier comes near (syncFar)
@@ -158,20 +160,22 @@ class Campaign extends Phaser.Scene {
   bonusText(b) { return campHubBonusText(b); } // the same words as the ready room's board (src/camphub.js)
   showDebrief(sc) {
     const M = this.camp.L, k = 'camp.m.' + this.level + '.' + (M.mission + 1) + '.', clock = t => Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
-    const R = this.replay === true ? this.replayRes : null, num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const R = this.replay === true && this.tuned !== true ? this.replayRes : null, num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     const scoreLine = uiText('camp.ui.score', { score: sc.score }), lines = [R ? scoreLine + '\n' + uiText('camp.ui.replayscore', { now: num(R.now), old: num(R.old) }) + ' ' + (R.improved || R.first ? uiText('camp.ui.replaybest', { best: num(R.best) }) : uiText('camp.ui.replaykept', { best: num(R.best) })) : scoreLine].concat(sc.bonuses.map(b => b.ok ? uiText('camp.ui.bonusmet', { pts: b.points, text: this.bonusText(b) }) : uiText('camp.ui.bonusmiss', { text: this.bonusText(b) })), [uiText('camp.ui.debriefstats', { time: clock(sc.t), hull: sc.hullLeft, lost: sc.shipsLost })], sc.haulersLost > 0 ? [uiText('camp.ui.debriefhaulers', { n: sc.haulersLost, pts: sc.haulerLost })] : []); // a replay says so, and the old best against this run
     const dk = M.dock && campPlaces(this.level)[M.dock]; if (dk && dk.outpost) lines.push(uiText('camp.ui.outpost', { outpost: dk.outpost, name: dk.name })); // the debrief is at the outpost of the mission's dock
-    if (typeof campRankLine === 'function') { const r = campRankLine(this.P, sc); if (r) lines.push(r); } // the ranks card's: a rank for the score, when it is there
+    if (this.tuned === true) lines.push(uiText('camp.ui.tune.notkept')); // a tuned run keeps no score and no rank (the tuning panel)
+    else if (typeof campRankLine === 'function') { const r = campRankLine(this.P, sc); if (r) lines.push(r); } // the ranks card's: a rank for the score, when it is there
     this.mode = 'debrief'; this.showCard(uiText(R ? 'camp.ui.replay' : 'camp.ui.debrief', { title: uiText(k + 'title') }), lines, uiText(this.mdone ? 'camp.ui.next' : 'camp.ui.debriefnext'), R ? 380 : 330);
     this.say([scoreLine]); // the voice says the score; the replay's comparison is for reading
   }
   missionWon() { // a mission won: its result is kept and the ore comes with the cruiser; the debrief, then the next mission, or after the last one the level's story and the refit
     const C = this.camp; if (!C.L.objectives) { this.showWon(); return; }
+    const sc = this.tuned === true ? Object.assign({}, C.score, { score: 0, bonuses: [] }) : C.score; // a tuned run (the tuning panel): the level moves on, the best scores and the rank, which are sums of them, do not (src/camptune.js)
     if (this.replay === true) { // a replay (card space-game-campaign-replay; strict: a stand-in scene in a test answers any property): the best is kept, the ore comes with the cruiser as ever, a better best can still promote, and the level and the next mission stay where they are (no story, no refit, no pick)
-      const was0 = typeof campRank === 'function' ? campRank(this.P).i : 0; this.replayRes = campReplayDone(this.P, this.level, this.mi, C.score); this.mdone = false; this.P.ore = campFunds(C);
+      const was0 = typeof campRank === 'function' ? campRank(this.P).i : 0; this.replayRes = campReplayDone(this.P, this.level, this.mi, sc); this.mdone = false; this.P.ore = campFunds(C);
       this.P.promo = typeof campRankPromoted === 'function' ? campRankPromoted(was0, this.P) : null; campProgressSave(this.P); this.showDebrief(C.score); return;
     }
-    const was = typeof campRank === 'function' ? campRank(this.P).i : 0, r = campMissionDone(this.P, this.level, this.mi, C.score); this.mdone = r.levelDone;
+    const was = typeof campRank === 'function' ? campRank(this.P).i : 0, r = campMissionDone(this.P, this.level, this.mi, sc); this.mdone = r.levelDone;
     this.P.ore = campFunds(C); // the ore comes with the cruiser
     this.P.promo = typeof campRankPromoted === 'function' ? campRankPromoted(was, this.P) : null; // the debrief says it (campRankLine)
     campProgressSave(this.P); // the result is kept: the ready room (src/camphub.js) and the next mission read it from the save (these were a trailing comment's, once: tests/campranks.mjs holds them)
@@ -258,6 +262,7 @@ class Campaign extends Phaser.Scene {
     const zk = typeof campZoomKey === 'function' ? campZoomKey(e.code) : null;
     if (zk && !this.leaving && this.mode === 'play') { campZoomPress(this, zk, e.repeat); return; } // + - = 0: the zoom of the view, or of the map when it is open (src/campzoom.js); a held key repeats, so this is read before the repeat guard
     if (this.leaving) return;
+    if (typeof campTuneIsOpen === 'function' && campTuneIsOpen(this)) { if (campTuneKey(this, e) === 'close' && typeof this.closeTune === 'function') this.closeTune(); return; } // the tuning panel (src/camptunedraw.js) takes every key while it is open, a held arrow too
     const c = e.code, C = this.camp;
     if (e.repeat && !(this.mode === 'play' && (c === 'ArrowUp' || c === 'ArrowDown') && this.pn && typeof campPanelOpen === 'function' && campPanelOpen(this.pn))) return; // a held key is one press, but for Up and Down in an open list: the highlight keeps moving
     if (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) { if (c === 'KeyH' || c === 'Escape') this.closeKeys(); return; } // the H page of every key (src/campkeys.js) has the keys while it is open
@@ -271,6 +276,7 @@ class Campaign extends Phaser.Scene {
     if (this.mode === 'lost') { if (c === 'Enter') go(this, 'Campaign', { level: this.level, mission: this.mi, techs: this.P.techs, via: 'retry', replay: this.replay === true }); else if (c === 'KeyT') go(this, 'Title'); return; } // a lost mission is flown again; the level is not lost
     if (this.mode === 'pause') { if (c === 'Escape') { this.hideCard(); this.mode = 'play'; } else if (c === 'KeyT') go(this, 'Title'); else if (c === 'KeyH') this.openKeys(); else if (c === 'KeyR' && (this.camp && this.camp.L && this.camp.L.objectives)) go(this, 'Campaign', { level: this.level, mission: this.mi, techs: this.P.techs, via: 'retry', replay: this.replay === true }); return; } // R: restart the mission (the level is kept; a replay is flown again as a replay); H: every key
     if (campKeyCodes('help').indexOf(c) >= 0) { this.openKeys(); return; } // H: every key, on one page
+    if (campKeyIs('tune', c)) { if (typeof this.openTune === 'function') this.openTune(); return; } // N: the tuning panel (src/camptunedraw.js), over the battle, which waits
     const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // a word typed into the strip is not a key
     if ((typeof this.pn !== 'object' || typeof this.pn.lit !== 'object') && typeof campPanelNew === 'function') this.pn = campPanelNew(); // made in create (campPanelsInstall); a stand-in scene in a test has none, and answers any property
     const listOpen = typeof campPanelOpen === 'function' && !!campPanelOpen(this.pn);
@@ -296,6 +302,13 @@ class Campaign extends Phaser.Scene {
     campKeysOpen(this);
   }
   closeKeys() { campKeysClose(this); if (this.keysPaused) { this.keysPaused = false; this.mode = 'play'; } }
+  openTune() { // the tuning panel: the lists and the map close, the battle waits (the pause card's own mode), and the panel comes up
+    if (typeof campTuneOpen !== 'function' || this.mode !== 'play' || (typeof document !== 'undefined' && document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))) return; // not while a word is typed into the strip
+    if (typeof campPanelsClose === 'function') campPanelsClose(this);
+    if (this.mp && typeof campMapClose === 'function') campMapClose(this);
+    if (campTuneOpen(this)) { this.mode = 'pause'; this.tunePaused = true; } // the mode waits only when the panel is up
+  }
+  closeTune() { campTuneClose(this); if (this.tunePaused) { this.tunePaused = false; this.mode = 'play'; } }
 
   // a turret fires (src/campaign.js says each shot with an event of its own): a flash at its muzzle, and its pew (src/audio.js, SFX.turret), never more than one in CAMP_BLIP.gap ms of the battle's clock, so eight turrets rattle and do not pile up into noise
   turretFlash(e) {
@@ -315,6 +328,8 @@ class Campaign extends Phaser.Scene {
   // ----- each frame -----
   update(time, dt) {
     spaceBackdropTick(this);
+    if (typeof campTuneMark === 'function') campTuneMark(this); // the TUNED mark, while any override is on (src/camptunedraw.js)
+    if (this.mode === 'play' && this.tuned === false && typeof campTuneActive === 'function' && campTuneActive()) this.tuned = true; // a frame of battle with an override on makes the whole run a tuned one: its score and rank are not kept
     if (typeof campPanelsPaint === 'function') campPanelsPaint(this, this.time.now); // the open list, if one is, and the target's line (src/campanelsdraw.js)
     const C = this.camp;
     if (this.mode === 'play' && !C.result) {
