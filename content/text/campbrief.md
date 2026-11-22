@@ -60,7 +60,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.key.wing | Fleet: {rowlaunch} |
 | camp.bf.key.map | Open the map; click a place, Enter flies |
 | camp.bf.key.zoom | Zoom the view or the map; {keyzoomreset} resets |
-| camp.bf.key.attack | Fighters: {rowattack} |
+| camp.bf.key.attack | All squads: {rowattack} |
 | camp.bf.key.escort | Escorts: {rowescort} |
 | camp.bf.key.missile | Fire a homing missile at the target |
 | camp.bf.key.mine | Fleet: {rowmine} |
@@ -75,7 +75,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.1.1.w4 | A miner is jumped on the way. Answer the pilot's call. |
 | camp.bf.1.1.n1 | Welcome aboard, Commander. The transport is ours to bring to Ceres. A patrol sees her off, then she is on her own. |
 | camp.bf.1.1.n2 | Pirates lie in wait ahead, with torpedo boats. Cover the transport: {convoy}, then "{tuck}". |
-| camp.bf.1.1.n3 | The arrows fly the cruiser. {fleetkey} is your fleet: {fighterskey} fighters, {escortskey} escorts, {convoykey} convoy. A pilot calls: Up, Down, Enter. |
+| camp.bf.1.1.n3 | The arrows fly the cruiser. {fleetkey} is your fleet: {squadskey} all squads, {redkey} red, {greenkey} green, {yellowkey} yellow. A pilot calls: Up, Down, Enter. |
 | camp.bf.1.2.w1 | Mine the rock fields round Ceres: {viamine}, then {rowmine}. |
 | camp.bf.1.2.w2 | Ore sells for triple at the Works. Pirates hunt the miners. |
 | camp.bf.1.2.w3 | Beat the 3 raids, then dock at Occator Works ({viadock}). |

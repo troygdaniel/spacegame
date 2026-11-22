@@ -26,7 +26,7 @@ console.log('A. the table');
 const K = J('CAMP.repair');
 check('CAMP.repair: fighters break off under 30 percent, within 15 s of flight, mended for 10 s, a fight is 1800 px, a radio line is not repeated within 5 s', K && JSON.stringify(K.kinds) === '["fighter"]' && K.below === 0.3 && K.within === 15 && K.time === 10 && K.fight === 1800 && K.sayEvery === 5, JSON.stringify(K));
 check('every number of it is a finite number', Object.values(K).every(v => Array.isArray(v) || (typeof v === 'number' && isFinite(v))));
-check('the functions are there: campRepairRun, campRepairTick, campRepairing, campRepairState, and campLaunch takes a mended ship', ['campRepairRun', 'campRepairTick', 'campRepairing', 'campRepairState', 'campRepairSay'].every(f => J(`typeof ${f}`) === 'function') && /function campLaunch\(C, again, order\)/.test(read('src/campaign.js')));
+check('the functions are there: campRepairRun, campRepairTick, campRepairing, campRepairState, and campLaunch takes a mended ship', ['campRepairRun', 'campRepairTick', 'campRepairing', 'campRepairState', 'campRepairSay'].every(f => J(`typeof ${f}`) === 'function') && /function campLaunch\(C, again, order, squad\)/.test(read('src/campaign.js')));
 check('a new battle has an empty repair list', J('__new().repairs.length') === 0 && J('campRepairing(C)') === 0);
 
 // ---- B. who breaks off

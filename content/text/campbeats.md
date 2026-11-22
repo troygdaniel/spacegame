@@ -20,12 +20,12 @@ The words of mission 1.1 in four beats (card space-game-l1-1-beats; src/campbeat
 | camp.b.rival | Destroy the pirate leader |
 | camp.b.torpedoes | Torpedo hits: {n} or fewer |
 | camp.hint.fast | A long quiet road. On the map ({map}), pick the transport and burn Fast. |
-| camp.hint.fleet | {fleetkey} is the fleet. {fighterskey} fighters, {escortskey} escorts, {convoykey} convoy. |
+| camp.hint.fleet | {fleetkey} is the fleet. {squadskey} all squads, {redkey} red, {greenkey} green, {yellowkey} yellow. |
 | camp.bf.enemy.tboat.one | {n} pirate torpedo boat |
 | camp.bf.enemy.tboat.many | {n} pirate torpedo boats |
 | camp.bf.enemy.lancer.one | {n} alien lancer |
 | camp.bf.enemy.lancer.many | {n} alien lancers |
 | camp.bf.enemy.pirateleader.one | the pirate leader, a heavy ship |
 | camp.bf.enemy.pirateleader.many | {n} pirate leaders |
-| camp.hint.tuck | Torpedo boats! Press {convoy} and pick "{tuck}". |
-| camp.hint.run | The leader blocks the way. Press {convoy} and pick "{run}". |
+| camp.hint.tuck | Torpedo boats! Press {convoy}, then pick "{tuck}". |
+| camp.hint.run | The leader blocks the way. Press {convoy}, then pick "{run}". |

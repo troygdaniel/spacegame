@@ -26,10 +26,10 @@ How the game is built, for someone (a person or an AI) who has never seen it. It
 
 | Feature | Rules | Drawing |
 |---|---|---|
-| One list per hand, with shortcut keys: `Q` opens the fleet list, `P` the ship list; each has rows that open its parts, and a part's key opens it directly (`W` convoy, `E` fighters, `R` escorts; `O` autopilot, `I` power, `U` dock and build; Stance has no key). Hidden until pressed, one open at a time; Up, Down, Enter, Left for back. And the direct keys | `camppanel.js` (lists, rows and keys: `CAMP_PANELS` and `CAMP_KEYS` in `data_controls.js`) | `campanelsdraw.js` |
+| One list per hand, with shortcut keys: `Q` opens the fleet list, `P` the ship list; each has rows that open its parts, and a part's key opens it directly (`W` all squads, `E` red, `R` green, `T` yellow; `O` autopilot, `I` power, `U` dock and build; Escorts, Convoy and Stance have no key: rows of the Q list). Hidden until pressed, one open at a time; Up, Down, Enter, Left for back. And the direct keys | `camppanel.js` (lists, rows and keys: `CAMP_PANELS` and `CAMP_KEYS` in `data_controls.js`) | `campanelsdraw.js` |
 | The tuning panel (N: numbers and switches changed live, kept in localStorage, copied out as a block; `CAMP.flags` and `campFlag` are the switches the systems read) | `camptune.js` (the table of rows, the overrides, the block) | `camptunedraw.js` (the panel, the clipboard, the TUNED mark); `tools/apply-tuning.mjs` reads the block |
-| The one target (A D S X; the Attack rows of the fighters and escorts lists go at it, the autopilot list's Fly to the target flies to it, Enter fires at it) | `camptarget.js` | `camptargetdraw.js` (the bracket) |
-| Orders to the wing, groups and targets | `campwing.js`, `campconvoy.js` (escorted ships), `campdogfight.js`, `camprepair.js` | `campconvoyscene.js` |
+| The one target (A D S X; the Attack rows of the squads' and escorts' lists go at it, the autopilot list's Fly to the target flies to it, Enter fires at it) | `camptarget.js` | `camptargetdraw.js` (the bracket) |
+| Orders to the wing, groups (the fighters' Red, Green and Yellow squads: `u.squad`, set at launch by `campSquadNext`) and targets | `campwing.js`, `campconvoy.js` (escorted ships), `campdogfight.js`, `camprepair.js` | `campconvoyscene.js` |
 | Pilots ask for orders (timed calls: a small amber list in the middle, Up, Down, Enter) | `camporders.js` | `camporderdraw.js` |
 | Mission 1.1's beats, route forks (dormant: no mission has one since 22 Nov), scouting | `campbeats.js`, `camproute.js`, `campanomaly.js` | `campanomalydraw.js` |
 | Enemies: pirates, torpedo boats, the rival | `camppirates.js`, `camptorpedo.js`, `camprival.js` | `camppirateart.js`, `camptorpedoscene.js`, `camprivaldraw.js` |

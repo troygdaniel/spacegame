@@ -48,9 +48,8 @@ function campPanelGo(P, C, id, from) {
 function campPanelKey(P, C, code, now) {
   const res = { used: false, ran: false, ok: false, say: '', row: '', tgt: '', fleet: false, open: campPanelOpen(P) }; // fleet: an order of the left hand or a pick of the target (a label for the tests and the radio; nothing slows the battle for it: card space-game-no-command-slowdown)
   const pk = code ? CAMP_PANELS.panels.find(p => p.code === code) : null;
-  if (pk) { // a list's key (Q W E R, P O I U): open that list at its first row, or close it when it is the one open
+  if (pk) { // a list's key (Q W E R T, P O I U): open that list at its first row, or close it when it is the one open
     res.used = true;
-    if (pk.id === 'convoy' && !campFlag('convoyorders')) { res.open = campPanelOpen(P); return res; } // the convoy orders are switched off (the tuning panel): W opens nothing (the part is not in the fleet list either)
     if (campPanelOpen(P) === pk.id) campPanelClose(P); else campPanelGo(P, C, pk.id);
     res.open = campPanelOpen(P); return res;
   }
@@ -125,14 +124,17 @@ function campPanelWhy(r) {
   if (r.code === 'cooling') { const m = /in (\d+) seconds/.exec(r.say || ''); t = t.replace('{s}', m ? m[1] : '?'); }
   return t;
 }
+// the squad a row is about (its order is to one squad, or it opens that squad's list): 'red', 'green', 'yellow', or '' (card space-game-fighter-squads)
+const campPanelSquadOf = row => { const g = row.wing && CAMP.wing.groups[row.wing[0]]; return g && g.squad ? g.squad : row.open && CAMP.wing.squads.indexOf(row.open) >= 0 ? row.open : ''; };
 function campPanelState(C, row) {
-  const B = CAMP.build;
+  const B = CAMP.build, sq = campPanelSquadOf(row);
+  if (sq) { const n = campWingShips(C, sq).length, tg = row.wing && row.wing[1] === 'attack' ? campPanelTarget(C) : null; return tg ? tg.name + ', ' + tg.km + ' km' : n + (n === 1 ? ' ship out' : ' ships out'); } // a squad's row: the target the attack goes at, else how many of its ships are out
   switch (row.id) {
-    case 'launch': return C.bay.fighters + ' fighters, ' + C.bay.escorts + ' escorts';
+    case 'launch': case 'slaunch': return C.bay.fighters + ' fighters, ' + C.bay.escorts + ' escorts';
     case 'attack': { const tg = campPanelTarget(C); return tg ? tg.name + ', ' + tg.km + ' km' : campWing(C, 'fighter').length + ' fighters out'; } // the target, when one is picked
     case 'escort': { const cv = campNearest(campConvoys(C), C.carrier); return cv ? campConvoyName(cv) + ' convoy' : 'stay by the carrier'; } // a level with no convoy (the belt): the escorts stay close
     case 'guard': case 'recall': return campWing(C).length + ' ships out';
-    case 'gfighters': case 'fguard': case 'fmine': case 'frecall': return campWing(C, 'fighter').length + ' fighters out';
+    case 'gsquads': case 'fguard': case 'fmine': case 'frecall': return campWing(C, 'fighter').length + ' fighters out';
     case 'gescorts': case 'eattack': case 'eguard': case 'erecall': return campWing(C, 'escort').length + ' escorts out';
     case 'gconvoy': return campPanelConvoyName(C);
     case 'gstance': return campPanelStanceName(C);
@@ -162,13 +164,14 @@ function campPanelShortWhy(r) {
   return t;
 }
 function campPanelShortState(C, row) {
-  const B = CAMP.build;
+  const B = CAMP.build, sq = campPanelSquadOf(row);
+  if (sq) { const tg = row.wing && row.wing[1] === 'attack' ? campPanelTarget(C) : null; return tg ? tg.km + ' km' : campWingShips(C, sq).length + ' out'; }
   switch (row.id) {
-    case 'launch': return (C.bay.fighters + C.bay.escorts) + ' in bay';
+    case 'launch': case 'slaunch': return (C.bay.fighters + C.bay.escorts) + ' in bay';
     case 'attack': return campWing(C, 'fighter').length + ' out';
     case 'escort': { const cv = campNearest(campConvoys(C), C.carrier); return cv ? campConvoyName(cv) : 'stay close'; }
     case 'guard': case 'recall': return campWing(C).length + ' out';
-    case 'gfighters': case 'fguard': case 'fmine': case 'frecall': return campWing(C, 'fighter').length + ' out';
+    case 'gsquads': case 'fguard': case 'fmine': case 'frecall': return campWing(C, 'fighter').length + ' out';
     case 'gescorts': case 'eattack': case 'eguard': case 'erecall': return campWing(C, 'escort').length + ' out';
     case 'gconvoy': return campPanelConvoyName(C);
     case 'gstance': return campPanelStanceName(C);

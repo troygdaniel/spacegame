@@ -30,7 +30,7 @@ g.run(`
 console.log('A. the table and the groups');
 {
   const W = J('CAMP.wing');
-  check('the table is data in CAMP: three groups (fighters, escorts, all), each a name and a list of kinds', Object.keys(W.groups).join() === 'fighters,escorts,all' && W.groups.fighters.kinds.join() === 'fighter' && W.groups.escorts.kinds.join() === 'escort' && W.groups.all.kinds.join() === 'fighter,escort' && Object.values(W.groups).every(x => x.name));
+  check('the table is data in CAMP: six groups (fighters, escorts, all, and the fighters\' squads red, green, yellow), each a name and a list of kinds', Object.keys(W.groups).join() === 'fighters,escorts,all,red,green,yellow' && W.groups.red.kinds.join() === 'fighter' && W.groups.red.squad === 'red' && W.groups.yellow.squad === 'yellow' && W.groups.fighters.kinds.join() === 'fighter' && W.groups.escorts.kinds.join() === 'escort' && W.groups.all.kinds.join() === 'fighter,escort' && Object.values(W.groups).every(x => x.name));
   check('the verbs: each with the kinds of target it takes and the group it addresses when none is named', ['attack', 'escort', 'guard', 'hold', 'scout', 'fetch', 'mine', 'recall'].every(v => W.verbs[v] && Array.isArray(W.verbs[v].kinds) && W.groups[W.verbs[v].group]));
   check('the pairs of the card: enemy: attack; friend or convoy: escort; place or point: guard, scout, hold; pickup or cache: fetch; anomaly: scout', W.verbs.attack.kinds.join() === 'enemy' && W.verbs.escort.kinds.includes('friend') && W.verbs.escort.kinds.includes('convoy') && ['guard', 'scout', 'hold'].every(v => W.verbs[v].kinds.includes('place') && W.verbs[v].kinds.includes('point')) && W.verbs.fetch.kinds.includes('pickup') && W.verbs.fetch.kinds.includes('cache') && W.verbs.scout.kinds.includes('anomaly'), JSON.stringify(W.verbs));
   check('today\'s defaults: Attack addresses the fighters, Escort the escorts, Guard and Recall everyone (an order that names no group is as it was)', W.verbs.attack.group === 'fighters' && W.verbs.escort.group === 'escorts' && W.verbs.guard.group === 'all' && W.verbs.recall.group === 'all');
@@ -137,7 +137,7 @@ console.log('G. the state for the map: groups, order, target, line');
 {
   g.run('__new(11, 1)'); g.run('window.__a = __foe(900, 0)');
   const s0 = J('campWingState(C)');
-  check('one row for each group that has ships: fighters (6), escorts (2), all (8); each with its name, its stance and where its ships are', s0.map(x => x.id + ':' + x.n).join() === 'fighters:6,escorts:2,all:8' && s0.every(x => x.name && x.stance === 'free' && x.ships.length === x.n && x.center && Number.isFinite(x.center.x)) && s0[0].ships.every(x => x.kind === 'fighter' && Number.isFinite(x.x) && Number.isFinite(x.y)));
+  check('one row for each group that has ships: fighters (6), escorts (2), all (8), the three squads (2 each); each with its name, its stance and where its ships are', s0.map(x => x.id + ':' + x.n).join() === 'fighters:6,escorts:2,all:8,red:2,green:2,yellow:2' && s0.every(x => x.name && x.stance === 'free' && x.ships.length === x.n && x.center && Number.isFinite(x.center.x)) && s0[0].ships.every(x => x.kind === 'fighter' && Number.isFinite(x.x) && Number.isFinite(x.y)));
   check('at the start the fighters guard the carrier and the escorts go with the hauler (the launch\'s own orders), so "all" is mixed, and the other two are not', s0.find(x => x.id === 'fighters').order === 'guard' && s0.find(x => x.id === 'escorts').order === 'escort' && s0.find(x => x.id === 'all').mixed === true && !s0.find(x => x.id === 'fighters').mixed && !s0.find(x => x.id === 'escorts').mixed);
   g.run('__r("fighters", "attack", "the gunship"); __r("escorts", "escort", "freighter-h1")');
   const s1 = J('campWingState(C)'), F = s1.find(x => x.id === 'fighters'), E = s1.find(x => x.id === 'escorts'), A = s1.find(x => x.id === 'all');
@@ -172,7 +172,7 @@ console.log('H. the words: the strip, the voice, the ship computer');
   g.run(`window.__sc = { scene: { key: 'Campaign' }, leaving: false, dead: false, camp: null, toasts: [] }; __sc.camp = C;`);
   const p = J(`(() => { const p = shipcompLocal('all hold at vesta', __sc); return p ? { action: p.action, text: p.text, run: !!p.run, refused: !!p.refused } : null; })()`);
   check('the ship computer takes it by the closed act fleet_wing, says it in words first, and does nothing until it runs; then the order goes through the one door', p && p.action === 'fleet_wing' && p.text === 'All ships, hold at Vesta.' && p.run && J('campWing(C).every(u => u.order.type !== "hold")') && (g.run(`shipcompLocal('all hold at vesta', __sc).run(__sc)`), J('campWing(C).every(u => u.order.type === "hold")')), JSON.stringify(p));
-  check('and the model is told the act, with its group, verbs and an example', /fleet_wing <a group \(fighters, escorts or all\), a verb/.test(src('src/shipcomputer.js')) && J(`Object.keys(SC_ACT).includes('fleet_wing')`));
+  check('and the model is told the act, with its group, verbs and an example', /fleet_wing <a group \(fighters, escorts, all, or one squad of the fighters: red, green or yellow\), a verb/.test(src('src/shipcomputer.js')) && J(`Object.keys(SC_ACT).includes('fleet_wing')`));
 }
 
 // found with the shortcut keys (card list-shortcuts): "Recall the fighters" answered "Wing, return to the carrier." though the escorts stayed out

@@ -183,8 +183,13 @@ const CAMP = {
     groups: {                              // three built-in groups, as data (a list of kinds, or of ship ids): numbered groups drop in later as C.groups[id] = { name, ships: [ids] }
       fighters: { name: 'Fighters', kinds: ['fighter'] },
       escorts: { name: 'Escorts', kinds: ['escort'] },           // the escorts, and the scouts they send out
-      all: { name: 'All ships', kinds: ['fighter', 'escort'] }
+      all: { name: 'All ships', kinds: ['fighter', 'escort'] },
+      red: { name: 'Red squad', kinds: ['fighter'], squad: 'red' },       // the fighters' three squads (card space-game-fighter-squads; Troy, 22 Nov 2026): a squad is the fighters whose u.squad is its id; the escorts and the scouts are in none
+      green: { name: 'Green squad', kinds: ['fighter'], squad: 'green' },
+      yellow: { name: 'Yellow squad', kinds: ['fighter'], squad: 'yellow' }
     },
+    squads: ['red', 'green', 'yellow'],    // the squads in the order they fill: a fighter that leaves the bay joins the one with the fewest ships out (a tie goes to the first of these), so six are two and two and two and a seventh makes Red three; a ship lost or mended gives its place back
+    squadColor: { red: 0xff5a4a, green: 0x3ee86a, yellow: 0xffd23a }, // what a squad's ships wear in flight (a ring: src/campaignscene.js) and on the map (src/campmapdraw.js): three hues apart, bright on the dark
     verbs: {                               // kinds: what the verb takes as a target (enemy, friend, convoy, place, point, pickup, cache, anomaly, rock); group: who it addresses when none is named (today's orders); need: a target must be named
       attack: { kinds: ['enemy'], group: 'fighters' },
       escort: { kinds: ['friend', 'convoy'], group: 'escorts' },
@@ -781,6 +786,7 @@ function campSpawn(C, kind, x, y) {
   u.faction = u.faction || (u.team === 'alien' ? 'alien' : u.team); // who it belongs to: 'earth', 'alien', 'pirate' or 'neutral'
   if (u.faction === 'alien') C.alienSeen = true; // the first alien of the battle: from here the ship computer's summary counts them (before it, on the rim, it does not name them: card space-game-night-hunt-l1-rim)
   u.maxHp = u.hp; u.nextShot = C.t + 600 + C.rng() * 900;
+  if (kind === 'fighter' && u.team === 'earth' && typeof campSquadNext === 'function') u.squad = campSquadNext(C); // the wing's fighter joins a squad (src/campwing.js); the escorts and the scouts are in none
   C.ships.push(u); C.by[u.id] = u;
   return u;
 }
@@ -1246,12 +1252,13 @@ function campBullet(C, from, rot, speed, dmg, lifeMs, team, ahead, extra) {
 }
 
 // the bay: Launch queues the ships, one leaves every launchEvery ms
-function campLaunch(C, again, order) { // again: the kind of a fighter that was mended aboard (src/camprepair.js): it goes out at once, with the order it had
+function campLaunch(C, again, order, squad) { // again: the kind of a fighter that was mended aboard (src/camprepair.js): it goes out at once, with the order it had and in the squad it was in
   if (!again && (!C.launchQ.length || C.t < C.nextLaunch || C.carrier.hp <= 0)) return;
   C.nextLaunch = C.t + CAMP.bay.launchEvery;
   const kind = again || C.launchQ.shift(), c = C.carrier, side = (C.launched % 2 ? 1 : -1), m = CAMP.bay.mouth, cs = Math.cos(c.rot), sn = Math.sin(c.rot); // out of the mouth of a hangar pod, one side and then the other
   const u = campSpawn(C, kind, c.x + cs * m[0] - sn * side * m[1], c.y + sn * m[0] + cs * side * m[1]); C.launched++;
   u.vx = c.vx + Math.cos(c.rot) * 140; u.vy = c.vy + Math.sin(c.rot) * 140; u.rot = c.rot;
+  if (squad && kind === 'fighter') u.squad = squad; // a fighter mended aboard rejoins its own squad
   const cv = kind === 'escort' ? campNearest(campConvoys(C), c) : null;
   u.order = order || (cv ? { type: 'escort', target: cv.id, slot: campWing(C, 'escort').length - 1 } : { type: 'guard', at: { kind: 'carrier' } });
   C.events.push({ type: 'launch', id: u.id, kind });

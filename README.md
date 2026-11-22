@@ -47,14 +47,15 @@ The game's own **H** page lists every key; it is built from `src/data_controls.j
 
 ### Campaign
 
-One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left and **`P` opens the ship list** at the right. Each is short: a few orders, and one row for each of its parts with the part's key on it. **A part's key opens it directly at any time:** `W` convoy, `E` fighters, `R` escorts on the left; `O` autopilot, `I` power, `U` dock and build on the right. So `E` then `Enter` sends the fighters at the target. Nothing is on the screen until you press one of these keys. Each row says what it does in plain words; a row that cannot be used now is grey and says why. **No key means two things in flight**, and there are no number keys.
+One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left and **`P` opens the ship list** at the right. Each is short: a few orders, and one row for each of its parts with the part's key on it. **A part's key opens it directly at any time:** `W` all squads, `E` the red squad, `R` the green squad, `T` the yellow squad on the left (the fighters are split into three squads); `O` autopilot, `I` power, `U` dock and build on the right. So `W` then `Enter` sends every fighter at the target, and `E` then `Enter` only the red squad. The escorts and the convoy have no key of their own: they are rows of the `Q` list. Nothing is on the screen until you press one of these keys. Each row says what it does in plain words; a row that cannot be used now is grey and says why. **No key means two things in flight**, and there are no number keys.
 
 | Key | What it does |
 |---|---|
-| `Q` | the **fleet list**: Launch the wing, Guard the cruiser, Mine ore, Recall the wing, and rows that open Fighters, Escorts, Convoy and Stance |
-| `W` | **convoy orders**: Tuck in, Run for it, Hold here, Carry on |
-| `E` | **fighters**: Attack the target, Guard the cruiser, Mine ore, Recall the fighters |
-| `R` | **escorts**: Escort the convoy, Attack the target, Guard the cruiser, Recall the escorts |
+| `Q` | the **fleet list**: Launch the wing, Guard the cruiser, Mine ore, Recall the wing, and rows that open All squads, the Red, Green and Yellow squads, Escorts (Escort the convoy, Attack the target, Guard the cruiser, Recall the escorts), Convoy (Tuck in, Run for it, Hold here, Carry on) and Stance |
+| `W` | **all squads**: Attack the target, Guard the cruiser, Recall, Mine ore, Launch the wing |
+| `E` | the **red squad**: Attack the target, Guard the cruiser, Recall |
+| `R` | the **green squad**: Attack the target, Guard the cruiser, Recall |
+| `T` | the **yellow squad**: Attack the target, Guard the cruiser, Recall |
 | `P` | the **ship list**: rows that open Autopilot, Power, Dock and build; Warp blink ahead once you have that tech |
 | `O` | **autopilot**: Fly to the goal, Fly to the target, Fast burn to the goal, Fast burn to the target |
 | `I` | **power**: one more pip to shields, engines or weapons, Balance the power, Emergency shields (a pip row leaves the list open, to press again) |

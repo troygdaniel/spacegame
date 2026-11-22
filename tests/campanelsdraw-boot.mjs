@@ -55,16 +55,16 @@ async function campaign() {
     check('nothing is drawn until a list\'s key is pressed: no list is open, no heading and no row is on the screen', (await isOpen()) === '' && (await j(`!${PL}.title.visible && ${PL}.rows.every(r => !r.name.visible && !r.suffix.visible && !r.cap.visible) && !${PL}.keys.visible`)) === true);
     check('the target\'s line is on the screen under the radar with no list open: TARGET  none', (await j(`${PL}.tgt.visible`)) === true && (await j(`${PL}.tgt.text`)) === 'TARGET  none' && (await j(`${PL}.tgtKeys.visible`)) === true);
     await snap(t, 'start');
-    // flight: the arrows turn and thrust the cruiser; A, W and the other letters do not (W is the convoy list's key), and a digit is no key at all
+    // flight: the arrows turn and thrust the cruiser; A, W and the other letters do not (W is the all-squads list's key), and a digit is no key at all
     const rot0 = await j(`${SC}.camp.carrier.rot`), stance0 = await j(`${SC}.camp.stance`);
     await press(t, 'KeyA', 400); await press(t, 'KeyW', 400);
     const wOpen = await isOpen(), wTitle = await j(`${PL}.title.visible && ${PL}.title.text`);
     await press(t, 'KeyW', 400); const wShut = await isOpen();
     await press(t, 'KeyD', 400); await press(t, 'KeyS', 400);
     check('W A S D do not fly the cruiser: no turn, no thrust (A and D picked no target: none is near)', Math.abs((await j(`${SC}.camp.carrier.rot`)) - rot0) < 1e-6 && (await j(`Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy)`)) < 1);
-    check('W is the convoy list\'s key: it opens that list directly (headed W   CONVOY ORDERS), and W again closes it', wOpen === 'convoy' && wTitle === (await j(`(() => { const p = campKeyList('convoy'); return p.key + '   ' + p.title; })()`)) && wTitle === 'W   CONVOY ORDERS' && wShut === '', wOpen + ' | ' + wTitle + ' | ' + wShut);
-    await press(t, 'Digit1', 20); await press(t, 'Digit2', 20); await press(t, 'KeyF', 20); await press(t, 'KeyG', 20); await press(t, 'KeyT', 20); await press(t, 'KeyY', 20); await t.run(300);
-    check('a digit or a letter that is no key of the table (1 2 F G T Y) does nothing in flight: nothing launched, no list opened, the stance as it was', (await j(`${SC}.camp.launchQ.length + ${SC}.camp.launched`)) === 0 && (await isOpen()) === '' && (await j(`${SC}.camp.stance`)) === stance0);
+    check('W is the all-squads list\'s key: it opens that list directly (headed W   ALL SQUADS), and W again closes it', wOpen === 'squads' && wTitle === (await j(`(() => { const p = campKeyList('squads'); return p.key + '   ' + p.title; })()`)) && wTitle === 'W   ALL SQUADS' && wShut === '', wOpen + ' | ' + wTitle + ' | ' + wShut);
+    await press(t, 'Digit1', 20); await press(t, 'Digit2', 20); await press(t, 'KeyF', 20); await press(t, 'KeyG', 20); await press(t, 'KeyZ', 20); await press(t, 'KeyY', 20); await t.run(300);
+    check('a digit or a letter that is no key of the table (1 2 F G Z Y) does nothing in flight: nothing launched, no list opened, the stance as it was', (await j(`${SC}.camp.launchQ.length + ${SC}.camp.launched`)) === 0 && (await isOpen()) === '' && (await j(`${SC}.camp.stance`)) === stance0);
     await press(t, 'ArrowRight', 500);
     check('the Right arrow turns the cruiser', (await j(`${SC}.camp.carrier.rot`)) - rot0 > 0.05);
     await press(t, 'ArrowUp', 500);
@@ -73,9 +73,9 @@ async function campaign() {
     await press(t, 'KeyQ', 20); await t.run(300);
     const fleetLabels = await drawnAs('fleet'), show = await j('CAMP_PANELS.show'), fleetRows = await j(`campPanelRows(${SC}.camp, 'fleet').map(r => ({ id: r.id, key: r.key, more: r.more }))`);
     check('Q opens the list of fleet orders at its first row, headed with its key', (await isOpen()) === 'fleet' && (await j(`${P}.at`)) === 0 && (await j(`${P}.top`)) === 0 && (await j(`${PL}.title.visible && ${PL}.title.text`)) === 'Q   FLEET ORDERS' && (await j(`${PL}.count.text`)) === '1 / ' + fleetLabels.length);
-    check('its rows are the fleet rows of this mission in the table\'s order: eight in level 1, the first is Launch the wing, and a row that opens a part ends in an arrow', JSON.stringify(await shownRows()) === JSON.stringify(fleetLabels.slice(0, show)) && fleetLabels.length === 8 && fleetLabels[0] === (await rowLabel('launch')) && fleetRows.every((r, i) => r.more === /  >$/.test(fleetLabels[i])), JSON.stringify(await shownRows()));
+    check('its rows are the fleet rows of this mission in the table\'s order: eleven in level 1, the first is Launch the wing, and a row that opens a part ends in an arrow', JSON.stringify(await shownRows()) === JSON.stringify(fleetLabels.slice(0, show)) && fleetLabels.length === 11 && fleetLabels[0] === (await rowLabel('launch')) && fleetRows.every((r, i) => r.more === /  >$/.test(fleetLabels[i])), JSON.stringify(await shownRows()));
     const caps = await shownCaps(), capOf = id => caps[fleetRows.findIndex(r => r.id === id)];
-    check('the Fighters, Escorts and Convoy rows show the key that opens that part in a cap (E R W); the Stance row and the plain orders have none', JSON.stringify(caps) === JSON.stringify(fleetRows.slice(0, show).map(r => r.key)) && capOf('gfighters') === (await j(`campKeyList('fighters').key`)) && capOf('gescorts') === (await j(`campKeyList('escorts').key`)) && capOf('gconvoy') === (await j(`campKeyList('convoy').key`)) && [capOf('gfighters'), capOf('gescorts'), capOf('gconvoy')].join() === 'E,R,W' && capOf('gstance') === '' && caps.filter(c => c).length === 3, JSON.stringify(caps));
+    check('the All squads and the three squads\' rows show the key that opens that part in a cap (W E R T); the Escorts, Convoy and Stance rows and the plain orders have none', JSON.stringify(caps) === JSON.stringify(fleetRows.slice(0, show).map(r => r.key)) && [capOf('gsquads'), capOf('gred'), capOf('ggreen'), capOf('gyellow')].join() === 'W,E,R,T' && capOf('gescorts') === '' && capOf('gconvoy') === '' && capOf('gstance') === '' && caps.filter(c => c).length === 4, JSON.stringify(caps));
     check('no row has a key of its own to give its order: a row is its words, its state and (a part\'s row) the cap of the part\'s key', (await j(`${PL}.rows.every(r => Object.keys(r).join() === 'cap,name,suffix')`)) === true && (await j(`CAMP_PANELS.panels.every(p => p.rows.every(r => !('k' in r) && !('code' in r)))`)) === true);
     check('the rows fit the list as the browser draws them (the cap, the words and the state side by side with room to spare)', (await fits()) === true);
     check('the foot names a top list\'s keys (camp.ui.listkeys)', (await j(`${PL}.keys.text`)) === (await foot('camp.ui.listkeys', 'Q')) && /Enter/.test(await j(`${PL}.keys.text`)) && !/\{/.test(await j(`${PL}.keys.text`)), await j(`${PL}.keys.text`));
@@ -107,23 +107,23 @@ async function campaign() {
     await press(t, 'KeyP', 20); await t.run(200);
     check('P again closes it', (await isOpen()) === '' && (await j(`${PL}.title.visible`)) === false);
     // the shortcut keys (card list-shortcuts): a part's key opens its list directly, from no list and from any other; Left goes back to the list it is a part of, onto that part's row; Enter on that row opens it again
-    const launched0 = await j(`${SC}.camp.launchQ.length + ${SC}.camp.launched`), fAt = await listAt('fleet', 'gfighters'), fighterLabels = await drawnAs('fighters');
-    await press(t, 'KeyE', 20); await t.run(300);
-    check('E with no list open opens the fighters list directly, at its first row (Attack the target), headed with its key', (await isOpen()) === 'fighters' && (await j(`${P}.at`)) === 0 && (await j(`${PL}.title.text`)) === 'E   FIGHTERS' && JSON.stringify(await shownRows()) === JSON.stringify(fighterLabels) && fighterLabels[0] === (await rowLabel('attack')) && (await j(`${PL}.count.text`)) === '1 / ' + fighterLabels.length, (await isOpen()) + ' | ' + (await j(`${PL}.title.text`)) + ' | ' + JSON.stringify(await shownRows()));
-    check('a part\'s list has no caps, and its foot is camp.ui.listkeysub (it names Left, the way back)', (await shownCaps()).every(c => c === '') && (await j(`${PL}.keys.text`)) === (await foot('camp.ui.listkeysub', 'E')) && (await j(`${PL}.keys.text`)) !== (await foot('camp.ui.listkeys', 'E')) && (await fits()) === true, await j(`${PL}.keys.text`));
+    const launched0 = await j(`${SC}.camp.launchQ.length + ${SC}.camp.launched`), fAt = await listAt('fleet', 'gsquads'), fighterLabels = await drawnAs('squads');
+    await press(t, 'KeyW', 20); await t.run(300);
+    check('W with no list open opens the all-squads list directly, at its first row (Attack the target), headed with its key', (await isOpen()) === 'squads' && (await j(`${P}.at`)) === 0 && (await j(`${PL}.title.text`)) === 'W   ALL SQUADS' && JSON.stringify(await shownRows()) === JSON.stringify(fighterLabels) && fighterLabels[0] === (await rowLabel('attack')) && (await j(`${PL}.count.text`)) === '1 / ' + fighterLabels.length, (await isOpen()) + ' | ' + (await j(`${PL}.title.text`)) + ' | ' + JSON.stringify(await shownRows()));
+    check('a part\'s list has no caps, and its foot is camp.ui.listkeysub (it names Left, the way back)', (await shownCaps()).every(c => c === '') && (await j(`${PL}.keys.text`)) === (await foot('camp.ui.listkeysub', 'W')) && (await j(`${PL}.keys.text`)) !== (await foot('camp.ui.listkeys', 'W')) && (await fits()) === true, await j(`${PL}.keys.text`));
     await snap(t, 'fighters-list');
     await press(t, 'ArrowLeft', 20); await t.run(300);
-    check('Left goes back to the fleet list with the highlight on the Fighters row, and gives no order', fAt >= 0 && (await isOpen()) === 'fleet' && (await j(`${P}.at`)) === fAt && (await j(`${HI}.name.text`)) === (await rowLabel('gfighters')) + '  >' && (await j(`${HI}.cap.text`)) === 'E' && (await j(`${PL}.title.text`)) === 'Q   FLEET ORDERS', (await isOpen()) + ' at ' + (await j(`${P}.at`)));
+    check('Left goes back to the fleet list with the highlight on the All squads row, and gives no order', fAt >= 0 && (await isOpen()) === 'fleet' && (await j(`${P}.at`)) === fAt && (await j(`${HI}.name.text`)) === (await rowLabel('gsquads')) + '  >' && (await j(`${HI}.cap.text`)) === 'W' && (await j(`${PL}.title.text`)) === 'Q   FLEET ORDERS', (await isOpen()) + ' at ' + (await j(`${P}.at`)));
     await press(t, 'ArrowLeft', 20); await t.run(200);
     check('Left in a top list does nothing: the fleet list stays, the highlight where it was', (await isOpen()) === 'fleet' && (await j(`${P}.at`)) === fAt);
     await press(t, 'Enter', 20); await t.run(300);
-    check('Enter on the Fighters row opens the fighters list again at its first row: no order is given and no missile fired', (await isOpen()) === 'fighters' && (await j(`${P}.at`)) === 0 && (await j(`${PL}.title.text`)) === 'E   FIGHTERS' && (await j(`${SC}.camp.launchQ.length + ${SC}.camp.launched`)) === launched0 && (await j(`${SC}.camp.stance`)) === 'match');
+    check('Enter on the All squads row opens the all-squads list again at its first row: no order is given and no missile fired', (await isOpen()) === 'squads' && (await j(`${P}.at`)) === 0 && (await j(`${PL}.title.text`)) === 'W   ALL SQUADS' && (await j(`${SC}.camp.launchQ.length + ${SC}.camp.launched`)) === launched0 && (await j(`${SC}.camp.stance`)) === 'match');
     await press(t, 'ArrowLeft', 20); await press(t, 'ArrowRight', 20); await t.run(300);
-    check('Left, then Right on the Fighters row: Right opens the part too', (await isOpen()) === 'fighters' && (await j(`${P}.at`)) === 0);
-    await press(t, 'KeyP', 20); await press(t, 'KeyE', 20); await t.run(300);
-    check('E from another list (the ship list, at the other side) closes it and opens the fighters list: one list at a time', (await isOpen()) === 'fighters' && (await j(`${P}.at`)) === 0 && (await j(`${PL}.title.text`)) === 'E   FIGHTERS');
-    await press(t, 'KeyQ', 20); await press(t, 'ArrowDown', 20); await press(t, 'KeyE', 20); await t.run(300);
-    check('E from the fleet list opens the fighters list at its first row (wherever the highlight was), and E again closes everything', (await isOpen()) === 'fighters' && (await j(`${P}.at`)) === 0 && (await press(t, 'KeyE', 20), await t.run(200), await isOpen()) === '' && (await j(`${PL}.title.visible`)) === false);
+    check('Left, then Right on the All squads row: Right opens the part too', (await isOpen()) === 'squads' && (await j(`${P}.at`)) === 0);
+    await press(t, 'KeyP', 20); await press(t, 'KeyW', 20); await t.run(300);
+    check('W from another list (the ship list, at the other side) closes it and opens the all-squads list: one list at a time', (await isOpen()) === 'squads' && (await j(`${P}.at`)) === 0 && (await j(`${PL}.title.text`)) === 'W   ALL SQUADS');
+    await press(t, 'KeyQ', 20); await press(t, 'ArrowDown', 20); await press(t, 'KeyW', 20); await t.run(300);
+    check('W from the fleet list opens the all-squads list at its first row (wherever the highlight was), and W again closes everything', (await isOpen()) === 'squads' && (await j(`${P}.at`)) === 0 && (await press(t, 'KeyW', 20), await t.run(200), await isOpen()) === '' && (await j(`${PL}.title.visible`)) === false);
     // I: the power list; a power row leaves the list open (a pip more, and more)
     const pw0 = await j(`${SC}.camp.power.p`), sAt = await listAt('power', 'shields');
     await press(t, 'KeyI', 20); for (let i = 0; i < sAt; i++) await press(t, 'ArrowDown', 20); await t.run(300);
@@ -179,7 +179,7 @@ async function campaign() {
     await snap(t, 'page');
     await press(t, 'KeyH'); await t.run(100);
     check('H again closes it and the battle goes on, with no list on the screen', (await j(`${SC}.ck`)) === null && (await j(`${SC}.mode`)) === 'play' && (await j(`${PL}.title.visible`)) === false);
-    check('the bottom key line names every list\'s key (Q W E R, P O I U), then the arrows, Space, Enter, Tab and H', (await j(`${SC}.hud.keys.text`)) === (await j(`campKeyLine()`)) && (await j(`${SC}.hud.keys.text`)).startsWith(await j(`campPanelKeyLine()`)) && (await j(`CAMP_PANELS.panels.filter(p => p.key).every(p => ${SC}.hud.keys.text.indexOf(p.key + ' ' + p.tab) >= 0)`)) === true && (await j(`CAMP_PANELS.panels.filter(p => p.key).map(p => p.key).join('')`)) === 'QWERPOIU' && (await j(`['fly', 'fire', 'missile', 'map', 'help'].every(k => ${SC}.hud.keys.text.indexOf(CAMP_KEYS[k].k) >= 0)`)) === true && !/\{/.test(await j(`${SC}.hud.keys.text`)), await j(`${SC}.hud.keys.text`));
+    check('the bottom key line names every list\'s key (Q W E R T, P O I U), then the arrows, Space, Enter, Tab and H', (await j(`${SC}.hud.keys.text`)) === (await j(`campKeyLine()`)) && (await j(`${SC}.hud.keys.text`)).startsWith(await j(`campPanelKeyLine()`)) && (await j(`CAMP_PANELS.panels.filter(p => p.key).every(p => ${SC}.hud.keys.text.indexOf(p.key + ' ' + p.tab) >= 0)`)) === true && (await j(`CAMP_PANELS.panels.filter(p => p.key).map(p => p.key).join('')`)) === 'QWERTPOIU' && (await j(`['fly', 'fire', 'missile', 'map', 'help'].every(k => ${SC}.hud.keys.text.indexOf(CAMP_KEYS[k].k) >= 0)`)) === true && !/\{/.test(await j(`${SC}.hud.keys.text`)), await j(`${SC}.hud.keys.text`));
     check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
   } finally { await t.close(); }
 }
