@@ -12,9 +12,9 @@ const { launch } = await import('./cdp.mjs');
 const OUT = process.env.KEYS_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { Digit0: 48, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, Digit7: 55, Digit8: 56, Digit9: 57, KeyH: 72, KeyA: 65, KeyD: 68, KeyS: 83, KeyX: 88, KeyQ: 81, KeyP: 80, KeyE: 69, KeyR: 82, KeyW: 87, KeyJ: 74, Escape: 27, Enter: 13, Tab: 9, ArrowRight: 39, ArrowLeft: 37, ArrowUp: 38, ArrowDown: 40 };
+const VK = { Digit0: 48, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, Digit7: 55, Digit8: 56, Digit9: 57, KeyH: 72, KeyA: 65, KeyD: 68, KeyS: 83, KeyX: 88, KeyQ: 81, KeyP: 80, KeyE: 69, KeyR: 82, KeyW: 87, KeyJ: 74, Escape: 27, Enter: 13, Tab: 9, ArrowRight: 39, ArrowLeft: 37, ArrowUp: 38, ArrowDown: 40, Slash: 191, Period: 190 };
 const press = async (t, code, wait = 40) => { // a real key: down, a few frames, up (the game clock is stepped, so "fast" is in game milliseconds)
-  const key = code.startsWith('Digit') ? code.slice(5) : code.startsWith('Key') ? code.slice(3).toLowerCase() : code, k = { windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key };
+  const key = code.startsWith('Digit') ? code.slice(5) : code.startsWith('Key') ? code.slice(3).toLowerCase() : code === 'Slash' ? '/' : code === 'Period' ? '.' : code, k = { windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key };
   await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, k)); await t.run(wait); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, k)); await t.run(wait);
 };
 const snap = async (t, name) => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, 'hands-' + name + '.png'), Buffer.from(r.data, 'base64')); } }; // twice: the first capture of a Phaser frame can be the one before it
@@ -49,8 +49,11 @@ async function campaign() {
     await snap(t, 'stances');
     await press(t, 'Digit2', 20); await t.run(200);
     check('2 on the stances page picks Orbit and the panel goes back to its first page', (await j(`${SC}.camp.stance`)) === 'orbit' && (await j(`${SC}.pn.page.fleet`)) === 0);
-    await press(t, 'KeyE', 20); await t.run(100);
-    check('E steps to the next stance', (await j(`${SC}.camp.stance`)) === 'keep');
+    await press(t, 'KeyE', 20); await press(t, 'KeyE', 20); await t.run(100);
+    check('E twice in a row passes through Keep distance: the row says "> Match speed" and no order is given yet', (await j(`${SC}.camp.stance`)) === 'orbit' && /^> Match/.test(await j(`${SC}.pnl.p.fleet.rows[5].suffix.text`)));
+    await snap(t, 'pending');
+    await t.run(1000);
+    check('0.7 s after the last press the order is given: Match speed (Keep distance was never ordered), and the row says it', (await j(`${SC}.camp.stance`)) === 'match' && (await j(`${SC}.pnl.p.fleet.rows[5].suffix.text`)) === 'Match speed');
     await press(t, 'KeyP', 20); await t.run(300);
     check('P turns the SHIP panel to BUILD', (await j(`${SC}.pn.page.ship`)) === 1 && (await j(`${SC}.pnl.p.ship.title.text`)) === 'BUILD');
     await snap(t, 'build');
@@ -69,6 +72,15 @@ async function campaign() {
     await snap(t, 'call');
     await press(t, 'Digit1', 20); await t.run(300);
     check('the call is answered and the rows are back', (await j(`${SC}.camp.call.open`)) === null && (await j(`${SC}.pnl.p.fleet.rows[0].name.visible`)) === true);
+    // the strip: the slash opens it (the chat key is stubbed: the strip needs one), the keys typed in it are not the fleet's, Esc closes it and does not pause; the period is the voice key of the scene
+    await t.ev(`(() => { shipcompAvailable = () => true; return 1; })()`);
+    await press(t, 'Slash', 40); await t.run(300);
+    check('/ opens the command strip: its input has the focus', (await j(`document.activeElement && document.activeElement.tagName`)) === 'INPUT');
+    await press(t, 'KeyD', 40); await press(t, 'Digit1', 40); await t.run(100);
+    check('the keys typed in the strip are the strip\'s, not the fleet\'s: D picks no target and 1 launches nothing more', (await j(`${SC}.camp.tgt`)) === '');
+    await press(t, 'Escape', 40); await t.run(300);
+    check('Esc closes the strip and does not pause the battle', (await j(`document.activeElement && document.activeElement.tagName`)) !== 'INPUT' && (await j(`${SC}.mode`)) === 'play');
+    check('the voice key of the Campaign is the period (U is the SHIP panel\'s emergency shields there): the listener follows the scene', (await j(`(() => { listenKeysSync(game); return [LISTEN.code, LISTEN.cap].join(); })()`)) === 'Period,.');
     await press(t, 'KeyH'); await t.run(200);
     check('H opens the page of every key and the battle waits', (await j(`${SC}.ck && ${SC}.ck.open`)) === true && (await j(`${SC}.mode`)) === 'pause');
     await snap(t, 'page');

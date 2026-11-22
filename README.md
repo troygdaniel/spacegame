@@ -54,7 +54,7 @@ Two hands, two panels, always on the screen: the **left hand** and the **FLEET p
 |---|---|
 | `1` | FLEET: launch the wing, or recall it (a toggle: it launches while ships wait in the bay, else it recalls) |
 | `2` `3` `4` | FLEET: the fighters attack the target (none picked: the nearest enemy), the escorts go to the convoy, the wing guards the cruiser |
-| `W` `E` `R` | FLEET: mine ore, the next stance (Free, Orbit, Keep distance, Match speed, Hold position), the next convoy order (Tuck in, Hold here, Run for it, Carry on) |
+| `W` `E` `R` | FLEET: mine ore, the next stance (Free, Orbit, Keep distance, Match speed, Hold position), the next convoy order (Tuck in, Hold here, Run for it, Carry on). `E` and `R` move the choice on the panel row ("> Run for it") and the order is given when the key has rested 0.7 s, so passing through one gives no order to it |
 | `Q` | FLEET: the next page of the panel (the stances, the convoy orders: there the digits pick a row; it goes back after a pick or 6 s) |
 | `A` `D` `S` `X` | the one target: the last or next hostile (nearest first), the nearest threat, clear it. A red bracket marks it and its name is in the FLEET panel; `2` attacks it, `8` flies to it, `Enter` fires at it |
 | `7` `8` `9` `0` | SHIP: fly to the goal, fly to the target (Shift: fast burn), a fast burn to the goal, dock at an outpost (aboard, in a level with none, it mends the hull) |
@@ -66,7 +66,7 @@ Two hands, two panels, always on the screen: the **left hand** and the **FLEET p
 | `1` `2` `3` | answer a pilot's radio call (the FLEET panel shows the call in place of its rows); pick a tech on its card |
 | `Tab` | the map of the level: click a mark to set it, `A` `D` step the marks, `7` or Enter flies there, `9` burns, `V` scouts, `T` takes a lane, `X` clears the goal |
 | `-` `=` `Backspace`, mouse wheel | zoom out, zoom in, reset the zoom (the view or the map) |
-| `/` `.` | type an order to the ship's computer; hold `.` and say it |
+| `/` `.` | type an order to the ship's computer; hold `.` and say it (both need a chat key: Settings > Keys) |
 | `Esc`, `H`, `M` | pause, the page of keys, mute |
 
 Command time (the battle at a quarter of its pace) runs while the map or a pilot's call is open, and for two seconds after any FLEET key, so there is time to give the next order. The battle has one pace (Normal); there is no pace key.

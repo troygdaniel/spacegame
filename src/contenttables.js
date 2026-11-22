@@ -910,6 +910,7 @@ const UI_TEXT = {
   'camp.bf.1.1.w2': 'The road forks. Scout both lanes, then pick one.',
   'camp.bf.1.1.w3': 'Pirates hide on the short lane. Shoot the torpedo boats first.',
   'camp.bf.1.1.w4': 'A pirate leader waits near Ceres. Kill it, or get her past.',
+  'camp.bf.1.1.w5': 'A miner is jumped on the way. Answer the pilot\'s call.',
   'camp.bf.1.1.n1': 'Welcome aboard, Commander. The transport is ours to bring to Ceres. A patrol sees her off, then she is on her own.',
   'camp.bf.1.1.n2': 'The road forks. Send a scout down each lane, then pick one on the map ({map}). Pirates may hide on the short one.',
   'camp.bf.1.1.n3': 'The arrow keys fly the cruiser. {keylaunch} launches the wing, {keyescort} sends the escorts to her. When a pilot calls, answer 1, 2 or 3.',
