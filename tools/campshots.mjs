@@ -44,7 +44,7 @@ const goTo = async row => { // the list open with the highlight on the row (not 
   if ((await j(`${SC}.mode`)) !== 'play') return false; // a card has the keys
   const way = await wayTo(row); if (!way) { note('(the row ' + row + ' is left out of this mission\'s list)'); return false; }
   for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): pressed until every list is closed (it pauses only when none is open)
-  for (const [code, downs] of way.keys) { await keyOn(code); for (let i = 0; i < downs; i++) await keyOn('ArrowDown'); }
+  for (const [code, downs] of way.keys) { await keyOn(code); const cur = await j(`${SC}.pn.at`), n = await j(`(() => { const o = campPanelOpen(${SC}.pn); return o ? campPanelList(${SC}.camp, o).length : 0; })()`); for (let i = 0, d = n ? ((downs - cur) % n + n) % n : 0; i < d; i++) await keyOn('ArrowDown'); } // a list can open with its highlight on its first usable row (start: 'usable', All squads): Down only the difference
   return true;
 };
 const order = async row => {
