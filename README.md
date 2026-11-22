@@ -24,7 +24,7 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 
 **Premise.** The Earth cruiser, a mining ship turned warship, is drafted into a war with an alien fleet. Missions run from the Moon to the asteroid rim (level 1), through the warp to Alpha Centauri and an ancient relic (level 2), to the alien home world (level 3), and end on a reveal: *this is not their home, it is an outpost.*
 
-**What you do.** You fly the cruiser yourself (the arrow keys, hold Space to fire its eight turrets, Enter a homing missile) and **command the rest**: fighters (attack, guard, mine), escorts (screen a convoy), the convoys themselves (tuck in, hold, run), scouts. You give orders from two short lists (`Q` the fleet's, `P` the ship's), by typing to the ship's computer, or by voice. Between missions you are in a **ready room** where you read briefings, spend ore on ships, and see your rank. After each battle you pick one of three alien technologies.
+**What you do.** You fly the cruiser yourself (the arrow keys, hold Space to fire its eight turrets, Enter a homing missile) and **command the rest**: fighters (attack, guard, mine), escorts (screen a convoy), the convoys themselves (tuck in, hold, run), scouts. You give orders from short lists (`Q` the fleet's, `P` the ship's, with a key for each part of them), by typing to the ship's computer, or by voice. Between missions you are in a **ready room** where you read briefings, spend ore on ships, and see your rank. After each battle you pick one of three alien technologies.
 
 **The ideas that make it a commander game.**
 
@@ -48,24 +48,31 @@ The game's own **H** page lists every key; it is built from `src/data_controls.j
 
 ### Campaign
 
-One list per hand. **`Q` opens the list of fleet orders** at the left, **`P` opens the list of ship orders** at the right. Nothing is on the screen until you press one. In an open list `Up` and `Down` move the highlight, `Enter` gives the order, and `Q`, `P` or `Esc` closes it. Each row says what it does in plain words; a row that cannot be used now is grey and says why. **No key means two things in flight**, and there are no number keys.
+One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left and **`P` opens the ship list** at the right. Each is short: a few orders, and one row for each of its parts with the part's key on it. **A part's key opens it directly at any time:** `W` convoy, `E` fighters, `R` escorts on the left; `O` autopilot, `I` power, `U` dock and build on the right. So `E` then `Enter` sends the fighters at the target. Nothing is on the screen until you press one of these keys. Each row says what it does in plain words; a row that cannot be used now is grey and says why. **No key means two things in flight**, and there are no number keys.
 
 | Key | What it does |
 |---|---|
-| `Q` | open or close the **fleet orders**: Attack the target, Launch the wing, Escort the convoy, Guard the cruiser, Recall the wing, Mine ore, the convoy orders (tuck in, run for it, hold here, carry on), the stances (one row each) |
-| `P` | open or close the **ship orders**: Fly to the goal, Fly to the target, Fast burn to the goal, Fast burn to the target, Emergency shields, Dock at the outpost (aboard, in a level with none: Repair the hull), and where they apply Warp blink and Build a fighter or an escort |
-| `Up` `Down` `Enter` | in an open list: move the highlight, give the order (the list closes when the order is taken) |
+| `Q` | the **fleet list**: Launch the wing, Guard the cruiser, Mine ore, Recall the wing, and rows that open Fighters, Escorts, Convoy and Stance |
+| `W` | **convoy orders**: Tuck in, Run for it, Hold here, Carry on |
+| `E` | **fighters**: Attack the target, Guard the cruiser, Mine ore, Recall the fighters |
+| `R` | **escorts**: Escort the convoy, Attack the target, Guard the cruiser, Recall the escorts |
+| `P` | the **ship list**: rows that open Autopilot, Power, Dock and build; Warp blink ahead once you have that tech |
+| `O` | **autopilot**: Fly to the goal, Fly to the target, Fast burn to the goal, Fast burn to the target |
+| `I` | **power**: one more pip to shields, engines or weapons, Balance the power, Emergency shields (a pip row leaves the list open, to press again) |
+| `U` | **dock and build**: Dock at the outpost (aboard, in a level with none: Repair the hull, Build a fighter, Build an escort) |
+| `Up` `Down` `Enter` | in an open list: move the highlight, give the order (the list closes when the order is taken). On a row that opens a part, `Enter` or `Right` opens it |
+| `Left` | in a part's list: back to the fleet or the ship list |
 | Arrow keys | fly the cruiser: Up thrust, Left and Right turn, Down brake (while a list or a pilot's call is open the ship coasts) |
 | `Space` (hold) | the turrets fire at ships in reach; they never fire on their own |
 | `Enter` | a homing missile at the target (only while no list is open) |
 | `A` `D` `S` `X` | the one target: the last or next hostile (nearest first), the nearest threat, clear it. A red bracket marks it and its name is under the radar; Attack goes at it, Fly to the target flies to it, `Enter` fires at it |
-| `J` `K` `L` `;` | power: a pip to the shields, the engines, the weapons; `;` back to 2, 2, 2 |
+| `J` `K` `L` `;` | power, directly: a pip to the shields, the engines, the weapons; `;` back to 2, 2, 2 (the `I` list has the same orders) |
 | `Tab` | the map of the level: `Up` `Down` step the marks, `Enter` flies there (`Shift+Enter` fast), a click sets a mark, `V` scouts, `T` takes a lane, `X` clears the trip |
 | `-` `=` `Backspace`, mouse wheel | zoom out, zoom in, reset the zoom (the view or the map) |
 | `/` `.` | type an order to the ship's computer; hold `.` and say it (both need a chat key: Settings > Keys) |
 | `Esc`, `H`, `M` | close a list or the map, else pause; the page of keys; mute |
 
-**A pilot's call** (a timed radio prompt with three answers) is a small amber list low in the middle of the screen: `Up` and `Down` pick an answer, `Enter` gives it. The highlight starts on the pilot's own cautious pick, which is also what he does if you say nothing. Only one list has the arrows and Enter at a time: while a `Q` or `P` list (or the map) is open the call waits, dimmed, and says so.
+**A pilot's call** (a timed radio prompt with three answers) is a small amber list low in the middle of the screen: `Up` and `Down` pick an answer, `Enter` gives it. The highlight starts on the pilot's own cautious pick, which is also what he does if you say nothing. Only one list has the arrows and Enter at a time: while an order list (or the map) is open the call waits, dimmed, and says so.
 
 Command time (the battle at a quarter of its pace) runs while a list, the map or a pilot's call is open, and for two seconds after a fleet order or a pick of the target. The battle has one pace (Normal); there is no pace key. Cards between battles (the tech pick, the refit) still use the number keys shown on them.
 
