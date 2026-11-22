@@ -2,7 +2,7 @@
 // The rules are tests/camptune.mjs (plain Node). This boots the real game twice. In the Campaign (level 1, mission 1): N opens the panel and the battle waits (the battle's clock does not move), Down and Left and Right change
 // the cruiser's top speed and the turret damage with real key events (Shift: ten steps), a number that differs from its default shows amber with its default beside it, Backspace puts one back, Enter flips the pilot calls
 // switch, Enter on Reset everything puts all back, Esc closes and the battle goes on; the TUNED mark with its count is on the screen while any override is on and gone when none is; this Chrome is driven (navigator.webdriver),
-// so nothing is read from or written to localStorage; no text runs over the next column. Then in the ready room (K from the title, with a game in progress): N opens the same panel at the top of the room and Esc closes it.
+// so nothing is read from or written to localStorage; no text runs over the next column. Then in the ready room (K from the title, with a game in progress): N opens the same panel at the top of the room and Esc closes it. Last, a mission won with an override on (?debug=1, the backslash wins): the debrief says the run is tuned and the save keeps a score of zero while the level moves on.
 //   node tests/camptune-boot.mjs
 // Pictures go to the folder in TUNE_SHOTS (default ~/dev/spacegame-night/shots/tune-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -14,7 +14,7 @@ const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.TUNE_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { KeyN: 78, KeyK: 75, Enter: 13, Escape: 27, Backspace: 8, ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39 };
+const VK = { KeyN: 78, KeyK: 75, Backslash: 220, Enter: 13, Escape: 27, Backspace: 8, ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39 };
 
 async function key(t, code, extra = {}, wait = 40) { // a real key: down, a few frames, up (the game clock is stepped, so waits are game milliseconds)
   const k = Object.assign({ windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: /^(Enter|Backspace|Arrow|Escape)/.test(code) ? code : code.replace(/^Key/, '').toLowerCase() }, extra);
@@ -97,6 +97,29 @@ async function room() {
   finally { await t.close(); }
 }
 
-await flight(); await room();
+async function tunedWin() { // a mission won while an override is on: the level moves on, the best score is not written, and the debrief says so (the debug keys: ?debug=1, the backslash wins)
+  console.log('a tuned win');
+  const t = await launch('?campaign=1&debug=1', ROOT);
+  try {
+    const SC = `game.scene.getScene('Campaign')`, j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`));
+    await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
+    await t.ev(`localStorage.removeItem('longhaul.campaign')`);
+    for (let i = 0; i < 8 && (await j(`${SC}.mode`)) !== 'play'; i++) { await key(t, 'Enter', {}, 40); await t.run(300); }
+    await key(t, 'KeyN'); await t.run(200); await key(t, 'ArrowDown'); await key(t, 'ArrowDown'); await key(t, 'ArrowRight'); await key(t, 'Escape'); await t.run(600);
+    check('an override is on and the scene has marked the run as tuned', (await j('campTuneCount()')) === 1 && (await j(`${SC}.tuned`)) === true);
+    await key(t, 'Backslash'); await t.run(1500);
+    for (let i = 0; i < 20 && (await j(`${SC}.mode`)) !== 'debrief'; i++) await t.run(300);
+    check('the mission is won and the debrief is up', (await j(`${SC}.mode`)) === 'debrief');
+    const texts = await j(`${SC}.children.list.filter(o => o.text).map(o => o.text)`);
+    check('the debrief says the run is tuned and keeps no score: "Tuned run: the score and the rank are not kept."', texts.some(x => x === 'Tuned run: the score and the rank are not kept.') || texts.some(x => /Tuned run/.test(x)), JSON.stringify(texts.slice(0, 12)));
+    await snap(t, '6-tuned-debrief');
+    const P = await j(`campProgressLoad()`);
+    check('the level moved on (mission 2 is next) and the best score of 1.1 is zero: the save has no score from a tuned run', P.mission === 1 && P.results && P.results['1.1'] && P.results['1.1'].score === 0, JSON.stringify({ mission: P.mission, results: P.results }));
+    check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
+  } catch (e) { console.log('  FAIL the boot stopped: ' + (e && e.message)); bad++; }
+  finally { await t.close(); }
+}
+
+await flight(); await room(); await tunedWin();
 console.log(bad ? `\nTUNING PANEL BOOT FAIL (${bad})` : '\nTUNING PANEL BOOT PASS');
 process.exit(bad ? 1 : 0);
