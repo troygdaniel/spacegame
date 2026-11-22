@@ -190,7 +190,7 @@ console.log('H. launching through the lists (card space-game-squad-tint: Launch 
   g.run('__new(1); campPanelClose(__PP);');
   const w = J(`(() => { const o = campPanelKey(__PP, C, 'KeyW', 0), id = campPanelList(C, 'squads')[__PP.at].id, e = campPanelKey(__PP, C, 'Enter', 0); return { open: o.open, id, ran: e.ran, ok: e.ok, row: e.row, n: C.orders.launch, closed: campPanelOpen(__PP) === '' }; })()`);
   check('W, Enter launches too (W opens All squads on Launch the wing)', w.open === 'squads' && w.id === 'launch' && w.ran && w.ok && w.row === 'launch' && w.n === 1 && w.closed, JSON.stringify(w));
-  g.run('__run(8); campPanelClose(__PP);');
+  g.run('__run(8); campPanelClose(__PP); campSpawn(C, "raider", C.carrier.x + 900, C.carrier.y);'); // (a hostile to attack: with none Attack is grey and All squads opens on Guard)
   const out = J(`(() => { const R = campPanelRowState(C, campPanelDef('squads').rows[0]); const o = campPanelKey(__PP, C, 'KeyW', 0), id = campPanelList(C, 'squads')[__PP.at].id; return { ok: R.ok, state: R.state, short: R.short, open: o.open, at: __PP.at, id }; })()`);
   check('with the wing out Launch is greyed ("all of it is out") and All squads opens on Attack the target, its first row that can be given', out.ok === false && out.state === 'all of it is out' && out.short === 'all out' && out.open === 'squads' && out.at === 1 && out.id === 'attack', JSON.stringify(out));
   const back = J(`(() => { campPanelClose(__PP); campPanelKey(__PP, C, 'KeyQ', 0); campPanelKey(__PP, C, 'Enter', 0); const l = campPanelKey(__PP, C, 'ArrowLeft', 0); return { open: l.open, at: __PP.at }; })()`);
