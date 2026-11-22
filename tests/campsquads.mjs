@@ -79,7 +79,7 @@ console.log('C. a squad with no ship out');
   g.run('__out(1); __sq("yellow").forEach(u => { u.hp = 0; });');
   const lost = J(`campWingOrder(C, 'yellow', 'recall', null, 'key')`);
   check('a squad that has lost all its ships refuses the same way and the others are not affected', lost.ok === false && lost.code === 'nosquad' && J(`campWingOrder(C, 'red', 'guard', null, 'key').ok`) === true);
-  check('its list is grey with the reason beside every row (no ships in the squad / none out); the other lists are not', J(`campPanelRows(C, 'yellow').every(r => !r.ok && r.state === 'no ships in the squad' && r.short === 'none out')`) && J(`campPanelRows(C, 'red').every(r => r.ok)`) && J(`campPanelRows(C, 'green').every(r => r.ok)`));
+  check('its list is grey with the reason beside every row (no ships in the squad / none out); the other lists are not', J(`campPanelRows(C, 'yellow').every(r => !r.ok && r.state === 'no ships in the squad' && r.short === 'none out')`) && ['red', 'green'].every(q => J(`campPanelRows(C, '${q}').filter(r => r.id !== '${q}attack').every(r => r.ok)`) && J(`campPanelRows(C, '${q}').find(r => r.id === '${q}attack').state`) === 'no hostiles in sight'));
   check('a squad\'s row in the Q list counts its ships: "2 out" for Red, "0 out" for Yellow; All squads counts the fighters', J(`campPanelRows(C, 'fleet').find(r => r.id === 'gred').short`) === '2 out' && J(`campPanelRows(C, 'fleet').find(r => r.id === 'gyellow').short`) === '0 out' && J(`campPanelRows(C, 'fleet').find(r => r.id === 'gsquads').short`) === '4 out');
   check('the refusal and the two short words are in the table (CAMP_PANELS.why and shortWhy) and the line is in the content', J('CAMP_PANELS.why.nosquad') === 'no ships in the squad' && J('CAMP_PANELS.shortWhy.nosquad') === 'none out' && /\| camp\.no\.nosquad \| /.test(src('content/text/campsquads.md')) && J(`uiText('camp.no.nosquad')`) === 'No ships of that squad are out.');
 }
@@ -104,7 +104,7 @@ console.log('D. the keys and the lists');
   check('E, Down, Down, Enter is Recall for Red: Red flies home, the others stay on their attack', e2.row === 'redrecall' && J('__ord("red")') === 'recall:,recall:' && J('__ord("green")').startsWith('attack'));
   const w = pick('KeyW', 1);
   check('W, Down, Enter is Guard the cruiser for all squads: every fighter, the recalled squad too', w.row === 'fguard' && J(`campWing(C, 'fighter').every(u => u.order.type === 'guard')`));
-  const m = J(`(() => { C.pickups.push({ id: 'p1', kind: 'rock', x: C.carrier.x + 500, y: C.carrier.y, ore: 20, born: 0 }); return 1; })()`);
+  const m = J(`(() => { C.rocks = []; C.pickups.push({ id: 'p1', kind: 'rock', x: C.carrier.x + 500, y: C.carrier.y, ore: 20, born: 0 }); return 1; })()`);
   const mine = pick('KeyW', 3);
   check('W, Mine ore: all the fighters go mining (the escorts are left as they were)', mine.row === 'fmine' && J(`campWing(C, 'fighter').every(u => u.order.type === 'mine')`) && J(`campWing(C, 'escort').every(u => u.order.type !== 'mine')`));
   // the escorts and the convoy through Q
