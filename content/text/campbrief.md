@@ -57,15 +57,15 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.keyshead | KEYS THIS MISSION NEEDS |
 | camp.bf.key.fly | Thrust, turn and brake (the arrow keys) |
 | camp.bf.key.fire | Hold: the turrets fire at ships in reach |
-| camp.bf.key.wing | Fleet list: {rowlaunch} |
+| camp.bf.key.wing | Fleet: {rowlaunch} |
 | camp.bf.key.map | Open the map; click a place, Enter flies |
 | camp.bf.key.zoom | Zoom the view or the map; {keyzoomreset} resets |
-| camp.bf.key.attack | Fleet list: {rowattack} |
-| camp.bf.key.escort | Fleet list: {rowescort} |
+| camp.bf.key.attack | Fighters: {rowattack} |
+| camp.bf.key.escort | Escorts: {rowescort} |
 | camp.bf.key.missile | Fire a homing missile at the target |
-| camp.bf.key.mine | Fleet list: {rowmine} |
-| camp.bf.key.dock | Ship list: dock to build, mend and sell |
-| camp.bf.key.shield | Ship list: {rowemergency} |
+| camp.bf.key.mine | Fleet: {rowmine} |
+| camp.bf.key.dock | Dock to build, mend and sell |
+| camp.bf.key.shield | Power: {rowemergency} |
 | camp.bf.keys.next | Enter or Right: next    Left: back    L: launch now    Esc: the board |
 | camp.bf.keys.launch | Enter or L: launch    Left: back    Esc: the board |
 | camp.bf.keys.zoom | {keyzoomout} {keyzoomin} zoom |
@@ -76,14 +76,14 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.1.1.w5 | A miner is jumped on the way. Answer the pilot's call. |
 | camp.bf.1.1.n1 | Welcome aboard, Commander. The transport is ours to bring to Ceres. A patrol sees her off, then she is on her own. |
 | camp.bf.1.1.n2 | The road forks. Send a scout down each lane, then pick one on the map ({map}). Pirates may hide on the short one. |
-| camp.bf.1.1.n3 | The arrows fly the cruiser. {fleetkey} opens your fleet orders. When a pilot calls, pick with Up and Down, then Enter. |
-| camp.bf.1.2.w1 | Mine the rock fields round Ceres: {fleetkey}, then {rowmine}. |
+| camp.bf.1.1.n3 | The arrows fly the cruiser. {fleetkey} is your fleet: {fighterskey} fighters, {escortskey} escorts, {convoykey} convoy. A pilot calls: Up, Down, Enter. |
+| camp.bf.1.2.w1 | Mine the rock fields round Ceres: {viamine}, then {rowmine}. |
 | camp.bf.1.2.w2 | Ore sells for triple at the Works. Pirates hunt the miners. |
-| camp.bf.1.2.w3 | Beat the 3 raids, then dock at Occator Works ({shipkey} list). |
+| camp.bf.1.2.w3 | Beat the 3 raids, then dock at Occator Works ({viadock}). |
 | camp.bf.1.2.w4 | The Works keeps its doors shut while a pirate is near. |
 | camp.bf.1.3.w1 | 3 haulers leave Ceres for Earth, 12 seconds apart. |
 | camp.bf.1.3.w2 | 1 must get home. Each hauler lost costs points. |
-| camp.bf.1.3.w3 | Pirates raid them twice. Order Escort ({fleetkey} list). |
+| camp.bf.1.3.w3 | Pirates raid them twice. Escorts cover them: {viaescort}, Enter. |
 | camp.bf.2.1.w1 | Find 2 of the 3 resource pods in the system. |
 | camp.bf.2.1.w2 | Any ship of yours that flies close picks one up. |
 | camp.bf.2.1.w3 | Aliens come from the west after 20 seconds. |

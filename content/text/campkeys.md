@@ -10,6 +10,6 @@ The words of the Campaign's page of every key and of its links (card space-game-
 | camp.keys.footer | H or Esc closes this page. The battle waits while it is open. |
 | camp.keys.debug | DEBUG KEYS (THE TUNE KIT) |
 | title.camp.keys | H  all the keys |
-| camp.ui.pausepanels | {fleetkey} opens the fleet orders, {shipkey} the ship orders: Up, Down, then Enter. A D S pick a target. H lists every key. |
+| camp.ui.pausepanels | {fleetkey} fleet orders ({convoykey} convoy, {fighterskey} fighters, {escortskey} escorts). {shipkey} ship orders ({navkey} autopilot, {powerkey} power, {yardkey} dock). In a list: Up, Down, Enter. A D S pick a target. H lists every key. |
 | camp.keys.roomtitle | READY ROOM  -  ALL THE KEYS |
 | camp.keys.roomfooter | H or Esc closes this page. |
