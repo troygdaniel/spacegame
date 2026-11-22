@@ -47,5 +47,9 @@ check('1.1: the briefing\'s goal says the same, and the ship computer is told it
 const g13 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 2 }); campStep(C, 1 / 30); return { hud: campObjective(C), brief: campHubBrief(campProgressNew(), 1, 2).objectives }; })()`);
 check('1.3: the three haulers keep "Haulers delivered"', /^Haulers delivered: 0 of 1\.$/.test(g13.hud) && g13.brief[0] === 'Haulers delivered: 0 of 1.', JSON.stringify(g13));
 
+const l11 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); return campLoseLines(C, 'convoy'); })()`), l13 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 2 }); return campLoseLines(C, 'convoy'); })()`);
+check('1.1: the lost card says the transport is lost; 1.3 says the haulers', l11[0] === 'The transport is lost.' && l13[0] === 'The haulers are lost.', JSON.stringify([l11[0], l13[0]]));
+check('the tip of a lost convoy is still there (1.1 shares the convoy tip until a transport tip is written: camp.lose.tip.convoy.transport)', l11.length === 3 && l11[2] === l13[2], JSON.stringify(l11));
+
 if (failed) { console.log(`\nHUNT FLEET: ${failed} FAILED`); process.exit(1); }
 console.log('\nHUNT FLEET: all passed');
