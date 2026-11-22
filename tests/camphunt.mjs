@@ -95,7 +95,7 @@ check('1.1 in a raid: "Pirates alive: n." and nothing about aliens or a mothersh
 check('1.2 the same (pirates after the miners): the summary says pirates, not aliens', (g.run(`window.C2s = campNew(1, [], { seed: 1, mission: 1 }); for (let i = 0; i < 30 * 400 && !campAliens(C2s).length; i++) campStep(C2s, 1 / 30); window.S2 = campSummary(C2s);`), J('/Pirates alive/.test(S2) && !/alien|mothership/i.test(S2)')), J('S2'));
 check('1.3 before the contact: no aliens named; once the contact cue has fired and its wave is out the count is there, "Aliens alive: n." next to the pirates',
   (g.run(`window.R3 = __sum(1, 2, 40); window.S3a = R3[1]; campCue(R3[0], 'contact'); for (let i = 0; i < 90; i++) campStep(R3[0], 1 / 30); window.S3b = campSummary(R3[0]);`), J('!/alien|mothership/i.test(S3a) && R3[0].alienSeen === true && /Aliens alive: [1-9]\\d*\\./.test(S3b)')), J('[S3a, S3b]'));
-check('a level with aliens from the start (the guards of 2.2) reports them, and its F note says what F fires at', (g.run(`window.S4 = __sum(2, 1, 2)[1];`), J('/Aliens alive: \\d+\\./.test(S4) && /F fires one at the nearest big ship/.test(S4)')), J('S4'));
+check('a level with aliens from the start (the guards of 2.2) reports them, and its missile note says what the missile key fires at', (g.run(`window.S4 = __sum(2, 1, 2)[1];`), J('/Aliens alive: \\d+\\./.test(S4) && /Enter fires one at the target, or with none picked at the nearest big ship/.test(S4)')), J('S4'));
 
 // ---- 11. the haulers' goal counts the haulers home while the mission waits for the rest ----
 // 1.3 needs one hauler home ("deliver 1") and ends when none is still on the way; the HUD said "Haulers delivered: 0 of 1." with two of them home.
