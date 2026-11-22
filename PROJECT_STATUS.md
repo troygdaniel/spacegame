@@ -51,6 +51,7 @@ The batch is the answer to "I want to direct the fleet more". Each item has its 
 ## Known issues and rough edges
 
 - **Balance is mid-retune.** Levels 2 and 3 were tuned before the fleet-command batch; expect them to feel easier or odd until the retune lands. The last all-nine playthrough with findings is `docs/WRAPUP.md` (20 Nov, before the batch); the night's fixes are in `docs/night/*.md`.
+- **Level 1 was flown start to finish after the fleet-command batch** (`docs/night/hunt-l1-fleet.md`, by `tests/huntfleet-boot.mjs`): the Tab map's V (scout) and T (take a lane) now act on the lane you marked even when the autopilot follows the transport, a toast no longer shows half a sentence, and 1.1 says "transport" where it said "haulers". Open items are listed there (the call plate's key caption, which the two-hands key change replaces; the lost card's tip).
 - **Debug keys** (the backslash wins a mission) exist for testing and are **off** unless the address says `?debug=1`.
 - **Chrome tests are run rarely** by choice (they are slow and take a shared lock). The Node suites (about 160) run on every landing, and some Chrome boots are updated by hand when keys move and run only at the gate. A red boot after a key change is usually a stale key in the script, not a game bug.
 - **Only mission 1.1 has the full set of beats.** Asking "why are the other eight plainer" is fair; that is the cut-list rule below.
