@@ -41,11 +41,11 @@ async function campaign() {
       const up = campKeyList(p.parent), pat = up ? campPanelList(C, up.id).findIndex(r => r.open === p.id) : -1; return up && up.code && pat >= 0 ? { list: p.id, keys: [[up.code, pat], ['Enter', at]] } : null; })()`);
     const goTo = async row => { // the list open with the highlight on the row (not given): every place is read from the lists of THIS mission
       const way = await wayTo(row); if (!way) return false;
-      if (await isOpen()) await press(t, 'Escape', 20); // Esc closes an open list (it pauses only when none is open)
+      for (let n = 0; n < 6 && (await isOpen()); n++) await press(t, 'Escape', 20); // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): pressed until every list is closed (it pauses only when none is open)
       for (const [code, downs] of way.keys) { await press(t, code, 20); for (let i = 0; i < downs; i++) await press(t, 'ArrowDown', 20); }
       await t.run(300); return (await isOpen()) === way.list;
     };
-    const order = async row => { if (!(await goTo(row))) return false; await press(t, 'Enter', 20); await t.run(300); return true; };
+    const order = async row => { if (!(await goTo(row))) return false; await press(t, 'Enter', 20); await t.run(300); if (await j(`!!${P}.pick`)) { await press(t, 'Enter', 20); await t.run(300); } return true; }; // a row that needs a target with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one
     const shownRows = () => j(`${PL}.rows.filter(r => r.name.visible).map(r => r.name.text)`);
     const drawnAs = id => j(`campPanelRows(${SC}.camp, ${JSON.stringify(id)}).map(r => r.label + (r.more ? '  >' : ''))`); // a row as it is drawn: its words, and an arrow when it opens a part
     const shownCaps = () => j(`${PL}.rows.filter(r => r.name.visible).map(r => r.cap.visible ? r.cap.text : '')`);
@@ -95,7 +95,7 @@ async function campaign() {
     const stanceWay = await wayTo('orbit');
     check('the stance list has no key: the way to a stance is Q, the Stance row, Enter, then the row', !!stanceWay && stanceWay.list === 'stance' && (await listCode('stance')) === '' && stanceWay.keys.length === 2 && stanceWay.keys[0][0] === (await listCode('fleet')) && stanceWay.keys[1][0] === 'Enter', JSON.stringify(stanceWay));
     check('Q, Down to "Stance", Enter, Down to "Orbit the target", Enter gives Orbit at once and the list closes', (await order('orbit')) === true && (await j(`${SC}.camp.stance`)) === 'orbit' && (await isOpen()) === '');
-    check('opened again with the highlight on that row: the list is headed STANCE with no key, the row is marked as the one in force, and the foot is a part\'s (camp.ui.listkeysub: Left goes back)', (await goTo('orbit')) === true && (await j(`${PL}.title.text`)) === (await j(`campKeyList('stance').title`)) && (await j(`${PL}.title.text`)) === 'STANCE' && (await j(`${HI}.name.text`)) === (await rowLabel('orbit')) && (await j(`${HI}.suffix.text`)) === 'in force' && (await j(`${PL}.keys.text`)) === (await foot('camp.ui.listkeysub', '')) && /Left/.test(await j(`${PL}.keys.text`)), await j(`${PL}.title.text + ' | ' + ${HI}.name.text + ' | ' + ${HI}.suffix.text + ' | ' + ${PL}.keys.text`));
+    check('opened again with the highlight on that row: the list is headed STANCE with no key, the row is marked as the one in force, and the foot says Esc goes back, because a row of Q opened it (camp.ui.listkeyback)', (await goTo('orbit')) === true && (await j(`${PL}.title.text`)) === (await j(`campKeyList('stance').title`)) && (await j(`${PL}.title.text`)) === 'STANCE' && (await j(`${HI}.name.text`)) === (await rowLabel('orbit')) && (await j(`${HI}.suffix.text`)) === 'in force' && (await j(`${PL}.keys.text`)) === (await foot('camp.ui.listkeyback', '')) && /back/.test(await j(`${PL}.keys.text`)), await j(`${PL}.title.text + ' | ' + ${HI}.name.text + ' | ' + ${HI}.suffix.text + ' | ' + ${PL}.keys.text`));
     await snap(t, 'stances');
     check('Q, Stance, Down to "Match my speed", Enter: Match speed, and Keep distance was never ordered on the way', (await order('match')) === true && (await j(`${SC}.camp.stance`)) === 'match');
     // P: the ship list; only one list is open at a time
@@ -118,12 +118,35 @@ async function campaign() {
     check('Left in a top list does nothing: the fleet list stays, the highlight where it was', (await isOpen()) === 'fleet' && (await j(`${P}.at`)) === fAt);
     await press(t, 'Enter', 20); await t.run(300);
     check('Enter on the All squads row opens the all-squads list again at its first row: no order is given and no missile fired', (await isOpen()) === 'squads' && (await j(`${P}.at`)) === 0 && (await j(`${PL}.title.text`)) === 'W   ALL SQUADS' && (await j(`${SC}.camp.launchQ.length + ${SC}.camp.launched`)) === launched0 && (await j(`${SC}.camp.stance`)) === 'match');
+    await press(t, 'Escape', 20); await t.run(200);
+    check('Esc in the all-squads list, which a row of Q opened, goes back to the fleet list (the highlight on the All squads row), not out of the lists and not to the ship; the battle is not paused', (await isOpen()) === 'fleet' && (await j(`${P}.at`)) === fAt && (await j(`${PL}.title.text`)) === 'Q   FLEET ORDERS' && (await j(`${SC}.mode`)) === 'play', (await isOpen()) + ' at ' + (await j(`${P}.at`)));
+    await press(t, 'Enter', 20); await t.run(300);
     await press(t, 'ArrowLeft', 20); await press(t, 'ArrowRight', 20); await t.run(300);
     check('Left, then Right on the All squads row: Right opens the part too', (await isOpen()) === 'squads' && (await j(`${P}.at`)) === 0);
     await press(t, 'KeyP', 20); await press(t, 'KeyW', 20); await t.run(300);
     check('W from another list (the ship list, at the other side) closes it and opens the all-squads list: one list at a time', (await isOpen()) === 'squads' && (await j(`${P}.at`)) === 0 && (await j(`${PL}.title.text`)) === 'W   ALL SQUADS');
+    await press(t, 'Escape', 20); await t.run(200);
+    check('Esc in a list its own key opened (W) closes it: that is the end, it does not drop into Q or P, and the battle is not paused', (await isOpen()) === '' && (await j(`${PL}.title.visible`)) === false && (await j(`${SC}.mode`)) === 'play');
     await press(t, 'KeyQ', 20); await press(t, 'ArrowDown', 20); await press(t, 'KeyW', 20); await t.run(300);
     check('W from the fleet list opens the all-squads list at its first row (wherever the highlight was), and W again closes everything', (await isOpen()) === 'squads' && (await j(`${P}.at`)) === 0 && (await press(t, 'KeyW', 20), await t.run(200), await isOpen()) === '' && (await j(`${PL}.title.visible`)) === false);
+    // the target sub-list (card space-game-order-target-pick): Attack with several hostiles and no target picked opens a list of them; Down moves the highlight (the flight view reveals the one it is on), Esc goes back to the list it came from, Enter gives the order at the highlighted one
+    await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; campSpawn(C, 'raider', c.x + 520, c.y - 200); campSpawn(C, 'raider', c.x + 900, c.y + 330); return 1; })()`); await press(t, 'KeyX', 20); await t.run(300);
+    check('no target is picked: the line under the radar says none', (await j(`${SC}.camp.tgt`)) === '' && (await isOpen()) === '', await j(`${PL}.tgt.text`));
+    if ((await goTo('attack')) === true) {
+      await press(t, 'Enter', 20); await t.run(400);
+      const pk = await j(`(${P}.pick ? { kind: ${P}.pick.kind, ids: ${P}.pick.ids.slice(), sel: ${P}.pick.sel, row: ${P}.pick.row } : null)`), tgt0 = await j(`${SC}.camp.tgt`);
+      check('Enter on Attack with several hostiles and no target opens a target sub-list over the list it came from: no order is given, the target is still none, a row for each hostile', !!pk && pk.kind === 'enemy' && pk.ids.length >= 2 && pk.sel === pk.ids[0] && tgt0 === '' && (await isOpen()) !== '' && (await shownRows()).length === pk.ids.length, JSON.stringify(pk) + ' | ' + JSON.stringify(await shownRows()));
+      await snap(t, 'pick-list');
+      await press(t, 'ArrowDown', 20); await t.run(400);
+      const sel1 = await j(`${P}.pick && ${P}.pick.sel`);
+      check('Down moves the highlight to the next hostile (the flight view reveals it: a bracket, and a zoom out if it is off the screen)', !!pk && sel1 === pk.ids[1] && (await j(`${SC}.camp.tgt`)) === '', String(sel1));
+      await snap(t, 'pick-list-second');
+      await press(t, 'Escape', 20); await t.run(300);
+      check('Esc in the sub-list goes back to the list it came from (still open, the highlight on Attack), and gives no order', !!pk && (await j(`${P}.pick`)) === null && (await isOpen()) !== '' && (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.mode`)) === 'play');
+      await press(t, 'Enter', 20); await t.run(300); await press(t, 'Enter', 20); await t.run(400);
+      check('Enter on Attack again, then Enter on the first row (the nearest threat) gives the order at it: it is the target now, and the lists are closed', !!pk && (await j(`${SC}.camp.tgt`)) === pk.ids[0] && (await isOpen()) === '' && (await j(`${P}.pick`)) === null, await j(`${SC}.camp.tgt`));
+      await press(t, 'KeyX', 20); await t.run(200);
+    } else console.log('  note the target sub-list check was skipped: the Attack row is not in this mission\'s list');
     // I: the power list; a power row leaves the list open (a pip more, and more)
     const pw0 = await j(`${SC}.camp.power.p`), sAt = await listAt('power', 'shields');
     await press(t, 'KeyI', 20); for (let i = 0; i < sAt; i++) await press(t, 'ArrowDown', 20); await t.run(300);

@@ -27,13 +27,14 @@ try {
   const listGo = async row => {
     if ((await j(`${SC}.mode`)) !== 'play') return false; // a card has the keys: Enter would be the card's
     const way = await listWay(row); if (!way) return false; // the row is not in this mission's list
-    if (await j(`campPanelOpen(${SC}.pn)`)) await key('Escape'); // an open list is closed first (Esc pauses only when none is open)
+    for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await key('Escape'); // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): pressed until every list is closed (it pauses only when none is open)
     for (const [code, downs] of way.keys) { await key(code); for (let i = 0; i < downs; i++) await key('ArrowDown'); }
     return true;
   };
   const listOrder = async row => {
     if (!(await listGo(row))) return false; await key('Enter');
-    if (await j(`campPanelOpen(${SC}.pn)`)) await key('Escape'); // an order that is refused leaves the list open, and so does a power row: it is closed, the keys go back to the ship
+    if (await j(`!!${SC}.pn.pick`)) await key('Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
+    for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await key('Escape'); // an order that is refused leaves the list open, and so does a power row: Esc until it is closed, the keys go back to the ship
     return true;
   };
   const hi = `${SC}.pnl.rows[${SC}.pn.at - ${SC}.pn.top]`; // the objects of the highlighted row of the open list (src/campanelsdraw.js)
@@ -47,7 +48,7 @@ try {
   const pwAt = await j(`campPanelList(${SC}.camp, 'ship').findIndex(r => r.open === 'power')`);
   check('P opens the ship list, and Power is a row of it that shows its key (I) and the pips now', await j(`campPanelOpen(${SC}.pn) === 'ship' && ${SC}.pnl.title.text === 'P   SHIP ORDERS' && ${pwAt} >= 0 && ${SC}.pnl.rows[${pwAt}].name.text === campKeyRow('gpower').label + '  >' && ${SC}.pnl.rows[${pwAt}].cap.visible && ${SC}.pnl.rows[${pwAt}].cap.text === campKeyList('power').key && campKeyList('power').key === 'I' && ${SC}.pnl.rows[${pwAt}].suffix.text === '2 / 2 / 2'`), await j(`${SC}.pnl.rows.filter(r => r.name.visible).map(r => r.name.text + ' | ' + r.suffix.text)`));
   for (let i = 0; i < pwAt; i++) await key('ArrowDown'); await key('Enter'); await t.run(300);
-  check('Enter on the Power row opens the power list (no order: the pips are as they were), and the emergency shields are a row of it', await j(`campPanelOpen(${SC}.pn) === 'power' && ${SC}.pn.at === 0 && ${SC}.pnl.title.text === 'I   POWER' && JSON.stringify(${SC}.camp.power.p) === '[2,2,2]' && ${SC}.pnl.rows.filter(r => r.name.visible).map(r => r.name.text).indexOf('Emergency shields') === campPanelList(${SC}.camp, 'power').findIndex(r => r.id === 'emergency') && campPanelList(${SC}.camp, 'power').findIndex(r => r.id === 'emergency') >= 0 && ${SC}.pnl.keys.text === uiText('camp.ui.listkeysub', { key: 'I' })`), await j(`${SC}.pnl.rows.filter(r => r.name.visible).map(r => r.name.text)`));
+  check('Enter on the Power row opens the power list (no order: the pips are as they were), and the emergency shields are a row of it', await j(`campPanelOpen(${SC}.pn) === 'power' && ${SC}.pn.at === 0 && ${SC}.pnl.title.text === 'I   POWER' && JSON.stringify(${SC}.camp.power.p) === '[2,2,2]' && ${SC}.pnl.rows.filter(r => r.name.visible).map(r => r.name.text).indexOf('Emergency shields') === campPanelList(${SC}.camp, 'power').findIndex(r => r.id === 'emergency') && campPanelList(${SC}.camp, 'power').findIndex(r => r.id === 'emergency') >= 0 && ${SC}.pnl.keys.text === uiText('camp.ui.listkeyback', { key: 'I' })`), await j(`${SC}.pnl.rows.filter(r => r.name.visible).map(r => r.name.text)`)); // a row of P opened it: the foot says Esc goes back (camp.ui.listkeyback)
   await shot('1-list'); await key('ArrowLeft'); await t.run(200);
   check('Left goes back to the ship list, the highlight on the Power row', await j(`campPanelOpen(${SC}.pn) === 'ship' && ${SC}.pn.at === ${pwAt}`));
   await key('Escape'); await t.run(200);
