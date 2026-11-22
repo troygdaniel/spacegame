@@ -515,7 +515,7 @@ const UI_TEXT = {
   // The title screen's two choices and the pause menu's Title row (card space-game-title-modes, content/text/title.md)
   'title.long.key': 'ENTER',
   'title.long.name': 'LONG HAUL',
-  'title.long.sub': 'The trading run, Halcyon Station to Kepler-4b. Enter starts it; the arrows pick.',
+  'title.long.sub': 'The trading run to Kepler-4b. Enter starts it; the arrows pick.',
   // The pilots' calls for orders (card space-game-order-calls, content/text/camporders.md)
   'camp.call.line.cruiser': 'Your shields are failing. Orders?',
   'camp.call.line.wounded': 'Wingman hit and burning. Orders?',
@@ -553,11 +553,11 @@ const UI_TEXT = {
   'camp.call.r.leave': 'Copy. Leaving it.',
   'camp.call.late': 'No orders. I will play it safe.',
   'camp.call.fail': 'Cannot do that. Playing it safe.',
-  'camp.call.hud.def': 'no answer',
+  'camp.call.hud.def': 'if you wait',
   'camp.call.hud.keys': '{keyup} {keydown} pick   {keypick} answer',
   'title.camp.key': 'K',
   'title.camp.name': 'CAMPAIGN',
-  'title.camp.sub': 'Earth\'s fleet on the rim: fly the carrier, command the wing. Three levels.',
+  'title.camp.sub': 'Earth\'s fleet on the rim: fly the carrier, command the wing.',
   'title.pause': 'Title screen   (saved; Campaign or Long Haul from there)',
   // The wing's stances (card space-game-campaign-stances, content/text/campaign-stances.md)
   'camp.say.stance.free': 'Wing, fight as you see fit.',
@@ -917,7 +917,7 @@ const UI_TEXT = {
   'camp.bf.1.1.w5': 'A miner is jumped on the way. Answer the pilot\'s call.',
   'camp.bf.1.1.n1': 'Welcome aboard, Commander. The transport is ours to bring to Ceres. A patrol sees her off, then she is on her own.',
   'camp.bf.1.1.n2': 'The road forks. Send a scout down each lane, then pick one on the map ({map}). Pirates may hide on the short one.',
-  'camp.bf.1.1.n3': 'The arrow keys fly the cruiser. {fleetkey} opens your fleet orders: launch the wing, then send the escorts to her. When a pilot calls, pick an answer with Up and Down, then Enter.',
+  'camp.bf.1.1.n3': 'The arrows fly the cruiser. {fleetkey} opens your fleet orders. When a pilot calls, pick with Up and Down, then Enter.',
   'camp.bf.1.2.w1': 'Mine the rock fields round Ceres: {fleetkey}, then {rowmine}.',
   'camp.bf.1.2.w2': 'Ore sells for triple at the Works. Pirates hunt the miners.',
   'camp.bf.1.2.w3': 'Beat the 3 raids, then dock at Occator Works ({shipkey} list).',

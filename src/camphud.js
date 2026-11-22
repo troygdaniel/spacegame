@@ -1,7 +1,7 @@
 // ---------- The Campaign's three gauges (card space-game-systems-gauges; Troy, 21 Nov 2026) ----------
 // Top left of the Campaign HUD, in the look of Long Haul's dials (src/hud.js hudGauge): SHIELDS (the hull is a thin bar under it), SPEED and LASERS. Beside each dial is a bar of power segments, the pips of
 // the system that feeds it (the shields' for SHIELDS, the engines' for SPEED, the weapons' for LASERS), lit as they are given and animated as power moves, like X-Wing. The bars replace the small W S E pips.
-// The SHIP panel's power rows (J K L; there is no SYSTEMS panel since card space-game-two-hands-keys): the direct keys J K L (a pip to the shields, the engines, the weapons: the order of the dials, and each key is printed under its bar) change the same numbers. Where things are is the table CAMP.hud (src/campaign.js); this file is the numbers
+// The ship's power keys (J K L; there is no SYSTEMS panel since card space-game-two-hands-keys): the direct keys J K L (a pip to the shields, the engines, the weapons: the order of the dials, and each key is printed under its bar) change the same numbers. Where things are is the table CAMP.hud (src/campaign.js); this file is the numbers
 // (campGauges), the places (campHudGeom, campHudFlow), the animation of the bars (campGaugeAnim) and the drawing. The pure part is tested in plain Node (tests/campgauges.mjs).
 //   campGauges(C)            the three dials now: [{ id, key, label, frac, big, color, warn, tick, pips }]   (frac 0 to 1; big the number in the dial; tick 0 to 1 a mark on the dial; pips lit in its bar)
 //   campHullBar(C)           the thin hull bar: { frac, n, label, color, warn }

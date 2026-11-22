@@ -3,7 +3,7 @@
 //   A. the table: Calm 0.6, Normal 0.72, Brisk 0.85 (15 percent under the 0.7, 0.85 and 1 they were: card space-game-command-slowtime), the default, the shot power; there is no key
 //   B. a battle with no pace, or with the number 1, is the table's own numbers, bit for bit (what the pins and the bots use); Brisk is no longer that: it is 0.85 of them
 //   C. the scaling: the five small kinds by the multiplier, the shots by its square root, the carrier, mothership, towers, haulers, turrets and Fast not at all; a change in play and back is exact
-//   D. the one pace: the Campaign scene makes every battle at Normal (CAMP.pace.start); there is no P key, no setting, no Settings > Game, no campace.js (card space-game-two-hands-keys: command time, src/campslow.js, gives time to give orders); campNew's opts.pace still takes a mode, for the tests, the bots and the sims
+//   D. the one pace: the Campaign scene makes every battle at Normal (CAMP.pace.start); there is no key for it (P opens the ship list: card one-list-keys), no setting, no Settings > Game, no campace.js (command time, src/campslow.js, gives time to give orders); campNew's opts.pace still takes a mode, for the tests, the bots and the sims
 //   E. the balance: a plain bot wins every mission at Normal and Calm (levels 2 and 3 in about one to two minutes, the rim run of level 1 in four to seven), a player who does nothing never wins
 // Run: node tests/camppace.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -59,7 +59,7 @@ g.run(`
     f.init({ level }); f.camp = f.makeCamp(); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); f.osp = {}; f.mode = 'play'; return f; };
   window.F = __fake(1); 0`);
 check('the Campaign scene makes its battle at Normal (0.72: CAMP.pace.start), whatever was stored before: the fleet-command tune and every bot number are measured there', J('F.camp.pace') === 0.72 && J('campPaceMult(CAMP.pace.start)') === 0.72);
-check('there is no P key for it: P is the SHIP panel\'s page key, and the pace does not move', (() => { g.run(`F.onKey({ code: 'KeyP' })`); return J('F.camp.pace') === 0.72 && J('F.pn.page.ship') === 1; })());
+check('there is no P key for it: P opens the ship list (and P again closes it), no row of either list is a pace, and the pace does not move', (() => { g.run(`F.onKey({ code: 'KeyP' })`); const open = J('campPanelOpen(F.pn)'), p1 = J('F.camp.pace'); g.run(`F.onKey({ code: 'KeyP' })`); return p1 === 0.72 && open === 'ship' && J('campPanelOpen(F.pn)') === '' && J('F.camp.pace') === 0.72 && J(`CAMP_PANELS.panels.every(p => p.rows.every(r => !/pace/i.test(r.id + ' ' + (r.order || '') + ' ' + r.label)))`) && J(`Object.keys(CAMP_KEYS).every(k => !/pace/i.test(k))`); })());
 check('there is no setting for it: no campace.js, no campPaceNow, no Settings > Game tab, no pace text, no pace line on the pause card or the H page', !/campace/.test(src('index.html')) && J('typeof campPaceNow') === 'undefined' && J('typeof campPaceChoose') === 'undefined' && !J('SETTINGS.sections.some(s => s[0] === "game")') && !Object.keys(J('UI_TEXT')).some(k => /^camp\.pace\./.test(k) || k === 'camp.keys.pace') && !/campPace/.test(src('src/campkeys.js')) && !/campPace/.test(src('src/campaignscene.js').replace(/campPaceMult|campPaceSet|campPaceShip/g, '')));
 check('campNew\'s opts.pace still takes a mode (the tests, the bots and the sims pass one): Calm gives 0.6', J(`campNew(11, [], { seed: 1, pace: 'calm' }).pace`) === 0.6);
 

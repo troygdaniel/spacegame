@@ -121,7 +121,10 @@ check('the goal "Destroy the attackers." is drawn with skiffs and a cutter on th
 // ---- 14. nothing a new player reads before the first contact (1.3) names the aliens (card space-game-title-subline; docs/night/hunt-l1-rim.md open C) ----
 // Level 1 is a pirate run until 1.3's contact: "Earth's fleet against the aliens" on the title, "Fighters attack the aliens" on the H page, "mothership" on the pause card and in Settings gave the surprise away.
 const ALIEN = /alien|mothership|invader/i;
-check('the title\'s Campaign line says "Earth\'s fleet on the rim" (and no alien); after the reveal it may say the war goes on', /^Earth's fleet on the rim: fly the carrier, command the wing\. Three levels\.$/.test(J("uiText('title.camp.sub')")) && /war/.test(J("uiText('title.camp.sub.r')")));
+// the room is where the NEXT mission starts (card one-list-keys, the first-five-minutes review): before 1.1 it called itself Occator Works, which is at Ceres, while the briefing beside it said the run starts at the Lunar Base
+check('the ready room before mission 1.1 is the Lunar Base, where 1.1 starts; before 1.2 and 1.3 it is Occator Works at Ceres; a level whose places name no dock keeps its own station',
+  J('campHubStation(1, 0).name') === 'Lunar Base' && J('campHubStation(1, 1).name') === 'Occator Works' && J('campHubStation(1, 2).name') === 'Occator Works' && J('campHubStation(2, 0).name') === 'Proxima Gate' && J('campHubStation(3, 2).name') === 'Aegir Watch' && J('campHubStation(1).name') === 'Occator Works', J('campHubStation(1, 0).name'));
+check('the title\'s Campaign line says "Earth\'s fleet on the rim" (and no alien); after the reveal it may say the war goes on', /^Earth's fleet on the rim: fly the carrier, command the wing\.$/.test(J("uiText('title.camp.sub')")) && /war/.test(J("uiText('title.camp.sub.r')")));
 const words14 = [];
 const walk14 = (where, x) => { if (typeof x === 'string') words14.push([where, x]); else if (Array.isArray(x)) x.forEach(v => walk14(where, v)); else if (x && typeof x === 'object') Object.values(x).forEach(v => walk14(where, v)); };
 walk14('title', J("['title.camp.name', 'title.camp.sub', 'title.camp.keys', 'title.long.name', 'title.long.sub', 'title.pause'].map(k => uiText(k))"));

@@ -1,9 +1,9 @@
-// smoke: the Campaign's two hands on the screen: both panels always drawn (the states are tests/campanelsui.mjs), a click on a heading or a row, the scene's keys, the H page of every key (plain Node, no Chrome)
-// Cards space-game-campaign-keys-help and space-game-two-hands-keys (Troy, 21 Nov 2026). The rules are tests/campanels.mjs; this is src/campanelsdraw.js, src/campkeys.js and the scene's keys (src/campaignscene.js, src/title.js) on stand-ins.
-//   A. both panels are on the screen from the first frame at their sides, clear of the HUD and the key line, one-line rows with a key cap and their live words
-//   B. a click on a heading turns the page, a click on a row does that row, a click elsewhere is not swallowed
-//   C. the scene: a key is an order, the keys of no row do nothing, B and N and F do nothing, Esc pauses, H opens and closes the page and waits the battle
-//   D. the H page: the panels first, every row of the table once, the debug keys from their table, two columns that fit, the title's Campaign panel says H
+// smoke: the Campaign's two lists on the screen: nothing until Q or P, then ONE open list with its rows, its live words and its foot, the target's line always on; a click on a row of the open list, the scene's keys, the H page of every key (plain Node, no Chrome)
+// Card one-list-keys (Troy, 22 Nov 2026: "one list per hand"), after space-game-campaign-keys-help. The rules are tests/campanels.mjs; this is src/campanelsdraw.js, src/campkeys.js and the scene's keys (src/campaignscene.js, src/title.js) on stand-ins.
+//   A. no list is on the screen until its key is pressed; the open one is at its side, clear of the HUD and the key line, its rows the table's words with their live word; the window scrolls; the foot says the keys
+//   B. a click on a row of the open list does that row (taken: the list closes; refused: it stays), a click on the rest of the list is swallowed, a click elsewhere or with no list open is not
+//   C. the scene: Q or P, Down, Enter is an order; a digit and the keys of nobody do nothing; Esc closes a list first, then pauses; H opens and closes the page and waits the battle
+//   D. the H page: the two lists first, every row of the table once, the debug keys from their table, two columns that fit, the title's Campaign panel says H
 // Run: node tests/campanelsdraw.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
@@ -26,45 +26,64 @@ g.run(`
       input: { handlers: [], on(e, f) { this.handlers.push([e, f]); }, off(e, f) { this.handlers = this.handlers.filter(h => h[1] !== f); } }, events: { once() {} } };
     s.camp.ships = s.camp.ships.filter(u => u.team !== 'alien'); return s; };
   window.__live = s => __all.filter(o => !o.gone);
-  window.__texts = () => __all.filter(o => !o.gone && o.kind === 'text').map(o => o.t);
+  window.__texts = () => __all.filter(o => !o.gone && o.kind === 'text' && o.visible).map(o => o.t); // the words on the screen (a hidden text is not)
+  window.__rowsOn = s => s.pnl.rows.filter(r => r.name.visible).map(r => ({ name: r.name.t, suffix: r.suffix.t }));
+  window.__k2 = (s, code, now) => campPanelKey(s.pn, s.camp, code, now);
 `);
 
-console.log('A. both panels are on the screen from the first frame');
+console.log('A. one list, when its key is pressed');
 {
-  g.run(`window.S = __scene(); campPanelsInstall(S); S.mode = 'play'; window.__n0 = __all.length; campPanelsPaint(S, 1000);`);
-  check('install makes both panels\' objects at once and listens for the pointer', J('Object.keys(S.pnl.p).join()') === 'fleet,ship' && J('S.input.handlers.length') === 1 && J('__all.length') > 30);
+  g.run(`window.S = __scene(); campPanelsInstall(S); S.mode = 'play'; campPanelsPaint(S, 1000);`);
+  check('install makes ONE set of objects (a heading, as many rows as a list shows, a foot, the target\'s line) and listens for the pointer', J('S.pnl.rows.length') === J('CAMP_PANELS.show') && J('S.input.handlers.length') === 1 && J('S.pnl.objs.length') === 1 + 2 + 2 * J('CAMP_PANELS.show') + 2 + 2 && J('JSON.stringify(S.pn)') === '{"open":"","at":0,"top":0,"lit":{}}');
+  check('with no key pressed no list is drawn: no heading, no row; only the target\'s line (none, and the keys that pick one)', J('__rowsOn(S).length') === 0 && !J('S.pnl.title.visible') && !J('S.pnl.keys.visible') && J('__texts().join("|")') === 'TARGET  none|A D S pick a target', J('__texts().join("|")'));
+  g.run(`__k2(S, 'KeyQ', 1000); campPanelsPaint(S, 1000);`);
   const t = J('__texts()');
-  check('with no key pressed both panels are drawn: FLEET with its seven rows (Launch / recall, Attack, Escort, Guard, Mine ore, Stance, Convoy) and SHIP with its eleven', ['FLEET', 'Launch / recall', 'Attack', 'Escort', 'Guard', 'Mine ore', 'Stance', 'Convoy', 'SHIP', 'Fly to goal', 'Fly to target', 'Fast burn', 'Dock', 'Shields +', 'Engines +', 'Weapons +', 'Balance', 'Emergency', 'Missile', 'Blink'].every(r => t.includes(r)), t.join(' | '));
+  check('Q opens the fleet list: its heading with its key, where the highlight is (1 / 15), and its first nine rows in the table\'s words', J('S.pnl.title.t') === 'Q   FLEET ORDERS' && J('S.pnl.count.t') === '1 / 15' && J('__rowsOn(S).map(r => r.name).join("|")') === 'Attack the target|Launch the wing|Escort the convoy|Guard the cruiser|Recall the wing|Mine ore|Convoy: tuck in|Convoy: run for it|Convoy: hold here', t.join(' | '));
   check('each row shows its live word: launch what is in the bay, the others why not (no wing out yet)', t.includes('8 in bay') && t.filter(x => x === 'none out').length >= 3, t.join(' | '));
+  check('the foot says the highlighted row\'s state in full (why Attack cannot be done) and the list\'s keys, from the key table', J('S.pnl.more.t') === 'No fighters out' && J('S.pnl.keys.t') === 'Up Down move   Enter order   Q or Esc close');
   g.run(`campOrder(S.camp, 'launch'); for (let i = 0; i < 30 * 8; i++) campStep(S.camp, 1 / 30); campPanelsPaint(S, 1100);`);
-  check('the words are live but are not made again at once: 100 ms later the same, a quarter of a second after they say what the game says now (Recall, 8 out)', J('__texts().includes("8 in bay")') && (g.run('campPanelsPaint(S, 1320)'), J('__texts().includes("Recall") && __texts().includes("8 ships out") || __texts().includes("8 out")')));
-  g.run(`S.camp.result = null;`);
+  check('the words are live but are not made again at once: 100 ms later the same, a quarter of a second after they say what the game says now (all out, 8 out)', J('__texts().includes("8 in bay")') && (g.run('campPanelsPaint(S, 1320)'), J('__texts().includes("all out") && __texts().includes("8 out") && !__texts().includes("8 in bay")')));
+  g.run(`S.camp.result = null; __k2(S, 'ArrowDown', 1400); campPanelsPaint(S, 1400);`);
+  check('a move of the highlight is drawn at once (2 / 15), and the foot follows it', J('S.pnl.count.t') === '2 / 15' && J('S.pnl.more.t') === 'All of it is out');
+  g.run(`for (let i = 0; i < 9; i++) __k2(S, 'ArrowDown', 1500); campPanelsPaint(S, 1500);`);
+  check('past the ninth row the list scrolls with the highlight: 11 / 15, the rows drawn are the third to the eleventh, still nine of them', J('S.pnl.count.t') === '11 / 15' && J('__rowsOn(S).length') === 9 && J('__rowsOn(S)[0].name') === 'Escort the convoy' && J('__rowsOn(S)[8].name') === 'Stance: fight freely' && J('__rowsOn(S)[8].suffix') === 'in force', JSON.stringify(J('__rowsOn(S)')));
   const geo = J('campPanelsGeometry(campPanelDef("fleet"))'), geo2 = J('campPanelsGeometry(campPanelDef("ship"))');
-  check('FLEET is at the left edge and SHIP at the right edge, each inside the screen, below the HUD\'s gauges (176) and the radar (226), above the key line (676), and the two do not touch', geo.x === 24 && geo2.x === 1280 - 24 - geo2.w && geo.y >= 230 && geo2.y >= 230 && geo.y + geo.h < 676 && geo2.y + geo2.h < 676 && geo.x + geo.w < geo2.x, JSON.stringify([geo.x, geo.y, geo.w, geo.h, geo2.x, geo2.y, geo2.w, geo2.h]));
-  check('the edge arrow\'s label keeps out of both panels (campPanelsKeep)', J('campPanelsKeep().length') === 2 && J('Campaign.prototype.arrowKeep.call({ pn: S.pn }).length') === J('CAMP.nav.arrow.keep.length') + 2);
-  g.run(`S.camp.docked = 'luna'; campPanelKey(S.pn, S.camp, 'KeyP', 3000); campPanelsPaint(S, 3300); window.__t2 = __texts();`); // docked: the build rows say what they cost (undocked: "Dock at an outpost to build.")
-  check('P turns SHIP to BUILD: the rows are New fighter and New escort, what each costs and why not', J('__t2').includes('BUILD') && ['New fighter', 'New escort'].every(r => J('__t2').includes(r)) && J('__t2').includes('25 ore'), J('__t2').join(' | '));
-  g.run(`campPanelKey(S.pn, S.camp, 'Digit8', 3400); campPanelsPaint(S, 3700);`);
-  check('a pick on BUILD (8, an escort, refused for want of ore) answers in words, and the panel is back on its first page', J('S.pn.page.ship') === 0 && J('S.pnl.p.ship.title.t') === 'SHIP' || J('__texts().includes("SHIP")'));
+  check('the fleet list is at the left edge and the ship list at the right edge, each inside the screen, below the HUD\'s gauges (176) and the radar (226), above the key line (676), and the two places do not touch', geo.x === 24 && geo2.x === 1280 - 24 - geo2.w && geo.y >= 230 && geo2.y >= 230 && geo.y + geo.h < 676 && geo2.y + geo2.h < 676 && geo.x + geo.w < geo2.x, JSON.stringify([geo.x, geo.y, geo.w, geo.h, geo2.x, geo2.y, geo2.w, geo2.h]));
+  check('a list is always CAMP_PANELS.show rows high, so it does not jump as it scrolls or when the other (shorter) one opens', geo.n === J('CAMP_PANELS.show') && geo.h === geo2.h && geo.list.h === geo.n * geo.rowH + (geo.n - 1) * J('CAMPPANELS_LOOK.box.gap'));
+  check('the edge arrow\'s label keeps out of the target\'s line (campPanelsKeep: one rectangle, under the radar); an open list is drawn over the label', J('campPanelsKeep().length') === 1 && J('campPanelsKeep()[0][2]') === 1280 && J('campPanelsKeep()[0][1]') <= J('CAMPPANELS_LOOK.tgt.y') && J('Campaign.prototype.arrowKeep.call({ pn: S.pn }).length') === J('CAMP.nav.arrow.keep.length') + 1);
+  g.run(`__k2(S, 'KeyP', 3000); campPanelsPaint(S, 3000); window.__t2 = __texts();`);
+  check('P opens the ship list in its place (one list at a time: the fleet rows are gone): its heading, 1 / 6, its six rows here, the other three lines empty', J('S.pnl.title.t') === 'P   SHIP ORDERS' && J('S.pnl.count.t') === '1 / 6' && J('__rowsOn(S).map(r => r.name).join("|")') === 'Fly to the goal|Fly to the target|Fast burn to the goal|Fast burn to the target|Emergency shields|Dock at the outpost' && !J('__t2').includes('Attack the target') && J('S.pnl.keys.t') === 'Up Down move   Enter order   P or Esc close', J('__t2').join(' | '));
+  check('the title and the first row of the ship list are drawn at the right, where the fleet\'s were at the left', J('S.pnl.title.x') === geo2.x + 12 && J('S.pnl.rows[0].name.x') === geo2.x + 14 && J('S.pnl.rows[0].name.y') === J('campPanelsGeometry(campPanelDef("ship")).rowY(0)') + geo2.rowH / 2 && geo2.x > 640);
+  g.run(`window.S3 = __scene(); S3.camp = campNew(3, [], { seed: 1, god: true }); S3.camp.ships = S3.camp.ships.filter(u => u.team !== 'alien'); campPanelsInstall(S3); S3.mode = 'play'; __k2(S3, 'KeyP', 0); campPanelsPaint(S3, 0); window.__t3 = __rowsOn(S3);`); // level 3 lists no outpost: ships are built aboard
+  check('where ships are built aboard (level 3) the ship list has the build rows, what each costs and why not, and the dock row is "Repair the hull"', J('__t3.map(r => r.name).join("|")') === 'Fly to the goal|Fly to the target|Fast burn to the goal|Fast burn to the target|Emergency shields|Repair the hull|Build a fighter|Build an escort' && J('__t3[6].suffix') === '25 ore' && J('__t3[7].suffix') === 'needs 45 ore' && J('S3.pnl.count.t') === '1 / 8', JSON.stringify(J('__t3')));
+  g.run(`for (let i = 0; i < 7; i++) __k2(S3, 'ArrowDown', 100); window.__r3 = __k2(S3, 'Enter', 100); campPanelsPaint(S3, 400);`);
+  check('a pick that is refused (an escort, for want of ore) answers in words and the list is still open on that row, its reason at the foot', J('__r3.ran') && !J('__r3.ok') && J('__r3.say.length') > 0 && J('S3.pn.open') === 'ship' && J('S3.pnl.count.t') === '8 / 8' && J('S3.pnl.more.t') === 'Needs 45 ore' && J('S3.pnl.title.visible'));
+  g.run(`__k2(S3, 'ArrowUp', 500); window.__r3 = __k2(S3, 'Enter', 500); campPanelsPaint(S3, 800);`);
+  check('a pick that is taken (a fighter) closes the list: nothing of it is drawn, the target\'s line stays', J('__r3.ok') && J('S3.pn.open') === '' && J('__rowsOn(S3).length') === 0 && !J('S3.pnl.title.visible') && J('S3.pnl.tgt.visible') && J('S3.camp.build.queue.length') === 1);
+  g.run(`__k2(S, 'KeyP', 3500); campPanelsPaint(S, 3500); S.mode = 'pause'; campPanelsPaint(S, 3600);`);
+  check('campPanelsClose closes the open list (a card, the map, the end took the screen), and a list left open is closed when a card comes up', (g.run(`S.mode = 'play'; __k2(S, 'KeyQ', 3700); campPanelsClose(S);`), J('S.pn.open') === '') && (g.run(`__k2(S, 'KeyQ', 3800); S.mode = 'pause'; campPanelsPaint(S, 3800); S.mode = 'play';`), J('S.pn.open') === ''));
 }
 
-console.log('B. a click on a heading or a row');
+console.log('B. a click on a row of the open list');
 {
-  g.run(`window.S = __scene(); S.mode = 'play'; campPanelsInstall(S); window.__said.length = 0; S.time.now = 5000; campPanelsPaint(S, 5000); S.time.now = 5000;`);
-  g.run(`window.__g = campPanelsGeometry(campPanelDef("fleet")); campPanelsClick(S, __g.x + 120, __g.rowY(0) + 10);`);
-  check('a click on row 1 (launch / recall) launches the wing, says so, and lights the row', J('S.camp.launchQ.length') === 8 && J('__said.pop()') === 'Launching the wing.' && J('S.pn.lit.launch') === 5000);
-  g.run(`S.time.now = 6000; campPanelsPaint(S, 6000); campPanelsClick(S, __g.x + 120, __g.rowY(1) + 10);`);
-  check('a click on a row that cannot be done answers in words (the wing is still launching)', /launching/i.test(J('__said.pop()') || ''));
-  g.run(`S.time.now = 7000; window.__o = S.camp.orders.launch; campPanelsClick(S, __g.x + 100, __g.y + 10);`);
-  check('a click on the heading turns the page: the stances', J('S.pn.page.fleet') === 1);
-  g.run(`S.time.now = 7100; campPanelsClick(S, __g.x + 120, __g.rowY(3) + 10);`);
-  check('a click on a row of the stances page picks it (match speed) and goes back to the orders', J('S.camp.stance') === 'match' && J('S.pn.page.fleet') === 0);
-  g.run(`S.time.now = 8000; window.__o = S.camp.orders.launch;`);
-  check('a click anywhere else is not the panels\' (it is not swallowed): the map and the battle get it', J('campPanelsClick(S, 700, 400)') === false && J('S.camp.orders.launch') === J('__o'));
-  g.run(`S.time.now = 9000; window.S.camp.ore = 100; S.camp.docked = 'luna'; campPanelKey(S.pn, S.camp, 'KeyP', 9000); campPanelsPaint(S, 9000); window.__g2 = campPanelsGeometry(campPanelDef("ship")); campPanelsClick(S, __g2.x + 150, __g2.rowY(0) + 10);`);
-  check('the click on BUILD row 1 builds a fighter: 25 ore spent, one queued', J('S.camp.ore') === 75 && J('S.camp.build.queue.length') === 1);
+  g.run(`window.S = __scene(); S.mode = 'play'; campPanelsInstall(S); window.__said.length = 0; S.time.now = 5000; campPanelsPaint(S, 5000);`);
+  g.run(`window.__g = campPanelsGeometry(campPanelDef("fleet")); window.__g2 = campPanelsGeometry(campPanelDef("ship"));`);
+  check('with no list open a click where a list would be is not the lists\': nothing is launched, the map and the battle get it', J('campPanelsClick(S, __g.x + 120, __g.rowY(1) + 10)') === false && J('S.camp.launchQ.length') === 0);
+  g.run(`__k2(S, 'KeyQ', 5000); campPanelsPaint(S, 5000); window.__c1 = campPanelsClick(S, __g.x + 120, __g.rowY(1) + 10);`);
+  check('a click on the second row of the open fleet list (Launch the wing) launches the wing, says so, lights the row, and the list closes (as Enter would)', J('__c1') === true && J('S.camp.launchQ.length') === 8 && J('__said.pop()') === 'Launching the wing.' && J('S.pn.lit.launch') === 5000 && J('S.pn.open') === '');
+  g.run(`S.time.now = 6000; __k2(S, 'KeyQ', 6000); campPanelsPaint(S, 6000); window.__c2 = campPanelsClick(S, __g.x + 120, __g.rowY(1) + 10);`);
+  check('a click on a row that cannot be done answers in words (the wing is still launching), and the list stays open with the highlight on the row clicked', J('__c2') === true && /launching/i.test(J('__said.pop()') || '') && J('S.pn.open') === 'fleet' && J('S.pn.at') === 1);
+  g.run(`S.time.now = 7000; window.__o = __said.length; window.__c3 = campPanelsClick(S, __g.x + 100, __g.y + 10); window.__c4 = campPanelsClick(S, __g.x + 100, __g.foot.y + 20);`);
+  check('a click on the heading or the foot of the open list is the list\'s (it is swallowed) and does nothing: no order, no page to turn, the list stays open', J('__c3') === true && J('__c4') === true && J('__said.length') === J('__o') && J('S.pn.open') === 'fleet' && J('S.pn.at') === 1);
+  g.run(`S.time.now = 7100; for (let i = 0; i < 12; i++) __k2(S, 'ArrowDown', 7100); campPanelsPaint(S, 7100); window.__top = S.pn.top; window.__c5 = campPanelsClick(S, __g.x + 120, __g.rowY(8) + 10);`);
+  check('in a scrolled list a click picks the row that is drawn there: the ninth line of the window from row ' + (J('__top') + 1) + ' is "Stance: match my speed", and the stance is given at once', J('__top') === 5 && J('__c5') === true && J('S.camp.stance') === 'match' && J('S.pn.open') === '');
+  g.run(`S.time.now = 8000; __k2(S, 'KeyQ', 8000); window.__o = S.camp.orders.launch;`);
+  check('a click anywhere else is not the lists\' (it is not swallowed): the map and the battle get it, and the list stays open', J('campPanelsClick(S, 700, 400)') === false && J('campPanelsClick(S, __g2.x + 100, __g2.rowY(0) + 10)') === false && J('S.camp.orders.launch') === J('__o') && J('S.pn.open') === 'fleet');
+  g.run(`window.S4 = __scene(); S4.camp = campNew(3, [], { seed: 1, god: true }); S4.camp.ships = S4.camp.ships.filter(u => u.team !== 'alien'); S4.camp.ore = 100; S4.mode = 'play'; campPanelsInstall(S4); S4.time.now = 9000; __k2(S4, 'KeyP', 9000); campPanelsPaint(S4, 9000); campPanelsClick(S4, __g2.x + 150, __g2.rowY(6) + 10);`);
+  check('the click on "Build a fighter" (level 3, the seventh row of the ship list) builds one: 25 ore spent, one queued; a ship order does not kick command time', J('S4.camp.ore') === 75 && J('S4.camp.build.queue.length') === 1 && !(J('S4.slowUntil') > 0));
+  check('a click that gives a fleet order is a moment of command time, as the key is', J('S.slowUntil') === 7100 + J('CAMP.slow.after'), String(J('S.slowUntil')));
   g.run(`S.mode = 'pause'; S.time.now = 9500;`);
-  check('behind a card, the pause or the map a click is not the panels\'', J(`campPanelsClick(S, ${J('__g.x')} + 120, ${J('__g.rowY(0)')} + 10)`) === false);
+  check('behind a card, the pause or the map a click is not the lists\'', J(`campPanelsClick(S, ${J('__g.x')} + 120, ${J('__g.rowY(0)')} + 10)`) === false && (g.run(`S.mode = 'play'; S.mp = {};`), J(`campPanelsClick(S, ${J('__g.x')} + 120, ${J('__g.rowY(0)')} + 10)`) === false) && (g.run(`S.mp = null;`), true));
 }
 
 console.log('C. the scene\'s keys');
@@ -78,33 +97,39 @@ console.log('C. the scene\'s keys');
     window.F = __fake('home'); F.onKey({ code: 'Enter' }); F.camp.ore = 200; F.update(0, 33); window.__k = c => F.onKey({ code: c });
   `);
   const orders = () => J('Object.values(F.camp.orders).reduce((a, b) => a + b, 0) + F.camp.launchQ.length + F.camp.build.queue.length');
-  check('the digits that are no row of the first pages (5, 6) and the keys that are nobody\'s now (B, N, F, Z, C) do nothing at all: no order, no autopilot, no map, no pause', (() => { ['Digit5', 'Digit6', 'KeyB', 'KeyN', 'KeyF', 'KeyZ', 'KeyC'].forEach(c => g.run(`__k('${c}')`)); return orders() === 0 && J('F.camp.nav') === null && J('F.mp') === null && J('F.mode') === 'play' && J('F.camp.ore') === 200; })());
-  g.run(`__k('Digit1');`);
-  check('1 launches the wing with no panel to open first', J('F.camp.launchQ.length') === 8);
-  g.run(`F.camp.launchQ.length = 0; __k('Digit7');`);
-  check('7 flies to the objective: the autopilot is on', J('F.camp.nav && F.camp.nav.id') === 'place:earth');
-  g.run(`F.camp.nav = null; __k('Escape');`);
-  check('Esc pauses (there is no panel to close first), and Esc on the pause card goes back to the battle', J('F.mode') === 'pause' && (g.run(`__k('Escape')`), J('F.mode') === 'play'));
-  g.run(`__k('KeyH');`);
-  check('H opens the page of every key, and the battle waits behind it (the pause card\'s mode)', J('F.ck && F.ck.open') === true && J('F.mode') === 'pause' && (g.run('window.__t0 = F.camp.t; F.update(0, 100)'), J('F.camp.t') === J('__t0')));
+  check('a digit (1 to 0: no row has a key now), the old letter keys (W E R U I) and the keys that are nobody\'s (B, N, F, Z, C) do nothing at all: no order, no list, no autopilot, no map, no pause', (() => { ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Numpad1', 'KeyW', 'KeyE', 'KeyR', 'KeyU', 'KeyI', 'KeyB', 'KeyN', 'KeyF', 'KeyZ', 'KeyC'].forEach(c => g.run(`__k('${c}')`)); return orders() === 0 && J('F.camp.nav') === null && J('F.mp') === null && J('F.mode') === 'play' && J('F.camp.ore') === 200 && J('F.pn.open') === '' && J('F.camp.stance') === 'free'; })());
+  g.run(`__k('KeyQ');`);
+  check('Q opens the fleet list and gives no order', J('F.pn.open') === 'fleet' && orders() === 0);
+  g.run(`__k('ArrowDown'); __k('Enter');`);
+  check('Down and Enter launch the wing (the second row), and the list is closed again', J('F.camp.launchQ.length') === 8 && J('F.pn.open') === '');
+  g.run(`F.camp.launchQ.length = 0; __k('KeyP'); __k('Enter');`);
+  check('P and Enter fly to the objective (the first row of the ship list): the autopilot is on, and no missile was fired by that Enter', J('F.camp.nav && F.camp.nav.id') === 'place:earth' && J('F.camp.orders.missiles') === 0 && J('F.pn.open') === '');
+  g.run(`F.camp.nav = null; __k('KeyQ'); __k('Escape');`);
+  check('Esc closes an open list first and does not pause', J('F.pn.open') === '' && J('F.mode') === 'play');
+  g.run(`__k('Escape');`);
+  check('Esc with no list open pauses, and Esc on the pause card goes back to the battle', J('F.mode') === 'pause' && (g.run(`__k('Escape')`), J('F.mode') === 'play'));
+  g.run(`__k('KeyP'); __k('KeyH');`);
+  check('H opens the page of every key (an open list closes under it), and the battle waits behind it (the pause card\'s mode)', J('F.ck && F.ck.open') === true && J('F.mode') === 'pause' && J('F.pn.open') === '' && (g.run('window.__t0 = F.camp.t; F.update(0, 100)'), J('F.camp.t') === J('__t0')));
   const o0 = orders();
-  g.run(`__k('Digit2'); __k('KeyQ'); __k('KeyD');`);
-  check('with the page open the keys do nothing (the page has them)', orders() === o0 && J('F.pn.page.fleet') === 0 && J('F.camp.tgt') === '');
+  g.run(`__k('Enter'); __k('KeyQ'); __k('KeyD'); __k('KeyJ');`);
+  check('with the page open the keys do nothing (the page has them): no missile, no list, no target, no power', orders() === o0 && J('F.pn.open') === '' && J('F.camp.tgt') === '');
   g.run(`__k('KeyH');`);
   check('H again closes it and the battle runs on', J('F.ck') === null && J('F.mode') === 'play' && (g.run('F.update(0, 100)'), J('F.camp.t') > J('__t0')));
   g.run(`__k('KeyH'); __k('Escape');`);
   check('Esc closes the page and does not pause', J('F.ck') === null && J('F.mode') === 'play');
   g.run(`__k('Escape'); __k('KeyH');`);
   check('H on the pause card opens the page over it and Esc closes it back to the card', J('F.ck && F.ck.open') === true && J('F.mode') === 'pause' && (g.run(`__k('Escape')`), J('F.ck') === null && J('F.mode') === 'pause'));
+  check('on the pause card Q and P open nothing (the card has the keys)', (g.run(`__k('KeyQ'); __k('KeyP');`), J('F.pn.open') === '' && J('F.mode') === 'pause'));
   g.run(`__k('Escape');`);
-  check('the pause card names the two hands and H, from the table', /Left hand: FLEET/.test(J(`uiText('camp.ui.pausepanels')`)) && /H  all keys/.test(J(`uiText('camp.ui.paused')`)));
+  check('the pause card names the two lists, their keys and H, from the table', J(`uiText('camp.ui.pausepanels')`) === 'Q opens the fleet orders, P the ship orders: Up, Down, then Enter. A D S pick a target. H lists every key.' && /\{fleetkey\} opens the fleet orders, \{shipkey\} the ship orders/.test(J(`UI_TEXT['camp.ui.pausepanels']`)) && /H  all keys/.test(J(`uiText('camp.ui.paused')`)));
 }
 
 console.log('D. the H page');
 {
   g.run('campDebugSet(true)'); // the page lists the tune kit's keys only while it is on (?debug=1; card space-game-debug-keys-off): on here, as the check below says "then the debug keys"
   const page = J('campKeysPage()');
-  check('the page begins with the two panels (the rows of each with their keys, then its page key: FLEET seven and Q, SHIP eleven and P), then the rest of the table, then the debug keys from their table', page[0].title === 'THE FLEET PANEL (LEFT HAND)' && page[1].title === 'THE SHIP PANEL (RIGHT HAND)' && page[0].rows.length === 8 && page[1].rows.length === 12 && page[0].rows[0].caps.join() === '1' && page[0].rows[7].caps.join() === 'Q' && page[1].rows[0].caps.join() === '7' && page[page.length - 1].rows.length === J('CAMP_DEBUG.keys.length') && page.some(p => p.title === 'FLY AND FIRE') && page.some(p => p.title === 'THE MAP'), page.map(p => p.title).join(' | '));
+  check('the page begins with the two lists (Q and P with what is in each, then the keys of an open list: Up Down, Enter, Esc), then the rest of the table, then the debug keys from their table', page[0].title === 'THE TWO LISTS' && page[0].rows.length === 5 && page[0].rows.map(r => r.caps.join(' ')).join('|') === 'Q|P|Up Down|Enter|Esc' && page[1].title === 'FLY AND FIRE' && page[page.length - 1].rows.length === J('CAMP_DEBUG.keys.length') && page.some(p => p.title === 'THE TARGET') && page.some(p => p.title === 'POWER') && page.some(p => p.title === 'THE MAP'), page.map(p => p.title).join(' | '));
+  check('the page has no line for a row of a list (a row has no key: the open list names its rows itself), and no digit is a key of flight on it (the digits left are a card\'s)', !page.flatMap(p => p.rows).some(r => /^(Launch|Attack|Escort|Guard|Mine|Stance|Convoy)\b/.test(r.t)) && page.filter(p => p.rows.some(r => r.caps.some(k => /\d/.test(k)))).map(p => p.title).join() === 'ON A CARD');
   check('every row of the PANELS and CAMPAIGN groups of the table is on it, once', J(`(() => { const page = campKeysPage().flatMap(g => g.rows.map(r => r.caps.join(' ') + '|' + r.t)); const rows = ['panels', 'campaign'].flatMap(id => controlsGroup(id).rows.map(r => r.k.join(' ') + '|' + r.t)); return rows.length === page.length - CAMP_DEBUG.keys.length && rows.every(r => page.filter(p => p === r).length === 1); })()`));
   const L = J('campKeysLayout(campKeysPage())'), K = J('CAMPKEYS');
   check('two columns of whole groups that fit the panel: the lowest line of each is above ' + K.bottom + ' and the lines are balanced', L.cols.length === 2 && L.cols.every(col => J(`campKeysHeight(${JSON.stringify(col)})`) <= K.bottom) && Math.abs(L.lines[0] - L.lines[1]) <= 8, JSON.stringify(L.lines) + ' ' + L.cols.map(col => J(`campKeysHeight(${JSON.stringify(col)})`)).join(','));
@@ -118,5 +143,5 @@ console.log('D. the H page');
   check('index.html loads the three files once each: campkeys.js, camppanel.js, campanelsdraw.js', ['campkeys', 'camppanel', 'campanelsdraw'].every(f => src('index.html').split('src/' + f + '.js').length === 2));
 }
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
-console.log(failed ? `\nCAMPAIGN PANELS DRAW FAIL (${failed} of ${n})` : `\nCAMPAIGN PANELS DRAW PASS (${n} checks)`);
+console.log(failed ? `\nCAMPAIGN LISTS DRAW FAIL (${failed} of ${n})` : `\nCAMPAIGN LISTS DRAW PASS (${n} checks)`);
 process.exit(failed ? 1 : 0);

@@ -4,7 +4,7 @@
 const CAMPTGT = { color: 0xff6a5a, line: 2, minScreen: 34, pad: 10, arm: 0.42, depth: 8, pulse: 0.35 }; // the colour, the line's width on the SCREEN (px), the bracket's least size on the screen (px across), room round the ship (world px), how much of each side a corner covers, the depth, how far its alpha swings
 function campTgtPaint(s) {
   if (!s || !s.add || !s.camp) return;
-  if (!s.tgtG) s.tgtG = s.add.graphics().setDepth(CAMPTGT.depth);
+  if (!s.tgtG || (s.tgtG.active === false && !s.tgtG.scene)) s.tgtG = s.add.graphics().setDepth(CAMPTGT.depth); // a scene that starts again (a retry, the next mission) destroys its layers: the old graphics is not active and has no scene, and a new one is made
   const g = s.tgtG; g.clear();
   const u = s.mode === 'play' && !s.mp && typeof campTgtNow === 'function' ? campTgtNow(s.camp) : null; if (!u) return;
   const K = CAMPTGT, z = s.cameras && s.cameras.main && s.cameras.main.zoom > 0 ? s.cameras.main.zoom : 1;

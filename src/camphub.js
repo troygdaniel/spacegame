@@ -26,7 +26,7 @@
 //   REPLAYS (card space-game-campaign-replay): on the board A D (or the arrows) choose a mission already done, R makes it the one the Briefing and Launch are for, X goes back to the next mission. campHubDone(P) is the list
 //   of missions that can be replayed; campHubTarget(P, H) is the mission Launch flies: the replay picked, else the next one; campHubLaunch(P, H) says { level, mission, via: 'hub', replay }. The story and the progress do not move.
 //   campHubLaunch(P)               what the Campaign scene is started with: { level, mission, via: 'hub' }
-//   campHubStation(level)          the station the level's ready room is: { name, accent, art }
+//   campHubStation(level, mission) the station the level's ready room is: { name, accent, art }; with a mission, the dock where that mission starts gives the name
 const CAMP_HUB = {
   rows: ['board', 'refit', 'rank', 'launch'],            // the rows, in order; the digit of a row is its place + 1 (the Briefing row is gone: Enter on a mission opens its briefing)
   stations: {                                            // the station the ready room is at, by level: the belt outpost, the warp station, the last outpost before the home world
@@ -44,7 +44,10 @@ const CAMP_HUB = {
 const campHubDigit = code => { const m = /^(?:Digit|Numpad)(\d)$/.exec(String(code || '')); return m ? +m[1] : null; };
 const campHubPlain = t => !/^camp\./.test(String(t)); // a string the game has no words for answers its own key
 const campHubLevels = () => Object.keys(CAMP.levels).map(Number).filter(n => Number.isInteger(n) && n >= 1).sort((a, b) => a - b);
-function campHubStation(level) { const s = CAMP_HUB.stations[level] || CAMP_HUB.stations[1]; return { name: s.name, accent: s.accent, art: s.art }; }
+function campHubStation(level, mission) { // mission (optional): the next mission to fly: the room is where it starts, when the level's docks name that place (before 1.1 the Lunar Base, not the works at Ceres)
+  const s = CAMP_HUB.stations[level] || CAMP_HUB.stations[1], L = CAMP.levels[level], m = mission != null && L && typeof campMissions === 'function' ? campMissions(level)[mission | 0] : null, at = m && L.docks ? L.docks[m.place] : '';
+  return { name: at || s.name, accent: s.accent, art: s.art };
+}
 // the rows this visit shows: the ids asked for that the table knows (a note is what makes a row known), else the five; at: the id to stand on
 const campHubIds = ids => { const ok = (Array.isArray(ids) ? ids : []).filter((id, i, a) => typeof id === 'string' && typeof CAMP_HUB.note[id] === 'function' && a.indexOf(id) === i); return ok.length ? ok : CAMP_HUB.rows.slice(); };
 function campHubNew(P, opts) { const rows = campHubIds(opts && opts.rows), at = opts && opts.at ? rows.indexOf(opts.at) : 0; return { row: at > 0 ? at : 0, rows, last: '', open: '', sel: 0, cur: Math.max(0, campHubSelectable(P).findIndex(r => r.state === 'next')), pick: null }; } // cur: the board's cursor among the missions that can be picked (the ones done and the next one; it starts on the next); pick: the replay chosen, { level, i }, or null

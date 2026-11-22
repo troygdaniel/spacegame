@@ -1,6 +1,7 @@
 // smoke: the Campaign's lose card says what happened, how far you got and one thing to try (plain Node, no Chrome)
 // Card space-game-night-ux, finding 3 (docs/night/ux.md; src/camplose.js, src/campaignscene.js showLost). Before: "The carrier is lost." and "Enter try again". Now: that, how long it lasted
 // (m:ss), the wave and the kills, and a tip for the reason. The debug key's lose has its own words (camp.lose.debug, in ui.md).
+// The tips name the fleet list by its key ("Q list", {fleetkey} of src/data_controls.js: card one-list-keys); an order has no digit of its own any more.
 // Run: node tests/uxlose.mjs   (exit code 1 on a failed check)
 import { readFileSync as __rf } from 'node:fs';
 import { readFileSync } from 'node:fs';
@@ -24,8 +25,9 @@ g.run(`
 check('the clock is m:ss', J('[0, 999, 59000, 61000, 125400, 3599000].map(campClock)').join() === '0:00,0:01,0:59,1:01,2:05,59:59');
 g.run(`C.t = 102000; C.kills = 5; C.waves[0].started = true; C.waves[1].started = true;`);
 const car = J(`campLoseLines(C, 'carrier')`), ear = J(`campLoseLines(C, 'earth')`), dbg = J(`campLoseLines(C, 'debug')`);
-check('the carrier lost: the cause, how long and how far, and a tip to launch early', car.length === 3 && car[0] === 'The carrier is lost.' && car[1] === 'You lasted 1:42: wave 2 of 3, kills: 5.' && /^Launch the wing early \(1\)/.test(car[2]), JSON.stringify(car));
-check('Earth lost: the cause, the same numbers, and a tip to send the fighters at them or guard', ear.length === 3 && ear[0] === "Earth's shield has failed." && ear[1] === car[1] && /2 attacks, 4 guards: do it early/.test(ear[2]), JSON.stringify(ear));
+check('the carrier lost: the cause, how long and how far, and a tip to launch early', car.length === 3 && car[0] === 'The carrier is lost.' && car[1] === 'You lasted 1:42: wave 2 of 3, kills: 5.' && car[2] === 'Launch the wing early (Q list): fighters draw fire. Keep moving.', JSON.stringify(car));
+check('Earth lost: the cause, the same numbers, and a tip to send the fighters at them or guard', ear.length === 3 && ear[0] === "Earth's shield has failed." && ear[1] === car[1] && ear[2] === 'Aliens at Earth shell it. Order Attack or Guard early (Q list).', JSON.stringify(ear));
+check('the tips name the fleet list by its key from the key table ({fleetkey}), never a digit: no order has a key of its own (card one-list-keys)', car[2].includes('(' + J(`campKeyVar('fleetkey')`) + ' list)') && ear[2].includes('(' + J(`campKeyVar('fleetkey')`) + ' list)') && J(`campKeyVar('fleetkey')`) === J(`CAMP_PANELS.panels.find(p => p.id === 'fleet').key`) && ![...car, ...ear].some(l => /\(\d\)|\b\d (attacks|guards|launches)\b|[{}]/.test(l)) && J(`['launch', 'attack', 'guard'].every(id => campPanelList(C, 'fleet').some(r => r.id === id))`), JSON.stringify([car[2], ear[2]]));
 check('the debug key\'s lose has its own words and no tip, never the raw key', dbg.length === 2 && dbg[0] === 'The level was ended with the debug key.' && !dbg.some(l => /camp\./.test(l)), JSON.stringify(dbg));
 check('a reason with no words of its own is "The level is lost." and a reason with odd characters is cleaned: never a raw key', J(`campLoseLines(C, 'nonsense')`)[0] === 'The level is lost.' && J(`campLoseLines(C, 'x.y/../z')`)[0] === 'The level is lost.' && J(`campLoseLines(C, undefined)`)[0] === 'The level is lost.');
 check('no battle (null, or one with no level) leaves the numbers out, keeps the cause and the tip, and does not throw', J(`campLoseLines(null, 'carrier')`).length === 2 && J(`campLoseLines(null, 'carrier')`)[0] === 'The carrier is lost.' && /^Launch the wing early/.test(J(`campLoseLines(null, 'carrier')`)[1]) && J(`campLoseLines({}, 'earth')`)[0] === "Earth's shield has failed.");

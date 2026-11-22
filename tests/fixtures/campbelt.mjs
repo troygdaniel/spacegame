@@ -82,7 +82,7 @@ export const BELT_WORDS = {
  "camp.bf.1.3.w2": "The mothership arrives with the last wave.",
  "camp.bf.1.3.w3": "Destroy the mothership to win. Missiles ({keymissile}) help.",
  "camp.l1.before.1": "Ceres belt. The cruiser is mining.",
- "camp.l1.before.2": "Fly over ore, or send the drones: {fleetkey}, then {rowmine}.",
+ "camp.l1.before.2": "Fly over ore, or send the drones: {fleetkey} list mines ore.",
  "camp.l1.after.1": "Mothership destroyed. The belt is clear.",
  "camp.l1.after.2": "Their wreck holds alien technology."
 };

@@ -4,7 +4,9 @@
 //   B. the fit puts those bounds inside the frame, centred, with the scale of the longer side
 //   C. the marks of a real battle of each level: places (not the warp point), the carrier, launched ships, convoys with where they head, aliens, the mothership, caches, relic, towers
 //   D. the legend lists only what is on the map; the colours are the radar's; the words are in content/text/ui.md; the key is Tab and not the mute key
-//   E. the scene calls it (its source is read: a scene is Phaser's) and the battle is NOT paused; a dry run of the drawing on a recording stand-in scene raises nothing
+//   E. the scene calls it (its source is read: a scene is Phaser's) and the battle is NOT paused; a dry run of the drawing on a recording stand-in scene raises nothing.
+//      With the two lists (card one-list-keys): Esc closes an open Q or P list first, then the map, and pauses only when neither is open; opening the map closes a list (the map has the arrows and Enter);
+//      Q or P over the map closes the map and opens the list; Enter over the map is never a missile
 // Run: node tests/campmap.mjs   (exit code 1 on a failed check)
 import { readFileSync as __rf } from 'node:fs';
 import { readFileSync } from 'node:fs';
@@ -78,10 +80,11 @@ const words = ['camp.ui.pausemap', 'camp.map.title', 'camp.map.footer', 'camp.ma
 check('every word of the map is in content/text/ui.md (not the key shown back)', words.every(k => J(`uiText(${JSON.stringify(k)}, { n: 3, name: 'X', km: '1,000' })`) !== k && J(`uiText(${JSON.stringify(k)}, { n: 3, name: 'X', km: '1,000' })`).length > 3), words.filter(k => J(`uiText(${JSON.stringify(k)})`) === k).join());
 check('every legend row fits one line of the right column: 27 letters at most with a number up to 99 (8-GEN saw "Convoys (1), a line to where each is hea" run off the panel), and the column has room for 27 letters of the 14 px monospace font', ['carrier', 'wing', 'convoy', 'alien', 'mother', 'tower', 'cache', 'relic'].every(k => J(`uiText('camp.map.${k}', { n: 99 })`).length <= 27) && 947 + 27 * 8.4 <= 1190, ['carrier', 'wing', 'convoy', 'alien', 'mother', 'tower', 'cache', 'relic'].map(k => J(`uiText('camp.map.${k}', { n: 99 })`).length).join());
 check('the key line and the pause card say the map key: "Tab map"', /Tab Map/.test(J(`campKeyLine()`)) && /^Tab /.test(J(`uiText('camp.ui.pausemap')`)) && J(`CAMPMAP.key`) === 'Tab');
-check('the map key is not the mute key (M mutes in every screen, src/meta.js) and not a key the Campaign flies, commands or debugs by', J(`CAMPMAP.key`) !== 'KeyM' && !/^(Key[WASDQIUM]|Arrow.*|Space|Digit[0-5]|Escape|Enter|Bracket.*|Backslash|Backquote)$/.test(J(`CAMPMAP.key`)) && /e\.code === 'KeyM'/.test(readFileSync(ROOT + '/src/meta.js', 'utf8')));
+check('the map key is not the mute key (M mutes in every screen, src/meta.js) and not a key the Campaign flies, commands or debugs by: it is no other direct key of the table (CAMP_KEYS), neither list\'s key (Q, P), no debug key, and CAMP_KEYS.map says the same key', J(`CAMPMAP.key`) !== 'KeyM' && !/^(Key[A-Z]|Arrow.*|Space|Digit\d|Escape|Enter|Semicolon|Slash|Period|Bracket.*|Backslash|Backquote)$/.test(J(`CAMPMAP.key`)) && J(`Object.keys(CAMP_KEYS).filter(id => id !== 'map' && CAMP_KEYS[id].codes.includes(CAMPMAP.key)).length`) === 0 && J(`CAMP_PANELS.panels.every(p => p.code !== CAMPMAP.key)`) && J(`CAMP_DEBUG.keys.every(r => r.code !== CAMPMAP.key)`) && J(`JSON.stringify(CAMP_KEYS.map.codes)`) === '["Tab"]' && /e\.code === 'KeyM'/.test(readFileSync(ROOT + '/src/meta.js', 'utf8')));
 
 // ---- E. the scene and a dry run of the drawing ----
-check('the scene installs the map\'s Tab key once in create, Esc closes the map before it can pause, Esc closes the map before it can pause, every frame paints it while it is open, and a card closes it', /campMapInstall\(this\)/.test(scene) && /campKeyCodes\('pause'\)\.indexOf\(c\) >= 0\) \{ if \(this\.mp\) campMapClose\(this\); else this\.showPause\(\)/.test(scene) && /if \(this\.mp\) campMapPaint\(this, time\)/.test(scene) && /campMapClose\(this\); \/\/ a card/.test(scene) && /this\.mp = null/.test(scene));
+check('the scene installs the map\'s Tab key once in create, Esc closes an open list first, then the map, and pauses only when neither is open, every frame paints the map while it is open, and a card closes it', /campMapInstall\(this\)/.test(scene) && (scene.match(/campMapInstall\(this\)/g) || []).length === 1 && /campKeyCodes\('pause'\)\.indexOf\(c\) >= 0\) \{ if \(listOpen\) campPanelsClose\(this\); else if \(this\.mp\) campMapClose\(this\); else this\.showPause\(\)/.test(scene) && /if \(this\.mp\) campMapPaint\(this, time\)/.test(scene) && /campMapClose\(this\); \/\/ a card/.test(scene) && /this\.mp = null/.test(scene));
+check('the map and the lists share the arrows and Enter, one at a time: opening the map closes an open list (campMapOpen), Q or P over the map closes the map and then opens the list, Enter over the map is never a missile, and the map is asked for its keys before the lists are', /campPanelsClose\(s\)/.test(draw.slice(draw.indexOf('function campMapOpen'), draw.indexOf('function campMapOpen') + 1200)) && /if \(this\.mp && !typing && \(CAMP_PANELS\.panels\.some\(p => p\.code === c\) \|\| campKeyIs\('missile', c\)\)\) \{ if \(campKeyIs\('missile', c\)\) return; campMapClose\(this\); \}/.test(scene) && scene.indexOf('campMapKey(this, c, e.shiftKey)') > 0 && scene.indexOf('campMapKey(this, c, e.shiftKey)') < scene.indexOf('campPanelKey(this.pn, C, c, now)'));
 check('the battle is not paused behind the map: no scene pause, no stop of the sim, in the drawing or in the scene\'s map lines', !/scene\.pause|\.pause\(\)|physics\.pause|timeScale/.test(draw + pure) && /update\(time, dt\)/.test(scene) && /this\.mode === 'play' && !C\.result/.test(scene));
 check('the pause card lists the map key (a line of its own, above the debug line)', /uiText\('camp\.ui\.pausemap'\), uiText\('camp\.ui\.pausepanels'/.test(scene));
 check('the pure file reaches nothing of the page or of Phaser; the drawing file masks nothing (no geometry mask: a ship past the frame is drawn on its edge)', !/\b(Phaser|document|window|localStorage|setTimeout|geometryMask|setMask)\b/.test(pure.replace(/\/\/.*$/gm, '')) && !/setMask|createGeometryMask/.test(draw));
@@ -104,11 +107,16 @@ check('the pure file reaches nothing of the page or of Phaser; the drawing file 
   check('Tab opens the map in the battle and Tab closes it', o1 === true && o2 === false);
   g.run(`__tab({ code: 'KeyM' }); __tab({ code: 'KeyW' }); __tab({ repeat: true });`);
   check('another key, and a held-down Tab, do nothing (M is the mute key and stays that)', J(`__ts.mp`) === null);
+  g.run(`__ts.pn = campPanelNew(); campPanelKey(__ts.pn, C1, 'KeyQ', 0); campPanelKey(__ts.pn, C1, 'ArrowDown', 0);`); const l0 = J(`[campPanelOpen(__ts.pn), __ts.pn.at]`);
+  g.run(`__tab()`); const l1 = J(`[!!__ts.mp, campPanelOpen(__ts.pn), __ts.pn.at]`);
+  g.run(`__tab()`); const l2 = J(`[!!__ts.mp, campPanelOpen(__ts.pn)]`);
+  g.run(`campPanelKey(__ts.pn, C1, 'KeyP', 0); __tab();`); const l3 = J(`[!!__ts.mp, campPanelOpen(__ts.pn)]`); g.run(`__tab();`);
+  check('Tab with the Q list open (its highlight on the second row) opens the map and CLOSES the list: the map has the arrows and Enter, so only one of them is open; Tab again closes the map and the list stays shut; the P list the same', l0.join() === 'fleet,1' && l1.join() === 'true,,0' && l2.join() === 'false,' && l3.join() === 'true,' && J(`__ts.mp`) === null, JSON.stringify([l0, l1, l2, l3]));
   g.run(`__tab({ target: { tagName: 'INPUT' } });`);
   check('a Tab typed in the command strip\'s box is not the map', J(`__ts.mp`) === null);
   for (const m of ['intro', 'won', 'pick', 'pause', 'lost', 'end']) { g.run(`__ts.mode = '${m}'; __tab();`); check(`Tab does nothing while the scene shows its "${m}" card`, J(`__ts.mp`) === null); }
   g.run(`__ts.mode = 'play'; __ts.leaving = true; __tab(); __ts.leaving = false; __ts.panel = true; __tab(); __ts.panel = false;`);
-  check('and nothing while the scene is leaving or a panel is up', J(`__ts.mp`) === null);
+  check('and nothing while the scene is leaving or its old panel flag is up', J(`__ts.mp`) === null);
   g.run(`__tab(); __ts.mode = 'won';`); const stillOpen = J(`!!__ts.mp`);
   g.run(`__tab();`);
   check('Tab closes an open map whatever the mode has become (a card that came up closes it too, from the scene)', stillOpen === true && J(`__ts.mp`) === null);

@@ -170,7 +170,10 @@ function campPanelRowState(C, row) {
     const t = campNavTarget(C, tr) || tr; if (!tr.moving && Math.hypot(t.x - C.carrier.x, t.y - C.carrier.y) - campNavStop(tr.kind, t) <= CAMP.nav.arrive) return no('there');
     return ok();
   }
-  if (row.blink) return campHas(C, 'blink') ? (campBlinkWhy(C) ? no('cooling', 'cooling') : ok()) : no('noblink');
+  if (row.blink) { // without the tech; cooling, with the seconds left filled in (the row showed "{s} s"); or ready
+    if (!campHas(C, 'blink')) return no('noblink'); if (!campBlinkWhy(C)) return ok();
+    const secs = Math.ceil((campBlinkCooldown(C) - (C.t - C.blinkAt)) / 1000); return { ok: false, state: CAMP_PANELS.why.cooling.replace('{s}', secs), short: CAMP_PANELS.shortWhy.cooling.replace('{s}', secs) };
+  }
   const r = campCheck(C, row.order, campPanelTargetArg(C, row));
   return r.ok ? ok() : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) };
 }

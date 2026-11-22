@@ -190,7 +190,7 @@ function campBriefSteps(P, level, i) {
 // ---- how: the keys this mission needs ----
 // The basics are for every mission, in the order they are used; what the mission's goals and bonus ask for is added. An order of a list (launch, attack, escort, mine; dock, emergency shields) shows the key that opens its list, Q or P, and says which list and which row (src/data_controls.js CAMP_PANELS: tests/campbrief.mjs checks they are there).
 const CAMPBRIEF_KEYS = {
-  get fly() { return [CAMP_KEYS.fly.k]; }, get fire() { return [CAMP_KEYS.fire.k]; }, get map() { return [CAMP_KEYS.map.k]; }, get zoom() { return [CAMP_KEYS.zoomout.k, CAMP_KEYS.zoomin.k, CAMP_KEYS.zoomreset.k]; }, // the keys of the table (CAMP_KEYS in src/data_controls.js), read when asked
+  get fly() { return [CAMP_KEYS.fly.k]; }, get fire() { return [CAMP_KEYS.fire.k]; }, get map() { return [CAMP_KEYS.map.k]; }, get zoom() { return [CAMP_KEYS.zoomout.k, CAMP_KEYS.zoomin.k]; }, // the keys of the table (CAMP_KEYS in src/data_controls.js), read when asked
   get missile() { return [CAMP_KEYS.missile.k]; },
   get wing() { return campKeyCaps('fleet'); }, get attack() { return campKeyCaps('fleet'); }, get escort() { return campKeyCaps('fleet'); }, get mine() { return campKeyCaps('fleet'); }, // rows of the fleet list: the key that opens it, read from the key table when asked (a remap is one change there)
   get dock() { return campKeyCaps('ship'); }, get shield() { return campKeyCaps('ship'); } // rows of the ship list

@@ -52,6 +52,7 @@ class Campaign extends Phaser.Scene {
     this.resume = !this.replay && this.via !== 'retry' && (this.P.levelDone | 0) === this.level && this.P.level === this.level && this.mi === campMissions(this.level).length - 1; // the level was won and the tab closed at the pick: the launch shows the level's story and the pick again, not a battle
     campReveal(!!this.P.revealed); // after the ending has been seen, level 3 is called the outpost (SPOILER, src/campaign.js)
     this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null; this.shown = {};
+    this.callSel = null; this.callUi = null; // a pilot's call of the battle before (a retry starts this same scene again): its highlight and its plate's objects are not this battle's (src/camporderdraw.js)
   }
   create() {
     if (typeof campWarpDue === 'function' && campWarpDue(this)) return; // a level that warps in starts with the warp cinematic, which comes back here with warped: true (src/campwarp.js)
@@ -450,7 +451,7 @@ class Campaign extends Phaser.Scene {
   // the bays of the cruiser: dimly lit in the picture, and bright while the wing leaves (the launch tubes, at the front of the pods) and while it comes home (the landing bays, at the back): the order to launch or recall can be seen on the ship
   syncBay() {
     const C = this.camp, c = C.carrier, B = CAMP_BAY;
-    if (!this.bayG) { this.bayG = this.add.graphics().setDepth(5.2); this.bayGlow = this.add.graphics().setDepth(5.3).setBlendMode('ADD'); }
+    if (!this.bayG || (this.bayG.active === false && !this.bayG.scene)) { this.bayG = this.add.graphics().setDepth(5.2); this.bayGlow = this.add.graphics().setDepth(5.3).setBlendMode('ADD'); }
     const g = this.bayG, h = this.bayGlow; g.clear(); h.clear();
     if (!this.bayAt) this.bayAt = { launch: -1e9, land: -1e9 };
     const L = campBayLight(C, this.bayAt), bays = campArtBays('cruiser'), cs = Math.cos(c.rot), sn = Math.sin(c.rot), d = bays.half[0], w = bays.half[1];

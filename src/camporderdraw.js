@@ -32,7 +32,7 @@ function campCallHasKeys(s) { return !!(s && s.camp && s.mode === 'play' && !s.m
 function campCallSel(s) {
   const v = s && s.camp && typeof campCallView === 'function' ? campCallView(s.camp) : null; if (!v) return 0;
   const key = v.id + ':' + v.pilot + ':' + (s.camp.call.n | 0);
-  if (!s.callSel || s.callSel.key !== key) s.callSel = { key, at: Math.max(0, v.def - 1) };
+  if (!s.callSel || s.callSel.key !== key || s.callSel.camp !== s.camp) s.callSel = { key, camp: s.camp, at: Math.max(0, v.def - 1) }; // of THIS battle: a retry starts the same scene again, and its first call has the same key
   return s.callSel.at;
 }
 
