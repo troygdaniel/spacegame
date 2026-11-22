@@ -623,6 +623,7 @@ const UI_TEXT = {
   'camp.say.shiparrived': '{name} has arrived.',
   'camp.say.shiplost': '{name} is lost.',
   'camp.o.deliverleft': 'Haulers home: {n}. Still flying: {left}.',
+  'camp.o.deliver.transport': 'Transport delivered: {got} of {need}.',
   'camp.b.nolost': 'Lose no ships',
   'camp.b.hull': 'Keep the hull above {pct} percent',
   'camp.b.ore': 'Mine {n} ore',

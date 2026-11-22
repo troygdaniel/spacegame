@@ -38,5 +38,14 @@ const t3 = J(`(() => { const shown = [], mk = () => new Proxy(function () {}, { 
   toast(s, 'Fighters, attack.'); s.time.now = 1200; toast(s, 'Missile away.'); s.time.now = 1400; toast(s, 'Power to shields.'); return shown; })()`);
 check('three short toasts in a row: the box holds the last two, as before', t3[2] === 'Missile away.\nPower to shields.', JSON.stringify(t3));
 
+// ---- 3. 1.1 has one Transport: its goal does not say "Haulers" ----
+// The HUD line, the briefing's goal (and the ship computer's summary, which reads the HUD line) said "Haulers delivered: 0 of 1." in a mission of one Transport that the rest of the game
+// calls "the transport" ("Transport is under way.", "Transport has arrived."). A deliver row may say `word: 'transport'`; 1.3's three haulers keep the old words.
+const g11 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); campStep(C, 1 / 30); return { hud: campObjective(C), brief: campHubBrief(campProgressNew(), 1, 0).objectives, sum: campSummary(C) }; })()`);
+check('1.1: the HUD goal says "Transport delivered: 0 of 1."', g11.hud === 'Transport delivered: 0 of 1.', g11.hud);
+check('1.1: the briefing\'s goal says the same, and the ship computer is told it', g11.brief.length === 1 && g11.brief[0] === 'Transport delivered: 0 of 1.' && g11.sum.indexOf('Goal: Transport delivered: 0 of 1.') >= 0, JSON.stringify([g11.brief, g11.sum.slice(0, 120)]));
+const g13 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 2 }); campStep(C, 1 / 30); return { hud: campObjective(C), brief: campHubBrief(campProgressNew(), 1, 2).objectives }; })()`);
+check('1.3: the three haulers keep "Haulers delivered"', /^Haulers delivered: 0 of 1\.$/.test(g13.hud) && g13.brief[0] === 'Haulers delivered: 0 of 1.', JSON.stringify(g13));
+
 if (failed) { console.log(`\nHUNT FLEET: ${failed} FAILED`); process.exit(1); }
 console.log('\nHUNT FLEET: all passed');
