@@ -1230,6 +1230,12 @@ const UI_TEXT = {
   'camp.say.rim7': 'Pirates ahead. Cover the haulers.',
   'camp.say.rim8': 'They are back. Cover the haulers.',
   'camp.say.rim9': 'Another raid. Hold the line.',
+  'camp.say.l1p.west': 'Pirates from the south-west. They want the miners.',
+  'camp.say.l1p.second': 'A second group, north-east. Split the squads.',
+  'camp.say.l1p.boats': 'Torpedo boats, heading for the miners. Tuck them in.',
+  'camp.say.l1p.haulboats': 'Torpedo boats ahead. Tuck the haulers in, or run.',
+  'camp.say.l1p.rear': 'Pirates on the last hauler. She is alone back there.',
+  'camp.say.l1p.again': 'More of them, on the last hauler again.',
   'camp.say.rim10': 'They keep coming. Stay on her.',
   // The three gauges (card space-game-systems-gauges, content/text/campaign-gauges.md)
   'camp.gauge.shields': 'SHIELDS',
