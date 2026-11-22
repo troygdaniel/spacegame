@@ -1,6 +1,7 @@
 // ---------- Campaign: the order lists, the drawing (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026) ----------
 // The Phaser half of src/camppanel.js, which says WHAT a list holds, what a key does and what a row says now. Nothing is on the screen until a list's key is pressed: then ONE list opens, a fleet list at the left (Q, or a part of it: W E R)
-// or a ship list at the right (P, or a part of it: O I U), below the gauges and the radar. A row is its words in plain language and, at the right, a word or two of the live state, or the reason it cannot be done now (the row is grey);
+// or a ship list at the right (P, or a part of it: O I U), right UNDER the gauges at the top right (card space-game-power-presets: the power list's three rows each carry their system's pip bar, the twin of the gauge's, and the highlighted row frames its gauge).
+//   campPanelPowerHi(s)      the dial (0 SHIELDS, 1 SPEED, 2 LASERS) whose row is highlighted in the open power list, else -1: the scene frames that gauge A row is its words in plain language and, at the right, a word or two of the live state, or the reason it cannot be done now (the row is grey);
 // a row that opens a part of the list shows that part's KEY in a cap at its left and an arrow at its right; the highlighted row has a bright bar; the one in force (a stance, a convoy order) is marked.
 // A list longer than CAMP_PANELS.show rows scrolls with the highlight, and says how many rows are below. The foot of the list names its keys (Up Down, Enter, Left back, Esc), read from the key table.
 // The target's line (its name, how far, its hull) is always on the screen, under the radar: A D S X pick it with no list open.
@@ -12,18 +13,18 @@
 // Everything is on the screen's own camera (scroll factor 0), so the zoom (src/camzoom.js) never scales it. tests/campanelsui.mjs checks the states on stand-ins.
 const CAMPPANELS_LOOK = {
   box: { w: 360, head: 30, row: 24, gap: 2, pad: 6, foot: 44 }, // px: the list's width, its heading's height, a row's height, the gap between rows, the gap under the heading, the foot (what is off the screen, and the keys)
-  top: 262, edge: 24, depth: 160, every: 250,                   // the list's y (the gauges and their lines take the top left, the radar the top right), its distance from the screen's edge, the depth (over the map, 150 to 156), ms between the words being made live
+  top: 262, topRight: 104, edge: 24, edgeRight: 4, depth: 160, every: 250, // the list's y: a left list under the lines of text at the left, a right list right under the gauges (the gauges end at about y 96, the radar is at the bottom right); its distance from the screen's edge (a right list ends 4 px from it, like the weapons gauge's bar that its pip bars sit under), the depth (over the map, 150 to 156), ms between the words being made live
   color: { left: CYAN, right: AMBER }, ink: { left: '#7fe9ff', right: '#ffd37a' },
   rowInk: { ok: '#e8f6ff', no: '#7f95a8', suffix: '#8fb4c8', why: '#ff9e7a', at: '#02101c' }, flash: 0xffffff,
   cap: { w: 24, h: 18, gap: 8 },                               // the key cap of a row that opens a part of the list (W E R, O I U), and the room after it: every row of a list that has such a row starts its words after the cap's place
-  tgt: { x: 20, y: 236, w: 216, bar: 3 }                        // the target's line under the radar: its distance from the right edge, its y, its width, its hull bar's height
+  tgt: { x: 20, y: 414, w: 216, bar: 3 }                        // the target's line over the radar (at the bottom right): its distance from the right edge, its y, its width, its hull bar's height
 };
 
 // where a list is: x, y, w, h of the whole of it, and the rows' places. rows: how many rows the list has in this mission: it is as tall as they are, up to CAMP_PANELS.show (a longer one scrolls and does not jump); none given: the full height
 function campPanelsGeometry(def, rows) {
   const K = CAMPPANELS_LOOK, B = K.box, right = def.side === 'right', n = Math.max(1, Math.min(CAMP_PANELS.show | 0, rows > 0 ? rows : CAMP_PANELS.show | 0));
-  const x = right ? W - K.edge - B.w : K.edge, ry = K.top + B.head + B.pad, lh = n * (B.row + B.gap) - B.gap;
-  return { x, y: K.top, w: B.w, h: B.head + B.pad + lh + B.pad + B.foot, n, head: { x, y: K.top, w: B.w, h: B.head }, rowH: B.row, rowY: i => ry + i * (B.row + B.gap), foot: { x, y: ry + lh + B.pad, w: B.w, h: B.foot }, list: { x, y: ry, w: B.w, h: lh } };
+  const x = right ? W - K.edgeRight - B.w : K.edge, top = right ? K.topRight : K.top, ry = top + B.head + B.pad, lh = n * (B.row + B.gap) - B.gap;
+  return { x, y: top, w: B.w, h: B.head + B.pad + lh + B.pad + B.foot, n, head: { x, y: top, w: B.w, h: B.head }, rowH: B.row, rowY: i => ry + i * (B.row + B.gap), foot: { x, y: ry + lh + B.pad, w: B.w, h: B.foot }, list: { x, y: ry, w: B.w, h: lh } };
 }
 function campPanelsKeep() { const T = CAMPPANELS_LOOK.tgt; return [[W - T.x - T.w - 8, T.y - 12, W, T.y + 22]]; }
 
@@ -39,6 +40,11 @@ function campPanelsInstall(s) {
   L.onPointer = p => campPanelsClick(s, p.x, p.y);
   if (s.input && s.input.on) s.input.on('pointerdown', L.onPointer);
   if (s.events && s.events.once) { const off = () => { try { if (s.input && s.input.off) s.input.off('pointerdown', L.onPointer); } catch (e) { /* gone */ } }; s.events.once('shutdown', off); s.events.once('destroy', off); }
+}
+// the dial whose row is highlighted in the open power list (the scene frames that gauge), else -1
+function campPanelPowerHi(s) {
+  const P = s && s.pn, C = s && s.camp; if (!P || !C || s.mode !== 'play' || typeof campPanelOpen !== 'function' || campPanelOpen(P) !== 'power') return -1;
+  const row = campPanelList(C, 'power')[P.at | 0]; return row && row.pip !== undefined ? CAMP_DIAL_PIPS.indexOf(row.pip) : -1;
 }
 // the list closes at once: a card, the map or the end took the screen
 function campPanelsClose(s) { if (s && s.pn && typeof s.pn === 'object') campPanelClose(s.pn); }
@@ -75,7 +81,13 @@ function campPanelsPaint(s, now) {
     const ink = at && st.ok ? K.rowInk.at : st.ok ? K.rowInk.ok : K.rowInk.no;
     if (st.key) { g.fillStyle(at ? 0x02101c : col, 1); g.fillRoundedRect(G.x + 10, y + (B.row - K.cap.h) / 2, K.cap.w, K.cap.h, 4); o.cap.setVisible(true).setPosition(G.x + 10 + K.cap.w / 2, y + B.row / 2).setText(st.key).setColor(at ? K.ink[def.side] : '#02101c'); } // the key that opens this part directly
     o.name.setVisible(true).setPosition(nx, y + B.row / 2).setText(st.label + (st.more ? '  >' : '')).setColor(ink);
-    o.suffix.setVisible(true).setPosition(G.x + G.w - 12, y + B.row / 2).setText(st.short || '').setColor(at && st.ok ? K.rowInk.at : st.marked ? K.ink[def.side] : st.ok ? K.rowInk.suffix : K.rowInk.why);
+    let sx = G.x + G.w - 12;
+    if (st.pip >= 0 && s.gaugeAnim) { // a power row: that system's pip bar at its right, the twin of the gauge's (the same animation and flash: both light together when Enter gives a pip), under the weapons gauge's bar; its key and its reason stand left of it
+      const Z = campHudGeom().cells[2].bar, d = CAMP_DIAL_PIPS.indexOf(st.pip), emer = C.t < C.power.until && st.pip === 1, by = y + (B.row - (Z.y1 - Z.y0)) / 2;
+      campBarDraw(g, { bar: { x0: Z.x0, y0: by, x1: Z.x1, y1: by + Z.y1 - Z.y0 } }, s.gaugeAnim.shown[st.pip], s.gaugeAnim.flash[st.pip], emer ? 0xffffff : [CAMP_GAUGE.colors.shields, CAMP_GAUGE.colors.speed, CAMP_GAUGE.colors.lasers][d]);
+      sx = Z.x0 - 10;
+    }
+    o.suffix.setVisible(true).setPosition(sx, y + B.row / 2).setText(st.short || '').setColor(at && st.ok ? K.rowInk.at : st.marked ? K.ink[def.side] : st.ok ? K.rowInk.suffix : K.rowInk.why);
   });
   const cur = V.rows[V.at], F = G.foot; // the foot: the highlighted row's full state (or its reason), what is off the screen, and the keys
   L.more.setVisible(true).setPosition(F.x + 12, F.y + 10).setText(cur && cur.state ? cur.state.charAt(0).toUpperCase() + cur.state.slice(1) : (V.below ? uiText('camp.ui.listmore', { n: V.below }) : '')).setColor(cur && !cur.ok ? K.rowInk.why : '#9fbdd1');

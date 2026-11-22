@@ -28,7 +28,7 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 
 **The ideas that make it a commander game.**
 
-- **Power management.** Six pips shared between weapons, shields and engines (like X-Wing's); shields mend by themselves at a rate the shield pips set; three gauges show where the energy goes.
+- **Power management.** Six pips shared between weapons, shields and engines (like X-Wing's); shields mend by themselves at a rate the shield pips set; three gauges at the top right show where the energy goes, and the power list (`I`) opens right under them with the same pip bars on its rows.
 - **Pilots ask for orders.** Timed radio calls with three choices (the miner's call in 1.1 has five: send all squads, Red, Green or Yellow, or stay) and real costs.
 - **A mission is a sequence of questions.** Mission 1.1 is the finished example: a patrol turns back, a distress call, an ambush with torpedo boats, a pirate leader who duels your cruiser. Something happens about every minute.
 - **Objectives and bonuses**, a score, and ranks that grow your wing.
@@ -58,7 +58,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 | `T` | the **yellow squad**: Attack the target, Guard the cruiser, Recall |
 | `P` | the **ship list**: rows that open Autopilot, Power, Dock and build; Warp blink ahead once you have that tech |
 | `O` | **autopilot**: Fly to the goal, Fly to the target, Fast burn to the goal, Fast burn to the target |
-| `I` | **power**: one more pip to shields, engines or weapons, Balance the power, Emergency shields (a pip row leaves the list open, to press again) |
+| `I` | **power**, which opens right under the three gauges at the top right: Shields, Engines and Weapons, each with its pip bar (the gauge's twin: both light together; the highlighted row frames its gauge), Enter gives one more pip and the list stays open; then Balance the power and Emergency shields |
 | `U` | **dock and build**: Dock at the outpost (aboard, in a level with none: Repair the hull, Build a fighter, Build an escort) |
 | `Up` `Down` `Enter` | in an open list: move the highlight, give the order (the list closes when the order is taken). On a row that opens a part, `Enter` or `Right` opens it |
 | `Left` | in a part's list: back to the fleet or the ship list |
@@ -66,7 +66,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 | `Space` (hold) | the turrets fire at ships in reach; they never fire on their own |
 | `Enter` | a homing missile at the target (only while no list is open) |
 | `A` `D` `S` `X` | the one target: the last or next hostile (nearest first), the nearest threat, clear it. A red bracket marks it and its name is under the radar; Attack goes at it, Fly to the target flies to it, `Enter` fires at it |
-| `J` `K` `L` `;` | power, directly: a pip to the shields, the engines, the weapons; `;` back to 2, 2, 2 (the `I` list has the same orders) |
+| `J` `K` `L` `;` | power, directly, one pip a press: a pip to the shields, the engines, the weapons; `;` back to 2, 2, 2 (the `I` list has the same orders) |
 | `Tab` | the map of the level: `Up` `Down` step the marks, `Enter` flies there (`Shift+Enter` fast), a click sets a mark, `V` scouts, `X` clears the trip |
 | `-` `=` `Backspace`, mouse wheel | zoom out, zoom in, reset the zoom (the view or the map) |
 | `/` `.` | type an order to the ship's computer; hold `.` and say it (both need a chat key: Settings > Keys) |

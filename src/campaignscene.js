@@ -29,7 +29,7 @@ const CAMP_MOUNT = { base: 3.2, dot: 1.7, hot: 2.8, aim: [7, 11], width: [1.5, 2
 const CAMP_BLIP = { gap: 70, flash: 90 }; // a turret's shot: at most one sound (sfx('turret', its number), src/audio.js) in gap ms of the battle's clock; the muzzle flash lasts flash ms
 const CAMP_SND = { blast: 45, hull: 90, shield: 90, earth: 250, wing: 55, far: 1600, min: 0.1 }; // the least gap, in ms of the battle's clock, between two sounds of one kind (a kill, a hull hit, a shield hit, a shot on Earth), so a busy fight does not pile them up
 const CAMP_ADDR = { used: false }; // the address (?campaign=N, src/title.js) opens the Campaign once per page load: coming back to the title from it must not open it again
-const CAMP_RADAR = { x: W - 118, y: 118, r: 98, range: 6000, fill: 0.9, rim: [2, 0.8], blip: 1 }; // the radar's centre and radius on the screen, and the px of space it shows from the carrier to its edge
+const CAMP_RADAR = { x: W - 118, y: H - 162, r: 98, range: 6000, fill: 0.9, rim: [2, 0.8], blip: 1 }; // the radar's centre and radius on the screen, and the px of space it shows from the carrier to its edge
 
 // (every start of the ready room passes {}: Phaser starts a scene with the data of its LAST start when it is given none, and the last may have been a dock's, with a battle that is long over in it)
 function campaignStart(s, level) { // the title's K: the ready room (src/camphubscene.js) of the mission the save says is next; a level asked for by number goes straight to that level, as the tune kit does
@@ -79,10 +79,10 @@ class Campaign extends Phaser.Scene {
     this.cameras.main.startFollow(this.sp[this.camp.carrier.id], true, 0.12, 0.12);
     this.k = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT,SPACE');
     this.hudG = this.add.graphics().setScrollFactor(0).setDepth(100);
-    this.hudBack = this.add.rectangle(0, CAMP.hud.y, CAMP.hud.plate.w, CAMP.hud.plate.min, 0x02060d, 0.4).setOrigin(0, 0).setScrollFactor(0).setDepth(99); // a dim plate under the left HUD column: a bright planet (Ceres at the start of 1.2) drawn through the white objective line and the bay line made them hard to read (card space-game-l1-mine-goal, docs/night/hunt-l1-rim.md D)
+    this.hudBack = this.add.rectangle(0, CAMP.hud.text.y - 6, CAMP.hud.plate.w, CAMP.hud.plate.min, 0x02060d, 0.4).setOrigin(0, 0).setScrollFactor(0).setDepth(99); // a dim plate under the left HUD column: a bright planet (Ceres at the start of 1.2) drawn through the white objective line and the bay line made them hard to read (card space-game-l1-mine-goal, docs/night/hunt-l1-rim.md D)
     this.keysBack = this.add.rectangle(W / 2, H - 35, W, 26, 0x02060d, 0.75).setScrollFactor(0).setDepth(99); // a thin strip under the bottom key line: a ship or a rock drawn through 'Tab Map  H Keys' was hard to read (card space-game-campaign-panels-ui)
     const t = (x, y, size, color) => this.add.text(x, y, '', uiFont(size, color, { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
-    this.hud = { ore: t(CAMP.hud.ore.x, CAMP.hud.ore.y, 14, '#ffd37a'), earth: t(24, 96, 14, '#9fe9ff'), bay: t(24, 130, 14, '#9fe9ff'), wave: t(24, 152, 14, '#ffd37a'), mother: t(W / 2 - 150, 18, 14, '#ff9ec0'), blink: t(24, 174, 14, '#7fe9ff'), // ore: under the speed and laser dials; the lines under the gauges (CAMP.hud.text) are put by flowHud, each where the lines above it end
+    this.hud = { ore: t(campHudGeom().ore.x, campHudGeom().ore.y, 14, '#ffd37a').setOrigin(1, 0), earth: t(24, 96, 14, '#9fe9ff'), bay: t(24, 130, 14, '#9fe9ff'), wave: t(24, 152, 14, '#ffd37a'), mother: t(W / 2 - 150, 18, 14, '#ff9ec0'), blink: t(24, 174, 14, '#7fe9ff'), // ore: under the speed and laser dials; the lines under the gauges (CAMP.hud.text) are put by flowHud, each where the lines above it end
       obj: t(24, 196, 14, '#ffffff'), nav: t(24, 218, 14, '#7fe9ff'), post: t(24, 240, 14, '#ffb454'), arrow: t(0, 0, 13, '#ffd37a').setOrigin(0.5), keys: this.add.text(24, H - 44, campKeyLine(), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
     if (typeof campGaugesMake === 'function') { this.hud.gauges = campGaugesMake(this, uiFont); this.gaugeAnim = campGaugeAnimNew(this.camp.power.p); this.gaugeAt = performance.now(); } // the three gauges (card space-game-systems-gauges, src/camphud.js): SHIELDS (the hull under it), SPEED, LASERS, a bar of power segments beside each; they replace the W S E pips
     this.powerKey = this.camp.power.base.join(); // the setting as it was saved: a change of it is saved when it is made (update)
@@ -526,7 +526,7 @@ class Campaign extends Phaser.Scene {
     const F = campHudFlow(ids.map(id => ({ id, show: !!(H[id] && H[id].text), h: id === 'earth' ? 12 : 0 })));
     ids.forEach(id => { if (H[id] && H[id].setY && F.ys[id] !== undefined) H[id].setY(F.ys[id]); });
     if (C.earth && F.ys.earth !== undefined) bar(24, F.ys.earth + 18, 220, C.earth.shield / C.earth.max, 0x38e1ff);
-    if (this.hudBack && this.hudBack.setSize) this.hudBack.setSize(CAMP.hud.plate.w, Math.max(CAMP.hud.plate.min, F.bottom + CAMP.hud.plate.pad - CAMP.hud.y)); // the dim plate under the column follows its length
+    if (this.hudBack && this.hudBack.setSize) this.hudBack.setSize(CAMP.hud.plate.w, Math.max(CAMP.hud.plate.min, F.bottom + CAMP.hud.plate.pad - (CAMP.hud.text.y - 6))); // the dim plate under the column follows its length
   }
   // the gauges and the radar
   paintHud() {
@@ -534,7 +534,7 @@ class Campaign extends Phaser.Scene {
     g.clear();
     if (this.hud.gauges && this.gaugeAnim) { // the three gauges and their power bars (src/camphud.js): the dials, the hull bar under the shields, the bars easing to the pips
       const nowMs = performance.now(); campGaugeAnim(this.gaugeAnim, C.power.p, Math.min(100, nowMs - (this.gaugeAt || nowMs))); this.gaugeAt = nowMs;
-      campGaugesPaint(g, this.hud.gauges, C, this.gaugeAnim, nowMs);
+      campGaugesPaint(g, this.hud.gauges, C, this.gaugeAnim, nowMs, typeof campPanelPowerHi === 'function' ? campPanelPowerHi(this) : -1); // (the dial of the highlighted row of the power list gets a frame: src/campanelsdraw.js)
     }
     if (typeof campRivalHud === 'function') campRivalHud(this, g, bar); // a rival ship's name, shield and hull and the warning of its phase (src/camprivaldraw.js)
     const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);

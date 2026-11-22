@@ -104,9 +104,9 @@ const CAMP_PANELS = {
       { id: 'burntarget', fly: 'target', burn: 1, label: 'Fast burn to the target', help: 'A fast burn to the target' }
     ] },
     { id: 'power', parent: 'ship', side: 'right', key: 'I', code: 'KeyI', title: 'POWER', tab: 'Power', name: 'the power list', rows: [ // the ship's power (docs/CAMPAIGN.md "Ship systems"), the dials' order; J K L ; do the first four directly, and each row shows that key
-      { id: 'shields', order: 'power', arg: 'shields', stay: 1, label: 'Shields: one more pip', help: 'A pip of power to the shields' },
-      { id: 'engines', order: 'power', arg: 'engines', stay: 1, label: 'Engines: one more pip', help: 'A pip of power to the engines' },
-      { id: 'weapons', order: 'power', arg: 'weapons', stay: 1, label: 'Weapons: one more pip', help: 'A pip of power to the weapons' },
+      { id: 'shields', order: 'power', arg: 'shields', stay: 1, pip: 1, label: 'Shields: one more pip', help: 'A pip of power to the shields' }, // pip: the index of the system in C.power.p (weapons, shields, engines): the row draws that system's pip bar, the same as its gauge's, and lights its gauge when it is the highlighted row (src/campanelsdraw.js; card space-game-power-presets)
+      { id: 'engines', order: 'power', arg: 'engines', stay: 1, pip: 2, label: 'Engines: one more pip', help: 'A pip of power to the engines' },
+      { id: 'weapons', order: 'power', arg: 'weapons', stay: 1, pip: 0, label: 'Weapons: one more pip', help: 'A pip of power to the weapons' },
       { id: 'balance', order: 'balance', stay: 1, label: 'Balance the power', help: 'Back to 2 / 2 / 2' },
       { id: 'emergency', order: 'emergency', label: 'Emergency shields', help: 'Shields get 4 pips for 10 s' }
     ] },
