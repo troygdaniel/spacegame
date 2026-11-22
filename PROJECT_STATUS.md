@@ -1,6 +1,6 @@
 # Project status
 
-**Updated: 21 Nov 2026, written against main `67bb072`.** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
+**Updated: 21 Nov 2026, written against main `7e7811b`.** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
 
 ## In one minute
 
