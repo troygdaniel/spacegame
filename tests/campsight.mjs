@@ -118,7 +118,7 @@ console.log('E. the marks and the edge arrows');
   g.run('window.__arr = (z) => campSightArrows(C, { x: C.carrier.x - W / 2, y: C.carrier.y - H / 2 }, W, H, z)');
   let ar = J('__arr(1)');
   check('a group that is off the screen gets an arrow at the edge, pointing at it (east: the right edge, angle 0)', ar.length === 2 && ar.some(a => a.x > 1200 && Math.abs(a.angle) < 0.2 && a.n === 2), JSON.stringify(ar));
-  check('the group to the north gets one at the top edge, pointing up', ar.some(a => a.y < 60 && Math.abs(a.angle + Math.PI / 2) < 0.2 && a.n === 1));
+  check('the group to the north gets one near the top, pointing up, and clear of every rectangle of the HUD (the arrow keeps out of the plates, as the goal\'s does)', ar.some(a => a.n === 1 && a.y < 200 && a.angle < -0.8 && a.angle > -2.4 && !J('CAMP.nav.arrow.keep').some(r => a.x >= r[0] && a.x <= r[2] && a.y >= r[1] && a.y <= r[3])), JSON.stringify(ar));
   check('each arrow says how many, what and how far', ar.every(a => typeof a.what === 'string' && a.what.length > 0 && a.dist > 2900 && a.dist < 5200), JSON.stringify(ar.map(a => [a.what, Math.round(a.dist)])));
   ar = J('__arr(0.335)');
   check('zoomed out to where they are on the screen there is no arrow for them (the first at 5000 px: 1675 px of screen from the middle is still off; the north one at 3000 px: 1005 px, off)', ar.length === 2);
