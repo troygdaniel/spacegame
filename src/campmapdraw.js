@@ -47,6 +47,7 @@ function campMapClose(s) {
 
 function campMapOpen(s) {
   if (s.mp || !s.camp) return;
+  if (typeof campPanelsClose === 'function') campPanelsClose(s); // the map has the arrows and Enter now: an open Q or P list closes
   const C = s.camp, F = CAMPMAP.frame, P = CAMPMAP_PANEL, L = (C.L || CAMP.levels[C.level]);
   const base = campMapFit(campMapBounds(C.level, false, C.L), F), wholeBase = campMapFit(campMapBounds(C.level, true, C.L), F); // wholeBase: the whole system fitted: where zooming out ends (zMin), and where the view's centre goes as it does
   const mp = s.mp = { objs: [], whole: false, wholeBase, zMin: campMapZMin(base, wholeBase, CAMPZOOM.map.min), nameObjs: [], base, fit: Object.assign({}, base), z: 1, zWant: 1, namesZ: 1, tAt: null, userSel: false, leg: [] }; // base: the level fitted to the frame; fit: what is drawn and clicked through, the base at zoom z (src/campzoom.js, campMapView)
@@ -272,22 +273,19 @@ function campMapTake(s, row) {
   const C = s.camp; if (!C || !row || row.kind !== 'lane' || C.result) return false;
   const r = campOrder(C, 'lane', row, 'click'); toast(s, r.say, r.ok ? '#b8f0ff' : '#ffb454'); if (s.mp) s.mp.dirty = true; return !!r.ok;
 }
-// a key while the map is open (card space-game-two-hands-keys): A and D (and Up and Down) step the marks, Left and Right go to the last or the next group, 7 flies there and 9 burns there (the SHIP panel's keys: the table's goal and burn rows),
-// Enter flies there too (Shift+Enter fast), X clears the destination. The fleet keys (1 2 3 4 W E R, S, Q) are not the map's: they go on to the panels. true when the key was the map's.
+// a key while the map is open (card one-list-keys): Up and Down step the marks, Left and Right go to the last or the next group, Enter flies there (Shift+Enter fast), V scouts there, T takes a lane,
+// X clears the trip. The digits and A D are not the map's any more (no key is reused: A and D are the target's). true when the key was the map's.
 function campMapKey(s, code, shift) {
   const mp = s.mp; if (!mp) return false;
   const rows = mp.rows, at = Math.max(0, rows.findIndex(r => r.id === mp.selId));
   const set = i => { if (rows.length) { mp.selId = rows[((i % rows.length) + rows.length) % rows.length].id; mp.userSel = true; } return true; }; // a choice in the list is what the zoom is about (campMapFocus)
-  if (campKeyCodes('last').indexOf(code) >= 0 || code === 'ArrowUp') return set(at - 1);
-  if (campKeyCodes('next').indexOf(code) >= 0 || code === 'ArrowDown') return set(at + 1);
+  if (code === 'ArrowUp') return set(at - 1);
+  if (code === 'ArrowDown') return set(at + 1);
   if (code === 'ArrowLeft' || code === 'ArrowRight') {
     const groups = rows.map(r => r.group).filter((g, i, a) => a.indexOf(g) === i); if (!groups.length) return true;
     const gi = groups.indexOf(rows[at] ? rows[at].group : ''), next = groups[(gi + (code === 'ArrowRight' ? 1 : -1) + groups.length) % groups.length];
     return set(rows.findIndex(r => r.group === next));
   }
-  const goal = campKeyRow('goal'), burn = campKeyRow('burn');
-  if (goal && campRowCodes(goal).indexOf(code) >= 0) { if (rows[at]) campMapFly(s, rows[at], false); return true; } // 7: fly there
-  if (burn && campRowCodes(burn).indexOf(code) >= 0) { if (rows[at]) campMapFly(s, rows[at], true); return true; } // 9: a fast burn there (the wing must be aboard)
   if (code === 'Enter' || code === 'NumpadEnter') { if (rows[at]) campMapFly(s, rows[at], !!shift); return true; } // Enter: regular speed; Shift+Enter: fast
   if (code === 'KeyV') { const row = rows[at]; if (row) campMapScout(s, row); return true; } // V: send a scout to the chosen place: the row that is marked in the list (a click on a mark chooses it too; the place a trip is flying to stays SET, with its buttons, and is not what V is about: card space-game-hunt-l1-fleet)
   if (code === 'KeyT') { const row = rows[at]; if (row && row.kind === 'lane') { campMapTake(s, row); return true; } return false; } // T: take the lane that is chosen (marked in the list), at a fork in the road

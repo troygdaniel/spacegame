@@ -1,6 +1,6 @@
 // ---------- Campaign: the pilots ask for orders (card space-game-order-calls; Troy, 21 Nov 2026) ----------
 // "The fights were not interactive and the escorts were boring: I want to direct the fleet more." A pilot of the wing radios what he sees and asks what to do. The fight goes on; a small prompt
-// (src/camporderdraw.js) shows three choices on 1 2 3 and the pilot waits a few seconds. No answer, and he takes the cautious one himself and says so. Each choice is a real order or a real cost in the sim:
+// (src/camporderdraw.js) shows three choices as a small list (Up, Down, Enter) and the pilot waits a few seconds. No answer, and he takes the cautious one himself and says so. Each choice is a real order or a real cost in the sim:
 // the wing's own orders (src/campwing.js), a missile out of the magazine, ore for the shield, the emergency power, or the enemy turned on the cruiser. At most one call in CAMP_CALLS.gap seconds.
 // The sim half: plain numbers and strings (no Phaser, no page; tests/camporders.mjs runs it in Node), and nothing in it rolls a die: the same flight makes the same calls.
 //
@@ -15,12 +15,11 @@
 //   campCallAnswer(C, n, how)   n: 1, 2 or 3 (0: the pilot's own pick); how: 'key', 'bot', 'late'; { ok, id, pick } and an event { type: 'call', stage: 'answer', ... }
 //   campCallView(C)             what the prompt draws: null, or { id, pilot, line, left, total, def, rows: [{ n, pick, label, def }] }
 //   campCallOpen(C)             a call is waiting for an answer (the slow-time card reads this: the battle runs slow while it is true)
-//   campCallKeyNum(code)        1 to 3 for Digit1 to Digit3 and Numpad1 to Numpad3, else 0
 //   C.timeScale                 (optional, set by the command-time card) the battle's speed against the player's seconds: the pilot's clock counts the player's seconds, not the slowed battle's
 const CAMP_CALLS = {
   first: 40,       // s of the mission's clock before the first call may come (the first minute's hints, src/campnudge.js, are said first: a call at 20 s took their turn)
   gap: 25,         // s from one call opening to the next one that may open
-  answer: 8,       // s the pilot waits for a 1, 2 or 3
+  answer: 8,       // s the pilot waits for an answer
   again: 70,       // s before the same type of call is made again
   pilots: 4,       // the callsigns of src/campchatter.js, taking turns
   wound: 0.4,      // a wingman at this share of his hull or less is "hit and burning"
@@ -103,7 +102,6 @@ const campCallType = id => CAMP_CALL_TYPES.find(t => t.id === id) || null;
 // ---- the state and the tick ----
 function campCallsNew(C) { return { n: 0, next: 0, open: null, last: {}, seen: {}, log: [] }; }
 function campCallOpen(C) { return !!(C && C.call && C.call.open); } // (a function declaration: the command-time card's test puts its own in its place)
-function campCallKeyNum(code) { const m = /^(?:Digit|Numpad)([123])$/.exec(String(code || '')); return m ? +m[1] : 0; }
 
 function campCallsTick(C, dt) {
   if (!C || C.result) return;

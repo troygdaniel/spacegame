@@ -7,7 +7,7 @@
 //   RUN FOR IT  full speed to its goal (CAMP.convoyOrders.run times its own speed; a miner goes home), with no cover: it is out from under the shield, and the escorts must keep the way clear.
 //   CARRY ON    back to its own course: the order is cancelled.
 // The cruiser's hull blocks, too, as it always did: a shot or a torpedo flies on until it touches a ship, and the cruiser between the shooter and the ship behind it is the first it touches (tests/campconvoy.mjs).
-// The pure half (no Phaser, no page; tests/campconvoy.mjs runs it in Node). The same rules for the page CONVOY of the FLEET panel (src/data_controls.js CAMP_PANELS), the strip and the ship's voice: all of them are
+// The pure half (no Phaser, no page; tests/campconvoy.mjs runs it in Node). The same rules for the convoy rows of the fleet list (src/data_controls.js CAMP_PANELS), the strip and the ship's voice: all of them are
 // campOrder(C, 'convoy', words).
 //   campConvoyOrder(C, words, dry)   the order: words say the verb ('tuck in', 'hold here', 'run for it', 'carry on') and may name a ship ('tuck in Hauler 2'); { ok, code, say } (codes ctuck chold crun ccarry; refusals cnone cwhat);
 //                                    dry: the answer and nothing done (campCheck)

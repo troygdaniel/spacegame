@@ -10,6 +10,6 @@ The words of the Campaign's one target (card space-game-two-hands-keys): A, D an
 | camp.no.tgtrange | The target is out of missile range, pilot. |
 | camp.ui.tgt | TARGET  {name}  {km} km |
 | camp.ui.tgtnone | TARGET  none |
-| camp.ui.tgtkeys | {keylast} {keynext} {keynear}  {keyclear} clear |
+| camp.ui.tgtkeys | {keylast} {keynext} {keynear} pick a target |
 | camp.ui.callhead | PILOT CALL |
 | camp.ui.tgtclear | {keyclear} clear |

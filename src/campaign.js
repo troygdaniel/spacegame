@@ -292,7 +292,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 238], [1056, 0, 1280, 226], [360, 0, 920, 152], [0, 656, 1020, 720]] // (the two panels' own rectangles are added by the scene: campPanelsKeep, src/campanelsdraw.js) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 238], [1056, 0, 1280, 226], [360, 0, 920, 152], [0, 656, 1020, 720]] // (the target line's own rectangle is added by the scene: campPanelsKeep, src/campanelsdraw.js) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {
