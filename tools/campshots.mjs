@@ -201,8 +201,9 @@ try {
     const st = () => j(`(() => { const s = ${SC}, P = s.pn; return { open: P.open, at: P.at, top: P.top, ships: s.camp.ships.filter(u => u.team === 'earth').length, tgt: s.camp.tgt }; })()`);
     await t.run(300); note('start', JSON.stringify(await st())); await snap('panels-01-no-list'); await boxShot('panels-01a-target-line', await tgtBox()); // no list: only the target's line
     await keyOn('KeyQ'); await t.run(300); note('Q', JSON.stringify(await st())); await snap('panels-01b-fleet-open'); await panelShot('panels-01c-fleet', 'fleet');
-    await keyOn('KeyE'); await t.run(300); note('E (from the fleet list: the fighters list)', JSON.stringify(await st())); await snap('panels-01f-fighters-open'); await panelShot('panels-01g-fighters', 'fighters');
-    await keyOn('ArrowLeft'); await t.run(300); note('Left (back to the fleet list, on the Fighters row)', JSON.stringify(await st())); await panelShot('panels-01h-fleet-back', 'fleet');
+    await keyOn('KeyW'); await t.run(300); note('W (from the fleet list: the all-squads list)', JSON.stringify(await st())); await snap('panels-01f-squads-open'); await panelShot('panels-01g-squads', 'squads');
+    await keyOn('KeyE'); await t.run(300); note('E (the red squad list)', JSON.stringify(await st())); await panelShot('panels-01g2-red', 'red');
+    await keyOn('ArrowLeft'); await t.run(300); note('Left (back to the fleet list, on the Red squad row)', JSON.stringify(await st())); await panelShot('panels-01h-fleet-back', 'fleet');
     await keyOn('KeyP'); await t.run(300); note('P (the fleet list closes, the ship list opens)', JSON.stringify(await st())); await snap('panels-01d-ship-open'); await panelShot('panels-01e-ship', 'ship');
     await keyOn('KeyI'); await t.run(300); await keyOn('Enter'); await t.run(300); note('I, Enter (the power list: a pip to the shields, the list stays open)', JSON.stringify(await st()), await j(`JSON.stringify(${SC}.camp.power.p)`)); await snap('panels-01i-power-open'); await panelShot('panels-01j-power', 'power');
     await goTo('balance'); await keyOn('Enter'); await keyOn('Escape'); await t.run(200); // the power as it was

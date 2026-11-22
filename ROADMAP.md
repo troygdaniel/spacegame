@@ -27,7 +27,7 @@ Raised again when Troy reports on 1.1, or says the game asks too much attention.
 
 Each says when to raise it. None starts without Troy's yes.
 
-1. **Fleet groups (numbered).** Name groups of small ships (A, B, C...), assign ships, give an order to a group instead of the whole wing. Three built-in groups exist (Fighters, Escorts, All); numbered ones wait until ranks give a bigger wing. *Raise when:* orders, fleet code, ranks. *Open:* how ships join a group (key, strip, automatic by type), how many.
+1. **Fleet groups (numbered).** Name groups of small ships (A, B, C...), assign ships, give an order to a group instead of the whole wing. The fighters' three squads (Red, Green, Yellow: card `space-game-fighter-squads`, Troy, 22 Nov 2026) are the first part of this and are built, with Fighters, Escorts and All; numbered ones wait until ranks give a bigger wing. *Raise when:* orders, fleet code, ranks. *Open:* how ships join a group (key, strip, automatic by type), how many.
 2. **Command the fleet from the map.** Select a group or ships on the Tab map and send them to a place or at a target: an order menu on click, right-click for the smart order, group selectors, order lines. The sim side (orders with explicit targets and groups) is built; the map screen is parked with its work in progress kept on a branch. *Depends on:* idea 1 for groups.
 3. **A second carrier** at a high rank, long term: a second carrier you command, small ships split between them. *Raise when:* ranks, fleet groups or the ready room are touched.
 4. **The call-in supply ship** for other systems: dock anywhere, shielded, it withdraws instead of dying. About two thirds built, parked. It is the first step of the colonisation supply chain in the Dying Earth chapter (below).
