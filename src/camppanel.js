@@ -97,7 +97,10 @@ function campPanelRun(C, row, how) {
     if (!tr.moving && d - campNavStop(tr.kind, t) <= CAMP.nav.arrive) return { ok: false, say: uiText('camp.nav.there', { name: tr.name }) };
     const r = campNavFly(C, tr, !!row.burn, how || 'key'); return r.ok ? { ok: true, say: uiText('camp.nav.say', { name: tr.name, km: campNavKm(d) }) } : r;
   }
-  if (row.fly === 'objective') { const r = campNavCheck(C, (row.burn ? 'fast ' : '') + 'the objective'); if (r.ok) campNavDo(C, r, how); return r; }
+  if (row.fly === 'objective') { // the autopilot to the goal; a burn with a ship out is refused the first time (the list stays open) and the second Enter recalls the wing and burns (src/campnav.js)
+    const r = campNavCheck(C, (row.burn ? 'fast ' : '') + 'the objective'); if (!r.ok || !r.row) return r;
+    const f = campNavFly(C, r.row, !!r.fast, how || 'key'); return f.ok ? { ok: true, say: f.say || r.say } : f;
+  }
   return campOrder(C, row.order, campPanelTargetArg(C, row), how || 'key');
 }
 

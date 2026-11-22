@@ -73,7 +73,7 @@ export const BELT_WORDS = {
  "camp.bf.1.1.w4": "Finish by destroying every alien that comes.",
  "camp.bf.1.1.n1": "Welcome aboard, Commander. The three rings to scan are on the map: Tab opens it in flight.",
  "camp.bf.1.1.n2": "Any ship of ours inside a ring scans it. Raiders will answer, so keep the wing close and shoot what comes.",
- "camp.bf.1.1.n3": "The arrow keys fly the cruiser. Hold Space to fire the turrets. {keylaunch} launches the wing. Tab opens the map.",
+ "camp.bf.1.1.n3": "The arrow keys fly the cruiser. Hold Space to fire the turrets. {fleetkey} opens the fleet orders: launch the wing. Tab opens the map.",
  "camp.bf.1.2.w1": "3 haulers leave Vesta for Ceres, 15 seconds apart.",
  "camp.bf.1.2.w2": "2 must reach Ceres. All 3 earns a bonus.",
  "camp.bf.1.2.w3": "3 waves of raiders come in from the east.",
@@ -82,7 +82,7 @@ export const BELT_WORDS = {
  "camp.bf.1.3.w2": "The mothership arrives with the last wave.",
  "camp.bf.1.3.w3": "Destroy the mothership to win. Missiles ({keymissile}) help.",
  "camp.l1.before.1": "Ceres belt. The cruiser is mining.",
- "camp.l1.before.2": "Fly over ore, or send the drones: {keymine} mines ore.",
+ "camp.l1.before.2": "Fly over ore, or send the drones: {fleetkey}, then {rowmine}.",
  "camp.l1.after.1": "Mothership destroyed. The belt is clear.",
  "camp.l1.after.2": "Their wreck holds alien technology."
 };

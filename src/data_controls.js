@@ -88,7 +88,7 @@ const campKeyCodes = id => (CAMP_KEYS[id] || { codes: [] }).codes;
 const campKeyIs = (id, code) => campKeyCodes(id).indexOf(code) >= 0;
 // the rows the H page and Settings list for the two lists: each list's key and what is in it (the list itself names every row when it is open), then the keys every open list shares
 function campPanelKeyRows() {
-  const sub = 'THE TWO LISTS', inIt = { fleet: 'launch, attack, convoy', ship: 'autopilot, dock, shields' };
+  const sub = 'THE TWO LISTS', inIt = { fleet: 'launch, attack, convoy', ship: 'autopilot, dock, shield' };
   return CAMP_PANELS.panels.map(p => ({ k: [p.key], t: p.title.charAt(0) + p.title.slice(1).toLowerCase() + ': ' + inIt[p.id], sub })).concat([
     { k: [CAMP_KEYS.up.k, CAMP_KEYS.down.k], t: 'In a list: move the highlight', sub }, { k: [CAMP_KEYS.pick.k], t: 'In a list: give the order', sub }, { k: [CAMP_KEYS.pause.k], t: 'Close the list (its own key too)', sub }]);
 }

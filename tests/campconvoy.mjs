@@ -1,7 +1,9 @@
-// smoke: the convoy orders: tuck in, hold here, run for it, carry on: the orders and who takes them, how the ships move, the cover of the cruiser's shield, the hull that blocks, the voice, the FLEET panel's third page and the words (plain Node, no Chrome)
-// Card space-game-convoy-orders (src/campconvoy.js, CAMP.convoyOrders in src/campaign.js, the page CONVOY of CAMP_PANELS in src/data_controls.js).
+// smoke: the convoy orders: tuck in, hold here, run for it, carry on: the orders and who takes them, how the ships move, the cover of the cruiser's shield, the hull that blocks, the voice, the four convoy rows of the one fleet list (Q, Up and Down, Enter) and the words (plain Node, no Chrome)
+// Card space-game-convoy-orders (src/campconvoy.js, CAMP.convoyOrders in src/campaign.js, the four convoy rows of CAMP_PANELS' fleet list in src/data_controls.js).
+// The keys are as card one-list-keys left them (22 Nov 2026): Q opens the ONE list of fleet orders; each convoy order is a row of it (nothing cycles, nothing settles, no pages, no digits), and the rows are
+// left out of the list in a mission that has no convoy and no escorted ship (their `when: 'convoy'`).
 //   A. the orders           B. how the ships move       C. the cover                  D. the hull that blocks
-//   E. the voice and strip  F. the FLEET panel's page   G. the words                  J. the scene's drawing       H. a battle with orders      I. determinism
+//   E. the voice and strip  F. the fleet list's rows    G. the words                  J. the scene's drawing       H. a battle with orders      I. determinism
 // Run: node tests/campconvoy.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
@@ -175,36 +177,38 @@ console.log('E. the voice and the strip');
   check('the order the voice makes is the same order: the transport and the hauler run', r.ok && J(`campConvoyState(C)`) === 'run');
 }
 
-// ---------- F. the FLEET panel's third page ----------
-console.log('F. the FLEET panel\'s page CONVOY');
+// ---------- F. the fleet list's convoy rows ----------
+console.log('F. the fleet list\'s convoy rows');
 {
+  // press through a list as the player does: the list's key (from a closed list, so the highlight is on the top row), Down to the row, Enter. null when the row is not in this mission's list
+  g.run(`window.__pick = (P, C, id, rowId, now) => { const def = CAMP_PANELS.panels.find(p => p.id === id), i = campPanelList(C, id).findIndex(r => r.id === rowId); if (i < 0) return null; campPanelClose(P); campPanelKey(P, C, def.code, now); for (let k = 0; k < i; k++) campPanelKey(P, C, 'ArrowDown', now); return campPanelKey(P, C, 'Enter', now); };
+    window.__FL = CAMP_PANELS.panels.find(p => p.id === 'fleet'); window.__cv = () => campPanelRows(C, 'fleet').filter(r => /^c(tuck|run|hold|carry)$/.test(r.id));`);
   g.run('__new(); __quiet()');
-  g.run(`window.__t = __hauler('t1', 'Transport', 400, 0, 5000, 0); window.__P = campPanelNew(); campPanelKey(__P, C, 'KeyQ', 0); campPanelKey(__P, C, 'KeyQ', 10);`);
-  check('FLEET has three pages: the orders, the stances, the convoy (CAMP_PANELS.pages: 3), flipped with the page key Q, and the third page is the 2nd press; SHIP has two (BUILD)', J('campPanelPages("fleet")') === 3 && J('__P.page.fleet') === 2 && J('campPanelPages("ship")') === 2);
-  const rows = J('campPanelRows(C, "fleet", 2)');
-  check('the third page has four rows: Tuck in, Hold here, Run for it, Carry on, numbered 1 to 4, all of them possible with a convoy out', rows.map(r => r.label).join() === 'Tuck in,Hold here,Run for it,Carry on' && rows.map(r => r.n).join() === '1,2,3,4' && rows.every(r => r.ok), JSON.stringify(rows));
-  check('the row ids are their own (they do not clash with the stances\' "hold")', new Set(J('CAMP_PANELS.panels[0].rows.concat(CAMP_PANELS.panels[0].page2.rows, CAMP_PANELS.panels[0].page3.rows).map(r => r.id)')).size === 16); // (16: the FLEET orders are seven since the two hands: card space-game-two-hands-keys, the stance and the convoy order are rows of their own)
-  const r1 = J(`campPanelKey(__P, C, 'Digit1', 30)`);
-  check('a digit on the third page does the row: Tuck in, the panel goes back to its first page, the ship is under the order', r1.ran && r1.ok && r1.row === 'ctuck' && J('__t.cord') === 'tuck' && J('__P.page.fleet') === 0, JSON.stringify(r1));
-  check('the row of the order in force is marked "in force"; the others are not', (() => { const rs = J('campPanelRows(C, "fleet", 2)'); return rs[0].marked && rs[0].state === 'in force' && !rs[1].marked && !rs[2].marked && !rs[3].marked && rs[1].state === '1 ship'; })(), J('JSON.stringify(campPanelRows(C, "fleet", 2))'));
-  g.run(`campPanelKey(__P, C, 'KeyR', 40); campPanelSettle(__P, C, 40 + CAMP_PANELS.settle)`);
-  check('R steps the convoy order from the first page once it has rested: after Tuck in comes Hold here, and the ship is under it; the page stays the first', J('__t.cord') === 'hold' && J('__P.page.fleet') === 0);
-  g.run(`window.__ords = C.orders.convoy | 0; campPanelKey(__P, C, 'KeyR', 2000); campPanelKey(__P, C, 'KeyR', 2300)`);
-  check('R pressed twice in a row (0.3 s apart) passes through Run for it and gives NO order to it: the ship is still under Hold here, the row says "> Carry on", and one order is given when the key rests', J('__t.cord') === 'hold' && J('(C.orders.convoy | 0) === __ords') && J('campPanelRows(C, "fleet", 0, __P).find(r => r.id === "convoy").state') === '> Carry on' && (g.run(`campPanelSettle(__P, C, 2300 + CAMP_PANELS.settle)`), !J('__t.cord') && J('(C.orders.convoy | 0) === __ords + 1')));
-  g.run(`campPanelKey(__P, C, 'KeyR', 5000); campPanelSettle(__P, C, 5000 + CAMP_PANELS.settle)`);
-  check('and the next press goes round to Tuck in', J('__t.cord') === 'tuck');
-  g.run(`__P.page.fleet = 0; campPanelKey(__P, C, 'KeyQ', 80); campPanelKey(__P, C, 'KeyQ', 90); campPanelKey(__P, C, 'KeyQ', 100)`);
-  check('and three presses of Q come back to the orders', J('__P.page.fleet') === 0);
+  g.run(`window.__t = __hauler('t1', 'Transport', 400, 0, 5000, 0); window.__P = campPanelNew(); window.__q1 = campPanelKey(__P, C, 'KeyQ', 0);`);
+  check('the fleet orders are ONE list, opened with Q on its top row (no pages to flip: no page2, page3 or pages in the table): with a convoy ship out the four convoy rows are in it, after the orders and before the stances', J('__q1.open') === 'fleet' && J('__P.at') === 0 && J('["page2", "page3"].every(k => !(k in __FL))') && J('!("pages" in CAMP_PANELS)') && J('typeof campPanelPages') === 'undefined' && J(`campPanelList(C, 'fleet').map(r => r.id).join()`) === 'attack,launch,escort,guard,recall,mine,ctuck,crun,chold,ccarry,free,orbit,keep,match,hold', J(`campPanelList(C, 'fleet').map(r => r.id).join()`));
+  const rows = J('__cv()');
+  check('the four rows: Convoy: tuck in, run for it, hold here, carry on; each the order "convoy" with its words and `when: "convoy"`, none with a number or a key of its own, all of them possible with a convoy out', rows.map(r => r.label).join() === 'Convoy: tuck in,Convoy: run for it,Convoy: hold here,Convoy: carry on' && rows.every(r => r.ok) && J('__FL.rows.filter(r => r.order === "convoy").map(r => r.id + ":" + r.arg + ":" + r.when).join()') === 'ctuck:tuck in:convoy,crun:run for it:convoy,chold:hold here:convoy,ccarry:carry on:convoy' && J('__FL.rows.every(r => !("n" in r) && !("k" in r) && !("code" in r) && !("cycle" in r))'), JSON.stringify(rows));
+  check('the row ids are their own (they do not clash with the stances\' "hold")', new Set(J('__FL.rows.map(r => r.id)')).size === 15 && J('__FL.rows.length') === 15); // (15: six orders, four convoy orders, five stances; Launch and Recall are two rows since card one-list-keys)
+  const d1 = J(`campPanelKey(__P, C, 'Digit1', 20)`), cord0 = J('__t.cord || ""');
+  const r1 = J(`__pick(__P, C, 'fleet', 'ctuck', 30)`);
+  check('Q, Down to "Convoy: tuck in", Enter does the row: Tuck in, the list closes, the ship is under the order; a digit does nothing (1 was the row\'s key)', !d1.used && !d1.ran && cord0 === '' && r1.ran && r1.ok && r1.row === 'ctuck' && r1.fleet && r1.open === '' && J('__t.cord') === 'tuck' && J('campPanelOpen(__P)') === '', JSON.stringify(r1));
+  check('the row of the order in force is marked "in force"; the others are not', (() => { const rs = J('__cv()'); return rs[0].id === 'ctuck' && rs[0].marked && rs[0].state === 'in force' && !rs[1].marked && !rs[2].marked && !rs[3].marked && rs[1].state === '1 ship' && rs[2].state === '1 ship'; })(), J('JSON.stringify(__cv())'));
+  g.run(`window.__kr = campPanelKey(__P, C, 'KeyR', 40); window.__cordR = __t.cord; window.__h = __pick(__P, C, 'fleet', 'chold', 50);`);
+  check('nothing cycles: R (the old convoy key) is not used and the order stays; the row "Convoy: hold here" gives Hold here the moment Enter is pressed (nothing settles), and the ship is under it', J('__kr.used') === false && J('__kr.ran') === false && J('__cordR') === 'tuck' && J('__h.ran && __h.ok') && J('__h.row') === 'chold' && J('__t.cord') === 'hold' && J('campPanelOpen(__P)') === '');
+  g.run(`window.__ords = C.orders.convoy | 0; campPanelKey(__P, C, 'KeyQ', 2000); const i = campPanelList(C, 'fleet').findIndex(r => r.id === 'ccarry'); for (let k = 0; k < i; k++) campPanelKey(__P, C, 'ArrowDown', 2000 + k); window.__lit = campPanelList(C, 'fleet')[__P.at].id;`);
+  check('moving the highlight down past Tuck in and Run for it to Carry on gives NO order: the ship is still under Hold here and no order is counted; Enter there gives one order, Carry on, and the ship goes its own way', J('__lit') === 'ccarry' && J('__t.cord') === 'hold' && J('(C.orders.convoy | 0) === __ords') && J('campPanelConvoyName(C)') === 'hold here' && (g.run(`window.__cc = campPanelKey(__P, C, 'Enter', 2300)`), J('__cc.ran && __cc.ok') && J('__cc.row') === 'ccarry' && !J('__t.cord') && J('(C.orders.convoy | 0) === __ords + 1') && J('campPanelConvoyName(C)') === 'carry on'));
+  g.run(`window.__tk = __pick(__P, C, 'fleet', 'ctuck', 5000); window.__rn = __pick(__P, C, 'fleet', 'crun', 5100);`);
+  check('and any order can follow any other (they are rows, not a round): Tuck in again, then Run for it', J('__tk.ok') && J('__rn.ok') && J('__t.cord') === 'run' && J('__cv().filter(r => r.marked).map(r => r.id).join()') === 'crun' && J('campPanelConvoyName(C)') === 'run for it');
+  g.run(`campPanelClose(__P); window.__o = [campPanelKey(__P, C, 'KeyQ', 80).open, campPanelKey(__P, C, 'KeyQ', 90).open, campPanelKey(__P, C, 'KeyQ', 100).open, campPanelKey(__P, C, 'Escape', 110)];`);
+  check('Q opens the list and Q closes it (a third press opens it again); Esc closes it too', J('__o.slice(0, 3).join()') === 'fleet,,fleet' && J('__o[3].used') === true && J('__o[3].open') === '' && J('campPanelOpen(__P)') === '');
+  g.run('__new(); C.ships.filter(u => u.team === "neutral").forEach(u => { u.hp = 0; delete C.by[u.id]; }); C.ships = C.ships.filter(u => u.hp > 0);');
+  const none = J('__cv()');
+  check('in a mission with a convoy but no escorted ship out NOW the four rows stay, greyed, and say why ("no convoy"); Enter on one is refused in words and the list stays open', J('C.L.convoys.length') > 0 && J('campConvoyShips(C).length') === 0 && none.length === 4 && none.every(r => !r.ok && r.short === 'no convoy' && /no escorted ships/.test(r.state)) && (() => { const r = J(`__pick(campPanelNew(), C, 'fleet', 'ctuck', 0)`); return r.ran && !r.ok && r.say.length > 0 && r.open === 'fleet'; })(), JSON.stringify(none));
   g.run('__new(); __quiet()');
-  const none = J('campPanelRows(C, "fleet", 2)');
-  check('with no escorted ship the four rows are greyed and say why ("no convoy")', none.every(r => !r.ok && r.short === 'no convoy' && /no escorted ships/.test(r.state)), JSON.stringify(none));
-  g.run('CAMP_PANELS.pages = 2');
-  check('with CAMP_PANELS.pages at 2 the convoy page is out and FLEET has two pages again', J('campPanelPages("fleet")') === 2);
-  g.run('CAMP_PANELS.pages = 1');
-  check('and at 1 the flip is off', J('campPanelPages("fleet")') === 1);
-  g.run('CAMP_PANELS.pages = 3');
-  check('the keys page (H, Settings) says what the page key flips to, in 36 characters or fewer, and R (the next convoy order) has its own line', (() => { const rows = J('campPanelKeyRows()'), fl = rows.find(r => r.k[0] === 'Q'), r = rows.find(r => r.k[0] === 'R'); return !!fl && /stances, convoy/.test(fl.t) && fl.t.length <= 36 && !!r && /convoy order/.test(r.t); })(), J('campPanelKeyRows().filter(r => r.k[0] === "Q").map(r => r.t).join("|")'));
-  check('the panel\'s key line is read from the table, not typed: a key hint is p.key', J('CAMP_PANELS.panels.every(p => typeof p.key === "string" && p.key.length === 1)'));
+  check('in a mission that can never use them (no convoy in the level and no escorted ship alive) the convoy rows are left out of the list: eleven rows, and no way to pick one', J('C.L.convoys.length') === 0 && J('__cv().length') === 0 && J(`campPanelList(C, 'fleet').map(r => r.id).join()`) === 'attack,launch,escort,guard,recall,mine,free,orbit,keep,match,hold' && J(`__pick(campPanelNew(), C, 'fleet', 'ctuck', 0)`) === null && J('__FL.rows.length') === 15);
+  check('and they come back the moment an escorted ship is out (the rule is asked each time: campPanelWhen)', (g.run(`__hauler('t1', 'Transport', 400, 0, 5000, 0)`), J('__cv().length') === 4 && J('__cv().every(r => r.ok)') && J('campPanelWhen(C, __FL.rows.find(r => r.id === "ctuck"))') === true && J('campPanelWhen(C, __FL.rows.find(r => r.id === "attack"))') === true));
+  check('the keys page (H, Settings) says what the fleet list\'s key opens, convoy orders among them, in 36 characters or fewer, and no key cycles the convoy order (R has no line)', (() => { const rows = J('campPanelKeyRows()'), fl = rows.find(r => r.k[0] === 'Q'), r = rows.find(r => r.k[0] === 'R'); return !!fl && /^Fleet orders: .*convoy/.test(fl.t) && fl.t.length <= 36 && !r && !rows.some(x => /convoy order|next page/.test(x.t)); })(), J('campPanelKeyRows().filter(r => r.k[0] === "Q").map(r => r.t).join("|")'));
+  check('the lists\' key line is read from the table, not typed: a key hint is p.key', J('CAMP_PANELS.panels.every(p => typeof p.key === "string" && p.key.length === 1)') && J('campPanelKeyLine()') === J('CAMP_PANELS.panels.map(p => p.key + " " + p.title.charAt(0) + p.title.slice(1).toLowerCase()).join("   ")') && J('campPanelKeyLine()') === 'Q Fleet orders   P Ship orders');
 }
 
 // ---------- G. the words ----------
