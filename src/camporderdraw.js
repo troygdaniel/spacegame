@@ -12,7 +12,7 @@
 //   campCallSel(s)        the highlighted row of the waiting call (0 to the last row); it starts on the pilot's own pick
 //   campCallKey(s, code)  true when the key was the call's: Up, Down (they stop the timer; Left and Right are swallowed and do not), Enter answers (the scene asks before the lists and the missile)
 //   campCallHear(s, e)    a sim event { type: 'call', stage }: the open call is said in its pilot's voice, the answer on the radio line
-const CAMPCALL_UI = { w: 470, base: 78, bottom: 112, rows: 6, depth: 210, pad: 14, row: 24, bar: 5, warn: 2.5, dim: 0.45 }; // the plate is base + rows x row tall (150 for three rows), its bottom edge `bottom` px above the screen's; `rows` the most it holds
+const CAMPCALL_UI = { w: 470, h: 150, lift: 262, rows: 6, depth: 210, pad: 14, row: 24, bar: 5, warn: 2.5, dim: 0.45 }; // h and lift: the plate of a three-row call (its top is `lift` px above the screen's bottom); a call with more rows grows it up from the same bottom edge, by `row` for each (`rows` is the most it holds)
 
 function campCallPilot(i) { const P = (typeof CHATTER === 'object' && CHATTER.pilots) || [['HAWK', '']]; return P[(i | 0) % P.length]; }
 
@@ -22,13 +22,14 @@ function campCallUi(s) { // made when the first call comes, and kept; campCallLa
   const fix = o => o.setScrollFactor(0).setDepth(K.depth);
   const ui = { key: '', n: 0, back: fix(s.add.rectangle(x, y, K.w, 150, 0x02060d, 0.88).setOrigin(0, 0)), edge: fix(s.add.graphics()), hi: fix(s.add.rectangle(x + 6, y, K.w - 12, K.row, 0xffd37a, 0.95).setOrigin(0, 0)), bar: fix(s.add.rectangle(x + K.pad, y, K.w - 2 * K.pad, K.bar, 0xffd37a, 1).setOrigin(0, 0.5)),
     head: fix(s.add.text(x + K.pad, y + 6, uiText('camp.ui.callhead'), uiFont(12, '#ffd37a', { letterSpacing: 2 }))), call: fix(s.add.text(x + K.pad, y + 22, '', uiFont(15, '#ffd37a', { wordWrap: { width: K.w - 2 * K.pad } }))), rows: [], x, y };
-  for (let i = 0; i < K.rows; i++) ui.rows.push(fix(s.add.text(x + K.pad + 4, y + 50 + i * K.row + 3, '', uiFont(15, '#9fe9ff'))));
+  ui.fix = fix; campCallRows(s, ui, 3); // three rows to start with; a call with more makes them when it comes
   ui.foot = fix(s.add.text(x + K.w - K.pad, y + 8, '', uiFont(11, '#9fbdd1')).setOrigin(1, 0));
   s.callUi = ui; return ui;
 }
+function campCallRows(s, ui, n) { const K = CAMPCALL_UI; while (ui.rows.length < Math.min(n, K.rows)) { const i = ui.rows.length; ui.rows.push(ui.fix(s.add.text(ui.x + K.pad + 4, ui.y + 50 + i * K.row + 3, '', uiFont(15, '#9fe9ff')))); } }
 // lay the plate out for a call of n rows: it grows up from its bottom edge, so three rows sit where they always did
 function campCallLay(ui, n) {
-  const K = CAMPCALL_UI, Ht = typeof H === 'number' ? H : 720, h = K.base + n * K.row, y = Ht - K.bottom - h, x = ui.x;
+  const K = CAMPCALL_UI, Ht = typeof H === 'number' ? H : 720, h = K.h + (n - 3) * K.row, y = Ht - K.lift + K.h - h, x = ui.x; // (n rows: the same bottom edge as three)
   ui.n = n; ui.y = y;
   ui.back.setPosition(x, y).setSize(K.w, h);
   ui.edge.clear(); ui.edge.lineStyle(2, 0xffd37a, 0.9); ui.edge.strokeRect(x + 1, y + 1, K.w - 2, h - 2);
@@ -57,7 +58,7 @@ function campCallPaint(s) {
   if (ui.key !== key) {
     ui.key = key;
     ui.call.setText(campCallPilot(v.pilot)[0] + ': ' + uiText(v.line));
-    campCallLay(ui, Math.min(K.rows, v.rows.length)); ui.state = '';
+    campCallRows(s, ui, v.rows.length); campCallLay(ui, Math.min(K.rows, v.rows.length)); ui.state = '';
     ui.rows.forEach((t, i) => t.setText(''));
     v.rows.slice(0, K.rows).forEach((r, i) => ui.rows[i].setText(uiText(r.label) + (r.def ? '   (' + uiText('camp.call.hud.def') + ')' : '') + (r.off ? '   (' + r.why + ')' : '')));
     if (ui.on) ui.rows.forEach((t, i) => t.setVisible(i < ui.n));
