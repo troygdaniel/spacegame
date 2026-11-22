@@ -226,6 +226,7 @@ class CampHub extends Phaser.Scene {
   leave() { if (typeof this.d.onLeave === 'function') this.d.onLeave(this); else go(this, 'Title'); }
   update(time) {
     interiorTick(this, time);
+    if (typeof campWalkTickScene === 'function') campWalkTickScene(this, time); // the briefing's walking map plays on (src/campbriefwalkdraw.js)
     if (this.msg && this.msg.until <= time && !this.msg.gone) { this.msg.gone = true; this.paint(); } // the answer fades from the page
   }
 }
