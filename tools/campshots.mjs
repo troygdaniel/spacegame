@@ -6,8 +6,8 @@
 //   node tools/campshots.mjs 3      the cards (won story, tech pick, lost, pause) and the Tab map
 //   node tools/campshots.mjs fx     explosions as the game makes them, at 60, 160, 320 and 520 ms (2x crops), and the guns
 //   node tools/campshots.mjs mars   Mars and the Earth-Luna start, up close
-//   node tools/campshots.mjs zoom   + - 0 and the wheel: the view, the edge arrow and the map at several zooms, a click on a place at a zoom
-//   node tools/campshots.mjs panels the keyboard panels: the tabs, Q and E open them, the pick's flash, the cross-fade, the tab's pulse, with the zoom and the map, the key line
+//   node tools/campshots.mjs zoom   + - Backspace and the wheel: the view, the edge arrow and the map at several zooms, a click on a place at a zoom
+//   node tools/campshots.mjs panels the two hands' panels (FLEET at the left, SHIP at the right, always on the screen): a key's flash, Q and P turn the pages, the target line, with the zoom and the map, the key line
 //   node tools/campshots.mjs look   the new look of the ships: 2x crops round the carrier (start, launch, recall, a crowd, the turrets firing)
 // Some pictures are STAGED (the carrier or the aliens are put in place, the hull and the shield are set low): the fight after the staging is the game's. The blind critic gets the PNG files and nothing else (docs/CRITIC.md).
 // Exit code 1 when a picture could not be taken or the game logged an error.
@@ -32,12 +32,14 @@ const snap = async name => { // taken twice: the first capture after a step can 
 };
 const keyOn = code => t.ev(`(() => { ${SC}.onKey({ code: '${code}', repeat: false }); return 1; })()`);
 const begin = async () => { await t.waitFor(up, 15000, 'the Campaign scene'); await t.clock(); await t.run(700); };
+const recall = () => t.ev(`(() => { campOrder(${SC}.camp, 'recall', undefined, 'key'); return 1; })()`); // 1 is launch-or-recall (a toggle that launches while ships wait in the bay): the picture wants the recall, so the order is given as the key gives it
 const enter = async () => { await keyOn('Enter'); await t.run(300); };
+const toPlay = async () => { for (let i = 0; i < 4 && (await j(`${SC}.mode`)) !== 'play'; i++) await enter(); await t.run(300); }; // the story card, then the mission's briefing card: Enter until the battle is on (a key does nothing under a card)
 // what is on the screen, by kind: how big each ship is drawn (px of screen), and how many of each there are
 const sizes = () => j(`(() => { const s = ${SC}, o = {}; s.camp.ships.forEach(u => { const sp = s.sp[u.id]; if (!sp) return; const k = u.team + ':' + u.kind; o[k] = o[k] || { n: 0, w: Math.round(sp.displayWidth), h: Math.round(sp.displayHeight), r: u.r }; o[k].n++; }); return o; })()`);
 // pilot: fly the carrier at a point (the nose is turned by hand: a staging shortcut), hold thrust, fire when something is in the nose
-const pilot = (tx, ty, fire) => t.ev(`(() => { const s = ${SC}, c = s.camp.carrier; c.rot = Math.atan2(${ty} - c.y, ${tx} - c.x); s.k.W.isDown = true; s.k.SPACE.isDown = ${!!fire}; return 1; })()`);
-const coast = () => t.ev(`(() => { const s = ${SC}; s.k.W.isDown = false; s.k.SPACE.isDown = false; return 1; })()`);
+const pilot = (tx, ty, fire) => t.ev(`(() => { const s = ${SC}, c = s.camp.carrier; c.rot = Math.atan2(${ty} - c.y, ${tx} - c.x); s.k.UP.isDown = true; s.k.SPACE.isDown = ${!!fire}; return 1; })()`); // the arrows fly: Up is thrust (W is the fleet's mine key now: card space-game-two-hands-keys)
+const coast = () => t.ev(`(() => { const s = ${SC}; s.k.UP.isDown = false; s.k.SPACE.isDown = false; return 1; })()`);
 const state = () => j(`(() => { const s = ${SC}, C = s.camp, c = C.carrier; const al = C.ships.filter(u => u.team === 'alien' && u.hp > 0), fr = C.ships.filter(u => u.team === 'earth' && u.kind !== 'carrier'); const near = r => C.ships.filter(u => u !== c && Math.hypot(u.x - c.x, u.y - c.y) < r).length; let a0 = null, d0 = 1e9; al.forEach(u => { const d = Math.hypot(u.x - c.x, u.y - c.y); if (d < d0) { d0 = d; a0 = u; } }); return { t: Math.round(C.t / 100) / 10, mode: s.mode, cx: Math.round(c.x), cy: Math.round(c.y), hp: Math.round(c.hp), aliens: al.length, wing: fr.length, near350: near(350), near600: near(600), ax: a0 && Math.round(a0.x), ay: a0 && Math.round(a0.y), ad: Math.round(d0), result: C.result, booms: (window.__booms || []).length }; })()`);
 const hookBooms = () => t.ev(`(() => { const s = ${SC}; window.__booms = []; const f = s.boom.explode.bind(s.boom); s.boom.explode = (n, x, y) => { window.__booms.push({ t: s.camp.t, n, x, y }); return f(n, x, y); }; return 1; })()`);
 
@@ -46,7 +48,7 @@ try {
   if (part === '1') {
     await hookBooms();
     await t.run(1200); await snap('c01-l1-intro');
-    await enter(); await t.run(800); await snap('c02-l1-start');
+    await enter(); await t.run(800); await snap('c02-l1-start'); await toPlay();
     await keyOn('Digit1'); await t.run(2200); await snap('c03-l1-launch');
     await t.run(2500); note('sizes after launch', JSON.stringify(await sizes()));
     // wait for the first wave (t = 20 s), then make the melee a player would be in: every alien 250 to 450 px from the carrier, the wing 90 to 235 px (staged: the positions only; the fight after it is the game's)
@@ -70,14 +72,14 @@ try {
     note('after the fight', JSON.stringify(await state()));
     // the hull and Earth's shield low (staged), the recall order, and the mothership up close (staged: the carrier is flown to it)
     await t.ev(`(() => { const C = ${SC}.camp; C.carrier.hp = C.carrier.maxHp * 0.22; C.earth.shield = C.earth.max * 0.18; return 1; })()`); await t.run(400); await snap('c07-l1-low');
-    await keyOn('Digit5'); await t.run(1800); await snap('c08-l1-recall');
+    await recall(); await t.run(1800); await snap('c08-l1-recall');
     // the mothership: put one 520 px ahead of the carrier (staged: the game sends it at the third wave) and let the wing go for it
     await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; C.carrier.hp = C.carrier.maxHp; C.earth.shield = C.earth.max; const m = campSpawn(C, 'mother', c.x + Math.cos(c.rot) * 560, c.y + Math.sin(c.rot) * 560); m.goal = 'earth'; return 1; })()`);
     await keyOn('Digit1'); await t.run(300); await keyOn('Digit2'); await t.run(1600); await snap('c09-l1-mother');
     note('sizes', JSON.stringify(await sizes()));
   } else if (part === '2') {
     await t.run(1000); await snap('c10-l2-intro');
-    await enter(); await t.run(700); await snap('c11-l2-start');
+    await enter(); await t.run(700); await snap('c11-l2-start'); await toPlay();
     await keyOn('Digit1'); await t.run(1800);
     // to the relic: through the guards (staged: the carrier is put 700 px from Proxima b and flown in; the guards wait until it is close)
     await t.ev(`(() => { const c = ${SC}.camp.carrier; c.x = 600; c.y = 1500; c.vx = c.vy = 0; return 1; })()`); await t.run(600);
@@ -95,7 +97,7 @@ try {
     note('l2 sizes', JSON.stringify(await sizes()));
     // level 3
     await t.goto('?campaign=3', ROOT); await begin(); await hookBooms();
-    await t.run(1000); await snap('c20-l3-intro'); await enter(); await t.run(700); await snap('c21-l3-start');
+    await t.run(1000); await snap('c20-l3-intro'); await enter(); await t.run(700); await snap('c21-l3-start'); await toPlay();
     await keyOn('Digit1'); await t.run(2000);
     await t.ev(`(() => { const c = ${SC}.camp.carrier; c.x = -1500; c.y = 600; c.vx = c.vy = 0; return 1; })()`); await t.run(800); await snap('c22-l3-world');
     await keyOn('Digit2');
@@ -109,7 +111,7 @@ try {
   } else if (part === 'fx') {
     // explosions as the game makes them (scene.boom.explode(26 for a ship, 90 for the carrier or the mothership), 3 for a hit) and what the guns look like: a strip of
     // pictures at 60, 160, 320 and 520 ms, each a 2x crop of 360 x 240 round the carrier's nose
-    await enter(); await t.run(600);
+    await toPlay(); await t.run(600);
     await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; c.x = 0; c.y = -900; c.vx = c.vy = 0; c.rot = 0; return 1; })()`); await t.run(500);
     const where = async () => j(`(() => { const s = ${SC}, v = s.cameras.main.worldView, c = s.camp.carrier; return { sx: c.x - v.x + 77, sy: c.y - v.y }; })()`);
     const crop = async (name, cx, cy) => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png', clip: { x: cx - 180, y: cy - 120, width: 360, height: 240, scale: 2 } }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); } note('crop', name); };
@@ -126,14 +128,14 @@ try {
   } else if (part === 'look') {
     // the new look of the ships (card space-game-campaign-look): 2x crops round the carrier. The carrier at the start, a launch (the tubes at the front of the pods lit), the wing out, a recall (the landing bays at the back lit), a crowd (the wing and
     // aliens close round it), and the turrets firing. The carrier is not moved except to put aliens near it (staged: positions only).
-    await enter(); await t.run(600);
+    await toPlay(); await t.run(600);
     const where = async () => j(`(() => { const s = ${SC}, v = s.cameras.main.worldView, c = s.camp.carrier; return { sx: (c.x - v.x) * s.cameras.main.zoom + 77, sy: (c.y - v.y) * s.cameras.main.zoom }; })()`);
     const crop = async (name, w = 400, h = 260, dx = 0, dy = 0) => { const p = await where(); for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png', clip: { x: p.sx + dx - w / 2, y: p.sy + dy - h / 2, width: w, height: h, scale: 2 } }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(34); } note('crop', name); };
     await crop('look-01-start');
     await keyOn('Digit1'); await t.run(500); await crop('look-02-launch');
     await t.run(1100); await crop('look-03-launch-later');
     await t.run(3500); await crop('look-04-wing-out', 520, 320);
-    await keyOn('Digit5'); await t.run(1400); await crop('look-05-recall', 520, 320);
+    await recall(); await t.run(1400); await crop('look-05-recall', 520, 320);
     // a crowd: the wing is out again, aliens come in close, the turrets fire
     await t.run(2500); await keyOn('Digit1'); await t.run(4800);
     await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; ['raider', 'raider', 'drone', 'raider', 'drone', 'gunship'].forEach((k, i) => { const a = i * 1.05 + 0.4, d = 230 + (i % 3) * 70; const u = campSpawn(C, k, c.x + Math.cos(a) * d, c.y + Math.sin(a) * d); u.hp = u.maxHp = 400; }); return 1; })()`);
@@ -143,65 +145,67 @@ try {
     note('sizes', JSON.stringify(await sizes()));
   } else if (part === 'zoom') {
     // + - = 0 and the wheel (card space-game-campaign-zoom): the view in and out with the HUD at its own size, the edge arrow, the map at several zooms, and a click on a place at a zoom (the scene reads the click through the map's own view)
-    await enter(); await t.run(600); await keyOn('Digit1'); await t.run(3000);
+    await toPlay(); await t.run(600); await keyOn('Digit1'); await t.run(3000);
     const zs = () => j(`(() => { const s = ${SC}; return { cam: +s.cameras.main.zoom.toFixed(3), want: +CAMZOOM.want.toFixed(3), mp: s.mp ? { z: +s.mp.z.toFixed(3), want: +s.mp.zWant.toFixed(3), s: +s.mp.fit.s.toFixed(4) } : null }; })()`);
     note('start', JSON.stringify(await zs())); await snap('zoom-01-start');
     for (let i = 0; i < 3; i++) await keyOn('Equal'); await t.run(900); note('in', JSON.stringify(await zs())); await snap('zoom-02-in');
     for (let i = 0; i < 8; i++) await keyOn('Minus'); await t.run(1200); note('out', JSON.stringify(await zs())); await snap('zoom-03-out');
-    await keyOn('Digit0'); await t.run(1000); note('reset', JSON.stringify(await zs()));
+    await keyOn('Backspace'); await t.run(1000); note('reset', JSON.stringify(await zs()));
     // the edge arrow (level 2: the goal is the nearest cache): seen at 1, at 1.6 and at 0.5 (it points where the goal is on the screen, so it is on the edge at one zoom and gone at another)
     await t.run(300); await snap('zoom-04-arrow-1'); note('arrow at 1', JSON.stringify(await j(`(() => { const s = ${SC}, a = s.hud.arrow; return { visible: a.visible, x: Math.round(a.x), y: Math.round(a.y), text: a.text }; })()`)));
     for (let i = 0; i < 2; i++) await keyOn('Equal'); await t.run(900); await snap('zoom-05-arrow-in'); note('arrow at 1.44', JSON.stringify(await j(`(() => { const s = ${SC}, a = s.hud.arrow; return { visible: a.visible, x: Math.round(a.x), y: Math.round(a.y), text: a.text }; })()`)));
-    await keyOn('Digit0'); for (let i = 0; i < 3; i++) await keyOn('Minus'); await t.run(900); await snap('zoom-06-arrow-out'); note('arrow at 0.58', JSON.stringify(await j(`(() => { const s = ${SC}, a = s.hud.arrow; return { visible: a.visible, x: Math.round(a.x), y: Math.round(a.y), text: a.text }; })()`)));
-    await keyOn('Digit0'); await t.run(900);
+    await keyOn('Backspace'); for (let i = 0; i < 3; i++) await keyOn('Minus'); await t.run(900); await snap('zoom-06-arrow-out'); note('arrow at 0.58', JSON.stringify(await j(`(() => { const s = ${SC}, a = s.hud.arrow; return { visible: a.visible, x: Math.round(a.x), y: Math.round(a.y), text: a.text }; })()`)));
+    await keyOn('Backspace'); await t.run(900);
     // the map
     await t.key('TAB'); await t.run(300); note('map open', JSON.stringify(await zs())); await snap('zoom-07-map-1');
     for (let i = 0; i < 4; i++) await keyOn('Equal'); await t.run(1200); note('map in (middle)', JSON.stringify(await zs())); await snap('zoom-08-map-in-middle');
-    await keyOn('Digit0'); await t.run(1000); await keyOn('KeyS'); await keyOn('KeyS'); await t.run(300);
+    await keyOn('Backspace'); await t.run(1000); await keyOn('KeyD'); await keyOn('KeyD'); await t.run(300); // D steps the map's list to the next mark (A the last)
     for (let i = 0; i < 6; i++) await keyOn('Equal'); await t.run(1400); note('map in (the place I chose)', JSON.stringify(await zs())); await snap('zoom-09-map-in-place');
     // a click on a place that is in the frame at this zoom and has no other row within 20 px of it (the relic sits on its planet): the screen point of the nearest such place to the frame's middle
     const hit = await j(`(() => { const s = ${SC}, mp = s.mp, F = CAMPMAP.frame, all = mp.rows, rows = all.filter(r => r.kind === 'place' && all.every(o => o === r || Math.hypot(o.x - r.x, o.y - r.y) * mp.fit.s > 20)); let best = null, bd = 1e9; rows.forEach(r => { const p = campMapPoint(mp.fit, F, r.x, r.y), d = Math.hypot(p.x - F.x - F.w / 2, p.y - F.y - F.h / 2); if (p.x > F.x + 6 && p.x < F.x + F.w - 6 && p.y > F.y + 6 && p.y < F.y + F.h - 6 && d < bd) { bd = d; best = { id: r.id, px: p.x, py: p.y }; } }); if (!best) return null; mp.setId = ''; s.input.emit('pointerdown', { x: best.px + 2, y: best.py + 1 }); return { want: best.id, got: mp.setId }; })()`);
     note('click at zoom', JSON.stringify(hit)); await t.run(300); await snap('zoom-10-map-click');
-    await keyOn('Digit0'); for (let i = 0; i < 4; i++) await keyOn('Minus'); await t.run(1200); note('map out', JSON.stringify(await zs())); await snap('zoom-11-map-out');
+    await keyOn('Backspace'); for (let i = 0; i < 4; i++) await keyOn('Minus'); await t.run(1200); note('map out', JSON.stringify(await zs())); await snap('zoom-11-map-out');
     // the wheel: the map's when it is open, the camera's when it is not
-    await keyOn('Digit0'); await t.run(700);
+    await keyOn('Backspace'); await t.run(700);
     await t.ev(`(() => { ${SC}.input.emit('wheel', {}, [], 0, -240); return 1; })()`); await t.run(900); note('wheel over the map', JSON.stringify(await zs()));
     await t.key('TAB'); await t.run(300); const before = await zs();
     await t.ev(`(() => { ${SC}.input.emit('wheel', {}, [], 0, -240); return 1; })()`); await t.run(900); note('wheel, map shut', JSON.stringify(before), '->', JSON.stringify(await zs()));
   } else if (part === 'panels') {
-    // the panels (card space-game-campaign-panels-ui): the collapsed tabs, FLEET open, the pick's flash, SHIP open, the cross-fade, the tab's pulse, with the zoom, with the map, and the key line's backing strip. Q and E open the panels.
-    await enter(); await t.run(600);
+    // the two hands' panels (card space-game-two-hands-keys): FLEET at the left, SHIP at the right, both on the screen from the first frame, a key on every row. A key lights its row, Q turns FLEET's page, P turns SHIP's, A D S pick a target
+    // (the FLEET panel names it, a bracket marks it), with the zoom, with the map, and the key line's backing strip.
+    await toPlay(); await t.run(600);
+    const box = id => j(`(() => { const G = campPanelsGeometry(CAMP_PANELS.panels.find(p => p.id === '${id}')), r = game.canvas.getBoundingClientRect(), k = r.width / 1280; return { x: r.left + G.x * k, y: r.top + G.y * k, w: G.w * k, h: G.h * k }; })()`); // a panel's place on the page (the canvas is scaled to fit the window)
+    const panelShot = async (name, id, pad = 6) => { const b = await box(id); for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png', clip: { x: b.x - pad, y: b.y - pad, width: b.w + 2 * pad, height: b.h + 2 * pad, scale: 2 } }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(34); } note('crop', name); };
     const clipShot = async (name, x, y, w, h) => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png', clip: { x, y, width: w, height: h, scale: 2 } }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(34); } note('crop', name); };
-    const st = () => j(`(() => { const s = ${SC}, P = s.pn; return { open: P.open, flash: P.flash && P.flash.row, shown: P.flash && P.flash.shown, closed: P.closed && P.closed.id, ships: s.camp.ships.filter(u => u.team === 'earth').length }; })()`);
-    await t.run(300); await snap('panels-01-collapsed'); await clipShot('panels-01b-tabs-left', 77, 200, 330, 120);
-    await keyOn('KeyQ'); await t.run(400); note('Q', JSON.stringify(await st())); await snap('panels-02-fleet-open'); await clipShot('panels-02b-fleet-crop', 77, 200, 330, 250);
-    await keyOn('Digit1'); await t.run(6); note('pick', JSON.stringify(await st())); await clipShot('panels-03-flash-40ms', 77, 200, 330, 250); // the second capture of a pair is 34 ms after the first: this one is the flash's first peak (40 ms)
-    await t.run(46); await clipShot('panels-03b-flash-120ms', 77, 200, 330, 250); // and the second peak (120 ms)
-    await t.run(400); await clipShot('panels-03c-collapsed-after', 77, 200, 330, 250);
+    const st = () => j(`(() => { const s = ${SC}, P = s.pn; return { page: P.page, ships: s.camp.ships.filter(u => u.team === 'earth').length, tgt: s.camp.tgt }; })()`);
+    await t.run(300); await snap('panels-01-both-on'); await panelShot('panels-01b-fleet', 'fleet'); await panelShot('panels-01c-ship', 'ship');
+    await keyOn('Digit1'); await t.run(6); note('1', JSON.stringify(await st())); await panelShot('panels-02-flash-40ms', 'fleet'); // the second capture of a pair is 34 ms after the first: this one is the flash's first peak (40 ms)
+    await t.run(46); await panelShot('panels-02b-flash-120ms', 'fleet'); // and the second peak (120 ms)
     await t.run(2500);
-    await keyOn('KeyE'); await t.run(400); await snap('panels-04-ship-open'); await clipShot('panels-04b-ship-crop', 880, 200, 330, 250);
-    await keyOn('KeyQ'); await t.run(26); note('switch', JSON.stringify(await st())); await clipShot('panels-05-crossfade', 77, 190, 1130, 270); // 60 ms in: both lists half there
-    await t.run(300); await keyOn('KeyQ'); await t.run(300);
-    await keyOn('KeyQ'); await t.run(40); await keyOn('Digit5'); await t.run(86); note('fast pick', JSON.stringify(await st())); await clipShot('panels-06-tab-pulse', 77, 200, 330, 120); // the pulse peaks 120 ms after the pick
-    await t.run(1500);
-    for (let i = 0; i < 3; i++) await keyOn('Equal'); await t.run(900); await keyOn('KeyE'); await t.run(400); await snap('panels-07-zoomed-in'); await keyOn('Escape'); await t.run(300);
-    await t.key('TAB'); await t.run(400); await snap('panels-08-map-open'); await t.key('TAB'); await t.run(300); await keyOn('Digit0'); await t.run(900);
+    await keyOn('KeyQ'); await t.run(400); note('Q', JSON.stringify(await st())); await snap('panels-03-fleet-stances'); await panelShot('panels-03b-stances', 'fleet');
+    await keyOn('KeyQ'); await t.run(400); await panelShot('panels-03c-convoy', 'fleet'); await keyOn('KeyQ'); await t.run(300);
+    await keyOn('KeyP'); await t.run(400); note('P', JSON.stringify(await st())); await snap('panels-04-ship-build'); await panelShot('panels-04b-build', 'ship'); await keyOn('KeyP'); await t.run(300);
+    // a hostile put in reach (staged): D picks it, the FLEET panel names it, the bracket is round it
+    await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; campSpawn(C, 'raider', c.x + 520, c.y - 180); return 1; })()`); await t.run(300);
+    await keyOn('KeyD'); await t.run(400); note('D', JSON.stringify(await st())); await snap('panels-05-target'); await panelShot('panels-05b-fleet-target', 'fleet');
+    await keyOn('KeyX'); await t.run(200);
+    for (let i = 0; i < 3; i++) await keyOn('Equal'); await t.run(900); await snap('panels-06-zoomed-in');
+    await t.key('TAB'); await t.run(400); await snap('panels-07-map-open'); await t.key('TAB'); await t.run(300); await keyOn('Backspace'); await t.run(900);
     // the key line: a ship under it
-    await t.ev(`(() => { const s = ${SC}, C = s.camp, c = C.carrier; const sp = s.sp[c.id]; return 1; })()`);
-    await clipShot('panels-09-keyline', 77, 575, 1130, 58); // the viewport is 633 px high (the canvas fits it at 0.88): the key line is at about y 590 to 610
+    await clipShot('panels-08-keyline', 77, 575, 1130, 58); // the viewport is 633 px high (the canvas fits it at 0.88): the key line is at about y 590 to 610
     note('sizes', JSON.stringify(await sizes()));
   } else if (part === 'mars') {
-    await enter(); await t.run(500);
+    await toPlay(); await t.run(500);
     await t.ev(`(() => { const c = ${SC}.camp.carrier; c.x = 3500; c.y = 450; c.vx = c.vy = 0; c.rot = 0; return 1; })()`); await t.run(900); await snap('c40-mars');
     await t.ev(`(() => { const c = ${SC}.camp.carrier; c.x = -150; c.y = 0; c.vx = c.vy = 0; return 1; })()`); await t.run(900); await snap('c41-earth-luna');
   } else if (part === '3') {
     // the cards: level 1 story (already c01), won -> story after -> tech pick, the lost card, the pause card, the map
-    await enter(); await t.run(600);
+    await toPlay(); await t.run(600);
     await keyOn('Backslash'); await t.run(2600); await snap('c30-won-story');
     await keyOn('Enter'); await t.run(600); await snap('c31-tech-pick');
-    await t.goto('?campaign=1&debug=1', ROOT); await begin(); await enter(); await t.run(500);
+    await t.goto('?campaign=1&debug=1', ROOT); await begin(); await toPlay(); await t.run(500);
     await keyOn('BracketLeft'); await t.run(1800); await snap('c32-lost');
-    await t.goto('?campaign=1', ROOT); await begin(); await enter(); await t.run(1500);
+    await t.goto('?campaign=1', ROOT); await begin(); await toPlay(); await t.run(1500);
     await keyOn('Digit1'); await t.run(2500);
     await keyOn('Escape'); await t.run(500); await snap('c33-pause');
     await keyOn('Escape'); await t.run(300);
