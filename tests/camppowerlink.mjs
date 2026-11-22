@@ -41,6 +41,11 @@ console.log('A. where things are');
   check('the lines of text at the left start where the gauges used to end (CAMP.hud.text.y), the dim plate behind them starts there too: the top left is free', H.text.y === 96 && J('CAMP.hud.right') === 8 && src('src/campaignscene.js').indexOf('this.add.rectangle(0, CAMP.hud.text.y - 6') > 0 && !/CAMP\.hud\.x\b/.test(src('src/campaignscene.js') + src('src/camphud.js')));
 }
 
+{
+  const Z = J('campHudGeom()'), W = J('W'), L = J('CAMPTUNE_LOOK'), R = J('CAMP_RIVAL_DRAW.hud');
+  check('the TUNED mark (a tuned run\'s count) is left of the gauges, not on them: its right end is at least 4 px left of the block, and its 100 px of text clear the rival\'s bars (the middle of the top)', W - L.markX + 4 <= Z.block.x0 && W - L.markX - 100 > R.x + R.w && L.markY < Z.block.y1, JSON.stringify([W - L.markX, Z.block.x0, R]));
+}
+
 console.log('B. the power rows\' pip bars');
 {
   g.run(`__open(); __down(0); __paint(5000);`);
