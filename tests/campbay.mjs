@@ -39,7 +39,7 @@ console.log('C. what the bigger bay touches');
   check('but a full bay does not buy the whole refit: the extra ships and the Fabricator cost more than the 500 the bay holds (the Fabricator was 120 when the bay held 200)', extras + o.fab > o.cap && o.fab <= o.cap, JSON.stringify(o));
   const l2 = J('CAMP.levels[1].missions[1]');
   const rocks = J('CAMP.levels[1].missions[1].rocks.reduce((a, f) => a + f.n, 0)'), ore = J('CAMP.ore.rock'), sold = l2.bonus.find(b => b.type === 'sold').n;
-  check('the sell bonus of 1.2 (400) is within what the three rock fields hold (' + rocks + ' rocks of ' + ore + ' ore), so it can be earned by mining, and it is more than the 190 and 160 of the goals', sold === 400 && sold <= rocks * ore && sold > 190 && l2.objectives.some(x => x.type === 'cashin' && x.n === 160) && l2.objectives.some(x => x.type === 'ore' && x.n === 190), JSON.stringify([rocks, ore, sold]));
+  check('the sell bonus of 1.2 (400) is within what the three rock fields hold (' + rocks + ' rocks of ' + ore + ' ore), so it can be earned by mining, and it is more than the 160 sale asked for and less than the goal (450 of the 500 the bay holds; card space-game-tune-l1-notes: the goal was 190)', sold === 400 && sold <= rocks * ore && sold > 160 && l2.objectives.some(x => x.type === 'cashin' && x.n === 160) && l2.objectives.some(x => x.type === 'ore' && x.n === 450 && x.n <= J('CAMP.ore.cap')) && rocks * ore >= 450 + 100, JSON.stringify([rocks, ore, sold]));
   const gb = J(`(() => { const P = campProgressNew(); P.ore = 480; P.bonus = { fighters: 1, escorts: 1 }; campHubGiveBack(P, 'escorts'); return P.ore; })()`);
   check('giving a ship back at the refit returns its ore up to the cap (480 + 45 is 500, not 525)', gb === 500, gb);
 }
