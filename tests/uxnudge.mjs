@@ -43,7 +43,7 @@ g.run(`__tick(14);`);
 check('with the wing out and aliens about, at 26 s, the second hint: "' + ATTACK + '"', J('__toasts.some(t => t[1] === ' + JSON.stringify(ATTACK) + ')') && J('(__toasts.find(t => /the fighters attack/.test(t[1])) || [0])[0]') >= 26 && J('(__toasts.find(t => /the fighters attack/.test(t[1])) || [99])[0]') < 26.5, JSON.stringify(J('__toasts')));
 g.run(`__tick(20);`);
 check('and not again', J('__toasts.filter(t => /the fighters attack/.test(t[1])).length') === 1);
-g.run(`window.F = __fake(1); __tick(3); __pick(F, 'launch'); __tick(20); window.__how = __pick(F, 'attack'); window.__lit = [F.camp.orders.attack, campPanelOpen(F.pn)]; __toasts.length = 0; __tick(15);`);
+g.run(`window.F = __fake(1); __tick(3); __pick(F, 'launch'); __tick(20); campSpawn(F.camp, 'raider', F.camp.carrier.x + 900, F.camp.carrier.y); window.__how = __pick(F, 'attack'); if (F.pn.pick) F.onKey({ code: 'Enter' }); /* several hostiles: the sub-list opened, Enter takes the nearest (card space-game-order-target-pick) */ window.__lit = [F.camp.orders.attack, campPanelOpen(F.pn)]; __toasts.length = 0; __tick(15);`);
 check('a player who ordered the attack before 26 s (W, Enter, as the hint says: W opens the all-squads list directly, on its first row) is never told to', J('__how').join() === 'squads,0' && J('__lit').join() === '1,' && !J('__toasts.some(t => /the fighters attack/.test(t[1]))'), JSON.stringify(J('__toasts')));
 // the fine print
 g.run(`window.F = __fake(2); __tick(40);`);
