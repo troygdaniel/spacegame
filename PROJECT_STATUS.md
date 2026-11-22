@@ -39,7 +39,7 @@ The batch is the answer to "I want to direct the fleet more". Each item has its 
 - **Enemy torpedo boats** (slow, ignore the fighters, launch a heavy torpedo at the convoy; the turrets and missiles can shoot torpedoes down) and a **rival ship** (the pirate leader: an enemy your size that duels the cruiser in phases, so power management matters).
 - **Fighter repair.** A hurt fighter flies home, is mended and relaunches.
 - **Ship systems.** Power pips to weapons, shields and engines (keys J K L, `;` to reset); three Long Haul-style gauges (shields, speed, lasers) with power bars; **shields now mend by themselves**, at a rate the shield pips set (the old pay-ore recharge is gone).
-- **Quality of life.** Zoom out to the whole system (Tab map) and twice as far in flight; the ore store holds 500; the title starts a mode only on a deliberate choice (Enter, K, arrows then Enter, or a click), not on any key.
+- **Quality of life.** Zoom out to the whole system (Tab map) and, in flight, out to where a mission's whole route fits on the screen (1.1's is 16,500 px: its farthest zoom is 0.021 and the names of the places and the convoy are drawn as marks there; a short mission's is 0.11); the ore store holds 500; the title starts a mode only on a deliberate choice (Enter, K, arrows then Enter, or a click), not on any key.
 
 ## Being built right now
 
