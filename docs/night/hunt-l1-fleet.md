@@ -16,6 +16,10 @@ What it does: K, the ready room, the missions overlay and the three briefing scr
 | 1.1 | win, long lane | no call answered (the pilot's own pick each time); both lanes scouted | won at 334 s, 2,380 (the miner was lost) |
 | 1.1 | loss | launch and autopilot only, no orders | the transport was lost at 227 s to the torpedo boats; the lost card, Enter, the brief, the pause card |
 | 1.1 | idle 100 s | nothing pressed for the first 100 s | the hints say what they say (below); the transport waited out the fork and took the short lane at 108 s |
+| 1.1 | win, unscouted, the cruiser at the leader | calls right; the transport took the short lane at the fork by T; the cruiser flew at the pirate leader from the map (Enter) and fired | won at 284 s, **3,130 with all five bonuses** ("Pirate leader is down.") |
+| 1.1 | the mouse | the map driven by clicks: a lane row (set, with its Scout and Take buttons), the buttons clicked | "Scout 1 is going to Long lane.", "Taking the long lane." |
+| 1.1 | the idle player's Fast burn | nothing for 55 s, then Tab, the transport, Shift+Enter (what the 50 s hint says) | "Autopilot to Transport convoy, full burn.": the 2,800 px gap closed in 10 s |
+| 1.1 | retry after the loss | the retry left alone for 75 s | clean: the hints say themselves again (6 s, 50 s, 63 s), no call, no lane picked, the transport waits at the fork |
 | 1.2 Mine and defend | win | calls right; the wing mines, the cruiser goes to the raiders from the map, to the Works, E dock | won at 301 s, 2,695 ("Sold 500 ore for 1500.") |
 | 1.2 | loss | the cruiser destroyed at 200 s (1.2 is not lost by standing still) | the lost card, Enter, the brief |
 | 1.3 Haulers home | win | calls right, wrong, none in turn | won at 292 s, 1,840 (8 ships lost to first contact), the refit, the tech |
@@ -33,6 +37,9 @@ What it does: K, the ready room, the missions overlay and the three briefing scr
 | 5 | minor (words) | **V on a row that is not a lane said "This mission has no scouting."** in the mission that scouts its lanes (and after the lane was taken). | 1.1, V on the transport or on a ship, or after the fork. | "Scouts only read the lanes here, pilot." and, once the lane is taken, "The fork is behind us. Nothing to scout." (`camp.no.scoutlanes`, `camp.no.scoutpast`: two more lines for the voice pack, 576 to record, 0 unclassified); 1.3 still says "no scouting". 3 checks. |
 | 6 | minor (briefing) | **The briefing's ENEMIES said "6 pirate skiffs" for 1.1; the flight meets 8** (the distress call's 2, the ambush's 4, and the 2 that come with the pirate leader). | 1.1, the third briefing screen. | `campBriefEnemies` counts a rival's `escorts`. 2 checks. |
 
+| 7 | minor (briefing) | **1.2's briefing said "Mine ore: 0 of 190."** while the HUD says "Mine ore: 60 of 190." from the first second (the store holds what the ready room's pocket held; with the ore carried from 1.1 it is more). | 1.2, the briefing's second screen against the HUD. | The briefing starts the mining goal from the ore carried (`campHubBrief`, never above the goal). 1 check. |
+| 8 | minor (my fix 3, caught by the picture) | **"Transport delivered: 0 of 1." wrapped its "1." alone in the Tab map's column** (27 letters fit; it was 28; "Haulers delivered: 0 of 1." is 26). | 1.1, Tab: `fleet-mouse-1-lane-set.png` before the change. | "Transport arrived: 0 of 1." (26). 1 check: both deliver goals are 27 letters or fewer. |
+
 ### Open: for Troy or for the owner (nothing changed)
 
 | # | rank | finding | how to see it | owner / what to decide |
@@ -41,6 +48,8 @@ What it does: K, the ready room, the missions overlay and the three briefing scr
 | B | minor | **The Tab map's footer still says "Z: area"** (and the briefing's "M: the whole system"): the map's Z key was removed with the zoom-out card. | Tab, the footer line. | 7-GEN, who owns the key words (`space-game-two-hands-keys`). |
 | C | minor (words) | **The lost card's tip for 1.1 names the haulers**: "Keep the wing on the haulers: FLEET panel, Escort." | The 1.1 lost card. | 7-GEN is rewriting that row (the key word is a placeholder on their branch). `campLoseLines` already looks for `camp.lose.tip.convoy.transport` first: write it there and the code needs nothing. |
 | D | note | **The 1.1 briefing's walkthrough has no line for the distress call** (the miner under attack at 31 percent of the road: the first order call of the game). It says scout, ambush, leader. | The third briefing screen (`fleet-1Wm-2-brief-3.png`). | Words in `content/text/campbrief.md`; a line was not added because the walkthrough has four steps by design. Troy: is a fifth wanted? |
+
+| E | note | **Typed orders need a chat key.** I opens the strip, but without an OpenAI or Anthropic key every line (even "take the long lane", "tuck in") is answered "The ship's computer needs a chat key (OpenAI or Anthropic) to answer: Settings > Keys." The Campaign's H page lists "I: Type an order to the ship" with no word about the key. The orders themselves (panel, map, calls) need no key, so a player with no key is never stuck. | Press I in 1.1 with no key. | Troy: is a one-word "(needs a chat key)" on that H row wanted? (The Long Haul rows say it.) |
 
 ### For 2-GEN's tune card (what feels off; no numbers changed)
 
@@ -56,6 +65,9 @@ What it does: K, the ready room, the missions overlay and the three briefing scr
 - **The scouts** read both lanes before the transport reached the fork ("Scout 1, short lane: ambush, 6 pirates.", "Scout 2, long lane: ambush, 4 pirates, a cache.") and came home; the pick by T on the map ("Taking the long lane.").
 - **Power in the leader's phases**: J (shields) on the charge, L (weapons) on the shield drop, K (engines) on the ram and the run, `;` back to even on the stalk; the toasts and the gauges followed ("Power to shields.", "Engines are low on power, pilot." when the engines were squeezed).
 - **Fighter repair**: "Fighter hit hard. Breaking off to land." then "Fighter mended and launching again." (1.2, three times).
+- **The mouse at the fork** works: a click on a lane row sets it (the Fly, Fast, Scout and Take buttons come up), the Scout and Take buttons act on it.
+- **A retry starts clean**: after a loss, the new try's hints, calls and fork are fresh.
+- **The kill**: with the cruiser sent at the leader from the map (Enter on its row), "Pirate leader is down.", the transport arrived 13 s later and the debrief scored all five bonuses.
 - **The map all the way out** (minus from the key table): ZOOM 9 percent in 1.1, the whole system with the lanes, the convoy and the traffic in the list.
 - **1.2**: Sold 500 ore for 1500, the Works' doors open once the raiders are gone, "Docking at Occator Works." and the ready room's BUILD page after the win; the rank promotion line and the bay's new size.
 - **The cards after a win and a loss**: the debrief with each bonus marked, "LEVEL 1 WON" with the story, the Earth refit (a tech by its digit, then Enter), the saved progress (`results` per mission, the ore), the lost card and Enter flying the mission again from its brief, the pause card (Goal, the keys, the pace).
