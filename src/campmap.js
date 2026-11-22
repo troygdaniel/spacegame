@@ -106,7 +106,7 @@ function campMapMarks(C, whole) { // whole: the far places too (the whole system
   if (typeof campAnomMarks === 'function') campAnomMarks(C).forEach(a => out.push({ type: 'anomaly', id: 'anom:' + a.id, x: a.x, y: a.y, r: a.r, shown: a.shown, color: a.shown ? c.cache : c.anomaly })); // noticed: an unlabelled warped mark; decloaked: the cache (src/campanomaly.js)
   if (C.relic && L.relic) out.push({ type: 'relic', x: C.relic.x, y: C.relic.y, r: L.relic.radius, hold: L.relic.hold ? C.relic.hold / L.relic.hold : 0, color: c.relic });
   C.ships.forEach(u => {
-    if (u.hp <= 0) return;
+    if (u.hp <= 0 || (u.team === 'alien' && typeof campSeen === 'function' && !campSeen(C, u))) return; // a hostile out of the sensors' sight is not on the map (src/campsight.js)
     const type = u.kind === 'carrier' ? 'carrier' : u.kind === 'freighter' ? 'convoy' : u.kind === 'mother' ? 'mother' : u.kind === 'tower' ? 'tower' : u.rival ? 'rival' : u.boat ? 'tboat' : u.faction === 'pirate' ? 'pirate' : u.team === 'alien' ? 'alien' : u.team === 'neutral' ? (u.kind === 'patrol' ? 'patrol' : 'miner') : 'wing';
     const m = { type, id: u.id, x: u.x, y: u.y, rot: u.rot, color: campDotColor(u) };
     if (type === 'wing' && u.squad) m.squad = u.squad; // a fighter's squad (card space-game-fighter-squads): the map draws its dot in the squad's colour (card space-game-squad-tint)

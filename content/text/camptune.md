@@ -43,6 +43,7 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.shieldsize | Shield size |
 | camp.ui.tune.row.turretdelay | Time between a turret's shots |
 | camp.ui.tune.row.turretreach | Turret reach |
+| camp.ui.tune.row.sensorrange | Sensor range (hostiles seen) |
 | camp.ui.tune.row.missilecount | Missiles at the start |
 | camp.ui.tune.row.missilereload | Missile reload time |
 | camp.ui.tune.row.lasertank | Laser tank size |
