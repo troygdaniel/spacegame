@@ -19,7 +19,7 @@
 //   campPickFit(C, item, view)                  the flight zoom at which the candidate and the cruiser are both inside `view` ({ x0, y0, x1, y1 }, screen px), the cruiser being at the middle of the screen
 const CAMP_PICK = {
   seen: 1200,                                  // ms an order's bracket stays on the candidate it was given at (the auto-pick, and a choice from the sub-list)
-  view: { left: 410, right: 40, top: 90, bottom: 80 } // px of the screen the reveal keeps clear: the list at the left (or the right) edge takes 400, the radar and the gauges the top, the key line the bottom
+  view: { left: 480, right: 40, top: 90, bottom: 80 } // px of the screen the reveal keeps clear: the list at the left edge ends at 384, and the bracket round the candidate reaches 30 px (and a little more) out from its middle; the radar and the gauges take the top, the key line the bottom
 };
 const campPickKind = row => (row && row.pick) || '';
 const campPickGuarded = C => (typeof campConvoyShips === 'function' ? campConvoyShips(C) : campConvoys(C)); // the ships you protect: the convoys and the neutral miners
