@@ -9,13 +9,14 @@
 //   campPanelNew()                   the state the scene keeps: { page: { fleet, ship }: the page each panel is on (0 is the first), at: when it was turned to it, lit: { row id: when its key was last pressed } }
 //   campPanelKey(P, C, code, now, shift)   one key: { used, ran, ok, say, row, page, tgt, fleet }: a panel's page key turns its page; a row's key does the row (ran: it was an order; ok and say are its answer; Shift with 8 is a fast burn); A D S X pick and clear the target (tgt)
 //   campPanelTick(P, now)            a panel left on a later page goes back to its first one after CAMP_PANELS.back ms
-//   campPanelRows(C, id, page)       the rows of a panel's page with their live state: [{ n, id, k, label, tag, ok, state, short, marked }] (state: what it will do, or why it cannot, in a few words; short: the same in one or two, for the one-line rows)
+//   campPanelSettle(P, C, now)       the cycling keys' pending choice (E the next stance, R the next convoy order: P.pend = { cycle, id, at }) is given as an order once the key has rested CAMP_PANELS.settle ms: { ran, ok, say, row }; the scene asks each frame
+//   campPanelRows(C, id, page, P)    the rows of a panel's page with their live state: [{ n, id, k, label, tag, ok, state, short, marked }] (with P, a cycling row with a choice pending says it: "> Run for it") (state: what it will do, or why it cannot, in a few words; short: the same in one or two, for the one-line rows)
 //   campPanelRun(C, row, how, shift) do the row: campOrder with the row's words (how: 'key' or 'click', the play log's), the autopilot, the blink -> { ok, say }
 //   campPanelTarget(C)               the line of the target for the FLEET panel: { name, km, hp } or null
 //   campPanelKeyLine()               'Q Fleet   P Ship': the panels' page keys, from the table;   campKeyLine(): the whole bottom key line (camp.ui.keys)
 const campPanelDigit = code => { const m = /^(?:Digit|Numpad)(\d)$/.exec(String(code || '')); return m ? +m[1] : null; };
 const campPanelDef = id => CAMP_PANELS.panels.find(p => p.id === id) || null;
-const campPanelNew = () => ({ page: { fleet: 0, ship: 0 }, at: { fleet: 0, ship: 0 }, lit: {} });
+const campPanelNew = () => ({ page: { fleet: 0, ship: 0 }, at: { fleet: 0, ship: 0 }, lit: {}, pend: null }); // pend: the cycling key's choice that waits to be given { cycle: 'stance' | 'convoy', id: the row, at: the clock of the last press }
 const campPanelPages = id => { const d = campPanelDef(id); return d ? Math.min(Math.max(1, CAMP_PANELS.pages | 0), 1 + (d.page2 ? 1 : 0) + (d.page3 ? 1 : 0)) : 1; }; // the pages of a panel: its rows, its page2 and its page3, as many as CAMP_PANELS.pages allows
 const campPanelPageRows = (def, page) => page === 1 && def.page2 ? def.page2.rows : page === 2 && def.page3 ? def.page3.rows : def.rows;
 const campPanelPageTitle = (def, page) => page === 1 && def.page2 ? def.page2.title : page === 2 && def.page3 ? def.page3.title : def.title; // what a page is called (on the panel's heading)
@@ -49,7 +50,9 @@ function campPanelKey(P, C, code, now, shift) {
   }
   const hit = campPanelFind(P, code); if (!hit) return res;
   res.used = true; res.fleet = hit.def.id === 'fleet'; res.row = hit.row.id; P.lit[hit.row.id] = now;
+  if (hit.row.cycle && C) return campPanelCycleKey(P, C, hit.row, now, res); // E and R wait for the key to rest
   const r = campPanelRun(C, hit.row, 'key', shift);
+  if (hit.row.order === 'stance' || hit.row.order === 'convoy') P.pend = null; // a stance or a convoy order picked by its digit on its page settles any waiting choice
   res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || '';
   if (hit.page > 0 && campPanelPageRows(hit.def, hit.page).indexOf(hit.row) >= 0) P.page[hit.def.id] = 0; // a pick on a later page: back to the first
   return res;
@@ -66,16 +69,31 @@ const campPanelAs = (C, row) => {
 };
 const campPanelTargetArg = (C, row) => (row.order === 'attack' || row.order === 'missiles') && typeof campTgtNow === 'function' && campTgtNow(C) ? CAMP_TGT : (row.arg || ''); // with a target picked the attack and the missile go at it; none: as they always did
 // the next of the stances or the convoy orders (E and R): the row after the one in force on the panel's page, round at the end
-function campPanelNext(C, row) {
-  const def = campPanelDef('fleet'), list = row.cycle === 'stance' ? def.page2.rows : def.page3.rows;
-  const at = list.findIndex(r => row.cycle === 'stance' ? C.stance === r.id : campPanelConvoyMarked(C, r));
+const campPanelCycleList = row => { const def = campPanelDef('fleet'); return row.cycle === 'stance' ? def.page2.rows : def.page3.rows; };
+const campPanelInForce = (C, r) => (r.order === 'stance' ? C.stance === r.id : campPanelConvoyMarked(C, r));
+function campPanelNext(C, row, pendingId) { // pendingId: the choice already waiting (the key was pressed again before it settled): the next one is after it
+  const list = campPanelCycleList(row), at = pendingId ? list.findIndex(r => r.id === pendingId) : list.findIndex(r => campPanelInForce(C, r));
   return list[(at + 1) % list.length];
+}
+// E or R pressed: the choice moves on the panel row and the order waits until the key has rested CAMP_PANELS.settle ms (campPanelSettle), so a press that is only passing through gives no order; a choice the game would refuse is refused at once, in words
+function campPanelCycleKey(P, C, row, now, res) {
+  const pend = P.pend && P.pend.cycle === row.cycle ? P.pend.id : '', nx = campPanelNext(C, row, pend), chk = campCheck(C, nx.order, nx.arg || '');
+  res.used = true; res.row = row.id;
+  if (!chk.ok) { P.pend = null; res.ran = true; res.ok = false; res.say = chk.say || ''; return res; }
+  P.pend = { cycle: row.cycle, id: nx.id, at: now }; res.pending = nx.id; return res;
+}
+function campPanelSettle(P, C, now) {
+  const p = P && P.pend; if (!p || !C || now - p.at < CAMP_PANELS.settle) return { ran: false };
+  P.pend = null;
+  const row = campPanelCycleList({ cycle: p.cycle }).find(r => r.id === p.id); if (!row || campPanelInForce(C, row)) return { ran: false }; // cycled round to where it was: nothing to do
+  const r = campOrder(C, row.order, row.arg || '', 'key');
+  return { ran: true, ok: !!(r && r.ok), say: (r && r.say) || '', row: p.cycle };
 }
 function campPanelRun(C, row, how, fast) {
   if (!C || !row) return { ok: false, say: '' };
   row = campPanelAs(C, row);
   if (row.blink) { C.input.blink = true; const bw = typeof campBlinkWhy === 'function' ? campBlinkWhy(C) : ''; return { ok: !bw, say: bw }; } // the warp blink: without the technology, or while it cools, the key says so
-  if (row.cycle) { const nx = campPanelNext(C, row); return campOrder(C, nx.order, nx.arg || '', how || 'key'); }
+  if (row.cycle) { const nx = campPanelNext(C, row); return campOrder(C, nx.order, nx.arg || '', how || 'key'); } // a click on the row steps at once (a click is a decision; the keys wait: campPanelCycleKey)
   if (row.fly === 'target') { // the autopilot to the target (Shift: a burn)
     const tr = typeof campTgtRow === 'function' ? campTgtRow(C) : null; if (!tr) return campNo('notarget');
     const t = campNavTarget(C, tr) || tr, d = Math.hypot(t.x - C.carrier.x, t.y - C.carrier.y);
@@ -168,9 +186,10 @@ const campPanelBlinkWord = C => !campHas(C, 'blink') ? 'no tech' : campBlinkWhy(
 const campPanelTarget = C => (typeof campTgtInfo === 'function' ? campTgtInfo(C) : null); // { name, km, hp } of the target, or null
 const campPanelShips = n => n + (n === 1 ? ' ship' : ' ships'); // "1 ship", "3 ships"
 const campPanelConvoyMarked = (C, row) => row.order === 'convoy' && campConvoyState(C) === campConvoyVerb(String(row.arg || '')); // the convoy order that all the escorted ships are under
-function campPanelRows(C, id, page) {
+function campPanelRows(C, id, page, P) {
   const def = campPanelDef(id); if (!def || !C) return [];
-  return campPanelPageRows(def, page | 0).map(row => { const as = campPanelAs(C, row); return Object.assign({ n: as.n, id: as.id, k: as.k, label: as.label, tag: as.tag || as.label, marked: (as.order === 'stance' && C.stance === as.id) || campPanelConvoyMarked(C, as) }, campPanelRowState(C, row)); });
+  const pend = P && P.pend ? P.pend : null, pl = pend ? campPanelCycleList({ cycle: pend.cycle }).find(r => r.id === pend.id) : null;
+  return campPanelPageRows(def, page | 0).map(row => { const as = campPanelAs(C, row); const pending = pl && as.cycle === pend.cycle ? { marked: true, state: '> ' + pl.label, short: '> ' + pl.label } : null; return Object.assign({ n: as.n, id: as.id, k: as.k, label: as.label, tag: as.tag || as.label, marked: (as.order === 'stance' && C.stance === as.id) || campPanelConvoyMarked(C, as) }, campPanelRowState(C, row), pending || {}); });
 }
 const campPanelTab = (C, id) => { const d = campPanelDef(id); if (!d) return ''; const st = id === 'fleet' && C && C.stance && C.stance !== 'free' ? d.page2.rows.find(r => r.id === C.stance) : null; return d.title + (st ? ' - ' + st.label.toUpperCase() : ''); };
 function campPanelHead(C, id, page) {

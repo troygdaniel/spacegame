@@ -61,7 +61,7 @@ function campPanelsInstall(s) {
 // the panels go back to their first page at once: a card, the map or the end took the screen
 function campPanelsClose(s) {
   if (!s || !s.pn || !s.pn.page) return;
-  CAMP_PANELS.panels.forEach(p => { s.pn.page[p.id] = 0; });
+  CAMP_PANELS.panels.forEach(p => { s.pn.page[p.id] = 0; }); s.pn.pend = null; // and a cycling choice that was waiting is dropped
 }
 // the panels show while the battle is on the screen: not over a card, the pause, the page of keys or the map
 const campPanelsOn = s => s.mode === 'play' && !s.mp && !(typeof campKeysIsOpen === 'function' && campKeysIsOpen(s));
@@ -94,8 +94,10 @@ function campPanelsPaintOne(s, O, now, on) {
   }
   O.title.setVisible(true).setText(campPanelPageTitle(def, page)).setColor(page > 0 ? '#ffffff' : '#9fbdd1');
   O.pageKey.setVisible(pages > 1).setText(def.key + '   ' + (page + 1) + '/' + pages);
+  const pk = s.pn.pend ? s.pn.pend.cycle + ':' + s.pn.pend.id : ''; // a choice waiting on E or R is shown at once, not at the next quarter second
+  if (O.pendKey !== pk) { O.pendKey = pk; O.live = -1e9; }
   if (O.live < 0 || now - O.live >= K.every || O.page !== page) { // the words are live: made on the first frame and four times a second after that (or at once when the page turned)
-    O.live = now; O.page = page; O.state = campPanelRows(C, def.id, page);
+    O.live = now; O.page = page; O.state = campPanelRows(C, def.id, page, s.pn);
     if (def.id === 'fleet') { const tg = campPanelTarget(C); O.tgt = tg ? { text: uiText('camp.ui.tgt', { name: tg.name, km: tg.km }), hp: tg.hp } : { text: uiText('camp.ui.tgtnone'), hp: -1 }; }
   }
   rows.forEach((r, i) => { // a row: a translucent back with the panel's colour at its edge, the key cap, the name and the live word
