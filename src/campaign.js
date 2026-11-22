@@ -190,6 +190,7 @@ const CAMP = {
     },
     squads: ['red', 'green', 'yellow'],    // the squads in the order they fill: a fighter that leaves the bay joins the one with the fewest ships out (a tie goes to the first of these), so six are two and two and two and a seventh makes Red three; a ship lost or mended gives its place back
     squadColor: { red: 0xff5a4a, green: 0x3ee86a, yellow: 0xffd23a }, // what a squad's ships wear in flight (a ring: src/campaignscene.js) and on the map (src/campmapdraw.js): three hues apart, bright on the dark
+    rescue: 1500,                          // px: a squad sent to a ship in trouble (a pilot's call, src/camporders.js) fights the pirates this near that ship, and goes back to the order it had when none is left (campWingRescue, src/campwing.js)
     verbs: {                               // kinds: what the verb takes as a target (enemy, friend, convoy, place, point, pickup, cache, anomaly, rock); group: who it addresses when none is named (today's orders); need: a target must be named
       attack: { kinds: ['enemy'], group: 'fighters' },
       escort: { kinds: ['friend', 'convoy'], group: 'escorts' },
@@ -1537,7 +1538,9 @@ function campWingAI(C, u, dt) {
     return campSeek(u, c.x, c.y, dt);
   }
   if (o.type === 'attack') {
-    foe = o.target && C.by[o.target] && C.by[o.target].hp > 0 ? C.by[o.target] : campDogFoe(C, u, campNearest(aliens, u)); // a named alien is the order's; with none named, a fighter flies at its partner (src/campdogfight.js)
+    const rs = o.rescue ? campWingRescue(C, u, o) : null; // a squad sent to a ship in trouble (a pilot's call; src/campwing.js): it fights the pirates about that ship, and when none is left it takes up the order it had
+    if (rs && rs.over) return;
+    foe = rs ? rs.foe : o.target && C.by[o.target] && C.by[o.target].hp > 0 ? C.by[o.target] : campDogFoe(C, u, campNearest(aliens, u)); // a named alien is the order's; with none named, a fighter flies at its partner (src/campdogfight.js)
     if (!foe) home = c; // nothing left to hit: back to the carrier's side
   } else if (o.type === 'escort') {
     const cv = C.by[o.target];
