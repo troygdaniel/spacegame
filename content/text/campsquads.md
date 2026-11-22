@@ -1,7 +1,7 @@
 ---
 type: text
 ---
-The words of the fighters' squads (card space-game-fighter-squads; Troy, 22 Nov 2026): the refusal when a squad has no ships out, and the map's legend rows for the squads' rings.
+The words of the fighters' squads (card space-game-fighter-squads; Troy, 22 Nov 2026): the refusal when a squad has no ships out, and the map's legend rows for the squads' colours.
 
 ## Strings
 | key | text |
