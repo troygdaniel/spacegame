@@ -38,7 +38,7 @@ function campaignStart(s, level) { // the title's K: the ready room (src/camphub
 }
 
 // a tech as the pick and the refit cards list it (card space-game-ready-room-simple): its name and what it changes in plain words with the numbers (src/camphub.js campHubTechChange), else the tech's own sentence
-const campTechLine = id => uiText('camp.tech.' + id + '.name') + '  -  ' + ((typeof campHubTechChange === 'function' && campHubTechChange(id)) || uiText('camp.tech.' + id + '.text'));
+const campTechLine = (id, P) => uiText('camp.tech.' + id + '.name') + '  -  ' + ((typeof campHubTechChange === 'function' && campHubTechChange(id, P)) || uiText('camp.tech.' + id + '.text')); // P: the pilot's progress, for the numbers that depend on what he has
 
 class Campaign extends Phaser.Scene {
   constructor() { super('Campaign'); }
@@ -198,7 +198,7 @@ class Campaign extends Phaser.Scene {
   }
   showPick() {
     this.mode = 'pick'; this.choices = campTechChoices(this.level, this.P);
-    this.showCard(uiText('camp.ui.pick'), this.choices.map((id, i) => (i + 1) + '   ' + campTechLine(id)), '', 340);
+    this.showCard(uiText('camp.ui.pick'), this.choices.map((id, i) => (i + 1) + '   ' + campTechLine(id, this.P)), '', 340);
   }
   // the Earth refit after the belt: one of the three techs (pick again before Enter), and ore buys extra fighters and escorts for the next level (the workshop's prices)
   showRefit() {
@@ -206,7 +206,7 @@ class Campaign extends Phaser.Scene {
   }
   paintRefit() {
     const R = this.refit, B = CAMP.build, lines = [uiText('camp.ui.refitore', { ore: R.ore, xf: R.f, xe: R.e }), uiText('camp.ui.refitpick', { keys: this.choices.map((id, i) => i < 3 ? i + 1 : i + 3).join('  ') })]
-      .concat(this.choices.map((id, i) => (i < 3 ? i + 1 : i + 3) + '   ' + campTechLine(id) + (R.pick === id ? '   <' : '')), [uiText('camp.ui.refitbuy', { fc: B.fighterCost, ec: B.escortCost })]);
+      .concat(this.choices.map((id, i) => (i < 3 ? i + 1 : i + 3) + '   ' + campTechLine(id, this.P) + (R.pick === id ? '   <' : '')), [uiText('camp.ui.refitbuy', { fc: B.fighterCost, ec: B.escortCost })]);
     this.showCard(uiText('camp.ui.refit'), lines, R.pick ? uiText('camp.ui.refitgot', { name: uiText('camp.tech.' + R.pick + '.name') }) : '', 380);
   }
   refitKey(c) {
