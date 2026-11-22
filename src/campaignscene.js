@@ -62,6 +62,7 @@ class Campaign extends Phaser.Scene {
     campShotTextures(this); // the pirates' and the neutrals' shots
     this.boom = fxBoom(this);
     if (typeof campTuneLoadOnce === 'function') campTuneLoadOnce(); // the tuning panel's overrides (src/camptune.js) go into the CAMP table before the battle is made: a page reads them once; a bot or a test never does
+    this.pickZoom = null; // the zoom a target sub-list took and the one to give back (src/camppickdraw.js)
     this.tuned = false; // a mission flown with any override on is a tuned run: its score and rank are not kept (update sets it)
     this.camp = this.makeCamp();
     this.sp = {}; this.bsp = []; this.bayAt = { launch: -1e9, land: -1e9 }; // the battle clock of the last launch and the last landing: the bays of the cruiser stay lit a moment after each (campBayLight)
@@ -281,7 +282,7 @@ class Campaign extends Phaser.Scene {
     const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // a word typed into the strip is not a key
     if ((typeof this.pn !== 'object' || typeof this.pn.lit !== 'object') && typeof campPanelNew === 'function') this.pn = campPanelNew(); // made in create (campPanelsInstall); a stand-in scene in a test has none, and answers any property
     const listOpen = typeof campPanelOpen === 'function' && !!campPanelOpen(this.pn);
-    if (campKeyCodes('pause').indexOf(c) >= 0) { if (listOpen) campPanelsClose(this); else if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc closes an open list first, then the map; it pauses only when neither is open
+    if (campKeyCodes('pause').indexOf(c) >= 0) { if (listOpen) campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0); else if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc goes back ONE step in the lists (a target sub-list to its list, a list a part's row opened to Q or P, a list its own key opened closes: src/camppanel.js), then closes the map; it pauses only when nothing is open
     if (this.mp && typeof campMapKey === 'function' && campMapKey(this, c, e.shiftKey)) return; // the open map has the arrows and Enter: Up and Down step the marks, Left and Right the groups, Enter flies there, V scouts, X clears the trip (src/campmapdraw.js)
     if (this.mp && !typing && (CAMP_PANELS.panels.some(p => p.code && p.code === c) || campKeyIs('missile', c))) { if (campKeyIs('missile', c)) return; campMapClose(this); } // a list's key over the map: the map closes and the list opens; Enter is never a missile over the map
     if (!typing && typeof campCallKey === 'function' && campCallKey(this, c)) return; // a pilot's call has the arrows and Enter while no list is open: Up and Down pick an answer, Enter gives it (src/camporderdraw.js)
@@ -363,6 +364,7 @@ class Campaign extends Phaser.Scene {
     if (typeof campFarSync === 'function') campFarSync(this);
     if (typeof campSightSync === 'function') campSightSync(this); // the edge arrows of the hostiles that are off the screen and the pulse of a group just seen (src/campsightscene.js) // the names of the places and the escorted ships when the view is out so far that the world's labels are specks (src/campfarscene.js)
     if (typeof campTgtPaint === 'function') campTgtPaint(this); // the bracket round the target A D S picked (src/camptargetdraw.js)
+    if (typeof campPickPaint === 'function') campPickPaint(this); // the candidate a target sub-list is on, shown in the flight view (and the zoom out to it; src/camppickdraw.js)
     if (typeof campTorpedoSync === 'function') campTorpedoSync(this, Math.min(dt, 100)); // the torpedoes and the boats that arm (src/camptorpedoscene.js)
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
     if (typeof campCallPaint === 'function') campCallPaint(this); // the plate of a pilot's call for orders, while one waits (src/camporderdraw.js)
