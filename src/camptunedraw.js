@@ -14,7 +14,7 @@ const CAMPTUNE_LOOK = {
   hiX: 192, hiW: 896, hiH: 26,                                    // the highlight bar
   noteY: 566, keysY: 606,                                         // the message line and the key lines under the list
   depth: 320,                                                      // over the H page (300), the cards (200) and the map (150 to 156)
-  markX: 232, markY: 22                                            // the TUNED mark: from the right edge of the screen, and its top
+  markX: 372, markY: 22                                            // the TUNED mark: from the right edge of the screen (its right end is 10 px left of the gauges' block, which is at the top right since card space-game-power-presets: x 908 on a 1280 screen), and its top
 };
 
 const campTuneIsOpen = s => !!s && !!s.tp && s.tp.open === true;
