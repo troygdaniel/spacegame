@@ -29,13 +29,13 @@ try {
   await toShare(0.315); await t.run(2500);
   check('beat 2: the miner is under attack and the pilots ask for orders (the call is open)', (await j(`campCallView(${SC}.camp) && campCallView(${SC}.camp).id`)) === 'distress');
   await snap(t, 'call');
-  // the call is a small list (card one-list-keys): the highlight starts on the pilot's own pick (view.def - 1), Down moves it (round at the end), Enter answers. The row of "rescue" is read from the call, not written here
-  const downs = await j(`(() => { const v = campCallView(${SC}.camp), at = v.rows.findIndex(r => r.pick === 'rescue'); return at < 0 ? -1 : (at - (v.def - 1) + v.rows.length) % v.rows.length; })()`);
+  // the call is a small list (card one-list-keys): the highlight starts on the pilot's own pick (view.def - 1), Down moves it (round at the end), Enter answers. The row of "sendred" is read from the call, not written here
+  const downs = await j(`(() => { const v = campCallView(${SC}.camp), at = v.rows.findIndex(r => r.pick === 'sendred'); return at < 0 ? -1 : (at - (v.def - 1) + v.rows.length) % v.rows.length; })()`);
   for (let i = 0; i < downs; i++) { await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowDown' }))`); await t.run(100); }
-  check('Down moves the call\'s highlight to "rescue"', downs >= 0 && (await j(`campCallView(${SC}.camp).rows[campCallSel(${SC})].pick`)) === 'rescue');
+  check('Down moves the call\'s highlight to "Send Red squad"', downs >= 0 && (await j(`campCallView(${SC}.camp).rows[campCallSel(${SC})].pick`)) === 'sendred');
   await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter' }))`); await t.run(3000);
-  check('Enter answers it with the highlighted row: the fighters are on the pirates', (await j(`${SC}.camp.call.log.some(l => l.id === 'distress' && l.pick === 'rescue')`)) === true);
-  await snap(t, 'rescue');
+  check('Enter answers it with the highlighted row: the red squad is on the pirates', (await j(`${SC}.camp.call.log.some(l => l.id === 'distress' && l.pick === 'sendred')`)) === true);
+  await snap(t, 'sendred');
   await t.run(20000);
   // beat 3: the ambush
   await toShare(0.525); await t.run(2500);

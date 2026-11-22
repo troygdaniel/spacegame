@@ -4,10 +4,13 @@
 // the wing's own orders (src/campwing.js), a missile out of the magazine, ore for the shield, the emergency power, or the enemy turned on the cruiser. At most one call in CAMP_CALLS.gap seconds.
 // The sim half: plain numbers and strings (no Phaser, no page; tests/camporders.mjs runs it in Node), and nothing in it rolls a die: the same flight makes the same calls.
 //
-// THE TABLE is data. A call TYPE is { id, when, pick: [fx, fx, fx], def }: `when(C, S)` is its trigger (a context { who, ids } of ship ids when it holds, else null), `pick` is the three choices by the id of
-// their effect in CAMP_CALL_FX, `def` is the cautious one (an index into pick) that is taken when the pilot hears nothing. An EFFECT is { do(C, ctx) } and says whether it could be done: a pick that cannot be
+// THE TABLE is data. A call TYPE is { id, when, pick: [fx, fx, fx], def }: `when(C, S)` is its trigger (a context { who, ids } of ship ids when it holds, else null), `pick` is the choices (three, or up to five when a call
+// offers the squads) by the id of their effect in CAMP_CALL_FX, `def` is the cautious one (an index into pick) that is taken when the pilot hears nothing. An EFFECT is { do(C, ctx) } and says whether it could be done: a pick that cannot be
 // done (no missile, the target is gone) is not done and the cautious one is. The words of a type are camp.call.line.<id>, of an effect camp.call.fx.<id> (the label on the prompt) and camp.call.r.<id> (the
 // pilot's answer, said on the radio), and camp.call.late and camp.call.fail are the answers to no answer and to a pick that could not be done (content/text/camporders.md).
+//   SQUADS (card space-game-distress-send-squads; Troy, 22 Nov 2026: "let him send squads, all or specific"): a call may offer the fighters' squads. campCallSquadFx(prefix, make) puts the effects prefix+all, prefix+red, prefix+green and
+//   prefix+yellow in CAMP_CALL_FX and returns their ids for a type's `pick`; make(C, ctx, group) does the order (campCallSend: fly to the ship the call is about and fight there, then take up the old order). An effect may carry
+//   ok(C, ctx): '' when it can be done now, else the code of why not (nosquad, nofighters, launching: the game's own refusals). The prompt shows that row grey with the reason and Enter on it is refused: the call stays open.
 //   C.call = { n, next, open, last, seen, log }  made at the first tick:  n calls made, next: the battle clock (ms) before which none opens, open: the call that waits { id, ctx, pilot, at, left, total, def, held }
 //   THE HOLD (card space-game-call-timer-stops; Troy, 22 Nov: "stop the selection timer if the user hits a key, otherwise keep it"): a call opens with its CAMP_CALLS.answer seconds running. When the player touches the prompt (Up or Down on
 //   it: campCallHold, called by the scene's campCallKey) the seconds stop where they are (`held` is 0 and counts up) and the call waits for Enter. Nothing else holds it (a fire, power, target or list key is not the prompt's), and a call
@@ -16,8 +19,8 @@
 //   C.call.mood = { until, deal, take, rate }  the answer's worth (CAMP_CALLS.mood, CAMP_CALL_RATE): until the battle clock `until` the wing (fighters and escorts) deals `deal` times the damage and takes `take` times (campHurt, src/campaign.js)
 //   campCallStart(C, id, ctx)   a script opens a call of a type that has `scripted: true` (its trigger is not asked); false while one waits
 //   campCallHold(C)            the player touched the prompt: the clock stops (true when it was held by this); an event { type: 'call', stage: 'hold', id }
-//   campCallAnswer(C, n, how)   n: 1, 2 or 3 (0: the pilot's own pick); how: 'key', 'bot', 'late'; { ok, id, pick } and an event { type: 'call', stage: 'answer', ... }
-//   campCallView(C)             what the prompt draws: null, or { id, pilot, line, left, total, held, def, rows: [{ n, pick, label, def }] }  (held: the clock is stopped, `left` is what it stopped at)
+//   campCallAnswer(C, n, how)   n: 1 to the number of rows (0: the pilot's own pick); how: 'key', 'bot', 'late'; { ok, id, pick } and an event { type: 'call', stage: 'answer', ... }. A key on a grey row is refused ({ ok: false, off: true, code, say }) and the call stays open
+//   campCallView(C)             what the prompt draws: null, or { id, pilot, line, left, total, held, def, rows: [{ n, pick, label, def, off, why, say }] }  (off: the row cannot be done now; why: a word or two, say: the sentence)  (held: the clock is stopped, `left` is what it stopped at)
 //   campCallOpen(C)             a call is waiting for an answer (the scene reads this: a call has the arrows and Enter, and the lists are dimmed behind it; the battle is NOT slowed)
 const CAMP_CALLS = {
   first: 40,       // s of the mission's clock before the first call may come (the first minute's hints, src/campnudge.js, are said first: a call at 20 s took their turn)
@@ -59,7 +62,7 @@ const CAMP_CALL_RATE = {
   second:      { good: [2], bad: [] },   // a second group: everyone attacks; holding, the cautious pick, and the fighters alone are neither
   running:     { good: [0], bad: [2] },  // pirates run: the fighters give chase; a missile after a runner is wasted
   opportunity: { good: [0], bad: [1] },  // a big ship alone: the missile; the fighters alone on it are wrong
-  distress:    { good: [0], bad: [1] }   // the miner (beat 2 of 1.1): the fighters help him; everyone going leaves the transport
+  distress:    { good: [1, 2, 3], bad: [0] } // the miner (beat 2 of 1.1; picks: all squads, Red, Green, Yellow, stay): one squad is the right-sized answer; all three leave the cruiser's side bare
 };
 
 // ---- the effects: each says whether it could be done ----
@@ -82,6 +85,25 @@ const CAMP_CALL_FX = {
   letgo: { do: () => true },
   leave: { do: () => true }
 };
+
+// ---- squad choices (the fighters' three squads, src/campwing.js) ----
+const campCallSquadWhy = (C, group) => campWingShips(C, group, true).some(u => u.kind === 'fighter') ? '' : C.launchQ.length ? 'launching' : group === 'fighters' ? 'nofighters' : 'nosquad'; // '' when the squad has a ship out to send
+function campCallSquadFx(prefix, make) { // the four choices of a call that offers the squads: all of them, Red, Green, Yellow (the ids prefix+all, prefix+red ...)
+  return ['fighters'].concat(CAMP.wing.squads).map(gr => { const id = prefix + (gr === 'fighters' ? 'all' : gr); CAMP_CALL_FX[id] = { squad: gr, ok: C => campCallSquadWhy(C, gr), do: (C, x) => make(C, x, gr) }; return id; });
+}
+// the squad (or all three) flies to the ship the call is about (ctx.who) and fights the pirates at it; when none is left it takes up the order it had (campWingRescue, src/campwing.js): the other squads keep theirs, the escorts stay
+function campCallSend(C, x, group) {
+  const m = x && C.by[x.who]; if (!m || m.hp <= 0) return false;
+  const ships = campWingShips(C, group, true).filter(u => u.kind === 'fighter'); if (!ships.length) return false;
+  const tg = campWingShipTarget(C, m);
+  ships.forEach(u => {
+    const old = u.order && u.order.rescue ? u.order.back : u.order; // a squad sent twice goes back to the order it had before the first
+    u.order = { type: 'attack', target: '', rescue: m.id, back: old || { type: 'guard', at: { kind: 'carrier' } }, tg: { kind: tg.kind, id: tg.id, ref: tg.ref, name: tg.name, x: tg.x, y: tg.y } }; u.move = null;
+  });
+  C.orders.attack = (C.orders.attack | 0) + 1;
+  C.events.push({ type: 'wingorder', group, verb: 'attack', target: { kind: tg.kind, id: tg.id, name: tg.name }, n: ships.length, how: 'call' });
+  return true;
+}
 
 // ---- the call types ----
 const CAMP_CALL_TYPES = [
@@ -153,7 +175,9 @@ function campCallHold(C) {
 // the answer: 1, 2 or 3; 0 (or anything else) is no answer: the pilot's own, cautious pick. A pick that cannot be done is not done: the cautious one is, and the answer says so.
 function campCallAnswer(C, n, how) {
   const S = C && C.call, o = S && S.open; if (!o) return { ok: false, code: 'nocall' };
-  const T = campCallType(o.id), asked = n >= 1 && n <= 3 ? n - 1 : -1; let i = asked >= 0 ? asked : T.def, failed = false;
+  const T = campCallType(o.id), asked = n >= 1 && n <= T.pick.length ? n - 1 : -1; let i = asked >= 0 ? asked : T.def, failed = false;
+  const fx0 = asked >= 0 ? CAMP_CALL_FX[T.pick[asked]] : null, why = fx0 && fx0.ok ? campTry(() => fx0.ok(C, o.ctx), '') : '';
+  if (why && how === 'key') return { ok: false, off: true, code: why, say: uiText('camp.no.' + why) }; // a grey row, picked by the player: refused with the reason, and the call goes on waiting (the clock runs as it was)
   if (!campTry(() => CAMP_CALL_FX[T.pick[i]].do(C, o.ctx), false) && i !== T.def) { failed = true; i = T.def; campTry(() => CAMP_CALL_FX[T.pick[i]].do(C, o.ctx), false); }
   S.open = null; S.next = Math.max(S.next, C.t + 3000); // a quiet moment after an answer: its own radio line is said first
   const way = asked < 0 ? 'late' : failed ? 'fail' : (how || 'key');
@@ -164,8 +188,9 @@ function campCallAnswer(C, n, how) {
   return { ok: true, id: T.id, pick: T.pick[i], n: i + 1, how: way, rate };
 }
 
+const campCallWhy = code => (typeof CAMP_PANELS === 'object' && CAMP_PANELS.shortWhy && CAMP_PANELS.shortWhy[code]) || code; // a word or two beside a grey row (the lists' own: 'none out')
 function campCallView(C) {
   const o = C && C.call && C.call.open; if (!o) return null;
   const T = campCallType(o.id); if (!T) return null;
-  return { id: o.id, pilot: o.pilot, line: 'camp.call.line.' + o.id, left: Math.max(0, o.left), total: o.total, held: o.held != null, def: T.def + 1, rows: T.pick.map((p, i) => ({ n: i + 1, pick: p, label: 'camp.call.fx.' + p, def: i === T.def })) };
+  return { id: o.id, pilot: o.pilot, line: 'camp.call.line.' + o.id, left: Math.max(0, o.left), total: o.total, held: o.held != null, def: T.def + 1, rows: T.pick.map((p, i) => { const fx = CAMP_CALL_FX[p], code = fx && fx.ok ? campTry(() => fx.ok(C, o.ctx), '') : ''; return { n: i + 1, pick: p, label: 'camp.call.fx.' + p, def: i === T.def, off: !!code, why: code ? campCallWhy(code) : '', say: code ? uiText('camp.no.' + code) : '' }; }) };
 }
