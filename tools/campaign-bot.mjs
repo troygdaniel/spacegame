@@ -6,6 +6,7 @@
 //   node tools/campaign-bot.mjs --tech beam          start with these techs (a level's table row says which a player would have)
 //   node tools/campaign-bot.mjs --old               level 1 with the numbers it had before the easier level 1 (Earth's shield 300 and the rest): what Troy's first tries were played on
 //   node tools/campaign-bot.mjs --set alien.hpScale=2 --set alien.damageScale=2   what if: change numbers of the table (CAMP.<path> = a number) for this run only
+//   node tools/campaign-bot.mjs --keys               every order the bot gives goes through the game's own KEYS (the order lists of src/camppanel.js: the list's key, Down to the row, Enter; the target picked first; Enter for a missile), not straight to the sim: proof that the keys alone win
 //   node tools/campaign-bot.mjs --json               the numbers, not the table
 // A bot is a way of playing: when it launches, whether it escorts, how often it attacks, whether it recalls its wounded, and the carrier's aim (skill: sharp,
 // steady, rough). The carrier flies at the alien nearest Earth (or nearest itself on a level with no Earth) and fires; that is the "plain strategy" of tests/campaign.mjs.
@@ -56,6 +57,7 @@ const SKILLS = { sharp: { gain: 3, thr: 0.15, noise: 0 }, steady: { gain: 2, thr
 const OLD = process.argv.includes('--old');
 const SETS = process.argv.map((a, i) => a === '--set' ? process.argv[i + 1] : null).filter(Boolean); // --set alien.hpScale=2 --set alien.damageScale=2: change the table before the run (what-if)
 const g = nodeGame();
+g.run(`window.__KEYS = ${process.argv.includes('--keys')}`); // --keys: the orders are given with the keys a player has (see ord below)
 if (process.argv.includes('--nocalls')) g.run('campCallsTick = null'); // --nocalls: the battle as it was before the pilots asked for orders (to compare)
 g.run(`window.__SMART = { distress: 1, cruiser: 3, wounded: 3, breakaway: 1, second: 3, running: 1, opportunity: 1 }; window.__WRONG = { distress: 2, cruiser: 2, wounded: 1, breakaway: 3, second: 1, running: 3, opportunity: 2 }`); // the 'smart' bot's picks by call type (1, 2 or 3): the right pick of each (CAMP_CALL_RATE in src/camporders.js, card space-game-fleet-command-tune); __WRONG: the wrong one of each (the 'plainw' bot)
 g.run(`window.__PACE = ${isNaN(Number(PACE)) ? JSON.stringify(PACE) : Number(PACE)}`); // the battle pace of every battle of this run
@@ -71,6 +73,18 @@ g.run(`(() => {
     return hurt0.apply(null, arguments);
   };
   const clampi = v => Math.max(-1, Math.min(1, v));
+  // --keys: an order as a player gives it. The row is found in the key table (campKeyVia), its list is opened with the list's own key, Down goes to the row, Enter gives it (src/camppanel.js campPanelKey);
+  // "attack that one" is the target picked first (what A, D and S do) and then the fighters' Attack row; a missile is Enter with no list open. What has no row (a scout, a lane: the map's) stays an order.
+  const give = (C, rowId) => { const list = campKeyVia(rowId), rows = list ? campPanelList(C, list.id) : [], i = rows.findIndex(r => r.id === rowId); if (i < 0) return { ok: false, say: 'no such row here: ' + rowId }; const P = campPanelNew(); campPanelKey(P, C, list.code, 0); for (let k = 0; k < i; k++) campPanelKey(P, C, 'ArrowDown', 0); window.__KEYN = (window.__KEYN | 0) + 1; return campPanelKey(P, C, 'Enter', 0); };
+  const aim = (C, id) => { if (id) C.tgt = id; else campTgtClear(C); };
+  const ROW = { launch: 'launch', escort: 'escort', mine: 'mine', recall: 'recall' };
+  const ord = (C, name, arg) => {
+    if (!window.__KEYS) return campOrder(C, name, arg);
+    if (ROW[name]) return give(C, ROW[name]);
+    if (name === 'convoy') return give(C, arg === 'tuck in' ? 'ctuck' : arg === 'carry on' ? 'ccarry' : arg === 'run for it' ? 'crun' : 'chold');
+    if (name === 'attack' || name === 'missiles') { const m = arg === 'mothership' ? C.ships.find(u => u.kind === 'mother' && u.hp > 0) : null; aim(C, m ? m.id : ''); return name === 'attack' ? give(C, 'attack') : campPanelKey(campPanelNew(), C, 'Enter', 0); }
+    return campOrder(C, name, arg);
+  };
   window.__botStep = (C, s, B, sk, st) => {
     if (B.idle) return; // (an idle player never answers a pilot's call: the pilot takes the cautious pick after his 8 s)
     if (C.call && C.call.open) campCallAnswer(C, B.answer === 'first' ? 1 : B.answer === 'smart' ? (window.__SMART[C.call.open.id] | 0) : B.answer === 'wrong' ? (window.__WRONG[C.call.open.id] | 0) : campCallView(C).def, 'bot'); // the pilots ask for orders (src/camporders.js): the plain bot answers at once with the cautious pick (0), 'first' always says 1, 'smart' picks by call type
@@ -78,29 +92,29 @@ g.run(`(() => {
     s -= C.arrivedAt / 1000;
     if (B.reactive != null && st.react == null && ((C.earth && C.earth.shield <= C.earth.max * 0.9) || C.carrier.hp <= C.carrier.maxHp * 0.8)) st.react = s + B.reactive;
     if (st.react != null && s >= st.react) { B = Object.assign({}, B, { sit: false, launchAt: st.launched ? B.launchAt : 0, attackFrom: 0, attackEvery: 5 }); st.sitOff = true; }
-    if (B.launch !== false && B.launchAt != null && !st.launched && s >= B.launchAt) { st.launched = true; campOrder(C, 'launch'); }
-    (B.escort || []).forEach((at, i) => { if (!st['e' + i] && s >= at && campConvoys(C).length) { st['e' + i] = true; campOrder(C, 'escort', 'convoy'); } }); // the wing goes to the nearest convoy ship (the transport, the haulers)
+    if (B.launch !== false && B.launchAt != null && !st.launched && s >= B.launchAt) { st.launched = true; ord(C, 'launch'); }
+    (B.escort || []).forEach((at, i) => { if (!st['e' + i] && s >= at && campConvoys(C).length) { st['e' + i] = true; ord(C, 'escort', 'convoy'); } }); // the wing goes to the nearest convoy ship (the transport, the haulers)
     if (C.route && !C.route.passed && !B.noroute) { // a fork in the road (card space-game-scout-route): scout both lanes as soon as an escort is out, then take the quieter one when the transport holds at the fork
       C.route.geo.order.forEach(id => { if (st.launched && !C.route.known[id] && !st['lane' + id]) { const row = campNavRows(C).find(x => x.id === 'lane:' + id); if (row && campOrder(C, 'scout', row).ok) st['lane' + id] = true; } });
       const hold = campRouteHolding(C), all = C.route.geo.order.every(id => C.route.known[id]);
       if (hold && !st.picked && (all || hold.left < 8)) { st.picked = true; const n = id => C.route.known[id] ? C.route.known[id].pirates + C.route.known[id].aliens : 99; campOrder(C, 'lane', hold.lanes.map(l => l.id).sort((a, b) => n(a) - n(b))[0]); }
     }
     const mineOpen = (campObjectives(C).some(o => !o.done && o.type === 'ore') || (B.mineAll && C.rocks.some(r => r.hp > 0))) && !B.nomine, fight = campAliens(C).some(u => !u.hold);
-    if (B.launch !== false && st.launched && mineOpen && !st.mining && !fight && s >= (st.mineAt || 0)) { if (campOrder(C, 'mine').ok) st.mining = true; else st.mineAt = s + 1; } // while the mission asks for ore the wing mines, and goes to the fight only when one comes (then mines again) // a mission that asks for ore: the wing mines (E then 1)
+    if (B.launch !== false && st.launched && mineOpen && !st.mining && !fight && s >= (st.mineAt || 0)) { if (ord(C, 'mine').ok) st.mining = true; else st.mineAt = s + 1; } // while the mission asks for ore the wing mines, and goes to the fight only when one comes (then mines again) // a mission that asks for ore: the wing mines (E then 1)
     if (B.cycle && st.launched) {
-      if (st.landAt && s >= st.landAt) { st.landAt = 0; campOrder(C, 'launch'); st.nextAtk = s + 2; }
+      if (st.landAt && s >= st.landAt) { st.landAt = 0; ord(C, 'launch'); st.nextAtk = s + 2; }
       const fs = campWing(C, 'fighter');
-      if (!st.landAt && fs.length >= 3 && Math.round(s * 30) % 60 === 0 && fs.reduce((a, u) => a + u.hp / u.maxHp, 0) / fs.length < B.cycle && C.carrier.hp > 0) { campOrder(C, 'recall'); st.landAt = s + 14; st.recalls = (st.recalls || 0) + 1; }
+      if (!st.landAt && fs.length >= 3 && Math.round(s * 30) % 60 === 0 && fs.reduce((a, u) => a + u.hp / u.maxHp, 0) / fs.length < B.cycle && C.carrier.hp > 0) { ord(C, 'recall'); st.landAt = s + 14; st.recalls = (st.recalls || 0) + 1; }
     }
     if (B.tuck && typeof campConvoyShips === 'function' && Math.round(s * 30) % 15 === 0) { // the convoy orders: tuck in while a hostile is near an escorted ship, carry on when it is clear
       const big = x => B.tuck !== 'torp' || x.kind === 'tboat' || x.kind === 'lancer' || x.kind === 'pirateleader'; // tuck: 'torp': only against the boats and the leader, the threats a tucked ship is safe from (the skiffs of a distress call are the fighters' to deal with, and the cruiser goes to the miner)
       const cs = campConvoyShips(C), threat = cs.some(f => campAliens(C).some(a => big(a) && !a.hold && campDist(a, f) < 1600)), clear = !cs.some(f => campAliens(C).some(a => big(a) && !a.hold && campDist(a, f) < 2600));
-      if (threat && !st.tuck) { st.tuck = true; campOrder(C, 'convoy', 'tuck in'); } else if (clear && st.tuck) { st.tuck = false; campOrder(C, 'convoy', 'carry on'); }
+      if (threat && !st.tuck) { st.tuck = true; ord(C, 'convoy', 'tuck in'); } else if (clear && st.tuck) { st.tuck = false; ord(C, 'convoy', 'carry on'); }
     }
-    if (B.missiles && Math.round(s * 30) % 21 === 0 && typeof campOrder === 'function') campOrder(C, 'missiles', C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'mothership' : '');
+    if (B.missiles && Math.round(s * 30) % 21 === 0 && typeof campOrder === 'function') ord(C, 'missiles', C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'mothership' : '');
     if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight)) {
       const boat = typeof campTorpedoBoats === 'function' ? campTorpedoBoats(C).filter(u => !u.running).sort((p, q) => campDist(p, C.carrier) - campDist(q, C.carrier))[0] : null; // torpedo boats (card space-game-torpedo-boats): the plain answer is to send the fighters at the nearest boat that still has a torpedo, before anything else
-      if (boat) campWingOrder(C, 'fighters', 'attack', boat.id); else campOrder(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : '');
+      if (boat) { if (window.__KEYS) { aim(C, boat.id); give(C, 'attack'); } else campWingOrder(C, 'fighters', 'attack', boat.id); } else ord(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : '');
       st.mining = false;
     }
   };
@@ -209,6 +223,7 @@ if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs')) {
       }
     }
   }
+  if (process.argv.includes('--keys')) out.keys = { orders: Number(g.run('window.__KEYN | 0')) }; // how many orders went through the lists' keys
   if (arg('json', false)) console.log(JSON.stringify(out, null, 1));
   else for (const [key, level] of keys) {
     console.log(`\nLevel ${key} (mission ${key.split('.')[1]})  skill ${SKILL}  techs [${techsFor(level, TECH).join(',')}]  ${SEEDS} seeds`);
