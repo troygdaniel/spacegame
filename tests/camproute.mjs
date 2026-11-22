@@ -202,7 +202,7 @@ sec('G', () => {
   check('G  the radio tells the player the road forks, once, with the transport on its way', J("__ev.filter(e => e.type === 'say' && e.key === 'camp.say.fork').length") === 1 && J('campConvoys(C).length') === 1);
   g.run('__go(75)');
   check('G  left alone she holds at the fork and after 45 s takes the short lane (nothing is chosen for the player)', J('C.route.lane') === null || J('C.route.lane') === 'short');
-  check('G  the briefing counts the raids of the default lane, not both lanes\' (6 skiffs, 2 torpedo boats and the pirate leader)', (() => { const e = J('campBriefEnemies(1, 0).list'); const n = k => (e.find(x => x.kind === k) || { n: 0 }).n; return n('skiff') === 2 + 4 && n('tboat') === 2 && n('pirateleader') === 1; })(), JSON.stringify(J('campBriefEnemies(1, 0).list')));
+  check('G  the briefing counts the raids of the default lane, not both lanes\' (8 skiffs: the distress call\'s 2, the ambush\'s 4 and the leader\'s 2; 2 torpedo boats and the pirate leader)', (() => { const e = J('campBriefEnemies(1, 0).list'); const n = k => (e.find(x => x.kind === k) || { n: 0 }).n; return n('skiff') === 2 + 4 + 2 && n('tboat') === 2 && n('pirateleader') === 1; })(), JSON.stringify(J('campBriefEnemies(1, 0).list')));
   g.run('window.C = campNew(1, [], { seed: 1, mission: 0 }); C.god = true; __ev.length = 0; __go(66)');
   check('G  nothing hostile comes before the fork (the patrol sees her off and is gone), so the fork is quiet: at 66 s she is at it, holding, with about 45 s of the wait to run', !!J('campRouteHolding(C)') && J('campRouteHolding(C).left') > 40 && J('campAliens(C).length') === 0);
 });

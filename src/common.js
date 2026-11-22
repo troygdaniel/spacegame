@@ -94,7 +94,7 @@ function toast(s, msg, color = '#ffd37a') {
   const edge = Phaser.Display.Color.HexStringToColor(color).color; // thin frame in the message colour, amber tab on the left
   const bg = s.add.rectangle(box.x, box.y, box.w, box.h, 0x04101c, 0.92).setStrokeStyle(1, edge, 0.9).setScrollFactor(0).setDepth(299);
   const tab = s.add.rectangle(box.left + 2, box.y, 3, box.h, AMBER, 1).setScrollFactor(0).setDepth(299);
-  s.toasts = [{ t, bg, tab, y: box.y, h: box.h, msg: String(msg), last: plan.lines[plan.lines.length - 1], at: now }];
+  s.toasts = [{ t, bg, tab, y: box.y, h: box.h, msg: String(msg), last: String(msg), at: now }]; // last: the message that came last, whole (the last LINE of a message that wrapped is a fragment: it was paired with the next toast as if it were a message, and the box showed "Q, CONVOY, 3 is Run for it." with the start of the sentence cut off)
   s.tweens.add({ targets: [t, bg, tab], alpha: 0, delay: TOAST.hold, duration: TOAST.fade, onComplete: () => { t.destroy(); bg.destroy(); tab.destroy(); } });
 }
 

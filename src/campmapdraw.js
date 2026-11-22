@@ -286,8 +286,8 @@ function campMapKey(s, code, shift) {
     return set(rows.findIndex(r => r.group === next));
   }
   if (code === 'Enter' || code === 'NumpadEnter') { if (rows[at]) campMapFly(s, rows[at], !!shift); return true; } // Enter: regular speed; Shift+Enter: fast
-  if (code === 'KeyV') { const row = mp.setId ? rows.find(r => r.id === mp.setId) : rows[at]; if (row) campMapScout(s, row); return true; } // V: send a scout to the chosen place (or the one set by a click)
-  if (code === 'KeyT') { const row = mp.setId ? rows.find(r => r.id === mp.setId) : rows[at]; if (row && row.kind === 'lane') { campMapTake(s, row); return true; } return false; } // T: take the lane that is chosen (or set), at a fork in the road
+  if (code === 'KeyV') { const row = rows[at]; if (row) campMapScout(s, row); return true; } // V: send a scout to the chosen place: the row that is marked in the list (a click on a mark chooses it too; the place a trip is flying to stays SET, with its buttons, and is not what V is about: card space-game-hunt-l1-fleet)
+  if (code === 'KeyT') { const row = rows[at]; if (row && row.kind === 'lane') { campMapTake(s, row); return true; } return false; } // T: take the lane that is chosen (marked in the list), at a fork in the road
   if (code === 'KeyX') { if (s.camp && (s.camp.nav || s.camp.navWait)) { campNavClear(s.camp, 'clear'); mp.dirty = true; } if (mp.flewId && mp.setId === mp.flewId) { mp.setId = ''; mp.flewId = ''; } return true; }
   return false;
 }
