@@ -1,6 +1,6 @@
 # Project status
 
-**Updated: 23 Nov 2026, written against main `fed8854` (the shortcut keys, no command time, a third round of fixes, the call timer, the flight zoom out to the mission's whole route and every flight starting at the same zoom), the walking briefing of mission 1.1, and the tuning panel (`N`), plus the cut of 1.1's fork (mission 1.1 is one road).** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
+**Updated: 23 Nov 2026, written against main `7d620ba` plus the fighter squads (`W` all squads, `E` red, `R` green, `T` yellow; the shortcut keys, no command time, a third round of fixes, the call timer, the flight zoom out to the mission's whole route and every flight starting at the same zoom), the walking briefing of mission 1.1, and the tuning panel (`N`), plus the cut of 1.1's fork (mission 1.1 is one road).** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
 
 ## In one minute
 
@@ -46,7 +46,7 @@ The batch is the answer to "I want to direct the fleet more". Each item has its 
 
 ## Being built right now
 
-- **Shortcut keys for the lists** (pull request 2, merged to main on 23 Nov at Troy's word, not through the gate): the keys above, and three fixes found by playing (below). The one-list keys under them landed on 22 Nov as pull request 1, at Troy's word, before the gate ran the Chrome boots. The Chrome boot scripts were rewritten for the shortcut keys; which were run, and where, is in the pull request. Still to do: Troy plays it and says what feels wrong (the lists are one table, so moving or dropping a row is one change).
+- **Shortcut keys for the lists** (pull request 2, merged to main on 23 Nov at Troy's word, not through the gate): the keys above, and three fixes found by playing (below). The one-list keys under them landed on 22 Nov as pull request 1, at Troy's word, before the gate ran the Chrome boots. The Chrome boot scripts were rewritten for the shortcut keys; which were run, and where, is in the pull request. The squads' key changes were run in Chrome on the branch: `campanelsdraw-boot`, `camphunt-boot` (default and `--panels`), `ordercall-boot`, `mapclickfly-boot`, `campfuzz-boot 1` and `tools/campshots.mjs panels`, and a picture check (rings in flight at three zooms, the eleven-row Q list, the map's legend). Still to do: Troy plays it and says what feels wrong (the lists are one table, so moving or dropping a row is one change).
 - **Retuning all nine missions** after the new systems (target: the plain bot wins all nine at all three paces with losses in the hard ones; an idle player never wins; a player who answers calls and uses convoy orders does clearly better; level 1 missions about five to eight minutes). 1.1 is done.
 - **Enemy torpedo boats**: on main and used in 1.1; finishing touches.
 - **Test upkeep** for the above (Chrome boot scripts that press keys that moved).

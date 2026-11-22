@@ -11,7 +11,7 @@
 //   campPanelsKeep()           the rectangles the edge arrow's label keeps out of: the target's line (an open list is drawn over the arrow's label)
 // Everything is on the screen's own camera (scroll factor 0), so the zoom (src/camzoom.js) never scales it. tests/campanelsui.mjs checks the states on stand-ins.
 const CAMPPANELS_LOOK = {
-  box: { w: 360, head: 30, row: 26, gap: 2, pad: 6, foot: 44 }, // px: the list's width, its heading's height, a row's height, the gap between rows, the gap under the heading, the foot (what is off the screen, and the keys)
+  box: { w: 360, head: 30, row: 24, gap: 2, pad: 6, foot: 44 }, // px: the list's width, its heading's height, a row's height, the gap between rows, the gap under the heading, the foot (what is off the screen, and the keys)
   top: 262, edge: 24, depth: 160, every: 250,                   // the list's y (the gauges and their lines take the top left, the radar the top right), its distance from the screen's edge, the depth (over the map, 150 to 156), ms between the words being made live
   color: { left: CYAN, right: AMBER }, ink: { left: '#7fe9ff', right: '#ffd37a' },
   rowInk: { ok: '#e8f6ff', no: '#7f95a8', suffix: '#8fb4c8', why: '#ff9e7a', at: '#02101c' }, flash: 0xffffff,
