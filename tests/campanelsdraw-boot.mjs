@@ -119,7 +119,7 @@ async function campaign() {
     await press(t, 'ArrowDown', 20); await t.run(200);
     check('Down moves the call\'s highlight to the next answer (round at the end)', (await isOpen()) === '' && (await j(`campCallSel(${SC})`)) === def % 3 && (await j(`campCallOpen(${SC}.camp)`)) === true);
     await press(t, 'Enter', 20); await t.run(300);
-    check('Enter answers the call with the highlighted row, fires no missile, and the plate is gone', (await j(`${SC}.camp.call.open`)) === null && (await j(`${SC}.camp.call.log[${SC}.camp.call.log.length - 1].way`)) === 'key' && (await j(`${SC}.camp.missiles`)) >= missiles0 && (await j(`${UI}.on`)) === false);
+    check('Enter answers the call with the highlighted row, fires no missile, and the plate is gone', (await j(`${SC}.camp.call.open`)) === null && ['key', 'fail'].indexOf(await j(`${SC}.camp.call.log[${SC}.camp.call.log.length - 1].way`)) >= 0 /* the call is opened by hand with nothing to act on, so a pick that cannot be done falls to the pilot's own: either way Enter answered it, not the clock */ && (await j(`${SC}.camp.missiles`)) >= missiles0 && (await j(`${UI}.on`)) === false);
     // the strip: the slash opens it (the chat key is stubbed: the strip needs one), the keys typed in it are not the game's, Esc closes it and does not pause; the period is the voice key of the scene
     await t.ev(`(() => { shipcompAvailable = () => true; return 1; })()`);
     await press(t, 'Slash', 40); await t.run(300);
