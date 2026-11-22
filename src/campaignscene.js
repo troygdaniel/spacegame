@@ -155,7 +155,7 @@ class Campaign extends Phaser.Scene {
     this.showCard(uiText('camp.ui.mission', { n, of: M.missions, title: uiText(k + 'title') }), where.concat(lines, bonus.length ? [uiText('camp.ui.bonushead')].concat(bonus) : []), uiText('camp.ui.briefgo'), 330);
     this.say(lines);
   }
-  bonusText(b) { return b.type === 'lost' && !b.n ? uiText('camp.b.nolost') : uiText('camp.b.' + b.type, { secs: b.secs, n: b.n, pct: b.pct }); }
+  bonusText(b) { return campHubBonusText(b); } // the same words as the ready room's board (src/camphub.js)
   showDebrief(sc) {
     const M = this.camp.L, k = 'camp.m.' + this.level + '.' + (M.mission + 1) + '.', clock = t => Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
     const R = this.replay === true ? this.replayRes : null, num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
