@@ -10,7 +10,7 @@ Main `79e9f14`. The six missions of levels 2 and 3 were tuned by bots after auto
 
 ## Findings, ranked
 
-### Fixed (test: `tests/camphuntfleet.mjs`, 12 checks)
+### Fixed (test: `tests/camphuntl23.mjs`, 12 checks)
 
 | # | rank | finding | how to see it | fix and pin |
 |---|---|---|---|---|

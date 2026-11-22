@@ -6,13 +6,14 @@
 const campClock = ms => { const t = Math.max(0, Math.round(ms / 1000)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
 function campLoseLines(C, why) {
   const has = k => uiText(k) !== k, w = String(why || '').replace(/[^a-z]/g, '');
-  const out = [has('camp.lose.' + w) ? uiText('camp.lose.' + w) : uiText('camp.lose.other')];
+  const word = ((C && C.L && C.L.objectives) || []).map(o => o.word).find(Boolean) || '', key = k => word && has(k + '.' + word) ? k + '.' + word : k; // a mission that delivers one named ship says so (1.1's transport): camp.lose.convoy.transport before camp.lose.convoy, and the tip the same way
+  const out = [has('camp.lose.' + w) ? uiText(key('camp.lose.' + w)) : uiText('camp.lose.other')];
   try {
     const L = (C.L || CAMP.levels[C.level]);
     out.push(uiText('camp.lose.reached', { time: campClock(C.t), wave: typeof campWaveCount === 'function' ? campWaveCount(C).n : C.waves.filter(x => x.started).length, total: typeof campWaveCount === 'function' ? campWaveCount(C).total : L.waves.length, kills: C.kills }));
   } catch (e) { /* no battle: the cause alone */ }
   const towers = w === 'carrier' && C && ((C.L || CAMP.levels[C.level]) || {}).win === 'towers'; // the tower missions: the tip that helps against towers
   if (towers && has('camp.lose.tip.towers')) out.push(uiText('camp.lose.tip.towers'));
-  else if (has('camp.lose.tip.' + w)) out.push(uiText('camp.lose.tip.' + w));
+  else if (has('camp.lose.tip.' + w)) out.push(uiText(key('camp.lose.tip.' + w)));
   return out;
 }

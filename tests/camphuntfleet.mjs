@@ -1,46 +1,72 @@
-// smoke: the small fixes of the hunt of Levels 2 and 3 after the fleet command batch (card space-game-hunt-l23-fleet; docs/night/hunt-l23-fleet.md), plain Node, no Chrome
-// The six missions were flown in the real game (muted, one Chrome) and in the sim (a tape of every second, an order fuzz); each fix here is a thing a player saw.
-//   A. the pick card and the refit say what the second bay does to the wing the pilot really has (the rank's ships and the refit's count), not to the table's bare bay
-//   B. a pilot who is already breaking off to land for a mend is not "hit and burning, orders?": the call is for the wingman who is still out there
+// smoke: the fixes of the hunt on the new Level 1 flown start to finish (card space-game-hunt-l1-fleet, docs/night/hunt-l1-fleet.md), each pinned (plain Node, no Chrome)
 // Run: node tests/camphuntfleet.mjs   (exit code 1 on a failed check)
-import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { nodeGame } from './nodegame.mjs';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 let failed = 0;
 const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame();
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
-const text = f => readFileSync(join(ROOT, f), 'utf8');
 
-// ---- A. the second bay's numbers ----
-// a pilot who has flown the six missions of levels 1 and 2 at 2,000 points each is a Captain: the bay holds more than the table's 6 fighters before the tech
-g.run(`window.__P = (techs, bonus) => { const P = campProgressNew(); P.level = 3; P.techs = techs; P.bonus = bonus || { fighters: 0, escorts: 0 }; for (const k of ['1.1', '1.2', '1.3', '2.1', '2.2', '2.3']) P.results[k] = { score: 2000, bonuses: [], t: 100, hull: 800, lost: 0, tries: 1 }; return P; };`);
-const bare = J('CAMP.bay.fighters'), plus = J('CAMP.tech.bay2.fighters'), wing = J(`campHubWing(__P(['shield']))`).fighters;
-check('the fixture: a Captain\'s bay holds more than the table\'s bare bay (' + wing + ' against ' + bare + ')', wing > bare);
-check('the second bay says "from the bay the pilot has to that and four more": ' + (wing) + ' to ' + (wing + plus), J(`campHubTechChange('bay2', __P(['shield']))`) === `Fighters in the bay: ${wing} to ${wing + plus}`, J(`campHubTechChange('bay2', __P(['shield']))`));
-check('the refit adds the ships it bought to the count (a fighter bought: one more in the "from")', (() => { const w2 = J(`campHubWing(__P(['shield'], { fighters: 2, escorts: 0 }))`).fighters; return w2 === wing + 2 && J(`campHubTechChange('bay2', __P(['shield'], { fighters: 2, escorts: 0 }))`) === `Fighters in the bay: ${w2} to ${w2 + plus}`; })());
-check('a pilot who has the second bay already: the "from" leaves it out (the line says what the tech did, not what it would do twice)', (() => { const P = `__P(['shield', 'bay2'])`, w2 = J(`campHubWing(${P})`).fighters; return w2 === wing + plus && J(`campHubTechChange('bay2', ${P})`) === `Fighters in the bay: ${wing} to ${wing + plus}`; })());
-check('with no pilot to ask the line is the table\'s own, as before (6 to 10)', J(`campHubTechChange('bay2')`) === `Fighters in the bay: ${bare} to ${bare + plus}`);
-check('the refit overlay lists the tech with the true numbers', J(`campHubRefit(__P(['shield', 'bay2'])).techs.find(t => t.id === 'bay2').change`) === `Fighters in the bay: ${wing} to ${wing + plus}`);
-check('the pick card and the refit card give the line the pilot\'s progress (campTechLine(id, this.P) in both)', J(`campTechLine('bay2', __P(['shield']))`) === `Second bay  -  Fighters in the bay: ${wing} to ${wing + plus}` && (text('src/campaignscene.js').match(/campTechLine\(id, this\.P\)/g) || []).length === 2);
-check('the other techs say what they said (the shield, the plating, the repair field)', ['shield', 'plating', 'repair'].every(id => J(`campHubTechChange('${id}', __P(['shield']))`) === J(`campHubTechChange('${id}')`)));
+// ---- 1. the map's V and T act on the row that is marked in the list, not on the place a trip is flying to ----
+// 1.1's fork: the HUD says AUTOPILOT Transport convoy, the toast says "Pick a lane on the map, press T." A player who follows the transport opens the map with that trip on: its place is SET
+// (the convoy) and the list starts on it. W or S moves the mark to a lane; V and T went to the set place all the same: V said "This mission has no scouting." (the convoy cannot be scouted),
+// T did nothing, and the transport waited out the whole fork wait ("No word. Taking the short lane.").
+g.run(`window.__mapkeys = (sel, set) => { const seen = { scout: null, take: null }, o = [campMapScout, campMapTake];
+  window.campMapScout = (s, row) => { seen.scout = row.id; return true; }; window.campMapTake = (s, row) => { seen.take = row.id; return true; };
+  const mp = { rows: [{ id: 'goal', kind: 'convoy', group: 'goal' }, { id: 'convoy:freighter-t1', kind: 'convoy', group: 'convoys' }, { id: 'lane:short', kind: 'lane', group: 'route' }, { id: 'lane:long', kind: 'lane', group: 'route' }], selId: sel, setId: set, flewId: set, userSel: true };
+  const s = { mp, camp: {} }, r = { v: campMapKey(s, 'KeyV'), t: campMapKey(s, 'KeyT') };
+  window.campMapScout = o[0]; window.campMapTake = o[1]; return Object.assign(seen, r); };`);
+const a = J(`__mapkeys('lane:long', 'convoy:freighter-t1')`);
+check('V with a trip set to the convoy and the mark on the long lane scouts the long lane', a.scout === 'lane:long', JSON.stringify(a));
+check('T with a trip set to the convoy and the mark on the long lane takes the long lane', a.take === 'lane:long' && a.t === true, JSON.stringify(a));
+const b = J(`__mapkeys('convoy:freighter-t1', 'convoy:freighter-t1')`);
+check('with the mark on the convoy itself V scouts it (the map says it cannot) and T is not the map\'s (it is not a lane)', b.scout === 'convoy:freighter-t1' && b.take === null && b.t === false, JSON.stringify(b));
+const c = J(`__mapkeys('lane:short', '')`);
+check('with nothing set the mark is what V and T act on, as before', c.scout === 'lane:short' && c.take === 'lane:short', JSON.stringify(c));
 
-// ---- B. the wounded call ----
-g.run(`window.__box = (lv, mi) => { const C = campNew(lv, [], { seed: 1, mission: mi || 0 }); C.arrivedAt = 0; C.t = 60000; C.ships = C.ships.filter(u => u.kind === 'carrier'); C.by = { [C.carrier.id]: C.carrier }; C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); return C; };
-window.__put = (C, kind, x, y, extra) => { const u = campSpawn(C, kind, x, y); if (u.team === 'earth' && !u.order) u.order = { type: 'guard', at: { kind: 'carrier' } }; Object.assign(u, extra || {}); return u; };
-window.__tick = (C, n) => { for (let i = 0; i < (n || 1); i++) campCallsTick(C, 1 / 30); };`);
-const open = e => J(`(() => { const C = ${e}; __tick(C); return C.call.open ? { id: C.call.open.id, ctx: C.call.open.ctx } : null; })()`);
-const hurt = (share, extra, second) => open(`(() => { const C = __box(2, 1), c = C.carrier, f = __put(C, 'fighter', c.x + 300, c.y); f.hp = f.maxHp * ${share}; Object.assign(f, ${JSON.stringify(extra || {})}); ${second || ''} __put(C, 'raider', c.x + 500, c.y); return C; })()`);
-check('a fighter at 35 percent with a raider on him calls, as he did', hurt(0.35)?.id === 'wounded');
-check('a fighter at 25 percent who is flying home to land (the repair, src/camprepair.js) does not: he is already on his way, "keep fighting" would be a lie', hurt(0.25, { repair: true }) === null);
-check('a fighter at 25 percent too far to get home (he fights on: repair is not set) still calls', hurt(0.25)?.id === 'wounded');
-check('with two wounded, the one who is flying home is skipped and the other is the one the pilot calls about', (() => {
-  const a = open(`(() => { const C = __box(2, 1), c = C.carrier, f = __put(C, 'fighter', c.x + 300, c.y), h = __put(C, 'fighter', c.x + 700, c.y); f.hp = f.maxHp * 0.2; f.repair = true; h.hp = h.maxHp * 0.35; __put(C, 'raider', c.x + 500, c.y); return C; })()`);
-  const who = J(`(() => { const C = __box(2, 1), c = C.carrier, f = __put(C, 'fighter', c.x + 300, c.y), h = __put(C, 'fighter', c.x + 700, c.y); f.hp = f.maxHp * 0.2; f.repair = true; h.hp = h.maxHp * 0.35; __put(C, 'raider', c.x + 500, c.y); __tick(C); return [f.id, h.id, C.call.open && C.call.open.ctx.who]; })()`);
-  return a && a.id === 'wounded' && who[2] === who[1]; })());
+// ---- 2. a toast that came after a long one does not show the tail of it ----
+// A message that wraps on two lines used to be remembered by its LAST LINE: a toast within 1.5 s of it was "paired" with that fragment, and the box showed the fragment on top. 1.1's own hints
+// were cut: "The leader blocks the way. Send the transport past it: Q, CONVOY, 3 is Run for it." then "Pirate leader ahead. Heavy ship." showed "Q, CONVOY, 3 is Run for it." over the second line.
+g.run(`window.__toastShows = (first, second) => { const shown = [], mk = () => new Proxy(function () {}, { get: (t, k) => (k === 'then' ? undefined : mk()), apply: () => mk() });
+  const s = { time: { now: 1000 }, add: { text: (x, y, txt) => { shown.push(txt); return mk(); }, rectangle: () => mk() }, tweens: { add: () => {} }, toasts: [] };
+  toast(s, first); s.time.now = 1300; toast(s, second); return shown; };`);
+const t1 = J(`__toastShows('The leader blocks the way. Send the transport past it: Q, CONVOY, 3 is Run for it.', 'Pirate leader ahead. Heavy ship.')`);
+check('a short toast after a two-line one stands alone (the tail of the long one is not on top of it)', t1.length === 2 && t1[1] === 'Pirate leader ahead. Heavy ship.', JSON.stringify(t1));
+const t2 = J(`__toastShows('Fighters, attack.', 'Missile away.')`);
+check('two short toasts a moment apart still share the box, the first on top', t2.length === 2 && t2[1] === 'Fighters, attack.\nMissile away.', JSON.stringify(t2));
+const t3 = J(`(() => { const shown = [], mk = () => new Proxy(function () {}, { get: (t, k) => (k === 'then' ? undefined : mk()), apply: () => mk() }); const s = { time: { now: 1000 }, add: { text: (x, y, txt) => { shown.push(txt); return mk(); }, rectangle: () => mk() }, tweens: { add: () => {} }, toasts: [] };
+  toast(s, 'Fighters, attack.'); s.time.now = 1200; toast(s, 'Missile away.'); s.time.now = 1400; toast(s, 'Power to shields.'); return shown; })()`);
+check('three short toasts in a row: the box holds the last two, as before', t3[2] === 'Missile away.\nPower to shields.', JSON.stringify(t3));
 
-console.log(failed ? `\ncamphuntfleet: ${failed} FAILED` : '\ncamphuntfleet: all ok');
-process.exit(failed ? 1 : 0);
+// ---- 3. 1.1 has one Transport: its goal does not say "Haulers" ----
+// The HUD line, the briefing's goal (and the ship computer's summary, which reads the HUD line) said "Haulers delivered: 0 of 1." in a mission of one Transport that the rest of the game
+// calls "the transport" ("Transport is under way.", "Transport has arrived."). A deliver row may say `word: 'transport'`; 1.3's three haulers keep the old words.
+const g11 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); campStep(C, 1 / 30); return { hud: campObjective(C), brief: campHubBrief(campProgressNew(), 1, 0).objectives, sum: campSummary(C) }; })()`);
+check('1.1: the HUD goal says "Transport delivered: 0 of 1."', g11.hud === 'Transport delivered: 0 of 1.', g11.hud);
+check('1.1: the briefing\'s goal says the same, and the ship computer is told it', g11.brief.length === 1 && g11.brief[0] === 'Transport delivered: 0 of 1.' && g11.sum.indexOf('Goal: Transport delivered: 0 of 1.') >= 0, JSON.stringify([g11.brief, g11.sum.slice(0, 120)]));
+const g13 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 2 }); campStep(C, 1 / 30); return { hud: campObjective(C), brief: campHubBrief(campProgressNew(), 1, 2).objectives }; })()`);
+check('1.3: the three haulers keep "Haulers delivered"', /^Haulers delivered: 0 of 1\.$/.test(g13.hud) && g13.brief[0] === 'Haulers delivered: 0 of 1.', JSON.stringify(g13));
+
+const l11 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); return campLoseLines(C, 'convoy'); })()`), l13 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 2 }); return campLoseLines(C, 'convoy'); })()`);
+check('1.1: the lost card says the transport is lost; 1.3 says the haulers', l11[0] === 'The transport is lost.' && l13[0] === 'The haulers are lost.', JSON.stringify([l11[0], l13[0]]));
+check('the tip of a lost convoy is still there (1.1 shares the convoy tip until a transport tip is written: camp.lose.tip.convoy.transport)', l11.length === 3 && l11[2] === l13[2], JSON.stringify(l11));
+
+// ---- 4. 1.1 does have scouting: V on a row that is not a lane says what scouts can read, not "This mission has no scouting." ----
+const sc = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); campOrder(C, 'launch'); for (let i = 0; i < 600; i++) campStep(C, 1 / 30);
+  const row = k => campNavRows(C).find(r => r.kind === k), say = r => r.say || r.code, out = {};
+  out.convoy = say(campScoutDo(C, row('convoy'), true)); out.lane = say(campScoutDo(C, row('lane'), true)); C.route.passed = true; out.past = say(campScoutDo(C, row('convoy'), true));
+  const D = campNew(1, [], { seed: 1, mission: 2 }); campOrder(D, 'launch'); for (let i = 0; i < 600; i++) campStep(D, 1 / 30); out.none = say(campScoutDo(D, campNavRows(D).find(r => r.kind === 'convoy') || { x: 0, y: 0 }, true)); return out; })()`);
+check('1.1, V on the transport: "Scouts only read the lanes here, pilot."', sc.convoy === 'Scouts only read the lanes here, pilot.', JSON.stringify(sc));
+check('1.1, V on a lane is allowed (the scout goes)', /Scout \d is going to Short lane/.test(sc.lane), JSON.stringify(sc));
+check('1.1, the fork behind: "The fork is behind us. Nothing to scout."; 1.3 (no fork, no scouting) keeps "This mission has no scouting."', sc.past === 'The fork is behind us. Nothing to scout.' && sc.none === 'This mission has no scouting.', JSON.stringify(sc));
+
+// ---- 5. the briefing counts every pirate 1.1 sends: the leader brings two skiffs ----
+// "Expect 6 pirate skiffs, 2 pirate torpedo boats, the pirate leader": the flight met 8 skiffs (the distress call's 2, the ambush's 4 and the 2 that come with the leader).
+const en = J(`campBriefEnemies(1, 0)`), seen = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }), L = C.L, k = {}; (L.waves || []).forEach(w => { if (w.lane && w.lane !== 'short') return; Object.keys(w.ships || {}).forEach(s => { k[s] = (k[s] || 0) + w.ships[s]; }); });
+  (L.rivals || []).forEach(r => Object.keys(r.escorts || {}).forEach(s => { k[s] = (k[s] || 0) + r.escorts[s]; })); return k; })()`);
+const sk = en.list.find(e => e.kind === 'skiff'), tb = en.list.find(e => e.kind === 'tboat');
+check('1.1\'s briefing says 8 skiffs and 2 torpedo boats (the distress call, the ambush and the leader\'s two)', sk && sk.n === 8 && tb && tb.n === 2 && /8 pirate skiffs/.test(en.line), en.line);
+check('and that is what the mission\'s rows send down the default lane (the count is read from them)', seen.skiff === 8 && seen.tboat === 2, JSON.stringify(seen));
+
+if (failed) { console.log(`\nHUNT FLEET: ${failed} FAILED`); process.exit(1); }
+console.log('\nHUNT FLEET: all passed');

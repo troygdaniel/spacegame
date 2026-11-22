@@ -497,7 +497,7 @@ const CAMP = {
       missions: [                                                 // a mission is a row laid over this one: kind, objectives, bonus objectives (bonus), par (s), its own waves, convoys ... (docs/CAMPAIGN.md, Missions)
         { id: 'escort', kind: 'escort', par: 400, hpScale: 1, dmgScale: 1, scouts: ['escort'], place: 'luna', dock: 'ceres',  // 1.1 ESCORT in four beats (card space-game-l1-1-beats; docs/CAMPAIGN.md "Mission 1.1 in four beats"): from the Lunar Base one transport flies to Ceres, 16,500 px at 52 px/s; something happens about every minute and the player directs the fleet in each
           convoys: [{ id: 't1', name: 'Transport', say: 'camp.say.transport', at: 4, from: 'luna', to: 'ceres', speed: 54 }],  // the transport: when she leaves (s after arrival), from and to which place, her speed (54: the short lane is about 5 minutes, the long one about 6; it was 52, which made the long lane 6 minutes 15)
-          objectives: [{ type: 'deliver', n: 1 }],  // what the mission asks: the transport must arrive (the pirate leader is a bonus: kill it, or get her past)
+          objectives: [{ type: 'deliver', n: 1, word: 'transport' }],  // what the mission asks: the transport must arrive (the pirate leader is a bonus: kill it, or get her past)
           bonus: [{ id: 'swift', type: 'time', secs: 400 }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'miner', type: 'neutrals', n: 0 }, { id: 'leader', type: 'rival', what: 'leader' }, { id: 'torp', type: 'torpedoes', n: 0 }],  // the debrief follows the beats: the miner saved, the leader killed, no torpedo hit
           traffic: [{ id: 'patrol', kind: 'patrol', place: 'luna', off: [160, -120], n: 2, name: 'Patrol', escort: { convoy: 't1', until: 0.12, say: 'camp.say.patrolleave' } },  // BEAT 1: a patrol of two flies with her to the edge of safe space (12 percent of the road) and turns back
                     { id: 'dm', kind: 'miner', at: [415, 5630], n: 1, name: 'Miner', home: 'luna', stay: true, hp: 24 }],  // BEAT 2: a miner works off the route, 2,600 px west of the road at 30 percent of it (an offset from Luna)
@@ -1434,12 +1434,12 @@ const campFree = (C, kind) => campWing(C, kind).filter(u => !u.scout);
 function campScoutDo(C, arg, dry) {
   const tasks = campScoutTasks(C);
   const lanes = !!(C.route && !C.route.passed); // a fork in the road: the lanes are for scouting whatever the mission's tasks say (src/camproute.js)
-  if (!tasks.includes('recon') && !tasks.includes('fetch') && !lanes) return campNo('noscout');
+  if (!tasks.includes('recon') && !tasks.includes('fetch') && !lanes) return campNo(C.route ? 'scoutpast' : 'noscout'); // (a mission with a fork says the fork is behind us: "no scouting" was wrong for 1.1 once the lane is taken)
   const es = campWing(C, 'escort'); if (!es.length) return campNo(C.launchQ.length ? 'launching' : 'noescorts');
   const free = es.filter(u => !u.scout && !(u.order && u.order.type === 'recall')); if (!free.length) return campNo('scoutsbusy');
   const f = arg && typeof arg === 'object' && Number.isFinite(arg.x) && Number.isFinite(arg.y) ? { row: arg } : typeof campNavFind === 'function' ? campNavFind(C, arg) : null; // a map row (the Tab map's Scout button) or the words
   if (!f || !f.row) return campNo('noscoutplace');
-  if (!tasks.includes('recon') && !tasks.includes('fetch') && f.row.kind !== 'lane') return campNo('noscout');
+  if (!tasks.includes('recon') && !tasks.includes('fetch') && f.row.kind !== 'lane') return campNo('scoutlanes'); // a fork is on the road and the lanes are all there is to scout: the other rows are not "no scouting" (1.1 said so to V on the transport)
   const row = f.row, n = (C.scoutN | 0) + 1;
   if (dry) return campYes('scout', { n, name: row.name });
   const u = campNearest(free, row);
@@ -1762,7 +1762,7 @@ function campObjectives(C) {
     else if (o.type === 'relic') got = C.flags.relic ? 1 : 0;
     else if (o.type === 'caches') { need = o.n; got = Math.min(o.n, C.cachesGot); }
     else if (o.type === 'clear') got = C.waves.length && C.waves.every(w => w.started) && !campAliens(C).length ? 1 : 0;
-    return { i, type: o.type, what: o.what, got, need, done: got >= need };
+    return { i, type: o.type, what: o.what, word: o.word, got, need, done: got >= need };
   });
 }
 // every tick: the recon points fill up while a ship of yours is near them; a mission whose objectives are all met is won; one that can no longer be met is lost (haulers)
@@ -1801,6 +1801,8 @@ function campScore(C) {
   return { score: Math.max(0, K.base + bonus + hull + speed - lost - haulerLost), base: K.base, bonuses, bonus, hull, speed, lost, haulerLost, haulersLost: C.lost, t, hullLeft: Math.round(C.carrier.hp), shipsLost: C.lostShips };
 }
 
+// the key of an objective's words: its type, then what is killed (a kill) or an optional word for what is delivered (a deliver row says `word: 'transport'` when it is one ship and not haulers: card space-game-hunt-l1-fleet)
+const campObjKey = o => 'camp.o.' + o.type + (o.type === 'kill' ? '.' + String(o.what).replace(/:.*/, '') : o.type === 'deliver' && o.word ? '.' + o.word : '');
 // what the level asks of you, in the words of content/text/ui.md (camp.obj.<win>): the HUD shows it, the ship computer is told it
 function campObjective(C) {
   const L = C.L, win = L.win;
@@ -1808,8 +1810,7 @@ function campObjective(C) {
   if (L.objectives) { // a mission: the first objective that is not done yet
     const o = campObjectives(C).find(x => !x.done); if (!o) return uiText('camp.o.done');
     if (o.type === 'deliver' && C.delivered >= o.need) return uiText('camp.o.deliverleft', { n: C.delivered, left: campConvoys(C).length + C.L.convoys.filter((cv, k) => !C.convoys[k].started).length }); // the haulers needed are home but the mission waits for the rest of them: say so (it read "0 of 1" with two haulers home; card space-game-night-hunt-l1-rim)
-    const key = 'camp.o.' + o.type + (o.type === 'kill' ? '.' + String(o.what).replace(/:.*/, '') : '');
-    return uiText(key, { got: o.got, need: o.need, secs: o.need });
+    return uiText(campObjKey(o), { got: o.got, need: o.need, secs: o.need });
   }
   if (win === 'mother') return uiText(C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'camp.obj.mother' : 'camp.obj.motherwait'); // the mothership comes with the last wave: until then the goal is to hold
   if (win === 'towers') return uiText('camp.obj.towers', { n: C.ships.filter(u => u.kind === 'tower' && u.hp > 0).length });
