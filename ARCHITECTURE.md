@@ -35,7 +35,7 @@ How the game is built, for someone (a person or an AI) who has never seen it. It
 | The three gauges and power bars | `camphud.js` | same file |
 | Maps and navigation | `campmap.js`, `campnav.js`, `campsol.js`, `campzoom.js` | `campmapdraw.js`, `campmapfire.js` |
 | The ready room, ranks, outposts, docking | `camphub.js`, `campranks.js`, `campoutpost.js`, `campdock.js` | `camphubscene.js` |
-| Briefing, hints, win and lose cards | `campbrief.js`, `campnudge.js`, `campwin.js`, `camplose.js`, `camphelp.js` | `campbriefdraw.js` |
+| Briefing, hints, win and lose cards | `campbrief.js`, `campnudge.js`, `campwin.js`, `camplose.js`, `camphelp.js` (the walking map of a briefing: `data_briefwalk.js`, `campbriefwalk.js`) | `campbriefdraw.js`, `campbriefwalkdraw.js` |
 | The ship's voice and radio | `campchatter.js`, `src/voice.js`, `src/voicepack.js` | |
 | Command strip, typed and spoken orders | `src/cmdstrip.js`, `src/shipcomputer.js`, `src/listen.js` | |
 
