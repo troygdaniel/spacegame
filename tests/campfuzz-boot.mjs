@@ -10,8 +10,9 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const { launch, sleep } = await import('./cdp.mjs');
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i < 0 ? d : process.argv[i + 1]; };
 const LEVEL = Number(arg('level', 2)), MISSION = Number(arg('mission', 1)), SEED = Number(arg('seed', 1)), KEYS = Number(arg('keys', 400)), FLIGHT = process.argv.includes('--flight');
-const VK = { Enter: 13, Escape: 27, Tab: 9, Space: 32, KeyL: 76, KeyA: 65, KeyD: 68, KeyW: 87, KeyS: 83, KeyQ: 81, KeyE: 69, KeyC: 67, KeyP: 80, KeyM: 77, KeyX: 88, KeyR: 82, KeyH: 72, KeyT: 84, KeyF: 70, KeyZ: 90, KeyK: 75,
-  ArrowLeft: 37, ArrowRight: 39, ArrowUp: 38, ArrowDown: 40, Equal: 187, Minus: 189, Digit0: 48, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, Digit6: 54, Digit7: 55, Backslash: 220 };
+// every key a player has: the two hands of the Campaign (card space-game-two-hands-keys: 1 2 3 4 W E R Q and A D S X at the left, 7 8 9 0 J K L ; U I Enter P at the right, the arrows to fly) and the keys of the rooms and cards (L K T F B C Z kept: they are the old Long Haul's and the rooms')
+const VK = { Enter: 13, Escape: 27, Tab: 9, Space: 32, KeyL: 76, KeyA: 65, KeyD: 68, KeyW: 87, KeyS: 83, KeyQ: 81, KeyE: 69, KeyC: 67, KeyP: 80, KeyM: 77, KeyX: 88, KeyR: 82, KeyH: 72, KeyT: 84, KeyF: 70, KeyZ: 90, KeyK: 75, KeyI: 73, KeyU: 85, KeyJ: 74, KeyB: 66,
+  ArrowLeft: 37, ArrowRight: 39, ArrowUp: 38, ArrowDown: 40, Equal: 187, Minus: 189, Backspace: 8, Semicolon: 186, Slash: 191, Digit0: 48, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, Digit6: 54, Digit7: 55, Digit8: 56, Digit9: 57, Backslash: 220 };
 const NAMES = Object.keys(VK).filter(k => k !== 'Backslash' && !(FLIGHT && (k === 'KeyT'))); // the debug key (\) wins a mission: not a player's key
 const weight = k => (k === 'Enter' ? 5 : k === 'Escape' ? (FLIGHT ? 0 : 2) : k === 'Space' ? 2 : 1);
 const bag = NAMES.flatMap(k => Array(weight(k)).fill(k));
@@ -20,7 +21,7 @@ let bad = 0; const sent = [];
 const t = await launch('', ROOT);
 try {
   const j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`));
-  const key = async (code, wait = 40) => { const k = { windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: code === 'Space' ? ' ' : code.replace(/^(Key|Digit)/, '').toLowerCase() }; await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, k)); await t.run(wait); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, k)); await t.run(wait); };
+  const key = async (code, wait = 40) => { const k = { windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: code === 'Space' ? ' ' : code === 'Semicolon' ? ';' : code === 'Slash' ? '/' : /^(Enter|Backspace|Arrow|Escape|Tab)/.test(code) ? code : code.replace(/^(Key|Digit)/, '').toLowerCase() }; await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, k)); await t.run(wait); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, k)); await t.run(wait); };
   await t.waitFor(`!!(window.game && game.scene.isActive('Title'))`, 30000, 'the title'); await t.clock(); await t.run(900);
   const res = { score: 2000, bonuses: ['swift'], t: 100, hull: 800, lost: 0, tries: 1 }, results = {};
   for (let l = 1; l <= LEVEL; l++) for (let m = 1; m <= 3; m++) if (l < LEVEL || m < MISSION) results[l + '.' + m] = res;
@@ -35,7 +36,7 @@ try {
   }
   for (let i = 0; i < KEYS; i++) {
     let code = bag[Math.floor(rnd() * bag.length)]; if (FLIGHT && rnd() < 0.02) code = 'Escape'; sent.push(code);
-    const hold = (code === 'KeyW' || code === 'KeyA' || code === 'KeyD' || code === 'Space') && rnd() < 0.5;
+    const hold = (code === 'ArrowUp' || code === 'ArrowLeft' || code === 'ArrowRight' || code === 'Space') && rnd() < 0.5; // the keys that are held in play: the arrows and the turrets
     await key(code, hold ? 400 : 40);
     if (i % 5 === 4) {
       await t.run(300);
