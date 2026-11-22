@@ -36,7 +36,7 @@ try {
   await key('Equal'); await key('Equal'); await key('Equal'); await t.run(300);
   check('+ zooms the map in (the zoom reads in its corner) and does not mute the sound; Backspace puts it back', await j(`${HUB}.bf.z > 1.6`) && (await j('G.muted')) === muted0 && (await bf()).some(x => /^ZOOM 17\d%/.test(x)));
   await snap('1b-zoomed-in');
-  await key('Backspace'); await key('KeyM'); await t.run(500); // Backspace resets the zoom (0 is the SHIP panel's dock key now: card space-game-two-hands-keys)
+  await key('Backspace'); await key('KeyM'); await t.run(500); // Backspace resets the zoom (no digit does)
   check('Backspace resets, M goes to the mission area (the zoom back to 100%), and does NOT mute the sound; the briefing is still up', await j(`${HUB}.bf.zoom === 1 && ${HUB}.bf.z === 1`) && (await j('G.muted')) === muted0);
   await snap('2-mission-area');
   await key('KeyM'); await t.run(400); await snap('2b-whole-system');
@@ -60,11 +60,11 @@ try {
   await key('Enter'); await t.run(400); await snap('6-replay-what-to-do'); await key('Enter'); await t.run(300); await snap('7-replay-how');
   await key('Escape'); await key('ArrowUp'); await key('KeyR'); await t.run(600);
   const m1 = await bf(), note = () => j(`${HUB}.bf.text.filter(o => o.text).map(o => o.text).filter(x => /^SHIP:/.test(x))`);
-  check('mission 1 (the belt survey) carries the ship\'s lines over its three screens, the basics in the story\'s voice: the map and the rings, the scan, then fly, fire, the panel and the map', (await note()).some(x => /Welcome aboard, Commander/.test(x)));
+  check('mission 1 (the belt survey) carries the ship\'s lines over its three screens, the basics in the story\'s voice: the map and the rings, the scan, then fly, the fleet list and a pilot\'s call', (await note()).some(x => /Welcome aboard, Commander/.test(x)));
   await snap('8-tutorial-1');
   await key('Enter'); await t.run(300); await snap('8-tutorial-2'); const n2 = await note();
   await key('Enter'); await t.run(300); await snap('8-tutorial-3'); const n3 = await note();
-  check('the second screen says how a ring is scanned and the third the keys: the arrows, Space, 1 and the wing, Tab', n2.some(x => /inside a ring scans it/.test(x)) && n3.some(x => /arrow keys fly the cruiser/.test(x) && /Space/.test(x) && /1 launches the wing/.test(x) && /Tab/.test(x)), n3.join(' | ')); // (the two hands: card space-game-two-hands-keys)
+  check('the second screen says how a ring is scanned and the third the keys: the arrows, Q and the fleet orders (launch the wing), a pilot\'s call answered with Up, Down and Enter', n2.some(x => /inside a ring scans it/.test(x)) && n3.some(x => /arrow keys fly the cruiser/.test(x) && /Q opens your fleet orders/.test(x) && /launch the wing/.test(x) && /Up and Down, then Enter/.test(x) && !/1, 2 or 3/.test(x)), n3.join(' | ')); // (one list per hand: card one-list-keys; the words are camp.bf.1.1.n3)
   await key('Enter');
   check('Enter on the last screen launches the replay: the Campaign scene is on belt mission 1 as a replay and goes to the flight', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.camp && ${CAMPS}.mode === 'play'`) && await j(`${CAMPS}.replay === true && ${CAMPS}.mi === 0`));
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));

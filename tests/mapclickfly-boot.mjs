@@ -53,7 +53,7 @@ async function campaign() {
     const sp = await j(`Math.round(Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy))`), top = await j(`Math.round(CAMP.carrier.speed)`), burn = await j(`Math.round(CAMP.carrier.speed * Math.max(CAMP.nav.fast, CAMP.nav.farFast))`); // far trips burn at farFast // the table's numbers, not a number written here (the carrier's top speed was 210 when this was written)
     check('six seconds in, the carrier is past its own top speed (' + top + ') and under the burn\'s (' + burn + ')', sp > top * 1.05 && sp <= burn + 1, sp + ' px/s');
     await snap(t, 'campaign-burn');
-    await t.ev(`(() => { ${SC}.k.UP.isDown = true; return 1; })()`); await t.run(200); await t.ev(`(() => { ${SC}.k.UP.isDown = false; return 1; })()`); await t.run(200); // the arrows fly (W is the FLEET's mine key now: card space-game-two-hands-keys)
+    await t.ev(`(() => { ${SC}.k.UP.isDown = true; return 1; })()`); await t.run(200); await t.ev(`(() => { ${SC}.k.UP.isDown = false; return 1; })()`); await t.run(200); // the arrows fly (no letter does: card one-list-keys)
     check('a steering key (Up) takes the wheel: the autopilot and the burn are off, and the speed is back under the top speed (' + top + ')', await j(`${SC}.camp.nav === null`) && (await j(`Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy)`)) <= top + 1);
     await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(300);
     const eros = await at('place:pallas'); await clickAt(t, eros.x, eros.y); await t.run(200);
@@ -69,7 +69,14 @@ async function campaign() {
     check('a click on Fly: back to regular speed, the same trip, Fly marked ON', (await j(`${SC}.camp.nav === window.__trip && ${SC}.camp.nav.fast === false && /ON$/.test(${SC}.mp.btnFly.text)`)) === true);
     await snap(t, 'campaign-switch');
     // card space-game-campaign-fast-board: Fast needs the wing aboard. Launch the wing, then ask for Fast on the map twice: refused, then recalled and burning
-    await t.ev(`(() => { campNavClear(${SC}.camp, 'clear'); ${SC}.onKey({ code: 'Digit1', repeat: false }); ${SC}.onKey({ code: 'Digit1', repeat: false }); return 1; })()`); await settle(t, `${SC}.camp.launchQ.length === 0 && campWing(${SC}.camp).length === 8`, 200); // every ship out (a ship still in the launch queue when the wing is recalled is not recalled: it comes out later; the map's open, so the battle runs at command time, a quarter speed, and 9 s is not enough)
+    // the wing is launched through the fleet list (card one-list-keys): Q, Down to "Launch the wing" (its place is read from the list), Enter. Q over the map closes the map, so Tab opens it again after the order
+    const launchedByList = await j(`(() => { const S = ${SC}, k = code => S.onKey({ code, repeat: false }); campNavClear(S.camp, 'clear'); const at = campPanelList(S.camp, 'fleet').findIndex(r => r.id === 'launch'); if (at < 0) return 'no launch row';
+      k(CAMP_PANELS.panels.find(p => p.id === 'fleet').code); const overMap = !S.mp && campPanelOpen(S.pn) === 'fleet'; for (let i = 0; i < at; i++) k('ArrowDown'); k('Enter'); const closed = campPanelOpen(S.pn) === '';
+      return overMap && closed ? 'ok' : 'map closed and list opened: ' + overMap + ', list closed by the order: ' + closed; })()`);
+    check('Q over the open map closes the map and opens the fleet list; Down to the launch row and Enter give the order and close the list', launchedByList === 'ok', String(launchedByList));
+    await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(300);
+    check('Tab opens the map again', (await j(`!!${SC}.mp`)) === true);
+    await settle(t, `${SC}.camp.launchQ.length === 0 && campWing(${SC}.camp).length === 8`, 200); // every ship out (a ship still in the launch queue when the wing is recalled is not recalled: it comes out later; the map's open, so the battle runs at command time, a quarter speed, and 9 s is not enough)
     check('the wing is out (eight ships)', (await j(`campNavOut(${SC}.camp)`)) === 8);
     // the place is chosen on the map's list and set (not by a click on its mark: the carrier is by Vesta now), and the keys do the rest: the Fast button, Shift+Enter, Shift+Enter
     await t.ev(`(() => { ${SC}.mp.selId = 'place:pallas'; ${SC}.mp.setId = 'place:pallas'; ${SC}.mp.dirty = true; return 1; })()`); await t.run(300);

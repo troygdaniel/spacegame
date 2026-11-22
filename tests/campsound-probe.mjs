@@ -4,7 +4,7 @@
 // and the peak, and counts what the game did to make it: the sfx() calls, the audio nodes created (the pool should make none), the voices used and stolen, and the bullets the sim fired.
 //   node tests/campsound-probe.mjs            the table (about two minutes); exit code 1 only when the page logged an error
 //   node tests/campsound-probe.mjs --json     the numbers
-// The sounds: the carrier's turrets (Space held beside an alien), the wing's guns (fighters and escorts attacking, Space up), a missile (F), the beam hum (Beam turrets), a small and a big blast,
+// The sounds: the carrier's turrets (Space held beside an alien), the wing's guns (fighters and escorts attacking, Space up), a missile (Enter), the beam hum (Beam turrets), a small and a big blast,
 // and for comparison the game's own laser and boom, and the music alone. The numbers are dBFS: 0 is full scale, 20 less is a tenth of the amplitude.
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -53,7 +53,7 @@ try {
     await sleep(3000); // and they go at the gunship
     rows.push(await phase('wing firing (Space up)', `const C = ${SC}.camp; campOrder(C, 'attack', ''); campOrder(C, 'recall'); campOrder(C, 'attack', '')`, 6));
     await t.ev(`(() => { campOrder(${SC}.camp, 'recall'); return 1; })()`); await sleep(2500);
-    rows.push(await phase('missile (F)', `const C = ${SC}.camp; C.missiles = 6; C.nextRocket = 0; campOrder(C, 'missiles', '')`, 4));
+    rows.push(await phase('missile (Enter)', `const C = ${SC}.camp; C.missiles = 6; C.nextRocket = 0; campOrder(C, 'missiles', '')`, 4));
     rows.push(await phase('beam hum (Beam turrets, Space held)', `const C = ${SC}.camp; if (C.techs.indexOf('beam') < 0) C.techs.push('beam'); ${SC}.k.SPACE = { isDown: true }`, 4, `${SC}.k.SPACE = { isDown: false }; const C = ${SC}.camp; C.techs = C.techs.filter(x => x !== 'beam')`));
     await sleep(800);
     rows.push(await phase('a small ship dies (blastSmall)', `const C = ${SC}.camp, u = campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y); u.vmax = 0; u.accel = 0; u.nextShot = 1e12; campHurt(C, u, 1e6, 'x')`, 2));

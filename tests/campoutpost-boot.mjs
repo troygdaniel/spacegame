@@ -1,6 +1,6 @@
 // not in the smoke: a boot of the Campaign's outposts, run by hand (one Chrome, muted, through the test lock; card space-game-campaign-outposts)
-// The rules are in tests/campoutpost.mjs and tests/campdock.mjs (plain Node). This boots the belt (level 1: the cruiser starts by Occator Works) and does what Troy does: looks at the SHIP panel undocked, docks
-// with 0, builds a fighter in the ready room, undocks with L, flies away hurt and alone to see the retreat line and the map's stations, and fits the Fabricator.
+// The rules are in tests/campoutpost.mjs and tests/campdock.mjs (plain Node). This boots the belt (level 1: the cruiser starts by Occator Works) and does what Troy does: opens the ship list (P) undocked, docks
+// through it (P, Down to the dock row, Enter), builds a fighter in the ready room, undocks with L, flies away hurt and alone to see the retreat line and the map's stations, and fits the Fabricator.
 //   node tests/campoutpost-boot.mjs
 // Pictures go to the folder in OUTPOST_SHOTS (default ~/dev/spacegame-night/shots/outpost-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -15,7 +15,7 @@ const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.OUTPOST_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { Digit0: 48, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, Digit6: 54, KeyE: 69, KeyF: 70, KeyL: 76, KeyP: 80, KeyU: 85, KeyR: 82, Enter: 13, Tab: 9, Minus: 189, Escape: 27 };
+const VK = { Digit0: 48, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, Digit6: 54, KeyE: 69, KeyF: 70, KeyL: 76, KeyP: 80, KeyQ: 81, KeyU: 85, KeyR: 82, Enter: 13, Tab: 9, Minus: 189, Escape: 27, ArrowDown: 40 };
 
 const t = await launch('?campaign=1', ROOT);
 try {
@@ -23,19 +23,30 @@ try {
   const key = async code => { const k = { windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: code === 'Minus' ? '-' : code.replace(/^(Key|Digit)/, '').toLowerCase() }; await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, k)); await t.run(50); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, k)); await t.run(300); };
   const snap = async name => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, 'outpost-' + name + '.png'), Buffer.from(r.data, 'base64')); await t.run(34); } console.log('  picture outpost-' + name); };
   const settle = async (expr, tries = 40) => { for (let i = 0; i < tries; i++) { if (await j(`!!(${expr})`)) return true; await sleep(60); await t.run(100); } return false; };
+  // an order is given through its list (card one-list-keys): the list's key (Q the fleet's, P the ship's), Down to the row, Enter. The row's place is read from the list of THIS mission in the page, never a number written here
+  const listOrder = async (id, row) => {
+    if ((await j(`${SCN}.mode`)) !== 'play') return false; // a card has the keys: Enter would be the card's
+    const at = await j(`campPanelList(${SCN}.camp, ${JSON.stringify(id)}).findIndex(r => r.id === ${JSON.stringify(row)})`); if (at < 0) return false; // the row is not in this mission's list
+    if (await j(`campPanelOpen(${SCN}.pn)`)) await key('Escape'); // an open list is closed first (Esc pauses only when none is open)
+    await key(await j(`CAMP_PANELS.panels.find(p => p.id === ${JSON.stringify(id)}).code`)); for (let i = 0; i < at; i++) await key('ArrowDown'); await key('Enter');
+    if (await j(`campPanelOpen(${SCN}.pn)`)) await key('Escape'); // an order that is refused leaves the list open: it is closed, the keys go back to the ship
+    return true;
+  };
   const shown = () => j(`(() => { const s = ${HUB}; return Object.keys(s.slots).map(k => s.slots[k]).filter(o => o.visible && o.text).map(o => o.text); })()`);
 
   await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 30000, 'the Campaign scene'); await belt(t); await t.clock(); await t.run(800);
   await key('Enter'); await key('Enter'); await settle(`${SCN}.mode === 'play'`); await t.ev(`(() => { const C = ${SCN}.camp; C.ships = C.ships.filter(u => u.team !== 'alien'); C.waves.forEach(w => { w.started = true; }); return 1; })()`);
-  check('the belt starts at Occator Works: the carrier is in range of that outpost, and the HUD says 0 dock there', await j(`campOutpostNear(${SCN}.camp) && campOutpostNear(${SCN}.camp).o.name === 'Occator Works'`));
+  check('the belt starts at Occator Works: the carrier is in range of that outpost, and its dock is in reach', await j(`campOutpostNear(${SCN}.camp) && campOutpostNear(${SCN}.camp).o.name === 'Occator Works'`));
   await t.run(300); await snap('1-start-in-range');
-  await t.ev(`(() => { ${SCN}.camp.ore = 100; return 1; })()`); await t.run(500); await snap('2-ship-panel-undocked'); // both panels are on the screen all the time (card space-game-two-hands-keys)
-  const shipRows = () => j(`${SCN}.pnl.p.ship.rows.filter(r => r.name.visible).map(r => r.key.text + ' ' + r.name.text + ' | ' + r.suffix.text)`);
-  const dockRow = (await shipRows()).find(x => /^0 Dock/.test(x)) || '';
-  await key('KeyP'); await t.run(300); const buildRows = await shipRows(); await snap('2b-ship-panel-build'); await key('KeyP'); // P turns the SHIP panel to its BUILD page, and back
-  check('the SHIP panel undocked: on its BUILD page New fighter and New escort say "dock first", and the Dock row (0) is ready and names the outpost ("Occator Works")', buildRows.filter(x => /dock first/.test(x)).length === 2 && /Occator Works/.test(dockRow), buildRows.join(' | ') + ' // ' + dockRow);
-  await key('Digit0'); // the dock row
-  check('0 docks: the Campaign scene is paused and the ready room opens as that outpost', await settle(`game.scene.isActive('CampHub') && ${HUB}.hub && ${HUB}.look && ${HUB}.look.name === 'Occator Works'`) && await j(`${SCN}.scene.isPaused() && ${SCN}.docked === true && ${SCN}.camp.docked === 'ceres'`));
+  await t.ev(`(() => { ${SCN}.camp.ore = 100; return 1; })()`); await t.run(500);
+  const drawn = () => j(`${SCN}.pnl.rows.filter(r => r.name.visible).map(r => r.name.text + ' | ' + r.suffix.text)`); // the rows of the open list as they are drawn: the words, and the word or two of state (src/campanelsdraw.js)
+  const before = await drawn(), tgtLine = await j(`${SCN}.pnl.tgt.visible`);
+  await key('KeyP'); await t.run(300); const shipRows = await drawn(), title = await j(`${SCN}.pnl.title.text`); await snap('2-ship-list-undocked'); await key('KeyP'); // P opens the ship list, P again closes it
+  const dockRow = shipRows.find(x => /^Dock at the outpost \|/.test(x)) || '';
+  check('no list is drawn until its key is pressed (only the target\'s line under the radar), then P opens the one list of ship orders', before.length === 0 && tgtLine === true && title === 'P   SHIP ORDERS' && (await j(`campPanelOpen(${SCN}.pn)`)) === '', before.join(' | ') + ' // ' + title);
+  check('the ship list undocked: the build rows are left out of it here (in a level with outposts ships are built docked), and the dock row is ready and names the outpost ("Occator Works")', shipRows.length > 0 && !shipRows.some(x => /^Build /.test(x)) && (await j(`campPanelList(${SCN}.camp, 'ship').every(r => r.when !== 'aboard')`)) === true && /\| Occator Works$/.test(dockRow), shipRows.join(' // '));
+  await listOrder('ship', 'dock'); // P, Down to "Dock at the outpost", Enter
+  check('the dock row docks: the Campaign scene is paused and the ready room opens as that outpost', await settle(`game.scene.isActive('CampHub') && ${HUB}.hub && ${HUB}.look && ${HUB}.look.name === 'Occator Works'`) && await j(`${SCN}.scene.isPaused() && ${SCN}.docked === true && ${SCN}.camp.docked === 'ceres'`));
   await t.run(1200); await snap('3-dock-room-build');
   check('the room has the dock\'s five rows, BUILD first, the ore of the battle on its page', (await shown()).some(x => /^BUILD {2}- {2}OCCATOR WORKS$/.test(x)) && (await shown()).some(x => /^Ore in the store: 100$/.test(x)), (await shown()).join(' | '));
   await key('KeyF'); await key('KeyF'); await t.run(300); await snap('4-dock-room-built');
@@ -58,7 +69,7 @@ try {
   await key('Tab'); await t.run(400); for (let i = 0; i < 8; i++) { await key('Minus'); } await t.run(600); await snap('9-map-whole-outposts'); // - zooms the map out to the whole system
   check('the map marks the outposts (a frame round the place); the list says the goal first', await j(`campMapMarks(${SCN}.camp, true).filter(m => m.outpost).map(m => m.id).sort().join()`) === 'ceres,earth,mars,vesta');
   await key('Tab');
-  await t.run(500); await snap('10-ship-panel-hurt');
+  await key('KeyP'); await t.run(500); await snap('10-ship-list-hurt'); await key('KeyP');
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
 } catch (e) { console.log('  FAIL the boot stopped: ' + (e && e.message)); bad++; }
 finally { await t.close(); }
