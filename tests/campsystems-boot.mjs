@@ -1,6 +1,6 @@
 // not in the smoke: the Campaign's ship systems in a real fight, one picture, run by hand (one Chrome, muted, through the test lock; card space-game-campaign-systems)
-// The rules are in tests/campsystems.mjs (plain Node). This boots level 1, opens the SYSTEMS panel with C, moves pips by the digits, fires the emergency shields, and takes pictures of the HUD gauges (their power bars) and of the panel
-// (the draw is Phaser's: the panel on a fight's background, the three gauges with a bar of power segments beside each). It also looks at what the screen holds: the panel is on the screen, the pips are the sim's, the saved
+// The rules are in tests/campsystems.mjs (plain Node). This boots level 1, moves pips with J K L on the SHIP panel (always on the screen: there is no SYSTEMS panel to open since card space-game-two-hands-keys), fires the emergency shields with U, and takes pictures of the HUD gauges (their power bars) and of the SHIP panel
+// (the draw is Phaser's: the panel on a fight's background, the three gauges with a bar of power segments beside each). It also looks at what the screen holds: the SHIP panel's power rows are on the screen, the pips are the sim's, the saved
 // setting is kept, the emergency is not.
 //   node tests/campsystems-boot.mjs
 // The pictures go to the folder in SYSTEMS_SHOTS (default ~/dev/spacegame-night/shots/systems-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
@@ -22,23 +22,22 @@ try {
   for (let i = 0; i < 4 && (await j(`${SC}.mode`)) !== 'play'; i++) { await key('Enter'); await t.run(300); } // the intro card, and the missions' briefing after it
   check('the battle is on (the cards are out of the way)', (await j(`${SC}.mode`)) === 'play', await j(`${SC}.mode`));
   check('a new battle starts at 2 / 2 / 2 with the three gauges and their power bars on the HUD (SHIELDS, SPEED, LASERS: card space-game-systems-gauges replaced the W S E pips)', await j(`JSON.stringify(${SC}.camp.power.p) === '[2,2,2]' && !!${SC}.hud.gauges && ${SC}.hud.gauges.l.map(t => t.text).join() === 'SHIELDS,SPEED,LASERS' && JSON.stringify(${SC}.gaugeAnim.shown) === '[2,2,2]'`));
-  await key('KeyC'); await t.run(500);
-  check('C opens the SYSTEMS panel and it is drawn (the words, five rows)', await j(`${SC}.pn.open === 'systems' && ${SC}.pnl.p.systems.rows.length === 5 && ${SC}.pnl.p.systems.rows.map(r => r.id).join() === 'weapons,shields,engines,balance,emergency'`)); // (the panels are built once, one object each: s.pnl.p[id], since card space-game-campaign-keys-help)
+  await t.run(500);
+  check('the SHIP panel is on the screen from the start with its power rows: J shields, K engines, L weapons, ; balance, U emergency', await j(`JSON.stringify(${SC}.pnl.p.ship.rows.slice(4, 9).map(r => r.key.text + ' ' + r.name.text.split(' ')[0])) === JSON.stringify(['J Shields', 'K Engines', 'L Weapons', '; Balance', 'U Emergency'])`), await j(`${SC}.pnl.p.ship.rows.slice(4, 9).map(r => r.key.text + ' ' + r.name.text)`)); // (the panels are built once, one object each: s.pnl.p[id])
   await shot('1-panel');
-  await key('Digit2'); await t.run(300);
-  check('2 is "power to shields": 1 / 3 / 2, the panel closes, the pips follow on the HUD', await j(`JSON.stringify(${SC}.camp.power.p) === '[1,3,2]' && ${SC}.pn.open === ''`));
+  await key('KeyJ'); await t.run(300);
+  check('J is "power to shields": 1 / 3 / 2, the pips follow on the HUD, the panel stays', await j(`JSON.stringify(${SC}.camp.power.p) === '[1,3,2]' && ${SC}.pnl.p.ship.rows[4].name.visible`));
   check('the setting is saved at once (the next level starts from it)', await j(`JSON.stringify(campPowerLoad()) === '[1,3,2]'`));
-  await key('KeyC'); await t.run(500); await key('Digit5'); await t.run(300);
-  check('C then 5: emergency shields: 1 / 4 / 1 for ten seconds, the setting still 1 / 3 / 2 and the HUD shields row white', await j(`JSON.stringify(${SC}.camp.power.p) === '[1,4,1]' && JSON.stringify(${SC}.camp.power.base) === '[1,3,2]'`));
+  await key('KeyU'); await t.run(300);
+  check('U: emergency shields: 1 / 4 / 1 for ten seconds, the setting still 1 / 3 / 2 and the HUD shields row white', await j(`JSON.stringify(${SC}.camp.power.p) === '[1,4,1]' && JSON.stringify(${SC}.camp.power.base) === '[1,3,2]'`));
   await t.run(1500); await shot('2-emergency');
   await t.run(9500);
   check('after ten seconds the pips are back to the setting', await j(`JSON.stringify(${SC}.camp.power.p) === '[1,3,2]'`));
-  await key('KeyC'); await t.run(500);
-  check('the panel says the emergency is cooling down (ready in N s) and the saved setting never held the emergency', await j(`/^[0-9]+ s$/.test(${SC}.pnl.p.systems.rows[4].suffix.text) && JSON.stringify(campPowerLoad()) === '[1,3,2]'`), await j(`${SC}.pnl.p.systems.rows[4].suffix.text`));
+  await t.run(500);
+  check('the panel says the emergency is cooling down (ready in N s) and the saved setting never held the emergency', await j(`/^[0-9]+ s$/.test(${SC}.pnl.p.ship.rows[8].suffix.text) && JSON.stringify(campPowerLoad()) === '[1,3,2]'`), await j(`${SC}.pnl.p.ship.rows[8].suffix.text`));
   await shot('3-cooling');
-  await key('KeyC'); await t.run(100);
   await key('KeyH'); await t.run(400);
-  check('H opens the page of every key and it lists the SYSTEMS panel (the page grew: its lines are 18 px apart now)', await j(`!!${SC}.ck && ${SC}.ck.open === true`));
+  check('H opens the page of every key and it lists the SHIP panel (the right hand)', await j(`!!${SC}.ck && ${SC}.ck.open === true`));
   await shot('4-keys'); await key('KeyH'); await t.run(200);
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
 } finally { await t.close(); }

@@ -55,41 +55,41 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.where | WHERE |
 | camp.bf.why | WHY |
 | camp.bf.keyshead | KEYS THIS MISSION NEEDS |
-| camp.bf.key.fly | Thrust, turn and brake (arrows too) |
+| camp.bf.key.fly | Thrust, turn and brake (the arrow keys) |
 | camp.bf.key.fire | Hold: the turrets fire at ships in reach |
-| camp.bf.key.wing | {fleetkey} then {nlaunch}: launch the wing |
+| camp.bf.key.wing | {keylaunch}: launch the wing, or bring it home |
 | camp.bf.key.map | Open the map; click a place, Enter flies |
-| camp.bf.key.zoom | Zoom the view or the map; 0 resets |
-| camp.bf.key.attack | {fleetkey} then {nattack}: the fighters attack |
-| camp.bf.key.escort | {fleetkey} then {nescort}: the escorts go to a convoy |
-| camp.bf.key.missile | Fire a homing missile |
-| camp.bf.key.mine | {fleetkey} then {nmine}: the wing mines ore |
-| camp.bf.key.dock | {shipkey} then {ndock}: dock to build, mend and sell |
-| camp.bf.key.shield | {systemskey} then {nemergency}: emergency shields |
+| camp.bf.key.zoom | Zoom the view or the map; {keyzoomreset} resets |
+| camp.bf.key.attack | {keyattack}: the fighters attack the target |
+| camp.bf.key.escort | {keyescort}: the escorts go to a convoy |
+| camp.bf.key.missile | Fire a homing missile at the target |
+| camp.bf.key.mine | {keymine}: the wing mines ore |
+| camp.bf.key.dock | {keydock}: dock to build, mend and sell |
+| camp.bf.key.shield | {keyemergency}: emergency shields |
 | camp.bf.keys.next | Enter or Right: next    Left: back    L: launch now    Esc: the board |
 | camp.bf.keys.launch | Enter or L: launch    Left: back    Esc: the board |
-| camp.bf.keys.zoom | + - 0 zoom |
+| camp.bf.keys.zoom | {keyzoomout} {keyzoomin} zoom |
 | camp.bf.1.1.w1 | 1 transport flies from the Lunar Base to Ceres. |
 | camp.bf.1.1.w2 | The road forks. Scout both lanes, then pick one. |
 | camp.bf.1.1.w3 | Pirates hide on the short lane. Shoot the torpedo boats first. |
 | camp.bf.1.1.w4 | A pirate leader waits near Ceres. Kill it, or get her past. |
 | camp.bf.1.1.n1 | Welcome aboard, Commander. The transport is ours to bring to Ceres. A patrol sees her off, then she is on her own. |
 | camp.bf.1.1.n2 | The road forks. Send a scout down each lane, then pick one on the map ({map}). Pirates may hide on the short one. |
-| camp.bf.1.1.n3 | W A S D fly the cruiser. {fleetkey} opens the fleet panel: {nlaunch} launches the wing, {nescort} sends the escorts to her. When a pilot calls, answer 1, 2 or 3. |
-| camp.bf.1.2.w1 | Mine the rock fields round Ceres. {fleetkey} then {nmine} sends the wing. |
+| camp.bf.1.1.n3 | The arrow keys fly the cruiser. {keylaunch} launches the wing, {keyescort} sends the escorts to her. When a pilot calls, answer 1, 2 or 3. |
+| camp.bf.1.2.w1 | Mine the rock fields round Ceres. {keymine} sends the wing. |
 | camp.bf.1.2.w2 | Ore sells for triple at the Works. Pirates hunt the miners. |
-| camp.bf.1.2.w3 | Beat the 3 raids, then dock at Occator Works: SHIP panel, Dock. |
+| camp.bf.1.2.w3 | Beat the 3 raids, then dock at Occator Works: {keydock}. |
 | camp.bf.1.2.w4 | The Works keeps its doors shut while a pirate is near. |
 | camp.bf.1.3.w1 | 3 haulers leave Ceres for Earth, 12 seconds apart. |
 | camp.bf.1.3.w2 | 1 must get home. Each hauler lost costs points. |
-| camp.bf.1.3.w3 | Pirates raid them twice. {fleetkey} then {nescort}: escorts cover them. |
+| camp.bf.1.3.w3 | Pirates raid them twice. {keyescort}: escorts cover them. |
 | camp.bf.2.1.w1 | Find 2 of the 3 resource pods in the system. |
 | camp.bf.2.1.w2 | Any ship of yours that flies close picks one up. |
 | camp.bf.2.1.w3 | Aliens come from the west after 20 seconds. |
 | camp.bf.2.1.w4 | Kill them too: the pods alone do not finish it. |
 | camp.bf.2.2.w1 | 7 guards hold the system. Destroy them all. |
 | camp.bf.2.2.w2 | More aliens join after 18 seconds, from the north-east. |
-| camp.bf.2.2.w3 | Missiles (F) help against the heavy ones. |
+| camp.bf.2.2.w3 | Missiles ({keymissile}) help against the heavy ones. |
 | camp.bf.2.3.w1 | Fly the carrier into the relic's ring at Proxima. |
 | camp.bf.2.3.w2 | Hold there 14 seconds with no alien near the relic. |
 | camp.bf.2.3.w3 | Leave the ring, or let aliens close, and it loses ground. |

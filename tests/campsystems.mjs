@@ -213,35 +213,32 @@ sec('G', () => {
 });
 
 sec('J', () => {
-  const T = J("CAMP_PANELS.panels.find(p => p.id === 'systems')");
-  check('J  the SYSTEMS panel is data of the panels table: key C, left, five rows (weapons +, shields +, engines +, balance, emergency shields), each an order the game has', T && T.key === 'C' && T.code === 'KeyC' && T.side === 'left' && T.rows.length === 5 && T.rows.map(r => r.n).join() === '1,2,3,4,5' && T.rows.map(r => r.order + ':' + (r.arg || '')).join() === 'power:weapons,power:shields,power:engines,balance:,emergency:', JSON.stringify(T));
+  const T = J("CAMP_PANELS.panels.find(p => p.id === 'ship')"), P5 = T.rows.filter(r => r.order === 'power' || r.order === 'balance' || r.order === 'emergency');
+  check('J  the power is five rows of the SHIP panel (card space-game-two-hands-keys: there is no SYSTEMS panel): shields J, engines K, weapons L, balance ;, emergency shields U, each an order the game has, and the keys are the gauges\' (CAMP_GAUGE.keys)', P5.length === 5 && P5.map(r => r.k).join('') === 'JKL;U' && P5.map(r => r.order + ':' + (r.arg || '')).join() === 'power:shields,power:engines,power:weapons,balance:,emergency:' && !J("CAMP_PANELS.panels.some(p => p.id === 'systems')") && J('Object.keys(CAMP_GAUGE.keys).join()') === 'KeyJ,KeyK,KeyL,Semicolon', JSON.stringify(P5));
   g.run(NEW([2, 2, 2])); g.run("window.__P = campPanelNew()");
   const key = (c, t) => J(`campPanelKey(__P, C, ${JSON.stringify(c)}, ${t || 0})`);
-  let r = key('KeyC', 0);
-  check('J  the key C opens the panel (and is its own: no other action takes it)', r.used === true && r.opened === 'systems' && J('__P.open') === 'systems', JSON.stringify(r));
-  r = key('Digit2', 10);
-  check('J  then a digit picks a row: 2 is "power to shields", the panel closes and the pips move (1 / 3 / 2)', r.ran === true && r.ok === true && r.say === 'Power to shields.' && J('__P.open') === '' && JSON.stringify(J('C.power.p')) === '[1,3,2]', JSON.stringify([r, J('C.power.p')]));
-  g.run("__P.open = 'systems'");
-  const rows = J("campPanelRows(C, 'systems')");
-  check('J  each row shows its live state: the pips and what they do, "now 1 / 3 / 2", the emergency\'s length', rows.length === 5 && /^1 pips: turrets x0\.77$/.test(rows[0].state) && /^3 pips: shield 18[78], mends 6\/s$/.test(rows[1].state) && /^2 pips: speed x1\.00$/.test(rows[2].state) && rows[3].state === 'now 1 / 3 / 2' && /10 s of shields/.test(rows[4].state) && rows.every(x => x.ok), JSON.stringify(rows));
-  check('J  the heading line says the pips (and the emergency while it runs)', J("campPanelHead(C, 'systems')") === 'W 1  S 3  E 2');
+  let r = key('KeyJ', 0);
+  check('J  the key J is "power to shields" at once, with no panel to open: the pips move (1 / 3 / 2), and the answer is in words', r.used === true && r.ran === true && r.ok === true && r.say === 'Power to shields.' && r.row === 'shields' && JSON.stringify(J('C.power.p')) === '[1,3,2]', JSON.stringify([r, J('C.power.p')]));
+  const rows = () => J("campPanelRows(C, 'ship')").filter(x => ['shields', 'engines', 'weapons', 'balance', 'emergency'].includes(x.id));
+  const rw = rows();
+  check('J  each row shows its live state: the pips and what they do, "now 1 / 3 / 2", the emergency\'s length', rw.length === 5 && /^3 pips: shield 18[78], mends 6\/s$/.test(rw[0].state) && /^2 pips: speed x1\.00$/.test(rw[1].state) && /^1 pips: turrets x0\.77$/.test(rw[2].state) && rw[3].state === 'now 1 / 3 / 2' && /10 s of shields/.test(rw[4].state) && rw.every(x => x.ok), JSON.stringify(rw));
+  r = key('KeyL', 10); const l1 = JSON.stringify(J('C.power.p'));
+  check('J  L is the weapons, K the engines, ; the balance back to 2 / 2 / 2, each as the orders always did', r.row === 'weapons' && r.ran && key('KeyK', 20).row === 'engines' && key('Semicolon', 30).row === 'balance' && JSON.stringify(J('C.power.p')) === '[2,2,2]' && l1.length > 0, l1 + ' ' + JSON.stringify(J('C.power.p')));
+  g.run(NEW([2, 2, 2]));
   g.run("campOrder(C, 'power', 'shields', 'key'); campOrder(C, 'power', 'shields', 'key')");
-  const full = J("campPanelRows(C, 'systems')");
-  check('J  a system at 4 pips says so, greyed ("at full power")', full[1].ok === false && full[1].state === 'at full power', JSON.stringify(full[1]));
+  const full = rows();
+  check('J  a system at 4 pips says so, greyed ("at full power")', full[0].ok === false && full[0].state === 'at full power', JSON.stringify(full[0]));
   g.run("campOrder(C, 'emergency', '', 'key'); __go(1)");
-  const em = J("campPanelRows(C, 'systems')"), hd = J("campPanelHead(C, 'systems')");
-  check('J  in an emergency every row says the power is held, and the heading counts the seconds', em.every(x => x.ok === false && x.state === 'running: the power is held') && /emergency \d+ s$/.test(hd), JSON.stringify([em[0], hd]));
+  const em = rows();
+  check('J  in an emergency every row says the power is held', em.every(x => x.ok === false && x.state === 'running: the power is held'), JSON.stringify(em[0]));
   g.run("__go(10)");
-  const cool = J("campPanelRows(C, 'systems')");
+  const cool = rows();
   check('J  after it, the emergency row counts down: "ready in 29 s" (40 s from its start)', cool[4].ok === false && /^ready in \d+ s$/.test(cool[4].state) && cool.slice(0, 4).every(x => x.ok !== undefined), JSON.stringify(cool[4]));
-  g.run("__P.open = 'fleet'");
-  r = key('KeyC', 20);
-  check('J  with another panel open, C switches to SYSTEMS (the two lists cross-fade: card space-game-campaign-panels-ui)', J('__P.open') === 'systems' && r.opened === 'systems', JSON.stringify(r));
-  check('J  the key line says the three panels: "Q Fleet   E Ship   C Systems"', J('campPanelKeyLine()') === 'Q Fleet   E Ship   C Systems');
+  check('J  the key line says the two panels: "Q Fleet   P Ship"', J('campPanelKeyLine()') === 'Q Fleet   P Ship');
 });
 
 sec('H', () => {
-  check('H  the SYSTEMS panel\'s emergency row, while it cools, says the seconds ("28 s"), not the template "{s} s" (the short why filled only the ore cases)', (() => { const r = J(`(() => { const C = campNew(1, [], { seed: 1 }); campOrder(C, 'emergency', '', 'key'); C.power.until = 0; C.power.p = C.power.base.slice(); C.t = 12000; return campPanelRows(C, 'systems', 0).find(x => x.id === 'emergency').short; })()`); return r === '28 s'; })());
+  check('H  the SHIP panel\'s emergency row, while it cools, says the seconds ("28 s"), not the template "{s} s" (the short why filled only the ore cases)', (() => { const r = J(`(() => { const C = campNew(1, [], { seed: 1 }); campOrder(C, 'emergency', '', 'key'); C.power.until = 0; C.power.p = C.power.base.slice(); C.t = 12000; return campPanelRows(C, 'ship', 0).find(x => x.id === 'emergency').short; })()`); return r === '28 s'; })());
   const sc = read('src/campaignscene.js');
   check('H  the scene starts a battle at the saved setting and saves a change of it (campPowerLoad / campPowerSave of C.power.base: the setting, never the emergency)', /power: campPowerLoad\(\)/.test(sc) && /campPowerSave\(C\.power\.base\)/.test(sc));
   check('H  the HUD draws a bar of power segments beside each of the three gauges (SHIELDS, SPEED, LASERS) from the live pips (C.power.p), which replaced the small W S E pips (card space-game-systems-gauges, tests/campgauges.mjs)', /C\.power\.p/.test(sc) && /campGaugesPaint\(/.test(sc) && /pips: P\.p\[1\]/.test(read('src/camphud.js')) && !/'W'/.test(sc));

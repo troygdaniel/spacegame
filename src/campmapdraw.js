@@ -3,7 +3,7 @@
 //   campMapInstall(s)  once, in create: Tab opens the map over the battle, or closes it       campMapPaint(s, time)   every frame while it is open       campMapClose(s)   Esc, or a card coming up
 // It reuses the sector map's (src/map.js) own pieces rather than a drawing system of its own: mapPlace puts the names of the places where they touch nothing, mapGridStep
 // chooses the grid, hudPanel and hudGlowPath are the glass panel and the glowing frame, and the colours are the radar's (campDotColor). The battle is NOT paused: the scene keeps
-// stepping the sim and every key but Esc and Tab still does what it does, so the orders (1 to 5), the strip (I) and the voice (U) work from the map.
+// stepping the sim and every key but Esc and Tab still does what it does, so the fleet's keys, the strip (/) and the voice (.) work from the map.
 // Nothing here uses a Phaser feature the Campaign scene does not already use (no mask: a ship outside the frame is drawn on its edge, as the radar draws it on the rim).
 const CAMPMAP_PANEL = { x: 70, y: 35, w: 1140, h: 650 }; // the glass panel: the sector map's own size and place (src/map.js)
 const CAMPMAP_SIDE = { x: 925, y: 424, step: 24, rows: 8, destY: 166, listY: 192, listStep: 22, hintY: 398 }; // the column on the right: the objective, where you are flying, the list to pick from (card space-game-campaign-navigate), then the legend
@@ -272,19 +272,22 @@ function campMapTake(s, row) {
   const C = s.camp; if (!C || !row || row.kind !== 'lane' || C.result) return false;
   const r = campOrder(C, 'lane', row, 'click'); toast(s, r.say, r.ok ? '#b8f0ff' : '#ffb454'); if (s.mp) s.mp.dirty = true; return !!r.ok;
 }
-// a key while the map is open: W S and the arrows choose (flying keys are the list's while it is open, as in the Long Haul nav panel), A D and the side arrows go to the next or the last group,
-// Enter flies there, X clears the destination. true when the key was the map's.
+// a key while the map is open (card space-game-two-hands-keys): A and D (and Up and Down) step the marks, Left and Right go to the last or the next group, 7 flies there and 9 burns there (the SHIP panel's keys: the table's goal and burn rows),
+// Enter flies there too (Shift+Enter fast), X clears the destination. The fleet keys (1 2 3 4 W E R, S, Q) are not the map's: they go on to the panels. true when the key was the map's.
 function campMapKey(s, code, shift) {
   const mp = s.mp; if (!mp) return false;
   const rows = mp.rows, at = Math.max(0, rows.findIndex(r => r.id === mp.selId));
   const set = i => { if (rows.length) { mp.selId = rows[((i % rows.length) + rows.length) % rows.length].id; mp.userSel = true; } return true; }; // a choice in the list is what the zoom is about (campMapFocus)
-  if (code === 'KeyW' || code === 'ArrowUp') return set(at - 1);
-  if (code === 'KeyS' || code === 'ArrowDown') return set(at + 1);
-  if (code === 'KeyA' || code === 'ArrowLeft' || code === 'KeyD' || code === 'ArrowRight') {
+  if (campKeyCodes('last').indexOf(code) >= 0 || code === 'ArrowUp') return set(at - 1);
+  if (campKeyCodes('next').indexOf(code) >= 0 || code === 'ArrowDown') return set(at + 1);
+  if (code === 'ArrowLeft' || code === 'ArrowRight') {
     const groups = rows.map(r => r.group).filter((g, i, a) => a.indexOf(g) === i); if (!groups.length) return true;
-    const gi = groups.indexOf(rows[at] ? rows[at].group : ''), next = groups[(gi + (code === 'KeyD' || code === 'ArrowRight' ? 1 : -1) + groups.length) % groups.length];
+    const gi = groups.indexOf(rows[at] ? rows[at].group : ''), next = groups[(gi + (code === 'ArrowRight' ? 1 : -1) + groups.length) % groups.length];
     return set(rows.findIndex(r => r.group === next));
   }
+  const goal = campKeyRow('goal'), burn = campKeyRow('burn');
+  if (goal && campRowCodes(goal).indexOf(code) >= 0) { if (rows[at]) campMapFly(s, rows[at], false); return true; } // 7: fly there
+  if (burn && campRowCodes(burn).indexOf(code) >= 0) { if (rows[at]) campMapFly(s, rows[at], true); return true; } // 9: a fast burn there (the wing must be aboard)
   if (code === 'Enter' || code === 'NumpadEnter') { if (rows[at]) campMapFly(s, rows[at], !!shift); return true; } // Enter: regular speed; Shift+Enter: fast
   if (code === 'KeyV') { const row = rows[at]; if (row) campMapScout(s, row); return true; } // V: send a scout to the chosen place: the row that is marked in the list (a click on a mark chooses it too; the place a trip is flying to stays SET, with its buttons, and is not what V is about: card space-game-hunt-l1-fleet)
   if (code === 'KeyT') { const row = rows[at]; if (row && row.kind === 'lane') { campMapTake(s, row); return true; } return false; } // T: take the lane that is chosen (marked in the list), at a fork in the road

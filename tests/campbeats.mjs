@@ -121,10 +121,10 @@ sec('G', () => {
   const spoken = ['camp.say.patrolleave', 'camp.say.distress', 'camp.say.thanks', 'camp.say.rimambush'].map(k => J(`uiText(${JSON.stringify(k)})`));
   check('G  the lines the ship speaks are about twelve words at most', spoken.every(s => words(s) <= 12), JSON.stringify(spoken));
   const hint = J('(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); return typeof campBeatHint === "function" ? campBeatHint(C, "fleet") : ""; })()');
-  check('G  the hints name their keys from the key table (CAMP_PANELS), not in letters of their own: campBeatHint(C, "fleet") carries the FLEET panel key', typeof hint === 'string' && hint.indexOf(J('CAMP_PANELS.panels.find(p => p.id === "fleet").key')) >= 0, hint);
+  check('G  the hints name their keys from the key table (CAMP_PANELS), not in letters of their own: campBeatHint(C, "fleet") carries the launch row\'s key', typeof hint === 'string' && hint.indexOf(J('CAMP_PANELS.panels.find(p => p.id === "fleet").rows.find(r => r.id === "launch").k')) >= 0, hint);
   g.run('__mk("short"); __until(0.525); __go(1)');
   const shown = {}; const h1 = J('(() => { const sh = {}; const a = campBeatNudge(C, sh); return a; })()');
-  check('G  with torpedo boats out the hint says to tuck the transport in, with the FLEET key from the table in it', typeof h1 === 'string' && /Tuck the transport in/.test(h1) && h1.indexOf(J('CAMP_PANELS.panels.find(p => p.id === "fleet").key')) >= 0, JSON.stringify(h1));
+  check('G  with torpedo boats out the hint says to tuck the transport in, with the convoy row\'s key from the table in it', typeof h1 === 'string' && /Tuck the transport in/.test(h1) && h1.indexOf('press ' + J('CAMP_PANELS.panels.find(p => p.id === "fleet").rows.find(r => r.id === "convoy").k')) >= 0, JSON.stringify(h1));
   g.run('campOrder(C, "convoy", "tuck in")');
   check('G  tucked in (Tuck in is in force) the hint is not shown: the player has done it', !/Tuck the transport in/.test(J('campBeatNudge(C, {}) || ""')));
   g.run('C.ships.filter(u => u.team === "alien").forEach(u => { u.hp = 0; }); __mk("short"); __until(0.755); __go(1)');

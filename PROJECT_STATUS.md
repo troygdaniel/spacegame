@@ -1,6 +1,6 @@
 # Project status
 
-**Updated: 21 Nov 2026, written against main `53ecf1d`.** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
+**Updated: 21 Nov 2026, written against main `3214678`.** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
 
 ## In one minute
 
@@ -31,8 +31,8 @@ Between missions you are in **the ready room**: four rows (Missions, Refit, Rank
 
 The batch is the answer to "I want to direct the fleet more". Each item has its own section in `docs/CAMPAIGN.md`.
 
-- **Panels and orders.** Three panels on keys Q (FLEET), E (SHIP), C (SYSTEMS), then a row's digit; an open panel takes Up/Down/Enter. FLEET has pages: orders, stances, convoy orders. The same orders can be typed (I) or spoken (U).
-- **Command time.** While a panel, the map or an order-call prompt is open, the battle runs at a quarter speed, with a sign. Fights are also 15 percent slower overall.
+- **Two hands, two panels** (card `space-game-two-hands-keys`, Troy: "just build it"). The **left hand and the FLEET panel** (left of the screen) command the fleet and pick the target; the **right hand and the SHIP panel** (right) run the ship. **Both panels are always on the screen and every row shows its key; one key is one order**: `1` launch or recall the wing, `2` attack the target, `3` escort, `4` guard, `W` mine, `E` next stance, `R` next convoy order, `Q` next page; `7` fly to the goal, `8` fly to the target, `9` fast burn, `0` dock, `J K L ;` power, `U` emergency shields, `Enter` a missile at the target, `I` the warp blink, `P` next page (BUILD). `A D S` pick **one target** for everything (a red bracket; `2` attacks it, `8` flies to it, `Enter` fires at it), `X` clears it. **The arrow keys fly.** The same orders can be typed (`/`) or spoken (hold `.`). The key table is `src/data_controls.js`; every hint reads it.
+- **Command time.** While the map or an order-call prompt is open, and for two seconds after any FLEET key, the battle runs at a quarter speed, with a sign. Fights are also 15 percent slower overall, and the Campaign has one pace (Normal): the P key and the pace setting are gone.
 - **Pilots ask for orders.** Timed radio calls with three choices (1 2 3), real costs and effects.
 - **Convoy orders.** Tuck in, Hold here, Run for it, for the ships you escort; the cruiser's shield can cover a ship tucked in.
 - **Scout ahead.** An escort route can fork: send a scout, then pick the short dangerous lane or the long quiet one.
@@ -43,7 +43,7 @@ The batch is the answer to "I want to direct the fleet more". Each item has its 
 
 ## Being built right now
 
-- **Panel keys move to Z X C** (FLEET to Z, SHIP to X, SYSTEMS stays C), so the three panels sit under the left hand; Q and E become free. Part 1 (arrow keys, Mine ore moves to FLEET) is on main; the key change itself is in progress. Until it lands, the keys in this file and the README are Q E C.
+- **Two hands: the keys have landed or are about to** (this card). Still to do after it: Troy plays it and says what feels wrong (the keys are one table, so a move is one change); the Chrome boot scripts that press keys are updated by hand.
 - **Retuning all nine missions** after the new systems (target: the plain bot wins all nine at all three paces with losses in the hard ones; an idle player never wins; a player who answers calls and uses convoy orders does clearly better; level 1 missions about five to eight minutes). 1.1 is done.
 - **Enemy torpedo boats**: on main and used in 1.1; finishing touches.
 - **Test upkeep** for the above (Chrome boot scripts that press keys that moved).
@@ -54,7 +54,8 @@ The batch is the answer to "I want to direct the fleet more". Each item has its 
 - **Levels 2 and 3 after the fleet-command batch** were flown by hand (`docs/night/hunt-l23-fleet.md`, 21 Nov): all six missions win and nothing crashes, but 2.1, 2.2, 3.1 and 3.2 are won in about half a minute with the hull untouched and no pilot ever calls in them (calls start at 40 s of a mission); only 2.3 and 3.3 ask anything of the shield, the power pips and the calls. Tuning notes are in that doc for the retune; two small fixes (the second bay's numbers on the pick card, a call about a pilot already flying home) landed with it.
 - **Level 1 was flown start to finish after the fleet-command batch** (`docs/night/hunt-l1-fleet.md`, by `tests/huntfleet-boot.mjs`): the Tab map's V (scout) and T (take a lane) now act on the lane you marked even when the autopilot follows the transport, a toast no longer shows half a sentence, and 1.1 says "transport" where it said "haulers". Open items are listed there (the call plate's key caption, which the two-hands key change replaces; the lost card's tip).
 - **Debug keys** (the backslash wins a mission) exist for testing and are **off** unless the address says `?debug=1`.
-- **Chrome tests are run rarely** by choice (they are slow and take a shared lock). The Node suites (about 160) run on every landing, and some Chrome boots are updated by hand when keys move and run only at the gate. A red boot after a key change is usually a stale key in the script, not a game bug.
+- **Chrome tests are run rarely** by choice (they are slow and take a shared lock). The Node suites (about 160) run on every landing, and some Chrome boots are updated by hand when keys move and run only at the gate. A red boot after a key change is usually a stale key in the script, not a game bug. **The two-hands change moved every Campaign key**: `tools/campshots.mjs` (a picture tool) still presses the old ones.
+- **The two-hands panels cover part of the left and right edges of the screen** (below the gauges and the radar); the map hides them. Their size is a guess to be judged by playing.
 - **Only mission 1.1 has the full set of beats.** Asking "why are the other eight plainer" is fair; that is the cut-list rule below.
 - **Long Haul** is unchanged; its design notes are `docs/UNIVERSE.md` and `docs/ECONOMY.md`.
 

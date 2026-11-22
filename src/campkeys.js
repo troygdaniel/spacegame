@@ -11,7 +11,7 @@
 const CAMPKEYS = {
   panel: { x: 70, y: 35, w: 1140, h: 650 },      // the glass panel: the sector map's own size and place
   colX: [104, 660], colW: 500,                   // left edge and width of the two columns
-  top: 104, pitch: 17, head: 24, gap: 10,        // first line's y, a line's pitch (19, then 18, until the SYSTEMS panel's five rows made a column 643 px deep), the room a heading takes, the room between two groups (26 and 12 until the FLEET panel's flip line: 635 px deep)
+  top: 104, pitch: 17, head: 24, gap: 7,        // first line's y, a line's pitch (19, then 18, until the SYSTEMS panel's five rows made a column 643 px deep), the room a heading takes, the room between two groups (26 and 12 until the FLEET panel's flip line: 635 px deep)
   capsW: 126, size: 14, bottom: 630,             // the space the key caps take at the left of a line, the size of the words, the lowest y a column may reach (the footer is at 650)
   depth: 300,                                    // over the cards (200), the map (150 to 156) and the panels (160)
   groups: ['panels', 'campaign'],                // the groups of the table (src/data_controls.js) the Campaign's page lists, in this order: the two panels first
@@ -42,7 +42,7 @@ function campKeysLayout(groups) {
     const col = [0, 0]; let swaps = 0;
     groups.forEach((g, i) => { const c = (mask >> i) & 1; col[c] += size(g); if (i && c !== ((mask >> (i - 1)) & 1)) swaps++; });
     const m = Math.max(col[0], col[1]);
-    if (!best || m < best.m || (m === best.m && swaps < best.swaps)) best = { m, swaps, mask };
+    if (!best || m < best.m || (m === best.m && swaps < best.swaps) || (m === best.m && swaps === best.swaps && !(mask & 1) && (best.mask & 1))) best = { m, swaps, mask }; // a tie: the first group (the FLEET panel, the left hand) is in the left column
   }
   const cols = [[], []]; groups.forEach((g, i) => cols[(best.mask >> i) & 1].push(g));
   return { cols, lines: cols.map(c => c.reduce((k, g) => k + size(g), 0)) };
@@ -58,7 +58,6 @@ function campKeysOpen(s, ids) { // ids: the groups to list (the ready room's); t
   const room = Array.isArray(ids); // the ready room's page has its own heading and footer (nothing is waiting behind it)
   put(s.add.text(K.colX[0], 46, uiText(room ? 'camp.keys.roomtitle' : 'camp.keys.title'), uiFont(24, '#38e1ff', { letterSpacing: 2 })), 2);
   put(s.add.text(K.colX[0], 640, uiText(room ? 'camp.keys.roomfooter' : 'camp.keys.footer'), uiFont(14, '#5b7a92')), 2);
-  if (typeof campPaceNow === 'function') put(s.add.text(K.colX[1] + K.colW, 640, uiText('camp.keys.pace', { pace: campPaceNow().name }), uiFont(14, '#ffd37a')).setOrigin(1, 0), 2); // the battle pace, and its key (src/campace.js)
   const L = campKeysLayout(campKeysPage(ids));
   L.cols.forEach((col, c) => {
     let y = K.top;

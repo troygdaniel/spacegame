@@ -13,7 +13,7 @@ const PART = Number((process.argv.indexOf('--part') > 0 && process.argv[process.
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const note = s => console.log('  note ' + s);
-const VK = { KeyQ: 81, KeyC: 67, KeyP: 80, KeyB: 66, KeyV: 86, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, KeyK: 75, KeyL: 76, Enter: 13, Escape: 27, Tab: 9, KeyH: 72 };
+const VK = { Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, KeyK: 75, KeyL: 76, Enter: 13, Escape: 27, Tab: 9, KeyH: 72, ArrowLeft: 37 };
 
 const t = await launch('', ROOT);
 try {
@@ -30,9 +30,9 @@ try {
   await key('KeyK');
   check('K on the title opens the ready room at level 3', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`));
   await t.run(900); const board = await shown(); note('board: ' + board.join(' | ').slice(0, 600)); await snap('p' + PART + '-1-board');
-  await key('Digit2'); await t.run(900); const brief = await shown(); note('briefing: ' + brief.join(' | ').slice(0, 500)); await snap('p' + PART + '-2-briefing');
-  await key('Digit4'); await t.run(700); note('rank: ' + (await shown()).join(' | ').slice(0, 300));
-  await key('Digit5'); await settle(`Math.abs(${HUB}.player.x - 1028) < 4 && Math.abs(${HUB}.player.y - 394) < 4`, 80); await t.run(300);
+  await key('Enter'); await t.run(900); const brief = await shown(); note('missions overlay: ' + brief.join(' | ').slice(0, 500)); await snap('p' + PART + '-2-briefing'); await key('ArrowLeft'); await t.run(300); // the ready room is four rows and an overlay (card space-game-ready-room-simple): Enter opens the missions, Left closes the overlay
+  await key('Digit3'); await key('Enter'); await t.run(700); note('rank: ' + (await shown()).join(' | ').slice(0, 300)); await key('ArrowLeft'); await t.run(300);
+  await key('Digit4'); await settle(`Math.abs(${HUB}.player.x - 1028) < 4 && Math.abs(${HUB}.player.y - 394) < 4`, 80); await t.run(300);
   await key('KeyL');
   const warp = await settle(`game.scene.isActive('CampWarp')`, 30);
   note('warp cinematic for this start: ' + warp);
@@ -46,16 +46,17 @@ try {
 
   // the pilot's play: the wing out and attacking, the carrier on the autopilot to the goal, Space held near an alien
   await t.ev(`(() => { ${S}.k.SPACE = { isDown: true }; return 1; })()`);
-  await key('KeyQ'); await key('Digit1'); await t.run(600); // Q opens the Fleet panel, 1 launches the wing
+  await key('Digit1'); await t.run(600); // 1 launches the wing (the FLEET panel is always on: card space-game-two-hands-keys)
   const drive = async secs => { // fly to the goal, one leg at a time, re-pick each 5 s; log what the game says
     for (let s = 0; s < secs; s += 5) {
       await t.ev(`(() => { const C = ${S}.camp; if (C.result) return 0; const g = campNavGoal(C); if (g) { const row = campNavRows(C).find(r => r.id === 'goal') || g; if (!C.nav || !C.nav.on) campNavGo(C, row); } return 1; })()`);
-      if (s % 10 === 5) await key('KeyQ'), await key('Digit2'); // Fleet, Attack
+      if (s % 10 === 5) await key('Digit2'); // Attack
       await t.run(5000);
       if (await j(`${S}.camp.result || ${S}.mode !== 'play'`)) break;
     }
   };
-  await drive(PART === 1 ? 90 : 120);
+  await drive(PART === 1 ? 150 : 150); // (the wing's fights are 15 percent slower and the shields mend by themselves now: a little more time to finish the last alien)
+  await settle(`!${S}.camp.result || ${S}.mode !== 'play'`, 60); // a won battle shows its debrief 1.8 s after the end: wait for it, do not read the mode in between
   const st = await j(`({ mode: ${S}.mode, result: ${S}.camp.result, t: Math.round(${S}.camp.t / 1000), obj: campObjective(${S}.camp), hull: Math.round(${S}.camp.carrier.hp), scans: (${S}.camp.scan || []).filter(p => p.got).length, towers: ${S}.camp.ships.filter(u => u.kind === 'tower' && u.hp > 0).length, aliens: campAliens(${S}.camp).length })`);
   note('state: ' + JSON.stringify(st)); await snap('p' + PART + '-7-after');
   check('the mission was won by play (the debrief is up)', st.mode === 'debrief', JSON.stringify(st));

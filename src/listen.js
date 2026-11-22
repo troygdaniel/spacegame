@@ -251,7 +251,7 @@ function listenCapShown(game) { return !!(LISTEN.on && listenScene(game || LISTE
 function listenCapPaint() {
   const S = LISTEN.s, d = listenCapDom(); if (!d) return null;
   try {
-    const game = LISTEN.game || (typeof window !== 'undefined' ? window.game : undefined), busy = S.state !== 'idle';
+    const game = LISTEN.game || (typeof window !== 'undefined' ? window.game : undefined), busy = S.state !== 'idle'; listenKeysSync(game); if (d.key && d.key.textContent !== LISTEN.cap) d.key.textContent = LISTEN.cap;
     if (!busy && !listenCapShown(game)) { d.root.style.display = 'none'; return null; }
     if (busy && !listenCapShown(game) && S.state !== 'listening' && S.state !== 'opening') { d.root.style.display = 'none'; return null; } // the scene went away under the ring
     const v = listenCapView(), canvas = typeof window !== 'undefined' && window.game && window.game.canvas, r = canvas && canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : null;
@@ -454,8 +454,13 @@ function listenHeld() { const S = LISTEN.s; return S.chunks.length + (S.blob ? 1
 // ---------- keys, once for the whole game ----------
 // The listeners are on the window, in the capture phase: they see Esc before Phaser does (an Esc that cancels the words must not also open the pause menu)
 function listenTyping() { const el = typeof document !== 'undefined' ? document.activeElement : null; return !!(el && (/^(INPUT|TEXTAREA|SELECT)$/.test(String(el.tagName)) || el.isContentEditable === true)); }
+// the key to hold: U in the Long Haul; in the Campaign U is the SHIP panel's emergency shields, so the voice is the period (CAMP_KEYS.voice in src/data_controls.js; card space-game-two-hands-keys). LISTEN.code and LISTEN.cap follow the scene that is up
+function listenKeysSync(game) {
+  const camp = !!(game && game.scene && typeof game.scene.getScenes === 'function' && game.scene.getScenes(true).some(sc => sc.scene && sc.scene.key === 'Campaign') && typeof campKeyCodes === 'function');
+  LISTEN.code = camp ? campKeyCodes('voice')[0] : 'KeyU'; LISTEN.cap = camp ? CAMP_KEYS.voice.k : 'U';
+}
 function listenKeyDown(e, game) {
-  const S = LISTEN.s;
+  const S = LISTEN.s; listenKeysSync(game);
   if (e.code === 'Escape') {
     // the ship is talking: the first Esc only stops the voice (the pause menu waits for the next one), card space-game-voice-shorter
     if (S.state === 'idle') { if (typeof voiceSpeaking === 'function' && voiceSpeaking() && voiceStop('esc')) { e.preventDefault(); e.stopPropagation(); } return; }
@@ -468,6 +473,7 @@ function listenKeyDown(e, game) {
   e.preventDefault(); listenPress(game);
 }
 function listenKeyUp(e) {
+  listenKeysSync(LISTEN.game);
   if (e.code !== LISTEN.code) return;
   const S = LISTEN.s; S.held = false;
   if (S.state === 'ring') { e.preventDefault(); listenRingAbort(); }        // let go before the ring was full; after that the key is not needed (it listens by itself)

@@ -1,7 +1,7 @@
 // ---------- Campaign: a pilot's call for orders, on the screen (card space-game-order-calls) ----------
-// The Phaser half of src/camporders.js, which says WHAT is asked. A small plate low in the middle of the window (clear of the left HUD, the radio line, and the FLEET and SHIP panels at the sides): the
+// The Phaser half of src/camporders.js, which says WHAT is asked. A small plate low in the middle of the window (since card space-game-two-hands-keys the FLEET panel shows the call in place of its rows, and this plate is not drawn while that panel is there): the
 // pilot's callsign and what he sees, three rows 1 2 3, the cautious one marked, and a bar that runs down as he waits. The words are camp.call.* (content/text/camporders.md). The answer is said back
-// on the radio line (the scene's chatShow: the callsign, the words, the pilot's voice). Keys: 1 2 3 (and the keypad's) answer while no panel is open (the panels' digits are theirs).
+// on the radio line (the scene's chatShow: the callsign, the words, the pilot's voice). Keys: 1 2 3 (and the keypad's) answer while a call waits (they are asked before the panels' keys).
 //   campCallPaint(s)      each frame: the plate while a call waits and the battle is on, else gone; the texts change only when the call does
 //   campCallKey(s, code)  true when the key answered the call (the scene asks before the panels do)
 //   campCallHear(s, e)    a sim event { type: 'call', stage }: the open call is said in its pilot's voice, the answer on the radio line
@@ -24,6 +24,7 @@ function campCallShow(ui, on) { [ui.back, ui.edge, ui.bar, ui.call, ui.foot].con
 
 function campCallPaint(s) {
   if (!s || !s.camp || typeof campCallView !== 'function') return;
+  if (s.pnl && s.pnl.p && s.pnl.p.fleet) { if (s.callUi && s.callUi.on) campCallShow(s.callUi, false); return; } // the FLEET panel shows the call in place of its rows (src/campanelsdraw.js; card space-game-two-hands-keys): this plate is the stand-in scene's
   const v = s.mode === 'play' && !s.camp.result ? campCallView(s.camp) : null;
   if (!v) { if (s.callUi && s.callUi.on) campCallShow(s.callUi, false); return; }
   if (!s.add || !s.add.rectangle) return; // a stand-in scene draws nothing

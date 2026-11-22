@@ -7,8 +7,8 @@ The words of one change of the Campaign's UX night (card space-game-night-ux, do
 | key | text |
 |---|---|
 | camp.help.goal | Your goal: {goal} |
-| camp.help.goalbay | Your goal: {goal} Press {fleetkey}, then {nlaunch}, to launch the wing. |
-| camp.help.keys | W A S D fly, Space fires. {panels} panels. |
+| camp.help.goalbay | Your goal: {goal} Press {keylaunch} to launch the wing. |
+| camp.help.keys | The arrow keys fly, Space fires. {panels}. |
 | camp.help.map | Tab opens the level map. Tab or Esc closes it. |
 | camp.help.status | Hull {hull} of {max}. Earth {earth} percent. {out} out, {bay} in bay. |
 | camp.help.status2 | Hull {hull} of {max}. {out} out, {bay} in bay. |

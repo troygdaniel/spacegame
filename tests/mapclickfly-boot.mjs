@@ -50,11 +50,11 @@ async function campaign() {
     check('a click on Fast flies there with the burn on', await j(`!!${SC}.camp.nav && ${SC}.camp.nav.fast === true`));
     await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(100); // the map closes
     await t.run(6000);
-    const sp = await j(`Math.round(Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy))`);
-    check('six seconds in, the carrier is past its old top speed of 210 and under the burn\'s 462', sp > 230 && sp <= 463, sp + ' px/s');
+    const sp = await j(`Math.round(Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy))`), top = await j(`Math.round(CAMP.carrier.speed)`), burn = await j(`Math.round(CAMP.carrier.speed * Math.max(CAMP.nav.fast, CAMP.nav.farFast))`); // far trips burn at farFast // the table's numbers, not a number written here (the carrier's top speed was 210 when this was written)
+    check('six seconds in, the carrier is past its own top speed (' + top + ') and under the burn\'s (' + burn + ')', sp > top * 1.05 && sp <= burn + 1, sp + ' px/s');
     await snap(t, 'campaign-burn');
-    await t.ev(`(() => { ${SC}.k.W.isDown = true; return 1; })()`); await t.run(200); await t.ev(`(() => { ${SC}.k.W.isDown = false; return 1; })()`); await t.run(200);
-    check('a steering key takes the wheel: the autopilot and the burn are off, and the speed is back under 210', await j(`${SC}.camp.nav === null`) && (await j(`Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy)`)) <= 211);
+    await t.ev(`(() => { ${SC}.k.UP.isDown = true; return 1; })()`); await t.run(200); await t.ev(`(() => { ${SC}.k.UP.isDown = false; return 1; })()`); await t.run(200); // the arrows fly (W is the FLEET's mine key now: card space-game-two-hands-keys)
+    check('a steering key (Up) takes the wheel: the autopilot and the burn are off, and the speed is back under the top speed (' + top + ')', await j(`${SC}.camp.nav === null`) && (await j(`Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy)`)) <= top + 1);
     await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(300);
     const eros = await at('place:pallas'); await clickAt(t, eros.x, eros.y); await t.run(200);
     await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', shiftKey: false, repeat: false }); return 1; })()`); await t.run(200);
@@ -69,7 +69,7 @@ async function campaign() {
     check('a click on Fly: back to regular speed, the same trip, Fly marked ON', (await j(`${SC}.camp.nav === window.__trip && ${SC}.camp.nav.fast === false && /ON$/.test(${SC}.mp.btnFly.text)`)) === true);
     await snap(t, 'campaign-switch');
     // card space-game-campaign-fast-board: Fast needs the wing aboard. Launch the wing, then ask for Fast on the map twice: refused, then recalled and burning
-    await t.ev(`(() => { campNavClear(${SC}.camp, 'clear'); ${SC}.onKey({ code: 'Digit1', repeat: false }); ${SC}.onKey({ code: 'Digit1', repeat: false }); return 1; })()`); await t.run(9000);
+    await t.ev(`(() => { campNavClear(${SC}.camp, 'clear'); ${SC}.onKey({ code: 'Digit1', repeat: false }); ${SC}.onKey({ code: 'Digit1', repeat: false }); return 1; })()`); await settle(t, `${SC}.camp.launchQ.length === 0 && campWing(${SC}.camp).length === 8`, 200); // every ship out (a ship still in the launch queue when the wing is recalled is not recalled: it comes out later; the map's open, so the battle runs at command time, a quarter speed, and 9 s is not enough)
     check('the wing is out (eight ships)', (await j(`campNavOut(${SC}.camp)`)) === 8);
     // the place is chosen on the map's list and set (not by a click on its mark: the carrier is by Vesta now), and the keys do the rest: the Fast button, Shift+Enter, Shift+Enter
     await t.ev(`(() => { ${SC}.mp.selId = 'place:pallas'; ${SC}.mp.setId = 'place:pallas'; ${SC}.mp.dirty = true; return 1; })()`); await t.run(300);
@@ -81,7 +81,7 @@ async function campaign() {
     await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', shiftKey: true, repeat: false }); return 1; })()`); await t.run(200);
     check('the second press recalls the wing and waits for it', (await j(`!!${SC}.camp.navWait && ${SC}.camp.orders.recall >= 1`)) === true);
     await settle(t, `${SC}.camp.nav && ${SC}.camp.nav.fast`, 80);
-    check('and when the last ship is aboard the burn starts by itself', (await j(`${SC}.camp.nav && ${SC}.camp.nav.fast === true && campNavOut(${SC}.camp) === 0`)) === true, JSON.stringify(await j(`[${SC}.camp.navWait && ${SC}.camp.navWait.n, campNavOut(${SC}.camp)]`)));
+    check('and when the last ship is aboard the burn starts by itself', (await j(`${SC}.camp.nav && ${SC}.camp.nav.fast === true && campNavOut(${SC}.camp) === 0`)) === true, JSON.stringify(await j(`[${SC}.camp.navWait && ${SC}.camp.navWait.n, campNavOut(${SC}.camp), campWing(${SC}.camp).map(u => u.kind + ':' + (u.order && u.order.type) + ':' + Math.round(Math.hypot(u.x - ${SC}.camp.carrier.x, u.y - ${SC}.camp.carrier.y))), ${SC}.camp.call && ${SC}.camp.call.log.slice(-3)]`)));
     check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
   } finally { await t.close(); }
 }

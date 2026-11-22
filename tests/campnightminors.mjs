@@ -41,7 +41,7 @@ const bl = J(`(() => { const C = campNew(1, [], { seed: 1 }); const none = campB
 check('B with no blink technology says so: "No warp blink yet. It is a technology you can pick."', bl.none === 'No warp blink yet. It is a technology you can pick.', bl.none);
 check('B while it cools says the seconds left', /^The blink is not ready: \d+ s\.$/.test(bl.cool), bl.cool);
 check('B when it is ready says nothing (the blink goes)', bl.ready === '', JSON.stringify(bl.ready));
-check('the scene asks it when B is pressed (and still sets the blink input first)', /KeyB'\) \{ C\.input\.blink = true; const bw = campBlinkWhy\(C\); if \(bw\) toast\(this, bw/.test(readFileSync(join(ROOT, 'src', 'campaignscene.js'), 'utf8')));
+check('the scene asks it when the blink key is pressed (the SHIP panel\'s I row: campPanelRun sets the blink input first and answers with campBlinkWhy)', /if \(row\.blink\) \{ C\.input\.blink = true; const bw = typeof campBlinkWhy === 'function' \? campBlinkWhy\(C\) : ''; return \{ ok: !bw, say: bw \}; \}/.test(readFileSync(join(ROOT, 'src', 'camppanel.js'), 'utf8')) && /pr\.ran\) \{ toast\(this, pr\.say/.test(readFileSync(join(ROOT, 'src', 'campaignscene.js'), 'utf8')));
 
 console.log('10. one name for the star of level 3');
 const star = J(`(() => { const pl = campPlaces(3); return Object.keys(pl).filter(k => pl[k].kind === 'star').map(k => pl[k].name); })()`);
@@ -66,10 +66,10 @@ check('hiding clears the gauges and the radar, and hides every text and the key 
 check('showing it again gives the texts back, and leaves the arrow to its own paint', hs.on[0] === true && hs.on[1] === true && hs.on[3] === true && hs.on[2] === false, JSON.stringify(hs));
 check('the scene hides it before it paints (update: hudHides ? hudShow(false) : hudShow(true) then paintHud)', /this\.hudHides\(\)\) this\.hudShow\(false\); else \{ this\.hudShow\(true\); this\.paintHud\(\)/.test(readFileSync(join(ROOT, 'src', 'campaignscene.js'), 'utf8')));
 
-console.log('11. the edge arrow\'s label keeps out of an open panel');
-const ak = J(`(() => { const base = Campaign.prototype.arrowKeep.call({ pn: { open: '' } }), open = Campaign.prototype.arrowKeep.call({ pn: { open: 'ship' } }), G = campPanelsGeometry(campPanelDef('ship'));
-  const at = campNavLabelAt(G.x + 60, G.y + 80, 170, 18, open, W, H), hit = r => at.x + 85 > r[0] && at.x - 85 < r[2] && at.y + 9 > r[1] && at.y - 9 < r[3]; return { base: base.length, open: open.length, last: open[open.length - 1], G: [G.x, G.y, G.w, G.h], clear: !open.some(hit) }; })()`);
-check('no panel open: the table\'s rectangles only; a panel open: one more, the column of the panel', ak.base === J('CAMP.nav.arrow.keep.length') && ak.open === ak.base + 1 && ak.last[0] <= ak.G[0] && ak.last[2] >= ak.G[0] + ak.G[2] && ak.last[3] >= ak.G[1] + ak.G[3], JSON.stringify(ak));
+console.log('11. the edge arrow\'s label keeps out of the two panels (they are always on the screen)');
+const ak = J(`(() => { const keep = Campaign.prototype.arrowKeep.call({ pn: campPanelNew() }), G = campPanelsGeometry(campPanelDef('ship')), F = campPanelsGeometry(campPanelDef('fleet'));
+  const at = campNavLabelAt(G.x + 60, G.y + 80, 170, 18, keep, W, H), hit = r => at.x + 85 > r[0] && at.x - 85 < r[2] && at.y + 9 > r[1] && at.y - 9 < r[3]; return { base: CAMP.nav.arrow.keep.length, n: keep.length, a: keep[keep.length - 2], b: keep[keep.length - 1], G: [G.x, G.y, G.w, G.h], F: [F.x, F.y, F.w, F.h], clear: !keep.some(hit) }; })()`);
+check('the table\'s rectangles and one for each panel: FLEET\'s and SHIP\'s, each covering the whole of its panel', ak.n === ak.base + 2 && ak.a[0] <= ak.F[0] && ak.a[2] >= ak.F[0] + ak.F[2] && ak.a[3] >= ak.F[1] + ak.F[3] && ak.b[0] <= ak.G[0] && ak.b[2] >= ak.G[0] + ak.G[2] && ak.b[3] >= ak.G[1] + ak.G[3], JSON.stringify(ak));
 check('and a label wanted on the SHIP column is put beside it, off every rectangle', ak.clear, JSON.stringify(ak));
 console.log('12. a tab closed at the tech pick: the next launch goes to the pick, not to mission 1');
 const lv = J(`(() => { const P = campProgressNew(), n = campMissions(2).length, sc = k => ({ score: 100 * (k + 1), bonuses: [], t: 60000, hullLeft: 1, shipsLost: 0 });

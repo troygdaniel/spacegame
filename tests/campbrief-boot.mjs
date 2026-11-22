@@ -9,34 +9,35 @@ import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const { launch, sleep } = await import('./cdp.mjs');
+import { beltSource } from './fixtures/campbelt.mjs';
 const OUT = process.env.BRIEF_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { Equal: 187, Minus: 189, Digit0: 48, KeyK: 75, KeyA: 65, KeyR: 82, KeyL: 76, KeyM: 77, KeyH: 72, Enter: 13, Escape: 27, ArrowRight: 39, ArrowLeft: 37, Left: 37, Digit2: 50 };
+const VK = { Equal: 187, Minus: 189, Backspace: 8, KeyK: 75, KeyR: 82, KeyL: 76, KeyM: 77, KeyH: 72, Enter: 13, Escape: 27, ArrowUp: 38, ArrowRight: 39, ArrowLeft: 37, Left: 37, Digit2: 50 };
 
 const t = await launch('', ROOT);
 try {
   const j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`)), HUB = `game.scene.getScene('CampHub')`, CAMPS = `game.scene.getScene('Campaign')`;
-  const key = async code => { const k = { windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: code.replace(/^(Key|Digit)/, '').toLowerCase() }; await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, k)); await t.run(50); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, k)); await t.run(250); };
+  const key = async code => { const k = { windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: /^(Enter|Backspace|Arrow|Escape)/.test(code) ? code : code.replace(/^(Key|Digit)/, '').toLowerCase() }; await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, k)); await t.run(50); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, k)); await t.run(250); };
   const snap = async name => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, 'brief-' + name + '.png'), Buffer.from(r.data, 'base64')); await t.run(34); } console.log('  picture brief-' + name); };
   const settle = async (expr, tries = 40) => { for (let i = 0; i < tries; i++) { if (await j(`!!(${expr})`)) return true; await sleep(60); await t.run(100); } return false; };
   const bf = () => j(`(() => { const s = ${HUB}; return s.bf ? s.bf.text.filter(o => o.text).map(o => o.text).concat(s.bf.map.filter(o => o.text).map(o => o.text)) : []; })()`);
 
-  await t.waitFor(`!!(window.game && game.scene.isActive('Title'))`, 30000, 'the title'); await t.clock(); await t.run(900);
+  await t.waitFor(`!!(window.game && game.scene.isActive('Title'))`, 30000, 'the title'); await t.ev(beltSource(1)); /* the old Level 1, the belt, as level 1 (card space-game-l1-rim-boots) */ await t.clock(); await t.run(900);
   await t.ev(`localStorage.setItem('longhaul.campaign', JSON.stringify({ level: 1, mission: 2, techs: ['shield', 'bay2'], ore: 77, bonus: { fighters: 1, escorts: 1 }, results: { '1.1': { score: 900, bonuses: ['swift', 'clean'], t: 100, hull: 500, lost: 0, tries: 2 }, '1.2': { score: 640, bonuses: [], t: 90, hull: 300, lost: 1, tries: 1 } } }))`);
   const muted0 = await j('G.muted');
   await key('KeyK');
   check('K opens the ready room, the cursor on the next mission', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`) && await j(`${HUB}.hub.cur === 2 && !${HUB}.bf`));
   await t.run(900);
-  await key('Enter'); await t.run(700);
+  await key('Enter'); await t.run(700); await key('Enter'); await t.run(700); // the board opens the missions overlay, Enter on the mission in it opens the big briefing (card space-game-ready-room-simple)
   const a = await bf();
-  check('Enter on the board opens the briefing at once on its first screen: Mission 3 (not 3 of 3), the three screens named, the map, the place, the route and the story line are on the glass', await j(`campBriefIsOpen(${HUB})`) && await j(`${HUB}.bf.screen === 0`) && a.some(x => /^MISSION 3\s+-\s+The mothership/.test(x)) && !a.some(x => /OF 3/.test(x)) && a.includes('WHERE') && a.includes('WHY') && a.some(x => /^Route /.test(x)) && a.includes('1  WHERE AND WHY') && a.includes('3  HOW'), a.join(' | ').slice(0, 400));
+  check('Enter on the board, then on the mission: the briefing opens on its first screen on its first screen: Mission 3 (not 3 of 3), the three screens named, the map, the place, the route and the story line are on the glass', await j(`campBriefIsOpen(${HUB})`) && await j(`${HUB}.bf.screen === 0`) && a.some(x => /^MISSION 3\s+-\s+The mothership/.test(x)) && !a.some(x => /OF 3/.test(x)) && a.includes('WHERE') && a.includes('WHY') && a.some(x => /^Route /.test(x)) && a.includes('1  WHERE AND WHY') && a.includes('3  HOW'), a.join(' | ').slice(0, 400));
   await snap('1-briefing');
   await key('Equal'); await key('Equal'); await key('Equal'); await t.run(300);
-  check('+ zooms the map in (the zoom reads in its corner) and does not mute the sound; 0 puts it back', await j(`${HUB}.bf.z > 1.6`) && (await j('G.muted')) === muted0 && (await bf()).some(x => /^ZOOM 17\d%/.test(x)));
+  check('+ zooms the map in (the zoom reads in its corner) and does not mute the sound; Backspace puts it back', await j(`${HUB}.bf.z > 1.6`) && (await j('G.muted')) === muted0 && (await bf()).some(x => /^ZOOM 17\d%/.test(x)));
   await snap('1b-zoomed-in');
-  await key('Digit0'); await key('KeyM'); await t.run(500);
-  check('0 resets, M goes to the mission area (the zoom back to 100%), and does NOT mute the sound; the briefing is still up', await j(`${HUB}.bf.zoom === 1 && ${HUB}.bf.z === 1`) && (await j('G.muted')) === muted0);
+  await key('Backspace'); await key('KeyM'); await t.run(500); // Backspace resets the zoom (0 is the SHIP panel's dock key now: card space-game-two-hands-keys)
+  check('Backspace resets, M goes to the mission area (the zoom back to 100%), and does NOT mute the sound; the briefing is still up', await j(`${HUB}.bf.zoom === 1 && ${HUB}.bf.z === 1`) && (await j('G.muted')) === muted0);
   await snap('2-mission-area');
   await key('KeyM'); await t.run(400); await snap('2b-whole-system');
   check('M again is the whole system', await j(`${HUB}.bf.zoom === 2`)); await key('KeyM');
@@ -52,12 +53,12 @@ try {
   check('Left twice is back on the first screen, which has its map again; Esc closes the briefing and is NOT the pause menu or the title: the ready room is still the room', await j(`${HUB}.bf.screen === 0 && ${HUB}.bf.map.length > 5`));
   await key('Escape'); await t.run(400);
   check('Esc closed it, and the ready room is still the room', await j(`!${HUB}.bf`) && await j(`game.scene.isActive('CampHub') && !game.scene.isActive('Pause')`));
-  await key('KeyA'); await key('KeyR'); await t.run(700);
+  await key('ArrowUp'); await key('KeyR'); await t.run(700); // the overlay is still open on the next mission: Up is the one before it, R picks it as a replay and opens its briefing
   const r = await bf();
-  check('A then R picks the second mission as a replay and opens its briefing, headed REPLAY, with its own story line', await j(`campBriefIsOpen(${HUB})`) && r.some(x => /^REPLAY\s+-\s+MISSION 2\s+-\s+Ore haulers/.test(x)) && r.some(x => /^Escort the haulers/.test(x)), r.join(' | ').slice(0, 300));
+  check('Up then R picks the second mission as a replay and opens its briefing, headed REPLAY, with its own story line', await j(`campBriefIsOpen(${HUB})`) && r.some(x => /^REPLAY\s+-\s+MISSION 2\s+-\s+Ore haulers/.test(x)) && r.some(x => /^Escort the haulers/.test(x)), r.join(' | ').slice(0, 300));
   await snap('3-replay-briefing');
   await key('Enter'); await t.run(400); await snap('6-replay-what-to-do'); await key('Enter'); await t.run(300); await snap('7-replay-how');
-  await key('Escape'); await key('KeyA'); await key('KeyR'); await t.run(600);
+  await key('Escape'); await key('ArrowUp'); await key('KeyR'); await t.run(600);
   const m1 = await bf(), note = () => j(`${HUB}.bf.text.filter(o => o.text).map(o => o.text).filter(x => /^SHIP:/.test(x))`);
   check('mission 1 (the belt survey) carries the ship\'s lines over its three screens, the basics in the story\'s voice: the map and the rings, the scan, then fly, fire, the panel and the map', (await note()).some(x => /Welcome aboard, Commander/.test(x)));
   await snap('8-tutorial-1');

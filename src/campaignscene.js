@@ -1,7 +1,7 @@
 // ---------- The Campaign scene: reads the keys, steps src/campaign.js, draws what its numbers say (docs/CAMPAIGN.md) ----------
 // The only Phaser in the mode. Every rule, number and word comes from src/campaign.js (the tuning table CAMP, the sim, uiText for the text), so this
 // file draws and listens and decides nothing about the game. It is not run by a test in plain Node (a scene is Phaser's): tests/campaign.mjs runs the sim.
-//   K on the title opens it (campaignStart); Enter begins a level; W A S D fly, Space (held) makes the eight turrets fire, F fires a homing missile (the magazine is C.missiles), Q blinks (the warp tech);
+//   K on the title opens it (campaignStart); Enter begins a level; the arrow keys fly, Space (held) makes the eight turrets fire, Enter fires a homing missile at the target (the magazine is C.missiles), I blinks (the warp tech);
 //   there is no other gun: the turrets aim themselves at the nearest alien in reach, always, and fire only while Space is held; the scene draws them, their reach and their flash (syncRockets)
 //   1 launch, 2 attack, 3 escort, 4 guard, 5 recall; I types an order and U speaks one (the strip and the ship computer, src/shipcomputer.js, find this scene);
 //   Esc pauses (this scene's own pause, not Long Haul's: the Long Haul save is not touched here); after a win the story, the tech pick (1 2 3), then the next level.
@@ -100,7 +100,7 @@ class Campaign extends Phaser.Scene {
   makeCamp() { // a new battle of this level: arrived by the chain (or a retry), the ore and the extra ships of the refit come with the cruiser; a level started by itself (an address, a skip) has its own
     const carried = this.P.level === this.level || this.replay === true; // a replay flies with the pilot's CURRENT ore, extra ships, techs and rank, whatever level it is of
     this.P.promo = null; // the promotion of the last debrief is told once
-    return campNew(this.level, this.P.techs, Object.assign({}, this.opts, { found: this.P.found, rank: typeof campRank === 'function' ? campRank(this.P).i : 0, stance: this.P.stance, power: campPowerLoad(), pace: typeof campPaceNow === 'function' ? campPaceNow().id : undefined }, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {})); // the rank (src/campranks.js) fills the bay and lifts the wing limit; found: the cloaked caches looted so far (their weapons stay with the pilot); the wing's stance is the pilot's: it comes with every battle
+    return campNew(this.level, this.P.techs, Object.assign({}, this.opts, { found: this.P.found, rank: typeof campRank === 'function' ? campRank(this.P).i : 0, stance: this.P.stance, power: campPowerLoad(), pace: CAMP.pace.start }, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {})); // the rank (src/campranks.js) fills the bay and lifts the wing limit; found: the cloaked caches looted so far (their weapons stay with the pilot); the wing's stance is the pilot's: it comes with every battle
   }
   drawPlace(p) { // returns what it made, so a far place can be taken down again (syncFar)
     const r = p.r || 60, made = [];
@@ -231,7 +231,7 @@ class Campaign extends Phaser.Scene {
     this.mode = 'lost'; const lines = typeof campLoseLines === 'function' ? campLoseLines(this.camp, why) : [uiText('camp.lose.' + why)]; // src/camplose.js: what happened, how far, one thing to try
     const ms = !!(this.camp && this.camp.L && this.camp.L.objectives); this.showCard(ms ? uiText('camp.ui.lostmission', { title: uiText('camp.m.' + this.level + '.' + (this.camp.L.mission + 1) + '.title') }) : uiText('camp.ui.lost', { n: this.level }), lines, uiText(ms ? 'camp.ui.retrymission' : 'camp.ui.retry')); this.say([lines[0]].concat(lines.slice(2))); // the numbers are for reading: the cause and the tip are said
   }
-  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap'), uiText('camp.ui.pausepanels', { panels: campPanelKeyLine().replace(/   /g, ', ') })].concat([uiText('camp.ui.pausehelp')], typeof campPaceLine === 'function' ? [campPaceLine() + '   ' + uiText('camp.pace.key')] : [], (this.camp && this.camp.L && this.camp.L.objectives) ? [uiText('camp.ui.pauseretry')] : [], typeof campDebugOn === 'function' && campDebugOn() && typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), (this.camp && this.camp.L && this.camp.L.objectives) ? 428 : 398); } // the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
+  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap'), uiText('camp.ui.pausepanels')].concat([uiText('camp.ui.pausehelp')], (this.camp && this.camp.L && this.camp.L.objectives) ? [uiText('camp.ui.pauseretry')] : [], typeof campDebugOn === 'function' && campDebugOn() && typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), (this.camp && this.camp.L && this.camp.L.objectives) ? 428 : 398); } // the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
   next(ore) { // after the story (and the pick, or the refit): the next level, or after the last one the end, with a new campaign waiting. ore: what is left to carry (the refit spent some)
     const last = !CAMP.levels[this.level + 1]; this.P.levelDone = 0; // the story and the pick are done: the level is over
     this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) { this.P.techs = []; this.P.found = []; this.P.ore = 0; this.P.bonus = { fighters: 0, escorts: 0 }; this.P.revealed = true; } // a new campaign: the techs and the loot of the last one are gone with the ore and the ships (the rank is the pilot's career and stays) // the ending is about to show: from now on a replay says the outpost (SPOILER)
@@ -268,21 +268,17 @@ class Campaign extends Phaser.Scene {
     if (this.mode === 'pick') { this.pickKey(c); return; }
     if (this.mode === 'lost') { if (c === 'Enter') go(this, 'Campaign', { level: this.level, mission: this.mi, techs: this.P.techs, via: 'retry', replay: this.replay === true }); else if (c === 'KeyT') go(this, 'Title'); return; } // a lost mission is flown again; the level is not lost
     if (this.mode === 'pause') { if (c === 'Escape') { this.hideCard(); this.mode = 'play'; } else if (c === 'KeyT') go(this, 'Title'); else if (c === 'KeyH') this.openKeys(); else if (c === 'KeyR' && (this.camp && this.camp.L && this.camp.L.objectives)) go(this, 'Campaign', { level: this.level, mission: this.mi, techs: this.P.techs, via: 'retry', replay: this.replay === true }); return; } // R: restart the mission (the level is kept; a replay is flown again as a replay); H: every key
-    if (c === 'KeyH') { this.openKeys(); return; } // H: every key, on one page
+    if (campKeyCodes('help').indexOf(c) >= 0) { this.openKeys(); return; } // H: every key, on one page
     const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // a word typed into the strip is not a key
-    if ((typeof this.pn !== 'object' || typeof this.pn.open !== 'string') && typeof campPanelNew === 'function') this.pn = campPanelNew(); // made in create (campPanelsInstall); a stand-in scene in a test has none, and answers any property
-    if (!typing && typeof campCallKey === 'function' && !(this.pn && this.pn.open) && campCallKey(this, c)) return; // 1 2 3 answer a pilot's call for orders while one waits and no panel is open (src/camporders.js, src/camporderdraw.js; the panels' digits are theirs)
-    const pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0, e.shiftKey) : { used: false }; // the panel keys (the table's: Q, E, C) open the panels (FLEET, SHIP, SYSTEMS), a digit picks a row of the open one, and so do Up, Down and Enter (src/camppanel.js); Esc closes a panel first
-    if (pr.ran) toast(this, pr.say, pr.ok ? '#9fe9ff' : '#ffb454');
+    if ((typeof this.pn !== 'object' || typeof this.pn.page !== 'object') && typeof campPanelNew === 'function') this.pn = campPanelNew(); // made in create (campPanelsInstall); a stand-in scene in a test has none, and answers any property
+    if (campKeyCodes('pause').indexOf(c) >= 0) { if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc closes the map first; it never pauses while the map is open
+    if (!typing && typeof campCallKey === 'function' && campCallKey(this, c)) return; // 1 2 3 answer a pilot's call for orders while one waits (src/camporders.js, src/camporderdraw.js; the FLEET panel shows the call in place of its rows)
+    if (this.mp && typeof campMapKey === 'function' && campMapKey(this, c, e.shiftKey)) return; // the open map's list: A D (and Up, Down) step the marks, Left and Right the groups, 7 flies there, 9 burns there, Enter flies, X clears the goal (src/campmapdraw.js)
+    const now = (this.time && this.time.now) || 0, pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, now, e.shiftKey) : { used: false }; // the two hands (src/camppanel.js): the left's FLEET keys and A D S X, the right's SHIP keys; one key is one order
+    if (pr.fleet && typeof campSlowKick === 'function') campSlowKick(this, now); // a fleet key: command time for a moment (src/campslow.js)
+    if (pr.ran) { toast(this, pr.say, pr.ok ? '#9fe9ff' : '#ffb454'); if (pr.ok && pr.row === 'balance' && this.gaugeAnim) this.gaugeAnim.flash = this.gaugeAnim.flash.map(() => 1); } // the balance key flashes all three bars, even when the power was even already
     if (pr.used) return;
-    const dk = !typing && this.mode === 'play' && typeof campPowerKey === 'function' ? campPowerKey(C, c) : { used: false }; // J K L: a pip to the shields, the engines, the weapons (the order of the dials), without the SYSTEMS panel (src/camphud.js; the same order as its rows)
-    if (dk.used) { if (dk.ran) toast(this, dk.say, dk.ok ? '#9fe9ff' : '#ffb454'); if (dk.ok && dk.sys === 'balance' && this.gaugeAnim) this.gaugeAnim.flash = this.gaugeAnim.flash.map(() => 1); return; } // the balance key flashes all three bars, even when the power was even already
-    if (c === 'Escape') { if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc closes the map first; it never pauses while the map is open
-    if (this.mp && typeof campMapKey === 'function' && campMapKey(this, c, e.shiftKey)) return; // the open map's list: W S choose, A D change group, Enter fly there (Shift+Enter fast), X clear (src/campmapdraw.js)
-    if (c === 'KeyB') { C.input.blink = true; const bw = campBlinkWhy(C); if (bw) toast(this, bw, '#ffb454'); } // the warp blink (it was Q; Q and E are free now: the panels are Z, X and C); without the technology, or while it cools, the key says so
-    else if (c === 'KeyF') this.fireMissile();
-    else if (c === CAMP.pace.key && !typing && this.mode === 'play') { const m = campPaceStep(1); campPaceSet(C, m.id); toast(this, uiText('camp.pace.toast', { pace: m.name }), '#9fe9ff'); } // B: the battle pace, calm, normal, brisk (card space-game-campaign-pace): it takes hold on the ships already out
-    else if (typeof campDebugKey === 'function') { // the tune kit (src/campdebug.js): ] skip, \\ win, [ lose, ` god mode; none is a key you fly by
+    if (typeof campDebugKey === 'function') { // the tune kit (src/campdebug.js): ] skip, \\ win, [ lose, ` god mode; none is a key you fly by
       const id = campDebugKey(c); if (!id) return;
       const r = campDebugRun(C, this.P, id); if (r && r.say) toast(this, r.say, '#ffd37a');
       if (r && r.go) go(this, 'Campaign', { level: r.go.level, techs: r.go.techs, via: 'skip' });
@@ -312,29 +308,27 @@ class Campaign extends Phaser.Scene {
     if (this.camp.t - (this.sndAt[kind] === undefined ? -1e9 : this.sndAt[kind]) < CAMP_SND[kind]) return;
     this.sndAt[kind] = this.camp.t; sfx(name, arg);
   }
-  fireMissile() { const r = campOrder(this.camp, 'missiles', '', 'key'); toast(this, r.say, r.ok ? '#9fe9ff' : '#ffb454'); }
 
   // ----- each frame -----
   update(time, dt) {
     spaceBackdropTick(this);
-    if (typeof campPanelsPaint === 'function') campPanelsPaint(this, this.time.now); // the open panel, once it is due (250 ms after its key)
+    if (typeof campPanelsPaint === 'function') campPanelsPaint(this, this.time.now); // the two panels (always on the screen: src/campanelsdraw.js)
     const C = this.camp;
     if (this.mode === 'play' && !C.result) {
       const k = this.k, inp = C.input;
-      // the autopilot (src/campnav.js, card space-game-campaign-navigate): while the map is open W A S D and the arrows are the list's, not the wheel's; with it closed any of them takes the wheel back
+      // the autopilot (src/campnav.js, card space-game-campaign-navigate): while the map is open the arrows are the list's, not the wheel's; with it closed any of them takes the wheel back
       const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // the strip's own box: the letters typed there are not the wheel
-      const arrows = !(this.pn && typeof this.pn.open === 'string' && this.pn.open); // while a panel is open the arrows are the panel's (Up and Down move its highlight, Left and Right its pages: card space-game-panel-keys-zxc), not the wheel's; W A S D still fly
-      const wheel = !this.mp && !typing && [k.W, k.A, k.S, k.D].concat(arrows ? [k.UP, k.DOWN, k.LEFT, k.RIGHT] : []).some(x => x && x.isDown);
+      const wheel = !this.mp && !typing && [k.UP, k.DOWN, k.LEFT, k.RIGHT].some(x => x && x.isDown); // the arrows fly (Up thrust, Left and Right turn, Down brake); W A S D are the fleet's and the target's keys now (card space-game-two-hands-keys)
       if (wheel && (C.nav || C.navWait) && typeof campNavClear === 'function') campNavClear(C, 'key'); // a steering key gives up the trip, and a burn that was waiting for the wing
       if (!(C.nav && C.nav.on)) {
         if (this.mp) { inp.turn = 0; inp.thrust = 0; inp.brake = false; }
         else {
-          inp.turn = ((k.D.isDown || (arrows && k.RIGHT.isDown)) ? 1 : 0) - ((k.A.isDown || (arrows && k.LEFT.isDown)) ? 1 : 0);
-          inp.thrust = (k.W.isDown || (arrows && k.UP.isDown)) ? 1 : 0; inp.brake = k.S.isDown || (arrows && k.DOWN.isDown);
+          inp.turn = (k.RIGHT.isDown ? 1 : 0) - (k.LEFT.isDown ? 1 : 0);
+          inp.thrust = k.UP.isDown ? 1 : 0; inp.brake = k.DOWN.isDown;
         }
       }
       inp.fire = k.SPACE.isDown;
-      C.timeScale = typeof campSlowScale === 'function' ? campSlowScale(this) : 1; // command time (src/campslow.js): a panel, the map or a call open runs the battle at a quarter
+      C.timeScale = typeof campSlowScale === 'function' ? campSlowScale(this) : 1; // command time (src/campslow.js): the map or a call open, or just after a fleet key, runs the battle at a quarter
       campStep(C, Math.min(dt, 100) / 1000 * C.timeScale);
       if (typeof campNudge === 'function') { const nd = campNudge(C, this.shown); if (nd) toast(this, nd, '#9fe9ff'); } // the first-minute hints, once each (src/campnudge.js)
       { const pk = C.power ? C.power.base.join() : ''; if (this.powerKey !== undefined && pk !== this.powerKey) { this.powerKey = pk; campPowerSave(C.power.base); } } // the setting is kept for the next battle the moment it is changed (the base, never an emergency's pips)
@@ -348,14 +342,15 @@ class Campaign extends Phaser.Scene {
     this.syncFar(time); this.syncRockets(Math.min(dt, 100)); this.syncBay(); if (typeof campRivalWorld === 'function') campRivalWorld(this); // (src/camprivaldraw.js)
     if (typeof campConvoySync === 'function') campConvoySync(this); // the shield bubble and the links of the ships that are tucked in (src/campconvoyscene.js)
     if (typeof campSlowPaint === 'function') campSlowPaint(this);
+    if (typeof campTgtPaint === 'function') campTgtPaint(this); // the bracket round the target A D S picked (src/camptargetdraw.js)
     if (typeof campTorpedoSync === 'function') campTorpedoSync(this, Math.min(dt, 100)); // the torpedoes and the boats that arm (src/camptorpedoscene.js)
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
     if (typeof campCallPaint === 'function') campCallPaint(this); // the plate of a pilot's call for orders, while one waits (src/camporderdraw.js)
     if (this.mp) campMapPaint(this, time);
   }
-  arrowKeep() { // the places the edge arrow's label keeps out of: the table's, and the open panel's column (a panel is up for a moment; the label sits beside it)
-    const keep = CAMP.nav.arrow.keep, o = this.pn && typeof this.pn.open === 'string' && this.pn.open && typeof campPanelDef === 'function' && typeof campPanelsGeometry === 'function' ? campPanelDef(this.pn.open) : null;
-    if (!o) return keep; const G = campPanelsGeometry(o); return keep.concat([[G.x - 8, G.y, G.x + G.w + 8, G.y + G.h + 8]]);
+  arrowKeep() { // the places the edge arrow's label keeps out of: the table's, and the two panels (they are on the screen all the time: src/campanelsdraw.js)
+    const keep = CAMP.nav.arrow.keep;
+    return typeof campPanelsKeep === 'function' ? keep.concat(campPanelsKeep()) : keep;
   }
   hudHides() { return ['won', 'lost', 'debrief', 'refit', 'pick', 'end'].indexOf(this.mode) >= 0; } // the modes of a result card
   hudShow(on) { // the HUD's texts, gauges and radar: off behind a result card, back when it goes; the arrow's own label is set by paintHud, so it is only hidden here
@@ -528,7 +523,7 @@ class Campaign extends Phaser.Scene {
     this.hud.mother.setText(m ? uiText('camp.ui.mother') : '');
     if (this.hud.repair) { const rp = campRepairState(C); this.hud.repair.setText(rp.n ? uiText('camp.ui.repair', { n: rp.n, s: rp.next }) : ''); } // (a stand-in scene in a test may have no repair text)
     if (this.hud.scouts) { const so = campScoutsOut(C); this.hud.scouts.setText(so ? uiText('camp.ui.scouts', { n: so }) : ''); } // (a stand-in scene in a test may have no scouts text)
-    this.hud.blink.setText(C.techs.indexOf('blink') >= 0 ? 'B  ' + (C.t - C.blinkAt >= campBlinkCooldown(C) ? 'READY' : Math.ceil((campBlinkCooldown(C) - (C.t - C.blinkAt)) / 1000) + ' s') : '');
+    this.hud.blink.setText(C.techs.indexOf('blink') >= 0 ? campKeyVar('keyblink') + '  ' + (C.t - C.blinkAt >= campBlinkCooldown(C) ? 'READY' : Math.ceil((campBlinkCooldown(C) - (C.t - C.blinkAt)) / 1000) + ' s') : '');
     // the radar: the carrier at its centre, space shown out to CAMP_RADAR.range; a ship beyond it is drawn on the rim
     const R = CAMP_RADAR; g.fillStyle(0x04101c, R.fill).fillCircle(R.x, R.y, R.r); g.lineStyle(R.rim[0], 0x38e1ff, R.rim[1]).strokeCircle(R.x, R.y, R.r);
     const dot = (p, color, size) => { let dx = (p.x - c.x) / R.range * R.r, dy = (p.y - c.y) / R.range * R.r; const d = Math.hypot(dx, dy); if (d > R.r - 3) { dx *= (R.r - 3) / d; dy *= (R.r - 3) / d; } g.fillStyle(color, 1).fillCircle(R.x + dx, R.y + dy, size + R.blip); };

@@ -10,6 +10,6 @@ The words of the Campaign's page of every key and of its links (card space-game-
 | camp.keys.footer | H or Esc closes this page. The battle waits while it is open. |
 | camp.keys.debug | DEBUG KEYS (THE TUNE KIT) |
 | title.camp.keys | H  all the keys |
-| camp.ui.pausepanels | {panels} open the panels; a digit then picks a row. H lists every key. |
+| camp.ui.pausepanels | Left hand: FLEET, and the target (A D S). Right hand: SHIP. Every row shows its key. H lists every key. |
 | camp.keys.roomtitle | READY ROOM  -  ALL THE KEYS |
 | camp.keys.roomfooter | H or Esc closes this page. |

@@ -17,7 +17,7 @@ const Z = J('({ min: CAMZOOM.min, max: CAMZOOM.max, key: CAMZOOM.key, hold: CAMZ
 console.log('the keys');
 const keyOf = c => J(`campZoomKey('${c}')`);
 check('+ is the = key with Shift (code Equal) and numpad +: zoom in; - and numpad -: zoom out', [keyOf('Equal'), keyOf('NumpadAdd')].every(k => k && k.dir === 1 && !k.reset) && [keyOf('Minus'), keyOf('NumpadSubtract')].every(k => k && k.dir === -1 && !k.reset));
-check('0 and numpad 0 reset', [keyOf('Digit0'), keyOf('Numpad0')].every(k => k && k.reset === true && k.dir === 0));
+check('Backspace resets (0 is the SHIP panel\'s dock key now: card space-game-two-hands-keys), and 0 and numpad 0 do not', keyOf('Backspace') && keyOf('Backspace').reset === true && keyOf('Backspace').dir === 0 && !keyOf('Digit0') && !keyOf('Numpad0'));
 check('no other key is a zoom key: the flying keys, the orders, Tab, Esc, Enter, the tune kit', ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'KeyF', 'KeyQ', 'KeyI', 'KeyU', 'Tab', 'Escape', 'Enter', 'Digit1', 'Digit2', 'Digit5', 'Digit9', 'BracketRight', 'Backslash', 'BracketLeft', 'Backquote', 'KeyZ', 'KeyX', 'KeyH'].every(c => keyOf(c) === null));
 check('a step of the keys is one and a fifth (a notch and a half of the wheel); a held key repeats in smaller steps', near(Z.key, 1.2) && Z.hold > 1 && Z.hold < Z.key, JSON.stringify(Z));
 check('+ then - is where you began, and a held + goes on, in small steps', near(J('camzoomKey(camzoomKey(1, 1, false), -1, false)'), 1) && near(J('camzoomKey(1, 1, true)'), Z.hold) && J('camzoomKey(1, 1, true)') < J('camzoomKey(1, 1, false)'));
@@ -29,7 +29,7 @@ console.log('the view: the scene reads the keys and the HUD does not scale');
 g.run(`window.__press = (code, repeat, mode, extra) => { CAMZOOM.want = window.__want; const C = campNew(1, [], { seed: 1 }); const sc = Object.assign({ mode: mode || 'play', leaving: false, mp: null, camp: C, pickKey() {}, refitKey() {} }, extra || {}); Campaign.prototype.onKey.call(sc, { code, repeat: !!repeat }); return { want: CAMZOOM.want, orders: JSON.stringify(C.orders), blink: !!C.input.blink }; };`);
 const press = (code, want, repeat, mode, extra) => { g.run(`window.__want = ${want}`); return J(`__press('${code}', ${!!repeat}, ${mode ? "'" + mode + "'" : 'null'}, ${extra ? JSON.stringify(extra) : 'null'})`); };
 check('in the battle + zooms in and - out (a fifth a press), also the = key and numpad', near(press('Equal', 1).want, 1.2) && near(press('NumpadAdd', 1).want, 1.2) && near(press('Minus', 1).want, 1 / 1.2) && near(press('NumpadSubtract', 1).want, 1 / 1.2));
-check('0 returns to the default from anywhere', press('Digit0', 1.5).want === 1 && press('Numpad0', 0.5).want === 1);
+check('Backspace returns to the default from anywhere', press('Backspace', 1.5).want === 1 && press('Backspace', 0.5).want === 1);
 check('a held key is read: the scene ignores key repeats, but not these (each repeat is a small step)', near(press('Equal', 1, true).want, Z.hold) && near(press('Minus', 1, true).want, 1 / Z.hold));
 check('the limits hold: at the far end - does nothing more, at the near end + does nothing more', press('Minus', Z.min).want === Z.min && press('Equal', Z.max).want === Z.max);
 check('only in the battle: not over the story, the pick, the pause, the lost card, or while leaving', ['intro', 'won', 'pick', 'pause', 'lost', 'end'].every(m => press('Equal', 1, false, m).want === 1) && press('Equal', 1, false, 'play', { leaving: true }).want === 1);
@@ -89,7 +89,7 @@ check('the paint steps the zoom first (before it reads mp.fit), moves the names 
 check('the wheel is taken by the map when it opens and given back when it closes', /s\.input\.on\('wheel', mp\.onWheel\)/.test(md) && /s\.input\.off\('wheel', s\.mp\.onWheel\)/.test(md));
 check('there is no Z toggle any more: the whole system is the far end of the zoom, the far bodies come in with a zoom under 1 (campMapFar) and the names are placed afresh then', !/KeyZ/.test(md) && !/function campMapWhole/.test(md) && /function campMapFar\(s\)/.test(md) && /mp\.z < 0\.995/.test(md) && /campMapFar\(s\);/.test(md));
 const zt = J(`uiText('camp.map.zoom', { pct: 800 })`);
-check('the corner says the zoom level and the keys, one short line that fits beside the title (40 letters at most)', zt === 'ZOOM 800%   + - zoom   0 reset' && zt.length <= 40 && /ui\.zoomText\.setText|mp\.zoomText\.setText\(uiText\('camp\.map\.zoom', \{ pct: Math\.round\(mp\.zWant \* 100\) \}\)\)/.test(md), zt);
+check('the corner says the zoom level and the keys, one short line that fits beside the title (40 letters at most)', zt === 'ZOOM 800%   - = zoom   Backspace reset' && zt.length <= 40 && /ui\.zoomText\.setText|mp\.zoomText\.setText\(uiText\('camp\.map\.zoom', \{ pct: Math\.round\(mp\.zWant \* 100\) \}\)\)/.test(md), zt);
 
 console.log('the map: names');
 const namesAt = J(`(() => { const F = CAMPMAP.frame, base = ${JSON.stringify(base)}, mk = (x, y, ox, oy) => { const t = { world: { x, y }, off: { x: ox, y: oy }, vis: null, pos: null, setPosition(a, b) { t.pos = [a, b]; return t; }, setVisible(v) { t.vis = v; return t; } }; return t; }; const band = { band: true, vis: null, setVisible(v) { band.vis = v; return band; } }; const a = mk(base.cx, base.cy, 5, 12), b = mk(base.cx + 1e7, base.cy, 0, 0); const sc = { mp: { fit: { s: base.s * 2, cx: base.cx, cy: base.cy }, nameObjs: [a, b, band] } }; campMapNamesMove(sc); return { a: a.pos, av: a.vis, bv: b.vis, bandv: band.vis, mid: [F.x + F.w / 2, F.y + F.h / 2] }; })()`);
@@ -108,10 +108,10 @@ const clicks = z => J(`(() => {
 [0.5, 1, 2, 4, 8].forEach(z => { const r = clicks(z); check('at zoom ' + z + ': a click on each place in the frame (' + r.n + ' of them, a few pixels off its mark) sets that place, and a click outside the frame sets none', r.n >= 1 && r.out.every(o => o[1] && o[2]) && r.none === false, JSON.stringify(r.out)); });
 check('at least three different places were checked across the zooms (the level has them)', [0.5, 1].every(z => clicks(z).n >= 3));
 console.log('the key table, the H page and the key line');
-const row = J(`controlsGroup('campaign').rows.find(r => r.k.includes('+'))`);
-check('the key table has one row for the zoom keys in the Campaign group: + - 0, what they do and the wheel', row && row.k.join(' ') === '+ - 0' && /zoom/i.test(row.t) && /wheel/.test(row.t) && /0 resets/.test(row.t), JSON.stringify(row));
-check('so the H page lists it (campKeysPage), once', J(`campKeysPage().flatMap(g => g.rows).filter(r => r.caps.includes('+')).length`) === 1);
-check('and the bottom key line says + - Zoom, before H Keys, and still fits the screen (8.6 px a letter from x 24 to 1272)', (l => /Tab Map {3}\+ - Zoom {3}H Keys$/.test(l) && 24 + l.length * 8.6 <= 1272)(J(`uiText('camp.ui.keys', { panels: campPanelKeyLine() })`)));
+const row = J(`controlsGroup('campaign').rows.find(r => r.k.includes('='))`);
+check('the key table has one row for the zoom keys in the Campaign group: - and =, what they do and that Backspace resets it (the wheel zooms too: the row in FLIGHT says it)', row && row.k.join(' ') === '- =' && /zoom/i.test(row.t) && /Backspace resets/.test(row.t), JSON.stringify(row));
+check('so the H page lists it (campKeysPage), once', J(`campKeysPage().flatMap(g => g.rows).filter(r => r.caps.includes('=')).length`) === 1);
+check('and the bottom key line says - = Zoom, before H Keys, and still fits the screen (8.6 px a letter from x 24 to 1272)', (l => /Tab Map {3}- = Zoom {3}H Keys$/.test(l) && 24 + l.length * 8.6 <= 1272)(J(`uiText('camp.ui.keys', { panels: campPanelKeyLine() })`)));
 
 console.log('zooming out to the whole system (card space-game-zoom-out-more)');
 g.run(`window.__lv = (lv, mi) => { const C = campNew(lv, [], { seed: 1, mission: mi }), F = CAMPMAP.frame, base = campMapFit(campMapBounds(lv, false, C.L), F), whole = campMapFit(campMapBounds(lv, true, C.L), F); return { C, F, base, whole, zMin: campMapZMin(base, whole, CAMPZOOM.map.min), zw: campMapWholeZ(base, whole) }; };`);

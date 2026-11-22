@@ -26,7 +26,8 @@ How the game is built, for someone (a person or an AI) who has never seen it. It
 
 | Feature | Rules | Drawing |
 |---|---|---|
-| Panels (FLEET, SHIP, SYSTEMS) and their rows | `camppanel.js` | `campanelsdraw.js` |
+| The two hands: the FLEET and SHIP panels (always on screen), their rows and keys | `camppanel.js` (keys and rows: `data_controls.js`) | `campanelsdraw.js` |
+| The one target (A D S X; 2 attacks it, 8 flies to it, Enter fires at it) | `camptarget.js` | `camptargetdraw.js` (the bracket) |
 | Orders to the wing, groups and targets | `campwing.js`, `campconvoy.js` (escorted ships), `campdogfight.js`, `camprepair.js` | `campconvoyscene.js` |
 | Pilots ask for orders (timed calls) | `camporders.js` | `camporderdraw.js` |
 | Mission 1.1's beats, route forks, scouting | `campbeats.js`, `camproute.js`, `campanomaly.js` | `campanomalydraw.js` |

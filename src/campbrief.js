@@ -190,9 +190,10 @@ function campBriefSteps(P, level, i) {
 // ---- how: the keys this mission needs ----
 // The basics are for every mission, in the order they are used; what the mission's goals and bonus ask for is added. the keys of the panels' own rows (launch, attack, escort, mine, dock, emergency shields) (src/data_controls.js CAMP_PANELS: tests/campbrief.mjs checks they are there).
 const CAMPBRIEF_KEYS = {
-  fly: ['W', 'A', 'S', 'D'], fire: ['Space'], map: ['Tab'], zoom: ['+', '-', '0'], missile: ['F'],
-  get wing() { return campKeyCaps('fleet', 'launch'); }, get attack() { return campKeyCaps('fleet', 'attack'); }, get escort() { return campKeyCaps('fleet', 'escort'); }, get mine() { return campKeyCaps('fleet', 'mine'); }, // the panels' own rows, read from the key table when asked (a remap is one change there: src/data_controls.js CAMP_PANELS)
-  get dock() { return campKeyCaps('ship', 'dock'); }, get shield() { return campKeyCaps('systems', 'emergency'); }
+  get fly() { return [CAMP_KEYS.fly.k]; }, get fire() { return [CAMP_KEYS.fire.k]; }, get map() { return [CAMP_KEYS.map.k]; }, get zoom() { return [CAMP_KEYS.zoomout.k, CAMP_KEYS.zoomin.k, CAMP_KEYS.zoomreset.k]; }, // the keys of the table (CAMP_KEYS in src/data_controls.js), read when asked
+  get missile() { return campKeyCaps('ship', 'missile'); },
+  get wing() { return campKeyCaps('fleet', 'launch'); }, get attack() { return campKeyCaps('fleet', 'attack'); }, get escort() { return campKeyCaps('fleet', 'escort'); }, get mine() { return campKeyCaps('fleet', 'mine'); }, // the panels' own rows, read from the key table when asked (a remap is one change there)
+  get dock() { return campKeyCaps('ship', 'dock'); }, get shield() { return campKeyCaps('ship', 'emergency'); }
 };
 function campBriefKeys(level, i) {
   const L = campMissionRow(level, i); if (!L) return [];

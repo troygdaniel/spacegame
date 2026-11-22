@@ -145,7 +145,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.ui.level | LEVEL {n}: {name} |
 | camp.ui.won | LEVEL {n} WON |
 | camp.ui.lost | LEVEL {n} LOST |
-| camp.ui.keys | W A S D fly   Space turrets   F missiles   {panels}   Tab Map   + - Zoom   H Keys |
+| camp.ui.keys | {keyfly} fly   {keyfire} turrets   {keymissile} missile   {keymap} Map   {keyzoomout} {keyzoomin} Zoom   {keyhelp} Keys |
 | camp.ui.begin | Enter  begin |
 | camp.ui.pick | Choose one salvaged technology:  1  2  3 |
 | camp.ui.next | Enter  continue |
@@ -170,15 +170,15 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.ui.out | OUT |
 | camp.ui.wave | WAVE {n} OF {total} |
 | camp.ui.mother | MOTHERSHIP |
-| camp.ui.missiles | F  MISSILES  {n} |
+| camp.ui.missiles | {keymissile}  MISSILES  {n} |
 | camp.ui.missilenext | next in {s} s |
-| camp.ui.pausehelp | Hold Space: the turrets fire at ships close by. F fires a homing missile at the nearest big ship. |
+| camp.ui.pausehelp | Hold Space: the turrets fire at ships close by. {keymissile} fires a homing missile at the target. |
 | camp.tech.shield.name | Shield grid |
 | camp.tech.shield.text | The carrier takes 40 percent less damage. |
 | camp.tech.beam.name | Beam turrets |
 | camp.tech.beam.text | The turrets fire beams: twice the damage, further, and through what they hit. |
 | camp.tech.blink.name | Warp blink |
-| camp.tech.blink.text | Press B to hop the carrier 1,500 px ahead. Ready again after 20 seconds. |
+| camp.tech.blink.text | Press {keyblink} to hop the carrier 1,500 px ahead. Ready again after 20 seconds. |
 | camp.tech.plating.name | Hull plating |
 | camp.tech.plating.text | The carrier's hull is half as strong again. |
 | camp.tech.bay2.name | Second bay |

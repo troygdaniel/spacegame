@@ -1,46 +1,54 @@
-// ---------- Campaign: the keyboard panels, the drawing (cards space-game-campaign-keys-help and space-game-campaign-panels-ui; Troy, 20 Nov 2026) ----------
-// The Phaser half of src/camppanel.js, which says WHAT a panel holds, what a key does and what the drawing shows when (campPanelView). Troy, from a screenshot of the open FLEET panel (a wide box with two lines to a row and the numbers
-// repeated, covering a lot of the screen): both panels are always on the screen as narrow collapsed TABS, 'Z FLEET' at the left edge and 'X SHIP' at the right (and 'C SYSTEMS' beside FLEET), below the gauges and the radar so nothing is covered. Its key (or a click on the tab)
-// opens FLEET: its tab lights and its rows drop under it as one-line bulleted rows in a narrower column (the digit, the name, and at the right a word or two of the live state, or the reason it cannot, greyed); X does the same for SHIP,
-// mirrored. Picking a row (its digit or a click) does it at once, flashes the chosen row twice in 160 ms and collapses the panel to its tab; a pick made before the panel was drawn (1 then 3 typed inside the 250 ms) pulses the TAB once instead.
-// In an open panel one row is lit as the HIGHLIGHT (Up and Down move it, Enter does it: card space-game-panel-keys-zxc). Esc, any other key or a click elsewhere closes it. Keys and behaviour are camppanel.js's and did not change; this is the drawing, one component for both panels, its words from the table (CAMP_PANELS in src/data_controls.js),
-// so a row added by data (a rank, a hub, a fabricator) is drawn without a line of code. The scene calls three things:
+// ---------- Campaign: the two hands' panels, the drawing (cards space-game-campaign-keys-help, space-game-campaign-panels-ui and space-game-two-hands-keys; Troy, 21 Nov 2026) ----------
+// The Phaser half of src/camppanel.js, which says WHAT a panel holds, what a key does and what a row says now. Two panels are on the screen all the time, small, at the edges, below the gauges and the radar so nothing is covered:
+// FLEET at the left (the left hand: 1 launch or recall, 2 attack, 3 escort, 4 guard, W mine, E stance, R convoy) with the target's line under its rows (A D S X), SHIP at the right (the right hand: 7 8 9 0, J K L ; U, Enter, I).
+// Every row shows its KEY as a cap, its name and, at the right, a word or two of the live state, or the reason it cannot be done (greyed); a row lights for a moment when its key is pressed. The heading shows the page key (Q, P) and the page: the
+// stances and the convoy orders of FLEET, BUILD of SHIP. While a pilot's call for orders waits, the FLEET panel shows the call in place of its rows, in amber and marked CALL (1 2 3 answer it). The words are the table's (CAMP_PANELS in src/data_controls.js),
+// so a row added by data is drawn without a line of code. The scene calls these:
 //   campPanelsInstall(s)       once, in create: s.pn is the state (campPanelNew), s.pnl the objects of both panels (made once, shown and moved after that); the pointer is listened for and given back when the scene shuts down
-//   campPanelsPaint(s, now)    every frame: the two tabs (while the battle is on the screen), and a list under a tab while its panel is open, flashing or going away; the words are live, four times a second
-//   campPanelsClose(s)         a card coming up, the map, the end: the panels go back to their tabs at once
-// Everything is on the screen's own camera (scroll factor 0), so the zoom (src/camzoom.js) never scales it. tests/campanelsui.mjs checks the states and their timing on stand-ins.
+//   campPanelsPaint(s, now)    every frame: the two panels while the battle is on the screen (not over a card, the pause, the page of keys or the map); the words are live, four times a second
+//   campPanelsClose(s)         a card coming up, the map, the end: the panels go back to their first page
+//   campPanelsKeep()           the two panels' rectangles [[x1, y1, x2, y2]]: what the edge arrow's label keeps out of
+// Everything is on the screen's own camera (scroll factor 0), so the zoom (src/camzoom.js) never scales it. tests/campanelsui.mjs checks the states on stand-ins.
 const CAMPPANELS_LOOK = {
-  tab: { w: 150, h: 28 }, slotGap: 6,                       // px: a collapsed tab: a key cap, the name and, on FLEET, the stance in force when it is not Free (card space-game-wrapup-stance-page: 110 wide until then); the gap between two tabs on one side (a panel's slot in the table)
-  hint: { gap: 5, size: 12, ink: '#8fb4c8' },              // px, px, colour: the line under a list whose panel has a second page: the arrows flip it (it names the page they go to)
-  list: { w: 232, row: 24, gap: 3, pad: 6 },               // px: the column of rows under the tab: its width (a name, its word and the digit have to fit: tests/campanelsui.mjs measures every row of the table), a row's height, the gap between rows, the gap under the tab
-  top: 238, edge: 24, depth: 160, every: 250,              // the tab's y (the gauges take the top left to 176 and the radar the top right to 226), its distance from the screen's edge, the depth (over the map, 150 to 156), ms between the words being made live
+  box: { w: 262, head: 28, row: 22, gap: 2, pad: 6, foot: 30 }, // px: a panel's width, its heading's height, a row's height, the gap between rows, the gap under the heading, the target line under FLEET's rows
+  cap: { w: 40, h: 18 },                                        // px: the key cap of a row
+  hint: { size: 12, ink: '#8fb4c8' },
+  top: 262, edge: 24, depth: 160, every: 250,                   // the panels' y (the gauges and their lines take the top left, the radar the top right), their distance from the screen's edge, the depth (over the map, 150 to 156), ms between the words being made live
   color: { left: CYAN, right: AMBER }, ink: { left: '#7fe9ff', right: '#ffd37a' },
-  rowInk: { ok: '#e8f6ff', no: '#7f95a8', suffix: '#8fb4c8', why: '#ff9e7a', digit: '#ffd37a' }, flash: 0xffffff,
-  pick: { fill: 0.24, bar: 0.95, width: 4 }                 // the highlighted row of the open panel: a wash of the panel's colour and a bright bar at its edge (alpha, alpha, px)
+  rowInk: { ok: '#e8f6ff', no: '#7f95a8', suffix: '#8fb4c8', why: '#ff9e7a', key: '#02101c' }, flash: 0xffffff,
+  call: { ink: '#ffd37a', rowInk: '#9fe9ff', bar: 5, warn: 2.5, color: 0xffd37a }
 };
 
-// where a panel is: its tab, the column of rows under it and the rows' places. x, y, w, h are the whole of it open (the tab and the list), as they were when it was one box
+// where a panel is: x, y, w, h of the whole of it, and the rows' places. n: how many rows the longest of its pages has
 function campPanelsGeometry(def) {
-  const K = CAMPPANELS_LOOK, right = def.side === 'right', n = def.rows.length, step = (def.slot || 0) * (K.tab.w + K.slotGap); // slot: a panel the table adds on a side that has one stands next to it (0 is at the edge)
-  const tab = { x: right ? W - K.edge - K.tab.w - step : K.edge + step, y: K.top, w: K.tab.w, h: K.tab.h };
-  const ly = tab.y + tab.h + K.list.pad, lh = n * K.list.row + (n - 1) * K.list.gap, lx = right ? tab.x + tab.w - K.list.w : tab.x; // the column hangs from its tab, on the side of the edge
-  return { x: lx, y: tab.y, w: K.list.w, h: tab.h + K.list.pad + lh, tab, list: { x: lx, y: ly, w: K.list.w, h: lh }, rowH: K.list.row, rowY: k => ly + (k - 1) * (K.list.row + K.list.gap) };
+  const K = CAMPPANELS_LOOK, B = K.box, right = def.side === 'right', pages = campPanelPages(def.id);
+  const n = Math.max(def.rows.length, pages > 1 && def.page2 ? def.page2.rows.length : 0, pages > 2 && def.page3 ? def.page3.rows.length : 0), foot = def.id === 'fleet' ? B.foot : 0;
+  const x = right ? W - K.edge - B.w : K.edge, ry = K.top + B.head + B.pad, lh = n * (B.row + B.gap) - B.gap;
+  return { x, y: K.top, w: B.w, h: B.head + B.pad + lh + (foot ? B.pad + foot : 0), n, head: { x, y: K.top, w: B.w, h: B.head }, rowH: B.row, rowY: i => ry + i * (B.row + B.gap), foot: { x, y: ry + lh + B.pad, w: B.w, h: foot }, list: { x, y: ry, w: B.w, h: lh } };
 }
+function campPanelsKeep() { return CAMP_PANELS.panels.map(def => { const G = campPanelsGeometry(def); return [G.x - 8, G.y, G.x + G.w + 8, G.y + G.h + 8]; }); }
 
-// the objects of one panel: a graphics for the tab and the row backs (drawn again each frame), the tab's key cap and name, and for each row its digit, its name and its suffix
+// the objects of one panel: a graphics for the backs, the heading's words, for each row its key, its name and its suffix, the target line, and the call that takes the rows' place
 function campPanelsBuild(s, def) {
-  const K = CAMPPANELS_LOOK, G = campPanelsGeometry(def), own = (o, d) => { o.setScrollFactor(0).setDepth(K.depth + (d || 0)); s.pnl.objs.push(o); return o; };
-  const O = { def, live: -1e9, g: own(s.add.graphics()) };
-  O.cap = own(keyCap(s, def.key, AMBER), 2); O.cap.setPosition(G.tab.x + 20, G.tab.y + G.tab.h / 2);
-  O.name = own(s.add.text(G.tab.x + 38, G.tab.y + G.tab.h / 2, def.title, uiFont(14, '#9fbdd1', { letterSpacing: 2 })).setOrigin(0, 0.5), 2);
-  O.note = own(s.add.text(G.tab.x + G.tab.w - 8, G.tab.y + G.tab.h / 2, '', uiFont(11, K.ink[def.side], { letterSpacing: 1 })).setOrigin(1, 0.5), 2); // the stance in force (FLEET): a word, not Free
-  O.hint = def.page2 || def.page3 ? own(s.add.text(G.list.x + 30, G.list.y + G.list.h + K.hint.gap, '', uiFont(K.hint.size, K.hint.ink)).setOrigin(0, 0), 2) : null; // "<- ->  stances" under the list, "<- ->  orders" on the second page
-  O.rows = def.rows.map(r => {
-    const y = G.rowY(r.n) + K.list.row / 2;
-    return { id: r.id, digit: own(s.add.text(G.list.x + 15, y, String(r.n), uiFont(14, K.rowInk.digit, { fontStyle: 'bold' })).setOrigin(0.5), 2),
-      name: own(s.add.text(G.list.x + 30, y, r.tag || r.label, uiFont(14, K.rowInk.ok)).setOrigin(0, 0.5), 2),
-      suffix: own(s.add.text(G.list.x + G.list.w - 10, y, '', uiFont(12, K.rowInk.suffix)).setOrigin(1, 0.5), 2) };
-  });
+  const K = CAMPPANELS_LOOK, B = K.box, G = campPanelsGeometry(def), own = (o, d) => { o.setScrollFactor(0).setDepth(K.depth + (d || 0)); s.pnl.objs.push(o); return o; };
+  const O = { def, live: -1e9, g: own(s.add.graphics()) }, tx = (x, y, str, size, color, st) => own(s.add.text(x, y, str, uiFont(size, color, st)), 2);
+  O.title = tx(G.x + 12, G.y + B.head / 2, def.title, 14, '#9fbdd1', { letterSpacing: 2 }).setOrigin(0, 0.5);
+  O.pageKey = tx(G.x + G.w - 12, G.y + B.head / 2, '', 12, K.ink[def.side], { letterSpacing: 1 }).setOrigin(1, 0.5); // "Q  1/3": the page key and the page
+  O.rows = [];
+  for (let i = 0; i < G.n; i++) {
+    const y = G.rowY(i) + B.row / 2;
+    O.rows.push({ key: tx(G.x + 8 + K.cap.w / 2, y, '', 12, K.rowInk.key, { fontStyle: 'bold' }).setOrigin(0.5),
+      name: tx(G.x + 8 + K.cap.w + 8, y, '', 14, K.rowInk.ok).setOrigin(0, 0.5),
+      suffix: tx(G.x + G.w - 10, y, '', 12, K.rowInk.suffix).setOrigin(1, 0.5) });
+  }
+  if (def.id === 'fleet') {
+    O.foot = tx(G.foot.x + 12, G.foot.y + 10, '', 13, '#ffd37a').setOrigin(0, 0.5);                                              // "TARGET  Raider 3  1.2 km"
+    O.footKeys = tx(G.foot.x + G.w - 10, G.foot.y + 10, '', 11, K.hint.ink).setOrigin(1, 0.5);                                   // "A D S  X clear"
+    O.callHead = tx(G.x + 12, G.y + B.head / 2, '', 14, K.call.ink, { letterSpacing: 2 }).setOrigin(0, 0.5);
+    O.callLine = tx(G.x + 12, G.list.y + 4, '', 13, K.call.ink, { wordWrap: { width: G.w - 24 } });
+    O.callRows = [0, 1, 2].map(i => tx(G.x + 12, G.list.y + 4 + 70 + i * 22, '', 13, K.call.rowInk));
+    O.callFoot = tx(G.x + G.w - 10, G.list.y + G.list.h - 6, '', 11, '#7f9fb4').setOrigin(1, 1);
+  }
   return O;
 }
 function campPanelsInstall(s) {
@@ -50,67 +58,80 @@ function campPanelsInstall(s) {
   if (s.input && s.input.on) s.input.on('pointerdown', s.pnl.onPointer);
   if (s.events && s.events.once) { const off = () => { try { if (s.input && s.input.off) s.input.off('pointerdown', s.pnl.onPointer); } catch (e) { /* gone */ } }; s.events.once('shutdown', off); s.events.once('destroy', off); }
 }
-// the panels go back to their tabs at once (no fade): a card, the map or the end took the screen
+// the panels go back to their first page at once: a card, the map or the end took the screen
 function campPanelsClose(s) {
-  if (!s || !s.pn) return;
-  s.pn.open = ''; s.pn.flash = null; s.pn.closed = null;
+  if (!s || !s.pn || !s.pn.page) return;
+  CAMP_PANELS.panels.forEach(p => { s.pn.page[p.id] = 0; });
 }
-// the tabs show while the battle is on the screen: not over a card, the pause, the page of keys or the map (a panel that is open is drawn wherever it was opened)
-const campPanelsTabsOn = s => s.mode === 'play' && !s.mp && !(typeof campKeysIsOpen === 'function' && campKeysIsOpen(s));
+// the panels show while the battle is on the screen: not over a card, the pause, the page of keys or the map
+const campPanelsOn = s => s.mode === 'play' && !s.mp && !(typeof campKeysIsOpen === 'function' && campKeysIsOpen(s));
 
-function campPanelsPaintOne(s, O, now, play) {
-  const K = CAMPPANELS_LOOK, def = O.def, G = campPanelsGeometry(def), v = campPanelView(s.pn, def.id, now), col = K.color[def.side], g = O.g, T = G.tab;
-  const tabOn = play || v.list > 0, lit = v.list, beat = Math.max(lit, v.pulse);
-  const page = campPanelPageOf(s.pn, def.id), pages = campPanelPages(def.id); // the page the list is on: the open one's, or the one a pick was made on while it fades
-  g.clear(); O.cap.setVisible(tabOn); O.name.setVisible(tabOn);
-  { const st = pages > 1 && s.camp && s.camp.stance && s.camp.stance !== 'free' ? def.page2.rows.find(r => r.id === s.camp.stance) : null; O.note.setVisible(tabOn && !!st && v.list <= 0).setText(st ? st.label.split(' ')[0].toUpperCase() : ''); } // the collapsed tab names the stance in force
-  if (tabOn) { // the tab: translucent and quiet when collapsed; brighter fill and border when its panel is open; one pulse when a pick came before the panel was drawn
-    g.fillStyle(0x04101c, 0.55 + 0.4 * lit); g.fillRoundedRect(T.x, T.y, T.w, T.h, 7);
-    if (beat > 0) { g.fillStyle(col, 0.18 * lit + 0.4 * v.pulse); g.fillRoundedRect(T.x, T.y, T.w, T.h, 7); }
-    g.lineStyle(1 + 1.5 * beat, col, 0.42 + 0.58 * beat); g.strokeRoundedRect(T.x, T.y, T.w, T.h, 7);
-    O.name.setColor(beat > 0.45 ? '#ffffff' : '#9fbdd1');
+function campPanelsPaintOne(s, O, now, on) {
+  const K = CAMPPANELS_LOOK, B = K.box, def = O.def, G = campPanelsGeometry(def), col = K.color[def.side], g = O.g, C = s.camp;
+  const call = on && def.id === 'fleet' && C && typeof campCallView === 'function' ? campCallView(C) : null;
+  const pages = campPanelPages(def.id), page = campPanelPageOf(s.pn, def.id), rows = campPanelPageRows(def, page);
+  g.clear();
+  const objs = [O.title, O.pageKey].concat(O.rows.flatMap(r => [r.key, r.name, r.suffix]), O.foot ? [O.foot, O.footKeys] : [], O.callHead ? [O.callHead, O.callLine, O.callFoot].concat(O.callRows) : []);
+  objs.forEach(o => o.setVisible(false));
+  if (!on) { O.live = -1e9; return; }
+  // the back and the heading
+  const hot = call ? K.call.color : col;
+  g.fillStyle(0x04101c, 0.62); g.fillRoundedRect(G.x, G.y, G.w, G.h, 7);
+  g.lineStyle(call ? 2.5 : 1.5, hot, call ? 0.95 : 0.55); g.strokeRoundedRect(G.x, G.y, G.w, G.h, 7);
+  g.fillStyle(hot, call ? 0.3 : 0.14); g.fillRoundedRect(G.x, G.y, G.w, B.head, 7);
+  if (call) { // a pilot's call: the rows' place is the call's (1 2 3 answer it)
+    O.callHead.setVisible(true).setText(uiText('camp.ui.callhead'));
+    O.callLine.setVisible(true); O.callFoot.setVisible(true).setText(uiText('camp.call.hud.keys') + '   * ' + uiText('camp.call.hud.def'));
+    const key = call.id + ':' + call.pilot;
+    if (O.callKey !== key) {
+      O.callKey = key; O.callLine.setText((typeof campCallPilot === 'function' ? campCallPilot(call.pilot)[0] : 'PILOT') + ': ' + uiText(call.line));
+      call.rows.forEach((r, i) => O.callRows[i] && O.callRows[i].setText(r.n + '  ' + uiText(r.label) + (r.def ? '  *' : ''))); // the pilot's own pick, if no answer comes, is starred (the foot says so)
+    }
+    O.callRows.forEach((t, i) => t.setVisible(i < call.rows.length));
+    const share = call.total > 0 ? Math.max(0, Math.min(1, call.left / call.total)) : 0, by = G.list.y + G.list.h - 4, bw = G.w - 24;
+    g.fillStyle(call.left <= K.call.warn ? 0xff6a5a : K.call.color, 1); g.fillRect(G.x + 12, by, Math.max(1, Math.round(bw * share)), K.call.bar);
+    O.live = -1e9; return;
   }
-  O.name.setText(v.list > 0 ? campPanelPageTitle(def, page) : def.title); // an open panel on another page says so on its tab; collapsed it is its own name again
-  if (O.hint) O.hint.setVisible(v.list > 0 && pages > 1).setAlpha(v.list).setText('\u2190 \u2192  ' + (page + 1 >= pages ? def.title.toLowerCase() + ' orders' : campPanelPageTitle(def, page + 1).toLowerCase())); // the hint names the page the right arrow goes to: stances, convoy, then the orders again
-  const show = v.list > 0;
-  const nrows = campPanelPageRows(def, page).length; // the rows of the page: FLEET's orders are six, its stances five, so the sixth line is not drawn on the second page
-  O.rows.forEach((r, i) => { [r.digit, r.name, r.suffix].forEach(o => { o.setVisible(show && i < nrows); if (show) o.setAlpha(v.list); }); });
-  if (!show) { O.live = -1e9; return; }
-  if (O.page !== page) { O.page = page; O.live = -1e9; } // flipped: the words are made again now, not at the next quarter second
-  if (O.live < 0 || now - O.live >= K.every) { // the words are live: made on the first frame of the list and four times a second after that
-    O.live = now;
-    campPanelRows(s.camp, def.id, page).forEach((r, i) => { const o = O.rows[i]; if (!o) return; o.digit.setVisible(true); o.name.setText(r.tag || r.label).setColor(r.ok ? K.rowInk.ok : K.rowInk.no); o.digit.setColor(r.ok ? K.rowInk.digit : K.rowInk.no); o.suffix.setText(r.marked ? r.state : (r.short || '')).setColor(r.marked ? K.rowInk.digit : r.ok ? K.rowInk.suffix : K.rowInk.why); }); // a stance in force says so ("in force", in the digit's colour)
-    for (let i = campPanelPageRows(def, page).length; i < O.rows.length; i++) { const o = O.rows[i]; o.name.setText(''); o.digit.setVisible(false); o.suffix.setText(''); } // a page with fewer rows than the panel's first (the convoy page has four): the rows it has no use for are blank, not the last page's words
+  O.title.setVisible(true).setText(campPanelPageTitle(def, page)).setColor(page > 0 ? '#ffffff' : '#9fbdd1');
+  O.pageKey.setVisible(pages > 1).setText(def.key + '   ' + (page + 1) + '/' + pages);
+  if (O.live < 0 || now - O.live >= K.every || O.page !== page) { // the words are live: made on the first frame and four times a second after that (or at once when the page turned)
+    O.live = now; O.page = page; O.state = campPanelRows(C, def.id, page);
+    if (def.id === 'fleet') { const tg = campPanelTarget(C); O.tgt = tg ? { text: uiText('camp.ui.tgt', { name: tg.name, km: tg.km }), hp: tg.hp } : { text: uiText('camp.ui.tgtnone'), hp: -1 }; }
   }
-  campPanelPageRows(def, page).forEach(r => { // the rows: a translucent back with the panel's colour at its edge; the one just picked flashes
-    const y = G.rowY(r.n), on = v.flash && v.flash.row === r.id ? v.flash.lit : 0;
-    g.fillStyle(0x04101c, 0.8 * v.list); g.fillRoundedRect(G.list.x, y, G.list.w, G.rowH, 5);
-    g.fillStyle(col, 0.9 * v.list); g.fillRect(G.list.x, y + 3, 3, G.rowH - 6);
-    if (on > 0) { g.fillStyle(K.flash, 0.85 * on); g.fillRoundedRect(G.list.x, y, G.list.w, G.rowH, 5); }
+  rows.forEach((r, i) => { // a row: a translucent back with the panel's colour at its edge, the key cap, the name and the live word
+    const o = O.rows[i], st = (O.state || [])[i] || { ok: true }, y = G.rowY(i), lit = s.pn.lit && s.pn.lit[r.id] != null && now - s.pn.lit[r.id] < CAMP_PANELS.anim.flash ? 0.5 - 0.5 * Math.cos(4 * Math.PI * (now - s.pn.lit[r.id]) / CAMP_PANELS.anim.flash) : 0;
+    g.fillStyle(0x04101c, 0.8); g.fillRoundedRect(G.x + 4, y, G.w - 8, B.row, 5);
+    g.fillStyle(col, 0.9); g.fillRect(G.x + 4, y + 3, 3, B.row - 6);
+    g.fillStyle(st.ok ? col : 0x4a5d70, 1); g.fillRoundedRect(G.x + 8, y + (B.row - K.cap.h) / 2, K.cap.w, K.cap.h, 4); // the key cap
+    if (lit > 0) { g.fillStyle(K.flash, 0.85 * lit); g.fillRoundedRect(G.x + 4, y, G.w - 8, B.row, 5); }
+    o.key.setVisible(true).setText(r.k).setColor(st.ok ? K.rowInk.key : '#c5d2de').setFontSize(String(r.k).length > 3 ? 10 : 12);
+    o.name.setVisible(true).setText(st.tag || r.tag || r.label).setColor(st.ok ? K.rowInk.ok : K.rowInk.no);
+    o.suffix.setVisible(true).setText(st.marked ? st.state : (st.short || '')).setColor(st.marked ? K.ink[def.side] : st.ok ? K.rowInk.suffix : K.rowInk.why);
   });
-  if (s.pn.open === def.id && v.open) { // the highlight: the row Enter would do
-    const hl = campPanelPageRows(def, page)[Math.min(s.pn.sel | 0, nrows - 1)];
-    if (hl) { const y = G.rowY(hl.n); g.fillStyle(col, K.pick.fill * v.list); g.fillRoundedRect(G.list.x, y, G.list.w, G.rowH, 5); g.fillStyle(0xffffff, K.pick.bar * v.list); g.fillRect(G.list.x, y + 2, K.pick.width, G.rowH - 4); }
+  if (O.foot) { // the target: its name and how far, under the rows, with its hull as a thin bar
+    const tg = O.tgt || { text: '', hp: -1 }, F = G.foot;
+    O.foot.setVisible(true).setText(tg.text).setColor(tg.hp >= 0 ? '#ff9e7a' : '#7f95a8');
+    O.footKeys.setVisible(true).setText(uiText(tg.hp >= 0 ? 'camp.ui.tgtclear' : 'camp.ui.tgtkeys')); // with a target the line is long: only the key that lets it go
+    if (tg.hp >= 0) { g.fillStyle(0x16293d, 1); g.fillRect(F.x + 12, F.y + 22, F.w - 24, 3); g.fillStyle(0xff7a6a, 1); g.fillRect(F.x + 12, F.y + 22, Math.max(1, (F.w - 24) * tg.hp), 3); }
   }
 }
 function campPanelsPaint(s, now) {
   const P = s.pn, L = s.pnl; if (!P || !L) return;
-  const play = campPanelsTabsOn(s);
-  CAMP_PANELS.panels.forEach(def => { if (L.p[def.id]) campPanelsPaintOne(s, L.p[def.id], now, play); });
+  campPanelTick(P, now);
+  const on = campPanelsOn(s);
+  CAMP_PANELS.panels.forEach(def => { if (L.p[def.id]) campPanelsPaintOne(s, L.p[def.id], now, on); });
 }
 
-// a click. On a tab: that panel opens at once, or closes when it is the one open (the other one's list goes as this one comes in). With a panel drawn: on a row it does the row, flashes it and closes the panel;
-// anywhere else it closes the panel. true when the panels took the click (a click in the 250 ms before a panel is drawn is not theirs, so it is not swallowed).
+// a click: on a panel's heading it turns the page; on a row it does the row (as its key would). true when a panel took the click (so it is not also a click on the map or the battle)
 function campPanelsClick(s, px, py) {
-  const P = s.pn, L = s.pnl; if (!P || !L) return false;
-  const now = (s.time && s.time.now) || 0, K = CAMPPANELS_LOOK, inR = (r, x, y) => x >= r.x && x <= r.x + r.w && y >= r.y && y < r.y + r.h;
-  const shown = campPanelShown(P, now);
-  if (campPanelsTabsOn(s) || shown) {
-    for (const def of CAMP_PANELS.panels) { if (inR(campPanelsGeometry(def).tab, px, py)) { campPanelToggle(P, def.id, now); return true; } }
+  const P = s.pn, L = s.pnl; if (!P || !L || !campPanelsOn(s)) return false;
+  const now = (s.time && s.time.now) || 0, inR = (r, x, y) => x >= r.x && x <= r.x + r.w && y >= r.y && y < r.y + r.h;
+  for (const def of CAMP_PANELS.panels) {
+    const G = campPanelsGeometry(def); if (!inR(G, px, py)) continue;
+    if (inR(G.head, px, py)) { campPanelKey(P, s.camp, def.code, now); return true; }
+    const page = campPanelPageOf(P, def.id), hit = campPanelPageRows(def, page).find((r, i) => py >= G.rowY(i) - 1 && py < G.rowY(i) + G.rowH + 1);
+    if (hit) { const r = campPanelRun(s.camp, hit, 'click'); P.lit[hit.id] = now; if (def.id === 'fleet' && typeof campSlowKick === 'function') campSlowKick(s, now); if (r && r.say) toast(s, r.say, r.ok ? '#9fe9ff' : '#ffb454'); if (page > 0) P.page[def.id] = 0; }
+    return true;
   }
-  if (!shown) return false;
-  const def = campPanelDef(P.open), G = campPanelsGeometry(def), hit = inR(G.list, px, py) ? campPanelPageRows(def, campPanelPageOf(P, def.id)).find(r => py >= G.rowY(r.n) - 1 && py < G.rowY(r.n) + K.list.row + 1) : null;
-  if (hit) { const r = campPanelRun(s.camp, hit, 'click'); if (r && r.say) toast(s, r.say, r.ok ? '#9fe9ff' : '#ffb454'); campPanelPick(P, def.id, hit.id, now); }
-  else { P.closed = { id: def.id, at: now, shown: true }; P.open = ''; }
-  return true;
+  return false;
 }
