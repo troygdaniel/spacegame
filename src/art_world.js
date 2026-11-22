@@ -137,6 +137,13 @@ function waSpaceArt(sc) {
 }
 
 // Backdrop for the Space scene: parallax star layers, and nothing else. spaceBackdropTick(s) runs every frame.
+// The layers scroll by the camera's scroll times the layer's factor (0.2, 0.45, 0.85) times spaceBackdropK(zoom): the zoom of the VIEW, the wheel's part of it (s._cz.cur, src/camzoom.js), up to 1.
+// The camera that draws the world is zoomed, so a fixed place (Ceres, the miner, a rock field) moves on the screen by the scroll times the zoom; the layers used to ignore the zoom, and at the Campaign's
+// start zoom (0.335) the near layer ran 2.5 times faster than Ceres: the stars streamed past a place that stands still (card space-game-stars-at-zoom; Troy, 22 Nov 2026). Now the layers go in proportion
+// to the zoom: no layer ever moves faster on the screen than a fixed place, the near one keeps up with it best, and at the far zoom of a long mission (0.02) they hardly move at all. At 1 and over (zoomed
+// in, the cruise, the jump) nothing changed. Cruise's own zoom out is not the wheel's, so it is left as it was.
+// The offsets are ADDED UP frame by frame (tilePosition += the camera's move x factor x K), not read from the scroll: read from it, a turn of the wheel with the camera 10,000 px out would slide every star.
+// tests/starszoom.mjs.
 // There is no sun, planet or moon in the backdrop (Troy, 17 Nov 2026): a picture of a body that is not a place you can fly to reads as a
 // place and confuses navigation. Halcyon's orange sun, ringed giant and moon and the other systems' sun in the sky were such pictures and
 // are gone. What you see in space is a real body of the system (src/data_systems.js), drawn by the scene where it is. A system with a
@@ -148,11 +155,18 @@ function spaceBackdrop(s, deep) {
   s.cameras.main.setBackgroundColor(0x02050e);
   const layer = (key, depth, f, a) => { const t = s.add.tileSprite(0, 0, W, H, key).setOrigin(0).setScrollFactor(0).setDepth(depth).setAlpha(a); t.par = f; if (star) t.setTint(STAR_TYPES[star].tint); return t; };
   s.bgLayers = [layer('stars1', -10, 0.2, 1), layer('stars2', -9, 0.45, 1), layer('stars3', -8, 0.85, 1)]; // three full-screen layers: each one costs fill rate
+  s.bgLast = null; // the camera's scroll at the last tick: the layers move by how far it has moved since (spaceBackdropTick); the scene object is used again on the next launch, so it starts again here
   s.tweens.add({ targets: s.bgLayers[2], alpha: 0.78, duration: 3400, yoyo: true, repeat: -1, ease: 'Sine.inOut' }); // the bright stars breathe a little
 }
+const BACKDROP_WRAP = 4096; // the offsets stay under this (a multiple of both tile sizes, 512 and 1024), so a long flight never grows a number into lost precision
+function spaceBackdropK(z) { return z > 0 ? Math.min(1, z) : 1; } // how much of the camera's move a layer takes: the view's zoom up to 1, and 1 where there is no zoom to speak of
 function spaceBackdropTick(s) {
-  const c = s.cameras.main;
-  for (const t of s.bgLayers) { t.tilePositionX = c.scrollX * t.par; t.tilePositionY = c.scrollY * t.par; }
+  const c = s.cameras.main, last = s.bgLast;
+  if (last) {
+    const k = spaceBackdropK(s._cz ? s._cz.cur : 1), dx = (c.scrollX - last.x) * k, dy = (c.scrollY - last.y) * k;
+    if (dx || dy) for (const t of s.bgLayers) { t.tilePositionX = (t.tilePositionX + dx * t.par) % BACKDROP_WRAP; t.tilePositionY = (t.tilePositionY + dy * t.par) % BACKDROP_WRAP; }
+    last.x = c.scrollX; last.y = c.scrollY;
+  } else s.bgLast = { x: c.scrollX, y: c.scrollY }; // the first frame: no move to add, whatever the camera's scroll is
 }
 
 // ---------- Kepler-4b ----------
