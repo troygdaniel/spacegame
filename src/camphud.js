@@ -1,14 +1,14 @@
 // ---------- The Campaign's three gauges (card space-game-systems-gauges; Troy, 21 Nov 2026) ----------
 // Top left of the Campaign HUD, in the look of Long Haul's dials (src/hud.js hudGauge): SHIELDS (the hull is a thin bar under it), SPEED and LASERS. Beside each dial is a bar of power segments, the pips of
 // the system that feeds it (the shields' for SHIELDS, the engines' for SPEED, the weapons' for LASERS), lit as they are given and animated as power moves, like X-Wing. The bars replace the small W S E pips.
-// The SYSTEMS panel (C) and the direct keys J K L (a pip to the shields, the engines, the weapons: the order of the dials, and each key is printed under its bar) change the same numbers. Where things are is the table CAMP.hud (src/campaign.js); this file is the numbers
+// The SHIP panel's power rows (J K L; there is no SYSTEMS panel since card space-game-two-hands-keys): the direct keys J K L (a pip to the shields, the engines, the weapons: the order of the dials, and each key is printed under its bar) change the same numbers. Where things are is the table CAMP.hud (src/campaign.js); this file is the numbers
 // (campGauges), the places (campHudGeom, campHudFlow), the animation of the bars (campGaugeAnim) and the drawing. The pure part is tested in plain Node (tests/campgauges.mjs).
 //   campGauges(C)            the three dials now: [{ id, key, label, frac, big, color, warn, tick, pips }]   (frac 0 to 1; big the number in the dial; tick 0 to 1 a mark on the dial; pips lit in its bar)
 //   campHullBar(C)           the thin hull bar: { frac, n, label, color, warn }
 //   campHudGeom()            where the dials, bars and the hull bar are, in screen px, from CAMP.hud: { cells: [{ cx, cy, R, dial, bar, key }], hull, bottom }
 //   campHudFlow(items)       the lines of text under the gauges: [{ id, show, h }] -> { ys: { id: y }, bottom }; a line with nothing to say gives its place back
 //   campGaugeAnim(A, pips, ms)   the bars' animation: the lit share of each bar eases to its pips, a flash runs when they change;  campGaugeAnimNew(pips) starts one
-//   campPowerKey(C, code)    a direct key: J shields, K engines, L weapons (the dials' order), ; back to 2 / 2 / 2: the order the SYSTEMS panel's row gives; { used, ran, ok, say, sys }
+//   campPowerKey(C, code)    a direct key: J shields, K engines, L weapons (the dials' order), ; back to 2 / 2 / 2: the order the SHIP panel's power rows give; { used, ran, ok, say, sys }
 // the code -> system of the keys of the SHIP panel's power rows (J K L ; in the table today)
 function campPowerKeys() { const k = {}; CAMP_PANELS.panels.forEach(p => p.rows.forEach(r => { if (r.order === 'power') k[r.code] = r.arg; else if (r.order === 'balance') k[r.code] = 'balance'; })); return k; }
 const CAMP_GAUGE = {
@@ -67,7 +67,7 @@ function campGaugeAnim(A, pips, ms) {
 // how much of segment i (0 to 1) is lit when `shown` segments are
 const campBarSeg = (shown, i) => Math.max(0, Math.min(1, shown - i));
 
-// ---- a direct key (J K L): the SYSTEMS panel's row, without opening the panel ----
+// ---- a direct key (J K L): the SHIP panel's power row (src/camppanel.js does the same through campPanelKey) ----
 function campPowerKey(C, code) {
   const sys = CAMP_GAUGE.keys[code]; if (!sys) return { used: false, ran: false, ok: false, say: '', sys: '' };
   const r = sys === 'balance' ? campOrder(C, 'balance', '', 'key') : campOrder(C, 'power', sys, 'key'); // ; is the panel's Balance row: 2 / 2 / 2 at once

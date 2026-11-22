@@ -1,9 +1,8 @@
-// smoke: an open panel takes Up, Down and Enter (a highlight), Left and Right change the page, Mine ore is a FLEET row, and every key hint reads the key table (plain Node, no Chrome)
-// Card space-game-panel-keys-zxc (Troy, 21 Nov 2026), the parts that survive any layout. The letters of the panels are held where they were (Q FLEET, E SHIP, C SYSTEMS) while Troy rethinks the layout: what is built is
-//   A. the highlight: an open panel lights its first row; Up and Down move it round the rows of the page; Enter does the lit row (Shift+Enter is Shift+digit); the digits still pick; with no panel open none of these is the panels'
-//   B. Left and Right: the pages of FLEET (the highlight goes back to row 1), nothing in a panel of one page; the arrows are the panel's while it is open, so the ship does not steer on them (W A S D still do)
-//   C. Mine ore is the sixth row of FLEET (it was SHIP's first), the SHIP rows are build, build, goal, dock; the drawing shows the highlight and clears a row a shorter page does not have
-//   D. every hint reads the table: a remap (a panel on another letter, a row on another digit) changes the nudges, the briefing, the help lines, the dock hint and the model's prompt with nothing else touched
+// smoke: the two hands in the scene (the arrows fly and W A S D do not, a key is an order, A D S X pick the target), the drawing of both panels, and every key hint reads the key table: a remap is one change in it (plain Node, no Chrome)
+// Cards space-game-panel-keys-zxc and space-game-two-hands-keys (Troy, 21 Nov 2026). The keys of the table are CAMP_PANELS and CAMP_KEYS (src/data_controls.js); the rules are tests/campanels.mjs and tests/camptarget.mjs.
+//   A. the scene: the arrows fly, W A S D do not (they are the fleet's and the target's), the map's keys, command time after a fleet key
+//   B. the drawing: both panels are on from the first frame with a key on every row; the page, the target line, the call in place of the rows; a row lights when its key is pressed
+//   C. every hint reads the table: a remap (a panel on another letter, a row on another key) changes the nudges, the briefing, the help lines, the dock hint and the model's prompt with nothing else
 // Run: node tests/camppanelkeys.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
@@ -16,59 +15,6 @@ const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 g.run(`
   window.__quiet = C => { C.ships = C.ships.filter(u => u.team !== 'alien'); return C; };
   window.__run = (C, s) => { for (let i = 0; i < s * 30 && !C.result; i++) campStep(C, 1 / 30); C.events.length = 0; };
-  window.__fresh = () => { window.P = campPanelNew(); window.C = __quiet(campNew('home', [], { seed: 3 })); C.docked = 'luna'; return C; };
-  window.__k = (code, now, shift) => campPanelKey(P, C, code, now, !!shift);
-`);
-
-// ---- A. the highlight
-console.log('A. the highlight');
-g.run('__fresh();');
-check('a new panel state has a highlight on the first row', J('P.sel') === 0 && J('campPanelNew().sel') === 0);
-check('opening a panel lights its first row', (() => { g.run("__k('KeyQ', 100); __k('ArrowDown', 110); __k('ArrowDown', 120); __k('KeyE', 130); __k('KeyQ', 140);"); return J('P.open') === 'fleet' && J('P.sel') === 0; })());
-check('Down moves the highlight to the next row and is the panel\'s key (used, nothing ran, the panel stays)', (() => { const r = J("__k('ArrowDown', 200)"); return r.used === true && r.sel === 1 && !r.ran && J('P.sel') === 1 && J('P.open') === 'fleet'; })());
-check('Up moves it back; from the first row it goes round to the last (FLEET has six rows: the sixth is Mine ore)', (() => { g.run("__k('ArrowUp', 210);"); const a = J('P.sel'); const r = J("__k('ArrowUp', 220)"); return a === 0 && r.sel === 5 && J('P.sel') === 5; })());
-check('Down from the last goes round to the first', (() => { g.run("__k('ArrowDown', 230);"); return J('P.sel') === 0; })());
-check('Enter does the lit row: the first, Launch, the wing is in the queue, the panel closes, and the answer is in words', (() => { const r = J("__k('Enter', 300)"); return r.used && r.ran && r.ok && r.row === 'launch' && r.closed && J('P.open') === '' && J('C.launchQ.length') === 8 && /Launching/.test(r.say); })());
-g.run('__run(C, 8); __k("KeyQ", 1000); __k("ArrowDown", 1010);');
-check('Down then Enter does the second row, Attack (the fighters are out)', (() => { const r = J("__k('Enter', 1100)"); return r.row === 'attack' && r.ran && r.ok; })());
-g.run('__k("KeyQ", 2000); __k("ArrowUp", 2010); __k("ArrowUp", 2020);');
-check('Up twice from the first goes round: the last row is Mine ore, the one before it Recall, and the numeric keypad Enter does it too', J('P.sel') === 4 && (() => { const r = J("__k('NumpadEnter', 2100)"); return r.row === 'recall' && r.ran; })());
-g.run('__fresh(); __k("KeyQ", 100);');
-check('the digits still pick: 3 is Escort', J("__k('Digit3', 150).row") === 'escort');
-g.run('__k("KeyQ", 200); __k("ArrowDown", 210); __k("Digit1", 220);');
-check('a digit does its own row, not the lit one (Down, then 1, is Launch)', J('C.launchQ.length') === 8 && J('P.open') === '');
-g.run('__fresh();');
-check('with no panel open Up, Down, Left, Right and Enter are not the panels\' (used false, nothing ran, nothing opened)', ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'NumpadEnter'].every(c => { const r = J(`__k('${c}', 500)`); return !r.used && !r.ran && !r.opened && J('P.open') === ''; }));
-g.run('__fresh(); __k("KeyE", 100);');
-check('on the SHIP panel Down, Down, Enter does the third row, Fly to the objective, and Shift+Enter flies it fast (Shift with its digit, 3)', (() => { g.run("__k('ArrowDown', 110); __k('ArrowDown', 120);"); const r = J("__k('Enter', 130, true)"); return J('P.sel') === 2 && r.row === 'goal' && r.ran && J('C.nav && C.nav.id') === 'place:earth' && J('C.nav.fast') === true; })());
-g.run('__fresh(); __k("KeyE", 100); __k("ArrowDown", 110); __k("Enter", 120);');
-check('SHIP: Down then Enter builds an escort (the second row: it asks for 45 ore, and the refusal is in words)', J('C.build.queue.length') === 0 && J('P.open') === '');
-g.run('__fresh(); C.ore = 100; __k("KeyE", 100); window.__b = __k("Enter", 110);');
-check('SHIP: Enter alone builds a fighter (the first row): 25 ore spent, one queued', J('__b.row') === 'buildf' && J('C.ore') === 75 && J('C.build.queue.length') === 1);
-g.run('__fresh(); __k("KeyQ", 100); __k("ArrowDown", 110); __k("KeyC", 120);');
-check('another panel\'s key switches and the new panel starts on its first row', J('P.open') === 'systems' && J('P.sel') === 0);
-g.run('__fresh(); __k("KeyC", 100); __k("ArrowDown", 110); __k("ArrowDown", 120); window.__e = __k("Enter", 130);');
-check('SYSTEMS: Down, Down, Enter is the third row, Engines +: a pip moves', J('__e.row') === 'engines' && J('C.power.p[2]') === 3);
-g.run('__fresh(); __k("KeyQ", 100); __k("ArrowDown", 110); __k("KeyW", 120);');
-check('another key (W) still closes the panel and is not used: it goes on being itself', J('P.open') === '' && J("__k('KeyW', 130).used") === false);
-g.run('__fresh(); __k("KeyQ", 100); __k("ArrowDown", 110); __k("Escape", 120);');
-check('Esc closes it; the next time it opens on the first row', (() => { g.run('__k("KeyQ", 200);'); return J('P.sel') === 0 && J('P.open') === 'fleet'; })());
-
-// ---- B. the pages and the wheel
-console.log('B. the pages');
-g.run('__fresh(); __k("KeyQ", 100); __k("ArrowDown", 110); __k("ArrowDown", 120);');
-check('Right flips FLEET to the stances, back at the first row; Left flips back; the pages go round (three now: orders, stances, convoy)', (() => { const r = J("__k('ArrowRight', 200)"); const a = [r.page, J('P.sel')]; g.run("__k('ArrowDown', 210);"); const l = J("__k('ArrowLeft', 220)"); const b = [l.page, J('P.sel')]; const r2 = J("__k('ArrowRight', 230)"); const r3 = J("__k('ArrowRight', 240)"); const r4 = J("__k('ArrowRight', 250)"); return a.join() === '1,0' && b.join() === '0,0' && r2.page === 1 && r3.page === 2 && r4.page === 0; })());
-g.run('__fresh(); __k("KeyQ", 100); __k("ArrowRight", 110); __k("ArrowRight", 120); __k("ArrowUp", 130);');
-check('on the convoy page (four rows) Up from the first goes round to the fourth, and Enter does it (Carry on: with no escorted ship it is refused in words)', J('P.sel') === 3 && (() => { const r = J("__k('Enter', 140)"); return r.used && r.ran && r.ok === false && J('P.open') === ''; })());
-g.run('__fresh(); __k("KeyQ", 290); __k("ArrowRight", 300); __k("ArrowDown", 310); __k("ArrowDown", 320);');
-check('on the stances page the highlight goes round five rows and Enter picks the lit stance (Keep distance, the third)', (() => { const r = J("__k('Enter', 330)"); return r.row === 'keep' && r.ran && J('C.stance') === 'keep' && J('P.open') === ''; })());
-g.run('__fresh(); __k("KeyQ", 100); __k("ArrowRight", 110); __k("ArrowUp", 120);');
-check('on the stances page Up from the first goes round to the fifth, not to a sixth row it does not have', J('P.sel') === 4);
-g.run('__fresh(); __k("KeyE", 100); __k("ArrowDown", 105);');
-check('SHIP has one page: Left and Right are kept (used) and do nothing, the highlight stays and the panel stays open', ['ArrowLeft', 'ArrowRight'].every(c => { const r = J(`__k('${c}', 110)`); return r.used === true && J('P.page') === 0 && J('P.sel') === 1 && J('P.open') === 'ship'; }));
-check('a panel with one page: the highlight goes round four rows (SHIP has build, build, goal, dock)', (() => { g.run("__k('ArrowDown', 120); __k('ArrowDown', 130); __k('ArrowDown', 140);"); return J('P.sel') === 0; })());
-// the scene: the ship does not steer on arrows while a panel is open
-g.run(`
   window.__fake = (level) => { const f = Object.create(Campaign.prototype); f.add = document; f.cameras = document; f.input = document; f.textures = document; f.tweens = document;
     f.time = { delayedCall: (ms, fn) => fn(), now: 0 }; f.boom = { explode() {} }; f.bgLayers = []; f.hudG = document; f.relicG = document;
     const h = {}; ['hull', 'earth', 'bay', 'wave', 'mother', 'blink', 'obj', 'keys', 'repair'].forEach(k => { h[k] = { text: '', setText(t) { h[k].text = t; return h[k]; } }; }); f.hud = h;
@@ -76,21 +22,20 @@ g.run(`
     f.init({ level }); f.camp = campNew(f.level, f.P.techs, f.opts); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); f.sync = () => {}; return f; };
   toast = () => {}; shipcompSay = () => true; window.F = __fake(1); F.onKey({ code: 'Enter' }); F.onKey({ code: 'Enter' }); F.update(0, 33);
 `);
-check('with no panel open the arrows fly the ship as they always did: Left turns it, Up is thrust, Down is the brake', (() => { g.run("F.k.LEFT.isDown = true; F.k.UP.isDown = true; F.update(0, 33);"); const a = [J('F.camp.input.turn'), J('F.camp.input.thrust')]; g.run("F.k.LEFT.isDown = false; F.k.UP.isDown = false; F.k.DOWN.isDown = true; F.update(0, 33);"); const b = J('F.camp.input.brake'); g.run("F.k.DOWN.isDown = false; F.update(0, 33);"); return a.join() === '-1,1' && b === true; })());
-g.run("F.onKey({ code: 'KeyQ' });");
-check('with a panel open Left, Right, Up and Down do not steer, thrust or brake the ship', (() => { g.run("F.k.LEFT.isDown = true; F.k.UP.isDown = true; F.k.DOWN.isDown = true; F.update(0, 33);"); const a = [J('F.camp.input.turn'), J('F.camp.input.thrust'), J('F.camp.input.brake')]; g.run("F.k.LEFT.isDown = false; F.k.UP.isDown = false; F.k.DOWN.isDown = false; F.k.RIGHT.isDown = true; F.update(0, 33);"); const b = J('F.camp.input.turn'); g.run("F.k.RIGHT.isDown = false;"); return a.join() === '0,0,false' && b === 0 && J('F.pn.open') === 'fleet'; })());
-check('W A S D still fly while a panel is open: A turns, W is thrust (a steering key is not the panel\'s key: here the key was held, not pressed)', (() => { g.run("F.k.A.isDown = true; F.k.W.isDown = true; F.update(0, 33);"); const a = [J('F.camp.input.turn'), J('F.camp.input.thrust')]; g.run("F.k.A.isDown = false; F.k.W.isDown = false;"); return a.join() === '-1,1'; })());
-check('and the arrows steer again the moment the panel is closed', (() => { g.run("F.onKey({ code: 'Escape' }); F.k.LEFT.isDown = true; F.update(0, 33);"); const a = J('F.camp.input.turn'); g.run("F.k.LEFT.isDown = false;"); return a === -1 && J('F.pn.open') === ''; })());
 
-// ---- C. Mine ore on FLEET; the drawing
-console.log('C. Mine ore and the drawing');
-const T = J('CAMP_PANELS.panels.map(p => ({ id: p.id, rows: p.rows.map(r => r.id + ":" + r.n) }))');
-check('FLEET: launch, attack, escort, guard, recall, mine (1 to 6); SHIP: build a fighter, build an escort, goal, dock (1 to 4); SYSTEMS as it was (1 to 5)', T[0].rows.join() === 'launch:1,attack:2,escort:3,guard:4,recall:5,mine:6' && T[1].rows.join() === 'buildf:1,builde:2,goal:3,dock:4' && T[2].rows.join() === 'weapons:1,shields:2,engines:3,balance:4,emergency:5', JSON.stringify(T));
-g.run('__fresh(); __run(C, 1); campOrder(C, "launch"); __run(C, 8); __k("KeyQ", 100);');
-check('FLEET 6 is Mine ore: the wing goes to mine (the order ran, its words are the mine order\'s)', (() => { const r = J("__k('Digit6', 150)"); return r.row === 'mine' && r.ran && C_orders() >= 1; })());
-function C_orders() { return J('C.orders.mine'); }
-check('and no digit of the SHIP panel is Mine now: E then 5 is nothing, the panel stays open', (() => { g.run('__k("KeyE", 200);'); const r = J("__k('Digit5', 210)"); return r.used && !r.ran && J('P.open') === 'ship'; })());
-// the drawing: the lit row and a shorter page
+// ---- A. the scene
+console.log('A. the scene');
+check('the arrows fly: Left turns, Up is thrust, Down is the brake (and there is no panel to open to stop them)', (() => { g.run("F.k.LEFT.isDown = true; F.k.UP.isDown = true; F.update(0, 33);"); const a = [J('F.camp.input.turn'), J('F.camp.input.thrust')]; g.run("F.k.LEFT.isDown = false; F.k.UP.isDown = false; F.k.DOWN.isDown = true; F.update(0, 33);"); const b = J('F.camp.input.brake'); g.run("F.k.DOWN.isDown = false; F.k.RIGHT.isDown = true; F.update(0, 33);"); const c = J('F.camp.input.turn'); g.run("F.k.RIGHT.isDown = false; F.update(0, 33);"); return a.join() === '-1,1' && b === true && c === 1; })());
+check('W A S D do not fly: A does not turn, W is no thrust, S is no brake (they are the fleet\'s and the target\'s keys)', (() => { g.run("F.k.A.isDown = true; F.k.W.isDown = true; F.k.S.isDown = true; F.k.D.isDown = true; F.update(0, 33);"); const a = [J('F.camp.input.turn'), J('F.camp.input.thrust'), J('F.camp.input.brake')]; g.run("F.k.A.isDown = F.k.W.isDown = F.k.S.isDown = F.k.D.isDown = false; F.update(0, 33);"); return a.join() === '0,0,false'; })());
+check('1 launches the wing at once from the scene, with an answer; and Q turns the FLEET page without launching anything', (() => { g.run("F.onKey({ code: 'Digit1' });"); const a = J('F.camp.launchQ.length') + J('F.camp.launched'); g.run("F.onKey({ code: 'KeyQ' });"); return a >= 8 && J('F.pn.page.fleet') === 1; })());
+g.run("F.pn.page.fleet = 0;");
+check('a fleet key slows the battle for CAMP.slow.after ms (command time): the scene is slowed after 1, and not after a SHIP key (J)', (() => { g.run("F.time.now = 5000; F.slowUntil = 0; F.onKey({ code: 'KeyJ' });"); const ship = J('F.slowUntil'); g.run("F.onKey({ code: 'Digit4' });"); return ship === 0 && J('F.slowUntil') === 5000 + J('CAMP.slow.after') && J('campSlowScale(F)') === J('CAMP.slow.scale'); })());
+check('and it is over again CAMP.slow.after ms later', (() => { g.run("F.time.now = 5000 + CAMP.slow.after + 1;"); return J('campSlowScale(F)') === 1; })());
+check('a key the table does not know goes on to the next reader: F, B, Z, C, N and 0 on its own (dock) are not the panels\' F or B', (() => { const before = J('Object.values(F.camp.orders).reduce((a, b) => a + b, 0)'); g.run("['KeyF', 'KeyB', 'KeyZ', 'KeyC', 'KeyN'].forEach(c => F.onKey({ code: c }));"); return J('Object.values(F.camp.orders).reduce((a, b) => a + b, 0)') === before; })());
+check('the pace key is gone (P turns the SHIP panel\'s page, it does not change the pace), and the scene gives the sim the fixed pace: Normal', (() => { g.run("F.onKey({ code: 'KeyP' });"); const pg = J('F.pn.page.ship'); g.run("F.onKey({ code: 'KeyP' });"); return pg === 1 && J('F.makeCamp().pace') === J("campPaceMult('normal')") && !('key' in J('CAMP.pace')); })());
+
+// ---- B. the drawing
+console.log('B. the drawing');
 g.run(`
   window.__all = [];
   window.__mk = (kind, x, y, t) => { const o = { kind, x, y, t: t == null ? '' : t, vis: true, alpha: 1, log: [] };
@@ -100,44 +45,48 @@ g.run(`
   window.__scene = () => { const s = { camp: campNew('home', [], { seed: 1, god: true }), mode: 'play', time: { now: 0 }, add: { rectangle: (x, y) => __mk('rect', x, y), graphics: () => __mk('g'), text: (x, y, t) => __mk('text', x, y, t), container: () => __mk('box') },
       input: { on() {}, off() {} }, events: { once() {} } }; s.camp.ships = s.camp.ships.filter(u => u.team !== 'alien'); return s; };
   window.S = __scene(); campPanelsInstall(S); S.camp.docked = 'luna';
-  window.__bars = (id) => S.pnl.p[id].g.log.filter(l => l[0] === 'fillRect' && l.length >= 5).map(l => ({ x: l[1], y: l[2], w: l[3], h: l[4] }));
   window.__paint = now => { S.time.now = now; campPanelsPaint(S, now); };
-  campPanelKey(S.pn, S.camp, 'KeyQ', 1000); __paint(1000); __paint(1300);
+  __paint(0);
 `);
-const geo = J(`campPanelsGeometry(campPanelDef('fleet'))`);
-const bar = (i) => J(`__bars('fleet')`).filter(b => b.w === J('CAMPPANELS_LOOK.pick.width') && Math.abs(b.y - (J(`campPanelsGeometry(campPanelDef('fleet')).rowY(${i + 1})`) + 2)) < 0.5).length;
-check('the open panel draws the highlight on its first row: a bright bar at the edge of that row only', bar(0) === 1 && [1, 2, 3, 4, 5].every(i => bar(i) === 0), JSON.stringify(J(`__bars('fleet')`)));
-g.run(`campPanelKey(S.pn, S.camp, 'ArrowDown', 1400); campPanelKey(S.pn, S.camp, 'ArrowDown', 1410); __paint(1500);`);
-check('after Down, Down it is on the third row', bar(2) === 1 && bar(0) === 0 && J('S.pn.sel') === 2);
-check('FLEET draws its six rows, the sixth named Mine ore, with its digit', J(`S.pnl.p.fleet.rows.map(r => r.name.t).join()`) === 'Launch,Attack,Escort,Guard,Recall,Mine ore' && J(`S.pnl.p.fleet.rows[5].digit.t`) === '6');
-g.run(`campPanelKey(S.pn, S.camp, 'ArrowRight', 1600); __paint(1700);`);
-check('on the stances page the sixth line is empty and not drawn (five stances), and the highlight is on the first', J(`S.pnl.p.fleet.rows.map(r => r.name.vis ? r.name.t : '').join()`) === 'Free,Orbit,Keep distance,Match speed,Hold position,' && J('S.pn.sel') === 0 && J(`S.pnl.p.fleet.rows[5].name.t`) === '' && J(`S.pnl.p.fleet.rows[5].digit.vis`) === false);
-g.run(`campPanelKey(S.pn, S.camp, 'ArrowLeft', 1800); __paint(1900);`);
-check('and the orders come back with Mine ore on the sixth line', J(`S.pnl.p.fleet.rows.map(r => r.name.t).join()`) === 'Launch,Attack,Escort,Guard,Recall,Mine ore' && J(`S.pnl.p.fleet.rows[5].digit.t`) === '6' && J(`S.pnl.p.fleet.rows[5].digit.vis`) === true && J(`S.pnl.p.fleet.rows[5].name.vis`) === true);
-g.run(`campPanelKey(S.pn, S.camp, 'Escape', 2000); __paint(2300);`);
-check('closed again: no highlight is drawn', J(`__bars('fleet')`).filter(b => b.w === J('CAMPPANELS_LOOK.pick.width')).length === 0);
+check('both panels are drawn from the first frame (no key opens them): FLEET\'s seven rows and SHIP\'s eleven, each with its key', J(`S.pnl.p.fleet.rows.slice(0, 7).map(r => r.key.t + ' ' + r.name.t).join()`) === '1 Launch / recall,2 Attack,3 Escort,4 Guard,W Mine ore,E Stance,R Convoy' && J(`S.pnl.p.ship.rows.map(r => r.key.t).join('')`) === '7890JKL;UEnterI' && J(`S.pnl.p.fleet.rows[0].name.vis && S.pnl.p.ship.rows[10].name.vis`) === true);
+check('the heading says the page key and the page: "Q   1/3" and "P   1/2"', J(`S.pnl.p.fleet.pageKey.t`) === 'Q   1/3' && J(`S.pnl.p.ship.pageKey.t`) === 'P   1/2');
+g.run(`campPanelKey(S.pn, S.camp, 'KeyQ', 1000); __paint(1000);`);
+check('Q turns FLEET to its stances: the heading says STANCES 2/3, five rows with 1 to 5, the sixth line is not drawn, and the one in force says so', J(`S.pnl.p.fleet.title.t`) === 'STANCES' && J(`S.pnl.p.fleet.pageKey.t`) === 'Q   2/3' && J(`S.pnl.p.fleet.rows.map(r => r.name.vis ? r.name.t : '').join()`) === 'Free,Orbit,Keep distance,Match speed,Hold position,,' && J(`S.pnl.p.fleet.rows[0].suffix.t`) === 'in force' && J(`S.pnl.p.fleet.rows[0].key.t`) === '1');
+g.run(`campPanelTick(S.pn, 1000 + CAMP_PANELS.back); __paint(8000);`);
+check('6 s later the panel is back on its orders', J(`S.pnl.p.fleet.title.t`) === 'FLEET' && J(`S.pnl.p.fleet.rows[0].name.vis`) === true);
+g.run(`campPanelKey(S.pn, S.camp, 'KeyP', 9000); __paint(9000);`);
+check('P turns SHIP to BUILD: two rows, 7 and 8, a fighter and an escort with their costs', J(`S.pnl.p.ship.title.t`) === 'BUILD' && J(`S.pnl.p.ship.rows.map(r => r.name.vis ? r.key.t + ' ' + r.name.t : '').join()`).startsWith('7 New fighter,8 New escort,'));
+g.run(`campPanelsClose(S); __paint(9100);`);
+check('a card, the map or the end puts both panels back on their first page', J(`S.pn.page.fleet`) === 0 && J(`S.pn.page.ship`) === 0 && J(`S.pnl.p.ship.title.t`) === 'SHIP');
+g.run(`campSpawn(S.camp, 'raider', S.camp.carrier.x + 700, S.camp.carrier.y); campPanelKey(S.pn, S.camp, 'KeyD', 9200); __paint(9200 + 300);`);
+check('D picks the target and the FLEET panel names it with its distance, with the key that lets it go', /^TARGET  Raider \d+  \d+(\.\d)? km$/.test(J(`S.pnl.p.fleet.foot.t`)) && J(`S.pnl.p.fleet.footKeys.t`) === 'X clear', J(`S.pnl.p.fleet.foot.t`));
+g.run(`campPanelKey(S.pn, S.camp, 'KeyX', 9600); __paint(9600 + 300);`);
+check('X clears it: "TARGET  none" and the three keys that pick', J(`S.pnl.p.fleet.foot.t`) === 'TARGET  none' && J(`S.pnl.p.fleet.footKeys.t`) === 'A D S  X clear');
+check('the panels are not drawn behind a card, the pause, the map or the page of keys', (() => { g.run(`S.mode = 'pause'; __paint(10000);`); const a = J(`S.pnl.p.fleet.rows[0].name.vis || S.pnl.p.ship.rows[0].name.vis`); g.run(`S.mode = 'play'; S.mp = {}; __paint(10100);`); const b = J(`S.pnl.p.fleet.rows[0].name.vis`); g.run(`S.mp = null; __paint(10200);`); return a === false && b === false && J(`S.pnl.p.fleet.rows[0].name.vis`) === true; })());
+check('a row lights for 160 ms when its key is pressed: P.lit holds the time, and the flash is drawn (a white wash on the row) only while it lasts', (() => { g.run(`campPanelKey(S.pn, S.camp, 'Digit2', 11000); __paint(11040);`); const on = J(`S.pnl.p.fleet.g.log.filter(l => l[0] === 'fillStyle' && l[1] === 0xffffff).length`); g.run(`__paint(11400);`); const off = J(`S.pnl.p.fleet.g.log.filter(l => l[0] === 'fillStyle' && l[1] === 0xffffff).length`); return J('S.pn.lit.attack') === 11000 && on > 0 && off === 0; })());
 
-// ---- D. every hint reads the table
-console.log('D. the hints read the table');
-const says = () => J(`({ nudge: uiText('camp.nudge.launch'), nudge2: uiText('camp.nudge.attack'), goal: uiText('camp.help.goalbay', { goal: 'G' }), keys: uiText('camp.help.keys'), dock: uiText('camp.hud.dockhint', { name: 'Luna' }), retreat: uiText('camp.say.retreatnear', { name: 'Luna' }), bfWing: uiText('camp.bf.key.wing'), bfMine: uiText('camp.bf.key.mine'), bfDock: uiText('camp.bf.key.dock'), bfShield: uiText('camp.bf.key.shield'), n3: uiText('camp.bf.1.1.n3'), w1: uiText('camp.bf.1.2.w1') })`);
+// ---- C. every hint reads the table
+console.log('C. the hints read the table');
+const says = () => J(`({ nudge: uiText('camp.nudge.launch'), nudge2: uiText('camp.nudge.attack'), goal: uiText('camp.help.goalbay', { goal: 'G' }), keys: uiText('camp.help.keys'), dock: uiText('camp.hud.dockhint', { name: 'Luna' }), retreat: uiText('camp.say.retreatnear', { name: 'Luna' }), bfWing: uiText('camp.bf.key.wing'), bfMine: uiText('camp.bf.key.mine'), bfDock: uiText('camp.bf.key.dock'), bfShield: uiText('camp.bf.key.shield'), n3: uiText('camp.bf.1.1.n3'), w1: uiText('camp.bf.1.2.w1'), line: uiText('camp.ui.keys'), tuck: uiText('camp.hint.tuck') })`);
 const before = says();
-check('as the table stands the hints say Q and E, the rows\' digits and C: "Press Q, then 1", "E 4  dock at Luna", "Q then 6: the wing mines ore", "C then 5: emergency shields"', before.nudge === 'Press Q, then 1, to launch the wing.' && before.nudge2 === 'Press Q, then 2, to send the fighters at the enemy.' && before.dock === 'E 4  dock at Luna' && before.retreat === 'Hull low, no ships. Luna is in range: E, then 4.' && before.bfMine === 'Q then 6: the wing mines ore' && before.bfShield === 'C then 5: emergency shields' && before.bfDock === 'E then 4: dock to build, mend and sell' && before.keys === 'W A S D fly, Space fires. Q Fleet, E Ship, C Systems panels.' && /^W A S D fly the cruiser\. Q opens the fleet panel: 1 launches the wing, 3 sends the escorts to her\./.test(before.n3) && before.w1 === 'Mine the rock fields round Ceres. Q then 6 sends the wing.', JSON.stringify(before));
-// the remap: FLEET on Z with Launch on 2 and Attack on 1; SHIP on X with Dock on 2; one change in the table
-g.run(`window.__tab0 = JSON.stringify(CAMP_PANELS.panels.map(p => ({ key: p.key, code: p.code, rows: p.rows.map(r => r.n) })));
-  const fl = CAMP_PANELS.panels[0], sh = CAMP_PANELS.panels[1]; fl.key = 'Z'; fl.code = 'KeyZ'; sh.key = 'X'; sh.code = 'KeyX';
-  fl.rows.find(r => r.id === 'launch').n = 2; fl.rows.find(r => r.id === 'attack').n = 1; sh.rows.find(r => r.id === 'dock').n = 3; sh.rows.find(r => r.id === 'goal').n = 4;`);
+check('as the table stands the hints say the rows\' keys: "Press 1 to launch the wing", "0  dock at Luna", "W: the wing mines ore", "U: emergency shields", and the key line names the arrows, Space, Enter, Tab, - = and H', before.nudge === 'Press 1 to launch the wing.' && before.nudge2 === 'Press 2 to send the fighters at the enemy.' && before.dock === '0  dock at Luna' && before.retreat === 'Hull low, no ships. Luna is in range: press 0.' && before.bfWing === '1: launch the wing, or bring it home' && before.bfMine === 'W: the wing mines ore' && before.bfDock === '0: dock to build, mend and sell' && before.bfShield === 'U: emergency shields' && before.line === 'Arrows fly   Space turrets   Enter missile   Tab Map   - = Zoom   H Keys' && /press R until/.test(before.tuck), JSON.stringify(before));
+// the remap: Launch on G, Dock on 5, Emergency on O, the FLEET page key on Z, the map's zoom reset on Delete, the missile on M: one change in the table
+g.run(`window.__tab0 = JSON.stringify([CAMP_PANELS, CAMP_KEYS]);
+  const fl = CAMP_PANELS.panels[0], sh = CAMP_PANELS.panels[1]; fl.key = 'Z'; fl.code = 'KeyZ';
+  Object.assign(fl.rows.find(r => r.id === 'launch'), { k: 'G', code: 'KeyG' }); Object.assign(sh.rows.find(r => r.id === 'dock'), { k: '5', code: 'Digit5' }); Object.assign(sh.rows.find(r => r.id === 'emergency'), { k: 'O', code: 'KeyO' });
+  Object.assign(sh.rows.find(r => r.id === 'missile'), { k: 'M', code: 'KeyM' }); CAMP_KEYS.fly.k = 'Cursor';`);
 const after = says();
-check('after the remap every hint says the new letters and digits: Press Z then 2 to launch, Z then 1 to attack, X 3 to dock, the key line Z Fleet, X Ship, C Systems', after.nudge === 'Press Z, then 2, to launch the wing.' && after.nudge2 === 'Press Z, then 1, to send the fighters at the enemy.' && after.goal === 'Your goal: G Press Z, then 2, to launch the wing.' && after.dock === 'X 3  dock at Luna' && after.retreat === 'Hull low, no ships. Luna is in range: X, then 3.' && after.bfWing === 'Z then 2: launch the wing' && after.bfDock === 'X then 3: dock to build, mend and sell' && after.keys === 'W A S D fly, Space fires. Z Fleet, X Ship, C Systems panels.' && /Z opens the fleet panel: 2 launches the wing/.test(after.n3) && after.bfMine === 'Z then 6: the wing mines ore', JSON.stringify(after));
-check('the briefing\'s key boxes follow: launch is Z 2, dock is X 3, emergency shields still C 5 (campBriefKeys reads the table when asked)', J('CAMPBRIEF_KEYS.wing.join()') === 'Z,2' && J('CAMPBRIEF_KEYS.dock.join()') === 'X,3' && J('CAMPBRIEF_KEYS.shield.join()') === 'C,5' && J('campBriefKeys(1, 0).find(k => k.id === "wing").k.join()') === 'Z,2');
-check('the key line, the H page rows and the model\'s prompt follow too', J('campPanelKeyLine()') === 'Z Fleet   X Ship   C Systems' && J('campPanelKeyRows()[0].k.join()') === 'Z' && /key Z opens the FLEET panel/.test(J('shipcompSystem(__scene())')) === false || true);
-check('the keys do what the hints say: Z opens FLEET, then 2 launches the wing; Q does nothing now', (() => { g.run('__fresh();'); const q = J("__k('KeyQ', 100)"); const z = J("__k('KeyZ', 200)"); const l = J("__k('Digit2', 300)"); return !q.used && !q.opened && z.opened === 'fleet' && l.row === 'launch' && l.ran && J('C.launchQ.length') === 8; })());
-g.run(`(() => { const t = JSON.parse(__tab0); CAMP_PANELS.panels.forEach((p, i) => { p.key = t[i].key; p.code = t[i].code; p.rows.forEach((r, j) => { r.n = t[i].rows[j]; }); }); })();`);
-check('the table is put back as it was, and the hints say Q and E again', JSON.stringify(says()) === JSON.stringify(before));
-// no text hard-codes a panel letter any more
-const letters = J(`Object.keys(UI_TEXT).filter(k => /^camp\\./.test(k) && /\\b[QEC] (?:then|opens)\\b|Press [QEC],|\\b[QEC] [1-6]  /.test(UI_TEXT[k])).map(k => k + ': ' + UI_TEXT[k])`);
-check('no line of the Campaign\'s text names a panel key as a letter any more: they are all placeholders ({fleetkey}, {nlaunch} ...) the table fills', letters.length === 0, letters.join(' | '));
-check('the same in the content files (content/text: the briefing, the outpost words, the help and nudge lines) and in the game\'s own defaults (src/contenttables.js)', ['content/text/campbrief.md', 'content/text/campoutpost.md', 'content/text/ux-help.md', 'content/text/ux-nudge.md', 'src/contenttables.js'].every(f => !/\b[QEC] (?:then|opens)\b|Press [QEC],/.test(src(f))));
-check('an unknown placeholder is left as it was ({nothing} stays, a name the table does not know says nothing)', J("uiText('camp.say.built', { kind: 'x' })") === 'A new x is in the bay.' && J("contentFill('a {fleetkey} {nowhere} {nzzz}')") === 'a Q {nowhere} {nzzz}');
+check('after the remap every hint says the new keys: Press G to launch, 5 to dock, O for emergency shields, the key line says M missile and Cursor fly', after.nudge === 'Press G to launch the wing.' && after.goal === 'Your goal: G Press G to launch the wing.' && after.dock === '5  dock at Luna' && after.retreat === 'Hull low, no ships. Luna is in range: press 5.' && after.bfWing === 'G: launch the wing, or bring it home' && after.bfDock === '5: dock to build, mend and sell' && after.bfShield === 'O: emergency shields' && after.line === 'Cursor fly   Space turrets   M missile   Tab Map   - = Zoom   H Keys', JSON.stringify(after));
+check('the briefing\'s key boxes follow (campBriefKeys reads the table when asked): launch is G, dock 5, the shields O, the missile M', J('CAMPBRIEF_KEYS.wing.join()') === 'G' && J('CAMPBRIEF_KEYS.dock.join()') === '5' && J('CAMPBRIEF_KEYS.shield.join()') === 'O' && J('CAMPBRIEF_KEYS.missile.join()') === 'M' && J('CAMPBRIEF_KEYS.fly.join()') === 'Cursor' && J('campBriefKeys(1, 0).find(k => k.id === "wing").k.join()') === 'G');
+check('the key line, the H page rows and the page keys follow too', J('campPanelKeyLine()') === 'Z Fleet   P Ship' && J('campPanelKeyRows()[0].k.join()') === 'G' && J('campPanelKeyRows().some(r => r.k[0] === "O")') === true && J('campPanelKeyRows()[7].k[0]') === 'Z');
+check('the keys do what the hints say: G launches the wing, Z turns the FLEET page; 1 and Q do nothing now (1 is not a row of FLEET page 1 any more: it is the stance digit only on a later page)', (() => { g.run('window.P = campPanelNew(); window.C = __quiet(campNew("home", [], { seed: 3 }));'); const one = J("campPanelKey(P, C, 'Digit1', 100, false)"), q = J("campPanelKey(P, C, 'KeyQ', 110, false)"), gg = J("campPanelKey(P, C, 'KeyG', 200, false)"), z = J("campPanelKey(P, C, 'KeyZ', 300, false)"); return !one.ran && !q.used && gg.row === 'launch' && gg.ran && J('C.launchQ.length') === 8 && z.used && J('P.page.fleet') === 1; })());
+g.run(`(() => { const t = JSON.parse(__tab0); Object.keys(CAMP_PANELS).forEach(k => delete CAMP_PANELS[k]); Object.assign(CAMP_PANELS, t[0]); Object.keys(CAMP_KEYS).forEach(k => delete CAMP_KEYS[k]); Object.assign(CAMP_KEYS, t[1]); })();`);
+check('the table is put back as it was, and the hints say the rows\' keys again', JSON.stringify(says()) === JSON.stringify(before));
+// no text hard-codes a key of the panels any more
+const keyed = J(`Object.keys(UI_TEXT).filter(k => /^camp\\./.test(k) && /\\bPress [QEWRJKLUIP0-9]\\b|\\b[QEP] (?:then|opens)\\b|\\(F\\)|W A S D/.test(UI_TEXT[k])).map(k => k + ': ' + UI_TEXT[k])`);
+check('no line of the Campaign\'s text names a key of the panels as a letter any more: they are all placeholders ({keylaunch}, {keydock} ...) the table fills', keyed.length === 0, keyed.join(' | '));
+check('the same in the content files (content/text: the briefing, the outpost words, the help, nudge and lose lines) and in the game\'s own defaults (src/contenttables.js)', ['content/text/campbrief.md', 'content/text/campoutpost.md', 'content/text/ux-help.md', 'content/text/ux-nudge.md', 'content/text/ux-lose.md', 'content/text/campbeats.md', 'src/contenttables.js'].every(f => !/\b[QEC] (?:then|opens)\b|Press [QEC],|W A S D|\(F\)/.test(src(f).replace(/'camp\.ui\.pace[^\n]*|camp\.keys\.pace[^\n]*/g, ''))));
+check('an unknown placeholder is left as it was ({nothing} stays, a name the table does not know says nothing)', J("uiText('camp.say.built', { kind: 'x' })") === 'A new x is in the bay.' && J("contentFill('a {fleetkey} {nowhere} {keyzzz}')") === 'a Q {nowhere} {keyzzz}');
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `PANEL KEYS FAIL (${failed} of ${n})` : `PANEL KEYS PASS (${n} checks)`);
 process.exitCode = failed ? 1 : 0;

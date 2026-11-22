@@ -179,18 +179,20 @@ console.log('E. the voice and the strip');
 console.log('F. the FLEET panel\'s page CONVOY');
 {
   g.run('__new(); __quiet()');
-  g.run(`window.__t = __hauler('t1', 'Transport', 400, 0, 5000, 0); window.__P = campPanelNew(); campPanelKey(__P, C, 'KeyQ', 0); campPanelKey(__P, C, 'ArrowRight', 10); campPanelKey(__P, C, 'ArrowRight', 20);`);
-  check('FLEET has three pages: the orders, the stances, the convoy (CAMP_PANELS.pages: 3), flipped with the arrows, and the third page is the 2nd arrow', J('campPanelPages("fleet")') === 3 && J('__P.page') === 2 && J('campPanelPages("ship")') === 1);
+  g.run(`window.__t = __hauler('t1', 'Transport', 400, 0, 5000, 0); window.__P = campPanelNew(); campPanelKey(__P, C, 'KeyQ', 0); campPanelKey(__P, C, 'KeyQ', 10);`);
+  check('FLEET has three pages: the orders, the stances, the convoy (CAMP_PANELS.pages: 3), flipped with the page key Q, and the third page is the 2nd press; SHIP has two (BUILD)', J('campPanelPages("fleet")') === 3 && J('__P.page.fleet') === 2 && J('campPanelPages("ship")') === 2);
   const rows = J('campPanelRows(C, "fleet", 2)');
   check('the third page has four rows: Tuck in, Hold here, Run for it, Carry on, numbered 1 to 4, all of them possible with a convoy out', rows.map(r => r.label).join() === 'Tuck in,Hold here,Run for it,Carry on' && rows.map(r => r.n).join() === '1,2,3,4' && rows.every(r => r.ok), JSON.stringify(rows));
-  check('the row ids are their own (they do not clash with the stances\' "hold")', new Set(J('CAMP_PANELS.panels[0].rows.concat(CAMP_PANELS.panels[0].page2.rows, CAMP_PANELS.panels[0].page3.rows).map(r => r.id)')).size === 15); // (15 since Mine ore moved to the FLEET orders: card space-game-panel-keys-zxc)
+  check('the row ids are their own (they do not clash with the stances\' "hold")', new Set(J('CAMP_PANELS.panels[0].rows.concat(CAMP_PANELS.panels[0].page2.rows, CAMP_PANELS.panels[0].page3.rows).map(r => r.id)')).size === 16); // (16: the FLEET orders are seven since the two hands: card space-game-two-hands-keys, the stance and the convoy order are rows of their own)
   const r1 = J(`campPanelKey(__P, C, 'Digit1', 30)`);
-  check('a digit on the third page does the row: Tuck in, the panel closes, the ship is under the order', r1.ran && r1.ok && r1.row === 'ctuck' && J('__t.cord') === 'tuck' && J('__P.open') === '', JSON.stringify(r1));
+  check('a digit on the third page does the row: Tuck in, the panel goes back to its first page, the ship is under the order', r1.ran && r1.ok && r1.row === 'ctuck' && J('__t.cord') === 'tuck' && J('__P.page.fleet') === 0, JSON.stringify(r1));
   check('the row of the order in force is marked "in force"; the others are not', (() => { const rs = J('campPanelRows(C, "fleet", 2)'); return rs[0].marked && rs[0].state === 'in force' && !rs[1].marked && !rs[2].marked && !rs[3].marked && rs[1].state === '1 ship'; })(), J('JSON.stringify(campPanelRows(C, "fleet", 2))'));
-  g.run(`campPanelKey(__P, C, 'KeyQ', 40); campPanelKey(__P, C, 'ArrowLeft', 50)`);
-  check('Left from the orders goes round to the convoy page (three pages go round both ways)', J('__P.page') === 2);
-  g.run(`campPanelKey(__P, C, 'Escape', 60); campPanelKey(__P, C, 'KeyQ', 70); campPanelKey(__P, C, 'ArrowRight', 80); campPanelKey(__P, C, 'ArrowRight', 90); campPanelKey(__P, C, 'ArrowRight', 100)`);
-  check('and three Rights come back to the orders', J('__P.page') === 0);
+  g.run(`campPanelKey(__P, C, 'KeyR', 40)`);
+  check('R steps the convoy order from the first page: after Tuck in comes Hold here, and the ship is under it; the page stays the first', J('__t.cord') === 'hold' && J('__P.page.fleet') === 0);
+  g.run(`campPanelKey(__P, C, 'KeyR', 50); campPanelKey(__P, C, 'KeyR', 60); campPanelKey(__P, C, 'KeyR', 70)`);
+  check('R goes round: run for it, carry on, and tuck in again', J('__t.cord') === 'tuck');
+  g.run(`__P.page.fleet = 0; campPanelKey(__P, C, 'KeyQ', 80); campPanelKey(__P, C, 'KeyQ', 90); campPanelKey(__P, C, 'KeyQ', 100)`);
+  check('and three presses of Q come back to the orders', J('__P.page.fleet') === 0);
   g.run('__new(); __quiet()');
   const none = J('campPanelRows(C, "fleet", 2)');
   check('with no escorted ship the four rows are greyed and say why ("no convoy")', none.every(r => !r.ok && r.short === 'no convoy' && /no escorted ships/.test(r.state)), JSON.stringify(none));
@@ -199,7 +201,7 @@ console.log('F. the FLEET panel\'s page CONVOY');
   g.run('CAMP_PANELS.pages = 1');
   check('and at 1 the flip is off', J('campPanelPages("fleet")') === 1);
   g.run('CAMP_PANELS.pages = 3');
-  check('the keys page (H, Settings) says what the arrows flip to, in 36 characters or fewer', (() => { const rows = J('campPanelKeyRows()'), fl = rows.find(r => r.k.includes('←')); return !!fl && /stances, convoy/.test(fl.t) && ('Q ← →' + fl.t).length > 0 && fl.t.length <= 36 + 0; })(), J('campPanelKeyRows().filter(r => r.k.includes("←")).map(r => r.t).join("|")'));
+  check('the keys page (H, Settings) says what the page key flips to, in 36 characters or fewer, and R (the next convoy order) has its own line', (() => { const rows = J('campPanelKeyRows()'), fl = rows.find(r => r.k[0] === 'Q'), r = rows.find(r => r.k[0] === 'R'); return !!fl && /stances, convoy/.test(fl.t) && fl.t.length <= 36 && !!r && /convoy order/.test(r.t); })(), J('campPanelKeyRows().filter(r => r.k[0] === "Q").map(r => r.t).join("|")'));
   check('the panel\'s key line is read from the table, not typed: a key hint is p.key', J('CAMP_PANELS.panels.every(p => typeof p.key === "string" && p.key.length === 1)'));
 }
 

@@ -3,7 +3,7 @@
 //   campMapInstall(s)  once, in create: Tab opens the map over the battle, or closes it       campMapPaint(s, time)   every frame while it is open       campMapClose(s)   Esc, or a card coming up
 // It reuses the sector map's (src/map.js) own pieces rather than a drawing system of its own: mapPlace puts the names of the places where they touch nothing, mapGridStep
 // chooses the grid, hudPanel and hudGlowPath are the glass panel and the glowing frame, and the colours are the radar's (campDotColor). The battle is NOT paused: the scene keeps
-// stepping the sim and every key but Esc and Tab still does what it does, so the orders (1 to 5), the strip (I) and the voice (U) work from the map.
+// stepping the sim and every key but Esc and Tab still does what it does, so the fleet's keys, the strip (/) and the voice (.) work from the map.
 // Nothing here uses a Phaser feature the Campaign scene does not already use (no mask: a ship outside the frame is drawn on its edge, as the radar draws it on the rim).
 const CAMPMAP_PANEL = { x: 70, y: 35, w: 1140, h: 650 }; // the glass panel: the sector map's own size and place (src/map.js)
 const CAMPMAP_SIDE = { x: 925, y: 424, step: 24, rows: 8, destY: 166, listY: 192, listStep: 22, hintY: 398 }; // the column on the right: the objective, where you are flying, the list to pick from (card space-game-campaign-navigate), then the legend

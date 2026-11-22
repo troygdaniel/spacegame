@@ -1,9 +1,9 @@
 // smoke: the Campaign's BATTLE PACE (card space-game-campaign-pace; Troy, 20 Nov 2026), in plain Node, no Chrome.
 // The small ships' fights were a bit fast: CAMP.pace scales the small ships' top speed, acceleration and turn, and their shots by its square root; nothing else.
-//   A. the table: Calm 0.6, Normal 0.72, Brisk 0.85 (15 percent under the 0.7, 0.85 and 1 they were: card space-game-command-slowtime), the default, the shot power, the quick key
+//   A. the table: Calm 0.6, Normal 0.72, Brisk 0.85 (15 percent under the 0.7, 0.85 and 1 they were: card space-game-command-slowtime), the default, the shot power; there is no key
 //   B. a battle with no pace, or with the number 1, is the table's own numbers, bit for bit (what the pins and the bots use); Brisk is no longer that: it is 0.85 of them
 //   C. the scaling: the five small kinds by the multiplier, the shots by its square root, the carrier, mothership, towers, haulers, turrets and Fast not at all; a change in play and back is exact
-//   D. the setting: Normal until picked, kept in this browser apart from the save, the cycle, a bad value; the P key, the pause card, the H page, the controls table; Settings > Game
+//   D. the one pace: the Campaign scene makes every battle at Normal (CAMP.pace.start); there is no P key, no setting, no Settings > Game, no campace.js (card space-game-two-hands-keys: command time, src/campslow.js, gives time to give orders); campNew's opts.pace still takes a mode, for the tests, the bots and the sims
 //   E. the balance: a plain bot wins every mission at Normal and Calm (levels 2 and 3 in about one to two minutes, the rim run of level 1 in four to seven), a player who does nothing never wins
 // Run: node tests/camppace.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -19,7 +19,7 @@ const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefin
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
 // ---- A. the table
-check('CAMP.pace: Calm 0.6, Normal 0.72, Brisk 0.85, in the order the key cycles them; the default is Normal; shots go by the square root; the key is P (B is the warp blink since the panels card)', J('CAMP.pace.modes.map(m => m.id + ":" + m.mult).join()') === 'calm:0.6,normal:0.72,brisk:0.85' && J('CAMP.pace.start') === 'normal' && J('CAMP.pace.shots') === 0.5 && J('CAMP.pace.key') === 'KeyP');
+check('CAMP.pace: Calm 0.6, Normal 0.72, Brisk 0.85; the default is Normal; shots go by the square root; there is no key', J('CAMP.pace.modes.map(m => m.id + ":" + m.mult).join()') === 'calm:0.6,normal:0.72,brisk:0.85' && J('CAMP.pace.start') === 'normal' && J('CAMP.pace.shots') === 0.5 && J('"key" in CAMP.pace') === false);
 check('campPaceMult: an id, a number, nothing (1) or nonsense (1)', J('[campPaceMult("calm"), campPaceMult("normal"), campPaceMult("brisk"), campPaceMult(0.5), campPaceMult(), campPaceMult("fast"), campPaceMult(-1), campPaceMult(NaN)]').join() === '0.6,0.72,0.85,0.5,1,1,1,1');
 
 // ---- B. no pace is the table's numbers
@@ -52,33 +52,16 @@ check('Fast, the trip and the warp do not read the pace: no pace in the autopilo
 check('shots: the wing\'s and the small aliens\' fly at the square root of the pace (0.6 gives 0.7746) of the table\'s speed; the fire intervals and the damage are the same', J(`(() => { const C = campNew(11, [], { seed: 1, pace: "calm" }); const f = campSpawn(C, 'fighter', 0, 0); f.vx = f.vy = 0; f.rot = 0; f.nextShot = 0; C.t = 1000; const foe = { x: 300, y: 0, r: 10 }; const before = C.bullets.length; campWingFire(C, f, CAMP.fighter, foe, 300, 0, true); const b = C.bullets[before]; return !!b && Math.abs(Math.hypot(b.vx, b.vy) - CAMP.fighter.bullet * Math.sqrt(0.6)) < 1e-6 && b.dmg === CAMP.fighter.damage; })()`) || J('C.shot') === undefined);
 check('a pace change in a running battle: the ships already out are rescaled from their own numbers and the table\'s own pace (1) puts them back exactly (not 0.72 times 1 over 0.72)', J(`(() => { const C = campNew(11, [], { seed: 1, pace: "normal" }); const us = ${JSON.stringify(kinds)}.map(k => campSpawn(C, k, 0, 0)); const was = us.map(u => [u.vmax, u.accel, u.turn]); campPaceSet(C, 'calm'); const calm = us.every((u, i) => u.vmax === was[i][0] / 0.72 * 0.6 || Math.abs(u.vmax - was[i][0] / 0.72 * 0.6) < 1e-9); campPaceSet(C, 1); const back = us.every((u, i) => u.vmax === (i < 2 ? CAMP[['fighter', 'escort'][i]].speed : PIRATES[['raider', 'drone', 'gunship'][i - 2]].max) && u.def === u.base.def) && C.pace === 1 && C.shot === 1; const c2 = C.carrier.vmax === CAMP.carrier.speed; return calm && back && c2; })()`));
 
-// ---- D. the setting, the key, the screens
-check('with nothing stored the setting is Normal (the new default), and the Campaign is made at its multiplier', J('campPaceNow().id') === 'normal' && J('campNew(11, [], { seed: 1, pace: campPaceNow().id }).pace') === 0.72);
-g.run(`campPaceChoose('calm')`);
-check('choosing keeps it in this browser under its own key, apart from the save; a reload (a second game on the same storage) has it; Reset game does not clear it', store.get('longhaul.campaign.pace') === 'calm' && (() => { const g2 = nodeGame({ store }); const id = JSON.parse(g2.run('JSON.stringify(campPaceLoad())')); g2.run('clearSave()'); return id === 'calm' && store.get('longhaul.campaign.pace') === 'calm'; })());
-check('Step cycles Calm, Normal, Brisk and round again, both ways; a garbage value in the storage is Normal', J(`(() => { const o = []; campPaceChoose('calm'); for (let i = 0; i < 4; i++) o.push(campPaceStep(1).id); for (let i = 0; i < 3; i++) o.push(campPaceStep(-1).id); return o.join(); })()`) === 'normal,brisk,calm,normal,calm,brisk,normal' && (store.set('longhaul.campaign.pace', 'warp9'), J('campPaceLoad()') === 'normal') && (g.run(`campPaceChoose('normal')`), true));
-check('the line for the pause card and the H page is "Pace: Normal"', J('campPaceLine()') === 'Pace: Normal');
-// the scene, on the stand-in of tests/campaign.mjs: P cycles in play, the pause card has the line, the battle was made at the setting
+// ---- D. the one pace
 g.run(`
-  var __toasts = []; toast = (s, msg) => { __toasts.push(msg); };
-  window.__fake = (level) => { const f = Object.create(Campaign.prototype); f.add = document; f.cameras = document; f.input = document; f.textures = document; f.tweens = document; f.time = { delayedCall: (ms, fn) => fn() }; f.boom = { explode() {} }; f.bgLayers = []; f.hudG = document; f.relicG = document; f.hud = { shield: document, ore: document, hull: document, earth: document, bay: document, wave: document, mother: document, blink: document, obj: document, keys: document };
+  window.__fake = (level) => { const f = Object.create(Campaign.prototype); f.add = document; f.cameras = document; f.input = document; f.textures = document; f.tweens = document; f.time = { delayedCall: (ms, fn) => fn() }; f.boom = { explode() {} }; f.bgLayers = []; f.hudG = document; f.relicG = document; f.mp = null;
     f.k = { W: { isDown: false }, A: { isDown: false }, S: { isDown: false }, D: { isDown: false }, UP: { isDown: false }, DOWN: { isDown: false }, LEFT: { isDown: false }, RIGHT: { isDown: false }, SPACE: { isDown: false } };
     f.init({ level }); f.camp = f.makeCamp(); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); f.osp = {}; f.mode = 'play'; return f; };
-`);
-g.run(`campPaceChoose('normal'); window.F = __fake(1); 0`);
-check('the Campaign scene makes its battle at the player\'s setting', J('F.camp.pace') === 0.72);
-g.run(`__toasts.length = 0; F.onKey({ code: 'KeyP' })`);
-check('B in play goes to Brisk (the next of Normal), says "Pace: Brisk.", and the running battle takes it', J('campPaceNow().id') === 'brisk' && J('F.camp.pace') === 0.85 && J('__toasts.pop()') === 'Pace: Brisk.');
-g.run(`F.onKey({ code: 'KeyP' }); F.onKey({ code: 'KeyP' })`);
-check('B again: Calm, then Normal; the stored setting follows', J('campPaceNow().id') === 'normal' && store.get('longhaul.campaign.pace') === 'normal' && J('F.camp.pace') === 0.72);
-g.run(`F.mode = 'pause'; F.onKey({ code: 'KeyP' })`);
-check('B does nothing outside the battle (on a card)', J('campPaceNow().id') === 'normal');
-g.run(`window.__card = null; F.showCard = (t, lines, ok, h) => { window.__card = { t, lines, ok, h }; }; F.showPause()`);
-check('the pause card says "Pace: Normal" and the key that changes it', J('__card.lines.some(l => /^Pace: Normal +P changes the battle pace\\.$/.test(l))'));
-check('the controls table lists P (with M: the row has both), so the H page and tests/controlshelp.mjs know the key', J(`controlsGroup('campaign').rows.some(r => r.k.includes('P') && /battle pace/i.test(r.t))`) && J('campKeysPage().some(g => g.rows.some(r => r.caps.includes("P")))'));
-check('the H page draws the setting at the foot of the page', /campPaceNow\(\)/.test(src('src/campkeys.js')) && /camp\.keys\.pace/.test(src('src/campkeys.js')));
-check('Settings has a GAME section with the three settings, Left, Right and Enter step it, its rail status and tag name the pace', J(`SETTINGS.sections.some(s => s[0] === 'game')`) && /draw_game\(\)/.test(src('src/settings.js')) && /stepPace\(d\)/.test(src('src/settings.js')) && /game: campPaceNow\(\)\.name\.toUpperCase\(\)/.test(src('src/settings.js')) && /game: 'PACE '/.test(src('src/settings.js')));
-check('the words are in content/text/ (the file mirrors the table): the line, the toast, the key, the three notes', ['camp.pace.line', 'camp.pace.toast', 'camp.pace.key', 'camp.pace.note.calm', 'camp.pace.note.normal', 'camp.pace.note.brisk', 'camp.keys.pace'].every(k => src('content/text/campaign-pace.md').includes('| ' + k + ' |')));
+  window.F = __fake(1); 0`);
+check('the Campaign scene makes its battle at Normal (0.72: CAMP.pace.start), whatever was stored before: the fleet-command tune and every bot number are measured there', J('F.camp.pace') === 0.72 && J('campPaceMult(CAMP.pace.start)') === 0.72);
+check('there is no P key for it: P is the SHIP panel\'s page key, and the pace does not move', (() => { g.run(`F.onKey({ code: 'KeyP' })`); return J('F.camp.pace') === 0.72 && J('F.pn.page.ship') === 1; })());
+check('there is no setting for it: no campace.js, no campPaceNow, no Settings > Game tab, no pace text, no pace line on the pause card or the H page', !/campace/.test(src('index.html')) && J('typeof campPaceNow') === 'undefined' && J('typeof campPaceChoose') === 'undefined' && !J('SETTINGS.sections.some(s => s[0] === "game")') && !Object.keys(J('UI_TEXT')).some(k => /^camp\.pace\./.test(k) || k === 'camp.keys.pace') && !/campPace/.test(src('src/campkeys.js')) && !/campPace/.test(src('src/campaignscene.js').replace(/campPaceMult|campPaceSet|campPaceShip/g, '')));
+check('campNew\'s opts.pace still takes a mode (the tests, the bots and the sims pass one): Calm gives 0.6', J(`campNew(11, [], { seed: 1, pace: 'calm' }).pace`) === 0.6);
 
 // ---- F. the difficulty curve (card space-game-wrapup-difficulty): per-mission hull and damage scales of the aliens, rising through each level; no row, no change
 check('a mission row may bring hpScale and dmgScale (times the table\'s alien scales); a row with none is as it was (the Earth level "home" has none), so C.hpS and C.dmgS are the table\'s', J(`(() => { const a = campNew('home', [], { seed: 1 }); return a.hpS === CAMP.alien.hpScale && a.dmgS === CAMP.alien.damageScale; })()`) && J(`(() => { const C = campNew(11, [], { seed: 1, mission: 2 }), r = campMissionRow(11, 2); const u = campSpawn(C, 'raider', 0, 0); return C.hpS === CAMP.alien.hpScale * r.hpScale && C.dmgS === CAMP.alien.damageScale * r.dmgScale && u.hp === PIRATES.raider.hp * C.hpS; })()`));

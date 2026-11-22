@@ -70,9 +70,9 @@ console.log('B. the direct keys J K L');
   const em = J(`(() => { const C = campNew(1, [], { seed: 1 }); campOrder(C, 'emergency', '', 'key'); return campPowerKey(C, 'KeyJ'); })()`);
   check('during an emergency the key is refused, like the panel row', em.used && !em.ok, JSON.stringify(em));
   const sc = src('src/campaignscene.js');
-  check('the scene reads them in flight only, and never while a word is typed into the strip', /const dk = !typing && this\.mode === 'play' && typeof campPowerKey === 'function' \? campPowerKey\(C, c\)/.test(sc));
+  check('the scene reads them as the SHIP panel\'s rows (one key, one order: campPanelKey), in flight only, and never while a word is typed into the strip', /pr = !typing && typeof campPanelKey === 'function' \? campPanelKey\(this\.pn, C, c, now, e\.shiftKey\)/.test(sc) && J(`CAMP_PANELS.panels[1].rows.filter(r => r.order === 'power' || r.order === 'balance').map(r => r.code).join()`) === 'KeyJ,KeyK,KeyL,Semicolon');
   check('and the table names them in the dials\' order: CAMP_GAUGE.keys is J shields, K engines, L weapons, free of every other key the Campaign binds', J('Object.entries(CAMP_GAUGE.keys).map(e => e.join(":")).join()') === 'KeyJ:shields,KeyK:engines,KeyL:weapons,Semicolon:balance');
-  check('the H page has a row for them (and Settings, which is built from the same table)', J(`controlsGroup('campaign').rows.some(r => r.k.join() === 'J,K,L,;')`));
+  check('the H page has a row for each (and Settings, which is built from the same table): the SHIP panel\'s rows J, K, L and ;', ['J', 'K', 'L', ';'].every(k => J(`controlsGroup('panels').rows.some(r => r.k.join() === ${JSON.stringify(k)})`)));
 }
 
 {
@@ -81,9 +81,9 @@ console.log('B. the direct keys J K L');
   check('; when the power is even already is not an error: the same words, and nothing moves', b.again.ok && b.again.say === 'Power balanced.' && b.o === 2, JSON.stringify(b.again));
   const e = J(`(() => { const C = campNew(1, [], { seed: 1 }); campOrder(C, 'emergency', '', 'key'); const r = campPowerKey(C, 'Semicolon'); return { r, p: C.power.p }; })()`);
   check('during an emergency ; is refused like the panel row (the shields keep their 4 pips)', e.r.used && !e.r.ok && e.p[1] === 4, JSON.stringify(e));
-  check('the scene flashes the three bars on a balance, even when nothing moved', /dk\.sys === 'balance' && this\.gaugeAnim\) this\.gaugeAnim\.flash = this\.gaugeAnim\.flash\.map\(\(\) => 1\)/.test(src('src/campaignscene.js')));
+  check('the scene flashes the three bars on a balance, even when nothing moved', /pr\.row === 'balance' && this\.gaugeAnim\) this\.gaugeAnim\.flash = this\.gaugeAnim\.flash\.map\(\(\) => 1\)/.test(src('src/campaignscene.js')));
   check('its letter and word stand under the last bar\'s key: ";  EVEN"', J('campHudGeom().balance.x') === J('campHudGeom().cells[2].bar.x1') && J('campHudGeom().balance.y') > J('campHudGeom().cells[2].key.y'));
-  check('the H page row says it (J K L ;), and the SYSTEMS panel\'s Balance row names the key', J(`controlsGroup('campaign').rows.some(r => r.k.join() === 'J,K,L,;' && r.t === 'Power: shields, engines, weapons, even')`) && /key ;/.test(J(`CAMP_PANELS.panels.find(p => p.id === 'systems').rows.find(r => r.id === 'balance').help`)));
+  check('the H page rows say it (J K L ;), and the SHIP panel\'s Balance row is the semicolon', J(`controlsGroup('panels').rows.some(r => r.k.join() === ';' && /2 \\/ 2 \\/ 2/.test(r.t))`) && J(`CAMP_PANELS.panels.find(p => p.id === 'ship').rows.find(r => r.id === 'balance').k`) === ';');
 }
 
 console.log('C. the numbers of the dials');

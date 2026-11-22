@@ -48,21 +48,28 @@ The game's own **H** page lists every key; it is built from `src/data_controls.j
 
 ### Campaign
 
+Two hands, two panels, always on the screen: the **left hand** and the **FLEET panel** at the left command the fleet and pick the target; the **right hand** and the **SHIP panel** at the right fly and run the ship. Every row of a panel shows its key, and one key is one order.
+
 | Key | What it does |
 |---|---|
-| `W A S D` (arrows too) | thrust, turn, brake the cruiser |
+| `1` | FLEET: launch the wing, or recall it (a toggle: it launches while ships wait in the bay, else it recalls) |
+| `2` `3` `4` | FLEET: the fighters attack the target (none picked: the nearest enemy), the escorts go to the convoy, the wing guards the cruiser |
+| `W` `E` `R` | FLEET: mine ore, the next stance (Free, Orbit, Keep distance, Match speed, Hold position), the next convoy order (Tuck in, Hold here, Run for it, Carry on) |
+| `Q` | FLEET: the next page of the panel (the stances, the convoy orders: there the digits pick a row; it goes back after a pick or 6 s) |
+| `A` `D` `S` `X` | the one target: the last or next hostile (nearest first), the nearest threat, clear it. A red bracket marks it and its name is in the FLEET panel; `2` attacks it, `8` flies to it, `Enter` fires at it |
+| `7` `8` `9` `0` | SHIP: fly to the goal, fly to the target (Shift: fast burn), a fast burn to the goal, dock at an outpost (aboard, in a level with none, it mends the hull) |
+| `J` `K` `L` `;` `U` | SHIP: a pip to the shields, the engines, the weapons; back to 2, 2, 2; emergency shields |
+| `Enter` `I` | SHIP: a homing missile at the target; the warp blink (once you have that tech) |
+| `P` | SHIP: the next page (BUILD: `7` a fighter, `8` an escort) |
+| Arrow keys | fly the cruiser: Up thrust, Left and Right turn, Down brake |
 | `Space` (hold) | the turrets fire at ships in reach; they never fire on their own |
-| `F` | fire a homing missile at a big ship |
-| `B` | warp blink hop (once you have that tech) |
-| `Q` `E` `C`, then a row's digit | open the FLEET, SHIP or SYSTEMS panel and pick a row. In an open panel Up and Down highlight a row, Enter does it, Left and Right change the page. FLEET: launch, attack, escort, guard, recall, mine; its pages are stances and convoy orders. SHIP: build a fighter, build an escort, autopilot (Shift for the fast burn), dock at an outpost. SYSTEMS: a pip to weapons, shields or engines, balance, emergency shields |
-| `J` `K` `L`, `;` | direct power keys: a pip to shields, engines, weapons; `;` puts the power back to 2, 2, 2 |
-| `1` `2` `3` | answer a pilot's radio call (while its plate is up); pick a tech on its card |
-| `Tab` | the map of the level: click a mark to set it, Enter flies there, Shift+Enter burns; `V` scouts, `T` takes a lane, `X` clears the goal |
-| `+` `-` `0`, mouse wheel | zoom the view or the map |
-| `I`, `U` | type an order to the ship's computer; hold U and say it |
-| `Esc`, `H`, `P`, `M` | pause, the page of keys, the battle pace (Calm, Normal, Brisk), mute |
+| `1` `2` `3` | answer a pilot's radio call (the FLEET panel shows the call in place of its rows); pick a tech on its card |
+| `Tab` | the map of the level: click a mark to set it, `A` `D` step the marks, `7` or Enter flies there, `9` burns, `V` scouts, `T` takes a lane, `X` clears the goal |
+| `-` `=` `Backspace`, mouse wheel | zoom out, zoom in, reset the zoom (the view or the map) |
+| `/` `.` | type an order to the ship's computer; hold `.` and say it |
+| `Esc`, `H`, `M` | pause, the page of keys, mute |
 
-(Panel keys are about to move to Z X C so the three panels sit under the left hand; `PROJECT_STATUS.md` says when it has landed.)
+Command time (the battle at a quarter of its pace) runs while the map or a pilot's call is open, and for two seconds after any FLEET key, so there is time to give the next order. The battle has one pace (Normal); there is no pace key.
 
 ### Long Haul
 

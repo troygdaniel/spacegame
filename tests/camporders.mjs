@@ -146,8 +146,8 @@ check('the open call is said in its pilot\'s voice (prio 0, his own Aura voice),
   check('G  and those picks are the table\'s: each __SMART pick is rated good, each __WRONG pick bad or neither (second: the intercept is neither), never the cautious one', J(`Object.keys(CAMP_CALL_RATE).every(id => { const r = CAMP_CALL_RATE[id], s = ${sm}[id] - 1, w = ${wr}[id] - 1; return r.good.includes(s) && !(r.good.includes(w)); })`), sm + wr);
 }
 const scene = text('src/campaignscene.js');
-check('the scene asks the call before the panels (their digits are theirs when one is open), hears the sim\'s call events, and paints the plate each frame; the key is not taken while a word is typed into the strip',
-  scene.indexOf('campCallKey(this, c)') > 0 && scene.indexOf('campCallKey(this, c)') < scene.indexOf('const pr = ') && /!typing && typeof campCallKey[^\n]*!\(this\.pn && this\.pn\.open\)/.test(scene) && /e\.type === 'call'[^\n]*campCallHear/.test(scene) && /campCallPaint\(this\)/.test(scene));
+check('the scene asks the call before the panels (while a call waits 1 2 3 are its answers, not the FLEET rows\' keys), hears the sim\'s call events, and paints the plate each frame; the key is not taken while a word is typed into the strip',
+  scene.indexOf('campCallKey(this, c)') > 0 && scene.indexOf('campCallKey(this, c)') < scene.indexOf('pr = !typing') && /!typing && typeof campCallKey === 'function' && campCallKey\(this, c\)/.test(scene) && /e\.type === 'call'[^\n]*campCallHear/.test(scene) && /campCallPaint\(this\)/.test(scene));
 const html = text('index.html'), tick = text('src/campaign.js');
 check('the scripts are in index.html (the sim before its drawing) and the sim\'s tick runs the calls once a step', html.indexOf('src/camporders.js') > 0 && html.indexOf('src/camporders.js') < html.indexOf('src/camporderdraw.js') && (tick.match(/campCallsTick\(C, dt\)/g) || []).length === 1);
 

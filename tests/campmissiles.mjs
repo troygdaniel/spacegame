@@ -7,7 +7,7 @@
 //   D. the magazine: slow reload up to the full, never past it, and the ore code can add to it (up to the most it holds)
 //   E. the words: "fire missiles", "missiles at the mothership"; the ship computer's act and what it tells the model
 //   F. Space and F: Space only makes the turrets fire (it never launches a missile), F only launches missiles; the turrets are in tests/campaign.mjs B
-//   G. the scene: F fires, the count on the HUD, the key line and the pause card
+//   G. the scene: Enter fires, the count on the HUD, the key line and the pause card
 //   H. nothing else moved: no order, no missile; the same seed flies the same; tower rings fall to missiles
 // Run: node tests/campmissiles.mjs   (exit code 1 on a failed check)
 import { readFileSync as __rf } from 'node:fs';
@@ -43,7 +43,7 @@ console.log('A. the table and the words');
   check('a new battle: six missiles in the magazine as a plain number (C.missiles), none in the air, the launcher ready', J('C.missiles') === 6 && J('C.rockets.length') === 0 && J('C.nextRocket') === 0 && J('C.orders.missiles') === 0);
   const keys = ['camp.say.missiles', 'camp.say.missilesmother', 'camp.no.nomissiles', 'camp.no.missilewait', 'camp.no.nobig', 'camp.no.range', 'camp.ui.missiles', 'camp.ui.missilenext', 'camp.ui.pausehelp'], md = src('content/text/ui.md');
   check('every word the launcher says is in content/text/ui.md and the game has it: a translation is a text edit', keys.every(k => md.includes('| ' + k + ' |') && J(`uiText('${k}')`) !== k), keys.filter(k => !md.includes('| ' + k + ' |') || J(`uiText('${k}')`) === k).join());
-  check('the words are the table\'s own: the answers are plain lines', J(`uiText('camp.say.missiles')`) === 'Missile away.' && J(`uiText('camp.no.nobig')`) === 'No big ship in missile range, pilot.' && J(`uiText('camp.ui.missiles', { n: 4 })`) === 'F  MISSILES  4');
+  check('the words are the table\'s own: the answers are plain lines', J(`uiText('camp.say.missiles')`) === 'Missile away.' && J(`uiText('camp.no.nobig')`) === 'No big ship in missile range, pilot.' && J(`uiText('camp.ui.missiles', { n: 4 })`) === 'Enter  MISSILES  4');
 }
 
 // ---------- B. firing ----------
@@ -154,7 +154,7 @@ console.log('E. the words, the strip and the voice');
   check('a fleet act outside the Campaign is still refused (the fleet is only yours there)', J(`shipcompPlan('SAY: ok\\nDO: fleet_missiles', { scene: { key: 'Space' } })`).refused === true);
   check('the model path: a reply "DO: fleet_missiles the mothership" is read and checked against the live battle', (() => { g.run('__nb(); window.__gun = __foe("mother", 1500, 0)'); const p = J(`(() => { const p = shipcompPlan('SAY: Firing.\\nDO: fleet_missiles the mothership', __scene); return { action: p.action, arg: p.arg, refused: p.refused, text: p.text }; })()`); return p.action === 'fleet_missiles' && !p.refused && p.text === 'Missile away, at the mothership.'; })());
   const sys = J('shipcompSystem(__scene)');
-  check('the model is told in a battle: the key (F), what it does, and the act on its list', /fleet_missiles/.test(sys) && /presses F to fire a homing missile/.test(sys) && /holds Space to make its eight turrets fire/.test(sys) && /F missiles/.test(sys) && !/main gun/.test(sys));
+  check('the model is told in a battle: the key (Enter, the SHIP panel\'s missile row), what it does, and the act on its list', /fleet_missiles/.test(sys) && /Enter missile at the target/.test(sys) && /holds Space to make its eight turrets fire/.test(sys) && /pick one target/.test(sys) && !/main gun/.test(sys));
   check('the state it is told says how many are left', /Missiles in the magazine: 6 of 6/.test(J('campSummary(C)')));
 }
 
@@ -181,17 +181,17 @@ console.log('G. the scene (on a stand-in)');
     window.__rec = () => { const log = []; const p = new Proxy({}, { get: (t, k) => (k === 'log' ? log : (...a) => { log.push([k, ...a]); return p; }) }); return p; };
     window.__txt = () => ({ text: '', color: '', setColor(c) { this.color = c; return this; }, setText(t) { this.text = t; return this; } });
     window.__fake = () => { const f = Object.create(Campaign.prototype); f.add = __rec(); f.tweens = { add() {} }; f.cameras = document; f.input = document; f.textures = document; f.boom = { explode() {} };
-      f.hud = { missiles: __txt() }; f.msp = {}; f.reachG = __rec(); f.mountG = __rec(); f.mode = 'play'; f.leaving = false; f.camp = C; return f; };
+      f.hud = { missiles: __txt() }; f.msp = {}; f.reachG = __rec(); f.mountG = __rec(); f.mode = 'play'; f.leaving = false; f.mp = null; f.camp = C; return f; };
   `);
   g.run('__m(1); window.__gun = __foe("gunship", 1500, 0, 90000); window.F = __fake(); F.syncRockets(33)');
-  check('the HUD count: "F  MISSILES  6" and nothing about a reload while the magazine is full', J('F.hud.missiles.text') === 'F  MISSILES  6' && J('F.hud.missiles.color') === '#ffb454');
-  g.run('F.onKey({ code: "KeyF" }); F.syncRockets(33)');
-  check('F fires a missile through the order (campOrder) and says it', J('C.missiles') === 5 && J('C.orders.missiles') === 1 && J('__toasts.length') === 1 && J('__toasts[0]') === 'Missile away.');
-  check('the count goes down and the reload shows: "next in 15 s"', J('F.hud.missiles.text') === 'F  MISSILES  5    next in 15 s', J('F.hud.missiles.text'));
+  check('the HUD count: "Enter  MISSILES  6" and nothing about a reload while the magazine is full', J('F.hud.missiles.text') === 'Enter  MISSILES  6' && J('F.hud.missiles.color') === '#ffb454');
+  g.run('F.onKey({ code: "Enter" }); F.syncRockets(33)');
+  check('Enter fires a missile through the order (campOrder) and says it', J('C.missiles') === 5 && J('C.orders.missiles') === 1 && J('__toasts.length') === 1 && J('__toasts[0]') === 'Missile away.');
+  check('the count goes down and the reload shows: "next in 15 s"', J('F.hud.missiles.text') === 'Enter  MISSILES  5    next in 15 s', J('F.hud.missiles.text'));
   g.run('__run(0.2); F.syncRockets(33)');
   check('the missile in the air has a sprite (a body and a flame), and it goes when the missile does', J('Object.keys(F.msp).length') === 1 && (g.run('__run(5); F.syncRockets(33)'), J('Object.keys(F.msp).length') === 0));
-  g.run('F.onKey({ code: "KeyF" }); F.onKey({ code: "KeyF" })');
-  check('an F with the launcher still cycling is answered in words, not ignored', J('__toasts[__toasts.length - 1]') === 'The launcher is still cycling.');
+  g.run('F.onKey({ code: "Enter" }); F.onKey({ code: "Enter" })');
+  check('an Enter with the launcher still cycling is answered in words, not ignored', J('__toasts[__toasts.length - 1]') === 'The launcher is still cycling.');
   g.run('C.missiles = 0; F.syncRockets(33)');
   check('an empty magazine shows in red', J('F.hud.missiles.color') === '#ff4d6d');
   g.run('__m(1); window.F = __fake(); window.__a = __foe("gunship", 300, 0, 9000); __run(0.1); F.syncRockets(33)');
@@ -205,14 +205,14 @@ console.log('G. the scene (on a stand-in)');
   check('nothing in reach: the mounts are drawn plain, with no aiming barrel: no amber line, at most the eight steel stubs along the heading (CAMP_MOUNT.stub, card space-game-campaign-look; none if that commit is reverted)', [0, 8].includes(J('F.mountG.log').filter(l => l[0] === 'lineBetween').length) && J('F.mountG.log').filter(l => l[0] === 'lineStyle').every(l => l[2] === J('CAMP_MOUNT.stub[1]')) && J('F.mountG.log').filter(l => l[0] === 'fillCircle').length === 16);
   g.run('__m(1); window.__gun = __foe("gunship", 1500, 0, 90000); F.camp = C; F.mode = "play"; F.onKey({ code: "Space" })');
   check('the scene: a Space key press launches nothing (Space is read as held, into the sim\'s fire input, every frame)', J('C.missiles') === 6 && J('C.rockets.length') === 0);
-  g.run('F.onKey({ code: "KeyF" })');
-  check('and F launches one', J('C.missiles') === 5 && J('C.rockets.length') === 1);
+  g.run('F.onKey({ code: "Enter" })');
+  check('and Enter launches one', J('C.missiles') === 5 && J('C.rockets.length') === 1);
   g.run('window.G2 = __fake(); G2.hud = {}; G2.syncRockets(33)');
   check('the scene makes its own count text the first time (a scene made before this card, a test stand-in)', J('typeof G2.hud.missiles') === 'object');
   const sc = src('src/campaignscene.js'), md = src('content/text/ui.md');
   check('the scene has no word and no number of the launcher in it: it reads uiText and CAMP', !/MISSILES|Missile away|next in/.test(sc) && /uiText\('camp\.ui\.missiles'/.test(sc) && /uiText\('camp\.ui\.pausehelp'\)/.test(sc) && /CAMP\.missile/.test(sc));
-  check('the key line names Space for the turrets and F for the missiles, the pause card says so too (a line of its own), and nothing says gun', /Space turrets/.test(J(`uiText('camp.ui.keys')`)) && /F missiles/.test(J(`uiText('camp.ui.keys')`)) && !/gun/i.test(J(`uiText('camp.ui.keys')`)) && /camp\.ui\.pausehelp \| Hold Space: the turrets fire at ships close by\. F fires a homing missile/.test(md));
-  check('in the scene F is the missile key and Space is not: no line gives a missile to Space', /c === 'KeyF'\) this\.fireMissile\(\)/.test(sc) && !/SPACE[^\n]*fireMissile|fireMissile[^\n]*SPACE|Space[^\n]*campOrder\(C, 'missiles'/.test(sc));
+  check('the key line names Space for the turrets and Enter for the missile, the pause card says so too (a line of its own, with the key from the table), and nothing says gun', /Space turrets/.test(J(`uiText('camp.ui.keys')`)) && /Enter missile/.test(J(`uiText('camp.ui.keys')`)) && !/gun/i.test(J(`uiText('camp.ui.keys')`)) && /camp\.ui\.pausehelp \| Hold Space: the turrets fire at ships close by\. \{keymissile\} fires a homing missile/.test(md));
+  check('in the scene the missile is the SHIP panel\'s Enter row (CAMP_PANELS, order missiles) and Space is not: no line gives a missile to Space', J(`CAMP_PANELS.panels[1].rows.find(r => r.id === 'missile').code`) === 'Enter' && !/SPACE[^\n]*campOrder\(C, 'missiles'|Space[^\n]*campOrder\(C, 'missiles'/.test(sc));
   check('the turrets\' shots are amber, so they are not mistaken for the main gun\'s', /b\.pd\) im\.setTint\(0xffd37a\)/.test(sc));
 }
 

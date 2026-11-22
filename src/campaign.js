@@ -292,7 +292,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 238], [1056, 0, 1280, 226], [360, 0, 920, 152], [0, 656, 1020, 720], [18, 232, 336, 272], [1100, 232, 1262, 272]] // screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 238], [1056, 0, 1280, 226], [360, 0, 920, 152], [0, 656, 1020, 720]] // (the two panels' own rectangles are added by the scene: campPanelsKeep, src/campanelsdraw.js) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {
@@ -693,7 +693,7 @@ function campNew(level, techs, opts) {
   const C = {
     level, mission: L.mission, L, flags: {}, arrivedAt: campHere(level, L) ? 0 : null, hpS: CAMP.alien.hpScale * (L.hpScale || 1), dmgS: CAMP.alien.damageScale * (L.dmgScale || 1), pace: campPaceMult(opts.pace), shot: Math.pow(campPaceMult(opts.pace), CAMP.pace.shots), via: opts.via || 'menu', t: 0, rng: campRng(opts.seed == null ? 1 : opts.seed), god: !!opts.god, nextId: 1, ships: [], by: {}, bullets: [], events: [],
     input: { turn: 0, thrust: 0, brake: false, fire: false, blink: false },
-    timeScale: 1,                                   // command time (src/campslow.js): 1 at the battle's own pace, CAMP.slow.scale while a panel, the map or a call is open; the scene sets it each frame and steps the battle by dt times it, and a clock of the player's seconds (the order calls') counts dt over it
+    timeScale: 1,                                   // command time (src/campslow.js): 1 at the battle's own pace, CAMP.slow.scale while the map or a call is open, or just after a fleet key; the scene sets it each frame and steps the battle by dt times it, and a clock of the player's seconds (the order calls') counts dt over it
     techs: (techs || []).filter(t => CAMP.tech[t]),
     earth: L.defend ? campDefend(level, L.defend) : L.earth === false ? null : { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield }, caches: (L.caches || []).map(c => ({ x: c[0], y: c[1], got: false })), cachesGot: 0,
     ore: Math.max(0, Math.min(CAMP.ore.cap, opts.ore != null ? opts.ore : (L.startOre != null ? L.startOre : CAMP.ore.start))), shield: CAMP.carrier.shield, pickups: [], build: { queue: [] },
@@ -1828,6 +1828,6 @@ function campSummary(C) {
   const out = campWing(C, 'fighter').length, esc = campWing(C, 'escort').length, al = campAliens(C).filter(u => u.faction !== 'pirate').length, pi = campAliens(C).length - al, cv = campConvoys(C).map(u => campConvoyName(u));
   return 'Campaign level ' + C.level + ', ' + L.name + '. Goal: ' + campObjective(C) + ' Carrier hull ' + Math.round(c.hp) + ' of ' + Math.round(c.maxHp) + ', shield ' + Math.round(C.shield) + ' of ' + CAMP.carrier.shield + '. Ore in the store: ' + Math.floor(C.ore) + ' of ' + CAMP.ore.cap + (C.build.queue.length ? ', building ' + C.build.queue.length + ' ship' + (C.build.queue.length === 1 ? '' : 's') : '') + '.'
     + (C.earth ? ' Earth shield ' + Math.round(C.earth.shield / C.earth.max * 100) + ' percent.' : '') + ' In the bay: ' + C.bay.fighters + ' fighters, ' + C.bay.escorts + ' escorts' + (campRepairing(C) ? ', ' + campRepairing(C) + ' being mended' : '') + '. Out: '
-    + out + ' fighters, ' + esc + ' escorts. Missiles in the magazine: ' + C.missiles + ' of ' + C.magazine + ' (F fires one at ' + (L.win === 'mother' || m ? 'the mothership or ' : '') + 'the nearest big ship).' + (al || C.alienSeen ? ' Aliens alive: ' + al + '.' : '') + (pi ? ' Pirates alive: ' + pi + '.' : '') + campAnomLine(C) + (L.convoys.length ? ' Convoys flying: ' + cv.join(', ') + (cv.length ? '' : 'none') + '.' : '')
+    + out + ' fighters, ' + esc + ' escorts. Missiles in the magazine: ' + C.missiles + ' of ' + C.magazine + ' (' + campKeyVar('keymissile') + ' fires one at the target, or with none picked at ' + (L.win === 'mother' || m ? 'the mothership or ' : '') + 'the nearest big ship).' + (al || C.alienSeen ? ' Aliens alive: ' + al + '.' : '') + (pi ? ' Pirates alive: ' + pi + '.' : '') + campAnomLine(C) + (L.convoys.length ? ' Convoys flying: ' + cv.join(', ') + (cv.length ? '' : 'none') + '.' : '')
     + (L.win === 'mother' ? (m ? ' The alien mothership is ' + Math.round(campDist(m, c) / 10) + ' km away.' : ' The mothership has not come yet.') : '');
 }
