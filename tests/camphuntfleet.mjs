@@ -7,7 +7,7 @@ const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + n
 const g = nodeGame();
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 
-// ---- 1. the map's V and T act on the row that is marked in the list, not on the place a trip is flying to ----
+// ---- 1. the map's V acts on the row that is marked in the list, not on the place a trip is flying to (and T is no key of the map: the fork of 1.1 was cut, card space-game-cut-lane-fork) ----
 // 1.1's fork: the HUD says AUTOPILOT Transport convoy, the toast says "Pick a lane on the map, press T." A player who follows the transport opens the map with that trip on: its place is SET
 // (the convoy) and the list starts on it. Up or Down moves the mark to a lane (they were W and S then); V and T went to the set place all the same: V said "This mission has no scouting." (the convoy cannot be scouted),
 // T did nothing, and the transport waited out the whole fork wait ("No word. Taking the short lane.").
@@ -17,12 +17,12 @@ g.run(`window.__mapkeys = (sel, set) => { const seen = { scout: null, take: null
   const s = { mp, camp: {} }, r = { v: campMapKey(s, 'KeyV'), t: campMapKey(s, 'KeyT') };
   window.campMapScout = o[0]; window.campMapTake = o[1]; return Object.assign(seen, r); };`);
 const a = J(`__mapkeys('lane:long', 'convoy:freighter-t1')`);
-check('V with a trip set to the convoy and the mark on the long lane scouts the long lane', a.scout === 'lane:long', JSON.stringify(a));
-check('T with a trip set to the convoy and the mark on the long lane takes the long lane', a.take === 'lane:long' && a.t === true, JSON.stringify(a));
+check('V with a trip set to the convoy and the mark on the long lane scouts the long lane (a route row of a mission that has a fork: the system is dormant, not gone)', a.scout === 'lane:long', JSON.stringify(a));
+check('T is not a key of the map any more: it takes no lane and the map does not claim it', a.take === null && a.t === false, JSON.stringify(a));
 const b = J(`__mapkeys('convoy:freighter-t1', 'convoy:freighter-t1')`);
-check('with the mark on the convoy itself V scouts it (the map says it cannot) and T is not the map\'s (it is not a lane)', b.scout === 'convoy:freighter-t1' && b.take === null && b.t === false, JSON.stringify(b));
+check('with the mark on the convoy itself V scouts it (the map says it cannot), and T is still not the map\'s', b.scout === 'convoy:freighter-t1' && b.take === null && b.t === false, JSON.stringify(b));
 const c = J(`__mapkeys('lane:short', '')`);
-check('with nothing set the mark is what V and T act on, as before', c.scout === 'lane:short' && c.take === 'lane:short', JSON.stringify(c));
+check('with nothing set the mark is what V acts on, as before', c.scout === 'lane:short' && c.take === null, JSON.stringify(c));
 
 // ---- 2. a toast that came after a long one does not show the tail of it ----
 // A message that wraps on two lines used to be remembered by its LAST LINE: a toast within 1.5 s of it was "paired" with that fragment, and the box showed the fragment on top. 1.1's own hints
@@ -56,14 +56,12 @@ check('1.1\'s lost card tip names the transport, the list and the row from the k
 const dl = J(`['camp.o.deliver', 'camp.o.deliver.transport'].map(k => uiText(k, { got: 0, need: 1 }).length)`);
 check('both deliver goals fit one line of the map\'s column (15 px type, 246 px: 27 letters): "Transport delivered: 0 of 1." wrapped its "1." alone', dl.every(n => n <= 27), JSON.stringify(dl));
 
-// ---- 4. 1.1 does have scouting: V on a row that is not a lane says what scouts can read, not "This mission has no scouting." ----
+// ---- 4. 1.1 has no scouting now: V says so (the fork it scouted was cut: card space-game-cut-lane-fork; the other levels have recon and fetch) ----
 const sc = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); campOrder(C, 'launch'); for (let i = 0; i < 600; i++) campStep(C, 1 / 30);
   const row = k => campNavRows(C).find(r => r.kind === k), say = r => r.say || r.code, out = {};
-  out.convoy = say(campScoutDo(C, row('convoy'), true)); out.lane = say(campScoutDo(C, row('lane'), true)); C.route.passed = true; out.past = say(campScoutDo(C, row('convoy'), true));
+  out.convoy = say(campScoutDo(C, row('convoy'), true)); out.lane = say(campScoutDo(C, row('place') || { x: 0, y: 0 }, true));
   const D = campNew(1, [], { seed: 1, mission: 2 }); campOrder(D, 'launch'); for (let i = 0; i < 600; i++) campStep(D, 1 / 30); out.none = say(campScoutDo(D, campNavRows(D).find(r => r.kind === 'convoy') || { x: 0, y: 0 }, true)); return out; })()`);
-check('1.1, V on the transport: "Scouts only read the lanes here, pilot."', sc.convoy === 'Scouts only read the lanes here, pilot.', JSON.stringify(sc));
-check('1.1, V on a lane is allowed (the scout goes)', /Scout \d is going to Short lane/.test(sc.lane), JSON.stringify(sc));
-check('1.1, the fork behind: "The fork is behind us. Nothing to scout."; 1.3 (no fork, no scouting) keeps "This mission has no scouting."', sc.past === 'The fork is behind us. Nothing to scout.' && sc.none === 'This mission has no scouting.', JSON.stringify(sc));
+check('1.1, V on the transport or on a place: "This mission has no scouting." (as 1.3 says)', sc.convoy === 'This mission has no scouting.' && sc.lane === 'This mission has no scouting.' && sc.none === 'This mission has no scouting.', JSON.stringify(sc));
 
 // ---- 5. the briefing counts every pirate 1.1 sends: the leader brings two skiffs ----
 // "Expect 6 pirate skiffs, 2 pirate torpedo boats, the pirate leader": the flight met 8 skiffs (the distress call's 2, the ambush's 4 and the 2 that come with the leader).

@@ -2,14 +2,14 @@
 // Troy found 1.1 boring: lots of flying and fights that were not his. It is now the one finished example of the fleet-command systems, four beats about a minute apart, each a place for the player to direct
 // the fleet (docs/CAMPAIGN.md "Mission 1.1 in four beats"). The pure half (no Phaser, no page; tests/campbeats.mjs runs it in Node). The beats are mission DATA; what is here is what the data needs:
 //   1  Leaving Luna: a patrol of two flies with the transport and turns back at the edge of safe space.  traffic: [{ kind: 'patrol', escort: { convoy: 't1', until: 0.12, say } }]  (campPatrolAI, src/camppirates.js)
-//   2  The distress call: a miner works off the route; at a share of the road a wave of pirates falls on it and the pilots ask for orders (an order call, src/camporders.js): send the fighters, send the whole
+//   2  The distress call: a miner works off the road; at a share of the road a wave of pirates falls on it and the pilots ask for orders (an order call, src/camporders.js): send the fighters, send the whole
 //      wing (the transport is left to the cruiser), or stay. A wave row says  beat: 'distress', victim: '<traffic id>', thanks: 40 (the ore a saved miner gives) and a cue  { name: 'distress', on: { lane } }.
-//   3  The ambush: a lane's wave with fighters and torpedo boats (src/camproute.js, src/camptorpedo.js): the fork and a scout can find it first.
+//   3  The ambush: a wave on the road with fighters and torpedo boats (src/camptorpedo.js). (The road used to fork here, with the ambush on the short lane: cut by card space-game-cut-lane-fork, Troy 22 Nov 2026.)
 //   4  The pirate leader: a rival ship near Ceres (src/camprival.js): kill it (the bonus), or get her past.
 //   campBeatsNew(C)            at campNew: C.beats = { patrolSaid, asked, thanked }
 //   campBeats(C)               each tick: the pirates wear a crippled miner down (the wave row's `harry`: hit points a second for each pirate within CAMP_BEATS.harryNear of it), and a miner that was saved gives its thanks (once: the ore, the radio)
 //   CAMP_CALL_TYPES / CAMP_CALL_FX  get the scripted call `distress` (rescue, rescueall, stay) when src/camporders.js is there; campBeats opens it (campCallStart)
-//   campBeatKey(id)            the key a hint names, from the key table (CAMP_PANELS: fleet, ship; the Campaign's CONTROLS rows: map, scout, take), never a letter of its own
+//   campBeatKey(id)            the key a hint names, from the key table (CAMP_PANELS: fleet, ship; the Campaign's CONTROLS rows: map), never a letter of its own
 //   campBeatHint(C, id)        the words of a hint with its keys in them (camp.hint.<id>)            campBeatNudge(C, shown)  the hint that is due (CAMPBEATHINTS), which campNudge (src/campnudge.js) asks for
 
 const CAMP_BEATS = { harryNear: 700 }; // px: a pirate this near the crippled miner is on it
@@ -21,12 +21,10 @@ function campBeatKey(id) {
   const rows = ((typeof CONTROLS === 'object' && CONTROLS.find(c => c.id === 'campaign')) || { rows: [] }).rows;
   const pick = re => rows.find(r => re.test(r.t));
   if (id === 'map') { const r = pick(/Open or close the map/); return r ? r.k[0] : 'Tab'; }
-  if (id === 'scout') { const r = pick(/scout/i); return r ? r.k[0] : 'V'; }
-  if (id === 'take') { const r = pick(/scout/i); return r && r.k[1] ? r.k[1] : 'T'; }
   return '';
 }
 const campBeatRow = id => { const r = typeof campKeyRow === 'function' ? campKeyRow(id) : null; return r ? r.label : ''; }; // the words of a row of the fleet list, as the list says them ("Convoy: tuck in")
-const campBeatKeys = () => ({ fleet: campBeatKey('fleet'), ship: campBeatKey('ship'), convoy: campBeatKey('convoy'), map: campBeatKey('map'), scout: campBeatKey('scout'), take: campBeatKey('take'), tuck: campBeatRow('ctuck'), run: campBeatRow('crun') }); // every key a line may name, as the key table says it (the lists' own are {fleetkey} {rowlaunch} ... of src/data_controls.js campKeyVar)
+const campBeatKeys = () => ({ fleet: campBeatKey('fleet'), ship: campBeatKey('ship'), convoy: campBeatKey('convoy'), map: campBeatKey('map'), tuck: campBeatRow('ctuck'), run: campBeatRow('crun') }); // every key a line may name, as the key table says it (the lists' own are {fleetkey} {rowlaunch} ... of src/data_controls.js campKeyVar)
 const campBeatHint = (C, id) => uiText('camp.hint.' + id, campBeatKeys());
 
 // beat 2: the thanks of a miner that was saved
@@ -55,15 +53,13 @@ if (typeof CAMP_CALL_TYPES === 'object' && typeof CAMP_CALL_FX === 'object' && !
 // the hints of the mission: plain data like src/campnudge.js's, but each is `wait`ed for until `until` (it shows when it is true, not only at its second), and its words carry keys from the key table.
 // campNudge (src/campnudge.js) asks for one when it has none of its own to give; each is shown once, in 1.1 only
 const CAMPBEATHINTS = [
-  { id: 'b-scout', at: 14, until: 55, hint: 'scout', when: C => C.orders.scout === 0 && !C.route.lane && !C.route.passed },
-  { id: 'b-fast', at: 24, until: 120, hint: 'fast', when: C => !(C.nav && C.nav.on) && !C.route.passed && !campAliens(C).length && !!C.carrier && !!campConvoys(C)[0] && campDist(C.carrier, campConvoys(C)[0]) > 2500 },
+  { id: 'b-fast', at: 24, until: 120, hint: 'fast', when: C => !(C.nav && C.nav.on) && campLane(C) < 0.2 && !campAliens(C).length && !!C.carrier && !!campConvoys(C)[0] && campDist(C.carrier, campConvoys(C)[0]) > 2500 }, // (the first fifth of the road only: it was "before the fork" while 1.1 had one)
   { id: 'b-tuck', at: 60, until: 400, hint: 'tuck', when: C => typeof campTorpedoBoats === 'function' && campTorpedoBoats(C).some(u => !u.running) && typeof campConvoyState === 'function' && campConvoyState(C) !== 'tuck' }, // torpedo boats about: tuck the transport in under the shield (src/campconvoy.js)
-  { id: 'b-run', at: 60, until: 400, hint: 'run', when: C => !!campRivalOf(C, 'leader') && typeof campConvoyState === 'function' && campConvoyState(C) !== 'run' }, // the leader is out: run the transport past it
-  { id: 'b-take', at: 50, until: 140, hint: 'take', when: C => !C.route.lane && !C.route.passed && !!campRouteHolding(C) }
+  { id: 'b-run', at: 60, until: 400, hint: 'run', when: C => !!campRivalOf(C, 'leader') && typeof campConvoyState === 'function' && campConvoyState(C) !== 'run' } // the leader is out: run the transport past it
 ];
 function campBeatNudge(C, shown) {
   try {
-    if (!C || C.result || !shown || C.level !== 1 || !C.route || C.L.mid !== 'escort') return null;
+    if (!C || C.result || !shown || C.level !== 1 || C.L.mid !== 'escort') return null;
     for (const h of CAMPBEATHINTS) {
       if (shown[h.id] || C.t < h.at * 1000) continue;
       if (!h.when(C)) { if (C.t >= h.until * 1000) shown[h.id] = true; continue; } // not true yet: it waits; its time is up, it is never shown

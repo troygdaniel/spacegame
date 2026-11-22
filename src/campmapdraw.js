@@ -273,8 +273,8 @@ function campMapTake(s, row) {
   const C = s.camp; if (!C || !row || row.kind !== 'lane' || C.result) return false;
   const r = campOrder(C, 'lane', row, 'click'); toast(s, r.say, r.ok ? '#b8f0ff' : '#ffb454'); if (s.mp) s.mp.dirty = true; return !!r.ok;
 }
-// a key while the map is open (card one-list-keys): Up and Down step the marks, Left and Right go to the last or the next group, Enter flies there (Shift+Enter fast), V scouts there, T takes a lane,
-// X clears the trip. The digits and A D are not the map's any more (no key is reused: A and D are the target's). true when the key was the map's.
+// a key while the map is open (card one-list-keys): Up and Down step the marks, Left and Right go to the last or the next group, Enter flies there (Shift+Enter fast), V scouts there,
+// X clears the trip (T took a lane at a fork until card space-game-cut-lane-fork: the Take button below is dormant with the route system). The digits and A D are not the map's any more (no key is reused: A and D are the target's). true when the key was the map's.
 function campMapKey(s, code, shift) {
   const mp = s.mp; if (!mp) return false;
   const rows = mp.rows, at = Math.max(0, rows.findIndex(r => r.id === mp.selId));
@@ -288,7 +288,6 @@ function campMapKey(s, code, shift) {
   }
   if (code === 'Enter' || code === 'NumpadEnter') { if (rows[at]) campMapFly(s, rows[at], !!shift); return true; } // Enter: regular speed; Shift+Enter: fast
   if (code === 'KeyV') { const row = rows[at]; if (row) campMapScout(s, row); return true; } // V: send a scout to the chosen place: the row that is marked in the list (a click on a mark chooses it too; the place a trip is flying to stays SET, with its buttons, and is not what V is about: card space-game-hunt-l1-fleet)
-  if (code === 'KeyT') { const row = rows[at]; if (row && row.kind === 'lane') { campMapTake(s, row); return true; } return false; } // T: take the lane that is chosen (marked in the list), at a fork in the road
   if (code === 'KeyX') { if (s.camp && (s.camp.nav || s.camp.navWait)) { campNavClear(s.camp, 'clear'); mp.dirty = true; } if (mp.flewId && mp.setId === mp.flewId) { mp.setId = ''; mp.flewId = ''; } return true; }
   return false;
 }

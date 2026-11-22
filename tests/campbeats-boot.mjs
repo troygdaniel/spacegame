@@ -22,7 +22,7 @@ try {
   await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
   for (let i = 0; i < 4 && (await j(`${SC}.mode`)) !== 'play'; i++) { await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', repeat: false }); return 1; })()`); await t.run(300); }
   check('the flight has started, on the rim run, with the beats in its row', (await j(`${SC}.mode`)) === 'play' && (await j(`${SC}.camp.L.mid === 'escort' && ${SC}.camp.L.rivals.length === 1 && ${SC}.camp.L.traffic.length === 2`)));
-  await t.ev(`(() => { const C = ${SC}.camp; campOrder(C, 'launch'); campOrder(C, 'lane', 'short'); return 1; })()`); await t.run(5000);
+  await t.ev(`(() => { const C = ${SC}.camp; campOrder(C, 'launch'); return 1; })()`); await t.run(5000);
   check('beat 1: two patrol ships are about, neutral, on the map list', (await j(`${SC}.camp.ships.filter(u => u.kind === 'patrol').length`)) === 2);
   await snap(t, 'patrol');
   // beat 2: the distress call

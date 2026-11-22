@@ -30,7 +30,7 @@ How the game is built, for someone (a person or an AI) who has never seen it. It
 | The one target (A D S X; the Attack rows of the fighters and escorts lists go at it, the autopilot list's Fly to the target flies to it, Enter fires at it) | `camptarget.js` | `camptargetdraw.js` (the bracket) |
 | Orders to the wing, groups and targets | `campwing.js`, `campconvoy.js` (escorted ships), `campdogfight.js`, `camprepair.js` | `campconvoyscene.js` |
 | Pilots ask for orders (timed calls: a small amber list in the middle, Up, Down, Enter) | `camporders.js` | `camporderdraw.js` |
-| Mission 1.1's beats, route forks, scouting | `campbeats.js`, `camproute.js`, `campanomaly.js` | `campanomalydraw.js` |
+| Mission 1.1's beats, route forks (dormant: no mission has one since 22 Nov), scouting | `campbeats.js`, `camproute.js`, `campanomaly.js` | `campanomalydraw.js` |
 | Enemies: pirates, torpedo boats, the rival | `camppirates.js`, `camptorpedo.js`, `camprival.js` | `camppirateart.js`, `camptorpedoscene.js`, `camprivaldraw.js` |
 | The three gauges and power bars | `camphud.js` | same file |
 | Maps and navigation | `campmap.js`, `campnav.js`, `campsol.js`, `campzoom.js` | `campmapdraw.js`, `campmapfire.js` |

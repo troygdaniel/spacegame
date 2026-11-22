@@ -8,7 +8,7 @@
 //   D  what a lane hides: its waves come only to a convoy on that lane; the other lane's never come; the wave counter does not count them
 //   E  the scout: the lanes are rows of the Tab map; a scout flies to a lane, reads it, and says what is there (ambush, quiet, a cache)
 //   F  the words, the strip and the voice, the map's lane marks (source)
-//   G  the real data: 1.1 of the rim run has a fork (and the briefing counts the default lane's raids)
+//   G  the real data: no mission has a fork now (1.1's was cut: card space-game-cut-lane-fork); the briefing counts 1.1's raids
 // Run: node tests/camproute.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
@@ -182,7 +182,7 @@ sec('F', () => {
   check('F  a question about lanes is not an order ("what is the long lane")', !/fleet_lane/.test(JSON.stringify(intent('what is the long lane'))));
   check('F  "scout the long lane" and "send a scout to the short route" are scout orders (a lane is a place to scout)', JSON.stringify(intent('scout the long lane')) === '{"act":"fleet_scout","arg":"long lane"}' && JSON.stringify(intent('send a scout to the short route')) === '{"act":"fleet_scout","arg":"short route"}');
   check('F  the computer\'s closed list has fleet_lane and runs it (scFleet)', /fleet_lane/.test(sc) && /fleet_lane: \(s, arg\) => scFleet\(s, 'lane', arg\)/.test(sc));
-  check('F  the map draws the lanes: campMapMarks gives each lane a mark with its points, the chosen one flagged; the Take button and the key T are in campmapdraw', /campRouteMarks/.test(mp) && /type: 'lane'/.test(read('src/camproute.js')) && /m\.type === 'lane'/.test(md) && /btnTake/.test(md) && /KeyT/.test(md));
+  check('F  the map draws the lanes: campMapMarks gives each lane a mark with its points, the chosen one flagged; the Take button is in campmapdraw (a click; the key T was taken out of the map with the fork of 1.1: card space-game-cut-lane-fork)', /campRouteMarks/.test(mp) && /type: 'lane'/.test(read('src/camproute.js')) && /m\.type === 'lane'/.test(md) && /btnTake/.test(md) && !/code === 'KeyT'/.test(md));
   check('F  the bot answers the fork: it picks a lane (campaign-bot says lane)', /'lane'/.test(bot));
   g.run('__mk(0); campOrder(C, "lane", "long")');
   const marks = J('campMapMarks(C).filter(m => m.type === "lane").map(m => ({ id: m.id, chosen: !!m.chosen, n: m.pts.length }))');
@@ -190,21 +190,12 @@ sec('F', () => {
 });
 
 sec('G', () => {
-  console.log('G. the real data: 1.1 of the rim run');
-  const row = J('campMissionRow(1, 0)'), R = row.route;
-  check('G  1.1 has a fork: two lanes, short (straight) and long (bends 4,200 px), the short one the default, 45 s to choose', !!R && R.lanes.length === 2 && R.lanes[0].id === 'short' && R.lanes[0].bend === 0 && R.lanes[1].id === 'long' && R.lanes[1].bend === -4200 && R.pick === 'short' && R.wait === 45);
-  check('G  its waves: one on every lane (the distress call of beat 2), one on the short lane (the ambush of beat 3) and two on the long lane (four in the row: card space-game-fleet-command-tune)', row.waves.length === 4 && row.waves.filter(w => !w.lane).length === 1 && row.waves.filter(w => w.lane === 'short').length === 1 && row.waves.filter(w => w.lane === 'long').length === 2);
-  check('G  the short lane hides the ambush (at 0.52: four skiffs and two torpedo boats); the long lane two small raids of two skiffs (at 0.46 and 0.62) and a cache of 40 ore', JSON.stringify(row.waves.filter(w => w.lane === 'short').map(w => [w.on.lane, w.ships.skiff, w.ships.tboat])) === '[[0.52,4,2]]' && row.waves.filter(w => w.lane === 'long').map(w => w.on.lane + ':' + w.ships.skiff).join() === '0.46:2,0.62:2' && R.lanes[1].hides.caches[0].ore === 40);
-  g.run('window.C = campNew(1, [], { seed: 1, mission: 0 }); C.god = true; __ev.length = 0');
-  const geo = J('(() => { const g = campRouteGeo(C); return { short: Math.round(g.lanes.short.len), long: Math.round(g.lanes.long.len), road: Math.round(g.len) }; })()');
-  check('G  the road is the 16,500 px of Luna to Ceres; the long lane is about 3,000 px longer than the short one (a minute at 52 px/s), the short one a share of 0.6 of the road', geo.road > 16000 && geo.road < 17000 && geo.long - geo.short > 2500 && geo.long - geo.short < 3600 && Math.abs(geo.short - 0.6 * geo.road) < 5, JSON.stringify(geo));
-  g.run('__go(8)');
-  check('G  the radio tells the player the road forks, once, with the transport on its way', J("__ev.filter(e => e.type === 'say' && e.key === 'camp.say.fork').length") === 1 && J('campConvoys(C).length') === 1);
-  g.run('__go(75)');
-  check('G  left alone she holds at the fork and after 45 s takes the short lane (nothing is chosen for the player)', J('C.route.lane') === null || J('C.route.lane') === 'short');
-  check('G  the briefing counts the raids of the default lane, not both lanes\' (8 skiffs: the distress call\'s 2, the ambush\'s 4 and the leader\'s 2; 2 torpedo boats and the pirate leader)', (() => { const e = J('campBriefEnemies(1, 0).list'); const n = k => (e.find(x => x.kind === k) || { n: 0 }).n; return n('skiff') === 2 + 4 + 2 && n('tboat') === 2 && n('pirateleader') === 1; })(), JSON.stringify(J('campBriefEnemies(1, 0).list')));
-  g.run('window.C = campNew(1, [], { seed: 1, mission: 0 }); C.god = true; __ev.length = 0; __go(66)');
-  check('G  nothing hostile comes before the fork (the patrol sees her off and is gone), so the fork is quiet: at 66 s she is at it, holding, with about 45 s of the wait to run', !!J('campRouteHolding(C)') && J('campRouteHolding(C).left') > 40 && J('campAliens(C).length') === 0);
+  console.log('G. the real data: 1.1 of the rim run has no fork any more (card space-game-cut-lane-fork, Troy 22 Nov 2026: "remove picking a lane"); the system stays here, dormant, and the fixture above is what keeps it tested');
+  const row = J('campMissionRow(1, 0)');
+  check('G  no mission of the game has a route in its row (the system is dormant: a row that writes one still gets its fork, A to F above)', !row.route && [0, 1, 2].every(i => [1, 2, 3].every(lv => !J(`campMissionRow(${lv}, ${i}).route`))));
+  g.run('window.C = campNew(1, [], { seed: 1, mission: 0 }); C.god = true; __ev.length = 0; __go(75)');
+  check('G  1.1 has no C.route, its transport has no route to fly, and nothing says the road forks', J('C.route') === null && J('campConvoys(C).every(c => !c.rt)') && !J("__ev.some(e => e.type === 'fork' || (e.type === 'say' && /fork/.test(e.key)))") && J('campRouteHolding(C)') === null);
+  check('G  the briefing counts what 1.1 sends (8 skiffs: the distress call\'s 2, the ambush\'s 4 and the leader\'s 2; 2 torpedo boats and the pirate leader)', (() => { const e = J('campBriefEnemies(1, 0).list'); const n = k => (e.find(x => x.kind === k) || { n: 0 }).n; return n('skiff') === 2 + 4 + 2 && n('tboat') === 2 && n('pirateleader') === 1; })(), JSON.stringify(J('campBriefEnemies(1, 0).list')));
 });
 
 console.log(failed ? `\n${failed} of ${n} checks failed` : `\nall ${n} checks passed`);

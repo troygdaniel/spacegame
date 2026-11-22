@@ -19,8 +19,6 @@ The words of mission 1.1 in four beats (card space-game-l1-1-beats; src/campbeat
 | camp.call.r.stay | Copy. Staying with the transport. |
 | camp.b.rival | Destroy the pirate leader |
 | camp.b.torpedoes | Torpedo hits: {n} or fewer |
-| camp.hint.scout | Open the map ({map}), pick a lane, press {scout} to send a scout. |
-| camp.hint.take | The transport waits at the fork. Pick a lane on the map, press {take}. |
 | camp.hint.fast | A long quiet road. On the map ({map}), pick the transport and burn Fast. |
 | camp.hint.fleet | {fleetkey} is the fleet. {fighterskey} fighters, {escortskey} escorts, {convoykey} convoy. |
 | camp.bf.enemy.tboat.one | {n} pirate torpedo boat |
