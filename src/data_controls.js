@@ -57,7 +57,7 @@ const CAMP_PANELS = {
       { id: 'ccarry', order: 'convoy', arg: 'carry on', label: 'Carry on', help: 'Convoy goes its own way again' }
     ] },
     { id: 'squads', parent: 'fleet', side: 'left', key: 'W', code: 'KeyW', title: 'ALL SQUADS', tab: 'All', name: 'the all-squads list', rows: [ // all the fighters at once: the three squads' orders and the bay's (card space-game-fighter-squads)
-      { id: 'attack', order: 'attack', pick: 'enemy', label: 'Attack the target', help: 'All squads attack the target' }, // the target of A D S X; none picked: the nearest enemy, as the order always was
+      { id: 'attack', order: 'attack', pick: 'enemy', label: 'Attack the target', help: 'All squads attack the target' }, // the target of A D S X; none picked: the one hostile, or a sub-list of them to choose from (pick, src/camppick.js)
       { id: 'fguard', wing: ['fighters', 'guard'], label: 'Guard the cruiser', help: 'All squads guard the cruiser' },
       { id: 'frecall', wing: ['fighters', 'recall'], label: 'Recall', help: 'All squads fly home to the bay' },
       { id: 'fmine', wing: ['fighters', 'mine'], pick: 'field', label: 'Mine ore', help: 'All squads mine ore' },

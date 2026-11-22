@@ -70,7 +70,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 | `Tab` | the map of the level: `Up` `Down` step the marks, `Enter` flies there (`Shift+Enter` fast), a click sets a mark, `V` scouts, `X` clears the trip |
 | `-` `=` `Backspace`, mouse wheel | zoom out, zoom in, reset the zoom (the view or the map) |
 | `/` `.` | type an order to the ship's computer; hold `.` and say it (both need a chat key: Settings > Keys) |
-| `Esc`, `H`, `M` | close a list or the map, else pause; the page of keys; mute |
+| `Esc`, `H`, `M` | back one step in the lists (a target list to its list, a list a row opened to `Q` or `P`; a list its own key opened closes), then close the map, else pause; the page of keys; mute |
 | `N` | the **tuning panel** (flight and ready room): numbers and switches changed live, kept in this browser; `Up` `Down` choose, `Left` `Right` change (`Shift` ten steps), `Backspace` back to the default; *Copy my settings* copies what you changed. A mission flown tuned keeps no score |
 
 **A pilot's call** (a timed radio prompt with three answers) is a small amber list low in the middle of the screen: `Up` and `Down` pick an answer, `Enter` gives it. The highlight starts on the pilot's own cautious pick, which is also what he does if you say nothing: he waits 8 seconds, shown by a bar. **Press `Up` or `Down` and the timer stops** (the bar stays where it was and turns pale blue, and the key line says "Timer stopped"): the call then waits for `Enter` (30 seconds at the longest, then he takes the cautious pick); touch nothing and it runs out as ever. No other key stops it. Only one list has the arrows and Enter at a time: while an order list (or the map) is open the call waits, dimmed, and says so.
