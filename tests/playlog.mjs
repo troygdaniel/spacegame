@@ -147,6 +147,12 @@ let dips = only(ls, 'fps_dip');
 check('under 30 fps for 2 s or more is one dip with the worst rate and how long', dips.length === 1 && dips[0].fps >= 19 && dips[0].fps <= 21 && dips[0].secs >= 4, JSON.stringify(dips));
 ls = lines(`for (let i = 0; i < 400; i++) { __t += 16; L.frame(16); } L.frame(5000); L.frame(0); L.frame(NaN); for (let i = 0; i < 400; i++) { __t += 16; L.frame(16); }`);
 check('60 fps with a hidden-tab frame of 5 s and bad numbers in it is no dip', only(ls, 'fps_dip').length === 0);
+// hitches in the Campaign (card perf-fights): a fight that runs at 45 frames a second, or one long frame in sixty, is no fps_dip; the minute's counts say it
+ls = lines(`L.tick(__snap({ scene: 'Campaign' })); for (let i = 0; i < 300; i++) { __t += 16; L.frame(16); } for (const d of [26, 30, 34, 40, 51, 80]) { __t += d; L.frame(d); } L.frame(5000); __t += 61000; L.tick(__snap({ scene: 'Campaign' }));`);
+{ const a = Object.assign({}, ...only(ls, 'counts').map(c => c.a));
+  check('in the Campaign a minute\'s counts hold its frames and how many took over 25, 33 and 50 ms (306 frames: 6 over 25, 4 over 33, 2 over 50); a hidden-tab frame of 5 s is none of them, and it is still no fps_dip', a['frames:campaign'] === 306 && a['slow25:campaign'] === 6 && a['slow33:campaign'] === 4 && a['slow50:campaign'] === 2 && only(ls, 'fps_dip').length === 0, JSON.stringify(a)); }
+ls = lines(`L.tick(__snap({ scene: 'Space' })); for (let i = 0; i < 100; i++) { __t += 40; L.frame(40); } __t += 61000; L.tick(__snap({ scene: 'Space' }));`);
+check('Long Haul\'s scenes are not counted this way', !only(ls, 'counts').some(c => Object.keys(c.a).some(k => /campaign/.test(k))), JSON.stringify(only(ls, 'counts')));
 check('a frame costs next to nothing: 300,000 frames take under 300 ms', J(`(() => { const L = __mk(); const t = Date.now(); for (let i = 0; i < 300000; i++) L.frame(16); return Date.now() - t; })()`) < 300);
 
 // ---- errors ----
