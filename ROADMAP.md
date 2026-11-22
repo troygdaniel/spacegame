@@ -15,8 +15,8 @@
 
 Nothing is cut until he has played mission 1.1 with the fleet-command batch and says so. The test for every idea, in or out: **what does the player decide, and what does it cost?** A mission is a sequence of questions. Candidates:
 
-1. The **stances page** on the FLEET panel: order calls may cover it.
-2. The **pace key P** (Calm, Normal, Brisk): slow command time may cover it.
+1. The **stances page** on the FLEET panel: order calls may cover it (it is still there: page 2, and `E` steps through the stances).
+2. ~~The **pace key P** (Calm, Normal, Brisk)~~: cut by card `space-game-two-hands-keys` (the Campaign flies at Normal; command time gives the time).
 3. **Holding Space to fire the turrets**: in a commander game the turrets could fire by themselves, the player's job being power and orders.
 4. **Scout-ahead routes**: content for one mission; keep only if it earns its place.
 5. **The distress call in 1.1**: same.

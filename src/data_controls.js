@@ -179,16 +179,14 @@ const CONTROLS = [
   { id: 'campaign', title: 'CAMPAIGN', scene: 'Campaign', rows: [ // the Campaign's H page (src/campkeys.js) is these rows under their sub headings, the debug keys after them; the PANELS group after it is made from CAMP_PANELS above (the two panels' keys), the codes of these from CAMP_KEYS. A line is the caps and at most 36 characters (Settings fits four columns). tests/controlshelp.mjs fails when a key the Campaign binds is not here
     { k: ['Arrows'], t: 'Thrust, brake, turn (the ship flies)', sub: 'FLY AND FIRE' },
     { k: ['Space'], t: 'Hold: turrets fire at ships in reach', sub: 'FLY AND FIRE' },
-    { k: ['-', '='], t: 'Zoom out and in (wheel too)', sub: 'FLY AND FIRE' }, // - and the wheel go out to the whole system on the map; = and the keypad's + and - too (src/campzoom.js)
-    { k: ['Backspace'], t: 'Reset the zoom', sub: 'FLY AND FIRE' },
+    { k: ['-', '='], t: 'Zoom out, in; Backspace resets', sub: 'FLY AND FIRE' },
+    { k: ['Shift'], t: 'With 8, 7 or Enter: a fast burn', sub: 'FLY AND FIRE' }, // Shift with the target's key (8) is a burn to it; a burn needs the wing aboard (card space-game-campaign-fast-board) // - and the wheel go out to the whole system on the map; = and the keypad's + and - too; Backspace is the reset (src/campzoom.js: all three from CAMP_KEYS)
     { k: ['A', 'D'], t: 'Last or next target (nearest first)', sub: 'THE TARGET' }, // ONE target for everything: 2 attacks it, 8 flies to it, Enter fires at it
-    { k: ['S'], t: 'Pick the nearest threat', sub: 'THE TARGET' },
-    { k: ['X'], t: 'Clear the target', sub: 'THE TARGET' },
+    { k: ['S', 'X'], t: 'S the nearest threat, X clears it', sub: 'THE TARGET' },
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Click'], t: 'Map: click a mark sets it, again flies', sub: 'THE MAP' },
     { k: ['A', 'D'], t: 'Map: last or next mark (arrows too)', sub: 'THE MAP' },
-    { k: ['7', '9'], t: 'Map: 7 flies there, 9 burns there', sub: 'THE MAP' },
-    { k: ['Shift', 'Enter'], t: 'Map: Enter flies, Shift+Enter fast', sub: 'THE MAP' },
+    { k: ['7', '9', 'Enter'], t: 'Map: 7 or Enter flies, 9 burns', sub: 'THE MAP' }, // (Shift+Enter is a burn too)
     { k: ['V', 'T'], t: 'Map: V scouts there, T takes a lane', sub: 'THE MAP' }, // T is the pick at a fork in the road (card space-game-scout-route)
     { k: ['X'], t: 'Map: X clears the goal', sub: 'THE MAP' },
     { k: ['/'], t: 'Type an order to the ship', sub: 'THE STRIP AND THE VOICE' },
@@ -220,7 +218,7 @@ const CONTROLS = [
     { k: ['Left'], t: 'Briefing: back a screen', sub: 'THE BRIEFING' },
     { k: ['L'], t: 'Briefing: launch the mission now', sub: 'THE BRIEFING' },
     { k: ['Esc'], t: 'Briefing: back to the missions', sub: 'THE BRIEFING' },
-    { k: ['+', '-', '0'], t: 'Briefing map: zoom (wheel too)', sub: 'THE BRIEFING' },
+    { k: ['-', '='], t: 'Briefing map: zoom; Backspace resets', sub: 'THE BRIEFING' },
     { k: ['M'], t: 'Briefing map: area, system, route', sub: 'THE BRIEFING' }
   ] },
   { id: 'title', title: 'TITLE', scene: null, rows: [

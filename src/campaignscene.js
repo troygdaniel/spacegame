@@ -1,7 +1,7 @@
 // ---------- The Campaign scene: reads the keys, steps src/campaign.js, draws what its numbers say (docs/CAMPAIGN.md) ----------
 // The only Phaser in the mode. Every rule, number and word comes from src/campaign.js (the tuning table CAMP, the sim, uiText for the text), so this
 // file draws and listens and decides nothing about the game. It is not run by a test in plain Node (a scene is Phaser's): tests/campaign.mjs runs the sim.
-//   K on the title opens it (campaignStart); Enter begins a level; W A S D fly, Space (held) makes the eight turrets fire, F fires a homing missile (the magazine is C.missiles), Q blinks (the warp tech);
+//   K on the title opens it (campaignStart); Enter begins a level; the arrow keys fly, Space (held) makes the eight turrets fire, Enter fires a homing missile at the target (the magazine is C.missiles), I blinks (the warp tech);
 //   there is no other gun: the turrets aim themselves at the nearest alien in reach, always, and fire only while Space is held; the scene draws them, their reach and their flash (syncRockets)
 //   1 launch, 2 attack, 3 escort, 4 guard, 5 recall; I types an order and U speaks one (the strip and the ship computer, src/shipcomputer.js, find this scene);
 //   Esc pauses (this scene's own pause, not Long Haul's: the Long Haul save is not touched here); after a win the story, the tech pick (1 2 3), then the next level.
@@ -312,11 +312,11 @@ class Campaign extends Phaser.Scene {
   // ----- each frame -----
   update(time, dt) {
     spaceBackdropTick(this);
-    if (typeof campPanelsPaint === 'function') campPanelsPaint(this, this.time.now); // the open panel, once it is due (250 ms after its key)
+    if (typeof campPanelsPaint === 'function') campPanelsPaint(this, this.time.now); // the two panels (always on the screen: src/campanelsdraw.js)
     const C = this.camp;
     if (this.mode === 'play' && !C.result) {
       const k = this.k, inp = C.input;
-      // the autopilot (src/campnav.js, card space-game-campaign-navigate): while the map is open W A S D and the arrows are the list's, not the wheel's; with it closed any of them takes the wheel back
+      // the autopilot (src/campnav.js, card space-game-campaign-navigate): while the map is open the arrows are the list's, not the wheel's; with it closed any of them takes the wheel back
       const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // the strip's own box: the letters typed there are not the wheel
       const wheel = !this.mp && !typing && [k.UP, k.DOWN, k.LEFT, k.RIGHT].some(x => x && x.isDown); // the arrows fly (Up thrust, Left and Right turn, Down brake); W A S D are the fleet's and the target's keys now (card space-game-two-hands-keys)
       if (wheel && (C.nav || C.navWait) && typeof campNavClear === 'function') campNavClear(C, 'key'); // a steering key gives up the trip, and a burn that was waiting for the wing
@@ -328,7 +328,7 @@ class Campaign extends Phaser.Scene {
         }
       }
       inp.fire = k.SPACE.isDown;
-      C.timeScale = typeof campSlowScale === 'function' ? campSlowScale(this) : 1; // command time (src/campslow.js): a panel, the map or a call open runs the battle at a quarter
+      C.timeScale = typeof campSlowScale === 'function' ? campSlowScale(this) : 1; // command time (src/campslow.js): the map or a call open, or just after a fleet key, runs the battle at a quarter
       campStep(C, Math.min(dt, 100) / 1000 * C.timeScale);
       if (typeof campNudge === 'function') { const nd = campNudge(C, this.shown); if (nd) toast(this, nd, '#9fe9ff'); } // the first-minute hints, once each (src/campnudge.js)
       { const pk = C.power ? C.power.base.join() : ''; if (this.powerKey !== undefined && pk !== this.powerKey) { this.powerKey = pk; campPowerSave(C.power.base); } } // the setting is kept for the next battle the moment it is changed (the base, never an emergency's pips)

@@ -9,7 +9,8 @@
 // The scene sets C.timeScale to the scale each frame and steps the sim by dt times it, so a clock that must count the player's own seconds (the calls' 8 s) divides dt by C.timeScale.
 function campSlowOpen(S) {
   if (!S || S.mode !== 'play') return false;
-  return !!(S.mp || (S.slowUntil > ((S.time && S.time.now) || 0)) || (S.camp && typeof campCallOpen === 'function' && campCallOpen(S.camp)));
+  const now = S.time && S.time.now; // the scene's clock (a stand-in scene with no clock is never slowed by a key)
+  return !!(S.mp || (typeof now === 'number' && S.slowUntil > now) || (S.camp && typeof campCallOpen === 'function' && campCallOpen(S.camp)));
 }
 const campSlowKick = (S, now) => { if (S) S.slowUntil = (now == null ? (S.time && S.time.now) || 0 : now) + CAMP.slow.after; };
 const campSlowScale = S => campSlowOpen(S) ? CAMP.slow.scale : 1;

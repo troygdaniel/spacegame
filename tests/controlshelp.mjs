@@ -61,13 +61,15 @@ const SCENES = {
 const campBound = () => {
   const keys = bound(CAMP_FILES);
   for (const m of read('src/campaignscene.js').matchAll(/(?<![\w.])c === '([^']+)'/g)) keys.add(norm(m[1]));
-  keys.add(norm(J('CAMPMAP.key'))); keys.add(norm(J('CAMP.pace.key'))); // the battle pace key (src/campace.js), read by the scene as CAMP.pace.key
-  const ZOOMCAP = { Equal: '+', Minus: '-', NumpadAdd: '+', NumpadSubtract: '-' }; // the zoom keys (card space-game-campaign-zoom): src/campzoom.js holds them in a table of codes, the table names the caps
+  keys.add(norm(J('CAMPMAP.key'))); // (there is no pace key any more: card space-game-two-hands-keys)
+  const ZOOMCAP = { Equal: '=', Minus: '-', NumpadAdd: '=', NumpadSubtract: '-' }; // the zoom keys (card space-game-campaign-zoom): src/campzoom.js holds them in a table of codes, the table names the caps
   J('Object.keys(CAMPZOOM.keys)').forEach(c => keys.add(ZOOMCAP[c] || norm(c))); J('CAMPZOOM.reset').forEach(c => keys.add(norm(c.replace(/^Numpad/, 'Digit'))));
   if (/\be\.shiftKey\b/.test(read('src/campaignscene.js')) && /\bshift\b/.test(read('src/campmapdraw.js'))) keys.add('SHIFT'); // Shift+Enter: the scene passes the event's shiftKey, the map reads it
   ['M', 'I', 'U'].forEach(k => { if (bound(EVERYWHERE).has(k)) keys.add(k); }); // the window handlers that work in every scene, the Campaign's too: mute (meta), the strip (shipcomputer), the voice (listen)
-  J('CAMP_PANELS.panels.map(p => [p.key].concat(p.rows.map(r => String(r.n))))').flat().forEach(d => keys.add(d));
-  return new Set([...keys].filter(k => !k.includes('.'))); // 'e.key === camp.nav.go' is an event name, not a key
+  // the two hands: the keys of the panels' rows and their page keys, and the keys of CAMP_KEYS (the arrows, A D S X, the zoom, the strip, the voice): the scene reads them from the tables (campPanelKey, campKeyCodes), so a key named there is a key bound
+  J('CAMP_PANELS.panels.map(p => [p.key].concat([p.rows, p.page2 && p.page2.rows, p.page3 && p.page3.rows].filter(Boolean).flat().map(r => r.k)))').flat().forEach(d => keys.add(norm(d)));
+  J('Object.values(CAMP_KEYS).map(k => k.k)').forEach(k => keys.add(norm(k)));
+  return new Set([...keys].filter(k => k === '.' || !k.includes('.'))); // 'e.key === camp.nav.go' is an event name, not a key (the period is the voice key)
 };
 const spaceOwn = bound(SPACE_FILES);
 [J('ASSIST.key'), J('OVERVIEW.key'), J('GUNLOCK.key')].concat(J('Object.values(ASSIST_MODES).map(m => m.key).filter(Boolean)')).forEach(k => spaceOwn.add(norm(k)));
@@ -75,13 +77,13 @@ const spaceOwn = bound(SPACE_FILES);
 // a key cap of the table as the keys it stands for; a cap that is not a keyboard key (the mouse) stands for none
 const NOT_KEYS = ['CLICK', 'MOUSE', 'WHEEL', 'ANY KEY'];
 const ARROWCAP = { '\u2190': 'LEFT', '\u2192': 'RIGHT' }; // the arrows' caps on the keys page (the FLEET panel's flip line)
-const capKeys = cap => { if (ARROWCAP[cap]) return [ARROWCAP[cap]]; const c = cap.toUpperCase(); if (NOT_KEYS.includes(c)) return []; const r = /^(\d)-(\d)$/.exec(c); if (r) { const out = []; for (let d = +r[1]; d <= +r[2]; d++) out.push(String(d)); return out; } return [norm(c)]; };
+const capKeys = cap => { if (ARROWCAP[cap]) return [ARROWCAP[cap]]; const c = cap.toUpperCase(); if (c === 'ARROWS') return ['ARROWS']; if (NOT_KEYS.includes(c)) return []; const r = /^(\d)-(\d)$/.exec(c); if (r) { const out = []; for (let d = +r[1]; d <= +r[2]; d++) out.push(String(d)); return out; } return [norm(c)]; };
 const groups = J(`CONTROLS.map(g => ({ id: g.id, scene: g.scene, rows: g.rows.map(r => ({ k: r.k, t: r.t, help: r.help })) }))`);
 const group = id => groups.find(x => x.id === id);
 
 console.log('1. every key the help names is bound');
 for (const gr of groups) {
-  const roomBound = () => { const k = bound(SCENES.readyroom); ['1', '2', '3', '4', '5'].forEach(d => k.add(d)); const ZC = { Equal: '+', Minus: '-', NumpadAdd: '+', NumpadSubtract: '-' }; if (/campZoomKey\(code\)/.test(read('src/campbriefdraw.js'))) { J('Object.keys(CAMPZOOM.keys)').forEach(c => k.add(ZC[c] || norm(c))); J('CAMPZOOM.reset').forEach(c => k.add(norm(c.replace(/^Numpad/, 'Digit')))); } return k; }; // the room hands every digit to campHubKey, which picks the row whose place it is; the briefing's map takes the zoom keys of src/campzoom.js (the Tab map's own: card space-game-briefing-walkthrough)
+  const roomBound = () => { const k = bound(SCENES.readyroom); ['1', '2', '3', '4', '5'].forEach(d => k.add(d)); const ZC = { Equal: '=', Minus: '-', NumpadAdd: '=', NumpadSubtract: '-' }; if (/campZoomKey\(code\)/.test(read('src/campbriefdraw.js'))) { J('Object.keys(CAMPZOOM.keys)').forEach(c => k.add(ZC[c] || norm(c))); J('CAMPZOOM.reset').forEach(c => k.add(norm(c.replace(/^Numpad/, 'Digit')))); } return k; }; // the room hands every digit to campHubKey, which picks the row whose place it is; the briefing's map takes the zoom keys of src/campzoom.js (the Tab map's own: card space-game-briefing-walkthrough)
   const have = gr.id === 'readyroom' ? roomBound() : gr.id === 'flight' ? new Set([...bound(SCENES.flight), ...spaceOwn]) : (gr.id === 'campaign' || gr.id === 'panels') ? campBound() : bound(SCENES[gr.id] || []);
   if (gr.id === 'title') continue; // the Title reads keys by e.code in one long line of its own; its rows are not what changed and are checked in tests/settings.mjs
   const missing = [];
@@ -144,16 +146,17 @@ console.log('5. nothing names a control that is gone');
 console.log('6. the Campaign: every bound key is on the table');
 {
   const named = new Set(); ['campaign', 'panels'].forEach(id => group(id).rows.forEach(r => r.k.forEach(cap => capKeys(cap).forEach(k => named.add(k)))));
-  const ALSO = { UP: 'W', DOWN: 'S', LEFT: 'A', RIGHT: 'D', ARROWUP: 'W', ARROWDOWN: 'S', ARROWLEFT: 'A', ARROWRIGHT: 'D' };
+  J('Object.values(CAMP_KEYS).map(k => k.k)').forEach(cap => capKeys(cap).forEach(k => named.add(k))); // the keys of CAMP_KEYS are the table too (the zoom's reset, the arrows)
+  const ALSO = { UP: 'ARROWS', DOWN: 'ARROWS', LEFT: 'ARROWS', RIGHT: 'ARROWS', ARROWUP: 'ARROWS', ARROWDOWN: 'ARROWS', ARROWLEFT: 'ARROWS', ARROWRIGHT: 'ARROWS' }; // the arrows are the one cap "Arrows"
   const bnd = campBound();
   const silent = [...bnd].filter(k => !named.has(k) && !(ALSO[k] && named.has(ALSO[k])));
   check('no key the Campaign binds is missing from the CAMPAIGN and PANELS groups', silent.length === 0, 'bound and not named: ' + silent.join(' ') + '   bound: ' + [...bnd].join(' '));
-  check('the scan saw the keys it should (fly, fire, blink, the panels\' digits, the map, cards, pause, title, help, strip, voice, mute)', ['W', 'A', 'S', 'D', 'SPACE', 'F', 'B', '1', '2', '5', 'TAB', 'X', 'ENTER', 'ESC', 'T', 'H', 'I', 'U', 'M'].every(k => bnd.has(k)), ['W', 'A', 'S', 'D', 'SPACE', 'F', 'B', '1', '2', '5', 'TAB', 'X', 'ENTER', 'ESC', 'T', 'H', 'I', 'U', 'M'].filter(k => !bnd.has(k)).join(' '));
+  check('the scan saw the keys it should (fly, fire, blink, the panels\' digits, the map, cards, pause, title, help, strip, voice, mute)', ['ARROWS', 'SPACE', 'W', 'A', 'S', 'D', 'J', 'K', 'L', ';', 'Q', 'P', '1', '2', '7', '0', 'TAB', 'X', 'ENTER', 'ESC', 'T', 'H', 'I', 'U', 'M', '/', '.', 'BACKSPACE'].every(k => bnd.has(k)), ['ARROWS', 'SPACE', 'W', 'A', 'S', 'D', 'J', 'K', 'L', ';', 'Q', 'P', '1', '2', '7', '0', 'TAB', 'X', 'ENTER', 'ESC', 'T', 'H', 'I', 'U', 'M', '/', '.', 'BACKSPACE'].filter(k => !bnd.has(k)).join(' '));
   const scene = read('src/campaignscene.js');
   check('the scene hands every digit to the panels (campPanelKey) and has no key of its own for a digit from 4 to 9 or an order: the old direct digits are gone (the refit card between levels buys with 4 and 5 on its own screen)', /campPanelKey\(/.test(scene) && !/Digit[4-9]/.test(noRefit(scene).split('\n').filter(l => !/R\.ore >= B\./.test(l)).join('\n')) && !/campOrder\(C, order, ''/.test(scene) && !/Digit1: 'launch'/.test(scene));
   const caps = (line, pick) => line.split(/ {2,}/).flatMap(seg => seg.split(' ').filter(t => pick.test(t))).map(c => c.toUpperCase());
   const keyLine = J(`uiText('camp.ui.keys', { panels: campPanelKeyLine() })`), pause = J(`uiText('camp.ui.paused')`);
-  check('the bottom key line names only keys of the table and says the panels from it: ' + keyLine, caps(keyLine, /^(?:[A-Z0-9]|Tab|Space)$/).every(c => named.has(c)) && keyLine.includes(J('campPanelKeyLine()')) && /H Keys$/.test(keyLine) && !/\b6-9\b|\bI type an order\b/.test(keyLine), caps(keyLine, /^(?:[A-Z0-9]|Tab|Space)$/).filter(c => !named.has(c)).join(' '));
+  check('the bottom key line names only keys of the table, read from it: ' + keyLine, caps(keyLine, /^(?:[A-Z0-9=\-]|Tab|Space|Enter|Arrows)$/).every(c => named.has(c)) && keyLine.startsWith(J("CAMP_KEYS.fly.k")) && keyLine.includes(J("campKeyVar('keymissile')")) && /H Keys$/.test(keyLine) && !/\b6-9\b|\bI type an order\b/.test(keyLine), caps(keyLine, /^(?:[A-Z0-9=\-]|Tab|Space|Enter|Arrows)$/).filter(c => !named.has(c)).join(' '));
   check('the key line fits the screen: 8.6 px a letter from x 24 ends at 1272 at the latest', 24 + keyLine.length * 8.6 <= 1272, keyLine.length + ' letters');
   check('the pause card says Esc, T and H, which are keys of the table', caps(pause, /^(?:[A-Z]|Esc)$/).every(c => named.has(c) || c === 'ESC') && /H {1,3}all keys/.test(pause) && /Esc/.test(pause), pause);
   const debugCodes = J('CAMP_DEBUG.keys.map(r => r.code)');

@@ -21,7 +21,7 @@ const SKILL = String(arg('skill', 'steady'));
 const TECH = arg('tech', null);
 const POWER = arg('power', null) === null ? null : String(arg('power')).split(',').map(Number); // --power 4,1,1: the ship's systems for every run (weapons, shields, engines; card space-game-campaign-systems); none: 2,2,2, today's numbers
 const MAXSEC = Number(arg('max', 420));
-const PACE = String(arg('pace', 'brisk'));                     // --pace calm|normal|brisk (or a number): the battle pace (card space-game-campaign-pace); brisk is 0.85 of the table's numbers since card space-game-command-slowtime (Calm 0.6, Normal 0.72, Brisk 0.85); --pace 1 is the table as it was. The bots step the sim themselves, so command time (a panel, the map or a call open: src/campslow.js, the scene's frame) never touches them: they need no teaching for it
+const PACE = String(arg('pace', 'brisk'));                     // --pace calm|normal|brisk (or a number): the battle pace (card space-game-campaign-pace); brisk is 0.85 of the table's numbers since card space-game-command-slowtime (Calm 0.6, Normal 0.72, Brisk 0.85); --pace 1 is the table as it was. The bots step the sim themselves, so command time (the map or a call open, or two seconds after a fleet key: src/campslow.js, the scene's frame) never touches them: they need no teaching for it
 const RANK = String(arg('rank', 'auto'));                     // --rank 0..5: the pilot's rank (src/campranks.js); auto: the rank a player of ordinary scores would have on reaching that mission (1,400 a mission flown before it)
 
 // the ways of playing. launchAt/attackFrom/attackEvery are seconds into the level; escort: the seconds each convoy is named (level 1); cycle: recall the wing when the fighters

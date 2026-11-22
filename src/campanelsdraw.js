@@ -80,7 +80,7 @@ function campPanelsPaintOne(s, O, now, on) {
   g.lineStyle(call ? 2.5 : 1.5, hot, call ? 0.95 : 0.55); g.strokeRoundedRect(G.x, G.y, G.w, G.h, 7);
   g.fillStyle(hot, call ? 0.3 : 0.14); g.fillRoundedRect(G.x, G.y, G.w, B.head, 7);
   if (call) { // a pilot's call: the rows' place is the call's (1 2 3 answer it)
-    O.callHead.setVisible(true).setText(uiText('camp.call.hud.head'));
+    O.callHead.setVisible(true).setText(uiText('camp.ui.callhead'));
     O.callLine.setVisible(true); O.callFoot.setVisible(true).setText(uiText('camp.call.hud.keys'));
     const key = call.id + ':' + call.pilot;
     if (O.callKey !== key) {

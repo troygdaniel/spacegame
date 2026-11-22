@@ -39,8 +39,8 @@ console.log('the arrow\'s label');
 
 console.log('the keep-out rectangles hold the panel tabs and the left HUD rows (8-GEN: the label sat under the SHIP tab and over the AUTOPILOT line)');
 {
-  const tabs = J('CAMP_PANELS.panels.map(d => campPanelsGeometry(d).tab)'), K = J('CAMP.nav.arrow.keep');
-  check('every panel tab is inside a keep rectangle (the tabs may move: then this says the rectangles must)', tabs.every(t => K.some(r => t.x >= r[0] && t.x + t.w <= r[2] && t.y >= r[1] && t.y + t.h <= r[3])), JSON.stringify([tabs, K]));
+  const tabs = J('CAMP_PANELS.panels.map(d => campPanelsGeometry(d).head)'), K = J('CAMP.nav.arrow.keep').concat(J('campPanelsKeep()'));
+  check('every panel heading is inside a keep rectangle (the panels may move: the label keeps out of campPanelsKeep, which follows them)', tabs.every(t => K.some(r => t.x >= r[0] && t.x + t.w <= r[2] && t.y >= r[1] && t.y + t.h <= r[3])), JSON.stringify([tabs, K]));
   check('the left HUD\'s objective line (y 152) and the autopilot line (y 174, 14 px type) are inside the first rectangle', K.some(r => r[0] === 0 && r[1] === 0 && r[3] >= 174 + 18));
   const W = 1280, H = 720, L = (x, y) => J(`campNavLabelAt(${x}, ${y}, 190, 18, ${JSON.stringify(K)}, ${W}, ${H})`), hit = (p, r) => p.x + 95 > r[0] && p.x - 95 < r[2] && p.y + 9 > r[1] && p.y - 9 < r[3];
   const a = L(1144, 222), b = L(85, 164);

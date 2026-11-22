@@ -4,7 +4,7 @@
 //   A. the numbers: the small ships are slower than the burn, near and far
 //   B. the rule in the sim: aboard burns; out refuses the first press and remembers it; a second press recalls and burns when the last ship lands; the timeout names who is still out; regular Fly is unaffected
 //   C. the words: "fly fast to Mars", "burn to the relic", "fly fast" (and the plain ones are as before), the dry check and what it does
-//   D. the SHIP panel's row: Shift with the digit is the burn, and obeys the rule
+//   D. the SHIP panel's rows: 9 is the burn, Shift with 8 a burn to the target, and they obey the rule
 //   E. the map's Fast button says why and presses obey the rule
 // Run: node tests/campfastboard.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -82,13 +82,13 @@ console.log('C. the words');
 
 console.log('D. the SHIP panel row');
 {
-  g.run(`window.C = __new(); window.P = campPanelNew(); campPanelKey(P, C, 'KeyE', 0, false); window.__p1 = campPanelKey(P, C, 'Digit3', 100, true);`);
-  check('Shift with 3 on the SHIP panel is a burn to the objective (wing aboard)', J('__p1.ran') === true && J('C.nav && C.nav.fast') === true);
-  g.run(`window.C = __new(); window.P = campPanelNew(); campPanelKey(P, C, 'KeyE', 0, false); campPanelKey(P, C, 'Digit3', 100, false);`);
-  check('3 alone is regular speed, as it was', J('C.nav && C.nav.fast') === false);
-  g.run(`window.C = __new(); campOrder(C, 'launch'); __run(C, 7); window.P = campPanelNew(); campPanelKey(P, C, 'KeyE', 0, false); window.__p2 = campPanelKey(P, C, 'Digit3', 100, true);`);
-  check('Shift and 3 with the wing out is refused the first time ("Wing is out"), and 3 alone still flies at regular speed', J('C.nav') === null && J('__ev(C, "camp.nav.no.wingout").length') >= 1 && (g.run(`campPanelKey(P, C, 'KeyE', 200, false); campPanelKey(P, C, 'Digit3', 300, false);`), J('C.nav && C.nav.fast') === false));
-  check('the table has the row for it, and the key line and pages read it: "E 3  Ship: autopilot (Shift: fast)"', J(`campPanelKeyRows().some(r => r.k.join(' ') === 'E 3' && /Shift: fast/.test(r.t))`));
+  g.run(`window.C = __new(); window.P = campPanelNew(); window.__p1 = campPanelKey(P, C, 'Digit9', 100, false);`);
+  check('9 on the SHIP panel is a burn to the objective (wing aboard): the burn row, one key', J('__p1.ran') === true && J('__p1.row') === 'burn' && J('C.nav && C.nav.fast') === true);
+  g.run(`window.C = __new(); window.P = campPanelNew(); campPanelKey(P, C, 'Digit7', 100, false);`);
+  check('7 alone is regular speed, as it was', J('C.nav && C.nav.fast') === false);
+  g.run(`window.C = __new(); campOrder(C, 'launch'); __run(C, 7); window.P = campPanelNew(); window.__p2 = campPanelKey(P, C, 'Digit9', 100, false);`);
+  check('9 with the wing out is refused the first time ("Wing is out"), and 7 alone still flies at regular speed', J('C.nav') === null && J('__ev(C, "camp.nav.no.wingout").length') >= 1 && (g.run(`campPanelKey(P, C, 'Digit7', 300, false);`), J('C.nav && C.nav.fast') === false));
+  check('the table has the rows for it, and the key line and pages read them: "9  Ship: a fast burn to the objective" and "8  Ship: autopilot to the target (Shift: fast)"', J(`campPanelKeyRows().some(r => r.k.join(' ') === '9' && /fast burn/.test(r.t))`) && J(`campPanelKeyRows().some(r => r.k.join(' ') === '8' && /Shift: fast/.test(r.t))`));
 }
 
 console.log('E. the map\'s Fast button');

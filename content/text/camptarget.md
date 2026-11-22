@@ -11,5 +11,5 @@ The words of the Campaign's one target (card space-game-two-hands-keys): A, D an
 | camp.ui.tgt | TARGET  {name}  {km} km |
 | camp.ui.tgtnone | TARGET  none |
 | camp.ui.tgtkeys | {keylast} {keynext} {keynear}  {keyclear} clear |
-| camp.call.hud.head | PILOT CALL |
+| camp.ui.callhead | PILOT CALL |
 | camp.ui.tgtclear | {keyclear} clear |
