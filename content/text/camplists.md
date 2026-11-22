@@ -12,3 +12,5 @@ The words of the two order lists (card one-list-keys): Q opens the fleet orders,
 | camp.ui.blink | BLINK |
 | camp.ui.listkeysub | {keyup} {keydown}  {keypick} order  Left back  {keypause} close |
 | camp.say.wing.recall | {group}, return to the carrier. |
+| camp.b.noneutrals | Lose no miners |
+| camp.b.notorpedoes | Take no torpedo hits |
