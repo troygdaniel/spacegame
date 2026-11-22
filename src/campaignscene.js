@@ -70,7 +70,7 @@ class Campaign extends Phaser.Scene {
     this.beamG = this.add.graphics().setDepth(3.5); // the cracks and the beams
     this.csp = this.camp.caches.map(k => this.add.image(k.x, k.y, 'pod').setScale(1.8).setDepth(3).setTint(0xffd37a)); // resource caches (level 2): gold pods that go when collected
     this.anomG = this.add.graphics().setDepth(1.5); // the haze of the anomalies and the decloaked caches (src/campanomalydraw.js)
-    this.squadG = this.add.graphics().setDepth(4.5); // the fighters' squad rings (card space-game-fighter-squads)
+    this.squadG = this.add.graphics().setDepth(4.5); // the circle round the fighters of the squad whose list is open (cards space-game-fighter-squads, space-game-squad-tint)
     this.relicG = this.add.graphics().setDepth(2); // the relic's ring (level 2), and how far the hold has got
     this.cachel = this.camp.caches.map(k => label(this, k.x, k.y + 34, uiText('camp.nav.cachelabel'), '#ffd37a', 12)); // a word under each cache: gold pods were easy to miss (docs/night/graphics.md finding 3)
     if (this.camp.relic) label(this, this.camp.relic.x, this.camp.relic.y - this.camp.L.relic.radius - 24, uiText('camp.nav.relicmark'), '#7fe9ff', 14);
@@ -420,19 +420,28 @@ class Campaign extends Phaser.Scene {
     const key = look.art ? campShipTexture(this, look.art) : look.model && typeof shipPreviewTexture === 'function' ? shipPreviewTexture(this, look.model) : look.tex;
     return this.textures.exists(key) ? key : 'ship';
   }
+  squadTint(sp, u) { // a fighter is drawn in its squad's colour, red, green or yellow (card space-game-squad-tint: not a ring round it, which crowded the view); the escorts and the others keep their own
+    const c = u.kind === 'fighter' && u.team === 'earth' && u.squad ? CAMP.wing.squadColor[u.squad] : 0;
+    if (c && sp._sq !== c) { sp._sq = c; sp.setTint(c); }
+  }
+  squadCircle() { // a circle round the fighters of the squad(s) whose list is open (E red, R green, T yellow: that squad; W: all three), in the squad's colour and the same size on the screen at every zoom, so the player sees who an order goes to; no list open, no circle (card space-game-squad-tint; it was a ring round every fighter all the time)
+    const sg = this.squadG; if (!sg) return;
+    const C = this.camp, z = this.cameras && this.cameras.main && this.cameras.main.zoom > 0 ? this.cameras.main.zoom : 1, col = CAMP.wing.squadColor;
+    const lit = this.pn && typeof campPanelOpen === 'function' && typeof campSquadsLit === 'function' ? campSquadsLit(campPanelOpen(this.pn)) : []; // the open list's id: a target sub-list opened from a squad's list leaves it (card space-game-order-target-pick), so the circle stays while it is picked
+    sg.clear();
+    if (lit.length) C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && lit.indexOf(u.squad) >= 0) { const sp = this.sp[u.id], half = sp && sp.displayWidth ? sp.displayWidth * z / 2 : 0; sg.lineStyle(2 / z, col[u.squad], 0.95).strokeCircle(u.x, u.y, Math.max(8, half + 3) / z); } });
+  }
   sync() {
     const C = this.camp, seen = {};
     C.ships.forEach(u => {
       let sp = this.sp[u.id];
       if (!sp) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone; sp = this.sp[u.id] = this.add.image(u.x, u.y, this.texOf(u.kind)).setScale(look.scale).setDepth(u.kind === 'carrier' ? 5 : u.team === 'earth' ? 4 : 3); if (look.tint) sp.setTint(look.tint); }
       sp.setPosition(u.x, u.y).setRotation(u.rot); seen[u.id] = true;
+      this.squadTint(sp, u);
       if (typeof campZoomShipScale === 'function' && this.cameras && this.cameras.main && sp.width) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone, k = campZoomShipScale(this.cameras.main.zoom, sp.width * look.scale); if (sp._k !== k) { sp._k = k; sp.setScale(look.scale * k); } } // zoomed far out a small ship is drawn no smaller than CAMPZOOM.view.minShip px (src/campzoom.js)
     });
     Object.keys(this.sp).forEach(id => { if (!seen[id]) { this.sp[id].destroy(); delete this.sp[id]; } });
-    if (this.squadG) { // a ring in the squad's colour round each fighter, the same size on the screen at every zoom, so the squads read from the farthest zoom out too (card space-game-fighter-squads)
-      const sg = this.squadG, z = this.cameras && this.cameras.main && this.cameras.main.zoom > 0 ? this.cameras.main.zoom : 1, col = CAMP.wing.squadColor; sg.clear();
-      C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && col[u.squad]) { const sp = this.sp[u.id], half = sp && sp.displayWidth ? sp.displayWidth * z / 2 : 0; sg.lineStyle(2 / z, col[u.squad], 0.95).strokeCircle(u.x, u.y, Math.max(8, half + 3) / z); } });
-    }
+    this.squadCircle();
     this.camp.caches.forEach((k, i) => { this.csp[i].setVisible(!k.got); if (this.cachel && this.cachel[i]) this.cachel[i].setVisible(!k.got); });
     if (!this.osp) this.osp = {}; const seenOre = {}; // (made in create; a stand-in scene in a test has none)
     C.pickups.forEach(o => { // rocks are asteroids, a wreck's ore glows; a wreck blinks in its last seconds

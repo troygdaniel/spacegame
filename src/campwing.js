@@ -42,6 +42,11 @@ function campSquadNext(C) {
   (C.repairs || []).forEach(r => { if (r.kind === 'fighter' && n[r.squad] != null) n[r.squad]++; });
   return ids.reduce((best, k) => (n[k] < n[best] ? k : best), ids[0]);
 }
+// the squads a list is about (card space-game-squad-tint; Troy, 22 Nov 2026): the red, green or yellow list (E R T) is its own squad's, the all-squads list (W) is all three, any other list or none is nobody's. The flight draws a circle round
+// the fighters of these squads only: while the list is open, so the player sees who an order goes to; in normal flight a fighter is just drawn in its squad's colour (src/campaignscene.js).
+function campSquadsLit(openId) {
+  return openId === 'squads' ? CAMP.wing.squads.slice() : CAMP.wing.squads.indexOf(openId) >= 0 ? [openId] : [];
+}
 
 // Recall and the bay (card space-game-recall-while-launching; found by 3-GEN): Launch queues every ship in C.launchQ and one leaves every CAMP.bay.launchEvery ms, so a Recall given while the bay is still emptying
 // found the ships out and sent them home, and the ships still in the queue came out afterwards with the guard and escort orders of a launch, as if there had been no Recall (and a burn that waits for the wing aboard

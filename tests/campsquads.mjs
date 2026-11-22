@@ -1,4 +1,4 @@
-// smoke: the fighters' three squads (Red, Green, Yellow): who is in which, an order to one squad, the lists and keys that give it, the words, the map's rings (plain Node, no Chrome)
+// smoke: the fighters' three squads (Red, Green, Yellow): who is in which, an order to one squad, the lists and keys that give it, the words, the map's coloured dots, the tint and the circle that shows only while a squad's list is open (plain Node, no Chrome)
 // Card space-game-fighter-squads (Troy, 22 Nov 2026: "I want to be able to control fighter squads easily": W all squads, E red, R green, T yellow, each Attack the target, Guard the cruiser, Recall; W also Launch and Mine ore).
 // The sim is src/campwing.js (campSquadNext, the groups 'red' 'green' 'yellow' of CAMP.wing) and src/campaign.js (a fighter gets u.squad when it leaves the bay); the lists are CAMP_PANELS (src/data_controls.js).
 //   A. who is in a squad: six fighters are two and two and two, the escorts are in none, a later fighter fills the thinnest squad, a lost squad is filled again, a mended fighter goes out in its own squad, no random number is used
@@ -143,9 +143,43 @@ console.log('F. the map and the colours');
   const lg = J('campMapLegend(C)');
   check('the legend has a row for each squad that has ships, under the wing\'s own row: "Red squad (2)", "Green squad (2)", "Yellow squad (2)" in the squads\' colours', lg.map(r => r.type).join() === 'carrier,wing,red,green,yellow' && lg.filter(r => /squad/.test(r.text)).map(r => r.text).join() === 'Red squad (2),Green squad (2),Yellow squad (2)' && lg.slice(2).every((r, i) => r.color === J('CAMP.wing.squadColor')[['red', 'green', 'yellow'][i]]), JSON.stringify(lg));
   const col = J('CAMP.wing.squadColor'), v = Object.values(col);
-  check('the three colours are three (red, green, yellow), none of them the escorts\' own mint, so a ring on a fighter can be told from a plain dot', v.length === 3 && new Set(v).size === 3 && !v.includes(J('CAMPMAP.color.wing')) && col.red > 0xe00000 && (col.green & 0xff00) > (col.green & 0xff0000) / 256 && (col.yellow >> 16) > 0xe0 && ((col.yellow >> 8) & 0xff) > 0xc0);
-  const scene = src('src/campaignscene.js'), mapdraw = src('src/campmapdraw.js');
-  check('the flight draws a ring in the squad\'s colour round each fighter (the same size on the screen at every zoom: its radius is a few pixels divided by the zoom), and the map a ring round its dot', /squadG/.test(scene) && /CAMP\.wing\.squadColor/.test(scene) && /strokeCircle\(u\.x, u\.y, Math\.max\(8, half \+ 3\) \/ z\)/.test(scene) && /m\.squad && CAMP\.wing\.squadColor\[m\.squad\]/.test(mapdraw));
+  check('the three colours are three (red, green, yellow), none of them the escorts\' own mint, so a fighter\'s dot can be told from an escort\'s plain one', v.length === 3 && new Set(v).size === 3 && !v.includes(J('CAMPMAP.color.wing')) && col.red > 0xe00000 && (col.green & 0xff00) > (col.green & 0xff0000) / 256 && (col.yellow >> 16) > 0xe0 && ((col.yellow >> 8) & 0xff) > 0xc0);
+  const mapdraw = src('src/campmapdraw.js'), wingLine = mapdraw.split('\n').find(l => /m\.type === 'wing'/.test(l) && /squadColor/.test(l)) || '';
+  check('the map draws a fighter\'s dot FILLED in its squad\'s colour with a white spark in the middle (an escort a plain mint dot); no ring round it (the red and the yellow are near the aliens\' and the pirates\' flat dots, so the spark tells ours)', /fillStyle\(sc \|\| m\.color, 1\)\.fillCircle/.test(wingLine) && /fillStyle\(0xffffff[^)]*\)\.fillCircle\(p\.x, p\.y, 1\)/.test(wingLine) && !/strokeCircle|lineStyle/.test(wingLine) && /m\.squad && CAMP\.wing\.squadColor\[m\.squad\]/.test(wingLine));
+}
+
+console.log('G. the tint, and the circle only while a squad\'s list is open (card space-game-squad-tint)');
+{
+  g.run(`
+    window.__gfx = () => { const r = { calls: [], clear() { r.calls = []; return r; }, setDepth() { return r; }, lineStyle(w, c, a) { r.calls.push({ t: 'line', w, c, a }); return r; }, strokeCircle(x, y, rad) { r.calls.push({ t: 'circle', x, y, rad }); return r; } }; return r; };
+    window.__stand = (open, zoom) => ({ camp: C, sp: {}, squadG: __gfx(), cameras: { main: { zoom: zoom || 1 } }, pn: { open: open || '', at: 0, top: 0, lit: {} } });
+    window.__circles = (open, zoom) => { const sc = __stand(open, zoom); Campaign.prototype.squadCircle.call(sc); const out = []; let st = null; sc.squadG.calls.forEach(c => { if (c.t === 'line') st = c; else out.push({ col: st.c, w: st.w, x: c.x, y: c.y, rad: c.rad }); }); return out; };
+    window.__tint = u => { const sp = { setTint(c) { sp.t = c; sp.n = (sp.n || 0) + 1; return sp; } }; Campaign.prototype.squadTint.call({}, sp, u); Campaign.prototype.squadTint.call({}, sp, u); return { t: sp.t === undefined ? null : sp.t, n: sp.n || 0 }; };
+  `);
+  g.run('__out(1);');
+  const COL = J('CAMP.wing.squadColor');
+  check('campSquadsLit: the red, green and yellow lists (E R T) are their own squad; the all-squads list (W) is all three; the fleet list (Q), the escorts, the convoy, the stance and the other side\'s lists, and none open, are nobody', J(`['red', 'green', 'yellow'].map(k => campSquadsLit(k).join('+')).join()`) === 'red,green,yellow' && J(`campSquadsLit('squads').join()`) === 'red,green,yellow' && J(`['', 'fleet', 'escorts', 'convoy', 'stance', 'ship', 'autopilot', 'power', 'dock', 'nope', null, undefined].map(k => campSquadsLit(k).length).join()`) === '0,0,0,0,0,0,0,0,0,0,0,0');
+  check('every squad has a list of its own whose id is its name, and the all-squads list is \'squads\' (the helper reads the list ids)', J(`CAMP.wing.squads.every(k => campPanelDef(k) && campPanelDef(k).key)`) === true && J(`!!campPanelDef('squads') && campPanelDef('squads').key`) === 'W');
+  const fl = J(`campWing(C, 'fighter').map(u => u.id)`);
+  const t0 = J(`__tint(campWing(C, 'fighter')[0])`), t1 = J(`__tint(campWing(C, 'fighter')[1])`), t2 = J(`__tint(campWing(C, 'fighter')[2])`);
+  check('a fighter is tinted in its squad\'s colour (Red, Green, Yellow for the first three out), set once and not again while it is the same', t0.t === COL.red && t1.t === COL.green && t2.t === COL.yellow && t0.n === 1 && t1.n === 1 && t2.n === 1, JSON.stringify([t0, t1, t2]));
+  check('an escort, a freighter, the cruiser and an alien are not tinted (their own look): no squad, no tint', J(`(() => { const o = [campWing(C, 'escort')[0], C.carrier, campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y)]; return o.map(u => __tint(u).n).join(); })()`) === '0,0,0');
+  check('even a squad fighter of the other side would not be tinted: only the earth team\'s fighters wear a squad colour', J(`(() => { const u = campWing(C, 'fighter')[0]; const was = u.team; u.team = 'alien'; const r = __tint(u).n; u.team = was; return r; })()`) === 0);
+  check('no list open: no circle at all in normal flight (the graphics are cleared and nothing is stroked)', J(`__circles('').length`) === 0 && J(`(() => { const sc = __stand(''); Campaign.prototype.squadCircle.call(sc); return sc.squadG.calls.length; })()`) === 0);
+  const qs = J(`['fleet', 'escorts', 'convoy', 'stance', 'ship', 'autopilot', 'power', 'dock'].map(k => __circles(k).length).join()`);
+  check('the Q list and the other lists open: still no circle (a circle shows only for a squad\'s own list)', qs === '0,0,0,0,0,0,0,0', qs);
+  const red = J(`__circles('red')`), pos = J(`campWing(C, 'fighter').filter(u => u.squad === 'red').map(u => [Math.round(u.x), Math.round(u.y)])`);
+  check('E open: a circle round each of the red squad\'s two fighters, in red, and round no one else', red.length === 2 && red.every(c => c.col === COL.red) && JSON.stringify(red.map(c => [Math.round(c.x), Math.round(c.y)]).sort()) === JSON.stringify(pos.slice().sort()), JSON.stringify(red));
+  check('R open: the green squad\'s two, in green; T open: the yellow squad\'s two, in yellow', J(`__circles('green')`).every(c => c.col === COL.green) && J(`__circles('green').length`) === 2 && J(`__circles('yellow')`).every(c => c.col === COL.yellow) && J(`__circles('yellow').length`) === 2);
+  const all = J(`__circles('squads')`);
+  check('W open: all six fighters get a circle, each in its own squad\'s colour (two of each)', all.length === 6 && ['red', 'green', 'yellow'].every(k => all.filter(c => c.col === COL[k]).length === 2));
+  check('the circle is the same size on the screen at every zoom: its radius times the zoom is 8 px (a stand-in sprite has no width; a real one is at least that) and its line 2 px, at the start zoom and far out', [1, 0.5, 0.1, 0.02].every(z => J(`__circles('red', ${z})`).every(c => Math.abs(c.rad * z - 8) < 1e-9 && Math.abs(c.w * z - 2) < 1e-9)));
+  check('a squad with no ship out has no circle to draw (nothing, not an error)', J(`(() => { campWing(C, 'fighter').filter(u => u.squad === 'red').forEach(u => { u.hp = 0; }); return __circles('red').length; })()`) === 0 && J(`__circles('squads').length`) === 4);
+  check('closing the list takes the circles away: the next frame with nothing open draws none (the graphics are cleared every frame)', J(`(() => { const sc = __stand('green'); Campaign.prototype.squadCircle.call(sc); const a = sc.squadG.calls.length; sc.pn.open = ''; Campaign.prototype.squadCircle.call(sc); return a > 0 && sc.squadG.calls.length === 0; })()`) === true);
+  check('a scene made without the squad graphics, or a stand-in without a panel, draws nothing and logs nothing', J(`(() => { const sc = __stand('red'); delete sc.squadG; Campaign.prototype.squadCircle.call(sc); const sd = __stand('red'); delete sd.pn; Campaign.prototype.squadCircle.call(sd); return sd.squadG.calls.length; })()`) === 0);
+  const scene = src('src/campaignscene.js');
+  check('sync() calls both (the tint for each ship, the circle once a frame), and no ring is drawn round every fighter any more', /this\.squadTint\(sp, u\);/.test(scene) && /this\.squadCircle\(\);/.test(scene) && /campSquadsLit\(campPanelOpen\(this\.pn\)\)/.test(scene) && !/u\.squad && col\[u\.squad\]\) \{ const sp/.test(scene));
+  check('the card\'s docs say it: the tint, the circle only while a list is open, the white spark on the map (PROJECT_STATUS.md, docs/CAMPAIGN.md)', /tint/.test(src('docs/CAMPAIGN.md').split('\n').find(l => /What a squad looks like/.test(l)) || '') && /circle/.test(src('PROJECT_STATUS.md').split('\n').find(l => /Fighter squads/.test(l)) || ''));
 }
 
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
