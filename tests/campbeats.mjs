@@ -1,10 +1,10 @@
 // smoke: mission 1.1 of the rim run as four beats, and its hints' keys from the key table (Q, Convoy) (plain Node, no Chrome)
 // Card space-game-l1-1-beats (Troy, 21 Nov 2026: "1.1 was boring: lots of flying, fights not interactive"; he will judge every new system on this one mission). Something happens every minute or so and the
-// player directs the fleet in each beat: (1) a patrol escorts the transport out of Luna and peels off at the edge of safe space; (2) a distress call from a miner off the route, as an order call (help it and leave
-// the transport, or stay); (3) an ambush: fighters tie up the wing while torpedo boats go for the transport (on the road: it used to fork, card space-game-cut-lane-fork); (4) the pirate leader, a rival ship, waits for her near Ceres.
+// player directs the fleet in each beat: (1) a patrol escorts the transport out of Luna and peels off at the edge of safe space; (2) a distress call from a miner off the route, as an order call (send all squads or one of the three, or stay
+// with the transport; tests/campcallsquads.mjs); (3) an ambush: fighters tie up the wing while torpedo boats go for the transport (on the road: it used to fork, card space-game-cut-lane-fork); (4) the pirate leader, a rival ship, waits for her near Ceres.
 //   A  the data of the row (the beats are data: traffic, waves, cues, a rival, the bonus)
 //   B  beat 1: the patrol flies with the transport, says it turns back, and goes home
-//   C  beat 2: the miner and its attackers, the call and its three answers, the thanks
+//   C  beat 2: the miner and its attackers, the call and its five answers, the thanks
 //   D  beat 3: the ambush on the road (fighters and torpedo boats)
 //   E  beat 4: the pirate leader
 //   F  the pace: a beat about every minute
@@ -70,17 +70,17 @@ sec('C', () => {
   check('C  the pirates are near the miner (within 2,500 px), 2,000 px or more from the transport: off the route', near && J('(() => { const a = campAliens(C)[0], t = __tt(); return Math.hypot(a.x - t.x, a.y - t.y) > 1500; })()'));
   g.run('__go(2)');
   const call = J('campCallView(C)');
-  check('C  the pilots ask for orders: the call distress is open with three choices, the cautious one is "stay with the transport"', !!call && call.id === 'distress' && call.rows.length === 3 && call.rows.find(r => r.def).pick === 'stay' && J('C.call.open.ctx.who') && /miner/i.test(J('C.call.open.ctx.who') + 'miner'), JSON.stringify(call));
-  const r = J('campCallAnswer(C, 1, "key")');
-  check('C  choice 1 (the fighters help the miner): ok, and the fighters are ordered to attack the pirates by it', r.ok && r.pick === 'rescue' && J('campWing(C, "fighter").some(u => u.order && u.order.type === "attack")'), JSON.stringify(r));
+  check('C  the pilots ask for orders: the call distress is open with five choices (all squads, Red, Green, Yellow, stay), the cautious one is "stay with the transport"', !!call && call.id === 'distress' && call.rows.length === 5 && call.rows.map(r => r.pick).join() === 'sendall,sendred,sendgreen,sendyellow,stay' && call.rows.find(r => r.def).pick === 'stay' && J('C.call.open.ctx.who') && /miner/i.test(J('C.call.open.ctx.who') + 'miner'), JSON.stringify(call));
+  const r = J('campCallAnswer(C, 2, "key")');
+  check('C  choice 2 (Send Red squad): ok, and only the red squad is ordered to the miner: the green and yellow squads and the escorts keep their orders', r.ok && r.pick === 'sendred' && J('campWing(C, "fighter").every(u => (u.squad === "red") === !!(u.order && u.order.rescue))') && J('campWing(C, "escort").every(u => !(u.order && u.order.rescue))'), JSON.stringify(r));
   g.run('__go(45)');
-  check('C  the wing kills the pirates in time and the miner is alive: the thanks, once (the radio), and 40 ore in the store', J('campAliens(C).filter(u => u.prey === "miners").length') === 0 && J('!!C.ships.find(u => u.tid === "dm" && u.hp > 0)') && J('C.ore') >= 40 && J('__says().filter(k => k === "camp.say.thanks").length') === 1, J('C.ore') + ' ' + J('campAliens(C).length'));
-  g.run('__mk(); campOrder(C, "launch"); __until(0.315); __go(2); campCallAnswer(C, 3, "key"); __go(60)');
-  check('C  choice 3 (stay with the transport): the miner is lost to the pirates (a neutral lost, the bonus for it is gone) and there is no thanks', J('C.neutralsLost') >= 1 && !J('__says().includes("camp.say.thanks")'), J('C.neutralsLost'));
+  check('C  the squad kills the pirates in time and the miner is alive: the thanks, once (the radio), and 40 ore in the store', J('campAliens(C).filter(u => u.prey === "miners").length') === 0 && J('!!C.ships.find(u => u.tid === "dm" && u.hp > 0)') && J('C.ore') >= 40 && J('__says().filter(k => k === "camp.say.thanks").length') === 1, J('C.ore') + ' ' + J('campAliens(C).length'));
+  g.run('__mk(); campOrder(C, "launch"); __until(0.315); __go(2); campCallAnswer(C, 5, "key"); __go(60)');
+  check('C  choice 5 (stay with the transport): the miner is lost to the pirates (a neutral lost, the bonus for it is gone) and there is no thanks', J('C.neutralsLost') >= 1 && !J('__says().includes("camp.say.thanks")'), J('C.neutralsLost'));
   g.run('__mk(); campOrder(C, "launch"); __until(0.315); __go(2); campCallAnswer(C, 0, "late"); __go(2)');
   check('C  no answer in time: the pilot takes the cautious pick himself (stay)', J('C.call.log[C.call.log.length - 1].pick') === 'stay');
-  g.run('__mk(); campOrder(C, "launch"); __until(0.315); __go(2); campCallAnswer(C, 2, "key")');
-  check('C  choice 2 sends everyone: the escorts too are on the pirates (nobody stays with the transport)', J('campWing(C).filter(u => u.order && u.order.type === "attack").length') >= J('campWing(C).length') - 0);
+  g.run('__mk(); campOrder(C, "launch"); __until(0.315); __go(2); campCallAnswer(C, 1, "key")');
+  check('C  choice 1 sends all squads: every fighter is on the pirates, the escorts stay with the transport', J('campWing(C, "fighter").length') > 0 && J('campWing(C, "fighter").every(u => u.order && u.order.rescue)') && J('campWing(C, "escort").every(u => !(u.order && u.order.rescue))'));
 });
 
 sec('D', () => {
@@ -113,7 +113,7 @@ sec('F', () => {
 
 sec('G', () => {
   console.log('G. the words, the hints and the bots');
-  const keys = ['camp.say.patrolleave', 'camp.say.distress', 'camp.say.thanks', 'camp.say.rimambush', 'camp.call.line.distress', 'camp.call.fx.rescue', 'camp.call.fx.rescueall', 'camp.call.fx.stay', 'camp.call.r.rescue', 'camp.call.r.rescueall', 'camp.call.r.stay', 'camp.b.rival'];
+  const keys = ['camp.say.patrolleave', 'camp.say.distress', 'camp.say.thanks', 'camp.say.rimambush', 'camp.call.line.distress', 'camp.call.fx.sendall', 'camp.call.fx.sendred', 'camp.call.fx.sendgreen', 'camp.call.fx.sendyellow', 'camp.call.fx.stay', 'camp.call.r.sendall', 'camp.call.r.sendred', 'camp.call.r.sendgreen', 'camp.call.r.sendyellow', 'camp.call.r.stay', 'camp.b.rival'];
   const miss = keys.filter(k => J(`uiText(${JSON.stringify(k)}) === ${JSON.stringify(k)}`));
   check('G  every new line has its words (content/text/campbeats.md)', miss.length === 0, miss.join(' '));
   const words = s => String(s).replace(/\{[^}]*\}/g, 'N').split(/\s+/).filter(Boolean).length;
