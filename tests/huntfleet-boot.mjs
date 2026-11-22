@@ -2,7 +2,8 @@
 // It boots the Campaign with a save that stands at the mission, reads the ready room and the three briefing screens, launches, and then PLAYS with real key events: the wing out, the cruiser on the
 // autopilot beside the convoy, the pilots' calls answered by a style, the fork scouted and picked, convoy orders, power moved in the rival's phases, missiles, the map zoomed all the way out.
 // Every key comes from the key table (CAMP_PANELS for the panels and their rows, the Campaign group of CONTROLS for the rest), never a letter of its own, so the walk survives a remap of the keys.
-//   node tests/huntfleet-boot.mjs --mission 1 [--ending win|lose] [--calls right|wrong|none|mix] [--secs 420] [--lane short|long] [--nobrief] [--idle 90] [--noscout] [--killleader]
+//   node tests/huntfleet-boot.mjs --mission 1 [--ending win|lose] [--calls right|wrong|none|mix] [--secs 420] [--lane short|long] [--nobrief] [--idle 90] [--noscout] [--killleader] [--dock0]
+// --dock0: the first thing a player does is dock at the base the HUD offers (SHIP, Dock), read the ready room's pages (build, repair), and undock
 // --noscout: the lanes are not scouted (the ambush is a surprise); --killleader: the cruiser goes at the pirate leader (the map, Enter) and fires, for the kill and its bonus
 // --idle N: a new player who does nothing for N seconds (the hints, the radio and the beats say what they say when nobody has acted yet), then the walk goes on
 // --ending lose: the transport (1.1) or the haulers (1.3) or the cruiser (1.2) is let go: no fighting, no orders after the launch, then the lost card, Enter (the mission again), the pause card
@@ -16,7 +17,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.HUNT_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i < 0 ? d : process.argv[i + 1]; };
-const MISSION = Number(arg('mission', 1)), SECS = Number(arg('secs', 420)), ENDING = String(arg('ending', 'win')), CALLS = String(arg('calls', 'mix')), LANE = String(arg('lane', 'short')), NOBRIEF = process.argv.includes('--nobrief'), IDLE = Number(arg('idle', 0)), NOSCOUT = process.argv.includes('--noscout'), KILL = process.argv.includes('--killleader');
+const MISSION = Number(arg('mission', 1)), SECS = Number(arg('secs', 420)), ENDING = String(arg('ending', 'win')), CALLS = String(arg('calls', 'mix')), LANE = String(arg('lane', 'short')), NOBRIEF = process.argv.includes('--nobrief'), IDLE = Number(arg('idle', 0)), NOSCOUT = process.argv.includes('--noscout'), KILL = process.argv.includes('--killleader'), DOCK0 = process.argv.includes('--dock0');
 const TAG = `${MISSION}${ENDING === 'lose' ? 'L' : 'W'}${CALLS[0]}`;
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
@@ -148,6 +149,12 @@ try {
     return true;
   };
   if (IDLE) { note(`idle for ${IDLE} s: nothing pressed (what the hints say to a player who has not acted)`); for (let i = 0; i < IDLE; i++) { await t.run(1000); if (i % 30 === 29) await snap('idle-' + (i + 1)); } note('HUD after the idle: ' + (await hud()).join(' | ').slice(0, 700)); }
+  if (DOCK0) {
+    await t.run(1500); const t1 = await j(`${S}.camp.t`); await order('ship', 'dock'); await t.run(1500);
+    const hub = await j(`game.scene.isActive('CampHub')`); note('E 4 at the start: hub ' + hub + (hub ? ' | ' + (await shown()).join(' | ').slice(0, 700) : ' | ' + (await toasts()).slice(-2).join(' || '))); await snap('dock0-1');
+    if (hub) { for (const d of ['Digit2', 'Digit3']) { await key(d); await t.run(500); note('page ' + d + ': ' + (await shown()).join(' | ').slice(0, 500)); } await snap('dock0-2'); await key('Escape'); await t.run(1500); }
+    note('after leaving: ' + JSON.stringify(await state()) + ' (the battle clock was ' + Math.round(t1 / 1000) + ' s at the dock order); ' + (await toasts()).slice(-2).join(' || '));
+  }
   await order('fleet', 'launch'); await t.run(900);
   await t.run(4000); if (MISSION !== 2) await order('ship', 'goal'); await t.run(600); note('autopilot: ' + await j(`JSON.stringify(${S}.camp.nav || null)`).then(v => String(v).slice(0, 200)) + ' state ' + JSON.stringify(await state()));
   const t0 = Date.now();
@@ -176,6 +183,9 @@ try {
       for (let i = 0; i < 3 && (await j(`${S}.mode`)) !== 'play'; i++) { note('retry card: ' + await card()); await snap('11-retry-' + i); await key('Enter'); await t.run(900); }
       check('the mission is flown again, in play, from its start', (await j(`${S}.mode`)) === 'play' && (await j(`Math.round(campMissionClock(${S}.camp))`)) < 5, JSON.stringify(await state()));
       await t.run(900); note('HUD after the retry: ' + (await hud()).join(' | ').slice(0, 500));
+      const n0 = await j('window.__log.length'); for (let i = 0; i < 75; i++) await t.run(1000); // the retry flown by nobody for 75 s: what is left over from the lost try, and what the new one says by itself
+      note('the retry, 75 s on its own: ' + JSON.stringify(await state()) + ' call ' + JSON.stringify(await j(`${S}.camp.call && { n: ${S}.camp.call.n, open: !!${S}.camp.call.open }`)) + ' route ' + JSON.stringify(await j(`${S}.camp.route && { lane: ${S}.camp.route.lane, pick: ${S}.camp.route.pick, holding: !!campRouteHolding(${S}.camp) }`)) + '\n' + (await toasts(n0)).filter(x => !/EVENT/.test(x)).join('\n'));
+      await snap('11-retry-75');
       await key('Escape'); await t.run(500); note('pause card: ' + await card()); await snap('12-pause'); await key('Escape'); await t.run(300);
     }
   }
