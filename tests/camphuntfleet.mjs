@@ -77,5 +77,11 @@ const ob = J(`(() => { const P = campProgressNew(); P.ore = 60; const a = campHu
   const C = campNew(1, [], { seed: 1, mission: 1, ore: 60 }); campStep(C, 1 / 30); return [a, b, c, campObjective(C)]; })()`);
 check('1.2: the briefing says "Mine ore: 60 of 190." for 60 ore carried, 142 for 142, and never more than the goal; the HUD says the same at the start', ob[0] === 'Mine ore: 60 of 190.' && ob[1] === 'Mine ore: 142 of 190.' && ob[2] === 'Mine ore: 190 of 190.' && ob[3] === 'Mine ore: 60 of 190.', JSON.stringify(ob));
 
+// ---- 7. a wing order names the ship by its words, not its id ----
+// "Fighters, attack the tboat." and "Fighters, attack the pirateleader." were the toasts of 1.1's two key targets (the walkthrough says shoot the torpedo boats first).
+const nm = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); const out = {}; ['skiff', 'tboat', 'pirateleader', 'raider', 'gunship'].forEach(k => { const u = campSpawn(C, k === 'pirateleader' ? 'skiff' : k, C.carrier.x + 900, C.carrier.y); if (k === 'pirateleader') u.kind = 'pirateleader'; out[k] = campWingShipName(C, u); });
+  const f = campSpawn(C, 'fighter', C.carrier.x + 100, C.carrier.y); out.fighter = campWingShipName(C, f); return out; })()`);
+check('a wing order names an enemy by its kind\'s words: the skiff, the torpedo boat, the pirate leader, the raider, the gunship; one of ours "our fighter"', nm.skiff === 'the skiff' && nm.tboat === 'the torpedo boat' && nm.pirateleader === 'the pirate leader' && nm.raider === 'the raider' && nm.gunship === 'the gunship' && nm.fighter === 'our fighter', JSON.stringify(nm));
+
 if (failed) { console.log(`\nHUNT FLEET: ${failed} FAILED`); process.exit(1); }
 console.log('\nHUNT FLEET: all passed');

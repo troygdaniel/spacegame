@@ -56,7 +56,8 @@ function campWingShipName(C, u) {
   if (u.kind === 'mother') return 'the mothership';
   if (u.kind === 'carrier') return 'the carrier';
   if (u.kind === 'freighter') return typeof campConvoyName === 'function' ? campConvoyName(u) + ' convoy' : 'the convoy';
-  return (u.team === 'alien' ? 'the ' : 'our ') + u.kind;
+  const k = 'camp.nav.k.' + u.kind, w = typeof uiText === 'function' ? uiText(k) : k, word = w && w !== k ? String(w).toLowerCase() : u.kind; // the kind's own words ("torpedo boat", "pirate leader"): the id said "Fighters, attack the tboat." and "the pirateleader"
+  return (u.team === 'alien' ? 'the ' : 'our ') + word;
 }
 const campWingShipTarget = (C, u) => ({ kind: campWingKindOf(u), id: u.id, name: campWingShipName(C, u), x: u.x, y: u.y, r: u.r || 0, ref: u.id });
 function campWingPlaceTarget(C, id) {
