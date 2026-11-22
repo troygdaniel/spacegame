@@ -192,7 +192,7 @@ function campBriefSteps(P, level, i) {
 const CAMPBRIEF_KEYS = {
   get fly() { return [CAMP_KEYS.fly.k]; }, get fire() { return [CAMP_KEYS.fire.k]; }, get map() { return [CAMP_KEYS.map.k]; }, get zoom() { return [CAMP_KEYS.zoomout.k, CAMP_KEYS.zoomin.k]; }, // the keys of the table (CAMP_KEYS in src/data_controls.js), read when asked
   get missile() { return [CAMP_KEYS.missile.k]; },
-  get wing() { return campKeyCaps(campKeyVia('launch').id); }, get attack() { return campKeyCaps(campKeyVia('attack').id); }, get escort() { return campKeyCaps(campKeyVia('escort').id); }, get mine() { return campKeyCaps(campKeyVia('mine').id); }, // an order of a list: the key of the list it is in (Q, or a part's own: E fighters, R escorts), read from the key table when asked (a remap is one change there)
+  get wing() { return campKeyCaps(campKeyVia('launch').id); }, get attack() { return campKeyCaps(campKeyVia('attack').id); }, get escort() { return campKeyCaps(campKeyVia('escort').id); }, get mine() { return campKeyCaps(campKeyVia('fmine').id); }, // an order of a list: the key of the list it is in (Q, or a part's own: E fighters, R escorts), read from the key table when asked (a remap is one change there)
   get dock() { return campKeyCaps(campKeyVia('dock').id); }, get shield() { return campKeyCaps(campKeyVia('emergency').id); } // U dock and build, I power
 };
 function campBriefKeys(level, i) {

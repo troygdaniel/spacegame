@@ -90,8 +90,8 @@ console.log('D. the keys and the lists');
   const by = id => T.find(p => p.id === id);
   check('W is the all-squads list, E the red squad\'s, R the green\'s, T the yellow\'s: each a part of the fleet list, and the escorts, the convoy and the stance have no key of their own', ['squads:W', 'red:E', 'green:R', 'yellow:T'].every(x => { const [id, k] = x.split(':'); return by(id).key === k && by(id).parent === 'fleet'; }) && ['convoy', 'escorts', 'stance'].every(id => by(id).key === '' && by(id).parent === 'fleet'));
   check('a squad\'s list is Attack the target, Guard the cruiser, Recall: three rows each, in that order', ['red', 'green', 'yellow'].every(id => by(id).rows.join() === [id + 'attack', id + 'guard', id + 'recall'].join()));
-  check('the all-squads list is the same three with Mine ore and Launch the wing: Attack, Guard, Recall, Mine, Launch', by('squads').rows.join() === 'attack,fguard,frecall,fmine,slaunch');
-  check('the Q list holds the squads, the escorts and the convoy as rows that open a part, then Guard, Mine, Recall and Stance: eleven rows, none of them left out in a mission with a convoy', by('fleet').rows.join() === 'launch,gsquads,gred,ggreen,gyellow,gescorts,gconvoy,guard,mine,recall,gstance' && J('CAMP_PANELS.show') >= 11);
+  check('the all-squads list starts with Launch the wing (so Q, Enter, Enter launches everything) and has the same three as a squad plus Mine ore: Launch, Attack, Guard, Recall, Mine; it opens on its first row that can be given (start: usable)', by('squads').rows.join() === 'launch,attack,fguard,frecall,fmine' && J(`campPanelDef('squads').start`) === 'usable');
+  check('the Q list is the parts of the wing and nothing else, so nothing is listed twice: All squads first, then Red, Green, Yellow, the escorts, the convoy and the stance, every row a part that opens its list; Launch, Guard, Mine and Recall are not in it (they are in All squads)', by('fleet').rows.join() === 'gsquads,gred,ggreen,gyellow,gescorts,gconvoy,gstance' && J(`campPanelDef('fleet').rows.every(r => r.open)`) === true && J(`campPanelDef('fleet').rows[0].open`) === 'squads' && J('CAMP_PANELS.show') >= 7);
   g.run('__out(1); window.__PP = campPanelNew();');
   const pick = (code, rows) => J(`(() => { campPanelClose(__PP); campPanelKey(__PP, C, '${code}', 0); for (let i = 0; i < ${rows}; i++) campPanelKey(__PP, C, 'ArrowDown', 0); const r = campPanelKey(__PP, C, 'Enter', 0); return { open: campPanelOpen(__PP), row: r.row, ok: r.ok, ran: r.ran, fleet: r.fleet }; })()`);
   g.run('window.__a = __foe(900, 0); campTgtNearest(C);');
@@ -109,7 +109,7 @@ console.log('D. the keys and the lists');
   check('W, Mine ore: all the fighters go mining (the escorts are left as they were)', mine.row === 'fmine' && J(`campWing(C, 'fighter').every(u => u.order.type === 'mine')`) && J(`campWing(C, 'escort').every(u => u.order.type !== 'mine')`));
   // the escorts and the convoy through Q
   const esc = J(`(() => { campPanelClose(__PP); campPanelKey(__PP, C, 'KeyQ', 0); const i = campPanelList(C, 'fleet').findIndex(r => r.id === 'gescorts'); for (let k = 0; k < i; k++) campPanelKey(__PP, C, 'ArrowDown', 0); const o = campPanelKey(__PP, C, 'Enter', 0); const l = campPanelKey(__PP, C, 'ArrowLeft', 0); return { i, open: o.open, back: l.open, at: __PP.at }; })()`);
-  check('the escorts\' orders are reached through the Q list: Q, Down to Escorts, Enter opens them at their first row; Left goes back onto the Escorts row', esc.i === 5 && esc.open === 'escorts' && esc.back === 'fleet' && esc.at === 5, JSON.stringify(esc));
+  check('the escorts\' orders are reached through the Q list: Q, Down to Escorts, Enter opens them at their first row; Left goes back onto the Escorts row', esc.i === 4 && esc.open === 'escorts' && esc.back === 'fleet' && esc.at === 4, JSON.stringify(esc));
   g.run('campPanelClose(__PP);');
   const old = ['KeyE', 'KeyR', 'KeyW'].map(c => J(`(() => { campPanelClose(__PP); return campPanelKey(__PP, C, '${c}', 0).open; })()`)).join();
   check('the old meanings are gone: E is not the fighters\' list, R not the escorts\', W not the convoy\'s: they open the red squad, the green squad and all squads', old === 'red,green,squads', old);
@@ -180,6 +180,23 @@ console.log('G. the tint, and the circle only while a squad\'s list is open (car
   const scene = src('src/campaignscene.js');
   check('sync() calls both (the tint for each ship, the circle once a frame), and no ring is drawn round every fighter any more', /this\.squadTint\(sp, u\);/.test(scene) && /this\.squadCircle\(\);/.test(scene) && /campSquadsLit\(campPanelOpen\(this\.pn\)\)/.test(scene) && !/u\.squad && col\[u\.squad\]\) \{ const sp/.test(scene));
   check('the card\'s docs say it: the tint, the circle only while a list is open, the white spark on the map (PROJECT_STATUS.md, docs/CAMPAIGN.md)', /tint/.test(src('docs/CAMPAIGN.md').split('\n').find(l => /What a squad looks like/.test(l)) || '') && /circle/.test(src('PROJECT_STATUS.md').split('\n').find(l => /Fighter squads/.test(l)) || ''));
+}
+
+console.log('H. launching through the lists (card space-game-squad-tint: Launch is the first row of All squads)');
+{
+  g.run('__new(1); campPanelClose(__PP);');
+  const a = J(`(() => { const q = campPanelKey(__PP, C, 'KeyQ', 0), at0 = __PP.at, id0 = campPanelList(C, 'fleet')[__PP.at].id, n0 = C.orders.launch, e1 = campPanelKey(__PP, C, 'Enter', 0), open1 = campPanelOpen(__PP), id1 = campPanelList(C, open1)[__PP.at].id, n1 = C.orders.launch, e2 = campPanelKey(__PP, C, 'Enter', 0); return { qopen: q.open, at0, id0, n0, ran1: e1.ran, open1, id1, n1, ran2: e2.ran, ok2: e2.ok, row2: e2.row, closed: campPanelOpen(__PP) === '', n2: C.orders.launch }; })()`);
+  check('Q opens the fleet list on All squads (its first row); Enter opens All squads on Launch the wing and launches nothing yet; the second Enter launches everything and the list closes', a.qopen === 'fleet' && a.at0 === 0 && a.id0 === 'gsquads' && a.n0 === 0 && a.ran1 === false && a.open1 === 'squads' && a.id1 === 'launch' && a.n1 === 0 && a.ran2 === true && a.ok2 === true && a.row2 === 'launch' && a.closed && a.n2 === 1, JSON.stringify(a));
+  g.run('__new(1); campPanelClose(__PP);');
+  const w = J(`(() => { const o = campPanelKey(__PP, C, 'KeyW', 0), id = campPanelList(C, 'squads')[__PP.at].id, e = campPanelKey(__PP, C, 'Enter', 0); return { open: o.open, id, ran: e.ran, ok: e.ok, row: e.row, n: C.orders.launch, closed: campPanelOpen(__PP) === '' }; })()`);
+  check('W, Enter launches too (W opens All squads on Launch the wing)', w.open === 'squads' && w.id === 'launch' && w.ran && w.ok && w.row === 'launch' && w.n === 1 && w.closed, JSON.stringify(w));
+  g.run('__run(8); campPanelClose(__PP);');
+  const out = J(`(() => { const R = campPanelRowState(C, campPanelDef('squads').rows[0]); const o = campPanelKey(__PP, C, 'KeyW', 0), id = campPanelList(C, 'squads')[__PP.at].id; return { ok: R.ok, state: R.state, short: R.short, open: o.open, at: __PP.at, id }; })()`);
+  check('with the wing out Launch is greyed ("all of it is out") and All squads opens on Attack the target, its first row that can be given', out.ok === false && out.state === 'all of it is out' && out.short === 'all out' && out.open === 'squads' && out.at === 1 && out.id === 'attack', JSON.stringify(out));
+  const back = J(`(() => { campPanelClose(__PP); campPanelKey(__PP, C, 'KeyQ', 0); campPanelKey(__PP, C, 'Enter', 0); const l = campPanelKey(__PP, C, 'ArrowLeft', 0); return { open: l.open, at: __PP.at }; })()`);
+  check('Left from All squads goes back to Q on the All squads row, and the other lists still open on their first row (a squad\'s list with the wing out starts on Attack, its first)', back.open === 'fleet' && back.at === 0 && J(`(() => { campPanelClose(__PP); campPanelKey(__PP, C, 'KeyE', 0); return __PP.at; })()`) === 0 && J(`(() => { campPanelClose(__PP); campPanelKey(__PP, C, 'KeyP', 0); return __PP.at; })()`) === 0, JSON.stringify(back));
+  g.run('campPanelClose(__PP); campOrder(C, "recall"); __run(10);');
+  check('after a Recall the bay has ships again: Launch can be given and All squads opens on it once more', J(`(() => { campPanelKey(__PP, C, 'KeyW', 0); const id = campPanelList(C, 'squads')[__PP.at].id; campPanelClose(__PP); return id; })()`) === 'launch');
 }
 
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
