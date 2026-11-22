@@ -69,7 +69,7 @@ try {
     const list = K.rows[id]; if (!list || !(list in K.lists)) { note(`(no row ${id} in the table of the lists)`); return false; }
     const way = await wayTo(id); if (!way) { note(`(the row ${id} is left out of this mission's ${list} list)`); return false; }
     if (await listOpen()) await key(K.esc); // an open list is closed first (Esc pauses only when none is open)
-    for (const [code, downs] of way) { await key(code, wait); for (let i = 0; i < downs; i++) await key(K.down, wait); }
+    for (const [code, downs] of way) { await key(code, wait); const cur = await j(`${S}.pn.at`), n = await j(`campPanelList(${S}.camp, campPanelOpen(${S}.pn)).length`); for (let i = 0, d = ((downs - cur) % n + n) % n; i < d; i++) await key(K.down, wait); } // (All squads opens on its first row that can be given: the Downs count from the highlight)
     await key(K.pick, wait);
     if (await listOpen()) await key(K.esc); // an order that is refused leaves the list open (its reason is the toast): it is closed, the keys go back to the ship
     return true;
@@ -84,10 +84,10 @@ try {
   K.scout = await ctl(/V scouts/, 0); // (the map's T took a lane at the fork of 1.1; the fork was cut, card space-game-cut-lane-fork: no K.take)
   K.up = await ck('up'); K.down = await ck('down'); K.pick = await ck('pick'); K.esc = await ck('pause'); K.shields = await ck('shields'); K.engines = await ck('engines'); K.weapons = await ck('weapons'); K.even = await ck('balance'); K.missile = await ck('missile');
   K.lists = await j(`(() => { const o = {}; CAMP_PANELS.panels.forEach(p => { o[p.id] = p.code; }); return o; })()`); // the key that opens each list ('' for a list with no key of its own: the stances)
-  K.rows = {}; for (const id of ['launch', 'attack', 'escort', 'guard', 'mine', 'ctuck', 'crun', 'ccarry', 'goal', 'target', 'burn', 'dock', 'emergency']) K.rows[id] = await rk(id); // the list each row is in
+  K.rows = {}; for (const id of ['launch', 'attack', 'escort', 'fguard', 'fmine', 'ctuck', 'crun', 'ccarry', 'goal', 'target', 'burn', 'dock', 'emergency']) K.rows[id] = await rk(id); // the list each row is in
   K.listDown = K.down; // the map's list is stepped with Down too (A and D are the target's keys, not the map's)
   note('keys from the table: ' + JSON.stringify(K));
-  check('every key the walk needs is in the key table', ['title', 'map', 'fire', 'next', 'near', 'minus', 'zero', 'scout', 'up', 'down', 'pick', 'esc', 'shields', 'engines', 'weapons', 'even', 'missile'].every(k => K[k]) && !!K.lists.fleet && !!K.lists.ship && ['launch', 'guard', 'mine'].every(k => K.rows[k] === 'fleet') && K.rows.attack === 'squads' && K.rows.escort === 'escorts' && ['ctuck', 'crun', 'ccarry'].every(k => K.rows[k] === 'convoy') && ['goal', 'target', 'burn'].every(k => K.rows[k] === 'nav') && K.rows.dock === 'yard' && K.rows.emergency === 'power' && Object.keys(K.rows).every(k => K.rows[k] in K.lists) /* each of those lists is in the table (a list with no key of its own, the escorts and the convoy, is opened from the fleet list: wayTo): the row is two or three keys away */, JSON.stringify(Object.keys(K).filter(k => !K[k]).concat(Object.keys(K.rows).filter(k => !K.rows[k]))));
+  check('every key the walk needs is in the key table', ['title', 'map', 'fire', 'next', 'near', 'minus', 'zero', 'scout', 'up', 'down', 'pick', 'esc', 'shields', 'engines', 'weapons', 'even', 'missile'].every(k => K[k]) && !!K.lists.fleet && !!K.lists.ship && ['launch', 'fguard', 'fmine', 'attack'].every(k => K.rows[k] === 'squads') && K.rows.escort === 'escorts' && ['ctuck', 'crun', 'ccarry'].every(k => K.rows[k] === 'convoy') && ['goal', 'target', 'burn'].every(k => K.rows[k] === 'nav') && K.rows.dock === 'yard' && K.rows.emergency === 'power' && Object.keys(K.rows).every(k => K.rows[k] in K.lists) /* each of those lists is in the table (a list with no key of its own, the escorts and the convoy, is opened from the fleet list: wayTo): the row is two or three keys away */, JSON.stringify(Object.keys(K).filter(k => !K[k]).concat(Object.keys(K.rows).filter(k => !K.rows[k]))));
   check('no row of a list has a key of its own, and no digit is a key of the flight', await j(`CAMP_PANELS.panels.every(p => p.rows.every(r => !('k' in r) && !('code' in r))) && Object.keys(CAMP_KEYS).every(id => CAMP_KEYS[id].codes.every(c => !/^(Digit|Numpad)[0-9]$/.test(c)))`));
   await key('KeyK'); // the title's own key for the Campaign (not in the Campaign group)
   check('K on the title opens the ready room', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`));
@@ -171,7 +171,7 @@ try {
     // 1.2: the wing mines; the cruiser goes to the raiders; when the ore is in and the raids are beaten, dock at the Works to sell
     if (MISSION === 2) {
       const ore = await j(`Math.floor(${C}.ore)`), best = await j(`Math.floor(${C}.oreBest)`);
-      if (!ordered.mine || (!any && clock - mineAt >= 25 && ore < 450)) { ordered.mine = true; mineAt = clock; note(`Mine ore (the fleet list) at ${clock} s: ore ${ore}`); await press('mine'); }
+      if (!ordered.mine || (!any && clock - mineAt >= 25 && ore < 450)) { ordered.mine = true; mineAt = clock; note(`Mine ore (the all-squads list) at ${clock} s: ore ${ore}`); await press('fmine'); }
       if (any && !foes && clock - flewAt >= 9) { flewAt = clock; const R = await foeRows(); if (R.length) { note(`raiders at ${R[0].d} px: the cruiser goes to ${R[0].id} (the map, Enter) at ${clock} s`); await mapDo(R[0].id, 'Enter', 'fly to the raiders'); } }
       if (!any && best >= 450 && !sold && (await j(`${C}.waves.every(w => w && w.started)`))) {
         if (!ordered.dock) { ordered.dock = true; note(`ore ${ore}: the goal is now "${await j(`campObjective(${C})`)}": fly there (the goal row) at ${clock} s`); await press('goal'); await t.run(600); }
