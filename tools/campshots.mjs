@@ -70,11 +70,11 @@ try {
       if (shots.kill >= 3 && shots.hit >= 2) break;
     }
     note('after the fight', JSON.stringify(await state()));
-    // the hull and Earth's shield low (staged), the recall order, and the mothership up close (staged: the carrier is flown to it)
-    await t.ev(`(() => { const C = ${SC}.camp; C.carrier.hp = C.carrier.maxHp * 0.22; C.earth.shield = C.earth.max * 0.18; return 1; })()`); await t.run(400); await snap('c07-l1-low');
+    // the hull and the shields low (staged; Earth's shield too where there is one), the recall order, and the mothership up close (staged: the carrier is flown to it)
+    await t.ev(`(() => { const C = ${SC}.camp; C.carrier.hp = C.carrier.maxHp * 0.22; if (C.earth) C.earth.shield = C.earth.max * 0.18; C.shield = campShieldMax(C) * 0.18; return 1; })()`); await t.run(400); await snap('c07-l1-low');
     await recall(); await t.run(1800); await snap('c08-l1-recall');
     // the mothership: put one 520 px ahead of the carrier (staged: the game sends it at the third wave) and let the wing go for it
-    await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; C.carrier.hp = C.carrier.maxHp; C.earth.shield = C.earth.max; const m = campSpawn(C, 'mother', c.x + Math.cos(c.rot) * 560, c.y + Math.sin(c.rot) * 560); m.goal = 'earth'; return 1; })()`);
+    await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; C.carrier.hp = C.carrier.maxHp; if (C.earth) C.earth.shield = C.earth.max; C.shield = campShieldMax(C); const m = campSpawn(C, 'mother', c.x + Math.cos(c.rot) * 560, c.y + Math.sin(c.rot) * 560); m.goal = 'earth'; return 1; })()`);
     await keyOn('Digit1'); await t.run(300); await keyOn('Digit2'); await t.run(1600); await snap('c09-l1-mother');
     note('sizes', JSON.stringify(await sizes()));
   } else if (part === '2') {
