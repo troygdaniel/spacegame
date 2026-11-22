@@ -64,7 +64,7 @@ function campHubTitle(level, i) {
   const t = uiText('camp.m.' + level + '.' + (i + 1) + '.title');
   return campHubPlain(t) ? t : (CAMP.levels[level] ? String(CAMP.levels[level].name) : '');
 }
-function campHubBonusText(b) { return b.type === 'lost' && !b.n ? uiText('camp.b.nolost') : uiText('camp.b.' + b.type, { secs: b.secs, n: b.n, pct: b.pct }); }
+function campHubBonusText(b) { const none = 'camp.b.no' + b.type; return !b.n && Object.prototype.hasOwnProperty.call(UI_TEXT, none) ? uiText(none) : uiText('camp.b.' + b.type, { secs: b.secs, n: b.n, pct: b.pct }); } // a bonus that allows none of something says so ("Lose no miners"), not "Miners lost: 0 or fewer": camp.b.nolost, .noneutrals, .notorpedoes
 const campHubResults = P => (P && P.results && typeof P.results === 'object') ? P.results : {};
 function campHubFlown(P) { return Object.keys(campHubResults(P)).length; }
 function campHubAll() { return campHubLevels().reduce((a, l) => a + campMissions(l).length, 0); }

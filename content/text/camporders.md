@@ -44,3 +44,4 @@ The words of the pilots' calls for orders (card space-game-order-calls, src/camp
 | camp.call.fail | Cannot do that. Playing it safe. |
 | camp.call.hud.def | if you wait |
 | camp.call.hud.keys | {keyup} {keydown} pick   {keypick} answer |
+| camp.call.hud.held | Timer stopped   {keyup} {keydown} pick   {keypick} answer |
