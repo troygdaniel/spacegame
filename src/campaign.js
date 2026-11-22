@@ -427,14 +427,10 @@ const CAMP = {
     modes: [                               // the settings, in the order the key cycles them: id, name, the multiplier
       { id: 'calm', name: 'Calm', mult: 0.6 },   // slow enough to read every pass of the fight
       { id: 'normal', name: 'Normal', mult: 0.72 }, // the default for a player
-      { id: 'brisk', name: 'Brisk', mult: 0.85 } // the quickest a player can have it. Card space-game-command-slowtime (Troy, 21 Nov 2026: fights slower, so there is time to direct the fleet) took the three values down by 15 percent (they were 0.7, 0.85, 1). A battle made with no pace, or with the number 1, is still the table's own numbers: the sim's pins, the bots with --pace 1 and the tests use that
+      { id: 'brisk', name: 'Brisk', mult: 0.85 } // the quickest a player can have it. Card space-game-command-slowtime (Troy, 21 Nov 2026: fights slower) took the three values down by 15 percent (they were 0.7, 0.85, 1); that stays, but the battle itself never slows for a list, the map or a call (card space-game-no-command-slowdown, Troy, 22 Nov 2026). A battle made with no pace, or with the number 1, is still the table's own numbers: the sim's pins, the bots with --pace 1 and the tests use that
     ],
     start: 'normal',                       // the setting until the player picks one
-    shots: 0.5                             // the power of the multiplier a shot's speed takes (0.5 is its square root: a shot does not outrun the eye, a hit still lands). There is no key and no setting for the pace any more (card space-game-two-hands-keys: command time, src/campslow.js, replaces it): the Campaign flies at CAMP.pace.start, and campNew's opts.pace still takes a mode for the tests, the bots and the sims
-  },
-  slow: {                                  // COMMAND TIME (card space-game-command-slowtime; src/campslow.js; Troy, 21 Nov 2026: fights were not interactive, he wants to direct the fleet more): while a list of orders (Q or P), the Tab map or a pilot's call is open the battle runs at this share of its pace (Homeworld style), with a sign on the screen. Closing returns to pace. Flying between places is not slowed: with nothing open, the carrier and the autopilot are as they were
-    after: 2000,                           // ms the battle stays slowed after a fleet order or a pick of the target (the list has closed: the time to give the next one)
-    scale: 0.25                            // a quarter speed: the whole battle (every ship, wave clock, reload and cooldown), not only the small ships the pace scales
+    shots: 0.5                             // the power of the multiplier a shot's speed takes (0.5 is its square root: a shot does not outrun the eye, a hit still lands). There is no key and no setting for the pace any more (card space-game-two-hands-keys): the Campaign flies at CAMP.pace.start, and campNew's opts.pace still takes a mode for the tests, the bots and the sims
   },
   refit: {                                 // the Earth refit screen after level 1: one tech, and ore buys extra ships for the next level (the costs are the workshop's, CAMP.build)
     most: 3                                // most extra fighters, and most extra escorts, one refit buys
@@ -693,7 +689,6 @@ function campNew(level, techs, opts) {
   const C = {
     level, mission: L.mission, L, flags: {}, arrivedAt: campHere(level, L) ? 0 : null, hpS: CAMP.alien.hpScale * (L.hpScale || 1), dmgS: CAMP.alien.damageScale * (L.dmgScale || 1), pace: campPaceMult(opts.pace), shot: Math.pow(campPaceMult(opts.pace), CAMP.pace.shots), via: opts.via || 'menu', t: 0, rng: campRng(opts.seed == null ? 1 : opts.seed), god: !!opts.god, nextId: 1, ships: [], by: {}, bullets: [], events: [],
     input: { turn: 0, thrust: 0, brake: false, fire: false, blink: false },
-    timeScale: 1,                                   // command time (src/campslow.js): 1 at the battle's own pace, CAMP.slow.scale while the map or a call is open, or just after a fleet key; the scene sets it each frame and steps the battle by dt times it, and a clock of the player's seconds (the order calls') counts dt over it
     techs: (techs || []).filter(t => CAMP.tech[t]),
     earth: L.defend ? campDefend(level, L.defend) : L.earth === false ? null : { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield }, caches: (L.caches || []).map(c => ({ x: c[0], y: c[1], got: false })), cachesGot: 0,
     ore: Math.max(0, Math.min(CAMP.ore.cap, opts.ore != null ? opts.ore : (L.startOre != null ? L.startOre : CAMP.ore.start))), shield: CAMP.carrier.shield, pickups: [], build: { queue: [] },

@@ -90,6 +90,6 @@ function campPanelsClick(s, px, py) {
   let i = -1; for (let k = 0; k < G.n; k++) if (py >= G.rowY(k) - 1 && py < G.rowY(k) + G.rowH + 1) i = k;
   const hit = i >= 0 ? rows[(P.top | 0) + i] : null;
   if (hit && hit.open) { campPanelGo(P, s.camp, hit.open); return true; } // a part's row: its list opens
-  if (hit) { P.at = (P.top | 0) + i; const r = campPanelRun(s.camp, hit, 'click'); P.lit[hit.id] = now; if (def.side === 'left' && typeof campSlowKick === 'function') campSlowKick(s, now); if (r && r.say) toast(s, r.say, r.ok ? '#9fe9ff' : '#ffb454'); if (r && r.ok && !hit.stay) campPanelClose(P); }
+  if (hit) { P.at = (P.top | 0) + i; const r = campPanelRun(s.camp, hit, 'click'); P.lit[hit.id] = now; if (r && r.say) toast(s, r.say, r.ok ? '#9fe9ff' : '#ffb454'); if (r && r.ok && !hit.stay) campPanelClose(P); }
   return true;
 }

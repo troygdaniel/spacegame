@@ -29,7 +29,6 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 **The ideas that make it a commander game.**
 
 - **Power management.** Six pips shared between weapons, shields and engines (like X-Wing's); shields mend by themselves at a rate the shield pips set; three gauges show where the energy goes.
-- **Command time.** While an order list, the map or a pilot's call is open, the battle slows to a quarter speed, so you have time to decide.
 - **Pilots ask for orders.** Timed radio calls with three choices and real costs.
 - **A mission is a sequence of questions.** Mission 1.1 is the finished example: a patrol turns back, a fork in the road (scout it first), a distress call, an ambush with torpedo boats, a pirate leader who duels your cruiser. Something happens about every minute.
 - **Objectives and bonuses**, a score, and ranks that grow your wing.
@@ -74,7 +73,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 
 **A pilot's call** (a timed radio prompt with three answers) is a small amber list low in the middle of the screen: `Up` and `Down` pick an answer, `Enter` gives it. The highlight starts on the pilot's own cautious pick, which is also what he does if you say nothing. Only one list has the arrows and Enter at a time: while an order list (or the map) is open the call waits, dimmed, and says so.
 
-Command time (the battle at a quarter of its pace) runs while a list, the map or a pilot's call is open, and for two seconds after a fleet order or a pick of the target. The battle has one pace (Normal); there is no pace key. Cards between battles (the tech pick, the refit) still use the number keys shown on them.
+The battle never slows for a list, the map or a pilot's call: it runs at its own speed whatever is open. It has one pace (Normal); there is no pace key. Cards between battles (the tech pick, the refit) still use the number keys shown on them.
 
 ### Long Haul
 

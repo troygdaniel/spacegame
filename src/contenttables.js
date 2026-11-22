@@ -579,8 +579,6 @@ const UI_TEXT = {
   'camp.no.noore2': 'Not enough ore: {need} needed, {have} in the store.',
   'camp.no.noearth': 'There is no Earth here, pilot.',
   'camp.no.shieldauto': 'Shields mend on their own. More pips on shields mend faster.',
-  'camp.slow.sign': 'COMMAND TIME  x{scale}',
-  'camp.slow.hint': 'Time slows while you give orders.',
   'camp.call.hud.wait': 'Close the list or the map to answer',
   'camp.ui.listkeys': '{keyup} {keydown}  {keypick} order or open  {keypause} close',
   'camp.ui.listmore': '{n} more below',
