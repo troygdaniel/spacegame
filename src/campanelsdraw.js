@@ -56,14 +56,14 @@ function campPanelsPaint(s, now) {
   L.tgtKeys.setVisible(true).setPosition(tx, T.y + 18).setText(uiText(tg ? 'camp.ui.tgtclear' : 'camp.ui.tgtkeys'));
   if (tg) { g.fillStyle(0x16293d, 1); g.fillRect(tx - T.w, T.y + 9, T.w, T.bar); g.fillStyle(0xff7a6a, 1); g.fillRect(tx - T.w, T.y + 9, Math.max(1, T.w * tg.hp), T.bar); }
   const id = campPanelOpen(P), def = id ? campPanelDef(id) : null; if (!def) { L.live = -1e9; L.key = ''; return; }
-  const col = K.color[def.side], key = id + ':' + P.at + ':' + P.top + ':' + Object.keys(P.lit || {}).map(k => P.lit[k]).join(); // (an order just given is in the key too: a power row stays open, and its pips are right at once)
+  const col = K.color[def.side], key = id + ':' + P.at + ':' + P.top + ':' + (P.pick ? 'p' + P.pick.sel + ':' + P.pick.at + ':' + P.pick.top : '') + ':' + (P.trail || []).join() + ':' + Object.keys(P.lit || {}).map(k => P.lit[k]).join(); // (an order just given is in the key too: a power row stays open, and its pips are right at once; so is the target sub-list's highlight)
   if (L.live < 0 || now - L.live >= K.every || L.key !== key) { L.live = now; L.key = key; L.view = campPanelView(P, C); } // the words are live: made when the list opens or the highlight moves, and four times a second
   const V = L.view; if (!V) return;
   const G = campPanelsGeometry(def, V.total);
   g.fillStyle(0x04101c, 0.9); g.fillRoundedRect(G.x, G.y, G.w, G.h, 7);
   g.lineStyle(2, col, 0.9); g.strokeRoundedRect(G.x, G.y, G.w, G.h, 7);
   g.fillStyle(col, 0.22); g.fillRoundedRect(G.x, G.y, G.w, B.head, 7);
-  L.title.setVisible(true).setPosition(G.x + 12, G.y + B.head / 2).setText((def.key ? def.key + '   ' : '') + def.title).setColor(K.ink[def.side]);
+  L.title.setVisible(true).setPosition(G.x + 12, G.y + B.head / 2).setText((def.key ? def.key + '   ' : '') + V.title).setColor(K.ink[def.side]); // (V.title: the list's, or what is being picked)
   const caps = V.rows.some(r => r.more), nx = G.x + 14 + (caps ? K.cap.w + K.cap.gap : 0); // a list with parts: every row's words start after the cap's place, so they line up
   L.count.setVisible(true).setPosition(G.x + G.w - 12, G.y + B.head / 2).setText((V.first + V.at + 1) + ' / ' + V.total);
   V.rows.forEach((st, i) => { // a row: its words, and at the right what it will do or why it cannot; the highlighted one has a bright bar
@@ -79,17 +79,28 @@ function campPanelsPaint(s, now) {
   });
   const cur = V.rows[V.at], F = G.foot; // the foot: the highlighted row's full state (or its reason), what is off the screen, and the keys
   L.more.setVisible(true).setPosition(F.x + 12, F.y + 10).setText(cur && cur.state ? cur.state.charAt(0).toUpperCase() + cur.state.slice(1) : (V.below ? uiText('camp.ui.listmore', { n: V.below }) : '')).setColor(cur && !cur.ok ? K.rowInk.why : '#9fbdd1');
-  L.keys.setVisible(true).setPosition(F.x + 12, F.y + 30).setText(uiText(def.parent ? 'camp.ui.listkeysub' : 'camp.ui.listkeys', { key: def.key }));
+  L.keys.setVisible(true).setPosition(F.x + 12, F.y + 30).setText(uiText(V.keys, { key: def.key })); // the foot's words are the model's: Esc closes a list its own key opened, goes back from one a row opened, and from a target sub-list
 }
 
 // a click on a row of the open list does the row (as Enter would). true when the list took the click (so it is not also a click on the map or the battle)
 function campPanelsClick(s, px, py) {
   const P = s.pn, L = s.pnl; if (!P || !L || !campPanelsOn(s)) return false;
   const def = campPanelDef(campPanelOpen(P)); if (!def) return false;
-  const rows = campPanelList(s.camp, def.id), G = campPanelsGeometry(def, rows.length), now = (s.time && s.time.now) || 0; if (!(px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h)) return false;
+  const V = campPanelView(P, s.camp); if (!V) return false; // the rows on the screen: the list's, or the candidates of a target sub-list
+  const G = campPanelsGeometry(def, V.total), now = (s.time && s.time.now) || 0; if (!(px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h)) return false;
   let i = -1; for (let k = 0; k < G.n; k++) if (py >= G.rowY(k) - 1 && py < G.rowY(k) + G.rowH + 1) i = k;
-  const hit = i >= 0 ? rows[(P.top | 0) + i] : null;
-  if (hit && hit.open) { campPanelGo(P, s.camp, hit.open); return true; } // a part's row: its list opens
-  if (hit) { P.at = (P.top | 0) + i; const r = campPanelRun(s.camp, hit, 'click'); P.lit[hit.id] = now; if (r && r.say) toast(s, r.say, r.ok ? '#9fe9ff' : '#ffb454'); if (r && r.ok && !hit.stay) campPanelClose(P); }
+  if (P.pick) { // a candidate: highlighted and chosen, the order is given at it
+    const pk = P.pick, items = campPickSync(s.camp, pk), it = i >= 0 ? items[pk.top + i] : null; if (!it) return true;
+    pk.at = pk.top + i; pk.sel = it.id; const r = campPanelChoose(P, s.camp, now, 'click', def); if (r && r.say) toast(s, r.say, r.ok ? '#9fe9ff' : '#ffb454'); return true;
+  }
+  const rows = campPanelList(s.camp, def.id), hit = i >= 0 ? rows[(P.top | 0) + i] : null;
+  if (hit && hit.open) { campPanelGo(P, s.camp, hit.open, '', def.id); return true; } // a part's row: its list opens (Esc comes back here)
+  if (hit) {
+    P.at = (P.top | 0) + i; let item = null;
+    if (campPickKind(hit) && campPanelRowState(s.camp, hit).ok) { const plan = campPickPlan(s.camp, hit); if (plan.how === 'list') { campPickOpen(P, hit, plan.items); return true; } if (plan.how === 'auto') item = plan.item; } // a row that needs a target: one is taken, several open a sub-list
+    const r = campPanelRun(s.camp, hit, 'click', item); P.lit[hit.id] = now; if (r && r.say) toast(s, r.say, r.ok ? '#9fe9ff' : '#ffb454');
+    if (r && r.ok && item) P.seen = { kind: campPickKind(hit), id: item.id, until: now + CAMP_PICK.seen };
+    if (r && r.ok && !hit.stay) campPanelClose(P);
+  }
   return true;
 }
