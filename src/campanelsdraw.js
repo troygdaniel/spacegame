@@ -46,7 +46,7 @@ function campPanelsBuild(s, def) {
     O.footKeys = tx(G.foot.x + G.w - 10, G.foot.y + 10, '', 11, K.hint.ink).setOrigin(1, 0.5);                                   // "A D S  X clear"
     O.callHead = tx(G.x + 12, G.y + B.head / 2, '', 14, K.call.ink, { letterSpacing: 2 }).setOrigin(0, 0.5);
     O.callLine = tx(G.x + 12, G.list.y + 4, '', 13, K.call.ink, { wordWrap: { width: G.w - 24 } });
-    O.callRows = [0, 1, 2].map(i => tx(G.x + 12, G.list.y + 4 + 70 + i * 22, '', 14, K.call.rowInk));
+    O.callRows = [0, 1, 2].map(i => tx(G.x + 12, G.list.y + 4 + 70 + i * 22, '', 13, K.call.rowInk));
     O.callFoot = tx(G.x + G.w - 10, G.list.y + G.list.h - 6, '', 11, '#7f9fb4').setOrigin(1, 1);
   }
   return O;
@@ -81,11 +81,11 @@ function campPanelsPaintOne(s, O, now, on) {
   g.fillStyle(hot, call ? 0.3 : 0.14); g.fillRoundedRect(G.x, G.y, G.w, B.head, 7);
   if (call) { // a pilot's call: the rows' place is the call's (1 2 3 answer it)
     O.callHead.setVisible(true).setText(uiText('camp.ui.callhead'));
-    O.callLine.setVisible(true); O.callFoot.setVisible(true).setText(uiText('camp.call.hud.keys'));
+    O.callLine.setVisible(true); O.callFoot.setVisible(true).setText(uiText('camp.call.hud.keys') + '   * ' + uiText('camp.call.hud.def'));
     const key = call.id + ':' + call.pilot;
     if (O.callKey !== key) {
       O.callKey = key; O.callLine.setText((typeof campCallPilot === 'function' ? campCallPilot(call.pilot)[0] : 'PILOT') + ': ' + uiText(call.line));
-      call.rows.forEach((r, i) => O.callRows[i] && O.callRows[i].setText(r.n + '  ' + uiText(r.label) + (r.def ? '   (' + uiText('camp.call.hud.def') + ')' : '')));
+      call.rows.forEach((r, i) => O.callRows[i] && O.callRows[i].setText(r.n + '  ' + uiText(r.label) + (r.def ? '  *' : ''))); // the pilot's own pick, if no answer comes, is starred (the foot says so)
     }
     O.callRows.forEach((t, i) => t.setVisible(i < call.rows.length));
     const share = call.total > 0 ? Math.max(0, Math.min(1, call.left / call.total)) : 0, by = G.list.y + G.list.h - 4, bw = G.w - 24;

@@ -12,7 +12,7 @@ const { launch } = await import('./cdp.mjs');
 const OUT = process.env.KEYS_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { Digit0: 48, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, Digit7: 55, Digit8: 56, Digit9: 57, KeyH: 72, KeyA: 65, KeyD: 68, KeyS: 83, KeyX: 88, KeyQ: 81, KeyP: 80, KeyE: 69, KeyR: 82, KeyW: 87, KeyJ: 74, Escape: 27, Enter: 13, Tab: 9 };
+const VK = { Digit0: 48, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, Digit7: 55, Digit8: 56, Digit9: 57, KeyH: 72, KeyA: 65, KeyD: 68, KeyS: 83, KeyX: 88, KeyQ: 81, KeyP: 80, KeyE: 69, KeyR: 82, KeyW: 87, KeyJ: 74, Escape: 27, Enter: 13, Tab: 9, ArrowRight: 39, ArrowLeft: 37, ArrowUp: 38, ArrowDown: 40 };
 const press = async (t, code, wait = 40) => { // a real key: down, a few frames, up (the game clock is stepped, so "fast" is in game milliseconds)
   const key = code.startsWith('Digit') ? code.slice(5) : code.startsWith('Key') ? code.slice(3).toLowerCase() : code, k = { windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key };
   await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, k)); await t.run(wait); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, k)); await t.run(wait);
@@ -33,6 +33,14 @@ async function campaign() {
     check('SHIP shows 7 8 9 0, J K L ;, U, Enter and I, each with its key', JSON.stringify(await j(`${SC}.pnl.p.ship.rows.map(r => r.key.text)`)) === JSON.stringify(['7', '8', '9', '0', 'J', 'K', 'L', ';', 'U', 'Enter', 'I']));
     check('the rows of both panels fit their column as the browser draws them (the key, the name and its word side by side with room to spare)', (await j(`[${SC}.pnl.p.fleet, ${SC}.pnl.p.ship].every(O => O.rows.filter(r => r.name.visible).every(r => 8 + CAMPPANELS_LOOK.cap.w + 8 + r.name.width + 8 + r.suffix.width + 10 <= CAMPPANELS_LOOK.box.w))`)) === true);
     await snap(t, 'start');
+    // flight: the arrows turn and thrust the cruiser; A, W and the other letters are the fleet's and do not
+    const rot0 = await j(`${SC}.camp.carrier.rot`);
+    await press(t, 'KeyA', 400); await press(t, 'KeyW', 400); await press(t, 'KeyD', 400); await press(t, 'KeyS', 400);
+    check('W A S D do not fly the cruiser: no turn, no thrust (A and D picked no target: none is near)', Math.abs((await j(`${SC}.camp.carrier.rot`)) - rot0) < 1e-6 && (await j(`Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy)`)) < 1);
+    await press(t, 'ArrowRight', 500);
+    check('the Right arrow turns the cruiser', (await j(`${SC}.camp.carrier.rot`)) - rot0 > 0.05);
+    await press(t, 'ArrowUp', 500);
+    check('the Up arrow thrusts it', (await j(`Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy)`)) > 1);
     await press(t, 'Digit1', 20); await t.run(300);
     check('1 launches the wing', (await j(`${SC}.camp.launchQ.length + ${SC}.camp.launched`)) >= 1);
     await t.run(6000);
@@ -56,6 +64,11 @@ async function campaign() {
       await press(t, 'KeyX', 20); await t.run(100);
       check('X clears it', (await j(`${SC}.camp.tgt`)) === '');
     }
+    await t.ev(`(() => { campCallStart(${SC}.camp, 'cruiser', {}); return 1; })()`); await t.run(500);
+    check('a pilot\'s call takes the place of the FLEET rows: PILOT CALL, the pilot\'s line and 1 2 3; 1 answers it and does not launch anything', (await j(`${SC}.pnl.p.fleet.callHead.visible && ${SC}.pnl.p.fleet.callRows.filter(r => r.visible).length === 3 && !${SC}.pnl.p.fleet.rows[0].name.visible && ${SC}.pnl.p.fleet.callRows.every(r => 12 + r.width <= CAMPPANELS_LOOK.box.w - 8)`)) === true);
+    await snap(t, 'call');
+    await press(t, 'Digit1', 20); await t.run(300);
+    check('the call is answered and the rows are back', (await j(`${SC}.camp.call.open`)) === null && (await j(`${SC}.pnl.p.fleet.rows[0].name.visible`)) === true);
     await press(t, 'KeyH'); await t.run(200);
     check('H opens the page of every key and the battle waits', (await j(`${SC}.ck && ${SC}.ck.open`)) === true && (await j(`${SC}.mode`)) === 'pause');
     await snap(t, 'page');
