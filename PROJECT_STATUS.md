@@ -1,6 +1,6 @@
 # Project status
 
-**Updated: 23 Nov 2026, written against main `f1fb57e` (the shortcut keys, no command time, a third round of fixes, the call timer and the flight zoom out to the mission's whole route), plus the walking briefing of mission 1.1.** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
+**Updated: 23 Nov 2026, written against main `fed8854` (the shortcut keys, no command time, a third round of fixes, the call timer, the flight zoom out to the mission's whole route, the walking briefing of mission 1.1 and the flight's starting zoom), plus the cut of 1.1's fork (mission 1.1 is one road).** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
 
 ## In one minute
 
