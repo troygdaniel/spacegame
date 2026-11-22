@@ -56,7 +56,7 @@ What it does: K, the ready room, the missions overlay and the three briefing scr
 
 (Three items of the first version of this list were closed by the key change that landed meanwhile (`space-game-two-hands-keys`): the call plate's key caption overlapping its third row (the call is shown in the FLEET panel's place now: `fleet-1Wm-call-1-distress.png`), the map footer's "Z: area", and the lost card's tip, which is item 10 above.)
 
-| F | note (design) | **On the remapped keys, R steps through the convoy orders and applies each one as it goes.** From "carry on" to "run for it" the key passes "tuck in" and "hold here": "Convoy, tuck in under our shield." "Convoy, hold here." "Convoy, run for it. No cover." in one second when the presses are quick; a slower player stops the transport dead for a moment on the way. | 1.1, R three times at the leader. | Troy / 7-GEN: a pick that does not apply until Enter, or the convoy page's digits kept, would not stop her on the way. Nothing changed. |
+| F | note (design), **closed by 7-GEN** | On the remapped keys R stepped through the convoy orders and applied each one as it went: from "carry on" to "run for it" the transport was told to tuck in and to hold on the way. The cycling keys (E, R) now give their order only after the key has rested 0.7 s (`CAMP_PANELS.settle`). The walk waits for the rest (one press, a pause, read the toast). | 1.1, R three times at the leader. | Nothing left to decide. |
 
 ### For 2-GEN's tune card (what feels off; no numbers changed)
 
