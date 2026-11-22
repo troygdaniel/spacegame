@@ -189,7 +189,8 @@ const CAMP = {
       yellow: { name: 'Yellow squad', kinds: ['fighter'], squad: 'yellow' }
     },
     squads: ['red', 'green', 'yellow'],    // the squads in the order they fill: a fighter that leaves the bay joins the one with the fewest ships out (a tie goes to the first of these), so six are two and two and two and a seventh makes Red three; a ship lost or mended gives its place back
-    squadColor: { red: 0xff5a4a, green: 0x3ee86a, yellow: 0xffd23a }, // what a squad's ships wear in flight (a ring: src/campaignscene.js) and on the map (src/campmapdraw.js): three hues apart, bright on the dark
+    squadColor: { red: 0xff5a4a, green: 0x3ee86a, yellow: 0xffd23a }, // what a squad's fighters are drawn in, in flight (a tint: src/campaignscene.js, and a circle while the squad's list is open) and on the map (src/campmapdraw.js): three hues apart, bright on the dark
+    rescue: 1500,                          // px: a squad sent to a ship in trouble (a pilot's call, src/camporders.js) fights the pirates this near that ship, and goes back to the order it had when none is left (campWingRescue, src/campwing.js)
     verbs: {                               // kinds: what the verb takes as a target (enemy, friend, convoy, place, point, pickup, cache, anomaly, rock); group: who it addresses when none is named (today's orders); need: a target must be named
       attack: { kinds: ['enemy'], group: 'fighters' },
       escort: { kinds: ['friend', 'convoy'], group: 'escorts' },
@@ -281,11 +282,11 @@ const CAMP = {
     refill: [2, 5, 8, 11, 14],             // charge a second, by the weapons' pips 0 to 4 (a turret at 2 pips fires 11.4 shots a second, so the default tank runs down in about half a minute of steady fire and then the turrets fire at 8 a second)
     low: 0.2                               // the computer says so when the charge falls under this share of the tank (and again after it has been over twice this)
   },
-  hud: {                                   // the left of the HUD (card space-game-systems-gauges, src/camphud.js): three Long Haul style dials in a row, SHIELDS (with the hull as a thin bar under it), SPEED, LASERS, each with a bar of power segments beside it (the pips of that system, like X-Wing); then the lines of text under them
-    x: 8, y: 8, cell: 118,                 // the first dial's cell: its left and top, and the width of a cell (three of them: 354 px, clear of the toast band, which starts at x 364)
+  hud: {                                   // the gauges of the HUD (card space-game-systems-gauges, src/camphud.js; moved from the top left to the top RIGHT by card space-game-power-presets: the ship lives on the right hand, with the P list): three Long Haul style dials in a row, SHIELDS (with the hull as a thin bar under it), SPEED, LASERS, each with a bar of power segments beside it (the pips of that system, like X-Wing); the lines of text stay at the left, under the top
+    right: 8, y: 8, cell: 118,             // the gauges' distance from the screen's right edge, their top, and the width of a cell (three of them: 354 px, from x 918 on a 1280 screen: clear of the toast band, which ends at x 916)
     r: 22, bar: { w: 10, h: 9, gap: 2 },   // the dial's radius (its bezel is 12 px outside it) and a power segment; the bar sits to the right of the dial, level with its middle
     hullBar: { y: 78, h: 7 },              // the thin hull bar under the shield dial (and its bar): its top, relative to the cell's top, and its height
-    ore: { x: 130, y: 74 },                // the ore line (and the cash), under the speed and laser dials
+    ore: { y: 74 },                        // the ore line (and the cash), under the speed and laser dials, its right end at the gauges' right edge
     text: { x: 24, y: 96, pitch: 22 },     // the lines of text under the gauges: the first one's y, and the step to the next (a line that has nothing to say gives its place back)
     plate: { w: 372, min: 90, pad: 4 }     // the dim plate under the column: its width, its least height, and how far it reaches past the last line
   },
@@ -313,7 +314,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 238], [1056, 0, 1280, 226], [360, 0, 920, 152], [0, 656, 1220, 720]] // (the target line's own rectangle is added by the scene: campPanelsKeep, src/campanelsdraw.js) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 238], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 450, 1280, 664]] // (the target line's own rectangle is added by the scene: campPanelsKeep, src/campanelsdraw.js) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {
@@ -1548,7 +1549,9 @@ function campWingAI(C, u, dt) {
     return campSeek(u, c.x, c.y, dt);
   }
   if (o.type === 'attack') {
-    foe = o.target && C.by[o.target] && C.by[o.target].hp > 0 ? C.by[o.target] : campDogFoe(C, u, campNearest(aliens, u)); // a named alien is the order's; with none named, a fighter flies at its partner (src/campdogfight.js)
+    const rs = o.rescue ? campWingRescue(C, u, o) : null; // a squad sent to a ship in trouble (a pilot's call; src/campwing.js): it fights the pirates about that ship, and when none is left it takes up the order it had
+    if (rs && rs.over) return;
+    foe = rs ? rs.foe : o.target && C.by[o.target] && C.by[o.target].hp > 0 ? C.by[o.target] : campDogFoe(C, u, campNearest(aliens, u)); // a named alien is the order's; with none named, a fighter flies at its partner (src/campdogfight.js)
     if (!foe) home = c; // nothing left to hit: back to the carrier's side
   } else if (o.type === 'escort') {
     const cv = C.by[o.target];

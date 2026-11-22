@@ -1,16 +1,17 @@
 // ---------- The Campaign's three gauges (card space-game-systems-gauges; Troy, 21 Nov 2026) ----------
-// Top left of the Campaign HUD, in the look of Long Haul's dials (src/hud.js hudGauge): SHIELDS (the hull is a thin bar under it), SPEED and LASERS. Beside each dial is a bar of power segments, the pips of
+// Top RIGHT of the Campaign HUD (they were at the top left until card space-game-power-presets: the ship lives on the right hand, and the P list and its power sub-list open right under them), in the look of Long Haul's dials (src/hud.js hudGauge): SHIELDS (the hull is a thin bar under it), SPEED and LASERS. Beside each dial is a bar of power segments, the pips of
 // the system that feeds it (the shields' for SHIELDS, the engines' for SPEED, the weapons' for LASERS), lit as they are given and animated as power moves, like X-Wing. The bars replace the small W S E pips.
 // The ship's power keys (J K L; there is no SYSTEMS panel since card space-game-two-hands-keys): the direct keys J K L (a pip to the shields, the engines, the weapons: the order of the dials, and each key is printed under its bar) change the same numbers. Where things are is the table CAMP.hud (src/campaign.js); this file is the numbers
 // (campGauges), the places (campHudGeom, campHudFlow), the animation of the bars (campGaugeAnim) and the drawing. The pure part is tested in plain Node (tests/campgauges.mjs).
 //   campGauges(C)            the three dials now: [{ id, key, label, frac, big, color, warn, tick, pips }]   (frac 0 to 1; big the number in the dial; tick 0 to 1 a mark on the dial; pips lit in its bar)
 //   campHullBar(C)           the thin hull bar: { frac, n, label, color, warn }
-//   campHudGeom()            where the dials, bars and the hull bar are, in screen px, from CAMP.hud: { cells: [{ cx, cy, R, dial, bar, key }], hull, bottom }
+//   campHudGeom()            where the dials, bars and the hull bar are, in screen px, from CAMP.hud: { cells: [{ cx, cy, R, dial, bar, key }], hull, bottom, ore: { x, y } (the ore line's right end), block: { x0, y0, x1, y1 } }
 //   campHudFlow(items)       the lines of text under the gauges: [{ id, show, h }] -> { ys: { id: y }, bottom }; a line with nothing to say gives its place back
 //   campGaugeAnim(A, pips, ms)   the bars' animation: the lit share of each bar eases to its pips, a flash runs when they change;  campGaugeAnimNew(pips) starts one
 //   campPowerKey(C, code)    a direct key: J shields, K engines, L weapons (the dials' order), ; back to 2 / 2 / 2: the same orders the strip and the voice give; { used, ran, ok, say, sys }
 // the code -> system of the keys of the SHIP panel's power rows (J K L ; in the table today)
 function campPowerKeys() { const k = {}; ['shields', 'engines', 'weapons', 'balance'].forEach(id => CAMP_KEYS[id].codes.forEach(c => { k[c] = CAMP_KEYS[id].sys; })); return k; }
+const CAMP_DIAL_PIPS = [1, 2, 0]; // the pips of the shields, the engines, the weapons (indexes into C.power.p, which is weapons, shields, engines): what dial 0, 1 and 2 show, left to right
 const CAMP_GAUGE = {
   colors: { shields: 0x7fe9ff, speed: 0x6dff9c, lasers: 0xffb454 },   // the dial and its bar: the colours the W S E pips had (weapons amber, shields cyan, engines green)
   keys: campPowerKeys(), // the direct keys (CAMP_KEYS in src/data_controls.js), the dials' order, and the balance key // the direct keys, in the order of the dials (SHIELDS, SPEED, LASERS: the key is under each bar), and ; for the balance (card space-game-power-balance-key); free of every key the Campaign binds (src/data_controls.js)
@@ -38,13 +39,13 @@ function campHullBar(C) {
 
 // ---- the places (pure) ----
 function campHudGeom() {
-  const H = CAMP.hud, R = H.r + 9, M = CAMP.power.max, bw = M * H.bar.w + (M - 1) * H.bar.gap;
+  const H = CAMP.hud, R = H.r + 9, M = CAMP.power.max, bw = M * H.bar.w + (M - 1) * H.bar.gap, Wd = typeof W === 'number' ? W : 1280, gx = Wd - H.right - 3 * H.cell; // the block of three cells ends H.right px from the screen's right edge
   const cells = [0, 1, 2].map(i => {
-    const x0 = H.x + i * H.cell, cx = x0 + R, cy = H.y + R, bx = cx + R + 6, by = Math.round(cy - H.bar.h / 2);
+    const x0 = gx + i * H.cell, cx = x0 + R, cy = H.y + R, bx = cx + R + 6, by = Math.round(cy - H.bar.h / 2);
     return { x0, cx, cy, R, dial: { x0: cx - R, y0: cy - R, x1: cx + R, y1: cy + R }, bar: { x0: bx, y0: by, x1: bx + bw, y1: by + H.bar.h }, key: { x: bx + bw / 2, y: by + H.bar.h + 9 } };
   });
   const hy = H.y + H.hullBar.y;
-  return { cells, hull: { x0: cells[0].x0, y0: hy, x1: cells[0].bar.x1, y1: hy + H.hullBar.h }, balance: { x: cells[2].bar.x1, y: cells[2].key.y + 12 }, bottom: H.text.y }; // balance: where the word of the ; key stands (right-aligned, under the last bar's key)
+  return { cells, hull: { x0: cells[0].x0, y0: hy, x1: cells[0].bar.x1, y1: hy + H.hullBar.h }, balance: { x: cells[2].bar.x1, y: cells[2].key.y + 12 }, bottom: H.text.y, ore: { x: gx + 3 * H.cell, y: H.ore.y }, block: { x0: gx, y0: H.y, x1: gx + 3 * H.cell, y1: H.y + H.hullBar.y + H.hullBar.h + 6 } }; // balance: where the word of the ; key stands (right-aligned, under the last bar's key)
 }
 // the lines of text under the gauges, top to bottom: each one that shows takes its pitch (and `h` more, a line with a bar under it), the others none
 function campHudFlow(items) {
@@ -130,14 +131,19 @@ function campGaugesMake(sc, uiFontFn) {
 }
 function campGaugesVisible(T, on) { if (!T) return; ['n', 'l', 'k'].forEach(k => (T[k] || []).forEach(t => t && t.setVisible && t.setVisible(on))); ['hull', 'hullN', 'bal'].forEach(k => T[k] && T[k].setVisible && T[k].setVisible(on)); }
 // every frame: the dials, the bars, the hull bar, and the words on them
-function campGaugesPaint(g, T, C, A, now) {
+function campGaugesPaint(g, T, C, A, now, hi) { // hi: the dial (0 SHIELDS, 1 SPEED, 2 LASERS) whose row is highlighted in the power list: it gets a bright frame in its own colour (card space-game-power-presets), or -1 / none
   const Z = campHudGeom(), D = campGauges(C), HB = campHullBar(C), emer = C.t < C.power.until;
-  const order = [1, 2, 0]; // the pips of the shields, the engines, the weapons: the order of the dials
+  const order = CAMP_DIAL_PIPS; // the pips of the shields, the engines, the weapons: the order of the dials
   Z.cells.forEach((cell, i) => {
     const d = D[i]; campDialDraw(g, cell, d, now);
     campBarDraw(g, cell, A.shown[order[i]], A.flash[order[i]], i === 0 && emer ? 0xffffff : d.color);
     if (T && T.n) { T.n[i].setText(d.big).setColor(d.warn ? '#ff4d6d' : '#ffffff'); T.l[i].setText(d.label); T.k[i].setText(d.key); }
   });
+  if (hi >= 0 && hi <= 2 && Z.cells[hi]) { // the dial and its bar of the highlighted row of the power list: one frame round both, and a line down to the list that opens under the gauges (drawn before the hull bar, which is over it)
+    const c = Z.cells[hi], col = D[hi].color, pulse = 0.75 + 0.25 * Math.sin(now / 180);
+    const fx = c.x0, fy = c.dial.y0 - 3, fw = c.bar.x1 + 3 - c.x0, fh = c.dial.y1 - c.dial.y0 + 14, bx = (c.bar.x0 + c.bar.x1) / 2, top = typeof CAMPPANELS_LOOK === 'object' ? CAMPPANELS_LOOK.topRight : 104;
+    g.fillStyle(col, 0.1).fillRoundedRect(fx, fy, fw, fh, 6); g.lineStyle(2, col, pulse).strokeRoundedRect(fx, fy, fw, fh, 6); g.lineStyle(2, col, pulse).lineBetween(bx, fy + fh, bx, top);
+  }
   const h = Z.hull, w = h.x1 - h.x0;
   g.fillStyle(CAMP_GAUGE.off, 0.9).fillRect(h.x0, h.y0, w, h.y1 - h.y0);
   g.fillStyle(HB.color, 1).fillRect(h.x0, h.y0, Math.max(0, w * HB.frac), h.y1 - h.y0);

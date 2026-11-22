@@ -26,8 +26,8 @@ g.run(`
 check('at the start: six fighters, two escorts, none out, in words', J('F.hud.bay.text') === 'BAY  fighters 6  escorts 2   OUT 0', J('F.hud.bay.text'));
 g.run(`F.onKey({ code: 'Digit1' }); for (let i = 0; i < 30 * 6; i++) F.update(0, 1000 / 30);`);
 check('a digit is no order in flight (card one-list-keys): after 1 and six seconds the gauge has not moved', J('F.hud.bay.text') === 'BAY  fighters 6  escorts 2   OUT 0', J('F.hud.bay.text'));
-g.run(`window.__at = __pick(F, 'fleet', 'launch'); for (let i = 0; i < 30 * 6; i++) F.update(0, 1000 / 30);`);
-check('after Launch (Q, Down to the Launch row, Enter) the bay is empty and eight are out', J('F.hud.bay.text') === 'BAY  fighters 0  escorts 0   OUT 8', J('F.hud.bay.text'));
+g.run(`window.__at = __pick(F, 'squads', 'launch'); for (let i = 0; i < 30 * 6; i++) F.update(0, 1000 / 30);`);
+check('after Launch (W, Enter on the Launch row, the top of the all-squads list) the bay is empty and eight are out', J('F.hud.bay.text') === 'BAY  fighters 0  escorts 0   OUT 8', J('F.hud.bay.text'));
 g.run(`window.F = __fake(1); F.onKey({ code: 'Enter' }); F.camp.bay.fighters = 1; F.camp.bay.escorts = 1; F.update(0, 33);`);
 check('one of each has no plural to get wrong', J('F.hud.bay.text') === 'BAY  fighters 1  escorts 1   OUT 0');
 g.run(`window.F = __fake(2); F.onKey({ code: 'Enter' }); F.update(0, 33);`);

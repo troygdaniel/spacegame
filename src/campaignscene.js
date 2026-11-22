@@ -29,7 +29,7 @@ const CAMP_MOUNT = { base: 3.2, dot: 1.7, hot: 2.8, aim: [7, 11], width: [1.5, 2
 const CAMP_BLIP = { gap: 70, flash: 90 }; // a turret's shot: at most one sound (sfx('turret', its number), src/audio.js) in gap ms of the battle's clock; the muzzle flash lasts flash ms
 const CAMP_SND = { blast: 45, hull: 90, shield: 90, earth: 250, wing: 55, far: 1600, min: 0.1 }; // the least gap, in ms of the battle's clock, between two sounds of one kind (a kill, a hull hit, a shield hit, a shot on Earth), so a busy fight does not pile them up
 const CAMP_ADDR = { used: false }; // the address (?campaign=N, src/title.js) opens the Campaign once per page load: coming back to the title from it must not open it again
-const CAMP_RADAR = { x: W - 118, y: 118, r: 98, range: 6000, fill: 0.9, rim: [2, 0.8], blip: 1 }; // the radar's centre and radius on the screen, and the px of space it shows from the carrier to its edge
+const CAMP_RADAR = { x: W - 118, y: H - 162, r: 98, range: 6000, fill: 0.9, rim: [2, 0.8], blip: 1 }; // the radar's centre and radius on the screen, and the px of space it shows from the carrier to its edge
 
 // (every start of the ready room passes {}: Phaser starts a scene with the data of its LAST start when it is given none, and the last may have been a dock's, with a battle that is long over in it)
 function campaignStart(s, level) { // the title's K: the ready room (src/camphubscene.js) of the mission the save says is next; a level asked for by number goes straight to that level, as the tune kit does
@@ -70,7 +70,7 @@ class Campaign extends Phaser.Scene {
     this.beamG = this.add.graphics().setDepth(3.5); // the cracks and the beams
     this.csp = this.camp.caches.map(k => this.add.image(k.x, k.y, 'pod').setScale(1.8).setDepth(3).setTint(0xffd37a)); // resource caches (level 2): gold pods that go when collected
     this.anomG = this.add.graphics().setDepth(1.5); // the haze of the anomalies and the decloaked caches (src/campanomalydraw.js)
-    this.squadG = this.add.graphics().setDepth(4.5); // the fighters' squad rings (card space-game-fighter-squads)
+    this.squadG = this.add.graphics().setDepth(4.5); // the circle round the fighters of the squad whose list is open (cards space-game-fighter-squads, space-game-squad-tint)
     this.relicG = this.add.graphics().setDepth(2); // the relic's ring (level 2), and how far the hold has got
     this.cachel = this.camp.caches.map(k => label(this, k.x, k.y + 34, uiText('camp.nav.cachelabel'), '#ffd37a', 12)); // a word under each cache: gold pods were easy to miss (docs/night/graphics.md finding 3)
     if (this.camp.relic) label(this, this.camp.relic.x, this.camp.relic.y - this.camp.L.relic.radius - 24, uiText('camp.nav.relicmark'), '#7fe9ff', 14);
@@ -78,10 +78,10 @@ class Campaign extends Phaser.Scene {
     this.cameras.main.startFollow(this.sp[this.camp.carrier.id], true, 0.12, 0.12);
     this.k = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT,SPACE');
     this.hudG = this.add.graphics().setScrollFactor(0).setDepth(100);
-    this.hudBack = this.add.rectangle(0, CAMP.hud.y, CAMP.hud.plate.w, CAMP.hud.plate.min, 0x02060d, 0.4).setOrigin(0, 0).setScrollFactor(0).setDepth(99); // a dim plate under the left HUD column: a bright planet (Ceres at the start of 1.2) drawn through the white objective line and the bay line made them hard to read (card space-game-l1-mine-goal, docs/night/hunt-l1-rim.md D)
+    this.hudBack = this.add.rectangle(0, CAMP.hud.text.y - 6, CAMP.hud.plate.w, CAMP.hud.plate.min, 0x02060d, 0.4).setOrigin(0, 0).setScrollFactor(0).setDepth(99); // a dim plate under the left HUD column: a bright planet (Ceres at the start of 1.2) drawn through the white objective line and the bay line made them hard to read (card space-game-l1-mine-goal, docs/night/hunt-l1-rim.md D)
     this.keysBack = this.add.rectangle(W / 2, H - 35, W, 26, 0x02060d, 0.75).setScrollFactor(0).setDepth(99); // a thin strip under the bottom key line: a ship or a rock drawn through 'Tab Map  H Keys' was hard to read (card space-game-campaign-panels-ui)
     const t = (x, y, size, color) => this.add.text(x, y, '', uiFont(size, color, { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
-    this.hud = { ore: t(CAMP.hud.ore.x, CAMP.hud.ore.y, 14, '#ffd37a'), earth: t(24, 96, 14, '#9fe9ff'), bay: t(24, 130, 14, '#9fe9ff'), wave: t(24, 152, 14, '#ffd37a'), mother: t(W / 2 - 150, 18, 14, '#ff9ec0'), blink: t(24, 174, 14, '#7fe9ff'), // ore: under the speed and laser dials; the lines under the gauges (CAMP.hud.text) are put by flowHud, each where the lines above it end
+    this.hud = { ore: t(campHudGeom().ore.x, campHudGeom().ore.y, 14, '#ffd37a').setOrigin(1, 0), earth: t(24, 96, 14, '#9fe9ff'), bay: t(24, 130, 14, '#9fe9ff'), wave: t(24, 152, 14, '#ffd37a'), mother: t(W / 2 - 150, 18, 14, '#ff9ec0'), blink: t(24, 174, 14, '#7fe9ff'), // ore: under the speed and laser dials; the lines under the gauges (CAMP.hud.text) are put by flowHud, each where the lines above it end
       obj: t(24, 196, 14, '#ffffff'), nav: t(24, 218, 14, '#7fe9ff'), post: t(24, 240, 14, '#ffb454'), arrow: t(0, 0, 13, '#ffd37a').setOrigin(0.5), keys: this.add.text(24, H - 44, campKeyLine(), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
     if (typeof campGaugesMake === 'function') { this.hud.gauges = campGaugesMake(this, uiFont); this.gaugeAnim = campGaugeAnimNew(this.camp.power.p); this.gaugeAt = performance.now(); } // the three gauges (card space-game-systems-gauges, src/camphud.js): SHIELDS (the hull under it), SPEED, LASERS, a bar of power segments beside each; they replace the W S E pips
     this.powerKey = this.camp.power.base.join(); // the setting as it was saved: a change of it is saved when it is made (update)
@@ -420,19 +420,28 @@ class Campaign extends Phaser.Scene {
     const key = look.art ? campShipTexture(this, look.art) : look.model && typeof shipPreviewTexture === 'function' ? shipPreviewTexture(this, look.model) : look.tex;
     return this.textures.exists(key) ? key : 'ship';
   }
+  squadTint(sp, u) { // a fighter is drawn in its squad's colour, red, green or yellow (card space-game-squad-tint: not a ring round it, which crowded the view); the escorts and the others keep their own
+    const c = u.kind === 'fighter' && u.team === 'earth' && u.squad ? CAMP.wing.squadColor[u.squad] : 0;
+    if (c && sp._sq !== c) { sp._sq = c; sp.setTint(c); }
+  }
+  squadCircle() { // a circle round the fighters of the squad(s) whose list is open (E red, R green, T yellow: that squad; W: all three), in the squad's colour and the same size on the screen at every zoom, so the player sees who an order goes to; no list open, no circle (card space-game-squad-tint; it was a ring round every fighter all the time)
+    const sg = this.squadG; if (!sg) return;
+    const C = this.camp, z = this.cameras && this.cameras.main && this.cameras.main.zoom > 0 ? this.cameras.main.zoom : 1, col = CAMP.wing.squadColor;
+    const lit = this.pn && typeof campPanelOpen === 'function' && typeof campSquadsLit === 'function' ? campSquadsLit(campPanelOpen(this.pn)) : []; // the open list's id: a target sub-list opened from a squad's list leaves it (card space-game-order-target-pick), so the circle stays while it is picked
+    sg.clear();
+    if (lit.length) C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && lit.indexOf(u.squad) >= 0) { const sp = this.sp[u.id], half = sp && sp.displayWidth ? sp.displayWidth * z / 2 : 0; sg.lineStyle(2 / z, col[u.squad], 0.95).strokeCircle(u.x, u.y, Math.max(8, half + 3) / z); } });
+  }
   sync() {
     const C = this.camp, seen = {};
     C.ships.forEach(u => {
       let sp = this.sp[u.id];
       if (!sp) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone; sp = this.sp[u.id] = this.add.image(u.x, u.y, this.texOf(u.kind)).setScale(look.scale).setDepth(u.kind === 'carrier' ? 5 : u.team === 'earth' ? 4 : 3); if (look.tint) sp.setTint(look.tint); }
       sp.setPosition(u.x, u.y).setRotation(u.rot); seen[u.id] = true;
+      this.squadTint(sp, u);
       if (typeof campZoomShipScale === 'function' && this.cameras && this.cameras.main && sp.width) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone, k = campZoomShipScale(this.cameras.main.zoom, sp.width * look.scale); if (sp._k !== k) { sp._k = k; sp.setScale(look.scale * k); } } // zoomed far out a small ship is drawn no smaller than CAMPZOOM.view.minShip px (src/campzoom.js)
     });
     Object.keys(this.sp).forEach(id => { if (!seen[id]) { this.sp[id].destroy(); delete this.sp[id]; } });
-    if (this.squadG) { // a ring in the squad's colour round each fighter, the same size on the screen at every zoom, so the squads read from the farthest zoom out too (card space-game-fighter-squads)
-      const sg = this.squadG, z = this.cameras && this.cameras.main && this.cameras.main.zoom > 0 ? this.cameras.main.zoom : 1, col = CAMP.wing.squadColor; sg.clear();
-      C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && col[u.squad]) { const sp = this.sp[u.id], half = sp && sp.displayWidth ? sp.displayWidth * z / 2 : 0; sg.lineStyle(2 / z, col[u.squad], 0.95).strokeCircle(u.x, u.y, Math.max(8, half + 3) / z); } });
-    }
+    this.squadCircle();
     this.camp.caches.forEach((k, i) => { this.csp[i].setVisible(!k.got); if (this.cachel && this.cachel[i]) this.cachel[i].setVisible(!k.got); });
     if (!this.osp) this.osp = {}; const seenOre = {}; // (made in create; a stand-in scene in a test has none)
     C.pickups.forEach(o => { // rocks are asteroids, a wreck's ore glows; a wreck blinks in its last seconds
@@ -524,7 +533,7 @@ class Campaign extends Phaser.Scene {
     const F = campHudFlow(ids.map(id => ({ id, show: !!(H[id] && H[id].text), h: id === 'earth' ? 12 : 0 })));
     ids.forEach(id => { if (H[id] && H[id].setY && F.ys[id] !== undefined) H[id].setY(F.ys[id]); });
     if (C.earth && F.ys.earth !== undefined) bar(24, F.ys.earth + 18, 220, C.earth.shield / C.earth.max, 0x38e1ff);
-    if (this.hudBack && this.hudBack.setSize) this.hudBack.setSize(CAMP.hud.plate.w, Math.max(CAMP.hud.plate.min, F.bottom + CAMP.hud.plate.pad - CAMP.hud.y)); // the dim plate under the column follows its length
+    if (this.hudBack && this.hudBack.setSize) this.hudBack.setSize(CAMP.hud.plate.w, Math.max(CAMP.hud.plate.min, F.bottom + CAMP.hud.plate.pad - (CAMP.hud.text.y - 6))); // the dim plate under the column follows its length
   }
   // the gauges and the radar
   paintHud() {
@@ -532,7 +541,7 @@ class Campaign extends Phaser.Scene {
     g.clear();
     if (this.hud.gauges && this.gaugeAnim) { // the three gauges and their power bars (src/camphud.js): the dials, the hull bar under the shields, the bars easing to the pips
       const nowMs = performance.now(); campGaugeAnim(this.gaugeAnim, C.power.p, Math.min(100, nowMs - (this.gaugeAt || nowMs))); this.gaugeAt = nowMs;
-      campGaugesPaint(g, this.hud.gauges, C, this.gaugeAnim, nowMs);
+      campGaugesPaint(g, this.hud.gauges, C, this.gaugeAnim, nowMs, typeof campPanelPowerHi === 'function' ? campPanelPowerHi(this) : -1); // (the dial of the highlighted row of the power list gets a frame: src/campanelsdraw.js)
     }
     if (typeof campRivalHud === 'function') campRivalHud(this, g, bar); // a rival ship's name, shield and hull and the warning of its phase (src/camprivaldraw.js)
     const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);

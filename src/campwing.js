@@ -42,6 +42,20 @@ function campSquadNext(C) {
   (C.repairs || []).forEach(r => { if (r.kind === 'fighter' && n[r.squad] != null) n[r.squad]++; });
   return ids.reduce((best, k) => (n[k] < n[best] ? k : best), ids[0]);
 }
+// the squads a list is about (card space-game-squad-tint; Troy, 22 Nov 2026): the red, green or yellow list (E R T) is its own squad's, the all-squads list (W) is all three, any other list or none is nobody's. The flight draws a circle round
+// the fighters of these squads only: while the list is open, so the player sees who an order goes to; in normal flight a fighter is just drawn in its squad's colour (src/campaignscene.js).
+function campSquadsLit(openId) {
+  return openId === 'squads' ? CAMP.wing.squads.slice() : CAMP.wing.squads.indexOf(openId) >= 0 ? [openId] : [];
+}
+
+// A squad SENT to a ship in trouble (card space-game-distress-send-squads; a pilot's call, src/camporders.js campCallSend): its order is an attack with { rescue: <ship id>, back: <the order it had> }. Each tick it fights the nearest
+// pirate about that ship (within CAMP.wing.rescue px of it; one that runs or is gone does not count); when none is left, or the ship is lost, the squad takes up the order it had, as if nothing had been asked. The other squads keep theirs.
+// { foe } while there is a pirate to fight, { over: true } when the order has just been given back.
+function campWingRescue(C, u, o) {
+  const m = C.by[o.rescue], K = CAMP.wing.rescue, about = m && m.hp > 0 ? campAliens(C).filter(a => a.hp > 0 && !a.running && !a.gone && campDist(a, m) < K) : [];
+  if (!about.length) { u.order = o.back || { type: 'guard', at: { kind: 'carrier' } }; u.move = null; return { over: true }; }
+  return { foe: campDogFoe(C, u, campNearest(about, u)) };
+}
 
 // Recall and the bay (card space-game-recall-while-launching; found by 3-GEN): Launch queues every ship in C.launchQ and one leaves every CAMP.bay.launchEvery ms, so a Recall given while the bay is still emptying
 // found the ships out and sent them home, and the ships still in the queue came out afterwards with the guard and escort orders of a launch, as if there had been no Recall (and a burn that waits for the wing aboard

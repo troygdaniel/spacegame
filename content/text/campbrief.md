@@ -57,13 +57,13 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.keyshead | KEYS THIS MISSION NEEDS |
 | camp.bf.key.fly | Thrust, turn and brake (the arrow keys) |
 | camp.bf.key.fire | Hold: the turrets fire at ships in reach |
-| camp.bf.key.wing | Fleet: {rowlaunch} |
+| camp.bf.key.wing | All squads: {rowlaunch} |
 | camp.bf.key.map | Open the map; click a place, Enter flies |
 | camp.bf.key.zoom | Zoom the view or the map; {keyzoomreset} resets |
 | camp.bf.key.attack | All squads: {rowattack} |
 | camp.bf.key.escort | Escorts: {rowescort} |
 | camp.bf.key.missile | Fire a homing missile at the target |
-| camp.bf.key.mine | Fleet: {rowmine} |
+| camp.bf.key.mine | All squads: {rowfmine} |
 | camp.bf.key.dock | Dock to build, mend and sell |
 | camp.bf.key.shield | Power: {rowemergency} |
 | camp.bf.keys.next | Enter or Right: next    Left: back    L: launch now    Esc: the board |
@@ -76,7 +76,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.1.1.n1 | Welcome aboard, Commander. The transport is ours to bring to Ceres. A patrol sees her off, then she is on her own. |
 | camp.bf.1.1.n2 | Pirates lie in wait ahead, with torpedo boats. Cover the transport: {convoy}, then "{tuck}". |
 | camp.bf.1.1.n3 | The arrows fly the cruiser. {fleetkey} is your fleet: {squadskey} all squads, {redkey} red, {greenkey} green, {yellowkey} yellow. A pilot calls: Up, Down, Enter. |
-| camp.bf.1.2.w1 | Mine the rock fields round Ceres: {viamine}, then {rowmine}. |
+| camp.bf.1.2.w1 | Mine the rock fields round Ceres: {viafmine}, then {rowfmine}. |
 | camp.bf.1.2.w2 | Ore sells for triple at the Works. Pirates hunt the miners. |
 | camp.bf.1.2.w3 | Beat the 5 raids, then dock at Occator Works ({viadock}). |
 | camp.bf.1.2.w4 | The Works keeps its doors shut while a pirate is near. |
