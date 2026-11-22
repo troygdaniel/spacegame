@@ -433,7 +433,7 @@ const CAMP = {
     shots: 0.5                             // the power of the multiplier a shot's speed takes (0.5 is its square root: a shot does not outrun the eye, a hit still lands). There is no key and no setting for the pace any more (card space-game-two-hands-keys: command time, src/campslow.js, replaces it): the Campaign flies at CAMP.pace.start, and campNew's opts.pace still takes a mode for the tests, the bots and the sims
   },
   slow: {                                  // COMMAND TIME (card space-game-command-slowtime; src/campslow.js; Troy, 21 Nov 2026: fights were not interactive, he wants to direct the fleet more): while a list of orders (Q or P), the Tab map or a pilot's call is open the battle runs at this share of its pace (Homeworld style), with a sign on the screen. Closing returns to pace. Flying between places is not slowed: with nothing open, the carrier and the autopilot are as they were
-    after: 2000,                           // ms the battle stays slowed after a FLEET key (card space-game-two-hands-keys: the panels are always open now, so a fleet key is what takes a command: the time to give the next one)
+    after: 2000,                           // ms the battle stays slowed after a fleet order or a pick of the target (the list has closed: the time to give the next one)
     scale: 0.25                            // a quarter speed: the whole battle (every ship, wave clock, reload and cooldown), not only the small ships the pace scales
   },
   refit: {                                 // the Earth refit screen after level 1: one tech, and ore buys extra ships for the next level (the costs are the workshop's, CAMP.build)
