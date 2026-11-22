@@ -42,14 +42,17 @@ check('three short toasts in a row: the box holds the last two, as before', t3[2
 // The HUD line, the briefing's goal (and the ship computer's summary, which reads the HUD line) said "Haulers delivered: 0 of 1." in a mission of one Transport that the rest of the game
 // calls "the transport" ("Transport is under way.", "Transport has arrived."). A deliver row may say `word: 'transport'`; 1.3's three haulers keep the old words.
 const g11 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); campStep(C, 1 / 30); return { hud: campObjective(C), brief: campHubBrief(campProgressNew(), 1, 0).objectives, sum: campSummary(C) }; })()`);
-check('1.1: the HUD goal says "Transport delivered: 0 of 1."', g11.hud === 'Transport delivered: 0 of 1.', g11.hud);
-check('1.1: the briefing\'s goal says the same, and the ship computer is told it', g11.brief.length === 1 && g11.brief[0] === 'Transport delivered: 0 of 1.' && g11.sum.indexOf('Goal: Transport delivered: 0 of 1.') >= 0, JSON.stringify([g11.brief, g11.sum.slice(0, 120)]));
+check('1.1: the HUD goal says "Transport arrived: 0 of 1."', g11.hud === 'Transport arrived: 0 of 1.', g11.hud);
+check('1.1: the briefing\'s goal says the same, and the ship computer is told it', g11.brief.length === 1 && g11.brief[0] === 'Transport arrived: 0 of 1.' && g11.sum.indexOf('Goal: Transport arrived: 0 of 1.') >= 0, JSON.stringify([g11.brief, g11.sum.slice(0, 120)]));
 const g13 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 2 }); campStep(C, 1 / 30); return { hud: campObjective(C), brief: campHubBrief(campProgressNew(), 1, 2).objectives }; })()`);
 check('1.3: the three haulers keep "Haulers delivered"', /^Haulers delivered: 0 of 1\.$/.test(g13.hud) && g13.brief[0] === 'Haulers delivered: 0 of 1.', JSON.stringify(g13));
 
 const l11 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); return campLoseLines(C, 'convoy'); })()`), l13 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 2 }); return campLoseLines(C, 'convoy'); })()`);
 check('1.1: the lost card says the transport is lost; 1.3 says the haulers', l11[0] === 'The transport is lost.' && l13[0] === 'The haulers are lost.', JSON.stringify([l11[0], l13[0]]));
 check('the tip of a lost convoy is still there (1.1 shares the convoy tip until a transport tip is written: camp.lose.tip.convoy.transport)', l11.length === 3 && l11[2] === l13[2], JSON.stringify(l11));
+
+const dl = J(`['camp.o.deliver', 'camp.o.deliver.transport'].map(k => uiText(k, { got: 0, need: 1 }).length)`);
+check('both deliver goals fit one line of the map\'s column (15 px type, 246 px: 27 letters): "Transport delivered: 0 of 1." wrapped its "1." alone', dl.every(n => n <= 27), JSON.stringify(dl));
 
 // ---- 4. 1.1 does have scouting: V on a row that is not a lane says what scouts can read, not "This mission has no scouting." ----
 const sc = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); campOrder(C, 'launch'); for (let i = 0; i < 600; i++) campStep(C, 1 / 30);
@@ -67,6 +70,12 @@ const en = J(`campBriefEnemies(1, 0)`), seen = J(`(() => { const C = campNew(1, 
 const sk = en.list.find(e => e.kind === 'skiff'), tb = en.list.find(e => e.kind === 'tboat');
 check('1.1\'s briefing says 8 skiffs and 2 torpedo boats (the distress call, the ambush and the leader\'s two)', sk && sk.n === 8 && tb && tb.n === 2 && /8 pirate skiffs/.test(en.line), en.line);
 check('and that is what the mission\'s rows send down the default lane (the count is read from them)', seen.skiff === 8 && seen.tboat === 2, JSON.stringify(seen));
+
+// ---- 6. the briefing's mining goal starts from the ore you carry, as the HUD does ----
+// 1.2's HUD says "Mine ore: 60 of 190." from the first second (the store holds what the ready room's pocket held); the briefing said "0 of 190." whatever you carried.
+const ob = J(`(() => { const P = campProgressNew(); P.ore = 60; const a = campHubBrief(P, 1, 1).objectives[0]; P.ore = 142; const b = campHubBrief(P, 1, 1).objectives[0]; P.ore = 400; const c = campHubBrief(P, 1, 1).objectives[0];
+  const C = campNew(1, [], { seed: 1, mission: 1, ore: 60 }); campStep(C, 1 / 30); return [a, b, c, campObjective(C)]; })()`);
+check('1.2: the briefing says "Mine ore: 60 of 190." for 60 ore carried, 142 for 142, and never more than the goal; the HUD says the same at the start', ob[0] === 'Mine ore: 60 of 190.' && ob[1] === 'Mine ore: 142 of 190.' && ob[2] === 'Mine ore: 190 of 190.' && ob[3] === 'Mine ore: 60 of 190.', JSON.stringify(ob));
 
 if (failed) { console.log(`\nHUNT FLEET: ${failed} FAILED`); process.exit(1); }
 console.log('\nHUNT FLEET: all passed');
