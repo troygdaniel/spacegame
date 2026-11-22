@@ -360,7 +360,8 @@ class Campaign extends Phaser.Scene {
     C.events.splice(0).forEach(e => this.onEvent(e));
     this.syncFar(time); this.syncRockets(Math.min(dt, 100)); this.syncBay(); if (typeof campRivalWorld === 'function') campRivalWorld(this); // (src/camprivaldraw.js)
     if (typeof campConvoySync === 'function') campConvoySync(this); // the shield bubble and the links of the ships that are tucked in (src/campconvoyscene.js)
-    if (typeof campFarSync === 'function') campFarSync(this); // the names of the places and the escorted ships when the view is out so far that the world's labels are specks (src/campfarscene.js)
+    if (typeof campFarSync === 'function') campFarSync(this);
+    if (typeof campSightSync === 'function') campSightSync(this); // the edge arrows of the hostiles that are off the screen and the pulse of a group just seen (src/campsightscene.js) // the names of the places and the escorted ships when the view is out so far that the world's labels are specks (src/campfarscene.js)
     if (typeof campTgtPaint === 'function') campTgtPaint(this); // the bracket round the target A D S picked (src/camptargetdraw.js)
     if (typeof campTorpedoSync === 'function') campTorpedoSync(this, Math.min(dt, 100)); // the torpedoes and the boats that arm (src/camptorpedoscene.js)
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
@@ -562,7 +563,7 @@ class Campaign extends Phaser.Scene {
     const pl = campPlaces(C.level); Object.keys(pl).forEach(id => { if (!pl[id].hidden && !(pl[id].far && Math.hypot(pl[id].x - c.x, pl[id].y - c.y) > R.range)) dot(pl[id], id === 'earth' ? 0x4aa3ff : 0xb9a37a, id === 'earth' ? 4 : 2); });
     C.rocks.forEach(o => dot(o, 0x8c8c8c, 1)); C.pickups.forEach(o => dot(o, 0xffd37a, 1)); C.caches.forEach(k => { if (!k.got) dot(k, 0xffd37a, 2); }); if (C.relic) dot(C.relic, 0x7fe9ff, 3);
     if (typeof campAnomMarks === 'function') campAnomMarks(C).forEach(a => { if (a.shown) dot(a, 0xffd37a, 3); else if (Math.sin(C.t / 260 + a.x) > -0.4) dot(a, 0xc58cff, 2); }); // an anomaly: a violet blip that flickers (the cloak), gold once it is decloaked
-    C.ships.forEach(u => { if (u.hp <= 0) return; dot(u, campDotColor(u), u.kind === 'mother' || u.rival ? 4 : u.kind === 'carrier' ? 3 : u.scout ? 3 : 2); }); // campDotColor (src/campmap.js): the map's colours too
+    C.ships.forEach(u => { if (u.hp <= 0 || (u.team === 'alien' && typeof campSeen === 'function' && !campSeen(C, u))) return; dot(u, campDotColor(u), u.kind === 'mother' || u.rival ? 4 : u.kind === 'carrier' ? 3 : u.scout ? 3 : 2); }); // campDotColor (src/campmap.js): the map's colours too
     (C.torpedoes || []).forEach(t => { if (!t.dead && Math.floor(C.t / 180) % 2 === 0) dot(t, CAMPMAP.color.torpedo, 2); }); // a torpedo in flight blinks bright on the radar: it is the one thing to look for (the dot is the map's colour for it)
     // the autopilot's readout under the goal line, and an arrow at the edge of the screen pointing at the goal with its distance (src/campnav.js; docs/night/graphics.md finding 3)
     if (this.hud.post) { // the outposts: where to retreat when the hull is low and no ship is left, else a hint when one is in range (src/campoutpost.js)

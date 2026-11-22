@@ -31,6 +31,7 @@ const CAMP_TUNE = {
     // the guns: the turrets, the missiles, the charge the turrets draw
     { id: 'turretdamage', group: 'guns', root: 'CAMP', path: 'carrier.pd', min: 1, max: 40, step: 1, unit: '', when: 'now' },
     { id: 'turretdelay', group: 'guns', root: 'CAMP', path: 'carrier.pdDelay', min: 100, max: 2000, step: 50, unit: 'ms', when: 'now' },
+    { id: 'sensorrange', group: 'guns', root: 'CAMP', path: 'sensor.range', min: 0, max: 20000, step: 500, unit: 'px', when: 'now' },
     { id: 'turretreach', group: 'guns', root: 'CAMP', path: 'carrier.pdRange', min: 150, max: 1500, step: 50, unit: 'px', when: 'now' },
     { id: 'missilecount', group: 'guns', root: 'CAMP', path: 'missile.magazine', min: 0, max: 12, step: 1, unit: '', when: 'next' },
     { id: 'missilereload', group: 'guns', root: 'CAMP', path: 'missile.reload', min: 2000, max: 60000, step: 1000, unit: 'ms', when: 'now' },

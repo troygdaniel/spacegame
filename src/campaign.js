@@ -151,6 +151,16 @@ const CAMP = {
     fight: 1800,                           // px: an alien this close to the cruiser, or any ship of the wing still out on an order, sends the mended fighter out again (else it stays in the bay)
     sayEvery: 5                            // s between two radio lines of the same kind (four fighters hurt together are one call)
   },
+  sensor: {                                // the carrier's sensors (card space-game-see-hostiles-earlier; Troy, 22 Nov 2026: "see hostiles earlier so I can send squads to meet them"; src/campsight.js)
+    range: 9000,                           // px from the carrier: a hostile this near is SEEN: on the radar, the map, the nav list and the target keys (A D S), in an edge arrow and in the radio's first call. 9000 is 21 s of the fastest raider's flight (430 px/s), 35 s of a drone's (260); a scout's own circle (CAMP.scout.sense) sees further still
+    always: ['mother', 'tower'],           // the kinds that are always seen: the mothership and the towers are the mission's own marks, as they were before the sensors had a range
+    group: 900,                            // px: hostiles this near each other are one group (one edge arrow, one radio call)
+    delay: 2000,                           // ms from the first sight to the radio call: the wave's own line ("Wave 2 incoming.") is said first
+    idNear: 2600,                          // px: a scout or an escort of yours this near a group, or the carrier itself this near it, tells what kind they are: the call names the kinds; with none near it says only how many
+    mark: 6000,                            // ms a group that was just seen is marked: its radar blip pulses and its edge arrow blinks
+    arrows: 4,                             // the most edge arrows at once (the groups nearest the carrier first)
+    sayEvery: 4                            // s between two calls (groups that come into sight in the same few seconds are one call)
+  },
   scout: {                                 // scout-escorts (card space-game-campaign-scouts; docs/CAMPAIGN.md "Scout-escorts"): an escort sent out with the Scout order to look, scan and fetch
     sense: 2600,                           // px: the sensor circle round a scout that is out (the map draws it, the radar marks the scout)
     read: 1400,                            // px: how close a scout must be to a cloaked anomaly to read what it likely is (reading is not uncovering)
@@ -1043,6 +1053,7 @@ function campTick(C, dt) {
   campMissions_tick(C, dt);
   if (typeof campCallsTick === 'function') campCallsTick(C, dt); // the pilots ask for orders: the call that waits, the call that may open (src/camporders.js)
   campWarn(C);
+  if (typeof campSightStep === 'function') campSightStep(C); // the hostiles that come into sight for the first time are called on the radio (src/campsight.js)
   if (typeof campOutpostTick === 'function') campOutpostTick(C, dt); // the retreat line (src/campoutpost.js)
   C.ships = C.ships.filter(u => u.hp > 0 || (delete C.by[u.id], false)); // the dead leave the list (the scene was told by the boom event)
 }
