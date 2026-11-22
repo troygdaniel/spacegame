@@ -56,6 +56,7 @@ try {
     }
   };
   await drive(PART === 1 ? 150 : 150); // (the wing's fights are 15 percent slower and the shields mend by themselves now: a little more time to finish the last alien)
+  await settle(`!${S}.camp.result || ${S}.mode !== 'play'`, 60); // a won battle shows its debrief 1.8 s after the end: wait for it, do not read the mode in between
   const st = await j(`({ mode: ${S}.mode, result: ${S}.camp.result, t: Math.round(${S}.camp.t / 1000), obj: campObjective(${S}.camp), hull: Math.round(${S}.camp.carrier.hp), scans: (${S}.camp.scan || []).filter(p => p.got).length, towers: ${S}.camp.ships.filter(u => u.kind === 'tower' && u.hp > 0).length, aliens: campAliens(${S}.camp).length })`);
   note('state: ' + JSON.stringify(st)); await snap('p' + PART + '-7-after');
   check('the mission was won by play (the debrief is up)', st.mode === 'debrief', JSON.stringify(st));
