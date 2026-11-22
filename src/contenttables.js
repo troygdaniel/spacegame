@@ -731,6 +731,7 @@ const UI_TEXT = {
   'camp.say.wing.fetch': '{group}, fetch {name}.',
   'camp.say.wing.mine': '{group}, mine {name}.',
   'camp.say.wing.cancel': '{group}, stand by.',
+  'camp.say.wing.recall': '{group}, return to the carrier.',
   'camp.ui.score': 'SCORE {score}',
   'camp.ui.debriefstats': 'Time {time}   Hull {hull}   Ships lost {lost}',
   'camp.ui.debriefnext': 'Enter  ready room',

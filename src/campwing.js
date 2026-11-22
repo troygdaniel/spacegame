@@ -143,11 +143,12 @@ function campWingOrder(C, group, verb, target, how, dry) {
   if (tg === false) return campWingNo('wnotarget');
   const gname = campWingGroupName(C, id);
   if (verb === 'recall') {
-    if (dry) return campYes('recall');
+    const rc = id === 'all' ? 'recall' : 'wing.recall', rv = { group: gname, name: '' }; // one part recalled is named: "Fighters, return to the carrier."
+    if (dry) return campYes(rc, rv);
     ships.forEach(u => { u.order = { type: 'recall' }; u.move = null; }); C.orders.recall++;
     const back = campWingQueueBack(C, id); // the ships of the group still waiting to leave the bay stay aboard (card space-game-recall-while-launching)
     if (id !== 'escorts') (C.repairs || []).forEach(r => { r.stay = true; }); // a fighter still being mended stays aboard when it is whole (src/camprepair.js)
-    const r = campWingDone(C, id, verb, null, ships, how, 'recall'); r.queued = back; return r;
+    const r = campWingDone(C, id, verb, null, ships, how, rc, rv); r.queued = back; return r;
   }
   if (tg && V.kinds.indexOf(tg.kind) < 0) return campWingNo('wbadpair', { group: gname, verb, what: CAMPWING_KIND_WORDS[tg.kind] || tg.kind });
   if (!tg && V.need) return campWingNo('wneed', { verb });
