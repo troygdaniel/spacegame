@@ -9,6 +9,14 @@ The words of the beats of missions 1.2 and 1.3 (card l1-pacing): the raids that 
 | camp.say.l1p.west | Pirates from the south-west. They want the miners. |
 | camp.say.l1p.second | A second group, north-east. Split the squads. |
 | camp.say.l1p.boats | Torpedo boats, heading for the miners. Tuck them in. |
-| camp.say.l1p.haulboats | Torpedo boats ahead. Tuck the haulers in, or run. |
+| camp.say.l1p.haulboats | A torpedo boat ahead. Tuck the haulers in, or run. |
 | camp.say.l1p.rear | Pirates on the last hauler. She is alone back there. |
 | camp.say.l1p.again | More of them, on the last hauler again. |
+| camp.hint.l1p.split | Two groups, two sides. One squad each: {viaredattack} red, {viagreenattack} green. |
+| camp.hint.l1p.boats | Torpedo boats! Tuck the miners in: {viactuck}, "{rowctuck}". |
+| camp.hint.l1p.mend | Quiet for now. Recall a hurt squad to be mended. |
+| camp.hint.l1p.haulboats | A torpedo boat! {viactuck}, "{rowctuck}": it covers the haulers beside you. |
+| camp.hint.l1p.rear | The last hauler is alone. Send a squad back to her. |
+| camp.hint.l1p.contact | Not pirates. All squads on them: {viaattack}, Enter. |
+| camp.bf.1.2.w5 | Torpedo boats hunt the miners: tuck them in, or send a squad. |
+| camp.bf.1.3.w5 | Something else is out there. Be ready. |

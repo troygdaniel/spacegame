@@ -181,7 +181,7 @@ const campBriefHasPicture = key => !!(campBriefPicture(key) && campBriefPicture(
 // the goals of a mission as steps and its bonus, each with the picture's key and parts: the words are the HUD's own (campHubBrief, camp.o.* and camp.b.*)
 function campBriefSteps(P, level, i) {
   const B = campHubBrief(P, level, i); if (!B) return { goals: [], bonus: [] };
-  const L = campMissionRow(level, i), waves = ((L && L.waves) || []).filter(w => !w.secret), pirates = waves.length > 0 && waves.every(w => Object.keys(w.ships || {}).every(k => typeof CAMP === 'object' && CAMP.pirate && CAMP.pirate.kinds && CAMP.pirate.kinds[k])); // a mission whose raids are all pirates draws pirates (the rim run), not the aliens' ships
+  const L = campMissionRow(level, i), waves = ((L && L.waves) || []).filter(w => !w.secret), pirates = waves.length > 0 && waves.every(w => Object.keys(w.ships || {}).every(k => typeof CAMP === 'object' && ((CAMP.pirate && CAMP.pirate.kinds && CAMP.pirate.kinds[k]) || (CAMP.torpedo && CAMP.torpedo.boats && CAMP.torpedo.boats[k] && CAMP.torpedo.boats[k].faction === 'pirate')))); // a mission whose raids are all pirates draws pirates (the rim run), not the aliens' ships; a pirate torpedo boat is a pirate too (with one in its waves 1.2 and 1.3 drew the aliens' raiders: card l1-pacing)
   const goals = B.objectives.map((text, k) => { const kind = B.kinds[k], pic = pirates && (kind === 'kill.wave' || kind === 'clear') ? kind + '.pirate' : kind; return { n: k + 1, kind, text, pic, parts: campBriefPicture(pic) }; });
   const bonus = B.bonus.map(b => { const kind = 'b.' + b.type; return { kind, points: b.points, text: b.text, pic: kind, parts: campBriefPicture(kind) }; });
   return { goals, bonus };
