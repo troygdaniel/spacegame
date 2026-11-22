@@ -2,7 +2,7 @@
 // It boots the game with a save that stands at the mission, opens the ready room with K, reads the briefing (three screens), launches, and flies with the keys a player uses
 // (the two hands: the FLEET keys 1 2 3 4 W E R Q and the target keys A D S X at the left, the SHIP keys 7 8 9 0 J K L ; U I Enter P at the right, the arrows to fly, the map on Tab, Space held), then lets the autopilot carry the rest and writes down what the game says: the HUD line, the goal, the toasts.
 //   node tests/camphunt-boot.mjs --level 2 --mission 1 [--secs 90] [--fight | --quickwin | --lose | --dock | --retreat | --panels | --replay]      the mission number is the one on the board (1 to 3)
-// --replay: the mission before the next one is picked in the ready room as a REPLAY (A, then R), briefed, flown (use --quickwin with it) and its debrief and the saved progress are read: the progress must not move
+// --replay: the mission before the next one is picked in the ready room as a REPLAY (Enter, Up, then R), briefed, flown (use --quickwin with it) and its debrief and the saved progress are read: the progress must not move
 // --panels: every key of the FLEET and SHIP panels pressed once in the flight (both are always on the screen), the stance page, the target keys, the missile, the map zoomed out to the whole system: what each one says (the toasts are written down at the end)
 // --retreat: the wing is gone and the hull is at 30 percent: the HUD says where to retreat, 9 burns there, 0 docks, the dock mends the hull (ore), Esc and the flight goes on
 // --dock: after the burn, 0 at the outpost of the mission (the ready room opens over the paused battle: its rows and words), then Esc and the flight goes on
@@ -45,13 +45,13 @@ try {
   await key('KeyK');
   check('K on the title opens the ready room', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`));
   await t.run(900); note('board: ' + (await shown()).join(' | ').slice(0, 600)); await snap('1-board');
-  if (REPLAY) { await key('KeyA'); await key('KeyR'); } else await key('Enter');
+  if (REPLAY) { await key('Enter'); await t.run(500); await key('ArrowUp'); await key('KeyR'); } else await key('Enter'); // the board's overlay (Enter), the mission before the next (Up), R picks it as a replay and opens its briefing (card space-game-ready-room-simple)
   await t.run(700);
   for (let s = 0; s < 3; s++) {
     const b = await shown(); note('briefing screen ' + (s + 1) + ': ' + b.join(' | ').slice(0, 900)); await snap('2-brief-' + (s + 1));
     if (s < 2) { await key('Enter'); await t.run(500); }
   }
-  await key('Enter');
+  await key('KeyL'); // L launches from any screen of the briefing (Enter goes on to the next one: the ready room is four rows and an overlay now, card space-game-ready-room-simple)
   const warp = await settle(`game.scene.isActive('CampWarp')`, 30);
   note('warp cinematic for this start: ' + warp);
   if (warp) { await t.run(1500); await snap('3-warp'); await key('Enter'); }
