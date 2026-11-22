@@ -15,6 +15,7 @@ What it does: K, the ready room, the missions overlay and the three briefing scr
 | 1.1 Rim escort | win, short lane | calls right, wrong, none in turn; both lanes scouted; tuck, carry on, run for it; power in every phase | won at 357 s, 2,515 |
 | 1.1 | win, long lane | no call answered (the pilot's own pick each time); both lanes scouted | won at 334 s, 2,380 (the miner was lost) |
 | 1.1 | loss | launch and autopilot only, no orders | the transport was lost at 227 s to the torpedo boats; the lost card, Enter, the brief, the pause card |
+| 1.1 | dock at the Lunar Base first | E 4 at 3 s (the HUD offers it), the build, repair and refit pages, Esc | the room opens over the paused battle and the flight goes on ("Undocked") |
 | 1.1 | idle 100 s | nothing pressed for the first 100 s | the hints say what they say (below); the transport waited out the fork and took the short lane at 108 s |
 | 1.1 | win, unscouted, the cruiser at the leader | calls right; the transport took the short lane at the fork by T; the cruiser flew at the pirate leader from the map (Enter) and fired | won at 284 s, **3,130 with all five bonuses** ("Pirate leader is down.") |
 | 1.1 | the mouse | the map driven by clicks: a lane row (set, with its Scout and Take buttons), the buttons clicked | "Scout 1 is going to Long lane.", "Taking the long lane." |
@@ -23,6 +24,8 @@ What it does: K, the ready room, the missions overlay and the three briefing scr
 | 1.2 Mine and defend | win | calls right; the wing mines, the cruiser goes to the raiders from the map, to the Works, E dock | won at 301 s, 2,695 ("Sold 500 ore for 1500.") |
 | 1.2 | loss | the cruiser destroyed at 200 s (1.2 is not lost by standing still) | the lost card, Enter, the brief |
 | 1.3 Haulers home | win | calls right, wrong, none in turn | won at 292 s, 1,840 (8 ships lost to first contact), the refit, the tech |
+| 1.3 | win | every call right | won at 292 s, 1 ship lost |
+| 1.3 | loss | launch and autopilot, no orders | all three haulers lost by 187 s to the contact wave; the lost card ("The haulers are lost."), Enter, the brief |
 
 ## Findings, ranked
 
@@ -54,6 +57,7 @@ What it does: K, the ready room, the missions overlay and the three briefing scr
 ### For 2-GEN's tune card (what feels off; no numbers changed)
 
 - **1.2: the mining goal is met in about 36 s and the rocks are empty by about 110 s** (60 to 180 ore in 34 s with the wing on Mine ore, 488 by 111 s, the store full at 500): the first raid is at 70 s and the second at 170 s whatever you do, so a quick player waits. "Mine 190" does not ask for anything.
+- **1.3, right against wrong, same flight:** every call answered right: won at 292 s, **1 ship lost**; one wounded call answered wrong 3 s after first contact (the mixed run): **8 ships lost**. The calls do change a fight, as intended; the size of the swing is the thing to judge.
 - **1.3: first contact cost 8 ships** in the flight that answered the wounded call wrongly 3 s after the aliens came (Cover him: the wing deals 0.6 and takes 1.6 for 20 s): the wing went from 11 to 3 within 30 s. The debrief says "Ships lost 8" and the "lose no ships" bonus is gone. Fine as a lesson; say so if it is too much for the end of the first level.
 - **The leader ran for good before it could be killed** in both wins (it ran for good at 327 s and 329 s, below 30 percent of its hull) and the "Destroy the pirate leader" bonus was missed twice: the kill needs the cruiser on it, not the wing.
 
