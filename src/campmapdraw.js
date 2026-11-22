@@ -190,7 +190,7 @@ function campMapPaint(s, time) {
     }
     else if (m.type === 'patrol') { g.fillStyle(m.color, 1).fillCircle(p.x, p.y, 2.5); g.lineStyle(1, m.color, 0.8).strokeCircle(p.x, p.y, 5); } // a neutral patrol: a dot in a ring
     else if (m.type === 'miner') g.fillStyle(m.color, 1).fillRect(p.x - 2.5, p.y - 2.5, 5, 5); // a neutral miner: a small pale square
-    else if (m.type === 'wing') { g.fillStyle(m.color, 1).fillCircle(p.x, p.y, 2); if (m.squad && CAMP.wing.squadColor[m.squad]) g.lineStyle(1.5, CAMP.wing.squadColor[m.squad], 1).strokeCircle(p.x, p.y, 4.5); } // a fighter wears its squad's ring (card space-game-fighter-squads); an escort is a plain dot
+    else if (m.type === 'wing') { const sc = m.squad && CAMP.wing.squadColor[m.squad]; g.fillStyle(sc || m.color, 1).fillCircle(p.x, p.y, sc ? 3 : 2); if (sc) g.fillStyle(0xffffff, 0.9).fillCircle(p.x, p.y, 1); } // a fighter's dot is in its squad's colour, a little larger, with a white spark in the middle, so it is never taken for an alien's or a pirate's flat dot (the red and the yellow are near theirs); an escort is a plain mint dot (card space-game-squad-tint: no ring)
     else if (m.type === 'rival') { g.fillStyle(m.color, 1).fillPoints([{ x: p.x, y: p.y - 6 }, { x: p.x + 6, y: p.y }, { x: p.x, y: p.y + 6 }, { x: p.x - 6, y: p.y }], true); g.lineStyle(1.5, m.color, 0.9).strokeCircle(p.x, p.y, 9); } // the rival ship: a diamond in a ring, the pirates' yellow
     else if (m.type === 'mother') g.fillStyle(m.color, 1).fillPoints([{ x: p.x, y: p.y - 7 }, { x: p.x + 7, y: p.y }, { x: p.x, y: p.y + 7 }, { x: p.x - 7, y: p.y }], true);
     else if (m.type === 'carrier') {

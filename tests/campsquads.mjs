@@ -1,4 +1,4 @@
-// smoke: the fighters' three squads (Red, Green, Yellow): who is in which, an order to one squad, the lists and keys that give it, the words, the map's rings (plain Node, no Chrome)
+// smoke: the fighters' three squads (Red, Green, Yellow): who is in which, an order to one squad, the lists and keys that give it, the words, the map's coloured dots, the tint and the circle that shows only while a squad's list is open (plain Node, no Chrome)
 // Card space-game-fighter-squads (Troy, 22 Nov 2026: "I want to be able to control fighter squads easily": W all squads, E red, R green, T yellow, each Attack the target, Guard the cruiser, Recall; W also Launch and Mine ore).
 // The sim is src/campwing.js (campSquadNext, the groups 'red' 'green' 'yellow' of CAMP.wing) and src/campaign.js (a fighter gets u.squad when it leaves the bay); the lists are CAMP_PANELS (src/data_controls.js).
 //   A. who is in a squad: six fighters are two and two and two, the escorts are in none, a later fighter fills the thinnest squad, a lost squad is filled again, a mended fighter goes out in its own squad, no random number is used
@@ -90,8 +90,8 @@ console.log('D. the keys and the lists');
   const by = id => T.find(p => p.id === id);
   check('W is the all-squads list, E the red squad\'s, R the green\'s, T the yellow\'s: each a part of the fleet list, and the escorts, the convoy and the stance have no key of their own', ['squads:W', 'red:E', 'green:R', 'yellow:T'].every(x => { const [id, k] = x.split(':'); return by(id).key === k && by(id).parent === 'fleet'; }) && ['convoy', 'escorts', 'stance'].every(id => by(id).key === '' && by(id).parent === 'fleet'));
   check('a squad\'s list is Attack the target, Guard the cruiser, Recall: three rows each, in that order', ['red', 'green', 'yellow'].every(id => by(id).rows.join() === [id + 'attack', id + 'guard', id + 'recall'].join()));
-  check('the all-squads list is the same three with Mine ore and Launch the wing: Attack, Guard, Recall, Mine, Launch', by('squads').rows.join() === 'attack,fguard,frecall,fmine,slaunch');
-  check('the Q list holds the squads, the escorts and the convoy as rows that open a part, then Guard, Mine, Recall and Stance: eleven rows, none of them left out in a mission with a convoy', by('fleet').rows.join() === 'launch,gsquads,gred,ggreen,gyellow,gescorts,gconvoy,guard,mine,recall,gstance' && J('CAMP_PANELS.show') >= 11);
+  check('the all-squads list starts with Launch the wing (so Q, Enter, Enter launches everything) and has the same three as a squad plus Mine ore: Launch, Attack, Guard, Recall, Mine; it opens on its first row that can be given (start: usable)', by('squads').rows.join() === 'launch,attack,fguard,frecall,fmine' && J(`campPanelDef('squads').start`) === 'usable');
+  check('the Q list is the parts of the wing and nothing else, so nothing is listed twice: All squads first, then Red, Green, Yellow, the escorts, the convoy and the stance, every row a part that opens its list; Launch, Guard, Mine and Recall are not in it (they are in All squads)', by('fleet').rows.join() === 'gsquads,gred,ggreen,gyellow,gescorts,gconvoy,gstance' && J(`campPanelDef('fleet').rows.every(r => r.open)`) === true && J(`campPanelDef('fleet').rows[0].open`) === 'squads' && J('CAMP_PANELS.show') >= 7);
   g.run('__out(1); window.__PP = campPanelNew();');
   const pick = (code, rows) => J(`(() => { campPanelClose(__PP); campPanelKey(__PP, C, '${code}', 0); for (let i = 0; i < ${rows}; i++) campPanelKey(__PP, C, 'ArrowDown', 0); const r = campPanelKey(__PP, C, 'Enter', 0); return { open: campPanelOpen(__PP), row: r.row, ok: r.ok, ran: r.ran, fleet: r.fleet }; })()`);
   g.run('window.__a = __foe(900, 0); campTgtNearest(C);');
@@ -109,7 +109,7 @@ console.log('D. the keys and the lists');
   check('W, Mine ore: all the fighters go mining (the escorts are left as they were)', mine.row === 'fmine' && J(`campWing(C, 'fighter').every(u => u.order.type === 'mine')`) && J(`campWing(C, 'escort').every(u => u.order.type !== 'mine')`));
   // the escorts and the convoy through Q
   const esc = J(`(() => { campPanelClose(__PP); campPanelKey(__PP, C, 'KeyQ', 0); const i = campPanelList(C, 'fleet').findIndex(r => r.id === 'gescorts'); for (let k = 0; k < i; k++) campPanelKey(__PP, C, 'ArrowDown', 0); const o = campPanelKey(__PP, C, 'Enter', 0); const l = campPanelKey(__PP, C, 'ArrowLeft', 0); return { i, open: o.open, back: l.open, at: __PP.at }; })()`);
-  check('the escorts\' orders are reached through the Q list: Q, Down to Escorts, Enter opens them at their first row; Left goes back onto the Escorts row', esc.i === 5 && esc.open === 'escorts' && esc.back === 'fleet' && esc.at === 5, JSON.stringify(esc));
+  check('the escorts\' orders are reached through the Q list: Q, Down to Escorts, Enter opens them at their first row; Left goes back onto the Escorts row', esc.i === 4 && esc.open === 'escorts' && esc.back === 'fleet' && esc.at === 4, JSON.stringify(esc));
   g.run('campPanelClose(__PP);');
   const old = ['KeyE', 'KeyR', 'KeyW'].map(c => J(`(() => { campPanelClose(__PP); return campPanelKey(__PP, C, '${c}', 0).open; })()`)).join();
   check('the old meanings are gone: E is not the fighters\' list, R not the escorts\', W not the convoy\'s: they open the red squad, the green squad and all squads', old === 'red,green,squads', old);
@@ -143,9 +143,60 @@ console.log('F. the map and the colours');
   const lg = J('campMapLegend(C)');
   check('the legend has a row for each squad that has ships, under the wing\'s own row: "Red squad (2)", "Green squad (2)", "Yellow squad (2)" in the squads\' colours', lg.map(r => r.type).join() === 'carrier,wing,red,green,yellow' && lg.filter(r => /squad/.test(r.text)).map(r => r.text).join() === 'Red squad (2),Green squad (2),Yellow squad (2)' && lg.slice(2).every((r, i) => r.color === J('CAMP.wing.squadColor')[['red', 'green', 'yellow'][i]]), JSON.stringify(lg));
   const col = J('CAMP.wing.squadColor'), v = Object.values(col);
-  check('the three colours are three (red, green, yellow), none of them the escorts\' own mint, so a ring on a fighter can be told from a plain dot', v.length === 3 && new Set(v).size === 3 && !v.includes(J('CAMPMAP.color.wing')) && col.red > 0xe00000 && (col.green & 0xff00) > (col.green & 0xff0000) / 256 && (col.yellow >> 16) > 0xe0 && ((col.yellow >> 8) & 0xff) > 0xc0);
-  const scene = src('src/campaignscene.js'), mapdraw = src('src/campmapdraw.js');
-  check('the flight draws a ring in the squad\'s colour round each fighter (the same size on the screen at every zoom: its radius is a few pixels divided by the zoom), and the map a ring round its dot', /squadG/.test(scene) && /CAMP\.wing\.squadColor/.test(scene) && /strokeCircle\(u\.x, u\.y, Math\.max\(8, half \+ 3\) \/ z\)/.test(scene) && /m\.squad && CAMP\.wing\.squadColor\[m\.squad\]/.test(mapdraw));
+  check('the three colours are three (red, green, yellow), none of them the escorts\' own mint, so a fighter\'s dot can be told from an escort\'s plain one', v.length === 3 && new Set(v).size === 3 && !v.includes(J('CAMPMAP.color.wing')) && col.red > 0xe00000 && (col.green & 0xff00) > (col.green & 0xff0000) / 256 && (col.yellow >> 16) > 0xe0 && ((col.yellow >> 8) & 0xff) > 0xc0);
+  const mapdraw = src('src/campmapdraw.js'), wingLine = mapdraw.split('\n').find(l => /m\.type === 'wing'/.test(l) && /squadColor/.test(l)) || '';
+  check('the map draws a fighter\'s dot FILLED in its squad\'s colour with a white spark in the middle (an escort a plain mint dot); no ring round it (the red and the yellow are near the aliens\' and the pirates\' flat dots, so the spark tells ours)', /fillStyle\(sc \|\| m\.color, 1\)\.fillCircle/.test(wingLine) && /fillStyle\(0xffffff[^)]*\)\.fillCircle\(p\.x, p\.y, 1\)/.test(wingLine) && !/strokeCircle|lineStyle/.test(wingLine) && /m\.squad && CAMP\.wing\.squadColor\[m\.squad\]/.test(wingLine));
+}
+
+console.log('G. the tint, and the circle only while a squad\'s list is open (card space-game-squad-tint)');
+{
+  g.run(`
+    window.__gfx = () => { const r = { calls: [], clear() { r.calls = []; return r; }, setDepth() { return r; }, lineStyle(w, c, a) { r.calls.push({ t: 'line', w, c, a }); return r; }, strokeCircle(x, y, rad) { r.calls.push({ t: 'circle', x, y, rad }); return r; } }; return r; };
+    window.__stand = (open, zoom) => ({ camp: C, sp: {}, squadG: __gfx(), cameras: { main: { zoom: zoom || 1 } }, pn: { open: open || '', at: 0, top: 0, lit: {} } });
+    window.__circles = (open, zoom) => { const sc = __stand(open, zoom); Campaign.prototype.squadCircle.call(sc); const out = []; let st = null; sc.squadG.calls.forEach(c => { if (c.t === 'line') st = c; else out.push({ col: st.c, w: st.w, x: c.x, y: c.y, rad: c.rad }); }); return out; };
+    window.__tint = u => { const sp = { setTint(c) { sp.t = c; sp.n = (sp.n || 0) + 1; return sp; } }; Campaign.prototype.squadTint.call({}, sp, u); Campaign.prototype.squadTint.call({}, sp, u); return { t: sp.t === undefined ? null : sp.t, n: sp.n || 0 }; };
+  `);
+  g.run('__out(1);');
+  const COL = J('CAMP.wing.squadColor');
+  check('campSquadsLit: the red, green and yellow lists (E R T) are their own squad; the all-squads list (W) is all three; the fleet list (Q), the escorts, the convoy, the stance and the other side\'s lists, and none open, are nobody', J(`['red', 'green', 'yellow'].map(k => campSquadsLit(k).join('+')).join()`) === 'red,green,yellow' && J(`campSquadsLit('squads').join()`) === 'red,green,yellow' && J(`['', 'fleet', 'escorts', 'convoy', 'stance', 'ship', 'autopilot', 'power', 'dock', 'nope', null, undefined].map(k => campSquadsLit(k).length).join()`) === '0,0,0,0,0,0,0,0,0,0,0,0');
+  check('every squad has a list of its own whose id is its name, and the all-squads list is \'squads\' (the helper reads the list ids)', J(`CAMP.wing.squads.every(k => campPanelDef(k) && campPanelDef(k).key)`) === true && J(`!!campPanelDef('squads') && campPanelDef('squads').key`) === 'W');
+  const fl = J(`campWing(C, 'fighter').map(u => u.id)`);
+  const t0 = J(`__tint(campWing(C, 'fighter')[0])`), t1 = J(`__tint(campWing(C, 'fighter')[1])`), t2 = J(`__tint(campWing(C, 'fighter')[2])`);
+  check('a fighter is tinted in its squad\'s colour (Red, Green, Yellow for the first three out), set once and not again while it is the same', t0.t === COL.red && t1.t === COL.green && t2.t === COL.yellow && t0.n === 1 && t1.n === 1 && t2.n === 1, JSON.stringify([t0, t1, t2]));
+  check('an escort, a freighter, the cruiser and an alien are not tinted (their own look): no squad, no tint', J(`(() => { const o = [campWing(C, 'escort')[0], C.carrier, campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y)]; return o.map(u => __tint(u).n).join(); })()`) === '0,0,0');
+  check('even a squad fighter of the other side would not be tinted: only the earth team\'s fighters wear a squad colour', J(`(() => { const u = campWing(C, 'fighter')[0]; const was = u.team; u.team = 'alien'; const r = __tint(u).n; u.team = was; return r; })()`) === 0);
+  check('no list open: no circle at all in normal flight (the graphics are cleared and nothing is stroked)', J(`__circles('').length`) === 0 && J(`(() => { const sc = __stand(''); Campaign.prototype.squadCircle.call(sc); return sc.squadG.calls.length; })()`) === 0);
+  const qs = J(`['fleet', 'escorts', 'convoy', 'stance', 'ship', 'autopilot', 'power', 'dock'].map(k => __circles(k).length).join()`);
+  check('the Q list and the other lists open: still no circle (a circle shows only for a squad\'s own list)', qs === '0,0,0,0,0,0,0,0', qs);
+  const red = J(`__circles('red')`), pos = J(`campWing(C, 'fighter').filter(u => u.squad === 'red').map(u => [Math.round(u.x), Math.round(u.y)])`);
+  check('E open: a circle round each of the red squad\'s two fighters, in red, and round no one else', red.length === 2 && red.every(c => c.col === COL.red) && JSON.stringify(red.map(c => [Math.round(c.x), Math.round(c.y)]).sort()) === JSON.stringify(pos.slice().sort()), JSON.stringify(red));
+  check('R open: the green squad\'s two, in green; T open: the yellow squad\'s two, in yellow', J(`__circles('green')`).every(c => c.col === COL.green) && J(`__circles('green').length`) === 2 && J(`__circles('yellow')`).every(c => c.col === COL.yellow) && J(`__circles('yellow').length`) === 2);
+  const all = J(`__circles('squads')`);
+  check('W open: all six fighters get a circle, each in its own squad\'s colour (two of each)', all.length === 6 && ['red', 'green', 'yellow'].every(k => all.filter(c => c.col === COL[k]).length === 2));
+  check('the circle is the same size on the screen at every zoom: its radius times the zoom is 8 px (a stand-in sprite has no width; a real one is at least that) and its line 2 px, at the start zoom and far out', [1, 0.5, 0.1, 0.02].every(z => J(`__circles('red', ${z})`).every(c => Math.abs(c.rad * z - 8) < 1e-9 && Math.abs(c.w * z - 2) < 1e-9)));
+  check('a squad with no ship out has no circle to draw (nothing, not an error)', J(`(() => { campWing(C, 'fighter').filter(u => u.squad === 'red').forEach(u => { u.hp = 0; }); return __circles('red').length; })()`) === 0 && J(`__circles('squads').length`) === 4);
+  check('closing the list takes the circles away: the next frame with nothing open draws none (the graphics are cleared every frame)', J(`(() => { const sc = __stand('green'); Campaign.prototype.squadCircle.call(sc); const a = sc.squadG.calls.length; sc.pn.open = ''; Campaign.prototype.squadCircle.call(sc); return a > 0 && sc.squadG.calls.length === 0; })()`) === true);
+  check('a scene made without the squad graphics, or a stand-in without a panel, draws nothing and logs nothing', J(`(() => { const sc = __stand('red'); delete sc.squadG; Campaign.prototype.squadCircle.call(sc); const sd = __stand('red'); delete sd.pn; Campaign.prototype.squadCircle.call(sd); return sd.squadG.calls.length; })()`) === 0);
+  const scene = src('src/campaignscene.js');
+  check('sync() calls both (the tint for each ship, the circle once a frame), and no ring is drawn round every fighter any more', /this\.squadTint\(sp, u\);/.test(scene) && /this\.squadCircle\(\);/.test(scene) && /campSquadsLit\(campPanelOpen\(this\.pn\)\)/.test(scene) && !/u\.squad && col\[u\.squad\]\) \{ const sp/.test(scene));
+  check('the card\'s docs say it: the tint, the circle only while a list is open, the white spark on the map (PROJECT_STATUS.md, docs/CAMPAIGN.md)', /tint/.test(src('docs/CAMPAIGN.md').split('\n').find(l => /What a squad looks like/.test(l)) || '') && /circle/.test(src('PROJECT_STATUS.md').split('\n').find(l => /Fighter squads/.test(l)) || ''));
+}
+
+console.log('H. launching through the lists (card space-game-squad-tint: Launch is the first row of All squads)');
+{
+  g.run('__new(1); campPanelClose(__PP);');
+  const a = J(`(() => { const q = campPanelKey(__PP, C, 'KeyQ', 0), at0 = __PP.at, id0 = campPanelList(C, 'fleet')[__PP.at].id, n0 = C.orders.launch, e1 = campPanelKey(__PP, C, 'Enter', 0), open1 = campPanelOpen(__PP), id1 = campPanelList(C, open1)[__PP.at].id, n1 = C.orders.launch, e2 = campPanelKey(__PP, C, 'Enter', 0); return { qopen: q.open, at0, id0, n0, ran1: e1.ran, open1, id1, n1, ran2: e2.ran, ok2: e2.ok, row2: e2.row, closed: campPanelOpen(__PP) === '', n2: C.orders.launch }; })()`);
+  check('Q opens the fleet list on All squads (its first row); Enter opens All squads on Launch the wing and launches nothing yet; the second Enter launches everything and the list closes', a.qopen === 'fleet' && a.at0 === 0 && a.id0 === 'gsquads' && a.n0 === 0 && a.ran1 === false && a.open1 === 'squads' && a.id1 === 'launch' && a.n1 === 0 && a.ran2 === true && a.ok2 === true && a.row2 === 'launch' && a.closed && a.n2 === 1, JSON.stringify(a));
+  g.run('__new(1); campPanelClose(__PP);');
+  const w = J(`(() => { const o = campPanelKey(__PP, C, 'KeyW', 0), id = campPanelList(C, 'squads')[__PP.at].id, e = campPanelKey(__PP, C, 'Enter', 0); return { open: o.open, id, ran: e.ran, ok: e.ok, row: e.row, n: C.orders.launch, closed: campPanelOpen(__PP) === '' }; })()`);
+  check('W, Enter launches too (W opens All squads on Launch the wing)', w.open === 'squads' && w.id === 'launch' && w.ran && w.ok && w.row === 'launch' && w.n === 1 && w.closed, JSON.stringify(w));
+  g.run('__run(8); campPanelClose(__PP);');
+  const out = J(`(() => { const R = campPanelRowState(C, campPanelDef('squads').rows[0]); const o = campPanelKey(__PP, C, 'KeyW', 0), id = campPanelList(C, 'squads')[__PP.at].id; return { ok: R.ok, state: R.state, short: R.short, open: o.open, at: __PP.at, id }; })()`);
+  check('with the wing out Launch is greyed ("all of it is out") and All squads opens on Attack the target, its first row that can be given', out.ok === false && out.state === 'all of it is out' && out.short === 'all out' && out.open === 'squads' && out.at === 1 && out.id === 'attack', JSON.stringify(out));
+  const back = J(`(() => { campPanelClose(__PP); campPanelKey(__PP, C, 'KeyQ', 0); campPanelKey(__PP, C, 'Enter', 0); const l = campPanelKey(__PP, C, 'ArrowLeft', 0); return { open: l.open, at: __PP.at }; })()`);
+  check('Left from All squads goes back to Q on the All squads row, and the other lists still open on their first row (a squad\'s list with the wing out starts on Attack, its first)', back.open === 'fleet' && back.at === 0 && J(`(() => { campPanelClose(__PP); campPanelKey(__PP, C, 'KeyE', 0); return __PP.at; })()`) === 0 && J(`(() => { campPanelClose(__PP); campPanelKey(__PP, C, 'KeyP', 0); return __PP.at; })()`) === 0, JSON.stringify(back));
+  g.run('campPanelClose(__PP); campOrder(C, "recall"); __run(10);');
+  check('after a Recall the bay has ships again: Launch can be given and All squads opens on it once more', J(`(() => { campPanelKey(__PP, C, 'KeyW', 0); const id = campPanelList(C, 'squads')[__PP.at].id; campPanelClose(__PP); return id; })()`) === 'launch');
 }
 
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));

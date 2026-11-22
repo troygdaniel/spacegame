@@ -42,6 +42,11 @@ function campSquadNext(C) {
   (C.repairs || []).forEach(r => { if (r.kind === 'fighter' && n[r.squad] != null) n[r.squad]++; });
   return ids.reduce((best, k) => (n[k] < n[best] ? k : best), ids[0]);
 }
+// the squads a list is about (card space-game-squad-tint; Troy, 22 Nov 2026): the red, green or yellow list (E R T) is its own squad's, the all-squads list (W) is all three, any other list or none is nobody's. The flight draws a circle round
+// the fighters of these squads only: while the list is open, so the player sees who an order goes to; in normal flight a fighter is just drawn in its squad's colour (src/campaignscene.js).
+function campSquadsLit(openId) {
+  return openId === 'squads' ? CAMP.wing.squads.slice() : CAMP.wing.squads.indexOf(openId) >= 0 ? [openId] : [];
+}
 
 // A squad SENT to a ship in trouble (card space-game-distress-send-squads; a pilot's call, src/camporders.js campCallSend): its order is an attack with { rescue: <ship id>, back: <the order it had> }. Each tick it fights the nearest
 // pirate about that ship (within CAMP.wing.rescue px of it; one that runs or is gone does not count); when none is left, or the ship is lost, the squad takes up the order it had, as if nothing had been asked. The other squads keep theirs.

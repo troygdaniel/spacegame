@@ -43,10 +43,11 @@ function campPanelScroll(P, n) {
   if (P.at < P.top) P.top = P.at; else if (P.at >= P.top + show) P.top = P.at - show + 1;
   P.top = Math.max(0, Math.min(P.top, Math.max(0, n - show)));
 }
-// open a list: at its first row, or (back: the part we came back from) on that part's row; via: the list whose row opened this one (Esc goes back to it), none for a list opened by its own key
+// open a list: at its first row (or, for a list that says start: 'usable', its first row that can be given), or (back: the part we came back from) on that part's row; via: the list whose row opened this one (Esc goes back to it), none for a list opened by its own key
 function campPanelGo(P, C, id, back, via) {
   P.open = id; P.at = 0; P.top = 0; P.pick = null; P.trail = via ? (P.trail || []).concat(via) : [];
   if (back) { const rows = campPanelList(C, id), i = rows.findIndex(r => r.open === back); if (i >= 0) { P.at = i; campPanelScroll(P, rows.length); } }
+  else if (C && campPanelDef(id) && campPanelDef(id).start === 'usable') { const rows = campPanelList(C, id), i = rows.findIndex(r => campPanelRowState(C, r).ok); if (i > 0) { P.at = i; campPanelScroll(P, rows.length); } } // a list whose table says start: 'usable' opens on its first row that can be given now: All squads opens on Launch while there are ships in the bay and, once the wing is out (Launch greyed: all out), on Attack the target (card space-game-squad-tint)
 }
 // the keys of a target sub-list (P.pick): Up and Down move the highlight, Enter gives the order at it, Esc and Left go back to the list it came from; true when the key was the sub-list's (any other key goes on to the direct keys)
 function campPanelPickKey(P, C, code, now, res, def) {
