@@ -1,6 +1,6 @@
 # Project status
 
-**Updated: 22 Nov 2026, written against main `053ce72` (branch `cloud/one-list-keys`, not yet landed).** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
+**Updated: 22 Nov 2026, written against main `053ce72` plus the one-list keys (pull request 1, merged 22 Nov at Troy's word).** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
 
 ## In one minute
 
@@ -43,7 +43,7 @@ The batch is the answer to "I want to direct the fleet more". Each item has its 
 
 ## Being built right now
 
-- **One list per hand** (branch `cloud/one-list-keys`, a pull request against main): the keys above. The plain-Node suites are updated and green (169 of 169). **The Chrome boot scripts were rewritten for the new keys and only partly run**, in software rendering on a cloud machine, not on Troy's: eight of the ten rewritten ones passed there, `campl3-boot` ran out of time with no failed check, and `huntfleet-boot` (a real-time flight of 1.1) did not reach the end, exactly as it did not on main on that machine. The rest were not run. Run them all at the gate before it lands. Still to do after it: Troy plays it and says what feels wrong (the lists are one table, so moving or dropping a row is one change).
+- **One list per hand** (pull request 1, merged to main on 22 Nov at Troy's word, before the gate ran the Chrome boots): the keys above. The plain-Node suites are updated and green (169 of 169). **The Chrome boot scripts were rewritten for the new keys and only partly run**, in software rendering on a cloud machine, not on Troy's: eight of the ten rewritten ones passed there, `campl3-boot` ran out of time with no failed check, and `huntfleet-boot` (a real-time flight of 1.1) did not reach the end, exactly as it did not on main on that machine. The rest were not run. Run them all locally: a red one is most likely a stale key in the script. Still to do after it: Troy plays it and says what feels wrong (the lists are one table, so moving or dropping a row is one change).
 - **Retuning all nine missions** after the new systems (target: the plain bot wins all nine at all three paces with losses in the hard ones; an idle player never wins; a player who answers calls and uses convoy orders does clearly better; level 1 missions about five to eight minutes). 1.1 is done.
 - **Enemy torpedo boats**: on main and used in 1.1; finishing touches.
 - **Test upkeep** for the above (Chrome boot scripts that press keys that moved).
