@@ -29,7 +29,7 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 **The ideas that make it a commander game.**
 
 - **Power management.** Six pips shared between weapons, shields and engines (like X-Wing's); shields mend by themselves at a rate the shield pips set; three gauges at the top right show where the energy goes, and the power list (`I`) opens right under them with the same pip bars on its rows.
-- **Pilots ask for orders.** Timed radio calls with three choices and real costs.
+- **Pilots ask for orders.** Timed radio calls with three choices (the miner's call in 1.1 has five: send all squads, Red, Green or Yellow, or stay) and real costs.
 - **A mission is a sequence of questions.** Mission 1.1 is the finished example: a patrol turns back, a distress call, an ambush with torpedo boats, a pirate leader who duels your cruiser. Something happens about every minute.
 - **Objectives and bonuses**, a score, and ranks that grow your wing.
 
@@ -73,7 +73,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 | `Esc`, `H`, `M` | close a list or the map, else pause; the page of keys; mute |
 | `N` | the **tuning panel** (flight and ready room): numbers and switches changed live, kept in this browser; `Up` `Down` choose, `Left` `Right` change (`Shift` ten steps), `Backspace` back to the default; *Copy my settings* copies what you changed. A mission flown tuned keeps no score |
 
-**A pilot's call** (a timed radio prompt with three answers) is a small amber list low in the middle of the screen: `Up` and `Down` pick an answer, `Enter` gives it. The highlight starts on the pilot's own cautious pick, which is also what he does if you say nothing: he waits 8 seconds, shown by a bar. **Press `Up` or `Down` and the timer stops** (the bar stays where it was and turns pale blue, and the key line says "Timer stopped"): the call then waits for `Enter` (30 seconds at the longest, then he takes the cautious pick); touch nothing and it runs out as ever. No other key stops it. Only one list has the arrows and Enter at a time: while an order list (or the map) is open the call waits, dimmed, and says so.
+**A pilot's call** (a timed radio prompt with three answers, or five when it offers the squads: a squad with no ship out is grey and `Enter` on it says why) is a small amber list low in the middle of the screen: `Up` and `Down` pick an answer, `Enter` gives it. The highlight starts on the pilot's own cautious pick, which is also what he does if you say nothing: he waits 8 seconds, shown by a bar. **Press `Up` or `Down` and the timer stops** (the bar stays where it was and turns pale blue, and the key line says "Timer stopped"): the call then waits for `Enter` (30 seconds at the longest, then he takes the cautious pick); touch nothing and it runs out as ever. No other key stops it. Only one list has the arrows and Enter at a time: while an order list (or the map) is open the call waits, dimmed, and says so.
 
 The battle never slows for a list, the map or a pilot's call: it runs at its own speed whatever is open. It has one pace (Normal); there is no pace key. Cards between battles (the tech pick, the refit) still use the number keys shown on them.
 
