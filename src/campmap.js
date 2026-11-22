@@ -109,7 +109,7 @@ function campMapMarks(C, whole) { // whole: the far places too (the whole system
     if (u.hp <= 0 || (u.team === 'alien' && typeof campSeen === 'function' && !campSeen(C, u))) return; // a hostile out of the sensors' sight is not on the map (src/campsight.js)
     const type = u.kind === 'carrier' ? 'carrier' : u.kind === 'freighter' ? 'convoy' : u.kind === 'mother' ? 'mother' : u.kind === 'tower' ? 'tower' : u.rival ? 'rival' : u.boat ? 'tboat' : u.faction === 'pirate' ? 'pirate' : u.team === 'alien' ? 'alien' : u.team === 'neutral' ? (u.kind === 'patrol' ? 'patrol' : 'miner') : 'wing';
     const m = { type, id: u.id, x: u.x, y: u.y, rot: u.rot, color: campDotColor(u) };
-    if (type === 'wing' && u.squad) m.squad = u.squad; // a fighter's squad (card space-game-fighter-squads): the map draws a ring of the squad's colour round its dot
+    if (type === 'wing' && u.squad) m.squad = u.squad; // a fighter's squad (card space-game-fighter-squads): the map draws its dot in the squad's colour (card space-game-squad-tint)
     if (type === 'convoy' && u.dest) m.to = { x: u.dest.x, y: u.dest.y };
     if (type === 'tboat') m.arming = u.arming > 0; // a torpedo boat (card space-game-torpedo-art): its own mark, with a ring while it arms
     out.push(m);

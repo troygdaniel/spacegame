@@ -40,10 +40,11 @@ function campPanelScroll(P, n) {
   if (P.at < P.top) P.top = P.at; else if (P.at >= P.top + show) P.top = P.at - show + 1;
   P.top = Math.max(0, Math.min(P.top, Math.max(0, n - show)));
 }
-// open a list: at its first row, or (from: the part we came back from) on that part's row
+// open a list: at its first row (or, for a list that says start: 'usable', its first row that can be given), or (from: the part we came back from) on that part's row
 function campPanelGo(P, C, id, from) {
   P.open = id; P.at = 0; P.top = 0;
   if (from) { const rows = campPanelList(C, id), i = rows.findIndex(r => r.open === from); if (i >= 0) { P.at = i; campPanelScroll(P, rows.length); } }
+  else if (C && campPanelDef(id) && campPanelDef(id).start === 'usable') { const rows = campPanelList(C, id), i = rows.findIndex(r => campPanelRowState(C, r).ok); if (i > 0) { P.at = i; campPanelScroll(P, rows.length); } } // a list whose table says start: 'usable' opens on its first row that can be given now: All squads opens on Launch while there are ships in the bay and, once the wing is out (Launch greyed: all out), on Attack the target (card space-game-squad-tint)
 }
 function campPanelKey(P, C, code, now) {
   const res = { used: false, ran: false, ok: false, say: '', row: '', tgt: '', fleet: false, open: campPanelOpen(P) }; // fleet: an order of the left hand or a pick of the target (a label for the tests and the radio; nothing slows the battle for it: card space-game-no-command-slowdown)
@@ -178,7 +179,7 @@ function campPanelShortState(C, row) {
     case 'gnav': return C.nav ? 'on' : '';
     case 'gpower': return C.power.p.join(' / ');
     case 'gyard': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name : ''; }
-    case 'shields': case 'engines': case 'weapons': { const n = C.power.p[{ weapons: 0, shields: 1, engines: 2 }[row.id]]; return CAMP_KEYS[row.id].k + '   ' + n + (n === 1 ? ' pip' : ' pips'); }
+    case 'shields': case 'engines': case 'weapons': return CAMP_KEYS[row.id].k; // the key of the row (the pips are the row's own bar now, the gauge's twin: src/campanelsdraw.js)
     case 'balance': return CAMP_KEYS.balance.k + '   ' + C.power.p.join(' / ');
     case 'mine': return campMiners(C).length + ' ships';
     case 'buildf': return B.fighterCost + ' ore';
@@ -222,7 +223,7 @@ const campPanelShips = n => n + (n === 1 ? ' ship' : ' ships'); // "1 ship", "3 
 const campPanelConvoyMarked = (C, row) => row.order === 'convoy' && campConvoyState(C) === campConvoyVerb(String(row.arg || '')); // the convoy order that all the escorted ships are under
 function campPanelRows(C, id) {
   if (!campPanelDef(id) || !C) return [];
-  return campPanelList(C, id).map(row => { const as = campPanelAs(C, row); const part = as.open ? campPanelDef(as.open) : null; return Object.assign({ id: as.id, label: as.label, key: part ? part.key : '', more: !!part, marked: (as.order === 'stance' && C.stance === as.id) || campPanelConvoyMarked(C, as) }, campPanelRowState(C, row)); });
+  return campPanelList(C, id).map(row => { const as = campPanelAs(C, row); const part = as.open ? campPanelDef(as.open) : null; return Object.assign({ id: as.id, label: as.label, key: part ? part.key : '', more: !!part, marked: (as.order === 'stance' && C.stance === as.id) || campPanelConvoyMarked(C, as), pip: as.pip === undefined ? -1 : as.pip }, campPanelRowState(C, row)); });
 }
 function campPanelView(P, C) {
   const id = campPanelOpen(P), def = campPanelDef(id); if (!def || !C) return null;

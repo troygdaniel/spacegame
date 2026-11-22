@@ -59,7 +59,7 @@ const SETS = process.argv.map((a, i) => a === '--set' ? process.argv[i + 1] : nu
 const g = nodeGame();
 g.run(`window.__KEYS = ${process.argv.includes('--keys')}`); // --keys: the orders are given with the keys a player has (see ord below)
 if (process.argv.includes('--nocalls')) g.run('campCallsTick = null'); // --nocalls: the battle as it was before the pilots asked for orders (to compare)
-g.run(`window.__SMART = { distress: 1, cruiser: 3, wounded: 3, breakaway: 1, second: 3, running: 1, opportunity: 1 }; window.__WRONG = { distress: 2, cruiser: 2, wounded: 1, breakaway: 3, second: 1, running: 3, opportunity: 2 }`); // the 'smart' bot's picks by call type (1, 2 or 3): the right pick of each (CAMP_CALL_RATE in src/camporders.js, card space-game-fleet-command-tune); __WRONG: the wrong one of each (the 'plainw' bot)
+g.run(`window.__SMART = { distress: 2, cruiser: 3, wounded: 3, breakaway: 1, second: 3, running: 1, opportunity: 1 }; window.__WRONG = { distress: 1, cruiser: 2, wounded: 1, breakaway: 3, second: 1, running: 3, opportunity: 2 }`); // the 'smart' bot's picks by call type (1, 2 or 3): the right pick of each (CAMP_CALL_RATE in src/camporders.js, card space-game-fleet-command-tune); __WRONG: the wrong one of each (the 'plainw' bot)
 g.run(`window.__PACE = ${isNaN(Number(PACE)) ? JSON.stringify(PACE) : Number(PACE)}`); // the battle pace of every battle of this run
 g.run(`window.__RANK = ${JSON.stringify(RANK)}`); // the pilot's rank for every battle of this run
 if (OLD) g.run(`(() => { CAMP.earth.shield = 300; CAMP.earth.regen = 0; CAMP.mother.hp = 900; CAMP.mother.damage = 12; CAMP.mother.holdAt = 1600; CAMP.mother.spawnEvery = 8000; CAMP.mother.spawnMax = 6; CAMP.levels[1].waves[2].ships.raider = 3; })()`); // the numbers before the easier level 1
@@ -75,9 +75,9 @@ g.run(`(() => {
   const clampi = v => Math.max(-1, Math.min(1, v));
   // --keys: an order as a player gives it. The row is found in the key table (campKeyVia), its list is opened with the list's own key, Down goes to the row, Enter gives it (src/camppanel.js campPanelKey);
   // "attack that one" is the target picked first (what A, D and S do) and then the fighters' Attack row; a missile is Enter with no list open. What has no row (a scout, a lane: the map's) stays an order.
-  const give = (C, rowId) => { const list = campKeyVia(rowId), rows = list ? campPanelList(C, list.id) : [], i = rows.findIndex(r => r.id === rowId); if (i < 0) return { ok: false, say: 'no such row here: ' + rowId }; const P = campPanelNew(); campPanelKey(P, C, list.code, 0); for (let k = 0; k < i; k++) campPanelKey(P, C, 'ArrowDown', 0); window.__KEYN = (window.__KEYN | 0) + 1; return campPanelKey(P, C, 'Enter', 0); };
+  const give = (C, rowId) => { const list = campKeyVia(rowId), rows = list ? campPanelList(C, list.id) : [], i = rows.findIndex(r => r.id === rowId); if (i < 0) return { ok: false, say: 'no such row here: ' + rowId }; const P = campPanelNew(); campPanelKey(P, C, list.code, 0); const nrows = rows.length, downs = ((i - P.at) % nrows + nrows) % nrows; for (let k = 0; k < downs; k++) campPanelKey(P, C, 'ArrowDown', 0); window.__KEYN = (window.__KEYN | 0) + 1; return campPanelKey(P, C, 'Enter', 0); };
   const aim = (C, id) => { if (id) C.tgt = id; else campTgtClear(C); };
-  const ROW = { launch: 'launch', escort: 'escort', mine: 'mine', recall: 'recall' };
+  const ROW = { launch: 'launch', escort: 'escort', mine: 'fmine', recall: 'frecall' }; // the whole-wing rows left Q (card space-game-squad-tint): the bot's Launch, Mine and Recall are the All squads list's (W)
   const ord = (C, name, arg) => {
     if (!window.__KEYS) return campOrder(C, name, arg);
     if (ROW[name]) return give(C, ROW[name]);
