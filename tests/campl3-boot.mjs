@@ -56,7 +56,7 @@ try {
     if ((await j(`${S}.mode`)) !== 'play') return false; // a card has the keys: Enter would be the card's
     const way = await listWay(row); if (!way) return false; // the row is not in this mission's list
     for (let n = 0; n < 6 && (await j(`campPanelOpen(${S}.pn)`)); n++) await key('Escape'); // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): pressed until every list is closed (it pauses only when none is open)
-    for (const [code, downs] of way.keys) { await key(code); for (let i = 0; i < downs; i++) await key('ArrowDown'); }
+    for (const [code, downs] of way.keys) { await key(code); const cur = await j(`${S}.pn.at`), n = await j(`(() => { const o = campPanelOpen(${S}.pn); return o ? campPanelList(${S}.camp, o).length : 0; })()`); for (let i = 0, d = n ? ((downs - cur) % n + n) % n : 0; i < d; i++) await key('ArrowDown'); } // a list can open with its highlight on its first usable row (start: 'usable', All squads): Down only the difference
     return true;
   };
   const listOrder = async row => {
