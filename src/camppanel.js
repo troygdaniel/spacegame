@@ -45,7 +45,7 @@ function campPanelGo(P, C, id, from) {
   if (from) { const rows = campPanelList(C, id), i = rows.findIndex(r => r.open === from); if (i >= 0) { P.at = i; campPanelScroll(P, rows.length); } }
 }
 function campPanelKey(P, C, code, now) {
-  const res = { used: false, ran: false, ok: false, say: '', row: '', tgt: '', fleet: false, open: campPanelOpen(P) }; // fleet: a fleet order or a pick of the target (command time slows the battle a moment more: src/campslow.js)
+  const res = { used: false, ran: false, ok: false, say: '', row: '', tgt: '', fleet: false, open: campPanelOpen(P) }; // fleet: an order of the left hand or a pick of the target (a label for the tests and the radio; nothing slows the battle for it: card space-game-no-command-slowdown)
   const pk = code ? CAMP_PANELS.panels.find(p => p.code === code) : null;
   if (pk) { // a list's key (Q W E R, P O I U): open that list at its first row, or close it when it is the one open
     res.used = true;

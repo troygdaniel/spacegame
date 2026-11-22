@@ -76,7 +76,7 @@ async function campaign() {
     check('Q over the open map closes the map and opens the fleet list; Down to the launch row and Enter give the order and close the list', launchedByList === 'ok', String(launchedByList));
     await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(300);
     check('Tab opens the map again', (await j(`!!${SC}.mp`)) === true);
-    await settle(t, `${SC}.camp.launchQ.length === 0 && campWing(${SC}.camp).length === 8`, 200); // every ship out (a ship still in the launch queue when the wing is recalled is not recalled: it comes out later; the map's open, so the battle runs at command time, a quarter speed, and 9 s is not enough)
+    await settle(t, `${SC}.camp.launchQ.length === 0 && campWing(${SC}.camp).length === 8`, 200); // every ship out (a ship still in the launch queue when the wing is recalled is not recalled: it comes out later; ships come out one per bay interval, and 9 s is not enough for eight)
     check('the wing is out (eight ships)', (await j(`campNavOut(${SC}.camp)`)) === 8);
     // the place is chosen on the map's list and set (not by a click on its mark: the carrier is by Vesta now), and the keys do the rest: the Fast button, Shift+Enter, Shift+Enter
     await t.ev(`(() => { ${SC}.mp.selId = 'place:pallas'; ${SC}.mp.setId = 'place:pallas'; ${SC}.mp.dirty = true; return 1; })()`); await t.run(300);

@@ -131,7 +131,6 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.pow\./, why: 'the power setting\'s three labels on the ship panel: shown (the ship answers the setting itself with camp.say lines)' },
   { re: /^camp\.call\./, why: 'the labels of a call for orders on its prompt, and its key line: on the screen (the call and the answers, camp.call.line, camp.call.r, late and fail, are said)' },
   { re: /^camp\.pace\./, why: 'the battle pace setting\'s line, toast, key hint and notes: on the card and the pause screen, not said' },
-  { re: /^camp\.slow\./, why: 'command time\'s sign (COMMAND TIME x0.25) and its one-line hint: a label on the screen and a toast, not said' },
   { re: /^camp\.m\.\d+\.\d+\.title$/, why: 'a mission\'s title: the title of its briefing and debrief cards' },
   { re: /^camp\.lose\.reached$/, why: 'the lose card\'s numbers line: shown, and not said (the cause and the tip are)' },
   { re: /^camp\.hint\./, why: 'the first-minute hints of mission 1.1 (the scout, the lane, the Fast burn): toasts, with the keys of the key table in them' },

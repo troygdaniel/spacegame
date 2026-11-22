@@ -11,7 +11,7 @@
 //             Test microphone button (opens the microphone for an instant, sends nothing) and the one-line hint about `node tools/serve.mjs`
 //   CONTROLS  every key of the game, from the one table in src/data_controls.js, a tab for each group
 //   FLIGHT    the flight feel: Classic or Heavy (src/handling.js), one row; kept in this browser, not in the save
-//   (the Campaign's battle pace had a GAME tab until card space-game-two-hands-keys: the Campaign flies at one fixed pace, Normal, and command time, src/campslow.js, is what gives time to give orders)
+//   (the Campaign's battle pace had a GAME tab until card space-game-two-hands-keys: the Campaign flies at one fixed pace, Normal; there is no command time either: the battle never slows for a list, the map or a call)
 //   CONTENT   which content pack is running and what it ignored (src/contentui.js builds the lines)
 //   RESET     Reset game (erase the save and start again) and Forget all keys, each with a second press; and the PLAY LOG: ON or OFF, Download log, Forget log (src/playlog.js)
 // Nothing here calls a service by itself. Test and Hear it are the only buttons that do, and only when the player presses them, on the key they
