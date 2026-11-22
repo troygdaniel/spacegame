@@ -3,11 +3,13 @@
 // runs down as he waits. It is a small LIST, answered like the Q and P lists: Up and Down move the highlight, Enter gives the answer (no key is reused: the digits answer nothing). The highlight starts on
 // the pilot's own cautious pick (the row marked "no answer"), so an Enter pressed by accident does what silence would have done. It cannot be confused with a Q or P list: those are at the screen's edges,
 // this is in the middle and amber, and only ONE of them has the arrows and Enter at a time: while a Q or P list is open the call waits, dimmed, and says "close the list to answer".
+// The pilot waits CAMP_CALLS.answer seconds, shown by the bar: touch the prompt (Up or Down) and the bar stops where it is, turns pale blue and the key line says "Timer stopped": the call then waits for Enter (the sim's
+// campCallHold, card space-game-call-timer-stops; untouched it runs out to the cautious pick). No other key stops it: the prompt's keys are Up, Down and Enter, and only the prompt's own key is the prompt's.
 // The words are camp.call.* (content/text/camporders.md). The answer is said back on the radio line (the scene's chatShow: the callsign, the words, the pilot's voice).
 //   campCallPaint(s)      each frame: the plate while a call waits and the battle is on, else gone; the texts change only when the call does
 //   campCallHasKeys(s)    a call waits and has the arrows and Enter (the battle is on and no Q or P list is open): the ship coasts meanwhile
 //   campCallSel(s)        the highlighted row of the waiting call (0 to 2); it starts on the pilot's own pick
-//   campCallKey(s, code)  true when the key was the call's: Up, Down (Left and Right are swallowed), Enter answers (the scene asks before the lists and the missile)
+//   campCallKey(s, code)  true when the key was the call's: Up, Down (they stop the timer; Left and Right are swallowed and do not), Enter answers (the scene asks before the lists and the missile)
 //   campCallHear(s, e)    a sim event { type: 'call', stage }: the open call is said in its pilot's voice, the answer on the radio line
 const CAMPCALL_UI = { w: 470, h: 150, lift: 262, depth: 210, pad: 14, row: 24, bar: 5, warn: 2.5, dim: 0.45 };
 
@@ -48,22 +50,22 @@ function campCallPaint(s) {
     v.rows.forEach((r, i) => ui.rows[i].setText(uiText(r.label) + (r.def ? '   (' + uiText('camp.call.hud.def') + ')' : '')));
   }
   if (!ui.on) campCallShow(ui, true);
-  const state = at + ':' + wait;
-  if (ui.state !== state) { // the highlight moved, or a list took the keys: the plate dims and says so
+  const state = at + ':' + wait + ':' + v.held;
+  if (ui.state !== state) { // the highlight moved, a list took the keys, or the timer was stopped: the plate dims and says so
     ui.state = state;
     ui.hi.setPosition(ui.x + 6, ui.y + 50 + at * K.row).setVisible(!wait);
     ui.rows.forEach((t, i) => t.setColor(i === at && !wait ? '#02101c' : '#9fe9ff'));
-    ui.foot.setText(uiText(wait ? 'camp.call.hud.wait' : 'camp.call.hud.keys'));
+    ui.foot.setText(uiText(wait ? 'camp.call.hud.wait' : v.held ? 'camp.call.hud.held' : 'camp.call.hud.keys'));
     [ui.back, ui.edge, ui.bar, ui.head, ui.call, ui.foot].concat(ui.rows).forEach(o => o.setAlpha && o.setAlpha(wait ? K.dim : 1));
   }
   const share = v.total > 0 ? Math.max(0, Math.min(1, v.left / v.total)) : 0;
-  ui.bar.setSize(Math.max(1, Math.round((K.w - 2 * K.pad) * share)), K.bar).setFillStyle(v.left <= K.warn ? 0xff6a5a : 0xffd37a, 1);
+  ui.bar.setSize(Math.max(1, Math.round((K.w - 2 * K.pad) * share)), K.bar).setFillStyle(v.held ? 0x9fe9ff : v.left <= K.warn ? 0xff6a5a : 0xffd37a, 1); // stopped: where it was, pale blue
 }
 
 function campCallKey(s, code) {
   if (!campCallHasKeys(s)) return false;
   const up = campKeyIs('up', code), down = campKeyIs('down', code);
-  if (up || down) { const at = campCallSel(s), n = campCallView(s.camp).rows.length; s.callSel.at = (at + (down ? 1 : -1) + n) % n; return true; }
+  if (up || down) { campCallHold(s.camp); const at = campCallSel(s), n = campCallView(s.camp).rows.length; s.callSel.at = (at + (down ? 1 : -1) + n) % n; return true; }
   if (code === 'ArrowLeft' || code === 'ArrowRight') return true; // the ship coasts while the call has the arrows
   if (campKeyIs('pick', code)) { campCallAnswer(s.camp, campCallSel(s) + 1, 'key'); return true; }
   return false;
