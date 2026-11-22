@@ -92,8 +92,8 @@ const CAMP_KEYS = {
   help: { k: 'H', codes: ['KeyH'] }, mute: { k: 'M', codes: ['KeyM'] }, pause: { k: 'Esc', codes: ['Escape'] }
 };
 const campKeyCodes = id => (CAMP_KEYS[id] || { codes: [] }).codes;
-// the codes of a row (a digit's also answers to the keypad's)
-const campRowCodes = r => (/^Digit\d$/.test(r.code) ? [r.code, 'Numpad' + r.code.slice(5)] : [r.code]);
+// the codes of a row (a digit's also answers to the keypad's, and Enter to the keypad's Enter)
+const campRowCodes = r => (/^Digit\d$/.test(r.code) ? [r.code, 'Numpad' + r.code.slice(5)] : r.code === 'Enter' ? ['Enter', 'NumpadEnter'] : [r.code]);
 // the rows the H page and Settings list for the panels: the panel's page key, then each row's key under the panel's heading, in the table's order
 function campPanelKeyRows() {
   const cap = (p, h) => p.title.charAt(0) + p.title.slice(1).toLowerCase() + ': ' + h.charAt(0).toLowerCase() + h.slice(1), sub = p => 'THE ' + p.title + ' PANEL (' + (p.side === 'left' ? 'LEFT' : 'RIGHT') + ' HAND)';
