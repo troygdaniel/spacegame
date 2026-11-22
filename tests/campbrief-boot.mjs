@@ -64,7 +64,7 @@ try {
   await snap('8-tutorial-1');
   await key('Enter'); await t.run(300); await snap('8-tutorial-2'); const n2 = await note();
   await key('Enter'); await t.run(300); await snap('8-tutorial-3'); const n3 = await note();
-  check('the second screen says how a ring is scanned and the third the keys: the arrow keys, Space, 1 and the wing, Tab', n2.some(x => /inside a ring scans it/.test(x)) && n3.some(x => /arrow keys fly the cruiser/.test(x) && /Space/.test(x) && /1 launches the wing/.test(x) && /Tab/.test(x)), n3.join(' | '));
+  check('the second screen says how a ring is scanned and the third the keys: the arrows, Space, 1 and the wing, Tab', n2.some(x => /inside a ring scans it/.test(x)) && n3.some(x => /arrow keys fly the cruiser/.test(x) && /Space/.test(x) && /1 launches the wing/.test(x) && /Tab/.test(x)), n3.join(' | ')); // (the two hands: card space-game-two-hands-keys)
   await key('Enter');
   check('Enter on the last screen launches the replay: the Campaign scene is on belt mission 1 as a replay and goes to the flight', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.camp && ${CAMPS}.mode === 'play'`) && await j(`${CAMPS}.replay === true && ${CAMPS}.mi === 0`));
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
