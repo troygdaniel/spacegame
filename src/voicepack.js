@@ -114,7 +114,7 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.no\./, spoken: 'campaign.no', voice: 'ship' },                                     // the refusals the strip and the voice answer with
   { re: /^camp\.nav\.(say|stopping|there|no\..+)$/, spoken: 'campaign.nav', voice: 'ship' },       // the autopilot's answers to the strip ("Flying to X", "I do not see that on the map")
   { re: /^camp\.help\./, spoken: 'campaign.help', voice: 'ship' },                                  // the computer's answers to "what do I do", "which keys", "status"
-  { re: /^camp\.lose\.(carrier|earth|debug|other|convoy|base|tip\..+)$/, spoken: 'campaign.lose', voice: 'ship' }, // the lose card: the cause and the tip are said, the numbers line is not
+  { re: /^camp\.lose\.(carrier|earth|debug|other|convoy(\.transport)?|base|tip\..+)$/, spoken: 'campaign.lose', voice: 'ship' }, // the lose card: the cause and the tip are said, the numbers line is not
   { re: /^camp\.l\d+\.(before|after)\.(r\.)?\d+$/, spoken: 'campaign.story', voice: 'ship' },    // the story before and after each level (r.: level 3 once the reveal has been seen, campStory)
   { re: /^camp\.bf\.\d+\.\d+\.w1$/, spoken: 'campaign.walk', voice: 'ship' },                     // the first step of a mission's walkthrough: the ship reads it once when the big briefing opens (src/campbriefdraw.js, card space-game-campaign-briefing)
   { re: /^camp\.m\.\d+\.\d+\.b[12]$/, spoken: 'campaign.brief', voice: 'ship' },                  // a mission's briefing
