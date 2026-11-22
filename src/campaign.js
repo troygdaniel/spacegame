@@ -1434,12 +1434,12 @@ const campFree = (C, kind) => campWing(C, kind).filter(u => !u.scout);
 function campScoutDo(C, arg, dry) {
   const tasks = campScoutTasks(C);
   const lanes = !!(C.route && !C.route.passed); // a fork in the road: the lanes are for scouting whatever the mission's tasks say (src/camproute.js)
-  if (!tasks.includes('recon') && !tasks.includes('fetch') && !lanes) return campNo('noscout');
+  if (!tasks.includes('recon') && !tasks.includes('fetch') && !lanes) return campNo(C.route ? 'scoutpast' : 'noscout'); // (a mission with a fork says the fork is behind us: "no scouting" was wrong for 1.1 once the lane is taken)
   const es = campWing(C, 'escort'); if (!es.length) return campNo(C.launchQ.length ? 'launching' : 'noescorts');
   const free = es.filter(u => !u.scout && !(u.order && u.order.type === 'recall')); if (!free.length) return campNo('scoutsbusy');
   const f = arg && typeof arg === 'object' && Number.isFinite(arg.x) && Number.isFinite(arg.y) ? { row: arg } : typeof campNavFind === 'function' ? campNavFind(C, arg) : null; // a map row (the Tab map's Scout button) or the words
   if (!f || !f.row) return campNo('noscoutplace');
-  if (!tasks.includes('recon') && !tasks.includes('fetch') && f.row.kind !== 'lane') return campNo('noscout');
+  if (!tasks.includes('recon') && !tasks.includes('fetch') && f.row.kind !== 'lane') return campNo('scoutlanes'); // a fork is on the road and the lanes are all there is to scout: the other rows are not "no scouting" (1.1 said so to V on the transport)
   const row = f.row, n = (C.scoutN | 0) + 1;
   if (dry) return campYes('scout', { n, name: row.name });
   const u = campNearest(free, row);

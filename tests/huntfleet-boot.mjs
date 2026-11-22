@@ -2,7 +2,8 @@
 // It boots the Campaign with a save that stands at the mission, reads the ready room and the three briefing screens, launches, and then PLAYS with real key events: the wing out, the cruiser on the
 // autopilot beside the convoy, the pilots' calls answered by a style, the fork scouted and picked, convoy orders, power moved in the rival's phases, missiles, the map zoomed all the way out.
 // Every key comes from the key table (CAMP_PANELS for the panels and their rows, the Campaign group of CONTROLS for the rest), never a letter of its own, so the walk survives a remap of the keys.
-//   node tests/huntfleet-boot.mjs --mission 1 [--ending win|lose] [--calls right|wrong|none|mix] [--secs 420] [--lane short|long] [--nobrief]
+//   node tests/huntfleet-boot.mjs --mission 1 [--ending win|lose] [--calls right|wrong|none|mix] [--secs 420] [--lane short|long] [--nobrief] [--idle 90]
+// --idle N: a new player who does nothing for N seconds (the hints, the radio and the beats say what they say when nobody has acted yet), then the walk goes on
 // --ending lose: the transport (1.1) or the haulers (1.3) or the cruiser (1.2) is let go: no fighting, no orders after the launch, then the lost card, Enter (the mission again), the pause card
 // --calls: how a call is answered: right (the type's right pick), wrong (a wrong pick), none (never: the cautious pick says itself), mix (right, wrong, none, in turn)
 // Pictures go to HUNT_SHOTS (default ~/dev/spacegame-night/shots/fleet-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
@@ -14,7 +15,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.HUNT_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i < 0 ? d : process.argv[i + 1]; };
-const MISSION = Number(arg('mission', 1)), SECS = Number(arg('secs', 420)), ENDING = String(arg('ending', 'win')), CALLS = String(arg('calls', 'mix')), LANE = String(arg('lane', 'short')), NOBRIEF = process.argv.includes('--nobrief');
+const MISSION = Number(arg('mission', 1)), SECS = Number(arg('secs', 420)), ENDING = String(arg('ending', 'win')), CALLS = String(arg('calls', 'mix')), LANE = String(arg('lane', 'short')), NOBRIEF = process.argv.includes('--nobrief'), IDLE = Number(arg('idle', 0));
 const TAG = `${MISSION}${ENDING === 'lose' ? 'L' : 'W'}${CALLS[0]}`;
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
@@ -96,38 +97,57 @@ try {
   };
   let scouted = false, took = false, tucked = false, ran = false, zoomed = false, rivalSeen = {}, lastCall = '', ordered = {};
   const POLICY = ENDING === 'win';
+  const foeRows = () => j(`(() => { const C = ${S}.camp, A = campAliens(C); return campNavRows(C).filter(r => A.some(u => u.id === r.ref)).map(r => ({ id: r.id, d: Math.round(campDist(C.carrier, A.find(u => u.id === r.ref))) })).sort((a, b) => a.d - b.d); })()`);
+  let docked = false, mineAt = -99, flewAt = -99, sold = false;
   const step = async () => {
     const C = `${S}.camp`; if (await j(`${C}.result || ${S}.mode !== 'play'`)) return false;
     const v = await callRows(); if (v && lastCall !== v.id + '@' + (await j(`${C}.call.n`))) { lastCall = v.id + '@' + (await j(`${C}.call.n`)); await answer(v); }
-    if (!POLICY) return true;
+    if (!POLICY) {
+      if (MISSION === 2 && !ordered.kill && (await j(`Math.round(campMissionClock(${C}))`)) >= 200) { ordered.kill = true; note('1.2 is not lost by standing still (the rules: only the cruiser dying loses it): the cruiser is destroyed at 200 s'); await t.ev(`(() => { const C = ${C}; campHurt(C, C.carrier, 99999, 'pirate-0'); return 1; })()`); }
+      return true;
+    }
     const clock = await j(`Math.round(campMissionClock(${C}))`);
-    const foes = await j(`campAliens(${C}).filter(u => Math.hypot(u.x - ${C}.carrier.x, u.y - ${C}.carrier.y) < 900).length`);
+    const foes = await j(`campAliens(${C}).filter(u => Math.hypot(u.x - ${C}.carrier.x, u.y - ${C}.carrier.y) < 900).length`), any = await j(`campAliens(${C}).length`);
     await (foes ? down(K.fire) : up(K.fire));
     if (foes && clock % 10 === 0) await order('fleet', 'attack');
     if (foes && clock % 11 === 0) await key(K.missile);
-    if (!foes && !ordered.escort && clock > 6) { ordered.escort = true; await order('fleet', 'escort'); }
-    if (!(await j(`!!(${C}.nav && ${C}.nav.on)`)) && clock % 5 === 0 && !(await j(`!!(${C}.route && campRouteHolding(${C}))`))) await order('ship', 'goal'); // the autopilot to the goal (the transport) when it lets go
-    // the fork (escort): a scout down each lane, then the pick
+    if (MISSION !== 2) {
+      if (!foes && !ordered.escort && clock > 6) { ordered.escort = true; await order('fleet', 'escort'); }
+      if (!(await j(`!!(${C}.nav && ${C}.nav.on)`)) && clock % 5 === 0 && !(await j(`!!(${C}.route && campRouteHolding(${C}))`))) await order('ship', 'goal'); // the autopilot to the goal (the convoy) when it lets go
+    }
+    // 1.1: the fork (a scout down each lane, then the pick), the convoy orders, the rival's phases
     if (MISSION === 1) {
       const L = await lanes();
       if (!scouted && clock >= 8 && L.length) { scouted = true; for (const l of L) { note(`scout the ${l.name} (V on the map) at ${clock} s`); await mapDo(l.id, K.scout, 'scout'); } await snap('fork-scouts'); }
       const hold = await j(`campRouteHolding(${C})`);
-      if (hold && !took) { took = true; const want = L.find(l => new RegExp(LANE, 'i').test(l.name)) || L[0]; note(`the transport holds at the fork (${JSON.stringify(hold)}); known: ${await j(`JSON.stringify(${C}.route.known)`)}; taking the ${want.name} (T on the map)`); await snap('fork-hold'); await mapDo(want.id, K.take, 'take'); note('lane now: ' + await j(`campRouteLaneNow(${C})`)); await snap('fork-taken'); }
-      // convoy orders while a torpedo boat or the leader is out
+      if (hold && !took) { took = true; const want = L.find(l => new RegExp(LANE, 'i').test(l.name)) || L[0]; note(`the transport holds at the fork (${JSON.stringify(hold)}); known: ${await j(`JSON.stringify(${C}.route.known)`)}; taking the ${want.name} (T on the map)`); await snap('fork-hold'); await mapDo(want.id, K.take, 'take'); await snap('fork-taken'); }
       const tb = await j(`campAliens(${C}).filter(u => u.kind === 'tboat').length`), ld = await j(`!!campRivalOf(${C}, 'leader')`);
       if (tb && !tucked) { tucked = true; note('torpedo boats out: Tuck in (FLEET page 3)'); await order('fleet', 'ctuck', 2); await snap('tuck'); }
-      if (ld && !ran && (await j(`campRivalOf(${C}, 'leader').rival.ph`)) === 'stalk' && clock > 0) { /* hold the tuck through the stalk */ }
       if (!tb && tucked && !ld && !ordered.carry) { ordered.carry = true; note('torpedo boats gone: Carry on (FLEET page 3)'); await order('fleet', 'ccarry', 2); }
       if (ld && !ran) { ran = true; note('the leader is out: Run for it (FLEET page 3)'); await order('fleet', 'crun', 2); await snap('run-for-it'); }
-      // the rival's phases: power where the phase wants it
-      if (ld) { const ph = await j(`campRivalOf(${C}, 'leader').rival.ph`); if (rivalSeen.cur !== ph) { rivalSeen.cur = ph; note(`rival phase ${ph} at ${clock} s: ${JSON.stringify(await j(`({ hull: Math.round(campRivalOf(${C}, 'leader').hp), shield: Math.round(campRivalOf(${C}, 'leader').rival.sh || 0), me: Math.round(${C}.carrier.hp), mine: Math.round(${C}.shield), power: ${C}.power })`))}`); await snap('rival-' + ph);
+      if (ld) { const ph = await j(`campRivalOf(${C}, 'leader').rival.ph`); if (rivalSeen.cur !== ph) { rivalSeen.cur = ph; note(`rival phase ${ph} at ${clock} s: ${JSON.stringify(await j(`({ hull: Math.round(campRivalOf(${C}, 'leader').hp), shield: Math.round(campRivalOf(${C}, 'leader').rival.sh || 0), me: Math.round(${C}.carrier.hp), mine: Math.round(${C}.shield), power: ${C}.power.p })`))}`); await snap('rival-' + ph);
         const pick = { charge: K.shields, down: K.weapons, ram: K.engines, run: K.engines, stalk: K.even }[ph]; if (pick) { await key(pick); await key(pick); } } }
+    }
+    // 1.2: the wing mines; the cruiser goes to the raiders; when the ore is in and the raids are beaten, dock at the Works to sell
+    if (MISSION === 2) {
+      const ore = await j(`Math.floor(${C}.ore)`), best = await j(`Math.floor(${C}.oreBest)`);
+      if (!ordered.mine || (!any && clock - mineAt >= 25 && ore < 450)) { ordered.mine = true; mineAt = clock; note(`Mine ore (FLEET) at ${clock} s: ore ${ore}`); await order('fleet', 'mine'); }
+      if (any && !foes && clock - flewAt >= 9) { flewAt = clock; const R = await foeRows(); if (R.length) { note(`raiders at ${R[0].d} px: the cruiser goes to ${R[0].id} (the map, Enter) at ${clock} s`); await mapDo(R[0].id, 'Enter', 'fly to the raiders'); } }
+      if (!any && best >= 190 && !sold && (await j(`${C}.waves.every(w => w && w.started)`))) {
+        if (!ordered.dock) { ordered.dock = true; note(`ore ${ore}: the goal is now "${await j(`campObjective(${C})`)}": fly there (E 3) at ${clock} s`); await order('ship', 'goal'); await t.run(600); }
+        else if (!(await j(`!!(${C}.nav && ${C}.nav.on)`)) && clock - (ordered.dockTry || 0) >= 4) {
+          ordered.dockTry = clock; note(`dock at the Works (E 4) at ${clock} s, ${await j(`Math.round(campDist(${C}.carrier, campOutposts(${C}.level).find(o => o.id === 'ceres'))) `)} px away`); await snap('dock-0'); await order('ship', 'dock'); await t.run(1500);
+          const hub = await j(`game.scene.isActive('CampHub')`); note('after the dock order: hub ' + hub + (hub ? ' | ' + (await shown()).join(' | ').slice(0, 600) : ' | ' + (await toasts()).slice(-2).join(' || '))); await snap('dock-1');
+          if (hub) { await key('Escape'); await t.run(1200); sold = true; note('after Esc: ' + JSON.stringify(await state()) + ' ore ' + await j(`Math.floor(${C}.ore)`) + ' sold ' + await j(`${C}.sold`)); }
+        }
+      }
     }
     if (!zoomed && clock > 90) { zoomed = true; note('the map, all the way out (minus from the table)'); await key(K.map); await t.run(300); for (let i = 0; i < 14; i++) await key(K.minus, 40); await t.run(300); await snap('map-out'); note('map zoom ' + await j(`JSON.stringify(${S}.mp && ${S}.mp.z)`)); await key(K.zero); await key(K.map); await t.run(200); }
     return true;
   };
+  if (IDLE) { note(`idle for ${IDLE} s: nothing pressed (what the hints say to a player who has not acted)`); for (let i = 0; i < IDLE; i++) { await t.run(1000); if (i % 30 === 29) await snap('idle-' + (i + 1)); } note('HUD after the idle: ' + (await hud()).join(' | ').slice(0, 700)); }
   await order('fleet', 'launch'); await t.run(900);
-  await t.run(4000); await order('ship', 'goal'); await t.run(600); note('autopilot: ' + await j(`JSON.stringify(${S}.camp.nav || null)`).then(v => String(v).slice(0, 200)) + ' state ' + JSON.stringify(await state()));
+  await t.run(4000); if (MISSION !== 2) await order('ship', 'goal'); await t.run(600); note('autopilot: ' + await j(`JSON.stringify(${S}.camp.nav || null)`).then(v => String(v).slice(0, 200)) + ' state ' + JSON.stringify(await state()));
   const t0 = Date.now();
   for (let s = 0; s < SECS; s++) {
     if (!(await step())) break;
@@ -144,7 +164,7 @@ try {
   if (over) {
     note(`${mode} card: ` + await card()); await snap('10-' + mode);
     if (mode === 'debrief') {
-      for (let i = 0; i < 6 && (await j(`game.scene.isActive('Campaign')`)); i++) { await key('Enter'); await t.run(1200); const m = await j(`${S}.mode`); if (await j(`game.scene.isActive('Campaign')`)) { note('card ' + (i + 1) + ' (mode ' + m + '): ' + (await card()).slice(0, 500)); await snap('11-card-' + (i + 1)); } }
+      for (let i = 0; i < 6 && (await j(`game.scene.isActive('Campaign')`)); i++) { const mm = await j(`${S}.mode`); if (mm === 'refit' || mm === 'pick') { await key('Digit1'); await t.run(300); } await key('Enter'); await t.run(1200); const m = await j(`${S}.mode`); if (await j(`game.scene.isActive('Campaign')`)) { note('card ' + (i + 1) + ' (mode ' + m + '): ' + (await card()).slice(0, 500)); await snap('11-card-' + (i + 1)); } }
       note('then the scene is ' + await j(`['CampHub', 'Campaign', 'Title'].filter(k => game.scene.isActive(k)).join()`));
       if (await j(`game.scene.isActive('CampHub')`)) { await t.run(900); note('the ready room after the win: ' + (await shown()).join(' | ').slice(0, 700)); await snap('12-room'); }
       note('save: ' + JSON.stringify(await j(`(() => { const v = JSON.parse(localStorage.getItem('longhaul.campaign')); return { level: v.level, mission: v.mission, results: v.results, ore: v.ore }; })()`)));

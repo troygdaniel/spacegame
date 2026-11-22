@@ -51,5 +51,22 @@ const l11 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); retur
 check('1.1: the lost card says the transport is lost; 1.3 says the haulers', l11[0] === 'The transport is lost.' && l13[0] === 'The haulers are lost.', JSON.stringify([l11[0], l13[0]]));
 check('the tip of a lost convoy is still there (1.1 shares the convoy tip until a transport tip is written: camp.lose.tip.convoy.transport)', l11.length === 3 && l11[2] === l13[2], JSON.stringify(l11));
 
+// ---- 4. 1.1 does have scouting: V on a row that is not a lane says what scouts can read, not "This mission has no scouting." ----
+const sc = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); campOrder(C, 'launch'); for (let i = 0; i < 600; i++) campStep(C, 1 / 30);
+  const row = k => campNavRows(C).find(r => r.kind === k), say = r => r.say || r.code, out = {};
+  out.convoy = say(campScoutDo(C, row('convoy'), true)); out.lane = say(campScoutDo(C, row('lane'), true)); C.route.passed = true; out.past = say(campScoutDo(C, row('convoy'), true));
+  const D = campNew(1, [], { seed: 1, mission: 2 }); campOrder(D, 'launch'); for (let i = 0; i < 600; i++) campStep(D, 1 / 30); out.none = say(campScoutDo(D, campNavRows(D).find(r => r.kind === 'convoy') || { x: 0, y: 0 }, true)); return out; })()`);
+check('1.1, V on the transport: "Scouts only read the lanes here, pilot."', sc.convoy === 'Scouts only read the lanes here, pilot.', JSON.stringify(sc));
+check('1.1, V on a lane is allowed (the scout goes)', /Scout \d is going to Short lane/.test(sc.lane), JSON.stringify(sc));
+check('1.1, the fork behind: "The fork is behind us. Nothing to scout."; 1.3 (no fork, no scouting) keeps "This mission has no scouting."', sc.past === 'The fork is behind us. Nothing to scout.' && sc.none === 'This mission has no scouting.', JSON.stringify(sc));
+
+// ---- 5. the briefing counts every pirate 1.1 sends: the leader brings two skiffs ----
+// "Expect 6 pirate skiffs, 2 pirate torpedo boats, the pirate leader": the flight met 8 skiffs (the distress call's 2, the ambush's 4 and the 2 that come with the leader).
+const en = J(`campBriefEnemies(1, 0)`), seen = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }), L = C.L, k = {}; (L.waves || []).forEach(w => { if (w.lane && w.lane !== 'short') return; Object.keys(w.ships || {}).forEach(s => { k[s] = (k[s] || 0) + w.ships[s]; }); });
+  (L.rivals || []).forEach(r => Object.keys(r.escorts || {}).forEach(s => { k[s] = (k[s] || 0) + r.escorts[s]; })); return k; })()`);
+const sk = en.list.find(e => e.kind === 'skiff'), tb = en.list.find(e => e.kind === 'tboat');
+check('1.1\'s briefing says 8 skiffs and 2 torpedo boats (the distress call, the ambush and the leader\'s two)', sk && sk.n === 8 && tb && tb.n === 2 && /8 pirate skiffs/.test(en.line), en.line);
+check('and that is what the mission\'s rows send down the default lane (the count is read from them)', seen.skiff === 8 && seen.tboat === 2, JSON.stringify(seen));
+
 if (failed) { console.log(`\nHUNT FLEET: ${failed} FAILED`); process.exit(1); }
 console.log('\nHUNT FLEET: all passed');
