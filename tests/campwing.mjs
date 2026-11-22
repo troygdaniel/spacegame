@@ -172,7 +172,7 @@ console.log('H. the words: the strip, the voice, the ship computer');
   g.run(`window.__sc = { scene: { key: 'Campaign' }, leaving: false, dead: false, camp: null, toasts: [] }; __sc.camp = C;`);
   const p = J(`(() => { const p = shipcompLocal('all hold at vesta', __sc); return p ? { action: p.action, text: p.text, run: !!p.run, refused: !!p.refused } : null; })()`);
   check('the ship computer takes it by the closed act fleet_wing, says it in words first, and does nothing until it runs; then the order goes through the one door', p && p.action === 'fleet_wing' && p.text === 'All ships, hold at Vesta.' && p.run && J('campWing(C).every(u => u.order.type !== "hold")') && (g.run(`shipcompLocal('all hold at vesta', __sc).run(__sc)`), J('campWing(C).every(u => u.order.type === "hold")')), JSON.stringify(p));
-  check('and the model is told the act, with its group, verbs and an example', /fleet_wing <a group \(fighters, escorts or all\), a verb/.test(src('src/shipcomputer.js')) && J(`Object.keys(SC_ACT).includes('fleet_wing')`));
+  check('and the model is told the act, with its group, verbs and an example', /fleet_wing <a group \(fighters, escorts, all, or one squad of the fighters: red, green or yellow\), a verb/.test(src('src/shipcomputer.js')) && J(`Object.keys(SC_ACT).includes('fleet_wing')`));
 }
 
 // found with the shortcut keys (card list-shortcuts): "Recall the fighters" answered "Wing, return to the carrier." though the escorts stayed out
