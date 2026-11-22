@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { nodeGame } from '../tests/nodegame.mjs';
 
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const FILES = { CAMP: 'src/campaign.js', CAMP_CALLS: 'src/camporders.js' }; // where each table is written
+const FILES = { CAMP: 'src/campaign.js', CAMP_CALLS: 'src/camporders.js', CAMPZOOM: 'src/campzoom.js' }; // where each table is written
 
 // the line of a path in a table written as the sources write them: one key a line (an inline object may carry the next keys on its own lines, indented further)
 // text: the file; name: 'CAMP' or 'CAMP_CALLS'; parts: ['carrier', 'speed']. Returns the 0-based index of the line that holds the last key, or -1.

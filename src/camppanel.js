@@ -26,7 +26,8 @@ const campKeyLine = () => uiText('camp.ui.keys', { panels: campPanelKeyLine() })
 // a row that can never be used in this mission is not in its list: the convoy's part with no convoy to give orders to, the blink without its tech, building where ships are built docked
 function campPanelWhen(C, row) {
   if (!row.when || !C) return true;
-  if (row.when === 'convoy') return !!((C.L && C.L.convoys && C.L.convoys.length) || (typeof campConvoyShips === 'function' && campConvoyShips(C).length));
+  if (row.when === 'stance') return campFlag('stance'); // the Stance part, unless the tuning panel's switch has taken the stances out
+  if (row.when === 'convoy') return campFlag('convoyorders') && !!((C.L && C.L.convoys && C.L.convoys.length) || (typeof campConvoyShips === 'function' && campConvoyShips(C).length));
   if (row.when === 'blink') return campHas(C, 'blink');
   if (row.when === 'aboard') return typeof campAboard !== 'function' || campAboard(C);
   return true;
@@ -49,6 +50,7 @@ function campPanelKey(P, C, code, now) {
   const pk = code ? CAMP_PANELS.panels.find(p => p.code === code) : null;
   if (pk) { // a list's key (Q W E R, P O I U): open that list at its first row, or close it when it is the one open
     res.used = true;
+    if (pk.id === 'convoy' && !campFlag('convoyorders')) { res.open = campPanelOpen(P); return res; } // the convoy orders are switched off (the tuning panel): W opens nothing (the part is not in the fleet list either)
     if (campPanelOpen(P) === pk.id) campPanelClose(P); else campPanelGo(P, C, pk.id);
     res.open = campPanelOpen(P); return res;
   }

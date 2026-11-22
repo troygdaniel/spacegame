@@ -42,7 +42,7 @@ const CAMP_PANELS = {
       { id: 'guard', order: 'guard', label: 'Guard the cruiser', help: 'The whole wing guards the cruiser' },
       { id: 'mine', order: 'mine', label: 'Mine ore', help: 'The wing goes and mines ore' },
       { id: 'recall', order: 'recall', label: 'Recall the wing', help: 'The wing flies home to the bay' },
-      { id: 'gstance', open: 'stance', label: 'Stance', help: 'How the wing fights' }
+      { id: 'gstance', open: 'stance', when: 'stance', label: 'Stance', help: 'How the wing fights' }
     ] },
     { id: 'convoy', parent: 'fleet', side: 'left', key: 'W', code: 'KeyW', title: 'CONVOY ORDERS', tab: 'Convoy', name: 'the convoy list', rows: [ // orders for the escorted ships (src/campconvoy.js). Voice and the strip: "tuck in", "run for it", "carry on", "haulers hold"
       { id: 'ctuck', order: 'convoy', arg: 'tuck in', label: 'Tuck in', help: 'Convoy flies in the cruiser\'s shield' },

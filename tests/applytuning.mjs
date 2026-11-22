@@ -16,7 +16,7 @@ import { findLine, editText, plan } from '../tools/apply-tuning.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame(), J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
-const SRC = { CAMP: readFileSync(join(ROOT, 'src/campaign.js'), 'utf8'), CAMP_CALLS: readFileSync(join(ROOT, 'src/camporders.js'), 'utf8') };
+const SRC = { CAMP: readFileSync(join(ROOT, 'src/campaign.js'), 'utf8'), CAMP_CALLS: readFileSync(join(ROOT, 'src/camporders.js'), 'utf8'), CAMPZOOM: readFileSync(join(ROOT, 'src/campzoom.js'), 'utf8') };
 
 console.log('A. every row has its line');
 const rows = J('CAMP_TUNE.rows.map(r => ({ id: r.id, flag: r.kind === "flag", name: r.kind === "flag" ? "CAMP" : r.root, path: r.kind === "flag" ? "flags." + r.flag : r.path, d: (() => { const s = campTuneSlot(r); return s.obj[s.key]; })() }))');
@@ -42,6 +42,8 @@ const diff = was.map((l, i) => l === now[i] ? -1 : i).filter(i => i >= 0);
 check('exactly four lines of the source changed (the lines the tool named), and the file has as many lines as before', diff.length === 4 && was.length === now.length && diff.map(i => i + 1).sort((a, b) => a - b).join() === changes.slice().sort((a, b) => a - b).join(), diff.join());
 check('on each changed line the comment after the number is what it was, byte for byte', diff.every(i => was[i].slice(was[i].indexOf('//')) === now[i].slice(now[i].indexOf('//'))));
 let text2 = SRC.CAMP_CALLS; const ec = editText(text2, 'CAMP_CALLS', 'answer', 12);
+check('the zoom table (src/campzoom.js, an inline object on one line) is found too: startPresses: 6 becomes 4 and nothing else on the line changes', (() => { const e = editText(SRC.CAMPZOOM, 'CAMPZOOM', 'view.startPresses', 4); return !!e && /startPresses: 4 \}/.test(e.text) && e.text.split('\n').filter((l, i) => l !== SRC.CAMPZOOM.split('\n')[i]).length === 1; })());
+check('every pip row has its whole array rewritten with the shape kept (the laser refill 2 5 8 11 14 at 16 is 4 10 16 22 28)', (() => { const p = plan(g, 'laserrefill = 16\n'); return JSON.stringify(p.rows[0].now) === '[4,10,16,22,28]' && /tank: \{/.test(SRC.CAMP) && editText(SRC.CAMP, 'CAMP', 'tank.refill', p.rows[0].now).text.split('\n').some(l => /refill: \[4, 10, 16, 22, 28\],/.test(l)); })());
 check('the calls table (src/camporders.js) is found the same way: answer: 8 becomes 12 and nothing else on the line', !!ec && /answer: 12,/.test(ec.text) && ec.text.split('\n').filter((l, i) => l !== SRC.CAMP_CALLS.split('\n')[i]).length === 1);
 const g2 = nodeGame({ replace: { 'src/campaign.js': text } });
 check('the edited source loads, and the game holds the new defaults: speed 280, ore 40, calls off, the shield curve 0 3 6 12 20 (its shape kept)', g2.run('CAMP.carrier.speed') === 280 && g2.run('CAMP.ore.rock') === 40 && g2.run('CAMP.flags.calls') === false && g2.run('CAMP.power.shields.regen.join()') === '0,3,6,12,20');

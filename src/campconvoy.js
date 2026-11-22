@@ -32,6 +32,7 @@ function campConvoySet(C, u, verb) {
   u.vmax = u.vmax0 * (u.kind === 'miner' && verb === 'run' ? CAMP.convoyOrders.run : 1);
 }
 function campConvoyOrder(C, arg, dry) {
+  if (!campFlag('convoyorders')) return campNo('cwhat'); // the convoy orders are switched off (the tuning panel): the escorted ships fly their own way
   const q = String(arg == null ? '' : arg).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim(), verb = campConvoyVerb(q);
   if (!verb) return campNo('cwhat');
   const t = campFind(C, q), one = t && t.kind === 'convoy' && C.by[t.id] && C.by[t.id].hp > 0 ? C.by[t.id] : null; // "tuck in Hauler 2": that ship only
