@@ -26,8 +26,8 @@ How the game is built, for someone (a person or an AI) who has never seen it. It
 
 | Feature | Rules | Drawing |
 |---|---|---|
-| One list per hand: `Q` opens the fleet list, `P` the ship list (hidden until pressed, one open at a time; Up, Down, Enter), and the direct keys | `camppanel.js` (lists, rows and keys: `CAMP_PANELS` and `CAMP_KEYS` in `data_controls.js`) | `campanelsdraw.js` |
-| The one target (A D S X; the fleet list's Attack goes at it, the ship list's Fly to the target flies to it, Enter fires at it) | `camptarget.js` | `camptargetdraw.js` (the bracket) |
+| One list per hand, with shortcut keys: `Q` opens the fleet list, `P` the ship list; each has rows that open its parts, and a part's key opens it directly (`W` convoy, `E` fighters, `R` escorts; `O` autopilot, `I` power, `U` dock and build; Stance has no key). Hidden until pressed, one open at a time; Up, Down, Enter, Left for back. And the direct keys | `camppanel.js` (lists, rows and keys: `CAMP_PANELS` and `CAMP_KEYS` in `data_controls.js`) | `campanelsdraw.js` |
+| The one target (A D S X; the Attack rows of the fighters and escorts lists go at it, the autopilot list's Fly to the target flies to it, Enter fires at it) | `camptarget.js` | `camptargetdraw.js` (the bracket) |
 | Orders to the wing, groups and targets | `campwing.js`, `campconvoy.js` (escorted ships), `campdogfight.js`, `camprepair.js` | `campconvoyscene.js` |
 | Pilots ask for orders (timed calls: a small amber list in the middle, Up, Down, Enter) | `camporders.js` | `camporderdraw.js` |
 | Mission 1.1's beats, route forks, scouting | `campbeats.js`, `camproute.js`, `campanomaly.js` | `campanomalydraw.js` |
@@ -52,7 +52,7 @@ Every rule, number and level row is described in `docs/CAMPAIGN.md` (one section
 - **Words:** `content/text/*.md` (one table per file, a file may hold at most 200 rows), defaults in `src/contenttables.js`. `node tools/build-content.mjs --seal` rebuilds `content.generated.js`; `--check` fails if it is stale. A key may be in any file; a file that sorts later wins a key two files give, so grep for a key before adding it. Ship-voice lines are curt (about 12 words, fact first).
 - **The voice pack** (`src/voicepack.js`, `voicepack/`): lines that repeat are recorded once. Every text key is classified there as spoken or shown-only; a new key with no rule fails `tests/voicepack.mjs`.
 - **Content packs and mods** (`mods/`, `mods.generated.js`, `docs/MODDING.md`, `docs/MODS.md`): a folder of markdown laid over the game. The Campaign is meant to become a swappable pack too (see `ROADMAP.md`).
-- **Keys:** `src/data_controls.js` is the one table of every key (`CONTROLS`; for the Campaign `CAMP_PANELS = { show, anim, panels: [{ id, side, key, code, title, name, rows }] }` is its two lists, the fleet list on `Q` and the ship list on `P`, and `CAMP_KEYS` its direct keys). Settings, the H help page, the key lines, the briefing hints and the README controls are all checked against it, so move a key there first.
+- **Keys:** `src/data_controls.js` is the one table of every key (`CONTROLS`; for the Campaign `CAMP_PANELS = { show, anim, panels: [{ id, side, key, code, title, tab, name, parent, rows }] }` is its nine lists: the fleet list on `Q` with its parts convoy `W`, fighters `E`, escorts `R` and Stance, which has no key, and the ship list on `P` with its parts autopilot `O`, power `I`, dock and build `U`; `parent` names the list a part belongs to. `CAMP_KEYS` is its direct keys). Settings, the H help page, the key lines, the briefing hints and the README controls are all checked against it, so move a key there first.
 
 ## Saving
 

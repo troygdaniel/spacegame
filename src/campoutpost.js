@@ -29,6 +29,13 @@ function campOutpostNear(C, safe) {
   campOutposts(C.level).forEach(o => { const d = campOutpostEdge(C, o); if (d <= o.range && (!best || d < best.d) && !(safe && campOutpostHot(C, o))) best = { o, d }; });
   return best;
 }
+// the HUD's line "U  dock at <outpost>": only when docking there is worth it now (the hull is hurt, there is ore for a ship, or the outpost buys ore and there is some), so a new player at the start of 1.1 is not sent to dock for nothing
+function campDockHint(C) {
+  if (!C || C.docked || C.result) return '';
+  const n = campOutpostNear(C); if (!n) return '';
+  const worth = C.carrier.hp < C.carrier.maxHp || C.ore >= Math.min(CAMP.build.fighterCost, CAMP.build.escortCost) || (!!n.o.market && C.ore > 0);
+  return worth ? uiText('camp.hud.dockhint', { name: n.o.name }) : '';
+}
 function campOutpostNearest(C, safe) {
   let best = null;
   campOutposts(C.level).forEach(o => { const d = campOutpostEdge(C, o); if ((!best || d < best.d) && !(safe && campOutpostHot(C, o))) best = { o, d }; });

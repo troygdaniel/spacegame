@@ -7,6 +7,8 @@ The words of the two order lists (card one-list-keys): Q opens the fleet orders,
 | key | text |
 |---|---|
 | camp.call.hud.wait | Close the list or the map to answer |
-| camp.ui.listkeys | {keyup} {keydown} move   {keypick} order   {key} or {keypause} close |
+| camp.ui.listkeys | {keyup} {keydown}  {keypick} order or open  {keypause} close |
 | camp.ui.listmore | {n} more below |
 | camp.ui.blink | BLINK |
+| camp.ui.listkeysub | {keyup} {keydown}  {keypick} order  Left back  {keypause} close |
+| camp.say.wing.recall | {group}, return to the carrier. |

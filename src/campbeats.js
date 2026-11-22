@@ -26,7 +26,7 @@ function campBeatKey(id) {
   return '';
 }
 const campBeatRow = id => { const r = typeof campKeyRow === 'function' ? campKeyRow(id) : null; return r ? r.label : ''; }; // the words of a row of the fleet list, as the list says them ("Convoy: tuck in")
-const campBeatKeys = () => ({ fleet: campBeatKey('fleet'), ship: campBeatKey('ship'), map: campBeatKey('map'), scout: campBeatKey('scout'), take: campBeatKey('take'), tuck: campBeatRow('ctuck'), run: campBeatRow('crun') }); // every key a line may name, as the key table says it (the lists' own are {fleetkey} {rowlaunch} ... of src/data_controls.js campKeyVar)
+const campBeatKeys = () => ({ fleet: campBeatKey('fleet'), ship: campBeatKey('ship'), convoy: campBeatKey('convoy'), map: campBeatKey('map'), scout: campBeatKey('scout'), take: campBeatKey('take'), tuck: campBeatRow('ctuck'), run: campBeatRow('crun') }); // every key a line may name, as the key table says it (the lists' own are {fleetkey} {rowlaunch} ... of src/data_controls.js campKeyVar)
 const campBeatHint = (C, id) => uiText('camp.hint.' + id, campBeatKeys());
 
 // beat 2: the thanks of a miner that was saved

@@ -3,7 +3,7 @@
 // file draws and listens and decides nothing about the game. It is not run by a test in plain Node (a scene is Phaser's): tests/campaign.mjs runs the sim.
 //   K on the title opens it (campaignStart); Enter begins a level; the arrow keys fly, Space (held) makes the eight turrets fire, Enter fires a homing missile at the target (the magazine is C.missiles);
 //   there is no other gun: the turrets aim themselves at the nearest alien in reach, always, and fire only while Space is held; the scene draws them, their reach and their flash (syncRockets)
-//   Q opens the list of fleet orders, P the list of ship orders (Up, Down, Enter: src/camppanel.js); / types an order and . speaks one (the strip and the ship computer, src/shipcomputer.js, find this scene);
+//   Q opens the list of fleet orders (W E R its parts), P the list of ship orders (O I U its parts) (Up, Down, Enter: src/camppanel.js); / types an order and . speaks one (the strip and the ship computer, src/shipcomputer.js, find this scene);
 //   Esc pauses (this scene's own pause, not Long Haul's: the Long Haul save is not touched here); after a win the story, the tech pick (1 2 3), then the next level.
 // Mode: 'intro' (the story before) -> 'play' <-> 'pause' -> 'won' (story after) -> 'pick' (one of three techs, when the level offers any) -> next level, or after the last level 'end' (back to the title);
 // or 'lost' (Enter tries again).
@@ -276,9 +276,9 @@ class Campaign extends Phaser.Scene {
     const listOpen = typeof campPanelOpen === 'function' && !!campPanelOpen(this.pn);
     if (campKeyCodes('pause').indexOf(c) >= 0) { if (listOpen) campPanelsClose(this); else if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc closes an open list first, then the map; it pauses only when neither is open
     if (this.mp && typeof campMapKey === 'function' && campMapKey(this, c, e.shiftKey)) return; // the open map has the arrows and Enter: Up and Down step the marks, Left and Right the groups, Enter flies there, V scouts, T takes a lane, X clears the trip (src/campmapdraw.js)
-    if (this.mp && !typing && (CAMP_PANELS.panels.some(p => p.code === c) || campKeyIs('missile', c))) { if (campKeyIs('missile', c)) return; campMapClose(this); } // Q or P over the map: the map closes and the list opens; Enter is never a missile over the map
+    if (this.mp && !typing && (CAMP_PANELS.panels.some(p => p.code && p.code === c) || campKeyIs('missile', c))) { if (campKeyIs('missile', c)) return; campMapClose(this); } // a list's key over the map: the map closes and the list opens; Enter is never a missile over the map
     if (!typing && typeof campCallKey === 'function' && campCallKey(this, c)) return; // a pilot's call has the arrows and Enter while no list is open: Up and Down pick an answer, Enter gives it (src/camporderdraw.js)
-    const now = (this.time && this.time.now) || 0, pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, now) : { used: false }; // the two lists and the direct keys (src/camppanel.js): Q and P open a list (Up, Down, Enter in it), A D S X the target, J K L ; the power, Enter a missile
+    const now = (this.time && this.time.now) || 0, pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, now) : { used: false }; // the lists and the direct keys (src/camppanel.js): Q W E R and P O I U open a list (Up, Down, Enter in it), A D S X the target, J K L ; the power, Enter a missile
     if (pr.fleet && typeof campSlowKick === 'function') campSlowKick(this, now); // a fleet order or a pick of the target: command time for a moment more (src/campslow.js)
     if (pr.ran) { toast(this, pr.say, pr.ok ? '#9fe9ff' : '#ffb454'); if (pr.ok && pr.row === 'balance' && this.gaugeAnim) this.gaugeAnim.flash = this.gaugeAnim.flash.map(() => 1); } // the balance key flashes all three bars, even when the power was even already
     if (pr.used) return;
@@ -539,8 +539,8 @@ class Campaign extends Phaser.Scene {
     (C.torpedoes || []).forEach(t => { if (!t.dead && Math.floor(C.t / 180) % 2 === 0) dot(t, CAMPMAP.color.torpedo, 2); }); // a torpedo in flight blinks bright on the radar: it is the one thing to look for (the dot is the map's colour for it)
     // the autopilot's readout under the goal line, and an arrow at the edge of the screen pointing at the goal with its distance (src/campnav.js; docs/night/graphics.md finding 3)
     if (this.hud.post) { // the outposts: where to retreat when the hull is low and no ship is left, else a hint when one is in range (src/campoutpost.js)
-      const rt = typeof campRetreat === 'function' ? campRetreat(C) : null, nr = !rt && typeof campOutpostNear === 'function' && !C.docked ? campOutpostNear(C) : null;
-      this.hud.post.setText(rt ? rt.line : nr ? uiText('camp.hud.dockhint', { name: nr.o.name }) : '').setColor(rt ? '#ff9ec0' : '#ffb454');
+      const rt = typeof campRetreat === 'function' ? campRetreat(C) : null, nr = !rt && typeof campDockHint === 'function' ? campDockHint(C) : '';
+      this.hud.post.setText(rt ? rt.line : nr).setColor(rt ? '#ff9ec0' : '#ffb454');
     }
     if (this.hud.nav) this.hud.nav.setText(C.navWait ? uiText('camp.nav.recalling', { n: C.navWait.n }) : C.nav ? uiText('camp.nav.hud', { name: C.nav.name, km: campNavKm(Math.hypot(C.nav.x - c.x, C.nav.y - c.y)) }) : '');
     if (this.flowHud) this.flowHud(bar); // (a stand-in scene in a test has none) the lines under the gauges, each where the lines above it end (and Earth's bar under its line)

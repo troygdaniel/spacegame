@@ -1,4 +1,4 @@
-// smoke: the Campaign's missile launcher and its turrets: Enter, homing, the magazine and its slow reload, big damage to big ships, the order by strip and voice (plain Node, no Chrome)
+// smoke: the Campaign's missile launcher and its turrets: Enter (while no order list is open), homing, the magazine and its slow reload, big damage to big ships, the order by strip and voice (plain Node, no Chrome)
 // Card space-game-campaign-missiles (docs/CAMPAIGN.md "The weapons"). The rules are in src/campaign.js (CAMP.missile, campFire, campMissiles, campMissileAdd, the order 'missiles');
 // the scene only draws them, so they are tested here on the numbers, and the scene's own decisions (the Enter key, the count, the turret ring) on a stand-in for the scene.
 //   A. the table and the words
@@ -7,7 +7,7 @@
 //   D. the magazine: slow reload up to the full, never past it, and the ore code can add to it (up to the most it holds)
 //   E. the words: "fire missiles", "missiles at the mothership"; the ship computer's act and what it tells the model
 //   F. Space and the missile: Space only makes the turrets fire (it never launches a missile), the order only launches missiles; the turrets are in tests/campaign.mjs B
-//   G. the scene: Enter fires (a direct key of CAMP_KEYS, not a row of a list: card one-list-keys), but only while no Q or P list is open: in an open list Enter gives the highlighted order; the count on the HUD, the key line and the pause card
+//   G. the scene: Enter fires (a direct key of CAMP_KEYS, not a row of a list: cards one-list-keys and list-shortcuts), but only while no list is open (Q W E R, P O I U): in an open list Enter gives the highlighted order, or on a part's row opens that part's list; the count on the HUD, the key line and the pause card
 //   H. nothing else moved: no order, no missile; the same seed flies the same; tower rings fall to missiles
 // Run: node tests/campmissiles.mjs   (exit code 1 on a failed check)
 import { readFileSync as __rf } from 'node:fs';
@@ -207,9 +207,11 @@ console.log('G. the scene (on a stand-in)');
   check('the scene: a Space key press launches nothing (Space is read as held, into the sim\'s fire input, every frame)', J('C.missiles') === 6 && J('C.rockets.length') === 0);
   g.run('F.onKey({ code: "Enter" })');
   check('and Enter launches one', J('C.missiles') === 5 && J('C.rockets.length') === 1);
-  // Enter belongs to an open list (card one-list-keys): it gives the highlighted order and fires nothing; with the list closed it is the missile again
-  g.run('__m(1); window.__gun = __foe("gunship", 1500, 0, 90000); F.camp = C; F.mode = "play"; F.pn = campPanelNew(); __toasts.length = 0; F.onKey({ code: "KeyP" }); window.__e0 = campPanelOpen(F.pn); window.__er = campPanelView(F.pn, C).rows[0].id; F.onKey({ code: "Enter" }); window.__e1 = [C.missiles, C.rockets.length, C.orders.missiles, campPanelOpen(F.pn), !!(C.nav && C.nav.on) || __toasts.length > 0];');
-  check('with the ship list open (P) Enter is the list\'s: it gives the highlighted row (Fly to the goal) and no missile is launched', J('__e0') === 'ship' && J('__er') === 'goal' && J('__e1.slice(0, 3)').join() === '6,0,0' && J('__e1[4]') === true, JSON.stringify(J('__e1')));
+  // Enter belongs to an open list (cards one-list-keys, list-shortcuts): it gives the highlighted order, or opens the part the highlight is on, and fires nothing; with the list closed it is the missile again
+  g.run('__m(1); window.__gun = __foe("gunship", 1500, 0, 90000); F.camp = C; F.mode = "play"; F.pn = campPanelNew(); __toasts.length = 0; F.onKey({ code: "KeyP" }); window.__p0 = [campPanelOpen(F.pn), campPanelView(F.pn, C).rows[0].id, campPanelView(F.pn, C).rows[0].more]; F.onKey({ code: "Enter" }); window.__p1 = [C.missiles, C.rockets.length, C.orders.missiles, campPanelOpen(F.pn), !!(C.nav && C.nav.on), __toasts.length];');
+  check('with the ship list open (P) Enter is the list\'s: on a part\'s row (Autopilot, the top one) it opens that part\'s list; no missile is launched and no order is given', J('__p0').join() === 'ship,gnav,true' && J('__p1').join() === '6,0,0,nav,false,0', JSON.stringify([J('__p0'), J('__p1')]));
+  g.run('__m(1); window.__gun = __foe("gunship", 1500, 0, 90000); F.camp = C; F.mode = "play"; F.pn = campPanelNew(); __toasts.length = 0; F.onKey({ code: campKeyVia("goal").code }); window.__e0 = campPanelOpen(F.pn); window.__er = campPanelView(F.pn, C).rows[0].id; F.onKey({ code: "Enter" }); window.__e1 = [C.missiles, C.rockets.length, C.orders.missiles, campPanelOpen(F.pn), !!(C.nav && C.nav.on) || __toasts.length > 0];');
+  check('with the autopilot list open (O, the part\'s own key) Enter is the list\'s: it gives the highlighted row (Fly to the goal) and no missile is launched', J('campKeyVia("goal").key') === 'O' && J('__e0') === 'nav' && J('__er') === 'goal' && J('__e1.slice(0, 3)').join() === '6,0,0' && J('__e1[4]') === true, JSON.stringify(J('__e1')));
   g.run('campPanelsClose(F); F.onKey({ code: "KeyQ" }); F.onKey({ code: "Escape" }); window.__e2 = [campPanelOpen(F.pn), F.mode, C.missiles]; F.onKey({ code: "Enter" });');
   check('Esc closes an open list (it does not pause), and with no list open Enter is the missile again', J('__e2').join() === ',play,6' && J('C.missiles') === 5 && J('C.rockets.length') === 1 && J('C.orders.missiles') === 1, JSON.stringify(J('__e2')));
   g.run('__m(1); window.__gun = __foe("gunship", 1500, 0, 90000); F.camp = C; F.pn = campPanelNew(); F.onKey({ code: "NumpadEnter" }); window.__e3 = C.missiles; F.onKey({ code: "KeyF" }); F.onKey({ code: "Digit6" });');
