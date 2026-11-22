@@ -179,7 +179,7 @@ function campPanelShortState(C, row) {
     case 'gnav': return C.nav ? 'on' : '';
     case 'gpower': return C.power.p.join(' / ');
     case 'gyard': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name : ''; }
-    case 'shields': case 'engines': case 'weapons': { const n = C.power.p[{ weapons: 0, shields: 1, engines: 2 }[row.id]]; return CAMP_KEYS[row.id].k + '   ' + n + (n === 1 ? ' pip' : ' pips'); }
+    case 'shields': case 'engines': case 'weapons': return CAMP_KEYS[row.id].k; // the key of the row (the pips are the row's own bar now, the gauge's twin: src/campanelsdraw.js)
     case 'balance': return CAMP_KEYS.balance.k + '   ' + C.power.p.join(' / ');
     case 'mine': return campMiners(C).length + ' ships';
     case 'buildf': return B.fighterCost + ' ore';
@@ -223,7 +223,7 @@ const campPanelShips = n => n + (n === 1 ? ' ship' : ' ships'); // "1 ship", "3 
 const campPanelConvoyMarked = (C, row) => row.order === 'convoy' && campConvoyState(C) === campConvoyVerb(String(row.arg || '')); // the convoy order that all the escorted ships are under
 function campPanelRows(C, id) {
   if (!campPanelDef(id) || !C) return [];
-  return campPanelList(C, id).map(row => { const as = campPanelAs(C, row); const part = as.open ? campPanelDef(as.open) : null; return Object.assign({ id: as.id, label: as.label, key: part ? part.key : '', more: !!part, marked: (as.order === 'stance' && C.stance === as.id) || campPanelConvoyMarked(C, as) }, campPanelRowState(C, row)); });
+  return campPanelList(C, id).map(row => { const as = campPanelAs(C, row); const part = as.open ? campPanelDef(as.open) : null; return Object.assign({ id: as.id, label: as.label, key: part ? part.key : '', more: !!part, marked: (as.order === 'stance' && C.stance === as.id) || campPanelConvoyMarked(C, as), pip: as.pip === undefined ? -1 : as.pip }, campPanelRowState(C, row)); });
 }
 function campPanelView(P, C) {
   const id = campPanelOpen(P), def = campPanelDef(id); if (!def || !C) return null;
