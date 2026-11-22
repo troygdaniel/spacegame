@@ -22,13 +22,14 @@ function campBriefOpen(s) {
   if (!s || !s.add || campBriefIsOpen(s)) return false;
   const t = campHubTarget(s.P, s.hub), Y = campBriefLayers(t.level, t.i); if (!Y) return false;
   const K = CAMPBRIEF, P = K.panel, objs = [], put = (o, d) => { o.setScrollFactor(0).setDepth(130 + (d || 0)); objs.push(o); return o; }, v = campBriefView(Y, 0, 1);
-  const bf = s.bf = { open: true, objs, t, Y, zoom: 0, z: 1, base: v.base, fit: v.fit, screen: 0, walk: campBriefWalk(t.level, t.i), ready: campBriefReady(s.P, t.level, t.i), foes: campBriefEnemies(t.level, t.i), brief: campHubBrief(s.P, t.level, t.i), route: campBriefRoute(Y), steps: campBriefSteps(s.P, t.level, t.i), keysFor: campBriefKeys(t.level, t.i), story: campBriefStory(s.P, t.level, t.i), map: [], text: [], pics: [] };
+  const bf = s.bf = { open: true, objs, t, Y, zoom: 0, z: 1, base: v.base, fit: v.fit, screen: 0, walk: campBriefWalk(t.level, t.i), ready: campBriefReady(s.P, t.level, t.i), foes: campBriefEnemies(t.level, t.i), brief: campHubBrief(s.P, t.level, t.i), route: campBriefRoute(Y), steps: campBriefSteps(s.P, t.level, t.i), keysFor: campBriefKeys(t.level, t.i), story: campBriefStory(s.P, t.level, t.i), map: [], text: [], pics: [], plan: null, wk: null };
+  bf.plan = typeof campWalkPlan === 'function' ? campWalkPlan(t.level, t.i) : null; if (bf.plan) bf.wk = campWalkNew(bf.plan); // a mission with a walk (src/data_briefwalk.js) is briefed on the walking map on every page (src/campbriefwalkdraw.js); the others keep the three screens
   put(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.97).setInteractive(), 0); // a veil that takes the clicks
   hudPanel(put(s.add.graphics(), 1), P.x, P.y, P.w, P.h, 22, 0.98, s.accent ? parseInt(s.accent.slice(1), 16) : CYAN);
   bf.g = put(s.add.graphics(), 2); bf.mg = put(s.add.graphics(), 2); // g: the rule under the heading and the pictures, mg: the map (drawn again alone at a zoom)
   bf.keys = put(s.add.text(P.x + P.w / 2, P.y + P.h - 20, '', uiFont(13, '#bfe9ff')).setOrigin(0.5), 4);
-  if (s.input && typeof s.input.on === 'function') { bf.onWheel = (p, over, dx, dy) => { if (bf.screen === 0) campBriefZoomTo(s, camzoomWheel(bf.z, dy, K.zoom.min, K.zoom.max)); }; s.input.on('wheel', bf.onWheel); } // the wheel zooms the map while it is on the screen
-  campBriefPaint(s);
+  if (s.input && typeof s.input.on === 'function') { bf.onWheel = (p, over, dx, dy) => { if (bf.plan) campWalkZoomTo(s, camzoomWheel(bf.wk.z, dy, CAMPWALK.zoom.min, CAMPWALK.zoom.max)); else if (bf.screen === 0) campBriefZoomTo(s, camzoomWheel(bf.z, dy, K.zoom.min, K.zoom.max)); }; s.input.on('wheel', bf.onWheel); } // the wheel zooms the map while it is on the screen
+  if (bf.plan) campWalkBuild(s); else campBriefPaint(s);
   if (typeof sfx === 'function') sfx('uiOpen');
   if (typeof shipcompSay === 'function' && bf.walk.data && bf.walk.steps[0]) { try { shipcompSay(bf.walk.steps[0]); } catch (e) { /* the voice never stops the screen */ } } // the ship reads the first step once; the voice's own settings (muted, off, no voice) decide if it is heard
   return true;
@@ -52,6 +53,7 @@ function campBriefPaint(s) {
 const campBriefOwn = (s, o) => { o.setScrollFactor(0).setDepth(134); s.bf.text.push(o); return o; };
 // the words of the keys line: what Enter does here, and on the first screen what + - 0 and M do
 function campBriefKeysLine(bf) {
+  if (bf.plan) return uiText(bf.wk.i >= bf.plan.steps.length - 1 ? 'camp.bf.keys.launch' : 'camp.bf.keys.next') + '    ' + uiText('camp.bf.keys.zoom'); // the walking map: Enter goes on a stop (or page) and launches at the last; + - Backspace zoom it on every page
   const last = bf.screen >= CAMPBRIEF.screens - 1;
   return uiText(last ? 'camp.bf.keys.launch' : 'camp.bf.keys.next') + (bf.screen === 0 ? '    ' + uiText('camp.bf.keys.zoom') + '    ' + uiText(CAMPBRIEF_ZOOM[campBriefZoomNext(bf.Y, bf.zoom)]) : '');
 }
@@ -79,20 +81,16 @@ function campBriefPaintWhere(s) {
   bf.story.forEach(l => { y = campBriefFlow(s, A, y, l, 16, '#e8f6ff'); });
 }
 
-// the map, once and again at a zoom: the grid, the rings and the belts, the places, the objective points, the route, you
-function campBriefPaintMap(s) {
-  const bf = s.bf, Y = bf.Y, F = CAMPBRIEF.frame, g = bf.mg; g.clear(); campBriefGone(bf.map);
-  const fit = bf.fit, X = (x, y) => campBriefProj(fit, F)(x, y), inF = p => p.x >= F.x && p.x <= F.x + F.w && p.y >= F.y && p.y <= F.y + F.h;
-  const own = o => { o.setScrollFactor(0).setDepth(133); bf.map.push(o); return o; };
-  // nothing is drawn outside the glass (card space-game-night-hunt-l2-l3: zoomed in, the route's dashes ran over the keys line and the YOU label hung under the panel): a circle is stroked as the arcs that are inside the frame, a line is cut to it, a point is drawn only inside it
-  const ring = (q, r) => campMapArcs(q.x, q.y, r, F).forEach(pts => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.strokePath(); }), whole = (q, r) => q.x - r >= F.x && q.x + r <= F.x + F.w && q.y - r >= F.y && q.y + r <= F.y + F.h;
+// the space of the map: the glass, the grid, the rings round the star and the belts as rocks (src/campsol.js), as the Tab map draws them; the briefing's map (here) and its walking map (src/campbriefwalkdraw.js) both start with it
+function campBriefMapSpace(g, fit, F, level) {
+  const X = (x, y) => campBriefProj(fit, F)(x, y);
   g.fillStyle(0x03070f, 1); g.fillRect(F.x, F.y, F.w, F.h);
   const w0 = fit.cx - F.w / 2 / fit.s, w1 = fit.cx + F.w / 2 / fit.s, h0 = fit.cy - F.h / 2 / fit.s, h1 = fit.cy + F.h / 2 / fit.s, gs = mapGridStep(F.w / fit.s, 1e12);
   g.lineStyle(1, CYAN, 0.12);
   for (let w = Math.ceil(w0 / gs) * gs; w < w1; w += gs) { const a = X(w, 0).x; g.lineBetween(a, F.y, a, F.y + F.h); }
   for (let w = Math.ceil(h0 / gs) * gs; w < h1; w += gs) { const b = X(0, w).y; g.lineBetween(F.x, b, F.x + F.w, b); }
   // the rings round the star and the belts as rocks (src/campsol.js): the same as the Tab map
-  const wd = typeof campWorldOf === 'function' ? campWorldOf(Y.level) : null;
+  const wd = typeof campWorldOf === 'function' ? campWorldOf(level) : null;
   if (wd) {
     const sp = X(wd.star.x, wd.star.y), proj = (x, y) => X(x, y);
     g.lineStyle(1, 0x7fa8c8, 0.26);
@@ -100,6 +98,15 @@ function campBriefPaintMap(s) {
     g.fillStyle(0xb9a37a, 0.8); wd.bands.forEach(b => campMapDotsIn(b.dots, proj, F).forEach(p => g.fillRect(p.x - 0.5, p.y - 0.5, 1.7, 1.7)));
     wd.clusters.forEach(c => campMapDotsIn(c.dots, proj, F).forEach(p => g.fillRect(p.x - 0.5, p.y - 0.5, 1.7, 1.7)));
   }
+}
+// the map, once and again at a zoom: the grid, the rings and the belts, the places, the objective points, the route, you
+function campBriefPaintMap(s) {
+  const bf = s.bf, Y = bf.Y, F = CAMPBRIEF.frame, g = bf.mg; g.clear(); campBriefGone(bf.map);
+  const fit = bf.fit, X = (x, y) => campBriefProj(fit, F)(x, y), inF = p => p.x >= F.x && p.x <= F.x + F.w && p.y >= F.y && p.y <= F.y + F.h;
+  const own = o => { o.setScrollFactor(0).setDepth(133); bf.map.push(o); return o; };
+  // nothing is drawn outside the glass (card space-game-night-hunt-l2-l3: zoomed in, the route's dashes ran over the keys line and the YOU label hung under the panel): a circle is stroked as the arcs that are inside the frame, a line is cut to it, a point is drawn only inside it
+  const ring = (q, r) => campMapArcs(q.x, q.y, r, F).forEach(pts => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.strokePath(); }), whole = (q, r) => q.x - r >= F.x && q.x + r <= F.x + F.w && q.y - r >= F.y && q.y + r <= F.y + F.h;
+  campBriefMapSpace(g, fit, F, Y.level);
   hudGlowPath(g, [[F.x, F.y], [F.x + F.w, F.y], [F.x + F.w, F.y + F.h], [F.x, F.y + F.h]], CYAN, 0.85, true, 1.25);
   // the places: a disc and a name (the names are put where they touch nothing: mapPlace); the outposts wear the Tab map's green frame
   const items = [], texts = [];
@@ -217,6 +224,7 @@ function campBriefPaintHow(s) {
 function campBriefKey(s, code, repeat) {
   if (!campBriefIsOpen(s)) return false;
   const bf = s.bf, K = CAMPBRIEF, zk = typeof campZoomKey === 'function' ? campZoomKey(code) : null;
+  if (bf.plan) return campWalkKey(s, code, repeat); // the walking map has its own stops (campbriefwalkdraw.js): the same keys, on stops
   if (zk) { if (bf.screen === 0) campBriefZoomTo(s, zk.reset ? 1 : camzoomKey(bf.z, zk.dir, !!repeat, K.zoom.min, K.zoom.max)); return true; } // + - 0: the map's zoom (the same keys as the Tab map's, src/campzoom.js)
   if (repeat) return true; // a held key repeats only for the zoom
   const nav = campBriefNav(bf.screen, code);
