@@ -117,7 +117,8 @@ const CAMP_KEYS = {
   shields: { k: 'J', codes: ['KeyJ'], sys: 'shields' }, engines: { k: 'K', codes: ['KeyK'], sys: 'engines' }, weapons: { k: 'L', codes: ['KeyL'], sys: 'weapons' }, balance: { k: ';', codes: ['Semicolon'], sys: 'balance' }, // the ship's power (docs/CAMPAIGN.md "Ship systems"): a pip to a system, in the dials' order; ; is 2 / 2 / 2
   zoomin: { k: '=', codes: ['Equal', 'NumpadAdd'] }, zoomout: { k: '-', codes: ['Minus', 'NumpadSubtract'] }, zoomreset: { k: 'Backspace', codes: ['Backspace'] }, // src/campzoom.js reads these codes
   strip: { k: '/', codes: ['Slash'] }, voice: { k: '.', codes: ['Period'] },          // type an order, hold to speak one (src/cmdstrip.js, src/shipcomputer.js, src/listen.js read these in the Campaign)
-  help: { k: 'H', codes: ['KeyH'] }, mute: { k: 'M', codes: ['KeyM'] }, pause: { k: 'Esc', codes: ['Escape'] }
+  help: { k: 'H', codes: ['KeyH'] }, mute: { k: 'M', codes: ['KeyM'] }, pause: { k: 'Esc', codes: ['Escape'] },
+  tune: { k: 'N', codes: ['KeyN'] }                                                  // the tuning panel (card space-game-tuning-panel, src/camptunedraw.js): in flight and in the ready room; numbers and switches, changed live. Nothing else uses N
 };
 const campKeyCodes = id => (CAMP_KEYS[id] || { codes: [] }).codes;
 const campKeyIs = (id, code) => campKeyCodes(id).indexOf(code) >= 0;
@@ -233,6 +234,7 @@ const CONTROLS = [
     { k: ['H'], t: 'This page of keys', sub: 'ANYWHERE' },
     { k: ['Esc'], t: 'Close a list or the map, else pause', sub: 'ANYWHERE' },
     { k: ['M'], t: 'Mute sound', sub: 'ANYWHERE' },
+    { k: ['N'], t: 'Tuning panel: numbers and switches', sub: 'ANYWHERE' }, // src/camptunedraw.js
     { k: ['T'], t: 'Title, from the pause or end card', sub: 'ON A CARD' },
     { k: ['R'], t: 'Pause card: restart the mission', sub: 'ON A CARD' },
     { k: ['Enter'], t: 'Cards: begin, continue, try again', sub: 'ON A CARD' },
@@ -252,6 +254,7 @@ const CONTROLS = [
     { k: ['U'], t: 'Refit: fit the Fabricator', sub: 'THE READY ROOM' },
     { k: ['Backspace'], t: 'Refit: give the last one back', sub: 'THE READY ROOM' },
     { k: ['H'], t: 'This page of keys', sub: 'THE READY ROOM' },
+    { k: ['N'], t: 'Tuning panel: numbers and switches', sub: 'THE READY ROOM' },
     { k: ['Esc'], t: 'Close a row, else the title (T too)', sub: 'THE READY ROOM' },
     { k: ['Enter', 'Right'], t: 'Briefing: next screen, then launch', sub: 'THE BRIEFING' }, // the big briefing (src/campbriefdraw.js), opened from the board: three screens (where and why, what to do, how); Enter on the last one launches
     { k: ['Left'], t: 'Briefing: back a screen', sub: 'THE BRIEFING' },

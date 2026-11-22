@@ -112,6 +112,7 @@ function campCallsTick(C, dt) {
   const S = C.call || (C.call = campCallsNew(C));
   C.waves.forEach((st, i) => { if (st && st.started && S.seen[i] == null) S.seen[i] = C.t; }); // when each wave came: "a second group" is one that has just come
   const o = S.open;
+  if (!campFlag('calls')) { if (o) { S.open = null; C.events.push({ type: 'call', stage: 'gone', id: o.id }); } return; } // the pilots' calls switched off (the tuning panel): none opens, and one that waits is dropped
   if (o) {
     const ids = [].concat(o.ctx.who || [], o.ctx.ids || []);
     if (ids.length && !ids.some(id => C.by[id] && C.by[id].hp > 0)) { S.open = null; C.events.push({ type: 'call', stage: 'gone', id: o.id }); return; } // the ship he was calling about is gone: there is nothing to order
@@ -134,7 +135,7 @@ function campCallsTick(C, dt) {
 
 // a script opens a call by hand (a type with `scripted: true` in the table: its trigger is never asked): true when it opened (none waits, the type is in the table)
 function campCallStart(C, id, ctx) {
-  const T = campCallType(id); if (!C || C.result || !T) return false;
+  const T = campCallType(id); if (!C || C.result || !T || !campFlag('calls')) return false;
   const S = C.call || (C.call = campCallsNew(C)); if (S.open) return false;
   S.n++; S.last[T.id] = C.t; S.next = Math.max(S.next, C.t + CAMP_CALLS.gap * 1000);
   S.open = { id: T.id, ctx: ctx || {}, pilot: (S.n - 1) % CAMP_CALLS.pilots, at: C.t, left: CAMP_CALLS.answer, total: CAMP_CALLS.answer, def: T.def, held: null };

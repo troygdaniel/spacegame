@@ -28,6 +28,7 @@ class CampHub extends Phaser.Scene {
   constructor() { super('CampHub'); }
   init(d) { this.d = d || {}; this.leaving = false; } // d: the scene data above (all of it optional)
   create() {
+    if (typeof campTuneLoadOnce === 'function') campTuneLoadOnce(); // the tuning panel's overrides (src/camptune.js): read once per page, before anything here reads the CAMP table
     this.P = this.d.P || campProgressLoad(); if (typeof campReveal === 'function') campReveal(!!this.P.revealed); // after the ending has been seen, level 3 is the outpost on the board too (the Campaign scene did this only when it began: a page loaded after the ending showed the old name)
     this.hub = campHubNew(this.P, { rows: this.d.rows, at: this.d.at }); this.msg = null; this.walls = []; // a dock hands in the Campaign scene's own progress, so what is bought there is not overwritten at the debrief
     const nx = campHubNext(this.P), st = Object.assign({}, campHubStation(nx.level, nx.i), this.d.station && typeof this.d.station === 'object' ? this.d.station : {}), css = /^#[0-9a-f]{6}$/i.test(st.accent) ? st.accent : campHubStation(nx.level).accent;
@@ -197,10 +198,12 @@ class CampHub extends Phaser.Scene {
   // ----- the keys and the clicks -----
   onKey(e) {
     if (this.leaving) return;
+    if (typeof campTuneIsOpen === 'function' && campTuneIsOpen(this)) { campTuneKey(this, e); return; } // the tuning panel (src/camptunedraw.js) takes every key while it is open, a held arrow too
     if (e.repeat && !(typeof campBriefIsOpen === 'function' && campBriefIsOpen(this) && typeof campZoomKey === 'function' && campZoomKey(e.code))) return; // a held key repeats only for the briefing map's zoom
     if (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) { campKeysKey(this, e.code); return; } // the H page of every key is open: any key closes it, and it takes the key
     if (typeof campBriefIsOpen === 'function' && campBriefIsOpen(this)) { if (e.code === 'KeyH' && typeof campKeysOpen === 'function') { campKeysOpen(this, CAMPKEYS.room); return; } campBriefKey(this, e.code, e.repeat); if (e.preventDefault) e.preventDefault(); return; } // the big briefing is up (src/campbriefdraw.js): it takes the keys: Enter or L launch, Esc back to the board, Left Right page the walkthrough, M the map's zoom
     if (e.code === 'KeyH' && typeof campKeysOpen === 'function') { campKeysOpen(this, CAMPKEYS.room); return; } // H: the ready room's keys, on one page (src/campkeys.js)
+    if (typeof campTuneOpen === 'function' && campKeyIs('tune', e.code) && !this.hub.open) { campTuneOpen(this); return; } // N: the tuning panel (src/camptunedraw.js), at the top of the room (not over an open row)
     const r = campHubKey(this.hub, this.P, e.code, this.d); if (!r.used) return;
     if (e.preventDefault && (e.code === 'Backspace' || e.code === 'Tab')) e.preventDefault();
     this.apply(r);
@@ -226,6 +229,7 @@ class CampHub extends Phaser.Scene {
   leave() { if (typeof this.d.onLeave === 'function') this.d.onLeave(this); else go(this, 'Title'); }
   update(time) {
     interiorTick(this, time);
+    if (typeof campTuneMark === 'function') campTuneMark(this); // the TUNED mark, while any override is on (src/camptunedraw.js)
     if (typeof campWalkTickScene === 'function') campWalkTickScene(this, time); // the briefing's walking map plays on (src/campbriefwalkdraw.js)
     if (this.msg && this.msg.until <= time && !this.msg.gone) { this.msg.gone = true; this.paint(); } // the answer fades from the page
   }

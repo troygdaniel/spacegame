@@ -19,6 +19,9 @@
 const CAMP = {
   store: 'longhaul.campaign',              // the localStorage key of the campaign progress (the level reached and the techs picked)
   step: 1 / 30,                            // s: the longest step the sim takes at once (a longer frame is cut into steps)
+  flags: {                                 // THE SWITCHES (card space-game-tuning-panel; the tuning panel's ON and OFF rows, src/camptune.js): each is a whole system, and false takes it out as if it were not in the mission. Systems read them through campFlag
+    calls: true                            // the pilots' radio calls for orders (src/camporders.js): off, none opens and an open one is dropped
+  },
   size: {                                  // how big your ships are: the one place for it (card space-game-campaign-look: another 30 percent smaller than the 140 x 100, 31 x 23 and 40 x 29 px they were drawn at). len: the drawn length in px (the scene scales the picture to it); hit: the hit circle's radius in px, about half of len over two, as it always was
     carrier: { len: 98, hit: 25 },         // it was 140 and 36
     fighter: { len: 22, hit: 6 },          // it was 31 and 8
@@ -601,6 +604,7 @@ const CAMP = {
     }
   }
 };
+const campFlag = id => !!(CAMP.flags && CAMP.flags[id]); // a switch of CAMP.flags: is the system in the mission? (the tuning panel changes them live; the defaults are the table's)
 
 // ---------- small helpers ----------
 function campPlaces(level) { // the places of a level: its own (and the far bodies the Sol card adds), plus the moons of CAMP.moons the level lists whose planet it has (added once each, whenever the planet is there), and the outpost names of the level's `outposts`; else the home system's
