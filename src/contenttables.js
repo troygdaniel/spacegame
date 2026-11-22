@@ -555,6 +555,7 @@ const UI_TEXT = {
   'camp.call.fail': 'Cannot do that. Playing it safe.',
   'camp.call.hud.def': 'if you wait',
   'camp.call.hud.keys': '{keyup} {keydown} pick   {keypick} answer',
+  'camp.call.hud.held': 'Timer stopped   {keyup} {keydown} pick   {keypick} answer',
   'title.camp.key': 'K',
   'title.camp.name': 'CAMPAIGN',
   'title.camp.sub': 'Earth\'s fleet on the rim: fly the carrier, command the wing.',
