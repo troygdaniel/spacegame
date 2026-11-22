@@ -46,6 +46,7 @@ const BOTS = {
   plains: { name: 'plains', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'smart' },                  // plain, and it answers the pilots' calls (src/camporders.js) with the pick a player who thinks would make
   plainf: { name: 'plainf', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'first' },
   plainw: { name: 'plainw', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'wrong' },             // plain, and it answers every call with the wrong pick (what the answers cost)
+  plainm: { name: 'plainm', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, mineAll: true },          // plain, and the wing keeps mining while any rock is left, goal met or not (a player who wants the cash: 1.2 in the real game, card space-game-tune-l1-notes)
   plainu: { name: 'plainu', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, noroute: true },            // plain, and it never scouts the fork: the default lane (what a player who ignores the new tools meets; card space-game-fleet-command-tune)
   thinks: { name: 'thinks', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'smart', tuck: 'torp' },   // a player who directs the fleet: answers the calls with the best pick and uses the convoy orders (and scouts the fork)
   thinku: { name: 'thinku', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'smart', tuck: 'torp', noroute: true } // the same on the default lane                   // plain, and it answers every call with 1                                                  // no wing at all, missiles only
@@ -84,7 +85,7 @@ g.run(`(() => {
       const hold = campRouteHolding(C), all = C.route.geo.order.every(id => C.route.known[id]);
       if (hold && !st.picked && (all || hold.left < 8)) { st.picked = true; const n = id => C.route.known[id] ? C.route.known[id].pirates + C.route.known[id].aliens : 99; campOrder(C, 'lane', hold.lanes.map(l => l.id).sort((a, b) => n(a) - n(b))[0]); }
     }
-    const mineOpen = campObjectives(C).some(o => !o.done && o.type === 'ore') && !B.nomine, fight = campAliens(C).some(u => !u.hold);
+    const mineOpen = (campObjectives(C).some(o => !o.done && o.type === 'ore') || (B.mineAll && C.rocks.some(r => r.hp > 0))) && !B.nomine, fight = campAliens(C).some(u => !u.hold);
     if (B.launch !== false && st.launched && mineOpen && !st.mining && !fight && s >= (st.mineAt || 0)) { if (campOrder(C, 'mine').ok) st.mining = true; else st.mineAt = s + 1; } // while the mission asks for ore the wing mines, and goes to the fight only when one comes (then mines again) // a mission that asks for ore: the wing mines (E then 1)
     if (B.cycle && st.launched) {
       if (st.landAt && s >= st.landAt) { st.landAt = 0; campOrder(C, 'launch'); st.nextAtk = s + 2; }

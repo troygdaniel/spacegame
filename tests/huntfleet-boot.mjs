@@ -141,7 +141,7 @@ try {
       const ore = await j(`Math.floor(${C}.ore)`), best = await j(`Math.floor(${C}.oreBest)`);
       if (!ordered.mine || (!any && clock - mineAt >= 25 && ore < 450)) { ordered.mine = true; mineAt = clock; note(`Mine ore (FLEET) at ${clock} s: ore ${ore}`); await press('mine'); }
       if (any && !foes && clock - flewAt >= 9) { flewAt = clock; const R = await foeRows(); if (R.length) { note(`raiders at ${R[0].d} px: the cruiser goes to ${R[0].id} (the map, Enter) at ${clock} s`); await mapDo(R[0].id, 'Enter', 'fly to the raiders'); } }
-      if (!any && best >= 190 && !sold && (await j(`${C}.waves.every(w => w && w.started)`))) {
+      if (!any && best >= 450 && !sold && (await j(`${C}.waves.every(w => w && w.started)`))) {
         if (!ordered.dock) { ordered.dock = true; note(`ore ${ore}: the goal is now "${await j(`campObjective(${C})`)}": fly there (the goal row) at ${clock} s`); await press('goal'); await t.run(600); }
         else if (!(await j(`!!(${C}.nav && ${C}.nav.on)`)) && clock - (ordered.dockTry || 0) >= 4) {
           ordered.dockTry = clock; note(`dock at the Works (the dock row) at ${clock} s, ${await j(`Math.round(campDist(${C}.carrier, campOutposts(${C}.level).find(o => o.id === 'ceres'))) `)} px away`); await snap('dock-0'); await press('dock'); await t.run(1500);

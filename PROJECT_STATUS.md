@@ -1,6 +1,6 @@
 # Project status
 
-**Updated: 21 Nov 2026, written against main `67bb072`.** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
+**Updated: 21 Nov 2026, written against main `7e7811b`.** This file is the first thing to read after the README. It says what the game is doing *now*. Whoever lands a change that alters what a player sees or does updates it in the same hand-in (rule in `CLAUDE.md`). If this file and the code disagree, the code is right and this file is stale: say so in an issue.
 
 ## In one minute
 
@@ -21,7 +21,7 @@ All nine missions are playable and winnable (the plain test bot wins every one; 
 
 | Level | Missions | State |
 |---|---|---|
-| **1, the rim run** (Lunar Base to Ceres and back toward Earth) | 1.1 escort a transport past pirates, 1.2 mine at Ceres and defend the miners, 1.3 escort the haulers home and meet the first aliens | The newest and most worked level. **1.1 is the one finished example** of the fleet-command systems (below): something happens about every minute. 1.2 and 1.3 are tuned (the rim tune) but the new beats are not scripted into them. Then the **Earth refit** (pick one of three techs, spend ore on ships). |
+| **1, the rim run** (Lunar Base to Ceres and back toward Earth) | 1.1 escort a transport past pirates, 1.2 mine at Ceres and defend the miners, 1.3 escort the haulers home and meet the first aliens | The newest and most worked level. **1.1 is the one finished example** of the fleet-command systems (below): something happens about every minute. 1.2 and 1.3 are tuned (the rim tune; then a hunt tune: 1.2's goal is 450 ore of harder rock, so mining takes most of its five minutes while the raids land, and 1.3's first contact is eight ships, not ten, so one wrong answer costs a few ships, not eight) but the new beats are not scripted into them. Then the **Earth refit** (pick one of three techs, spend ore on ships). |
 | **2, Alpha Centauri** (warp unlocked) | 2.1 resources, 2.2 the guards, 2.3 the relic | Works. Being retuned for the new systems. |
 | **3, the alien home world** | 3.1 approach, 3.2 outer ring, 3.3 inner ring (twelve towers) | Works, then the ending (the outpost reveal). Being retuned for the new systems. |
 
