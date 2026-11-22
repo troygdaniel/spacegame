@@ -39,18 +39,21 @@ async function flight() {
     check('the battle waits while it is open: its clock has not moved', (await j(`${SC}.camp.t`)) === t0, `${t0} -> ${await j(`${SC}.camp.t`)}`);
     await snap(t, '1-open');
     const rows = () => j(`${SC}.tp.lines.filter(l => l.name.text).map(l => [l.name.text, l.val.text, l.def.text, l.when.text, l.val.style.color])`);
-    await key(t, 'ArrowDown'); await key(t, 'ArrowDown'); // past the two top rows and the heading: the cruiser's top speed
+    const goto = async id => { for (let i = 0; i < 80 && (await j(`(() => { const it = campTuneItems()[${SC}.tp.model.cur]; return it.kind === 'row' ? it.row.id : it.kind; })()`)) !== id; i++) await key(t, 'ArrowDown'); return (await j(`campTuneItems()[${SC}.tp.model.cur].row && campTuneItems()[${SC}.tp.model.cur].row.id`)) === id; }; // down to a row by its id (the list is longer than the screen: it scrolls)
+    check('the list is longer than the window: the panel shows 15 lines and a down arrow says there is more below', (await j(`campTuneItems().length`)) > (await j('CAMP_TUNE_VIEW.show')));
+    await goto('cruiserspeed'); // past the two top rows and the heading: the cruiser's top speed
     await key(t, 'ArrowRight'); await key(t, 'ArrowRight', { modifiers: 8 }); // one step and ten (Shift)
     check('Right and Shift+Right change the cruiser\'s top speed: 210 + 10 + 100 = 320 px/s, in the live table too', (await j('CAMP.carrier.speed')) === 320 && (await j('campTuneValue("cruiserspeed")')) === 320);
     const r1 = await rows(), sp = r1.find(r => r[0] === 'Cruiser top speed');
     check('its row reads 320 px/s in amber with "default 210 px/s" beside it, and says it is felt next mission', !!sp && sp[1] === '320 px/s' && sp[2] === 'default 210 px/s' && sp[3] === 'next mission' && /ffb454/i.test(sp[4]), JSON.stringify(sp));
-    await key(t, 'ArrowDown'); await key(t, 'ArrowDown'); await key(t, 'ArrowRight'); await key(t, 'ArrowRight');
+    await goto('turretdamage'); await key(t, 'ArrowRight'); await key(t, 'ArrowRight');
     check('the turret damage goes from 4 to 6 (felt at once) and the count of changes is two', (await j('CAMP.carrier.pd')) === 6 && (await j('campTuneCount()')) === 2 && (await rows()).some(r => r[0] === 'Turret damage a shot' && r[1] === '6' && r[3] === 'at once'));
     await snap(t, '2-changed');
-    check('every line fits: no name runs into its value, no default into its tag, nothing leaves the panel', await j(`(() => { const L = CAMPTUNE_LOOK, P = L.panel, T = ${SC}.tp; return T.lines.every(l => !l.name.text || (l.name.x + l.name.width < l.val.x - l.val.width - 14 && (!l.def.text || l.def.x + l.def.width < l.when.x - l.when.width - 8) && l.when.x <= P.x + P.w - 10)); })()`));
+    check('every line fits, in every window of the list: no name runs into its value, no default into its tag, nothing leaves the panel', (await j(`(() => { const L = CAMPTUNE_LOOK, P = L.panel, T = ${SC}.tp, items = campTuneItems(), bad = []; const m = T.model, keep = [m.top, m.cur]; for (let k = 0; k <= items.length - CAMP_TUNE_VIEW.show; k++) { m.top = k; m.cur = Math.min(items.length - 1, k + 7); while (items[m.cur].kind === 'head') m.cur++; campTunePaint(${SC}); T.lines.forEach(l => { if (l.name.text && !(l.name.x + l.name.width < l.val.x - l.val.width - 14 && (!l.def.text || l.def.x + l.def.width < l.when.x - l.when.width - 8) && l.when.x <= P.x + P.w - 10)) bad.push(l.name.text); }); } m.top = keep[0]; m.cur = keep[1]; campTunePaint(${SC}); return bad; })()`)).length === 0);
     await key(t, 'Backspace');
     check('Backspace puts the highlighted row (the turret damage) back to its default', (await j('CAMP.carrier.pd')) === 4 && (await j('campTuneCount()')) === 1);
-    for (let i = 0; i < 30 && (await j(`campTuneItems()[${SC}.tp.model.cur].kind === 'row' ? campTuneItems()[${SC}.tp.model.cur].row.id : ''`)) !== 'calls'; i++) await key(t, 'ArrowDown');
+    check('going down the list scrolled the window: the highlight is on the screen, the first lines are above it', await goto('calls') && (await j(`${SC}.tp.model.top`)) > 0 && (await j(`${SC}.tp.model.cur >= ${SC}.tp.model.top && ${SC}.tp.model.cur < ${SC}.tp.model.top + CAMP_TUNE_VIEW.show`)));
+    await snap(t, '2b-scrolled');
     await key(t, 'Enter');
     check('Enter on the pilot calls switch turns it OFF (the live flag too)', (await j('CAMP.flags.calls')) === false && (await rows()).some(r => r[0] === 'Pilots call for orders' && r[1] === 'OFF' && r[2] === 'default ON'));
     await snap(t, '3-switch');
