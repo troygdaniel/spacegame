@@ -19,7 +19,7 @@
 //   campHubBrief(P, level, i)      one mission's briefing: { title, kindText, lines, objectives, kinds, bonus: [{ type, points, text }], par, best, tries }
 //   campHubRefit(P)                { ore, techs: [{ id, name, text, change }], wing: { fighters, escorts }, extra: { fighters, escorts }, most, fc, ec, fab, items }
 //   campHubRefitItems(P)           the refit's choices: [{ id: 'fighters' | 'escorts' | 'fab', name, change (what it does, in words with the numbers), cost, have, ok (can be bought now), status }]
-//   campHubTechChange(id)          what a tech changes, in plain words with the numbers of CAMP.tech ("Carrier hull: 600 to 900")
+//   campHubTechChange(id, P)       what a tech changes, in plain words with the numbers of CAMP.tech ("Carrier hull: 600 to 900")
 //   campHubRank(P)                 { ranked, name, n, of, points, next, nextName, wing, flown, all }: campRankStatus(P) (the ranks card, src/campranks.js) when it is there, else the plain score
 //   campHubBuy(P, what) / campHubGiveBack(P, what)   what: 'fighters' | 'escorts'  -> { ok, key, vars }
 //   campHubKey(H, P, code, ctx)    one key -> { used, moved, action: '' | 'launch' | 'undock' | 'title', changed, ok, say: { key, vars } | { text } | null }; ctx: the scene's data, handed to a row's keys
@@ -163,20 +163,20 @@ const CAMP_HUB_TECHVARS = {
   beam: t => ({ dmg: t.damage, from: CAMP.carrier.pdRange, to: Math.round(CAMP.carrier.pdRange * t.reach) }),
   blink: t => ({ dist: t.dist, secs: Math.round(t.cooldown / 1000) }),
   plating: t => ({ from: CAMP.carrier.hull, to: Math.round(CAMP.carrier.hull * t.hull) }),
-  bay2: t => ({ from: CAMP.bay.fighters, to: CAMP.bay.fighters + t.fighters }),
+  bay2: (t, P) => { const from = P ? campHubWing(P).fighters - (P.techs.indexOf('bay2') >= 0 ? t.fighters : 0) : CAMP.bay.fighters; return { from, to: from + t.fighters }; }, // the bay the pilot really has (the rank's ships and the refit's count are in it: the hunt of levels 2 and 3), before the tech; with no pilot to ask, the table's bare bay
   repair: t => ({ rate: t.rate, reach: t.reach }),
   overdrive: t => ({ from: CAMP.carrier.speed, to: Math.round(CAMP.carrier.speed * t.speed) }),
   lens: t => ({ from: CAMP.anomaly.sense, to: Math.round(CAMP.anomaly.sense * t.sense) }),
   fabricator: t => ({ cost: CAMP.outpost.fabricator })
 };
-function campHubTechChange(id) {
+function campHubTechChange(id, P) { // P (optional): the pilot's progress, for the numbers that depend on what he has (the second bay)
   const t = CAMP.tech[id], f = CAMP_HUB_TECHVARS[id]; if (!t || !f) return '';
-  let v; try { v = f(t); } catch (e) { return ''; }
+  let v; try { v = f(t, P); } catch (e) { return ''; }
   const w = uiText('camp.room.tech.' + id, v); return campHubPlain(w) ? w : '';
 }
 function campHubRefit(P) {
   const b = P.bonus || {};
-  return { fab: { owned: campHubHasFab(P), cost: CAMP.outpost.fabricator }, ore: P.ore | 0, techs: P.techs.filter(t => CAMP.tech[t]).map(id => ({ id, name: uiText('camp.tech.' + id + '.name'), text: uiText('camp.tech.' + id + '.text'), change: campHubTechChange(id) })), wing: campHubWing(P),
+  return { fab: { owned: campHubHasFab(P), cost: CAMP.outpost.fabricator }, ore: P.ore | 0, techs: P.techs.filter(t => CAMP.tech[t]).map(id => ({ id, name: uiText('camp.tech.' + id + '.name'), text: uiText('camp.tech.' + id + '.text'), change: campHubTechChange(id, P) })), wing: campHubWing(P),
     extra: { fighters: b.fighters | 0, escorts: b.escorts | 0 }, most: CAMP.refit.most, fc: CAMP.build.fighterCost, ec: CAMP.build.escortCost, items: campHubRefitItems(P) };
 }
 // the refit's choices, each with what it changes (the numbers), what it costs, what you have, and whether you can have it now

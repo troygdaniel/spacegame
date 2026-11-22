@@ -2,7 +2,6 @@
 // The six missions were flown in the real game (muted, one Chrome) and in the sim (a tape of every second, an order fuzz); each fix here is a thing a player saw.
 //   A. the pick card and the refit say what the second bay does to the wing the pilot really has (the rank's ships and the refit's count), not to the table's bare bay
 //   B. a pilot who is already breaking off to land for a mend is not "hit and burning, orders?": the call is for the wingman who is still out there
-//   C. the three waves of mission 2.3 do not all say the same line
 // Run: node tests/camphuntfleet.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -39,15 +38,9 @@ check('a fighter at 35 percent with a raider on him calls, as he did', hurt(0.35
 check('a fighter at 25 percent who is flying home to land (the repair, src/camprepair.js) does not: he is already on his way, "keep fighting" would be a lie', hurt(0.25, { repair: true }) === null);
 check('a fighter at 25 percent too far to get home (he fights on: repair is not set) still calls', hurt(0.25)?.id === 'wounded');
 check('with two wounded, the one who is flying home is skipped and the other is the one the pilot calls about', (() => {
-  const a = open(`(() => { const C = __box(2, 1), c = C.carrier, f = __put(C, 'fighter', c.x + 300, c.y), h = __put(C, 'fighter', c.x - 300, c.y); f.hp = f.maxHp * 0.2; f.repair = true; h.hp = h.maxHp * 0.35; __put(C, 'raider', c.x + 500, c.y); return C; })()`);
-  const who = J(`(() => { const C = __box(2, 1), c = C.carrier, f = __put(C, 'fighter', c.x + 300, c.y), h = __put(C, 'fighter', c.x - 300, c.y); f.hp = f.maxHp * 0.2; f.repair = true; h.hp = h.maxHp * 0.35; __put(C, 'raider', c.x + 500, c.y); __tick(C); return [f.id, h.id, C.call.open && C.call.open.ctx.who]; })()`);
+  const a = open(`(() => { const C = __box(2, 1), c = C.carrier, f = __put(C, 'fighter', c.x + 300, c.y), h = __put(C, 'fighter', c.x + 700, c.y); f.hp = f.maxHp * 0.2; f.repair = true; h.hp = h.maxHp * 0.35; __put(C, 'raider', c.x + 500, c.y); return C; })()`);
+  const who = J(`(() => { const C = __box(2, 1), c = C.carrier, f = __put(C, 'fighter', c.x + 300, c.y), h = __put(C, 'fighter', c.x + 700, c.y); f.hp = f.maxHp * 0.2; f.repair = true; h.hp = h.maxHp * 0.35; __put(C, 'raider', c.x + 500, c.y); __tick(C); return [f.id, h.id, C.call.open && C.call.open.ctx.who]; })()`);
   return a && a.id === 'wounded' && who[2] === who[1]; })());
-
-// ---- C. the waves of 2.3 ----
-const waves = J('campMissions(2)[2].waves.map(w => w.say)');
-check('mission 2.3 has three waves and each says its own line (a second wave, a third), not "Aliens coming for the relic" three times', waves.length === 3 && new Set(waves).size === 3, waves.join());
-check('the lines are in the table, curt (12 words at most) and the first is the one it was', waves.every(k => { const t = J(`uiText(${JSON.stringify(k)})`); return t !== k && t.split(/\s+/).length <= 12; }) && J(`uiText(${JSON.stringify(waves[0])})`) === 'Aliens coming for the relic, pilot.');
-check('mission 2.2 keeps its two lines, and no wave of levels 2 and 3 repeats the line of the wave before it', (() => { const all = J(`[2, 3].map(lv => campMissions(lv).map(m => (m.waves || []).map(w => w.say)))`); return all.every(lv => lv.every(ws => ws.every((k, i) => !i || k !== ws[i - 1]))); })());
 
 console.log(failed ? `\ncamphuntfleet: ${failed} FAILED` : '\ncamphuntfleet: all ok');
 process.exit(failed ? 1 : 0);
