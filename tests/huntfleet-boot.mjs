@@ -1,6 +1,6 @@
 // not in the smoke: Level 1 flown start to finish as a player, in the real game (one Chrome, muted, through the test lock; card space-game-hunt-l1-fleet)
 // It boots the Campaign with a save that stands at the mission, reads the ready room and the three briefing screens, launches, and then PLAYS with real key events: the wing out, the cruiser on the
-// autopilot beside the convoy, the pilots' calls answered by a style, the fork scouted and picked, convoy orders, power moved in the rival's phases, missiles, the map zoomed all the way out.
+// autopilot beside the convoy, the pilots' calls answered by a style, (the fork of 1.1 was cut: card space-game-cut-lane-fork; its steps below find no lane rows and no hold, and do nothing), convoy orders, power moved in the rival's phases, missiles, the map zoomed all the way out.
 // Every key comes from the key table (CAMP_PANELS for the order lists and their rows, CAMP_KEYS for the direct keys, the Campaign group of CONTROLS for the rest), never a letter of its own, so the walk survives a remap of the keys.
 // An order is given through the list its row is in (cards one-list-keys and list-shortcuts): that list's own key (Q W E R, P O I U; a list with no key, the stances, through its parent's row), Down to the row, Enter; a pilot's call is answered with Up, Down and Enter.
 //   node tests/huntfleet-boot.mjs --mission 1 [--ending win|lose] [--calls right|wrong|none|mix] [--secs 420] [--lane short|long] [--nobrief] [--idle 90] [--noscout] [--killleader] [--dock0]
@@ -44,7 +44,7 @@ try {
 
   // ---- the key table: the code of every key the walk presses, read from the game's own tables
   // The keys come from the game's own tables and nothing else: CAMP_KEYS (the direct keys: map, fire, zoom, the target keys, the power keys, the missile, and Up, Down, Enter and Esc of an open list), CAMP_PANELS (the key that opens
-  // each of the lists, and which list a row is in: campKeyVia), and the Campaign group of CONTROLS for V and T (scout, take a lane). An order is given as a player gives it (card list-shortcuts): the key of the list the row is in
+  // each of the lists, and which list a row is in: campKeyVia), and the Campaign group of CONTROLS for V (scout). An order is given as a player gives it (card list-shortcuts): the key of the list the row is in
   // (a list with no key of its own, the stances, is opened from its parent: the parent's key, Down to the part's row, Enter), Down to the row, Enter;
   // the row's place is read from the list of THIS mission (campPanelList), never a number written here. A row the table does not have is said and skipped, so a change of the table shows up as a note, not as a wrong key.
   const codeOf = lab => /^[A-Z]$/.test(lab) ? 'Key' + lab : /^[0-9]$/.test(lab) ? 'Digit' + lab : ({ Tab: 'Tab', Space: 'Space', Enter: 'Enter', Esc: 'Escape', ';': 'Semicolon', '+': 'Equal', '-': 'Minus', '/': 'Slash', '=': 'Equal', Backspace: 'Backspace' })[lab] || null;
@@ -81,7 +81,7 @@ try {
   for (let m = 1; m < MISSION; m++) results['1.' + m] = res;
   await t.ev(`localStorage.setItem('longhaul.campaign', ${JSON.stringify(JSON.stringify({ level: 1, mission: MISSION - 1, techs: [], ore: 60, bonus: { fighters: 0, escorts: 0 }, results }))})`);
   K.title = await ctl(/Title, from the pause/); K.map = await ck('map'); K.fire = await ck('fire'); K.next = await ck('next'); K.last = await ck('last'); K.near = await ck('near'); K.clear = await ck('clear'); K.minus = await ck('zoomout'); K.zero = await ck('zoomreset');
-  K.scout = await ctl(/V scouts/, 0); K.take = await ctl(/V scouts/, 1);
+  K.scout = await ctl(/V scouts/, 0); // (the map's T took a lane at the fork of 1.1; the fork was cut, card space-game-cut-lane-fork: no K.take)
   K.up = await ck('up'); K.down = await ck('down'); K.pick = await ck('pick'); K.esc = await ck('pause'); K.shields = await ck('shields'); K.engines = await ck('engines'); K.weapons = await ck('weapons'); K.even = await ck('balance'); K.missile = await ck('missile');
   K.lists = await j(`(() => { const o = {}; CAMP_PANELS.panels.forEach(p => { o[p.id] = p.code; }); return o; })()`); // the key that opens each list ('' for a list with no key of its own: the stances)
   K.rows = {}; for (const id of ['launch', 'attack', 'escort', 'guard', 'mine', 'ctuck', 'crun', 'ccarry', 'goal', 'target', 'burn', 'dock', 'emergency']) K.rows[id] = await rk(id); // the list each row is in

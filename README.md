@@ -30,7 +30,7 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 
 - **Power management.** Six pips shared between weapons, shields and engines (like X-Wing's); shields mend by themselves at a rate the shield pips set; three gauges show where the energy goes.
 - **Pilots ask for orders.** Timed radio calls with three choices and real costs.
-- **A mission is a sequence of questions.** Mission 1.1 is the finished example: a patrol turns back, a fork in the road (scout it first), a distress call, an ambush with torpedo boats, a pirate leader who duels your cruiser. Something happens about every minute.
+- **A mission is a sequence of questions.** Mission 1.1 is the finished example: a patrol turns back, a distress call, an ambush with torpedo boats, a pirate leader who duels your cruiser. Something happens about every minute.
 - **Objectives and bonuses**, a score, and ranks that grow your wing.
 
 The state of each system is in [`PROJECT_STATUS.md`](PROJECT_STATUS.md).
@@ -66,7 +66,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 | `Enter` | a homing missile at the target (only while no list is open) |
 | `A` `D` `S` `X` | the one target: the last or next hostile (nearest first), the nearest threat, clear it. A red bracket marks it and its name is under the radar; Attack goes at it, Fly to the target flies to it, `Enter` fires at it |
 | `J` `K` `L` `;` | power, directly: a pip to the shields, the engines, the weapons; `;` back to 2, 2, 2 (the `I` list has the same orders) |
-| `Tab` | the map of the level: `Up` `Down` step the marks, `Enter` flies there (`Shift+Enter` fast), a click sets a mark, `V` scouts, `T` takes a lane, `X` clears the trip |
+| `Tab` | the map of the level: `Up` `Down` step the marks, `Enter` flies there (`Shift+Enter` fast), a click sets a mark, `V` scouts, `X` clears the trip |
 | `-` `=` `Backspace`, mouse wheel | zoom out, zoom in, reset the zoom (the view or the map) |
 | `/` `.` | type an order to the ship's computer; hold `.` and say it (both need a chat key: Settings > Keys) |
 | `Esc`, `H`, `M` | close a list or the map, else pause; the page of keys; mute |

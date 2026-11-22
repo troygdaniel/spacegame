@@ -1,11 +1,11 @@
 // smoke: mission 1.1 of the rim run as four beats, and its hints' keys from the key table (W the convoy list) (plain Node, no Chrome)
 // Card space-game-l1-1-beats (Troy, 21 Nov 2026: "1.1 was boring: lots of flying, fights not interactive"; he will judge every new system on this one mission). Something happens every minute or so and the
 // player directs the fleet in each beat: (1) a patrol escorts the transport out of Luna and peels off at the edge of safe space; (2) a distress call from a miner off the route, as an order call (help it and leave
-// the transport, or stay); (3) an ambush: fighters tie up the wing while torpedo boats go for the transport (the fork and a scout can find it first); (4) the pirate leader, a rival ship, waits for her near Ceres.
+// the transport, or stay); (3) an ambush: fighters tie up the wing while torpedo boats go for the transport (on the road: it used to fork, card space-game-cut-lane-fork); (4) the pirate leader, a rival ship, waits for her near Ceres.
 //   A  the data of the row (the beats are data: traffic, waves, cues, a rival, the bonus)
 //   B  beat 1: the patrol flies with the transport, says it turns back, and goes home
 //   C  beat 2: the miner and its attackers, the call and its three answers, the thanks
-//   D  beat 3: the ambush on the short lane (fighters and torpedo boats), the long lane without the boats
+//   D  beat 3: the ambush on the road (fighters and torpedo boats)
 //   E  beat 4: the pirate leader
 //   F  the pace: a beat about every minute
 //   G  the words, the hints from the key table (cards one-list-keys and list-shortcuts, 22 and 23 Nov 2026: a hint names the key of the list its row is in, W for the convoy's, and the row's own words, "Tuck in"; the fleet hint names Q and its parts' keys E, R and W;
@@ -24,7 +24,7 @@ const sec = (name, fn) => { try { fn(); } catch (e) { check(name + ' ran without
 g.run(`
   window.__ev = [];
   window.__go = (s, fn) => { const k = Math.round(s * 30); for (let i = 0; i < k && !C.result; i++) { if (fn) fn(i); campStep(C, 1 / 30); __ev.push(...C.events); C.events.length = 0; } };
-  window.__mk = (lane, seed) => { window.C = campNew(1, [], { seed: seed == null ? 1 : seed, mission: 0 }); C.god = true; __ev.length = 0; if (lane) campRoutePick(C, lane, "order"); return !!C; };
+  window.__mk = seed => { window.C = campNew(1, [], { seed: seed == null ? 1 : seed, mission: 0 }); C.god = true; __ev.length = 0; return !!C; }; // (1.1 is one road: the fork was cut, card space-game-cut-lane-fork)
   window.__tt = () => campConvoys(C)[0];
   window.__tough = () => campConvoys(C).forEach(f => { f.hp = f.maxHp = 1e6; });
   window.__says = () => __ev.filter(e => e.type === 'say').map(e => e.key);
@@ -37,18 +37,18 @@ sec('A', () => {
   const row = J('campMissionRow(1, 0)');
   const pat = (row.traffic || []).find(t => t.kind === 'patrol'), dm = (row.traffic || []).find(t => t.kind === 'miner');
   check('A  a patrol of two leaves Luna with the transport: it escorts her until 12 percent of the road (the edge of safe space), then turns back', !!pat && pat.n === 2 && pat.escort && pat.escort.convoy === 't1' && pat.escort.until === 0.12 && /patrolleave/.test(pat.escort.say), JSON.stringify(pat));
-  check('A  a miner works off the route, on the west side, apart from every lane', !!dm && Array.isArray(dm.at) && dm.n === 1);
+  check('A  a miner works off the road, on the west side', !!dm && Array.isArray(dm.at) && dm.n === 1);
   check('A  the distress: a cue at 31 percent of the road and a wave of two skiffs near the miner that goes for miners (the wave is tagged beat: distress)', (row.cues || []).some(c => c.name === 'distress' && c.on.lane === 0.31) && row.waves.some(w => w.beat === 'distress' && w.prey === 'miners' && w.ships.skiff === 2 && !w.lane));
-  const shortW = row.waves.filter(w => w.lane === 'short'), longW = row.waves.filter(w => w.lane === 'long');
-  check('A  the ambush is on the short lane: fighters and two torpedo boats for the transport; the long lane has only two small raids of skiffs (card space-game-fleet-command-tune: it was one of three, now two of two so the longer lane has something every minute), no torpedo boats', shortW.some(w => w.ships.tboat === 2 && w.ships.skiff >= 3 && w.goal === 'convoy:t1' && w.ambush) && longW.length === 2 && longW.every(w => w.ships.skiff === 2) && !longW.some(w => w.ships.tboat));
+  const amb = row.waves.filter(w => w.ambush);
+  check('A  the ambush is a plain wave of the road: fighters and two torpedo boats for the transport, at 52 percent (the road forked here until card space-game-cut-lane-fork; the long lane\'s two small raids went with it)', amb.length === 1 && amb[0].ships.tboat === 2 && amb[0].ships.skiff >= 3 && amb[0].goal === 'convoy:t1' && amb[0].on.lane === 0.52 && !amb[0].lane && row.waves.length === 2);
   check('A  the pirate leader waits near Ceres: a rival row, ahead of the transport, with two skiffs, fought by the cruiser', Array.isArray(row.rivals) && row.rivals.length === 1 && row.rivals[0].id === 'leader' && row.rivals[0].kind === 'pirateleader' && row.rivals[0].on.lane === 0.75 && row.rivals[0].escorts.skiff === 2);
-  check('A  the old plain raids (0.03 and 0.82) are gone: nothing hostile before the fork and no wave after the join', !row.waves.some(w => !w.lane && !w.beat));
+  check('A  the old plain raids (0.03 and 0.82) are gone: the row has the distress call and the ambush and nothing else, and no wave belongs to a lane', row.waves.every(w => w.beat === 'distress' || w.ambush) && !row.waves.some(w => w.lane) && !row.route);
   check('A  the debrief: swift, hull, the miner saved (none lost), the leader killed, at most one torpedo hit', JSON.stringify(row.bonus.map(b => b.id)) === '["swift","hull","miner","leader","torp"]' && row.bonus.find(b => b.id === 'leader').type === 'rival' && row.bonus.find(b => b.id === 'torp').type === 'torpedoes');
 });
 
 sec('B', () => {
   console.log('B. beat 1: the patrol');
-  g.run('__mk("short"); __go(2)');
+  g.run('__mk(); __go(2)');
   const pats = () => J('C.ships.filter(u => u.kind === "patrol").map(u => ({ x: u.x, y: u.y }))');
   check('B  two patrol ships are at the Lunar Base at the start, neutral', J('C.ships.filter(u => u.kind === "patrol" && u.team === "neutral").length') === 2 && pats().every(p => Math.hypot(p.x - J('campPlaces(1).luna.x'), p.y - J('campPlaces(1).luna.y')) < 1500));
   g.run('__until(0.07)');
@@ -64,7 +64,7 @@ sec('B', () => {
 
 sec('C', () => {
   console.log('C. beat 2: the distress call');
-  g.run('__mk("short"); campOrder(C, "launch"); __until(0.315)');
+  g.run('__mk(); campOrder(C, "launch"); __until(0.315)');
   check('C  at 31 percent the cue distress is fired and two pirates are out by the miner', J('C.cues.distress != null') && J('campAliens(C).filter(u => u.prey === "miners").length') === 2);
   const near = J('(() => { const m = C.ships.find(u => u.tid === "dm"); const a = campAliens(C)[0]; return !!m && Math.hypot(m.x - a.x, m.y - a.y) < 2500; })()');
   check('C  the pirates are near the miner (within 2,500 px), 2,000 px or more from the transport: off the route', near && J('(() => { const a = campAliens(C)[0], t = __tt(); return Math.hypot(a.x - t.x, a.y - t.y) > 1500; })()'));
@@ -75,42 +75,40 @@ sec('C', () => {
   check('C  choice 1 (the fighters help the miner): ok, and the fighters are ordered to attack the pirates by it', r.ok && r.pick === 'rescue' && J('campWing(C, "fighter").some(u => u.order && u.order.type === "attack")'), JSON.stringify(r));
   g.run('__go(45)');
   check('C  the wing kills the pirates in time and the miner is alive: the thanks, once (the radio), and 40 ore in the store', J('campAliens(C).filter(u => u.prey === "miners").length') === 0 && J('!!C.ships.find(u => u.tid === "dm" && u.hp > 0)') && J('C.ore') >= 40 && J('__says().filter(k => k === "camp.say.thanks").length') === 1, J('C.ore') + ' ' + J('campAliens(C).length'));
-  g.run('__mk("short"); campOrder(C, "launch"); __until(0.315); __go(2); campCallAnswer(C, 3, "key"); __go(60)');
+  g.run('__mk(); campOrder(C, "launch"); __until(0.315); __go(2); campCallAnswer(C, 3, "key"); __go(60)');
   check('C  choice 3 (stay with the transport): the miner is lost to the pirates (a neutral lost, the bonus for it is gone) and there is no thanks', J('C.neutralsLost') >= 1 && !J('__says().includes("camp.say.thanks")'), J('C.neutralsLost'));
-  g.run('__mk("short"); campOrder(C, "launch"); __until(0.315); __go(2); campCallAnswer(C, 0, "late"); __go(2)');
+  g.run('__mk(); campOrder(C, "launch"); __until(0.315); __go(2); campCallAnswer(C, 0, "late"); __go(2)');
   check('C  no answer in time: the pilot takes the cautious pick himself (stay)', J('C.call.log[C.call.log.length - 1].pick') === 'stay');
-  g.run('__mk("short"); campOrder(C, "launch"); __until(0.315); __go(2); campCallAnswer(C, 2, "key")');
+  g.run('__mk(); campOrder(C, "launch"); __until(0.315); __go(2); campCallAnswer(C, 2, "key")');
   check('C  choice 2 sends everyone: the escorts too are on the pirates (nobody stays with the transport)', J('campWing(C).filter(u => u.order && u.order.type === "attack").length') >= J('campWing(C).length') - 0);
 });
 
 sec('D', () => {
   console.log('D. beat 3: the ambush');
-  g.run('__mk("short"); __until(0.52); __go(1)');
-  check('D  on the short lane at 52 percent the ambush comes out of the dark: skiffs and two torpedo boats, with the alarm', J('campAliens(C).filter(u => u.kind === "tboat").length') === 2 && J('campAliens(C).filter(u => u.kind === "skiff").length') >= 4 && J("__ev.some(e => e.type === 'alarm')"));
+  g.run('__mk(); __until(0.52); __go(1)');
+  check('D  on the road at 52 percent the ambush comes out of the dark: skiffs and two torpedo boats, with the alarm', J('campAliens(C).filter(u => u.kind === "tboat").length') === 2 && J('campAliens(C).filter(u => u.kind === "skiff").length') >= 4 && J("__ev.some(e => e.type === 'alarm')"));
   check('D  the torpedo boats go for the transport (their goal is her), the skiffs for her too: the wing cannot cover both', J('campAliens(C).filter(u => u.kind === "tboat").every(u => String(u.goal) === "convoy:t1")'));
-  g.run('__mk("long"); __until(0.58); __go(1)');
-  check('D  on the long lane there is no torpedo boat: only the small raid of skiffs (the long lane is quiet and has a cache)', J('campAliens(C).filter(u => u.kind === "tboat").length') === 0 && J('C.caches.filter(k => k.lane === "long").length') === 1);
 });
 
 sec('E', () => {
   console.log('E. beat 4: the pirate leader');
-  g.run('__mk("short"); __until(0.755); __go(1)');
+  g.run('__mk(); __until(0.755); __go(1)');
   check('E  at 75 percent the pirate leader comes: one rival ship and two skiffs, near Ceres, said on the radio', J('!!campRivalOf(C, "leader")') && J('campAliens(C).filter(u => u.kind === "skiff" && !u.rival).length') >= 2 && J("__says().some(k => /rival\\.leader/.test(k))"));
   const lead = J('(() => { const u = campRivalOf(C, "leader"), t = __tt(); return { d: Math.hypot(u.x - t.x, u.y - t.y), toCeres: Math.hypot(u.x, u.y) }; })()');
   check('E  it is ahead of the transport, on the road to Ceres (within 3,500 px of the transport and 4,500 px of Ceres)', lead.d < 3800 && lead.toCeres < 4800, JSON.stringify(lead));
   g.run('(() => { const u = campRivalOf(C, "leader"); campHurt(C, u, 99999, "test"); })(); __go(1)');
   check('E  when it dies the leader bonus is earned (the leader bonus is a kill, not a chase)', J('C.rivalEnd.leader') === 'dead' && J('campBonuses(C).find(b => b.id === "leader").ok') === true, J('C.rivalEnd'));
-  g.run('__mk("short"); __until(0.8)');
+  g.run('__mk(); __until(0.8)');
   check('E  left alone the leader does not decide the mission: the transport still gets through and wins it (the bonus is not earned)', (g.run('(() => { const f = campConvoys(C)[0]; if (f) { f.x = f.dest.x; f.y = f.dest.y; } })(); __go(1)'), J('C.result') === 'won') && J('campBonuses(C).find(b => b.id === "leader").ok') === false);
 });
 
 sec('F', () => {
   console.log('F. the pace');
-  g.run('__mk("short"); window.__T = {}; for (let i = 0; i < 300 * 30 && !C.result; i++) { __tough(); campStep(C, 1 / 30); const s = C.t / 1000; C.events.forEach(e => { if (e.type === "say") { if (e.key === "camp.say.patrolleave") __T.patrol = s; if (e.key === "camp.say.distress") __T.distress = s; if (/ambush/.test(e.key)) __T.ambush = s; if (/rival\\.leader/.test(e.key)) __T.leader = s; } }); C.events.length = 0; }');
+  g.run('__mk(); window.__T = {}; for (let i = 0; i < 300 * 30 && !C.result; i++) { __tough(); campStep(C, 1 / 30); const s = C.t / 1000; C.events.forEach(e => { if (e.type === "say") { if (e.key === "camp.say.patrolleave") __T.patrol = s; if (e.key === "camp.say.distress") __T.distress = s; if (/ambush/.test(e.key)) __T.ambush = s; if (/rival\\.leader/.test(e.key)) __T.leader = s; } }); C.events.length = 0; }');
   const T = J('__T');
   check('F  the four beats come in order: the patrol turns back, the distress call, the ambush, the leader', T.patrol && T.distress && T.ambush && T.leader && T.patrol < T.distress && T.distress < T.ambush && T.ambush < T.leader, JSON.stringify(T));
   const gaps = [T.distress - T.patrol, T.ambush - T.distress, T.leader - T.ambush];
-  check('F  something happens every 40 to 90 seconds on the short lane (the gaps between the beats)', gaps.every(x => x >= 40 && x <= 90), JSON.stringify(gaps));
+  check('F  something happens every 40 to 90 seconds on the road (the gaps between the beats)', gaps.every(x => x >= 40 && x <= 90), JSON.stringify(gaps));
 });
 
 sec('G', () => {
@@ -127,7 +125,7 @@ sec('G', () => {
   const pkey = id => J(`CAMP_PANELS.panels.find(p => p.id === "${id}").key`), ckey = pkey('convoy');
   const remapC = J('(() => { const C = campNew(1, [], { seed: 1, mission: 0 }), P = CAMP_PANELS.panels.find(p => p.id === "convoy"), was = P.key; P.key = "G"; const t = [campBeatHint(C, "fleet"), campBeatHint(C, "tuck")]; P.key = was; return t; })()');
   check('G  the hints name their keys from the key table (CAMP_PANELS), not in letters of their own: campBeatHint(C, "fleet") carries the fleet list\'s key (Q) and the keys of its parts (E fighters, R escorts, W convoy); the text itself says {fleetkey} {fighterskey} {escortskey} {convoykey}, so a remap of the fleet\'s key or of a part\'s changes the hint; no row has a key of its own to name', typeof hint === 'string' && fkey === 'Q' && hint === fkey + ' is the fleet. ' + pkey('fighters') + ' fighters, ' + pkey('escorts') + ' escorts, ' + ckey + ' convoy.' && [pkey('fighters'), pkey('escorts'), ckey].join() === 'E,R,W' && /\| camp\.hint\.fleet \| \{fleetkey\} is the fleet\. \{fighterskey\} fighters, \{escortskey\} escorts, \{convoykey\} convoy\. \|/.test(raw) && remap.indexOf('G is the fleet. ') === 0 && / G convoy\.$/.test(remapC[0]) && remapC[0].indexOf(fkey + ' is the fleet. ') === 0 && remapC[1].indexOf('Press G and pick') > 0 && J('CAMP_PANELS.panels.every(p => p.rows.every(r => !("k" in r)))') && J('campBeatKey("fleet")') === fkey && J('campBeatKey("convoy")') === ckey && J('campBeatKeys().convoy') === ckey, hint + ' | ' + remap + ' | ' + remapC.join(' | '));
-  g.run('__mk("short"); __until(0.525); __go(1)');
+  g.run('__mk(); __until(0.525); __go(1)');
   const shown = {}; const h1 = J('(() => { const sh = {}; const a = campBeatNudge(C, sh); return a; })()');
   const tuckRow = J('CAMP_PANELS.panels.find(p => p.id === "convoy").rows.find(r => r.id === "ctuck").label'), runRow = J('CAMP_PANELS.panels.find(p => p.id === "convoy").rows.find(r => r.id === "crun").label');
   check('G  with torpedo boats out the hint says to tuck the transport in: the key of the list the tuck row is in (the convoy\'s own, W) and the row\'s own words, both from the table ("Press W and pick \"Tuck in\""); the fleet list (Q) of this mission has the Convoy row, with that key on it', typeof h1 === 'string' && tuckRow === 'Tuck in' && ckey === 'W' && J('campKeyVia("ctuck").id') === 'convoy' && J('campKeyVar("viactuck")') === ckey && /^Torpedo boats!/.test(h1) && h1.indexOf('Press ' + ckey + ' and pick "' + tuckRow + '"') >= 0 && J(`campPanelList(C, 'convoy').some(r => r.id === 'ctuck')`) && J(`campPanelRows(C, 'convoy').find(r => r.id === 'ctuck').ok`) === true && J(`campPanelRows(C, 'fleet').find(r => r.id === 'gconvoy').key`) === ckey, JSON.stringify(h1));
@@ -135,7 +133,7 @@ sec('G', () => {
   check('G  and the hint is true: that key opens the convoy list directly (no order), and Enter on the "Tuck in" row gives the order (a fleet order; the list closes)', did.o.used && !did.o.ran && did.o.open === 'convoy' && did.r.ran && did.r.ok && did.r.row === 'ctuck' && did.r.fleet && did.r.open === '' && did.state === 'tuck', JSON.stringify(did));
   g.run('campOrder(C, "convoy", "carry on"); campOrder(C, "convoy", "tuck in")');
   check('G  tucked in (Tuck in is in force) the hint is not shown: the player has done it', J('campConvoyState(C)') === 'tuck' && !/tuck in/i.test(J('campBeatNudge(C, {}) || ""')));
-  g.run('C.ships.filter(u => u.team === "alien").forEach(u => { u.hp = 0; }); __mk("short"); __until(0.755); __go(1)');
+  g.run('C.ships.filter(u => u.team === "alien").forEach(u => { u.hp = 0; }); __mk(); __until(0.755); __go(1)');
   const h2 = J('campBeatNudge(C, {})');
   check('G  with the leader out the hint says to run the transport past it (the row "Run for it" of the convoy list, W, in the table\'s words)', typeof h2 === 'string' && runRow === 'Run for it' && /^The leader blocks the way\./.test(h2) && h2.indexOf('Press ' + ckey + ' and pick "' + runRow + '"') >= 0 && J(`campPanelList(C, 'convoy').some(r => r.id === 'crun')`), JSON.stringify(h2));
   const src = read('src/campbeats.js');
