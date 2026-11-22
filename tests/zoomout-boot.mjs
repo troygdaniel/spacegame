@@ -1,6 +1,6 @@
 // not in the smoke: the zoom out in the real game (one Chrome, muted, through the test lock; card space-game-zoom-out-more)
-// It boots a mission, launches the wing and zooms the FLIGHT view out with the - key (the camera goes to 0.2, twice the Long Haul's 0.4; the small ships keep a size you can see), with a fight and the
-// convoy in it, and times the same stretch of the battle at zoom 1 and at 0.2; then opens the Tab map and zooms it out with - and the wheel until the whole system fits, a picture on the way.
+// It boots a mission, launches the wing and zooms the FLIGHT view out with the - key (the flight starts at 0.335, six presses of -; it goes out to the mission's farthest zoom, where the route fits: 0.2 or under; the small ships keep a size you can see), with a fight and the
+// convoy in it, and times the same stretch of the battle at the start zoom and at the farthest; then opens the Tab map and zooms it out with - and the wheel until the whole system fits, a picture on the way.
 //   node tests/zoomout-boot.mjs [--level 1] [--mission 1]        pictures go to HUNT_SHOTS (default ~/dev/spacegame-night/shots/zoom-*.png), never into the repository
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
@@ -38,19 +38,21 @@ try {
   await t.ev(`(() => { const C = ${S}.camp, c = C.carrier; if (C.arrivedAt == null) C.arrivedAt = C.t - 5000; C.orders.launch = 1; C.bay.fighters = 4; for (let i = 0; i < 6; i++) campSpawn(C, i < 3 ? 'skiff' : 'raider', c.x + 700 + i * 120, c.y + (i % 2 ? 260 : -260)); for (let i = 0; i < 4; i++) { const f = campSpawn(C, 'fighter', c.x + 80 + i * 30, c.y + (i % 2 ? 60 : -60)); f.order = { type: 'attack', target: '' }; } C.shield = campShieldMax(C); C.god = true; })()`);
   await t.run(600);
   const ms = async n => { const t0 = Date.now(); await t.run(n); return Date.now() - t0; };
-  const w1 = await ms(2000), z1 = await j('CAMZOOM.want'); await snap('1-flight-zoom1');
-  // - presses: the camera goes out in steps of 1.2 to 0.2 and stops there
-  let zs = [1]; for (let i = 0; i < 12; i++) { await key('Minus', 40); zs.push(await j('CAMZOOM.want')); }
+  const w1 = await ms(2000), z1 = await j('CAMZOOM.want'), DEF = 1 / Math.pow(1.2, 6); await snap('1-flight-start');
+  check('the flight starts at the zoom six presses of - reach (card space-game-zoom-start-six): 0.335', Math.abs(z1 - DEF) < 1e-6, String(z1));
+  // - presses: the camera goes out in steps (1.2 to 0.2, 1.5 past it) to this mission's farthest zoom, where the whole route fits (card space-game-zoom-fit-mission), and stops there
+  const far = await j('CAMZOOM.min');
+  let zs = [z1]; for (let i = 0; i < 12; i++) { await key('Minus', 40); zs.push(await j('CAMZOOM.want')); }
   note('zoom after each press of -: ' + zs.map(z => +z.toFixed(3)).join(' '));
-  check('- zooms the flight view out in steps and stops at 0.2 (twice as far as the Long Haul\'s 0.4)', zs[zs.length - 1] === 0.2 && zs.every((z, i) => !i || z <= zs[i - 1]) && zs.filter(z => z === 0.2).length >= 2);
-  await t.run(900); const cz = await j(`${S}.cameras.main.zoom`); check('the camera arrives at 0.2', Math.abs(cz - 0.2) < 0.005, String(cz));
-  const w2 = await ms(2000); await snap('2-flight-zoom02');
-  note('2 s of the battle took ' + w1 + ' ms at zoom 1 and ' + w2 + ' ms at 0.2 (virtual time stepped by hand: frames cost the same unless drawing does)');
+  check('- zooms the flight view out in steps and stops at the mission\'s farthest zoom (' + far.toFixed(4) + ': the route fits; 0.2 or under, the Long Haul\'s is 0.4)', zs[zs.length - 1] === far && far <= 0.2 && zs.every((z, i) => !i || z <= zs[i - 1]) && zs.filter(z => z === far).length >= 2);
+  await t.run(900); const cz = await j(`${S}.cameras.main.zoom`); check('the camera arrives at the farthest zoom', Math.abs(cz - far) < 0.0005, String(cz));
+  const w2 = await ms(2000); await snap('2-flight-zoom-far');
+  note('2 s of the battle took ' + w1 + ' ms at the start zoom and ' + w2 + ' ms at ' + far.toFixed(4) + ' (virtual time stepped by hand: frames cost the same unless drawing does)');
   check('the far-out view costs no more than twice the frames of the near one', w2 <= Math.max(2 * w1, w1 + 1500), w1 + ' -> ' + w2);
   const sz = await j(`(() => { const out = {}; Object.keys(${S}.sp).forEach(id => { const u = ${S}.camp.by[id]; if (!u) return; const sp = ${S}.sp[id]; out[u.kind] = Math.round(sp.displayWidth * ${S}.cameras.main.zoom * 10) / 10; }); return out; })()`);
-  note('drawn width on the screen by kind at zoom 0.2: ' + JSON.stringify(sz)); check('every ship is drawn at least 9 px across on the screen at 0.2 (the least is 10)', Object.values(sz).length > 3 && Object.values(sz).every(v => v >= 9), JSON.stringify(sz));
+  note('drawn width on the screen by kind at the farthest zoom: ' + JSON.stringify(sz)); check('every ship is drawn at least 9 px across on the screen at the farthest zoom (the least is 10)', Object.values(sz).length > 3 && Object.values(sz).every(v => v >= 9), JSON.stringify(sz));
   const fps = await j(`Math.round(game.loop.actualFps || 0)`); note('actualFps (as the loop sees it, stepped clock): ' + fps);
-  await key('Backspace', 40); await t.run(1200); check('Backspace puts the view back to 1', Math.abs((await j(`${S}.cameras.main.zoom`)) - 1) < 0.01);
+  await key('Backspace', 40); await t.run(1200); check('Backspace puts the view back to the start zoom (0.335, six presses of -), not 1', Math.abs((await j(`${S}.cameras.main.zoom`)) - DEF) < 0.01);
   // the Tab map: - and the wheel out to the whole system
   await key('Tab'); await t.run(700); const m0 = await j(`({ z: ${S}.mp.z, zMin: ${S}.mp.zMin, whole: ${S}.mp.whole })`); note('map opened: ' + JSON.stringify(m0)); await snap('3-map-open');
   let mz = []; for (let i = 0; i < 6; i++) { await key('Minus', 40); mz.push(+(await j(`${S}.mp.zWant`)).toFixed(3)); } await t.run(1200); await snap('4-map-6-presses');
