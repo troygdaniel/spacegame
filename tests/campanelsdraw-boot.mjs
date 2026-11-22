@@ -41,11 +41,11 @@ async function campaign() {
       const up = campKeyList(p.parent), pat = up ? campPanelList(C, up.id).findIndex(r => r.open === p.id) : -1; return up && up.code && pat >= 0 ? { list: p.id, keys: [[up.code, pat], ['Enter', at]] } : null; })()`);
     const goTo = async row => { // the list open with the highlight on the row (not given): every place is read from the lists of THIS mission
       const way = await wayTo(row); if (!way) return false;
-      if (await isOpen()) await press(t, 'Escape', 20); // Esc closes an open list (it pauses only when none is open)
+      for (let n = 0; n < 6 && (await isOpen()); n++) await press(t, 'Escape', 20); // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): pressed until every list is closed (it pauses only when none is open)
       for (const [code, downs] of way.keys) { await press(t, code, 20); for (let i = 0; i < downs; i++) await press(t, 'ArrowDown', 20); }
       await t.run(300); return (await isOpen()) === way.list;
     };
-    const order = async row => { if (!(await goTo(row))) return false; await press(t, 'Enter', 20); await t.run(300); return true; };
+    const order = async row => { if (!(await goTo(row))) return false; await press(t, 'Enter', 20); await t.run(300); if (await j(`!!${P}.pick`)) { await press(t, 'Enter', 20); await t.run(300); } return true; }; // a row that needs a target with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one
     const shownRows = () => j(`${PL}.rows.filter(r => r.name.visible).map(r => r.name.text)`);
     const drawnAs = id => j(`campPanelRows(${SC}.camp, ${JSON.stringify(id)}).map(r => r.label + (r.more ? '  >' : ''))`); // a row as it is drawn: its words, and an arrow when it opens a part
     const shownCaps = () => j(`${PL}.rows.filter(r => r.name.visible).map(r => r.cap.visible ? r.cap.text : '')`);

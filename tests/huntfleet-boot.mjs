@@ -58,20 +58,22 @@ try {
   const K = {}; // filled after the boot
   const DIRECT = ['shields', 'engines', 'weapons', 'balance', 'missile']; // not rows: keys of their own (J K L ; and Enter while no list is open)
   const listOpen = () => j(`campPanelOpen(${S}.pn)`);
+  const closeLists = async () => { for (let n = 0; n < 6 && (await listOpen()); n++) await key(K.esc); }; // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): until every list is closed (it pauses only when none is open)
   const press = async (id, wait = 50) => { // an order: a direct key, or a row of a list (the key of the list it is in, Down to the row, Enter)
     if ((await j(`${S}.mode`)) !== 'play') return false; // a card has the keys
     if (DIRECT.indexOf(id) >= 0) {
       const c = K[id === 'balance' ? 'even' : id]; if (!c) { note(`(no key for ${id}: the table has none)`); return false; }
-      if (await listOpen()) await key(K.esc);
+      await closeLists();
       if (id === 'missile' && (await j(`campCallHasKeys(${S})`))) { note('(no missile now: a pilot\'s call waits, and Enter would answer it)'); return false; }
       await key(c, wait); return true;
     }
     const list = K.rows[id]; if (!list || !(list in K.lists)) { note(`(no row ${id} in the table of the lists)`); return false; }
     const way = await wayTo(id); if (!way) { note(`(the row ${id} is left out of this mission's ${list} list)`); return false; }
-    if (await listOpen()) await key(K.esc); // an open list is closed first (Esc pauses only when none is open)
+    await closeLists(); // an open list is closed first (Esc pauses only when none is open)
     for (const [code, downs] of way) { await key(code, wait); for (let i = 0; i < downs; i++) await key(K.down, wait); }
     await key(K.pick, wait);
-    if (await listOpen()) await key(K.esc); // an order that is refused leaves the list open (its reason is the toast): it is closed, the keys go back to the ship
+    if (await j(`!!${S}.pn.pick`)) await key(K.pick, wait); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one
+    await closeLists(); // an order that is refused leaves the list open (its reason is the toast): it is closed, the keys go back to the ship
     return true;
   };
   const convoyTo = async (row, rx) => { const n0 = await j('window.__log.length'), gave = await press(row); await t.run(300); const said = (await toasts(n0)).join(' | '); check('the convoy row ' + row + ' gave ' + rx, gave && rx.test(said), said.slice(0, 200)); return gave; }; // the convoy orders are plain rows, one for each: the row is given once and says its order (no key steps through them, nothing to wait for)
@@ -122,7 +124,7 @@ try {
     note(`call ${v.id} at ${await j(`Math.round(${S}.camp.t / 1000)`)} s, ${style} (${JSON.stringify(v.rows.map(r => r.n + ':' + r.pick))}, cautious ${v.def}) -> ${n || 'no answer'}`); await snap('call-' + callN + '-' + v.id);
     if (!n) return;
     // the call is a small list: the highlight starts on the pilot's own pick (view.def - 1), Up and Down move it (round at the ends), Enter answers with the highlighted row. An order list has the keys while it is open: it is closed first
-    if (await listOpen()) await key(K.esc);
+    await closeLists();
     if (!(await j(`campCallHasKeys(${S})`))) { note('(the call does not have the keys now: not answered)'); return; }
     const sel = await j(`campCallSel(${S})`), downs = (n - 1 - sel + v.rows.length) % v.rows.length;
     for (let i = 0; i < downs; i++) await key(K.down); await key(K.pick);

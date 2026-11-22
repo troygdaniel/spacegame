@@ -27,13 +27,14 @@ try {
   const listGo = async row => {
     if ((await j(`${SC}.mode`)) !== 'play') return false; // a card has the keys: Enter would be the card's
     const way = await listWay(row); if (!way) return false; // the row is not in this mission's list
-    if (await j(`campPanelOpen(${SC}.pn)`)) await key('Escape'); // an open list is closed first (Esc pauses only when none is open)
+    for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await key('Escape'); // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): pressed until every list is closed (it pauses only when none is open)
     for (const [code, downs] of way.keys) { await key(code); for (let i = 0; i < downs; i++) await key('ArrowDown'); }
     return true;
   };
   const listOrder = async row => {
     if (!(await listGo(row))) return false; await key('Enter');
-    if (await j(`campPanelOpen(${SC}.pn)`)) await key('Escape'); // an order that is refused leaves the list open, and so does a power row: it is closed, the keys go back to the ship
+    if (await j(`!!${SC}.pn.pick`)) await key('Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
+    for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await key('Escape'); // an order that is refused leaves the list open, and so does a power row: Esc until it is closed, the keys go back to the ship
     return true;
   };
   const hi = `${SC}.pnl.rows[${SC}.pn.at - ${SC}.pn.top]`; // the objects of the highlighted row of the open list (src/campanelsdraw.js)
