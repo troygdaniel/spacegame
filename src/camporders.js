@@ -14,8 +14,7 @@
 //   campCallStart(C, id, ctx)   a script opens a call of a type that has `scripted: true` (its trigger is not asked); false while one waits
 //   campCallAnswer(C, n, how)   n: 1, 2 or 3 (0: the pilot's own pick); how: 'key', 'bot', 'late'; { ok, id, pick } and an event { type: 'call', stage: 'answer', ... }
 //   campCallView(C)             what the prompt draws: null, or { id, pilot, line, left, total, def, rows: [{ n, pick, label, def }] }
-//   campCallOpen(C)             a call is waiting for an answer (the slow-time card reads this: the battle runs slow while it is true)
-//   C.timeScale                 (optional, set by the command-time card) the battle's speed against the player's seconds: the pilot's clock counts the player's seconds, not the slowed battle's
+//   campCallOpen(C)             a call is waiting for an answer (the scene reads this: a call has the arrows and Enter, and the lists are dimmed behind it; the battle is NOT slowed)
 const CAMP_CALLS = {
   first: 40,       // s of the mission's clock before the first call may come (the first minute's hints, src/campnudge.js, are said first: a call at 20 s took their turn)
   gap: 25,         // s from one call opening to the next one that may open
@@ -111,7 +110,7 @@ function campCallsTick(C, dt) {
   if (o) {
     const ids = [].concat(o.ctx.who || [], o.ctx.ids || []);
     if (ids.length && !ids.some(id => C.by[id] && C.by[id].hp > 0)) { S.open = null; C.events.push({ type: 'call', stage: 'gone', id: o.id }); return; } // the ship he was calling about is gone: there is nothing to order
-    o.left -= dt / (C.timeScale > 0 && C.timeScale <= 1 ? C.timeScale : 1);
+    o.left -= dt;
     if (o.left <= 0) campCallAnswer(C, 0, 'late');
     return;
   }

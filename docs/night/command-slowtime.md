@@ -1,5 +1,7 @@
 # Command time: the battle slows while you give orders (card space-game-command-slowtime, Troy, 21 Nov 2026)
 
+> **Superseded 22 Nov 2026** by card `space-game-no-command-slowdown` (Troy: "do not change the speed of the game with command mode"): the quarter-speed time, its sign and its hint described below are removed; only the 15 percent lower pace values stay. Kept as the record.
+
 Troy's goal: fights were not interactive and escorts were boring; he wants to direct the fleet more. Undo anchor: `git tag fleet-command-before`.
 
 ## What changed

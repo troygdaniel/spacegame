@@ -32,7 +32,6 @@ How the game is built, for someone (a person or an AI) who has never seen it. It
 | Pilots ask for orders (timed calls: a small amber list in the middle, Up, Down, Enter) | `camporders.js` | `camporderdraw.js` |
 | Mission 1.1's beats, route forks, scouting | `campbeats.js`, `camproute.js`, `campanomaly.js` | `campanomalydraw.js` |
 | Enemies: pirates, torpedo boats, the rival | `camppirates.js`, `camptorpedo.js`, `camprival.js` | `camppirateart.js`, `camptorpedoscene.js`, `camprivaldraw.js` |
-| Command time (battle slows while you order) | `campslow.js` | its sign, same file |
 | The three gauges and power bars | `camphud.js` | same file |
 | Maps and navigation | `campmap.js`, `campnav.js`, `campsol.js`, `campzoom.js` | `campmapdraw.js`, `campmapfire.js` |
 | The ready room, ranks, outposts, docking | `camphub.js`, `campranks.js`, `campoutpost.js`, `campdock.js` | `camphubscene.js` |
@@ -42,7 +41,7 @@ How the game is built, for someone (a person or an AI) who has never seen it. It
 
 The command strip, the ship computer and voice reach the simulation through one closed list of actions (`SC_ACT` in `shipcomputer.js`), so a typed "launch", a spoken one and the row of the fleet list do the same thing and are refused for the same reasons.
 
-**The scene** (`src/campaignscene.js`) is deliberately thin: it reads the keyboard, decides how fast time runs (command time slows it to a quarter while a list, the map or a pilot's call is open, and for `CAMP.slow.after` ms after a fleet order or a pick of the target), calls `campStep`, and draws the state. It is the only place with Phaser in the mode and no test runs it directly; tests drive it on a stand-in object, and a few Chrome boots run the real thing.
+**The scene** (`src/campaignscene.js`) is deliberately thin: it reads the keyboard, steps the battle by each frame's own time (a list, the map or a pilot's call open never slows it), calls `campStep`, and draws the state. It is the only place with Phaser in the mode and no test runs it directly; tests drive it on a stand-in object, and a few Chrome boots run the real thing.
 
 Every rule, number and level row is described in `docs/CAMPAIGN.md` (one section per feature, with the card and the reason). Balance and the bots are `docs/CAMPAIGN-TUNING.md` and `docs/WRAPUP-DIFFICULTY.md`.
 
@@ -71,7 +70,7 @@ Long Haul saves in the browser (`localStorage`, key `longhaul.save.v1`). The Cam
 - **No build step, no dependencies for the game.** A new person or an AI can read one file, change a number and reload. Node is only for tests and tools.
 - **The simulation knows nothing about the screen.** That is what makes a fight testable to the last digit, tunable by bots, and safe to change at speed with many hands.
 - **One table for numbers, one for keys, one place for words.** Each has a test that notices drift (a key named in a hint that is not in the table, a word key with no voice classification, a pin of a number that changed).
-- **Deterministic by seed.** Randomness comes from seeded streams; the scene's real-time pieces (radio chatter timing, pictures) never feed back into the simulation. Command time slows the simulation by scaling the step, not by changing any rule.
+- **Deterministic by seed.** Randomness comes from seeded streams; the scene's real-time pieces (radio chatter timing, pictures) never feed back into the simulation. The scene steps the simulation by the frame's own time and never scales it (there is no command time).
 - **Small files with one job.** A feature is one rules file and, if it draws, one drawing file. Several people (and agents) edit at once, so files rarely collide.
 - **Feature freeze, then the bench.** New ideas are parked in `ROADMAP.md`; the freeze since 20 Nov 2026 means bug fixes and the fleet-command batch only. The test for any idea: *what does the player decide, and what does it cost?*
 - **Undo anchors.** Big batches are tagged (`fleet-command-before` marks the start of the current one) so a change can be backed out as a set.
