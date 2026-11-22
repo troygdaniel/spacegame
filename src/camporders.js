@@ -8,17 +8,22 @@
 // their effect in CAMP_CALL_FX, `def` is the cautious one (an index into pick) that is taken when the pilot hears nothing. An EFFECT is { do(C, ctx) } and says whether it could be done: a pick that cannot be
 // done (no missile, the target is gone) is not done and the cautious one is. The words of a type are camp.call.line.<id>, of an effect camp.call.fx.<id> (the label on the prompt) and camp.call.r.<id> (the
 // pilot's answer, said on the radio), and camp.call.late and camp.call.fail are the answers to no answer and to a pick that could not be done (content/text/camporders.md).
-//   C.call = { n, next, open, last, seen, log }  made at the first tick:  n calls made, next: the battle clock (ms) before which none opens, open: the call that waits { id, ctx, pilot, at, left, total, def }
+//   C.call = { n, next, open, last, seen, log }  made at the first tick:  n calls made, next: the battle clock (ms) before which none opens, open: the call that waits { id, ctx, pilot, at, left, total, def, held }
+//   THE HOLD (card space-game-call-timer-stops; Troy, 22 Nov: "stop the selection timer if the user hits a key, otherwise keep it"): a call opens with its CAMP_CALLS.answer seconds running. When the player touches the prompt (Up or Down on
+//   it: campCallHold, called by the scene's campCallKey) the seconds stop where they are (`held` is 0 and counts up) and the call waits for Enter. Nothing else holds it (a fire, power, target or list key is not the prompt's), and a call
+//   nobody touches runs out to the cautious pick as ever. A held call does not block the others for ever: CAMP_CALLS.held seconds after the hold the pilot takes the cautious pick (a late answer, said so); no call opens while one waits.
 //   campCallsTick(C, dt)        every tick (campTick): the waiting call's clock, the call that may open now
 //   C.call.mood = { until, deal, take, rate }  the answer's worth (CAMP_CALLS.mood, CAMP_CALL_RATE): until the battle clock `until` the wing (fighters and escorts) deals `deal` times the damage and takes `take` times (campHurt, src/campaign.js)
 //   campCallStart(C, id, ctx)   a script opens a call of a type that has `scripted: true` (its trigger is not asked); false while one waits
+//   campCallHold(C)            the player touched the prompt: the clock stops (true when it was held by this); an event { type: 'call', stage: 'hold', id }
 //   campCallAnswer(C, n, how)   n: 1, 2 or 3 (0: the pilot's own pick); how: 'key', 'bot', 'late'; { ok, id, pick } and an event { type: 'call', stage: 'answer', ... }
-//   campCallView(C)             what the prompt draws: null, or { id, pilot, line, left, total, def, rows: [{ n, pick, label, def }] }
+//   campCallView(C)             what the prompt draws: null, or { id, pilot, line, left, total, held, def, rows: [{ n, pick, label, def }] }  (held: the clock is stopped, `left` is what it stopped at)
 //   campCallOpen(C)             a call is waiting for an answer (the scene reads this: a call has the arrows and Enter, and the lists are dimmed behind it; the battle is NOT slowed)
 const CAMP_CALLS = {
   first: 40,       // s of the mission's clock before the first call may come (the first minute's hints, src/campnudge.js, are said first: a call at 20 s took their turn)
   gap: 25,         // s from one call opening to the next one that may open
-  answer: 8,       // s the pilot waits for an answer
+  answer: 8,       // s the pilot waits for an answer, until the player touches the prompt (Up or Down: then the clock stops)
+  held: 30,        // s a call the player has touched waits for Enter before the pilot takes the cautious pick himself (the others wait behind it: one call at a time)
   again: 70,       // s before the same type of call is made again
   pilots: 4,       // the callsigns of src/campchatter.js, taking turns
   wound: 0.4,      // a wingman at this share of his hull or less is "hit and burning"
@@ -110,6 +115,7 @@ function campCallsTick(C, dt) {
   if (o) {
     const ids = [].concat(o.ctx.who || [], o.ctx.ids || []);
     if (ids.length && !ids.some(id => C.by[id] && C.by[id].hp > 0)) { S.open = null; C.events.push({ type: 'call', stage: 'gone', id: o.id }); return; } // the ship he was calling about is gone: there is nothing to order
+    if (o.held != null) { o.held += dt; if (o.held >= CAMP_CALLS.held) campCallAnswer(C, 0, 'late'); return; } // touched: the seconds are stopped; it waits for Enter, for CAMP_CALLS.held at the most
     o.left -= dt;
     if (o.left <= 0) campCallAnswer(C, 0, 'late');
     return;
@@ -120,7 +126,7 @@ function campCallsTick(C, dt) {
     if (S.last[T.id] != null && C.t - S.last[T.id] < CAMP_CALLS.again * 1000) continue;
     const ctx = campTry(() => T.when(C, S), null); if (!ctx) continue;
     S.n++; S.last[T.id] = C.t; S.next = C.t + CAMP_CALLS.gap * 1000;
-    S.open = { id: T.id, ctx, pilot: (S.n - 1) % CAMP_CALLS.pilots, at: C.t, left: CAMP_CALLS.answer, total: CAMP_CALLS.answer, def: T.def };
+    S.open = { id: T.id, ctx, pilot: (S.n - 1) % CAMP_CALLS.pilots, at: C.t, left: CAMP_CALLS.answer, total: CAMP_CALLS.answer, def: T.def, held: null };
     C.events.push({ type: 'call', stage: 'open', id: T.id, pilot: S.open.pilot });
     return;
   }
@@ -131,8 +137,15 @@ function campCallStart(C, id, ctx) {
   const T = campCallType(id); if (!C || C.result || !T) return false;
   const S = C.call || (C.call = campCallsNew(C)); if (S.open) return false;
   S.n++; S.last[T.id] = C.t; S.next = Math.max(S.next, C.t + CAMP_CALLS.gap * 1000);
-  S.open = { id: T.id, ctx: ctx || {}, pilot: (S.n - 1) % CAMP_CALLS.pilots, at: C.t, left: CAMP_CALLS.answer, total: CAMP_CALLS.answer, def: T.def };
+  S.open = { id: T.id, ctx: ctx || {}, pilot: (S.n - 1) % CAMP_CALLS.pilots, at: C.t, left: CAMP_CALLS.answer, total: CAMP_CALLS.answer, def: T.def, held: null };
   C.events.push({ type: 'call', stage: 'open', id: T.id, pilot: S.open.pilot });
+  return true;
+}
+
+// the player touched the prompt (Up or Down on it): the pilot's seconds stop where they are and the call waits for Enter (CAMP_CALLS.held s at the most). true when this held it; false when none waits or it is held already
+function campCallHold(C) {
+  const o = C && !C.result && C.call && C.call.open; if (!o || o.held != null) return false;
+  o.held = 0; C.events.push({ type: 'call', stage: 'hold', id: o.id });
   return true;
 }
 
@@ -153,5 +166,5 @@ function campCallAnswer(C, n, how) {
 function campCallView(C) {
   const o = C && C.call && C.call.open; if (!o) return null;
   const T = campCallType(o.id); if (!T) return null;
-  return { id: o.id, pilot: o.pilot, line: 'camp.call.line.' + o.id, left: Math.max(0, o.left), total: o.total, def: T.def + 1, rows: T.pick.map((p, i) => ({ n: i + 1, pick: p, label: 'camp.call.fx.' + p, def: i === T.def })) };
+  return { id: o.id, pilot: o.pilot, line: 'camp.call.line.' + o.id, left: Math.max(0, o.left), total: o.total, held: o.held != null, def: T.def + 1, rows: T.pick.map((p, i) => ({ n: i + 1, pick: p, label: 'camp.call.fx.' + p, def: i === T.def })) };
 }

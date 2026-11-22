@@ -43,7 +43,7 @@ function camzoomEase(cur, target, dt) {
   const k = 1 - Math.exp(-Math.max(0, dt) * CAMZOOM.ease), z = cur + (target - cur) * k;
   return Math.abs(target - z) < 0.0005 ? target : z;
 }
-function camzoomCompose(base, wheel) { return Math.min(4, Math.max(0.1, base * wheel)); } // (the floor was 0.25: the Campaign's view goes out to 0.2, card space-game-zoom-out-more; the Long Haul's wheel stops at 0.4 times its base, which is over this either way)
+function camzoomCompose(base, wheel) { return Math.min(4, Math.max(0.01, base * wheel)); } // (the floor was 0.25, then 0.1: the Campaign's view goes out to 0.2 (card space-game-zoom-out-more) and, on a long mission, to the zoom at which its route fits, down to 0.02 (card space-game-zoom-fit-mission); the Long Haul's wheel stops at 0.4 times its base, which is over this either way)
 // how much a world label is scaled so it keeps its size on the screen when the camera is out
 function camzoomLabelScale(z) { return z < 1 ? Math.min(CAMZOOM.labelMax, 1 / z) : 1; }
 function camzoomFarK(z) { return Math.min(1, Math.max(0, (CAMZOOM.far - z) / (CAMZOOM.far - CAMZOOM.farFull))); }

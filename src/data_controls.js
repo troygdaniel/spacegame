@@ -221,7 +221,7 @@ const CONTROLS = [
     { k: ['S', 'X'], t: 'S the nearest threat, X clears it', sub: 'THE TARGET' },
     { k: ['J', 'K', 'L'], t: 'Power to shields, engines, weapons', sub: 'POWER' },
     { k: [';'], t: 'Balance the power: 2 / 2 / 2', sub: 'POWER' },
-    { k: ['Up', 'Down'], t: 'A pilot calls: pick an answer; Enter', sub: 'A PILOT\'S CALL' }, // the call's small list has the arrows and Enter while no Q or P list is open (src/camporderdraw.js)
+    { k: ['Up', 'Down'], t: 'A pilot calls: pick (stops timer); Enter', sub: 'A PILOT\'S CALL' }, // the call's small list has the arrows and Enter while no Q or P list is open; a press of Up or Down stops its 8 s timer, and the call then waits for Enter (src/camporderdraw.js, card space-game-call-timer-stops)
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Up', 'Down'], t: 'Map: last or next mark (Left, Right)', sub: 'THE MAP' },
     { k: ['Enter'], t: 'Map: fly there (Shift+Enter: fast)', sub: 'THE MAP' },
