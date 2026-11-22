@@ -24,6 +24,7 @@ function campRepairSay(C, which) {
 
 function campRepairRun(C, u, dt) {
   const K = CAMP.repair, c = C.carrier;
+  if (!campFlag('repair') && !u.repair) return false; // the repair is switched off (the tuning panel): a hurt fighter fights on (one already on its way home is mended)
   if (u.team !== 'earth' || u.scout || K.kinds.indexOf(u.kind) < 0 || c.hp <= 0) return false;
   if (!u.repair) {
     if (u.hp >= u.maxHp * K.below) return false;

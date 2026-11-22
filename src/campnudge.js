@@ -9,7 +9,7 @@ const CAMPNUDGE = [ // plain data: id, the level, the second it may first show, 
 ];
 function campNudge(C, shown) {
   try {
-    if (!C || C.result || !shown) return null;
+    if (!C || C.result || !shown || !campFlag('hints')) return null; // the hints are switched off (the tuning panel): none shows
     for (const h of CAMPNUDGE) {
       if (shown[h.id] || C.level !== h.level || C.t < h.at * 1000) continue;
       if (!h.when(C)) { shown[h.id] = true; continue; } // no longer true (the player did it): never hinted

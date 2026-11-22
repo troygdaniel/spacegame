@@ -19,8 +19,20 @@
 const CAMP = {
   store: 'longhaul.campaign',              // the localStorage key of the campaign progress (the level reached and the techs picked)
   step: 1 / 30,                            // s: the longest step the sim takes at once (a longer frame is cut into steps)
+  time: {                                  // the clock of the missions' scripts (card space-game-tuning-panel)
+    waves: 1                               // times every `at` and `early` second of a wave row: 0.5 brings every timed wave in twice as soon, 2 holds each back twice as long (a wave that waits for a place or an event, `on`, is not timed)
+  },
   flags: {                                 // THE SWITCHES (card space-game-tuning-panel; the tuning panel's ON and OFF rows, src/camptune.js): each is a whole system, and false takes it out as if it were not in the mission. Systems read them through campFlag
-    calls: true                            // the pilots' radio calls for orders (src/camporders.js): off, none opens and an open one is dropped
+    calls: true,                           // the pilots' radio calls for orders (src/camporders.js): off, none opens and an open one is dropped
+    distress: true,                        // the distress call of mission 1.1 (beat 2, src/campbeats.js): off, the pirates never fall on the miner, the pilots never ask, and the miner gives no thanks
+    tboats: true,                          // the enemy torpedo boats (src/camptorpedo.js): off, none is ever made
+    rival: true,                           // the rival ship, the pirate leader (src/camprival.js): off, it never comes (and its bonus cannot be met)
+    repair: true,                          // a hurt fighter flies home to be mended (src/camprepair.js): off, it fights on
+    convoyorders: true,                    // Tuck in, Run for it, Hold here, Carry on (src/campconvoy.js): off, the escorted ships fly their own way and the Convoy part is not in the list
+    stance: true,                          // the wing's stances (src/campaign.js, the Stance part of the fleet list): off, the wing always fights freely and the part is not in the list
+    autofire: false,                       // true: the turrets fire by themselves at what is in reach (Space is not needed); false: they fire only while Space is held
+    laser: true,                           // the turrets' charge (CAMP.tank): off, a shot costs nothing and the tank is always full
+    hints: true                            // the first-minute hints and the beats' tips (src/campnudge.js, src/campbeats.js): off, none shows
   },
   size: {                                  // how big your ships are: the one place for it (card space-game-campaign-look: another 30 percent smaller than the 140 x 100, 31 x 23 and 40 x 29 px they were drawn at). len: the drawn length in px (the scene scales the picture to it); hit: the hit circle's radius in px, about half of len over two, as it always was
     carrier: { len: 98, hit: 25 },         // it was 140 and 36
@@ -213,7 +225,8 @@ const CAMP = {
   stances: ['free', 'orbit', 'keep', 'match', 'hold'], // the stances, in the order of the panel's second page: free is how the wing always flew (the pirates' own steering)
   convoy: {
     hp: 200,                               // hit points of a freighter
-    speed: 120                             // px/s: the same as the MULE of the escort call
+    speed: 120,                            // px/s: the same as the MULE of the escort call
+    speedScale: 1                          // times the speed of every convoy a mission row makes (the transport's 54, the haulers' 62): the tuning panel's one number for them
   },
   convoyOrders: {                          // orders for the escorted ships (card space-game-convoy-orders; src/campconvoy.js; docs/CAMPAIGN.md "Convoy orders"): Tuck in, Hold here, Run for it, Carry on; the page CONVOY of the FLEET panel, the strip and the voice
     kinds: ['freighter', 'miner'],         // the ships that take them: the convoys (the transport, the haulers) and the neutral miners
@@ -433,6 +446,7 @@ const CAMP = {
       { id: 'brisk', name: 'Brisk', mult: 0.85 } // the quickest a player can have it. Card space-game-command-slowtime (Troy, 21 Nov 2026: fights slower) took the three values down by 15 percent (they were 0.7, 0.85, 1); that stays, but the battle itself never slows for a list, the map or a call (card space-game-no-command-slowdown, Troy, 22 Nov 2026). A battle made with no pace, or with the number 1, is still the table's own numbers: the sim's pins, the bots with --pace 1 and the tests use that
     ],
     start: 'normal',                       // the setting until the player picks one
+    scale: 1,                              // times the setting's multiplier (the tuning panel's one pace number: 1 is Normal as the table has it, 1.2 a fifth quicker)
     shots: 0.5                             // the power of the multiplier a shot's speed takes (0.5 is its square root: a shot does not outrun the eye, a hit still lands). There is no key and no setting for the pace any more (card space-game-two-hands-keys): the Campaign flies at CAMP.pace.start, and campNew's opts.pace still takes a mode for the tests, the bots and the sims
   },
   refit: {                                 // the Earth refit screen after level 1: one tech, and ore buys extra ships for the next level (the costs are the workshop's, CAMP.build)
@@ -672,7 +686,7 @@ function campTravel(level, i) {
 // the multiplier of a pace setting: an id of CAMP.pace.modes or a number; anything else (none given) is 1, the numbers as the table has them
 function campPaceMult(p) {
   if (typeof p === 'number' && p > 0 && isFinite(p)) return p;
-  const m = CAMP.pace.modes.find(x => x.id === p); return m ? m.mult : 1;
+  const m = CAMP.pace.modes.find(x => x.id === p); return m ? m.mult * CAMP.pace.scale : 1;
 }
 const campSmall = kind => kind === 'fighter' || kind === 'escort' || !!PIRATES[kind] || !!CAMP.pirate.kinds[kind] || !!CAMP.torpedo.boats[kind] || !!CAMP.rival.kinds[kind]; // a small ship: the ones the pace scales (fighters and escorts of the wing, the aliens that are not the mothership or a tower)
 // the pace is put on a ship from the numbers it was made with (u.base), so it can change in play and come back to Brisk exactly
@@ -710,7 +724,7 @@ function campNew(level, techs, opts) {
   if (typeof campBeatsNew === 'function') campBeatsNew(C); // the beats of the mission (src/campbeats.js)
   C.route = null; if (typeof campRouteNew === 'function') campRouteNew(C); // a fork in the road (src/camproute.js): C.route, and the lanes' caches in C.caches
   Object.assign(C, { cues: {}, piratesEscaped: 0, neutralsLost: 0 }); // the named cues a script has fired (campCue), the pirates that broke off and got away, the neutral ships lost (src/camppirates.js)
-  C.stance = campStanceId(opts.stance); C.orders.stance = 0; // the wing's stance: one for the whole wing, kept across orders and saved with the progress (card space-game-campaign-stances)
+  C.stance = campFlag('stance') ? campStanceId(opts.stance) : 'free'; C.orders.stance = 0; // the wing's stance: one for the whole wing, kept across orders and saved with the progress (card space-game-campaign-stances)
   const p = campPlaces(level)[L.start], c = campSpawn(C, 'carrier', p.x + L.startAt[0], p.y + L.startAt[1]);
   C.carrier = c; c.rot = 0;
   C.power = campPowerNew(opts.power); C.shield = campShieldMax(C); // the ship's systems: the saved setting (or 2 / 2 / 2), and a full shield for its cap (150 at the default)
@@ -733,7 +747,10 @@ function campNew(level, techs, opts) {
 }
 
 // one ship into the game. kind: carrier, fighter, escort, freighter, mother, or a PIRATES key (raider, drone, gunship)
+// a kind of ship a switch has taken out of the game (CAMP.flags): campSpawn makes none, and every caller already asks whether it got one
+const campKindOff = kind => ((kind === 'tboat' || kind === 'lancer' || !!(CAMP.torpedo.boats && CAMP.torpedo.boats[kind])) && !campFlag('tboats')) || (!!(CAMP.rival.kinds && CAMP.rival.kinds[kind]) && !campFlag('rival'));
 function campSpawn(C, kind, x, y) {
+  if (campKindOff(kind)) return null;
   const u = { id: kind + '-' + (C.nextId++), kind, x, y, vx: 0, vy: 0, rot: 0, move: null, moveUntil: 0, ran: false, side: C.rng() < 0.5 ? -1 : 1, nextShot: 0, order: null, goal: '', distractedUntil: 0 };
   if (kind === 'carrier') {
     const k = CAMP.carrier; Object.assign(u, { team: 'earth', hp: k.hull * (campHas(C, 'plating') ? CAMP.tech.plating.hull : 1), r: CAMP.size.carrier.hit, vmax: k.speed, accel: k.accel, turn: k.turn });
@@ -895,6 +912,7 @@ function campDo(C, name, arg, dry, how) {
   if (name === 'stance') { // the wing's stance: how Attack and Guard move (orbit, keep distance, match speed, hold position, free); "orbit the mothership" also sends the fighters at it
     const q = String(arg == null ? '' : arg).toLowerCase(), id = /\b(?:orbit|circle)\b/.test(q) ? 'orbit' : /\b(?:distance|stand off|keep away|kite)\b|^keep\b/.test(q) ? 'keep' : /\b(?:match|formation)\b/.test(q) ? 'match' : /\b(?:hold|stay put)\b/.test(q) ? 'hold' : /\b(?:free|at will|freely)\b/.test(q) ? 'free' : null;
     if (!id) return campNo('stance');
+    if (!campFlag('stance')) return campNo('cwhat'); // the stances are switched off (the tuning panel): the wing always fights freely
     const mo = t && t.kind === 'mother' ? campTarget(C, t) : null, fs = campWing(C, 'fighter'), withMother = !!mo && fs.length > 0 && (id === 'orbit' || id === 'keep'), code = 'stance.' + id + (withMother ? '.mother' : '');
     if (dry) return campYes(code);
     C.stance = id; C.orders.stance++; C.events.push({ type: 'stance', stance: id });
@@ -1030,17 +1048,18 @@ function campSchedule(C) {
     const pl = campPlaces(C.level), to = pl[cv.to], from = cv.from ? pl[cv.from] : null;
     const a = from ? Math.atan2(to.y - from.y, to.x - from.x) : Math.atan2(to.y, to.x), sx = from ? from.x + Math.cos(a) * ((from.r || 60) + 50) : Math.cos(a) * (C.earth.r + 50), sy = from ? from.y + Math.sin(a) * ((from.r || 60) + 50) : Math.sin(a) * (C.earth.r + 50);
     const f = campSpawn(C, 'freighter', sx, sy); f.id = 'freighter-' + cv.id; C.by[f.id] = f; f.dest = { x: to.x, y: to.y }; f.rot = a; f.cname = cv.name || to.name; f.named = !!cv.name; // a convoy with a name of its own (Transport, Hauler 1) is a ship: its arrival and its loss read "Transport has arrived", not "The convoy has reached Transport" (the old lines name the place it flies to: Mars)
-    f.cid = cv.id; f.from = { x: sx, y: sy }; f.lane = Math.hypot(to.x - sx, to.y - sy); if (cv.speed) f.vmax = cv.speed; // its own way: where it began and how long the road is (a wave can come by how far it has flown: on { lane }), and its own speed (a row's `speed`, else the table's)
+    f.cid = cv.id; f.from = { x: sx, y: sy }; f.lane = Math.hypot(to.x - sx, to.y - sy); f.vmax = (cv.speed || f.vmax) * CAMP.convoy.speedScale; // its own way: where it began and how long the road is (a wave can come by how far it has flown: on { lane }), and its own speed (a row's `speed`, else the table's)
     if (C.route) campRouteConvoy(C, f); // on a route the convoy flies the fork and the lane (src/camproute.js)
     campSay(C, cv.say || 'camp.say.convoy', { name: f.cname });
   });
   L.waves.forEach((w, i) => {
     const st = C.waves[i]; if (st.started) return;
     const prev = i > 0 ? C.waves[i - 1] : null, prevDead = !prev || (prev.started && !C.ships.some(u => u.team === 'alien' && u.hp > 0 && u.wave === i - 1));
-    const due = (w.on ? campWaveOn(C, w.on) : sec >= w.at) && (!w.needClear || prevDead) && (!w.lane || campRouteWaveOk(C, w)); // a wave of a lane comes only to a convoy on that lane (src/camproute.js)
-    const early = w.early != null && prev && prev.started && prevDead && sec - prev.at >= w.early && (!w.lane || campRouteWaveOk(C, w));
+    const T = CAMP.time.waves, due = (w.on ? campWaveOn(C, w.on) : sec >= w.at * T) && (!w.needClear || prevDead) && (!w.lane || campRouteWaveOk(C, w)); // a wave of a lane comes only to a convoy on that lane (src/camproute.js)
+    const early = w.early != null && prev && prev.started && prevDead && sec - prev.at >= w.early * T && (!w.lane || campRouteWaveOk(C, w));
     if (!due && !early) return;
     st.started = true; st.at = sec;
+    if (w.beat === 'distress' && !campFlag('distress')) return; // the distress call is switched off (the tuning panel): the wave is taken as passed and no pirate comes (src/campbeats.js)
     const goal = w.goal || 'earth', ahead = w.ahead != null ? campAhead(C, w) : null, org = ahead ? [ahead.x, ahead.y] : (w.from || [C.carrier.x + 2500, C.carrier.y]); // ahead: the wave comes out of the dark this many px in front of a convoy (its heading), the one named (along) or the first flying
     Object.keys(w.ships).forEach(kind => {
       for (let k = 0; k < w.ships[kind]; k++) { const a = campSpawn(C, kind, org[0] + campBetween(C, -300, 300), org[1] + campBetween(C, -300, 300)); if (a) { a.goal = goal; a.wave = i; a.rot = ahead ? Math.atan2(ahead.y - a.y, ahead.x - a.x) : Math.atan2(-a.y, -a.x); if (a.faction === 'pirate' || a.boat) { a.prey = w.prey || 'any'; if (w.breakAt != null && a.faction === 'pirate') a.breakAt = w.breakAt; } } }
@@ -1106,10 +1125,12 @@ function campPowerLoad() { let p = CAMP.power.start.slice(); campTry(() => { con
 function campPowerSave(p) { if (campPowerOk(p)) campTry(() => localStorage.setItem(CAMP.store + '.power', JSON.stringify(p)), 0); }
 // The turrets' charge (card space-game-systems-gauges): C.charge, 0 to CAMP.tank.max. campLaserSpend(C) is a shot: true and the cost is paid, or false when there is not that much (C.dryAt is the clock of the last refusal).
 // campLaserStep(C, dt) mends it at CAMP.tank.refill[the weapons' pips] a second and says so once when it falls low; campLaserFrac(C) is its share of the tank, campLaserRate(C) the charge a second it mends at now.
+const campFiring = C => !!C.input.fire || campFlag('autofire'); // the turrets fire while Space is held, or always when the tuning panel's switch has them fire by themselves
 const campLaserRate = C => CAMP.tank.refill[C && C.power && C.power.p ? C.power.p[0] : CAMP.power.start[0]];
 const campLaserFrac = C => Math.max(0, Math.min(1, (C.charge === undefined ? CAMP.tank.max : C.charge) / CAMP.tank.max));
 function campLaserSpend(C) {
   const k = CAMP.tank; if (C.charge === undefined) C.charge = k.max;
+  if (!campFlag('laser')) { C.charge = k.max; return true; } // the charge is switched off (the tuning panel): a shot costs nothing and the tank is always full
   if (C.charge + 1e-9 < k.cost) { C.dryAt = C.t; return false; }
   C.charge = Math.max(0, C.charge - k.cost); return true;
 }
@@ -1120,6 +1141,7 @@ function campOreFull(C) {
 }
 function campLaserStep(C, dt) {
   const k = CAMP.tank; if (C.charge === undefined) C.charge = k.max;
+  if (!campFlag('laser')) { C.charge = k.max; C.chargeLow = false; return; }
   C.charge = Math.min(k.max, C.charge + campLaserRate(C) * dt);
   const f = C.charge / k.max;
   if (!C.chargeLow && f < k.low) { C.chargeLow = true; campSay(C, 'camp.say.lasersdry'); } else if (C.chargeLow && f > k.low * 2) C.chargeLow = false;
@@ -1192,7 +1214,7 @@ function campTurrets(C) {
     if (!best) { let rd = reach; C.rocks.forEach(r => { const d = campDist(r, tu) - r.r; if (r.hp > 0 && d <= rd) { rd = d; rock = r; } }); if (rock) tu.aim = Math.atan2(rock.y - tu.y, rock.x - tu.x); }
     tu.rock = rock ? rock.id : '';
     if (C.t < tu.at) return;
-    const go = !!(best || rock) && !!C.input.fire && campLaserSpend(C); // a shot at something in reach spends charge; with none left the slot is let go, so the turrets fire as fast as the charge mends
+    const go = !!(best || rock) && campFiring(C) && campLaserSpend(C); // a shot at something in reach spends charge; with none left the slot is let go, so the turrets fire as fast as the charge mends
     if (rock && go) {
       tu.shotAt = C.t; campRockHit(C, rock, k.pd * k_laser_turret(C)); C.laserNow.push({ from: c.id, to: rock.id, kind: 'rock' }); C.events.push({ type: 'laser', src: 'turret', i, x: tu.x, y: tu.y, tx: rock.x - Math.cos(tu.aim) * rock.r * 0.6, ty: rock.y - Math.sin(tu.aim) * rock.r * 0.6, rock: rock.id }); // the beam of this turret lands on the rock's near side
     }
@@ -1208,13 +1230,13 @@ function campTurrets(C) {
 // The mining lasers (the belt card) say they fire through C.lasers, a list the sim keeps: [{ from: the ship's id, to: the rock's or the alien's id, kind: 'rock' | 'alien',
 // since: the battle's clock (ms) when this beam began without a break }], empty when none fires. One hum for the beams on rocks (and, if CAMP.beamHum.alienLaser asks, those on aliens: a plain turret shot is one).
 function campBeam(C, dt) {
-  const on = campHas(C, 'beam') && !!C.input.fire && C.carrier.hp > 0 && C.turrets.some(t => t.target);
+  const on = campHas(C, 'beam') && campFiring(C) && C.carrier.hp > 0 && C.turrets.some(t => t.target);
   C.beamT = on ? Math.min(CAMP.beamHum.rise, (C.beamT || 0) + dt) : Math.max(0, (C.beamT || 0) - dt * 3);
 }
 function campBeamState(C) {
   const off = { kind: '', level: 0, rise: 0 }, k = CAMP.beamHum;
   if (!C || C.result || C.carrier.hp <= 0) return off;
-  if (campHas(C, 'beam') && C.input.fire && C.turrets.some(t => t.target)) return { kind: 'turrets', level: 1, rise: Math.min(1, (C.beamT || 0) / k.rise) };
+  if (campHas(C, 'beam') && campFiring(C) && C.turrets.some(t => t.target)) return { kind: 'turrets', level: 1, rise: Math.min(1, (C.beamT || 0) / k.rise) };
   const ls = (C.lasers || []).filter(l => l && Number.isFinite(l.since) && (l.kind !== 'alien' || k.alienLaser)); // a turret shot at an alien is a pulse with a pew of its own, unless alienLaser asks for the hum on it too
   return ls.length ? { kind: 'laser', level: k.laserLevel, rise: Math.min(1, Math.max(0, (C.t - Math.min(...ls.map(l => l.since))) / 1000 / k.rise)) } : off;
 }

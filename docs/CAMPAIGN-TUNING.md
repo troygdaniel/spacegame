@@ -26,6 +26,22 @@ A bot, a tool or a test turns the kit on in code with `campDebugSet(true)` (off 
 
 They are listed in one small line on the pause screen (`campDebugLine`). The rows are the data table `CAMP_DEBUG` at the top of `src/campdebug.js`: change a key there, one line.
 
+## The tuning panel (card `space-game-tuning-panel`; Troy, 22 Nov 2026)
+
+How Troy iterates on feel: press **`N`**, in flight or in the ready room, and change a number or a switch while the battle waits; close it and fly. `Up` `Down` choose, `Left` `Right` change (`Shift`: ten steps), `Backspace` puts a row back to its default, `Enter` flips a switch, `Esc` or `N` closes. Each row says when the change is felt: **at once** (the battle already on feels it), **next mission** (the number is copied into a ship, a rock or the battle's clock when the mission is made) or **next call**. Changes are kept in the browser (`localStorage`, `longhaul.campaign.tuning`); a **TUNED** mark shows while any is on; **a mission flown tuned keeps no score and no rank** (the level still moves on). The rows are one table, `CAMP_TUNE` in `src/camptune.js`:
+
+| Group | Rows (at once unless said) |
+|---|---|
+| The cruiser | top speed (next mission), turn rate (next), shield size, shield mend rate (the value at 2 pips; the other pips keep their shape) |
+| The guns | turret damage, time between shots, reach; missiles at the start (next), missile reload; laser tank size, laser refill |
+| The wing and the convoy | fighter hull (next), fighter damage; transport and hauler speed (a factor on every mission's convoy, next) |
+| The enemy | hull and damage, each a factor on the mission's own scale (next) |
+| Time and the pilots | battle pace (a factor on Normal, next), time to the waves (a factor on every timed wave, `CAMP.time.waves`), time to answer a call and between calls (next call), starting zoom (presses of minus from 1, next) |
+| Ore | ore in a rock (next), a mining ship's rate |
+| Switches (`CAMP.flags`, read through `campFlag`) | pilots' calls; the distress call of 1.1 (next); torpedo boats (next); the rival ship (next); fighter repair; convoy orders; the wing's stances; **turrets fire by themselves** (on; the others are on by default); the turret charge; the first-minute hints. Off takes the whole system out as if it were not in the mission: the plain bot still wins 1.1 with each off, and with all off together (`tests/camptune.mjs`) |
+
+**Copy my settings** (the top row) puts only the changed rows on the clipboard, one line each: `cruiserspeed = 280   # Cruiser top speed, default 210`. Paste it to whoever bakes it in: `node tools/apply-tuning.mjs settings.txt` prints each `CAMP` change it means (the old default, the new one, the file and line), and `--write` makes the change in the source (only the number or the array on the line, never a comment). **Bots, node tests and boot scripts never see overrides**: only a scene reads the file (`campTuneLoadOnce`), and a driven browser (`navigator.webdriver`) neither reads nor writes it. To add a row: one line in `CAMP_TUNE.rows`, its words `camp.ui.tune.row.<id>` in `content/text/camptune.md`, and a check in `tests/camptune.mjs` that the number does what it says.
+
 ## The numbers: one table
 
 `CAMP` at the top of `src/campaign.js`, one line a number, a comment on each. Units: px, px/s, seconds for the times written in a level, milliseconds for a delay.
