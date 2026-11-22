@@ -17,7 +17,7 @@ function campBeatsNew(C) { C.beats = { patrolSaid: false, asked: false, thanked:
 
 // the key of a panel or of a map key, as the key table says it (the panels move: nothing here names a letter)
 function campBeatKey(id) {
-  const P = typeof CAMP_PANELS === 'object' && CAMP_PANELS.panels.find(p => p.id === id); if (P) return P.key;
+  const P = typeof CAMP_PANELS === 'object' && CAMP_PANELS.panels.find(p => p.id === id); if (P) return P.key || (typeof campKeyPath === 'function' ? campKeyPath(id) : ''); // a list with no key of its own (the convoy's) is reached through the fleet list: 'Q, Convoy'
   const rows = ((typeof CONTROLS === 'object' && CONTROLS.find(c => c.id === 'campaign')) || { rows: [] }).rows;
   const pick = re => rows.find(r => re.test(r.t));
   if (id === 'map') { const r = pick(/Open or close the map/); return r ? r.k[0] : 'Tab'; }

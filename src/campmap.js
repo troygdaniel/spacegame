@@ -109,6 +109,7 @@ function campMapMarks(C, whole) { // whole: the far places too (the whole system
     if (u.hp <= 0) return;
     const type = u.kind === 'carrier' ? 'carrier' : u.kind === 'freighter' ? 'convoy' : u.kind === 'mother' ? 'mother' : u.kind === 'tower' ? 'tower' : u.rival ? 'rival' : u.boat ? 'tboat' : u.faction === 'pirate' ? 'pirate' : u.team === 'alien' ? 'alien' : u.team === 'neutral' ? (u.kind === 'patrol' ? 'patrol' : 'miner') : 'wing';
     const m = { type, id: u.id, x: u.x, y: u.y, rot: u.rot, color: campDotColor(u) };
+    if (type === 'wing' && u.squad) m.squad = u.squad; // a fighter's squad (card space-game-fighter-squads): the map draws a ring of the squad's colour round its dot
     if (type === 'convoy' && u.dest) m.to = { x: u.dest.x, y: u.dest.y };
     if (type === 'tboat') m.arming = u.arming > 0; // a torpedo boat (card space-game-torpedo-art): its own mark, with a ring while it arms
     out.push(m);
@@ -122,7 +123,10 @@ function campMapLegend(C, marks) {
   marks = marks || campMapMarks(C);
   const n = t => marks.filter(m => m.type === t).length, c = CAMPMAP.color;
   const rows = [['carrier', c.carrier, 0], ['wing', c.wing, 1], ['convoy', c.convoy, 1], ['alien', c.alien, 1], ['pirate', c.pirate, 1], ['tboat', c.pirate, 1], ['torpedo', c.torpedo, 1], ['patrol', c.patrol, 1], ['miner', c.miner, 1], ['mother', c.mother, 0], ['rival', c.pirate, 0], ['tower', c.tower, 1], ['cache', c.cache, 1], ['anomaly', c.anomaly, 1], ['relic', c.relic, 0]];
-  return rows.filter(r => n(r[0]) > 0).map(r => ({ type: r[0], color: r[1], text: uiText('camp.map.' + r[0], { n: n(r[0]) }) }));
+  const out = rows.filter(r => n(r[0]) > 0).map(r => ({ type: r[0], color: r[1], text: uiText('camp.map.' + r[0], { n: n(r[0]) }) })), at = out.findIndex(r => r.type === 'wing');
+  const sq = CAMP.wing.squads.filter(k => marks.some(m => m.squad === k)).map(k => ({ type: k, color: CAMP.wing.squadColor[k], text: uiText('camp.map.' + k, { n: marks.filter(m => m.squad === k).length }) })); // the squads that have ships out, under the wing's row (their ring on the map)
+  if (at >= 0) out.splice(at + 1, 0, ...sq); else out.push(...sq);
+  return out;
 }
 
 // ---- the rings and the rocks (card space-game-campaign-sol): what is drawn of a circle and of a belt inside the frame, with no drawing in it ----

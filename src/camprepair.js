@@ -7,7 +7,7 @@
 //                             recalled the wing since; else it is in the bay, whole, and Launch takes it
 //   campRepairing(C, kind)    how many ships are being mended (of a kind, or all): they are still the wing's (the build limit, the dock, the "no ships left" rule count them)
 //   campRepairState(C)        { n, next } for the HUD: how many, and the seconds until the first is whole
-// The sim is the plain numbers of src/campaign.js: C.repairs is a list of { kind, until, order, stay } (until: the battle clock in ms; order: what to go out with; stay: the wing was recalled while it
+// The sim is the plain numbers of src/campaign.js: C.repairs is a list of { kind, until, order, squad, stay } (until: the battle clock in ms; order: what to go out with; squad: the fighter's squad, which it goes out in again and which counts it while it is mended (src/campwing.js campSquadNext); stay: the wing was recalled while it
 // was mended, so it stays aboard). A landed fighter is not a ship of C.ships any more (as a recalled one is not): nothing in the sim can hit it, find it or count it as "out".
 // Rules worth knowing: the wing's own AI runs this first, so it wins over any order (an Attack given to a fighter on its way home is kept, and is what it goes out with); a Recall given to it is kept too (it
 // lands, is mended and stays aboard); a fighter ABOVE 30 percent that is recalled lands as it always did (whole at once, in the bay). The escorts and the scouts do not break off; the enemy has no repair
@@ -32,7 +32,7 @@ function campRepairRun(C, u, dt) {
     u.repair = true; campRepairSay(C, 'off'); C.events.push({ type: 'repairoff', id: u.id, x: u.x, y: u.y });
   }
   if (campDist(u, c) < CAMP.bay.dockAt) { // landed: out of the sim as a recalled ship is, in the repair list until it is whole
-    (C.repairs = C.repairs || []).push({ kind: u.kind, until: C.t + K.time * 1000, order: u.order || null, stay: !!(u.order && u.order.type === 'recall') });
+    (C.repairs = C.repairs || []).push({ kind: u.kind, until: C.t + K.time * 1000, order: u.order || null, squad: u.squad || '', stay: !!(u.order && u.order.type === 'recall') });
     u.hp = 0; u.docked = true; u.repair = false; C.events.push({ type: 'dock', id: u.id, repair: true });
     return true;
   }
@@ -49,7 +49,7 @@ function campRepairTick(C) {
     if (C.t < r.until) return true;
     if (!r.stay && (out || near)) {
       if (C.t < C.nextLaunch) return true; // the bay mouth is busy this tick: the next one
-      campLaunch(C, r.kind, r.order); C.mended = (C.mended | 0) + 1; campRepairSay(C, 'back'); return false;
+      campLaunch(C, r.kind, r.order, r.squad); C.mended = (C.mended | 0) + 1; campRepairSay(C, 'back'); return false;
     }
     C.bay[r.kind + 's']++; C.mended = (C.mended | 0) + 1; campRepairSay(C, 'done'); return false;
   });
