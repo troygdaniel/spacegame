@@ -68,5 +68,11 @@ const sk = en.list.find(e => e.kind === 'skiff'), tb = en.list.find(e => e.kind 
 check('1.1\'s briefing says 8 skiffs and 2 torpedo boats (the distress call, the ambush and the leader\'s two)', sk && sk.n === 8 && tb && tb.n === 2 && /8 pirate skiffs/.test(en.line), en.line);
 check('and that is what the mission\'s rows send down the default lane (the count is read from them)', seen.skiff === 8 && seen.tboat === 2, JSON.stringify(seen));
 
+// ---- 6. the briefing's mining goal starts from the ore you carry, as the HUD does ----
+// 1.2's HUD says "Mine ore: 60 of 190." from the first second (the store holds what the ready room's pocket held); the briefing said "0 of 190." whatever you carried.
+const ob = J(`(() => { const P = campProgressNew(); P.ore = 60; const a = campHubBrief(P, 1, 1).objectives[0]; P.ore = 142; const b = campHubBrief(P, 1, 1).objectives[0]; P.ore = 400; const c = campHubBrief(P, 1, 1).objectives[0];
+  const C = campNew(1, [], { seed: 1, mission: 1, ore: 60 }); campStep(C, 1 / 30); return [a, b, c, campObjective(C)]; })()`);
+check('1.2: the briefing says "Mine ore: 60 of 190." for 60 ore carried, 142 for 142, and never more than the goal; the HUD says the same at the start', ob[0] === 'Mine ore: 60 of 190.' && ob[1] === 'Mine ore: 142 of 190.' && ob[2] === 'Mine ore: 190 of 190.' && ob[3] === 'Mine ore: 60 of 190.', JSON.stringify(ob));
+
 if (failed) { console.log(`\nHUNT FLEET: ${failed} FAILED`); process.exit(1); }
 console.log('\nHUNT FLEET: all passed');
