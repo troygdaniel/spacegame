@@ -213,10 +213,14 @@ if (what === 'live') { // the real loop, not stepped: the intervals between draw
     await t.ev(`(() => { ${SCENARIO} const s = game.scene.getScene('Campaign'); s.hideCard(); s.mode = 'play'; if (${k.keep ? 'true' : 'false'}) { __prep(s.camp); window.__keep = true; campOrder(s.camp, 'launch'); window.__topup(); setInterval(() => window.__topup(), 500); }
       if (${k.keep ? 'false' : 'true'}) { const T = {}, sc = game.scene.getScene('Campaign'); setInterval(() => __drive(sc.camp, T), 100); }
       window.__dts = []; window.__js = []; let last = 0, t0 = 0; game.events.on('prestep', () => { t0 = performance.now(); }); game.events.on('postrender', () => { const n = performance.now(); if (last) { window.__dts.push(n - last); window.__js.push(n - t0); } last = n; }); return 1; })()`);
+    if (process.env.PERF_ZOOM) await t.ev(`(() => { CAMZOOM.want = ${Number(process.env.PERF_ZOOM)}; return 1; })()`); // PERF_ZOOM=0.05: the view's zoom (0.335 is where a flight starts; a long mission goes out to its whole route)
     await sleep(3000); await t.ev('(() => { __dts.length = 0; __js.length = 0; return 1; })()'); // warm, then the measured part
     await sleep(secs * 1000);
-    const d = await t.ev('__dts'), js = await t.ev('__js'), n = d.length, c = await counts(t);
-    console.log(`live ${key}: ${n} frames in ${secs} s = ${r2(n / secs)} a second; interval between frames (ms) ${JSON.stringify({ ...stat(d), p99: r2(pct(d, .99)) })}; over 20 ms: ${d.filter(x => x > 20).length}, over 33 ms: ${d.filter(x => x > 33).length}, over 50 ms: ${d.filter(x => x > 50).length}; ${JSON.stringify(c)}`);
+    const d = await t.ev('__dts'), js = await t.ev('__js'), n = d.length, c = await counts(t), zoom = await t.ev(`game.scene.getScene('Campaign').cameras.main.zoom`);
+    console.log(`live ${key} at zoom ${r2(zoom)}: ${n} frames in ${secs} s = ${r2(n / secs)} a second; interval between frames (ms) ${JSON.stringify({ ...stat(d), p99: r2(pct(d, .99)) })}; over 20 ms: ${d.filter(x => x > 20).length}, over 33 ms: ${d.filter(x => x > 33).length}, over 50 ms: ${d.filter(x => x > 50).length}; ${JSON.stringify(c)}`);
+    // WHERE a long interval comes from: the game's own part of that frame (from the loop's first step to the end of its drawing, JS only) against the interval. An interval over 33 ms whose own part was a few ms was spent outside the game's JavaScript: the Mac (other programs), the browser's drawing or the display. One whose own part is long is the game (or the garbage collector, which runs inside it).
+    const slow = d.map((x, i) => ({ i, gap: x, own: js[i] })).filter(x => x.gap > 33), ownLong = slow.filter(x => x.own > 8).length;
+    console.log(`  the game's own part of a frame (ms) ${JSON.stringify(stat(js))}; of the ${slow.length} intervals over 33 ms, ${ownLong} had an own part over 8 ms and ${slow.length - ownLong} were spent outside the game's JavaScript; the worst five (interval/own): ${slow.sort((a, b) => b.gap - a.gap).slice(0, 5).map(x => r2(x.gap) + '/' + r2(x.own)).join(', ') || 'none'}`);
     noErrors(t);
   } finally { await t.close(); }
 }
@@ -275,9 +279,6 @@ if (what === 'hitches') { // a level played the way a player plays it, stepped: 
     const sp = await t.ev('__T2.spikes'), tot = sp.map(x => x.ms);
     console.log(`hitches, level 1 played ${secs} s (stepped): frame ms ${JSON.stringify(stat(tot))}, ${sp.filter(x => x.ms > 3).length} frames over 3 ms, ${sp.filter(x => x.ms > 8).length} over 8 ms of ${sp.length}`);
     [...sp].sort((a, b) => b.ms - a.ms).slice(0, 12).forEach(x => console.log('  ' + JSON.stringify(x)));
-    // WHERE a long interval comes from: the game's own part of that frame (from the loop's first step to the end of its drawing, JS only) against the interval. An interval over 33 ms whose own part was a few ms was spent outside the game's JavaScript: the Mac (other programs), the browser's drawing or the display. One whose own part is long is the game (or the garbage collector, which runs inside it).
-    const slow = d.map((x, i) => ({ i, gap: x, own: js[i] })).filter(x => x.gap > 33), ownLong = slow.filter(x => x.own > 8).length;
-    console.log(`  the game's own part of a frame (ms) ${JSON.stringify(stat(js))}; of the ${slow.length} intervals over 33 ms, ${ownLong} had an own part over 8 ms and ${slow.length - ownLong} were spent outside the game's JavaScript; the worst five (interval/own): ${slow.sort((a, b) => b.gap - a.gap).slice(0, 5).map(x => r2(x.gap) + '/' + r2(x.own)).join(', ') || 'none'}`);
     noErrors(t);
   } finally { await t.close(); }
 }
