@@ -1,13 +1,13 @@
-// smoke: the Campaign's missile launcher and its turrets: F, homing, the magazine and its slow reload, big damage to big ships, the order by strip and voice (plain Node, no Chrome)
+// smoke: the Campaign's missile launcher and its turrets: Enter, homing, the magazine and its slow reload, big damage to big ships, the order by strip and voice (plain Node, no Chrome)
 // Card space-game-campaign-missiles (docs/CAMPAIGN.md "The weapons"). The rules are in src/campaign.js (CAMP.missile, campFire, campMissiles, campMissileAdd, the order 'missiles');
-// the scene only draws them, so they are tested here on the numbers, and the scene's own decisions (the F key, the count, the turret ring) on a stand-in for the scene.
+// the scene only draws them, so they are tested here on the numbers, and the scene's own decisions (the Enter key, the count, the turret ring) on a stand-in for the scene.
 //   A. the table and the words
 //   B. firing: a target in reach, none, the mothership named, out of range, the pause between launches, an empty magazine
 //   C. flying: it homes, it kills a gunship in one, it takes the mothership down in six, little to the small ships, it goes off on big ships only, a new target, no fuel
 //   D. the magazine: slow reload up to the full, never past it, and the ore code can add to it (up to the most it holds)
 //   E. the words: "fire missiles", "missiles at the mothership"; the ship computer's act and what it tells the model
-//   F. Space and F: Space only makes the turrets fire (it never launches a missile), F only launches missiles; the turrets are in tests/campaign.mjs B
-//   G. the scene: Enter fires, the count on the HUD, the key line and the pause card
+//   F. Space and the missile: Space only makes the turrets fire (it never launches a missile), the order only launches missiles; the turrets are in tests/campaign.mjs B
+//   G. the scene: Enter fires (a direct key of CAMP_KEYS, not a row of a list: card one-list-keys), but only while no Q or P list is open: in an open list Enter gives the highlighted order; the count on the HUD, the key line and the pause card
 //   H. nothing else moved: no order, no missile; the same seed flies the same; tower rings fall to missiles
 // Run: node tests/campmissiles.mjs   (exit code 1 on a failed check)
 import { readFileSync as __rf } from 'node:fs';
@@ -154,7 +154,7 @@ console.log('E. the words, the strip and the voice');
   check('a fleet act outside the Campaign is still refused (the fleet is only yours there)', J(`shipcompPlan('SAY: ok\\nDO: fleet_missiles', { scene: { key: 'Space' } })`).refused === true);
   check('the model path: a reply "DO: fleet_missiles the mothership" is read and checked against the live battle', (() => { g.run('__nb(); window.__gun = __foe("mother", 1500, 0)'); const p = J(`(() => { const p = shipcompPlan('SAY: Firing.\\nDO: fleet_missiles the mothership', __scene); return { action: p.action, arg: p.arg, refused: p.refused, text: p.text }; })()`); return p.action === 'fleet_missiles' && !p.refused && p.text === 'Missile away, at the mothership.'; })());
   const sys = J('shipcompSystem(__scene)');
-  check('the model is told in a battle: the key (Enter, the SHIP panel\'s missile row), what it does, and the act on its list', /fleet_missiles/.test(sys) && /Enter missile at the target/.test(sys) && /holds Space to make its eight turrets fire/.test(sys) && /pick one target/.test(sys) && !/main gun/.test(sys));
+  check('the model is told in a battle: the key (Enter, a direct key, while no list is open), what it does, and the act on its list', /fleet_missiles/.test(sys) && /With no list open Enter fires a missile at the target/.test(sys) && /Q opens|Q /.test(sys) && !/SHIP panel|FLEET panel/.test(sys) && /holds Space to make its eight turrets fire/.test(sys) && /pick one target/.test(sys) && !/main gun/.test(sys));
   check('the state it is told says how many are left', /Missiles in the magazine: 6 of 6/.test(J('campSummary(C)')));
 }
 
@@ -207,12 +207,19 @@ console.log('G. the scene (on a stand-in)');
   check('the scene: a Space key press launches nothing (Space is read as held, into the sim\'s fire input, every frame)', J('C.missiles') === 6 && J('C.rockets.length') === 0);
   g.run('F.onKey({ code: "Enter" })');
   check('and Enter launches one', J('C.missiles') === 5 && J('C.rockets.length') === 1);
+  // Enter belongs to an open list (card one-list-keys): it gives the highlighted order and fires nothing; with the list closed it is the missile again
+  g.run('__m(1); window.__gun = __foe("gunship", 1500, 0, 90000); F.camp = C; F.mode = "play"; F.pn = campPanelNew(); __toasts.length = 0; F.onKey({ code: "KeyP" }); window.__e0 = campPanelOpen(F.pn); window.__er = campPanelView(F.pn, C).rows[0].id; F.onKey({ code: "Enter" }); window.__e1 = [C.missiles, C.rockets.length, C.orders.missiles, campPanelOpen(F.pn), !!(C.nav && C.nav.on) || __toasts.length > 0];');
+  check('with the ship list open (P) Enter is the list\'s: it gives the highlighted row (Fly to the goal) and no missile is launched', J('__e0') === 'ship' && J('__er') === 'goal' && J('__e1.slice(0, 3)').join() === '6,0,0' && J('__e1[4]') === true, JSON.stringify(J('__e1')));
+  g.run('campPanelsClose(F); F.onKey({ code: "KeyQ" }); F.onKey({ code: "Escape" }); window.__e2 = [campPanelOpen(F.pn), F.mode, C.missiles]; F.onKey({ code: "Enter" });');
+  check('Esc closes an open list (it does not pause), and with no list open Enter is the missile again', J('__e2').join() === ',play,6' && J('C.missiles') === 5 && J('C.rockets.length') === 1 && J('C.orders.missiles') === 1, JSON.stringify(J('__e2')));
+  g.run('__m(1); window.__gun = __foe("gunship", 1500, 0, 90000); F.camp = C; F.pn = campPanelNew(); F.onKey({ code: "NumpadEnter" }); window.__e3 = C.missiles; F.onKey({ code: "KeyF" }); F.onKey({ code: "Digit6" });');
+  check('the keypad\'s Enter is the same key (CAMP_KEYS.missile); F and a digit launch nothing', J('__e3') === 5 && J('C.missiles') === 5 && J('C.rockets.length') === 1);
   g.run('window.G2 = __fake(); G2.hud = {}; G2.syncRockets(33)');
   check('the scene makes its own count text the first time (a scene made before this card, a test stand-in)', J('typeof G2.hud.missiles') === 'object');
   const sc = src('src/campaignscene.js'), md = src('content/text/ui.md');
   check('the scene has no word and no number of the launcher in it: it reads uiText and CAMP', !/MISSILES|Missile away|next in/.test(sc) && /uiText\('camp\.ui\.missiles'/.test(sc) && /uiText\('camp\.ui\.pausehelp'\)/.test(sc) && /CAMP\.missile/.test(sc));
   check('the key line names Space for the turrets and Enter for the missile, the pause card says so too (a line of its own, with the key from the table), and nothing says gun', /Space turrets/.test(J(`uiText('camp.ui.keys')`)) && /Enter missile/.test(J(`uiText('camp.ui.keys')`)) && !/gun/i.test(J(`uiText('camp.ui.keys')`)) && /camp\.ui\.pausehelp \| Hold Space: the turrets fire at ships close by\. \{keymissile\} fires a homing missile/.test(md));
-  check('in the scene the missile is the SHIP panel\'s Enter row (CAMP_PANELS, order missiles) and Space is not: no line gives a missile to Space', J(`CAMP_PANELS.panels[1].rows.find(r => r.id === 'missile').code`) === 'Enter' && !/SPACE[^\n]*campOrder\(C, 'missiles'|Space[^\n]*campOrder\(C, 'missiles'/.test(sc));
+  check('in the scene the missile is the direct key Enter (CAMP_KEYS.missile; a hint names it with {keymissile}), not a row of either list (what has a direct key is not listed), and Space is not: no line gives a missile to Space', J(`CAMP_KEYS.missile.codes.join()`) === 'Enter,NumpadEnter' && J(`CAMP_KEYS.missile.k`) === 'Enter' && J(`campKeyVar('keymissile')`) === 'Enter' && J(`campKeyIs('missile', 'Enter') && !campKeyIs('missile', 'Space')`) && J(`CAMP_PANELS.panels.every(p => p.rows.every(r => r.id !== 'missile' && r.order !== 'missiles' && !('code' in r)))`) && J(`(() => { const C = campNew(1, [], { seed: 1 }), P = campPanelNew(); return campPanelKey(P, C, 'Enter', 0).row; })()`) === 'missile' && !/SPACE[^\n]*campOrder\(C, 'missiles'|Space[^\n]*campOrder\(C, 'missiles'/.test(sc));
   check('the turrets\' shots are amber, so they are not mistaken for the main gun\'s', /b\.pd\) im\.setTint\(0xffd37a\)/.test(sc));
 }
 

@@ -14,7 +14,7 @@ const CAMPKEYS = {
   top: 104, pitch: 17, head: 24, gap: 7,        // first line's y, a line's pitch (19, then 18, until the SYSTEMS panel's five rows made a column 643 px deep), the room a heading takes, the room between two groups (26 and 12 until the FLEET panel's flip line: 635 px deep)
   capsW: 126, size: 14, bottom: 630,             // the space the key caps take at the left of a line, the size of the words, the lowest y a column may reach (the footer is at 650)
   depth: 300,                                    // over the cards (200), the map (150 to 156) and the panels (160)
-  groups: ['panels', 'campaign'],                // the groups of the table (src/data_controls.js) the Campaign's page lists, in this order: the two panels first
+  groups: ['panels', 'campaign'],                // the groups of the table (src/data_controls.js) the Campaign's page lists, in this order: the two lists first
   room: ['readyroom']                            // the page H opens in the ready room (src/camphubscene.js): its own keys
 };
 

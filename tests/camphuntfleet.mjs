@@ -1,4 +1,4 @@
-// smoke: the fixes of the hunt on the new Level 1 flown start to finish (card space-game-hunt-l1-fleet, docs/night/hunt-l1-fleet.md), each pinned (plain Node, no Chrome)
+// smoke: the fixes of the hunt on the new Level 1 flown start to finish (card space-game-hunt-l1-fleet, docs/night/hunt-l1-fleet.md), each pinned; the lost card's tip names the fleet list's key and the escort row (card one-list-keys) (plain Node, no Chrome)
 // Run: node tests/camphuntfleet.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
 
@@ -9,7 +9,7 @@ const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 
 // ---- 1. the map's V and T act on the row that is marked in the list, not on the place a trip is flying to ----
 // 1.1's fork: the HUD says AUTOPILOT Transport convoy, the toast says "Pick a lane on the map, press T." A player who follows the transport opens the map with that trip on: its place is SET
-// (the convoy) and the list starts on it. W or S moves the mark to a lane; V and T went to the set place all the same: V said "This mission has no scouting." (the convoy cannot be scouted),
+// (the convoy) and the list starts on it. Up or Down moves the mark to a lane (they were W and S then); V and T went to the set place all the same: V said "This mission has no scouting." (the convoy cannot be scouted),
 // T did nothing, and the transport waited out the whole fork wait ("No word. Taking the short lane.").
 g.run(`window.__mapkeys = (sel, set) => { const seen = { scout: null, take: null }, o = [campMapScout, campMapTake];
   window.campMapScout = (s, row) => { seen.scout = row.id; return true; }; window.campMapTake = (s, row) => { seen.take = row.id; return true; };
@@ -27,6 +27,7 @@ check('with nothing set the mark is what V and T act on, as before', c.scout ===
 // ---- 2. a toast that came after a long one does not show the tail of it ----
 // A message that wraps on two lines used to be remembered by its LAST LINE: a toast within 1.5 s of it was "paired" with that fragment, and the box showed the fragment on top. 1.1's own hints
 // were cut: "The leader blocks the way. Send the transport past it: Q, CONVOY, 3 is Run for it." then "Pirate leader ahead. Heavy ship." showed "Q, CONVOY, 3 is Run for it." over the second line.
+// (Those were the keys of the old panels. Since card one-list-keys the hint reads "Q, then Convoy: run for it": the fleet list's key and the row's own words; the rule pinned here is the toast's, whatever the words.)
 g.run(`window.__toastShows = (first, second) => { const shown = [], mk = () => new Proxy(function () {}, { get: (t, k) => (k === 'then' ? undefined : mk()), apply: () => mk() });
   const s = { time: { now: 1000 }, add: { text: (x, y, txt) => { shown.push(txt); return mk(); }, rectangle: () => mk() }, tweens: { add: () => {} }, toasts: [] };
   toast(s, first); s.time.now = 1300; toast(s, second); return shown; };`);
@@ -49,7 +50,7 @@ check('1.3: the three haulers keep "Haulers delivered"', /^Haulers delivered: 0 
 
 const l11 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); return campLoseLines(C, 'convoy'); })()`), l13 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 2 }); return campLoseLines(C, 'convoy'); })()`);
 check('1.1: the lost card says the transport is lost; 1.3 says the haulers', l11[0] === 'The transport is lost.' && l13[0] === 'The haulers are lost.', JSON.stringify([l11[0], l13[0]]));
-check('1.1\'s lost card tip names the transport and its key from the table, 1.3\'s the haulers; no brace is left in either', l11.length === 3 && /^Keep the wing on the transport: \S+ escorts\.$/.test(l11[2]) && /^Keep the wing on the haulers: \S+ escorts\.$/.test(l13[2]) && l11[2].replace('transport', 'haulers') === l13[2] && !/[{}]/.test(l11[2] + l13[2]), JSON.stringify([l11[2], l13[2]]));
+check('1.1\'s lost card tip names the transport, the list and the row from the key table ("Q, then Escort the convoy": the fleet list\'s key and the escort row\'s own words; an order has no key of its own), 1.3\'s the haulers; no brace and no digit is left in either', (() => { const way = J(`campKeyVar('fleetkey') + ', then ' + campKeyVar('rowescort')`); return l11.length === 3 && way === 'Q, then Escort the convoy' && l11[2] === 'Keep the wing on the transport: ' + way + '.' && l13[2] === 'Keep the wing on the haulers: ' + way + '.' && l11[2].replace('transport', 'haulers') === l13[2] && !/[{}]|\d/.test(l11[2] + l13[2]) && J(`campPanelList(campNew(1, [], { seed: 1, mission: 0 }), 'fleet').some(r => r.id === 'escort' && r.label === campKeyVar('rowescort'))`); })(), JSON.stringify([l11[2], l13[2]]));
 
 const dl = J(`['camp.o.deliver', 'camp.o.deliver.transport'].map(k => uiText(k, { got: 0, need: 1 }).length)`);
 check('both deliver goals fit one line of the map\'s column (15 px type, 246 px: 27 letters): "Transport delivered: 0 of 1." wrapped its "1." alone', dl.every(n => n <= 27), JSON.stringify(dl));

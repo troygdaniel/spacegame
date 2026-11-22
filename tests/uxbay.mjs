@@ -1,6 +1,7 @@
 // smoke: the Campaign's bay gauge says what its numbers are (plain Node, no Chrome)
 // Card space-game-night-ux, finding 5 (docs/night/ux.md; paintHud in src/campaignscene.js). It read "BAY  6+2    OUT  0" and nothing said that was six fighters and two escorts. Now
 // "BAY  fighters 6  escorts 2   OUT 0" (labels first, so there is no plural to get wrong), kept to 40 letters so it stays clear of the toast band (which starts at x 364).
+// The wing is launched the way the pilot does it since the card one-list-keys: Q opens the fleet list, Down to "Launch the wing", Enter. A digit does nothing in flight.
 // Run: node tests/uxbay.mjs   (exit code 1 on a failed check)
 import { readFileSync as __rf } from 'node:fs';
 import { readFileSync } from 'node:fs';
@@ -18,11 +19,15 @@ g.run(`
     const h = {}; ['hull', 'earth', 'bay', 'wave', 'mother', 'blink', 'obj', 'keys'].forEach(k => { h[k] = { text: '', setText(t) { h[k].text = t; return h[k]; } }; }); f.hud = h;
     f.k = { W: { isDown: false }, A: { isDown: false }, S: { isDown: false }, D: { isDown: false }, UP: { isDown: false }, DOWN: { isDown: false }, LEFT: { isDown: false }, RIGHT: { isDown: false }, SPACE: { isDown: false } };
     f.init({ level }); f.camp = campNew(f.level, f.P.techs, f.opts); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); f.sync = () => {}; return f; };
+  // give a row of a list as the pilot does: the list's key (Q or P), Down to the row, Enter
+  window.__pick = (f, id, row) => { const i = campPanelList(f.camp, id).findIndex(r => r.id === row); f.onKey({ code: CAMP_PANELS.panels.find(p => p.id === id).code }); for (let k = 0; k < i; k++) f.onKey({ code: 'ArrowDown' }); f.onKey({ code: 'Enter' }); return i; };
   window.F = __fake(1); F.onKey({ code: 'Enter' }); F.update(0, 33);
 `);
 check('at the start: six fighters, two escorts, none out, in words', J('F.hud.bay.text') === 'BAY  fighters 6  escorts 2   OUT 0', J('F.hud.bay.text'));
 g.run(`F.onKey({ code: 'Digit1' }); for (let i = 0; i < 30 * 6; i++) F.update(0, 1000 / 30);`);
-check('after Launch the bay is empty and eight are out', J('F.hud.bay.text') === 'BAY  fighters 0  escorts 0   OUT 8', J('F.hud.bay.text'));
+check('a digit is no order in flight (card one-list-keys): after 1 and six seconds the gauge has not moved', J('F.hud.bay.text') === 'BAY  fighters 6  escorts 2   OUT 0', J('F.hud.bay.text'));
+g.run(`window.__at = __pick(F, 'fleet', 'launch'); for (let i = 0; i < 30 * 6; i++) F.update(0, 1000 / 30);`);
+check('after Launch (Q, Down to the Launch row, Enter) the bay is empty and eight are out', J('F.hud.bay.text') === 'BAY  fighters 0  escorts 0   OUT 8', J('F.hud.bay.text'));
 g.run(`window.F = __fake(1); F.onKey({ code: 'Enter' }); F.camp.bay.fighters = 1; F.camp.bay.escorts = 1; F.update(0, 33);`);
 check('one of each has no plural to get wrong', J('F.hud.bay.text') === 'BAY  fighters 1  escorts 1   OUT 0');
 g.run(`window.F = __fake(2); F.onKey({ code: 'Enter' }); F.update(0, 33);`);

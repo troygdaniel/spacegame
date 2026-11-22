@@ -8,7 +8,7 @@
 //   D  beat 3: the ambush on the short lane (fighters and torpedo boats), the long lane without the boats
 //   E  beat 4: the pirate leader
 //   F  the pace: a beat about every minute
-//   G  the words, the hints from the key table, the bots
+//   G  the words, the hints from the key table (card one-list-keys, 22 Nov 2026: a hint names the list's key, Q, and the row's own words, "Convoy: tuck in"; no row has a key of its own), the bots
 // Run: node tests/campbeats.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
@@ -121,17 +121,20 @@ sec('G', () => {
   const spoken = ['camp.say.patrolleave', 'camp.say.distress', 'camp.say.thanks', 'camp.say.rimambush'].map(k => J(`uiText(${JSON.stringify(k)})`));
   check('G  the lines the ship speaks are about twelve words at most', spoken.every(s => words(s) <= 12), JSON.stringify(spoken));
   const hint = J('(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); return typeof campBeatHint === "function" ? campBeatHint(C, "fleet") : ""; })()');
-  check('G  the hints name their keys from the key table (CAMP_PANELS), not in letters of their own: campBeatHint(C, "fleet") carries the launch row\'s key', typeof hint === 'string' && hint.indexOf(J('CAMP_PANELS.panels.find(p => p.id === "fleet").rows.find(r => r.id === "launch").k')) >= 0, hint);
+  const fkey = J('CAMP_PANELS.panels.find(p => p.id === "fleet").key'), raw = read('content/text/campbeats.md');
+  const remap = J('(() => { const C = campNew(1, [], { seed: 1, mission: 0 }), P = CAMP_PANELS.panels.find(p => p.id === "fleet"), was = P.key; P.key = "G"; const t = campBeatHint(C, "fleet"); P.key = was; return t; })()');
+  check('G  the hints name their keys from the key table (CAMP_PANELS), not in letters of their own: campBeatHint(C, "fleet") carries the fleet list\'s key (Q) and how a list is used (Up and Down, then Enter); the text itself says {fleetkey}, so a remap changes the hint; no row has a key of its own to name', typeof hint === 'string' && fkey === 'Q' && hint.indexOf('Press ' + fkey + ' ') === 0 && /Up and Down, then Enter/.test(hint) && /\| camp\.hint\.fleet \| Press \{fleetkey\} /.test(raw) && remap.indexOf('Press G ') === 0 && J('CAMP_PANELS.panels.every(p => p.rows.every(r => !("k" in r)))') && J('campBeatKey("fleet")') === fkey, hint);
   g.run('__mk("short"); __until(0.525); __go(1)');
   const shown = {}; const h1 = J('(() => { const sh = {}; const a = campBeatNudge(C, sh); return a; })()');
-  check('G  with torpedo boats out the hint says to tuck the transport in, with the convoy row\'s key from the table in it', typeof h1 === 'string' && /Tuck the transport in/.test(h1) && h1.indexOf('press ' + J('CAMP_PANELS.panels.find(p => p.id === "fleet").rows.find(r => r.id === "convoy").k')) >= 0, JSON.stringify(h1));
+  const tuckRow = J('CAMP_PANELS.panels.find(p => p.id === "fleet").rows.find(r => r.id === "ctuck").label'), runRow = J('CAMP_PANELS.panels.find(p => p.id === "fleet").rows.find(r => r.id === "crun").label');
+  check('G  with torpedo boats out the hint says to tuck the transport in: the fleet list\'s key and the tuck row\'s own words, both from the table ("Press Q and pick \"Convoy: tuck in\"")', typeof h1 === 'string' && tuckRow === 'Convoy: tuck in' && /^Torpedo boats!/.test(h1) && h1.indexOf('Press ' + fkey + ' and pick "' + tuckRow + '"') >= 0 && J(`campPanelList(C, 'fleet').some(r => r.id === 'ctuck')`) && J(`campPanelRows(C, 'fleet').find(r => r.id === 'ctuck').ok`) === true, JSON.stringify(h1));
   g.run('campOrder(C, "convoy", "tuck in")');
-  check('G  tucked in (Tuck in is in force) the hint is not shown: the player has done it', !/Tuck the transport in/.test(J('campBeatNudge(C, {}) || ""')));
+  check('G  tucked in (Tuck in is in force) the hint is not shown: the player has done it', J('campConvoyState(C)') === 'tuck' && !/tuck in/i.test(J('campBeatNudge(C, {}) || ""')));
   g.run('C.ships.filter(u => u.team === "alien").forEach(u => { u.hp = 0; }); __mk("short"); __until(0.755); __go(1)');
   const h2 = J('campBeatNudge(C, {})');
-  check('G  with the leader out the hint says to run the transport past it (Run for it, the CONVOY page)', typeof h2 === 'string' && /Run for it/.test(h2), JSON.stringify(h2));
+  check('G  with the leader out the hint says to run the transport past it (the row "Convoy: run for it" of the fleet list, in the table\'s words)', typeof h2 === 'string' && runRow === 'Convoy: run for it' && /^The leader blocks the way\./.test(h2) && h2.indexOf('Press ' + fkey + ' and pick "' + runRow + '"') >= 0 && J(`campPanelList(C, 'fleet').some(r => r.id === 'crun')`), JSON.stringify(h2));
   const src = read('src/campbeats.js');
-  check('G  and the code of the beats has no key letter of its own for a panel (it asks the table)', !/Press [QEC]\b/.test(src) && /CAMP_PANELS/.test(src));
+  check('G  and neither the code of the beats nor its hints\' texts have a key letter of their own for a list (they ask the table)', !/Press [A-Z0-9]\b/.test(src) && /CAMP_PANELS/.test(src) && !raw.split('\n').filter(l => /^\| camp\.hint\./.test(l)).some(l => /[Pp]ress [A-Z0-9]\b/.test(l)));
   const bot = read('tools/campaign-bot.mjs');
   check('G  the bot knows the distress call: its smart answer table has it', /distress:/.test(bot));
 });

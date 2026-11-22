@@ -12,7 +12,7 @@ const CAMPZOOM = {
   map: { min: 0.5, max: 8, key: 1.4, hold: 1.06, wheel: 0.002 }, // the map's zoom range; 1 is the level fitted to the frame. min is how far out it goes AT LEAST: the zoom at which the whole system fits is lower where the system is much larger than the level (mp.zMin, campMapZMin). key, hold and wheel: the step of a press, of a held key's repeat and of a wheel unit (the flight's are 1.2, 1.03 and 0.0012: the map has farther to go)
   view: { min: 0.2, minShip: 10 },                                // the flight view's farthest zoom out (the camera's own is 0.4 in the Long Haul), and the smallest a ship is drawn on screen, px across, when the view is out so far that it would be smaller
   keys: Object.assign({}, ...campKeyCodes('zoomin').map(c => ({ [c]: 1 })), ...campKeyCodes('zoomout').map(c => ({ [c]: -1 }))), // KeyboardEvent.code of the keys that zoom in (1) and out (-1): the table's (CAMP_KEYS in src/data_controls.js: = and the keypad's +, - and the keypad's -)
-  reset: campKeyCodes('zoomreset'),                              // the keys that go back to the default: Backspace (0 is the SHIP panel's dock key now: card space-game-two-hands-keys)
+  reset: campKeyCodes('zoomreset'),                              // the keys that go back to the default: Backspace
   mem: { level: 0, want: 1 }                                     // the zoom of the level last played: where a retry starts
 };
 

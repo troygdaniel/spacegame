@@ -30,7 +30,7 @@ class CampHub extends Phaser.Scene {
   create() {
     this.P = this.d.P || campProgressLoad(); if (typeof campReveal === 'function') campReveal(!!this.P.revealed); // after the ending has been seen, level 3 is the outpost on the board too (the Campaign scene did this only when it began: a page loaded after the ending showed the old name)
     this.hub = campHubNew(this.P, { rows: this.d.rows, at: this.d.at }); this.msg = null; this.walls = []; // a dock hands in the Campaign scene's own progress, so what is bought there is not overwritten at the debrief
-    const nx = campHubNext(this.P), st = Object.assign({}, campHubStation(nx.level), this.d.station && typeof this.d.station === 'object' ? this.d.station : {}), css = /^#[0-9a-f]{6}$/i.test(st.accent) ? st.accent : campHubStation(nx.level).accent;
+    const nx = campHubNext(this.P), st = Object.assign({}, campHubStation(nx.level, nx.i), this.d.station && typeof this.d.station === 'object' ? this.d.station : {}), css = /^#[0-9a-f]{6}$/i.test(st.accent) ? st.accent : campHubStation(nx.level).accent;
     this.look = { id: 'camp-hub', name: String(st.name), art: st.art, home: false, accent: parseInt(css.slice(1), 16), accentCss: css, pirate: false, // what src/stationlook.js answers for a dock: the hall's colour, and the desks in it (a mission desk and a repair bay, no bar, shop or pump)
       terminals: { missions: true, repair: true, shop: false, pump: false, bar: false }, barName: '', barLines: [], welcome: '' };
     this.accent = css;

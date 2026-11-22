@@ -4,7 +4,7 @@
 //   Fast in Long Haul = the autopilot as it always was (it cruises the middle of a long leg); Fly = the autopilot's local leg only, at the ship's own top speed (no cruise, no clearing of a mass for one).
 //   Fast in the Campaign = a burn: the carrier's top speed and thrust times CAMP.nav.fast (2) while the autopilot flies it; Fly = the autopilot as it always was.
 //   A. the Campaign: the burn in the sim (speed, arrival, steering takes it away, manual flight untouched, the flight times)
-//   B. the Campaign map: the first click sets, a second flies, the buttons, Enter and Shift+Enter, the words
+//   B. the Campaign map: the first click sets, a second flies, the buttons, Enter and Shift+Enter, the words (the map's keys since card one-list-keys: Up and Down choose, Enter flies, X clears; no digit and no letter of the target or the lists is the map's)
 //   C. Long Haul: the autopilot's regular speed, the times of the two buttons, the speed through the navigation panel
 //   D. the Long Haul map: the click, the second click, the buttons beside the mark, Enter and Shift+Enter
 // Run: node tests/mapclickfly.mjs   (exit code 1 on a failed check)
@@ -93,10 +93,11 @@ g.run(`
   check('Shift+Enter flies it fast', J('M.camp.nav.id') === 'place:sun' && J('M.camp.nav.fast') === true);
   g.run(`campMapKey(M, 'KeyX'); M.mp.dirty = true; campMapPaint(M, 3000); campMapClick(M, __pt.x + 6, __pt.y); window.__was = M.mp.setId; window.__pr = campMapPoint(M.mp.fit, CAMPMAP.frame, CAMP.levels[2].places.proxima.x, CAMP.levels[2].places.proxima.y); campMapClick(M, __pr.x + 4, __pr.y);`);
   check('a click on another place moves the setting there (no flight), and a click on nothing sets nothing', J('__was') === 'place:sun' && J('M.mp.setId') !== 'place:sun' && !!J('M.mp.setId') && J('M.camp.nav') === null && J(`campMapClick(M, 30, 30)`) === false && !!J('M.mp.setId'));
-  check('the keys the map did not take stay not its: a digit, Space, Q, I, U', ['Digit1', 'Space', 'KeyQ', 'KeyI', 'KeyU'].every(c => J(`campMapKey(M, '${c}', false)`) === false));
+  check('the keys that are not the map\'s: a digit (1, 7, 9: the old group keys too), Space, the two lists\' Q and P, the target\'s A D S, the power\'s J K L, W, I, U', ['Digit1', 'Digit7', 'Digit9', 'Space', 'KeyQ', 'KeyP', 'KeyA', 'KeyD', 'KeyS', 'KeyJ', 'KeyK', 'KeyL', 'KeyW', 'KeyI', 'KeyU'].every(c => J(`campMapKey(M, '${c}', false)`) === false));
   g.run(`campMapClose(M); window.M2 = __scx(2); campMapOpen(M2); campMapPaint(M2, 0); M2.mp.setId = 'place:proxima'; campMapPaint(M2, 300); M2.mp.rows = [];  M2.mp.rowsAt = -1e9; M2.camp.caches.forEach(k => { k.got = true; }); campMapPaint(M2, 900);`);
   check('a set place that has gone from the list clears itself and the buttons go', J('M2.mp.btnFly.visible') === true || J('M2.mp.setId') === 'place:proxima' ? true : J('M2.mp.setId') === '');
-  check('the words are in content/text/mapfly.md and the defaults, and the old key line is unchanged', ['camp.map.fly', 'camp.map.fast', 'camp.map.set', 'camp.nav.gofast'].every(k => src('content/text/mapfly.md').includes('| ' + k + ' |') && src('src/contenttables.js').includes("'" + k + "'")) && J(`uiText('camp.map.keys')`) === 'W S choose   Enter fly   X clear');
+  check('the words are in content/text/mapfly.md and the defaults; the map\'s key line names the keys the map takes since card one-list-keys (Up and Down choose: W and S are not the map\'s any more), and each key it names IS the map\'s: campMapKey takes it, and takes neither W nor S', ['camp.map.fly', 'camp.map.fast', 'camp.map.set', 'camp.nav.gofast'].every(k => src('content/text/mapfly.md').includes('| ' + k + ' |') && src('src/contenttables.js').includes("'" + k + "'")) && J(`uiText('camp.map.keys')`) === 'Up Down choose   Enter fly   X clear'
+    && J(`(() => { const o = [campMapFly, campNavClear]; window.campMapFly = () => true; const mk = () => ({ mp: { rows: [{ id: 'a', kind: 'place', group: 'places' }, { id: 'b', kind: 'place', group: 'places' }], selId: 'a', setId: '', flewId: '' }, camp: {} }); const r = ['ArrowUp', 'ArrowDown', 'Enter', 'KeyX', 'KeyW', 'KeyS'].map(c => campMapKey(mk(), c)); window.campMapFly = o[0]; return r; })()`).join() === 'true,true,true,true,false,false');
   check('the scene gives the map the shift key (Shift+Enter)', /campMapKey\(this, c, e\.shiftKey\)/.test(src('src/campaignscene.js')));
 }
 

@@ -33,7 +33,7 @@ The words of the Campaign's navigation: the autopilot, the list on the map, the 
 | camp.nav.arrow | {name}  {km} km |
 | camp.nav.cachelabel | CACHE |
 | camp.nav.relicmark | RELIC |
-| camp.map.keys | W S choose   Enter fly   X clear |
+| camp.map.keys | Up Down choose   Enter fly   X clear |
 | camp.map.zoom | ZOOM {pct}%   {keyzoomout} {keyzoomin} zoom   {keyzoomreset} reset |
 | camp.map.local | AREA  {km} km across |
 | camp.map.whole | SYSTEM  {km} km across |

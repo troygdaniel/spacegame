@@ -9,7 +9,7 @@
 //   campBeatsNew(C)            at campNew: C.beats = { patrolSaid, asked, thanked }
 //   campBeats(C)               each tick: the pirates wear a crippled miner down (the wave row's `harry`: hit points a second for each pirate within CAMP_BEATS.harryNear of it), and a miner that was saved gives its thanks (once: the ore, the radio)
 //   CAMP_CALL_TYPES / CAMP_CALL_FX  get the scripted call `distress` (rescue, rescueall, stay) when src/camporders.js is there; campBeats opens it (campCallStart)
-//   campBeatKey(id)            the key a hint names, from the key table (CAMP_PANELS: fleet, ship, systems; the Campaign's CONTROLS rows: map, scout, take), never a letter of its own
+//   campBeatKey(id)            the key a hint names, from the key table (CAMP_PANELS: fleet, ship; the Campaign's CONTROLS rows: map, scout, take), never a letter of its own
 //   campBeatHint(C, id)        the words of a hint with its keys in them (camp.hint.<id>)            campBeatNudge(C, shown)  the hint that is due (CAMPBEATHINTS), which campNudge (src/campnudge.js) asks for
 
 const CAMP_BEATS = { harryNear: 700 }; // px: a pirate this near the crippled miner is on it
@@ -25,8 +25,8 @@ function campBeatKey(id) {
   if (id === 'take') { const r = pick(/scout/i); return r && r.k[1] ? r.k[1] : 'T'; }
   return '';
 }
-const campBeatRow = id => { const P = typeof CAMP_PANELS === 'object' && CAMP_PANELS.panels.find(p => p.id === 'fleet'), r = P && P.page3 && P.page3.rows.find(x => x.id === id); return r ? String(r.n) : ''; }; // the digit of a row of the FLEET panel's CONVOY page
-const campBeatKeys = () => ({ fleet: campBeatKey('fleet'), ship: campBeatKey('ship'), systems: campBeatKey('systems'), map: campBeatKey('map'), scout: campBeatKey('scout'), take: campBeatKey('take'), tuck: campBeatRow('ctuck'), run: campBeatRow('crun') }); // every key a line may name, as the key table says it (the panels' own are {fleetkey} {nlaunch} ... of src/data_controls.js campKeyVar)
+const campBeatRow = id => { const r = typeof campKeyRow === 'function' ? campKeyRow(id) : null; return r ? r.label : ''; }; // the words of a row of the fleet list, as the list says them ("Convoy: tuck in")
+const campBeatKeys = () => ({ fleet: campBeatKey('fleet'), ship: campBeatKey('ship'), map: campBeatKey('map'), scout: campBeatKey('scout'), take: campBeatKey('take'), tuck: campBeatRow('ctuck'), run: campBeatRow('crun') }); // every key a line may name, as the key table says it (the lists' own are {fleetkey} {rowlaunch} ... of src/data_controls.js campKeyVar)
 const campBeatHint = (C, id) => uiText('camp.hint.' + id, campBeatKeys());
 
 // beat 2: the thanks of a miner that was saved

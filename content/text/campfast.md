@@ -6,7 +6,7 @@ The words of the Campaign's Fast rule (card space-game-campaign-fast-board): a b
 ## Strings
 | key | text |
 |---|---|
-| camp.nav.no.wingout | Wing is out: recall it first. Press again to recall and burn. |
+| camp.nav.no.wingout | Wing is out: recall it first. Order again to recall and burn. |
 | camp.nav.no.wingout2 | Recalling the wing, then the burn. |
 | camp.nav.recalling | Recalling... {n} out. |
 | camp.nav.recalltimeout | Recall timed out. Still out: {names}. |

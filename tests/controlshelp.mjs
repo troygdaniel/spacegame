@@ -8,8 +8,10 @@
 //   3. a line of the H page is at most 43 characters and a scene has at most 20: what the page holds without wrapping or running off
 //   4. content/text/ui.md has exactly the table's lines; the key line in space and the README name only keys that are in the table
 //   5. nothing names a control that is gone
-//   6. the Campaign (card space-game-campaign-keys-help): every key a Campaign file binds is on the table (the CAMPAIGN and PANELS groups and the debug keys), every key the table names is bound, and the key line, the
-//      pause card and the title name only keys of the table. A key added to the Campaign scene, its map or its panels and not to src/data_controls.js fails here, so the H page cannot go stale again
+//   6. the Campaign (cards space-game-campaign-keys-help and one-list-keys): every key a Campaign file binds is on the table (the CAMPAIGN and LISTS groups and the debug keys), every key the table names is bound, and the key line, the
+//      pause card and the title name only keys of the table. A key added to the Campaign scene, its map or its lists and not to src/data_controls.js fails here, so the H page cannot go stale again.
+//      "One list per hand": Q and P each open ONE list (Up, Down, Enter in it); no digit, no letter order and no Shift is a flight key; and NO FLIGHT KEY HAS TWO MEANINGS but the shared ones the table's own comment
+//      documents: the arrows and Enter belong to whichever list is open (a Q or P list, a pilot's call, the map; else the ship: fly, missile), and X clears the target in flight and the trip in the map
 // How it knows what is bound: the literal keys of addKey / addKeys calls, the e.code and e.key tests of keydown handlers, and the keys kept
 // in tables (ASSIST.key, the assist's modes, OVERVIEW.key, GUNLOCK.key), read from the game itself.
 // Run: node tests/controlshelp.mjs   (exit code 1 on a failed check)
@@ -44,7 +46,7 @@ function bound(files) {
 }
 const SPACE_FILES = ['space', 'assist', 'assist_orbit', 'autopilot', 'cruise', 'jump', 'gunlock', 'overview', 'clickmove', 'boost', 'camzoom', 'autotarget', 'handling', 'navpanel', 'hud'];
 const EVERYWHERE = ['map', 'meta', 'shipcomputer', 'listen'];         // Tab, H, Esc, M, I (the ship's computer, src/shipcomputer.js) and U (hold to talk to it, src/listen.js): window handlers for every scene
-const CAMP_FILES = ['campaignscene', 'campmapdraw', 'campmap', 'campkeys', 'camppanel', 'camphud'];   // the Campaign scene, its Tab map, its H page, its panels (src/camppanel.js) and its gauges, whose J K L keys are a table of codes (src/camphud.js)
+const CAMP_FILES = ['campaignscene', 'campmapdraw', 'campmap', 'campkeys', 'camppanel', 'camporderdraw', 'camphud'];   // the Campaign scene, its Tab map, its H page, its two lists (src/camppanel.js), a pilot's call (src/camporderdraw.js) and its gauges (src/camphud.js)
 const SCENES = {
   campaign: CAMP_FILES.concat(EVERYWHERE),
   panels: CAMP_FILES.concat(EVERYWHERE),
@@ -56,8 +58,8 @@ const SCENES = {
   title: ['title', 'contentui', 'settings', 'mods'],
   any: EVERYWHERE
 };
-// what the Campaign binds: the literal keys of its files, the scene's own tests of the code it holds in a variable (c === 'KeyT'), the map's key (CAMPMAP.key), and the digits: the scene hands every digit
-// to campPanelKey, which opens the panel whose key it is (CAMP_PANELS) and picks the row whose n it is, so those digits are bound by that table and the test below that the scene routes them
+// what the Campaign binds: the literal keys of its files, the scene's own tests of the code it holds in a variable (c === 'KeyT'), the map's key (CAMPMAP.key), the two keys that open a list (CAMP_PANELS: Q and P;
+// a row of a list has no key of its own) and the direct keys of CAMP_KEYS. The scene hands a key to campPanelKey and campKeyIs, which read those two tables, so a key named there is a key bound
 const campBound = () => {
   const keys = bound(CAMP_FILES);
   for (const m of read('src/campaignscene.js').matchAll(/(?<![\w.])c === '([^']+)'/g)) keys.add(norm(m[1]));
@@ -65,18 +67,20 @@ const campBound = () => {
   const ZOOMCAP = { Equal: '=', Minus: '-', NumpadAdd: '=', NumpadSubtract: '-' }; // the zoom keys (card space-game-campaign-zoom): src/campzoom.js holds them in a table of codes, the table names the caps
   J('Object.keys(CAMPZOOM.keys)').forEach(c => keys.add(ZOOMCAP[c] || norm(c))); J('CAMPZOOM.reset').forEach(c => keys.add(norm(c.replace(/^Numpad/, 'Digit'))));
   if (/\be\.shiftKey\b/.test(read('src/campaignscene.js')) && /\bshift\b/.test(read('src/campmapdraw.js'))) keys.add('SHIFT'); // Shift+Enter: the scene passes the event's shiftKey, the map reads it
-  ['M', 'I', 'U'].forEach(k => { if (bound(EVERYWHERE).has(k)) keys.add(k); }); // the window handlers that work in every scene, the Campaign's too: mute (meta), the strip (shipcomputer), the voice (listen)
-  // the two hands: the keys of the panels' rows and their page keys, and the keys of CAMP_KEYS (the arrows, A D S X, the zoom, the strip, the voice): the scene reads them from the tables (campPanelKey, campKeyCodes), so a key named there is a key bound
-  J('CAMP_PANELS.panels.map(p => [p.key].concat([p.rows, p.page2 && p.page2.rows, p.page3 && p.page3.rows].filter(Boolean).flat().map(r => r.k)))').flat().forEach(d => keys.add(norm(d)));
+  ['M'].forEach(k => { if (bound(EVERYWHERE).has(k)) keys.add(k); }); // the window handler that works in every scene, the Campaign's too: mute (meta). The strip and the voice are NOT I and U in the Campaign: they are CAMP_KEYS.strip (/) and CAMP_KEYS.voice (.), checked in part 6
+  // the two hands: the key that opens each list (a row has none), and the keys of CAMP_KEYS (the arrows, A D S X, the power, the zoom, the strip, the voice): the scene reads them from the tables (campPanelKey, campKeyCodes), so a key named there is a key bound
+  J('CAMP_PANELS.panels.map(p => p.key)').forEach(d => keys.add(norm(d)));
   J('Object.values(CAMP_KEYS).map(k => k.k)').forEach(k => keys.add(norm(k)));
   return new Set([...keys].filter(k => k === '.' || !k.includes('.'))); // 'e.key === camp.nav.go' is an event name, not a key (the period is the voice key)
 };
+// the keys of the two cards between levels (the handlers noRefit leaves out of the flight scan): the codes their tables and tests name
+const cardBound = () => { const keys = new Set(); for (const m of read('src/campaignscene.js').matchAll(/  (?:refitKey|pickKey)\(c\) \{[\s\S]*?\n  \}\n/g)) for (const k of m[0].matchAll(/\b(Digit\d|Enter)\b/g)) keys.add(norm(k[1])); return keys; };
 const spaceOwn = bound(SPACE_FILES);
 [J('ASSIST.key'), J('OVERVIEW.key'), J('GUNLOCK.key')].concat(J('Object.values(ASSIST_MODES).map(m => m.key).filter(Boolean)')).forEach(k => spaceOwn.add(norm(k)));
 
 // a key cap of the table as the keys it stands for; a cap that is not a keyboard key (the mouse) stands for none
 const NOT_KEYS = ['CLICK', 'MOUSE', 'WHEEL', 'ANY KEY'];
-const ARROWCAP = { '\u2190': 'LEFT', '\u2192': 'RIGHT' }; // the arrows' caps on the keys page (the FLEET panel's flip line)
+const ARROWCAP = { '\u2190': 'LEFT', '\u2192': 'RIGHT' }; // an arrow drawn as a cap stands for its key
 const capKeys = cap => { if (ARROWCAP[cap]) return [ARROWCAP[cap]]; const c = cap.toUpperCase(); if (c === 'ARROWS') return ['ARROWS']; if (NOT_KEYS.includes(c)) return []; const r = /^(\d)-(\d)$/.exec(c); if (r) { const out = []; for (let d = +r[1]; d <= +r[2]; d++) out.push(String(d)); return out; } return [norm(c)]; };
 const groups = J(`CONTROLS.map(g => ({ id: g.id, scene: g.scene, rows: g.rows.map(r => ({ k: r.k, t: r.t, help: r.help })) }))`);
 const group = id => groups.find(x => x.id === id);
@@ -85,6 +89,7 @@ console.log('1. every key the help names is bound');
 for (const gr of groups) {
   const roomBound = () => { const k = bound(SCENES.readyroom); ['1', '2', '3', '4', '5'].forEach(d => k.add(d)); const ZC = { Equal: '=', Minus: '-', NumpadAdd: '=', NumpadSubtract: '-' }; if (/campZoomKey\(code\)/.test(read('src/campbriefdraw.js'))) { J('Object.keys(CAMPZOOM.keys)').forEach(c => k.add(ZC[c] || norm(c))); J('CAMPZOOM.reset').forEach(c => k.add(norm(c.replace(/^Numpad/, 'Digit')))); } return k; }; // the room hands every digit to campHubKey, which picks the row whose place it is; the briefing's map takes the zoom keys of src/campzoom.js (the Tab map's own: card space-game-briefing-walkthrough)
   const have = gr.id === 'readyroom' ? roomBound() : gr.id === 'flight' ? new Set([...bound(SCENES.flight), ...spaceOwn]) : (gr.id === 'campaign' || gr.id === 'panels') ? campBound() : bound(SCENES[gr.id] || []);
+  if (gr.id === 'campaign') cardBound().forEach(k => have.add(k)); // the rows under ON A CARD are the keys of the tech and refit cards (their own screens, left out of the flight scan): 1 to 3 pick a technology, 4 and 5 buy ships
   if (gr.id === 'title') continue; // the Title reads keys by e.code in one long line of its own; its rows are not what changed and are checked in tests/settings.mjs
   const missing = [];
   gr.rows.forEach(r => r.k.forEach(cap => capKeys(cap).forEach(k => { if (!have.has(k)) missing.push(cap + ' (' + r.t + ')'); })));
@@ -147,16 +152,43 @@ console.log('6. the Campaign: every bound key is on the table');
 {
   const named = new Set(); ['campaign', 'panels'].forEach(id => group(id).rows.forEach(r => r.k.forEach(cap => capKeys(cap).forEach(k => named.add(k)))));
   J('Object.values(CAMP_KEYS).map(k => k.k)').forEach(cap => capKeys(cap).forEach(k => named.add(k))); // the keys of CAMP_KEYS are the table too (the zoom's reset, the arrows)
+  if (group('campaign').rows.some(r => /Shift\+Enter/.test(r.t) && r.k.includes('Enter'))) named.add('SHIFT'); // Shift is no key of its own any more: it is named only where it is read, in the line of the map's Enter ("Shift+Enter: fast")
   const ALSO = { UP: 'ARROWS', DOWN: 'ARROWS', LEFT: 'ARROWS', RIGHT: 'ARROWS', ARROWUP: 'ARROWS', ARROWDOWN: 'ARROWS', ARROWLEFT: 'ARROWS', ARROWRIGHT: 'ARROWS' }; // the arrows are the one cap "Arrows"
   const bnd = campBound();
   const silent = [...bnd].filter(k => !named.has(k) && !(ALSO[k] && named.has(ALSO[k])));
-  check('no key the Campaign binds is missing from the CAMPAIGN and PANELS groups', silent.length === 0, 'bound and not named: ' + silent.join(' ') + '   bound: ' + [...bnd].join(' '));
-  check('the scan saw the keys it should (fly, fire, blink, the panels\' digits, the map, cards, pause, title, help, strip, voice, mute)', ['ARROWS', 'SPACE', 'W', 'A', 'S', 'D', 'J', 'K', 'L', ';', 'Q', 'P', '1', '2', '7', '0', 'TAB', 'X', 'ENTER', 'ESC', 'T', 'H', 'I', 'U', 'M', '/', '.', 'BACKSPACE'].every(k => bnd.has(k)), ['ARROWS', 'SPACE', 'W', 'A', 'S', 'D', 'J', 'K', 'L', ';', 'Q', 'P', '1', '2', '7', '0', 'TAB', 'X', 'ENTER', 'ESC', 'T', 'H', 'I', 'U', 'M', '/', '.', 'BACKSPACE'].filter(k => !bnd.has(k)).join(' '));
+  check('no key the Campaign binds is missing from the CAMPAIGN and LISTS groups', silent.length === 0, 'bound and not named: ' + silent.join(' ') + '   bound: ' + [...bnd].join(' '));
+  const SAW = ['ARROWS', 'UP', 'DOWN', 'LEFT', 'RIGHT', 'SPACE', 'ENTER', 'A', 'D', 'S', 'X', 'J', 'K', 'L', ';', 'Q', 'P', 'TAB', 'V', 'T', 'R', 'ESC', 'H', 'M', '/', '.', '=', '-', 'BACKSPACE', 'SHIFT', '4', '5'];
+  check('the scan saw the keys it should (fly, fire, the missile, the target, the power, the two lists, the map and its V T X, the cards, pause, help, strip, voice, mute, zoom)', SAW.every(k => bnd.has(k)), SAW.filter(k => !bnd.has(k)).join(' '));
+  const GONE_KEYS = ['W', 'E', 'I', 'U', '1', '2', '3', '6', '7', '8', '9', '0']; // the old one-key orders (W mine, E stance, U emergency, I ...), the digits that opened a panel or picked a row (R is the pause card's restart, 4 and 5 the refit card's)
+  check('and it saw none of the keys the lists took away: no letter order (W E I U) and no digit but the refit card\'s 4 and 5 is bound by a Campaign file', GONE_KEYS.every(k => !bnd.has(k)), GONE_KEYS.filter(k => bnd.has(k)).join(' '));
+  check('the strip and the voice are / and . in the Campaign, not the Long Haul\'s I and U: src/shipcomputer.js and src/listen.js read the code from CAMP_KEYS while the Campaign is up', /shipcompCamp\(game\) \? e\.code !== campKeyCodes\('strip'\)\[0\] : e\.code !== 'KeyI'/.test(read('src/shipcomputer.js')) && /LISTEN\.code = camp \? campKeyCodes\('voice'\)\[0\] : 'KeyU'/.test(read('src/listen.js')) && J("campKeyCodes('strip')[0]") === 'Slash' && J("campKeyCodes('voice')[0]") === 'Period');
   const scene = read('src/campaignscene.js');
-  check('the scene hands every digit to the panels (campPanelKey) and has no key of its own for a digit from 4 to 9 or an order: the old direct digits are gone (the refit card between levels buys with 4 and 5 on its own screen)', /campPanelKey\(/.test(scene) && !/Digit[4-9]/.test(noRefit(scene).split('\n').filter(l => !/R\.ore >= B\./.test(l)).join('\n')) && !/campOrder\(C, order, ''/.test(scene) && !/Digit1: 'launch'/.test(scene));
+  check('the scene has no key of its own for a digit or an order in flight (the refit card between levels buys with 4 and 5 on its own screen): every flight key goes through the tables (campPanelKey, campKeyCodes, campKeyIs), and Shift is not handed to the lists', /campPanelKey\(this\.pn, C, c, now\)/.test(scene) && !/Digit\d|Numpad\d/.test(noRefit(scene).split('\n').filter(l => !/R\.ore >= B\./.test(l)).join('\n')) && !/campOrder\(C, order, ''/.test(scene) && !/Digit1: 'launch'/.test(scene) && !/campPanelKey\([^)]*shift/i.test(scene));
+  const dead = J(`(() => { const codes = []; for (let d = 0; d <= 9; d++) codes.push('Digit' + d, 'Numpad' + d); codes.push('KeyW', 'KeyE', 'KeyR', 'KeyU', 'KeyI', 'ShiftLeft', 'ShiftRight'); return ['', 'fleet', 'ship'].flatMap(open => codes.filter(c => { const C = campNew(1, [], { seed: 1 }), P = campPanelNew(); P.open = open; const before = JSON.stringify([C.bay, C.stance, C.tgt || '', C.power]); const r = campPanelKey(P, C, c, 0); return r.used || r.ran || P.open !== open || P.at !== 0 || JSON.stringify([C.bay, C.stance, C.tgt || '', C.power]) !== before; }).map(c => open + ':' + c)); })()`);
+  check('a digit does nothing in flight, and neither does an old letter order or Shift: with no list open, with the Q list open and with the P list open, each of Digit0-9, Numpad0-9, W E R U I and Shift is not used by the lists, gives no order and moves nothing', dead.length === 0, dead.join(' '));
+  check('no row of a list has a key of its own: a row is its id, its order and its words (no k, code, n, tag or cycle), a list has no pages, and each list has exactly one key (Q, P), which no direct key of CAMP_KEYS also is', J(`CAMP_PANELS.panels.every(p => p.rows.every(r => !('k' in r) && !('code' in r) && !('n' in r) && !('tag' in r) && !('cycle' in r)) && !('page2' in p) && !('page3' in p) && !('pages' in p) && !('back' in p))`) && J('CAMP_PANELS.panels.map(p => p.key + ":" + p.code).join()') === 'Q:KeyQ,P:KeyP' && J(`CAMP_PANELS.panels.every(p => !Object.values(CAMP_KEYS).some(k => k.codes.includes(p.code) || k.k === p.key))`) && !('settle' in J('CAMP_PANELS')));
+
+  // ---- one key, one meaning (card one-list-keys): the table lists no flight key twice but the shared ones it documents ----
+  // The rows of the CAMPAIGN and LISTS groups that are flight (not "ON A CARD": a card is a screen of its own, where T, R, Enter and the digits are the card's). A key that stands in more than one of them must be:
+  //   the arrows or Enter (they belong to whichever list is open: a Q or P list, a pilot's call, the map; else the ship flies and Enter is a missile), or
+  //   X (it clears: the target in flight, the trip in the map), or
+  //   Esc, whose two lines say the same thing (it closes the open list; the LISTS group repeats it beside the lists).
+  const flightRows = J(`['campaign', 'panels'].flatMap(id => controlsGroup(id).rows.filter(r => r.sub !== 'ON A CARD').map(r => ({ k: r.k, t: r.t, sub: r.sub, g: id })))`);
+  const byKey = {}; flightRows.forEach(r => r.k.forEach(cap => capKeys(cap).forEach(k => { (byKey[k] = byKey[k] || []).push(r); })));
+  const SHARED_LIST = ['ARROWS', 'UP', 'DOWN', 'LEFT', 'RIGHT', 'ENTER']; // whichever list is open has them
+  const twice = Object.keys(byKey).filter(k => byKey[k].length > 1), undocumented = twice.filter(k => !SHARED_LIST.includes(k) && k !== 'X' && k !== 'ESC');
+  check('no flight key is listed with two meanings: the only keys in more than one flight row are the arrows and Enter (the open list\'s), X and Esc; every other key (' + Object.keys(byKey).filter(k => byKey[k].length === 1).join(' ') + ') has ONE row', undocumented.length === 0 && flightRows.length >= 20, undocumented.map(k => k + ': ' + byKey[k].map(r => r.t).join(' / ')).join(' | '));
+  check('the shared ones are exactly the documented ones: Up and Down are a pilot\'s call, the map and "In a list" (each line says which list), Enter is the missile "(no list open)", the map\'s "fly there" and "In a list: give the order"', (() => { const says = r => /^In a list:|^Map:|^A pilot calls|no list open|^Thrust, brake, turn/.test(r.t); return twice.filter(k => SHARED_LIST.includes(k)).every(k => byKey[k].every(says)) && ['UP', 'DOWN'].every(k => byKey[k].length === 3 && byKey[k].some(r => /^A pilot calls/.test(r.t)) && byKey[k].some(r => /^Map:/.test(r.t)) && byKey[k].some(r => /^In a list: move/.test(r.t)))
+    && byKey.ENTER.length === 3 && byKey.ENTER.some(r => /Missile.*\(no list open\)/.test(r.t)) && byKey.ENTER.some(r => /^Map: fly there/.test(r.t)) && byKey.ENTER.some(r => /^In a list: give the order/.test(r.t)); })(), JSON.stringify(twice.map(k => [k, byKey[k].map(r => r.t)])));
+  check('X is in two rows and only two: it clears the target (THE TARGET) and clears the trip in the map (THE MAP); Esc is in two rows that say one thing: it closes the open list (else the map, else it pauses)', byKey.X.length === 2 && byKey.X.some(r => r.sub === 'THE TARGET' && /X clears it/.test(r.t)) && byKey.X.some(r => r.sub === 'THE MAP' && /^Map: X clears the trip/.test(r.t)) && byKey.ESC.length === 2 && byKey.ESC.every(r => /^Close (a|the) list/.test(r.t)), JSON.stringify([byKey.X, byKey.ESC]));
+  check('the digits the table still names are the cards\' own and are read by the cards\' own handlers only (1-3 a technology, 4 and 5 a fighter or an escort, all under ON A CARD); no flight row names a digit', ['1', '2', '3', '4', '5'].every(d => cardBound().has(d)) && J(`['campaign', 'panels'].flatMap(id => controlsGroup(id).rows).filter(r => r.k.some(c => /\\d/.test(c))).every(r => r.sub === 'ON A CARD')`) && !Object.keys(byKey).some(k => /\d/.test(k)));
+  check('the codes say the same: a KeyboardEvent.code is under two names of CAMP_KEYS only where the arrows are also a list\'s Up and Down (fly, up, down) and Enter is also a list\'s pick (missile, pick); no other direct key shares a code', (() => { const K = J('CAMP_KEYS'), seen = {}; Object.keys(K).forEach(id => K[id].codes.forEach(c => { (seen[c] = seen[c] || []).push(id); })); const shared = Object.keys(seen).filter(c => seen[c].length > 1).map(c => c + '=' + seen[c].join('+')).sort().join();
+    return shared === 'ArrowDown=fly+down,ArrowUp=fly+up,Enter=missile+pick,NumpadEnter=missile+pick'; })());
+  check('a direct key means the same whether a list is open or not: A D S X pick and clear the target and J K L ; move the power with no list, with the Q list and with the P list open, and none of them closes the list or moves its highlight', J(`['', 'fleet', 'ship'].every(open => ['KeyA', 'KeyD', 'KeyS', 'KeyX', 'KeyJ', 'KeyK', 'KeyL', 'Semicolon'].every((c, i) => { const C = campNew(2, [], { seed: 1 }), P = campPanelNew(); P.open = open; const r = campPanelKey(P, C, c, 0); return r.used && P.open === open && P.at === 0 && (i < 4 ? r.fleet === true && !r.ran : r.ran === true && r.row === ['shields', 'engines', 'weapons', 'balance'][i - 4]); }))`));
+  check('Enter is a missile only while no list is open: with none it is the missile (an order, row "missile"); with the Q or P list open it is the list\'s (the highlighted row, never the missile)', J(`(() => { const run = open => { const C = campNew(2, [], { seed: 1 }), P = campPanelNew(); P.open = open; return campPanelKey(P, C, 'Enter', 0).row; }; return [run(''), run('fleet'), run('ship')]; })()`).join() === 'missile,' + J(`campPanelList(campNew(2, [], { seed: 1 }), 'fleet')[0].id`) + ',' + J(`campPanelList(campNew(2, [], { seed: 1 }), 'ship')[0].id`));
   const caps = (line, pick) => line.split(/ {2,}/).flatMap(seg => seg.split(' ').filter(t => pick.test(t))).map(c => c.toUpperCase());
   const keyLine = J(`uiText('camp.ui.keys', { panels: campPanelKeyLine() })`), pause = J(`uiText('camp.ui.paused')`);
-  check('the bottom key line names only keys of the table, read from it: ' + keyLine, caps(keyLine, /^(?:[A-Z0-9=\-]|Tab|Space|Enter|Arrows)$/).every(c => named.has(c)) && keyLine.startsWith(J("CAMP_KEYS.fly.k")) && keyLine.includes(J("campKeyVar('keymissile')")) && /H Keys$/.test(keyLine) && !/\b6-9\b|\bI type an order\b/.test(keyLine), caps(keyLine, /^(?:[A-Z0-9=\-]|Tab|Space|Enter|Arrows)$/).filter(c => !named.has(c)).join(' '));
+  check('the bottom key line names only keys of the table, read from it, the two lists first: ' + keyLine, caps(keyLine, /^(?:[A-Z0-9=\-]|Tab|Space|Enter|Arrows)$/).every(c => named.has(c)) && keyLine.startsWith(J('campPanelKeyLine()')) && J('campPanelKeyLine()') === 'Q Fleet orders   P Ship orders' && keyLine.includes(J("CAMP_KEYS.fly.k") + ' fly') && keyLine.includes(J("campKeyVar('keymissile')") + ' missile') && keyLine.includes(J("campKeyVar('keymap')") + ' ') && /H Keys$/.test(keyLine) && !/\d/.test(keyLine) && !/\bI type an order\b/.test(keyLine) && keyLine === J('campKeyLine()'), caps(keyLine, /^(?:[A-Z0-9=\-]|Tab|Space|Enter|Arrows)$/).filter(c => !named.has(c)).join(' '));
   check('the key line fits the screen: 8.6 px a letter from x 24 ends at 1272 at the latest', 24 + keyLine.length * 8.6 <= 1272, keyLine.length + ' letters');
   check('the pause card says Esc, T and H, which are keys of the table', caps(pause, /^(?:[A-Z]|Esc)$/).every(c => named.has(c) || c === 'ESC') && /H {1,3}all keys/.test(pause) && /Esc/.test(pause), pause);
   const debugCodes = J('CAMP_DEBUG.keys.map(r => r.code)');
@@ -165,9 +197,9 @@ console.log('6. the Campaign: every bound key is on the table');
   const offPage = (g.run('campDebugSet(false)'), J('campKeysPage().some(g => g.title === uiText("camp.keys.debug"))')); // and with it off the page has no debug group at all
   check('the H page has no debug group while the tune kit is off (the normal game)', offPage === false);
   g.run('campDebugSet(true)');
-  // the panels took the direct digits (key 3 and keys 4 to 9 do nothing on their own: 1 or 2 opens a panel, a digit then picks a row), but the lines of the lose cards and the story still said "press 3" and "press 6" (card space-game-wrapup-hunt-l3)
-  const stale = J(`Object.keys(UI_TEXT).filter(k => /^camp\\./.test(k) && /[Pp]ress [3-9]\\b|[Pp]ress [1-9][.!]|\\([1-9]\\)/.test(UI_TEXT[k])).map(k => k + ': ' + UI_TEXT[k])`);
-  check('no Campaign line names a digit key the panels took away: "press 3", "press 6", "(2)" alone are gone (the way is 1 or 2, then a digit: "press 1, then 3")', stale.length === 0, stale.join(' | '));
+  // no digit is a flight key any more (the lists are Q and P, a row is picked with Up, Down and Enter), so no line may send the player to one: "press 3", "(2)" alone, and the panels' own "press 1, then 3" are all gone (cards space-game-wrapup-hunt-l3, one-list-keys)
+  const stale = J(`Object.keys(UI_TEXT).filter(k => /^camp\\./.test(k) && /[Pp]ress [0-9]\\b|, then [0-9]\\b|\\([0-9]\\)/.test(UI_TEXT[k])).map(k => k + ': ' + UI_TEXT[k])`);
+  check('no Campaign line names a digit key: "press 3", "press 1, then 3", "(2)" alone are gone (the way is Q or P, then the row by its name)', stale.length === 0, stale.join(' | '));
   check('the H page lists every row of the two groups, in groups, once: nothing in the table is left off it', J(`(() => { const page = campKeysPage().flatMap(g => g.rows.map(r => r.caps.join(' ') + '|' + r.t)); return ['panels', 'campaign'].every(id => controlsGroup(id).rows.every(r => page.includes(r.k.join(' ') + '|' + r.t))); })()`));
 }
 

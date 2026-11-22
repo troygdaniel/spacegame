@@ -4,7 +4,7 @@
 //   A. the numbers: the small ships are slower than the burn, near and far
 //   B. the rule in the sim: aboard burns; out refuses the first press and remembers it; a second press recalls and burns when the last ship lands; the timeout names who is still out; regular Fly is unaffected
 //   C. the words: "fly fast to Mars", "burn to the relic", "fly fast" (and the plain ones are as before), the dry check and what it does
-//   D. the SHIP panel's rows: 9 is the burn, Shift with 8 a burn to the target, and they obey the rule
+//   D. the ship list's rows (P, then Up, Down and Enter: card one-list-keys, 22 Nov 2026): "Fast burn to the goal" and "Fast burn to the target" are rows of their own (no digit, no Shift), and they obey the rule
 //   E. the map's Fast button says why and presses obey the rule
 // Run: node tests/campfastboard.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -21,6 +21,8 @@ g.run(`
   window.__mars = C => campNavRows(C).find(r => r.id === 'place:mars');
   window.__ev = (C, key) => C.events.filter(e => e.type === 'nav' && e.key === key);
   window.__new = () => { const C = __quiet(campNew('home', [], { seed: 1, god: true })); return C; };
+  // press through a list as the player does: the list's key (from a closed list, so the highlight is on the top row), Down to the row, Enter. null when the row is not in this mission's list
+  window.__pick = (P, C, id, rowId, now) => { const def = CAMP_PANELS.panels.find(p => p.id === id), i = campPanelList(C, id).findIndex(r => r.id === rowId); if (i < 0) return null; campPanelClose(P); campPanelKey(P, C, def.code, now); for (let k = 0; k < i; k++) campPanelKey(P, C, 'ArrowDown', now); return campPanelKey(P, C, 'Enter', now); };
 `);
 
 console.log('A. the numbers');
@@ -80,15 +82,21 @@ console.log('C. the words');
   check('a regular word ("fly to Mars") with the wing out just flies', (g.run(`window.C = __new(); campOrder(C, 'launch'); __run(C, 7); window.__ck4 = campNavCheck(C, 'mars'); campNavDo(C, __ck4);`), J('C.nav && C.nav.fast') === false));
 }
 
-console.log('D. the SHIP panel row');
+console.log('D. the ship list\'s rows');
 {
-  g.run(`window.C = __new(); window.P = campPanelNew(); window.__p1 = campPanelKey(P, C, 'Digit9', 100, false);`);
-  check('9 on the SHIP panel is a burn to the objective (wing aboard): the burn row, one key', J('__p1.ran') === true && J('__p1.row') === 'burn' && J('C.nav && C.nav.fast') === true);
-  g.run(`window.C = __new(); window.P = campPanelNew(); campPanelKey(P, C, 'Digit7', 100, false);`);
-  check('7 alone is regular speed, as it was', J('C.nav && C.nav.fast') === false);
-  g.run(`window.C = __new(); campOrder(C, 'launch'); __run(C, 7); window.P = campPanelNew(); window.__p2 = campPanelKey(P, C, 'Digit9', 100, false);`);
-  check('9 with the wing out is refused the first time ("Wing is out"), and 7 alone still flies at regular speed', J('C.nav') === null && J('__ev(C, "camp.nav.no.wingout").length') >= 1 && (g.run(`campPanelKey(P, C, 'Digit7', 300, false);`), J('C.nav && C.nav.fast') === false));
-  check('the table has the rows for it, and the key line and pages read them: "9  Ship: a fast burn to the objective" and "8  Ship: autopilot to the target (Shift: fast)"', J(`campPanelKeyRows().some(r => r.k.join(' ') === '9' && /fast burn/.test(r.t))`) && J(`campPanelKeyRows().some(r => r.k.join(' ') === '8' && /Shift: fast/.test(r.t))`));
+  g.run(`window.C = __new(); window.P = campPanelNew(); window.__p1 = __pick(P, C, 'ship', 'burn', 100);`);
+  check('P, "Fast burn to the goal", Enter is a burn to the objective (wing aboard): the burn row, and the list closes', J('__p1.ran') === true && J('__p1.ok') === true && J('__p1.row') === 'burn' && J('__p1.open') === '' && J('C.nav && C.nav.fast') === true);
+  g.run(`window.C = __new(); window.P = campPanelNew(); window.__p0 = __pick(P, C, 'ship', 'goal', 100);`);
+  check('the top row, "Fly to the goal", is regular speed, as it was', J(`campPanelList(C, 'ship')[0].id`) === 'goal' && J('__p0.row') === 'goal' && J('__p0.ok') === true && J('C.nav && C.nav.fast') === false);
+  g.run(`window.C = __new(); window.P = campPanelNew(); window.__d = ['Digit9', 'Digit7', 'Digit8'].map(c => campPanelKey(P, C, c, 100));`);
+  check('a digit is no key in flight: 9, 7 and 8 (the old burn, goal and target keys) are not used, give no order and set no course', J('__d.every(r => !r.used && !r.ran && r.open === "")') && J('C.nav') === null);
+  g.run(`window.C = __new(); campOrder(C, 'launch'); __run(C, 7); window.P = campPanelNew(); window.__p2 = __pick(P, C, 'ship', 'burn', 100);`);
+  check('the burn row with the wing out is refused the first time ("Wing is out": no course is set, the line is in the events and is what the key answers)', J('__p2.ran') === true && J('__p2.row') === 'burn' && J('C.nav') === null && J('C.navWait') === null && J('__ev(C, "camp.nav.no.wingout").length') >= 1 && J('__p2.say') === J('uiText("camp.nav.no.wingout")'));
+  check('and it is a refusal to the list too: the answer is not ok and the list stays open on the row, so Enter again is the second press (as "Fast burn to the target" does, below)', J('__p2.ok') === false && J('__p2.open') === 'ship', JSON.stringify(J('({ ok: __p2.ok, open: __p2.open, say: __p2.say })')));
+  check('the goal row still flies at regular speed with the wing out', (g.run(`window.__p5 = __pick(P, C, 'ship', 'goal', 300);`), J('__p5.ok') === true && J('C.nav && C.nav.fast') === false && J('campPanelOpen(P)') === ''));
+  g.run(`window.C = __new(); campOrder(C, 'launch'); __run(C, 7); campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y); campTgtNearest(C); window.P = campPanelNew(); window.__p3 = __pick(P, C, 'ship', 'burntarget', 100);`);
+  check('"Fast burn to the target" obeys the same rule: with the wing out it is refused ("Wing is out") and the list stays open on the row, and "Fly to the target" still flies at regular speed', J('!!C.tgt') && J('__p3.ran') === true && J('__p3.ok') === false && J('__p3.open') === 'ship' && J('C.nav') === null && J('__ev(C, "camp.nav.no.wingout").length') >= 1 && (g.run(`window.__p4 = __pick(P, C, 'ship', 'target', 300);`), J('__p4.ok') === true && J('C.nav && C.nav.fast') === false));
+  check('the table has the rows for it: goal, target, burn, burntarget are four rows (burn: 1 on the two fast ones, the same autopilot), none has a key of its own, and the H page names only the lists\' keys (Q, P, Up Down, Enter, Esc)', J(`CAMP_PANELS.panels.find(p => p.id === 'ship').rows.filter(r => r.fly).map(r => r.id + ':' + r.fly + ':' + (r.burn || 0)).join()`) === 'goal:objective:0,target:target:0,burn:objective:1,burntarget:target:1' && J(`CAMP_PANELS.panels.every(p => p.rows.every(r => !('k' in r) && !('code' in r) && !('n' in r)))`) && J(`campPanelKeyRows().map(r => r.k.join(' ')).join('|')`) === 'Q|P|Up Down|Enter|Esc' && J(`campKeyVar('rowburn')`) === 'Fast burn to the goal' && J(`campKeyVar('rowburntarget')`) === 'Fast burn to the target');
 }
 
 console.log('E. the map\'s Fast button');

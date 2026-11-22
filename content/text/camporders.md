@@ -42,5 +42,5 @@ The words of the pilots' calls for orders (card space-game-order-calls, src/camp
 | camp.call.r.leave | Copy. Leaving it. |
 | camp.call.late | No orders. I will play it safe. |
 | camp.call.fail | Cannot do that. Playing it safe. |
-| camp.call.hud.def | no answer |
-| camp.call.hud.keys | 1 2 3 answer |
+| camp.call.hud.def | if you wait |
+| camp.call.hud.keys | {keyup} {keydown} pick   {keypick} answer |

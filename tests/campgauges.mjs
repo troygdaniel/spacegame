@@ -2,9 +2,10 @@
 // Card space-game-systems-gauges (Troy, 21 Nov 2026). The code is src/camphud.js (the gauges), src/campaign.js (CAMP.tank, C.charge, campLaserSpend / campLaserStep, the turrets that pay for a shot) and the scene's
 // wiring (src/campaignscene.js). What is tested:
 //   A. the turrets' charge: full at the start, a shot spends it, it mends by the weapons' pips, a starved weapon system fires as fast as it mends, the computer says so once
-//   B. the direct keys J K L: a pip to the shields, the engines, the weapons (the dials' order; the SYSTEMS panel's rows), and ; back to 2 / 2 / 2 (card space-game-power-balance-key), and only in flight
+//   B. the direct keys J K L: a pip to the shields, the engines, the weapons (the dials' order), and ; back to 2 / 2 / 2 (card space-game-power-balance-key), and only in flight. They are direct keys of CAMP_KEYS (card one-list-keys):
+//      the power is no row of the Q or P list, and the keys mean the same whether a list is open or not
 //   C. the numbers of the three dials (shields, speed, lasers) and the hull bar, and the bars' pips
-//   D. where things are: nothing under the toast band, nothing on another thing, the lines of text start under the gauges and stay above the left tab
+//   D. where things are: nothing under the toast band, nothing on another thing, the lines of text start under the gauges and stay above where the fleet list opens (the left, under the lines)
 //   E. the bars' animation: easing, a flash when the pips change
 //   F. drawing, with a recording stand-in for Phaser's Graphics, and the scene's wiring (the W S E pips and the old hull and shield texts are gone)
 // Run: node tests/campgauges.mjs   (exit code 1 on a failed check)
@@ -68,11 +69,14 @@ console.log('B. the direct keys J K L');
   const full = J(`(() => { const C = campNew(1, [], { seed: 1 }); C.power.p = [4, 1, 1]; C.power.base = [4, 1, 1]; const a = campPowerKey(C, 'KeyL'); return { a, p: C.power.p }; })()`);
   check('a system at full power says so and nothing moves: "That system is at full power."', full.a.used && !full.a.ok && full.a.say === 'That system is at full power.' && full.p.join() === '4,1,1', JSON.stringify(full));
   const em = J(`(() => { const C = campNew(1, [], { seed: 1 }); campOrder(C, 'emergency', '', 'key'); return campPowerKey(C, 'KeyJ'); })()`);
-  check('during an emergency the key is refused, like the panel row', em.used && !em.ok, JSON.stringify(em));
+  check('during an emergency the key is refused, as the order is', em.used && !em.ok, JSON.stringify(em));
   const sc = src('src/campaignscene.js');
-  check('the scene reads them as the SHIP panel\'s rows (one key, one order: campPanelKey), in flight only, and never while a word is typed into the strip', /pr = !typing && typeof campPanelKey === 'function' \? campPanelKey\(this\.pn, C, c, now, e\.shiftKey\)/.test(sc) && J(`CAMP_PANELS.panels[1].rows.filter(r => r.order === 'power' || r.order === 'balance').map(r => r.code).join()`) === 'KeyJ,KeyK,KeyL,Semicolon');
+  check('the scene reads them as direct keys (campPanelKey, with no Shift passed), in flight only, and never while a word is typed into the strip; the codes are CAMP_KEYS\' (shields J, engines K, weapons L, balance ;, each with its system)', /pr = !typing && typeof campPanelKey === 'function' \? campPanelKey\(this\.pn, C, c, now\) :/.test(sc) && J(`['shields', 'engines', 'weapons', 'balance'].map(id => CAMP_KEYS[id].codes.join('+') + ':' + CAMP_KEYS[id].sys + ':' + CAMP_KEYS[id].k).join()`) === 'KeyJ:shields:J,KeyK:engines:K,KeyL:weapons:L,Semicolon:balance:;' && J(`['KeyJ', 'KeyK', 'KeyL', 'Semicolon'].map(c => ['shields', 'engines', 'weapons', 'balance'].find(id => campKeyIs(id, c))).join()`) === 'shields,engines,weapons,balance');
+  check('the power is not a row of either list (what has a direct key is not listed): no row gives the power or the balance order, and no row has a key of its own', J(`CAMP_PANELS.panels.every(p => p.rows.every(r => r.order !== 'power' && r.order !== 'balance' && !('k' in r) && !('code' in r)))`) && J(`CAMP_PANELS.panels.map(p => p.code).join()`) === 'KeyQ,KeyP');
+  const pk = J(`(() => { const C = campNew(1, [], { seed: 1 }), P = campPanelNew(); const a = campPanelKey(P, C, 'KeyJ', 0), pa = C.power.p.slice(); campPanelKey(P, C, 'KeyP', 0); const open = campPanelOpen(P); const b = campPanelKey(P, C, 'KeyK', 0), pb = C.power.p.slice(), still = campPanelOpen(P); const c = campPanelKey(P, C, 'Semicolon', 0), pc = C.power.p.slice(); return { a, pa, open, b, pb, still, c, pc }; })()`);
+  check('through the scene\'s reader (campPanelKey) J is the same order with no list open, and K and ; are the same with the ship list open, which stays open: one key, one meaning', pk.a.used && pk.a.ran && pk.a.ok && pk.a.row === 'shields' && pk.a.say === 'Power to shields.' && pk.pa.join() === '1,3,2' && pk.open === 'ship' && pk.b.ok && pk.b.row === 'engines' && pk.pb.join() === '1,2,3' && pk.still === 'ship' && pk.c.ok && pk.c.row === 'balance' && pk.c.say === 'Power balanced.' && pk.pc.join() === '2,2,2', JSON.stringify(pk));
   check('and the table names them in the dials\' order: CAMP_GAUGE.keys is J shields, K engines, L weapons, free of every other key the Campaign binds', J('Object.entries(CAMP_GAUGE.keys).map(e => e.join(":")).join()') === 'KeyJ:shields,KeyK:engines,KeyL:weapons,Semicolon:balance');
-  check('the H page has a row for each (and Settings, which is built from the same table): the SHIP panel\'s rows J, K, L and ;', ['J', 'K', 'L', ';'].every(k => J(`controlsGroup('panels').rows.some(r => r.k.join() === ${JSON.stringify(k)})`)));
+  check('the H page names each (and Settings, which is built from the same table): under POWER in the CAMPAIGN group, J K L on one line and ; on the next, and the caps are CAMP_KEYS\'', J(`controlsGroup('campaign').rows.filter(r => r.sub === 'POWER').map(r => r.k.join(' ')).join('|')`) === 'J K L|;' && J(`controlsGroup('campaign').rows.filter(r => r.sub === 'POWER').map(r => r.k.join(' ')).join('|')`) === J(`['shields', 'engines', 'weapons'].map(id => CAMP_KEYS[id].k).join(' ') + '|' + CAMP_KEYS.balance.k`) && J(`controlsGroup('campaign').rows.find(r => r.k.join() === 'J,K,L').t`) === 'Power to shields, engines, weapons', J(`controlsGroup('campaign').rows.filter(r => r.sub === 'POWER')`));
 }
 
 {
@@ -80,10 +84,10 @@ console.log('B. the direct keys J K L');
   check('; puts the power back to 2 / 2 / 2 at once (and the setting that is kept), the voice says "Power balanced."', b.r.used && b.r.ok && b.r.sys === 'balance' && b.after.join() === '2,2,2' && b.base.join() === '2,2,2' && b.r.say === 'Power balanced.', JSON.stringify(b));
   check('; when the power is even already is not an error: the same words, and nothing moves', b.again.ok && b.again.say === 'Power balanced.' && b.o === 2, JSON.stringify(b.again));
   const e = J(`(() => { const C = campNew(1, [], { seed: 1 }); campOrder(C, 'emergency', '', 'key'); const r = campPowerKey(C, 'Semicolon'); return { r, p: C.power.p }; })()`);
-  check('during an emergency ; is refused like the panel row (the shields keep their 4 pips)', e.r.used && !e.r.ok && e.p[1] === 4, JSON.stringify(e));
+  check('during an emergency ; is refused as the order is (the shields keep their 4 pips)', e.r.used && !e.r.ok && e.p[1] === 4, JSON.stringify(e));
   check('the scene flashes the three bars on a balance, even when nothing moved', /pr\.row === 'balance' && this\.gaugeAnim\) this\.gaugeAnim\.flash = this\.gaugeAnim\.flash\.map\(\(\) => 1\)/.test(src('src/campaignscene.js')));
   check('its letter and word stand under the last bar\'s key: ";  EVEN"', J('campHudGeom().balance.x') === J('campHudGeom().cells[2].bar.x1') && J('campHudGeom().balance.y') > J('campHudGeom().cells[2].key.y'));
-  check('the H page rows say it (J K L ;), and the SHIP panel\'s Balance row is the semicolon', J(`controlsGroup('panels').rows.some(r => r.k.join() === ';' && /2 \\/ 2 \\/ 2/.test(r.t))`) && J(`CAMP_PANELS.panels.find(p => p.id === 'ship').rows.find(r => r.id === 'balance').k`) === ';');
+  check('the H page says it (; balances the power: 2 / 2 / 2), the balance key of CAMP_KEYS is the semicolon, a hint that names it ({keybalance}) reads the same cap, and the lists have no Balance row', J(`controlsGroup('campaign').rows.some(r => r.k.join() === ';' && /2 \\/ 2 \\/ 2/.test(r.t))`) && J(`CAMP_KEYS.balance.k`) === ';' && J(`campKeyVar('keybalance')`) === ';' && J(`CAMP_PANELS.panels.every(p => !p.rows.some(r => r.id === 'balance'))`));
 }
 
 console.log('C. the numbers of the dials');
@@ -119,8 +123,8 @@ console.log('D. where things are');
   check('a line with nothing to say gives its place back: b is skipped, the next goes where it would have gone, a line with a bar under it takes 12 px more', f0.ys.a === J('CAMP.hud.text.y') && f0.ys.b === undefined && f0.ys.c === f0.ys.a + J('CAMP.hud.text.pitch') && f0.ys.d === f0.ys.c + J('CAMP.hud.text.pitch') + 12, JSON.stringify(f0));
   check('the lines start under the hull bar', f0.ys.a >= Z.hull.y1 + 2, JSON.stringify([f0.ys.a, Z.hull]));
   const typ = J(`campHudFlow(['earth', 'bay', 'wave', 'blink', 'obj', 'nav'].map(id => ({ id, show: true, h: id === 'earth' ? 12 : 0 })))`);
-  check('even the busiest ordinary set of lines (Earth with its bar, bay, wave, blink, goal, autopilot) ends above the left panel tab', typ.bottom - J('CAMP.hud.text.pitch') + 17 <= tab.top, JSON.stringify([typ.bottom, tab.top]));
-  check('the arrow\'s keep-out rectangle at the left covers the gauges and the lines to the tab', keep.some(r => r[0] <= 0 && r[1] <= 0 && r[2] >= 358 && r[3] >= typ.bottom - 22), JSON.stringify(keep));
+  check('even the busiest ordinary set of lines (Earth with its bar, bay, wave, blink, goal, autopilot) ends above the top of an open list (the fleet list opens at the left, under the lines)', typ.bottom - J('CAMP.hud.text.pitch') + 17 <= tab.top, JSON.stringify([typ.bottom, tab.top]));
+  check('the arrow\'s keep-out rectangle at the left covers the gauges and the lines down to where a list opens', keep.some(r => r[0] <= 0 && r[1] <= 0 && r[2] >= 358 && r[3] >= typ.bottom - 22), JSON.stringify(keep));
   const ore = J('CAMP.hud.ore');
   check('the ore line sits under the speed and laser dials, clear of the hull bar and of the lines', ore.x > Z.cells[0].bar.x1 && ore.y >= Z.cells[1].dial.y1 && ore.y + 18 <= f0.ys.a, JSON.stringify(ore));
   check('no literal pip table is left: CAMP.hud has no pips', J('CAMP.hud.pips') === null);

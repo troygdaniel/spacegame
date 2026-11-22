@@ -454,7 +454,7 @@ function listenHeld() { const S = LISTEN.s; return S.chunks.length + (S.blob ? 1
 // ---------- keys, once for the whole game ----------
 // The listeners are on the window, in the capture phase: they see Esc before Phaser does (an Esc that cancels the words must not also open the pause menu)
 function listenTyping() { const el = typeof document !== 'undefined' ? document.activeElement : null; return !!(el && (/^(INPUT|TEXTAREA|SELECT)$/.test(String(el.tagName)) || el.isContentEditable === true)); }
-// the key to hold: U in the Long Haul; in the Campaign U is the SHIP panel's emergency shields, so the voice is the period (CAMP_KEYS.voice in src/data_controls.js; card space-game-two-hands-keys). LISTEN.code and LISTEN.cap follow the scene that is up
+// the key to hold: U in the Long Haul; in the Campaign the voice is the period (CAMP_KEYS.voice in src/data_controls.js; card space-game-two-hands-keys). LISTEN.code and LISTEN.cap follow the scene that is up
 function listenKeysSync(game) {
   const camp = !!(game && game.scene && typeof game.scene.getScenes === 'function' && game.scene.getScenes(true).some(sc => sc.scene && sc.scene.key === 'Campaign') && typeof campKeyCodes === 'function');
   LISTEN.code = camp ? campKeyCodes('voice')[0] : 'KeyU'; LISTEN.cap = camp ? CAMP_KEYS.voice.k : 'U';

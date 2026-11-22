@@ -1,7 +1,7 @@
 ---
 type: text
 ---
-The words of mission 1.1 in four beats (card space-game-l1-1-beats; src/campbeats.js): the patrol that turns back, the distress call and its three answers, the thanks, the ambush, the bonuses, and the hints, whose keys come from the key table (the panels' own keys, the map's). Lines the ship speaks are about 12 words at most.
+The words of mission 1.1 in four beats (card space-game-l1-1-beats; src/campbeats.js): the patrol that turns back, the distress call and its three answers, the thanks, the ambush, the bonuses, and the hints, whose keys come from the key table (the lists' keys and rows, the map's). Lines the ship speaks are about 12 words at most.
 
 ## Strings
 | key | text |
@@ -22,12 +22,12 @@ The words of mission 1.1 in four beats (card space-game-l1-1-beats; src/campbeat
 | camp.hint.scout | Open the map ({map}), pick a lane, press {scout} to send a scout. |
 | camp.hint.take | The transport waits at the fork. Pick a lane on the map, press {take}. |
 | camp.hint.fast | A long quiet road. On the map ({map}), pick the transport and burn Fast. |
-| camp.hint.fleet | FLEET panel at the left: every row shows its key. {keylaunch} launches the wing. |
+| camp.hint.fleet | Press {fleetkey} for fleet orders: Up and Down, then Enter. |
 | camp.bf.enemy.tboat.one | {n} pirate torpedo boat |
 | camp.bf.enemy.tboat.many | {n} pirate torpedo boats |
 | camp.bf.enemy.lancer.one | {n} alien lancer |
 | camp.bf.enemy.lancer.many | {n} alien lancers |
 | camp.bf.enemy.pirateleader.one | the pirate leader, a heavy ship |
 | camp.bf.enemy.pirateleader.many | {n} pirate leaders |
-| camp.hint.tuck | Torpedo boats! Tuck the transport in under your shield: press {keyconvoy} until the FLEET panel says Tuck in. |
-| camp.hint.run | The leader blocks the way. Send the transport past it: press {keyconvoy} until the FLEET panel says Run for it. |
+| camp.hint.tuck | Torpedo boats! Press {fleetkey} and pick "{tuck}". |
+| camp.hint.run | The leader blocks the way. Press {fleetkey} and pick "{run}". |

@@ -20,16 +20,16 @@ How the game is built, for someone (a person or an AI) who has never seen it. It
 
 ## The Campaign: simulation versus scene
 
-**The simulation** (`src/campaign.js`, no Phaser). `campNew(level, techs, opts)` makes one game `C`; `campStep(C, seconds)` advances it in fixed small steps; `campOrder(C, name, arg, how)` runs an order and `campCheck` says whether it could (so panels, the command strip, voice and bots all ask the same question). `C.events` collects what the scene should show or play; the scene empties it every frame. A level is a row of `CAMP.levels`, a mission is a row of its `missions`, enemies come as `waves` or scripted `cues`. A seeded random stream (`opts.seed`) makes a battle repeat exactly, which is what lets tests pin a whole fight.
+**The simulation** (`src/campaign.js`, no Phaser). `campNew(level, techs, opts)` makes one game `C`; `campStep(C, seconds)` advances it in fixed small steps; `campOrder(C, name, arg, how)` runs an order and `campCheck` says whether it could (so the lists, the command strip, voice and bots all ask the same question). `C.events` collects what the scene should show or play; the scene empties it every frame. A level is a row of `CAMP.levels`, a mission is a row of its `missions`, enemies come as `waves` or scripted `cues`. A seeded random stream (`opts.seed`) makes a battle repeat exactly, which is what lets tests pin a whole fight.
 
 **Satellite rule files** keep `campaign.js` from growing without end. Each is plain functions the sim calls, one feature each, many with a *scene half* that draws it (`x.js` for rules, `xdraw.js` or `xscene.js` for Phaser):
 
 | Feature | Rules | Drawing |
 |---|---|---|
-| The two hands: the FLEET and SHIP panels (always on screen), their rows and keys | `camppanel.js` (keys and rows: `data_controls.js`) | `campanelsdraw.js` |
-| The one target (A D S X; 2 attacks it, 8 flies to it, Enter fires at it) | `camptarget.js` | `camptargetdraw.js` (the bracket) |
+| One list per hand: `Q` opens the fleet list, `P` the ship list (hidden until pressed, one open at a time; Up, Down, Enter), and the direct keys | `camppanel.js` (lists, rows and keys: `CAMP_PANELS` and `CAMP_KEYS` in `data_controls.js`) | `campanelsdraw.js` |
+| The one target (A D S X; the fleet list's Attack goes at it, the ship list's Fly to the target flies to it, Enter fires at it) | `camptarget.js` | `camptargetdraw.js` (the bracket) |
 | Orders to the wing, groups and targets | `campwing.js`, `campconvoy.js` (escorted ships), `campdogfight.js`, `camprepair.js` | `campconvoyscene.js` |
-| Pilots ask for orders (timed calls) | `camporders.js` | `camporderdraw.js` |
+| Pilots ask for orders (timed calls: a small amber list in the middle, Up, Down, Enter) | `camporders.js` | `camporderdraw.js` |
 | Mission 1.1's beats, route forks, scouting | `campbeats.js`, `camproute.js`, `campanomaly.js` | `campanomalydraw.js` |
 | Enemies: pirates, torpedo boats, the rival | `camppirates.js`, `camptorpedo.js`, `camprival.js` | `camppirateart.js`, `camptorpedoscene.js`, `camprivaldraw.js` |
 | Command time (battle slows while you order) | `campslow.js` | its sign, same file |
@@ -40,9 +40,9 @@ How the game is built, for someone (a person or an AI) who has never seen it. It
 | The ship's voice and radio | `campchatter.js`, `src/voice.js`, `src/voicepack.js` | |
 | Command strip, typed and spoken orders | `src/cmdstrip.js`, `src/shipcomputer.js`, `src/listen.js` | |
 
-The command strip, the ship computer and voice reach the simulation through one closed list of actions (`SC_ACT` in `shipcomputer.js`), so a typed "launch", a spoken one and the panel row do the same thing and are refused for the same reasons.
+The command strip, the ship computer and voice reach the simulation through one closed list of actions (`SC_ACT` in `shipcomputer.js`), so a typed "launch", a spoken one and the row of the fleet list do the same thing and are refused for the same reasons.
 
-**The scene** (`src/campaignscene.js`) is deliberately thin: it reads the keyboard, decides how fast time runs (command time slows it to a quarter while a panel, the map or a call is open), calls `campStep`, and draws the state. It is the only place with Phaser in the mode and no test runs it directly; tests drive it on a stand-in object, and a few Chrome boots run the real thing.
+**The scene** (`src/campaignscene.js`) is deliberately thin: it reads the keyboard, decides how fast time runs (command time slows it to a quarter while a list, the map or a pilot's call is open, and for `CAMP.slow.after` ms after a fleet order or a pick of the target), calls `campStep`, and draws the state. It is the only place with Phaser in the mode and no test runs it directly; tests drive it on a stand-in object, and a few Chrome boots run the real thing.
 
 Every rule, number and level row is described in `docs/CAMPAIGN.md` (one section per feature, with the card and the reason). Balance and the bots are `docs/CAMPAIGN-TUNING.md` and `docs/WRAPUP-DIFFICULTY.md`.
 
@@ -52,7 +52,7 @@ Every rule, number and level row is described in `docs/CAMPAIGN.md` (one section
 - **Words:** `content/text/*.md` (one table per file, a file may hold at most 200 rows), defaults in `src/contenttables.js`. `node tools/build-content.mjs --seal` rebuilds `content.generated.js`; `--check` fails if it is stale. A key may be in any file; a file that sorts later wins a key two files give, so grep for a key before adding it. Ship-voice lines are curt (about 12 words, fact first).
 - **The voice pack** (`src/voicepack.js`, `voicepack/`): lines that repeat are recorded once. Every text key is classified there as spoken or shown-only; a new key with no rule fails `tests/voicepack.mjs`.
 - **Content packs and mods** (`mods/`, `mods.generated.js`, `docs/MODDING.md`, `docs/MODS.md`): a folder of markdown laid over the game. The Campaign is meant to become a swappable pack too (see `ROADMAP.md`).
-- **Keys:** `src/data_controls.js` is the one table of every key (`CONTROLS`, and `CAMP_PANELS` for the three Campaign panels). Settings, the H help page, the key lines, the briefing hints and the README controls are all checked against it, so move a key there first.
+- **Keys:** `src/data_controls.js` is the one table of every key (`CONTROLS`; for the Campaign `CAMP_PANELS = { show, anim, panels: [{ id, side, key, code, title, name, rows }] }` is its two lists, the fleet list on `Q` and the ship list on `P`, and `CAMP_KEYS` its direct keys). Settings, the H help page, the key lines, the briefing hints and the README controls are all checked against it, so move a key there first.
 
 ## Saving
 

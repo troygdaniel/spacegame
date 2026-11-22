@@ -1,6 +1,7 @@
 // smoke: card space-game-night-quit-at-pick (findings A and F of docs/night/hunt-l2-l3.md), plain Node, no Chrome
 //   A  quitting at the tech pick or the Earth refit: the save's levelDone sends the pilot back to the level's story and pick (the flag itself is pinned in tests/campnightminors.mjs; here the refit of level 1 too)
-//   F  a level with no outpost (level 3): the SHIP panel's fourth row (its sixth until card space-game-shield-auto took the recharge row out, its fifth until space-game-panel-keys-zxc moved Mine ore to FLEET) is "Repair the hull" and 0 mends the hull aboard for ore; a level with outposts keeps "Dock at an outpost"
+//   F  a level with no outpost (level 3): the ship list's dock row (P opens the list; Up, Down and Enter in it: card one-list-keys, 22 Nov 2026) is "Repair the hull" and giving it mends the hull aboard for ore; a level with outposts keeps "Dock at the outpost".
+//      No digit is a key in flight (0 was the dock key), and a level with no outpost has the two build rows in its list where the others do not
 // Run: node tests/campquitpick.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
 
@@ -16,26 +17,29 @@ const r1 = J(`(() => { const P = campProgressNew(), n = campMissions(1).length; 
 check('after the last mission of level 1 the save says so, the room offers the last mission, and the scene resumes at the won card (whose Enter is the refit)', r1.flag === 1 && r1.nx.i === r1.n - 1 && r1.resume === true && r1.refit === true, JSON.stringify(r1));
 check('closing the tab at the refit leaves the flag set (only next() clears it), so the same goes for it again', J(`(() => { const P = campProgressLoad(); P.techs = []; campProgressSave(P); return campProgressLoad().levelDone; })()`) === 1);
 
-console.log('F. level 3 mends the hull aboard from the SHIP panel');
+console.log('F. level 3 mends the hull aboard from the ship list');
+// press through a list as the player does: the list's key (from a closed list, so the highlight is on the top row), Down to the row, Enter. null when the row is not in this mission's list
+g.run(`window.__pick = (P, C, id, rowId, now) => { const def = CAMP_PANELS.panels.find(p => p.id === id), i = campPanelList(C, id).findIndex(r => r.id === rowId); if (i < 0) return null; campPanelClose(P); campPanelKey(P, C, def.code, now); for (let k = 0; k < i; k++) campPanelKey(P, C, 'ArrowDown', now); return campPanelKey(P, C, 'Enter', now); };`);
 g.run(`window.mk = lv => { const C = campNew(lv, [], { seed: 1, mission: 0 }); C.arrivedAt = 0; C.ore = 200; return C; }; window.shipRow = C => campPanelRows(C, 'ship').find(r => r.id === 'dock');`);
-const f3 = J(`(() => { const C = mk(3), whole = shipRow(C); C.carrier.hp = C.carrier.maxHp * 0.25; const hurt = shipRow(C); C.ore = 0; const poor = shipRow(C); C.ore = 200; return { aboard: campAboard(C), whole, hurt, poor, max: C.carrier.maxHp }; })()`);
-check('level 3 has no outpost: the fifth row reads "Repair the hull" (the tab says Repair)', f3.aboard === true && f3.whole.label === 'Repair the hull' && f3.whole.tag === 'Repair', JSON.stringify(f3.whole));
+const f3 = J(`(() => { const C = mk(3), whole = shipRow(C), ids = campPanelRows(C, 'ship').map(r => r.id); C.carrier.hp = C.carrier.maxHp * 0.25; const hurt = shipRow(C); C.ore = 0; const poor = shipRow(C); C.ore = 200; return { aboard: campAboard(C), whole, hurt, poor, ids, max: C.carrier.maxHp }; })()`);
+check('level 3 has no outpost: the dock row (the sixth of the ship list, after the four flights and the emergency shields) reads "Repair the hull", and the list has the two build rows after it', f3.aboard === true && f3.whole.label === 'Repair the hull' && f3.ids.join() === 'goal,target,burn,burntarget,emergency,dock,buildf,builde' && !('tag' in f3.whole), JSON.stringify([f3.whole, f3.ids]));
 check('with the hull whole it says why in two words ("hull sound") and is not ok', f3.whole.ok === false && f3.whole.short === 'hull sound', JSON.stringify(f3.whole));
 check('hurt: ok, what it does ("450 hull for N ore") and the cost in the short word', f3.hurt.ok === true && /^\d+ hull for \d+ ore$/.test(f3.hurt.state) && /^\d+ ore$/.test(f3.hurt.short), JSON.stringify(f3.hurt));
 check('hurt with no ore: not ok, and it says what it needs', f3.poor.ok === false && /ore/.test(f3.poor.short), JSON.stringify(f3.poor));
 const run = J(`(() => { const C = mk(3), P = campPanelNew(); C.carrier.hp = C.carrier.maxHp * 0.25; const was = C.carrier.hp, ore = C.ore, quote = campMendQuote(C);
-  const b = campPanelKey(P, C, 'Digit0', 1100, false);
-  return { ran: b.ran, ok: b.ok, say: b.say, hp: C.carrier.hp, max: C.carrier.maxHp, paid: ore - C.ore, quote, was, mends: C.orders.repair | 0, row: b.row }; })()`);
-check('0 on level 3 mends the hull to full for the quoted ore', run.row === 'dock' && run.ran === true && run.ok === true && run.hp === run.max && run.paid === run.quote.cost && run.mends === 1, JSON.stringify(run));
+  const digit = campPanelKey(P, C, 'Digit0', 1000), hp0 = C.carrier.hp, b = __pick(P, C, 'ship', 'dock', 1100);
+  return { digit, hp0, open: b.open, ran: b.ran, ok: b.ok, say: b.say, hp: C.carrier.hp, max: C.carrier.maxHp, paid: ore - C.ore, quote, was, mends: C.orders.repair | 0, row: b.row }; })()`);
+check('a digit is no key in flight: 0 (the old dock key) is not used, gives no order and mends nothing', run.digit.used === false && run.digit.ran === false && run.digit.open === '' && run.hp0 === run.was, JSON.stringify(run.digit));
+check('P, down to "Repair the hull", Enter on level 3 mends the hull to full for the quoted ore, and the list closes (the order was taken)', run.row === 'dock' && run.ran === true && run.ok === true && run.open === '' && run.hp === run.max && run.paid === run.quote.cost && run.mends === 1, JSON.stringify(run));
 check('and says so in the words of the repair order (not "There is no outpost in this system")', /\b(mend|repair|hull)/i.test(run.say) && !/no outpost/i.test(run.say), run.say);
-const again = J(`(() => { const C = mk(3), P = campPanelNew(); const b = campPanelKey(P, C, 'Digit0', 1100, false); return { ok: b.ok, say: b.say, hp: C.carrier.hp, max: C.carrier.maxHp }; })()`);
-check('with the hull whole, 0 mends nothing and says the hull is sound', again.ok === false && /sound|whole|full/i.test(again.say) && again.hp === again.max, JSON.stringify(again));
+const again = J(`(() => { const C = mk(3), P = campPanelNew(), ore = C.ore; const b = __pick(P, C, 'ship', 'dock', 1100); return { ran: b.ran, ok: b.ok, say: b.say, open: b.open, paid: ore - C.ore, hp: C.carrier.hp, max: C.carrier.maxHp }; })()`);
+check('with the hull whole, the row mends nothing, says the hull is sound and the list stays open (a refusal does not close it)', again.ran === true && again.ok === false && /sound|whole|full/i.test(again.say) && again.hp === again.max && again.paid === 0 && again.open === 'ship', JSON.stringify(again));
 const click = J(`(() => { const C = mk(3); C.carrier.hp = 100; const row = CAMP_PANELS.panels.find(p => p.id === 'ship').rows.find(r => r.id === 'dock'); const r = campPanelRun(C, row, 'click'); return { ok: r.ok, hp: C.carrier.hp, max: C.carrier.maxHp }; })()`);
-check('a click on the row does the same as the key (campPanelRun is the one way in)', click.ok === true && click.hp === click.max, JSON.stringify(click));
+check('a click on the row does the same as Enter on it (campPanelRun is the one way in)', click.ok === true && click.hp === click.max, JSON.stringify(click));
 
 console.log('F. a level with outposts is as it was');
-const l1 = J(`(() => { const C = mk(1), row = shipRow(C), def = CAMP_PANELS.panels.find(p => p.id === 'ship').rows.find(r => r.id === 'dock'); return { aboard: campAboard(C), row, order: campPanelAs(C, def).order, label: campPanelAs(C, def).label }; })()`);
-check('level 1 (outposts): the row is "Dock at an outpost" and the order is dock', l1.aboard === false && l1.order === 'dock' && l1.label === 'Dock at an outpost' && l1.row.label === 'Dock at an outpost' && l1.row.tag === 'Dock', JSON.stringify(l1));
+const l1 = J(`(() => { const C = mk(1), row = shipRow(C), ids = campPanelRows(C, 'ship').map(r => r.id), def = CAMP_PANELS.panels.find(p => p.id === 'ship').rows.find(r => r.id === 'dock'); return { aboard: campAboard(C), row, ids, order: campPanelAs(C, def).order, label: campPanelAs(C, def).label }; })()`);
+check('level 1 (outposts): the row is "Dock at the outpost", the order is dock, and the build rows are not in its list (ships are built docked there)', l1.aboard === false && l1.order === 'dock' && l1.label === 'Dock at the outpost' && l1.row.label === 'Dock at the outpost' && l1.ids.join() === 'goal,target,burn,burntarget,emergency,dock', JSON.stringify(l1));
 check('the table itself is not changed (the row is made over at the moment, for a level that needs it)', J(`CAMP_PANELS.panels.find(p => p.id === 'ship').rows.find(r => r.id === 'dock').order`) === 'dock');
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nfailed: ${failed}` : '\nCAMPQUITPICK PASS');

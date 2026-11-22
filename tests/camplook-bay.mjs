@@ -47,6 +47,9 @@ check('a landing lights the landing bays and a launch the tubes for 0.7 s, by th
 // 5. a lost carrier has no light
 const dead = J(`(() => { const C = campNew(1, [], { seed: 2 }); campOrder(C, 'launch', '', 'key'); C.carrier.hp = 0; const sc = __scene(C); return __draw(sc); })()`);
 check('a lost carrier has no lit bay', dead.fills.length === 0 && dead.circles.length === 0);
+// a bug found by retrying a mission in the browser (card one-list-keys): the scene object is started again and its layers destroyed, but the two bay graphics were kept (no scene, not active): no bay lights after a retry
+const again = J(`(() => { const C = campNew(1, [], { seed: 2 }); const sc = __scene(C); Campaign.prototype.syncBay.call(sc); Campaign.prototype.syncBay.call(sc); const kept = sc.__gs.length; sc.bayG.active = false; sc.bayGlow.active = false; Campaign.prototype.syncBay.call(sc); return { kept, made: sc.__gs.length, fresh: sc.bayG === sc.__gs[2] && sc.bayGlow === sc.__gs[3] }; })()`);
+check('after the scene starts again (a retry: the old graphics are destroyed) the bays are drawn on NEW graphics, and live ones are kept, not made again each frame', again.kept === 2 && again.made === 4 && again.fresh, JSON.stringify(again));
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nfailed: ${failed}` : '\nfailed: 0');
 process.exit(failed ? 1 : 0);

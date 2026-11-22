@@ -9,7 +9,7 @@ The words of the Campaign's first level, the asteroid belt (card space-game-camp
 | camp.l1.before.3 | Then mine at the rim and bring the haulers home. |
 | camp.l1.after.3 | Earth recalls the cruiser for a refit. |
 | camp.say.ambush | Alarm. Unknown ships, coming for the cruiser. |
-| camp.say.ambush2 | Mining lasers are weapons now. Hold Space. Drones: {keyattack} attacks. |
+| camp.say.ambush2 | Mining lasers are weapons now. Hold Space. Drones: order Attack ({fleetkey}). |
 | camp.say.bwave2 | Second wave, from the north-west. |
 | camp.say.bwave3 | The mothership is here. Kill it. |
 | camp.say.escortcarrier | Escorts are with the cruiser. |

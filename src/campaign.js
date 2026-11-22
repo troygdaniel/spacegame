@@ -292,7 +292,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 238], [1056, 0, 1280, 226], [360, 0, 920, 152], [0, 656, 1020, 720]] // (the two panels' own rectangles are added by the scene: campPanelsKeep, src/campanelsdraw.js) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 238], [1056, 0, 1280, 226], [360, 0, 920, 152], [0, 656, 1020, 720]] // (the target line's own rectangle is added by the scene: campPanelsKeep, src/campanelsdraw.js) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {
@@ -432,8 +432,8 @@ const CAMP = {
     start: 'normal',                       // the setting until the player picks one
     shots: 0.5                             // the power of the multiplier a shot's speed takes (0.5 is its square root: a shot does not outrun the eye, a hit still lands). There is no key and no setting for the pace any more (card space-game-two-hands-keys: command time, src/campslow.js, replaces it): the Campaign flies at CAMP.pace.start, and campNew's opts.pace still takes a mode for the tests, the bots and the sims
   },
-  slow: {                                  // COMMAND TIME (card space-game-command-slowtime; src/campslow.js; Troy, 21 Nov 2026: fights were not interactive, he wants to direct the fleet more): while the FLEET, SHIP or SYSTEMS panel, the Tab map or an order-call prompt is open the battle runs at this share of its pace (Homeworld style), with a sign on the screen. Closing returns to pace. Flying between places is not slowed: with nothing open, the carrier and the autopilot are as they were
-    after: 2000,                           // ms the battle stays slowed after a FLEET key (card space-game-two-hands-keys: the panels are always open now, so a fleet key is what takes a command: the time to give the next one)
+  slow: {                                  // COMMAND TIME (card space-game-command-slowtime; src/campslow.js; Troy, 21 Nov 2026: fights were not interactive, he wants to direct the fleet more): while a list of orders (Q or P), the Tab map or a pilot's call is open the battle runs at this share of its pace (Homeworld style), with a sign on the screen. Closing returns to pace. Flying between places is not slowed: with nothing open, the carrier and the autopilot are as they were
+    after: 2000,                           // ms the battle stays slowed after a fleet order or a pick of the target (the list has closed: the time to give the next one)
     scale: 0.25                            // a quarter speed: the whole battle (every ship, wave clock, reload and cooldown), not only the small ships the pace scales
   },
   refit: {                                 // the Earth refit screen after level 1: one tech, and ore buys extra ships for the next level (the costs are the workshop's, CAMP.build)
@@ -451,7 +451,7 @@ const CAMP = {
     chunk: 25                              // ore a chunk of the reward holds (the ore reward is that many chunks lying on the cache, for any ship of yours to pick up)
   },
   outpost: {                               // friendly outposts (card space-game-campaign-outposts, src/campoutpost.js): ships are built and the hull mended only docked at one, which a level lists in its `outposts`
-    range: 280,                            // px from the edge of an outpost within which the carrier can dock (X, the SHIP panel's Dock row, "dock at Luna"): a place's own size is added
+    range: 280,                            // px from the edge of an outpost within which the carrier can dock (the ship list's Dock row, "dock at Luna"): a place's own size is added
     clear: 900,                            // px: no alien within this of the carrier, or the outpost keeps its doors shut (docking stops the battle: it must not be a free breather in a fight)
     repairOre: 60,                         // ore for mending the whole hull from nothing; a part costs its share, at least 5
     retreatHull: 0.35,                     // below this share of the hull, with no ship of the wing left (in the bay, out, launching or building), the HUD says where to retreat

@@ -1,16 +1,16 @@
 // ---------- Campaign: command time (card space-game-command-slowtime; Troy, 21 Nov 2026) ----------
-// Fights were not interactive and the escorts were boring: he wants to direct the fleet more. While the Tab map or an order-call prompt is open, and for CAMP.slow.after ms after any FLEET key (the left hand: the orders,
-// the page, the target), the battle runs at a quarter of its pace (CAMP.slow.scale, Homeworld style) and a sign on the screen says so; closing the map or the call returns it to pace. The panels are on the screen all the time now
-// (card space-game-two-hands-keys), so being open can no longer slow the battle: a fleet key does, for a moment, so there is time to give the next one. Nothing else is slowed: flying (the arrows, the SHIP keys) is as it was. It is plain functions (tests/campslowtime.mjs runs them in Node); the scene calls them (src/campaignscene.js update).
-//   campSlowOpen(S)      is something that takes a command open on this scene? S.mp (the map), campCallOpen(C) (a pilot's call waits: src/camporders.js, card space-game-order-calls), or S.slowUntil (a fleet key was pressed: campSlowKick) is still ahead of the clock
-//   campSlowKick(S, now) a fleet key was pressed at now (ms of the scene's clock): the slowing lasts CAMP.slow.after ms from it
+// Fights were not interactive and the escorts were boring: he wants to direct the fleet more. While something that takes a command is open (the Q list of fleet orders, the P list of ship orders, the Tab map, a pilot's call),
+// and for CAMP.slow.after ms after a fleet order or a pick of the target, the battle runs at a quarter of its pace (CAMP.slow.scale, Homeworld style) and a sign on the screen says so; closing it returns the battle to pace.
+// Nothing else is slowed: flying is as it was. It is plain functions (tests/campslowtime.mjs runs them in Node); the scene calls them (src/campaignscene.js update).
+//   campSlowOpen(S)      is something that takes a command open on this scene? S.mp (the map), an open list (campPanelOpen(S.pn): src/camppanel.js), campCallOpen(C) (a pilot's call waits: src/camporders.js), or S.slowUntil (a fleet order was given: campSlowKick) is still ahead of the clock
+//   campSlowKick(S, now) a fleet order was given at now (ms of the scene's clock): the slowing lasts CAMP.slow.after ms from it
 //   campSlowScale(S)     the share of the battle's pace now: 1, or CAMP.slow.scale while one is open (and the battle is on: not behind a card or the pause)
 //   campSlowInstall(S)   the sign (made in create); campSlowPaint(S) shows it while the battle is slowed
 // The scene sets C.timeScale to the scale each frame and steps the sim by dt times it, so a clock that must count the player's own seconds (the calls' 8 s) divides dt by C.timeScale.
 function campSlowOpen(S) {
   if (!S || S.mode !== 'play') return false;
   const now = S.time && S.time.now; // the scene's clock (a stand-in scene with no clock is never slowed by a key)
-  return !!(S.mp || (typeof now === 'number' && S.slowUntil > now) || (S.camp && typeof campCallOpen === 'function' && campCallOpen(S.camp)));
+  return !!(S.mp || (S.pn && typeof S.pn === 'object' && typeof campPanelOpen === 'function' && campPanelOpen(S.pn)) || (typeof now === 'number' && S.slowUntil > now) || (S.camp && typeof campCallOpen === 'function' && campCallOpen(S.camp)));
 }
 const campSlowKick = (S, now) => { if (S) S.slowUntil = (now == null ? (S.time && S.time.now) || 0 : now) + CAMP.slow.after; };
 const campSlowScale = S => campSlowOpen(S) ? CAMP.slow.scale : 1;

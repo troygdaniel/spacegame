@@ -1,9 +1,10 @@
 // not in the smoke: Level 1 flown start to finish as a player, in the real game (one Chrome, muted, through the test lock; card space-game-hunt-l1-fleet)
 // It boots the Campaign with a save that stands at the mission, reads the ready room and the three briefing screens, launches, and then PLAYS with real key events: the wing out, the cruiser on the
 // autopilot beside the convoy, the pilots' calls answered by a style, the fork scouted and picked, convoy orders, power moved in the rival's phases, missiles, the map zoomed all the way out.
-// Every key comes from the key table (CAMP_PANELS for the panels and their rows, the Campaign group of CONTROLS for the rest), never a letter of its own, so the walk survives a remap of the keys.
+// Every key comes from the key table (CAMP_PANELS for the two lists and their rows, CAMP_KEYS for the direct keys, the Campaign group of CONTROLS for the rest), never a letter of its own, so the walk survives a remap of the keys.
+// An order is given through its list (card one-list-keys): Q or P, Down to the row, Enter; a pilot's call is answered with Up, Down and Enter.
 //   node tests/huntfleet-boot.mjs --mission 1 [--ending win|lose] [--calls right|wrong|none|mix] [--secs 420] [--lane short|long] [--nobrief] [--idle 90] [--noscout] [--killleader] [--dock0]
-// --dock0: the first thing a player does is dock at the base the HUD offers (SHIP, Dock), read the ready room's pages (build, repair), and undock
+// --dock0: the first thing a player does is dock at the base the HUD offers (the ship list's dock row), read the ready room's pages (build, repair), and undock
 // --noscout: the lanes are not scouted (the ambush is a surprise); --killleader: the cruiser goes at the pirate leader (the map, Enter) and fires, for the kill and its bonus
 // --idle N: a new player who does nothing for N seconds (the hints, the radio and the beats say what they say when nobody has acted yet), then the walk goes on
 // --ending lose: the transport (1.1) or the haulers (1.3) or the cruiser (1.2) is let go: no fighting, no orders after the launch, then the lost card, Enter (the mission again), the pause card
@@ -42,15 +43,32 @@ try {
   const toasts = (from = 0) => j(`window.__log.slice(${from})`);
 
   // ---- the key table: the code of every key the walk presses, read from the game's own tables
-  // The keys come from the game's own tables and nothing else: CAMP_KEYS (the keys that are not a panel's: map, fire, zoom, the target keys), campKeyRow(id) (a row of the FLEET or SHIP panel: its code), and the Campaign group
-  // of CONTROLS for V and T (scout, take a lane). A row the table does not have is said and skipped, so a remap shows up as a note, not as a wrong key.
+  // The keys come from the game's own tables and nothing else: CAMP_KEYS (the direct keys: map, fire, zoom, the target keys, the power keys, the missile, and Up, Down, Enter and Esc of an open list), CAMP_PANELS (the key that opens
+  // each of the two lists, and which list a row is in), and the Campaign group of CONTROLS for V and T (scout, take a lane). An order is given as a player gives it (card one-list-keys): the list's key, Down to the row, Enter;
+  // the row's place is read from the list of THIS mission (campPanelList), never a number written here. A row the table does not have is said and skipped, so a change of the table shows up as a note, not as a wrong key.
   const codeOf = lab => /^[A-Z]$/.test(lab) ? 'Key' + lab : /^[0-9]$/.test(lab) ? 'Digit' + lab : ({ Tab: 'Tab', Space: 'Space', Enter: 'Enter', Esc: 'Escape', ';': 'Semicolon', '+': 'Equal', '-': 'Minus', '/': 'Slash', '=': 'Equal', Backspace: 'Backspace' })[lab] || null;
   const ctl = async (re, i = 0) => codeOf(await j(`(() => { const g = CONTROLS.find(g => g.id === 'campaign'); const r = g.rows.find(r => ${re}.test(r.t)); return r ? r.k[${i}] : null; })()`));
   const ck = id => j(`(typeof CAMP_KEYS === 'object' && CAMP_KEYS[${JSON.stringify(id)}]) ? CAMP_KEYS[${JSON.stringify(id)}].codes[0] : null`);
-  const rk = id => j(`(typeof campKeyRow === 'function' && campKeyRow(${JSON.stringify(id)})) ? campKeyRow(${JSON.stringify(id)}).code : null`);
+  const rk = id => j(`(() => { const p = typeof CAMP_PANELS === 'object' && CAMP_PANELS.panels.find(p => p.rows.some(r => r.id === ${JSON.stringify(id)})); return p ? p.id : null; })()`); // the list a row is in ('fleet' or 'ship'), or null
   const K = {}; // filled after the boot
-  const press = async (id, wait = 50, mods = 0) => { const c = K.rows[id]; if (!c) { note(`(no key for the row ${id}: the table has none)`); return false; } await key(c, wait, mods); return true; };
-  const convoyTo = async rx => { const c = K.rows.convoy; if (!c) { note('(no key for the convoy order row)'); return false; } for (let i = 0; i < 5; i++) { const n0 = await j('window.__log.length'); await key(c); await t.run(await j('(typeof CAMP_PANELS === "object" && CAMP_PANELS.settle) || 0') + 300); const said = (await toasts(n0)).join(' | '); if (rx.test(said)) { check('the convoy key gave ' + rx, true, 'after ' + (i + 1) + ' press(es)'); return true; } } check('the convoy key gave ' + rx, false, 'five presses, each rested, and the order never said it'); return false; }; // a CYCLING key gives its order only after it has rested CAMP_PANELS.settle ms (0.7 s): one press, wait for the rest and a margin, read what was said; press again only if it was another order (the cycle's next)
+  const DIRECT = ['shields', 'engines', 'weapons', 'balance', 'missile']; // not rows: keys of their own (J K L ; and Enter while no list is open)
+  const listOpen = () => j(`campPanelOpen(${S}.pn)`);
+  const press = async (id, wait = 50) => { // an order: a direct key, or a row of a list (the list's key, Down to the row, Enter)
+    if ((await j(`${S}.mode`)) !== 'play') return false; // a card has the keys
+    if (DIRECT.indexOf(id) >= 0) {
+      const c = K[id === 'balance' ? 'even' : id]; if (!c) { note(`(no key for ${id}: the table has none)`); return false; }
+      if (await listOpen()) await key(K.esc);
+      if (id === 'missile' && (await j(`campCallHasKeys(${S})`))) { note('(no missile now: a pilot\'s call waits, and Enter would answer it)'); return false; }
+      await key(c, wait); return true;
+    }
+    const list = K.rows[id]; if (!list || !K.lists[list]) { note(`(no row ${id} in the table of the lists)`); return false; }
+    const at = await j(`campPanelList(${S}.camp, ${JSON.stringify(list)}).findIndex(r => r.id === ${JSON.stringify(id)})`); if (at < 0) { note(`(the row ${id} is left out of this mission's ${list} list)`); return false; }
+    if (await listOpen()) await key(K.esc); // an open list is closed first (Esc pauses only when none is open)
+    await key(K.lists[list], wait); for (let i = 0; i < at; i++) await key(K.down, wait); await key(K.pick, wait);
+    if (await listOpen()) await key(K.esc); // an order that is refused leaves the list open (its reason is the toast): it is closed, the keys go back to the ship
+    return true;
+  };
+  const convoyTo = async (row, rx) => { const n0 = await j('window.__log.length'), gave = await press(row); await t.run(300); const said = (await toasts(n0)).join(' | '); check('the convoy row ' + row + ' gave ' + rx, gave && rx.test(said), said.slice(0, 200)); return gave; }; // the convoy orders are plain rows, one for each: the row is given once and says its order (no key steps through them, nothing to wait for)
 
   await t.waitFor(`!!(window.game && game.scene.isActive('Title'))`, 30000, 'the title'); await t.clock(); await t.run(900);
   const res = { score: 2000, bonuses: ['swift'], t: 100, hull: 800, lost: 0, tries: 1 }, results = {};
@@ -58,10 +76,13 @@ try {
   await t.ev(`localStorage.setItem('longhaul.campaign', ${JSON.stringify(JSON.stringify({ level: 1, mission: MISSION - 1, techs: [], ore: 60, bonus: { fighters: 0, escorts: 0 }, results }))})`);
   K.title = await ctl(/Title, from the pause/); K.map = await ck('map'); K.fire = await ck('fire'); K.next = await ck('next'); K.last = await ck('last'); K.near = await ck('near'); K.clear = await ck('clear'); K.minus = await ck('zoomout'); K.zero = await ck('zoomreset');
   K.scout = await ctl(/V scouts/, 0); K.take = await ctl(/V scouts/, 1);
-  K.rows = {}; for (const id of ['launch', 'attack', 'escort', 'guard', 'mine', 'convoy', 'goal', 'target', 'burn', 'dock', 'shields', 'engines', 'weapons', 'balance', 'emergency', 'missile']) K.rows[id] = await rk(id);
-  K.listDown = K.next; K.shields = K.rows.shields; K.engines = K.rows.engines; K.weapons = K.rows.weapons; K.even = K.rows.balance; K.missile = K.rows.missile;
+  K.up = await ck('up'); K.down = await ck('down'); K.pick = await ck('pick'); K.esc = await ck('pause'); K.shields = await ck('shields'); K.engines = await ck('engines'); K.weapons = await ck('weapons'); K.even = await ck('balance'); K.missile = await ck('missile');
+  K.lists = await j(`(() => { const o = {}; CAMP_PANELS.panels.forEach(p => { o[p.id] = p.code; }); return o; })()`); // the key that opens each list
+  K.rows = {}; for (const id of ['launch', 'attack', 'escort', 'guard', 'mine', 'ctuck', 'crun', 'ccarry', 'goal', 'target', 'burn', 'dock', 'emergency']) K.rows[id] = await rk(id); // the list each row is in
+  K.listDown = K.down; // the map's list is stepped with Down too (A and D are the target's keys, not the map's)
   note('keys from the table: ' + JSON.stringify(K));
-  check('every key the walk needs is in the key table', ['title', 'map', 'fire', 'next', 'near', 'minus', 'zero', 'scout', 'take'].every(k => K[k]) && ['launch', 'attack', 'escort', 'mine', 'convoy', 'goal', 'dock', 'shields', 'engines', 'weapons', 'balance', 'missile'].every(k => K.rows[k]), JSON.stringify(Object.keys(K).filter(k => !K[k]).concat(Object.keys(K.rows).filter(k => !K.rows[k]))));
+  check('every key the walk needs is in the key table', ['title', 'map', 'fire', 'next', 'near', 'minus', 'zero', 'scout', 'take', 'up', 'down', 'pick', 'esc', 'shields', 'engines', 'weapons', 'even', 'missile'].every(k => K[k]) && !!K.lists.fleet && !!K.lists.ship && ['launch', 'attack', 'escort', 'mine', 'ctuck', 'crun', 'ccarry'].every(k => K.rows[k] === 'fleet') && ['goal', 'dock', 'emergency'].every(k => K.rows[k] === 'ship'), JSON.stringify(Object.keys(K).filter(k => !K[k]).concat(Object.keys(K.rows).filter(k => !K.rows[k]))));
+  check('no row of a list has a key of its own, and no digit is a key of the flight', await j(`CAMP_PANELS.panels.every(p => p.rows.every(r => !('k' in r) && !('code' in r))) && Object.keys(CAMP_KEYS).every(id => CAMP_KEYS[id].codes.every(c => !/^(Digit|Numpad)[0-9]$/.test(c)))`));
   await key('KeyK'); // the title's own key for the Campaign (not in the Campaign group)
   check('K on the title opens the ready room', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`));
   await t.run(900); note('board: ' + (await shown()).join(' | ').slice(0, 700)); await snap('1-board');
@@ -93,10 +114,15 @@ try {
     let n = 0;
     if (style === 'right') n = R && R.good.length ? R.good[0] + 1 : 0; else if (style === 'wrong') n = R && R.bad.length ? R.bad[0] + 1 : 0;
     note(`call ${v.id} at ${await j(`Math.round(${S}.camp.t / 1000)`)} s, ${style} (${JSON.stringify(v.rows.map(r => r.n + ':' + r.pick))}, cautious ${v.def}) -> ${n || 'no answer'}`); await snap('call-' + callN + '-' + v.id);
-    if (n) await key('Digit' + n);
+    if (!n) return;
+    // the call is a small list: the highlight starts on the pilot's own pick (view.def - 1), Up and Down move it (round at the ends), Enter answers with the highlighted row. A Q or P list has the keys while it is open: it is closed first
+    if (await listOpen()) await key(K.esc);
+    if (!(await j(`campCallHasKeys(${S})`))) { note('(the call does not have the keys now: not answered)'); return; }
+    const sel = await j(`campCallSel(${S})`), downs = (n - 1 - sel + v.rows.length) % v.rows.length;
+    for (let i = 0; i < downs; i++) await key(K.down); await key(K.pick);
   };
   const lanes = () => j(`campNavRows(${S}.camp).filter(r => r.kind === 'lane').map(r => ({ id: r.id, name: r.name }))`);
-  const mapDo = async (rowId, code, what) => { // the map by its keys: open it, move the list to the row (W S from the table), press the key (V scouts, T takes), close it
+  const mapDo = async (rowId, code, what) => { // the map by its keys: open it, move the list to the row (Down, from the table), press the key (V scouts, T takes), close it
     await key(K.map); await t.run(300);
     for (let i = 0; i < 60 && (await j(`${S}.mp && ${S}.mp.selId`)) !== rowId; i++) await key(K.listDown);
     const at = await j(`${S}.mp && ${S}.mp.selId`); if (at !== rowId) note(`(${what}: the list would not go to ${rowId}; it stands on ${at})`);
@@ -129,17 +155,17 @@ try {
       const hold = await j(`campRouteHolding(${C})`);
       if (hold && !took) { took = true; const want = L.find(l => new RegExp(LANE, 'i').test(l.name)) || L[0]; note(`the transport holds at the fork (${JSON.stringify(hold)}); known: ${await j(`JSON.stringify(${C}.route.known)`)}; taking the ${want.name} (T on the map)`); await snap('fork-hold'); await mapDo(want.id, K.take, 'take'); await snap('fork-taken'); }
       const tb = await j(`campAliens(${C}).filter(u => u.kind === 'tboat').length`), ld = await j(`!!campRivalOf(${C}, 'leader')`);
-      if (tb && !tucked) { tucked = true; note('torpedo boats out: Tuck in (the convoy key steps through the orders)'); await convoyTo(/tuck in/i); await snap('tuck'); }
-      if (!tb && tucked && !ld && !ordered.carry) { ordered.carry = true; note('torpedo boats gone: Carry on (the convoy key steps through the orders)'); await convoyTo(/carry on/i); }
+      if (tb && !tucked) { tucked = true; note('torpedo boats out: Tuck in (its row of the fleet list)'); await convoyTo('ctuck', /tuck in/i); await snap('tuck'); }
+      if (!tb && tucked && !ld && !ordered.carry) { ordered.carry = true; note('torpedo boats gone: Carry on (its row of the fleet list)'); await convoyTo('ccarry', /carry on/i); }
       if (ld && KILL && clock - (ordered.chase || -99) >= 8) { ordered.chase = clock; const row = await j(`(() => { const u = campRivalOf(${C}, 'leader'); const r = campNavRows(${C}).find(r => r.ref === u.id); return r ? { id: r.id, d: Math.round(campDist(${C}.carrier, u)) } : null; })()`); if (row) { note(`the cruiser goes at the leader (${row.id}, ${row.d} px) at ${clock} s`); await mapDo(row.id, 'Enter', 'fly to the leader'); } }
-      if (ld && !ran) { ran = true; note('the leader is out: Run for it (the convoy key steps through the orders)'); await convoyTo(/run for it/i); await snap('run-for-it'); }
+      if (ld && !ran) { ran = true; note('the leader is out: Run for it (its row of the fleet list)'); await convoyTo('crun', /run for it/i); await snap('run-for-it'); }
       if (ld) { const ph = await j(`campRivalOf(${C}, 'leader').rival.ph`); if (rivalSeen.cur !== ph) { rivalSeen.cur = ph; note(`rival phase ${ph} at ${clock} s: ${JSON.stringify(await j(`({ hull: Math.round(campRivalOf(${C}, 'leader').hp), shield: Math.round(campRivalOf(${C}, 'leader').rival.sh || 0), me: Math.round(${C}.carrier.hp), mine: Math.round(${C}.shield), power: ${C}.power.p })`))}`); await snap('rival-' + ph);
         const pick = { charge: K.shields, down: K.weapons, ram: K.engines, run: K.engines, stalk: K.even }[ph]; if (pick) { await key(pick); await key(pick); } } }
     }
     // 1.2: the wing mines; the cruiser goes to the raiders; when the ore is in and the raids are beaten, dock at the Works to sell
     if (MISSION === 2) {
       const ore = await j(`Math.floor(${C}.ore)`), best = await j(`Math.floor(${C}.oreBest)`);
-      if (!ordered.mine || (!any && clock - mineAt >= 25 && ore < 450)) { ordered.mine = true; mineAt = clock; note(`Mine ore (FLEET) at ${clock} s: ore ${ore}`); await press('mine'); }
+      if (!ordered.mine || (!any && clock - mineAt >= 25 && ore < 450)) { ordered.mine = true; mineAt = clock; note(`Mine ore (the fleet list) at ${clock} s: ore ${ore}`); await press('mine'); }
       if (any && !foes && clock - flewAt >= 9) { flewAt = clock; const R = await foeRows(); if (R.length) { note(`raiders at ${R[0].d} px: the cruiser goes to ${R[0].id} (the map, Enter) at ${clock} s`); await mapDo(R[0].id, 'Enter', 'fly to the raiders'); } }
       if (!any && best >= 450 && !sold && (await j(`${C}.waves.every(w => w && w.started)`))) {
         if (!ordered.dock) { ordered.dock = true; note(`ore ${ore}: the goal is now "${await j(`campObjective(${C})`)}": fly there (the goal row) at ${clock} s`); await press('goal'); await t.run(600); }
@@ -156,7 +182,7 @@ try {
   if (IDLE) { note(`idle for ${IDLE} s: nothing pressed (what the hints say to a player who has not acted)`); for (let i = 0; i < IDLE; i++) { await t.run(1000); if (i % 30 === 29) await snap('idle-' + (i + 1)); } note('HUD after the idle: ' + (await hud()).join(' | ').slice(0, 700)); }
   if (DOCK0) {
     await t.run(1500); const t1 = await j(`${S}.camp.t`); await press('dock'); await t.run(1500);
-    const hub = await j(`game.scene.isActive('CampHub')`); note('E 4 at the start: hub ' + hub + (hub ? ' | ' + (await shown()).join(' | ').slice(0, 700) : ' | ' + (await toasts()).slice(-2).join(' || '))); await snap('dock0-1');
+    const hub = await j(`game.scene.isActive('CampHub')`); note('the dock row at the start: hub ' + hub + (hub ? ' | ' + (await shown()).join(' | ').slice(0, 700) : ' | ' + (await toasts()).slice(-2).join(' || '))); await snap('dock0-1');
     if (hub) { for (const d of ['Digit2', 'Digit3']) { await key(d); await t.run(500); note('page ' + d + ': ' + (await shown()).join(' | ').slice(0, 500)); } await snap('dock0-2'); await key('Escape'); await t.run(1500); }
     note('after leaving: ' + JSON.stringify(await state()) + ' (the battle clock was ' + Math.round(t1 / 1000) + ' s at the dock order); ' + (await toasts()).slice(-2).join(' || '));
   }
