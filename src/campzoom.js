@@ -2,7 +2,8 @@
 // Troy: "zooming in and out, with the + and - keys, for the game and for the map". The Long Haul's camera zoom (src/camzoom.js) is the game view's: the Campaign scene calls camzoomSetup, so the world is on one camera and the HUD,
 // the panels and the strip on another that never scales, and the zoom eases to where it was put (0.3 s) within camzoom's own limits (0.4 to 1.6). This file is what the Campaign adds, with no Phaser in it:
 //   keys      + (the = key too, and numpad +) zooms in, - (numpad - too) zooms out, 0 (numpad 0) goes back to the default; a held key repeats. The mouse wheel keeps working: in the battle it is camzoom's, with the map open it is the map's
-//   memory    the zoom is kept for the level (a retry comes back as it was) and starts at the default on a new level; the Long Haul's own remembered zoom is put back when the Campaign scene is left
+//   start     every flight starts at the zoom that six presses of - reach (card space-game-zoom-start-six; Troy, 22 Nov 2026): 1 / 1.2^6, 0.335 (campZoomDefault), on a new mission, a retry and a replay alike, and Backspace goes back to
+//             it; no zoom is kept from one flight to the next. The Long Haul's own remembered zoom is put back when the Campaign scene is left
 //   the map   (Tab) zooms in the same way, from the whole system (the zoom at which every body and ring just fits, campMapZMin: 0.02 of the level fitted on the rim, 0.3 on level 3) to 8 times the level fitted to the frame, eased,
 //             in bigger steps than the flight's (the system is up to 40 times the level): about the place you picked (a list choice or a click) or, with none, about the middle of the frame. The view is campMapView
 //             (src/campmap.js), which keeps what you zoom about where it was on the screen and the level inside the frame (and moves to the system's centre as it goes out); every click is read through mp.fit, which the view writes, so it is right at any zoom
@@ -14,10 +15,10 @@
 // campZoomPress(s, zk, repeat) is the one door for a key; the scene calls it before anything else reads the key (a held key repeats, and the scene ignores repeats). tests/campzoom.mjs.
 const CAMPZOOM = {
   map: { min: 0.5, max: 8, key: 1.4, hold: 1.06, wheel: 0.002 }, // the map's zoom range; 1 is the level fitted to the frame. min is how far out it goes AT LEAST: the zoom at which the whole system fits is lower where the system is much larger than the level (mp.zMin, campMapZMin). key, hold and wheel: the step of a press, of a held key's repeat and of a wheel unit (the flight's are 1.2, 1.03 and 0.0012: the map has farther to go)
-  view: { min: 0.2, minShip: 10, floor: 0.02, fitPad: 0.25, shotMax: 6, labelMax: 6, farKey: 1.5, markZ: 0.08 }, // the flight view's farthest zoom out for a short mission (the camera's own is 0.4 in the Long Haul), and the smallest a ship is drawn on screen, px across, when the view is out so far that it would be smaller. floor: the farthest of all (a mission's own fit is never past it: the screen is 64,000 px across there); fitPad: the share of room left past the farthest point of the route; markZ: under this zoom a place's name and an escorted ship's are drawn on the screen as marks (src/campfarscene.js), the world labels being a few pixels high; farKey: the step of a press of - or + past 0.2 (1.2 times, camzoom's own, from the default out to 0.2); shotMax and labelMax: how far a shot is thickened and a world label (a place's name) is scaled up at far zoom (src/camzoom.js camzoomLabelScale reads CAMZOOM.labelMax)
+  view: { min: 0.2, minShip: 10, floor: 0.02, fitPad: 0.25, shotMax: 6, labelMax: 6, farKey: 1.5, markZ: 0.08, startPresses: 6 }, // the flight view's farthest zoom out for a short mission (the camera's own is 0.4 in the Long Haul), and the smallest a ship is drawn on screen, px across, when the view is out so far that it would be smaller. floor: the farthest of all (a mission's own fit is never past it: the screen is 64,000 px across there); fitPad: the share of room left past the farthest point of the route; markZ: under this zoom a place's name and an escorted ship's are drawn on the screen as marks (src/campfarscene.js), the world labels being a few pixels high; startPresses: how many presses of - from 1 the default zoom is (every flight starts there, Backspace goes back to it); farKey: the step of a press of - or + past 0.2 (1.2 times, camzoom's own, from the default out to 0.2); shotMax and labelMax: how far a shot is thickened and a world label (a place's name) is scaled up at far zoom (src/camzoom.js camzoomLabelScale reads CAMZOOM.labelMax)
   keys: Object.assign({}, ...campKeyCodes('zoomin').map(c => ({ [c]: 1 })), ...campKeyCodes('zoomout').map(c => ({ [c]: -1 }))), // KeyboardEvent.code of the keys that zoom in (1) and out (-1): the table's (CAMP_KEYS in src/data_controls.js: = and the keypad's +, - and the keypad's -)
   reset: campKeyCodes('zoomreset'),                              // the keys that go back to the default: Backspace
-  mem: { level: 0, want: 1 }                                     // the zoom of the level last played: where a retry starts
+  mem: {}                                                        // the Long Haul's own camera range, kept while the Campaign has its own (campZoomRange)
 };
 
 // a key: { dir, reset } when it is a zoom key, else null
@@ -50,21 +51,21 @@ function campZoomFit(level, mi) {
 const campZoomFloor = (level, mi) => { const K = CAMPZOOM.view, fit = campZoomFit(level, mi); return fit > 0 ? Math.max(K.floor, Math.min(K.min, fit)) : K.min; };
 // a press of + or -: a step is 1.2 times (CAMZOOM.key) from the default out to 0.2 and 1.5 times (CAMPZOOM.view.farKey) past it, so the way out to a long mission's route is a few more presses (15 to the farthest of 1.1, not 21), and + after - is
 // where it began; a held key's repeat is camzoom's smooth step
-function campViewKey(want, dir, repeat) {
-  if (repeat) return camzoomKey(want, dir, true);
+function campViewStep(want, dir) { // one press, with no limit (the camera's own limits are camzoomClamp's, and the Long Haul's are not the Campaign's)
   const K = CAMPZOOM.view, near = Math.log(CAMZOOM.key), far = Math.log(K.farKey), lo = Math.log(K.min), x = Math.log(want);
   const p = x >= lo ? (x - lo) / near : (x - lo) / far, q = p + (dir < 0 ? -1 : 1);
-  return camzoomClamp(Math.exp(q >= 0 ? lo + q * near : lo + q * far));
+  return Math.exp(q >= 0 ? lo + q * near : lo + q * far);
 }
+function campViewKey(want, dir, repeat) { return repeat ? camzoomKey(want, dir, true) : camzoomClamp(campViewStep(want, dir)); }
 // on: the Campaign's range (floor: this mission's farthest zoom, else 0.2) and its far labels; off: the Long Haul's put back
 function campZoomRange(on, floor) {
   const m = CAMPZOOM.mem, K = CAMPZOOM.view;
   if (on) { if (m.lhMin == null) { m.lhMin = CAMZOOM.min; m.lhLabel = CAMZOOM.labelMax; } CAMZOOM.min = floor > 0 ? floor : K.min; CAMZOOM.labelMax = K.labelMax; }
   else if (m.lhMin != null) { CAMZOOM.min = m.lhMin; CAMZOOM.labelMax = m.lhLabel; m.lhMin = null; m.lhLabel = null; }
 }
-// where the game camera starts on a level: where it was left on this level (a retry), the default on any other
-function campZoomStart(level) { return CAMPZOOM.mem.level === level ? camzoomClamp(CAMPZOOM.mem.want) : 1; }
-function campZoomKeep(level, want) { CAMPZOOM.mem.level = level; CAMPZOOM.mem.want = camzoomClamp(want); }
+// the default zoom of the flight view: where six presses of - from 1 end (CAMPZOOM.view.startPresses; 0.335 at the steps of 1.2). Every flight starts there and Backspace goes back to it
+function campZoomDefault() { let z = 1; for (let i = 0; i < CAMPZOOM.view.startPresses; i++) z = campViewStep(z, -1); return z; }
+const campZoomStart = campZoomDefault; // where the game camera starts: the same on every mission, a retry and a replay
 
 // what the map zooms about: the place you set by a click or chose in the list, else nothing (the middle of the frame): { x, y } in the world, or null
 function campMapFocus(mp) {
@@ -77,7 +78,7 @@ function campZoomPress(s, zk, repeat) {
   if (!zk) return false;
   const mp = s.mp, R = CAMPZOOM.map;
   if (mp) mp.zWant = zk.reset ? 1 : campMapZoomKey(mp.zWant, zk.dir, repeat, campMapZLo(mp), R.max);
-  else CAMZOOM.want = zk.reset ? 1 : campViewKey(CAMZOOM.want, zk.dir, repeat);
+  else CAMZOOM.want = zk.reset ? campZoomDefault() : campViewKey(CAMZOOM.want, zk.dir, repeat);
   return true;
 }
 // the wheel over the open map
