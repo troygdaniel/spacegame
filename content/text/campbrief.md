@@ -50,13 +50,12 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.keyshead | KEYS THIS MISSION NEEDS |
 | camp.bf.key.fly | Thrust, turn and brake (the arrow keys) |
 | camp.bf.key.fire | Hold: the turrets fire at ships in reach |
-| camp.bf.key.wing | All squads: {rowlaunch} |
 | camp.bf.key.map | Open the map; click a place, Enter flies |
 | camp.bf.key.zoom | Zoom the view or the map; {keyzoomreset} resets |
-| camp.bf.key.attack | All squads: {rowattack} |
-| camp.bf.key.escort | All squads: {rowescort} |
+| camp.bf.key.attack | The pilots attack the picked enemy |
+| camp.bf.key.escort | The pilots guard the picked friendly |
 | camp.bf.key.missile | Fire a homing missile at the target |
-| camp.bf.key.mine | All squads: {rowfmine} |
+| camp.bf.key.mine | Cruiser list: {rowfmine} |
 | camp.bf.key.dock | Dock to build, mend and sell |
 | camp.bf.key.shield | Power: {rowemergency} |
 | camp.bf.keys.next | Enter or Right: next    Left: back    L: launch now    Esc: the board |
@@ -68,14 +67,14 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.1.1.w4 | A miner is jumped on the way. Send a squad. |
 | camp.bf.1.1.n1 | Welcome aboard, Commander. The transport is ours to bring to Ceres. A patrol sees her off, then she is on her own. |
 | camp.bf.1.1.n2 | Pirates lie in wait ahead, with torpedo boats. Cover the transport: say or type "tuck in". |
-| camp.bf.1.1.n3 | The arrows fly the cruiser. {keyall} picks all three pilots, {squadskey} lists all squads. {keyattack} attack, {keyguard} guard, {keyrecall} recall. |
+| camp.bf.1.1.n3 | The arrows fly the cruiser. {keywlast} {keywnext} pick who, {keyattack} engage, {keyguard} guard, {keyrecall} recall. |
 | camp.bf.1.2.w1 | Mine the rock fields round Ceres: {viafmine}, then {rowfmine}. |
 | camp.bf.1.2.w2 | The Works pays three credits an ore. Pirates hunt the miners. |
 | camp.bf.1.2.w3 | Beat the 5 raids, then dock at Occator Works ({viadock}). |
 | camp.bf.1.2.w4 | The Works keeps its doors shut while a pirate is near. |
 | camp.bf.1.3.w1 | 3 haulers leave Ceres for Earth, 12 seconds apart. |
 | camp.bf.1.3.w2 | 1 must get home. Each hauler lost costs points. |
-| camp.bf.1.3.w3 | Pirates keep coming. Cover the haulers: {viaescort}, then {rowescort}. |
+| camp.bf.1.3.w3 | Pirates keep coming. Cover the haulers: pick one ({keyflast} {keyfnext}), then {keyguard}. |
 | camp.bf.2.1.w1 | Find 2 of the 3 resource pods in the system. |
 | camp.bf.2.1.w2 | Any ship of yours that flies close picks one up. |
 | camp.bf.2.1.w3 | Aliens come from the west after 20 seconds. |

@@ -128,10 +128,10 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.no.bay | The bay is empty, pilot. |
 | camp.no.launching | The wing is still launching. |
 | camp.no.baydry | Everything is already out, pilot. |
-| camp.no.nofighters | No fighters are out. Launch first. |
+| camp.no.nofighters | No fighters are out. |
 | camp.no.noconvoy | There is no convoy to escort. |
 | camp.no.nomother | The mothership has not come yet. |
-| camp.no.nowing | No ships are out. Launch first. |
+| camp.no.nowing | No ships are out. |
 | camp.no.what | I cannot do that, pilot. |
 | camp.no.nomissiles | The magazine is empty, pilot. It reloads slowly. |
 | camp.no.missilewait | The launcher is still cycling. |

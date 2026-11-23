@@ -75,12 +75,15 @@ function campTgtMissile(C, dry) {
 // ---- WHO takes the order (C.sel), the FRIENDLY (C.fsel) and the order keys (cards space-game-bracket-select-orders, space-game-keys-select) ----
 const CAMP_SELPILOT = 'pilot:';
 const CAMP_SELALL = 'all'; // WHO: the three pilots at once, the first stop of A and D and the default (nothing picked is All pilots)
-function campSelPilotName(u, squad) { return typeof campPilotName === 'function' && u && u.pilot ? campPilotName(u) : squad.charAt(0).toUpperCase() + squad.slice(1) + ' squad'; } // the name three-pilots gave it (Wedge, Kara, Apollo), until then its squad's colour
+function campSelPilotName(u, squad) { const p = (CAMP.pilots || []).find(q => q.squad === squad); return typeof campPilotName === 'function' && u && u.pilot ? campPilotName(u) : p ? p.name : squad.charAt(0).toUpperCase() + squad.slice(1) + ' squad'; } // the name three-pilots gave it (Wedge, Kara, Apollo), until then its squad's colour
 function campSelAllUnits(C) { return C && C.carrier ? (CAMP.wing.squads || []).reduce((a, sq) => a.concat(campWingShips(C, sq)), []) : []; } // the pilots' ships that are out
 function campSelAllName() { return typeof uiText === 'function' ? uiText('camp.sel.all') : 'All pilots'; }
-function campSelList(C) { // the stops of A and D: All pilots, then the pilots with a ship out (red, green, yellow); [{ id, kind: 'all'|'pilot', squad, unit (a pilot's ship; null for all), units (all: the ships out), name }]
+function campSelList(C) { // the stops of A and D: All pilots, then the pilots an order can reach: out, or in the bay (it launches them: card space-game-keys-orders) or being mended (red, green, yellow); [{ id, kind: 'all'|'pilot', squad, unit (a pilot's ship; null for all, and for a pilot in the bay), units (all: the ships out), name }]
   if (!C || !C.carrier) return [];
-  const pilots = (CAMP.wing.squads || []).map(sq => { const ships = campWingShips(C, sq); return ships.length ? { id: CAMP_SELPILOT + sq, kind: 'pilot', squad: sq, unit: ships[0], units: [ships[0]], name: campSelPilotName(ships[0], sq) } : null; }).filter(Boolean);
+  const pilots = (CAMP.wing.squads || []).map(sq => {
+    const ships = campWingShips(C, sq); if (!ships.length && !campWingDocked(C, sq).length) return null; // lost, with nothing in the bay to take its place: not a stop
+    return { id: CAMP_SELPILOT + sq, kind: 'pilot', squad: sq, unit: ships[0] || null, units: ships.length ? [ships[0]] : [], name: campSelPilotName(ships[0] || null, sq) };
+  }).filter(Boolean);
   return [{ id: CAMP_SELALL, kind: 'all', squad: '', unit: null, units: campSelAllUnits(C), name: campSelAllName() }].concat(pilots);
 }
 function campSelAll(C) { if (C && C.carrier) C.sel = CAMP_SELALL; return C ? C.sel : ''; } // Q (until the Q list returns): WHO is all three pilots

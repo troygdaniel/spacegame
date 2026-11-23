@@ -20,7 +20,7 @@ function campHelp(text, C) {
     q = q.replace(CAMPHELP.filler, '').replace(/\s+(please|already)$/, '').trim();
     if (!q) return null;
     const H = CAMPHELP, wing = (typeof campWing === 'function' ? campWing(C).length : 0), bay = (C.bay ? C.bay.fighters : 0);
-    if (H.goal.test(q)) return uiText(bay > 0 && wing === 0 && !C.launchQ.length ? 'camp.help.goalbay' : 'camp.help.goal', { goal: campObjective(C) });
+    if (H.goal.test(q)) return uiText('camp.help.goal', { goal: campObjective(C) });
     if (H.keys.test(q)) return uiText('camp.help.keys');
     if (H.map.test(q)) return uiText('camp.help.map');
     if (H.status.test(q)) return uiText(C.earth ? 'camp.help.status' : 'camp.help.status2', { hull: Math.round(C.carrier.hp), max: Math.round(C.carrier.maxHp), earth: C.earth ? Math.round(C.earth.shield / C.earth.max * 100) : 0, out: wing, bay });
