@@ -16,7 +16,7 @@
 // ---------- the Campaign's lists (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026: "one list per hand", then "shortcut keys that take you straight to the sub-list") ----------
 // LEFT HAND, the fleet: Q PICKS ALL THREE PILOTS now (card space-game-q-selects-all, Troy, 23 Nov 2026) and the FLEET list it used to open is switched off (CAMP_FLEET_LIST below; its rows and code are kept). The list was a row for each part of the wing and nothing else (card space-game-squad-tint; Troy, 22 Nov 2026: nothing listed twice): W ALL SQUADS (launch, mine and the rest of the wing's orders; the three pilots are Red, Green and Yellow: card space-game-three-pilots), and E R T are NOT lists any more (card space-game-bracket-select-orders; Troy, 23 Nov 2026, like X-Wing): the order keys, E attack, R guard, T recall, which act on the two selections,
 // and CONVOY, which has no key (a row of the Q list: Enter or Right on it opens that part; there is no escort ship: card space-game-cut-escorts, Troy, 22 Nov 2026). The first row of that list is LAUNCH THE WING, so W, Enter launches everything (Q, Enter, Enter did, with the list on).
-// RIGHT HAND, the ship, mirrored: P opens the SHIP list with a row for each part: O POWER (shields first: O, Enter adds a shield pip; card space-game-ship-shortcuts-o-power, Troy, 22 Nov 2026), I AUTOPILOT, U DOCK AND REPAIR.
+// RIGHT HAND, the ship, mirrored: P OPENS THE POWER LIST DIRECTLY now (card space-game-p-opens-power, Troy, 23 Nov 2026: "P should just open the power list") and the SHIP list it used to open is switched off (CAMP_SHIP_LIST below; its rows and code are kept). O still opens power too. The ship list was a row for each part: POWER (shields first: P, Enter adds a shield pip; card space-game-ship-shortcuts-o-power, Troy, 22 Nov 2026), I AUTOPILOT, U DOCK AND REPAIR, and the warp blink (that row lives in the POWER list while the ship list is off).
 // A part's key opens its list directly, at any time (W, Enter: launch the wing); Enter or a click on the part's row in Q or P opens it too. Nothing is on the screen until a key is pressed, and only one list is open at a time.
 // In an open list Up and Down move the highlight, Enter gives the order (the list closes when the order is taken; a power row leaves it open, to be given again), Left goes back to the list it is a part of, the list's own key closes it.
 // Esc goes back ONE STEP, to where you came from (card space-game-order-target-pick): a target sub-list to its list, a list a row of Q or P opened back to Q or P, a list its own key opened (Q W P O I U) is closed; with nothing open, Esc pauses.
@@ -48,6 +48,9 @@ const campYardRows = () => CAMP_YARD.map(r => { const o = { id: r.id, order: r.d
 // THE SWITCH FOR Q'S POP-UP (card space-game-q-selects-all; Troy, 23 Nov 2026: "Q selects all three pilots as the friendly selection, no pop-up"). false: Q is the key that picks ALL THREE PILOTS (CAMP_KEYS.all; the next E R T order goes to all three) and the FLEET list is off: no key opens it, nothing goes back to it, and the key line, the H page and the hints do not name it (its rows stay below, ready).
 // true: Q opens the FLEET list as before and Q picks nothing. campFleetListSet(on) is the one place that moves both (the key of the list, the key of All pilots, and the list's `off` mark that campPanelGo reads); the tests of the list's code call it with true.
 const CAMP_FLEET_LIST = false;
+// THE SWITCH FOR P'S SHIP LIST (card space-game-p-opens-power; Troy, 23 Nov 2026: "P should just open the power list"). false: P opens the POWER list directly (its key is P, and O opens it too: `alt`), the SHIP list is off: no key opens it, nothing goes back to it (Left from a part does nothing, the foot does not offer it), and the key line, the H page and the hints do not name it. The warp blink row, which only the ship list had, is the last row of the POWER list meanwhile.
+// true: P opens the SHIP list as before, O opens power, and the blink row is the ship list's last row again. campShipListSet(on) is the one place that moves all of it (the keys, the `off` mark, the parts' `parent`, the blink row); the tests of the list's code call it with true.
+const CAMP_SHIP_LIST = false;
 const CAMP_PANELS = {
   show: 11,                                // how many rows of a list are on the screen at once: a longer list scrolls with the highlight (the fleet list has eleven: the squads came in, card space-game-fighter-squads)
   anim: { flash: 160 },                    // ms: a row lights up (two pulses) when Enter gives it
@@ -136,13 +139,26 @@ function campFleetListSet(on) { // the switch (CAMP_FLEET_LIST): who has Q. The 
   }
   return on;
 }
+function campShipListSet(on) { // the switch (CAMP_SHIP_LIST): who has P. The ship list's key and `off` mark, the power list's key (P or O) and its second key, the parts' `parent` (Left goes back to a list that is on, to none otherwise) and the blink row move together
+  const L = CAMP_PANELS.panels, ship = L.find(x => x.id === 'ship'), pw = L.find(x => x.id === 'power'); if (!ship || !pw) return on;
+  ship.key = on ? 'P' : ''; ship.code = on ? 'KeyP' : ''; ship.off = !on;
+  pw.key = on ? 'O' : 'P'; pw.code = on ? 'KeyO' : 'KeyP'; // while the ship list is off P is the power list's key and O its second one (alt: another KeyboardEvent.code that opens it; altkey the cap)
+  if (on) { delete pw.alt; delete pw.altkey; } else { pw.alt = 'KeyO'; pw.altkey = 'O'; }
+  ['power', 'nav', 'yard'].forEach(id => { const x = L.find(y => y.id === id); if (x) x.parent = on ? 'ship' : ''; });
+  const from = on ? pw : ship, to = on ? ship : pw, i = from.rows.findIndex(r => r.id === 'blink'); // the warp blink's row: the ship list's last row, or the power list's last row while the ship list is off
+  if (i >= 0) to.rows.push(from.rows.splice(i, 1)[0]);
+  let C = null; try { C = CONTROLS; } catch (e) { C = null; } // the H page's tables: not made yet when this first runs
+  if (C) { const l = C.find(x => x.id === 'panels'); if (l) l.rows.splice(0, l.rows.length, ...campPanelKeyRows()); }
+  return on;
+}
 campFleetListSet(CAMP_FLEET_LIST);
+campShipListSet(CAMP_SHIP_LIST);
 const campKeyCodes = id => (CAMP_KEYS[id] || { codes: [] }).codes;
 const campKeyIs = (id, code) => campKeyCodes(id).indexOf(code) >= 0;
 // the rows the H page and Settings list for the lists: each list's key and what it is, then the keys every open list shares
 function campPanelKeyRows() {
   const sub = 'THE ORDER LISTS', what = { fleet: 'Fleet orders, and the lists below', convoy: 'Convoy: tuck in, run, hold, carry on', squads: 'All squads: launch, attack, recall', ship: 'Ship orders, and the lists below', nav: 'Autopilot: goal, target, fast burn', power: 'Power: pips, balance, emergency', yard: 'Dock, repair the hull and our ships' };
-  return CAMP_PANELS.panels.filter(p => p.key).map(p => ({ k: [p.key], t: what[p.id] || p.title, sub })).concat([
+  return CAMP_PANELS.panels.filter(p => p.key).map(p => ({ k: p.altkey ? [p.key, p.altkey] : [p.key], t: what[p.id] || p.title, sub })).concat([
     { k: [CAMP_KEYS.up.k, CAMP_KEYS.down.k], t: 'In a list: move the highlight', sub }, { k: [CAMP_KEYS.pick.k], t: 'In a list: give the order', sub }, { k: ['Left', 'Right'], t: 'In a list: back, or into a part', sub }, { k: [CAMP_KEYS.pause.k], t: 'Back a step, or close the list', sub }]);
 }
 
@@ -306,6 +322,7 @@ const CONTROLS = [
   ] }
 ];
 campFleetListSet(CAMP_FLEET_LIST); // the switch's state again, now that the H page's tables are made too (the Q row)
+campShipListSet(CAMP_SHIP_LIST); // and the ship list's (the LISTS group's rows)
 
 const controlsGroup = id => CONTROLS.find(g => g.id === id) || null;
 const controlsLine = r => r.k.join(' ') + '   ' + r.t.charAt(0).toLowerCase() + r.t.slice(1); // 'W A S D   walk (the arrow keys work too)'
