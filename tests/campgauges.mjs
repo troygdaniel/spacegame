@@ -123,7 +123,7 @@ console.log('C. the numbers of the dials');
 
 console.log('D. where things are');
 {
-  const Z = J('campHudGeom()'), T = J('TOAST'), W = J('W'), tab = J('CAMPPANELS_LOOK'), keep = J('CAMP.nav.arrow.keep'), radar = J('CAMP_RADAR');
+  const Z = J('campHudGeom()'), T = J('TOAST'), W = J('W'), tab = J('CAMPPANELS_LOOK'), keep = J('CAMP.nav.arrow.keep'), box = J('campTdispBox()'); // box: the target display's (the radar's old place)
   const band = { x0: W / 2 - (T.w + 2 * T.pad) / 2, x1: W / 2 + (T.w + 2 * T.pad) / 2, y0: T.top, y1: T.bottom };
   const hit = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
   const boxes = Z.cells.flatMap((c, i) => [{ id: 'dial' + i, ...c.dial }, { id: 'bar' + i, ...c.bar }]).concat([{ id: 'hull', ...Z.hull }]);
@@ -133,7 +133,7 @@ console.log('D. where things are');
   { const bal = { x0: Z.balance.x - 44, x1: Z.balance.x, y0: Z.balance.y - 6, y1: Z.balance.y + 6 };
     check('the ; word (about 44 px wide, 12 high, right-aligned) is clear of every dial, bar, the hull bar, the toast band and the ore line, and inside the gauges\' columns', boxes.every(b => !hit(bal, b)) && !hit(bal, band) && bal.x1 <= Math.max(...boxes.map(b => b.x1)) && bal.y1 <= J('CAMP.hud.ore.y'), JSON.stringify([bal, J('CAMP.hud.ore')])); }
   check('the hull bar is under the shield dial and its bar, and starts where the dial does', Z.hull.y0 >= Z.cells[0].dial.y1 && Z.hull.x0 === Z.cells[0].dial.x0 && Z.hull.x1 === Z.cells[0].bar.x1, JSON.stringify(Z.hull));
-  check('the whole block is at the top right, above the radar (which is at the bottom right now), and every box is on the screen, the block\'s right edge 8 px from the screen\'s', boxes.every(b => b.x0 >= 0 && b.y0 >= 0 && b.x1 <= W && b.y1 <= radar.y - radar.r) && Z.block.x1 === W - J('CAMP.hud.right') && radar.y + radar.r < J('H') - 40 && radar.x + radar.r <= W, JSON.stringify([radar, Z.block]));
+  check('the whole block is at the top right, above the target display (which is at the bottom right now), and every box is on the screen, the block\'s right edge 8 px from the screen\'s', boxes.every(b => b.x0 >= 0 && b.y0 >= 0 && b.x1 <= W && b.y1 <= box.y) && Z.block.x1 === W - J('CAMP.hud.right') && box.y + box.h < J('H') - 40 && box.x + box.w <= W, JSON.stringify([box, Z.block]));
   const f0 = J(`campHudFlow([{ id: 'a', show: true }, { id: 'b', show: false }, { id: 'c', show: true, h: 12 }, { id: 'd', show: true }])`);
   check('a line with nothing to say gives its place back: b is skipped, the next goes where it would have gone, a line with a bar under it takes 12 px more', f0.ys.a === J('CAMP.hud.text.y') && f0.ys.b === undefined && f0.ys.c === f0.ys.a + J('CAMP.hud.text.pitch') && f0.ys.d === f0.ys.c + J('CAMP.hud.text.pitch') + 12, JSON.stringify(f0));
   check('the lines start under the hull bar', f0.ys.a >= Z.hull.y1 + 2, JSON.stringify([f0.ys.a, Z.hull]));
@@ -142,7 +142,7 @@ console.log('D. where things are');
   check('the arrow\'s keep-out rectangle at the left covers the gauges and the lines down to where a list opens', keep.some(r => r[0] <= 0 && r[1] <= 0 && r[2] >= 358 && r[3] >= typ.bottom - 22), JSON.stringify(keep));
   const ore = Z.ore;
   check('the ore line ends at the gauges\' right edge (its text, 236 px at the most, is right-aligned there) under the speed and laser dials, clear of the hull bar and of the lines', ore.x === Z.block.x1 && ore.x - 236 >= Z.hull.x1 && ore.y >= Z.cells[1].dial.y1 && ore.y + 18 <= f0.ys.a, JSON.stringify(ore));
-  check('the arrow\'s keep-out rectangles cover the gauges at the top right (the whole block) and the radar at the bottom right', keep.some(r => r[2] >= W && r[0] <= Z.block.x0 && r[1] <= 0 && r[3] >= Z.block.y1) && keep.some(r => r[2] >= W && r[0] <= radar.x - radar.r && r[1] <= radar.y - radar.r && r[3] >= radar.y + radar.r), JSON.stringify(keep));
+  check('the arrow\'s keep-out rectangles cover the gauges at the top right (the whole block) and the target display at the bottom right', keep.some(r => r[2] >= W && r[0] <= Z.block.x0 && r[1] <= 0 && r[3] >= Z.block.y1) && keep.some(r => r[2] >= W && r[0] <= box.x && r[1] <= box.y && r[3] >= box.y + box.h), JSON.stringify(keep));
   check('no literal pip table is left: CAMP.hud has no pips', J('CAMP.hud.pips') === null);
 }
 

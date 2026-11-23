@@ -3,6 +3,7 @@
 //   'enemy'   Attack (the squads' lists and the escorts'): a hostile, the nearest threat to the ships you protect first
 //   'escort'  Escort the convoy: a convoy ship or one of the neutral miners, the nearest to the cruiser first
 //   'field'   Mine ore: a field of rocks with rock left in it, the nearest to the cruiser first
+//   'guard'   Guard the target (card space-game-guard-the-target): a ship you protect (a convoy ship, a neutral miner, the distress miner), the nearest to the cruiser first, then the outposts; the squad flies in formation beside it
 //   'ward'    Repair a ship we protect (card space-game-repair-with-ore): a convoy ship or a miner that is hurt and within CAMP.mend.range of the cruiser, the nearest first; the row shows what mending it costs
 // ONE candidate: the order is given at once, at it (an enemy also becomes THE target, C.tgt, so P fly to the target and a missile follow it). SEVERAL: Enter on the row opens a SUB-LIST of them (a row each: its name, how far, its hull),
 // Up and Down move the highlight, Enter gives the order, Esc (or Left) goes back to the list it came from. NONE: the order is as it always was (no convoy in the level: the escorts stay close; no rock: the ore lying about; no hostile: Attack
@@ -43,9 +44,13 @@ function campPickFields(C) { // the rocks that are left, a field of them by the 
     return { id: 'field-' + k, name: uiText('camp.ui.cand.field', { n: (+k | 0) + 1 }), what: 'field', x, y, r, km: campNavKm(campDist(c, C.carrier)), hp: -1, n, rock: near.id };
   }), C.carrier);
 }
+function campPickGuardees(C) { // what a squad can be sent to guard: the ships you protect (as Escort the convoy lists them), then the outposts of the level, nearest to the cruiser first (an outpost has no hull: hp -1)
+  const posts = typeof campOutposts === 'function' ? campOutposts(C.level).map(o => ({ id: 'place:' + o.id, name: o.name, what: 'post', x: o.x, y: o.y, r: o.r || 60, km: campNavKm(campDist(o, C.carrier)), hp: -1, n: 0, rock: '' })) : [];
+  return campPickEscorts(C).concat(campPickByNear(posts, C.carrier));
+}
 function campPickItems(C, kind) {
   if (!C || !C.carrier) return [];
-  return kind === 'enemy' ? campPickHostiles(C) : kind === 'escort' ? campPickEscorts(C) : kind === 'field' ? campPickFields(C) : kind === 'ward' ? campPickWards(C) : [];
+    return kind === 'enemy' ? campPickHostiles(C) : kind === 'escort' ? campPickEscorts(C) : kind === 'field' ? campPickFields(C) : kind === 'ward' ? campPickWards(C) : kind === 'guard' ? campPickGuardees(C) : [];
 }
 function campPickPlan(C, row) {
   const kind = campPickKind(row); if (!kind || !C) return { how: 'direct' };
@@ -68,8 +73,8 @@ function campPickSync(C, pk) {
 }
 function campPickRow(C, it, kind) {
   const pct = Math.round(Math.max(0, it.hp) * 100), n = it.n;
-  const short = it.what === 'field' ? uiText(n === 1 ? 'camp.ui.cand.rock1' : 'camp.ui.cand.rocks', { n }) + '  ' + it.km + ' km' : it.km + ' km  ' + pct + '%' + (it.cost != null ? '  ' + it.cost + ' ore' : '');
-  const state = it.what === 'field' ? uiText('camp.ui.cand.state.field', { name: it.name, n, km: it.km }) : uiText('camp.ui.cand.state.ship', { name: it.name, km: it.km, hp: pct });
+  const short = it.what === 'field' ? uiText(n === 1 ? 'camp.ui.cand.rock1' : 'camp.ui.cand.rocks', { n }) + '  ' + it.km + ' km' : it.what === 'post' ? it.km + ' km' : it.km + ' km  ' + pct + '%' + (it.cost != null ? '  ' + it.cost + ' ore' : '');
+  const state = it.what === 'field' ? uiText('camp.ui.cand.state.field', { name: it.name, n, km: it.km }) : it.what === 'post' ? uiText('camp.ui.cand.state.post', { name: it.name, km: it.km }) : uiText('camp.ui.cand.state.ship', { name: it.name, km: it.km, hp: pct });
   return { id: it.id, label: it.name, key: '', more: false, ok: true, state, short, marked: kind === 'enemy' && !!C.tgt && C.tgt === it.id, hull: it.charge ? Math.max(0, Math.min(1, it.hp)) : -1, band: it.charge ? campChargeBand(it.hp) : '' }; // the target now is marked; a ship you protect has its hull and the band of its colour for the bar at the right of its row (src/campanelsdraw.js)
 }
 function campPickShown(P, C, now) {
