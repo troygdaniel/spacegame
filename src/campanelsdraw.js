@@ -87,6 +87,7 @@ function campPanelsPaint(s, now) {
       campBarDraw(g, { bar: { x0: Z.x0, y0: by, x1: Z.x1, y1: by + Z.y1 - Z.y0 } }, s.gaugeAnim.shown[st.pip], s.gaugeAnim.flash[st.pip], emer ? 0xffffff : [CAMP_GAUGE.colors.shields, CAMP_GAUGE.colors.speed, CAMP_GAUGE.colors.lasers][d]);
       sx = Z.x0 - 10;
     }
+    if (st.hull >= 0) { const Q = CAMP.charge.list, bx = sx - Q.w, by = y + (B.row - Q.h) / 2; g.fillStyle(0x02060d, 0.85).fillRect(bx - 1, by - 1, Q.w + 2, Q.h + 2); g.fillStyle(0x16293d, 1).fillRect(bx, by, Q.w, Q.h); g.fillStyle(CAMP.charge.color[st.band], 1).fillRect(bx, by, Math.max(1, Math.round(Q.w * st.hull)), Q.h); sx = bx - 10; } // a ship you protect: its hull as a bar at the right of its row, its km and percent left of it (card space-game-protected-health)
     o.suffix.setVisible(true).setPosition(sx, y + B.row / 2).setText(st.short || '').setColor(at && st.ok ? K.rowInk.at : st.marked ? K.ink[def.side] : st.ok ? K.rowInk.suffix : K.rowInk.why);
   });
   const cur = V.rows[V.at], F = G.foot; // the foot: the highlighted row's full state (or its reason), what is off the screen, and the keys
@@ -95,6 +96,13 @@ function campPanelsPaint(s, now) {
 }
 
 // a click on a row of the open list does the row (as Enter would). true when the list took the click (so it is not also a click on the map or the battle)
+// the pointer is on the open list's box: a press there is the list's click (campPanelsClick), never the start of a drag of the view (src/campdrag.js)
+function campPanelsOver(s, px, py) {
+  const P = s.pn; if (!P || typeof P !== 'object' || !campPanelsOn(s)) return false;
+  const def = campPanelDef(campPanelOpen(P)); if (!def) return false;
+  const V = campPanelView(P, s.camp); if (!V) return false;
+  const G = campPanelsGeometry(def, V.total); return px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h;
+}
 function campPanelsClick(s, px, py) {
   const P = s.pn, L = s.pnl; if (!P || !L || !campPanelsOn(s)) return false;
   const def = campPanelDef(campPanelOpen(P)); if (!def) return false;
@@ -112,6 +120,7 @@ function campPanelsClick(s, px, py) {
     if (campPickKind(hit) && campPanelRowState(s.camp, hit).ok) { const plan = campPickPlan(s.camp, hit); if (plan.how === 'list') { campPickOpen(P, hit, plan.items); return true; } if (plan.how === 'auto') item = plan.item; } // a row that needs a target: one is taken, several open a sub-list
     const r = campPanelRun(s.camp, hit, 'click', item); P.lit[hit.id] = now; if (r && r.say) toast(s, r.say, r.ok ? '#9fe9ff' : '#ffb454');
     if (r && r.ok && item) P.seen = { kind: campPickKind(hit), id: item.id, until: now + CAMP_PICK.seen };
+    if (r && r.ok) campSquadsKeep(P, def.id, now);
     if (r && r.ok && !hit.stay) campPanelClose(P);
   }
   return true;

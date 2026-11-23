@@ -7,7 +7,7 @@
 //   campMapBounds(level)          the plain extent of a level's data: places, caches, relic ring, guards, tower rings, where waves come from, convoy ends -> { x0, y0, x1, y1 }
 //                                 (data only, so the view does not zoom about while you read it; a ship that leaves it is drawn on the edge, like the radar's rim)
 //   campMapFit(b, frame, pad)     the scale and centre that put the bounds in the frame: { s, cx, cy };   campMapPoint(fit, frame, x, y) -> { x, y } on the screen
-//   campMapMarks(C)               everything on the map now, from the battle C: [{ type, x, y, ... }], the places first and the carrier last
+//   campMapMarks(C, whole, rings) everything on the map now, from the battle C: [{ type, x, y, ... }], the places first and the carrier last (rings: the squads in focus: only their fighters' marks carry the squad)
 //   campMapLegend(C, marks)       one row for each kind that is on the map now: [{ type, color, text }]
 //   campDotColor(u)               the colour of a ship, for the map and the radar alike
 // The key is Tab, the sector map's own: M is the mute key in every screen (src/meta.js), so it cannot also open a map.
@@ -74,13 +74,27 @@ function campMapFit(b, frame, pad) {
 // the view at zoom z (1: the level fitted to the frame): the scale and centre to draw with. view is the last one and z0 the zoom it had; focus, a world point or null, is what is zoomed about, which stays where it was on the screen
 // (null: the middle of the frame stays). Zoomed in, the view is held inside the fitted extent. Zoomed out past 1 it is the fitted centre, so zooming back in returns to the whole level; with `whole` (the whole system fitted
 // to the frame, campMapFit of campMapBounds(level, true)) the centre moves from the level's to the system's as the zoom goes out, and at the zoom where the whole system just fits (campMapWholeZ) it is the system's own.
-function campMapView(base, frame, z, view, z0, focus, whole) {
+// `free` (a box, or null): the map has been dragged, and the centre is wherever it was put inside that box (campMapPan, campMapRecentre below).
+function campMapView(base, frame, z, view, z0, focus, whole, free) {
   const s = base.s * z; let cx = view.cx, cy = view.cy;
   if (focus && z0 > 0) { const k = z0 / z; cx = focus.x - (focus.x - cx) * k; cy = focus.y - (focus.y - cy) * k; }
+  if (free) return { s, cx: Math.max(free.x0, Math.min(free.x1, cx)), cy: Math.max(free.y0, Math.min(free.y1, cy)) }; // `free`, a box: the view the pilot has dragged (card space-game-drag-view) goes where the hand put it, anywhere inside the whole system's bounds: no hold on the level's extent, no pull to its middle
   const vx = frame.w / 2 / s, vy = frame.h / 2 / s, bx = frame.w / 2 / base.s, by = frame.h / 2 / base.s;
   const w = whole && z < 1 ? campMapOutShare(base, whole, z) : 0, mx = base.cx + (whole ? (whole.cx - base.cx) * w : 0), my = base.cy + (whole ? (whole.cy - base.cy) * w : 0);
   const hold = (c, v, b, mid) => v >= b ? mid : Math.max(mid - (b - v), Math.min(mid + (b - v), c));
   return { s, cx: hold(cx, vx, bx, mx), cy: hold(cy, vy, by, my) };
+}
+// a drag of the map by dx, dy screen pixels (card space-game-drag-view): the map follows the hand, so the centre moves the other way by the pixels over the scale, and stays inside mp.box (the whole system's bounds: the map cannot be dragged away)
+function campMapPan(mp, frame, dx, dy) {
+  if (!mp || !mp.fit || !(mp.fit.s > 0)) return false;
+  const f = mp.fit, b = mp.box, cx = f.cx - dx / f.s, cy = f.cy - dy / f.s;
+  mp.fit = { s: f.s, cx: b ? Math.max(b.x0, Math.min(b.x1, cx)) : cx, cy: b ? Math.max(b.y0, Math.min(b.y1, cy)) : cy };
+  mp.panned = true; return true;
+}
+// the map back where its zoom puts it (the held view: the level's middle, or the way out to the system's): Backspace, the mark
+function campMapRecentre(mp, frame) {
+  if (!mp || !mp.base) return false;
+  mp.panned = false; mp.fit = campMapView(mp.base, frame, mp.z, mp.fit, mp.z, null, mp.wholeBase); return true;
 }
 // how far along the way out from the level (0) to the whole system (1) a zoom is: by the log of the zoom, so every step out moves the centre the same share of the way
 function campMapOutShare(base, whole, z) {
@@ -94,7 +108,7 @@ const campMapZMin = (base, whole, floor) => Math.min(floor == null ? 1 : floor, 
 const campMapPoint = (fit, frame, x, y) => ({ x: frame.x + frame.w / 2 + (x - fit.cx) * fit.s, y: frame.y + frame.h / 2 + (y - fit.cy) * fit.s });
 
 const CAMPMAP_RANK = { lane: 0, place: 0, objective: 0, relic: 1, anomaly: 2, cache: 2, scan: 2, rock: 2, pickup: 2, tower: 3, convoy: 4, patrol: 4, miner: 4, pirate: 5, alien: 5, tboat: 5, wing: 6, rival: 7, mother: 7, torpedo: 7, carrier: 8 }; // drawn in this order: the carrier on top
-function campMapMarks(C, whole) { // whole: the far places too (the whole system); else only the level's own area
+function campMapMarks(C, whole, rings) { // whole: the far places too (the whole system); else only the level's own area; rings: the squads in focus (src/campwing.js campSquadsShown), whose fighters' marks carry the squad
   const L = (C.L || CAMP.levels[C.level]), pl = campPlaces(C.level), c = CAMPMAP.color, out = [];
   Object.keys(pl).forEach(id => { const p = pl[id]; if (p.hidden || (p.far && !whole && !campMapUsed(L, id))) return; out.push({ type: 'place', id, x: p.x, y: p.y, r: p.r || 60, name: String(p.name) + (p.base ? ' / ' + p.base : ''), color: p.kind === 'star' ? c.star : id === 'earth' ? c.earth : c.place, outpost: !!(L && L.outposts && L.outposts[id]) }); }); // outpost: a friendly station (the map draws a mark on it)
   (C.caches || []).forEach(k => { if (!k.got) out.push({ type: 'cache', x: k.x, y: k.y, color: c.cache }); });
@@ -105,12 +119,14 @@ function campMapMarks(C, whole) { // whole: the far places too (the whole system
   (C.pickups || []).forEach(p => out.push({ type: 'pickup', id: p.id, x: p.x, y: p.y, color: c.pickup }));
   if (typeof campAnomMarks === 'function') campAnomMarks(C).forEach(a => out.push({ type: 'anomaly', id: 'anom:' + a.id, x: a.x, y: a.y, r: a.r, shown: a.shown, color: a.shown ? c.cache : c.anomaly })); // noticed: an unlabelled warped mark; decloaked: the cache (src/campanomaly.js)
   if (C.relic && L.relic) out.push({ type: 'relic', x: C.relic.x, y: C.relic.y, r: L.relic.radius, hold: L.relic.hold ? C.relic.hold / L.relic.hold : 0, color: c.relic });
+  const care = {}; (typeof campChargeBars === 'function' ? campChargeBars(C) : []).forEach(b => { care[b.id] = b; }); // the ships you protect: their hull goes on their marks (src/campcharge.js)
   C.ships.forEach(u => {
     if (u.hp <= 0 || (u.team === 'alien' && typeof campSeen === 'function' && !campSeen(C, u))) return; // a hostile out of the sensors' sight is not on the map (src/campsight.js)
     const type = u.kind === 'carrier' ? 'carrier' : u.kind === 'freighter' ? 'convoy' : u.kind === 'mother' ? 'mother' : u.kind === 'tower' ? 'tower' : u.rival ? 'rival' : u.boat ? 'tboat' : u.faction === 'pirate' ? 'pirate' : u.team === 'alien' ? 'alien' : u.team === 'neutral' ? (u.kind === 'patrol' ? 'patrol' : 'miner') : 'wing';
     const m = { type, id: u.id, x: u.x, y: u.y, rot: u.rot, color: campDotColor(u) };
-    if (type === 'wing' && u.squad) m.squad = u.squad; // a fighter's squad (card space-game-fighter-squads): the map draws its dot in the squad's colour (card space-game-squad-tint)
+    if (type === 'wing' && u.squad && rings && rings.indexOf(u.squad) >= 0) m.squad = u.squad; // a fighter's squad (card space-game-fighter-squads) only while that squad is in focus (card space-game-squad-rings): the map draws its dot in the squad's colour, as the ring does in flight; the others are plain wing dots
     if (type === 'convoy' && u.dest) m.to = { x: u.dest.x, y: u.dest.y };
+    if (care[u.id]) { m.hull = care[u.id].hull; m.band = care[u.id].band; m.hit = care[u.id].hit; } // a bar over the mark (campmapdraw)
     if (type === 'tboat') m.arming = u.arming > 0; // a torpedo boat (card space-game-torpedo-art): its own mark, with a ring while it arms
     out.push(m);
   });
@@ -124,7 +140,7 @@ function campMapLegend(C, marks) {
   const n = t => marks.filter(m => m.type === t).length, c = CAMPMAP.color;
   const rows = [['carrier', c.carrier, 0], ['wing', c.wing, 1], ['convoy', c.convoy, 1], ['alien', c.alien, 1], ['pirate', c.pirate, 1], ['tboat', c.pirate, 1], ['torpedo', c.torpedo, 1], ['patrol', c.patrol, 1], ['miner', c.miner, 1], ['mother', c.mother, 0], ['rival', c.pirate, 0], ['tower', c.tower, 1], ['cache', c.cache, 1], ['anomaly', c.anomaly, 1], ['relic', c.relic, 0]];
   const out = rows.filter(r => n(r[0]) > 0).map(r => ({ type: r[0], color: r[1], text: uiText('camp.map.' + r[0], { n: n(r[0]) }) })), at = out.findIndex(r => r.type === 'wing');
-  const sq = CAMP.wing.squads.filter(k => marks.some(m => m.squad === k)).map(k => ({ type: k, color: CAMP.wing.squadColor[k], text: uiText('camp.map.' + k, { n: marks.filter(m => m.squad === k).length }) })); // the squads that have ships out, under the wing's row (their ring on the map)
+  const sq = CAMP.wing.squads.filter(k => marks.some(m => m.squad === k)).map(k => ({ type: k, color: CAMP.wing.squadColor[k], text: uiText('camp.map.' + k, { n: marks.filter(m => m.squad === k).length }) })); // the squads in focus that have ships out, under the wing's row (their ring on the map: only a squad in focus has a coloured mark, so only it has a row)
   if (at >= 0) out.splice(at + 1, 0, ...sq); else out.push(...sq);
   return out;
 }

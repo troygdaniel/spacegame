@@ -151,6 +151,16 @@ const CAMP = {
     fight: 1800,                           // px: an alien this close to the cruiser, or any ship of the wing still out on an order, sends the mended fighter out again (else it stays in the bay)
     sayEvery: 5                            // s between two radio lines of the same kind (four fighters hurt together are one call)
   },
+  charge: {                                // the health bar on every ship you protect (card space-game-protected-health; Troy, 22 Nov 2026: bars on the transport, the haulers and the miners; src/campcharge.js, src/campchargescene.js)
+    amber: 0.6,                            // the hull share at or under which the bar turns from green to amber
+    red: 0.3,                              // the hull share at or under which the bar turns red (a ship that is nearly lost)
+    flash: 700,                            // ms a bar flashes white after its ship is hit (the hit's own tick; a ship tucked under the cruiser's shield takes the hit on the cruiser's, so its bar does not flash)
+    color: { green: 0x6dff9c, amber: 0xffb454, red: 0xff4d6d }, // the bar's fill: the wing's mint green, the convoy's amber, the aliens' red (the map's own colours)
+    bar: { w: 38, h: 5, gap: 5, min: 14 }, // px ON THE SCREEN, the same at every zoom: the bar's width and height, its distance over the ship's edge, and the least the ship's half size counts for (a ship drawn at its minimum size, src/campzoom.js, is 10 px across)
+    mark: { w: 16, h: 3, gap: 5 },         // px: the bar over a ship's mark on the Tab map (width, height, distance over the mark)
+    list: { w: 46, h: 6 },                 // px: the bar at the right of a ship's row in an order's sub-list
+    depth: 6                               // the flight view's draw order: over the ships (4 and 5), under the HUD
+  },
   sensor: {                                // the carrier's sensors (card space-game-see-hostiles-earlier; Troy, 22 Nov 2026: "see hostiles earlier so I can send squads to meet them"; src/campsight.js)
     range: 9000,                           // px from the carrier: a hostile this near is SEEN: on the radar, the map, the nav list and the target keys (A D S), in an edge arrow and in the radio's first call. 9000 is 21 s of the fastest raider's flight (430 px/s), 35 s of a drone's (260); a scout's own circle (CAMP.scout.sense) sees further still
     always: ['mother', 'tower'],           // the kinds that are always seen: the mothership and the towers are the mission's own marks, as they were before the sensors had a range
@@ -199,7 +209,8 @@ const CAMP = {
       yellow: { name: 'Yellow squad', kinds: ['fighter'], squad: 'yellow' }
     },
     squads: ['red', 'green', 'yellow'],    // the squads in the order they fill: a fighter that leaves the bay joins the one with the fewest ships out (a tie goes to the first of these), so six are two and two and two and a seventh makes Red three; a ship lost or mended gives its place back
-    squadColor: { red: 0xff5a4a, green: 0x3ee86a, yellow: 0xffd23a }, // what a squad's fighters are drawn in, in flight (a tint: src/campaignscene.js, and a circle while the squad's list is open) and on the map (src/campmapdraw.js): three hues apart, bright on the dark
+    squadColor: { red: 0xff5a4a, green: 0x3ee86a, yellow: 0xffd23a }, // a squad's colour: its RING in flight (src/campaignscene.js) and its dots on the map (src/campmapdraw.js), shown only for a squad in focus (card space-game-squad-rings; the fighters themselves are all drawn alike): three hues apart, bright on the dark
+    ringKeep: 8000,                        // ms: the ring of a squad stays on after an order was given from its list (the list closes), until another squad is in focus, X clears the target, or this long has passed (src/campwing.js campSquadsShown)
     rescue: 1500,                          // px: a squad sent to a ship in trouble (a pilot's call, src/camporders.js) fights the pirates this near that ship, and goes back to the order it had when none is left (campWingRescue, src/campwing.js)
     verbs: {                               // kinds: what the verb takes as a target (enemy, friend, convoy, place, point, pickup, cache, anomaly, rock); group: who it addresses when none is named (today's orders); need: a target must be named
       attack: { kinds: ['enemy'], group: 'fighters' },
