@@ -1267,7 +1267,7 @@ const UI_TEXT = {
   'camp.hint.l1p.mend': 'Quiet for now. Recall a hurt squad to be mended.',
   'camp.hint.l1p.haulboats': 'A torpedo boat! {viactuck}, "{rowctuck}": it covers the haulers beside you.',
   'camp.hint.l1p.rear': 'The last hauler is alone. Send a squad back to her.',
-  'camp.hint.l1p.contact': 'Not pirates. All squads on them: {viaattack}, Enter.',
+  'camp.hint.l1p.contact': 'Not pirates. All squads on them: {viaattack}, "{rowattack}".',
   'camp.bf.1.2.w5': 'Torpedo boats hunt the miners: tuck them in, or send a squad.',
   'camp.bf.1.3.w5': 'Something else is out there. Be ready.',
   'camp.say.rim10': 'They keep coming. Stay on her.',
