@@ -115,7 +115,7 @@ console.log('D. the keys and the lists');
   g.run('campPanelClose(__PP);');
   const old = ['KeyE', 'KeyR', 'KeyW'].map(c => J(`(() => { campPanelClose(__PP); return campPanelKey(__PP, C, '${c}', 0).open; })()`)).join();
   check('the old meanings are gone: E is not the fighters\' list, R not the escorts\', W not the convoy\'s: they open the red squad, the green squad and all squads', old === 'red,green,squads', old);
-  check('the key line, the H page and the hints say the new keys (Q Fleet  W All  E Red  R Green  T Yellow), read from the table', J('campPanelKeyLine()') === 'Q Fleet  W All  E Red  R Green  T Yellow    P Ship  O Autopilot  I Power  U Dock' && J('campPanelKeyRows().slice(0, 5).map(r => r.k[0]).join("")') === 'QWERT' && J(`campKeyVar('squadskey') + campKeyVar('redkey') + campKeyVar('greenkey') + campKeyVar('yellowkey')`) === 'WERT');
+  check('the key line, the H page and the hints say the new keys (Q Fleet  W All  E Red  R Green  T Yellow), read from the table', J('campPanelKeyLine()') === 'Q Fleet  W All  E Red  R Green  T Yellow    P Ship  O Power  I Autopilot  U Dock' && J('campPanelKeyRows().slice(0, 5).map(r => r.k[0]).join("")') === 'QWERT' && J(`campKeyVar('squadskey') + campKeyVar('redkey') + campKeyVar('greenkey') + campKeyVar('yellowkey')`) === 'WERT');
 }
 
 console.log('E. the words');
