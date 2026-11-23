@@ -139,6 +139,53 @@ The fleet-command cards (1.1 in four beats, scout route, order calls, convoy ord
 - **The table after** (plain bot, 12 seeds; plains and plainf 8): every mission won by plain, plains, plainf and plainm, 100 per cent: 1.1 362 s, 1.2 297 s (it was 302), 1.3 292 s with 1 ship lost and 110 hull points taken (2 and 187 before), 2.1 52 s, 2.2 82 s, 2.3 106 s, 3.1 69 s, 3.2 78 s, 3.3 81 s. Idle wins none (loses 1.1, 1.2, 1.3 and 2.3, the rest run out the clock); the passive `troy` bot loses 1.1 and 1.3 and wins 38 per cent of 3.3, as before. Levels 2 and 3 are untouched (the new `hp` is read only where a field row says it).
 - **Pins moved:** `tests/campbay.mjs`, `camphunt.mjs`, `camphuntfleet.mjs` (the goal 190 is 450), `camprim.mjs` (30 rocks of 200, selling 450 pays 1,350, the 400 bonus earned by that sale or by 390 and 10 more), the hunt tool `tests/huntfleet-boot.mjs` (docks at 450); new `tests/campl1tune.mjs` pins the numbers and runs the bots.
 
+## Missions 1.2 and 1.3 in beats (card `l1-pacing`; 23 Nov 2026)
+
+Troy on the first mission: "lots of flying, not much happens", "the waiting, and the fights not being interactive". Mission 1.1 was rebuilt for that; 1.2 and 1.3 were not. The plain bot met no hostile for 149 of the 297 s of 1.2 and for 148 of the 292 s of 1.3. Both are a sequence of beats now, each a question for the three squads. Only the two mission rows changed (`CAMP.levels[1].missions[1]` and `[2]` in `src/campaign.js`), with the hints in `src/campl1beats.js` and the words in `content/text/campl1pacing.md`. No rule, no enemy kind, no key and no score rule is new. `tests/campl1pacing.mjs` pins all of it.
+
+**1.2 Mine and defend: five beats** (it was three raids, at 70, 170 and 270 s).
+
+| Time | What happens | What the player decides | What it costs |
+|---|---|---|---|
+| 0 s | At Ceres, empty store, three rock fields, two other miners | Which squads mine and which stand guard | A squad on guard cuts no rock |
+| 40 s | A probe: 3 skiffs from the east, for the miners | Which squad stops mining to meet it | Ore not mined while it is away |
+| 100 s | A raid from the south-west: 3 skiffs, 1 cutter | Send the wing, or part of it | See the next row |
+| 112 s | A second group from the north-east, the far side: 2 skiffs, 1 cutter (the pilots' "second group" call asks) | Split the squads, or finish one side first | A side with no squad is a miner under fire |
+| 175 s | 2 torpedo boats and 2 skiffs, for the miners | Tuck the miners in under the shield, or send a squad at the boats, or both | Tucked: the torpedoes hit the cruiser's shield. A squad on the boats is not on the skiffs. Nothing: a miner or both are lost |
+| 230 to 240 s | The heavy raid, once the others are dead: 3 skiffs, 3 cutters, 2 brutes | Hurt squads home to be mended first, or all in now | Mending takes a squad out of the fight for a while |
+| after it | The Works opens its doors | Dock and sell (the mission ends), or mine on for the 400-ore bonus | Time against the speed bonus |
+
+**1.3 Haulers home: six beats** (it was two raids at 16 and 34 percent of the road, the contact at 52 percent, and then a minute and a half of empty road). The three haulers leave twelve seconds apart as before, so the convoy is 1,500 px long and the cruiser's shield cannot cover the first and the last at once.
+
+| Time (plain bot) | Road | What happens | What the player decides | What it costs |
+|---|---|---|---|---|
+| 24 s | 8 % | A probe at the lead hauler: 3 skiffs | One squad forward, or keep the wing close | A squad forward is not at the back later |
+| 66 s | 24 % | 1 torpedo boat and 2 skiffs | Tuck the haulers in, run for it, or kill the boat first | Tucked haulers fly at the cruiser's side: slower. Left alone: two torpedo hits on a hauler |
+| 110 s | 40 % | A raid on the LAST hauler: 3 skiffs, 1 cutter | A squad sent back, the cruiser turned round, or the hauler left to it | The front is thinner while a squad is back there |
+| 150 s | 56 % | Pirates at the front again: 2 skiffs, 2 cutters | Which squad, and who needs mending | As above |
+| 195 s | 72 % | 3 skiffs at the last hauler again | The same question, with a tired wing | As above |
+| 220 s | 82 % | **First contact**: the pirates break off and run; 4 raiders, 2 drones, 2 gunships fall on the cruiser (the same eight ships as before) | Hurt squads home to be mended, or all in; the power to the shields; a pilot's call | A squad in the bay is not in the fight; a wrong call costs ships |
+| 255 to 292 s | | The road to Earth, about 40 s (it was 90 s) | | |
+
+No alien is seen or named before first contact: the five waves before it are pirates, and the briefing's pictures and its ENEMIES line say pirates "and unknown ships".
+
+**Fights last longer and cost no more.** A raid used to be over in about ten seconds. The pirates of the two missions are tougher and hit softer: 1.2's scales are 2.0 for hit points and 1.35 for damage (they were 1.4 and 1.8), 1.3's are 2.9 and 1.55 (2.2 and 2.1). Raids also start farther out (4,300 px or more from Ceres, 2,400 to 3,400 px ahead on the road), so they are alive and coming for longer: with the longer sensor range that is a decision before it is a fight.
+
+**Before and after** (`node tools/campaign-bot.mjs --level 1`, 12 seeds, the median of each):
+
+| Bot | 1.2 before | 1.2 after | 1.3 before | 1.3 after |
+|---|---|---|---|---|
+| plain: won, seconds, quiet seconds, ships lost | 100 %, 297, 149, 0 | 100 %, 277, **95**, 0 | 100 %, 292, 148, 0 | 100 %, 292, **95**, 0 |
+| plain: damage the cruiser took | 34 | 24 | 89 | 100 |
+| late (a slow player) | 100 %, 302, 164, 0 | 100 %, 266, 114, 0 | 100 %, 292, 143, 1 | 100 %, 292, 98, 1 |
+| plainw (every call answered wrong) | 100 %, 298, 168, 0 | 100 %, 292, 117, 0 | 100 %, 292, 134, 3 | 100 %, 292, 101, 2 |
+| tuck (uses the convoy orders) | 100 %, 300, 164, 0 | 100 %, 269, 121, 0 | 100 %, 294, 158, 1 | 100 %, 301, 130, 0 |
+| idle (no order given) | lost 83 %, never won | lost 100 % | lost 100 % | lost 100 % |
+
+Haulers lost in 1.3, the mean of six seeds: plain 0.8 before and 0.5 after; a slow player 0.5 and 0.8; a wing that only guards 0.5 and 0.7; with the convoy orders none, before and after. Miners lost in 1.2: the plain bot none, before and after; a slow player one on one seed in six before, two on one seed in six after (the torpedo boats). Missions 1.1, 2.x and 3.x are not touched.
+
+**What the tests show a choice changes.** At the torpedo boats of 1.2: doing nothing loses a miner or both; tucking in loses none and the shield takes the torpedoes; Red on the boats loses none and fewer torpedoes are fired. At the torpedo boat of 1.3: tucked haulers keep 20 points of hull or more; all squads on the boat and it fires less. **Not shown to change the outcome:** splitting the squads at 1.2's two-sided raid, and sending a squad back to 1.3's last hauler. They are choices about where the squads are, and the plain bot does about as well either way.
+
 ## The play log
 
 Every level is in the play log (`docs/PLAYLOG.md`, the `campaign` event): the level, how it began (menu, address, next, retry, skip or hub), the waves, each order and how it was given (key, strip, voice, click) and whether it worked, each ship lost, the tech picked, each debug key, and the end (win, lose, quit or skip, why, the wave reached, the ships lost, the hull left, the seconds). `node tools/playlog-summary.mjs` prints a **Campaign** block, one line a level. A level the tab closes on is ended as quit.

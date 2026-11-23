@@ -49,7 +49,7 @@ class Campaign extends Phaser.Scene {
     this.P = campProgressLoad(); if (Array.isArray(d.techs)) this.P.techs = d.techs.filter(t => CAMP.tech[t]);
     this.mi = d.mission != null ? d.mission | 0 : (this.P.level === this.level ? this.P.mission | 0 : 0); if (this.mi >= campMissions(this.level).length) this.mi = 0; // the mission of the level to fly: the one asked for, else the next the save has
     this.opts.mission = this.mi;
-    this.replay = !!d.replay && !!(this.P.results && this.P.results[campResultKey(this.level, this.mi)]); // a mission flown AGAIN from the ready room (card space-game-campaign-replay): only one that has a result; its story and progress do not move
+    this.replay = !!d.replay && (!!(this.P.results && this.P.results[campResultKey(this.level, this.mi)]) || (typeof campHubFlyable === 'function' && campHubFlyable(this.P).some(r => r.level === this.level && r.i === this.mi))); // a mission flown AGAIN from the ready room (card space-game-campaign-replay): only one that has a result, or one SKIPPED (card space-game-replay-reselect-bug: before the next, no result: its first win is kept as its result); its story and progress do not move
     this.resume = !this.replay && this.via !== 'retry' && (this.P.levelDone | 0) === this.level && this.P.level === this.level && this.mi === campMissions(this.level).length - 1; // the level was won and the tab closed at the pick: the launch shows the level's story and the pick again, not a battle
     campReveal(!!this.P.revealed); // after the ending has been seen, level 3 is called the outpost (SPOILER, src/campaign.js)
     this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null; this.shown = {};
@@ -163,7 +163,8 @@ class Campaign extends Phaser.Scene {
   bonusText(b) { return campHubBonusText(b); } // the same words as the ready room's board (src/camphub.js)
   showDebrief(sc) {
     const M = this.camp.L, k = 'camp.m.' + this.level + '.' + (M.mission + 1) + '.', clock = t => Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
-    const R = this.replay === true && this.tuned !== true ? this.replayRes : null, num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const R0 = this.replay === true && this.tuned !== true ? this.replayRes : null, R = R0 && !R0.first ? R0 : null, // (the first win of a skipped mission is a debrief as any other: there is no best to compare with)
+       num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     const scoreLine = uiText('camp.ui.score', { score: sc.score }), lines = [R ? scoreLine + '\n' + uiText('camp.ui.replayscore', { now: num(R.now), old: num(R.old) }) + ' ' + (R.improved || R.first ? uiText('camp.ui.replaybest', { best: num(R.best) }) : uiText('camp.ui.replaykept', { best: num(R.best) })) : scoreLine].concat(sc.bonuses.map(b => b.ok ? uiText('camp.ui.bonusmet', { pts: b.points, text: this.bonusText(b) }) : uiText('camp.ui.bonusmiss', { text: this.bonusText(b) })), [uiText('camp.ui.debriefstats', { time: clock(sc.t), hull: sc.hullLeft, lost: sc.shipsLost })], sc.haulersLost > 0 ? [uiText('camp.ui.debriefhaulers', { n: sc.haulersLost, pts: sc.haulerLost })] : []); // a replay says so, and the old best against this run
     const dk = M.dock && campPlaces(this.level)[M.dock]; if (dk && dk.outpost) lines.push(uiText('camp.ui.outpost', { outpost: dk.outpost, name: dk.name })); // the debrief is at the outpost of the mission's dock
     if (this.tuned === true) lines.push(uiText('camp.ui.tune.notkept')); // a tuned run keeps no score and no rank (the tuning panel)
