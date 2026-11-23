@@ -15,6 +15,7 @@ import { run as botRun, setPace, techsFor } from '../tools/campaign-bot.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name + (detail ? '  ' + String(detail).slice(0, 200) : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 300) + ')' : ''}`); } };
 const g = nodeGame();
+g.run('CAMP.pilotStrength = 3;'); // the duels of this suite are one lone fighter against one pirate: a pilot as strong as one fighter (card space-game-three-pilots: the game's pilots are 3, 3 and 2 times that)
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 const near = (a, b, e = 1e-6) => Math.abs(a - b) < e;
