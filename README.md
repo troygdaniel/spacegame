@@ -32,6 +32,7 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 - **Pilots ask for orders.** Timed radio calls with three choices (the miner's call in 1.1 has five: send all squads, Red, Green or Yellow, or stay) and real costs.
 - **A mission is a sequence of questions.** Mission 1.1 is the finished example: a patrol turns back, a distress call, an ambush with torpedo boats, a pirate leader who duels your cruiser. Something happens about every minute.
 - **Objectives and bonuses**, a score, and ranks that grow your wing.
+- **Ore and credits.** Ore is what the cruiser carries (500 at the most): the wing mines it, and it pays for repairs in flight. An outpost buys it for credits, which have no cap and are spent at a station: the dock's repairs and the refit's extra fighters take credits first, then ore.
 
 The state of each system is in [`PROJECT_STATUS.md`](PROJECT_STATUS.md).
 

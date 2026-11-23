@@ -22,8 +22,7 @@ CAMP_HUBS.page.repair = s => {
   const C = campDockC(s.d); if (!C) return; const c = C.carrier; let i = 0;
   s.line(i++, 0, uiText('camp.hub.repair.head'), '#6dff9c');
   s.line(i++, 0, uiText('camp.hub.repair.hull', { hp: Math.round(c.hp), max: Math.round(c.maxHp) }), '#e8f6ff');
-  s.line(i++, 0, uiText('camp.hub.repair.ore', { ore: campFunds(C) }), '#ffd37a');
-  { const ov = typeof campStoreOver === 'function' ? campStoreOver(C) : null; if (ov && ov.over > 0) s.line(i++, 0, uiText('camp.hub.build.over', ov), '#ffb454'); } // more than the store carries on from the mission: this room is where it can still be spent (card space-game-l1-pacing-bugs)
+  s.line(i++, 0, uiText('camp.hub.repair.ore', { ore: Math.floor(C.ore), credits: Math.floor(C.cash || 0) }), '#ffd37a');
   const r = campCheck(C, 'repair', ''); i++;
   s.line(i++, 0, c.maxHp - c.hp <= 0.5 ? uiText('camp.hub.repair.sound') : uiText('camp.hub.repair.key', { ore: campMendQuote(C).cost }), r.ok ? '#9fe9ff' : '#8fb4c9');
   if (s.msg && s.msg.until > s.time.now) s.line(i + 1, 0, s.msg.text, s.msg.ok ? '#6dff9c' : '#ffb454');
