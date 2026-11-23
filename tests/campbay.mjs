@@ -33,10 +33,10 @@ console.log('B. "Ore bay full."');
 
 console.log('C. what the bigger bay touches');
 {
-  const o = J('({ most: CAMP.refit.most, fc: CAMP.build.fighterCost, fab: CAMP.outpost.fabricator, cap: CAMP.ore.cap })');
-  const extras = o.most * o.fc;
-  check('the extra ships of a refit cost ' + extras + ' (3 fighters), less than a full bay: a full bay can buy them', extras < o.cap, JSON.stringify(o));
-  check('the whole refit now fits in a full bay: the extra fighters and the Fabricator cost ' + (extras + o.fab) + ' of the 500 the bay holds (it was 510 while the refit sold escorts too, card space-game-cut-escorts; the Fabricator was 120 when the bay held 200); the Fabricator alone is within the bay', extras + o.fab <= o.cap && o.fab <= o.cap, JSON.stringify(o));
+    const o = J('({ most: CAMP.refit.most, fc: CAMP.refit.fighterCost, hull: CAMP.mend.hullOre, cap: CAMP.ore.cap })');
+    const extras = o.most * o.fc;
+    check('the extra ships of a refit cost ' + extras + ' (3 fighters), less than a full bay: a full bay can buy them', extras < o.cap, JSON.stringify(o));
+  check('a whole hull mended in space (' + o.hull + ' ore) is a small share of a full bay (' + o.cap + '): ore matters in the middle of a fight (card space-game-repair-with-ore) without emptying the bay; the Fabricator that once made a full bay not enough is gone', o.hull <= o.cap / 4 && o.hull >= 20, JSON.stringify(o));
   const l2 = J('CAMP.levels[1].missions[1]');
   const rocks = J('CAMP.levels[1].missions[1].rocks.reduce((a, f) => a + f.n, 0)'), ore = J('CAMP.ore.rock'), sold = l2.bonus.find(b => b.type === 'sold').n;
   check('the sell bonus of 1.2 (400) is within what the three rock fields hold (' + rocks + ' rocks of ' + ore + ' ore), so it can be earned by mining, and it is more than the 160 sale asked for and less than the goal (450 of the 500 the bay holds; card space-game-tune-l1-notes: the goal was 190)', sold === 400 && sold <= rocks * ore && sold > 160 && l2.objectives.some(x => x.type === 'cashin' && x.n === 160) && l2.objectives.some(x => x.type === 'ore' && x.n === 450 && x.n <= J('CAMP.ore.cap')) && rocks * ore >= 450 + 100, JSON.stringify([rocks, ore, sold]));

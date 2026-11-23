@@ -89,7 +89,7 @@ console.log('D. Enter meant for a pilot\'s call does not fire a missile when the
 console.log('E. more cash and ore than the store carries on: the game says so');
 {
   // Flying 1.2: "Sold 464 ore for 1392.", the dock room said "Ore in the store: 1392", and 1.3 began with ORE 500/500: a save holds CAMP.ore.cap at the most, and nothing said that 892 was left behind.
-  // The rule stands (Troy decides: docs/night/hunt-l1-pacing.md); the radio at the sale, the dock room's build page and the debrief now say it (card space-game-l1-pacing-bugs).
+  // The rule stands (Troy decides: docs/night/hunt-l1-pacing.md); the radio at the sale, the dock room's repair page and the debrief now say it (card space-game-l1-pacing-bugs).
   const r = J(`(() => { const mk = ore => { const C = campNew(1, [], { seed: 1, mission: 1 }); for (let i = 0; i < 30; i++) campStep(C, 1 / 30); C.events.length = 0; C.ore = ore; const o = campOutposts(C.level).find(o => o.market); const sold = campSell(C, o);
       return { sold, says: C.events.filter(e => e.type === 'say').map(e => [e.key, uiText(e.key, e.vars)]), over: campStoreOver(C), line: campOverLine(C), ore: C.ore, cash: C.cash }; };
     return { big: mk(464), small: mk(150), none: mk(0), cap: CAMP.ore.cap, rate: campOutposts(1).find(o => o.market).market.rate }; })()`);
@@ -99,8 +99,8 @@ console.log('E. more cash and ore than the store carries on: the game says so');
   check('the debrief has a line for it: what there is, what the store holds, what was left behind', r.big.line === 'Funds 1392. The store holds 500: 892 was left behind.', r.big.line);
   check('a sale that fits says nothing more (150 ore for 450) and the debrief has no such line; with no ore nothing is sold', r.small.sold.cash === 450 && r.small.says.length === 1 && r.small.line === '' && r.small.over.over === 0 && r.none.sold === null && r.none.line === '', JSON.stringify([r.small.says, r.small.line, r.none.sold]));
   const dock = J(`(() => { const lines = []; const C = campNew(1, [], { seed: 1, mission: 1 }); C.cash = 1392; C.ore = 0; const s = { d: { camp: C }, look: { name: 'Occator Works' }, time: { now: 0 }, line: (i, c, t) => lines.push(t) };
-    CAMP_HUBS.page.build(s); const out = lines.slice(); lines.length = 0; C.cash = 300; CAMP_HUBS.page.build(s); return { over: out, fits: lines.slice() }; })()`);
-  check('the dock room\'s build page says it under the ore line, while it can still be spent there, and not when it all fits', dock.over.indexOf('Only 500 leaves with you: 892 to spend here, or it is lost.') === dock.over.indexOf('Ore in the store: 1392') + 1 && dock.over.indexOf('Ore in the store: 1392') >= 0 && !dock.fits.some(t => /leaves with you/.test(t)), JSON.stringify(dock));
+    CAMP_HUBS.page.repair(s); const out = lines.slice(); lines.length = 0; C.cash = 300; CAMP_HUBS.page.repair(s); return { over: out, fits: lines.slice() }; })()`);
+  check('the dock room\'s repair page (the build page is gone: card space-game-repair-with-ore) says it under the ore line, while it can still be spent there, and not when it all fits', dock.over.indexOf('Only 500 leaves with you: 892 to spend here, or it is lost.') === dock.over.indexOf('Ore in the store: 1392') + 1 && dock.over.indexOf('Ore in the store: 1392') >= 0 && !dock.fits.some(t => /leaves with you/.test(t)), JSON.stringify(dock));
   const scene = readFileSync(join(ROOT, 'src/campaignscene.js'), 'utf8');
   check('the debrief card asks for that line (showDebrief)', /showDebrief\(sc\) \{[\s\S]{0,3000}campOverLine\(this\.camp\)/.test(scene));
   const kept = J(`(() => { const k = 'longhaul.campaign', had = localStorage.getItem(k); localStorage.setItem(k, JSON.stringify({ level: 1, mission: 2, techs: [], ore: 1392, results: {} })); const P = campProgressLoad(); if (had == null) localStorage.removeItem(k); else localStorage.setItem(k, had); return P.ore; })()`);

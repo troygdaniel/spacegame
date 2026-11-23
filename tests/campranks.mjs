@@ -77,18 +77,16 @@ console.log('C. campRankStatus: what the hub reads');
 console.log('D. the wing: the bay and the limit');
 {
   g.run(`window.__rankC = (rank, techs, bonus) => { window.C = campNew(1, techs || [], { seed: 1, rank, bonus }); return C; }`);
-  const R = J('CAMP.ranks'), rows = R.map((r, i) => { g.run(`__rankC(${i})`); return { i, f: J('C.bay.fighters'), capf: J('C.cap.fighters'), rank: J('C.rank') }; });
+  const R = J('CAMP.ranks'), rows = R.map((r, i) => { g.run(`__rankC(${i})`); return { i, f: J('C.bay.fighters'), rank: J('C.rank') }; });
   check('a battle starts with the rank\'s wing in the bay: 8 and the extras of each rank, and says its rank', rows.every(x => x.f === 8 + R[x.i].fighters && x.rank === x.i), JSON.stringify(rows.map(x => x.f)));
-  check('and the wing limit goes up with it: 14 (the workshop\'s) and the rank\'s extras', rows.every(x => x.capf === 14 + R[x.i].fighters), JSON.stringify(rows.map(x => x.capf)));
+  check('there is no wing limit to raise any more (nothing builds ships: card space-game-repair-with-ore): no C.cap in a battle', J('typeof __rankC(3).cap') === 'undefined');
   check('no rank given is a cadet: the old bay, as every battle before the ranks (a battle of a test, an address)', (g.run('window.C = campNew(1, [], { seed: 1 })'), J('C.bay.fighters') === 8 && J('C.rank') === 0));
   check('a rank out of range is held to the table (below 0 the cadet, over the last the commodore)', (g.run('__rankC(-4)'), J('C.rank') === 0) && (g.run('__rankC(99)'), J('C.rank') === 5 && J('C.bay.fighters') === 16));
   check('the second-bay tech and the extras of the refit add to the rank\'s, and all three together are in the bay', (g.run(`__rankC(2, ['bay2'], { fighters: 3 })`), J('C.bay.fighters') === 8 + 4 + 3 + 3));
   g.run('__rankC(2)'); g.run('C.waves.forEach(w => { w.started = true; }); campOrder(C, "launch")');
   check('Launch puts the whole wing out: the bay of the rank, one ship every 0.6 s', J('C.launchQ.length') === 11, J('C.launchQ.length'));
-  // ships are built docked at an outpost (card space-game-campaign-outposts: campCanBuild), so the carrier of these checks is docked
-  const build = rank => { g.run(`__rankC(${rank}); C.docked = true; C.waves.forEach(w => { w.started = true; }); C.ore = 200; window.__ok = 0; for (let i = 0; i < 40; i++) { C.ore = 200; const r = campOrder(C, 'build', 'a fighter'); if (r.ok) __ok++; else { window.__code = r.code; break; } }`); return { ok: J('__ok'), code: J('__code'), total: J('C.bay.fighters + C.build.queue.length') }; };
-  const b0 = build(0), b5 = build(5);
-  check('the workshop builds up to the limit of the rank, and then says the wing is full: a cadet to 14 fighters, a commodore to 22', b0.total === 14 && b5.total === 22 && b0.code === 'buildfull' && b5.code === 'buildfull', JSON.stringify([b0, b5]));
+    // nothing builds ships any more (card space-game-repair-with-ore): the wing of a mission is the bay of the rank, and the order 'build' says so, docked or not
+  // nothing builds ships any more (card space-game-repair-with-ore): the wing of a mission is the bay of the rank, and the order 'build' says so, docked or not
 }
 
 // ---------- E. the promotion ----------
