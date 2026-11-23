@@ -429,7 +429,7 @@ class Campaign extends Phaser.Scene {
     const C = this.camp, z = this.cameras && this.cameras.main && this.cameras.main.zoom > 0 ? this.cameras.main.zoom : 1, col = CAMP.wing.squadColor;
     const lit = this.pn && typeof campSquadsShown === 'function' ? campSquadsShown(this.pn, C, (this.time && this.time.now) || 0) : []; // a target sub-list opened from a squad's list leaves its list open as far as the panel's state goes (card space-game-order-target-pick), so the ring stays while it is picked
     sg.clear();
-    if (lit.length) C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && lit.indexOf(u.squad) >= 0) { const sp = this.sp[u.id], half = sp && sp.displayWidth ? sp.displayWidth * z / 2 : 0; sg.lineStyle(2 / z, col[u.squad], 0.95).strokeCircle(u.x, u.y, Math.max(8, half + 3) / z); } });
+    if (lit.length) C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && lit.indexOf(u.squad) >= 0) { const sp = this.sp[u.id], half = sp && sp.displayWidth ? sp.displayWidth * z / 2 : 0; sg.lineStyle(2 / z, col[u.squad], 0.95); campRing(sg, u.x, u.y, Math.max(8, half + 3) / z); } }); // the cheap outline (src/campcircles.js: a closed line of a few corners, not Phaser's arc)
   }
   sync() {
     const C = this.camp, seen = {};
