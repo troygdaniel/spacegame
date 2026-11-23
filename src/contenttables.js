@@ -1187,7 +1187,7 @@ const UI_TEXT = {
   'camp.keys.footer': 'H or Esc closes this page. The battle waits while it is open.',
   'camp.keys.debug': 'DEBUG KEYS (THE TUNE KIT)',
   'title.camp.keys': 'H  all the keys',
-  'camp.ui.pausepanels': '{fleetkey} fleet orders ({squadskey} all squads, {redkey} red, {greenkey} green, {yellowkey} yellow). {shipkey} ship orders ({powerkey} power, {navkey} autopilot, {yardkey} dock). In a list: Up, Down, Enter. A D S pick a target. H lists every key.',
+  'camp.ui.pausepanels': '{fleetkey} fleet orders ({squadskey} all squads, {redkey} red, {greenkey} green, {yellowkey} yellow). {shipkey} ship orders ({powerkey} power, {navkey} autopilot, {yardkey} dock). In a list: Up, Down, Enter. A D S pick a target, {keyfocus} looks at it. H lists every key.',
   'camp.map.local': 'AREA  {km} km across',
   'camp.map.whole': 'SYSTEM  {km} km across',
   'camp.nav.no.wingout': 'Wing is out: recall it first. Order again to recall and burn.',
@@ -1327,6 +1327,10 @@ const UI_TEXT = {
   'camp.hint.tuck': 'Torpedo boats! Press {convoy}, then pick "{tuck}".',
   'camp.hint.run': 'The leader blocks the way. Press {convoy}, then pick "{run}".',
   'camp.hud.recentre': 'RECENTRE  {keyzoomreset}',
+  'camp.hud.focuswatch': 'WATCHING {name}  {keyzoomreset} back',
+  'camp.hud.focuscruiser': 'the cruiser',
+  'camp.hud.focuscruiserfar': 'Cruiser {km} km',
+  'camp.hud.focuslost': '{name} is gone. Back to the cruiser.',
 };
 function uiText(key, vars) { return contentFill(CT_HAS(UI_TEXT, key) ? UI_TEXT[key] : key, vars); }
 function ctTextKeys() { // every string the game reads: key -> { get, set }
