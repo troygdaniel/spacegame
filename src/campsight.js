@@ -2,17 +2,21 @@
 // Troy wants to see the hostiles early so he can send squads to meet them. The sim always knew where every hostile was; what the player saw of it was a dot on a small radar. This file is the rule of
 // what is SEEN and how the player is told (pure, no Phaser: tests/campsight.mjs runs it in Node; the drawing is src/campsightscene.js). The numbers are CAMP.sensor (src/campaign.js; the range is a
 // row of the N tuning panel, src/camptune.js).
-//   SEEN: a hostile is seen when it is within CAMP.sensor.range of the carrier, or inside the sensor circle of a scout that is out (CAMP.scout.sense, src/campaign.js campSensors: the scouts see
-//   further), or it is a kind that is always seen (the mothership and the towers, which are the mission's own marks). Everything the player can look at or pick goes through it: the radar and the
+//   SEEN: a hostile is seen when it is within CAMP.sensor.range of the carrier, or inside the sensor circle of a fighter that is out (CAMP.sensor.wing, campSensors below: the fighters see
+//   further; card space-game-cut-escorts, where the scout-escorts' circles became every fighter's), or it is a kind that is always seen (the mothership and the towers, which are the mission's own marks). Everything the player can look at or pick goes through it: the radar and the
 //   map's marks, the nav list's enemy rows and the target keys (A D S: src/camptarget.js), the edge arrows and the radio's first call. The AIs, the turrets and the bots' sim calls do NOT: a hostile
 //   out of sight still flies and fires; it is only not on the screen's instruments. Range 0 sees nothing but the always-seen kinds.
 //   campSeen(C, u)               is this ship seen (a ship of your own side always is)
 //   campSightGroups(C, seenOnly) the hostiles that can come and go (not the always-seen kinds), in groups of CAMP.sensor.group px: [{ n, x, y, dist, ids, kinds: { kind: n }, at }] nearest first
 //   campSightStep(C)             each tick: the hostiles that come into sight for the first time are called on the radio, after CAMP.sensor.delay ms, one line for a few seconds' worth
-//   campSightLine(C, ids)        the call: { key: 'camp.say.sight', vars: { what, dir, km } } or null: how many, which way, how far; the kinds too when a scout, an escort or the carrier is near enough to tell
+//   campSightLine(C, ids)        the call: { key: 'camp.say.sight', vars: { what, dir, km } } or null: how many, which way, how far; the kinds too when a fighter or the carrier is near enough to tell
 //   campSightMarks(C)            the groups that came into sight in the last CAMP.sensor.mark ms: [{ x, y, age: 0..1 }] (the radar pulses and the edge arrow blinks)
 //   campSightArrows(C, scroll, W_, H_, zoom)   the edge arrows: a group that is off the screen (or under the HUD) gets one at the edge, pointing at it: [{ x, y, angle, n, dist, what, fresh }]
 //   campSightDir(dx, dy)         'north', 'north-east' ... for a vector (up on the screen is north)
+//   campSensors(C)              the sensor circles of the fighters that are out: [{ id, x, y, r: CAMP.sensor.wing }]
+//   campSightFighter(C, x, y, r)  the first fighter of yours that is out within r px of a point, or null: what a cloaked anomaly asks of a ship that is not the cruiser (src/campanomaly.js)
+const campSensors = C => C.ships.filter(u => u.team === 'earth' && u.kind === 'fighter' && u.hp > 0 && !u.docked).map(u => ({ id: u.id, x: u.x, y: u.y, r: CAMP.sensor.wing }));
+const campSightFighter = (C, x, y, r) => ((C && C.ships) || []).find(u => u.team === 'earth' && u.kind === 'fighter' && u.hp > 0 && !u.docked && Math.hypot(x - u.x, y - u.y) <= r) || null;
 const campSightAlways = u => (CAMP.sensor.always || []).indexOf(u.kind) >= 0;
 function campSeen(C, u) {
   if (!C || !C.carrier || !u) return false;
@@ -45,8 +49,8 @@ function campSightDir(dx, dy) { // the screen's y runs down: up is north, right 
   return uiText('camp.sight.dir.' + CAMP_SIGHT_DIRS[i]);
 }
 const campSightKindName = k => { const w = uiText('camp.nav.k.' + k); return w.indexOf('camp.nav.k.') === 0 ? k.charAt(0).toUpperCase() + k.slice(1) : w; };
-// somebody close enough to tell what they are: the carrier itself, a scout that is out, or an escort of yours, within CAMP.sensor.idNear of the group
-const campSightKnown = (C, x, y) => !!C.carrier && (Math.hypot(x - C.carrier.x, y - C.carrier.y) <= CAMP.sensor.idNear || campScouts(C).some(u => Math.hypot(u.x - x, u.y - y) <= CAMP.sensor.idNear) || campWing(C, 'escort').some(u => Math.hypot(u.x - x, u.y - y) <= CAMP.sensor.idNear));
+// somebody close enough to tell what they are: the carrier itself or a fighter of yours, within CAMP.sensor.idNear of the group
+const campSightKnown = (C, x, y) => !!C.carrier && (Math.hypot(x - C.carrier.x, y - C.carrier.y) <= CAMP.sensor.idNear || campWing(C, 'fighter').some(u => Math.hypot(u.x - x, u.y - y) <= CAMP.sensor.idNear));
 // "6 hostiles", or with the kinds known "4 Skiffs, 2 Cutters": the words are content/text/campsight.md's
 function campSightWhat(kinds, named) {
   const ks = Object.keys(kinds).sort((a, b) => kinds[b] - kinds[a] || (a < b ? -1 : 1)), total = ks.reduce((a, k) => a + kinds[k], 0);

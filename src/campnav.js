@@ -189,7 +189,7 @@ function campNavFind(C, text) {
     const cv = rows.filter(r => r.kind === 'convoy' && !r.goal); if (!cv.length) return { code: 'noconvoy' };
     return { row: cv.find(r => r.name.toLowerCase().split(' ').some(w => w.length > 2 && q.includes(w) && w !== 'convoy')) || cv[0] };
   }
-  if (/\b(?:wing|fighters?|escorts?|ships|fleet|squadron)\b/.test(q)) { const r = by('wing'); return r ? { row: r } : { code: 'nowing' }; }
+  if (/\b(?:wing|fighters?|ships|fleet|squadron)\b/.test(q)) { const r = by('wing'); return r ? { row: r } : { code: 'nowing' }; }
   const places = rows.filter(r => r.kind === 'place' && !r.goal), alias = { moon: 'luna', 'lunar base': 'luna', base: 'luna', star: 'sun', sun: 'sun' };
   const hit = places.find(p => q === p.name.toLowerCase() || q === p.id.slice(6)) || places.find(p => q.includes(p.name.toLowerCase()) || q.split(' ').includes(p.id.slice(6))) || places.find(p => alias[q] === p.id.slice(6) || Object.keys(alias).some(a => q.includes(a) && alias[a] === p.id.slice(6)));
   if (hit) return { row: hit };

@@ -10,7 +10,7 @@ const CAMPHELP = {
   goal: /^(?:what(?: is|s)? (?:my |the |our )?(?:goal|objective|mission|aim|task|job|plan)|what (?:do|should|can|must) (?:i|we) do(?: now| next| first)?|what now|what next|what are we doing|what am i (?:supposed|meant) to do|where do i start|how do i (?:win|win this|win this level|finish|beat this|beat this level)|objective|goal|mission|my goal)$/,
   keys: /^(?:help(?: me)?|keys|controls|the keys|the controls|what keys|what are the (?:keys|controls)|what (?:keys|buttons) do i (?:press|use)|how do i (?:play|play this|fly|steer|move|fire|shoot|fire the gun|use the guns?|give orders|command the (?:wing|fighters|ships)|control (?:the|my) (?:ship|carrier))|how does this work|what can i do|what can i say|what are the orders|orders|commands|the orders|what are my orders)$/,
   map: /^(?:(?:show|open|bring up|pull up) (?:me )?(?:the )?map|map|the map|how do i (?:see|open|show|use) (?:the )?map|where is (?:earth|everything|everyone|everybody|the (?:mothership|convoy|convoys|aliens|enemy))|where (?:are|is) the (?:aliens|convoys|convoy|enemy|enemies|mothership|ships)|where am i|where are we)$/,
-  status: /^(?:status|report|status report|sitrep|situation|how am i doing|how are we doing|how is (?:the |my )?(?:carrier|hull|ship|earth|shield|wing|fleet|battle|fight)|how bad is it|how are (?:my|the) (?:ships|fighters|escorts|wing)|how many (?:fighters|escorts|ships|ships are out|are left|do i have)|carrier (?:hull|status)|hull|earth shield|earth s shield|shield)$/
+  status: /^(?:status|report|status report|sitrep|situation|how am i doing|how are we doing|how is (?:the |my )?(?:carrier|hull|ship|earth|shield|wing|fleet|battle|fight)|how bad is it|how are (?:my|the) (?:ships|fighters|wing)|how many (?:fighters|ships|ships are out|are left|do i have)|carrier (?:hull|status)|hull|earth shield|earth s shield|shield)$/
 };
 
 function campHelp(text, C) {
@@ -19,7 +19,7 @@ function campHelp(text, C) {
     let q = String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/'/g, ' ').replace(/\s+/g, ' ').trim();
     q = q.replace(CAMPHELP.filler, '').replace(/\s+(please|already)$/, '').trim();
     if (!q) return null;
-    const H = CAMPHELP, wing = (typeof campWing === 'function' ? campWing(C).length : 0), bay = (C.bay ? C.bay.fighters + C.bay.escorts : 0);
+    const H = CAMPHELP, wing = (typeof campWing === 'function' ? campWing(C).length : 0), bay = (C.bay ? C.bay.fighters : 0);
     if (H.goal.test(q)) return uiText(bay > 0 && wing === 0 && !C.launchQ.length ? 'camp.help.goalbay' : 'camp.help.goal', { goal: campObjective(C) });
     if (H.keys.test(q)) return uiText('camp.help.keys');
     if (H.map.test(q)) return uiText('camp.help.map');

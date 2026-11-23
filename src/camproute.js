@@ -25,7 +25,7 @@
 //   campRouteFly(C, u, dt)          one tick of a convoy on the route: to the fork, the hold, the lane, the join, the place
 //   campRoutePick(C, id, how)       the pick ('order' | 'auto' after the wait | 'panic' with an enemy within CAMP.route.panic px of the holding convoy): C.route.lane, an event { type: 'lane', lane, auto }         campRouteDo(C, arg, dry)  the order 'lane' (campOrder(C, 'lane', 'long'))
 //   campRouteFind(C, words)         a lane by its id or its name: "long", "the short lane", a map row                        campRouteHolding(C)  null, or { lanes, left, convoy } while a convoy waits at the fork
-//   campRouteHides(C, id)           what a lane hides now: { ships: { skiff: 3 }, aliens, pirates, caches }                  campRouteRead(C, u)   a scout that has reached a lane reads it (C.route.known[id], the radio)
+//   campRouteHides(C, id)           what a lane hides now: { ships: { skiff: 3 }, aliens, pirates, caches }
 //   campRouteRows(C)                the lanes as rows of the Tab map's list (campNavRows)                                    campRouteMarks(C)    the lanes as marks of the map (campMapMarks): { type: 'lane', id, pts, chosen, known }
 //   campRouteWaveOk(C, w)           a wave of a lane is due only on that lane                                                campWaveCount(C)     { n, total }: the waves that came and the waves that can (the HUD's "wave 2 of 5")
 //   campRouteAhead(C, f, px)        a point px ahead of a convoy on the road it will fly (a wave comes out of the dark there)
@@ -180,13 +180,6 @@ function campRouteText(h) {
   if (n > 0) parts.push(uiText(h.aliens === 0 ? 'camp.route.pirates' : h.pirates === 0 ? 'camp.route.aliens' : 'camp.route.ships', { n }));
   if (h.caches > 0) parts.push(uiText('camp.route.cache'));
   return parts.length ? parts.join(', ') : uiText('camp.route.quiet');
-}
-function campRouteRead(C, u) { // a scout that has stayed at a lane's middle reads it
-  const s = u.scout, R = C.route; if (!s || !s.lane || !R || !R.geo.lanes[s.lane]) return false;
-  const h = campRouteHides(C, s.lane); R.known[s.lane] = h; s.found = s.found || []; s.found.push(campRouteText(h));
-  C.events.push({ type: 'laneread', lane: s.lane, n: s.n, ships: h.pirates + h.aliens, caches: h.caches });
-  campSay(C, 'camp.say.lanefound', { n: s.n, name: R.geo.lanes[s.lane].name.toLowerCase(), what: campRouteText(h) });
-  return true;
 }
 
 // ---- the Tab map and its list ----

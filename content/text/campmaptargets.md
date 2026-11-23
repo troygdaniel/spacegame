@@ -10,7 +10,6 @@ The words of the Campaign map's targets (card space-game-campaign-map-targets): 
 | camp.nav.k.drone | Drone |
 | camp.nav.k.gunship | Gunship |
 | camp.nav.k.fighter | Fighter |
-| camp.nav.k.escort | Escort |
 | camp.nav.k.tower | Tower |
 | camp.nav.k.freighter | Freighter |
 | camp.nav.wreck | Wreck |

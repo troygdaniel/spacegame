@@ -8,7 +8,7 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 |---|---|
 | camp.lose.convoy | The haulers are lost. |
 | camp.lose.base | The works are lost. |
-| camp.lose.tip.convoy | Keep the escorts on the haulers: {viaescort}, then {rowescort}. |
+| camp.lose.tip.convoy | Keep the squads on the haulers: {viaescort}, then {rowescort}. |
 | camp.lose.tip.base | Guard the works: {viafguard}, then {rowfguard}. Then hold Space. |
 | camp.say.scanned | Point scanned: {n} of {of}. |
 | camp.say.hauler | {name} is under way. |
@@ -47,7 +47,7 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.ui.pauseretry | R  restart the mission |
 | camp.m.1.1.title | Rim escort |
 | camp.m.1.1.b1 | Escort the transport from the Lunar Base to Ceres. |
-| camp.m.1.1.b2 | Pirates lie in wait. A scout can find them first. |
+| camp.m.1.1.b2 | Pirates lie in wait. Fly a squad ahead to see them first. |
 | camp.m.1.2.title | Mine and defend |
 | camp.m.1.2.b1 | Mine ore at Ceres and sell it at the Works. |
 | camp.m.1.2.b2 | Pirates go for the miners. |

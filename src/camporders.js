@@ -49,7 +49,7 @@ const CAMP_CALLS = {
 };
 
 // ---- who is about ----
-const campCallWing = C => C.ships.filter(u => u.team === 'earth' && u.hp > 0 && (u.kind === 'fighter' || u.kind === 'escort'));
+const campCallWing = C => C.ships.filter(u => u.team === 'earth' && u.hp > 0 && u.kind === 'fighter');
 const campCallFoes = C => campAliens(C).filter(u => u.kind !== 'tower' && u.kind !== 'mother' && !u.running);
 const campCallByDist = (list, p) => list.slice().sort((a, b) => campDist(a, p) - campDist(b, p) || (a.id < b.id ? -1 : 1));
 const campCallIds = (list, p, n) => campCallByDist(list, p).slice(0, n).map(u => u.id);
@@ -111,7 +111,7 @@ const CAMP_CALL_TYPES = [
   { id: 'cruiser', pick: ['guard', 'strike', 'emergency'], def: 0, // the cruiser's shield is going and an enemy is in reach: the wing comes home to guard it / the fighters go for the nearest enemy / the emergency power (shields up, weapons and engines down for a while)
     when: C => { if (C.carrier.hp <= 0 || !(C.shield <= campShieldMax(C) * CAMP_CALLS.shield)) return null; const f = campNearest(campAliens(C), C.carrier, CAMP_CALLS.shieldNear); return f ? { ids: [f.id] } : null; } },
   { id: 'wounded', pick: ['cover', 'home', 'fight'], def: 1, // a wingman is hit and an enemy is on him (not one who is already flying home to be mended: src/camprepair.js)
-    when: C => { const foes = campCallFoes(C), w = campCallWing(C).filter(u => !u.scout && u.hp <= u.maxHp * CAMP_CALLS.wound && !(u.order && u.order.type === 'recall') && !u.repair && foes.some(f => campDist(f, u) < CAMP_CALLS.woundNear)); return w.length ? { who: campCallByDist(w, C.carrier)[0].id, ids: campCallIds(foes, w[0], 3) } : null; } },
+    when: C => { const foes = campCallFoes(C), w = campCallWing(C).filter(u => u.hp <= u.maxHp * CAMP_CALLS.wound && !(u.order && u.order.type === 'recall') && !u.repair && foes.some(f => campDist(f, u) < CAMP_CALLS.woundNear)); return w.length ? { who: campCallByDist(w, C.carrier)[0].id, ids: campCallIds(foes, w[0], 3) } : null; } },
   { id: 'breakaway', pick: ['intercept', 'hold', 'draw'], def: 1, // enemies close on a convoy ship with the cruiser away from her: two or more of them, or one with none of the wing beside her
     when: C => { const foes = campCallFoes(C), wing = campCallWing(C), K = CAMP_CALLS;
       for (const f of campConvoys(C)) { const near = foes.filter(u => campDist(u, f) < K.convoyNear); if (near.length && campDist(f, C.carrier) > K.convoyFar && (near.length >= 2 || !wing.some(u => campDist(u, f) < K.covered))) return { who: f.id, ids: campCallIds(near, f, 3) }; }

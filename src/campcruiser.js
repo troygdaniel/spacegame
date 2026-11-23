@@ -1,4 +1,4 @@
-// ---------- The Campaign's own ship pictures: the cruiser, the fighter and the escort (card space-game-campaign-look) ----------
+// ---------- The Campaign's own ship pictures: the cruiser and the fighter (card space-game-campaign-look) ----------
 // Troy: "less arcade and more like Battlestar Galactica": a boxy, utilitarian hull in muted grey and bronze, a long spine, a flight pod down each side with a lit bay, a big engine block with a dull glow,
 // panel lines and a few running lights; no neon outline, no bright tint. Nothing here knows the game: it draws into a Phaser Graphics (a texture, made once by campShipTexture) and says where its parts are
 // (CAMP_ART), so the scene can light the bays and the tests can check the turret mounts lie on the hull. The Long Haul's own Bastion (src/shipmodels.js) is not touched.
@@ -6,7 +6,6 @@
 // k times larger (the scene scales it down to the length in CAMP.size), so it is smooth, not blocky. Light comes from above: the hull is lighter along its middle, darker at the edges, the same on both sides.
 const CAMP_ART = {
   fighter: { k: 4, len: 22, pad: 2, half: 8, glow: [[8, 0.13], [5.5, 0.15]] },        // the wing's fighters: a dart with swept wings (the picture k times the units; the hull len long and half wide each side of the middle, over the wings); glow: [radius in units, alpha] of the faint pale disc under a friendly ship, so the wing is found against dark space and the moon (set the alphas to 0 for none)
-  escort: { k: 4, len: 28, pad: 3, half: 9.5, glow: [[10, 0.13], [7, 0.15]] },       // the escorts: a small boxy gunship with two nacelles
   cruiser: {
     k: 2,
     len: 98,                                        // the hull's length in units: the picture of it is len * k px, and the scene scales it to CAMP.size.carrier.len
@@ -137,23 +136,6 @@ function campFighterDraw(g) {
   p.rect(-10.6, -2.7, -9.4, 2.7, C.dark);
   [[0, 1.05], [-4.7, 0.85], [4.7, 0.85]].forEach(([y, h]) => { p.dot(-10.8, y, 1.9, C.engine, 0.07); p.rect(-11, y - h, -9.7, y + h, C.engine, 0.95); p.rect(-11, y - h * 0.4, -10.4, y + h * 0.4, C.hot, 0.8); }); // the three engines
 }
-// the escort: a small boxy gunship, a nacelle each side with a bronze stripe, a short nose, a lit window, the engines at the back
-function campEscortDraw(g) {
-  const A = CAMP_ART.escort, k = A.k, [W, H] = campArtSize('escort'), p = campArtPen(g, W / 2, H / 2, k), C = CAMP_HULL, S = C.steel, B = C.bronze;
-  A.glow.forEach(([r, a]) => p.dot(0, 0, r, C.glass, a)); // the faint pale disc under it
-  [1, -1].forEach(s => { // the nacelles: boxes along the sides, joined by a strut
-    const y1 = s > 0 ? 5.6 : -9.4, y2 = s > 0 ? 9.4 : -5.6, bx = [[-12, y1 + 0.8], [-11.2, y1], [3.2, y1], [4, y1 + 0.8], [4, y2 - 0.8], [3.2, y2], [-11.2, y2], [-12, y2 - 0.8]];
-    p.rect(-6, s > 0 ? 4 : -6, -2, s > 0 ? 6 : -4, C.dark); p.poly(bx, B[0]); p.rect(-11, y1 + 0.8, 3, y2 - 0.8, B[1]); p.rect(-10, (y1 + y2) / 2 - 1, 2.4, (y1 + y2) / 2 + 1, B[2], 0.9); p.outline(bx, C.edge, 0.7, 0.95);
-    p.rect(3.2, (y1 + y2) / 2 - 1, 4, (y1 + y2) / 2 + 1, C.bay, 0.55); // a lit slot in the front of each nacelle
-  });
-  const hull = [[-13, -4.2], [8, -4.2], [14, -2.2], [14, 2.2], [8, 4.2], [-13, 4.2]];
-  p.poly(hull, S[3]); p.rect(-12, -2.4, 9, 2.4, S[4], 0.9); p.poly([[8, -4], [13.4, -2.1], [13.4, 2.1], [8, 4]], S[4], 0.95); p.outline(hull, C.edge, 0.75, 0.95);
-  [-1, 1].forEach(s => { p.dot(4, 8.6 * s, 2.2, C.glass, 0.1); p.dot(4, 8.6 * s, 0.7, C.glass, 0.95); }); // a pale light at the front of each nacelle
-  p.line(-4, -4.2, -4, 4.2, C.edge, 0.55, 0.45); p.line(3, -4.2, 3, 4.2, C.edge, 0.55, 0.45);
-  p.rect(-13.8, -3.6, -12, 3.6, C.dark); [-1.9, 1.9].forEach(y => { p.dot(-14, y, 2.2, C.engine, 0.07); p.rect(-14.5, y - 1, -13.2, y + 1, C.engine, 0.95); p.rect(-14.5, y - 0.4, -13.8, y + 0.4, C.hot, 0.8); });
-  for (let y = -1.6; y <= 1.7; y += 1.6) p.rect(8.2, y - 0.4, 9.8, y + 0.4, C.window, 0.85); // the lit window
-  p.dot(-1, 0, 1.1, C.edge); p.dot(-1, 0, 0.8, S[3]); // a turret on the back
-}
 // what the scene needs of a picture: its width (the hull's length in the picture's px), its height over the wings or pods, and the scale that makes the hull as long as CAMP.size says (kind: a row of CAMP.size)
 function campArtLook(kind, art) { const a = CAMP_ART[art], w = a.len * a.k; return { art, w, h: 2 * a.half * a.k, scale: CAMP.size[kind].len / w }; }
 
@@ -162,7 +144,7 @@ function campShipTexture(scene, kind) {
   const key = 'camp-' + kind;
   if (scene.textures.exists(key)) return key;
   const [W, H] = campArtSize(kind), g = scene.make.graphics({ x: 0, y: 0, add: false });
-  const draw = ({ cruiser: campCruiserDraw, fighter: campFighterDraw, escort: campEscortDraw })[kind] || (typeof campPirateArt === 'function' ? campPirateArt(kind) : null); // the pirates' and the neutrals' pictures: src/camppirateart.js
+  const draw = ({ cruiser: campCruiserDraw, fighter: campFighterDraw })[kind] || (typeof campPirateArt === 'function' ? campPirateArt(kind) : null); // the pirates' and the neutrals' pictures: src/camppirateart.js
   draw(g); g.generateTexture(key, W, H); g.destroy();
   return key;
 }

@@ -36,13 +36,11 @@ The words of the Campaign's ready room, the hub between missions (card space-gam
 | camp.hub.brief.best | Best so far: {score} points, flown {n} |
 | camp.hub.brief.new | Not flown yet. |
 | camp.hub.refit.ore | Ore in the store: {ore} |
-| camp.hub.refit.wing | Wing for the next mission: {f} fighters, {e} escorts |
+| camp.hub.refit.wing | Wing for the next mission: {f} fighters |
 | camp.hub.boughtf | A fighter joins the wing. {ore} ore left. |
-| camp.hub.boughte | An escort joins the wing. {ore} ore left. |
 | camp.hub.soldf | A fighter given back. {ore} ore. |
-| camp.hub.solde | An escort given back. {ore} ore. |
 | camp.hub.noore | Not enough ore: {need} needed, {have} in the store. |
-| camp.hub.most | No more: {most} extra of each at most. |
+| camp.hub.most | No more: {most} extra at most. |
 | camp.hub.nothing | Nothing to give back. |
 | camp.hub.rank.name | Rank: {name}  ({n} of {of}) |
 | camp.hub.rank.next | Next rank {to} at {next} points |
@@ -50,7 +48,7 @@ The words of the Campaign's ready room, the hub between missions (card space-gam
 | camp.hub.rank.none | No rank yet. Fly a mission. |
 | camp.hub.rank.points | Score so far: {points} points |
 | camp.hub.rank.flown | Missions flown: {n} of {all} |
-| camp.hub.rank.wing | Wing: {f} fighters, {e} escorts |
+| camp.hub.rank.wing | Wing: {f} fighters |
 | camp.hub.launch.head | NEXT: MISSION {n} OF {of}  -  {title} |
 | camp.hub.launch.go | Enter or L launches the cruiser. |
 | camp.hub.launch.level | Level {n} begins with this mission: {name}. |

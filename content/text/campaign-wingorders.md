@@ -6,11 +6,10 @@ The words of the Campaign's wing orders with groups and explicit targets (card s
 ## Strings
 | key | text |
 |---|---|
-| camp.no.wnogroup | Which group? Fighters, escorts or all. |
+| camp.no.wnogroup | Which group? Red, green, yellow or all. |
 | camp.no.wnotarget | I cannot find that target. |
 | camp.no.wbadpair | {group} cannot {verb} {what}. |
 | camp.no.wneed | Name a target to {verb}. |
-| camp.no.wnoscout | No scouts are aboard. |
 | camp.no.wnothing | Nothing is lying about to fetch. |
 | camp.say.wing.attack | {group}, attack {name}. |
 | camp.say.wing.attacknear | {group}, attack the nearest. |

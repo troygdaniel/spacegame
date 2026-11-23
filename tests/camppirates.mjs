@@ -16,7 +16,7 @@ const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
 // a test mission on Level 1 (this page's own copy of the table): at Ceres, where the cruiser starts, one hauler from Vesta to Ceres, a pirate wave, a patrol and two miners
 g.run(`
-  CAMP.levels[1].missions.push({ id: 'pt', kind: 'escort', par: 100, place: 'ceres', dock: 'ceres', scouts: ['escort'],
+  CAMP.levels[1].missions.push({ id: 'pt', kind: 'escort', par: 100, place: 'ceres', dock: 'ceres', 
     rocks: [{ at: [900, 700], n: 7, spread: 300 }, { at: [-1100, -400], n: 7, spread: 300 }], // (Level 1 has no rocks of its own since the rim run: each mission brings them)
     objectives: [{ type: 'hold', secs: 100000 }], bonus: [{ id: 'ok', type: 'neutrals', n: 0 }],
     convoys: [{ id: 'h1', name: 'Hauler 1', at: 2, from: 'vesta', to: 'ceres' }],
