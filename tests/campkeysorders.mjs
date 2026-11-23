@@ -39,10 +39,10 @@ sec('B. an order launches a pilot in the bay', () => {
   check('all three flew home, landed and are in the bay', J('C.bay.fighters') === 3 && J('__out().length') === 0, J('C.bay.fighters') + ' in the bay, ' + J('__out().length') + ' out');
   const none = J(`campSelOrder(C, 'recall', 'key')`);
   check('Recall with every pilot home says no fighters are out, and does not launch them', none.ok === false && /no fighters/i.test(none.say) && J('__out().length') === 0, JSON.stringify(none));
-  g.run('C.tgt = __r1.id; C.sel = "pilot:green";');
-  const dry = J(`campSelOrder(C, 'attack', 'key', true)`);
+  g.run('C.tgt = __r1.id; C.sel = "";');
+  const dry = J(`campWingOrder(C, 'green', 'attack', __r1.id, 'key', true)`);
   check('the dry run says the attack can be given (a pilot in the bay takes it) and launches nothing', dry.ok === true && J('__out().length') === 0 && J('C.bay.fighters') === 3, JSON.stringify(dry));
-  const o = J(`campSelOrder(C, 'attack', 'key')`);
+  const o = J(`campWingOrder(C, 'green', 'attack', __r1.id, 'key')`);
   check('Kara, in the bay, attacks the picked hostile: she is out at once with that order, Wedge and Apollo stay in the bay', o.ok === true && J(`__out().map(u => campPilotName(u)).join()`) === 'Kara' && J(`__out()[0].order.type === 'attack' && __out()[0].order.target === __r1.id`) && J('C.bay.fighters') === 2, JSON.stringify(o));
   g.run('C.sel = "all";');
   const o2 = J(`campSelOrder(C, 'guard', 'key')`);
@@ -57,10 +57,10 @@ sec('B. an order launches a pilot in the bay', () => {
 });
 
 sec('C. a pilot being mended', () => {
-  g.run('__new(); window.__r1 = __raider(900, 300); C.tgt = __r1.id; C.sel = "pilot:red"; __out().find(x => x.squad === "red").hp = 1; __run(60);');
+  g.run('__new(); window.__r1 = __raider(900, 300); C.tgt = __r1.id; C.sel = ""; __out().find(x => x.squad === "red").hp = 1; for (let i = 0; i < 60 && !C.repairs.length; i++) __run(0.5);');
   const state = J(`({ repairs: C.repairs.length, out: __out().map(u => u.squad).sort().join(), bay: C.bay.fighters })`);
   check('Wedge, hurt, flew home and is being mended (the other two are out)', state.repairs === 1 && state.out === 'green,yellow', JSON.stringify(state));
-  const o = J(`campSelOrder(C, 'attack', 'key')`);
+  const o = J(`campWingOrder(C, 'red', 'attack', __r1.id, 'key')`);
   check('an order to Wedge while he is mended is taken (he goes out with it when he is whole)', o.ok === true && J(`C.repairs[0].order && C.repairs[0].order.type === 'attack' && C.repairs[0].stay === false`), JSON.stringify(o));
 });
 

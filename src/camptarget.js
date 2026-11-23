@@ -102,8 +102,8 @@ function campSelRowFor(C, kind) {
 const campSelWho = C => { const f = campSelNow(C); return f && f.kind === 'pilot' ? f.name : uiText('camp.w.all'); }; // who takes the order of a W row: a selected pilot alone, else all squads
 function campSelOrder(C, verb, how, dry) {
   if (!C) return campNo('what');
-  if (!campWing(C, 'fighter').length) return campNo(C.launchQ.length ? 'launching' : 'nofighters');
   const f = campSelNow(C), group = f && f.kind === 'pilot' ? f.squad : 'fighters';
+  if (!campWing(C, 'fighter').length && !(verb !== 'recall' && campWingDocked(C, group).length)) return campNo(C.launchQ.length ? 'launching' : 'nofighters'); // pilots in the bay take an order by launching (card space-game-keys-orders)
   if (verb === 'attack') {
     const h = campTgtNow(C);
     if (!h && !campTgtList(C).length) { const d = campWingOrder(C, group, 'attack', null, how || 'key', true); return d.ok ? campNo('nofoe') : d; } // nothing picked and nothing in sight: the squad's own refusal if it has one, else "no hostiles in sight"

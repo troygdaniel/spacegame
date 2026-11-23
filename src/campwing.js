@@ -56,6 +56,31 @@ function campWingShips(C, id) {
   return C.ships.filter(u => u.team === 'earth' && u.hp > 0 && u.kind === 'fighter' && (sp.ships ? sp.ships.indexOf(u.id) >= 0 : (sp.kinds || []).indexOf(u.kind) >= 0) && (!sp.squad || u.squad === sp.squad));
 }
 
+// THE PILOTS IN THE BAY (card space-game-keys-orders; Troy, 23 Nov 2026: "an order to a pilot in the bay launches them"). A pilot that was recalled lands and waits in the bay (C.bay.fighters); the mission starts with all three out (src/campaign.js campStartOut).
+//   campWingDocked(C, id)   the squads of group id with no ship out that an order can reach now: [{ squad, how: 'bay' }] a pilot waiting in the bay (the order launches it, in its own squad), [{ squad, how: 'mend' }] one being mended (it goes out with the order when it is whole)
+//   campWingReach(C, id)    how many ships an order to the group reaches: the ones out and the ones that could be launched or sent out whole
+function campWingDocked(C, id) {
+  const sp = campWingGroupSpec(C, id); if (!sp || sp.ships || !C.bay) return []; // a group of named ships has no ids for the ones in the bay
+  const squads = sp.squad ? [sp.squad] : (CAMP.wing.squads || []).slice(), repairs = C.repairs || [], out = []; let free = C.bay.fighters | 0;
+  squads.forEach(sq => {
+    if (campWingShips(C, sq).length) return;
+    if (repairs.some(r => r.kind === 'fighter' && r.squad === sq)) out.push({ squad: sq, how: 'mend' });
+    else if (free > 0) { free--; out.push({ squad: sq, how: 'bay' }); }
+  });
+  return out;
+}
+const campWingReach = (C, id) => campWingShips(C, id).length + campWingDocked(C, id).length;
+// launch the docked pilots an order is given to: the ones in the bay leave at once (ships added to `ships`), the ones being mended are told to go out whole (their order is set once it is known: campWingMendOrder)
+function campWingLaunchDocked(C, docked, ships) {
+  const mend = [];
+  docked.forEach(d => {
+    if (d.how === 'bay') { C.bay.fighters--; const u = campLaunch(C, 'fighter', null, d.squad); if (u) ships.push(u); }
+    else mend.push(d.squad);
+  });
+  return mend;
+}
+function campWingMendOrder(C, mend, order) { (C.repairs || []).forEach(r => { if (mend.indexOf(r.squad) >= 0) { r.order = order; r.stay = false; } }); } // a pilot being mended goes out whole, with this order
+
 // the squad a fighter that leaves the bay joins: the one with the fewest ships (out, or landed to be mended: those come back to it), a tie to the first of CAMP.wing.squads. Six fighters leave as two and two and two; when a squad has lost
 // its ships the next ones to leave (a Launch after a build) fill it again. No random number: the battle's seeded stream is the same as before squads.
 function campSquadNext(C) {
@@ -198,9 +223,9 @@ function campWingOrder(C, group, verb, target, how, dry) {
   if (!C || C.result) return campNo('over');
   const V = CAMP.wing.verbs[verb]; if (!V) return campNo('what');
   const gid = campWingGroupId(C, group); if (gid === null) return campWingNo('wnogroup');
-  const id = gid || V.group, ships = campWingShips(C, id);
+  const id = gid || V.group, ships = campWingShips(C, id), docked = verb === 'recall' ? [] : campWingDocked(C, id); // an order other than Recall reaches the pilots in the bay too: it launches them (card space-game-keys-orders)
   const empty = { fighters: 'nofighters', all: 'nowing', red: 'nosquad', green: 'nosquad', yellow: 'nosquad' }[id] || 'nowing';
-  if (!ships.length) return campNo(C.launchQ.length ? 'launching' : empty);
+  if (!ships.length && !docked.length) return campNo(C.launchQ.length ? 'launching' : empty);
   const tg = campWingTarget(C, target);
   if (tg === false) return campWingNo('wnotarget');
   const gname = campWingGroupName(C, id);
@@ -222,6 +247,7 @@ function campWingOrder(C, group, verb, target, how, dry) {
     if (!tg) {
       if (!C.L.convoys.length) { // no convoys in this level: Escort keeps the fighters close to the carrier
         if (dry) return campYes('escortcarrier');
+        const mend0 = campWingLaunchDocked(C, docked, ships); campWingMendOrder(C, mend0, { type: 'guard', at: { kind: 'carrier' } });
         ships.forEach(u => { u.order = { type: 'guard', at: { kind: 'carrier' } }; u.move = null; }); C.orders.escort++;
         return campWingDone(C, id, verb, null, ships, how, 'escortcarrier');
       }
@@ -242,6 +268,8 @@ function campWingOrder(C, group, verb, target, how, dry) {
     say = tg ? 'wing.mine' : 'mine';
   }
   if (dry) return campYes(say, vars);
+  const mend = campWingLaunchDocked(C, docked, ships); // the pilots in the bay leave now, with this order; the ones being mended go out with it when whole
+  if (mend.length) { const mo = CAMPWING_ORDER[verb](C, {}, tgo, 0); if (tgo) mo.tg = { kind: tgo.kind, id: tgo.id, ref: tgo.ref, name: tgo.name, x: tgo.x, y: tgo.y }; if (verb === 'guard' && tgo && (tgo.kind === 'friend' || tgo.kind === 'convoy')) mo.grp = id; campWingMendOrder(C, mend, mo); }
   ships.forEach((u, i) => { u.order = CAMPWING_ORDER[verb](C, u, tgo, i); if (tgo) u.order.tg = { kind: tgo.kind, id: tgo.id, ref: tgo.ref, name: tgo.name, x: tgo.x, y: tgo.y }; if (verb === 'guard' && tgo && (tgo.kind === 'friend' || tgo.kind === 'convoy')) u.order.grp = id; u.move = null; }); // grp: the group the guard of a ship was given to (campWingGuardStep says its end once for it)
   C.orders[verb] = (C.orders[verb] | 0) + 1;
   return campWingDone(C, id, verb, tgo, ships, how, say, vars);
