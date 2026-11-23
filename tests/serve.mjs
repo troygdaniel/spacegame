@@ -1,8 +1,8 @@
-// smoke: the dev server: serves, refuses, rebuilds on change, R reloads
-// The dev server (tools/serve.mjs, docs/MODDING.md section 4). Needs no packages; one headless Chrome for the R key at the end.
+// smoke: the dev server: serves, refuses, rebuilds on change, Shift+R or a click on the chip reloads (plain R is the game's)
+// The dev server (tools/serve.mjs, docs/MODDING.md section 4). Needs no packages; one headless Chrome for the reload keys at the end.
 // Checks: it serves the game with the dev script added to HTML only; it refuses everything it should (.., dot-names, POST, a foreign
-// Host header, other network interfaces); it rebuilds and tells the page when content/ changes, also when a file is broken; and R
-// reloads the page (but not while you type in a box). Run: node tests/serve.mjs
+// Host header, other network interfaces); it rebuilds and tells the page when content/ changes, also when a file is broken; and Shift+R
+// (or a click on the chip) reloads the page, but a plain R does not (it is Guard in the Campaign: card space-game-dev-r-reload-clash) and nothing reloads while you type in a box. Run: node tests/serve.mjs
 import { spawn } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, unlinkSync, existsSync } from 'node:fs';
 import { tmpdir, networkInterfaces } from 'node:os';
@@ -58,7 +58,8 @@ try {
     check('a game script is served as JavaScript, untouched', js.status === 200 && /text\/javascript/.test(js.headers['content-type']) && !js.body.includes('__dev') && js.body === readFileSync(join(ROOT, 'src', 'common.js'), 'utf8'));
     check('nothing is cached', home.headers['cache-control'] === 'no-store' && js.headers['cache-control'] === 'no-store');
     const dev = await get(a.port, '/__dev.js');
-    check('/__dev.js has the R key', dev.status === 200 && dev.body.includes("'KeyR'") && dev.body.includes('INPUT'));
+    check('/__dev.js has the Shift+R key and the typing guard, and the chip says Shift+R', dev.status === 200 && dev.body.includes("'KeyR'") && dev.body.includes('!e.shiftKey') && dev.body.includes('INPUT') && dev.body.includes('DEV SERVER  Shift+R reloads') && !/R reloads/.test(dev.body.replace(/Shift\+R reloads/g, '')));
+    check('/__dev.js is valid JavaScript (a quote in its words would break it for the page)', (() => { try { new Function(dev.body); return true; } catch (e) { return String(e); } })() === true);
     check('HEAD works and sends no body', (await get(a.port, '/', { method: 'HEAD' })).body === '');
     for (const p of ['/../package.json', '/%2e%2e/%2e%2e/etc/hosts', '/src/..%2f..%2fREADME.md', '/.git/config', '/.env', '/src/%2e%2e/.git/HEAD', '/nope.js', '/src', '/%00', '/%zz'])
       check('refused: ' + p, [400, 404].includes((await get(a.port, p)).status), String((await get(a.port, p)).status));
@@ -98,7 +99,7 @@ try {
     const r3 = await page.next('rebuilt', 8000, seen);
     check('removing it clears the problem', r3 && r3.problems === 0 && r3.entries === 2, JSON.stringify(r3));
 
-    // ---- 3. in Chrome: the chip, and R reloads ----
+    // ---- 3. in Chrome: the chip, and Shift+R or a click reloads (a plain R does not) ----
     console.log('R in a real page');
     const t = await launch('');
     try {
@@ -108,14 +109,22 @@ try {
       writeFileSync(join(tmp, 'content', 'missions', 'third.md'), TEMPLATE);
       await t.waitFor('document.body.innerText.includes("content rebuilt")', 10000, 'the chip after a rebuild');
       check('the chip says the content was rebuilt', true);
-      const key = type => t.send('Input.dispatchKeyEvent', { type, windowsVirtualKeyCode: 82, code: 'KeyR', key: 'r' });
-      await t.ev('(document.getElementById("box").focus(), 1)');
-      await key('keyDown'); await key('keyUp'); await sleep(1200);
-      check('R typed in a box does not reload', (await t.ev('window.__n')) === 1);
+      const key = (type, shift) => t.send('Input.dispatchKeyEvent', shift ? { type, windowsVirtualKeyCode: 82, code: 'KeyR', key: 'R', modifiers: 8 } : { type, windowsVirtualKeyCode: 82, code: 'KeyR', key: 'r' });
       await t.ev('(document.getElementById("box").blur(), 1)');
-      await key('keyDown'); await key('keyUp');
+      await key('keyDown'); await key('keyUp'); await sleep(1200);
+      check('a plain R does not reload the page (it is a key of the game: Guard in the Campaign)', (await t.ev('window.__n')) === 1);
+      await t.ev('(document.getElementById("box").focus(), 1)');
+      await key('keyDown', true); await key('keyUp', true); await sleep(1200);
+      check('Shift+R typed in a box does not reload', (await t.ev('window.__n')) === 1);
+      await t.ev('(document.getElementById("box").blur(), 1)');
+      await key('keyDown', true); await key('keyUp', true);
       await t.waitFor('window.__n === 2', 10000, 'the page reloaded');
-      check('R reloads the page', true);
+      check('Shift+R reloads the page', true);
+      await t.waitFor('document.body.innerText.includes("DEV SERVER")', 15000, 'the chip on the reloaded page');
+      check('the chip says Shift+R reloads', (await t.ev('document.body.innerText')).includes('Shift+R reloads'));
+      await t.ev('([...document.querySelectorAll("div")].find(d => d.textContent.startsWith("DEV SERVER")).click(), 1)');
+      await t.waitFor('window.__n === 3', 10000, 'the page reloaded by the chip');
+      check('a click on the chip reloads the page', true);
       check('no console errors', t.errors.length === 0, t.errors.join(' | '));
     } finally { try { await t.close(); } catch (e) { /* the profile folder can still be filling on a busy Mac */ } }
   } finally { page.close(); await b.stop(); }
