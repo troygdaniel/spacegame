@@ -16,7 +16,7 @@ import { nodeGame } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame({ store: new Map() });
-const R3 = x => [x, x, x].join(), R2 = x => [x, x].join(); // the orders of a squad of three and of two, as __ord writes them
+const R3 = x => x, R2 = x => x; // the order of a squad, as __ord writes it: one pilot flies each squad now (card space-game-three-pilots), so a squad's orders are one
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
@@ -33,13 +33,13 @@ console.log('A. who is in a squad');
 {
   g.run('__out(1)');
   const sq = J(`campWing(C, 'fighter').map(u => u.squad)`);
-  check('the bay launches eight fighters and they are Red, Green, Yellow, Red, Green, Yellow, Red, Green in the order they leave: three, three and two', sq.join() === 'red,green,yellow,red,green,yellow,red,green' && ['red', 'green', 'yellow'].map(k => sq.filter(x => x === k).length).join() === '3,3,2', sq.join());
-  check('there is no escort ship (card space-game-cut-escorts): every ship of the wing is a fighter and has a squad', J(`campWing(C, 'escort').length`) === 0 && J(`campWing(C).length`) === 8 && J(`campWing(C).every(u => u.kind === 'fighter' && !!u.squad)`) === true);
-  check('the three groups are the fighters whose squad it is, and Fighters (all squads) is the eight', J(`['red', 'green', 'yellow'].map(k => campWingShips(C, k).length).join()`) === '3,3,2' && J(`campWingShips(C, 'fighters').length`) === 8 && J(`['red', 'green', 'yellow'].every(k => campWingShips(C, k).every(u => u.kind === 'fighter'))`) === true && J(`campWingShips(C, 'all').length`) === 8);
+  check('the bay launches three fighters, the pilots, and they are Red, Green, Yellow in the order they leave: Wedge, Kara, Apollo', sq.join() === 'red,green,yellow' && J(`campWing(C, 'fighter').map(u => u.pilot).join()`) === 'wedge,kara,apollo', sq.join());
+  check('there is no escort ship (card space-game-cut-escorts): every ship of the wing is a fighter and has a squad', J(`campWing(C, 'escort').length`) === 0 && J(`campWing(C).length`) === 3 && J(`campWing(C).every(u => u.kind === 'fighter' && !!u.squad)`) === true);
+  check('the three groups are the fighters whose squad it is, and Fighters (all squads) is the three', J(`['red', 'green', 'yellow'].map(k => campWingShips(C, k).length).join()`) === '1,1,1' && J(`campWingShips(C, 'fighters').length`) === 3 && J(`['red', 'green', 'yellow'].every(k => campWingShips(C, k).every(u => u.kind === 'fighter'))`) === true && J(`campWingShips(C, 'all').length`) === 3);
   g.run(`campSpawn(C, 'fighter', C.carrier.x + 100, C.carrier.y).order = { type: 'guard', at: { kind: 'carrier' } };`);
-  check('a ninth fighter (a build, a rank, a refit) fills the thinnest squad, the first of them when they tie: Yellow has three', J(`__sq('red').length`) === 3 && J(`__sq('green').length`) === 3 && J(`__sq('yellow').length`) === 3);
+  check('a fourth fighter (a test makes one: nothing in the game does) fills the thinnest squad, the first of them when they tie: Red has two', J(`__sq('red').length`) === 2 && J(`__sq('green').length`) === 1 && J(`__sq('yellow').length`) === 1);
   g.run(`__sq('green').forEach(u => { u.hp = 0; }); campSpawn(C, 'fighter', C.carrier.x + 100, C.carrier.y);`);
-  check('a squad that lost its ships is filled again by the next to leave the bay: Green had none, the new fighter is Green', J(`__sq('green').length`) === 1 && J(`__sq('yellow').length`) === 3 && J(`__sq('red').length`) === 3);
+  check('a squad that lost its ships is filled again by the next to leave the bay: Green had none, the new fighter is Green', J(`__sq('green').length`) === 1 && J(`__sq('yellow').length`) === 1 && J(`__sq('red').length`) === 2);
   check('choosing a squad uses no random number: the battle\'s seeded stream is where it was', J(`(() => { const D = campNew('home', [], { seed: 7 }); const a = D.rng(); const E = campNew('home', [], { seed: 7 }); campSquadNext(E); campSquadNext(E); const b = E.rng(); return a === b; })()`) === true);
   // the same fight twice: the squads do not change what happens
   check('the same seed flown twice gives the same squads in the same places (a deterministic sim)', J(`(() => { const run = () => { __out(5); return campWing(C, 'fighter').map(u => u.squad + ':' + Math.round(u.x)).join(); }; return run() === run(); })()`) === true);
@@ -50,8 +50,8 @@ console.log('B. an order to one squad');
   g.run('__out(1); window.__a = __foe(900, 0); window.__b = __foe(-900, 200); campTgtNearest(C);');
   const tgt = J('C.tgt');
   const r = J(`campWingOrder(C, 'red', 'attack', C.tgt, 'key')`);
-  check('Red attacks the target: its three fighters are on the attack order, the target\'s id in it, and the answer names the squad ("Red squad, attack ...")', r.ok && r.n === 3 && J('__ord("red")') === ['attack:' + tgt, 'attack:' + tgt, 'attack:' + tgt].join() && /Red squad/.test(r.say), r.say + ' ' + J('__ord("red")'));
-  check('the other squads are left on the order they had (guarding the cruiser)', J('__ord("green")') === 'guard:,guard:,guard:' && J('__ord("yellow")') === 'guard:,guard:');
+  check('Red attacks the target: its fighter is on the attack order, the target\'s id in it, and the answer names the pilot ("Wedge, attack ...")', r.ok && r.n === 1 && J('__ord("red")') === 'attack:' + tgt && /Wedge/.test(r.say), r.say + ' ' + J('__ord("red")'));
+  check('the other squads are left on the order they had (guarding the cruiser)', J('__ord("green")') === 'guard:' && J('__ord("yellow")') === 'guard:');
   const other = J('__b.id');
   g.run(`campWingOrder(C, 'green', 'attack', '${other}', 'key');`);
   check('two squads hold two targets at once: Red on the first, Green on the second, Yellow on guard', J('__ord("red")') === R3('attack:' + tgt) && J('__ord("green")') === R3('attack:' + other) && J('__ord("yellow")') === R2('guard:'));
@@ -61,10 +61,10 @@ console.log('B. an order to one squad');
   g.run(`campWingOrder(C, 'red', 'guard', null, 'key');`);
   check('Guard the cruiser puts a squad back on the cruiser (a recalled squad too), the others as they were', J('__ord("red")') === R3('guard:') && J('__ord("green")').startsWith('attack:'));
   const all = J(`campWingOrder(C, 'fighters', 'attack', C.tgt, 'key')`);
-  check('All squads (the group Fighters) is every fighter, all three squads', all.ok && all.n === 8 && ['red', 'green', 'yellow'].every(k => J(`__ord('${k}')`).split(',').every(x => x === 'attack:' + tgt)));
+  check('All squads (the group Fighters) is every fighter, all three pilots', all.ok && all.n === 3 && ['red', 'green', 'yellow'].every(k => J(`__ord('${k}')`).split(',').every(x => x === 'attack:' + tgt)));
   const ev = J(`C.events.length`);
   g.run(`C.events.length = 0; campWingOrder(C, 'yellow', 'guard', null, 'click');`);
-  check('the play log reads the squad: a wingorder event with the group yellow, the verb, the count and how it was given', J(`C.events.filter(e => e.type === 'wingorder').map(e => [e.group, e.verb, e.n, e.how].join(':')).join()`) === 'yellow:guard:2:click');
+  check('the play log reads the squad: a wingorder event with the group yellow, the verb, the count and how it was given', J(`C.events.filter(e => e.type === 'wingorder').map(e => [e.group, e.verb, e.n, e.how].join(':')).join()`) === 'yellow:guard:1:click');
   // a Recall while the bay is still emptying: the other squads' waiting ships stay in the queue
   g.run('__new(2); campOrder(C, "launch"); __run(1.0);');
   const q0 = J('C.launchQ.length');
@@ -83,7 +83,7 @@ console.log('C. a squad with no ship out');
   const lost = J(`campWingOrder(C, 'yellow', 'recall', null, 'key')`);
   check('a squad that has lost all its ships refuses the same way and the others are not affected', lost.ok === false && lost.code === 'nosquad' && J(`campWingOrder(C, 'red', 'guard', null, 'key').ok`) === true);
   check('its list is grey with the reason beside every row (no ships in the squad / none out); the other lists are not', J(`campPanelRows(C, 'yellow').every(r => !r.ok && r.state === 'no ships in the squad' && r.short === 'none out')`) && ['red', 'green'].every(q => J(`campPanelRows(C, '${q}').filter(r => r.id !== '${q}attack' && r.id !== '${q}escort').every(r => r.ok)`) && J(`campPanelRows(C, '${q}').find(r => r.id === '${q}attack').state`) === 'no hostiles in sight' && J(`campPanelRows(C, '${q}').find(r => r.id === '${q}escort').state`) === 'no convoy to escort'));
-  check('a squad\'s row in the Q list counts its ships: "3 out" for Red, "0 out" for Yellow; All squads counts the fighters', J(`campPanelRows(C, 'fleet').find(r => r.id === 'gred').short`) === '3 out' && J(`campPanelRows(C, 'fleet').find(r => r.id === 'gyellow').short`) === '0 out' && J(`campPanelRows(C, 'fleet').find(r => r.id === 'gsquads').short`) === '6 out');
+  check('a squad\'s row in the Q list counts its ships: "1 out" for Wedge, "0 out" for Apollo; All squads counts the fighters', J(`campPanelRows(C, 'fleet').find(r => r.id === 'gred').short`) === '1 out' && J(`campPanelRows(C, 'fleet').find(r => r.id === 'gyellow').short`) === '0 out' && J(`campPanelRows(C, 'fleet').find(r => r.id === 'gsquads').short`) === '2 out');
   check('the refusal and the two short words are in the table (CAMP_PANELS.why and shortWhy) and the line is in the content', J('CAMP_PANELS.why.nosquad') === 'no ships in the squad' && J('CAMP_PANELS.shortWhy.nosquad') === 'none out' && /\| camp\.no\.nosquad \| /.test(src('content/text/campsquads.md')) && J(`uiText('camp.no.nosquad')`) === 'No ships of that squad are out.');
 }
 
@@ -116,7 +116,7 @@ console.log('D. the keys and the lists');
   g.run('campPanelClose(__PP);');
   const old = ['KeyE', 'KeyR', 'KeyW'].map(c => J(`(() => { campPanelClose(__PP); return campPanelKey(__PP, C, '${c}', 0).open; })()`)).join();
   check('the old meanings are gone: E is not the fighters\' list, R not the escorts\', W not the convoy\'s: they open the red squad, the green squad and all squads', old === 'red,green,squads', old);
-  check('the key line, the H page and the hints say the new keys (Q Fleet  W All  E Red  R Green  T Yellow), read from the table', J('campPanelKeyLine()') === 'Q Fleet  W All  E Red  R Green  T Yellow    P Ship  O Power  I Autopilot  U Dock' && J('campPanelKeyRows().slice(0, 5).map(r => r.k[0]).join("")') === 'QWERT' && J(`campKeyVar('squadskey') + campKeyVar('redkey') + campKeyVar('greenkey') + campKeyVar('yellowkey')`) === 'WERT');
+  check('the key line, the H page and the hints say the new keys (Q Fleet  W All  E Wedge  R Kara  T Apollo), read from the table', J('campPanelKeyLine()') === 'Q Fleet  W All  E Wedge  R Kara  T Apollo    P Ship  O Power  I Autopilot  U Dock' && J('campPanelKeyRows().slice(0, 5).map(r => r.k[0]).join("")') === 'QWERT' && J(`campKeyVar('squadskey') + campKeyVar('redkey') + campKeyVar('greenkey') + campKeyVar('yellowkey')`) === 'WERT');
 }
 
 console.log('E. the words');
@@ -142,15 +142,15 @@ console.log('F. the map and the colours (card space-game-squad-rings: a squad ha
 {
   g.run('__out(1);');
   const marks = J(`campMapMarks(C).filter(m => m.type === 'wing')`);
-  check('on the map no fighter\'s mark carries a squad while no squad is in focus: eight plain wing marks (six fighters, two escorts)', marks.length === 8 && marks.every(m => !m.squad));
+  check('on the map no fighter\'s mark carries a squad while no squad is in focus: three plain wing marks (the pilots)', marks.length === 3 && marks.every(m => !m.squad));
   const red = J(`campMapMarks(C, false, ['red']).filter(m => m.type === 'wing')`);
-  check('Red in focus: the marks of the three red fighters carry the squad, no other mark does (the other squads stay plain)', red.length === 8 && red.filter(m => m.squad).length === 3 && red.every(m => !m.squad || m.squad === 'red'));
+  check('Red in focus: the mark of Wedge carries the squad, no other mark does (the other squads stay plain)', red.length === 3 && red.filter(m => m.squad).length === 1 && red.every(m => !m.squad || m.squad === 'red'));
   const all = J(`campMapMarks(C, false, ['red', 'green', 'yellow']).filter(m => m.type === 'wing')`);
-  check('all three in focus: the eight fighters\' marks carry their squad, three, three and two', all.filter(m => m.squad).length === 8 && ['red', 'green', 'yellow'].map(k => all.filter(m => m.squad === k).length).join() === '3,3,2');
+  check('all three in focus: the three pilots\' marks carry their squad, one each', all.filter(m => m.squad).length === 3 && ['red', 'green', 'yellow'].map(k => all.filter(m => m.squad === k).length).join() === '1,1,1');
   const lg0 = J('campMapLegend(C)');
   check('with no squad in focus the legend has the wing\'s row and no squad rows (the dots are all one colour)', lg0.map(r => r.type).join() === 'carrier,wing', JSON.stringify(lg0));
   const lg = J(`campMapLegend(C, campMapMarks(C, false, ['red', 'green', 'yellow']))`);
-  check('the legend has a row for each squad in focus that has ships, under the wing\'s own row: "Red squad (3)", "Green squad (3)", "Yellow squad (2)" in the squads\' colours', lg.map(r => r.type).join() === 'carrier,wing,red,green,yellow' && lg.filter(r => /squad/.test(r.text)).map(r => r.text).join() === 'Red squad (3),Green squad (3),Yellow squad (2)' && lg.slice(2).every((r, i) => r.color === J('CAMP.wing.squadColor')[['red', 'green', 'yellow'][i]]), JSON.stringify(lg));
+  check('the legend has a row for each squad in focus that has ships, under the wing\'s own row: "Wedge", "Kara", "Apollo" in the squads\' colours', lg.map(r => r.type).join() === 'carrier,wing,red,green,yellow' && lg.slice(2).map(r => r.text).join() === 'Wedge,Kara,Apollo' && lg.slice(2).every((r, i) => r.color === J('CAMP.wing.squadColor')[['red', 'green', 'yellow'][i]]), JSON.stringify(lg));
   check('one squad in focus: one row, that squad\'s', J(`campMapLegend(C, campMapMarks(C, false, ['green'])).map(r => r.type).join()`) === 'carrier,wing,green');
   const col = J('CAMP.wing.squadColor'), v = Object.values(col);
   check('the three colours are three (red, green, yellow), none of them the escorts\' own mint, so a squad\'s dot can be told from a plain one', v.length === 3 && new Set(v).size === 3 && !v.includes(J('CAMPMAP.color.wing')) && col.red > 0xe00000 && (col.green & 0xff00) > (col.green & 0xff0000) / 256 && (col.yellow >> 16) > 0xe0 && ((col.yellow >> 8) & 0xff) > 0xc0);
@@ -180,17 +180,17 @@ console.log('G. the ring: the fighters are all one colour, a ring marks the squa
   const qs = J(`['escorts', 'convoy', 'stance', 'ship', 'autopilot', 'power', 'dock'].map(k => __circles(k).length).join()`);
   check('the lists that are no squad\'s open: no ring', qs === '0,0,0,0,0,0,0', qs);
   const q0 = J(`__circles('fleet', 1, { at: 0 })`), q1 = J(`__circles('fleet', 1, { at: 1 })`), q3 = J(`__circles('fleet', 1, { at: 3 })`), q4 = J(`__circles('fleet', 1, { at: 4 })`);
-  check('Q open, the highlight on All squads: all eight fighters ringed, each in its own squad\'s colour (three, three and two)', q0.length === 8 && ['red', 'green', 'yellow'].map(k => q0.filter(c => c.col === COL[k]).length).join() === '3,3,2');
-  check('Q open, the highlight on Red squad: its three fighters ringed in red; on Yellow squad: the yellow two; on Convoy: no ring', q1.length === 3 && q1.every(c => c.col === COL.red) && q3.length === 2 && q3.every(c => c.col === COL.yellow) && q4.length === 0);
+  check('Q open, the highlight on All squads: all three pilots ringed, each in its own squad\'s colour', q0.length === 3 && ['red', 'green', 'yellow'].map(k => q0.filter(c => c.col === COL[k]).length).join() === '1,1,1');
+  check('Q open, the highlight on Wedge: its fighter ringed in red; on Apollo: the yellow one; on Convoy: no ring', q1.length === 1 && q1.every(c => c.col === COL.red) && q3.length === 1 && q3.every(c => c.col === COL.yellow) && q4.length === 0);
   const red = J(`__circles('red')`), pos = J(`campWing(C, 'fighter').filter(u => u.squad === 'red').map(u => [Math.round(u.x), Math.round(u.y)])`);
-  check('E open: a ring round each of the red squad\'s three fighters, in red, and round no one else', red.length === 3 && red.every(c => c.col === COL.red) && JSON.stringify(red.map(c => [Math.round(c.x), Math.round(c.y)]).sort()) === JSON.stringify(pos.slice().sort()), JSON.stringify(red));
-  check('R open: the green squad\'s three, in green; T open: the yellow squad\'s two, in yellow', J(`__circles('green')`).every(c => c.col === COL.green) && J(`__circles('green').length`) === 3 && J(`__circles('yellow')`).every(c => c.col === COL.yellow) && J(`__circles('yellow').length`) === 2);
+  check('E open: a ring round Wedge, in red, and round no one else', red.length === 1 && red.every(c => c.col === COL.red) && JSON.stringify(red.map(c => [Math.round(c.x), Math.round(c.y)]).sort()) === JSON.stringify(pos.slice().sort()), JSON.stringify(red));
+  check('R open: Kara, in green; T open: Apollo, in yellow', J(`__circles('green')`).every(c => c.col === COL.green) && J(`__circles('green').length`) === 1 && J(`__circles('yellow')`).every(c => c.col === COL.yellow) && J(`__circles('yellow').length`) === 1);
   const all2 = J(`__circles('squads')`);
-  check('W open: all eight fighters get a ring, each in its own squad\'s colour (three, three and two)', all2.length === 8 && ['red', 'green', 'yellow'].map(k => all2.filter(c => c.col === COL[k]).length).join() === '3,3,2');
+  check('W open: all three pilots get a ring, each in its own squad\'s colour', all2.length === 3 && ['red', 'green', 'yellow'].map(k => all2.filter(c => c.col === COL[k]).length).join() === '1,1,1');
   check('the ring is the same size on the screen at every zoom, so it reads at the start zoom and far out: its radius times the zoom is 8 px (a stand-in sprite has no width; a real one is at least that) and its line 2 px', [1, 0.5, 0.1, 0.02].every(z => J(`__circles('red', ${z})`).every(c => Math.abs(c.rad * z - 8) < 1e-9 && Math.abs(c.w * z - 2) < 1e-9)));
   check('the ring is the cheap outline of src/campcircles.js (campRing: one closed line through 10 to 96 corners, not Phaser\'s arc), one per ringed fighter', J(`(() => { const sc = __stand('red', 1); Campaign.prototype.squadCircle.call(sc); const c = sc.squadG.calls.filter(k => k.t === 'circle'); return c.length > 0 && c.every(k => k.close === true && k.n >= 10 && k.n <= 96); })()`) === true && /campRing\(sg, u\.x, u\.y,/.test(scene) && !/strokeCircle/.test(scene.split('\n').filter(l => /squadG|squadCircle|sg\.lineStyle/.test(l)).join('\n')));
-  check('the kept ring is drawn the same way: a squad in P.ring is ringed until its time is up, then not, and the state is let go', J(`__circles('', 1, { ring: { sq: ['green'], until: 5000 } }, 100).map(c => c.col).join()`) === COL.green + ',' + COL.green + ',' + COL.green && J(`__circles('', 1, { ring: { sq: ['green'], until: 5000 } }, 5000).length`) === 0 && J(`(() => { const sc = __stand('', 1, { ring: { sq: ['green'], until: 5000 } }, 6000); Campaign.prototype.squadCircle.call(sc); return sc.pn.ring; })()`) === null);
-  check('a squad with no ship out has no ring to draw (nothing, not an error)', J(`(() => { campWing(C, 'fighter').filter(u => u.squad === 'red').forEach(u => { u.hp = 0; }); return __circles('red').length; })()`) === 0 && J(`__circles('squads').length`) === 5);
+  check('the kept ring is drawn the same way: a squad in P.ring is ringed until its time is up, then not, and the state is let go', J(`__circles('', 1, { ring: { sq: ['green'], until: 5000 } }, 100).map(c => c.col).join()`) === String(COL.green) && J(`__circles('', 1, { ring: { sq: ['green'], until: 5000 } }, 5000).length`) === 0 && J(`(() => { const sc = __stand('', 1, { ring: { sq: ['green'], until: 5000 } }, 6000); Campaign.prototype.squadCircle.call(sc); return sc.pn.ring; })()`) === null);
+  check('a squad with no ship out has no ring to draw (nothing, not an error)', J(`(() => { campWing(C, 'fighter').filter(u => u.squad === 'red').forEach(u => { u.hp = 0; }); return __circles('red').length; })()`) === 0 && J(`__circles('squads').length`) === 2);
   check('closing the list takes the ring away: the next frame with nothing open draws none (the graphics are cleared every frame)', J(`(() => { const sc = __stand('green'); Campaign.prototype.squadCircle.call(sc); const a = sc.squadG.calls.length; sc.pn.open = ''; Campaign.prototype.squadCircle.call(sc); return a > 0 && sc.squadG.calls.length === 0; })()`) === true);
   check('a scene made without the squad graphics, or a stand-in without a panel, draws nothing and logs nothing', J(`(() => { const sc = __stand('red'); delete sc.squadG; Campaign.prototype.squadCircle.call(sc); const sd = __stand('red'); delete sd.pn; Campaign.prototype.squadCircle.call(sd); return sd.squadG.calls.length; })()`) === 0);
   g.run('__out(1);');
