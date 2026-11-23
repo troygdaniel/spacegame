@@ -3,7 +3,7 @@
 //   A. the torpedo boats of 1.2 and the wing on a Mine order: a boat's prey is the miners, the haulers and the cruiser, never a fighter, whatever the wing's order is (a skiff still hunts a mining fighter)
 //   C. a beat's hint (the line with the keys) waits a few seconds after the beat's radio line: the screen has one message box, and the hint was replaced on the frame it was put up
 //   D. Enter just after a call closed by itself (its ship gone, its time out) is swallowed for a moment: it was the call's, and it fired a missile
-//   E. funds over the store (CAMP.ore.cap) are left behind when the debrief closes: the radio at the sale, the dock room and the debrief say so; the rule is unchanged
+//   E. a sale over the store: credits are kept apart from ore now (tests/campcredits.mjs), nothing is left behind, and the three warnings of it are gone
 //   B. the words: the radio never names a ship by a bare kind id ("fighter"), and the heavy raid of 1.2, the fifth wave, is not announced as "a third raid"
 // Run: node tests/camphuntpacing.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -86,26 +86,15 @@ console.log('D. Enter meant for a pilot\'s call does not fire a missile when the
   check('a call that ran out of time is the same: Enter just after it is swallowed', r.lateGone === true && r.late === true, JSON.stringify(r));
   check('a call the player answered himself leaves no grace: his next Enter is a missile', r.answered === true && r.closed === true && r.own === false, JSON.stringify(r));
 }
-console.log('E. more cash and ore than the store carries on: the game says so');
+console.log('E. a sale over the store: nothing is left behind any more, and nothing warns of it');
 {
-  // Flying 1.2: "Sold 464 ore for 1392.", the dock room said "Ore in the store: 1392", and 1.3 began with ORE 500/500: a save holds CAMP.ore.cap at the most, and nothing said that 892 was left behind.
-  // The rule stands (Troy decides: docs/night/hunt-l1-pacing.md); the radio at the sale, the dock room's repair page and the debrief now say it (card space-game-l1-pacing-bugs).
-  const r = J(`(() => { const mk = ore => { const C = campNew(1, [], { seed: 1, mission: 1 }); for (let i = 0; i < 30; i++) campStep(C, 1 / 30); C.events.length = 0; C.ore = ore; const o = campOutposts(C.level).find(o => o.market); const sold = campSell(C, o);
-      return { sold, says: C.events.filter(e => e.type === 'say').map(e => [e.key, uiText(e.key, e.vars)]), over: campStoreOver(C), line: campOverLine(C), ore: C.ore, cash: C.cash }; };
-    return { big: mk(464), small: mk(150), none: mk(0), cap: CAMP.ore.cap, rate: campOutposts(1).find(o => o.market).market.rate }; })()`);
-  check('the case: 464 ore sells for 1,392 at the Works (3 a piece), and the store carries 500 on', r.big.sold && r.big.sold.cash === 1392 && r.cap === 500 && r.big.cash === 1392 && r.big.ore === 0, JSON.stringify([r.big.sold, r.cap]));
-  check('what is over is counted: 1,392 of funds, 500 carried, 892 over', r.big.over.funds === 1392 && r.big.over.cap === 500 && r.big.over.over === 892, JSON.stringify(r.big.over));
-  check('the radio says it at the sale, right after the sale\'s own line, with both numbers', r.big.says.length === 2 && r.big.says[0][0] === 'camp.say.sold' && r.big.says[1][0] === 'camp.say.soldover' && r.big.says[1][1] === 'Only 500 comes with us. Spend 892 here.', JSON.stringify(r.big.says));
-  check('the debrief has a line for it: what there is, what the store holds, what was left behind', r.big.line === 'Funds 1392. The store holds 500: 892 was left behind.', r.big.line);
-  check('a sale that fits says nothing more (150 ore for 450) and the debrief has no such line; with no ore nothing is sold', r.small.sold.cash === 450 && r.small.says.length === 1 && r.small.line === '' && r.small.over.over === 0 && r.none.sold === null && r.none.line === '', JSON.stringify([r.small.says, r.small.line, r.none.sold]));
-  const dock = J(`(() => { const lines = []; const C = campNew(1, [], { seed: 1, mission: 1 }); C.cash = 1392; C.ore = 0; const s = { d: { camp: C }, look: { name: 'Occator Works' }, time: { now: 0 }, line: (i, c, t) => lines.push(t) };
-    CAMP_HUBS.page.repair(s); const out = lines.slice(); lines.length = 0; C.cash = 300; CAMP_HUBS.page.repair(s); return { over: out, fits: lines.slice() }; })()`);
-  check('the dock room\'s repair page (the build page is gone: card space-game-repair-with-ore) says it under the ore line, while it can still be spent there, and not when it all fits', dock.over.indexOf('Only 500 leaves with you: 892 to spend here, or it is lost.') === dock.over.indexOf('Ore in the store: 1392') + 1 && dock.over.indexOf('Ore in the store: 1392') >= 0 && !dock.fits.some(t => /leaves with you/.test(t)), JSON.stringify(dock));
-  const scene = readFileSync(join(ROOT, 'src/campaignscene.js'), 'utf8');
-  check('the debrief card asks for that line (showDebrief)', /showDebrief\(sc\) \{[\s\S]{0,3000}campOverLine\(this\.camp\)/.test(scene));
-  const kept = J(`(() => { const k = 'longhaul.campaign', had = localStorage.getItem(k); localStorage.setItem(k, JSON.stringify({ level: 1, mission: 2, techs: [], ore: 1392, results: {} })); const P = campProgressLoad(); if (had == null) localStorage.removeItem(k); else localStorage.setItem(k, had); return P.ore; })()`);
-  check('the rule itself is unchanged: a save with 1,392 is read as 500 (the store), and a mission starts with 500 at the most', kept === 500 && J(`campNew(1, [], { seed: 1, mission: 2, ore: 1392 }).ore`) === 500, String(kept));
-  check('the three lines are short: the radio\'s 12 words at most, the others 14', J(`['camp.say.soldover', 'camp.hub.build.over', 'camp.ui.over'].map(k => uiText(k, { cap: 500, over: 892, funds: 1392 }).split(/\\s+/).length)`).every((n, i) => n <= (i ? 14 : 12)));
+  // Flying 1.2: "Sold 464 ore for 1392.", and 1.3 began with ORE 500/500: a save held CAMP.ore.cap of the cash and the ore together. Card space-game-l1-pacing-bugs made the game SAY so in three places; then Troy chose to
+  // keep credits apart from ore (card space-game-credits-apart-from-ore: the rules are tests/campcredits.mjs), so nothing is lost and the three warnings are gone.
+  const r = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 1 }); for (let i = 0; i < 30; i++) campStep(C, 1 / 30); C.events.length = 0; C.ore = 464; const sold = campSell(C, campOutposts(C.level).find(o => o.market));
+    const P = campCarryOut(campProgressNew(), C); return { sold, says: C.events.filter(e => e.type === 'say').map(e => uiText(e.key, e.vars)), P: [P.ore, P.credits] }; })()`);
+  check('464 ore sells for 1,392 credits, the radio says the one line of the sale, and all of it goes on to the save', r.sold.cash === 1392 && r.says.length === 1 && r.says[0] === 'Sold 464 ore for 1392 credits.' && r.P[0] === 0 && r.P[1] === 1392, JSON.stringify(r));
+  const src = ['src/campoutpost.js', 'src/campdock.js', 'src/campaignscene.js', 'src/contenttables.js'].map(f => readFileSync(join(ROOT, f), 'utf8')).join('\n');
+  check('the three over-the-store warnings and their words are gone (the radio at the sale, the dock room, the debrief)', !/campStoreOver|campOverLine|camp\.say\.soldover|camp\.hub\.build\.over|camp\.ui\.over\b/.test(src));
 }
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nHUNT L1 PACING FAIL (${failed} of ${n})` : `\nHUNT L1 PACING PASS (${n} checks)`);

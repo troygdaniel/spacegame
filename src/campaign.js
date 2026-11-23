@@ -784,7 +784,7 @@ function campNew(level, techs, opts) {
     ore: Math.max(0, Math.min(CAMP.ore.cap, opts.ore != null ? opts.ore : (L.startOre != null ? L.startOre : CAMP.ore.start))), shield: CAMP.carrier.shield, pickups: [], mends: [],
     relic: L.relic ? { x: campPlaces(level)[L.relic.place].x, y: campPlaces(level)[L.relic.place].y, hold: 0 } : null,
     bay: { fighters: CAMP.bay.fighters }, launchQ: [], nextLaunch: 0, tgt: '', repairs: [], // repairs: the fighters landed and being mended, { kind, until, order, stay } (src/camprepair.js)
-    waves: L.waves.map(() => ({ started: false, at: 0 })), convoys: L.convoys.map(() => ({ started: false })), delivered: 0, lost: 0, kills: 0, launched: 0, lostShips: 0, lane: {}, cash: 0, sold: 0, oreBest: 0,
+    waves: L.waves.map(() => ({ started: false, at: 0 })), convoys: L.convoys.map(() => ({ started: false })), delivered: 0, lost: 0, kills: 0, launched: 0, lostShips: 0, lane: {}, cash: Math.max(0, Math.floor(+opts.credits || 0)), sold: 0, oreBest: 0,
     orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, repair: 0, mendship: 0, power: 0, balance: 0, emergency: 0, convoy: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
     result: null, why: '', docked: '' // docked: the id of the outpost the carrier is docked at ('' in flight; src/campoutpost.js)
   };
@@ -859,6 +859,17 @@ function campSpawn(C, kind, x, y) {
   return u;
 }
 // the money of the dock: the cash (what ore sold at a market came to) and the ore in the store; a price is paid from the cash first, then the ore
+// ORE AND CREDITS (card space-game-credits-apart-from-ore; Troy, 22 Nov 2026). ORE is what the cruiser carries: C.ore in a battle, P.ore in the save, CAMP.ore.cap at the most, spent anywhere (a repair in flight spends
+// ore only: src/campmend.js). CREDITS are what an outpost pays for ore (campSell): C.cash in a battle, P.credits in the save, no cap, spent only at a station (docked, the ready room's refit, the Earth refit), where they
+// are spent FIRST. It was one number: a sale's cash was saved as ore and cut to the store at the next load (sold 464 ore for 1,392, began the next mission with 500).
+//   campFunds(C), campPay(C, cost)      a battle, at a station: the cash and the ore together; the cash first
+//   campCarryOut(P, C)                  what goes on from a mission into the save: the ore left in the store and all the credits
+//   campWealth(P), campSpend(P, cost)   the save, at a station (the ready room, the Earth refit): credits and ore together; credits first; false and nothing taken when both are short
+//   campRefund(P, n)                    money given back at a station: ore while the store has room (ore is what a repair in flight can spend), the rest credits; nothing is cut
+function campCarryOut(P, C) { P.ore = Math.max(0, Math.min(CAMP.ore.cap, Math.floor(C.ore))); P.credits = Math.max(0, Math.floor(C.cash || 0)); return P; }
+const campWealth = P => Math.max(0, Math.floor(P.credits || 0)) + Math.max(0, P.ore | 0);
+function campSpend(P, cost) { if (!(cost >= 0) || campWealth(P) < cost) return false; const c = Math.min(Math.max(0, Math.floor(P.credits || 0)), cost); P.credits = Math.max(0, Math.floor(P.credits || 0)) - c; P.ore = (P.ore | 0) - (cost - c); return true; }
+function campRefund(P, n) { if (!(n > 0)) return P; n = Math.floor(n); const o = Math.min(n, Math.max(0, CAMP.ore.cap - (P.ore | 0))); P.ore = (P.ore | 0) + o; P.credits = Math.max(0, Math.floor(P.credits || 0)) + (n - o); return P; }
 const campFunds = C => Math.floor(C.cash || 0) + Math.floor(C.ore);
 function campPay(C, cost) { const c = Math.min(C.cash || 0, cost); C.cash = (C.cash || 0) - c; C.ore -= cost - c; }
 const campAlive = C => C.ships.filter(u => u.hp > 0);
@@ -1633,7 +1644,7 @@ function campEnding() {
   const R = (CAMP.levels[3] && CAMP.levels[3].reveal) || {};
   return [uiText('camp.end.1'), uiText('camp.end.2'), uiText('camp.end.3', { star: R.star || '' })];
 }
-function campProgressNew() { return { level: 1, mission: 0, levelDone: 0, techs: [], found: [], ore: 0, bonus: { fighters: 0 }, results: {}, revealed: false }; } // level and mission: the next one to fly; ore: carried into the next level; bonus: the extra ships the Earth refit bought for it; results: { '<level>.<mission>': { score, bonuses: [ids], t, hull, lost, tries } }, one for each mission flown (the best score is kept)
+function campProgressNew() { return { level: 1, mission: 0, levelDone: 0, techs: [], found: [], ore: 0, credits: 0, bonus: { fighters: 0 }, results: {}, revealed: false }; } // level and mission: the next one to fly; ore: carried into the next level; bonus: the extra ships the Earth refit bought for it; results: { '<level>.<mission>': { score, bonuses: [ids], t, hull, lost, tries } }, one for each mission flown (the best score is kept)
 const campResultKey = (level, i) => level + '.' + ((i | 0) + 1);
 function campProgressLoad() {
   const P = campProgressNew();
@@ -1644,7 +1655,8 @@ function campProgressLoad() {
     if (Number.isInteger(raw.levelDone) && raw.levelDone >= 0 && raw.levelDone < 9) P.levelDone = raw.levelDone; // the level whose last mission is won and whose story and pick are not done yet (a tab closed at the pick)
     if (Array.isArray(raw.techs)) raw.techs.forEach(t => { if (CAMP.tech[t] && P.techs.indexOf(t) < 0) P.techs.push(t); });
     if (Array.isArray(raw.found)) raw.found.slice(0, 99).forEach(k => { if (typeof k === 'string' && /^[1-9]\.[a-z0-9]{1,16}$/.test(k) && P.found.indexOf(k) < 0) P.found.push(k); }); // the cloaked caches looted: '<level>.<id>'
-    if (Number.isFinite(raw.ore)) P.ore = Math.max(0, Math.min(CAMP.ore.cap, Math.floor(raw.ore)));
+    if (Number.isFinite(raw.credits) && raw.credits > 0) P.credits = Math.floor(raw.credits); // credits: what the outposts paid for ore, no cap (card space-game-credits-apart-from-ore)
+    if (Number.isFinite(raw.ore)) { const ore = Math.max(0, Math.floor(raw.ore)); P.ore = Math.min(CAMP.ore.cap, ore); P.credits += ore - P.ore; } // the store holds CAMP.ore.cap; what an OLD save has over it was the cash of a sale (saved as ore, and cut here until this card): it becomes credits, nothing is lost
     P.revealed = raw.revealed === true; // the ending has been seen (SPOILER: campReveal)
     if (raw.bonus && typeof raw.bonus === 'object') { const b = x => Number.isInteger(x) ? Math.max(0, Math.min(CAMP.refit.most, x)) : 0; P.bonus = { fighters: Math.min(CAMP.refit.most, b(raw.bonus.fighters) + b(raw.bonus.escorts)) }; } // an escort bought before card space-game-cut-escorts is a fighter now
     if (raw.results && typeof raw.results === 'object') Object.keys(raw.results).slice(0, 40).forEach(k => { const r = raw.results[k]; if (/^[1-9]\.[1-9]$/.test(k) && r && Number.isFinite(r.score)) P.results[k] = { score: Math.max(0, Math.min(99999, Math.floor(r.score))), bonuses: Array.isArray(r.bonuses) ? r.bonuses.filter(x => typeof x === 'string').slice(0, 6).map(x => x.slice(0, 24)) : [], t: Math.max(0, r.t | 0), hull: Math.max(0, r.hull | 0), lost: Math.max(0, r.lost | 0), tries: Math.max(1, Math.min(99, r.tries | 0 || 1)), replays: Math.max(0, Math.min(999, r.replays | 0)) }; if (Number.isInteger(r.rank) && r.rank >= 0 && r.rank < 12) P.results[k].rank = r.rank; }); // replays: how many times it was flown again (card space-game-campaign-replay); rank: the rank the best run gave, an index (the ranks card)
@@ -1652,7 +1664,7 @@ function campProgressLoad() {
   if (P.mission >= campMissions(P.level).length) P.mission = 0;
   return P;
 }
-function campProgressSave(P) { campTry(() => localStorage.setItem(CAMP.store, JSON.stringify({ level: P.level, mission: P.mission | 0, levelDone: P.levelDone | 0, techs: P.techs, found: P.found || [], ore: P.ore | 0, bonus: P.bonus, results: P.results || {}, revealed: P.revealed === undefined ? campProgressLoad().revealed : P.revealed === true })), 0); } // revealed: the ending has been seen (SPOILER: campReveal)
+function campProgressSave(P) { campTry(() => localStorage.setItem(CAMP.store, JSON.stringify({ level: P.level, mission: P.mission | 0, levelDone: P.levelDone | 0, techs: P.techs, found: P.found || [], ore: P.ore | 0, credits: Math.max(0, Math.floor(P.credits || 0)), bonus: P.bonus, results: P.results || {}, revealed: P.revealed === undefined ? campProgressLoad().revealed : P.revealed === true })), 0); } // revealed: the ending has been seen (SPOILER: campReveal)
 // a mission won: its result is kept (the best score, how many tries), and the mission to fly next moves on. Answers { levelDone }: true when it was the last mission of its level (the caller goes to the level's story and refit, then the next level)
 function campMissionDone(P, level, i, sc) {
   const k = campResultKey(level, i), old = P.results[k], res = { score: sc.score, bonuses: sc.bonuses.filter(b => b.ok).map(b => b.id), t: sc.t, hull: sc.hullLeft, lost: sc.shipsLost, tries: (old ? old.tries : 0) + 1 };

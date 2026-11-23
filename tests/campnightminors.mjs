@@ -22,7 +22,7 @@ check('the lost title is the mirror of the won one ("MISSION COMPLETE: <title>")
 check('a level without missions keeps "LEVEL n LOST" (the stand-in with no camp)', J(`(() => { const got = []; Campaign.prototype.showLost.call({ level: 2, showCard: (t) => got.push(t), say() {} }, 'earth'); return got[0]; })()`) === 'LEVEL 2 LOST');
 
 console.log('2. the refit header lists the keys of its rows');
-const hdr = n => J(`(() => { const got = []; const sc = { choices: ${JSON.stringify(['a', 'b', 'c', 'd', 'e', 'f'].slice(0, n))}, refit: { pick: null, f: 0, e: 0, ore: 10 }, showCard: (t, lines) => got.push(lines) }; Campaign.prototype.paintRefit.call(sc); return got[0]; })()`);
+const hdr = n => J(`(() => { const got = []; const sc = { choices: ${JSON.stringify(['a', 'b', 'c', 'd', 'e', 'f'].slice(0, n))}, refit: { pick: null, f: 0, e: 0, w: { ore: 10, credits: 0 } }, showCard: (t, lines) => got.push(lines) }; Campaign.prototype.paintRefit.call(sc); return got[0]; })()`);
 const h3 = hdr(3), h5 = hdr(5), h6 = hdr(6);
 check('three techs: "Choose a technology:  1  2  3"', h3[1] === 'Choose a technology:  1  2  3', h3[1]);
 check('a looted tech or two: the header says 6 and 7 as the rows do', h5[1] === 'Choose a technology:  1  2  3  6  7' && /^6   /.test(h5[5]) && /^7   /.test(h5[6]), h5[1] + ' | ' + h5[5] + ' | ' + h5[6]);

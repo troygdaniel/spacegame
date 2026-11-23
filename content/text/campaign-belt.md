@@ -15,6 +15,6 @@ The words of the Campaign's first level, the asteroid belt (card space-game-camp
 | camp.say.escortcarrier | The squads are with the cruiser. |
 | camp.ui.refit | EARTH REFIT |
 | camp.ui.refitpick | Choose a technology:  {keys} |
-| camp.ui.refitbuy | 4  +1 fighter ({fc} ore) |
-| camp.ui.refitore | ORE  {ore}     EXTRA SHIPS  {xf} fighters |
+| camp.ui.refitbuy | 4  +1 fighter ({fc})     credits first, then ore |
+| camp.ui.refitore | CREDITS  {credits}   ORE  {ore}     EXTRA SHIPS  {xf} fighters |
 | camp.ui.refitgot | Chosen: {name}.  Enter  continue |

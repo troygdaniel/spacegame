@@ -105,7 +105,7 @@ class Campaign extends Phaser.Scene {
   makeCamp() { // a new battle of this level: arrived by the chain (or a retry), the ore and the extra ships of the refit come with the cruiser; a level started by itself (an address, a skip) has its own
     const carried = this.P.level === this.level || this.replay === true; // a replay flies with the pilot's CURRENT ore, extra ships, techs and rank, whatever level it is of
     this.P.promo = null; // the promotion of the last debrief is told once
-    return campNew(this.level, this.P.techs, Object.assign({}, this.opts, { found: this.P.found, rank: typeof campRank === 'function' ? campRank(this.P).i : 0, power: campPowerLoad(), pace: CAMP.pace.start }, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {})); // the rank (src/campranks.js) fills the bay and lifts the wing limit; found: the cloaked caches looted so far (their weapons stay with the pilot); the wing's stance is the pilot's: it comes with every battle
+    return campNew(this.level, this.P.techs, Object.assign({}, this.opts, { found: this.P.found, rank: typeof campRank === 'function' ? campRank(this.P).i : 0, power: campPowerLoad(), pace: CAMP.pace.start, credits: this.P.credits }, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {})); // (the credits are the pilot's, like the rank: they come with every battle, so a win never writes them over with less) // the rank (src/campranks.js) fills the bay and lifts the wing limit; found: the cloaked caches looted so far (their weapons stay with the pilot); the wing's stance is the pilot's: it comes with every battle
   }
   drawPlace(p) { // returns what it made, so a far place can be taken down again (syncFar)
     const r = p.r || 60, made = [];
@@ -166,7 +166,6 @@ class Campaign extends Phaser.Scene {
        num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     const scoreLine = uiText('camp.ui.score', { score: sc.score }), lines = [R ? scoreLine + '\n' + uiText('camp.ui.replayscore', { now: num(R.now), old: num(R.old) }) + ' ' + (R.improved || R.first ? uiText('camp.ui.replaybest', { best: num(R.best) }) : uiText('camp.ui.replaykept', { best: num(R.best) })) : scoreLine].concat(sc.bonuses.map(b => b.ok ? uiText('camp.ui.bonusmet', { pts: b.points, text: this.bonusText(b) }) : uiText('camp.ui.bonusmiss', { text: this.bonusText(b) })), [uiText('camp.ui.debriefstats', { time: clock(sc.t), hull: sc.hullLeft, lost: sc.shipsLost })], sc.haulersLost > 0 ? [uiText('camp.ui.debriefhaulers', { n: sc.haulersLost, pts: sc.haulerLost })] : []); // a replay says so, and the old best against this run
     const dk = M.dock && campPlaces(this.level)[M.dock]; if (dk && dk.outpost) lines.push(uiText('camp.ui.outpost', { outpost: dk.outpost, name: dk.name })); // the debrief is at the outpost of the mission's dock
-    { const ov = typeof campOverLine === 'function' ? campOverLine(this.camp) : ''; if (ov) lines.push(ov); } // more cash and ore than the store carries on: said here, where it is left behind (src/campoutpost.js)
     if (this.tuned === true) lines.push(uiText('camp.ui.tune.notkept')); // a tuned run keeps no score and no rank (the tuning panel)
     else if (typeof campRankLine === 'function') { const r = campRankLine(this.P, sc); if (r) lines.push(r); } // the ranks card's: a rank for the score, when it is there
     this.mode = 'debrief'; this.showCard(uiText(R ? 'camp.ui.replay' : 'camp.ui.debrief', { title: uiText(k + 'title') }), lines, uiText(this.mdone ? 'camp.ui.next' : 'camp.ui.debriefnext'), R ? 380 : 330);
@@ -176,11 +175,11 @@ class Campaign extends Phaser.Scene {
     const C = this.camp; if (!C.L.objectives) { this.showWon(); return; }
     const sc = this.tuned === true ? Object.assign({}, C.score, { score: 0, bonuses: [] }) : C.score; // a tuned run (the tuning panel): the level moves on, the best scores and the rank, which are sums of them, do not (src/camptune.js)
     if (this.replay === true) { // a replay (card space-game-campaign-replay; strict: a stand-in scene in a test answers any property): the best is kept, the ore comes with the cruiser as ever, a better best can still promote, and the level and the next mission stay where they are (no story, no refit, no pick)
-      const was0 = typeof campRank === 'function' ? campRank(this.P).i : 0; this.replayRes = campReplayDone(this.P, this.level, this.mi, sc); this.mdone = false; this.P.ore = campFunds(C);
+      const was0 = typeof campRank === 'function' ? campRank(this.P).i : 0; this.replayRes = campReplayDone(this.P, this.level, this.mi, sc); this.mdone = false; campCarryOut(this.P, C);
       this.P.promo = typeof campRankPromoted === 'function' ? campRankPromoted(was0, this.P) : null; campProgressSave(this.P); this.showDebrief(C.score); return;
     }
     const was = typeof campRank === 'function' ? campRank(this.P).i : 0, r = campMissionDone(this.P, this.level, this.mi, sc); this.mdone = r.levelDone;
-    this.P.ore = campFunds(C); // the ore comes with the cruiser
+    campCarryOut(this.P, C); // the ore left in the store comes with the cruiser, and the credits of its sales, whole (card space-game-credits-apart-from-ore: they were one number, cut to the store at the next load)
     this.P.promo = typeof campRankPromoted === 'function' ? campRankPromoted(was, this.P) : null; // the debrief says it (campRankLine)
     campProgressSave(this.P); // the result is kept: the ready room (src/camphub.js) and the next mission read it from the save (these were a trailing comment's, once: tests/campranks.mjs holds them)
     this.showDebrief(C.score);
@@ -211,18 +210,18 @@ class Campaign extends Phaser.Scene {
   }
   // the Earth refit after the belt: one of the three techs (pick again before Enter), and ore buys extra fighters for the next level (the workshop's prices)
   showRefit() {
-    this.mode = 'refit'; this.choices = campTechChoices(this.level, this.P); this.refit = { pick: null, f: 0, ore: campFunds(this.camp) }; this.paintRefit();
+    this.mode = 'refit'; this.choices = campTechChoices(this.level, this.P); this.refit = { pick: null, f: 0, w: campCarryOut({}, this.camp) }; this.paintRefit(); // w: the ore and the credits the cruiser came home with; the refit spends credits first (campSpend)
   }
   paintRefit() {
-    const R = this.refit, B = CAMP.refit, lines = [uiText('camp.ui.refitore', { ore: R.ore, xf: R.f }), uiText('camp.ui.refitpick', { keys: this.choices.map((id, i) => i < 3 ? i + 1 : i + 3).join('  ') })]
+    const R = this.refit, B = CAMP.refit, lines = [uiText('camp.ui.refitore', { ore: R.w.ore, credits: R.w.credits, xf: R.f }), uiText('camp.ui.refitpick', { keys: this.choices.map((id, i) => i < 3 ? i + 1 : i + 3).join('  ') })]
       .concat(this.choices.map((id, i) => (i < 3 ? i + 1 : i + 3) + '   ' + campTechLine(id, this.P) + (R.pick === id ? '   <' : '')), [uiText('camp.ui.refitbuy', { fc: B.fighterCost })]);
     this.showCard(uiText('camp.ui.refit'), lines, R.pick ? uiText('camp.ui.refitgot', { name: uiText('camp.tech.' + R.pick + '.name') }) : '', 380);
   }
   refitKey(c) {
     const R = this.refit, B = CAMP.refit, i = { Digit1: 0, Digit2: 1, Digit3: 2, Digit6: 3, Digit7: 4, Digit8: 5 }[c]; // 4 buys a ship, so what was looted from the cloaked caches (src/campanomaly.js) is chosen with 6, 7 and 8
     if (i !== undefined && this.choices[i]) R.pick = this.choices[i];
-    else if (c === 'Digit4' && R.f < CAMP.refit.most && R.ore >= B.fighterCost) { R.f++; R.ore -= B.fighterCost; }
-    else if (c === 'Enter' && R.pick) { campPick(this.P, R.pick); this.P.bonus = { fighters: R.f }; this.hideCard(); this.next(R.ore); return; }
+    else if (c === 'Digit4' && R.f < CAMP.refit.most && campSpend(R.w, B.fighterCost)) R.f++;
+    else if (c === 'Enter' && R.pick) { campPick(this.P, R.pick); this.P.bonus = { fighters: R.f }; this.hideCard(); this.next(R.w); return; }
     else return;
     this.paintRefit();
   }
@@ -240,10 +239,10 @@ class Campaign extends Phaser.Scene {
     const ms = !!(this.camp && this.camp.L && this.camp.L.objectives); this.showCard(ms ? uiText('camp.ui.lostmission', { title: uiText('camp.m.' + this.level + '.' + (this.camp.L.mission + 1) + '.title') }) : uiText('camp.ui.lost', { n: this.level }), lines, uiText(ms ? 'camp.ui.retrymission' : 'camp.ui.retry')); this.say([lines[0]].concat(lines.slice(2))); // the numbers are for reading: the cause and the tip are said
   }
   showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap'), uiText('camp.ui.pausepanels')].concat([uiText('camp.ui.pausehelp')], (this.camp && this.camp.L && this.camp.L.objectives) ? [uiText('camp.ui.pauseretry')] : [], typeof campDebugOn === 'function' && campDebugOn() && typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), (this.camp && this.camp.L && this.camp.L.objectives) ? 428 : 398); } // the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
-  next(ore) { // after the story (and the pick, or the refit): the next level, or after the last one the end, with a new campaign waiting. ore: what is left to carry (the refit spent some)
+  next(w) { // after the story (and the pick, or the refit): the next level, or after the last one the end, with a new campaign waiting. w: the ore and the credits that are left to carry (the refit spent some), { ore, credits }
     const last = !CAMP.levels[this.level + 1]; this.P.levelDone = 0; // the story and the pick are done: the level is over
-    this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) { this.P.techs = []; this.P.found = []; this.P.ore = 0; this.P.bonus = { fighters: 0 }; this.P.revealed = true; } // a new campaign: the techs and the loot of the last one are gone with the ore and the ships (the rank is the pilot's career and stays) // the ending is about to show: from now on a replay says the outpost (SPOILER)
-    else { this.P.ore = ore != null ? ore : Math.floor(this.camp.ore); if (!CAMP.levels[this.level].refit) this.P.bonus = { fighters: 0 }; } // the extras of a refit are for the level after it; a level that had none carries only ore
+    this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) { this.P.techs = []; this.P.found = []; this.P.ore = 0; this.P.credits = 0; this.P.bonus = { fighters: 0 }; this.P.revealed = true; } // a new campaign: the techs and the loot of the last one are gone with the ore and the ships (the rank is the pilot's career and stays) // the ending is about to show: from now on a replay says the outpost (SPOILER)
+    else { if (w) { this.P.ore = w.ore; this.P.credits = w.credits; } else campCarryOut(this.P, this.camp); if (!CAMP.levels[this.level].refit) this.P.bonus = { fighters: 0 }; } // the extras of a refit are for the level after it; a level that had none carries only ore
     campProgressSave(this.P);
     if (!last) { go(this, 'CampHub', {}); return; } // the next level begins in its ready room: Launch flies its first mission (and the warp, if it has one)
     this.showEnd();
@@ -548,7 +547,7 @@ class Campaign extends Phaser.Scene {
     const out = campWing(C, 'fighter').length, waves = C.L.waves;
     this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(campObjective(C));
     this.hud.bay.setText(uiText('camp.ui.baywords', { f: C.bay.fighters, out })); // "BAY  fighters 8   OUT 0"
-    if (this.hud.ore) this.hud.ore.setColor(C.ore >= CAMP.ore.cap ? '#ffb454' : '#ffd37a').setText(uiText('camp.ui.ore') + '  ' + Math.floor(C.ore) + '/' + CAMP.ore.cap + (C.cash > 0 ? '   ' + uiText('camp.ui.cash') + '  ' + Math.floor(C.cash) : '') + (C.mends.length ? '  +' + C.mends.length : '')); // the ore, under the shield gauge (+n: ships being mended) (and the cash a market paid, when there is some) (a stand-in scene in a test may have no ore text)
+    if (this.hud.ore) this.hud.ore.setColor(C.ore >= CAMP.ore.cap ? '#ffb454' : '#ffd37a').setText(uiText('camp.ui.ore') + '  ' + Math.floor(C.ore) + '/' + CAMP.ore.cap + (C.cash > 0 ? '   ' + uiText('camp.ui.cash') + '  ' + Math.floor(C.cash) : '') + (C.mends.length ? '  +' + C.mends.length : '')); // the ore, under the shield gauge (+n: ships being mended) and the credits beside it when there are some (what the outposts paid, and what the save brought: card space-game-credits-apart-from-ore) (a stand-in scene in a test may have no ore text)
     const wc = typeof campWaveCount === 'function' ? campWaveCount(C) : { n: C.waves.filter(w => w.started).length, total: waves.length }; // the waves that can come on the lane she flies (src/camproute.js)
     this.hud.wave.setText(uiText('camp.ui.wave', { n: wc.n, total: wc.total }));
     this.hud.mother.setText(m ? uiText('camp.ui.mother') : '');

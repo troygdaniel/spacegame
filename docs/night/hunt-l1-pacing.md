@@ -83,6 +83,8 @@ No stretch with nothing alive was longer than 43 s. The 40 s stretches in 1.2 ar
 
 ## The store: what the game says now, and the options (finding B)
 
+**Decided (22 Nov 2026): Troy chose option 2, credits kept apart from ore**, built as card `space-game-credits-apart-from-ore`: a sale pays credits with no cap, saved beside the ore; ore stays what the cruiser carries (500) and is what a repair in flight spends; an old save's ore over 500 becomes credits. The three lines below were taken out again with it, since nothing is left behind any more. What follows is kept as the record of what was found and offered.
+
 Nothing of the economy changed. Three lines were added, each only when the cash and the ore together are over the store's 500:
 
 - **At the sale**, on the radio, after "Sold 464 ore for 1392.": **"Only 500 comes with us. Spend 892 here."**
