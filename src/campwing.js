@@ -42,10 +42,33 @@ function campSquadNext(C) {
   (C.repairs || []).forEach(r => { if (r.kind === 'fighter' && n[r.squad] != null) n[r.squad]++; });
   return ids.reduce((best, k) => (n[k] < n[best] ? k : best), ids[0]);
 }
-// the squads a list is about (card space-game-squad-tint; Troy, 22 Nov 2026): the red, green or yellow list (E R T) is its own squad's, the all-squads list (W) is all three, any other list or none is nobody's. The flight draws a circle round
-// the fighters of these squads only: while the list is open, so the player sees who an order goes to; in normal flight a fighter is just drawn in its squad's colour (src/campaignscene.js).
+// THE SQUAD RING (card space-game-squad-rings; Troy, 22 Nov 2026, turning back the tint of card space-game-squad-tint): the fighters are all drawn alike, and a ring in the squad's colour is the only mark of a squad. It is on only for a squad IN FOCUS, so the
+// player sees who an order goes to: (a) the squad whose row is highlighted in the Q list (All squads: all three, each in its own colour), (b) the squad whose list is open (E red, R green, T yellow, W all three), a target sub-list opened from it too, and
+// (c) after an order was given from such a list the ring is KEPT (P.ring = { sq, until }) until another squad is in focus, X clears the target, or CAMP.wing.ringKeep ms have passed. The map's dots follow the same rule (src/campmap.js).
+// campSquadsLit(openId)             the squads a list is about: the red, green or yellow list is its own, the all-squads list is all three, any other list or none is nobody's
+// campSquadsFocus(P, C)             the squads in focus now: the open list's; in the fleet list (Q) the highlighted row's (a row that opens a squad's list); else none
+// campSquadsKeep(P, openId, now)    an order was given from list openId: its squads keep their ring (nothing for a list that is not a squad's)
+// campSquadsFree(P)                 X: the kept ring goes
+// campSquadsShown(P, C, now)        the squads to draw a ring round this frame: the focus, which replaces the kept ring, else the kept ring until its time is up
 function campSquadsLit(openId) {
   return openId === 'squads' ? CAMP.wing.squads.slice() : CAMP.wing.squads.indexOf(openId) >= 0 ? [openId] : [];
+}
+function campSquadsFocus(P, C) {
+  const open = typeof campPanelOpen === 'function' ? campPanelOpen(P) : ''; if (!open) return [];
+  if (open !== 'fleet') return campSquadsLit(open);
+  const row = C && typeof campPanelList === 'function' ? campPanelList(C, open)[P.at | 0] : null; // the Q list: the squad whose row the highlight is on
+  return row && row.open ? campSquadsLit(row.open) : [];
+}
+function campSquadsKeep(P, openId, now) {
+  const sq = campSquadsLit(openId); if (P && sq.length) P.ring = { sq, until: now + CAMP.wing.ringKeep };
+}
+function campSquadsFree(P) { if (P) P.ring = null; }
+function campSquadsShown(P, C, now) {
+  if (!P || typeof P !== 'object') return [];
+  const f = campSquadsFocus(P, C); if (f.length) { P.ring = null; return f; } // a squad in focus takes the ring over: what was kept is let go
+  const k = P.ring; if (!k) return [];
+  if (!(now < k.until)) { P.ring = null; return []; }
+  return k.sq.slice();
 }
 
 // A squad SENT to a ship in trouble (card space-game-distress-send-squads; a pilot's call, src/camporders.js campCallSend): its order is an attack with { rescue: <ship id>, back: <the order it had> }. Each tick it fights the nearest

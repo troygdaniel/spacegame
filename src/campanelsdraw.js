@@ -96,6 +96,13 @@ function campPanelsPaint(s, now) {
 }
 
 // a click on a row of the open list does the row (as Enter would). true when the list took the click (so it is not also a click on the map or the battle)
+// the pointer is on the open list's box: a press there is the list's click (campPanelsClick), never the start of a drag of the view (src/campdrag.js)
+function campPanelsOver(s, px, py) {
+  const P = s.pn; if (!P || typeof P !== 'object' || !campPanelsOn(s)) return false;
+  const def = campPanelDef(campPanelOpen(P)); if (!def) return false;
+  const V = campPanelView(P, s.camp); if (!V) return false;
+  const G = campPanelsGeometry(def, V.total); return px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h;
+}
 function campPanelsClick(s, px, py) {
   const P = s.pn, L = s.pnl; if (!P || !L || !campPanelsOn(s)) return false;
   const def = campPanelDef(campPanelOpen(P)); if (!def) return false;
@@ -113,6 +120,7 @@ function campPanelsClick(s, px, py) {
     if (campPickKind(hit) && campPanelRowState(s.camp, hit).ok) { const plan = campPickPlan(s.camp, hit); if (plan.how === 'list') { campPickOpen(P, hit, plan.items); return true; } if (plan.how === 'auto') item = plan.item; } // a row that needs a target: one is taken, several open a sub-list
     const r = campPanelRun(s.camp, hit, 'click', item); P.lit[hit.id] = now; if (r && r.say) toast(s, r.say, r.ok ? '#9fe9ff' : '#ffb454');
     if (r && r.ok && item) P.seen = { kind: campPickKind(hit), id: item.id, until: now + CAMP_PICK.seen };
+    if (r && r.ok) campSquadsKeep(P, def.id, now);
     if (r && r.ok && !hit.stay) campPanelClose(P);
   }
   return true;

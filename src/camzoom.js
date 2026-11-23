@@ -43,6 +43,9 @@ function camzoomEase(cur, target, dt) {
   const k = 1 - Math.exp(-Math.max(0, dt) * CAMZOOM.ease), z = cur + (target - cur) * k;
   return Math.abs(target - z) < 0.0005 ? target : z;
 }
+// the scroll that keeps a world point under a screen point as the zoom changes (card space-game-drag-view: the wheel zooms about the pointer while the view is dragged off the cruiser). anchor = { wx, wy, sx, sy }: the
+// world point and the screen point it stays under. The camera's centre is scroll + W/2 at any zoom, so the world point at screen sx is scroll + W/2 + (sx - W/2) / z.
+function camzoomAnchorScroll(a, z) { return { x: a.wx - W / 2 - (a.sx - W / 2) / z, y: a.wy - H / 2 - (a.sy - H / 2) / z }; }
 function camzoomCompose(base, wheel) { return Math.min(4, Math.max(0.01, base * wheel)); } // (the floor was 0.25, then 0.1: the Campaign's view goes out to 0.2 (card space-game-zoom-out-more) and, on a long mission, to the zoom at which its route fits, down to 0.02 (card space-game-zoom-fit-mission); the Long Haul's wheel stops at 0.4 times its base, which is over this either way)
 // how much a world label is scaled so it keeps its size on the screen when the camera is out
 function camzoomLabelScale(z) { return z < 1 ? Math.min(CAMZOOM.labelMax, 1 / z) : 1; }
@@ -98,6 +101,7 @@ function camzoomFrame(s) {
   c.cur = camzoomEase(c.cur, s.leaving || s.dead ? 1 : CAMZOOM.want, s.game.loop.delta);
   main.setZoom(camzoomCompose(c.base, c.cur)); c.out = main.zoom;
   const z = c.out;
+  if (c.anchor) { const q = camzoomAnchorScroll(c.anchor, z); main.setScroll(q.x, q.y); if (c.cur === CAMZOOM.want) c.anchor = null; } // a zoom about a point (src/campdrag.js): the scroll follows the zoom until it has arrived
   c.bg.setScroll(main.scrollX, main.scrollY); // the distant bodies drift as they always did, at their own size
   const f = main.fadeEffect; c.ui.setAlpha(f && (f.isRunning || f.isComplete) ? 1 - f.alpha : 1); // a fade of the world takes the HUD with it, as it did with one camera
   // the key cap prompt over the ship or a signal is placed as if the zoom were 1 (src/ui.js, src/poi.js): move it to where that point really is
