@@ -33,6 +33,7 @@ try {
   const cam = () => j(`(() => { const c = ${S}.cameras.main, ca = ${S}.camp.carrier; return { sx: c.scrollX, sy: c.scrollY, z: c.zoom, follow: !!c._follow, panned: !!${S}.panned, mark: !!(${S}.dragMark && ${S}.dragMark.on), cx: ca.x, cy: ca.y, mid: { x: c.scrollX + 640, y: c.scrollY + 360 } }; })()`);
 
   await t.waitFor(`!!(window.game && game.scene.isActive('Title'))`, 30000, 'the title'); await t.clock(); await t.run(900);
+  await t.ev('(() => { campFleetListSet(true); campShipListSet(true); return 1; })()'); // these walks are about the order lists: Q and P open them, which the game switches off (CAMP_FLEET_LIST, CAMP_SHIP_LIST: cards space-game-q-selects-all and space-game-p-opens-power); on here, as the node suites do
   const res = { score: 2000, bonuses: ['swift'], t: 100, hull: 800, lost: 0, tries: 1 }, results = {};
   for (let l = 1; l <= LEVEL; l++) for (let m = 1; m <= 3; m++) if (l < LEVEL || m < MISSION) results[l + '.' + m] = res;
   await t.ev(`localStorage.setItem('longhaul.campaign', ${JSON.stringify(JSON.stringify({ level: LEVEL, mission: MISSION - 1, techs: LEVEL === 1 ? [] : ['shield'], ore: 60, bonus: { fighters: 0, escorts: 0 }, results }))})`);
