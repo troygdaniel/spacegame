@@ -42,7 +42,7 @@ function campSquadNext(C) {
   return ids.reduce((best, k) => (n[k] < n[best] ? k : best), ids[0]);
 }
 // THE SQUAD RING (card space-game-squad-rings; Troy, 22 Nov 2026, turning back the tint of card space-game-squad-tint): the fighters are all drawn alike, and a ring in the squad's colour is the only mark of a squad. It is on only for a squad IN FOCUS, so the
-// player sees who an order goes to: (a) the squad whose row is highlighted in the Q list (All squads: all three, each in its own colour), (b) the squad whose list is open (E red, R green, T yellow, W all three), a target sub-list opened from it too, and
+// player sees who an order goes to: (a) the squad whose row is highlighted in the Q list (All squads: all three, each in its own colour), (b) the squads whose list is open (W all three), the pilot A D picked while no such list is open, a target sub-list opened from it too, and
 // (c) after an order was given from such a list the ring is KEPT (P.ring = { sq, until }) until another squad is in focus, X clears the target, or CAMP.wing.ringKeep ms have passed. The map's dots follow the same rule (src/campmap.js).
 // campSquadsLit(openId)             the squads a list is about: the red, green or yellow list is its own, the all-squads list is all three, any other list or none is nobody's
 // campSquadsFocus(P, C)             the squads in focus now: the open list's; in the fleet list (Q) the highlighted row's (a row that opens a squad's list); else none
@@ -53,10 +53,12 @@ function campSquadsLit(openId) {
   return openId === 'squads' ? CAMP.wing.squads.slice() : CAMP.wing.squads.indexOf(openId) >= 0 ? [openId] : [];
 }
 function campSquadsFocus(P, C) {
-  const open = typeof campPanelOpen === 'function' ? campPanelOpen(P) : ''; if (!open) return [];
-  if (open !== 'fleet') return campSquadsLit(open);
+  const open = typeof campPanelOpen === 'function' ? campPanelOpen(P) : '';
+  const f = C && typeof campSelNow === 'function' ? campSelNow(C) : null, sel = f && f.kind === 'pilot' ? [f.squad] : []; // the pilot A D selected keeps its ring while no squad's list is the focus (card space-game-bracket-select-orders)
+  if (!open) return sel;
+  if (open !== 'fleet') { const lit = campSquadsLit(open); return lit.length ? lit : sel; }
   const row = C && typeof campPanelList === 'function' ? campPanelList(C, open)[P.at | 0] : null; // the Q list: the squad whose row the highlight is on
-  return row && row.open ? campSquadsLit(row.open) : [];
+  const lit = row && row.open ? campSquadsLit(row.open) : []; return lit.length ? lit : sel;
 }
 function campSquadsKeep(P, openId, now) {
   const sq = campSquadsLit(openId); if (P && sq.length) P.ring = { sq, until: now + CAMP.wing.ringKeep };

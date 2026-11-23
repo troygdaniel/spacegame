@@ -70,7 +70,7 @@ function campPanelChoose(P, C, now, how, def) {
 function campPanelKey(P, C, code, now) {
   const res = { used: false, ran: false, ok: false, say: '', row: '', tgt: '', fleet: false, open: campPanelOpen(P) }; // fleet: an order of the left hand or a pick of the target (a label for the tests and the radio; nothing slows the battle for it: card space-game-no-command-slowdown)
   const pk = code ? CAMP_PANELS.panels.find(p => p.code === code) : null;
-  if (pk) { // a list's key (Q W E R T, P O I U): open that list at its first row, or close it when it is the one open
+  if (pk) { // a list's key (Q W, P O I U): open that list at its first row, or close it when it is the one open
     res.used = true;
     if (campPanelOpen(P) === pk.id) campPanelClose(P); else campPanelGo(P, C, pk.id);
     res.open = campPanelOpen(P); return res;
@@ -104,11 +104,19 @@ function campPanelKey(P, C, code, now) {
       res.open = campPanelOpen(P); return res;
     }
   }
-  const tk = typeof campTgtStep === 'function' ? (campKeyIs('next', code) ? 'next' : campKeyIs('last', code) ? 'last' : campKeyIs('near', code) ? 'near' : campKeyIs('clear', code) ? 'clear' : '') : '';
-  if (tk) { // A D S X: the one target (src/camptarget.js)
+  const tk = typeof campTgtStep === 'function' ? (campKeyIs('next', code) ? 'next' : campKeyIs('last', code) ? 'last' : campKeyIs('fnext', code) ? 'fnext' : campKeyIs('flast', code) ? 'flast' : campKeyIs('near', code) ? 'near' : campKeyIs('clear', code) ? 'clear' : '') : '';
+  if (tk) { // [ ] S the hostile, A D the friend, X both (src/camptarget.js: the two selections)
     res.used = true; res.fleet = true; if (!C) return res;
-    if (tk === 'clear') { campTgtClear(C); campSquadsFree(P); } else if (tk === 'near') campTgtNearest(C); else campTgtStep(C, tk === 'next' ? 1 : -1);
-    res.tgt = C.tgt || ''; return res;
+    if (tk === 'clear') { campTgtClear(C); campSelClear(C); campSquadsFree(P); } else if (tk === 'near') campTgtNearest(C); else if (tk === 'fnext' || tk === 'flast') campSelStep(C, tk === 'fnext' ? 1 : -1); else campTgtStep(C, tk === 'next' ? 1 : -1);
+    res.tgt = C.tgt || ''; res.sel = C.sel || ''; return res;
+  }
+  const ok = typeof campSelOrder === 'function' ? ['attack', 'guard', 'recall'].find(id => campKeyIs(id, code)) : '';
+  if (ok) { // E R T: the pilots attack the hostile, guard the friend, fly home; a selected pilot takes the order alone (src/camptarget.js campSelOrder)
+    res.used = true; if (!C) return res;
+    const f = campSelNow(C), r = campSelOrder(C, ok, 'key');
+    res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = ok; res.fleet = true;
+    if (res.ok) campSquadsKeep(P, f && f.kind === 'pilot' ? f.squad : 'squads', now); // the pilot (or all three) keep the ring a while
+    return res;
   }
   const pw = ['shields', 'engines', 'weapons', 'balance'].find(id => campKeyIs(id, code));
   if (pw) { // J K L ; the ship's power

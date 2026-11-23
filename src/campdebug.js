@@ -12,9 +12,9 @@
 // Why the switch (card space-game-debug-keys-off): the four keys sit beside Enter, and one slip of the finger on the backslash ended Troy's Mission 1 at 108 s. Off is the normal game.
 const CAMP_DEBUG = {
   keys: [                                   // one row a key. code: the physical key (KeyboardEvent.code, so a layout cannot move it); key: what it says on the pause line; text: what it does
-    { id: 'skip', code: 'BracketRight', key: ']', text: 'next level' },     // ends this level as skipped and starts the next with the first tech of each level before it
+    { id: 'skip', code: 'Quote', key: '\'', text: 'next level' },         // ends this level as skipped and starts the next with the first tech of each level before it
     { id: 'win', code: 'Backslash', key: '\\', text: 'win' },               // wins this level, so the story and the tech pick that follow a win are shown
-    { id: 'lose', code: 'BracketLeft', key: '[', text: 'lose' },            // loses this level (the lose screen)
+    { id: 'lose', code: 'Comma', key: ',', text: 'lose' },              // loses this level (the lose screen)
     { id: 'god', code: 'Backquote', key: '`', text: 'god mode' }            // the carrier takes no damage and Earth's shield does not fall; again to turn it off
   ],
   sep: '   ',                              // between the rows of the pause line
