@@ -555,7 +555,7 @@ console.log('L. ore: asteroid rocks and wrecks, mining, the carrier shield (it m
     for (let i = 0; i < secs * 30 && !C.result; i++) { script(C, i / 30); campStep(C, 1 / 30); C.events.length = 0; } return { r: C.result, t: Math.round(C.t / 1000), ls: C.lostShips, built: C.orders.build, mined: C.orders.mine }; });
   `);
   const withOre = J('__plays2(__ore, 600)'), without = J('__plays2(__stay, 600)');
-  check('a player who also mines and builds wins level 1 on every seed, and loses fewer small ships than the same player without ore (6 seeds together)', withOre.every(r => r.r === 'won') && withOre.reduce((a, r) => a + r.ls, 0) < without.reduce((a, r) => a + r.ls, 0) && withOre.some(r => r.built > 0), JSON.stringify([withOre.map(r => r.ls), without.map(r => r.ls)]));
+  check('a player who also mines and builds wins level 1 on every seed, and loses no more small ships than the same player without ore (6 seeds together; "fewer" until card space-game-fighter-flight: the guarding wing flies in formation now and loses next to none either way, 4 ships without ore before, 2 on one seed in each way now)', withOre.every(r => r.r === 'won') && withOre.reduce((a, r) => a + r.ls, 0) <= without.reduce((a, r) => a + r.ls, 0) && withOre.some(r => r.built > 0), JSON.stringify([withOre.map(r => r.ls), without.map(r => r.ls)]));
 }
 
 // ---------- M. level 1 is the asteroid belt, in three missions ----------
