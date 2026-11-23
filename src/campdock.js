@@ -36,6 +36,7 @@ CAMP_HUBS.page.build = s => {
   const C = campDockC(s.d); if (!C) return; const w = campDockWing(C), B = CAMP.build; let i = 0;
   s.line(i++, 0, uiText('camp.hub.build.head', { name: s.look.name.toUpperCase() }), '#6dff9c');
   s.line(i++, 0, uiText('camp.hub.build.ore', { ore: campFunds(C) }), '#ffd37a');
+  { const ov = typeof campStoreOver === 'function' ? campStoreOver(C) : null; if (ov && ov.over > 0) s.line(i++, 0, uiText('camp.hub.build.over', ov), '#ffb454'); } // more than the store carries on from the mission: this room is where it can still be spent
   s.line(i++, 0, uiText('camp.hub.build.wing', { f: w.f, e: w.e, q: w.q }), '#e8f6ff');
   i++; s.line(i++, 0, uiText('camp.hub.build.keys', { fc: B.fighterCost, ec: B.escortCost }), '#9fe9ff');
   s.line(i++, 0, uiText('camp.hub.build.room', { ft: B.fighterTime, et: B.escortTime }), '#8fb4c9');
