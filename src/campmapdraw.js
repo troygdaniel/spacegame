@@ -197,6 +197,7 @@ function campMapPaint(s, time) {
       const a = m.rot || 0, tri = [{ x: p.x + Math.cos(a) * 9, y: p.y + Math.sin(a) * 9 }, { x: p.x + Math.cos(a + 2.5) * 6, y: p.y + Math.sin(a + 2.5) * 6 }, { x: p.x + Math.cos(a - 2.5) * 6, y: p.y + Math.sin(a - 2.5) * 6 }];
       g.fillStyle(m.color, 1).fillPoints(tri, true); g.lineStyle(1, CYAN, 1).strokePoints(tri, true);
     }
+    if (m.hull != null) { const K = CAMP.charge, Q = K.mark; g.fillStyle(0x02060d, 0.85).fillRect(p.x - Q.w / 2 - 1, p.y - Q.gap - Q.h - 1, Q.w + 2, Q.h + 2); g.fillStyle(0x16293d, 1).fillRect(p.x - Q.w / 2, p.y - Q.gap - Q.h, Q.w, Q.h); g.fillStyle(K.color[m.band], 1).fillRect(p.x - Q.w / 2, p.y - Q.gap - Q.h, Math.max(1, Math.round(Q.w * m.hull)), Q.h); if (m.hit > 0) g.lineStyle(1, 0xffffff, 0.4 + 0.6 * m.hit).strokeRect(p.x - Q.w / 2 - 1, p.y - Q.gap - Q.h - 1, Q.w + 2, Q.h + 2); } // a ship you protect: its hull as a small bar over its mark (card space-game-protected-health)
   });
   campSensors(C).forEach(sn => { g.lineStyle(1, 0x7fe9ff, 0.3); campMapArcs(X(sn.x), Y(sn.y), sn.r * f.s, F).forEach(pts => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.strokePath(); }); }); // a scout's sensor circle, cut to the frame (card space-game-campaign-scouts)
   campFirePaint(mp.fire, C, g, F, f, performance.now()); // the fight over the marks: volleys, bullets, missiles, mining beams, rings and flashes (src/campmapfire.js), thin and cut to the frame

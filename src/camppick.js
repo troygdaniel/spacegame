@@ -30,7 +30,7 @@ function campPickHostiles(C) { // every hostile (what A D S step through), the n
   const guard = campPickGuarded(C), ref = guard.length ? guard : [C.carrier], gap = u => Math.min.apply(null, ref.map(p => campDist(u, p)));
   return campAliens(C).slice().sort((a, b) => gap(a) - gap(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).map(u => campPickShip(C, u, campNavUnitName(u), 'ship'));
 }
-function campPickEscorts(C) { return campPickByNear(campPickGuarded(C), C.carrier).map(u => campPickShip(C, u, u.kind === 'freighter' && !u.named ? campConvoyName(u) + ' convoy' : campConvoyName(u), 'ship')); }
+function campPickEscorts(C) { return campPickByNear(campPickGuarded(C), C.carrier).map(u => Object.assign(campPickShip(C, u, u.kind === 'freighter' && !u.named ? campConvoyName(u) + ' convoy' : campConvoyName(u), 'ship'), { charge: true })); } // charge: a ship you protect, whose row wears its health bar (card space-game-protected-health)
 function campPickFields(C) { // the rocks that are left, a field of them by the row of the level that made them (a rock carries its field's number)
   const by = {}; (C.rocks || []).forEach(r => { if (r.hp > 0) (by[r.field == null ? 0 : r.field] = by[r.field == null ? 0 : r.field] || []).push(r); });
   return campPickByNear(Object.keys(by).map(k => {
@@ -66,7 +66,7 @@ function campPickRow(C, it, kind) {
   const pct = Math.round(Math.max(0, it.hp) * 100), n = it.n;
   const short = it.what === 'field' ? uiText(n === 1 ? 'camp.ui.cand.rock1' : 'camp.ui.cand.rocks', { n }) + '  ' + it.km + ' km' : it.km + ' km  ' + pct + '%';
   const state = it.what === 'field' ? uiText('camp.ui.cand.state.field', { name: it.name, n, km: it.km }) : uiText('camp.ui.cand.state.ship', { name: it.name, km: it.km, hp: pct });
-  return { id: it.id, label: it.name, key: '', more: false, ok: true, state, short, marked: kind === 'enemy' && !!C.tgt && C.tgt === it.id }; // the target now is marked
+  return { id: it.id, label: it.name, key: '', more: false, ok: true, state, short, marked: kind === 'enemy' && !!C.tgt && C.tgt === it.id, hull: it.charge ? Math.max(0, Math.min(1, it.hp)) : -1, band: it.charge ? campChargeBand(it.hp) : '' }; // the target now is marked; a ship you protect has its hull and the band of its colour for the bar at the right of its row (src/campanelsdraw.js)
 }
 function campPickShown(P, C, now) {
   if (!P || !C) return null;
