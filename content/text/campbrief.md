@@ -68,7 +68,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.1.1.w4 | A miner is jumped on the way. Send a squad. |
 | camp.bf.1.1.n1 | Welcome aboard, Commander. The transport is ours to bring to Ceres. A patrol sees her off, then she is on her own. |
 | camp.bf.1.1.n2 | Pirates lie in wait ahead, with torpedo boats. Cover the transport: {convoy}, then "{tuck}". |
-| camp.bf.1.1.n3 | The arrows fly the cruiser. {fleetkey} is your fleet: {squadskey} all squads, {redkey} red, {greenkey} green, {yellowkey} yellow. |
+| camp.bf.1.1.n3 | The arrows fly the cruiser. {fleetkey} is your fleet: {squadskey} all squads. {keyattack} attack, {keyguard} guard, {keyrecall} recall. |
 | camp.bf.1.2.w1 | Mine the rock fields round Ceres: {viafmine}, then {rowfmine}. |
 | camp.bf.1.2.w2 | The Works pays three credits an ore. Pirates hunt the miners. |
 | camp.bf.1.2.w3 | Beat the 5 raids, then dock at Occator Works ({viadock}). |

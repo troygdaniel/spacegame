@@ -288,7 +288,7 @@ class Campaign extends Phaser.Scene {
     const now = (this.time && this.time.now) || 0, pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, now) : { used: false }; // the lists and the direct keys (src/camppanel.js): Q W E R and P O I U open a list (Up, Down, Enter in it), A D S X the target, J K L ; the power, Enter a missile
     if (pr.ran) { toast(this, pr.say, pr.ok ? '#9fe9ff' : '#ffb454'); if (pr.ok && pr.row === 'balance' && this.gaugeAnim) this.gaugeAnim.flash = this.gaugeAnim.flash.map(() => 1); } // the balance key flashes all three bars, even when the power was even already
     if (pr.used) return;
-    if (typeof campDebugKey === 'function') { // the tune kit (src/campdebug.js): ] skip, \\ win, [ lose, ` god mode; none is a key you fly by
+    if (typeof campDebugKey === 'function') { // the tune kit (src/campdebug.js): ' skip, \\ win, , lose, ` god mode; none is a key you fly by
       const id = campDebugKey(c); if (!id) return;
       const r = campDebugRun(C, this.P, id); if (r && r.say) toast(this, r.say, '#ffd37a');
       if (r && r.go) go(this, 'Campaign', { level: r.go.level, techs: r.go.techs, via: 'skip' });
