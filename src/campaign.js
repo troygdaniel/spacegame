@@ -1589,7 +1589,7 @@ function campWingAI(C, u, dt) {
   } else if (o.type === 'fetch') { // (src/campwing.js) fly over the ore or the cache (a ship of ours takes what it touches), fighting what comes within 320 px; when it is gone, back to guarding the carrier
     const ft = campWingLive(C, o.tg); if (!ft || (ft.kind === 'cache' && C.caches[+String(ft.id).slice(6)] && C.caches[+String(ft.id).slice(6)].got)) { u.order = { type: 'guard', at: { kind: 'carrier' } }; return; }
     foe = campNearest(aliens, u, 320); if (!foe) home = ft;
-  } else if (o.type === 'mine') { // fight what comes within 320 px; else take a chunk or a wreck lying about, or cut the nearest rock (a laser from the ship); with none, circle the carrier and wait for more
+  } else if (o.type === 'mine') { // fight what comes within 320 px; else take a chunk or a wreck lying about, or cut the nearest rock (a laser from the ship); with none, wait beside the carrier in formation for more
     foe = campNearest(aliens, u, 320);
     const safe = r => !aliens.some(a => campDist(a, r) < CAMP.ore.danger), want = o.target ? C.rocks.find(r => r.id === o.target && r.hp > 0) || C.pickups.find(q => q.id === o.target) : null; // a rock or ore named by the order, while it is there
     const pk = want ? (C.pickups.indexOf(want) >= 0 ? want : null) : campNearest(C.pickups.filter(safe), u), rk = want ? (C.pickups.indexOf(want) >= 0 ? null : want) : campNearest(C.rocks.filter(r => r.hp > 0 && safe(r)), u);
@@ -1601,7 +1601,7 @@ function campWingAI(C, u, dt) {
         if (d - rk.r <= L.range) { campRockHit(C, rk, L.dps * (C.dt || CAMP.step)); C.laserNow.push({ from: u.id, to: rk.id, kind: 'rock' }); u.rot = campRot(u.rot, Math.atan2(rk.y - u.y, rk.x - u.x), 0.4); C.events.push({ type: 'laser', src: 'drone', id: u.id, x: u.x, y: u.y, tx: rk.x + dx / d * rk.r * 0.6, ty: rk.y + dy / d * rk.r * 0.6, rock: rk.id }); }
       } else home = campFlightSlot(C, u, c); // nothing to mine: beside the cruiser, in formation (it was a circle round it)
     }
-  } else { // guard: a point (the carrier, a place, a convoy) is circled; an alien that comes within reach of it, or of this ship, is fought
+  } else { // guard: a flight holds its slots beside a point (the carrier, a place, a convoy; src/campflight.js); an alien that comes within reach of it, or of this ship, is fought, and the flight flies back to its slots when it is gone
     const at = o.at || { kind: 'carrier' }, p = at.kind === 'carrier' ? c : at.kind === 'place' ? campPlaces(C.level)[at.id] : at.kind === 'point' ? at : C.by[at.id] || c;
     foe = campNearest(aliens, p, CAMP.flight.reach) || campNearest(aliens, u, 450); if (foe) foe = campDogFoe(C, u, foe, 1000); // a partner within reach is the one it fights
     if (!foe) home = campFlightSlot(C, u, p); // no threat: hold the slot beside what is guarded, at its speed and heading (src/campflight.js); it was a circle round it
