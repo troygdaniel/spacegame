@@ -17,6 +17,7 @@
 //              stop (held: seconds it listened; why: silence, again, lead or cap; short, silent), clip (bytes), heard (ms, chars of the transcript, 0 = empty), and the end:
 //              why = sent (the words went to the computer) or the name of the plain line shown (tap, silent, nothing, denied...). Counts and times, never the words.
 //   idle       NO INPUT FOR 20 s OR MORE: secs, and what was on screen (scene, scenes, panel, mission, system, auto): the best sign of confusion
+//   counts     also, in the Campaign, a minute's frames and how many of them took over 25, 33 and 50 ms (frames:campaign, slow25:campaign, slow33:campaign, slow50:campaign): the hitches fps_dip cannot see
 //   fps_dip    under 30 frames a second for 2 s or more: fps (the worst), secs        stall   the page froze (no tick for 5 s)       tab   hidden | visible
 //   error      every JS error, rejected promise and console.error: kind, msg, stack (file paths shortened to ~)
 //   campaign   the Campaign mode (card space-game-campaign-tune), one line a step: start (level, via: menu | address | next | retry | skip), wave (level, wave reached), order (which order, how: key | strip | voice | click,
@@ -245,6 +246,10 @@ function playlogCreate(env) {
     try {
       if (!(delta > 0) || delta > P.fps.skip || hidden) return;
       fpsAcc.sum += delta; fpsAcc.n++;
+      if (cur === 'Campaign') { // hitches a player feels and fps_dip cannot see (a fight at 45 frames a second, one long frame in sixty): counted, a minute at a time, with the frames they are out of (card perf-fights; docs/PERF.md asked for it)
+        counts['frames:campaign'] = (counts['frames:campaign'] || 0) + 1;
+        if (delta > 25) { counts['slow25:campaign'] = (counts['slow25:campaign'] || 0) + 1; if (delta > 33) { counts['slow33:campaign'] = (counts['slow33:campaign'] || 0) + 1; if (delta > 50) counts['slow50:campaign'] = (counts['slow50:campaign'] || 0) + 1; } }
+      }
       if (fpsAcc.sum >= P.fps.window) {
         const fps = fpsAcc.n / (fpsAcc.sum / 1000);
         if (fps < P.fps.low) { if (!dip) dip = { fps, secs: 0 }; dip.fps = Math.min(dip.fps, fps); dip.secs += fpsAcc.sum / 1000; }
