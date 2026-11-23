@@ -1,8 +1,8 @@
 // not in the smoke: a boot of the target pick, run by hand (one Chrome, muted, through the test lock; card space-game-order-target-pick)
 // The rules are tests/camppick.mjs (plain Node). This boots the real game once, in mission 1.1 with the wing out (three pilots), and plays the keys as a player does: three hostiles are put in the battle, W opens the all-squads list
-// (on Attack, the wing being out), Enter on Attack opens the target sub-list (no order yet), Down moves the highlight to a hostile that is far off the screen and the view zooms out to show it with the cruiser (a bracket is on it), Esc goes
-// back to the list and the zoom is the player's again, Enter and Down and Enter gives the order at the one chosen (it is the target, all three pilots attack it); then the new keys (card space-game-bracket-select-orders): X clears, ] picks the
-// nearest hostile, E sends the pilots at it with no list opened, D picks a pilot and E sends that pilot alone. Q (the fleet list, switched on here) then All squads then Attack then Esc, Esc, Esc goes back through the lists one by one.
+// (not on Attack: it is grey while no hostile is picked, and Enter on it refuses), ] picks the nearest hostile and W opens on Attack, named after it; Enter sends all three pilots at it at once (card space-game-w-uses-selection: no sub-list);
+// Mine ore with several rock fields still opens the target sub-list (no order yet), Down moves the highlight, Esc goes back; then the keys of card space-game-bracket-select-orders: X clears, ] picks the nearest hostile, E sends the pilots
+// at it with no list opened, D picks a pilot and E sends that pilot alone. Q (the fleet list, switched on here) then All squads then Esc, Esc goes back through the lists one by one. (Not run by 1-GEN: no Chrome while Troy plays.)
 // Pictures go to the folder in PICK_SHOTS (default ~/dev/spacegame-night/shots/pick-*.png), never into the repository.
 //   node tests/camppick-boot.mjs
 // Exit code 1 when a check fails or the game logged an error.
@@ -39,25 +39,35 @@ try {
   await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; campSpawn(C, 'raider', c.x + 700, c.y - 200); campSpawn(C, 'skiff', c.x + 1500, c.y + 600); campSpawn(C, 'raider', c.x - 3300, c.y + 400); })()`);
   await t.run(300);
   await key(t, 'KeyW'); await t.run(300);
-  check('W opens the all-squads list on Attack (the wing is out, so Launch cannot be given: the list opens on its first usable row)', (await j(`${SC}.pn.open`)) === 'squads' && (await j(`campPanelList(${SC}.camp, 'squads')[${SC}.pn.at].id`)) === 'attack');
-  await key(t, 'Enter'); await t.run(600);
-  check('Enter on Attack the target opens the sub-list of the three hostiles: no order yet, the list it came from is still the open one', (await j(`${SC}.pn.open`)) === 'squads' && !!(await j(`${SC}.pn.pick`)) && (await j(`campPickSync(${SC}.camp, ${SC}.pn.pick).length`)) === 3 && (await j(`${SC}.camp.orders.attack | 0`)) === 0 && (await j(`${SC}.camp.tgt`)) === '');
-  check('the sub-list is drawn: PICK A TARGET heads it, three candidates (name, km, hull) are its rows, its foot names Esc back', /^W +PICK A TARGET$/.test(await j(`${SC}.pnl.title.text`)) && (await j(`${SC}.pnl.rows.filter(r => r.name.visible).length`)) === 3 && /Esc back/.test(await j(`${SC}.pnl.keys.text`)) && /km/.test(await j(`${SC}.pnl.rows[0].suffix.text`)), (await j(`${SC}.pnl.title.text + ' | ' + ${SC}.pnl.rows.map(r => r.name.text + '|' + r.suffix.text).join(' ; ')`)));
-  check('a bracket layer is made for the highlighted candidate (cyan: the sub-list\'s, not the target\'s red)', !!(await j(`!!${SC}.pickG`)));
-  await snap(t, '1-sub-list-open');
+  const rowOf = id => j(`campPanelRows(${SC}.camp, 'squads').find(r => r.id === '${id}')`), toRow = async id => { // W's list moved to a row: the Down presses a player makes
+    const n = await j(`campPanelList(${SC}.camp, 'squads').length`), want = await j(`campPanelList(${SC}.camp, 'squads').findIndex(r => r.id === '${id}')`), at = await j(`${SC}.pn.at`);
+    for (let k = 0, d = ((want - at) % n + n) % n; k < d; k++) { await key(t, 'ArrowDown'); await t.run(120); }
+  };
+  const a0 = await rowOf('attack');
+  check('with no hostile picked W opens the all-squads list on its first row that can be given, not on Attack (Launch is out, Attack is grey until a hostile is picked: "pick one with [ ] or S")', (await j(`${SC}.pn.open`)) === 'squads' && (await j(`campPanelList(${SC}.camp, 'squads')[${SC}.pn.at].id`)) !== 'attack' && a0.ok === false && /pick one/.test(a0.state) && a0.label === 'Attack the target');
+  await toRow('attack'); await key(t, 'Enter'); await t.run(300);
+  check('Enter on the grey Attack row refuses in words: no sub-list, no order, no target picked for the player, the list stays open', (await j(`${SC}.pn.open`)) === 'squads' && (await j(`${SC}.pn.pick`)) === null && (await j(`${SC}.camp.orders.attack | 0`)) === 0 && (await j(`${SC}.camp.tgt`)) === '');
+  await key(t, 'KeyW'); await t.run(200);
+  await key(t, 'BracketRight', { key: ']' }); await t.run(300);
+  const near0 = await j(`${SC}.camp.tgt`);
+  await key(t, 'KeyW'); await t.run(300);
+  check('with a hostile picked ( ] ) W opens on Attack, and the row names it: "Attack <name>" (card space-game-w-uses-selection)', !!near0 && (await j(`${SC}.pn.open`)) === 'squads' && (await j(`campPanelList(${SC}.camp, 'squads')[${SC}.pn.at].id`)) === 'attack' && (await rowOf('attack')).label === 'Attack ' + (await j(`campTgtName(${SC}.camp)`)), (await rowOf('attack')).label);
   await t.ev(`${SC}.camp.god = true`); // (the hostiles cannot end the battle while the keys are pressed)
-  const order = await j(`campPickSync(${SC}.camp, ${SC}.pn.pick).map(i => [i.id, Math.abs(i.x - ${SC}.camp.carrier.x)])`), fi = order.reduce((b, x, k) => (x[1] > order[b][1] ? k : b), 0), far = order[fi][0];
-  for (let i = 0; i < fi; i++) { await key(t, 'ArrowDown'); await t.run(300); }
-  await t.run(900);
-  const zFar = await zoomNow();
-  check('moving the highlight to the farthest hostile (about 3,300 px away to the left): it is shown with the cruiser: the view has zoomed OUT (less than it was) so that it is inside the screen to the right of the list', (await j(`${SC}.pn.pick.sel`)) === far && zFar < z0 - 0.02 && (await j(`(() => { const s = ${SC}, C = s.camp, u = C.by['${far}'], z = s.cameras.main.zoom; return W / 2 + (u.x - C.carrier.x) * z; })()`)) > 400, `z0 ${z0} -> ${zFar}`);
-  await snap(t, '2-revealed-far');
-  await key(t, 'Escape'); await t.run(1200);
-  check('Esc goes back to the all-squads list (the sub-list is gone, the list is still open on Attack) and the zoom is the player\'s again', (await j(`${SC}.pn.open`)) === 'squads' && (await j(`${SC}.pn.pick`)) === null && Math.abs((await zoomNow()) - z0) < 0.01, `${await zoomNow()} vs ${z0}`);
-  await key(t, 'Enter'); await t.run(300); await key(t, 'ArrowDown'); await key(t, 'Enter'); await t.run(900);
-  const tgt = await j(`${SC}.camp.tgt`);
-  check('Enter, Down, Enter chooses the second hostile: it is THE target, all three pilots attack it, the lists are closed, and the view is never zoomed IN by it (it may zoom out to show the target: card space-game-select-zooms-out)', !!tgt && (await j(`${SC}.pn.open`)) === '' && (await j(`campWing(${SC}.camp, 'fighter').every(u => u.order && u.order.type === 'attack' && u.order.target === '${tgt}')`)) && (await zoomNow()) <= z0 + 0.01);
-  await snap(t, '3-chosen');
+  await key(t, 'Enter'); await t.run(900);
+  check('Enter sends all three pilots at that hostile at once: no sub-list, the list closes, it stays THE target, and the view is never zoomed IN by it (it may zoom out to show the target: card space-game-select-zooms-out)', (await j(`${SC}.camp.tgt`)) === near0 && (await j(`${SC}.pn.open`)) === '' && (await j(`${SC}.pn.pick`)) === null && (await j(`campWing(${SC}.camp, 'fighter').every(u => u.order && u.order.type === 'attack' && u.order.target === '${near0}')`)) && (await zoomNow()) <= z0 + 0.01);
+  await snap(t, '1-attack-from-w');
+  const nf = await j(`campPickItems(${SC}.camp, 'field').length`);
+  if (nf >= 2) { // Mine ore (and Escort the convoy) still pick from a sub-list: the rock fields of the mission
+    await key(t, 'KeyW'); await t.run(300); await toRow('fmine'); await key(t, 'Enter'); await t.run(600);
+    check('Mine ore with several rock fields opens the sub-list of them: no order yet, the list it came from is still the open one', (await j(`${SC}.pn.open`)) === 'squads' && !!(await j(`${SC}.pn.pick`)) && (await j(`campPickSync(${SC}.camp, ${SC}.pn.pick).length`)) === nf);
+    check('the sub-list is drawn: WHICH ROCKS TO MINE heads it, a row for each field, its foot names Esc back, and a bracket layer is made for the highlighted one', /^W +WHICH ROCKS TO MINE$/.test(await j(`${SC}.pnl.title.text`)) && (await j(`${SC}.pnl.rows.filter(r => r.name.visible).length`)) === nf && /Esc back/.test(await j(`${SC}.pnl.keys.text`)) && !!(await j(`!!${SC}.pickG`)));
+    await snap(t, '2-mine-sub-list');
+    await key(t, 'ArrowDown'); await t.run(300);
+    check('Down moves the highlight to the next field', (await j(`${SC}.pn.pick.at`)) === 1);
+    await key(t, 'Escape'); await t.run(900);
+    check('Esc goes back to the all-squads list (the sub-list is gone, the list is still open)', (await j(`${SC}.pn.open`)) === 'squads' && (await j(`${SC}.pn.pick`)) === null);
+    await key(t, 'Escape'); await t.run(300);
+  } else console.log('  skip   the Mine ore sub-list (this mission has one rock field)');
   await key(t, 'KeyX'); await t.run(300);
   check('X lets the target go (and the friend): both selections are empty, no list is open', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.camp.sel`)) === '' && (await j(`${SC}.pn.open`)) === '');
   await t.ev(`campWingOrder(${SC}.camp, 'fighters', 'guard', null, 'key')`); await t.run(300);
@@ -78,13 +88,13 @@ try {
   await key(t, 'KeyX'); await t.run(300);
   await key(t, 'KeyQ'); await t.run(200);
   check('Q (the fleet list is switched on in this page) opens it on All squads and picks nothing', (await j(`${SC}.pn.open`)) === 'fleet' && (await j(`campPanelList(${SC}.camp, 'fleet')[${SC}.pn.at].open`)) === 'squads' && (await j(`${SC}.camp.sel`)) === '');
-  await key(t, 'Enter'); await t.run(200); await key(t, 'Enter'); await t.run(400);
-  check('Q, Enter on All squads, Enter on Attack: a sub-list over the all-squads list, reached by a row (its foot says Esc back)', (await j(`${SC}.pn.open`)) === 'squads' && !!(await j(`${SC}.pn.pick`)) && (await j(`${SC}.pn.trail.join()`)) === 'fleet');
-  await key(t, 'Escape'); await key(t, 'Escape');
-  check('Esc, Esc: back to the all-squads list, then to Q on the All squads row', (await j(`${SC}.pn.open`)) === 'fleet' && (await j(`campPanelList(${SC}.camp, 'fleet')[${SC}.pn.at].open`)) === 'squads');
+  await key(t, 'Enter'); await t.run(300);
+  check('Q, Enter on All squads: the all-squads list opens, reached by a row (its foot says Esc back)', (await j(`${SC}.pn.open`)) === 'squads' && (await j(`${SC}.pn.trail.join()`)) === 'fleet');
+  await key(t, 'Escape'); await t.run(300);
+  check('Esc: back to Q on the All squads row', (await j(`${SC}.pn.open`)) === 'fleet' && (await j(`campPanelList(${SC}.camp, 'fleet')[${SC}.pn.at].open`)) === 'squads');
   await snap(t, '5-back-to-q');
   await key(t, 'Escape'); await t.run(200);
-  check('the third Esc closes Q; the fourth (nothing open) pauses the game', (await j(`${SC}.pn.open`)) === '' && (await j(`${SC}.mode`)) === 'play');
+  check('the next Esc closes Q; the one after (nothing open) pauses the game', (await j(`${SC}.pn.open`)) === '' && (await j(`${SC}.mode`)) === 'play');
   await key(t, 'Escape'); await t.run(300);
   check('and pauses', (await j(`${SC}.mode`)) === 'pause'); await key(t, 'Escape'); await t.run(300);
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
