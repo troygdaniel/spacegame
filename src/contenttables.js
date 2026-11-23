@@ -1143,7 +1143,7 @@ const UI_TEXT = {
   'camp.keys.debug': 'DEBUG KEYS (THE TUNE KIT)',
   'title.camp.keys': 'H  all the keys',
   'camp.sel.all': 'All pilots',
-  'camp.ui.pausepanels': '{keyall} all three pilots, {squadskey} the all-squads list. {keylast} {keynext} pick a hostile, {keyflast} {keyfnext} a friend, {keyattack} attack, {keyguard} guard, {keyrecall} recall. {powerkey} power, {navkey} autopilot, {yardkey} dock. In a list: Up, Down, Enter. {keyfocus} looks at it. H lists every key.',
+  'camp.ui.pausepanels': '{keyall} all three pilots, {squadskey} the all-squads list. {keywlast} {keywnext} pick who, {keylast} {keynext} an enemy, {keyflast} {keyfnext} a friendly, {keyattack} attack, {keyguard} guard, {keyrecall} recall. {powerkey} power, {navkey} autopilot, {yardkey} dock. In a list: Up, Down, Enter. {keyfocus} looks at it. H lists every key.',
   'camp.map.local': 'AREA  {km} km across',
   'camp.map.whole': 'SYSTEM  {km} km across',
   'camp.nav.no.wingout': 'Wing is out: recall it first. Order again to recall and burn.',
@@ -1204,7 +1204,7 @@ const UI_TEXT = {
   'camp.say.l1p.haulboats': 'A torpedo boat ahead. Tuck the haulers in, or run.',
   'camp.say.l1p.rear': 'Pirates on the last hauler. She is alone back there.',
   'camp.say.l1p.again': 'More of them, on the last hauler again.',
-  'camp.hint.l1p.split': 'Two groups, two sides. One pilot each: {keyflast} {keyfnext} pick a pilot, {keyattack} attack.',
+  'camp.hint.l1p.split': 'Two groups, two sides. One pilot each: {keywlast} {keywnext} pick a pilot, {keyattack} attack.',
   'camp.hint.l1p.boats': 'Torpedo boats! Tuck the miners in: say or type "tuck in".',
   'camp.hint.l1p.mend': 'Quiet for now. Recall a hurt squad to be mended.',
   'camp.hint.l1p.haulboats': 'A torpedo boat! Say or type "tuck in": it covers the haulers beside you.',
@@ -1286,11 +1286,9 @@ const UI_TEXT = {
   'camp.w.guard': 'Guard {name}',
   'camp.w.all': 'all squads',
   'camp.w.nohostile.state': 'pick one with {keylast} {keynext} or {keynear}',
-  'camp.w.nofriend.state': 'pick a ship with {keyflast} or {keyfnext}',
-  'camp.w.pilotguard.state': 'a pilot cannot be guarded: pick a ship with {keyflast} or {keyfnext}',
+  'camp.w.nofriend.state': 'pick a friendly with {keyflast} or {keyfnext}',
   'camp.no.nohostile': 'No hostile selected. Pick one first.',
   'camp.no.nofriend': 'No ship selected to guard. Pick one first.',
-  'camp.no.pilotguard': 'A pilot cannot be guarded. Pick a ship first.',
 };
 function uiText(key, vars) { return contentFill(CT_HAS(UI_TEXT, key) ? UI_TEXT[key] : key, vars); }
 function ctTextKeys() { // every string the game reads: key -> { get, set }

@@ -1,6 +1,6 @@
 // ---------- Campaign: selecting a ship zooms out to show it (card space-game-select-zooms-out; Troy, 23 Nov 2026) ----------
-// Troy: selecting a target zooms out until my ship and the target are both on the screen. [ ] pick a hostile (C.tgt) and A D a friendly ship, a pilot or a ship you protect (C.sel; card space-game-bracket-select-orders:
-// the selection is campSelUnits(C), { hostile, friend }, each a ship or null, src/camptarget.js). F then follows the selected ship and Backspace brings the view back, as they do today (src/campfocus.js).
+// Troy: selecting a target zooms out until my ship and the target are both on the screen. [ ] \\ pick an enemy (C.tgt), , . a friendly ship or outpost you protect (C.fsel) and A D one pilot (C.sel; All pilots, the default, is nobody in particular: it does not move the zoom; cards space-game-bracket-select-orders, space-game-keys-select:
+// the picks are campSelUnits(C), { hostile, friendly, friendlyPost, who }, each a ship or null (an outpost is a place), src/camptarget.js). F then follows the selected ship and S brings the view back, as they do today (src/campfocus.js).
 //   when        the moment the selection CHANGES (a ship picked, another picked, one let go), not every frame: a target that flies off afterwards does not drag the zoom, and a zoom the player makes with + - or the
 //               wheel stays his. Out only, never in: the zoom is the player's own (what it was before the pick) or the one at which the cruiser and every selected ship are on the screen, whichever is farther out
 //   how far     campPickFit (src/camppick.js): the zoom at which the ship and the cruiser both fit inside the part of the screen the panels leave free; with two ships selected the smaller of the two, the farthest zoom
@@ -9,11 +9,11 @@
 //   not here    a target sub-list has the view while it is open (s.pickZoom, src/camppickdraw.js) and so has F's follow (s.focus): nothing changes then, and the selection is read again when they are done
 // campSelZoom(s) is called every frame by the scene (src/campaignscene.js). The rule is in plain functions (tests/campselzoom.mjs runs them in Node).
 
-// the ships selected now: the friendly one, then the hostile one (campSelUnits, src/camptarget.js), alive
+// the things picked now: the one pilot (none for All pilots), the friendly ship or outpost, then the enemy (campSelUnits, src/camptarget.js), alive
 function campSelZoomUnits(C) {
   if (!C || !C.carrier || typeof campSelUnits !== 'function') return [];
-  const sel = campSelUnits(C);
-  return (sel.friends || [sel.friend]).concat([sel.hostile]).filter(u => u && u.hp > 0 && !u.gone); // every friend ship (Q picks all three pilots), then the hostile
+  const sel = campSelUnits(C), post = sel.friendlyPost ? { id: sel.friendlyPost.id, hp: 1, x: sel.friendlyPost.x, y: sel.friendlyPost.y, r: sel.friendlyPost.r } : null; // an outpost has no hull: it is a place to fit
+  return [sel.who, sel.friendly, post, sel.hostile].filter(u => u && u.hp > 0 && !u.gone);
 }
 // the zoom at which the cruiser and every one of these ships are on the screen; Infinity for none
 function campSelZoomFit(C, units) {

@@ -11,6 +11,6 @@ The words of the Campaign's page of every key and of its links (card space-game-
 | camp.keys.debug | DEBUG KEYS (THE TUNE KIT) |
 | title.camp.keys | H  all the keys |
 | camp.sel.all | All pilots |
-| camp.ui.pausepanels | {keyall} all three pilots, {squadskey} the all-squads list. {keylast} {keynext} pick a hostile, {keyflast} {keyfnext} a friend, {keyattack} attack, {keyguard} guard, {keyrecall} recall. {powerkey} power, {navkey} autopilot, {yardkey} dock. In a list: Up, Down, Enter. {keyfocus} looks at it. H lists every key. |
+| camp.ui.pausepanels | {keyall} all three pilots, {squadskey} the all-squads list. {keywlast} {keywnext} pick who, {keylast} {keynext} an enemy, {keyflast} {keyfnext} a friendly, {keyattack} attack, {keyguard} guard, {keyrecall} recall. {powerkey} power, {navkey} autopilot, {yardkey} dock. In a list: Up, Down, Enter. {keyfocus} looks at it. H lists every key. |
 | camp.keys.roomtitle | READY ROOM  -  ALL THE KEYS |
 | camp.keys.roomfooter | H or Esc closes this page. |
