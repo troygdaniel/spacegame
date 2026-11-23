@@ -6,5 +6,5 @@ The words of one change of the Campaign's UX night (card space-game-night-ux, do
 ## Strings
 | key | text |
 |---|---|
-| camp.nudge.launch | Press {vialaunch}, pick "{rowlaunch}". Or {fleetkey}, "{rowgsquads}", "{rowlaunch}". |
+| camp.nudge.launch | Press {vialaunch}, pick "{rowlaunch}". |
 | camp.nudge.attack | Enemies. Press {viaattack}, pick "{rowattack}": the fighters attack. |

@@ -44,6 +44,7 @@ function campPanelScroll(P, n) {
 }
 // open a list: at its first row (or, for a list that says start: 'usable', its first row that can be given), or (back: the part we came back from) on that part's row; via: the list whose row opened this one (Esc goes back to it), none for a list opened by its own key
 function campPanelGo(P, C, id, back, via) {
+  const dd = campPanelDef(id); if (dd && dd.off) return; // a list that is switched off (the fleet list: CAMP_FLEET_LIST, src/data_controls.js) is opened by nothing: not its key, not Left from a part of it
   P.open = id; P.at = 0; P.top = 0; P.pick = null; P.trail = via ? (P.trail || []).concat(via) : [];
   if (back) { const rows = campPanelList(C, id), i = rows.findIndex(r => r.open === back); if (i >= 0) { P.at = i; campPanelScroll(P, rows.length); } }
   else if (C && campPanelDef(id) && campPanelDef(id).start === 'usable') { const rows = campPanelList(C, id), i = rows.findIndex(r => campPanelRowState(C, r).ok); if (i > 0) { P.at = i; campPanelScroll(P, rows.length); } } // a list whose table says start: 'usable' opens on its first row that can be given now: All squads opens on Launch while there are ships in the bay and, once the wing is out (Launch greyed: all out), on Attack the target (card space-game-squad-tint)
@@ -103,6 +104,10 @@ function campPanelKey(P, C, code, now) {
       if (res.ok && !row.stay) campPanelClose(P); // the order is given: the keys go back to the ship (a power row stays: a pip more, and more). A refusal leaves the list open, with its reason said
       res.open = campPanelOpen(P); return res;
     }
+  }
+  if (campKeyIs('all', code) && typeof campSelAll === 'function') { // Q (the fleet list is off): all three pilots are the friend; the next E R T goes to all three (src/camptarget.js campSelAll)
+    res.used = true; res.fleet = true; if (!C) return res;
+    campSelAll(C); res.sel = C.sel || ''; res.tgt = C.tgt || ''; return res;
   }
   const tk = typeof campTgtStep === 'function' ? (campKeyIs('next', code) ? 'next' : campKeyIs('last', code) ? 'last' : campKeyIs('fnext', code) ? 'fnext' : campKeyIs('flast', code) ? 'flast' : campKeyIs('near', code) ? 'near' : campKeyIs('clear', code) ? 'clear' : '') : '';
   if (tk) { // [ ] S the hostile, A D the friend, X both (src/camptarget.js: the two selections)
