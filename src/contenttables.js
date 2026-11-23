@@ -1325,6 +1325,7 @@ const UI_TEXT = {
   'camp.bf.enemy.pirateleader.many': '{n} pirate leaders',
   'camp.hint.tuck': 'Torpedo boats! Press {convoy}, then pick "{tuck}".',
   'camp.hint.run': 'The leader blocks the way. Press {convoy}, then pick "{run}".',
+  'camp.hud.recentre': 'RECENTRE  {keyzoomreset}',
 };
 function uiText(key, vars) { return contentFill(CT_HAS(UI_TEXT, key) ? UI_TEXT[key] : key, vars); }
 function ctTextKeys() { // every string the game reads: key -> { get, set }

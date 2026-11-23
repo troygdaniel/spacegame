@@ -242,7 +242,7 @@ const CONTROLS = [
     { k: ['Arrows'], t: 'Thrust, brake, turn (the ship flies)', sub: 'FLY AND FIRE' },
     { k: ['Space'], t: 'Hold: turrets fire at ships in reach', sub: 'FLY AND FIRE' },
     { k: ['Enter'], t: 'Missile at the target (no list open)', sub: 'FLY AND FIRE' },
-    { k: ['-', '='], t: 'Zoom out, in; Backspace resets', sub: 'FLY AND FIRE' }, // - and the wheel go out to the whole system on the map; = and the keypad's + and - too; Backspace is the reset (src/campzoom.js: all three from CAMP_KEYS)
+    { k: ['-', '='], t: 'Zoom; Backspace resets; drag pans', sub: 'FLY AND FIRE' }, // - and the wheel go out to the whole system on the map; = and the keypad's + and - too; Backspace is the reset (src/campzoom.js: all three from CAMP_KEYS) // drag: the left button held and moved pans the view and the Tab map (src/campdrag.js): it stays where it is put; the wheel zooms about the pointer; a RECENTRE mark, Backspace (this reset) or the arrows held bring it back (a row of its own did not fit the H page)
     { k: ['A', 'D'], t: 'Last or next target (nearest first)', sub: 'THE TARGET' }, // ONE target for everything: Attack goes at it, Fly to the target flies to it, Enter fires at it
     { k: ['S', 'X'], t: 'S the nearest threat, X clears it', sub: 'THE TARGET' },
     { k: ['J', 'K', 'L'], t: 'Power to shields, engines, weapons', sub: 'POWER' },

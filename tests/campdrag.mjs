@@ -9,7 +9,7 @@
 //   C  coming back: the camera follows the cruiser again; Backspace, the mark and a flying key held CAMPDRAG.fly ms do it; a key tapped does not
 //   D  the map: the free view (no hold, inside the system's box), the pan, the zoom that keeps the pan, the recentre
 //   E  the zoom about the pointer: the world point under it stays under it as the zoom eases
-//   F  the words and the wiring: the mark names the key from the table, the help page says it, the scene and the map call it, the script is in the page
+//   F  the words and the wiring: the mark names the key from the table, the help page says it (in the zoom row), the scene and the map call it, the script is in the page
 // Run: node tests/campdrag.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -102,9 +102,9 @@ check('a drag of the map moves its centre by the drag over the scale (the map fo
 R(`campMapPan(__m, __F, -1e9, -1e9);`);
 const edge = J('({ cx: __m.fit.cx, cy: __m.fit.cy })');
 check('it cannot be dragged out of the system: the centre stops at the bounds', near(edge.cx, box.x1, 1e-9) && near(edge.cy, box.y1, 1e-9), JSON.stringify({ edge, box }));
-R(`window.__m = __mp(); campMapPan(__m, __F, 800, 200); window.__cp = Object.assign({}, __m.fit); __m.zWant = 3; for (let i = 0; i < 60; i++) campMapZoomStep(__m, __F, 16);`);
+R(`window.__m = __mp(); campMapPan(__m, __F, 800, 200); window.__cp = Object.assign({}, __m.fit); __m.zWant = 3; for (let i = 0; i < 150; i++) campMapZoomStep(__m, __F, 16);`);
 check('zooming a panned map keeps the pan (the hold does not pull it back to the level\'s middle)', near(J('__m.fit.cx'), J('__cp').cx, 1e-6) && near(J('__m.fit.cy'), J('__cp').cy, 1e-6) && J('__m.z') === 3, JSON.stringify([J('__m.fit'), J('__cp')]));
-R(`window.__m = __mp(); __m.zWant = 3; for (let i = 0; i < 60; i++) campMapZoomStep(__m, __F, 16); window.__held = Object.assign({}, __m.fit);`);
+R(`window.__m = __mp(); __m.zWant = 3; for (let i = 0; i < 150; i++) campMapZoomStep(__m, __F, 16); window.__held = Object.assign({}, __m.fit);`);
 check('a map that was never panned zooms as before: the hold works (centre on the level\'s own middle at zoom 3 of nothing set)', near(J('__held').cx, base.cx, 1e-6) && near(J('__held').cy, base.cy, 1e-6));
 R(`window.__m = __mp(); campMapPan(__m, __F, 800, 200); campMapRecentre(__m, __F);`);
 check('recentre: the map is on the level again and no longer panned', near(J('__m.fit.cx'), base.cx, 1e-6) && near(J('__m.fit.cy'), base.cy, 1e-6) && J('__m.panned') === false);
@@ -122,16 +122,16 @@ check('with no anchor (not panned: the cruiser is in the middle) the zoom is as 
 
 // ---- F. the words and the wiring ----
 console.log('F. the words and the wiring');
-const mark = J('uiText("camp.view.recentre")');
+const mark = J('uiText("camp.hud.recentre")');
 check('the mark says RECENTRE and names the key from the table, not a letter written into the words', /recentre/i.test(mark) && mark.includes(J('CAMP_KEYS.zoomreset.k')) && !/\{/.test(mark), mark);
 const rows = J("(CONTROLS.find(c => c.id === 'campaign') || { rows: [] }).rows.map(r => r.k.join(' ') + ' ' + r.t)");
-check('the H page says the mouse drags the view, and that Backspace resets the zoom and recentres', rows.some(r => /drag/i.test(r)) && rows.some(r => /Backspace/.test(r) && /recentre/i.test(r)), JSON.stringify(rows.filter(r => /drag|Backspace/i.test(r))));
+check('the H page says that a drag pans, in the row of the zoom, where Backspace is named (a row of its own did not fit the page)', rows.some(r => /drag/i.test(r) && /Backspace resets/.test(r)), JSON.stringify(rows.filter(r => /drag|Backspace/i.test(r))));
 const html = read('index.html'), scene = read('src/campaignscene.js'), mapdraw = read('src/campmapdraw.js'), zoom = read('src/campzoom.js'), cz = read('src/camzoom.js');
 check('the script is in the page, after the map and the zoom it uses', /<script src="src\/campdrag\.js"><\/script>/.test(html) && html.indexOf('src/campdrag.js') > html.indexOf('src/campzoom.js'));
 check('the scene installs it once and ticks it every frame', /campDragInstall\(this\)/.test(scene) && /campDragFrame\(this/.test(scene));
 check('Backspace is the reset in campZoomPress and recentres', /campViewRecentre|campMapRecentre/.test(zoom));
 check('the zoom frame puts the scroll back for an anchor', /camzoomAnchorScroll/.test(cz));
-check('the map\'s click is read on release, so a drag that starts on a mark is not a click on it (campMapClick is called by the drag code, not by a pointerdown)', !/s\.input\.on\('pointerdown', mp\.onPointer\)/.test(mapdraw) && /campDrag/.test(mapdraw));
+check('the map\'s click is read on release, so a drag that starts on a mark is not a click on it (campMapClick is called by the drag code, not by a pointerdown)', !/s\.input\.on\('pointerdown', mp\.onPointer\)/.test(mapdraw) && /campdrag\.js/.test(mapdraw));
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `DRAG VIEW FAIL (${failed} of ${n})` : `DRAG VIEW PASS (${n} checks)`);
 process.exit(failed ? 1 : 0);

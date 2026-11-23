@@ -74,13 +74,27 @@ function campMapFit(b, frame, pad) {
 // the view at zoom z (1: the level fitted to the frame): the scale and centre to draw with. view is the last one and z0 the zoom it had; focus, a world point or null, is what is zoomed about, which stays where it was on the screen
 // (null: the middle of the frame stays). Zoomed in, the view is held inside the fitted extent. Zoomed out past 1 it is the fitted centre, so zooming back in returns to the whole level; with `whole` (the whole system fitted
 // to the frame, campMapFit of campMapBounds(level, true)) the centre moves from the level's to the system's as the zoom goes out, and at the zoom where the whole system just fits (campMapWholeZ) it is the system's own.
-function campMapView(base, frame, z, view, z0, focus, whole) {
+// `free` (a box, or null): the map has been dragged, and the centre is wherever it was put inside that box (campMapPan, campMapRecentre below).
+function campMapView(base, frame, z, view, z0, focus, whole, free) {
   const s = base.s * z; let cx = view.cx, cy = view.cy;
   if (focus && z0 > 0) { const k = z0 / z; cx = focus.x - (focus.x - cx) * k; cy = focus.y - (focus.y - cy) * k; }
+  if (free) return { s, cx: Math.max(free.x0, Math.min(free.x1, cx)), cy: Math.max(free.y0, Math.min(free.y1, cy)) }; // `free`, a box: the view the pilot has dragged (card space-game-drag-view) goes where the hand put it, anywhere inside the whole system's bounds: no hold on the level's extent, no pull to its middle
   const vx = frame.w / 2 / s, vy = frame.h / 2 / s, bx = frame.w / 2 / base.s, by = frame.h / 2 / base.s;
   const w = whole && z < 1 ? campMapOutShare(base, whole, z) : 0, mx = base.cx + (whole ? (whole.cx - base.cx) * w : 0), my = base.cy + (whole ? (whole.cy - base.cy) * w : 0);
   const hold = (c, v, b, mid) => v >= b ? mid : Math.max(mid - (b - v), Math.min(mid + (b - v), c));
   return { s, cx: hold(cx, vx, bx, mx), cy: hold(cy, vy, by, my) };
+}
+// a drag of the map by dx, dy screen pixels (card space-game-drag-view): the map follows the hand, so the centre moves the other way by the pixels over the scale, and stays inside mp.box (the whole system's bounds: the map cannot be dragged away)
+function campMapPan(mp, frame, dx, dy) {
+  if (!mp || !mp.fit || !(mp.fit.s > 0)) return false;
+  const f = mp.fit, b = mp.box, cx = f.cx - dx / f.s, cy = f.cy - dy / f.s;
+  mp.fit = { s: f.s, cx: b ? Math.max(b.x0, Math.min(b.x1, cx)) : cx, cy: b ? Math.max(b.y0, Math.min(b.y1, cy)) : cy };
+  mp.panned = true; return true;
+}
+// the map back where its zoom puts it (the held view: the level's middle, or the way out to the system's): Backspace, the mark
+function campMapRecentre(mp, frame) {
+  if (!mp || !mp.base) return false;
+  mp.panned = false; mp.fit = campMapView(mp.base, frame, mp.z, mp.fit, mp.z, null, mp.wholeBase); return true;
 }
 // how far along the way out from the level (0) to the whole system (1) a zoom is: by the log of the zoom, so every step out moves the centre the same share of the way
 function campMapOutShare(base, whole, z) {

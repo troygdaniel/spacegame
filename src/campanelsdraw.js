@@ -95,6 +95,13 @@ function campPanelsPaint(s, now) {
 }
 
 // a click on a row of the open list does the row (as Enter would). true when the list took the click (so it is not also a click on the map or the battle)
+// the pointer is on the open list's box: a press there is the list's click (campPanelsClick), never the start of a drag of the view (src/campdrag.js)
+function campPanelsOver(s, px, py) {
+  const P = s.pn; if (!P || typeof P !== 'object' || !campPanelsOn(s)) return false;
+  const def = campPanelDef(campPanelOpen(P)); if (!def) return false;
+  const V = campPanelView(P, s.camp); if (!V) return false;
+  const G = campPanelsGeometry(def, V.total); return px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h;
+}
 function campPanelsClick(s, px, py) {
   const P = s.pn, L = s.pnl; if (!P || !L || !campPanelsOn(s)) return false;
   const def = campPanelDef(campPanelOpen(P)); if (!def) return false;
