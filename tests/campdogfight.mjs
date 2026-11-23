@@ -10,6 +10,7 @@ import { nodeGame } from './nodegame.mjs';
 let failed = 0;
 const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + name + (detail ? '  ' + String(detail).slice(0, 200) : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 300) + ')' : ''}`); } };
 const g = nodeGame({ store: new Map() });
+g.run('CAMP.pace.fight = 1'); // this suite pins the dogfight's own moves (how often a ship flips, breaks and jinks, how long a duel lasts) at the pace's own numbers: the fight pace of card space-game-slower-fights (0.5: every duel twice as long, so a third of these pins would move for a reason that is not the dogfight) is off here, and tests/campfightpace.mjs flies a duel with it on
 g.run(`CAMP.levels.duelfix = Object.assign({}, CAMP.levels[1], { missions: [] });`); // level 1's own numbers (the earth, the pirates, the scales) with none of its missions' rows
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const near = (a, b, e = 1e-6) => Math.abs(a - b) <= e;

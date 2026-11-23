@@ -12,7 +12,7 @@ The words of Level 1 as the rim run (card space-game-l1-rim-missions): what the 
 | camp.say.rim3 | The last raid. Keep them off her. |
 | camp.say.rim4 | Pirates at the rim. They want the miners. |
 | camp.say.rim5 | A second raid. Guard the miners. |
-| camp.say.rim6 | A third raid, and heavier. Hold them. |
+| camp.say.rim6 | The heavy raid is coming. Hold them. |
 | camp.say.rim7 | Pirates ahead. Cover the haulers. |
 | camp.say.rim8 | They are back. Cover the haulers. |
 | camp.say.contact | Unknown ships. Not pirates. Weapons hot. |

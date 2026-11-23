@@ -86,7 +86,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.2.3.w1 | Fly the carrier into the relic's ring at Proxima. |
 | camp.bf.2.3.w2 | Hold there 14 seconds with no alien near the relic. |
 | camp.bf.2.3.w3 | Leave the ring, or let aliens close, and it loses ground. |
-| camp.bf.2.3.w4 | Aliens come from the north-east after 6 seconds. |
+| camp.bf.2.3.w4 | Aliens come from the north-east after 3 seconds. |
 | camp.bf.3.1.w1 | Fly to each of the 3 marked rings on the map. |
 | camp.bf.3.1.w2 | Any ship of yours inside a ring scans it: 7 seconds. |
 | camp.bf.3.1.w3 | Aliens answer your first scan. Keep the wing close. |

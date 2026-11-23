@@ -76,7 +76,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 
 **A pilot's call** (a timed radio prompt with three answers, or five when it offers the squads: a squad with no ship out is grey and `Enter` on it says why) is a small amber list low in the middle of the screen: `Up` and `Down` pick an answer, `Enter` gives it. The highlight starts on the pilot's own cautious pick, which is also what he does if you say nothing: he waits 8 seconds, shown by a bar. **Press `Up` or `Down` and the timer stops** (the bar stays where it was and turns pale blue, and the key line says "Timer stopped"): the call then waits for `Enter` (30 seconds at the longest, then he takes the cautious pick); touch nothing and it runs out as ever. No other key stops it. Only one list has the arrows and Enter at a time: while an order list (or the map) is open the call waits, dimmed, and says so.
 
-The battle never slows for a list, the map or a pilot's call: it runs at its own speed whatever is open. It has one pace (Normal); there is no pace key. Cards between battles (the tech pick, the refit) still use the number keys shown on them.
+The battle never slows for a list, the map or a pilot's call: it runs at its own speed whatever is open. It has one pace (Normal); there is no pace key. In a fight the small ships fly, turn and fire at half speed (they slow when a foe is within about 900 px, and are at the pace they had beyond 1,700 px, so trips and mission clocks are unchanged; the `N` panel's **Fight pace** row is the number, 0.5). Cards between battles (the tech pick, the refit) still use the number keys shown on them.
 
 ### Long Haul
 
