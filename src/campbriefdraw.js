@@ -63,7 +63,7 @@ function campBriefFlow(s, col, y, text, size, color, o) { const t = campBriefOwn
 
 // the heading across the top and the three screens' names under it (the one you are on is lit)
 function campBriefPaintHead(s) {
-  const bf = s.bf, B = bf.brief, K = CAMPBRIEF, Hd = K.head, rp = bf.t.replay === true;
+  const bf = s.bf, B = bf.brief, K = CAMPBRIEF, Hd = K.head, rp = bf.t.replay === true && bf.t.skipped !== true; // a mission done is a replay; one skipped is briefed as a mission
   campBriefOwn(s, s.add.text(Hd.x, Hd.y, uiText(rp ? 'camp.bf.head.replay' : 'camp.bf.head', { n: B.n, title: B.title }), uiFont(19, rp ? '#6dff9c' : '#38e1ff', { fontStyle: 'bold' }))).setOrigin(0, 0.5); // "Mission 1", not "Mission 1/3": which of how many is the board's business
   campBriefOwn(s, s.add.text(Hd.right, Hd.y, uiText('camp.hub.brief.kind', { kind: B.kindText, par: B.par }), uiFont(13, '#8fb4c9'))).setOrigin(1, 0.5);
   CAMPBRIEF_SCREEN.forEach((name, k) => campBriefOwn(s, s.add.text(Hd.x + k * K.tabs.step, K.tabs.y, (k + 1) + '  ' + uiText('camp.bf.scr.' + name), uiFont(13, k === bf.screen ? '#ffd37a' : '#5f8299', k === bf.screen ? { fontStyle: 'bold' } : {}))).setOrigin(0, 0.5));
