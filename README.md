@@ -24,7 +24,7 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 
 **Premise.** The Earth cruiser, a mining ship turned warship, is drafted into a war with an alien fleet. Missions run from the Moon to the asteroid rim (level 1), through the warp to Alpha Centauri and an ancient relic (level 2), to the alien home world (level 3), and end on a reveal: *this is not their home, it is an outpost.*
 
-**What you do.** You fly the cruiser yourself (the arrow keys, hold Space to fire its eight turrets, Enter a homing missile) and **command the rest**: fighters in three squads (attack, guard, escort a convoy, mine), the convoys themselves (tuck in, hold, run). You give orders from short lists (`Q` the fleet's, `P` the ship's, with a key for each part of them), by typing to the ship's computer, or by voice. Between missions you are in a **ready room** where you read briefings, spend ore on ships, and see your rank. After each battle you pick one of three alien technologies.
+**What you do.** You fly the cruiser yourself (the arrow keys, hold Space to fire its eight turrets, Enter a homing missile) and **command the rest**: three named pilots, Wedge, Kara and Apollo, each flying a fighter as strong as a squad (attack, guard, escort a convoy, mine), the convoys themselves (tuck in, hold, run). You give orders from short lists (`Q` the fleet's, `P` the ship's, with a key for each part of them), by typing to the ship's computer, or by voice. Between missions you are in a **ready room** where you read briefings, spend ore on ships, and see your rank. After each battle you pick one of three alien technologies.
 
 **The ideas that make it a commander game.**
 
