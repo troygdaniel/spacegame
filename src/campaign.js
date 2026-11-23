@@ -1068,6 +1068,7 @@ function campTick(C, dt) {
   campRepairTick(C); // the fighters mended in the bay are whole again (src/camprepair.js)
   campDogPair(C); // the fighters and the raiders pair off, one on one (src/campdogfight.js)
   campFightPace(C); // a small ship near a foe flies and fires at the fight pace (card space-game-slower-fights)
+  if (typeof campWingGuardStep === 'function') campWingGuardStep(C); // a squad guarding a ship that is lost or safe goes back to the cruiser, and says so (src/campwing.js)
   C.ships.forEach(u => { if (u.hp > 0 && u.kind !== 'carrier') campAI(C, u, dt); });
   campBullets(C, dt);
   if (typeof campTorpedoes === 'function') campTorpedoes(C, dt); // the torpedoes fly, hit and go off (src/camptorpedo.js)
