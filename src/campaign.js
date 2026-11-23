@@ -37,7 +37,6 @@ const CAMP = {
   size: {                                  // how big your ships are: the one place for it (card space-game-campaign-look: another 30 percent smaller than the 140 x 100, 31 x 23 and 40 x 29 px they were drawn at). len: the drawn length in px (the scene scales the picture to it); hit: the hit circle's radius in px, about half of len over two, as it always was
     carrier: { len: 98, hit: 25 },         // it was 140 and 36
     fighter: { len: 22, hit: 6 },          // it was 31 and 8
-    escort: { len: 28, hit: 7 },           // it was 40 and 10
     skiff: { len: 28, hit: 9 }, cutter: { len: 34, hit: 12 }, brute: { len: 46, hit: 17 }, // the pirates (card space-game-l1-pirates-traffic): about the hit circles of the raider, the drone and the gunship they fly like (10, 14, 19), a little smaller
     pirateleader: { len: 98, hit: 25 },    // a rival ship (card space-game-rival-duel): the cruiser's own size
     patrol: { len: 38, hit: 12 }, miner: { len: 36, hit: 14 },                         // the neutral ships
@@ -95,19 +94,16 @@ const CAMP = {
   build: {
     fighterCost: 25,                       // ore for a new fighter
     fighterTime: 6,                        // s to build it (one ship at a time, into the bay)
-    escortCost: 45,                        // ore for a new escort
-    escortTime: 10,                        // s to build it
     maxFighters: 14,                       // most fighters in the bay and out together (and queued)
-    maxEscorts: 6,                         // most escorts, the same way
     most: 5                                // most ships one order queues
   },
-  ranks: [                                 // the ranks (card space-game-campaign-ranks, src/campranks.js): the best scores of the missions flown, added up, are the points; a rank is held from `at` points; its extras are added to the bay and to the wing limit (CAMP.build.maxFighters, maxEscorts)
-    { id: 'cadet', at: 0, fighters: 0, escorts: 0 },           // the start: the wing of the bay, no more
-    { id: 'ensign', at: 1000, fighters: 1, escorts: 0 },        // one good mission (1,000 for the objectives)
-    { id: 'lieutenant', at: 3500, fighters: 2, escorts: 1 },    // about three missions at a good score
-    { id: 'commander', at: 6500, fighters: 3, escorts: 1 },     // about five
-    { id: 'captain', at: 10000, fighters: 4, escorts: 2 },      // about seven: late in the second level
-    { id: 'commodore', at: 14000, fighters: 5, escorts: 3 }     // the nine missions flown well (a mission is worth 1,000 to 1,900)
+  ranks: [                                 // the ranks (card space-game-campaign-ranks, src/campranks.js): the best scores of the missions flown, added up, are the points; a rank is held from `at` points; its extras are added to the bay and to the wing limit (CAMP.build.maxFighters). Card space-game-cut-escorts (Troy, 22 Nov 2026): the escort ship is gone, so a rank gives the same number of fighters in all that it gave in ships (fighters + escorts)
+    { id: 'cadet', at: 0, fighters: 0 },           // the start: the wing of the bay, no more
+    { id: 'ensign', at: 1000, fighters: 1 },        // one good mission (1,000 for the objectives)
+    { id: 'lieutenant', at: 3500, fighters: 3 },    // about three missions at a good score (it was 2 fighters and 1 escort)
+    { id: 'commander', at: 6500, fighters: 4 },     // about five (3 and 1)
+    { id: 'captain', at: 10000, fighters: 6 },      // about seven: late in the second level (4 and 2)
+    { id: 'commodore', at: 14000, fighters: 8 }     // the nine missions flown well (a mission is worth 1,000 to 1,900) (5 and 3)
   ],
   beamHum: {                               // the hum of a beam (card space-game-campaign-sounds): what src/audio.js beamHum is told
     rise: 2,                               // s of unbroken fire (Beam turrets tech, Space held, a turret on a target) until the hum has climbed all the way
@@ -132,8 +128,7 @@ const CAMP = {
     small: 10                              // hit points any other alien loses (a raider, a drone)
   },
   bay: {
-    fighters: 6,                           // fighters in the bay at the start
-    escorts: 2,                            // escorts in the bay at the start
+    fighters: 8,                           // fighters in the bay at the start: three squads of 3, 3 and 2 (card space-game-cut-escorts, Troy, 22 Nov 2026: the two escorts of the bay became fighters; there is no escort ship)
     launchEvery: 600,                      // ms between ships leaving the bay once Launch is ordered
     mouth: [21, 19.5],                     // px from the carrier's centre (x along the nose, y to the side): where a launched ship appears, one side and then the other: just in front of the launch tube of a hangar pod (CAMP_ART.cruiser.launch)
     dockAt: 63                             // px: a recalled ship this close to the carrier lands (and is whole again when next launched)
@@ -144,7 +139,7 @@ const CAMP = {
     panic: 1400                            // px: a convoy holding at the fork does not sit still with an enemy this close: she takes the default lane at once
   },
   repair: {                                // a hurt fighter lands to be mended (card space-game-fighter-repair; src/camprepair.js, docs/CAMPAIGN.md "Repair"): the wing's fighters only, the enemy's never do
-    kinds: ['fighter'],                    // who breaks off (an escort stays in the fight, a scout has its task)
+    kinds: ['fighter'],                    // who breaks off
     below: 0.3,                            // the share of its hull under which a fighter breaks off and flies home
     within: 15,                            // s of flight (the way home over its top speed): a cruiser farther off than this and the fighter fights on
     time: 10,                              // s a landed fighter is mended, then it is whole again
@@ -177,27 +172,16 @@ const CAMP = {
     depth: 6                               // the flight view's draw order: over the ships (4 and 5), under the HUD
   },
   sensor: {                                // the carrier's sensors (card space-game-see-hostiles-earlier; Troy, 22 Nov 2026: "see hostiles earlier so I can send squads to meet them"; src/campsight.js)
-    range: 9000,                           // px from the carrier: a hostile this near is SEEN: on the map, in the nav list and the target keys (A D S), in an edge arrow and in the radio's first call. 9000 is 21 s of the fastest raider's flight (430 px/s), 35 s of a drone's (260); a scout's own circle (CAMP.scout.sense) sees further still
+    range: 9000,                           // px from the carrier: a hostile this near is SEEN: on the map, in the nav list and the target keys (A D S), in an edge arrow and in the radio's first call. 9000 is 21 s of the fastest raider's flight (430 px/s), 35 s of a drone's (260); a fighter that is out sees from its own circle too (`wing`)
     always: ['mother', 'tower'],           // the kinds that are always seen: the mothership and the towers are the mission's own marks, as they were before the sensors had a range
     group: 900,                            // px: hostiles this near each other are one group (one edge arrow, one radio call)
     delay: 2000,                           // ms from the first sight to the radio call: the wave's own line ("Wave 2 incoming.") is said first
-    idNear: 2600,                          // px: a scout or an escort of yours this near a group, or the carrier itself this near it, tells what kind they are: the call names the kinds; with none near it says only how many
+    wing: 2600,                            // px: the sensor circle round each fighter that is out (the scouts' circle, now every fighter's: card space-game-cut-escorts): a hostile inside it is SEEN as one near the carrier is, and a cloaked anomaly inside it is noticed (src/campsight.js, src/campanomaly.js)
+    idNear: 2600,                          // px: a fighter of yours this near a group, or the carrier itself this near it, tells what kind they are: the call names the kinds; with none near it says only how many
     mark: 6000,                            // ms a group that was just seen is marked: its edge arrow blinks
     arrows: 4,                             // the most edge arrows at once (the groups nearest the carrier first)
     friends: 2,                            // the most amber edge arrows at once for ships you protect that are in trouble and off the screen (the nearest first; card space-game-target-display: the radar is gone)
     sayEvery: 4                            // s between two calls (groups that come into sight in the same few seconds are one call)
-  },
-  scout: {                                 // scout-escorts (card space-game-campaign-scouts; docs/CAMPAIGN.md "Scout-escorts"): an escort sent out with the Scout order to look, scan and fetch
-    sense: 2600,                           // px: the sensor circle round a scout that is out (the map draws it)
-    read: 1400,                            // px: how close a scout must be to a cloaked anomaly to read what it likely is (reading is not uncovering)
-    scanReach: 260,                        // px beyond a recon point's own radius from which a scout scans it
-    scanRate: 2.5,                         // how many times as fast as the wing a scout fills a recon point (a point of 8 s in 3.2 s)
-    pickup: 90,                            // px: a scout touches ore, an ore chunk or a cache from this far, and carries it home
-    carry: 60,                             // ore a scout holds; a full hold sends it home
-    station: 6,                            // s a scout stays at its place, reading, before it reports and goes home
-    fragile: 2.5,                          // damage a scout out takes, times this (an escort's 90 hit points feel like 36)
-    leash: 5200,                           // px: a scout this far from the carrier when the carrier is on a Fast burn is left behind: lost
-    tasks: ['recon', 'escort', 'fetch']    // what a mission allows when its row says nothing (a mission row may have scouts: [...])
   },
   fighter: {
     hp: 36,                                // hit points
@@ -209,18 +193,14 @@ const CAMP = {
     bullet: 700,                           // px/s of a shot
     range: 420,                            // px it shoots from
     aim: 0.3,                              // rad: how far off its target the nose may be and still fire
-    hold: 240                              // px: the ring it circles an alien at (pirateSteer's hold)
-  },
-  escort: {
-    hp: 90, speed: 300, accel: 360, turn: 2.6, damage: 6, delay: [350, 500], bullet: 650, range: 520, aim: 0.35, hold: 300, // as a fighter: tougher, slower, longer reach
-    beside: 150                            // px: how far from its convoy an escort keeps station
+    hold: 240,                             // px: the ring it circles an alien at (pirateSteer's hold)
+    beside: 150                            // px: how far from its convoy a fighter on the Escort order keeps station (it was the escort ship's)
   },
   wing: {                                  // the wing's groups, verbs and targets (card space-game-campaign-wing-targets; src/campwing.js): campWingOrder(C, group, verb, target, how)
     groups: {                              // three built-in groups, as data (a list of kinds, or of ship ids): numbered groups drop in later as C.groups[id] = { name, ships: [ids] }
       fighters: { name: 'Fighters', kinds: ['fighter'] },
-      escorts: { name: 'Escorts', kinds: ['escort'] },           // the escorts, and the scouts they send out
-      all: { name: 'All ships', kinds: ['fighter', 'escort'] },
-      red: { name: 'Red squad', kinds: ['fighter'], squad: 'red' },       // the fighters' three squads (card space-game-fighter-squads; Troy, 22 Nov 2026): a squad is the fighters whose u.squad is its id; the escorts and the scouts are in none
+      all: { name: 'All ships', kinds: ['fighter'] },                // the same ships as Fighters now (card space-game-cut-escorts: there is no escort ship)
+      red: { name: 'Red squad', kinds: ['fighter'], squad: 'red' },       // the fighters' three squads (card space-game-fighter-squads; Troy, 22 Nov 2026): a squad is the fighters whose u.squad is its id
       green: { name: 'Green squad', kinds: ['fighter'], squad: 'green' },
       yellow: { name: 'Yellow squad', kinds: ['fighter'], squad: 'yellow' }
     },
@@ -230,15 +210,14 @@ const CAMP = {
     rescue: 1500,                          // px: a squad sent to a ship in trouble (a pilot's call, src/camporders.js) fights the pirates this near that ship, and goes back to the order it had when none is left (campWingRescue, src/campwing.js)
     verbs: {                               // kinds: what the verb takes as a target (enemy, friend, convoy, place, point, pickup, cache, anomaly, rock); group: who it addresses when none is named (today's orders); need: a target must be named
       attack: { kinds: ['enemy'], group: 'fighters' },
-      escort: { kinds: ['friend', 'convoy'], group: 'escorts' },
-      guard: { kinds: ['place', 'point', 'friend', 'convoy'], group: 'all' },
+      escort: { kinds: ['friend', 'convoy'], group: 'fighters' },     // Escort the convoy: a SQUAD order (the fighters fly beside the convoy ship); there is no escort ship (card space-game-cut-escorts)
+      guard: { kinds: ['place', 'point', 'friend', 'convoy', 'anomaly'], group: 'all' },     // an anomaly too: a squad that flies there is a ship in range of it, and the cloak shows (src/campanomaly.js)
       hold: { kinds: ['place', 'point'], group: 'all', need: true },                     // fly there and stay, firing at what comes into range
-      scout: { kinds: ['place', 'point', 'anomaly'], group: 'escorts', need: true },     // the scouts' order (card space-game-campaign-scouts), once it is in
-      fetch: { kinds: ['pickup', 'cache'], group: 'escorts' },                           // fly over it: a ship of yours takes ore and caches it touches
+      fetch: { kinds: ['pickup', 'cache'], group: 'fighters' },                          // fly over it: a ship of yours takes ore and caches it touches
       mine: { kinds: ['rock', 'pickup'], group: 'all' },
       recall: { kinds: [], group: 'all' }
     },
-    smart: { enemy: 'attack', friend: 'escort', convoy: 'escort', place: 'guard', point: 'guard', pickup: 'fetch', cache: 'fetch', anomaly: 'scout', rock: 'mine' }, // the verb a right-click does for a kind of target
+    smart: { enemy: 'attack', friend: 'escort', convoy: 'escort', place: 'guard', point: 'guard', pickup: 'fetch', cache: 'fetch', anomaly: 'guard', rock: 'mine' }, // the verb a right-click does for a kind of target
     holdAt: 60                             // px: a ship ordered to hold at a point is there when it is this near it, and stops
   },
   stance: {                                // the wing's stances (card space-game-campaign-stances): how Attack and Guard move; which stances there are, and their order, is CAMP.stances
@@ -384,7 +363,7 @@ const CAMP = {
       cutter: { base: 'drone',   hp: 36, dmg: 7, ore: 10, color: 0xe8d24a },   // the medium raider
       brute:  { base: 'gunship', hp: 90, dmg: 9, ore: 18, color: 0xe8b84a }    // a slow heavy gun, a three-shot spread
     },
-    prey: { freighter: 0.5, miner: 0.55, escort: 0.9, fighter: 1.1, patrol: 1.3, carrier: 1.6 }, // what a pirate weighs when it picks what to attack: the distance to it times this, the least wins (so a hauler 1,000 px off is wanted over the cruiser 500 px off). A wave row's `prey` ('haulers', 'miners', 'carrier') keeps to that kind when one is there; `goal: 'convoy:h1'` wins over it
+    prey: { freighter: 0.5, miner: 0.55, fighter: 1.1, patrol: 1.3, carrier: 1.6 }, // what a pirate weighs when it picks what to attack: the distance to it times this, the least wins (so a hauler 1,000 px off is wanted over the cruiser 500 px off). A wave row's `prey` ('haulers', 'miners', 'carrier') keeps to that kind when one is there; `goal: 'convoy:h1'` wins over it
     breakHp: 0.35,                         // a pirate breaks off and runs when its hull falls under this share (a wave row's `breakAt` is its own)
     run: 1.15,                             // times its top speed, while it runs
     runMin: 2500,                          // ms a runner runs at least before it can be gone
@@ -503,10 +482,13 @@ const CAMP = {
     ],
     start: 'normal',                       // the setting until the player picks one
     scale: 1,                              // times the setting's multiplier (the tuning panel's one pace number: 1 is Normal as the table has it, 1.2 a fifth quicker)
+    fight: 0.5,                            // FIGHT PACE (card space-game-slower-fights; Troy, 22 Nov 2026: "slow the pace of the fights down so I can enjoy it", then "a lot more": 0.75 became 0.5): the share of its pace a small ship flies and fires at WHILE IT IS IN A FIGHT (not a torpedo boat, a slow hull, nor a runner, a ship that has broken off and flees), a foe within `engage[0]` px of it (a gun's reach and a dogfight's turns): top speed, acceleration, turn rate and the gaps between its shots, all times this, so a duel plays out the same and lasts twice as long (1 / 0.5). Away from every foe (beyond `engage[1]`) it flies at the pace above, as it did, so a trip, an approach, a scout's road and the missions' beat clocks are the same as before; between the two distances the share eases in, so no ship snaps. The tuning panel's row Fight pace (N). Only a battle made with a pace MODE has it (the tests' and the sims' number paces are the table's own numbers: 1 here)
+    engage: [900, 1700],                   // px: a foe nearer than the first puts the ship at the fight pace in full; one farther than the second, not at all. Narrow on purpose: a wave comes in at the pace it always did and slows only for the last of the way, so it arrives about when it did (a mission's clock for a relic's hold or a wave's first contact does not move); the raiders' guns reach 520 px, the dogfight pairs at 1,500
+    every: 200,                            // ms between the looks at who is near (campFightPace)
     shots: 0.5                             // the power of the multiplier a shot's speed takes (0.5 is its square root: a shot does not outrun the eye, a hit still lands). There is no key and no setting for the pace any more (card space-game-two-hands-keys): the Campaign flies at CAMP.pace.start, and campNew's opts.pace still takes a mode for the tests, the bots and the sims
   },
   refit: {                                 // the Earth refit screen after level 1: one tech, and ore buys extra ships for the next level (the costs are the workshop's, CAMP.build)
-    most: 3                                // most extra fighters, and most extra escorts, one refit buys
+    most: 3                                // most extra fighters one refit buys
   },
   anomaly: {                               // the cloaked enemy caches (card space-game-campaign-anomalies; src/campanomaly.js; the rows are CAMP.levels[n].anomalies)
     sense: 2400,                           // px: the carrier this near notices one: a mark on the map, 'Anomaly' in the nav list, one line from the ship (the lens tech doubles it)
@@ -524,7 +506,7 @@ const CAMP = {
     clear: 900,                            // px: no alien within this of the carrier, or the outpost keeps its doors shut (docking stops the battle: it must not be a free breather in a fight)
     repairOre: 60,                         // ore for mending the whole hull from nothing; a part costs its share, at least 5
     retreatHull: 0.35,                     // below this share of the hull, with no ship of the wing left (in the bay, out, launching or building), the HUD says where to retreat
-    fabricator: 300                        // ore for the Fabricator at a refit (the tech 'fabricator'): the carrier then builds fighters and escorts anywhere (120 while the store held 200: the bay holds 500 now, and the extra ships of a refit are 210, so one full bay no longer buys the whole refit)
+    fabricator: 300                        // ore for the Fabricator at a refit (the tech 'fabricator'): the carrier then builds fighters anywhere (120 while the store held 200: the bay holds 500 now, and the extra ships of a refit are 210, so one full bay no longer buys the whole refit)
   },
   tech: {                                  // what each tech does; names and words are in content/text/ui.md (camp.tech.<id>.name, .text)
     shield: { after: 1, taken: 0.6 },      // after level 1: the carrier takes this share of the damage it is dealt (0.6 = 40 percent less)
@@ -535,7 +517,7 @@ const CAMP = {
     repair: { after: 2, rate: 4, reach: 220 }, // after level 2: hit points a second the carrier and the ships within this many px of it heal
     overdrive: { after: 'find', speed: 1.25 }, // looted from a cloaked cache (an anomaly), offered at the refit as one more choice: the carrier's top speed and thrust times this
     lens: { after: 'find', sense: 2 },     // looted from a cloaked cache: the carrier notices an anomaly this many times as far
-    fabricator: { after: 0 }               // not a pick after a level (no level is 0): bought at a refit for CAMP.outpost.fabricator ore; the carrier builds fighters and escorts anywhere, not only docked (campCanBuild)
+    fabricator: { after: 0 }               // not a pick after a level (no level is 0): bought at a refit for CAMP.outpost.fabricator ore; the carrier builds fighters anywhere, not only docked (campCanBuild)
   },
   // the places of the home system at 1 to 12 of the Sol pack's distances (docs/SOL.md; Earth to Mars 4,100 px), Earth at the origin, y grows downward, north is up
   places: {
@@ -564,7 +546,7 @@ const CAMP = {
       rocks: [],                                                  // the missions have their own (the belt is at Ceres, 1.2)
       anomalies: [],                                              // none: no cloaked alien caches before first contact (1.3); the later levels have them
       missions: [                                                 // a mission is a row laid over this one: kind, objectives, bonus objectives (bonus), par (s), its own waves, convoys ... (docs/CAMPAIGN.md, Missions)
-        { id: 'escort', kind: 'escort', par: 400, hpScale: 1, dmgScale: 1, scouts: ['escort'], place: 'luna', dock: 'ceres',  // 1.1 ESCORT in four beats (card space-game-l1-1-beats; docs/CAMPAIGN.md "Mission 1.1 in four beats"): from the Lunar Base one transport flies to Ceres, 16,500 px at 52 px/s; something happens about every minute and the player directs the fleet in each
+        { id: 'escort', kind: 'escort', par: 400, hpScale: 1, dmgScale: 1, place: 'luna', dock: 'ceres',  // 1.1 ESCORT in four beats (card space-game-l1-1-beats; docs/CAMPAIGN.md "Mission 1.1 in four beats"): from the Lunar Base one transport flies to Ceres, 16,500 px at 52 px/s; something happens about every minute and the player directs the fleet in each
           convoys: [{ id: 't1', name: 'Transport', say: 'camp.say.transport', at: 4, from: 'luna', to: 'ceres', speed: 54 }],  // the transport: when she leaves (s after arrival), from and to which place, her speed (54: the road is about 5 minutes; it was 52)
           objectives: [{ type: 'deliver', n: 1, word: 'transport' }],  // what the mission asks: the transport must arrive (the pirate leader is a bonus: kill it, or get her past)
           bonus: [{ id: 'swift', type: 'time', secs: 400 }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'miner', type: 'neutrals', n: 0 }, { id: 'leader', type: 'rival', what: 'leader' }, { id: 'torp', type: 'torpedoes', n: 0 }],  // the debrief follows the beats: the miner saved, the leader killed, no torpedo hit
@@ -574,7 +556,7 @@ const CAMP = {
           waves: [{ on: { lane: 0.31 }, beat: 'distress', victim: 'dm', thanks: 40, harry: 0.4, from: [-437, 6155], ships: { skiff: 2 }, prey: 'miners', say: 'camp.say.distress' },  // BEAT 2: two skiffs come out of the dark by the miner (an offset from Luna); they go for miners
                   { on: { lane: 0.52 }, ahead: 2000, ships: { skiff: 4, tboat: 2 }, goal: 'convoy:t1', ambush: true, say: 'camp.say.rimambush' }],  // BEAT 3: the ambush on the road behind the rocks: skiffs tie up the wing while two torpedo boats go for the transport (it was the short lane's: the road forked here until card space-game-cut-lane-fork, Troy 22 Nov 2026: "remove picking a lane")
           rivals: [{ id: 'leader', kind: 'pirateleader', on: { lane: 0.75 }, ahead: 3000, along: 't1', escorts: { skiff: 2 }, say: 'camp.say.rival.leader' }] },  // BEAT 4: the pirate leader (a rival ship: src/camprival.js) waits for her near Ceres: kill it, or get her past
-        { id: 'mine', kind: 'defend', par: 380, hpScale: 2.0, dmgScale: 1.35, scouts: ['fetch'], place: 'ceres', dock: 'ceres', start: 'ceres', startAt: [130, 30],  // 1.2 MINE AND DEFEND at Ceres: the ore is worth 3 cash at the Works but the rim is not safe: pirates go for the miners; the cruiser starts at Ceres
+        { id: 'mine', kind: 'defend', par: 380, hpScale: 2.0, dmgScale: 1.35, place: 'ceres', dock: 'ceres', start: 'ceres', startAt: [130, 30],  // 1.2 MINE AND DEFEND at Ceres: the ore is worth 3 cash at the Works but the rim is not safe: pirates go for the miners; the cruiser starts at Ceres
           rocks: [{ at: [900, 700], n: 10, spread: 330, hp: 200 }, { at: [-1100, -400], n: 10, spread: 330, hp: 200 }, { at: [300, -1600], n: 10, spread: 330, hp: 200 }],  // three rock fields, offsets from Ceres: 30 rocks (600 ore) of 200 hit points (the others' 100): the wing cuts one in 8 s, not 4 (card space-game-tune-l1-notes: with 20 rocks of 100 and a goal of 190 the goal was met in 36 s and the fields were empty by 110 s, with the first raid not due until 70 and the third at 270)
           objectives: [{ type: 'ore', n: 450 }, { type: 'kill', what: 'wave:4' }, { type: 'cashin', n: 160 }],  // fill the bay (450 of its 500; the store the cruiser carries in from 1.1 counts), beat the last raid (the fifth wave), sell at the Works (the doors are shut with a pirate near, so the fight comes first). The wing mines about 2 ore a second at the table's rock, so the goal takes most of the mission and the raids land while it works
           traffic: [{ id: 'm1', kind: 'miner', place: 'ceres', off: [260, 120], n: 2, name: 'Miner' }],  // two other mining ships work the rocks round Ceres and dock at the Works (src/camppirates.js); the pirates go for them (prey 'miners'), and the bonus below asks for none lost
@@ -585,7 +567,7 @@ const CAMP = {
             { at: 112, from: [3200, -3000], ships: { skiff: 2, cutter: 1 }, prey: 'miners', say: 'camp.say.l1p.second' },  // ... and twelve seconds on a second group from the north-east, the far side: the squads must be split (the pilots' "second group" call asks)
             { at: 175, from: [-700, 4300], ships: { tboat: 2, skiff: 2 }, prey: 'miners', say: 'camp.say.l1p.boats' },  // 3 torpedo boats for the miners: tuck the miners in under the shield, or send a squad at the boats before they fire
             { at: 240, early: 55, needClear: true, from: [3000, -3300], ships: { skiff: 3, cutter: 3, brute: 2 }, prey: 'miners', say: 'camp.say.rim6' }] },  // 4 the heavy raid, when the others are dead: the whole wing, hurt squads home to be mended first; then the Works opens its doors and the ore is sold
-        { id: 'haulers', kind: 'escort', par: 380, hpScale: 2.9, dmgScale: 1.55, scouts: ['escort'], place: 'ceres', dock: 'earth', start: 'ceres', startAt: [130, 30],  // 1.3 HAULERS HOME: three ore haulers fly from Ceres toward Earth; pirates raid and break off; then FIRST CONTACT: a small alien scout force
+        { id: 'haulers', kind: 'escort', par: 380, hpScale: 2.9, dmgScale: 1.55, place: 'ceres', dock: 'earth', start: 'ceres', startAt: [130, 30],  // 1.3 HAULERS HOME: three ore haulers fly from Ceres toward Earth; pirates raid and break off; then FIRST CONTACT: a small alien scout force
           convoys: [{ id: 'h1', name: 'Hauler 1', say: 'camp.say.hauler', at: 4, from: 'ceres', to: 'earth', speed: 62 }, { id: 'h2', name: 'Hauler 2', say: 'camp.say.hauler', at: 16, from: 'ceres', to: 'earth', speed: 62 }, { id: 'h3', name: 'Hauler 3', say: 'camp.say.hauler', at: 28, from: 'ceres', to: 'earth', speed: 62 }],  // the haulers: when they leave (s after arrival), from and to which place. Twelve seconds apart, so the convoy is strung out along 1,500 px of road: the cruiser's shield cannot cover the first and the last at once, which is what the beats below are about
           objectives: [{ type: 'deliver', n: 1 }, { type: 'kill', what: 'wave:5' }],  // one hauler must get home (only all lost fails it; each lost hauler costs CAMP.score.hauler), and the aliens of first contact must be beaten
           bonus: [{ id: 'all', type: 'delivered' }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
@@ -635,7 +617,7 @@ const CAMP = {
         { id: 'echo', at: [2800, -3300], hides: 'weapons', guards: { gunship: 2, drone: 3 }, reward: { ore: 120, missiles: 2, tech: 'overdrive' } } // north of Proxima: the best of them
       ],
       missions: [
-        { id: 'resources', kind: 'recon', par: 100, hpScale: 1.5, dmgScale: 1.8, scouts: ['recon', 'fetch'], place: 'alpha-cen-b', dock: 'proxima-w',  // M1 at Alpha Centauri B's world (a trip of about 7 s by Fast)               // M1: gather two of the three resource caches, with the aliens that followed through the warp
+        { id: 'resources', kind: 'recon', par: 100, hpScale: 1.5, dmgScale: 1.8, place: 'alpha-cen-b', dock: 'proxima-w',  // M1 at Alpha Centauri B's world (a trip of about 7 s by Fast)               // M1: gather two of the three resource caches, with the aliens that followed through the warp
           caches: [[-1500, 900], [800, 1600], [1600, -700]], rocks: [{ at: [-900, -1100], n: 5, spread: 260 }, { at: [1100, 600], n: 5, spread: 260 }], objectives: [{ type: 'caches', n: 2 }, { type: 'kill', what: 'wave:0' }],  // the resource caches
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'wreck' }, { id: 'swift', type: 'time', secs: 100 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
           waves: [{ at: 20, from: [-3000, 1200], ships: { raider: 4, drone: 3 }, goal: 'carrier', say: 'camp.say.l2wave1' }] },  // the waves: when, from where, how many of each kind
@@ -646,7 +628,7 @@ const CAMP = {
         { id: 'relic', kind: 'defend', par: 90, hpScale: 2.6, dmgScale: 3, win: 'relic', place: 'proxima', dock: 'proxima-w',  // M3 at Proxima b, the relic's world (the cruiser starts there)      // M3: hold the carrier on the relic's ring until it answers, with no alien near it
           start: 'proxima', startAt: [-600, 300], relic: { place: 'proxima', radius: 240, hold: 14, caches: 0, clear: 650 }, objectives: [{ type: 'relic' }],  // where the cruiser starts, and the relic
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'echo' }, { id: 'swift', type: 'time', secs: 90 }, { id: 'hull', type: 'hull', pct: 70 }],  // bonus objectives: each met earns CAMP.score.bonus
-          waves: [{ at: 6, from: [2800, -2800], ships: { drone: 4, raider: 3 }, goal: 'carrier', say: 'camp.say.l2wave3' }, { at: 24, from: [-2500, 1800], ships: { gunship: 3, raider: 3 }, goal: 'carrier', say: 'camp.say.l2wave3' }, { at: 42, from: [2200, 2400], ships: { drone: 4, gunship: 2 }, goal: 'carrier', say: 'camp.say.l2wave3' }] }  // the waves: when, from where, how many of each kind
+          waves: [{ at: 3, from: [2800, -2800], ships: { drone: 4, raider: 3 }, goal: 'carrier', say: 'camp.say.l2wave3' }, { at: 24, from: [-2500, 1800], ships: { gunship: 3, raider: 3 }, goal: 'carrier', say: 'camp.say.l2wave3' }, { at: 42, from: [2200, 2400], ships: { drone: 4, gunship: 2 }, goal: 'carrier', say: 'camp.say.l2wave3' }] }  // the waves: when, from where, how many of each kind
       ]
     },
     3: {                                                          // the alien home world: scan the approach, break the outer ring, break the inner ring
@@ -667,7 +649,7 @@ const CAMP = {
         { id: 'core', at: [-1800, 4300], hides: 'weapons', guards: { gunship: 3, drone: 3 }, reward: { ore: 150, missiles: 3 } }               // south, well outside the inner ring and out of the sense range of the missions' starts (card space-game-wrapup-hunt-l3: it was noticed at second 0): the last of them
       ],
       missions: [
-        { id: 'approach', kind: 'recon', par: 120, hpScale: 2.2, dmgScale: 2.6, scouts: ['recon'], place: 'kolga', dock: 'tyr',  // M1 at Kolga, a moon of the alien home world (a trip of about 10 s by Fast)                // M1: three points on the way in; defenders come when the first is scanned
+        { id: 'approach', kind: 'recon', par: 120, hpScale: 2.2, dmgScale: 2.6, place: 'kolga', dock: 'tyr',  // M1 at Kolga, a moon of the alien home world (a trip of about 10 s by Fast)                // M1: three points on the way in; defenders come when the first is scanned
           objectives: [{ type: 'scan', points: [{ at: [-1500, 800], r: 420, secs: 7 }, { at: [100, 1400], r: 420, secs: 7 }, { at: [1500, -500], r: 420, secs: 7 }] }, { type: 'kill', what: 'wave:0' }],  // what the mission asks (scan points: where, how close, how many seconds), all of it
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'nest' }, { id: 'swift', type: 'time', secs: 120 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
           waves: [{ on: { scanned: 1 }, from: [-2500, 1800], ships: { raider: 5, drone: 3 }, goal: 'carrier', say: 'camp.say.l3wave1' }] },  // the waves: when, from where, how many of each kind
@@ -753,38 +735,56 @@ function campPaceMult(p) {
   if (typeof p === 'number' && p > 0 && isFinite(p)) return p;
   const m = CAMP.pace.modes.find(x => x.id === p); return m ? m.mult * CAMP.pace.scale : 1;
 }
-const campSmall = kind => kind === 'fighter' || kind === 'escort' || !!PIRATES[kind] || !!CAMP.pirate.kinds[kind] || !!CAMP.torpedo.boats[kind] || !!CAMP.rival.kinds[kind]; // a small ship: the ones the pace scales (fighters and escorts of the wing, the aliens that are not the mothership or a tower)
+const campSmall = kind => kind === 'fighter' || !!PIRATES[kind] || !!CAMP.pirate.kinds[kind] || !!CAMP.torpedo.boats[kind] || !!CAMP.rival.kinds[kind]; // a small ship: the ones the pace scales (the fighters of the wing, the aliens that are not the mothership or a tower)
 // the pace is put on a ship from the numbers it was made with (u.base), so it can change in play and come back to Brisk exactly
 function campPaceShip(C, u) {
   if (!u.base) return;
-  const P = C.pace, b = u.base; u.vmax = b.vmax * P; u.accel = b.accel * P; u.turn = b.turn * P;
+  const P = C.pace * (u.fp || 1), R = u.running ? CAMP.pirate.run : 1, b = u.base; u.vmax = b.vmax * P * R; u.accel = b.accel * P * R; u.turn = b.turn * P; // R: a runner flies faster (src/camppirates.js campPirateBreakOne) and keeps it; u.fp: the share of the pace the ship flies at now, 1 away from every foe, CAMP.pace.fight in a fight (campFightPace)
   u.def = P === 1 ? b.def : Object.assign({}, b.def, { speed: b.def.speed * P, max: b.def.max * P }); // pirateSteer reads the shape: its ring and its lean use the speed and the acceleration
 }
 // a new pace for the battle, from now on and for the ships already out (the quick key)
 function campPaceSet(C, p) {
-  C.pace = campPaceMult(p); C.shot = Math.pow(C.pace, CAMP.pace.shots);
+  C.pace = campPaceMult(p); C.shot = Math.pow(C.pace, CAMP.pace.shots); C.fightOn = campPaceIsMode(p);
   C.ships.forEach(u => campPaceShip(C, u));
   return C.pace;
+}
+const campPaceIsMode = p => typeof p !== 'number' && !!CAMP.pace.modes.find(x => x.id === p); // a pace MODE (an id of CAMP.pace.modes) has the fight pace; a number, or none, is the table's own numbers
+const campFightGap = (u, ms) => ms / (u.fp || 1); // the gap between a small ship's shots, in a fight: longer by the same share that the ship flies slower
+// FIGHT PACE (card space-game-slower-fights): every CAMP.pace.every ms each small ship looks for the nearest foe (the aliens against anything that is not an alien, the wing against the aliens) and takes its share of the pace by how near it is
+function campFightPace(C) {
+  if (C.t < (C.fightAt || 0)) return; C.fightAt = C.t + CAMP.pace.every;
+  const F = C.fightOn ? Math.max(0.05, +CAMP.pace.fight || 1) : 1, r0 = CAMP.pace.engage[0], r1 = Math.max(r0 + 1, CAMP.pace.engage[1]), ships = C.ships;
+  for (let i = 0; i < ships.length; i++) {
+    const u = ships[i]; if (!u.base || u.hp <= 0 || u.boat) continue; // a torpedo boat is a slow hull, not a dogfighter: at half its speed the turrets kill it before it can launch, so it flies and arms as it always did
+    let fp = 1;
+    if (F !== 1 && !u.running) { // a runner (a pirate that has broken off, src/camppirates.js) flees at its full run speed: slowed by the carrier at its heels, it could never get away
+      let best = Infinity; const al = u.team === 'alien';
+      for (let j = 0; j < ships.length; j++) { const o = ships[j]; if (o.hp <= 0 || (o.team === 'alien') === al || o.running) continue; const dx = o.x - u.x, dy = o.y - u.y, d2 = dx * dx + dy * dy; if (d2 < best) best = d2; } // a runner is not a foe to slow for: the wing chasing it must be quicker than it, as it was
+      const t = best === Infinity ? 1 : Math.max(0, Math.min(1, (Math.sqrt(best) - r0) / (r1 - r0)));
+      fp = F + (1 - F) * t;
+    }
+    if (Math.abs(fp - (u.fp || 1)) > 0.004) { u.fp = fp; campPaceShip(C, u); }
+  }
 }
 function campNew(level, techs, opts) {
   opts = opts || {};
   const L = campMissionRow(level, opts.mission); if (!L) return null;
   const C = {
-    level, mission: L.mission, L, flags: {}, arrivedAt: campHere(level, L) ? 0 : null, hpS: CAMP.alien.hpScale * (L.hpScale || 1), dmgS: CAMP.alien.damageScale * (L.dmgScale || 1), pace: campPaceMult(opts.pace), shot: Math.pow(campPaceMult(opts.pace), CAMP.pace.shots), via: opts.via || 'menu', t: 0, rng: campRng(opts.seed == null ? 1 : opts.seed), god: !!opts.god, nextId: 1, ships: [], by: {}, bullets: [], events: [],
+    level, mission: L.mission, L, flags: {}, arrivedAt: campHere(level, L) ? 0 : null, hpS: CAMP.alien.hpScale * (L.hpScale || 1), dmgS: CAMP.alien.damageScale * (L.dmgScale || 1), pace: campPaceMult(opts.pace), fightOn: campPaceIsMode(opts.pace), fightAt: 0, shot: Math.pow(campPaceMult(opts.pace), CAMP.pace.shots), via: opts.via || 'menu', t: 0, rng: campRng(opts.seed == null ? 1 : opts.seed), god: !!opts.god, nextId: 1, ships: [], by: {}, bullets: [], events: [],
     input: { turn: 0, thrust: 0, brake: false, fire: false, blink: false },
     techs: (techs || []).filter(t => CAMP.tech[t]),
     earth: L.defend ? campDefend(level, L.defend) : L.earth === false ? null : { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield }, caches: (L.caches || []).map(c => ({ x: c[0], y: c[1], got: false })), cachesGot: 0,
     ore: Math.max(0, Math.min(CAMP.ore.cap, opts.ore != null ? opts.ore : (L.startOre != null ? L.startOre : CAMP.ore.start))), shield: CAMP.carrier.shield, pickups: [], build: { queue: [] },
     relic: L.relic ? { x: campPlaces(level)[L.relic.place].x, y: campPlaces(level)[L.relic.place].y, hold: 0 } : null,
-    bay: { fighters: CAMP.bay.fighters, escorts: CAMP.bay.escorts }, launchQ: [], nextLaunch: 0, tgt: '', repairs: [], // repairs: the fighters landed and being mended, { kind, until, order, stay } (src/camprepair.js)
+    bay: { fighters: CAMP.bay.fighters }, launchQ: [], nextLaunch: 0, tgt: '', repairs: [], // repairs: the fighters landed and being mended, { kind, until, order, stay } (src/camprepair.js)
     waves: L.waves.map(() => ({ started: false, at: 0 })), convoys: L.convoys.map(() => ({ started: false })), delivered: 0, lost: 0, kills: 0, launched: 0, lostShips: 0, lane: {}, cash: 0, sold: 0, oreBest: 0,
     orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, build: 0, power: 0, balance: 0, emergency: 0, convoy: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
     result: null, why: '', docked: '' // docked: the id of the outpost the carrier is docked at ('' in flight; src/campoutpost.js)
   };
   if (campHas(C, 'bay2')) C.bay.fighters += CAMP.tech.bay2.fighters;
-  if (opts.bonus) { C.bay.fighters += Math.max(0, opts.bonus.fighters | 0); C.bay.escorts += Math.max(0, opts.bonus.escorts | 0); } // the extras bought at the Earth refit
+  if (opts.bonus) { C.bay.fighters += Math.max(0, opts.bonus.fighters | 0); } // the extras bought at the Earth refit
   C.rank = Math.max(0, Math.min(CAMP.ranks.length - 1, opts.rank | 0)); // the rank of the pilot (src/campranks.js: from the scores of the missions flown): its extras fill the bay and lift the wing limit
-  { const rk = CAMP.ranks[C.rank]; C.bay.fighters += rk.fighters; C.bay.escorts += rk.escorts; C.cap = { fighters: CAMP.build.maxFighters + rk.fighters, escorts: CAMP.build.maxEscorts + rk.escorts }; }
+  { const rk = CAMP.ranks[C.rank]; C.bay.fighters += rk.fighters; C.cap = { fighters: CAMP.build.maxFighters + rk.fighters }; }
   Object.assign(C, { missiles: CAMP.missile.magazine, magazine: CAMP.missile.magazine, turretMul: 1, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0 }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks
   if (typeof campBeatsNew === 'function') campBeatsNew(C); // the beats of the mission (src/campbeats.js)
   C.route = null; if (typeof campRouteNew === 'function') campRouteNew(C); // a fork in the road (src/camproute.js): C.route, and the lanes' caches in C.caches
@@ -811,7 +811,7 @@ function campNew(level, techs, opts) {
   return C;
 }
 
-// one ship into the game. kind: carrier, fighter, escort, freighter, mother, or a PIRATES key (raider, drone, gunship)
+// one ship into the game. kind: carrier, fighter, freighter, mother, or a PIRATES key (raider, drone, gunship)
 // a kind of ship a switch has taken out of the game (CAMP.flags): campSpawn makes none, and every caller already asks whether it got one
 const campKindOff = kind => ((kind === 'tboat' || kind === 'lancer' || !!(CAMP.torpedo.boats && CAMP.torpedo.boats[kind])) && !campFlag('tboats')) || (!!(CAMP.rival.kinds && CAMP.rival.kinds[kind]) && !campFlag('rival'));
 function campSpawn(C, kind, x, y) {
@@ -819,10 +819,10 @@ function campSpawn(C, kind, x, y) {
   const u = { id: kind + '-' + (C.nextId++), kind, x, y, vx: 0, vy: 0, rot: 0, move: null, moveUntil: 0, ran: false, side: C.rng() < 0.5 ? -1 : 1, nextShot: 0, order: null, goal: '', distractedUntil: 0 };
   if (kind === 'carrier') {
     const k = CAMP.carrier; Object.assign(u, { team: 'earth', hp: k.hull * (campHas(C, 'plating') ? CAMP.tech.plating.hull : 1), r: CAMP.size.carrier.hit, vmax: k.speed, accel: k.accel, turn: k.turn });
-  } else if (kind === 'fighter' || kind === 'escort') {
-    const k = CAMP[kind];
-    Object.assign(u, { team: 'earth', hp: k.hp, r: CAMP.size[kind].hit, vmax: k.speed, accel: k.accel, turn: k.turn,
-      def: { key: kind === 'fighter' ? 'raider' : 'drone', hold: k.hold, speed: k.accel, max: k.speed, hp: k.hp } }); // the shape pirateSteer reads
+  } else if (kind === 'fighter') {
+    const k = CAMP.fighter;
+    Object.assign(u, { team: 'earth', hp: k.hp, r: CAMP.size.fighter.hit, vmax: k.speed, accel: k.accel, turn: k.turn,
+      def: { key: 'raider', hold: k.hold, speed: k.accel, max: k.speed, hp: k.hp } }); // the shape pirateSteer reads
   } else if (kind === 'freighter') {
     Object.assign(u, { team: 'earth', hp: CAMP.convoy.hp, r: 22, vmax: CAMP.convoy.speed, accel: 400, turn: 2 });
   } else if (kind === 'mother') {
@@ -848,7 +848,7 @@ function campSpawn(C, kind, x, y) {
   u.faction = u.faction || (u.team === 'alien' ? 'alien' : u.team); // who it belongs to: 'earth', 'alien', 'pirate' or 'neutral'
   if (u.faction === 'alien') C.alienSeen = true; // the first alien of the battle: from here the ship computer's summary counts them (before it, on the rim, it does not name them: card space-game-night-hunt-l1-rim)
   u.maxHp = u.hp; u.nextShot = C.t + 600 + C.rng() * 900;
-  if (kind === 'fighter' && u.team === 'earth' && typeof campSquadNext === 'function') u.squad = campSquadNext(C); // the wing's fighter joins a squad (src/campwing.js); the escorts and the scouts are in none
+  if (kind === 'fighter' && u.team === 'earth' && typeof campSquadNext === 'function') u.squad = campSquadNext(C); // the wing's fighter joins a squad (src/campwing.js)
   C.ships.push(u); C.by[u.id] = u;
   return u;
 }
@@ -857,7 +857,7 @@ const campFunds = C => Math.floor(C.cash || 0) + Math.floor(C.ore);
 function campPay(C, cost) { const c = Math.min(C.cash || 0, cost); C.cash = (C.cash || 0) - c; C.ore -= cost - c; }
 const campAlive = C => C.ships.filter(u => u.hp > 0);
 const campAliens = C => C.ships.filter(u => u.team === 'alien' && u.hp > 0);
-const campWing = (C, kind) => C.ships.filter(u => u.team === 'earth' && u.hp > 0 && (kind ? u.kind === kind : (u.kind === 'fighter' || u.kind === 'escort')));
+const campWing = (C, kind) => C.ships.filter(u => u.team === 'earth' && u.hp > 0 && (kind ? u.kind === kind : u.kind === 'fighter'));
 const campConvoys = C => C.ships.filter(u => u.kind === 'freighter' && u.hp > 0);
 function campNearest(list, p, max) { let best = null, bd = max == null ? Infinity : max; list.forEach(u => { const d = campDist(u, p); if (d < bd) { bd = d; best = u; } }); return best; }
 
@@ -869,8 +869,7 @@ function campHurt(C, u, dmg, byId) {
     if (campHas(C, 'shield')) dmg *= CAMP.tech.shield.taken; if (C.god) dmg = 0;
     if (C.shield > 0 && dmg > 0) { const take = Math.min(C.shield, dmg); C.shield -= take; dmg -= take; C.shieldHitAt = C.t; C.events.push({ type: 'shieldhit', x: u.x, y: u.y }); } // the shield first
   }
-  if (u.scout) dmg *= CAMP.scout.fragile; // a scout out is fragile
-  { const M = C.call && C.call.mood; if (M && C.t < M.until) { const wing = x => x && x.team === 'earth' && (x.kind === 'fighter' || x.kind === 'escort'); if (wing(u)) dmg *= M.take; else if (u.team === 'alien' && wing(C.by[byId])) dmg *= M.deal; } } // the wing fights by the answer of the last order call (src/camporders.js CAMP_CALLS.mood): a right pick makes it hit harder and take less, a wrong one the opposite
+  { const M = C.call && C.call.mood; if (M && C.t < M.until) { const wing = x => x && x.team === 'earth' && x.kind === 'fighter'; if (wing(u)) dmg *= M.take; else if (u.team === 'alien' && wing(C.by[byId])) dmg *= M.deal; } } // the wing fights by the answer of the last order call (src/camporders.js CAMP_CALLS.mood): a right pick makes it hit harder and take less, a wrong one the opposite
   if (u.rival) dmg = campRivalHurt(C, u, dmg); // a rival's shield takes the hit first, as the carrier's does; with it down every hit goes through, and harder (src/camprival.js)
   u.hp -= dmg; u.hurtAt = C.t;
   C.events.push({ type: 'hit', x: u.x, y: u.y, id: u.id, hull: dmg > 0 }); // hull: it got through to the hull (the carrier's shield takes the first of it)
@@ -878,7 +877,7 @@ function campHurt(C, u, dmg, byId) {
   if (u.hp <= 0) campKill(C, u);
 }
 function campKill(C, u) {
-  u.hp = 0; if (u.scout) campScoutDrop(C, u);
+  u.hp = 0;
   C.events.push({ type: 'boom', x: u.x, y: u.y, big: u.kind === 'carrier' || u.kind === 'mother', id: u.id, kind: u.kind });
   if (u.team === 'alien') {
     C.kills++;
@@ -928,16 +927,14 @@ function campDo(C, name, arg, dry, how) {
   if (name === 'power' || name === 'balance' || name === 'emergency') return campPowerDo(C, name, arg, dry); // the ship's systems (below)
   if (arg === CAMP_TGT && (name === 'attack' || name === 'missiles')) return name === 'attack' ? campTgtAttack(C, how, dry) : campTgtMissile(C, dry); // the target A D S picked (src/camptarget.js): key 2 and Enter
   const t = campFind(C, arg), out = campWing(C);
-  if (name === 'scout') return campScoutDo(C, arg, dry); // the Scout order (below)
   if (name === 'lane') return campRouteDo(C, arg, dry); // the pick at a fork in the road (src/camproute.js)
   if (name === 'convoy') return campConvoyOrder(C, arg, dry); // Tuck in, Hold here, Run for it, Carry on: the escorted ships (src/campconvoy.js)
   if (name === 'launch') {
-    const n = C.bay.fighters + C.bay.escorts - C.launchQ.length;
+    const n = C.bay.fighters - C.launchQ.length;
     if (n <= 0) return campNo(C.launchQ.length ? 'launching' : out.length ? 'baydry' : 'bay');
     if (dry) return campYes('launch');
     for (let i = 0; i < C.bay.fighters; i++) C.launchQ.push('fighter');
-    for (let i = 0; i < C.bay.escorts; i++) C.launchQ.push('escort');
-    C.bay.fighters = 0; C.bay.escorts = 0; C.orders.launch++; (C.repairs || []).forEach(r => { r.stay = false; }); // a fighter still being mended goes out too when it is whole
+    C.bay.fighters = 0; C.orders.launch++; (C.repairs || []).forEach(r => { r.stay = false; }); // a fighter still being mended goes out too when it is whole
     return campYes('launch');
   }
   // Attack, Escort, Guard and Recall are the wing orders of src/campwing.js (campWingOrder) with no group and no target named: today's groups and today's answers
@@ -947,8 +944,8 @@ function campDo(C, name, arg, dry, how) {
     return campWingOrder(C, null, 'attack', t && t.kind === 'mother' ? 'mother' : null, how, dry);
   }
   if (name === 'escort') {
-    if (!campWing(C, 'escort').length) return campNo(C.launchQ.length ? 'launching' : 'noescorts');
-    if (!C.L.convoys.length) return campWingOrder(C, null, 'escort', null, how, dry); // no convoys in this level: Escort keeps the escorts close to the carrier
+    if (!campWing(C, 'fighter').length) return campNo(C.launchQ.length ? 'launching' : 'nofighters');
+    if (!C.L.convoys.length) return campWingOrder(C, null, 'escort', null, how, dry); // no convoys in this level: Escort keeps the fighters close to the carrier
     const cv = t && t.kind === 'convoy' ? C.by[t.id] : t ? null : campNearest(campConvoys(C), C.carrier);
     if (!cv || cv.hp <= 0) return campNo('noconvoy');
     return campWingOrder(C, null, 'escort', cv.id, how, dry);
@@ -990,20 +987,21 @@ function campDo(C, name, arg, dry, how) {
   return campNo('what');
 }
 // the ships that mine: the whole wing that is out. In the belt the fighters are the cruiser's mining drones; an attack order (key 2) turns them back to the fight
-function campMiners(C) { return campFree(C); }
-// build: queue new fighters or escorts (arg 'fighter', 'escort', with a count: 'escort 2'); one at a time, into the bay, ore paid now
+function campMiners(C) { return campWing(C, 'fighter'); }
+// build: queue new fighters (arg 'fighter', with a count: 'fighter 2'); one at a time, into the bay, ore paid now
 function campBuild(C, arg, dry) {
   if (typeof campCanBuild === 'function' && !campCanBuild(C)) return campNo('nodock'); // (a level with no outpost builds aboard: campCanBuild says yes there, card space-game-campaign-no-outpost-rule: the refusal is never shown there) // ships are built docked at an outpost, or anywhere with the Fabricator (src/campoutpost.js)
-  const q = String(arg == null ? '' : arg).toLowerCase(), B = CAMP.build, kind = /escort/.test(q) ? 'escort' : 'fighter';
+  const q = String(arg == null ? '' : arg).toLowerCase(), B = CAMP.build, kind = 'fighter';
+  if (/escort/.test(q)) return campNo('what'); // there is no escort ship to build (card space-game-cut-escorts): Escort is an order of the squads
   const words = { one: 1, a: 1, an: 1, two: 2, three: 3, four: 4, five: 5 }, m = /(\d+)|\b(one|two|three|four|five)\b/.exec(q);
   const n = Math.max(1, Math.min(B.most, m ? (m[1] ? parseInt(m[1], 10) : words[m[2]]) : 1));
-  const have = (kind === 'fighter' ? C.bay.fighters + campWing(C, 'fighter').length + C.launchQ.filter(k => k === 'fighter').length : C.bay.escorts + campWing(C, 'escort').length + C.launchQ.filter(k => k === 'escort').length)
+  const have = C.bay.fighters + campWing(C, 'fighter').length + C.launchQ.filter(k => k === 'fighter').length
     + C.build.queue.filter(b => b.kind === kind).length + campRepairing(C, kind); // (a fighter being mended is still one of the wing)
-  if (have + n > (kind === 'fighter' ? C.cap.fighters : C.cap.escorts)) return campNo('buildfull', { kind }); // the wing limit: the workshop's, and the rank's extras
-  const cost = n * (kind === 'fighter' ? B.fighterCost : B.escortCost);
+  if (have + n > C.cap.fighters) return campNo('buildfull', { kind }); // the wing limit: the workshop's, and the rank's extras
+  const cost = n * B.fighterCost;
   if (campFunds(C) < cost) return campNo('noore2', { need: cost, have: campFunds(C) });
   if (dry) return campYes('build', { n, kind: n === 1 ? kind : kind + 's' });
-  campPay(C, cost); for (let i = 0; i < n; i++) C.build.queue.push({ kind, left: kind === 'fighter' ? B.fighterTime : B.escortTime }); C.orders.build++;
+  campPay(C, cost); for (let i = 0; i < n; i++) C.build.queue.push({ kind, left: B.fighterTime }); C.orders.build++;
   return campYes('build', { n, kind: n === 1 ? kind : kind + 's' });
 }
 
@@ -1012,25 +1010,23 @@ function campIntent(text) {
   const SC_FILLER = /^(?:(?:please|hey|ok|okay|computer|athena|can you|could you|would you|will you|i want to|i wanna|i need to|lets|let's|go ahead and|all|everyone)\s+)+/;
   let q = String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9' -]+/g, ' ').replace(/\s+/g, ' ').trim().replace(SC_FILLER, '').replace(/\s+(please|now|right now|already)$/, '').trim();
   if (!q) return null;
-  { const ml = /^(?:(?:scout|reconnoitre|reconnoiter)|send (?:a |an |the |our )?scouts?(?: out)?\s+(?:to|at|down|along|toward|towards|for))\s+(?:the |our )?(.*\b(?:lane|route))$/.exec(q); if (ml) return { act: 'fleet_scout', arg: ml[1] }; } // "scout the long lane": a lane of a fork in the road is a place to scout (card space-game-scout-route; before the wing's words, which know no lanes)
   { // the convoy orders (card space-game-convoy-orders): "tuck in", "run for it", "carry on", and with a convoy word ("haulers hold", "hold the transport") hold: the plain "hold here" stays the wing's stance. The words go to campConvoyOrder whole: it finds the verb and a ship's name
-    const cw = /\b(?:convoys?|transport|haulers?|freighters?|cargo|miners?)\b/.test(q), wing = /\b(?:escort|attack|guard|mine|build|launch|recall|scout|dock)\b/.test(q);
+    const cw = /\b(?:convoys?|transport|haulers?|freighters?|cargo|miners?)\b/.test(q), wing = /\b(?:escort|attack|guard|mine|build|launch|recall|dock)\b/.test(q);
     if (/^(?:tuck|close up|snug up|take cover|get under (?:the |our )?(?:shield|cover))/.test(q) || (cw && !wing && /\btuck\b/.test(q))) return { act: 'fleet_convoy', arg: q };
     if (/^(?:run for it|make a run(?: for it)?)$/.test(q) || (cw && !wing && /\b(?:run for it|make a run|run|flee|full speed)\b/.test(q))) return { act: 'fleet_convoy', arg: q.indexOf('run') >= 0 || q.indexOf('flee') >= 0 || q.indexOf('full speed') >= 0 ? q : 'run for it' };
     if (/^(?:carry on|as you were|resume course|release the (?:convoy|haulers|transport))$/.test(q) || (cw && !wing && /\b(?:carry on|as you were|resume|release)\b/.test(q))) return { act: 'fleet_convoy', arg: q.indexOf('carry on') >= 0 ? q : 'carry on' };
     if (cw && !wing && (/^(?:convoys?|haulers?|transport|freighters?|miners?)\s+(?:hold|stop|halt|stay put|wait)\b/.test(q) || /^(?:hold|stop|halt)\s+(?:the |our )?(?:convoys?|haulers?|transport|freighters?|miners?)\b/.test(q))) return { act: 'fleet_convoy', arg: q };
   }
-  { // a group named first, in words the old forms below would lose the group of: "all attack the mothership", "escorts scout the anomaly", "fighters hold at Ceres", "cancel the fighters" (src/campwing.js)
+  { // a group named first, in words the old forms below would lose the group of: "all attack the mothership", "red squad guard the anomaly", "fighters hold at Ceres", "cancel the fighters" (src/campwing.js)
     const wp = typeof campWingParse === 'function' ? campWingParse(String(text).toLowerCase().replace(/^(?:(?:please|hey|ok|okay|computer|athena|can you|could you|would you|will you|go ahead and)\s+)+/, '')) : null;
-    const same = wp && ((wp.group === 'fighters' && wp.verb === 'attack') || (wp.group === 'escorts' && wp.verb === 'escort') || (wp.group === 'all' && (wp.verb === 'guard' || !wp.verb)) || (wp.group === 'escorts' && !wp.verb && /\b(?:convoys?|freighters?|cargo|supplies|haulers?)\b/.test(wp.target))); // the old forms mean the same: their own words and answers
+    const same = wp && ((wp.group === 'fighters' && wp.verb === 'attack') || (wp.group === 'all' && (wp.verb === 'guard' || !wp.verb))); // the old forms mean the same: their own words and answers
     if (wp && (wp.verb || wp.target) && !same && !/^(?:launch|return|come|go|land|dock|retreat|fall|pull|stay|form|get them)\b/.test(wp.target) && !(wp.verb === '' && /^(?:cancel)$/.test(wp.target))) return { act: 'fleet_wing', arg: wp.verb === 'cancel' ? 'cancel ' + wp.group : (wp.group + ' ' + wp.verb + ' ' + wp.target).replace(/\s+/g, ' ').trim() };
   }
-  q = q.replace(/^(?:the |our )?(?:fighters?|wing|escorts?|squadron|ships)\s+(?=(?:attack|engage|guard|defend|protect|launch|recall|return|escort)\b)/, '');
+  q = q.replace(/^(?:the |our )?(?:fighters?|wing|squadron|ships)\s+(?=(?:attack|engage|guard|defend|protect|launch|recall|return|escort)\b)/, '');
   let m;
-  if ((m = /^(?:scout|reconnoitre|reconnoiter)\s+(?:the |our )?(.+)$/.exec(q)) || (m = /^send (?:a |an |the |our )?scouts?(?: out)?\s+(?:to|at|toward|towards|for)\s+(?:the |our )?(.+)$/.exec(q))) return { act: 'fleet_scout', arg: m[1] }; // "scout Mars", "send a scout to the relic": the Scout order (card space-game-campaign-scouts)
   if ((m = /^(?:(?:take|use|pick|choose|go|fly|run|send (?:her|it|them|the transport|the convoy|the haulers))\s+(?:by |along |down |via |on |through |over )?)?(?:the |our )?([a-z]+(?: [a-z]+)?)\s+(?:lane|route)$/.exec(q))) return { act: 'fleet_lane', arg: m[1] }; // "take the long lane", "go by the short lane", "long lane": the pick at a fork in the road (card space-game-scout-route)
   if (/\b(?:missiles?|rockets?|torpedoe?s?)\b/.test(q)) return { act: 'fleet_missiles', arg: q.replace(/\b(?:fire|launch|shoot|send|loose|use|the|our|all|some|a|one|missiles?|rockets?|torpedoe?s?|with|at|on|to)\b/g, ' ').replace(/\s+/g, ' ').trim() }; // "fire missiles", "missiles at the mothership": before "launch", which is the bay
-  if (/^(?:launch|scramble|deploy|open the bay|open the bay doors|bay doors|send out the (?:wing|fighters|ships|fleet)|launch the (?:wing|fighters|ships|fleet|escorts)|get them out)(?: now)?$/.test(q) || /^launch\b/.test(q)) return { act: 'fleet_launch', arg: '' };
+  if (/^(?:launch|scramble|deploy|open the bay|open the bay doors|bay doors|send out the (?:wing|fighters|ships|fleet)|launch the (?:wing|fighters|ships|fleet)|get them out)(?: now)?$/.test(q) || /^launch\b/.test(q)) return { act: 'fleet_launch', arg: '' };
   if ((m = /^(?:dock|land|put in|moor|berth)\s+(?:at|in|on|with|to)\s+(.+)$/.exec(q)) && !/^(?:the )?(?:carrier|cruiser|ship|base|bay)$/.test(m[1])) return { act: 'fleet_dock', arg: m[1].replace(/^(?:the |an? )/, '').replace(/^(?:outpost|station)$/, '') }; // "dock at Luna", "land at the lunar base", "dock at an outpost": the CARRIER docks at an outpost (card space-game-campaign-outposts); a bare "dock" or "land" is the wing's, below
   if ((m = /^retreat to (?!the (?:carrier|cruiser|ship)\b|base\b)(.+)$/.exec(q))) return { act: 'fleet_fly', arg: m[1] }; // "retreat to Luna": the carrier flies there by itself (the HUD's retreat line says the words); a bare "retreat" is the wing's
   if ((m = /^(?:recall|come home|come back|return(?: home| to the carrier| to base)?|land|dock|rtb|fall back|retreat|pull back|bring them (?:home|back))\b\s*(.*)$/.exec(q))) return { act: 'fleet_recall', arg: '' };
@@ -1041,8 +1037,7 @@ function campIntent(text) {
   if (/^(?:repair|mend|fix|patch)\b.*\b(?:hull|ship|carrier|cruiser|damage)\b/.test(q) || /^(?:repair|mend|fix)$/.test(q)) return { act: 'fleet_repair', arg: '' }; // the hull, docked
   if ((m = /^(?:build|make|construct|produce|buy|order|get us|get me|add)\s+(?:me |us )?(.*)$/.exec(q)) && !/\b(?:shield|shields)\b/.test(q)) return { act: 'fleet_build', arg: m[1] };
   if (/\b(?:mine|mining|harvest|harvesting|gather ore|collect ore|collect the ore|scavenge|scavenging|salvage)\b/.test(q) && !/^(?:how|what|why|where)\b/.test(q)) return { act: 'fleet_mine', arg: '' };
-  if ((m = /^(?:send|move|put|take|set)\s+(?:the |our )?(?:escorts?|escort ships?|wing)\s*(?:to|with|beside|for|on)?\s*(.*)$/.exec(q)) && /escort/.test(q)) return { act: 'fleet_escort', arg: m[1] };
-  if ((m = /^(?:the |our )?escorts?\s+(?:to|with|beside|for|on)\s+(.*)$/.exec(q))) return { act: 'fleet_escort', arg: m[1] }; // "escorts to the Mars convoy"
+  if ((m = /^(?:send|move|put|take|set)\s+(?:the |our )?(?:wing|fighters?|squadron)\s*(?:to|with|beside|for|on)?\s*(.*)$/.exec(q)) && /escort/.test(q)) return { act: 'fleet_escort', arg: m[1] };
   if ((m = /^(?:escort|cover|screen|protect|defend|guard|watch)\s+(?:the )?(.*(?:convoy|convoys|freighter|freighters|cargo|supplies).*)$/.exec(q))) return { act: 'fleet_escort', arg: m[1] };
   if ((m = /^(?:escort|cover)\s+(?:the )?(.+)$/.exec(q))) return { act: 'fleet_escort', arg: m[1] };
   if ((m = /^(?:orbit|circle|fly around|go around)\b\s*(.*)$/.exec(q))) return { act: 'fleet_stance', arg: 'orbit ' + m[1] }; // "orbit the mothership": the stance, and the fighters at it
@@ -1072,12 +1067,12 @@ function campTick(C, dt) {
   campLaunch(C);
   campRepairTick(C); // the fighters mended in the bay are whole again (src/camprepair.js)
   campDogPair(C); // the fighters and the raiders pair off, one on one (src/campdogfight.js)
+  campFightPace(C); // a small ship near a foe flies and fires at the fight pace (card space-game-slower-fights)
   C.ships.forEach(u => { if (u.hp > 0 && u.kind !== 'carrier') campAI(C, u, dt); });
   campBullets(C, dt);
   if (typeof campTorpedoes === 'function') campTorpedoes(C, dt); // the torpedoes fly, hit and go off (src/camptorpedo.js)
   campBeam(C, dt);
   campMissiles(C, dt);
-  campScoutsStep(C, dt); // the scouts take what they touch before anyone else does (and a Fast burn leaves them behind)
   campCaches(C);
   campAnomalies(C, dt);
   if (typeof campRivals === 'function') campRivals(C, dt); // the rival ships of the mission row (src/camprival.js)
@@ -1322,8 +1317,7 @@ function campLaunch(C, again, order, squad) { // again: the kind of a fighter th
   const u = campSpawn(C, kind, c.x + cs * m[0] - sn * side * m[1], c.y + sn * m[0] + cs * side * m[1]); C.launched++;
   u.vx = c.vx + Math.cos(c.rot) * 140; u.vy = c.vy + Math.sin(c.rot) * 140; u.rot = c.rot;
   if (squad && kind === 'fighter') u.squad = squad; // a fighter mended aboard rejoins its own squad
-  const cv = kind === 'escort' ? campNearest(campConvoys(C), c) : null;
-  u.order = order || (cv ? { type: 'escort', target: cv.id, slot: campWing(C, 'escort').length - 1 } : { type: 'guard', at: { kind: 'carrier' } });
+  u.order = order || { type: 'guard', at: { kind: 'carrier' } };
   C.events.push({ type: 'launch', id: u.id, kind });
 }
 
@@ -1331,7 +1325,7 @@ function campLaunch(C, again, order, squad) { // again: the kind of a fighter th
 function campCaches(C) {
   C.caches.forEach(k => {
     if (k.got || k.carried) return;
-    if (!C.ships.some(u => u.team === 'earth' && u.hp > 0 && !u.scout && Math.hypot(u.x - k.x, u.y - k.y) <= CAMP.cache.radius)) return; // a scout out carries a cache home instead (campScoutsStep)
+    if (!C.ships.some(u => u.team === 'earth' && u.hp > 0 && Math.hypot(u.x - k.x, u.y - k.y) <= CAMP.cache.radius)) return;
     k.got = true; C.cachesGot++; if (k.ore) C.ore = Math.min(CAMP.ore.cap, C.ore + k.ore); C.events.push({ type: 'cache', x: k.x, y: k.y }); // a cache on a lane holds ore (src/camproute.js)
     campSay(C, 'camp.say.cache', { n: C.cachesGot, total: C.caches.length });
   });
@@ -1361,7 +1355,7 @@ function campRockHit(C, rock, dmg) {
 }
 // ore: a ship of yours that comes close takes it (unless the store is full); a wreck's ore goes after wreckLife
 function campPickups(C) {
-  const k = CAMP.ore, mine = C.ships.filter(u => u.team === 'earth' && u.hp > 0 && !u.scout); // a scout out carries ore home itself (campScoutsStep)
+  const k = CAMP.ore, mine = C.ships.filter(u => u.team === 'earth' && u.hp > 0);
   C.rocks = C.rocks.filter(r => r.hp > 0); // a broken rock is gone (its chunk lies where it was)
   C.pickups = C.pickups.filter(p => {
     if (p.kind === 'wreck' && C.t - p.born > k.wreckLife) return false;
@@ -1474,7 +1468,7 @@ function campAlienAI(C, u, dt) {
   const dog = !isEarth && campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campSteer(C, u, def, dist, target, u.vx - tv.x, u.vy - tv.y); // a raider against a fighter is a dogfight (src/campdogfight.js)
   if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
   if (m.fire && dist < def.range + (isEarth ? C.earth.r : 0) && C.t > u.nextShot && Math.abs(campWrap((dog ? m.aim : target) - u.rot)) < def.aim) {
-    u.nextShot = C.t + campBetween(C, def.shot[0], def.shot[1]);
+    u.nextShot = C.t + campFightGap(u, campBetween(C, def.shot[0], def.shot[1]));
     const n = def.spread || 1;
     for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * C.dmgS, 1800, 'alien', 14);
   }
@@ -1510,93 +1504,13 @@ function campMotherAI(C, u, dt) {
   }
 }
 
-// ---------- scout-escorts (card space-game-campaign-scouts; docs/CAMPAIGN.md "Scout-escorts") ----------
-// A scout is an escort whose order is { type: 'scout' } and whose u.scout is { n (its number), name (its place), x, y, phase: 'out' | 'station' | 'home', at, carry: { ore, caches }, found: [what it read] }.
-// The Scout order (campOrder(C, 'scout', 'vesta')) sends the nearest free escort that is out: it flies to the place at its own speed, stays CAMP.scout.station seconds reading (a sensor circle round it), reports, and
-// comes home; on the way it takes ore and caches it touches (they count when it lands), scans recon points faster than the wing, and is fragile; a Fast burn leaves it behind beyond the leash.
-//   campScoutTasks(C)  what the mission allows ('recon', 'escort', 'fetch'; its row's scouts: [...] or the table's)     campScouts(C) / campScoutsOut(C)  the scouts out     campSensors(C)  their sensor circles
-//   campFree(C, kind)  the wing without the scouts: Guard, Escort and Mine do not take a scout from its task (Recall does)
-const campScoutTasks = C => (C && C.L && Array.isArray(C.L.scouts)) ? C.L.scouts : CAMP.scout.tasks;
-const campScouts = C => C.ships.filter(u => u.scout && u.hp > 0);
-const campScoutsOut = C => campScouts(C).length;
-const campSensors = C => campScouts(C).map(u => ({ id: u.id, x: u.x, y: u.y, r: CAMP.scout.sense }));
-const campFree = (C, kind) => campWing(C, kind).filter(u => !u.scout);
-function campScoutDo(C, arg, dry) {
-  const tasks = campScoutTasks(C);
-  const lanes = !!(C.route && !C.route.passed); // a fork in the road: the lanes are for scouting whatever the mission's tasks say (src/camproute.js)
-  if (!tasks.includes('recon') && !tasks.includes('fetch') && !lanes) return campNo(C.route ? 'scoutpast' : 'noscout'); // (a mission with a fork says the fork is behind us: "no scouting" was wrong for 1.1 once the lane is taken)
-  const es = campWing(C, 'escort'); if (!es.length) return campNo(C.launchQ.length ? 'launching' : 'noescorts');
-  const free = es.filter(u => !u.scout && !(u.order && u.order.type === 'recall')); if (!free.length) return campNo('scoutsbusy');
-  const f = arg && typeof arg === 'object' && Number.isFinite(arg.x) && Number.isFinite(arg.y) ? { row: arg } : typeof campNavFind === 'function' ? campNavFind(C, arg) : null; // a map row (the Tab map's Scout button) or the words
-  if (!f || !f.row) return campNo('noscoutplace');
-  if (!tasks.includes('recon') && !tasks.includes('fetch') && f.row.kind !== 'lane') return campNo('scoutlanes'); // a fork is on the road and the lanes are all there is to scout: the other rows are not "no scouting" (1.1 said so to V on the transport)
-  const row = f.row, n = (C.scoutN | 0) + 1;
-  if (dry) return campYes('scout', { n, name: row.name });
-  const u = campNearest(free, row);
-  u.order = { type: 'scout' }; u.move = null; u.scout = { n, name: row.name, x: row.x, y: row.y, phase: 'out', at: C.t, carry: { ore: 0, caches: 0 }, found: [], lane: row.kind === 'lane' ? row.lane : '' };
-  C.scoutN = n; C.orders.scout = (C.orders.scout | 0) + 1; C.events.push({ type: 'scout', id: u.id, n, name: row.name });
-  return campYes('scout', { n, name: row.name });
-}
-// a scout lands: what it carries is delivered (the ore into the store, a cache gathered), the escort is back in the bay
-function campScoutDock(C, u) {
-  const s = u.scout; u.hp = 0; u.docked = true; C.bay.escorts++;
-  if (s && s.carry) {
-    if (s.carry.ore > 0) { C.ore = Math.min(CAMP.ore.cap, C.ore + s.carry.ore); C.events.push({ type: 'ore', x: u.x, y: u.y, n: s.carry.ore, id: u.id }); }
-    C.caches.forEach(k => { if (k.carried === u.id) { k.carried = ''; k.got = true; C.cachesGot++; if (k.ore) C.ore = Math.min(CAMP.ore.cap, C.ore + k.ore); C.events.push({ type: 'cache', x: k.x, y: k.y }); campSay(C, 'camp.say.cache', { n: C.cachesGot, total: C.caches.length }); } });
-  }
-  C.events.push({ type: 'dock', id: u.id }); if (s) campSay(C, 'camp.say.scouthome', { n: s.n });
-}
-// a scout that is destroyed (or left behind) drops its load: the ore lies where it died, a cache is back where it was
-function campScoutDrop(C, u) {
-  const s = u.scout; if (!s || !s.carry) return;
-  if (s.carry.ore > 0) C.pickups.push({ id: 'chunk-' + (C.nextId++), kind: 'chunk', x: u.x, y: u.y, ore: s.carry.ore, born: C.t });
-  C.caches.forEach(k => { if (k.carried === u.id) k.carried = ''; });
-  s.carry.ore = 0; s.carry.caches = 0;
-}
-function campScoutAI(C, u, dt) {
-  const K = CAMP.scout, s = u.scout, c = C.carrier;
-  if (s.phase === 'out') { if (campDist(u, s) < 110) { s.phase = 'station'; s.at = C.t; C.events.push({ type: 'scoutreach', id: u.id, n: s.n }); } else return campSeek(u, s.x, s.y, dt); }
-  if (s.phase === 'station') {
-    if (C.t - s.at < K.station * 1000) { const a = C.t / 900; return campSeek(u, s.x + Math.cos(a) * 70, s.y + Math.sin(a) * 70, dt); } // it hovers round its place, reading
-    s.phase = 'home';
-    if (s.lane && typeof campRouteRead === 'function') campRouteRead(C, u); // a lane: what it hides is read and said (src/camproute.js)
-    else if (s.found && s.found.length) campSay(C, 'camp.say.scoutfound', { n: s.n, name: s.name, likely: s.found[0] }); else campSay(C, 'camp.say.scoutnothing', { n: s.n, name: s.name });
-  }
-  if (campDist(u, c) < CAMP.bay.dockAt) return campScoutDock(C, u);
-  return campSeek(u, c.x, c.y, dt);
-}
-// each tick, before the ore and the caches are taken by anyone else: a scout takes what it touches (if the mission allows fetch), reads anomalies in range, and one left behind by a Fast burn is lost
-function campScoutsStep(C, dt) {
-  const K = CAMP.scout, scouts = campScouts(C); if (!scouts.length) return;
-  const tasks = campScoutTasks(C), fast = C.nav && C.nav.on && C.nav.fast, anomalies = Array.isArray(C.anoms) ? C.anoms : null; // C.anoms: the anomalies card's state (src/campanomaly.js)
-  scouts.forEach(u => {
-    const s = u.scout;
-    if (fast && campDist(u, C.carrier) > K.leash) { campScoutDrop(C, u); u.hp = 0; C.lostShips++; C.events.push({ type: 'scoutlost', id: u.id, n: s.n, x: u.x, y: u.y }); campSay(C, 'camp.say.scoutleft', { n: s.n }); return; }
-    if (tasks.includes('fetch') || s.lane) { // (a scout sent to a lane may fetch what lies there)
-      for (let i = C.pickups.length - 1; i >= 0 && s.carry.ore < K.carry; i--) {
-        const p = C.pickups[i]; if (Math.hypot(u.x - p.x, u.y - p.y) > K.pickup + u.r) continue;
-        const take = Math.min(p.ore, K.carry - s.carry.ore); s.carry.ore += take; p.ore -= take; if (p.ore <= 0) C.pickups.splice(i, 1);
-        if (s.carry.ore >= K.carry && s.phase !== 'home') s.phase = 'home'; // a full hold: home
-      }
-      C.caches.forEach(k => { if (k.got || k.carried || Math.hypot(u.x - k.x, u.y - k.y) > K.pickup + u.r) return; k.carried = u.id; s.carry.caches++; });
-    }
-    if (anomalies) anomalies.forEach(a => { // a hidden (cloaked) anomaly inside the read range is NOTICED from afar and named ("Anomaly: likely a weapons store"), not uncovered: only a visit by the carrier decloaks it (campAnomalies)
-      if (a.read || a.state !== 'hidden' || Math.hypot(u.x - a.x, u.y - a.y) > K.read) return;
-      a.read = true; const what = a.hides || 'cache'; (s.found = s.found || []).push(what);
-      if (!a.sensed) { a.sensed = true; C.events.push({ type: 'anomaly', stage: 'sense', id: a.id, x: a.x, y: a.y }); } // the mark appears on the map, as when the carrier notices one
-      C.events.push({ type: 'anomalyread', id: a.id, x: a.x, y: a.y }); campSay(C, 'camp.say.anomalyread', { n: s.n, likely: what });
-    });
-  });
-}
-
-// a ship of yours, by its order (fighters and escorts)
+// a ship of yours, by its order (the fighters)
 function campWingAI(C, u, dt) {
   const k = CAMP[u.kind], c = C.carrier, o = u.order || { type: 'guard', at: { kind: 'carrier' } }, aliens = campAliens(C);
   let foe = null, home = null;
   if (campRepairRun(C, u, dt)) return; // a fighter under 30 percent hull breaks off, flies home and lands to be mended, whatever its order (src/camprepair.js)
-  if (o.type === 'scout' && u.scout) return campScoutAI(C, u, dt);
   if (o.type === 'recall') {
-    if (campDist(u, c) < CAMP.bay.dockAt) { if (u.scout) return campScoutDock(C, u); u.hp = 0; u.docked = true; C.bay[u.kind + 's']++; C.events.push({ type: 'dock', id: u.id }); return; }
+    if (campDist(u, c) < CAMP.bay.dockAt) { u.hp = 0; u.docked = true; C.bay.fighters++; C.events.push({ type: 'dock', id: u.id }); return; }
     return campSeek(u, c.x, c.y, dt);
   }
   if (o.type === 'attack') {
@@ -1629,7 +1543,7 @@ function campWingAI(C, u, dt) {
       } else home = campFlightSlot(C, u, c); // nothing to mine: beside the cruiser, in formation (it was a circle round it)
     }
   } else { // guard: a flight holds its slots beside a point (the carrier, a place, a convoy; src/campflight.js); an alien that comes within reach of it, or of this ship, is fought, and the flight flies back to its slots when it is gone
-    const at = o.at || { kind: 'carrier' }, p = at.kind === 'carrier' ? c : at.kind === 'place' ? campPlaces(C.level)[at.id] : at.kind === 'point' ? at : C.by[at.id] || c;
+    const at = o.at || { kind: 'carrier' }, p = at.kind === 'carrier' ? c : at.kind === 'place' ? campPlaces(C.level)[at.id] : at.kind === 'point' ? at : at.kind === 'anomaly' ? (C.anoms || []).find(a => 'anom:' + a.id === at.id) || c : C.by[at.id] || c; // an anomaly: the squad flies to it (src/campanomaly.js)
     foe = campNearest(aliens, p, CAMP.flight.reach) || campNearest(aliens, u, 450); if (foe) foe = campDogFoe(C, u, foe, 1000); // a partner within reach is the one it fights
     if (!foe) home = campFlightSlot(C, u, p); // no threat: hold the slot beside what is guarded, at its speed and heading (src/campflight.js); it was a circle round it
   }
@@ -1643,10 +1557,10 @@ function campWingAI(C, u, dt) {
   } else if (home) { if (home.fly) campStation(u, home, dt, campDist(u, home) > CAMP.flight.catchUp ? null : home.face); else campSeek(u, home.x + (home.vx || 0) * 0.2, home.y + (home.vy || 0) * 0.2, dt); } // a slot of a flight is flown to at its own speed, the nose its way
 }
 
-// one shot of a fighter or an escort, if it may fire, the gun is on the target and in range
+// one shot of a fighter, if it may fire, the gun is on the target and in range
 function campWingFire(C, u, k, foe, dist, target, may) {
   if (!(may && dist < k.range + (foe.r || 0) && C.t > u.nextShot && Math.abs(campWrap(target - u.rot)) < k.aim)) return false;
-  u.nextShot = C.t + campBetween(C, k.delay[0], k.delay[1]);
+  u.nextShot = C.t + campFightGap(u, campBetween(C, k.delay[0], k.delay[1]));
   campBullet(C, u, u.rot, k.bullet * C.shot, k.damage, 1400, 'earth', 14); C.events.push({ type: 'wingshot', x: u.x, y: u.y, kind: u.kind, id: u.id }); // the wing's gun has a sound of its own (the scene scales it by the distance)
   return true;
 }
@@ -1787,7 +1701,7 @@ function campEnding() {
   const R = (CAMP.levels[3] && CAMP.levels[3].reveal) || {};
   return [uiText('camp.end.1'), uiText('camp.end.2'), uiText('camp.end.3', { star: R.star || '' })];
 }
-function campProgressNew() { return { level: 1, mission: 0, levelDone: 0, techs: [], found: [], ore: 0, bonus: { fighters: 0, escorts: 0 }, results: {}, stance: 'free', revealed: false }; } // level and mission: the next one to fly; ore: carried into the next level; bonus: the extra ships the Earth refit bought for it; results: { '<level>.<mission>': { score, bonuses: [ids], t, hull, lost, tries } }, one for each mission flown (the best score is kept)
+function campProgressNew() { return { level: 1, mission: 0, levelDone: 0, techs: [], found: [], ore: 0, bonus: { fighters: 0 }, results: {}, stance: 'free', revealed: false }; } // level and mission: the next one to fly; ore: carried into the next level; bonus: the extra ships the Earth refit bought for it; results: { '<level>.<mission>': { score, bonuses: [ids], t, hull, lost, tries } }, one for each mission flown (the best score is kept)
 const campResultKey = (level, i) => level + '.' + ((i | 0) + 1);
 function campProgressLoad() {
   const P = campProgressNew();
@@ -1801,7 +1715,7 @@ function campProgressLoad() {
     if (Number.isFinite(raw.ore)) P.ore = Math.max(0, Math.min(CAMP.ore.cap, Math.floor(raw.ore)));
     if (CAMP.stances.indexOf(raw.stance) >= 0) P.stance = raw.stance; // the wing's stance is the pilot's choice: it stays across missions and sessions
     P.revealed = raw.revealed === true; // the ending has been seen (SPOILER: campReveal)
-    if (raw.bonus && typeof raw.bonus === 'object') { const b = x => Number.isInteger(x) ? Math.max(0, Math.min(CAMP.refit.most, x)) : 0; P.bonus = { fighters: b(raw.bonus.fighters), escorts: b(raw.bonus.escorts) }; }
+    if (raw.bonus && typeof raw.bonus === 'object') { const b = x => Number.isInteger(x) ? Math.max(0, Math.min(CAMP.refit.most, x)) : 0; P.bonus = { fighters: Math.min(CAMP.refit.most, b(raw.bonus.fighters) + b(raw.bonus.escorts)) }; } // an escort bought before card space-game-cut-escorts is a fighter now
     if (raw.results && typeof raw.results === 'object') Object.keys(raw.results).slice(0, 40).forEach(k => { const r = raw.results[k]; if (/^[1-9]\.[1-9]$/.test(k) && r && Number.isFinite(r.score)) P.results[k] = { score: Math.max(0, Math.min(99999, Math.floor(r.score))), bonuses: Array.isArray(r.bonuses) ? r.bonuses.filter(x => typeof x === 'string').slice(0, 6).map(x => x.slice(0, 24)) : [], t: Math.max(0, r.t | 0), hull: Math.max(0, r.hull | 0), lost: Math.max(0, r.lost | 0), tries: Math.max(1, Math.min(99, r.tries | 0 || 1)), replays: Math.max(0, Math.min(999, r.replays | 0)) }; if (Number.isInteger(r.rank) && r.rank >= 0 && r.rank < 12) P.results[k].rank = r.rank; }); // replays: how many times it was flown again (card space-game-campaign-replay); rank: the rank the best run gave, an index (the ranks card)
   }, 0);
   if (P.mission >= campMissions(P.level).length) P.mission = 0;
@@ -1864,12 +1778,10 @@ function campMissions_tick(C, dt) {
   if (C.arrivedAt == null) { const p = campMissionPlace(C); if (!p || Math.hypot(C.carrier.x - p.x, C.carrier.y - p.y) <= CAMP.mission.arrive) { C.arrivedAt = C.t; if (C.nav && p && C.nav.id === 'place:' + C.L.place && typeof campNavClear === 'function') campNavClear(C, 'mission'); C.events.push({ type: 'arrived', place: p ? p.name : '' }); campSay(C, 'camp.say.arrived', { name: p ? p.name : '' }); } return; } // the mission begins when the cruiser is there (the autopilot lets go without a line of its own: the ship's "Arrived at X." says it once)
   if (!C.L.objectives) return;
   const mine = C.ships.filter(u => u.team === 'earth' && u.hp > 0 && u.kind !== 'freighter');
-  const scouting = campScoutTasks(C).includes('recon') ? mine.filter(u => u.scout) : []; // scouts fill a recon point CAMP.scout.scanRate times as fast, from CAMP.scout.scanReach farther than the wing, if the mission allows recon
   C.scan.forEach(p => {
     if (p.got) return;
-    const scouted = scouting.some(u => Math.hypot(u.x - p.x, u.y - p.y) <= p.r + CAMP.scout.scanReach);
-    if (!scouted && !mine.some(u => Math.hypot(u.x - p.x, u.y - p.y) <= p.r)) return;
-    p.t += dt * (scouted ? CAMP.scout.scanRate : 1);
+    if (!mine.some(u => Math.hypot(u.x - p.x, u.y - p.y) <= p.r)) return;
+    p.t += dt;
     if (p.t >= p.secs) { p.got = true; C.events.push({ type: 'scanned', x: p.x, y: p.y, n: C.scan.filter(q => q.got).length, of: C.scan.length }); campSay(C, 'camp.say.scanned', { n: C.scan.filter(q => q.got).length, of: C.scan.length }); }
   });
   if (C.guardsStart == null) C.guardsStart = C.ships.some(u => u.guard);
@@ -1917,9 +1829,9 @@ function campObjective(C) {
 function campSummary(C) {
   if (!C) return 'Campaign: not in a battle.';
   const L = C.L, c = C.carrier, m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
-  const out = campWing(C, 'fighter').length, esc = campWing(C, 'escort').length, al = campAliens(C).filter(u => u.faction !== 'pirate').length, pi = campAliens(C).length - al, cv = campConvoys(C).map(u => campConvoyName(u));
+  const out = campWing(C, 'fighter').length, al = campAliens(C).filter(u => u.faction !== 'pirate').length, pi = campAliens(C).length - al, cv = campConvoys(C).map(u => campConvoyName(u));
   return 'Campaign level ' + C.level + ', ' + L.name + '. Goal: ' + campObjective(C) + ' Carrier hull ' + Math.round(c.hp) + ' of ' + Math.round(c.maxHp) + ', shield ' + Math.round(C.shield) + ' of ' + CAMP.carrier.shield + '. Ore in the store: ' + Math.floor(C.ore) + ' of ' + CAMP.ore.cap + (C.build.queue.length ? ', building ' + C.build.queue.length + ' ship' + (C.build.queue.length === 1 ? '' : 's') : '') + '.'
-    + (C.earth ? ' Earth shield ' + Math.round(C.earth.shield / C.earth.max * 100) + ' percent.' : '') + ' In the bay: ' + C.bay.fighters + ' fighters, ' + C.bay.escorts + ' escorts' + (campRepairing(C) ? ', ' + campRepairing(C) + ' being mended' : '') + '. Out: '
-    + out + ' fighters, ' + esc + ' escorts. Missiles in the magazine: ' + C.missiles + ' of ' + C.magazine + ' (' + campKeyVar('keymissile') + ' fires one at the target, or with none picked at ' + (L.win === 'mother' || m ? 'the mothership or ' : '') + 'the nearest big ship).' + (al || C.alienSeen ? ' Aliens alive: ' + al + '.' : '') + (pi ? ' Pirates alive: ' + pi + '.' : '') + campAnomLine(C) + (L.convoys.length ? ' Convoys flying: ' + cv.join(', ') + (cv.length ? '' : 'none') + '.' : '')
+    + (C.earth ? ' Earth shield ' + Math.round(C.earth.shield / C.earth.max * 100) + ' percent.' : '') + ' In the bay: ' + C.bay.fighters + ' fighters' + (campRepairing(C) ? ', ' + campRepairing(C) + ' being mended' : '') + '. Out: '
+    + out + ' fighters. Missiles in the magazine: ' + C.missiles + ' of ' + C.magazine + ' (' + campKeyVar('keymissile') + ' fires one at the target, or with none picked at ' + (L.win === 'mother' || m ? 'the mothership or ' : '') + 'the nearest big ship).' + (al || C.alienSeen ? ' Aliens alive: ' + al + '.' : '') + (pi ? ' Pirates alive: ' + pi + '.' : '') + campAnomLine(C) + (L.convoys.length ? ' Convoys flying: ' + cv.join(', ') + (cv.length ? '' : 'none') + '.' : '')
     + (L.win === 'mother' ? (m ? ' The alien mothership is ' + Math.round(campDist(m, c) / 10) + ' km away.' : ' The mothership has not come yet.') : '');
 }

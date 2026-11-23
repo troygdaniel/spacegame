@@ -1,5 +1,5 @@
-// smoke: the fighters and escorts are drawn as small grey and bronze ships to match the cruiser (src/campcruiser.js): muted, no neon, inside their picture, nothing red (the aliens are red), a pale canopy or a lit window to say "ours" (plain Node, no Chrome)
-// Card space-game-campaign-look: "fighters and escorts: matching muted colours, still easy to tell from aliens in a crowd". The drawings are run on a recording stand-in for the Phaser Graphics; what they LOOK like in a crowd is for the pictures
+// smoke: the fighters are drawn as small grey and bronze ships to match the cruiser (src/campcruiser.js): muted, no neon, inside their picture, nothing red (the aliens are red), a pale canopy or a lit window to say "ours" (plain Node, no Chrome)
+// Card space-game-campaign-look: "fighters (and the escorts, cut by card space-game-cut-escorts): matching muted colours, still easy to tell from aliens in a crowd". The drawings are run on a recording stand-in for the Phaser Graphics; what they LOOK like in a crowd is for the pictures
 // (tools/campshots.mjs, the melee) and the blind critic (docs/CRITIC.md).
 // Run: node tests/camplook-small.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
@@ -13,7 +13,7 @@ const H = J('CAMP_HULL'), A = J('CAMP_ART');
 const hsv = c => { const r = (c >> 16 & 255) / 255, gg = (c >> 8 & 255) / 255, b = (c & 255) / 255, mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), d = mx - mn; let h = 0; if (d) h = mx === r ? ((gg - b) / d + 6) % 6 : mx === gg ? (b - r) / d + 2 : (r - gg) / d + 4; return { h: h * 60, s: mx ? d / mx : 0, v: mx }; };
 const palette = new Set([...H.steel, ...H.bronze, H.dark, H.edge, H.window, H.glass, H.bay, H.engine, H.hot, 0xffffff]);
 
-[['fighter', 'campFighterDraw', 'a fighter'], ['escort', 'campEscortDraw', 'an escort']].forEach(([kind, fn, what]) => {
+[['fighter', 'campFighterDraw', 'a fighter']].forEach(([kind, fn, what]) => {
   console.log(what);
   const ops = J(`__rec('${fn}')`), [W, Ht] = J(`campArtSize('${kind}')`), a = A[kind], k = a.k;
   check(what + ': it draws only with fills, plain lines and paths', [...new Set(ops.map(o => o[0]))].every(n => ['fillStyle', 'lineStyle', 'fillRect', 'fillCircle', 'beginPath', 'moveTo', 'lineTo', 'closePath', 'fillPath', 'strokePath', 'lineBetween'].includes(n)));
@@ -27,15 +27,15 @@ const palette = new Set([...H.steel, ...H.bronze, H.dark, H.edge, H.window, H.gl
   check(what + ': no thick edge: every line under 1 unit wide, and every outline is the dark edge colour', lines.every(w => w <= 1) && ops.every((o, i) => o[0] !== 'strokePath' || (() => { for (let j = i - 1; j >= 0; j--) if (ops[j][0] === 'lineStyle') return ops[j][2] === H.edge; return false; })()));
   let fc = 0, fa = 1; const halos = []; ops.forEach(([n, a, b, r]) => { if (n === 'fillStyle') { fc = a; fa = b === undefined ? 1 : b; } if (n === 'fillCircle' && r > 1.5 * k) halos.push({ c: fc, a: fa }); });
   check(what + ': a faint glow only: every circle over 1.5 units is a halo (alpha 0.15 or less) in the pale light colour or the engine colour, seven at most (the faint disc of two rings under it, the lights, the two engines)', halos.length >= 3 && halos.length <= 7 && halos.every(h => h.a <= 0.15 && (h.c === H.glass || h.c === H.engine)), JSON.stringify(halos.map(h => h.c.toString(16) + '/' + h.a)));
-  check(what + ': what says "ours": the pale canopy (fighter) or the lit window (escort) is drawn', used.has(kind === 'fighter' ? H.glass : H.window));
-  const look = J(`campArtLook('${kind === 'fighter' ? 'fighter' : 'escort'}', '${kind}')`);
+  check(what + ': what says "ours": the pale canopy is drawn', used.has(H.glass));
+  const look = J(`campArtLook('fighter', '${kind}')`);
   check(what + ': the scene scales it to the table length: hull ' + a.len + ' px (CAMP.size.' + kind + '.len)', Math.abs(look.scale * look.w - J(`CAMP.size.${kind}.len`)) < 1e-9 && look.w === a.len * k && look.art === kind, JSON.stringify(look));
   const hit = J(`CAMP.size.${kind}.hit`);
   check(what + ': the hit circle (' + hit + ' px) is inside the drawn ship: about half its half-length, and well inside the width over the wings', hit <= a.len / 2 * 0.62 && hit < a.half, hit + ' of ' + a.len / 2);
 });
-check('the cruiser, the fighter and the escort are all in the scene\'s look table as the Campaign\'s own pictures', ['carrier', 'fighter', 'escort'].every(kind => J(`CAMP_LOOK.${kind}.art`) !== null));
-const tex = J(`(() => { const made = {}; const sc = { textures: { exists: k => !!made[k] }, make: { graphics: () => { const g = new Proxy({}, { get: (t, n) => n === 'generateTexture' ? (k, w, h) => { made[k] = [w, h]; } : () => g }); return g; } } }; return ['cruiser', 'fighter', 'escort'].map(k => [campShipTexture(sc, k), made['camp-' + k]]); })()`);
-check('campShipTexture makes each under its own key (camp-cruiser, camp-fighter, camp-escort) at the size campArtSize says', tex.every(([key, size], i) => key === 'camp-' + ['cruiser', 'fighter', 'escort'][i] && size && size[0] === J(`campArtSize('${['cruiser', 'fighter', 'escort'][i]}')`)[0]), JSON.stringify(tex));
+check('the cruiser and the fighter are in the scene\'s look table as the Campaign\'s own pictures, and there is no escort one', J('CAMP_LOOK.escort') === null && ['carrier', 'fighter'].every(kind => J(`CAMP_LOOK.${kind}.art`) !== null));
+const tex = J(`(() => { const made = {}; const sc = { textures: { exists: k => !!made[k] }, make: { graphics: () => { const g = new Proxy({}, { get: (t, n) => n === 'generateTexture' ? (k, w, h) => { made[k] = [w, h]; } : () => g }); return g; } } }; return ['cruiser', 'fighter'].map(k => [campShipTexture(sc, k), made['camp-' + k]]); })()`);
+check('campShipTexture makes each under its own key (camp-cruiser, camp-fighter) at the size campArtSize says', tex.every(([key, size], i) => key === 'camp-' + ['cruiser', 'fighter'][i] && size && size[0] === J(`campArtSize('${['cruiser', 'fighter'][i]}')`)[0]), JSON.stringify(tex));
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nfailed: ${failed}` : '\nfailed: 0');
 process.exit(failed ? 1 : 0);

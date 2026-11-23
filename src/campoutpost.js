@@ -1,5 +1,5 @@
 // ---------- Campaign: friendly outposts (card space-game-campaign-outposts; Troy, 20 Nov 2026) ----------
-// Troy: fighters and escorts can only be BUILT, and the hull MENDED, DOCKED at a friendly outpost; the shield mends by itself, anywhere (the pips set how fast); mining works anywhere. A Fabricator
+// Troy: fighters can only be BUILT, and the hull MENDED, DOCKED at a friendly outpost; the shield mends by itself, anywhere (the pips set how fast); mining works anywhere. A Fabricator
 // upgrade lets the ship build anywhere. Low on hull with no ships left, the HUD says where to retreat and how long it takes on Fast. This file is the PURE half (no Phaser, no page;
 // tests/campoutpost.mjs runs it in Node); the scene (src/campaignscene.js) opens the ready room (src/camphubscene.js, with the dock's rows, src/campdock.js) when the carrier docks.
 //   THE DATA: CAMP.levels[n].outposts = { <place id>: { name?, range? } }: the friendly outposts of a level, places of that level (a hidden place is not one). name is what the room is called (else the place's
@@ -33,7 +33,7 @@ function campOutpostNear(C, safe) {
 function campDockHint(C) {
   if (!C || C.docked || C.result) return '';
   const n = campOutpostNear(C); if (!n) return '';
-  const worth = C.carrier.hp < C.carrier.maxHp || C.ore >= Math.min(CAMP.build.fighterCost, CAMP.build.escortCost) || (!!n.o.market && C.ore > 0);
+  const worth = C.carrier.hp < C.carrier.maxHp || C.ore >= CAMP.build.fighterCost || (!!n.o.market && C.ore > 0);
   return worth ? uiText('camp.hud.dockhint', { name: n.o.name }) : '';
 }
 function campOutpostNearest(C, safe) {
@@ -67,6 +67,13 @@ function campDock(C, arg, dry) {
 }
 // a market outpost (CAMP.levels[n].outposts[id].market = { rate }) buys the ore in the store when the carrier docks: rate cash for each, the store empty after. The cash pays for building, repair and the refit (campPay), and what is
 // left of it and of the ore goes on to the ready room. { ore, cash } or null when nothing was sold
+// THE STORE AND WHAT IS OVER IT (card space-game-l1-pacing-bugs; found by flying 1.2: "Sold 464 ore for 1392.", and 1.3 began with 500). What goes on from a mission is the cash and the ore together (campFunds),
+// and a save holds CAMP.ore.cap of it at the most (campProgressLoad, campNew): the rest is gone when the debrief closes, and nothing said so. The rule is not changed here; the game SAYS it: the radio at the sale
+// (camp.say.soldover), the dock room's build page (camp.hub.build.over) while it can still be spent there, and the debrief (camp.ui.over). The options for Troy are in docs/night/hunt-l1-pacing.md.
+//   campStoreOver(C)   { funds, cap, over }: what the cruiser has (cash and ore), what the store carries on, and what is over it (0 when it all fits)
+//   campOverLine(C)    the debrief's line when something is over, else ''
+function campStoreOver(C) { const funds = C ? campFunds(C) : 0, cap = CAMP.ore.cap; return { funds, cap, over: Math.max(0, funds - cap) }; }
+function campOverLine(C) { const ov = campStoreOver(C); return ov.over > 0 ? uiText('camp.ui.over', ov) : ''; }
 function campSell(C, o) {
   if (!o || !o.market || C.ore < 1) return null;
   if (C.ore > (C.oreBest || 0)) C.oreBest = C.ore; // the best the store held counts for the mission's "ore" objective even if no tick has seen it
@@ -74,6 +81,7 @@ function campSell(C, o) {
   C.ore -= ore; C.cash = (C.cash || 0) + cash; C.sold = (C.sold || 0) + ore;
   C.events.push({ type: 'sold', id: o.id, name: o.name, ore, cash });
   campSay(C, 'camp.say.sold', { ore, cash });
+  { const ov = campStoreOver(C); if (ov.over > 0) campSay(C, 'camp.say.soldover', { cap: ov.cap, over: ov.over }); } // more than the store carries on: say so now, while the dock's room is open to spend it in
   return { ore, cash };
 }
 function campUndock(C) { if (!C.docked) return false; const id = C.docked; C.docked = ''; C.events.push({ type: 'undocked', id }); return true; }
@@ -93,7 +101,7 @@ function campMend(C, arg, dry) {
 
 // ---- the retreat ----
 // no ship of the wing is left to fight for the carrier: none in the bay, out, launching or being built
-const campNoShips = C => !(C.bay.fighters + C.bay.escorts) && !campWing(C).length && !C.launchQ.length && !C.build.queue.length && !campRepairing(C);
+const campNoShips = C => !C.bay.fighters && !campWing(C).length && !C.launchQ.length && !C.build.queue.length && !campRepairing(C);
 function campRetreat(C) {
   if (!C || C.result || C.docked || !C.carrier || C.carrier.hp <= 0) return null;
   if (C.carrier.hp >= C.carrier.maxHp * CAMP.outpost.retreatHull || !campNoShips(C)) return null;

@@ -88,8 +88,8 @@ try {
   await hold('ArrowRight', 600); check('Right turns it', Math.abs((await j(`${S}.camp.carrier.rot`)) - r0) > 0.05);
   await hold('ArrowLeft', 600);
   await key('Tab'); await t.run(500); await snap('6-map'); note('map open: ' + await j(`!!(${S}.map && ${S}.map.open) || !!${S}.mapOpen`)); await key('Tab'); await t.run(300);
-  check('no list is on the screen until its key is pressed (nothing at all: no target is picked, so the corner is empty)', (await j(`campPanelOpen(${S}.pn)`)) === '' && (await j(`!${S}.pnl.title.visible && ${S}.pnl.rows.every(r => !r.name.visible) `)) === true); await snap('7-no-list');
-  const keyed = await j(`CAMP_PANELS.panels.filter(p => p.code).map(p => [p.code, p.id, p.key + '   ' + p.title, p.parent || ''])`), pinned = { fleet: 'Q   FLEET ORDERS', ship: 'P   SHIP ORDERS', squads: 'W   ALL SQUADS', red: 'E   RED SQUAD', power: 'I   POWER' };
+  check('no list is on the screen until its key is pressed (nothing at all: no target is picked, so the corner is empty)', (await j(`campPanelOpen(${S}.pn)`)) === '' && (await j(`!${S}.pnl.title.visible && ${S}.pnl.rows.every(r => !r.name.visible)`)) === true); await snap('7-no-list');
+  const keyed = await j(`CAMP_PANELS.panels.filter(p => p.code).map(p => [p.code, p.id, p.key + '   ' + p.title, p.parent || ''])`), pinned = { fleet: 'Q   FLEET ORDERS', ship: 'P   SHIP ORDERS', squads: 'W   ALL SQUADS', red: 'E   RED SQUAD', power: 'O   POWER' };
   check('the key table has nine lists with a key of their own: Q and its parts W E R T, P and its parts O I U', keyed.map(x => x[0]).join() === 'KeyQ,KeyW,KeyE,KeyR,KeyT,KeyP,KeyO,KeyI,KeyU' && keyed.every(x => VK[x[0]]), keyed.map(x => x[0]).join());
   for (const [k, id, title, parent] of keyed) { // each list: its key opens it directly at the first row (from no list), Up goes round to the last row (a long list scrolls), its key closes it
     await key(k); await t.run(500); await snap('7-list-' + id); const head = await j(`${S}.pnl.title.text`), n = await j(`campPanelList(${S}.camp, ${JSON.stringify(id)}).length`); note(id + ' list: ' + head + ' / ' + (await listRows()).join(' | '));
@@ -109,7 +109,7 @@ try {
     // the ship's rows (fly to the target, the two build rows, dock, the emergency shields, the blink), the power keys (J K L ;). A list of [what to do, what it is]: a string is a direct key, [row] is an order given through the list it is in
     const via = async row => { const w = await listWay(row); return w ? w.keys.map(k => k[0].replace(/^Key/, '') + (k[1] ? ', Down x ' + k[1] : '')).join(', ') + ', Enter' : '(no way)'; }; // the keys of an order as they were pressed
     const done = [];
-    for (const [act, what] of [[['launch'], 'launch'], [['attack'], 'attack (the fighters)'], [['escort'], 'escort (the escorts)'], [['guard'], 'guard'], [['recall'], 'recall (the wing is out)'], [['mine'], 'mine'], [['keep'], 'stance: keep distance'], [['ctuck'], 'convoy: tuck in'],
+    for (const [act, what] of [[['launch'], 'launch'], [['attack'], 'attack (the fighters)'], [['escort'], 'escort (the convoy)'], [['guard'], 'guard'], [['recall'], 'recall (the wing is out)'], [['mine'], 'mine'], [['keep'], 'stance: keep distance'], [['ctuck'], 'convoy: tuck in'],
       ['KeyS', 'S nearest threat'], ['KeyD', 'D next target'], ['KeyA', 'A last target'], [['target'], 'fly to the target'], [['burntarget'], 'fast burn to the target'], ['KeyX', 'X clear the target'],
       [['buildf'], 'build a fighter'], [['builde'], 'build an escort'], [['dock'], 'dock (away from it)'],
       ['KeyJ', 'J shields pip'], ['KeyK', 'K engines pip'], ['KeyL', 'L weapons pip'], [['emergency'], 'emergency shields'], ['Semicolon', '; balance'], [['blink'], 'blink'],

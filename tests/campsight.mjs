@@ -40,13 +40,13 @@ console.log('A. seen');
   check('the range is 9000 px: 21 s of the fastest raider\'s flight (430 px/s), more of a slower one', R === 9000 && R / 430 > 20 && R / 430 < 22, R);
   check('a hostile inside the range is seen, one beyond it is not', J('(() => { const a = __foe("raider", 8900, 0), b = __foe("raider", 0, -9100); return campSeen(C, a) === true && campSeen(C, b) === false; })()'));
   check('the mothership and the towers are always seen, as they were before the sensors had a range', J('(() => { const m = __foe("mother", 30000, 0), t = __foe("tower", -30000, 0); return campSeen(C, m) && campSeen(C, t); })()'));
-  check('a ship of your own side is always seen', J('(() => { const e = campSpawn(C, "escort", 40000, 0); return campSeen(C, e); })()'));
-  check('a hostile inside the circle of a scout that is out is seen however far it is from the cruiser', J(`(() => {
-    const far = __foe("raider", 14000, 0), e = campSpawn(C, "escort", 13000, 0); e.scout = { phase: 'station' };
+  check('a ship of your own side is always seen', J('(() => { const e = campSpawn(C, "fighter", 40000, 0); return campSeen(C, e); })()'));
+  check('a hostile inside the circle of a fighter that is out is seen however far it is from the cruiser (the scouts\' circle, now every fighter\'s: card space-game-cut-escorts)', J(`(() => {
+    __mk(); const far = __foe("raider", 14000, 0), e = campSpawn(C, "fighter", 13000, 0);
     const near = campSeen(C, far), sensors = campSensors(C).length; e.hp = 0; const gone = campSeen(C, far);
     return near === true && sensors === 1 && gone === false;
   })()`));
-  check('a hostile just outside the scout\'s circle is not', J(`(() => { __mk(); const far = __foe("raider", 14000, 0), e = campSpawn(C, "escort", 14000 - CAMP.scout.sense - 50, 0); e.scout = { phase: 'station' }; return campSeen(C, far) === false; })()`));
+  check('a hostile just outside a fighter\'s circle is not', J(`(() => { __mk(); const far = __foe("raider", 14000, 0), e = campSpawn(C, "fighter", 14000 - CAMP.sensor.wing - 50, 0); return campSeen(C, far) === false; })()`));
   check('with the range at 0 only the always-seen kinds are seen (the tuning row\'s lowest value)', J(`(() => { __mk(); const a = __foe("raider", 100, 0), t = __foe("tower", 100, 100); const was = CAMP.sensor.range; CAMP.sensor.range = 0; const r = campSeen(C, a) === false && campSeen(C, t) === true; CAMP.sensor.range = was; return r; })()`));
   check('the range is read at the moment (the tuning panel changes it live)', J(`(() => { __mk(); const a = __foe("raider", 5000, 0); const was = CAMP.sensor.range; CAMP.sensor.range = 4000; const r1 = campSeen(C, a); CAMP.sensor.range = 6000; const r2 = campSeen(C, a); CAMP.sensor.range = was; return r1 === false && r2 === true; })()`));
 }
@@ -85,17 +85,17 @@ console.log('D. the radio\'s first call');
   check('the first sight is not called at once: the wave\'s own line is said first', J('__says().length') === 0);
   g.run('C.t = 100000 + CAMP.sensor.delay + 10; campSightStep(C)');
   const s1 = J('__says()');
-  check('after the delay one call: how many, which way, how far (no scout or escort near: no kinds)', s1.length === 1 && /^camp\.say\.sight /.test(s1[0]) && s1[0].indexOf('3 hostiles') > 0 && s1[0].indexOf('"dir":"east"') > 0 && s1[0].indexOf('"km":"') > 0, s1.join(' | '));
+  check('after the delay one call: how many, which way, how far (no fighter near: no kinds)', s1.length === 1 && /^camp\.say\.sight /.test(s1[0]) && s1[0].indexOf('3 hostiles') > 0 && s1[0].indexOf('"dir":"east"') > 0 && s1[0].indexOf('"km":"') > 0, s1.join(' | '));
   check('the words fill from the text table: "Contact, east: 3 hostiles, 520 km."', J('uiText("camp.say.sight", C.events.find(e => e.type === "say").vars)') === 'Contact, east: 3 hostiles, 520 km.', J('uiText("camp.say.sight", C.events.find(e => e.type === "say").vars)'));
   g.run('C.events.length = 0; C.t += 5000; campSightStep(C)');
   check('the same hostiles are not called twice', J('__says().length') === 0);
-  // a second group, with an escort near: the kinds are named
-  g.run('window.__e = campSpawn(C, "escort", C.carrier.x - 6000, C.carrier.y - 200); __e.vx = __e.vy = 0; window.__b1 = __foe("raider", -7000, 0); window.__b2 = __foe("raider", -7100, 0); window.__b3 = __foe("gunship", -7200, 0); C.t += 5000; campSightStep(C); C.t += CAMP.sensor.delay + 10; campSightStep(C)');
+  // a second group, with a fighter near: the kinds are named
+  g.run('window.__e = campSpawn(C, "fighter", C.carrier.x - 6000, C.carrier.y - 200); __e.vx = __e.vy = 0; window.__b1 = __foe("raider", -7000, 0); window.__b2 = __foe("raider", -7100, 0); window.__b3 = __foe("gunship", -7200, 0); C.t += 5000; campSightStep(C); C.t += CAMP.sensor.delay + 10; campSightStep(C)');
   const s2 = J('__says()');
-  check('with an escort of yours near the group the call names the kinds, the most first: "2 Raiders, 1 Gunship"', s2.length === 1 && s2[0].indexOf('2 Raiders, 1 Gunship') > 0 && s2[0].indexOf('"dir":"west"') > 0, s2.join(' | '));
-  g.run('C.events.length = 0; __mk(); window.__s = campSpawn(C, "escort", C.carrier.x + 9000, C.carrier.y); __s.scout = { phase: "station" }; __s.vx = __s.vy = 0; window.__c1 = __foe("skiff", 11000, 0); C.t = 200000; campSightStep(C); C.t += CAMP.sensor.delay + 10; campSightStep(C)');
+  check('with a fighter of yours near the group the call names the kinds, the most first: "2 Raiders, 1 Gunship"', s2.length === 1 && s2[0].indexOf('2 Raiders, 1 Gunship') > 0 && s2[0].indexOf('"dir":"west"') > 0, s2.join(' | '));
+  g.run('C.events.length = 0; __mk(); window.__s = campSpawn(C, "fighter", C.carrier.x + 9000, C.carrier.y); __s.vx = __s.vy = 0; window.__c1 = __foe("skiff", 11000, 0); C.t = 200000; campSightStep(C); C.t += CAMP.sensor.delay + 10; campSightStep(C)');
   const s3 = J('__says()');
-  check('a scout out sees a group 11,000 px off (beyond the cruiser\'s range) and names it too: "1 Skiff"', s3.length === 1 && s3[0].indexOf('1 Skiff') > 0 && s3[0].indexOf('"dir":"east"') > 0, s3.join(' | '));
+  check('a fighter out sees a group 11,000 px off (beyond the cruiser\'s range) and names it too: "1 Skiff"', s3.length === 1 && s3[0].indexOf('1 Skiff') > 0 && s3[0].indexOf('"dir":"east"') > 0, s3.join(' | '));
   g.run('C.events.length = 0; __mk(); window.__d1 = __foe("raider", 4000, 0); C.t = 300000; campSightStep(C); __d1.hp = 0; C.t += CAMP.sensor.delay + 10; campSightStep(C)');
   check('a group that is dead before the call is due is not called', J('__says().length') === 0);
   g.run('C.events.length = 0; __mk(); window.__f1 = __foe("raider", 4000, 0); window.__f2 = __foe("raider", -4000, 0); C.t = 400000; campSightStep(C); C.t += CAMP.sensor.delay + 10; campSightStep(C)');

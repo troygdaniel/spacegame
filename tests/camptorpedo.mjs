@@ -16,7 +16,7 @@ const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
 // a test mission on Level 1 (this page's own copy of the table): at Ceres, where the cruiser starts; a pirate wave of two torpedo boats and two skiffs after 5 s
 g.run(`
-  CAMP.levels[1].missions.push({ id: 'tb', kind: 'escort', par: 100, place: 'ceres', dock: 'ceres', scouts: ['escort'],
+  CAMP.levels[1].missions.push({ id: 'tb', kind: 'escort', par: 100, place: 'ceres', dock: 'ceres', 
     rocks: [{ at: [900, 700], n: 7, spread: 300 }],
     objectives: [{ type: 'hold', secs: 100000 }], bonus: [{ id: 'nt', type: 'torpedoes', n: 0 }],
     convoys: [{ id: 'h1', name: 'Hauler 1', at: 2, from: 'vesta', to: 'ceres' }],
@@ -54,11 +54,11 @@ console.log('A. the kinds and the sides');
 console.log('B. what a boat goes for');
 {
   g.run('__new(); __quiet()');
-  check('it goes for a hauler 1,500 px off over a fighter 300 px off: fighters and escorts are not its prey', J(`(() => { const b = __spawn('tboat', 1500, 600), h = __hauler(2000, 600); const f = __spawn('fighter', 1300, 600); f.order = null; const e = __spawn('escort', 1400, 700); return campTorpedoTarget(C, b).id === h.id })()`));
+  check('it goes for a hauler 1,500 px off over a fighter 300 px off: fighters are not its prey', J(`(() => { const b = __spawn('tboat', 1500, 600), h = __hauler(2000, 600); const f = __spawn('fighter', 1300, 600); f.order = null; const e = __spawn('fighter', 1400, 700); return campTorpedoTarget(C, b).id === h.id })()`));
   check('it goes for the cruiser when there is no hauler and no miner', J(`(() => { __new(); __quiet(); const b = __spawn('tboat', 1500, 0); const f = __spawn('fighter', 1400, 100); return campTorpedoTarget(C, b).id === C.carrier.id })()`));
   check('the row\'s prey \'carrier\' keeps to the cruiser though a hauler is nearer', J(`(() => { __new(); __quiet(); const b = __spawn('tboat', 1500, 0); __hauler(1700, 0); b.prey = 'carrier'; return campTorpedoTarget(C, b).kind === 'carrier' })()`));
   check('a named hauler (goal convoy:x1) wins over the nearer cruiser', J(`(() => { __new(); __quiet(); const b = __spawn('tboat', 400, 0); const h = __hauler(-3000, 0); b.goal = 'convoy:x1'; return campTorpedoTarget(C, b).id === h.id })()`));
-  check('a neutral miner is prey, and your own escort on a Mine order too', J(`(() => { __new(); __quiet(); const b = __spawn('tboat', 1500, 0); const m = __spawn('miner', 1700, 0); const t1 = campTorpedoTarget(C, b).id === m.id; m.hp = 0; C.ships = C.ships.filter(s => s.hp > 0); const e = __spawn('escort', 1700, 0); e.order = { type: 'mine' }; return t1 && campTorpedoTarget(C, b).id === e.id })()`));
+  check('a neutral miner is prey; your own fighter on a Mine order is not (it was: a boat armed on a mining fighter in 1.2, card space-game-l1-pacing-bugs): with the miner gone the boat goes for the cruiser', J(`(() => { __new(); __quiet(); const b = __spawn('tboat', 1500, 0); const m = __spawn('miner', 1700, 0); const t1 = campTorpedoTarget(C, b).id === m.id; m.hp = 0; C.ships = C.ships.filter(s => s.hp > 0); const e = __spawn('fighter', 1700, 0); e.order = { type: 'mine' }; return t1 && campTorpedoTarget(C, b).id === C.carrier.id })()`));
   check('the weights decide between two prey: a hauler 1,000 px off before the cruiser 700 px off (0.5 against 1.1)', J(`(() => { __new(); __quiet(); const b = __spawn('tboat', 700, 0); __hauler(1700, 0); return campTorpedoTarget(C, b).kind === 'freighter' })()`));
 }
 
@@ -299,7 +299,7 @@ console.log('K. the wing\'s words and the plain bot');
 }
 {
   const bot = await import('../tools/campaign-bot.mjs');
-  bot.botGame.run(`CAMP.levels[1].missions.push({ id: 'tbbot', kind: 'escort', par: 300, hpScale: 1, dmgScale: 1, scouts: ['escort'], place: 'ceres', dock: 'ceres', start: 'ceres', startAt: [130, 30],
+  bot.botGame.run(`CAMP.levels[1].missions.push({ id: 'tbbot', kind: 'escort', par: 300, hpScale: 1, dmgScale: 1, place: 'ceres', dock: 'ceres', start: 'ceres', startAt: [130, 30],
     convoys: [{ id: 't1', name: 'Transport', at: 4, from: 'ceres', to: 'vesta', speed: 45 }], objectives: [{ type: 'deliver', n: 1 }], bonus: [{ id: 'nt', type: 'torpedoes', n: 0 }],
     waves: [{ at: 10, from: [2500, -1200], ships: { tboat: 2, skiff: 2 }, goal: 'convoy:t1', prey: 'haulers' }] })`); // 62 s of road for the transport: two boats and two skiffs come at her from ahead
   const idx = JSON.parse(bot.botGame.run('JSON.stringify(CAMP.levels[1].missions.length - 1)')), rs = [], torp = [];

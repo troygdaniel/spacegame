@@ -6,7 +6,7 @@
 // THE BOAT (CAMP.torpedo.boats): `tboat` is the pirates' (faction 'pirate'), `lancer` the aliens' (faction 'alien'): the same boat with its own numbers. A wave row names them in `ships`:
 //   { at | on, from, ships: { tboat: 2, skiff: 3 }, goal, say, prey, breaks, breakOn, breakAt }   (the row's fields are the pirates'; a boat of the aliens ignores breaks and breakAt)
 //   prey:  'haulers' | 'miners' | 'carrier' | 'any' (the default). The boat weighs the ships in its own table (boats.<kind>.prey: a hauler, a miner, the cruiser) by distance times weight, the least wins;
-//          fighters and escorts are not in it, so the boat flies past them. `goal: 'convoy:h1'` (a named hauler) wins over prey. With none of the prey left it goes for the cruiser.
+//          fighters are not in it, so the boat flies past them (also when they are on a Mine order: campTorpPrey). `goal: 'convoy:h1'` (a named hauler) wins over prey. With none of the prey left it goes for the cruiser.
 //   It flies at its prey at its own slow speed, no gun. Inside tube.range it stops and ARMS for tube.windup ms (an 'arming' event and a line on the radio), then launches (a 'launch' event); tube.reload ms
 //   to the next, tube.n in all. Killed while it arms, it fires nothing. With no torpedo left it breaks off and runs (a pirate boat as the pirates do: src/camppirates.js; it counts as escaped).
 // THE TORPEDO (CAMP.torpedo.torp): C.torpedoes = [{ id: 'torpedo-N', kind: 'torpedo', x, y, vx, vy, rot, sp, hp, maxHp, r, target (a ship's id), from (the boat's id), fac, life (ms of fuel), dmg }], and each is in C.by
@@ -35,14 +35,17 @@ function campTorpSay(C, kind, key, vars) {
   C.torpSay[kind] = C.t; campSay(C, key, vars);
 }
 // a ship by name for a line of words: a hauler or a neutral has its own, the cruiser is "us" (a line of its own)
-const campTorpName = u => u.kind === 'freighter' ? campConvoyName(u) : (u.cname || u.kind);
+const campTorpName = u => u.kind === 'freighter' ? campConvoyName(u) : (u.cname || (typeof campWingShipName === 'function' ? campWingShipName(null, u) : u.kind)); // a ship of the wing in words ("our fighter"): a fighter on a Mine order is prey (campPreyKind), and the radio said "Torpedo boat arming on fighter." (card space-game-hunt-l1-pacing)
 const campTorpKey = (u, stem) => stem + (u.kind === 'carrier' ? '.us' : '.name');
 
+// is this ship prey for a boat of this kind? Its table names the haulers, the miners and the cruiser. Your own fighters never are, whatever their order: a fighter on a Mine order is "a mining ship" to a
+// pirate skiff (campPreyKind, src/camppirates.js), but a boat's heavy torpedo is for the big ships, and "Tuck in" cannot cover a fighter (found by flying 1.2, where the boats come while the wing mines: card space-game-l1-pacing-bugs)
+const campTorpPrey = (bk, s) => s.kind !== 'fighter' && bk.prey[campPreyKind(s)] != null;
 // what a boat goes for: the hauler its wave names, else the best of its prey by distance times weight (the prey the row names when it is there), else the cruiser
 function campTorpedoTarget(C, u) {
   const bk = CAMP.torpedo.boats[u.kind];
   if (u.goal && u.goal.indexOf('convoy:') === 0) { const f = C.by['freighter-' + u.goal.slice(7)]; if (f && f.hp > 0) return f; }
-  const all = C.ships.filter(s => s.hp > 0 && (s.team === 'earth' || s.team === 'neutral') && bk.prey[campPreyKind(s)] != null);
+  const all = C.ships.filter(s => s.hp > 0 && (s.team === 'earth' || s.team === 'neutral') && campTorpPrey(bk, s));
   const want = u.prey || 'any';
   let pool = want === 'any' ? all : all.filter(s => campPreyOf(want, campPreyKind(s)));
   if (!pool.length) pool = all;
@@ -86,7 +89,7 @@ function campTorpedoLaunch(C, u, tgt) {
 // a torpedo that has no target (its own is gone) takes the nearest ship of the kinds the boats go for, inside torp.lock of it
 function campTorpedoRetarget(C, t) {
   const T = CAMP.torpedo.torp, boat = C.by[t.from], bk = boat && CAMP.torpedo.boats[boat.kind] || CAMP.torpedo.boats.tboat;
-  return campNearest(C.ships.filter(s => s.hp > 0 && (s.team === 'earth' || s.team === 'neutral') && bk.prey[campPreyKind(s)] != null), t, T.lock);
+  return campNearest(C.ships.filter(s => s.hp > 0 && (s.team === 'earth' || s.team === 'neutral') && campTorpPrey(bk, s)), t, T.lock);
 }
 
 function campTorpedoes(C, dt) {

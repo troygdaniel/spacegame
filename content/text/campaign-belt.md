@@ -12,9 +12,9 @@ The words of the Campaign's first level, the asteroid belt (card space-game-camp
 | camp.say.ambush2 | Mining lasers are weapons now. Hold Space. Drones: fighters attack ({viaattack}). |
 | camp.say.bwave2 | Second wave, from the north-west. |
 | camp.say.bwave3 | The mothership is here. Kill it. |
-| camp.say.escortcarrier | Escorts are with the cruiser. |
+| camp.say.escortcarrier | The squads are with the cruiser. |
 | camp.ui.refit | EARTH REFIT |
 | camp.ui.refitpick | Choose a technology:  {keys} |
-| camp.ui.refitbuy | 4  +1 fighter ({fc} ore)     5  +1 escort ({ec} ore) |
-| camp.ui.refitore | ORE  {ore}     EXTRA SHIPS  {xf} fighters  {xe} escorts |
+| camp.ui.refitbuy | 4  +1 fighter ({fc} ore) |
+| camp.ui.refitore | ORE  {ore}     EXTRA SHIPS  {xf} fighters |
 | camp.ui.refitgot | Chosen: {name}.  Enter  continue |

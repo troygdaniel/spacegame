@@ -27,6 +27,7 @@ const CAMP_CALLS = {
   gap: 25,         // s from one call opening to the next one that may open
   answer: 8,       // s the pilot waits for an answer, until the player touches the prompt (Up or Down: then the clock stops)
   held: 30,        // s a call the player has touched waits for Enter before the pilot takes the cautious pick himself (the others wait behind it: one call at a time)
+  grace: 0.7,      // s after a call closed BY ITSELF (the ship it was about is gone, or its time ran out) in which Enter is still the call's and does nothing: without it an Enter meant as an answer fired a missile (card space-game-hunt-l1-pacing)
   again: 70,       // s before the same type of call is made again
   pilots: 4,       // the callsigns of src/campchatter.js, taking turns
   wound: 0.4,      // a wingman at this share of his hull or less is "hit and burning"
@@ -48,7 +49,7 @@ const CAMP_CALLS = {
 };
 
 // ---- who is about ----
-const campCallWing = C => C.ships.filter(u => u.team === 'earth' && u.hp > 0 && (u.kind === 'fighter' || u.kind === 'escort'));
+const campCallWing = C => C.ships.filter(u => u.team === 'earth' && u.hp > 0 && u.kind === 'fighter');
 const campCallFoes = C => campAliens(C).filter(u => u.kind !== 'tower' && u.kind !== 'mother' && !u.running);
 const campCallByDist = (list, p) => list.slice().sort((a, b) => campDist(a, p) - campDist(b, p) || (a.id < b.id ? -1 : 1));
 const campCallIds = (list, p, n) => campCallByDist(list, p).slice(0, n).map(u => u.id);
@@ -110,7 +111,7 @@ const CAMP_CALL_TYPES = [
   { id: 'cruiser', pick: ['guard', 'strike', 'emergency'], def: 0, // the cruiser's shield is going and an enemy is in reach: the wing comes home to guard it / the fighters go for the nearest enemy / the emergency power (shields up, weapons and engines down for a while)
     when: C => { if (C.carrier.hp <= 0 || !(C.shield <= campShieldMax(C) * CAMP_CALLS.shield)) return null; const f = campNearest(campAliens(C), C.carrier, CAMP_CALLS.shieldNear); return f ? { ids: [f.id] } : null; } },
   { id: 'wounded', pick: ['cover', 'home', 'fight'], def: 1, // a wingman is hit and an enemy is on him (not one who is already flying home to be mended: src/camprepair.js)
-    when: C => { const foes = campCallFoes(C), w = campCallWing(C).filter(u => !u.scout && u.hp <= u.maxHp * CAMP_CALLS.wound && !(u.order && u.order.type === 'recall') && !u.repair && foes.some(f => campDist(f, u) < CAMP_CALLS.woundNear)); return w.length ? { who: campCallByDist(w, C.carrier)[0].id, ids: campCallIds(foes, w[0], 3) } : null; } },
+    when: C => { const foes = campCallFoes(C), w = campCallWing(C).filter(u => u.hp <= u.maxHp * CAMP_CALLS.wound && !(u.order && u.order.type === 'recall') && !u.repair && foes.some(f => campDist(f, u) < CAMP_CALLS.woundNear)); return w.length ? { who: campCallByDist(w, C.carrier)[0].id, ids: campCallIds(foes, w[0], 3) } : null; } },
   { id: 'breakaway', pick: ['intercept', 'hold', 'draw'], def: 1, // enemies close on a convoy ship with the cruiser away from her: two or more of them, or one with none of the wing beside her
     when: C => { const foes = campCallFoes(C), wing = campCallWing(C), K = CAMP_CALLS;
       for (const f of campConvoys(C)) { const near = foes.filter(u => campDist(u, f) < K.convoyNear); if (near.length && campDist(f, C.carrier) > K.convoyFar && (near.length >= 2 || !wing.some(u => campDist(u, f) < K.covered))) return { who: f.id, ids: campCallIds(near, f, 3) }; }
@@ -127,6 +128,7 @@ const campCallType = id => CAMP_CALL_TYPES.find(t => t.id === id) || null;
 
 // ---- the state and the tick ----
 function campCallsNew(C) { return { n: 0, next: 0, open: null, last: {}, seen: {}, log: [] }; }
+function campCallGrace(C) { const S = C && C.call; return !!(S && !S.open && S.selfAt != null && C.t - S.selfAt >= 0 && C.t - S.selfAt < CAMP_CALLS.grace * 1000); } // a call has just closed by itself: Enter is not yet the missile's
 function campCallOpen(C) { return !!(C && C.call && C.call.open); } // (a function declaration: the command-time card's test puts its own in its place)
 
 function campCallsTick(C, dt) {
@@ -137,7 +139,7 @@ function campCallsTick(C, dt) {
   if (!campFlag('calls')) { if (o) { S.open = null; C.events.push({ type: 'call', stage: 'gone', id: o.id }); } return; } // the pilots' calls switched off (the tuning panel): none opens, and one that waits is dropped
   if (o) {
     const ids = [].concat(o.ctx.who || [], o.ctx.ids || []);
-    if (ids.length && !ids.some(id => C.by[id] && C.by[id].hp > 0)) { S.open = null; C.events.push({ type: 'call', stage: 'gone', id: o.id }); return; } // the ship he was calling about is gone: there is nothing to order
+    if (ids.length && !ids.some(id => C.by[id] && C.by[id].hp > 0)) { S.open = null; S.selfAt = C.t; C.events.push({ type: 'call', stage: 'gone', id: o.id }); return; } // the ship he was calling about is gone: there is nothing to order
     if (o.held != null) { o.held += dt; if (o.held >= CAMP_CALLS.held) campCallAnswer(C, 0, 'late'); return; } // touched: the seconds are stopped; it waits for Enter, for CAMP_CALLS.held at the most
     o.left -= dt;
     if (o.left <= 0) campCallAnswer(C, 0, 'late');
@@ -181,6 +183,7 @@ function campCallAnswer(C, n, how) {
   if (!campTry(() => CAMP_CALL_FX[T.pick[i]].do(C, o.ctx), false) && i !== T.def) { failed = true; i = T.def; campTry(() => CAMP_CALL_FX[T.pick[i]].do(C, o.ctx), false); }
   S.open = null; S.next = Math.max(S.next, C.t + 3000); // a quiet moment after an answer: its own radio line is said first
   const way = asked < 0 ? 'late' : failed ? 'fail' : (how || 'key');
+  if (way === 'late') S.selfAt = C.t; // it closed by itself: for CAMP_CALLS.grace an Enter is still the call's (campCallGrace)
   const R = CAMP_CALL_RATE[T.id], rate = way === 'late' || way === 'fail' || i === T.def || !R ? '' : R.good.indexOf(i) >= 0 ? 'good' : R.bad.indexOf(i) >= 0 ? 'bad' : ''; // the pick the pilot was asked for and got, rated: right, wrong, or neither
   if (rate) { const M = CAMP_CALLS.mood[rate]; S.mood = { until: C.t + M.secs * 1000, deal: M.deal, take: M.take, rate }; C.events.push({ type: 'say', key: 'camp.say.call' + rate, vars: {} }); }
   S.log.push({ id: T.id, pick: T.pick[i], way, at: Math.round(C.t) });

@@ -19,7 +19,7 @@
 //   campCue(C, name)             fire a cue (once; true)               campPirates(C, dt)    the tick: the mission's cues, the waves that break off
 //   campPirateBreak(C, who)      who: 'all' | 'wave:N': break off now; the number of pirates that did      campPirateAI / campTrafficAI   one ship of each
 //   campTrafficNew(C)            the neutral ships of the mission row, at campNew                         campNeutralLost(C, u)          what a lost neutral does
-//   campPreyKind(u)              what a pirate sees in a ship: 'freighter', 'miner', 'escort', 'fighter', 'patrol' or 'carrier'
+//   campPreyKind(u)              what a pirate sees in a ship: 'freighter', 'miner', 'fighter', 'patrol' or 'carrier'
 
 function campCue(C, name) {
   if (!name || !C.cues) return false;
@@ -34,7 +34,7 @@ function campPreyKind(u) {
   if (u.kind === 'patrol') return 'patrol';
   if (u.kind === 'carrier') return 'carrier';
   if (u.team === 'earth' && u.order && u.order.type === 'mine') return 'miner'; // your own ships on a Mine order are mining ships to a pirate
-  return u.kind === 'escort' ? 'escort' : 'fighter';
+  return 'fighter';
 }
 const campPreyOf = (want, kind) => want === 'haulers' ? kind === 'freighter' : want === 'miners' ? kind === 'miner' : want === 'carrier' ? kind === 'carrier' : true;
 
@@ -66,7 +66,7 @@ function campPirateAI(C, u, dt) {
   const dog = campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campSteer(C, u, def, dist, target, u.vx - (tgt.vx || 0), u.vy - (tgt.vy || 0)); // a skiff against a fighter is a dogfight
   if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
   if (m.fire && dist < def.range && C.t > u.nextShot && Math.abs(campWrap((dog ? m.aim : target) - u.rot)) < def.aim) {
-    u.nextShot = C.t + campBetween(C, def.shot[0], def.shot[1]);
+    u.nextShot = C.t + campFightGap(u, campBetween(C, def.shot[0], def.shot[1]));
     const n = def.spread || 1;
     for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * C.dmgS, 1800, 'alien', 14, { fac: 'pirate' }); // fac: the scene and the map draw a pirate's shot in amber, not the aliens' red
   }
