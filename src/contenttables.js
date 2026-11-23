@@ -1317,7 +1317,7 @@ const UI_TEXT = {
   'camp.b.rival': 'Destroy the pirate leader',
   'camp.b.torpedoes': 'Torpedo hits: {n} or fewer',
   'camp.hint.fast': 'A long quiet road. On the map ({map}), pick the transport and burn Fast.',
-  'camp.hint.fleet': '{fleetkey} is the fleet. {squadskey} all squads, {redkey} red, {greenkey} green, {yellowkey} yellow.',
+  'camp.hint.fleet': '{fleetkey} is the fleet. {squadskey} all squads, {redkey} Wedge, {greenkey} Kara, {yellowkey} Apollo.',
   'camp.bf.enemy.tboat.one': '{n} pirate torpedo boat',
   'camp.bf.enemy.tboat.many': '{n} pirate torpedo boats',
   'camp.bf.enemy.lancer.one': '{n} alien lancer',
