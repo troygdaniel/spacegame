@@ -13,7 +13,7 @@ import { beltSource } from './fixtures/campbelt.mjs';
 const OUT = process.env.BRIEF_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { Equal: 187, Minus: 189, Backspace: 8, KeyK: 75, KeyR: 82, KeyL: 76, KeyM: 77, KeyH: 72, Enter: 13, Escape: 27, ArrowUp: 38, ArrowRight: 39, ArrowLeft: 37, Left: 37, Digit2: 50 };
+const VK = { Equal: 187, Minus: 189, Backspace: 8, KeyS: 83, KeyK: 75, KeyR: 82, KeyL: 76, KeyM: 77, KeyH: 72, Enter: 13, Escape: 27, ArrowUp: 38, ArrowRight: 39, ArrowLeft: 37, Left: 37, Digit2: 50 };
 
 const t = await launch('', ROOT);
 try {
@@ -34,10 +34,10 @@ try {
   check('Enter on the board, then on the mission: the briefing opens on its first screen on its first screen: Mission 3 (not 3 of 3), the three screens named, the map, the place, the route and the story line are on the glass', await j(`campBriefIsOpen(${HUB})`) && await j(`${HUB}.bf.screen === 0`) && a.some(x => /^MISSION 3\s+-\s+The mothership/.test(x)) && !a.some(x => /OF 3/.test(x)) && a.includes('WHERE') && a.includes('WHY') && a.some(x => /^Route /.test(x)) && a.includes('1  WHERE AND WHY') && a.includes('3  HOW'), a.join(' | ').slice(0, 400));
   await snap('1-briefing');
   await key('Equal'); await key('Equal'); await key('Equal'); await t.run(300);
-  check('+ zooms the map in (the zoom reads in its corner) and does not mute the sound; Backspace puts it back', await j(`${HUB}.bf.z > 1.6`) && (await j('G.muted')) === muted0 && (await bf()).some(x => /^ZOOM 17\d%/.test(x)));
+  check('+ zooms the map in (the zoom reads in its corner) and does not mute the sound; S puts it back', await j(`${HUB}.bf.z > 1.6`) && (await j('G.muted')) === muted0 && (await bf()).some(x => /^ZOOM 17\d%/.test(x)));
   await snap('1b-zoomed-in');
-  await key('Backspace'); await key('KeyM'); await t.run(500); // Backspace resets the zoom (no digit does)
-  check('Backspace resets, M goes to the mission area (the zoom back to 100%), and does NOT mute the sound; the briefing is still up', await j(`${HUB}.bf.zoom === 1 && ${HUB}.bf.z === 1`) && (await j('G.muted')) === muted0);
+  await key('KeyS'); await key('KeyM'); await t.run(500); // S resets the zoom (no digit does)
+  check('S resets, M goes to the mission area (the zoom back to 100%), and does NOT mute the sound; the briefing is still up', await j(`${HUB}.bf.zoom === 1 && ${HUB}.bf.z === 1`) && (await j('G.muted')) === muted0);
   await snap('2-mission-area');
   await key('KeyM'); await t.run(400); await snap('2b-whole-system');
   check('M again is the whole system', await j(`${HUB}.bf.zoom === 2`)); await key('KeyM');

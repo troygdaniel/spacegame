@@ -6,7 +6,7 @@
 //   node tools/campshots.mjs 3      the cards (won story, tech pick, lost, pause) and the Tab map
 //   node tools/campshots.mjs fx     explosions as the game makes them, at 60, 160, 320 and 520 ms (2x crops), and the guns
 //   node tools/campshots.mjs mars   Mars and the Earth-Luna start, up close
-//   node tools/campshots.mjs zoom   + - Backspace and the wheel: the view, the edge arrow and the map at several zooms, a click on a place at a zoom
+//   node tools/campshots.mjs zoom   + - S and the wheel: the view, the edge arrow and the map at several zooms, a click on a place at a zoom
 //   node tools/campshots.mjs panels the order lists (nothing drawn until a list's key; then the fleet list at the left or the ship list at the right, or a part of one: E the fighters, I the power): the key caps, the highlight, a refused row's flash, the stance list, the target line, with the zoom and the map, the key line
 //   node tools/campshots.mjs look   the new look of the ships: 2x crops round the carrier (start, launch, recall, a crowd, the turrets firing)
 // Some pictures are STAGED (the carrier or the aliens are put in place, the hull and the shield are set low): the fight after the staging is the game's. The blind critic gets the PNG files and nothing else (docs/CRITIC.md).
@@ -169,23 +169,23 @@ try {
     note('start', JSON.stringify(await zs())); await snap('zoom-01-start');
     for (let i = 0; i < 3; i++) await keyOn('Equal'); await t.run(900); note('in', JSON.stringify(await zs())); await snap('zoom-02-in');
     for (let i = 0; i < 8; i++) await keyOn('Minus'); await t.run(1200); note('out', JSON.stringify(await zs())); await snap('zoom-03-out');
-    await keyOn('Backspace'); await t.run(1000); note('reset', JSON.stringify(await zs()));
+    await keyOn('KeyS'); await t.run(1000); note('reset', JSON.stringify(await zs()));
     // the edge arrow (level 2: the goal is the nearest cache): seen at 1, at 1.6 and at 0.5 (it points where the goal is on the screen, so it is on the edge at one zoom and gone at another)
     await t.run(300); await snap('zoom-04-arrow-1'); note('arrow at 1', JSON.stringify(await j(`(() => { const s = ${SC}, a = s.hud.arrow; return { visible: a.visible, x: Math.round(a.x), y: Math.round(a.y), text: a.text }; })()`)));
     for (let i = 0; i < 2; i++) await keyOn('Equal'); await t.run(900); await snap('zoom-05-arrow-in'); note('arrow at 1.44', JSON.stringify(await j(`(() => { const s = ${SC}, a = s.hud.arrow; return { visible: a.visible, x: Math.round(a.x), y: Math.round(a.y), text: a.text }; })()`)));
-    await keyOn('Backspace'); for (let i = 0; i < 3; i++) await keyOn('Minus'); await t.run(900); await snap('zoom-06-arrow-out'); note('arrow at 0.58', JSON.stringify(await j(`(() => { const s = ${SC}, a = s.hud.arrow; return { visible: a.visible, x: Math.round(a.x), y: Math.round(a.y), text: a.text }; })()`)));
-    await keyOn('Backspace'); await t.run(900);
+    await keyOn('KeyS'); for (let i = 0; i < 3; i++) await keyOn('Minus'); await t.run(900); await snap('zoom-06-arrow-out'); note('arrow at 0.58', JSON.stringify(await j(`(() => { const s = ${SC}, a = s.hud.arrow; return { visible: a.visible, x: Math.round(a.x), y: Math.round(a.y), text: a.text }; })()`)));
+    await keyOn('KeyS'); await t.run(900);
     // the map
     await t.key('TAB'); await t.run(300); note('map open', JSON.stringify(await zs())); await snap('zoom-07-map-1');
     for (let i = 0; i < 4; i++) await keyOn('Equal'); await t.run(1200); note('map in (middle)', JSON.stringify(await zs())); await snap('zoom-08-map-in-middle');
-    await keyOn('Backspace'); await t.run(1000); await keyOn('ArrowDown'); await keyOn('ArrowDown'); await t.run(300); // Down steps the map's list to the next mark (Up the last)
+    await keyOn('KeyS'); await t.run(1000); await keyOn('ArrowDown'); await keyOn('ArrowDown'); await t.run(300); // Down steps the map's list to the next mark (Up the last)
     for (let i = 0; i < 6; i++) await keyOn('Equal'); await t.run(1400); note('map in (the place I chose)', JSON.stringify(await zs())); await snap('zoom-09-map-in-place');
     // a click on a place that is in the frame at this zoom and has no other row within 20 px of it (the relic sits on its planet): the screen point of the nearest such place to the frame's middle
     const hit = await j(`(() => { const s = ${SC}, mp = s.mp, F = CAMPMAP.frame, all = mp.rows, rows = all.filter(r => r.kind === 'place' && all.every(o => o === r || Math.hypot(o.x - r.x, o.y - r.y) * mp.fit.s > 20)); let best = null, bd = 1e9; rows.forEach(r => { const p = campMapPoint(mp.fit, F, r.x, r.y), d = Math.hypot(p.x - F.x - F.w / 2, p.y - F.y - F.h / 2); if (p.x > F.x + 6 && p.x < F.x + F.w - 6 && p.y > F.y + 6 && p.y < F.y + F.h - 6 && d < bd) { bd = d; best = { id: r.id, px: p.x, py: p.y }; } }); if (!best) return null; mp.setId = ''; s.input.emit('pointerdown', { x: best.px + 2, y: best.py + 1 }); return { want: best.id, got: mp.setId }; })()`);
     note('click at zoom', JSON.stringify(hit)); await t.run(300); await snap('zoom-10-map-click');
-    await keyOn('Backspace'); for (let i = 0; i < 4; i++) await keyOn('Minus'); await t.run(1200); note('map out', JSON.stringify(await zs())); await snap('zoom-11-map-out');
+    await keyOn('KeyS'); for (let i = 0; i < 4; i++) await keyOn('Minus'); await t.run(1200); note('map out', JSON.stringify(await zs())); await snap('zoom-11-map-out');
     // the wheel: the map's when it is open, the camera's when it is not
-    await keyOn('Backspace'); await t.run(700);
+    await keyOn('KeyS'); await t.run(700);
     await t.ev(`(() => { ${SC}.input.emit('wheel', {}, [], 0, -240); return 1; })()`); await t.run(900); note('wheel over the map', JSON.stringify(await zs()));
     await t.key('TAB'); await t.run(300); const before = await zs();
     await t.ev(`(() => { ${SC}.input.emit('wheel', {}, [], 0, -240); return 1; })()`); await t.run(900); note('wheel, map shut', JSON.stringify(before), '->', JSON.stringify(await zs()));
@@ -220,7 +220,7 @@ try {
     await goTo('attack'); await t.run(400); await panelShot('panels-05b-fighters-target', (await wayTo('attack')).list); await keyOn('Escape'); await t.run(200);
     await keyOn('KeyX'); await t.run(200);
     for (let i = 0; i < 3; i++) await keyOn('Equal'); await t.run(900); await snap('panels-06-zoomed-in');
-    await t.key('TAB'); await t.run(400); await snap('panels-07-map-open'); await t.key('TAB'); await t.run(300); await keyOn('Backspace'); await t.run(900);
+    await t.key('TAB'); await t.run(400); await snap('panels-07-map-open'); await t.key('TAB'); await t.run(300); await keyOn('KeyS'); await t.run(900);
     // the key line: a ship under it
     await clipShot('panels-08-keyline', 77, 575, 1130, 58); // the viewport is 633 px high (the canvas fits it at 0.88): the key line is at about y 590 to 610
     note('sizes', JSON.stringify(await sizes()));
@@ -231,10 +231,10 @@ try {
   } else if (part === '3') {
     // the cards: level 1 story (already c01), won -> story after -> tech pick, the lost card, the pause card, the map
     await toPlay(); await t.run(600);
-    await keyOn('Backslash'); await t.run(2600); await snap('c30-won-story');
+    await keyOn('Digit6'); await t.run(2600); await snap('c30-won-story');
     await keyOn('Enter'); await t.run(600); await snap('c31-tech-pick');
     await t.goto('?campaign=1&debug=1', ROOT); await begin(); await toPlay(); await t.run(500);
-    await keyOn('Comma'); await t.run(1800); await snap('c32-lost');
+    await keyOn('Digit7'); await t.run(1800); await snap('c32-lost');
     await t.goto('?campaign=1', ROOT); await begin(); await toPlay(); await t.run(1500);
     await order('launch'); await t.run(2500);
     await keyOn('Escape'); await t.run(500); await snap('c33-pause');

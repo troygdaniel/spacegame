@@ -14,7 +14,7 @@ const LEVEL = Number(arg('level', 1)), MISSION = Number(arg('mission', 1));
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const note = s => console.log('  note ' + s);
-const VK = { KeyK: 75, KeyL: 76, Backspace: 8, Enter: 13, Tab: 9, ArrowUp: 38 };
+const VK = { KeyK: 75, KeyL: 76, Backspace: 8, KeyS: 83, Enter: 13, Tab: 9, ArrowUp: 38 };
 const t = await launch('', ROOT);
 try {
   const j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`)), S = `game.scene.getScene('Campaign')`;
@@ -59,7 +59,7 @@ try {
   check('it stays where it was put while the battle goes on (the camera does not drift back to the cruiser)', Math.abs(c2.sx - c1.sx) < 60 && Math.abs(c2.sy - c1.sy) < 60 && c2.panned, JSON.stringify([c1.sx, c2.sx]));
   await snap('2-panned-with-mark');
   const mk = await j(`({ x: ${S}.dragMark.t.x, y: ${S}.dragMark.t.y, w: ${S}.dragMark.t.width, text: ${S}.dragMark.t.text })`);
-  check('the mark says RECENTRE and names Backspace', /RECENTRE/.test(mk.text) && /Backspace/.test(mk.text), JSON.stringify(mk));
+  check('the mark says RECENTRE and names S', /RECENTRE/.test(mk.text) && /S/.test(mk.text), JSON.stringify(mk));
   // the wheel zooms about the pointer: the world point under it stays under it
   const under = (c, sx, sy) => ({ x: c.sx + 640 + (sx - 640) / c.z, y: c.sy + 360 + (sy - 360) / c.z });
   const w0 = await cam(), p0 = under(w0, 900, 200);
@@ -71,10 +71,10 @@ try {
   const m2 = await j(`({ x: ${S}.dragMark.t.x, y: ${S}.dragMark.t.y })`); await click(m2.x, m2.y); await t.run(1800);
   const c3 = await cam();
   check('a click on the mark puts the camera back on the cruiser: following, no mark, the cruiser in the middle', c3.follow && !c3.panned && !c3.mark && Math.hypot(c3.mid.x - c3.cx, c3.mid.y - c3.cy) < 20, JSON.stringify(c3));
-  // Backspace
+  // S
   await drag(700, 300, 400, 300); check('dragged again: off the cruiser', (await cam()).panned);
-  await key('Backspace', 40); await t.run(1800);
-  const c4 = await cam(); check('Backspace recentres the flight view (and puts the zoom back to the start 0.335)', c4.follow && !c4.panned && Math.abs(c4.z - 1 / Math.pow(1.2, 6)) < 0.01, JSON.stringify(c4));
+  await key('KeyS', 40); await t.run(1800);
+  const c4 = await cam(); check('S recentres the flight view (and puts the zoom back to the start 0.335)', c4.follow && !c4.panned && Math.abs(c4.z - 1 / Math.pow(1.2, 6)) < 0.01, JSON.stringify(c4));
   // a flying key held: not at once, then yes
   await drag(700, 300, 400, 300); await keyDown('ArrowUp'); await t.run(150);
   check('a flying key held a moment does not take the view back yet (150 ms of 350)', (await cam()).panned);
@@ -96,9 +96,9 @@ try {
   // a click without a drag still sets a mark (the carrier's own mark, or the nearest)
   const pick = await j(`(() => { const mp = ${S}.mp, F = CAMPMAP.frame, inF = r0 => { const q = campMapPoint(mp.fit, F, r0.x, r0.y); return q.x >= F.x && q.x <= F.x + F.w && q.y >= F.y && q.y <= F.y + F.h; }, proj = (x, y) => campMapPoint(mp.fit, F, x, y), onList = q => mp.list.some(t => t.rowId && q.x >= t.x && q.x <= t.x + 260 && Math.abs(q.y - t.y) <= 11), r = mp.rows.find(x => { const q = campMapPoint(mp.fit, F, x.x, x.y), st = campNavPickStack(mp.rows.filter(inF), proj, q.x, q.y); return x.id !== 'carrier' && q.x > F.x + 20 && q.x < F.x + F.w - 20 && q.y > F.y + 20 && q.y < F.y + F.h - 20 && !onList(q) && st.length && st[0].id === x.id; }); /* a mark the click can set: not under a list line (the list is read first), and the nearest of its stack */ return r ? Object.assign({ id: r.id }, campMapPoint(mp.fit, F, r.x, r.y)) : null; })()`);
   if (pick) { await click(pick.x, pick.y); check('a click without a drag on a mark of the dragged map still sets it (the click is read on the release)', (await j(`${S}.mp.setId`)) === pick.id, pick.id + ' at ' + Math.round(pick.x) + ',' + Math.round(pick.y)); } else note('no mark inside the frame to click');
-  await key('Backspace', 40); await t.run(500);
+  await key('KeyS', 40); await t.run(500);
   const m2b = await j(`({ cx: ${S}.mp.fit.cx, cy: ${S}.mp.fit.cy, panned: ${S}.mp.panned, z: ${S}.mp.zWant, mark: ${S}.mp.recentre.visible })`);
-  check('Backspace on the map is the zoom reset and the recentre: the centre is where it was, no mark', !m2b.panned && !m2b.mark && m2b.z === 1 && Math.abs(m2b.cx - m0.cx) < 1 && Math.abs(m2b.cy - m0.cy) < 1, JSON.stringify([m0, m2b]));
+  check('S on the map is the zoom reset and the recentre: the centre is where it was, no mark', !m2b.panned && !m2b.mark && m2b.z === 1 && Math.abs(m2b.cx - m0.cx) < 1 && Math.abs(m2b.cy - m0.cy) < 1, JSON.stringify([m0, m2b]));
   await key('Tab'); await t.run(300);
   const errs = await j(`window.__errors || []`); check('the game logged no error', !errs || errs.length === 0, JSON.stringify(errs).slice(0, 300));
 } catch (e) { console.log('  FAIL the walk stopped: ' + (e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : e)); bad++; }

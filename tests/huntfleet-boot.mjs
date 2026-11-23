@@ -22,7 +22,7 @@ const TAG = `${MISSION}${ENDING === 'lose' ? 'L' : 'W'}`;
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const note = s => console.log('  note ' + s);
-const VK = { Tab: 9, Enter: 13, Escape: 27, Space: 32, ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40, Digit0: 48, Semicolon: 186, Equal: 187, Minus: 189, Backspace: 8, Slash: 191 };
+const VK = { Tab: 9, Enter: 13, Escape: 27, Space: 32, ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40, Digit0: 48, Semicolon: 186, Comma: 188, Period: 190, Backslash: 220, BracketLeft: 219, BracketRight: 221, Equal: 187, Minus: 189, Backspace: 8, Slash: 191 };
 for (let i = 0; i < 26; i++) VK['Key' + String.fromCharCode(65 + i)] = 65 + i;
 for (let i = 1; i <= 9; i++) VK['Digit' + i] = 48 + i;
 const t = await launch('', ROOT);
@@ -46,7 +46,7 @@ try {
   // each of the lists, and which list a row is in: campKeyVia), and the Campaign group of CONTROLS for the map keys. An order is given as a player gives it (card list-shortcuts): the key of the list the row is in
   // (a list with no key of its own, the stances, is opened from its parent: the parent's key, Down to the part's row, Enter), Down to the row, Enter;
   // the row's place is read from the list of THIS mission (campPanelList), never a number written here. A row the table does not have is said and skipped, so a change of the table shows up as a note, not as a wrong key.
-  const codeOf = lab => /^[A-Z]$/.test(lab) ? 'Key' + lab : /^[0-9]$/.test(lab) ? 'Digit' + lab : ({ Tab: 'Tab', Space: 'Space', Enter: 'Enter', Esc: 'Escape', ';': 'Semicolon', '+': 'Equal', '-': 'Minus', '/': 'Slash', '=': 'Equal', Backspace: 'Backspace' })[lab] || null;
+  const codeOf = lab => /^[A-Z]$/.test(lab) ? 'Key' + lab : /^[0-9]$/.test(lab) ? 'Digit' + lab : ({ Tab: 'Tab', Space: 'Space', Enter: 'Enter', Esc: 'Escape', ';': 'Semicolon', ',': 'Comma', '.': 'Period', '\\': 'Backslash', '[': 'BracketLeft', ']': 'BracketRight', '+': 'Equal', '-': 'Minus', '/': 'Slash', '=': 'Equal', Backspace: 'Backspace' })[lab] || null;
   const ctl = async (re, i = 0) => codeOf(await j(`(() => { const g = CONTROLS.find(g => g.id === 'campaign'); const r = g.rows.find(r => ${re}.test(r.t)); return r ? r.k[${i}] : null; })()`));
   const ck = id => j(`(typeof CAMP_KEYS === 'object' && CAMP_KEYS[${JSON.stringify(id)}]) ? CAMP_KEYS[${JSON.stringify(id)}].codes[0] : null`);
   const rk = id => j(`(() => { const p = typeof campKeyVia === 'function' ? campKeyVia(${JSON.stringify(id)}) : null; return p ? p.id : null; })()`); // the list a row is in ('fleet', 'fighters', 'nav' ...), or null

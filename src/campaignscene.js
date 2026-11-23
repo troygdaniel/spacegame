@@ -28,6 +28,10 @@ const CAMP_REACH = { w: 2, alpha: 0.4, color: 0xffd37a }; // the ring that shows
 const CAMP_MOUNT = { base: 3.2, dot: 1.7, hot: 2.8, aim: [7, 11], width: [1.5, 2.2], flash: 10, flashScale: 0.9, stub: [6.5, 0x9aa0a8] }; // a turret mount, drawn on the hull (it is a third smaller since the carrier is): its dark base, its amber dot (and the dot while it fires), the length of the barrel at rest and on a shot, the barrel's width at rest and on a shot, and how far in front of the mount the muzzle flash is and how big (it was 1.3 on the 140 px carrier and hid the bow of the 98 px one), and the steel barrel a mount with nothing to shoot at points along the carrier's heading (its length and colour: without it a mount was a lit dot and read as a window, the blind critic)
 const CAMP_BLIP = { gap: 70, flash: 90 }; // a turret's shot: at most one sound (sfx('turret', its number), src/audio.js) in gap ms of the battle's clock; the muzzle flash lasts flash ms
 const CAMP_SND = { blast: 45, hull: 90, shield: 90, earth: 250, wing: 55, far: 1600, min: 0.1 }; // the least gap, in ms of the battle's clock, between two sounds of one kind (a kill, a hull hit, a shield hit, a shot on Earth), so a busy fight does not pile them up
+// the pause (card space-game-paused-big; Troy, 23 Nov 2026: "show the word PAUSED much more obviously: a large word on a highlighted band across the middle, the scene dimmed behind"): showPause hands showCard
+// its words with band true and drawPauseBand draws them. veil: how dark the battle goes; lift: the band's middle is this far above the screen's middle; bandH, word (the letters' size), space (between them);
+// gap: the panel under the band starts this far below it and ends this far above the foot; panelW, size (the help's letters), wrap, lineSpacing: the help in the panel; pad: the panel's top margin; hintRoom: the foot line's room
+const CAMP_PAUSE = { veil: 0.72, lift: 40, bandH: 160, bandAlpha: 0.94, edge: 3, word: 112, space: 18, gap: 14, panelW: 980, size: 17, wrap: 920, lineSpacing: 6, pad: 12, hintRoom: 44 };
 const CAMP_ADDR = { used: false }; // the address (?campaign=N, src/title.js) opens the Campaign once per page load: coming back to the title from it must not open it again
 
 // (every start of the ready room passes {}: Phaser starts a scene with the data of its LAST start when it is given none, and the last may have been a dock's, with a battle that is long over in it)
@@ -128,10 +132,11 @@ class Campaign extends Phaser.Scene {
   }
 
   // ----- the cards: the story, the pick, the end -----
-  showCard(title, lines, hint, tall) {
+  showCard(title, lines, hint, tall, band) {
     this.hideCard(); if (typeof campMapClose === 'function') campMapClose(this); // a card (the story, the end) comes up over the map: the map goes
     (this.toasts || []).forEach(o => { if (o && o.t && o.t.destroy) { o.t.destroy(); o.bg.destroy(); o.tab.destroy(); } }); this.toasts = []; // and the toast of the moment before (it floats above a card and ran through the debrief's title)
     if (typeof campPanelsClose === 'function') campPanelsClose(this); // and a panel
+    if (band) { this.drawPauseBand(title, lines, hint); return; } // the pause is not a card but a band (below)
     const o = [], cx = W / 2, cy = H / 2 - 20, style = uiFont(20, '#e8f6ff', { align: 'center', wordWrap: { width: 720 }, lineSpacing: 4 }), text = lines.join('\n\n');
     // the card is as tall as its words: the refit with the three techs (two lines each) was 376 px of text in a 380 px card, so the title sat on its first line and the hint on its last, and with the looted techs
     // (up to six choices) it ran off the screen. A throwaway text says how tall they are (130 px is the title above and the hint below); past the screen the type steps down to fit.
@@ -142,6 +147,23 @@ class Campaign extends Phaser.Scene {
     o.push(this.add.text(cx, cy - h / 2 + 34, title, uiFont(24, '#38e1ff', { letterSpacing: 3 })).setOrigin(0.5));
     const body = this.add.text(cx, cy + 6, text, style).setOrigin(0.5); if (fit < 1) body.setScale(fit); o.push(body);
     o.push(this.add.text(cx, cy + h / 2 - 30, hint, uiFont(16, '#ffd37a')).setOrigin(0.5));
+    o.forEach(x => x.setScrollFactor(0).setDepth(200));
+    this.card = o; this.panel = true;
+  }
+  // the pause: the battle dimmed, a lit band across the middle of the screen with the word large on it (dark letters on the cyan: the strongest contrast the HUD has), and the help in a dark panel under the band with the
+  // way back at its foot. The help steps down to fit the panel as the cards' words do (the debug line makes it a line longer).
+  drawPauseBand(title, lines, hint) {
+    const P = CAMP_PAUSE, cx = W / 2, by = H / 2 - P.lift, o = [], panelTop = by + P.bandH / 2 + P.gap, panelBot = H - P.gap, text = lines.join('\n');
+    const style = uiFont(P.size, '#e8f6ff', { align: 'center', wordWrap: { width: P.wrap }, lineSpacing: P.lineSpacing });
+    const probe = this.add.text(-9999, -9999, text, style), bodyH = probe.height || 0; probe.destroy();
+    const room = panelBot - panelTop - P.hintRoom - P.pad, fit = bodyH > room ? room / bodyH : 1;
+    o.push(this.add.rectangle(W / 2, H / 2, W, H, 0x02060d, P.veil));                                                                    // the veil: the battle and its gauges go dark
+    o.push(this.add.rectangle(cx, by, W, P.bandH, CYAN, P.bandAlpha));                                                                  // the band, the whole width of the screen
+    o.push(this.add.rectangle(cx, by - P.bandH / 2, W, P.edge, 0xe8f6ff, 1), this.add.rectangle(cx, by + P.bandH / 2, W, P.edge, 0xe8f6ff, 1)); // a pale line along each edge
+    o.push(this.add.text(cx + P.space / 2, by, title, uiFont(P.word, '#03111c', { fontStyle: 'bold', letterSpacing: P.space })).setOrigin(0.5)); // the word (the letter spacing trails the last letter: half of it is put back)
+    o.push(this.add.rectangle(cx, (panelTop + panelBot) / 2, P.panelW, panelBot - panelTop, 0x04101c, 0.96).setStrokeStyle(2, CYAN, 0.6));
+    const body = this.add.text(cx, panelTop + P.pad, text, style).setOrigin(0.5, 0); if (fit < 1) body.setScale(fit); o.push(body);
+    o.push(this.add.text(cx, panelBot - P.hintRoom / 2, hint, uiFont(16, '#ffd37a')).setOrigin(0.5));
     o.forEach(x => x.setScrollFactor(0).setDepth(200));
     this.card = o; this.panel = true;
   }
@@ -237,7 +259,7 @@ class Campaign extends Phaser.Scene {
     this.mode = 'lost'; const lines = typeof campLoseLines === 'function' ? campLoseLines(this.camp, why) : [uiText('camp.lose.' + why)]; // src/camplose.js: what happened, how far, one thing to try
     const ms = !!(this.camp && this.camp.L && this.camp.L.objectives); this.showCard(ms ? uiText('camp.ui.lostmission', { title: uiText('camp.m.' + this.level + '.' + (this.camp.L.mission + 1) + '.title') }) : uiText('camp.ui.lost', { n: this.level }), lines, uiText(ms ? 'camp.ui.retrymission' : 'camp.ui.retry')); this.say([lines[0]].concat(lines.slice(2))); // the numbers are for reading: the cause and the tip are said
   }
-  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap'), uiText('camp.ui.pausepanels')].concat([uiText('camp.ui.pausehelp')], (this.camp && this.camp.L && this.camp.L.objectives) ? [uiText('camp.ui.pauseretry')] : [], typeof campDebugOn === 'function' && campDebugOn() && typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), (this.camp && this.camp.L && this.camp.L.objectives) ? 428 : 398); } // the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
+  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap'), uiText('camp.ui.pausepanels')].concat([uiText('camp.ui.pausehelp')], (this.camp && this.camp.L && this.camp.L.objectives) ? [uiText('camp.ui.pauseretry')] : [], typeof campDebugOn === 'function' && campDebugOn() && typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), (this.camp && this.camp.L && this.camp.L.objectives) ? 428 : 398, true); } // the band (card space-game-paused-big: PAUSED large across the middle; the height only keeps the old card's room for the tests); the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
   next(w) { // after the story (and the pick, or the refit): the next level, or after the last one the end, with a new campaign waiting. w: the ore and the credits that are left to carry (the refit spent some), { ore, credits }
     const last = !CAMP.levels[this.level + 1]; this.P.levelDone = 0; // the story and the pick are done: the level is over
     this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) { this.P.techs = []; this.P.found = []; this.P.ore = 0; this.P.credits = 0; this.P.bonus = { fighters: 0 }; this.P.revealed = true; } // a new campaign: the techs and the loot of the last one are gone with the ore and the ships (the rank is the pilot's career and stays) // the ending is about to show: from now on a replay says the outpost (SPOILER)
@@ -364,11 +386,11 @@ class Campaign extends Phaser.Scene {
     if (typeof campConvoySync === 'function') campConvoySync(this); // the shield bubble and the links of the ships that are tucked in (src/campconvoyscene.js)
     if (typeof campFarSync === 'function') campFarSync(this);
     if (typeof campSightSync === 'function') campSightSync(this); // the edge arrows of the hostiles that are off the screen and the pulse of a group just seen (src/campsightscene.js) // the names of the places and the escorted ships when the view is out so far that the world's labels are specks (src/campfarscene.js)
-    if (typeof campTgtPaint === 'function') campTgtPaint(this); // the bracket round the target A D S picked (src/camptargetdraw.js)
-    if (typeof campSelZoom === 'function') campSelZoom(this); // a ship selected with [ ] or A D zooms the view out until it and the cruiser are on the screen (src/campselzoom.js)
+    if (typeof campTgtPaint === 'function') campTgtPaint(this); // the brackets round the enemy [ ] \ picked, the pilot A D picked and the friendly , . picked (src/camptargetdraw.js)
+    if (typeof campSelZoom === 'function') campSelZoom(this); // a ship selected with [ ] , . or A D (one pilot) zooms the view out until it and the cruiser are on the screen (src/campselzoom.js)
     if (typeof campPickPaint === 'function') campPickPaint(this); // the candidate a target sub-list is on, shown in the flight view (and the zoom out to it; src/camppickdraw.js)
     if (typeof campTdispSync === 'function') campTdispSync(this, this.time.now); // the target display in the bottom right corner: the target, or the ship an order's list is on (src/camptdispscene.js)
-    if (typeof campFdispSync === 'function') campFdispSync(this, this.time.now); // the friend display in the bottom left corner: the ship A or D picked (card space-game-friendly-display; the same file)
+    if (typeof campFdispSync === 'function') campFdispSync(this, this.time.now); // the who display in the bottom left corner: the pilot A or D picked, or All pilots (card space-game-friendly-display; the same file)
     if (typeof campTorpedoSync === 'function') campTorpedoSync(this, Math.min(dt, 100)); // the torpedoes and the boats that arm (src/camptorpedoscene.js)
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
     if (typeof campChargeSync === 'function') campChargeSync(this); // the health bars of the ships you protect, over them (src/campchargescene.js), once their sprites are in place
