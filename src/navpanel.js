@@ -9,7 +9,7 @@
 // N opens it with the keys on it: W S (or the arrows) choose, Enter on a place flies there at once (on the station it docks, on the planet you can
 // land on it lands: the order takes the ship all the way in; P on the row only flies there; card space-game-hunt-pirates: Enter used to only set the
 // destination and a second Enter went, and Troy pressed it 19 times without flying). A jump row keeps its two steps: Enter sets it, Enter again jumps,
-// because a jump burns fuel. X clears the destination, N closes. A click on a row does what Enter does. It opens by itself, without taking the keys, when you launch or arrive (you
+// because a jump burns fuel. X clears the destination and, when the autopilot is flying there, stops it ("Destination cleared. Autopilot off."; card space-game-lh-autopilot-cleared-dest: it used to clear only the destination and the autopilot flew on), N closes. A click on a row does what Enter does. It opens by itself, without taking the keys, when you launch or arrive (you
 // have no destination yet) and when the call gives you a new goal; it goes away again after a few seconds. The destination stays pinned at the
 // top of the panel's place with its distance while you fly, panel open or not.
 //
@@ -328,7 +328,10 @@ function navpanelFrame(s, time, K) {
   if (K.n) { navpanelClose(s); return ''; }
   const rows = cr.list;
   if ((K.up || K.down) && rows.length) { cr.sel = (cr.sel + (K.down ? 1 : rows.length - 1)) % rows.length; sfx('tick'); np.at = 0; }
-  if (K.x) { cr.target = null; np.jump = null; np.jumpRow = null; toast(s, 'Destination cleared.', '#9fe9ff'); sfx('tick'); np.at = 0; }
+  if (K.x) { // clearing the destination gives the stick back: since Enter on a place flies there (card space-game-lh-autopilot-cleared-dest) the destination is also the autopilot's trip, which keeps its own copy of the target
+    const flying = !!(s.ap && s.ap.on); if (flying) autopilotEnd(s, 'quiet'); // 'quiet': the one line below says it
+    cr.target = null; np.jump = null; np.jumpRow = null; toast(s, flying ? 'Destination cleared. Autopilot off.' : 'Destination cleared.', '#9fe9ff'); sfx('tick'); np.at = 0;
+  }
   const r = rows[cr.sel], p = s.ap && s.ap.k && s.ap.k.P;
   if (r && r.kind === 'jump' && p && p._justDown) { p._justDown = false; navpanelEngage(s, r); np.at = 0; } // P on a system: the same as going there (a body's P is the autopilot's own)
   if (K.enter && r) { navpanelClick(s, cr.sel); if (!np.keys) return ''; }
