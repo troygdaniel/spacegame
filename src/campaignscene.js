@@ -31,7 +31,7 @@ const CAMP_SND = { blast: 45, hull: 90, shield: 90, earth: 250, wing: 55, far: 1
 // the pause (card space-game-paused-big; Troy, 23 Nov 2026: "show the word PAUSED much more obviously: a large word on a highlighted band across the middle, the scene dimmed behind"): showPause hands showCard
 // its words with band true and drawPauseBand draws them. veil: how dark the battle goes; lift: the band's middle is this far above the screen's middle; bandH, word (the letters' size), space (between them);
 // gap: the panel under the band starts this far below it and ends this far above the foot; panelW, size (the help's letters), wrap, lineSpacing: the help in the panel; pad: the panel's top margin; hintRoom: the foot line's room
-const CAMP_PAUSE = { veil: 0.72, lift: 40, bandH: 160, bandAlpha: 0.94, edge: 3, word: 112, space: 18, gap: 14, panelW: 980, size: 17, wrap: 920, lineSpacing: 6, pad: 12, hintRoom: 44 };
+const CAMP_PAUSE = { veil: 0.72, lift: 40, bandH: 106, bandAlpha: 0.94, edge: 2, word: 75, space: 12, gap: 14, panelW: 980, size: 17, wrap: 920, lineSpacing: 6, pad: 12, hintRoom: 44 };
 const CAMP_ADDR = { used: false }; // the address (?campaign=N, src/title.js) opens the Campaign once per page load: coming back to the title from it must not open it again
 
 // (every start of the ready room passes {}: Phaser starts a scene with the data of its LAST start when it is given none, and the last may have been a dock's, with a battle that is long over in it)
