@@ -62,13 +62,13 @@ console.log('A. the rules, on a fixture level');
   // paying
   g.run('__rt(1); C.docked = "ceres"; C.ore = 20; C.cash = 100; C.carrier.hp = C.carrier.maxHp / 2');
   check('funds are the cash and the ore together: 120', J('campFunds(C)') === 120);
-  check('a repair is paid from the cash first: the half hull costs 30 ore-worth, the cash goes down and the ore stays', (() => { const r = J('campOrder(C, "repair", "")'); return r.ok === true && J('C.cash') === 70 && J('C.ore') === 20; })());
+  check('a repair at the dock is paid from the cash first (docked it is half price: 15 for half a hull): the cash goes down and the ore stays', (() => { const r = J('campOrder(C, "repair", "")'); return r.ok === true && J('C.cash') === 85 && J('C.ore') === 20; })());
   g.run('C.cash = 10; C.ore = 40; C.carrier.hp = C.carrier.maxHp / 2');
-  check('when the cash is not enough the rest comes from the store: a 30 repair with 10 cash and 40 ore leaves 0 cash and 20 ore', (() => { const r = J('campOrder(C, "repair", "")'); return r.ok === true && J('C.cash') === 0 && J('C.ore') === 20; })());
+  check('when the cash is not enough the rest comes from the store: a 15 repair with 10 cash and 40 ore leaves 0 cash and 35 ore', (() => { const r = J('campOrder(C, "repair", "")'); return r.ok === true && J('C.cash') === 0 && J('C.ore') === 35; })());
   g.run('C.cash = 5; C.ore = 5; C.carrier.hp = C.carrier.maxHp / 2');
   check('with too little of both the order is refused and nothing is taken', (() => { const r = J('campOrder(C, "repair", "")'); return r.ok === false && J('C.cash') === 5 && J('C.ore') === 5; })());
   g.run('C.docked = ""; C.cash = 100; C.ore = 100');
-  check('a fighter built at the dock is paid the same way (cash first)', (() => { g.run('C.docked = "ceres"'); const r = J('campOrder(C, "build", "fighter")'); return r.ok === true && J('C.cash') + J('C.ore') === 200 - J('CAMP.build.fighterCost') && J('C.cash') === 100 - J('CAMP.build.fighterCost'); })());
+  check('in space a repair is paid in ORE only (credits are spent at a station: card space-game-credits-apart-from-ore): 100 cash and 100 ore, half a hull (30 ore), the cash stays', (() => { g.run('C.docked = ""; C.cash = 100; C.ore = 100; C.carrier.hp = C.carrier.maxHp / 2'); const r = J('campOrder(C, "repair", "")'); return r.ok === true && J('C.cash') === 100 && J('C.ore') === 70; })());
 
   // the objectives
   g.run('__rt(1); C.ships = C.ships.filter(u => u.team !== "alien")');

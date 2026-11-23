@@ -54,6 +54,9 @@ const CAMP_TUNE = {
     // the ore
     { id: 'orerock', group: 'ore', root: 'CAMP', path: 'ore.rock', min: 5, max: 100, step: 5, unit: 'ore', when: 'next' },
     { id: 'miningrate', group: 'ore', root: 'CAMP', path: 'laser.dps', min: 1, max: 60, step: 1, unit: 'a second', when: 'now' },
+    { id: 'repairprice', group: 'ore', root: 'CAMP', path: 'mend.hullOre', min: 5, max: 400, step: 5, unit: 'ore a hull', when: 'now' },          // card space-game-repair-with-ore: the cruiser's whole hull, mended in space (the dock takes half)
+    { id: 'wardprice', group: 'ore', root: 'CAMP', path: 'mend.wardPoint', min: 0, max: 2, step: 0.05, unit: 'ore a point', when: 'now' },     // a ship you protect
+    { id: 'fightermend', group: 'ore', root: 'CAMP', path: 'repair.ore', min: 0, max: 50, step: 1, unit: 'ore', when: 'now' },                  // a landed fighter's mend (none: twice the time)
     // the switches (each turns a whole system off, as if it were not in the mission; autofire turns one on)
     { id: 'calls', kind: 'flag', group: 'systems', flag: 'calls', when: 'now' },
     { id: 'distress', kind: 'flag', group: 'systems', flag: 'distress', when: 'next' },

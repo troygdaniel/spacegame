@@ -32,6 +32,7 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 - **Pilots ask for orders.** Timed radio calls with three choices (the miner's call in 1.1 has five: send all squads, Red, Green or Yellow, or stay) and real costs.
 - **A mission is a sequence of questions.** Mission 1.1 is the finished example: a patrol turns back, a distress call, an ambush with torpedo boats, a pirate leader who duels your cruiser. Something happens about every minute.
 - **Objectives and bonuses**, a score, and ranks that grow your wing.
+- **Ore and credits.** Ore is what the cruiser carries (500 at the most): the wing mines it, and it pays for repairs in flight. An outpost buys it for credits, which have no cap and are spent at a station: the dock's repairs and the refit's extra fighters take credits first, then ore.
 
 The state of each system is in [`PROJECT_STATUS.md`](PROJECT_STATUS.md).
 
@@ -59,7 +60,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 | `P` | the **ship list**: rows that open Power, Autopilot, Dock and repair; Warp blink ahead once you have that tech |
 | `O` | **power**, which opens right under the three gauges at the top right: Shields, Engines and Weapons, each with its pip bar (the gauge's twin: both light together; the highlighted row frames its gauge), Enter gives one more pip and the list stays open; then Balance the power and Emergency shields |
 | `I` | **autopilot**: Fly to the goal, Fly to the target, Fast burn to the goal, Fast burn to the target |
-| `U` | **dock and repair**: Dock at the outpost (aboard, in a level with none: Repair the hull, Build a fighter, Build an escort) |
+| `U` | **dock and repair**: Dock at the outpost (where there is one), Repair the hull (anywhere, for ore), Repair a ship we protect (when it is near) |
 | `Up` `Down` `Enter` | in an open list: move the highlight, give the order (the list closes when the order is taken). On a row that opens a part, `Enter` or `Right` opens it |
 | `Left` | in a part's list: back to the fleet or the ship list |
 | Arrow keys | fly the cruiser: Up thrust, Left and Right turn, Down brake (while a list or a pilot's call is open the ship coasts) |
@@ -70,6 +71,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 | `Tab` | the map of the level: `Up` `Down` step the marks, `Enter` flies there (`Shift+Enter` fast), a click sets a mark, `X` clears the trip |
 | `-` `=` `Backspace`, mouse wheel | zoom out, zoom in, reset the zoom and recentre (the view or the map) |
 | mouse drag (left button) | pan the flight view away from the cruiser, or the Tab map; the RECENTRE mark, `Backspace`, or an arrow held bring it back |
+| `F` | **look at the selected ship**: the camera glides to it in half a second and follows it. It is the ship a target list is on (to attack, escort, guard), else the leader of the squad whose ring shows, else the picked hostile (`A` `D` `S`); with nothing selected it comes back to the cruiser. `Backspace` (or a drag) lets it go; a label says what is watched and an arrow at the screen's edge points at the cruiser with its distance. The arrows, `Space` and every list work meanwhile |
 | `/` `.` | type an order to the ship's computer; hold `.` and say it (both need a chat key: Settings > Keys) |
 | `Esc`, `H`, `M` | back one step in the lists (a target list to its list, a list a row opened to `Q` or `P`; a list its own key opened closes), then close the map, else pause; the page of keys; mute |
 | `N` | the **tuning panel** (flight and ready room): numbers and switches changed live, kept in this browser; `Up` `Down` choose, `Left` `Right` change (`Shift` ten steps), `Backspace` back to the default; *Copy my settings* copies what you changed. A mission flown tuned keeps no score |
