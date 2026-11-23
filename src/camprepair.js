@@ -33,8 +33,8 @@ function campRepairRun(C, u, dt) {
     u.repair = true; campRepairSay(C, 'off'); C.events.push({ type: 'repairoff', id: u.id, x: u.x, y: u.y });
   }
   if (campDist(u, c) < CAMP.bay.dockAt) { // landed: out of the sim as a recalled ship is, in the repair list until it is whole
-    const paid = K.ore <= 0 || campFunds(C) >= K.ore; // a mend costs a little ore (card space-game-repair-with-ore); with none it is never refused, it takes K.slow times as long
-    if (paid && K.ore > 0) campPay(C, K.ore);
+    const paid = K.ore <= 0 || campMendFunds(C) >= K.ore; // a mend costs a little ORE (card space-game-repair-with-ore; in flight credits cannot pay it); with none it is never refused, it takes K.slow times as long
+    if (paid && K.ore > 0) campMendPay(C, K.ore);
     (C.repairs = C.repairs || []).push({ kind: u.kind, until: C.t + K.time * 1000 * (paid ? 1 : K.slow), order: u.order || null, squad: u.squad || '', stay: !!(u.order && u.order.type === 'recall'), paid });
     u.hp = 0; u.docked = true; u.repair = false; C.events.push({ type: 'dock', id: u.id, repair: true });
     return true;

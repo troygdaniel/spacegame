@@ -56,6 +56,10 @@ check('with no ore for it the order is refused and says what is needed', (() => 
 function C_NUM(s) { return /\d/.test(String(s)); }
 R(`__new(); C.carrier.hp = C.carrier.maxHp - 1;`);
 check('a scratch costs the least: at least 5 ore (the dock\'s old rule)', J('campMendQuote(C).cost') === 5);
+R(`__new(); C.carrier.hp = C.carrier.maxHp / 2; C.ore = 3; C.cash = 100;`);
+check('in space credits do not pay for a repair (ore only): with 3 ore and 100 credits the order is refused', J('campOrder(C, "repair", "", "key").code') === 'noore2' && J('C.cash') === 100);
+R(`__new(); C.carrier.hp = C.carrier.maxHp / 2; C.ore = 3; C.cash = 100; C.docked = 'luna';`);
+check('docked the credits pay first: 15 credits for half a hull at half price, the ore stays', (() => { const r = J('(() => { const r = campOrder(C, "repair", "", "key"); return { ok: r.ok, hp: C.carrier.hp, max: C.carrier.maxHp, cash: C.cash, ore: C.ore }; })()'); return r.ok === true && r.hp === r.max && r.cash === 85 && r.ore === 3; })());
 R(`__new(); C.carrier.hp = C.carrier.maxHp / 2; C.docked = 'luna';`);
 check('docked it is instant and half price: 15 ore for half a hull, whole at once', (() => { const o = J('C.ore'); const r = J('(() => { const r = campOrder(C, "repair", "", "key"); return { ok: r.ok, hp: C.carrier.hp, max: C.carrier.maxHp }; })()'); return r.ok === true && r.hp === r.max && o - J('C.ore') === 15; })());
 R(`__new(); C.carrier.hp = C.carrier.maxHp / 2; campTuneSet && 0;`);
@@ -76,7 +80,7 @@ check('with no ore it is not refused: it mends, in twice the time (20 s), and no
 R(`__wing(); C.ore = 2; C.cash = 0; __land();`);
 check('with less ore than a mend costs it is not paid at all: slow, and the 2 ore stay', Math.abs(J('C.repairs[0].until - __LANDED') - 20000) < 60 && J('C.ore') === 2);
 R(`__wing(); C.ore = 0; C.cash = 40; __land();`);
-check('cash from a sale pays for a mend too (the funds are ore and cash)', J('C.repairs.length') === 1 && J('C.cash') === 35 && Math.abs(J('C.repairs[0].until - __LANDED') - 10000) < 60, J('[C.cash, C.repairs[0] && C.repairs[0].until - __LANDED]'));
+check('credits from a sale do not pay for a mend in flight (they are spent at a station: card space-game-credits-apart-from-ore): slow, and the 40 stay', J('C.repairs.length') === 1 && J('C.cash') === 40 && Math.abs(J('C.repairs[0].until - __LANDED') - 20000) < 60, J('[C.cash, C.repairs[0] && C.repairs[0].until - __LANDED]'));
 R(`__wing(); CAMP.repair.ore = 0; window.__o = C.ore; __land(); CAMP.repair.ore = 5;`);
 check('a mend priced at 0 on the N panel is free and takes the usual time', J('__o - C.ore') === 0 && Math.abs(J('C.repairs[0].until - __LANDED') - 10000) < 60);
 
