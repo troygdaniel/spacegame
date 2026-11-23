@@ -112,6 +112,7 @@ function campPanelsClick(s, px, py) {
     if (campPickKind(hit) && campPanelRowState(s.camp, hit).ok) { const plan = campPickPlan(s.camp, hit); if (plan.how === 'list') { campPickOpen(P, hit, plan.items); return true; } if (plan.how === 'auto') item = plan.item; } // a row that needs a target: one is taken, several open a sub-list
     const r = campPanelRun(s.camp, hit, 'click', item); P.lit[hit.id] = now; if (r && r.say) toast(s, r.say, r.ok ? '#9fe9ff' : '#ffb454');
     if (r && r.ok && item) P.seen = { kind: campPickKind(hit), id: item.id, until: now + CAMP_PICK.seen };
+    if (r && r.ok) campSquadsKeep(P, def.id, now);
     if (r && r.ok && !hit.stay) campPanelClose(P);
   }
   return true;
