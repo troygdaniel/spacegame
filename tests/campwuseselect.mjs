@@ -41,7 +41,7 @@ sec('A. the table', () => {
 sec('B. Attack with and without a selected hostile', () => {
   g.run('__l1(); window.__a = __raider(1500, 400); window.__b = __raider(-900, 700); window.__c = __raider(300, -1800); C.tgt = ""; C.sel = "";');
   const r0 = row('attack');
-  check('nothing selected, three hostiles about: the row is grey, still called Attack the target, and says to pick with [ ] or S (short: pick one)', r0.ok === false && r0.label === 'Attack the target' && r0.state === 'pick one with [ ] or S' && r0.short === 'pick one', JSON.stringify(r0));
+  check('nothing selected, three hostiles about: the row is grey, still called Attack the target, and says to pick with [ ] or the backslash (short: pick one)', r0.ok === false && r0.label === 'Attack the target' && r0.state === 'pick one with [ ] or \\' && r0.short === 'pick one', JSON.stringify(r0));
   g.run('__w("attack")');
   const o = J(`__k('Enter')`);
   check('Enter on the grey row refuses in words, opens no sub-list, picks no hostile for the player and leaves the squads as they were', o.ran && !o.ok && /No hostile selected/.test(o.say) && J('PP.pick') === null && J('PP.open') === 'squads' && J(`C.tgt`) === '' && J(`__orders().every(x => x.type === 'guard')`), JSON.stringify(o));
@@ -63,30 +63,30 @@ sec('C. a selected pilot takes the order alone', () => {
 });
 
 sec('D. Guard with and without a selected friend', () => {
-  g.run('__l1(); window.__t = __hauler("t1", "Transport", 500, 0, 9000, 0); window.__h = __hauler("h2", "Hauler 2", -600, 200, -9000, 200); C.tgt = ""; C.sel = "";');
+  g.run('__l1(); window.__t = __hauler("t1", "Transport", 500, 0, 9000, 0); window.__h = __hauler("h2", "Hauler 2", -600, 200, -9000, 200); C.tgt = ""; C.sel = "all"; C.fsel = "";');
   const r0 = row('fguardt');
-  check('nothing selected, two ships to guard: the row is grey, still called Guard the target, and says to pick with A or D', r0.ok === false && r0.label === 'Guard the target' && r0.state === 'pick a ship with A or D' && r0.short === 'pick one', JSON.stringify(r0));
+  check('no friendly picked, two ships to guard: the row is grey, still called Guard the target, and says to pick with the comma or period', r0.ok === false && r0.label === 'Guard the target' && r0.state === 'pick a friendly with , or .' && r0.short === 'pick one', JSON.stringify(r0));
   g.run('__w("fguardt")');
   const o = J(`__k('Enter')`);
   check('Enter on the grey row refuses in words, opens no sub-list and gives no order (the squads still guard the cruiser)', o.ran && !o.ok && /No ship selected to guard/.test(o.say) && J('PP.pick') === null && J('PP.open') === 'squads' && J(`__orders().every(x => x.type === 'guard' && x.at.kind === 'carrier')`), JSON.stringify(o));
   g.run('C.sel = "pilot:red";');
-  check('a pilot selected: a pilot is not a ship to guard: the row is grey and says so ("a pilot cannot be guarded: pick a ship with A or D"), its short word is "pick a ship" (card space-game-w-list-covers-friend-box)', row('fguardt').ok === false && row('fguardt').state === 'a pilot cannot be guarded: pick a ship with A or D' && row('fguardt').short === 'pick a ship', JSON.stringify(row('fguardt')));
+  check('a pilot picked as who (A D) is not the friendly: the row is still grey and still says to pick a friendly (card space-game-keys-select: who and the friendly are two picks; there is no "a pilot cannot be guarded" any more)', row('fguardt').ok === false && row('fguardt').state === 'pick a friendly with , or .' && row('fguardt').short === 'pick one', JSON.stringify(row('fguardt')));
   g.run('__w("fguardt")');
   const op = J(`__k('Enter')`);
-  check('Enter on that grey row refuses in words ("A pilot cannot be guarded. Pick a ship first."), and the squads are not sent anywhere', op.ran && !op.ok && /^A pilot cannot be guarded/.test(op.say) && J('PP.pick') === null && J('PP.open') === 'squads' && J(`__orders().every(x => x.type === 'guard' && x.at.kind === 'carrier')`), JSON.stringify(op));
+  check('Enter on that grey row refuses in words ("No ship selected to guard. Pick one first."), and the squads are not sent anywhere', op.ran && !op.ok && /^No ship selected to guard/.test(op.say) && J('PP.pick') === null && J('PP.open') === 'squads' && J(`__orders().every(x => x.type === 'guard' && x.at.kind === 'carrier')`), JSON.stringify(op));
   g.run('C.sel = "all";');
-  check('all three pilots selected (Q): grey as well, with the same hint (they are pilots too)', row('fguardt').ok === false && row('fguardt').state === 'a pilot cannot be guarded: pick a ship with A or D');
-  g.run('C.sel = "";');
-  check('and nobody selected is still "pick a ship with A or D" (no pilot to blame)', row('fguardt').state === 'pick a ship with A or D' && row('fguardt').short === 'pick one');
-  g.run('C.sel = "all";');
-  g.run('C.sel = "freighter-h2";');
+  check('All pilots as who: grey as well, with the same hint', row('fguardt').ok === false && row('fguardt').state === 'pick a friendly with , or .');
+  g.run('C.sel = "pilot:green"; C.fsel = "freighter-h2";');
+  const rp = row('fguardt');
+  check('a pilot as who and a ship as the friendly: the row is ready and says who goes (Kara), and Enter sends that pilot alone', rp.ok === true && /^Guard Hauler 2/.test(rp.label) && /^Kara, \d+ km$/.test(rp.state) && (() => { g.run('__w("fguardt")'); const ok = J(`__k('Enter')`); return ok.ran && ok.ok && J(`campWingShips(C, 'green').every(u => u.order.type === 'guard' && u.order.at.id === 'freighter-h2')`) && J(`['red', 'yellow'].every(s => campWingShips(C, s).every(u => u.order.at.kind === 'carrier'))`); })(), JSON.stringify(rp));
+  g.run('campWingOrder(C, "fighters", "guard", null, "key"); C.sel = "all"; C.fsel = "freighter-h2"; __pn();');
   const r1 = row('fguardt');
-  check('a ship you protect selected: the row names it ("Guard Hauler 2 convoy"), is ready, and says who goes and how far', r1.ok === true && /^Guard Hauler 2/.test(r1.label) && /^all squads, \d+ km$/.test(r1.state) && /^\d+ km$/.test(r1.short), JSON.stringify(r1));
+  check('a ship you protect picked as the friendly: the row names it ("Guard Hauler 2 convoy"), is ready, and says who goes and how far', r1.ok === true && /^Guard Hauler 2/.test(r1.label) && /^all squads, \d+ km$/.test(r1.state) && /^\d+ km$/.test(r1.short), JSON.stringify(r1));
   g.run('__w("fguardt")');
   const o2 = J(`__k('Enter')`);
   check('Enter sends all three squads to guard it at once: no sub-list (two ships to choose from), the list closes, the orders are guards at that ship', o2.ran && o2.ok && J('PP.pick') === null && J('PP.open') === '' && J(`__orders().every(x => x.type === 'guard' && x.at.id === 'freighter-h2')`), JSON.stringify(o2));
-  g.run('__l1(); window.__t = __hauler("t1", "Transport", 500, 0, 9000, 0);');
-  check('with no ship to guard at all the row is grey with the hint to pick (the outposts cannot be selected, so they are not offered)', row('fguardt').ok === false && J(`campSelList(C).every(e => e.kind === 'pilot' || e.kind === 'ward')`));
+  g.run('__l1(); window.__t = __hauler("t1", "Transport", 500, 0, 9000, 0); C.fsel = "";');
+  check('with no friendly picked the row is grey with the hint to pick (the friendlies are the transport and the level\'s outposts: the pilots are not in that list)', row('fguardt').ok === false && J(`campFriList(C).every(e => e.kind === 'post' || e.kind === 'ward')`) && J(`campFriList(C).length`) > 1);
 });
 
 sec('E. the rest of the list is as it was', () => {
@@ -101,9 +101,9 @@ sec('E. the rest of the list is as it was', () => {
 
 sec('F. the words', () => {
   const t = k => J(`uiText('${k}')`);
-  check('the hints that sent the player to the W row tell them to pick first: the nudge, the lose tip, the 1.1 walk step and the 1.2 hint say S (the nearest hostile) before W',
-    /\bS\b/.test(t('camp.nudge.attack')) && /\bS\b/.test(t('camp.lose.tip.earth')) && /\bS\b/.test(t('camp.bf.1.1.s3')) && /\bS\b/.test(t('camp.hint.l1p.contact')), [t('camp.nudge.attack'), t('camp.lose.tip.earth'), t('camp.bf.1.1.s3'), t('camp.hint.l1p.contact')].join(' | '));
-  check('the two row names and the two refusals are content (a key of the table is filled in), no braces left', ['camp.w.attack', 'camp.w.guard', 'camp.no.nohostile', 'camp.no.nofriend', 'camp.no.pilotguard', 'camp.w.nohostile.state', 'camp.w.nofriend.state', 'camp.w.pilotguard.state'].every(k => { const s = J(`uiText('${k}', { name: 'X' })`); return s && !/\{/.test(s) && s !== k; }));
+  check('the hints that sent the player to the W row tell them to pick first: the nudge, the lose tip, the 1.1 walk step and the 1.2 hint say the backslash (the nearest hostile) before W',
+    ['camp.nudge.attack', 'camp.lose.tip.earth', 'camp.bf.1.1.s3', 'camp.hint.l1p.contact'].every(k => t(k).includes('\\') && !/\bS\b/.test(t(k))), [t('camp.nudge.attack'), t('camp.lose.tip.earth'), t('camp.bf.1.1.s3'), t('camp.hint.l1p.contact')].join(' | '));
+  check('the two row names and the two refusals are content (a key of the table is filled in), no braces left', ['camp.w.attack', 'camp.w.guard', 'camp.no.nohostile', 'camp.no.nofriend', 'camp.w.nohostile.state', 'camp.w.nofriend.state'].every(k => { const s = J(`uiText('${k}', { name: 'X' })`); return s && !/\{/.test(s) && s !== k; }));
 });
 
 console.log(failed ? `\n${failed} of ${n} FAILED` : `\nAll ${n} checks passed.`);

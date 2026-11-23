@@ -1,9 +1,9 @@
-// smoke: the focus view: F glides the camera to the selected ship (a sub-list's candidate, a squad's leader, the picked hostile, else the cruiser) and follows it; Backspace and a lost ship bring the cruiser back, a drag breaks the follow (plain Node, no Chrome)
+// smoke: the focus view: F glides the camera to the selected ship (a sub-list's candidate, a squad's leader, the picked hostile, else the cruiser) and follows it; S and a lost ship bring the cruiser back, a drag breaks the follow (plain Node, no Chrome)
 // Card space-game-focus-view (src/campfocus.js; Troy, 22 Nov 2026: "look around and view the battle from different perspectives by selecting a target, hostile or friendly, and having it at the centre of the screen").
 //   A  what is focused: the subject, in order: a target sub-list's candidate, the leader of the squad whose ring shows, the picked hostile, the cruiser; it reads campTdispSubject (src/camptdisp.js) when there is one
 //   B  the glide: the zoom of a long one (both ends on the screen, then back), the edge arrow's place
 //   C  the key: start, the same ship again, the cruiser, the camera's follow and its lerp, the arrival, the zoom given back (not over one the player set)
-//   D  the end: a ship that dies or leaves, the battle over, a card; the pause keeps it; the way back (Backspace, the RECENTRE mark, F with nothing selected)
+//   D  the end: a ship that dies or leaves, the battle over, a card; the pause keeps it; the way back (S, the RECENTRE mark, F with nothing selected)
 //   E  the drag view: a drag breaks the follow and F picks it up again; a flying key does not bring the view back; the arrows, Space and the lists work while looking elsewhere
 //   F  the scene: F is a key of the table (and no other key of the Campaign's), the scene's onKey and update are wired to it, the text and the label
 // Run: node tests/campfocus.mjs   (exit code 1 on a failed check)
@@ -114,10 +114,10 @@ watch(); g.run(`S.mode = 'debrief'; __frame(33.3, 1);`);
 check('a card on the screen (the debrief) does too', J('S.focus') === null);
 watch(); g.run(`S.mode = 'pause'; __frame(33.3, 5);`);
 check('the pause (and the H page, which is the pause\'s mode) keeps it', J('S.focus') !== null && J('S.focus.id') === J('R1.id'));
-watch(); g.run(`window.__zk = campZoomKey('Backspace'); campZoomPress(S, __zk, false);`);
-check('Backspace (the zoom reset) brings the cruiser back and the zoom to its default', J('S.focus') === null && J('__cam.target.id') === 'sprite-of-the-cruiser' && J('CAMZOOM.want') === J('campZoomDefault()'));
+watch(); g.run(`window.__zk = campZoomKey('KeyS'); campZoomPress(S, __zk, false);`);
+check('S (the zoom reset) brings the cruiser back and the zoom to its default', J('S.focus') === null && J('__cam.target.id') === 'sprite-of-the-cruiser' && J('CAMZOOM.want') === J('campZoomDefault()'));
 watch(); g.run(`window.__rc = campViewRecentre(S);`);
-check('campViewRecentre (the RECENTRE mark\'s click, Backspace\'s door) ends a focus and says it did', J('__rc') === true && J('S.focus') === null && J('campViewRecentre(S)') === false);
+check('campViewRecentre (the RECENTRE mark\'s click, S\'s door) ends a focus and says it did', J('__rc') === true && J('S.focus') === null && J('campViewRecentre(S)') === false);
 watch(); g.run(`window.__zoomed = null; R1.hp = 0; S.focus.zoom = { was: 0.4, set: 0.3 }; CAMZOOM.want = 0.3; __frame(33.3, 1);`);
 check('a focus that ends in the middle of a glide gives the zoom back', J('CAMZOOM.want') === 0.4 && J('S.focus') === null);
 
@@ -138,7 +138,7 @@ const sc = src('src/campaignscene.js'), dr = src('src/campdrag.js'), ix = src('i
 check('the scene calls campFocusInstall in create, campFocusFrame in update, and campFocusPress for the focus key before the lists read the key (with a list open it works; a call and the map do not take it)', /campFocusInstall\(this\)/.test(sc) && /campFocusFrame\(this, dt\)/.test(sc) && /campKeyIs\('focus', c\)[^]{0,120}campFocusPress\(this\)/.test(sc) && sc.indexOf("campKeyIs('focus', c)") < sc.indexOf('campPanelKey(this.pn, C, c, now)') && sc.indexOf("campKeyIs('focus', c)") > sc.indexOf('campMapKey(this, c, e.shiftKey)'));
 check('the drag view lets go of a focus on a drag and ends it on the way back (the two spots of src/campdrag.js), and the script is loaded after it', /campFocusBreak\(s\)/.test(dr) && /campFocusEnd\(s, 'back'\)/.test(dr) && ix.indexOf('src/campfocus.js') > ix.indexOf('src/campdrag.js') && ix.indexOf('src/campfocus.js') < ix.indexOf('src/campmapdraw.js'));
 g.run(`var S = __mk(); window.R1 = __foe(900, 0); campTgtStep(C, 1);`);
-check('the label says what is watched and the way back from the key table ("WATCHING Raider 1  Backspace back"), the arrow\'s words the distance, the lost ship its name', (() => { const w = J(`uiText('camp.hud.focuswatch', { name: 'Raider 1' })`); return w === 'WATCHING Raider 1  Backspace back' && J(`uiText('camp.hud.focuscruiserfar', { km: '12' })`) === 'Cruiser 12 km' && J(`uiText('camp.hud.focuslost', { name: 'Raider 1' })`) === 'Raider 1 is gone. Back to the cruiser.' && !/[{}]/.test(w); })());
+check('the label says what is watched and the way back from the key table ("WATCHING Raider 1  S back"), the arrow\'s words the distance, the lost ship its name', (() => { const w = J(`uiText('camp.hud.focuswatch', { name: 'Raider 1' })`); return w === 'WATCHING Raider 1  S back' && J(`uiText('camp.hud.focuscruiserfar', { km: '12' })`) === 'Cruiser 12 km' && J(`uiText('camp.hud.focuslost', { name: 'Raider 1' })`) === 'Raider 1 is gone. Back to the cruiser.' && !/[{}]/.test(w); })());
 g.run(`var S2 = __mk(); window.R1 = __foe(900, 0); campTgtStep(C, 1);
   window.__rec = { vis: [], txt: {}, tri: 0, clears: 0 }; window.__nt = 0;
   const mk = n => { const o = { name: n, width: 120, setScrollFactor() { return o; }, setDepth() { return o; }, setOrigin() { return o; }, setVisible(v) { __rec.vis.push(n + ':' + v); return o; }, setPosition(x, y) { o.x = x; o.y = y; return o; }, setText(t) { o.text = t; __rec.txt[n] = t; return o; }, text: '', style: { color: '' } }; return o; };
@@ -147,7 +147,7 @@ g.run(`var S2 = __mk(); window.R1 = __foe(900, 0); campTgtStep(C, 1);
   campFocusPress(S2); __cam.scrollX = C.carrier.x - W / 2 + 40000; __cam.scrollY = C.carrier.y - H / 2; // far from the cruiser: its arrow shows
   campFocusPaint(S2); window.__on = __rec.vis.slice(-3);`);
 check('the label and the arrow are drawn on the screen while a ship is watched, not while it is not (a graphics and two texts that the scene makes in create): the label says what is watched, the arrow one triangle and the cruiser\'s distance', J('S2.focusMark !== undefined') && J('__off').some(x => x === 't:false') && J('__on').some(x => x === 't:true') && J('__on').some(x => x === 'a:true') && J('__rec.tri') === 1 && /^WATCHING Raider/.test(J('__rec.txt.t')) && /^Cruiser \d/.test(J('__rec.txt.a')), JSON.stringify(J('__rec')));
-// ---- G. the real scene: the key F and Backspace through Campaign.onKey, the frame through Campaign.update ----
+// ---- G. the real scene: the key F and S through Campaign.onKey, the frame through Campaign.update ----
 console.log('G. the real scene');
 g.run(`
   go = () => {}; shipcompSay = () => true;
@@ -169,8 +169,8 @@ g.run(`F.k.UP.isDown = true; F.camp.input.thrust = 0; __tick(F, 0.3); window.__t
 check('and the arrow keys still fly the cruiser while the camera is elsewhere (Up is thrust in the sim\'s input), and the focus stays', J('__thr') === 1 && J('F.focus !== null'));
 g.run(`F.onKey({ code: 'KeyQ' }); window.__open = campPanelOpen(F.pn); F.onKey({ code: 'KeyF' }); window.__same = F.focus && F.focus.id;`);
 check('a list opens while looking elsewhere (Q), and F with the list open does not close it or lose the ship', J('__open') === 'fleet' && J('campPanelOpen(F.pn)') === 'fleet' && J('__same') === J('RX.id'));
-g.run(`F.onKey({ code: 'Escape' }); F.onKey({ code: 'Backspace' });`);
-check('Backspace through the scene brings the cruiser back (the follow is the cruiser\'s sprite again) and resets the zoom', J('F.focus') === null && J('__cam.target.id') === 'sprite-of-the-cruiser' && J('CAMZOOM.want') === J('campZoomDefault()'));
+g.run(`F.onKey({ code: 'Escape' }); F.onKey({ code: 'KeyS' });`);
+check('S through the scene brings the cruiser back (the follow is the cruiser\'s sprite again) and resets the zoom', J('F.focus') === null && J('__cam.target.id') === 'sprite-of-the-cruiser' && J('CAMZOOM.want') === J('campZoomDefault()'));
 g.run(`F.onKey({ code: 'KeyF' });`);
 check('F with the target still picked looks at it again', J('F.focus && F.focus.id') === J('RX.id'));
 g.run(`F.camp.by[RX.id].hp = 0; __tick(F, 0.2);`);

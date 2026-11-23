@@ -14,7 +14,7 @@ const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.TUNE_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { KeyN: 78, KeyK: 75, Backslash: 220, Enter: 13, Escape: 27, Backspace: 8, ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39 };
+const VK = { KeyN: 78, KeyK: 75, Digit6: 54, Enter: 13, Escape: 27, Backspace: 8, ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39 };
 
 async function key(t, code, extra = {}, wait = 40) { // a real key: down, a few frames, up (the game clock is stepped, so waits are game milliseconds)
   const k = Object.assign({ windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: /^(Enter|Backspace|Arrow|Escape)/.test(code) ? code : code.replace(/^Key/, '').toLowerCase() }, extra);
@@ -97,7 +97,7 @@ async function room() {
   finally { await t.close(); }
 }
 
-async function tunedWin() { // a mission won while an override is on: the level moves on, the best score is not written, and the debrief says so (the debug keys: ?debug=1, the backslash wins)
+async function tunedWin() { // a mission won while an override is on: the level moves on, the best score is not written, and the debrief says so (the debug keys: ?debug=1, 6 wins)
   console.log('a tuned win');
   const t = await launch('?campaign=1&debug=1', ROOT);
   try {
@@ -107,7 +107,7 @@ async function tunedWin() { // a mission won while an override is on: the level 
     for (let i = 0; i < 8 && (await j(`${SC}.mode`)) !== 'play'; i++) { await key(t, 'Enter', {}, 40); await t.run(300); }
     await key(t, 'KeyN'); await t.run(200); await key(t, 'ArrowDown'); await key(t, 'ArrowDown'); await key(t, 'ArrowRight'); await key(t, 'Escape'); await t.run(600);
     check('an override is on and the scene has marked the run as tuned', (await j('campTuneCount()')) === 1 && (await j(`${SC}.tuned`)) === true);
-    await key(t, 'Backslash'); await t.run(1500);
+    await key(t, 'Digit6'); await t.run(1500);
     for (let i = 0; i < 20 && (await j(`${SC}.mode`)) !== 'debrief'; i++) await t.run(300);
     check('the mission is won and the debrief is up', (await j(`${SC}.mode`)) === 'debrief');
     const texts = await j(`${SC}.children.list.filter(o => o.text).map(o => o.text)`);

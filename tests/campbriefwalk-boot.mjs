@@ -13,7 +13,7 @@ const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.BRIEF_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { Equal: 187, Minus: 189, Backspace: 8, KeyK: 75, KeyL: 76, KeyM: 77, Enter: 13, Escape: 27, ArrowRight: 39, ArrowLeft: 37 };
+const VK = { Equal: 187, Minus: 189, Backspace: 8, KeyS: 83, KeyK: 75, KeyL: 76, KeyM: 77, Enter: 13, Escape: 27, ArrowRight: 39, ArrowLeft: 37 };
 
 const t = await launch('', ROOT);
 try {
@@ -50,8 +50,8 @@ try {
   await snap('4b-zoomed-in');
   await t.run(12000);
   check('left zoomed in for twelve seconds the walk is still on the fourth stop', (await where()).i === 3);
-  await key('Backspace'); await t.run(300);
-  check('Backspace puts the zoom back to 100%, and the sound is not muted by any of it', await j(`${HUB}.bf.wk.z === 1`) && (await j('G.muted')) !== true);
+  await key('KeyS'); await t.run(300);
+  check('S puts the zoom back to 100%, and the sound is not muted by any of it', await j(`${HUB}.bf.wk.z === 1`) && (await j('G.muted')) !== true);
   await key('Enter'); await t.run(3200); await snap('5-leader-waits');
   const c = await words();
   check('Enter is page 3 (how): the leader waits near Ceres, the keys this mission needs and the readiness are in the strip under the map', (await where()).page === 2 && (await where()).i === 4 && c.some(x => /^A pirate leader waits near Ceres/.test(x)) && c.some(x => /^READINESS/.test(x)) && c.some(x => /^Arrows$/.test(x) || /thrust|turn/i.test(x)), JSON.stringify(c).slice(0, 500));
