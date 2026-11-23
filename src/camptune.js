@@ -46,6 +46,7 @@ const CAMP_TUNE = {
     { id: 'enemydamage', group: 'foes', root: 'CAMP', path: 'alien.damageScale', min: 0.2, max: 5, step: 0.1, unit: 'x', when: 'next' },
     // time and the pilots
     { id: 'pace', group: 'time', root: 'CAMP', path: 'pace.scale', min: 0.4, max: 1.6, step: 0.05, unit: 'x', when: 'next' },
+    { id: 'fightpace', group: 'time', root: 'CAMP', path: 'pace.fight', min: 0.3, max: 1.5, step: 0.05, unit: 'x', when: 'now' },     // how fast the small ships fly and fire while a foe is near (card space-game-slower-fights); 1 is as fast as they travel
     { id: 'wavetime', group: 'time', root: 'CAMP', path: 'time.waves', min: 0.25, max: 3, step: 0.05, unit: 'x', when: 'now' },
     { id: 'callanswer', group: 'time', root: 'CAMP_CALLS', path: 'answer', min: 2, max: 30, step: 1, unit: 's', when: 'call' },
     { id: 'callgap', group: 'time', root: 'CAMP_CALLS', path: 'gap', min: 5, max: 120, step: 5, unit: 's', when: 'call' },

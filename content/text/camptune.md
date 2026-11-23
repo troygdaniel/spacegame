@@ -54,6 +54,7 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.enemyhull | Enemy hull (times the mission's) |
 | camp.ui.tune.row.enemydamage | Enemy damage (times the mission's) |
 | camp.ui.tune.row.pace | Battle pace (1 is Normal) |
+| camp.ui.tune.row.fightpace | Fight pace (1 is as fast as travel) |
 | camp.ui.tune.row.wavetime | Wave timing (times the mission's) |
 | camp.ui.tune.row.callgap | Time between pilot calls |
 | camp.ui.tune.row.startzoom | Starting zoom (presses of minus) |

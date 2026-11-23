@@ -463,6 +463,9 @@ const CAMP = {
     ],
     start: 'normal',                       // the setting until the player picks one
     scale: 1,                              // times the setting's multiplier (the tuning panel's one pace number: 1 is Normal as the table has it, 1.2 a fifth quicker)
+    fight: 0.75,                           // FIGHT PACE (card space-game-slower-fights; Troy, 22 Nov 2026: "slow the pace of the fights down so I can enjoy it"): the share of its pace a small ship flies and fires at WHILE IT IS IN A FIGHT, a foe within `engage[0]` px of it: top speed, acceleration, turn rate and the gaps between its shots, all times this, so a duel plays out the same and lasts a third longer (1 / 0.75). Away from every foe (beyond `engage[1]`) it flies at the pace above, as it did, so a trip, an approach, a scout's road and the missions' beat clocks are the same as before; between the two distances the share eases in, so no ship snaps. The tuning panel's row Fight pace (N). Only a battle made with a pace MODE has it (the tests' and the sims' number paces are the table's own numbers: 1 here)
+    engage: [1000, 2200],                  // px: a foe nearer than the first puts the ship at the fight pace in full; one farther than the second, not at all
+    every: 200,                            // ms between the looks at who is near (campFightPace)
     shots: 0.5                             // the power of the multiplier a shot's speed takes (0.5 is its square root: a shot does not outrun the eye, a hit still lands). There is no key and no setting for the pace any more (card space-game-two-hands-keys): the Campaign flies at CAMP.pace.start, and campNew's opts.pace still takes a mode for the tests, the bots and the sims
   },
   refit: {                                 // the Earth refit screen after level 1: one tech, and ore buys extra ships for the next level (the costs are the workshop's, CAMP.build)
@@ -706,20 +709,38 @@ const campSmall = kind => kind === 'fighter' || kind === 'escort' || !!PIRATES[k
 // the pace is put on a ship from the numbers it was made with (u.base), so it can change in play and come back to Brisk exactly
 function campPaceShip(C, u) {
   if (!u.base) return;
-  const P = C.pace, b = u.base; u.vmax = b.vmax * P; u.accel = b.accel * P; u.turn = b.turn * P;
+  const P = C.pace * (u.fp || 1), R = u.running ? CAMP.pirate.run : 1, b = u.base; u.vmax = b.vmax * P * R; u.accel = b.accel * P * R; u.turn = b.turn * P; // R: a runner flies faster (src/camppirates.js campPirateBreakOne) and keeps it; u.fp: the share of the pace the ship flies at now, 1 away from every foe, CAMP.pace.fight in a fight (campFightPace)
   u.def = P === 1 ? b.def : Object.assign({}, b.def, { speed: b.def.speed * P, max: b.def.max * P }); // pirateSteer reads the shape: its ring and its lean use the speed and the acceleration
 }
 // a new pace for the battle, from now on and for the ships already out (the quick key)
 function campPaceSet(C, p) {
-  C.pace = campPaceMult(p); C.shot = Math.pow(C.pace, CAMP.pace.shots);
+  C.pace = campPaceMult(p); C.shot = Math.pow(C.pace, CAMP.pace.shots); C.fightOn = campPaceIsMode(p);
   C.ships.forEach(u => campPaceShip(C, u));
   return C.pace;
+}
+const campPaceIsMode = p => typeof p !== 'number' && !!CAMP.pace.modes.find(x => x.id === p); // a pace MODE (an id of CAMP.pace.modes) has the fight pace; a number, or none, is the table's own numbers
+const campFightGap = (u, ms) => ms / (u.fp || 1); // the gap between a small ship's shots, in a fight: longer by the same share that the ship flies slower
+// FIGHT PACE (card space-game-slower-fights): every CAMP.pace.every ms each small ship looks for the nearest foe (the aliens against anything that is not an alien, the wing against the aliens) and takes its share of the pace by how near it is
+function campFightPace(C) {
+  if (C.t < (C.fightAt || 0)) return; C.fightAt = C.t + CAMP.pace.every;
+  const F = C.fightOn ? Math.max(0.05, +CAMP.pace.fight || 1) : 1, r0 = CAMP.pace.engage[0], r1 = Math.max(r0 + 1, CAMP.pace.engage[1]), ships = C.ships;
+  for (let i = 0; i < ships.length; i++) {
+    const u = ships[i]; if (!u.base || u.hp <= 0) continue;
+    let fp = 1;
+    if (F !== 1) {
+      let best = Infinity; const al = u.team === 'alien';
+      for (let j = 0; j < ships.length; j++) { const o = ships[j]; if (o.hp <= 0 || (o.team === 'alien') === al) continue; const dx = o.x - u.x, dy = o.y - u.y, d2 = dx * dx + dy * dy; if (d2 < best) best = d2; }
+      const t = best === Infinity ? 1 : Math.max(0, Math.min(1, (Math.sqrt(best) - r0) / (r1 - r0)));
+      fp = F + (1 - F) * t;
+    }
+    if (Math.abs(fp - (u.fp || 1)) > 0.004) { u.fp = fp; campPaceShip(C, u); }
+  }
 }
 function campNew(level, techs, opts) {
   opts = opts || {};
   const L = campMissionRow(level, opts.mission); if (!L) return null;
   const C = {
-    level, mission: L.mission, L, flags: {}, arrivedAt: campHere(level, L) ? 0 : null, hpS: CAMP.alien.hpScale * (L.hpScale || 1), dmgS: CAMP.alien.damageScale * (L.dmgScale || 1), pace: campPaceMult(opts.pace), shot: Math.pow(campPaceMult(opts.pace), CAMP.pace.shots), via: opts.via || 'menu', t: 0, rng: campRng(opts.seed == null ? 1 : opts.seed), god: !!opts.god, nextId: 1, ships: [], by: {}, bullets: [], events: [],
+    level, mission: L.mission, L, flags: {}, arrivedAt: campHere(level, L) ? 0 : null, hpS: CAMP.alien.hpScale * (L.hpScale || 1), dmgS: CAMP.alien.damageScale * (L.dmgScale || 1), pace: campPaceMult(opts.pace), fightOn: campPaceIsMode(opts.pace), fightAt: 0, shot: Math.pow(campPaceMult(opts.pace), CAMP.pace.shots), via: opts.via || 'menu', t: 0, rng: campRng(opts.seed == null ? 1 : opts.seed), god: !!opts.god, nextId: 1, ships: [], by: {}, bullets: [], events: [],
     input: { turn: 0, thrust: 0, brake: false, fire: false, blink: false },
     techs: (techs || []).filter(t => CAMP.tech[t]),
     earth: L.defend ? campDefend(level, L.defend) : L.earth === false ? null : { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield }, caches: (L.caches || []).map(c => ({ x: c[0], y: c[1], got: false })), cachesGot: 0,
@@ -1021,6 +1042,7 @@ function campTick(C, dt) {
   campLaunch(C);
   campRepairTick(C); // the fighters mended in the bay are whole again (src/camprepair.js)
   campDogPair(C); // the fighters and the raiders pair off, one on one (src/campdogfight.js)
+  campFightPace(C); // a small ship near a foe flies and fires at the fight pace (card space-game-slower-fights)
   C.ships.forEach(u => { if (u.hp > 0 && u.kind !== 'carrier') campAI(C, u, dt); });
   campBullets(C, dt);
   if (typeof campTorpedoes === 'function') campTorpedoes(C, dt); // the torpedoes fly, hit and go off (src/camptorpedo.js)
@@ -1423,7 +1445,7 @@ function campAlienAI(C, u, dt) {
   const dog = !isEarth && campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campSteer(C, u, def, dist, target, u.vx - tv.x, u.vy - tv.y); // a raider against a fighter is a dogfight (src/campdogfight.js)
   if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
   if (m.fire && dist < def.range + (isEarth ? C.earth.r : 0) && C.t > u.nextShot && Math.abs(campWrap((dog ? m.aim : target) - u.rot)) < def.aim) {
-    u.nextShot = C.t + campBetween(C, def.shot[0], def.shot[1]);
+    u.nextShot = C.t + campFightGap(u, campBetween(C, def.shot[0], def.shot[1]));
     const n = def.spread || 1;
     for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * C.dmgS, 1800, 'alien', 14);
   }
@@ -1595,7 +1617,7 @@ function campWingAI(C, u, dt) {
 // one shot of a fighter or an escort, if it may fire, the gun is on the target and in range
 function campWingFire(C, u, k, foe, dist, target, may) {
   if (!(may && dist < k.range + (foe.r || 0) && C.t > u.nextShot && Math.abs(campWrap(target - u.rot)) < k.aim)) return false;
-  u.nextShot = C.t + campBetween(C, k.delay[0], k.delay[1]);
+  u.nextShot = C.t + campFightGap(u, campBetween(C, k.delay[0], k.delay[1]));
   campBullet(C, u, u.rot, k.bullet * C.shot, k.damage, 1400, 'earth', 14); C.events.push({ type: 'wingshot', x: u.x, y: u.y, kind: u.kind, id: u.id }); // the wing's gun has a sound of its own (the scene scales it by the distance)
   return true;
 }

@@ -66,7 +66,7 @@ function campPirateAI(C, u, dt) {
   const dog = campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campSteer(C, u, def, dist, target, u.vx - (tgt.vx || 0), u.vy - (tgt.vy || 0)); // a skiff against a fighter is a dogfight
   if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
   if (m.fire && dist < def.range && C.t > u.nextShot && Math.abs(campWrap((dog ? m.aim : target) - u.rot)) < def.aim) {
-    u.nextShot = C.t + campBetween(C, def.shot[0], def.shot[1]);
+    u.nextShot = C.t + campFightGap(u, campBetween(C, def.shot[0], def.shot[1]));
     const n = def.spread || 1;
     for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * C.dmgS, 1800, 'alien', 14, { fac: 'pirate' }); // fac: the scene and the map draw a pirate's shot in amber, not the aliens' red
   }
