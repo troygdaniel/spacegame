@@ -242,7 +242,7 @@ g.run(`
   check('the legend has a row for it', J(`campMapLegend(C).some(r => r.type === 'rival' && r.text === 'Pirate leader')`));
   check('and the list of targets names it', J(`campNavRows(C).some(r => /Pirate leader/.test(r.name))`));
   check('the picture has its own drawing and a look the scene knows', J(`typeof campPirateArt('pirateleader') === 'function' && !!CAMP_ART.pirateleader`) && /pirateleader: campArtLook\('pirateleader', 'pirateleader'\)/.test(src('src/campaignscene.js')));
-  check('the scene calls the three drawings and the radar dot is larger', /campRivalHud\(this, g, bar\)/.test(src('src/campaignscene.js')) && /campRivalWorld\(this\)/.test(src('src/campaignscene.js')) && /campRivalEvent\(this, e\)/.test(src('src/campaignscene.js')) && /e\.rival \? 4|u\.rival \? 4/.test(src('src/campaignscene.js')));
+  check('the scene calls the three drawings', /campRivalHud\(this, g, bar\)/.test(src('src/campaignscene.js')) && /campRivalWorld\(this\)/.test(src('src/campaignscene.js')) && /campRivalEvent\(this, e\)/.test(src('src/campaignscene.js')));
   check('the drawing script is in index.html after the rules', src('index.html').indexOf('src/camprival.js') > 0 && src('index.html').indexOf('src/camprivaldraw.js') > src('index.html').indexOf('src/camprival.js'));
 }
 

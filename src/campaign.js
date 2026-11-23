@@ -146,6 +146,17 @@ const CAMP = {
     fight: 1800,                           // px: an alien this close to the cruiser, or any ship of the wing still out on an order, sends the mended fighter out again (else it stays in the bay)
     sayEvery: 5                            // s between two radio lines of the same kind (four fighters hurt together are one call)
   },
+  tdisp: {                                 // the target display, in the corner the radar had (card space-game-target-display; Troy, 22 Nov 2026: "the bottom right mini map can go away, to make way to show the target selected"; src/camptdisp.js, src/camptdispscene.js)
+    right: 18,                             // px from the right edge of the screen to the box
+    bottom: 64,                            // px from the bottom edge to the box (the key line's strip is under it)
+    w: 200, h: 200,                        // px: the box, about the radar's size (its disc was 196 across)
+    every: 250,                            // ms between two readings of the ship: the numbers and the words are live four times a second (a new ship is read at once)
+    pic: 76,                               // px: the picture's frame; the ship is drawn to fit it
+    bar: { w: 86, h: 8 },                  // px: the hull bar and the shield bar
+    color: { hostile: 0xff4d6d, friend: 0x7fe9ff }, // the frame: a hostile's red (the target's bracket), the fleet lists' cyan for a ship of yours or a neutral you are picking
+    ink: { hostile: '#ff9aae', friend: '#9fe9ff' },  // the name and the line of what it is doing
+    depth: 64                              // the draw order: over the edge arrows (62), under the lists (160)
+  },
   charge: {                                // the health bar on every ship you protect (cards space-game-protected-health and space-game-health-bar-quiet; Troy, 22 Nov 2026: bars on the transport, the haulers and the miners, a thin line until the ship is under attack; src/campcharge.js, src/campchargescene.js)
     amber: 0.6,                            // the hull share at or under which the bar turns from green to amber
     red: 0.3,                              // the hull share at or under which the bar turns red (a ship that is nearly lost)
@@ -161,14 +172,15 @@ const CAMP = {
     depth: 6                               // the flight view's draw order: over the ships (4 and 5), under the HUD
   },
   sensor: {                                // the carrier's sensors (card space-game-see-hostiles-earlier; Troy, 22 Nov 2026: "see hostiles earlier so I can send squads to meet them"; src/campsight.js)
-    range: 9000,                           // px from the carrier: a hostile this near is SEEN: on the radar, the map, the nav list and the target keys (A D S), in an edge arrow and in the radio's first call. 9000 is 21 s of the fastest raider's flight (430 px/s), 35 s of a drone's (260); a fighter that is out sees from its own circle too (`wing`)
+    range: 9000,                           // px from the carrier: a hostile this near is SEEN: on the map, in the nav list and the target keys (A D S), in an edge arrow and in the radio's first call. 9000 is 21 s of the fastest raider's flight (430 px/s), 35 s of a drone's (260); a fighter that is out sees from its own circle too (`wing`)
     always: ['mother', 'tower'],           // the kinds that are always seen: the mothership and the towers are the mission's own marks, as they were before the sensors had a range
     group: 900,                            // px: hostiles this near each other are one group (one edge arrow, one radio call)
     delay: 2000,                           // ms from the first sight to the radio call: the wave's own line ("Wave 2 incoming.") is said first
     wing: 2600,                            // px: the sensor circle round each fighter that is out (the scouts' circle, now every fighter's: card space-game-cut-escorts): a hostile inside it is SEEN as one near the carrier is, and a cloaked anomaly inside it is noticed (src/campsight.js, src/campanomaly.js)
     idNear: 2600,                          // px: a fighter of yours this near a group, or the carrier itself this near it, tells what kind they are: the call names the kinds; with none near it says only how many
-    mark: 6000,                            // ms a group that was just seen is marked: its radar blip pulses and its edge arrow blinks
+    mark: 6000,                            // ms a group that was just seen is marked: its edge arrow blinks
     arrows: 4,                             // the most edge arrows at once (the groups nearest the carrier first)
+    friends: 2,                            // the most amber edge arrows at once for ships you protect that are in trouble and off the screen (the nearest first; card space-game-target-display: the radar is gone)
     sayEvery: 4                            // s between two calls (groups that come into sight in the same few seconds are one call)
   },
   fighter: {
@@ -331,7 +343,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 238], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 450, 1280, 664]] // (the target line's own rectangle is added by the scene: campPanelsKeep, src/campanelsdraw.js) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 238], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 450, 1280, 664]] // (the target display's box, campTdispBox in src/camptdispscene.js, is inside the last one, where the radar was) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {
@@ -479,11 +491,11 @@ const CAMP = {
     most: 3                                // most extra fighters one refit buys
   },
   anomaly: {                               // the cloaked enemy caches (card space-game-campaign-anomalies; src/campanomaly.js; the rows are CAMP.levels[n].anomalies)
-    sense: 2400,                           // px: the carrier this near notices one: a mark on the radar and the map, 'Anomaly' in the nav list, one line from the ship (the lens tech doubles it)
+    sense: 2400,                           // px: the carrier this near notices one: a mark on the map, 'Anomaly' in the nav list, one line from the ship (the lens tech doubles it)
     visit: 260,                            // px: the carrier this near, for `hold` seconds, decloaks it
     hold: 2,                               // seconds the carrier must stay within `visit` (it counts back down when the carrier leaves)
     stop: 160,                             // px: the autopilot flies to this near it (inside `visit`)
-    haze: 1500,                            // px: the scene draws the shimmer from this far (the screen shows less; the radar and the map have the mark from `sense`)
+    haze: 1500,                            // px: the scene draws the shimmer from this far (the screen shows less; the map has the mark from `sense`)
     size: 220,                             // px: the radius of the haze and of the cache's ring (a row may have its own r)
     ring: 420,                             // px: the cloaked guards decloak on a ring this far round the cache and go for the carrier
     done: 600,                             // ms after the last guard has died before the reward comes (a beat)

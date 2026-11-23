@@ -8,6 +8,7 @@ The words of the sensors (card space-game-see-hostiles-earlier; Troy, 22 Nov 202
 |---|---|
 | camp.say.sight | Contact, {dir}: {what}, {km} km. |
 | camp.sight.arrow | {what}  {km} km |
+| camp.sight.friend | {name}  {pct}%  {km} km |
 | camp.sight.hostile.one | {n} hostile |
 | camp.sight.hostile.many | {n} hostiles |
 | camp.sight.kind.one | {n} {kind} |

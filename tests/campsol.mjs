@@ -6,7 +6,7 @@
 //   C. the belt: one ring of rocks between Mars and Jupiter, every rock inside it, the same every time; the Trojan camps are clusters
 //   D. Alpha Centauri and Epsilon Eridani: the star in the middle, its rings, its planets and belts, the level's own places where they were
 //   E. the map: the area and the whole system, the rings clipped to the frame, the rocks in the frame, the names, Z
-//   F. the scene: a far body is made when the carrier comes near and taken down when it leaves; stars are drawn as stars; the radar leaves the far ones out
+//   F. the scene: a far body is made when the carrier comes near and taken down when it leaves; stars are drawn as stars; (the radar that left the far ones out is gone)
 //   G. with the pack gone the Campaign is what it was
 // Run: node tests/campsol.mjs   (exit code 1 on a failed check)
 import { readFileSync as __rf } from 'node:fs';
@@ -150,7 +150,7 @@ check('near the Sun it is drawn as a star, not a planet: the G star texture, add
 g.run(`F1.camp.carrier.x = 0; F1.camp.carrier.y = 0; F1.syncFar(3000);`);
 check('a scene that has not made its table (a stand-in, or before create) does nothing and does not throw', J(`(() => { const f = Object.create(Campaign.prototype); f.level = "home"; f.camp = campNew("home", [], {}); f.syncFar(1000); return true; })()`));
 const scene = readFileSync(ROOT + '/src/campaignscene.js', 'utf8');
-check('create makes only the near places (not far ones), and update asks syncFar; the radar leaves out a far body beyond its range', /!pl\[id\]\.hidden && !pl\[id\]\.far\) this\.drawPlace/.test(scene) && /this\.syncFar\(time\)/.test(scene) && /!\(pl\[id\]\.far && Math\.hypot\(pl\[id\]\.x - c\.x, pl\[id\]\.y - c\.y\) > R\.range\)/.test(scene));
+check('create makes only the near places (not far ones), and update asks syncFar (the radar that left a far body out of its disc is gone: card space-game-target-display)', /!pl\[id\]\.hidden && !pl\[id\]\.far\) this\.drawPlace/.test(scene) && /this\.syncFar\(time\)/.test(scene));
 
 // ---- G. no pack ----
 const bare = nodeGame({ replace: { 'mods.generated.js': 'var MODS = { version: 1, packs: [], errors: [] };' } });
