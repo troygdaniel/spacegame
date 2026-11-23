@@ -1,6 +1,6 @@
 // not in the smoke: a boot of the Campaign's outposts, run by hand (one Chrome, muted, through the test lock; card space-game-campaign-outposts)
 // The rules are in tests/campoutpost.mjs and tests/campdock.mjs (plain Node). This boots the belt (level 1: the cruiser starts by Occator Works) and does what Troy does: opens the ship list (P) and its dock list (U, card list-shortcuts) undocked, docks
-// through it (U, Down to the dock row, Enter), builds a fighter in the ready room, undocks with L, flies away hurt and alone to see the retreat line and the map's stations, and fits the Fabricator.
+// through it (U, Down to the dock row, Enter), mends the hull in the ready room (nothing is built any more), undocks with L, and flies away hurt and alone to see the retreat line and the map's stations.
 //   node tests/campoutpost-boot.mjs
 // Pictures go to the folder in OUTPOST_SHOTS (default ~/dev/spacegame-night/shots/outpost-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -61,20 +61,15 @@ try {
   await listOrder('dock'); // U, Down to "Dock at the outpost", Enter
   check('the dock row docks: the Campaign scene is paused and the ready room opens as that outpost', await settle(`game.scene.isActive('CampHub') && ${HUB}.hub && ${HUB}.look && ${HUB}.look.name === 'Occator Works'`) && await j(`${SCN}.scene.isPaused() && ${SCN}.docked === true && ${SCN}.camp.docked === 'ceres'`));
   await t.run(1200); await snap('3-dock-room-build');
-  check('the room has the dock\'s five rows, BUILD first, the ore of the battle on its page', (await shown()).some(x => /^BUILD {2}- {2}OCCATOR WORKS$/.test(x)) && (await shown()).some(x => /^Ore in the store: 100$/.test(x)), (await shown()).join(' | '));
-  await key('KeyF'); await key('KeyF'); await t.run(300); await snap('4-dock-room-built');
-  check('F, F: two fighters are queued (50 ore), the page says so', await j(`${SCN}.camp.build.queue.length === 2 && ${SCN}.camp.ore === 50`) && (await shown()).some(x => /2 in the yard$/.test(x)), (await shown()).join(' | '));
-  await t.ev(`(() => { ${SCN}.camp.carrier.hp = ${SCN}.camp.carrier.maxHp * 0.4; return 1; })()`); await key('Digit2'); await key('KeyR'); await t.run(300); await snap('5-dock-room-repair');
-  check('REPAIR: R mends the hull for ore, the battle\'s hull is whole', await j(`${SCN}.camp.carrier.hp === ${SCN}.camp.carrier.maxHp && ${SCN}.camp.ore < 50`));
-  await t.ev(`(() => { ${SCN}.camp.ore = 400; return 1; })()`); await key('Digit3'); await key('KeyU'); await t.run(300); await snap('6-dock-room-fabricator'); // 400: the Fabricator costs 300 since card space-game-ore-bay-bigger (the store holds 500)
-  check('REFIT: U fits the Fabricator: the battle and the progress both have it', await j(`campHas(${SCN}.camp, 'fabricator') && ${SCN}.P.techs.includes('fabricator')`) && await j(`JSON.parse(localStorage.getItem('longhaul.campaign')).techs.includes('fabricator')`));
-  await key('Digit5'); await t.run(1400); await snap('7-dock-room-undock');
+  check('the room has the dock\'s page: REPAIR, the ore of the battle on it (nothing is built here any more: card space-game-three-pilots)', (await shown()).some(x => /^REPAIR$/.test(x)) && (await shown()).some(x => /Ore in the store: 100$/.test(x)), (await shown()).join(' | '));
+  await t.ev(`(() => { ${SCN}.camp.carrier.hp = ${SCN}.camp.carrier.maxHp * 0.4; return 1; })()`); await key('KeyR'); await t.run(300); await snap('5-dock-room-repair');
+  check('REPAIR: R mends the hull for ore, the battle\'s hull is whole', await j(`${SCN}.camp.carrier.hp === ${SCN}.camp.carrier.maxHp && ${SCN}.camp.ore < 100`));
+  await t.run(1400); await snap('7-dock-room-undock');
   await key('KeyL');
   check('L undocks: the room is gone, the battle runs again, the carrier is free', await settle(`!game.scene.isActive('CampHub') && game.scene.isActive('Campaign') && !${SCN}.scene.isPaused() && ${SCN}.camp.docked === '' && ${SCN}.docked === false`));
   // away from every outpost: the Fabricator builds anywhere; the retreat line when hurt and alone
   await t.ev(`(() => { const C = ${SCN}.camp; C.carrier.x = 3000; C.carrier.y = 3000; C.carrier.vx = 0; C.carrier.vy = 0; C.ore = 100; return 1; })()`); await t.run(600);
-  check('with the Fabricator, far from every outpost, Build a fighter is allowed (the answer is the order\'s)', await j(`campCheck(${SCN}.camp, 'build', 'fighter').ok`));
-  await t.ev(`(() => { const C = ${SCN}.camp; C.techs = C.techs.filter(x => x !== 'fabricator'); C.bay.fighters = 0; C.bay.escorts = 0; C.build.queue.length = 0; C.launchQ.length = 0; C.ships.forEach(u => { if (u.team === 'earth' && u.kind !== 'carrier') u.hp = 0; }); C.carrier.hp = C.carrier.maxHp * 0.2; return 1; })()`); await t.run(1200);
+  await t.ev(`(() => { const C = ${SCN}.camp; C.bay.fighters = 0; C.bay.escorts = 0; C.launchQ.length = 0; C.ships.forEach(u => { if (u.team === 'earth' && u.kind !== 'carrier') u.hp = 0; }); C.carrier.hp = C.carrier.maxHp * 0.2; return 1; })()`); await t.run(1200);
   const hudLine = await j(`${SCN}.hud.post.text`);
   check('hurt and alone, far from an outpost: the HUD says "Retreat to <place>: N s on Fast."', /^Retreat to [A-Za-z ]+: \d+ s on Fast\.$/.test(hudLine), hudLine);
   check('the ship says it too (a toast and the voice line) and the goal of the map is that place', await j(`campNavGoal(${SCN}.camp) && campNavGoal(${SCN}.camp).id === 'place:' + campRetreat(${SCN}.camp).o.id`));

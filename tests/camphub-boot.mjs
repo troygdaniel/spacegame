@@ -41,7 +41,7 @@ try {
   await key('Digit2'); const there = await settle(`Math.abs(${HUB}.player.x - 640) < 4 && Math.abs(${HUB}.player.y - 246) < 4`, 80); await t.run(300); await snap('3-refit');
   check('2: the refit at the repair bay: the pilot has walked to it', there);
   await key('Enter'); await t.run(300); await snap('3-refit-overlay');
-  check('Enter opens the refit overlay: each choice says what it changes, its cost and what you have', (await shown()).some(x => /^Fighters in your wing: 8 to 9$/.test(x)) && (await shown()).some(x => /^25 ore$/.test(x)) && (await shown()).some(x => /^You can buy it\.$/.test(x)) && (await shown()).some(x => /^Damage the carrier takes: 100 to 60 percent$/.test(x)));
+  check('Enter opens the refit overlay: each choice says what it changes, its cost and what you have', (await shown()).some(x => /^Wing strength: 8 to 9 fighters$/.test(x)) && (await shown()).some(x => /^25 ore$/.test(x)) && (await shown()).some(x => /^You can buy it\.$/.test(x)) && (await shown()).some(x => /^Damage the carrier takes: 100 to 60 percent$/.test(x)));
   await key('KeyF'); await key('KeyF'); await key('KeyF'); await t.run(300); await snap('3b-refit-bought');
   const sv = await j(`JSON.parse(localStorage.getItem('longhaul.campaign'))`);
   check('F, F, F bought three fighters (there is no escort to buy): 100 - 25 - 25 - 25 = 25 ore, in the save at once', sv.ore === 25 && sv.bonus.fighters === 3 && sv.bonus.escorts === undefined, JSON.stringify(sv.bonus) + ' ore ' + sv.ore);
@@ -51,7 +51,7 @@ try {
   check('4: the pilot walks to the pad and its sentence says what launching does', arrived && (await shown()).some(x => /Take the cruiser out on mission 2 of 3/.test(x)), await j(`JSON.stringify([${HUB}.player.x, ${HUB}.player.y])`));
   await key('KeyL');
   check('L launches: the Campaign scene starts on mission 2 via the hub, and goes straight to the flight (no second briefing)', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.camp`) && await j(`${CAMPS}.via === 'hub' && ${CAMPS}.mi === 1 && ${CAMPS}.level === 1`) && await settle(`${CAMPS}.mode === 'play'`), await j(`${CAMPS}.mode`));
-  check('the wing is the one bought in the room: 11 fighters in the bay at the start (8 and the 3 bought)', await j(`${CAMPS}.camp.bay.fighters === 11`), await j(`JSON.stringify(${CAMPS}.camp.bay)`));
+  check('the wing is the one bought in the room: still the three pilots in the bay, with a strength of 11 fighters\' worth at the start (8 and the 3 bought: card space-game-three-pilots)', await j(`${CAMPS}.camp.bay.fighters === 3 && ${CAMPS}.camp.strength === 11`), await j(`JSON.stringify({ bay: ${CAMPS}.camp.bay, strength: ${CAMPS}.camp.strength })`));
   await t.run(1500); await snap('6-flight');
   // the mission is won: the debrief, and Enter returns to the room
   await t.ev(`(() => { const s = ${CAMPS}; campEnd(s.camp, 'won', 'test'); return 1; })()`); await t.run(2600);
