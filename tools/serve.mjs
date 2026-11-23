@@ -1,6 +1,6 @@
 // Optional dev server for Long Haul (docs/MODDING.md section 4). Nothing in the game needs it: index.html still opens by double-click.
 // It is for people who edit markdown in content/: it serves this folder, rebuilds content.generated.js the moment a file in
-// content/ changes, and tells the open page, which then reloads when you press R.
+// content/ changes, and tells the open page, which then reloads when you press Shift+R or click its chip (plain R is the game's: Guard in the Campaign).
 //   node tools/serve.mjs                     http://127.0.0.1:8787/   (the next free port if that one is taken)
 //   --port N        another port; 0 means any free port
 //   --root DIR      the folder to serve (default: this repo)
@@ -31,27 +31,27 @@ const MIME = {
 };
 
 // What the open page runs (sent as /__dev.js, and only to pages this server sends): a small chip that says what the server did,
-// and the R key. R does nothing while you type in a box, and Ctrl/Cmd+R is left to the browser.
+// and the Shift+R key. Plain R does nothing here: R is a key of the game (Guard in the Campaign, restart on its pause card), so it must not reload the page (card space-game-dev-r-reload-clash). Shift+R does nothing while you type in a box, and Ctrl/Cmd+R is left to the browser.
 const DEV_CLIENT = `(function () {
   var chip = document.createElement('div');
   chip.style.cssText = 'position:fixed;left:10px;bottom:10px;z-index:2147483647;font:12px monospace;padding:6px 10px;border-radius:3px;cursor:pointer;background:#04101c;border:1px solid #38e1ff;color:#9fe9ff;opacity:0.92';
-  chip.title = 'Press R (or click) to reload the page';
+  chip.title = 'Press Shift+R (or click) to reload the page; plain R belongs to the game';
   var set = function (text, color) { chip.textContent = text; chip.style.borderColor = color; chip.style.color = color; };
   var reload = function () { location.reload(); };
   chip.addEventListener('click', reload);
   (document.body || document.documentElement).appendChild(chip);
-  set('DEV SERVER  R reloads', '#38e1ff');
+  set('DEV SERVER  Shift+R reloads', '#38e1ff');
   var say = function (d) {
     var at = new Date(d.at).toLocaleTimeString();
-    if (d.problems) set('content rebuilt ' + at + ': ' + d.problems + ' problem' + (d.problems === 1 ? '' : 's') + ' (see the terminal)   R reloads', '#ffb454');
-    else set('content rebuilt ' + at + ': no problems   R reloads', '#6dff9c');
+    if (d.problems) set('content rebuilt ' + at + ': ' + d.problems + ' problem' + (d.problems === 1 ? '' : 's') + ' (see the terminal)   Shift+R reloads', '#ffb454');
+    else set('content rebuilt ' + at + ': no problems   Shift+R reloads', '#6dff9c');
   };
   var es = new EventSource('/__events');
   es.addEventListener('state', function (e) { var d = JSON.parse(e.data); if (d.problems) say(d); });
   es.addEventListener('rebuilt', function (e) { say(JSON.parse(e.data)); });
   es.onerror = function () { set('dev server stopped', '#ff4d6d'); };
   window.addEventListener('keydown', function (e) {
-    if (e.code !== 'KeyR' || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    if (e.code !== 'KeyR' || !e.shiftKey || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return; // Shift+R only: a plain R is Guard in the game
     var t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     reload();
@@ -221,7 +221,7 @@ async function main() {
   const s = startServer(o);
   try {
     const { url } = await s.ready;
-    console.log(`Long Haul dev server: ${url}   (serving ${o.root.replace(REPO, '.') || '.'}; press R in the page to reload it; Ctrl+C stops)`);
+    console.log(`Long Haul dev server: ${url}   (serving ${o.root.replace(REPO, '.') || '.'}; press Shift+R in the page to reload it; Ctrl+C stops)`);
     console.log(playlogDirOk(o.playlogs) ? `play log: the page's log is kept in ${o.playlogs.replace(homedir(), '~')} (outside the repo)` : `play log: ${o.playlogs} is inside the repo: the page's log is NOT kept (use --playlogs with a folder outside it)`);
     console.log(o.watch ? `watching ${o.content.replace(REPO + sep, '')}/${o.modsToo ? ' and ' + o.mods.replace(REPO + sep, '') + '/' : ''} and rebuilding ${o.out.replace(REPO + sep, '')}${o.modsToo ? ' and ' + o.modsOut.replace(REPO + sep, '') : ''} when it changes` : 'not watching: --no-watch');
   } catch (e) {
