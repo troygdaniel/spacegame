@@ -1,6 +1,6 @@
 // ---------- Campaign: the order lists, the logic (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026) ----------
 // Q opens the FLEET list at the left, P the SHIP list at the right. Each has a row for every part of it, and a part has a key of its own that opens its list directly, at any time: W CONVOY, E FIGHTERS, R ESCORTS on the left;
-// O AUTOPILOT, I POWER, U DOCK AND BUILD on the right (STANCE is a part with no key: Enter on its row opens it). Nothing is on the screen until a key is pressed; only one list is open at a time.
+// O POWER, I AUTOPILOT, U DOCK AND REPAIR on the right (STANCE is a part with no key: Enter on its row opens it). Nothing is on the screen until a key is pressed; only one list is open at a time.
 // In an open list Up and Down move the highlight (round at the ends), Enter gives the highlighted order (on a part's row: opens that part), Left goes back to the list it is a part of, the list's own key closes it.
 // ESC GOES BACK ONE STEP, TO WHERE YOU CAME FROM (card space-game-order-target-pick; Troy, 22 Nov 2026): a target sub-list (src/camppick.js) goes back to the list it was opened from; a list opened from a part's row (Q, then Squads) goes back to that list (Q);
 // a list opened by its own key (Q, or W E R T, O I U) is closed; with nothing open Esc pauses (the scene). P.trail is the lists we came through by rows, the last one first to go back to.
@@ -18,7 +18,7 @@
 //   campPanelView(P, C)              what the open list draws: null, or { id, title, key, side, parent, keys (the foot's words), pick (a target sub-list), rows (the ones on the screen), at (the highlight, in rows), first, total, above, below (rows off the screen) }
 //   campPanelRun(C, row, how, item)  do the row: campOrder with the row's words (how: 'key' or 'click', the play log's), an order to one part of the wing, the autopilot, the blink -> { ok, say }; item: the candidate a pick row's order is given at (src/camppick.js)
 //   campPanelTarget(C)               the line of the target: { name, km, hp } or null
-//   campPanelKeyLine()               'Q Fleet  W Convoy  E Fighters  R Escorts   P Ship  O Autopilot  I Power  U Dock': the lists' keys, from the table;   campKeyLine(): the whole bottom key line (camp.ui.keys)
+//   campPanelKeyLine()               'Q Fleet  W Convoy  E Fighters  R Escorts   P Ship  O Power  I Autopilot  U Dock': the lists' keys, from the table;   campKeyLine(): the whole bottom key line (camp.ui.keys)
 const campPanelDef = id => CAMP_PANELS.panels.find(p => p.id === id) || null;
 const campPanelNew = () => ({ open: '', at: 0, top: 0, lit: {}, trail: [], pick: null, seen: null, ring: null });
 const campPanelOpen = P => (P && typeof P.open === 'string' && campPanelDef(P.open) ? P.open : '');
@@ -166,8 +166,11 @@ function campPanelWhy(r) {
 }
 // the squad a row is about (its order is to one squad, or it opens that squad's list): 'red', 'green', 'yellow', or '' (card space-game-fighter-squads)
 const campPanelSquadOf = row => { const g = row.wing && CAMP.wing.groups[row.wing[0]]; return g && g.squad ? g.squad : row.open && CAMP.wing.squads.indexOf(row.open) >= 0 ? row.open : ''; };
+// what a row of the DOCK AND REPAIR list costs, in words, from the row's own `cost` (the table CAMP_YARD, src/data_controls.js): '25 ore, 12 s', or short '25 ore'; '' for a row with no cost
+const campPanelCost = (row, short) => { const B = CAMP.build, k = row.cost; return k && B[k + 'Cost'] != null ? B[k + 'Cost'] + ' ore' + (short ? '' : ', ' + B[k + 'Time'] + ' s') : ''; };
 function campPanelState(C, row) {
   const B = CAMP.build, sq = campPanelSquadOf(row);
+  if (row.cost) return campPanelCost(row); // a yard row: what it costs
   if (sq) { const n = campWingShips(C, sq).length, tg = row.wing && row.wing[1] === 'attack' ? campPanelTarget(C) : null; return tg ? tg.name + ', ' + tg.km + ' km' : n + (n === 1 ? ' ship out' : ' ships out'); } // a squad's row: the target the attack goes at, else how many of its ships are out
   switch (row.id) {
     case 'launch': case 'slaunch': return C.bay.fighters + ' fighters, ' + C.bay.escorts + ' escorts';
@@ -184,8 +187,6 @@ function campPanelState(C, row) {
     case 'weapons': case 'shields': case 'engines': { const i = { weapons: 0, shields: 1, engines: 2 }[row.id], fx = campPowerFx(C); return C.power.p[i] + (C.power.p[i] === 1 ? ' pip: ' : ' pips: ') + (i === 0 ? 'turrets x' + (1 / fx.delay).toFixed(2) : i === 1 ? 'shield ' + Math.round(campShieldMax(C)) + (fx.regen > 0 ? ', mends ' + fx.regen + '/s' : ', no mend') : 'speed x' + fx.speed.toFixed(2)); }
     case 'balance': return 'now ' + C.power.p.join(' / ');
     case 'mine': return campMiners(C).length + ' ships, ' + C.rocks.filter(r => r.hp > 0).length + ' rocks, ' + C.pickups.length + ' ore'; // the whole wing mines (the belt, space-game-campaign-belt): rocks to cut and ore lying about
-    case 'buildf': return B.fighterCost + ' ore, ' + B.fighterTime + ' s';
-    case 'builde': return B.escortCost + ' ore, ' + B.escortTime + ' s';
     case 'free': case 'orbit': case 'keep': case 'match': case 'hold': return C.stance === row.id ? 'in force' : ''; // the wing's stance: the one in force is marked
     case 'ctuck': case 'chold': case 'crun': case 'ccarry': return campPanelConvoyMarked(C, row) ? 'in force' : campPanelShips(campConvoyShips(C).length); // the convoy orders: the one in force is marked (src/campconvoy.js)
     case 'emergency': return CAMP.power.emergency.ms / 1000 + ' s of shields, then back';
@@ -205,6 +206,7 @@ function campPanelShortWhy(r) {
 }
 function campPanelShortState(C, row) {
   const B = CAMP.build, sq = campPanelSquadOf(row);
+  if (row.cost) return campPanelCost(row, true);
   if (sq) { const tg = row.wing && row.wing[1] === 'attack' ? campPanelTarget(C) : null; return tg ? tg.km + ' km' : campWingShips(C, sq).length + ' out'; }
   switch (row.id) {
     case 'launch': case 'slaunch': return (C.bay.fighters + C.bay.escorts) + ' in bay';
@@ -221,8 +223,6 @@ function campPanelShortState(C, row) {
     case 'shields': case 'engines': case 'weapons': return CAMP_KEYS[row.id].k; // the key of the row (the pips are the row's own bar now, the gauge's twin: src/campanelsdraw.js)
     case 'balance': return CAMP_KEYS.balance.k + '   ' + C.power.p.join(' / ');
     case 'mine': return campMiners(C).length + ' ships';
-    case 'buildf': return B.fighterCost + ' ore';
-    case 'builde': return B.escortCost + ' ore';
     case 'dock': { if (campPanelAs(C, row).order === 'repair') return campMendQuote(C).cost + ' ore'; const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name : ''; } // the outpost in range, by name (the row had no word of its own when it could be done: wrap-up, 8-GEN)
     case 'goal': case 'burn': { const g = campNavGoal(C); return g ? campNavKm(Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y)) + ' km' : ''; }
     case 'target': case 'burntarget': { const tg = campPanelTarget(C); return tg ? tg.km + ' km' : ''; }
