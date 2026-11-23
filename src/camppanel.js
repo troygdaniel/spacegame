@@ -204,7 +204,7 @@ function campPanelState(C, row) {
     case 'attack': { const tg = campPanelTarget(C); return tg ? tg.name + ', ' + tg.km + ' km' : campWing(C, 'fighter').length + ' fighters out'; } // the target, when one is picked
     case 'escort': { const cv = campNearest(campConvoys(C), C.carrier); return cv ? campConvoyName(cv) + ' convoy' : 'stay by the carrier'; } // a level with no convoy (the belt): the squads stay close
     case 'guard': case 'recall': return campWing(C).length + ' ships out';
-    case 'gsquads': case 'fguard': case 'fguardt': case 'fmine': case 'frecall': return campWing(C, 'fighter').length + ' fighters out';
+    case 'gsquads': case 'fguard': case 'fguardt': case 'fmine': case 'frecall': { const out = campWing(C, 'fighter').length; return out || !(C.bay.fighters > 0) ? out + ' fighters out' : C.bay.fighters + ' in the bay'; } // pilots in the bay take the order by launching (card space-game-keys-orders)
     case 'gconvoy': return campPanelConvoyName(C);
     case 'gnav': return C.nav ? 'flying to ' + C.nav.name : 'not flying';
     case 'gpower': return 'weapons ' + C.power.p[0] + ', shields ' + C.power.p[1] + ', engines ' + C.power.p[2];
@@ -238,7 +238,7 @@ function campPanelShortState(C, row) {
     case 'attack': return campWing(C, 'fighter').length + ' out';
     case 'escort': { const cv = campNearest(campConvoys(C), C.carrier); return cv ? campConvoyName(cv) : 'stay close'; }
     case 'guard': case 'recall': return campWing(C).length + ' out';
-    case 'gsquads': case 'fguard': case 'fguardt': case 'fmine': case 'frecall': return campWing(C, 'fighter').length + ' out';
+    case 'gsquads': case 'fguard': case 'fguardt': case 'fmine': case 'frecall': { const out = campWing(C, 'fighter').length; return out || !(C.bay.fighters > 0) ? out + ' out' : C.bay.fighters + ' in bay'; }
     case 'gconvoy': return campPanelConvoyName(C);
     case 'gnav': return C.nav ? 'on' : '';
     case 'gpower': return C.power.p.join(' / ');
