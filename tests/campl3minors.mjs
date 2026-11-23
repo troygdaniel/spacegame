@@ -47,7 +47,7 @@ check('the two refusal lines of a level with no outpost are gone from the words 
 // ---- the tower missions' lose tip ----
 const lose = (lv, m) => J(`(() => { const C = campNew(${lv}, [], { seed: 1, mission: ${m} }); campHurt(C, C.carrier, 99999, 'x'); campStep(C, 0.1); return campLoseLines(C, C.why); })()`);
 check('the tower missions (level 3, outer and inner ring) give the tip that helps: "Fire missiles (Enter) at the towers. Send the wing at them."', [1, 2].every(m => lose(3, m)[2] === 'Fire missiles (Enter) at the towers. Send the wing at them.'), JSON.stringify(lose(3, 1)));
-check('the other missions keep the generic one ("Launch the wing early (1, then 1)...")', lose(3, 0)[2].startsWith('Launch the wing early') && lose(1, 0)[2].startsWith('Launch the wing early') && lose(2, 1)[2].startsWith('Launch the wing early'), JSON.stringify([lose(3, 0)[2], lose(1, 0)[2]]));
+check('the other missions keep the generic one ("Use the pilots early: they draw fire...")', lose(3, 0)[2].startsWith('Use the pilots early') && lose(1, 0)[2].startsWith('Use the pilots early') && lose(2, 1)[2].startsWith('Use the pilots early'), JSON.stringify([lose(3, 0)[2], lose(1, 0)[2]]));
 check('and the words are short enough to say (twelve words)', 'Fire missiles (Enter) at the towers. Send the wing at them.'.split(/\s+/).length <= 12);
 
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));

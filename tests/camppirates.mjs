@@ -11,6 +11,7 @@ let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const store = new Map();
 const g = nodeGame({ store });
+g.run('CAMP.bay.startOut = false; // this suite\'s set-up is the old start: the pilots begin in the bay (the game starts them out beside the cruiser: card space-game-keys-orders; tests/campkeysorders.mjs has the new start)');
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 

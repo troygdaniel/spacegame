@@ -15,6 +15,7 @@ import { nodeGame, ROOT } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const g = nodeGame({ store: new Map() });
+g.run('CAMP.bay.startOut = false; // this suite\'s set-up is the old start: the pilots begin in the bay (the game starts them out beside the cruiser: card space-game-keys-orders; tests/campkeysorders.mjs has the new start)');
 const R = code => { try { g.run('(() => {' + code + '\n})()'); return true; } catch (e) { check('setup: ' + String(code).trim().slice(0, 70), false, e.message); return false; } };
 const J = e => JSON.parse(g.run(`(() => { try { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); } catch (e) { return JSON.stringify({ THROWS: e.message }); } })()`));
 const read = f => readFileSync(ROOT + '/' + f, 'utf8');

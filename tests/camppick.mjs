@@ -15,6 +15,7 @@ import { nodeGame } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame();
+g.run('CAMP.bay.startOut = false; // this suite\'s set-up is the old start: the pilots begin in the bay (the game starts them out beside the cruiser: card space-game-keys-orders; tests/campkeysorders.mjs has the new start)');
 g.run('campFleetListSet(true)'); // this suite is about the lists' code, Q's pop-up included: it is switched off in the game (CAMP_FLEET_LIST, card space-game-q-selects-all) and on here; tests/campselect.mjs has the game's own state
 g.run('campShipListSet(true)'); // and the ship list too: it is switched off in the game (CAMP_SHIP_LIST, card space-game-p-opens-power: P opens power) and on here; tests/campselect.mjs has the game's own state
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
@@ -59,7 +60,7 @@ console.log('B. Attack');
   g.run(`CB.ships = CB.ships.filter(u => u.team !== 'alien'); campPanelClose(PB); __list(PB, CB, 'squads');`);
   let r = J(`__row(PB, CB, 'attackpick', 100)`);
   check('with no hostile the row is grey ("no hostiles in sight", "none seen") and Enter is refused in words, no order given, the list stays open on the row', (() => { const st = J(`campPanelRows(CB, 'squads').find(x => x.id === 'attackpick')`); return !st.ok && st.state === 'no hostiles in sight' && st.short === 'none seen' && r.used && r.ran && !r.ok && /no hostiles/i.test(r.say) && r.open === 'squads' && J('PB.pick') === null && J('CB.orders.attack | 0') === 0; })(), JSON.stringify(r));
-  check('the refusal of its own comes first: with no fighter out the row says so, not "no hostiles"', (() => { g.run(`window.CB0 = campNew(1, [], { seed: 5, god: true, mission: 0 }); CB0.ships = CB0.ships.filter(u => u.team !== 'alien'); window.PB0 = campPanelNew(); __list(PB0, CB0, 'squads');`); const q = J(`__row(PB0, CB0, 'attackpick', 0)`), st = J(`campPanelRows(CB0, 'squads').find(x => x.id === 'attackpick')`); return !q.ok && /fighters|squad/i.test(q.say) && !/hostiles/i.test(q.say) && !st.ok && !/hostiles/.test(st.state); })());
+  check('the refusal of its own comes first: with no fighter out and none in the bay the row says so, not "no hostiles"', (() => { g.run(`window.CB0 = campNew(1, [], { seed: 5, god: true, mission: 0 }); CB0.bay.fighters = 0; CB0.ships = CB0.ships.filter(u => u.team !== 'alien'); window.PB0 = campPanelNew(); __list(PB0, CB0, 'squads');`); const q = J(`__row(PB0, CB0, 'attackpick', 0)`), st = J(`campPanelRows(CB0, 'squads').find(x => x.id === 'attackpick')`); return !q.ok && /fighters|squad/i.test(q.say) && !/hostiles/i.test(q.say) && !st.ok && !/hostiles/.test(st.state); })());
   g.run(`campPanelClose(PB); window.F1 = __foe(CB, 900, 0);`);
   g.run(`__list(PB, CB, 'squads');`);
   r = J(`__row(PB, CB, 'attackpick', 200)`);

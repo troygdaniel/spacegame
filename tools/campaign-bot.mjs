@@ -112,6 +112,7 @@ g.run(`(() => {
     if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight)) {
       const boat = typeof campTorpedoBoats === 'function' ? campTorpedoBoats(C).filter(u => !u.running).sort((p, q) => campDist(p, C.carrier) - campDist(q, C.carrier))[0] : null; // torpedo boats (card space-game-torpedo-boats): the plain answer is to send the fighters at the nearest boat that still has a torpedo, before anything else
       if (boat) { if (window.__KEYS) { aim(C, boat.id); pilotKey(C, 'red', 'KeyE'); pilotKey(C, 'green', 'KeyE'); } else ['red', 'green'].forEach(k => campWingOrder(C, k, 'attack', boat.id)); } else ord(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : '');
+      const left = campAliens(C).filter(u => !u.hold); if (left.length && left.every(u => u.running)) { const run = left.sort((p, q) => campDist(p, C.carrier) - campDist(q, C.carrier))[0]; campWingOrder(C, null, 'attack', run.id, 'bot'); } // all that is left is a pirate running with its hull gone: the wing is sent at it by name, as a player picks it (the pilots start out now, and a runner kept out of the wing's own sight: card space-game-keys-orders)
       st.mining = false;
     }
   };
@@ -124,7 +125,7 @@ g.run(`(() => {
     if (B.sit && a && campDist(a, c) > 900) a = null; // a carrier that stays where it is and fights only what comes close
     if (B.sit && !a) { C.input.thrust = 0; C.input.turn = 0; C.input.fire = false; return; }
     const L = C.L; let goal = a;
-    if (L.place && C.arrivedAt == null) { if (!C.nav || !C.nav.on) { const gp = campNavGoal(C); if (gp) campNavGo(C, gp, true); } return; } // the trip to the mission's place first: the map's Fast click, which the autopilot flies (it sets the input itself)
+    if (L.place && C.arrivedAt == null) { if (campNavOut(C)) { if (!st.tripHome) { st.tripHome = true; campWingOrder(C, null, 'recall', null, 'bot'); } return; } /* the pilots start out (card space-game-keys-orders): they come home first, a Fast burn needs the wing aboard */ if (!C.nav || !C.nav.on) { const gp = campNavGoal(C); if (gp) campNavGo(C, gp, true); } return; } // the trip to the mission's place first: the map's Fast click, which the autopilot flies (it sets the input itself)
     if (L.objectives) { // a mission: fly at what its first open objective asks (a point to scan, a cache, the relic, the haulers), and at what comes near
       const first = campObjectives(C).find(o => !o.done) || {}, byD = list => list.sort((p, q) => campDist(p, c) - campDist(q, c))[0];
       if (first.type === 'scan') goal = byD(C.scan.filter(p => !p.got)) || goal; else if (first.type === 'caches') goal = byD(C.caches.filter(k => !k.got)) || goal; else if (first.type === 'relic') goal = C.relic;

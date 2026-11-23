@@ -17,6 +17,7 @@ import { run as botRun, techsFor, botGame } from '../tools/campaign-bot.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const store = new Map(), g = nodeGame({ store });
+g.run('CAMP.bay.startOut = false; // this suite\'s set-up is the old start: the pilots begin in the bay (the game starts them out beside the cruiser: card space-game-keys-orders; tests/campkeysorders.mjs has the new start)');
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const CAMP0 = g.run('JSON.stringify([CAMP])'); // the tables as shipped, to prove nothing moves
 
@@ -148,7 +149,7 @@ check('fighter repair: a fighter under a third of its hull breaks off for home w
 check('convoy orders: tuck in is an order with it on and is refused with it off; the Convoy part is not in the fleet list, so nothing opens the convoy list (it has no key of its own)', J(`(() => { const ask = on => { __mk(); campTuneSet('convoyorders', on); window.__run(6); const r = [campConvoyOrder(C, 'tuck in', true).ok, campPanelList(C, 'fleet').some(x => x.id === 'gconvoy'), campPanelList(C, 'fleet').some(x => x.open === 'convoy')].join(); campTuneResetAll(); return r; }; return ask(true) + '|' + ask(false); })()`) === 'true,true,true|false,false,false');
 check('turrets fire by themselves: with it on a tower in reach is shot at with no Space held; with it off (as shipped) it is not', J(`(() => { const shots = on => { __mk(); campTuneSet('autofire', on); __tower(); C.input.fire = false; __run(2); const r = window.__turrets; campTuneResetAll(); return r; }; return [shots(false), shots(true) > 0].join(); })()`) === '0,true');
 check('the laser charge: with it off the turrets never run dry and the tank is full; with it on firing drains it', J(`(() => { const run = on => { __mk(); campTuneSet('laser', on); __tower(); C.input.fire = true; __run(4); const r = Math.round(campLaserFrac(C) * 100); campTuneResetAll(); return r; }; return [run(true) < 100, run(false)].join(); })()`) === 'true,100');
-check('the first-minute hints: with it on some hint comes due in the first two minutes; with it off none ever does', J(`(() => { const any = on => { __mk(); campTuneSet('hints', on); const shown = {}; let n = 0; for (let t = 0; t < 120; t += 2) { C.t = t * 1000; if (campNudge(C, shown)) n++; } campTuneResetAll(); return n; }; return [any(true) > 0, any(false)].join(); })()`) === 'true,0');
+check('the first-minute hints (the pilots start out: the one hint is to send them at an enemy): with it on some hint comes due in the first two minutes; with it off none ever does', J(`(() => { const any = on => { CAMP.bay.startOut = true; __mk(); CAMP.bay.startOut = false; campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y); campTuneSet('hints', on); const shown = {}; let n = 0; for (let t = 0; t < 120; t += 2) { C.t = t * 1000; if (campNudge(C, shown)) n++; } campTuneResetAll(); return n; }; return [any(true) > 0, any(false)].join(); })()`) === 'true,0');
 const flags = ['distress', 'tboats', 'rival', 'repair', 'convoyorders', 'laser', 'hints'];
 for (const f of flags) {
   botGame.run(`campTuneSet(${JSON.stringify(f)}, false)`);

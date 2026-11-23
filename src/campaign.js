@@ -130,6 +130,7 @@ const CAMP = {
   },
   bay: {
     fighters: 3,                           // fighters in the bay at the start: THREE PILOTS, one for each squad (card space-game-three-pilots, Troy, 23 Nov 2026; CAMP.pilots). It was eight fighters in three squads of 3, 3 and 2: the pilot of a squad is as strong as the squad was (CAMP.pilotStrength)
+    startOut: true,                        // true: the pilots are out beside the cruiser when a mission begins (card space-game-keys-orders; Troy, 23 Nov 2026); false: they start in the bay and leave on an order, as before (the node suites about the bay, and the launch queue, set it)
     launchEvery: 600,                      // ms between ships leaving the bay once Launch is ordered
     mouth: [21, 19.5],                     // px from the carrier's centre (x along the nose, y to the side): where a launched ship appears, one side and then the other: just in front of the launch tube of a hangar pod (CAMP_ART.cruiser.launch)
     dockAt: 63                             // px: a recalled ship this close to the carrier lands (and is whole again when next launched)
@@ -822,6 +823,7 @@ function campNew(level, techs, opts) {
   if (typeof campTrafficNew === 'function') campTrafficNew(C); // the neutral ships of the level: patrols and other miners (src/camppirates.js)
   if (typeof campTorpedoNew === 'function') campTorpedoNew(C); // the torpedoes in flight and their counts (src/camptorpedo.js)
   campAnomNew(C, opts.found); // the cloaked caches of the level (src/campanomaly.js); what was looted in earlier flights stays looted, and its weapons are yours
+  campStartOut(C); // the three pilots are out beside the cruiser from the first second (card space-game-keys-orders)
   return C;
 }
 
@@ -963,12 +965,12 @@ function campDo(C, name, arg, dry, how) {
   }
   // Attack, Escort, Guard and Recall are the wing orders of src/campwing.js (campWingOrder) with no group and no target named: today's groups and today's answers
   if (name === 'attack') {
-    if (!campWing(C, 'fighter').length) return campNo(C.launchQ.length ? 'launching' : 'nofighters');
+    if (!campWingReach(C, 'fighters')) return campNo(C.launchQ.length ? 'launching' : 'nofighters'); // the pilots in the bay take the order by launching (card space-game-keys-orders)
     if (t && t.kind === 'mother' && !campTarget(C, t)) return campNo('nomother');
     return campWingOrder(C, null, 'attack', t && t.kind === 'mother' ? 'mother' : null, how, dry);
   }
   if (name === 'escort') {
-    if (!campWing(C, 'fighter').length) return campNo(C.launchQ.length ? 'launching' : 'nofighters');
+    if (!campWingReach(C, 'fighters')) return campNo(C.launchQ.length ? 'launching' : 'nofighters');
     if (!C.L.convoys.length) return campWingOrder(C, null, 'escort', null, how, dry); // no convoys in this level: Escort keeps the fighters close to the carrier
     const cv = t && t.kind === 'convoy' ? C.by[t.id] : t ? null : campNearest(campConvoys(C), C.carrier);
     if (!cv || cv.hp <= 0) return campNo('noconvoy');
@@ -988,7 +990,8 @@ function campDo(C, name, arg, dry, how) {
     campFire(C, tg); C.orders.missiles++; return campYes(tg.kind === 'mother' ? 'missilesmother' : 'missiles');
   }
   if (name === 'mine') {
-    const ms = campMiners(C); if (!ms.length) return campNo(C.launchQ.length ? 'launching' : 'nowing');
+    const ms = campMiners(C); if (!ms.length && campWingDocked(C, 'fighters').length) return campWingOrder(C, null, 'mine', null, how, dry); // the pilots in the bay go out to mine
+    if (!ms.length) return campNo(C.launchQ.length ? 'launching' : 'nowing');
     if (!C.pickups.length && !C.rocks.some(r => r.hp > 0)) return campNo('noore');
     if (dry) return campYes('mine');
     ms.forEach(u => { u.order = { type: 'mine' }; u.move = null; });
@@ -1312,6 +1315,14 @@ function campLaunch(C, again, order, squad) { // again: the kind of a fighter th
   if (squad && kind === 'fighter') { u.squad = squad; campPilotSet(C, u); } // a pilot mended aboard flies again as itself, in its own squad
   u.order = order || { type: 'guard', at: { kind: 'carrier' } };
   C.events.push({ type: 'launch', id: u.id, kind });
+  return u;
+}
+// THE PILOTS START OUT (card space-game-keys-orders; Troy, 23 Nov 2026: "pilots start each mission already out beside the cruiser"; there is no Launch key or row): the bay is emptied at the start of a mission, the three pilots leave it at once and guard the cruiser.
+// A pilot that is recalled later lands and waits in the bay, and an order to it launches it (src/campwing.js campWingDocked). The Launch order itself (the strip, the voice) is still there for a bay that has ships.
+function campStartOut(C) {
+  if (!CAMP.bay.startOut) return; // the old start (the pilots in the bay): a test of the bay says so
+  const n = C.bay.fighters; for (let i = 0; i < n; i++) campLaunch(C, 'fighter');
+  C.bay.fighters = 0; C.nextLaunch = 0;
 }
 
 // resource caches (level 2): any ship of yours that comes close picks one up
