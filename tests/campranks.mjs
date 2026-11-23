@@ -77,20 +77,16 @@ console.log('C. campRankStatus: what the hub reads');
 console.log('D. the wing: the bay and the limit');
 {
   g.run(`window.__rankC = (rank, techs, bonus) => { window.C = campNew(1, techs || [], { seed: 1, rank, bonus }); return C; }`);
-  const R = J('CAMP.ranks'), rows = R.map((r, i) => { g.run(`__rankC(${i})`); return { i, f: J('C.bay.fighters'), e: J('C.bay.escorts'), capf: J('C.cap.fighters'), cape: J('C.cap.escorts'), rank: J('C.rank') }; });
+  const R = J('CAMP.ranks'), rows = R.map((r, i) => { g.run(`__rankC(${i})`); return { i, f: J('C.bay.fighters'), e: J('C.bay.escorts'), rank: J('C.rank') }; });
   check('a battle starts with the rank\'s wing in the bay: 6 and 2 and the extras of each rank, and says its rank', rows.every(x => x.f === 6 + R[x.i].fighters && x.e === 2 + R[x.i].escorts && x.rank === x.i), JSON.stringify(rows.map(x => x.f + '/' + x.e)));
-  check('and the wing limit goes up with it: 14 and 6 (the workshop\'s) and the rank\'s extras', rows.every(x => x.capf === 14 + R[x.i].fighters && x.cape === 6 + R[x.i].escorts), JSON.stringify(rows.map(x => x.capf + '/' + x.cape)));
+  check('there is no wing limit to raise any more (nothing builds ships: card space-game-repair-with-ore): no C.cap in a battle', J('typeof __rankC(3).cap') === 'undefined');
   check('no rank given is a cadet: the old bay, as every battle before the ranks (a battle of a test, an address)', (g.run('window.C = campNew(1, [], { seed: 1 })'), J('C.bay.fighters') === 6 && J('C.bay.escorts') === 2 && J('C.rank') === 0));
   check('a rank out of range is held to the table (below 0 the cadet, over the last the commodore)', (g.run('__rankC(-4)'), J('C.rank') === 0) && (g.run('__rankC(99)'), J('C.rank') === 5 && J('C.bay.fighters') === 11));
   check('the second-bay tech and the extras of the refit add to the rank\'s, and all three together are in the bay', (g.run(`__rankC(2, ['bay2'], { fighters: 2, escorts: 1 })`), J('C.bay.fighters') === 6 + 4 + 2 + 2 && J('C.bay.escorts') === 2 + 1 + 1));
   g.run('__rankC(2)'); g.run('C.waves.forEach(w => { w.started = true; }); campOrder(C, "launch")');
   check('Launch puts the whole wing out: the bay of the rank, one ship every 0.6 s', J('C.launchQ.length') === 11, J('C.launchQ.length'));
-  // ships are built docked at an outpost (card space-game-campaign-outposts: campCanBuild), so the carrier of these checks is docked
-  const build = rank => { g.run(`__rankC(${rank}); C.docked = true; C.waves.forEach(w => { w.started = true; }); C.ore = 200; window.__ok = 0; for (let i = 0; i < 40; i++) { C.ore = 200; const r = campOrder(C, 'build', 'a fighter'); if (r.ok) __ok++; else { window.__code = r.code; break; } }`); return { ok: J('__ok'), code: J('__code'), total: J('C.bay.fighters + C.build.queue.length') }; };
-  const b0 = build(0), b5 = build(5);
-  check('the workshop builds up to the limit of the rank, and then says the wing is full: a cadet to 14 fighters, a commodore to 19', b0.total === 14 && b5.total === 19 && b0.code === 'buildfull' && b5.code === 'buildfull', JSON.stringify([b0, b5]));
-  const e5 = (g.run(`__rankC(5); C.docked = true; C.ore = 200; window.__eok = 0; for (let i = 0; i < 40; i++) { C.ore = 200; const r = campOrder(C, 'build', 'an escort'); if (r.ok) __eok++; else break; }`), J('C.bay.escorts + C.build.queue.length'));
-  check('and the escorts the same way: a commodore to 6 plus its 3', e5 === 9, e5);
+  // nothing builds ships any more (card space-game-repair-with-ore): the wing of a mission is the bay of the rank, and the order 'build' says so, docked or not
+  check('the wing of a mission is the bay of the rank (a cadet 6, a commodore 11) and nothing builds more: the order "build" is refused at every rank, docked too', (() => { const r = rank => { g.run(`__rankC(${rank}); C.docked = true;`); return J(`(() => { const o = campOrder(C, 'build', 'a fighter'); return { code: o.code, ok: o.ok, f: C.bay.fighters }; })()`); }; const a = r(0), b = r(5); return a.ok === false && b.ok === false && a.code === 'nobuild' && b.code === 'nobuild' && a.f === 6 && b.f === 11; })());
 }
 
 // ---------- E. the promotion ----------

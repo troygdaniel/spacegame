@@ -643,7 +643,7 @@ const CAMP = {
       name: 'The home world', start: 'arrival', startAt: [0, 0], earth: false,
       reveal: { star: 'Tau Ceti', name: 'The outpost', place: 'Alien outpost' }, // SPOILER: after the win the ending says this was an outpost and the data points to this star; once the ending has been seen (the saved flag revealed) a replay says the true names (campReveal)
       warp: { dest: 'Epsilon Eridani', ly: 9.3, star: { kind: 'lava', seed: 551 }, behind: { kind: 'lava', seed: 4371 }, companions: [], l1: 'camp.warp.l1b' }, // the warp cinematic (src/campwarp.js) from Alpha Centauri to Epsilon Eridani: the star ahead and the one behind as pictures (kind, seed) since neither is a place of this level, no companion stars, and its own first line
-      // no outposts here: the alien home world is the only place, so nothing friendly to dock at: build and repair work aboard (src/campoutpost.js campAboard), the Fabricator or not
+      // no outposts here: the alien home world is the only place, so nothing friendly to dock at: the hull is mended in space like anywhere (src/campmend.js)
       world: { system: 'epsilon-eridani', fit: { place: 'home', pack: 'epsilon-eridani-b' }, same: { home: 'epsilon-eridani-b' }, k: 3 }, // Epsilon Eridani's star and belts round the alien home world, which is the pack's Aegir; k: the rings are this many times the pack's (so the star is not on top of the towers)
       places: {
         arrival: { x: -7000, y: 3500, name: 'Warp point', hidden: true },                          // where the carrier warps in: 7,800 px from the world (not drawn)

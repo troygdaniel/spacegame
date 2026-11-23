@@ -23,7 +23,7 @@ run(`window.__new = (seed) => { window.C = campNew('home', [], { seed: seed || 5
 
 // ---- A. the table
 console.log('A. the table');
-const K = J('CAMP.repair');
+const K = J('CAMP.repair'), CAMP_REPAIR_ORE = K.ore;
 check('CAMP.repair: fighters break off under 30 percent, within 15 s of flight, mended for 10 s, a fight is 1800 px, a radio line is not repeated within 5 s', K && JSON.stringify(K.kinds) === '["fighter"]' && K.below === 0.3 && K.within === 15 && K.time === 10 && K.fight === 1800 && K.sayEvery === 5, JSON.stringify(K));
 check('every number of it is a finite number', Object.values(K).every(v => Array.isArray(v) || (typeof v === 'number' && isFinite(v))));
 check('the functions are there: campRepairRun, campRepairTick, campRepairing, campRepairState, and campLaunch takes a mended ship', ['campRepairRun', 'campRepairTick', 'campRepairing', 'campRepairState', 'campRepairSay'].every(f => J(`typeof ${f}`) === 'function') && /function campLaunch\(C, again, order, squad\)/.test(read('src/campaign.js')));
@@ -59,13 +59,11 @@ check('it flies home: the way to the cruiser shortens', J('campDist(U, C.carrier
 run('for (let i = 0; i < 400 && C.repairs.length === 0; i++) campStep(C, 1 / 30); window.LANDED = C.t;');
 check('it lands on the cruiser: one in the repair list, until 10 s from now, with the order it had', J('C.repairs.length') === 1 && Math.abs(J('C.repairs[0].until') - J('LANDED') - 10000) < 40 && J('C.repairs[0].order.type') === 'attack' && J('C.repairs[0].stay') === false, J('JSON.stringify(C.repairs)'));
 check('it is out of the sim (no longer in the ships), not counted as out, not lost, and the dock is told', J('C.by[U.id] === undefined') && J('campWing(C, "fighter").length') === J('HP0') - 1 && J('C.lostShips') === J('LOST') && J('C.events.some(e => e.type === "dock" && e.repair && e.id === U.id)') !== false);
-check('it is still the wing\'s: the build limit counts it, the dock counts it, "no ships left" does not say so, the ship computer says it is being mended', (() => {
+check('it is still the wing\'s: "no ships left" does not say so, the ship computer says it is being mended', (() => {
   run('C.bay.fighters = 0; C.bay.escorts = 0; C.launchQ.length = 0; for (const u of campWing(C)) u.hp = 0;');
-  return J('campRepairing(C, "fighter")') === 1 && J('campRepairing(C, "escort")') === 0 && J('campDockWing(C).f') === 1 && J('campNoShips(C)') === false && /1 being mended/.test(J('campSummary(C)')); })());
+  return J('campRepairing(C, "fighter")') === 1 && J('campRepairing(C, "escort")') === 0 && J('campNoShips(C)') === false && /1 being mended/.test(J('campSummary(C)')); })());
 check('with no repair in the list the same state IS "no ships left"', J('(() => { C.repairs.length = 0; return campNoShips(C); })()') === true);
-check('the build limit counts a fighter being mended (the cap is what the wing may be, whole or not)', (() => {
-  run('__new(); C.ore = 9999; C.techs.push("fabricator"); for (const u of campWing(C, "fighter")) u.hp = 0; C.ships = C.ships.filter(u => u.hp > 0); C.launchQ.length = 0; C.bay.fighters = 5; C.bay.escorts = 0; C.cap.fighters = 6;');
-  const room = J('campBuild(C, "fighter", true)'); run('C.repairs.push({ kind: "fighter", until: 1e12, order: null, stay: false });'); const full = J('campBuild(C, "fighter", true)'); return room.ok === true && full.ok === false && full.code === 'buildfull'; })());
+check('the landing costs 5 ore (card space-game-repair-with-ore): the first mend of a fresh battle takes it from the store', (() => { run('__new(); window.__O = C.ore; window.U = __hurt(__F(0), 0.2); for (let i = 0; i < 400 && C.repairs.length === 0; i++) campStep(C, 1 / 30);'); return J('__O - C.ore') === CAMP_REPAIR_ORE; })());
 
 // ---- D. mended
 console.log('D. mended');

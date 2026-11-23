@@ -416,7 +416,6 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'torpedo' || e.type === 'tboom') { if (typeof campTorpedoEvent === 'function') campTorpedoEvent(this, e); } // a torpedo boat arms, a torpedo is away, goes off, is shot down (src/camptorpedoscene.js)
     else if (e.type === 'convoy') { if (typeof campConvoyEvent === 'function') campConvoyEvent(this, e); } // an order for the escorted ships, a hit taken for one (src/campconvoyscene.js)
     else if (e.type === 'ore') beep(900, 0.05, 'triangle', 0.035, 200);
-    else if (e.type === 'built') beep(660, 0.12, 'triangle', 0.05, 240);
     else if (e.type === 'shieldhit' && e.x === this.camp.carrier.x) { this.cameras.main.shake(60, 0.002); this.battleSound('shield', 'shieldHit'); }
     else if (e.type === 'end') { if (e.result === 'won') this.time.delayedCall(1800, () => this.missionWon()); else this.time.delayedCall(1200, () => this.showLost(e.why)); }
   }
@@ -551,7 +550,7 @@ class Campaign extends Phaser.Scene {
     const out = campWing(C, 'fighter').length + campWing(C, 'escort').length, waves = C.L.waves;
     this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(campObjective(C));
     this.hud.bay.setText(uiText('camp.ui.baywords', { f: C.bay.fighters, e: C.bay.escorts, out })); // "BAY  fighters 6  escorts 2   OUT 0": it used to read 6+2 (docs/night/ux.md 5)
-    if (this.hud.ore) this.hud.ore.setColor(C.ore >= CAMP.ore.cap ? '#ffb454' : '#ffd37a').setText(uiText('camp.ui.ore') + '  ' + Math.floor(C.ore) + '/' + CAMP.ore.cap + (C.cash > 0 ? '   ' + uiText('camp.ui.cash') + '  ' + Math.floor(C.cash) : '') + (C.build.queue.length ? '  +' + C.build.queue.length : '')); // the ore, under the shield gauge (and the cash a market paid, when there is some) (a stand-in scene in a test may have no ore text)
+    if (this.hud.ore) this.hud.ore.setColor(C.ore >= CAMP.ore.cap ? '#ffb454' : '#ffd37a').setText(uiText('camp.ui.ore') + '  ' + Math.floor(C.ore) + '/' + CAMP.ore.cap + (C.cash > 0 ? '   ' + uiText('camp.ui.cash') + '  ' + Math.floor(C.cash) : '') + (C.mends.length ? '  +' + C.mends.length : '')); // the ore, under the shield gauge (+n: ships being mended) (and the cash a market paid, when there is some) (a stand-in scene in a test may have no ore text)
     const wc = typeof campWaveCount === 'function' ? campWaveCount(C) : { n: C.waves.filter(w => w.started).length, total: waves.length }; // the waves that can come on the lane she flies (src/camproute.js)
     this.hud.wave.setText(uiText('camp.ui.wave', { n: wc.n, total: wc.total }));
     this.hud.mother.setText(m ? uiText('camp.ui.mother') : '');
