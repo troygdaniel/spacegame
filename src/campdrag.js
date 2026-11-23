@@ -44,6 +44,7 @@ function campDragCanStart(s, x, y) {
 // pan by a drag of dx, dy screen pixels: the world follows the hand, so the camera moves the other way, by the pixels over the zoom
 function campViewPan(s, dx, dy) {
   const cam = s.cameras.main, z = cam.zoom > 0 ? cam.zoom : 1;
+  if (typeof campFocusBreak === 'function') campFocusBreak(s); // the hand has the view: a focus (src/campfocus.js) is let go, and F picks it up again
   if (!s.panned) { cam.stopFollow(); s.panned = true; }
   cam.scrollX -= dx / z; cam.scrollY -= dy / z;
   if (s._cz) s._cz.anchor = null; // the hand has the view: a zoom's anchor is the wheel's, made after
@@ -51,6 +52,7 @@ function campViewPan(s, dx, dy) {
 }
 // the camera back on the cruiser (it eases there by its own lerp); false when the view was not off
 function campViewRecentre(s) {
+  if (typeof campFocusEnd === 'function' && campFocusEnd(s, 'back')) return true; // Backspace and the mark also end a focus (src/campfocus.js): the camera follows the cruiser again
   if (!s || !s.panned) return false;
   s.panned = false; s.dragFly = 0; if (s._cz) s._cz.anchor = null;
   const cam = s.cameras && s.cameras.main, sp = s.sp && s.camp && s.camp.carrier ? s.sp[s.camp.carrier.id] : null;
