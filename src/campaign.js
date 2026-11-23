@@ -266,9 +266,10 @@ const CAMP = {
     peel: [0.5, 0.8],                      // s: how long the peel lasts (the nose where it flies, off the line to the target by peelAngle), before the ship flies on out
     peelAngle: 1.0,                        // rad: the peel's angle off the line away from the target (it breaks to one side)
     wide: 560,                             // px (past the target's radius): out this far it turns and comes in again, on the other side of the line
-    inMax: 4,                              // s: a run in that has not reached the target in this time breaks off anyway and comes in again
+    passed: 45,                            // px: it has passed the target when it is this much farther off than the closest it has been on the run, and it peels away (the lane goes by the target, it does not hang round it)
+    inMax: 4,                              // s: a run in that has been in gun range this long without reaching the target breaks off anyway and comes in again (the clock does not run while it is still closing)
     burst: 0.5,                            // times the fighter's own delay between shots while it is on a run in: a pass is short, so the guns fire in a burst; set so that a flight deals about what the old circling dealt to a ship that fights back (a gunship: 925 a 40 s against 962; the mothership 4,003 against 4,248)
-    burstBy: { drone: 0.3, tboat: 0.45 }   // the same for the kinds the old circling hurt more: a quick drone (the pirates' cutter is one) is hard to line up on a lane, and a torpedo boat dodges (the base kind of a pirate is looked up: CAMP.pirate.kinds)
+    burstBy: { drone: 0.46, tboat: 0.45 }   // the same for the kinds the old circling hurt more: a quick drone (the pirates' cutter is one) is hard to line up on a lane, and a torpedo boat dodges (the base kind of a pirate is looked up: CAMP.pirate.kinds)
   },
   convoy: {
     hp: 200,                               // hit points of a freighter

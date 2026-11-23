@@ -29,10 +29,12 @@ function campFlightSlot(C, u, P) {
 //   campStrafe(C, u, foe, dist, th)   one frame of one fighter against foe, `dist` and the bearing `th` from it to the target: { move, ang (where the engine pushes), face (the nose), fire, burst, thrust }
 function campStrafe(C, u, foe, dist, th) {
   const K = CAMP.strafe, t = C.t, fr = foe.r || 0, r = u.run || (u.run = { m: 'in', until: t + K.inMax * 1000, side: campFlightNum(u) % 2 ? 1 : -1 });
-  if (r.m === 'in' && (dist < fr + K.near || t > r.until)) { r.m = 'peel'; r.until = t + (K.peel[0] + C.rng() * (K.peel[1] - K.peel[0])) * 1000; }
+  const rng = ((CAMP[u.kind] || {}).range || 420) + fr; if (r.m === 'in' && dist > rng) r.until = t + K.inMax * 1000; // a run in times out only inside gun range: a ship that is still closing (the target runs, or the ship is slow) keeps coming, it does not break off and start again from out wide
+  if (r.m === 'in') r.min = Math.min(r.min == null ? 1e9 : r.min, dist); // the closest it has been on this run
+  if (r.m === 'in' && (dist < fr + K.near || t > r.until || (r.min < rng && dist > r.min + K.passed))) { r.m = 'peel'; r.until = t + (K.peel[0] + C.rng() * (K.peel[1] - K.peel[0])) * 1000; }
   else if (r.m === 'peel' && t > r.until) r.m = 'out';
   else if (r.m === 'out' && dist > fr + K.wide) {
-    r.m = 'in'; r.until = t + K.inMax * 1000; r.side = -r.side; // round again, from the other side of the line
+    r.m = 'in'; r.until = t + K.inMax * 1000; r.min = null; r.side = -r.side; // round again, from the other side of the line
     if (u.kind === 'fighter') { const lead = campFlightMembers(C, u)[0]; if (lead && lead !== u && lead.run) r.side = lead.run.side; } // a wingman is on its leader's side
   }
   if (r.m === 'peel') { const a = th + Math.PI - r.side * K.peelAngle; return { move: 'peel', ang: a, face: a, fire: false, thrust: 1 }; }

@@ -127,6 +127,8 @@ console.log('G. strafing runs');
   check('the damage the wing deals to a gunship that shoots back in 40 s is about the old circling\'s (962 over five seeds, 925 measured; seeds go from 576 to 1,076: here seed 1, 400 to 1,400)', d >= 400 && d <= 1400, d);
   const wa = src('src/campaign.js'), wing = wa.slice(wa.indexOf('function campWingAI'), wa.indexOf('function campWingFire'));
   check('the wing\'s AI no longer steers by the pirates\' ring (campSteer) against anything: a duel is campDogSteer, the rest campStrafe', !/campSteer\(/.test(wing) && /campStrafe\(C, u, foe, dist, target\)/.test(wing) && /campDogSteer\(C, u, foe/.test(wing));
+  const abort = J(`(() => { __out(1); window.__foes = true; const f = campSpawn(C, 'gunship', C.carrier.x + 3000, C.carrier.y); const u = __fs()[0]; u.x = C.carrier.x; u.y = C.carrier.y; const d = dist => { u.x = f.x - dist; u.y = f.y; u.run = { m: 'in', until: C.t - 1000, side: 1 }; campStrafe(C, u, f, dist, 0); return u.run.m; }; const far = d(900), near = d(300); window.__foes = false; return [far, near]; })()`);
+  check('a run in does not time out while the ship is still closing from out of gun range (a target that runs, a slow ship: it kept breaking off and never arrived), and does inside it', abort[0] === 'in' && abort[1] === 'peel', JSON.stringify(abort));
   check('the guns fire in a burst on a run in (CAMP.strafe.burst, and burstBy for a drone and a torpedo boat), and the shot delay is only ever shortened by it', J('CAMP.strafe.burst') > 0 && J('CAMP.strafe.burst') < 1 && J('CAMP.strafe.burstBy.drone') < J('CAMP.strafe.burst'));
 }
 
