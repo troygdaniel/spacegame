@@ -39,7 +39,6 @@ function campMapInstall(s, target) {
 
 function campMapClose(s) {
   if (!s || !s.mp) return;
-  if (s.mp.onPointer && s.input && s.input.off) { try { s.input.off('pointerdown', s.mp.onPointer); } catch (e) { /* gone */ } }
   if (s.mp.onWheel && s.input && s.input.off) { try { s.input.off('wheel', s.mp.onWheel); } catch (e) { /* gone */ } }
   s.mp.objs.forEach(o => { try { o.destroy(); } catch (e) { /* already gone with the scene */ } });
   s.mp = null;
@@ -50,7 +49,7 @@ function campMapOpen(s) {
   if (typeof campPanelsClose === 'function') campPanelsClose(s); // the map has the arrows and Enter now: an open Q or P list closes
   const C = s.camp, F = CAMPMAP.frame, P = CAMPMAP_PANEL, L = (C.L || CAMP.levels[C.level]);
   const base = campMapFit(campMapBounds(C.level, false, C.L), F), wholeBase = campMapFit(campMapBounds(C.level, true, C.L), F); // wholeBase: the whole system fitted: where zooming out ends (zMin), and where the view's centre goes as it does
-  const mp = s.mp = { objs: [], whole: false, wholeBase, zMin: campMapZMin(base, wholeBase, CAMPZOOM.map.min), nameObjs: [], base, fit: Object.assign({}, base), z: 1, zWant: 1, namesZ: 1, tAt: null, userSel: false, leg: [] }; // base: the level fitted to the frame; fit: what is drawn and clicked through, the base at zoom z (src/campzoom.js, campMapView)
+  const mp = s.mp = { objs: [], whole: false, wholeBase, zMin: campMapZMin(base, wholeBase, CAMPZOOM.map.min), nameObjs: [], base, fit: Object.assign({}, base), box: campMapBounds(C.level, true, C.L), panned: false, dragging: false, z: 1, zWant: 1, namesZ: 1, tAt: null, userSel: false, leg: [] }; // base: the level fitted to the frame; fit: what is drawn and clicked through, the base at zoom z (src/campzoom.js, campMapView)
   mp.fire = campFireNew(); // the fight on the map (src/campmapfire.js): a pool of marks made once, per open map; the scene feeds it while the map is open
   const own = o => { o.setScrollFactor(0); mp.objs.push(o); return o; };
   own(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.84)).setDepth(150);
@@ -65,6 +64,7 @@ function campMapOpen(s) {
   mp.dest = own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.destY, '', uiFont(14, '#7fe9ff', { wordWrap: { width: 250 } }))).setDepth(154);
   mp.list = []; for (let i = 0; i < CAMP.nav.list; i++) mp.list.push(own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.listY + i * CAMPMAP_SIDE.listStep, '', uiFont(14, '#9fe9ff'))).setOrigin(0, 0.5).setDepth(154));
   own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.hintY, uiText('camp.map.keys'), uiFont(13, '#5b7a92'))).setDepth(154);
+  mp.recentre = own(s.add.text(F.x + 10, F.y + F.h - 30, uiText('camp.hud.recentre'), uiFont(13, CAMPDRAG.mark.ink, { backgroundColor: CAMPDRAG.mark.back, padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false); // the mark of a dragged map: a click on it, or Backspace, puts the map back (src/campdrag.js)
   mp.goalText = own(s.add.text(0, 0, uiText('camp.map.goalmark'), uiFont(12, '#ffd37a'))).setOrigin(0.5).setDepth(154);
   mp.routeText = own(s.add.text(0, 0, '', uiFont(12, '#ffd37a'))).setOrigin(0.5).setDepth(154);
   mp.rows = []; mp.rowsAt = -1e9; mp.selId = ''; mp.setId = ''; mp.flewId = '';
@@ -73,8 +73,7 @@ function campMapOpen(s) {
   mp.btnFast = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false);
   mp.btnScout = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false); // the third button (card space-game-campaign-scouts): Scout, key V
   mp.btnTake = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false); // the fourth button, on a lane of a fork in the road only (card space-game-scout-route): Take, key T
-  mp.onPointer = p => campMapClick(s, p.x, p.y);
-  if (s.input && s.input.on) s.input.on('pointerdown', mp.onPointer);
+  // the pointer is src/campdrag.js's (card space-game-drag-view): a press on the frame waits for the release, so a drag pans the map and a click is campMapClick as it always was
   mp.onWheel = (p, over, dx, dy) => campZoomMapWheel(mp, dy); // the wheel zooms the map while it is open (the scene holds the wheel back from the camera then: camzoomHold)
   if (s.input && s.input.on) s.input.on('wheel', mp.onWheel);
   for (let i = 0; i < CAMPMAP_SIDE.rows; i++) mp.leg.push(own(s.add.text(CAMPMAP_SIDE.x + 22, CAMPMAP_SIDE.y + i * CAMPMAP_SIDE.step, '', uiFont(14, '#9fe9ff', { wordWrap: { width: 235 } }))).setOrigin(0, 0.5).setDepth(154)); // a row is one line (27 letters at most, tests/campmap.mjs); the wrap is only a net
@@ -124,8 +123,9 @@ function campMapPaint(s, time) {
   const F = CAMPMAP.frame, dt = mp.tAt == null ? 0 : Math.max(0, Math.min(100, time - mp.tAt)); mp.tAt = time;
   const moving = campMapZoomStep(mp, F, dt); // the zoom eases to where + - 0 or the wheel put it, and mp.fit is the view at that zoom: everything below and every click reads it
   campMapFar(s); // the far bodies and their names come in when the zoom goes under 1 and go when it is back
-  if (moving) campMapNamesMove(s); else if (mp.z === mp.zWant && mp.namesZ !== mp.z) { campMapNames(s); mp.namesZ = mp.z; } // the names move with the marks while it eases, and are placed afresh (clear of one another) when it has arrived
+  if (moving || mp.dragging) campMapNamesMove(s); else if (mp.z === mp.zWant && mp.namesZ !== mp.z) { campMapNames(s); mp.namesZ = mp.z; } // the names move with the marks while it eases, and are placed afresh (clear of one another) when it has arrived
   mp.zoomText.setText(uiText('camp.map.zoom', { pct: Math.round(mp.zWant * 100) }));
+  mp.recentre.setVisible(!!mp.panned); // a dragged map shows its way back
   const C = s.camp, f = mp.fit, g = mp.g, col = CAMPMAP.color;
   const X = x => F.x + F.w / 2 + (x - f.cx) * f.s, Y = y => F.y + F.h / 2 + (y - f.cy) * f.s;
   const pin = (x, y) => ({ x: Math.max(F.x + 5, Math.min(F.x + F.w - 5, x)), y: Math.max(F.y + 5, Math.min(F.y + F.h - 5, y)) }); // a ship past the edge sits on the edge

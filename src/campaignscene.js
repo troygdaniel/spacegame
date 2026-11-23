@@ -92,6 +92,7 @@ class Campaign extends Phaser.Scene {
     this.hud.chat = this.add.text(24, H - 112, '', uiFont(15, '#ffd37a', { stroke: '#02060d', strokeThickness: 3, wordWrap: { width: 330 } })).setScrollFactor(0).setDepth(101).setAlpha(0); // bottom left, beside the command strip (which starts at x 368)
     this.input.keyboard.on('keydown', e => this.onKey(e));
     if (typeof campPanelsInstall === 'function') campPanelsInstall(this); // the two lists: Q the fleet orders at the left, P the ship orders at the right, hidden until asked for (src/camppanel.js, src/campanelsdraw.js)
+    if (typeof campDragInstall === 'function') campDragInstall(this); // press and drag pans the flight view and the map, with a RECENTRE mark and the way back (src/campdrag.js)
     if (typeof campMapInstall === 'function') campMapInstall(this); // Tab: the map of the level, over the battle, which goes on behind it (src/campmap.js, src/campmapdraw.js)
     this.events.once('shutdown', () => { if (typeof stopBeamHum === 'function') stopBeamHum(); }); // no hum left behind when the level ends or the title comes
     if (typeof camzoomSetup === 'function') { // the Long Haul's own camera zoom (src/camzoom.js): the world on one camera, the HUD, panels and strip on another that never scales; + - = 0 and the wheel zoom the world (src/campzoom.js)
@@ -331,6 +332,7 @@ class Campaign extends Phaser.Scene {
   // ----- each frame -----
   update(time, dt) {
     spaceBackdropTick(this);
+    if (typeof campDragFrame === 'function') campDragFrame(this, dt, campDragFlying(this)); // the view dragged off the cruiser: the way back (a flying key held, the battle over), and its mark
     if (typeof campTuneMark === 'function') campTuneMark(this); // the TUNED mark, while any override is on (src/camptunedraw.js)
     if (this.mode === 'play' && this.tuned === false && typeof campTuneActive === 'function' && campTuneActive()) this.tuned = true; // a frame of battle with an override on makes the whole run a tuned one: its score and rank are not kept
     if (typeof campPanelsPaint === 'function') campPanelsPaint(this, this.time.now); // the open list, if one is, and the target's line (src/campanelsdraw.js)
