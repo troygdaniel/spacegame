@@ -68,10 +68,13 @@ try {
   await key(t, 'KeyE'); await t.run(300);
   check('E sends all three pilots at it, with no list opened (an order key, not a list)', (await j(`campWing(${SC}.camp, 'fighter').every(u => u.order && u.order.type === 'attack' && u.order.target === '${near}')`)) && (await j(`${SC}.pn.open`)) === '');
   await t.ev(`campWingOrder(${SC}.camp, 'fighters', 'guard', null, 'key')`); await t.run(300);
+  // (the three pilots flew at the first target and it is gone by now: pick the nearest hostile again, and the checks below use that one)
+  await key(t, 'BracketRight', { key: ']' }); await t.run(300);
+  const near2 = await j(`${SC}.camp.tgt`);
   await key(t, 'KeyD'); await t.run(300);
-  check('D picks a pilot as the friend (the first, Red); the hostile is still the target', (await j(`${SC}.camp.sel`)) === 'pilot:red' && (await j(`${SC}.camp.tgt`)) === near);
+  check('D picks a pilot as the friend (the first, Red); the hostile is still the target', !!near2 && (await j(`${SC}.camp.sel`)) === 'pilot:red' && (await j(`${SC}.camp.tgt`)) === near2);
   await key(t, 'KeyE'); await t.run(300);
-  check('E with a pilot picked sends that pilot alone: Red attacks, the others stay on guard', (await j(`campWing(${SC}.camp, 'fighter').filter(u => u.squad === 'red').every(u => u.order && u.order.type === 'attack' && u.order.target === '${near}')`)) && (await j(`campWing(${SC}.camp, 'fighter').filter(u => u.squad !== 'red').every(u => !(u.order && u.order.type === 'attack'))`)));
+  check('E with a pilot picked sends that pilot alone: Red attacks, the others stay on guard', (await j(`campWing(${SC}.camp, 'fighter').filter(u => u.squad === 'red').every(u => u.order && u.order.type === 'attack' && u.order.target === '${near2}')`)) && (await j(`campWing(${SC}.camp, 'fighter').filter(u => u.squad !== 'red').every(u => !(u.order && u.order.type === 'attack'))`)));
   await key(t, 'KeyX'); await t.run(300);
   await key(t, 'KeyQ'); await t.run(200);
   check('Q (the fleet list is switched on in this page) opens it on All squads and picks nothing', (await j(`${SC}.pn.open`)) === 'fleet' && (await j(`campPanelList(${SC}.camp, 'fleet')[${SC}.pn.at].open`)) === 'squads' && (await j(`${SC}.camp.sel`)) === '');
