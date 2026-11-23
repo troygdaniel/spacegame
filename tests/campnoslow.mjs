@@ -1,5 +1,5 @@
 // smoke: NO command time (card space-game-no-command-slowdown, Troy, 22 Nov 2026: "do not change the speed of the game with command mode"; it takes out what card space-game-command-slowtime, 21 Nov, built); plain Node, no Chrome
-//   The battle stays at its own speed while the Q or P list, a part's list (W E R, O I U, the stance), the Tab map or a pilot's call is open, and after an order or a pick of the target. There is no sign and no hint that says time slows.
+//   The battle stays at its own speed while the Q or P list, a part's list (W E R, O I U, the convoy), the Tab map or a pilot's call is open, and after an order or a pick of the target. There is no sign and no hint that says time slows.
 //   What stays of that card: the battle PACE is 15 percent under what it was (Calm 0.6, Normal 0.72, Brisk 0.85) and the Campaign has no pace key; they are not command time
 //   A  the numbers: no CAMP.slow, no timeScale on a battle, the pace values as they were set
 //   B  the scene's frame: a frame is dt of battle whatever is open (nothing, each of the nine lists, the map, a pilot's call); a frame cap of 100 ms still holds; the same frames end in the very same battle with a list open or not
@@ -38,7 +38,7 @@ check('a battle made with no pace (the pins, the bots) is the table\'s own numbe
 console.log('B. the scene\'s frame');
 const LISTS = J('CAMP_PANELS.panels.map(p => p.id)');
 const run = (open, n, dt, extra) => J(`(() => { const F = __fake(1); const C = F.camp; ${extra || ''} F.pn.open = '${open}'; const t0 = C.t; __frames(F, ${n}, ${dt}); return C.t - t0; })()`);
-check('there are eleven lists (the two tops and their nine parts) and a frame with each open, or none, is the battle\'s own dt: 20 frames of 33 ms are 660 ms of the battle clock', LISTS.length === 11 && [''].concat(LISTS).every(id => near(run(id, 20, 33), 660, 0.01)), JSON.stringify(LISTS));
+check('there are ten lists (the two tops and their eight parts) and a frame with each open, or none, is the battle\'s own dt: 20 frames of 33 ms are 660 ms of the battle clock', LISTS.length === 10 && [''].concat(LISTS).every(id => near(run(id, 20, 33), 660, 0.01)), JSON.stringify(LISTS));
 check('a pilot\'s call waiting for an answer does not slow it either', near(run('', 20, 33, "C.call = campCallsNew(C); C.call.open = { id: 'wounded', ctx: {}, left: 8, total: 8, pick: 0 };"), 660, 0.01));
 check('nor does the Tab map open (the battle goes on behind it at its own speed; the map\'s own painting is stubbed here, it is the scene\'s clock that is looked at)', near(J(`(() => { const sv = campMapPaint; campMapPaint = () => {}; try { const F = __fake(1); F.mp = { objs: [], fire: [] }; const t0 = F.camp.t; __frames(F, 20, 33); return F.camp.t - t0; } finally { campMapPaint = sv; } })()`), 660, 0.01));
 check('the frame cap still holds (a stall of 500 ms is 100 ms of the battle), with a list open as well', near(J(`(() => { const F = __fake(1); const t0 = F.camp.t; F.update(0, 500); return F.camp.t - t0; })()`), 100, 0.01) && near(J(`(() => { const F = __fake(1); F.pn.open = 'fleet'; const t0 = F.camp.t; F.update(0, 500); return F.camp.t - t0; })()`), 100, 0.01));
