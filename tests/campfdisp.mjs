@@ -9,6 +9,7 @@
 //   E. Q (all three pilots picked; card space-game-q-all-pilots-panel): the display says All pilots with a row for each pilot out, its name and its hull, and nothing else; back to one ship and away again
 //   F. the square marker: the friend and the hostile and the fighters an order went to are all drawn by the one function; no ring is left in the scene; the scene calls the display every frame
 //   G. an open left list (W, 7 rows to y 528) no longer covers the friend box: the box steps right of it while it is open, and back when it closes (card space-game-w-list-covers-friend-box)
+//   H. the three boxes (card space-game-keys-panels): the friendly picked with , . is in its own box stacked above the enemy's, shown only when one is picked (an outpost too); the enemy's and the friendly's boxes have an order-key line at their foot, lit when the order can be given and grey when not
 // Run: node tests/campfdisp.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
@@ -27,7 +28,7 @@ g.run(`
   window.__foe = (dx, dy) => { const u = campSpawn(C, 'raider', C.carrier.x + dx, C.carrier.y + dy); u.vx = u.vy = 0; return u; };
   // a stand-in scene: graphics and texts that remember what was done to them, an image, the panels' state
   window.__scene = (extra) => {
-    const mkG = () => { const o = { clears: 0, log: [] }; ['fillStyle', 'lineStyle', 'fillRoundedRect', 'strokeRoundedRect', 'fillRect', 'strokeRect'].forEach(k => { o[k] = (...a) => { o.log.push([k].concat(a)); return o; }; }); o.clear = () => { o.clears++; o.log = []; return o; }; o.setScrollFactor = () => o; o.setDepth = () => o; return o; };
+    const mkG = () => { const o = { clears: 0, log: [] }; ['fillStyle', 'lineStyle', 'fillRoundedRect', 'strokeRoundedRect', 'fillRect', 'strokeRect', 'lineBetween'].forEach(k => { o[k] = (...a) => { o.log.push([k].concat(a)); return o; }; }); o.clear = () => { o.clears++; o.log = []; return o; }; o.setScrollFactor = () => o; o.setDepth = () => o; return o; };
     const mkT = (objs) => () => { const o = { text: '', x: 0, y: 0, vis: false, style: { color: '#ffffff' }, width: 60, height: 14 }; ['setScrollFactor', 'setDepth', 'setOrigin'].forEach(k => { o[k] = () => o; }); o.setText = v => { o.text = v; return o; }; o.setColor = v => { o.style.color = v; return o; }; o.setPosition = (x, y) => { o.x = x; o.y = y; return o; }; o.setVisible = v => { o.vis = v; return o; }; objs.push(o); return o; };
     const objs = [], pics = [];
     const mkP = () => { const pic = { vis: false, tex: '', tint: -1, x: 0, y: 0, width: 64, height: 32 }; ['setScrollFactor', 'setDepth', 'setRotation', 'setScale'].forEach(k => { pic[k] = () => pic; }); pic.setTexture = t => { pic.tex = t; return pic; }; pic.setTint = t => { pic.tint = t; return pic; }; pic.clearTint = () => { pic.tint = -1; return pic; }; pic.setPosition = (x, y) => { pic.x = x; pic.y = y; return pic; }; pic.setVisible = v => { pic.vis = v; return pic; }; pics.push(pic); return pic; };
@@ -75,7 +76,7 @@ console.log('B. what is read');
 console.log('C. the box');
 {
   const R = J('campTdispBox()'), L = J('campTdispBox(true)'), K = J('CAMP.tdisp'), keep = J('CAMP.nav.arrow.keep');
-  check('the friend display is in the bottom LEFT corner: its left edge ' + K.left + ' px from the edge, level with the target display, the same size (200 by 200)', L.x === K.left && L.y === R.y && L.w === R.w && L.h === R.h && L.w === 200);
+  check('the friend display is in the bottom LEFT corner: its left edge ' + K.left + ' px from the edge, level with the target display at the bottom, 200 by 200 (the enemy\'s box is the order-key line taller)', L.x === K.left && L.y + L.h === R.y + R.h && L.w === R.w && L.h === 200 && R.h === 200 + K.line);
   check('it is the mirror of the target display: the same distance from the edge, the other side', L.x === 1280 - (R.x + R.w) && K.left === K.right);
   check('it is inside the rectangle the edge arrows keep out of, so no label is put on it', keep.some(r => L.x >= r[0] && L.y >= r[1] && L.x + L.w <= r[2] && L.y + L.h <= r[3]));
   check('it is clear of the target display\'s box and of the lines of text and the lists at the left top (they end at about y 262; the box starts below)', L.x + L.w < R.x && L.y > 262);
@@ -176,13 +177,68 @@ console.log('G. an open list and the friend box (card space-game-w-list-covers-f
   g.run(`campPanelClose(P); delete S.pnl; __open('ship'); campFdispSync(S, 1600);`);
   check('a right list (the ship list) never reaches this corner: the box stays', J(`${V}.dx`) === 0);
   g.run(`campPanelClose(P); delete S.pnl;`);
-  const full = J(`(() => { const out = {}; CAMP_PANELS.panels.filter(d => d.side !== 'right').forEach(d => { const G = campPanelsGeometry(d), B = campTdispBox(true), dx = campFdispDx({ pn: Object.assign(campPanelNew(), { open: d.id }), pnl: null }), A = campTdispBox(true, dx); out[d.id] = { hits: __hit(G, B), dx, clear: !__hit(G, A), inside: A.x + A.w <= 1280 }; }); return out; })()`);
+  const full = J(`(() => { const out = {}; CAMP_PANELS.panels.filter(d => d.side !== 'right').forEach(d => { const G = campPanelsGeometry(d), B = campTdispBox(true), dx = campBoxDx({ pn: Object.assign(campPanelNew(), { open: d.id }), pnl: null }, true, false), A = campTdispBox(true, dx); out[d.id] = { hits: __hit(G, B), dx, clear: !__hit(G, A), inside: A.x + A.w <= 1280 }; }); return out; })()`);
   check('every left list at its full height, with the box where it would put it: no overlap, and on the screen', Object.values(full).every(r => r.clear && r.inside) && Object.keys(full).length >= 3, JSON.stringify(full));
   check('and the ones that reach the corner are the ones that move it (the ones that do not leave it alone)', Object.values(full).every(r => r.hits === (r.dx !== 0)), JSON.stringify(full));
   g.run(`C.sel = 'all'; __open('squads'); campFdispSync(S, 2000);`);
   const shAll = J(`campTdispBox(true, ${V}.dx)`);
   check('Q (all pilots) steps right of the open list too, rows and title with it', J(`${V}.dx`) !== 0 && J(`${V}.name.x`) === shAll.x + 10 && J(`${V}.rows[0].name.x`) === shAll.x + J('CAMP_FDISP_ALL.name') && J(`${V}.rows[0].num.x`) === shAll.x + J('CAMP_FDISP_ALL.numRight'));
-  check('the scene\'s own panel view is read (the stand-in has none: the full height is taken); the numbers are in the table with their comments', /s\.pnl && s\.pnl\.view \? s\.pnl\.view\.total : 0/.test(readFileSync(new URL('../src/camptdispscene.js', import.meta.url), 'utf8')) && /beside: 12, +\/\/ px between an open left list/.test(readFileSync(new URL('../src/campaign.js', import.meta.url), 'utf8')));
+  check('the scene\'s own panel view is read (the stand-in has none: the full height is taken); the numbers are in the table with their comments', /s\.pnl && s\.pnl\.view \? s\.pnl\.view\.total : 0/.test(readFileSync(new URL('../src/camptdispscene.js', import.meta.url), 'utf8')) && /beside: 12, +\/\/ px between an open list/.test(readFileSync(new URL('../src/campaign.js', import.meta.url), 'utf8')));
+}
+
+console.log('H. the three boxes and the order-key lines (card space-game-keys-panels)');
+{
+  g.run('__out()'); g.run('window.S = __scene()');
+  const K = J('CAMP.tdisp'), En = J('campTdispBox()'), Fr = J('campTdispBox(false, 0, true)'), Wh = J('campTdispBox(true)'), keep = J('CAMP.nav.arrow.keep');
+  check('the friendly\'s box is stacked just above the enemy\'s (CAMP.tdisp.stack px between them), in the same column, the same size', Fr.x === En.x && Fr.w === En.w && Fr.h === En.h && Fr.y + Fr.h + K.stack === En.y, JSON.stringify([Fr, En]));
+  check('the enemy\'s and the friendly\'s boxes both end at or after the who box\'s height of 200 + the key line, the who box has no line', En.h === 200 + K.line && Fr.h === 200 + K.line && Wh.h === 200);
+  check('both right boxes are inside a rectangle the edge arrows keep out of, and none of the three boxes touches another', [En, Fr, Wh].every(b => keep.some(r => b.x >= r[0] && b.y >= r[1] && b.x + b.w <= r[2] && b.y + b.h <= r[3])) && !J(`[[${JSON.stringify(Fr)}, ${JSON.stringify(En)}], [${JSON.stringify(Wh)}, ${JSON.stringify(En)}], [${JSON.stringify(Wh)}, ${JSON.stringify(Fr)}]].some(([a, b]) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y)`));
+  check('no friendly picked: nothing is shown in its box', J('campGdispSubject(C)') === null && J('campGdispSubject(null)') === null && J('campGdispSubject({})') === null);
+  g.run(`window.W1 = campFriList(C).find(e => e.kind === 'ward'); window.P1 = campFriList(C).find(e => e.kind === 'post'); C.fsel = W1.id;`);
+  const sub = J(`(() => { const s = campGdispSubject(C); return s && { id: s.u.id, side: s.side }; })()`);
+  check('a ship you protect picked with , .: its box shows it, as a friend', sub && sub.id === J('W1.id') && sub.side === 'friend', JSON.stringify(sub));
+  g.run(`C.fsel = P1.id;`);
+  const post = J(`(() => { const s = campGdispSubject(C); return s && { u: s.u, post: s.post.name, side: s.side }; })()`);
+  check('an outpost picked: its box shows it (no unit, the outpost\'s name)', post && post.u === null && post.post === J('P1.name') && post.side === 'friend', JSON.stringify(post));
+  g.run(`C.fsel = W1.id; campFdispSync(S, 1000); campTdispSync(S, 1000); campGdispSync(S, 1000);`);
+  const V = 'S.hud.gdisp';
+  check('the friendly\'s box is drawn in its own place: its name, type, hull and distance are written inside the stacked box', J(`${V}.name.text`) === J('campTdispName(W1.unit)') && J(`${V}.name.x`) === Fr.x + 10 && J(`${V}.name.y`) === Fr.y + 8 && /^Friendly /.test(J(`${V}.type.text`)) && J(`${V}.hullN.vis`) && J(`${V}.km.vis`) && J(`${V}.pic.vis`));
+  check('the enemy\'s box and the who box are still there: the who box says All pilots, the enemy\'s is empty with no enemy picked', J('S.hud.fdisp.name.text') === 'All pilots' && !J('S.hud.tdisp && S.hud.tdisp.name.vis'));
+  const key = J('CAMP_KEYS.guard.k'), keyA = J('CAMP_KEYS.attack.k');
+  check('its foot has the order-key line: the key from the key table and the word, "Guard"', J(`${V}.keyCap.text`) === key && J(`${V}.keyLabel.text`) === 'Guard' && J(`${V}.keyCap.vis && ${V}.keyLabel.vis`) && J(`${V}.keyLabel.y`) > Fr.y + Fr.h - K.line && J(`${V}.keyLabel.x`) > Fr.x);
+  check('the order can be given (the pilots are out): the line is lit: the cap is filled in the box\'s colour and the word is bright', J(`${V}.info.order.ok`) === true && J(`${V}.keyLabel.style.color`) === '#e8f6ff' && J(`${V}.g.log.some(l => l[0] === 'fillStyle' && l[1] === CAMP.tdisp.color.friend)`) && J(`${V}.keyCap.style.color`) === '#02101c');
+  g.run(`campWing(C, 'fighter').forEach(u => { u.hp = 0; }); campGdispSync(S, 1500);`);
+  check('no pilot out: the order cannot be given: the line is grey (the cap dim, the word grey)', J(`${V}.info.order.ok`) === false && J(`${V}.keyLabel.style.color`) === '#7f95a8' && J(`${V}.keyCap.style.color`) === '#9fb4c4' && J(`${V}.g.log.some(l => l[0] === 'fillStyle' && l[1] === 0x2a3b4c)`) && !J(`${V}.g.log.some(l => l[0] === 'fillStyle' && l[1] === CAMP.tdisp.color.friend && l[2] === 0.95)`));
+  g.run('__out()'); g.run('window.S = __scene()');
+  g.run(`window.R1 = __foe(900, 0); C.tgt = R1.id; campTdispSync(S, 2000);`);
+  const T = 'S.hud.tdisp';
+  check('an enemy picked: the enemy\'s box has the line too: its key and "Attack", lit with the pilots out', J(`${T}.keyCap.text`) === keyA && J(`${T}.keyLabel.text`) === 'Attack' && J(`${T}.info.order.ok`) === true && J(`${T}.keyCap.vis`) && J(`${T}.name.x`) === En.x + 10);
+  g.run(`campWing(C, 'fighter').forEach(u => { u.hp = 0; }); campTdispSync(S, 2500);`);
+  check('no pilot out: the enemy\'s line is grey', J(`${T}.info.order.ok`) === false && J(`${T}.keyLabel.style.color`) === '#7f95a8');
+  g.run('__out()'); g.run('window.S = __scene()');
+  g.run(`campPickOpen(P, { id: 'escort', pick: 'escort' }, campPickItems(C, 'escort')); campTdispSync(S, 3000);`);
+  check('a friendly ship that an order\'s list is on shows in the enemy\'s box as before, and has no order line there (the line is the enemy\'s)', J(`${T}.side`) === 'friend' && J(`${T}.info.order`) === null && !J(`${T}.keyCap.vis`) && !J(`${T}.keyLabel.vis`));
+  g.run(`P.pick = null; P.seen = null; window.P1 = campFriList(C).find(e => e.kind === 'post'); C.fsel = P1.id; campGdispSync(S, 4000);`);
+  check('an outpost in the friendly\'s box: its name, "Friendly post" and how far; no picture, hull, shield or order it is on; the key line is there', J(`${V}.name.text`) === J('P1.name') && J(`${V}.type.text`) === 'Friendly post' && J(`${V}.km.vis`) && !J(`${V}.pic.vis`) && !J(`${V}.hullN.vis`) && !J(`${V}.shN.vis`) && !J(`${V}.doing.vis`) && J(`${V}.keyLabel.text`) === 'Guard' && J(`${V}.keyCap.vis`));
+  g.run(`C.fsel = campFriList(C).find(e => e.kind === 'ward').id; campGdispSync(S, 4500);`);
+  check('and back to a ship: the picture, hull and order come back', J(`${V}.pic.vis && ${V}.hullN.vis && ${V}.doing.vis`) && !/post/i.test(J(`${V}.type.text`)));
+  g.run(`campFriClear(C); campGdispSync(S, 5000);`);
+  check('X lets the friendly go: its box goes (every text, the picture and the line hidden)', J(`[${V}.name, ${V}.type, ${V}.km, ${V}.hullN, ${V}.doing, ${V}.keyCap, ${V}.keyLabel].every(o => !o.vis) && !${V}.pic.vis`));
+  g.run(`C.fsel = campFriList(C).find(e => e.kind === 'ward').id; campGdispSync(S, 5500); S.mp = {}; campGdispSync(S, 5600);`);
+  check('the map open hides it, key line too', J(`!${V}.name.vis && !${V}.keyCap.vis && !${V}.keyLabel.vis`));
+  g.run(`S.mp = null; campGdispSync(S, 5800); window.__c0 = ${V}.g.clears; campGdispSync(S, 5900); campGdispSync(S, 6000);`);
+  check('a steady box costs nothing: not drawn again while nothing changes', J(`${V}.g.clears === __c0`));
+  // an open right list
+  g.run(`campPanelGo(P, C, 'power'); S.pnl = { view: campPanelView(P, C) }; campGdispSync(S, 6500); campTdispSync(S, 6500);`);
+  const Pw = J(`(() => { const G = campPanelsGeometry(campPanelDef('power'), S.pnl.view.total); return { x: G.x, y: G.y, w: G.w, h: G.h }; })()`), FrNow = J(`campTdispBox(false, ${V}.dx, true)`);
+  check('the power list (right, five rows, to y 318) would cover the friendly\'s box: the box steps left of it, CAMP.tdisp.beside px from its edge, and they do not touch', Pw.y + Pw.h > Fr.y && J(`${V}.dx`) < 0 && FrNow.x + FrNow.w + K.beside === Pw.x && !J(`(${JSON.stringify(Pw)}.x < ${FrNow.x + FrNow.w} && ${JSON.stringify(Pw)}.x + ${Pw.w} > ${FrNow.x})`), JSON.stringify([Pw, FrNow]));
+  check('the enemy\'s box, below the list, stays; the who box (a right list never reaches it) stays', J('!S.hud.tdisp || S.hud.tdisp.dx === 0') && J('!S.hud.fdisp || !S.hud.fdisp.dx'));
+  g.run(`campPanelClose(P); delete S.pnl; campGdispSync(S, 7000);`);
+  check('the list closes: the friendly\'s box goes back to its column', J(`${V}.dx`) === 0 && J(`${V}.name.x`) === Fr.x + 10);
+  check('a left list moves the who box and never the right ones; a right list the right ones and never the who box', J(`(() => { const L = { pn: Object.assign(campPanelNew(), { open: 'squads' }), pnl: null }, R = { pn: Object.assign(campPanelNew(), { open: 'power' }), pnl: null }; return [campBoxDx(L, true, false) > 0, campBoxDx(L, false, true) === 0, campBoxDx(L, false, false) === 0, campBoxDx(R, true, false) === 0, campBoxDx(R, false, true) < 0].every(Boolean); })()`));
+  const html = src('index.html'), scene = src('src/campaignscene.js');
+  check('the scene calls the three displays every frame, in the one file (no new script)', /campTdispSync\(this, this\.time\.now\);[^\n]*\n\s*if \(typeof campFdispSync === 'function'\) campFdispSync\(this, this\.time\.now\);[^\n]*\n\s*if \(typeof campGdispSync === 'function'\) campGdispSync\(this, this\.time\.now\)/.test(scene) && /function campGdispSync\(/.test(src('src/camptdispscene.js')));
+  check('the words: Attack, Guard and Friendly post are content (no bare key at run time) and the voice pack\'s tdisp family covers them', ['camp.tdisp.key.attack', 'camp.tdisp.key.guard', 'camp.tdisp.type.post'].every(k => J(`uiText(${JSON.stringify(k)})`) !== k) && /camp\\\.tdisp\\\./.test(src('src/voicepack.js')));
 }
 
 console.log('F. the square marker, and no rings');

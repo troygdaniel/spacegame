@@ -10,6 +10,9 @@ The words of the target display (card space-game-target-display; Troy, 22 Nov 20
 | camp.tdisp.shield | SHIELD |
 | camp.tdisp.noshield | no shield |
 | camp.tdisp.km | {km} km |
+| camp.tdisp.type.post | Friendly post |
+| camp.tdisp.key.attack | Attack |
+| camp.tdisp.key.guard | Guard |
 | camp.tdisp.type | {side} {what} |
 | camp.tdisp.side.alien | Hostile |
 | camp.tdisp.side.pirate | Pirate |
