@@ -1,6 +1,6 @@
 // ---------- Campaign: the target's bracket on the screen (card space-game-two-hands-keys; Troy, 21 Nov 2026) ----------
 // The Phaser half of src/camptarget.js. The ship that A, D or S picked has a clear bracket round it (four red corners, a slow pulse), however far the view is zoomed out: the bracket never gets smaller than CAMPTGT.minScreen px on the screen.
-// Its name and distance are on the target's line under the radar (src/campanelsdraw.js). campTgtPaint(s) is called each frame by the scene; a battle behind a card, the pause or the map shows no bracket.
+// Its name, bars, distance and what it is doing are in the target display in the bottom right corner (src/camptdispscene.js). campTgtPaint(s) is called each frame by the scene; a battle behind a card, the pause or the map shows no bracket.
 const CAMPTGT = { color: 0xff6a5a, line: 2, minScreen: 34, pad: 10, arm: 0.42, depth: 8, pulse: 0.35 }; // the colour, the line's width on the SCREEN (px), the bracket's least size on the screen (px across), room round the ship (world px), how much of each side a corner covers, the depth, how far its alpha swings
 function campTgtPaint(s) {
   if (!s || !s.add || !s.camp) return;

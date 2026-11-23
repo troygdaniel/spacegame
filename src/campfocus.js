@@ -2,7 +2,7 @@
 // Troy: zooming and dragging did not give what he wanted, which is to look around and see the battle from other places by picking a ship, hostile or friendly, and having it in the middle of the screen.
 //   F (CAMP_KEYS.focus)   a KEY, not automatic: with something selected the camera glides to it in CAMPFOCUS.glide ms (by time, not by frame: the same half second at any frame rate), at the zoom it has (a long glide zooms out until the two ends are on the screen, and gives the zoom
 //                         back when it has arrived), and FOLLOWS it until another focus, the way back, or a drag of the hand
-//   what is focused       the SUBJECT, the first of: (1) the ship a target sub-list is on (src/camppick.js: a ship to escort, to guard, to help, a hostile to attack; the box of src/camptdisp.js shows the same one), (2) the leader of
+//   what is focused       the SUBJECT, the first of: (1) the ship a target sub-list is on (src/camppick.js: a ship to escort, to guard, to help, a hostile to attack; the target display's campTdispSubject, src/camptdisp.js, says which: it is the one it shows), (2) the leader of
 //                         the squad whose ring shows (src/campwing.js campSquadsShown: its list is open or it was just ordered; with several squads in focus, the first with a ship out), (3) the picked hostile (C.tgt: A D S),
 //                         (4) the cruiser. With nothing selected the key is the way back: the camera is on the cruiser
 //   the way back          Backspace (the zoom reset, src/campzoom.js, which calls campViewRecentre) and F with nothing selected glide the camera back and let the cruiser be followed again; a ship that dies or leaves does the
@@ -29,14 +29,8 @@ function campFocusLeader(C, sq) {
   if (!C || !C.ships) return null;
   return C.ships.filter(u => u.team === 'earth' && u.hp > 0 && u.kind === 'fighter' && u.squad === sq).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))[0] || null;
 }
-// the ship a sub-list is on, or the picked hostile: the box of src/camptdisp.js says the same (campTdispSubject, which comes first when it is there); the stand-in is the same rule for a page that has not got it
-function campFocusSeen(C, P, now) {
-  if (typeof campTdispSubject === 'function') return campTdispSubject(C, P, now);
-  const it = P && typeof campPickShown === 'function' ? campPickShown(P, C, now) : null, u = it && it.what === 'ship' && C.by ? C.by[it.id] : null;
-  if (u && u.hp > 0) return { u, side: u.team === 'alien' ? 'hostile' : 'friend' };
-  const t = typeof campTgtNow === 'function' ? campTgtNow(C) : null;
-  return t ? { u: t, side: 'hostile' } : null;
-}
+// the ship a sub-list is on, or the picked hostile, as the target display shows it (campTdispSubject, src/camptdisp.js: the two read ONE selection)
+const campFocusSeen = (C, P, now) => campTdispSubject(C, P, now);
 // the subject: { u, side: 'hostile' | 'friend', why: 'pick' | 'squad' | 'target' | 'cruiser' }; never null (the cruiser is the last one)
 function campFocusSubject(C, P, now) {
   if (!C || !C.carrier) return null;

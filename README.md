@@ -65,7 +65,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 | Arrow keys | fly the cruiser: Up thrust, Left and Right turn, Down brake (while a list or a pilot's call is open the ship coasts) |
 | `Space` (hold) | the turrets fire at ships in reach; they never fire on their own |
 | `Enter` | a homing missile at the target (only while no list is open) |
-| `A` `D` `S` `X` | the one target: the last or next hostile (nearest first), the nearest threat, clear it. A red bracket marks it and its name is under the radar; Attack goes at it, Fly to the target flies to it, `Enter` fires at it |
+| `A` `D` `S` `X` | the one target: the last or next hostile (nearest first), the nearest threat, clear it. A red bracket marks it and the target display in the bottom right corner shows it (a picture, its name and type, hull and shield, how far, what it is doing); Attack goes at it, Fly to the target flies to it, `Enter` fires at it |
 | `J` `K` `L` `;` | power, directly, one pip a press: a pip to the shields, the engines, the weapons; `;` back to 2, 2, 2 (the `I` list has the same orders) |
 | `Tab` | the map of the level: `Up` `Down` step the marks, `Enter` flies there (`Shift+Enter` fast), a click sets a mark, `X` clears the trip |
 | `-` `=` `Backspace`, mouse wheel | zoom out, zoom in, reset the zoom and recentre (the view or the map) |
