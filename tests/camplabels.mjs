@@ -3,7 +3,7 @@
 // the radar's rim; the list cut the star's name ("Epsilon Eridani star") without saying so.
 //   campMapFreeSpot(cands, w, h, boxes)   the first candidate centre where a w by h label overlaps no box;  campMapRouteSpots(a, b)   where to try the route label along its line
 //   campNavLabelAt(x, y, w, h, keep, W, H) the arrow's label pushed out of the keep rectangles and kept on the screen
-//   campPanelsKeep()                       the rectangle of the target's line (src/campanelsdraw.js; card one-list-keys): the two lists are hidden until Q or P opens one, and an open list is drawn over the label, so no list is kept out of
+//   the keep rectangles                    the table's CAMP.nav.arrow.keep only (the target's line that was kept out of too is gone; the target display's box is inside the radar's old rectangle): the two lists are hidden until Q or P opens one, and an open list is drawn over the label, so no list is kept out of
 // Run: node tests/camplabels.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
@@ -38,16 +38,15 @@ console.log('the arrow\'s label');
   check('the scene uses it for the arrow\'s label, with the keep rectangles of CAMP.nav.arrow', /campNavLabelAt\(ar\.x - Math\.cos\(a\) \* 64, ar\.y - Math\.sin\(a\) \* 28, this\.hud\.arrow\.width/.test(src('src/campaignscene.js')) && /CAMP\.nav\.arrow\.keep/.test(src('src/campaignscene.js')));
 }
 
-console.log('the keep-out rectangles hold the target\'s line and the left HUD rows (8-GEN: the label sat under the SHIP tab and over the AUTOPILOT line; the tabs are gone, the lists open on a key)');
+console.log('the keep-out rectangles hold the target display and the left HUD rows (8-GEN: the label sat under the SHIP tab and over the AUTOPILOT line; the tabs are gone, the lists open on a key)');
 {
-  const T = J('CAMPPANELS_LOOK.tgt'), PK = J('campPanelsKeep()'), K = J('CAMP.nav.arrow.keep').concat(PK);
-  const line = { x0: 1280 - T.x - T.w, x1: 1280 - T.x, y0: T.y - 8, y1: T.y + 18 }; // the target's name (13 px type, right-aligned at T.y), its hull bar under it, and the line of its keys (centred 18 px lower)
-  check('the target\'s line (under the radar: its name, its hull bar, its keys) is inside a keep rectangle (the line may move: the label keeps out of campPanelsKeep, which follows it)', PK.length === 1 && K.some(r => line.x0 >= r[0] && line.x1 <= r[2] && line.y0 >= r[1] && line.y1 <= r[3]) && PK[0][2] === 1280, JSON.stringify([line, PK]));
+  const BX = J('campTdispBox()'), K = J('CAMP.nav.arrow.keep');
+  check('the target display (in the corner the radar had: its box, campTdispBox) is inside a keep rectangle, so no label is put on it', K.some(r => BX.x >= r[0] && BX.x + BX.w <= r[2] && BX.y >= r[1] && BX.y + BX.h <= r[3]) && J('typeof campPanelsKeep') === 'undefined', JSON.stringify([BX, K]));
   check('no list is kept out of: the lists are hidden until Q or P opens one (an open list is drawn over the label), so the places of the lists are free for the label while none is open', (() => { const heads = J('CAMP_PANELS.panels.map(d => campPanelsGeometry(d).list)'); return heads.every(t => !K.some(r => t.x >= r[0] && t.x + t.w <= r[2] && t.y >= r[1] && t.y + t.h <= r[3])) && J('Campaign.prototype.arrowKeep.call({}).length') === K.length; })());
   check('the left HUD\'s objective line (y 152) and the autopilot line (y 174, 14 px type) are inside the first rectangle', K.some(r => r[0] === 0 && r[1] === 0 && r[3] >= 174 + 18));
   const W = 1280, H = 720, L = (x, y) => J(`campNavLabelAt(${x}, ${y}, 190, 18, ${JSON.stringify(K)}, ${W}, ${H})`), hit = (p, r) => p.x + 95 > r[0] && p.x - 95 < r[2] && p.y + 9 > r[1] && p.y - 9 < r[3];
-  const a = L(1144, 222), b = L(85, 164), c = L(1280 - T.x - T.w / 2, T.y);
-  check('the label wanted under the radar (2.3 and 3.3 starts), on the target\'s line, or on the AUTOPILOT line (1.2) ends out of every rectangle, and on the screen', [a, b, c].every(p => !K.some(r => hit(p, r)) && p.x - 95 >= 0 && p.x + 95 <= W && p.y - 9 >= 0 && p.y + 9 <= H), JSON.stringify([a, b, c]));
+  const a = L(1144, 222), b = L(85, 164), c = L(BX.x + BX.w / 2, BX.y + BX.h / 2);
+  check('the label wanted at the top right (2.3 and 3.3 starts), on the target display, or on the AUTOPILOT line (1.2) ends out of every rectangle, and on the screen', [a, b, c].every(p => !K.some(r => hit(p, r)) && p.x - 95 >= 0 && p.x + 95 <= W && p.y - 9 >= 0 && p.y + 9 <= H), JSON.stringify([a, b, c]));
 }
 
 console.log('the list');

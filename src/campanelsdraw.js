@@ -4,20 +4,18 @@
 //   campPanelPowerHi(s)      the dial (0 SHIELDS, 1 SPEED, 2 LASERS) whose row is highlighted in the open power list, else -1: the scene frames that gauge A row is its words in plain language and, at the right, a word or two of the live state, or the reason it cannot be done now (the row is grey);
 // a row that opens a part of the list shows that part's KEY in a cap at its left and an arrow at its right; the highlighted row has a bright bar; the one in force (a stance, a convoy order) is marked.
 // A list longer than CAMP_PANELS.show rows scrolls with the highlight, and says how many rows are below. The foot of the list names its keys (Up Down, Enter, Left back, Esc), read from the key table.
-// The target's line (its name, how far, its hull) is always on the screen, under the radar: A D S X pick it with no list open.
+// The target (A D S X, with no list open) is shown by the target display in the bottom right corner (src/camptdispscene.js), which took over the target's line that was here (card space-game-target-display).
 // The words are the table's (CAMP_PANELS in src/data_controls.js), so a row or a list added by data is drawn without a line of code. The scene calls these:
 //   campPanelsInstall(s)       once, in create: s.pn is the state (campPanelNew), s.pnl the objects (made once, shown and moved after that); the pointer is listened for and given back when the scene shuts down
-//   campPanelsPaint(s, now)    every frame: the open list while the battle is on the screen (not over a card, the pause, the page of keys or the map), and the target's line; the words are live, four times a second
+//   campPanelsPaint(s, now)    every frame: the open list while the battle is on the screen (not over a card, the pause, the page of keys or the map); the words are live, four times a second
 //   campPanelsClose(s)         a card coming up, the map, the end: the list closes
-//   campPanelsKeep()           the rectangles the edge arrow's label keeps out of: the target's line (an open list is drawn over the arrow's label)
 // Everything is on the screen's own camera (scroll factor 0), so the zoom (src/camzoom.js) never scales it. tests/campanelsui.mjs checks the states on stand-ins.
 const CAMPPANELS_LOOK = {
   box: { w: 360, head: 30, row: 24, gap: 2, pad: 6, foot: 44 }, // px: the list's width, its heading's height, a row's height, the gap between rows, the gap under the heading, the foot (what is off the screen, and the keys)
   top: 262, topRight: 104, edge: 24, edgeRight: 4, depth: 160, every: 250, // the list's y: a left list under the lines of text at the left, a right list right under the gauges (the gauges end at about y 96, the radar is at the bottom right); its distance from the screen's edge (a right list ends 4 px from it, like the weapons gauge's bar that its pip bars sit under), the depth (over the map, 150 to 156), ms between the words being made live
   color: { left: CYAN, right: AMBER }, ink: { left: '#7fe9ff', right: '#ffd37a' },
   rowInk: { ok: '#e8f6ff', no: '#7f95a8', suffix: '#8fb4c8', why: '#ff9e7a', at: '#02101c' }, flash: 0xffffff,
-  cap: { w: 24, h: 18, gap: 8 },                               // the key cap of a row that opens a part of the list (W E R, O I U), and the room after it: every row of a list that has such a row starts its words after the cap's place
-  tgt: { x: 20, y: 414, w: 216, bar: 3 }                        // the target's line over the radar (at the bottom right): its distance from the right edge, its y, its width, its hull bar's height
+  cap: { w: 24, h: 18, gap: 8 }                                // the key cap of a row that opens a part of the list (W E R, O I U), and the room after it: every row of a list that has such a row starts its words after the cap's place
 };
 
 // where a list is: x, y, w, h of the whole of it, and the rows' places. rows: how many rows the list has in this mission: it is as tall as they are, up to CAMP_PANELS.show (a longer one scrolls and does not jump); none given: the full height
@@ -26,8 +24,6 @@ function campPanelsGeometry(def, rows) {
   const x = right ? W - K.edgeRight - B.w : K.edge, top = right ? K.topRight : K.top, ry = top + B.head + B.pad, lh = n * (B.row + B.gap) - B.gap;
   return { x, y: top, w: B.w, h: B.head + B.pad + lh + B.pad + B.foot, n, head: { x, y: top, w: B.w, h: B.head }, rowH: B.row, rowY: i => ry + i * (B.row + B.gap), foot: { x, y: ry + lh + B.pad, w: B.w, h: B.foot }, list: { x, y: ry, w: B.w, h: lh } };
 }
-function campPanelsKeep() { const T = CAMPPANELS_LOOK.tgt; return [[W - T.x - T.w - 8, T.y - 12, W, T.y + 22]]; }
-
 function campPanelsInstall(s) {
   const K = CAMPPANELS_LOOK, n = Math.max(1, CAMP_PANELS.show | 0);
   s.pn = campPanelNew(); s.pnl = { objs: [], rows: [], live: -1e9, key: '', onPointer: null };
@@ -36,7 +32,6 @@ function campPanelsInstall(s) {
   L.title = tx(15, '#ffffff', { letterSpacing: 2 }).setOrigin(0, 0.5); L.count = tx(12, '#9fbdd1').setOrigin(1, 0.5);
   for (let i = 0; i < n; i++) L.rows.push({ cap: tx(12, '#02101c', { fontStyle: 'bold' }).setOrigin(0.5), name: tx(15, K.rowInk.ok).setOrigin(0, 0.5), suffix: tx(12, K.rowInk.suffix).setOrigin(1, 0.5) });
   L.more = tx(12, '#9fbdd1').setOrigin(0, 0.5); L.keys = tx(12, '#9fbdd1').setOrigin(0, 0.5);
-  L.tgt = tx(13, '#ffd37a').setOrigin(1, 0.5); L.tgtKeys = tx(11, '#8fb4c8').setOrigin(1, 0.5);
   L.onPointer = p => campPanelsClick(s, p.x, p.y);
   if (s.input && s.input.on) s.input.on('pointerdown', L.onPointer);
   if (s.events && s.events.once) { const off = () => { try { if (s.input && s.input.off) s.input.off('pointerdown', L.onPointer); } catch (e) { /* gone */ } }; s.events.once('shutdown', off); s.events.once('destroy', off); }
@@ -56,11 +51,6 @@ function campPanelsPaint(s, now) {
   const K = CAMPPANELS_LOOK, B = K.box, C = s.camp, on = campPanelsOn(s), g = L.g;
   g.clear(); L.objs.forEach(o => { if (o !== g) o.setVisible(false); });
   if (!on) { if (campPanelOpen(P) && s.mode !== 'play') campPanelClose(P); L.live = -1e9; return; }
-  // the target's line, under the radar: always there, so A D S X can be used with no list open
-  const T = K.tgt, tg = campPanelTarget(C), tx = W - T.x;
-  L.tgt.setVisible(true).setPosition(tx, T.y).setText(tg ? uiText('camp.ui.tgt', { name: tg.name, km: tg.km }) : uiText('camp.ui.tgtnone')).setColor(tg ? '#ff9e7a' : '#7f95a8');
-  L.tgtKeys.setVisible(true).setPosition(tx, T.y + 18).setText(uiText(tg ? 'camp.ui.tgtclear' : 'camp.ui.tgtkeys'));
-  if (tg) { g.fillStyle(0x16293d, 1); g.fillRect(tx - T.w, T.y + 9, T.w, T.bar); g.fillStyle(0xff7a6a, 1); g.fillRect(tx - T.w, T.y + 9, Math.max(1, T.w * tg.hp), T.bar); }
   const id = campPanelOpen(P), def = id ? campPanelDef(id) : null; if (!def) { L.live = -1e9; L.key = ''; return; }
   const col = K.color[def.side], key = id + ':' + P.at + ':' + P.top + ':' + (P.pick ? 'p' + P.pick.sel + ':' + P.pick.at + ':' + P.pick.top : '') + ':' + (P.trail || []).join() + ':' + Object.keys(P.lit || {}).map(k => P.lit[k]).join(); // (an order just given is in the key too: a power row stays open, and its pips are right at once; so is the target sub-list's highlight)
   if (L.live < 0 || now - L.live >= K.every || L.key !== key) { L.live = now; L.key = key; L.view = campPanelView(P, C); } // the words are live: made when the list opens or the highlight moves, and four times a second

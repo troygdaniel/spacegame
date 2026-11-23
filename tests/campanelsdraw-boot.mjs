@@ -1,6 +1,6 @@
 // not in the smoke: a boot of the Campaign's order lists (Q the fleet list at the left with its parts W E R, P the ship list at the right with its parts O I U; a part's key opens it directly; nothing is drawn until one is opened) with a real keyboard, run by hand (one Chrome, muted, through the test lock; cards one-list-keys and list-shortcuts)
 // The rules are tests/campanels.mjs, tests/campanelsdraw.mjs, tests/campanelsui.mjs, tests/camptarget.mjs and tests/camppanelkeys.mjs (plain Node). This boots the Campaign once and the title once and does what Troy does: no list on the screen at the
-// first frame (only the target's line under the radar), Q and the highlight, the key caps on the rows that open a part, Down and Enter launch the wing, the stances are a part of the fleet list, P the ship list, E straight to the fighters, Left back to the fleet list, I and a pip of power
+// first frame (nothing; the target is the target display's now), Q and the highlight, the key caps on the rows that open a part, Down and Enter launch the wing, the stances are a part of the fleet list, P the ship list, E straight to the fighters, Left back to the fleet list, I and a pip of power
 // (the list stays open), a refused order leaves the list open, A D S X the target (a hostile is put in reach: the first
 // minute of 1.1 has none), a pilot's call answered with Up, Down and Enter, the strip, H and the page of every key, and H on the title. The list a row is in is read from campKeyVia in the page and its place there from campPanelList, never a letter or a number written here; the words are read from the game (uiText, the key table).
 //   node tests/campanelsdraw-boot.mjs         pictures go to the folder in KEYS_SHOTS (default ~/dev/spacegame-night/shots/hands-*.png), never into the repository
@@ -54,7 +54,7 @@ async function campaign() {
     const foot = (text, k) => j(`uiText(${JSON.stringify(text)}, { key: ${JSON.stringify(k)} })`); // the foot's key line as the game says it
     const fits = () => j(`(() => { const K = CAMPPANELS_LOOK, rows = ${PL}.rows.filter(r => r.name.visible), cap = rows.some(r => r.cap.visible) ? K.cap.w + K.cap.gap : 0; return rows.every(r => 14 + cap + r.name.width + 8 + r.suffix.width + 12 <= K.box.w); })()`);
     check('nothing is drawn until a list\'s key is pressed: no list is open, no heading and no row is on the screen', (await isOpen()) === '' && (await j(`!${PL}.title.visible && ${PL}.rows.every(r => !r.name.visible && !r.suffix.visible && !r.cap.visible) && !${PL}.keys.visible`)) === true);
-    check('the target\'s line is on the screen under the radar with no list open: TARGET  none', (await j(`${PL}.tgt.visible`)) === true && (await j(`${PL}.tgt.text`)) === 'TARGET  none' && (await j(`${PL}.tgtKeys.visible`)) === true);
+    check('with no list open and nothing picked the bottom right corner is empty: the target display is not there (the radar and the target\'s line are gone)', (await j(`!${SC}.hud.tdisp || (!${SC}.hud.tdisp.id && !${SC}.hud.tdisp.pic.visible)`)) === true);
     await snap(t, 'start');
     // flight: the arrows turn and thrust the cruiser; A, W and the other letters do not (W is the all-squads list's key), and a digit is no key at all
     const rot0 = await j(`${SC}.camp.carrier.rot`), stance0 = await j(`${SC}.camp.stance`);
@@ -133,7 +133,7 @@ async function campaign() {
     check('W from the fleet list opens the all-squads list on its first row that can be given (wherever the highlight was), and W again closes everything', (await isOpen()) === 'squads' && (await j(`${P}.at`)) === (await firstGiven()) && (await press(t, 'KeyW', 20), await t.run(200), await isOpen()) === '' && (await j(`${PL}.title.visible`)) === false);
     // the target sub-list (card space-game-order-target-pick): Attack with several hostiles and no target picked opens a list of them; Down moves the highlight (the flight view reveals the one it is on), Esc goes back to the list it came from, Enter gives the order at the highlighted one
     await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; campSpawn(C, 'raider', c.x + 520, c.y - 200); campSpawn(C, 'raider', c.x + 900, c.y + 330); return 1; })()`); await press(t, 'KeyX', 20); await t.run(300);
-    check('no target is picked: the line under the radar says none', (await j(`${SC}.camp.tgt`)) === '' && (await isOpen()) === '', await j(`${PL}.tgt.text`));
+    check('no target is picked, and the target display is not there', (await j(`${SC}.camp.tgt`)) === '' && (await isOpen()) === '' && (await j(`!${SC}.hud.tdisp || !${SC}.hud.tdisp.pic.visible`)) === true);
     if ((await goTo('attack')) === true) {
       await press(t, 'Enter', 20); await t.run(400);
       const pk = await j(`(${P}.pick ? { kind: ${P}.pick.kind, ids: ${P}.pick.ids.slice(), sel: ${P}.pick.sel, row: ${P}.pick.row } : null)`), tgt0 = await j(`${SC}.camp.tgt`);
@@ -169,10 +169,10 @@ async function campaign() {
     const spawned = await j(`(() => { const C = ${SC}.camp, c = C.carrier, u = campSpawn(C, 'raider', c.x + 500, c.y - 200); return !!u; })()`).catch(() => false);
     if (spawned) {
       await press(t, 'KeyD', 20); await t.run(300);
-      check('D picks the hostile as the target with no list open, and the line under the radar names it', !!(await j(`${SC}.camp.tgt`)) && (await isOpen()) === '' && /^TARGET {2}.+ {2}\d+ km$/.test(await j(`${PL}.tgt.text`)), await j(`${PL}.tgt.text`));
+      check('D picks the hostile as the target with no list open, and the target display in the bottom right corner shows it: its name, its picture', !!(await j(`${SC}.camp.tgt`)) && (await isOpen()) === '' && (await j(`${SC}.hud.tdisp.id`)) === (await j(`${SC}.camp.tgt`)) && (await j(`${SC}.hud.tdisp.pic.visible`)) === true, await j(`${SC}.hud.tdisp.info && ${SC}.hud.tdisp.info.name`));
       await snap(t, 'target');
       await press(t, 'KeyX', 20); await t.run(300);
-      check('X clears it, and the line says none', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${PL}.tgt.text`)) === 'TARGET  none');
+      check('X clears it, and the display is gone: the corner is empty', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.hud.tdisp.pic.visible`)) === false);
     }
     // a pilot's call: a small list in the middle, answered with Up, Down and Enter (the digits answer nothing)
     await t.ev(`(() => { campCallStart(${SC}.camp, 'cruiser', {}); return 1; })()`); await t.run(500);
