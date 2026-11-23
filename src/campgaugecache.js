@@ -11,7 +11,7 @@
 const CAMPGAUGECACHE = { every: 50, pad: 16, depth: 100 }; // ms between two paints of the dials (20 a second: the needle and the bars still move smoothly); px of room round the cells for the halos; the HUD Graphics' own depth
 function campGaugeCacheBox() {
   const Z = campHudGeom(), B = Z.block, P = CAMPGAUGECACHE.pad, Wd = typeof W === 'number' ? W : 1280, low = typeof CAMPPANELS_LOOK === 'object' && CAMPPANELS_LOOK.topRight ? CAMPPANELS_LOOK.topRight : 104; // (the line from the highlighted dial runs down to where the list opens)
-  const x = Math.max(0, Math.floor(B.x0 - P)), y = Math.max(0, Math.floor(B.y0 - P - 12)), x1 = Math.min(Wd, Math.ceil(Math.max(B.x1, Z.balance.x) + P)), y1 = Math.ceil(Math.max(B.y1, low, Z.balance.y + 12) + P);
+  const x = Math.max(0, Math.floor(B.x0 - P)), y = Math.max(0, Math.floor(B.y0 - P - 12)), x1 = Math.min(Wd, Math.ceil(B.x1 + P)), y1 = Math.ceil(Math.max(B.y1, low) + P); // (the balance word under the last bar went with the semicolon key: card space-game-keys-select)
   return { x, y, w: x1 - x, h: y1 - y };
 }
 function campGaugesPaintCached(s, g, T, C, A, now, hi) {

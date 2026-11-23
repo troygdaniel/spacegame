@@ -24,9 +24,9 @@ function campTdispSubject(C, P, now) {
 }
 function campFdispSubject(C) {
   if (!C || !C.carrier || typeof campSelUnits !== 'function') return null;
-  const u = campSelUnits(C).friend;
+  const u = campSelUnits(C).who; // WHO (A D): one pilot's ship, or All pilots (the default; card space-game-keys-select)
   if (u) return u.hp > 0 && !u.gone ? { u, side: 'friend' } : null;
-  const f = typeof campSelNow === 'function' ? campSelNow(C) : null; // Q picks all three pilots (card space-game-q-selects-all): no one ship, the display shows All pilots and a row for each pilot out (card space-game-q-all-pilots-panel)
+  const f = typeof campSelNow === 'function' ? campSelNow(C) : null; // All pilots (A D's first stop, Q) (card space-game-q-selects-all): no one ship, the display shows All pilots and a row for each pilot out (card space-game-q-all-pilots-panel)
   return f && f.kind === 'all' ? { u: null, all: (f.units || []).filter(x => x && x.hp > 0 && !x.gone), side: 'friend' } : null;
 }
 function campFdispAllInfo(C, units) { // what the Q display draws: its title and a row for each pilot out, with the pilot's name and hull; key: everything it shows

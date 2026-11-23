@@ -319,7 +319,8 @@ async function listenEarlyRun(game) {
 // ---------- one press ----------
 function listenScene(game) { // the scene the computer can open over: the Space or Station scene that is running (a paused one, behind a menu, is not)
   if (!game || !game.scene) return null;
-  return game.scene.getScenes(true).find(sc => sc.scene.key === 'Space' || sc.scene.key === 'Station' || sc.scene.key === 'Campaign') || null;
+  const voice = typeof CAMP_VOICE === 'undefined' || (typeof campKeyCodes === 'function' && campKeyCodes('voice').length > 0); // the Campaign's voice is off (CAMP_VOICE, card space-game-keys-select) while it has no key: no press, no key cap there
+  return game.scene.getScenes(true).find(sc => sc.scene.key === 'Space' || sc.scene.key === 'Station' || (sc.scene.key === 'Campaign' && voice)) || null;
 }
 // the same things that keep the strip's line from opening (src/cmdstrip.js cmdstripBlocked), asked early so the player is not asked to speak into a line that will not open
 const listenBlocked = s => !!(s.leaving || s.dead || s.panel || s.talk || s.shopOpen || s.jmp || (s.cr && s.cr.navOpen));
@@ -454,7 +455,7 @@ function listenHeld() { const S = LISTEN.s; return S.chunks.length + (S.blob ? 1
 // ---------- keys, once for the whole game ----------
 // The listeners are on the window, in the capture phase: they see Esc before Phaser does (an Esc that cancels the words must not also open the pause menu)
 function listenTyping() { const el = typeof document !== 'undefined' ? document.activeElement : null; return !!(el && (/^(INPUT|TEXTAREA|SELECT)$/.test(String(el.tagName)) || el.isContentEditable === true)); }
-// the key to hold: U in the Long Haul; in the Campaign the voice is the period (CAMP_KEYS.voice in src/data_controls.js; card space-game-two-hands-keys). LISTEN.code and LISTEN.cap follow the scene that is up
+// the key to hold: U in the Long Haul; in the Campaign the voice has no key while CAMP_VOICE is off (the period went to the friendlies: card space-game-keys-select), and listenScene is null there, so nothing listens and no cap is drawn. LISTEN.code and LISTEN.cap follow the scene that is up
 function listenKeysSync(game) {
   const camp = !!(game && game.scene && typeof game.scene.getScenes === 'function' && game.scene.getScenes(true).some(sc => sc.scene && sc.scene.key === 'Campaign') && typeof campKeyCodes === 'function');
   LISTEN.code = camp ? campKeyCodes('voice')[0] : 'KeyU'; LISTEN.cap = camp ? CAMP_KEYS.voice.k : 'U';

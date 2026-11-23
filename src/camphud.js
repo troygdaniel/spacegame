@@ -8,13 +8,13 @@
 //   campHudGeom()            where the dials, bars and the hull bar are, in screen px, from CAMP.hud: { cells: [{ cx, cy, R, dial, bar, key }], hull, bottom, ore: { x, y } (the ore line's right end), block: { x0, y0, x1, y1 } }
 //   campHudFlow(items)       the lines of text under the gauges: [{ id, show, h }] -> { ys: { id: y }, bottom }; a line with nothing to say gives its place back
 //   campGaugeAnim(A, pips, ms)   the bars' animation: the lit share of each bar eases to its pips, a flash runs when they change;  campGaugeAnimNew(pips) starts one
-//   campPowerKey(C, code)    a direct key: J shields, K engines, L weapons (the dials' order), ; back to 2 / 2 / 2: the same orders the strip and the voice give; { used, ran, ok, say, sys }
-// the code -> system of the keys of the SHIP panel's power rows (J K L ; in the table today)
-function campPowerKeys() { const k = {}; ['shields', 'engines', 'weapons', 'balance'].forEach(id => CAMP_KEYS[id].codes.forEach(c => { k[c] = CAMP_KEYS[id].sys; })); return k; }
+//   campPowerKey(C, code)    a direct key: J shields, K engines, L weapons (the dials' order; the semicolon's balance key is gone): the same orders the strip gives; { used, ran, ok, say, sys }
+// the code -> system of the keys of the SHIP panel's power rows (J K L in the table today)
+function campPowerKeys() { const k = {}; ['shields', 'engines', 'weapons'].forEach(id => CAMP_KEYS[id].codes.forEach(c => { k[c] = CAMP_KEYS[id].sys; })); return k; }
 const CAMP_DIAL_PIPS = [1, 2, 0]; // the pips of the shields, the engines, the weapons (indexes into C.power.p, which is weapons, shields, engines): what dial 0, 1 and 2 show, left to right
 const CAMP_GAUGE = {
   colors: { shields: 0x7fe9ff, speed: 0x6dff9c, lasers: 0xffb454 },   // the dial and its bar: the colours the W S E pips had (weapons amber, shields cyan, engines green)
-  keys: campPowerKeys(), // the direct keys (CAMP_KEYS in src/data_controls.js), the dials' order, and the balance key // the direct keys, in the order of the dials (SHIELDS, SPEED, LASERS: the key is under each bar), and ; for the balance (card space-game-power-balance-key); free of every key the Campaign binds (src/data_controls.js)
+  keys: campPowerKeys(), // the direct keys (CAMP_KEYS in src/data_controls.js), the dials' order // the direct keys, in the order of the dials (SHIELDS, SPEED, LASERS: the key is under each bar); the semicolon's balance key is gone (card space-game-keys-select); free of every key the Campaign binds (src/data_controls.js)
   segs: 24,                                                           // segments round a dial (Long Haul's has 30)
   ease: 9, flash: 280,                                                // segments a second a bar fills at, and how long (ms) a segment that changed flashes
   off: 0x16293d, glass: 0x07101c, hull: { ok: 0x6dff9c, low: 0xff4d6d, edge: 0x38e1ff }
@@ -45,7 +45,7 @@ function campHudGeom() {
     return { x0, cx, cy, R, dial: { x0: cx - R, y0: cy - R, x1: cx + R, y1: cy + R }, bar: { x0: bx, y0: by, x1: bx + bw, y1: by + H.bar.h }, key: { x: bx + bw / 2, y: by + H.bar.h + 9 } };
   });
   const hy = H.y + H.hullBar.y;
-  return { cells, hull: { x0: cells[0].x0, y0: hy, x1: cells[0].bar.x1, y1: hy + H.hullBar.h }, balance: { x: cells[2].bar.x1, y: cells[2].key.y + 12 }, bottom: H.text.y, ore: { x: gx + 3 * H.cell, y: H.ore.y }, block: { x0: gx, y0: H.y, x1: gx + 3 * H.cell, y1: H.y + H.hullBar.y + H.hullBar.h + 6 } }; // balance: where the word of the ; key stands (right-aligned, under the last bar's key)
+  return { cells, hull: { x0: cells[0].x0, y0: hy, x1: cells[0].bar.x1, y1: hy + H.hullBar.h }, bottom: H.text.y, ore: { x: gx + 3 * H.cell, y: H.ore.y }, block: { x0: gx, y0: H.y, x1: gx + 3 * H.cell, y1: H.y + H.hullBar.y + H.hullBar.h + 6 } };
 }
 // the lines of text under the gauges, top to bottom: each one that shows takes its pitch (and `h` more, a line with a bar under it), the others none
 function campHudFlow(items) {
@@ -68,10 +68,10 @@ function campGaugeAnim(A, pips, ms) {
 // how much of segment i (0 to 1) is lit when `shown` segments are
 const campBarSeg = (shown, i) => Math.max(0, Math.min(1, shown - i));
 
-// ---- a direct key (J K L ;): the ship's power (src/camppanel.js does the same through campPanelKey) ----
+// ---- a direct key (J K L): the ship's power (src/camppanel.js does the same through campPanelKey) ----
 function campPowerKey(C, code) {
   const sys = CAMP_GAUGE.keys[code]; if (!sys) return { used: false, ran: false, ok: false, say: '', sys: '' };
-  const r = sys === 'balance' ? campOrder(C, 'balance', '', 'key') : campOrder(C, 'power', sys, 'key'); // ; is the balance: 2 / 2 / 2 at once
+  const r = campOrder(C, 'power', sys, 'key');
   return { used: true, ran: true, ok: !!r.ok, say: r.say || '', sys };
 }
 
@@ -127,9 +127,9 @@ function campBarDraw(g, cell, shown, flash, color) {
 // the three texts of each dial (the number in it, its word under the number) and the key under its bar, and the hull's words; made once, hidden with the rest of the HUD (hudShow)
 function campGaugesMake(sc, uiFontFn) {
   const Z = campHudGeom(), mk = (x, y, size, color, ox) => sc.add.text(x, y, '', uiFontFn(size, color, { stroke: '#02060d', strokeThickness: 3 })).setOrigin(ox == null ? 0.5 : ox, 0.5).setScrollFactor(0).setDepth(101);
-  return { n: Z.cells.map(c => mk(c.cx, c.cy - 3, 13, '#ffffff')), l: Z.cells.map(c => mk(c.cx, c.cy + 10, 8, '#9fbdd1')), k: Z.cells.map(c => mk(c.key.x, c.key.y, 9, '#9fbdd1')), hull: mk(Z.hull.x0, Z.hull.y0 - 7, 9, '#9fe9ff', 0), hullN: mk(Z.hull.x1, Z.hull.y0 - 7, 9, '#9fe9ff', 1), bal: mk(Z.balance.x, Z.balance.y, 9, '#9fbdd1', 1) };
+  return { n: Z.cells.map(c => mk(c.cx, c.cy - 3, 13, '#ffffff')), l: Z.cells.map(c => mk(c.cx, c.cy + 10, 8, '#9fbdd1')), k: Z.cells.map(c => mk(c.key.x, c.key.y, 9, '#9fbdd1')), hull: mk(Z.hull.x0, Z.hull.y0 - 7, 9, '#9fe9ff', 0), hullN: mk(Z.hull.x1, Z.hull.y0 - 7, 9, '#9fe9ff', 1) };
 }
-function campGaugesVisible(T, on) { if (!T) return; ['n', 'l', 'k'].forEach(k => (T[k] || []).forEach(t => t && t.setVisible && t.setVisible(on))); ['hull', 'hullN', 'bal'].forEach(k => T[k] && T[k].setVisible && T[k].setVisible(on)); }
+function campGaugesVisible(T, on) { if (!T) return; ['n', 'l', 'k'].forEach(k => (T[k] || []).forEach(t => t && t.setVisible && t.setVisible(on))); ['hull', 'hullN'].forEach(k => T[k] && T[k].setVisible && T[k].setVisible(on)); }
 // every frame: the dials, the bars, the hull bar, and the words on them
 function campGaugesPaint(g, T, C, A, now, hi) { // hi: the dial (0 SHIELDS, 1 SPEED, 2 LASERS) whose row is highlighted in the power list: it gets a bright frame in its own colour (card space-game-power-presets), or -1 / none
   const Z = campHudGeom(), D = campGauges(C), HB = campHullBar(C), emer = C.t < C.power.until;
@@ -148,6 +148,5 @@ function campGaugesPaint(g, T, C, A, now, hi) { // hi: the dial (0 SHIELDS, 1 SP
   g.fillStyle(CAMP_GAUGE.off, 0.9).fillRect(h.x0, h.y0, w, h.y1 - h.y0);
   g.fillStyle(HB.color, 1).fillRect(h.x0, h.y0, Math.max(0, w * HB.frac), h.y1 - h.y0);
   g.lineStyle(1, CAMP_GAUGE.hull.edge, 0.4).strokeRect(h.x0, h.y0, w, h.y1 - h.y0);
-  if (T && T.bal) T.bal.setText(campKeyVar('keybalance') + '  ' + uiText('camp.gauge.even')); // the key of the balance, and its word, under the last bar's key
   if (T && T.hull) { T.hull.setText(HB.label).setColor(HB.warn ? '#ff4d6d' : '#9fe9ff'); T.hullN.setText(String(HB.n)).setColor(HB.warn ? '#ff4d6d' : '#9fe9ff'); }
 }

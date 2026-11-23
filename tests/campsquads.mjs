@@ -84,7 +84,7 @@ console.log('C. a squad with no ship out');
   g.run('__out(1); __sq("yellow").forEach(u => { u.hp = 0; });');
   const lost = J(`campWingOrder(C, 'yellow', 'recall', null, 'key')`);
   check('a squad that has lost all its ships refuses the same way and the others are not affected', lost.ok === false && lost.code === 'nosquad' && J(`campWingOrder(C, 'red', 'guard', null, 'key').ok`) === true);
-  check('a squad with no ship out is no friend to pick: A D step the pilots that have a ship out (red, green) and let a lost one go from the selection (card space-game-bracket-select-orders: the squads\' own lists are gone)', J(`campSelList(C).filter(e => e.kind === 'pilot').map(e => e.squad).join()`) === 'red,green' && J(`(() => { C.sel = 'pilot:yellow'; const none = campSelNow(C) === null && C.sel === ''; return none; })()`) === true);
+  check('a squad with no ship out is no one to pick: A D step All pilots and the pilots that have a ship out (red, green) and let a lost one go back to All pilots (cards space-game-bracket-select-orders, space-game-keys-select: the squads\' own lists are gone)', J(`campSelList(C).filter(e => e.kind === 'pilot').map(e => e.squad).join()`) === 'red,green' && J(`campSelList(C)[0].id`) === 'all' && J(`(() => { C.sel = 'pilot:yellow'; const back = campSelNow(C).id === 'all' && C.sel === 'all'; return back; })()`) === true);
   check('the refusal and the two short words are in the table (CAMP_PANELS.why and shortWhy) and the line is in the content', J('CAMP_PANELS.why.nosquad') === 'no ships in the squad' && J('CAMP_PANELS.shortWhy.nosquad') === 'none out' && /\| camp\.no\.nosquad \| /.test(src('content/text/campsquads.md')) && J(`uiText('camp.no.nosquad')`) === 'No ships of that squad are out.');
 }
 
@@ -100,7 +100,7 @@ console.log('D. the keys and the lists');
   g.run('window.__a = __foe(900, 0); campTgtNearest(C);');
   const tg = J('C.tgt');
   const s1 = (key('KeyD'), J('C.sel')), s2 = (key('KeyD'), J('C.sel')), s3 = (key('KeyD'), J('C.sel')), s4 = (key('KeyA'), J('C.sel'));
-  check('D picks the friends in turn, the three pilots first (red, green, yellow) then the ships you protect, and A goes back one; none of them is an order and none opens a list', s1 === 'pilot:red' && s2 === 'pilot:green' && s3 === 'pilot:yellow' && s4 === 'pilot:green' && J('campPanelOpen(__PP)') === '' && J('C.orders.attack | 0') === 0);
+  check('D picks who in turn from All pilots (the default): the pilots red, green, yellow, and A goes back one; none of them is an order and none opens a list', s1 === 'pilot:red' && s2 === 'pilot:green' && s3 === 'pilot:yellow' && s4 === 'pilot:green' && J('campPanelOpen(__PP)') === '' && J('C.orders.attack | 0') === 0);
   const e0 = key('KeyE');
   check('E with the green pilot picked: the green squad attacks the picked target (a fleet order) and only the green squad', e0.ran && e0.ok && e0.row === 'attack' && e0.open === '' && e0.fleet === true && J('__ord("green")') === R3('attack:' + tg) && J('__ord("red")').startsWith('guard') && J('__ord("yellow")').startsWith('guard'), JSON.stringify(e0));
   g.run(`C.sel = ''; campPanelKey(__PP, C, 'KeyD', 0);`);
@@ -113,7 +113,7 @@ console.log('D. the keys and the lists');
   check('T with the red pilot picked is Recall for Red: Red flies home, the others stay on their attack', e2.ran && e2.ok && e2.row === 'recall' && J('__ord("red")') === R3('recall:') && J('__ord("green")').startsWith('attack') && J('__ord("yellow")').startsWith('attack'));
   g.run(`campPanelKey(__PP, C, 'KeyX', 0);`);
   const rg = key('KeyR');
-  check('X lets both selections go; R with none picked is Guard the cruiser for all three squads, the recalled one too', J('C.sel') === '' && J('C.tgt') === '' && rg.ran && rg.ok && rg.row === 'guard' && J(`campWing(C, 'fighter').every(u => u.order.type === 'guard')`));
+  check('X lets the enemy and the friendly go and puts who back on All pilots; R with none picked is Guard the cruiser for all three squads, the recalled one too', J('C.sel') === 'all' && J('C.fsel') === '' && J('C.tgt') === '' && rg.ran && rg.ok && rg.row === 'guard' && J(`campWing(C, 'fighter').every(u => u.order.type === 'guard')`));
   g.run(`campPanelClose(__PP); campPanelKey(__PP, C, 'KeyW', 0);`);
   const w = J(`(() => { campPanelClose(__PP); campPanelKey(__PP, C, 'KeyW', 0); for (let k = 0; k < 10 && campPanelList(C, 'squads')[__PP.at].id !== 'fguard'; k++) campPanelKey(__PP, C, 'ArrowDown', 0); const r = campPanelKey(__PP, C, 'Enter', 0); return { open: campPanelOpen(__PP), row: r.row, ok: r.ok, ran: r.ran, fleet: r.fleet }; })()`);
   check('W, Down to Guard the cruiser, Enter is Guard the cruiser for all squads (the list is still the way to the wide orders): every fighter', w.ran && w.ok && w.row === 'fguard' && J(`campWing(C, 'fighter').every(u => u.order.type === 'guard')`), JSON.stringify(w));
@@ -126,7 +126,7 @@ console.log('D. the keys and the lists');
   g.run('campPanelClose(__PP);');
   const old = ['KeyE', 'KeyR', 'KeyT'].map(c => J(`(() => { campPanelClose(__PP); return campPanelKey(__PP, C, '${c}', 0).open; })()`)).join();
   check('E, R and T open no list any more: they give an order (or are refused in words) and the panel stays shut', old === ',,', old);
-  check('the key line, the H page and the hints say the keys (Q Fleet  W All), read from the table: the three order keys are direct keys, in the texts as {keyattack} {keyguard} {keyrecall} and the friends\' as {keyflast} {keyfnext}', J('campPanelKeyLine()') === 'Q Fleet  W All    P Ship  O Power  I Autopilot  U Dock' && J('campPanelKeyRows().slice(0, 2).map(r => r.k[0]).join("")') === 'QW' && J(`campKeyVar('squadskey')`) === 'W' && J(`['keyattack', 'keyguard', 'keyrecall', 'keyflast', 'keyfnext', 'keylast', 'keynext'].map(campKeyVar).join('')`) === 'ERTAD[]');
+  check('the key line, the H page and the hints say the keys (Q Fleet  W All), read from the table: the three order keys are direct keys, in the texts as {keyattack} {keyguard} {keyrecall} who as {keywlast} {keywnext} and the friendlies\' as {keyflast} {keyfnext}', J('campPanelKeyLine()') === 'Q Fleet  W All    P Ship  O Power  I Autopilot  U Dock' && J('campPanelKeyRows().slice(0, 2).map(r => r.k[0]).join("")') === 'QW' && J(`campKeyVar('squadskey')`) === 'W' && J(`['keyattack', 'keyguard', 'keyrecall', 'keywlast', 'keywnext', 'keyflast', 'keyfnext', 'keylast', 'keynext'].map(campKeyVar).join('')`) === 'ERTAD,.[]');
 }
 
 console.log('E. the words');

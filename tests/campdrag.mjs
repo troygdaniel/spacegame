@@ -1,12 +1,12 @@
-// smoke: drag the view: press and drag pans the flight view and the Tab map away from the cruiser, a recentre mark, Backspace and the flying keys bring it back (plain Node, no Chrome)
+// smoke: drag the view: press and drag pans the flight view and the Tab map away from the cruiser, a recentre mark, S and the flying keys bring it back (plain Node, no Chrome)
 // Card space-game-drag-view (Troy, 22 Nov 2026, from his play: "drag the map around so the centre point can move"). The flight camera followed the cruiser and the map was fitted to the level, so the
 // centre could not be moved. Now a press and a drag with the mouse (past a few pixels: a click is a click) pans the flight camera off the cruiser, where it stays, and pans the Tab map; a RECENTRE mark
-// shows while the view is off; Backspace (which already resets the zoom), a click on the mark, and a flying key held a moment bring it back. The wheel zooms about the pointer while panned. src/campdrag.js,
+// shows while the view is off; S (which already resets the zoom: it was Backspace until card space-game-keys-select), a click on the mark, and a flying key held a moment bring it back. The wheel zooms about the pointer while panned. src/campdrag.js,
 // src/campmap.js (the map's free view), src/camzoom.js (the anchor of a zoom). Phaser is not in a plain Node game, so the camera and the scene here are stand-ins that keep what the code writes to them;
 // tests/campdrag-boot.mjs (Chrome, not in the smoke) flies the real thing.
 //   A  the press: a click stays a click under CAMPDRAG.move pixels, a drag moves by what the pointer moved, a release says which it was
 //   B  the flight pan: the camera lets go of the cruiser and moves by the drag over the zoom; again and again; only in the battle, not over a list, the map or a card
-//   C  coming back: the camera follows the cruiser again; Backspace, the mark and a flying key held CAMPDRAG.fly ms do it; a key tapped does not
+//   C  coming back: the camera follows the cruiser again; S, the mark and a flying key held CAMPDRAG.fly ms do it; a key tapped does not
 //   D  the map: the free view (no hold, inside the system's box), the pan, the zoom that keeps the pan, the recentre
 //   E  the zoom about the pointer: the world point under it stays under it as the zoom eases
 //   F  the words and the wiring: the mark names the key from the table, the help page says it (in the zoom row), the scene and the map call it, the script is in the page
@@ -82,9 +82,9 @@ R(`window.__s = __scene(0.5); campDragFlyTick(__s, 5000, true);`);
 check('a flying key with the view on the cruiser does nothing', J('__s.cameras.main.starts') === 0);
 R(`window.__s = __scene(0.5); campViewPan(__s, 100, 0); __s.mode = 'debrief'; campDragFrame(__s, 16, false);`);
 check('the battle ending (a card over it) brings the view back by itself', J('__s.panned') === false && J('__s.cameras.main.following') === true);
-// Backspace is the zoom reset of campZoomPress: it recentres too, the flight's and the map's
+// S is the zoom reset of campZoomPress: it recentres too, the flight's and the map's
 R(`window.__s = __scene(0.5); campViewPan(__s, 100, 0); campZoomPress(__s, { dir: 0, reset: true }, false);`);
-check('Backspace (the zoom reset) recentres the flight view too', J('__s.panned') === false && J('__s.cameras.main.following') === true && near(J('CAMZOOM.want'), J('campZoomDefault()')));
+check('S (the zoom reset) recentres the flight view too', J('__s.panned') === false && J('__s.cameras.main.following') === true && near(J('CAMZOOM.want'), J('campZoomDefault()')));
 check('and a zoom key that is not the reset leaves the pan alone', (() => { R(`window.__s = __scene(0.5); campViewPan(__s, 100, 0); campZoomPress(__s, { dir: -1, reset: false }, false);`); return J('__s.panned') === true; })());
 
 // ---- D. the map ----
@@ -111,7 +111,7 @@ check('a map that was never panned zooms as before: the hold works (centre on th
 R(`window.__m = __mp(); campMapPan(__m, __F, 800, 200); campMapRecentre(__m, __F);`);
 check('recentre: the map is on the level again and no longer panned', near(J('__m.fit.cx'), base.cx, 1e-6) && near(J('__m.fit.cy'), base.cy, 1e-6) && J('__m.panned') === false);
 R(`window.__s = __scene(0.5); __s.mp = __mp(); campMapPan(__s.mp, __F, 800, 200); __s.mp.zWant = 4; campZoomPress(__s, { dir: 0, reset: true }, false);`);
-check('Backspace on the map is the zoom reset and the recentre', J('__s.mp.zWant') === 1 && J('__s.mp.panned') === false && near(J('__s.mp.fit.cx'), base.cx, 1e-6));
+check('S on the map is the zoom reset and the recentre', J('__s.mp.zWant') === 1 && J('__s.mp.panned') === false && near(J('__s.mp.fit.cx'), base.cx, 1e-6));
 
 // ---- E. the zoom about the pointer ----
 console.log('E. the zoom about the pointer');
@@ -127,11 +127,11 @@ console.log('F. the words and the wiring');
 const mark = J('uiText("camp.hud.recentre")');
 check('the mark says RECENTRE and names the key from the table, not a letter written into the words', /recentre/i.test(mark) && mark.includes(J('CAMP_KEYS.zoomreset.k')) && !/\{/.test(mark), mark);
 const rows = J("(CONTROLS.find(c => c.id === 'campaign') || { rows: [] }).rows.map(r => r.k.join(' ') + ' ' + r.t)");
-check('the H page says that a drag pans, in the row of the zoom, where Backspace is named (a row of its own did not fit the page)', rows.some(r => /drag/i.test(r) && /Backspace resets/.test(r)), JSON.stringify(rows.filter(r => /drag|Backspace/i.test(r))));
+check('the H page says that a drag pans, in the row of the zoom, where S is named (a row of its own did not fit the page)', rows.some(r => /drag/i.test(r) && /S resets/.test(r)), JSON.stringify(rows.filter(r => /drag|S resets/i.test(r))));
 const html = read('index.html'), scene = read('src/campaignscene.js'), mapdraw = read('src/campmapdraw.js'), zoom = read('src/campzoom.js'), cz = read('src/camzoom.js');
 check('the script is in the page, after the map and the zoom it uses', /<script src="src\/campdrag\.js"><\/script>/.test(html) && html.indexOf('src/campdrag.js') > html.indexOf('src/campzoom.js'));
 check('the scene installs it once and ticks it every frame', /campDragInstall\(this\)/.test(scene) && /campDragFrame\(this/.test(scene));
-check('Backspace is the reset in campZoomPress and recentres', /campViewRecentre|campMapRecentre/.test(zoom));
+check('S is the reset in campZoomPress and recentres', /campViewRecentre|campMapRecentre/.test(zoom));
 check('the zoom frame puts the scroll back for an anchor', /camzoomAnchorScroll/.test(cz));
 check('the map\'s click is read on release, so a drag that starts on a mark is not a click on it (campMapClick is called by the drag code, not by a pointerdown)', !/s\.input\.on\('pointerdown', mp\.onPointer\)/.test(mapdraw) && /campdrag\.js/.test(mapdraw));
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
