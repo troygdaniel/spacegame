@@ -126,6 +126,7 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.bf\.\d+\.\d+\.w\d$/, why: 'the other steps of a mission\'s walkthrough: on the big briefing, for the eyes (only the first is read, once, when it opens)' },
   { re: /^camp\.bf\./, why: 'the big briefing\'s headings, its enemies, readiness and warning lines, the route, the keys it lists, its key line and the ship\'s own line over a screen of mission 1.1: on the screen, and a key line or a number is not a fixed spoken line' },
   { re: /^camp\.bw\./, why: 'the names of the ships and the marks on the briefing\'s walking map (WING, PATROL, PIRATES?): drawn on the map, not said' },
+  { re: /^camp\.tdisp\./, why: 'the target display\'s words: the box\'s names (hull, shield), a ship\'s type, how far, and the line of what it is doing; shown, never said (a line of the radio would crowd the pilots)' },
   { re: /^camp\.sight\./, why: 'the sensors\' fragments: the edge arrow\'s label and the words (a count, a kind, a compass point) that fill the radio\'s call, camp.say.sight; shown, never said alone' },
   { re: /^camp\.gauge\./, why: 'the three gauges\' words (SHIELDS, SPEED, LASERS, HULL): drawn inside the dials at the top left of the HUD, not said' },
   { re: /^camp\.pow\./, why: 'the power setting\'s three labels on the ship panel: shown (the ship answers the setting itself with camp.say lines)' },

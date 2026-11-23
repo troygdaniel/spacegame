@@ -1,5 +1,5 @@
 // ---------- Campaign: seeing hostiles from afar (card space-game-see-hostiles-earlier; Troy, 22 Nov 2026) ----------
-// Troy wants to see the hostiles early so he can send squads to meet them. The sim always knew where every hostile was; what the player saw of it was a dot on a small radar. This file is the rule of
+// Troy wants to see the hostiles early so he can send squads to meet them. The sim always knew where every hostile was; what the player saw of it was a dot on a small radar (gone since card space-game-target-display: the map, the edge arrows and the target display tell it now). This file is the rule of
 // what is SEEN and how the player is told (pure, no Phaser: tests/campsight.mjs runs it in Node; the drawing is src/campsightscene.js). The numbers are CAMP.sensor (src/campaign.js; the range is a
 // row of the N tuning panel, src/camptune.js).
 //   SEEN: a hostile is seen when it is within CAMP.sensor.range of the carrier, or inside the sensor circle of a fighter that is out (CAMP.sensor.wing, campSensors below: the fighters see
@@ -10,7 +10,7 @@
 //   campSightGroups(C, seenOnly) the hostiles that can come and go (not the always-seen kinds), in groups of CAMP.sensor.group px: [{ n, x, y, dist, ids, kinds: { kind: n }, at }] nearest first
 //   campSightStep(C)             each tick: the hostiles that come into sight for the first time are called on the radio, after CAMP.sensor.delay ms, one line for a few seconds' worth
 //   campSightLine(C, ids)        the call: { key: 'camp.say.sight', vars: { what, dir, km } } or null: how many, which way, how far; the kinds too when a fighter or the carrier is near enough to tell
-//   campSightMarks(C)            the groups that came into sight in the last CAMP.sensor.mark ms: [{ x, y, age: 0..1 }] (the radar pulses and the edge arrow blinks)
+//   campSightMarks(C)            the groups that came into sight in the last CAMP.sensor.mark ms: [{ x, y, age: 0..1 }] (the edge arrow blinks)
 //   campSightArrows(C, scroll, W_, H_, zoom)   the edge arrows: a group that is off the screen (or under the HUD) gets one at the edge, pointing at it: [{ x, y, angle, n, dist, what, fresh }]
 //   campSightDir(dx, dy)         'north', 'north-east' ... for a vector (up on the screen is north)
 //   campSensors(C)              the sensor circles of the fighters that are out: [{ id, x, y, r: CAMP.sensor.wing }]
@@ -98,4 +98,18 @@ function campSightArrows(C, scroll, W_, H_, zoom) {
     out.push({ x: e.x, y: e.y, angle: e.angle, n: g.n, dist: g.dist, what: campSightWhat(g.kinds, campSightKnown(C, g.x, g.y)), fresh: C.t - g.at < K.mark });
   });
   return out.slice(0, K.arrows);
+}
+
+// the ships you protect that are in trouble and off the screen (card space-game-target-display: the radar showed every ship of the convoy, and it is gone): one that is under attack (the full health bar, src/campcharge.js: hit in the
+// last CAMP.charge.loud ms) or nearly lost (the bar's red band) gets an arrow at the edge too, nearest the cruiser first, at most CAMP.sensor.friends; { x, y, angle, dist, what: its name, pct, friend: true, fresh: just hit }
+function campSightFriends(C, scroll, W_, H_, zoom) {
+  if (!C || !C.carrier || typeof campChargeBars !== 'function') return [];
+  const K = CAMP.sensor, A = CAMP.nav.arrow, z = zoom > 0 ? zoom : 1, out = [];
+  campChargeBars(C).filter(b => b.loud > 0 || b.band === 'red').sort((a, b) => campDist(a, C.carrier) - campDist(b, C.carrier)).forEach(b => {
+    const sx = (b.x - scroll.x - W_ / 2) * z + W_ / 2, sy = (b.y - scroll.y - H_ / 2) * z + H_ / 2;
+    if (sx > A.margin && sx < W_ - A.margin && sy > A.margin && sy < H_ - A.margin && !(A.keep || []).some(r => sx >= r[0] && sx <= r[2] && sy >= r[1] && sy <= r[3])) return; // on the screen and clear of the HUD: it is seen as it is
+    const e = typeof campNavEdge === 'function' ? campNavEdge(sx - W_ / 2, sy - H_ / 2, W_, H_, A.margin, A.keep) : null; if (!e) return;
+    out.push({ x: e.x, y: e.y, angle: e.angle, dist: campDist(b, C.carrier), what: campTdispName(C.by[b.id]), pct: b.pct, friend: true, fresh: b.hit > 0 });
+  });
+  return out.slice(0, K.friends);
 }

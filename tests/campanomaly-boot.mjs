@@ -1,5 +1,5 @@
 // not in the smoke: the picture check of the anomalies, run by hand (one Chrome, muted, through the test lock; card space-game-campaign-anomalies)
-// The rules are tests/campanomaly.mjs (plain Node). This boots the Campaign once and does what the pilot does: comes near a warped spot (the haze is drawn, the radar has its mark), stays two seconds in its
+// The rules are tests/campanomaly.mjs (plain Node). This boots the Campaign once and does what the pilot does: comes near a warped spot (the haze is drawn, the map has its mark), stays two seconds in its
 // range (the cloak drops, the cache and its guards are shown), kills the guards (the loot lies on the cache and is saved), and opens the Tab map with the anomaly noticed. Pictures of each go to ANOM_SHOTS
 // (default ~/dev/spacegame-night/shots/anom-*.png), never into the repository.
 //   node tests/campanomaly-boot.mjs        exit code 1 when a check fails or the game logged an error
@@ -30,7 +30,7 @@ try {
     const a = C.anoms.find(q => q.id === 'veil'), c = C.carrier; c.x = a.x - 450; c.y = a.y + 40; c.vx = 0; c.vy = 0; c.rot = 0; return 1; })()`);
   await t.run(900);
   const s1 = await j(`({ mode: ${SC}.mode, state: ${SC}.camp.anoms[0].state, sensed: ${SC}.camp.anoms[0].sensed, cmds: ${SC}.anomG ? ${SC}.anomG.commandBuffer.length : -1, marks: campAnomMarks(${SC}.camp).length, errors: 0 })`);
-  check('in play, the veil noticed at 450 px: its mark is on the radar (a mark), and the haze is drawn this frame (a layer of its own with commands in it)', s1.mode === 'play' && s1.sensed && s1.marks === 1 && s1.cmds > 40, JSON.stringify(s1));
+  check('in play, the veil noticed at 450 px: its mark is on the map (a mark), and the haze is drawn this frame (a layer of its own with commands in it)', s1.mode === 'play' && s1.sensed && s1.marks === 1 && s1.cmds > 40, JSON.stringify(s1));
   await snap(t, '1-haze');
   await t.ev(`(() => { const C = ${SC}.camp, a = C.anoms.find(q => q.id === 'veil'); C.carrier.x = a.x - 90; C.carrier.y = a.y; return 1; })()`);
   await t.run(1000); await snap(t, '2-visit');

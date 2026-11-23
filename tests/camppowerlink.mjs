@@ -1,7 +1,7 @@
 // smoke: the power list and the gauges are one picture: the gauges at the top right, the power list right under them, each pip row carrying its system's pip bar (the gauge's twin), the highlighted row framing its gauge (plain Node, no Chrome)
 // Card space-game-power-presets (Troy, 22 Nov 2026: "pips move one at a time ... the sub-list opens right beside or under the top-right gauges, each row shows the same pip bar as its gauge, aligned or joined to it, both lighting together on Enter;
 // the highlighted row highlights its gauge"). J K L and ; are as they were (one pip a press, balance); only the look of the power list and where the gauges are changed.
-//   A. where: the gauges' block ends at the screen's right edge (8 px), the right-hand lists open right under it, the radar and the target's line are at the bottom right, nothing at the top left
+//   A. where: the gauges' block ends at the screen's right edge (8 px), the right-hand lists open right under it, the target display (the radar's old place) is at the bottom right, nothing at the top left
 //   B. the power list's three pip rows: a bar of four boxes each, under the weapons gauge's bar (one column), as many lit as the system has pips, in the gauge's own colour; the balance and the emergency rows have none
 //   C. both light together: the same animation: after Enter on a row the gauge's bar and the row's bar flash white on the same segment, and ease to the new pips together
 //   D. the highlighted row frames its gauge (and a line runs from it to the list), the others and a closed list frame nothing; the scene hands the dial to the gauges' paint
@@ -33,11 +33,11 @@ g.run(`
 
 console.log('A. where things are');
 {
-  const Z = J('campHudGeom()'), W = J('W'), K = J('CAMPPANELS_LOOK'), rad = J('CAMP_RADAR'), tg = K.tgt, H = J('CAMP.hud');
+  const Z = J('campHudGeom()'), W = J('W'), K = J('CAMPPANELS_LOOK'), box = J('campTdispBox()'), H = J('CAMP.hud');
   check('the gauges\' block ends 8 px from the screen\'s right edge and starts right of the toast band (916): three cells in a row, in the order SHIELDS, SPEED, LASERS', Z.block.x1 === W - 8 && Z.block.x0 >= 916 && Z.cells.length === 3 && Z.cells[0].x0 < Z.cells[1].x0 && Z.cells[1].x0 < Z.cells[2].x0 && J('campGauges(campNew(1, [], { seed: 1 })).map(d => d.id).join()') === 'shields,speed,lasers', JSON.stringify([Z.block, W]));
   const G = J(`campPanelsGeometry(campPanelDef('power'), 5)`), Gs = J(`campPanelsGeometry(campPanelDef('ship'), 3)`);
   check('the power list (and the ship list) open right UNDER the gauges: their top is below the block\'s bottom and within 12 px of it, they end 4 px from the right edge, and the gauges are not covered', G.y >= Z.block.y1 + 2 && G.y - Z.block.y1 <= 12 && Gs.y === G.y && G.x + G.w === W - 4 && Z.cells.every(c => c.dial.y1 <= G.y && c.bar.y1 <= G.y), JSON.stringify([G, Z.block]));
-  check('the radar is at the bottom right, below the lists, with the target\'s line over it; the top right under the lists holds nothing else (the toast, the lines of text and the rival\'s bars are at the middle and the left)', rad.y - rad.r > G.y + G.h && rad.y + rad.r < J('H') - 40 && rad.x + rad.r <= W && tg.y + 32 < rad.y - rad.r && tg.y > G.y + G.h, JSON.stringify([rad, tg, G.y + G.h]));
+  check('the target display is at the bottom right, below the lists; the top right under the lists holds nothing else (the toast, the lines of text and the rival\'s bars are at the middle and the left)', box.y > G.y + G.h && box.y + box.h < J('H') - 40 && box.x + box.w <= W, JSON.stringify([box, G.y + G.h]));
   check('the lines of text at the left start where the gauges used to end (CAMP.hud.text.y), the dim plate behind them starts there too: the top left is free', H.text.y === 96 && J('CAMP.hud.right') === 8 && src('src/campaignscene.js').indexOf('this.add.rectangle(0, CAMP.hud.text.y - 6') > 0 && !/CAMP\.hud\.x\b/.test(src('src/campaignscene.js') + src('src/camphud.js')));
 }
 

@@ -2,7 +2,7 @@
 //   1  a lost mission says "MISSION LOST: <title>" (a won one says MISSION COMPLETE), a level without missions keeps "LEVEL n LOST"
 //   2  the refit header names the keys its rows have: 1 2 3, and 6 7 8 for what a cloaked cache gave (4 and 5 buy ships)
 //   10 the star of level 3 is "Epsilon Eridani" on the map and in the list (it was "Epsilon Eridani star" on one and cut on the other)
-//   11 the edge arrow's label keeps out of the target's line (card one-list-keys: the two lists are hidden until Q or P, so it keeps out of no list)
+//   11 the edge arrow's label keeps out of the target display's corner (cards one-list-keys, target-display: the two lists are hidden until Q or P, so it keeps out of no list)
 //   13 the ship systems' pips (W S E) are clear of the toast band, so no toast, however wide, covers them
 // Run: node tests/campnightminors.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -69,12 +69,12 @@ check('hiding clears the gauges and the radar, and hides every text and the key 
 check('showing it again gives the texts back, and leaves the arrow to its own paint', hs.on[0] === true && hs.on[1] === true && hs.on[3] === true && hs.on[2] === false, JSON.stringify(hs));
 check('the scene hides it before it paints (update: hudHides ? hudShow(false) : hudShow(true) then paintHud)', /this\.hudHides\(\)\) this\.hudShow\(false\); else \{ this\.hudShow\(true\); this\.paintHud\(\)/.test(readFileSync(join(ROOT, 'src', 'campaignscene.js'), 'utf8')));
 
-console.log('11. the edge arrow\'s label keeps out of the target\'s line (the two lists are hidden until Q or P: an open list is drawn over the label)');
-const ak = J(`(() => { const keep = Campaign.prototype.arrowKeep.call({ pn: campPanelNew() }), T = CAMPPANELS_LOOK.tgt, G = campPanelsGeometry(campPanelDef('ship')), F = campPanelsGeometry(campPanelDef('fleet'));
-  const hit = at => r => at.x + 85 > r[0] && at.x - 85 < r[2] && at.y + 9 > r[1] && at.y - 9 < r[3], at = campNavLabelAt(W - T.x - T.w / 2, T.y, 170, 18, keep, W, H), free = [campNavLabelAt(G.x + 160, G.y + 200, 170, 18, keep, W, H), campNavLabelAt(F.x + 160, F.y + 200, 170, 18, keep, W, H)];
-  return { base: CAMP.nav.arrow.keep.length, n: keep.length, a: keep[keep.length - 1], line: [W - T.x - T.w, T.y - 8, W - T.x, T.y + 18], clear: !keep.some(hit(at)), at, free, want: [[G.x + 160, G.y + 200], [F.x + 160, F.y + 200]] }; })()`);
-check('the table\'s rectangles and one more: the target\'s line under the radar, the whole of it (its name, its hull bar, its keys)', ak.n === ak.base + 1 && ak.a[0] <= ak.line[0] && ak.a[1] <= ak.line[1] && ak.a[2] >= ak.line[2] && ak.a[3] >= ak.line[3], JSON.stringify(ak));
-check('a label wanted on the target\'s line is put off every rectangle', ak.clear, JSON.stringify(ak));
+console.log('11. the edge arrow\'s label keeps out of the target display\'s corner (the two lists are hidden until Q or P: an open list is drawn over the label)');
+const ak = J(`(() => { const keep = Campaign.prototype.arrowKeep.call({ pn: campPanelNew() }), T = campTdispBox(), G = campPanelsGeometry(campPanelDef('ship')), F = campPanelsGeometry(campPanelDef('fleet'));
+  const hit = at => r => at.x + 85 > r[0] && at.x - 85 < r[2] && at.y + 9 > r[1] && at.y - 9 < r[3], at = campNavLabelAt(T.x + T.w / 2, T.y + T.h / 2, 170, 18, keep, W, H), free = [campNavLabelAt(G.x + 160, G.y + 200, 170, 18, keep, W, H), campNavLabelAt(F.x + 160, F.y + 200, 170, 18, keep, W, H)];
+  return { base: CAMP.nav.arrow.keep.length, n: keep.length, a: keep.find(r => T.x >= r[0] && T.y >= r[1] && T.x + T.w <= r[2] && T.y + T.h <= r[3]), line: [T.x, T.y, T.x + T.w, T.y + T.h], clear: !keep.some(hit(at)), at, free, want: [[G.x + 160, G.y + 200], [F.x + 160, F.y + 200]] }; })()`);
+check('the table\'s rectangles and no more (the target\'s line that had one of its own is gone): the target display\'s whole box is inside one of them', ak.n === ak.base && !!ak.a && ak.a[0] <= ak.line[0] && ak.a[1] <= ak.line[1] && ak.a[2] >= ak.line[2] && ak.a[3] >= ak.line[3], JSON.stringify(ak));
+check('a label wanted on the target display is put off every rectangle', ak.clear, JSON.stringify(ak));
 check('and one wanted where a list opens stays where it was put: no list is on the screen until its key is pressed, so its place is not kept out of', ak.free.every((p, i) => p.x === ak.want[i][0] && p.y === ak.want[i][1]), JSON.stringify(ak.free));
 console.log('12. a tab closed at the tech pick: the next launch goes to the pick, not to mission 1');
 const lv = J(`(() => { const P = campProgressNew(), n = campMissions(2).length, sc = k => ({ score: 100 * (k + 1), bonuses: [], t: 60000, hullLeft: 1, shipsLost: 0 });

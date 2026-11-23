@@ -1,6 +1,6 @@
 // ---------- The scene half of the torpedo boats (card space-game-torpedo-art; the rules are src/camptorpedo.js) ----------
 // The player must SEE a torpedo to shoot it down, so it is drawn to be found: a pale body with an orange warhead, a bright flame, a trail of smoke, a pulsing amber ring round it (red-pink for the aliens'), and a thin line to the ship
-// it is going for. A boat that is arming glows at its tube and pulses a ring for as long as the windup lasts. The radar shows a torpedo as a blinking bright dot; the Tab map has its own marks (src/campmap.js).
+// it is going for. A boat that is arming glows at its tube and pulses a ring for as long as the windup lasts. The Tab map shows a torpedo as a blinking bright dot (it has its own marks: src/campmap.js).
 // The scene (src/campaignscene.js) calls campTorpedoSync(scene, ms) every frame and campTorpedoEvent(scene, e) for the events 'torpedo' and 'tboom'. Nothing here decides anything: it draws what C.torpedoes and the boats say.
 const CAMP_TORP = {
   tex: 'torpedo', size: [26, 10], scale: 1.25,                       // the picture (made once, in px) and how large it is drawn
