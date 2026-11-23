@@ -1211,7 +1211,7 @@ const UI_TEXT = {
   'camp.keys.footer': 'H or Esc closes this page. The battle waits while it is open.',
   'camp.keys.debug': 'DEBUG KEYS (THE TUNE KIT)',
   'title.camp.keys': 'H  all the keys',
-  'camp.ui.pausepanels': '{fleetkey} fleet orders ({squadskey} all squads, {redkey} red, {greenkey} green, {yellowkey} yellow). {shipkey} ship orders ({navkey} autopilot, {powerkey} power, {yardkey} dock). In a list: Up, Down, Enter. A D S pick a target. H lists every key.',
+  'camp.ui.pausepanels': '{fleetkey} fleet orders ({squadskey} all squads, {redkey} red, {greenkey} green, {yellowkey} yellow). {shipkey} ship orders ({powerkey} power, {navkey} autopilot, {yardkey} dock). In a list: Up, Down, Enter. A D S pick a target. H lists every key.',
   'camp.map.local': 'AREA  {km} km across',
   'camp.map.whole': 'SYSTEM  {km} km across',
   'camp.nav.no.wingout': 'Wing is out: recall it first. Order again to recall and burn.',

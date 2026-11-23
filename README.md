@@ -28,7 +28,7 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 
 **The ideas that make it a commander game.**
 
-- **Power management.** Six pips shared between weapons, shields and engines (like X-Wing's); shields mend by themselves at a rate the shield pips set; three gauges at the top right show where the energy goes, and the power list (`I`) opens right under them with the same pip bars on its rows.
+- **Power management.** Six pips shared between weapons, shields and engines (like X-Wing's); shields mend by themselves at a rate the shield pips set; three gauges at the top right show where the energy goes, and the power list (`O`) opens right under them with the same pip bars on its rows.
 - **Pilots ask for orders.** Timed radio calls with three choices (the miner's call in 1.1 has five: send all squads, Red, Green or Yellow, or stay) and real costs.
 - **A mission is a sequence of questions.** Mission 1.1 is the finished example: a patrol turns back, a distress call, an ambush with torpedo boats, a pirate leader who duels your cruiser. Something happens about every minute.
 - **Objectives and bonuses**, a score, and ranks that grow your wing.
@@ -47,7 +47,7 @@ The game's own **H** page lists every key; it is built from `src/data_controls.j
 
 ### Campaign
 
-One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left and **`P` opens the ship list** at the right. Each is short: a few orders, and one row for each of its parts with the part's key on it. **A part's key opens it directly at any time:** `W` all squads, `E` the red squad, `R` the green squad, `T` the yellow squad on the left (the fighters are split into three squads); `O` autopilot, `I` power, `U` dock and build on the right. So `W` then `Enter` sends every fighter at the target, and `E` then `Enter` only the red squad. The escorts and the convoy have no key of their own: they are rows of the `Q` list. Nothing is on the screen until you press one of these keys. Each row says what it does in plain words; a row that cannot be used now is grey and says why. **No key means two things in flight**, and there are no number keys.
+One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left and **`P` opens the ship list** at the right. Each is short: a few orders, and one row for each of its parts with the part's key on it. **A part's key opens it directly at any time:** `W` all squads, `E` the red squad, `R` the green squad, `T` the yellow squad on the left (the fighters are split into three squads); `O` power (Shields first: `O`, `Enter` adds a shield pip), `I` autopilot, `U` dock and repair on the right. So `W` then `Enter` sends every fighter at the target, and `E` then `Enter` only the red squad. The escorts and the convoy have no key of their own: they are rows of the `Q` list. Nothing is on the screen until you press one of these keys. Each row says what it does in plain words; a row that cannot be used now is grey and says why. **No key means two things in flight**, and there are no number keys.
 
 | Key | What it does |
 |---|---|
@@ -56,10 +56,10 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 | `E` | the **red squad**: Attack the target, Guard the cruiser, Recall |
 | `R` | the **green squad**: Attack the target, Guard the cruiser, Recall |
 | `T` | the **yellow squad**: Attack the target, Guard the cruiser, Recall |
-| `P` | the **ship list**: rows that open Autopilot, Power, Dock and build; Warp blink ahead once you have that tech |
-| `O` | **autopilot**: Fly to the goal, Fly to the target, Fast burn to the goal, Fast burn to the target |
-| `I` | **power**, which opens right under the three gauges at the top right: Shields, Engines and Weapons, each with its pip bar (the gauge's twin: both light together; the highlighted row frames its gauge), Enter gives one more pip and the list stays open; then Balance the power and Emergency shields |
-| `U` | **dock and build**: Dock at the outpost (aboard, in a level with none: Repair the hull, Build a fighter, Build an escort) |
+| `P` | the **ship list**: rows that open Power, Autopilot, Dock and repair; Warp blink ahead once you have that tech |
+| `O` | **power**, which opens right under the three gauges at the top right: Shields, Engines and Weapons, each with its pip bar (the gauge's twin: both light together; the highlighted row frames its gauge), Enter gives one more pip and the list stays open; then Balance the power and Emergency shields |
+| `I` | **autopilot**: Fly to the goal, Fly to the target, Fast burn to the goal, Fast burn to the target |
+| `U` | **dock and repair**: Dock at the outpost (aboard, in a level with none: Repair the hull, Build a fighter, Build an escort) |
 | `Up` `Down` `Enter` | in an open list: move the highlight, give the order (the list closes when the order is taken). On a row that opens a part, `Enter` or `Right` opens it |
 | `Left` | in a part's list: back to the fleet or the ship list |
 | Arrow keys | fly the cruiser: Up thrust, Left and Right turn, Down brake (while a list or a pilot's call is open the ship coasts) |

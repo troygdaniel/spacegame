@@ -24,7 +24,7 @@ g.run(`
   window.__scene = () => { const s = { camp: campNew('home', [], { seed: 1, god: true }), mode: 'play', time: { now: 0 }, add: { rectangle: (x, y) => __mk('rect', x, y), graphics: () => __mk('g'), text: (x, y, t) => __mk('text', x, y, t) },
       input: { on() {}, off() {} }, events: { once() {} } }; s.gaugeAnim = campGaugeAnimNew(s.camp.power.p); return s; };
   window.S = __scene(); campPanelsInstall(S);
-  window.__open = () => { campPanelClose(S.pn); campPanelKey(S.pn, S.camp, 'KeyI', 0); };            // the power list, highlight on Shields
+  window.__open = () => { campPanelClose(S.pn); campPanelKey(S.pn, S.camp, 'KeyO', 0); };            // the power list, highlight on Shields
   window.__down = k => { for (let i = 0; i < k; i++) campPanelKey(S.pn, S.camp, 'ArrowDown', 0); };
   window.__now = 1000; window.__paint = (ms) => { campGaugeAnim(S.gaugeAnim, S.camp.power.p, ms); __now += 300; campPanelsPaint(S, __now); }; // (the words are live four times a second: a later now makes the view again)
   // the segments a list's graphics drew: [x, y, color, alpha] for every fill of a bar's segment size, in the order drawn
