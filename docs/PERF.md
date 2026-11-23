@@ -109,6 +109,20 @@ In the order I would do them. The gain is what the measurement above allows me t
   Not done: the saving (about 150 ms once) is small for the risk of a missing texture.
 - Texture painting could be spread over several frames behind the title screen. Not done for the same reason.
 
+## The HUD repaint cache (cloud PR 5), measured on this Mac (card `space-game-verify-cloud-prs`, 23 Nov 2026)
+
+`docs/PERF-FIGHTS.md` has the cloud machine's numbers for PR 5 (script work 3.2 to 1.2 ms a frame, allocation 2,061 to 462 KB a frame, no change to the game's sums). These are the same two runs on this Mac, headless Chrome with the GPU, `busy1`, the commands of "Measuring again" below. Off is `a626167c` (PR 5 not in), on is main `3d6bdbb3`. **On is main as it is today, so it also has what landed after PR 5** (the three pilots in place of eight fighters, fewer ships in the fight): the allocation drop is PR 5 plus that, not PR 5 alone. The picture does not change: PR 5's cache is there in the profile (`campGaugesPaintCached` in `campgaugecache.js`) and the HUD's Graphics paths are gone from the top of the list.
+
+| Measure (busy1, this Mac) | off `a626167c` | on `3d6bdbb3` | Verdict |
+|---|---|---|---|
+| Allocation a frame, `alloc busy1` (sampled) | 2,049 KB, 84% inside Phaser with no game function on the stack | **294 KB**, 39% of it that | The cloud saw 2,061 to 462 KB; here the pilots take it lower still |
+| Real loop, `live busy1 30`, Mac quiet (load 4.3 to 4.6): frames a second | 60 (1800 frames) | 60.03 (1801) in both runs | Same |
+| Intervals over 20 ms of the 1800 | 1 (max 20.2 ms) | 5 (max 22.2) and 1 (max 20.7) | Same, within the noise |
+| The game's own part of a frame, mean (median) | 2.75 ms (2.7) | 1.71 ms (1.4) and 0.85 ms (0.8) | About half to a third |
+| A pair run when the Mac got busy (load 6.1), off | 57.7 fps, 39 over 20 ms, 30 over 33 ms, max 63.9 ms; all 30 of the long ones spent outside the game's JavaScript; own part 2.07 ms mean | not run in that load | The Mac, not the game: the old build's own part is the same 2 ms |
+
+Order of the runs: alloc off, alloc on, live off, live on, live on, live off (pairs back to back, the second pair swapped), 09:24 to 09:27. The player's frame rate was 60 either way on a quiet Mac, so what PR 5 buys here is a lower allocation and a smaller own part of the frame, not a frame rate you can see on a quiet Mac (the garbage collector was 1.8% of a frame before it, so it is headroom on a busy machine, not a fix for a hitch we saw).
+
 ## Measuring again
 
 ```
