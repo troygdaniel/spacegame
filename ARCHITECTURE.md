@@ -35,7 +35,7 @@ How the game is built, for someone (a person or an AI) who has never seen it. It
 | Mission 1.1's beats, route forks (dormant: no mission has one since 22 Nov), cloaked anomalies (a fighter or the cruiser in sensor range reads one; the scout-escort ship was cut on 22 Nov) | `campbeats.js`, `camproute.js`, `campanomaly.js` | `campanomalydraw.js` |
 | Enemies: pirates, torpedo boats, the rival | `camppirates.js`, `camptorpedo.js`, `camprival.js` | `camppirateart.js`, `camptorpedoscene.js`, `camprivaldraw.js` |
 | The three gauges and power bars | `camphud.js` | same file |
-| Maps and navigation | `campmap.js`, `campnav.js`, `campsol.js`, `campzoom.js` | `campmapdraw.js`, `campmapfire.js`, `campdrag.js` (the drag of the view and the map, the RECENTRE mark) |
+| Maps and navigation | `campmap.js`, `campnav.js`, `campsol.js`, `campzoom.js` | `campmapdraw.js`, `campmapfire.js`, `campdrag.js` (the drag of the view and the map, the RECENTRE mark), `campfocus.js` (F: the camera glides to the selected ship and follows it; the rules are plain functions, the camera calls and the label are the scene's) |
 | The ready room, ranks, outposts, docking | `camphub.js`, `campranks.js`, `campoutpost.js`, `campdock.js` | `camphubscene.js` |
 | Briefing, hints, win and lose cards | `campbrief.js`, `campnudge.js`, `campwin.js`, `camplose.js`, `camphelp.js` (the walking map of a briefing: `data_briefwalk.js`, `campbriefwalk.js`) | `campbriefdraw.js`, `campbriefwalkdraw.js` |
 | The ship's voice and radio | `campchatter.js`, `src/voice.js`, `src/voicepack.js` | |
