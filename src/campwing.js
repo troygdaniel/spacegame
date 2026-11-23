@@ -15,8 +15,31 @@
 //   campWingTarget(C, spec) / campWingLive(C, tg)    the words, id, row or point -> { kind, id, name, x, y, r, ref }; the same target with its position now (a ship moves)
 //   campWingText(C, text, dry)                       the strip and the voice: "fighters at the mothership", "red squad escort the convoy", "all guard Ceres" (the order 'wing' of campDo)
 
+// ---- the three pilots (card space-game-three-pilots; Troy, 23 Nov 2026: one fighter replaces each squad, Wedge (red, the leader), Kara (green), Apollo (yellow)) ----
+// A squad is ONE fighter now, a named pilot as strong as the squad was (CAMP.pilots, CAMP.pilotStrength: 3, 3 and 2 fighters' worth at the start; a rank, the bay2 tech and the refit add to it). The groups 'red', 'green' and 'yellow' are the pilots' own, and their names are
+// the pilots' (CAMP.wing.groups): "Wedge, attack the mothership", "Kara guards the Mars convoy". A pilot's ship has u.pilot (the id), u.squad (the group), u.str (its strength: its hull and its gun are a lone fighter's times it).
+//   campPilotStrengths(total)   the strength of each pilot (in CAMP.pilots' order) when the wing is `total` fighters' worth: as even as it goes, the first ones taking the odd ones (8 is 3, 3, 2)
+//   campPilotSet(C, u)          makes a fighter the pilot of its squad: its id, its strength, its hull (called when it leaves the bay, in campSpawn and campLaunch)
+//   campPilotName(u)            the name of a pilot's ship ('Wedge'), '' for any other ship
+//   campPilots(C)               [{ id, name, squad, lead, str, ship }] the three pilots, ship: the one that is out and alive now, else null
+function campPilotStrengths(total) {
+  const n = CAMP.pilots.length, t = Math.max(0, Math.floor(total) || 0), base = Math.floor(t / n), rem = t % n;
+  return CAMP.pilots.map((p, i) => Math.max(1, base + (i < rem ? 1 : 0)));
+}
+function campPilotSet(C, u) {
+  const i = CAMP.pilots.findIndex(p => p.squad === u.squad); if (i < 0) return u;
+  const P = CAMP.pilots[i], str = (C.pilotStr || campPilotStrengths(CAMP.pilotStrength))[i] || 1;
+  u.pilot = P.id; u.str = str; u.maxHp = u.hp = CAMP.fighter.hp * str; if (u.def) u.def.hp = u.hp;
+  return u;
+}
+const campPilotName = u => { const p = u && u.pilot ? CAMP.pilots.find(q => q.id === u.pilot) : null; return p ? p.name : ''; };
+function campPilots(C) {
+  return CAMP.pilots.map((p, i) => ({ id: p.id, name: p.name, squad: p.squad, lead: !!p.lead, str: (C.pilotStr || campPilotStrengths(CAMP.pilotStrength))[i] || 1,
+    ship: C.ships.find(u => u.team === 'earth' && u.hp > 0 && u.kind === 'fighter' && u.pilot === p.id) || null }));
+}
+
 // ---- groups ----
-const CAMPWING_GROUP_WORDS = { red: 'red', 'red squad': 'red', green: 'green', 'green squad': 'green', yellow: 'yellow', 'yellow squad': 'yellow', squads: 'fighters', 'all squads': 'fighters', fighter: 'fighters', fighters: 'fighters', all: 'all', everyone: 'all', everybody: 'all', wing: 'all', fleet: 'all', squadron: 'all', ships: 'all' };
+const CAMPWING_GROUP_WORDS = { wedge: 'red', kara: 'green', apollo: 'yellow', red: 'red', 'red squad': 'red', green: 'green', 'green squad': 'green', yellow: 'yellow', 'yellow squad': 'yellow', squads: 'fighters', 'all squads': 'fighters', fighter: 'fighters', fighters: 'fighters', all: 'all', everyone: 'all', everybody: 'all', wing: 'all', fleet: 'all', squadron: 'all', ships: 'all' };
 // the group's id for a word or an id; '' for none; null for one that does not exist
 function campWingGroupId(C, group) {
   if (group == null || group === '') return '';
@@ -301,8 +324,8 @@ function campWingSmart(C, target) {
 const CAMPWING_VERB_WORDS = { attack: 'attack', engage: 'attack', hit: 'attack', strike: 'attack', guard: 'guard', defend: 'guard', protect: 'guard', escort: 'escort', cover: 'escort', fetch: 'fetch', get: 'fetch', collect: 'fetch', grab: 'fetch', retrieve: 'fetch', hold: 'hold', mine: 'mine', recall: 'recall' };
 function campWingParse(text) {
   const q = String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/^(?:the |our )/, '');
-  const mc = /^(?:cancel|stop|stand down|release|clear)\s+(?:the |our )?(red squad|green squad|yellow squad|red|green|yellow|all squads|squads|fighters?|all|everyone|everybody|wing|fleet|squadron|ships)\b/.exec(q); if (mc) return { group: CAMPWING_GROUP_WORDS[mc[1]], verb: 'cancel', target: '' };
-  let m = /^(red squad|green squad|yellow squad|red|green|yellow|all squads|squads|fighters?|all|everyone|everybody|wing|fleet|squadron|ships)\b\s*(.*)$/.exec(q); if (!m) return null;
+  const mc = /^(?:cancel|stop|stand down|release|clear)\s+(?:the |our )?(wedge|kara|apollo|red squad|green squad|yellow squad|red|green|yellow|all squads|squads|fighters?|all|everyone|everybody|wing|fleet|squadron|ships)\b/.exec(q); if (mc) return { group: CAMPWING_GROUP_WORDS[mc[1]], verb: 'cancel', target: '' };
+  let m = /^(wedge|kara|apollo|red squad|green squad|yellow squad|red|green|yellow|all squads|squads|fighters?|all|everyone|everybody|wing|fleet|squadron|ships)\b\s*(.*)$/.exec(q); if (!m) return null;
   const group = CAMPWING_GROUP_WORDS[m[1]]; let rest = m[2].replace(/^(?:to |should |must |please )/, '');
   let verb = '', mv = /^(attack|engage|hit|strike|guard|defend|protect|escort|cover|fetch|get|collect|grab|retrieve|hold|mine|recall)\b\s*(.*)$/.exec(rest);
   if (mv) { verb = CAMPWING_VERB_WORDS[mv[1]]; rest = mv[2]; }

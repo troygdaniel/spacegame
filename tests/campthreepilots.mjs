@@ -41,8 +41,8 @@ sec(() => {
   check('campPilotName gives the name of a fighter, and nothing for a ship that is no pilot', J('__F().map(u => campPilotName(u)).sort().join()') === 'Apollo,Kara,Wedge' && J('campPilotName(C.carrier)') === '');
   // the gun: a pilot's shot takes off damage times strength
   g.run('__new()'); g.run('(() => { const u = __P("wedge"); const foe = campSpawn(C, "gunship", u.x + 300, u.y); foe.hp = foe.maxHp = 1e7; foe.vmax = 0; foe.accel = 0; foe.nextShot = 1e12; u.rot = 0; u.nextShot = 0; u.order = { type: "attack", target: foe.id }; C.bullets.length = 0; window.__foe = foe; })()');
-  g.run('(() => { for (let i = 0; i < 90 && !C.bullets.some(b => b.team === "earth"); i++) campStep(C, 1 / 30); })()');
-  const d = J('(C.bullets.filter(b => b.team === "earth")[0] || {}).damage'), base = J('CAMP.fighter.damage');
+  g.run('(() => { for (let i = 0; i < 90 && !C.bullets.some(b => b.from === __P("wedge").id); i++) campStep(C, 1 / 30); })()');
+  const d = J('(C.bullets.filter(b => b.from === __P("wedge").id)[0] || {}).dmg'), base = J('CAMP.fighter.damage');
   check('Wedge\'s shot hurts 3 times a lone fighter\'s (the gun is scaled with the hull)', d === base * 3, d + ' vs ' + base);
 });
 
