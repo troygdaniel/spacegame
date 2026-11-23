@@ -75,16 +75,17 @@ try {
   const box = async (dx, dy) => { await x(`${SP}.ship.body.reset(${SP}.mx.freighter.x + ${dx}, ${SP}.mx.freighter.y + ${dy})`); await run(100); };
   check('the box is 350 px, cruise 90, slow 45 (card space-game-missions-after-distances), half damage', await t.ev('ESCORT.box === 350 && ESCORT.cruise === 90 && ESCORT.slow === 45 && ESCORT.cover === 0.5'));
   await box(0, -500);
-  check('outside the ring: exposed, she slows to 30, a shot costs her 5', await t.ev(`${SP}.mx.covered === false && escortCover(${SP}, ESCORT.shot) === 5`) && (await spd()) === 30, 'speed ' + await spd());
+  check('outside the ring: exposed, she slows to 45, a shot costs her 5', await t.ev(`${SP}.mx.covered === false && escortCover(${SP}, ESCORT.shot) === 5`) && (await spd()) === 45, 'speed ' + await spd()); // (the speeds are the box line's: slow 45, cruise 90; they were 30 and 60 before the 3 times spread, a59ce61f)
   check('the ring says EXPOSED and the HUD says to get inside', await t.ev(`${SP}.mx.ringText.text === 'EXPOSED' && ${SP}.mx.ringText.visible && HUD_MISSIONS.escort.next(${SP}, 'Space').includes('ring')`));
   await box(0, -340);
-  check('inside the ring: covered, she cruises at 60, a shot costs her 2.5', await t.ev(`${SP}.mx.covered === true && escortCover(${SP}, ESCORT.shot) === 2.5`) && (await spd()) === 60, 'speed ' + await spd());
+  check('inside the ring: covered, she cruises at 90, a shot costs her 2.5', await t.ev(`${SP}.mx.covered === true && escortCover(${SP}, ESCORT.shot) === 2.5`) && (await spd()) === 90, 'speed ' + await spd());
   check('the ring says COVERED and the HUD says to hold it', await t.ev(`${SP}.mx.ringText.text === 'COVERED' && HUD_MISSIONS.escort.next(${SP}, 'Space').includes('Covered')`));
+  await box(0, -300); // (well inside: at 90 px/s she walks 9 px away from the ship in the 100 ms below, and 340 was too near the 350 edge)
   await x(`${SP}.spawnDrone(${SP}.mx.freighter.x + 120, ${SP}.mx.freighter.y + 60)`); await run(100);
-  check('a pirate right beside her no longer slows her: the fight is on the move', (await spd()) === 60, 'speed ' + await spd());
+  check('a pirate right beside her no longer slows her: the fight is on the move', (await spd()) === 90, 'speed ' + await spd());
   await t.shot('missions-escort-box');
   await box(0, -360);
-  check('ten pixels past the ring she is exposed again', await t.ev(`${SP}.mx.covered === false`) && (await spd()) === 30);
+  check('ten pixels past the ring she is exposed again', await t.ev(`${SP}.mx.covered === false`) && (await spd()) === 45);
   await x(`${S('Space')}.ship.setPosition(${S('Space')}.mx.freighter.x, ${S('Space')}.mx.freighter.y - 150)`);
   await run(20000); // no screenshot here: after a 20 s run the GL readback hung on a busy Mac
   const hp20 = await t.ev(`${S('Space')}.mx.freighter.active ? ${S('Space')}.mx.freighter.hp : -1`);
@@ -129,7 +130,7 @@ try {
   await x(`${SQ}.mx.freighter.body.reset(GATE.x + 40, GATE.y)`);
   await run(200); g = await G();
   check('at the gate she is not paid yet: the gate spins up for 8 s', g.mission === 'accepted' && g.credits === c2 && await t.ev(`${SQ}.mx.spin > 7000 && ${SQ}.mx.spin <= 8000`), JSON.stringify(g));
-  check('she holds still in the ring and says so', await t.ev(`${SQ}.mx.freighter.body.speed === 0`) && (await toasts()).includes('Eight seconds to spin up'));
+  check('she holds still in the ring and says so', await t.ev(`${SQ}.mx.freighter.body.speed === 0`) && (await toasts()).replace(/\s+/g, ' ').includes('Eight seconds to spin up')); // (the toast is "MULE: At the gate. Eight seconds to spin up. Hold them off.": toast.mule-spinup)
   check('the last stand: three pirates come for her from 1,100 px out', await t.ev(`${SQ}.enemies.getChildren().filter(d => d.active && d.prey === ${SQ}.mx.freighter).length === 3 && ${SQ}.enemies.getChildren().every(d => Phaser.Math.Distance.Between(d.x, d.y, GATE.x, GATE.y) > 900)`));
   check('the HUD counts the spin-up down', (await t.ev(`HUD_MISSIONS.escort.next(${SQ}, 'Space')`)).startsWith('Hold the gate: '));
   await t.shot('missions-escort-laststand');

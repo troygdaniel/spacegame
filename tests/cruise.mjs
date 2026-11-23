@@ -63,7 +63,7 @@ try {
   check('Enter makes the chosen body the target and the autopilot takes the ship there; the panel is put away', await E(`(() => { const s = ${SP}, c = s.cr; return !c.navOpen && !!c.target && c.target.name === ${JSON.stringify(picked)} && !!(s.ap && s.ap.on); })()`), picked);
   check('the amber objective arrow points at the nav target, the radar arrow stays on the mission',
     await E(`(() => { const s = ${SP}; return hudObjective(s, 'Space').name === ${JSON.stringify(picked.toUpperCase())} && hudObjective(s, 'Space', true).name !== undefined && s.cr.target !== null; })()`));
-  await E(`(() => { const s = ${SP}; autopilotEnd(s, 'quiet'); cruiseNavOpen(s); cruiseNavDraw(s); })()`); await tick(2); // the autopilot is off again: X clears a target that is only set
+  await E(`(() => { const s = ${SP}; autopilotEnd(s, 'quiet'); if (s.cr.active) cruiseEnd(s, 'quiet'); cruiseNavOpen(s); cruiseNavDraw(s); })()`); await tick(2); // the autopilot and the cruise it started are off again (Enter flies there by cruise since 568fb255, and X is ignored while a cruise runs): X clears a target that is only set
   await E(`${SP}.cr.k.X._justDown = true`); await tick(2);
   check('X in the nav list clears the target', (await E(`${SP}.cr.target`)) === null);
   await E(`(() => { cruiseNavClose(${SP}); })()`);
