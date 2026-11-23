@@ -12,6 +12,7 @@ import { nodeGame, ROOT } from './nodegame.mjs';
 let failed = 0;
 const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + name + (detail ? '  ' + detail : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame();
+g.run('campShipListSet(true)'); // this suite is about the ship list's code (P, Down, a part's row): it is switched off in the game (CAMP_SHIP_LIST, card space-game-p-opens-power: P opens power) and on here; tests/campselect.mjs has the game's own state
 const J = e => JSON.parse(g.run(`JSON.stringify(${e})`));
 
 console.log('1. the lost card names the mission');

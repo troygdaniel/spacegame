@@ -1143,7 +1143,7 @@ const UI_TEXT = {
   'camp.keys.debug': 'DEBUG KEYS (THE TUNE KIT)',
   'title.camp.keys': 'H  all the keys',
   'camp.sel.all': 'All pilots',
-  'camp.ui.pausepanels': '{keyall} all three pilots, {squadskey} the all-squads list. {keylast} {keynext} pick a hostile, {keyflast} {keyfnext} a friend, {keyattack} attack, {keyguard} guard, {keyrecall} recall. {shipkey} ship orders ({powerkey} power, {navkey} autopilot, {yardkey} dock). In a list: Up, Down, Enter. {keyfocus} looks at it. H lists every key.',
+  'camp.ui.pausepanels': '{keyall} all three pilots, {squadskey} the all-squads list. {keylast} {keynext} pick a hostile, {keyflast} {keyfnext} a friend, {keyattack} attack, {keyguard} guard, {keyrecall} recall. {powerkey} power, {navkey} autopilot, {yardkey} dock. In a list: Up, Down, Enter. {keyfocus} looks at it. H lists every key.',
   'camp.map.local': 'AREA  {km} km across',
   'camp.map.whole': 'SYSTEM  {km} km across',
   'camp.nav.no.wingout': 'Wing is out: recall it first. Order again to recall and burn.',

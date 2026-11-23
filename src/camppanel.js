@@ -1,6 +1,6 @@
 // ---------- Campaign: the order lists, the logic (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026) ----------
-// (Q used to open the FLEET list at the left; it picks all three pilots now and that list is switched off, CAMP_FLEET_LIST in src/data_controls.js: card space-game-q-selects-all. The lists below are as they were.) P opens the SHIP list at the right. Each has a row for every part of it, and a part has a key of its own that opens its list directly, at any time: W ALL SQUADS (E R T are the order keys now) on the left;
-// O POWER, I AUTOPILOT, U DOCK AND REPAIR on the right (CONVOY is a part with no key: Enter on its row opens it). Nothing is on the screen until a key is pressed; only one list is open at a time.
+// (Q used to open the FLEET list at the left; it picks all three pilots now and that list is switched off, CAMP_FLEET_LIST in src/data_controls.js: card space-game-q-selects-all. P used to open the SHIP list at the right; it opens the POWER list now and the ship list is switched off, CAMP_SHIP_LIST: card space-game-p-opens-power. The lists below are as they were.) Each list has a row for every part of it, and a part has a key of its own that opens its list directly, at any time: W ALL SQUADS (E R T are the order keys now) on the left;
+// P POWER (O too), I AUTOPILOT, U DOCK AND REPAIR on the right (CONVOY is a part with no key: Enter on its row opens it, with the fleet list on). Nothing is on the screen until a key is pressed; only one list is open at a time.
 // In an open list Up and Down move the highlight (round at the ends), Enter gives the highlighted order (on a part's row: opens that part), Left goes back to the list it is a part of, the list's own key closes it.
 // ESC GOES BACK ONE STEP, TO WHERE YOU CAME FROM (card space-game-order-target-pick; Troy, 22 Nov 2026): a target sub-list (src/camppick.js) goes back to the list it was opened from; a list opened from a part's row (Q, then Squads) goes back to that list (Q);
 // a list opened by its own key (Q, or W E R T, O I U) is closed; with nothing open Esc pauses (the scene). P.trail is the lists we came through by rows, the last one first to go back to.
@@ -70,7 +70,7 @@ function campPanelChoose(P, C, now, how, def) {
 }
 function campPanelKey(P, C, code, now) {
   const res = { used: false, ran: false, ok: false, say: '', row: '', tgt: '', fleet: false, open: campPanelOpen(P) }; // fleet: an order of the left hand or a pick of the target (a label for the tests and the radio; nothing slows the battle for it: card space-game-no-command-slowdown)
-  const pk = code ? CAMP_PANELS.panels.find(p => p.code === code) : null;
+  const pk = code ? CAMP_PANELS.panels.find(p => (p.code && p.code === code) || (p.alt && p.alt === code)) : null; // alt: a second key of the list (O opens power as well as P while the ship list is off)
   if (pk) { // a list's key (Q W, P O I U): open that list at its first row, or close it when it is the one open
     res.used = true;
     if (campPanelOpen(P) === pk.id) campPanelClose(P); else campPanelGo(P, C, pk.id);

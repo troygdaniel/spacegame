@@ -28,7 +28,7 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 
 **The ideas that make it a commander game.**
 
-- **Power management.** Six pips shared between weapons, shields and engines (like X-Wing's); shields mend by themselves at a rate the shield pips set; three gauges at the top right show where the energy goes, and the power list (`O`) opens right under them with the same pip bars on its rows.
+- **Power management.** Six pips shared between weapons, shields and engines (like X-Wing's); shields mend by themselves at a rate the shield pips set; three gauges at the top right show where the energy goes, and the power list (`P`, or `O`) opens right under them with the same pip bars on its rows.
 - **No pilot pop-ups.** Nothing asks you for orders: the miner's call in 1.1 is one plain radio line, and you send squads with the ordinary order keys.
 - **A mission is a sequence of questions.** Mission 1.1 is the finished example: a patrol turns back, a distress call, an ambush with torpedo boats, a pirate leader who duels your cruiser. Something happens about every minute.
 - **Objectives and bonuses**, a score, and ranks that grow your wing.
@@ -48,18 +48,17 @@ The game's own **H** page lists every key; it is built from `src/data_controls.j
 
 ### Campaign
 
-One list per hand, with shortcut keys. **`W` opens the all-squads list** at the left and **`P` opens the ship list** at the right. Each is short: a few orders, and one row for each of its parts with the part's key on it. **`Q` is no list: it picks all three pilots** (below); the old fleet list is switched off, not removed (`CAMP_FLEET_LIST` in `src/data_controls.js`). **A part's key opens it directly at any time:** `W` all squads on the left; `O` power (Shields first: `O`, `Enter` adds a shield pip), `I` autopilot, `U` dock and repair on the right. So `W` then `Enter` sends every fighter at the target. The three squads (Red, Green, Yellow) have no lists: you pick one with `A` `D` and give it an order with `E` `R` `T` (below). The convoy has no key (its list was a row of the fleet list): say or type its orders ("tuck in", "run for it", "hold here", "carry on"). Nothing is on the screen until you press one of these keys. Each row says what it does in plain words; a row that cannot be used now is grey and says why. **No key means two things in flight**, and there are no number keys.
+One list per hand, with shortcut keys. **`W` opens the all-squads list** at the left and **`P` opens the power list** at the right (`O` opens it too). Each is short: a few orders, and (the all-squads list, with the fleet list on) one row for each of its parts with the part's key on it. **`Q` is no list: it picks all three pilots** (below); the old fleet list is switched off, not removed (`CAMP_FLEET_LIST` in `src/data_controls.js`), and so is **the ship list** `P` used to open (`CAMP_SHIP_LIST`: its rows were Power, Autopilot, Dock and repair, Warp blink ahead). **A list's key opens it directly at any time:** `W` all squads on the left; `P` (or `O`) power (Shields first: `P`, `Enter` adds a shield pip), `I` autopilot, `U` dock and repair on the right. So `W` then `Enter` sends every fighter at the target. The three squads (Red, Green, Yellow) have no lists: you pick one with `A` `D` and give it an order with `E` `R` `T` (below). The convoy has no key (its list was a row of the fleet list): say or type its orders ("tuck in", "run for it", "hold here", "carry on"). Nothing is on the screen until you press one of these keys. Each row says what it does in plain words; a row that cannot be used now is grey and says why. **No key means two things in flight**, and there are no number keys.
 
 | Key | What it does |
 |---|---|
 | `Q` | **all three pilots** at once as the friend you picked: the next `E` `R` `T` goes to all three (no pop-up; `A` `D` still pick one pilot or a ship) |
 | `W` | **all squads**: Launch the wing, Attack the target, Guard the cruiser, Guard the target, Recall, Mine ore (it opens on Launch while ships are in the bay and on Attack once the wing is out: `W`, Enter launches everything) |
-| `P` | the **ship list**: rows that open Power, Autopilot, Dock and repair; Warp blink ahead once you have that tech |
-| `O` | **power**, which opens right under the three gauges at the top right: Shields, Engines and Weapons, each with its pip bar (the gauge's twin: both light together; the highlighted row frames its gauge), Enter gives one more pip and the list stays open; then Balance the power and Emergency shields |
+| `P` or `O` | **power**, which opens right under the three gauges at the top right: Shields, Engines and Weapons, each with its pip bar (the gauge's twin: both light together; the highlighted row frames its gauge), Enter gives one more pip and the list stays open; then Balance the power, Emergency shields, and Warp blink ahead once you have that tech (it was a row of the ship list, which is switched off) |
 | `I` | **autopilot**: Fly to the goal, Fly to the target, Fast burn to the goal, Fast burn to the target |
 | `U` | **dock and repair**: Dock at the outpost (where there is one), Repair the hull (anywhere, for ore), Repair a ship we protect (when it is near) |
 | `Up` `Down` `Enter` | in an open list: move the highlight, give the order (the list closes when the order is taken). On a row that opens a part, `Enter` or `Right` opens it |
-| `Left` | in a part's list: back to the fleet or the ship list |
+| `Left` | in a part's list: back to the list it is a part of (none are on now: the fleet and ship lists are switched off) |
 | Arrow keys | fly the cruiser: Up thrust, Left and Right turn, Down brake (while a list is open the ship coasts) |
 | `Space` (hold) | the turrets fire at ships in reach; they never fire on their own |
 | `Enter` | a homing missile at the target (only while no list is open) |

@@ -14,6 +14,7 @@ const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   
 const store = new Map();
 const g = nodeGame({ store });
 g.run('campFleetListSet(true)'); // this suite is about the lists' code, Q's pop-up included: it is switched off in the game (CAMP_FLEET_LIST, card space-game-q-selects-all) and on here; tests/campselect.mjs has the game's own state
+g.run('campShipListSet(true)'); // and the ship list too: it is switched off in the game (CAMP_SHIP_LIST, card space-game-p-opens-power: P opens power) and on here; tests/campselect.mjs has the game's own state
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 

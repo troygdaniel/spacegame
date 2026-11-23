@@ -24,6 +24,7 @@ let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 700) + ')' : ''}`); } };
 const g = nodeGame();
 g.run('campFleetListSet(true)'); // the lists' tables are checked with Q's pop-up on (switched off in the game: CAMP_FLEET_LIST); the game's own state, Q picking all three pilots, is the last section below (card space-game-q-selects-all)
+g.run('campShipListSet(true)'); // and the ship list too: it is switched off in the game (CAMP_SHIP_LIST, card space-game-p-opens-power: P opens power) and on here; tests/campselect.mjs has the game's own state
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const read = f => readFileSync(join(ROOT, f), 'utf8');
 
