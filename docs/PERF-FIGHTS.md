@@ -25,6 +25,8 @@ In the busiest fight the tools can build (`busy1` of `tools/perfcampaign.mjs`: 1
 
 All three drawing changes are for the Campaign's scenes only (`Campaign`, `CampHub`, `CampWarp`); Long Haul's keep Phaser's own. No file of the HUD, the lists, the radar or the scene was edited: the three files change how Phaser's own calls behave for those scenes. `tests/campperf.mjs` pins them; `tests/playlog.mjs` pins the counts.
 
+**For new drawing, call these by name** (asked for by the local team, for squad rings and health bars): `campDisc(g, x, y, r)` and `campRing(g, x, y, r)` in `src/campcircles.js` draw the cheap circle on any Graphics in any scene, with the fill or line style the Graphics already has; `campLabel(t, text, color)` in `src/camptextguard.js` sets a label's words and colour and paints only for what changed. Three rules that keep a fight cheap: no `fillCircle`, `strokeCircle`, `arc` or `fillPoints` on a Graphics that is repainted every frame (use `campDisc`, `campRing`, `fillRect`, `fillTriangle`); no `setColor` on a label every frame without asking whether it changed (`campLabel`); and anything with hundreds of commands that changes a few times a second is painted into a texture, as the gauges are.
+
 ## The numbers
 
 `busy1`, headless Chromium with software GL on a cloud machine, the repo's own tool (`frames`, `alloc`), before and after on the same commit of main:

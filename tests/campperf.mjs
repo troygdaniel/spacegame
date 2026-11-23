@@ -36,6 +36,11 @@ console.log('A. circles');
   check('a circle of no size is left to Phaser (nothing to fan)', run('Campaign', 'fillCircle(0, 0, 0)').join() === 'ARC-FILL');
 }
 
+{ // the same two shapes by name, for new drawing (squad rings, health bars): any Graphics, any scene
+  const r = J(`(() => { const o = new __G('Space'); campDisc(o, 5, 5, 3); const fan = o.calls.slice(); o.calls.length = 0; campRing(o, 5, 5, 3); const ring = o.calls.slice(); o.calls.length = 0; campDisc(o, 0, 0, 0); campRing(o, 0, 0, -1); return { fan, ring, none: o.calls.length, back: campDisc(o, 1, 1, 1) === o && campRing(o, 1, 1, 1) === o, nil: campDisc(null, 0, 0, 1) }; })()`);
+  check('campDisc and campRing draw the cheap circle on any Graphics, whatever its scene: a fan of triangles, a closed line; a circle of no size draws nothing; each answers the Graphics so a chain goes on', r.fan.join() === Array(8).fill('tri').join() && r.ring.join() === 'strokePoints10closedend' && r.none === 0 && r.back === true && r.nil === null, JSON.stringify(r));
+}
+
 console.log('B. labels');
 {
   g.run(`(() => { function T(key, style) { this.scene = { sys: { settings: { key } } }; this.style = Object.assign({ color: '#fff', fontSize: '14px', fontStyle: '' }, style); this.paints = 0; }
@@ -46,6 +51,7 @@ console.log('B. labels');
   check('the same for the size (a number or its px) and the style', paints('Campaign', `t.setFontSize(14); t.setFontSize('14px'); t.setFontStyle('')`) === 0 && paints('Campaign', `t.setFontSize(12); t.setFontSize(12); t.setFontSize('12px'); t.setFontStyle('bold'); t.setFontStyle('bold')`) === 2);
   check('a guarded call still answers the label, so a chain goes on (setColor(...).setText(...))', J(`(() => { const t = new __T('Campaign'); return t.setColor('#fff') === t && t.setColor('#000') === t; })()`));
   check('Long Haul\'s labels are Phaser\'s own: every call paints, the same value or not', paints('Space', `for (let i = 0; i < 5; i++) t.setColor('#fff')`) === 5 && paints('Station', `t.setFontSize(14); t.setFontSize(14)`) === 2);
+  check('campLabel sets a label\'s words and colour and paints only for what changed, in any scene (a stand-in label with setText)', J(`(() => { const t = new __T('Space', { color: '#fff' }); t.text = 'HULL 600'; t.setText = function (v) { this.text = v; this.paints++; return this; }; campLabel(t, 'HULL 600', '#fff'); const same = t.paints; campLabel(t, 'HULL 590', '#fff'); const words = t.paints; campLabel(t, 'HULL 590', '#ff4d6d'); const col = t.paints; campLabel(t, undefined, '#ff4d6d'); campLabel(t, 590 === 590 ? 'HULL 590' : '', undefined); return [same, words, col, t.paints, campLabel(null, 'x') === null, t.style.color].join(); })()`) === '0,1,2,2,true,#ff4d6d');
   check('the paints saved are counted (for the measuring tools)', J('__TG.skipped') > 60);
 }
 
