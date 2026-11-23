@@ -3,6 +3,7 @@
 //   'enemy'   Attack (the squads' lists and the escorts'): a hostile, the nearest threat to the ships you protect first
 //   'escort'  Escort the convoy: a convoy ship or one of the neutral miners, the nearest to the cruiser first
 //   'field'   Mine ore: a field of rocks with rock left in it, the nearest to the cruiser first
+//   'ward'    Repair a ship we protect (card space-game-repair-with-ore): a convoy ship or a miner that is hurt and within CAMP.mend.range of the cruiser, the nearest first; the row shows what mending it costs
 // ONE candidate: the order is given at once, at it (an enemy also becomes THE target, C.tgt, so P fly to the target and a missile follow it). SEVERAL: Enter on the row opens a SUB-LIST of them (a row each: its name, how far, its hull),
 // Up and Down move the highlight, Enter gives the order, Esc (or Left) goes back to the list it came from. NONE: the order is as it always was (no convoy in the level: the escorts stay close; no rock: the ore lying about; no hostile: Attack
 // is refused, and its row is grey). An enemy that is already the target (A D S picked it) is attacked at once, with no list: those keys stay the quick way. Moving the highlight REVEALS the candidate in the flight view (src/camppickdraw.js).
@@ -31,6 +32,9 @@ function campPickHostiles(C) { // every hostile (what A D S step through), the n
   return campAliens(C).slice().sort((a, b) => gap(a) - gap(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).map(u => campPickShip(C, u, campNavUnitName(u), 'ship'));
 }
 function campPickEscorts(C) { return campPickByNear(campPickGuarded(C), C.carrier).map(u => Object.assign(campPickShip(C, u, u.kind === 'freighter' && !u.named ? campConvoyName(u) + ' convoy' : campConvoyName(u), 'ship'), { charge: true })); } // charge: a ship you protect, whose row wears its health bar (card space-game-protected-health)
+function campPickWards(C) { // the ships you protect that are hurt and near: the nearest first, with the ore each would cost (src/campmend.js)
+  return (typeof campWardsNear === 'function' ? campWardsNear(C) : []).map(u => Object.assign(campPickShip(C, u, u.kind === 'freighter' && !u.named ? campConvoyName(u) + ' convoy' : campConvoyName(u), 'ship'), { charge: true, cost: campWardQuote(C, u).cost }));
+}
 function campPickFields(C) { // the rocks that are left, a field of them by the row of the level that made them (a rock carries its field's number)
   const by = {}; (C.rocks || []).forEach(r => { if (r.hp > 0) (by[r.field == null ? 0 : r.field] = by[r.field == null ? 0 : r.field] || []).push(r); });
   return campPickByNear(Object.keys(by).map(k => {
@@ -41,7 +45,7 @@ function campPickFields(C) { // the rocks that are left, a field of them by the 
 }
 function campPickItems(C, kind) {
   if (!C || !C.carrier) return [];
-  return kind === 'enemy' ? campPickHostiles(C) : kind === 'escort' ? campPickEscorts(C) : kind === 'field' ? campPickFields(C) : [];
+  return kind === 'enemy' ? campPickHostiles(C) : kind === 'escort' ? campPickEscorts(C) : kind === 'field' ? campPickFields(C) : kind === 'ward' ? campPickWards(C) : [];
 }
 function campPickPlan(C, row) {
   const kind = campPickKind(row); if (!kind || !C) return { how: 'direct' };
@@ -64,7 +68,7 @@ function campPickSync(C, pk) {
 }
 function campPickRow(C, it, kind) {
   const pct = Math.round(Math.max(0, it.hp) * 100), n = it.n;
-  const short = it.what === 'field' ? uiText(n === 1 ? 'camp.ui.cand.rock1' : 'camp.ui.cand.rocks', { n }) + '  ' + it.km + ' km' : it.km + ' km  ' + pct + '%';
+  const short = it.what === 'field' ? uiText(n === 1 ? 'camp.ui.cand.rock1' : 'camp.ui.cand.rocks', { n }) + '  ' + it.km + ' km' : it.km + ' km  ' + pct + '%' + (it.cost != null ? '  ' + it.cost + ' ore' : '');
   const state = it.what === 'field' ? uiText('camp.ui.cand.state.field', { name: it.name, n, km: it.km }) : uiText('camp.ui.cand.state.ship', { name: it.name, km: it.km, hp: pct });
   return { id: it.id, label: it.name, key: '', more: false, ok: true, state, short, marked: kind === 'enemy' && !!C.tgt && C.tgt === it.id, hull: it.charge ? Math.max(0, Math.min(1, it.hp)) : -1, band: it.charge ? campChargeBand(it.hp) : '' }; // the target now is marked; a ship you protect has its hull and the band of its colour for the bar at the right of its row (src/campanelsdraw.js)
 }

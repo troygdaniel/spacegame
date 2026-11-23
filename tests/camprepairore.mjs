@@ -24,7 +24,8 @@ const near = (a, b, e = 1e-6) => Math.abs(a - b) <= e * Math.max(1, Math.abs(b))
 R(`window.__new = (seed, mission) => { window.C = campNew(1, [], { seed: seed || 5, mission: mission || 0, ore: 200 }); C.god = false; return C; };
   window.__go = s => { for (let i = 0; i < Math.round(s * 30); i++) campStep(C, 1 / 30); };
   window.__says = () => C.events.filter(e => e.type === 'say').map(e => e.key);
-  window.__ward = () => campConvoyShips(C)[0];`);
+  window.__newT = seed => { __new(seed); __go(5); return C; }; // the transport of 1.1 leaves at 4 s
+  window.__ward = () => campConvoyShips(C).find(u => u.kind === 'freighter');`);
 
 // ---- A. the numbers, and what is gone ----
 console.log('A. the numbers, and what is gone');
@@ -34,7 +35,7 @@ check('the whole hull costs what it cost at the dock (60 ore) and the dock takes
 check('a fighter\'s mend costs a little ore (5), and takes twice as long with none', J('CAMP.repair.ore') === 5 && J('CAMP.repair.slow') === 2, J('[CAMP.repair.ore, CAMP.repair.slow]'));
 check('the numbers are finite', M && Object.values(M).every(v => typeof v === 'number' && isFinite(v)));
 check('nothing builds ships: no CAMP.build, no campBuild, no campFactory, no campCanBuild, no queue in a new battle', J('typeof CAMP.build') === 'undefined' && J('typeof campBuild') === 'undefined' && J('typeof campFactory') === 'undefined' && J('typeof campCanBuild') === 'undefined' && J('typeof __new().build') === 'undefined');
-check('no Fabricator: not a tech, not an outpost price, not in the dock or the refit', J('typeof CAMP.tech.fabricator') === 'undefined' && J('typeof CAMP.outpost.fabricator') === 'undefined' && !/fabricator/i.test(read('src/camphub.js')) && !/fabricator/i.test(read('src/campdock.js')));
+check('no Fabricator: not a tech, not an outpost price, not in the dock or the refit', J('typeof CAMP.tech.fabricator') === 'undefined' && J('typeof CAMP.outpost.fabricator') === 'undefined' && !/fabricator/i.test(read('src/camphub.js').replace(/\/\/[^\n]*/g, '')) && !/fabricator/i.test(read('src/campdock.js').replace(/\/\/[^\n]*/g, '')));
 check('the refit keeps its price for an extra fighter (CAMP.refit.fighterCost: 25), which was the workshop\'s', J('CAMP.refit.fighterCost') === 25, J('CAMP.refit.fighterCost'));
 check('the script is in the page', /<script src="src\/campmend\.js"><\/script>/.test(read('index.html')));
 
@@ -45,7 +46,7 @@ const q = J('campMendQuote(C)');
 check('the quote is the share of the hull missing: half of 600 points is 300 points for 30 ore', q && near(q.missing, J('__max') / 2) && q.cost === Math.ceil(60 * 0.5), JSON.stringify(q));
 const r1 = J('(() => { const o = C.ore; const r = campOrder(C, "repair", "", "key"); return { ok: r.ok, code: r.code, say: r.say, paid: o - C.ore, hp: C.carrier.hp }; })()');
 check('Repair the hull in open space works (no dock): the ore is paid now and the ship says what it is doing', r1.ok === true && r1.paid === 30 && /mend/i.test(r1.say), JSON.stringify(r1));
-check('the hull is not whole at once: it mends over the seconds (nothing yet at the order, half after half of the time, whole after all of it)', r1.hp === J('__max') / 2 && (R('__go(CAMP.mend.hullSecs / 2);'), J('C.carrier.hp') > J('__max') * 0.7 && J('C.carrier.hp') < J('__max') * 0.8) && (R('__go(CAMP.mend.hullSecs / 2 + 0.5);'), near(J('C.carrier.hp'), J('__max'))), J('C.carrier.hp'));
+check('the hull is not whole at once: it mends over the seconds a part of the hull takes (half a hull, 4 s of the 8: 150 points in 2 s, whole in 4)', r1.hp === J('__max') / 2 && (R('__go(2);'), near(J('C.carrier.hp'), J('__max') / 2 + 150, 0.02)) && (R('__go(2.5);'), near(J('C.carrier.hp'), J('__max'))), J('C.carrier.hp'));
 check('it stops at whole and the list of mends is empty again', J('C.mends.length') === 0 && J('campOrder(C, "repair", "", "key").code') === 'hullfull');
 R(`__new(); C.carrier.hp = 100; campSpawn(C, 'raider', C.carrier.x + 500, C.carrier.y);`);
 check('in a fight it works too: aliens near do not stop it', J('campOrder(C, "repair", "", "key").ok') === true);
@@ -81,23 +82,23 @@ check('a mend priced at 0 on the N panel is free and takes the usual time', J('_
 
 // ---- D. a ship you protect ----
 console.log('D. a ship you protect');
-R(`__new(); window.W = __ward(); W.hp = W.maxHp / 2; W.x = C.carrier.x + 300; W.y = C.carrier.y;`);
+R(`__newT(); window.WD = __ward(); WD.hp = WD.maxHp / 2; WD.x = C.carrier.x + 300; WD.y = C.carrier.y;`);
 const cand = J('campPickItems(C, "ward").map(i => ({ id: i.id, what: i.what, hp: i.hp }))');
-check('the candidates are the ships you protect that are hurt and near: the hurt transport', cand.length === 1 && cand[0].id === J('W.id') && cand[0].hp === 0.5, JSON.stringify(cand));
-check('a ship at full hull is not a candidate', (() => { R('W.hp = W.maxHp;'); return J('campPickItems(C, "ward").length') === 0; })());
-check('a hurt ship too far from the cruiser is not either (range ' + J('CAMP.mend.range') + ' px)', (() => { R('W.hp = W.maxHp / 2; W.x = C.carrier.x + CAMP.mend.range + 500;'); return J('campPickItems(C, "ward").length') === 0; })());
-R(`W.x = C.carrier.x + 300;`);
-const wq = J('(() => { const o = C.ore, hp = W.hp, miss = W.maxHp - W.hp; const r = campOrder(C, "mendship", W.id, "key"); return { ok: r.ok, code: r.code, say: r.say, paid: o - C.ore, miss, hp0: hp, hp: W.hp }; })()');
+check('the candidates are the ships you protect that are hurt and near: the hurt transport', cand.length === 1 && cand[0].id === J('WD.id') && cand[0].hp === 0.5, JSON.stringify(cand));
+check('a ship at full hull is not a candidate', (() => { R('WD.hp = WD.maxHp;'); return J('campPickItems(C, "ward").length') === 0; })());
+check('a hurt ship too far from the cruiser is not either (range ' + J('CAMP.mend.range') + ' px)', (() => { R('WD.hp = WD.maxHp / 2; WD.x = C.carrier.x + CAMP.mend.range + 500;'); return J('campPickItems(C, "ward").length') === 0; })());
+R(`WD.x = C.carrier.x + 300;`);
+const wq = J('(() => { const o = C.ore, hp = WD.hp, miss = WD.maxHp - WD.hp; const r = campOrder(C, "mendship", WD.id, "key"); return { ok: r.ok, code: r.code, say: r.say, paid: o - C.ore, miss, hp0: hp, hp: WD.hp }; })()');
 check('the order mends it: the ore is paid now (0.1 a point: half of 200 is 100 points, 10 ore) and the ship says so', wq.ok === true && wq.paid === Math.ceil(wq.miss * J('CAMP.mend.wardPoint')) && /mend/i.test(wq.say), JSON.stringify(wq));
-check('the ship is mended over wardSecs, not at once: nothing at the order, whole after the seconds', wq.hp === wq.hp0 && (R('__go(CAMP.mend.wardSecs / 2);'), J('W.hp') > J('W.maxHp') / 2 + 10 && J('W.hp') < J('W.maxHp') - 10) && (R('__go(CAMP.mend.wardSecs / 2 + 0.5);'), near(J('W.hp'), J('W.maxHp'))), J('W.hp'));
-check('a ship that is already being mended is refused (and a whole one: nothing to mend)', (() => { R('W.hp = W.maxHp / 2; campOrder(C, "mendship", W.id, "key");'); const a = J('campOrder(C, "mendship", W.id, "key").code'); R('__go(CAMP.mend.wardSecs + 1);'); const b = J('campOrder(C, "mendship", W.id, "key").code'); return a === 'mending' && b === 'noward'; })());
-check('out of range the answer names the ship and how far, and nothing is paid', (() => { R('W.hp = W.maxHp / 2; W.x = C.carrier.x + CAMP.mend.range + 800; const __o = C.ore; window.__o2 = __o;'); const r = J('(() => { const r = campOrder(C, "mendship", W.id, "key"); return { ok: r.ok, code: r.code, say: r.say }; })()'); return r.ok === false && r.code === 'farward' && J('C.ore') === J('__o2') && /\d/.test(r.say); })());
-check('with no id it takes the nearest hurt one in range (the strip and the voice have no list)', (() => { R('W.x = C.carrier.x + 300;'); return J('campOrder(C, "mendship", "", "strip").ok') === true; })());
-R(`__new(); window.W = __ward(); W.hp = W.maxHp / 2; W.x = C.carrier.x + 300; C.ore = 1; C.cash = 0;`);
-check('with no ore it is refused and says what is needed', (() => { const r = J('(() => { const r = campOrder(C, "mendship", W.id, "key"); return { code: r.code, say: r.say }; })()'); return r.code === 'noore2' && /\d/.test(r.say); })());
+check('the ship is mended over the seconds its share of the hull takes (half a hull of 6 s: 3 s): nothing at the order, 50 points in 1.5 s, whole after 3', wq.hp === wq.hp0 && (R('__go(1.5);'), near(J('WD.hp'), J('WD.maxHp') / 2 + 50, 0.03)) && (R('__go(2);'), near(J('WD.hp'), J('WD.maxHp'))), J('WD.hp'));
+check('a ship that is already being mended is refused (and a whole one: nothing to mend)', (() => { R('WD.hp = WD.maxHp / 2; campOrder(C, "mendship", WD.id, "key");'); const a = J('campOrder(C, "mendship", WD.id, "key").code'); R('__go(CAMP.mend.wardSecs + 1);'); const b = J('campOrder(C, "mendship", WD.id, "key").code'); return a === 'mending' && b === 'noward'; })());
+check('out of range the answer names the ship and how far, and nothing is paid', (() => { R('WD.hp = WD.maxHp / 2; WD.x = C.carrier.x + CAMP.mend.range + 800; const __o = C.ore; window.__o2 = __o;'); const r = J('(() => { const r = campOrder(C, "mendship", WD.id, "key"); return { ok: r.ok, code: r.code, say: r.say }; })()'); return r.ok === false && r.code === 'farward' && J('C.ore') === J('__o2') && /\d/.test(r.say); })());
+check('with no id it takes the nearest hurt one in range (the strip and the voice have no list)', (() => { R('WD.x = C.carrier.x + 300;'); return J('campOrder(C, "mendship", "", "strip").ok') === true; })());
+R(`__newT(); window.WD = __ward(); WD.hp = WD.maxHp / 2; WD.x = C.carrier.x + 300; WD.y = C.carrier.y; C.ore = 1; C.cash = 0;`);
+check('with no ore it is refused and says what is needed', (() => { const r = J('(() => { const r = campOrder(C, "mendship", WD.id, "key"); return { code: r.code, say: r.say }; })()'); return r.code === 'noore2' && /\d/.test(r.say); })());
 R(`__new(1, 1); window.__m = campConvoyShips(C).filter(u => u.kind === 'miner'); if (__m.length) { __m[0].hp = __m[0].maxHp / 2; __m[0].x = C.carrier.x + 200; __m[0].y = C.carrier.y; }`);
 check('in 1.2 a miner is one of the ships you protect: it can be mended too', J('__m.length') > 0 && J('campPickItems(C, "ward").some(i => i.id === __m[0].id)') === true);
-R(`__new(); window.W = __ward(); W.hp = W.maxHp / 2; W.x = C.carrier.x + 300; W.y = C.carrier.y; C.docked = 'luna';`);
+R(`__newT(); window.WD = __ward(); WD.hp = WD.maxHp / 2; WD.x = C.carrier.x + 300; WD.y = C.carrier.y; C.docked = 'luna';`);
 check('the dock mends the hull only (docked the battle is paused: a ship you protect is not near)', J('typeof campMendWard') === 'function');
 
 // ---- E. the lists ----
@@ -106,8 +107,8 @@ const yard = J('CAMP_YARD.map(r => r.id)');
 check('the U list\'s table: Dock, Repair the hull, Repair a ship we protect (no Build rows)', JSON.stringify(yard) === '["dock","repairhull","repairward"]', JSON.stringify(yard));
 R(`__new(); window.__rows = campPanelList(C, 'yard').map(r => r.id);`);
 check('in 1.1 (a transport to protect) the U list shows all three', JSON.stringify(J('__rows')) === '["dock","repairhull","repairward"]', JSON.stringify(J('__rows')));
-R(`__new(1, 2); window.__rows3 = campPanelList(C, 'yard').map(r => r.id); window.__hasConvoy = campConvoyShips(C).length;`);
-check('a mission with nothing to protect has no row for it', J('__hasConvoy') > 0 || JSON.stringify(J('__rows3')) === '["dock","repairhull"]', JSON.stringify(J('__rows3')));
+R(`window.C = campNew(3, [], { seed: 1, mission: 0, ore: 100 }); window.__rows3 = campPanelList(C, 'yard').map(r => r.id); window.__hasConvoy = campConvoyShips(C).length + ((C.L && C.L.convoys) || []).length;`);
+check('a level with nothing to protect and no outpost to dock at (the alien home world) has only Repair the hull: no ward row, no dock row', J('__hasConvoy') === 0 && JSON.stringify(J('__rows3')) === '["repairhull"]', JSON.stringify([J('__hasConvoy'), J('__rows3')]));
 check('the ward row picks its target: pick "ward" in the table', J('CAMP_YARD.find(r => r.id === "repairward").pick') === 'ward' || J('campYardRows().find(r => r.id === "repairward").pick') === 'ward');
 check('the rows read their price live: the hull row says what mending it costs now', (() => { R('__new(); C.carrier.hp = C.carrier.maxHp / 2;'); return /30/.test(J('campPanelState(C, campPanelList(C, "yard").find(r => r.id === "repairhull"))')); })());
 check('no Build row in any list, and no "Build a fighter" words anywhere in the table', !/build a/i.test(read('src/data_controls.js').replace(/\/\/[^\n]*/g, '')) && !/buildf|builde/.test(read('src/data_controls.js').replace(/\/\/[^\n]*/g, '')));

@@ -189,7 +189,7 @@ class Campaign extends Phaser.Scene {
   openDock(id) {
     const C = this.camp, o = C && typeof campOutposts === 'function' ? campOutposts(C.level).find(x => x.id === id) : null; if (!o || this.docked || !this.scene || !this.scene.launch) return;
     this.docked = true; if (this.mp) campMapClose(this); if (typeof campPanelsClose === 'function') campPanelsClose(this);
-    const d = { dock: id, camp: C, P: this.P, rows: CAMP_DOCK.rows.slice(), at: 'build', station: { name: o.name }, onLaunch: h => this.undock(h), onLeave: h => this.undock(h) };
+    const d = { dock: id, camp: C, P: this.P, rows: CAMP_DOCK.rows.slice(), at: 'repair', station: { name: o.name }, onLaunch: h => this.undock(h), onLeave: h => this.undock(h) };
     this.scene.pause(); this.scene.launch('CampHub', d);
   }
   undock(hub) { campUndock(this.camp); this.docked = false; if (hub && hub.scene) hub.scene.stop(); this.scene.resume(); toast(this, uiText('camp.say.undock'), '#9fe9ff'); }
@@ -214,12 +214,12 @@ class Campaign extends Phaser.Scene {
     this.mode = 'refit'; this.choices = campTechChoices(this.level, this.P); this.refit = { pick: null, f: 0, e: 0, ore: campFunds(this.camp) }; this.paintRefit();
   }
   paintRefit() {
-    const R = this.refit, B = CAMP.build, lines = [uiText('camp.ui.refitore', { ore: R.ore, xf: R.f, xe: R.e }), uiText('camp.ui.refitpick', { keys: this.choices.map((id, i) => i < 3 ? i + 1 : i + 3).join('  ') })]
+    const R = this.refit, B = CAMP.refit, lines = [uiText('camp.ui.refitore', { ore: R.ore, xf: R.f, xe: R.e }), uiText('camp.ui.refitpick', { keys: this.choices.map((id, i) => i < 3 ? i + 1 : i + 3).join('  ') })]
       .concat(this.choices.map((id, i) => (i < 3 ? i + 1 : i + 3) + '   ' + campTechLine(id, this.P) + (R.pick === id ? '   <' : '')), [uiText('camp.ui.refitbuy', { fc: B.fighterCost, ec: B.escortCost })]);
     this.showCard(uiText('camp.ui.refit'), lines, R.pick ? uiText('camp.ui.refitgot', { name: uiText('camp.tech.' + R.pick + '.name') }) : '', 380);
   }
   refitKey(c) {
-    const R = this.refit, B = CAMP.build, i = { Digit1: 0, Digit2: 1, Digit3: 2, Digit6: 3, Digit7: 4, Digit8: 5 }[c]; // 4 and 5 buy ships, so what was looted from the cloaked caches (src/campanomaly.js) is chosen with 6, 7 and 8
+    const R = this.refit, B = CAMP.refit, i = { Digit1: 0, Digit2: 1, Digit3: 2, Digit6: 3, Digit7: 4, Digit8: 5 }[c]; // 4 and 5 buy ships, so what was looted from the cloaked caches (src/campanomaly.js) is chosen with 6, 7 and 8
     if (i !== undefined && this.choices[i]) R.pick = this.choices[i];
     else if (c === 'Digit4' && R.f < CAMP.refit.most && R.ore >= B.fighterCost) { R.f++; R.ore -= B.fighterCost; }
     else if (c === 'Digit5' && R.e < CAMP.refit.most && R.ore >= B.escortCost) { R.e++; R.ore -= B.escortCost; }

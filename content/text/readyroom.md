@@ -7,7 +7,7 @@ The words of the ready room's menu and its overlays (card space-game-ready-room-
 | key | text |
 |---|---|
 | camp.room.desc.board | Every mission of the campaign: the ones you have flown, with your scores, and the next one. Open it to read a briefing, or to pick one to fly again. |
-| camp.room.desc.refit | Spend ore on more ships for the next mission, or fit the Fabricator. It shows what each choice changes before you buy. |
+| camp.room.desc.refit | Spend ore on more ships for the next mission. It shows what each choice changes before you buy. |
 | camp.room.desc.rank | Your pilot rank and how far the next one is. A higher rank puts more ships in your wing. |
 | camp.room.desc.launch | Take the cruiser out on mission {n} of {of}: {title}. The briefing was read here, so the flight starts at once. |
 | camp.room.desc.replay | Fly {title} again for a better score. Nothing in the story moves. |
@@ -23,11 +23,9 @@ The words of the ready room's menu and its overlays (card space-game-ready-room-
 | camp.room.change.fighters | Fighters in your wing: {from} to {to} |
 | camp.room.change.escorts | Escorts in your wing: {from} to {to} |
 | camp.room.have.ship | You have {ore} ore. Bought here: {n} of {most}. |
-| camp.room.have.fab | You have {ore} ore. |
 | camp.room.can | You can buy it. |
 | camp.room.need | Not yet: {need} more ore. |
 | camp.room.most | No more: {most} of {most} bought. |
-| camp.room.fitted | Fitted. |
 | camp.room.cost | {cost} ore |
 | camp.room.refit.techs | FITTED TECH |
 | camp.room.refit.notech | None yet. You pick one after each level, and the pick shows its numbers. |
@@ -42,4 +40,3 @@ The words of the ready room's menu and its overlays (card space-game-ready-room-
 | camp.room.tech.repair | The carrier and ships within {reach} px mend {rate} hit points a second |
 | camp.room.tech.overdrive | Carrier top speed: {from} to {to} px a second |
 | camp.room.tech.lens | Anomaly sense range: {from} to {to} px |
-| camp.room.tech.fabricator | Build ships anywhere, not only docked ({cost} ore, once) |

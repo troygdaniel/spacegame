@@ -26,13 +26,13 @@ const campPanelClose = P => { if (P && typeof P === 'object') { P.open = ''; P.a
 const campPanelCase = t => t.charAt(0) + t.slice(1).toLowerCase();
 const campPanelKeyLine = () => ['left', 'right'].map(side => CAMP_PANELS.panels.filter(p => p.side === side && p.key).map(p => p.key + ' ' + p.tab).join('  ')).join('    ');
 const campKeyLine = () => uiText('camp.ui.keys', { panels: campPanelKeyLine() });
-// a row that can never be used in this mission is not in its list: the convoy's part with no convoy to give orders to, the blink without its tech, building where ships are built docked
+// a row that can never be used in this mission is not in its list: the convoy's part with no convoy to give orders to, the blink without its tech, the dock where there is no outpost
 function campPanelWhen(C, row) {
   if (!row.when || !C) return true;
   if (row.when === 'stance') return campFlag('stance'); // the Stance part, unless the tuning panel's switch has taken the stances out
   if (row.when === 'convoy') return campFlag('convoyorders') && !!((C.L && C.L.convoys && C.L.convoys.length) || (typeof campConvoyShips === 'function' && campConvoyShips(C).length));
   if (row.when === 'blink') return campHas(C, 'blink');
-  if (row.when === 'aboard') return typeof campAboard !== 'function' || campAboard(C);
+  if (row.when === 'outpost') return typeof campAboard !== 'function' || !campAboard(C); // the dock row: not in a level with no outpost to dock at (card space-game-repair-with-ore: the hull is mended anywhere)
   return true;
 }
 const campPanelList = (C, id) => { const d = campPanelDef(id); return d ? d.rows.filter(r => campPanelWhen(C, r)) : []; };
@@ -126,12 +126,8 @@ function campPanelKey(P, C, code, now) {
 }
 
 // do a row: the order with the row's words, so the lists, the strip and the voice are one set of rules; fly: the autopilot to the objective or the target (burn: fast); blink: the warp hop
-// a level that lists no outpost has nowhere to dock: its dock row mends the hull aboard instead (card space-game-night-quit-at-pick, finding F of docs/night/hunt-l2-l3.md; the rule is src/campoutpost.js campAboard)
-const campPanelAs = (C, row) => {
-  if (!row || !C) return row;
-  if (row.id === 'dock' && typeof campAboard === 'function' && campAboard(C)) return Object.assign({}, row, { order: 'repair', arg: '', label: 'Repair the hull', help: 'Mend the hull aboard (costs ore)' });
-  return row;
-};
+// (a level with no outpost used to turn its Dock row into Repair the hull; the hull is mended anywhere now, so that row is its own and the Dock row is left out there: when 'outpost')
+const campPanelAs = (C, row) => row;
 const campPanelTargetArg = (C, row) => (row.order === 'attack' || row.order === 'missiles') && typeof campTgtNow === 'function' && campTgtNow(C) ? CAMP_TGT : (row.arg || ''); // with a target picked the attack and the missile go at it; none: as they always did
 const campPanelWingTarget = (C, row) => { const u = row.wing[1] === 'attack' && typeof campTgtNow === 'function' ? campTgtNow(C) : null; return u ? u.id : null; }; // an order to a part of the wing: Attack goes at the target (none picked: the verb's own, the nearest enemy); Guard is the cruiser, Mine the nearest ore
 function campPanelRun(C, row, how, item) {
@@ -140,6 +136,7 @@ function campPanelRun(C, row, how, item) {
   if (row.open) return { ok: true, say: '', open: row.open }; // a part's row: the caller opens its list
   if (item && row.pick === 'enemy') C.tgt = item.id; // the hostile that was chosen is THE target now: the attack below goes at it, and P fly to the target and Enter a missile follow it
   else if (item && row.pick === 'escort') return campWingOrder(C, 'escorts', 'escort', item.id, how || 'key'); // the escorts go to the ship that was chosen (a convoy ship or a miner)
+  else if (item && row.pick === 'ward') return campOrder(C, 'mendship', item.id, how || 'key'); // the ship that was chosen is mended (src/campmend.js)
   else if (item && row.pick === 'field') return campWingOrder(C, row.wing ? row.wing[0] : 'all', 'mine', item.rock, how || 'key'); // the wing starts at the rock of the field that was chosen
   else if (row.pick === 'enemy' && !campTgtNow(C) && !campTgtList(C).length) { const dry = row.wing ? campWingOrder(C, row.wing[0], row.wing[1], null, how || 'key', true) : campCheck(C, row.order, ''); return dry.ok ? campNo('nofoe') : dry; } // Attack with no hostile and no target: nothing to attack (an order's own refusal, no fighters out, is said first)
   if (row.wing) return campWingOrder(C, row.wing[0], row.wing[1], campPanelWingTarget(C, row), how || 'key');
@@ -166,11 +163,17 @@ function campPanelWhy(r) {
 }
 // the squad a row is about (its order is to one squad, or it opens that squad's list): 'red', 'green', 'yellow', or '' (card space-game-fighter-squads)
 const campPanelSquadOf = row => { const g = row.wing && CAMP.wing.groups[row.wing[0]]; return g && g.squad ? g.squad : row.open && CAMP.wing.squads.indexOf(row.open) >= 0 ? row.open : ''; };
-// what a row of the DOCK AND REPAIR list costs, in words, from the row's own `cost` (the table CAMP_YARD, src/data_controls.js): '25 ore, 12 s', or short '25 ore'; '' for a row with no cost
-const campPanelCost = (row, short) => { const B = CAMP.build, k = row.cost; return k && B[k + 'Cost'] != null ? B[k + 'Cost'] + ' ore' + (short ? '' : ', ' + B[k + 'Time'] + ' s') : ''; };
+// what a row of the DOCK AND REPAIR list costs, in words, from the row's own `cost` (the table CAMP_YARD, src/data_controls.js), live: 'hull' is mending the hull now ('30 ore, 4 s', short '30 ore', or 'hull sound'); 'ward' is the nearest
+// ship you protect that is hurt and near ('10 ore'), '' when none is; '' for a row with no cost (card space-game-repair-with-ore)
+const campPanelCost = (C, row, short) => {
+  const k = row.cost, K = CAMP.mend; if (!k || !C || !C.carrier) return '';
+  if (k === 'hull') { const q = campMendQuote(C); return q.missing <= 0.5 ? 'hull sound' : q.cost + ' ore' + (short || C.docked ? '' : ', ' + Math.max(1, Math.round(K.hullSecs * q.missing / C.carrier.maxHp)) + ' s'); }
+  if (k === 'ward') { const u = typeof campWardsNear === 'function' ? campWardsNear(C)[0] : null; return u ? campWardQuote(C, u).cost + ' ore' : ''; }
+  return '';
+};
 function campPanelState(C, row) {
-  const B = CAMP.build, sq = campPanelSquadOf(row);
-  if (row.cost) return campPanelCost(row); // a yard row: what it costs
+  const sq = campPanelSquadOf(row);
+  if (row.cost) return campPanelCost(C, row); // a yard row: what it costs (now)
   if (sq) { const n = campWingShips(C, sq).length, tg = row.wing && row.wing[1] === 'attack' ? campPanelTarget(C) : null; return tg ? tg.name + ', ' + tg.km + ' km' : n + (n === 1 ? ' ship out' : ' ships out'); } // a squad's row: the target the attack goes at, else how many of its ships are out
   switch (row.id) {
     case 'launch': case 'slaunch': return C.bay.fighters + ' fighters, ' + C.bay.escorts + ' escorts';
@@ -183,14 +186,14 @@ function campPanelState(C, row) {
     case 'gstance': return campPanelStanceName(C);
     case 'gnav': return C.nav ? 'flying to ' + C.nav.name : 'not flying';
     case 'gpower': return 'weapons ' + C.power.p[0] + ', shields ' + C.power.p[1] + ', engines ' + C.power.p[2];
-    case 'gyard': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name + ' in range' : typeof campAboard === 'function' && campAboard(C) ? 'aboard' : 'no outpost in range'; }
+    case 'gyard': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name + ' in range' : 'no outpost in range'; }
     case 'weapons': case 'shields': case 'engines': { const i = { weapons: 0, shields: 1, engines: 2 }[row.id], fx = campPowerFx(C); return C.power.p[i] + (C.power.p[i] === 1 ? ' pip: ' : ' pips: ') + (i === 0 ? 'turrets x' + (1 / fx.delay).toFixed(2) : i === 1 ? 'shield ' + Math.round(campShieldMax(C)) + (fx.regen > 0 ? ', mends ' + fx.regen + '/s' : ', no mend') : 'speed x' + fx.speed.toFixed(2)); }
     case 'balance': return 'now ' + C.power.p.join(' / ');
     case 'mine': return campMiners(C).length + ' ships, ' + C.rocks.filter(r => r.hp > 0).length + ' rocks, ' + C.pickups.length + ' ore'; // the whole wing mines (the belt, space-game-campaign-belt): rocks to cut and ore lying about
     case 'free': case 'orbit': case 'keep': case 'match': case 'hold': return C.stance === row.id ? 'in force' : ''; // the wing's stance: the one in force is marked
     case 'ctuck': case 'chold': case 'crun': case 'ccarry': return campPanelConvoyMarked(C, row) ? 'in force' : campPanelShips(campConvoyShips(C).length); // the convoy orders: the one in force is marked (src/campconvoy.js)
     case 'emergency': return CAMP.power.emergency.ms / 1000 + ' s of shields, then back';
-    case 'dock': { if (campPanelAs(C, row).order === 'repair') { const q = campMendQuote(C); return Math.round(q.missing) + ' hull for ' + q.cost + ' ore'; } const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? 'dock at ' + n.o.name : ''; } // the outpost in range (aboard: the mend)
+    case 'dock': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? 'dock at ' + n.o.name : ''; } // the outpost in range
     case 'goal': case 'burn': { const g = campNavGoal(C); return g ? g.name + '  ' + campNavKm(Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y)) + ' km' : ''; }
     case 'target': case 'burntarget': { const tg = campPanelTarget(C); return tg ? tg.name + '  ' + tg.km + ' km' : ''; }
     case 'blink': return campPanelBlinkWord(C);
@@ -205,8 +208,8 @@ function campPanelShortWhy(r) {
   return t;
 }
 function campPanelShortState(C, row) {
-  const B = CAMP.build, sq = campPanelSquadOf(row);
-  if (row.cost) return campPanelCost(row, true);
+  const sq = campPanelSquadOf(row);
+  if (row.cost) return campPanelCost(C, row, true);
   if (sq) { const tg = row.wing && row.wing[1] === 'attack' ? campPanelTarget(C) : null; return tg ? tg.km + ' km' : campWingShips(C, sq).length + ' out'; }
   switch (row.id) {
     case 'launch': case 'slaunch': return (C.bay.fighters + C.bay.escorts) + ' in bay';
@@ -223,7 +226,7 @@ function campPanelShortState(C, row) {
     case 'shields': case 'engines': case 'weapons': return CAMP_KEYS[row.id].k; // the key of the row (the pips are the row's own bar now, the gauge's twin: src/campanelsdraw.js)
     case 'balance': return CAMP_KEYS.balance.k + '   ' + C.power.p.join(' / ');
     case 'mine': return campMiners(C).length + ' ships';
-    case 'dock': { if (campPanelAs(C, row).order === 'repair') return campMendQuote(C).cost + ' ore'; const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name : ''; } // the outpost in range, by name (the row had no word of its own when it could be done: wrap-up, 8-GEN)
+    case 'dock': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name : ''; }
     case 'goal': case 'burn': { const g = campNavGoal(C); return g ? campNavKm(Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y)) + ' km' : ''; }
     case 'target': case 'burntarget': { const tg = campPanelTarget(C); return tg ? tg.km + ' km' : ''; }
     case 'free': case 'orbit': case 'keep': case 'match': case 'hold': return C.stance === row.id ? 'in force' : '';

@@ -1,5 +1,6 @@
 // ---------- Campaign: a hurt fighter lands to be mended (card space-game-fighter-repair; Troy 21 Nov: the fights were not interactive and the escorts were boring, he wants to direct the fleet more) ----------
-// A fighter of the wing under CAMP.repair.below (30 percent) of its hull breaks off, flies home, lands on the cruiser, is mended for CAMP.repair.time (10 s) and goes out again whole, with the order it had. A cruiser
+// A fighter of the wing under CAMP.repair.below (30 percent) of its hull breaks off, flies home, lands on the cruiser, is mended for CAMP.repair.time (10 s) and goes out again whole, with the order it had. The mend costs
+// CAMP.repair.ore (5: card space-game-repair-with-ore); with none to pay it takes CAMP.repair.slow (twice) as long, and is never refused. A cruiser
 // that is too far (more than CAMP.repair.within, 15 s of flight at the fighter's own speed) and the fighter fights on. A radio line each way (the ship's voice: content/text/campaign-repair.md). The wing strip (the bay line
 // in the HUD's left column) shows "REPAIR n  s". The enemy's fighters never do this: it is the wing's AI only (campWingAI calls campRepairRun first), pirates and aliens alike are the ones it is fought against.
 //   campRepairRun(C, u, dt)   the wing's AI, first thing: true when this ship is on its way home to be mended (or has just landed); false when it fights on as always
@@ -32,7 +33,9 @@ function campRepairRun(C, u, dt) {
     u.repair = true; campRepairSay(C, 'off'); C.events.push({ type: 'repairoff', id: u.id, x: u.x, y: u.y });
   }
   if (campDist(u, c) < CAMP.bay.dockAt) { // landed: out of the sim as a recalled ship is, in the repair list until it is whole
-    (C.repairs = C.repairs || []).push({ kind: u.kind, until: C.t + K.time * 1000, order: u.order || null, squad: u.squad || '', stay: !!(u.order && u.order.type === 'recall') });
+    const paid = K.ore <= 0 || campFunds(C) >= K.ore; // a mend costs a little ore (card space-game-repair-with-ore); with none it is never refused, it takes K.slow times as long
+    if (paid && K.ore > 0) campPay(C, K.ore);
+    (C.repairs = C.repairs || []).push({ kind: u.kind, until: C.t + K.time * 1000 * (paid ? 1 : K.slow), order: u.order || null, squad: u.squad || '', stay: !!(u.order && u.order.type === 'recall'), paid });
     u.hp = 0; u.docked = true; u.repair = false; C.events.push({ type: 'dock', id: u.id, repair: true });
     return true;
   }
