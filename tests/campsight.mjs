@@ -125,7 +125,7 @@ console.log('E. the marks and the edge arrows');
   check('zoomed out to where they are on the screen there is no arrow for them (the first at 5000 px: 1675 px of screen from the middle is still off; the north one at 3000 px: 1005 px, off)', ar.length === 2);
   ar = J('__arr(0.05)');
   check('zoomed out far enough that they are on the screen (and clear of the HUD\'s plates), no arrow: they are seen as they are', ar.length === 0, JSON.stringify(ar));
-  check('one that is on the screen but under the HUD\'s top plate (the north group at 0.1: 60 px from the top) keeps its arrow, as the goal\'s does', J('__arr(0.1)').length === 1);
+  check('one that is on the screen but under the HUD\'s top plate (the north group at 0.1: 60 px from the top) keeps its arrow, as the goal\'s does; so does the east group, which is under the enemy\'s and friendly\'s boxes at the right (card space-game-keys-panels)', J('__arr(0.1)').filter(a => a.n === 1).length === 1 && J('__arr(0.1)').length === 2);
   check('a group just seen blinks (fresh); one seen long ago does not', J('__arr(1)').every(a => a.fresh === true) && J('(() => { C.t += CAMP.sensor.mark + 100; return __arr(1).every(a => a.fresh === false); })()'));
   g.run('C.t = 100000');
   const mk = J('campSightMarks(C)');
@@ -134,8 +134,8 @@ console.log('E. the marks and the edge arrows');
   check('and none after', J('campSightMarks(C).length') === 0);
   g.run('__mk(); for (let i = 0; i < 7; i++) __foe("raider", 5000 * Math.cos(i), 5000 * Math.sin(i)).vx = 0; C.t = 1000');
   check('at most CAMP.sensor.arrows arrows at once', J('campSightArrows(C, { x: C.carrier.x - W / 2, y: C.carrier.y - H / 2 }, W, H, 1).length') <= 4);
-  g.run('__mk(); window.__w1 = __foe("raider", 5000, 0); C.t = 1000; __w1.x = C.carrier.x + 500; __w1.y = C.carrier.y');
-  check('a group on the screen (500 px off at zoom 1) has none', J('__arr(1).length') === 0);
+  g.run('__mk(); window.__w1 = __foe("raider", 5000, 0); C.t = 1000; __w1.x = C.carrier.x + 300; __w1.y = C.carrier.y');
+  check('a group on the screen (300 px off at zoom 1, clear of the boxes at the right) has none', J('__arr(1).length') === 0);
 }
 
 console.log('F. the scene half');

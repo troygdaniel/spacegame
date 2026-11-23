@@ -159,7 +159,9 @@ const CAMP = {
   tdisp: {                                 // the target display, in the corner the radar had (card space-game-target-display; Troy, 22 Nov 2026: "the bottom right mini map can go away, to make way to show the target selected"; src/camptdisp.js, src/camptdispscene.js)
     right: 18,                             // px from the right edge of the screen to the box
     left: 18,                              // px from the left edge to the friend display's box (card space-game-friendly-display: the same box, in the bottom left corner)
-    beside: 12,                            // px between an open left list and the friend display's box when the box steps right of it (card space-game-w-list-covers-friend-box)
+    beside: 12,                            // px between an open list and a display's box when the box steps out of its way (right of a left list for the who box, left of a right list for the two right boxes; card space-game-w-list-covers-friend-box)
+    line: 26,                              // px: the order-key line at the foot of the two right boxes (the enemy's and the friendly's: "E  Attack", "G  Guard", lit or grey; card space-game-keys-panels): they are this much taller than the who box
+    stack: 8,                              // px between the friendly's box and the enemy's, which it is stacked above
     bottom: 64,                            // px from the bottom edge to the box (the key line's strip is under it)
     w: 200, h: 200,                        // px: the box, about the radar's size (its disc was 196 across)
     every: 250,                            // ms between two readings of the ship: the numbers and the words are live four times a second (a new ship is read at once)
@@ -359,7 +361,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 238], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 450, 1280, 664], [0, 450, 224, 664]] // (the target display's box, campTdispBox in src/camptdispscene.js, is inside the fourth one, where the radar was, and the friend display's, campTdispBox(true), inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 238], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 190, 1280, 664], [0, 450, 224, 664]] // (the enemy's box and the friendly's above it, campTdispBox(false) and campTdispBox(false, 0, true) in src/camptdispscene.js, are inside the fourth one, where the radar was, and the who box, campTdispBox(true), inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {
