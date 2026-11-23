@@ -10,6 +10,7 @@ import { nodeGame } from './nodegame.mjs';
 let failed = 0;
 const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + name + (detail ? '  ' + String(detail).slice(0, 200) : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 300) + ')' : ''}`); } };
 const g = nodeGame({ store: new Map() });
+g.run('CAMP.pace.fight = 1'); // this suite pins the dogfight's own moves (how often a ship flips, breaks and jinks, how long a duel lasts) at the pace's own numbers: the fight pace of card space-game-slower-fights (0.5: every duel twice as long, so a third of these pins would move for a reason that is not the dogfight) is off here, and tests/campfightpace.mjs flies a duel with it on
 g.run(`CAMP.levels.duelfix = Object.assign({}, CAMP.levels[1], { missions: [] });`); // level 1's own numbers (the earth, the pirates, the scales) with none of its missions' rows
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const near = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
@@ -145,7 +146,7 @@ const cu = []; for (let s = 1; s <= 6; s++) cu.push(J(`__duelK(${s}, 'cutter')`)
 check('a pirate cutter (a drone) is not a dogfight: no moves, no pair, as before', cu.every(d => d.modes <= 1 && !d.mated), JSON.stringify(cu.map(d => d.modes)));
 check('the same seed is the same fight, to the pixel', JSON.stringify(J(`__duel(7, 3, 3, 'normal')`)) === JSON.stringify(J(`__duel(7, 3, 3, 'normal')`)));
 const six = []; for (let s = 1; s <= 12; s++) six.push(J(`__duel(${s}, 3, 3, 'normal')`));
-check('three against three: they pair off (all but at most one fighter has a living partner for most of the fight), and the fight is decided in under 80 s in every seed (60 before the fight pace, card space-game-slower-fights: the small ships fly and fire a quarter slower in a fight, so a duel lasts a third longer; the slowest seed is 63 s)', six.every(d => d.paired / d.alive > 0.6 && d.t < 80), six.map(d => (d.paired / d.alive).toFixed(2) + '/' + d.t.toFixed(0)).join(' '));
+check('three against three: they pair off (all but at most one fighter has a living partner for most of the fight), and the fight is decided in under 60 s in every seed', six.every(d => d.paired / d.alive > 0.6 && d.t < 60), six.map(d => (d.paired / d.alive).toFixed(2) + '/' + d.t.toFixed(0)).join(' '));
 const pace = ['calm', 'normal', 'brisk'].map(p => { const r = []; for (let s = 1; s <= 10; s++) r.push(J(`__duel(${s}, 1, 1, '${p}')`)); return r.filter(d => d.wingLeft === 0 || d.alLeft === 0).length; });
 check('at every pace of the P key (Calm, Normal, Brisk) the duels end', pace.every(n => n >= 9), JSON.stringify(pace));
 
