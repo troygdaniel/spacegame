@@ -388,7 +388,7 @@ const CAMP = {
   rival: {                                 // RIVAL ships (card space-game-rival-duel; src/camprival.js): an enemy the cruiser's size, with a hull and a shield of its own, that duels the cruiser. A mission row's `rivals` names them (the hook: src/camprival.js)
     comeFrom: 2600,                        // px from the carrier a rival comes from when its row gives no place
     kinds: {
-      pirateleader: { name: 'Pirate leader', base: 'gunship', hull: 1500, shield: 600, dmg: 9, ore: 60, color: 0xe8b84a, say: 'camp.say.rival.leader', // the first: the pirate leader at the end of mission 1.1 (a small, forgiving one). base: the PIRATES row its guns and aim come from; ore: its wreck
+      pirateleader: { name: 'Pirate leader', base: 'gunship', hull: 1900, shield: 600, dmg: 9, ore: 60, color: 0xe8b84a, say: 'camp.say.rival.leader', // the first: the pirate leader at the end of mission 1.1 (a small, forgiving one; hull 1500 until card space-game-tune-after-strafing: the strafing runs took the wing's kill time from 57 s to 44 s, 1900 makes it 54 s). base: the PIRATES row its guns and aim come from; ore: its wreck
         move: { speed: 190, accel: 150, turn: 1 },       // a cruiser's way of flying: a little slower than the carrier's 210 at the default power, a ship that has to turn to point its side
         phase: {                                           // stalk (circles at `hold` px and shoots a little) -> charge (stops, turns its side on you; `charge` s of warning) -> fires the broadside -> down (shield off `down` s) -> ram or run -> stalk again
           hold: 340, first: 10, stalk: 5,                 // the range it keeps (inside the turrets' 500 px and inside the screen: at 620 it was off the edge); seconds before the first charge, and between a ram or a run and the next charge
@@ -446,7 +446,7 @@ const CAMP = {
     regenDelay: 6000                       // ms without a hit before the shield starts to mend
   },
   tower: {                                 // an alien defence tower: a gun that does not move (level 3)
-    hp: 160,                               // hit points (a level may give its own)
+    hp: 200,                               // hit points (a level may give its own). 160 until card space-game-tune-after-strafing: the wing's strafing runs (src/campflight.js) kill a tower in about two thirds of the time, so a quarter more hull brings the fighters' kill time back to what it was (7 fighters: 6 s, strafing 4 s, now 5 s)
     radius: 26,                            // px, the hit circle
     damage: 10,                            // per shot
     delay: [1300, 1900],                   // ms between shots
