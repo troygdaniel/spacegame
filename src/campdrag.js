@@ -77,7 +77,6 @@ function campDragFlyTick(s, dt, flying) {
 function campDragFlying(s) {
   const k = s && s.k; if (!k || s.mp || s.mode !== 'play') return false;
   if (s.pn && typeof campPanelOpen === 'function' && campPanelOpen(s.pn)) return false;
-  if (typeof campCallHasKeys === 'function' && campCallHasKeys(s)) return false;
   if (typeof document !== 'undefined' && document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return false;
   return [k.UP, k.DOWN, k.LEFT, k.RIGHT].some(x => x && x.isDown);
 }

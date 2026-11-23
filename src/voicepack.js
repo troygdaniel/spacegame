@@ -117,7 +117,6 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.bf\.\d+\.\d+\.w1$/, spoken: 'campaign.walk', voice: 'ship' },                     // the first step of a mission's walkthrough: the ship reads it once when the big briefing opens (src/campbriefdraw.js, card space-game-campaign-briefing)
   { re: /^camp\.m\.\d+\.\d+\.b[12]$/, spoken: 'campaign.brief', voice: 'ship' },                  // a mission's briefing
   { re: /^camp\.warp\./, spoken: 'campaign.warp', voice: 'ship' },                                  // the warp cinematic's lines
-  { re: /^camp\.call\.(line|r)\.|^camp\.call\.(late|fail)$/, spoken: 'campaign.chatter', voice: 'pilots' }, // a pilot's call for orders and his answers (card space-game-order-calls): said in a pilot's voice, like the radio's lines
   { re: /^camp\.chat\./, spoken: 'campaign.chatter', voice: 'pilots' },                             // the wing's radio: any pilot may say any line
   { re: /^camp\.end\./, spoken: 'campaign.end', voice: 'ship' },                                    // the reveal's ending (card space-game-campaign-reveal)
   { re: /^camp\.(rank|sys|scout|anom|reveal)\./, spoken: 'campaign.cards', voice: 'ship' },  // the cards that follow: ranks, systems, scouts, anomalies: spoken until a card says a key of them is only shown (a silent rule above this line)
@@ -130,7 +129,6 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.sight\./, why: 'the sensors\' fragments: the edge arrow\'s label and the words (a count, a kind, a compass point) that fill the radio\'s call, camp.say.sight; shown, never said alone' },
   { re: /^camp\.gauge\./, why: 'the three gauges\' words (SHIELDS, SPEED, LASERS, HULL): drawn inside the dials at the top left of the HUD, not said' },
   { re: /^camp\.pow\./, why: 'the power setting\'s three labels on the ship panel: shown (the ship answers the setting itself with camp.say lines)' },
-  { re: /^camp\.call\./, why: 'the labels of a call for orders on its prompt, and its key line: on the screen (the call and the answers, camp.call.line, camp.call.r, late and fail, are said)' },
   { re: /^camp\.pace\./, why: 'the battle pace setting\'s line, toast, key hint and notes: on the card and the pause screen, not said' },
   { re: /^camp\.m\.\d+\.\d+\.title$/, why: 'a mission\'s title: the title of its briefing and debrief cards' },
   { re: /^camp\.lose\.reached$/, why: 'the lose card\'s numbers line: shown, and not said (the cause and the tip are)' },

@@ -23,8 +23,7 @@ const CAMP = {
     waves: 1                               // times every `at` and `early` second of a wave row: 0.5 brings every timed wave in twice as soon, 2 holds each back twice as long (a wave that waits for a place or an event, `on`, is not timed)
   },
   flags: {                                 // THE SWITCHES (card space-game-tuning-panel; the tuning panel's ON and OFF rows, src/camptune.js): each is a whole system, and false takes it out as if it were not in the mission. Systems read them through campFlag
-    calls: true,                           // the pilots' radio calls for orders (src/camporders.js): off, none opens and an open one is dropped
-    distress: true,                        // the distress call of mission 1.1 (beat 2, src/campbeats.js): off, the pirates never fall on the miner, the pilots never ask, and the miner gives no thanks
+    distress: true,                        // the distress call of mission 1.1 (beat 2, src/campbeats.js): off, the pirates never fall on the miner and the miner gives no thanks
     tboats: true,                          // the enemy torpedo boats (src/camptorpedo.js): off, none is ever made
     rival: true,                           // the rival ship, the pirate leader (src/camprival.js): off, it never comes (and its bonus cannot be met)
     repair: true,                          // a hurt fighter flies home to be mended (src/camprepair.js): off, it fights on
@@ -217,7 +216,6 @@ const CAMP = {
     squads: ['red', 'green', 'yellow'],    // the squads in the order they fill: a fighter that leaves the bay joins the one with the fewest ships out (a tie goes to the first of these), so six are two and two and two and a seventh makes Red three; a ship lost or mended gives its place back
     squadColor: { red: 0xff5a4a, green: 0x3ee86a, yellow: 0xffd23a }, // a squad's colour: its RING in flight (src/campaignscene.js) and its dots on the map (src/campmapdraw.js), shown only for a squad in focus (card space-game-squad-rings; the fighters themselves are all drawn alike): three hues apart, bright on the dark
     ringKeep: 8000,                        // ms: the ring of a squad stays on after an order was given from its list (the list closes), until another squad is in focus, X clears the target, or this long has passed (src/campwing.js campSquadsShown)
-    rescue: 1500,                          // px: a squad sent to a ship in trouble (a pilot's call, src/camporders.js) fights the pirates this near that ship, and goes back to the order it had when none is left (campWingRescue, src/campwing.js)
     verbs: {                               // kinds: what the verb takes as a target (enemy, friend, convoy, place, point, pickup, cache, anomaly, rock); group: who it addresses when none is named (today's orders); need: a target must be named
       attack: { kinds: ['enemy'], group: 'fighters' },
       escort: { kinds: ['friend', 'convoy'], group: 'fighters' },     // Escort the convoy: a SQUAD order (the fighters fly beside the convoy ship); there is no escort ship (card space-game-cut-escorts)
@@ -894,7 +892,6 @@ function campHurt(C, u, dmg, byId) {
     if (campHas(C, 'shield')) dmg *= CAMP.tech.shield.taken; if (C.god) dmg = 0;
     if (C.shield > 0 && dmg > 0) { const take = Math.min(C.shield, dmg); C.shield -= take; dmg -= take; C.shieldHitAt = C.t; C.events.push({ type: 'shieldhit', x: u.x, y: u.y }); } // the shield first
   }
-  { const M = C.call && C.call.mood; if (M && C.t < M.until) { const wing = x => x && x.team === 'earth' && x.kind === 'fighter'; if (wing(u)) dmg *= M.take; else if (u.team === 'alien' && wing(C.by[byId])) dmg *= M.deal; } } // the wing fights by the answer of the last order call (src/camporders.js CAMP_CALLS.mood): a right pick makes it hit harder and take less, a wrong one the opposite
   if (u.rival) dmg = campRivalHurt(C, u, dmg); // a rival's shield takes the hit first, as the carrier's does; with it down every hit goes through, and harder (src/camprival.js)
   u.hp -= dmg; u.hurtAt = C.t;
   C.events.push({ type: 'hit', x: u.x, y: u.y, id: u.id, hull: dmg > 0 }); // hull: it got through to the hull (the carrier's shield takes the first of it)
@@ -1081,7 +1078,6 @@ function campTick(C, dt) {
   campMendTick(C, dt); // the hull and the ships you protect being mended (src/campmend.js)
   campLasers(C);
   campMissions_tick(C, dt);
-  if (typeof campCallsTick === 'function') campCallsTick(C, dt); // the pilots ask for orders: the call that waits, the call that may open (src/camporders.js)
   campWarn(C);
   if (typeof campSightStep === 'function') campSightStep(C); // the hostiles that come into sight for the first time are called on the radio (src/campsight.js)
   if (typeof campOutpostTick === 'function') campOutpostTick(C, dt); // the retreat line (src/campoutpost.js)
@@ -1502,9 +1498,7 @@ function campWingAI(C, u, dt) {
     return campSeek(u, c.x, c.y, dt);
   }
   if (o.type === 'attack') {
-    const rs = o.rescue ? campWingRescue(C, u, o) : null; // a squad sent to a ship in trouble (a pilot's call; src/campwing.js): it fights the pirates about that ship, and when none is left it takes up the order it had
-    if (rs && rs.over) return;
-    foe = rs ? rs.foe : o.target && C.by[o.target] && C.by[o.target].hp > 0 ? C.by[o.target] : campFlightCover(C, u) || campDogFoe(C, u, campNearest(aliens, u)); // (a wingman covers its leader first: src/campflight.js) // a named alien is the order's; with none named, a fighter flies at its partner (src/campdogfight.js)
+    foe = o.target && C.by[o.target] && C.by[o.target].hp > 0 ? C.by[o.target] : campFlightCover(C, u) || campDogFoe(C, u, campNearest(aliens, u)); // (a wingman covers its leader first: src/campflight.js) // a named alien is the order's; with none named, a fighter flies at its partner (src/campdogfight.js)
     if (!foe) home = c; // nothing left to hit: back to the carrier's side
   } else if (o.type === 'escort') {
     const cv = C.by[o.target];

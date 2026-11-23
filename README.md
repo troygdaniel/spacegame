@@ -29,7 +29,7 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 **The ideas that make it a commander game.**
 
 - **Power management.** Six pips shared between weapons, shields and engines (like X-Wing's); shields mend by themselves at a rate the shield pips set; three gauges at the top right show where the energy goes, and the power list (`O`) opens right under them with the same pip bars on its rows.
-- **Pilots ask for orders.** Timed radio calls with three choices (the miner's call in 1.1 has five: send all squads, Red, Green or Yellow, or stay) and real costs.
+- **No pilot pop-ups.** Nothing asks you for orders: the miner's call in 1.1 is one plain radio line, and you send squads with the ordinary order keys.
 - **A mission is a sequence of questions.** Mission 1.1 is the finished example: a patrol turns back, a distress call, an ambush with torpedo boats, a pirate leader who duels your cruiser. Something happens about every minute.
 - **Objectives and bonuses**, a score, and ranks that grow your wing.
 - **Ore and credits.** Ore is what the cruiser carries (500 at the most): the wing mines it, and it pays for repairs in flight. An outpost buys it for credits, which have no cap and are spent at a station: the dock's repairs and the refit's extra fighters take credits first, then ore.
@@ -63,7 +63,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 | `U` | **dock and repair**: Dock at the outpost (where there is one), Repair the hull (anywhere, for ore), Repair a ship we protect (when it is near) |
 | `Up` `Down` `Enter` | in an open list: move the highlight, give the order (the list closes when the order is taken). On a row that opens a part, `Enter` or `Right` opens it |
 | `Left` | in a part's list: back to the fleet or the ship list |
-| Arrow keys | fly the cruiser: Up thrust, Left and Right turn, Down brake (while a list or a pilot's call is open the ship coasts) |
+| Arrow keys | fly the cruiser: Up thrust, Left and Right turn, Down brake (while a list is open the ship coasts) |
 | `Space` (hold) | the turrets fire at ships in reach; they never fire on their own |
 | `Enter` | a homing missile at the target (only while no list is open) |
 | `A` `D` `S` `X` | the one target: the last or next hostile (nearest first), the nearest threat, clear it. A red bracket marks it and the target display in the bottom right corner shows it (a picture, its name and type, hull and shield, how far, what it is doing); Attack goes at it, Fly to the target flies to it, `Enter` fires at it |
@@ -76,9 +76,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 | `Esc`, `H`, `M` | back one step in the lists (a target list to its list, a list a row opened to `Q` or `P`; a list its own key opened closes), then close the map, else pause; the page of keys; mute |
 | `N` | the **tuning panel** (flight and ready room): numbers and switches changed live, kept in this browser; `Up` `Down` choose, `Left` `Right` change (`Shift` ten steps), `Backspace` back to the default; *Copy my settings* copies what you changed. A mission flown tuned keeps no score |
 
-**A pilot's call** (a timed radio prompt with three answers, or five when it offers the squads: a squad with no ship out is grey and `Enter` on it says why) is a small amber list low in the middle of the screen: `Up` and `Down` pick an answer, `Enter` gives it. The highlight starts on the pilot's own cautious pick, which is also what he does if you say nothing: he waits 8 seconds, shown by a bar. **Press `Up` or `Down` and the timer stops** (the bar stays where it was and turns pale blue, and the key line says "Timer stopped"): the call then waits for `Enter` (30 seconds at the longest, then he takes the cautious pick); touch nothing and it runs out as ever. No other key stops it. Only one list has the arrows and Enter at a time: while an order list (or the map) is open the call waits, dimmed, and says so.
-
-The battle never slows for a list, the map or a pilot's call: it runs at its own speed whatever is open. It has one pace (Normal); there is no pace key. In a fight the small ships fly, turn and fire at half speed (they slow when a foe is within about 900 px, and are at the pace they had beyond 1,700 px, so trips and mission clocks are unchanged; the `N` panel's **Fight pace** row is the number, 0.5). Cards between battles (the tech pick, the refit) still use the number keys shown on them.
+The battle never slows for a list or the map: it runs at its own speed whatever is open. It has one pace (Normal); there is no pace key. In a fight the small ships fly, turn and fire at half speed (they slow when a foe is within about 900 px, and are at the pace they had beyond 1,700 px, so trips and mission clocks are unchanged; the `N` panel's **Fight pace** row is the number, 0.5). Cards between battles (the tech pick, the refit) still use the number keys shown on them.
 
 ### Long Haul
 

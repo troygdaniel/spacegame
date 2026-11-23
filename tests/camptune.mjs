@@ -6,8 +6,8 @@
 //   D. Copy my settings: only the changed rows, one line each, read back by campTuneParse (the tool's); nothing changed is an empty block
 //   E. the panel: Up and Down skip the headings and go round, Left and Right change (Shift: ten steps), Backspace resets the row, Enter flips a switch / copies / resets everything, N and Esc close, every key is the panel's;
 //      the scene opens it with N in flight (the battle waits: mode 'pause') and closes it back to 'play'; the ready room opens it at its top level
-//   F. the pilots' calls switch: off in the sim as if the system were not there, and the plain bot still wins with it off
-//   H. every number does what its row says, and when: at once (a battle already on feels it), next mission (a new battle does, the one on does not), next call
+//   F. the switches: off in the sim as if the system were not there, and the plain bot still wins with the distress call off
+//   H. every number does what its row says, and when: at once (a battle already on feels it), next mission (a new battle does, the one on does not)
 //   I. every other switch: the system is not in the battle with it off (and the turrets' autofire is in with it on); the plain bot still wins 1.1 with each off, and all of them off together
 //   G. a tuned run: the level moves on and the score is not kept (a zero score is the best of nothing)
 // Run: node tests/camptune.mjs   (exit code 1 on a failed check)
@@ -18,38 +18,38 @@ let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const store = new Map(), g = nodeGame({ store });
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
-const CAMP0 = g.run('JSON.stringify([CAMP, CAMP_CALLS])'); // the tables as shipped, to prove nothing moves
+const CAMP0 = g.run('JSON.stringify([CAMP])'); // the tables as shipped, to prove nothing moves
 
 console.log('A. the table');
 const rows = J('CAMP_TUNE.rows.map(r => ({ id: r.id, kind: r.kind || "num", group: r.group, when: r.when, min: r.min, max: r.max, step: r.step, d: campTuneDefault(r.id), slot: !!campTuneSlot(r) }))');
 check('there are rows, with unique ids, each in a group the panel lists', rows.length >= 6 && new Set(rows.map(r => r.id)).size === rows.length && rows.every(r => J(`CAMP_TUNE.groups.indexOf("${r.group}") >= 0`)));
-check('every row has a place in the CAMP table (or CAMP_CALLS, or the flags)', rows.every(r => r.slot));
+check('every row has a place in the CAMP table (or the flags)', rows.every(r => r.slot));
 check('every number\'s default is a number inside its range, on its step; every switch\'s default is true or false', rows.every(r => r.kind === 'flag' ? typeof r.d === 'boolean' : typeof r.d === 'number' && r.d >= r.min && r.d <= r.max && Math.abs(r.d / r.step - Math.round(r.d / r.step)) < 1e-9), JSON.stringify(rows.filter(r => r.kind !== 'flag' && !(r.d >= r.min && r.d <= r.max))));
-check('every row says when it is felt: now, next mission or next call', rows.every(r => ['now', 'next', 'call'].indexOf(r.when) >= 0));
+check('every row says when it is felt: now or next mission', rows.every(r => ['now', 'next'].indexOf(r.when) >= 0));
 check('every row, every group and every "when" has its words (none is a missing key)', J('CAMP_TUNE.rows.every(r => !/^camp\\./.test(campTuneLabel(r)) && !/^camp\\./.test(campTuneWhen(r))) && CAMP_TUNE.groups.every(x => !/^camp\\./.test(uiText("camp.ui.tune.group." + x)))'));
 check('N is the table\'s tuning key, and no other direct key, list key or debug key of the Campaign is KeyN', J('CAMP_KEYS.tune.codes.join()') === 'KeyN' && J('Object.keys(CAMP_KEYS).filter(k => k !== "tune" && CAMP_KEYS[k].codes.indexOf("KeyN") >= 0).length') === 0 && J('CAMP_PANELS.panels.filter(p => p.code === "KeyN").length') === 0 && J('CAMP_DEBUG.keys.filter(k => k.code === "KeyN").length') === 0);
 check('the H page lists N (the Campaign\'s page and the ready room\'s)', J('controlsGroup("campaign").rows.some(r => r.k.join() === "N")') && J('controlsGroup("readyroom").rows.some(r => r.k.join() === "N")'));
 
 console.log('B. the overrides');
-check('before anything is asked nothing is overridden and the live table is the shipped one', J('campTuneCount()') === 0 && J('campTuneActive()') === false && g.run('JSON.stringify([CAMP, CAMP_CALLS])') === CAMP0);
+check('before anything is asked nothing is overridden and the live table is the shipped one', J('campTuneCount()') === 0 && J('campTuneActive()') === false && g.run('JSON.stringify([CAMP])') === CAMP0);
 check('a set value is in the live table at once and is the row\'s value; the default stays what it was', J('[campTuneSet("cruiserspeed", 300), CAMP.carrier.speed, campTuneValue("cruiserspeed"), campTuneDefault("cruiserspeed"), campTuneCount(), campTuneChanged("cruiserspeed")]').join() === '300,300,300,210,1,true');
 check('a value is rounded to the row\'s step and held inside its range (min and max)', J('[campTuneSet("cruiserspeed", 304), campTuneSet("cruiserspeed", 9999), campTuneSet("cruiserspeed", -5), campTuneSet("shieldmend", 4.3), campTuneSet("orerock", "abc")]').join() === '300,600,60,4.5,20', J('[campTuneSet("cruiserspeed", 304), campTuneSet("cruiserspeed", 9999), campTuneSet("cruiserspeed", -5), campTuneSet("shieldmend", 4.3), campTuneSet("orerock", "abc")]').join());
 check('a value that is the default is no override (the count falls)', J('[campTuneSet("cruiserspeed", 210), campTuneChanged("cruiserspeed"), campTuneCount()]').join() === '210,false,1');
 check('a row of pips (the shield\'s mend rate) is the value at 2 pips, and every pip scales with it: the curve keeps its shape', J('CAMP.power.shields.regen').join() === '0,2.25,4.5,9,15' && J('campTuneDefault("shieldmend")') === 3);
-check('stepping: Right is one step, Shift ten, Left back; a switch flips', J('[campTuneStep("turretdamage", 1), campTuneStep("turretdamage", 1, true), campTuneStep("turretdamage", -1), campTuneStep("calls", 1), CAMP.flags.calls]').join() === '5,15,14,false,false');
-check('reset puts one row back (a pip row\'s whole array too); reset all puts everything back; the live tables are the shipped ones, byte for byte', J('[campTuneReset("shieldmend"), CAMP.power.shields.regen.join(), campTuneResetAll(), campTuneCount()]').join() === '3,0,1.5,3,6,10,0,0' && g.run('JSON.stringify([CAMP, CAMP_CALLS])') === CAMP0);
+check('stepping: Right is one step, Shift ten, Left back; a switch flips', J('[campTuneStep("turretdamage", 1), campTuneStep("turretdamage", 1, true), campTuneStep("turretdamage", -1), campTuneStep("distress", 1), CAMP.flags.distress]').join() === '5,15,14,false,false');
+check('reset puts one row back (a pip row\'s whole array too); reset all puts everything back; the live tables are the shipped ones, byte for byte', J('[campTuneReset("shieldmend"), CAMP.power.shields.regen.join(), campTuneResetAll(), campTuneCount()]').join() === '3,0,1.5,3,6,10,0,0' && g.run('JSON.stringify([CAMP])') === CAMP0);
 check('a row\'s snapshot is taken once: a later change of the table by a pack is not a "default" that moves under an override', J('(() => { campTuneSet("orerock", 50); const d = campTuneDefault("orerock"); campTuneResetAll(); return d; })()') === 20);
 check('apply and restore: restore puts every row back to the default, apply puts the overrides in again', J('(() => { campTuneSet("cruiserspeed", 400); campTuneRestore(); const a = CAMP.carrier.speed; campTuneApply(); const b = CAMP.carrier.speed; campTuneResetAll(); return [a, b, CAMP.carrier.speed].join(); })()') === '210,400,210');
 check('an unknown id, or one of another kind, changes nothing', J('[campTuneSet("nosuchrow", 5), campTuneStep("nosuchrow", 1), campTuneReset("nosuchrow"), campTuneCount()]').join() === ',,,0' || J('[campTuneSet("nosuchrow", 5), campTuneCount()]').join() === ',0');
 
 console.log('C. the browser\'s storage');
-check('a change is written to localStorage under the store\'s key, only the changed rows', (() => { g.run('campTuneSet("cruiserspeed", 280); campTuneSet("calls", false)'); const v = JSON.parse(store.get('longhaul.campaign.tuning')); return v.v === 1 && v.over.cruiserspeed === 280 && v.over.calls === false && Object.keys(v.over).length === 2; })());
+check('a change is written to localStorage under the store\'s key, only the changed rows', (() => { g.run('campTuneSet("cruiserspeed", 280); campTuneSet("distress", false)'); const v = JSON.parse(store.get('longhaul.campaign.tuning')); return v.v === 1 && v.over.cruiserspeed === 280 && v.over.distress === false && Object.keys(v.over).length === 2; })());
 const g2 = nodeGame({ store }); // the page reloaded: the same storage
-check('a reloaded page, a node game or a bot has the shipped numbers until a scene reads the file: a test never sees an override', g2.run('CAMP.carrier.speed') === 210 && g2.run('CAMP.flags.calls') === true && g2.run('campTuneCount()') === 0);
-check('a scene reads it once: the overrides go into the live table (and into the model), a second read changes nothing', g2.run('campTuneLoadOnce()') === 2 && g2.run('CAMP.carrier.speed') === 280 && g2.run('CAMP.flags.calls') === false && g2.run('campTuneLoadOnce()') === 2 && g2.run('campTuneActive()') === true);
+check('a reloaded page, a node game or a bot has the shipped numbers until a scene reads the file: a test never sees an override', g2.run('CAMP.carrier.speed') === 210 && g2.run('CAMP.flags.distress') === true && g2.run('campTuneCount()') === 0);
+check('a scene reads it once: the overrides go into the live table (and into the model), a second read changes nothing', g2.run('campTuneLoadOnce()') === 2 && g2.run('CAMP.carrier.speed') === 280 && g2.run('CAMP.flags.distress') === false && g2.run('campTuneLoadOnce()') === 2 && g2.run('campTuneActive()') === true);
 check('reset all removes the file', (() => { g2.run('campTuneResetAll()'); return !store.has('longhaul.campaign.tuning') && g2.run('CAMP.carrier.speed') === 210; })());
-const s3 = new Map([['longhaul.campaign.tuning', JSON.stringify({ v: 1, over: { cruiserspeed: 99999, nosuchrow: 4, orerock: 'x', turretdamage: 4, calls: false } })]]), g3 = nodeGame({ store: s3 });
-check('a file with an unknown id, a value out of range, a value that is no number or one that is the default: the first is dropped, the second clamped, the rest ignored', g3.run('campTuneLoadOnce()') === 2 && g3.run('CAMP.carrier.speed') === 600 && g3.run('CAMP.flags.calls') === false && g3.run('CAMP.ore.rock') === 20 && g3.run('CAMP.carrier.pd') === 4);
+const s3 = new Map([['longhaul.campaign.tuning', JSON.stringify({ v: 1, over: { cruiserspeed: 99999, nosuchrow: 4, orerock: 'x', turretdamage: 4, distress: false } })]]), g3 = nodeGame({ store: s3 });
+check('a file with an unknown id, a value out of range, a value that is no number or one that is the default: the first is dropped, the second clamped, the rest ignored', g3.run('campTuneLoadOnce()') === 2 && g3.run('CAMP.carrier.speed') === 600 && g3.run('CAMP.flags.distress') === false && g3.run('CAMP.ore.rock') === 20 && g3.run('CAMP.carrier.pd') === 4);
 const s4 = new Map([['longhaul.campaign.tuning', '{not json']]), g4 = nodeGame({ store: s4 });
 check('a corrupt file does no harm (nothing is overridden, nothing throws)', g4.run('campTuneLoadOnce()') === 0 && g4.run('CAMP.carrier.speed') === 210);
 const s5 = new Map([['longhaul.campaign.tuning', JSON.stringify({ v: 1, over: { cruiserspeed: 280 } })]]), g5 = nodeGame({ store: s5 });
@@ -59,12 +59,12 @@ check('a browser a program drives (navigator.webdriver) reads no overrides and w
 console.log('D. Copy my settings');
 g.run('campTuneResetAll()');
 check('nothing changed is an empty block', g.run('campTuneText()') === '');
-g.run('campTuneSet("cruiserspeed", 280); campTuneSet("shieldmend", 6); campTuneSet("calls", false)');
+g.run('campTuneSet("cruiserspeed", 280); campTuneSet("shieldmend", 6); campTuneSet("distress", false)');
 const text = g.run('campTuneText()');
-check('the block starts with its head, and has one line a changed row, in the table\'s order, each with its words and its default', text.split('\n')[0] === 'LONG HAUL TUNING v1' && text.split('\n').filter(Boolean).length === 4 && /^cruiserspeed = 280 +# Cruiser top speed, default 210$/m.test(text) && /^shieldmend = 6 +# Shield mend rate, default 3$/m.test(text) && /^calls = off +# Pilots call for orders, default on$/m.test(text), text);
+check('the block starts with its head, and has one line a changed row, in the table\'s order, each with its words and its default', text.split('\n')[0] === 'LONG HAUL TUNING v1' && text.split('\n').filter(Boolean).length === 4 && /^cruiserspeed = 280 +# Cruiser top speed, default 210$/m.test(text) && /^shieldmend = 6 +# Shield mend rate, default 3$/m.test(text) && /^distress = off +# The distress call of mission 1.1, default on$/m.test(text), text);
 const back = J(`campTuneParse(${JSON.stringify(text)})`);
-check('the parse gives the rows back: ids and values, the switch as a boolean, no line left over', back.rows.map(r => r.id + '=' + r.value).join() === 'cruiserspeed=280,shieldmend=6,calls=false' && back.bad.length === 0);
-check('a line that is not understood (an unknown id, a switch given a number, a number given on/off) is listed, not guessed', J('campTuneParse("cruiserspeed = on\\ncalls = 5\\nnosuch = 4\\norerock = 25")').bad.length === 3 && J('campTuneParse("cruiserspeed = on\\ncalls = 5\\nnosuch = 4\\norerock = 25")').rows.map(r => r.id).join() === 'orerock');
+check('the parse gives the rows back: ids and values, the switch as a boolean, no line left over', back.rows.map(r => r.id + '=' + r.value).join() === 'cruiserspeed=280,shieldmend=6,distress=false' && back.bad.length === 0);
+check('a line that is not understood (an unknown id, a switch given a number, a number given on/off) is listed, not guessed', J('campTuneParse("cruiserspeed = on\\ndistress = 5\\nnosuch = 4\\norerock = 25")').bad.length === 3 && J('campTuneParse("cruiserspeed = on\\ndistress = 5\\nnosuch = 4\\norerock = 25")').rows.map(r => r.id).join() === 'orerock');
 g.run('campTuneResetAll()');
 
 console.log('E. the panel');
@@ -83,9 +83,9 @@ check('Backspace puts the highlighted row back to its default', (press(null, 'Ba
 check('a held arrow keeps going (the number runs); any other held key is the panel\'s and does nothing', (press(null, 'ArrowRight', { repeat: true }), press(null, 'ArrowRight', { repeat: true }), J('CAMP.carrier.speed') === 230) && (press(null, 'KeyQ', { repeat: true }), J('CAMP.carrier.speed') === 230));
 check('every key is the panel\'s while it is open: a list key, Space and Tab open nothing and fire nothing', (press(null, 'KeyQ'), press(null, 'KeyP'), press(null, 'Space'), press(null, 'Tab'), sc('mode') === 'pause' && J('campPanelOpen(window.__sc.pn)') === '' && J('campTuneIsOpen(window.__sc)')));
 // the switch row, and the two top rows
-for (let i = 0; i < 80 && J('campTuneItems()[window.__sc.tp.model.cur].kind === "row" ? campTuneItems()[window.__sc.tp.model.cur].row.id : ""') !== 'calls'; i++) press(null, 'ArrowDown');
-check('Enter on a switch flips it, and Right too', (press(null, 'Enter'), J('CAMP.flags.calls') === false) && (press(null, 'ArrowRight'), J('CAMP.flags.calls') === true));
-check('Enter on Copy my settings gives the block (the clipboard is the browser\'s: asked, never needed) and says so; Enter on Reset everything puts every row back', (() => { g.run('campTuneSet("orerock", 50); campTuneSet("calls", false)'); const text2 = g.run('campTuneText()'); for (let i = 0; i < 40 && sc('tp.model.cur') !== 0; i++) press(null, 'ArrowUp'); press(null, 'Enter'); const said = sc('tp.model.msg'); press(null, 'ArrowDown'); press(null, 'Enter'); return said === 'copied' && g.run('window.__clip') === text2 && J('campTuneCount()') === 0 && sc('tp.model.msg') === 'reset'; })());
+for (let i = 0; i < 80 && J('campTuneItems()[window.__sc.tp.model.cur].kind === "row" ? campTuneItems()[window.__sc.tp.model.cur].row.id : ""') !== 'distress'; i++) press(null, 'ArrowDown');
+check('Enter on a switch flips it, and Right too', (press(null, 'Enter'), J('CAMP.flags.distress') === false) && (press(null, 'ArrowRight'), J('CAMP.flags.distress') === true));
+check('Enter on Copy my settings gives the block (the clipboard is the browser\'s: asked, never needed) and says so; Enter on Reset everything puts every row back', (() => { g.run('campTuneSet("orerock", 50); campTuneSet("distress", false)'); const text2 = g.run('campTuneText()'); for (let i = 0; i < 40 && sc('tp.model.cur') !== 0; i++) press(null, 'ArrowUp'); press(null, 'Enter'); const said = sc('tp.model.msg'); press(null, 'ArrowDown'); press(null, 'Enter'); return said === 'copied' && g.run('window.__clip') === text2 && J('campTuneCount()') === 0 && sc('tp.model.msg') === 'reset'; })());
 check('with nothing changed, Copy says nothing is changed', (() => { for (let i = 0; i < 40 && sc('tp.model.cur') !== 0; i++) press(null, 'ArrowUp'); press(null, 'Enter'); return sc('tp.model.msg') === 'nothing'; })());
 check('Esc closes the panel and the battle goes on (mode play)', (press(null, 'Escape'), sc('mode') === 'play' && J('campTuneIsOpen(window.__sc)') === false));
 check('N closes it too; with the panel closed N opens it again', (press(null, 'KeyN'), sc('mode') === 'pause') && (press(null, 'KeyN'), sc('mode') === 'play'));
@@ -105,22 +105,13 @@ check('the TUNED mark: made once an override is on, with the count; empty when n
 console.log('F. the switches');
 g.run('campTuneResetAll()');
 const techs = techsFor(1);
-check('the pilots\' calls: a scripted call opens with the switch on, is refused with it off, and an open call is dropped when it goes off', J(`(() => {
-  const C = campNew(1, [], { seed: 2 }); const a = campCallStart(C, 'distress', { who: 'x', ids: [] }); C.call.open = null;
-  campTuneSet('calls', false); const b = campCallStart(C, 'distress', { who: 'x', ids: [] });
-  campTuneSet('calls', true); campCallStart(C, 'distress', { who: 'x', ids: [] }); const open1 = campCallOpen(C);
-  campTuneSet('calls', false); C.events.length = 0; campCallsTick(C, 0.1); const gone = !campCallOpen(C) && C.events.some(e => e.type === 'call' && e.stage === 'gone');
-  campTuneResetAll(); return [a, b, open1, gone].join(); })()`) === 'true,false,true,true');
-check('with the pilots\' calls off, no call ever opens in a whole mission flown by a bot that never answers (and it is the same battle on)', J(`(() => {
-  const fly = on => { campTuneSet('calls', on); const C = campNew(1, [], { seed: 5 }); let opened = 0; for (let i = 0; i < 30 * 200 && !C.result; i++) { campStep(C, 1 / 30); if (campCallOpen(C)) { opened++; campCallAnswer(C, 0, 'bot'); } C.events.length = 0; } campTuneResetAll(); return opened; };
-  return [fly(true) >= 0, fly(false)].join(); })()`) === 'true,0');
 for (const mi of [0, 1, 2]) {
-  botGame.run('campTuneSet("calls", false)');
+  botGame.run('campTuneSet("distress", false)');
   const r = botRun(1, 3, 'plain', 'steady', techs, 420, mi);
   botGame.run('campTuneResetAll()');
-  check(`the plain bot still wins mission 1.${mi + 1} with the pilots' calls off`, r.result === 'won', JSON.stringify({ result: r.result, why: r.why, t: r.t }));
+  check(`the plain bot still wins mission 1.${mi + 1} with the distress call off`, r.result === 'won', JSON.stringify({ result: r.result, why: r.why, t: r.t }));
 }
-check('the bots\' own game never carries an override out of a test (it is back to the shipped numbers)', botGame.run('campTuneCount()') === 0 && botGame.run('CAMP.flags.calls') === true);
+check('the bots\' own game never carries an override out of a test (it is back to the shipped numbers)', botGame.run('campTuneCount()') === 0 && botGame.run('CAMP.flags.distress') === true);
 
 console.log('H. every number does what its row says');
 g.run(`window.__mk = (lv, seed, o) => { campTuneResetAll(); const C = campNew(lv || 1, [], Object.assign({ seed: seed || 4, mission: 0 }, o || {})); C.ships = C.ships.filter(u => u.team !== 'alien'); window.C = C; return C; };
@@ -143,14 +134,13 @@ check('transport and hauler speed: the convoy a mission makes flies at the missi
 check('enemy hull and damage: the scales of a new battle are the mission\'s times the row (next mission)', J(`(() => { __mk(); const a = campNew(1, [], { seed: 4 }); campTuneSet('enemyhull', 2); campTuneSet('enemydamage', 3); const b = campNew(1, [], { seed: 4 }); campTuneResetAll(); return [b.hpS / a.hpS, b.dmgS / a.dmgS, a.hpS].join(); })()`).startsWith('2,3,'));
 check('battle pace: a new battle flies at the row times Normal (next mission)', J(`(() => { __mk(); const a = campNew(1, [], { seed: 4, pace: 'normal' }).pace; campTuneSet('pace', 1.5); const b = campNew(1, [], { seed: 4, pace: 'normal' }).pace; campTuneResetAll(); return [a, Math.round(b / a * 100) / 100].join(); })()`) === '0.72,1.5');
 check('time to the waves: 1.2\'s first wave (40 s; it was 70 s until card l1-pacing moved it, so the pins moved from 35, 69 and "not by 90 s") comes at 20 s at 0.5, at 39 s as it is, and at 80 s at 2, twice as late (felt at once)', J(`(() => { const at = v => { __mk(1, 4, { mission: 1 }); campTuneSet('wavetime', v); for (let t = 0; t < 90; t++) { __run(1); if (C.waves[0].started) { campTuneResetAll(); return t; } } campTuneResetAll(); return -1; }; return [at(0.5), at(1), at(2)].join(); })()`) === '20,39,80');
-check('pilot call: the time to answer and the time between calls are the rows\' (the next call)', J(`(() => { __mk(1, 3); campTuneSet('callanswer', 20); campTuneSet('callgap', 50); campCallStart(C, 'distress', { who: 'x', ids: [] }); const r = [C.call.open.total, Math.round((C.call.next - C.t) / 1000)].join(); campTuneResetAll(); return r; })()`) === '20,50');
 check('starting zoom: the flight starts at that many presses of minus out from 1 (next mission): 0 is 1, 6 is the shipped default', J(`(() => { campTuneResetAll(); const d = campZoomDefault(); campTuneSet('startzoom', 0); const z0 = campZoomDefault(); campTuneSet('startzoom', 9); const z9 = campZoomDefault(); campTuneResetAll(); return [z0, z9 < d, d > 0.3 && d < 0.4].join(); })()`) === '1,true,true');
 check('ore in a rock: a rock made after it holds the new ore (next mission); a rock already there keeps its own', J(`(() => { __mk(1, 4, { mission: 1 }); const old = C.rocks[0]; campTuneSet('orerock', 40); campRockHit(C, old, 1e6); const a = C.pickups.slice(-1)[0].ore; const C2 = campNew(1, [], { seed: 4, mission: 1 }); campRockHit(C2, C2.rocks[0], 1e6); const b = C2.pickups.slice(-1)[0].ore; campTuneResetAll(); return [a, b].join(); })()`) === '20,40');
 check('mining rate: a mining ship cuts a rock at the new rate at once', J(`(() => { const rate = v => { __mk(1, 4, { mission: 1 }); campTuneSet('miningrate', v); const orh = campRockHit, seen = []; campRockHit = function (C2, rk, d) { seen.push(d); return orh.apply(this, arguments); }; const rk = C.rocks[0]; C.carrier.x = rk.x + 120; C.carrier.y = rk.y; campOrder(C, 'launch'); __run(4); campOrder(C, 'mine'); __run(25); campRockHit = orh; campTuneResetAll(); return seen.length ? Math.max(...seen) : -1; }; const a = rate(5), b = rate(10); return a > 0 && Math.abs(b / a - 2) < 0.05; })()`) === true);
 
 console.log('I. the other switches');
 const sw = (id, on, expr) => J(`(() => { __mk(1, 3); campTuneSet(${JSON.stringify(id)}, ${on}); const r = (${expr}); campTuneResetAll(); return r; })()`);
-check('the distress call: with it on the lane wave brings two pirates on the miner and the pilots ask for orders; off, the wave is taken as passed, no pirate comes, no call opens, no thanks (and no ore)', J(`(() => { const fly = on => { __mk(1, 3); campTuneSet('distress', on); const i = C.L.waves.findIndex(w => w.beat === 'distress'); C.lane = {}; C.L.convoys.forEach(c => { C.lane[c.id] = 0.4; }); __run(1); const ore = C.ore; __run(3); const r = [C.waves[i].started, C.ships.filter(u => u.team === 'alien' && u.wave === i).length, !!(C.call && C.call.open), C.beats.thanked, C.ore === ore].join(); campTuneResetAll(); return r; }; return fly(true) + '|' + fly(false); })()`) === 'true,2,true,false,true|true,0,false,true,true');
+check('the distress call: with it on the lane wave brings two pirates on the miner; off, the wave is taken as passed, no pirate comes, no thanks (and no ore)', J(`(() => { const fly = on => { __mk(1, 3); campTuneSet('distress', on); const i = C.L.waves.findIndex(w => w.beat === 'distress'); C.lane = {}; C.L.convoys.forEach(c => { C.lane[c.id] = 0.4; }); __run(1); const ore = C.ore; __run(3); const r = [C.waves[i].started, C.ships.filter(u => u.team === 'alien' && u.wave === i).length, C.beats.thanked, C.ore === ore].join(); campTuneResetAll(); return r; }; return fly(true) + '|' + fly(false); })()`) === 'true,2,false,true|true,0,true,true');
 check('torpedo boats: the game makes none with the switch off (and makes them with it on)', sw('tboats', false, "[campSpawn(C, 'tboat', 0, 0), campSpawn(C, 'lancer', 0, 0)].map(u => u === null).join()") === 'true,true' && sw('tboats', true, "[campSpawn(C, 'tboat', 0, 0), campSpawn(C, 'lancer', 0, 0)].map(u => u === null).join()") === 'false,false');
 check('the rival ship: none is made with the switch off, and the pirates it brought with it are the mission\'s own', sw('rival', false, "campSpawn(C, 'pirateleader', 0, 0) === null") === true && sw('rival', true, "campSpawn(C, 'pirateleader', 0, 0) === null") === false);
 check('fighter repair: a fighter under a third of its hull breaks off for home with it on; with it off it fights on', J(`(() => { const run = on => { __mk(); campTuneSet('repair', on); campOrder(C, 'launch'); __run(3); const f = C.ships.find(u => u.kind === 'fighter'); f.hp = 5; const r = campRepairRun(C, f, 1 / 30); campTuneResetAll(); return r; }; return [run(true), run(false)].join(); })()`) === 'true,false');
@@ -168,7 +158,7 @@ for (const f of flags) {
 botGame.run('campTuneSet("autofire", true)');
 { const r = botRun(1, 3, 'plain', 'steady', techs, 420, 0); botGame.run('campTuneResetAll()'); check('the plain bot still wins mission 1.1 with the turrets firing by themselves', r.result === 'won', JSON.stringify({ result: r.result, why: r.why })); }
 for (const mi of [0, 1, 2]) {
-  botGame.run(`${['calls', ...flags].map(f => `campTuneSet(${JSON.stringify(f)}, false)`).join('; ')}; campTuneSet('autofire', true)`);
+  botGame.run(`${flags.map(f => `campTuneSet(${JSON.stringify(f)}, false)`).join('; ')}; campTuneSet('autofire', true)`);
   const r = botRun(1, 3, 'plain', 'steady', techs, 420, mi);
   botGame.run('campTuneResetAll()');
   check(`the plain bot still wins mission 1.${mi + 1} with every switch off at once (and the autofire on)`, r.result === 'won', JSON.stringify({ result: r.result, why: r.why, t: r.t }));
