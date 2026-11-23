@@ -1,4 +1,4 @@
-// smoke: the Campaign's pause is the word PAUSED large on a lit band across the middle, the battle dimmed behind it, the help in a panel under the band; Esc is still the key (plain Node, no Chrome)
+// smoke: the Campaign's pause is the word PAUSED large (two thirds of its first size since card space-game-paused-smaller) on a lit band across the middle, the battle dimmed behind it, the help in a panel under the band; Esc is still the key (plain Node, no Chrome)
 // Card space-game-paused-big (Troy, 23 Nov 2026: "show the word PAUSED much more obviously: a large word on a highlighted band across the middle, the scene dimmed behind. Esc stays the pause key").
 // The scene is Phaser's and is not run here: showPause (src/campaignscene.js) is called on a stand-in that records what is added, in order, and says how tall a text is (its lines, wrapped at the width it is
 // given, 0.6 of the letter size a letter) so the check that the help fits its panel is a real one. The picture itself (the colours, the letters on the band) is looked at in the batch of Chrome boots.
@@ -39,15 +39,15 @@ check('the first thing drawn is a veil over the whole screen', veil.kind === 're
 check('it dims the battle (more than the cards\' half, not black: between 55 and 85 percent)', veil.alpha >= 0.55 && veil.alpha <= 0.85, veil.alpha);
 
 console.log('B. the band');
-const band = objs.find(o => o.kind === 'rect' && o.h >= 100 && o.h < 300 && o.w === W);
-check('there is a band the whole width of the screen and at least 100 px tall', !!band, JSON.stringify(objs.filter(o => o.kind === 'rect').map(o => [o.w, o.h])));
+const band = objs.find(o => o.kind === 'rect' && o.h >= 90 && o.h < 300 && o.w === W);
+check('there is a band the whole width of the screen, about two thirds of the 160 px it was: 95 to 120 px tall', !!band && band.h >= 95 && band.h <= 120, JSON.stringify(objs.filter(o => o.kind === 'rect').map(o => [o.w, o.h])));
 check('it lies across the middle of the screen: its centre is within 60 px of the screen\'s middle', band && Math.abs(band.y - H / 2) <= 60, band && band.y);
 check('it is lit: the HUD\'s cyan, 85 percent or more solid', band && band.color === CYAN && band.alpha >= 0.85, band && JSON.stringify([band.color, band.alpha]));
 
 console.log('C. the word');
 const word = objs.find(o => o.kind === 'text' && o.text === 'PAUSED');
 check('the word PAUSED is drawn, and it is in the table of words (not typed here)', !!word && J(`uiText('camp.ui.pausetitle')`) === 'PAUSED');
-check('it is large: 96 px letters or more', word && word.size >= 96, word && word.size);
+check('it is large, at about two thirds of the 112 px of the first card (space-game-paused-smaller; Troy: "a bit smaller"): 70 to 80 px letters', word && word.size >= 70 && word.size <= 80, word && word.size);
 check('it is by far the largest text on the screen (at least four times the help\'s letters)', word && objs.filter(o => o.kind === 'text' && o !== word).every(o => word.size >= 4 * o.size));
 check('it is centred on the band, left to right and up and down, and drawn after it (so it is on top)', word && band && Math.abs(word.x - W / 2) <= 20 && word.y === band.y && objs.indexOf(word) > objs.indexOf(band));
 check('it fits the width with room to spare (six letters and their spacing, 200 px of margin)', word && 6 * (0.6 * word.size + word.letters) <= W - 200, word && 6 * (0.6 * word.size + word.letters));
@@ -56,7 +56,7 @@ check('it fits inside the band, with room above and below it', word && band && 1
 console.log('D. the help and the way back');
 const rects = objs.filter(o => o.kind === 'rect'), panel = rects[rects.length - 1];
 const fits = (list, label) => {
-  const b = list.find(o => o.kind === 'rect' && o.h >= 100 && o.h < 300 && o.w === W), texts = list.filter(o => o.kind === 'text'), word = texts.find(o => o.text === 'PAUSED'), hint = texts[texts.length - 1], body = texts[texts.length - 2];
+  const b = list.find(o => o.kind === 'rect' && o.h >= 90 && o.h < 300 && o.w === W), texts = list.filter(o => o.kind === 'text'), word = texts.find(o => o.text === 'PAUSED'), hint = texts[texts.length - 1], body = texts[texts.length - 2];
   const pn = list.filter(o => o.kind === 'rect').pop(), top = pn.y - pn.h / 2, bottom = pn.y + pn.h / 2;
   check(label + ': the panel starts under the band and ends inside the screen', top >= b.y + b.h / 2 && bottom <= H, JSON.stringify([top, b.y + b.h / 2, bottom, H]));
   check(label + ': the help starts inside the panel and ends above the way back, whatever its size after it steps down', body.y >= top && body.y + body.h * body.scale <= hint.y - 8, JSON.stringify([body.y, body.h, body.scale, hint.y]));
