@@ -53,7 +53,7 @@ try {
   check('Enter is the ready room: the board has the new best on the second mission, the third is still NEXT, and no story, refit or pick came up', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`) && (await key('Enter'), true) && (await shown()).some(x => /^1,?700 pts/.test(x) || /1700 pts/.test(x)) && (await shown()).some(x => /\[>\] 3\s+The mothership/.test(x)), (await shown()).join(' | '));
   await t.run(900); await snap('8-board-after');
   // a replay that is lost costs nothing
-  await key('ArrowDown'); await key('KeyR'); await t.run(900); await key('KeyL'); // (the missions overlay is open: Down wraps to mission 1, R opens its briefing, L launches from it)
+  await key('ArrowDown'); await key('ArrowDown'); await key('KeyR'); await t.run(900); await key('KeyL'); // (the missions overlay is open, the cursor on the next mission: Down goes to the last row, Start the campaign over, Down again wraps to mission 1, R opens its briefing, L launches from it)
   check('replaying again (mission 1 this time) the scene is a replay once more', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.mode === 'play' && ${CAMPS}.replay === true`));
   await t.ev(`(() => { const s = ${CAMPS}; campEnd(s.camp, 'lost', 'carrier'); return 1; })()`); await t.run(1800);
   const sv2 = await save();

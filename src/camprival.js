@@ -103,7 +103,7 @@ function campRivalAI(C, u, dt) {
     const a = Math.atan2(u.y - car.y, u.x - car.x) + R.side * 0.45, px = car.x + Math.cos(a) * P.hold, py = car.y + Math.sin(a) * P.hold;
     campSeek(u, px, py, dt, brg);
     const G = K.gun;
-    if (d < G.range && C.t > u.nextShot && Math.abs(campWrap(brg - u.rot)) < G.aim) { u.nextShot = C.t + campBetween(C, G.delay[0], G.delay[1]); campBullet(C, u, u.rot, G.speed * C.shot, G.dmg * C.dmgS, 1800, 'alien', u.r); }
+    if (d < G.range && C.t > u.nextShot && Math.abs(campWrap(brg - u.rot)) < G.aim) { u.nextShot = C.t + campFightGap(u, campBetween(C, G.delay[0], G.delay[1])); campBullet(C, u, u.rot, G.speed * C.shot, G.dmg * C.dmgS, 1800, 'alien', u.r); }
     if (sec >= R.until && d < P.hold * 1.8) campRivalGo(C, u, 'charge');
   } else if (R.ph === 'charge') {
     campRivalCoast(u, dt, 0.25); // it stops and turns its side on you
