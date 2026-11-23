@@ -11,5 +11,7 @@ The words of the W list's rows that act on the selection (card space-game-w-uses
 | camp.w.all | all squads |
 | camp.w.nohostile.state | pick one with {keylast} {keynext} or {keynear} |
 | camp.w.nofriend.state | pick a ship with {keyflast} or {keyfnext} |
+| camp.w.pilotguard.state | a pilot cannot be guarded: pick a ship with {keyflast} or {keyfnext} |
 | camp.no.nohostile | No hostile selected. Pick one first. |
 | camp.no.nofriend | No ship selected to guard. Pick one first. |
+| camp.no.pilotguard | A pilot cannot be guarded. Pick a ship first. |
