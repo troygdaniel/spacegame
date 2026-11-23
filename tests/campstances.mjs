@@ -128,8 +128,8 @@ console.log('G. a stance is for Attack and Guard');
 {
   g.run('__bat("hold", [700, 0]); campOrder(C, "attack", ""); __run(8)');
   check('Attack with HOLD does not chase: the fighters are where they were at the start, not at the gunship (700 px away, their range 420)', J('__fighters().every(u => __dist(u, __foe) > 420)'));
-  g.run('__bat("orbit", [700, 0]); campOrder(C, "guard", ""); __run(12)');
-  check('Guard with ORBIT: the wing that guards the carrier circles what comes near it (the gunship is inside 700 px of the carrier)', J('__fighters().some(u => __dist(u, __foe) < 450)'));
+  g.run('__bat("orbit", [600, 0]); campOrder(C, "guard", ""); __run(12)');
+  check('Guard with ORBIT: the wing that guards the carrier circles what comes near it (the gunship is inside 700 px of the carrier: 600 px off; the guard flies in a formation astern, not a circle, card space-game-fighter-flight)', J('__fighters().some(u => __dist(u, __foe) < 450)'));
   g.run('__bat("hold", null, 2); campOrder(C, "launch")');
   g.run('window.C = campNew(11, [], { seed: 1, god: true, stance: "hold" }); C.waves.forEach(w => { w.started = true; }); campOrder(C, "launch"); for (let i = 0; i < 300; i++) { campStep(C, 1 / 30); C.events.length = 0; } campOrder(C, "escort", ""); __run(2)');
   check('Escort with no convoy to go to (the belt) keeps the escorts by the carrier, as before (the order is guard at the carrier), and a stance shapes how: here HOLD', J('campWing(C, "escort").every(u => u.order.type === "guard")') && J('C.L.convoys.length') === 0);
