@@ -6,7 +6,7 @@
 
 ## Now (near term, in this order)
 
-1. **Finish the fleet-command batch.** The goal Troy gave on 21 Nov 2026: *fights were not interactive and escorts were boring; he wants to direct the fleet more.* Most of the batch is on main (panels, order calls, convoy orders, scouting a route, torpedo boats, a rival ship, fighter repair, power gauges). Still open: the panel keys moving to Z X C, and the last tests that press the old keys.
+1. **Finish the fleet-command batch.** The goal Troy gave on 21 Nov 2026: *fights were not interactive and escorts were boring; he wants to direct the fleet more.* Most of the batch is on main (panels, convoy orders, scouting a route, torpedo boats, a rival ship, fighter repair, power gauges). Still open: the panel keys moving to Z X C, and the last tests that press the old keys.
 2. **Make mission 1.1 the one finished example.** Mission 1.1 (escort a transport from the Moon to Ceres) carries every new system in a beat about each minute. Nothing is spread to levels 2 and 3 until Troy has played 1.1 with the whole batch and says it works.
 3. **Retune all nine missions** after the new systems: the plain bot wins all nine at all three paces with losses in the hard ones; an idle player never wins; a player who answers calls and uses convoy orders does clearly better; level 1 missions about five to eight minutes. 1.1 is tuned; the rest follow.
 4. **Troy plays 1.1, then the cut list** (below) is decided.
@@ -15,7 +15,7 @@
 
 Nothing is cut until he has played mission 1.1 with the fleet-command batch and says so. The test for every idea, in or out: **what does the player decide, and what does it cost?** A mission is a sequence of questions. Candidates:
 
-1. The **stances page** on the FLEET panel: order calls may cover it (it is still there: page 2, and `E` steps through the stances).
+1. The **stances page** on the FLEET panel: (it is still there: page 2, and `E` steps through the stances).
 2. ~~The **pace key P** (Calm, Normal, Brisk)~~: cut by card `space-game-two-hands-keys` (the Campaign flies at Normal).
 3. **Holding Space to fire the turrets**: in a commander game the turrets could fire by themselves, the player's job being power and orders.
 4. **Scout-ahead routes**: content for one mission; keep only if it earns its place.

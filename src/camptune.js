@@ -4,10 +4,10 @@
 // block "Copy my settings" puts on the clipboard so an agent can bake the values in as the new defaults (tools/apply-tuning.mjs reads it and prints the CAMP changes it means).
 //
 //   THE ROWS (CAMP_TUNE.rows): { id, kind, group, label (camp.ui.tune.row.<id>), when, ... }
-//     kind 'num' (the default): { root: 'CAMP' | 'CAMP_CALLS' | 'CAMPZOOM', path: 'carrier.speed', min, max, step, unit }: a number of that table. An array with `of: 2` is a row of numbers by power pips: the row shows the
+//     kind 'num' (the default): { root: 'CAMP' | 'CAMPZOOM', path: 'carrier.speed', min, max, step, unit }: a number of that table. An array with `of: 2` is a row of numbers by power pips: the row shows the
 //         value at pip 2 (the default setting) and every pip of the array is scaled with it, so the shape of the curve stays.
-//     kind 'flag': { flag: 'calls' }: a switch of CAMP.flags (src/campaign.js), one place that the missions and the systems read (campFlag).
-//     when: 'now' the change is felt at once; 'next' from the next mission start (the number is copied into a ship or a rock when the mission is made); 'call' from the next pilot call.
+//     kind 'flag': { flag: 'distress' }: a switch of CAMP.flags (src/campaign.js), one place that the missions and the systems read (campFlag).
+//     when: 'now' the change is felt at once; 'next' from the next mission start (the number is copied into a ship or a rock when the mission is made).
 //   THE OVERRIDES (CAMP_TUNE.state.over): { id: value } for the rows that differ from the default. The default is what CAMP held the first time anything here was asked (the snapshot).
 //   campTuneRow(id) / campTuneRows(group)   the rows
 //   campTuneDefault(id) / campTuneValue(id) the default and the value now (a number, or true or false for a switch)
@@ -44,12 +44,10 @@ const CAMP_TUNE = {
     // the enemy
     { id: 'enemyhull', group: 'foes', root: 'CAMP', path: 'alien.hpScale', min: 0.2, max: 5, step: 0.1, unit: 'x', when: 'next' },
     { id: 'enemydamage', group: 'foes', root: 'CAMP', path: 'alien.damageScale', min: 0.2, max: 5, step: 0.1, unit: 'x', when: 'next' },
-    // time and the pilots
+    // time
     { id: 'pace', group: 'time', root: 'CAMP', path: 'pace.scale', min: 0.4, max: 1.6, step: 0.05, unit: 'x', when: 'next' },
     { id: 'fightpace', group: 'time', root: 'CAMP', path: 'pace.fight', min: 0.25, max: 1, step: 0.05, unit: 'x', when: 'now' },     // how fast the small ships fly and fire while a foe is near (card space-game-slower-fights); 1 is as fast as they travel
     { id: 'wavetime', group: 'time', root: 'CAMP', path: 'time.waves', min: 0.25, max: 3, step: 0.05, unit: 'x', when: 'now' },
-    { id: 'callanswer', group: 'time', root: 'CAMP_CALLS', path: 'answer', min: 2, max: 30, step: 1, unit: 's', when: 'call' },
-    { id: 'callgap', group: 'time', root: 'CAMP_CALLS', path: 'gap', min: 5, max: 120, step: 5, unit: 's', when: 'call' },
     { id: 'startzoom', group: 'time', root: 'CAMPZOOM', path: 'view.startPresses', min: 0, max: 12, step: 1, unit: 'presses', when: 'next' },
     // the ore
     { id: 'orerock', group: 'ore', root: 'CAMP', path: 'ore.rock', min: 5, max: 100, step: 5, unit: 'ore', when: 'next' },
@@ -58,7 +56,6 @@ const CAMP_TUNE = {
     { id: 'wardprice', group: 'ore', root: 'CAMP', path: 'mend.wardPoint', min: 0, max: 2, step: 0.05, unit: 'ore a point', when: 'now' },     // a ship you protect
     { id: 'fightermend', group: 'ore', root: 'CAMP', path: 'repair.ore', min: 0, max: 50, step: 1, unit: 'ore', when: 'now' },                  // a landed fighter's mend (none: twice the time)
     // the switches (each turns a whole system off, as if it were not in the mission; autofire turns one on)
-    { id: 'calls', kind: 'flag', group: 'systems', flag: 'calls', when: 'now' },
     { id: 'distress', kind: 'flag', group: 'systems', flag: 'distress', when: 'next' },
     { id: 'tboats', kind: 'flag', group: 'systems', flag: 'tboats', when: 'next' },
     { id: 'rival', kind: 'flag', group: 'systems', flag: 'rival', when: 'next' },
@@ -76,8 +73,7 @@ const campTuneRows = group => CAMP_TUNE.rows.filter(r => !group || r.group === g
 const campTuneIsFlag = row => !!row && row.kind === 'flag';
 
 // where a row's number lives: its table and path
-function campTuneRoot(name) { // the tables a row can live in: the Campaign's own (src/campaign.js), the pilots' calls (src/camporders.js), the flight view's zoom (src/campzoom.js)
-  if (name === 'CAMP_CALLS') return typeof CAMP_CALLS === 'object' ? CAMP_CALLS : null;
+function campTuneRoot(name) { // the tables a row can live in: the Campaign's own (src/campaign.js), the flight view's zoom (src/campzoom.js)
   if (name === 'CAMPZOOM') return typeof CAMPZOOM === 'object' ? CAMPZOOM : null;
   return typeof CAMP === 'object' ? CAMP : null;
 }

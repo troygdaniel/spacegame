@@ -27,18 +27,15 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.group.guns | The guns |
 | camp.ui.tune.group.wing | The wing and the convoy |
 | camp.ui.tune.group.foes | The enemy |
-| camp.ui.tune.group.time | Time and the pilots |
+| camp.ui.tune.group.time | Time |
 | camp.ui.tune.group.ore | Ore |
 | camp.ui.tune.group.systems | Switches: a whole system, in or out |
 | camp.ui.tune.when.now | at once |
 | camp.ui.tune.when.next | next mission |
-| camp.ui.tune.when.call | next call |
 | camp.ui.tune.row.cruiserspeed | Cruiser top speed |
 | camp.ui.tune.row.shieldmend | Shield mend rate |
 | camp.ui.tune.row.turretdamage | Turret damage a shot |
 | camp.ui.tune.row.orerock | Ore in a rock |
-| camp.ui.tune.row.callanswer | Pilot call: time to answer |
-| camp.ui.tune.row.calls | Pilots call for orders |
 | camp.ui.tune.row.cruiserturn | Cruiser turn rate |
 | camp.ui.tune.row.shieldsize | Shield size |
 | camp.ui.tune.row.turretdelay | Time between a turret's shots |
@@ -56,7 +53,6 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.pace | Battle pace (1 is Normal) |
 | camp.ui.tune.row.fightpace | Fight pace (1 is as fast as travel) |
 | camp.ui.tune.row.wavetime | Wave timing (times the mission's) |
-| camp.ui.tune.row.callgap | Time between pilot calls |
 | camp.ui.tune.row.startzoom | Starting zoom (presses of minus) |
 | camp.ui.tune.row.miningrate | Mining rate of a mining ship |
 | camp.ui.tune.row.distress | The distress call of mission 1.1 |
