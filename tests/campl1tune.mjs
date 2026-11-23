@@ -36,7 +36,7 @@ console.log('B. 1.2: the bot that keeps mining (plainm) takes most of the missio
   }
   g.run('window.__tg = null');
   check('both runs are won, in about four and a half to five and a half minutes (240 to 400 s; it was 270 to 400 s when the last raid was the third, at 270 s: card l1-pacing made it the fifth, at 240 s or from 230 s if the others are dead), and neither is won before its fifth raid is in', rows.every(r => r.res === 'won' && r.t >= 240 && r.t <= 400 && r.raids.length === 5 && r.raids[4] >= 230 && r.raids[4] <= 250 && r.t > r.raids[4]), JSON.stringify(rows)); // the fifth raid is at 242 at the latest as it was; 250 since card space-game-slower-fights: with half-speed fights the others die later and seed 2's raid is seen at 244
-  check('from an empty store the goal is met between 150 and 290 s (it was about 100 s), so mining fills most of the mission', rows.every(r => r.goal >= 150 && r.goal <= 290), JSON.stringify(rows));
+  check('from an empty store the goal is met between 150 and 310 s (it was about 100 s, and 290 s at most until the fights ran at half speed: cards space-game-slower-fights and space-game-l1-pacing-bugs together put seed 1 at 298), so mining fills most of the mission', rows.every(r => r.goal >= 150 && r.goal <= 310), JSON.stringify(rows));
   check('the first four raids (40, 100, 112 and 175 s; it was two, at 70 and 170 s, before card l1-pacing) land before the goal is met or while it is being worked: the first is in by 42 s, the fourth by 177 s, and the fourth is before the goal', rows.every(r => r.raids[0] <= 42 && r.raids[1] <= 102 && r.raids[2] <= 114 && r.raids[3] <= 177 && r.raids[3] < r.goal), JSON.stringify(rows));
 }
 
