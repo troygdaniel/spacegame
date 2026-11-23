@@ -8,7 +8,7 @@
 // No key is reused: the direct keys (A D S X the target, J K L ; the power, Enter a missile while no list is open) mean the same whether a list is open or not; only the arrows and Enter are the open list's.
 // The lists, their rows and their words are CAMP_PANELS and CAMP_KEYS (src/data_controls.js): this file only reads them. It is plain data and functions, no Phaser (tests/campanels.mjs runs it in Node); src/campanelsdraw.js draws
 // the open list and src/campaignscene.js gives it the keys and the clicks. The target is src/camptarget.js.
-//   campPanelNew()                   the state the scene keeps: { open: '' or a list's id, at: the highlighted row, top: the first row on the screen, lit: { row id: when Enter last gave it }, trail: [the lists we came through by rows], pick: the target sub-list or null, seen: the candidate an order was just given at }
+//   campPanelNew()                   the state the scene keeps: { open: '' or a list's id, at: the highlighted row, top: the first row on the screen, lit: { row id: when Enter last gave it }, trail: [the lists we came through by rows], pick: the target sub-list or null, seen: the candidate an order was just given at, ring: the squads whose ring stays on after an order (src/campwing.js campSquadsShown) }
 //   campPanelKey(P, C, code, now)    one key: { used, ran, ok, say, row, tgt, fleet, open }: a list's key opens it, or closes it when it is the one open; in an open list Up, Down, Left, Enter and Esc are the list's; A D S X pick and clear the target (tgt);
 //                                    J K L ; move the power; Enter with no list open fires a missile (ran: it was an order; ok and say are its answer). The scene asks a pilot's call BEFORE this when no list is open
 //   campPanelOpen(P)                 the id of the open list, or '' (while a target sub-list is open it is the list that sub-list came from)          campPanelClose(P)   close it (and the sub-list)
@@ -20,7 +20,7 @@
 //   campPanelTarget(C)               the line of the target: { name, km, hp } or null
 //   campPanelKeyLine()               'Q Fleet  W Convoy  E Fighters  R Escorts   P Ship  O Autopilot  I Power  U Dock': the lists' keys, from the table;   campKeyLine(): the whole bottom key line (camp.ui.keys)
 const campPanelDef = id => CAMP_PANELS.panels.find(p => p.id === id) || null;
-const campPanelNew = () => ({ open: '', at: 0, top: 0, lit: {}, trail: [], pick: null, seen: null });
+const campPanelNew = () => ({ open: '', at: 0, top: 0, lit: {}, trail: [], pick: null, seen: null, ring: null });
 const campPanelOpen = P => (P && typeof P.open === 'string' && campPanelDef(P.open) ? P.open : '');
 const campPanelClose = P => { if (P && typeof P === 'object') { P.open = ''; P.at = 0; P.top = 0; P.pick = null; P.trail = []; } };
 const campPanelCase = t => t.charAt(0) + t.slice(1).toLowerCase();
@@ -65,7 +65,7 @@ function campPanelChoose(P, C, now, how, def) {
   if (!it || !row) return out;
   const r = campPanelRun(C, row, how, it);
   out.ran = true; out.ok = !!(r && r.ok); out.say = (r && r.say) || ''; out.fleet = !def || def.side === 'left'; P.lit[row.id] = now;
-  if (out.ok) { P.seen = { kind: pk.kind, id: it.id, until: now + CAMP_PICK.seen }; campPanelClose(P); }
+  if (out.ok) { P.seen = { kind: pk.kind, id: it.id, until: now + CAMP_PICK.seen }; campSquadsKeep(P, campPanelOpen(P), now); campPanelClose(P); }
   out.open = campPanelOpen(P); return out;
 }
 function campPanelKey(P, C, code, now) {
@@ -100,6 +100,7 @@ function campPanelKey(P, C, code, now) {
       const r = campPanelRun(C, row, 'key', item);
       res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = row.id; res.fleet = def.side === 'left'; P.lit[row.id] = now;
       if (res.ok && item) P.seen = { kind: campPickKind(row), id: item.id, until: now + CAMP_PICK.seen }; // the one that was taken keeps its bracket for a moment
+      if (res.ok) campSquadsKeep(P, open, now); // a squad's list: the squad keeps its ring for a while (src/campwing.js)
       if (res.ok && !row.stay) campPanelClose(P); // the order is given: the keys go back to the ship (a power row stays: a pip more, and more). A refusal leaves the list open, with its reason said
       res.open = campPanelOpen(P); return res;
     }
@@ -107,7 +108,7 @@ function campPanelKey(P, C, code, now) {
   const tk = typeof campTgtStep === 'function' ? (campKeyIs('next', code) ? 'next' : campKeyIs('last', code) ? 'last' : campKeyIs('near', code) ? 'near' : campKeyIs('clear', code) ? 'clear' : '') : '';
   if (tk) { // A D S X: the one target (src/camptarget.js)
     res.used = true; res.fleet = true; if (!C) return res;
-    if (tk === 'clear') campTgtClear(C); else if (tk === 'near') campTgtNearest(C); else campTgtStep(C, tk === 'next' ? 1 : -1);
+    if (tk === 'clear') { campTgtClear(C); campSquadsFree(P); } else if (tk === 'near') campTgtNearest(C); else campTgtStep(C, tk === 'next' ? 1 : -1);
     res.tgt = C.tgt || ''; return res;
   }
   const pw = ['shields', 'engines', 'weapons', 'balance'].find(id => campKeyIs(id, code));

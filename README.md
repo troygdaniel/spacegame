@@ -68,7 +68,8 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 | `A` `D` `S` `X` | the one target: the last or next hostile (nearest first), the nearest threat, clear it. A red bracket marks it and its name is under the radar; Attack goes at it, Fly to the target flies to it, `Enter` fires at it |
 | `J` `K` `L` `;` | power, directly, one pip a press: a pip to the shields, the engines, the weapons; `;` back to 2, 2, 2 (the `I` list has the same orders) |
 | `Tab` | the map of the level: `Up` `Down` step the marks, `Enter` flies there (`Shift+Enter` fast), a click sets a mark, `V` scouts, `X` clears the trip |
-| `-` `=` `Backspace`, mouse wheel | zoom out, zoom in, reset the zoom (the view or the map) |
+| `-` `=` `Backspace`, mouse wheel | zoom out, zoom in, reset the zoom and recentre (the view or the map) |
+| mouse drag (left button) | pan the flight view away from the cruiser, or the Tab map; the RECENTRE mark, `Backspace`, or an arrow held bring it back |
 | `/` `.` | type an order to the ship's computer; hold `.` and say it (both need a chat key: Settings > Keys) |
 | `Esc`, `H`, `M` | back one step in the lists (a target list to its list, a list a row opened to `Q` or `P`; a list its own key opened closes), then close the map, else pause; the page of keys; mute |
 | `N` | the **tuning panel** (flight and ready room): numbers and switches changed live, kept in this browser; `Up` `Down` choose, `Left` `Right` change (`Shift` ten steps), `Backspace` back to the default; *Copy my settings* copies what you changed. A mission flown tuned keeps no score |

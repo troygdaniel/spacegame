@@ -70,7 +70,7 @@ check('a dead tower is not on the map', J(`campMapMarks(C3)`).filter(m => m.type
 
 // ---- D. the legend, the colours, the words, the key ----
 let lg = J(`campMapLegend(C1)`);
-check('the legend has a row for each kind that is on the map and none for the rest (level 1 with a wing out has the carrier, the ships out, the three squads, the convoys, the aliens; no towers, no relic)', lg.map(r => r.type).join() === 'carrier,wing,red,green,yellow,convoy,alien' && !lg.some(r => /tower|relic|cache/.test(r.type)), lg.map(r => r.type).join());
+check('the legend has a row for each kind that is on the map and none for the rest (level 1 with a wing out has the carrier, the ships out, the convoys, the aliens; no squad rows while no squad is in focus, no towers, no relic)', lg.map(r => r.type).join() === 'carrier,wing,convoy,alien' && !lg.some(r => /tower|relic|cache/.test(r.type)), lg.map(r => r.type).join());
 lg = J(`campMapLegend(C2)`);
 check('level 2\'s legend has the caches and the relic, with the number of caches left in the words', lg.some(r => r.type === 'cache' && /2/.test(r.text)) && lg.some(r => r.type === 'relic') && lg.every(r => /^[A-Z]/.test(r.text) && !/camp\.map/.test(r.text)), JSON.stringify(lg));
 check('the colours: the radar and the map use one function, and it gives what the radar gave before (alien, mother, tower, convoy, carrier, wing)', J(`['raider', 'mother', 'tower'].map(k => campDotColor({ team: 'alien', kind: k }))`).join() === [0xff4d6d, 0xff4dff, 0xff9a3a].join() && J(`[['freighter', 'earth'], ['carrier', 'earth'], ['fighter', 'earth'], ['escort', 'earth']].map(([k, t]) => campDotColor({ team: t, kind: k }))`).join() === [0xffb454, 0xffffff, 0x6dff9c, 0x6dff9c].join());
