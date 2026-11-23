@@ -2,12 +2,14 @@
 // Troy: "the bottom right mini map can go away, to make way to show the target selected": a TARGET DISPLAY like X-Wing's, in the corner the radar had, about its size: a picture of the ship, its name and type, hull and shield
 // bars with numbers, how far it is and one line of what it is doing. With nothing selected it is not there. It shows the one TARGET (C.tgt, picked with A D S: a hostile) and, in a friendly colour, a ship you are picking
 // in an order's sub-list (to escort, to guard, to help: src/camppick.js): the candidate the highlight is on, or the one an order was just given at for a moment. This file is the rule, with no Phaser and no page
-// (tests/camptdisp.mjs runs it in Node); the numbers are CAMP.tdisp in src/campaign.js, the words are content/text/camptdisp.md (camp.tdisp.*), the drawing is src/camptdispscene.js.
+// (tests/camptdisp.mjs and tests/campfdisp.mjs run it in Node); the numbers are CAMP.tdisp in src/campaign.js, the words are content/text/camptdisp.md (camp.tdisp.*), the drawing is src/camptdispscene.js.
 //   campTdispSubject(C, P, now)  the ship shown now: { u, side: 'hostile' | 'friend' }, or null. A sub-list's candidate comes first (what the player is deciding on), else the target. P is the panels' state (campPanelNew), now the scene's ms
 //   campTdispInfo(C, u, side)    what is drawn: { id, side, kind, name, type, hull: { now, max, share }, shield: { now, max, share } | null, km, doing, key } (key: everything the drawing shows, so it is drawn again only when it changes)
 //   campTdispDoing(C, u)         the one line: what the ship is doing, read from the same picks the AIs make (campAlienAI, campPirateTarget, the wing's orders) without moving anything
-//   campTdispName(C, u)          the name the lists give it ("Skiff 3", "Hauler 2", "Transport convoy")
+//   campTdispName(C, u)          the name the lists give it ("Skiff 3", "Hauler 2", "Transport convoy"; a pilot's ship: the pilot's name, "Wedge")
+//   campFdispSubject(C)          the ship the FRIEND display shows (card space-game-friendly-display; the bottom LEFT corner, the mirror of the target display): the friend A or D picked (C.sel, campSelUnits in src/camptarget.js), a pilot or a ship you protect, or null
 const campTdispName = u => {
+  if (u.kind === 'fighter' && u.team === 'earth' && typeof campPilotName === 'function' && campPilotName(u)) return campPilotName(u); // Wedge, Kara, Apollo (card space-game-three-pilots)
   if (u.kind === 'freighter' || (u.kind === 'miner' && u.team === 'neutral')) return u.kind === 'freighter' && !u.named ? campConvoyName(u) + ' convoy' : (u.kind === 'freighter' ? campConvoyName(u) : (u.cname || campNavUnitName(u))); // as the Escort sub-list names it (campPickEscorts)
   return campNavUnitName(u);
 };
@@ -18,6 +20,11 @@ function campTdispSubject(C, P, now) {
   if (u && u.hp > 0) return { u, side: u.team === 'alien' ? 'hostile' : 'friend' };
   const t = typeof campTgtNow === 'function' ? campTgtNow(C) : null;
   return t ? { u: t, side: 'hostile' } : null;
+}
+function campFdispSubject(C) {
+  if (!C || !C.carrier || typeof campSelUnits !== 'function') return null;
+  const u = campSelUnits(C).friend;
+  return u && u.hp > 0 && !u.gone ? { u, side: 'friend' } : null;
 }
 // the ship a hostile is going for, as the AIs pick it (campAlienAI for an alien, campPirateTarget for a pirate and a torpedo boat); the carrier (or Earth) when nothing nearer is
 function campTdispFoe(C, u) {

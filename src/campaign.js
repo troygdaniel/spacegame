@@ -157,6 +157,7 @@ const CAMP = {
   },
   tdisp: {                                 // the target display, in the corner the radar had (card space-game-target-display; Troy, 22 Nov 2026: "the bottom right mini map can go away, to make way to show the target selected"; src/camptdisp.js, src/camptdispscene.js)
     right: 18,                             // px from the right edge of the screen to the box
+    left: 18,                              // px from the left edge to the friend display's box (card space-game-friendly-display: the same box, in the bottom left corner)
     bottom: 64,                            // px from the bottom edge to the box (the key line's strip is under it)
     w: 200, h: 200,                        // px: the box, about the radar's size (its disc was 196 across)
     every: 250,                            // ms between two readings of the ship: the numbers and the words are live four times a second (a new ship is read at once)
@@ -214,8 +215,8 @@ const CAMP = {
       yellow: { name: 'Apollo', kinds: ['fighter'], squad: 'yellow' }
     },
     squads: ['red', 'green', 'yellow'],    // the squads in the order they fill: a fighter that leaves the bay joins the one with the fewest ships out (a tie goes to the first of these), so six are two and two and two and a seventh makes Red three; a ship lost or mended gives its place back
-    squadColor: { red: 0xff5a4a, green: 0x3ee86a, yellow: 0xffd23a }, // a squad's colour: its RING in flight (src/campaignscene.js) and its dots on the map (src/campmapdraw.js), shown only for a squad in focus (card space-game-squad-rings; the fighters themselves are all drawn alike): three hues apart, bright on the dark
-    ringKeep: 8000,                        // ms: the ring of a squad stays on after an order was given from its list (the list closes), until another squad is in focus, X clears the target, or this long has passed (src/campwing.js campSquadsShown)
+    squadColor: { red: 0xff5a4a, green: 0x3ee86a, yellow: 0xffd23a }, // a squad's colour: its dots on the map (src/campmapdraw.js), shown only for a squad in focus, and the picture of its fighter in the displays (src/camptdispscene.js); the ring it made in flight is gone (card space-game-friendly-display: the friend's square, src/camptargetdraw.js) (card space-game-squad-rings; the fighters themselves are all drawn alike): three hues apart, bright on the dark
+    ringKeep: 8000,                        // ms: the mark (the friend's square on its fighters; it was a ring) of a squad stays on after an order was given from its list (the list closes), until another squad is in focus, X clears the target, or this long has passed (src/campwing.js campSquadsShown)
     verbs: {                               // kinds: what the verb takes as a target (enemy, friend, convoy, place, point, pickup, cache, anomaly, rock); group: who it addresses when none is named (today's orders); need: a target must be named
       attack: { kinds: ['enemy'], group: 'fighters' },
       escort: { kinds: ['friend', 'convoy'], group: 'fighters' },     // Escort the convoy: a SQUAD order (the fighters fly beside the convoy ship); there is no escort ship (card space-game-cut-escorts)
@@ -356,7 +357,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 238], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 450, 1280, 664]] // (the target display's box, campTdispBox in src/camptdispscene.js, is inside the last one, where the radar was) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 238], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 450, 1280, 664], [0, 450, 224, 664]] // (the target display's box, campTdispBox in src/camptdispscene.js, is inside the fourth one, where the radar was, and the friend display's, campTdispBox(true), inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {
