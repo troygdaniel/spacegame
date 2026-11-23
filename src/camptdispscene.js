@@ -1,10 +1,10 @@
 // ---------- The scene half of the target display (card space-game-target-display; the rule is src/camptdisp.js) ----------
 // The box in the bottom right corner, where the radar was: a frame (red for a hostile, cyan for a ship of yours or a neutral you are picking), the ship's name and type, a picture of it, a hull bar and a shield bar with their
-// numbers, how far it is and the line of what it is doing. Nothing selected, nothing drawn: the corner is empty. It is read when a ship is first shown and four times a second after (CAMP.tdisp.every), the frame and the bars
+// numbers, how far it is and the line of what it is doing. Nothing selected, nothing drawn: the corner is empty. The same box is the FRIEND display in the bottom LEFT corner (card space-game-friendly-display: campFdispSync, the ship A or D picked; campTdispBox(true); its objects in scene.hud.fdisp), drawn by the same code. It is read when a ship is first shown and four times a second after (CAMP.tdisp.every), the frame and the bars
 // are drawn again only when the ship, the side or a number changes, and every text is set through campLabel (src/camptextguard.js), so a steady box costs nothing. It is on the screen's own camera (scroll factor 0), over the
 // edge arrows and under the lists, and hidden behind a card, the pause, the page of keys and the Tab map (the same times as the lists). The scene calls campTdispSync(scene, now) every frame; the objects are kept in
 // scene.hud.tdisp (a scene that starts again has a new hud: the old are destroyed with it). Nothing here decides anything.
-function campTdispBox() { const K = CAMP.tdisp; return { x: W - K.right - K.w, y: H - K.bottom - K.h, w: K.w, h: K.h }; } // the box on the screen (also the rectangle the edge arrows' labels keep out of: inside CAMP.nav.arrow.keep)
+function campTdispBox(left) { const K = CAMP.tdisp; return { x: left ? K.left : W - K.right - K.w, y: H - K.bottom - K.h, w: K.w, h: K.h }; } // the box on the screen: in the bottom right corner (the target), or with left set in the bottom LEFT one (the friend display, card space-game-friendly-display: the same box and layout, mirrored). Both are rectangles the edge arrows' labels keep out of (inside CAMP.nav.arrow.keep)
 const CAMP_TDISP_LAY = { name: [10, 8], type: [10, 29], pic: [10, 50], col: 96, hullL: 50, hullB: 63, hullN: 74, shL: 92, shB: 105, shN: 116, km: [10, 136], doing: [10, 160], wrap: 180 }; // where each part is, in px from the box's top left corner
 function campTdispMake(s) {
   const K = CAMP.tdisp, mk = (o, d) => o.setScrollFactor(0).setDepth(K.depth + (d || 0)), tx = (size, color, st) => mk(s.add.text(0, 0, '', uiFont(size, color, st)), 2).setVisible(false);
@@ -13,19 +13,21 @@ function campTdispMake(s) {
 function campTdispOn(s) { return s.mode === 'play' && !s.mp && !(typeof s.hudHides === 'function' && s.hudHides()) && !(typeof campKeysIsOpen === 'function' && campKeysIsOpen(s)); }
 function campTdispHide(V) { V.g.clear(); V.gkey = ''; V.id = ''; V.info = null; [V.pic, V.name, V.type, V.hullL, V.hullN, V.shL, V.shN, V.km, V.doing].forEach(o => o.setVisible(false)); }
 function campTdispDraw(V, info) { // the frame, the picture's frame and the two bars
-  const K = CAMP.tdisp, B = campTdispBox(), L = CAMP_TDISP_LAY, g = V.g, col = K.color[info.side === 'hostile' ? 'hostile' : 'friend'];
+  const K = CAMP.tdisp, B = campTdispBox(V.left), L = CAMP_TDISP_LAY, g = V.g, col = K.color[info.side === 'hostile' ? 'hostile' : 'friend'];
   g.clear(); g.fillStyle(0x04101c, 0.9).fillRoundedRect(B.x, B.y, B.w, B.h, 7); g.lineStyle(2, col, 0.9).strokeRoundedRect(B.x, B.y, B.w, B.h, 7);
   g.fillStyle(0x0a1a2a, 0.95).fillRect(B.x + L.pic[0], B.y + L.pic[1], K.pic, K.pic); g.lineStyle(1, col, 0.5).strokeRect(B.x + L.pic[0], B.y + L.pic[1], K.pic, K.pic);
   const bar = (y, share, color) => { g.fillStyle(0x16293d, 1).fillRect(B.x + L.col, B.y + y, K.bar.w, K.bar.h); g.fillStyle(color, 1).fillRect(B.x + L.col, B.y + y, Math.max(share > 0 ? 1 : 0, Math.round(K.bar.w * share)), K.bar.h); g.lineStyle(1, 0x38e1ff, 0.4).strokeRect(B.x + L.col, B.y + y, K.bar.w, K.bar.h); };
   bar(L.hullB, info.hull.share, CAMP.charge.color[campChargeBand(info.hull.share)]);
   if (info.shield) bar(L.shB, info.shield.share, 0x7fe9ff); else { g.fillStyle(0x16293d, 0.5).fillRect(B.x + L.col, B.y + L.shB, K.bar.w, K.bar.h); }
 }
-function campTdispSync(s, now) {
-  const C = s.camp, P = s.pn, K = CAMP.tdisp; if (!C || !s.hud || !s.add) return;
-  const V = s.hud.tdisp || (s.hud.tdisp = campTdispMake(s)), sub = campTdispOn(s) ? campTdispSubject(C, P, now) : null;
+function campTdispSync(s, now) { campTdispShow(s, now, 'tdisp', false, () => campTdispSubject(s.camp, s.pn, now)); } // the target display, bottom right
+function campFdispSync(s, now) { campTdispShow(s, now, 'fdisp', true, () => campFdispSubject(s.camp)); } // the friend display, bottom left: the ship A or D picked (src/camptdisp.js campFdispSubject)
+function campTdispShow(s, now, slot, left, subject) { // one display: its objects are kept in scene.hud[slot]; the ship is read when first shown and every CAMP.tdisp.every ms after
+  const C = s.camp, K = CAMP.tdisp; if (!C || !s.hud || !s.add) return;
+  const V = s.hud[slot] || (s.hud[slot] = Object.assign(campTdispMake(s), { left })), sub = campTdispOn(s) ? subject() : null;
   if (!sub) { if (V.id || V.gkey) campTdispHide(V); return; }
   if (V.id !== sub.u.id || V.side !== sub.side || now - V.at >= K.every) { V.info = campTdispInfo(C, sub.u, sub.side); V.id = sub.u.id; V.side = sub.side; V.at = now; } // a new ship is read at once, the same one four times a second
-  const info = V.info, B = campTdispBox(), L = CAMP_TDISP_LAY, ink = K.ink[info.side === 'hostile' ? 'hostile' : 'friend'];
+  const info = V.info, B = campTdispBox(left), L = CAMP_TDISP_LAY, ink = K.ink[info.side === 'hostile' ? 'hostile' : 'friend'];
   const gkey = info.side + '|' + info.hull.now + '|' + info.hull.max + '|' + (info.shield ? info.shield.now + '/' + info.shield.max : '-');
   if (V.gkey !== gkey) { V.gkey = gkey; campTdispDraw(V, info); }
   const at = (o, p, text, color) => { campLabel(o, text, color); o.setPosition(B.x + p[0], B.y + p[1]).setVisible(true); };
