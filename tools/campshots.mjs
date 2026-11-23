@@ -206,7 +206,7 @@ try {
     await keyOn('KeyE'); await t.run(300); note('E (the red squad list)', JSON.stringify(await st())); await panelShot('panels-01g2-red', 'red');
     await keyOn('ArrowLeft'); await t.run(300); note('Left (back to the fleet list, on the Red squad row)', JSON.stringify(await st())); await panelShot('panels-01h-fleet-back', 'fleet');
     await keyOn('KeyP'); await t.run(300); note('P (the fleet list closes, the ship list opens)', JSON.stringify(await st())); await snap('panels-01d-ship-open'); await panelShot('panels-01e-ship', 'ship');
-    await keyOn('KeyI'); await t.run(300); await keyOn('Enter'); await t.run(300); note('I, Enter (the power list: a pip to the shields, the list stays open)', JSON.stringify(await st()), await j(`JSON.stringify(${SC}.camp.power.p)`)); await snap('panels-01i-power-open'); await panelShot('panels-01j-power', 'power');
+    await keyOn('KeyO'); await t.run(300); await keyOn('Enter'); await t.run(300); note('O, Enter (the power list: a pip to the shields, the list stays open)', JSON.stringify(await st()), await j(`JSON.stringify(${SC}.camp.power.p)`)); await snap('panels-01i-power-open'); await panelShot('panels-01j-power', 'power');
     await goTo('balance'); await keyOn('Enter'); await keyOn('Escape'); await t.run(200); // the power as it was
     // a refused order (Recall with no ship out): the list stays open, the row flashes twice and the foot says why
     await goTo('recall'); await t.run(300); await keyOn('Enter'); await t.run(6); note('Enter on Recall, no ship out', JSON.stringify(await st())); await panelShot('panels-02-flash-40ms', 'fleet'); // the second capture of a pair is 34 ms after the first: this one is the flash's first peak (40 ms)

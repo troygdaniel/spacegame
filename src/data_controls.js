@@ -16,7 +16,7 @@
 // ---------- the Campaign's lists (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026: "one list per hand", then "shortcut keys that take you straight to the sub-list") ----------
 // LEFT HAND, the fleet: Q opens the FLEET list, which is a row for each part of the wing and nothing else (card space-game-squad-tint; Troy, 22 Nov 2026: nothing listed twice): W ALL SQUADS, E RED SQUAD, R GREEN SQUAD, T YELLOW SQUAD (the fighters are split into three squads: card space-game-fighter-squads),
 // and ESCORTS, CONVOY and STANCE, which have no key (a row of the Q list: Enter or Right on it opens that part; the scouts are escorts and are in no squad). The first row of Q is All squads and the first row of that list is LAUNCH THE WING, so Q, Enter, Enter launches everything, and so does W, Enter.
-// RIGHT HAND, the ship, mirrored: P opens the SHIP list with a row for each part: O AUTOPILOT, I POWER, U DOCK AND BUILD.
+// RIGHT HAND, the ship, mirrored: P opens the SHIP list with a row for each part: O POWER (shields first: O, Enter adds a shield pip; card space-game-ship-shortcuts-o-power, Troy, 22 Nov 2026), I AUTOPILOT, U DOCK AND REPAIR.
 // A part's key opens its list directly, at any time (E, Enter: the fighters attack the target); Enter or a click on the part's row in Q or P opens it too. Nothing is on the screen until a key is pressed, and only one list is open at a time.
 // In an open list Up and Down move the highlight, Enter gives the order (the list closes when the order is taken; a power row leaves it open, to be given again), Left goes back to the list it is a part of, the list's own key closes it.
 // Esc goes back ONE STEP, to where you came from (card space-game-order-target-pick): a target sub-list to its list, a list a row of Q or P opened back to Q or P, a list its own key opened (Q W E R T P O I U) is closed; with nothing open, Esc pauses.
@@ -33,6 +33,17 @@
 //           pick: 'enemy' | 'escort' | 'field' makes it a row that needs a target: one candidate is taken at once, several open a sub-list of them, Esc goes back (src/camppick.js, card space-game-order-target-pick);
 //           stay: 1 leaves the list open after the order (a pip of power: it is given again and again); when: 'convoy' | 'blink' | 'aboard' leaves the row out of a mission that can never use it (campPanelWhen, src/camppanel.js);
 //           label is the row's words in the list, help its line for a hint. A row's id is its own in the whole table (a hint finds the row, and the list it is in, by it)
+// the rows of the DOCK AND REPAIR list (U), from a table (card space-game-ship-shortcuts-o-power; Troy, 22 Nov 2026). PREP for a later feature, NOT built now (the idea bench: repair ships in space with ore, instead of building new ones):
+// the Build rows are swapped for Repair rows in this ONE place, and the list, its notes (src/camppanel.js reads `cost`), the H page and the hints follow. Nothing changes in what a row does today.
+//   { id, label, help, when, cost, does }   id: the row's own in the whole table;  label and help: its words in the list and for a hint;  when: when it shows ('' always, 'aboard' only in a level where ships are built aboard: campPanelWhen);
+//                                           cost: what it takes, the CAMP.build price it reads ('fighter' or 'escort': <kind>Cost ore and <kind>Time s), '' for none;  does: the order it gives, { order, arg } (campOrder, src/campaign.js)
+const CAMP_YARD = [
+  { id: 'dock', label: 'Dock at the outpost', help: 'Dock at a friendly outpost', when: '', cost: '', does: { order: 'dock' } }, // ships are built and the hull mended only docked (card space-game-campaign-outposts); docking opens the ready room (a level with no outpost mends the hull aboard instead: campPanelAs)
+  { id: 'buildf', label: 'Build a fighter', help: 'Build a fighter (costs ore)', when: 'aboard', cost: 'fighter', does: { order: 'build', arg: 'fighter' } }, // only in a level with no outpost: elsewhere ships are built docked, in the ready room
+  { id: 'builde', label: 'Build an escort', help: 'Build an escort (costs ore)', when: 'aboard', cost: 'escort', does: { order: 'build', arg: 'escort' } }
+];
+const campYardRows = () => CAMP_YARD.map(r => { const o = { id: r.id, order: r.does.order }; if (r.does.arg) o.arg = r.does.arg; if (r.when) o.when = r.when; o.label = r.label; o.help = r.help; if (r.cost) o.cost = r.cost; return o; }); // the table as the list's rows
+
 const CAMP_PANELS = {
   show: 11,                                // how many rows of a list are on the screen at once: a longer list scrolls with the highlight (the fleet list has eleven: the squads came in, card space-game-fighter-squads)
   anim: { flash: 160 },                    // ms: a row lights up (two pulses) when Enter gives it
@@ -88,29 +99,25 @@ const CAMP_PANELS = {
       { id: 'hold', order: 'stance', arg: 'hold position', label: 'Hold position', name: 'Hold position', help: 'Stay put, fire at what comes' }
     ] },
     { id: 'ship', side: 'right', key: 'P', code: 'KeyP', title: 'SHIP ORDERS', tab: 'Ship', name: 'the ship list', rows: [
-      { id: 'gnav', open: 'nav', label: 'Autopilot', help: 'Fly to the goal or the target' },
       { id: 'gpower', open: 'power', label: 'Power', help: 'Shields, engines, weapons' },
-      { id: 'gyard', open: 'yard', label: 'Dock and build', help: 'Dock, mend, build ships' },
+      { id: 'gnav', open: 'nav', label: 'Autopilot', help: 'Fly to the goal or the target' },
+      { id: 'gyard', open: 'yard', label: 'Dock and repair', help: 'Dock, mend the hull, build ships' },
       { id: 'blink', blink: 1, when: 'blink', label: 'Warp blink ahead', help: 'Warp blink hop (needs that tech)' }
     ] },
-    { id: 'nav', parent: 'ship', side: 'right', key: 'O', code: 'KeyO', title: 'AUTOPILOT', tab: 'Autopilot', name: 'the autopilot list', rows: [
-      { id: 'goal', fly: 'objective', label: 'Fly to the goal', help: 'Autopilot to the objective' },
-      { id: 'target', fly: 'target', label: 'Fly to the target', help: 'Autopilot to the target' },
-      { id: 'burn', fly: 'objective', burn: 1, label: 'Fast burn to the goal', help: 'A fast burn to the objective' }, // a burn needs the wing aboard (card space-game-campaign-fast-board)
-      { id: 'burntarget', fly: 'target', burn: 1, label: 'Fast burn to the target', help: 'A fast burn to the target' }
-    ] },
-    { id: 'power', parent: 'ship', side: 'right', key: 'I', code: 'KeyI', title: 'POWER', tab: 'Power', name: 'the power list', rows: [ // the ship's power (docs/CAMPAIGN.md "Ship systems"), the dials' order; J K L ; do the first four directly, and each row shows that key
+    { id: 'power', parent: 'ship', side: 'right', key: 'O', code: 'KeyO', title: 'POWER', tab: 'Power', name: 'the power list', rows: [ // the ship's power (docs/CAMPAIGN.md "Ship systems"), the dials' order; J K L ; do the first four directly, and each row shows that key
       { id: 'shields', order: 'power', arg: 'shields', stay: 1, pip: 1, label: 'Shields: one more pip', help: 'A pip of power to the shields' }, // pip: the index of the system in C.power.p (weapons, shields, engines): the row draws that system's pip bar, the same as its gauge's, and lights its gauge when it is the highlighted row (src/campanelsdraw.js; card space-game-power-presets)
       { id: 'engines', order: 'power', arg: 'engines', stay: 1, pip: 2, label: 'Engines: one more pip', help: 'A pip of power to the engines' },
       { id: 'weapons', order: 'power', arg: 'weapons', stay: 1, pip: 0, label: 'Weapons: one more pip', help: 'A pip of power to the weapons' },
       { id: 'balance', order: 'balance', stay: 1, label: 'Balance the power', help: 'Back to 2 / 2 / 2' },
       { id: 'emergency', order: 'emergency', label: 'Emergency shields', help: 'Shields get 4 pips for 10 s' }
     ] },
-    { id: 'yard', parent: 'ship', side: 'right', key: 'U', code: 'KeyU', title: 'DOCK AND BUILD', tab: 'Dock', name: 'the dock list', rows: [
-      { id: 'dock', order: 'dock', label: 'Dock at the outpost', help: 'Dock at a friendly outpost' }, // ships are built and the hull mended only docked (card space-game-campaign-outposts); docking opens the ready room (a level with no outpost mends the hull aboard instead: campPanelAs)
-      { id: 'buildf', order: 'build', arg: 'fighter', when: 'aboard', label: 'Build a fighter', help: 'Build a fighter (costs ore)' }, // only in a level with no outpost: elsewhere ships are built docked, in the ready room
-      { id: 'builde', order: 'build', arg: 'escort', when: 'aboard', label: 'Build an escort', help: 'Build an escort (costs ore)' }
-    ] }
+    { id: 'nav', parent: 'ship', side: 'right', key: 'I', code: 'KeyI', title: 'AUTOPILOT', tab: 'Autopilot', name: 'the autopilot list', rows: [
+      { id: 'goal', fly: 'objective', label: 'Fly to the goal', help: 'Autopilot to the objective' },
+      { id: 'target', fly: 'target', label: 'Fly to the target', help: 'Autopilot to the target' },
+      { id: 'burn', fly: 'objective', burn: 1, label: 'Fast burn to the goal', help: 'A fast burn to the objective' }, // a burn needs the wing aboard (card space-game-campaign-fast-board)
+      { id: 'burntarget', fly: 'target', burn: 1, label: 'Fast burn to the target', help: 'A fast burn to the target' }
+    ] },
+    { id: 'yard', parent: 'ship', side: 'right', key: 'U', code: 'KeyU', title: 'DOCK AND REPAIR', tab: 'Dock', name: 'the dock list', rows: campYardRows() } // the rows are the table CAMP_YARD above: what to put here is that table's business
   ],
   // why a row cannot be done now, in a few plain words: the code of the game's own refusal (campNo in src/campaign.js) to the words beside the row's name; {need} is ore, {s} seconds
   why: { over: 'the battle is over', bay: 'the bay is empty', launching: 'still launching', baydry: 'all of it is out', nofighters: 'no fighters out', nosquad: 'no ships in the squad', noescorts: 'no escorts out', noconvoy: 'no convoy to escort', nowing: 'no ships out',
