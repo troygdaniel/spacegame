@@ -10,6 +10,8 @@
 //   node tools/perfcampaign.mjs fill [busy1|busy3] [seconds each]  CHROME. WHERE the drawing time goes (use LONGHAUL_GL=software): the real loop with one kind of thing hidden at a time
 //   node tools/perfcampaign.mjs soak [game minutes] [busy1|natural1]  CHROME. a long session in 1-minute steps of game time: heap after a collection, nodes, listeners, textures, sprites
 //   node tools/perfcampaign.mjs restart [n]                         CHROME. start a level n times in a row: what is left behind each time
+//   node tools/perfcampaign.mjs planetstart [level]                CHROME. the planets at a level's start (card space-game-cloud-followups): the Campaign scene's create() with no planet painted yet (a retry, an address) and after the ready
+//                                                                  room has been open a few seconds (it paints them one a tick, src/camphubscene.js campHubWarm): ms of create(), and how many planets were painted in it
 //   node tools/perfcampaign.mjs load                                CHROME. page load to the Campaign at ?campaign=3 (median of 5)
 // Scenarios: busy1 / busy3 keep a full fight going for as long as it is measured (level 1 with the mothership; level 3 with its twelve towers): the aliens are topped up to 18, the wing is
 // launched and topped up, the carrier cannot die, so the numbers are the worst a level gives, not an average. natural1 is level 1 played the way a player does (launch, attack, fly).
@@ -339,6 +341,28 @@ if (what === 'restart') {
     for (let i = 0; i <= n; i++) { if (i) await hop(1 + (i % 3)); const c = await counts(t); rows.push({ start: i, ...(await heap(t)), textures: c.textures, objects: c.objects }); }
     rows.forEach(r => console.log(JSON.stringify(r)));
     console.log('heap after a full collection, by start: ' + rows.map(r => r.heapMB).join(' '));
+    noErrors(t);
+  } finally { await t.close(); }
+}
+
+if (what === 'planetstart') { // the planets painted inside create() were 373 ms of one frame on level 1 (docs/PERF.md): with PERF_ROOT=<an older checkout> this is the "before", the same tool on the new code the "after"
+  const level = Number(arg) || 1, t = await enter('natural1');
+  try {
+    await t.ev(`(() => { if (window.__PL) return 1; const P = window.__PL = { rows: [], paints: 0, ms: 0, each: [] };
+      const c0 = Campaign.prototype.create; Campaign.prototype.create = function (...a) { const s = performance.now(), n0 = P.paints, m0 = P.ms; try { return c0.apply(this, a); } finally { P.rows.push({ createMs: performance.now() - s, paintedInCreate: P.paints - n0, paintMsInCreate: P.ms - m0 }); } };
+      const f = window.planetTexture; window.planetTexture = function (sc, kind, seed) { const had = sc.textures.exists('planet-' + kind + '-' + ((seed | 0) || 1)), s = performance.now(); try { return f.apply(this, arguments); } finally { if (!had) { const d = performance.now() - s; P.paints++; P.ms += d; P.each.push(Math.round(d)); } } };
+      window.__cold = () => { Object.keys(game.textures.list).filter(k => /^planet-/.test(k)).forEach(k => game.textures.remove(k)); waPlanetCache.length = 0; P.each = []; return 1; };
+      return 1; })()`);
+    const goto = async (key, data, ms) => { await t.ev(`(() => { const s = game.scene.getScenes(true)[0]; go(s, ${JSON.stringify(key)}, ${JSON.stringify(data || {})}); return 1; })()`); await t.run(ms); }; // from whatever scene is up, on the stepped clock
+    const last = () => t.ev('(() => { const r = __PL.rows[__PL.rows.length - 1] || {}; return { createMs: Math.round(r.createMs || 0), paintedInCreate: r.paintedInCreate, paintMsInCreate: Math.round(r.paintMsInCreate || 0) }; })()');
+    const cold = async () => { await goto('Title', {}, 900); await t.ev('__cold()'); }; // the title shows no planet: take them out of the cache only when no image is using them (a picture whose texture is gone stops the renderer)
+    for (let i = 0; i < 3; i++) {
+      await cold(); await goto('Campaign', { level, via: 'skip' }, 1500); const noRoom = await last();
+      await cold(); await goto('CampHub', {}, 4500); // the ready room, open for a few seconds (its timers run on the stepped clock)
+      const inRoom = await t.ev('({ paints: __PL.paints, each: __PL.each.slice() })');
+      await goto('Campaign', { level, via: 'hub' }, 1500); const fromRoom = await last();
+      console.log(`level ${level}, run ${i + 1}: create() with no planet painted ${JSON.stringify(noRoom)} | ready room open 4.5 s painted ${inRoom.paints} planets (${inRoom.each.join(' ')} ms each), then create() ${JSON.stringify(fromRoom)}`);
+    }
     noErrors(t);
   } finally { await t.close(); }
 }

@@ -31,6 +31,16 @@ function campHubOldNote(P) {
   return !seen;
 }
 
+// The next level's planets are painted while the ready room is open, one a timer tick, so the level starts without painting them: planetTexture (src/art_world.js) keeps each one, and the Campaign scene's create() finds
+// them there. Painted inside create() they cost 373 ms of one frame on level 1, the one dip in Troy's play logs (docs/PERF.md; card space-game-cloud-followups, from the cloud session's note on pull request 5). A mission
+// picked on the board from another level, or a level started with no room (a retry, an address), finds none cached and paints them as before. Returns how many it will paint.
+function campHubWarm(sc, level) {
+  if (!sc || !sc.time || typeof sc.time.delayedCall !== 'function' || typeof planetTexture !== 'function' || typeof campPlaces !== 'function') return 0;
+  const pl = campPlaces(level) || {}, near = Object.keys(pl).map(id => pl[id]).filter(p => p && !p.hidden && !p.far && p.kind !== 'star').slice(0, 5); // the ones the scene draws at its start (drawPlace), no more than the cache keeps
+  near.forEach((p, i) => sc.time.delayedCall(600 + 160 * i, () => { if (!sc.leaving) campTry(() => planetTexture(sc, p.kind || 'rock', p.seed || 1), 0); })); // after the fade-in, a frame or more apart; a scene that is left takes its timers with it
+  return near.length;
+}
+
 class CampHub extends Phaser.Scene {
   constructor() { super('CampHub'); }
   init(d) { this.d = d || {}; this.leaving = false; } // d: the scene data above (all of it optional)
@@ -52,6 +62,7 @@ class CampHub extends Phaser.Scene {
     this.keyFn = e => this.onKey(e); this.input.keyboard.on('keydown', this.keyFn);
     this.events.once('shutdown', () => { this.input.keyboard.off('keydown', this.keyFn); });
     this.paint(); this.stand(true);
+    campHubWarm(this, nx.level); // the planets of the level to come, painted while the room is up
   }
 
   // the cruiser on the pad, nose up, with its name under it
