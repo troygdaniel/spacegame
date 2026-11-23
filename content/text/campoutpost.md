@@ -23,14 +23,14 @@ The words of the Campaign's friendly outposts (card space-game-campaign-outposts
 | camp.hud.dockhint | {viadock}  dock at {name} |
 | camp.hub.row.repair | REPAIR |
 | camp.hub.row.undock | UNDOCK |
-| camp.hub.dockfoot.repair | Enter  the refit |
+| camp.hub.dockfoot.repair | Enter  the mission board |
 | camp.hub.dockfoot.board | Enter  to the undock row |
 | camp.hub.dockfoot.undock | Enter  UNDOCK |
 | camp.hub.note.repair | hull {pct} percent |
 | camp.hub.note.undock | {name} |
 | camp.hub.repair.head | REPAIR |
 | camp.hub.repair.hull | Hull: {hp} of {max} |
-| camp.hub.repair.key | R  mend the hull: {ore} ore |
+| camp.hub.repair.key | R  mend the hull: {ore} ore (half price here) |
 | camp.hub.repair.sound | The hull is sound. |
 | camp.hub.undock.head | UNDOCK |
 | camp.hub.undock.line | Enter or L undocks. The battle goes on where you left it. |
