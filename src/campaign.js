@@ -91,13 +91,16 @@ const CAMP = {
     hold: 150,                             // px from the rock a mining ship keeps while it works
     turret: 0.35                           // the share of a turret shot's damage that cuts a rock (the turrets are the same lasers: they do less to rock than to an alien)
   },
-  build: {
-    fighterCost: 25,                       // ore for a new fighter
-    fighterTime: 6,                        // s to build it (one ship at a time, into the bay)
-    maxFighters: 14,                       // most fighters in the bay and out together (and queued)
-    most: 5                                // most ships one order queues
+  mend: {                                  // repair in space with ore (card space-game-repair-with-ore, src/campmend.js; Troy, 22 Nov 2026: nothing builds ships any more, ore mends them)
+    hullOre: 60,                           // ore for mending the whole hull from nothing (the dock's old price); a part costs its share
+    min: 5,                                // the least a mend costs, a scratch included
+    hullSecs: 8,                           // s a whole hull takes to mend (a part takes its share); the ore is paid when the order is given
+    wardPoint: 0.1,                        // ore a hit point of a ship you protect (a transport, a hauler, a miner): half of a freighter's 200 is 10 ore
+    wardSecs: 6,                           // s a whole hull of a ship you protect takes to mend
+    range: 700,                            // px: the cruiser mends a ship you protect only when it is this near (a ship tucked in beside it always is)
+    dockShare: 0.5                         // docked at an outpost the hull is mended at once for this share of the price
   },
-  ranks: [                                 // the ranks (card space-game-campaign-ranks, src/campranks.js): the best scores of the missions flown, added up, are the points; a rank is held from `at` points; its extras are added to the bay and to the wing limit (CAMP.build.maxFighters). Card space-game-cut-escorts (Troy, 22 Nov 2026): the escort ship is gone, so a rank gives the same number of fighters in all that it gave in ships (fighters + escorts)
+  ranks: [                                 // the ranks (card space-game-campaign-ranks, src/campranks.js): the best scores of the missions flown, added up, are the points; a rank is held from `at` points; its extras are added to the bay. Card space-game-cut-escorts (Troy, 22 Nov 2026): the escort ship is gone, so a rank gives the same number of fighters in all that it gave in ships (fighters + escorts)
     { id: 'cadet', at: 0, fighters: 0 },           // the start: the wing of the bay, no more
     { id: 'ensign', at: 1000, fighters: 1 },        // one good mission (1,000 for the objectives)
     { id: 'lieutenant', at: 3500, fighters: 3 },    // about three missions at a good score (it was 2 fighters and 1 escort)
@@ -143,6 +146,8 @@ const CAMP = {
     below: 0.3,                            // the share of its hull under which a fighter breaks off and flies home
     within: 15,                            // s of flight (the way home over its top speed): a cruiser farther off than this and the fighter fights on
     time: 10,                              // s a landed fighter is mended, then it is whole again
+    ore: 5,                                // ore a mend costs (paid when the fighter lands, from the ore and the cash of a sale); card space-game-repair-with-ore: nothing builds ships, ore mends them
+    slow: 2,                               // times as long a mend takes when there is no ore for it (never refused)
     fight: 1800,                           // px: an alien this close to the cruiser, or any ship of the wing still out on an order, sends the mended fighter out again (else it stays in the bay)
     sayEvery: 5                            // s between two radio lines of the same kind (four fighters hurt together are one call)
   },
@@ -487,8 +492,9 @@ const CAMP = {
     every: 200,                            // ms between the looks at who is near (campFightPace)
     shots: 0.5                             // the power of the multiplier a shot's speed takes (0.5 is its square root: a shot does not outrun the eye, a hit still lands). There is no key and no setting for the pace any more (card space-game-two-hands-keys): the Campaign flies at CAMP.pace.start, and campNew's opts.pace still takes a mode for the tests, the bots and the sims
   },
-  refit: {                                 // the Earth refit screen after level 1: one tech, and ore buys extra ships for the next level (the costs are the workshop's, CAMP.build)
-    most: 3                                // most extra fighters one refit buys
+  refit: {                                 // the Earth refit screen after level 1: one tech, and ore buys extra ships for the next level (nothing builds them in a battle: the refit is where ore buys a bigger wing)
+    most: 3,                               // most extra fighters one refit buys
+    fighterCost: 25                        // ore for an extra fighter (it was the workshop's price, CAMP.build.fighterCost, until card space-game-repair-with-ore)
   },
   anomaly: {                               // the cloaked enemy caches (card space-game-campaign-anomalies; src/campanomaly.js; the rows are CAMP.levels[n].anomalies)
     sense: 2400,                           // px: the carrier this near notices one: a mark on the map, 'Anomaly' in the nav list, one line from the ship (the lens tech doubles it)
@@ -501,12 +507,10 @@ const CAMP = {
     done: 600,                             // ms after the last guard has died before the reward comes (a beat)
     chunk: 25                              // ore a chunk of the reward holds (the ore reward is that many chunks lying on the cache, for any ship of yours to pick up)
   },
-  outpost: {                               // friendly outposts (card space-game-campaign-outposts, src/campoutpost.js): ships are built and the hull mended only docked at one, which a level lists in its `outposts`
+  outpost: {                               // friendly outposts (card space-game-campaign-outposts, src/campoutpost.js): an outpost buys the ore and sells the refit, and mends the hull at half price; a level lists its `outposts`
     range: 280,                            // px from the edge of an outpost within which the carrier can dock (the ship list's Dock row, "dock at Luna"): a place's own size is added
     clear: 900,                            // px: no alien within this of the carrier, or the outpost keeps its doors shut (docking stops the battle: it must not be a free breather in a fight)
-    repairOre: 60,                         // ore for mending the whole hull from nothing; a part costs its share, at least 5
-    retreatHull: 0.35,                     // below this share of the hull, with no ship of the wing left (in the bay, out, launching or building), the HUD says where to retreat
-    fabricator: 300                        // ore for the Fabricator at a refit (the tech 'fabricator'): the carrier then builds fighters anywhere (120 while the store held 200: the bay holds 500 now, and the extra ships of a refit are 210, so one full bay no longer buys the whole refit)
+    retreatHull: 0.35                      // below this share of the hull, with no ship of the wing left (in the bay, out, launching or being mended), the HUD says where to retreat
   },
   tech: {                                  // what each tech does; names and words are in content/text/ui.md (camp.tech.<id>.name, .text)
     shield: { after: 1, taken: 0.6 },      // after level 1: the carrier takes this share of the damage it is dealt (0.6 = 40 percent less)
@@ -516,8 +520,7 @@ const CAMP = {
     bay2: { after: 2, fighters: 4 },       // after level 2: this many more fighters in the bay
     repair: { after: 2, rate: 4, reach: 220 }, // after level 2: hit points a second the carrier and the ships within this many px of it heal
     overdrive: { after: 'find', speed: 1.25 }, // looted from a cloaked cache (an anomaly), offered at the refit as one more choice: the carrier's top speed and thrust times this
-    lens: { after: 'find', sense: 2 },     // looted from a cloaked cache: the carrier notices an anomaly this many times as far
-    fabricator: { after: 0 }               // not a pick after a level (no level is 0): bought at a refit for CAMP.outpost.fabricator ore; the carrier builds fighters anywhere, not only docked (campCanBuild)
+    lens: { after: 'find', sense: 2 }      // looted from a cloaked cache: the carrier notices an anomaly this many times as far
   },
   // the places of the home system at 1 to 12 of the Sol pack's distances (docs/SOL.md; Earth to Mars 4,100 px), Earth at the origin, y grows downward, north is up
   places: {
@@ -636,7 +639,7 @@ const CAMP = {
       name: 'The home world', start: 'arrival', startAt: [0, 0], earth: false,
       reveal: { star: 'Tau Ceti', name: 'The outpost', place: 'Alien outpost' }, // SPOILER: after the win the ending says this was an outpost and the data points to this star; once the ending has been seen (the saved flag revealed) a replay says the true names (campReveal)
       warp: { dest: 'Epsilon Eridani', ly: 9.3, star: { kind: 'lava', seed: 551 }, behind: { kind: 'lava', seed: 4371 }, companions: [], l1: 'camp.warp.l1b' }, // the warp cinematic (src/campwarp.js) from Alpha Centauri to Epsilon Eridani: the star ahead and the one behind as pictures (kind, seed) since neither is a place of this level, no companion stars, and its own first line
-      // no outposts here: the alien home world is the only place, so nothing friendly to dock at: build and repair work aboard (src/campoutpost.js campAboard), the Fabricator or not
+      // no outposts here: the alien home world is the only place, so nothing friendly to dock at: the hull is mended in space like anywhere (src/campmend.js)
       world: { system: 'epsilon-eridani', fit: { place: 'home', pack: 'epsilon-eridani-b' }, same: { home: 'epsilon-eridani-b' }, k: 3 }, // Epsilon Eridani's star and belts round the alien home world, which is the pack's Aegir; k: the rings are this many times the pack's (so the star is not on top of the towers)
       places: {
         arrival: { x: -7000, y: 3500, name: 'Warp point', hidden: true },                          // where the carrier warps in: 7,800 px from the world (not drawn)
@@ -774,17 +777,17 @@ function campNew(level, techs, opts) {
     input: { turn: 0, thrust: 0, brake: false, fire: false, blink: false },
     techs: (techs || []).filter(t => CAMP.tech[t]),
     earth: L.defend ? campDefend(level, L.defend) : L.earth === false ? null : { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield }, caches: (L.caches || []).map(c => ({ x: c[0], y: c[1], got: false })), cachesGot: 0,
-    ore: Math.max(0, Math.min(CAMP.ore.cap, opts.ore != null ? opts.ore : (L.startOre != null ? L.startOre : CAMP.ore.start))), shield: CAMP.carrier.shield, pickups: [], build: { queue: [] },
+    ore: Math.max(0, Math.min(CAMP.ore.cap, opts.ore != null ? opts.ore : (L.startOre != null ? L.startOre : CAMP.ore.start))), shield: CAMP.carrier.shield, pickups: [], mends: [],
     relic: L.relic ? { x: campPlaces(level)[L.relic.place].x, y: campPlaces(level)[L.relic.place].y, hold: 0 } : null,
     bay: { fighters: CAMP.bay.fighters }, launchQ: [], nextLaunch: 0, tgt: '', repairs: [], // repairs: the fighters landed and being mended, { kind, until, order, stay } (src/camprepair.js)
     waves: L.waves.map(() => ({ started: false, at: 0 })), convoys: L.convoys.map(() => ({ started: false })), delivered: 0, lost: 0, kills: 0, launched: 0, lostShips: 0, lane: {}, cash: 0, sold: 0, oreBest: 0,
-    orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, build: 0, power: 0, balance: 0, emergency: 0, convoy: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
+    orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, repair: 0, mendship: 0, power: 0, balance: 0, emergency: 0, convoy: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
     result: null, why: '', docked: '' // docked: the id of the outpost the carrier is docked at ('' in flight; src/campoutpost.js)
   };
   if (campHas(C, 'bay2')) C.bay.fighters += CAMP.tech.bay2.fighters;
   if (opts.bonus) { C.bay.fighters += Math.max(0, opts.bonus.fighters | 0); } // the extras bought at the Earth refit
   C.rank = Math.max(0, Math.min(CAMP.ranks.length - 1, opts.rank | 0)); // the rank of the pilot (src/campranks.js: from the scores of the missions flown): its extras fill the bay and lift the wing limit
-  { const rk = CAMP.ranks[C.rank]; C.bay.fighters += rk.fighters; C.cap = { fighters: CAMP.build.maxFighters + rk.fighters }; }
+  { const rk = CAMP.ranks[C.rank]; C.bay.fighters += rk.fighters; }
   Object.assign(C, { missiles: CAMP.missile.magazine, magazine: CAMP.missile.magazine, turretMul: 1, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0 }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks
   if (typeof campBeatsNew === 'function') campBeatsNew(C); // the beats of the mission (src/campbeats.js)
   C.route = null; if (typeof campRouteNew === 'function') campRouteNew(C); // a fork in the road (src/camproute.js): C.route, and the lanes' caches in C.caches
@@ -971,7 +974,7 @@ function campDo(C, name, arg, dry, how) {
     C.orders.mine++; return campYes('mine');
   }
   if (name === 'recharge') return campNo('shieldauto'); // the old pay-ore recharge (card space-game-shield-auto): the shield mends by itself now, and "recharge shields" says so
-  if (name === 'build') return campBuild(C, arg, dry);
+  if (name === 'build') return campNo('nobuild'); // nothing builds ships any more (card space-game-repair-with-ore): the strip and the voice still understand the word, and say what to do instead
   if (name === 'stance') { // the wing's stance: how Attack and Guard move (orbit, keep distance, match speed, hold position, free); "orbit the mothership" also sends the fighters at it
     const q = String(arg == null ? '' : arg).toLowerCase(), id = /\b(?:orbit|circle)\b/.test(q) ? 'orbit' : /\b(?:distance|stand off|keep away|kite)\b|^keep\b/.test(q) ? 'keep' : /\b(?:match|formation)\b/.test(q) ? 'match' : /\b(?:hold|stay put)\b/.test(q) ? 'hold' : /\b(?:free|at will|freely)\b/.test(q) ? 'free' : null;
     if (!id) return campNo('stance');
@@ -983,28 +986,12 @@ function campDo(C, name, arg, dry, how) {
     return campYes(code);
   }
   if (name === 'dock') return campDock(C, arg, dry); // src/campoutpost.js
-  if (name === 'repair') return campMend(C, arg, dry);
+  if (name === 'repair') return campMend(C, arg, dry); // the hull, anywhere (src/campmend.js)
+  if (name === 'mendship') return campMendWard(C, arg, dry); // a ship you protect, when it is near
   return campNo('what');
 }
 // the ships that mine: the whole wing that is out. In the belt the fighters are the cruiser's mining drones; an attack order (key 2) turns them back to the fight
 function campMiners(C) { return campWing(C, 'fighter'); }
-// build: queue new fighters (arg 'fighter', with a count: 'fighter 2'); one at a time, into the bay, ore paid now
-function campBuild(C, arg, dry) {
-  if (typeof campCanBuild === 'function' && !campCanBuild(C)) return campNo('nodock'); // (a level with no outpost builds aboard: campCanBuild says yes there, card space-game-campaign-no-outpost-rule: the refusal is never shown there) // ships are built docked at an outpost, or anywhere with the Fabricator (src/campoutpost.js)
-  const q = String(arg == null ? '' : arg).toLowerCase(), B = CAMP.build, kind = 'fighter';
-  if (/escort/.test(q)) return campNo('what'); // there is no escort ship to build (card space-game-cut-escorts): Escort is an order of the squads
-  const words = { one: 1, a: 1, an: 1, two: 2, three: 3, four: 4, five: 5 }, m = /(\d+)|\b(one|two|three|four|five)\b/.exec(q);
-  const n = Math.max(1, Math.min(B.most, m ? (m[1] ? parseInt(m[1], 10) : words[m[2]]) : 1));
-  const have = C.bay.fighters + campWing(C, 'fighter').length + C.launchQ.filter(k => k === 'fighter').length
-    + C.build.queue.filter(b => b.kind === kind).length + campRepairing(C, kind); // (a fighter being mended is still one of the wing)
-  if (have + n > C.cap.fighters) return campNo('buildfull', { kind }); // the wing limit: the workshop's, and the rank's extras
-  const cost = n * B.fighterCost;
-  if (campFunds(C) < cost) return campNo('noore2', { need: cost, have: campFunds(C) });
-  if (dry) return campYes('build', { n, kind: n === 1 ? kind : kind + 's' });
-  campPay(C, cost); for (let i = 0; i < n; i++) C.build.queue.push({ kind, left: B.fighterTime }); C.orders.build++;
-  return campYes('build', { n, kind: n === 1 ? kind : kind + 's' });
-}
-
 // plain words as an order: { act: 'fleet_launch' | 'fleet_attack' | 'fleet_escort' | 'fleet_guard' | 'fleet_recall', arg } or null (the model reads it instead)
 function campIntent(text) {
   const SC_FILLER = /^(?:(?:please|hey|ok|okay|computer|athena|can you|could you|would you|will you|i want to|i wanna|i need to|lets|let's|go ahead and|all|everyone)\s+)+/;
@@ -1084,7 +1071,7 @@ function campTick(C, dt) {
   campEarth(C, dt);
   campPickups(C);
   campOreFull(C); // the store has filled: "Ore bay full.", once
-  campFactory(C, dt);
+  campMendTick(C, dt); // the hull and the ships you protect being mended (src/campmend.js)
   campLasers(C);
   campMissions_tick(C, dt);
   if (typeof campCallsTick === 'function') campCallsTick(C, dt); // the pilots ask for orders: the call that waits, the call that may open (src/camporders.js)
@@ -1367,13 +1354,6 @@ function campPickups(C) {
     return false;
   });
 }
-// the bay's workshop: the first ship of the queue is built (one at a time), then it is in the bay
-function campFactory(C, dt) {
-  const q = C.build.queue; if (!q.length || C.carrier.hp <= 0) return;
-  q[0].left -= dt;
-  if (q[0].left <= 0) { const b = q.shift(); C.bay[b.kind + 's']++; C.events.push({ type: 'built', kind: b.kind }); campSay(C, 'camp.say.built', { kind: b.kind }); }
-}
-
 // the ship's voice says when Earth's shield or the carrier's hull first falls to half and to a quarter: until now nothing but the bars said so, and a level was lost with no word before it
 function campWarn(C) {
   if (C.result || !C.carrier || C.carrier.hp <= 0) return;
@@ -1831,7 +1811,7 @@ function campSummary(C) {
   if (!C) return 'Campaign: not in a battle.';
   const L = C.L, c = C.carrier, m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
   const out = campWing(C, 'fighter').length, al = campAliens(C).filter(u => u.faction !== 'pirate').length, pi = campAliens(C).length - al, cv = campConvoys(C).map(u => campConvoyName(u));
-  return 'Campaign level ' + C.level + ', ' + L.name + '. Goal: ' + campObjective(C) + ' Carrier hull ' + Math.round(c.hp) + ' of ' + Math.round(c.maxHp) + ', shield ' + Math.round(C.shield) + ' of ' + CAMP.carrier.shield + '. Ore in the store: ' + Math.floor(C.ore) + ' of ' + CAMP.ore.cap + (C.build.queue.length ? ', building ' + C.build.queue.length + ' ship' + (C.build.queue.length === 1 ? '' : 's') : '') + '.'
+  return 'Campaign level ' + C.level + ', ' + L.name + '. Goal: ' + campObjective(C) + ' Carrier hull ' + Math.round(c.hp) + ' of ' + Math.round(c.maxHp) + ', shield ' + Math.round(C.shield) + ' of ' + CAMP.carrier.shield + '. Ore in the store: ' + Math.floor(C.ore) + ' of ' + CAMP.ore.cap + (C.mends.length ? ', mending ' + C.mends.length + ' ship' + (C.mends.length === 1 ? '' : 's') : '') + '.'
     + (C.earth ? ' Earth shield ' + Math.round(C.earth.shield / C.earth.max * 100) + ' percent.' : '') + ' In the bay: ' + C.bay.fighters + ' fighters' + (campRepairing(C) ? ', ' + campRepairing(C) + ' being mended' : '') + '. Out: '
     + out + ' fighters. Missiles in the magazine: ' + C.missiles + ' of ' + C.magazine + ' (' + campKeyVar('keymissile') + ' fires one at the target, or with none picked at ' + (L.win === 'mother' || m ? 'the mothership or ' : '') + 'the nearest big ship).' + (al || C.alienSeen ? ' Aliens alive: ' + al + '.' : '') + (pi ? ' Pirates alive: ' + pi + '.' : '') + campAnomLine(C) + (L.convoys.length ? ' Convoys flying: ' + cv.join(', ') + (cv.length ? '' : 'none') + '.' : '')
     + (L.win === 'mother' ? (m ? ' The alien mothership is ' + Math.round(campDist(m, c) / 10) + ' km away.' : ' The mothership has not come yet.') : '');
