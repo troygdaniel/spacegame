@@ -100,7 +100,7 @@ function campPanelKey(P, C, code, now) {
       const r = campPanelRun(C, row, 'key', item);
       res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = row.id; res.fleet = def.side === 'left'; P.lit[row.id] = now;
       if (res.ok && item) P.seen = { kind: campPickKind(row), id: item.id, until: now + CAMP_PICK.seen }; // the one that was taken keeps its bracket for a moment
-      if (res.ok) campSquadsKeep(P, open, now); // a squad's list: the squad keeps its ring for a while (src/campwing.js)
+      if (res.ok) { const sf = row.sel && typeof campSelNow === 'function' ? campSelNow(C) : null; campSquadsKeep(P, sf && sf.kind === 'pilot' ? sf.squad : open, now); } // a squad's list: the squad keeps its ring for a while (src/campwing.js); a selected pilot who took the order alone keeps its own
       if (res.ok && !row.stay) campPanelClose(P); // the order is given: the keys go back to the ship (a power row stays: a pip more, and more). A refusal leaves the list open, with its reason said
       res.open = campPanelOpen(P); return res;
     }
@@ -139,13 +139,21 @@ function campPanelKey(P, C, code, now) {
 
 // do a row: the order with the row's words, so the lists, the strip and the voice are one set of rules; fly: the autopilot to the objective or the target (burn: fast); blink: the warp hop
 // (a level with no outpost used to turn its Dock row into Repair the hull; the hull is mended anywhere now, so that row is its own and the Dock row is left out there: when 'outpost')
-const campPanelAs = (C, row) => row;
+// a row that acts on the selection (sel: card space-game-w-uses-selection) is named after it ("Attack Raider 3", "Guard Hauler 2 convoy"); with none selected it keeps the table's words
+const campPanelAs = (C, row) => {
+  if (!row.sel || !C || typeof campSelRowFor !== 'function') return row;
+  const s = campSelRowFor(C, row.sel); return s.code ? row : Object.assign({}, row, { label: uiText(row.sel === 'hostile' ? 'camp.w.attack' : 'camp.w.guard', { name: s.name }) });
+};
 const campPanelTargetArg = (C, row) => (row.order === 'attack' || row.order === 'missiles') && typeof campTgtNow === 'function' && campTgtNow(C) ? CAMP_TGT : (row.arg || ''); // with a target picked the attack and the missile go at it; none: as they always did
 const campPanelWingTarget = (C, row) => { const u = row.wing[1] === 'attack' && typeof campTgtNow === 'function' ? campTgtNow(C) : null; return u ? u.id : null; }; // an order to a part of the wing: Attack goes at the target (none picked: the verb's own, the nearest enemy); Guard is the cruiser, Mine the nearest ore
 function campPanelRun(C, row, how, item) {
   if (!C || !row) return { ok: false, say: '' };
   row = campPanelAs(C, row);
   if (row.open) return { ok: true, say: '', open: row.open }; // a part's row: the caller opens its list
+  if (row.sel) { // Attack and Guard the target act on the selection, at once, as E and R do: no second list, and none selected is said in words (never the nearest picked for the player, never the cruiser guarded by a side door)
+    const sl = campSelRowFor(C, row.sel); if (sl.code && campWing(C, 'fighter').length) return campNo(sl.code); // no fighters out: the order's own refusal first
+    return campSelOrder(C, row.sel === 'hostile' ? 'attack' : 'guard', how || 'key');
+  }
   if (item && row.pick === 'enemy') C.tgt = item.id; // the hostile that was chosen is THE target now: the attack below goes at it, and P fly to the target and Enter a missile follow it
   else if (item && row.pick === 'escort') return campWingOrder(C, row.wing ? row.wing[0] : 'fighters', 'escort', item.id, how || 'key'); // the squads (or the one squad of the row) go to the ship that was chosen (a convoy ship or a miner)
   else if (item && row.pick === 'guard') return campWingOrder(C, row.wing[0], 'guard', item.id, how || 'key'); // the squad guards the ship or outpost that was chosen, in formation beside it (src/campwing.js campWingGuardStep ends it when the ship is lost or safe)
@@ -171,6 +179,7 @@ function campPanelRun(C, row, how, item) {
 // ---- the live state of a row ----
 function campPanelWhy(r) {
   const W = CAMP_PANELS.why; let t = W[r.code] || W.what;
+  if (r.code === 'nohostile' || r.code === 'nofriend') t = uiText('camp.w.' + r.code + '.state'); // the keys that pick, read from the key table (a remap follows)
   if (r.code === 'noore2') { const m = /(\d+) needed/.exec(r.say || ''); t = t.replace('{need}', m ? m[1] : '?'); }
   if (r.code === 'cooling') { const m = /in (\d+) seconds/.exec(r.say || ''); t = t.replace('{s}', m ? m[1] : '?'); }
   return t;
@@ -189,6 +198,7 @@ function campPanelState(C, row) {
   const sq = campPanelSquadOf(row);
   if (row.cost) return campPanelCost(C, row); // a yard row: what it costs (now)
   if (sq) { const n = campWingShips(C, sq).length, tg = row.wing && row.wing[1] === 'attack' ? campPanelTarget(C) : null; return tg ? tg.name + ', ' + tg.km + ' km' : n + (n === 1 ? ' ship out' : ' ships out'); } // a squad's row: the target the attack goes at, else how many of its ships are out
+  if (row.sel) { const sl = campSelRowFor(C, row.sel); if (!sl.code) return campSelWho(C) + ', ' + campNavKm(campDist(sl.unit, C.carrier)) + ' km'; } // who takes the order, and how far it is
   switch (row.id) {
     case 'launch': case 'slaunch': return C.bay.fighters + ' fighters';
     case 'attack': { const tg = campPanelTarget(C); return tg ? tg.name + ', ' + tg.km + ' km' : campWing(C, 'fighter').length + ' fighters out'; } // the target, when one is picked
@@ -222,6 +232,7 @@ function campPanelShortState(C, row) {
   const sq = campPanelSquadOf(row);
   if (row.cost) return campPanelCost(C, row, true);
   if (sq) { const tg = row.wing && row.wing[1] === 'attack' ? campPanelTarget(C) : null; return tg ? tg.km + ' km' : campWingShips(C, sq).length + ' out'; }
+  if (row.sel) { const sl = campSelRowFor(C, row.sel); if (!sl.code) return campNavKm(campDist(sl.unit, C.carrier)) + ' km'; }
   switch (row.id) {
     case 'launch': case 'slaunch': return C.bay.fighters + ' in bay';
     case 'attack': return campWing(C, 'fighter').length + ' out';
@@ -248,6 +259,12 @@ function campPanelRowState(C, row) {
   row = campPanelAs(C, row);
   const ok = () => ({ ok: true, state: campPanelState(C, row), short: campPanelShortState(C, row) }), no = (why, sh) => ({ ok: false, state: CAMP_PANELS.why[why] || CAMP_PANELS.why.what, short: CAMP_PANELS.shortWhy[sh || why] || CAMP_PANELS.shortWhy.what });
   if (row.open) return ok(); // a part's row is always open to go into
+  if (row.sel) { // acts on the selection: grey while none is picked (with the keys that pick), or while the order has a refusal of its own (no fighters out)
+    const verb = row.sel === 'hostile' ? 'attack' : 'guard', sl = campSelRowFor(C, row.sel);
+    if (sl.code && !campWing(C, 'fighter').length) { const r = campSelOrder(C, verb, 'key', true); return { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; }
+    if (sl.code) return { ok: false, state: campPanelWhy({ code: sl.code }), short: campPanelShortWhy({ code: sl.code }) }; // pick one first, with the keys
+    const r = campSelOrder(C, verb, 'key', true); return r.ok ? ok() : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) };
+  }
   if (row.pick === 'enemy' && !campTgtNow(C) && !campTgtList(C).length) { const r = row.wing ? campWingOrder(C, row.wing[0], row.wing[1], null, 'key', true) : campCheck(C, row.order, ''); return r.ok ? no('nofoe') : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; } // Attack with no hostile to attack: grey, and why (a refusal of its own comes first: no fighters out)
   if (row.pick === 'guard' && !campPickItems(C, 'guard').length) { const r = campWingOrder(C, row.wing[0], 'guard', null, 'key', true); return r.ok ? no('noguard') : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; } // Guard the target with nothing to guard: grey, and why (a refusal of its own comes first: no ships of the squad out)
   if (row.wing) { const r = campWingOrder(C, row.wing[0], row.wing[1], campPanelWingTarget(C, row), 'key', true); return r.ok ? ok() : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; }

@@ -31,6 +31,7 @@
 //   row:    { id, order, arg, wing, fly, burn, blink, open, stay, when, label, help }   order is a campOrder name (src/campaign.js: the words the strip and the voice use; arg goes with it); wing: [group, verb] is an order to one part of the wing
 //           (campWingOrder, src/campwing.js: a squad or 'fighters'; Attack goes at the target); fly: 'objective' or 'target' is the autopilot (src/campnav.js), burn: 1 makes it a fast burn; blink: 1 is the warp blink; open: '<list id>' opens that part's list;
 //           pick: 'enemy' | 'escort' | 'field' | 'guard' | 'ward' makes it a row that needs a target: one candidate is taken at once, several open a sub-list of them, Esc goes back (src/camppick.js, card space-game-order-target-pick);
+//           sel: 'hostile' | 'friend' makes it a row that acts on what is SELECTED already ([ ] S the hostile, A D the friend: src/camptarget.js campSelOrder, the rule of E R T): it names it ("Attack Raider 3"), gives the order at once, and is grey with a hint while none is picked (card space-game-w-uses-selection);
 //           stay: 1 leaves the list open after the order (a pip of power: it is given again and again); when: 'convoy' | 'blink' | 'outpost' leaves the row out of a mission that can never use it (campPanelWhen, src/camppanel.js);
 //           label is the row's words in the list, help its line for a hint. A row's id is its own in the whole table (a hint finds the row, and the list it is in, by it)
 // the rows of the DOCK AND REPAIR list (U), from a table (card space-game-ship-shortcuts-o-power made it one; card space-game-repair-with-ore, Troy, 22 Nov 2026, swapped the Build rows for Repair rows: nothing builds ships any more).
@@ -67,10 +68,10 @@ const CAMP_PANELS = {
     ] },
     { id: 'squads', parent: 'fleet', side: 'left', key: 'W', code: 'KeyW', title: 'ALL SQUADS', tab: 'All', name: 'the all-squads list', start: 'usable', rows: [ // all the fighters at once: the bay's Launch first (so Q, Enter, Enter launches everything), then the three squads' orders (cards space-game-fighter-squads, space-game-squad-tint)
       { id: 'launch', order: 'launch', label: 'Launch the wing', help: 'Launch the ships in the bay' },
-      { id: 'attack', order: 'attack', pick: 'enemy', label: 'Attack the target', help: 'All squads attack the target' }, // the target of A D S X; none picked: the one hostile, or a sub-list of them to choose from (pick, src/camppick.js)
+      { id: 'attack', order: 'attack', sel: 'hostile', label: 'Attack the target', help: 'All squads attack the selected hostile' }, // the hostile [ ] S picked (card space-game-w-uses-selection: no second list to choose from; the row names it, and is grey, with a hint, while none is picked)
       { id: 'escort', order: 'escort', pick: 'escort', label: 'Escort the convoy', help: 'All squads go to the convoy' }, // the squads' own order (it was the escorts'): a convoy ship or a miner is picked (src/camppick.js); none in the level: the squads stay by the cruiser
       { id: 'fguard', wing: ['fighters', 'guard'], label: 'Guard the cruiser', help: 'All squads guard the cruiser' },
-      { id: 'fguardt', wing: ['fighters', 'guard'], pick: 'guard', label: 'Guard the target', help: 'All squads guard a ship or outpost you pick' }, // card space-game-guard-the-target (Troy, 22 Nov 2026): the ships you protect and the outposts; one is taken at once, several open the target sub-list (src/camppick.js)
+            { id: 'fguardt', wing: ['fighters', 'guard'], sel: 'friend', label: 'Guard the target', help: 'All squads guard the selected friend' }, // the ship you protect that A D picked (card space-game-w-uses-selection, Troy, 23 Nov 2026; it was a pick list of ships and outposts, card space-game-guard-the-target): the row names it, and is grey, with a hint, while none is picked
       { id: 'frecall', wing: ['fighters', 'recall'], label: 'Recall', help: 'All squads fly home to the bay' },
       { id: 'fmine', wing: ['fighters', 'mine'], pick: 'field', label: 'Mine ore', help: 'All squads mine ore' }
     ] },
@@ -103,7 +104,7 @@ const CAMP_PANELS = {
   // the same, a word or two, beside a row of the list
   shortWhy: { over: 'over', bay: 'bay empty', launching: 'leaving', baydry: 'all out', nofighters: 'none out', nosquad: 'none out', noconvoy: 'no convoy', nowing: 'none out', cnone: 'no convoy', cwhat: 'not now',
     noore: 'no ore near', noore2: 'needs {need} ore', noearth: 'no Earth', what: 'not now', mending: 'mending', farward: 'too far', noward: 'none hurt', nobuild: 'no building',
-    nogoal: 'no goal', nofoe: 'none seen', there: 'there', noguard: 'none to guard', docked: 'docked', noposts: 'no outpost', whichpost: 'no post', farpost: 'too far', hotdock: 'foes near', hullfull: 'hull sound', powermax: 'at full', powernone: 'none free', powerwhat: 'which?', locked: 'held', cooling: '{s} s',
+    nogoal: 'no goal', nofoe: 'none seen', nohostile: 'pick one', nofriend: 'pick one', there: 'there', noguard: 'none to guard', docked: 'docked', noposts: 'no outpost', whichpost: 'no post', farpost: 'too far', hotdock: 'foes near', hullfull: 'hull sound', powermax: 'at full', powernone: 'none free', powerwhat: 'which?', locked: 'held', cooling: '{s} s',
     notarget: 'no target', nomissiles: 'none left', missilewait: 'reloading', range: 'too far', nobig: 'none near', noblink: 'no tech' }
 };
 // the direct keys of the Campaign (the scene reads the codes here; a hint names the cap): { k: the cap or caps a hint prints, codes: the KeyboardEvent.codes that do it }. One key, one meaning, everywhere in flight

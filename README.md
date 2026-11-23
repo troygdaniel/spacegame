@@ -53,7 +53,7 @@ One list per hand, with shortcut keys. **`W` opens the all-squads list** at the 
 | Key | What it does |
 |---|---|
 | `Q` | **all three pilots** at once as the friend you picked: the next `E` `R` `T` goes to all three (no pop-up; `A` `D` still pick one pilot or a ship) |
-| `W` | **all squads**: Launch the wing, Attack the target, Guard the cruiser, Guard the target, Recall, Mine ore (it opens on Launch while ships are in the bay and on Attack once the wing is out: `W`, Enter launches everything) |
+| `W` | **all squads**: Launch the wing, Attack the target, Guard the cruiser, Guard the target, Recall, Mine ore (it opens on Launch while ships are in the bay and on Attack once the wing is out: `W`, Enter launches everything). **Attack and Guard the target act on what you picked**: the row names it ("Attack Raider 3") and Enter sends the squads at once, or the one pilot you picked; with nothing picked the row is grey and says to pick one (`[` `]` `S` the hostile, `A` `D` the ship to guard) |
 | `P` | **power**, which opens right under the three gauges at the top right: Shields, Engines and Weapons, each with its pip bar (the gauge's twin: both light together; the highlighted row frames its gauge), Enter gives one more pip and the list stays open; then Balance the power, Emergency shields, and Warp blink ahead once you have that tech (it was a row of the ship list, which is switched off) |
 | `O` | **autopilot**: Fly to the goal, Fly to the target, Fast burn to the goal, Fast burn to the target |
 | `U` | **dock and repair**: Dock at the outpost (where there is one), Repair the hull (anywhere, for ore), Repair a ship we protect (when it is near) |
