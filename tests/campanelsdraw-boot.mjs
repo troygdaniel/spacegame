@@ -125,24 +125,26 @@ async function campaign() {
     check('Esc in a list its own key opened (W) closes it: that is the end, it does not drop into Q or P, and the battle is not paused', (await isOpen()) === '' && (await j(`${PL}.title.visible`)) === false && (await j(`${SC}.mode`)) === 'play');
     await press(t, 'KeyQ', 20); await press(t, 'ArrowDown', 20); await press(t, 'KeyW', 20); await t.run(300);
     check('W from the fleet list opens the all-squads list on its first row that can be given (wherever the highlight was), and W again closes everything', (await isOpen()) === 'squads' && (await j(`${P}.at`)) === (await firstGiven()) && (await press(t, 'KeyW', 20), await t.run(200), await isOpen()) === '' && (await j(`${PL}.title.visible`)) === false);
-    // the target sub-list (card space-game-order-target-pick): Attack with several hostiles and no target picked opens a list of them; Down moves the highlight (the flight view reveals the one it is on), Esc goes back to the list it came from, Enter gives the order at the highlighted one
+    // Attack the target acts on the hostile that is PICKED ([ ] S; card space-game-w-uses-selection: no sub-list any more): with hostiles about and none picked the row is grey and Enter on it refuses; ] picks the nearest one and the row names it; Enter gives the order at it
     await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; campSpawn(C, 'raider', c.x + 520, c.y - 200); campSpawn(C, 'raider', c.x + 900, c.y + 330); return 1; })()`); await press(t, 'KeyX', 20); await t.run(300);
     check('no target is picked, and the target display is not there', (await j(`${SC}.camp.tgt`)) === '' && (await isOpen()) === '' && (await j(`!${SC}.hud.tdisp || !${SC}.hud.tdisp.pic.visible`)) === true);
+    const attackRow = () => j(`campPanelRows(${SC}.camp, 'squads').find(r => r.id === 'attack')`);
     if ((await goTo('attack')) === true) {
+      const a0 = await attackRow(), o0 = await j(`${SC}.camp.orders.attack | 0`);
       await press(t, 'Enter', 20); await t.run(400);
-      const pk = await j(`(${P}.pick ? { kind: ${P}.pick.kind, ids: ${P}.pick.ids.slice(), sel: ${P}.pick.sel, row: ${P}.pick.row } : null)`), tgt0 = await j(`${SC}.camp.tgt`);
-      check('Enter on Attack with several hostiles and no target opens a target sub-list over the list it came from: no order is given, the target is still none, a row for each hostile', !!pk && pk.kind === 'enemy' && pk.ids.length >= 2 && pk.sel === pk.ids[0] && tgt0 === '' && (await isOpen()) !== '' && (await shownRows()).length === pk.ids.length, JSON.stringify(pk) + ' | ' + JSON.stringify(await shownRows()));
+      check('Enter on the grey Attack row (hostiles about, none picked) refuses: no sub-list, no order, the target is still none, the list stays open', !!a0 && a0.ok === false && a0.label === 'Attack the target' && (await j(`${P}.pick`)) === null && (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.camp.orders.attack | 0`)) === o0 && (await isOpen()) === 'squads', JSON.stringify(a0));
       await snap(t, 'pick-list');
-      await press(t, 'ArrowDown', 20); await t.run(400);
-      const sel1 = await j(`${P}.pick && ${P}.pick.sel`);
-      check('Down moves the highlight to the next hostile (the flight view reveals it: a bracket, and a zoom out if it is off the screen)', !!pk && sel1 === pk.ids[1] && (await j(`${SC}.camp.tgt`)) === '', String(sel1));
+      await press(t, 'KeyW', 20); await t.run(200); await press(t, 'BracketRight', 20); await t.run(400); const near = await j(`${SC}.camp.tgt`);
+      await press(t, 'KeyW', 20); await t.run(300);
+      const a1 = await attackRow();
+      check('] picks the nearest hostile (the flight view reveals it) and W opens on Attack, the row naming it: "Attack <name>"', near !== '' && !!a1 && a1.ok === true && a1.label === 'Attack ' + (await j(`campTgtName(${SC}.camp)`)) && (await isOpen()) === 'squads' && (await j(`campPanelList(${SC}.camp, 'squads')[${P}.at].id`)) === 'attack', a1 && a1.label);
       await snap(t, 'pick-list-second');
       await press(t, 'Escape', 20); await t.run(300);
-      check('Esc in the sub-list goes back to the list it came from (still open, the highlight on Attack), and gives no order', !!pk && (await j(`${P}.pick`)) === null && (await isOpen()) !== '' && (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.mode`)) === 'play');
-      await press(t, 'Enter', 20); await t.run(300); await press(t, 'Enter', 20); await t.run(400);
-      check('Enter on Attack again, then Enter on the first row (the nearest threat) gives the order at it: it is the target now, and the lists are closed', !!pk && (await j(`${SC}.camp.tgt`)) === pk.ids[0] && (await isOpen()) === '' && (await j(`${P}.pick`)) === null, await j(`${SC}.camp.tgt`));
+      check('Esc closes the list (the one W opened) and gives no order: the picked hostile is still the target', (await isOpen()) === '' && (await j(`${SC}.camp.tgt`)) === near && (await j(`${SC}.camp.orders.attack | 0`)) === o0 && (await j(`${SC}.mode`)) === 'play');
+      await press(t, 'KeyW', 20); await t.run(300); await press(t, 'Enter', 20); await t.run(400);
+      check('W, Enter on "Attack <name>" gives the order at it at once: it stays the target, and the lists are closed', (await j(`${SC}.camp.tgt`)) === near && (await isOpen()) === '' && (await j(`${P}.pick`)) === null && (await j(`${SC}.camp.orders.attack | 0`)) > o0, await j(`${SC}.camp.tgt`));
       await press(t, 'KeyX', 20); await t.run(200);
-    } else console.log('  note the target sub-list check was skipped: the Attack row is not in this mission\'s list');
+    } else console.log('  note the Attack row check was skipped: the Attack row is not in this mission\'s list');
     // I: the power list; a power row leaves the list open (a pip more, and more)
     const pw0 = await j(`${SC}.camp.power.p`), sAt = await listAt('power', 'shields');
     await press(t, 'KeyO', 20); for (let i = 0; i < sAt; i++) await press(t, 'ArrowDown', 20); await t.run(300);
