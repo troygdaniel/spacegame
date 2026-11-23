@@ -253,6 +253,19 @@ const CAMP = {
     jink: { aspect: 0.32, range: 520, rate: { fighter: 2, raider: 0.8 }, time: [0.45, 0.85], every: { fighter: 1.2, raider: 2.5 } }, // a ship with an enemy's nose on it (within aspect rad, range px) throws itself aside: a chance of rate a second (the wing's pilots do it more than the aliens'), once in every s, for time s
     pair: { range: 1500, keep: 2400, every: 600 } // the pairing: a fighter and a raider within range px of each other fight one on one, and the pair holds until a ship is lost or they are keep px apart; looked at every ms
   },
+  flight: {                                // FLIGHTS (card space-game-fighter-flight; src/campflight.js): a squad guards or escorts in a loose formation beside and behind what it protects, not in a circle round it
+    beside: 150,                           // px: how far from the edge of the thing (its radius is added) the leader of a squad flies
+    anchors: [                             // where each squad's leader flies, in the protected thing's own frame (back: forward is +, so - is behind; side: right is +), as a share of that distance: red, green, yellow in the order of CAMP.wing.squads
+      { back: -0.6, side: -1 },            // red: the port quarter, a little behind
+      { back: -0.6, side: 1 },             // green: the starboard quarter
+      { back: -1.8, side: 0 }              // yellow: astern
+    ],
+    gap: 60,                               // px between the ships of a flight: a wingman is this far behind and this far (times vee.side) out from the one before
+    vee: { back: 0.9, side: 0.8 },         // the vee: a row of two wingmen, left and right, is gap * back behind its leader and gap * side out from him; the next pair a row farther
+    reach: 700,                            // px: an alien this near what a flight guards is a threat the flight breaks off to meet (as it was); or one within 450 px of the ship itself
+    catchUp: 220,                          // px: farther than this from its slot a ship points where it is flying; nearer, its nose goes the way of what it flies beside
+    rest: -Math.PI / 2                     // rad: the heading a flight takes beside a place or a point, which has no nose (north)
+  },
   stances: ['free', 'orbit', 'keep', 'match', 'hold'], // the stances, in the order of the panel's second page: free is how the wing always flew (the pirates' own steering)
   convoy: {
     hp: 200,                               // hit points of a freighter
@@ -1582,7 +1595,7 @@ function campWingAI(C, u, dt) {
   } else if (o.type === 'escort') {
     const cv = C.by[o.target];
     if (!cv || cv.hp <= 0) { u.order = { type: 'guard', at: { kind: 'carrier' } }; return; }
-    foe = campNearest(aliens, cv, 650); if (!foe) { const a = (o.slot || 0) * 2.4 + C.t / 4000; home = { x: cv.x + Math.cos(a) * k.beside, y: cv.y + Math.sin(a) * k.beside, vx: cv.vx, vy: cv.vy }; }
+    foe = campNearest(aliens, cv, 650); if (!foe) home = campFlightSlot(C, u, cv); // beside the convoy ship, in the squad's formation (src/campflight.js), not round it
   } else if (o.type === 'hold') { // (src/campwing.js) fly to the point and stay there: brake, turn to what is in range and fire
     const hp = o.at || c; if (campDist(u, hp) > CAMP.wing.holdAt) return campSeek(u, hp.x, hp.y, dt);
     const fo = campNearest(aliens, u, k.range + 40), keep = Math.pow(0.04, dt); u.vx *= keep; u.vy *= keep; u.x += u.vx * dt; u.y += u.vy * dt;
@@ -1591,7 +1604,7 @@ function campWingAI(C, u, dt) {
   } else if (o.type === 'fetch') { // (src/campwing.js) fly over the ore or the cache (a ship of ours takes what it touches), fighting what comes within 320 px; when it is gone, back to guarding the carrier
     const ft = campWingLive(C, o.tg); if (!ft || (ft.kind === 'cache' && C.caches[+String(ft.id).slice(6)] && C.caches[+String(ft.id).slice(6)].got)) { u.order = { type: 'guard', at: { kind: 'carrier' } }; return; }
     foe = campNearest(aliens, u, 320); if (!foe) home = ft;
-  } else if (o.type === 'mine') { // fight what comes within 320 px; else take a chunk or a wreck lying about, or cut the nearest rock (a laser from the ship); with none, circle the carrier and wait for more
+  } else if (o.type === 'mine') { // fight what comes within 320 px; else take a chunk or a wreck lying about, or cut the nearest rock (a laser from the ship); with none, wait beside the carrier in formation for more
     foe = campNearest(aliens, u, 320);
     const safe = r => !aliens.some(a => campDist(a, r) < CAMP.ore.danger), want = o.target ? C.rocks.find(r => r.id === o.target && r.hp > 0) || C.pickups.find(q => q.id === o.target) : null; // a rock or ore named by the order, while it is there
     const pk = want ? (C.pickups.indexOf(want) >= 0 ? want : null) : campNearest(C.pickups.filter(safe), u), rk = want ? (C.pickups.indexOf(want) >= 0 ? null : want) : campNearest(C.rocks.filter(r => r.hp > 0 && safe(r)), u);
@@ -1601,12 +1614,12 @@ function campWingAI(C, u, dt) {
         const dx = u.x - rk.x, dy = u.y - rk.y, d = Math.hypot(dx, dy) || 1, L = CAMP.laser;
         home = { x: rk.x + dx / d * L.hold, y: rk.y + dy / d * L.hold, vx: 0, vy: 0 };
         if (d - rk.r <= L.range) { campRockHit(C, rk, L.dps * (C.dt || CAMP.step)); C.laserNow.push({ from: u.id, to: rk.id, kind: 'rock' }); u.rot = campRot(u.rot, Math.atan2(rk.y - u.y, rk.x - u.x), 0.4); C.events.push({ type: 'laser', src: 'drone', id: u.id, x: u.x, y: u.y, tx: rk.x + dx / d * rk.r * 0.6, ty: rk.y + dy / d * rk.r * 0.6, rock: rk.id }); }
-      } else { const a = (parseInt(u.id.split('-')[1], 10) || 0) * 0.9 + C.t / 3500; home = { x: c.x + Math.cos(a) * 330, y: c.y + Math.sin(a) * 330, vx: c.vx || 0, vy: c.vy || 0 }; }
+      } else home = campFlightSlot(C, u, c); // nothing to mine: beside the cruiser, in formation (it was a circle round it)
     }
-  } else { // guard: a point (the carrier, a place, a convoy) is circled; an alien that comes within reach of it, or of this ship, is fought
+  } else { // guard: a flight holds its slots beside a point (the carrier, a place, a convoy; src/campflight.js); an alien that comes within reach of it, or of this ship, is fought, and the flight flies back to its slots when it is gone
     const at = o.at || { kind: 'carrier' }, p = at.kind === 'carrier' ? c : at.kind === 'place' ? campPlaces(C.level)[at.id] : at.kind === 'point' ? at : C.by[at.id] || c;
-    foe = campNearest(aliens, p, 700) || campNearest(aliens, u, 450); if (foe) foe = campDogFoe(C, u, foe, 1000); // a partner within reach is the one it fights
-    if (!foe) { const a = (u.id.length * 1.7 + (parseInt(u.id.split('-')[1], 10) || 0) * 0.9) + C.t / 3500; home = { x: p.x + Math.cos(a) * 330, y: p.y + Math.sin(a) * 330, vx: p.vx || 0, vy: p.vy || 0 }; }
+    foe = campNearest(aliens, p, CAMP.flight.reach) || campNearest(aliens, u, 450); if (foe) foe = campDogFoe(C, u, foe, 1000); // a partner within reach is the one it fights
+    if (!foe) home = campFlightSlot(C, u, p); // no threat: hold the slot beside what is guarded, at its speed and heading (src/campflight.js); it was a circle round it
   }
   if (C.stance !== 'free' && (o.type === 'attack' || o.type === 'guard')) return campStanceMove(C, u, k, foe, home, dt); // a stance: how this ship moves while it attacks or guards (below)
   if (foe) {
@@ -1615,7 +1628,7 @@ function campWingAI(C, u, dt) {
     if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
     campWingFire(C, u, k, foe, dist, dog ? m.aim : target, m.fire);
     u.move = u.move || null;
-  } else if (home) campSeek(u, home.x + (home.vx || 0) * 0.2, home.y + (home.vy || 0) * 0.2, dt);
+  } else if (home) { if (home.fly) campStation(u, home, dt, campDist(u, home) > CAMP.flight.catchUp ? null : home.face); else campSeek(u, home.x + (home.vx || 0) * 0.2, home.y + (home.vy || 0) * 0.2, dt); } // a slot of a flight is flown to at its own speed, the nose its way
 }
 
 // one shot of a fighter or an escort, if it may fire, the gun is on the target and in range
