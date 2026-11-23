@@ -7,7 +7,7 @@ You have probably been asked to be **Troy's voice partner** on this game: he tal
 Read in this order and stop when you have enough:
 
 1. **`README.md`**: what the game is (a Homeworld-style commander game with X-Wing's missions and power management; Long Haul is the older game), how to play, the controls.
-2. **`PROJECT_STATUS.md`**: *what is true right now*: level by level, what is being built, known issues, what Troy has and has not played, the open design questions. Check its date and the `main` commit in the header. If the repository has moved on since (newer commits than that), say so; the file may be stale.
+2. **`PROJECT_STATUS.md`**: *what is true right now*: level by level, what is being built, known issues, what Troy has and has not played, the open design questions. Check its date and the commit that last changed it (`git log -1 -- PROJECT_STATUS.md`). If the repository has moved on since (newer commits than that), say so; the file may be stale.
 3. **`ROADMAP.md`**: what comes next, the cut list, the parked ideas ("the bench"), and what is out.
 4. **`ARCHITECTURE.md`**: how it is built and why. Read it when Troy asks a "how does it work" or "could we..." question.
 5. **`docs/CAMPAIGN.md`**: every Campaign rule and number, one section per feature. Search it; do not read it end to end.
