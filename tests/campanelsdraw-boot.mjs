@@ -104,7 +104,7 @@ async function campaign() {
     await press(t, 'KeyQ', 20); await press(t, 'KeyP', 20); await t.run(300);
     const shipLabels = await drawnAs('ship');
     check('P with the fleet list open closes it and opens the ship list: one list at a time', (await isOpen()) === 'ship' && (await j(`${P}.at`)) === 0 && (await j(`${PL}.title.text`)) === 'P   SHIP ORDERS');
-    check('its rows are the ship rows of this mission (Autopilot, Power, Dock and build, each with its key O I U in a cap), and they fit', JSON.stringify(await shownRows()) === JSON.stringify(shipLabels.slice(0, show)) && (await shownCaps()).slice(0, 3).join() === (await j(`['nav', 'power', 'yard'].map(id => campKeyList(id).key).join()`)) && (await shownCaps()).slice(0, 3).join() === 'O,I,U' && (await fits()) === true, JSON.stringify(await shownRows()) + ' ' + JSON.stringify(await shownCaps()));
+    check('its rows are the ship rows of this mission (Power, Autopilot, Dock and repair, each with its key O I U in a cap), and they fit', JSON.stringify(await shownRows()) === JSON.stringify(shipLabels.slice(0, show)) && (await shownCaps()).slice(0, 3).join() === (await j(`['power', 'nav', 'yard'].map(id => campKeyList(id).key).join()`)) && (await shownCaps()).slice(0, 3).join() === 'O,I,U' && (await fits()) === true, JSON.stringify(await shownRows()) + ' ' + JSON.stringify(await shownCaps()));
     await snap(t, 'ship-list');
     await press(t, 'KeyP', 20); await t.run(200);
     check('P again closes it', (await isOpen()) === '' && (await j(`${PL}.title.visible`)) === false);
@@ -151,8 +151,8 @@ async function campaign() {
     } else console.log('  note the target sub-list check was skipped: the Attack row is not in this mission\'s list');
     // I: the power list; a power row leaves the list open (a pip more, and more)
     const pw0 = await j(`${SC}.camp.power.p`), sAt = await listAt('power', 'shields');
-    await press(t, 'KeyI', 20); for (let i = 0; i < sAt; i++) await press(t, 'ArrowDown', 20); await t.run(300);
-    check('I opens the power list directly, at the right, headed with its key, the highlight on "Shields: one more pip"', (await isOpen()) === 'power' && (await j(`${PL}.title.text`)) === 'I   POWER' && (await j(`${HI}.name.text`)) === (await rowLabel('shields')) && JSON.stringify(await shownRows()) === JSON.stringify(await drawnAs('power')) && (await j(`${PL}.keys.text`)) === (await foot('camp.ui.listkeysub', 'I')) && (await fits()) === true, (await j(`${PL}.title.text`)) + ' | ' + JSON.stringify(await shownRows()));
+    await press(t, 'KeyO', 20); for (let i = 0; i < sAt; i++) await press(t, 'ArrowDown', 20); await t.run(300);
+    check('O opens the power list directly, at the right, headed with its key, the highlight on "Shields: one more pip"', (await isOpen()) === 'power' && (await j(`${PL}.title.text`)) === 'O   POWER' && (await j(`${HI}.name.text`)) === (await rowLabel('shields')) && JSON.stringify(await shownRows()) === JSON.stringify(await drawnAs('power')) && (await j(`${PL}.keys.text`)) === (await foot('camp.ui.listkeysub', 'O')) && (await fits()) === true, (await j(`${PL}.title.text`)) + ' | ' + JSON.stringify(await shownRows()));
     await snap(t, 'power-list');
     await press(t, 'Enter', 20); await t.run(300);
     const pw1 = await j(`${SC}.camp.power.p`);
