@@ -63,7 +63,6 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.rival | The rival ship |
 | camp.ui.tune.row.repair | Hurt fighters fly home to be mended |
 | camp.ui.tune.row.convoyorders | Convoy orders |
-| camp.ui.tune.row.stance | The wing's stances |
 | camp.ui.tune.row.autofire | Turrets fire by themselves |
 | camp.ui.tune.row.laser | Turret charge (the lasers run dry) |
 | camp.ui.tune.row.hints | The first-minute hints |

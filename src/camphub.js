@@ -117,10 +117,10 @@ function campHubSelect(H, P) {
 }
 // A save from an older version meets missions that changed: the ones before the next with no result show as skipped. The ready room says so ONCE (src/camphubscene.js campHubOldNote: a flag of its own beside the save, not a key of it; this half has no storage)
 const campHubOldSave = P => campHubBoard(P).some(r => !r.head && r.state === 'passed');
-// START OVER: the last row of the Missions list. The first Enter asks, the second does it (any other key takes the question back); what is kept is the stance and the ending seen
+// START OVER: the last row of the Missions list. The first Enter asks, the second does it (any other key takes the question back); what is kept is the ending seen
 const campHubOverRow = P => campHubSelectable(P).length; // the cursor's place on that row
 function campHubStartOver(H, P) {
-  const keep = { revealed: P.revealed, stance: P.stance }, fresh = campProgressNew();
+  const keep = { revealed: P.revealed }, fresh = campProgressNew();
   Object.keys(P).forEach(k => { delete P[k]; }); Object.assign(P, fresh, keep);
   H.cur = Math.max(0, campHubSelectable(P).findIndex(r => r.state === 'next')); H.pick = null; H.ask = false;
 }

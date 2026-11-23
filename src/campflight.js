@@ -42,13 +42,13 @@ function campStrafe(C, u, foe, dist, th) {
 }
 
 // ---------- a wingman covers its leader (card space-game-fighter-flight: "a wingman covering the leader") ----------
-//   campFlightCover(C, u)   for a wingman: the nearest alien (to the leader) that is within CAMP.flight.cover.range of its leader with its nose on him; else null (and always null for the leader). Attack with no target named and Guard use it first
+//   campFlightCover(C, u)   for a wingman: the nearest dogfighter (raider, skiff) to the leader that is within CAMP.flight.cover.range of its leader with its nose on him; else null (and always null for the leader). Attack with no target named and Guard use it first
 function campFlightCover(C, u) {
   if (u.kind !== 'fighter') return null;
   const lead = campFlightMembers(C, u)[0]; if (!lead || lead === u || lead.hp <= 0) return null;
   const K = CAMP.flight.cover; let best = null, bd = K.range;
   for (const s of campAliens(C)) {
-    if (s.hp <= 0 || s.rot == null || s.kind === 'mother' || s.kind === 'tower') continue; // these aim without turning: not counted (campDogThreat)
+    if (s.hp <= 0 || s.rot == null || !campDogIs(s)) continue; // a tail to be shot off the leader is a dogfighter's (a raider, a skiff): the bigger ones are strafed by the whole flight, not covered against
     const d = Math.hypot(s.x - lead.x, s.y - lead.y); if (d >= bd) continue;
     if (Math.abs(campWrap(Math.atan2(lead.y - s.y, lead.x - s.x) - s.rot)) < K.aspect) { best = s; bd = d; }
   }

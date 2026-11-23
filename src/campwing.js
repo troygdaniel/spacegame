@@ -272,7 +272,7 @@ function campWingState(C) {
     else if (o.type === 'escort' && o.target) { const u = C.by[o.target]; target = u && u.hp > 0 ? campWingShipTarget(C, u) : null; }
     else if (o.type === 'guard' && o.at && o.at.kind === 'place') target = campWingPlaceTarget(C, o.at.id);
     else if (o.type === 'hold' && o.at) target = { kind: 'point', id: 'point', name: 'that point', x: o.at.x, y: o.at.y, r: 0, ref: '' };
-    out.push({ id, name: campWingGroupName(C, id), n: ships.length, order: o.type, mixed: keys.length > 1, stance: C.stance || 'free', target, center: { x: cx, y: cy },
+    out.push({ id, name: campWingGroupName(C, id), n: ships.length, order: o.type, mixed: keys.length > 1, target, center: { x: cx, y: cy },
       ships: ships.map(u => ({ id: u.id, kind: u.kind, x: u.x, y: u.y, scout: !!u.scout })), line: target ? { from: { x: cx, y: cy }, to: { x: target.x, y: target.y } } : null });
   });
   return out;

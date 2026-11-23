@@ -122,7 +122,7 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.call\.(line|r)\.|^camp\.call\.(late|fail)$/, spoken: 'campaign.chatter', voice: 'pilots' }, // a pilot's call for orders and his answers (card space-game-order-calls): said in a pilot's voice, like the radio's lines
   { re: /^camp\.chat\./, spoken: 'campaign.chatter', voice: 'pilots' },                             // the wing's radio: any pilot may say any line
   { re: /^camp\.end\./, spoken: 'campaign.end', voice: 'ship' },                                    // the reveal's ending (card space-game-campaign-reveal)
-  { re: /^camp\.(rank|stance|sys|scout|anom|reveal)\./, spoken: 'campaign.cards', voice: 'ship' },  // the cards that follow: ranks, stances, systems, scouts, anomalies: spoken until a card says a key of them is only shown (a silent rule above this line)
+  { re: /^camp\.(rank|sys|scout|anom|reveal)\./, spoken: 'campaign.cards', voice: 'ship' },  // the cards that follow: ranks, systems, scouts, anomalies: spoken until a card says a key of them is only shown (a silent rule above this line)
   { re: /^camp\.ui\.score$/, spoken: 'campaign.debrief', voice: 'ship' },                          // the debrief says the score (a number: kept live)
   // ---- silent: shown, never said ----
   { re: /^camp\.bf\.\d+\.\d+\.w\d$/, why: 'the other steps of a mission\'s walkthrough: on the big briefing, for the eyes (only the first is read, once, when it opens)' },

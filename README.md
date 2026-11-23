@@ -51,7 +51,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 
 | Key | What it does |
 |---|---|
-| `Q` | the **fleet list**, a row for each part of the wing and nothing else: All squads, the Red, Green and Yellow squads, Escorts (Escort the convoy, Attack the target, Guard the cruiser, Recall the escorts), Convoy (Tuck in, Run for it, Hold here, Carry on) and Stance |
+| `Q` | the **fleet list**, a row for each part of the wing and nothing else: All squads, the Red, Green and Yellow squads, Escorts (Escort the convoy, Attack the target, Guard the cruiser, Recall the escorts) and Convoy (Tuck in, Run for it, Hold here, Carry on) |
 | `W` | **all squads**: Launch the wing, Attack the target, Guard the cruiser, Recall, Mine ore (it opens on Launch while ships are in the bay and on Attack once the wing is out: `W`, Enter or `Q`, Enter, Enter launches everything) |
 | `E` | the **red squad**: Attack the target, Guard the cruiser, Recall |
 | `R` | the **green squad**: Attack the target, Guard the cruiser, Recall |

@@ -9,7 +9,7 @@
 //   campBriefRoute(Y)                 { px, km, regular, fast, near }: from the start to the mission's place: km and the Fast flight are campTravel's (the HUD's own), the regular flight the map's rule (campNavEta)
 //   campBriefWalk(level, i)           { steps: [text], data: bool }: the walkthrough from the content file (camp.bf.<level>.<mission>.w1 ...), or a plain fallback line when the mission has none
 //   campBriefEnemies(level, i)        { list: [{ kind, n, text }], line }: what the mission's waves, guards and towers add up to, in words
-//   campBriefReady(P, level, i)       { lines: [text], warnings: [text] }: the wing, the rank, the stance, the missiles, the ore, the power setting, the shield, and a warning for what is off (the Hold stance: the only thing that can be off in the ready room, where the whole wing is in the bay and the magazine and shield are full; the power setting is a line, the saved one)
+//   campBriefReady(P, level, i)       { lines: [text], warnings: [text] }: the wing, the rank, the missiles, the ore, the power setting, the shield, and a warning for what is off (nothing can be: the whole wing is in the bay and the magazine and shield are full in the ready room; the power setting is a line, the saved one)
 //   campBriefNav(screen, code)        { screen, act }: what a key does on one of the three screens (the pure half of campBriefKey): Enter or Right the next screen, Left the one before, Enter on the last one (or L anywhere) launches, Esc closes
 //   campBriefView(Y, zoom, z, view, z0)  { base, fit }: the map's view: the area of zoom 0 1 2 fitted to the frame, then z (+ - 0 and the wheel, 0.5 to 8 times) about the mission's place, as the Tab map does (campMapView)
 //   campBriefSteps(P, level, i)       { goals, bonus }: the goals as steps, each with its picture (campBriefPicture: parts drawn from the game's own sprites), then the bonus objectives with what they earn
@@ -111,15 +111,14 @@ function campBriefEnemies(level, i) {
 // ---- readiness: what you fly it with, and what is off ----
 function campBriefReady(P, level, i) {
   const wing = typeof campRankWing === 'function' ? campRankWing(P) : { fighters: CAMP.bay.fighters + ((P.bonus || {}).fighters | 0), escorts: CAMP.bay.escorts + ((P.bonus || {}).escorts | 0) };
-  const rank = typeof campRank === 'function' ? campRank(P).name : '', stance = (P.stance && CAMP.stances && CAMP.stances.indexOf(P.stance) >= 0) ? P.stance : 'free';
+  const rank = typeof campRank === 'function' ? campRank(P).name : '';
   const missiles = CAMP.missile.magazine, ore = P.ore | 0; // (a mission starts with the full magazine, a full shield and the whole wing in the bay: the ready room has no ship out, so none of that is ever a warning here)
   const lines = [uiText('camp.bf.ready.bay', { f: wing.fighters, e: wing.escorts })];
   if (rank) lines.push(uiText('camp.bf.ready.rank', { name: rank }));
   const pw = typeof campPowerLoad === 'function' ? campPowerLoad() : CAMP.power.start.slice(), cap = Math.round(CAMP.carrier.shield * CAMP.power.shields.cap[pw[1]]); // the ship's systems (card space-game-campaign-systems): the setting saved in this browser is what the battle starts with, and the shield's cap follows the shields' pips
-  lines.push(uiText('camp.bf.ready.stance', { name: uiText('camp.bf.stance.' + stance) }), uiText('camp.bf.ready.stock', { missiles, ore }), uiText('camp.bf.ready.power', { w: pw[0], s: pw[1], e: pw[2] }), uiText('camp.bf.ready.shield', { cap }));
+  lines.push(uiText('camp.bf.ready.stock', { missiles, ore }), uiText('camp.bf.ready.power', { w: pw[0], s: pw[1], e: pw[2] }), uiText('camp.bf.ready.shield', { cap }));
   const warnings = [];
-  if (stance === 'hold') warnings.push(uiText('camp.bf.warn.hold'));
-  return { lines, warnings, wing, rank, stance, power: pw, shield: cap };
+  return { lines, warnings, wing, rank, power: pw, shield: cap };
 }
 
 // ---- the three screens ----

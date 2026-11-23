@@ -40,7 +40,7 @@ check('the table is the one place: change a row of it (a stand-in for a Repair r
 check('camppanel.js has no per-row case for the builds any more (the cost words come from the row\'s cost)', !/case 'buildf'|case 'builde'/.test(src('src/camppanel.js')));
 
 // ---- D. nothing else moved ----
-check('the lists have the rows they had: 7 fleet, 4 convoy, 5 squads, 3+3+3, 4 escorts, 5 stance, 4 ship, 5 power, 4 autopilot, 3 dock; the direct keys J K L ; are as they were', J(`CAMP_PANELS.panels.map(p => p.rows.length).join()`) === '7,4,5,3,3,3,4,5,4,5,4,3' && J(`['shields', 'engines', 'weapons', 'balance'].map(id => CAMP_KEYS[id].codes[0]).join()`) === 'KeyJ,KeyK,KeyL,Semicolon');
+check('the lists have the rows they had: 6 fleet, 4 convoy, 5 squads, 3+3+3, 4 escorts, 4 ship, 5 power, 4 autopilot, 3 dock; the direct keys J K L ; are as they were', J(`CAMP_PANELS.panels.map(p => p.rows.length).join()`) === '6,4,5,3,3,3,4,4,5,4,3' && J(`['shields', 'engines', 'weapons', 'balance'].map(id => CAMP_KEYS[id].codes[0]).join()`) === 'KeyJ,KeyK,KeyL,Semicolon');
 check('the bots and the shot tool use the table (rows by id, lists by campKeyVia), not a letter: no KeyO or KeyI in tools/campaign-bot.mjs', !/Key[OI]\b/.test(src('tools/campaign-bot.mjs')));
 
 console.log(failed ? `\nCAMP SHORTCUTS FAIL (${failed} of ${n})` : `\nCAMP SHORTCUTS PASS (${n} checks)`); process.exit(failed ? 1 : 0);
