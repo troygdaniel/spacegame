@@ -507,7 +507,7 @@ console.log('L. ore: asteroid rocks and wrecks, mining, the carrier shield (it m
   // nothing builds ships any more (card space-game-repair-with-ore): the order "build" says so and costs nothing, docked or not; tests/camprepairore.mjs has the repairs
   N("home"); g.run('C.ore = 100; C.docked = "luna"');
   const b1 = J(`campOrder(C, 'build', 'fighter')`);
-  check('Build a fighter: refused with the reason and what to do instead, nothing spent, nothing queued, even docked', !b1.ok && b1.code === 'nobuild' && /mend them with ore/i.test(b1.say) && J('C.ore') === 100 && J('typeof C.build') === 'undefined');
+  check('Build a fighter: refused with the reason and what to do instead, nothing spent, nothing queued, even docked', !b1.ok && b1.code === 'nobuild' && /mend with ore/i.test(b1.say) && J('C.ore') === 100 && J('typeof C.build') === 'undefined');
   g.run('__new2("home", [], 1); C.ore = 200; campOrder(C, "launch"); __run(6)');
   check('the wing of a mission is the bay it started with: launched, the three pilots are out (and no more)', J(`campWing(C, 'fighter').length`) === 3);
   // plain words
