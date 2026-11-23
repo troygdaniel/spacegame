@@ -1,0 +1,112 @@
+// smoke: what flying missions 1.2 and 1.3 by hand found (card space-game-hunt-l1-pacing): a torpedo boat leaves your mining fighters alone, and the last raid of 1.2 is not called the third (plain Node, no Chrome)
+// Missions 1.2 and 1.3 were rebuilt as beats (card l1-pacing) and then flown by hand in the real game (tests/huntl1pacing-boot.mjs; what was seen: docs/night/hunt-l1-pacing.md). Each bug found there is pinned here.
+//   A. the torpedo boats of 1.2 and the wing on a Mine order: a boat's prey is the miners, the haulers and the cruiser, never a fighter or an escort, whatever the wing's order is (a skiff still hunts a mining fighter)
+//   C. a beat's hint (the line with the keys) waits a few seconds after the beat's radio line: the screen has one message box, and the hint was replaced on the frame it was put up
+//   D. Enter just after a call closed by itself (its ship gone, its time out) is swallowed for a moment: it was the call's, and it fired a missile
+//   E. funds over the store (CAMP.ore.cap) are left behind when the debrief closes: the radio at the sale, the dock room and the debrief say so; the rule is unchanged
+//   B. the words: the radio never names a ship by a bare kind id ("fighter"), and the heavy raid of 1.2, the fifth wave, is not announced as "a third raid"
+// Run: node tests/camphuntpacing.mjs   (exit code 1 on a failed check)
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+process.argv.length = 2; // the bot tool reads its options from the command line: none
+const bot = await import('../tools/campaign-bot.mjs');
+const g = typeof bot.botGame === 'function' ? bot.botGame() : bot.botGame;
+const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
+let failed = 0, n = 0;
+const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
+
+console.log('A. torpedo boats and the wing that mines');
+{
+  // A wing ship on a Mine order is "a mining ship" to a pirate skiff (campPreyKind, src/camppirates.js). A torpedo boat is not a skiff: its prey is the haulers, the miners and the cruiser, never a fighter or an escort
+  // (src/camptorpedo.js says so at its top), whatever the wing's order. In 1.2 the boats come "for the miners" at 175 s, when the wing is mining: a boat armed on a fighter ("Torpedo boat arming on fighter."), and
+  // Tuck in, what the hint says to do, cannot cover a fighter (cards space-game-hunt-l1-pacing, finding A, and space-game-l1-pacing-bugs).
+  const r = J(`(() => { const out = [];
+    for (const seed of [1, 2, 3]) { const C = campNew(1, [], { seed, mission: 1 }); const seen = {}, fired = {}; let mined = false, cut = false, miningThen = 0;
+      for (let i = 0; i < 235 * 30 && !C.result; i++) { campStep(C, 1 / 30); const s = campMissionClock(C);
+        if (i === 30) campOrder(C, 'launch');
+        if (s >= 8 && !mined) { mined = campWingOrder(C, 'fighters', 'mine', '').ok; }
+        if (s >= 170 && !cut) { cut = true; C.ships.forEach(u => { if (u.kind === 'miner') u.hp = 0; }); miningThen = campWing(C, 'fighter').filter(u => u.order && u.order.type === 'mine').length; } // the miners are gone before the boats come: the only "mining ships" left are your own fighters
+        campTorpedoBoats(C).forEach(b => { const t = C.by[b.tgt]; if (t) seen[t.kind] = 1; });
+        C.events.forEach(e => { if (e.type === 'torpedo' && e.stage === 'launch') { const t = C.by[e.target]; fired[t ? t.kind : '?'] = 1; } });
+        C.events.length = 0; }
+      out.push({ seed, mined, miningThen, seen: Object.keys(seen), fired: Object.keys(fired) }); }
+    return out; })()`);
+  check('the flights are the case: fighters were on Mine ore when the boats came, and the boats picked a target', r.every(x => x.mined && x.miningThen >= 2 && x.seen.length > 0), JSON.stringify(r));
+  check('a torpedo boat never goes for a fighter or an escort, even one on a Mine order: with the miners gone it goes for the cruiser', r.every(x => x.seen.join() === 'carrier'), JSON.stringify(r.map(x => x.seen)));
+  check('no torpedo is launched at a fighter or an escort', r.every(x => x.fired.indexOf('fighter') < 0 && x.fired.indexOf('escort') < 0), JSON.stringify(r.map(x => x.fired)));
+  const lone = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 1 }); for (let i = 0; i < 60; i++) campStep(C, 1 / 30); campOrder(C, 'launch'); for (let i = 0; i < 300; i++) campStep(C, 1 / 30); campWingOrder(C, 'fighters', 'mine', '');
+    C.ships.forEach(u => { if (u.kind === 'miner') u.hp = 0; }); const f = campWing(C, 'fighter').sort((a, b) => campDist(b, C.carrier) - campDist(a, C.carrier))[0]; const t = { x: f.x + 30, y: f.y, from: '' }; const hit = campTorpedoRetarget(C, t);
+    const e = campWing(C, 'escort')[0]; e.order = { type: 'mine' }; const b = { kind: 'tboat', x: e.x + 200, y: e.y, prey: 'miners' };
+    return { order: f.order && f.order.type, far: Math.round(campDist(f, C.carrier)), hit: hit ? hit.kind : null, boat: campTorpedoTarget(C, b).kind, skiff: campPreyKind(f) }; })()`);
+  check('a torpedo that lost its target does not turn on a mining fighter 30 px from it', lone.order === 'mine' && lone.hit !== 'fighter' && lone.hit !== 'escort', JSON.stringify(lone));
+  check('a boat sent for the miners, with an escort on a Mine order 200 px off and no miner left, goes for the cruiser', lone.boat === 'carrier', JSON.stringify(lone));
+  check('the pirates\' skiffs are unchanged: to them a fighter on a Mine order is still a mining ship', lone.skiff === 'miner', JSON.stringify(lone));
+}
+
+console.log('B. the words');
+{
+  const names = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 1 }); for (let i = 0; i < 60; i++) campStep(C, 1 / 30); campOrder(C, 'launch'); for (let i = 0; i < 300; i++) campStep(C, 1 / 30);
+    return C.ships.filter(u => u.hp > 0 && (u.team === 'earth' || u.team === 'neutral')).map(u => [u.kind, campTorpName(u)]); })()`);
+  check('every ship of yours and every neutral has a name in words for the torpedo lines', names.length >= 5 && names.every(([k, nm]) => nm && nm !== k), JSON.stringify(names.filter(([k, nm]) => nm === k)));
+  const mine = J(`CAMP.levels[1].missions[1].waves.map(w => uiText(w.say))`);
+  check('1.2 has five waves and the heavy raid is the last', mine.length === 5, String(mine.length));
+  check('the heavy raid, the fifth wave, is not announced as a third raid (it was the third of three before card l1-pacing)', !/third/i.test(mine[4]) && /heav/i.test(mine[4]), mine[4]);
+  check('no line of 1.2 counts the raids wrongly: "second" is only said of the second group', mine.every((s, i) => !/\b(third|fourth|fifth)\b/i.test(s) && (i === 2 || !/second/i.test(s))), JSON.stringify(mine));
+  check('the lines are curt: 12 words at most', mine.every(s => s.split(/\s+/).length <= 12), JSON.stringify(mine));
+}
+console.log('C. a hint is not put up in the same breath as the radio line of its beat');
+{
+  // The screen has ONE message box (toast, src/common.js): a new message takes the place of the one that is up. The hint of a beat ("Two groups, two sides. One squad each: E red, R green.") was due on the very step its wave
+  // came, and the wave's own radio line ("A second group, north-east. Split the squads.") was put up after it on the same frame: the hint, the line with the KEYS in it, was never on the screen (seen flying 1.2: the picture at 113 s).
+  g.run(`(() => { const step0 = campStep; window.__H = null; campStep = function (C, dt) { const r = step0.apply(null, arguments); if (window.__H) { const t = campNudge(C, window.__shown); if (t) window.__H.push([campMissionClock(C), t, C.waves.map(w => (w && w.started ? w.at : null))]); } return r; }; })()`);
+  const hints = (mission, name) => { g.run('window.__H = []; window.__shown = {}'); bot.run(1, 1, name, 'steady', [], 420, mission); const h = J('window.__H'); g.run('window.__H = null'); return h; };
+  const a = hints(1, 'guard'), b = hints(2, 'guard'), wait = J('CAMPL1HINT_WAIT');
+  const gap = (h, re, wave) => { const x = h.find(x => re.test(x[1])); return x ? x[0] - x[2][wave] : null; };
+  const gaps = [gap(a, /Two groups/, 2), gap(a, /Torpedo boats!/, 3), gap(b, /A torpedo boat!/, 1), gap(b, /last hauler/, 2), gap(b, /Not pirates/, 5)];
+  check('the wait is a few seconds: long enough for the radio line and the sensors\' "Contact" line (2 s after a wave) to be read, short enough to be of use', wait >= 3 && wait <= 6, String(wait));
+  check('each hint of a beat comes that long after its wave\'s own line, not on the same step (1.2: two groups, the boats; 1.3: the boat, the last hauler, first contact)', gaps.every(d => d != null && d >= wait && d < wait + 1.5), JSON.stringify(gaps));
+}
+console.log('D. Enter meant for a pilot\'s call does not fire a missile when the call has just closed by itself');
+{
+  // Enter answers a call, and with no call and no list open Enter fires a missile. A call closes by itself when the ship it is about is gone (a runner that got away) or its 8 s run out. Flying 1.3, the "running" call
+  // closed in the instant between Up and Enter, and the Enter fired one of the six missiles at nothing worth one ("Missile away."). For a moment after a call closes by itself, Enter is still the call's and does nothing.
+  const r = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 2 }); for (let i = 0; i < 90; i++) campStep(C, 1 / 30); C.call = C.call || campCallsNew(C); const s = { camp: C, mode: 'play', mp: null, pn: null };
+    const open = left => { C.call.open = { id: 'running', ctx: { ids: ['nobody-1'] }, pilot: 0, at: C.t, left, total: 8, def: 1, held: null }; };
+    const out = {}; out.before = campCallKey(s, 'Enter'); // no call yet: Enter is not the call's (it is the missile's)
+    open(8); out.has = campCallHasKeys(s); campCallsTick(C, 1 / 30); out.gone = !campCallOpen(C); out.atOnce = campCallKey(s, 'Enter'); out.arrow = campCallKey(s, 'ArrowDown');
+    C.t += CAMP_CALLS.grace * 1000 - 50; out.stillIn = campCallKey(s, 'Enter'); C.t += 100; out.after = campCallKey(s, 'Enter');
+    const u = C.ships.find(x => x.hp > 0 && x.team === 'earth'); C.call.open = { id: 'running', ctx: { ids: [u.id] }, pilot: 0, at: C.t, left: 0.01, total: 8, def: 1, held: null }; campCallsTick(C, 1 / 30); out.lateGone = !campCallOpen(C); out.late = campCallKey(s, 'Enter');
+    C.t += 5000; C.call.open = { id: 'running', ctx: { ids: [u.id] }, pilot: 0, at: C.t, left: 8, total: 8, def: 1, held: null }; out.answered = campCallKey(s, 'Enter'); out.closed = !campCallOpen(C); out.own = campCallKey(s, 'Enter'); // the player's own answer closes it: the next Enter is his, at once
+    out.grace = CAMP_CALLS.grace; return out; })()`);
+  check('the case: with no call Enter is not the call\'s; a call about a ship that is gone closes by itself', r.before === false && r.has === true && r.gone === true, JSON.stringify(r));
+  check('Enter in the moment after it closed is swallowed (no missile), and so for the whole grace; an arrow is not (the ship steers)', r.atOnce === true && r.stillIn === true && r.arrow === false, JSON.stringify(r));
+  check('after the grace (under a second) Enter is the missile\'s again', r.after === false && r.grace > 0.3 && r.grace < 1, JSON.stringify(r));
+  check('a call that ran out of time is the same: Enter just after it is swallowed', r.lateGone === true && r.late === true, JSON.stringify(r));
+  check('a call the player answered himself leaves no grace: his next Enter is a missile', r.answered === true && r.closed === true && r.own === false, JSON.stringify(r));
+}
+console.log('E. more cash and ore than the store carries on: the game says so');
+{
+  // Flying 1.2: "Sold 464 ore for 1392.", the dock room said "Ore in the store: 1392", and 1.3 began with ORE 500/500: a save holds CAMP.ore.cap at the most, and nothing said that 892 was left behind.
+  // The rule stands (Troy decides: docs/night/hunt-l1-pacing.md); the radio at the sale, the dock room's repair page and the debrief now say it (card space-game-l1-pacing-bugs).
+  const r = J(`(() => { const mk = ore => { const C = campNew(1, [], { seed: 1, mission: 1 }); for (let i = 0; i < 30; i++) campStep(C, 1 / 30); C.events.length = 0; C.ore = ore; const o = campOutposts(C.level).find(o => o.market); const sold = campSell(C, o);
+      return { sold, says: C.events.filter(e => e.type === 'say').map(e => [e.key, uiText(e.key, e.vars)]), over: campStoreOver(C), line: campOverLine(C), ore: C.ore, cash: C.cash }; };
+    return { big: mk(464), small: mk(150), none: mk(0), cap: CAMP.ore.cap, rate: campOutposts(1).find(o => o.market).market.rate }; })()`);
+  check('the case: 464 ore sells for 1,392 at the Works (3 a piece), and the store carries 500 on', r.big.sold && r.big.sold.cash === 1392 && r.cap === 500 && r.big.cash === 1392 && r.big.ore === 0, JSON.stringify([r.big.sold, r.cap]));
+  check('what is over is counted: 1,392 of funds, 500 carried, 892 over', r.big.over.funds === 1392 && r.big.over.cap === 500 && r.big.over.over === 892, JSON.stringify(r.big.over));
+  check('the radio says it at the sale, right after the sale\'s own line, with both numbers', r.big.says.length === 2 && r.big.says[0][0] === 'camp.say.sold' && r.big.says[1][0] === 'camp.say.soldover' && r.big.says[1][1] === 'Only 500 comes with us. Spend 892 here.', JSON.stringify(r.big.says));
+  check('the debrief has a line for it: what there is, what the store holds, what was left behind', r.big.line === 'Funds 1392. The store holds 500: 892 was left behind.', r.big.line);
+  check('a sale that fits says nothing more (150 ore for 450) and the debrief has no such line; with no ore nothing is sold', r.small.sold.cash === 450 && r.small.says.length === 1 && r.small.line === '' && r.small.over.over === 0 && r.none.sold === null && r.none.line === '', JSON.stringify([r.small.says, r.small.line, r.none.sold]));
+  const dock = J(`(() => { const lines = []; const C = campNew(1, [], { seed: 1, mission: 1 }); C.cash = 1392; C.ore = 0; const s = { d: { camp: C }, look: { name: 'Occator Works' }, time: { now: 0 }, line: (i, c, t) => lines.push(t) };
+    CAMP_HUBS.page.repair(s); const out = lines.slice(); lines.length = 0; C.cash = 300; CAMP_HUBS.page.repair(s); return { over: out, fits: lines.slice() }; })()`);
+  check('the dock room\'s repair page (the build page is gone: card space-game-repair-with-ore) says it under the ore line, while it can still be spent there, and not when it all fits', dock.over.indexOf('Only 500 leaves with you: 892 to spend here, or it is lost.') === dock.over.indexOf('Ore in the store: 1392') + 1 && dock.over.indexOf('Ore in the store: 1392') >= 0 && !dock.fits.some(t => /leaves with you/.test(t)), JSON.stringify(dock));
+  const scene = readFileSync(join(ROOT, 'src/campaignscene.js'), 'utf8');
+  check('the debrief card asks for that line (showDebrief)', /showDebrief\(sc\) \{[\s\S]{0,3000}campOverLine\(this\.camp\)/.test(scene));
+  const kept = J(`(() => { const k = 'longhaul.campaign', had = localStorage.getItem(k); localStorage.setItem(k, JSON.stringify({ level: 1, mission: 2, techs: [], ore: 1392, results: {} })); const P = campProgressLoad(); if (had == null) localStorage.removeItem(k); else localStorage.setItem(k, had); return P.ore; })()`);
+  check('the rule itself is unchanged: a save with 1,392 is read as 500 (the store), and a mission starts with 500 at the most', kept === 500 && J(`campNew(1, [], { seed: 1, mission: 2, ore: 1392 }).ore`) === 500, String(kept));
+  check('the three lines are short: the radio\'s 12 words at most, the others 14', J(`['camp.say.soldover', 'camp.hub.build.over', 'camp.ui.over'].map(k => uiText(k, { cap: 500, over: 892, funds: 1392 }).split(/\\s+/).length)`).every((n, i) => n <= (i ? 14 : 12)));
+}
+check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
+console.log(failed ? `\nHUNT L1 PACING FAIL (${failed} of ${n})` : `\nHUNT L1 PACING PASS (${n} checks)`);
+process.exit(failed ? 1 : 0);
