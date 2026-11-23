@@ -1,9 +1,7 @@
-// smoke: the Campaign's first-minute hints: open the all-squads list and pick Launch the wing, then pick a hostile and pick Attack the target (it goes at the hostile picked, with no list), once each, level 1 only (plain Node, no Chrome)
-// Card space-game-night-ux, finding 6 (docs/night/ux.md; src/campnudge.js, update in src/campaignscene.js). A player who reads "Launch the wing" and then flies about is told, at 6 s, 'Press W, pick "Launch the wing".
-// Or Q, "All squads", "Launch the wing".'; with the wing out and aliens about, at 26 s, 'Enemies. Pick one with the backslash, then W, "Attack the target": the fighters attack.' Each is shown once, never if the player has already done it, and only in level 1.
-// The keys in the hints are the key table's (cards one-list-keys and list-shortcuts: {vialaunch} and {viaattack} of src/data_controls.js, the key of the list each order is in), and so are the rows' words ({rowlaunch}, {rowattack}):
-// the hint says the row by its words, never "then Enter" (card space-game-cloud-followups: a list opens on its first usable row, and Attack with several hostiles opens a sub-list that wants a second Enter), and the player here gives the
-// orders exactly the way the hints say: the key, Down to the row named, Enter (and the sub-list's Enter). A digit is no order any more, so a player who presses 1 is still hinted.
+// smoke: the Campaign's first-minute hint: pick a hostile and press E (the pilots start out, so there is no launch hint), once, level 1 only (plain Node, no Chrome)
+// Card space-game-night-ux, finding 6 (docs/night/ux.md; src/campnudge.js, update in src/campaignscene.js). The pilots start each mission out beside the cruiser (card space-game-keys-orders) so the old launch hint is gone; the one hint left is at 26 s, with aliens about:
+// 'Enemies. Pick one with the backslash, then E: the pilots attack.' It is shown once, never if the player has already given an attack, and only in level 1. The keys in it are the key table's ({keynear}, {keyattack} of src/data_controls.js).
+// The player here does what it says: the pick key, then E.
 // Run: node tests/uxnudge.mjs   (exit code 1 on a failed check)
 import { readFileSync as __rf } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
@@ -25,40 +23,30 @@ g.run(`
     f.onKey({ code: 'Enter' }); return [open, i]; };
   window.__tick = s => { for (let i = 0; i < s * 30; i++) F.update(0, 1000 / 30); };
 `);
-const LAUNCH = 'Press W, pick "Launch the wing".', ATTACK = 'Enemies. Pick one with \\, then W, "Attack the target": the fighters attack.';
-check('the two hints read their keys AND the rows\' words from the key table and say the row by its words, not "then Enter" (card space-game-cloud-followups: "then Enter" is only true while the row is the one its list opens on, and Attack acts on the hostile picked, so the hint says to pick one first, card space-game-w-uses-selection): W is the key of the list "Launch the wing" is in and of the list "Attack the target" is in ({vialaunch}, {viaattack}), the rows are {rowlaunch} and {rowattack}, and there is no second way through the fleet list now (it is switched off, card space-game-q-selects-all)', J(`uiText('camp.nudge.launch')`) === LAUNCH && J(`uiText('camp.nudge.attack')`) === ATTACK && J(`'Press ' + campKeyVar('vialaunch') + ', pick "' + campKeyVar('rowlaunch') + '".'`) === LAUNCH && J(`'Enemies. Pick one with ' + campKeyVar('keynear') + ', then ' + campKeyVar('viaattack') + ', "' + campKeyVar('rowattack') + '": the fighters attack.'`) === ATTACK && J(`['camp.nudge.launch', 'camp.nudge.attack', 'camp.help.goalbay'].every(k => !/then Enter|, Enter/.test(UI_TEXT[k]))`) && J(`UI_TEXT['camp.nudge.launch'].includes('{vialaunch}') && UI_TEXT['camp.nudge.launch'].includes('{rowlaunch}') && UI_TEXT['camp.nudge.attack'].includes('{viaattack}') && UI_TEXT['camp.nudge.attack'].includes('{rowattack}') && UI_TEXT['camp.nudge.attack'].includes('{keynear}')`) && J(`[campKeyVia('launch').id, campKeyVia('launch').key, campKeyVia('attack').id, campKeyVia('attack').key]`).join() === 'squads,W,squads,W' && J(`(() => { const C = campNew(1, [], {}), P = campPanelNew(); campOrder(C, 'launch', ''); for (let i = 0; i < 30 * 8; i++) campStep(C, 1 / 30); campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y); campTgtNearest(C); campPanelGo(P, C, 'squads'); return campPanelList(C, 'squads')[P.at].id === 'attack'; })()`), J(`uiText('camp.nudge.launch')`) + ' | ' + J(`uiText('camp.nudge.attack')`));
-// a player who does nothing
+const ATTACK = 'Enemies. Pick one with \\, then E: the pilots attack.';
+check('the hint reads its keys from the key table and says them by their letters, not "then Enter": the pick key ({keynear}) and the order key ({keyattack}); the launch hint is gone with the Launch key (the pilots start out)', J(`uiText('camp.nudge.attack')`) === ATTACK && J(`'Enemies. Pick one with ' + campKeyVar('keynear') + ', then ' + campKeyVar('keyattack') + ': the pilots attack.'`) === ATTACK && J(`UI_TEXT['camp.nudge.attack'].includes('{keyattack}') && UI_TEXT['camp.nudge.attack'].includes('{keynear}')`) && J(`UI_TEXT['camp.nudge.launch'] === undefined && UI_TEXT['camp.help.goalbay'] === undefined`) && J(`CAMPNUDGE.map(h => h.id).join()`) === 'attack', J(`uiText('camp.nudge.attack')`));
+// a player who does nothing: the pilots are out from the first second
 g.run(`window.F = __fake(1); __tick(5.5);`);
-check('nothing is said in the first 5 seconds', J('__toasts.length') === 0);
-g.run(`__tick(1);`);
-check('at 6 s: "' + LAUNCH + '"', J('__toasts.map(t => t[1])').join('|') === LAUNCH && J('__toasts[0][0]') >= 6 && J('__toasts[0][0]') < 6.2, JSON.stringify(J('__toasts')));
+check('nothing is said in the first 5 seconds, and the three pilots are already out', J('__toasts.length') === 0 && J(`campWing(F.camp, 'fighter').length`) === 3 && J('F.camp.bay.fighters') === 0);
 g.run(`__tick(10);`);
-check('and it is not said again (the convoy\'s own message at 10 s is the only other)', J('__toasts.filter(t => /launch the wing/i.test(t[1])).length') === 1 && J('__toasts.some(t => /Convoy to Mars/.test(t[1]))'), JSON.stringify(J('__toasts')));
-// a player who presses the old key: a digit is no order (card one-list-keys), so the wing is still in the bay and the hint still comes
-g.run(`window.F = __fake(1); __tick(3); F.onKey({ code: 'Digit1' }); __toasts.length = 0; __tick(4);`);
-check('a player who pressed 1 at 3 s has launched nothing and is still told how', J('F.camp.orders.launch') === 0 && J('__toasts.filter(t => t[1] === ' + JSON.stringify(LAUNCH) + ').length') === 1, JSON.stringify(J('__toasts')));
-// a player who launches at 3 s
-g.run(`window.F = __fake(1); __tick(3); window.__how = __pick(F, 'launch'); window.__lit = [F.camp.orders.launch, campPanelOpen(F.pn)]; __toasts.length = 0; __tick(10);`);
-check('a player who launched at 3 s (W, Enter, as the hint says: the all-squads list opens on the row, the order is taken and the list closes) is never told to', J('__how').join() === 'squads,0' && J('__lit').join() === '1,' && !J('__toasts.some(t => /launch the wing/i.test(t[1]))'), JSON.stringify(J('__lit')) + JSON.stringify(J('__toasts')));
+check('nobody is told to launch (the convoy\'s own message at 10 s is the only word in the first 16 seconds)', J('__toasts.filter(t => /launch/i.test(t[1])).length') === 0 && J('__toasts.some(t => /Convoy to Mars/.test(t[1]))'), JSON.stringify(J('__toasts')));
 // the attack hint
 g.run(`__tick(14);`);
-check('with the wing out and aliens about, at 26 s, the second hint: "' + ATTACK + '"', J('__toasts.some(t => t[1] === ' + JSON.stringify(ATTACK) + ')') && J('(__toasts.find(t => /the fighters attack/.test(t[1])) || [0])[0]') >= 26 && J('(__toasts.find(t => /the fighters attack/.test(t[1])) || [99])[0]') < 26.5, JSON.stringify(J('__toasts')));
+check('with aliens about, at 26 s, the hint: "' + ATTACK + '"', J('__toasts.some(t => t[1] === ' + JSON.stringify(ATTACK) + ')') && J('(__toasts.find(t => /the pilots attack/.test(t[1])) || [0])[0]') >= 26 && J('(__toasts.find(t => /the pilots attack/.test(t[1])) || [99])[0]') < 26.5, JSON.stringify(J('__toasts')));
 g.run(`__tick(20);`);
-check('and not again', J('__toasts.filter(t => /the fighters attack/.test(t[1])).length') === 1);
-// the attack hint with SEVERAL hostiles about (mission 1.3 at 27 s): the row is grey until one is picked (the hint says the backslash first); a player who does what the hint says (the backslash, the key, the row "Attack the target") gives the order at once, with no list (card space-game-w-uses-selection)
-g.run(`window.F = __fake(1); __tick(3); __pick(F, 'launch'); __tick(20); campSpawn(F.camp, 'raider', F.camp.carrier.x + 900, F.camp.carrier.y); campSpawn(F.camp, 'raider', F.camp.carrier.x + 1400, F.camp.carrier.y + 200); window.__how0 = __pick(F, 'attack'); window.__sub = [!!F.pn.pick, F.camp.orders.attack, campPanelOpen(F.pn)]; campPanelClose(F.pn); campTgtNearest(F.camp); window.__how = __pick(F, 'attack'); window.__after = [!!F.pn.pick, F.camp.orders.attack, campPanelOpen(F.pn)];`);
-check('with two hostiles about and none picked, the row the hint names is refused (no sub-list, no order, the list stays open); after the backslash (the nearest is picked) the key and the row give the order at once and close the lists', J('__how').join() === 'squads,1' && J('__sub').join() === 'false,0,squads' && J('__after').join() === 'false,1,', JSON.stringify(J('__sub')) + JSON.stringify(J('__after')));
-g.run(`window.F = __fake(1); __tick(3); __pick(F, 'launch'); __tick(20); campSpawn(F.camp, 'raider', F.camp.carrier.x + 900, F.camp.carrier.y); campTgtNearest(F.camp); window.__how = __pick(F, 'attack'); /* the backslash, W, Attack: the hint's own steps (card space-game-w-uses-selection) */ window.__lit = [F.camp.orders.attack, campPanelOpen(F.pn)]; __toasts.length = 0; __tick(15);`);
-check('a player who ordered the attack before 26 s (the backslash, W, Enter, as the hint says: W opens the all-squads list directly, on Attack the target, its second row, once the wing is out) is never told to', J('__how').join() === 'squads,1' && J('__lit').join() === '1,' && !J('__toasts.some(t => /the fighters attack/.test(t[1]))'), JSON.stringify(J('__toasts')));
+check('and not again', J('__toasts.filter(t => /the pilots attack/.test(t[1])).length') === 1);
+// a player who does what the hint says: the pick key, then E, at once (no list, no second pick)
+g.run(`window.F = __fake(1); __tick(20); campSpawn(F.camp, 'raider', F.camp.carrier.x + 900, F.camp.carrier.y); campSpawn(F.camp, 'raider', F.camp.carrier.x + 1400, F.camp.carrier.y + 200); F.onKey({ code: 'Backslash' }); window.__tgt = F.camp.tgt; F.onKey({ code: 'KeyE' }); window.__after = [!!F.pn.pick, F.camp.orders.attack, campPanelOpen(F.pn), campWing(F.camp, 'fighter').every(u => u.order.type === 'attack' && u.order.target === __tgt)];`);
+check('with two hostiles about, the backslash picks the nearest and E sends all three pilots at it at once: no list, no sub-list', J('__tgt') !== '' && J('__after').join() === 'false,1,,true', JSON.stringify(J('__after')));
+g.run(`window.F = __fake(1); __tick(20); campSpawn(F.camp, 'raider', F.camp.carrier.x + 900, F.camp.carrier.y); F.onKey({ code: 'Backslash' }); F.onKey({ code: 'KeyE' }); __toasts.length = 0; __tick(15);`);
+check('a player who ordered the attack before 26 s (the backslash, E, as the hint says) is never told to', J('F.camp.orders.attack') === 1 && !J('__toasts.some(t => /the pilots attack/.test(t[1]))'), JSON.stringify(J('__toasts')));
 // the fine print
 g.run(`window.F = __fake(2); __tick(40);`);
-check('level 2 has no hints (the player has learnt the keys)', !J('__toasts.some(t => /Press [QE]|launch the wing|the fighters attack/i.test(t[1]))') && J('F.camp.t') >= 39000, JSON.stringify(J('__toasts')));
+check('level 2 has no hints (the player has learnt the keys)', !J('__toasts.some(t => /Press [QE]|launch the wing|the pilots attack/i.test(t[1]))') && J('F.camp.t') >= 39000, JSON.stringify(J('__toasts')));
 g.run(`window.F = __fake(1); F.onKey({ code: 'Escape' }); __tick(10);`);
 check('paused, the clock does not run and no hint is shown', J('__toasts.length') === 0 && J('F.camp.t') === 0);
-g.run(`window.F = __fake(1); __tick(8); F.init({ level: 1, seed: 5 }); F.camp = campNew(1, F.P.techs, F.opts); F.onKey({ code: 'Enter' }); __toasts.length = 0; __tick(7);`);
-check('the same scene started again (a retry runs init on the same object) hints again: the hint state is reset in init', J('__toasts.filter(t => t[1] === ' + JSON.stringify(LAUNCH) + ').length') === 1, JSON.stringify(J('__toasts')));
+g.run(`window.F = __fake(1); __tick(30); F.init({ level: 1, seed: 5 }); F.camp = campNew(1, F.P.techs, F.opts); F.onKey({ code: 'Enter' }); __toasts.length = 0; __tick(27);`);
+check('the same scene started again (a retry runs init on the same object) hints again: the hint state is reset in init', J('__toasts.filter(t => /the pilots attack/.test(t[1])).length') === 1, JSON.stringify(J('__toasts')));
 check('campNudge is quiet with no battle, no state, or a finished battle, and never throws', J('campNudge(null, {})') === null && J('campNudge({}, null)') === null && J(`campNudge(Object.assign(campNew(1, [], {}), { result: 'won', t: 9000 }), {})`) === null);
-check('the table is plain data: ids, the level, the second, a test, and words that are in content/text/ui.md', J('CAMPNUDGE.map(h => h.id).join()') === 'launch,attack' && J('CAMPNUDGE.every(h => h.level === 1 && h.at > 0 && typeof h.when === "function" && uiText(h.key) !== h.key)'));
-check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
-console.log(failed ? `UX NUDGE FAIL (${failed} of ${n})` : `UX NUDGE PASS (${n} checks)`);
-process.exitCode = failed ? 1 : 0;
+console.log(failed ? `\n${failed} of ${n} FAILED` : `\nAll ${n} checks passed.`);
+process.exit(failed ? 1 : 0);

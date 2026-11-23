@@ -1,7 +1,7 @@
 // smoke: the Campaign's bay gauge says what its numbers are (plain Node, no Chrome)
 // Card space-game-night-ux, finding 5 (docs/night/ux.md; paintHud in src/campaignscene.js). It read "BAY  6+2    OUT  0" and nothing said that was six fighters and two escorts (since card space-game-cut-escorts: eight fighters and no escorts). Now
 // "BAY  fighters 3   OUT 0" (labels first, so there is no plural to get wrong), kept to 40 letters so it stays clear of the toast band (which starts at x 364).
-// The wing is launched the way the pilot does it since the card one-list-keys: Q opens the fleet list, Down to "Launch the wing", Enter. A digit does nothing in flight.
+// The pilots start out in the game (card space-game-keys-orders); this suite starts them in the bay (CAMP.bay.startOut) to see the gauge change. A digit does nothing in flight.
 // Run: node tests/uxbay.mjs   (exit code 1 on a failed check)
 import { readFileSync as __rf } from 'node:fs';
 import { readFileSync } from 'node:fs';
@@ -27,8 +27,8 @@ g.run(`
 check('at the start: three fighters (the pilots), none out, in words', J('F.hud.bay.text') === 'BAY  fighters 3   OUT 0', J('F.hud.bay.text'));
 g.run(`F.onKey({ code: 'Digit1' }); for (let i = 0; i < 30 * 6; i++) F.update(0, 1000 / 30);`);
 check('a digit is no order in flight (card one-list-keys): after 1 and six seconds the gauge has not moved', J('F.hud.bay.text') === 'BAY  fighters 3   OUT 0', J('F.hud.bay.text'));
-g.run(`window.__at = __pick(F, 'squads', 'launch'); for (let i = 0; i < 30 * 6; i++) F.update(0, 1000 / 30);`);
-check('after Launch (W, Enter on the Launch row, the top of the all-squads list) the bay is empty and three are out', J('F.hud.bay.text') === 'BAY  fighters 0   OUT 3', J('F.hud.bay.text'));
+g.run(`campOrder(F.camp, 'launch', ''); for (let i = 0; i < 30 * 6; i++) F.update(0, 1000 / 30);`); // (there is no Launch key or row any more: the strip and the voice still have the order; card space-game-keys-orders)
+check('after the Launch order the bay is empty and three are out', J('F.hud.bay.text') === 'BAY  fighters 0   OUT 3', J('F.hud.bay.text'));
 g.run(`window.F = __fake(1); F.onKey({ code: 'Enter' }); F.camp.bay.fighters = 1; F.update(0, 33);`);
 check('one fighter has no plural to get wrong', J('F.hud.bay.text') === 'BAY  fighters 1   OUT 0');
 g.run(`window.F = __fake(2); F.onKey({ code: 'Enter' }); F.update(0, 33);`);
@@ -37,5 +37,7 @@ check('the line fits: 40 letters at most with three-digit numbers, and ends left
 check('the old words are still in the table (nothing else is removed)', J(`uiText('camp.ui.bay')`) === 'BAY' && J(`uiText('camp.ui.out')`) === 'OUT');
 check('the scene no longer builds the gauge from "+" and the numbers', !/C\.bay\.fighters \+ '\+'/.test(readFileSync(ROOT + '/src/campaignscene.js', 'utf8')));
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
+g.run('CAMP.bay.startOut = true; window.F = __fake(1); F.onKey({ code: "Enter" }); F.update(0, 33); CAMP.bay.startOut = false;');
+check('with the pilots starting out (the game): three out, none in the bay, in words', J('F.hud.bay.text') === 'BAY  fighters 0   OUT 3', J('F.hud.bay.text'));
 console.log(failed ? `UX BAY FAIL (${failed} of ${n})` : `UX BAY PASS (${n} checks)`);
 process.exitCode = failed ? 1 : 0;
