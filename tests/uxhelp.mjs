@@ -25,7 +25,7 @@ const kinds = {
   status: ['status', 'report', 'status report', 'how am I doing', 'how is the carrier', 'how is my hull', 'how is Earth', 'how are my fighters', 'how many fighters', 'how bad is it', 'hull', 'shield', 'how are we doing']
 };
 const goalNow = J('campObjective(C)').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // the goal line is whatever the level asks now (its wording is another change's)
-const said = { goal: new RegExp('^Your goal: ' + goalNow), keys: /^The arrow keys fly, Space fires\. Q opens the fleet list, P opens the ship list\.$/, map: /^Tab opens the level map\./, status: /^Hull 600 of 600\. Earth 100 percent\. 0 out, 8 in bay\.$/ };
+const said = { goal: new RegExp('^Your goal: ' + goalNow), keys: /^The arrow keys fly, Space fires\. Q opens the fleet list, P opens the ship list\.$/, map: /^Tab opens the level map\./, status: /^Hull 600 of 600\. Earth 100 percent\. 0 out, 3 in bay\.$/ };
 for (const [k, phrases] of Object.entries(kinds)) {
   const bad = phrases.filter(p => !said[k].test(help(p) || ''));
   check(`${k}: ${phrases.length} ways of asking are answered (${phrases.slice(0, 3).join(' / ')} ...)`, bad.length === 0, 'not answered: ' + bad.map(p => p + ' => ' + help(p)).join(' | '));
@@ -44,7 +44,7 @@ g.run(`C.carrier.hp = 412; C.earth.shield = C.earth.max * 0.5; campOrder(C, 'lau
 const st = help('status');
 check('a status says the carrier\'s hull now, Earth\'s shield in percent, the ships out and what is left in the bay', /^Hull 4\d\d of 600\. Earth \d+ percent\. \d out, \d in bay\.$/.test(st) && J('campWing(C).length') > 0 && st.includes(J('campWing(C).length') + ' out'), st);
 g.run(`var C2 = campNew(2, [], { seed: 3 }); var S2 = { scene: { key: 'Campaign' }, camp: C2 };`);
-check('on a level with no Earth (2 and 3) the status leaves Earth out, and the goal is that level\'s', /^Hull 600 of 600\. 0 out, 8 in bay\.$/.test(J('campHelp("status", C2)')) && /^Your goal: Gather resources: 0 of 2\. Press W, pick "Launch the wing"\.$/.test(J('campHelp("what do I do", C2)')), J('campHelp("status", C2)') + ' | ' + J('campHelp("what do I do", C2)'));
+check('on a level with no Earth (2 and 3) the status leaves Earth out, and the goal is that level\'s', /^Hull 600 of 600\. 0 out, 3 in bay\.$/.test(J('campHelp("status", C2)')) && /^Your goal: Gather resources: 0 of 2\. Press W, pick "Launch the wing"\.$/.test(J('campHelp("what do I do", C2)')), J('campHelp("status", C2)') + ' | ' + J('campHelp("what do I do", C2)'));
 g.run(`var C0 = campNew(1, [], { seed: 3 });`);
 check('with the wing still in the bay the goal adds the key to press, read from the key table ("Press W, pick Launch the wing.": {vialaunch} and {rowlaunch}); once it is out it does not', / Press W, pick "Launch the wing"\.$/.test(J('campHelp("what do I do", C0)')) && J(`UI_TEXT['camp.help.goalbay'].includes('{vialaunch}') && campKeyVar('vialaunch') === campKeyOpens(campKeyVia('launch').id)`) && (g.run(`campOrder(C0, 'launch', '')`), !/Press|Enter|launch the wing/i.test(J('campHelp("what do I do", C0)')) && /^Your goal: /.test(J('campHelp("what do I do", C0)'))), J('campHelp("what do I do", C0)'));
 g.run(`var C9 = campNew(1, [], { seed: 3 }); var P9 = campPanelNew(); var K9 = [campPanelKey(P9, C9, 'Digit1', 0)]; K9.push(campPanelKey(P9, C9, CAMP_PANELS.panels.find(p => p.key === campKeyVar('vialaunch')).code, 0)); var A9 = [P9.at, (campPanelList(C9, P9.open)[P9.at] || {}).id]; K9.push(campPanelKey(P9, C9, 'Enter', 0));`);

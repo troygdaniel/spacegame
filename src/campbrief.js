@@ -110,7 +110,7 @@ function campBriefEnemies(level, i) {
 
 // ---- readiness: what you fly it with, and what is off ----
 function campBriefReady(P, level, i) {
-  const wing = typeof campRankWing === 'function' ? campRankWing(P) : { fighters: CAMP.bay.fighters + ((P.bonus || {}).fighters | 0) };
+  const wing = typeof campRankWing === 'function' ? campRankWing(P) : { fighters: CAMP.pilotStrength + ((P.bonus || {}).fighters | 0) };
   const rank = typeof campRank === 'function' ? campRank(P).name : '';
   const missiles = CAMP.missile.magazine, ore = P.ore | 0; // (a mission starts with the full magazine, a full shield and the whole wing in the bay: the ready room has no ship out, so none of that is ever a warning here)
   const lines = [uiText('camp.bf.ready.bay', { f: wing.fighters })];

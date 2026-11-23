@@ -48,7 +48,7 @@ check('the places are named, Luna with its base, Earth in the Earth colour and t
 check('the convoy\'s line goes to the place it was sent to (Mars: its x and y)', (() => { const c = ms.find(m => m.type === 'convoy'), mars = J(`CAMP.places.mars`); return c.to.x === mars.x && c.to.y === mars.y; })());
 g.run(`campOrder(C1, 'launch', ''); __run(C1, 12);`);
 ms = J(`campMapMarks(C1)`); t = types(ms);
-check('after Launch the ships that left are on the map as the wing (the fighters), apart from the carrier', t.wing >= 6 && t.carrier === 1, JSON.stringify(t));
+check('after Launch the ships that left are on the map as the wing (the three pilots), apart from the carrier', t.wing === 3 && t.carrier === 1, JSON.stringify(t));
 g.run(`__run(C1, 40);`);
 ms = J(`campMapMarks(C1)`); t = types(ms);
 check('level 1 at 67 s: both convoys are flying and the first wave of aliens is on the map', t.alien >= 1 && t.convoy >= 1, JSON.stringify(t));

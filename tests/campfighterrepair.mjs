@@ -105,8 +105,8 @@ check('a fighter ABOVE 30 percent that is recalled lands as it always did: whole
 
 // ---- F. the radio
 console.log('F. the radio');
-run('__new(); campWing(C, "fighter").slice(0, 4).forEach(u => __hurt(u, 0.2)); campStep(C, 1 / 30);');
-check('four fighters hurt together are one radio call, not four', J('__says().filter(k => k === "camp.say.repairoff").length') === 1 && J('campWing(C, "fighter").filter(u => u.repair).length') === 4);
+run('__new(); campWing(C, "fighter").slice(0, 2).forEach(u => __hurt(u, 0.2)); campStep(C, 1 / 30);');
+check('two pilots hurt together are one radio call, not two (it was four fighters: card space-game-three-pilots)', J('__says().filter(k => k === "camp.say.repairoff").length') === 1 && J('campWing(C, "fighter").filter(u => u.repair).length') === 2);
 check('five seconds later the next one is a call again', (() => { run('C.events.length = 0; __go(5.2); campWing(C, "fighter").filter(u => !u.repair).slice(0, 1).forEach(u => __hurt(u, 0.1)); campStep(C, 1 / 30);'); return J('__says().filter(k => k === "camp.say.repairoff").length') === 1; })());
 const T = read('content/text/campaign-repair.md');
 const keys = ['camp.say.repairoff', 'camp.say.repairback', 'camp.say.repairdone', 'camp.ui.repair'];
@@ -131,8 +131,8 @@ console.log('H. fights in the sim');
 const fight = seed => J(`(() => { const C = campNew('home', [], { seed: ${seed} }); campOrder(C, 'launch'); let landed = 0, back = 0, said = [];
   for (let i = 0; i < 30 * 200 && !C.result; i++) { if (i % 150 === 40) campOrder(C, 'attack'); const was = C.repairs.length; campStep(C, 1 / 30); C.events.forEach(e => { if (e.type === 'dock' && e.repair) landed++; if (e.type === 'say' && /repair/.test(e.key)) said.push(e.key); }); C.events.length = 0; }
   return { result: C.result, t: Math.round(C.t), landed, mended: C.mended | 0, lost: C.lostShips, kills: C.kills, rep: C.repairs.length, said: said.length }; })()`);
-const runs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(fight); // ten seeds, not four: with eight fighters and no escort ship (card space-game-cut-escorts) the damage is spread and a fighter falls under 30 percent on one seed in two
-check('in a fight of level 1 with the wing at the aliens, fighters do land to be mended (on at least three of ten seeds) and are mended', runs.filter(r => r.landed > 0).length >= 3 && runs.every(r => r.mended <= r.landed), JSON.stringify(runs));
+const runs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(fight); // ten seeds, not four: with three pilots (card space-game-three-pilots; base main 981c198b) a pilot has three fighters' hull and falls under 30 percent on one seed in ten (it was one in two with eight fighters)
+check('in a fight of level 1 with the wing at the aliens, a pilot does land to be mended (on at least one of ten seeds) and is mended', runs.filter(r => r.landed > 0).length >= 1 && runs.every(r => r.mended <= r.landed), JSON.stringify(runs));
 check('the same seed repeats exactly (nothing random is added)', JSON.stringify(fight(3)) === JSON.stringify(runs[2]));
 check('every fight is won or at least ends by the clock: no ship is left stuck aboard forever (the repair list is empty or a fighter landed in the last 10 s)', runs.every(r => r.rep <= 3), JSON.stringify(runs.map(r => r.rep))); // 3 since card space-game-fighter-flight (it was 2): a fight can end with three fighters in the mending queue, which is the clock, not a ship stuck aboard
 const bot = J(`(() => { const out = []; for (const seed of [1, 2, 3]) { const C = campNew('home', [], { seed }); campOrder(C, 'launch'); for (let i = 0; i < 30 * 400 && !C.result; i++) { if (i % 150 === 40) campOrder(C, 'attack'); campStep(C, 1 / 30); C.events.length = 0; } out.push(C.result); } return out; })()`);

@@ -17,6 +17,6 @@ The words of the Campaign's ranks (card space-game-campaign-ranks): the names, o
 | camp.rank.commander.promo | Pilots ask to serve in your wing. |
 | camp.rank.captain.promo | A full wing now. Use it. |
 | camp.rank.commodore.promo | The whole fleet answers to you. |
-| camp.ui.promoted | PROMOTED: {name}. The bay holds {fighters} fighters. |
+| camp.ui.promoted | PROMOTED: {name}. The wing is {fighters} fighters strong. |
 | camp.ui.rank | Rank: {name}   {points} points   next: {next} at {at} |
 | camp.ui.ranktop | Rank: {name}   {points} points   the highest rank |

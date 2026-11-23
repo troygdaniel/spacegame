@@ -168,7 +168,7 @@ function campHubWing(P) {
     if (r && r.wing && Number.isFinite(r.wing.fighters)) return { fighters: r.wing.fighters | 0 };
   } catch (e) { /* the ranks card's trouble is not the room's */ }
   const b = P.bonus || {};
-  return { fighters: CAMP.bay.fighters + (P.techs.indexOf('bay2') >= 0 ? CAMP.tech.bay2.fighters : 0) + (b.fighters | 0) };
+  return { fighters: CAMP.pilotStrength + (P.techs.indexOf('bay2') >= 0 ? CAMP.tech.bay2.fighters : 0) + (b.fighters | 0) };
 }
 // what a tech changes, in plain words with the numbers it works from (the words are content/text/readyroom.md, camp.room.tech.<id>; the numbers are CAMP.tech and the carrier's own)
 const CAMP_HUB_TECHVARS = {
@@ -176,7 +176,7 @@ const CAMP_HUB_TECHVARS = {
   beam: t => ({ dmg: t.damage, from: CAMP.carrier.pdRange, to: Math.round(CAMP.carrier.pdRange * t.reach) }),
   blink: t => ({ dist: t.dist, secs: Math.round(t.cooldown / 1000) }),
   plating: t => ({ from: CAMP.carrier.hull, to: Math.round(CAMP.carrier.hull * t.hull) }),
-  bay2: (t, P) => { const from = P ? campHubWing(P).fighters - (P.techs.indexOf('bay2') >= 0 ? t.fighters : 0) : CAMP.bay.fighters; return { from, to: from + t.fighters }; }, // the bay the pilot really has (the rank's ships and the refit's count are in it: the hunt of levels 2 and 3), before the tech; with no pilot to ask, the table's bare bay
+  bay2: (t, P) => { const from = P ? campHubWing(P).fighters - (P.techs.indexOf('bay2') >= 0 ? t.fighters : 0) : CAMP.pilotStrength; return { from, to: from + t.fighters }; }, // the bay the pilot really has (the rank's ships and the refit's count are in it: the hunt of levels 2 and 3), before the tech; with no pilot to ask, the table's bare bay
   repair: t => ({ rate: t.rate, reach: t.reach }),
   overdrive: t => ({ from: CAMP.carrier.speed, to: Math.round(CAMP.carrier.speed * t.speed) }),
   lens: t => ({ from: CAMP.anomaly.sense, to: Math.round(CAMP.anomaly.sense * t.sense) })

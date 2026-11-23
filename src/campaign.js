@@ -129,11 +129,17 @@ const CAMP = {
     small: 10                              // hit points any other alien loses (a raider, a drone)
   },
   bay: {
-    fighters: 8,                           // fighters in the bay at the start: three squads of 3, 3 and 2 (card space-game-cut-escorts, Troy, 22 Nov 2026: the two escorts of the bay became fighters; there is no escort ship)
+    fighters: 3,                           // fighters in the bay at the start: THREE PILOTS, one for each squad (card space-game-three-pilots, Troy, 23 Nov 2026; CAMP.pilots). It was eight fighters in three squads of 3, 3 and 2: the pilot of a squad is as strong as the squad was (CAMP.pilotStrength)
     launchEvery: 600,                      // ms between ships leaving the bay once Launch is ordered
     mouth: [21, 19.5],                     // px from the carrier's centre (x along the nose, y to the side): where a launched ship appears, one side and then the other: just in front of the launch tube of a hangar pod (CAMP_ART.cruiser.launch)
     dockAt: 63                             // px: a recalled ship this close to the carrier lands (and is whole again when next launched)
   },
+  pilots: [                                // THE THREE PILOTS (card space-game-three-pilots; Troy, 23 Nov 2026: "one fighter replaces each squad: Wedge (red, the leader), Kara (green), Apollo (yellow)"; src/campwing.js campPilots). A pilot is one fighter that flies for a squad: its ship has u.pilot (the id here) and u.squad, and the squad's group ('red', 'green', 'yellow') is that one ship. The order is the order the squads fill
+    { id: 'wedge', name: 'Wedge', squad: 'red', lead: true },
+    { id: 'kara', name: 'Kara', squad: 'green' },
+    { id: 'apollo', name: 'Apollo', squad: 'yellow' }
+  ],
+  pilotStrength: 8,                        // the wing's strength at the start, in fighters' worth: Wedge 3, Kara 3 and Apollo 2, the sizes of the squads they replace. A pilot's hull and gun are a lone fighter's times its share (campPilotStrengths). What a rank, the bay2 tech or the Earth refit used to add as fighters is added to this, one at a time to the pilot who has the least (Wedge first on a tie), so the wing stays three ships
   route: {                                 // the fork in an escort's road (card space-game-scout-route; src/camproute.js, docs/CAMPAIGN.md "Scouting the route"). DORMANT since card space-game-cut-lane-fork (Troy, 22 Nov 2026: "remove picking a lane"): no mission row has a `route` now; a row that writes one still gets a fork
     wait: 45,                              // s a convoy holds at the fork for the player's word when the mission's route says nothing; then it takes the route's default lane
     reach: 70,                             // px: a convoy is at a waypoint (the fork, a lane's middle, the join) when it is this near it
@@ -203,9 +209,9 @@ const CAMP = {
     groups: {                              // three built-in groups, as data (a list of kinds, or of ship ids): numbered groups drop in later as C.groups[id] = { name, ships: [ids] }
       fighters: { name: 'Fighters', kinds: ['fighter'] },
       all: { name: 'All ships', kinds: ['fighter'] },                // the same ships as Fighters now (card space-game-cut-escorts: there is no escort ship)
-      red: { name: 'Red squad', kinds: ['fighter'], squad: 'red' },       // the fighters' three squads (card space-game-fighter-squads; Troy, 22 Nov 2026): a squad is the fighters whose u.squad is its id
-      green: { name: 'Green squad', kinds: ['fighter'], squad: 'green' },
-      yellow: { name: 'Yellow squad', kinds: ['fighter'], squad: 'yellow' }
+      red: { name: 'Wedge', kinds: ['fighter'], squad: 'red' },       // the fighters' three squads (card space-game-fighter-squads; Troy, 22 Nov 2026): a squad is the fighters whose u.squad is its id
+      green: { name: 'Kara', kinds: ['fighter'], squad: 'green' },
+      yellow: { name: 'Apollo', kinds: ['fighter'], squad: 'yellow' }
     },
     squads: ['red', 'green', 'yellow'],    // the squads in the order they fill: a fighter that leaves the bay joins the one with the fewest ships out (a tie goes to the first of these), so six are two and two and two and a seventh makes Red three; a ship lost or mended gives its place back
     squadColor: { red: 0xff5a4a, green: 0x3ee86a, yellow: 0xffd23a }, // a squad's colour: its RING in flight (src/campaignscene.js) and its dots on the map (src/campmapdraw.js), shown only for a squad in focus (card space-game-squad-rings; the fighters themselves are all drawn alike): three hues apart, bright on the dark
@@ -786,10 +792,12 @@ function campNew(level, techs, opts) {
     orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, repair: 0, mendship: 0, power: 0, balance: 0, emergency: 0, convoy: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
     result: null, why: '', docked: '' // docked: the id of the outpost the carrier is docked at ('' in flight; src/campoutpost.js)
   };
-  if (campHas(C, 'bay2')) C.bay.fighters += CAMP.tech.bay2.fighters;
-  if (opts.bonus) { C.bay.fighters += Math.max(0, opts.bonus.fighters | 0); } // the extras bought at the Earth refit
-  C.rank = Math.max(0, Math.min(CAMP.ranks.length - 1, opts.rank | 0)); // the rank of the pilot (src/campranks.js: from the scores of the missions flown): its extras fill the bay and lift the wing limit
-  { const rk = CAMP.ranks[C.rank]; C.bay.fighters += rk.fighters; }
+  C.strength = CAMP.pilotStrength; // the wing's strength in fighters' worth: three ships whatever it is (card space-game-three-pilots); campPilotStrengths shares it out
+  if (campHas(C, 'bay2')) C.strength += CAMP.tech.bay2.fighters;
+  if (opts.bonus) { C.strength += Math.max(0, opts.bonus.fighters | 0); } // the extras bought at the Earth refit
+  C.rank = Math.max(0, Math.min(CAMP.ranks.length - 1, opts.rank | 0)); // the rank of the pilot (src/campranks.js: from the scores of the missions flown): its extras make the three pilots stronger
+  { const rk = CAMP.ranks[C.rank]; C.strength += rk.fighters; }
+  C.pilotStr = campPilotStrengths(C.strength);
   Object.assign(C, { missiles: CAMP.missile.magazine, magazine: CAMP.missile.magazine, turretMul: 1, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0 }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks
   if (typeof campBeatsNew === 'function') campBeatsNew(C); // the beats of the mission (src/campbeats.js)
   C.route = null; if (typeof campRouteNew === 'function') campRouteNew(C); // a fork in the road (src/camproute.js): C.route, and the lanes' caches in C.caches
@@ -852,7 +860,7 @@ function campSpawn(C, kind, x, y) {
   u.faction = u.faction || (u.team === 'alien' ? 'alien' : u.team); // who it belongs to: 'earth', 'alien', 'pirate' or 'neutral'
   if (u.faction === 'alien') C.alienSeen = true; // the first alien of the battle: from here the ship computer's summary counts them (before it, on the rim, it does not name them: card space-game-night-hunt-l1-rim)
   u.maxHp = u.hp; u.nextShot = C.t + 600 + C.rng() * 900;
-  if (kind === 'fighter' && u.team === 'earth' && typeof campSquadNext === 'function') u.squad = campSquadNext(C); // the wing's fighter joins a squad (src/campwing.js)
+  if (kind === 'fighter' && u.team === 'earth' && typeof campSquadNext === 'function') { u.squad = campSquadNext(C); campPilotSet(C, u); } // the wing's fighter joins a squad (src/campwing.js) and is its pilot: its name, its hull and its gun (card space-game-three-pilots)
   C.ships.push(u); C.by[u.id] = u;
   return u;
 }
@@ -1299,7 +1307,7 @@ function campLaunch(C, again, order, squad) { // again: the kind of a fighter th
   const kind = again || C.launchQ.shift(), c = C.carrier, side = (C.launched % 2 ? 1 : -1), m = CAMP.bay.mouth, cs = Math.cos(c.rot), sn = Math.sin(c.rot); // out of the mouth of a hangar pod, one side and then the other
   const u = campSpawn(C, kind, c.x + cs * m[0] - sn * side * m[1], c.y + sn * m[0] + cs * side * m[1]); C.launched++;
   u.vx = c.vx + Math.cos(c.rot) * 140; u.vy = c.vy + Math.sin(c.rot) * 140; u.rot = c.rot;
-  if (squad && kind === 'fighter') u.squad = squad; // a fighter mended aboard rejoins its own squad
+  if (squad && kind === 'fighter') { u.squad = squad; campPilotSet(C, u); } // a pilot mended aboard flies again as itself, in its own squad
   u.order = order || { type: 'guard', at: { kind: 'carrier' } };
   C.events.push({ type: 'launch', id: u.id, kind });
 }
@@ -1513,7 +1521,7 @@ function campWingAI(C, u, dt) {
       else if (rk) { // a rock: go to the laser's hold distance from it and cut it
         const dx = u.x - rk.x, dy = u.y - rk.y, d = Math.hypot(dx, dy) || 1, L = CAMP.laser;
         home = { x: rk.x + dx / d * L.hold, y: rk.y + dy / d * L.hold, vx: 0, vy: 0 };
-        if (d - rk.r <= L.range) { campRockHit(C, rk, L.dps * (C.dt || CAMP.step)); C.laserNow.push({ from: u.id, to: rk.id, kind: 'rock' }); u.rot = campRot(u.rot, Math.atan2(rk.y - u.y, rk.x - u.x), 0.4); C.events.push({ type: 'laser', src: 'drone', id: u.id, x: u.x, y: u.y, tx: rk.x + dx / d * rk.r * 0.6, ty: rk.y + dy / d * rk.r * 0.6, rock: rk.id }); }
+        if (d - rk.r <= L.range) { campRockHit(C, rk, L.dps * (u.str || 1) * (C.dt || CAMP.step)); C.laserNow.push({ from: u.id, to: rk.id, kind: 'rock' }); u.rot = campRot(u.rot, Math.atan2(rk.y - u.y, rk.x - u.x), 0.4); C.events.push({ type: 'laser', src: 'drone', id: u.id, x: u.x, y: u.y, tx: rk.x + dx / d * rk.r * 0.6, ty: rk.y + dy / d * rk.r * 0.6, rock: rk.id }); }
       } else home = campFlightSlot(C, u, c); // nothing to mine: beside the cruiser, in formation (it was a circle round it)
     }
   } else { // guard: a flight holds its slots beside a point (the carrier, a place, a convoy; src/campflight.js); an alien that comes within reach of it, or of this ship, is fought, and the flight flies back to its slots when it is gone
@@ -1534,7 +1542,7 @@ function campWingAI(C, u, dt) {
 function campWingFire(C, u, k, foe, dist, target, may) {
   if (!(may && dist < k.range + (foe.r || 0) && C.t > u.nextShot && Math.abs(campWrap(target - u.rot)) < k.aim)) return false;
   u.nextShot = C.t + campFightGap(u, campBetween(C, k.delay[0], k.delay[1]));
-  campBullet(C, u, u.rot, k.bullet * C.shot, k.damage, 1400, 'earth', 14); C.events.push({ type: 'wingshot', x: u.x, y: u.y, kind: u.kind, id: u.id }); // the wing's gun has a sound of its own (the scene scales it by the distance)
+  campBullet(C, u, u.rot, k.bullet * C.shot, k.damage * (u.str || 1), 1400, 'earth', 14); C.events.push({ type: 'wingshot', x: u.x, y: u.y, kind: u.kind, id: u.id }); // the wing's gun has a sound of its own (the scene scales it by the distance)
   return true;
 }
 

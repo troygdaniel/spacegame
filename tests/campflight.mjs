@@ -21,7 +21,7 @@ const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefin
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
 g.run(`
-  window.__new = seed => { window.C = campNew('home', [], { seed: seed || 1, god: true }); C.ships = C.ships.filter(u => u.team !== 'alien'); C.motherSpawn = 1e12; return C; };
+  window.__new = seed => { window.C = campNew('home', [], { seed: seed || 1, god: true }); C.pilotStr = [1, 1, 1]; C.bay.fighters = 8; /* the flights of this suite are the old wing of eight lone fighters, three squads of 3, 3 and 2 (a flight of several ships is the formation's own case; the game flies one pilot to a squad now: card space-game-three-pilots) */ C.ships = C.ships.filter(u => u.team !== 'alien'); C.motherSpawn = 1e12; return C; };
   window.__run = (sec, f) => { for (let i = 0; i < Math.round(sec * 30); i++) { campStep(C, 1 / 30); C.events.length = 0; if (!window.__foes) C.ships = C.ships.filter(u => u.team !== 'alien'); if (f) f(i); } };
   window.__out = seed => { __new(seed); campOrder(C, 'launch'); __run(10); return C; };
   window.__fs = () => campWing(C, 'fighter').slice().sort((a, b) => (a.id < b.id ? -1 : 1));
