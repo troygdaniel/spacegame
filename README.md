@@ -28,7 +28,7 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 
 **The ideas that make it a commander game.**
 
-- **Power management.** Six pips shared between weapons, shields and engines (like X-Wing's); shields mend by themselves at a rate the shield pips set; three gauges at the top right show where the energy goes, and the power list (`I`) opens right under them with the same pip bars on its rows.
+- **Power management.** Six pips shared between weapons, shields and engines (like X-Wing's); shields mend by themselves at a rate the shield pips set; three gauges at the top right show where the energy goes, and the power list (`O`) opens right under them with the same pip bars on its rows.
 - **Pilots ask for orders.** Timed radio calls with three choices (the miner's call in 1.1 has five: send all squads, Red, Green or Yellow, or stay) and real costs.
 - **A mission is a sequence of questions.** Mission 1.1 is the finished example: a patrol turns back, a distress call, an ambush with torpedo boats, a pirate leader who duels your cruiser. Something happens about every minute.
 - **Objectives and bonuses**, a score, and ranks that grow your wing.
