@@ -151,13 +151,17 @@ const CAMP = {
     fight: 1800,                           // px: an alien this close to the cruiser, or any ship of the wing still out on an order, sends the mended fighter out again (else it stays in the bay)
     sayEvery: 5                            // s between two radio lines of the same kind (four fighters hurt together are one call)
   },
-  charge: {                                // the health bar on every ship you protect (card space-game-protected-health; Troy, 22 Nov 2026: bars on the transport, the haulers and the miners; src/campcharge.js, src/campchargescene.js)
+  charge: {                                // the health bar on every ship you protect (cards space-game-protected-health and space-game-health-bar-quiet; Troy, 22 Nov 2026: bars on the transport, the haulers and the miners, a thin line until the ship is under attack; src/campcharge.js, src/campchargescene.js)
     amber: 0.6,                            // the hull share at or under which the bar turns from green to amber
     red: 0.3,                              // the hull share at or under which the bar turns red (a ship that is nearly lost)
     flash: 700,                            // ms a bar flashes white after its ship is hit (the hit's own tick; a ship tucked under the cruiser's shield takes the hit on the cruiser's, so its bar does not flash)
     color: { green: 0x6dff9c, amber: 0xffb454, red: 0xff4d6d }, // the bar's fill: the wing's mint green, the convoy's amber, the aliens' red (the map's own colours)
-    bar: { w: 38, h: 5, gap: 5, min: 14 }, // px ON THE SCREEN, the same at every zoom: the bar's width and height, its distance over the ship's edge, and the least the ship's half size counts for (a ship drawn at its minimum size, src/campzoom.js, is 10 px across)
-    mark: { w: 16, h: 3, gap: 5 },         // px: the bar over a ship's mark on the Tab map (width, height, distance over the mark)
+    loud: 4000,                            // ms the FULL bar (with its percentage) stays after the last hit: under attack and for this long after; with no hit, or this long after the last one, the bar is a thin line
+    ease: 500,                             // ms the full bar then takes to shrink back to the thin line (a short ease, not a pop); a new hit makes it full again at once
+    line: { h: 2, back: 0.3 },             // the THIN LINE (px on the screen, the same at every zoom): its height, and how faint the track is behind it that shows how much hull is gone (its length is the hull that is left, in the band's colour, no number)
+    bar: { w: 38, h: 5, gap: 5, min: 14, back: 0.85 }, // px ON THE SCREEN, the same at every zoom: the full bar's width (the thin line's length too) and height, its distance over the ship's edge, the least the ship's half size counts for (a ship drawn at its minimum size, src/campzoom.js, is 10 px across), and how dark the frame behind the full bar is
+    number: { font: 11, gap: 5 },          // the percentage at the right of the full bar: its size (px) and its distance from the bar's end
+    mark: { w: 16, h: 3, gap: 5, line: 1 }, // px: the bar over a ship's mark on the Tab map (width, the full bar's height, distance over the mark; line: the thin line's height; no number on the map)
     list: { w: 46, h: 6 },                 // px: the bar at the right of a ship's row in an order's sub-list
     depth: 6                               // the flight view's draw order: over the ships (4 and 5), under the HUD
   },
