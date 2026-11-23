@@ -27,16 +27,15 @@ const CHATTER = {
     copy: { delay: 1200 }, home: { delay: 1200 },       // an order given: the answer comes a beat later (the computer's own line, if it speaks one, is not a sim event: the radio is busy, not held)
     contact: { delay: 2800 }, mother: { delay: 2800 }, lowmissiles: { delay: 2800 }, relic: { delay: 2800 }, convoy: { delay: 2800 }, cache: { delay: 2800 }, anomaly: { delay: 2800 }, // anomaly: a cloaked cache noticed (card space-game-campaign-anomalies)
     shields: { delay: 2800 }, engines: { delay: 2800 },   // the ship's systems (card space-game-campaign-systems): the computer's low-shields and low-engines lines
-    scouts: { delay: 2800 }, scoutlost: { delay: 2800 }   // the scout-escorts (card space-game-campaign-scouts): a report, and one left behind
   },
   says: {                                // the computer's own line (a 'say' event of the sim) -> the call it brings
     'camp.say.wave1': 'contact', 'camp.say.wave2': 'contact', 'camp.say.l2wave1': 'contact', 'camp.say.l2wave2': 'contact', 'camp.say.l2wave2b': 'contact',
     'camp.say.l3wave1': 'contact', 'camp.say.l3wave2': 'contact', 'camp.say.l3wave3': 'contact', 'camp.say.wave3': 'mother',
     'camp.say.ambush': 'contact', 'camp.say.bwave2': 'contact', 'camp.say.bwave3': 'mother', // the belt level's (content/text/campaign-belt.md); its ambush2 line is a hint, not a call
-    'camp.say.relicon': 'relic', 'camp.say.delivered': 'convoy', 'camp.say.shiparrived': 'convoy', 'camp.say.cache': 'cache', 'camp.say.shieldlow': 'shields', 'camp.say.enginelow': 'engines', 'camp.say.scoutnothing': 'scouts', 'camp.say.scoutfound': 'scouts', 'camp.say.scoutleft': 'scoutlost', 'camp.say.anomalyread': 'anomaly',
+    'camp.say.relicon': 'relic', 'camp.say.delivered': 'convoy', 'camp.say.shiparrived': 'convoy', 'camp.say.cache': 'cache', 'camp.say.shieldlow': 'shields', 'camp.say.enginelow': 'engines', 'camp.say.anomalyread': 'anomaly',
     'camp.say.anom.sense': 'anomaly', 'camp.say.anom.reveal': 'contact', 'camp.say.anom.done': 'cache' // the cloaked caches: noticed, decloaked (its guards are contacts), looted
   },
-  earth: ['carrier', 'fighter', 'escort', 'freighter'] // the kinds on Earth's side: anything else that blows up is theirs (splash)
+  earth: ['carrier', 'fighter', 'freighter'] // the kinds on Earth's side: anything else that blows up is theirs (splash)
 };
 
 // the setting: read once (a lazy read, inside try: storage is optional), kept when it is set
@@ -60,7 +59,7 @@ function chatterNew() { return { last: -1e9, hold: -1e9, at: {}, q: [], pilot: -
 function chatterEventOf(C, e) {
   if (!e) return null;
   if (e.type === 'boom') return CHATTER.earth.includes(e.kind) ? null : 'splash';
-  if (e.type === 'hit') { const u = ((C && C.ships) || []).find(s => s.id === e.id); return u && u.team === 'earth' && (u.kind === 'fighter' || u.kind === 'escort') ? 'hit' : null; }
+  if (e.type === 'hit') { const u = ((C && C.ships) || []).find(s => s.id === e.id); return u && u.team === 'earth' && u.kind === 'fighter' ? 'hit' : null; }
   if (e.type === 'say') return CHATTER.says[e.key] || null;
   if (e.type === 'missile') return C && typeof C.missiles === 'number' && C.missiles <= 1 ? 'lowmissiles' : null;
   if (e.type === 'ore') return 'ore';

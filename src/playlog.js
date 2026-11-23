@@ -365,7 +365,7 @@ function playlogWrap(L, root) {
     const r = orig.apply(this, arguments);
     try {
       const w1 = C.waves.filter(w => w.started).length; for (let w = w0 + 1; w <= w1; w++) L.campaign('wave', { level: C.level, wave: w });
-      C.events.slice(n0).forEach(e => { if (e && e.type === 'boom' && ['fighter', 'escort', 'freighter', 'carrier'].includes(e.kind)) L.campaign('lost', { level: C.level, what: e.kind }); });
+      C.events.slice(n0).forEach(e => { if (e && e.type === 'boom' && ['fighter', 'freighter', 'carrier'].includes(e.kind)) L.campaign('lost', { level: C.level, what: e.kind }); });
       campResult(C);
     } catch (e) { /* never */ }
     return r;

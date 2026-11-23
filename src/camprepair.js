@@ -25,7 +25,7 @@ function campRepairSay(C, which) {
 function campRepairRun(C, u, dt) {
   const K = CAMP.repair, c = C.carrier;
   if (!campFlag('repair') && !u.repair) return false; // the repair is switched off (the tuning panel): a hurt fighter fights on (one already on its way home is mended)
-  if (u.team !== 'earth' || u.scout || K.kinds.indexOf(u.kind) < 0 || c.hp <= 0) return false;
+  if (u.team !== 'earth' || K.kinds.indexOf(u.kind) < 0 || c.hp <= 0) return false;
   if (!u.repair) {
     if (u.hp >= u.maxHp * K.below) return false;
     if (campDist(u, c) > K.within * u.vmax) return false; // too far to get home: it fights on (asked again every tick: the cruiser may come to it)
@@ -43,7 +43,7 @@ function campRepairRun(C, u, dt) {
 function campRepairTick(C) {
   if (!C.repairs || !C.repairs.length || C.result || C.carrier.hp <= 0) return;
   const K = CAMP.repair, c = C.carrier;
-  const out = C.launchQ.length > 0 || campWing(C).some(w => !w.scout && !(w.order && w.order.type === 'recall')); // a ship of the wing out on an order: the fight goes on
+  const out = C.launchQ.length > 0 || campWing(C).some(w => !(w.order && w.order.type === 'recall')); // a ship of the wing out on an order: the fight goes on
   const near = campAliens(C).some(a => campDist(a, c) <= K.fight);
   C.repairs = C.repairs.filter(r => {
     if (C.t < r.until) return true;

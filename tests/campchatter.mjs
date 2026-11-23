@@ -49,7 +49,7 @@ try {
 
 // ---- C: which sim events are calls ----
 g.run(`window.__C = { missiles: 5, ships: [
-  { id: 'carrier', team: 'earth', kind: 'carrier' }, { id: 'f1', team: 'earth', kind: 'fighter' }, { id: 'e1', team: 'earth', kind: 'escort' },
+  { id: 'carrier', team: 'earth', kind: 'carrier' }, { id: 'f1', team: 'earth', kind: 'fighter' }, { id: 'e1', team: 'earth', kind: 'fighter' },
   { id: 'a1', team: 'alien', kind: 'drone' }, { id: 'm1', team: 'alien', kind: 'mother' }, { id: 'v1', team: 'earth', kind: 'freighter' } ] };`);
 const ev = e => J(`chatterEventOf(__C, ${JSON.stringify(e)})`);
 try {

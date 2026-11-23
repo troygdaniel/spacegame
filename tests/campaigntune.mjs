@@ -82,14 +82,14 @@ check('the tuning table is one object at the top of src/campaign.js: before any 
 const bare = table.filter(l => /:\s*-?\d/.test(l) && !/\/\//.test(l) && !/^\s*\{ (id|at):/.test(l));
 check('every line of the table that has a number has a comment (the lines of a wave and a convoy have their header\'s)', bare.length === 0, bare.join(' | '));
 {
-  const want = { 'carrier speed': 'CAMP.carrier.speed', 'carrier hull': 'CAMP.carrier.hull', 'fighters in the bay': 'CAMP.bay.fighters', 'escorts in the bay': 'CAMP.bay.escorts', 'fighter damage': 'CAMP.fighter.damage', 'alien hull (all)': 'CAMP.alien.hpScale', 'alien damage (all)': 'CAMP.alien.damageScale', 'mothership hull': 'CAMP.mother.hp', 'Earth shield': 'CAMP.earth.shield', 'when a wave comes': 'CAMP.levels[1].waves[0].at', 'how big a wave is': 'CAMP.levels[1].waves[0].ships.raider', 'when a convoy leaves': 'CAMP.levels[1].convoys[0].at' };
+  const want = { 'carrier speed': 'CAMP.carrier.speed', 'carrier hull': 'CAMP.carrier.hull', 'fighters in the bay': 'CAMP.bay.fighters', 'fighter damage': 'CAMP.fighter.damage', 'alien hull (all)': 'CAMP.alien.hpScale', 'alien damage (all)': 'CAMP.alien.damageScale', 'mothership hull': 'CAMP.mother.hp', 'Earth shield': 'CAMP.earth.shield', 'when a wave comes': 'CAMP.levels[1].waves[0].at', 'how big a wave is': 'CAMP.levels[1].waves[0].ships.raider', 'when a convoy leaves': 'CAMP.levels[1].convoys[0].at' };
   const miss = Object.entries(want).filter(([k, e]) => { try { return typeof g.run(e) !== 'number'; } catch (er) { return true; } }).map(([k]) => k);
   check('the numbers Troy named are all in the table as numbers: ' + Object.keys(want).join(', '), miss.length === 0, miss.join(', '));
 }
 {
   const body = src.slice(src.indexOf('};', src.indexOf('const CAMP = {')) + 2).replace(/\/\/.*$/gm, '');
   const code = (s => s.replace(/CAMP\.[a-z]+(\.[a-zA-Z0-9]+)*/g, '').replace(/'[^']*'/g, ''))(body);
-  check('src/campaign.js asks the one table for its numbers: it reads CAMP.<group> for the carrier, the bay, the aliens, the mothership and Earth, and CAMP[kind] for a fighter or an escort', ['carrier', 'bay', 'alien', 'mother', 'earth'].every(k => new RegExp('CAMP\\.' + k + '\\b').test(body)) && /CAMP\[(u\.)?kind\]/.test(body), '');
+  check('src/campaign.js asks the one table for its numbers: it reads CAMP.<group> for the carrier, the bay, the aliens, the mothership and Earth, and CAMP[kind] for a fighter', ['carrier', 'bay', 'alien', 'mother', 'earth'].every(k => new RegExp('CAMP\\.' + k + '\\b').test(body)) && /CAMP\[(u\.)?kind\]/.test(body), '');
 }
 
 // ---- E. the play log through the game's own functions ----

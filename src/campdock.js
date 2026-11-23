@@ -5,7 +5,7 @@
 // (CAMP_HUB.note, .act, .rowKey) and src/camphubscene.js (CAMP_HUBS.page, .stops, .face, .run).
 const CAMP_DOCK = { rows: ['build', 'repair', 'upgrade', 'board', 'undock'] }; // the rows of a dock's room, in order: a digit picks each (the Campaign's panels: a digit picks)
 const campDockC = ctx => (ctx && ctx.camp) || null;
-const campDockWing = C => ({ f: C.bay.fighters + campWing(C, 'fighter').length + C.launchQ.filter(k => k === 'fighter').length + campRepairing(C, 'fighter'), e: C.bay.escorts + campWing(C, 'escort').length + C.launchQ.filter(k => k === 'escort').length, q: C.build.queue.length });
+const campDockWing = C => ({ f: C.bay.fighters + campWing(C, 'fighter').length + C.launchQ.filter(k => k === 'fighter').length + campRepairing(C, 'fighter'), q: C.build.queue.length });
 
 CAMP_HUB.note.build = (P, ctx) => { const C = campDockC(ctx); return C ? uiText('camp.hub.note.build', { ore: campFunds(C) }) : ''; };
 CAMP_HUB.note.repair = (P, ctx) => { const C = campDockC(ctx); return C ? uiText('camp.hub.note.repair', { pct: Math.round(C.carrier.hp / C.carrier.maxHp * 100) }) : ''; };
@@ -13,10 +13,10 @@ CAMP_HUB.note.upgrade = (P, ctx) => { const C = campDockC(ctx); return C && camp
 CAMP_HUB.note.undock = (P, ctx) => uiText('camp.hub.note.undock', { name: ctx && ctx.station && ctx.station.name ? ctx.station.name : '' });
 CAMP_HUB.act.undock = 'undock';
 
-// BUILD: F a fighter, E an escort, through the order (so the ore, the bay room and the queue are the order's); REPAIR: R mends the hull for ore; REFIT: U fits the Fabricator
+// BUILD: F a fighter, through the order (so the ore, the bay room and the queue are the order's); REPAIR: R mends the hull for ore; REFIT: U fits the Fabricator
 CAMP_HUB.rowKey.build = (H, P, code, res, ctx) => {
-  const C = campDockC(ctx); if (!C || (code !== 'KeyF' && code !== 'KeyE')) return null;
-  const r = campOrder(C, 'build', code === 'KeyF' ? 'fighter' : 'escort', 'key'); res.used = true; res.ok = r.ok; res.say = { text: r.say }; return res;
+  const C = campDockC(ctx); if (!C || code !== 'KeyF') return null;
+  const r = campOrder(C, 'build', 'fighter', 'key'); res.used = true; res.ok = r.ok; res.say = { text: r.say }; return res;
 };
 CAMP_HUB.rowKey.repair = (H, P, code, res, ctx) => {
   const C = campDockC(ctx); if (!C || code !== 'KeyR') return null;
@@ -37,9 +37,9 @@ CAMP_HUBS.page.build = s => {
   s.line(i++, 0, uiText('camp.hub.build.head', { name: s.look.name.toUpperCase() }), '#6dff9c');
   s.line(i++, 0, uiText('camp.hub.build.ore', { ore: campFunds(C) }), '#ffd37a');
   { const ov = typeof campStoreOver === 'function' ? campStoreOver(C) : null; if (ov && ov.over > 0) s.line(i++, 0, uiText('camp.hub.build.over', ov), '#ffb454'); } // more than the store carries on from the mission: this room is where it can still be spent
-  s.line(i++, 0, uiText('camp.hub.build.wing', { f: w.f, e: w.e, q: w.q }), '#e8f6ff');
-  i++; s.line(i++, 0, uiText('camp.hub.build.keys', { fc: B.fighterCost, ec: B.escortCost }), '#9fe9ff');
-  s.line(i++, 0, uiText('camp.hub.build.room', { ft: B.fighterTime, et: B.escortTime }), '#8fb4c9');
+  s.line(i++, 0, uiText('camp.hub.build.wing', { f: w.f, q: w.q }), '#e8f6ff');
+  i++; s.line(i++, 0, uiText('camp.hub.build.keys', { fc: B.fighterCost }), '#9fe9ff');
+  s.line(i++, 0, uiText('camp.hub.build.room', { ft: B.fighterTime }), '#8fb4c9');
   if (s.msg && s.msg.until > s.time.now) s.line(i + 1, 0, s.msg.text, s.msg.ok ? '#6dff9c' : '#ffb454');
 };
 CAMP_HUBS.page.repair = s => {

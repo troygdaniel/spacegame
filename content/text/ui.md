@@ -115,7 +115,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.say.launch | Launching the wing. |
 | camp.say.attack | Fighters, attack. |
 | camp.say.attackmother | Fighters, attack the mothership. |
-| camp.say.escort | Escorts are with the {name} convoy. |
+| camp.say.escort | The squads are with the {name} convoy. |
 | camp.say.guard | The wing is guarding. |
 | camp.say.recall | Wing, return to the carrier. |
 | camp.say.missiles | Missile away. |
@@ -129,7 +129,6 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.no.launching | The wing is still launching. |
 | camp.no.baydry | Everything is already out, pilot. |
 | camp.no.nofighters | No fighters are out. Launch first. |
-| camp.no.noescorts | No escorts are out. Launch first. |
 | camp.no.noconvoy | There is no convoy to escort. |
 | camp.no.nomother | The mothership has not come yet. |
 | camp.no.nowing | No ships are out. Launch first. |

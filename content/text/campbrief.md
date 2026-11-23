@@ -27,7 +27,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.enemy.tower.many | {n} defence towers |
 | camp.bf.enemy.mother.one | the mothership |
 | camp.bf.enemy.mother.many | {n} motherships |
-| camp.bf.ready.bay | Bay: {f} fighters, {e} escorts |
+| camp.bf.ready.bay | Bay: {f} fighters |
 | camp.bf.ready.rank | Rank: {name} |
 | camp.bf.ready.stance | Stance: {name} |
 | camp.bf.ready.stock | Missiles {missiles}    Ore {ore} |
@@ -61,7 +61,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.key.map | Open the map; click a place, Enter flies |
 | camp.bf.key.zoom | Zoom the view or the map; {keyzoomreset} resets |
 | camp.bf.key.attack | All squads: {rowattack} |
-| camp.bf.key.escort | Escorts: {rowescort} |
+| camp.bf.key.escort | All squads: {rowescort} |
 | camp.bf.key.missile | Fire a homing missile at the target |
 | camp.bf.key.mine | All squads: {rowfmine} |
 | camp.bf.key.dock | Dock to build, mend and sell |
@@ -82,7 +82,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.1.2.w4 | The Works keeps its doors shut while a pirate is near. |
 | camp.bf.1.3.w1 | 3 haulers leave Ceres for Earth, 12 seconds apart. |
 | camp.bf.1.3.w2 | 1 must get home. Each hauler lost costs points. |
-| camp.bf.1.3.w3 | Pirates come again and again. Escorts cover them: {viaescort}, Enter. |
+| camp.bf.1.3.w3 | Pirates keep coming. Cover the haulers: {viaescort}, then {rowescort}. |
 | camp.bf.2.1.w1 | Find 2 of the 3 resource pods in the system. |
 | camp.bf.2.1.w2 | Any ship of yours that flies close picks one up. |
 | camp.bf.2.1.w3 | Aliens come from the west after 20 seconds. |

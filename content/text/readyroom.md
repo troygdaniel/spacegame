@@ -19,9 +19,7 @@ The words of the ready room's menu and its overlays (card space-game-ready-room-
 | camp.room.col.change | WHAT IT CHANGES |
 | camp.room.col.cost | COST |
 | camp.room.item.fighters | Fighter |
-| camp.room.item.escorts | Escort |
 | camp.room.change.fighters | Fighters in your wing: {from} to {to} |
-| camp.room.change.escorts | Escorts in your wing: {from} to {to} |
 | camp.room.have.ship | You have {ore} ore. Bought here: {n} of {most}. |
 | camp.room.have.fab | You have {ore} ore. |
 | camp.room.can | You can buy it. |
@@ -32,7 +30,7 @@ The words of the ready room's menu and its overlays (card space-game-ready-room-
 | camp.room.refit.techs | FITTED TECH |
 | camp.room.refit.notech | None yet. You pick one after each level, and the pick shows its numbers. |
 | camp.room.rank.ladder | THE RANKS |
-| camp.room.rank.rung | {name}   from {at} points   fighters +{f}, escorts +{e} |
+| camp.room.rank.rung | {name}   from {at} points   fighters +{f} |
 | camp.room.rank.togo | {n} points to the next rank |
 | camp.room.tech.shield | Damage the carrier takes: {from} to {to} percent |
 | camp.room.tech.beam | Turret damage x{dmg}, reach {from} to {to} px, and shots go through |

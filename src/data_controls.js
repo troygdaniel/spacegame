@@ -15,7 +15,7 @@
 // Space scene binds is named here.
 // ---------- the Campaign's lists (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026: "one list per hand", then "shortcut keys that take you straight to the sub-list") ----------
 // LEFT HAND, the fleet: Q opens the FLEET list, which is a row for each part of the wing and nothing else (card space-game-squad-tint; Troy, 22 Nov 2026: nothing listed twice): W ALL SQUADS, E RED SQUAD, R GREEN SQUAD, T YELLOW SQUAD (the fighters are split into three squads: card space-game-fighter-squads),
-// and ESCORTS, CONVOY and STANCE, which have no key (a row of the Q list: Enter or Right on it opens that part; the scouts are escorts and are in no squad). The first row of Q is All squads and the first row of that list is LAUNCH THE WING, so Q, Enter, Enter launches everything, and so does W, Enter.
+// and CONVOY and STANCE, which have no key (a row of the Q list: Enter or Right on it opens that part; there is no escort ship: card space-game-cut-escorts, Troy, 22 Nov 2026). The first row of Q is All squads and the first row of that list is LAUNCH THE WING, so Q, Enter, Enter launches everything, and so does W, Enter.
 // RIGHT HAND, the ship, mirrored: P opens the SHIP list with a row for each part: O POWER (shields first: O, Enter adds a shield pip; card space-game-ship-shortcuts-o-power, Troy, 22 Nov 2026), I AUTOPILOT, U DOCK AND REPAIR.
 // A part's key opens its list directly, at any time (E, Enter: the fighters attack the target); Enter or a click on the part's row in Q or P opens it too. Nothing is on the screen until a key is pressed, and only one list is open at a time.
 // In an open list Up and Down move the highlight, Enter gives the order (the list closes when the order is taken; a power row leaves it open, to be given again), Left goes back to the list it is a part of, the list's own key closes it.
@@ -29,18 +29,17 @@
 //   list:   { id, side, key, code, title, tab, name, parent, rows }   side 'left' or 'right'; key and code (a KeyboardEvent.code) open and close the list ('' for a list with no key of its own); tab is its word on the bottom key line; name is what a hint calls it;
 //           parent is the list it is a part of (Left goes back there); start: 'usable' opens the list on its first row that can be given now, not on the first (card space-game-squad-tint: All squads starts on Launch, then, with the wing out, on Attack)
 //   row:    { id, order, arg, wing, fly, burn, blink, open, stay, when, label, help }   order is a campOrder name (src/campaign.js: the words the strip and the voice use; arg goes with it); wing: [group, verb] is an order to one part of the wing
-//           (campWingOrder, src/campwing.js: 'fighters' or 'escorts'; Attack goes at the target); fly: 'objective' or 'target' is the autopilot (src/campnav.js), burn: 1 makes it a fast burn; blink: 1 is the warp blink; open: '<list id>' opens that part's list;
+//           (campWingOrder, src/campwing.js: a squad or 'fighters'; Attack goes at the target); fly: 'objective' or 'target' is the autopilot (src/campnav.js), burn: 1 makes it a fast burn; blink: 1 is the warp blink; open: '<list id>' opens that part's list;
 //           pick: 'enemy' | 'escort' | 'field' makes it a row that needs a target: one candidate is taken at once, several open a sub-list of them, Esc goes back (src/camppick.js, card space-game-order-target-pick);
 //           stay: 1 leaves the list open after the order (a pip of power: it is given again and again); when: 'convoy' | 'blink' | 'aboard' leaves the row out of a mission that can never use it (campPanelWhen, src/camppanel.js);
 //           label is the row's words in the list, help its line for a hint. A row's id is its own in the whole table (a hint finds the row, and the list it is in, by it)
 // the rows of the DOCK AND REPAIR list (U), from a table (card space-game-ship-shortcuts-o-power; Troy, 22 Nov 2026). PREP for a later feature, NOT built now (the idea bench: repair ships in space with ore, instead of building new ones):
 // the Build rows are swapped for Repair rows in this ONE place, and the list, its notes (src/camppanel.js reads `cost`), the H page and the hints follow. Nothing changes in what a row does today.
 //   { id, label, help, when, cost, does }   id: the row's own in the whole table;  label and help: its words in the list and for a hint;  when: when it shows ('' always, 'aboard' only in a level where ships are built aboard: campPanelWhen);
-//                                           cost: what it takes, the CAMP.build price it reads ('fighter' or 'escort': <kind>Cost ore and <kind>Time s), '' for none;  does: the order it gives, { order, arg } (campOrder, src/campaign.js)
+//                                           cost: what it takes, the CAMP.build price it reads ('fighter': <kind>Cost ore and <kind>Time s), '' for none;  does: the order it gives, { order, arg } (campOrder, src/campaign.js)
 const CAMP_YARD = [
   { id: 'dock', label: 'Dock at the outpost', help: 'Dock at a friendly outpost', when: '', cost: '', does: { order: 'dock' } }, // ships are built and the hull mended only docked (card space-game-campaign-outposts); docking opens the ready room (a level with no outpost mends the hull aboard instead: campPanelAs)
-  { id: 'buildf', label: 'Build a fighter', help: 'Build a fighter (costs ore)', when: 'aboard', cost: 'fighter', does: { order: 'build', arg: 'fighter' } }, // only in a level with no outpost: elsewhere ships are built docked, in the ready room
-  { id: 'builde', label: 'Build an escort', help: 'Build an escort (costs ore)', when: 'aboard', cost: 'escort', does: { order: 'build', arg: 'escort' } }
+  { id: 'buildf', label: 'Build a fighter', help: 'Build a fighter (costs ore)', when: 'aboard', cost: 'fighter', does: { order: 'build', arg: 'fighter' } } // only in a level with no outpost: elsewhere ships are built docked, in the ready room (there is no escort to build: card space-game-cut-escorts)
 ];
 const campYardRows = () => CAMP_YARD.map(r => { const o = { id: r.id, order: r.does.order }; if (r.does.arg) o.arg = r.does.arg; if (r.when) o.when = r.when; o.label = r.label; o.help = r.help; if (r.cost) o.cost = r.cost; return o; }); // the table as the list's rows
 
@@ -53,7 +52,6 @@ const CAMP_PANELS = {
       { id: 'gred', open: 'red', label: 'Red squad', help: 'The red squad\'s orders' },
       { id: 'ggreen', open: 'green', label: 'Green squad', help: 'The green squad\'s orders' },
       { id: 'gyellow', open: 'yellow', label: 'Yellow squad', help: 'The yellow squad\'s orders' },
-      { id: 'gescorts', open: 'escorts', label: 'Escorts', help: 'The escorts\' orders' },
       { id: 'gconvoy', open: 'convoy', when: 'convoy', label: 'Convoy', help: 'Orders for the ships you escort' },
       { id: 'gstance', open: 'stance', when: 'stance', label: 'Stance', help: 'How the wing fights' }
     ] },
@@ -66,30 +64,28 @@ const CAMP_PANELS = {
     { id: 'squads', parent: 'fleet', side: 'left', key: 'W', code: 'KeyW', title: 'ALL SQUADS', tab: 'All', name: 'the all-squads list', start: 'usable', rows: [ // all the fighters at once: the bay's Launch first (so Q, Enter, Enter launches everything), then the three squads' orders (cards space-game-fighter-squads, space-game-squad-tint)
       { id: 'launch', order: 'launch', label: 'Launch the wing', help: 'Launch the ships in the bay' },
       { id: 'attack', order: 'attack', pick: 'enemy', label: 'Attack the target', help: 'All squads attack the target' }, // the target of A D S X; none picked: the one hostile, or a sub-list of them to choose from (pick, src/camppick.js)
+      { id: 'escort', order: 'escort', pick: 'escort', label: 'Escort the convoy', help: 'All squads go to the convoy' }, // the squads' own order (it was the escorts'): a convoy ship or a miner is picked (src/camppick.js); none in the level: the squads stay by the cruiser
       { id: 'fguard', wing: ['fighters', 'guard'], label: 'Guard the cruiser', help: 'All squads guard the cruiser' },
       { id: 'frecall', wing: ['fighters', 'recall'], label: 'Recall', help: 'All squads fly home to the bay' },
       { id: 'fmine', wing: ['fighters', 'mine'], pick: 'field', label: 'Mine ore', help: 'All squads mine ore' }
     ] },
     { id: 'red', parent: 'fleet', side: 'left', key: 'E', code: 'KeyE', title: 'RED SQUAD', tab: 'Red', name: 'the red squad list', rows: [
       { id: 'redattack', wing: ['red', 'attack'], pick: 'enemy', label: 'Attack the target', help: 'The red squad attacks the target' },
+      { id: 'redescort', wing: ['red', 'escort'], pick: 'escort', label: 'Escort the convoy', help: 'The red squad goes to the convoy' },
       { id: 'redguard', wing: ['red', 'guard'], label: 'Guard the cruiser', help: 'The red squad guards the cruiser' },
       { id: 'redrecall', wing: ['red', 'recall'], label: 'Recall', help: 'The red squad flies home to the bay' }
     ] },
     { id: 'green', parent: 'fleet', side: 'left', key: 'R', code: 'KeyR', title: 'GREEN SQUAD', tab: 'Green', name: 'the green squad list', rows: [
       { id: 'greenattack', wing: ['green', 'attack'], pick: 'enemy', label: 'Attack the target', help: 'The green squad attacks the target' },
+      { id: 'greenescort', wing: ['green', 'escort'], pick: 'escort', label: 'Escort the convoy', help: 'The green squad goes to the convoy' },
       { id: 'greenguard', wing: ['green', 'guard'], label: 'Guard the cruiser', help: 'The green squad guards the cruiser' },
       { id: 'greenrecall', wing: ['green', 'recall'], label: 'Recall', help: 'The green squad flies home to the bay' }
     ] },
     { id: 'yellow', parent: 'fleet', side: 'left', key: 'T', code: 'KeyT', title: 'YELLOW SQUAD', tab: 'Yellow', name: 'the yellow squad list', rows: [
       { id: 'yellowattack', wing: ['yellow', 'attack'], pick: 'enemy', label: 'Attack the target', help: 'The yellow squad attacks the target' },
+      { id: 'yellowescort', wing: ['yellow', 'escort'], pick: 'escort', label: 'Escort the convoy', help: 'The yellow squad goes to the convoy' },
       { id: 'yellowguard', wing: ['yellow', 'guard'], label: 'Guard the cruiser', help: 'The yellow squad guards the cruiser' },
       { id: 'yellowrecall', wing: ['yellow', 'recall'], label: 'Recall', help: 'The yellow squad flies home to the bay' }
-    ] },
-    { id: 'escorts', parent: 'fleet', side: 'left', key: '', code: '', title: 'ESCORTS', tab: '', name: 'the escorts list', rows: [
-      { id: 'escort', order: 'escort', pick: 'escort', label: 'Escort the convoy', help: 'Escorts go to the convoy' },
-      { id: 'eattack', wing: ['escorts', 'attack'], pick: 'enemy', label: 'Attack the target', help: 'Escorts attack the target' },
-      { id: 'eguard', wing: ['escorts', 'guard'], label: 'Guard the cruiser', help: 'Escorts guard the cruiser' },
-      { id: 'erecall', wing: ['escorts', 'recall'], label: 'Recall the escorts', help: 'Escorts fly home to the bay' }
     ] },
     { id: 'stance', parent: 'fleet', side: 'left', key: '', code: '', title: 'STANCE', tab: '', name: 'the stance list', rows: [ // how Attack and Guard move; the one in force is marked. name: the stance's own word (the HUD, the debrief)
       { id: 'free', order: 'stance', arg: 'free', label: 'Fight freely', name: 'Free', help: 'The wing fights its own way' },
@@ -120,12 +116,12 @@ const CAMP_PANELS = {
     { id: 'yard', parent: 'ship', side: 'right', key: 'U', code: 'KeyU', title: 'DOCK AND REPAIR', tab: 'Dock', name: 'the dock list', rows: campYardRows() } // the rows are the table CAMP_YARD above: what to put here is that table's business
   ],
   // why a row cannot be done now, in a few plain words: the code of the game's own refusal (campNo in src/campaign.js) to the words beside the row's name; {need} is ore, {s} seconds
-  why: { over: 'the battle is over', bay: 'the bay is empty', launching: 'still launching', baydry: 'all of it is out', nofighters: 'no fighters out', nosquad: 'no ships in the squad', noescorts: 'no escorts out', noconvoy: 'no convoy to escort', nowing: 'no ships out',
+  why: { over: 'the battle is over', bay: 'the bay is empty', launching: 'still launching', baydry: 'all of it is out', nofighters: 'no fighters out', nosquad: 'no ships in the squad', noconvoy: 'no convoy to escort', nowing: 'no ships out',
     noore: 'no ore in reach', noore2: 'needs {need} ore', noearth: 'no Earth here', buildfull: 'no room in the bay', what: 'cannot do that now',
     cnone: 'no escorted ships', cwhat: 'cannot do that now', nogoal: 'no objective', there: 'you are there', nodock: 'Dock at an outpost to build.', norepair: 'Dock at an outpost to repair.', docked: 'already docked', noposts: 'no outpost here', whichpost: 'no such outpost', farpost: 'no outpost in range', hotdock: 'aliens too close', hullfull: 'the hull is sound', powermax: 'at full power', powernone: 'no power to take', powerwhat: 'which system?', locked: 'running: the power is held', cooling: 'ready in {s} s',
     notarget: 'pick a target first', nofoe: 'no hostiles in sight', nomissiles: 'no missiles left', missilewait: 'the launcher is reloading', range: 'out of missile range', nobig: 'nothing in reach', noblink: 'needs the warp tech' },
   // the same, a word or two, beside a row of the list
-  shortWhy: { over: 'over', bay: 'bay empty', launching: 'leaving', baydry: 'all out', nofighters: 'none out', nosquad: 'none out', noescorts: 'none out', noconvoy: 'no convoy', nowing: 'none out', cnone: 'no convoy', cwhat: 'not now',
+  shortWhy: { over: 'over', bay: 'bay empty', launching: 'leaving', baydry: 'all out', nofighters: 'none out', nosquad: 'none out', noconvoy: 'no convoy', nowing: 'none out', cnone: 'no convoy', cwhat: 'not now',
     noore: 'no ore near', noore2: 'needs {need} ore', noearth: 'no Earth', buildfull: 'bay full', what: 'not now',
     nogoal: 'no goal', nofoe: 'none seen', there: 'there', nodock: 'dock first', norepair: 'dock first', docked: 'docked', noposts: 'no outpost', whichpost: 'no post', farpost: 'too far', hotdock: 'foes near', hullfull: 'hull sound', powermax: 'at full', powernone: 'none free', powerwhat: 'which?', locked: 'held', cooling: '{s} s',
     notarget: 'no target', nomissiles: 'none left', missilewait: 'reloading', range: 'too far', nobig: 'none near', noblink: 'no tech' }
@@ -156,12 +152,12 @@ function campPanelKeyRows() {
 
 // the keys as the hints say them, ALL read from the tables above: a remap is one change here and every text follows.
 //   campKeyVar(name)   a {placeholder} of a text (contentFill, src/contenttables.js, asks for the names it does not know):
-//                      {fleetkey} {fighterskey} {convoykey} {escortskey} {shipkey} {navkey} {powerkey} {yardkey} the key that opens a list (its id + "key");
+//                      {fleetkey} {fighterskey} {convoykey} {shipkey} {navkey} {powerkey} {yardkey} the key that opens a list (its id + "key");
 //                      {keymap} {keyfly} {keymissile} {keyshields} ... a direct key of CAMP_KEYS ("key" + its id);
-//                      {rowlaunch} {rowdock} ... the words of a row ("row" + its id);   {vialaunch} {viaattack} ... the way to the list that row is in ("via" + its id: its key, or 'Q, Escorts' when the list has none), for "Press {viaattack}, pick {rowattack}";
+//                      {rowlaunch} {rowdock} ... the words of a row ("row" + its id);   {vialaunch} {viaattack} ... the way to the list that row is in ("via" + its id: its key, or 'Q, Convoy' when the list has none), for "Press {viaattack}, pick {rowattack}";
 //                      {panels} what Q and P are;   '' when the name is none of these (the text keeps its braces)
 //   campKeyCaps(list)  the key cap of a list as the briefing's boxes draw it: ['Q'] for 'fleet'; [] when there is no such list or it has no key
-//   campKeyVia(row)    the list a row is in, or null;   campKeyOpens(list)  the key that reaches a list: its own, else its parent's;   campKeyPath(list)  the way there in words: 'E', or 'Q, Escorts' for a list with no key
+//   campKeyVia(row)    the list a row is in, or null;   campKeyOpens(list)  the key that reaches a list: its own, else its parent's;   campKeyPath(list)  the way there in words: 'E', or 'Q, Convoy' for a list with no key
 function campKeyRow(id) {
   for (const p of CAMP_PANELS.panels) { const r = p.rows.find(x => x.id === id); if (r) return r; }
   return null;
@@ -169,7 +165,7 @@ function campKeyRow(id) {
 const campKeyVia = id => CAMP_PANELS.panels.find(p => p.rows.some(x => x.id === id)) || null;
 const campKeyList = id => CAMP_PANELS.panels.find(p => p.id === id) || null;
 const campKeyOpens = id => { let p = campKeyList(id); while (p && !p.key && p.parent) p = campKeyList(p.parent); return p ? p.key : ''; };
-// the way to a list as a hint says it: the list's own key ('E'), or for a list with no key (Escorts, Convoy, Stance) the key of the list it is a part of and the words of its row there ('Q, Escorts')
+// the way to a list as a hint says it: the list's own key ('E'), or for a list with no key (Convoy, Stance) the key of the list it is a part of and the words of its row there ('Q, Convoy')
 function campKeyPath(id) {
   const p = campKeyList(id); if (!p) return '';
   if (p.key) return p.key;
@@ -259,7 +255,6 @@ const CONTROLS = [
     { k: ['Up', 'Down'], t: 'Map: last or next mark (Left, Right)', sub: 'THE MAP' },
     { k: ['Enter'], t: 'Map: fly there (Shift+Enter: fast)', sub: 'THE MAP' },
     { k: ['Click'], t: 'Map: click a mark sets it, again flies', sub: 'THE MAP' },
-    { k: ['V'], t: 'Map: V scouts there', sub: 'THE MAP' }, // (T took a lane at the fork of 1.1's road until card space-game-cut-lane-fork; the route system is dormant)
     { k: ['X'], t: 'Map: X clears the trip', sub: 'THE MAP' },
     { k: ['/'], t: 'Type an order (needs a chat key)', sub: 'THE STRIP AND THE VOICE' }, // the same words the lists say: the strip and the voice answer through the chat key (Settings > Keys); the lists, the map and the calls need none
     { k: ['.'], t: 'Hold to speak (needs a chat key)', sub: 'THE STRIP AND THE VOICE' },
@@ -271,7 +266,7 @@ const CONTROLS = [
     { k: ['R'], t: 'Pause card: restart the mission', sub: 'ON A CARD' },
     { k: ['Enter'], t: 'Cards: begin, continue, try again', sub: 'ON A CARD' },
     { k: ['1-3'], t: 'Tech card: pick a technology', sub: 'ON A CARD' }, // after a level, not in flight
-    { k: ['4', '5'], t: 'Refit card: buy a fighter or escort', sub: 'ON A CARD' }
+    { k: ['4'], t: 'Refit card: buy a fighter', sub: 'ON A CARD' }
   ] },
   { id: 'panels', title: 'LISTS', scene: 'Campaign', rows: campPanelKeyRows() }, // the Campaign's order lists, made from CAMP_PANELS above (the H page puts them first)
   { id: 'readyroom', title: 'READY ROOM', scene: 'CampHub', rows: [ // the ready room between missions (src/camphub.js keys, src/camphubscene.js); the Campaign's H page lists them last, and H opens it in the room
@@ -282,7 +277,7 @@ const CONTROLS = [
     { k: ['L'], t: 'Launch the mission, or the replay', sub: 'THE READY ROOM' },
     { k: ['R'], t: 'Missions: pick it, open briefing', sub: 'THE READY ROOM' },
     { k: ['X'], t: 'Missions: back to the next one', sub: 'THE READY ROOM' },
-    { k: ['F', 'E'], t: 'Refit: buy a fighter or an escort', sub: 'THE READY ROOM' },
+    { k: ['F'], t: 'Refit: buy a fighter', sub: 'THE READY ROOM' },
     { k: ['U'], t: 'Refit: fit the Fabricator', sub: 'THE READY ROOM' },
     { k: ['Backspace'], t: 'Refit: give the last one back', sub: 'THE READY ROOM' },
     { k: ['H'], t: 'This page of keys', sub: 'THE READY ROOM' },

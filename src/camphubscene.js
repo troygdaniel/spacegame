@@ -175,7 +175,7 @@ class CampHub extends Phaser.Scene {
   }
   overRefit() { // the choices: what each changes (the numbers), what it costs, what you have; then the tech already fitted
     const P = this.P, H = this.hub, O = CAMP_HUBS.over, r = campHubRefit(P), at = Math.max(0, Math.min(2, H.sel | 0)), X = [24, 230, 790];
-    this.ovLine(0, 0, uiText('camp.hub.refit.ore', { ore: r.ore }), '#ffd37a'); this.ovLine(0, 360, uiText('camp.hub.refit.wing', { f: r.wing.fighters, e: r.wing.escorts }), '#e8f6ff');
+    this.ovLine(0, 0, uiText('camp.hub.refit.ore', { ore: r.ore }), '#ffd37a'); this.ovLine(0, 360, uiText('camp.hub.refit.wing', { f: r.wing.fighters }), '#e8f6ff');
     this.ovLine(2, X[0], uiText('camp.room.col.choice'), '#6f8aa0'); this.ovLine(2, X[1], uiText('camp.room.col.change'), '#6f8aa0'); this.ovLine(2, X[2], uiText('camp.room.col.cost'), '#6f8aa0');
     r.items.forEach((it, k) => {
       const y = 3 + k * 3, on = k === at;
@@ -192,8 +192,8 @@ class CampHub extends Phaser.Scene {
     if (r.ranked) { this.ovLine(i++, 0, uiText('camp.hub.rank.name', { name: r.name, n: r.n, of: r.of }), '#ffd37a'); this.ovLine(i++, 0, r.next != null ? uiText('camp.hub.rank.next', { to: r.nextName, next: r.next }) + '   (' + uiText('camp.room.rank.togo', { n: Math.max(0, r.next - r.points) }) + ')' : uiText('camp.hub.rank.top'), '#8fb4c9'); }
     else this.ovLine(i++, 0, uiText('camp.hub.rank.none'), '#8fb4c9');
     i++; this.ovLine(i++, 0, uiText('camp.hub.rank.points', { points: r.points }), '#e8f6ff'); this.ovLine(i++, 0, uiText('camp.hub.rank.flown', { n: r.flown, all: r.all }), '#e8f6ff');
-    this.ovLine(i++, 0, uiText('camp.hub.rank.wing', { f: r.wing.fighters, e: r.wing.escorts }), '#e8f6ff');
-    if (r.ladder.length) { i++; this.ovLine(i++, 0, uiText('camp.room.rank.ladder'), '#38e1ff'); r.ladder.forEach(l => this.ovLine(i++, 0, (l.here ? '> ' : '  ') + uiText('camp.room.rank.rung', { name: l.name, at: l.at, f: l.fighters, e: l.escorts }), l.here ? '#ffd37a' : '#e8f6ff')); }
+    this.ovLine(i++, 0, uiText('camp.hub.rank.wing', { f: r.wing.fighters }), '#e8f6ff');
+    if (r.ladder.length) { i++; this.ovLine(i++, 0, uiText('camp.room.rank.ladder'), '#38e1ff'); r.ladder.forEach(l => this.ovLine(i++, 0, (l.here ? '> ' : '  ') + uiText('camp.room.rank.rung', { name: l.name, at: l.at, f: l.fighters }), l.here ? '#ffd37a' : '#e8f6ff')); }
     this.ovHint(19);
   }
 

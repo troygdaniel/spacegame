@@ -2,7 +2,7 @@
 // Card space-game-distress-send-squads (Troy, 22 Nov 2026: "for the miner we help in mission 1.1, let him send squads, all or specific; the timed call that comes up shows those options").
 //   A  the table: five picks built by campCallSquadFx (so any call can offer squads), the cautious one is "stay", the ratings, the words
 //   B  the rows: a squad with no ship out is grey with the reason; a key on it is refused and the call stays open; a bot's answer falls back to the cautious pick
-//   C  the order: the squad sent flies to the miner and fights; the others keep their own orders; the escorts stay; when the pirates are dead or gone (or the miner is lost) the squad takes up the order it had
+//   C  the order: the squad sent flies to the miner and fights; the others keep their own orders; when the pirates are dead or gone (or the miner is lost) the squad takes up the order it had
 //   D  the numbers: what each answer saves and how fast (seed 1 of the plain flight; the same flight makes the same call)
 //   E  the plate: five rows grow up from the same bottom edge, a grey row shows its reason, Enter on it says why in the key line, Up and Down still stop the timer
 //   F  the bots: the thinking bot answers Send Red and the wrong-answer bot Send all squads, from the table of ratings
@@ -41,7 +41,7 @@ sec('A', () => {
 
 sec('B', () => {
   console.log('B. the rows');
-  check('B  the call opens at the miner with six fighters out, two to a squad, and no row is grey', g.run('__ready()') === true && J('__fighters().length') === 6 && J('["red", "green", "yellow"].every(k => __fighters().filter(u => u.squad === k).length === 2)') && J('campCallView(C).rows.every(r => !r.off)'));
+  check('B  the call opens at the miner with eight fighters out, three, three and two to the squads, and no row is grey', g.run('__ready()') === true && J('__fighters().length') === 8 && J('["red", "green", "yellow"].map(k => __fighters().filter(u => u.squad === k).length).join()') === '3,3,2' && J('campCallView(C).rows.every(r => !r.off)'));
   g.run('__fighters().filter(u => u.squad === "green").forEach(u => { u.hp = 0; })');
   const v = J('campCallView(C)');
   check('B  the green squad has no ship left: its row is grey with the lists\' words ("none out") and the sentence, the others are not', v.rows[2].off && v.rows[2].why === 'none out' && /squad/i.test(v.rows[2].say) && [0, 1, 3, 4].every(i => !v.rows[i].off), JSON.stringify(v.rows.map(r => [r.pick, r.off, r.why])));
@@ -56,14 +56,14 @@ sec('B', () => {
 sec('C', () => {
   console.log('C. the order: fly there, fight, go back');
   g.run('__ready()');
-  g.run(`(() => { // a squad of its own orders: green attacks a pirate of the ambush later, yellow mines, the escorts guard; red is on the cruiser
+  g.run(`(() => { // a squad of its own orders: green attacks a pirate of the ambush later, yellow mines; red is on the cruiser
     const sq = k => __fighters().filter(u => u.squad === k); sq('green').forEach(u => { u.order = { type: 'attack', target: 'x-1' }; }); sq('yellow').forEach(u => { u.order = { type: 'mine', target: '' }; });
-    window.__before = __fighters().map(u => [u.id, u.squad, JSON.stringify(u.order)]); window.__escorts = campWing(C, 'escort').map(u => JSON.stringify(u.order)); })()`);
+    window.__before = __fighters().map(u => [u.id, u.squad, JSON.stringify(u.order)]); })()`);
   const r = J('campCallAnswer(C, 2, "key")');
   const after = J('__fighters().map(u => [u.id, u.squad, u.order])'), before = J('__before');
   const red = after.filter(a => a[1] === 'red'), other = after.filter(a => a[1] !== 'red');
-  check('C  Send Red: both red fighters attack with a rescue of the miner and carry the order they had (guard the cruiser) to go back to', r.ok && r.pick === 'sendred' && red.length === 2 && red.every(a => a[2].type === 'attack' && a[2].rescue === J('__miner().id') && a[2].back && a[2].back.type === 'guard' && a[2].back.at.kind === 'carrier'), JSON.stringify(red));
-  check('C  the green and yellow squads keep the orders they had (attack, mine), and so do the escorts', other.every(a => JSON.stringify(a[2]) === before.find(b => b[0] === a[0])[2]) && JSON.stringify(J('campWing(C, "escort").map(u => JSON.stringify(u.order))')) === JSON.stringify(J('__escorts')), JSON.stringify(other));
+  check('C  Send Red: all three red fighters attack with a rescue of the miner and carry the order they had (guard the cruiser) to go back to', r.ok && r.pick === 'sendred' && red.length === 3 && red.every(a => a[2].type === 'attack' && a[2].rescue === J('__miner().id') && a[2].back && a[2].back.type === 'guard' && a[2].back.at.kind === 'carrier'), JSON.stringify(red));
+  check('C  the green and yellow squads keep the orders they had (attack, mine)', other.length === 5 && other.every(a => JSON.stringify(a[2]) === before.find(b => b[0] === a[0])[2]), JSON.stringify(other));
   check('C  the map line of the red squad runs to the miner (the order\'s target is the ship that called)', J('__fighters().filter(u => u.squad === "red").every(u => u.order.tg && u.order.tg.id === __miner().id)'));
   g.run('__go(1)');
   check('C  a second later the red fighters have made for the pirates at the miner (still on the rescue)', J('__fighters().filter(u => u.squad === "red").every(u => u.order.rescue)') && J('__pirates().length') === 2);
@@ -75,7 +75,7 @@ sec('C', () => {
   g.run(`(() => { __fighters().filter(u => u.squad === "yellow").forEach(u => { u.order = { type: 'mine', target: '' }; }); campCallAnswer(C, 4, 'key'); __go(0.3); window.__m = __miner(); __m.hp = 0; __go(0.3); })()`);
   check('C  Send Yellow, then the miner is lost on the way: the yellow squad takes up its old order (mine ore) and does not go on to the pirates', J('__fighters().filter(u => u.squad === "yellow").every(u => u.order.type === "mine" && !u.order.rescue)') && J('__fighters().filter(u => u.squad === "red").every(u => u.order.type === "guard")'));
   g.run('__ready()'); g.run('campCallAnswer(C, 1, "key"); __go(0.2)');
-  check('C  Send all squads: every fighter goes, the escorts stay with the transport', J('__fighters().every(u => u.order.rescue)') && J('campWing(C, "escort").every(u => !(u.order && u.order.rescue))'));
+  check('C  Send all squads: every fighter goes', J('__fighters().every(u => u.order.rescue)') && J('__fighters().length') === 8);
   check('C  sending is an order of the wing for the books (the attack count goes up)', J('C.orders.attack') >= 1);
   g.run('__ready()'); g.run('campCallAnswer(C, 2, "key"); __go(0.3); window.__o1 = JSON.stringify(__fighters().filter(u => u.squad === "red")[0].order.back); C.call.open = null; campCallStart(C, "distress", { who: __miner().id, ids: __pirates().map(u => u.id) }); campCallAnswer(C, 2, "key")');
   check('C  a squad sent twice goes back to the order it had before the first, not to the first rescue', J('__fighters().filter(u => u.squad === "red").every(u => JSON.stringify(u.order.back) === __o1 && !u.order.back.rescue)'));
@@ -86,7 +86,7 @@ sec('D', () => {
   const run = (pick, seed) => J(`(() => { __ready(${seed}); const m0 = __miner().hp; campCallAnswer(C, ${pick}, 'bot'); let clear = null, dead = null, home = null; for (let s = 1; s <= 90; s++) { __tough(); __go(1); const f = __fighters(), m = __miner(); if (dead == null && (!m || m.hp <= 0)) dead = s; if (clear == null && __pirates().length === 0) clear = s; if (home == null && clear != null && ${pick} < 5 && f.every(u => !u.order.rescue)) home = s; if (clear != null && s >= clear + 6) break; } const m = __miner(); return { m0: Math.round(m0 * 10) / 10, hp: m && m.hp > 0 ? Math.round(m.hp * 10) / 10 : 0, dead, clear, home, lost: C.neutralsLost, ore: C.ore }; })()`);
   const all = run(1, 1), red = run(2, 1), stay = run(5, 1);
   check('D  Send all squads (seed 1): the miner is saved, the pirates are dead in about 25 seconds', all.hp > 0 && all.clear != null && all.clear <= 30 && all.lost === 0, JSON.stringify(all));
-  check('D  Send Red (seed 1): two fighters can do it: the miner is saved and the pirates are dead in under 45 seconds ("more slowly than six" was pinned on this one seed, 31 s against 23 s; since card space-game-fighter-flight the guarding wing flies in formation, the squads start from other places, and the two clear them in 21 s against the six\'s 22: the seeds 2 to 4 go either way)', red.hp > 0 && red.clear != null && red.clear < 45 && red.lost === 0, JSON.stringify(red));
+  check('D  Send Red (seed 1): three fighters can do it: the miner is saved and the pirates are dead in under 45 seconds ("more slowly than six" was pinned on this one seed, 31 s against 23 s; since card space-game-fighter-flight the guarding wing flies in formation, the squads start from other places, and the two clear them in 21 s against the six\'s 22: the seeds 2 to 4 go either way)', red.hp > 0 && red.clear != null && red.clear < 45 && red.lost === 0, JSON.stringify(red));
   check('D  Stay with the transport (seed 1): the miner is lost (it was 22 hit points when the call came), no thanks, one neutral lost', stay.hp === 0 && stay.dead != null && stay.lost === 1 && stay.ore < 40, JSON.stringify(stay));
   console.log('     (numbers: all ' + JSON.stringify(all) + '  red ' + JSON.stringify(red) + '  stay ' + JSON.stringify(stay) + ')');
 });
