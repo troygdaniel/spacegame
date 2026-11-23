@@ -6,6 +6,7 @@
 //   D. the rank page with and without the ranks card; the briefing page; the launch page
 //   E. launch (L, Enter on Launch, a second click on the Launch row) starts the Campaign scene with via 'hub' and rolls the door up; Esc leaves for the title
 //   F. the Campaign scene's side: a mission launched from the hub goes straight to the flight; a debrief and a level's end go back to the hub; the title opens the hub
+//   G. the next level's planets are painted while the room is open, one a timer tick, so the level starts without the 373 ms (card space-game-cloud-followups)
 // Run: node tests/camphubscene.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
@@ -36,7 +37,7 @@ g.run(`
     __rec.go.length = 0; __rec.sfx.length = 0; __rec.texts.length = 0; __rec.tweens.length = 0; __rec.door = 0;
     const s = Object.create(CampHub.prototype);
     s.add = { rectangle: (x, y) => { const o = __obj(); o.x = x; o.y = y; return o; }, text: (x, y, t) => { const o = __obj(); o.x = x; o.y = y; o.t = t; __rec.texts.push(o); return o; }, image: (x, y, k) => { const o = __obj(); o.x = x; o.y = y; o.key = k; return o; } };
-    s.cameras = { main: { fadeIn() {}, fadeOut() {} } }; s.tweens = { add: cfg => { __rec.tweens.push(cfg); return { stop() { cfg.stopped = true; } }; } }; s.time = { now: 1000 };
+    s.cameras = { main: { fadeIn() {}, fadeOut() {} } }; s.tweens = { add: cfg => { __rec.tweens.push(cfg); return { stop() { cfg.stopped = true; } }; } }; s.time = { now: 1000, delayedCall: (ms, fn) => { (window.__timers = window.__timers || []).push({ ms, fn }); return {}; } };
     s.input = { keyboard: { on: (e, fn) => { s.kb = fn; }, off() {} } }; s.events = { once() {} };
     if (window.__briefStand) __briefStand(s);
     s.init(d || {}); s.create(); return s;
@@ -153,6 +154,19 @@ g.run(`campReveal(false); localStorage.setItem(CAMP.store, JSON.stringify({ leve
 check('after the ending has been seen (the saved flag) the board of a page that has just loaded calls level 3 the outpost, as the ending said, and not the home world', has9(/LEVEL 3\s+-\s+The outpost/) && !has9(/home world/) && J('CAMP.levels[3].name') === 'The outpost', J('__shown(S9)').filter(t => /LEVEL/.test(t)).join(' / '));
 g.run(`campReveal(false); localStorage.removeItem(CAMP.store); var S10 = __scene(); __key(S10, 'Enter');`);
 check('and before it (no flag) the board says the home world: nothing is given away', J('__shown(S10)').some(t => /LEVEL 3\s+-\s+The home world/.test(t)) && !J('__shown(S10)').some(t => /outpost/i.test(t)));
+// ---- G. the planets of the next level, painted while the room is up ----
+// planetTexture is the recording stand-in here (the real one paints an 800 px canvas, src/art_world.js); the Campaign scene's drawPlace asks for the same keys
+g.run(`window.__painted = []; window.planetTexture = (sc, kind, seed) => { __painted.push((kind) + '-' + seed); return 'planet-' + kind + '-' + seed; };
+  window.__timers = []; campReveal(false); localStorage.removeItem(CAMP.store); window.SG = __scene();`);
+const wantG = J(`(() => { const pl = campPlaces(campHubNext(SG.P).level); return Object.keys(pl).map(id => pl[id]).filter(p => !p.hidden && !p.far && p.kind !== 'star').map(p => (p.kind || 'rock') + '-' + (p.seed || 1)); })()`);
+check('opening the room sets one timer for each near planet of the level to come (' + wantG.length + ': ' + wantG.join(' ') + '), after the fade-in and one apart, and paints none of them yet: the room itself is not slowed', wantG.length >= 2 && J('__timers.length') === wantG.length && J('__timers.every((t, i) => t.ms >= 600 && (i === 0 || t.ms > __timers[i - 1].ms))') && J('__painted.length') === 0, JSON.stringify(J('__timers.map(t => t.ms)')));
+g.run(`__timers.forEach(t => t.fn());`);
+check('each timer paints its own planet, the kind and the seed the level\'s places say', J('__painted').join() === wantG.join(), J('__painted').join());
+g.run(`__painted.length = 0; var drawn = []; (() => { const C = Object.create(Campaign.prototype), pl = campPlaces(campHubNext(SG.P).level); C.add = { image: (x, y, k) => { drawn.push(k); return __obj(); } }; Object.keys(pl).map(id => pl[id]).filter(p => !p.hidden && !p.far && p.kind !== 'star').forEach(p => C.drawPlace(p)); })();`);
+check('and the Campaign scene (drawPlace, at its start) asks for exactly those textures: the keys the room painted, so the level\'s create() finds them and paints nothing', J('drawn').filter(k => /^planet-/.test(k)).join() === wantG.map(k => 'planet-' + k).join(), J('drawn').join());
+g.run(`__timers.length = 0; __painted.length = 0; var S2 = __scene(); S2.leaving = true; __timers.forEach(t => t.fn());`);
+check('a room that has been left paints nothing when its timers run', J('__timers.length') > 0 && J('__painted.length') === 0);
+check('with no timers on the scene (a stand-in) or no planet painter it does nothing and throws nothing', J('campHubWarm({}, 1)') === 0 && J('campHubWarm(null, 1)') === 0 && J(`(() => { const t = window.planetTexture; window.planetTexture = undefined; const r = campHubWarm({ time: { delayedCall() {} } }, 1); window.planetTexture = t; return r; })()`) === 0);
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `CAMPAIGN HUB SCENE FAIL (${failed} of ${n})` : `CAMPAIGN HUB SCENE PASS (${n} checks)`);
 process.exitCode = failed ? 1 : 0;
