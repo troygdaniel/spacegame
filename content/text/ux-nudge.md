@@ -7,4 +7,4 @@ The words of one change of the Campaign's UX night (card space-game-night-ux, do
 | key | text |
 |---|---|
 | camp.nudge.launch | Press {vialaunch}, pick "{rowlaunch}". |
-| camp.nudge.attack | Enemies. Press {viaattack}, pick "{rowattack}": the fighters attack. |
+| camp.nudge.attack | Enemies. Pick one with {keynear}, then {viaattack}, "{rowattack}": the fighters attack. |

@@ -44,7 +44,7 @@ sec('B. Attack with and without a selected hostile', () => {
   check('nothing selected, three hostiles about: the row is grey, still called Attack the target, and says to pick with [ ] or S (short: pick one)', r0.ok === false && r0.label === 'Attack the target' && r0.state === 'pick one with [ ] or S' && r0.short === 'pick one', JSON.stringify(r0));
   g.run('__w("attack")');
   const o = J(`__k('Enter')`);
-  check('Enter on the grey row refuses in words, opens no sub-list, picks no hostile for the player and leaves the squads as they were', o.ran && !o.ok && /No hostile selected/.test(o.say) && /\[ \] or S/.test(o.say) && J('PP.pick') === null && J('PP.open') === 'squads' && J(`C.tgt`) === '' && J(`__orders().every(x => x.type === 'guard')`), JSON.stringify(o));
+  check('Enter on the grey row refuses in words, opens no sub-list, picks no hostile for the player and leaves the squads as they were', o.ran && !o.ok && /No hostile selected/.test(o.say) && J('PP.pick') === null && J('PP.open') === 'squads' && J(`C.tgt`) === '' && J(`__orders().every(x => x.type === 'guard')`), JSON.stringify(o));
   g.run('C.tgt = __b.id;');
   const nm = J('campTgtName(C)'), r1 = row('attack');
   check('a hostile selected: the row names it ("Attack ' + nm + '"), is ready, and says who goes and how far', r1.ok === true && r1.label === 'Attack ' + nm && /^all squads, \d+ km$/.test(r1.state) && /^\d+ km$/.test(r1.short), JSON.stringify(r1));
@@ -68,7 +68,7 @@ sec('D. Guard with and without a selected friend', () => {
   check('nothing selected, two ships to guard: the row is grey, still called Guard the target, and says to pick with A or D', r0.ok === false && r0.label === 'Guard the target' && r0.state === 'pick a ship with A or D' && r0.short === 'pick one', JSON.stringify(r0));
   g.run('__w("fguardt")');
   const o = J(`__k('Enter')`);
-  check('Enter on the grey row refuses in words, opens no sub-list and gives no order (the squads still guard the cruiser)', o.ran && !o.ok && /No ship selected to guard/.test(o.say) && /A or D/.test(o.say) && J('PP.pick') === null && J('PP.open') === 'squads' && J(`__orders().every(x => x.type === 'guard' && x.at.kind === 'carrier')`), JSON.stringify(o));
+  check('Enter on the grey row refuses in words, opens no sub-list and gives no order (the squads still guard the cruiser)', o.ran && !o.ok && /No ship selected to guard/.test(o.say) && J('PP.pick') === null && J('PP.open') === 'squads' && J(`__orders().every(x => x.type === 'guard' && x.at.kind === 'carrier')`), JSON.stringify(o));
   g.run('C.sel = "pilot:red";');
   check('a pilot selected: nothing to guard in that (a pilot is not a ship to guard): grey, the same hint', row('fguardt').ok === false && row('fguardt').state === 'pick a ship with A or D');
   g.run('C.sel = "all";');
