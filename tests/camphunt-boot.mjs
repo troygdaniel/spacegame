@@ -88,7 +88,7 @@ try {
   await hold('ArrowRight', 600); check('Right turns it', Math.abs((await j(`${S}.camp.carrier.rot`)) - r0) > 0.05);
   await hold('ArrowLeft', 600);
   await key('Tab'); await t.run(500); await snap('6-map'); note('map open: ' + await j(`!!(${S}.map && ${S}.map.open) || !!${S}.mapOpen`)); await key('Tab'); await t.run(300);
-  check('no list is on the screen until its key is pressed: only the target\'s line under the radar', (await j(`campPanelOpen(${S}.pn)`)) === '' && (await j(`!${S}.pnl.title.visible && ${S}.pnl.rows.every(r => !r.name.visible) && ${S}.pnl.tgt.visible`)) === true, await j(`${S}.pnl.tgt.text`)); await snap('7-no-list');
+  check('no list is on the screen until its key is pressed (nothing at all: no target is picked, so the corner is empty)', (await j(`campPanelOpen(${S}.pn)`)) === '' && (await j(`!${S}.pnl.title.visible && ${S}.pnl.rows.every(r => !r.name.visible) `)) === true); await snap('7-no-list');
   const keyed = await j(`CAMP_PANELS.panels.filter(p => p.code).map(p => [p.code, p.id, p.key + '   ' + p.title, p.parent || ''])`), pinned = { fleet: 'Q   FLEET ORDERS', ship: 'P   SHIP ORDERS', squads: 'W   ALL SQUADS', red: 'E   RED SQUAD', power: 'I   POWER' };
   check('the key table has nine lists with a key of their own: Q and its parts W E R T, P and its parts O I U', keyed.map(x => x[0]).join() === 'KeyQ,KeyW,KeyE,KeyR,KeyT,KeyP,KeyO,KeyI,KeyU' && keyed.every(x => VK[x[0]]), keyed.map(x => x[0]).join());
   for (const [k, id, title, parent] of keyed) { // each list: its key opens it directly at the first row (from no list), Up goes round to the last row (a long list scrolls), its key closes it

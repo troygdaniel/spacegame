@@ -6,7 +6,7 @@
 //   C. the groups: hostiles near each other are one; the compass words
 //   D. the radio's first call: once, after the delay, how many and which way and how far, the kinds when somebody is near enough to tell, one call for a few seconds' worth, none for the dead
 //   E. the marks and the edge arrows: a group off the screen gets one at the edge, a group on the screen none, the newest blinks
-//   F. the scene half draws them, the radar pulses, nothing behind a card
+//   F. the scene half draws them (the radar's pulse went with the radar: card space-game-target-display), nothing behind a card
 //   G. the tuning row, the words, the voice pack's rule, the scripts and the scene's calls
 // Run: node tests/campsight.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -144,9 +144,9 @@ console.log('F. the scene half');
   const shown = J('__S.texts.filter(t => t.vis).map(t => t.text)');
   check('an edge arrow has its label: "2 hostiles  510 km" (the text table\'s camp.sight.arrow)', shown.length === 1 && /^2 hostiles {2}\d+ km$/.test(shown[0]), shown.join('|'));
   check('the graphics drew a triangle for it', J('__S.calls.filter(c => c[0] === "fillPoints").length') === 1);
-  check('and a ring on the radar where the group is (just seen: the pulse)', J('__S.calls.some(c => c[0] === "strokeCircle")') );
+  check('and no ring: the radar the pulse was on is gone (the target display took its corner)', !J('__S.calls.some(c => c[0] === "strokeCircle")'));
   g.run('C.t = 100000 + CAMP.sensor.mark + 500; __S.calls.length = 0; campSightSync(__S)');
-  check('after the mark time the ring is gone and the arrow stays', J('__S.calls.filter(c => c[0] === "strokeCircle").length') === 0 && J('__S.calls.filter(c => c[0] === "fillPoints").length') === 1);
+  check('after the mark time the arrow stays (it stops blinking)', J('__S.calls.filter(c => c[0] === "strokeCircle").length') === 0 && J('__S.calls.filter(c => c[0] === "fillPoints").length') === 1);
   g.run('__S.mode = "map"; __S.calls.length = 0; campSightSync(__S)');
   check('on the map (not in flight) nothing is drawn and the label is hidden', J('__S.calls.filter(c => c[0] === "fillPoints" || c[0] === "strokeCircle").length') === 0 && J('__S.texts.filter(t => t.vis).length') === 0);
   g.run('__S.mode = "play"; __S.hudHides = () => true; __S.calls.length = 0; campSightSync(__S)');
@@ -170,7 +170,7 @@ console.log('G. the row, the words, the scripts and the scene\'s calls');
   check('the sim ticks it (campTick) after the warnings', /campWarn\(C\);\s*\n\s*if \(typeof campSightStep === 'function'\) campSightStep\(C\);/.test(src('src/campaign.js')));
   const sc = src('src/campaignscene.js');
   check('the Campaign scene calls campSightSync every frame, next to the far marks', /campFarSync\(this\);\s*\n\s*if \(typeof campSightSync === 'function'\) campSightSync\(this\);/.test(sc));
-  check('the radar draws only the hostiles that are seen', /u\.team === 'alien' && typeof campSeen === 'function' && !campSeen\(C, u\)\)\) return; dot\(u, campDotColor\(u\)/.test(sc));
+  check('the scene draws no radar at all, so no hostile out of sight is on one (the target keys, the nav list and the map are the places a hostile shows: sections B and E)', !/CAMP_RADAR/.test(sc));
   check('the sensors keep no state in the scene object (scene instances are reused on a restart)', !/this\.sight\b/.test(sc) && !/scene\.sight\b/.test(src('src/campsightscene.js')));
   check('the rule file is pure: no Phaser, no scene', !/Phaser|scene\./.test(src('src/campsight.js').replace(/^\/\/.*$/gm, '')));
 }
