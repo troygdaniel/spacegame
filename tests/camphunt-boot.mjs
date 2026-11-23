@@ -109,7 +109,7 @@ try {
     // the ship's rows (fly to the target, the two build rows, dock, the emergency shields, the blink), the power keys (J K L ;). A list of [what to do, what it is]: a string is a direct key, [row] is an order given through the list it is in
     const via = async row => { const w = await listWay(row); return w ? w.keys.map(k => k[0].replace(/^Key/, '') + (k[1] ? ', Down x ' + k[1] : '')).join(', ') + ', Enter' : '(no way)'; }; // the keys of an order as they were pressed
     const done = [];
-    for (const [act, what] of [[['launch'], 'launch'], [['attack'], 'attack (the fighters)'], [['escort'], 'escort (the escorts)'], [['guard'], 'guard'], [['recall'], 'recall (the wing is out)'], [['mine'], 'mine'], [['keep'], 'stance: keep distance'], [['ctuck'], 'convoy: tuck in'],
+    for (const [act, what] of [[['launch'], 'launch'], [['attack'], 'attack (the fighters)'], [['escort'], 'escort (the convoy)'], [['guard'], 'guard'], [['recall'], 'recall (the wing is out)'], [['mine'], 'mine'], [['keep'], 'stance: keep distance'], [['ctuck'], 'convoy: tuck in'],
       ['KeyS', 'S nearest threat'], ['KeyD', 'D next target'], ['KeyA', 'A last target'], [['target'], 'fly to the target'], [['burntarget'], 'fast burn to the target'], ['KeyX', 'X clear the target'],
       [['buildf'], 'build a fighter'], [['builde'], 'build an escort'], [['dock'], 'dock (away from it)'],
       ['KeyJ', 'J shields pip'], ['KeyK', 'K engines pip'], ['KeyL', 'L weapons pip'], [['emergency'], 'emergency shields'], ['Semicolon', '; balance'], [['blink'], 'blink'],

@@ -30,7 +30,7 @@ g.run(`
 
 console.log('A. the numbers');
 {
-  check('a fighter (430 px/s) and an escort (300) are slower than the burn, near (462) and far (672): they could not keep up', J('CAMP.fighter.speed') < J('CAMP.carrier.speed * CAMP.nav.fast') && J('CAMP.escort.speed') < J('CAMP.carrier.speed * CAMP.nav.fast') && J('CAMP.fighter.speed') < J('CAMP.carrier.speed * CAMP.nav.farFast'), J('[CAMP.fighter.speed, CAMP.carrier.speed * CAMP.nav.fast, CAMP.carrier.speed * CAMP.nav.farFast]').join(' '));
+  check('a fighter (430 px/s) is slower than the burn, near (462) and far (672): they could not keep up', J('CAMP.fighter.speed') < J('CAMP.carrier.speed * CAMP.nav.fast') && J('CAMP.fighter.speed') < J('CAMP.carrier.speed * CAMP.nav.farFast'), J('[CAMP.fighter.speed, CAMP.carrier.speed * CAMP.nav.fast, CAMP.carrier.speed * CAMP.nav.farFast]').join(' '));
   check('the waits are in the table: 20 s to get the wing back, 8 s to press again', J('CAMP.nav.recallWait') === 20 && J('CAMP.nav.askFor') === 8);
 }
 

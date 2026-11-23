@@ -1,9 +1,8 @@
 // ---------- Campaign: wing orders with groups and explicit targets (card space-game-campaign-wing-targets; Troy: command the fleet from the map) ----------
 // The sim side of commanding the fleet from the map. An order names a GROUP, a VERB and a TARGET: campWingOrder(C, group, verb, target, how). Plain numbers and strings, no Phaser; tests/campwing.mjs runs it in Node.
-//   groups   built-in ones in CAMP.wing.groups: 'fighters', 'escorts' (the escorts, and the scouts they send out), 'all', and the fighters' three SQUADS 'red', 'green' and 'yellow' (card space-game-fighter-squads: a fighter has u.squad, set when it
+//   groups   built-in ones in CAMP.wing.groups: 'fighters', 'all' (the same ships: there is no escort ship, card space-game-cut-escorts), and the fighters' three SQUADS 'red', 'green' and 'yellow' (card space-game-fighter-squads: a fighter has u.squad, set when it
 //            leaves the bay by campSquadNext; 'fighters' is all three squads together; an order to one squad leaves the others on theirs). A group is DATA: { name, kinds: ['fighter', ...] } or { name, ships: [ids] }, so numbered
-//            groups drop in later: C.groups[id] = { name, ships } is read before the table (nothing builds them yet: bench idea 1, with ranks). A group left out is the verb's own (today's orders: Attack the fighters,
-//            Escort the escorts, Guard and Recall everyone).
+//            groups drop in later: C.groups[id] = { name, ships } is read before the table (nothing builds them yet: bench idea 1, with ranks). A group left out is the verb's own (today's orders: Attack, Escort the convoy, Guard and Recall the fighters of all three squads).
 //   targets  a target is one of: an enemy (a ship of theirs), a friend (one of ours), a convoy, a place, a point { x, y }, a pickup (ore lying about), a cache (a resource cache), an anomaly (one that is noticed), a rock.
 //            Give it as an entity id ('raider-3', 'freighter-h1', 'carrier', 'rock-4', 'chunk-9'), a nav row of the map (campNavRows: 'place:vesta', 'cache:0', 'anom:veil', 'scan:1', 'mother', 'tower:tower-3'),
 //            a point { x, y }, a { kind, id } of these, or words ("mars", "the mothership", "the anomaly"). null is no target: the verb's own default (Attack: the nearest alien, Guard: the carrier, Escort: the nearest convoy).
@@ -14,10 +13,10 @@
 //   campWingState(C)                                 what the map draws: [{ id, name, n, order, mixed, target, center, ships, line }] one per group that has ships
 //   campWingVerbs(C, target)                         the verbs that take this target, for the map's order menu;  campWingSmart(C, target)  the one a right-click does
 //   campWingTarget(C, spec) / campWingLive(C, tg)    the words, id, row or point -> { kind, id, name, x, y, r, ref }; the same target with its position now (a ship moves)
-//   campWingText(C, text, dry)                       the strip and the voice: "fighters at the mothership", "escorts to Mars", "all guard Ceres", "escorts scout the anomaly" (the order 'wing' of campDo)
+//   campWingText(C, text, dry)                       the strip and the voice: "fighters at the mothership", "red squad escort the convoy", "all guard Ceres" (the order 'wing' of campDo)
 
 // ---- groups ----
-const CAMPWING_GROUP_WORDS = { red: 'red', 'red squad': 'red', green: 'green', 'green squad': 'green', yellow: 'yellow', 'yellow squad': 'yellow', squads: 'fighters', 'all squads': 'fighters', fighter: 'fighters', fighters: 'fighters', escort: 'escorts', escorts: 'escorts', scout: 'escorts', scouts: 'escorts', all: 'all', everyone: 'all', everybody: 'all', wing: 'all', fleet: 'all', squadron: 'all', ships: 'all' };
+const CAMPWING_GROUP_WORDS = { red: 'red', 'red squad': 'red', green: 'green', 'green squad': 'green', yellow: 'yellow', 'yellow squad': 'yellow', squads: 'fighters', 'all squads': 'fighters', fighter: 'fighters', fighters: 'fighters', all: 'all', everyone: 'all', everybody: 'all', wing: 'all', fleet: 'all', squadron: 'all', ships: 'all' };
 // the group's id for a word or an id; '' for none; null for one that does not exist
 function campWingGroupId(C, group) {
   if (group == null || group === '') return '';
@@ -28,10 +27,10 @@ function campWingGroupId(C, group) {
 }
 const campWingGroupSpec = (C, id) => (C && C.groups && C.groups[id]) || CAMP.wing.groups[id] || null;
 const campWingGroupName = (C, id) => { const s = campWingGroupSpec(C, id); return s ? String(s.name) : String(id); };
-// the ships of a group that are out now. free: the scouts that are out on their task are left to it (every verb but Recall and Scout)
-function campWingShips(C, id, free) {
+// the ships of a group that are out now
+function campWingShips(C, id) {
   const sp = campWingGroupSpec(C, id); if (!sp) return [];
-  return C.ships.filter(u => u.team === 'earth' && u.hp > 0 && (u.kind === 'fighter' || u.kind === 'escort') && (sp.ships ? sp.ships.indexOf(u.id) >= 0 : (sp.kinds || []).indexOf(u.kind) >= 0) && (!sp.squad || u.squad === sp.squad) && !(free && u.scout));
+  return C.ships.filter(u => u.team === 'earth' && u.hp > 0 && u.kind === 'fighter' && (sp.ships ? sp.ships.indexOf(u.id) >= 0 : (sp.kinds || []).indexOf(u.kind) >= 0) && (!sp.squad || u.squad === sp.squad));
 }
 
 // the squad a fighter that leaves the bay joins: the one with the fewest ships (out, or landed to be mended: those come back to it), a tie to the first of CAMP.wing.squads. Six fighters leave as two and two and two; when a squad has lost
@@ -82,15 +81,15 @@ function campWingRescue(C, u, o) {
 
 // Recall and the bay (card space-game-recall-while-launching; found by 3-GEN): Launch queues every ship in C.launchQ and one leaves every CAMP.bay.launchEvery ms, so a Recall given while the bay is still emptying
 // found the ships out and sent them home, and the ships still in the queue came out afterwards with the guard and escort orders of a launch, as if there had been no Recall (and a burn that waits for the wing aboard
-// waited for ships that were never recalled: campNavOut counts the queue). Now the ships of the group that are still in the queue are put back in the bay (C.bay.fighters, C.bay.escorts) and counted aboard; the group's
-// kinds say which: Fighters the fighters, Escorts the escorts, All both; a group of named ships (C.groups) has none in the queue, which has no ids yet. Returns how many went back.
+// waited for ships that were never recalled: campNavOut counts the queue). Now the ships of the group that are still in the queue are put back in the bay (C.bay.fighters) and counted aboard; the group's
+// kinds say which; a group of named ships (C.groups) has none in the queue, which has no ids yet. Returns how many went back.
 function campWingQueueBack(C, id) {
   const sp = campWingGroupSpec(C, id), kinds = sp && !sp.ships && !sp.squad ? sp.kinds || [] : []; // a squad has no ships in the queue (a fighter joins its squad when it leaves the bay): a Recall of one squad leaves the others' waiting ships where they are
   if (!C.launchQ.length || !kinds.length) return 0;
   let n = 0;
   C.launchQ = C.launchQ.filter(k => {
     if (kinds.indexOf(k) < 0) return true;
-    if (k === 'fighter') C.bay.fighters++; else C.bay.escorts++;
+    C.bay.fighters++;
     n++; return false;
   });
   return n;
@@ -183,9 +182,9 @@ function campWingOrder(C, group, verb, target, how, dry) {
   if (!C || C.result) return campNo('over');
   const V = CAMP.wing.verbs[verb]; if (!V) return campNo('what');
   const gid = campWingGroupId(C, group); if (gid === null) return campWingNo('wnogroup');
-  const id = gid || V.group, ships = campWingShips(C, id, verb !== 'recall' && verb !== 'scout');
-  const empty = { fighters: 'nofighters', escorts: 'noescorts', all: 'nowing', red: 'nosquad', green: 'nosquad', yellow: 'nosquad' }[id] || 'nowing';
-  if (!ships.length && verb !== 'scout') return campNo(C.launchQ.length ? 'launching' : empty);
+  const id = gid || V.group, ships = campWingShips(C, id);
+  const empty = { fighters: 'nofighters', all: 'nowing', red: 'nosquad', green: 'nosquad', yellow: 'nosquad' }[id] || 'nowing';
+  if (!ships.length) return campNo(C.launchQ.length ? 'launching' : empty);
   const tg = campWingTarget(C, target);
   if (tg === false) return campWingNo('wnotarget');
   const gname = campWingGroupName(C, id);
@@ -194,24 +193,18 @@ function campWingOrder(C, group, verb, target, how, dry) {
     if (dry) return campYes(rc, rv);
     ships.forEach(u => { u.order = { type: 'recall' }; u.move = null; }); C.orders.recall++;
     const back = campWingQueueBack(C, id); // the ships of the group still waiting to leave the bay stay aboard (card space-game-recall-while-launching)
-    if (id !== 'escorts') (C.repairs || []).forEach(r => { r.stay = true; }); // a fighter still being mended stays aboard when it is whole (src/camprepair.js)
+    (C.repairs || []).forEach(r => { r.stay = true; }); // a fighter still being mended stays aboard when it is whole (src/camprepair.js)
     const r = campWingDone(C, id, verb, null, ships, how, rc, rv); r.queued = back; return r;
   }
   if (tg && V.kinds.indexOf(tg.kind) < 0) return campWingNo('wbadpair', { group: gname, verb, what: CAMPWING_KIND_WORDS[tg.kind] || tg.kind });
   if (!tg && V.need) return campWingNo('wneed', { verb });
-  if (verb === 'scout') { // the scouts' own order (card space-game-campaign-scouts): the nearest free escort flies to the place, reads it and comes home
-    if (typeof campScoutDo !== 'function') return campWingNo('wnoscout');
-    const r = campScoutDo(C, { x: tg.x, y: tg.y, name: tg.name }, dry);
-    if (r && r.ok && !dry) { C.events.push({ type: 'wingorder', group: id, verb, target: { kind: tg.kind, id: tg.id, name: tg.name }, n: 1, how: how || '' }); }
-    return r;
-  }
   let say = 'wing.' + verb, vars = { group: gname, name: tg ? tg.name : '' }, tgo = tg;
   if (verb === 'attack') {
     if (tg && C.by[tg.id] && C.by[tg.id].kind === 'mother') say = id === V.group ? 'attackmother' : 'wing.attack'; // today's words for today's order, the generic ones for any other group
     else if (!tg) say = id === V.group ? 'attack' : 'wing.attacknear';
   } else if (verb === 'escort') {
     if (!tg) {
-      if (!C.L.convoys.length) { // no convoys in this level: Escort keeps the escorts close to the carrier
+      if (!C.L.convoys.length) { // no convoys in this level: Escort keeps the fighters close to the carrier
         if (dry) return campYes('escortcarrier');
         ships.forEach(u => { u.order = { type: 'guard', at: { kind: 'carrier' } }; u.move = null; }); C.orders.escort++;
         return campWingDone(C, id, verb, null, ships, how, 'escortcarrier');
@@ -248,7 +241,7 @@ const campWingCheck = (C, group, verb, target) => campWingOrder(C, group, verb, 
 function campWingCancel(C, group, how, dry) {
   if (!C || C.result) return campNo('over');
   const gid = campWingGroupId(C, group); if (gid === null) return campWingNo('wnogroup');
-  const id = gid || 'all', ships = campWingShips(C, id, true);
+  const id = gid || 'all', ships = campWingShips(C, id);
   if (!ships.length) return campNo(C.launchQ.length ? 'launching' : 'nowing');
   if (dry) return campYes('wing.cancel', { group: campWingGroupName(C, id), name: '' });
   ships.forEach(u => { u.order = { type: 'guard', at: { kind: 'carrier' } }; u.move = null; });
@@ -259,9 +252,9 @@ function campWingCancel(C, group, how, dry) {
 // ---- what the map draws ----
 const campWingOrderKey = u => { const o = u.order || { type: 'guard', at: { kind: 'carrier' } }; return o.type + '|' + (o.tg ? o.tg.id : o.target || (o.at && o.at.id) || (o.at && o.at.kind) || ''); };
 function campWingState(C) {
-  const out = [], ids = Object.keys(CAMP.wing.groups).concat(Object.keys(C.groups || {}));
+  const out = [], ids = Object.keys(CAMP.wing.groups).filter(id => id !== 'all').concat(Object.keys(C.groups || {})); // 'all' is the same ships as 'fighters' now (no escort ship, card space-game-cut-escorts): one row for them
   ids.forEach(id => {
-    const ships = campWingShips(C, id, false); if (!ships.length) return;
+    const ships = campWingShips(C, id); if (!ships.length) return;
     const count = {}; ships.forEach(u => { const k = campWingOrderKey(u); count[k] = (count[k] || 0) + 1; });
     const keys = Object.keys(count).sort((a, b) => count[b] - count[a]), best = keys[0], lead = ships.find(u => campWingOrderKey(u) === best), o = lead.order || { type: 'guard', at: { kind: 'carrier' } };
     const cx = ships.reduce((a, u) => a + u.x, 0) / ships.length, cy = ships.reduce((a, u) => a + u.y, 0) / ships.length;
@@ -273,14 +266,14 @@ function campWingState(C) {
     else if (o.type === 'guard' && o.at && o.at.kind === 'place') target = campWingPlaceTarget(C, o.at.id);
     else if (o.type === 'hold' && o.at) target = { kind: 'point', id: 'point', name: 'that point', x: o.at.x, y: o.at.y, r: 0, ref: '' };
     out.push({ id, name: campWingGroupName(C, id), n: ships.length, order: o.type, mixed: keys.length > 1, target, center: { x: cx, y: cy },
-      ships: ships.map(u => ({ id: u.id, kind: u.kind, x: u.x, y: u.y, scout: !!u.scout })), line: target ? { from: { x: cx, y: cy }, to: { x: target.x, y: target.y } } : null });
+      ships: ships.map(u => ({ id: u.id, kind: u.kind, x: u.x, y: u.y })), line: target ? { from: { x: cx, y: cy }, to: { x: target.x, y: target.y } } : null });
   });
   return out;
 }
 // the verbs that take this target (the map's order menu), and the one a right-click does
 function campWingVerbs(C, target) {
   const tg = campWingTarget(C, target); if (!tg) return [];
-  return Object.keys(CAMP.wing.verbs).filter(v => CAMP.wing.verbs[v].kinds.indexOf(tg.kind) >= 0 && (v !== 'scout' || typeof campScoutDo === 'function'));
+  return Object.keys(CAMP.wing.verbs).filter(v => CAMP.wing.verbs[v].kinds.indexOf(tg.kind) >= 0);
 }
 function campWingSmart(C, target) {
   const tg = campWingTarget(C, target); if (!tg) return '';
@@ -288,14 +281,14 @@ function campWingSmart(C, target) {
 }
 
 // ---- the strip and the voice ----
-// "fighters at the mothership", "escorts to Mars", "all guard Ceres", "escorts scout the anomaly", "fighters hold at Ceres", "cancel the fighters", "red squad attack the mothership", "yellow guard", "all squads recall"
-const CAMPWING_VERB_WORDS = { attack: 'attack', engage: 'attack', hit: 'attack', strike: 'attack', guard: 'guard', defend: 'guard', protect: 'guard', escort: 'escort', cover: 'escort', scout: 'scout', recon: 'scout', reconnoitre: 'scout', fetch: 'fetch', get: 'fetch', collect: 'fetch', grab: 'fetch', retrieve: 'fetch', hold: 'hold', mine: 'mine', recall: 'recall' };
+// "fighters at the mothership", "red squad escort the convoy", "all guard Ceres", "fighters hold at Ceres", "cancel the fighters", "red squad attack the mothership", "yellow guard", "all squads recall"
+const CAMPWING_VERB_WORDS = { attack: 'attack', engage: 'attack', hit: 'attack', strike: 'attack', guard: 'guard', defend: 'guard', protect: 'guard', escort: 'escort', cover: 'escort', fetch: 'fetch', get: 'fetch', collect: 'fetch', grab: 'fetch', retrieve: 'fetch', hold: 'hold', mine: 'mine', recall: 'recall' };
 function campWingParse(text) {
   const q = String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/^(?:the |our )/, '');
-  const mc = /^(?:cancel|stop|stand down|release|clear)\s+(?:the |our )?(red squad|green squad|yellow squad|red|green|yellow|all squads|squads|fighters?|escorts?|scouts?|all|everyone|everybody|wing|fleet|squadron|ships)\b/.exec(q); if (mc) return { group: CAMPWING_GROUP_WORDS[mc[1]], verb: 'cancel', target: '' };
-  let m = /^(red squad|green squad|yellow squad|red|green|yellow|all squads|squads|fighters?|escorts?|scouts?|all|everyone|everybody|wing|fleet|squadron|ships)\b\s*(.*)$/.exec(q); if (!m) return null;
+  const mc = /^(?:cancel|stop|stand down|release|clear)\s+(?:the |our )?(red squad|green squad|yellow squad|red|green|yellow|all squads|squads|fighters?|all|everyone|everybody|wing|fleet|squadron|ships)\b/.exec(q); if (mc) return { group: CAMPWING_GROUP_WORDS[mc[1]], verb: 'cancel', target: '' };
+  let m = /^(red squad|green squad|yellow squad|red|green|yellow|all squads|squads|fighters?|all|everyone|everybody|wing|fleet|squadron|ships)\b\s*(.*)$/.exec(q); if (!m) return null;
   const group = CAMPWING_GROUP_WORDS[m[1]]; let rest = m[2].replace(/^(?:to |should |must |please )/, '');
-  let verb = '', mv = /^(attack|engage|hit|strike|guard|defend|protect|escort|cover|scout|recon|reconnoitre|fetch|get|collect|grab|retrieve|hold|mine|recall)\b\s*(.*)$/.exec(rest);
+  let verb = '', mv = /^(attack|engage|hit|strike|guard|defend|protect|escort|cover|fetch|get|collect|grab|retrieve|hold|mine|recall)\b\s*(.*)$/.exec(rest);
   if (mv) { verb = CAMPWING_VERB_WORDS[mv[1]]; rest = mv[2]; }
   rest = rest.replace(/^(?:at|to|on|over|for|near|beside|around|in)\b\s*/, '').replace(/^(?:the |that |our )/, '').trim();
   return { group, verb, target: rest };

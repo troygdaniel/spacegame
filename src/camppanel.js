@@ -1,6 +1,6 @@
 // ---------- Campaign: the order lists, the logic (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026) ----------
-// Q opens the FLEET list at the left, P the SHIP list at the right. Each has a row for every part of it, and a part has a key of its own that opens its list directly, at any time: W CONVOY, E FIGHTERS, R ESCORTS on the left;
-// O POWER, I AUTOPILOT, U DOCK AND REPAIR on the right (a part with no key: Enter on its row opens it). Nothing is on the screen until a key is pressed; only one list is open at a time.
+// Q opens the FLEET list at the left, P the SHIP list at the right. Each has a row for every part of it, and a part has a key of its own that opens its list directly, at any time: W ALL SQUADS, E RED, R GREEN, T YELLOW on the left;
+// O POWER, I AUTOPILOT, U DOCK AND REPAIR on the right (CONVOY is a part with no key: Enter on its row opens it). Nothing is on the screen until a key is pressed; only one list is open at a time.
 // In an open list Up and Down move the highlight (round at the ends), Enter gives the highlighted order (on a part's row: opens that part), Left goes back to the list it is a part of, the list's own key closes it.
 // ESC GOES BACK ONE STEP, TO WHERE YOU CAME FROM (card space-game-order-target-pick; Troy, 22 Nov 2026): a target sub-list (src/camppick.js) goes back to the list it was opened from; a list opened from a part's row (Q, then Squads) goes back to that list (Q);
 // a list opened by its own key (Q, or W E R T, O I U) is closed; with nothing open Esc pauses (the scene). P.trail is the lists we came through by rows, the last one first to go back to.
@@ -18,7 +18,7 @@
 //   campPanelView(P, C)              what the open list draws: null, or { id, title, key, side, parent, keys (the foot's words), pick (a target sub-list), rows (the ones on the screen), at (the highlight, in rows), first, total, above, below (rows off the screen) }
 //   campPanelRun(C, row, how, item)  do the row: campOrder with the row's words (how: 'key' or 'click', the play log's), an order to one part of the wing, the autopilot, the blink -> { ok, say }; item: the candidate a pick row's order is given at (src/camppick.js)
 //   campPanelTarget(C)               the line of the target: { name, km, hp } or null
-//   campPanelKeyLine()               'Q Fleet  W Convoy  E Fighters  R Escorts   P Ship  O Power  I Autopilot  U Dock': the lists' keys, from the table;   campKeyLine(): the whole bottom key line (camp.ui.keys)
+//   campPanelKeyLine()               'Q Fleet  W All  E Red  R Green  T Yellow   P Ship  O Power  I Autopilot  U Dock': the lists' keys, from the table;   campKeyLine(): the whole bottom key line (camp.ui.keys)
 const campPanelDef = id => CAMP_PANELS.panels.find(p => p.id === id) || null;
 const campPanelNew = () => ({ open: '', at: 0, top: 0, lit: {}, trail: [], pick: null, seen: null, ring: null });
 const campPanelOpen = P => (P && typeof P.open === 'string' && campPanelDef(P.open) ? P.open : '');
@@ -138,7 +138,7 @@ function campPanelRun(C, row, how, item) {
   row = campPanelAs(C, row);
   if (row.open) return { ok: true, say: '', open: row.open }; // a part's row: the caller opens its list
   if (item && row.pick === 'enemy') C.tgt = item.id; // the hostile that was chosen is THE target now: the attack below goes at it, and P fly to the target and Enter a missile follow it
-  else if (item && row.pick === 'escort') return campWingOrder(C, 'escorts', 'escort', item.id, how || 'key'); // the escorts go to the ship that was chosen (a convoy ship or a miner)
+  else if (item && row.pick === 'escort') return campWingOrder(C, row.wing ? row.wing[0] : 'fighters', 'escort', item.id, how || 'key'); // the squads (or the one squad of the row) go to the ship that was chosen (a convoy ship or a miner)
   else if (item && row.pick === 'field') return campWingOrder(C, row.wing ? row.wing[0] : 'all', 'mine', item.rock, how || 'key'); // the wing starts at the rock of the field that was chosen
   else if (row.pick === 'enemy' && !campTgtNow(C) && !campTgtList(C).length) { const dry = row.wing ? campWingOrder(C, row.wing[0], row.wing[1], null, how || 'key', true) : campCheck(C, row.order, ''); return dry.ok ? campNo('nofoe') : dry; } // Attack with no hostile and no target: nothing to attack (an order's own refusal, no fighters out, is said first)
   if (row.wing) return campWingOrder(C, row.wing[0], row.wing[1], campPanelWingTarget(C, row), how || 'key');
@@ -172,12 +172,11 @@ function campPanelState(C, row) {
   if (row.cost) return campPanelCost(row); // a yard row: what it costs
   if (sq) { const n = campWingShips(C, sq).length, tg = row.wing && row.wing[1] === 'attack' ? campPanelTarget(C) : null; return tg ? tg.name + ', ' + tg.km + ' km' : n + (n === 1 ? ' ship out' : ' ships out'); } // a squad's row: the target the attack goes at, else how many of its ships are out
   switch (row.id) {
-    case 'launch': case 'slaunch': return C.bay.fighters + ' fighters, ' + C.bay.escorts + ' escorts';
+    case 'launch': case 'slaunch': return C.bay.fighters + ' fighters';
     case 'attack': { const tg = campPanelTarget(C); return tg ? tg.name + ', ' + tg.km + ' km' : campWing(C, 'fighter').length + ' fighters out'; } // the target, when one is picked
-    case 'escort': { const cv = campNearest(campConvoys(C), C.carrier); return cv ? campConvoyName(cv) + ' convoy' : 'stay by the carrier'; } // a level with no convoy (the belt): the escorts stay close
+    case 'escort': { const cv = campNearest(campConvoys(C), C.carrier); return cv ? campConvoyName(cv) + ' convoy' : 'stay by the carrier'; } // a level with no convoy (the belt): the squads stay close
     case 'guard': case 'recall': return campWing(C).length + ' ships out';
     case 'gsquads': case 'fguard': case 'fmine': case 'frecall': return campWing(C, 'fighter').length + ' fighters out';
-    case 'gescorts': case 'eattack': case 'eguard': case 'erecall': return campWing(C, 'escort').length + ' escorts out';
     case 'gconvoy': return campPanelConvoyName(C);
     case 'gnav': return C.nav ? 'flying to ' + C.nav.name : 'not flying';
     case 'gpower': return 'weapons ' + C.power.p[0] + ', shields ' + C.power.p[1] + ', engines ' + C.power.p[2];
@@ -206,12 +205,11 @@ function campPanelShortState(C, row) {
   if (row.cost) return campPanelCost(row, true);
   if (sq) { const tg = row.wing && row.wing[1] === 'attack' ? campPanelTarget(C) : null; return tg ? tg.km + ' km' : campWingShips(C, sq).length + ' out'; }
   switch (row.id) {
-    case 'launch': case 'slaunch': return (C.bay.fighters + C.bay.escorts) + ' in bay';
+    case 'launch': case 'slaunch': return C.bay.fighters + ' in bay';
     case 'attack': return campWing(C, 'fighter').length + ' out';
     case 'escort': { const cv = campNearest(campConvoys(C), C.carrier); return cv ? campConvoyName(cv) : 'stay close'; }
     case 'guard': case 'recall': return campWing(C).length + ' out';
     case 'gsquads': case 'fguard': case 'fmine': case 'frecall': return campWing(C, 'fighter').length + ' out';
-    case 'gescorts': case 'eattack': case 'eguard': case 'erecall': return campWing(C, 'escort').length + ' out';
     case 'gconvoy': return campPanelConvoyName(C);
     case 'gnav': return C.nav ? 'on' : '';
     case 'gpower': return C.power.p.join(' / ');

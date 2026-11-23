@@ -110,10 +110,10 @@ function campBriefEnemies(level, i) {
 
 // ---- readiness: what you fly it with, and what is off ----
 function campBriefReady(P, level, i) {
-  const wing = typeof campRankWing === 'function' ? campRankWing(P) : { fighters: CAMP.bay.fighters + ((P.bonus || {}).fighters | 0), escorts: CAMP.bay.escorts + ((P.bonus || {}).escorts | 0) };
+  const wing = typeof campRankWing === 'function' ? campRankWing(P) : { fighters: CAMP.bay.fighters + ((P.bonus || {}).fighters | 0) };
   const rank = typeof campRank === 'function' ? campRank(P).name : '';
   const missiles = CAMP.missile.magazine, ore = P.ore | 0; // (a mission starts with the full magazine, a full shield and the whole wing in the bay: the ready room has no ship out, so none of that is ever a warning here)
-  const lines = [uiText('camp.bf.ready.bay', { f: wing.fighters, e: wing.escorts })];
+  const lines = [uiText('camp.bf.ready.bay', { f: wing.fighters })];
   if (rank) lines.push(uiText('camp.bf.ready.rank', { name: rank }));
   const pw = typeof campPowerLoad === 'function' ? campPowerLoad() : CAMP.power.start.slice(), cap = Math.round(CAMP.carrier.shield * CAMP.power.shields.cap[pw[1]]); // the ship's systems (card space-game-campaign-systems): the setting saved in this browser is what the battle starts with, and the shield's cap follows the shields' pips
   lines.push(uiText('camp.bf.ready.stock', { missiles, ore }), uiText('camp.bf.ready.power', { w: pw[0], s: pw[1], e: pw[2] }), uiText('camp.bf.ready.shield', { cap }));
@@ -145,7 +145,7 @@ function campBriefView(Y, zoom, z, view, z0) {
 // A picture is a list of parts in a box of CAMPBRIEF.pic.w by .h round (0, 0): { look, x, y, k, rot, tint } a sprite of the game (look: a CAMP_LOOK name, or 'pod', 'rock', 'ore'; k times the size it has in the battle), { ring, x, y, r, color, a, dash, fill }, { disc }, { line }, { arrow }, { reticle }, { clock }, { bar }.
 // The sprites are the game's own, so a picture is always of what is in the mission: the wing in a ring, the haulers on their lane, the mothership in the reticle, the cruiser mining.
 const CAMPBRIEF_COL_PIC = { cyan: 0x38e1ff, amber: 0xffb454, green: 0x6dff9c, red: 0xff7aa8, gold: 0xffd37a, white: 0xffffff, rock: 0xb9a37a, violet: 0xc9a0ff };
-const CAMPBRIEF_LOOKS = ['carrier', 'fighter', 'escort', 'freighter', 'raider', 'drone', 'gunship', 'mother', 'tower', 'pod', 'rock', 'ore', 'skiff', 'cutter'];
+const CAMPBRIEF_LOOKS = ['carrier', 'fighter', 'freighter', 'raider', 'drone', 'gunship', 'mother', 'tower', 'pod', 'rock', 'ore', 'skiff', 'cutter'];
 const campBriefPicture = (() => {
   const C = CAMPBRIEF_COL_PIC, img = (look, x, y, k, rot, tint) => ({ look, x, y, k, rot: rot || 0, tint: tint || 0 }), ring = (x, y, r, color, a, dash, fill) => ({ ring: true, x, y, r, color, a: a == null ? 0.9 : a, dash: !!dash, fill: !!fill }), ret = (x, y, r) => ({ reticle: true, x, y, r }), arrow = (x0, y0, x1, y1, color) => ({ arrow: true, x0, y0, x1, y1, color });
   const T = {
@@ -163,7 +163,7 @@ const campBriefPicture = (() => {
     'clear.pirate': [ring(0, 0, 33, C.green, 0.5, true), img('carrier', 0, 0, 0.36, 0.3), img('skiff', -42, -20, 0.9, 0.6), img('skiff', -42, 20, 0.9, -0.6)],
     // the bonus objectives
     'b.time': [{ clock: true, x: 0, y: 0, r: 27 }],
-    'b.lost': [ring(0, 0, 33, C.green, 0.16, false, true), ring(0, 0, 33, C.green, 0.8, true), img('fighter', -14, 3, 1.1, 0), img('escort', 15, -3, 1.0, 0)],
+    'b.lost': [ring(0, 0, 33, C.green, 0.16, false, true), ring(0, 0, 33, C.green, 0.8, true), img('fighter', -14, 3, 1.1, 0), img('fighter', 15, -3, 1.0, 0)],
     'b.ore': [img('rock', 24, -8, 0.7, 0.5), img('carrier', -26, 12, 0.4, -0.45), { line: true, x0: -8, y0: 4, x1: 17, y1: -5, color: C.cyan, w: 2 }, img('ore', 6, 18, 1.2, 0)],
     'b.hull': [img('carrier', 0, -8, 0.5, 0), { bar: true, x: -30, y: 18, w: 60, h: 8, f: 0.7, color: C.green }],
     'b.delivered': [img('freighter', -40, -17, 0.4, 0), img('freighter', -40, 0, 0.4, 0), img('freighter', -40, 17, 0.4, 0), arrow(-18, 0, 20, 0, C.amber), { disc: true, x: 40, y: 0, r: 11, color: C.rock }],

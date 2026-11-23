@@ -30,8 +30,8 @@ console.log('A. the table and the words');
 {
   const R = J('CAMP.ranks');
   check('six ranks, in the table: cadet, ensign, lieutenant, commander, captain, commodore', R.map(r => r.id).join() === 'cadet,ensign,lieutenant,commander,captain,commodore', R.map(r => r.id).join());
-  check('the first is held from 0 points and gives nothing; each one needs more points than the last', R[0].at === 0 && R[0].fighters === 0 && R[0].escorts === 0 && R.every((r, i) => i === 0 || r.at > R[i - 1].at), R.map(r => r.at).join());
-  check('and gives at least what the last gave, fighters and escorts, and more of one of them: a rank is always worth having', R.every((r, i) => i === 0 || (r.fighters >= R[i - 1].fighters && r.escorts >= R[i - 1].escorts && r.fighters + r.escorts > R[i - 1].fighters + R[i - 1].escorts)), R.map(r => r.fighters + '/' + r.escorts).join(' '));
+  check('the first is held from 0 points and gives nothing; each one needs more points than the last', R[0].at === 0 && R[0].fighters === 0 && R[0].escorts === undefined && R.every((r, i) => i === 0 || r.at > R[i - 1].at), R.map(r => r.at).join());
+  check('and gives more fighters than the last (the escort was folded into the fighters, card space-game-cut-escorts): a rank is always worth having', R.every((r, i) => i === 0 || r.fighters > R[i - 1].fighters), R.map(r => r.fighters).join(' '));
   check('every line of the table has a comment, and the table is in the one CAMP, near the top, before any code', (() => { const s = src('src/campaign.js'), i = s.indexOf('  ranks: ['), j = s.indexOf('  beamHum: {'); return i > 0 && j > i && s.slice(i, j).split('\n').filter(l => l.trim()).every(l => l.includes('//') || l.trim() === '],'); })());
   const md = src('content/text/campaign-ranks.md'), keys = R.map(r => 'camp.rank.' + r.id).concat(R.slice(1).map(r => 'camp.rank.' + r.id + '.promo'), ['camp.ui.promoted', 'camp.ui.rank', 'camp.ui.ranktop']);
   check('every rank has a name and (but the first) a promotion line, and the debrief and hub lines are there, in content/text/campaign-ranks.md and in the game', keys.every(k => md.includes('| ' + k + ' |') && J(`uiText('${k}')`) !== k), keys.filter(k => !md.includes('| ' + k + ' |') || J(`uiText('${k}')`) === k).join());
@@ -47,7 +47,7 @@ console.log('B. the points and the rank');
   check('junk in the results is not points (no score, a string, a negative), and nothing throws on a state with none', J(`campPoints({ results: { a: null, b: { score: 'x' }, c: { score: -50 }, d: { score: 700 } } })`) === 700 && J('campPoints({})') === 0 && J('campPoints(null)') === 0);
   const at = [[0, 0], [999, 0], [1000, 1], [3499, 1], [3500, 2], [6499, 2], [6500, 3], [9999, 3], [10000, 4], [13999, 4], [14000, 5], [99999, 5]];
   check('a rank is held from its points, and not before (one under is still the rank below)', at.every(([p, i]) => J(`campRankAt(${p})`) === i), at.filter(([p, i]) => J(`campRankAt(${p})`) !== i).join(' | '));
-  check('the rank of a pilot: its index, id, name, points, the points it is held from and its extras', JSON.stringify(J('campRank(__P(4200))')) === JSON.stringify({ i: 2, id: 'lieutenant', name: 'Lieutenant', points: 4200, at: 3500, fighters: 2, escorts: 1 }), JSON.stringify(J('campRank(__P(4200))')));
+  check('the rank of a pilot: its index, id, name, points, the points it is held from and its extras', JSON.stringify(J('campRank(__P(4200))')) === JSON.stringify({ i: 2, id: 'lieutenant', name: 'Lieutenant', points: 4200, at: 3500, fighters: 3 }), JSON.stringify(J('campRank(__P(4200))')));
   check('a mission flown again with a worse score does not lower it: the result keeps its best (the missions card), so the rank only goes up', (() => {
     g.run(`window.__Q = __P(0); __Q.results['1.1'] = { score: 1800, bonuses: [], t: 90, hull: 500, lost: 0, tries: 1 }; window.__r0 = campRank(__Q).i;
       campMissionDone(__Q, 1, 0, { score: 1000, bonuses: [], t: 200, hullLeft: 300, shipsLost: 3 }); window.__r1 = campRank(__Q).i; window.__p1 = campPoints(__Q);
@@ -60,37 +60,35 @@ console.log('B. the points and the rank');
 console.log('C. campRankStatus: what the hub reads');
 {
   const s = J('campRankStatus(__P(4000))');
-  check('the shape 5-GEN\'s ready room reads: { name, n, of, points, next, nextName, wing: { fighters, escorts } }', Object.keys(s).sort().join() === 'next,nextName,n,name,of,points,wing'.split(',').sort().join() && Object.keys(s.wing).sort().join() === 'escorts,fighters', Object.keys(s).join());
-  check('a lieutenant with 4,000 points: rank 3 of 6, the commander is at 6,500, and the wing is the bay (6 and 2) and the rank\'s extras (2 and 1)', s.name === 'Lieutenant' && s.n === 3 && s.of === 6 && s.points === 4000 && s.next === 6500 && s.nextName === 'Commander' && s.wing.fighters === 8 && s.wing.escorts === 3, JSON.stringify(s));
+  check('the shape 5-GEN\'s ready room reads: { name, n, of, points, next, nextName, wing: { fighters } }', Object.keys(s).sort().join() === 'next,nextName,n,name,of,points,wing'.split(',').sort().join() && Object.keys(s.wing).sort().join() === 'fighters', Object.keys(s).join());
+  check('a lieutenant with 4,000 points: rank 3 of 6, the commander is at 6,500, and the wing is the bay (8) and the rank\'s extras (3)', s.name === 'Lieutenant' && s.n === 3 && s.of === 6 && s.points === 4000 && s.next === 6500 && s.nextName === 'Commander' && s.wing.fighters === 11 && s.wing.escorts === undefined, JSON.stringify(s));
   const top = J('campRankStatus(__P(20000))');
-  check('at the top there is no next: next is null, nextName is empty, and the wing has all the extras (5 and 3)', top.n === 6 && top.next === null && top.nextName === '' && top.wing.fighters === 11 && top.wing.escorts === 5, JSON.stringify(top));
-  const w = J(`campRankStatus(__P(4000, { techs: ['bay2'], bonus: { fighters: 2, escorts: 1 } })).wing`);
-  check('the wing counts everything the next mission starts with: the second-bay tech (four fighters), the extras of the refit, and the rank', w.fighters === 6 + 4 + 2 + 2 && w.escorts === 2 + 1 + 1, JSON.stringify(w));
-  check('with no results at all it is a cadet with the plain bay: a new pilot', J('campRankStatus(campProgressNew()).n') === 1 && J('campRankStatus(campProgressNew()).wing.fighters') === 6 && J('campRankStatus(campProgressNew()).wing.escorts') === 2);
+  check('at the top there is no next: next is null, nextName is empty, and the wing has all the extras (8)', top.n === 6 && top.next === null && top.nextName === '' && top.wing.fighters === 16, JSON.stringify(top));
+  const w = J(`campRankStatus(__P(4000, { techs: ['bay2'], bonus: { fighters: 3 } })).wing`);
+  check('the wing counts everything the next mission starts with: the second-bay tech (four fighters), the extras of the refit, and the rank', w.fighters === 8 + 4 + 3 + 3 && w.escorts === undefined, JSON.stringify(w));
+  check('with no results at all it is a cadet with the plain bay: a new pilot', J('campRankStatus(campProgressNew()).n') === 1 && J('campRankStatus(campProgressNew()).wing.fighters') === 8 && J('campRankStatus(campProgressNew()).wing.escorts') === null);
   // the two cards together (the hub, src/camphub.js, reads this status): the room shows the real rank, its next rank, the score and the wing the next mission starts with
   const hk = J('(() => { const P = __P(4000); return { r: campHubRank(P), note: CAMP_HUB.note.rank(P) }; })()');
-  check('the ready room reads the real ranks: ranked, Lieutenant 3 of 6, 4,000 points, the commander next at 6,500, and its wing note and rank row say the rank', hk.r.ranked === true && hk.r.name === 'Lieutenant' && hk.r.n === 3 && hk.r.of === 6 && hk.r.points === 4000 && hk.r.next === 6500 && hk.r.nextName === 'Commander' && hk.r.wing.fighters === 8 && hk.r.wing.escorts === 3 && hk.note === 'Lieutenant', JSON.stringify(hk));
-  check('and a new pilot in the room is a Cadet with the plain wing (6 and 2) and the next rank at 1,000', J('campHubRank(campProgressNew()).name') === 'Cadet' && J('campHubRank(campProgressNew()).next') === 1000 && J('campHubRank(campProgressNew()).wing.fighters') === 6);
+  check('the ready room reads the real ranks: ranked, Lieutenant 3 of 6, 4,000 points, the commander next at 6,500, and its wing note and rank row say the rank', hk.r.ranked === true && hk.r.name === 'Lieutenant' && hk.r.n === 3 && hk.r.of === 6 && hk.r.points === 4000 && hk.r.next === 6500 && hk.r.nextName === 'Commander' && hk.r.wing.fighters === 11 && hk.note === 'Lieutenant', JSON.stringify(hk));
+  check('and a new pilot in the room is a Cadet with the plain wing (8) and the next rank at 1,000', J('campHubRank(campProgressNew()).name') === 'Cadet' && J('campHubRank(campProgressNew()).next') === 1000 && J('campHubRank(campProgressNew()).wing.fighters') === 8);
 }
 
 // ---------- D. the wing ----------
 console.log('D. the wing: the bay and the limit');
 {
   g.run(`window.__rankC = (rank, techs, bonus) => { window.C = campNew(1, techs || [], { seed: 1, rank, bonus }); return C; }`);
-  const R = J('CAMP.ranks'), rows = R.map((r, i) => { g.run(`__rankC(${i})`); return { i, f: J('C.bay.fighters'), e: J('C.bay.escorts'), capf: J('C.cap.fighters'), cape: J('C.cap.escorts'), rank: J('C.rank') }; });
-  check('a battle starts with the rank\'s wing in the bay: 6 and 2 and the extras of each rank, and says its rank', rows.every(x => x.f === 6 + R[x.i].fighters && x.e === 2 + R[x.i].escorts && x.rank === x.i), JSON.stringify(rows.map(x => x.f + '/' + x.e)));
-  check('and the wing limit goes up with it: 14 and 6 (the workshop\'s) and the rank\'s extras', rows.every(x => x.capf === 14 + R[x.i].fighters && x.cape === 6 + R[x.i].escorts), JSON.stringify(rows.map(x => x.capf + '/' + x.cape)));
-  check('no rank given is a cadet: the old bay, as every battle before the ranks (a battle of a test, an address)', (g.run('window.C = campNew(1, [], { seed: 1 })'), J('C.bay.fighters') === 6 && J('C.bay.escorts') === 2 && J('C.rank') === 0));
-  check('a rank out of range is held to the table (below 0 the cadet, over the last the commodore)', (g.run('__rankC(-4)'), J('C.rank') === 0) && (g.run('__rankC(99)'), J('C.rank') === 5 && J('C.bay.fighters') === 11));
-  check('the second-bay tech and the extras of the refit add to the rank\'s, and all three together are in the bay', (g.run(`__rankC(2, ['bay2'], { fighters: 2, escorts: 1 })`), J('C.bay.fighters') === 6 + 4 + 2 + 2 && J('C.bay.escorts') === 2 + 1 + 1));
+  const R = J('CAMP.ranks'), rows = R.map((r, i) => { g.run(`__rankC(${i})`); return { i, f: J('C.bay.fighters'), capf: J('C.cap.fighters'), rank: J('C.rank') }; });
+  check('a battle starts with the rank\'s wing in the bay: 8 and the extras of each rank, and says its rank', rows.every(x => x.f === 8 + R[x.i].fighters && x.rank === x.i), JSON.stringify(rows.map(x => x.f)));
+  check('and the wing limit goes up with it: 14 (the workshop\'s) and the rank\'s extras', rows.every(x => x.capf === 14 + R[x.i].fighters), JSON.stringify(rows.map(x => x.capf)));
+  check('no rank given is a cadet: the old bay, as every battle before the ranks (a battle of a test, an address)', (g.run('window.C = campNew(1, [], { seed: 1 })'), J('C.bay.fighters') === 8 && J('C.rank') === 0));
+  check('a rank out of range is held to the table (below 0 the cadet, over the last the commodore)', (g.run('__rankC(-4)'), J('C.rank') === 0) && (g.run('__rankC(99)'), J('C.rank') === 5 && J('C.bay.fighters') === 16));
+  check('the second-bay tech and the extras of the refit add to the rank\'s, and all three together are in the bay', (g.run(`__rankC(2, ['bay2'], { fighters: 3 })`), J('C.bay.fighters') === 8 + 4 + 3 + 3));
   g.run('__rankC(2)'); g.run('C.waves.forEach(w => { w.started = true; }); campOrder(C, "launch")');
   check('Launch puts the whole wing out: the bay of the rank, one ship every 0.6 s', J('C.launchQ.length') === 11, J('C.launchQ.length'));
   // ships are built docked at an outpost (card space-game-campaign-outposts: campCanBuild), so the carrier of these checks is docked
   const build = rank => { g.run(`__rankC(${rank}); C.docked = true; C.waves.forEach(w => { w.started = true; }); C.ore = 200; window.__ok = 0; for (let i = 0; i < 40; i++) { C.ore = 200; const r = campOrder(C, 'build', 'a fighter'); if (r.ok) __ok++; else { window.__code = r.code; break; } }`); return { ok: J('__ok'), code: J('__code'), total: J('C.bay.fighters + C.build.queue.length') }; };
   const b0 = build(0), b5 = build(5);
-  check('the workshop builds up to the limit of the rank, and then says the wing is full: a cadet to 14 fighters, a commodore to 19', b0.total === 14 && b5.total === 19 && b0.code === 'buildfull' && b5.code === 'buildfull', JSON.stringify([b0, b5]));
-  const e5 = (g.run(`__rankC(5); C.docked = true; C.ore = 200; window.__eok = 0; for (let i = 0; i < 40; i++) { C.ore = 200; const r = campOrder(C, 'build', 'an escort'); if (r.ok) __eok++; else break; }`), J('C.bay.escorts + C.build.queue.length'));
-  check('and the escorts the same way: a commodore to 6 plus its 3', e5 === 9, e5);
+  check('the workshop builds up to the limit of the rank, and then says the wing is full: a cadet to 14 fighters, a commodore to 22', b0.total === 14 && b5.total === 22 && b0.code === 'buildfull' && b5.code === 'buildfull', JSON.stringify([b0, b5]));
 }
 
 // ---------- E. the promotion ----------
@@ -100,7 +98,7 @@ console.log('E. the promotion: the debrief, the scene, the save');
   check('campRankPromoted says when a mission took the pilot up: from the rank it was to the rank it is, and nothing when it did not', JSON.stringify(J('campRankPromoted(0, __P(1000))')) === '{"from":0,"to":1}' && J('campRankPromoted(0, __P(999))') === null && J('campRankPromoted(1, __P(1500))') === null && JSON.stringify(J('campRankPromoted(0, __P(7000))')) === '{"from":0,"to":3}' && J('campRankPromoted(3, __P(100))') === null);
   g.run(`window.__PP = __P(1200); __PP.promo = { from: 0, to: 1 }`);
   const line = J('campRankLine(__PP, {})');
-  check('the debrief line of a promotion: PROMOTED, the new rank, the bay it brings, and the rank\'s own line under it', /^PROMOTED: Ensign\. The bay holds 7 fighters and 2 escorts\.\nCommand has noticed the way you fly\.$/.test(line), line);
+  check('the debrief line of a promotion: PROMOTED, the new rank, the bay it brings, and the rank\'s own line under it', /^PROMOTED: Ensign\. The bay holds 9 fighters\.\nCommand has noticed the way you fly\.$/.test(line), line);
   g.run(`window.__PP = __P(4200)`);
   check('with no promotion it says the rank, the points (with a comma) and what the next one needs', J('campRankLine(__PP, {})') === 'Rank: Lieutenant   4,200 points   next: Commander at 6,500', J('campRankLine(__PP, {})'));
   check('at the top it says so', J('campRankLine(__P(15500), {})') === 'Rank: Commodore   15,500 points   the highest rank', J('campRankLine(__P(15500), {})'));
@@ -118,7 +116,7 @@ console.log('E. the promotion: the debrief, the scene, the save');
   g.run(`window.__f2 = __sc(1500); __f2.camp.score.score = 100; Campaign.prototype.missionWon.call(__f2)`);
   check('one that does not cross a rank sets none (an ensign who scores 100 more stays an ensign)', J('__f2.P.promo') === null && J('__f2.P.results["1.1"].score') >= 100);
   g.run(`window.__f3 = __sc(4200); window.__c3 = __f3.makeCamp()`);
-  check('the next battle is made with the rank of the state (4,200 points: a lieutenant, 8 and 3 in the bay), and the promotion of the last debrief is cleared', J('__c3.rank') === 2 && J('__c3.bay.fighters') === 8 && J('__c3.bay.escorts') === 3 && J('__f3.P.promo') === null, JSON.stringify([J('__c3.rank'), J('__c3.bay.fighters')]));
+  check('the next battle is made with the rank of the state (4,200 points: a lieutenant, 11 in the bay), and the promotion of the last debrief is cleared', J('__c3.rank') === 2 && J('__c3.bay.fighters') === 11 && J('__f3.P.promo') === null, JSON.stringify([J('__c3.rank'), J('__c3.bay.fighters')]));
   g.run(`window.__SV = __P(5000); campProgressSave(__SV); window.__LD = campProgressLoad()`);
   const saved = JSON.parse(store.get('longhaul.campaign'));
   check('nothing new is saved for the rank: the save has no rank and no promotion, and the rank comes back from the results (a reload of 5,000 points is a lieutenant)', !('rank' in saved) && !('promo' in saved) && J('campRank(__LD).i') === 2 && J('campPoints(__LD)') === 5000, Object.keys(saved).join());

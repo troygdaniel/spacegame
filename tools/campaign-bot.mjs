@@ -74,15 +74,19 @@ g.run(`(() => {
   };
   const clampi = v => Math.max(-1, Math.min(1, v));
   // --keys: an order as a player gives it. The row is found in the key table (campKeyVia), its list is opened with the list's own key, Down goes to the row, Enter gives it (src/camppanel.js campPanelKey);
-  // "attack that one" is the target picked first (what A, D and S do) and then the fighters' Attack row; a missile is Enter with no list open. What has no row (a scout, a lane: the map's) stays an order.
+  // "attack that one" is the target picked first (what A, D and S do) and then the fighters' Attack row; a missile is Enter with no list open. What has no row (a lane: the map's) stays an order.
   const give = (C, rowId) => { const list = campKeyVia(rowId), rows = list ? campPanelList(C, list.id) : [], i = rows.findIndex(r => r.id === rowId); if (i < 0) return { ok: false, say: 'no such row here: ' + rowId }; const P = campPanelNew(); campPanelKey(P, C, list.code, 0); const nrows = rows.length, downs = ((i - P.at) % nrows + nrows) % nrows; for (let k = 0; k < downs; k++) campPanelKey(P, C, 'ArrowDown', 0); window.__KEYN = (window.__KEYN | 0) + 1; let r = campPanelKey(P, C, 'Enter', 0); if (P.pick) { window.__KEYN++; r = campPanelKey(P, C, 'Enter', 0); } return r; }; // (a row that needs a target opens a sub-list when there are several to choose from, src/camppick.js: the bot takes the top one, as a player who has no better idea does)
   const aim = (C, id) => { if (id) C.tgt = id; else campTgtClear(C); };
   const ROW = { launch: 'launch', escort: 'escort', mine: 'fmine', recall: 'frecall' }; // the whole-wing rows left Q (card space-game-squad-tint): the bot's Launch, Mine and Recall are the All squads list's (W)
+  // the wing is split as a player splits it (card space-game-cut-escorts: there is no escort ship): the Yellow squad (two ships) is the escort, going to the convoy; Red and Green (six) are the fighters that Attack goes to
+  const wingEscort = (C, arg) => { const t = campFind(C, arg), cv = t && t.kind === 'convoy' ? C.by[t.id] : campNearest(campConvoys(C), C.carrier); return cv ? campWingOrder(C, 'yellow', 'escort', cv.id, 'bot') : campOrder(C, 'escort', arg); };
+  const wingAttack = (C, arg) => { let r = null; ['red', 'green'].forEach(k => { const x = campWingOrder(C, k, 'attack', arg === 'mothership' ? 'mother' : null, 'bot'); if (x.ok || !r) r = x; }); return r.ok || campWing(C, 'fighter').length === 0 ? r : campOrder(C, 'attack', arg); };
   const ord = (C, name, arg) => {
-    if (!window.__KEYS) return campOrder(C, name, arg);
+    if (!window.__KEYS) return name === 'escort' ? wingEscort(C, arg) : name === 'attack' ? wingAttack(C, arg) : campOrder(C, name, arg);
+    if (name === 'escort') return give(C, 'yellowescort'); // the escort of the old wing is the Yellow squad now, two ships (card space-game-cut-escorts: no escort ship): the one squad that goes to the convoy while Red and Green fight
     if (ROW[name]) return give(C, ROW[name]);
     if (name === 'convoy') return give(C, arg === 'tuck in' ? 'ctuck' : arg === 'carry on' ? 'ccarry' : arg === 'run for it' ? 'crun' : 'chold');
-    if (name === 'attack' || name === 'missiles') { const m = arg === 'mothership' ? C.ships.find(u => u.kind === 'mother' && u.hp > 0) : null; aim(C, m ? m.id : ''); return name === 'attack' ? give(C, 'attack') : campPanelKey(campPanelNew(), C, 'Enter', 0); }
+    if (name === 'attack' || name === 'missiles') { const m = arg === 'mothership' ? C.ships.find(u => u.kind === 'mother' && u.hp > 0) : null; aim(C, m ? m.id : ''); return name === 'attack' ? (give(C, 'redattack'), give(C, 'greenattack')) : campPanelKey(campPanelNew(), C, 'Enter', 0); }
     return campOrder(C, name, arg);
   };
   window.__botStep = (C, s, B, sk, st) => {
@@ -94,15 +98,10 @@ g.run(`(() => {
     if (st.react != null && s >= st.react) { B = Object.assign({}, B, { sit: false, launchAt: st.launched ? B.launchAt : 0, attackFrom: 0, attackEvery: 5 }); st.sitOff = true; }
     if (B.launch !== false && B.launchAt != null && !st.launched && s >= B.launchAt) { st.launched = true; ord(C, 'launch'); }
     (B.escort || []).forEach((at, i) => { if (!st['e' + i] && s >= at && campConvoys(C).length) { st['e' + i] = true; ord(C, 'escort', 'convoy'); } }); // the wing goes to the nearest convoy ship (the transport, the haulers)
-    if (C.route && !C.route.passed && !B.noroute) { // a fork in the road (card space-game-scout-route): scout both lanes as soon as an escort is out, then take the quieter one when the transport holds at the fork
-      C.route.geo.order.forEach(id => { if (st.launched && !C.route.known[id] && !st['lane' + id]) { const row = campNavRows(C).find(x => x.id === 'lane:' + id); if (row && campOrder(C, 'scout', row).ok) st['lane' + id] = true; } });
-      const hold = campRouteHolding(C), all = C.route.geo.order.every(id => C.route.known[id]);
-      if (hold && !st.picked && (all || hold.left < 8)) { st.picked = true; const n = id => C.route.known[id] ? C.route.known[id].pirates + C.route.known[id].aliens : 99; campOrder(C, 'lane', hold.lanes.map(l => l.id).sort((a, b) => n(a) - n(b))[0]); }
-    }
     const mineOpen = (campObjectives(C).some(o => !o.done && o.type === 'ore') || (B.mineAll && C.rocks.some(r => r.hp > 0))) && !B.nomine, fight = campAliens(C).some(u => !u.hold);
     if (B.launch !== false && st.launched && mineOpen && !st.mining && !fight && s >= (st.mineAt || 0)) { if (ord(C, 'mine').ok) st.mining = true; else st.mineAt = s + 1; } // while the mission asks for ore the wing mines, and goes to the fight only when one comes (then mines again) // a mission that asks for ore: the wing mines (E then 1)
     if (B.cycle && st.launched) {
-      if (st.landAt && s >= st.landAt) { st.landAt = 0; ord(C, 'launch'); st.nextAtk = s + 2; }
+      if (st.landAt && s >= st.landAt) { st.landAt = 0; ord(C, 'launch'); st.nextAtk = s + 2; (B.escort || []).forEach((at, i) => { if (s >= at) st['e' + i] = false; }); } // the squad that escorts goes back to the convoy once it is out again
       const fs = campWing(C, 'fighter');
       if (!st.landAt && fs.length >= 3 && Math.round(s * 30) % 60 === 0 && fs.reduce((a, u) => a + u.hp / u.maxHp, 0) / fs.length < B.cycle && C.carrier.hp > 0) { ord(C, 'recall'); st.landAt = s + 14; st.recalls = (st.recalls || 0) + 1; }
     }
@@ -114,7 +113,7 @@ g.run(`(() => {
     if (B.missiles && Math.round(s * 30) % 21 === 0 && typeof campOrder === 'function') ord(C, 'missiles', C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'mothership' : '');
     if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight)) {
       const boat = typeof campTorpedoBoats === 'function' ? campTorpedoBoats(C).filter(u => !u.running).sort((p, q) => campDist(p, C.carrier) - campDist(q, C.carrier))[0] : null; // torpedo boats (card space-game-torpedo-boats): the plain answer is to send the fighters at the nearest boat that still has a torpedo, before anything else
-      if (boat) { if (window.__KEYS) { aim(C, boat.id); give(C, 'attack'); } else campWingOrder(C, 'fighters', 'attack', boat.id); } else ord(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : '');
+      if (boat) { if (window.__KEYS) { aim(C, boat.id); give(C, 'redattack'); give(C, 'greenattack'); } else ['red', 'green'].forEach(k => campWingOrder(C, k, 'attack', boat.id)); } else ord(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : '');
       st.mining = false;
     }
   };

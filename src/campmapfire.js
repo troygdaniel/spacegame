@@ -23,7 +23,7 @@ const CAMPFIRE = {
   flash: 6,                          // px: a hit's flash
   color: { volley: 0xffd37a, beam: 0x7fe9ff, missile: 0xffd37a, friend: 0x9fe9ff, foe: 0xff9aa8, ringFriend: 0x9fe9ff, ringFoe: 0xff4d6d, blast: 0xffd37a, shield: 0x7fe9ff,
     wing: CAMPMAP.color.wing, alien: CAMPMAP.color.alien, pirate: CAMPMAP.color.pirate, patrol: CAMPMAP.color.patrol }, // friend and foe as the map's own marks (campDotColor): the wing green, the aliens red, the pirates yellow, a patrol teal
-  earth: ['carrier', 'fighter', 'escort', 'freighter'] // the kinds on Earth's side; anything else that blows up is theirs
+  earth: ['carrier', 'fighter', 'freighter'] // the kinds on Earth's side; anything else that blows up is theirs
 };
 const CF_TMP = { t0: 0, t1: 1, x0: 0, y0: 0, x1: 0, y1: 0 }; // the scratch the clip writes into: one object for ever
 const CF_NONE = [];
