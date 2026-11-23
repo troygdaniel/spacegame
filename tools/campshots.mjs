@@ -43,13 +43,14 @@ const wayTo = row => j(`(() => { const C = ${SC}.camp, id = ${JSON.stringify(row
 const goTo = async row => { // the list open with the highlight on the row (not given)
   if ((await j(`${SC}.mode`)) !== 'play') return false; // a card has the keys
   const way = await wayTo(row); if (!way) { note('(the row ' + row + ' is left out of this mission\'s list)'); return false; }
-  if (await j(`campPanelOpen(${SC}.pn)`)) await keyOn('Escape'); // an open list is closed first (Esc pauses only when none is open)
-  for (const [code, downs] of way.keys) { await keyOn(code); for (let i = 0; i < downs; i++) await keyOn('ArrowDown'); }
+  for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): pressed until every list is closed (it pauses only when none is open)
+  for (const [code, downs] of way.keys) { await keyOn(code); const cur = await j(`${SC}.pn.at`), n = await j(`(() => { const o = campPanelOpen(${SC}.pn); return o ? campPanelList(${SC}.camp, o).length : 0; })()`); for (let i = 0, d = n ? ((downs - cur) % n + n) % n : 0; i < d; i++) await keyOn('ArrowDown'); } // a list can open with its highlight on its first usable row (start: 'usable', All squads): Down only the difference
   return true;
 };
 const order = async row => {
   if (!(await goTo(row))) return false; await keyOn('Enter');
-  if (await j(`campPanelOpen(${SC}.pn)`)) await keyOn('Escape'); // an order that is refused leaves the list open, and so does a power row: it is closed, the keys go back to the ship
+  if (await j(`!!${SC}.pn.pick`)) await keyOn('Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
+  for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); // an order that is refused leaves the list open, and so does a power row: Esc until it is closed, the keys go back to the ship
   return true;
 };
 const recall = () => order('recall'); // Recall is a row of its own (Launch and Recall are two rows, not a toggle)
@@ -213,7 +214,7 @@ try {
     await t.run(400); await panelShot('panels-02c-refused', 'fleet'); await keyOn('Escape'); await t.run(200);
     await order('launch'); note('launch', JSON.stringify(await st())); await t.run(2500);
     await keyOn('KeyQ'); await keyOn('ArrowUp'); await t.run(400); note('Q, Up (round to the last row: Stance)', JSON.stringify(await st())); await snap('panels-03-fleet-stances'); await panelShot('panels-03b-stances', 'fleet'); await keyOn('Escape'); await t.run(200); // Up from the first row goes round to the last: the row that opens the stances
-    await order('orbit'); await goTo('orbit'); await t.run(400); note('the stance list, Orbit in force', JSON.stringify(await st())); await panelShot('panels-03c-stance-in-force', 'stance'); await keyOn('Escape'); await t.run(300); // Q, the Stance row, Enter: the stance list; the stance in force is marked
+    await order('orbit'); await goTo('orbit'); await t.run(400); note('the stance list, Orbit in force', JSON.stringify(await st())); await panelShot('panels-03c-stance-in-force', 'stance'); for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); await t.run(300); // Esc goes back to Q, then closes it. Q, the Stance row, Enter: the stance list; the stance in force is marked
     await keyOn('KeyP'); await t.run(400); note('P', JSON.stringify(await st())); await snap('panels-04-ship-list'); await panelShot('panels-04b-ship', 'ship'); await keyOn('KeyP'); await t.run(300);
     // a hostile put in reach (staged): D picks it with no list open, the line under the radar names it, the bracket is round it; the fighters list's Attack row (E) goes at it
     await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; campSpawn(C, 'raider', c.x + 520, c.y - 180); return 1; })()`); await t.run(300);

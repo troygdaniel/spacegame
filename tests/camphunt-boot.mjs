@@ -46,13 +46,14 @@ try {
   const listGo = async row => {
     if ((await j(`${S}.mode`)) !== 'play') return false; // a card has the keys: Enter would be the card's
     const way = await listWay(row); if (!way) return false; // the row is not in this mission's list
-    if (await j(`campPanelOpen(${S}.pn)`)) await key('Escape'); // an open list is closed first (Esc pauses only when none is open)
-    for (const [code, downs] of way.keys) { await key(code); for (let i = 0; i < downs; i++) await key('ArrowDown'); }
+    for (let n = 0; n < 6 && (await j(`campPanelOpen(${S}.pn)`)); n++) await key('Escape'); // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): pressed until every list is closed (it pauses only when none is open)
+    for (const [code, downs] of way.keys) { await key(code); const cur = await j(`${S}.pn.at`), n = await j(`(() => { const o = campPanelOpen(${S}.pn); return o ? campPanelList(${S}.camp, o).length : 0; })()`); for (let i = 0, d = n ? ((downs - cur) % n + n) % n : 0; i < d; i++) await key('ArrowDown'); } // a list can open with its highlight on its first usable row (start: 'usable', All squads): Down only the difference
     return true;
   };
   const listOrder = async row => {
     if (!(await listGo(row))) return false; await key('Enter');
-    if (await j(`campPanelOpen(${S}.pn)`)) await key('Escape'); // an order that is refused leaves the list open, and so does a power row: it is closed, the keys go back to the ship
+    if (await j(`!!${S}.pn.pick`)) await key('Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
+    for (let n = 0; n < 6 && (await j(`campPanelOpen(${S}.pn)`)); n++) await key('Escape'); // an order that is refused leaves the list open, and so does a power row: Esc until it is closed, the keys go back to the ship
     return true;
   };
   const listRows = () => j(`${S}.pnl.rows.filter(r => r.name.visible).map(r => r.name.text + (r.suffix.text ? ' [' + r.suffix.text + ']' : ''))`); // the rows of the open list as they are drawn (src/campanelsdraw.js)
@@ -128,7 +129,7 @@ try {
     check('E opens the red squad list directly; Left goes back to the fleet list with the highlight on the Red squad row; Enter on that row opens the list again', eOpen === 'red' && (await j(`campPanelOpen(${S}.pn)`)) === 'fleet' && (await j(`${S}.pn.at`)) === (await j(`campPanelList(${S}.camp, 'fleet').findIndex(r => r.open === 'red')`)) && (await key('Enter'), await t.run(300), await j(`campPanelOpen(${S}.pn)`)) === 'red' && (await j(`${S}.pn.at`)) === 0, eOpen);
     await key('KeyP'); await t.run(200); const pOpen = await j(`campPanelOpen(${S}.pn)`); await key('Escape'); await key('Semicolon'); await t.run(200); const pw0 = await j(`${S}.camp.power.p`); await key('KeyI'); for (let i = 0, n = await j(`campPanelList(${S}.camp, 'power').findIndex(r => r.id === 'shields')`); i < n; i++) await key('ArrowDown'); await key('Enter'); await t.run(300); const pw1 = await j(`${S}.camp.power.p`);
     check('P from the red squad list closes it and opens the ship list (one list at a time); I opens the power list directly; Enter on the shields row gives a pip and leaves the list open', pOpen === 'ship' && (await j(`campPanelOpen(${S}.pn)`)) === 'power' && pw1[1] === pw0[1] + 1, JSON.stringify([pw0, pw1])); await snap('11-power'); await key('Escape'); await key('Semicolon'); await t.run(200);
-    await listGo('free'); await t.run(400); await snap('11-stances'); note('the stance list (Q, Down to the Stance row, Enter): ' + (await j(`${S}.pnl.title.text`)) + ' / ' + (await listRows()).join(' | ')); await key('Escape'); // the stances are a part of the fleet list with no key of its own; Esc closes the list
+    await listGo('free'); await t.run(400); await snap('11-stances'); note('the stance list (Q, Down to the Stance row, Enter): ' + (await j(`${S}.pnl.title.text`)) + ' / ' + (await listRows()).join(' | ')); await key('Escape'); note('Esc from the stance list goes back to the fleet list (it came from a row of Q): ' + await j(`campPanelOpen(${S}.pn)`)); await key('Escape'); // the stances are a part of the fleet list with no key of its own: the first Esc goes back to Q, the second closes it
     mark = await j('window.__toasts.length'); const orbitKeys = await via('orbit'); await listOrder('orbit'); await say(orbitKeys + ' (the stance list, "' + (await j(`campKeyRow('orbit').label`)) + '")'); await t.run(600);
     check('the stance rows are plain rows of the stance list: the one picked is in force at once, and no list is left open', (await j(`${S}.camp.stance`)) === 'orbit' && (await j(`campPanelOpen(${S}.pn)`)) === '');
     mark = await j('window.__toasts.length'); await key('Enter'); await say('Enter missile, with no list open (nothing big in reach)');

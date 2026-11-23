@@ -1,25 +1,28 @@
 // ---------- Campaign: the order lists, the logic (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026) ----------
 // Q opens the FLEET list at the left, P the SHIP list at the right. Each has a row for every part of it, and a part has a key of its own that opens its list directly, at any time: W CONVOY, E FIGHTERS, R ESCORTS on the left;
 // O AUTOPILOT, I POWER, U DOCK AND BUILD on the right (STANCE is a part with no key: Enter on its row opens it). Nothing is on the screen until a key is pressed; only one list is open at a time.
-// In an open list Up and Down move the highlight (round at the ends), Enter gives the highlighted order (on a part's row: opens that part), Left goes back to the list it is a part of, the list's own key or Esc closes it.
+// In an open list Up and Down move the highlight (round at the ends), Enter gives the highlighted order (on a part's row: opens that part), Left goes back to the list it is a part of, the list's own key closes it.
+// ESC GOES BACK ONE STEP, TO WHERE YOU CAME FROM (card space-game-order-target-pick; Troy, 22 Nov 2026): a target sub-list (src/camppick.js) goes back to the list it was opened from; a list opened from a part's row (Q, then Squads) goes back to that list (Q);
+// a list opened by its own key (Q, or W E R T, O I U) is closed; with nothing open Esc pauses (the scene). P.trail is the lists we came through by rows, the last one first to go back to.
 // An order that is taken closes the list (a power row leaves it open: a pip is given again and again); one that is refused leaves it open and says why.
 // No key is reused: the direct keys (A D S X the target, J K L ; the power, Enter a missile while no list is open) mean the same whether a list is open or not; only the arrows and Enter are the open list's.
 // The lists, their rows and their words are CAMP_PANELS and CAMP_KEYS (src/data_controls.js): this file only reads them. It is plain data and functions, no Phaser (tests/campanels.mjs runs it in Node); src/campanelsdraw.js draws
 // the open list and src/campaignscene.js gives it the keys and the clicks. The target is src/camptarget.js.
-//   campPanelNew()                   the state the scene keeps: { open: '' or a list's id, at: the highlighted row, top: the first row on the screen, lit: { row id: when Enter last gave it } }
+//   campPanelNew()                   the state the scene keeps: { open: '' or a list's id, at: the highlighted row, top: the first row on the screen, lit: { row id: when Enter last gave it }, trail: [the lists we came through by rows], pick: the target sub-list or null, seen: the candidate an order was just given at }
 //   campPanelKey(P, C, code, now)    one key: { used, ran, ok, say, row, tgt, fleet, open }: a list's key opens it, or closes it when it is the one open; in an open list Up, Down, Left, Enter and Esc are the list's; A D S X pick and clear the target (tgt);
 //                                    J K L ; move the power; Enter with no list open fires a missile (ran: it was an order; ok and say are its answer). The scene asks a pilot's call BEFORE this when no list is open
-//   campPanelOpen(P)                 the id of the open list, or ''          campPanelClose(P)   close it          campPanelGo(P, C, id, from)   open list `id` (from: the list we came back from: the highlight goes to its row)
+//   campPanelOpen(P)                 the id of the open list, or '' (while a target sub-list is open it is the list that sub-list came from)          campPanelClose(P)   close it (and the sub-list)
+//   campPanelGo(P, C, id, back, via) open list `id` (back: the part we came back from: the highlight goes to its row; via: the list whose row opened it, so Esc goes back there)
 //   campPanelList(C, id)             the rows of a list in THIS mission (a row whose `when` can never hold here is left out)
 //   campPanelRows(C, id)             the same with their live state: [{ id, label, key, more, ok, state, short, marked }] (key: the key of the part a row opens; more: it opens a part; state: what it will do, or why it cannot; short: the same in a word or two)
-//   campPanelView(P, C)              what the open list draws: null, or { id, title, key, side, parent, rows (the ones on the screen), at (the highlight, in rows), first, total, above, below (rows off the screen) }
-//   campPanelRun(C, row, how)        do the row: campOrder with the row's words (how: 'key' or 'click', the play log's), an order to one part of the wing, the autopilot, the blink -> { ok, say }
+//   campPanelView(P, C)              what the open list draws: null, or { id, title, key, side, parent, keys (the foot's words), pick (a target sub-list), rows (the ones on the screen), at (the highlight, in rows), first, total, above, below (rows off the screen) }
+//   campPanelRun(C, row, how, item)  do the row: campOrder with the row's words (how: 'key' or 'click', the play log's), an order to one part of the wing, the autopilot, the blink -> { ok, say }; item: the candidate a pick row's order is given at (src/camppick.js)
 //   campPanelTarget(C)               the line of the target: { name, km, hp } or null
 //   campPanelKeyLine()               'Q Fleet  W Convoy  E Fighters  R Escorts   P Ship  O Autopilot  I Power  U Dock': the lists' keys, from the table;   campKeyLine(): the whole bottom key line (camp.ui.keys)
 const campPanelDef = id => CAMP_PANELS.panels.find(p => p.id === id) || null;
-const campPanelNew = () => ({ open: '', at: 0, top: 0, lit: {} });
+const campPanelNew = () => ({ open: '', at: 0, top: 0, lit: {}, trail: [], pick: null, seen: null });
 const campPanelOpen = P => (P && typeof P.open === 'string' && campPanelDef(P.open) ? P.open : '');
-const campPanelClose = P => { if (P && typeof P === 'object') { P.open = ''; P.at = 0; P.top = 0; } };
+const campPanelClose = P => { if (P && typeof P === 'object') { P.open = ''; P.at = 0; P.top = 0; P.pick = null; P.trail = []; } };
 const campPanelCase = t => t.charAt(0) + t.slice(1).toLowerCase();
 const campPanelKeyLine = () => ['left', 'right'].map(side => CAMP_PANELS.panels.filter(p => p.side === side && p.key).map(p => p.key + ' ' + p.tab).join('  ')).join('    ');
 const campKeyLine = () => uiText('camp.ui.keys', { panels: campPanelKeyLine() });
@@ -40,11 +43,30 @@ function campPanelScroll(P, n) {
   if (P.at < P.top) P.top = P.at; else if (P.at >= P.top + show) P.top = P.at - show + 1;
   P.top = Math.max(0, Math.min(P.top, Math.max(0, n - show)));
 }
-// open a list: at its first row (or, for a list that says start: 'usable', its first row that can be given), or (from: the part we came back from) on that part's row
-function campPanelGo(P, C, id, from) {
-  P.open = id; P.at = 0; P.top = 0;
-  if (from) { const rows = campPanelList(C, id), i = rows.findIndex(r => r.open === from); if (i >= 0) { P.at = i; campPanelScroll(P, rows.length); } }
+// open a list: at its first row (or, for a list that says start: 'usable', its first row that can be given), or (back: the part we came back from) on that part's row; via: the list whose row opened this one (Esc goes back to it), none for a list opened by its own key
+function campPanelGo(P, C, id, back, via) {
+  P.open = id; P.at = 0; P.top = 0; P.pick = null; P.trail = via ? (P.trail || []).concat(via) : [];
+  if (back) { const rows = campPanelList(C, id), i = rows.findIndex(r => r.open === back); if (i >= 0) { P.at = i; campPanelScroll(P, rows.length); } }
   else if (C && campPanelDef(id) && campPanelDef(id).start === 'usable') { const rows = campPanelList(C, id), i = rows.findIndex(r => campPanelRowState(C, r).ok); if (i > 0) { P.at = i; campPanelScroll(P, rows.length); } } // a list whose table says start: 'usable' opens on its first row that can be given now: All squads opens on Launch while there are ships in the bay and, once the wing is out (Launch greyed: all out), on Attack the target (card space-game-squad-tint)
+}
+// the keys of a target sub-list (P.pick): Up and Down move the highlight, Enter gives the order at it, Esc and Left go back to the list it came from; true when the key was the sub-list's (any other key goes on to the direct keys)
+function campPanelPickKey(P, C, code, now, res, def) {
+  const pk = P.pick, items = campPickSync(C, pk);
+  if (!items.length) { P.pick = null; return false; } // every candidate is gone: back to the list, and the key is read there
+  if (campKeyIs('pause', code) || code === 'ArrowLeft') { P.pick = null; res.used = true; return true; }
+  if (campKeyIs('up', code) || campKeyIs('down', code)) { pk.at += campKeyIs('down', code) ? 1 : -1; campPanelScroll(pk, items.length); pk.sel = items[pk.at].id; res.used = true; return true; }
+  if (code === 'ArrowRight') { res.used = true; return true; }
+  if (campKeyIs('pick', code)) { res.used = true; Object.assign(res, campPanelChoose(P, C, now, 'key', def)); return true; }
+  return false;
+}
+// Enter (or a click) on the sub-list's highlighted candidate: the row's order is given at it, and the lists close; a refusal leaves the sub-list open, with its reason said
+function campPanelChoose(P, C, now, how, def) {
+  const pk = P.pick, items = campPickSync(C, pk), it = items[pk.at], row = campKeyRow(pk.row), out = { ran: false, ok: false, say: '', row: pk.row };
+  if (!it || !row) return out;
+  const r = campPanelRun(C, row, how, it);
+  out.ran = true; out.ok = !!(r && r.ok); out.say = (r && r.say) || ''; out.fleet = !def || def.side === 'left'; P.lit[row.id] = now;
+  if (out.ok) { P.seen = { kind: pk.kind, id: it.id, until: now + CAMP_PICK.seen }; campPanelClose(P); }
+  out.open = campPanelOpen(P); return out;
 }
 function campPanelKey(P, C, code, now) {
   const res = { used: false, ran: false, ok: false, say: '', row: '', tgt: '', fleet: false, open: campPanelOpen(P) }; // fleet: an order of the left hand or a pick of the target (a label for the tests and the radio; nothing slows the battle for it: card space-game-no-command-slowdown)
@@ -57,15 +79,27 @@ function campPanelKey(P, C, code, now) {
   const open = campPanelOpen(P);
   if (open) { // the open list has the arrows, Enter and Esc
     const rows = campPanelList(C, open), def = campPanelDef(open);
-    if (campKeyIs('pause', code)) { campPanelClose(P); res.used = true; res.open = ''; return res; }
+    if (P.pick && campPanelPickKey(P, C, code, now, res, def)) return res; // a target sub-list (src/camppick.js) is the one that has the keys
+    if (campKeyIs('pause', code)) { // Esc: one step back, to where we came from: the list a part's row opened this from, else closed
+      res.used = true; const trail = (P.trail || []).slice(), prev = trail.pop();
+      if (prev && campPanelDef(prev)) { campPanelGo(P, C, prev, open); P.trail = trail; } else campPanelClose(P);
+      res.open = campPanelOpen(P); return res;
+    }
     if (campKeyIs('up', code) || campKeyIs('down', code)) { P.at += campKeyIs('down', code) ? 1 : -1; campPanelScroll(P, rows.length); res.used = true; return res; }
     if (code === 'ArrowLeft') { res.used = true; if (def.parent) { campPanelGo(P, C, def.parent, open); res.open = campPanelOpen(P); } return res; } // back to the list this one is a part of
-    if (code === 'ArrowRight') { res.used = true; campPanelScroll(P, rows.length); const row = rows[P.at]; if (row && row.open) { campPanelGo(P, C, row.open); res.open = campPanelOpen(P); } return res; } // into the part the highlight is on (the ship coasts while a list is open: the arrows are the list's)
+    if (code === 'ArrowRight') { res.used = true; campPanelScroll(P, rows.length); const row = rows[P.at]; if (row && row.open) { campPanelGo(P, C, row.open, '', open); res.open = campPanelOpen(P); } return res; } // into the part the highlight is on (the ship coasts while a list is open: the arrows are the list's)
     if (campKeyIs('pick', code)) {
       campPanelScroll(P, rows.length); const row = rows[P.at]; res.used = true; if (!row) return res;
-      if (row.open) { campPanelGo(P, C, row.open); res.open = campPanelOpen(P); return res; } // a part's row: its list opens
-      const r = campPanelRun(C, row, 'key');
+      if (row.open) { campPanelGo(P, C, row.open, '', open); res.open = campPanelOpen(P); return res; } // a part's row: its list opens (Esc comes back here)
+      let item = null;
+      if (campPickKind(row) && campPanelRowState(C, row).ok) { // a row that needs a target: one candidate is taken at once, several open a sub-list of them (src/camppick.js)
+        const plan = campPickPlan(C, row);
+        if (plan.how === 'list') { campPickOpen(P, row, plan.items); res.open = campPanelOpen(P); return res; }
+        if (plan.how === 'auto') item = plan.item;
+      }
+      const r = campPanelRun(C, row, 'key', item);
       res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = row.id; res.fleet = def.side === 'left'; P.lit[row.id] = now;
+      if (res.ok && item) P.seen = { kind: campPickKind(row), id: item.id, until: now + CAMP_PICK.seen }; // the one that was taken keeps its bracket for a moment
       if (res.ok && !row.stay) campPanelClose(P); // the order is given: the keys go back to the ship (a power row stays: a pip more, and more). A refusal leaves the list open, with its reason said
       res.open = campPanelOpen(P); return res;
     }
@@ -99,10 +133,14 @@ const campPanelAs = (C, row) => {
 };
 const campPanelTargetArg = (C, row) => (row.order === 'attack' || row.order === 'missiles') && typeof campTgtNow === 'function' && campTgtNow(C) ? CAMP_TGT : (row.arg || ''); // with a target picked the attack and the missile go at it; none: as they always did
 const campPanelWingTarget = (C, row) => { const u = row.wing[1] === 'attack' && typeof campTgtNow === 'function' ? campTgtNow(C) : null; return u ? u.id : null; }; // an order to a part of the wing: Attack goes at the target (none picked: the verb's own, the nearest enemy); Guard is the cruiser, Mine the nearest ore
-function campPanelRun(C, row, how) {
+function campPanelRun(C, row, how, item) {
   if (!C || !row) return { ok: false, say: '' };
   row = campPanelAs(C, row);
   if (row.open) return { ok: true, say: '', open: row.open }; // a part's row: the caller opens its list
+  if (item && row.pick === 'enemy') C.tgt = item.id; // the hostile that was chosen is THE target now: the attack below goes at it, and P fly to the target and Enter a missile follow it
+  else if (item && row.pick === 'escort') return campWingOrder(C, 'escorts', 'escort', item.id, how || 'key'); // the escorts go to the ship that was chosen (a convoy ship or a miner)
+  else if (item && row.pick === 'field') return campWingOrder(C, row.wing ? row.wing[0] : 'all', 'mine', item.rock, how || 'key'); // the wing starts at the rock of the field that was chosen
+  else if (row.pick === 'enemy' && !campTgtNow(C) && !campTgtList(C).length) { const dry = row.wing ? campWingOrder(C, row.wing[0], row.wing[1], null, how || 'key', true) : campCheck(C, row.order, ''); return dry.ok ? campNo('nofoe') : dry; } // Attack with no hostile and no target: nothing to attack (an order's own refusal, no fighters out, is said first)
   if (row.wing) return campWingOrder(C, row.wing[0], row.wing[1], campPanelWingTarget(C, row), how || 'key');
   if (row.blink) { const bw = typeof campBlinkWhy === 'function' ? campBlinkWhy(C) : ''; if (!bw) C.input.blink = true; return { ok: !bw, say: bw }; } // the warp blink: without the technology, or while it cools, the row says so
   if (row.fly === 'target') { // the autopilot to the target (burn: fast, which needs the wing aboard)
@@ -198,6 +236,7 @@ function campPanelRowState(C, row) {
   row = campPanelAs(C, row);
   const ok = () => ({ ok: true, state: campPanelState(C, row), short: campPanelShortState(C, row) }), no = (why, sh) => ({ ok: false, state: CAMP_PANELS.why[why] || CAMP_PANELS.why.what, short: CAMP_PANELS.shortWhy[sh || why] || CAMP_PANELS.shortWhy.what });
   if (row.open) return ok(); // a part's row is always open to go into
+  if (row.pick === 'enemy' && !campTgtNow(C) && !campTgtList(C).length) { const r = row.wing ? campWingOrder(C, row.wing[0], row.wing[1], null, 'key', true) : campCheck(C, row.order, ''); return r.ok ? no('nofoe') : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; } // Attack with no hostile to attack: grey, and why (a refusal of its own comes first: no fighters out)
   if (row.wing) { const r = campWingOrder(C, row.wing[0], row.wing[1], campPanelWingTarget(C, row), 'key', true); return r.ok ? ok() : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; }
   if (row.fly === 'objective') {
     const f = campNavFind(C, 'the objective'); if (!f.row) return no('nogoal');
@@ -227,6 +266,16 @@ function campPanelRows(C, id) {
 }
 function campPanelView(P, C) {
   const id = campPanelOpen(P), def = campPanelDef(id); if (!def || !C) return null;
-  const all = campPanelRows(C, id), show = Math.max(1, CAMP_PANELS.show | 0); campPanelScroll(P, all.length);
-  return { id, title: def.title, key: def.key, side: def.side, parent: def.parent || '', rows: all.slice(P.top, P.top + show), at: P.at - P.top, first: P.top, total: all.length, above: P.top, below: Math.max(0, all.length - P.top - show) };
+  const show = Math.max(1, CAMP_PANELS.show | 0);
+  if (P.pick) { // a target sub-list: the candidates, over the list it came from
+    const items = campPickSync(C, P.pick);
+    if (items.length) {
+      campPanelScroll(P.pick, items.length); const pk = P.pick, all = items.map(i => campPickRow(C, i, pk.kind));
+      return { id, title: uiText('camp.ui.cand.title.' + pk.kind), key: def.key, side: def.side, parent: id, pick: true, keys: 'camp.ui.cand.keys', rows: all.slice(pk.top, pk.top + show), at: pk.at - pk.top, first: pk.top, total: all.length, above: pk.top, below: Math.max(0, all.length - pk.top - show) };
+    }
+    P.pick = null; // none is left: the list it came from
+  }
+  const all = campPanelRows(C, id); campPanelScroll(P, all.length);
+  const keys = P.trail && P.trail.length ? 'camp.ui.listkeyback' : def.parent ? 'camp.ui.listkeysub' : 'camp.ui.listkeys'; // the foot's words: Esc closes a list its own key opened, and goes back from one a part's row opened
+  return { id, title: def.title, key: def.key, side: def.side, parent: def.parent || '', pick: false, keys, rows: all.slice(P.top, P.top + show), at: P.at - P.top, first: P.top, total: all.length, above: P.top, below: Math.max(0, all.length - P.top - show) };
 }
