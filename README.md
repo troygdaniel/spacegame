@@ -59,7 +59,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 | `P` | the **ship list**: rows that open Power, Autopilot, Dock and repair; Warp blink ahead once you have that tech |
 | `O` | **power**, which opens right under the three gauges at the top right: Shields, Engines and Weapons, each with its pip bar (the gauge's twin: both light together; the highlighted row frames its gauge), Enter gives one more pip and the list stays open; then Balance the power and Emergency shields |
 | `I` | **autopilot**: Fly to the goal, Fly to the target, Fast burn to the goal, Fast burn to the target |
-| `U` | **dock and repair**: Dock at the outpost (aboard, in a level with none: Repair the hull, Build a fighter, Build an escort) |
+| `U` | **dock and repair**: Dock at the outpost (where there is one), Repair the hull (anywhere, for ore), Repair a ship we protect (when it is near) |
 | `Up` `Down` `Enter` | in an open list: move the highlight, give the order (the list closes when the order is taken). On a row that opens a part, `Enter` or `Right` opens it |
 | `Left` | in a part's list: back to the fleet or the ship list |
 | Arrow keys | fly the cruiser: Up thrust, Left and Right turn, Down brake (while a list or a pilot's call is open the ship coasts) |

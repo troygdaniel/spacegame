@@ -38,10 +38,10 @@ check('the other levels have no variant: the same lines before and after the fla
 // ---- no outpost on the level: the words ----
 g.run('window.C3 = campNew(3, [], { seed: 1, mission: 1 }); window.C1 = campNew(1, [], { seed: 1, mission: 0 }); C3.ore = 100; C1.ore = 100; campOrder(C3, "launch"); campOrder(C1, "launch");');
 const b3 = J('(() => { const r = campOrder(C3, "build", "a fighter"); return [r.ok, r.code, r.say]; })()'), b1 = J('(() => { C1.carrier.x += 9000; const r = campOrder(C1, "build", "a fighter"); return [r.ok, r.code, r.say]; })()');
-check('level 3 has no outpost: Build works ABOARD (Troy\'s decision via ORCH, 20 Nov: level 3 must not be stranded; card space-game-campaign-no-outpost-rule wins over the refusal line): the order is not refused, so "No outpost here. Only the Fabricator builds." is never shown', b3[0] === true && b3[1] !== 'nobuildpost', JSON.stringify(b3));
-check('a level that has outposts (the belt), away from them, still says "Dock at an outpost to build."', b1[0] === false && b1[1] === 'nodock' && b1[2] === 'Dock at an outpost to build.', JSON.stringify(b1));
+check('nothing builds ships, level 3 and everywhere else (card space-game-repair-with-ore): the order is refused with the same reason, never an outpost one (nobuildpost does not show)', b3[0] === false && b3[1] === 'nobuild' && b3[1] !== 'nobuildpost', JSON.stringify(b3));
+check('a level that has outposts (the belt), away from them, says the same: no building, mend with ore', b1[0] === false && b1[1] === 'nobuild', JSON.stringify(b1));
 const r3 = J('(() => { C3.carrier.hp = 100; const r = campOrder(C3, "repair", ""); return [r.ok, r.code, r.say]; })()'), r1 = J('(() => { const r = campOrder(C1, "repair", ""); return [r.ok, r.code]; })()');
-check('Repair works aboard on level 3 (not refused), and still says "Dock at an outpost to repair." on the belt', r3[1] !== 'norepairpost' && r3[1] !== 'norepair' && r1[1] === 'norepair', JSON.stringify([r3, r1]));
+check('Repair works on level 3 (no outpost) and on the belt away from every outpost: both mend in space for ore', r3[0] === true && r3[1] === 'mendhull' && (g.run('C1.carrier.hp = 100'), J(`campOrder(C1, 'repair', '').ok`) === true), JSON.stringify([r3, r1]));
 check('the two refusal lines of a level with no outpost are gone from the words and the panel table', J(`CAMP_PANELS.why.nobuildpost`) === null && J(`CAMP_PANELS.why.norepairpost`) === null && J(`UI_TEXT['camp.no.nobuildpost']`) === null);
 
 // ---- the tower missions' lose tip ----

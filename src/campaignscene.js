@@ -188,7 +188,7 @@ class Campaign extends Phaser.Scene {
   openDock(id) {
     const C = this.camp, o = C && typeof campOutposts === 'function' ? campOutposts(C.level).find(x => x.id === id) : null; if (!o || this.docked || !this.scene || !this.scene.launch) return;
     this.docked = true; if (this.mp) campMapClose(this); if (typeof campPanelsClose === 'function') campPanelsClose(this);
-    const d = { dock: id, camp: C, P: this.P, rows: CAMP_DOCK.rows.slice(), at: 'build', station: { name: o.name }, onLaunch: h => this.undock(h), onLeave: h => this.undock(h) };
+    const d = { dock: id, camp: C, P: this.P, rows: CAMP_DOCK.rows.slice(), at: 'repair', station: { name: o.name }, onLaunch: h => this.undock(h), onLeave: h => this.undock(h) };
     this.scene.pause(); this.scene.launch('CampHub', d);
   }
   undock(hub) { campUndock(this.camp); this.docked = false; if (hub && hub.scene) hub.scene.stop(); this.scene.resume(); toast(this, uiText('camp.say.undock'), '#9fe9ff'); }
@@ -213,12 +213,12 @@ class Campaign extends Phaser.Scene {
     this.mode = 'refit'; this.choices = campTechChoices(this.level, this.P); this.refit = { pick: null, f: 0, ore: campFunds(this.camp) }; this.paintRefit();
   }
   paintRefit() {
-    const R = this.refit, B = CAMP.build, lines = [uiText('camp.ui.refitore', { ore: R.ore, xf: R.f }), uiText('camp.ui.refitpick', { keys: this.choices.map((id, i) => i < 3 ? i + 1 : i + 3).join('  ') })]
+    const R = this.refit, B = CAMP.refit, lines = [uiText('camp.ui.refitore', { ore: R.ore, xf: R.f }), uiText('camp.ui.refitpick', { keys: this.choices.map((id, i) => i < 3 ? i + 1 : i + 3).join('  ') })]
       .concat(this.choices.map((id, i) => (i < 3 ? i + 1 : i + 3) + '   ' + campTechLine(id, this.P) + (R.pick === id ? '   <' : '')), [uiText('camp.ui.refitbuy', { fc: B.fighterCost })]);
     this.showCard(uiText('camp.ui.refit'), lines, R.pick ? uiText('camp.ui.refitgot', { name: uiText('camp.tech.' + R.pick + '.name') }) : '', 380);
   }
   refitKey(c) {
-    const R = this.refit, B = CAMP.build, i = { Digit1: 0, Digit2: 1, Digit3: 2, Digit6: 3, Digit7: 4, Digit8: 5 }[c]; // 4 buys a ship, so what was looted from the cloaked caches (src/campanomaly.js) is chosen with 6, 7 and 8
+    const R = this.refit, B = CAMP.refit, i = { Digit1: 0, Digit2: 1, Digit3: 2, Digit6: 3, Digit7: 4, Digit8: 5 }[c]; // 4 buys a ship, so what was looted from the cloaked caches (src/campanomaly.js) is chosen with 6, 7 and 8
     if (i !== undefined && this.choices[i]) R.pick = this.choices[i];
     else if (c === 'Digit4' && R.f < CAMP.refit.most && R.ore >= B.fighterCost) { R.f++; R.ore -= B.fighterCost; }
     else if (c === 'Enter' && R.pick) { campPick(this.P, R.pick); this.P.bonus = { fighters: R.f }; this.hideCard(); this.next(R.ore); return; }
@@ -411,7 +411,6 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'torpedo' || e.type === 'tboom') { if (typeof campTorpedoEvent === 'function') campTorpedoEvent(this, e); } // a torpedo boat arms, a torpedo is away, goes off, is shot down (src/camptorpedoscene.js)
     else if (e.type === 'convoy') { if (typeof campConvoyEvent === 'function') campConvoyEvent(this, e); } // an order for the escorted ships, a hit taken for one (src/campconvoyscene.js)
     else if (e.type === 'ore') beep(900, 0.05, 'triangle', 0.035, 200);
-    else if (e.type === 'built') beep(660, 0.12, 'triangle', 0.05, 240);
     else if (e.type === 'shieldhit' && e.x === this.camp.carrier.x) { this.cameras.main.shake(60, 0.002); this.battleSound('shield', 'shieldHit'); }
     else if (e.type === 'end') { if (e.result === 'won') this.time.delayedCall(1800, () => this.missionWon()); else this.time.delayedCall(1200, () => this.showLost(e.why)); }
   }
@@ -546,7 +545,7 @@ class Campaign extends Phaser.Scene {
     const out = campWing(C, 'fighter').length, waves = C.L.waves;
     this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(campObjective(C));
     this.hud.bay.setText(uiText('camp.ui.baywords', { f: C.bay.fighters, out })); // "BAY  fighters 8   OUT 0"
-    if (this.hud.ore) this.hud.ore.setColor(C.ore >= CAMP.ore.cap ? '#ffb454' : '#ffd37a').setText(uiText('camp.ui.ore') + '  ' + Math.floor(C.ore) + '/' + CAMP.ore.cap + (C.cash > 0 ? '   ' + uiText('camp.ui.cash') + '  ' + Math.floor(C.cash) : '') + (C.build.queue.length ? '  +' + C.build.queue.length : '')); // the ore, under the shield gauge (and the cash a market paid, when there is some) (a stand-in scene in a test may have no ore text)
+    if (this.hud.ore) this.hud.ore.setColor(C.ore >= CAMP.ore.cap ? '#ffb454' : '#ffd37a').setText(uiText('camp.ui.ore') + '  ' + Math.floor(C.ore) + '/' + CAMP.ore.cap + (C.cash > 0 ? '   ' + uiText('camp.ui.cash') + '  ' + Math.floor(C.cash) : '') + (C.mends.length ? '  +' + C.mends.length : '')); // the ore, under the shield gauge (+n: ships being mended) (and the cash a market paid, when there is some) (a stand-in scene in a test may have no ore text)
     const wc = typeof campWaveCount === 'function' ? campWaveCount(C) : { n: C.waves.filter(w => w.started).length, total: waves.length }; // the waves that can come on the lane she flies (src/camproute.js)
     this.hud.wave.setText(uiText('camp.ui.wave', { n: wc.n, total: wc.total }));
     this.hud.mother.setText(m ? uiText('camp.ui.mother') : '');

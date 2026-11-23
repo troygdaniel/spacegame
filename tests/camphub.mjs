@@ -68,7 +68,7 @@ check('a level or a mission that is not there has no briefing', J('campHubBrief(
 
 // ---- D. the refit ----
 const r0 = J('campHubRefit(campProgressNew())');
-check('a new campaign: no ore, no tech, the bay\'s own wing (8 fighters), and the table\'s price and most', r0.ore === 0 && r0.techs.length === 0 && r0.wing.fighters === J('CAMP.bay.fighters') && r0.wing.escorts === undefined && r0.fc === J('CAMP.build.fighterCost') && r0.ec === undefined && r0.most === J('CAMP.refit.most'));
+check('a new campaign: no ore, no tech, the bay\'s own wing (8 fighters), and the table\'s price and most', r0.ore === 0 && r0.techs.length === 0 && r0.wing.fighters === J('CAMP.bay.fighters') && r0.wing.escorts === undefined && r0.fc === J('CAMP.refit.fighterCost') && r0.ec === undefined && r0.most === J('CAMP.refit.most'));
 check('the tech taken is listed with its words, and the second bay adds its fighters to the wing', (() => { const r = J('(() => { const p = campProgressNew(); p.techs = ["shield", "bay2"]; return campHubRefit(p); })()'); return r.techs.length === 2 && r.techs[0].name === 'Shield grid' && r.wing.fighters === J('CAMP.bay.fighters + CAMP.tech.bay2.fighters'); })());
 g.run(`var hubP2 = campProgressNew(); hubP2.ore = 100; var hubH2 = campHubNew(hubP2); hubH2.row = 1; hubH2.open = 'refit';`); // the refit overlay is open: its keys are its own
 const k2 = code => J(`campHubKey(hubH2, hubP2, ${JSON.stringify(code)})`);
@@ -131,20 +131,17 @@ check('in a dock\'s room (ctx.dock) nothing opens: Enter on the board goes on to
 g.run(`var hubP5 = campProgressNew(); hubP5.ore = 100; hubP5.techs = ['shield']; var hubH5 = campHubNew(hubP5); hubH5.row = 1; hubH5.open = 'refit';`);
 const k5 = code => J(`campHubKey(hubH5, hubP5, ${JSON.stringify(code)})`);
 const it5 = () => J('campHubRefitItems(hubP5)');
-check('the refit\'s choices say what they change with the numbers, what they cost and what you have, and whether you can: a fighter 8 to 9 for 25 ore, the Fabricator for 300 (100 in the store: not yet, 200 more)', (() => { const it = it5(); return it.length === 2 && it[0].name === 'Fighter' && it[0].change === 'Fighters in your wing: 8 to 9' && it[0].cost === 25 && it[0].ok && it[0].status === 'You can buy it.' && /^You have 100 ore\. Bought here: 0 of 3\.$/.test(it[0].have) && it[1].id === 'fab' && it[1].cost === 300 && !it[1].ok && it[1].status === 'Not yet: 200 more ore.' && /anywhere/.test(it[1].change); })());
-check('Up and Down move among the two choices (wrapping); Enter buys the one chosen: a fighter; the Fabricator with too little ore says so', (() => {
-  const a = J('hubH5.sel'); k5('ArrowDown'); const b = J('hubH5.sel'); k5('ArrowDown'); const c = J('hubH5.sel'); k5('ArrowDown'); const d = J('hubH5.sel'); k5('ArrowUp'); const e = J('hubH5.sel');
+check('the refit\'s choices say what they change with the numbers, what they cost and what you have, and whether you can: a fighter 8 to 9 for 25 ore (the only choice: nothing is fitted any more)', (() => { const it = it5(); return it.length === 1 && it[0].name === 'Fighter' && it[0].change === 'Fighters in your wing: 8 to 9' && it[0].cost === 25 && it[0].ok && it[0].status === 'You can buy it.' && /^You have 100 ore\. Bought here: 0 of 3\.$/.test(it[0].have); })());
+check('Up and Down stay on the one choice (wrapping); Enter buys a fighter (card space-game-repair-with-ore: no Fabricator)', (() => {
+  const a = J('hubH5.sel'); k5('ArrowDown'); const b = J('hubH5.sel'); k5('ArrowUp'); const c = J('hubH5.sel');
   g.run('hubH5.sel = 0'); const f = k5('Enter'); const ok1 = f.changed && J('hubP5.ore') === 75 && J('hubP5.bonus.fighters') === 1 && f.say.key === 'camp.hub.boughtf' && J('campHubRefitItems(hubP5)')[0].change === 'Fighters in your wing: 9 to 10';
-  const ok2 = true;
-  g.run('hubH5.sel = 1'); const i = k5('Enter'); const ok3 = !i.changed && !i.ok && i.say.key === 'camp.hub.upgrade.no' && J('hubP5.ore') === 75;
-  return a === 0 && b === 1 && c === 0 && d === 1 && e === 0 && ok1 && ok2 && ok3 && J('hubH5.open') === 'refit';
+  return a === 0 && b === 0 && c === 0 && ok1 && J('hubH5.open') === 'refit';
 })());
-check('with the ore the Fabricator is fitted once: Enter on it takes 300 and the tech is kept; again it says nothing to buy; the fighter stops at the most (3) with the reason on its line', (() => {
-  g.run('hubP5.ore = 350; hubH5.sel = 1'); const a = k5('Enter'); const ok1 = a.changed && a.say.key === 'camp.hub.refit.fabbought' && J('hubP5.ore') === 50 && J('hubP5.techs').includes('fabricator') && it5()[1].status === 'Fitted.' && !it5()[1].ok;
-  const b = k5('Enter'); g.run('hubP5.ore = 100; hubP5.bonus.fighters = 3'); const f = it5()[0];
-  return ok1 && !b.changed && b.say.key === 'camp.hub.nothing' && !f.ok && f.status === 'No more: 3 of 3 bought.';
+check('the fighter stops at the most (3) with the reason on its line', (() => {
+  g.run('hubP5.ore = 100; hubP5.bonus.fighters = 3'); const f = it5()[0];
+  return !f.ok && f.status === 'No more: 3 of 3 bought.';
 })());
-check('F, U and Backspace still work inside the refit overlay (at once, without moving the choice), and the refit page data lists the tech fitted with its numbers', (() => { g.run('hubP5.ore = 100; hubP5.bonus = { fighters: 0 }; hubP5.techs = ["shield", "plating"]; hubH5.sel = 1'); const a = k5('KeyF'), b = k5('Backspace'); const r = J('campHubRefit(hubP5)'); return a.changed && b.changed && J('hubP5.ore') === 100 && J('hubH5.sel') === 1 && r.techs.length === 2 && r.techs[0].change === 'Damage the carrier takes: 100 to 60 percent' && r.techs[1].change === 'Carrier hull: 600 to 900' && r.items.length === 2; })());
+check('F and Backspace still work inside the refit overlay (at once, without moving the choice), and the refit page data lists the tech fitted with its numbers', (() => { g.run('hubP5.ore = 100; hubP5.bonus = { fighters: 0 }; hubP5.techs = ["shield", "plating"]; hubH5.sel = 0'); const a = k5('KeyF'), b = k5('Backspace'); const r = J('campHubRefit(hubP5)'); return a.changed && b.changed && J('hubP5.ore') === 100 && J('hubH5.sel') === 0 && r.techs.length === 2 && r.techs[0].change === 'Damage the carrier takes: 100 to 60 percent' && r.techs[1].change === 'Carrier hull: 600 to 900' && r.items.length === 1; })());
 const techIds = J('Object.keys(CAMP.tech)');
 check('every tech says what it changes, in words with numbers and no leftover key or brace: ' + techIds.join(' '), techIds.every(id => { const t = J(`campHubTechChange(${JSON.stringify(id)})`); return t && !/^camp\./.test(t) && !/[{}]/.test(t) && /\d/.test(t); }) && J('campHubTechChange("nope")') === '' && J('campHubTechChange("bay2")') === 'Fighters in the bay: 8 to 12');
 check('the rank has its ladder: every rank, the points it is held from and the ships it adds; the one held is marked when the ranks card says which', (() => { const none = J('campHubRank(hubP1).ladder'); g.run(`window.campRankStatus = hubP => ({ name: 'Flight Lieutenant', n: 3, of: 6, points: 2100, next: 3000, nextName: 'Squadron Leader', wing: { fighters: 9, escorts: 4 } });`); const l = J('campHubRank(hubP1).ladder'); g.run('window.campRankStatus = undefined'); return none.length === J('CAMP.ranks.length') && none.every(x => x.name && !/^camp\./.test(x.name) && Number.isFinite(x.at)) && none.every(x => !x.here) && l.filter(x => x.here).length === 1 && l[2].here; })());
