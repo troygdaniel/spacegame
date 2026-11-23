@@ -11,12 +11,14 @@ function campTdispMake(s) {
   return { g: mk(s.add.graphics()), pic: mk(s.add.image(0, 0, 'ship'), 1).setVisible(false), name: tx(16, '#ffffff', { fontStyle: 'bold' }), type: tx(12, '#9fbdd1'), hullL: tx(11, '#9fbdd1'), hullN: tx(11, '#e8f6ff'), shL: tx(11, '#9fbdd1'), shN: tx(11, '#e8f6ff'), km: tx(14, '#e8f6ff'), doing: tx(12, '#ffffff', { wordWrap: { width: CAMP_TDISP_LAY.wrap } }), at: -1e9, id: '', side: '', info: null, gkey: '', kind: '' };
 }
 function campTdispOn(s) { return s.mode === 'play' && !s.mp && !(typeof s.hudHides === 'function' && s.hudHides()) && !(typeof campKeysIsOpen === 'function' && campKeysIsOpen(s)); }
-function campTdispHide(V) { V.g.clear(); V.gkey = ''; V.id = ''; V.info = null; [V.pic, V.name, V.type, V.hullL, V.hullN, V.shL, V.shN, V.km, V.doing].forEach(o => o.setVisible(false)); }
+function campTdispHide(V) { V.g.clear(); V.gkey = ''; V.id = ''; V.info = null; [V.pic, V.name, V.type, V.hullL, V.hullN, V.shL, V.shN, V.km, V.doing].forEach(o => o.setVisible(false)); campFdispRowsHide(V); V.allOn = false; }
+function campTdispFrame(V, col) { const B = campTdispBox(V.left), g = V.g; g.clear(); g.fillStyle(0x04101c, 0.9).fillRoundedRect(B.x, B.y, B.w, B.h, 7); g.lineStyle(2, col, 0.9).strokeRoundedRect(B.x, B.y, B.w, B.h, 7); } // the box's own frame
+function campTdispBar(g, x, y, w, h, share, color) { g.fillStyle(0x16293d, 1).fillRect(x, y, w, h); g.fillStyle(color, 1).fillRect(x, y, Math.max(share > 0 ? 1 : 0, Math.round(w * share)), h); g.lineStyle(1, 0x38e1ff, 0.4).strokeRect(x, y, w, h); } // a bar: its ground, its fill by the share, its edge
 function campTdispDraw(V, info) { // the frame, the picture's frame and the two bars
   const K = CAMP.tdisp, B = campTdispBox(V.left), L = CAMP_TDISP_LAY, g = V.g, col = K.color[info.side === 'hostile' ? 'hostile' : 'friend'];
-  g.clear(); g.fillStyle(0x04101c, 0.9).fillRoundedRect(B.x, B.y, B.w, B.h, 7); g.lineStyle(2, col, 0.9).strokeRoundedRect(B.x, B.y, B.w, B.h, 7);
+  campTdispFrame(V, col);
   g.fillStyle(0x0a1a2a, 0.95).fillRect(B.x + L.pic[0], B.y + L.pic[1], K.pic, K.pic); g.lineStyle(1, col, 0.5).strokeRect(B.x + L.pic[0], B.y + L.pic[1], K.pic, K.pic);
-  const bar = (y, share, color) => { g.fillStyle(0x16293d, 1).fillRect(B.x + L.col, B.y + y, K.bar.w, K.bar.h); g.fillStyle(color, 1).fillRect(B.x + L.col, B.y + y, Math.max(share > 0 ? 1 : 0, Math.round(K.bar.w * share)), K.bar.h); g.lineStyle(1, 0x38e1ff, 0.4).strokeRect(B.x + L.col, B.y + y, K.bar.w, K.bar.h); };
+  const bar = (y, share, color) => campTdispBar(g, B.x + L.col, B.y + y, K.bar.w, K.bar.h, share, color);
   bar(L.hullB, info.hull.share, CAMP.charge.color[campChargeBand(info.hull.share)]);
   if (info.shield) bar(L.shB, info.shield.share, 0x7fe9ff); else { g.fillStyle(0x16293d, 0.5).fillRect(B.x + L.col, B.y + L.shB, K.bar.w, K.bar.h); }
 }
@@ -26,6 +28,8 @@ function campTdispShow(s, now, slot, left, subject) { // one display: its object
   const C = s.camp, K = CAMP.tdisp; if (!C || !s.hud || !s.add) return;
   const V = s.hud[slot] || (s.hud[slot] = Object.assign(campTdispMake(s), { left })), sub = campTdispOn(s) ? subject() : null;
   if (!sub) { if (V.id || V.gkey) campTdispHide(V); return; }
+  if (sub.all) return campFdispAll(s, now, V, sub); // Q: all three pilots
+  if (V.allOn) { campFdispRowsHide(V); V.allOn = false; V.gkey = ''; V.id = ''; } // back to one ship: the rows go, the frame and the texts are made again
   if (V.id !== sub.u.id || V.side !== sub.side || now - V.at >= K.every) { V.info = campTdispInfo(C, sub.u, sub.side); V.id = sub.u.id; V.side = sub.side; V.at = now; } // a new ship is read at once, the same one four times a second
   const info = V.info, B = campTdispBox(left), L = CAMP_TDISP_LAY, ink = K.ink[info.side === 'hostile' ? 'hostile' : 'friend'];
   const gkey = info.side + '|' + info.hull.now + '|' + info.hull.max + '|' + (info.shield ? info.shield.now + '/' + info.shield.max : '-');
@@ -40,4 +44,31 @@ function campTdispShow(s, now, slot, left, subject) { // one display: its object
     V.pic.setScale((K.pic - 8) / Math.max(1, V.pic.width, V.pic.height));
   }
   V.pic.setPosition(B.x + L.pic[0] + K.pic / 2, B.y + L.pic[1] + K.pic / 2).setVisible(true);
+}
+
+// ---- the display for Q: All pilots (card space-game-q-all-pilots-panel; Troy, 23 Nov 2026: Q picks all three pilots, "All pilots with each pilot's name and hull") ----
+// The same box and frame, with the title (camp.sel.all) where a ship's name goes and, under it, a row for each pilot out: the pilot's name, its hull numbers and a hull bar the box's width. Nothing else: no picture, no type, no order.
+// With no pilot out it is the title alone. The rows' texts are made the first time they are wanted (three at most) and kept in V.rows.
+const CAMP_FDISP_ALL = { first: 40, pitch: 50, name: 10, numRight: 190, bar: { x: 10, dy: 22, w: 180, h: 9 } }; // px from the box's top left corner: the first row's top and the step to the next, the name's x, the numbers' right end, the bar under the name
+function campFdispRows(s, V, n) {
+  const K = CAMP.tdisp, mk = (o, d) => o.setScrollFactor(0).setDepth(K.depth + d); V.rows = V.rows || [];
+  while (V.rows.length < n) V.rows.push({ name: mk(s.add.text(0, 0, '', uiFont(14, '#ffffff', { fontStyle: 'bold' })), 2).setVisible(false), num: mk(s.add.text(0, 0, '', uiFont(12, '#e8f6ff')), 2).setOrigin(1, 0).setVisible(false) });
+  return V.rows;
+}
+function campFdispRowsHide(V) { (V.rows || []).forEach(r => { r.name.setVisible(false); r.num.setVisible(false); }); }
+function campFdispAll(s, now, V, sub) {
+  const C = s.camp, K = CAMP.tdisp, A = CAMP_FDISP_ALL, B = campTdispBox(V.left), L = CAMP_TDISP_LAY;
+  if (V.id !== 'all' || now - V.at >= K.every) { V.info = campFdispAllInfo(C, sub.all); V.id = 'all'; V.side = 'friend'; V.at = now; } // read when first shown and four times a second after
+  const info = V.info, rows = campFdispRows(s, V, info.rows.length);
+  if (!V.allOn) { [V.pic, V.type, V.hullL, V.hullN, V.shL, V.shN, V.km, V.doing].forEach(o => o.setVisible(false)); V.allOn = true; V.gkey = ''; V.kind = ''; } // the single ship's parts go, and its picture is set again when one comes back
+  if (V.gkey !== info.key) { // the frame and the bars are drawn again only when a pilot or a number changes
+    V.gkey = info.key; campTdispFrame(V, K.color.friend);
+    info.rows.forEach((r, i) => campTdispBar(V.g, B.x + A.bar.x, B.y + A.first + i * A.pitch + A.bar.dy, A.bar.w, A.bar.h, r.hull.share, CAMP.charge.color[campChargeBand(r.hull.share)]));
+  }
+  campLabel(V.name, info.name, K.ink.friend); V.name.setPosition(B.x + L.name[0], B.y + L.name[1]).setVisible(true);
+  V.rows.forEach((r, i) => {
+    const row = info.rows[i]; if (!row) { r.name.setVisible(false); r.num.setVisible(false); return; }
+    campLabel(r.name, row.name); r.name.setPosition(B.x + A.name, B.y + A.first + i * A.pitch).setVisible(true);
+    campLabel(r.num, row.hull.now + ' / ' + row.hull.max); r.num.setPosition(B.x + A.numRight, B.y + A.first + i * A.pitch + 2).setVisible(true);
+  });
 }

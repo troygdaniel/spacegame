@@ -6,7 +6,8 @@
 //   B. what is read: a pilot by its name (Wedge, Kara, Apollo), its hull, no shield, how far, the order it is on; a ship you protect by the name the lists give it
 //   C. the box: the bottom left corner, the target display's size and height, inside a rectangle the edge arrows keep out of, and clear of the target display's box
 //   D. the scene half on a stand-in: hidden with no friend, shown with one, in the friend's colour, on the left, both displays at once when a hostile and a friend are picked, hidden behind a card or the map
-//   E. the square marker: the friend and the hostile and the fighters an order went to are all drawn by the one function; no ring is left in the scene; the scene calls the display every frame
+//   E. Q (all three pilots picked; card space-game-q-all-pilots-panel): the display says All pilots with a row for each pilot out, its name and its hull, and nothing else; back to one ship and away again
+//   F. the square marker: the friend and the hostile and the fighters an order went to are all drawn by the one function; no ring is left in the scene; the scene calls the display every frame
 // Run: node tests/campfdisp.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
@@ -108,7 +109,48 @@ console.log('D. the scene half');
   check('a scene with no camp, or no graphics, is not an error', (() => { try { g.run('campFdispSync({}, 0); campFdispSync({ camp: C, hud: {} }, 0);'); return true; } catch (e) { return false; } })());
 }
 
-console.log('E. the square marker, and no rings');
+console.log('E. Q: all three pilots (card space-game-q-all-pilots-panel)');
+{
+  g.run('__out()'); g.run('window.S = __scene()');
+  const Bx = J('campTdispBox(true)'), A = J('CAMP_FDISP_ALL');
+  g.run(`campSelAll(C);`);
+  const sub = J(`(() => { const s = campFdispSubject(C); return s && { u: s.u, side: s.side, n: s.all.length, names: s.all.map(u => campTdispName(u)).join() }; })()`);
+  check('Q picked: the subject is no one ship but all three pilots out, as a friend', sub && sub.u === null && sub.side === 'friend' && sub.n === 3 && sub.names === 'Wedge,Kara,Apollo', JSON.stringify(sub));
+  const inf = J(`(() => { const i = campFdispAllInfo(C, campFdispSubject(C).all); return { name: i.name, rows: i.rows.map(r => r.name + ' ' + r.hull.now + '/' + r.hull.max), key: i.key }; })()`);
+  check('what it reads: the title "All pilots" and a row for each: the pilot\'s name and its hull now and at most', inf.name === 'All pilots' && inf.rows.length === 3 && /^Wedge \d+\/\d+$/.test(inf.rows[0]) && /^Kara /.test(inf.rows[1]) && /^Apollo /.test(inf.rows[2]), JSON.stringify(inf));
+  g.run(`campFdispSync(S, 1000);`);
+  const V = 'S.hud.fdisp';
+  check('the title is where a ship\'s name goes (the box\'s top left), in the friend\'s ink', J(`${V}.name.text`) === 'All pilots' && J(`${V}.name.x`) === Bx.x + 10 && J(`${V}.name.y`) === Bx.y + 8 && J(`${V}.name.style.color`) === J('CAMP.tdisp.ink.friend'));
+  check('three rows, one under the other: each pilot\'s name at the left and its hull numbers ("108 / 108") at the right', [0, 1, 2].every(i => J(`${V}.rows[${i}].name.vis`) && J(`${V}.rows[${i}].name.x`) === Bx.x + A.name && J(`${V}.rows[${i}].name.y`) === Bx.y + A.first + i * A.pitch && /^\d+ \/ \d+$/.test(J(`${V}.rows[${i}].num.text`)) && J(`${V}.rows[${i}].num.x`) === Bx.x + A.numRight) && J(`${V}.rows.map(r => r.name.text).join()`) === 'Wedge,Kara,Apollo');
+  check('nothing else: no picture, type, shield, distance or order is shown', J(`!${V}.pic.vis && !${V}.type.vis && !${V}.hullL.vis && !${V}.hullN.vis && !${V}.shL.vis && !${V}.shN.vis && !${V}.km.vis && !${V}.doing.vis`));
+  check('every row is inside the box, and the last row\'s bar ends above its bottom edge', J(`${V}.rows.every(r => r.name.x >= ${Bx.x} && r.num.x <= ${Bx.x + Bx.w} && r.name.y >= ${Bx.y} && r.num.y + 14 <= ${Bx.y + Bx.h})`) && Bx.y + A.first + 2 * A.pitch + A.bar.dy + A.bar.h < Bx.y + Bx.h);
+  const bars = J(`${V}.g.log.filter(l => l[0] === 'fillRect' && l[3] === ${A.bar.w})`);
+  check('a hull bar under each name, the box\'s width less its edges (its ground and its fill: two rectangles each), the frame in the friend\'s colour', bars.length === 6 && J(`${V}.g.log.some(l => l[0] === 'lineStyle' && l[2] === CAMP.tdisp.color.friend)`) && J(`${V}.g.log.some(l => l[0] === 'strokeRoundedRect')`));
+  g.run(`window.__n0 = ${V}.g.clears; campFdispSync(S, 1100); campFdispSync(S, 1200);`);
+  check('a steady display costs nothing: the frame is not drawn again while nothing changes', J(`${V}.g.clears === __n0`));
+  g.run(`campWing(C, 'fighter').filter(u => u.pilot === 'kara')[0].hp -= 10; campFdispSync(S, 1500);`);
+  check('a hit on one pilot: its numbers change and the frame and bars are drawn again', J(`${V}.g.clears`) === J('__n0') + 1 && J(`${V}.rows[1].num.text`) === J(`(() => { const u = campWing(C, 'fighter').filter(u => u.pilot === 'kara')[0], h = campTdispHull(u); return h.now + ' / ' + h.max; })()`));
+  g.run(`campWing(C, 'fighter').filter(u => u.pilot === 'wedge').forEach(u => { u.hp = 0; }); campFdispSync(S, 1800);`);
+  check('a pilot lost: its row goes (two rows are left: Kara and Apollo) and the third row\'s texts are hidden', J(`${V}.rows.filter(r => r.name.vis).length`) === 2 && J(`${V}.rows[0].name.text`) === 'Kara' && J(`${V}.rows[1].name.text`) === 'Apollo' && !J(`${V}.rows[2].name.vis`) && !J(`${V}.rows[2].num.vis`));
+  g.run(`campWing(C, 'fighter').forEach(u => { u.hp = 0; }); campFdispSync(S, 2100);`);
+  check('no pilot out: the title alone, no row', J(`${V}.name.text`) === 'All pilots' && J(`${V}.name.vis`) && J(`${V}.rows.every(r => !r.name.vis && !r.num.vis)`));
+  g.run('__out()'); g.run('window.S = __scene()');
+  g.run(`campSelAll(C); campFdispSync(S, 3000); C.sel = 'pilot:green'; campFdispSync(S, 3100);`);
+  check('then one pilot picked (D): the rows go and the one ship\'s display is there again, its picture and order too', J(`${V}.rows.every(r => !r.name.vis && !r.num.vis)`) && J(`${V}.name.text`) === 'Kara' && J(`${V}.pic.vis`) && J(`${V}.doing.vis`) && J(`${V}.pic.tex`) === 'tex-fighter' && J(`${V}.hullN.vis`));
+  g.run(`campSelAll(C); campFdispSync(S, 3400);`);
+  check('and Q again: the one ship\'s parts go, the rows are back, and the picture is set again for the next ship picked', J(`!${V}.pic.vis && !${V}.doing.vis && !${V}.hullN.vis`) && J(`${V}.rows.filter(r => r.name.vis).length`) === 3 && J(`${V}.kind`) === '');
+  g.run(`campSelClear(C); campFdispSync(S, 3700);`);
+  check('X lets it go: the title and every row are hidden', J(`!${V}.name.vis && ${V}.rows.every(r => !r.name.vis && !r.num.vis) && !${V}.pic.vis`));
+  g.run(`campSelAll(C); campFdispSync(S, 4000); S.mp = {}; campFdispSync(S, 4100);`);
+  check('the map open hides it, rows too', J(`!${V}.name.vis && ${V}.rows.every(r => !r.name.vis && !r.num.vis)`));
+  g.run(`S.mp = null; campFdispSync(S, 4400);`);
+  check('and it is back when the map closes', J(`${V}.name.vis && ${V}.rows.filter(r => r.name.vis).length === 3`));
+  g.run(`window.R1 = __foe(900, 0); C.tgt = R1.id; campTdispSync(S, 4500);`);
+  check('a hostile picked as well: its display is in the other corner as ever (Q does not touch the target display)', /^Raider \d+$/.test(J('S.hud.tdisp.name.text')) && J('S.hud.tdisp.name.x') === J('campTdispBox().x') + 10 && J(`${V}.name.text`) === 'All pilots');
+  check('the words are the key camp.sel.all (campkeys.md) and the display adds none of its own', J(`uiText('camp.sel.all')`) === 'All pilots' && !/uiText\('camp\.[a-z.]+'/.test(readFileSync(new URL('../src/camptdispscene.js', import.meta.url), 'utf8').split('card space-game-q-all-pilots-panel')[1].replace(/uiText\('camp\.tdisp\.[a-z.]+'/g, '')));
+}
+
+console.log('F. the square marker, and no rings');
 {
   const html = src('index.html'), scene = src('src/campaignscene.js'), draw = src('src/camptargetdraw.js'), tds = src('src/camptdispscene.js');
   check('the target\'s function draws the square (campTgtCorners): the hostile, the friend picked and the fighters an order went to use the same one', /function campTgtCorners\(/.test(draw) && /campTgtCorners\(g, v, col, z, al\)/.test(draw) && /campTgtCorners\(sg, u, CAMPTGT\.friend/.test(scene));
