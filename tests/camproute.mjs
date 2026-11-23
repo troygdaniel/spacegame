@@ -39,7 +39,7 @@ g.run(`
         objectives: [{ type: 'deliver', n: 1 }], waves: [] }
     ] };
   window.__mk = (i, seed) => { window.C = campNew('rr', [], { seed: seed == null ? 1 : seed, mission: i | 0 }); C.god = true; __ev.length = 0; return !!C; };
-  window.__esc = (dx, dy) => { const u = campSpawn(C, 'escort', C.carrier.x + (dx || 0), C.carrier.y + (dy || 0)); u.order = { type: 'guard', at: { kind: 'carrier' } }; u.vx = u.vy = 0; return u; };
+  window.__esc = (dx, dy) => { const u = campSpawn(C, 'fighter', C.carrier.x + (dx || 0), C.carrier.y + (dy || 0)); u.order = { type: 'guard', at: { kind: 'carrier' } }; u.vx = u.vy = 0; return u; };
   window.__tt = () => campConvoys(C)[0];
   window.__Fpt = () => { const g = campRouteGeo(C); return g.fork; };
 `);
@@ -154,23 +154,12 @@ sec('C2', () => {
 });
 
 sec('E', () => {
-  console.log('E. the scout');
+  console.log('E. the lanes (the scout that read them was cut with the escort ship: card space-game-cut-escorts; the route system is dormant)');
   g.run('__mk(0)');
   const rows = J('campNavRows(C).filter(r => r.kind === "lane").map(r => ({ id: r.id, group: r.group, name: r.name, x: Math.round(r.x), y: Math.round(r.y), lane: r.lane }))');
   const G = J('(() => { const g = campRouteGeo(C); return { s: g.lanes.short.mid, l: g.lanes.long.mid }; })()');
   check('E  the lanes are two rows of the Tab map\'s list, in a group of their own, named for the lane, at the lane\'s middle', rows.length === 2 && rows.every(r => r.group === 'routes') && rows[0].id === 'lane:short' && rows[1].id === 'lane:long' && Math.abs(rows[0].x - G.s.x) < 2 && Math.abs(rows[1].y - Math.round(G.l.y)) < 2 && /Short lane/.test(rows[0].name), JSON.stringify(rows));
-  check('E  the Scout order is allowed on a route mission whose row allows only "escort" tasks (the lanes are for scouting): a dry check on a lane with an escort out says yes', (g.run('__esc()'), J('campCheck(C, "scout", campNavRows(C).find(r => r.id === "lane:short")).ok')) === true);
-  check('E  and "scout the long lane" finds the lane by its words', J('campCheck(C, "scout", "long lane").ok') === true && J('campCheck(C, "scout", "the short lane").ok') === true);
-  g.run('campOrder(C, "scout", campNavRows(C).find(r => r.id === "lane:short")); __go(52)');
-  check('E  the scout flew out, read, and said what is on the short lane: "ambush, 3 pirates"', J("__ev.some(e => e.type === 'say' && e.key === 'camp.say.lanefound')") && J("__ev.filter(e => e.type === 'laneread').length") === 1);
-  const K = J('C.route.known');
-  check('E  what it read is kept (C.route.known.short): three skiffs ahead, no cache; the long lane is still unread', !!K.short && K.short.ships.skiff === 3 && K.short.caches === 0 && !K.long, JSON.stringify(K));
-  g.run('__mk(0); __esc(); campOrder(C, "scout", campNavRows(C).find(r => r.id === "lane:long")); __go(60)');
-  const K2 = J('C.route.known');
-  check('E  the long lane read: quiet, with a cache of 40 ore; the radio said so ("quiet")', !!K2.long && K2.long.caches === 1 && Object.keys(K2.long.ships).length === 0 && J("__ev.some(e => e.type === 'say' && e.key === 'camp.say.lanefound')"), JSON.stringify(K2));
-  g.run('__mk(0); __esc(); campOrder(C, "scout", campNavRows(C).find(r => r.id === "lane:long")); __go(90)');
-  check('E  the scout carries the cache home: when it lands the 40 ore are in the store and the cache is counted (it may fetch on a lane)', J('C.ore') >= 40 && J('C.cachesGot') === 1, J('C.ore') + ' ' + J('C.cachesGot'));
-  g.run('__mk(0); __esc(); __go(1)');
+  g.run('__mk(0); __go(1)');
   check('E  a lane row stays in the list until she has passed the fork, then it goes (nothing to scout)', J('campNavRows(C).filter(r => r.kind === "lane").length') === 2 && (g.run('campOrder(C, "lane", "long"); __go(80)'), J('campNavRows(C).filter(r => r.kind === "lane").length') === 0));
 });
 
@@ -180,10 +169,9 @@ sec('F', () => {
   const intent = t => J(`campIntent(${JSON.stringify(t)})`);
   check('F  the voice: "take the long lane" is the act fleet_lane with the lane as its word; "use the short route", "go by the short lane" too', JSON.stringify(intent('take the long lane')) === '{"act":"fleet_lane","arg":"long"}' && JSON.stringify(intent('go by the short lane')) === '{"act":"fleet_lane","arg":"short"}' && JSON.stringify(intent('long lane')) === '{"act":"fleet_lane","arg":"long"}', JSON.stringify([intent('take the long lane'), intent('go by the short lane'), intent('long lane')]));
   check('F  a question about lanes is not an order ("what is the long lane")', !/fleet_lane/.test(JSON.stringify(intent('what is the long lane'))));
-  check('F  "scout the long lane" and "send a scout to the short route" are scout orders (a lane is a place to scout)', JSON.stringify(intent('scout the long lane')) === '{"act":"fleet_scout","arg":"long lane"}' && JSON.stringify(intent('send a scout to the short route')) === '{"act":"fleet_scout","arg":"short route"}');
+  check('F  "scout the long lane" is no order any more: the scout is gone, so it is nobody\'s act', !/fleet_scout/.test(JSON.stringify(intent('scout the long lane'))) && !/fleet_scout/.test(JSON.stringify(intent('send a scout to the short route'))));
   check('F  the computer\'s closed list has fleet_lane and runs it (scFleet)', /fleet_lane/.test(sc) && /fleet_lane: \(s, arg\) => scFleet\(s, 'lane', arg\)/.test(sc));
   check('F  the map draws the lanes: campMapMarks gives each lane a mark with its points, the chosen one flagged; the Take button is in campmapdraw (a click; the key T was taken out of the map with the fork of 1.1: card space-game-cut-lane-fork)', /campRouteMarks/.test(mp) && /type: 'lane'/.test(read('src/camproute.js')) && /m\.type === 'lane'/.test(md) && /btnTake/.test(md) && !/code === 'KeyT'/.test(md));
-  check('F  the bot answers the fork: it picks a lane (campaign-bot says lane)', /'lane'/.test(bot));
   g.run('__mk(0); campOrder(C, "lane", "long")');
   const marks = J('campMapMarks(C).filter(m => m.type === "lane").map(m => ({ id: m.id, chosen: !!m.chosen, n: m.pts.length }))');
   check('F  the map has two lane marks while the lanes can still be chosen; the long one is the chosen', marks.length === 2 && marks.find(m => m.id === 'long').chosen === true && marks.find(m => m.id === 'short').chosen === false, JSON.stringify(marks));

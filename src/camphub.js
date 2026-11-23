@@ -8,7 +8,7 @@
 //     1 to 4 pick the row (and close an overlay)   Up Down (W S) move the row   Enter or Right open it   L launches from anywhere   Esc closes the overlay, and with none open leaves for the title (T too)
 //     in the Missions overlay: Up Down choose a mission, Enter (R) picks it and opens its briefing (a mission done is a replay; a SKIPPED one, [-], is flown the same way and its first win is kept: card space-game-replay-reselect-bug),
 //       X goes back to the next mission; the last row, Start the campaign over, asks on Enter and does it on the second Enter (any other key takes it back)
-//     in the Refit overlay: Up Down choose, Enter buys (or F a fighter, E an escort), Backspace gives the last one back; each choice shows what it changes (with the numbers), its cost and what you have
+//     in the Refit overlay: Up Down choose, Enter buys (or F a fighter), Backspace gives the last one back; each choice shows what it changes (with the numbers), its cost and what you have
 //   campHubNew(P, opts)            the state the scene keeps: { row, rows, last, open (the row whose overlay is up, or ''), sel (the refit's choice), cur (the Missions cursor), pick (the replay chosen), ask (Start over has asked) }; opts: { rows: [ids], at: the id to start on }
 //   campHubRows(P, ids)            the rows (the five, or ids) with the live note of each: [{ id, n, name, note }]
 //   THE ROWS ARE DATA: a row is an id with its words (camp.hub.row.<id>, camp.hub.foot.<id>), a note (CAMP_HUB.note[id](P)), what Enter does on it (CAMP_HUB.act[id]: an action, or nothing to go on to the next row),
@@ -18,11 +18,11 @@
 //   campHubBoard(P)                every level and mission, in order: [{ head: true, level, name, n } | { level, i, n, id, title, kind, state: 'done' | 'next' | 'passed' | 'later', score, bonus, of, tries }]
 //   campHubBoardView(rows, max)    the window of the board that fits max lines and holds the next mission
 //   campHubBrief(P, level, i)      one mission's briefing: { title, kindText, lines, objectives, kinds, bonus: [{ type, points, text }], par, best, tries }
-//   campHubRefit(P)                { ore, techs: [{ id, name, text, change }], wing: { fighters, escorts }, extra: { fighters, escorts }, most, fc, ec, items }
-//   campHubRefitItems(P)           the refit's choices: [{ id: 'fighters' | 'escorts', name, change (what it does, in words with the numbers), cost, have, ok (can be bought now), status }]
+//   campHubRefit(P)                { ore, techs: [{ id, name, text, change }], wing: { fighters }, extra: { fighters }, most, fc, items }
+//   campHubRefitItems(P)           the refit's choices: [{ id: 'fighters', name, change (what it does, in words with the numbers), cost, have, ok (can be bought now), status }]
 //   campHubTechChange(id, P)       what a tech changes, in plain words with the numbers of CAMP.tech ("Carrier hull: 600 to 900")
 //   campHubRank(P)                 { ranked, name, n, of, points, next, nextName, wing, flown, all }: campRankStatus(P) (the ranks card, src/campranks.js) when it is there, else the plain score
-//   campHubBuy(P, what) / campHubGiveBack(P, what)   what: 'fighters' | 'escorts'  -> { ok, key, vars }
+//   campHubBuy(P, what) / campHubGiveBack(P, what)   what: 'fighters'  -> { ok, key, vars }
 //   campHubKey(H, P, code, ctx)    one key -> { used, moved, action: '' | 'launch' | 'undock' | 'title', changed, ok, say: { key, vars } | { text } | null }; ctx: the scene's data, handed to a row's keys
 //   REPLAYS (card space-game-campaign-replay): on the board A D (or the arrows) choose a mission already done, R makes it the one the Briefing and Launch are for, X goes back to the next mission. campHubDone(P) is the list
 //   of missions that can be replayed; campHubTarget(P, H) is the mission Launch flies: the replay picked, else the next one; campHubLaunch(P, H) says { level, mission, via: 'hub', replay }. The story and the progress do not move.
@@ -165,10 +165,10 @@ function campHubBrief(P, level, i) {
 function campHubWing(P) {
   try {
     const r = typeof campRankStatus === 'function' ? campRankStatus(P) : null;
-    if (r && r.wing && Number.isFinite(r.wing.fighters) && Number.isFinite(r.wing.escorts)) return { fighters: r.wing.fighters | 0, escorts: r.wing.escorts | 0 };
+    if (r && r.wing && Number.isFinite(r.wing.fighters)) return { fighters: r.wing.fighters | 0 };
   } catch (e) { /* the ranks card's trouble is not the room's */ }
   const b = P.bonus || {};
-  return { fighters: CAMP.bay.fighters + (P.techs.indexOf('bay2') >= 0 ? CAMP.tech.bay2.fighters : 0) + (b.fighters | 0), escorts: CAMP.bay.escorts + (b.escorts | 0) };
+  return { fighters: CAMP.bay.fighters + (P.techs.indexOf('bay2') >= 0 ? CAMP.tech.bay2.fighters : 0) + (b.fighters | 0) };
 }
 // what a tech changes, in plain words with the numbers it works from (the words are content/text/readyroom.md, camp.room.tech.<id>; the numbers are CAMP.tech and the carrier's own)
 const CAMP_HUB_TECHVARS = {
@@ -189,7 +189,7 @@ function campHubTechChange(id, P) { // P (optional): the pilot's progress, for t
 function campHubRefit(P) {
   const b = P.bonus || {};
   return { ore: P.ore | 0, techs: P.techs.filter(t => CAMP.tech[t]).map(id => ({ id, name: uiText('camp.tech.' + id + '.name'), text: uiText('camp.tech.' + id + '.text'), change: campHubTechChange(id, P) })), wing: campHubWing(P),
-    extra: { fighters: b.fighters | 0, escorts: b.escorts | 0 }, most: CAMP.refit.most, fc: CAMP.refit.fighterCost, ec: CAMP.refit.escortCost, items: campHubRefitItems(P) };
+      extra: { fighters: b.fighters | 0 }, most: CAMP.refit.most, fc: CAMP.refit.fighterCost, items: campHubRefitItems(P) };
 }
 // the refit's choices, each with what it changes (the numbers), what it costs, what you have, and whether you can have it now
 function campHubRefitItems(P) {
@@ -199,30 +199,30 @@ function campHubRefitItems(P) {
     return { id, name: uiText('camp.room.item.' + id), change: uiText('camp.room.change.' + id, { from: have, to: have + 1 }), cost, have: uiText('camp.room.have.ship', { ore, n, most }), ok,
       status: ok ? uiText('camp.room.can') : full ? uiText('camp.room.most', { most }) : uiText('camp.room.need', { need: cost - ore }) };
   };
-  return [ship('fighters', w.fighters, CAMP.refit.fighterCost), ship('escorts', w.escorts, CAMP.refit.escortCost)];
-}
-const campHubCost = what => (what === 'fighters' ? CAMP.refit.fighterCost : CAMP.refit.escortCost);
+    return [ship('fighters', w.fighters, CAMP.refit.fighterCost)];
+  }
+  const campHubCost = what => CAMP.refit.fighterCost;
 function campHubBuy(P, what) {
-  if (what !== 'fighters' && what !== 'escorts') return { ok: false, key: 'camp.hub.nothing', vars: {} };
-  if (!P.bonus) P.bonus = { fighters: 0, escorts: 0 };
+  if (what !== 'fighters') return { ok: false, key: 'camp.hub.nothing', vars: {} };
+  if (!P.bonus) P.bonus = { fighters: 0 };
   const cost = campHubCost(what);
   if ((P.bonus[what] | 0) >= CAMP.refit.most) return { ok: false, key: 'camp.hub.most', vars: { most: CAMP.refit.most } };
   if ((P.ore | 0) < cost) return { ok: false, key: 'camp.hub.noore', vars: { need: cost, have: P.ore | 0 } };
   P.ore = (P.ore | 0) - cost; P.bonus[what] = (P.bonus[what] | 0) + 1;
-  return { ok: true, key: what === 'fighters' ? 'camp.hub.boughtf' : 'camp.hub.boughte', vars: { cost, ore: P.ore } };
+  return { ok: true, key: 'camp.hub.boughtf', vars: { cost, ore: P.ore } };
 }
 function campHubGiveBack(P, what) {
-  if (!P.bonus) P.bonus = { fighters: 0, escorts: 0 };
+  if (!P.bonus) P.bonus = { fighters: 0 };
   if (!(P.bonus[what] | 0)) return { ok: false, key: 'camp.hub.nothing', vars: {} };
   const cost = campHubCost(what); P.bonus[what]--; P.ore = Math.min(CAMP.ore.cap, (P.ore | 0) + cost);
-  return { ok: true, key: what === 'fighters' ? 'camp.hub.soldf' : 'camp.hub.solde', vars: { cost, ore: P.ore } };
+  return { ok: true, key: 'camp.hub.soldf', vars: { cost, ore: P.ore } };
 }
 function campHubRank(P) {
   let st = null; try { st = typeof campRankStatus === 'function' ? campRankStatus(P) : null; } catch (e) { st = null; }
   const ok = !!(st && typeof st.name === 'string' && st.name), total = campHubTotal(P);
   return { ranked: ok, name: ok ? st.name : '', n: ok ? st.n | 0 : 0, of: ok ? st.of | 0 : 0, points: ok && Number.isFinite(st.points) ? st.points | 0 : total, next: ok && Number.isFinite(st.next) ? st.next | 0 : null,
     nextName: ok && st.nextName ? String(st.nextName) : '', wing: campHubWing(P), total, flown: campHubFlown(P), all: campHubAll(),
-    ladder: (typeof CAMP === 'object' && Array.isArray(CAMP.ranks) ? CAMP.ranks : []).map((r, i) => ({ name: campHubRankName(i), at: r.at | 0, fighters: r.fighters | 0, escorts: r.escorts | 0, here: ok && i + 1 === (st.n | 0) })) }; // ladder: every rank, the points it is held from and the ships it adds to the wing
+    ladder: (typeof CAMP === 'object' && Array.isArray(CAMP.ranks) ? CAMP.ranks : []).map((r, i) => ({ name: campHubRankName(i), at: r.at | 0, fighters: r.fighters | 0, here: ok && i + 1 === (st.n | 0) })) }; // ladder: every rank, the points it is held from and the ships it adds to the wing
 }
 
 // ---- the rows ----
@@ -238,21 +238,21 @@ const campHubKeyLine = () => uiText('camp.hub.keys');
 const campHubLaunch = (P, H) => { const t = campHubTarget(P, H); return { level: t.level, mission: t.i, via: 'hub', replay: t.replay }; }; // replay: the Campaign scene flies it from its standard start and moves nothing
 
 // ---- the keys ----
-// the refit's own keys: F buys a fighter, E an escort, Backspace gives the last one back. In the hall they are the OVERLAY's (a purchase is always seen with its numbers); a room with no
+// the refit's own keys: F buys a fighter, Backspace gives the last one back. In the hall they are the OVERLAY's (a purchase is always seen with its numbers); a room with no
 // overlay for the row (a dock's) has them on the row, as ever
 CAMP_HUB.rowKey.refit = (H, P, code, res) => {
-  if (code !== 'KeyF' && code !== 'KeyE' && code !== 'Backspace') return null;
+  if (code !== 'KeyF' && code !== 'Backspace') return null;
   res.used = true; let r;
-  if (code === 'Backspace') { const b = P.bonus || {}, what = H.last && (b[H.last] | 0) > 0 ? H.last : (b.fighters | 0) > 0 ? 'fighters' : 'escorts'; r = campHubGiveBack(P, what); }
-  else { const what = code === 'KeyF' ? 'fighters' : 'escorts'; r = campHubBuy(P, what); if (r.ok) H.last = what; }
+  if (code === 'Backspace') { const b = P.bonus || {}, what = H.last && (b[H.last] | 0) > 0 ? H.last : (b.fighters | 0) > 0 ? 'fighters' : ''; r = campHubGiveBack(P, what); }
+  else { const what = 'fighters'; r = campHubBuy(P, what); if (r.ok) H.last = what; }
   res.ok = r.ok; res.changed = r.ok; res.say = { key: r.key, vars: r.vars };
   return res;
 };
-// the REFIT overlay: Up Down choose among the refit's choices (a fighter, an escort); Enter buys the one chosen; F E Backspace as ever
+// the REFIT overlay: Up Down choose among the refit's choices (a fighter); Enter buys the one chosen; F Backspace as ever
 CAMP_HUB.over.refit = {
-  len: () => 2, get: H => H.sel | 0, set: (H, i) => { H.sel = i; },
+  len: () => 1, get: H => H.sel | 0, set: (H, i) => { H.sel = i; },
   go: (H, P, res) => {
-    const it = campHubRefitItems(P)[Math.max(0, Math.min(1, H.sel | 0))]; res.used = true; let r;
+    const it = campHubRefitItems(P)[0]; res.used = true; let r; // (one choice now: a fighter)
     r = campHubBuy(P, it.id); if (r.ok) H.last = it.id;
     res.ok = r.ok; res.changed = r.ok; res.say = { key: r.key, vars: r.vars }; return res;
   },

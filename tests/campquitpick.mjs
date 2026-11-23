@@ -1,7 +1,7 @@
 // smoke: card space-game-night-quit-at-pick (findings A and F of docs/night/hunt-l2-l3.md: the refit waits; level 3 mends the hull from the dock list, U), plain Node, no Chrome
 //   A  quitting at the tech pick or the Earth refit: the save's levelDone sends the pilot back to the level's story and pick (the flag itself is pinned in tests/campnightminors.mjs; here the refit of level 1 too)
 //   F  a level with no outpost (level 3): the dock row (the top row of the DOCK AND REPAIR list: U opens it directly, or P and its "Dock and repair" row; Up, Down and Enter in it: cards one-list-keys and list-shortcuts, 22 and 23 Nov 2026) is "Repair the hull" and giving it mends the hull aboard for ore; a level with outposts keeps "Dock at the outpost".
-//      No digit is a key in flight (0 was the dock key), and a level with no outpost has the two build rows in its list where the others do not
+//      No digit is a key in flight (0 was the dock key), and a level with no outpost has the build row in its list where the others do not
 // Run: node tests/campquitpick.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
 

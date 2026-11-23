@@ -63,7 +63,7 @@ const rows = J('campNavRows(C).map(r => ({ id: r.id, kind: r.kind, group: r.grou
 check('C  the Tab map\'s list has no lane row and no "routes" group', !rows.some(r => r.kind === 'lane' || r.group === 'routes' || /^lane:/.test(r.id)), JSON.stringify(rows));
 check('C  the map draws no lane mark', J('campMapMarks(C).filter(m => m.type === "lane").length') === 0);
 const sc = J('(() => { const r = campOrder(C, "scout", campNavRows(C).find(x => x.kind === "convoy") || { x: 0, y: 0 }, "map"); return { ok: r.ok, say: r.say || r.code }; })()');
-check('C  V on the transport says the mission has no scouting (there is nothing to read ahead any more)', sc.ok === false && /no scouting/i.test(sc.say), JSON.stringify(sc));
+check('C  there is no Scout order at all any more (the scout-escort was cut: card space-game-cut-escorts), so the transport cannot be scouted either', sc.ok === false, JSON.stringify(sc));
 const tk = J('(() => { const r = campOrder(C, "lane", "long", "typed"); return { ok: r.ok, say: r.say || r.code }; })()');
 check('C  "take the long lane" is the ship\'s "there is no fork on this road"', tk.ok === false && /no fork/i.test(tk.say), JSON.stringify(tk));
 
@@ -85,7 +85,7 @@ check('E  the briefing\'s walkthrough of 1.1 does not mention a fork, a lane or 
 check('E  it still says the transport, the torpedo boats, the leader and the miner\'s call', /transport/i.test(walk[0]) && walk.some(s => /torpedo/i.test(s)) && walk.some(s => /leader/i.test(s)) && walk.some(s => /miner/i.test(s)), JSON.stringify(walk));
 check('E  the ship\'s notes of the briefing\'s three screens do not mention a fork, a lane or a scout, and none is empty', notes.every(n => n && !/fork|\blanes?\b|scout/i.test(n)), JSON.stringify(notes));
 const ctl = read('src/data_controls.js'), readme = read('README.md'), status = read('PROJECT_STATUS.md');
-check('E  the help page\'s map row says V scouts and does not say T takes a lane', !/T takes a lane/.test(ctl) && !/takes a lane/.test(readme), '');
+check('E  the help page\'s map rows say neither that V scouts nor that T takes a lane', !/T takes a lane/.test(ctl) && !/takes a lane/.test(readme) && !/V scouts/.test(ctl) && !/V.{0,3}scouts/.test(readme), '');
 check('E  the README\'s description of mission 1.1 has no fork in it', !/fork in the road/i.test(readme), '');
 check('E  PROJECT_STATUS.md says there is no fork in 1.1', /no fork|one road/i.test(status), '');
 check('E  the map has no T key hint left: the Tab map\'s help rows name V and X but not a take', !/\bT\b.*take|take.*\bT\b/i.test(g.run(`(CONTROLS.find(c => c.id === 'campaign') || { rows: [] }).rows.map(r => r.k.join(' ') + ' ' + r.t).join('\\n')`)));

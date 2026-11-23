@@ -88,8 +88,8 @@ function campUndock(C) { if (!C.docked) return false; const id = C.docked; C.doc
 // (mending the hull is src/campmend.js now: anywhere in space for ore, and at half price docked)
 
 // ---- the retreat ----
-// no ship of the wing is left to fight for the carrier: none in the bay, out, launching or being mended
-const campNoShips = C => !(C.bay.fighters + C.bay.escorts) && !campWing(C).length && !C.launchQ.length && !campRepairing(C);
+  // no ship of the wing is left to fight for the carrier: none in the bay, out, launching or being mended
+  const campNoShips = C => !C.bay.fighters && !campWing(C).length && !C.launchQ.length && !campRepairing(C);
 function campRetreat(C) {
   if (!C || C.result || C.docked || !C.carrier || C.carrier.hp <= 0) return null;
   if (C.carrier.hp >= C.carrier.maxHp * CAMP.outpost.retreatHull || !campNoShips(C)) return null;

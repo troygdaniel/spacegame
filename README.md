@@ -24,7 +24,7 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 
 **Premise.** The Earth cruiser, a mining ship turned warship, is drafted into a war with an alien fleet. Missions run from the Moon to the asteroid rim (level 1), through the warp to Alpha Centauri and an ancient relic (level 2), to the alien home world (level 3), and end on a reveal: *this is not their home, it is an outpost.*
 
-**What you do.** You fly the cruiser yourself (the arrow keys, hold Space to fire its eight turrets, Enter a homing missile) and **command the rest**: fighters (attack, guard, mine), escorts (screen a convoy), the convoys themselves (tuck in, hold, run), scouts. You give orders from short lists (`Q` the fleet's, `P` the ship's, with a key for each part of them), by typing to the ship's computer, or by voice. Between missions you are in a **ready room** where you read briefings, spend ore on ships, and see your rank. After each battle you pick one of three alien technologies.
+**What you do.** You fly the cruiser yourself (the arrow keys, hold Space to fire its eight turrets, Enter a homing missile) and **command the rest**: fighters in three squads (attack, guard, escort a convoy, mine), the convoys themselves (tuck in, hold, run). You give orders from short lists (`Q` the fleet's, `P` the ship's, with a key for each part of them), by typing to the ship's computer, or by voice. Between missions you are in a **ready room** where you read briefings, spend ore on ships, and see your rank. After each battle you pick one of three alien technologies.
 
 **The ideas that make it a commander game.**
 
@@ -47,11 +47,11 @@ The game's own **H** page lists every key; it is built from `src/data_controls.j
 
 ### Campaign
 
-One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left and **`P` opens the ship list** at the right. Each is short: a few orders, and one row for each of its parts with the part's key on it. **A part's key opens it directly at any time:** `W` all squads, `E` the red squad, `R` the green squad, `T` the yellow squad on the left (the fighters are split into three squads); `O` power (Shields first: `O`, `Enter` adds a shield pip), `I` autopilot, `U` dock and repair on the right. So `W` then `Enter` sends every fighter at the target, and `E` then `Enter` only the red squad. The escorts and the convoy have no key of their own: they are rows of the `Q` list. Nothing is on the screen until you press one of these keys. Each row says what it does in plain words; a row that cannot be used now is grey and says why. **No key means two things in flight**, and there are no number keys.
+One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left and **`P` opens the ship list** at the right. Each is short: a few orders, and one row for each of its parts with the part's key on it. **A part's key opens it directly at any time:** `W` all squads, `E` the red squad, `R` the green squad, `T` the yellow squad on the left (the fighters are split into three squads); `O` power (Shields first: `O`, `Enter` adds a shield pip), `I` autopilot, `U` dock and repair on the right. So `W` then `Enter` sends every fighter at the target, and `E` then `Enter` only the red squad. The convoy has no key of its own: it is a row of the `Q` list. Nothing is on the screen until you press one of these keys. Each row says what it does in plain words; a row that cannot be used now is grey and says why. **No key means two things in flight**, and there are no number keys.
 
 | Key | What it does |
 |---|---|
-| `Q` | the **fleet list**, a row for each part of the wing and nothing else: All squads, the Red, Green and Yellow squads, Escorts (Escort the convoy, Attack the target, Guard the cruiser, Recall the escorts), Convoy (Tuck in, Run for it, Hold here, Carry on) and Stance |
+| `Q` | the **fleet list**, a row for each part of the wing and nothing else: All squads, the Red, Green and Yellow squads, Convoy (Tuck in, Run for it, Hold here, Carry on) and Stance |
 | `W` | **all squads**: Launch the wing, Attack the target, Guard the cruiser, Recall, Mine ore (it opens on Launch while ships are in the bay and on Attack once the wing is out: `W`, Enter or `Q`, Enter, Enter launches everything) |
 | `E` | the **red squad**: Attack the target, Guard the cruiser, Recall |
 | `R` | the **green squad**: Attack the target, Guard the cruiser, Recall |
@@ -67,7 +67,7 @@ One list per hand, with shortcut keys. **`Q` opens the fleet list** at the left 
 | `Enter` | a homing missile at the target (only while no list is open) |
 | `A` `D` `S` `X` | the one target: the last or next hostile (nearest first), the nearest threat, clear it. A red bracket marks it and its name is under the radar; Attack goes at it, Fly to the target flies to it, `Enter` fires at it |
 | `J` `K` `L` `;` | power, directly, one pip a press: a pip to the shields, the engines, the weapons; `;` back to 2, 2, 2 (the `I` list has the same orders) |
-| `Tab` | the map of the level: `Up` `Down` step the marks, `Enter` flies there (`Shift+Enter` fast), a click sets a mark, `V` scouts, `X` clears the trip |
+| `Tab` | the map of the level: `Up` `Down` step the marks, `Enter` flies there (`Shift+Enter` fast), a click sets a mark, `X` clears the trip |
 | `-` `=` `Backspace`, mouse wheel | zoom out, zoom in, reset the zoom and recentre (the view or the map) |
 | mouse drag (left button) | pan the flight view away from the cruiser, or the Tab map; the RECENTRE mark, `Backspace`, or an arrow held bring it back |
 | `/` `.` | type an order to the ship's computer; hold `.` and say it (both need a chat key: Settings > Keys) |

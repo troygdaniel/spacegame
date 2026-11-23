@@ -37,14 +37,11 @@ run('__new();');
 check('a fighter at 31 percent fights on', (() => { run('__hurt(__F(0), 0.31); campStep(C, 1 / 30);'); return !J('__F(0).repair') && J('__says()').indexOf('camp.say.repairoff') < 0; })());
 run('__new();');
 check('at exactly 30 percent it fights on (under, not at)', (() => { run('__F(0).hp = __F(0).maxHp * 0.3; campStep(C, 1 / 30);'); return !J('__F(0).repair'); })());
-run('__new(); campOrder(C, "escort"); __go(1);');
-check('an escort at 10 percent hull fights on: the escorts do not break off', (() => { run('const e = campWing(C, "escort")[0]; __hurt(e, 0.1); campStep(C, 1 / 30);'); return !J('campWing(C, "escort")[0].repair'); })());
 run('__new();');
 check('a fighter 8000 px from the cruiser (over 15 s of flight at 430 px/s) fights on, and breaks off when the cruiser comes within reach', (() => {
   run('const u = __F(0); u.x = C.carrier.x + 8000; u.y = C.carrier.y; __hurt(u, 0.2); u.order = { type: "guard", at: { kind: "point", x: u.x, y: u.y } }; campStep(C, 1 / 30);');
   const far = !J('__F(0).repair'); run('__F(0).x = C.carrier.x + 5000; campStep(C, 1 / 30);'); return far && J('__F(0).repair') === true; })());
 run('__new();');
-check('a scout does not break off (it has its task)', (() => { run('const e = campWing(C, "escort")[0]; e.scout = { n: 1 }; __hurt(e, 0.1); campRepairRun(C, e, 1 / 30);'); return !J('campWing(C, "escort")[0].repair') && J('campRepairRun(C, campWing(C, "escort")[0], 1 / 30)') === false; })());
 check('an enemy raider at 10 percent hull and a pirate skiff never do it: the enemy has no repair (campRepairRun refuses them, and their AI never calls it)', (() => {
   run('__new(); const r = campSpawn(C, "raider", C.carrier.x + 300, C.carrier.y); r.hp = r.maxHp * 0.1; window.R1 = r; const s = campSpawn(C, "skiff", C.carrier.x + 400, C.carrier.y); s.hp = s.maxHp * 0.1; window.R2 = s;');
   return J('campRepairRun(C, R1, 1 / 30)') === false && J('campRepairRun(C, R2, 1 / 30)') === false && !/campRepairRun/.test(read('src/camppirates.js')) && (read('src/campaign.js').match(/campRepairRun\(/g) || []).length === 1; })());
@@ -59,9 +56,9 @@ check('it flies home: the way to the cruiser shortens', J('campDist(U, C.carrier
 run('for (let i = 0; i < 400 && C.repairs.length === 0; i++) campStep(C, 1 / 30); window.LANDED = C.t;');
 check('it lands on the cruiser: one in the repair list, until 10 s from now, with the order it had', J('C.repairs.length') === 1 && Math.abs(J('C.repairs[0].until') - J('LANDED') - 10000) < 40 && J('C.repairs[0].order.type') === 'attack' && J('C.repairs[0].stay') === false, J('JSON.stringify(C.repairs)'));
 check('it is out of the sim (no longer in the ships), not counted as out, not lost, and the dock is told', J('C.by[U.id] === undefined') && J('campWing(C, "fighter").length') === J('HP0') - 1 && J('C.lostShips') === J('LOST') && J('C.events.some(e => e.type === "dock" && e.repair && e.id === U.id)') !== false);
-check('it is still the wing\'s: "no ships left" does not say so, the ship computer says it is being mended', (() => {
-  run('C.bay.fighters = 0; C.bay.escorts = 0; C.launchQ.length = 0; for (const u of campWing(C)) u.hp = 0;');
-  return J('campRepairing(C, "fighter")') === 1 && J('campRepairing(C, "escort")') === 0 && J('campNoShips(C)') === false && /1 being mended/.test(J('campSummary(C)')); })());
+  check('it is still the wing\'s: "no ships left" does not say so, the ship computer says it is being mended', (() => {
+    run('C.bay.fighters = 0; C.launchQ.length = 0; for (const u of campWing(C)) u.hp = 0;');
+    return J('campRepairing(C, "fighter")') === 1 && J('campNoShips(C)') === false && /1 being mended/.test(J('campSummary(C)')); })());
 check('with no repair in the list the same state IS "no ships left"', J('(() => { C.repairs.length = 0; return campNoShips(C); })()') === true);
 check('the landing costs 5 ore (card space-game-repair-with-ore): the first mend of a fresh battle takes it from the store', (() => { run('__new(); window.__O = C.ore; window.U = __hurt(__F(0), 0.2); for (let i = 0; i < 400 && C.repairs.length === 0; i++) campStep(C, 1 / 30);'); return J('__O - C.ore') === CAMP_REPAIR_ORE; })());
 
@@ -87,7 +84,7 @@ land('{ type: "guard", at: { kind: "carrier" } }');
 run('C.repairs[0].stay = true; __go(11);');
 check('a repair marked "stay" goes to the bay even in a fight', J('C.repairs.length') === 0 && J('C.bay.fighters') >= 1);
 land('{ type: "guard", at: { kind: "carrier" } }');
-run('window.B0 = C.bay.fighters; campOrder(C, "recall"); window.RS = C.repairs[0].stay; for (const u of campWing(C)) u.hp = 0; C.ships = C.ships.filter(u => u.hp > 0); C.launchQ.length = 0; C.bay.fighters = 1; C.bay.escorts = 0; campOrder(C, "launch"); window.LS = C.repairs[0].stay;');
+run('window.B0 = C.bay.fighters; campOrder(C, "recall"); window.RS = C.repairs[0].stay; for (const u of campWing(C)) u.hp = 0; C.ships = C.ships.filter(u => u.hp > 0); C.launchQ.length = 0; C.bay.fighters = 1; campOrder(C, "launch"); window.LS = C.repairs[0].stay;');
 check('a Recall marks the fighter being mended "stay"; a Launch takes it back, so it goes out when it is whole', J('RS') === true && J('LS') === false);
 land('{ type: "guard", at: { kind: "carrier" } }');
 run('C.nextLaunch = C.t + 1e6; __go(11);');
@@ -127,15 +124,15 @@ run(`window.__fake = (level) => { const f = Object.create(Campaign.prototype); f
     f.init({ level }); f.camp = campNew(f.level, f.P.techs, f.opts); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); f.sync = () => {}; return f; };
   toast = () => {}; shipcompSay = () => true; window.F = __fake(1); F.onKey({ code: 'Enter' }); F.update(0, 33);`);
 check('the scene\'s repair line is empty with nothing being mended, and reads "REPAIR 1  8 s" with one', (() => { const e = J('F.hud.repair.text'); run('F.camp.repairs.push({ kind: "fighter", until: F.camp.t + 7500, order: null, stay: false }); F.update(0, 33);'); return e === '' && J('F.hud.repair.text') === 'REPAIR 1  8 s'; })(), J('F.hud.repair.text'));
-check('the bay line is still the 40-letter line of tests/uxbay.mjs, and the repair line sits at the same height as the scouts line, to the right of it (x 130 against 24)', /this\.hud\.repair = t\(130, 196,/.test(read('src/campaignscene.js')) && /this\.hud\.scouts = t\(24, 196,/.test(read('src/campaignscene.js')) && J('F.hud.bay.text').length <= 40);
+check('the bay line is still the 40-letter line of tests/uxbay.mjs, and the repair line sits under it at the left (x 24, y 196: the scouts line that shared the row is gone)', /this\.hud\.repair = t\(24, 196,/.test(read('src/campaignscene.js')) && !/this\.hud\.scouts/.test(read('src/campaignscene.js')) && J('F.hud.bay.text').length <= 40);
 
 // ---- H. fights in the sim
 console.log('H. fights in the sim');
 const fight = seed => J(`(() => { const C = campNew('home', [], { seed: ${seed} }); campOrder(C, 'launch'); let landed = 0, back = 0, said = [];
   for (let i = 0; i < 30 * 200 && !C.result; i++) { if (i % 150 === 40) campOrder(C, 'attack'); const was = C.repairs.length; campStep(C, 1 / 30); C.events.forEach(e => { if (e.type === 'dock' && e.repair) landed++; if (e.type === 'say' && /repair/.test(e.key)) said.push(e.key); }); C.events.length = 0; }
   return { result: C.result, t: Math.round(C.t), landed, mended: C.mended | 0, lost: C.lostShips, kills: C.kills, rep: C.repairs.length, said: said.length }; })()`);
-const runs = [1, 2, 3, 4].map(fight);
-check('in a fight of level 1 with the wing at the aliens, fighters do land to be mended (in most seeds) and are mended', runs.filter(r => r.landed > 0).length >= 2 && runs.every(r => r.mended <= r.landed), JSON.stringify(runs));
+const runs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(fight); // ten seeds, not four: with eight fighters and no escort ship (card space-game-cut-escorts) the damage is spread and a fighter falls under 30 percent on one seed in two
+check('in a fight of level 1 with the wing at the aliens, fighters do land to be mended (on at least three of ten seeds) and are mended', runs.filter(r => r.landed > 0).length >= 3 && runs.every(r => r.mended <= r.landed), JSON.stringify(runs));
 check('the same seed repeats exactly (nothing random is added)', JSON.stringify(fight(3)) === JSON.stringify(runs[2]));
 check('every fight is won or at least ends by the clock: no ship is left stuck aboard forever (the repair list is empty or a fighter landed in the last 10 s)', runs.every(r => r.rep <= 2), JSON.stringify(runs.map(r => r.rep)));
 const bot = J(`(() => { const out = []; for (const seed of [1, 2, 3]) { const C = campNew('home', [], { seed }); campOrder(C, 'launch'); for (let i = 0; i < 30 * 400 && !C.result; i++) { if (i % 150 === 40) campOrder(C, 'attack'); campStep(C, 1 / 30); C.events.length = 0; } out.push(C.result); } return out; })()`);

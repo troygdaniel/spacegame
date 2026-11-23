@@ -81,7 +81,7 @@ check('a click on a row picks it, a second click on UNDOCK undocks', (() => { g.
 
 // ---- D. the between-missions refit has no Fabricator ----
 g.run(`localStorage.setItem(CAMP.store, JSON.stringify({ level: 1, mission: 1, techs: ['shield'], ore: 350, bonus: { fighters: 0, escorts: 0 }, results: {} })); var S3 = __room({}); __key(S3, 'Digit2'); __key(S3, 'Enter');`); // (the refit overlay of the hall)
-check('the hall\'s refit overlay offers a fighter and an escort and no Fabricator (what each does, its price)', has(/^Fighter$/, 'S3') && has(/^Escort$/, 'S3') && !has(/^Fabricator$/, 'S3') && !has(/Build ships anywhere/, 'S3'), shown('S3').join(' | '));
+check('the hall\'s refit overlay offers a fighter and no escort and no Fabricator (what it does, its price)', has(/^Fighter$/, 'S3') && !has(/^Escort$/, 'S3') && !has(/^Fabricator$/, 'S3') && !has(/Build ships anywhere/, 'S3'), shown('S3').join(' | '));
 g.run(`__key(S3, 'KeyU');`);
 check('U does nothing there now: the ore and the techs of the save are as they were', (() => { const sv = JSON.parse(g.run('localStorage.getItem(CAMP.store)')); return sv.ore === 350 && !sv.techs.includes('fabricator'); })());
 check('a progress that still lists the old tech "fabricator" (a save from before) loads and flies: it is ignored, nothing builds', (() => { g.run(`localStorage.setItem(CAMP.store, JSON.stringify({ level: 1, mission: 1, techs: ['fabricator'], ore: 60, bonus: { fighters: 0, escorts: 0 }, results: {} })); var PL = campProgressLoad(); var CB = campNew('home', PL.techs, { seed: 1 }); CB.ore = 100;`); return J(`campOrder(CB, 'build', 'fighter').ok`) === false; })());

@@ -1,6 +1,6 @@
 // smoke: what flying missions 1.2 and 1.3 by hand found (card space-game-hunt-l1-pacing): a torpedo boat leaves your mining fighters alone, and the last raid of 1.2 is not called the third (plain Node, no Chrome)
 // Missions 1.2 and 1.3 were rebuilt as beats (card l1-pacing) and then flown by hand in the real game (tests/huntl1pacing-boot.mjs; what was seen: docs/night/hunt-l1-pacing.md). Each bug found there is pinned here.
-//   A. the torpedo boats of 1.2 and the wing on a Mine order: a boat's prey is the miners, the haulers and the cruiser, never a fighter or an escort, whatever the wing's order is (a skiff still hunts a mining fighter)
+//   A. the torpedo boats of 1.2 and the wing on a Mine order: a boat's prey is the miners, the haulers and the cruiser, never a fighter, whatever the wing's order is (a skiff still hunts a mining fighter)
 //   C. a beat's hint (the line with the keys) waits a few seconds after the beat's radio line: the screen has one message box, and the hint was replaced on the frame it was put up
 //   D. Enter just after a call closed by itself (its ship gone, its time out) is swallowed for a moment: it was the call's, and it fired a missile
 //   E. funds over the store (CAMP.ore.cap) are left behind when the debrief closes: the radio at the sale, the dock room and the debrief say so; the rule is unchanged
@@ -27,21 +27,21 @@ console.log('A. torpedo boats and the wing that mines');
       for (let i = 0; i < 235 * 30 && !C.result; i++) { campStep(C, 1 / 30); const s = campMissionClock(C);
         if (i === 30) campOrder(C, 'launch');
         if (s >= 8 && !mined) { mined = campWingOrder(C, 'fighters', 'mine', '').ok; }
-        if (s >= 170 && !cut) { cut = true; C.ships.forEach(u => { if (u.kind === 'miner') u.hp = 0; }); miningThen = campWing(C, 'fighter').filter(u => u.order && u.order.type === 'mine').length; } // the miners are gone before the boats come: the only "mining ships" left are your own fighters
+        if (s >= 170 && !cut) { cut = true; C.ships.forEach(u => { if (u.kind === 'miner') u.hp = 0; }); if (!C.pickups.length && !C.rocks.some(k => k.hp > 0)) C.pickups.push({ id: 'chunk-t', kind: 'chunk', x: C.carrier.x + 1500, y: C.carrier.y, ore: 20, born: C.t }); campWingOrder(C, 'fighters', 'mine', ''); /* eight fighters cut the rocks of 1.2 before 170 s now (card space-game-cut-escorts): a chunk of ore keeps the Mine order alive */ miningThen = campWing(C, 'fighter').filter(u => u.order && u.order.type === 'mine').length; } // the miners are gone before the boats come: the only "mining ships" left are your own fighters
         campTorpedoBoats(C).forEach(b => { const t = C.by[b.tgt]; if (t) seen[t.kind] = 1; });
         C.events.forEach(e => { if (e.type === 'torpedo' && e.stage === 'launch') { const t = C.by[e.target]; fired[t ? t.kind : '?'] = 1; } });
         C.events.length = 0; }
       out.push({ seed, mined, miningThen, seen: Object.keys(seen), fired: Object.keys(fired) }); }
     return out; })()`);
   check('the flights are the case: fighters were on Mine ore when the boats came, and the boats picked a target', r.every(x => x.mined && x.miningThen >= 2 && x.seen.length > 0), JSON.stringify(r));
-  check('a torpedo boat never goes for a fighter or an escort, even one on a Mine order: with the miners gone it goes for the cruiser', r.every(x => x.seen.join() === 'carrier'), JSON.stringify(r.map(x => x.seen)));
-  check('no torpedo is launched at a fighter or an escort', r.every(x => x.fired.indexOf('fighter') < 0 && x.fired.indexOf('escort') < 0), JSON.stringify(r.map(x => x.fired)));
+  check('a torpedo boat never goes for a fighter, even one on a Mine order: with the miners gone it goes for the cruiser', r.every(x => x.seen.join() === 'carrier'), JSON.stringify(r.map(x => x.seen)));
+  check('no torpedo is launched at a fighter', r.every(x => x.fired.indexOf('fighter') < 0 && x.fired.indexOf('escort') < 0), JSON.stringify(r.map(x => x.fired)));
   const lone = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 1 }); for (let i = 0; i < 60; i++) campStep(C, 1 / 30); campOrder(C, 'launch'); for (let i = 0; i < 300; i++) campStep(C, 1 / 30); campWingOrder(C, 'fighters', 'mine', '');
     C.ships.forEach(u => { if (u.kind === 'miner') u.hp = 0; }); const f = campWing(C, 'fighter').sort((a, b) => campDist(b, C.carrier) - campDist(a, C.carrier))[0]; const t = { x: f.x + 30, y: f.y, from: '' }; const hit = campTorpedoRetarget(C, t);
-    const e = campWing(C, 'escort')[0]; e.order = { type: 'mine' }; const b = { kind: 'tboat', x: e.x + 200, y: e.y, prey: 'miners' };
+    const e = campWing(C, 'fighter')[1]; e.order = { type: 'mine' }; const b = { kind: 'tboat', x: e.x + 200, y: e.y, prey: 'miners' };
     return { order: f.order && f.order.type, far: Math.round(campDist(f, C.carrier)), hit: hit ? hit.kind : null, boat: campTorpedoTarget(C, b).kind, skiff: campPreyKind(f) }; })()`);
-  check('a torpedo that lost its target does not turn on a mining fighter 30 px from it', lone.order === 'mine' && lone.hit !== 'fighter' && lone.hit !== 'escort', JSON.stringify(lone));
-  check('a boat sent for the miners, with an escort on a Mine order 200 px off and no miner left, goes for the cruiser', lone.boat === 'carrier', JSON.stringify(lone));
+  check('a torpedo that lost its target does not turn on a mining fighter 30 px from it', lone.order === 'mine' && lone.hit !== 'fighter', JSON.stringify(lone));
+  check('a boat sent for the miners, with a second fighter on a Mine order 200 px off and no miner left, goes for the cruiser', lone.boat === 'carrier', JSON.stringify(lone));
   check('the pirates\' skiffs are unchanged: to them a fighter on a Mine order is still a mining ship', lone.skiff === 'miner', JSON.stringify(lone));
 }
 
