@@ -69,7 +69,7 @@ class Campaign extends Phaser.Scene {
     this.beamG = this.add.graphics().setDepth(3.5); // the cracks and the beams
     this.csp = this.camp.caches.map(k => this.add.image(k.x, k.y, 'pod').setScale(1.8).setDepth(3).setTint(0xffd37a)); // resource caches (level 2): gold pods that go when collected
     this.anomG = this.add.graphics().setDepth(1.5); // the haze of the anomalies and the decloaked caches (src/campanomalydraw.js)
-    this.squadG = this.add.graphics().setDepth(4.5); // the ring round the fighters of a squad in focus (cards space-game-fighter-squads, space-game-squad-tint, space-game-squad-rings)
+    this.squadG = this.add.graphics().setDepth(4.5); // the square marks on the fighters of a squad in focus (cards space-game-fighter-squads, space-game-friendly-display)
     this.relicG = this.add.graphics().setDepth(2); // the relic's ring (level 2), and how far the hold has got
     this.cachel = this.camp.caches.map(k => label(this, k.x, k.y + 34, uiText('camp.nav.cachelabel'), '#ffd37a', 12)); // a word under each cache: gold pods were easy to miss (docs/night/graphics.md finding 3)
     if (this.camp.relic) label(this, this.camp.relic.x, this.camp.relic.y - this.camp.L.relic.radius - 24, uiText('camp.nav.relicmark'), '#7fe9ff', 14);
@@ -368,6 +368,7 @@ class Campaign extends Phaser.Scene {
     if (typeof campSelZoom === 'function') campSelZoom(this); // a ship selected with [ ] or A D zooms the view out until it and the cruiser are on the screen (src/campselzoom.js)
     if (typeof campPickPaint === 'function') campPickPaint(this); // the candidate a target sub-list is on, shown in the flight view (and the zoom out to it; src/camppickdraw.js)
     if (typeof campTdispSync === 'function') campTdispSync(this, this.time.now); // the target display in the bottom right corner: the target, or the ship an order's list is on (src/camptdispscene.js)
+    if (typeof campFdispSync === 'function') campFdispSync(this, this.time.now); // the friend display in the bottom left corner: the ship A or D picked (card space-game-friendly-display; the same file)
     if (typeof campTorpedoSync === 'function') campTorpedoSync(this, Math.min(dt, 100)); // the torpedoes and the boats that arm (src/camptorpedoscene.js)
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
     if (typeof campChargeSync === 'function') campChargeSync(this); // the health bars of the ships you protect, over them (src/campchargescene.js), once their sprites are in place
@@ -420,12 +421,14 @@ class Campaign extends Phaser.Scene {
     const key = look.art ? campShipTexture(this, look.art) : look.model && typeof shipPreviewTexture === 'function' ? shipPreviewTexture(this, look.model) : look.tex;
     return this.textures.exists(key) ? key : 'ship';
   }
-  squadCircle() { // a ring round the fighters of the squad(s) in focus, in the squad's colour and the same size on the screen at every zoom, so the player sees who an order goes to; the fighters themselves are all drawn alike, and with no squad in focus there is no ring (card space-game-squad-rings; it was a tint on every fighter, card space-game-squad-tint, before). In focus: the squad whose row the Q list is on, whose list is open (E red, R green, T yellow: that squad; W: all three) or that was just given an order from its list (campSquadsShown, src/campwing.js)
+  squadMarks() { // the friend's square marker (the target's own, campTgtCorners in src/camptargetdraw.js, in the friend's green) on the fighters of the squad(s) in focus, the same size on the screen at every zoom, so the player sees who an order goes to; the fighters themselves are all drawn alike, and with no squad in focus there is no mark (card space-game-friendly-display: the squad's coloured rings, cards space-game-squad-rings and space-game-squad-tint before it, are gone). In focus: the squad whose row the Q list is on, whose list is open (W: all three) or that was just given an order from its key (E, R, T: campSquadsShown, src/campwing.js). The pilot A or D picked has its bracket from campTgtPaint already, so it is not marked twice
     const sg = this.squadG; if (!sg) return;
-    const C = this.camp, z = this.cameras && this.cameras.main && this.cameras.main.zoom > 0 ? this.cameras.main.zoom : 1, col = CAMP.wing.squadColor;
-    const lit = this.pn && typeof campSquadsShown === 'function' ? campSquadsShown(this.pn, C, (this.time && this.time.now) || 0) : []; // a target sub-list opened from a squad's list leaves its list open as far as the panel's state goes (card space-game-order-target-pick), so the ring stays while it is picked
+    const C = this.camp, z = this.cameras && this.cameras.main && this.cameras.main.zoom > 0 ? this.cameras.main.zoom : 1;
+    const lit = this.pn && typeof campSquadsShown === 'function' ? campSquadsShown(this.pn, C, (this.time && this.time.now) || 0) : []; // a target sub-list opened from a squad's list leaves its list open as far as the panel's state goes (card space-game-order-target-pick), so the marks stay while it is picked
     sg.clear();
-    if (lit.length) C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && lit.indexOf(u.squad) >= 0) { const sp = this.sp[u.id], half = sp && sp.displayWidth ? sp.displayWidth * z / 2 : 0; sg.lineStyle(2 / z, col[u.squad], 0.95); campRing(sg, u.x, u.y, Math.max(8, half + 3) / z); } }); // the cheap outline (src/campcircles.js: a closed line of a few corners, not Phaser's arc)
+    if (!lit.length) return;
+    const sel = typeof campSelNow === 'function' ? campSelNow(C) : null, al = campTgtPulse();
+    C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && lit.indexOf(u.squad) >= 0 && !(sel && sel.unit === u)) campTgtCorners(sg, u, CAMPTGT.friend, z, al); });
   }
   sync() {
     const C = this.camp, seen = {};
@@ -436,7 +439,7 @@ class Campaign extends Phaser.Scene {
       if (typeof campZoomShipScale === 'function' && this.cameras && this.cameras.main && sp.width) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone, k = campZoomShipScale(this.cameras.main.zoom, sp.width * look.scale); if (sp._k !== k) { sp._k = k; sp.setScale(look.scale * k); } } // zoomed far out a small ship is drawn no smaller than CAMPZOOM.view.minShip px (src/campzoom.js)
     });
     Object.keys(this.sp).forEach(id => { if (!seen[id]) { this.sp[id].destroy(); delete this.sp[id]; } });
-    this.squadCircle();
+    this.squadMarks();
     this.camp.caches.forEach((k, i) => { this.csp[i].setVisible(!k.got); if (this.cachel && this.cachel[i]) this.cachel[i].setVisible(!k.got); });
     if (!this.osp) this.osp = {}; const seenOre = {}; // (made in create; a stand-in scene in a test has none)
     C.pickups.forEach(o => { // rocks are asteroids, a wreck's ore glows; a wreck blinks in its last seconds
