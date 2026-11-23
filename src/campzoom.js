@@ -77,8 +77,8 @@ function campMapFocus(mp) {
 function campZoomPress(s, zk, repeat) {
   if (!zk) return false;
   const mp = s.mp, R = CAMPZOOM.map;
-  if (mp) mp.zWant = zk.reset ? 1 : campMapZoomKey(mp.zWant, zk.dir, repeat, campMapZLo(mp), R.max);
-  else CAMZOOM.want = zk.reset ? campZoomDefault() : campViewKey(CAMZOOM.want, zk.dir, repeat);
+  if (mp) { mp.zWant = zk.reset ? 1 : campMapZoomKey(mp.zWant, zk.dir, repeat, campMapZLo(mp), R.max); if (zk.reset && mp.panned && typeof campMapRecentre === 'function') { campMapRecentre(mp, CAMPMAP.frame); mp.namesZ = -1; } } // Backspace: the zoom back to the level fitted, and the map back on it (card space-game-drag-view)
+  else { CAMZOOM.want = zk.reset ? campZoomDefault() : campViewKey(CAMZOOM.want, zk.dir, repeat); if (zk.reset && typeof campViewRecentre === 'function') campViewRecentre(s); } // ... and the flight view back on the cruiser
   return true;
 }
 // the wheel over the open map
@@ -94,6 +94,6 @@ function campMapZoomStep(mp, F, dt) {
   const z0 = mp.z;
   mp.z = camzoomEase(mp.z, mp.zWant, dt);
   if (mp.z === z0) return false;
-  mp.fit = campMapView(mp.base, F, mp.z, mp.fit, z0, campMapFocus(mp), mp.wholeBase);
+  mp.fit = campMapView(mp.base, F, mp.z, mp.fit, z0, campMapFocus(mp), mp.wholeBase, mp.panned ? mp.box : null); // a dragged map keeps where it was put (campMapPan)
   return true;
 }

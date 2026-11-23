@@ -209,7 +209,8 @@ const CAMP = {
       yellow: { name: 'Yellow squad', kinds: ['fighter'], squad: 'yellow' }
     },
     squads: ['red', 'green', 'yellow'],    // the squads in the order they fill: a fighter that leaves the bay joins the one with the fewest ships out (a tie goes to the first of these), so six are two and two and two and a seventh makes Red three; a ship lost or mended gives its place back
-    squadColor: { red: 0xff5a4a, green: 0x3ee86a, yellow: 0xffd23a }, // what a squad's fighters are drawn in, in flight (a tint: src/campaignscene.js, and a circle while the squad's list is open) and on the map (src/campmapdraw.js): three hues apart, bright on the dark
+    squadColor: { red: 0xff5a4a, green: 0x3ee86a, yellow: 0xffd23a }, // a squad's colour: its RING in flight (src/campaignscene.js) and its dots on the map (src/campmapdraw.js), shown only for a squad in focus (card space-game-squad-rings; the fighters themselves are all drawn alike): three hues apart, bright on the dark
+    ringKeep: 8000,                        // ms: the ring of a squad stays on after an order was given from its list (the list closes), until another squad is in focus, X clears the target, or this long has passed (src/campwing.js campSquadsShown)
     rescue: 1500,                          // px: a squad sent to a ship in trouble (a pilot's call, src/camporders.js) fights the pirates this near that ship, and goes back to the order it had when none is left (campWingRescue, src/campwing.js)
     verbs: {                               // kinds: what the verb takes as a target (enemy, friend, convoy, place, point, pickup, cache, anomaly, rock); group: who it addresses when none is named (today's orders); need: a target must be named
       attack: { kinds: ['enemy'], group: 'fighters' },

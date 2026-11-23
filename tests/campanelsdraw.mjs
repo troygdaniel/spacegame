@@ -41,7 +41,7 @@ console.log('A. one list, when its key is pressed');
 {
   g.run(`window.S = __scene(); campPanelsInstall(S); S.mode = 'play'; campPanelsPaint(S, 1000);`);
   const LK = J(`uiText('camp.ui.listkeys')`), LKS = J(`uiText('camp.ui.listkeysub')`), LKB = J(`uiText('camp.ui.listkeyback')`), CAP = J('CAMPPANELS_LOOK.cap');
-  check('install makes ONE set of objects (a heading, as many rows as a list shows, each a key cap, a name and a word, a foot, the target\'s line) and listens for the pointer', J('S.pnl.rows.length') === J('CAMP_PANELS.show') && J('S.pnl.rows.every(r => !!r.cap && !!r.name && !!r.suffix)') && J('S.input.handlers.length') === 1 && J('S.pnl.objs.length') === 1 + 2 + 3 * J('CAMP_PANELS.show') + 2 + 2 && J('JSON.stringify(S.pn)') === '{"open":"","at":0,"top":0,"lit":{},"trail":[],"pick":null,"seen":null}');
+  check('install makes ONE set of objects (a heading, as many rows as a list shows, each a key cap, a name and a word, a foot, the target\'s line) and listens for the pointer', J('S.pnl.rows.length') === J('CAMP_PANELS.show') && J('S.pnl.rows.every(r => !!r.cap && !!r.name && !!r.suffix)') && J('S.input.handlers.length') === 1 && J('S.pnl.objs.length') === 1 + 2 + 3 * J('CAMP_PANELS.show') + 2 + 2 && J('JSON.stringify(S.pn)') === '{"open":"","at":0,"top":0,"lit":{},"trail":[],"pick":null,"seen":null,"ring":null}');
   check('with no key pressed no list is drawn: no heading, no row; only the target\'s line (none, and the keys that pick one)', J('__rowsOn(S).length') === 0 && !J('S.pnl.title.visible') && !J('S.pnl.keys.visible') && J('__texts().join("|")') === 'TARGET  none|A D S pick a target', J('__texts().join("|")'));
   g.run(`__k2(S, 'KeyQ', 1000); campPanelsPaint(S, 1000);`);
   const t = J('__texts()');
