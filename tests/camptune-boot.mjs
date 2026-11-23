@@ -1,6 +1,6 @@
 // not in the smoke: a boot of the tuning panel, run by hand (one Chrome, muted, through the test lock; card space-game-tuning-panel)
 // The rules are tests/camptune.mjs (plain Node). This boots the real game twice. In the Campaign (level 1, mission 1): N opens the panel and the battle waits (the battle's clock does not move), Down and Left and Right change
-// the cruiser's top speed and the turret damage with real key events (Shift: ten steps), a number that differs from its default shows amber with its default beside it, Backspace puts one back, Enter flips the pilot calls
+// the cruiser's top speed and the turret damage with real key events (Shift: ten steps), a number that differs from its default shows amber with its default beside it, Backspace puts one back, Enter flips the distress call
 // switch, Enter on Reset everything puts all back, Esc closes and the battle goes on; the TUNED mark with its count is on the screen while any override is on and gone when none is; this Chrome is driven (navigator.webdriver),
 // so nothing is read from or written to localStorage; no text runs over the next column. Then in the ready room (K from the title, with a game in progress): N opens the same panel at the top of the room and Esc closes it. Last, a mission won with an override on (?debug=1, the backslash wins): the debrief says the run is tuned and the save keeps a score of zero while the level moves on.
 //   node tests/camptune-boot.mjs
@@ -52,10 +52,10 @@ async function flight() {
     check('every line fits, in every window of the list: no name runs into its value, no default into its tag, nothing leaves the panel', (await j(`(() => { const L = CAMPTUNE_LOOK, P = L.panel, T = ${SC}.tp, items = campTuneItems(), bad = []; const m = T.model, keep = [m.top, m.cur]; for (let k = 0; k <= items.length - CAMP_TUNE_VIEW.show; k++) { m.top = k; m.cur = Math.min(items.length - 1, k + 7); while (items[m.cur].kind === 'head') m.cur++; campTunePaint(${SC}); T.lines.forEach(l => { if (l.name.text && !(l.name.x + l.name.width < l.val.x - l.val.width - 14 && (!l.def.text || l.def.x + l.def.width < l.when.x - l.when.width - 8) && l.when.x <= P.x + P.w - 10)) bad.push(l.name.text); }); } m.top = keep[0]; m.cur = keep[1]; campTunePaint(${SC}); return bad; })()`)).length === 0);
     await key(t, 'Backspace');
     check('Backspace puts the highlighted row (the turret damage) back to its default', (await j('CAMP.carrier.pd')) === 4 && (await j('campTuneCount()')) === 1);
-    check('going down the list scrolled the window: the highlight is on the screen, the first lines are above it', await goto('calls') && (await j(`${SC}.tp.model.top`)) > 0 && (await j(`${SC}.tp.model.cur >= ${SC}.tp.model.top && ${SC}.tp.model.cur < ${SC}.tp.model.top + CAMP_TUNE_VIEW.show`)));
+    check('going down the list scrolled the window: the highlight is on the screen, the first lines are above it', await goto('distress') && (await j(`${SC}.tp.model.top`)) > 0 && (await j(`${SC}.tp.model.cur >= ${SC}.tp.model.top && ${SC}.tp.model.cur < ${SC}.tp.model.top + CAMP_TUNE_VIEW.show`)));
     await snap(t, '2b-scrolled');
     await key(t, 'Enter');
-    check('Enter on the pilot calls switch turns it OFF (the live flag too)', (await j('CAMP.flags.calls')) === false && (await rows()).some(r => r[0] === 'Pilots call for orders' && r[1] === 'OFF' && r[2] === 'default ON'));
+    check('Enter on the distress call switch turns it OFF (the live flag too)', (await j('CAMP.flags.distress')) === false && (await rows()).some(r => r[0] === 'The distress call of mission 1.1' && r[1] === 'OFF' && r[2] === 'default ON'));
     await snap(t, '3-switch');
     await key(t, 'Escape'); await t.run(900);
     check('Esc closes the panel and the battle goes on: mode play, its clock moves again', (await j(`campTuneIsOpen(${SC})`)) === false && (await j(`${SC}.mode`)) === 'play' && (await j(`${SC}.camp.t`)) > t0);
@@ -66,7 +66,7 @@ async function flight() {
     await key(t, 'KeyN'); await t.run(200);
     for (let i = 0; i < 40 && (await j(`campTuneItems()[${SC}.tp.model.cur].kind`)) !== 'reset'; i++) await key(t, 'ArrowDown');
     await key(t, 'Enter'); await t.run(200);
-    check('Reset everything puts every row back: no override, the table is the shipped one, the TUNED mark goes', (await j('campTuneCount()')) === 0 && (await j('CAMP.carrier.speed')) === 210 && (await j('CAMP.flags.calls')) === true);
+    check('Reset everything puts every row back: no override, the table is the shipped one, the TUNED mark goes', (await j('campTuneCount()')) === 0 && (await j('CAMP.carrier.speed')) === 210 && (await j('CAMP.flags.distress')) === true);
     await key(t, 'Escape'); await t.run(300);
     check('the mark is gone with the overrides', !(await j(`!!(${SC}.tuneMark && ${SC}.tuneMark.text)`)));
     check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));

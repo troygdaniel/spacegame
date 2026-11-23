@@ -1,9 +1,9 @@
 // not in the smoke: missions 1.2 and 1.3 flown as a player in the real game, beat by beat (one Chrome, muted, through the test lock; card space-game-hunt-l1-pacing)
 // It is tests/huntfleet-boot.mjs with another player: the three squads are ordered apart (E red, R green, T yellow, W all), the miners or the haulers are tucked in when torpedo boats come, hurt squads are
-// recalled to be mended in a quiet stretch, the power goes to the shields for the heavy raid and first contact, a missile goes at the big ships, the pilots' calls are answered by a style.
+// recalled to be mended in a quiet stretch, the power goes to the shields for the heavy raid and first contact, a missile goes at the big ships,
 // It writes down every beat (BEAT: a wave that came, a wave that is gone, a call, a quiet stretch of 40 s or more) and every order it gave (DECIDE), with the mission clock.
 // Every key comes from the key table (CAMP_PANELS, CAMP_KEYS), never a letter of its own.
-//   node tests/huntl1pacing-boot.mjs --mission 2|3 [--ending win|lose] [--calls right|wrong|none|mix] [--secs 420] [--nobrief]
+//   node tests/huntl1pacing-boot.mjs --mission 2|3 [--ending win|lose] [--secs 420] [--nobrief]
 // --ending lose: the wing is launched (in 1.3 the autopilot is put on the convoy) and no order is ever given. --nolaunch: not even that (nothing is pressed at all).  --ore N: the ore in the save.
 // Pictures go to HUNT_SHOTS (default ~/dev/spacegame-night/shots/pacing-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -14,8 +14,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.HUNT_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i < 0 ? d : process.argv[i + 1]; };
-const MISSION = Number(arg('mission', 1)), SECS = Number(arg('secs', 420)), ENDING = String(arg('ending', 'win')), CALLS = String(arg('calls', 'mix')), LANE = String(arg('lane', 'short')), NOBRIEF = process.argv.includes('--nobrief'), IDLE = Number(arg('idle', 0)), NOSCOUT = process.argv.includes('--noscout'), KILL = process.argv.includes('--killleader'), DOCK0 = process.argv.includes('--dock0'), ORE = Number(arg('ore', 60)), NOLAUNCH = process.argv.includes('--nolaunch');
-const TAG = `${MISSION}${ENDING === 'lose' ? 'L' : 'W'}${CALLS[0]}`;
+const MISSION = Number(arg('mission', 1)), SECS = Number(arg('secs', 420)), ENDING = String(arg('ending', 'win')), LANE = String(arg('lane', 'short')), NOBRIEF = process.argv.includes('--nobrief'), IDLE = Number(arg('idle', 0)), NOSCOUT = process.argv.includes('--noscout'), KILL = process.argv.includes('--killleader'), DOCK0 = process.argv.includes('--dock0'), ORE = Number(arg('ore', 60)), NOLAUNCH = process.argv.includes('--nolaunch');
+const TAG = `${MISSION}${ENDING === 'lose' ? 'L' : 'W'}`;
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const note = s => console.log('  note ' + s);
@@ -60,7 +60,6 @@ try {
     if (DIRECT.indexOf(id) >= 0) {
       const c = K[id === 'balance' ? 'even' : id]; if (!c) { note(`(no key for ${id}: the table has none)`); return false; }
       await closeLists();
-      if (id === 'missile' && (await j(`campCallHasKeys(${S})`))) { note('(no missile now: a pilot\'s call waits, and Enter would answer it)'); return false; }
       await key(c, wait); return true;
     }
     const list = K.rows[id]; if (!list || !(list in K.lists)) { note(`(no row ${id} in the table of the lists)`); return false; }
@@ -105,26 +104,11 @@ try {
   await t.ev(`(() => { window.__log = []; const sc = ${S}, tm = () => Math.round(sc.camp ? sc.camp.t / 1000 : 0), put = s => window.__log.push(tm() + 's  ' + s);
     const t0 = toast; toast = function (s, text) { try { put('TOAST ' + String(text).replace(/\\n/g, ' / ')); } catch (e) { /* the log only */ } return t0.apply(this, arguments); };
     const c0 = sc.chatShow; sc.chatShow = function (line, now) { try { put('RADIO ' + line.call + ': ' + line.text); } catch (e) { /* the log only */ } return c0.apply(this, arguments); };
-    const e0 = sc.onEvent; sc.onEvent = function (e) { try { if (e.type === 'call') put('CALL ' + JSON.stringify(e)); else if (!/^(shot|hit|fx|spark|boom|trail|laser|beam|puff|splash)/.test(e.type)) put('EVENT ' + JSON.stringify(e).slice(0, 160)); } catch (x) { /* the log only */ } return e0.apply(this, arguments); };
+    const e0 = sc.onEvent; sc.onEvent = function (e) { try { if (!/^(shot|hit|fx|spark|boom|trail|laser|beam|puff|splash)/.test(e.type)) put('EVENT ' + JSON.stringify(e).slice(0, 160)); } catch (x) { /* the log only */ } return e0.apply(this, arguments); };
     return 1; })()`);
   await t.run(900); await snap('5-flight'); note('HUD at the start: ' + (await hud()).join(' | ').slice(0, 800)); note('state: ' + JSON.stringify(await state()));
 
   // ---- the player
-  const callRows = () => j(`campCallView(${S}.camp)`);
-  let callN = 0; const picks = { right: null, wrong: null };
-  const answer = async v => { // the pick by style: right = a pick the table rates good, wrong = one it rates bad, none = wait for the pilot's own
-    const style = CALLS === 'mix' ? ['right', 'wrong', 'none'][callN % 3] : CALLS; callN++;
-    const R = await j(`CAMP_CALL_RATE[${JSON.stringify(v.id)}] || null`);
-    let n = 0;
-    if (style === 'right') n = R && R.good.length ? R.good[0] + 1 : 0; else if (style === 'wrong') n = R && R.bad.length ? R.bad[0] + 1 : 0;
-    note(`call ${v.id} at ${await j(`Math.round(${S}.camp.t / 1000)`)} s, ${style} (${JSON.stringify(v.rows.map(r => r.n + ':' + r.pick))}, cautious ${v.def}) -> ${n || 'no answer'}`); await snap('call-' + callN + '-' + v.id);
-    if (!n) return;
-    // the call is a small list: the highlight starts on the pilot's own pick (view.def - 1), Up and Down move it (round at the ends), Enter answers with the highlighted row. An order list has the keys while it is open: it is closed first
-    await closeLists();
-    if (!(await j(`campCallHasKeys(${S})`))) { note('(the call does not have the keys now: not answered)'); return; }
-    const sel = await j(`campCallSel(${S})`), downs = (n - 1 - sel + v.rows.length) % v.rows.length;
-    for (let i = 0; i < downs; i++) await key(K.down); await key(K.pick);
-  };
   const lanes = () => j(`campNavRows(${S}.camp).filter(r => r.kind === 'lane').map(r => ({ id: r.id, name: r.name }))`);
   const mapDo = async (rowId, code, what) => { // the map by its keys: open it, move the list to the row (Down, from the table), press the key (V scouts, T takes), close it
     await key(K.map); await t.run(300);
@@ -132,7 +116,7 @@ try {
     const at = await j(`${S}.mp && ${S}.mp.selId`); if (at !== rowId) note(`(${what}: the list would not go to ${rowId}; it stands on ${at})`);
     await key(code, 80); await t.run(300); await key(K.map); await t.run(200);
   };
-  // ---- the player of missions 1.2 and 1.3 (card space-game-hunt-l1-pacing): the three squads apart, the convoy orders, the pilots' calls, the power, the missile, the dock
+  // ---- the player of missions 1.2 and 1.3 (card space-game-hunt-l1-pacing): the three squads apart, the convoy orders, the power, the missile, the dock
   const POLICY = ENDING === 'win';
   const C = `${S}.camp`;
   const beats = []; const beat = s => { beats.push(s); note('BEAT ' + s); };
@@ -142,7 +126,7 @@ try {
     return { mode: ${S}.mode, result: C.result, clock: Math.round(campMissionClock(C)), any: A.length, near: A.filter(u => campDist(u, C.carrier) < 900).length, run: A.filter(u => u.running).length,
       waves: C.waves.map((w, i) => { const m = A.filter(u => u.wave === i); return { s: !!(w && w.started), n: m.length, live: m.filter(u => !u.running).length, d: m.length ? Math.round(Math.min.apply(null, m.map(u => campDist(u, C.carrier)))) : -1, kinds: m.map(u => u.kind).sort().join(',') }; }),
       sq, wing: campWing(C).length, bay: (C.bay ? (C.bay.fighters | 0) + (C.bay.escorts | 0) : -1), rep: (C.repairs || []).length, tgt: tg ? { id: tg.id, wave: tg.wave, kind: tg.kind } : null,
-      call: !!campCallView(C), nav: !!(C.nav && C.nav.on), ore: Math.floor(C.ore), best: Math.floor(C.oreBest || 0), hull: Math.round(C.carrier.hp), shield: Math.round(C.shield), power: C.power ? C.power.p : null,
+      nav: !!(C.nav && C.nav.on), ore: Math.floor(C.ore), best: Math.floor(C.oreBest || 0), hull: Math.round(C.carrier.hp), shield: Math.round(C.shield), power: C.power ? C.power.p : null,
       prot: C.ships.filter(u => u.hp > 0 && (u.kind === 'freighter' || u.kind === 'miner')).map(u => (u.cname || u.id) + ':' + Math.round(100 * u.hp / u.maxHp)).join(' '), cstate: typeof campConvoyState === 'function' ? campConvoyState(C) : '',
       boats: campTorpedoBoats(C).filter(u => !u.running).length, missiles: C.missiles == null ? -1 : C.missiles, allStarted: C.waves.every(w => w && w.started), sold: C.sold | 0 }; })()`);
   // the one target, as a player picks it: S (the nearest threat), then D (the next) until the bracket is on a ship of the wave (and kind) wanted
@@ -151,7 +135,7 @@ try {
     for (let i = 0; i < 14; i++) { const tg = await j(`(() => { const C = ${C}, u = C.tgt && C.by[C.tgt]; return u ? { wave: u.wave, kind: u.kind, run: !!u.running } : null; })()`); if (tg && tg.wave === wave && !tg.run && (!kind || tg.kind === kind)) return true; await key(K.next); }
     return false;
   };
-  const did = {}; let lastCall = '', quietFrom = -1, lastAny = 0, seen = [], cleared = [], reAt = {}, recallAt = -99, mineAt = -99, flew = -99, docked = false, sold = false;
+  const did = {}; let quietFrom = -1, lastAny = 0, seen = [], cleared = [], reAt = {}, recallAt = -99, mineAt = -99, flew = -99, docked = false, sold = false;
   const say = (clock, s) => note(`DECIDE ${clock} s: ${s}`);
   const send = async (clock, squad, wave, kind) => { // a squad at a wave: the target, then the squad's Attack row
     if (!(await aim(wave, kind))) { say(clock, `(no ship of wave ${wave + 1}${kind ? ' of kind ' + kind : ''} to pick with the target keys)`); return false; }
@@ -167,7 +151,6 @@ try {
     const busy = q.any > 0 || q.call;
     if (!busy && quietFrom < 0) quietFrom = clock;
     if (busy && quietFrom >= 0) { if (clock - quietFrom >= 40) beat(`QUIET ${quietFrom} to ${clock} s (${clock - quietFrom} s with no hostile alive and no call): ore ${q.ore}, objective "${await j(`campObjective(${C})`)}"`); quietFrom = -1; }
-    const v = await j(`campCallView(${C})`); if (v) { const k = v.id + '@' + (await j(`${C}.call.n`)); if (lastCall !== k) { lastCall = k; beat(`${clock} s: CALL ${v.id}: "${await j(`uiText(${JSON.stringify(v.line)})`)}" rows ${JSON.stringify(v.rows.map(r => r.pick + (r.off ? ' (grey: ' + r.why + ')' : '')))}`); await answer(v); } }
     if (!POLICY) return true; // the loss: the wing is launched and nothing else is ever ordered
     await (q.near ? down(K.fire) : up(K.fire)); // Space held while a hostile is in the turrets' reach
     const live = q.waves.map((w, i) => (w.s && w.live ? i : -1)).filter(i => i >= 0);
@@ -261,7 +244,7 @@ try {
       check('the mission is flown again, in play, from its start', (await j(`${S}.mode`)) === 'play' && (await j(`Math.round(campMissionClock(${S}.camp))`)) < 5, JSON.stringify(await state()));
       await t.run(900); note('HUD after the retry: ' + (await hud()).join(' | ').slice(0, 500));
       const n0 = await j('window.__log.length'); for (let i = 0; i < 75; i++) await t.run(1000); // the retry flown by nobody for 75 s: what is left over from the lost try, and what the new one says by itself
-      note('the retry, 75 s on its own: ' + JSON.stringify(await state()) + ' call ' + JSON.stringify(await j(`${S}.camp.call && { n: ${S}.camp.call.n, open: !!${S}.camp.call.open }`)) + ' route ' + JSON.stringify(await j(`${S}.camp.route && { lane: ${S}.camp.route.lane, pick: ${S}.camp.route.pick, holding: !!campRouteHolding(${S}.camp) }`)) + '\n' + (await toasts(n0)).filter(x => !/EVENT/.test(x)).join('\n'));
+      note('the retry, 75 s on its own: ' + JSON.stringify(await state()) + ' route ' + JSON.stringify(await j(`${S}.camp.route && { lane: ${S}.camp.route.lane, pick: ${S}.camp.route.pick, holding: !!campRouteHolding(${S}.camp) }`)) + '\n' + (await toasts(n0)).filter(x => !/EVENT/.test(x)).join('\n'));
       await snap('11-retry-75');
       await key('Escape'); await t.run(500); note('pause card: ' + await card()); await snap('12-pause'); await key('Escape'); await t.run(300);
     }

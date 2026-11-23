@@ -31,7 +31,6 @@ How the game is built, for someone (a person or an AI) who has never seen it. It
 | Picking the target of an order (card `space-game-order-target-pick`: Attack, Escort the convoy and Mine ore take the one candidate at once or open a sub-list of the several; the highlight is shown in the flight view; Esc goes back one step) | `camppick.js` (candidates, the plan, the sub-list state; `P.pick`; the rows say `pick` in `data_controls.js`) | `camppickdraw.js` (the bracket and the zoom out to show it), `campanelsdraw.js` (the sub-list is drawn as a list) |
 | The one target (A D S X; the Attack rows of the squads' lists go at it, the autopilot list's Fly to the target flies to it, Enter fires at it) | `camptarget.js` | `camptargetdraw.js` (the bracket) |
 | Orders to the wing, groups (the fighters' Red, Green and Yellow squads: `u.squad`, set at launch by `campSquadNext`) and targets | `campwing.js`, `campconvoy.js` (escorted ships), `campdogfight.js`, `campflight.js` (a squad's formation beside what it guards), `camprepair.js` | `campconvoyscene.js` |
-| Pilots ask for orders (timed calls: a small amber list in the middle, Up, Down, Enter; a call may offer the fighters' squads, and the squad sent goes back to its old order: `campWingRescue` in `campwing.js`) | `camporders.js` | `camporderdraw.js` |
 | Mission 1.1's beats, route forks (dormant: no mission has one since 22 Nov), cloaked anomalies (a fighter or the cruiser in sensor range reads one; the scout-escort ship was cut on 22 Nov) | `campbeats.js`, `camproute.js`, `campanomaly.js` | `campanomalydraw.js` |
 | Enemies: pirates, torpedo boats, the rival | `camppirates.js`, `camptorpedo.js`, `camprival.js` | `camppirateart.js`, `camptorpedoscene.js`, `camprivaldraw.js` |
 | The three gauges and power bars | `camphud.js` | same file |
@@ -43,7 +42,7 @@ How the game is built, for someone (a person or an AI) who has never seen it. It
 
 The command strip, the ship computer and voice reach the simulation through one closed list of actions (`SC_ACT` in `shipcomputer.js`), so a typed "launch", a spoken one and the row of the fleet list do the same thing and are refused for the same reasons.
 
-**The scene** (`src/campaignscene.js`) is deliberately thin: it reads the keyboard, steps the battle by each frame's own time (a list, the map or a pilot's call open never slows it), calls `campStep`, and draws the state. It is the only place with Phaser in the mode and no test runs it directly; tests drive it on a stand-in object, and a few Chrome boots run the real thing.
+**The scene** (`src/campaignscene.js`) is deliberately thin: it reads the keyboard, steps the battle by each frame's own time (a list or the map open never slows it), calls `campStep`, and draws the state. It is the only place with Phaser in the mode and no test runs it directly; tests drive it on a stand-in object, and a few Chrome boots run the real thing.
 
 Every rule, number and level row is described in `docs/CAMPAIGN.md` (one section per feature, with the card and the reason). Balance and the bots are `docs/CAMPAIGN-TUNING.md` and `docs/WRAPUP-DIFFICULTY.md`.
 

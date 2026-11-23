@@ -44,13 +44,11 @@ const BOTS = {
   troyh: { name: 'troyh', launchAt: 45, escort: [81], sit: true, reactive: 3, noroute: true },                                      // troy, and when the first real damage comes (Earth under 90 percent, or the hull under 80) it reads a hint 3 s later: launch if need be, attack every 5 s, fly out
   strong: { name: 'strong', launchAt: 1, escort: [9, 56], attackFrom: 12, attackEvery: 5, missiles: true, cycle: 0.45, skill: 'sharp' }, // a strong player (card space-game-wrapup-difficulty): escorts both convoys, missiles on every big ship, recalls and relaunches the hurt wing, and flies sharp
   mcarrier: { name: 'mcarrier', launch: false, missiles: true },
-  plains: { name: 'plains', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'smart' },                  // plain, and it answers the pilots' calls (src/camporders.js) with the pick a player who thinks would make
-  plainf: { name: 'plainf', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'first' },
-  plainw: { name: 'plainw', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'wrong' },             // plain, and it answers every call with the wrong pick (what the answers cost)
+  plains: { name: 'plains', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: true },                  // plain, and it sends the Red squad to the miner of 1.1 when the radio says pirates are on him (an ordinary squad order)
   plainm: { name: 'plainm', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, mineAll: true },          // plain, and the wing keeps mining while any rock is left, goal met or not (a player who wants the cash: 1.2 in the real game, card space-game-tune-l1-notes)
   plainu: { name: 'plainu', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, noroute: true },            // plain, and it never scouts the fork: the default lane (what a player who ignores the new tools meets; card space-game-fleet-command-tune)
-  thinks: { name: 'thinks', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'smart', tuck: 'torp' },   // a player who directs the fleet: answers the calls with the best pick and uses the convoy orders (and scouts the fork)
-  thinku: { name: 'thinku', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, answer: 'smart', tuck: 'torp', noroute: true } // the same on the default lane                   // plain, and it answers every call with 1                                                  // no wing at all, missiles only
+  thinks: { name: 'thinks', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: true, tuck: 'torp' },   // a player who directs the fleet: helps the miner and uses the convoy orders (and scouts the fork)
+  thinku: { name: 'thinku', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: true, tuck: 'torp', noroute: true } // the same on the default lane
 };
 const SKILLS = { sharp: { gain: 3, thr: 0.15, noise: 0 }, steady: { gain: 2, thr: 0.22, noise: 0.1 }, rough: { gain: 1.5, thr: 0.3, noise: 0.2 } };
 
@@ -58,8 +56,6 @@ const OLD = process.argv.includes('--old');
 const SETS = process.argv.map((a, i) => a === '--set' ? process.argv[i + 1] : null).filter(Boolean); // --set alien.hpScale=2 --set alien.damageScale=2: change the table before the run (what-if)
 const g = nodeGame();
 g.run(`window.__KEYS = ${process.argv.includes('--keys')}`); // --keys: the orders are given with the keys a player has (see ord below)
-if (process.argv.includes('--nocalls')) g.run('campCallsTick = null'); // --nocalls: the battle as it was before the pilots asked for orders (to compare)
-g.run(`window.__SMART = { distress: 2, cruiser: 3, wounded: 3, breakaway: 1, second: 3, running: 1, opportunity: 1 }; window.__WRONG = { distress: 1, cruiser: 2, wounded: 1, breakaway: 3, second: 1, running: 3, opportunity: 2 }`); // the 'smart' bot's picks by call type (1, 2 or 3): the right pick of each (CAMP_CALL_RATE in src/camporders.js, card space-game-fleet-command-tune); __WRONG: the wrong one of each (the 'plainw' bot)
 g.run(`window.__PACE = ${isNaN(Number(PACE)) ? JSON.stringify(PACE) : Number(PACE)}`); // the battle pace of every battle of this run
 g.run(`window.__RANK = ${JSON.stringify(RANK)}`); // the pilot's rank for every battle of this run
 if (OLD) g.run(`(() => { CAMP.earth.shield = 300; CAMP.earth.regen = 0; CAMP.mother.hp = 900; CAMP.mother.damage = 12; CAMP.mother.holdAt = 1600; CAMP.mother.spawnEvery = 8000; CAMP.mother.spawnMax = 6; CAMP.levels[1].waves[2].ships.raider = 3; })()`); // the numbers before the easier level 1
@@ -90,8 +86,8 @@ g.run(`(() => {
     return campOrder(C, name, arg);
   };
   window.__botStep = (C, s, B, sk, st) => {
-    if (B.idle) return; // (an idle player never answers a pilot's call: the pilot takes the cautious pick after his 8 s)
-    if (C.call && C.call.open) campCallAnswer(C, B.answer === 'first' ? 1 : B.answer === 'smart' ? (window.__SMART[C.call.open.id] | 0) : B.answer === 'wrong' ? (window.__WRONG[C.call.open.id] | 0) : campCallView(C).def, 'bot'); // the pilots ask for orders (src/camporders.js): the plain bot answers at once with the cautious pick (0), 'first' always says 1, 'smart' picks by call type
+    if (B.idle) return; // (an idle player gives no order)
+    if (B.help && !st.helped && C.beats && !C.beats.thanked) { const w = C.L.waves.findIndex(x => x.beat === 'distress'), foes = w >= 0 && C.waves[w] && C.waves[w].started ? C.ships.filter(u => u.team === 'alien' && u.hp > 0 && u.wave === w) : []; if (foes.length) { st.helped = true; campWingOrder(C, 'red', 'attack', foes[0].id, 'bot'); } } // the miner is under attack (the radio says so, one plain line): a player who reads it sends the Red squad at the pirates on him, an ordinary squad order
     if (C.arrivedAt == null) return; // the trip first, with the wing aboard (a Fast burn needs it: card space-game-campaign-fast-board); the plan runs from the arrival, as a player's does
     s -= C.arrivedAt / 1000;
     if (B.reactive != null && st.react == null && ((C.earth && C.earth.shield <= C.earth.max * 0.9) || C.carrier.hp <= C.carrier.maxHp * 0.8)) st.react = s + B.reactive;

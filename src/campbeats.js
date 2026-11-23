@@ -2,18 +2,17 @@
 // Troy found 1.1 boring: lots of flying and fights that were not his. It is now the one finished example of the fleet-command systems, four beats about a minute apart, each a place for the player to direct
 // the fleet (docs/CAMPAIGN.md "Mission 1.1 in four beats"). The pure half (no Phaser, no page; tests/campbeats.mjs runs it in Node). The beats are mission DATA; what is here is what the data needs:
 //   1  Leaving Luna: a patrol of two flies with the transport and turns back at the edge of safe space.  traffic: [{ kind: 'patrol', escort: { convoy: 't1', until: 0.12, say } }]  (campPatrolAI, src/camppirates.js)
-//   2  The distress call: a miner works off the road; at a share of the road a wave of pirates falls on it and the pilots ask for orders (an order call, src/camporders.js): send the fighters, send the whole
-//      wing (the transport is left to the cruiser), or stay.  [now: send all squads, Red, Green or Yellow, or stay] A wave row says  beat: 'distress', victim: '<traffic id>', thanks: 40 (the ore a saved miner gives) and a cue  { name: 'distress', on: { lane } }.
+//   2  The distress call: a miner works off the road; at a share of the road a wave of pirates falls on it and the radio says so, one plain line (the wave row's `say`). No pop-up asks what to do (card space-game-no-pilot-popups,
+//      Troy, 23 Nov 2026): the player sends help with the ordinary order keys. A wave row says  beat: 'distress', victim: '<traffic id>', thanks: 40 (the ore a saved miner gives) and a cue  { name: 'distress', on: { lane } }.
 //   3  The ambush: a wave on the road with fighters and torpedo boats (src/camptorpedo.js). (The road used to fork here, with the ambush on the short lane: cut by card space-game-cut-lane-fork, Troy 22 Nov 2026.)
 //   4  The pirate leader: a rival ship near Ceres (src/camprival.js): kill it (the bonus), or get her past.
-//   campBeatsNew(C)            at campNew: C.beats = { patrolSaid, asked, thanked }
+//   campBeatsNew(C)            at campNew: C.beats = { patrolSaid, thanked }
 //   campBeats(C)               each tick: the pirates wear a crippled miner down (the wave row's `harry`: hit points a second for each pirate within CAMP_BEATS.harryNear of it), and a miner that was saved gives its thanks (once: the ore, the radio)
-//   CAMP_CALL_TYPES / CAMP_CALL_FX  get the scripted call `distress` (sendall, sendred, sendgreen, sendyellow, stay) when src/camporders.js is there; campBeats opens it (campCallStart)
 //   campBeatKey(id)            the key a hint names, from the key table (CAMP_PANELS: fleet, ship; the Campaign's CONTROLS rows: map), never a letter of its own
 //   campBeatHint(C, id)        the words of a hint with its keys in them (camp.hint.<id>)            campBeatNudge(C, shown)  the hint that is due (CAMPBEATHINTS), which campNudge (src/campnudge.js) asks for
 
 const CAMP_BEATS = { harryNear: 700 }; // px: a pirate this near the crippled miner is on it
-function campBeatsNew(C) { C.beats = { patrolSaid: false, asked: false, thanked: false }; return C.beats; }
+function campBeatsNew(C) { C.beats = { patrolSaid: false, thanked: false }; return C.beats; }
 
 // the key of a panel or of a map key, as the key table says it (the panels move: nothing here names a letter)
 function campBeatKey(id) {
@@ -35,20 +34,11 @@ function campBeats(C) {
   const wv = C.L.waves[w], m = C.ships.find(u => u.team === 'neutral' && u.hp > 0 && u.tid === wv.victim);
   if (!m) { B.thanked = true; return; } // the miner is lost: no thanks
   const foes = C.ships.filter(u => u.team === 'alien' && u.hp > 0 && u.wave === w);
-  if (!B.asked && foes.length && typeof campCallStart === 'function' && campCallStart(C, 'distress', { who: m.id, ids: campCallIds(foes, m, 3) })) B.asked = true; // the pilots ask for orders (a call that waits is not interrupted: it is tried again)
   if (wv.harry > 0 && foes.length) { const near = foes.filter(u => campDist(u, m) < CAMP_BEATS.harryNear).length; if (near) campHurt(C, m, wv.harry * Math.min(near, 3) * (C.dt || 1 / 30), foes[0].id); } // the pirates have him: a crippled miner is wasted, hit points a second for each pirate about him, a shot cannot be counted on to hit a ship that sits still
   if (foes.length) return; // the pirates are still at it
   B.thanked = true; const ore = wv.thanks | 0;
   if (ore > 0) C.ore = Math.min(CAMP.ore.cap, C.ore + ore);
   C.events.push({ type: 'thanks', id: m.id, ore, x: m.x, y: m.y }); campSay(C, 'camp.say.thanks', { ore });
-}
-
-// beat 2 as an order call: a type with scripted: true (src/camporders.js): its trigger is never asked, campBeats opens it with campCallStart when the pirates have fallen on the miner.
-// Its choices (card space-game-distress-send-squads; Troy, 22 Nov 2026): Send all squads, Send Red, Send Green, Send Yellow, or Stay with the transport (the cautious one). A squad sent flies to the miner, fights the skiffs there
-// and goes back to the order it had when they are dead or gone (campCallSend, campWingRescue); the others keep theirs, and the escorts stay with the transport. Sending more saves the miner sooner and leaves the cruiser's side bare.
-if (typeof CAMP_CALL_TYPES === 'object' && typeof CAMP_CALL_FX === 'object' && typeof campCallSquadFx === 'function' && !CAMP_CALL_TYPES.some(t => t.id === 'distress')) {
-  CAMP_CALL_FX.stay = { do: () => true };                                         // nothing is done: the wing stays with the transport
-  CAMP_CALL_TYPES.push({ id: 'distress', scripted: true, pick: campCallSquadFx('send', campCallSend).concat('stay'), def: 4 });
 }
 
 // the hints of the mission: plain data like src/campnudge.js's, but each is `wait`ed for until `until` (it shows when it is true, not only at its second), and its words carry keys from the key table.
