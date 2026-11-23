@@ -71,7 +71,6 @@ function campMapOpen(s) {
   if (C.nav && C.nav.on) { mp.setId = mp.flewId = C.nav.of || C.nav.id; mp.selId = mp.setId; } // a trip is on when the map is opened: its place is set again, with the buttons (Fly or Fast marked ON), and chosen in the list
   mp.btnFly = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false); // the two small buttons by a place you have set (card space-game-map-click-fly)
   mp.btnFast = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false);
-  mp.btnScout = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false); // the third button (card space-game-campaign-scouts): Scout, key V
   mp.btnTake = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false); // the fourth button, on a lane of a fork in the road only (card space-game-scout-route): Take, key T
   // the pointer is src/campdrag.js's (card space-game-drag-view): a press on the frame waits for the release, so a drag pans the map and a click is campMapClick as it always was
   mp.onWheel = (p, over, dx, dy) => campZoomMapWheel(mp, dy); // the wheel zooms the map while it is open (the scene holds the wheel back from the camera then: camzoomHold)
@@ -199,7 +198,6 @@ function campMapPaint(s, time) {
     }
     if (m.hull != null) { const K = CAMP.charge, Q = K.mark, k = m.loud || 0, h = campChargeLook(k, Q.line, Q.h), by = p.y - Q.gap - h; if (k > 0) g.fillStyle(0x02060d, K.bar.back * k).fillRect(p.x - Q.w / 2 - 1, by - 1, Q.w + 2, h + 2); g.fillStyle(0x16293d, campChargeLook(k, K.line.back, 1)).fillRect(p.x - Q.w / 2, by, Q.w, h); g.fillStyle(K.color[m.band], 1).fillRect(p.x - Q.w / 2, by, Math.max(1, Math.round(Q.w * m.hull)), h); if (m.hit > 0 && k > 0) g.lineStyle(1, 0xffffff, 0.4 + 0.6 * m.hit).strokeRect(p.x - Q.w / 2 - 1, by - 1, Q.w + 2, h + 2); } // a ship you protect: its hull over its mark, a thin line, the full bar while it is under attack, no number (cards space-game-protected-health and space-game-health-bar-quiet)
   });
-  campSensors(C).forEach(sn => { g.lineStyle(1, 0x7fe9ff, 0.3); campMapArcs(X(sn.x), Y(sn.y), sn.r * f.s, F).forEach(pts => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.strokePath(); }); }); // a scout's sensor circle, cut to the frame (card space-game-campaign-scouts)
   campFirePaint(mp.fire, C, g, F, f, performance.now()); // the fight over the marks: volleys, bullets, missiles, mining beams, rings and flashes (src/campmapfire.js), thin and cut to the frame
   // ---- navigate (card space-game-campaign-navigate): the goal pulses with a line from the carrier and its distance and flight time; the chosen row has a frame; the place you are flying to has a line ----
   if (time - mp.rowsAt >= 250 || mp.dirty) { mp.rows = campNavRows(C); mp.rowsAt = time; mp.dirty = false; } // the list is rebuilt four times a second: ships move
@@ -225,15 +223,14 @@ function campMapPaint(s, time) {
     const here = N && N.on && N.id === (setRow.of || setRow.id), waiting = !!(C.navWait && C.navWait.id === (setRow.of || setRow.id)), on = uiText('camp.map.on'), flyOn = here && !N.fast, fastOn = here && N.fast; // which one is going
     mp.btnFly.setText(uiText('camp.map.fly', { t: eta(campNavEta(C, campNavFlight(C, setRow, d))) }) + (flyOn ? '  ' + on : '')).setBackgroundColor(flyOn ? '#1f7f95' : '#0a3a4a').setVisible(true);
     mp.btnFast.setText(waiting ? uiText('camp.nav.recalling', { n: C.navWait.n }) : campNavOut(C) ? uiText(C.fastAsk && C.t - C.fastAsk.at <= CAMP.nav.askFor * 1000 ? 'camp.map.fastask' : 'camp.map.fastout', { n: campNavOut(C) }) : uiText('camp.map.fast', { t: eta(campNavEta(C, campNavFlight(C, setRow, d), true)) }) + (fastOn ? '  ' + on : '')).setBackgroundColor(fastOn ? '#1f7f95' : '#0a3a4a').setAlpha(campNavOut(C) ? 0.6 : 1).setVisible(true);
-    mp.btnScout.setText(uiText('camp.map.scout', { t: eta(Math.round(campNavFlight(C, setRow, d) / CAMP.escort.speed)) })).setVisible(campScoutTasks(C).some(k => k !== 'escort') || setRow.kind === 'lane'); // the escort's own speed: a scout is faster than the carrier (card space-game-campaign-scouts)
     const take = setRow.kind === 'lane' && !!C.route && !C.route.passed; // a lane of a fork: the fourth button, Take (the pick); the lane's own line says it when it is the chosen one
     mp.btnTake.setText(uiText('camp.map.take') + (setRow.chosen ? '  ' + on : '')).setBackgroundColor(setRow.chosen ? '#1f7f95' : '#0a3a4a').setVisible(take);
-    const w = Math.max(mp.btnFly.width, mp.btnFast.width, mp.btnScout.width, take ? mp.btnTake.width : 0), h = mp.btnFly.height, right = q.x + 22 + w <= F.x + F.w - 4, bx = right ? q.x + 22 : Math.max(F.x + 4, q.x - 22 - w), by = Math.max(F.y + 4, Math.min(F.y + F.h - (take ? 4 : 3) * h - 12, q.y - h - 2)); // beside the mark, on the side with room, inside the frame
-    mp.btnFly.setPosition(bx, by); mp.btnFast.setPosition(bx, by + h + 4); mp.btnScout.setPosition(bx, by + 2 * (h + 4)); mp.btnTake.setPosition(bx, by + 3 * (h + 4));
+    const w = Math.max(mp.btnFly.width, mp.btnFast.width, take ? mp.btnTake.width : 0), h = mp.btnFly.height, right = q.x + 22 + w <= F.x + F.w - 4, bx = right ? q.x + 22 : Math.max(F.x + 4, q.x - 22 - w), by = Math.max(F.y + 4, Math.min(F.y + F.h - (take ? 3 : 2) * h - 12, q.y - h - 2)); // beside the mark, on the side with room, inside the frame
+    mp.btnFly.setPosition(bx, by); mp.btnFast.setPosition(bx, by + h + 4); mp.btnTake.setPosition(bx, by + 2 * (h + 4));
     if (!N) campMapFitOne(mp.dest, uiText('camp.map.set', { name: setRow.name }) + '  ' + campNavKm(d) + ' km');
-  } else { mp.btnFly.setVisible(false); mp.btnFast.setVisible(false); mp.btnScout.setVisible(false); mp.btnTake.setVisible(false); }
+  } else { mp.btnFly.setVisible(false); mp.btnFast.setVisible(false); mp.btnTake.setVisible(false); }
   if (mp.routeAt) { // the route label, beside the line, where it is on no name and under no button: the whole-system map has the belts' names on the route; the buttons are boxes like the names
-    const names = (mp.nameObjs || []).filter(t => t && t.visible !== false && !t.gone).map(t => ({ x: t.x - t.width / 2, y: t.y - t.height / 2, w: t.width, h: t.height })), btns = [mp.btnFly, mp.btnFast, mp.btnScout, mp.btnTake].filter(b => b && b.visible && b.width).map(b => ({ x: b.x, y: b.y, w: b.width, h: b.height }));
+    const names = (mp.nameObjs || []).filter(t => t && t.visible !== false && !t.gone).map(t => ({ x: t.x - t.width / 2, y: t.y - t.height / 2, w: t.width, h: t.height })), btns = [mp.btnFly, mp.btnFast, mp.btnTake].filter(b => b && b.visible && b.width).map(b => ({ x: b.x, y: b.y, w: b.width, h: b.height }));
     const { cp, q } = mp.routeAt, spot = campMapFreeSpot(campMapRouteSpots(cp, q), mp.routeText.width || 120, mp.routeText.height || 16, names.concat(btns)) || { x: (cp.x + q.x) / 2, y: (cp.y + q.y) / 2 - 10 };
     mp.routeText.setPosition(spot.x, spot.y); mp.routeAt = null;
   }
@@ -264,17 +261,12 @@ function campMapFly(s, row, fast) {
   const r = campNavFly(C, row, fast, 'click'); // regular speed, or Fast with the wing aboard; with a ship out the first press is refused (an event says so) and the second recalls the wing and burns (src/campnav.js)
   if (s.mp) { s.mp.dirty = true; if (r.ok) { s.mp.setId = s.mp.flewId = row.id; } } return !!r.ok; // the place stays set, with its buttons, while the trip lasts
 }
-// send a scout (card space-game-campaign-scouts): the Scout order with the row's place; the answer is a toast, the same words as the strip's
-function campMapScout(s, row) {
-  const C = s.camp; if (!C || !row || C.result) return false;
-  const r = campOrder(C, 'scout', row, 'click'); toast(s, r.say, r.ok ? '#b8f0ff' : '#ffb454'); if (s.mp) { s.mp.dirty = true; s.mp.setId = ''; } return !!r.ok;
-}
 // the pick at a fork in the road (card space-game-scout-route): the Take button and the key T; the answer is a toast, the same words as the strip's
 function campMapTake(s, row) {
   const C = s.camp; if (!C || !row || row.kind !== 'lane' || C.result) return false;
   const r = campOrder(C, 'lane', row, 'click'); toast(s, r.say, r.ok ? '#b8f0ff' : '#ffb454'); if (s.mp) s.mp.dirty = true; return !!r.ok;
 }
-// a key while the map is open (card one-list-keys): Up and Down step the marks, Left and Right go to the last or the next group, Enter flies there (Shift+Enter fast), V scouts there,
+// a key while the map is open (card one-list-keys): Up and Down step the marks, Left and Right go to the last or the next group, Enter flies there (Shift+Enter fast),
 // X clears the trip (T took a lane at a fork until card space-game-cut-lane-fork: the Take button below is dormant with the route system). The digits and A D are not the map's any more (no key is reused: A and D are the target's). true when the key was the map's.
 function campMapKey(s, code, shift) {
   const mp = s.mp; if (!mp) return false;
@@ -288,7 +280,6 @@ function campMapKey(s, code, shift) {
     return set(rows.findIndex(r => r.group === next));
   }
   if (code === 'Enter' || code === 'NumpadEnter') { if (rows[at]) campMapFly(s, rows[at], !!shift); return true; } // Enter: regular speed; Shift+Enter: fast
-  if (code === 'KeyV') { const row = rows[at]; if (row) campMapScout(s, row); return true; } // V: send a scout to the chosen place: the row that is marked in the list (a click on a mark chooses it too; the place a trip is flying to stays SET, with its buttons, and is not what V is about: card space-game-hunt-l1-fleet)
   if (code === 'KeyX') { if (s.camp && (s.camp.nav || s.camp.navWait)) { campNavClear(s.camp, 'clear'); mp.dirty = true; } if (mp.flewId && mp.setId === mp.flewId) { mp.setId = ''; mp.flewId = ''; } return true; }
   return false;
 }
@@ -298,7 +289,6 @@ function campMapClick(s, px, py) {
   const mp = s.mp; if (!mp) return false;
   const onBtn = t => !!t && t.visible && px >= t.x && px <= t.x + t.width && py >= t.y && py <= t.y + t.height;
   if (onBtn(mp.btnTake)) { const set = mp.rows.find(r => r.id === mp.setId); if (set) campMapTake(s, set); return true; }
-  if (onBtn(mp.btnScout)) { const set = mp.rows.find(r => r.id === mp.setId); if (set) campMapScout(s, set); return true; }
   if (onBtn(mp.btnFly) || onBtn(mp.btnFast)) { const set = mp.rows.find(r => r.id === mp.setId); if (set) campMapFly(s, set, onBtn(mp.btnFast)); return true; }
   const F = CAMPMAP.frame, hit = mp.list.find(t => t.rowId && px >= t.x && px <= t.x + 260 && Math.abs(py - t.y) <= 11);
   let row = hit ? mp.rows.find(r => r.id === hit.rowId) : null;

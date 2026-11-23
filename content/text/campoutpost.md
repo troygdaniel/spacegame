@@ -24,7 +24,7 @@ The words of the Campaign's friendly outposts (card space-game-campaign-outposts
 | camp.say.retreathot | Hull low, no ships. {name} is covered by enemies: no safe dock. |
 | camp.hud.dockhint | {viadock}  dock at {name} |
 | camp.tech.fabricator.name | Fabricator |
-| camp.tech.fabricator.text | Build fighters and escorts anywhere, not only docked. |
+| camp.tech.fabricator.text | Build fighters anywhere, not only docked. |
 | camp.hub.row.build | BUILD |
 | camp.hub.row.repair | REPAIR |
 | camp.hub.row.upgrade | REFIT |
@@ -41,8 +41,8 @@ The words of the Campaign's friendly outposts (card space-game-campaign-outposts
 | camp.hub.note.undock | {name} |
 | camp.hub.build.head | BUILD  -  {name} |
 | camp.hub.build.ore | Ore in the store: {ore} |
-| camp.hub.build.wing | Wing: {f} fighters, {e} escorts (bay and out); {q} in the yard |
-| camp.hub.build.keys | F  fighter {fc} ore     E  escort {ec} ore |
+| camp.hub.build.wing | Wing: {f} fighters (bay and out); {q} in the yard |
+| camp.hub.build.keys | F  fighter {fc} ore |
 | camp.hub.build.room | Builds take {ft} s and {et} s each and join the bay. |
 | camp.hub.repair.head | REPAIR |
 | camp.hub.repair.hull | Hull: {hp} of {max} |

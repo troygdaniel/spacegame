@@ -42,11 +42,6 @@ The words of the Campaign's radio chatter (card space-game-campaign-chatter). Th
 | camp.chat.shields.2 | Shields almost gone. |
 | camp.chat.engines.1 | Engines are sluggish. |
 | camp.chat.engines.2 | We are crawling here. |
-| camp.chat.scouts.1 | Scout reports: nothing there. |
-| camp.chat.scouts.2 | Scout is clear. |
-| camp.chat.scouts.3 | Nothing out there. |
-| camp.chat.scoutlost.1 | We lost a scout. |
-| camp.chat.scoutlost.2 | Scout is gone. |
 | camp.chat.anomaly.1 | Something odd out there. |
 | camp.chat.anomaly.2 | Sensors show a ripple. |
 | camp.chat.anomaly.3 | Space is bending ahead. |

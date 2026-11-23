@@ -147,7 +147,7 @@ console.log('F. the save, the old loot, the refit');
   g.run('window.__F = __sc(); __F.showRefit()');
   check('the refit screen lists the loot after the three, numbered 6 and 7 (4 and 5 buy ships and keep their keys)', J('__F.choices.join()') === 'shield,beam,blink,overdrive,lens' && J('__F.card.filter(l => /^[0-9]   /.test(l)).map(l => l[0]).join("")') === '12367' && /^6   Overdrive/.test(J('__F.card.find(l => /^6 /.test(l))')), J('__F.card.join(" | ")'));
   g.run(`__F.refitKey('Digit6')`);
-  check('6 chooses it (shown chosen), 4 still buys a fighter, 5 an escort', J('__F.refit.pick') === 'overdrive' && (g.run(`__F.refit.ore = 100; __F.refit.f = 0; __F.refitKey('Digit4'); __F.refitKey('Digit5')`), J('__F.refit.f') === 1 && J('__F.refit.e') === 1));
+  check('6 chooses it (shown chosen), 4 still buys a fighter, 5 buys nothing (no escort)', J('__F.refit.pick') === 'overdrive' && (g.run(`__F.refit.ore = 100; __F.refit.f = 0; __F.refitKey('Digit4'); __F.refitKey('Digit5')`), J('__F.refit.f') === 1 && J('__F.refit.ore') === 75));
   g.run(`__F.refitKey('Enter')`);
   check('Enter keeps it: the pilot has the tech (the scene\'s next() saves the progress) and the next battle is flown with it', J('__F.P.techs.includes("overdrive")'));
   g.run(`window.__C2 = campNew(1, ['overdrive'], { seed: 1 }); __C2.carrier.rot = 0; __C2.input.thrust = 1; for (let i = 0; i < 600; i++) campStep(__C2, 1 / 30); window.__C3 = campNew(1, [], { seed: 1 }); __C3.carrier.rot = 0; __C3.input.thrust = 1; for (let i = 0; i < 600; i++) campStep(__C3, 1 / 30);`);

@@ -18,7 +18,7 @@ const CAMPMAP = {
   crowdZ: 0.6,                              // under this zoom a place's name that cannot be put clear of the others is not drawn (the whole system: the inner planets are a few pixels apart)
   minExtent: 3000,                          // px of space: never zoom in closer than this across (a level with only one place in it)
   km: 10,                                   // px of space in a km (the ship computer's "the mothership is N km away" says px / 10)
-  color: { star: 0xffe29a, earth: 0x4aa3ff, place: 0xb9a37a, cache: 0xffd37a, relic: 0x7fe9ff, alien: 0xff4d6d, mother: 0xff4dff, tower: 0xff9a3a, convoy: 0xffb454, carrier: 0xffffff, wing: 0x6dff9c, anomaly: 0xc58cff, scout: 0xb8f0ff, rock: 0x8c8c8c, pickup: 0xffd37a, pirate: 0xe8d24a, patrol: 0x5fd8c0, miner: 0xc9d4e8, torpedo: 0xffe08a }
+  color: { star: 0xffe29a, earth: 0x4aa3ff, place: 0xb9a37a, cache: 0xffd37a, relic: 0x7fe9ff, alien: 0xff4d6d, mother: 0xff4dff, tower: 0xff9a3a, convoy: 0xffb454, carrier: 0xffffff, wing: 0x6dff9c, anomaly: 0xc58cff, rock: 0x8c8c8c, pickup: 0xffd37a, pirate: 0xe8d24a, patrol: 0x5fd8c0, miner: 0xc9d4e8, torpedo: 0xffe08a }
 };
 
 // a place for a small label among others: the first of the candidate centres (a list of { x, y }) where a w by h box overlaps none of the boxes ({ x, y, w, h }: top left and size); null when every one is taken.
@@ -35,7 +35,6 @@ function campMapRouteSpots(a, b, off) {
 // the colour of a ship (u: a ship of the battle): the radar and the map agree
 function campDotColor(u) {
   const c = CAMPMAP.color;
-  if (u.scout) return c.scout; // a scout out (card space-game-campaign-scouts): pale cyan, on the map and the radar alike
   if (u.faction === 'pirate') return c.pirate; // pirates are yellow, neutrals teal (a patrol) and pale (a miner): not the aliens' red, not your green (card space-game-l1-pirates-traffic)
   if (u.team === 'neutral') return u.kind === 'patrol' ? c.patrol : c.miner;
   return u.team === 'alien' ? (u.kind === 'mother' ? c.mother : u.kind === 'tower' ? c.tower : c.alien) : u.kind === 'freighter' ? c.convoy : u.kind === 'carrier' ? c.carrier : c.wing;

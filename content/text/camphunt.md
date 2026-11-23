@@ -11,6 +11,4 @@ The words of the night hunt's small fixes on the Campaign (card space-game-night
 | camp.o.deliverleft | Haulers home: {n}. Still flying: {left}. |
 | camp.o.deliver.transport | Transport arrived: {got} of {need}. |
 | camp.lose.convoy.transport | The transport is lost. |
-| camp.no.scoutlanes | Scouts only read the lanes here, pilot. |
-| camp.no.scoutpast | The fork is behind us. Nothing to scout. |
-| camp.lose.tip.convoy.transport | Keep the escorts on the transport: {viaescort}, then {rowescort}. |
+| camp.lose.tip.convoy.transport | Keep the squads on the transport: {viaescort}, then {rowescort}. |

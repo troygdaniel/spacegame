@@ -1,7 +1,7 @@
 // ---------- Campaign: the anomalies (card space-game-campaign-anomalies; Troy, 20 Nov 2026) ----------
 // Off the missions' routes there are spots where space looks odd and warped, like the Predator's cloak: CLOAKED ENEMY CACHES, a store of weapons and a tech lab of the aliens. The cloak fools the sensors
-// (no contact, no name) but not the eye: it shows as a shimmer. Nothing is known about it until the carrier comes: it is noticed at CAMP.anomaly.sense (a mark on the radar and the map, "Anomaly" in the
-// nav list, one line from the ship), and visited at CAMP.anomaly.visit for CAMP.anomaly.hold seconds it DECLOAKS: the shimmer drops, the cache is shown, the cloaked guards come out round it and attack.
+// (no contact, no name) but not the eye: it shows as a shimmer. Nothing is known about it until a ship of yours comes: the carrier notices it at CAMP.anomaly.sense (a mark on the radar and the map, "Anomaly" in the
+// nav list, one line from the ship), and a fighter that is out within CAMP.sensor.wing of it notices AND reads it ("Anomaly: likely a weapons store": card space-game-cut-escorts, the scouts' job), and visited at CAMP.anomaly.visit for CAMP.anomaly.hold seconds it DECLOAKS: the shimmer drops, the cache is shown, the cloaked guards come out round it and attack.
 // When the guards are dead the reward is given, once: ore (as chunks lying on the cache for any ship to pick up), a heavier weapon (more missiles in the magazine, a heavier turret), and a tech item that is
 // offered at the Earth refit as one more choice. What was looted is saved (P.found: '<level>.<id>') and does not come back; the weapons stay with the pilot. The pure half (no Phaser, no page;
 // tests/campanomaly.mjs runs it in Node); src/campaignscene.js draws the haze and the cache, src/campmap.js the marks, src/campnav.js the list.
@@ -57,7 +57,9 @@ function campAnomalies(C, dt) {
     if (a.state === 'old' || a.state === 'done') return;
     const d = campDist(c, a);
     if (a.state === 'hidden') {
-      if (!a.sensed && d <= campAnomSense(C)) { a.sensed = true; C.events.push({ type: 'anomaly', stage: 'sense', id: a.id, x: a.x, y: a.y }); campSay(C, 'camp.say.anom.sense'); }
+      const fh = campSightFighter(C, a.x, a.y, CAMP.sensor.wing); // any ship of yours in sensor range reveals it (card space-game-cut-escorts: the scouts' job): the carrier at campAnomSense, a fighter that is out at CAMP.sensor.wing
+      if (!a.sensed && (d <= campAnomSense(C) || fh)) { a.sensed = true; C.events.push({ type: 'anomaly', stage: 'sense', id: a.id, x: a.x, y: a.y }); if (!fh) campSay(C, 'camp.say.anom.sense'); }
+      if (fh && !a.read) { a.read = true; const what = a.hides || 'cache'; C.events.push({ type: 'anomalyread', id: a.id, x: a.x, y: a.y }); campSay(C, 'camp.say.anomalyread', { likely: what }); } // a fighter reads what it likely is, as a scout did: named, not uncovered
       if (d <= K.visit) a.hold += dt; else a.hold = Math.max(0, a.hold - dt);
       if (a.hold >= K.hold) campAnomReveal(C, a);
     } else if (a.state === 'revealed') {

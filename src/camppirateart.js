@@ -1,5 +1,5 @@
 // ---------- The pictures of the pirates and the neutral ships (card space-game-l1-pirates-traffic) ----------
-// The same way as the cruiser, the fighter and the escort (src/campcruiser.js: campArtPen draws in units, the picture is k times larger, CAMP.size says how long the hull is drawn), but not the same look:
+// The same way as the cruiser and the fighter (src/campcruiser.js: campArtPen draws in units, the picture is k times larger, CAMP.size says how long the hull is drawn), but not the same look:
 // the cruiser's clean grey and bronze is Earth's; a PIRATE is scavenged: rust-brown plates bolted on, a yellow ochre stripe and nothing straight for long; a PATROL is a clean pale hull with a teal stripe and a
 // light bar (white and cyan); a MINER is an industrial hull with a cargo pod, a boom and orange hazard marks. None of them is red or green (the aliens' and yours), so the eye tells them apart in a crowd.
 //   skiff    a thin dart with forward-swept stubs and one big engine     cutter   a wedge with welded plates and a pair of guns     brute    a blocky heavy gun with three barrels
