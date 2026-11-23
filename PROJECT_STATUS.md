@@ -25,7 +25,7 @@ All nine missions are playable and winnable (the plain test bot wins every one; 
 | **2, Alpha Centauri** (warp unlocked) | 2.1 resources, 2.2 the guards, 2.3 the relic | Works. Being retuned for the new systems. |
 | **3, the alien home world** | 3.1 approach, 3.2 outer ring, 3.3 inner ring (twelve towers) | Works, then the ending (the outpost reveal). Being retuned for the new systems. |
 
-Between missions you are in **the ready room**: four rows (Missions, Refit, Rank, Launch). Enter opens a row as an overlay (missions with their briefing, the refit with what each choice changes in numbers, the rank ladder). You can replay any mission you have flown. After each battle you pick one of three techs.
+Between missions you are in **the ready room**: four rows (Missions, Refit, Rank, Launch). Enter opens a row as an overlay (missions with their briefing, the refit with what each choice changes in numbers, the rank ladder). You can replay any mission you have flown, and fly any mission an older save left skipped (`[-]`); the last row of the Missions list starts the campaign over (it asks first). After each battle you pick one of three techs.
 
 ### What the fleet-command batch added (all on main)
 

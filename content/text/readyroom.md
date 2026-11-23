@@ -12,7 +12,7 @@ The words of the ready room's menu and its overlays (card space-game-ready-room-
 | camp.room.desc.launch | Take the cruiser out on mission {n} of {of}: {title}. The briefing was read here, so the flight starts at once. |
 | camp.room.desc.replay | Fly {title} again for a better score. Nothing in the story moves. |
 | camp.room.foot.close | Left or Esc  close |
-| camp.room.hint.board | Up Down  choose a mission     Enter  open its briefing     X  back to the next mission     Left  close |
+| camp.room.hint.board | Up Down  choose a mission     Enter  open its briefing, then Launch flies it     X  back to the next     Left  close |
 | camp.room.hint.refit | Up Down  choose     Enter  buy it     Backspace  give the last one back     F E U  the same, at once     Left  close |
 | camp.room.hint.rank | Nothing to buy here.     Left  close |
 | camp.room.col.choice | CHOICE |
