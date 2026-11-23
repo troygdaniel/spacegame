@@ -77,14 +77,14 @@ console.log('C. campRankStatus: what the hub reads');
 console.log('D. the wing: the bay and the limit');
 {
   g.run(`window.__rankC = (rank, techs, bonus) => { window.C = campNew(1, techs || [], { seed: 1, rank, bonus }); return C; }`);
-  const R = J('CAMP.ranks'), rows = R.map((r, i) => { g.run(`__rankC(${i})`); return { i, f: J('C.bay.fighters'), rank: J('C.rank') }; });
-  check('a battle starts with the rank\'s wing in the bay: 8 and the extras of each rank, and says its rank', rows.every(x => x.f === 8 + R[x.i].fighters && x.rank === x.i), JSON.stringify(rows.map(x => x.f)));
+  const R = J('CAMP.ranks'), rows = R.map((r, i) => { g.run(`__rankC(${i})`); return { i, f: J('C.strength'), rank: J('C.rank'), bay: J('C.bay.fighters') }; });
+  check('a battle starts with the rank\'s wing: three pilots in the bay (card space-game-three-pilots) as strong as 8 fighters and the extras of each rank, and says its rank', rows.every(x => x.f === 8 + R[x.i].fighters && x.bay === 3 && x.rank === x.i), JSON.stringify(rows.map(x => x.f)));
   check('there is no wing limit to raise any more (nothing builds ships: card space-game-repair-with-ore): no C.cap in a battle', J('typeof __rankC(3).cap') === 'undefined');
-  check('no rank given is a cadet: the old bay, as every battle before the ranks (a battle of a test, an address)', (g.run('window.C = campNew(1, [], { seed: 1 })'), J('C.bay.fighters') === 8 && J('C.rank') === 0));
-  check('a rank out of range is held to the table (below 0 the cadet, over the last the commodore)', (g.run('__rankC(-4)'), J('C.rank') === 0) && (g.run('__rankC(99)'), J('C.rank') === 5 && J('C.bay.fighters') === 16));
-  check('the second-bay tech and the extras of the refit add to the rank\'s, and all three together are in the bay', (g.run(`__rankC(2, ['bay2'], { fighters: 3 })`), J('C.bay.fighters') === 8 + 4 + 3 + 3));
+  check('no rank given is a cadet: the old bay, as every battle before the ranks (a battle of a test, an address)', (g.run('window.C = campNew(1, [], { seed: 1 })'), J('C.strength') === 8 && J('C.bay.fighters') === 3 && J('C.rank') === 0));
+  check('a rank out of range is held to the table (below 0 the cadet, over the last the commodore)', (g.run('__rankC(-4)'), J('C.rank') === 0) && (g.run('__rankC(99)'), J('C.rank') === 5 && J('C.strength') === 16));
+  check('the second-bay tech and the extras of the refit add to the rank\'s, and all three together are in the bay', (g.run(`__rankC(2, ['bay2'], { fighters: 3 })`), J('C.strength') === 8 + 4 + 3 + 3 && J('C.bay.fighters') === 3));
   g.run('__rankC(2)'); g.run('C.waves.forEach(w => { w.started = true; }); campOrder(C, "launch")');
-  check('Launch puts the whole wing out: the bay of the rank, one ship every 0.6 s', J('C.launchQ.length') === 11, J('C.launchQ.length'));
+  check('Launch puts the whole wing out: the three pilots, one ship every 0.6 s, whatever the rank', J('C.launchQ.length') === 3, J('C.launchQ.length'));
     // nothing builds ships any more (card space-game-repair-with-ore): the wing of a mission is the bay of the rank, and the order 'build' says so, docked or not
   // nothing builds ships any more (card space-game-repair-with-ore): the wing of a mission is the bay of the rank, and the order 'build' says so, docked or not
 }
@@ -96,7 +96,7 @@ console.log('E. the promotion: the debrief, the scene, the save');
   check('campRankPromoted says when a mission took the pilot up: from the rank it was to the rank it is, and nothing when it did not', JSON.stringify(J('campRankPromoted(0, __P(1000))')) === '{"from":0,"to":1}' && J('campRankPromoted(0, __P(999))') === null && J('campRankPromoted(1, __P(1500))') === null && JSON.stringify(J('campRankPromoted(0, __P(7000))')) === '{"from":0,"to":3}' && J('campRankPromoted(3, __P(100))') === null);
   g.run(`window.__PP = __P(1200); __PP.promo = { from: 0, to: 1 }`);
   const line = J('campRankLine(__PP, {})');
-  check('the debrief line of a promotion: PROMOTED, the new rank, the bay it brings, and the rank\'s own line under it', /^PROMOTED: Ensign\. The bay holds 9 fighters\.\nCommand has noticed the way you fly\.$/.test(line), line);
+  check('the debrief line of a promotion: PROMOTED, the new rank, the bay it brings, and the rank\'s own line under it', /^PROMOTED: Ensign\. The wing is 9 fighters strong\.\nCommand has noticed the way you fly\.$/.test(line), line);
   g.run(`window.__PP = __P(4200)`);
   check('with no promotion it says the rank, the points (with a comma) and what the next one needs', J('campRankLine(__PP, {})') === 'Rank: Lieutenant   4,200 points   next: Commander at 6,500', J('campRankLine(__PP, {})'));
   check('at the top it says so', J('campRankLine(__P(15500), {})') === 'Rank: Commodore   15,500 points   the highest rank', J('campRankLine(__P(15500), {})'));
@@ -114,7 +114,7 @@ console.log('E. the promotion: the debrief, the scene, the save');
   g.run(`window.__f2 = __sc(1500); __f2.camp.score.score = 100; Campaign.prototype.missionWon.call(__f2)`);
   check('one that does not cross a rank sets none (an ensign who scores 100 more stays an ensign)', J('__f2.P.promo') === null && J('__f2.P.results["1.1"].score') >= 100);
   g.run(`window.__f3 = __sc(4200); window.__c3 = __f3.makeCamp()`);
-  check('the next battle is made with the rank of the state (4,200 points: a lieutenant, 11 in the bay), and the promotion of the last debrief is cleared', J('__c3.rank') === 2 && J('__c3.bay.fighters') === 11 && J('__f3.P.promo') === null, JSON.stringify([J('__c3.rank'), J('__c3.bay.fighters')]));
+  check('the next battle is made with the rank of the state (4,200 points: a lieutenant, 11 fighters strong), and the promotion of the last debrief is cleared', J('__c3.rank') === 2 && J('__c3.strength') === 11 && J('__f3.P.promo') === null, JSON.stringify([J('__c3.rank'), J('__c3.strength')]));
   g.run(`window.__SV = __P(5000); campProgressSave(__SV); window.__LD = campProgressLoad()`);
   const saved = JSON.parse(store.get('longhaul.campaign'));
   check('nothing new is saved for the rank: the save has no rank and no promotion, and the rank comes back from the results (a reload of 5,000 points is a lieutenant)', !('rank' in saved) && !('promo' in saved) && J('campRank(__LD).i') === 2 && J('campPoints(__LD)') === 5000, Object.keys(saved).join());

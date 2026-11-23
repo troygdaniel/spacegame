@@ -51,9 +51,9 @@ const CAMP_PANELS = {
   panels: [
     { id: 'fleet', side: 'left', key: 'Q', code: 'KeyQ', title: 'FLEET ORDERS', tab: 'Fleet', name: 'the fleet list', rows: [
       { id: 'gsquads', open: 'squads', label: 'All squads', help: 'Orders for all three squads of fighters' },
-      { id: 'gred', open: 'red', label: 'Red squad', help: 'The red squad\'s orders' },
-      { id: 'ggreen', open: 'green', label: 'Green squad', help: 'The green squad\'s orders' },
-      { id: 'gyellow', open: 'yellow', label: 'Yellow squad', help: 'The yellow squad\'s orders' },
+      { id: 'gred', open: 'red', label: 'Wedge', help: 'Wedge\'s orders' },
+      { id: 'ggreen', open: 'green', label: 'Kara', help: 'Kara\'s orders' },
+      { id: 'gyellow', open: 'yellow', label: 'Apollo', help: 'Apollo\'s orders' },
       { id: 'gconvoy', open: 'convoy', when: 'convoy', label: 'Convoy', help: 'Orders for the ships you escort' }
     ] },
     { id: 'convoy', parent: 'fleet', side: 'left', key: '', code: '', title: 'CONVOY ORDERS', tab: '', name: 'the convoy list', rows: [ // orders for the escorted ships (src/campconvoy.js). Voice and the strip: "tuck in", "run for it", "carry on", "haulers hold"
@@ -71,26 +71,26 @@ const CAMP_PANELS = {
       { id: 'frecall', wing: ['fighters', 'recall'], label: 'Recall', help: 'All squads fly home to the bay' },
       { id: 'fmine', wing: ['fighters', 'mine'], pick: 'field', label: 'Mine ore', help: 'All squads mine ore' }
     ] },
-    { id: 'red', parent: 'fleet', side: 'left', key: 'E', code: 'KeyE', title: 'RED SQUAD', tab: 'Red', name: 'the red squad list', rows: [
-      { id: 'redattack', wing: ['red', 'attack'], pick: 'enemy', label: 'Attack the target', help: 'The red squad attacks the target' },
-      { id: 'redescort', wing: ['red', 'escort'], pick: 'escort', label: 'Escort the convoy', help: 'The red squad goes to the convoy' },
-      { id: 'redguard', wing: ['red', 'guard'], label: 'Guard the cruiser', help: 'The red squad guards the cruiser' },
-      { id: 'redguardt', wing: ['red', 'guard'], pick: 'guard', label: 'Guard the target', help: 'The red squad guards a ship or outpost you pick' },
-      { id: 'redrecall', wing: ['red', 'recall'], label: 'Recall', help: 'The red squad flies home to the bay' }
+    { id: 'red', parent: 'fleet', side: 'left', key: 'E', code: 'KeyE', title: 'WEDGE', tab: 'Wedge', name: 'the Wedge list', rows: [
+      { id: 'redattack', wing: ['red', 'attack'], pick: 'enemy', label: 'Attack the target', help: 'Wedge attacks the target' },
+      { id: 'redescort', wing: ['red', 'escort'], pick: 'escort', label: 'Escort the convoy', help: 'Wedge goes to the convoy' },
+      { id: 'redguard', wing: ['red', 'guard'], label: 'Guard the cruiser', help: 'Wedge guards the cruiser' },
+      { id: 'redguardt', wing: ['red', 'guard'], pick: 'guard', label: 'Guard the target', help: 'Wedge guards a ship or outpost you pick' },
+      { id: 'redrecall', wing: ['red', 'recall'], label: 'Recall', help: 'Wedge flies home to the bay' }
     ] },
-    { id: 'green', parent: 'fleet', side: 'left', key: 'R', code: 'KeyR', title: 'GREEN SQUAD', tab: 'Green', name: 'the green squad list', rows: [
-      { id: 'greenattack', wing: ['green', 'attack'], pick: 'enemy', label: 'Attack the target', help: 'The green squad attacks the target' },
-      { id: 'greenescort', wing: ['green', 'escort'], pick: 'escort', label: 'Escort the convoy', help: 'The green squad goes to the convoy' },
-      { id: 'greenguard', wing: ['green', 'guard'], label: 'Guard the cruiser', help: 'The green squad guards the cruiser' },
-      { id: 'greenguardt', wing: ['green', 'guard'], pick: 'guard', label: 'Guard the target', help: 'The green squad guards a ship or outpost you pick' },
-      { id: 'greenrecall', wing: ['green', 'recall'], label: 'Recall', help: 'The green squad flies home to the bay' }
+    { id: 'green', parent: 'fleet', side: 'left', key: 'R', code: 'KeyR', title: 'KARA', tab: 'Kara', name: 'the Kara list', rows: [
+      { id: 'greenattack', wing: ['green', 'attack'], pick: 'enemy', label: 'Attack the target', help: 'Kara attacks the target' },
+      { id: 'greenescort', wing: ['green', 'escort'], pick: 'escort', label: 'Escort the convoy', help: 'Kara goes to the convoy' },
+      { id: 'greenguard', wing: ['green', 'guard'], label: 'Guard the cruiser', help: 'Kara guards the cruiser' },
+      { id: 'greenguardt', wing: ['green', 'guard'], pick: 'guard', label: 'Guard the target', help: 'Kara guards a ship or outpost you pick' },
+      { id: 'greenrecall', wing: ['green', 'recall'], label: 'Recall', help: 'Kara flies home to the bay' }
     ] },
-    { id: 'yellow', parent: 'fleet', side: 'left', key: 'T', code: 'KeyT', title: 'YELLOW SQUAD', tab: 'Yellow', name: 'the yellow squad list', rows: [
-      { id: 'yellowattack', wing: ['yellow', 'attack'], pick: 'enemy', label: 'Attack the target', help: 'The yellow squad attacks the target' },
-      { id: 'yellowescort', wing: ['yellow', 'escort'], pick: 'escort', label: 'Escort the convoy', help: 'The yellow squad goes to the convoy' },
-      { id: 'yellowguard', wing: ['yellow', 'guard'], label: 'Guard the cruiser', help: 'The yellow squad guards the cruiser' },
-      { id: 'yellowguardt', wing: ['yellow', 'guard'], pick: 'guard', label: 'Guard the target', help: 'The yellow squad guards a ship or outpost you pick' },
-      { id: 'yellowrecall', wing: ['yellow', 'recall'], label: 'Recall', help: 'The yellow squad flies home to the bay' }
+    { id: 'yellow', parent: 'fleet', side: 'left', key: 'T', code: 'KeyT', title: 'APOLLO', tab: 'Apollo', name: 'the Apollo list', rows: [
+      { id: 'yellowattack', wing: ['yellow', 'attack'], pick: 'enemy', label: 'Attack the target', help: 'Apollo attacks the target' },
+      { id: 'yellowescort', wing: ['yellow', 'escort'], pick: 'escort', label: 'Escort the convoy', help: 'Apollo goes to the convoy' },
+      { id: 'yellowguard', wing: ['yellow', 'guard'], label: 'Guard the cruiser', help: 'Apollo guards the cruiser' },
+      { id: 'yellowguardt', wing: ['yellow', 'guard'], pick: 'guard', label: 'Guard the target', help: 'Apollo guards a ship or outpost you pick' },
+      { id: 'yellowrecall', wing: ['yellow', 'recall'], label: 'Recall', help: 'Apollo flies home to the bay' }
     ] },
     { id: 'ship', side: 'right', key: 'P', code: 'KeyP', title: 'SHIP ORDERS', tab: 'Ship', name: 'the ship list', rows: [
       { id: 'gpower', open: 'power', label: 'Power', help: 'Shields, engines, weapons' },
@@ -144,7 +144,7 @@ const campKeyCodes = id => (CAMP_KEYS[id] || { codes: [] }).codes;
 const campKeyIs = (id, code) => campKeyCodes(id).indexOf(code) >= 0;
 // the rows the H page and Settings list for the lists: each list's key and what it is, then the keys every open list shares
 function campPanelKeyRows() {
-  const sub = 'THE ORDER LISTS', what = { fleet: 'Fleet orders, and the lists below', convoy: 'Convoy: tuck in, run, hold, carry on', squads: 'All squads: launch, attack, recall', red: 'Red squad: attack, guard, recall', green: 'Green squad: attack, guard, recall', yellow: 'Yellow squad: attack, guard, recall', ship: 'Ship orders, and the lists below', nav: 'Autopilot: goal, target, fast burn', power: 'Power: pips, balance, emergency', yard: 'Dock, repair the hull and our ships' };
+  const sub = 'THE ORDER LISTS', what = { fleet: 'Fleet orders, and the lists below', convoy: 'Convoy: tuck in, run, hold, carry on', squads: 'All squads: launch, attack, recall', red: 'Wedge: attack, guard, recall', green: 'Kara: attack, guard, recall', yellow: 'Apollo: attack, guard, recall', ship: 'Ship orders, and the lists below', nav: 'Autopilot: goal, target, fast burn', power: 'Power: pips, balance, emergency', yard: 'Dock, repair the hull and our ships' };
   return CAMP_PANELS.panels.filter(p => p.key).map(p => ({ k: [p.key], t: what[p.id] || p.title, sub })).concat([
     { k: [CAMP_KEYS.up.k, CAMP_KEYS.down.k], t: 'In a list: move the highlight', sub }, { k: [CAMP_KEYS.pick.k], t: 'In a list: give the order', sub }, { k: ['Left', 'Right'], t: 'In a list: back, or into a part', sub }, { k: [CAMP_KEYS.pause.k], t: 'Back a step, or close the list', sub }]);
 }

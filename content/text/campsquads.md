@@ -7,6 +7,6 @@ The words of the fighters' squads (card space-game-fighter-squads; Troy, 22 Nov 
 | key | text |
 |---|---|
 | camp.no.nosquad | No ships of that squad are out. |
-| camp.map.red | Red squad ({n}) |
-| camp.map.green | Green squad ({n}) |
-| camp.map.yellow | Yellow squad ({n}) |
+| camp.map.red | Wedge |
+| camp.map.green | Kara |
+| camp.map.yellow | Apollo |

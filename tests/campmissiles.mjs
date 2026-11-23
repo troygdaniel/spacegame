@@ -95,7 +95,7 @@ console.log('C. flying');
   check('a drone on the way, 600 px short of the target, is not touched: the fuze goes off on big ships only', J('__hp(__mid)') === 200 && J(`__ev('mboom')`) === 1);
   g.run('__m(1); window.__gun = __foe("gunship", 1200, 0, 3000); window.__e = campSpawn(C, "fighter", C.carrier.x + 1000, C.carrier.y + 30).id; /* 200 px short of the gunship: on a strafing run in, shooting (50 px off it, the fighter would be peeling away, which does not shoot: card space-game-fighter-flight) */ C.by[__e].vmax = 0; C.by[__e].accel = 0');
   g.run(`__fire(''); __run(4)`);
-  check('the ships of Earth near the bang are not hurt (the fighter, which was shooting too, keeps its 36)', J('__hp(__e)') === 36 && J('__hp(__gun)') <= 2880, J('__hp(__gun)'));
+  check('the ships of Earth near the bang are not hurt (the pilot, which was shooting too, keeps its full hull: 36 times its strength)', J('__hp(__e)') === J('C.by[__e].maxHp') && J('C.by[__e].maxHp') === 36 * J('C.by[__e].str') && J('__hp(__gun)') <= 2880, J('__hp(__gun)'));
   g.run('__m(1); window.__mo = __foe("mother", 1500, 0)');
   g.run(`for (let i = 0; i < 6; i++) { __fire('the mothership'); __run(1); } __run(6)`);
   check('six missiles take most of the mothership\'s hit points (6 times the big damage) and not all: the missiles do most of it, the guns finish it', (() => { const left = J('CAMP.mother.hp') - 6 * J('CAMP.missile.big'); return left > 0 && left < J('CAMP.mother.hp') * 0.3 && J('__hp(__mo)') === left && J('C.missiles') === 0 && J('C.rockets.length') === 0 && J(`__ev('mboom')`) === 6; })(), J('__hp(__mo)'));

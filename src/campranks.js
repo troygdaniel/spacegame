@@ -15,10 +15,10 @@ function campRank(P) {
   const points = campPoints(P), i = campRankAt(points), r = CAMP.ranks[i];
   return { i, id: r.id, name: uiText('camp.rank.' + r.id), points, at: r.at, fighters: r.fighters };
 }
-// the wing a pilot of this state would fly the next mission with: the bay, the second bay tech, the extras of the refit, and the rank's
+// the wing a pilot of this state would fly the next mission with, as strength in fighters' worth (three pilots fly it: card space-game-three-pilots, CAMP.pilotStrength): the wing, the second bay tech, the extras of the refit, and the rank's
 function campRankWing(P) {
   const r = CAMP.ranks[campRank(P).i], b = (P && P.bonus) || {}, techs = (P && P.techs) || [];
-  return { fighters: CAMP.bay.fighters + (techs.indexOf('bay2') >= 0 ? CAMP.tech.bay2.fighters : 0) + (b.fighters | 0) + r.fighters };
+  return { fighters: CAMP.pilotStrength + (techs.indexOf('bay2') >= 0 ? CAMP.tech.bay2.fighters : 0) + (b.fighters | 0) + r.fighters };
 }
 function campRankStatus(P) {
   const k = campRank(P), nx = CAMP.ranks[k.i + 1] || null;
