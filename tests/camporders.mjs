@@ -104,9 +104,9 @@ check('a call of a type that is scripted (a mission\'s beat, card space-game-l1-
 check('no answer is the cautious pick of the type for all six: guard, home, hold, hold, letgo, leave', (() => { const defs = { cruiser: 'guard', wounded: 'home', breakaway: 'hold', second: 'hold', running: 'letgo', opportunity: 'leave' }; return types.every(t => t.pick[t.def] === defs[t.id]); })());
 
 // ---- E. the same flight, the same calls; the bots ----
-const flight = () => botRun(3, 3, 'plains', 'steady', techsFor(3), 420, 2);
+const flight = () => botRun(2, 3, 'plains', 'steady', techsFor(2), 420, 2); // 2.3 (it was 3.3: the wing wins that one in 55 s now and the bot meets one call, card space-game-fighter-flight)
 const f1 = flight(), f2 = flight();
-check('the same seed flown twice makes the same calls in the same order (3.3 with the thinking bot: ' + f1.calls.length + ' calls) and ends the same way', f1.calls.length >= 2 && JSON.stringify(f1.calls) === JSON.stringify(f2.calls) && f1.t === f2.t && f1.result === f2.result, JSON.stringify([f1.calls, f2.calls]));
+check('the same seed flown twice makes the same calls in the same order (2.3 with the thinking bot: ' + f1.calls.length + ' calls) and ends the same way', f1.calls.length >= 2 && JSON.stringify(f1.calls) === JSON.stringify(f2.calls) && f1.t === f2.t && f1.result === f2.result, JSON.stringify([f1.calls, f2.calls]));
 const wins = ['plain', 'plains', 'plainf'].map(b => [[1, 2], [2, 1], [3, 2]].map(([lv, mi]) => botRun(lv, 2, b, 'steady', techsFor(lv), 420, mi).result));
 check('the bots still win with the calls on: the plain one (answers at once with the cautious pick), the one that thinks and the one that always says 1 win 1.3, 2.2 and 3.3', wins.every(w => w.every(x => x === 'won')), JSON.stringify(wins));
 check('the bot that never answers (idle) is not asked twice: a call it does not answer is the pilot\'s own cautious pick after 8 s (the log says late), and that is all it ever does', (() => { const r = botRun(2, 3, 'idle', 'steady', techsFor(2), 120, 1); return r.calls.every(c => /:late$/.test(c)); })());

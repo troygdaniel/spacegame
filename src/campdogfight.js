@@ -72,20 +72,24 @@ function campDogSteer(C, u, tgt, bs) {
   const dx = tgt.x - u.x, dy = tgt.y - u.y, dist = Math.hypot(dx, dy) || 1, th = Math.atan2(dy, dx), dt = C.dt || CAMP.step;
   const tvx = tgt.vx || 0, tvy = tgt.vy || 0, off = campWrap(th - u.rot);
   const role = campDogRole(u), aim = campDogLead(u, tgt, bs, K.lead[role] == null ? 0.8 : K.lead[role]);
+  if (role === 'fighter') { const Q = K.circle; d.wind = (d.wind || 0) * Math.max(0, 1 - Q.decay * dt) + (d.los == null ? 0 : campWrap(th - d.los)); d.los = th; } // the line to the target turning round and round is a circling fight: the wing's fighters do not fly one (below)
   const away = -((u.vx - tvx) * Math.cos(th) + (u.vy - tvy) * Math.sin(th)); // my speed away from the target along the line (positive: I am leaving it)
   // the moves end
   if (d.mode === 'break' && (t > d.until || dist > K.breakOff.to) && t > d.from + 450) d.mode = 'attack';
   else if (d.mode === 'flip' && (t > d.until || (Math.abs(off) < 0.25 && Math.abs(away) < 90))) d.mode = 'attack';
   else if (d.mode === 'jink' && t > d.until) d.mode = 'attack';
+  else if (d.mode === 'extend' && t > d.until) { d.mode = 'attack'; d.wind = 0; }
   // the moves begin
   if (d.mode === 'approach' || d.mode === 'attack') {
     if (dist > K.far) d.mode = 'approach'; else if (d.mode === 'approach') d.mode = 'attack';
     if (d.mode === 'attack') {
-      if (dist < K.near) { d.mode = 'break'; d.from = t; d.until = t + campDogDraw(C, K.breakOff.time[0], K.breakOff.time[1]) * 1000; d.side = C.rng() < 0.5 ? -1 : 1; }
+      if (role === 'fighter' && u.order && u.order.type === 'attack' && Math.abs(d.wind) > K.circle.limit && t - (d.extendAt == null ? -1e9 : d.extendAt) >= K.circle.every * 1000 && !campDogThreat(C, u)) { d.mode = 'extend'; d.extendAt = t; d.until = t + campDogDraw(C, K.circle.extend[0], K.circle.extend[1]) * 1000; }
+      else if (dist < K.near) { d.mode = 'break'; d.from = t; d.until = t + campDogDraw(C, K.breakOff.time[0], K.breakOff.time[1]) * 1000; d.side = C.rng() < 0.5 ? -1 : 1; }
       else if (Math.abs(off) > K.flip.off && dist < K.flip.range && t - d.flipAt >= K.flip.every * 1000) { d.mode = 'flip'; d.flipAt = t; d.until = t + campDogDraw(C, K.flip.time[0], K.flip.time[1]) * 1000; }
       else if (t - d.jinkAt >= (K.jink.every[role] == null ? 2 : K.jink.every[role]) * 1000 && C.rng() < (K.jink.rate[role] == null ? 1 : K.jink.rate[role]) * dt) { const thr = campDogThreat(C, u); if (thr) { d.mode = 'jink'; d.jinkAt = t; d.until = t + campDogDraw(C, K.jink.time[0], K.jink.time[1]) * 1000; d.side = C.rng() < 0.5 ? -1 : 1; d.from = Math.atan2(thr.y - u.y, thr.x - u.x); } }
     }
   }
+  if (d.mode === 'extend') { const a = th + Math.PI; return { mode: 'extend', ang: a, face: a, fire: false, aim: th, thrust: 1, snap: true }; } // straight away from the target, the nose where it flies: the end of a turning fight, then in again
   if (d.mode === 'break') { const a = th + Math.PI - d.side * K.breakOff.angle; return { mode: 'break', ang: a, face: a, fire: false, aim: th, thrust: 1, snap: true }; }
   if (d.mode === 'jink') { const a = (d.from == null ? th : d.from) + d.side * (Math.PI / 2 + 0.25); return { mode: 'jink', ang: a, face: a, fire: false, aim: th, thrust: 1, snap: true }; }
   if (d.mode === 'flip') return { mode: 'flip', ang: aim, face: aim, fire: true, aim, thrust: 1, snap: true }; // nose to the target, and the main engine pushes against the way it was going: the brake

@@ -251,6 +251,7 @@ const CAMP = {
     breakOff: { angle: 1.9, time: [0.5, 0.9], to: 330 }, // the break after a pass: rad off the line to the target, how long (s), and how far (px) it must be before it comes round again
     flip: { off: 2.2, range: 420, time: [0.9, 1.5], every: 4.5 }, // the flip and burn: when the target is this far (rad) off the nose, i.e. behind, and within range px, the ship turns on the spot and brakes with the main engine, firing as it comes round; for time s, at most once in every s
     jink: { aspect: 0.32, range: 520, rate: { fighter: 2, raider: 0.8 }, time: [0.45, 0.85], every: { fighter: 1.2, raider: 2.5 } }, // a ship with an enemy's nose on it (within aspect rad, range px) throws itself aside: a chance of rate a second (the wing's pilots do it more than the aliens'), once in every s, for time s
+    circle: { limit: 4.5, decay: 0.12, extend: [0.7, 1.1], every: 3 }, // NO CIRCLING (card space-game-fighter-flight): a fighter that has turned the line to its target round by this much (rad, one way) without a pass breaks off and EXTENDS: flies straight away from it for a time (s), then comes back in head-on; the turn it has made fades by decay of its size a second, and it extends at most once in every s
     pair: { range: 1500, keep: 2400, every: 600 } // the pairing: a fighter and a raider within range px of each other fight one on one, and the pair holds until a ship is lost or they are keep px apart; looked at every ms
   },
   flight: {                                // FLIGHTS (card space-game-fighter-flight; src/campflight.js): a squad guards or escorts in a loose formation beside and behind what it protects, not in a circle round it
@@ -262,9 +263,21 @@ const CAMP = {
     ],
     gap: 60,                               // px between the ships of a flight: a wingman is this far behind and this far (times vee.side) out from the one before
     vee: { back: 0.9, side: 0.8 },         // the vee: a row of two wingmen, left and right, is gap * back behind its leader and gap * side out from him; the next pair a row farther
-    reach: 700,                            // px: an alien this near what a flight guards is a threat the flight breaks off to meet (as it was); or one within 450 px of the ship itself
+    reach: 700,                            // px: an alien this near what a flight guards is a threat the flight breaks off to meet (as it was)
+    self: 450,                             // px: or one this near the ship itself (as it was)
+    cover: { range: 520, aspect: 0.5 },    // a WINGMAN covers its leader: an alien within range px of the leader with its nose within aspect rad of the leader (it is shooting at him) is the wingman's foe, before the one it would have picked
     catchUp: 220,                          // px: farther than this from its slot a ship points where it is flying; nearer, its nose goes the way of what it flies beside
     rest: -Math.PI / 2                     // rad: the heading a flight takes beside a place or a point, which has no nose (north)
+  },
+  strafe: {                                // STRAFING RUNS (card space-game-fighter-flight; src/campflight.js campStrafe): how the wing's fighters fly at a ship that is no dogfighter (a drone, a gunship, a tower, a torpedo boat, the mothership): in on a lane beside it, firing, peel away, out wide, and in again; no ring round it
+    miss: 130,                             // px: the lane passes this far (past the target's radius) beside the middle of it: a run past it, not a ram
+    near: 70,                              // px (past the target's radius): this close it has passed, and peels away
+    peel: [0.5, 0.8],                      // s: how long the peel lasts (the nose where it flies, off the line to the target by peelAngle), before the ship flies on out
+    peelAngle: 1.0,                        // rad: the peel's angle off the line away from the target (it breaks to one side)
+    wide: 560,                             // px (past the target's radius): out this far it turns and comes in again, on the other side of the line
+    inMax: 4,                              // s: a run in that has not reached the target in this time breaks off anyway and comes in again
+    burst: 0.5,                            // times the fighter's own delay between shots while it is on a run in: a pass is short, so the guns fire in a burst; set so that a flight deals about what the old circling dealt to a ship that fights back (a gunship: 925 a 40 s against 962; the mothership 4,003 against 4,248)
+    burstBy: { drone: 0.3, tboat: 0.45 }   // the same for the kinds the old circling hurt more: a quick drone (the pirates' cutter is one) is hard to line up on a lane, and a torpedo boat dodges (the base kind of a pirate is looked up: CAMP.pirate.kinds)
   },
   stances: ['free', 'orbit', 'keep', 'match', 'hold'], // the stances, in the order of the panel's second page: free is how the wing always flew (the pirates' own steering)
   convoy: {
@@ -1590,7 +1603,7 @@ function campWingAI(C, u, dt) {
   if (o.type === 'attack') {
     const rs = o.rescue ? campWingRescue(C, u, o) : null; // a squad sent to a ship in trouble (a pilot's call; src/campwing.js): it fights the pirates about that ship, and when none is left it takes up the order it had
     if (rs && rs.over) return;
-    foe = rs ? rs.foe : o.target && C.by[o.target] && C.by[o.target].hp > 0 ? C.by[o.target] : campDogFoe(C, u, campNearest(aliens, u)); // a named alien is the order's; with none named, a fighter flies at its partner (src/campdogfight.js)
+    foe = rs ? rs.foe : o.target && C.by[o.target] && C.by[o.target].hp > 0 ? C.by[o.target] : campFlightCover(C, u) || campDogFoe(C, u, campNearest(aliens, u)); // (a wingman covers its leader first: src/campflight.js) // a named alien is the order's; with none named, a fighter flies at its partner (src/campdogfight.js)
     if (!foe) home = c; // nothing left to hit: back to the carrier's side
   } else if (o.type === 'escort') {
     const cv = C.by[o.target];
@@ -1618,15 +1631,15 @@ function campWingAI(C, u, dt) {
     }
   } else { // guard: a flight holds its slots beside a point (the carrier, a place, a convoy; src/campflight.js); an alien that comes within reach of it, or of this ship, is fought, and the flight flies back to its slots when it is gone
     const at = o.at || { kind: 'carrier' }, p = at.kind === 'carrier' ? c : at.kind === 'place' ? campPlaces(C.level)[at.id] : at.kind === 'point' ? at : C.by[at.id] || c;
-    foe = campNearest(aliens, p, CAMP.flight.reach) || campNearest(aliens, u, 450); if (foe) foe = campDogFoe(C, u, foe, 1000); // a partner within reach is the one it fights
+    foe = campNearest(aliens, p, CAMP.flight.reach) || campNearest(aliens, u, CAMP.flight.self); if (foe) foe = campDogFoe(C, u, foe, 1000); foe = campFlightCover(C, u) || foe; // a wingman covers its leader first (src/campflight.js) // a partner within reach is the one it fights
     if (!foe) home = campFlightSlot(C, u, p); // no threat: hold the slot beside what is guarded, at its speed and heading (src/campflight.js); it was a circle round it
   }
   if (C.stance !== 'free' && (o.type === 'attack' || o.type === 'guard')) return campStanceMove(C, u, k, foe, home, dt); // a stance: how this ship moves while it attacks or guards (below)
   if (foe) {
     const dx = foe.x - u.x, dy = foe.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx);
-    const dog = campDogOn(C, u, foe), m = dog ? campDogSteer(C, u, foe, k.bullet * C.shot) : campSteer(C, u, u.def, dist, target, u.vx - (foe.vx || 0), u.vy - (foe.vy || 0)); // a duel is flown as a dogfight (src/campdogfight.js), the rest as the pirates fly
-    if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
-    campWingFire(C, u, k, foe, dist, dog ? m.aim : target, m.fire);
+    const dog = campDogOn(C, u, foe), m = dog ? campDogSteer(C, u, foe, k.bullet * C.shot) : campStrafe(C, u, foe, dist, target); // a duel is flown as a dogfight (src/campdogfight.js), a bigger ship is strafed in runs (src/campflight.js), neither goes round it
+    if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt, m.thrust);
+    if (campWingFire(C, u, k, foe, dist, dog ? m.aim : target, m.fire) && m.burst) u.nextShot = C.t + (u.nextShot - C.t) * m.burst; // the guns fire in a burst on a run in
     u.move = u.move || null;
   } else if (home) { if (home.fly) campStation(u, home, dt, campDist(u, home) > CAMP.flight.catchUp ? null : home.face); else campSeek(u, home.x + (home.vx || 0) * 0.2, home.y + (home.vy || 0) * 0.2, dt); } // a slot of a flight is flown to at its own speed, the nose its way
 }
