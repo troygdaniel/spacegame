@@ -72,15 +72,6 @@ function campSquadsShown(P, C, now) {
   return k.sq.slice();
 }
 
-// A squad SENT to a ship in trouble (card space-game-distress-send-squads; a pilot's call, src/camporders.js campCallSend): its order is an attack with { rescue: <ship id>, back: <the order it had> }. Each tick it fights the nearest
-// pirate about that ship (within CAMP.wing.rescue px of it; one that runs or is gone does not count); when none is left, or the ship is lost, the squad takes up the order it had, as if nothing had been asked. The other squads keep theirs.
-// { foe } while there is a pirate to fight, { over: true } when the order has just been given back.
-function campWingRescue(C, u, o) {
-  const m = C.by[o.rescue], K = CAMP.wing.rescue, about = m && m.hp > 0 ? campAliens(C).filter(a => a.hp > 0 && !a.running && !a.gone && campDist(a, m) < K) : [];
-  if (!about.length) { u.order = o.back || { type: 'guard', at: { kind: 'carrier' } }; u.move = null; return { over: true }; }
-  return { foe: campDogFoe(C, u, campNearest(about, u)) };
-}
-
 // Recall and the bay (card space-game-recall-while-launching; found by 3-GEN): Launch queues every ship in C.launchQ and one leaves every CAMP.bay.launchEvery ms, so a Recall given while the bay is still emptying
 // found the ships out and sent them home, and the ships still in the queue came out afterwards with the guard and escort orders of a launch, as if there had been no Recall (and a burn that waits for the wing aboard
 // waited for ships that were never recalled: campNavOut counts the queue). Now the ships of the group that are still in the queue are put back in the bay (C.bay.fighters) and counted aboard; the group's

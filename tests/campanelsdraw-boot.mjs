@@ -2,7 +2,7 @@
 // The rules are tests/campanels.mjs, tests/campanelsdraw.mjs, tests/campanelsui.mjs, tests/camptarget.mjs and tests/camppanelkeys.mjs (plain Node). This boots the Campaign once and the title once and does what Troy does: no list on the screen at the
 // first frame (nothing; the target is the target display's now), Q and the highlight, the key caps on the rows that open a part, Down and Enter launch the wing, the stances are a part of the fleet list, P the ship list, E straight to the fighters, Left back to the fleet list, I and a pip of power
 // (the list stays open), a refused order leaves the list open, A D S X the target (a hostile is put in reach: the first
-// minute of 1.1 has none), a pilot's call answered with Up, Down and Enter, the strip, H and the page of every key, and H on the title. The list a row is in is read from campKeyVia in the page and its place there from campPanelList, never a letter or a number written here; the words are read from the game (uiText, the key table).
+// minute of 1.1 has none), the strip, H and the page of every key, and H on the title. The list a row is in is read from campKeyVia in the page and its place there from campPanelList, never a letter or a number written here; the words are read from the game (uiText, the key table).
 //   node tests/campanelsdraw-boot.mjs         pictures go to the folder in KEYS_SHOTS (default ~/dev/spacegame-night/shots/hands-*.png), never into the repository
 // Exit code 1 when a check fails or the game logged an error.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -174,22 +174,6 @@ async function campaign() {
       await press(t, 'KeyX', 20); await t.run(300);
       check('X clears it, and the display is gone: the corner is empty', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.hud.tdisp.pic.visible`)) === false);
     }
-    // a pilot's call: a small list in the middle, answered with Up, Down and Enter (the digits answer nothing)
-    await t.ev(`(() => { campCallStart(${SC}.camp, 'cruiser', {}); return 1; })()`); await t.run(500);
-    const UI = `${SC}.callUi`, def = await j(`campCallView(${SC}.camp).def`);
-    check('a pilot\'s call is its own plate in the middle: PILOT CALL, the pilot\'s line and three rows that fit, and no Q or P list opens for it', (await j(`${UI}.on && ${UI}.head.text === 'PILOT CALL' && ${UI}.rows.filter(r => r.visible).length === 3 && ${UI}.rows.every(r => CAMPCALL_UI.pad + 4 + r.width <= CAMPCALL_UI.w - CAMPCALL_UI.pad)`)) === true && (await isOpen()) === '');
-    check('its highlight starts on the pilot\'s own pick (the row marked "no answer"), and the call has the arrows and Enter', (await j(`campCallSel(${SC})`)) === def - 1 && (await j(`campCallHasKeys(${SC})`)) === true && (await j(`${UI}.hi.visible`)) === true);
-    await snap(t, 'call');
-    await press(t, 'Digit1', 20); await press(t, 'Digit2', 20); await press(t, 'Digit3', 20); await t.run(300);
-    check('1 2 3 answer nothing: the call still waits', (await j(`campCallOpen(${SC}.camp)`)) === true);
-    await press(t, 'KeyQ', 20); await t.run(300);
-    check('with a list open the call waits, dimmed, and says to close the list: the list has the keys', (await isOpen()) === 'fleet' && (await j(`campCallHasKeys(${SC})`)) === false && (await j(`${UI}.foot.text`)) === 'Close the list or the map to answer' && (await j(`${UI}.hi.visible`)) === false);
-    await press(t, 'Escape', 20); await t.run(200);
-    const missiles0 = await j(`${SC}.camp.missiles`);
-    await press(t, 'ArrowDown', 20); await t.run(200);
-    check('Down moves the call\'s highlight to the next answer (round at the end)', (await isOpen()) === '' && (await j(`campCallSel(${SC})`)) === def % 3 && (await j(`campCallOpen(${SC}.camp)`)) === true);
-    await press(t, 'Enter', 20); await t.run(300);
-    check('Enter answers the call with the highlighted row, fires no missile, and the plate is gone', (await j(`${SC}.camp.call.open`)) === null && ['key', 'fail'].indexOf(await j(`${SC}.camp.call.log[${SC}.camp.call.log.length - 1].way`)) >= 0 /* the call is opened by hand with nothing to act on, so a pick that cannot be done falls to the pilot's own: either way Enter answered it, not the clock */ && (await j(`${SC}.camp.missiles`)) >= missiles0 && (await j(`${UI}.on`)) === false);
     // the strip: the slash opens it (the chat key is stubbed: the strip needs one), the keys typed in it are not the game's, Esc closes it and does not pause; the period is the voice key of the scene
     await t.ev(`(() => { shipcompAvailable = () => true; return 1; })()`);
     await press(t, 'Slash', 40); await t.run(300);

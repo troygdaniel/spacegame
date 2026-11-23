@@ -1,7 +1,7 @@
 // Reads a "Copy my settings" block of the Campaign's tuning panel (card space-game-tuning-panel) and says which lines of the tuning tables it means.
 // Troy tunes by feel in the game (the N key), copies his settings and pastes them to ORCH; an agent runs this to see the changes, and again with --write to bake them in as the new defaults.
 //   node tools/apply-tuning.mjs settings.txt           print each change: the row, its table path, the old default and the new one, and the file and line it is on
-//   node tools/apply-tuning.mjs --write settings.txt   the same, and change those lines in the source (src/campaign.js, src/camporders.js): only the number or the array on the line, never a comment
+//   node tools/apply-tuning.mjs --write settings.txt   the same, and change those lines in the source (src/campaign.js, src/campzoom.js): only the number or the array on the line, never a comment
 //   pbpaste | node tools/apply-tuning.mjs -            the block from standard input
 //   --root DIR                                         another checkout (default: this one)
 // The rows and their places are CAMP_TUNE in src/camptune.js (the one table the panel and this tool share); the block is read with the game's own campTuneParse, so a line the panel would not write is listed
@@ -13,10 +13,10 @@ import { fileURLToPath } from 'node:url';
 import { nodeGame } from '../tests/nodegame.mjs';
 
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const FILES = { CAMP: 'src/campaign.js', CAMP_CALLS: 'src/camporders.js', CAMPZOOM: 'src/campzoom.js' }; // where each table is written
+const FILES = { CAMP: 'src/campaign.js', CAMPZOOM: 'src/campzoom.js' }; // where each table is written
 
 // the line of a path in a table written as the sources write them: one key a line (an inline object may carry the next keys on its own lines, indented further)
-// text: the file; name: 'CAMP' or 'CAMP_CALLS'; parts: ['carrier', 'speed']. Returns the 0-based index of the line that holds the last key, or -1.
+// text: the file; name: 'CAMP' or 'CAMPZOOM'; parts: ['carrier', 'speed']. Returns the 0-based index of the line that holds the last key, or -1.
 export function findLine(text, name, parts) {
   const lines = text.split('\n'), start = lines.findIndex(l => new RegExp('^const ' + name + ' = \\{').test(l));
   if (start < 0) return -1;

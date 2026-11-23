@@ -1,5 +1,5 @@
 // not in the smoke: a boot of mission 1.1 with its four beats, run by hand (one Chrome, muted, through the test lock; card space-game-l1-1-beats)
-// The rules are in tests/campbeats.mjs (plain Node). This boots the rim run once and meets, for the first time in one scene, the systems the beats use: the order call's plate (src/camporderdraw.js), the torpedo boats,
+// The rules are in tests/campbeats.mjs (plain Node). This boots the rim run once and meets, for the first time in one scene, the systems the beats use: the torpedo boats,
 // the rival ship's bars and its charge ring, the patrol and the miner on the map. The sim is run forward in the page (campStep in a loop, no drawing) to each beat; the scene then draws it for a moment.
 // One picture of each beat. Nothing is judged by eye: the page must stay quiet and the beats must be there.
 //   node tests/campbeats-boot.mjs        pictures go to CAMPBEATS_SHOTS (default ~/dev/spacegame-night/shots/campbeats-*.png), never into the repository
@@ -27,14 +27,12 @@ try {
   await snap(t, 'patrol');
   // beat 2: the distress call
   await toShare(0.315); await t.run(2500);
-  check('beat 2: the miner is under attack and the pilots ask for orders (the call is open)', (await j(`campCallView(${SC}.camp) && campCallView(${SC}.camp).id`)) === 'distress');
+  check('beat 2: the miner is under attack and the radio said so in one plain line; nothing asks for orders (no call, no plate)', (await j(`typeof campCallView`)) === 'undefined' && (await j(`!${SC}.callUi`)) === true && (await j(`${SC}.camp.ships.some(u => u.team === 'alien' && u.prey === 'miners' && u.hp > 0)`)) === true);
   await snap(t, 'call');
-  // the call is a small list (card one-list-keys): the highlight starts on the pilot's own pick (view.def - 1), Down moves it (round at the end), Enter answers. The row of "sendred" is read from the call, not written here
-  const downs = await j(`(() => { const v = campCallView(${SC}.camp), at = v.rows.findIndex(r => r.pick === 'sendred'); return at < 0 ? -1 : (at - (v.def - 1) + v.rows.length) % v.rows.length; })()`);
-  for (let i = 0; i < downs; i++) { await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowDown' }))`); await t.run(100); }
-  check('Down moves the call\'s highlight to "Send Red squad"', downs >= 0 && (await j(`campCallView(${SC}.camp).rows[campCallSel(${SC})].pick`)) === 'sendred');
-  await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter' }))`); await t.run(3000);
-  check('Enter answers it with the highlighted row: the red squad is on the pirates', (await j(`${SC}.camp.call.log.some(l => l.id === 'distress' && l.pick === 'sendred')`)) === true);
+  // the player sends help with the ordinary squad order (what the squad list's Attack row gives): the Red squad at a pirate that is on the miner
+  await j(`(() => { const foe = ${SC}.camp.ships.find(u => u.team === 'alien' && u.prey === 'miners' && u.hp > 0); return foe ? campWingOrder(${SC}.camp, 'red', 'attack', foe.id, 'key').ok : false; })()`);
+  await t.run(3000);
+  check('the red squad is on the pirates', (await j(`${SC}.camp.ships.filter(u => u.team === 'earth' && u.kind === 'fighter' && u.squad === 'red').every(u => u.order && u.order.type === 'attack')`)) === true);
   await snap(t, 'sendred');
   await t.run(20000);
   // beat 3: the ambush

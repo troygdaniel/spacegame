@@ -2,7 +2,6 @@
 // Missions 1.2 and 1.3 were rebuilt as beats (card l1-pacing) and then flown by hand in the real game (tests/huntl1pacing-boot.mjs; what was seen: docs/night/hunt-l1-pacing.md). Each bug found there is pinned here.
 //   A. the torpedo boats of 1.2 and the wing on a Mine order: a boat's prey is the miners, the haulers and the cruiser, never a fighter, whatever the wing's order is (a skiff still hunts a mining fighter)
 //   C. a beat's hint (the line with the keys) waits a few seconds after the beat's radio line: the screen has one message box, and the hint was replaced on the frame it was put up
-//   D. Enter just after a call closed by itself (its ship gone, its time out) is swallowed for a moment: it was the call's, and it fired a missile
 //   E. a sale over the store: credits are kept apart from ore now (tests/campcredits.mjs), nothing is left behind, and the three warnings of it are gone
 //   B. the words: the radio never names a ship by a bare kind id ("fighter"), and the heavy raid of 1.2, the fifth wave, is not announced as "a third raid"
 // Run: node tests/camphuntpacing.mjs   (exit code 1 on a failed check)
@@ -67,24 +66,6 @@ console.log('C. a hint is not put up in the same breath as the radio line of its
   const gaps = [gap(a, /Two groups/, 2), gap(a, /Torpedo boats!/, 3), gap(b, /A torpedo boat!/, 1), gap(b, /last hauler/, 2), gap(b, /Not pirates/, 5)];
   check('the wait is a few seconds: long enough for the radio line and the sensors\' "Contact" line (2 s after a wave) to be read, short enough to be of use', wait >= 3 && wait <= 6, String(wait));
   check('each hint of a beat comes that long after its wave\'s own line, not on the same step (1.2: two groups, the boats; 1.3: the boat, the last hauler, first contact)', gaps.every(d => d != null && d >= wait && d < wait + 1.5), JSON.stringify(gaps));
-}
-console.log('D. Enter meant for a pilot\'s call does not fire a missile when the call has just closed by itself');
-{
-  // Enter answers a call, and with no call and no list open Enter fires a missile. A call closes by itself when the ship it is about is gone (a runner that got away) or its 8 s run out. Flying 1.3, the "running" call
-  // closed in the instant between Up and Enter, and the Enter fired one of the six missiles at nothing worth one ("Missile away."). For a moment after a call closes by itself, Enter is still the call's and does nothing.
-  const r = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 2 }); for (let i = 0; i < 90; i++) campStep(C, 1 / 30); C.call = C.call || campCallsNew(C); const s = { camp: C, mode: 'play', mp: null, pn: null };
-    const open = left => { C.call.open = { id: 'running', ctx: { ids: ['nobody-1'] }, pilot: 0, at: C.t, left, total: 8, def: 1, held: null }; };
-    const out = {}; out.before = campCallKey(s, 'Enter'); // no call yet: Enter is not the call's (it is the missile's)
-    open(8); out.has = campCallHasKeys(s); campCallsTick(C, 1 / 30); out.gone = !campCallOpen(C); out.atOnce = campCallKey(s, 'Enter'); out.arrow = campCallKey(s, 'ArrowDown');
-    C.t += CAMP_CALLS.grace * 1000 - 50; out.stillIn = campCallKey(s, 'Enter'); C.t += 100; out.after = campCallKey(s, 'Enter');
-    const u = C.ships.find(x => x.hp > 0 && x.team === 'earth'); C.call.open = { id: 'running', ctx: { ids: [u.id] }, pilot: 0, at: C.t, left: 0.01, total: 8, def: 1, held: null }; campCallsTick(C, 1 / 30); out.lateGone = !campCallOpen(C); out.late = campCallKey(s, 'Enter');
-    C.t += 5000; C.call.open = { id: 'running', ctx: { ids: [u.id] }, pilot: 0, at: C.t, left: 8, total: 8, def: 1, held: null }; out.answered = campCallKey(s, 'Enter'); out.closed = !campCallOpen(C); out.own = campCallKey(s, 'Enter'); // the player's own answer closes it: the next Enter is his, at once
-    out.grace = CAMP_CALLS.grace; return out; })()`);
-  check('the case: with no call Enter is not the call\'s; a call about a ship that is gone closes by itself', r.before === false && r.has === true && r.gone === true, JSON.stringify(r));
-  check('Enter in the moment after it closed is swallowed (no missile), and so for the whole grace; an arrow is not (the ship steers)', r.atOnce === true && r.stillIn === true && r.arrow === false, JSON.stringify(r));
-  check('after the grace (under a second) Enter is the missile\'s again', r.after === false && r.grace > 0.3 && r.grace < 1, JSON.stringify(r));
-  check('a call that ran out of time is the same: Enter just after it is swallowed', r.lateGone === true && r.late === true, JSON.stringify(r));
-  check('a call the player answered himself leaves no grace: his next Enter is a missile', r.answered === true && r.closed === true && r.own === false, JSON.stringify(r));
 }
 console.log('E. a sale over the store: nothing is left behind any more, and nothing warns of it');
 {

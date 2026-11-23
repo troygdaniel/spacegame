@@ -45,10 +45,8 @@ console.log('C. 1.3: the first contact');
   const row = J(`(() => { const L = CAMP.levels[1].missions[2]; const k = L.waves.findIndex(w => w.on && w.on.cue === 'contact'); return { hp: L.hpScale, dmg: L.dmgScale, at: k, of: L.waves.length, contact: L.waves[k].ships, on: L.waves[k].on, cue: L.cues[0].on.lane }; })()`);
   check('the contact wave is four raiders, two drones and two gunships (eight ships, as before); it is the sixth and last wave now (it was the third: card l1-pacing put three more pirate beats before it) and its cue is at 0.82 of the road (it was 0.52)', row.at === 5 && row.of === 6 && row.cue === 0.82 && row.contact.raider === 4 && row.contact.drone === 2 && row.contact.gunship === 2 && Object.keys(row.contact).length === 3, JSON.stringify(row));
   check('the scales are 2.9 for hit points and 1.55 for damage (they were 2.2 and 2.1 until card l1-pacing: tougher hulls and lighter guns, so a fight lasts and a wrong answer costs less at once)', row.hp === 2.9 && row.dmg === 1.55, JSON.stringify(row));
-  g.run(`window.__SMART.wounded = window.__WRONG.wounded`); // every call right but the wounded one at first contact, which is answered wrong ("Cover him")
   const lost = [1, 2, 3, 4].map(seed => botRun(1, seed, 'plains', 'steady', techsFor(1), 420, 2));
-  check('with that one wrong answer the mission is still won every time, and the wing loses 5 ships at the very most (it was up to 8)', lost.every(r => r.result === 'won' && r.shipsLost <= 5), JSON.stringify(lost.map(r => [r.result, r.shipsLost])));
-  g.run(`window.__SMART.wounded = 3`);
+  check('the plain bot that helps (no pilot call asks for orders any more: card space-game-no-pilot-popups) wins first contact every time, and the wing loses 5 ships at the very most (it was up to 8)', lost.every(r => r.result === 'won' && r.shipsLost <= 5), JSON.stringify(lost.map(r => [r.result, r.shipsLost])));
 }
 
 console.log('\nthe game made ' + (g.errors.length ? 'errors: ' + g.errors.join(' | ') : 'no errors'));
