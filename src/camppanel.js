@@ -3,7 +3,7 @@
 // P POWER (O too), I AUTOPILOT, U DOCK AND REPAIR on the right (CONVOY is a part with no key: Enter on its row opens it, with the fleet list on). Nothing is on the screen until a key is pressed; only one list is open at a time.
 // In an open list Up and Down move the highlight (round at the ends), Enter gives the highlighted order (on a part's row: opens that part), Left goes back to the list it is a part of, the list's own key closes it.
 // ESC GOES BACK ONE STEP, TO WHERE YOU CAME FROM (card space-game-order-target-pick; Troy, 22 Nov 2026): a target sub-list (src/camppick.js) goes back to the list it was opened from; a list opened from a part's row (Q, then Squads) goes back to that list (Q);
-// a list opened by its own key (Q, or W E R T, O I U) is closed; with nothing open Esc pauses (the scene). P.trail is the lists we came through by rows, the last one first to go back to.
+// a list opened by its own key (Q, or W E R T, O U, and I with the ship list on) is closed; with nothing open Esc pauses (the scene). P.trail is the lists we came through by rows, the last one first to go back to.
 // An order that is taken closes the list (a power row leaves it open: a pip is given again and again); one that is refused leaves it open and says why.
 // No key is reused: the direct keys (A D S X the target, J K L ; the power, Enter a missile while no list is open) mean the same whether a list is open or not; only the arrows and Enter are the open list's.
 // The lists, their rows and their words are CAMP_PANELS and CAMP_KEYS (src/data_controls.js): this file only reads them. It is plain data and functions, no Phaser (tests/campanels.mjs runs it in Node); src/campanelsdraw.js draws
@@ -18,7 +18,7 @@
 //   campPanelView(P, C)              what the open list draws: null, or { id, title, key, side, parent, keys (the foot's words), pick (a target sub-list), rows (the ones on the screen), at (the highlight, in rows), first, total, above, below (rows off the screen) }
 //   campPanelRun(C, row, how, item)  do the row: campOrder with the row's words (how: 'key' or 'click', the play log's), an order to one part of the wing, the autopilot, the blink -> { ok, say }; item: the candidate a pick row's order is given at (src/camppick.js)
 //   campPanelTarget(C)               the line of the target: { name, km, hp } or null
-//   campPanelKeyLine()               'Q Fleet  W All  E Red  R Green  T Yellow   P Ship  O Power  I Autopilot  U Dock': the lists' keys, from the table;   campKeyLine(): the whole bottom key line (camp.ui.keys)
+//   campPanelKeyLine()               'Q Fleet  W All  E Red  R Green  T Yellow   P Power  O Autopilot  U Dock': the lists' keys, from the table;   campKeyLine(): the whole bottom key line (camp.ui.keys)
 const campPanelDef = id => CAMP_PANELS.panels.find(p => p.id === id) || null;
 const campPanelNew = () => ({ open: '', at: 0, top: 0, lit: {}, trail: [], pick: null, seen: null, ring: null });
 const campPanelOpen = P => (P && typeof P.open === 'string' && campPanelDef(P.open) ? P.open : '');
@@ -70,8 +70,8 @@ function campPanelChoose(P, C, now, how, def) {
 }
 function campPanelKey(P, C, code, now) {
   const res = { used: false, ran: false, ok: false, say: '', row: '', tgt: '', fleet: false, open: campPanelOpen(P) }; // fleet: an order of the left hand or a pick of the target (a label for the tests and the radio; nothing slows the battle for it: card space-game-no-command-slowdown)
-  const pk = code ? CAMP_PANELS.panels.find(p => (p.code && p.code === code) || (p.alt && p.alt === code)) : null; // alt: a second key of the list (O opens power as well as P while the ship list is off)
-  if (pk) { // a list's key (Q W, P O I U): open that list at its first row, or close it when it is the one open
+  const pk = code ? CAMP_PANELS.panels.find(p => p.code && p.code === code) : null;
+  if (pk) { // a list's key (Q W, P O U): open that list at its first row, or close it when it is the one open
     res.used = true;
     if (campPanelOpen(P) === pk.id) campPanelClose(P); else campPanelGo(P, C, pk.id);
     res.open = campPanelOpen(P); return res;
