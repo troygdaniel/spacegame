@@ -77,7 +77,7 @@ function campTorpedoLaunch(C, u, tgt) {
   const t = { id, kind: 'torpedo', x: u.x + Math.cos(rot) * (u.r + 4), y: u.y + Math.sin(rot) * (u.r + 4), rot, sp: T.launch, vx: 0, vy: 0, hp: T.hp, maxHp: T.hp, r: T.r, target: tgt.id, from: u.id, fac: u.faction, life: T.life, dmg: T.dmg * C.dmgS };
   t.vx = Math.cos(rot) * t.sp; t.vy = Math.sin(rot) * t.sp;
   C.torpedoes.push(t); C.by[id] = t; C.torpStat.launched++;
-  u.tubes--; u.tubeAt = C.t + campFightGap(u, bk.tube.reload);
+  u.tubes--; u.tubeAt = C.t + bk.tube.reload;
   C.events.push({ type: 'torpedo', stage: 'launch', id, from: u.id, target: tgt.id, x: t.x, y: t.y });
   campTorpSay(C, 'launch', campTorpKey(tgt, 'camp.say.torp.fire'), { name: campTorpName(tgt) });
   return t;

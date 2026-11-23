@@ -474,7 +474,7 @@ const CAMP = {
     ],
     start: 'normal',                       // the setting until the player picks one
     scale: 1,                              // times the setting's multiplier (the tuning panel's one pace number: 1 is Normal as the table has it, 1.2 a fifth quicker)
-    fight: 0.5,                            // FIGHT PACE (card space-game-slower-fights; Troy, 22 Nov 2026: "slow the pace of the fights down so I can enjoy it", then "a lot more": 0.75 became 0.5): the share of its pace a small ship flies and fires at WHILE IT IS IN A FIGHT, a foe within `engage[0]` px of it (a gun's reach and a dogfight's turns): top speed, acceleration, turn rate and the gaps between its shots, all times this, so a duel plays out the same and lasts twice as long (1 / 0.5). Away from every foe (beyond `engage[1]`) it flies at the pace above, as it did, so a trip, an approach, a scout's road and the missions' beat clocks are the same as before; between the two distances the share eases in, so no ship snaps. The tuning panel's row Fight pace (N). Only a battle made with a pace MODE has it (the tests' and the sims' number paces are the table's own numbers: 1 here)
+    fight: 0.5,                            // FIGHT PACE (card space-game-slower-fights; Troy, 22 Nov 2026: "slow the pace of the fights down so I can enjoy it", then "a lot more": 0.75 became 0.5): the share of its pace a small ship flies and fires at WHILE IT IS IN A FIGHT (not a torpedo boat, a slow hull, nor a runner, a ship that has broken off and flees), a foe within `engage[0]` px of it (a gun's reach and a dogfight's turns): top speed, acceleration, turn rate and the gaps between its shots, all times this, so a duel plays out the same and lasts twice as long (1 / 0.5). Away from every foe (beyond `engage[1]`) it flies at the pace above, as it did, so a trip, an approach, a scout's road and the missions' beat clocks are the same as before; between the two distances the share eases in, so no ship snaps. The tuning panel's row Fight pace (N). Only a battle made with a pace MODE has it (the tests' and the sims' number paces are the table's own numbers: 1 here)
     engage: [900, 1700],                   // px: a foe nearer than the first puts the ship at the fight pace in full; one farther than the second, not at all. Narrow on purpose: a wave comes in at the pace it always did and slows only for the last of the way, so it arrives about when it did (a mission's clock for a relic's hold or a wave's first contact does not move); the raiders' guns reach 520 px, the dogfight pairs at 1,500
     every: 200,                            // ms between the looks at who is near (campFightPace)
     shots: 0.5                             // the power of the multiplier a shot's speed takes (0.5 is its square root: a shot does not outrun the eye, a hit still lands). There is no key and no setting for the pace any more (card space-game-two-hands-keys): the Campaign flies at CAMP.pace.start, and campNew's opts.pace still takes a mode for the tests, the bots and the sims
@@ -747,11 +747,11 @@ function campFightPace(C) {
   if (C.t < (C.fightAt || 0)) return; C.fightAt = C.t + CAMP.pace.every;
   const F = C.fightOn ? Math.max(0.05, +CAMP.pace.fight || 1) : 1, r0 = CAMP.pace.engage[0], r1 = Math.max(r0 + 1, CAMP.pace.engage[1]), ships = C.ships;
   for (let i = 0; i < ships.length; i++) {
-    const u = ships[i]; if (!u.base || u.hp <= 0) continue;
+    const u = ships[i]; if (!u.base || u.hp <= 0 || u.boat) continue; // a torpedo boat is a slow hull, not a dogfighter: at half its speed the turrets kill it before it can launch, so it flies and arms as it always did
     let fp = 1;
-    if (F !== 1) {
+    if (F !== 1 && !u.running) { // a runner (a pirate that has broken off, src/camppirates.js) flees at its full run speed: slowed by the carrier at its heels, it could never get away
       let best = Infinity; const al = u.team === 'alien';
-      for (let j = 0; j < ships.length; j++) { const o = ships[j]; if (o.hp <= 0 || (o.team === 'alien') === al) continue; const dx = o.x - u.x, dy = o.y - u.y, d2 = dx * dx + dy * dy; if (d2 < best) best = d2; }
+      for (let j = 0; j < ships.length; j++) { const o = ships[j]; if (o.hp <= 0 || (o.team === 'alien') === al || o.running) continue; const dx = o.x - u.x, dy = o.y - u.y, d2 = dx * dx + dy * dy; if (d2 < best) best = d2; } // a runner is not a foe to slow for: the wing chasing it must be quicker than it, as it was
       const t = best === Infinity ? 1 : Math.max(0, Math.min(1, (Math.sqrt(best) - r0) / (r1 - r0)));
       fp = F + (1 - F) * t;
     }
