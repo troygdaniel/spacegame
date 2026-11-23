@@ -126,7 +126,7 @@ function campMapMarks(C, whole, rings) { // whole: the far places too (the whole
     const m = { type, id: u.id, x: u.x, y: u.y, rot: u.rot, color: campDotColor(u) };
     if (type === 'wing' && u.squad && rings && rings.indexOf(u.squad) >= 0) m.squad = u.squad; // a fighter's squad (card space-game-fighter-squads) only while that squad is in focus (card space-game-squad-rings): the map draws its dot in the squad's colour, as the ring does in flight; the others are plain wing dots
     if (type === 'convoy' && u.dest) m.to = { x: u.dest.x, y: u.dest.y };
-    if (care[u.id]) { m.hull = care[u.id].hull; m.band = care[u.id].band; m.hit = care[u.id].hit; } // a bar over the mark (campmapdraw)
+    if (care[u.id]) { m.hull = care[u.id].hull; m.band = care[u.id].band; m.hit = care[u.id].hit; m.loud = care[u.id].loud; } // a bar over the mark (campmapdraw): a thin line, the full bar while the ship is under attack
     if (type === 'tboat') m.arming = u.arming > 0; // a torpedo boat (card space-game-torpedo-art): its own mark, with a ring while it arms
     out.push(m);
   });
