@@ -62,7 +62,6 @@ function campTdispDoing(C, u) {
     case 'hold': return t('hold.f');
     case 'mine': return t('mine');
     case 'recall': return t('recall');
-    case 'scout': return t('scout');
     case 'fetch': return t('fetch');
     default: return t('guard');
   }

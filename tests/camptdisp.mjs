@@ -100,7 +100,7 @@ console.log('C. what it is doing');
   check('a torpedo boat arming: "arming a torpedo"', J('__doing(TB)') === 'arming a torpedo', J('__doing(TB)'));
   g.run(`window.F2 = campSpawn(C, 'fighter', C.carrier.x + 300, C.carrier.y); F2.team = 'earth';`);
   const ord = o => { g.run(`F2.repair = false; F2.order = ${JSON.stringify(o)};`); return J('__doing(F2)'); };
-  check('a fighter\'s orders: guard, attack the nearest, hold, mine, recall, scout, fetch', ord({ type: 'guard' }) === 'guarding the cruiser' && ord({ type: 'attack', target: '' }) === 'attacking the nearest hostile' && ord({ type: 'hold' }) === 'holding position' && ord({ type: 'mine' }) === 'mining ore' && ord({ type: 'recall' }) === 'returning to the bay' && ord({ type: 'scout' }) === 'scouting ahead' && ord({ type: 'fetch' }) === 'fetching ore');
+  check('a fighter\'s orders: guard, attack the nearest, hold, mine, recall, fetch (the Scout order went with the escort ship)', ord({ type: 'guard' }) === 'guarding the cruiser' && ord({ type: 'attack', target: '' }) === 'attacking the nearest hostile' && ord({ type: 'hold' }) === 'holding position' && ord({ type: 'mine' }) === 'mining ore' && ord({ type: 'recall' }) === 'returning to the bay' && ord({ type: 'fetch' }) === 'fetching ore');
   g.run(`window.T2 = C.ships.find(u => u.kind === 'freighter');`);
   check('attack a named ship, escort a ship: by its name', ord({ type: 'attack', target: J('T2.id') }) === 'attacking ' + J('campTdispName(T2)') && ord({ type: 'escort', target: J('T2.id') }) === 'escorting ' + J('campTdispName(T2)'));
   g.run(`F2.repair = true;`); check('a fighter flying home to be mended: "going home to mend"', J('__doing(F2)') === 'going home to mend');

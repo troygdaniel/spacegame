@@ -892,7 +892,6 @@ const UI_TEXT = {
   'camp.tdisp.do.hold.f': 'holding position',
   'camp.tdisp.do.mine': 'mining ore',
   'camp.tdisp.do.recall': 'returning to the bay',
-  'camp.tdisp.do.scout': 'scouting ahead',
   'camp.tdisp.do.fetch': 'fetching ore',
   'camp.tdisp.do.repair': 'going home to mend',
   'camp.tdisp.do.tuck': 'tucked in under the shield',
