@@ -64,7 +64,8 @@ try {
       // runs, as it has since this UI was made (60ad931). The old check asked whether the Title was still up 330 ms after the press, which is a race against the 280 ms
       // fade of go() (src/common.js), not a fact about P. What P owns is the panel: it must not open. The game starting is read from the flag go() sets at once.
       const afterP = await t.ev(`(() => { const s = game.scene.getScene('Title'); return { leaving: !!s.leaving, open: s.contentUi.isOpen(), claimed: s.contentUi.handleKey({ code: 'KeyP' }), settings: game.scene.isActive('Settings') }; })()`);
-      check('P opens nothing when there is nothing to show (the content UI does not claim it); like any key it starts the game', afterP.open === false && afterP.claimed === false && afterP.settings === false && afterP.leaving === true, JSON.stringify(afterP));
+      // Since 9cb57d69 the Title starts a mode only on a deliberate choice (Enter or K, the arrows then Enter, a click on a panel), so P is no longer "any key": it neither opens the panel nor starts the game.
+      check('P opens nothing when there is nothing to show (the content UI does not claim it), and it does not start the game either (a mode starts only on a deliberate choice)', afterP.open === false && afterP.claimed === false && afterP.settings === false && afterP.leaving === false, JSON.stringify(afterP));
       check('no console errors', t.errors.length === 0, t.errors.join(' | '));
     } finally { await t.close(); }
   }
@@ -102,7 +103,9 @@ try {
       check('the MODDED tag opens it too', (await ui(t)).open);
       await press(t, 'ESC');
       await clickAt(t, 640, 200);
-      await t.waitFor(`game.scene.isActive('Station')`, 5000, 'Station after a click').then(() => check('a click on the empty title starts the game as before', true)).catch(() => check('a click on the empty title starts the game as before', false));
+      // Since 9cb57d69 a click on the empty title starts nothing (a click on a mode's panel does): the Title stays up.
+      const started = await t.waitFor(`game.scene.isActive('Station')`, 1500, 'Station after a click').then(() => true).catch(() => false);
+      check('a click on the empty title does not start the game (a mode starts only on a deliberate choice) and the Title stays up', !started && await t.ev(`game.scene.isActive('Title')`));
       check('no console errors', t.errors.length === 0, t.errors.join(' | '));
     } finally { await t.close(); }
   }

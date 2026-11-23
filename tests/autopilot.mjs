@@ -127,7 +127,7 @@ try {
   await E(`game.scene.start('Overlay', { from: 'Space', mode: 'map' })`); await tick(4);
   const OV = "game.scene.getScene('Overlay')";
   const map0 = JSON.parse(await E(`JSON.stringify({ pick: ${OV}.pick === undefined, foot: ${OV}.footer.text, line: ${OV}.tPick.text })`));
-  check('the map has no picker, and names the destination with its distance', map0.pick && !/Enter|W S/.test(map0.foot) && map0.line.startsWith('Destination: ' + dest) && / km$/.test(map0.line), JSON.stringify(map0));
+  check('the map has no list picker, and names the destination with its distance (and says a click on it flies: 5c6a3113)', map0.pick && !/Enter|W S/.test(map0.foot) && map0.line.startsWith('Destination: ' + dest) && / km\b/.test(map0.line), JSON.stringify(map0));
   await E(`(() => { const e = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13 }); window.dispatchEvent(e); return 1; })()`); await tick(3);
   check('Enter on the map flies nowhere', !(await state()).on && (await E(`${SP}.cr.target.name`)) === dest);
   await E(`(() => { game.scene.stop('Overlay'); game.scene.resume('Space'); })()`);
