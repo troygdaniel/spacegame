@@ -1295,6 +1295,7 @@ const UI_TEXT = {
   'camp.say.callbad': 'Bad call. The wing is rattled.',
   'camp.say.contact': 'Unknown ships. Not pirates. Weapons hot.',
   'camp.say.sold': 'Sold {ore} ore for {cash}.',
+  'camp.say.soldover': 'Only {cap} comes with us. Spend {over} here.', 'camp.hub.build.over': 'Only {cap} leaves with you: {over} to spend here, or it is lost.', 'camp.ui.over': 'Funds {funds}. The store holds {cap}: {over} was left behind.',
   'camp.o.ore': 'Mine ore: {got} of {need}.',
   'camp.o.cashin': 'Sell your ore at the Works: {got} of {need}.',
   'camp.b.sold': 'Sell {n} ore',
