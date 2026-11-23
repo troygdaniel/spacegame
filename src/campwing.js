@@ -233,7 +233,7 @@ function campWingOrder(C, group, verb, target, how, dry) {
     say = tg ? 'wing.mine' : 'mine';
   }
   if (dry) return campYes(say, vars);
-  ships.forEach((u, i) => { u.order = CAMPWING_ORDER[verb](C, u, tgo, i); if (tgo) u.order.tg = { kind: tgo.kind, id: tgo.id, ref: tgo.ref, name: tgo.name, x: tgo.x, y: tgo.y }; u.move = null; });
+  ships.forEach((u, i) => { u.order = CAMPWING_ORDER[verb](C, u, tgo, i); if (tgo) u.order.tg = { kind: tgo.kind, id: tgo.id, ref: tgo.ref, name: tgo.name, x: tgo.x, y: tgo.y }; if (verb === 'guard' && tgo && (tgo.kind === 'friend' || tgo.kind === 'convoy')) u.order.grp = id; u.move = null; }); // grp: the group the guard of a ship was given to (campWingGuardStep says its end once for it)
   C.orders[verb] = (C.orders[verb] | 0) + 1;
   return campWingDone(C, id, verb, tgo, ships, how, say, vars);
 }
@@ -254,6 +254,22 @@ function campWingCancel(C, group, how, dry) {
   ships.forEach(u => { u.order = { type: 'guard', at: { kind: 'carrier' } }; u.move = null; });
   C.events.push({ type: 'wingorder', group: id, verb: 'cancel', target: null, n: ships.length, how: how || '' });
   const r = campYes('wing.cancel', { group: campWingGroupName(C, id), name: '' }); r.group = id; r.verb = 'cancel'; r.n = ships.length; return r;
+}
+
+// ---- Guard the target (card space-game-guard-the-target; Troy, 22 Nov 2026) ----
+// A squad (or the wing) sent to guard a SHIP (a convoy ship, a neutral miner, the distress miner) flies in formation beside it, meets what comes near it and returns (campWingAI, the guard branch, src/campflight.js). It stays on that ship until it is given
+// another order, or until the ship is SAFE (it arrived: u.arrived) or LOST (its hull is gone), which this says on the radio, once for each group: "Red squad, Mars convoy is lost. Back to the cruiser." Then the group guards the cruiser again. A place (an outpost)
+// is guarded as it always was, and ends only with another order. Called every tick (campTick); a few ships, so it costs nothing.
+function campWingGuardStep(C) {
+  const said = {};
+  C.ships.forEach(u => {
+    if (u.team !== 'earth' || u.hp <= 0) return;
+    const o = u.order; if (!o || o.type !== 'guard' || !o.at || (o.at.kind !== 'friend' && o.at.kind !== 'convoy')) return;
+    const m = C.by[o.at.id]; if (m && m.hp > 0) return; // still there
+    const gid = o.grp || u.squad || (u.kind === 'escort' ? 'escorts' : 'all'), name = o.tg && o.tg.name ? o.tg.name : 'the ship', key = gid + '|' + o.at.id; // the group the order was given to (the whole wing is one voice), else the ship's own squad
+    if (!said[key]) { said[key] = 1; campSay(C, m && m.arrived ? 'camp.say.wing.guardsafe' : 'camp.say.wing.guardlost', { group: campWingGroupName(C, gid), name }); }
+    u.order = { type: 'guard', at: { kind: 'carrier' } }; u.move = null; // back to the cruiser
+  });
 }
 
 // ---- what the map draws ----

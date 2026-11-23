@@ -140,6 +140,8 @@ function campPanelRun(C, row, how, item) {
   if (row.open) return { ok: true, say: '', open: row.open }; // a part's row: the caller opens its list
   if (item && row.pick === 'enemy') C.tgt = item.id; // the hostile that was chosen is THE target now: the attack below goes at it, and P fly to the target and Enter a missile follow it
   else if (item && row.pick === 'escort') return campWingOrder(C, 'escorts', 'escort', item.id, how || 'key'); // the escorts go to the ship that was chosen (a convoy ship or a miner)
+  else if (item && row.pick === 'guard') return campWingOrder(C, row.wing[0], 'guard', item.id, how || 'key'); // the squad guards the ship or outpost that was chosen, in formation beside it (src/campwing.js campWingGuardStep ends it when the ship is lost or safe)
+  else if (row.pick === 'guard') { const dry = campWingOrder(C, row.wing[0], 'guard', null, how || 'key', true); return dry.ok ? campNo('noguard') : dry; } // Guard the target with nothing to guard: refused in words, never the carrier by a side door
   else if (item && row.pick === 'field') return campWingOrder(C, row.wing ? row.wing[0] : 'all', 'mine', item.rock, how || 'key'); // the wing starts at the rock of the field that was chosen
   else if (row.pick === 'enemy' && !campTgtNow(C) && !campTgtList(C).length) { const dry = row.wing ? campWingOrder(C, row.wing[0], row.wing[1], null, how || 'key', true) : campCheck(C, row.order, ''); return dry.ok ? campNo('nofoe') : dry; } // Attack with no hostile and no target: nothing to attack (an order's own refusal, no fighters out, is said first)
   if (row.wing) return campWingOrder(C, row.wing[0], row.wing[1], campPanelWingTarget(C, row), how || 'key');
@@ -177,7 +179,7 @@ function campPanelState(C, row) {
     case 'attack': { const tg = campPanelTarget(C); return tg ? tg.name + ', ' + tg.km + ' km' : campWing(C, 'fighter').length + ' fighters out'; } // the target, when one is picked
     case 'escort': { const cv = campNearest(campConvoys(C), C.carrier); return cv ? campConvoyName(cv) + ' convoy' : 'stay by the carrier'; } // a level with no convoy (the belt): the escorts stay close
     case 'guard': case 'recall': return campWing(C).length + ' ships out';
-    case 'gsquads': case 'fguard': case 'fmine': case 'frecall': return campWing(C, 'fighter').length + ' fighters out';
+    case 'gsquads': case 'fguard': case 'fguardt': case 'fmine': case 'frecall': return campWing(C, 'fighter').length + ' fighters out';
     case 'gescorts': case 'eattack': case 'eguard': case 'erecall': return campWing(C, 'escort').length + ' escorts out';
     case 'gconvoy': return campPanelConvoyName(C);
     case 'gstance': return campPanelStanceName(C);
@@ -213,7 +215,7 @@ function campPanelShortState(C, row) {
     case 'attack': return campWing(C, 'fighter').length + ' out';
     case 'escort': { const cv = campNearest(campConvoys(C), C.carrier); return cv ? campConvoyName(cv) : 'stay close'; }
     case 'guard': case 'recall': return campWing(C).length + ' out';
-    case 'gsquads': case 'fguard': case 'fmine': case 'frecall': return campWing(C, 'fighter').length + ' out';
+    case 'gsquads': case 'fguard': case 'fguardt': case 'fmine': case 'frecall': return campWing(C, 'fighter').length + ' out';
     case 'gescorts': case 'eattack': case 'eguard': case 'erecall': return campWing(C, 'escort').length + ' out';
     case 'gconvoy': return campPanelConvoyName(C);
     case 'gstance': return campPanelStanceName(C);
@@ -238,6 +240,7 @@ function campPanelRowState(C, row) {
   const ok = () => ({ ok: true, state: campPanelState(C, row), short: campPanelShortState(C, row) }), no = (why, sh) => ({ ok: false, state: CAMP_PANELS.why[why] || CAMP_PANELS.why.what, short: CAMP_PANELS.shortWhy[sh || why] || CAMP_PANELS.shortWhy.what });
   if (row.open) return ok(); // a part's row is always open to go into
   if (row.pick === 'enemy' && !campTgtNow(C) && !campTgtList(C).length) { const r = row.wing ? campWingOrder(C, row.wing[0], row.wing[1], null, 'key', true) : campCheck(C, row.order, ''); return r.ok ? no('nofoe') : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; } // Attack with no hostile to attack: grey, and why (a refusal of its own comes first: no fighters out)
+  if (row.pick === 'guard' && !campPickItems(C, 'guard').length) { const r = campWingOrder(C, row.wing[0], 'guard', null, 'key', true); return r.ok ? no('noguard') : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; } // Guard the target with nothing to guard: grey, and why (a refusal of its own comes first: no ships of the squad out)
   if (row.wing) { const r = campWingOrder(C, row.wing[0], row.wing[1], campPanelWingTarget(C, row), 'key', true); return r.ok ? ok() : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; }
   if (row.fly === 'objective') {
     const f = campNavFind(C, 'the objective'); if (!f.row) return no('nogoal');
