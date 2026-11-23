@@ -15,7 +15,7 @@
 // Space scene binds is named here.
 // ---------- the Campaign's lists (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026: "one list per hand", then "shortcut keys that take you straight to the sub-list") ----------
 // LEFT HAND, the fleet: Q opens the FLEET list, which is a row for each part of the wing and nothing else (card space-game-squad-tint; Troy, 22 Nov 2026: nothing listed twice): W ALL SQUADS, E RED SQUAD, R GREEN SQUAD, T YELLOW SQUAD (the fighters are split into three squads: card space-game-fighter-squads),
-// and CONVOY and STANCE, which have no key (a row of the Q list: Enter or Right on it opens that part; there is no escort ship: card space-game-cut-escorts, Troy, 22 Nov 2026). The first row of Q is All squads and the first row of that list is LAUNCH THE WING, so Q, Enter, Enter launches everything, and so does W, Enter.
+// and CONVOY, which has no key (a row of the Q list: Enter or Right on it opens that part; there is no escort ship: card space-game-cut-escorts, Troy, 22 Nov 2026). The first row of Q is All squads and the first row of that list is LAUNCH THE WING, so Q, Enter, Enter launches everything, and so does W, Enter.
 // RIGHT HAND, the ship, mirrored: P opens the SHIP list with a row for each part: O POWER (shields first: O, Enter adds a shield pip; card space-game-ship-shortcuts-o-power, Troy, 22 Nov 2026), I AUTOPILOT, U DOCK AND REPAIR.
 // A part's key opens its list directly, at any time (E, Enter: the fighters attack the target); Enter or a click on the part's row in Q or P opens it too. Nothing is on the screen until a key is pressed, and only one list is open at a time.
 // In an open list Up and Down move the highlight, Enter gives the order (the list closes when the order is taken; a power row leaves it open, to be given again), Left goes back to the list it is a part of, the list's own key closes it.
@@ -54,8 +54,7 @@ const CAMP_PANELS = {
       { id: 'gred', open: 'red', label: 'Red squad', help: 'The red squad\'s orders' },
       { id: 'ggreen', open: 'green', label: 'Green squad', help: 'The green squad\'s orders' },
       { id: 'gyellow', open: 'yellow', label: 'Yellow squad', help: 'The yellow squad\'s orders' },
-      { id: 'gconvoy', open: 'convoy', when: 'convoy', label: 'Convoy', help: 'Orders for the ships you escort' },
-      { id: 'gstance', open: 'stance', when: 'stance', label: 'Stance', help: 'How the wing fights' }
+      { id: 'gconvoy', open: 'convoy', when: 'convoy', label: 'Convoy', help: 'Orders for the ships you escort' }
     ] },
     { id: 'convoy', parent: 'fleet', side: 'left', key: '', code: '', title: 'CONVOY ORDERS', tab: '', name: 'the convoy list', rows: [ // orders for the escorted ships (src/campconvoy.js). Voice and the strip: "tuck in", "run for it", "carry on", "haulers hold"
       { id: 'ctuck', order: 'convoy', arg: 'tuck in', label: 'Tuck in', help: 'Convoy flies in the cruiser\'s shield' },
@@ -92,13 +91,6 @@ const CAMP_PANELS = {
       { id: 'yellowguard', wing: ['yellow', 'guard'], label: 'Guard the cruiser', help: 'The yellow squad guards the cruiser' },
       { id: 'yellowguardt', wing: ['yellow', 'guard'], pick: 'guard', label: 'Guard the target', help: 'The yellow squad guards a ship or outpost you pick' },
       { id: 'yellowrecall', wing: ['yellow', 'recall'], label: 'Recall', help: 'The yellow squad flies home to the bay' }
-    ] },
-    { id: 'stance', parent: 'fleet', side: 'left', key: '', code: '', title: 'STANCE', tab: '', name: 'the stance list', rows: [ // how Attack and Guard move; the one in force is marked. name: the stance's own word (the HUD, the debrief)
-      { id: 'free', order: 'stance', arg: 'free', label: 'Fight freely', name: 'Free', help: 'The wing fights its own way' },
-      { id: 'orbit', order: 'stance', arg: 'orbit', label: 'Orbit the target', name: 'Orbit', help: 'Circle the target, firing' },
-      { id: 'keep', order: 'stance', arg: 'keep distance', label: 'Keep distance', name: 'Keep distance', help: 'Stand off from the target' },
-      { id: 'match', order: 'stance', arg: 'match speed', label: 'Match my speed', name: 'Match speed', help: 'Fly beside the cruiser' },
-      { id: 'hold', order: 'stance', arg: 'hold position', label: 'Hold position', name: 'Hold position', help: 'Stay put, fire at what comes' }
     ] },
     { id: 'ship', side: 'right', key: 'P', code: 'KeyP', title: 'SHIP ORDERS', tab: 'Ship', name: 'the ship list', rows: [
       { id: 'gpower', open: 'power', label: 'Power', help: 'Shields, engines, weapons' },
@@ -172,7 +164,7 @@ function campKeyRow(id) {
 const campKeyVia = id => CAMP_PANELS.panels.find(p => p.rows.some(x => x.id === id)) || null;
 const campKeyList = id => CAMP_PANELS.panels.find(p => p.id === id) || null;
 const campKeyOpens = id => { let p = campKeyList(id); while (p && !p.key && p.parent) p = campKeyList(p.parent); return p ? p.key : ''; };
-// the way to a list as a hint says it: the list's own key ('E'), or for a list with no key (Convoy, Stance) the key of the list it is a part of and the words of its row there ('Q, Convoy')
+// the way to a list as a hint says it: the list's own key ('E'), or for a list with no key (Convoy) the key of the list it is a part of and the words of its row there ('Q, Convoy')
 function campKeyPath(id) {
   const p = campKeyList(id); if (!p) return '';
   if (p.key) return p.key;

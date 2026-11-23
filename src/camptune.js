@@ -64,7 +64,6 @@ const CAMP_TUNE = {
     { id: 'rival', kind: 'flag', group: 'systems', flag: 'rival', when: 'next' },
     { id: 'repair', kind: 'flag', group: 'systems', flag: 'repair', when: 'now' },
     { id: 'convoyorders', kind: 'flag', group: 'systems', flag: 'convoyorders', when: 'now' },
-    { id: 'stance', kind: 'flag', group: 'systems', flag: 'stance', when: 'now' },
     { id: 'autofire', kind: 'flag', group: 'systems', flag: 'autofire', when: 'now' },
     { id: 'laser', kind: 'flag', group: 'systems', flag: 'laser', when: 'now' },
     { id: 'hints', kind: 'flag', group: 'systems', flag: 'hints', when: 'now' }

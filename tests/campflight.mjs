@@ -7,6 +7,9 @@
 //   D. a threat: a ship breaks off to meet it and flies back to its slot when it is gone
 //   E. other orders: escorting a convoy ship, guarding a place, mining with nothing to mine
 //   F. the same seed gives the same flight (a deterministic sim)
+//   G. strafing runs: against a ship that is no dogfighter a fighter flies in on a lane, peels away, goes out wide and comes in again: no ring round it, the guns fire on the run in, about the damage the old circling dealt
+//   H. no circling in a dogfight: a fighter that has turned the line to its target round and round on an Attack breaks off and extends, then comes in again; the duels
+//   I. a wingman covers its leader: the alien with its nose on the leader is the wingman's foe
 // Run: node tests/campflight.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
@@ -104,6 +107,52 @@ console.log('F. determinism and the code');
   const cs = src('src/campaign.js'), wing = cs.split('\n').filter(l => /home = |foe = campNearest\(aliens, cv/.test(l)).join('\n');
   check('the guard, the escort and the idle mine no longer put a ship on a circle: their home is campFlightSlot, and no `C.t / 3500` or `C.t / 4000` is left in the wing\'s AI', (wing.match(/campFlightSlot/g) || []).length >= 3 && !/C\.t \/ (3500|4000)/.test(cs.slice(cs.indexOf('function campWingAI'), cs.indexOf('function campWingFire'))));
   check('the script is in index.html after the dogfight\'s, and the numbers are the table\'s', /campdogfight\.js"><\/script>\s*<script src="src\/campflight\.js"/.test(src('index.html')) && K.anchors.length === 3 && K.gap > 0 && K.beside > 0);
+}
+
+console.log('G. strafing runs');
+{
+  g.run(`
+    window.__big = (kind, still, seed) => { __out(seed || 1); window.__foes = true; const f = campSpawn(C, kind, C.carrier.x + 650, C.carrier.y - 200); f.hp = f.maxHp = 1e7; if (still) { f.vmax = 0; f.accel = 0; f.nextShot = 1e12; } window.__f = f; campOrder(C, 'attack', f.id, 'key'); return f; };
+  `);
+  g.run('__big("gunship", true); window.__w = {}; window.__modes = {}; __fs().forEach(u => { __w[u.id] = { last: Math.atan2(u.y - __f.y, u.x - __f.x), sum: 0 }; });');
+  g.run('window.__samples = 0; window.__aimed = 0; window.__ins = 0; window.__shotOutIn = 0; __run(30, () => { __f.x = C.carrier.x + 650; __f.y = C.carrier.y - 200; __fs().forEach(u => { const a = Math.atan2(u.y - __f.y, u.x - __f.x), r = __w[u.id]; r.sum += campWrap(a - r.last); r.last = a; if (u.run) { __modes[u.id] = (__modes[u.id] || []).concat(u.run.m).filter((m, i, l) => i === 0 || m !== l[i - 1]); if (u.run.m === "in" && Math.hypot(u.x - __f.x, u.y - __f.y) < 420) { __samples++; if (Math.abs(campWrap(Math.atan2(__f.y - u.y, __f.x - u.x) - u.rot)) < 0.6) __aimed++; } } }); });');
+  const wind = J('Object.values(__w).map(r => Math.round(Math.abs(r.sum) / 6.283 * 10) / 10)'), cycles = J('Object.values(__modes).map(l => l.filter(m => m === "in").length)');
+  check('against a gunship (no dogfighter) every fighter flies runs, not a ring: over 30 s none goes round it more than twice (the old circling went round up to six times in 40 s)', wind.every(w => w <= 2), JSON.stringify(wind));
+  check('and each flies in, peels, goes out and comes in again: at least three runs in 30 s, the moves in that order', cycles.every(c => c >= 3) && J('Object.values(__modes).every(l => l.every((m, i) => i === 0 || ({ in: "peel", peel: "out", out: "in" })[l[i - 1]] === m))') === true, JSON.stringify(cycles));
+  check('on a run in the nose is on the target (within 0.6 rad) at least 70 percent of the time it is within gun range, and it does not shoot on the peel or the way out (the guns: CAMP.strafe)', J('__samples') > 100 && J('__aimed / __samples') >= 0.7, J('__aimed') + ' of ' + J('__samples'));
+  const lanes = J(`(() => { __run(20, () => { __f.x = C.carrier.x + 650; __f.y = C.carrier.y - 200; }); let same = 0, n = 0; ['red', 'green', 'yellow'].forEach(q => { const m = __fs().filter(u => u.squad === q); if (m.length === 2 && m[0].run && m[1].run && m[0].run.m === 'in' && m[1].run.m === 'in') { n++; if (m[0].run.side === m[1].run.side) same++; } }); return [same, n]; })()`);
+  check('a wingman takes its leader\'s side: in the runs in where both of a squad are in, they are on the same side (the flight comes in together)', lanes[1] === 0 || lanes[0] >= lanes[1] - 1, JSON.stringify(lanes));
+  const dmg = (kind, seed) => J(`(() => { const f = __big("${kind}", false, ${seed}); __run(40, () => { f.hp = Math.max(f.hp, f.maxHp - 1e6) }); return Math.round(1e7 - f.hp); })()`);
+  const d = dmg('gunship', 1);
+  check('the damage the wing deals to a gunship that shoots back in 40 s is about the old circling\'s (962 over five seeds, 925 measured; seeds go from 576 to 1,076: here seed 1, 400 to 1,400)', d >= 400 && d <= 1400, d);
+  const wa = src('src/campaign.js'), wing = wa.slice(wa.indexOf('function campWingAI'), wa.indexOf('function campWingFire'));
+  check('the wing\'s AI no longer steers by the pirates\' ring (campSteer) against anything: a duel is campDogSteer, the rest campStrafe', !/campSteer\(/.test(wing) && /campStrafe\(C, u, foe, dist, target\)/.test(wing) && /campDogSteer\(C, u, foe/.test(wing));
+  const abort = J(`(() => { __out(1); window.__foes = true; const f = campSpawn(C, 'gunship', C.carrier.x + 3000, C.carrier.y); const u = __fs()[0]; u.x = C.carrier.x; u.y = C.carrier.y; const d = dist => { u.x = f.x - dist; u.y = f.y; u.run = { m: 'in', until: C.t - 1000, side: 1 }; campStrafe(C, u, f, dist, 0); return u.run.m; }; const far = d(900), near = d(300); window.__foes = false; return [far, near]; })()`);
+  check('a run in does not time out while the ship is still closing from out of gun range (a target that runs, a slow ship: it kept breaking off and never arrived), and does inside it', abort[0] === 'in' && abort[1] === 'peel', JSON.stringify(abort));
+  check('the guns fire in a burst on a run in (CAMP.strafe.burst, and burstBy for a drone and a torpedo boat), and the shot delay is only ever shortened by it', J('CAMP.strafe.burst') > 0 && J('CAMP.strafe.burst') < 1 && J('CAMP.strafe.burstBy.drone') < J('CAMP.strafe.burst'));
+}
+
+console.log('H. no circling in a dogfight');
+{
+  const steer = (order, wind, extendAt) => J(`(() => { __out(1); const u = __fs()[0], r = __foe(500, 0); u.order = { type: 'attack', target: '' }; ${order ? `u.order = ${order};` : ''} u.dog = { mode: 'attack', until: 0, side: 1, flipAt: -1e9, jinkAt: -1e9, wind: ${wind}, los: Math.atan2(r.y - u.y, r.x - u.x), extendAt: ${extendAt} }; u.x = r.x - 500; u.y = r.y; u.rot = 0; u.vx = 0; u.vy = 0; const m = campDogSteer(C, u, r, CAMP.fighter.bullet); return { mode: m.mode, fire: m.fire, away: Math.abs(campWrap(m.ang - Math.PI)) < 1e-6 }; })()`);
+  g.run('window.__foes = true;');
+  const a = steer('', 6, -1e9), b = steer('{ type: "guard", at: { kind: "carrier" } }', 6, -1e9), c = steer('', 2, -1e9), e = steer('', 6, 'C.t');
+  check('a fighter on an Attack that has turned the line to its target round by more than CAMP.dog.circle.limit (4.5 rad) breaks off and EXTENDS: straight away from it, nose where it flies, not firing', a.mode === 'extend' && a.fire === false && a.away === true, JSON.stringify(a));
+  check('not when it guards (it stays on what attacks what it protects), not when it has turned less than the limit, and not again within CAMP.dog.circle.every seconds of the last', b.mode !== 'extend' && c.mode !== 'extend' && e.mode !== 'extend', JSON.stringify([b, c, e]));
+  check('only the wing\'s fighters extend: the aliens\' raiders fly the dogfight as they did (no extend in their steering)', J(`(() => { __out(1); const r = __foe(500, 0), f = __fs()[0]; r.dog = { mode: 'attack', until: 0, side: 1, flipAt: -1e9, jinkAt: -1e9, wind: 9, los: 0 }; r.order = { type: 'attack' }; r.x = f.x + 500; r.y = f.y; const m = campDogSteer(C, r, f, 500); return m.mode; })()`) !== 'extend');
+  g.run('window.__foes = false;');
+  g.run(`window.__duel = seed => { __new(seed); campOrder(C, 'launch'); __run(10); window.__foes = true; const fs = __fs(); fs.slice(1).forEach(u => { u.hp = 0; }); const f = fs[0]; f.x = C.carrier.x + 4000; f.y = C.carrier.y; f.vx = f.vy = 0; f.order = { type: 'attack', target: '' }; const r = campSpawn(C, 'raider', f.x + 900, f.y); r.goal = 'carrier'; let wind = 0, last = null, t = 0; for (; t < 80 * 30 && r.hp > 0 && f.hp > 0; t++) { campStep(C, 1 / 30); C.events.length = 0; if (f.hp > 0 && r.hp > 0) { const a = Math.atan2(r.y - f.y, r.x - f.x); if (last !== null) wind += campWrap(a - last); last = a; } } window.__foes = false; return { win: r.hp <= 0, lost: f.hp <= 0, sec: Math.round(t / 30), revs: Math.abs(wind) / 6.283 }; };`);
+  const duels = [1, 2, 3, 4, 5, 6].map(sd => J(`__duel(${sd})`));
+  check('one fighter against one raider, six seeds: the fighter wins every time, and the line between them never turns round more than two and a half times (it did up to three before the extend) and ' + 'about one time on average', duels.every(d => d.win && !d.lost) && duels.every(d => d.revs <= 2.6) && duels.reduce((a, d) => a + d.revs, 0) / duels.length <= 1.2, JSON.stringify(duels.map(d => [d.sec, Math.round(d.revs * 10) / 10])));
+}
+
+console.log('I. a wingman covers its leader');
+{
+  g.run('__out(1);');
+  const cv = J(`(() => { window.__foes = true; const reds = __fs().filter(u => u.squad === 'red'), L = reds[0], W = reds[1]; const B = campSpawn(C, 'raider', L.x - 300, L.y); B.rot = 0; const A = campSpawn(C, 'raider', W.x + 200, W.y + 200); A.rot = Math.PI; C.t += 1; const on = campFlightCover(C, W) === B, lead = campFlightCover(C, L); B.rot = Math.PI; const away = campFlightCover(C, W); B.rot = 0; B.x = L.x - 900; const far = campFlightCover(C, W); B.x = L.x - 300; B.kind = 'tower'; const tower = campFlightCover(C, W); window.__foes = false; return { on, lead, away, far, tower }; })()`);
+  check('the wingman\'s foe is the alien that has its nose on the leader within CAMP.flight.cover.range (an alien nearer to the wingman is not it)', cv.on === true, JSON.stringify(cv));
+  check('the leader covers nobody; an alien facing away, one out of range and a tower (it aims without turning) are not covered', cv.lead === null && cv.away === null && cv.far === null && cv.tower === null, JSON.stringify(cv));
+  check('Attack with no target and Guard ask for the cover first (campFlightCover in the wing\'s AI), and only fighters have a leader', /campFlightCover\(C, u\) \|\| campDogFoe/.test(src('src/campaign.js')) && /foe = campFlightCover\(C, u\) \|\| foe/.test(src('src/campaign.js')) && J(`(() => { const e = campWing(C, 'escort')[0]; return e ? campFlightCover(C, e) : null; })()`) === null);
 }
 
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));

@@ -29,16 +29,9 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.enemy.mother.many | {n} motherships |
 | camp.bf.ready.bay | Bay: {f} fighters |
 | camp.bf.ready.rank | Rank: {name} |
-| camp.bf.ready.stance | Stance: {name} |
 | camp.bf.ready.stock | Missiles {missiles}    Ore {ore} |
 | camp.bf.ready.power | Power: weapons {w}, shields {s}, engines {e} |
 | camp.bf.ready.shield | Shield: full, {cap} points |
-| camp.bf.stance.free | Free |
-| camp.bf.stance.orbit | Orbit |
-| camp.bf.stance.keep | Keep distance |
-| camp.bf.stance.match | Match speed |
-| camp.bf.stance.hold | Hold |
-| camp.bf.warn.hold | Stance is Hold: the wing will not attack on its own. |
 | camp.bf.route | Route {km} km: {regular} s regular, {fast} s on Fast. |
 | camp.bf.routenear | You start at the mission place. |
 | camp.bf.you | YOU |

@@ -21,3 +21,38 @@ function campFlightSlot(C, u, P) {
   const fw = A.back * D + back, rt = A.side * D + side; // forward and right of the thing, in its own frame (y grows downward, so "right" of an eastward nose is +y)
   return { x: P.x + ci * fw - si * rt, y: P.y + si * fw + ci * rt, vx: P.vx || 0, vy: P.vy || 0, face: h, fly: true, rank, lead: rank === 0 };
 }
+
+// ---------- strafing runs (card space-game-fighter-flight; Troy, 22 Nov 2026: "against big ships: approach, fire, peel away, swing wide and come in again; visible attack lanes, not a ring around the target"; CAMP.strafe) ----------
+// Against a ship that is no dogfighter (a drone, a gunship, a tower, a torpedo boat, the mothership: src/campdogfight.js campDogOn is false) a fighter used to fly the pirates' own steering, which goes round a ring about the
+// target (src/enemies.js pirateSteer). Now it flies RUNS, in three moves, each a straight lane: IN (a line that passes CAMP.strafe.miss px beside the target, the nose on it, the guns firing in a burst), PEEL (past it, a hard turn away
+// off the line, the nose where it flies, for a short time) and OUT (flying on away until it is CAMP.strafe.wide from it), then IN again from the other side. The flight of a squad runs together: a wingman takes its leader's side.
+//   campStrafe(C, u, foe, dist, th)   one frame of one fighter against foe, `dist` and the bearing `th` from it to the target: { move, ang (where the engine pushes), face (the nose), fire, burst, thrust }
+function campStrafe(C, u, foe, dist, th) {
+  const K = CAMP.strafe, t = C.t, fr = foe.r || 0, r = u.run || (u.run = { m: 'in', until: t + K.inMax * 1000, side: campFlightNum(u) % 2 ? 1 : -1 });
+  const rng = ((CAMP[u.kind] || {}).range || 420) + fr; if (r.m === 'in' && dist > rng) r.until = t + K.inMax * 1000; // a run in times out only inside gun range: a ship that is still closing (the target runs, or the ship is slow) keeps coming, it does not break off and start again from out wide
+  if (r.m === 'in') r.min = Math.min(r.min == null ? 1e9 : r.min, dist); // the closest it has been on this run
+  if (r.m === 'in' && (dist < fr + K.near || t > r.until || (r.min < rng && dist > r.min + K.passed))) { r.m = 'peel'; r.until = t + (K.peel[0] + C.rng() * (K.peel[1] - K.peel[0])) * 1000; }
+  else if (r.m === 'peel' && t > r.until) r.m = 'out';
+  else if (r.m === 'out' && dist > fr + K.wide) {
+    r.m = 'in'; r.until = t + K.inMax * 1000; r.min = null; r.side = -r.side; // round again, from the other side of the line
+    if (u.kind === 'fighter') { const lead = campFlightMembers(C, u)[0]; if (lead && lead !== u && lead.run) r.side = lead.run.side; } // a wingman is on its leader's side
+  }
+  if (r.m === 'peel') { const a = th + Math.PI - r.side * K.peelAngle; return { move: 'peel', ang: a, face: a, fire: false, thrust: 1 }; }
+  if (r.m === 'out') { const a = th + Math.PI - r.side * K.peelAngle * 0.5; return { move: 'out', ang: a, face: a, fire: false, thrust: 1 }; }
+  const base = u && foe.faction === 'pirate' && CAMP.pirate.kinds[foe.kind] ? CAMP.pirate.kinds[foe.kind].base : foe.kind; // a pirate's cutter is a drone to its guns
+  return { move: 'in', ang: th + r.side * Math.atan2(fr + K.miss, Math.max(dist, 1)), face: th, fire: true, burst: K.burstBy[base] || K.burst, thrust: 1 };
+}
+
+// ---------- a wingman covers its leader (card space-game-fighter-flight: "a wingman covering the leader") ----------
+//   campFlightCover(C, u)   for a wingman: the nearest dogfighter (raider, skiff) to the leader that is within CAMP.flight.cover.range of its leader with its nose on him; else null (and always null for the leader). Attack with no target named and Guard use it first
+function campFlightCover(C, u) {
+  if (u.kind !== 'fighter') return null;
+  const lead = campFlightMembers(C, u)[0]; if (!lead || lead === u || lead.hp <= 0) return null;
+  const K = CAMP.flight.cover; let best = null, bd = K.range;
+  for (const s of campAliens(C)) {
+    if (s.hp <= 0 || s.rot == null || !campDogIs(s)) continue; // a tail to be shot off the leader is a dogfighter's (a raider, a skiff): the bigger ones are strafed by the whole flight, not covered against
+    const d = Math.hypot(s.x - lead.x, s.y - lead.y); if (d >= bd) continue;
+    if (Math.abs(campWrap(Math.atan2(lead.y - s.y, lead.x - s.x) - s.rot)) < K.aspect) { best = s; bd = d; }
+  }
+  return best;
+}

@@ -93,7 +93,7 @@ console.log('C. flying');
   check('a gunship (80 hit points) dies to one missile', J('__hp(__gun)') === 0);
   check('a raider near the bang loses only the small damage (10), not the big one (120)', J('__hp(__rd)') === 190, J('__hp(__rd)'));
   check('a drone on the way, 600 px short of the target, is not touched: the fuze goes off on big ships only', J('__hp(__mid)') === 200 && J(`__ev('mboom')`) === 1);
-  g.run('__m(1); window.__gun = __foe("gunship", 1200, 0, 3000); window.__e = campSpawn(C, "fighter", C.carrier.x + 1150, C.carrier.y + 30).id; C.by[__e].vmax = 0; C.by[__e].accel = 0');
+  g.run('__m(1); window.__gun = __foe("gunship", 1200, 0, 3000); window.__e = campSpawn(C, "fighter", C.carrier.x + 1000, C.carrier.y + 30).id; /* 200 px short of the gunship: on a strafing run in, shooting (50 px off it, the fighter would be peeling away, which does not shoot: card space-game-fighter-flight) */ C.by[__e].vmax = 0; C.by[__e].accel = 0');
   g.run(`__fire(''); __run(4)`);
   check('the ships of Earth near the bang are not hurt (the fighter, which was shooting too, keeps its 36)', J('__hp(__e)') === 36 && J('__hp(__gun)') <= 2880, J('__hp(__gun)'));
   g.run('__m(1); window.__mo = __foe("mother", 1500, 0)');
