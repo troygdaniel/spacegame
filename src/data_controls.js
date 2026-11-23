@@ -19,8 +19,8 @@
 // RIGHT HAND, the ship, mirrored: P OPENS THE POWER LIST DIRECTLY now (card space-game-p-opens-power, Troy, 23 Nov 2026: "P should just open the power list") and the SHIP list it used to open is switched off (CAMP_SHIP_LIST below; its rows and code are kept). O still opens power too. The ship list was a row for each part: POWER (shields first: P, Enter adds a shield pip; card space-game-ship-shortcuts-o-power, Troy, 22 Nov 2026), I AUTOPILOT, U DOCK AND REPAIR, and the warp blink (that row lives in the POWER list while the ship list is off).
 // A part's key opens its list directly, at any time (W, Enter: launch the wing); Enter or a click on the part's row in Q or P opens it too. Nothing is on the screen until a key is pressed, and only one list is open at a time.
 // In an open list Up and Down move the highlight, Enter gives the order (the list closes when the order is taken; a power row leaves it open, to be given again), Left goes back to the list it is a part of, the list's own key closes it.
-// Esc goes back ONE STEP, to where you came from (card space-game-order-target-pick): a target sub-list to its list, a list a row of Q or P opened back to Q or P, a list its own key opened (Q W P O I U) is closed; with nothing open, Esc pauses.
-// The battle runs at its own speed while a list is open (card space-game-no-command-slowdown). NO KEY IS REUSED IN FLIGHT: each of Q W and P O I U opens one list and means nothing else. The direct keys are only:
+// Esc goes back ONE STEP, to where you came from (card space-game-order-target-pick): a target sub-list to its list, a list a row of Q or P opened back to Q or P, a list its own key opened (Q W P O U, and I with the ship list on) is closed; with nothing open, Esc pauses.
+// The battle runs at its own speed while a list is open (card space-game-no-command-slowdown). NO KEY IS REUSED IN FLIGHT: each of Q W and P O U (and I with the ship list on) opens one list and means nothing else. The direct keys are only:
 //   Arrows fly (Up thrust, Left and Right turn, Down brake)   Space the turrets   Enter a missile at the target (only while no list is open)   [ ] the last or next HOSTILE (the target)   A D the last or next FRIEND (a ship you protect, or one of your pilots)   Q all three pilots at once (the friend)   S the nearest threat   X clears both   E the pilots attack the selected hostile   R guard the selected friend   T recall (a selected pilot takes the order alone, else all three do)
 //   J K L a pip of power to the shields, the engines, the weapons   ; balance (the POWER list has them as rows too)   Tab the map   - = zoom, Backspace resets it   H keys   M mute   Esc pause (when no list is open)   / types an order   . talks
 // The arrows and Enter belong to whatever list is open: a list of these first, else the ship (fly, missile). (No pop-up takes them: card space-game-no-pilot-popups, Troy, 23 Nov 2026.)
@@ -139,11 +139,11 @@ function campFleetListSet(on) { // the switch (CAMP_FLEET_LIST): who has Q. The 
   }
   return on;
 }
-function campShipListSet(on) { // the switch (CAMP_SHIP_LIST): who has P. The ship list's key and `off` mark, the power list's key (P or O) and its second key, the parts' `parent` (Left goes back to a list that is on, to none otherwise) and the blink row move together
+function campShipListSet(on) { // the switch (CAMP_SHIP_LIST): who has P. The ship list's key and `off` mark, the power list's key (P, or O with the ship list on), the autopilot list's key (O, or I with it on), the parts' `parent` (Left goes back to a list that is on, to none otherwise) and the blink row move together
   const L = CAMP_PANELS.panels, ship = L.find(x => x.id === 'ship'), pw = L.find(x => x.id === 'power'); if (!ship || !pw) return on;
   ship.key = on ? 'P' : ''; ship.code = on ? 'KeyP' : ''; ship.off = !on;
-  pw.key = on ? 'O' : 'P'; pw.code = on ? 'KeyO' : 'KeyP'; // while the ship list is off P is the power list's key and O its second one (alt: another KeyboardEvent.code that opens it; altkey the cap)
-  if (on) { delete pw.alt; delete pw.altkey; } else { pw.alt = 'KeyO'; pw.altkey = 'O'; }
+  pw.key = on ? 'O' : 'P'; pw.code = on ? 'KeyO' : 'KeyP'; // while the ship list is off P is the power list's key and O the autopilot's; with it on the keys are the old ones: P the ship list, O power, I the autopilot (card space-game-autopilot-on-o moved the game's own state, which is the off one)
+  const nv = L.find(x => x.id === 'nav'); if (nv) { nv.key = on ? 'I' : 'O'; nv.code = on ? 'KeyI' : 'KeyO'; } // the autopilot's list: O while the ship list is off (I is free), I with it on
   ['power', 'nav', 'yard'].forEach(id => { const x = L.find(y => y.id === id); if (x) x.parent = on ? 'ship' : ''; });
   const from = on ? pw : ship, to = on ? ship : pw, i = from.rows.findIndex(r => r.id === 'blink'); // the warp blink's row: the ship list's last row, or the power list's last row while the ship list is off
   if (i >= 0) to.rows.push(from.rows.splice(i, 1)[0]);
@@ -158,7 +158,7 @@ const campKeyIs = (id, code) => campKeyCodes(id).indexOf(code) >= 0;
 // the rows the H page and Settings list for the lists: each list's key and what it is, then the keys every open list shares
 function campPanelKeyRows() {
   const sub = 'THE ORDER LISTS', what = { fleet: 'Fleet orders, and the lists below', convoy: 'Convoy: tuck in, run, hold, carry on', squads: 'All squads: launch, attack, recall', ship: 'Ship orders, and the lists below', nav: 'Autopilot: goal, target, fast burn', power: 'Power: pips, balance, emergency', yard: 'Dock, repair the hull and our ships' };
-  return CAMP_PANELS.panels.filter(p => p.key).map(p => ({ k: p.altkey ? [p.key, p.altkey] : [p.key], t: what[p.id] || p.title, sub })).concat([
+  return CAMP_PANELS.panels.filter(p => p.key).map(p => ({ k: [p.key], t: what[p.id] || p.title, sub })).concat([
     { k: [CAMP_KEYS.up.k, CAMP_KEYS.down.k], t: 'In a list: move the highlight', sub }, { k: [CAMP_KEYS.pick.k], t: 'In a list: give the order', sub }, { k: ['Left', 'Right'], t: 'In a list: back, or into a part', sub }, { k: [CAMP_KEYS.pause.k], t: 'Back a step, or close the list', sub }]);
 }
 
