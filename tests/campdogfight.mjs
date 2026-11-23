@@ -145,7 +145,7 @@ const cu = []; for (let s = 1; s <= 6; s++) cu.push(J(`__duelK(${s}, 'cutter')`)
 check('a pirate cutter (a drone) is not a dogfight: no moves, no pair, as before', cu.every(d => d.modes <= 1 && !d.mated), JSON.stringify(cu.map(d => d.modes)));
 check('the same seed is the same fight, to the pixel', JSON.stringify(J(`__duel(7, 3, 3, 'normal')`)) === JSON.stringify(J(`__duel(7, 3, 3, 'normal')`)));
 const six = []; for (let s = 1; s <= 12; s++) six.push(J(`__duel(${s}, 3, 3, 'normal')`));
-check('three against three: they pair off (all but at most one fighter has a living partner for most of the fight), and the fight is decided in under 60 s in every seed', six.every(d => d.paired / d.alive > 0.6 && d.t < 60), six.map(d => (d.paired / d.alive).toFixed(2) + '/' + d.t.toFixed(0)).join(' '));
+check('three against three: they pair off (all but at most one fighter has a living partner for most of the fight), and the fight is decided in under 80 s in every seed (60 before the fight pace, card space-game-slower-fights: the small ships fly and fire a quarter slower in a fight, so a duel lasts a third longer; the slowest seed is 63 s)', six.every(d => d.paired / d.alive > 0.6 && d.t < 80), six.map(d => (d.paired / d.alive).toFixed(2) + '/' + d.t.toFixed(0)).join(' '));
 const pace = ['calm', 'normal', 'brisk'].map(p => { const r = []; for (let s = 1; s <= 10; s++) r.push(J(`__duel(${s}, 1, 1, '${p}')`)); return r.filter(d => d.wingLeft === 0 || d.alLeft === 0).length; });
 check('at every pace of the P key (Calm, Normal, Brisk) the duels end', pace.every(n => n >= 9), JSON.stringify(pace));
 
