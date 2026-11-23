@@ -78,11 +78,11 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.1.1.n3 | The arrows fly the cruiser. {fleetkey} is your fleet: {squadskey} all squads, {redkey} red, {greenkey} green, {yellowkey} yellow. A pilot calls: Up, Down, Enter. |
 | camp.bf.1.2.w1 | Mine the rock fields round Ceres: {viafmine}, then {rowfmine}. |
 | camp.bf.1.2.w2 | Ore sells for triple at the Works. Pirates hunt the miners. |
-| camp.bf.1.2.w3 | Beat the 3 raids, then dock at Occator Works ({viadock}). |
+| camp.bf.1.2.w3 | Beat the 5 raids, then dock at Occator Works ({viadock}). |
 | camp.bf.1.2.w4 | The Works keeps its doors shut while a pirate is near. |
 | camp.bf.1.3.w1 | 3 haulers leave Ceres for Earth, 12 seconds apart. |
 | camp.bf.1.3.w2 | 1 must get home. Each hauler lost costs points. |
-| camp.bf.1.3.w3 | Pirates raid them twice. Escorts cover them: {viaescort}, Enter. |
+| camp.bf.1.3.w3 | Pirates come again and again. Escorts cover them: {viaescort}, Enter. |
 | camp.bf.2.1.w1 | Find 2 of the 3 resource pods in the system. |
 | camp.bf.2.1.w2 | Any ship of yours that flies close picks one up. |
 | camp.bf.2.1.w3 | Aliens come from the west after 20 seconds. |
@@ -109,4 +109,4 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.at.cache | RESOURCE POD |
 | camp.bf.at.guards | GUARDS |
 | camp.bf.at.mother | MOTHERSHIP |
-| camp.bf.1.3.w4 | Something else is out there. Be ready. |
+| camp.bf.1.3.w4 | A torpedo boat hunts them: tuck in, or kill it first. |
