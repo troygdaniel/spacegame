@@ -61,8 +61,8 @@ console.log('C. paying at a station from the save');
   check('then ore, for what the credits do not cover', r[3] === true && JSON.stringify(r[4]) === '[270,0]', JSON.stringify(r.slice(3, 5)));
   check('a price over both together is refused whole: nothing is taken', r[5] === false && JSON.stringify(r[6]) === '[270,0]', JSON.stringify(r.slice(5, 7)));
   check('exactly what there is can be spent, and a price of nothing or less takes nothing', r[7] === true && JSON.stringify(r[8]) === '[0,0]' && r[9] === true && r[10] === false && r[11] === 0, JSON.stringify(r.slice(7)));
-  const give = J(`(() => { const P = Object.assign(campProgressNew(), { ore: 490, credits: 0 }); campRefund(P, 45); return [P.ore, P.credits]; })()`);
-  check('money given back at a station (a refit item returned) is credits: the store cannot overflow and nothing is lost', JSON.stringify(give) === '[490,45]', JSON.stringify(give));
+  const give = J(`(() => { const P = Object.assign(campProgressNew(), { ore: 490, credits: 0 }); campRefund(P, 45); const Q = Object.assign(campProgressNew(), { ore: 100, credits: 7 }); campRefund(Q, 45); campRefund(Q, 0); campRefund(Q, -9); return [[P.ore, P.credits], [Q.ore, Q.credits]]; })()`);
+  check('money given back at a station (a refit item returned) fills the store first, since ore is what a repair in flight can spend, and the rest is credits: 490 and 45 back is 500 ore and 35 credits, nothing is cut', JSON.stringify(give) === '[[500,35],[145,7]]', JSON.stringify(give));
 }
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nCREDITS FAIL (${failed} of ${n})` : `\nCREDITS PASS (${n} checks)`);

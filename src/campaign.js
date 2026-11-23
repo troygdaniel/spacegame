@@ -850,11 +850,11 @@ function campSpawn(C, kind, x, y) {
 //   campFunds(C), campPay(C, cost)      a battle, at a station: the cash and the ore together; the cash first
 //   campCarryOut(P, C)                  what goes on from a mission into the save: the ore left in the store and all the credits
 //   campWealth(P), campSpend(P, cost)   the save, at a station (the ready room, the Earth refit): credits and ore together; credits first; false and nothing taken when both are short
-//   campRefund(P, n)                    money given back at a station is credits (the store cannot overflow)
+//   campRefund(P, n)                    money given back at a station: ore while the store has room (ore is what a repair in flight can spend), the rest credits; nothing is cut
 function campCarryOut(P, C) { P.ore = Math.max(0, Math.min(CAMP.ore.cap, Math.floor(C.ore))); P.credits = Math.max(0, Math.floor(C.cash || 0)); return P; }
 const campWealth = P => Math.max(0, Math.floor(P.credits || 0)) + Math.max(0, P.ore | 0);
 function campSpend(P, cost) { if (!(cost >= 0) || campWealth(P) < cost) return false; const c = Math.min(Math.max(0, Math.floor(P.credits || 0)), cost); P.credits = Math.max(0, Math.floor(P.credits || 0)) - c; P.ore = (P.ore | 0) - (cost - c); return true; }
-function campRefund(P, n) { if (n > 0) P.credits = Math.max(0, Math.floor(P.credits || 0)) + Math.floor(n); return P; }
+function campRefund(P, n) { if (!(n > 0)) return P; n = Math.floor(n); const o = Math.min(n, Math.max(0, CAMP.ore.cap - (P.ore | 0))); P.ore = (P.ore | 0) + o; P.credits = Math.max(0, Math.floor(P.credits || 0)) + (n - o); return P; }
 const campFunds = C => Math.floor(C.cash || 0) + Math.floor(C.ore);
 function campPay(C, cost) { const c = Math.min(C.cash || 0, cost); C.cash = (C.cash || 0) - c; C.ore -= cost - c; }
 const campAlive = C => C.ships.filter(u => u.hp > 0);

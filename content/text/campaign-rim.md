@@ -16,11 +16,11 @@ The words of Level 1 as the rim run (card space-game-l1-rim-missions): what the 
 | camp.say.rim7 | Pirates ahead. Cover the haulers. |
 | camp.say.rim8 | They are back. Cover the haulers. |
 | camp.say.contact | Unknown ships. Not pirates. Weapons hot. |
-| camp.say.sold | Sold {ore} ore for {cash}. |
+| camp.say.sold | Sold {ore} ore for {cash} credits. |
 | camp.o.ore | Mine ore: {got} of {need}. |
 | camp.o.cashin | Sell your ore at the Works: {got} of {need}. |
 | camp.b.sold | Sell {n} ore |
-| camp.ui.cash | CASH |
+| camp.ui.cash | CREDITS |
 | camp.ui.debriefhaulers | Haulers lost {n}   (-{pts}) |
 | camp.b.neutrals | Miners lost: {n} or fewer |
 | camp.bf.enemy.skiff.one | {n} pirate skiff |

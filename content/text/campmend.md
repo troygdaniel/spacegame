@@ -12,7 +12,7 @@ The words of repair in space with ore (card space-game-repair-with-ore; Troy, 22
 | camp.no.noward | No ship we protect is hurt. |
 | camp.no.farward | {name} is {km} km off. Come within {range} km. |
 | camp.no.nobuild | No ships are built now. Mend them with ore: {yardkey}. |
-| camp.hub.repair.ore | Ore in the store: {ore} |
+| camp.hub.repair.ore | Credits: {credits}     Ore in the store: {ore} |
 | camp.ui.tune.row.repairprice | Repair the hull: ore for a whole hull |
 | camp.ui.tune.row.wardprice | Repair a ship we protect: ore a point |
 | camp.ui.tune.row.fightermend | A fighter's mend: ore each |

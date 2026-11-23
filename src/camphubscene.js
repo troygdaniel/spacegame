@@ -175,7 +175,7 @@ class CampHub extends Phaser.Scene {
   }
   overRefit() { // the choices: what each changes (the numbers), what it costs, what you have; then the tech already fitted
     const P = this.P, H = this.hub, O = CAMP_HUBS.over, r = campHubRefit(P), at = Math.max(0, Math.min(2, H.sel | 0)), X = [24, 230, 790];
-    this.ovLine(0, 0, uiText('camp.hub.refit.ore', { ore: r.ore }), '#ffd37a'); this.ovLine(0, 360, uiText('camp.hub.refit.wing', { f: r.wing.fighters }), '#e8f6ff');
+    this.ovLine(0, 0, uiText('camp.hub.refit.ore', { ore: r.ore, credits: r.credits }), '#ffd37a'); this.ovLine(0, 360, uiText('camp.hub.refit.wing', { f: r.wing.fighters }), '#e8f6ff');
     this.ovLine(2, X[0], uiText('camp.room.col.choice'), '#6f8aa0'); this.ovLine(2, X[1], uiText('camp.room.col.change'), '#6f8aa0'); this.ovLine(2, X[2], uiText('camp.room.col.cost'), '#6f8aa0');
     r.items.forEach((it, k) => {
       const y = 3 + k * 3, on = k === at;

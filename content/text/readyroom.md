@@ -7,7 +7,7 @@ The words of the ready room's menu and its overlays (card space-game-ready-room-
 | key | text |
 |---|---|
 | camp.room.desc.board | Every mission of the campaign: the ones you have flown, with your scores, and the next one. Open it to read a briefing, or to pick one to fly again. |
-| camp.room.desc.refit | Spend ore on more ships for the next mission. It shows what each choice changes before you buy. |
+| camp.room.desc.refit | Spend credits, then ore, on more ships for the next mission. It shows what each choice changes before you buy. |
 | camp.room.desc.rank | Your pilot rank and how far the next one is. A higher rank puts more ships in your wing. |
 | camp.room.desc.launch | Take the cruiser out on mission {n} of {of}: {title}. The briefing was read here, so the flight starts at once. |
 | camp.room.desc.replay | Fly {title} again for a better score. Nothing in the story moves. |
@@ -20,9 +20,9 @@ The words of the ready room's menu and its overlays (card space-game-ready-room-
 | camp.room.col.cost | COST |
 | camp.room.item.fighters | Fighter |
 | camp.room.change.fighters | Fighters in your wing: {from} to {to} |
-| camp.room.have.ship | You have {ore} ore. Bought here: {n} of {most}. |
+| camp.room.have.ship | You have {credits} credits and {ore} ore. Bought here: {n} of {most}. |
 | camp.room.can | You can buy it. |
-| camp.room.need | Not yet: {need} more ore. |
+| camp.room.need | Not yet: {need} more credits or ore. |
 | camp.room.most | No more: {most} of {most} bought. |
 | camp.room.cost | {cost} ore |
 | camp.room.refit.techs | FITTED TECH |

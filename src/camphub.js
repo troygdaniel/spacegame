@@ -188,16 +188,16 @@ function campHubTechChange(id, P) { // P (optional): the pilot's progress, for t
 }
 function campHubRefit(P) {
   const b = P.bonus || {};
-  return { ore: P.ore | 0, techs: P.techs.filter(t => CAMP.tech[t]).map(id => ({ id, name: uiText('camp.tech.' + id + '.name'), text: uiText('camp.tech.' + id + '.text'), change: campHubTechChange(id, P) })), wing: campHubWing(P),
+  return { ore: P.ore | 0, credits: Math.max(0, Math.floor(P.credits || 0)), techs: P.techs.filter(t => CAMP.tech[t]).map(id => ({ id, name: uiText('camp.tech.' + id + '.name'), text: uiText('camp.tech.' + id + '.text'), change: campHubTechChange(id, P) })), wing: campHubWing(P),
       extra: { fighters: b.fighters | 0 }, most: CAMP.refit.most, fc: CAMP.refit.fighterCost, items: campHubRefitItems(P) };
 }
 // the refit's choices, each with what it changes (the numbers), what it costs, what you have, and whether you can have it now
 function campHubRefitItems(P) {
-  const b = P.bonus || {}, ore = P.ore | 0, w = campHubWing(P), most = CAMP.refit.most;
+  const b = P.bonus || {}, ore = P.ore | 0, credits = Math.max(0, Math.floor(P.credits || 0)), funds = campWealth(P), w = campHubWing(P), most = CAMP.refit.most; // the refit spends credits first, then ore (campSpend, src/campaign.js: card space-game-credits-apart-from-ore)
   const ship = (id, have, cost) => {
-    const n = b[id] | 0, full = n >= most, ok = !full && ore >= cost;
-    return { id, name: uiText('camp.room.item.' + id), change: uiText('camp.room.change.' + id, { from: have, to: have + 1 }), cost, have: uiText('camp.room.have.ship', { ore, n, most }), ok,
-      status: ok ? uiText('camp.room.can') : full ? uiText('camp.room.most', { most }) : uiText('camp.room.need', { need: cost - ore }) };
+    const n = b[id] | 0, full = n >= most, ok = !full && funds >= cost;
+    return { id, name: uiText('camp.room.item.' + id), change: uiText('camp.room.change.' + id, { from: have, to: have + 1 }), cost, have: uiText('camp.room.have.ship', { ore, credits, n, most }), ok,
+      status: ok ? uiText('camp.room.can') : full ? uiText('camp.room.most', { most }) : uiText('camp.room.need', { need: cost - funds }) };
   };
     return [ship('fighters', w.fighters, CAMP.refit.fighterCost)];
   }
@@ -207,15 +207,15 @@ function campHubBuy(P, what) {
   if (!P.bonus) P.bonus = { fighters: 0 };
   const cost = campHubCost(what);
   if ((P.bonus[what] | 0) >= CAMP.refit.most) return { ok: false, key: 'camp.hub.most', vars: { most: CAMP.refit.most } };
-  if ((P.ore | 0) < cost) return { ok: false, key: 'camp.hub.noore', vars: { need: cost, have: P.ore | 0 } };
-  P.ore = (P.ore | 0) - cost; P.bonus[what] = (P.bonus[what] | 0) + 1;
-  return { ok: true, key: 'camp.hub.boughtf', vars: { cost, ore: P.ore } };
+  if (!campSpend(P, cost)) return { ok: false, key: 'camp.hub.noore', vars: { need: cost, have: campWealth(P) } }; // credits first, then ore
+  P.bonus[what] = (P.bonus[what] | 0) + 1;
+  return { ok: true, key: 'camp.hub.boughtf', vars: { cost, ore: P.ore, credits: P.credits } };
 }
 function campHubGiveBack(P, what) {
   if (!P.bonus) P.bonus = { fighters: 0 };
   if (!(P.bonus[what] | 0)) return { ok: false, key: 'camp.hub.nothing', vars: {} };
-  const cost = campHubCost(what); P.bonus[what]--; P.ore = Math.min(CAMP.ore.cap, (P.ore | 0) + cost);
-  return { ok: true, key: 'camp.hub.soldf', vars: { cost, ore: P.ore } };
+  const cost = campHubCost(what); P.bonus[what]--; campRefund(P, cost); // given back as ore while the store has room, the rest as credits (it was ore, cut to the store)
+  return { ok: true, key: 'camp.hub.soldf', vars: { cost, ore: P.ore, credits: P.credits } };
 }
 function campHubRank(P) {
   let st = null; try { st = typeof campRankStatus === 'function' ? campRankStatus(P) : null; } catch (e) { st = null; }
@@ -227,7 +227,7 @@ function campHubRank(P) {
 
 // ---- the rows ----
 CAMP_HUB.note.board = P => uiText('camp.hub.note.board', { done: campHubFlown(P), all: campHubAll() });
-CAMP_HUB.note.refit = P => uiText('camp.hub.note.refit', { ore: P.ore | 0 });
+CAMP_HUB.note.refit = P => uiText('camp.hub.note.refit', { ore: P.ore | 0, credits: Math.max(0, Math.floor(P.credits || 0)) });
 CAMP_HUB.note.rank = P => { const rk = campHubRank(P); return rk.ranked ? rk.name : uiText('camp.hub.note.points', { points: rk.points }); };
 CAMP_HUB.note.launch = (P, ctx) => { const t = campHubTarget(P, ctx && ctx.hub); return uiText(t.replay && !t.skipped ? 'camp.hub.note.replay' : (P && (P.levelDone | 0) === t.level && t.level === (P.level | 0)) ? 'camp.hub.note.pick' : 'camp.hub.note.launch', { n: t.i + 1 }); };
 function campHubRows(P, ids, ctx) { // ctx: the scene's data (a dock passes { dock, camp, P }): what a row's note may read besides the progress

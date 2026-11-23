@@ -12,7 +12,7 @@ The words of the Campaign's ready room, the hub between missions (card space-gam
 | camp.hub.row.rank | RANK |
 | camp.hub.row.launch | LAUNCH |
 | camp.hub.note.board | {done} of {all} flown |
-| camp.hub.note.refit | {ore} ore |
+| camp.hub.note.refit | {credits} credits, {ore} ore |
 | camp.hub.note.points | {points} points |
 | camp.hub.note.launch | mission {n} |
 | camp.hub.foot.board | Enter  open the missions |
@@ -35,11 +35,11 @@ The words of the Campaign's ready room, the hub between missions (card space-gam
 | camp.hub.brief.obj | OBJECTIVES |
 | camp.hub.brief.best | Best so far: {score} points, flown {n} |
 | camp.hub.brief.new | Not flown yet. |
-| camp.hub.refit.ore | Ore in the store: {ore} |
+| camp.hub.refit.ore | Credits: {credits}     Ore in the store: {ore} |
 | camp.hub.refit.wing | Wing for the next mission: {f} fighters |
-| camp.hub.boughtf | A fighter joins the wing. {ore} ore left. |
-| camp.hub.soldf | A fighter given back. {ore} ore. |
-| camp.hub.noore | Not enough ore: {need} needed, {have} in the store. |
+| camp.hub.boughtf | A fighter joins the wing. {credits} credits and {ore} ore left. |
+| camp.hub.soldf | A fighter given back. {credits} credits and {ore} ore. |
+| camp.hub.noore | Not enough: {need} needed, {have} in credits and ore. |
 | camp.hub.most | No more: {most} extra at most. |
 | camp.hub.nothing | Nothing to give back. |
 | camp.hub.rank.name | Rank: {name}  ({n} of {of}) |
