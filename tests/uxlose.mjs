@@ -53,7 +53,7 @@ check('with the kit off the four keys do nothing in the scene: the battle is sti
 g.run(`__cards.length = 0; F.showPause();`);
 check('and the pause card has no DEBUG line', !J('__cards.pop().lines').some(l => /DEBUG/.test(l)));
 g.run(`campDebugSet(true); window.F = __fake(1); F.onKey({ code: 'Enter' }); __cards.length = 0; F.showPause();`);
-check('with the kit on the pause card has the DEBUG line', J('__cards.pop().lines').some(l => /^DEBUG {2}\] next level/.test(l)));
+check('with the kit on the pause card has the DEBUG line', J('__cards.pop().lines').some(l => /^DEBUG {2}' next level/.test(l)));
 g.run(`window.F = __fake(1); F.onKey({ code: 'Enter' }); __cards.length = 0; F.onKey({ code: 'Backslash' }); F.update(0, 33);`);
 check('and the backslash wins the level, as it did', J('F.camp.result') === 'won', J('[F.camp.result, F.mode]').join());
 g.run('campDebugSet(false)');

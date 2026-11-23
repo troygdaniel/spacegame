@@ -14,14 +14,14 @@
 // (20 px type, 520 px wide, 580 px high). tests/controlshelp.mjs checks that, that every key named here is bound, and that every key the
 // Space scene binds is named here.
 // ---------- the Campaign's lists (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026: "one list per hand", then "shortcut keys that take you straight to the sub-list") ----------
-// LEFT HAND, the fleet: Q opens the FLEET list, which is a row for each part of the wing and nothing else (card space-game-squad-tint; Troy, 22 Nov 2026: nothing listed twice): W ALL SQUADS, E RED SQUAD, R GREEN SQUAD, T YELLOW SQUAD (the fighters are split into three squads: card space-game-fighter-squads),
+// LEFT HAND, the fleet: Q opens the FLEET list, which is a row for each part of the wing and nothing else (card space-game-squad-tint; Troy, 22 Nov 2026: nothing listed twice): W ALL SQUADS (launch, mine and the rest of the wing's orders; the three pilots are Red, Green and Yellow: card space-game-three-pilots), and E R T are NOT lists any more (card space-game-bracket-select-orders; Troy, 23 Nov 2026, like X-Wing): the order keys, E attack, R guard, T recall, which act on the two selections,
 // and CONVOY, which has no key (a row of the Q list: Enter or Right on it opens that part; there is no escort ship: card space-game-cut-escorts, Troy, 22 Nov 2026). The first row of Q is All squads and the first row of that list is LAUNCH THE WING, so Q, Enter, Enter launches everything, and so does W, Enter.
 // RIGHT HAND, the ship, mirrored: P opens the SHIP list with a row for each part: O POWER (shields first: O, Enter adds a shield pip; card space-game-ship-shortcuts-o-power, Troy, 22 Nov 2026), I AUTOPILOT, U DOCK AND REPAIR.
-// A part's key opens its list directly, at any time (E, Enter: the fighters attack the target); Enter or a click on the part's row in Q or P opens it too. Nothing is on the screen until a key is pressed, and only one list is open at a time.
+// A part's key opens its list directly, at any time (W, Enter: launch the wing); Enter or a click on the part's row in Q or P opens it too. Nothing is on the screen until a key is pressed, and only one list is open at a time.
 // In an open list Up and Down move the highlight, Enter gives the order (the list closes when the order is taken; a power row leaves it open, to be given again), Left goes back to the list it is a part of, the list's own key closes it.
-// Esc goes back ONE STEP, to where you came from (card space-game-order-target-pick): a target sub-list to its list, a list a row of Q or P opened back to Q or P, a list its own key opened (Q W E R T P O I U) is closed; with nothing open, Esc pauses.
-// The battle runs at its own speed while a list is open (card space-game-no-command-slowdown). NO KEY IS REUSED IN FLIGHT: each of Q W E R and P O I U opens one list and means nothing else. The direct keys are only:
-//   Arrows fly (Up thrust, Left and Right turn, Down brake)   Space the turrets   Enter a missile at the target (only while no list is open)   A D the last or next target   S the nearest threat   X clears it
+// Esc goes back ONE STEP, to where you came from (card space-game-order-target-pick): a target sub-list to its list, a list a row of Q or P opened back to Q or P, a list its own key opened (Q W P O I U) is closed; with nothing open, Esc pauses.
+// The battle runs at its own speed while a list is open (card space-game-no-command-slowdown). NO KEY IS REUSED IN FLIGHT: each of Q W and P O I U opens one list and means nothing else. The direct keys are only:
+//   Arrows fly (Up thrust, Left and Right turn, Down brake)   Space the turrets   Enter a missile at the target (only while no list is open)   [ ] the last or next HOSTILE (the target)   A D the last or next FRIEND (a ship you protect, or one of your pilots)   S the nearest threat   X clears both   E the pilots attack the selected hostile   R guard the selected friend   T recall (a selected pilot takes the order alone, else all three do)
 //   J K L a pip of power to the shields, the engines, the weapons   ; balance (the POWER list has them as rows too)   Tab the map   - = zoom, Backspace resets it   H keys   M mute   Esc pause (when no list is open)   / types an order   . talks
 // The arrows and Enter belong to whatever list is open: a list of these first, else the ship (fly, missile). (No pop-up takes them: card space-game-no-pilot-popups, Troy, 23 Nov 2026.)
 // A row that can never be used in this mission (the blink without its tech, the dock where there is no outpost, the CONVOY part's row in Q with no convoy) is left out (its `when`). A row that cannot be used NOW stays, greyed, with the reason beside it.
@@ -51,9 +51,6 @@ const CAMP_PANELS = {
   panels: [
     { id: 'fleet', side: 'left', key: 'Q', code: 'KeyQ', title: 'FLEET ORDERS', tab: 'Fleet', name: 'the fleet list', rows: [
       { id: 'gsquads', open: 'squads', label: 'All squads', help: 'Orders for all three squads of fighters' },
-      { id: 'gred', open: 'red', label: 'Wedge', help: 'Wedge\'s orders' },
-      { id: 'ggreen', open: 'green', label: 'Kara', help: 'Kara\'s orders' },
-      { id: 'gyellow', open: 'yellow', label: 'Apollo', help: 'Apollo\'s orders' },
       { id: 'gconvoy', open: 'convoy', when: 'convoy', label: 'Convoy', help: 'Orders for the ships you escort' }
     ] },
     { id: 'convoy', parent: 'fleet', side: 'left', key: '', code: '', title: 'CONVOY ORDERS', tab: '', name: 'the convoy list', rows: [ // orders for the escorted ships (src/campconvoy.js). Voice and the strip: "tuck in", "run for it", "carry on", "haulers hold"
@@ -70,27 +67,6 @@ const CAMP_PANELS = {
       { id: 'fguardt', wing: ['fighters', 'guard'], pick: 'guard', label: 'Guard the target', help: 'All squads guard a ship or outpost you pick' }, // card space-game-guard-the-target (Troy, 22 Nov 2026): the ships you protect and the outposts; one is taken at once, several open the target sub-list (src/camppick.js)
       { id: 'frecall', wing: ['fighters', 'recall'], label: 'Recall', help: 'All squads fly home to the bay' },
       { id: 'fmine', wing: ['fighters', 'mine'], pick: 'field', label: 'Mine ore', help: 'All squads mine ore' }
-    ] },
-    { id: 'red', parent: 'fleet', side: 'left', key: 'E', code: 'KeyE', title: 'WEDGE', tab: 'Wedge', name: 'the Wedge list', rows: [
-      { id: 'redattack', wing: ['red', 'attack'], pick: 'enemy', label: 'Attack the target', help: 'Wedge attacks the target' },
-      { id: 'redescort', wing: ['red', 'escort'], pick: 'escort', label: 'Escort the convoy', help: 'Wedge goes to the convoy' },
-      { id: 'redguard', wing: ['red', 'guard'], label: 'Guard the cruiser', help: 'Wedge guards the cruiser' },
-      { id: 'redguardt', wing: ['red', 'guard'], pick: 'guard', label: 'Guard the target', help: 'Wedge guards a ship or outpost you pick' },
-      { id: 'redrecall', wing: ['red', 'recall'], label: 'Recall', help: 'Wedge flies home to the bay' }
-    ] },
-    { id: 'green', parent: 'fleet', side: 'left', key: 'R', code: 'KeyR', title: 'KARA', tab: 'Kara', name: 'the Kara list', rows: [
-      { id: 'greenattack', wing: ['green', 'attack'], pick: 'enemy', label: 'Attack the target', help: 'Kara attacks the target' },
-      { id: 'greenescort', wing: ['green', 'escort'], pick: 'escort', label: 'Escort the convoy', help: 'Kara goes to the convoy' },
-      { id: 'greenguard', wing: ['green', 'guard'], label: 'Guard the cruiser', help: 'Kara guards the cruiser' },
-      { id: 'greenguardt', wing: ['green', 'guard'], pick: 'guard', label: 'Guard the target', help: 'Kara guards a ship or outpost you pick' },
-      { id: 'greenrecall', wing: ['green', 'recall'], label: 'Recall', help: 'Kara flies home to the bay' }
-    ] },
-    { id: 'yellow', parent: 'fleet', side: 'left', key: 'T', code: 'KeyT', title: 'APOLLO', tab: 'Apollo', name: 'the Apollo list', rows: [
-      { id: 'yellowattack', wing: ['yellow', 'attack'], pick: 'enemy', label: 'Attack the target', help: 'Apollo attacks the target' },
-      { id: 'yellowescort', wing: ['yellow', 'escort'], pick: 'escort', label: 'Escort the convoy', help: 'Apollo goes to the convoy' },
-      { id: 'yellowguard', wing: ['yellow', 'guard'], label: 'Guard the cruiser', help: 'Apollo guards the cruiser' },
-      { id: 'yellowguardt', wing: ['yellow', 'guard'], pick: 'guard', label: 'Guard the target', help: 'Apollo guards a ship or outpost you pick' },
-      { id: 'yellowrecall', wing: ['yellow', 'recall'], label: 'Recall', help: 'Apollo flies home to the bay' }
     ] },
     { id: 'ship', side: 'right', key: 'P', code: 'KeyP', title: 'SHIP ORDERS', tab: 'Ship', name: 'the ship list', rows: [
       { id: 'gpower', open: 'power', label: 'Power', help: 'Shields, engines, weapons' },
@@ -131,8 +107,10 @@ const CAMP_KEYS = {
   missile: { k: 'Enter', codes: ['Enter', 'NumpadEnter'] },                            // a homing missile at the target, only while no list and no call has Enter
   up: { k: 'Up', codes: ['ArrowUp'] }, down: { k: 'Down', codes: ['ArrowDown'] }, pick: { k: 'Enter', codes: ['Enter', 'NumpadEnter'] }, // in an open list (Q, P, a pilot's call): move the highlight, give the order
   map: { k: 'Tab', codes: ['Tab'] },                                                   // open and close the map (src/campmap.js CAMPMAP.key says the same)
-  next: { k: 'D', codes: ['KeyD'] }, last: { k: 'A', codes: ['KeyA'] },               // the next and the last target
-  near: { k: 'S', codes: ['KeyS'] }, clear: { k: 'X', codes: ['KeyX'] },              // the nearest threat; clear the target (in the map: clear the trip)
+  next: { k: ']', codes: ['BracketRight'] }, last: { k: '[', codes: ['BracketLeft'] }, // the next and the last HOSTILE (the target; card space-game-bracket-select-orders: the brackets are the hostiles' keys)
+  fnext: { k: 'D', codes: ['KeyD'] }, flast: { k: 'A', codes: ['KeyA'] },             // the next and the last FRIEND: the ships you protect and your three pilots (the second selection, C.sel)
+  near: { k: 'S', codes: ['KeyS'] }, clear: { k: 'X', codes: ['KeyX'] },              // the nearest threat; clear both selections (in the map: clear the trip)
+  attack: { k: 'E', codes: ['KeyE'] }, guard: { k: 'R', codes: ['KeyR'] }, recall: { k: 'T', codes: ['KeyT'] }, // the order keys act on the two selections (src/camptarget.js campSelOrder): E the pilots attack the selected hostile, R guard the selected friend, T fly home; a selected pilot takes the order alone
   shields: { k: 'J', codes: ['KeyJ'], sys: 'shields' }, engines: { k: 'K', codes: ['KeyK'], sys: 'engines' }, weapons: { k: 'L', codes: ['KeyL'], sys: 'weapons' }, balance: { k: ';', codes: ['Semicolon'], sys: 'balance' }, // the ship's power (docs/CAMPAIGN.md "Ship systems"): a pip to a system, in the dials' order; ; is 2 / 2 / 2
   zoomin: { k: '=', codes: ['Equal', 'NumpadAdd'] }, zoomout: { k: '-', codes: ['Minus', 'NumpadSubtract'] }, zoomreset: { k: 'Backspace', codes: ['Backspace'] }, // src/campzoom.js reads these codes
   strip: { k: '/', codes: ['Slash'] }, voice: { k: '.', codes: ['Period'] },          // type an order, hold to speak one (src/cmdstrip.js, src/shipcomputer.js, src/listen.js read these in the Campaign)
@@ -144,7 +122,7 @@ const campKeyCodes = id => (CAMP_KEYS[id] || { codes: [] }).codes;
 const campKeyIs = (id, code) => campKeyCodes(id).indexOf(code) >= 0;
 // the rows the H page and Settings list for the lists: each list's key and what it is, then the keys every open list shares
 function campPanelKeyRows() {
-  const sub = 'THE ORDER LISTS', what = { fleet: 'Fleet orders, and the lists below', convoy: 'Convoy: tuck in, run, hold, carry on', squads: 'All squads: launch, attack, recall', red: 'Wedge: attack, guard, recall', green: 'Kara: attack, guard, recall', yellow: 'Apollo: attack, guard, recall', ship: 'Ship orders, and the lists below', nav: 'Autopilot: goal, target, fast burn', power: 'Power: pips, balance, emergency', yard: 'Dock, repair the hull and our ships' };
+  const sub = 'THE ORDER LISTS', what = { fleet: 'Fleet orders, and the lists below', convoy: 'Convoy: tuck in, run, hold, carry on', squads: 'All squads: launch, attack, recall', ship: 'Ship orders, and the lists below', nav: 'Autopilot: goal, target, fast burn', power: 'Power: pips, balance, emergency', yard: 'Dock, repair the hull and our ships' };
   return CAMP_PANELS.panels.filter(p => p.key).map(p => ({ k: [p.key], t: what[p.id] || p.title, sub })).concat([
     { k: [CAMP_KEYS.up.k, CAMP_KEYS.down.k], t: 'In a list: move the highlight', sub }, { k: [CAMP_KEYS.pick.k], t: 'In a list: give the order', sub }, { k: ['Left', 'Right'], t: 'In a list: back, or into a part', sub }, { k: [CAMP_KEYS.pause.k], t: 'Back a step, or close the list', sub }]);
 }
@@ -245,8 +223,10 @@ const CONTROLS = [
     { k: ['Space'], t: 'Hold: turrets fire at ships in reach', sub: 'FLY AND FIRE' },
     { k: ['Enter'], t: 'Missile at the target (no list open)', sub: 'FLY AND FIRE' },
     { k: ['-', '='], t: 'Zoom; Backspace resets; drag pans', sub: 'FLY AND FIRE' }, // - and the wheel go out to the whole system on the map; = and the keypad's + and - too; Backspace is the reset (src/campzoom.js: all three from CAMP_KEYS) // drag: the left button held and moved pans the view and the Tab map (src/campdrag.js): it stays where it is put; the wheel zooms about the pointer; a RECENTRE mark, Backspace (this reset) or the arrows held bring it back (a row of its own did not fit the H page)
-    { k: ['A', 'D'], t: 'Last or next target (nearest first)', sub: 'THE TARGET' }, // ONE target for everything: Attack goes at it, Fly to the target flies to it, Enter fires at it
-    { k: ['S', 'X', 'F'], t: 'S nearest, X clears it, F looks at it', sub: 'THE TARGET' }, // F: the camera glides to the target, a ship a list is on, or a squad's leader, and follows it (src/campfocus.js); Backspace (the zoom row) brings it back
+    { k: ['[', ']'], t: 'Last or next hostile (nearest first)', sub: 'THE TARGET' }, // the hostile selection (C.tgt): Fly to the target flies to it, Enter fires at it, E sends the pilots at it
+    { k: ['A', 'D'], t: 'Last or next friend: a pilot or a ship', sub: 'THE TARGET' }, // the friendly selection (C.sel): the ships you protect and your three pilots; R sends the pilots to guard it
+    { k: ['E', 'R', 'T'], t: 'Orders: attack, guard, recall', sub: 'THE TARGET' }, // a selected pilot takes the order alone, else all three do
+    { k: ['S', 'X', 'F'], t: 'S nearest, X clears both, F looks at it', sub: 'THE TARGET' }, // F: the camera glides to the target, a ship a list is on, or a squad's leader, and follows it (src/campfocus.js); Backspace (the zoom row) brings it back
     { k: ['J', 'K', 'L'], t: 'Power to shields, engines, weapons', sub: 'POWER' },
     { k: [';'], t: 'Balance the power: 2 / 2 / 2', sub: 'POWER' },
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },

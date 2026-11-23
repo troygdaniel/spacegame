@@ -236,7 +236,7 @@ try {
     await keyOn('Backslash'); await t.run(2600); await snap('c30-won-story');
     await keyOn('Enter'); await t.run(600); await snap('c31-tech-pick');
     await t.goto('?campaign=1&debug=1', ROOT); await begin(); await toPlay(); await t.run(500);
-    await keyOn('BracketLeft'); await t.run(1800); await snap('c32-lost');
+    await keyOn('Comma'); await t.run(1800); await snap('c32-lost');
     await t.goto('?campaign=1', ROOT); await begin(); await toPlay(); await t.run(1500);
     await order('launch'); await t.run(2500);
     await keyOn('Escape'); await t.run(500); await snap('c33-pause');
