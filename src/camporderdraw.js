@@ -77,7 +77,7 @@ function campCallPaint(s) {
 }
 
 function campCallKey(s, code) {
-  if (!campCallHasKeys(s)) return false;
+  if (!campCallHasKeys(s)) return !!(s && s.camp && s.mode === 'play' && !s.mp && !campCallListOpen(s) && campKeyIs('pick', code) && typeof campCallGrace === 'function' && campCallGrace(s.camp)); // the call closed by itself a moment ago: the Enter that was on its way to it is swallowed, not fired as a missile
   const up = campKeyIs('up', code), down = campKeyIs('down', code);
   if (up || down) { campCallHold(s.camp); const at = campCallSel(s), n = campCallView(s.camp).rows.length; s.callSel.at = (at + (down ? 1 : -1) + n) % n; s.callSel.note = ''; return true; }
   if (code === 'ArrowLeft' || code === 'ArrowRight') return true; // the ship coasts while the call has the arrows

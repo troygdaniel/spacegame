@@ -35,7 +35,7 @@ function campTorpSay(C, kind, key, vars) {
   C.torpSay[kind] = C.t; campSay(C, key, vars);
 }
 // a ship by name for a line of words: a hauler or a neutral has its own, the cruiser is "us" (a line of its own)
-const campTorpName = u => u.kind === 'freighter' ? campConvoyName(u) : (u.cname || u.kind);
+const campTorpName = u => u.kind === 'freighter' ? campConvoyName(u) : (u.cname || (typeof campWingShipName === 'function' ? campWingShipName(null, u) : u.kind)); // a ship of the wing in words ("our fighter"): a fighter on a Mine order is prey (campPreyKind), and the radio said "Torpedo boat arming on fighter." (card space-game-hunt-l1-pacing)
 const campTorpKey = (u, stem) => stem + (u.kind === 'carrier' ? '.us' : '.name');
 
 // what a boat goes for: the hauler its wave names, else the best of its prey by distance times weight (the prey the row names when it is there), else the cruiser
