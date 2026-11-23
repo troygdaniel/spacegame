@@ -8,6 +8,7 @@
 //   D. the scene half on a stand-in: hidden with no friend, shown with one, in the friend's colour, on the left, both displays at once when a hostile and a friend are picked, hidden behind a card or the map
 //   E. Q (all three pilots picked; card space-game-q-all-pilots-panel): the display says All pilots with a row for each pilot out, its name and its hull, and nothing else; back to one ship and away again
 //   F. the square marker: the friend and the hostile and the fighters an order went to are all drawn by the one function; no ring is left in the scene; the scene calls the display every frame
+//   G. an open left list (W, 7 rows to y 528) no longer covers the friend box: the box steps right of it while it is open, and back when it closes (card space-game-w-list-covers-friend-box)
 // Run: node tests/campfdisp.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
@@ -148,6 +149,39 @@ console.log('E. Q: all three pilots (card space-game-q-all-pilots-panel)');
   g.run(`window.R1 = __foe(900, 0); C.tgt = R1.id; campTdispSync(S, 4500);`);
   check('a hostile picked as well: its display is in the other corner as ever (Q does not touch the target display)', /^Raider \d+$/.test(J('S.hud.tdisp.name.text')) && J('S.hud.tdisp.name.x') === J('campTdispBox().x') + 10 && J(`${V}.name.text`) === 'All pilots');
   check('the words are the key camp.sel.all (campkeys.md) and the display adds none of its own', J(`uiText('camp.sel.all')`) === 'All pilots' && !/uiText\('camp\.[a-z.]+'/.test(readFileSync(new URL('../src/camptdispscene.js', import.meta.url), 'utf8').split('card space-game-q-all-pilots-panel')[1].replace(/uiText\('camp\.tdisp\.[a-z.]+'/g, '')));
+}
+
+console.log('G. an open list and the friend box (card space-game-w-list-covers-friend-box)');
+{
+  g.run('__out()'); g.run('window.S = __scene()');
+  g.run(`window.__hit = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; window.__open = id => { campPanelGo(P, C, id); S.pnl = { view: campPanelView(P, C) }; const d = campPanelDef(id); return campPanelsGeometry(d, S.pnl.view ? S.pnl.view.total : 0); };`);
+  g.run(`C.sel = 'pilot:red'; campFdispSync(S, 1000);`);
+  const home = J('campTdispBox(true)'), V = 'S.hud.fdisp';
+  check('no list open: the box is in its corner', J(`${V}.dx`) === 0 && J(`${V}.name.x`) === home.x + 10);
+  const W = J(`(() => { const G = __open('squads'); return { x: G.x, y: G.y, w: G.w, h: G.h, n: G.n }; })()`);
+  check('the W list is the card\'s case: seven rows, down past the top of the corner box (so it covers it where it stands)', W.n === 7 && W.y + W.h > home.y && W.x < home.x + home.w, JSON.stringify([W, home]));
+  g.run(`window.__c0 = ${V}.g.clears; campFdispSync(S, 1100);`);
+  const sh = J(`campTdispBox(true, ${V}.dx)`);
+  check('with the W list open the box steps right of it, CAMP.tdisp.beside px from its edge, at the same height', J(`${V}.dx`) === W.x + W.w + J('CAMP.tdisp.beside') - home.x && sh.x === W.x + W.w + J('CAMP.tdisp.beside') && sh.y === home.y, JSON.stringify([sh, W]));
+  check('so the list and the box do not touch: both show', !J(`__hit(${JSON.stringify(W)}, ${JSON.stringify(sh)})`) && sh.x + sh.w <= 1280);
+  check('its name and its picture are in the box where it is now, and the frame and bars were drawn again there', J(`${V}.name.x`) === sh.x + 10 && J(`${V}.pic.x`) > sh.x && J(`${V}.pic.x`) < sh.x + sh.w && J(`${V}.g.clears`) === J('__c0') + 1);
+  g.run(`window.__c1 = ${V}.g.clears; campFdispSync(S, 1200); campFdispSync(S, 1300);`);
+  check('a steady frame with the list open costs nothing (the box is not drawn again while it stays there)', J(`${V}.g.clears`) === J('__c1'));
+  g.run(`campPanelClose(P); delete S.pnl; campFdispSync(S, 1400);`);
+  check('the list closes: the box goes back to its corner, drawn again there', J(`${V}.dx`) === 0 && J(`${V}.name.x`) === home.x + 10 && J(`${V}.g.clears`) === J('__c1') + 1);
+  const Cv = J(`(() => { const G = __open('convoy'); return { x: G.x, y: G.y, w: G.w, h: G.h, n: G.n }; })()`);
+  g.run(`campFdispSync(S, 1500);`);
+  check('a short list (the convoy\'s, four rows, ending above the box) does not move it', Cv.y + Cv.h <= home.y && J(`${V}.dx`) === 0, JSON.stringify([Cv, home]));
+  g.run(`campPanelClose(P); delete S.pnl; __open('ship'); campFdispSync(S, 1600);`);
+  check('a right list (the ship list) never reaches this corner: the box stays', J(`${V}.dx`) === 0);
+  g.run(`campPanelClose(P); delete S.pnl;`);
+  const full = J(`(() => { const out = {}; CAMP_PANELS.panels.filter(d => d.side !== 'right').forEach(d => { const G = campPanelsGeometry(d), B = campTdispBox(true), dx = campFdispDx({ pn: Object.assign(campPanelNew(), { open: d.id }), pnl: null }), A = campTdispBox(true, dx); out[d.id] = { hits: __hit(G, B), dx, clear: !__hit(G, A), inside: A.x + A.w <= 1280 }; }); return out; })()`);
+  check('every left list at its full height, with the box where it would put it: no overlap, and on the screen', Object.values(full).every(r => r.clear && r.inside) && Object.keys(full).length >= 3, JSON.stringify(full));
+  check('and the ones that reach the corner are the ones that move it (the ones that do not leave it alone)', Object.values(full).every(r => r.hits === (r.dx !== 0)), JSON.stringify(full));
+  g.run(`C.sel = 'all'; __open('squads'); campFdispSync(S, 2000);`);
+  const shAll = J(`campTdispBox(true, ${V}.dx)`);
+  check('Q (all pilots) steps right of the open list too, rows and title with it', J(`${V}.dx`) !== 0 && J(`${V}.name.x`) === shAll.x + 10 && J(`${V}.rows[0].name.x`) === shAll.x + J('CAMP_FDISP_ALL.name') && J(`${V}.rows[0].num.x`) === shAll.x + J('CAMP_FDISP_ALL.numRight'));
+  check('the scene\'s own panel view is read (the stand-in has none: the full height is taken); the numbers are in the table with their comments', /s\.pnl && s\.pnl\.view \? s\.pnl\.view\.total : 0/.test(readFileSync(new URL('../src/camptdispscene.js', import.meta.url), 'utf8')) && /beside: 12, +\/\/ px between an open left list/.test(readFileSync(new URL('../src/campaign.js', import.meta.url), 'utf8')));
 }
 
 console.log('F. the square marker, and no rings');

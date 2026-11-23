@@ -20,7 +20,7 @@
 //   campSelAll(C)               Q (card space-game-q-selects-all): all three pilots are the friend (C.sel 'all'; campSelNow: kind 'all', name 'All pilots', units: the ships out); the next E R T goes to all three. A and D step from it as from no friend
 //   campSelUnits(C)             { hostile, friend, friends }: the ships selected now (units, or null); friend is the one ship a pilot or a ward is (null for All pilots), friends every ship the friend pick is (three for Q); what the camera, the brackets and the displays read (src/campselzoom.js, src/camptargetdraw.js, src/camptdisp.js)
 //   campSelClear(C)             X: no friend
-//   campSelRowFor(C, kind)      the selection a W row acts on (card space-game-w-uses-selection): 'hostile' the target, 'friend' the ship you protect that is selected: { id, name, unit } or { code: 'nohostile' | 'nofriend' };   campSelWho(C)   'Kara' or 'all squads': who takes the order
+//   campSelRowFor(C, kind)      the selection a W row acts on (card space-game-w-uses-selection): 'hostile' the target, 'friend' the ship you protect that is selected: { id, name, unit } or { code: 'nohostile' | 'nofriend' | 'pilotguard' (a pilot is the friend picked) };   campSelWho(C)   'Kara' or 'all squads': who takes the order
 //   campSelOrder(C, verb, how, dry)   E 'attack', R 'guard', T 'recall' (campWingOrder): the group is the selected pilot's squad, else all three; attack goes at the hostile (none picked: S picks the nearest first), guard at the friend that is a ship (none or a pilot: the cruiser)
 const CAMP_TGT = '@target'; // the arg of campOrder(C, 'attack' | 'missiles', CAMP_TGT): the picked target (campDo in src/campaign.js)
 function campTgtList(C) {
@@ -97,7 +97,7 @@ function campSelUnits(C) { const f = campSelNow(C); return { hostile: campTgtNow
 // the selection a row of the W list acts on (card space-game-w-uses-selection): kind 'hostile' is the hostile [ ] S picked, 'friend' the ship you protect that A D picked (a pilot or all three are no ship to guard); { id, name } or { code } (the refusal) when there is none
 function campSelRowFor(C, kind) {
   if (kind === 'hostile') { const u = campTgtNow(C); return u ? { id: u.id, name: campNavUnitName(u), unit: u } : { code: 'nohostile' }; }
-  const f = campSelNow(C); return f && f.kind === 'ward' ? { id: f.id, name: f.name, unit: f.unit } : { code: 'nofriend' };
+  const f = campSelNow(C); return f && f.kind === 'ward' ? { id: f.id, name: f.name, unit: f.unit } : { code: f ? 'pilotguard' : 'nofriend' }; // a pilot (or all three, Q) is picked: it cannot be guarded, so the row says so (card space-game-w-list-covers-friend-box); nobody picked: pick one
 }
 const campSelWho = C => { const f = campSelNow(C); return f && f.kind === 'pilot' ? f.name : uiText('camp.w.all'); }; // who takes the order of a W row: a selected pilot alone, else all squads
 function campSelOrder(C, verb, how, dry) {

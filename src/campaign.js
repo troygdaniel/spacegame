@@ -158,6 +158,7 @@ const CAMP = {
   tdisp: {                                 // the target display, in the corner the radar had (card space-game-target-display; Troy, 22 Nov 2026: "the bottom right mini map can go away, to make way to show the target selected"; src/camptdisp.js, src/camptdispscene.js)
     right: 18,                             // px from the right edge of the screen to the box
     left: 18,                              // px from the left edge to the friend display's box (card space-game-friendly-display: the same box, in the bottom left corner)
+    beside: 12,                            // px between an open left list and the friend display's box when the box steps right of it (card space-game-w-list-covers-friend-box)
     bottom: 64,                            // px from the bottom edge to the box (the key line's strip is under it)
     w: 200, h: 200,                        // px: the box, about the radar's size (its disc was 196 across)
     every: 250,                            // ms between two readings of the ship: the numbers and the words are live four times a second (a new ship is read at once)

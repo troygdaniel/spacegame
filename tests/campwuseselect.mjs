@@ -70,9 +70,15 @@ sec('D. Guard with and without a selected friend', () => {
   const o = J(`__k('Enter')`);
   check('Enter on the grey row refuses in words, opens no sub-list and gives no order (the squads still guard the cruiser)', o.ran && !o.ok && /No ship selected to guard/.test(o.say) && J('PP.pick') === null && J('PP.open') === 'squads' && J(`__orders().every(x => x.type === 'guard' && x.at.kind === 'carrier')`), JSON.stringify(o));
   g.run('C.sel = "pilot:red";');
-  check('a pilot selected: nothing to guard in that (a pilot is not a ship to guard): grey, the same hint', row('fguardt').ok === false && row('fguardt').state === 'pick a ship with A or D');
+  check('a pilot selected: a pilot is not a ship to guard: the row is grey and says so ("a pilot cannot be guarded: pick a ship with A or D"), its short word is "pick a ship" (card space-game-w-list-covers-friend-box)', row('fguardt').ok === false && row('fguardt').state === 'a pilot cannot be guarded: pick a ship with A or D' && row('fguardt').short === 'pick a ship', JSON.stringify(row('fguardt')));
+  g.run('__w("fguardt")');
+  const op = J(`__k('Enter')`);
+  check('Enter on that grey row refuses in words ("A pilot cannot be guarded. Pick a ship first."), and the squads are not sent anywhere', op.ran && !op.ok && /^A pilot cannot be guarded/.test(op.say) && J('PP.pick') === null && J('PP.open') === 'squads' && J(`__orders().every(x => x.type === 'guard' && x.at.kind === 'carrier')`), JSON.stringify(op));
   g.run('C.sel = "all";');
-  check('all three pilots selected: grey as well', row('fguardt').ok === false);
+  check('all three pilots selected (Q): grey as well, with the same hint (they are pilots too)', row('fguardt').ok === false && row('fguardt').state === 'a pilot cannot be guarded: pick a ship with A or D');
+  g.run('C.sel = "";');
+  check('and nobody selected is still "pick a ship with A or D" (no pilot to blame)', row('fguardt').state === 'pick a ship with A or D' && row('fguardt').short === 'pick one');
+  g.run('C.sel = "all";');
   g.run('C.sel = "freighter-h2";');
   const r1 = row('fguardt');
   check('a ship you protect selected: the row names it ("Guard Hauler 2 convoy"), is ready, and says who goes and how far', r1.ok === true && /^Guard Hauler 2/.test(r1.label) && /^all squads, \d+ km$/.test(r1.state) && /^\d+ km$/.test(r1.short), JSON.stringify(r1));
@@ -97,7 +103,7 @@ sec('F. the words', () => {
   const t = k => J(`uiText('${k}')`);
   check('the hints that sent the player to the W row tell them to pick first: the nudge, the lose tip, the 1.1 walk step and the 1.2 hint say S (the nearest hostile) before W',
     /\bS\b/.test(t('camp.nudge.attack')) && /\bS\b/.test(t('camp.lose.tip.earth')) && /\bS\b/.test(t('camp.bf.1.1.s3')) && /\bS\b/.test(t('camp.hint.l1p.contact')), [t('camp.nudge.attack'), t('camp.lose.tip.earth'), t('camp.bf.1.1.s3'), t('camp.hint.l1p.contact')].join(' | '));
-  check('the two row names and the two refusals are content (a key of the table is filled in), no braces left', ['camp.w.attack', 'camp.w.guard', 'camp.no.nohostile', 'camp.no.nofriend', 'camp.w.nohostile.state', 'camp.w.nofriend.state'].every(k => { const s = J(`uiText('${k}', { name: 'X' })`); return s && !/\{/.test(s) && s !== k; }));
+  check('the two row names and the two refusals are content (a key of the table is filled in), no braces left', ['camp.w.attack', 'camp.w.guard', 'camp.no.nohostile', 'camp.no.nofriend', 'camp.no.pilotguard', 'camp.w.nohostile.state', 'camp.w.nofriend.state', 'camp.w.pilotguard.state'].every(k => { const s = J(`uiText('${k}', { name: 'X' })`); return s && !/\{/.test(s) && s !== k; }));
 });
 
 console.log(failed ? `\n${failed} of ${n} FAILED` : `\nAll ${n} checks passed.`);

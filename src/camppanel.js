@@ -179,7 +179,7 @@ function campPanelRun(C, row, how, item) {
 // ---- the live state of a row ----
 function campPanelWhy(r) {
   const W = CAMP_PANELS.why; let t = W[r.code] || W.what;
-  if (r.code === 'nohostile' || r.code === 'nofriend') t = uiText('camp.w.' + r.code + '.state'); // the keys that pick, read from the key table (a remap follows)
+  if (r.code === 'nohostile' || r.code === 'nofriend' || r.code === 'pilotguard') t = uiText('camp.w.' + r.code + '.state'); // the keys that pick, read from the key table (a remap follows)
   if (r.code === 'noore2') { const m = /(\d+) needed/.exec(r.say || ''); t = t.replace('{need}', m ? m[1] : '?'); }
   if (r.code === 'cooling') { const m = /in (\d+) seconds/.exec(r.say || ''); t = t.replace('{s}', m ? m[1] : '?'); }
   return t;

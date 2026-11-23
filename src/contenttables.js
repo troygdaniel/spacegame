@@ -1287,8 +1287,10 @@ const UI_TEXT = {
   'camp.w.all': 'all squads',
   'camp.w.nohostile.state': 'pick one with {keylast} {keynext} or {keynear}',
   'camp.w.nofriend.state': 'pick a ship with {keyflast} or {keyfnext}',
+  'camp.w.pilotguard.state': 'a pilot cannot be guarded: pick a ship with {keyflast} or {keyfnext}',
   'camp.no.nohostile': 'No hostile selected. Pick one first.',
   'camp.no.nofriend': 'No ship selected to guard. Pick one first.',
+  'camp.no.pilotguard': 'A pilot cannot be guarded. Pick a ship first.',
 };
 function uiText(key, vars) { return contentFill(CT_HAS(UI_TEXT, key) ? UI_TEXT[key] : key, vars); }
 function ctTextKeys() { // every string the game reads: key -> { get, set }
