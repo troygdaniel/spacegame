@@ -105,15 +105,15 @@ function campPanelKey(P, C, code, now) {
       res.open = campPanelOpen(P); return res;
     }
   }
-  if (campKeyIs('all', code) && typeof campSelAll === 'function') { // Q (the fleet list is off): all three pilots are the friend; the next E R T goes to all three (src/camptarget.js campSelAll)
+  if (campKeyIs('all', code) && typeof campSelAll === 'function') { // Q (the fleet list is off): WHO is all three pilots; the next E R T goes to all three (src/camptarget.js campSelAll)
     res.used = true; res.fleet = true; if (!C) return res;
-    campSelAll(C); res.sel = C.sel || ''; res.tgt = C.tgt || ''; return res;
+    campSelAll(C); res.sel = C.sel || ''; res.tgt = C.tgt || ''; res.fsel = C.fsel || ''; return res;
   }
-  const tk = typeof campTgtStep === 'function' ? (campKeyIs('next', code) ? 'next' : campKeyIs('last', code) ? 'last' : campKeyIs('fnext', code) ? 'fnext' : campKeyIs('flast', code) ? 'flast' : campKeyIs('near', code) ? 'near' : campKeyIs('clear', code) ? 'clear' : '') : '';
-  if (tk) { // [ ] S the hostile, A D the friend, X both (src/camptarget.js: the two selections)
+  const tk = typeof campTgtStep === 'function' ? (campKeyIs('next', code) ? 'next' : campKeyIs('last', code) ? 'last' : campKeyIs('wnext', code) ? 'wnext' : campKeyIs('wlast', code) ? 'wlast' : campKeyIs('fnext', code) ? 'fnext' : campKeyIs('flast', code) ? 'flast' : campKeyIs('near', code) ? 'near' : campKeyIs('clear', code) ? 'clear' : '') : '';
+  if (tk) { // [ ] the enemy, \ the nearest threat, A D who, , . the friendly, X all of it (src/camptarget.js: the three picks)
     res.used = true; res.fleet = true; if (!C) return res;
-    if (tk === 'clear') { campTgtClear(C); campSelClear(C); campSquadsFree(P); } else if (tk === 'near') campTgtNearest(C); else if (tk === 'fnext' || tk === 'flast') campSelStep(C, tk === 'fnext' ? 1 : -1); else campTgtStep(C, tk === 'next' ? 1 : -1);
-    res.tgt = C.tgt || ''; res.sel = C.sel || ''; return res;
+    if (tk === 'clear') { campPicksClear(C); campSquadsFree(P); } else if (tk === 'near') campTgtNearest(C); else if (tk === 'wnext' || tk === 'wlast') campSelStep(C, tk === 'wnext' ? 1 : -1); else if (tk === 'fnext' || tk === 'flast') campFriStep(C, tk === 'fnext' ? 1 : -1); else campTgtStep(C, tk === 'next' ? 1 : -1);
+    res.tgt = C.tgt || ''; res.sel = C.sel || ''; res.fsel = C.fsel || ''; return res;
   }
   const ok = typeof campSelOrder === 'function' ? ['attack', 'guard', 'recall'].find(id => campKeyIs(id, code)) : '';
   if (ok) { // E R T: the pilots attack the hostile, guard the friend, fly home; a selected pilot takes the order alone (src/camptarget.js campSelOrder)
@@ -123,10 +123,10 @@ function campPanelKey(P, C, code, now) {
     if (res.ok) campSquadsKeep(P, f && f.kind === 'pilot' ? f.squad : 'squads', now); // the pilot (or all three) keep the ring a while
     return res;
   }
-  const pw = ['shields', 'engines', 'weapons', 'balance'].find(id => campKeyIs(id, code));
-  if (pw) { // J K L ; the ship's power
+  const pw = ['shields', 'engines', 'weapons'].find(id => campKeyIs(id, code));
+  if (pw) { // J K L the ship's power (the semicolon's balance key is gone: Balance is a row of the POWER list)
     res.used = true; if (!C) return res;
-    const r = pw === 'balance' ? campOrder(C, 'balance', '', 'key') : campOrder(C, 'power', pw, 'key');
+    const r = campOrder(C, 'power', pw, 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = pw; return res;
   }
   if (!open && campKeyIs('missile', code)) { // Enter with no list open: a homing missile at the target
@@ -179,7 +179,7 @@ function campPanelRun(C, row, how, item) {
 // ---- the live state of a row ----
 function campPanelWhy(r) {
   const W = CAMP_PANELS.why; let t = W[r.code] || W.what;
-  if (r.code === 'nohostile' || r.code === 'nofriend' || r.code === 'pilotguard') t = uiText('camp.w.' + r.code + '.state'); // the keys that pick, read from the key table (a remap follows)
+  if (r.code === 'nohostile' || r.code === 'nofriend') t = uiText('camp.w.' + r.code + '.state'); // the keys that pick, read from the key table (a remap follows)
   if (r.code === 'noore2') { const m = /(\d+) needed/.exec(r.say || ''); t = t.replace('{need}', m ? m[1] : '?'); }
   if (r.code === 'cooling') { const m = /in (\d+) seconds/.exec(r.say || ''); t = t.replace('{s}', m ? m[1] : '?'); }
   return t;
@@ -244,7 +244,7 @@ function campPanelShortState(C, row) {
     case 'gpower': return C.power.p.join(' / ');
     case 'gyard': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name : ''; }
     case 'shields': case 'engines': case 'weapons': return CAMP_KEYS[row.id].k; // the key of the row (the pips are the row's own bar now, the gauge's twin: src/campanelsdraw.js)
-    case 'balance': return CAMP_KEYS.balance.k + '   ' + C.power.p.join(' / ');
+    case 'balance': return C.power.p.join(' / '); // no key: the semicolon is gone (card space-game-keys-select)
     case 'mine': return campMiners(C).length + ' ships';
     case 'dock': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name : ''; }
     case 'goal': case 'burn': { const g = campNavGoal(C); return g ? campNavKm(Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y)) + ' km' : ''; }

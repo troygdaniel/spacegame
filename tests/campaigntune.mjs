@@ -30,7 +30,7 @@ g.run('campDebugSet(true)'); // the kit is off in the normal game (section H bel
 const rows = J(`CAMP_DEBUG.keys`);
 check('four debug keys: skip, win, lose and god, each with a physical key code, what it says on the pause line and what it does', rows.map(r => r.id).join() === 'skip,win,lose,god' && rows.every(r => /^[A-Za-z0-9]{2,20}$/.test(r.code) && r.key.length === 1 && r.text.length > 2), JSON.stringify(rows));
 check('no two rows share a key, and no row is a key the Campaign flies or commands by (W A S D, the arrows, Space, 1 to 5, Q, I, U, Esc, H, M, Tab, Enter, E)', new Set(rows.map(r => r.code)).size === rows.length && rows.every(r => !/^(Key[WASDQIUHME]|Arrow.*|Space|Digit[0-5]|Escape|Tab|Enter)$/.test(r.code)), rows.map(r => r.code).join());
-check('a physical key is looked up to its row; any other key is null (never throws)', rows.every(r => J(`campDebugKey(${JSON.stringify(r.code)})`) === r.id) && ['KeyW', 'Digit1', '', 'Backspace'].every(c => J(`campDebugKey(${JSON.stringify(c)})`) === null) && J(`campDebugKey(undefined)`) === null && J(`campDebugKey(null)`) === null);
+check('a physical key is looked up to its row; any other key is null (never throws)', rows.every(r => J(`campDebugKey(${JSON.stringify(r.code)})`) === r.id) && ['KeyW', 'Digit1', '', 'Backspace', 'Backslash', 'Comma'].every(c => J(`campDebugKey(${JSON.stringify(c)})`) === null) && J(`campDebugKey(undefined)`) === null && J(`campDebugKey(null)`) === null);
 
 // ---- B. what they do ----
 g.run(`var C0 = campNew(1, [], { seed: 5 }), P0 = campProgressNew();`);
@@ -149,13 +149,13 @@ check('the play log counts the Campaign keys as one, the debug keys by name, and
   check('the address turns it on: ?debug, ?debug=1, on, true, yes (any case, anywhere in the address); nothing else does', ['?debug', '?debug=1', '?campaign=2&debug=1', '?campaign=2&tech=blink&DEBUG=On', '#debug=true', '?x=1&debug=yes'].every(a => J(`campDebugAddr(${JSON.stringify(a)})`) === true) && ['', '?', '?campaign=2', '?debug=0', '?debug=off', '?debug=no', '?debug=2', '?debugging=1', '?x=debug', '?campaign=debug', '?debug%zz=1'].every(a => J(`campDebugAddr(${JSON.stringify(a)})`) === false) && J('[campDebugAddr(), campDebugAddr(null), campDebugAddr(7)]').every(v => v === false) && J(`campDebugAddrPage('?campaign=1&debug=1')`) === true && J(`campDebugAddrPage('?campaign=1')`) === false);
   const g4 = nodeGame(); g4.run(__rf(new URL('./fixtures/camplegacy.js', import.meta.url), 'utf8') + ' CAMP.levels[1] = CAMP.levels.home; location = { search: \'?campaign=1&debug=1\' }; var Ch = campNew(1, [], { seed: 2 });');
   const J4 = e => JSON.parse(g4.run(`JSON.stringify(${e}) ?? 'null'`));
-  check('campDebugOn asks the page address on the first key: ?debug=1 in it and the keys are on, and the line is there', J4('campDebugOn()') === true && J4(`campDebugKey('Backslash')`) === 'win' && J4('campDebugLine(Ch)').startsWith('DEBUG  '));
+  check('campDebugOn asks the page address on the first key: ?debug=1 in it and the keys are on, and the line is there', J4('campDebugOn()') === true && J4(`campDebugKey('Digit6')`) === 'win' && J4('campDebugLine(Ch)').startsWith('DEBUG  '));
   g4.run(`location = { search: '' };`);
   check('and it stays as it was read (the address is not read again on every key)', J4('campDebugOn()') === true);
   const g3 = nodeGame(); g3.run(`location = { search: '?campaign=1' };`);
-  check('an address with no debug in it: off', JSON.parse(g3.run(`JSON.stringify([campDebugOn(), campDebugKey('Backslash'), campDebugKey('BracketLeft')])`)).join() === 'false,,');
+  check('an address with no debug in it: off', JSON.parse(g3.run(`JSON.stringify([campDebugOn(), campDebugKey('Digit6'), campDebugKey('BracketLeft')])`)).join() === 'false,,');
   g3.run('campDebugSet(true)');
-  check('campDebugSet(true) is how a bot, a tool or a test turns it on, and campDebugSet(false) off again', JSON.parse(g3.run(`JSON.stringify([campDebugOn(), campDebugKey('Backslash'), campDebugSet(false), campDebugOn(), campDebugKey('Backslash')])`)).join() === 'true,win,false,false,');
+  check('campDebugSet(true) is how a bot, a tool or a test turns it on, and campDebugSet(false) off again', JSON.parse(g3.run(`JSON.stringify([campDebugOn(), campDebugKey('Digit6'), campDebugSet(false), campDebugOn(), campDebugKey('Digit6')])`)).join() === 'true,win,false,false,');
   const addr = readFileSync(ROOT + '/src/campaignaddr.js', 'utf8'), scene = readFileSync(ROOT + '/src/campaignscene.js', 'utf8'), keys = readFileSync(ROOT + '/src/campkeys.js', 'utf8');
   check('the pause card and the H page leave the debug line and group out unless campDebugOn(); the address is read in campaignaddr.js, which loads before campdebug.js', /campDebugOn\(\) && typeof campDebugLine === 'function'/.test(scene) && /campDebugOn\(\)/.test(keys) && __rf(ROOT + '/index.html', 'utf8').indexOf('src/campaignaddr.js') < __rf(ROOT + '/index.html', 'utf8').indexOf('src/campdebug.js') && /function campDebugAddrPage/.test(addr));
 }

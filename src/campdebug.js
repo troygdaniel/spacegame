@@ -9,12 +9,12 @@
 //   campDebugRun(C, P, id)        do it: C is the battle (campNew), P the progress { level, techs }. -> { ok, say, go }; { ok: false } and nothing done while the kit is off
 //                                 say: a plain line for the screen. go: null, or { level, techs, via: 'skip' }: the scene starts that level now (campNew(go.level, go.techs, { via: go.via }))
 //   campDebugLine(C)              the one line for the pause screen, with the god mode as it is now; '' while the kit is off (the scene leaves the line out)
-// Why the switch (card space-game-debug-keys-off): the four keys sit beside Enter, and one slip of the finger on the backslash ended Troy's Mission 1 at 108 s. Off is the normal game.
+// Why the switch (card space-game-debug-keys-off): the four keys sit beside Enter, and one slip of the finger on a key beside Enter ended Troy's Mission 1 at 108 s. Off is the normal game.
 const CAMP_DEBUG = {
   keys: [                                   // one row a key. code: the physical key (KeyboardEvent.code, so a layout cannot move it); key: what it says on the pause line; text: what it does
     { id: 'skip', code: 'Quote', key: '\'', text: 'next level' },         // ends this level as skipped and starts the next with the first tech of each level before it
-    { id: 'win', code: 'Backslash', key: '\\', text: 'win' },               // wins this level, so the story and the tech pick that follow a win are shown
-    { id: 'lose', code: 'Comma', key: ',', text: 'lose' },              // loses this level (the lose screen)
+    { id: 'win', code: 'Digit6', key: '6', text: 'win' },                   // wins this level, so the story and the tech pick that follow a win are shown (it was the backslash, which is the nearest threat now: card space-game-keys-select)
+    { id: 'lose', code: 'Digit7', key: '7', text: 'lose' },                 // loses this level (the lose screen) (it was the comma, which is the last friendly now)
     { id: 'god', code: 'Backquote', key: '`', text: 'god mode' }            // the carrier takes no damage and Earth's shield does not fall; again to turn it off
   ],
   sep: '   ',                              // between the rows of the pause line

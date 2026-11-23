@@ -13,6 +13,6 @@ function campTgtPaint(s) {
   if (!s.tgtG || (s.tgtG.active === false && !s.tgtG.scene)) s.tgtG = s.add.graphics().setDepth(CAMPTGT.depth); // a scene that starts again (a retry, the next mission) destroys its layers: the old graphics is not active and has no scene, and a new one is made
   const g = s.tgtG; g.clear();
   const play = s.mode === 'play' && !s.mp, K = CAMPTGT, z = s.cameras && s.cameras.main && s.cameras.main.zoom > 0 ? s.cameras.main.zoom : 1, al = campTgtPulse();
-  const u = play && typeof campTgtNow === 'function' ? campTgtNow(s.camp) : null, f = play && typeof campSelNow === 'function' ? campSelNow(s.camp) : null; // the hostile (red) and the friend (green)
-  [[u, K.color], [f && f.unit, K.friend]].forEach(([v, col]) => { if (v) campTgtCorners(g, v, col, z, al); });
+  const pk = play && typeof campSelUnits === 'function' ? campSelUnits(s.camp) : null; // the enemy (red), the pilot picked and the friendly ship picked (green); All pilots has no one bracket
+  [[pk && pk.hostile, K.color], [pk && pk.who, K.friend], [pk && pk.friendly, K.friend]].forEach(([v, col]) => { if (v) campTgtCorners(g, v, col, z, al); });
 }

@@ -102,7 +102,7 @@ function campSquadsLit(openId) {
 }
 function campSquadsFocus(P, C) {
   const open = typeof campPanelOpen === 'function' ? campPanelOpen(P) : '';
-  const f = C && typeof campSelNow === 'function' ? campSelNow(C) : null, sel = f && f.kind === 'pilot' ? [f.squad] : f && f.kind === 'all' ? CAMP.wing.squads.slice() : []; // the pilot A D selected (or all three, Q) keeps its ring while no squad's list is the focus (cards space-game-bracket-select-orders, space-game-q-selects-all)
+  const f = C && typeof campSelNow === 'function' ? campSelNow(C) : null, sel = f && f.kind === 'pilot' ? [f.squad] : []; // the pilot A D selected keeps its ring (All pilots, the default, rings nobody: card space-game-keys-select) while no squad's list is the focus (cards space-game-bracket-select-orders, space-game-q-selects-all)
   if (!open) return sel;
   if (open !== 'fleet') { const lit = campSquadsLit(open); return lit.length ? lit : sel; }
   const row = C && typeof campPanelList === 'function' ? campPanelList(C, open)[P.at | 0] : null; // the Q list: the squad whose row the highlight is on

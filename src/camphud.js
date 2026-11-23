@@ -8,13 +8,13 @@
 //   campHudGeom()            where the dials, bars and the hull bar are, in screen px, from CAMP.hud: { cells: [{ cx, cy, R, dial, bar, key }], hull, bottom, ore: { x, y } (the ore line's right end), block: { x0, y0, x1, y1 } }
 //   campHudFlow(items)       the lines of text under the gauges: [{ id, show, h }] -> { ys: { id: y }, bottom }; a line with nothing to say gives its place back
 //   campGaugeAnim(A, pips, ms)   the bars' animation: the lit share of each bar eases to its pips, a flash runs when they change;  campGaugeAnimNew(pips) starts one
-//   campPowerKey(C, code)    a direct key: J shields, K engines, L weapons (the dials' order), ; back to 2 / 2 / 2: the same orders the strip and the voice give; { used, ran, ok, say, sys }
-// the code -> system of the keys of the SHIP panel's power rows (J K L ; in the table today)
-function campPowerKeys() { const k = {}; ['shields', 'engines', 'weapons', 'balance'].forEach(id => CAMP_KEYS[id].codes.forEach(c => { k[c] = CAMP_KEYS[id].sys; })); return k; }
+//   campPowerKey(C, code)    a direct key: J shields, K engines, L weapons (the dials' order; the semicolon's balance key is gone): the same orders the strip gives; { used, ran, ok, say, sys }
+// the code -> system of the keys of the SHIP panel's power rows (J K L in the table today)
+function campPowerKeys() { const k = {}; ['shields', 'engines', 'weapons'].forEach(id => CAMP_KEYS[id].codes.forEach(c => { k[c] = CAMP_KEYS[id].sys; })); return k; }
 const CAMP_DIAL_PIPS = [1, 2, 0]; // the pips of the shields, the engines, the weapons (indexes into C.power.p, which is weapons, shields, engines): what dial 0, 1 and 2 show, left to right
 const CAMP_GAUGE = {
   colors: { shields: 0x7fe9ff, speed: 0x6dff9c, lasers: 0xffb454 },   // the dial and its bar: the colours the W S E pips had (weapons amber, shields cyan, engines green)
-  keys: campPowerKeys(), // the direct keys (CAMP_KEYS in src/data_controls.js), the dials' order, and the balance key // the direct keys, in the order of the dials (SHIELDS, SPEED, LASERS: the key is under each bar), and ; for the balance (card space-game-power-balance-key); free of every key the Campaign binds (src/data_controls.js)
+  keys: campPowerKeys(), // the direct keys (CAMP_KEYS in src/data_controls.js), the dials' order // the direct keys, in the order of the dials (SHIELDS, SPEED, LASERS: the key is under each bar), and ; for the balance (card space-game-power-balance-key); free of every key the Campaign binds (src/data_controls.js)
   segs: 24,                                                           // segments round a dial (Long Haul's has 30)
   ease: 9, flash: 280,                                                // segments a second a bar fills at, and how long (ms) a segment that changed flashes
   off: 0x16293d, glass: 0x07101c, hull: { ok: 0x6dff9c, low: 0xff4d6d, edge: 0x38e1ff }
@@ -68,10 +68,10 @@ function campGaugeAnim(A, pips, ms) {
 // how much of segment i (0 to 1) is lit when `shown` segments are
 const campBarSeg = (shown, i) => Math.max(0, Math.min(1, shown - i));
 
-// ---- a direct key (J K L ;): the ship's power (src/camppanel.js does the same through campPanelKey) ----
+// ---- a direct key (J K L): the ship's power (src/camppanel.js does the same through campPanelKey) ----
 function campPowerKey(C, code) {
   const sys = CAMP_GAUGE.keys[code]; if (!sys) return { used: false, ran: false, ok: false, say: '', sys: '' };
-  const r = sys === 'balance' ? campOrder(C, 'balance', '', 'key') : campOrder(C, 'power', sys, 'key'); // ; is the balance: 2 / 2 / 2 at once
+  const r = campOrder(C, 'power', sys, 'key');
   return { used: true, ran: true, ok: !!r.ok, say: r.say || '', sys };
 }
 
