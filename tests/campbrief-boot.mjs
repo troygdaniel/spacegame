@@ -64,7 +64,7 @@ try {
   await snap('8-tutorial-1');
   await key('Enter'); await t.run(300); await snap('8-tutorial-2'); const n2 = await note();
   await key('Enter'); await t.run(300); await snap('8-tutorial-3'); const n3 = await note();
-  check('the second screen says how a ring is scanned and the third the keys: the arrows, Space, Q and the fleet orders (launch the wing), Tab (the belt fixture\'s own lines)', n2.some(x => /inside a ring scans it/.test(x)) && n3.some(x => /arrow keys fly the cruiser/.test(x) && /Space/.test(x) && /Q opens the fleet orders: launch the wing/.test(x) && /Tab/.test(x) && !/1 launches/.test(x)), n3.join(' | ')); // (one list per hand: card one-list-keys; the words are camp.bf.1.1.n3)
+  check('the second screen says how a ring is scanned and the third the keys: the arrows, Space, Q (all three pilots) and the list of the wing, Tab (the belt fixture\'s own lines)', n2.some(x => /inside a ring scans it/.test(x)) && n3.some(x => /arrow keys fly the cruiser/.test(x) && /Space/.test(x) && /Q picks all three pilots/.test(x) && /Tab/.test(x) && !/1 launches/.test(x)), n3.join(' | ')); // (one list per hand: card one-list-keys; the words are camp.bf.1.1.n3)
   await key('Enter');
   check('Enter on the last screen launches the replay: the Campaign scene is on belt mission 1 as a replay and goes to the flight', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.camp && ${CAMPS}.mode === 'play'`) && await j(`${CAMPS}.replay === true && ${CAMPS}.mi === 0`));
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));

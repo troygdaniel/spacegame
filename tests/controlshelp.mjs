@@ -23,6 +23,7 @@ import { nodeGame, ROOT } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 700) + ')' : ''}`); } };
 const g = nodeGame();
+g.run('campFleetListSet(true)'); // the lists' tables are checked with Q's pop-up on (switched off in the game: CAMP_FLEET_LIST); the game's own state, Q picking all three pilots, is the last section below (card space-game-q-selects-all)
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const read = f => readFileSync(join(ROOT, f), 'utf8');
 
@@ -224,6 +225,23 @@ console.log('6. the Campaign: every bound key is on the table');
   const stale = J(`Object.keys(UI_TEXT).filter(k => /^camp\\./.test(k) && /[Pp]ress [0-9]\\b|, then [0-9]\\b|\\([0-9]\\)/.test(UI_TEXT[k])).map(k => k + ': ' + UI_TEXT[k])`);
   check('no Campaign line names a digit key: "press 3", "press 1, then 3", "(2)" alone are gone (the way is the key of a list, then the row by its name)', stale.length === 0, stale.join(' | '));
   check('the H page lists every row of the two groups, in groups, once: nothing in the table is left off it', J(`(() => { const page = campKeysPage().flatMap(g => g.rows.map(r => r.caps.join(' ') + '|' + r.t)); return ['panels', 'campaign'].every(id => controlsGroup(id).rows.every(r => page.includes(r.k.join(' ') + '|' + r.t))); })()`));
+}
+
+// ---- the game's own state: the fleet list is off and Q picks all three pilots (card space-game-q-selects-all; Troy, 23 Nov 2026)
+console.log('Q picks all three pilots');
+{
+  g.run('campFleetListSet(false)');
+  const keyed = J(`CAMP_PANELS.panels.filter(p => p.key).map(p => p.key).join('')`);
+  check('the fleet list is switched off: it has no key and no code (and a mark, off, that campPanelGo reads); the five lists with a key are W P O I U, and no list has the code of Q', keyed === 'WPOIU' && J(`CAMP_PANELS.panels.find(p => p.id === 'fleet').key + CAMP_PANELS.panels.find(p => p.id === 'fleet').code`) === '' && J(`CAMP_PANELS.panels.find(p => p.id === 'fleet').off`) === true && J(`CAMP_PANELS.panels.every(p => p.code !== 'KeyQ')`));
+  check('Q is a direct key of the table, the one that picks all three pilots: CAMP_KEYS.all is Q, KeyQ, and no other key of the table (a direct key, a list, the map, a zoom key, a debug key) has that code', J(`CAMP_KEYS.all.k`) === 'Q' && J(`campKeyCodes('all').join()`) === 'KeyQ' && J(`Object.keys(CAMP_KEYS).filter(id => id !== 'all' && CAMP_KEYS[id].codes.includes('KeyQ')).length`) === 0 && J(`CAMPMAP.key !== 'KeyQ' && !campZoomKey('KeyQ') && !CAMP_DEBUG.keys.some(r => r.code === 'KeyQ')`));
+  const open9 = J(`(() => { const bad = [], opens = [''].concat(CAMP_PANELS.panels.map(p => p.id)); opens.forEach(open => { const C = campNew(1, [], { seed: 1 }), P = campPanelNew(); P.open = open; P.at = open ? 1 : 0; const r = campPanelKey(P, C, 'KeyQ', 0); if (!(r.used && !r.ran && r.ok === false && C.sel === 'all' && campPanelOpen(P) === open)) bad.push('over ' + (open || 'nothing')); }); return bad; })()`);
+  check('Q picks all three pilots from anywhere: with no list open and over each list, it is used, gives no order and opens or closes no list (the open one stays as it was), and the friend is all', open9.length === 0, open9.join(' | '));
+  const left = J(`(() => { const C = campNew(1, [], { seed: 1 }), P = campPanelNew(); campPanelKey(P, C, 'KeyW', 0); const r = campPanelKey(P, C, 'ArrowLeft', 0); return [campPanelOpen(P), r.used, campPanelOpen(P) === 'squads']; })()`);
+  check('Left in the all-squads list does not go back to the fleet list (it is off): the list stays, and nothing else opens', left[0] === 'squads' && left[1] === true);
+  const page = J('campKeysPage()'), tgt = page.find(p => p.title === 'THE TARGET');
+  check('the H page has Q under THE TARGET (all three pilots at once) and no Q among the order lists', tgt && tgt.rows.some(r => r.caps.join() === 'Q' && /pilots/.test(r.t)) && !page[0].rows.some(r => r.caps.join() === 'Q') && J('campPanelKeyLine()') === 'W All    P Ship  O Power  I Autopilot  U Dock');
+  const back = (g.run('campFleetListSet(true)'), J(`[campPanelKeyLine(), CAMP_KEYS.all.codes.length, campKeysPage().find(p => p.title === 'THE TARGET').rows.some(r => r.caps.join() === 'Q')]`));
+  check('and the switch turned on gives Q its list again (the old code is kept): the key line has Q Fleet, Q picks nothing, the page has no Q row; turned off, it all goes back', back[0].startsWith('Q Fleet  W All') && back[1] === 0 && back[2] === false && (g.run('campFleetListSet(false)'), J('campKeyCodes("all").join()') === 'KeyQ'));
 }
 
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));

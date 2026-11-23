@@ -13,7 +13,7 @@
 function campSelZoomUnits(C) {
   if (!C || !C.carrier || typeof campSelUnits !== 'function') return [];
   const sel = campSelUnits(C);
-  return [sel.friend, sel.hostile].filter(u => u && u.hp > 0 && !u.gone);
+  return (sel.friends || [sel.friend]).concat([sel.hostile]).filter(u => u && u.hp > 0 && !u.gone); // every friend ship (Q picks all three pilots), then the hostile
 }
 // the zoom at which the cruiser and every one of these ships are on the screen; Infinity for none
 function campSelZoomFit(C, units) {

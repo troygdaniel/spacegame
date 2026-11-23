@@ -1,5 +1,5 @@
 // ---------- Campaign: the two selections (cards space-game-two-hands-keys, 21 Nov 2026; space-game-bracket-select-orders, Troy, 23 Nov 2026, like X-Wing) ----------
-// TWO selections are held at once: a HOSTILE (the target) and a FRIEND. [ and ] pick the hostile (nearest the cruiser first), S the nearest, A and D the friend (your pilots, then the ships you protect), X lets both go.
+// TWO selections are held at once: a HOSTILE (the target) and a FRIEND. [ and ] pick the hostile (nearest the cruiser first), S the nearest, A and D the friend (your pilots, then the ships you protect), Q all three pilots at once (card space-game-q-selects-all), X lets both go.
 // The order keys act on them (campSelOrder): E sends the pilots at the hostile, R sends them to guard the friend, T recalls; a friend that is one of the pilots takes the order alone, else all three do. Fly to the target (P), Enter and the missile follow the hostile as before.
 // The target is a ship of the aliens' or the pirates' side: C.tgt is its id ('' for none). The sim keeps it as plain data (no Phaser, seeded, nothing random): tests/camptarget.mjs runs it in Node;
 // src/campanelsdraw.js says its name in the FLEET panel and src/campaignscene.js draws the bracket round it on the screen. A target that is destroyed is let go the next time anyone asks.
@@ -17,7 +17,8 @@
 //   campSelList(C)              the friends A and D step through: the pilots with a ship out (red, green, yellow), then the ships you protect, nearest the cruiser first: [{ id, kind: 'pilot'|'ward', squad, unit, name }]
 //   campSelNow(C)               the friend now (an entry of that list), or null (one that was lost or is home is let go the next time anyone asks)
 //   campSelStep(C, dir)         D (1) and A (-1): the friend after or before, round at the ends; with none, D takes the first and A the last
-//   campSelUnits(C)             { hostile, friend }: the two ships selected now (units, or null); what the camera and the brackets read (src/campselzoom.js, src/camptargetdraw.js)
+//   campSelAll(C)               Q (card space-game-q-selects-all): all three pilots are the friend (C.sel 'all'; campSelNow: kind 'all', name 'All pilots', units: the ships out); the next E R T goes to all three. A and D step from it as from no friend
+//   campSelUnits(C)             { hostile, friend, friends }: the ships selected now (units, or null); friend is the one ship a pilot or a ward is (null for All pilots), friends every ship the friend pick is (three for Q); what the camera, the brackets and the displays read (src/campselzoom.js, src/camptargetdraw.js, src/camptdisp.js)
 //   campSelClear(C)             X: no friend
 //   campSelOrder(C, verb, how, dry)   E 'attack', R 'guard', T 'recall' (campWingOrder): the group is the selected pilot's squad, else all three; attack goes at the hostile (none picked: S picks the nearest first), guard at the friend that is a ship (none or a pilot: the cruiser)
 const CAMP_TGT = '@target'; // the arg of campOrder(C, 'attack' | 'missiles', CAMP_TGT): the picked target (campDo in src/campaign.js)
@@ -74,8 +75,13 @@ function campSelList(C) {
   const wards = campPickEscorts(C).map(i => ({ id: i.id, kind: 'ward', squad: '', unit: C.by[i.id], name: i.name })).filter(e => e.unit && e.unit.hp > 0);
   return pilots.concat(wards);
 }
+const CAMP_SELALL = 'all'; // Q: the three pilots at once (card space-game-q-selects-all); not a stop of A and D, which step the pilots and the ships you protect one at a time
+function campSelAllUnits(C) { return C && C.carrier ? (CAMP.wing.squads || []).reduce((a, sq) => a.concat(campWingShips(C, sq)), []) : []; } // the pilots' ships that are out
+function campSelAllName() { return typeof uiText === 'function' ? uiText('camp.sel.all') : 'All pilots'; }
+function campSelAll(C) { if (C && C.carrier) C.sel = CAMP_SELALL; return C ? C.sel : ''; } // Q
 function campSelNow(C) {
   if (!C || !C.sel) return null;
+  if (C.sel === CAMP_SELALL) return C.carrier ? { id: CAMP_SELALL, kind: 'all', squad: '', unit: null, units: campSelAllUnits(C), name: campSelAllName() } : null; // all three pilots, however many are out: the order keys say "no fighters out" themselves
   const e = campSelList(C).find(x => x.id === C.sel);
   if (!e) { C.sel = ''; return null; }
   return e;
@@ -86,7 +92,7 @@ function campSelStep(C, dir) {
   C.sel = list[i].id; return list[i];
 }
 function campSelClear(C) { const had = !!(C && C.sel); if (C) C.sel = ''; return had; }
-function campSelUnits(C) { const f = campSelNow(C); return { hostile: campTgtNow(C), friend: f ? f.unit : null }; }
+function campSelUnits(C) { const f = campSelNow(C); return { hostile: campTgtNow(C), friend: f ? f.unit : null, friends: f ? (f.kind === 'all' ? f.units : f.unit ? [f.unit] : []) : [] }; } // friend: the one ship a pilot or a ward is (null for All pilots); friends: every ship the friend selection is (the three for Q)
 function campSelOrder(C, verb, how, dry) {
   if (!C) return campNo('what');
   if (!campWing(C, 'fighter').length) return campNo(C.launchQ.length ? 'launching' : 'nofighters');

@@ -1,5 +1,5 @@
 // ---------- Campaign: the order lists, the logic (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026) ----------
-// Q opens the FLEET list at the left, P the SHIP list at the right. Each has a row for every part of it, and a part has a key of its own that opens its list directly, at any time: W ALL SQUADS, E RED, R GREEN, T YELLOW on the left;
+// (Q used to open the FLEET list at the left; it picks all three pilots now and that list is switched off, CAMP_FLEET_LIST in src/data_controls.js: card space-game-q-selects-all. The lists below are as they were.) P opens the SHIP list at the right. Each has a row for every part of it, and a part has a key of its own that opens its list directly, at any time: W ALL SQUADS (E R T are the order keys now) on the left;
 // O POWER, I AUTOPILOT, U DOCK AND REPAIR on the right (CONVOY is a part with no key: Enter on its row opens it). Nothing is on the screen until a key is pressed; only one list is open at a time.
 // In an open list Up and Down move the highlight (round at the ends), Enter gives the highlighted order (on a part's row: opens that part), Left goes back to the list it is a part of, the list's own key closes it.
 // ESC GOES BACK ONE STEP, TO WHERE YOU CAME FROM (card space-game-order-target-pick; Troy, 22 Nov 2026): a target sub-list (src/camppick.js) goes back to the list it was opened from; a list opened from a part's row (Q, then Squads) goes back to that list (Q);
@@ -44,6 +44,7 @@ function campPanelScroll(P, n) {
 }
 // open a list: at its first row (or, for a list that says start: 'usable', its first row that can be given), or (back: the part we came back from) on that part's row; via: the list whose row opened this one (Esc goes back to it), none for a list opened by its own key
 function campPanelGo(P, C, id, back, via) {
+  const dd = campPanelDef(id); if (dd && dd.off) return; // a list that is switched off (the fleet list: CAMP_FLEET_LIST, src/data_controls.js) is opened by nothing: not its key, not Left from a part of it
   P.open = id; P.at = 0; P.top = 0; P.pick = null; P.trail = via ? (P.trail || []).concat(via) : [];
   if (back) { const rows = campPanelList(C, id), i = rows.findIndex(r => r.open === back); if (i >= 0) { P.at = i; campPanelScroll(P, rows.length); } }
   else if (C && campPanelDef(id) && campPanelDef(id).start === 'usable') { const rows = campPanelList(C, id), i = rows.findIndex(r => campPanelRowState(C, r).ok); if (i > 0) { P.at = i; campPanelScroll(P, rows.length); } } // a list whose table says start: 'usable' opens on its first row that can be given now: All squads opens on Launch while there are ships in the bay and, once the wing is out (Launch greyed: all out), on Attack the target (card space-game-squad-tint)
@@ -103,6 +104,10 @@ function campPanelKey(P, C, code, now) {
       if (res.ok && !row.stay) campPanelClose(P); // the order is given: the keys go back to the ship (a power row stays: a pip more, and more). A refusal leaves the list open, with its reason said
       res.open = campPanelOpen(P); return res;
     }
+  }
+  if (campKeyIs('all', code) && typeof campSelAll === 'function') { // Q (the fleet list is off): all three pilots are the friend; the next E R T goes to all three (src/camptarget.js campSelAll)
+    res.used = true; res.fleet = true; if (!C) return res;
+    campSelAll(C); res.sel = C.sel || ''; res.tgt = C.tgt || ''; return res;
   }
   const tk = typeof campTgtStep === 'function' ? (campKeyIs('next', code) ? 'next' : campKeyIs('last', code) ? 'last' : campKeyIs('fnext', code) ? 'fnext' : campKeyIs('flast', code) ? 'flast' : campKeyIs('near', code) ? 'near' : campKeyIs('clear', code) ? 'clear' : '') : '';
   if (tk) { // [ ] S the hostile, A D the friend, X both (src/camptarget.js: the two selections)
