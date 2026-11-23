@@ -13,6 +13,7 @@ import { nodeGame, ROOT } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const g = nodeGame();
+g.run('campFleetListSet(true); // this suite is about the all-squads list (W): it is switched off in the game with the old fleet switch (card space-game-keys-orders; CAMP_FLEET_LIST) and on here');
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 g.run(`
