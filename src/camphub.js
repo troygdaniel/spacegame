@@ -6,9 +6,10 @@
 //   The keys (card space-game-ready-room-simple; Troy, 21 Nov 2026): the menu is the four rows; the right side says in a sentence or two what the chosen row is. Enter (or Right) on Missions, Refit or Rank
 //   OPENS IT as an overlay that takes the top of the screen; Up and Down move in the overlay's list (the same on every one), Enter does the thing on the choice, Left or Esc closes it. Launch launches.
 //     1 to 4 pick the row (and close an overlay)   Up Down (W S) move the row   Enter or Right open it   L launches from anywhere   Esc closes the overlay, and with none open leaves for the title (T too)
-//     in the Missions overlay: Up Down choose a mission, Enter (R) picks it and opens its briefing (a mission done is a replay), X goes back to the next mission
+//     in the Missions overlay: Up Down choose a mission, Enter (R) picks it and opens its briefing (a mission done is a replay; a SKIPPED one, [-], is flown the same way and its first win is kept: card space-game-replay-reselect-bug),
+//       X goes back to the next mission; the last row, Start the campaign over, asks on Enter and does it on the second Enter (any other key takes it back)
 //     in the Refit overlay: Up Down choose, Enter buys (or F a fighter, E an escort, U the Fabricator), Backspace gives the last one back; each choice shows what it changes (with the numbers), its cost and what you have
-//   campHubNew(P, opts)            the state the scene keeps: { row, rows, last, open (the row whose overlay is up, or ''), sel (the refit's choice) }; opts: { rows: [ids], at: the id to start on }
+//   campHubNew(P, opts)            the state the scene keeps: { row, rows, last, open (the row whose overlay is up, or ''), sel (the refit's choice), cur (the Missions cursor), pick (the replay chosen), ask (Start over has asked) }; opts: { rows: [ids], at: the id to start on }
 //   campHubRows(P, ids)            the rows (the five, or ids) with the live note of each: [{ id, n, name, note }]
 //   THE ROWS ARE DATA: a row is an id with its words (camp.hub.row.<id>, camp.hub.foot.<id>), a note (CAMP_HUB.note[id](P)), what Enter does on it (CAMP_HUB.act[id]: an action, or nothing to go on to the next row),
 //   its own keys (CAMP_HUB.rowKey[id](H, P, code, res), for a dock's rows) or its overlay (CAMP_HUB.over[id]: the list, the cursor, what Enter does, its own keys; not in a dock's room) and its page and stand in the scene (CAMP_HUBS.page[id], .stops[id], .face[id], src/camphubscene.js). The room is opened with scene data { rows, at, station:
@@ -50,7 +51,7 @@ function campHubStation(level, mission) { // mission (optional): the next missio
 }
 // the rows this visit shows: the ids asked for that the table knows (a note is what makes a row known), else the five; at: the id to stand on
 const campHubIds = ids => { const ok = (Array.isArray(ids) ? ids : []).filter((id, i, a) => typeof id === 'string' && typeof CAMP_HUB.note[id] === 'function' && a.indexOf(id) === i); return ok.length ? ok : CAMP_HUB.rows.slice(); };
-function campHubNew(P, opts) { const rows = campHubIds(opts && opts.rows), at = opts && opts.at ? rows.indexOf(opts.at) : 0; return { row: at > 0 ? at : 0, rows, last: '', open: '', sel: 0, cur: Math.max(0, campHubSelectable(P).findIndex(r => r.state === 'next')), pick: null }; } // cur: the board's cursor among the missions that can be picked (the ones done and the next one; it starts on the next); pick: the replay chosen, { level, i }, or null
+function campHubNew(P, opts) { const rows = campHubIds(opts && opts.rows), at = opts && opts.at ? rows.indexOf(opts.at) : 0; return { row: at > 0 ? at : 0, rows, last: '', open: '', sel: 0, cur: Math.max(0, campHubSelectable(P).findIndex(r => r.state === 'next')), pick: null, ask: false }; } // cur: the board's cursor among the missions that can be picked (the ones done and the next one; it starts on the next); pick: the replay chosen, { level, i }, or null; ask: the Start over row has asked and waits for its second Enter
 
 // the mission the Launch row flies: the one the save says is next, kept inside what exists
 function campHubNext(P) {
@@ -96,33 +97,49 @@ function campHubBoardView(rows, max) {
 
 // ---- replays ----
 const campHubDone = P => campHubBoard(P).filter(r => !r.head && r.state === 'done'); // the missions with a result that are not the next one: they can be flown again
-// the mission Launch flies: the replay picked on the board (if it is still a done mission), else the next one the save says
+// the missions that can be flown from the board besides the next one (card space-game-replay-reselect-bug): the ones done, and the ones SKIPPED (before the next one with no result: a save from an older version, whose
+// missions changed under it, or the tune kit's skip). A skipped one is flown like a replay (the story and the progress do not move) and its first win is kept as its result
+const campHubFlyable = P => campHubBoard(P).filter(r => !r.head && (r.state === 'done' || r.state === 'passed'));
+// the mission Launch flies: the replay picked on the board (if it can still be flown), else the next one the save says. skipped: the pick has no result yet
 function campHubTarget(P, H) {
-  const pk = H && H.pick;
-  if (pk && campHubDone(P).some(r => r.level === pk.level && r.i === pk.i)) return { level: pk.level, i: pk.i, replay: true };
-  const nx = campHubNext(P); return { level: nx.level, i: nx.i, replay: false };
+  const pk = H && H.pick, row = pk && campHubFlyable(P).find(r => r.level === pk.level && r.i === pk.i);
+  if (row) return { level: pk.level, i: pk.i, replay: true, skipped: row.state === 'passed' };
+  const nx = campHubNext(P); return { level: nx.level, i: nx.i, replay: false, skipped: false };
 }
-// the missions the board's cursor can stand on: the ones done (they can be replayed) and the next one
-const campHubSelectable = P => campHubBoard(P).filter(r => !r.head && (r.state === 'done' || r.state === 'next'));
-// the mission under the cursor becomes the one Launch flies: a mission done is a replay (picked), the next one is the road (nothing picked); the answer says which
+// the missions the board's cursor can stand on: the ones done, the ones skipped (they can be flown) and the next one
+const campHubSelectable = P => campHubBoard(P).filter(r => !r.head && (r.state === 'done' || r.state === 'passed' || r.state === 'next'));
+// the mission under the cursor becomes the one Launch flies: a mission done or skipped is a replay (picked), the next one is the road (nothing picked); the answer says which
 function campHubSelect(H, P) {
   const sel = campHubSelectable(P); if (!sel.length) return null;
   H.cur = Math.max(0, Math.min(sel.length - 1, H.cur | 0)); const t = sel[H.cur];
-  if (t.state === 'done') { H.pick = { level: t.level, i: t.i }; return { key: 'camp.hub.replay.set', vars: { n: t.n, title: t.title } }; }
+  if (t.state === 'done' || t.state === 'passed') { H.pick = { level: t.level, i: t.i }; return { key: t.state === 'done' ? 'camp.hub.replay.set' : 'camp.hub.skipped.set', vars: { n: t.n, title: t.title } }; }
   H.pick = null; return null;
+}
+// A save from an older version meets missions that changed: the ones before the next with no result show as skipped. The ready room says so ONCE (src/camphubscene.js campHubOldNote: a flag of its own beside the save, not a key of it; this half has no storage)
+const campHubOldSave = P => campHubBoard(P).some(r => !r.head && r.state === 'passed');
+// START OVER: the last row of the Missions list. The first Enter asks, the second does it (any other key takes the question back); what is kept is the stance and the ending seen
+const campHubOverRow = P => campHubSelectable(P).length; // the cursor's place on that row
+function campHubStartOver(H, P) {
+  const keep = { revealed: P.revealed, stance: P.stance }, fresh = campProgressNew();
+  Object.keys(P).forEach(k => { delete P[k]; }); Object.assign(P, fresh, keep);
+  H.cur = Math.max(0, campHubSelectable(P).findIndex(r => r.state === 'next')); H.pick = null; H.ask = false;
 }
 // the MISSIONS overlay (card space-game-ready-room-simple): Up Down (the model's) move the cursor over the missions done and the next one; Enter or R picks the one under it AND opens its briefing at once (a
 // mission done is a replay); X goes back to the next mission. A dock's room has no overlay (nothing there launches a mission)
 function campHubBoardGo(H, P, res) {
   const sel = campHubSelectable(P);
   if (!sel.length) { res.ok = false; res.say = { key: 'camp.hub.replay.none', vars: {} }; return res; }
+  if ((H.cur | 0) >= sel.length) { // the Start over row: asks first, does it on the second Enter
+    if (!H.ask) { H.ask = true; res.ok = false; res.say = { key: 'camp.hub.restart.ask', vars: {} }; return res; }
+    campHubStartOver(H, P); res.changed = true; res.say = { key: 'camp.hub.restart.done', vars: {} }; return res;
+  }
   H.cur = Math.max(0, Math.min(sel.length - 1, H.cur | 0));
   const say = campHubSelect(H, P); if (say) res.say = say; res.action = CAMP_HUB.act.board; return res;
 }
 CAMP_HUB.over.board = {
-  len: P => campHubSelectable(P).length, get: H => H.cur | 0, set: (H, i) => { H.cur = i; }, go: campHubBoardGo,
+  len: P => campHubSelectable(P).length + 1, get: H => H.cur | 0, set: (H, i) => { H.cur = i; }, go: campHubBoardGo, // + 1: the Start over row
   key: (H, P, code, res) => {
-    if (code === 'KeyR') { res.used = true; return campHubBoardGo(H, P, res); }
+    if (code === 'KeyR') { res.used = true; return (H.cur | 0) >= campHubOverRow(P) ? res : campHubBoardGo(H, P, res); } // (R opens a briefing: there is none on the Start over row)
     if (code === 'KeyX') { res.used = true; if (H.pick) { H.pick = null; res.say = { key: 'camp.hub.replay.cleared', vars: {} }; } return res; }
     return null;
   }
@@ -222,7 +239,7 @@ function campHubRank(P) {
 CAMP_HUB.note.board = P => uiText('camp.hub.note.board', { done: campHubFlown(P), all: campHubAll() });
 CAMP_HUB.note.refit = P => uiText('camp.hub.note.refit', { ore: P.ore | 0 });
 CAMP_HUB.note.rank = P => { const rk = campHubRank(P); return rk.ranked ? rk.name : uiText('camp.hub.note.points', { points: rk.points }); };
-CAMP_HUB.note.launch = (P, ctx) => { const t = campHubTarget(P, ctx && ctx.hub); return uiText(t.replay ? 'camp.hub.note.replay' : (P && (P.levelDone | 0) === t.level && t.level === (P.level | 0)) ? 'camp.hub.note.pick' : 'camp.hub.note.launch', { n: t.i + 1 }); };
+CAMP_HUB.note.launch = (P, ctx) => { const t = campHubTarget(P, ctx && ctx.hub); return uiText(t.replay && !t.skipped ? 'camp.hub.note.replay' : (P && (P.levelDone | 0) === t.level && t.level === (P.level | 0)) ? 'camp.hub.note.pick' : 'camp.hub.note.launch', { n: t.i + 1 }); };
 function campHubRows(P, ids, ctx) { // ctx: the scene's data (a dock passes { dock, camp, P }): what a row's note may read besides the progress
   return campHubIds(ids).map((id, k) => { let note = ''; try { note = String(CAMP_HUB.note[id](P, ctx)); } catch (e) { note = ''; } return { id, n: k + 1, name: uiText('camp.hub.row.' + id), note }; });
 }
@@ -261,6 +278,7 @@ function campHubKey(H, P, code, ctx) {
   const ov = !dock && H.open && CAMP_HUB.over[H.open] && H.open === id ? CAMP_HUB.over[H.open] : null; // the overlay that is up (a row picked from outside it closes it)
   if (H.open && !ov) H.open = '';
   const enter = code === 'Enter' || code === 'NumpadEnter', d = campHubDigit(code);
+  if (!enter) H.ask = false; // the Start over row's question stands until a key other than Enter
   if (d != null) { if (d >= 1 && d <= n) { H.row = d - 1; H.open = ''; res.used = res.moved = true; } return res; }
   if (ov) { // an overlay is up: Left and Esc close it, Up and Down move in its list, Enter or Right does the thing on the choice, and its own keys
     if (code === 'Escape' || campHubLeft(code)) { H.open = ''; res.used = res.moved = true; return res; }

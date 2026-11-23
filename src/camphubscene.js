@@ -24,13 +24,20 @@ const CAMP_HUBS = {
   face: { board: -1.5708, rank: -1.5708, refit: -1.5708, launch: -0.5 } // which way the pilot looks there, in radians (the art looks east at 0): up at a desk, at the cruiser from the pad
 };
 
+// a save from an older version (missions before the next one with no result) is told so ONCE: true the first time the ready room meets one, never again. The flag is a key of its own beside the save, not a key of it
+function campHubOldNote(P) {
+  if (!campHubOldSave(P)) return false; const key = CAMP.store + '.oldsave'; let seen = false;
+  campTry(() => { seen = localStorage.getItem(key) === '1'; if (!seen) localStorage.setItem(key, '1'); }, 0);
+  return !seen;
+}
+
 class CampHub extends Phaser.Scene {
   constructor() { super('CampHub'); }
   init(d) { this.d = d || {}; this.leaving = false; } // d: the scene data above (all of it optional)
   create() {
     if (typeof campTuneLoadOnce === 'function') campTuneLoadOnce(); // the tuning panel's overrides (src/camptune.js): read once per page, before anything here reads the CAMP table
     this.P = this.d.P || campProgressLoad(); if (typeof campReveal === 'function') campReveal(!!this.P.revealed); // after the ending has been seen, level 3 is the outpost on the board too (the Campaign scene did this only when it began: a page loaded after the ending showed the old name)
-    this.hub = campHubNew(this.P, { rows: this.d.rows, at: this.d.at }); this.msg = null; this.walls = []; // a dock hands in the Campaign scene's own progress, so what is bought there is not overwritten at the debrief
+    this.hub = campHubNew(this.P, { rows: this.d.rows, at: this.d.at }); this.oldNote = !this.d.dock && campHubOldNote(this.P); this.msg = null; this.walls = []; // a dock hands in the Campaign scene's own progress, so what is bought there is not overwritten at the debrief
     const nx = campHubNext(this.P), st = Object.assign({}, campHubStation(nx.level, nx.i), this.d.station && typeof this.d.station === 'object' ? this.d.station : {}), css = /^#[0-9a-f]{6}$/i.test(st.accent) ? st.accent : campHubStation(nx.level).accent;
     this.look = { id: 'camp-hub', name: String(st.name), art: st.art, home: false, accent: parseInt(css.slice(1), 16), accentCss: css, pirate: false, // what src/stationlook.js answers for a dock: the hall's colour, and the desks in it (a mission desk and a repair bay, no bar, shop or pump)
       terminals: { missions: true, repair: true, shop: false, pump: false, bar: false }, barName: '', barLines: [], welcome: '' };
@@ -118,9 +125,10 @@ class CampHub extends Phaser.Scene {
     const page = !this.d.dock && CAMP_HUBS.desc[id] ? s => s.pageDesc(id) : CAMP_HUBS.page[id]; if (page) page(this); // a dock's rows keep their pages; the hall's rows say in a sentence or two what they are (the overlay has the rest)
     this.ovShow(!!open); if (open) { this.ovTitle.setText(uiText('camp.hub.row.' + open)); CAMP_HUBS.overlay[open](this); }
   }
-  pageDesc(id) { // the sentence or two about the chosen row (Launch names the mission, or the replay it flies)
+  pageDesc(id) { // the sentence or two about the chosen row (Launch names the mission, or the replay it flies), and under it, once, what an older save means
     const P = this.P, t = campHubTarget(P, this.hub), b = id === 'launch' ? campHubBrief(P, t.level, t.i) : null;
-    this.wrap(uiText(id === 'launch' && t.replay ? 'camp.room.desc.replay' : 'camp.room.desc.' + id, b ? { n: b.n, of: b.of, title: b.title } : {}), 62).forEach((l, i) => this.line(i, 0, l, '#e8f6ff'));
+    const lines = this.wrap(uiText(id === 'launch' && t.replay && !t.skipped ? 'camp.room.desc.replay' : 'camp.room.desc.' + id, b ? { n: b.n, of: b.of, title: b.title } : {}), 62); lines.forEach((l, i) => this.line(i, 0, l, '#e8f6ff'));
+    if (this.oldNote && campHubOldSave(P)) this.wrap(uiText('camp.hub.oldsave'), 62).forEach((l, i) => this.line(lines.length + 1 + i, 0, l, '#ffb454')); // "This save is from an older version..."
   }
   pageBoard() {
     const H = this.hub, sel = campHubSelectable(this.P), legend = sel.length > 0 && !(this.d && this.d.dock), pk = H.pick;
@@ -136,27 +144,32 @@ class CampHub extends Phaser.Scene {
     if (legend) { const m = this.msg && this.msg.until > this.time.now && this.hub.rows[this.hub.row] === 'board' ? this.msg : null; this.line(CAMP_HUBS.pane.lines - 1, 0, m ? m.text : uiText('camp.hub.replay.keys'), m ? (m.ok ? '#6dff9c' : '#ffb454') : '#8fb4c9'); } // the keys, or the answer of the last one
   }
   // ----- the overlays: the top of the screen, opened by Enter on a row -----
-  ovFoot() { const m = this.msg && this.msg.until > this.time.now ? this.msg : null, O = CAMP_HUBS.over; return m ? { text: m.text, color: m.ok ? '#6dff9c' : '#ffb454' } : { text: uiText('camp.room.hint.' + this.hub.open), color: '#8fb4c9' }; }
+  ovFoot() { const m = this.msg && this.msg.until > this.time.now ? this.msg : null, O = CAMP_HUBS.over; if (this.hub.ask && this.hub.open === 'board') return { text: uiText('camp.hub.restart.ask'), color: '#ffb454' }; return m ? { text: m.text, color: m.ok ? '#6dff9c' : '#ffb454' } : { text: uiText('camp.room.hint.' + this.hub.open), color: '#8fb4c9' }; }
   ovHint(line) { const f = this.ovFoot(); this.ovLine(line, 0, f.text, f.color); }
-  overBoard() { // the missions on the left, the chosen one's briefing beside them
-    const P = this.P, H = this.hub, O = CAMP_HUBS.over, sel = campHubSelectable(P), pk = H.pick;
-    if (sel.length) H.cur = Math.max(0, Math.min(sel.length - 1, H.cur | 0));
-    const cur = sel[H.cur] || null, view = campHubBoardView(campHubBoard(P), 19);
+  overBoard() { // the missions on the left, the chosen one's briefing beside them; under them the last row, Start the campaign over, and what the marks mean
+    const P = this.P, H = this.hub, O = CAMP_HUBS.over, sel = campHubSelectable(P), pk = H.pick, over = campHubOverRow(P);
+    H.cur = Math.max(0, Math.min(over, H.cur | 0)); // (the cursor may stand on the Start over row, one past the missions)
+    const cur = sel[H.cur] || null, view = campHubBoardView(campHubBoard(P), 16), at = view.length + 1;
     view.forEach((r, i) => {
       if (r.head) { this.ovLine(i, 0, uiText('camp.hub.level', { n: r.level, name: r.name }), '#38e1ff'); return; }
       const isCur = !!(cur && r.level === cur.level && r.i === cur.i), isPick = !!(pk && r.level === pk.level && r.i === pk.i);
       const mark = isPick ? '[R]' : { done: '[x]', next: '[>]', passed: '[-]', later: '[ ]' }[r.state], col = isPick ? '#6dff9c' : isCur ? '#ffffff' : r.state === 'next' ? '#ffd37a' : r.state === 'later' ? '#6f8aa0' : '#e8f6ff';
       this.ovLine(i, 0, (isCur ? '> ' : '  ') + mark + ' ' + r.n + '  ' + r.title + '  (' + uiText('camp.hub.kind.' + r.kind) + ')', col);
-      this.ovLine(i, O.col2 - 60 - O.pad, r.state === 'next' ? uiText('camp.hub.next') : r.state === 'done' ? uiText('camp.hub.score', { score: r.score }) + (r.of ? '  ' + uiText('camp.hub.bonuses', { got: r.bonus, of: r.of }) : '') + (r.rank ? '  ' + r.rank : '') : '', isPick ? '#6dff9c' : r.state === 'next' ? '#ffb454' : '#9fe9ff', true);
+      this.ovLine(i, O.col2 - 60 - O.pad, r.state === 'next' ? uiText('camp.hub.next') : r.state === 'passed' ? uiText('camp.hub.skipped.tag') : r.state === 'done' ? uiText('camp.hub.score', { score: r.score }) + (r.of ? '  ' + uiText('camp.hub.bonuses', { got: r.bonus, of: r.of }) : '') + (r.rank ? '  ' + r.rank : '') : '', isPick ? '#6dff9c' : r.state === 'next' ? '#ffb454' : r.state === 'passed' ? '#8fb4c9' : '#9fe9ff', true);
     });
+    const ask = !!H.ask && H.cur === over; // Start over has asked: its row turns amber
+    this.ovLine(at, 0, (H.cur === over ? '> ' : '  ') + uiText('camp.hub.restart.row'), ask ? '#ffb454' : H.cur === over ? '#ffffff' : '#8fb4c9');
+    if (at + 3 < 19) { this.ovLine(at + 2, 0, uiText('camp.hub.legend'), '#8fb4c9'); this.wrap(uiText('camp.hub.replay.how'), 66).forEach((l, i) => { if (at + 3 + i < 19) this.ovLine(at + 3 + i, 0, l, '#8fb4c9'); }); } // what the marks mean, and how to fly one again
     const b = cur ? campHubBrief(P, cur.level, cur.i) : null, X = O.col2 - O.pad; if (b) {
-      const replay = cur.state === 'done';
+      const replay = cur.state === 'done'; // a mission done is a replay; a skipped one has its briefing as it is, with "Not flown yet" under it
       this.ovLine(0, X, uiText(replay ? 'camp.hub.replay.head' : 'camp.hub.brief.head', { n: b.n, of: b.of, title: b.title }), replay ? '#6dff9c' : '#38e1ff');
       this.ovLine(1, X, uiText('camp.hub.brief.kind', { kind: b.kindText, par: b.par }), '#8fb4c9');
       b.lines.forEach((l, i) => this.ovLine(3 + i, X, l, '#e8f6ff'));
       this.ovLine(6, X, uiText('camp.hub.brief.obj'), '#38e1ff'); b.objectives.slice(0, 4).forEach((o, i) => this.ovLine(7 + i, X, ('- ' + o).slice(0, 74), '#e8f6ff'));
       this.ovLine(12, X, uiText('camp.ui.bonushead'), '#ffd37a'); b.bonus.slice(0, 4).forEach((x, i) => this.ovLine(13 + i, X, ('+' + x.points + '  ' + x.text).slice(0, 74), '#ffd37a'));
       this.ovLine(18, X, b.tries ? uiText('camp.hub.brief.best', { score: b.best, n: b.tries }) : uiText('camp.hub.brief.new'), '#8fb4c9');
+    } else if (H.cur === over) { // the Start over row: what it does
+      this.ovLine(0, X, uiText('camp.hub.restart.row'), '#ffb454'); this.wrap(uiText('camp.hub.restart.desc'), 54).forEach((l, i) => this.ovLine(2 + i, X, l, '#e8f6ff'));
     }
     this.ovHint(19);
   }
