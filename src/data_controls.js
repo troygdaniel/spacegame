@@ -248,7 +248,7 @@ const CONTROLS = [
     { k: ['Enter'], t: 'Missile at the target (no list open)', sub: 'FLY AND FIRE' },
     { k: ['-', '='], t: 'Zoom; Backspace resets; drag pans', sub: 'FLY AND FIRE' }, // - and the wheel go out to the whole system on the map; = and the keypad's + and - too; Backspace is the reset (src/campzoom.js: all three from CAMP_KEYS) // drag: the left button held and moved pans the view and the Tab map (src/campdrag.js): it stays where it is put; the wheel zooms about the pointer; a RECENTRE mark, Backspace (this reset) or the arrows held bring it back (a row of its own did not fit the H page)
     { k: ['A', 'D'], t: 'Last or next target (nearest first)', sub: 'THE TARGET' }, // ONE target for everything: Attack goes at it, Fly to the target flies to it, Enter fires at it
-    { k: ['S', 'X', 'F'], t: 'S nearest, X clears, F looks at it', sub: 'THE TARGET' }, // F: the camera glides to the target, a ship a list is on, or a squad's leader, and follows it (src/campfocus.js); Backspace (the zoom row) brings it back
+    { k: ['S', 'X', 'F'], t: 'S nearest, X clears it, F looks at it', sub: 'THE TARGET' }, // F: the camera glides to the target, a ship a list is on, or a squad's leader, and follows it (src/campfocus.js); Backspace (the zoom row) brings it back
     { k: ['J', 'K', 'L'], t: 'Power to shields, engines, weapons', sub: 'POWER' },
     { k: [';'], t: 'Balance the power: 2 / 2 / 2', sub: 'POWER' },
     { k: ['Up', 'Down'], t: 'A pilot calls: pick (stops timer); Enter', sub: 'A PILOT\'S CALL' }, // the call's small list has the arrows and Enter while no Q or P list is open; a press of Up or Down stops its 8 s timer, and the call then waits for Enter (src/camporderdraw.js, card space-game-call-timer-stops)

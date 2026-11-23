@@ -20,6 +20,9 @@ const CAMPFOCUS = {
   edge: { pad: 40, arrow: 9, ink: 0x7fe9ff, label: '#7fe9ff' }  // the cruiser's arrow: px from the screen's edge, its size, its colours
 };
 
+// the focus of a scene, or null: a stand-in scene in a test may answer any property with a stub, so only an object made here counts
+const campFocusOf = s => { const f = s && s.focus; return f && typeof f === 'object' && typeof f.id === 'string' && f.pt ? f : null; };
+
 // ---- what is focused ----
 // the leader of a squad: its first ship out, by id (the ships of a squad keep their ids, so the leader is the same until it is lost)
 function campFocusLeader(C, sq) {
@@ -61,7 +64,7 @@ function campFocusGlideZoom(cx, cy, tx, ty, z) {
 const campFocusMid = cam => ({ x: cam.scrollX + W / 2, y: cam.scrollY + H / 2 });
 // the zoom a glide took is given back, unless the player zoomed by hand meanwhile (what he set stays) or a target sub-list has the zoom (src/camppickdraw.js campPickZoom gives it back itself)
 function campFocusZoomBack(s) {
-  const f = s && s.focus, Z = f && f.zoom; if (!Z) return;
+  const f = campFocusOf(s), Z = f && f.zoom; if (!Z) return;
   if (typeof CAMZOOM !== 'undefined' && Math.abs(CAMZOOM.want - Z.set) < 1e-9) CAMZOOM.want = Z.was;
   f.zoom = null;
 }
@@ -73,7 +76,7 @@ function campFocusPress(s) {
   const now = (s.time && s.time.now) || 0, sub = campFocusSubject(C, s.pn, now), u = sub && sub.u;
   if (!u) return '';
   if (u === C.carrier) return campFocusReturn(s) ? 'back' : 'cruiser';
-  if (s.focus && s.focus.id === u.id) return 'same';
+  const cur = campFocusOf(s); if (cur && cur.id === u.id) return 'same';
   campFocusZoomBack(s); // another ship: the zoom of the last glide first
   const z = cam.zoom > 0 ? cam.zoom : 1, mid = campFocusMid(cam), want = typeof CAMZOOM !== 'undefined' ? CAMZOOM.want : z;
   const f = s.focus = { id: u.id, name: campFocusName(C, u), side: sub.side, why: sub.why, pt: { x: u.x, y: u.y }, from: { x: mid.x, y: mid.y }, t: 0, gliding: true, zoom: null };
@@ -85,12 +88,12 @@ function campFocusPress(s) {
 }
 // the camera back on the cruiser: true when there was a focus to end or the hand had the view
 function campFocusReturn(s) {
-  if (s && s.focus) { campFocusEnd(s, 'back'); return true; }
+  if (campFocusOf(s)) { campFocusEnd(s, 'back'); return true; }
   return !!(s && s.panned && typeof campViewRecentre === 'function' && campViewRecentre(s));
 }
 // the focus ends and the camera follows the cruiser again (its own lerp eases the way back); why: 'back' (a key), 'lost' (the ship is gone), 'over' (the battle ended or a card came)
 function campFocusEnd(s, why) {
-  const f = s && s.focus; if (!f) return false;
+  const f = campFocusOf(s); if (!f) return false;
   campFocusZoomBack(s); s.focus = null;
   const cam = s.cameras && s.cameras.main, sp = s.sp && s.camp && s.camp.carrier ? s.sp[s.camp.carrier.id] : null;
   if (cam && sp) cam.startFollow(sp, true, CAMPDRAG.follow, CAMPDRAG.follow);
@@ -98,12 +101,12 @@ function campFocusEnd(s, why) {
 }
 // a drag of the hand (campViewPan): the follow is let go and nothing is put back: the hand has the view, and F picks the ship up again
 function campFocusBreak(s) {
-  if (!s || !s.focus) return false;
+  if (!campFocusOf(s)) return false;
   campFocusZoomBack(s); s.focus = null; return true;
 }
 // every frame (the scene's update), dt ms: the point the camera follows is kept on the ship; the glide ends when the camera is there; a ship that died or left, or the battle over, ends the focus
 function campFocusFrame(s, dt) {
-  const f = s && s.focus; if (!f) { campFocusPaint(s); return; }
+  const f = campFocusOf(s); if (!f) { campFocusPaint(s); return; }
   const C = s.camp, cam = s.cameras && s.cameras.main;
   if (!C || !cam || C.result || (s.mode !== 'play' && s.mode !== 'pause')) { campFocusEnd(s, 'over'); campFocusPaint(s); return; } // a card (the debrief, the end) takes the view back; the pause and the H page do not
   const u = campFocusAlive(C, f.id);
@@ -139,7 +142,7 @@ function campFocusInstall(s) {
 }
 function campFocusPaint(s) {
   const M = s && s.focusMark; if (!M) return;
-  const f = s.focus, on = !!f && !s.mp, K = CAMPFOCUS, C = s.camp, cam = s.cameras && s.cameras.main;
+  const f = campFocusOf(s), on = !!f && !s.mp, K = CAMPFOCUS, C = s.camp, cam = s.cameras && s.cameras.main;
   M.g.clear(); M.t.setVisible(on); M.a.setVisible(false);
   if (!on || !C || !cam) return;
   campLabel(M.t, uiText('camp.hud.focuswatch', { name: f.name }));

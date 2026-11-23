@@ -52,7 +52,7 @@ function campViewPan(s, dx, dy) {
 }
 // the camera back on the cruiser (it eases there by its own lerp); false when the view was not off
 function campViewRecentre(s) {
-  if (s && s.focus && typeof campFocusEnd === 'function') { campFocusEnd(s, 'back'); return true; } // Backspace and the mark also end a focus (src/campfocus.js): the camera follows the cruiser again
+  if (typeof campFocusEnd === 'function' && campFocusEnd(s, 'back')) return true; // Backspace and the mark also end a focus (src/campfocus.js): the camera follows the cruiser again
   if (!s || !s.panned) return false;
   s.panned = false; s.dragFly = 0; if (s._cz) s._cz.anchor = null;
   const cam = s.cameras && s.cameras.main, sp = s.sp && s.camp && s.camp.carrier ? s.sp[s.camp.carrier.id] : null;
