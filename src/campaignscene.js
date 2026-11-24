@@ -65,6 +65,7 @@ class Campaign extends Phaser.Scene {
     this.boom = fxBoom(this);
     if (typeof campTuneLoadOnce === 'function') campTuneLoadOnce(); // the tuning panel's overrides (src/camptune.js) go into the CAMP table before the battle is made: a page reads them once; a bot or a test never does
     this.pickZoom = null; // the zoom a target sub-list took and the one to give back (src/camppickdraw.js)
+    this.peek = null; this.selPeek = null; // the peek at a picked ship that was off the screen, and the ships picked the frame before (src/campselzoom.js)
     this.tuned = false; // a mission flown with any override on is a tuned run: its score and rank are not kept (update sets it)
     this.camp = this.makeCamp();
     this.sp = {}; this.bsp = []; this.bayAt = { launch: -1e9, land: -1e9 }; // the battle clock of the last launch and the last landing: the bays of the cruiser stay lit a moment after each (campBayLight)
@@ -312,7 +313,7 @@ class Campaign extends Phaser.Scene {
     if (campKeyCodes('pause').indexOf(c) >= 0) { if (listOpen) campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0); else if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc goes back ONE step in the lists (a target sub-list to its list, a list a part's row opened to Q or P, a list its own key opened closes: src/camppanel.js), then closes the map; it pauses only when nothing is open
     if (this.mp && typeof campMapKey === 'function' && campMapKey(this, c, e.shiftKey)) return; // the open map has the arrows and Enter: Up and Down step the marks, Left and Right the groups, Enter flies there, X clears the trip (src/campmapdraw.js)
     if (this.mp && !typing && (CAMP_PANELS.panels.some(p => p.code && p.code === c) || campKeyIs('missile', c))) { if (campKeyIs('missile', c)) return; campMapClose(this); } // a list's key over the map: the map closes and the list opens; Enter is never a missile over the map
-    if (!typing && campKeyIs('focus', c)) { if (typeof campFocusPress === 'function') campFocusPress(this); return; } // F: the camera to the selected ship (a sub-list's candidate, a squad's leader, the target), or back to the cruiser with none (src/campfocus.js); it works with a list open and the ship flies on
+    if (!typing && campKeyIs('focus', c)) { const pk = typeof campPeekBreak === 'function' && campPeekBreak(this); if (typeof campFocusPress === 'function') campFocusPress(this); if (pk && typeof campPeekHome === 'function') campPeekHome(this); return; } // F: the camera to the selected ship (a sub-list's candidate, a squad's leader, the target), or back to the cruiser with none (src/campfocus.js); it works with a list open and the ship flies on
     const now = (this.time && this.time.now) || 0, pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, now) : { used: false }; // the lists and the direct keys (src/camppanel.js): Q W E R and P O U open a list (Up, Down, Enter in it), A D S X the target, J K L ; the power, Enter a missile
     if (pr.ran) { toast(this, pr.say, pr.ok ? '#9fe9ff' : '#ffb454'); if (pr.ok && pr.row === 'balance' && this.gaugeAnim) this.gaugeAnim.flash = this.gaugeAnim.flash.map(() => 1); } // the balance key flashes all three bars, even when the power was even already
     if (pr.used) return;
@@ -402,7 +403,8 @@ class Campaign extends Phaser.Scene {
     if (typeof campFarSync === 'function') campFarSync(this);
     if (typeof campSightSync === 'function') campSightSync(this); // the edge arrows of the hostiles that are off the screen and the pulse of a group just seen (src/campsightscene.js) // the names of the places and the escorted ships when the view is out so far that the world's labels are specks (src/campfarscene.js)
     if (typeof campTgtPaint === 'function') campTgtPaint(this); // the brackets round the enemy [ ] \ picked, the pilot Q W picked and the friendly O P picked (src/camptargetdraw.js)
-    if (typeof campSelZoom === 'function') campSelZoom(this); // a ship selected with [ ] O P or Q W (one pilot) zooms the view out until it and the cruiser are on the screen (src/campselzoom.js)
+    if (typeof campSelPeek === 'function') campSelPeek(this); // a ship newly picked (a key or a click) that is off the screen starts a peek: the camera glides to it, holds, glides back; one on the screen moves nothing (src/campselzoom.js)
+    if (typeof campPeekFrame === 'function') campPeekFrame(this, dt); // the glide out, the hold and the glide back, by time
     if (typeof campPickPaint === 'function') campPickPaint(this); // the candidate a target sub-list is on, shown in the flight view (and the zoom out to it; src/camppickdraw.js)
     if (typeof campTcornerLook === 'function') campTcornerLook(this.pn, this.time.now); // what the target corners read besides the game: the panels' state (the ship an order's list is on) and the clock (src/camptcorner.js)
     if (typeof campCornerSync === 'function') campCornerSync(this, this.time.now); // the corner panels: Q W FLEET at the bottom left (and the ones other cards add): the title and the selection stay, the details open on use and fade (src/campcorner.js, src/campcornerscene.js)

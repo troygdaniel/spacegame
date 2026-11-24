@@ -57,6 +57,9 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.fightpace | Fight pace (1 is as fast as travel) |
 | camp.ui.tune.row.marktime | Pilot and target squares stay |
 | camp.ui.tune.row.targetrestart | Enemy pick starts over |
+| camp.ui.tune.row.peekhold | Pick peek: camera stays |
+| camp.ui.tune.row.peekglide | Pick peek: each glide |
+| camp.ui.tune.row.peekzoom | Pick peek: least zoom |
 | camp.ui.tune.row.wavetime | Wave timing (times the mission's) |
 | camp.ui.tune.row.startzoom | Starting zoom (presses of minus) |
 | camp.ui.tune.row.miningrate | Mining rate of a mining ship |
