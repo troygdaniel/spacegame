@@ -135,6 +135,20 @@ g.run(`
   check('the block stands inside the screen (its plate starts at y >= 0) and ends 4 px above the S CRUISER title row', Z.plate.y >= 0 && Z.y1 + K.gap === T.tl.y && Z.bottom === T.tl.y, JSON.stringify([Z.plate, Z.y1, T.tl]));
   check('the two top corners are still level (HOSTILES with S CRUISER) and the bottom ones too: moving the top pair down 16 px for the fourth line kept the alignment', T.tl.y === T.tr.y && T.bl.y === T.br.y && T.tl.y === 78, JSON.stringify(T));
   check('the title row and the room under it are still on the screen (the S list is the tallest thing under it)', T.tl.y + Th + 4 + 200 < J('H'), T.tl.y);
+  // the R chip beside the count (Troy, 24 Nov 2026: "show the R chip beside the missile count")
+  g.run(`window.__st = () => { const calls = [], rec = k => (...a) => { calls.push([k].concat(a)); return gg; }, gg = { calls, fillStyle: rec('fillStyle'), fillRect: rec('fillRect'), lineStyle: rec('lineStyle'), strokeRect: rec('strokeRect') }; return gg; };
+    window.__tx = () => { const t = { text: '', color: '', setText(v) { t.text = String(v); return t; }, setColor(c) { t.color = c; return t; } }; return t; };
+    window.__H = () => ({ crShieldL: __tx(), crShieldN: __tx(), crHullL: __tx(), crHullN: __tx(), crOre: __tx(), crCash: __tx(), crMis: __tx(), crMisKey: __tx(), crMisWhy: __tx() });`);
+  const ch = J('CAMPCRUISERHUD.chip');
+  check('the chip stands on the missiles line, after the longest count (MISSILES  12/12) and before the state at the right', Z.misKey.y === Z.mis.y && Z.misKey.x === Z.mis.x + ch.x && Z.misKey.x - ch.w / 2 > Z.mis.x + 100 && Z.misKey.x + ch.w / 2 < Z.misWhy.x - 80, JSON.stringify([Z.mis, Z.misKey, Z.misWhy]));
+  g.run('__m(100, 3); window.__g1 = __st(); window.__h1 = __H(); campCruiserHudPaint(__g1, __h1, C)');
+  check('painted: the letter is the key table\'s (R), and a plain chip rectangle is drawn at the chip\'s place', J('__h1.crMisKey.text') === 'R' && J('campCruiserMissileKey()') === 'R' && J(`__g1.calls.some(c => c[0] === 'fillRect' && c[1] === ${Z.misKey.x - ch.w / 2} && c[2] === ${Z.misKey.y - ch.h / 2} && c[3] === ${ch.w} && c[4] === ${ch.h})`), J('__g1.calls.filter(c => c[0] === "fillRect").length'));
+  g.run('window.__codes = CAMP_KEYS.reload.codes; window.__k = CAMP_KEYS.reload.k; CAMP_KEYS.reload.k = "T"; CAMP_KEYS.reload.codes = ["KeyT"]; window.__g2 = __st(); window.__h2 = __H(); campCruiserHudPaint(__g2, __h2, C)');
+  check('a rebound key shows its own letter (the chip reads the table, it does not say R by itself)', J('__h2.crMisKey.text') === 'T');
+  g.run('CAMP_KEYS.reload.codes = []; window.__g3 = __st(); window.__h3 = __H(); campCruiserHudPaint(__g3, __h3, C)');
+  check('with no key for it, no letter and no chip are drawn (one rectangle fewer than with the key)', J('__h3.crMisKey.text') === '' && J('__g3.calls.filter(c => c[0] === "fillRect").length') === J('__g1.calls.filter(c => c[0] === "fillRect").length') - 1);
+  g.run('CAMP_KEYS.reload.k = __k; CAMP_KEYS.reload.codes = __codes');
+  check('the HUD makes the letter\'s text (crMisKey) and the scene\'s texts are in its HUD', /crMisKey: mk\(/.test(src('src/campcruiserhud.js')));
   const scene = src('src/campaignscene.js');
   check('the scene has no bottom-left count any more: no hud.missiles text, none of the old words; the rockets\' own sprites are made on the first frame (this.msp)', !/hud\.missiles/.test(scene) && !/camp\.ui\.missiles|camp\.ui\.missilenext/.test(scene) && /if \(!this\.msp\)/.test(scene) && /this\.msp = null;/.test(scene));
   check('the HUD makes the two texts of the line (crMis, crMisWhy) and paints them', /crMis: mk\(/.test(src('src/campcruiserhud.js')) && /crMisWhy: mk\(/.test(src('src/campcruiserhud.js')) && /H\.crMis\.setText\(campCruiserMissileLine\(S\)\)/.test(src('src/campcruiserhud.js')));
