@@ -80,7 +80,7 @@ check('and the save on disk is the new campaign: level 1, mission 0, no results'
 check('a campaign just begun has one mission to reach (the next) and the row: the list is 2 long', J('campHubSelectable(P).length') === 1 && J('CAMP_HUB.over.board.len(P)') === 2);
 
 // ---- E. the words ----
-check('the key line of the list says how to fly one again: Enter opens its briefing, then Launch flies it', /Enter\s+open its briefing, then Launch flies it/.test(J(`uiText('camp.room.hint.board')`)) && J(`uiText('camp.room.hint.board')`).length < 125, J(`uiText('camp.room.hint.board')`));
+check('the key line of the list says how to fly one again: Enter opens its briefing, then Launch flies it', /Enter( or click again)?\s+open its briefing, then Launch flies it/.test(J(`uiText('camp.room.hint.board')`)) && J(`uiText('camp.room.hint.board')`).length < 125, J(`uiText('camp.room.hint.board')`));
 check('the old save\'s note says what happened and what to do, in plain words', /older version/.test(J(`uiText('camp.hub.oldsave')`)) && /skipped/.test(J(`uiText('camp.hub.oldsave')`)) && /fly it/.test(J(`uiText('camp.hub.oldsave')`)));
 check('the question says what goes and how to answer; the row and its description are there', /Enter again: yes/.test(J(`uiText('camp.hub.restart.ask')`)) && /Any other key: no/.test(J(`uiText('camp.hub.restart.ask')`)) && J(`uiText('camp.hub.restart.row')`) === 'Start the campaign over' && /mission 1/.test(J(`uiText('camp.hub.restart.desc')`)) && J(`uiText('camp.hub.legend')`).indexOf('[-] skipped') > 0);
 check('the briefing is headed as a mission, not a REPLAY, for a skipped one (the scene\'s head reads t.skipped)', /bf\.t\.replay === true && bf\.t\.skipped !== true/.test(src('src/campbriefdraw.js')));

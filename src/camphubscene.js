@@ -19,7 +19,7 @@ const CAMP_HUBS = {
   walk: { ms: 1.6, min: 260 },                 // the pilot's walk to a desk: ms for each px of the way (a brisk walk: 600 px a second), and the shortest walk in ms
   msg: 3200,                                   // ms a purchase's answer stays on the page
   cruiser: { x: 1090, y: 360, len: 190, name: 502 }, // the cruiser on the pad: where, how long it is drawn (nose up), and the y of its name under the pad's BAY 01
-  over: { x: 36, y: 24, w: 1208, h: 408, pad: 20, top: 46, line: 18, col2: 640, hint: 26 }, // the overlay: the glass at the top of the screen, the room inside it (from the left and from the top), a line's height, where the second column starts, and how far above its bottom the hint stands
+  over: { x: 36, y: 24, w: 1208, h: 408, pad: 20, top: 46, line: 18, col2: 640, hint: 26, lines: 16 }, // the overlay: the glass at the top of the screen, the room inside it (from the left and from the top), a line's height, where the second column starts, how far above its bottom the hint stands, and how many lines of the missions it lists (each has a click zone)
   stops: { board: [200, 246], rank: [336, 312], refit: [640, 246], launch: [1028, 394] }, // where the pilot stands for each row: at the desk's front, in the open hall, at the pad
   face: { board: -1.5708, rank: -1.5708, refit: -1.5708, launch: -0.5 } // which way the pilot looks there, in radians (the art looks east at 0): up at a desk, at the cruiser from the pad
 };
@@ -104,6 +104,15 @@ class CampHub extends Phaser.Scene {
     this.ovTitle = this.add.text(O.x + O.pad, O.y + 12, '', uiFont(16, this.accent, { letterSpacing: 2 })).setDepth(87);
     this.ovBar = this.add.rectangle(O.x + O.w / 2, O.y + O.top, O.w - 2 * O.pad + 12, O.line * 2 + 6, 0xffb454, 0.14).setDepth(86.5);
     this.ovSlots = {}; this.ovShow(false);
+    // the mouse on the missions list (card space-game-click-mission): a clear zone over each line the list can have, shown only on the lines a mission the cursor can stand on is drawn on (zonesPaint), each with the hand; and one faint bar under the line the pointer is on
+    const zl = O.x + O.pad - 6, zw = O.col2 - 60 - 2 * O.pad + 12; // from a little left of the text to a little past the rank at its right
+    this.mHits = []; this.hov = -1;
+    for (let k = 0; k < O.lines; k++) {
+      const z = this.add.rectangle(zl + zw / 2, O.y + O.top + k * O.line + O.line / 2, zw, O.line, 0xffffff, 0.001).setDepth(88).setInteractive({ useHandCursor: true }); z.cur = -1; z.setVisible(false);
+      z.on('pointerdown', () => this.clickMission(z.cur)); z.on('pointerover', () => this.hoverMission(z.cur)); z.on('pointerout', () => this.hoverMission(-1, z.cur));
+      this.mHits.push(z);
+    }
+    this.ovHover = this.add.rectangle(zl + zw / 2, O.y + O.top + O.line / 2, zw, O.line, 0xffffff, 0.08).setDepth(86.5).setVisible(false);
   }
   ovShow(on) { this.ovGlass.setVisible(on); this.ovTitle.setVisible(on); this.ovBar.setVisible(false); Object.keys(this.ovSlots).forEach(k => this.ovSlots[k].setVisible(false)); }
   ovLine(i, x, text, color, right) { // one line of the overlay: i the line, x from the left of its room (the glass's right edge when right: aligned to it), the text and its colour
@@ -135,6 +144,7 @@ class CampHub extends Phaser.Scene {
     Object.keys(this.slots).forEach(k => this.slots[k].setVisible(false));
     const page = !this.d.dock && CAMP_HUBS.desc[id] ? s => s.pageDesc(id) : CAMP_HUBS.page[id]; if (page) page(this); // a dock's rows keep their pages; the hall's rows say in a sentence or two what they are (the overlay has the rest)
     this.ovShow(!!open); if (open) { this.ovTitle.setText(uiText('camp.hub.row.' + open)); CAMP_HUBS.overlay[open](this); }
+    this.zonesPaint(open === 'board'); // the click zones follow the list
   }
   pageDesc(id) { // the sentence or two about the chosen row (Launch names the mission, or the replay it flies), and under it, once, what an older save means
     const P = this.P, t = campHubTarget(P, this.hub), b = id === 'launch' ? campHubBrief(P, t.level, t.i) : null;
@@ -160,7 +170,7 @@ class CampHub extends Phaser.Scene {
   overBoard() { // the missions on the left, the chosen one's briefing beside them; under them the last row, Start the campaign over, and what the marks mean
     const P = this.P, H = this.hub, O = CAMP_HUBS.over, sel = campHubSelectable(P), pk = H.pick, over = campHubOverRow(P);
     H.cur = Math.max(0, Math.min(over, H.cur | 0)); // (the cursor may stand on the Start over row, one past the missions)
-    const cur = sel[H.cur] || null, view = campHubBoardView(campHubBoard(P), 16), at = view.length + 1;
+    const cur = sel[H.cur] || null, view = campHubBoardView(campHubBoard(P), O.lines), at = view.length + 1;
     view.forEach((r, i) => {
       if (r.head) { this.ovLine(i, 0, uiText('camp.hub.level', { n: r.level, name: r.name }), '#38e1ff'); return; }
       const isCur = !!(cur && r.level === cur.level && r.i === cur.i), isPick = !!(pk && r.level === pk.level && r.i === pk.i);
@@ -206,6 +216,26 @@ class CampHub extends Phaser.Scene {
     this.ovLine(i++, 0, uiText('camp.hub.rank.wing', { f: r.wing.fighters }), '#e8f6ff');
     if (r.ladder.length) { i++; this.ovLine(i++, 0, uiText('camp.room.rank.ladder'), '#38e1ff'); r.ladder.forEach(l => this.ovLine(i++, 0, (l.here ? '> ' : '  ') + uiText('camp.room.rank.rung', { name: l.name, at: l.at, f: l.fighters }), l.here ? '#ffd37a' : '#e8f6ff')); }
     this.ovHint(19);
+  }
+
+  // ----- the mouse on the missions list (card space-game-click-mission) -----
+  modalUp() { return (typeof campBriefIsOpen === 'function' && campBriefIsOpen(this)) || (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) || (typeof campTuneIsOpen === 'function' && campTuneIsOpen(this)); } // a page in front of the list (the briefing, the H page, the tuning panel): it takes the pointer as it takes the keys
+  zonesPaint(on) { // the zones are on the lines a mission the cursor can stand on is drawn on (src/camphub.js campHubBoardHits); the others, and every zone while another page is up, are hidden
+    const at = {}; if (on && !this.d.dock) campHubBoardHits(this.P, CAMP_HUBS.over.lines).forEach(h => { at[h.line] = h.cur; });
+    this.mHits.forEach((z, k) => { z.cur = at[k] != null ? at[k] : -1; z.setVisible(z.cur >= 0); });
+    if (!on) this.hov = -1; this.hoverPaint();
+  }
+  hoverMission(cur, from) { // the pointer enters (cur) or leaves (-1, from the one it left) a zone: out of an old zone after into the next must not clear the next
+    if (cur >= 0) this.hov = cur; else if (from == null || this.hov === from) this.hov = -1;
+    this.hoverPaint();
+  }
+  hoverPaint() { // the faint bar under the line the pointer is on: not while a page is in front of the list
+    const z = this.hov >= 0 && this.hub.open === 'board' && !this.modalUp() ? this.mHits.find(o => o.visible !== false && o.cur === this.hov) : null;
+    if (z) this.ovHover.setY(z.y); this.ovHover.setVisible(!!z);
+  }
+  clickMission(cur) { // a click on a mission: the arrows' move, and on the chosen one Enter (src/camphub.js campHubClickMission); nothing under a page in front
+    if (this.leaving || this.d.dock || this.modalUp()) return;
+    const r = campHubClickMission(this.hub, this.P, cur); if (r.used) this.apply(r);
   }
 
   // the pilot walks to the desk of the chosen row (straight lines: the hall's doors are in line with the desks)
