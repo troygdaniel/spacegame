@@ -8,8 +8,8 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 |---|---|
 | camp.lose.convoy | The haulers are lost. |
 | camp.lose.base | The works are lost. |
-| camp.lose.tip.convoy | Guard the haulers: pick one ({keyflast} {keyfnext}), then {keyengage}. |
-| camp.lose.tip.base | Guard the works: pick them ({keyflast} {keyfnext}), then {keyengage}. Hold Space. |
+| camp.lose.tip.convoy | Guard the haulers: pick one ({keyfriendlies}), then {keyorder}. |
+| camp.lose.tip.base | Guard the works: pick them ({keyfriendlies}), then {keyorder}. Hold Space. |
 | camp.say.scanned | Point scanned: {n} of {of}. |
 | camp.say.hauler | {name} is under way. |
 | camp.say.raid | Raiders on the haulers. Escort them. |
