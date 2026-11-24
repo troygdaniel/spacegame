@@ -140,7 +140,7 @@ function campPanelKey(P, C, code, now) {
     const r = campOrder(C, 'power', pw, 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = pw; return res;
   }
-  if (campKeyIs('reload', code)) { // R: build missiles up to the full rack, for ore (card space-game-missiles-cost-ore: it is also the S list's row Reload missiles, so the row lights as the key is pressed)
+  if (campKeyIs('reload', code)) { // R: queue one missile to build, for ore (card space-game-missiles-cost-ore: it is also the S list's row Reload missiles, so the row lights as the key is pressed)
     res.used = true; if (!C) return res;
     const r = campOrder(C, 'reload', '', 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = 'sreload'; if (typeof now === 'number' && P && P.lit) P.lit.sreload = now; return res;

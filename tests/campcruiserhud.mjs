@@ -1,8 +1,9 @@
-// smoke: the S CRUISER corner at the top left: the status over its title (SHIELD bar, HULL bar, ORE line), the corner's title row, and the S list opening under it with no heading and no counter (plain Node, no Chrome)
+// smoke: the S CRUISER corner at the top left: the status over its title (SHIELD bar, HULL bar), the ORE and MISSILES block over HOSTILES at the top right, the corner's title row, and the S list opening under it with no heading and no counter (plain Node, no Chrome)
 // Card space-game-layout-cruiser (ORCH for Troy, 24 Nov 2026: "top left is what I command": the S list becomes the S CRUISER corner, and above its title sit a shield bar, a hull bar and the ore count, moved from the
 // round gauges and the ore line at the top right). The code is src/campcruiserhud.js (own numbers, own words camp.cruiser.*, nothing from src/camphud.js), hooked in src/campaignscene.js.
 //   A. the numbers: shield and hull as a share of their top, red at or under the low mark, the ore line, and the credits and the ships being mended
-//   B. the places: inside the screen, as wide as a corner panel, lines one under another, the corner's title row right under the last line
+//   B. the places: inside the screen, as wide as a corner panel, lines one under another, the corner's title row right under the last line; the top right block (card space-game-ore-missiles-topright: ORE and MISSILES over HOSTILES) is its mirror
+//      (tests/campmissilecost.mjs has the missile line and the R chip)
 //   C. the words: four keys in a words file and in the table, a voicepack rule, the script loaded once
 //   D. the drawing on stand-ins: a plate, two bars of the right widths and colours, the texts say the numbers; plain rectangles only; nothing drawn by a scene with no texts
 //   E. the scene: it makes the texts into its HUD and paints them every frame; nothing of src/camphud.js is called from the new file
@@ -54,11 +55,17 @@ g.run(`
   const Z = J('campCruiserHudGeom()'), K = J('CAMPCRUISERHUD'), W = J('W'), T = J('CAMP.corner.at.tl'), cw = J('CAMP.corner.w'), Th = J('CAMP.corner.title.h');
   check('the block is in the top left corner, inside the screen, at the corner\'s left edge', Z.x0 === T.x && Z.y0 >= 0 && Z.x1 <= W / 2 && Z.y1 < 120, JSON.stringify(Z));
   check('it is as wide as a corner panel (its title row), so the corner is one column', Z.x1 - Z.x0 === cw, Z.x1 - Z.x0 + ' vs ' + cw);
-  check('the shield line is above the hull line, the ore line under both, each one line apart', Z.rows[0].id === 'shield' && Z.rows[1].id === 'hull' && Z.rows[1].label.y - Z.rows[0].label.y === K.row && Z.ore.y - Z.rows[1].label.y === K.row);
+  check('the shield line is above the hull line, each one line apart; the block has two lines (the ore and the missiles are at the top right now)', Z.rows[0].id === 'shield' && Z.rows[1].id === 'hull' && Z.rows[1].label.y - Z.rows[0].label.y === K.row && K.lines === 2 && Z.y1 - Z.y0 === 2 * K.row && Z.rows.length === 2);
   check('a bar is inside the plate, with room for its word at the left and its number at the right, and is at least 90 px long', Z.rows.every(r => r.bar.x0 >= Z.x0 + K.pad + K.label && r.bar.x1 <= Z.x1 - K.pad - K.num && r.bar.x1 - r.bar.x0 >= 90 && r.bar.y1 - r.bar.y0 === K.bar), JSON.stringify(Z.rows));
-  check('the plate covers the three lines', Z.plate.x === Z.x0 && Z.plate.w === cw && Z.plate.y <= Z.rows[0].bar.y0 && Z.plate.y + Z.plate.h >= Z.ore.y + K.row / 2 - 1, JSON.stringify(Z.plate));
-  check('the corner\'s title row starts right under the last line (the gap between): CAMP.corner.at.tl.y is the one number', Z.bottom === T.y && Z.y1 + K.gap === T.y && Z.bottom > Z.ore.y, Z.bottom + ' vs ' + T.y);
-  check('the ore on the left and the credits on the right fit one line of the block without meeting (the longest: "ORE  300/300" and "CREDITS  9999  +9"; a character is 0.48 of its font size: the old ore line was 236 px for 35 characters at 14 px)', (() => { const per = 0.48, l = 'ORE  300/300'.length * per * 13, r = 'CREDITS  9999  +9'.length * per * 12; return Z.ore.x + l + 8 < Z.cash.x - r; })(), JSON.stringify([Z.ore, Z.cash]));
+  check('the plate covers the two lines', Z.plate.x === Z.x0 && Z.plate.w === cw && Z.plate.y <= Z.rows[0].bar.y0 && Z.plate.y + Z.plate.h >= Z.rows[1].label.y + K.row / 2 - 1, JSON.stringify(Z.plate));
+  check('the corner\'s title row starts right under the last line (the gap between): CAMP.corner.at.tl.y is the one number', Z.bottom === T.y && Z.y1 + K.gap === T.y && Z.bottom > Z.rows[1].label.y, Z.bottom + ' vs ' + T.y);
+  const R = Z.right, Tr = J('CAMP.corner.at.tr'), colW = J('CAMP.hud.plate.w');
+  check('the top right block is over the HOSTILES title row: at its left edge, as wide as a panel, inside the screen, ending the gap above it', R.x0 === Tr.x && R.x1 - R.x0 === cw && R.x1 <= W && R.y0 >= 0 && R.y1 + K.gap === Tr.y && R.bottom === Tr.y, JSON.stringify(R));
+  check('it mirrors the top left block: the same height and the same lines, level with it (the two corners start at the same y)', R.y1 - R.y0 === Z.y1 - Z.y0 && R.y0 === Z.y0 && R.y1 === Z.y1 && R.plate.h === Z.plate.h && R.plate.y === Z.plate.y, JSON.stringify([R.plate, Z.plate]));
+  check('the ore line is above the missiles line, each one line apart; the credits are on the ore line\'s right, the state on the missiles line\'s right', R.mis.y - R.ore.y === K.row && R.cash.y === R.ore.y && R.misWhy.y === R.mis.y && R.cash.x === R.x1 - K.pad && R.misWhy.x === R.x1 - K.pad && R.mis.x === R.ore.x, JSON.stringify(R));
+  check('the plate covers the two lines', R.plate.x === R.x0 && R.plate.w === cw && R.plate.y <= R.ore.y - K.row / 2 && R.plate.y + R.plate.h >= R.mis.y + K.row / 2, JSON.stringify(R.plate));
+  check('the top right block does not meet the top centre column (the plate of the wave and objective lines is W / 2 and 280 px either side)', R.x0 >= W / 2 + colW / 2 && Z.x1 <= W / 2 - colW / 2 + 100, JSON.stringify([R.x0, W / 2 + colW / 2, Z.x1, W / 2 - colW / 2]));
+  check('the ore on the left and the credits on the right fit one line of the block without meeting (the longest: "ORE  300/300" and "CREDITS  9999  +9"; a character is 0.48 of its font size: the old ore line was 236 px for 35 characters at 14 px)', (() => { const per = 0.48, l = 'ORE  300/300'.length * per * 13, r = 'CREDITS  9999  +9'.length * per * 12; return R.ore.x + l + 8 < R.cash.x - r; })(), JSON.stringify([R.ore, R.cash]));
   }
 
 // ---- C. the words and the files ----
@@ -76,13 +83,13 @@ g.run(`
   g.run(`window.C2 = __new(); C2.shield = campShieldMax(C2) * 0.5; C2.carrier.hp = C2.carrier.maxHp; C2.ore = 55; C2.cash = 0; C2.mends = []; window.ST = __stand(); campCruiserHudPaint(ST.gg, ST.H, C2);`);
   const calls = J('ST.gg.calls'), H = J('ST.H'), Z = J('campCruiserHudGeom()'), K = J('CAMPCRUISERHUD');
   const rects = calls.filter(c => c[0] === 'fillRect');
-  check('it draws a plate and, for each of the two bars, a back and a fill (five filled rectangles) and strokes both bars', rects.length === 5 && calls.filter(c => c[0] === 'strokeRect').length === 2, rects.length);
+  check('it draws the two plates (the top left one and the top right one) and, for each of the two bars, a back and a fill (six filled rectangles) and strokes both bars', rects.length === 6 && calls.filter(c => c[0] === 'strokeRect').length === 2 && rects[0][1] === Z.plate.x && rects[1][1] === Z.right.plate.x, rects.length);
   const sh = Z.rows[0].bar, w = sh.x1 - sh.x0;
-  check('the shield fill is half the bar wide, from the bar\'s left', rects[2][1] === sh.x0 && Math.abs(rects[2][3] - w * 0.5) < 1e-6, JSON.stringify(rects));
-  check('the hull is full: its fill is the whole bar', Math.abs(rects[4][3] - (Z.rows[1].bar.x1 - Z.rows[1].bar.x0)) < 1e-6, JSON.stringify(rects[4]));
+  check('the shield fill is half the bar wide, from the bar\'s left', rects[3][1] === sh.x0 && Math.abs(rects[3][3] - w * 0.5) < 1e-6, JSON.stringify(rects));
+  check('the hull is full: its fill is the whole bar', Math.abs(rects[5][3] - (Z.rows[1].bar.x1 - Z.rows[1].bar.x0)) < 1e-6, JSON.stringify(rects[5]));
   check('the texts say the numbers: shield, hull, and the ore line', H.crShieldN.text === String(Math.round(J('C2.shield'))) && H.crHullN.text === String(Math.round(J('C2.carrier.hp'))) && H.crOre.text === 'ORE  55/' + J('CAMP.ore.cap') && H.crCash.text === '', JSON.stringify(H));
   check('a bar in warning is drawn red and its number is red', (() => { g.run(`C2.carrier.hp = C2.carrier.maxHp * 0.1; ST = __stand(); campCruiserHudPaint(ST.gg, ST.H, C2);`); const cs = J('ST.gg.calls').filter(c => c[0] === 'fillStyle'); return cs.some(c => c[1] === K.color.warn) && J('ST.H.crHullN.color') === K.ink.warn && J('ST.H.crShieldN.color') === K.ink.num; })());
-  check('no rounded frame is drawn (a rounded rectangle is triangulated again on every render)', !J('ST.gg.calls').some(c => /Rounded/.test(c[0])) && !/Rounded/.test(src('src/campcruiserhud.js').replace(/\/\/.*$/gm, '')));
+  check('no rounded frame is drawn by the plates and the bars (a rounded rectangle is triangulated again on every render); the one rounded shape is the R chip, on a Graphics of its own that is drawn again only when its letter changes', !J('ST.gg.calls').some(c => /Rounded/.test(c[0])) && (src('src/campcruiserhud.js').replace(/\/\/.*$/gm, '').match(/Rounded/g) || []).length === 1 && /H\.crChipK !== k/.test(src('src/campcruiserhud.js')));
   check('a scene with none of the texts draws nothing and does not throw', (() => { g.run(`ST = __stand(); campCruiserHudPaint(ST.gg, {}, C2); campCruiserHudPaint(ST.gg, null, C2);`); return J('ST.gg.calls').length === 0; })());
 }
 
