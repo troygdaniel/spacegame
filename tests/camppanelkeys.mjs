@@ -14,8 +14,6 @@ const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   
 const g = nodeGame({ store: new Map() });
 g.run('campPowerSet(true)'); // the pips are OFF in the game (card space-game-power-removed; CAMP_POWER in src/data_controls.js): this suite is about the lists and the keys as they were, with the power list, so it switches them on. The game as it is now: tests/powerremoved.mjs
 g.run('CAMP.bay.startOut = false; // this suite\'s set-up is the old start: the pilots begin in the bay (the game starts them out beside the cruiser: card space-game-keys-orders; tests/campkeysorders.mjs has the new start)');
-g.run('campFleetListSet(true)'); // this suite is about the lists' code, Q's pop-up included: it is switched off in the game (CAMP_FLEET_LIST, card space-game-q-selects-all) and on here; tests/campselect.mjs has the game's own state
-g.run('campShipListSet(true)'); // and the ship list too: it is switched off in the game (CAMP_SHIP_LIST, card space-game-p-opens-power: P opens power) and on here; tests/campselect.mjs has the game's own state
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 g.run(`
@@ -92,7 +90,6 @@ check('the list is not drawn behind a card, the pause, the map or the page of ke
 check('a row lights for 160 ms when Enter gives it: P.lit holds the time, and the flash is drawn (a white wash on the row) only while it lasts (a refused row, W, Down and Enter on Attack with no fighter out and the bay empty: the list is still open to show it)', (() => { g.run(`S.camp.bay.fighters = 0; campPanelKey(S.pn, S.camp, 'KeyW', 11000); campPanelKey(S.pn, S.camp, 'ArrowDown', 11000); campPanelKey(S.pn, S.camp, 'Enter', 11000); __paint(11040);`); const on = J(`S.pnl.g.log.filter(l => l[0] === 'fillStyle' && l[1] === 0xffffff).length`), open = J('S.pn.open'); g.run(`__paint(11400);`); const off = J(`S.pnl.g.log.filter(l => l[0] === 'fillStyle' && l[1] === 0xffffff).length`); g.run(`campPanelsClose(S);`); return J('S.pn.lit.attack') === 11000 && open === 'squads' && J('CAMP_PANELS.anim.flash') === 160 && on > 0 && off === 0; })());
 
 // ---- C. every hint reads the table (the game's own state: Q picks all three pilots, the fleet list is off; the convoy's orders are said or typed, they have no key now)
-g.run('campFleetListSet(false)'); g.run('campShipListSet(false)'); // P opens power, the ship list is off too (card space-game-p-opens-power)
 console.log('C. the hints read the table');
 const says = () => J(`({ nudge2: uiText('camp.nudge.attack'), keys: uiText('camp.help.keys'), dock: uiText('camp.hud.dockhint', { name: 'Luna' }), retreat: uiText('camp.say.retreatnear', { name: 'Luna' }), amb: uiText('camp.say.ambush2'), blink: uiText('camp.tech.blink.text'),
   bfAttack: uiText('camp.bf.key.attack'), bfEscort: uiText('camp.bf.key.escort'), bfMine: uiText('camp.bf.key.mine'), bfDock: uiText('camp.bf.key.dock'), bfShield: uiText('camp.bf.key.shield'), bfMissile: uiText('camp.bf.key.missile'),

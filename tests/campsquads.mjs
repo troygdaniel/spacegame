@@ -18,8 +18,6 @@ const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   
 const g = nodeGame({ store: new Map() });
 g.run('campPowerSet(true)'); // the pips are OFF in the game (card space-game-power-removed; CAMP_POWER in src/data_controls.js): this suite is about the lists and the keys as they were, with the power list, so it switches them on. The game as it is now: tests/powerremoved.mjs
 g.run('CAMP.bay.startOut = false; // this suite\'s set-up is the old start: the pilots begin in the bay (the game starts them out beside the cruiser: card space-game-keys-orders; tests/campkeysorders.mjs has the new start)');
-g.run('campFleetListSet(true)'); // this suite is about the lists' code, Q's pop-up included: it is switched off in the game (CAMP_FLEET_LIST, card space-game-q-selects-all) and on here; tests/campselect.mjs has the game's own state
-g.run('campShipListSet(true)'); // and the ship list too: it is switched off in the game (CAMP_SHIP_LIST, card space-game-p-opens-power: P opens power) and on here; tests/campselect.mjs has the game's own state
 const R3 = x => x, R2 = x => x; // the order of a squad, as __ord writes it: one pilot flies each squad now (card space-game-three-pilots), so a squad's orders are one
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
@@ -102,7 +100,6 @@ console.log('D. the keys and the lists');
   const ord = () => { g.run('campFleetListSet(false)'); const r = key('KeyW'); g.run('campFleetListSet(true)'); return r; }; // the order key is W: with the old squads list on W opens that list first, so the order is given with the old lists off
   g.run('window.__a = __foe(900, 0); campTgtNearest(C);');
   const tg = J('C.tgt');
-  g.run('campFleetListSet(false)'); // Q and W are who here (card space-game-keys3-select): with the old fleet list on they would open its lists first, so the keys of who are tried with it off
   const s1 = (key('KeyQ'), J('C.sel')), s2 = (key('KeyQ'), J('C.sel')), s3 = (key('KeyQ'), J('C.sel')), s4 = (key('KeyQ'), J('C.sel'));
   check('Q picks who in turn from All pilots (the default): the pilots red, green, yellow and round to All pilots again, one way; it is no order and opens no list', s1 === 'pilot:red' && s2 === 'pilot:green' && s3 === 'pilot:yellow' && s4 === 'all' && J('campPanelOpen(__PP)') === '' && J('C.orders.attack | 0') === 0);
   g.run(`C.sel = 'pilot:green';`);
@@ -113,7 +110,6 @@ console.log('D. the keys and the lists');
   g.run(`C.sel = ''; campPanelKey(__PP, C, 'KeyQ', 0); campPanelKey(__PP, C, 'KeyQ', 0); campPanelKey(__PP, C, 'KeyQ', 0);`);
   const t0 = key('KeyW');
   check('W with the red pilot picked, then the yellow one: each goes at the target alone, so all three are on it', r0.ok && t0.ok && J('__ord("red")') === R3('attack:' + tg) && J('__ord("yellow")') === R2('attack:' + tg) && J('__ord("green")') === R3('attack:' + tg));
-  g.run('campFleetListSet(true)'); // the old lists are back for the rest of the suite
   g.run(`C.sel = 'pilot:red';`);
   const e2 = key('KeyR');
   check('R is the missiles\' key (card space-game-missiles-cost-ore; it was free): with the red pilot picked it builds missiles, not an order to a squad, and all three stay on their attack', e2.used && e2.row === 'sreload' && J('__ord("red")').startsWith('attack') && J('__ord("green")').startsWith('attack') && J('__ord("yellow")').startsWith('attack'));

@@ -16,8 +16,6 @@ const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   
 const g = nodeGame();
 g.run('campPowerSet(true)'); // the pips are OFF in the game (card space-game-power-removed; CAMP_POWER in src/data_controls.js): this suite is about the lists and the keys as they were, with the power list, so it switches them on. The game as it is now: tests/powerremoved.mjs
 g.run('CAMP.bay.startOut = false; // this suite\'s set-up is the old start: the pilots begin in the bay (the game starts them out beside the cruiser: card space-game-keys-orders; tests/campkeysorders.mjs has the new start)');
-g.run('campFleetListSet(true)'); // this suite is about the lists' code, Q's pop-up included: it is switched off in the game (CAMP_FLEET_LIST, card space-game-q-selects-all) and on here; tests/campselect.mjs has the game's own state
-g.run('campShipListSet(true)'); // and the ship list too: it is switched off in the game (CAMP_SHIP_LIST, card space-game-p-opens-power: P opens power) and on here; tests/campselect.mjs has the game's own state
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 
@@ -163,8 +161,6 @@ console.log('C. the scene\'s keys');
   check('H on the pause card opens the page over it and Esc closes it back to the card', J('F.ck && F.ck.open') === true && J('F.mode') === 'pause' && (g.run(`__k('Escape')`), J('F.ck') === null && J('F.mode') === 'pause'));
   check('on the pause card Q, P and the parts\' keys (W O I U) open nothing (the card has the keys)', (g.run(`['KeyQ', 'KeyP', 'KeyW', 'KeyO', 'KeyI', 'KeyU'].forEach(__k);`), J('F.pn.open') === '' && J('F.mode') === 'pause'));
   g.run(`__k('Escape');`);
-  g.run('campFleetListSet(false)'); // the pause card and the H page say the game's own state: Q picks all three pilots, no fleet list
-  g.run('campShipListSet(false)'); // and P opens power, no ship list (card space-game-p-opens-power)
   check('the pause card names the lists with a key (S the cruiser list only: the power and autopilot lists have no key now), each with its key, and H, from the table', J(`uiText('camp.ui.pausepanels')`) === 'Q picks who, ] an enemy, [ a friendly, W gives the order. S the cruiser: fly, mine, dock, repair, shields; then 1 to 8 does a row. F looks at it. H lists every key.' && /\{keywho\} picks who, \{keyhostiles\} an enemy, \{keyfriendlies\} a friendly, \{keyorder\} gives the order\. \{cruiserkey\} the cruiser: fly, mine, dock, repair, shields; then 1 to \{cruiserlast\} does a row/.test(J(`UI_TEXT['camp.ui.pausepanels']`)) && !/\b[QWERPOIU] /.test(J(`UI_TEXT['camp.ui.pausepanels']`)) && /H  all keys/.test(J(`uiText('camp.ui.paused')`)));
 }
 

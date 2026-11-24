@@ -18,8 +18,6 @@ import { nodeGame, ROOT } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name + (detail ? '  ' + String(detail).slice(0, 240) : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 600) + ')' : ''}`); } };
 const g = nodeGame();
-g.run('campFleetListSet(true)'); // this suite is about the lists' code, Q's pop-up included: it is switched off in the game (CAMP_FLEET_LIST, card space-game-q-selects-all) and on here; tests/campselect.mjs has the game's own state
-g.run('campShipListSet(true)'); // and the ship list too: it is switched off in the game (CAMP_SHIP_LIST, card space-game-p-opens-power: P opens power) and on here; tests/campselect.mjs has the game's own state
 const J = e => JSON.parse(g.run(`(() => { try { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); } catch (e) { return JSON.stringify({ THROWS: e.message }); } })()`));
 const R = c => { try { g.run(c); } catch (e) { check('setup: ' + String(c).trim().slice(0, 70), false, e.message); } }; // a setup that throws is a failed check, not a crash of the run
 const read = f => readFileSync(join(ROOT, f), 'utf8');
@@ -63,7 +61,7 @@ const can = (mode, extra) => J(`(() => { const s = __scene(0.5); s.mode = ${JSON
 check('a drag may start in the battle, in open space', can('play') === true);
 check('not over the story card, the briefing, the debrief, the pause (any mode but the battle)', ['intro', 'brief', 'debrief', 'won', 'pause', 'refit', 'pick', 'lost', 'end'].every(m => can(m) === false));
 check('not with the map open (the map has its own drag), not while the scene is leaving, not with the page of keys open', can('play', 's.mp = {};') === false && can('play', 's.leaving = true;') === false);
-R(`window.__sp = __scene(0.5); __sp.pn = campPanelNew(); window.__C = campNew(1, [], { seed: 1 }); __sp.camp = __C; campPanelGo(__sp.pn, __C, 'fleet');`);
+R(`window.__sp = __scene(0.5); __sp.pn = campPanelNew(); window.__C = campNew(1, [], { seed: 1 }); __sp.camp = __C; campPanelGo(__sp.pn, __C, 'cruiser');`);
 const L = J('(() => { const def = campPanelDef(campPanelOpen(__sp.pn)), V = campPanelView(__sp.pn, __C), G = campPanelsGeometry(def, V.total); return { x: G.x + 20, y: G.y + 20 }; })()');
 check('not on an open list: a press on its rows is the list\'s click, a press beside it is the view\'s', J(`campDragCanStart(__sp, ${L.x}, ${L.y})`) === false && J('campDragCanStart(__sp, 640, 360)') === true, JSON.stringify(L));
 

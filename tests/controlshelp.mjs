@@ -25,8 +25,6 @@ const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   
 const g = nodeGame();
 g.run('campPowerSet(true)'); // the pips are OFF in the game (card space-game-power-removed; CAMP_POWER in src/data_controls.js): this suite is about the lists and the keys as they were, with the power list, so it switches them on. The game as it is now: tests/powerremoved.mjs
 g.run('CAMP.bay.startOut = false; // this suite\'s set-up is the old start: the pilots begin in the bay (the game starts them out beside the cruiser: card space-game-keys-orders; tests/campkeysorders.mjs has the new start)');
-g.run('campFleetListSet(true)'); // the lists' tables are checked with Q's pop-up on (switched off in the game: CAMP_FLEET_LIST); the game's own state, Q picking all three pilots, is the last section below (card space-game-q-selects-all)
-g.run('campShipListSet(true)'); // and the ship list too: it is switched off in the game (CAMP_SHIP_LIST, card space-game-p-opens-power: P opens power) and on here; tests/campselect.mjs has the game's own state
 const J = e => JSON.parse(g.run(`(() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })()`));
 const read = f => readFileSync(join(ROOT, f), 'utf8');
 
@@ -237,7 +235,6 @@ console.log('6. the Campaign: every bound key is on the table');
 // ---- the game's own state: the fleet list is off and Q picks all three pilots (card space-game-q-selects-all; Troy, 23 Nov 2026)
 console.log('Q picks all three pilots');
 {
-  g.run('campFleetListSet(false)');
   const keyed = J(`CAMP_PANELS.panels.filter(p => p.key).map(p => p.key).join('')`);
   check('the fleet list and the all-squads list are switched off: they have no key and no code (and a mark, off, that campPanelGo reads); the five lists with a key are S (the cruiser list) P O I U, and no list has the code of W or T', keyed === 'SPOIU' && J(`CAMP_PANELS.panels.find(p => p.id === 'fleet').key + CAMP_PANELS.panels.find(p => p.id === 'fleet').code`) === '' && J(`CAMP_PANELS.panels.find(p => p.id === 'fleet').off`) === true && J(`CAMP_PANELS.panels.find(p => p.id === 'squads').key + CAMP_PANELS.panels.find(p => p.id === 'squads').code`) === '' && J(`CAMP_PANELS.panels.find(p => p.id === 'squads').off`) === true && J(`CAMP_PANELS.panels.every(p => p.code !== 'KeyW' && p.code !== 'KeyT')`));
   check('S is the cruiser list\'s key and the zoom\'s reset, on purpose (the scene resets the zoom first and then opens the list: card space-game-keys2-cruiser), and no other key of the table (a direct key, a list, the map, a debug key) has that code; Q is no list\'s and only who\'s key (CAMP_KEYS.all has no key and no code: Q picks who, all pilots first)', J(`CAMP_KEYS.all.k`) === '' && J(`campKeyCodes('all').length`) === 0 && J(`CAMP_PANELS.panels.find(p => p.id === 'cruiser').code`) === 'KeyS' && J(`CAMP_PANELS.panels.filter(p => p.code === 'KeyS').length`) === 1 && J(`Object.keys(CAMP_KEYS).filter(id => CAMP_KEYS[id].codes.includes('KeyS')).join()`) === 'zoomreset' && J(`CAMPMAP.key !== 'KeyS' && !CAMP_DEBUG.keys.some(r => r.code === 'KeyS')`) && J(`!CAMP_PANELS.panels.some(p => p.code === 'KeyQ') && Object.keys(CAMP_KEYS).filter(id => CAMP_KEYS[id].codes.includes('KeyQ')).join() === 'who'`));
