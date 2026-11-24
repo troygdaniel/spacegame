@@ -592,7 +592,7 @@ class Campaign extends Phaser.Scene {
     const waves = C.L.waves;
     this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(campObjective(C));
     const wc = typeof campWaveCount === 'function' ? campWaveCount(C) : { n: C.waves.filter(w => w.started).length, total: waves.length }; // the waves that can come on the lane she flies (src/camproute.js)
-    this.hud.wave.setText(uiText('camp.ui.wave', { n: wc.n, total: wc.total }));
+    this.hud.wave.setText(typeof campWaveLineOn === 'function' && !campWaveLineOn(C) ? '' : uiText('camp.ui.wave', { n: wc.n, total: wc.total })); // no wave line in an escort mission (CAMP.hud.noWave: the goal line stands first)
     this.hud.mother.setText(m ? uiText('camp.ui.mother') : '');
     if (this.hud.repair) { const rp = campRepairState(C); this.hud.repair.setText(rp.n ? uiText('camp.ui.repair', { n: rp.n, s: rp.next }) : ''); } // (a stand-in scene in a test may have no repair text)
     // an arrow at the edge of the screen pointing at the goal with its distance (src/campnav.js; docs/night/graphics.md finding 3); the autopilot's readout under the goal line is gone with its line (card space-game-hud-topleft-trim)
