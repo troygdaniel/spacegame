@@ -21,7 +21,7 @@ const CAMP_TUNE = {
   store: 'longhaul.campaign.tuning',      // the localStorage key: { v: 1, over: { id: value } }
   ver: 1,
   bigStep: 10,                            // Shift with Left or Right: this many steps at once
-  groups: ['ship', 'guns', 'wing', 'foes', 'time', 'ore', 'systems'],   // the panel's headings, in order (camp.ui.tune.group.<id>)
+  groups: ['ship', 'guns', 'wing', 'foes', 'time', 'view', 'ore', 'systems'],   // the panel's headings, in order (camp.ui.tune.group.<id>)
   rows: [
     // the cruiser
     { id: 'cruiserspeed', group: 'ship', root: 'CAMP', path: 'carrier.speed', min: 60, max: 600, step: 10, unit: 'px/s', when: 'next' },
@@ -56,6 +56,9 @@ const CAMP_TUNE = {
     { id: 'marktime', group: 'time', root: 'CAMP', path: 'mark.show', min: 500, max: 10000, step: 500, unit: 'ms', when: 'now' },   // how long the squares on the pilots and on the target held stay before they fade (card space-game-pilot-squares-fade)
     { id: 'wavetime', group: 'time', root: 'CAMP', path: 'time.waves', min: 0.25, max: 3, step: 0.05, unit: 'x', when: 'now' },
     { id: 'startzoom', group: 'time', root: 'CAMPZOOM', path: 'view.startPresses', min: 0, max: 12, step: 1, unit: 'presses', when: 'next' },
+    // the ships on the screen (card space-game-ships-bigger): the least size a ship is drawn at when the view is out; only the picture, nothing in the fight
+    { id: 'leastfighter', group: 'view', root: 'CAMPZOOM', path: 'view.leastSmall', min: 4, max: 60, step: 1, unit: 'px', when: 'now' },     // a fighter's least length on the screen (22 px long at close zoom); the ships between it and the cruiser grow in proportion
+    { id: 'leastcruiser', group: 'view', root: 'CAMPZOOM', path: 'view.leastBig', min: 10, max: 150, step: 2, unit: 'px', when: 'now' },    // the cruiser's, and every capital ship's (98 px long at close zoom)
     // the ore
     { id: 'orerock', group: 'ore', root: 'CAMP', path: 'ore.rock', min: 5, max: 100, step: 5, unit: 'ore', when: 'next' },
     { id: 'miningrate', group: 'ore', root: 'CAMP', path: 'laser.dps', min: 1, max: 60, step: 1, unit: 'a second', when: 'now' },
