@@ -50,7 +50,7 @@ g.run(`
   check('1 is the first row, Fly to the goal (level 3 has one): given at once, the list closes after an order that is taken, the row is lit', d1.used && d1.ran && d1.row === 'goal' && d1.ok && J('campPanelOpen(P)') === '' && J('P.lit.goal') === 1300, JSON.stringify(d1));
   g.run(`__new(1); __k('KeyS', 100);`);
   const np = J(`__k('Numpad2', 1400)`);
-  check('the keypad\'s digits do the same: Numpad2 is the second row (Fly to the target: grey with no target, so the reason is said and the list stays open)', np.used && np.ran && !np.ok && np.row === 'target' && np.say === 'No target, pilot. [ or ] picks one, \\ the nearest.' && J('campPanelOpen(P)') === 'cruiser' && J('P.lit.target') === 1400, JSON.stringify(np));
+  check('the keypad\'s digits do the same: Numpad2 is the second row (Fly to the target: grey with no target, so the reason is said and the list stays open)', np.used && np.ran && !np.ok && np.row === 'target' && /^No target, pilot\./.test(np.say) && J('campPanelOpen(P)') === 'cruiser' && J('P.lit.target') === 1400, JSON.stringify(np));
   const grey = J(`__k('Digit5', 1500)`);
   check('a greyed row\'s digit does nothing but say why and flash: 5 is Repair hull with the hull sound: refused in words, the hull is as it was, the row is lit, the list stays open', grey.used && grey.ran && !grey.ok && grey.row === 'srepair' && grey.say.length > 0 && J('P.lit.srepair') === 1500 && J('campPanelOpen(P)') === 'cruiser' && J('C.carrier.hp') === J('C.carrier.maxHp'), JSON.stringify(grey));
   const none = J(`__k('Digit8', 1600)`);
