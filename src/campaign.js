@@ -181,7 +181,7 @@ const CAMP = {
     show: 4000,                            // ms the details stay open at full strength after the corner's keys are used (or campCornerOpen is called), then they fade
     hit: 4000,                             // ms they stay open after the corner says it was hit (FLEET: a pilot's hull went down)
     fade: 600,                             // ms the details take to fade out
-    title: { h: 26, chipW: 22, chipH: 18, chipGap: 3, pad: 8, gap: 8, chips: 2 }, // the title row: its height, a key-cap chip's size and the space between two, the space at the left, and between the chips, the title and the selection; chips: the chip column is this many chips wide in EVERY corner (S has one, the others two), so every title starts at the same x
+    title: { h: 26, chipW: 22, chipH: 18, chipGap: 3, pad: 8, gap: 8, chips: 1 }, // the title row: its height, a key-cap chip's size and the space between two, the space at the left, and between the chips, the title and the selection; chips: the chip column is this many chips wide in EVERY corner (one each since card space-game-keys4-titles: S, Q, [ and ]), so every title starts at the same x
     gap: 4, pad: 8,                        // px between the title row and its details, and inside the details' frame
     item: { bar: 46, text: 20, key: 26, pic: 80 },  // px: the height of a detail line by its kind: a name with a number and a bar, a line of text, a key chip and its word, a picture row (src/camptcornerscene.js: the ship's picture, its type and its distance)
     bar: { dy: 22, h: 9 },                 // px: a bar's top below its item's top, and its height
