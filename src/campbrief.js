@@ -191,7 +191,7 @@ function campBriefSteps(P, level, i) {
 const CAMPBRIEF_KEYS = {
   get fly() { return [CAMP_KEYS.fly.k]; }, get fire() { return [CAMP_KEYS.fire.k]; }, get map() { return [CAMP_KEYS.map.k]; }, get zoom() { return [CAMP_KEYS.zoomout.k, CAMP_KEYS.zoomin.k]; }, // the keys of the table (CAMP_KEYS in src/data_controls.js), read when asked
   get missile() { return [CAMP_KEYS.missile.k]; },
-  get attack() { return [CAMP_KEYS.attack.k]; }, get escort() { return [CAMP_KEYS.guard.k]; }, get mine() { return campKeyCaps(campKeyVia('fmine').id); }, // an order of a list: the key of the list it is in (Q, or a part's own: E fighters, R escorts), read from the key table when asked (a remap is one change there)
+  get attack() { return [CAMP_KEYS.engage.k]; }, get escort() { return [CAMP_KEYS.engage.k]; }, get mine() { return campKeyCaps(campKeyVia('fmine').id); }, // an order of a list: the key of the list it is in (Q, or a part's own: E fighters, R escorts), read from the key table when asked (a remap is one change there)
   get dock() { return campKeyCaps(campKeyVia('dock').id); }, get shield() { return campKeyCaps(campKeyVia('emergency').id); } // U dock and repair; the power list's key (none now: card space-game-keys2-select, so the line is left out)
 };
 function campBriefKeys(level, i) {

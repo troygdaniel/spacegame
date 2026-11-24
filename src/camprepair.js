@@ -1,17 +1,16 @@
 // ---------- Campaign: a hurt fighter lands to be mended (card space-game-fighter-repair; Troy 21 Nov: the fights were not interactive and the escorts were boring, he wants to direct the fleet more) ----------
-// A fighter of the wing under CAMP.repair.below (30 percent) of its hull breaks off, flies home, lands on the cruiser, is mended for CAMP.repair.time (10 s) and goes out again whole, with the order it had. The mend costs
-// CAMP.repair.ore (5: card space-game-repair-with-ore); with none to pay it takes CAMP.repair.slow (twice) as long, and is never refused. A cruiser
-// that is too far (more than CAMP.repair.within, 15 s of flight at the fighter's own speed) and the fighter fights on. A radio line each way (the ship's voice: content/text/campaign-repair.md). The wing strip (the bay line
+// A fighter of the wing under CAMP.repair.below (25 percent: card space-game-keys2-orders; it was 30) of its hull breaks off, flies home by itself, lands on the cruiser, is mended for CAMP.repair.time (20 s; it was 10) and goes out again whole, at once, with the order it had,
+// fight or no fight: the pilots stay out all mission (no Launch, no recall). The mend costs CAMP.repair.ore (none now; card space-game-repair-with-ore made it 5: the N panel can put a price back); with a price and no ore to pay it
+// it takes CAMP.repair.slow (twice) as long, and is never refused. A cruiser that is too far (more than CAMP.repair.within, 15 s of flight at the fighter's own speed) and the fighter fights on. A radio line each way (the ship's voice: content/text/campaign-repair.md). The wing strip (the bay line
 // in the HUD's left column) shows "REPAIR n  s". The enemy's fighters never do this: it is the wing's AI only (campWingAI calls campRepairRun first), pirates and aliens alike are the ones it is fought against.
 //   campRepairRun(C, u, dt)   the wing's AI, first thing: true when this ship is on its way home to be mended (or has just landed); false when it fights on as always
-//   campRepairTick(C)         every tick: a fighter whose time is up goes out again, at once, when there is a fight (an alien near the cruiser, a ship of the wing out on an order) and the player has not
-//                             recalled the wing since; else it is in the bay, whole, and Launch takes it
+//   campRepairTick(C)         every tick: a fighter whose time is up goes out again, at once, with its order, unless the wing was recalled for the Fast burn while it was mended (then it is in the bay, whole)
 //   campRepairing(C, kind)    how many ships are being mended (of a kind, or all): they are still the wing's (the build limit, the dock, the "no ships left" rule count them)
 //   campRepairState(C)        { n, next } for the HUD: how many, and the seconds until the first is whole
 // The sim is the plain numbers of src/campaign.js: C.repairs is a list of { kind, until, order, squad, stay } (until: the battle clock in ms; order: what to go out with; squad: the fighter's squad, which it goes out in again and which counts it while it is mended (src/campwing.js campSquadNext); stay: the wing was recalled while it
 // was mended, so it stays aboard). A landed fighter is not a ship of C.ships any more (as a recalled one is not): nothing in the sim can hit it, find it or count it as "out".
 // Rules worth knowing: the wing's own AI runs this first, so it wins over any order (an Attack given to a fighter on its way home is kept, and is what it goes out with); a Recall given to it is kept too (it
-// lands, is mended and stays aboard); a fighter ABOVE 30 percent that is recalled lands as it always did (whole at once, in the bay). The escorts and the scouts do not break off; the enemy has no repair
+// lands, is mended and stays aboard); a fighter ABOVE 25 percent that is recalled (the Fast burn does it) lands as it always did (whole at once, in the bay). The escorts and the scouts do not break off; the enemy has no repair
 // (the raiders' and the pirates' AI never call it); the repair field tech (CAMP.tech.repair) still mends what flies near the cruiser, on top. C.mended counts the fighters made whole, for the bots' table.
 
 function campRepairing(C, kind) { return (C.repairs || []).filter(r => !kind || r.kind === kind).length; }
@@ -45,12 +44,9 @@ function campRepairRun(C, u, dt) {
 
 function campRepairTick(C) {
   if (!C.repairs || !C.repairs.length || C.result || C.carrier.hp <= 0) return;
-  const K = CAMP.repair, c = C.carrier;
-  const out = C.launchQ.length > 0 || campWing(C).some(w => !(w.order && w.order.type === 'recall')); // a ship of the wing out on an order: the fight goes on
-  const near = campAliens(C).some(a => campDist(a, c) <= K.fight);
   C.repairs = C.repairs.filter(r => {
     if (C.t < r.until) return true;
-    if (!r.stay && (out || near)) {
+    if (!r.stay) { // whole: out again at once, with the order it had, fight or none (card space-game-keys2-orders: the pilots stay out all mission; there is no Launch and no recall)
       if (C.t < C.nextLaunch) return true; // the bay mouth is busy this tick: the next one
       campLaunch(C, r.kind, r.order, r.squad); C.mended = (C.mended | 0) + 1; campRepairSay(C, 'back'); return false;
     }

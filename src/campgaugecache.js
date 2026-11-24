@@ -23,7 +23,7 @@ function campGaugesPaintCached(s, g, T, C, A, now, hi) {
     Z = s.hud.gz = { box, g: s.make.graphics({ x: 0, y: 0, add: false }), at: -1e9, key: '' };
     s.hud.gaugeRT = s.add.renderTexture(box.x, box.y, box.w, box.h).setOrigin(0, 0).setScrollFactor(0).setDepth(CAMPGAUGECACHE.depth); // in s.hud, so hudShow hides it behind a result card with the rest of the HUD
   }
-  const key = hi + ':' + C.power.p.join() + ':' + (C.t < C.power.until ? 1 : 0); // what must be seen at once: the highlighted dial, the pips, the emergency
+  const key = hi + ':' + C.power.p.join() + ':' + (C.emergAt === undefined ? 'n' : C.emergAt); // what must be seen at once: the highlighted dial, the pips, an Emergency shields just given (the shield jumps to full: card space-game-keys2-cruiser)
   if (now - Z.at < CAMPGAUGECACHE.every && key === Z.key) return false;
   Z.at = now; Z.key = key;
   Z.g.clear(); campGaugesPaintDirect(Z.g, T, C, A, now, hi);

@@ -3,7 +3,7 @@
 // file draws and listens and decides nothing about the game. It is not run by a test in plain Node (a scene is Phaser's): tests/campaign.mjs runs the sim.
 //   K on the title opens it (campaignStart); Enter begins a level; the arrow keys fly, Space (held) makes the eight turrets fire, Enter fires a homing missile at the target (the magazine is C.missiles);
 //   there is no other gun: the turrets aim themselves at the nearest alien in reach, always, and fire only while Space is held; the scene draws them, their reach and their flash (syncRockets)
-//   W opens the all-squads list, P the power list, O the autopilot, U dock and repair (the fleet list Q used to open and the ship list P used to open are switched off: CAMP_FLEET_LIST, CAMP_SHIP_LIST) (Up, Down, Enter: src/camppanel.js); / types an order and . speaks one (the strip and the ship computer, src/shipcomputer.js, find this scene);
+//   S puts the view back on the cruiser and opens the cruiser list (it fades when untouched; card space-game-keys2-cruiser), P the power list, O the autopilot (the dock list is a row of the cruiser list; the fleet list Q used to open and the ship list P used to open are switched off: CAMP_FLEET_LIST, CAMP_SHIP_LIST) (Up, Down, Enter: src/camppanel.js); / types an order and . speaks one (the strip and the ship computer, src/shipcomputer.js, find this scene);
 //   Esc pauses (this scene's own pause, not Long Haul's: the Long Haul save is not touched here); after a win the story, the tech pick (1 2 3), then the next level.
 // Mode: 'intro' (the story before) -> 'play' <-> 'pause' -> 'won' (story after) -> 'pick' (one of three techs, when the level offers any) -> next level, or after the last level 'end' (back to the title);
 // or 'lost' (Enter tries again).
@@ -283,7 +283,7 @@ class Campaign extends Phaser.Scene {
   // ----- keys -----
   onKey(e) {
     const zk = typeof campZoomKey === 'function' ? campZoomKey(e.code) : null;
-    if (zk && !this.leaving && this.mode === 'play') { campZoomPress(this, zk, e.repeat); return; } // + - = 0: the zoom of the view, or of the map when it is open (src/campzoom.js); a held key repeats, so this is read before the repeat guard
+    if (zk && !this.leaving && this.mode === 'play') { campZoomPress(this, zk, e.repeat); if (!zk.reset || e.repeat) return; } // S (the reset) puts the view back on the cruiser and goes ON to open the cruiser list (card space-game-keys2-cruiser); the other zoom keys are done here // + - = 0: the zoom of the view, or of the map when it is open (src/campzoom.js); a held key repeats, so this is read before the repeat guard
     if (this.leaving) return;
     if (typeof campTuneIsOpen === 'function' && campTuneIsOpen(this)) { if (campTuneKey(this, e) === 'close' && typeof this.closeTune === 'function') this.closeTune(); return; } // the tuning panel (src/camptunedraw.js) takes every key while it is open, a held arrow too
     const c = e.code, C = this.camp;
@@ -391,7 +391,6 @@ class Campaign extends Phaser.Scene {
     if (typeof campPickPaint === 'function') campPickPaint(this); // the candidate a target sub-list is on, shown in the flight view (and the zoom out to it; src/camppickdraw.js)
     if (typeof campTdispSync === 'function') campTdispSync(this, this.time.now); // the target display in the bottom right corner: the target, or the ship an order's list is on (src/camptdispscene.js)
     if (typeof campFdispSync === 'function') campFdispSync(this, this.time.now); // the who display in the bottom left corner: the pilot A or D picked, or All pilots (card space-game-friendly-display; the same file)
-    if (typeof campGdispSync === 'function') campGdispSync(this, this.time.now); // the friendly display, stacked above the enemy's (card space-game-keys-panels; the same file)
     if (typeof campTorpedoSync === 'function') campTorpedoSync(this, Math.min(dt, 100)); // the torpedoes and the boats that arm (src/camptorpedoscene.js)
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
     if (typeof campChargeSync === 'function') campChargeSync(this); // the health bars of the ships you protect, over them (src/campchargescene.js), once their sprites are in place
@@ -450,7 +449,7 @@ class Campaign extends Phaser.Scene {
     const lit = this.pn && typeof campSquadsShown === 'function' ? campSquadsShown(this.pn, C, (this.time && this.time.now) || 0) : []; // a target sub-list opened from a squad's list leaves its list open as far as the panel's state goes (card space-game-order-target-pick), so the marks stay while it is picked
     sg.clear();
     if (!lit.length) return;
-    const sel = typeof campSelNow === 'function' ? campSelNow(C) : null, al = campTgtPulse();
+    const sel = typeof campSelNow === 'function' ? campSelNow(C) : null, al = campTgtPulse(); // the pilot picked has its square from campTgtPaint, so it is not marked twice (with All pilots picked, campTgtPaint marks the three: a squad in focus, which no list brings now, would be drawn over the same square)
     C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && lit.indexOf(u.squad) >= 0 && !(sel && sel.unit === u)) campTgtCorners(sg, u, CAMPTGT.friend, z, al); });
   }
   sync() {

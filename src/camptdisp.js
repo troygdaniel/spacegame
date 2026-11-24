@@ -8,9 +8,8 @@
 //   campTdispDoing(C, u)         the one line: what the ship is doing, read from the same picks the AIs make (campAlienAI, campPirateTarget, the wing's orders) without moving anything
 //   campTdispName(C, u)          the name the lists give it ("Skiff 3", "Hauler 2", "Transport convoy"; a pilot's ship: the pilot's name, "Wedge")
 //   campFdispSubject(C)          the ship the FRIEND display shows (card space-game-friendly-display; the bottom LEFT corner, the mirror of the target display): the friend A or D picked (C.sel, campSelUnits in src/camptarget.js), a pilot or a ship you protect, or null; for Q, all three pilots, { u: null, all: [the ships out] }
-//   campGdispSubject(C)          the ship or outpost the FRIENDLY box shows (card space-game-keys-panels: stacked above the enemy's, in the bottom right): the friendly O P picked (C.fsel, campFriNow in src/camptarget.js), { u, side: 'friend' } for a ship, { u: null, post, side: 'friend' } for an outpost, or null
-//   campTdispPostInfo(C, e)      what an outpost shows: its name, "Friendly post", how far; no bars, no picture, no order line of its own kind (the key line is the box's)
-//   campTdispOrder(C, verb)      the key line at the foot of the enemy's and the friendly's boxes: { verb, key, label, ok }: the key from the key table (CAMP_KEYS[verb].k), the word, and ok when the order can be given now (campSelOrder, a dry run: nothing moves)
+//   campTdispPostInfo(C, e)      what an outpost shows when it is the target held: its name, "Friendly post", how far; no bars, no picture (the key line is the box's)
+//   campTdispOrder(C, verb)      the key line at the foot of the target box (Attack for an enemy, Guard for a friendly): { verb, key, label, ok }: the key from the key table (CAMP_KEYS[verb].k), the word, and ok when the order can be given now (campSelOrder, a dry run: nothing moves)
 //   campFdispAllInfo(C, units)   what that display draws for Q (card space-game-q-all-pilots-panel): { name: 'All pilots', rows: [{ id, name, hull }], key }
 const campTdispName = u => {
   if (u.kind === 'fighter' && u.team === 'earth' && typeof campPilotName === 'function' && campPilotName(u)) return campPilotName(u); // Wedge, Kara, Apollo (card space-game-three-pilots)
@@ -18,12 +17,14 @@ const campTdispName = u => {
   return campNavUnitName(u);
 };
 const campTdispWho = (C, t) => !t ? '' : t === C.carrier ? uiText('camp.tdisp.who.cruiser') : t === C.earth ? uiText('camp.tdisp.who.earth') : campTdispName(t); // who it is at: the cruiser, Earth or a ship by its name
-function campTdispSubject(C, P, now) {
+function campTdispSubject(C, P, now) { // the ONE target box (bottom right): a ship an order's list is on, else the one target held: an enemy ([ ] \\) or a friendly ship or outpost (O P), held: true (card space-game-keys2-panels)
   if (!C || !C.carrier) return null;
   const it = P && typeof campPickShown === 'function' ? campPickShown(P, C, now) : null, u = it && it.what === 'ship' && C.by ? C.by[it.id] : null;
   if (u && u.hp > 0) return { u, side: u.team === 'alien' ? 'hostile' : 'friend' };
-  const t = typeof campTgtNow === 'function' ? campTgtNow(C) : null;
-  return t ? { u: t, side: 'hostile' } : null;
+  const h = typeof campHeldNow === 'function' ? campHeldNow(C) : null; // the ONE target held: the enemy or the friendly (src/camptarget.js)
+  if (!h) return null;
+  if (h.post) return { u: null, post: h.post, side: 'friend', held: true };
+  return h.unit && h.unit.hp > 0 && !h.unit.gone ? { u: h.unit, side: h.kind === 'hostile' ? 'hostile' : 'friend', held: true } : null;
 }
 function campFdispSubject(C) {
   if (!C || !C.carrier || typeof campSelUnits !== 'function') return null;
@@ -32,17 +33,12 @@ function campFdispSubject(C) {
   const f = typeof campSelNow === 'function' ? campSelNow(C) : null; // All pilots (A D's first stop, Q) (card space-game-q-selects-all): no one ship, the display shows All pilots and a row for each pilot out (card space-game-q-all-pilots-panel)
   return f && f.kind === 'all' ? { u: null, all: (f.units || []).filter(x => x && x.hp > 0 && !x.gone), side: 'friend' } : null;
 }
-function campGdispSubject(C) {
-  const e = C && C.carrier && typeof campFriNow === 'function' ? campFriNow(C) : null; if (!e) return null;
-  if (e.kind === 'post') return { u: null, post: e, side: 'friend' };
-  return e.unit && e.unit.hp > 0 && !e.unit.gone ? { u: e.unit, side: 'friend' } : null;
-}
 function campTdispPostInfo(C, e) {
   const km = campNavKm(campDist(e, C.carrier)), type = uiText('camp.tdisp.type.post');
   return { id: e.id, side: 'friend', kind: 'post', name: e.name, type, hull: null, shield: null, km, doing: '', key: [e.id, 'post', e.name, km].join('|') };
 }
 function campTdispOrder(C, verb) {
-  const r = typeof campSelOrder === 'function' ? campSelOrder(C, verb, 'key', true) : null, k = typeof CAMP_KEYS === 'object' && CAMP_KEYS[verb] ? CAMP_KEYS[verb].k : '';
+  const r = typeof campSelOrder === 'function' ? campSelOrder(C, verb, 'key', true) : null, k = typeof CAMP_KEYS === 'object' ? ((CAMP_KEYS.engage || CAMP_KEYS[verb] || {}).k || '') : ''; // E is the one order key (CAMP_KEYS.engage, card space-game-keys2-orders); before that, the verb's own
   return { verb, key: Array.isArray(k) ? String(k[0] || '') : String(k || ''), label: uiText('camp.tdisp.key.' + verb), ok: !!(r && r.ok) };
 }
 function campFdispAllInfo(C, units) { // what the Q display draws: its title and a row for each pilot out, with the pilot's name and hull; key: everything it shows

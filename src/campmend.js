@@ -69,3 +69,19 @@ function campMendTick(C, dt) {
     return m.left > 0.01 && u.hp < u.maxHp - 0.01;
   });
 }
+
+// ---- Emergency shields (card space-game-keys2-cruiser; Troy, 23 Nov 2026) ----
+// The cruiser list's last row but one: the shield is filled to its top at once, for CAMP.emergency.ore ore (the store, as a mend is paid: in flight ore only), and the row cannot be given again for CAMP.emergency.cooldown ms.
+// Refused in words, first the one that says why it will wait: cooling (the seconds left), the shield already full, not enough ore. C.emergAt is the clock of the last one (none yet: long ago). Pure: no Phaser.
+//   campEmergencyLeft(C)   ms until it can be given again (0: now)          campEmergency(C, dry)   the order 'emergency'
+const campEmergencyLeft = C => Math.max(0, (C.emergAt === undefined ? -1e9 : C.emergAt) + CAMP.emergency.cooldown - C.t);
+function campEmergency(C, dry) {
+  const K = CAMP.emergency, left = campEmergencyLeft(C), max = campShieldMax(C);
+  if (left > 0) return campNo('cooling', { s: Math.ceil(left / 1000) });
+  if (C.shield >= max - 0.5) return campNo('shieldfull');
+  if (campMendFunds(C) < K.ore) return campNo('noore2', { need: K.ore, have: campMendFunds(C) });
+  if (dry) return campYes('emergency');
+  campMendPay(C, K.ore); C.shield = max; C.emergAt = C.t; C.orders.emergency = (C.orders.emergency | 0) + 1;
+  C.events.push({ type: 'emergency', x: C.carrier.x, y: C.carrier.y });
+  return campYes('emergency');
+}

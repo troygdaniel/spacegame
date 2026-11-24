@@ -13,6 +13,7 @@ function campTgtPaint(s) {
   if (!s.tgtG || (s.tgtG.active === false && !s.tgtG.scene)) s.tgtG = s.add.graphics().setDepth(CAMPTGT.depth); // a scene that starts again (a retry, the next mission) destroys its layers: the old graphics is not active and has no scene, and a new one is made
   const g = s.tgtG; g.clear();
   const play = s.mode === 'play' && !s.mp, K = CAMPTGT, z = s.cameras && s.cameras.main && s.cameras.main.zoom > 0 ? s.cameras.main.zoom : 1, al = campTgtPulse();
-  const pk = play && typeof campSelUnits === 'function' ? campSelUnits(s.camp) : null; // the enemy (red), the pilot picked and the friendly ship picked (green); All pilots has no one bracket
-  [[pk && pk.hostile, K.color], [pk && pk.who, K.friend], [pk && pk.friendly, K.friend]].forEach(([v, col]) => { if (v) campTgtCorners(g, v, col, z, al); });
+  const pk = play && typeof campSelUnits === 'function' ? campSelUnits(s.camp) : null; // the enemy (red) and the friendly ship picked (green), and WHO (green): the pilot picked, or all three pilots when All pilots is picked (card space-game-keys2-panels)
+  const who = pk ? (pk.who ? [pk.who] : (pk.whoShips || [])) : [];
+  [[pk && pk.hostile, K.color], [pk && pk.friendly, K.friend]].concat(who.map(u => [u, K.friend])).forEach(([v, col]) => { if (v && v.hp > 0) campTgtCorners(g, v, col, z, al); });
 }

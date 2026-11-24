@@ -28,6 +28,8 @@ const CAMP_TUNE = {
     { id: 'cruiserturn', group: 'ship', root: 'CAMP', path: 'carrier.turn', min: 0.3, max: 4, step: 0.1, unit: 'rad/s', when: 'next' },
     { id: 'shieldsize', group: 'ship', root: 'CAMP', path: 'carrier.shield', min: 30, max: 600, step: 10, unit: 'points', when: 'now' },
     { id: 'shieldmend', group: 'ship', root: 'CAMP', path: 'power.shields.regen', of: 2, min: 0, max: 30, step: 0.5, unit: 'a second', when: 'now' },
+    { id: 'emergencyore', group: 'ship', root: 'CAMP', path: 'emergency.ore', min: 0, max: 400, step: 5, unit: 'ore', when: 'now' },                // card space-game-keys2-cruiser: what Emergency shields costs
+    { id: 'emergencycool', group: 'ship', root: 'CAMP', path: 'emergency.cooldown', min: 0, max: 120000, step: 1000, unit: 'ms', when: 'now' },       // and how long before it can be given again
     // the guns: the turrets, the missiles, the charge the turrets draw
     { id: 'turretdamage', group: 'guns', root: 'CAMP', path: 'carrier.pd', min: 1, max: 40, step: 1, unit: '', when: 'now' },
     { id: 'turretdelay', group: 'guns', root: 'CAMP', path: 'carrier.pdDelay', min: 100, max: 2000, step: 50, unit: 'ms', when: 'now' },
@@ -40,6 +42,8 @@ const CAMP_TUNE = {
     // the wing and the ships you escort
     { id: 'fighterhull', group: 'wing', root: 'CAMP', path: 'fighter.hp', min: 6, max: 200, step: 2, unit: '', when: 'next' },
     { id: 'fighterdamage', group: 'wing', root: 'CAMP', path: 'fighter.damage', min: 1, max: 40, step: 1, unit: '', when: 'now' },
+    { id: 'repairbelow', group: 'wing', root: 'CAMP', path: 'repair.below', min: 0.05, max: 0.9, step: 0.05, unit: '', when: 'now' },     // card space-game-keys2-orders: the hull a pilot breaks off at and returns home by itself
+    { id: 'repairtime', group: 'wing', root: 'CAMP', path: 'repair.time', min: 2, max: 90, step: 2, unit: 's', when: 'now' },                  // and the seconds its mend takes before it comes back out whole
     { id: 'convoyspeed', group: 'wing', root: 'CAMP', path: 'convoy.speedScale', min: 0.3, max: 3, step: 0.05, unit: 'x', when: 'next' },
     // the enemy
     { id: 'enemyhull', group: 'foes', root: 'CAMP', path: 'alien.hpScale', min: 0.2, max: 5, step: 0.1, unit: 'x', when: 'next' },

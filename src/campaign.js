@@ -72,6 +72,10 @@ const CAMP = {
     emergency: { shields: 4, ms: 10000, cooldown: 40000 }, // emergency shields: 4 pips to shields (the other two get 1 each) for ms, ready again cooldown ms after it started
     low: { shield: 0.3, rearm: 0.6, engines: 1 }           // the computer says so when the shield is under 30 percent of its cap (and again after it has been over 60), or when the engines are set to 1 pip or less
   },
+  emergency: {                             // EMERGENCY SHIELDS (card space-game-keys2-cruiser; Troy, 23 Nov 2026): a row of the cruiser list (S) that fills the shield at once. ORCH's numbers, both on the N panel (the `ship` group)
+    ore: 50,                               // the ore it costs, paid from the store as a mend is (src/campmend.js campEmergency)
+    cooldown: 20000                        // ms before it can be given again, counted from the order
+  },
   ore: {                                   // ore: asteroid rocks and the wrecks of dead aliens; spent on new ships and the hull's mend (docs/CAMPAIGN.md, Ore)
     start: 30,                             // ore in the store at the start of a level
     cap: 500,                              // most ore the carrier's store holds (200 until card space-game-ore-bay-bigger: Troy hit it; a rim field holds 400 and a market pays 3 cash an ore, so a full bay sells for 1,500)
@@ -149,20 +153,18 @@ const CAMP = {
   },
   repair: {                                // a hurt fighter lands to be mended (card space-game-fighter-repair; src/camprepair.js, docs/CAMPAIGN.md "Repair"): the wing's fighters only, the enemy's never do
     kinds: ['fighter'],                    // who breaks off
-    below: 0.3,                            // the share of its hull under which a fighter breaks off and flies home
+    below: 0.25,                           // the share of its hull under which a fighter breaks off and flies home (card space-game-keys2-orders: a badly hurt pilot returns by itself; both numbers are on the N panel)
     within: 15,                            // s of flight (the way home over its top speed): a cruiser farther off than this and the fighter fights on
-    time: 10,                              // s a landed fighter is mended, then it is whole again
-    ore: 5,                                // ore a mend costs (paid when the fighter lands, from the ore and the cash of a sale); card space-game-repair-with-ore: nothing builds ships, ore mends them
+    time: 20,                              // s a landed fighter is mended, then it is whole again and goes out by itself (keys2-orders: there is no Launch and no recall)
+    ore: 0,                                // ore a mend costs (card space-game-repair-with-ore made it 5; keys2-orders: a pilot's return is free, the tuning panel can put a price back); with none to pay it takes `slow` times as long only when a price is set
     slow: 2,                               // times as long a mend takes when there is no ore for it (never refused)
-    fight: 1800,                           // px: an alien this close to the cruiser, or any ship of the wing still out on an order, sends the mended fighter out again (else it stays in the bay)
     sayEvery: 5                            // s between two radio lines of the same kind (four fighters hurt together are one call)
   },
   tdisp: {                                 // the target display, in the corner the radar had (card space-game-target-display; Troy, 22 Nov 2026: "the bottom right mini map can go away, to make way to show the target selected"; src/camptdisp.js, src/camptdispscene.js)
     right: 18,                             // px from the right edge of the screen to the box
     left: 18,                              // px from the left edge to the friend display's box (card space-game-friendly-display: the same box, in the bottom left corner)
-    beside: 12,                            // px between an open list and a display's box when the box steps out of its way (right of a left list for the who box, left of a right list for the two right boxes; card space-game-w-list-covers-friend-box)
-    line: 26,                              // px: the order-key line at the foot of the two right boxes (the enemy's and the friendly's: "E  Attack", "G  Guard", lit or grey; card space-game-keys-panels): they are this much taller than the who box
-    stack: 8,                              // px between the friendly's box and the enemy's, which it is stacked above
+    beside: 12,                            // px between an open list and a display's box when the box steps out of its way (right of a left list for the who box, left of a right list for the target box; card space-game-w-list-covers-friend-box)
+    line: 26,                              // px: the order-key line at the foot of the target box ("E  Attack" for an enemy, "E  Guard" for a friendly, lit or grey; cards space-game-keys-panels, space-game-keys2-panels): it is this much taller than the who box
     bottom: 64,                            // px from the bottom edge to the box (the key line's strip is under it)
     w: 200, h: 200,                        // px: the box, about the radar's size (its disc was 196 across)
     every: 250,                            // ms between two readings of the ship: the numbers and the words are live four times a second (a new ship is read at once)
@@ -354,6 +356,7 @@ const CAMP = {
     align: 0.5,                            // rad: thrust only when the nose is within this of the line (the Long Haul autopilot's aligned)
     etaSlow: 1.1,                          // the flight time on the map is distance over the carrier's top speed times this (it speeds up and brakes)
     fast: 2.2,                             // the map's Fast button (card space-game-map-click-fly): the carrier's top speed and thrust, times this, while the autopilot flies it; steering takes it away. 462 px/s: above a fighter's 430 (and an escort's 300), so a ship of the wing could not keep up: Fast needs the wing aboard (card space-game-campaign-fast-board)
+    auto: { leg: 3000, near: 4000 },       // FLY TO THE GOAL BURNS BY ITSELF (card space-game-keys2-cruiser): the cruiser list's row burns when the leg is at least `leg` px, the wing is aboard and no hostile is within `near` px, and drops to regular speed when one comes that near (src/campnav.js campNavAuto). ORCH's guesses
     recallWait: 20,                        // s: after a second press of Fast with ships out, how long the wing has to get back aboard before the burn is given up (the ships still out are named)
     askFor: 8,                             // s: a first press of Fast with ships out is refused and remembered this long: a second press in that time recalls the wing and burns once the last ship is aboard
     farFrom: 8000,                         // px: a Fast trip longer than this (Earth to Mars is 4,100, Earth to Jupiter 40,000) burns at farFast instead of fast (card space-game-campaign-sol)
@@ -362,7 +365,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 238], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 190, 1280, 664], [0, 450, 224, 664]] // (the enemy's box and the friendly's above it, campTdispBox(false) and campTdispBox(false, 0, true) in src/camptdispscene.js, are inside the fourth one, where the radar was, and the who box, campTdispBox(true), inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 238], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 430, 1280, 664], [0, 450, 224, 664]] // (the target box, campTdispBox(false) in src/camptdispscene.js, is inside the fourth one, where the radar was, and the who box, campTdispBox(true), inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {
@@ -953,7 +956,8 @@ function campOrder(C, name, arg, how) { return campDo(C, name, arg, false, how);
 function campCheck(C, name, arg) { return campDo(C, name, arg, true); }
 function campDo(C, name, arg, dry, how) {
   if (!C || C.result) return campNo('over');
-  if (name === 'power' || name === 'balance' || name === 'emergency') return campPowerDo(C, name, arg, dry); // the ship's systems (below)
+  if (name === 'emergency') return campEmergency(C, dry); // the shield filled at once for ore (src/campmend.js; card space-game-keys2-cruiser: it was a power setting that lasted ten seconds)
+  if (name === 'power' || name === 'balance') return campPowerDo(C, name, arg, dry); // the ship's systems (below)
   if (arg === CAMP_TGT && (name === 'attack' || name === 'missiles')) return name === 'attack' ? campTgtAttack(C, how, dry) : campTgtMissile(C, dry); // the target A D S picked (src/camptarget.js): key 2 and Enter
   const t = campFind(C, arg), out = campWing(C);
   if (name === 'lane') return campRouteDo(C, arg, dry); // the pick at a fork in the road (src/camproute.js)
