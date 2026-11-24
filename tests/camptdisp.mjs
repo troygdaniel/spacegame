@@ -1,4 +1,4 @@
-// smoke: the target display in the bottom right corner, the radar's place: who is shown, its name, type, bars, distance and what it is doing; the stand-in scene's drawing; the amber arrows for ships you protect that are in trouble (plain Node, no Chrome)
+// smoke: what the target corners show (the radar's old place, bottom right): who is shown, its name, type, bars, distance and what it is doing; the amber arrows for ships you protect that are in trouble (plain Node, no Chrome)
 // Card space-game-target-display (Troy, 22 Nov 2026: "the bottom right mini map can go away, to make way to show the target selected": a target display like X-Wing's, with a picture, the name and type, hull and shield bars with
 // numbers, the distance and one line of what it is doing; hidden with no target; it shows a friendly selection too). src/camptdisp.js is the rule (CAMP.tdisp in src/campaign.js the table, content/text/camptdisp.md the words),
 // src/camptdispscene.js the drawing (a stand-in scene here), src/campsight.js campSightFriends the arrows that took over what the radar showed of the convoy.
@@ -6,7 +6,7 @@
 //   B. what is read: name, type, hull and shield numbers (the rival's shield; the cruiser's), how far; the key that says when to draw again
 //   C. what it is doing: a line for every state the ships can be in (hostile, pirate, neutral, yours)
 //   D. the box: where it is, as big as the radar's disc was, inside the arrows' keep rectangle; the words and the voice pack's rule
-//   E. the scene half on a stand-in: hidden with no target, shown with one, read four times a second, drawn again only when a number changes, the friendly colour, hidden behind a card and the map, the picture once
+//   E. (the scene half of the box moved with the box: the target corners [ ] HOSTILES and O P FRIENDLIES, tests/campcorners.mjs section I)
 //   F. the radar is gone (the scene draws none, the sight scene pulses none, the target's line is gone from the panels) and the amber arrows for a ship you protect that is under attack or nearly lost and off the screen
 // Run: node tests/camptdisp.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -24,14 +24,6 @@ g.run(`
   window.__new = (s) => { const C = campNew(1, [], { seed: 5, god: true, mission: 0 }); C.arrivedAt = 0; C.ships = C.ships.filter(u => u.team !== 'alien'); __run(C, s || 4); C.ships = C.ships.filter(u => u.team !== 'alien'); C.ships.forEach(u => { delete u.hurtAt; }); window.C = C; window.P = campPanelNew(); return C; };
   window.__foe = (kind, dx, dy) => { const u = campSpawn(C, kind, C.carrier.x + dx, C.carrier.y + dy); u.vx = u.vy = 0; return u; };
   window.__doing = u => campTdispDoing(C, u);
-  // a stand-in scene: graphics and texts that remember what was done to them, an image, the panels' state, a clock
-  window.__scene = (extra) => {
-    const gs = { clears: 0, rects: 0, log: [] }, objs = [];
-    const mkG = () => { const o = gs; ['fillStyle', 'lineStyle', 'fillRoundedRect', 'strokeRoundedRect', 'fillRect', 'strokeRect', 'lineBetween'].forEach(k => { o[k] = (...a) => { o.log.push([k].concat(a)); if (k === 'fillRect') o.rects++; return o; }; }); o.clear = () => { o.clears++; o.log = []; return o; }; o.setScrollFactor = () => o; o.setDepth = () => o; return o; };
-    const mkT = () => { const o = { text: '', x: 0, y: 0, vis: false, sets: 0, colors: 0, style: { color: '#ffffff' }, width: 60, height: 14 }; ['setScrollFactor', 'setDepth', 'setOrigin'].forEach(k => { o[k] = () => o; }); o.setText = v => { o.text = v; o.sets++; return o; }; o.setColor = v => { o.style.color = v; o.colors++; return o; }; o.setPosition = (x, y) => { o.x = x; o.y = y; return o; }; o.setVisible = v => { o.vis = v; return o; }; objs.push(o); return o; };
-    const pic = { vis: false, tex: '', textures: 0, tint: -1, sc: 0, rot: 0, x: 0, y: 0, width: 64, height: 32 }; ['setScrollFactor', 'setDepth'].forEach(k => { pic[k] = () => pic; }); pic.setTexture = t => { pic.tex = t; pic.textures++; return pic; }; pic.setRotation = r => { pic.rot = r; return pic; }; pic.setTint = t => { pic.tint = t; return pic; }; pic.clearTint = () => { pic.tint = -1; return pic; }; pic.setScale = k => { pic.sc = k; return pic; }; pic.setPosition = (x, y) => { pic.x = x; pic.y = y; return pic; }; pic.setVisible = v => { pic.vis = v; return pic; };
-    return Object.assign({ gs, objs, pic, camp: C, pn: P, mode: 'play', hud: {}, textures: { exists: () => true }, texOf: k => 'tex-' + k, add: { graphics: mkG, text: mkT, image: () => pic } }, extra || {});
-  };
 `);
 
 console.log('A. who is shown');
@@ -126,41 +118,12 @@ console.log('D. the box and the words');
   check('every line of the CAMP table\'s tdisp block has its comment', tb.split('\n').filter(l => /^\s+\w+: /.test(l)).every(l => /\/\//.test(l)));
 }
 
-console.log('E. the scene half');
-{
-  g.run('__new()'); g.run('window.S = __scene()');
-  g.run('campTdispSync(S, 0)');
-  check('nothing picked: nothing is drawn, no text or picture is shown', J('S.pic.vis') === false && J('S.objs.every(o => !o.vis)') && J('S.gs.log.length') === 0);
-  g.run(`window.R1 = __foe('raider', 1200, 0); C.tgt = R1.id; campTdispSync(S, 1000);`);
-  check('a target: the frame is drawn, the name, type, hull and distance are written, the doing line too', J('S.objs.filter(o => o.vis).length') >= 7 && J('S.objs.some(o => /^Raider \\d+$/.test(o.text))') && J('S.objs.some(o => o.text === "Hostile raider")') && J('S.objs.some(o => o.text === "HULL")') && J('S.objs.some(o => o.text === "SHIELD")') && J('S.objs.some(o => o.text === "no shield")') && J('S.objs.some(o => o.text === "120 km")') && J('S.objs.some(o => /^attacking/.test(o.text))'));
-  check('the frame is in the corner and red for a hostile (the frame\'s colour is the table\'s)', J('S.gs.log.some(l => l[0] === "strokeRoundedRect" && l[1] === ' + J('campTdispBox().x') + ' && l[2] === ' + J('campTdispBox().y') + ')') && J('S.gs.log.find(l => l[0] === "lineStyle")[2]') === J('CAMP.tdisp.color.hostile'));
-  check('the hull numbers are the ship\'s (now / max)', J('S.objs.some(o => o.text === Math.ceil(R1.hp) + " / " + Math.round(R1.maxHp))'));
-  check('the picture is the ship\'s own art, nose up, to fit the frame, inside the box', J('S.pic.vis') && J('S.pic.tex') === 'tex-raider' && Math.abs(J('S.pic.rot') + Math.PI / 2) < 1e-9 && J('S.pic.sc') > 0 && J('S.pic.x') > J('campTdispBox().x') && J('S.pic.x') < J('campTdispBox().x + campTdispBox().w'));
-  g.run('S.pic.n0 = S.pic.textures; S.gs.n0 = S.gs.clears; S.objs.forEach(o => { o.s0 = o.sets; o.c0 = o.colors; }); campTdispSync(S, 1100); campTdispSync(S, 1200);');
-  check('read again within a quarter of a second: nothing is set or drawn again', J('S.pic.textures === S.pic.n0 && S.gs.clears === S.gs.n0 && S.objs.every(o => o.sets === o.s0 && o.colors === o.c0)'));
-  g.run('R1.x += 400; campTdispSync(S, 1400);');
-  check('after a quarter of a second the distance is read again: only its text is set (the frame is not drawn again)', J('S.objs.some(o => o.text === "160 km")') && J('S.gs.clears === S.gs.n0') && J('S.pic.textures === S.pic.n0'));
-  g.run('R1.hp -= 3; campTdispSync(S, 1700);');
-  check('a hit: the frame and the bar are drawn again, and the hull number', J('S.gs.clears > S.gs.n0') && J('S.objs.some(o => o.text === Math.ceil(R1.hp) + " / " + Math.round(R1.maxHp))'));
-  g.run(`campTdispSync(S, 1700); campPickOpen(P, { id: 'escort', pick: 'escort' }, campPickItems(C, 'escort')); campTdispSync(S, 2000);`);
-  check('a ship of yours in a sub-list: the same box in the friendly colour, its name and type, and a new picture', J('S.gs.log.find(l => l[0] === "lineStyle")[2]') === J('CAMP.tdisp.color.friend') && J('S.objs.some(o => /^Friendly /.test(o.text))') && J('S.pic.tex') !== 'tex-raider');
-  g.run(`P.pick = null; P.seen = null; C.tgt = ''; campTdispSync(S, 2300);`);
-  check('nothing picked again: the box goes (the corner is empty)', J('S.pic.vis') === false && J('S.objs.every(o => !o.vis)') && J('S.gs.log.length') === 0);
-  g.run(`C.tgt = R1.id; campTdispSync(S, 2600); S.mode = 'won'; S.hudHides = () => true; campTdispSync(S, 2900);`);
-  check('behind a result card it is hidden', J('S.objs.every(o => !o.vis)') && J('S.pic.vis') === false);
-  g.run(`S.mode = 'play'; S.hudHides = () => false; S.mp = {}; campTdispSync(S, 3200);`);
-  check('behind the Tab map it is hidden', J('S.objs.every(o => !o.vis)'));
-  g.run(`S.mp = null; campTdispSync(S, 3500);`);
-  check('and back when the map closes', J('S.objs.filter(o => o.vis).length') >= 7);
-  check('a scene with no camp, or no graphics, is not an error (a stand-in in another test)', (() => { try { g.run('campTdispSync({}, 0); campTdispSync({ camp: C, hud: {} }, 0);'); return true; } catch (e) { return false; } })());
-}
-
 console.log('F. the radar is gone; the arrows for ships you protect');
 {
   const sc = src('src/campaignscene.js');
   check('the scene draws no radar and has none of its numbers (CAMP_RADAR)', !/CAMP_RADAR/.test(sc) && !/radar: the carrier at its centre/.test(sc) && J('typeof CAMP_RADAR') === 'undefined');
   check('the sight scene pulses no ring on it; the panels draw no target line and keep no rectangle for one', !/CAMP_RADAR|pulse/.test(src('src/campsightscene.js').replace(/^\/\/.*$/gm, '')) && !/L\.tgt|tgtKeys|campPanelsKeep/.test(src('src/campanelsdraw.js').replace(/^\/\/.*$/gm, '')) && J('typeof campPanelsKeep') === 'undefined');
-  check('the scene calls the display every frame, after the pick\'s reveal; the arrows\' keep list is the table\'s', /campPickPaint\(this\);[^\n]*\n\s*if \(typeof campTdispSync === 'function'\) campTdispSync\(this, this\.time\.now\);/.test(sc) && /arrowKeep\(\) \{ return CAMP\.nav\.arrow\.keep; \}/.test(sc));
+  check('the scene calls the target corners every frame, after the pick\'s reveal (the look, the panel, then the picture); the arrows\' keep list is the table\'s', /campPickPaint\(this\);[^\n]*\n\s*if \(typeof campTcornerLook === 'function'\) campTcornerLook\(this\.pn, this\.time\.now\);[^\n]*\n\s*if \(typeof campCornerSync === 'function'\) campCornerSync\(this, this\.time\.now\);[^\n]*\n\s*if \(typeof campTcornerSync === 'function'\) campTcornerSync\(this, this\.time\.now\);/.test(sc) && !/campTdispSync/.test(sc) && /arrowKeep\(\) \{ return CAMP\.nav\.arrow\.keep; \}/.test(sc));
   const html = src('index.html'), p = f => html.indexOf('src/' + f);
   check('both files are in index.html, the scene half before the Campaign scene', p('camptdisp.js') > 0 && p('camptdispscene.js') > 0 && p('camptdispscene.js') < p('campaignscene.js'));
   g.run('__new(6)'); g.run(`window.TT = C.ships.find(u => u.kind === 'freighter'); window.view = { x: C.carrier.x - 640, y: C.carrier.y - 360 };`);
