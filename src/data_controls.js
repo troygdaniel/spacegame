@@ -52,6 +52,9 @@ const CAMP_FLEET_LIST = false;
 // THE SWITCH FOR P'S SHIP LIST (card space-game-p-opens-power; Troy, 23 Nov 2026: "P should just open the power list"). false: the SHIP list is off and so, by key, are the POWER and AUTOPILOT lists (card space-game-keys2-select, Troy, 23 Nov 2026: O and P are the friendlies' keys now; other cards remove the two lists): no key opens any of them, nothing goes back to it (Left from a part does nothing, the foot does not offer it), and the key line, the H page and the hints do not name it. The warp blink row, which only the ship list had, is the last row of the POWER list meanwhile.
 // true: P opens the SHIP list as before, O opens power, I the autopilot (these keys shadow the friendlies' O and P), and the blink row is the ship list's last row again. campShipListSet(on) is the one place that moves all of it (the keys, the `off` mark, the parts' `parent`, the blink row); the tests of the list's code call it with true.
 const CAMP_SHIP_LIST = false;
+// THE SWITCH FOR POWER MANAGEMENT (card space-game-power-removed; Troy, 23 Nov 2026: "he never uses it"). false: no power list (no key opens it), no J K L, no pips on the gauges, no "power to shields" or "balance" words, and every system runs at the balanced 2 / 2 / 2
+// (CAMP.power.on is false: src/campaign.js). true: all of it as it was. campPowerSet(on) is the one place that moves all of it; the tests of the pips switch it on first and say so.
+const CAMP_POWER = false;
 // THE SWITCH FOR HOLD TO SPEAK (card space-game-keys-select; Troy, 23 Nov 2026, through ORCH: "disable voice orders for now"). false: no key is bound to it (the period is the friendlies' now), the floating key cap is not drawn, the key line, the H page and the hints do not name it. Typing an order (/) is untouched, and the code (src/listen.js) stays.
 // true: the voice has a key again. campVoiceSet(on, key) is the one place that moves it; the card that brings the voice back says which key (a { k, codes } like the other entries of CAMP_KEYS): nothing picks one here.
 const CAMP_VOICE = false;
@@ -128,7 +131,7 @@ const CAMP_KEYS = {
   near: { k: '\\', codes: ['Backslash'] }, clear: { k: 'X', codes: ['KeyX'] },         // the nearest threat (the tune kit's win moved off the backslash); clear the enemy and the friendly and put WHO back on all pilots (in the map: clear the trip)
   engage: { k: 'E', codes: ['KeyE'] },                                                // the one order key (card space-game-keys2-orders, Troy, 23 Nov 2026): WHO does the fitting thing for what is picked (src/camptarget.js campSelOrder 'engage'): an enemy picked, attack it; a friendly, guard it; nothing, form up on the cruiser. G and R are free: there is no recall (the pilots stay out; a badly hurt one returns by itself: src/camprepair.js). An order to a pilot in the bay launches it. T is free
   attack: { k: 'E', codes: [] }, guard: { k: 'E', codes: [] },                       // only the letter the two target boxes' key lines read (src/camptdisp.js campTdispOrder reads CAMP_KEYS[verb].k until card space-game-keys2-panels moves it to engage and deletes these two): no code, so they take no key and G is free
-  shields: { k: 'J', codes: ['KeyJ'], sys: 'shields' }, engines: { k: 'K', codes: ['KeyK'], sys: 'engines' }, weapons: { k: 'L', codes: ['KeyL'], sys: 'weapons' }, // the ship's power (docs/CAMPAIGN.md "Ship systems"): a pip to a system, in the dials' order; the semicolon (balance, 2 / 2 / 2) is gone: Balance is a row of the POWER list and an order for the strip (card space-game-keys-select)
+  shields: { k: '', codes: [], sys: 'shields' }, engines: { k: '', codes: [], sys: 'engines' }, weapons: { k: '', codes: [], sys: 'weapons' }, // OFF (card space-game-power-removed, Troy, 23 Nov 2026: "he never uses it"): J K L gave a pip to the shields, the engines, the weapons; no key now (CAMP.power.on is false). The ship's power (docs/CAMPAIGN.md "Ship systems"): a pip to a system, in the dials' order; the semicolon (balance, 2 / 2 / 2) is gone: Balance is a row of the POWER list and an order for the strip (card space-game-keys-select)
   zoomin: { k: '=', codes: ['Equal', 'NumpadAdd'] }, zoomout: { k: '-', codes: ['Minus', 'NumpadSubtract'] }, zoomreset: { k: 'S', codes: ['KeyS'] }, // src/campzoom.js reads these codes; S resets the zoom AND brings the view back to the cruiser (it was Backspace; card space-game-keys-select)
   strip: { k: '/', codes: ['Slash'] }, voice: { k: '', codes: [] },                    // type an order; hold to speak one is OFF (CAMP_VOICE: no key; campVoiceSet gives it one when it comes back). src/cmdstrip.js, src/shipcomputer.js, src/listen.js read these in the Campaign
   help: { k: 'H', codes: ['KeyH'] }, mute: { k: 'M', codes: ['KeyM'] }, pause: { k: 'Esc', codes: ['Escape'] },
@@ -191,8 +194,24 @@ function campShipListSet(on) { // the switch (CAMP_SHIP_LIST): who has P. The sh
   campListsWire(); // the warp blink's row too (campCruiserWire): the ship list's last row with the ship list on, else the cruiser list's, else the power list's
   return on;
 }
+const CAMP_POWER_KEYS = { shields: { k: 'J', codes: ['KeyJ'] }, engines: { k: 'K', codes: ['KeyK'] }, weapons: { k: 'L', codes: ['KeyL'] } }; // the direct keys of the pips, kept for the switch
+const CAMP_POWER_ROW = { k: ['J', 'K', 'L'], t: 'Power to shields, engines, weapons', sub: 'POWER' };   // and their row on the H page
+let campPowerOn = CAMP_POWER;
+function campPowerSet(on) { // the switch (CAMP_POWER): the power list and its key, J K L, their row on the H page, the gauges' bars and keys, and CAMP.power.on (the rules: pips moved by nothing while it is false) move together
+  campPowerOn = !!on; if (typeof CAMP === 'object' && CAMP && CAMP.power) CAMP.power.on = campPowerOn;
+  Object.keys(CAMP_POWER_KEYS).forEach(id => { const K = CAMP_KEYS[id]; if (K) { K.k = campPowerOn ? CAMP_POWER_KEYS[id].k : ''; K.codes = campPowerOn ? CAMP_POWER_KEYS[id].codes.slice() : []; } });
+  if (typeof CAMP_GAUGE === 'object' && CAMP_GAUGE && typeof campPowerKeys === 'function') CAMP_GAUGE.keys = campPowerKeys(); // the gauges' direct keys follow
+  const pw = CAMP_PANELS.panels.find(x => x.id === 'power'); if (pw) { pw.off = !campPowerOn; campShipListSet(campShipOn); if (!campPowerOn) { pw.key = ''; pw.code = ''; } } // the power list: its key is the ship switch's (campShipListSet), none while it is off
+  let C = null; try { C = CONTROLS; } catch (e) { C = null; } // the H page's tables: not made yet when this first runs
+  const g = C ? C.find(x => x.id === 'campaign') : null; if (g) {
+    const i = g.rows.findIndex(x => x.sub === 'POWER' && x.k.join() === 'J,K,L'); if (i >= 0) g.rows.splice(i, 1);
+    if (campPowerOn) { const t = g.rows.findIndex(x => x.k.join() === 'Tab'); g.rows.splice(t < 0 ? g.rows.length : t, 0, Object.assign({}, CAMP_POWER_ROW)); }
+  }
+  return on;
+}
 campFleetListSet(CAMP_FLEET_LIST);
 campShipListSet(CAMP_SHIP_LIST);
+campPowerSet(CAMP_POWER);
 campVoiceSet(CAMP_VOICE);
 const campKeyCodes = id => (CAMP_KEYS[id] || { codes: [] }).codes;
 const campKeyIs = (id, code) => campKeyCodes(id).indexOf(code) >= 0;
@@ -306,7 +325,6 @@ const CONTROLS = [
     { k: ['\\'], t: 'The nearest threat', sub: 'THE TARGET' },
     { k: ['E'], t: 'Order: attack, guard or form up', sub: 'THE TARGET' }, // E does the fitting thing for the pick: who takes the order (Q W) does it, and a pilot in the bay is launched by it (card space-game-keys2-orders)
     { k: ['X', 'F'], t: 'X clears the picks, F looks at it', sub: 'THE TARGET' }, // X: no enemy, no friendly, who is all pilots again. F: the camera glides to the target, a ship a list is on, or a squad's leader, and follows it (src/campfocus.js); S (the zoom row) brings it back
-    { k: ['J', 'K', 'L'], t: 'Power to shields, engines, weapons', sub: 'POWER' },
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Up', 'Down'], t: 'Map: last or next mark (Left, Right)', sub: 'THE MAP' },
     { k: ['Enter'], t: 'Map: fly there (Shift+Enter: fast)', sub: 'THE MAP' },
@@ -364,6 +382,7 @@ const CONTROLS = [
 ];
 campFleetListSet(CAMP_FLEET_LIST); // the switch's state again, now that the H page's tables are made too (the Q row)
 campShipListSet(CAMP_SHIP_LIST); // and the ship list's (the LISTS group's rows)
+campPowerSet(CAMP_POWER); // and the power's (the J K L row)
 campVoiceSet(CAMP_VOICE); // and the voice's (no row while it is off)
 
 const controlsGroup = id => CONTROLS.find(g => g.id === id) || null;

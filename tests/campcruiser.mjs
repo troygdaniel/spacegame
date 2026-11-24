@@ -92,7 +92,7 @@ console.log('E. Emergency shields');
   g.run(`E.shield = 40; E.ore = 49; var poor = campCheck(E, 'emergency', '');`);
   check('with 49 ore it is refused: 50 needed', J(`[poor.ok, poor.code].join()`) === 'false,noore2' && /50 needed/.test(J(`poor.say`)), J(`poor.say`));
   g.run(`E.ore = 80; var pw0 = E.power.p.join(); var ok1 = campOrder(E, 'emergency', '', 'key');`);
-  check('with the ore it fills the shield at once and takes 50 ore; the power pips are not touched', J(`[ok1.ok, E.shield === campShieldMax(E), E.ore, E.power.p.join() === pw0, E.power.until, E.orders.emergency].join()`) === 'true,true,30,true,0,1', J(`[ok1.say, E.shield, E.ore].join('|')`));
+  check('with the ore it fills the shield at once and takes 50 ore; the power pips are not touched', J(`[ok1.ok, E.shield === campShieldMax(E), E.ore, E.power.p.join() === pw0, E.orders.emergency].join()`) === 'true,true,30,true,1', J(`[ok1.say, E.shield, E.ore].join('|')`));
   g.run(`E.shield = 10; E.ore = 100; var cool = campCheck(E, 'emergency', ''); var row1 = __rowof(E, 'emergency');`);
   check('at once again it is refused: cooling, 20 seconds; the row is grey and says 20 s', J(`[cool.ok, cool.code].join()`) === 'false,cooling' && /in 20 seconds/.test(J(`cool.say`)) && J(`[row1.ok, row1.short, row1.state].join('|')`) === 'false|20 s|ready in 20 s' || J(`[row1.ok, row1.short].join('|')`) === 'false|20 s', J(`[cool.say, row1.ok, row1.short, row1.state].join('|')`));
   g.run(`__run(E, 19); var still = campCheck(E, 'emergency', '').code; __run(E, 2); E.shield = 10; var again = campOrder(E, 'emergency', '', 'key');`);

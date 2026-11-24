@@ -426,7 +426,7 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'alarm') { sfx('siren'); this.cameras.main.flash(300, 255, 60, 60); this.cameras.main.shake(300, 0.004); } // the ambush: out of the dark
     else if (e.type === 'blink') { this.boom.explode(30, e.x, e.y); sfx('shieldUp'); }
     else if (e.type === 'anomaly') this.anomalyEvent(e);
-    else if (e.type === 'power') beep(e.p && e.p[1] === 4 ? 880 : 540, 0.06, 'triangle', 0.04, 120); // a pip moved (the ship's systems, src/campaign.js): a blip, higher for the emergency
+    else if (e.type === 'power') beep(540, 0.06, 'triangle', 0.04, 120); // a pip moved (the ship's systems, src/campaign.js; only with CAMP.power.on): a blip
     else if (e.type === 'missile') sfx('missileLaunch');
     else if (e.type === 'mboom') { this.boom.explode(44, e.x, e.y); sfx('missileBlast'); }
     else if (e.type === 'mfizzle') { this.boom.explode(6, e.x, e.y); sfx('missileFizzle'); }

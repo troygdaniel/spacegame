@@ -58,6 +58,7 @@ const CAMP = {
     shield: 150                            // points of shield: they take damage before the hull and mend by themselves, at a rate the shield pips set (CAMP.power.shields.regen; card space-game-shield-auto: the ore recharge is gone)
   },
   power: {                                 // ship systems (card space-game-campaign-systems; docs/CAMPAIGN.md "Ship systems"): power to weapons, shields and engines, like X-Wing
+    on: false,                             // THE SWITCH (card space-game-power-removed; Troy, 23 Nov 2026: "he never uses it"): false: the pilot cannot move a pip (no list, no J K L, no words: 'power' and 'balance' are refused) and every system runs at the balanced start below, saved settings ignored; true: the old power management, as it was, for the tests and for a mod. The factors below are 1 at 2 pips, so the shield is 150 and mends 3 a second after 3 s unhit, the turrets and the missile launcher and the engines at the table's own numbers
     budget: 6, max: 4, start: [2, 2, 2],   // the pips to share, the most in one system, and the default: weapons, shields, engines. Every factor is 1 at 2 pips (the shield mends at its base rate there)
     weapons: { delay: [1.6, 1.3, 1, 0.8, 0.65],   // x the turrets' pdDelay, by pips 0 to 4
                reload: [1.6, 1.3, 1, 0.75, 0.55] }, // x the missile reload
@@ -68,7 +69,6 @@ const CAMP = {
                accel: [0.7, 0.85, 1, 1.15, 1.3],    // x the thrust
                turn: [0.8, 0.9, 1, 1.1, 1.2],       // x how fast the nose turns
                blink: [1.5, 1.25, 1, 0.8, 0.6] },   // x the warp blink's recharge
-    emergency: { shields: 4, ms: 10000, cooldown: 40000 }, // emergency shields: 4 pips to shields (the other two get 1 each) for ms, ready again cooldown ms after it started
     low: { shield: 0.3, rearm: 0.6, engines: 1 }           // the computer says so when the shield is under 30 percent of its cap (and again after it has been over 60), or when the engines are set to 1 pip or less
   },
   emergency: {                             // EMERGENCY SHIELDS (card space-game-keys2-cruiser; Troy, 23 Nov 2026): a row of the cruiser list (S) that fills the shield at once. ORCH's numbers, both on the N panel (the `ship` group)
@@ -332,7 +332,7 @@ const CAMP = {
     low: 0.2                               // the computer says so when the charge falls under this share of the tank (and again after it has been over twice this)
   },
   hud: {                                   // the gauges of the HUD (card space-game-systems-gauges, src/camphud.js; moved from the top left to the top RIGHT by card space-game-power-presets: the ship lives on the right hand, with the P list): three Long Haul style dials in a row, SHIELDS (with the hull as a thin bar under it), SPEED, LASERS, each with a bar of power segments beside it (the pips of that system, like X-Wing); the lines of text stay at the left, under the top
-    right: 8, y: 8, cell: 118,             // the gauges' distance from the screen's right edge, their top, and the width of a cell (three of them: 354 px, from x 918 on a 1280 screen: clear of the toast band, which ends at x 916)
+    right: 8, y: 8, cell: 118, plain: 76,  // the gauges' distance from the screen's right edge, their top, and the width of a cell (three of them: 354 px, from x 918 on a 1280 screen: clear of the toast band, which ends at x 916). plain: the cell's width while the pips are off (CAMP.power.on false: card space-game-power-removed): the dial alone, no bar beside it and no key under it (three of them: 228 px, from x 1044)
     r: 22, bar: { w: 10, h: 9, gap: 2 },   // the dial's radius (its bezel is 12 px outside it) and a power segment; the bar sits to the right of the dial, level with its middle
     hullBar: { y: 78, h: 7 },              // the thin hull bar under the shield dial (and its bar): its top, relative to the cell's top, and its height
     ore: { y: 74 },                        // the ore line (and the cash), under the speed and laser dials, its right end at the gauges' right edge
@@ -1037,8 +1037,9 @@ function campIntent(text) {
   if ((m = /^(?:dock|land|put in|moor|berth)\s+(?:at|in|on|with|to)\s+(.+)$/.exec(q)) && !/^(?:the )?(?:carrier|cruiser|ship|base|bay)$/.test(m[1])) return { act: 'fleet_dock', arg: m[1].replace(/^(?:the |an? )/, '').replace(/^(?:outpost|station)$/, '') }; // "dock at Luna", "land at the lunar base", "dock at an outpost": the CARRIER docks at an outpost (card space-game-campaign-outposts); a bare "dock" or "land" is the wing's, below
   if ((m = /^retreat to (?!the (?:carrier|cruiser|ship)\b|base\b)(.+)$/.exec(q))) return { act: 'fleet_fly', arg: m[1] }; // "retreat to Luna": the carrier flies there by itself (the HUD's retreat line says the words); a bare "retreat" is the wing's
   if ((m = /^(?:recall|come home|come back|return(?: home| to the carrier| to base)?|land|dock|rtb|fall back|retreat|pull back|bring them (?:home|back))\b\s*(.*)$/.exec(q))) return { act: 'fleet_recall', arg: '' };
-  if ((m = /^(?:(?:more|extra|give) )?(?:power|energy)\s+(?:to|into|for|on)\s+(?:the |our )?([a-z]+)(?:\s+(?:from|out of|off)\s+(?:the |our )?([a-z]+))?$/.exec(q)) && campPowerSys(m[1]) >= 0) return { act: 'fleet_power', arg: CAMP_POWER_NAMES[campPowerSys(m[1])] + (m[2] && campPowerSys(m[2]) >= 0 ? ':' + CAMP_POWER_NAMES[campPowerSys(m[2])] : '') }; // "power to shields": a pip to it, from the system with the most or the one named
-  if (/^(?:balance|reset|even out|equali[sz]e|level)\s+(?:the |our )?(?:power|systems|energy)$/.test(q) || /^(?:power|energy) balance$/.test(q)) return { act: 'fleet_balance', arg: '' };
+  // "power to shields" and "balance the power": typed words for a pip, only while the pips are on (CAMP.power.on; off in the game since card space-game-power-removed: they parse to nothing, so they are not an order the strip or the voice gives)
+  if (CAMP.power.on && (m = /^(?:(?:more|extra|give) )?(?:power|energy)\s+(?:to|into|for|on)\s+(?:the |our )?([a-z]+)(?:\s+(?:from|out of|off)\s+(?:the |our )?([a-z]+))?$/.exec(q)) && campPowerSys(m[1]) >= 0) return { act: 'fleet_power', arg: CAMP_POWER_NAMES[campPowerSys(m[1])] + (m[2] && campPowerSys(m[2]) >= 0 ? ':' + CAMP_POWER_NAMES[campPowerSys(m[2])] : '') }; // "power to shields": a pip to it, from the system with the most or the one named
+  if (CAMP.power.on && (/^(?:balance|reset|even out|equali[sz]e|level)\s+(?:the |our )?(?:power|systems|energy)$/.test(q) || /^(?:power|energy) balance$/.test(q))) return { act: 'fleet_balance', arg: '' };
   if (/^emergency\s+(?:shields?|power)$/.test(q) || /^(?:all )?power to shields? now$/.test(q)) return { act: 'fleet_emergency', arg: '' };
   if (/^(?:recharge|refill|restore|top up|repair|charge|power up)\b.*\bshields?\b/.test(q) || /^shields?\s+(?:up|back up|on)$/.test(q) || /^(?:recharge|refill)\b/.test(q)) return { act: 'fleet_recharge', arg: /earth|planet|home/.test(q) ? 'earth' : /carrier|\bship\b|\bme\b/.test(q) ? 'carrier' : '' };
   if (/^(?:repair|mend|fix|patch)\b.*\b(?:hull|ship|carrier|cruiser|damage)\b/.test(q) || /^(?:repair|mend|fix)$/.test(q)) return { act: 'fleet_repair', arg: '' }; // the hull, docked
@@ -1136,13 +1137,13 @@ function campSchedule(C) {
 }
 
 // ---------- the ship's systems: power to weapons, shields and engines (card space-game-campaign-systems; docs/CAMPAIGN.md "Ship systems") ----------
-// C.power = { p: [w, s, e] (the pips in use now), base: [w, s, e] (the setting: what the player chose, what is saved), at: the clock when the last emergency began, until: when it ends (0: none), lowS, lowE }.
+// C.power = { p: [w, s, e] (the pips in use now), base: [w, s, e] (the setting: what the player chose, what is saved), lowS, lowE }. (The emergency shields are not a power setting any more: campEmergency, src/campmend.js.)
 // The pips are a budget of CAMP.power.budget (6), each system 0 to 4; the table CAMP.power says what a pip does, and at 2 / 2 / 2 every factor is 1: the numbers of before, to the bit.
 //   campPowerFx(C)             the factors now: { delay, reload, cap, regen, speed, accel, turn, blink }     campShieldMax(C)  the shield's cap in points    campBlinkCooldown(C)  ms     campReload(C)  ms
-//   campOrder(C, 'power', 'shields' | 'shields:weapons')   a pip to shields, from the system with the most or the one named;  'balance' is 2 / 2 / 2;  'emergency' is 1 / 4 / 1 for 10 s, ready again 40 s after it began
-//   campPowerStep(C, dt)       each tick: the emergency's end, the shield held to its cap and mended by the shields' power, the low lines;      campPowerLoad() / campPowerSave(p)  the setting in this browser
+//   campOrder(C, 'power', 'shields' | 'shields:weapons')   a pip to shields, from the system with the most or the one named;  'balance' is 2 / 2 / 2
+//   campPowerStep(C, dt)       each tick: the shield held to its cap and mended by the shields' power, the low lines;      campPowerLoad() / campPowerSave(p)  the setting in this browser
 const campPowerOk = a => Array.isArray(a) && a.length === 3 && a.every(v => Number.isInteger(v) && v >= 0 && v <= CAMP.power.max) && a[0] + a[1] + a[2] === CAMP.power.budget;
-function campPowerNew(pips) { const p = campPowerOk(pips) ? pips.slice() : CAMP.power.start.slice(); return { p, base: p.slice(), at: -1e9, until: 0, lowS: false, lowE: false }; }
+function campPowerNew(pips) { const p = CAMP.power.on && campPowerOk(pips) ? pips.slice() : CAMP.power.start.slice(); return { p, base: p.slice(), lowS: false, lowE: false }; }
 function campPowerFx(C) {
   const K = CAMP.power, p = C && C.power && C.power.p ? C.power.p : K.start;
   return { delay: K.weapons.delay[p[0]], reload: K.weapons.reload[p[0]], cap: K.shields.cap[p[1]], regen: K.shields.regen[p[1]], speed: K.engines.speed[p[2]], accel: K.engines.accel[p[2]], turn: K.engines.turn[p[2]], blink: K.engines.blink[p[2]] };
@@ -1155,16 +1156,8 @@ const campReload = C => CAMP.missile.reload * campPowerFx(C).reload;
 const campPowerSys = w => /^(?:weapons?|guns?|turrets?)$/.test(w) ? 0 : /^shields?$/.test(w) ? 1 : /^(?:engines?|thrusters?|drives?)$/.test(w) ? 2 : -1;
 const CAMP_POWER_NAMES = ['weapons', 'shields', 'engines'];
 function campPowerDo(C, name, arg, dry) {
-  const P = C.power, K = CAMP.power, on = C.t < P.until; // on: an emergency is running
-  if (name === 'emergency') {
-    if (on) return campNo('locked');
-    const left = P.at + K.emergency.cooldown - C.t; if (left > 0) return campNo('cooling', { s: Math.ceil(left / 1000) });
-    if (dry) return campYes('emergency');
-    const rest = K.budget - K.emergency.shields; P.at = C.t; P.until = C.t + K.emergency.ms; P.p = [Math.floor(rest / 2), K.emergency.shields, Math.ceil(rest / 2)]; C.orders.emergency++;
-    C.events.push({ type: 'power', p: P.p.slice() });
-    return campYes('emergency');
-  }
-  if (on) return campNo('locked');
+  const P = C.power, K = CAMP.power;
+  if (!K.on) return campNo('powerwhat'); // the pips are off (CAMP.power.on): nothing moves them. (The emergency shields are not a power setting any more: campEmergency, src/campmend.js, card space-game-keys2-cruiser)
   if (name === 'balance') { if (!dry) { P.base = K.start.slice(); P.p = K.start.slice(); C.orders.balance++; C.events.push({ type: 'power', p: P.p.slice() }); } return campYes('balance'); }
   const m = /^([a-z]+)(?::([a-z]+))?$/.exec(String(arg == null ? '' : arg).toLowerCase().trim()), to = m ? campPowerSys(m[1]) : -1, chosen = m && m[2] ? campPowerSys(m[2]) : -1;
   if (to < 0 || (m[2] && chosen < 0) || chosen === to) return campNo('powerwhat');
@@ -1177,7 +1170,6 @@ function campPowerDo(C, name, arg, dry) {
 }
 function campPowerStep(C, dt) {
   const P = C.power, K = CAMP.power; if (!P) return;
-  if (P.until && C.t >= P.until) { P.until = 0; P.p = P.base.slice(); campSay(C, 'camp.say.emergencyend'); } // the emergency is over: back to what it was
   const fx = campPowerFx(C), max = CAMP.carrier.shield * fx.cap;
   if (C.shield > max) C.shield = max; // a smaller cap takes the shield down to it; a bigger one does not fill it
   if (fx.regen > 0 && C.shield < max && C.t - (C.shieldHitAt === undefined ? -1e9 : C.shieldHitAt) >= K.shields.regenDelay) C.shield = Math.min(max, C.shield + fx.regen * dt);
@@ -1185,7 +1177,7 @@ function campPowerStep(C, dt) {
   if (!P.lowS && f < K.low.shield) { P.lowS = true; campSay(C, 'camp.say.shieldlow'); } else if (P.lowS && f > K.low.rearm) P.lowS = false;
   if (!P.lowE && P.base[2] <= K.low.engines) { P.lowE = true; campSay(C, 'camp.say.enginelow'); } else if (P.lowE && P.base[2] > K.low.engines) P.lowE = false; // the setting, not an emergency's 1 pip
 }
-function campPowerLoad() { let p = CAMP.power.start.slice(); campTry(() => { const raw = JSON.parse(localStorage.getItem(CAMP.store + '.power') || 'null'); if (campPowerOk(raw)) p = raw.slice(); }, 0); return p; }
+function campPowerLoad() { let p = CAMP.power.start.slice(); if (!CAMP.power.on) return p; campTry(() => { const raw = JSON.parse(localStorage.getItem(CAMP.store + '.power') || 'null'); if (campPowerOk(raw)) p = raw.slice(); }, 0); return p; }
 function campPowerSave(p) { if (campPowerOk(p)) campTry(() => localStorage.setItem(CAMP.store + '.power', JSON.stringify(p)), 0); }
 // The turrets' charge (card space-game-systems-gauges): C.charge, 0 to CAMP.tank.max. campLaserSpend(C) is a shot: true and the cost is paid, or false when there is not that much (C.dryAt is the clock of the last refusal).
 // campLaserStep(C, dt) mends it at CAMP.tank.refill[the weapons' pips] a second and says so once when it falls low; campLaserFrac(C) is its share of the tank, campLaserRate(C) the charge a second it mends at now.

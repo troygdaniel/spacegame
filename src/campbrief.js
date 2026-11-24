@@ -116,7 +116,7 @@ function campBriefReady(P, level, i) {
   const lines = [uiText('camp.bf.ready.bay', { f: wing.fighters })];
   if (rank) lines.push(uiText('camp.bf.ready.rank', { name: rank }));
   const pw = typeof campPowerLoad === 'function' ? campPowerLoad() : CAMP.power.start.slice(), cap = Math.round(CAMP.carrier.shield * CAMP.power.shields.cap[pw[1]]); // the ship's systems (card space-game-campaign-systems): the setting saved in this browser is what the battle starts with, and the shield's cap follows the shields' pips
-  lines.push(uiText('camp.bf.ready.stock', { missiles, ore }), uiText('camp.bf.ready.power', { w: pw[0], s: pw[1], e: pw[2] }), uiText('camp.bf.ready.shield', { cap }));
+  lines.push(uiText('camp.bf.ready.stock', { missiles, ore }), uiText('camp.bf.ready.shield', { cap })); // (the power line went with the pips: card space-game-power-removed; the shield's cap is 150 at the balanced setting)
   const warnings = [];
   return { lines, warnings, wing, rank, power: pw, shield: cap };
 }

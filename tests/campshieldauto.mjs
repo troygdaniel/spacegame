@@ -15,6 +15,7 @@ import { nodeGame } from './nodegame.mjs';
 let failed = 0;
 const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + name + (detail ? '  ' + detail : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const g = nodeGame();
+g.run('campPowerSet(true)'); // the pips are OFF in the game (card space-game-power-removed; CAMP_POWER in src/data_controls.js): this suite is about them (the list, J K L, the bars, the pip orders), so it switches them on. The game as it is now: tests/powerremoved.mjs
 g.run('CAMP.bay.startOut = false; // this suite\'s set-up is the old start: the pilots begin in the bay (the game starts them out beside the cruiser: card space-game-keys-orders; tests/campkeysorders.mjs has the new start)');
 g.run('campFleetListSet(true)'); // this suite is about the lists' code, Q's pop-up included: it is switched off in the game (CAMP_FLEET_LIST, card space-game-q-selects-all) and on here; tests/campselect.mjs has the game's own state
 g.run('campShipListSet(true)'); // and the ship list too: it is switched off in the game (CAMP_SHIP_LIST, card space-game-p-opens-power: P opens power) and on here; tests/campselect.mjs has the game's own state
@@ -73,9 +74,9 @@ check('no text of the keys names a list\'s key as a letter of its own (it is {fl
 
 console.log('C. the old words');
 check('"recharge shields" is understood (the order the pilot knew) and answers that the shield mends by itself: no ore paid, no shield filled', (() => { const r = J(`campIntent('recharge shields')`); return r && r.act === 'fleet_recharge'; })());
-check('the order itself is refused with the one line and nothing changes', (() => { const r = J(`(() => { const C = mk(1, [2, 2, 2]); C.ore = 100; C.shield = 30; const x = campOrder(C, 'recharge', '', 'key'); return { x, ore: C.ore, shield: C.shield, orders: C.orders.recharge === undefined }; })()`); return r.x.ok === false && r.x.code === 'shieldauto' && r.x.say === 'Shields mend on their own. More pips on shields mend faster.' && r.ore === 100 && r.shield === 30 && r.orders; })());
+check('the order itself is refused with the one line and nothing changes', (() => { const r = J(`(() => { const C = mk(1, [2, 2, 2]); C.ore = 100; C.shield = 30; const x = campOrder(C, 'recharge', '', 'key'); return { x, ore: C.ore, shield: C.shield, orders: C.orders.recharge === undefined }; })()`); return r.x.ok === false && r.x.code === 'shieldauto' && r.x.say === 'Shields mend on their own.' && r.ore === 100 && r.shield === 30 && r.orders; })());
 const sys = J('SC_CAMP_ACTS + SC_CAMP_HOW');
-check('the model is not offered the action, and is told the shields mend by themselves and what key sets it', !/fleet_recharge/.test(sys) && !/recharg/i.test(sys) && /shields mend by themselves/.test(sys) && /key J/.test(sys));
+check('the model is not offered the action, and is told the shields mend by themselves (and no key or pips: the pips are off)', !/fleet_recharge/.test(sys) && !/recharg/i.test(sys) && /shields mend by themselves/.test(sys) && !/key J|pips/.test(sys)); // (no pips and no key since card space-game-power-removed)
 
 console.log('D. the words');
 const md = readFileSync(ROOT + '/content/text/campshield.md', 'utf8');
