@@ -141,9 +141,9 @@ const CAMP = {
     dockAt: 63                             // px: a recalled ship this close to the carrier lands (and is whole again when next launched)
   },
   pilots: [                                // THE THREE PILOTS (card space-game-three-pilots; Troy, 23 Nov 2026: "one fighter replaces each squad: Wedge (red, the leader), Kara (green), Apollo (yellow)"; src/campwing.js campPilots). A pilot is one fighter that flies for a squad: its ship has u.pilot (the id here) and u.squad, and the squad's group ('red', 'green', 'yellow') is that one ship. The order is the order the squads fill
-    { id: 'wedge', name: 'Wedge', squad: 'red', lead: true },
-    { id: 'kara', name: 'Kara', squad: 'green' },
-    { id: 'apollo', name: 'Apollo', squad: 'yellow' }
+    { id: 'wedge', name: 'Wedge', call: 'Red 1', squad: 'red', lead: true },   // call: the call sign shown with the name in the fleet pick (card space-game-keys5-qwe: Red 1 Wedge); the radio and the orders still say the name
+    { id: 'kara', name: 'Kara', call: 'Red 2', squad: 'green' },
+    { id: 'apollo', name: 'Apollo', call: 'Red 3', squad: 'yellow' }
   ],
   pilotStrength: 8,                        // the wing's strength at the start, in fighters' worth: Wedge 3, Kara 3 and Apollo 2, the sizes of the squads they replace. A pilot's hull and gun are a lone fighter's times its share (campPilotStrengths). What a rank, the bay2 tech or the Earth refit used to add as fighters is added to this, one at a time to the pilot who has the least (Wedge first on a tie), so the wing stays three ships
   route: {                                 // the fork in an escort's road (card space-game-scout-route; src/camproute.js, docs/CAMPAIGN.md "Scouting the route"). DORMANT since card space-game-cut-lane-fork (Troy, 22 Nov 2026: "remove picking a lane"): no mission row has a `route` now; a row that writes one still gets a fork

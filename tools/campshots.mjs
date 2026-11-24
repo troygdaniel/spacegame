@@ -57,8 +57,8 @@ const noRow = async row => {
   return false;
 };
 const shut = async () => { for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); }; // every list closed (Esc goes back one step; it is pressed only while a list is open, so it never pauses)
-// S resets the zoom AND opens the cruiser list (card space-game-keys2-cruiser); over the open map it closes the map first (a list's key does). For a picture of the zoom alone: S, the list closed again, and the map opened again when it was up
-const zreset = async map => { await keyOn('KeyS'); await shut(); if (map && !(await j(`!!${SC}.mp`))) { await t.key('TAB'); await t.run(300); } };
+// Q resets the zoom AND opens the cruiser list (card space-game-keys2-cruiser); over the open map it closes the map first (a list's key does). For a picture of the zoom alone: S, the list closed again, and the map opened again when it was up
+const zreset = async map => { await keyOn(await j(`campKeyCodes('zoomreset')[0]`)); await shut(); if (map && !(await j(`!!${SC}.mp`))) { await t.key('TAB'); await t.run(300); } };
 let NUM = 0; // the digit of the row the last list walk went to, when its list is a numbered one (0: a list with a highlight)
 const order = async row => {
   if ((await j(`${SC}.mode`)) === 'play' && !(await wayTo(row)) && (await noRow(row))) return true;

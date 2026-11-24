@@ -57,7 +57,10 @@ function campTgtCycle(C) { // ] (card space-game-keys4-onekey, Troy, 24 Nov 2026
   const list = campTgtList(C); if (!list.length) { if (C) C.tgt = ''; return null; }
   const t = campMarkClock(C), cold = !(C.tgtAt >= 0) || t < C.tgtAt || t - C.tgtAt >= CAMP.target.restart;
   if (cold) return campTgtNearest(C); // the first press, a press after the pause, or one with a target held by a click on the map
-  C.tgtAt = t; return campTgtStep(C, 1);
+  C.tgtAt = t;
+  const at = list.findIndex(u => u.id === C.tgt);
+  if (at === list.length - 1) { C.tgt = ''; campMarkTouch(C, false, true); return null; } // the empty stop after the last ship (card space-game-keys5-qwe, Troy, 24 Nov 2026: X is gone): nothing is held, so E forms up; the next press starts again from the nearest
+  return campTgtStep(C, 1);
 }
 function campTgtHold(C, id) { // a click on an enemy (card space-game-click-target, src/campclick.js): that ship is THE target held, as ] or \ would make it (the friendly is let go; the clock of ] starts, so the next ] steps on from it); the ship, or null when it is no hostile now
   const u = campTgtList(C).find(x => x.id === id); if (!u) return null;
@@ -98,9 +101,20 @@ function campSelList(C) { // the stops of Q and W: All pilots, then the pilots a
   if (!C || !C.carrier) return [];
   const pilots = (CAMP.wing.squads || []).map(sq => {
     const ships = campWingShips(C, sq); if (!ships.length && !campWingDocked(C, sq).length) return null; // lost, with nothing in the bay to take its place: not a stop
-    return { id: CAMP_SELPILOT + sq, kind: 'pilot', squad: sq, unit: ships[0] || null, units: ships.length ? [ships[0]] : [], name: campSelPilotName(ships[0] || null, sq) };
+    return { id: CAMP_SELPILOT + sq, kind: 'pilot', squad: sq, unit: ships[0] || null, units: ships.length ? [ships[0]] : [], name: campSelPilotName(ships[0] || null, sq), label: campSelLabel(CAMP_SELPILOT + sq) };
   }).filter(Boolean);
-  return [{ id: CAMP_SELALL, kind: 'all', squad: '', unit: null, units: campSelAllUnits(C), name: campSelAllName() }].concat(pilots);
+  return [{ id: CAMP_SELALL, kind: 'all', squad: '', unit: null, units: campSelAllUnits(C), name: campSelAllName(), label: campSelAllName() }].concat(pilots);
+}
+function campSelLabel(id) { // a stop's words in the fleet pick and the corner: its call sign and name (CAMP.pilots: Red 1 Wedge; card space-game-keys5-qwe), or All pilots
+  if (id === CAMP_SELALL) return campSelAllName();
+  const sq = String(id).replace(CAMP_SELPILOT, ''), p = (CAMP.pilots || []).find(q => q.squad === sq);
+  return p ? (p.call ? p.call + ' ' : '') + p.name : sq;
+}
+const campSelIs = (C, id) => !!C && (id === CAMP_SELALL ? !C.sel || C.sel === CAMP_SELALL : C.sel === id); // is that stop the WHO now (nothing picked is All pilots)
+function campSelPick(C, id, how) { // a row of the fleet pick (W, then a digit): that pilot, or All pilots, is WHO. No order is given; a pilot who is lost (and has nothing in the bay) is no stop
+  if (!C || !C.carrier) return campNo('what');
+  const e = campSelList(C).find(x => x.id === id); if (!e) return campNo('nopilot');
+  C.sel = e.id; campMarkTouch(C, true, false); return { ok: true, say: '', who: e.id };
 }
 function campSelAll(C) { if (C && C.carrier) { C.sel = CAMP_SELALL; campMarkTouch(C, true, false); } return C ? C.sel : ''; } // the first stop of Q: WHO is all three pilots
 function campSelNow(C) { // WHO now: never null with a cruiser; '' (nothing picked), or a pilot who was lost or is home, is All pilots
@@ -109,7 +123,7 @@ function campSelNow(C) { // WHO now: never null with a cruiser; '' (nothing pick
   if (!e) { C.sel = CAMP_SELALL; return list[0]; }
   return e;
 }
-function campSelStep(C, dir) { // Q (1): the next who (-1: the last), round at the ends (All pilots, Wedge, Kara, Apollo, All pilots...)
+function campSelStep(C, dir) { // the next who (-1: the last), round at the ends (All pilots, Wedge, Kara, Apollo, All pilots...): no key steps it since card space-game-keys5-qwe (the fleet pick, W and a digit), the code and the tests keep it
   const list = campSelList(C); if (!list.length) { if (C) C.sel = CAMP_SELALL; return null; }
   const at = Math.max(0, list.findIndex(e => e.id === C.sel)), d = dir < 0 ? -1 : 1, i = (at + d + list.length) % list.length;
   C.sel = list[i].id; campMarkTouch(C, true, false); return list[i];
@@ -145,6 +159,7 @@ function campFriNow(C) { // the friendly now: a ship of the list, or the place a
 function campFriStep(C, dir) { // [ (1): the friendly after (-1: before), round at the ends; with none, 1 takes the first and -1 the last. One target: the enemy is let go
   const list = campFriList(C); if (!list.length) return null; // no ship to protect: a place held by a map click stays held (campFriNow lets go of a ship that is lost)
   const at = list.findIndex(e => e.id === C.fsel), d = dir < 0 ? -1 : 1, i = at < 0 ? (d > 0 ? 0 : list.length - 1) : (at + d + list.length) % list.length;
+  if (d > 0 && at === list.length - 1) { C.fsel = ''; C.tgt = ''; campMarkTouch(C, false, true); return null; } // the empty stop after the last ship (card space-game-keys5-qwe): nothing is held, then the next press takes the first
   C.fsel = list[i].id; C.tgt = ''; campMarkTouch(C, false, true); return list[i];
 }
 function campFriClear(C) { const had = !!(C && C.fsel); if (C) C.fsel = ''; return had; }

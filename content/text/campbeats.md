@@ -13,7 +13,7 @@ The words of mission 1.1 in four beats (card space-game-l1-1-beats; src/campbeat
 | camp.b.rival | Destroy the pirate leader |
 | camp.b.torpedoes | Torpedo hits: {n} or fewer |
 | camp.hint.fast | A long quiet road. On the map ({map}), pick the transport and burn Fast. |
-| camp.hint.fleet | {keywho} picks who: all pilots or one. {keyorder} gives the order: attack, guard or form up. |
+| camp.hint.fleet | {keywho}, then 1 to 4, picks who: all pilots or one. {keyorder} gives the order: attack, guard or form up. |
 | camp.bf.enemy.tboat.one | {n} pirate torpedo boat |
 | camp.bf.enemy.tboat.many | {n} pirate torpedo boats |
 | camp.bf.enemy.lancer.one | {n} alien lancer |
