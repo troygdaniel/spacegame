@@ -11,6 +11,7 @@ The words of the Campaign's Fast rule (card space-game-campaign-fast-board): a b
 | camp.nav.recalling | Recalling... {n} out. |
 | camp.nav.recalltimeout | Recall timed out. Still out: {names}. |
 | camp.nav.burnoff | Wing launched: burn off. |
+| camp.nav.burnfoe | Hostiles near: burn off. |
 | camp.map.fastout | FAST   Shift+Enter    wing is out |
 | camp.map.fastask | FAST   press again: recall, then burn |
 | camp.map.on | ON |

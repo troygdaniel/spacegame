@@ -28,6 +28,8 @@ const CAMP_TUNE = {
     { id: 'cruiserturn', group: 'ship', root: 'CAMP', path: 'carrier.turn', min: 0.3, max: 4, step: 0.1, unit: 'rad/s', when: 'next' },
     { id: 'shieldsize', group: 'ship', root: 'CAMP', path: 'carrier.shield', min: 30, max: 600, step: 10, unit: 'points', when: 'now' },
     { id: 'shieldmend', group: 'ship', root: 'CAMP', path: 'power.shields.regen', of: 2, min: 0, max: 30, step: 0.5, unit: 'a second', when: 'now' },
+    { id: 'emergencyore', group: 'ship', root: 'CAMP', path: 'emergency.ore', min: 0, max: 400, step: 5, unit: 'ore', when: 'now' },                // card space-game-keys2-cruiser: what Emergency shields costs
+    { id: 'emergencycool', group: 'ship', root: 'CAMP', path: 'emergency.cooldown', min: 0, max: 120000, step: 1000, unit: 'ms', when: 'now' },       // and how long before it can be given again
     // the guns: the turrets, the missiles, the charge the turrets draw
     { id: 'turretdamage', group: 'guns', root: 'CAMP', path: 'carrier.pd', min: 1, max: 40, step: 1, unit: '', when: 'now' },
     { id: 'turretdelay', group: 'guns', root: 'CAMP', path: 'carrier.pdDelay', min: 100, max: 2000, step: 50, unit: 'ms', when: 'now' },

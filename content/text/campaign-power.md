@@ -19,6 +19,9 @@ The words of the Campaign's ship systems (card space-game-campaign-systems): pow
 | camp.no.powerwhat | Weapons, shields or engines? |
 | camp.no.locked | Emergency shields hold the power. |
 | camp.no.cooling | Emergency shields ready in {s} seconds. |
+| camp.no.shieldfull | The shields are full, pilot. |
+| camp.ui.tune.row.emergencyore | Emergency shields: ore |
+| camp.ui.tune.row.emergencycool | Emergency shields: wait |
 | camp.pow.weapons | WEAPONS |
 | camp.pow.shields | SHIELDS |
 | camp.pow.engines | ENGINES |

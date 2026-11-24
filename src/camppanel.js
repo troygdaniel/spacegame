@@ -20,9 +20,18 @@
 //   campPanelTarget(C)               the line of the target: { name, km, hp } or null
 //   campPanelKeyLine()               'Q Fleet  W All  E Red  R Green  T Yellow   P Power  O Autopilot  U Dock': the lists' keys, from the table;   campKeyLine(): the whole bottom key line (camp.ui.keys)
 const campPanelDef = id => CAMP_PANELS.panels.find(p => p.id === id) || null;
-const campPanelNew = () => ({ open: '', at: 0, top: 0, lit: {}, trail: [], pick: null, seen: null, ring: null });
+const campPanelNew = () => ({ open: '', at: 0, top: 0, lit: {}, trail: [], pick: null, seen: null, ring: null, touch: null });
 const campPanelOpen = P => (P && typeof P.open === 'string' && campPanelDef(P.open) ? P.open : '');
-const campPanelClose = P => { if (P && typeof P === 'object') { P.open = ''; P.at = 0; P.top = 0; P.pick = null; P.trail = []; } };
+const campPanelClose = P => { if (P && typeof P === 'object') { P.open = ''; P.at = 0; P.top = 0; P.pick = null; P.trail = []; P.touch = null; } };
+// THE FADE (card space-game-keys2-cruiser; Troy, 23 Nov 2026: the cruiser list "fades after a few seconds untouched"). A list marked `fades` in the table (the cruiser's, and any list or target sub-list reached from it) closes by itself after CAMP_PANELS.anim.idle ms
+// with no key and no click (P.touch is the scene clock of the last: a key in campPanelKey, a click in campPanelsClick) and dims over the next anim.out ms. campPanelFade(P, now) is asked every frame by the drawing: the list's opacity, 1 to 0 (it has closed at 0).
+const campPanelFades = P => { const o = campPanelOpen(P); if (!o) return false; const d = campPanelDef(o); return !!(d && d.fades) || (P.trail || []).some(id => { const t = campPanelDef(id); return !!(t && t.fades); }); };
+function campPanelFade(P, now) {
+  if (!campPanelFades(P)) return 1;
+  const K = CAMP_PANELS.anim; if (typeof P.touch !== 'number' || P.touch > now) P.touch = now; // a list that has just opened starts counting at its first frame
+  const idle = now - P.touch; if (idle >= K.idle + K.out) { campPanelClose(P); return 0; }
+  return idle <= K.idle ? 1 : 1 - (idle - K.idle) / K.out;
+}
 const campPanelCase = t => t.charAt(0) + t.slice(1).toLowerCase();
 const campPanelKeyLine = () => ['left', 'right'].map(side => CAMP_PANELS.panels.filter(p => p.side === side && p.key).map(p => p.key + ' ' + p.tab).join('  ')).join('    ');
 const campKeyLine = () => uiText('camp.ui.keys', { panels: campPanelKeyLine() });
@@ -70,6 +79,7 @@ function campPanelChoose(P, C, now, how, def) {
 }
 function campPanelKey(P, C, code, now) {
   const res = { used: false, ran: false, ok: false, say: '', row: '', tgt: '', fleet: false, open: campPanelOpen(P) }; // fleet: an order of the left hand or a pick of the target (a label for the tests and the radio; nothing slows the battle for it: card space-game-no-command-slowdown)
+  if (typeof now === 'number' && campPanelOpen(P)) P.touch = now; // a key in an open list is a touch: the fade starts again (campPanelFade)
   const pk = code ? CAMP_PANELS.panels.find(p => p.code && p.code === code) : null;
   if (pk) { // a list's key (Q W, P O U): open that list at its first row, or close it when it is the one open
     res.used = true;
@@ -171,7 +181,9 @@ function campPanelRun(C, row, how, item) {
   }
   if (row.fly === 'objective') { // the autopilot to the goal; a burn with a ship out is refused the first time (the list stays open) and the second Enter recalls the wing and burns (src/campnav.js)
     const r = campNavCheck(C, (row.burn ? 'fast ' : '') + 'the objective'); if (!r.ok || !r.row) return r;
-    const f = campNavFly(C, r.row, !!r.fast, how || 'key'); return f.ok ? { ok: true, say: f.say || r.say } : f;
+    const auto = !row.burn && row.fast === 'auto' && campNavAuto(C, Math.hypot(r.row.x - C.carrier.x, r.row.y - C.carrier.y)); // the cruiser list's Fly to the goal burns by itself on a long clear leg (src/campnav.js campNavAuto; card space-game-keys2-cruiser)
+    const f = campNavFly(C, r.row, !!r.fast || auto, how || 'key'); if (f.ok && C.nav) C.nav.auto = auto;
+    return f.ok ? { ok: true, say: auto ? uiText('camp.nav.gofast', { name: r.row.name }) : f.say || r.say } : f;
   }
   return campOrder(C, row.order, campPanelTargetArg(C, row), how || 'key');
 }
@@ -213,9 +225,9 @@ function campPanelState(C, row) {
     case 'balance': return 'now ' + C.power.p.join(' / ');
     case 'mine': return campMiners(C).length + ' ships, ' + C.rocks.filter(r => r.hp > 0).length + ' rocks, ' + C.pickups.length + ' ore'; // the whole wing mines (the belt, space-game-campaign-belt): rocks to cut and ore lying about
     case 'ctuck': case 'chold': case 'crun': case 'ccarry': return campPanelConvoyMarked(C, row) ? 'in force' : campPanelShips(campConvoyShips(C).length); // the convoy orders: the one in force is marked (src/campconvoy.js)
-    case 'emergency': return CAMP.power.emergency.ms / 1000 + ' s of shields, then back';
+    case 'emergency': return CAMP.emergency.ore + ' ore: the shields fill at once';
     case 'dock': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? 'dock at ' + n.o.name : ''; } // the outpost in range
-    case 'goal': case 'burn': { const g = campNavGoal(C); return g ? g.name + '  ' + campNavKm(Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y)) + ' km' : ''; }
+    case 'goal': case 'burn': { const g = campNavGoal(C); if (!g) return ''; const d = Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y), far = row.fast === 'auto' && d >= CAMP.nav.auto.leg && !campNavHostileNear(C); return g.name + '  ' + campNavKm(d) + ' km' + (far ? (campNavOut(C) ? ', no burn: wing out' : ', burns') : ''); } // the cruiser list's goal row says whether it will burn by itself: on a long clear leg it does, with the wing aboard
     case 'target': case 'burntarget': { const tg = campPanelTarget(C); return tg ? tg.name + '  ' + tg.km + ' km' : ''; }
     case 'blink': return campPanelBlinkWord(C);
   }
@@ -249,7 +261,7 @@ function campPanelShortState(C, row) {
     case 'dock': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? n.o.name : ''; }
     case 'goal': case 'burn': { const g = campNavGoal(C); return g ? campNavKm(Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y)) + ' km' : ''; }
     case 'target': case 'burntarget': { const tg = campPanelTarget(C); return tg ? tg.km + ' km' : ''; }
-    case 'emergency': return CAMP.power.emergency.ms / 1000 + ' s';
+    case 'emergency': return CAMP.emergency.ore + ' ore';
     case 'blink': return campPanelBlinkWord(C);
     case 'ctuck': case 'chold': case 'crun': case 'ccarry': return campPanelConvoyMarked(C, row) ? 'in force' : campPanelShips(campConvoyShips(C).length);
   }
