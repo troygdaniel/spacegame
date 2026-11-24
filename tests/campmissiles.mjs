@@ -119,12 +119,12 @@ console.log('D. the magazine');
   check('three fired: three left', J('C.missiles') === 3);
   g.run('window.__o0 = C.ore; __run(60)');
   check('nothing reloads for free (card space-game-missiles-cost-ore): after a minute of play there is still no missile back, none is building and no ore is spent', J('C.missiles') === 3 && J('C.reloadAt') === 0 && J('C.ore') >= J('__o0'), J('C.missiles'));
-  g.run('C.ore = 100; campOrder(C, "reload", "", "key"); __run(16)');
-  check('R with ore builds one every 15 s: one comes back', J('C.missiles') === 4, J('C.missiles'));
+  g.run('C.ore = 100; campOrder(C, "reload", "", "key"); campOrder(C, "reload", "", "key"); campOrder(C, "reload", "", "key"); __run(16)');
+  check('three presses of R with ore queue three (card space-game-missile-queue: one a press), built one every 15 s: one comes back', J('C.missiles') === 4, J('C.missiles'));
   g.run('__run(15)');
   check('and the next 15 s another', J('C.missiles') === 5);
   g.run('__run(15)');
-  check('the rack stops at the full magazine (6) and never goes past it', J('C.missiles') === 6 && J('C.reloadAt') === 0 && J('C.rackOn') === false);
+  check('the rack stops at the full magazine (6) and never goes past it', J('C.missiles') === 6 && J('C.reloadAt') === 0 && J('C.queued') === 0);
   g.run('__fire("")');
   check('a full magazine that fires one starts no build (it builds only at zero, or on R)', J('C.missiles') === 5 && J('C.reloadAt') === 0);
   check('the ore code adds with campMissileAdd: it says how many went in, up to the most the magazine holds (12)', J('campMissileAdd(C, 3)') === 3 && J('C.missiles') === 8 && J('campMissileAdd(C, 10)') === 4 && J('C.missiles') === 12 && J('campMissileAdd(C, 5)') === 0);
@@ -157,7 +157,7 @@ console.log('E. the words, the strip and the voice');
   check('a fleet act outside the Campaign is still refused (the fleet is only yours there)', J(`shipcompPlan('SAY: ok\\nDO: fleet_missiles', { scene: { key: 'Space' } })`).refused === true);
   check('the model path: a reply "DO: fleet_missiles the mothership" is read and checked against the live battle', (() => { g.run('__nb(); window.__gun = __foe("mother", 1500, 0)'); const p = J(`(() => { const p = shipcompPlan('SAY: Firing.\\nDO: fleet_missiles the mothership', __scene); return { action: p.action, arg: p.arg, refused: p.refused, text: p.text }; })()`); return p.action === 'fleet_missiles' && !p.refused && p.text === 'Missile away, at the mothership.'; })());
   const sys = J('shipcompSystem(__scene)');
-  check('the model is told in a battle: the key (Enter, a direct key, while no list is open), what it does, and the act on its list', /fleet_missiles/.test(sys) && /With no list open Enter fires a missile at the target/.test(sys) && /Q opens|Q /.test(sys) && !/SHIP panel|FLEET panel/.test(sys) && /holds Space to make its eight turrets fire/.test(sys) && /pick an enemy/.test(sys) && !/main gun/.test(sys));
+  check('the model is told in a battle: the key (Enter, a direct key, while no list is open), what it does, and the act on its list', /fleet_missiles/.test(sys) && /Enter fires a missile at the target/.test(sys) && /Q opens|Q /.test(sys) && !/SHIP panel|FLEET panel/.test(sys) && /holds Space to make its eight turrets fire/.test(sys) && /pick an enemy/.test(sys) && !/main gun/.test(sys));
   check('the state it is told says how many are left', /Missiles in the magazine: 6 of 6/.test(J('campSummary(C)')));
 }
 

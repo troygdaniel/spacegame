@@ -116,10 +116,10 @@ const CAMP = {
     alienLaser: 0                          // 1: a plain turret shot at an alien (a kind 'alien' beam in C.lasers) hums too, over its pew; 0: it keeps its pew only, and the hum is for rocks and the Beam turrets
   },
   missile: {                               // the missile launcher (F, or the order "missiles"): a homing missile for the mothership and the other big ships (card space-game-campaign-missiles)
-    magazine: 6,                           // missiles you start with, and the full rack: how many R builds the magazine up to
+    magazine: 6,                           // missiles you start with, and the full rack: the most R can queue is the empty slots of it
     max: 12,                               // the most the magazine can ever hold (C.missiles, a plain number: the ore code adds to it with campMissileAdd)
     reload: 15000,                         // ms a missile takes to BUILD (the old reload time; card space-game-missiles-cost-ore: the magazine no longer fills itself, src/campmissilebuild.js)
-    cost: 20,                              // ore a missile costs to build, paid when its build starts (card space-game-missiles-cost-ore; Troy, 24 Nov 2026). The ship builds ONE by itself only at 0 missiles, R builds up to the full rack; 0 makes them free again
+    cost: 20,                              // ore a missile costs to build, paid when its build starts (card space-game-missiles-cost-ore; Troy, 24 Nov 2026). The ship builds ONE by itself only at 0 missiles, each press of R queues one (card space-game-missile-queue); 0 makes them free again
     delay: 700,                            // ms between two launches (the launcher cycles)
     lock: 2400,                            // px: a big ship this close to the carrier can be locked (the mothership first, else the nearest tower or gunship)
     bigKinds: ['mother', 'tower', 'gunship', 'pirateleader'], // the ships that count as big: the missile aims at them, its fuze goes off on them, they take `big`
@@ -165,7 +165,7 @@ const CAMP = {
     beside: 12,                            // px between an open list and a display's box when the box steps out of its way (right of a left list for the FLEET corner, left of a right list for the target box; card space-game-w-list-covers-friend-box)
     line: 26,                              // px: the order-key line at the foot of the target box ("E  Attack" for an enemy, "E  Guard" for a friendly, lit or grey; cards space-game-keys-panels, space-game-keys2-panels): it is this much taller than the who box
     bottom: 64,                            // px from the bottom edge to the box (the key line's strip is under it)
-    w: 260, h: 200,                        // px: the box (its width is the corner panel's, CAMP.corner.w; the target corners' room), about the radar's height
+    w: 320, h: 200,                        // px: the box (its width is the corner panel's, CAMP.corner.w; the target corners' room), about the radar's height
     every: 250,                            // ms between two readings of the ship: the numbers and the words are live four times a second (a new ship is read at once)
     pic: 76,                               // px: the picture's frame; the ship is drawn to fit it
     bar: { w: 86, h: 8 },                  // px: the hull bar and the shield bar
@@ -176,27 +176,30 @@ const CAMP = {
   corner: {                                // the four corner panels (card space-game-layout-fleet; Troy, 24 Nov 2026: "four corners, each a small title that never leaves, starting with its keys as plain key-cap chips; the details under a title open when its keys are used and fade after a few seconds; the current selection is written beside the title and never fades"): top left S CRUISER, bottom left Q W FLEET, top right [ ] HOSTILES, bottom right O P FRIENDLIES. src/campcorner.js (the rule and the registry), src/campcornerscene.js (the drawing)
     edge: 18,                              // px: THE margin: from the screen's left and right edges to the corners' frames (the right ones end this far from the right edge: at.tr.x and at.br.x are W - edge - w), and where the glyphs of the bottom left texts start (the key line, the MISSILES count, the radio: x = edge - ink); card space-game-layout-align, Troy, 24 Nov 2026: the left corners and the bottom key strip shared no left edge
     ink: 2,                                // px: a text with a 3 or 4 px stroke draws its first letter this far right of its x (half the stroke and the letter's side)
-    w: 260,                                // px: a panel's width (its title row and its details): room for the chips, FRIENDLIES and a name like Transport beside it (it was 200, and the name ran off the screen: card space-game-layout-align)
+    w: 320,                                // px: a panel's width (its title row and its details): room for the FLEET line (Q All pilots  W Guard Transport) and for FRIENDLIES and a name beside it (card space-game-fleet-sentence; it was 260, and 200 before card space-game-layout-align)
     depth: 64,                             // the draw order: over the edge arrows (62), under the lists (160)
     show: 4000,                            // ms the details stay open at full strength after the corner's keys are used (or campCornerOpen is called), then they fade
     hit: 4000,                             // ms they stay open after the corner says it was hit (FLEET: a pilot's hull went down)
     fade: 600,                             // ms the details take to fade out
-    title: { h: 26, chipW: 22, chipH: 18, chipGap: 3, pad: 8, gap: 8, chips: 2 }, // the title row: its height, a key-cap chip's size and the space between two, the space at the left, and between the chips, the title and the selection; chips: the chip column is this many chips wide in EVERY corner (S has one, the others two), so every title starts at the same x
+    title: { h: 26, chipW: 22, chipH: 18, chipGap: 3, pad: 8, gap: 8, chips: 1 }, // the title row: its height, a key-cap chip's size and the space between two, the space at the left, and between the chips, the title and the selection; chips: the chip column is this many chips wide in EVERY corner (one each since card space-game-keys4-titles: S, Q, [ and ]), so every title starts at the same x
     gap: 4, pad: 8,                        // px between the title row and its details, and inside the details' frame
     item: { bar: 46, text: 20, key: 26, pic: 80 },  // px: the height of a detail line by its kind: a name with a number and a bar, a line of text, a key chip and its word, a picture row (src/camptcornerscene.js: the ship's picture, its type and its distance)
     bar: { dy: 22, h: 9 },                 // px: a bar's top below its item's top, and its height
     chip: 0x7fe9ff,                        // the key-cap chips' fill (the friend's cyan, as the order key's)
     at: {                                  // where each corner's title row sits (x: its left edge; y: the edge of the row at the screen's edge side, the bottom edge for a bottom corner; dir: 1 the details open downward, -1 upward). Left and right are what you command and everything else
-      tl: { x: 18, y: 78, dir: 1 },        // S CRUISER (card space-game-layout-cruiser): under its status (the SHIELD and HULL bars, the ORE and MISSILES lines, src/campcruiserhud.js: they end 4 px above this row), at the top of the screen; the S list opens under the row. 78 since card space-game-missiles-cost-ore (it was 62: the fourth line)
-      bl: { x: 18, y: 630, dir: -1 },      // Q W FLEET: the row ends where the who box used to (y 630), nothing is under it now: the MISSILES count is in the status block at the top left since card space-game-missiles-cost-ore
-      tr: { x: 1002, y: 78, dir: 1 },      // [ ] HOSTILES: its title row level with S CRUISER's (it was 88 px lower: card space-game-layout-align); x is W - edge - w, the left margin mirrored
-      br: { x: 1002, y: 630, dir: -1 }     // O P FRIENDLIES: level with FLEET's row (the bottom pair end at 630, the top pair start at 78)
+      tl: { x: 18, y: 78, dir: 1 },        // S CRUISER (card space-game-layout-cruiser): under its status (the SHIELD and HULL bars, src/campcruiserhud.js: they end 4 px above this row), at the top of the screen; the S list opens under the row. 78 since card space-game-missiles-cost-ore (it was 62: the fourth line)
+      bl: { x: 18, y: 630, dir: -1 },      // Q FLEET: the row ends where the who box used to (y 630), nothing is under it now: the MISSILES count is in the ORE and MISSILES block over HOSTILES at the top right (card space-game-missiles-cost-ore, then space-game-ore-missiles-topright)
+      tr: { x: 942, y: 78, dir: 1 },      // ] HOSTILES: its title row level with S CRUISER's (it was 88 px lower: card space-game-layout-align); x is W - edge - w, the left margin mirrored; over it the ORE and MISSILES block (src/campcruiserhud.js, card space-game-ore-missiles-topright), ending 4 px above this row
+      br: { x: 942, y: 630, dir: -1 }     // [ FRIENDLIES: level with FLEET's row (the bottom pair end at 630, the top pair start at 78)
     }
   },
   mark: {                                  // the squares come and go (cards space-game-pilot-squares-fade; Troy, 24 Nov 2026: "have the reticle squares disappear from the pilots after a few seconds", and the same for the selected targets; src/camptarget.js campMarkNow, src/camptargetdraw.js): the squares on the pilots WHO is show when WHO is picked, an order is given or the mission begins; the square on the target held (the enemy's or the friend's) shows when it is picked, and an order shows both; then they go
     show: 3000,                            // ms (the game's own clock, so a pause does not eat it) a square stays at full strength after it was brought back
     fade: 600,                             // ms it then takes to fade out (the target stays held, the target box at the bottom right and the who box at the bottom left stay)
     verbs: ['launch', 'attack', 'escort', 'guard', 'recall', 'mine']   // the counters of C.orders that are the pilots' orders and bring both squares back (a missile, a power change and the convoy's orders do not)
+  },
+  click: {                                 // the mouse on the flight view (card space-game-click-target; src/campclick.js)
+    hit: 28                                // px on the SCREEN: the radius of the circle a click hits around a ship (a ship's own radius is never smaller), so it grows in the world as the view zooms out and a small far ship can be hit
   },
   target: {                                // the hostiles' key (card space-game-keys4-onekey; src/camptarget.js campTgtCycle)
     restart: 2000                          // ms (the game's own clock) with no press of ] or \ after which the next ] starts again from the nearest hostile; a press within it steps on to the next one
@@ -391,7 +394,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 150], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [996, 366, 1280, 664], [996, 62, 1280, 92], [0, 430, 284, 664]] // (the target corners, card space-game-layout-targets: O P FRIENDLIES, its title up from y 630 and its details above it, are inside the fifth one, where the radar was; the title row of [ ] HOSTILES is the sixth (its details open under it when the target held is a hostile: a label may sit on them for a few seconds, as on any list that opens); campTdispBox(false) in src/camptdispscene.js is the fifth's bottom part and the FLEET corner's room, campTdispBox(true), is inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 150], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [936, 366, 1280, 664], [936, 62, 1280, 92], [0, 430, 344, 664]] // (the target corners, card space-game-layout-targets: O P FRIENDLIES, its title up from y 630 and its details above it, are inside the fifth one, where the radar was; the title row of [ ] HOSTILES is the sixth (its details open under it when the target held is a hostile: a label may sit on them for a few seconds, as on any list that opens); campTdispBox(false) in src/camptdispscene.js is the fifth's bottom part and the FLEET corner's room, campTdispBox(true), is inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {
@@ -842,7 +845,7 @@ function campNew(level, techs, opts) {
   C.rank = Math.max(0, Math.min(CAMP.ranks.length - 1, opts.rank | 0)); // the rank of the pilot (src/campranks.js: from the scores of the missions flown): its extras make the three pilots stronger
   { const rk = CAMP.ranks[C.rank]; C.strength += rk.fighters; }
   C.pilotStr = campPilotStrengths(C.strength);
-  Object.assign(C, { missiles: CAMP.missile.magazine, magazine: CAMP.missile.magazine, turretMul: 1, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0, rackOn: false }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks; reloadAt: when the missile being built is done (0: none), rackOn: R is building up to the full rack (src/campmissilebuild.js)
+  Object.assign(C, { missiles: CAMP.missile.magazine, magazine: CAMP.missile.magazine, turretMul: 1, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0, queued: 0 }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks; reloadAt: when the missile being built is done (0: none), queued: the missiles R has queued that wait for their build to start (src/campmissilebuild.js)
   if (typeof campBeatsNew === 'function') campBeatsNew(C); // the beats of the mission (src/campbeats.js)
   C.route = null; if (typeof campRouteNew === 'function') campRouteNew(C); // a fork in the road (src/camproute.js): C.route, and the lanes' caches in C.caches
   Object.assign(C, { cues: {}, piratesEscaped: 0, neutralsLost: 0 }); // the named cues a script has fired (campCue), the pirates that broke off and got away, the neutral ships lost (src/camppirates.js)
@@ -1021,7 +1024,7 @@ function campDo(C, name, arg, dry, how) {
   if (name === 'guard') return campWingOrder(C, null, 'guard', t && t.kind === 'place' ? 'place:' + t.id : t && t.kind === 'convoy' ? t.id : null, how, dry);
   if (name === 'recall') return campWingOrder(C, null, 'recall', null, how, dry);
   if (name === 'wing') return campWingText(C, arg, dry); // a group, a verb and a target in words: "fighters at the mothership", "all guard Ceres"
-  if (name === 'reload') return campReloadDo(C, dry); // R: build missiles up to the full rack, for ore (src/campmissilebuild.js)
+  if (name === 'reload') return campReloadDo(C, dry); // R: queue one missile to build, for ore (src/campmissilebuild.js)
   if (name === 'missiles') { // the launcher: the mothership if you name it (or if it is in reach), else the nearest big ship in reach
     if (C.missiles <= 0) return campNo('nomissiles');
     if (C.t < C.nextRocket) return campNo('missilewait');
@@ -1631,7 +1634,7 @@ function campBullets(C, dt) {
 }
 
 // ---------- the missile launcher (card space-game-campaign-missiles; the numbers are CAMP.missile) ----------
-// C.missiles is the magazine: a plain number. It does NOT fill itself: a missile is built for CAMP.missile.cost ore, by itself at 0 and up to the full rack on R (src/campmissilebuild.js); campMissileAdd (the loot) can fill it up to `max`.
+// C.missiles is the magazine: a plain number. It does NOT fill itself: a missile is built for CAMP.missile.cost ore, by itself at 0 and one more for each press of R (src/campmissilebuild.js); campMissileAdd (the loot) can fill it up to `max`.
 // A missile goes for its target, turning at most `turn` rad/s; when the target is gone it takes the mothership or the nearest big ship in reach, else it flies on until its fuel is out.
 // Its fuze goes off near a big ship (never a raider or a drone on the way), and every alien within `blast` is hurt: a big ship `big`, any other `small`.
 const campBig = u => CAMP.missile.bigKinds.indexOf(u.kind) >= 0;

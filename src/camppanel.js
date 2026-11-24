@@ -1,7 +1,7 @@
 // ---------- Campaign: the order lists, the logic (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026) ----------
 // (Q used to open the FLEET list at the left; it picks all three pilots now and that list is switched off, CAMP_FLEET_LIST in src/data_controls.js: card space-game-q-selects-all. P used to open the SHIP list at the right; it opens the POWER list now and the ship list is switched off, CAMP_SHIP_LIST: card space-game-p-opens-power. The lists below are as they were.) Each list has a row for every part of it, and a part has a key of its own that opens its list directly, at any time: W ALL SQUADS (E R T are the order keys now) on the left;
 // P POWER (O too), I AUTOPILOT, U DOCK AND REPAIR on the right (CONVOY is a part with no key: Enter on its row opens it, with the fleet list on). Nothing is on the screen until a key is pressed; only one list is open at a time.
-// In an open list Up and Down move the highlight (round at the ends), Enter gives the highlighted order (on a part's row: opens that part), Left goes back to the list it is a part of, the list's own key closes it.
+// (A NUMBERED list, the S list's `numbers: 1`, card space-game-s-list-numbers, is driven by the digits 1 to 9 alone: its rows carry their numbers, there is no highlight, and Up, Down, Left, Right and Enter are left to the ship.) In an open list Up and Down move the highlight (round at the ends), Enter gives the highlighted order (on a part's row: opens that part), Left goes back to the list it is a part of, the list's own key closes it.
 // ESC GOES BACK ONE STEP, TO WHERE YOU CAME FROM (card space-game-order-target-pick; Troy, 22 Nov 2026): a target sub-list (src/camppick.js) goes back to the list it was opened from; a list opened from a part's row (Q, then Squads) goes back to that list (Q);
 // a list opened by its own key (Q, or W E R T, O U, and I with the ship list on) is closed; with nothing open Esc pauses (the scene). P.trail is the lists we came through by rows, the last one first to go back to.
 // An order that is taken closes the list (a power row leaves it open: a pip is given again and again); one that is refused leaves it open and says why.
@@ -22,6 +22,9 @@
 const campPanelDef = id => CAMP_PANELS.panels.find(p => p.id === id) || null;
 const campPanelNew = () => ({ open: '', at: 0, top: 0, lit: {}, trail: [], pick: null, seen: null, ring: null, touch: null });
 const campPanelOpen = P => (P && typeof P.open === 'string' && campPanelDef(P.open) ? P.open : '');
+// a NUMBERED list (the cruiser's: `numbers: 1`, card space-game-s-list-numbers) is driven by the digits 1 to 9 alone: it takes neither the arrows nor Enter, so while it is open the arrows fly the ship and Enter fires a missile. campPanelOwnsArrows: an open list that is NOT numbered has them
+const campPanelNumbered = P => { const d = campPanelDef(campPanelOpen(P)); return !!(d && d.numbers); };
+const campPanelOwnsArrows = P => !!campPanelOpen(P) && !campPanelNumbered(P);
 const campPanelClose = P => { if (P && typeof P === 'object') { P.open = ''; P.at = 0; P.top = 0; P.pick = null; P.trail = []; P.touch = null; } };
 // THE FADE (card space-game-keys2-cruiser; Troy, 23 Nov 2026: the cruiser list "fades after a few seconds untouched"). A list marked `fades` in the table (the cruiser's, and any list or target sub-list reached from it) closes by itself after CAMP_PANELS.anim.idle ms
 // with no key and no click (P.touch is the scene clock of the last: a key in campPanelKey, a click in campPanelsClick) and dims over the next anim.out ms. campPanelFade(P, now) is asked every frame by the drawing: the list's opacity, 1 to 0 (it has closed at 0).
@@ -63,7 +66,10 @@ function campPanelGo(P, C, id, back, via) {
 function campPanelPickKey(P, C, code, now, res, def) {
   const pk = P.pick, items = campPickSync(C, pk);
   if (!items.length) { P.pick = null; return false; } // every candidate is gone: back to the list, and the key is read there
-  if (campKeyIs('pause', code) || code === 'ArrowLeft') { P.pick = null; res.used = true; return true; }
+  const nums = !!(def && def.numbers), dn = nums ? campKeyDigit(code) : 0; // a numbered list's sub-list is numbered too: 1 to 9 choose a candidate, Esc goes back, the arrows and Enter are the ship's
+  if (campKeyIs('pause', code) || (!nums && code === 'ArrowLeft')) { P.pick = null; res.used = true; return true; }
+  if (dn) { res.used = true; if (dn > items.length) return true; pk.at = dn - 1; campPanelScroll(pk, items.length); pk.sel = items[pk.at].id; Object.assign(res, campPanelChoose(P, C, now, 'key', def)); return true; }
+  if (nums) return false;
   if (campKeyIs('up', code) || campKeyIs('down', code)) { pk.at += campKeyIs('down', code) ? 1 : -1; campPanelScroll(pk, items.length); pk.sel = items[pk.at].id; res.used = true; return true; }
   if (code === 'ArrowRight') { res.used = true; return true; }
   if (campKeyIs('pick', code)) { res.used = true; Object.assign(res, campPanelChoose(P, C, now, 'key', def)); return true; }
@@ -87,8 +93,8 @@ function campPanelKey(P, C, code, now) {
     if (campPanelOpen(P) === pk.id) campPanelClose(P); else campPanelGo(P, C, pk.id);
     res.open = campPanelOpen(P); return res;
   }
-  const open = campPanelOpen(P);
-  if (open) { // the open list has the arrows, Enter and Esc
+  const open = campPanelOpen(P), nums = campPanelNumbered(P), dn = nums ? campKeyDigit(code) : 0; // nums: the open list is a numbered one: the digits do its rows, and the arrows and Enter are the ship's (card space-game-s-list-numbers)
+  if (open) { // the open list has the arrows, Enter and Esc (a numbered one has the digits and Esc)
     const rows = campPanelList(C, open), def = campPanelDef(open);
     if (P.pick && campPanelPickKey(P, C, code, now, res, def)) return res; // a target sub-list (src/camppick.js) is the one that has the keys
     if (campKeyIs('pause', code)) { // Esc: one step back, to where we came from: the list a part's row opened this from, else closed
@@ -96,10 +102,11 @@ function campPanelKey(P, C, code, now) {
       if (prev && campPanelDef(prev)) { campPanelGo(P, C, prev, open); P.trail = trail; } else campPanelClose(P);
       res.open = campPanelOpen(P); return res;
     }
-    if (campKeyIs('up', code) || campKeyIs('down', code)) { P.at += campKeyIs('down', code) ? 1 : -1; campPanelScroll(P, rows.length); res.used = true; return res; }
-    if (code === 'ArrowLeft') { res.used = true; if (def.parent) { campPanelGo(P, C, def.parent, open); res.open = campPanelOpen(P); } return res; } // back to the list this one is a part of
-    if (code === 'ArrowRight') { res.used = true; campPanelScroll(P, rows.length); const row = rows[P.at]; if (row && row.open) { campPanelGo(P, C, row.open, '', open); res.open = campPanelOpen(P); } return res; } // into the part the highlight is on (the ship coasts while a list is open: the arrows are the list's)
-    if (campKeyIs('pick', code)) {
+    if (!nums && (campKeyIs('up', code) || campKeyIs('down', code))) { P.at += campKeyIs('down', code) ? 1 : -1; campPanelScroll(P, rows.length); res.used = true; return res; }
+    if (!nums && code === 'ArrowLeft') { res.used = true; if (def.parent) { campPanelGo(P, C, def.parent, open); res.open = campPanelOpen(P); } return res; } // back to the list this one is a part of
+    if (!nums && code === 'ArrowRight') { res.used = true; campPanelScroll(P, rows.length); const row = rows[P.at]; if (row && row.open) { campPanelGo(P, C, row.open, '', open); res.open = campPanelOpen(P); } return res; } // into the part the highlight is on (the ship coasts while a list is open: the arrows are the list's)
+    if (dn || (!nums && campKeyIs('pick', code))) { // Enter on the highlighted row, or (a numbered list) the digit of a row: the same doing
+      if (dn) { res.used = true; if (dn > rows.length) return res; P.at = dn - 1; } // a digit with no row on it does nothing
       campPanelScroll(P, rows.length); const row = rows[P.at]; res.used = true; if (!row) return res;
       if (row.open) { campPanelGo(P, C, row.open, '', open); res.open = campPanelOpen(P); return res; } // a part's row: its list opens (Esc comes back here)
       let item = null;
@@ -140,12 +147,12 @@ function campPanelKey(P, C, code, now) {
     const r = campOrder(C, 'power', pw, 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = pw; return res;
   }
-  if (campKeyIs('reload', code)) { // R: build missiles up to the full rack, for ore (card space-game-missiles-cost-ore: it is also the S list's row Reload missiles, so the row lights as the key is pressed)
+  if (campKeyIs('reload', code)) { // R: queue one missile to build, for ore (card space-game-missiles-cost-ore: it is also the S list's row Reload missiles, so the row lights as the key is pressed)
     res.used = true; if (!C) return res;
     const r = campOrder(C, 'reload', '', 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = 'sreload'; if (typeof now === 'number' && P && P.lit) P.lit.sreload = now; return res;
   }
-  if (!open && campKeyIs('missile', code)) { // Enter with no list open: a homing missile at the target
+  if ((!open || nums) && campKeyIs('missile', code)) { // Enter with no list open (or a numbered one: it does not take Enter): a homing missile at the target
     res.used = true; if (!C) return res;
     const r = campOrder(C, 'missiles', campPanelTargetArg(C, { order: 'missiles' }), 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = 'missile'; return res;
@@ -318,12 +325,12 @@ function campPanelView(P, C) {
   if (P.pick) { // a target sub-list: the candidates, over the list it came from
     const items = campPickSync(C, P.pick);
     if (items.length) {
-      campPanelScroll(P.pick, items.length); const pk = P.pick, all = items.map(i => campPickRow(C, i, pk.kind));
-      return { id, title: uiText('camp.ui.cand.title.' + pk.kind), key: def.key, side: def.side, parent: id, pick: true, keys: 'camp.ui.cand.keys', rows: all.slice(pk.top, pk.top + show), at: pk.at - pk.top, first: pk.top, total: all.length, above: pk.top, below: Math.max(0, all.length - pk.top - show) };
+      campPanelScroll(P.pick, items.length); const pk = P.pick, all = items.map(i => campPickRow(C, i, pk.kind)), num = (r, i) => def.numbers && pk.top + i < 9 ? Object.assign({}, r, { num: pk.top + i + 1 }) : r; // a numbered list's candidates carry their numbers too (1 to 9)
+      return { id, title: uiText('camp.ui.cand.title.' + pk.kind), key: def.key, side: def.side, parent: id, pick: true, numbers: !!def.numbers, last: Math.min(9, all.length), keys: def.numbers ? 'camp.ui.candnums' : 'camp.ui.cand.keys', rows: all.slice(pk.top, pk.top + show).map(num), at: def.numbers ? -1 : pk.at - pk.top, first: pk.top, total: all.length, above: pk.top, below: Math.max(0, all.length - pk.top - show) };
     }
     P.pick = null; // none is left: the list it came from
   }
   const all = campPanelRows(C, id); campPanelScroll(P, all.length);
-  const keys = P.trail && P.trail.length ? 'camp.ui.listkeyback' : def.parent ? 'camp.ui.listkeysub' : 'camp.ui.listkeys'; // the foot's words: Esc closes a list its own key opened, and goes back from one a part's row opened
-  return { id, title: def.title, key: def.key, side: def.side, parent: def.parent || '', pick: false, keys, rows: all.slice(P.top, P.top + show), at: P.at - P.top, first: P.top, total: all.length, above: P.top, below: Math.max(0, all.length - P.top - show) };
+  const keys = def.numbers ? 'camp.ui.listnums' : P.trail && P.trail.length ? 'camp.ui.listkeyback' : def.parent ? 'camp.ui.listkeysub' : 'camp.ui.listkeys'; // the foot's words: Esc closes a list its own key opened, and goes back from one a part's row opened; a numbered list says its digits
+  return { id, title: def.title, key: def.key, side: def.side, parent: def.parent || '', pick: false, numbers: !!def.numbers, last: Math.min(9, all.length), keys, rows: all.slice(P.top, P.top + show).map((r, i) => def.numbers && P.top + i < 9 ? Object.assign({}, r, { num: P.top + i + 1 }) : r), at: def.numbers ? -1 : P.at - P.top, first: P.top, total: all.length, above: P.top, below: Math.max(0, all.length - P.top - show) };
 }

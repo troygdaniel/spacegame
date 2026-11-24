@@ -1,7 +1,8 @@
 // ---------- Campaign: drag the view (card space-game-drag-view; Troy, 22 Nov 2026, from his play) ----------
 // Troy: "drag the map around so the centre point can move". The flight camera followed the cruiser and the Tab map was fitted to the level, so the centre of either could not be moved.
 //   press and drag   with the mouse (the left button) pans the flight view off the cruiser, and the Tab map. A press that does not move CAMPDRAG.move pixels is a click and does what a click did (the lists' rows, the
-//                    map's marks and buttons): the map's click is read on the release now, so a drag that begins on a mark does not pick it
+//                    map's marks and buttons): the map's click is read on the release now, so a drag that begins on a mark does not pick it. In the flight view a click is on a ship: the scene's shipClick (card
+//                    space-game-click-target, src/campclick.js); a RIGHT press is a click at once, and the browser's menu on it is off
 //   the flight view  the camera lets go of the cruiser and stays where the hand put it (the cruiser and the fight go on); the wheel zooms about the pointer while it is off (camzoomAnchorScroll, src/camzoom.js), the keys
 //                    and the target lists' reveal zoom about the middle of the view, and give the zoom back as they did
 //   the way back     a RECENTRE mark shows while the view is off (a small arrow on it points at the cruiser): a click on it, Backspace (the zoom reset: src/campzoom.js), a flying key held CAMPDRAG.fly ms (a tap does
@@ -112,8 +113,10 @@ function campDragInstall(s) {
   const t = s.add.text(0, 0, '', uiFont(14, K.ink, { backgroundColor: K.back, padding: { x: 8, y: 3 } })).setScrollFactor(0).setDepth(K.depth + 1).setOrigin(0.5).setVisible(false);
   s.dragMark = { g, t, on: false, shown: '' };
   const ok = p => typeof p.leftButtonDown === 'function' ? p.leftButtonDown() : true; // the left button (a right press or a wheel press is not a drag)
+  const shipClick = (x, y, b) => { if (!s.mp && typeof s.shipClick === 'function') s.shipClick(x, y, b); }; // card space-game-click-target: the scene's (src/campaignscene.js shipClick), in the flight view only (the map has its own clicks)
+  if (s.input && s.input.mouse && typeof s.input.mouse.disableContextMenu === 'function') s.input.mouse.disableContextMenu(); // the browser's menu on a right click is off on the canvas: the right click is the order
   const down = p => {
-    if (!ok(p)) return;
+    if (!ok(p)) { if (typeof p.rightButtonDown === 'function' && p.rightButtonDown() && !s.mp && campDragCanStart(s, p.x, p.y)) shipClick(p.x, p.y, 'right'); return; } // a right press is a click at once (it has no drag); a wheel press is nothing
     if (s.mp) { campDragMapDown(s, p); return; }
     if (campDragMarkHit(s.dragMark, p.x, p.y)) { campViewRecentre(s); return; }
     if (campDragCanStart(s, p.x, p.y)) campDragDown(s.dragIn, p.x, p.y);
@@ -124,7 +127,7 @@ function campDragInstall(s) {
   };
   const up = () => {
     const u = campDragUp(s.dragIn); if (!u) return;
-    if (s.mp) campDragMapUp(s, u);
+    if (s.mp) campDragMapUp(s, u); else if (!u.drag) shipClick(u.x, u.y, 'left'); // a press that did not move is a click on a ship (or on space: nothing)
   };
   const wheel = p => { if (s.panned && !s.mp && typeof camzoomCanWheel === 'function' && camzoomCanWheel(s)) campViewAnchor(s, p.x, p.y); };
   s.input.on('pointerdown', down); s.input.on('pointermove', move); s.input.on('pointerup', up); s.input.on('pointerupoutside', up); s.input.on('wheel', wheel);
