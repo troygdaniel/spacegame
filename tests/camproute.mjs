@@ -183,7 +183,7 @@ sec('G', () => {
   check('G  no mission of the game has a route in its row (the system is dormant: a row that writes one still gets its fork, A to F above)', !row.route && [0, 1, 2].every(i => [1, 2, 3].every(lv => !J(`campMissionRow(${lv}, ${i}).route`))));
   g.run('window.C = campNew(1, [], { seed: 1, mission: 0 }); C.god = true; __ev.length = 0; __go(75)');
   check('G  1.1 has no C.route, its transport has no route to fly, and nothing says the road forks', J('C.route') === null && J('campConvoys(C).every(c => !c.rt)') && !J("__ev.some(e => e.type === 'fork' || (e.type === 'say' && /fork/.test(e.key)))") && J('campRouteHolding(C)') === null);
-  check('G  the briefing counts what 1.1 sends (8 skiffs: the distress call\'s 2, the ambush\'s 4 and the leader\'s 2; 2 torpedo boats and the pirate leader)', (() => { const e = J('campBriefEnemies(1, 0).list'); const n = k => (e.find(x => x.kind === k) || { n: 0 }).n; return n('skiff') === 2 + 4 + 2 && n('tboat') === 2 && n('pirateleader') === 1; })(), JSON.stringify(J('campBriefEnemies(1, 0).list')));
+  check('G  the briefing counts what 1.1 sends (10 skiffs: the distress call\'s 2, the ambush\'s 4, the leader\'s 2 and 2 with the boats after the call; 5 torpedo boats, 3 of them after the call; and the pirate leader)', (() => { const e = J('campBriefEnemies(1, 0).list'); const n = k => (e.find(x => x.kind === k) || { n: 0 }).n; return n('skiff') === 2 + 4 + 2 + 2 && n('tboat') === 2 + 3 && n('pirateleader') === 1; })(), JSON.stringify(J('campBriefEnemies(1, 0).list')));
 });
 
 console.log(failed ? `\n${failed} of ${n} checks failed` : `\nall ${n} checks passed`);

@@ -56,8 +56,8 @@ check('no Scout order: campScoutDo is gone and "scout Mars" is no order', J(`typ
 const en = J(`campBriefEnemies(1, 0)`), seen = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }), L = C.L, k = {}; (L.waves || []).forEach(w => { if (w.lane && w.lane !== 'short') return; Object.keys(w.ships || {}).forEach(s => { k[s] = (k[s] || 0) + w.ships[s]; }); });
   (L.rivals || []).forEach(r => Object.keys(r.escorts || {}).forEach(s => { k[s] = (k[s] || 0) + r.escorts[s]; })); return k; })()`);
 const sk = en.list.find(e => e.kind === 'skiff'), tb = en.list.find(e => e.kind === 'tboat');
-check('1.1\'s briefing says 8 skiffs and 2 torpedo boats (the distress call, the ambush and the leader\'s two)', sk && sk.n === 8 && tb && tb.n === 2 && /8 pirate skiffs/.test(en.line), en.line);
-check('and that is what the mission\'s rows send down the default lane (the count is read from them)', seen.skiff === 8 && seen.tboat === 2, JSON.stringify(seen));
+check('1.1\'s briefing says 10 skiffs and 5 torpedo boats (the distress call, the group that goes for the transport after it, the ambush and the leader\'s two)', sk && sk.n === 10 && tb && tb.n === 5 && /10 pirate skiffs/.test(en.line), en.line);
+check('and that is what the mission\'s rows send down the default lane (the count is read from them)', seen.skiff === 10 && seen.tboat === 5, JSON.stringify(seen));
 
 // ---- 6. the briefing's mining goal starts from the ore you carry, as the HUD does ----
 // 1.2's HUD says "Mine ore: 60 of 450." from the first second (the store holds what the ready room's pocket held); the briefing said "0 of 450." whatever you carried (the goal was 190 until card space-game-tune-l1-notes).

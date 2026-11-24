@@ -28,6 +28,7 @@ const campBeatHint = (C, id) => uiText('camp.hint.' + id, campBeatKeys());
 
 // beat 2: the thanks of a miner that was saved
 function campBeats(C) {
+  if (typeof campMinerTick === 'function') campMinerTick(C); // the price of answering the call, said once (src/campminer.js)
   const B = C.beats; if (!B || B.thanked || !C.cues || C.cues.distress == null) return;
   if (!campFlag('distress')) { B.thanked = true; return; } // the distress call is switched off (the tuning panel): no call, no thanks (the wave scheduler, src/campaign.js, makes no pirates for the beat's wave)
   const w = C.L.waves.findIndex(x => x.beat === 'distress'); if (w < 0 || !C.waves[w] || !C.waves[w].started) return;
