@@ -65,7 +65,7 @@ g.run(`
   check('the ore line is above the missiles line, each one line apart; the credits are on the ore line\'s right, the state on the missiles line\'s right', R.mis.y - R.ore.y === K.row && R.cash.y === R.ore.y && R.misWhy.y === R.mis.y && R.cash.x === R.x1 - K.pad && R.misWhy.x === R.x1 - K.pad && R.mis.x === R.ore.x, JSON.stringify(R));
   check('the plate covers the two lines', R.plate.x === R.x0 && R.plate.w === cw && R.plate.y <= R.ore.y - K.row / 2 && R.plate.y + R.plate.h >= R.mis.y + K.row / 2, JSON.stringify(R.plate));
   check('the top right block does not meet the top centre column (the plate of the wave and objective lines is W / 2 and 280 px either side)', R.x0 >= W / 2 + colW / 2 && Z.x1 <= W / 2 - colW / 2 + 100, JSON.stringify([R.x0, W / 2 + colW / 2, Z.x1, W / 2 - colW / 2]));
-  check('the ore on the left and the credits on the right fit one line of the block without meeting (the longest: "ORE  300/300" and "CREDITS  9999  +9"; a character is 0.48 of its font size: the old ore line was 236 px for 35 characters at 14 px)', (() => { const per = 0.48, l = 'ORE  300/300'.length * per * 13, r = 'CREDITS  9999  +9'.length * per * 12; return R.ore.x + l + 8 < R.cash.x - r; })(), JSON.stringify([R.ore, R.cash]));
+  check('the ore on the left and the credits on the right fit one line of the block without meeting (the longest: "ORE  300/300" and "CREDITS  9999  +9"; a capital takes K.charW.caps of its font size, measured in the picture: 129 px for 16 characters at 13)', (() => { const c = K.charW, l = 'ORE  300/300'.length * c.caps * K.font.line, r = 'CREDITS  9999  +9'.length * c.caps * K.font.side; return R.ore.x + l + 8 < R.cash.x - r; })(), JSON.stringify([R.ore, R.cash]));
   }
 
 // ---- C. the words and the files ----

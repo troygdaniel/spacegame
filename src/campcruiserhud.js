@@ -19,6 +19,7 @@ const CAMPCRUISERHUD = {
   pad: 8, label: 50, num: 36,          // px: the room inside the plate at each side, the words at the left of a bar and the number at its right
   row: 20, bar: 9, gap: 4, lines: 2,   // px: the step between lines (20: the R key cap, 18 high, fits a line of the right block; the left one has the same), a bar's height, and the room between the last line and the title row under it; lines: how many in each block (left: shield, hull; right: ore, missiles)
   low: 0.3,                            // a bar at or under this share turns red
+  font: { line: 12, side: 11 }, charW: { caps: 0.62, low: 0.55 }, // px: the ore and missiles lines, and the credits and the state at their right; what a character takes of its font size, in capitals (a line: measured 129 px for 16 characters at 13) and in lower case (the state), for a text with no width of its own (a test's stand-in)
   chip: { x: 118, r: 4, gap: 8 },              // the R key-cap chip beside the missile count (Troy, 24 Nov 2026: "show the R chip beside the missile count"): its centre this far right of the line's left edge when no missile is on its way (after "MISSILES  12/12", before the state at the right), its corner radius, and the gap after the words when the queue makes them longer; its size and fill are the corner chips' (CAMP.corner.title.chipW and chipH, CAMP.corner.chip)
   color: { shield: 0x7fe9ff, hull: 0x6dff9c, warn: 0xff4d6d, off: 0x16293d, edge: 0x38e1ff, plate: 0x02060d },
   ink: { label: '#9fbdd1', num: '#ffffff', warn: '#ff4d6d', ore: '#ffd37a', full: '#ffb454', mis: '#ffb454', misWhy: '#9fe9ff', chip: '#02101c' },
@@ -64,8 +65,8 @@ function campCruiserHudMake(sc, uiFontFn) {
   return {
     crShieldL: mk(sh.label, 11, K.ink.label, 0).setText(uiText('camp.cruiser.shield')), crShieldN: mk(sh.num, 12, K.ink.num, 1),
     crHullL: mk(hu.label, 11, K.ink.label, 0).setText(uiText('camp.cruiser.hull')), crHullN: mk(hu.num, 12, K.ink.num, 1),
-    crOre: mk(Z.right.ore, 13, K.ink.ore, 0), crCash: mk(Z.right.cash, 12, K.ink.ore, 1),
-    crMis: mk(Z.right.mis, 13, K.ink.mis, 0), crMisWhy: mk(Z.right.misWhy, 12, K.ink.misWhy, 1),
+    crOre: mk(Z.right.ore, K.font.line, K.ink.ore, 0), crCash: mk(Z.right.cash, K.font.side, K.ink.ore, 1),
+    crMis: mk(Z.right.mis, K.font.line, K.ink.mis, 0), crMisWhy: mk(Z.right.misWhy, K.font.side, K.ink.misWhy, 1),
     crChipG: sc.add.graphics().setScrollFactor(0).setDepth(K.depth - 0.5), // the R key cap, drawn again only when its letter changes
     crMisKey: sc.add.text(Z.right.misKey.x, Z.right.misKey.y, '', uiFontFn(12, K.ink.chip, { fontStyle: 'bold' })).setOrigin(0.5).setScrollFactor(0).setDepth(K.depth) // the letter as the corner chips' (dark, bold, no stroke)
   };
@@ -85,7 +86,7 @@ function campCruiserHudPaint(g, H, C) {
   if (H.crCash) H.crCash.setText(campCruiserCashLine(S));
   if (H.crMis) H.crMis.setText(campCruiserMissileLine(S)).setColor(S.missiles.n > 0 ? K.ink.mis : K.ink.warn); // red at 0, as the old count was
   if (H.crMisKey) { // the R key cap: the same chip as the corners' (rounded, cyan, a dark bold letter), on a Graphics of its own that is drawn again only when the letter changes; no key for it, no chip and no letter
-    const key = campCruiserMissileKey(), w = (H.crMis && H.crMis.width) || campCruiserMissileLine(S).length * 0.48 * 13, c = { x: campCruiserChipX(Z, w), y: Z.right.misKey.y }; H.crMisKey.setText(key).setPosition(c.x, c.y); // (a stand-in text has no width: the estimate of 0.48 of the font size a character)
+    const key = campCruiserMissileKey(), w = (H.crMis && H.crMis.width) || campCruiserMissileLine(S).length * K.charW.caps * K.font.line, c = { x: campCruiserChipX(Z, w), y: Z.right.misKey.y }; H.crMisKey.setText(key).setPosition(c.x, c.y); // (a stand-in text has no width: the estimate of K.charW)
     if (H.crChipG) { const k = key ? key + '@' + c.x + ',' + c.y : ''; if (H.crChipK !== k) { H.crChipK = k; const T = CAMP.corner.title; H.crChipG.clear(); if (key) H.crChipG.fillStyle(CAMP.corner.chip, 0.95).fillRoundedRect(c.x - T.chipW / 2, c.y - T.chipH / 2, T.chipW, T.chipH, K.chip.r); } }
   }
   if (H.crMisWhy) H.crMisWhy.setText(campCruiserMissileWhy(S)).setColor(S.missiles.state === 'noore' ? K.ink.warn : K.ink.misWhy);
