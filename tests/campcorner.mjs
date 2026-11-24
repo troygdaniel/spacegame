@@ -17,7 +17,7 @@ const g = nodeGame();
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 const near = (a, b, e = 1e-6) => Math.abs(a - b) < e;
-g.run(`CAMP_CORNERS.splice(0, CAMP_CORNERS.length, ...CAMP_CORNERS.filter(d => d.id === 'fleet'));`); // this suite is the panel alone, with FLEET and the probe it adds: the target corners other cards register (HOSTILES, FRIENDLIES: tests/campcorners.mjs) are not in this world
+g.run(`CAMP_CORNERS.splice(0, CAMP_CORNERS.length, ...CAMP_CORNERS.filter(d => d.id === 'fleet' || d.id === 'cruiser'));`); // this suite is the panel with FLEET, S CRUISER (card space-game-layout-cruiser, src/campcruiserhud.js) and the probe it adds: the target corners other cards register (HOSTILES, FRIENDLIES: tests/campcorners.mjs) are not in this world
 
 g.run(`
   window.__new = () => { const C = window.C = campNew(1, [], { seed: 5, mission: 0 }); C.god = true; C.t = 1000; return C; }; // the three pilots are out beside the cruiser
