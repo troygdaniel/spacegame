@@ -1216,6 +1216,10 @@ const UI_TEXT = {
   'camp.gauge.speed': 'SPEED',
   'camp.gauge.lasers': 'LASERS',
   'camp.gauge.hull': 'HULL',
+  'camp.cruiser.shield': 'SHIELD',
+  'camp.cruiser.hull': 'HULL',
+  'camp.cruiser.ore': 'ORE',
+  'camp.cruiser.credits': 'CREDITS',
   'camp.say.lasersdry': 'Lasers are running dry.',
   // The bigger ore bay (card space-game-ore-bay-bigger, content/text/campaign-orebay.md)
   'camp.say.orefull': 'Ore bay full.',
