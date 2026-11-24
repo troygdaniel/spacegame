@@ -21,9 +21,12 @@ function campCornerDraw(s, V, N) {
   const K = CAMP.corner, T = K.title, left = N.at.charAt(1) === 'l', dx = campBoxDx(s, left), G = campCornerGeom(N.at, campCornerItemsH(N.items), dx), g = V.g, o = N.open, T0 = G.title; V.on = true;
   while (V.chips.length < N.chips.length) V.chips.push(V.tx(12, '#02101c', { fontStyle: 'bold' }).setOrigin(0.5));
   V.chips.forEach((c, i) => { if (i >= N.chips.length) c.setVisible(false); });
-  const cy = T0.y + (T0.h - T.chipH) / 2, chipX = i => T0.x + T.pad + i * (T.chipW + T.chipGap), after = T0.x + T.pad + N.chips.length * (T.chipW + T.chipGap) - T.chipGap + T.gap;
+  const cy = T0.y + (T0.h - T.chipH) / 2, chipX = i => T0.x + T.pad + i * (T.chipW + T.chipGap), slots = Math.max(T.chips, N.chips.length), after = T0.x + T.pad + slots * (T.chipW + T.chipGap) - T.chipGap + T.gap; // the chip column is the same width in every corner (CAMP.corner.title.chips), so the titles start at the same x
   campLabel(V.title, N.title, '#9fbdd1'); V.title.setPosition(after, T0.y + (T0.h - 14) / 2).setVisible(true);
-  campLabel(V.sel, N.selection, '#ffffff'); V.sel.setPosition(after + (V.title.width || N.title.length * 8) + T.gap, T0.y + (T0.h - 16) / 2).setVisible(!!N.selection);
+  const selX = after + (V.title.width || N.title.length * 8) + T.gap, room = T0.x + T0.w - T.pad - selX; // the selection has this much room, to the frame's inner edge: a longer name is cut short with an ellipsis (it ran off the screen)
+  if (N.selection) { const k = N.selection + '|' + Math.round(room); if (V.selK !== k) { V.selK = k; campLabel(V.sel, N.selection, '#ffffff'); V.selV = V.sel.width > room ? campCornerFit(N.selection, room, str => { V.sel.setText(str); return V.sel.width; }) : N.selection; } campLabel(V.sel, V.selV, '#ffffff'); } // (worked out when the name or the room changes, not every frame)
+  else campLabel(V.sel, '', '#ffffff');
+  V.sel.setPosition(selX, T0.y + (T0.h - 16) / 2).setVisible(!!N.selection);
   N.chips.forEach((cap, i) => { const c = V.chips[i]; campLabel(c, cap, '#02101c'); c.setPosition(chipX(i) + T.chipW / 2, cy + T.chipH / 2).setVisible(true); });
   const key = [N.chips.join(), N.title, dx, G.det ? G.det.h : 0, Math.round(o * 20), N.items.map(it => [campCornerKind(it), it.name || it.text || it.cap, it.num || it.label || '', Math.round((it.share || 0) * 100), it.color, it.ok, it.sel].join(':')).join('|')].join('#');
   if (V.gkey !== key) { // the frame, the chips, the bars: drawn again when something they show changes

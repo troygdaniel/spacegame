@@ -173,7 +173,7 @@ console.log('E. one component, the screen\'s own camera');
   check('every object of the lists (the key caps too) has scroll factor 0: it is on the camera that never zooms (src/camzoom.js sorts by it), so - = and the wheel never scale them', objs.length === 1 + 2 + 3 * J('CAMP_PANELS.show') + 2 && objs.every(sf => sf === 0), objs.length);
   check('the lists are drawn over the map (their depth)', K.depth > 156);
   const sc = src('src/campaignscene.js'), cr = sc.slice(sc.indexOf('  create() {'), sc.indexOf('  get camzoomHold()'));
-  check('the bottom key line has a thin backing strip under it, over the whole width, on the screen\'s camera, below the text', /this\.keysBack = this\.add\.rectangle\(W \/ 2, H - 35, W, 26, 0x02060d, 0\.75\)\.setScrollFactor\(0\)\.setDepth\(99\)/.test(cr) && /keys: this\.add\.text\(24, H - 44, campKeyLine\(\)[^;]*\.setScrollFactor\(0\)\.setDepth\(100\)/.test(cr));
+  check('the bottom key line has a thin backing strip under it, over the whole width, on the screen\'s camera, below the text', /this\.keysBack = this\.add\.rectangle\(W \/ 2, H - 35, W, 26, 0x02060d, 0\.75\)\.setScrollFactor\(0\)\.setDepth\(99\)/.test(cr) && /keys: this\.add\.text\(CAMP\.corner\.edge - CAMP\.corner\.ink, H - 44, campKeyLine\(\)[^;]*\.setScrollFactor\(0\)\.setDepth\(100\)/.test(cr));
   check('the scene gives the lists the time of the scene, and they are painted every frame (no call plate is painted)', /campPanelsPaint\(this, this\.time\.now\)/.test(sc) && !/campCallPaint/.test(sc));
 }
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
