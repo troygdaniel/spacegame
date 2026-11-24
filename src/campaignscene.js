@@ -20,7 +20,7 @@ const CAMP_LOOK = {
   patrol: campArtLook('patrol', 'patrol'), miner: campArtLook('miner', 'miner'), // the neutral ships: a pale police hull with a teal stripe, an industrial miner
   raider: { tex: 'raider', scale: 1 }, drone: { tex: 'drone', scale: 1 }, gunship: { tex: 'gunship', scale: 1 }, mother: { tex: 'reaver', scale: 2.6, tint: 0xc9a0ff }, tower: { tex: 'gunship', scale: 1.6, tint: 0xff9a3a }
 };
-const CAMP_SHOT = { pirate: 0xffa83a, neutral: 0x7fe9ff }; // the colour of a pirate's shot (amber: not the aliens' red, not the guns' pale yellow) and of a neutral patrol's (cyan), as the textures 'shot-pirate' and 'shot-neutral' (campShotTextures)
+const CAMP_SHOT = { pirate: 0xffa83a, neutral: 0x7fe9ff, earth: 0x6dff9c }; // the colour of a pirate's shot (amber: not the aliens' red), of a neutral patrol's (cyan) and of the Earth side's (green: the cruiser's turrets and the three pilots; the wing's green of the Tab map, CAMPMAP.color.wing), as the textures 'shot-pirate', 'shot-neutral' and 'shot-earth' (campShotTextures); an alien's stays the game's red 'ebullet', and the Long Haul keeps its own 'bullet'
 function campShotTextures(scene) { // made once, 14 by 4 like the game's own bullet
   Object.keys(CAMP_SHOT).forEach(k => { const key = 'shot-' + k; if (scene.textures.exists(key)) return; const g = scene.make.graphics({ x: 0, y: 0, add: false }); g.fillStyle(CAMP_SHOT[k], 1); g.fillRect(0, 0, 14, 4); g.generateTexture(key, 14, 4); g.destroy(); });
 }
@@ -61,7 +61,7 @@ class Campaign extends Phaser.Scene {
     if (typeof campWarpDue === 'function' && campWarpDue(this)) return; // a level that warps in starts with the warp cinematic, which comes back here with warped: true (src/campwarp.js)
     const dark = this.warped ? 255 : 0; this.cameras.main.fadeIn(300, dark, dark, dark); // out of the warp's white flash, else out of black
     spaceBackdrop(this, true);
-    campShotTextures(this); // the pirates' and the neutrals' shots
+    campShotTextures(this); // the pirates', the neutrals' and the Earth side's shots
     this.boom = fxBoom(this);
     if (typeof campTuneLoadOnce === 'function') campTuneLoadOnce(); // the tuning panel's overrides (src/camptune.js) go into the CAMP table before the battle is made: a page reads them once; a bot or a test never does
     this.pickZoom = null; // the zoom a target sub-list took and the one to give back (src/camppickdraw.js)
@@ -495,8 +495,8 @@ class Campaign extends Phaser.Scene {
     this.bsp.forEach((im, i) => {
       const b = C.bullets[i]; if (!b) { im.setVisible(false); return; }
       const kb = typeof campZoomShotScale === 'function' && this.cameras && this.cameras.main ? campZoomShotScale(this.cameras.main.zoom) : 1; // thicker when the view is far out (src/campzoom.js)
-      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'bullet' : b.team === 'neutral' ? 'shot-neutral' : b.fac === 'pirate' ? 'shot-pirate' : 'ebullet').setScale((b.beam ? 3 : b.pd ? 0.9 : 1) * kb, (b.beam ? 1.2 : 1) * kb);
-      if (b.beam) im.setTint(0x7fe9ff); else if (b.pd) im.setTint(0xffd37a); else im.clearTint(); // the turrets' shots are amber; the beam tech's are cyan, long and go through
+      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'shot-earth' : b.team === 'neutral' ? 'shot-neutral' : b.fac === 'pirate' ? 'shot-pirate' : 'ebullet').setScale((b.beam ? 3 : b.pd ? 0.9 : 1) * kb, (b.beam ? 1.2 : 1) * kb);
+      if (b.beam) im.setTint(0x7fe9ff); else im.clearTint(); // the Earth side's shots (turrets and pilots) are green as they are, no tint; the beam tech's keep their cyan tint (on the green, a teal), long and go through
     });
   }
   // the bays of the cruiser: dimly lit in the picture, and bright while the wing leaves (the launch tubes, at the front of the pods) and while it comes home (the landing bays, at the back): the order to launch or recall can be seen on the ship
