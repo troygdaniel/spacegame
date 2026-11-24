@@ -107,25 +107,24 @@ console.log('E. Emergency shields');
 
 console.log('F. Fly to the goal burns by itself');
 {
-  g.run(`CAMP.bay.startOut = false;`); // the pilots start in the bay here: the burn needs the wing aboard
+  g.run(`CAMP.bay.startOut = true;`); // the game's start: the pilots begin out, and the burn tows them (card space-game-burn-with-wing-out)
   g.run(`var F = __new(2, 0); var gr = campPanelList(F, 'cruiser').find(r => r.id === 'goal'), st = __rowof(F, 'goal'); var rr = campPanelRun(F, gr, 'key');`);
-  check('Alpha Centauri B is 5,790 px away, nothing hostile near, the wing aboard: the row says it burns, and Enter flies there at the burn', J(`st.state`).endsWith(', burns') && J(`[rr.ok, F.nav.on, F.nav.fast, F.nav.auto, F.nav.burn > 1].join()`) === 'true,true,true,true,true', J(`[st.state, rr.say, F.nav && F.nav.fast].join('|')`));
+  check('Alpha Centauri B is 5,790 px away, nothing hostile near, the pilots out (as the game starts them): the row says it burns, and Enter flies there at the burn', J(`st.state`).endsWith(', burns') && J(`[rr.ok, F.nav.on, F.nav.fast, F.nav.auto, F.nav.burn > 1].join()`) === 'true,true,true,true,true', J(`[st.state, rr.say, F.nav && F.nav.fast].join('|')`));
   check('and says so: "full burn"', /full burn/.test(J(`rr.say`)), J(`rr.say`));
   g.run(`var F2 = __new('home', 0); var gr2 = campPanelList(F2, 'cruiser').find(r => r.id === 'goal'), st2 = __rowof(F2, 'goal'); var rr2 = campPanelRun(F2, gr2, 'key');`);
   check('a short leg (Earth, 383 px) goes at the regular speed and does not say it burns', J(`[rr2.ok, F2.nav.on, F2.nav.fast, !!F2.nav.auto].join()`) === 'true,true,false,false' && !/burns/.test(J(`st2.state`)), J(`st2.state`));
   g.run(`var F3 = __new(2, 0); campOrder(F3, 'launch', '', 'key'); var out3 = campNavOut(F3), rr3 = campPanelRun(F3, campPanelList(F3, 'cruiser').find(r => r.id === 'goal'), 'key');`);
-  check('with a ship out it flies at the regular speed (a burn would strand it) and nothing is asked of the wing', J(`out3 > 0`) && J(`[rr3.ok, F3.nav.on, F3.nav.fast, !!F3.navWait].join()`) === 'true,true,false,false', J(`rr3.say`));
+  check('with a ship out it burns all the same (the wing is towed): nothing is asked of the wing and nobody is recalled', J(`out3 > 0`) && J(`[rr3.ok, F3.nav.on, F3.nav.fast, !!F3.nav.auto, F3.orders.recall].join()`) === 'true,true,true,true,0', J(`rr3.say`));
   g.run(`var F4 = __new(2, 1); var al = F4.ships.filter(u => u.team === 'alien'); var near0 = Math.min(...al.map(u => campDist(u, F4.carrier))); al[0].x = F4.carrier.x + 2500; al[0].y = F4.carrier.y; var rr4 = campPanelRun(F4, campPanelList(F4, 'cruiser').find(r => r.id === 'goal'), 'key');`);
   check('with a hostile within 4,000 px it flies at the regular speed', J(`near0 > 4000`) && J(`[rr4.ok, F4.nav.on, F4.nav.fast].join()`) === 'true,true,false', J(`near0`));
   g.run(`var F5 = __new(2, 1); var al5 = F5.ships.filter(u => u.team === 'alien'); var rr5 = campPanelRun(F5, campPanelList(F5, 'cruiser').find(r => r.id === 'goal'), 'key'); var b0 = F5.nav.fast && F5.nav.auto; F5.events.length = 0; al5[0].x = F5.carrier.x + 2500; al5[0].y = F5.carrier.y; __run(F5, 1);`);
   check('a burn that began by itself ends by itself when a hostile comes within 4,000 px: the trip goes on at the regular speed and the computer says so', J(`b0`) === true && J(`[F5.nav.on, F5.nav.fast, !!F5.nav.auto, F5.nav.burn].join()`) === 'true,false,false,1' && J(`F5.events.some(e => e.type === 'nav' && e.key === 'camp.nav.burnfoe')`) && J(`uiText('camp.nav.burnfoe')`) === 'Hostiles near: burn off.', J(`F5.nav && [F5.nav.fast, F5.nav.auto].join()`));
   g.run(`var F6 = __new(2, 0); campShipListSet(true); campFleetListSet(true); var old = campPanelRun(F6, campKeyList('nav').rows.find(r => r.id === 'goal'), 'key'); campFleetListSet(false); campShipListSet(false);`);
   check('the old autopilot list\'s Fly to the goal still goes at the regular speed (only the cruiser list\'s row burns by itself)', J(`[old.ok, F6.nav.on, F6.nav.fast].join()`) === 'true,true,false');
-  g.run(`CAMP.bay.startOut = false; var F7 = __new(2, 0); CAMP.bay.startOut = true; campShipListSet(true); campFleetListSet(true); var bn = campPanelRun(F7, campKeyList('nav').rows.find(r => r.id === 'burn'), 'key'); campFleetListSet(false); campShipListSet(false);`);
+  g.run(`var F7 = __new(2, 0); campShipListSet(true); campFleetListSet(true); var bn = campPanelRun(F7, campKeyList('nav').rows.find(r => r.id === 'burn'), 'key'); campFleetListSet(false); campShipListSet(false);`);
   check('the old burn row still burns when it is asked for in a test (the parked list is as it was)', J(`[bn.ok, F7.nav.fast, !!F7.nav.auto].join()`) === 'true,true,false');
-  g.run(`CAMP.bay.startOut = true;`);
   g.run(`var F8 = __new(2, 0), st8 = __rowof(F8, 'goal'), rr8 = campPanelRun(F8, campPanelList(F8, 'cruiser').find(r => r.id === 'goal'), 'key');`);
-  check('the pilots start each mission out: then the row says "no burn: wing out" and flies at the regular speed (R recalls them; the row never does)', /, no burn: wing out$/.test(J(`st8.state`)) && J(`[rr8.ok, F8.nav.on, F8.nav.fast].join()`) === 'true,true,false', J(`st8.state`));
+  check('the pilots start each mission out: the row says it burns all the same and flies at the burn (they are towed), no recall', /, burns$/.test(J(`st8.state`)) && !/wing out/.test(J(`st8.state`)) && J(`[rr8.ok, F8.nav.on, F8.nav.fast, campNavOut(F8) > 0, F8.orders.recall].join()`) === 'true,true,true,true,0', J(`st8.state`));
   check('the numbers are the table\'s: a leg of 3,000 px, a hostile within 4,000', J(`[CAMP.nav.auto.leg, CAMP.nav.auto.near].join()`) === '3000,4000');
 }
 

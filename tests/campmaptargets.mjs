@@ -125,7 +125,7 @@ console.log('E. a target lost');
   g.run(`window.C = __new(11); window.__rk = campNavRows(C).find(r => r.kind === 'rock'); campNavFly(C, __rk, false, 'key'); __run(C, 2); C.rocks.find(r => r.id === __rk.ref).hp = 0; C.events.length = 0; __run(C, 1);`);
   check('a rock that breaks ends it too (lost)', J('C.nav') === null && J('__ev(C, "camp.nav.lost").length') === 1);
   g.run(`window.C = __new(11); campOrder(C, 'launch'); __run(C, 7); window.A = campSpawn(C, 'raider', 2500, 0); __script(A, 0, 0); window.__r1 = campNavFly(C, __row(C, 'alien:' + A.id), true, 'key');`);
-  check('the wing rule is the same as for a place: Fast to an enemy with the wing out is refused the first time (the regular trip is allowed)', J('__r1.ok') === false && J('__r1.refused') === true && J('campNavFly(C, __row(C, "alien:" + A.id), false, "key").ok') === true);
+  check('the wing rule is the same as for a place (card space-game-burn-with-wing-out): Fast to an enemy with the wing out burns, nothing is refused (the regular trip is allowed too)', J('__r1.ok') === true && J('C.nav.fast') === true && J('campNavFly(C, __row(C, "alien:" + A.id), false, "key").ok') === true && J('C.nav.fast') === false);
   g.run(`window.C = __new(11); window.A = campSpawn(C, 'raider', 2500, 0); __script(A, 0, 0); campNavFly(C, __row(C, 'alien:' + A.id), false, 'key'); __run(C, 3); window.__n0 = C.nav; campNavFly(C, __row(C, 'alien:' + A.id), true, 'key');`);
   check('Fly then Fast on the same moving target keeps the trip (same trip, only the speed changes), as for a place', J('C.nav === __n0') && J('C.nav.fast') === true);
 }
