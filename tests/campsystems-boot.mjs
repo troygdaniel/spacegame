@@ -1,7 +1,7 @@
 // not in the smoke: the Campaign's ship systems in a real fight, one picture, run by hand (one Chrome, muted, through the test lock; card space-game-campaign-systems)
-// The rules are in tests/campsystems.mjs (plain Node). This boots level 1, moves pips through the power list (I, a part of the ship list: card list-shortcuts; a power row leaves the list open) and with J K L (direct keys: they work with no list open and open none: card one-list-keys), fires the emergency shields through the power list (I, Down to its row, Enter), and takes pictures of the HUD gauges (their power bars) and of the open power list
-// (the draw is Phaser's: the list on a fight's background, the three gauges with a bar of power segments beside each). It also looks at what the screen holds: no list until its key, the power rows and the emergency's row in the power list, the pips are the sim's, the saved
-// setting is kept, the emergency is not.
+// The rules are in the plain Node suites (tests/campcruiser.mjs for the emergency shields). This boots level 1 and looks at what is left of the ship's systems in the game: the three gauges on the HUD, no power list and no ship list (O and P pick
+// friendlies: card space-game-keys2-select), and Emergency shields as a row of the cruiser list (S, Down to its row, Enter: card space-game-keys2-cruiser): the shield fills at once for ore, the row cools down and refuses meanwhile.
+// The power keys (J K L) are pressed only while the key table still has them (card space-game-power-removed takes them out). Pictures: the open cruiser list, the HUD after the emergency, the cooling row, the H page.
 //   node tests/campsystems-boot.mjs
 // The pictures go to the folder in SYSTEMS_SHOTS (default ~/dev/spacegame-night/shots/systems-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -41,47 +41,38 @@ try {
   await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
   for (let i = 0; i < 4 && (await j(`${SC}.mode`)) !== 'play'; i++) { await key('Enter'); await t.run(300); } // the intro card, and the missions' briefing after it
   check('the battle is on (the cards are out of the way)', (await j(`${SC}.mode`)) === 'play', await j(`${SC}.mode`));
-  check('a new battle starts at 2 / 2 / 2 with the three gauges and their power bars on the HUD (SHIELDS, SPEED, LASERS: card space-game-systems-gauges replaced the W S E pips)', await j(`JSON.stringify(${SC}.camp.power.p) === '[2,2,2]' && !!${SC}.hud.gauges && ${SC}.hud.gauges.l.map(t => t.text).join() === 'SHIELDS,SPEED,LASERS' && JSON.stringify(${SC}.gaugeAnim.shown) === '[2,2,2]'`));
+  // What is left of the ship's systems in the game (cards space-game-keys2-select, space-game-keys2-cruiser, space-game-power-removed): no power list and no ship list (O and P pick friendlies), the three gauges on the HUD,
+  // and Emergency shields as a row of the cruiser list (S): the shield is filled at once for ore, and the row cools down. The power keys (J K L) are pressed only while the key table still has them.
+  check('the three gauges are on the HUD (SHIELDS, SPEED, LASERS)', await j(`!!${SC}.hud.gauges && ${SC}.hud.gauges.l.map(t => t.text).join() === 'SHIELDS,SPEED,LASERS'`), JSON.stringify(await j(`${SC}.hud.gauges ? ${SC}.hud.gauges.l.map(t => t.text) : null`)));
   await t.run(500);
-  check('no list is on the screen at the start; the power keys are direct keys of the key table (J shields, K engines, L weapons, ; balance) and rows of the power list too, which stay open when given', await j(`campPanelOpen(${SC}.pn) === '' && !${SC}.pnl.title.visible && ${SC}.pnl.rows.every(r => !r.name.visible) && ['shields', 'engines', 'weapons', 'balance'].map(id => CAMP_KEYS[id].k).join() === 'J,K,L,;' && ['shields', 'engines', 'weapons', 'balance'].every(id => campKeyVia(id).id === 'power' && campKeyRow(id).stay === 1) && campKeyVia('emergency').id === 'power' && !campKeyRow('emergency').stay && !campPanelList(${SC}.camp, 'ship').some(r => r.order === 'power' || r.order === 'balance')`), await j(`['shields', 'engines', 'weapons', 'balance'].map(id => CAMP_KEYS[id].k)`));
-  await j('campShipListSet(true)'); // this part is about the ship list: it is switched off in the game (CAMP_SHIP_LIST, card space-game-p-opens-power: P opens power) and on here
-  await key('KeyP'); await t.run(300);
-  const pwAt = await j(`campPanelList(${SC}.camp, 'ship').findIndex(r => r.open === 'power')`);
-  check('P opens the ship list, and Power is a row of it that shows its key (O) and the pips now', await j(`campPanelOpen(${SC}.pn) === 'ship' && ${SC}.pnl.title.text === 'P   SHIP ORDERS' && ${pwAt} >= 0 && ${SC}.pnl.rows[${pwAt}].name.text === campKeyRow('gpower').label + '  >' && ${SC}.pnl.rows[${pwAt}].cap.visible && ${SC}.pnl.rows[${pwAt}].cap.text === campKeyList('power').key && campKeyList('power').key === 'O' && ${SC}.pnl.rows[${pwAt}].suffix.text === '2 / 2 / 2'`), await j(`${SC}.pnl.rows.filter(r => r.name.visible).map(r => r.name.text + ' | ' + r.suffix.text)`));
-  for (let i = 0; i < pwAt; i++) await key('ArrowDown'); await key('Enter'); await t.run(300);
-  check('Enter on the Power row opens the power list (no order: the pips are as they were), and the emergency shields are a row of it', await j(`campPanelOpen(${SC}.pn) === 'power' && ${SC}.pn.at === 0 && ${SC}.pnl.title.text === 'O   POWER' && JSON.stringify(${SC}.camp.power.p) === '[2,2,2]' && ${SC}.pnl.rows.filter(r => r.name.visible).map(r => r.name.text).indexOf('Emergency shields') === campPanelList(${SC}.camp, 'power').findIndex(r => r.id === 'emergency') && campPanelList(${SC}.camp, 'power').findIndex(r => r.id === 'emergency') >= 0 && ${SC}.pnl.keys.text === uiText('camp.ui.listkeyback', { key: 'I' })`), await j(`${SC}.pnl.rows.filter(r => r.name.visible).map(r => r.name.text)`)); // a row of P opened it: the foot says Esc goes back (camp.ui.listkeyback)
-  await shot('1-list'); await key('ArrowLeft'); await t.run(200);
-  check('Left goes back to the ship list, the highlight on the Power row', await j(`campPanelOpen(${SC}.pn) === 'ship' && ${SC}.pn.at === ${pwAt}`));
-  await key('Escape'); await t.run(200);
-  // the power list by its own key: O, Down to the shields' row, Enter gives a pip and the list stays open (to give it again); Balance puts it back
-  const sAt = await j(`campPanelList(${SC}.camp, 'power').findIndex(r => r.id === 'shields')`), bAt = await j(`campPanelList(${SC}.camp, 'power').findIndex(r => r.id === 'balance')`);
-  await key('KeyO'); for (let i = 0; i < sAt; i++) await key('ArrowDown'); await key('Enter'); await t.run(300);
-  check('O, Enter on "Shields: one more pip": 1 / 3 / 2, and the power list stays open with the highlight on that row, which says its direct key (J; the pips are the row\'s own bar, the twin of its gauge\'s: card space-game-power-presets)', await j(`JSON.stringify(${SC}.camp.power.p) === '[1,3,2]' && campPanelOpen(${SC}.pn) === 'power' && ${SC}.pn.at === ${sAt} && ${hi}.name.text === campKeyRow('shields').label && ${hi}.suffix.text === campPanelRows(${SC}.camp, 'power')[${sAt}].short && ${hi}.suffix.text === campKeyVar('keyshields') && ${SC}.gaugeAnim && ${SC}.gaugeAnim.last[1] === 3`), await j(`JSON.stringify(${SC}.camp.power.p) + ' | ' + ${hi}.name.text + ' | ' + ${hi}.suffix.text`));
-  for (let i = sAt; i < bAt; i++) await key('ArrowDown'); await key('Enter'); await t.run(300);
-  check('Down to "Balance the power", Enter: 2 / 2 / 2 again, the list still open; O again closes it', await j(`JSON.stringify(${SC}.camp.power.p) === '[2,2,2]' && campPanelOpen(${SC}.pn) === 'power'`) && (await key('KeyO'), await t.run(200), await j(`campPanelOpen(${SC}.pn) === '' && !${SC}.pnl.title.visible`)));
-  await key('KeyJ'); await t.run(300);
-  check('J is "power to shields": 1 / 3 / 2, the pips follow on the HUD, and no list opens for it', await j(`JSON.stringify(${SC}.camp.power.p) === '[1,3,2]' && campPanelOpen(${SC}.pn) === '' && !${SC}.pnl.title.visible`));
-  check('the setting is saved at once (the next level starts from it)', await j(`JSON.stringify(campPowerLoad()) === '[1,3,2]'`));
-  await key('KeyU'); await t.run(200);
-  check('U is no power order (it opens the dock list): the pips are as they were', await j(`JSON.stringify(${SC}.camp.power.p) === '[1,3,2]' && campPanelOpen(${SC}.pn) === 'yard'`));
-  await key('KeyU'); await t.run(200);
-  const gave = await listOrder('emergency'); await t.run(300);
-  check('I, Down to "Emergency shields", Enter: the order is given and the list closes (the emergency is no row that stays)', gave === true && (await listWay('emergency')).list === 'power' && await j(`campPanelOpen(${SC}.pn) === ''`));
-  check('emergency shields: 1 / 4 / 1 for ten seconds, the setting still 1 / 3 / 2 and the HUD shields row white', await j(`JSON.stringify(${SC}.camp.power.p) === '[1,4,1]' && JSON.stringify(${SC}.camp.power.base) === '[1,3,2]'`));
-  await t.run(1500); await shot('2-emergency');
-  await t.run(9500);
-  check('after ten seconds the pips are back to the setting', await j(`JSON.stringify(${SC}.camp.power.p) === '[1,3,2]'`));
-  await t.run(500);
-  const eAt = await j(`campPanelList(${SC}.camp, 'power').findIndex(r => r.id === 'emergency')`);
-  await key('KeyO'); for (let i = 0; i < eAt; i++) await key('ArrowDown'); await t.run(400); // the list open, the highlight on the emergency's row (not given: no Enter)
-  check('the list says the emergency is cooling down (its row is grey and says N s) and the saved setting never held the emergency', await j(`${hi}.name.text === 'Emergency shields' && /^[0-9]+ s$/.test(${hi}.suffix.text) && campPanelRows(${SC}.camp, 'power')[${eAt}].ok === false && JSON.stringify(campPowerLoad()) === '[1,3,2]'`), await j(`${hi}.name.text + ' | ' + ${hi}.suffix.text`));
+  check('no list is on the screen at the start, and Emergency shields is a row of the cruiser list, which has a key of its own', await j(`campPanelOpen(${SC}.pn) === '' && !${SC}.pnl.title.visible && ${SC}.pnl.rows.every(r => !r.name.visible) && campKeyVia('emergency').id === 'cruiser' && !!campKeyList('cruiser').code && !campKeyRow('emergency').stay`), JSON.stringify(await j(`[campKeyVia('emergency').id, campKeyList('cruiser').key]`)));
+  const PK = await j(`['shields', 'engines', 'weapons'].map(id => campKeyCodes(id)[0] || '')`);
+  if (PK[0]) { // the power keys are still in the key table: J gives the shields a pip with no list opened
+    const p0 = await j(`${SC}.camp.power.p.slice()`); await key(PK[0]); await t.run(300); const p1 = await j(`${SC}.camp.power.p.slice()`);
+    check('the shields\' power key gives the shields a pip and opens no list', p1[1] === p0[1] + 1 && (await j(`campPanelOpen(${SC}.pn)`)) === '', JSON.stringify([p0, p1]));
+    await t.ev(`(() => { campOrder(${SC}.camp, 'balance', '', 'key'); return 1; })()`); await t.run(200);
+  } else console.log('  note   the key table has no power keys (card space-game-power-removed): the gauges are plain readouts');
+  check('O and P open no list (they pick the friendlies; the power list and the ship list have no key in the game)', (await key('KeyO'), await t.run(150), await j(`campPanelOpen(${SC}.pn)`)) === '' && (await key('KeyP'), await t.run(150), await j(`campPanelOpen(${SC}.pn)`)) === '');
+  // the emergency: the shield is knocked down and there is ore to pay with
+  const E = await j(`({ ore: CAMP.emergency.ore, cool: CAMP.emergency.cooldown, max: campShieldMax(${SC}.camp) })`);
+  await t.ev(`(() => { const C = ${SC}.camp; C.god = true; C.shield = campShieldMax(C) * 0.25; C.ore = ${E.ore} + 30; return 1; })()`); await t.run(100);
+  const way = await listWay('emergency'), went = await listGo('emergency'); await t.run(200);
+  check('the cruiser list\'s key, Down to "Emergency shields": the list is open with the highlight on that row, which says what it costs', went === true && way.list === 'cruiser' && await j(`campPanelOpen(${SC}.pn) === 'cruiser' && ${hi}.name.text === campKeyRow('emergency').label`), JSON.stringify(way) + ' | ' + await j(`${hi}.name.text + ' | ' + ${hi}.suffix.text`));
+  await shot('1-list');
+  const ore0 = await j(`Math.floor(${SC}.camp.ore)`); await key('Enter'); await t.run(300);
+  check('Enter: the shield is full at once, the ore is paid (' + E.ore + ') and the list closes (the emergency is no row that stays)', await j(`${SC}.camp.shield >= campShieldMax(${SC}.camp) - 1 && Math.floor(${SC}.camp.ore) === ${ore0} - ${E.ore} && campPanelOpen(${SC}.pn) === '' && (${SC}.camp.orders.emergency | 0) === 1`), JSON.stringify(await j(`[Math.round(${SC}.camp.shield), Math.round(campShieldMax(${SC}.camp)), Math.floor(${SC}.camp.ore), campPanelOpen(${SC}.pn)]`)));
+  await t.run(1200); await shot('2-emergency');
+  await t.ev(`(() => { const C = ${SC}.camp; C.shield = campShieldMax(C) * 0.25; return 1; })()`); await t.run(100);
+  const eAt = await j(`campPanelList(${SC}.camp, 'cruiser').findIndex(r => r.id === 'emergency')`);
+  await listGo('emergency'); await t.run(300); // the list open again, the highlight on the emergency's row (not given: no Enter)
+  check('the list says the emergency is cooling down (its row cannot be given and says N s)', await j(`${hi}.name.text === campKeyRow('emergency').label && /[0-9]+ s/.test(${hi}.suffix.text) && campPanelRows(${SC}.camp, 'cruiser')[${eAt}].ok === false`), await j(`${hi}.name.text + ' | ' + ${hi}.suffix.text`));
   await shot('3-cooling');
-  await key('Enter'); await t.run(300);
-  check('Enter on the cooling row is refused: the list stays open and the pips do not move', await j(`campPanelOpen(${SC}.pn) === 'power' && JSON.stringify(${SC}.camp.power.p) === '[1,3,2]'`));
+  const sh0 = await j(`Math.round(${SC}.camp.shield)`), ore1 = await j(`Math.floor(${SC}.camp.ore)`); await key('Enter'); await t.run(200);
+  check('Enter on the cooling row is refused: the list stays open, no ore is paid and it was given once only', await j(`campPanelOpen(${SC}.pn) === 'cruiser' && Math.floor(${SC}.camp.ore) === ${ore1} && (${SC}.camp.orders.emergency | 0) === 1`), JSON.stringify(await j(`[campPanelOpen(${SC}.pn), Math.floor(${SC}.camp.ore), ${SC}.camp.orders.emergency]`)) + ' shield before ' + sh0);
   await key('Escape'); await t.run(200);
   check('Esc closes the list and does not pause the battle', await j(`campPanelOpen(${SC}.pn) === '' && ${SC}.mode === 'play'`));
   await key('KeyH'); await t.run(400);
-  check('H opens the page of every key (it lists the order lists and the power keys)', await j(`!!${SC}.ck && ${SC}.ck.open === true`));
+  check('H opens the page of every key', await j(`!!${SC}.ck && ${SC}.ck.open === true`));
   await shot('4-keys'); await key('KeyH'); await t.run(200);
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
 } finally { await t.close(); }

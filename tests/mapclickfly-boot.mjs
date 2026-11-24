@@ -37,6 +37,9 @@ async function campaign() {
     const SC = `game.scene.getScene('Campaign')`, j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`));
     await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
     for (let i = 0; i < 4 && (await j(`${SC}.mode`)) !== 'play'; i++) { await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', repeat: false }); return 1; })()`); await t.run(300); } // the intro card, and on a tree with missions a briefing after it: Enter until the flight
+    // the three pilots start the mission out beside the cruiser (card space-game-keys-orders) and a fast burn needs them aboard: they are called home first (the recall order; no key gives it now), so the first half is the map's buttons alone
+    await t.ev(`(() => { campOrder(${SC}.camp, 'recall', '', 'key'); return 1; })()`);
+    check('the pilots are aboard before the map is tried (recalled by the order)', await settle(t, `campNavOut(${SC}.camp) === 0 && ${SC}.camp.launchQ.length === 0`, 200), JSON.stringify(await j(`campNavOut(${SC}.camp)`)));
     await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(400);
     check('Tab opens the map', await j(`!!${SC}.mp`));
     const at = id => j(`(() => { const s = ${SC}, mp = s.mp, r = mp.rows.find(r => r.id === '${id}'), p = campMapPoint(mp.fit, CAMPMAP.frame, r.x, r.y); return { x: p.x, y: p.y }; })()`);
@@ -69,11 +72,11 @@ async function campaign() {
     check('a click on Fly: back to regular speed, the same trip, Fly marked ON', (await j(`${SC}.camp.nav === window.__trip && ${SC}.camp.nav.fast === false && /ON$/.test(${SC}.mp.btnFly.text)`)) === true);
     await snap(t, 'campaign-switch');
     // card space-game-campaign-fast-board: Fast needs the wing aboard. Launch the wing, then ask for Fast on the map twice: refused, then recalled and burning
-    // the wing is launched through the list its row is in (cards one-list-keys and list-shortcuts: the fleet list, read with campKeyVia): Q, Down to "Launch the wing" (its place is read from the list), Enter. Q over the map closes the map, so Tab opens it again after the order
-    const launchedByList = await j(`(() => { const S = ${SC}, k = code => S.onKey({ code, repeat: false }); campNavClear(S.camp, 'clear'); const via = campKeyVia('launch'); if (!via || via.id !== 'squads' || !via.code) return 'the launch row is not in the all-squads list: ' + (via && via.id); const at = campPanelList(S.camp, via.id).findIndex(r => r.id === 'launch'); if (at < 0) return 'no launch row';
-      k(via.code); const overMap = !S.mp && campPanelOpen(S.pn) === via.id; for (let i = (S.pn.at || 0); i < at; i++) k('ArrowDown'); k('Enter'); const closed = campPanelOpen(S.pn) === '';
-      return overMap && closed ? 'ok' : 'map closed and list opened: ' + overMap + ', list closed by the order: ' + closed; })()`);
-    check('W over the open map closes the map and opens the all-squads list (the Launch row is its first); Enter gives the order and closes the list', launchedByList === 'ok', String(launchedByList));
+    // the wing is sent out again by the launch order (the all-squads list and its Launch row are switched off: card space-game-keys-orders). A list's key over the map closes the map (S, the cruiser list: card space-game-keys2-cruiser), so Tab opens it again after
+    const listOverMap = await j(`(() => { const S = ${SC}, k = code => S.onKey({ code, repeat: false }); campNavClear(S.camp, 'clear'); const cr = campKeyList('cruiser'); if (!cr || !cr.code) return 'the cruiser list has no key';
+      k(cr.code); const overMap = !S.mp && campPanelOpen(S.pn) === 'cruiser'; k('Escape'); const closed = campPanelOpen(S.pn) === '' && S.mode === 'play';
+      const went = campOrder(S.camp, 'launch', '', 'key'); return overMap && closed ? 'ok' : 'map closed and list opened: ' + overMap + ', Esc closed the list and did not pause: ' + closed + ', launch: ' + JSON.stringify(went); })()`);
+    check('S (the cruiser list\'s key) over the open map closes the map and opens the cruiser list; Esc closes the list; the pilots are sent out again by the launch order (the strip\'s word: no key and no row gives it now)', listOverMap === 'ok', String(listOverMap));
     await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(300);
     check('Tab opens the map again', (await j(`!!${SC}.mp`)) === true);
     await settle(t, `${SC}.camp.launchQ.length === 0 && campWing(${SC}.camp).length === 3`, 200); // every ship out (a ship still in the launch queue when the wing is recalled is not recalled: it comes out later; ships come out one per bay interval; the wing is the three pilots since card space-game-three-pilots, 23 Nov 2026)
