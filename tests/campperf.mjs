@@ -1,10 +1,10 @@
-// smoke: the three things that make a big fight cheaper to draw: circles as small polygons, labels painted only when they change, the gauges painted 20 times a second into a texture (plain Node, no Chrome)
+// smoke: the things that make a big fight cheaper to draw: circles as small polygons, rounded rectangles and the squares, labels painted only when they change (plain Node, no Chrome)
 // Card perf-fights (Troy: "the big fights feel slow"). Measured in a full fight (docs/PERF-FIGHTS.md): the scene allocated 2 MB a frame, 84 percent of it Phaser building the HUD's circles and arcs into
 // triangles again at every render, and nine labels a frame were painted and sent to the graphics card again with nothing new on them. Nothing here changes what is on the screen.
 //   A. src/campcircles.js: how many corners a circle gets, that they lie on the circle, that the edge strays under half a pixel; a Campaign scene's fillCircle is a fan of triangles and its strokeCircle a closed
 //      line, with no arc; another scene's circles are Phaser's own
 //   B. src/camptextguard.js: the same colour, size or style set again paints nothing; a new one paints; another scene's labels are Phaser's own
-//   C. src/campgaugecache.js: the dials are painted at most once in 50 ms, at once when the pips or the highlighted dial change, straight into the HUD's Graphics when the scene cannot make a texture
+//   C. the gauges' picture cache (src/campgaugecache.js) is gone with the gauges (card space-game-layout-hud)
 // Run: node tests/campperf.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -81,24 +81,10 @@ console.log('B. labels');
   check('the paints saved are counted (for the measuring tools)', J('__TG.skipped') > 60);
 }
 
-console.log('C. the gauges');
+console.log('C. the gauges are not drawn any more (card space-game-layout-hud)');
 {
-  g.run(`
-    window.__mkScene = can => { const made = { graphics: 0, rt: [] }; const gfx = () => { const o = { cmds: 0, clears: 0, clear() { o.clears++; o.cmds = 0; return o; } }; ['fillStyle', 'lineStyle', 'fillRect', 'strokeRect', 'fillPoints', 'strokePoints', 'beginPath', 'moveTo', 'lineTo', 'strokePath', 'fillPath', 'lineBetween', 'fillRoundedRect', 'strokeRoundedRect', 'fillCircle', 'strokeCircle', 'fillTriangle', 'closePath', 'arc'].forEach(k => { o[k] = () => { o.cmds++; return o; }; }); return o; };
-      const s = { hud: {}, hudG: gfx(), made };
-      if (can) { s.make = { graphics: () => { made.graphics++; return gfx(); } }; s.add = { renderTexture: (x, y, w, h) => { const rt = { x, y, w, h, draws: [], clears: 0, clear() { rt.clears++; return rt; }, draw(o, dx, dy) { rt.draws.push([o.cmds, dx, dy]); return rt; }, setOrigin() { return rt; }, setScrollFactor(v) { rt.sf = v; return rt; }, setDepth(d) { rt.depth = d; return rt; }, setVisible(v) { rt.vis = v; return rt; } }; made.rt.push(rt); return rt; } }; }
-      return s; };
-    window.__C = campNew(1, [], { seed: 1 }); window.__A = campGaugeAnimNew(__C.power.p);
-    window.__paint = (s, now, hi) => campGaugesPaintCached(s, s.hudG, null, __C, __A, now, hi == null ? -1 : hi);
-  `);
-  const box = J('campGaugeCacheBox()'), Z = J('campHudGeom()');
-  check('the texture covers the three dials, their bars and halos, and the line down to where the power list opens, and stays on the screen', box.x <= Z.block.x0 - 8 && box.y >= 0 && box.x + box.w >= Z.block.x1 && box.x + box.w <= 1280 && box.y + box.h >= Z.block.y1 && box.y + box.h >= J(`typeof CAMPPANELS_LOOK === 'object' && CAMPPANELS_LOOK.topRight ? CAMPPANELS_LOOK.topRight : 104`), JSON.stringify(box));
-  check('the first frame paints the dials into a Graphics of their own (thousands of commands) and draws that ONCE into the texture; the HUD\'s own Graphics gets none of it', J(`(() => { const s = window.__S = __mkScene(true); const did = __paint(s, 1000); const rt = s.made.rt[0]; return did === true && s.made.graphics === 1 && s.made.rt.length === 1 && s.hudG.cmds === 0 && rt.draws.length === 1 && rt.draws[0][0] > 500 && rt.draws[0][1] === -rt.x && rt.draws[0][2] === -rt.y && rt.sf === 0 && rt.depth === CAMPGAUGECACHE.depth && s.hud.gaugeRT === rt; })()`));
-  check('for the next 49 ms nothing is painted again; at 50 ms it is: sixty frames a second are twenty paints', J(`(() => { const s = __S, rt = s.made.rt[0]; const a = [__paint(s, 1016), __paint(s, 1033), __paint(s, 1049)], n0 = rt.draws.length, b = __paint(s, 1050); let paints = 0; for (let f = 0; f < 60; f++) if (__paint(s, 2000 + f * 1000 / 60)) paints++; return a.join() === 'false,false,false' && n0 === 1 && b === true && paints >= 19 && paints <= 21 && s.made.graphics === 1 && s.made.rt.length === 1; })()`));
-  check('a pip that moved is seen at once, and so is the dial of the row highlighted in the power list, and the emergency', J(`(() => { const s = __S; __paint(s, 5000); const quiet = __paint(s, 5001); campOrder(__C, 'power', 'shields'); const pip = __paint(s, 5002), hi = __paint(s, 5003, 1), same = __paint(s, 5004, 1), off = __paint(s, 5005, -1); __C.shield = 10; __C.ore = 100; campOrder(__C, 'emergency'); const em = __paint(s, 5006); return [quiet, pip, hi, same, off, em].join(); })()`) === 'false,true,true,false,true,true');
-  check('the texture is in the HUD\'s own table, so a result card hides it with the rest (hudShow walks that table), and a scene that starts again makes a new one (its hud is new)', J(`(() => { const s = __S, old = s.made.rt.length; s.hud = {}; __paint(s, 9000); return typeof s.hud.gaugeRT.setVisible === 'function' && s.made.rt.length === old + 1; })()`));
-  check('a scene that cannot make a texture (a stand-in in a test) is painted as before, straight into the HUD\'s Graphics, every frame', J(`(() => { const s = __mkScene(false); const a = __paint(s, 0), n = s.hudG.cmds; s.hudG.clear(); __paint(s, 1); return a === false && n > 500 && s.hudG.cmds === n && !s.hud.gz; })()`));
-  check('the scene\'s own call is untouched (campGaugesPaint(g, ...)): the cache answers to that name and finds the scene from the Graphics, and the three files are in the page after the files they lean on', /campGaugesPaint\(g, this\.hud\.gauges/.test(src('src/campaignscene.js')) && J(`(() => { const s = __mkScene(true); s.hudG.scene = s; campGaugesPaint(s.hudG, null, __C, __A, 100, -1); const noScene = __mkScene(true); campGaugesPaint(noScene.hudG, null, __C, __A, 100, -1); return s.hudG.cmds === 0 && s.made.rt.length === 1 && noScene.hudG.cmds > 500 && noScene.made.rt.length === 0 && typeof campGaugesPaintDirect === 'function'; })()`) && (() => { const h = src('index.html'), at = f => h.indexOf(`src="src/${f}"`); return at('camphud.js') > 0 && at('campgaugecache.js') > at('camphud.js') && at('campcircles.js') > h.indexOf('phaser.min.js') && at('camptextguard.js') > h.indexOf('phaser.min.js'); })());
+  const idx = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'index.html'), 'utf8');
+  check('the picture cache of the dials (src/campgaugecache.js, which painted them 20 times a second into a texture) is gone with the dials: no file of the page names it, and the scene\'s Graphics is not given the dial painter', !/campgaugecache/.test(idx) && J('typeof campGaugeCacheBox') === 'undefined' && J('typeof campGaugesPaintCached') === 'undefined' && J('typeof campGaugesPaint') === 'undefined');
 }
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nCAMPAIGN PERF FAIL (${failed} of ${n})` : `\nCAMPAIGN PERF PASS (${n} checks)`);

@@ -52,7 +52,7 @@ const star = J(`(() => { const pl = campPlaces(3); return Object.keys(pl).filter
 check('the star of level 3 is "Epsilon Eridani" (no added word that the list has to cut)', star.length === 1 && star[0] === 'Epsilon Eridani', JSON.stringify(star));
 check('the Sun of level 1 is still the Sun', J(`Object.values(campPlaces(1)).some(p => p.kind === 'star' && p.name === 'Sun')`));
 
-console.log('13. the gauges are clear of the toast band');
+console.log('13. the power list\'s bars (the gauges\' places, not drawn) are clear of the toast band');
 {
   const Z = J('campHudGeom()'), T = J('TOAST'), W = J('W');
   const band = { x0: W / 2 - (T.w + 2 * T.pad) / 2, x1: W / 2 + (T.w + 2 * T.pad) / 2, y0: T.top, y1: T.bottom };
@@ -60,7 +60,7 @@ console.log('13. the gauges are clear of the toast band');
   const boxes = Z.cells.flatMap(c => [c.dial, c.bar]).concat([Z.hull]);
   check('the widest toast box (552 px, from the band\'s top) does not touch a dial, a power bar or the hull bar (card space-game-systems-gauges replaced the W S E pips)', boxes.every(b => !hit(band, b)), JSON.stringify([Z, band]));
   const src = J(`Campaign.prototype.paintHud.toString()`);
-  check('the HUD draws the gauges from src/camphud.js (no literal pips left in paintHud)', /campGaugesPaint/.test(src) && !/CAMP\.hud\.pips/.test(src) && !/fillRect\(366/.test(src));
+  check('the HUD does not draw the gauges any more (card space-game-layout-hud), and no literal pips are left in paintHud', !/campGaugesPaint/.test(src) && !/CAMP\.hud\.pips/.test(src) && !/fillRect\(366/.test(src));
 }
 console.log('15. no HUD under a result card');
 check('the result modes hide the HUD, flight, brief and pause do not', J(`['won', 'lost', 'debrief', 'refit', 'pick', 'end'].every(m => Campaign.prototype.hudHides.call({ mode: m })) && ['play', 'brief', 'pause', 'intro'].every(m => !Campaign.prototype.hudHides.call({ mode: m }))`));

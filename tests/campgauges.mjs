@@ -10,7 +10,7 @@
 //   E. the bars' animation: easing, a flash when the pips change
 //   F. drawing, with a recording stand-in for Phaser's Graphics, and the scene's wiring (the W S E pips and the old hull and shield texts are gone)
 // Run: node tests/campgauges.mjs   (exit code 1 on a failed check)
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
 
 let failed = 0, n = 0;
@@ -136,12 +136,10 @@ console.log('D. where things are');
   check('the whole block is at the top right, above the target display (which is at the bottom right now), and every box is on the screen, the block\'s right edge 8 px from the screen\'s', boxes.every(b => b.x0 >= 0 && b.y0 >= 0 && b.x1 <= W && b.y1 <= box.y) && Z.block.x1 === W - J('CAMP.hud.right') && box.y + box.h < J('H') - 40 && box.x + box.w <= W, JSON.stringify([box, Z.block]));
   const f0 = J(`campHudFlow([{ id: 'a', show: true }, { id: 'b', show: false }, { id: 'c', show: true, h: 12 }, { id: 'd', show: true }])`);
   check('a line with nothing to say gives its place back: b is skipped, the next goes where it would have gone, a line with a bar under it takes 12 px more', f0.ys.a === J('CAMP.hud.text.y') && f0.ys.b === undefined && f0.ys.c === f0.ys.a + J('CAMP.hud.text.pitch') && f0.ys.d === f0.ys.c + J('CAMP.hud.text.pitch') + 12, JSON.stringify(f0));
-  check('the lines start in the top left corner (card space-game-hud-topleft-trim: y 14, the gauges are at the top right), and the dim plate under them ends left of the gauges', f0.ys.a === 14 && J('CAMP.hud.text.x') + J('CAMP.hud.plate.w') < Z.block.x0, JSON.stringify([f0.ys.a, Z.block]));
-  const typ = J(`campHudFlow(['earth', 'wave', 'obj', 'repair', 'post'].map(id => ({ id, show: true, h: id === 'earth' ? 12 : 0 })))`);
-  check('even the busiest ordinary set of lines (Earth with its bar, the wave, the goal, the repair line, the outpost hint) ends above the top of an open list (the cruiser list opens at the left, under the lines)', typ.bottom - J('CAMP.hud.text.pitch') + 17 <= tab.top, JSON.stringify([typ.bottom, tab.top]));
-  check('the arrow\'s keep-out rectangle at the left covers the gauges and the lines down to where a list opens', keep.some(r => r[0] <= 0 && r[1] <= 0 && r[2] >= 358 && r[3] >= typ.bottom - 22), JSON.stringify(keep));
-  const ore = Z.ore;
-  check('the ore line ends at the gauges\' right edge (its text, 236 px at the most, is right-aligned there) under the speed and laser dials, clear of the hull bar and of the lines at the left (the lines are in the other corner now)', ore.x === Z.block.x1 && ore.x - 236 >= Z.hull.x1 && ore.y >= Z.cells[1].dial.y1 && ore.x - 236 > J('CAMP.hud.text.x') + J('CAMP.hud.plate.w'), JSON.stringify(ore));
+  check('the lines are a column at the TOP CENTRE (card space-game-layout-hud: they were at the top left, which is the cruiser\'s corner now): the first at y 6, each centred on x 640 (the screen\'s middle), and the dim plate under them is centred and 560 wide, so it stays between the two corners (x 360 to 920)', f0.ys.a === 6 && J('CAMP.hud.text.x') === W / 2 && J('CAMP.hud.plate.w') === 560 && J('CAMP.hud.text.x') - J('CAMP.hud.plate.w') / 2 >= 360 && J('CAMP.hud.text.x') + J('CAMP.hud.plate.w') / 2 <= 920, JSON.stringify([f0.ys.a, J('CAMP.hud.text')]));
+  const typ = J(`campHudFlow(['wave', 'obj', 'earth', 'repair', 'post'].map(id => ({ id, show: true, h: id === 'earth' ? 12 : 0 })))`), calm = J(`campHudFlow(['wave', 'obj', 'earth'].map(id => ({ id, show: true, h: id === 'earth' ? 12 : 0 })))`), pitch = J('CAMP.hud.text.pitch');
+  check('the wave, the goal and Earth with its bar (the lines of an Earth mission) end above the toast band; with the repair line and the outpost hint as well the column reaches into the band (a toast over them is drawn over the lines: pinned here, picture check owed)', calm.bottom - pitch + 17 <= T.top && typ.bottom - pitch + 17 > T.top, JSON.stringify([calm.bottom, typ.bottom, T.top]));
+  check('the arrow\'s keep-out rectangles cover the top centre column (the middle one) and the corners at its sides', keep.some(r => r[0] <= 360 && r[2] >= 920 && r[1] <= 0 && r[3] >= calm.bottom) && keep.some(r => r[0] <= 0 && r[1] <= 0 && r[2] >= 358 && r[3] >= 100), JSON.stringify(keep));
   check('the arrow\'s keep-out rectangles cover the gauges at the top right (the whole block) and the target display at the bottom right', keep.some(r => r[2] >= W && r[0] <= Z.block.x0 && r[1] <= 0 && r[3] >= Z.block.y1) && keep.some(r => r[2] >= W && r[0] <= box.x && r[1] <= box.y && r[3] >= box.y + box.h), JSON.stringify(keep));
   check('no literal pip table is left: CAMP.hud has no pips', J('CAMP.hud.pips') === null);
 }
@@ -156,28 +154,14 @@ console.log('E. the bars\' animation');
 
 console.log('F. drawing and the scene');
 {
-  const r = g.run(`(() => {
-    const calls = []; const rec = new Proxy({}, { get: (o, k) => (...a) => { calls.push(k); return rec; } });
-    const mkT = () => { const t = { text: '', col: '', setText(s) { t.text = s; return t; }, setColor(c) { t.col = c; return t; }, setVisible(v) { t.vis = v; return t; } }; return t; };
-    const T = { n: [mkT(), mkT(), mkT()], l: [mkT(), mkT(), mkT()], k: [mkT(), mkT(), mkT()], hull: mkT(), hullN: mkT() };
-    const C = campNew(1, [], { seed: 1 }); C.charge = 12; C.shield = 50;
-    const A = campGaugeAnimNew(C.power.p);
-    campGaugesPaint(rec, T, C, A, 1000);
-    const words = [T.n.map(t => t.text), T.l.map(t => t.text), T.k.map(t => t.text), T.hull.text, T.hullN.text, T.n[2].col];
-    campGaugesVisible(T, false); const hid = T.n.every(t => t.vis === false) && T.hull.vis === false && T.hullN.vis === false;
-    campGaugesVisible(T, true); const shown = T.n.every(t => t.vis === true) && T.k.every(t => t.vis === true);
-    return JSON.stringify({ words, hid, shown, rects: calls.filter(c => c === 'fillRect').length, arcs: calls.filter(c => c === 'strokePath').length });
-  })()`);
-  const o = JSON.parse(r);
-  check('the numbers and words reach the texts: 50, 0, 12 in the dials; SHIELDS SPEED LASERS under them; J K L under the bars; HULL 600; the low tank in red; no balance label (its key is gone)', JSON.stringify(o.words) === JSON.stringify([['50', '0', '12'], ['SHIELDS', 'SPEED', 'LASERS'], ['J', 'K', 'L'], 'HULL', '600', '#ff4d6d']), JSON.stringify(o.words));
-  check('the drawing makes the three bars of four segments (a dark one each, the lit ones over them), the hull bar, the dials\' segments, and hides and shows with the HUD', o.rects >= 3 * 4 + 2 && o.arcs > 3 * 20 && o.hid && o.shown, JSON.stringify(o));
+  check('the dials, the hull bar, the ore line and their drawing are gone (card space-game-layout-hud): no campGaugesPaint, campGaugesMake, campGaugesVisible or campDialDraw, and src/campgaugecache.js does not exist; the power list\'s rows still draw a bar of segments (campBarDraw) from campGaugeAnim', ['campGaugesPaint', 'campGaugesMake', 'campGaugesVisible', 'campDialDraw', 'campGaugeCacheBox'].every(f => J(`typeof ${f}`) === 'undefined') && J('typeof campBarDraw') === 'function' && J('typeof campGaugeAnim') === 'function' && !existsSync(ROOT + '/src/campgaugecache.js'));
   const sc = src('src/campaignscene.js'), paint = J(`Campaign.prototype.paintHud.toString()`);
-  check('paintHud draws the gauges (campGaugesPaint) and the lines flow under them (flowHud); the W S E pips, the hull and shield texts and the fixed hull and shield bars are gone', /campGaugesPaint\(g, this\.hud\.gauges/.test(paint) && /this\.flowHud\(bar\)/.test(paint) && !/hud\.hull|hud\.shield|hud\.pw|hud\.ps|hud\.pe|CAMP\.hud\.pips/.test(sc) && !/bar\(252, 36/.test(paint) && !/bar\(24, 36/.test(paint));
-  check('the scene makes the gauges\' texts once, with the pips as they are, and hides them with the rest of the HUD', /this\.hud\.gauges = campGaugesMake\(this, uiFont\)/.test(sc) && /campGaugesVisible\(this\.hud\.gauges, on\)/.test(sc));
+  check('paintHud does not draw the gauges and the lines flow at the top centre (flowHud); the W S E pips, the hull and shield texts and the fixed hull and shield bars are gone', !/campGaugesPaint/.test(paint) && /this\.flowHud\(bar\)/.test(paint) && !/hud\.hull|hud\.shield|hud\.pw|hud\.ps|hud\.pe|CAMP\.hud\.pips|hud\.ore/.test(sc) && !/bar\(252, 36/.test(paint) && !/bar\(24, 36/.test(paint));
+  check('the scene makes no gauge texts, and keeps the bars\' animation for the power list\'s rows', !/campGaugesMake|campGaugesVisible|hud\.gauges/.test(sc) && /this\.gaugeAnim = campGaugeAnimNew\(this\.camp\.power\.p\)/.test(sc));
   check('index.html loads src/camphud.js once', src('index.html').split('src/camphud.js').length === 2);
   const fl = J(`(() => { const mk = (t) => { const o = { text: t, y: -1, setY(v) { o.y = v; return o; } }; return o; }; const sc = { camp: { earth: null }, hud: { earth: mk(''), wave: mk('WAVE'), obj: mk('GOAL'), repair: mk(''), post: mk('') }, hudBack: { setSize(w, h) { sc.plate = [w, h]; return sc; } } }; Campaign.prototype.flowHud.call(sc, () => {}); return { ys: Object.keys(sc.hud).map(k => [k, sc.hud[k].y]), plate: sc.plate }; })()`);
   const ys = Object.fromEntries(fl.ys);
-  check('flowHud stacks the lines that have words: wave, goal one under another from the top of the lines, the empty ones left where they were, and the plate follows', ys.wave === J('CAMP.hud.text.y') && ys.obj === ys.wave + 22 && ys.earth === -1 && ys.repair === -1 && ys.post === -1 && fl.plate[0] === J('CAMP.hud.plate.w') && fl.plate[1] >= J('CAMP.hud.plate.min'), JSON.stringify(fl));
+  check('flowHud stacks the lines that have words: wave, goal one under another from the top of the lines, the empty ones left where they were, and the plate follows', ys.wave === J('CAMP.hud.text.y') && ys.obj === ys.wave + J('CAMP.hud.text.pitch') && ys.earth === -1 && ys.repair === -1 && ys.post === -1 && fl.plate[0] === J('CAMP.hud.plate.w') && fl.plate[1] >= J('CAMP.hud.plate.min'), JSON.stringify(fl));
 }
 
 console.log('\nthe game made ' + (g.errors.length ? 'errors: ' + g.errors.join(' | ') : 'no errors'));

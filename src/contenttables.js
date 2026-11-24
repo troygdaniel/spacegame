@@ -790,7 +790,7 @@ const UI_TEXT = {
   'camp.ui.level': 'LEVEL {n}: {name}',
   'camp.ui.won': 'LEVEL {n} WON',
   'camp.ui.lost': 'LEVEL {n} LOST',
-  'camp.ui.keys': '{panels}    {keyfly} fly  {keyfire} turrets  {keymissile} missile  {keymap} Map  {keyhelp} Keys',
+  'camp.ui.keys': '{keyfly} fly  {keyfire} turrets  {keymissile} missile  {keymap} Map  {keyhelp} Keys',
   'camp.ui.begin': 'Enter  begin',
   'camp.ui.pick': 'Choose one salvaged technology:  1  2  3',
   'camp.ui.next': 'Enter  continue',

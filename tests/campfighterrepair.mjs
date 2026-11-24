@@ -124,7 +124,7 @@ run(`window.__fake = (level) => { const f = Object.create(Campaign.prototype); f
     f.init({ level }); f.camp = campNew(f.level, f.P.techs, f.opts); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); f.sync = () => {}; return f; };
   toast = () => {}; shipcompSay = () => true; window.F = __fake(1); F.onKey({ code: 'Enter' }); F.update(0, 33);`);
 check('the scene\'s repair line is empty with nothing being mended, and reads "REPAIR 1  8 s" with one', (() => { const e = J('F.hud.repair.text'); run('F.camp.repairs.push({ kind: "fighter", until: F.camp.t + 7500, order: null, stay: false }); F.update(0, 33);'); return e === '' && J('F.hud.repair.text') === 'REPAIR 1  8 s'; })(), J('F.hud.repair.text'));
-check('the repair line is at the left (x 24) and flows with the lines of the corner (card space-game-hud-topleft-trim: the bay line it sat under is gone; the scouts line that shared the row is gone too)', /this\.hud\.repair = t\(24, \d+,/.test(read('src/campaignscene.js')) && /ids = \['earth', 'wave', 'obj', 'repair', 'post'\]/.test(read('src/campaignscene.js')) && !/this\.hud\.scouts/.test(read('src/campaignscene.js')) && !/hud\.bay/.test(read('src/campaignscene.js')));
+check('the repair line is centred at the top and flows with the lines of the column (card space-game-layout-hud: wave, goal, Earth, repair, post; the bay line it sat under is gone; the scouts line that shared the row is gone too)', /this\.hud\.repair = mid\(\d+,/.test(read('src/campaignscene.js')) && /ids = \['wave', 'obj', 'earth', 'repair', 'post'\]/.test(read('src/campaignscene.js')) && !/this\.hud\.scouts/.test(read('src/campaignscene.js')) && !/hud\.bay/.test(read('src/campaignscene.js')));
 
 // ---- H. fights in the sim
 console.log('H. fights in the sim');

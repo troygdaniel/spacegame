@@ -28,7 +28,7 @@ console.log('B. "Ore bay full."');
   check('nothing under the cap; when the store reaches 500 it says so once, and not again while it stays full', r.none === 0 && r.one === 1 && r.still === 1, JSON.stringify(r));
   check('it can say it again once the store has been under 90 per cent (440 is under 450) and fills again; the words are "Ore bay full."', r.under === 1 && r.again === 2 && r.text === 'Ore bay full.', JSON.stringify(r));
   const hud = J(`Campaign.prototype.paintHud.toString()`);
-  check('the HUD shows ore as have / cap: ORE 190/500 (the line turns amber when the bay is full)', /Math\.floor\(C\.ore\) \+ '\/' \+ CAMP\.ore\.cap/.test(hud) && /C\.ore >= CAMP\.ore\.cap \? '#ffb454'/.test(hud));
+  check('the Campaign scene no longer writes the ore line at the top right (card space-game-layout-hud): the ore, as have / cap, is the cruiser corner\'s (src/campcruiserhud.js, card space-game-layout-cruiser)', !/this\.hud\.ore/.test(hud) && !/camp\.ui\.ore/.test(hud));
 }
 
 console.log('C. what the bigger bay touches');

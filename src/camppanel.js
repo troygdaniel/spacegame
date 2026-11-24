@@ -18,7 +18,7 @@
 //   campPanelView(P, C)              what the open list draws: null, or { id, title, key, side, parent, keys (the foot's words), pick (a target sub-list), rows (the ones on the screen), at (the highlight, in rows), first, total, above, below (rows off the screen) }
 //   campPanelRun(C, row, how, item)  do the row: campOrder with the row's words (how: 'key' or 'click', the play log's), an order to one part of the wing, the autopilot, the blink -> { ok, say }; item: the candidate a pick row's order is given at (src/camppick.js)
 //   campPanelTarget(C)               the line of the target: { name, km, hp } or null
-//   campPanelKeyLine()               'Q Fleet  W All  E Red  R Green  T Yellow   P Power  O Autopilot  U Dock': the lists' keys, from the table;   campKeyLine(): the whole bottom key line (camp.ui.keys)
+//   campPanelKeyLine()               'Q Fleet  W All  E Red  R Green  T Yellow   P Power  O Autopilot  U Dock': the lists' keys, from the table;   campKeyLine(): the whole bottom key line (camp.ui.keys: the flying keys, not the lists')
 const campPanelDef = id => CAMP_PANELS.panels.find(p => p.id === id) || null;
 const campPanelNew = () => ({ open: '', at: 0, top: 0, lit: {}, trail: [], pick: null, seen: null, ring: null, touch: null });
 const campPanelOpen = P => (P && typeof P.open === 'string' && campPanelDef(P.open) ? P.open : '');
@@ -34,7 +34,7 @@ function campPanelFade(P, now) {
 }
 const campPanelCase = t => t.charAt(0) + t.slice(1).toLowerCase();
 const campPanelKeyLine = () => ['left', 'right'].map(side => CAMP_PANELS.panels.filter(p => p.side === side && p.key).map(p => p.key + ' ' + p.tab).join('  ')).join('    ');
-const campKeyLine = () => uiText('camp.ui.keys', { panels: campPanelKeyLine() });
+const campKeyLine = () => uiText('camp.ui.keys'); // the bottom line is the flying keys only: Arrows, Space, Enter, Tab, H (card space-game-layout-hud: the lists' keys, S Cruiser, are written on their own corner's title now)
 // a row that can never be used in this mission is not in its list: the convoy's part with no convoy to give orders to, the blink without its tech, the dock where there is no outpost
 function campPanelWhen(C, row) {
   if (row.off) return false; // a row switched off (the S list's Dock and repair, card space-game-keys3-repair: it stays in the table)
