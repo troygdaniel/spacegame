@@ -28,6 +28,7 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.group.wing | The wing and the convoy |
 | camp.ui.tune.group.foes | The enemy |
 | camp.ui.tune.group.time | Time |
+| camp.ui.tune.group.view | Ships on the screen |
 | camp.ui.tune.group.ore | Ore |
 | camp.ui.tune.group.systems | Switches: a whole system, in or out |
 | camp.ui.tune.when.now | at once |
@@ -62,6 +63,8 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.peekzoom | Pick peek: least zoom |
 | camp.ui.tune.row.wavetime | Wave timing (times the mission's) |
 | camp.ui.tune.row.startzoom | Starting zoom (presses of minus) |
+| camp.ui.tune.row.leastfighter | Least fighter size on screen |
+| camp.ui.tune.row.leastcruiser | Least cruiser size on screen |
 | camp.ui.tune.row.miningrate | Mining rate of a mining ship |
 | camp.ui.tune.row.distress | The distress call of mission 1.1 |
 | camp.ui.tune.row.tboats | Enemy torpedo boats |
