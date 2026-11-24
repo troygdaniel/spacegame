@@ -170,9 +170,9 @@ console.log('G. through the scene');
   g.run(`F.camp.tgt = RX.id; F.camp.sel = 'pilot:red'; F.camp.fsel = ''; campTgtPaint(F);`);
   check('both brackets are drawn for an enemy and a pilot: eight corner strokes, four in the enemy\'s red and four in the pilot\'s green', J('__lines.length') === 16 && J('__lines.filter(c => c === CAMPTGT.color).length') === 8 && J('__lines.filter(c => c === CAMPTGT.friend).length') === 8 && J('CAMPTGT.friend') !== J('CAMPTGT.color'), JSON.stringify(J('__lines')));
   g.run(`F.camp.tgt = ''; F.camp.sel = 'all'; campTgtPaint(F);`);
-  check('with All pilots picked (the default) and no enemy nothing is drawn: no bracket for nobody in particular', J('__lines.length') === 0);
+  check('with All pilots picked (the default) and no enemy there is no red bracket, and each pilot out has the green square: eight strokes a pilot, all in the friend\'s colour (card space-game-keys2-panels: all three pilots light up)', J('campSelUnits(F.camp).whoShips.length') === 3 && J('__lines.length') === 24 && J('__lines.every(c => c === CAMPTGT.friend)'), JSON.stringify(J('__lines.length')));
   g.run(`F.camp.fsel = campFriList(F.camp).find(e => e.kind === 'ward') ? campFriList(F.camp).find(e => e.kind === 'ward').id : ''; campTgtPaint(F);`);
-  check('a friendly ship picked gets the green bracket too (an outpost has none)', J('F.camp.fsel') === '' ? J('__lines.length') === 0 : J('__lines.length') === 8 && J('__lines.every(c => c === CAMPTGT.friend)'));
+  check('a friendly ship picked gets the green bracket too (an outpost has none), on top of the pilots\'', J('F.camp.fsel') === '' ? J('__lines.length') === 24 : J('__lines.length') === 32 && J('__lines.every(c => c === CAMPTGT.friend)'));
 }
 
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
