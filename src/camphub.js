@@ -6,7 +6,7 @@
 //   The keys (card space-game-ready-room-simple; Troy, 21 Nov 2026): the menu is the four rows; the right side says in a sentence or two what the chosen row is. Enter (or Right) on Missions, Refit or Rank
 //   OPENS IT as an overlay that takes the top of the screen; Up and Down move in the overlay's list (the same on every one), Enter does the thing on the choice, Left or Esc closes it. Launch launches.
 //     1 to 4 pick the row (and close an overlay)   Up Down (W S) move the row   Enter or Right open it   L launches from anywhere   Esc closes the overlay, and with none open leaves for the title (T too)
-//     in the Missions overlay: Up Down choose a mission, Enter (R) picks it and opens its briefing (a mission done is a replay; a SKIPPED one, [-], is flown the same way and its first win is kept: card space-game-replay-reselect-bug),
+//     in the Missions overlay: Up Down (or a click on a mission) choose a mission, Enter (R, or a second click on it) picks it and opens its briefing (a mission done is a replay; a SKIPPED one, [-], is flown the same way and its first win is kept: card space-game-replay-reselect-bug),
 //       X goes back to the next mission; the last row, Start the campaign over, asks on Enter and does it on the second Enter (any other key takes it back)
 //     in the Refit overlay: Up Down choose, Enter buys (or F a fighter), Backspace gives the last one back; each choice shows what it changes (with the numbers), its cost and what you have
 //   campHubNew(P, opts)            the state the scene keeps: { row, rows, last, open (the row whose overlay is up, or ''), sel (the refit's choice), cur (the Missions cursor), pick (the replay chosen), ask (Start over has asked) }; opts: { rows: [ids], at: the id to start on }
@@ -17,6 +17,8 @@
 //   campHubNext(P)                 the mission the Launch row flies: { level, i }
 //   campHubBoard(P)                every level and mission, in order: [{ head: true, level, name, n } | { level, i, n, id, title, kind, state: 'done' | 'next' | 'passed' | 'later', score, bonus, of, tries }]
 //   campHubBoardView(rows, max)    the window of the board that fits max lines and holds the next mission
+//   campHubBoardHits(P, max)       the lines of that window a mouse click can land on (card space-game-click-mission): [{ line, cur }], the missions done, skipped and next, with the cursor's place among them; never a heading, a later mission or Start over
+//   campHubClickMission(H, P, cur) a click on the mission at cursor place cur of the Missions overlay -> the result of a key: the first click moves the cursor (an arrow), a second on the chosen mission is Enter; { used: false } when no such mission, or the overlay is not the Missions
 //   campHubBrief(P, level, i)      one mission's briefing: { title, kindText, lines, objectives, kinds, bonus: [{ type, points, text }], par, best, tries }
 //   campHubRefit(P)                { ore, techs: [{ id, name, text, change }], wing: { fighters }, extra: { fighters }, most, fc, items }
 //   campHubRefitItems(P)           the refit's choices: [{ id: 'fighters', name, change (what it does, in words with the numbers), cost, have, ok (can be bought now), status }]
@@ -144,6 +146,19 @@ CAMP_HUB.over.board = {
     return null;
   }
 };
+// the MOUSE on the Missions overlay (card space-game-click-mission; Troy, 24 Nov 2026): a click on a mission is what the arrows are, a second click on the chosen one is Enter. The lines a click can land on are the
+// missions the cursor can stand on (the same rule: done, skipped, next); Start over is left to the keys (Enter asks, a second Enter does it: a stray double click must not wipe a campaign)
+function campHubBoardHits(P, max) {
+  const sel = campHubSelectable(P);
+  return campHubBoardView(campHubBoard(P), max).map((r, line) => { if (r.head) return null; const cur = sel.findIndex(s => s.level === r.level && s.i === r.i); return cur >= 0 ? { line, cur } : null; }).filter(Boolean);
+}
+function campHubClickMission(H, P, cur) {
+  const res = { used: false, moved: false, action: '', changed: false, ok: true, say: null }, sel = campHubSelectable(P), rows = H.rows && H.rows.length ? H.rows : CAMP_HUB.rows;
+  if (H.open !== 'board' || rows[H.row] !== 'board' || !Number.isInteger(cur) || cur < 0 || cur >= sel.length) return res; // (another overlay, a place with no mission: nothing)
+  H.ask = false; // the Start over question is taken back by anything but its Enter, a click too
+  if ((H.cur | 0) === cur) return campHubKey(H, P, 'Enter', {}); // the chosen mission again: Enter
+  H.cur = cur; res.used = res.moved = true; return res;
+}
 
 // ---- the briefing ----
 function campHubBrief(P, level, i) {

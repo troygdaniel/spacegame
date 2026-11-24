@@ -353,6 +353,7 @@ const CONTROLS = [
     { k: ['L'], t: 'Launch the mission, or the replay', sub: 'THE READY ROOM' },
     { k: ['R'], t: 'Missions: pick it, open briefing', sub: 'THE READY ROOM' },
     { k: ['X'], t: 'Missions: back to the next one', sub: 'THE READY ROOM' },
+    { k: ['Click'], t: 'Missions: click picks, again opens', sub: 'THE READY ROOM' }, // the mouse on the Missions list (card space-game-click-mission): one click moves the cursor, a second on the chosen mission is Enter
       { k: ['F'], t: 'Refit: buy a fighter', sub: 'THE READY ROOM' },
     { k: ['Backspace'], t: 'Refit: give the last one back', sub: 'THE READY ROOM' },
     { k: ['H'], t: 'This page of keys', sub: 'THE READY ROOM' },
