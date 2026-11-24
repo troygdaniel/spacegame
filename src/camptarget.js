@@ -1,7 +1,7 @@
-// ---------- Campaign: the three picks (cards space-game-two-hands-keys, 21 Nov 2026; space-game-bracket-select-orders, 23 Nov 2026; space-game-keys-select, Troy, 23 Nov 2026, like X-Wing) ----------
-// THREE picks are held at once: WHO takes the order (C.sel: All pilots, the default, or one pilot), an ENEMY (the target, C.tgt) and a FRIENDLY (a ship or outpost you protect, C.fsel). A and D step WHO (All pilots, Wedge, Kara, Apollo, round), [ and ] the enemy (nearest the cruiser first), \ the nearest threat,
-// , and . the friendly, Q all three pilots at once (until the Q list returns), X lets the enemy and the friendly go and puts WHO back on All pilots. S is no pick: it brings the view back to the cruiser (src/campzoom.js).
-// The order key acts on them (campSelOrder, card space-game-keys2-orders): E sends WHO at the enemy, or to guard the friendly, or (nothing picked) to form up on the cruiser; there is no recall; a pilot takes the order alone, All pilots are all three. Fly to the target (P), Enter and the missile follow the enemy as before.
+// ---------- Campaign: WHO and one TARGET (cards space-game-two-hands-keys, 21 Nov 2026; space-game-bracket-select-orders, 23 Nov 2026; space-game-keys-select and space-game-keys2-select, Troy, 23 Nov 2026, like X-Wing) ----------
+// Two picks are held: WHO takes the order (C.sel: All pilots, the default, or one pilot) and ONE target, which is an ENEMY (C.tgt) or a FRIENDLY (a ship or outpost you protect, C.fsel), never both: picking a friendly lets the enemy go and picking an enemy lets the friendly go. A and D step WHO (All pilots, Wedge, Kara, Apollo, round), [ and ] the enemy (nearest the cruiser first), \ the nearest threat,
+// O and P the friendly (last, next), Q all three pilots at once (until the Q list returns), X lets the target go and puts WHO back on All pilots. S is no pick: it brings the view back to the cruiser (src/campzoom.js).
+// The order key acts on them (campSelOrder, card space-game-keys2-orders): E sends WHO at the enemy, or to guard the friendly, or (nothing picked) to form up on the cruiser; there is no recall; a pilot takes the order alone, All pilots are all three. Fly to the target, Enter and the missile follow the enemy as before.
 // The target is a ship of the aliens' or the pirates' side: C.tgt is its id ('' for none). The sim keeps it as plain data (no Phaser, seeded, nothing random): tests/camptarget.mjs runs it in Node;
 // src/campanelsdraw.js says its name in the FLEET panel and src/campaignscene.js draws the bracket round it on the screen. A target that is destroyed is let go the next time anyone asks.
 //   campTgtList(C)              the hostiles, nearest the carrier first (ties by id): every alien ship that is alive, the mothership and the towers too
@@ -20,10 +20,11 @@
 //   campSelStep(C, dir)         D (1) and A (-1): the next or the last who, round at the ends
 //   campSelAll(C)               Q: WHO is All pilots (kind 'all', name 'All pilots', units: the ships out)
 //   campSelClear(C)             WHO back to All pilots
-//   C.fsel                      the FRIENDLY: the id of a ship you protect (the transport, a miner, a hauler) or of an outpost ('place:...'); '' for none
-//   campFriList(C)              the stops of , and .: the ships you protect, then the outposts, each nearest the cruiser first: [{ id, kind: 'ward'|'post', unit (null for a post), name, x, y, r }]
-//   campFriNow(C) / campFriStep(C, dir) / campFriClear(C)   the friendly now (or null); . (1) and , (-1) the next and the last, round at the ends; none
-//   campPicksClear(C)           X: no enemy, no friendly, WHO back on All pilots; true when there was something to let go
+//   C.fsel                      the FRIENDLY: the id of a ship you protect (the transport, a miner, a hauler) or of an outpost ('place:...'); '' for none. C.tgt and C.fsel are never both set (one target): a pick of one lets go of the other, and the step with nothing to pick changes neither
+//   campHeldNow(C)             the ONE target held now (card space-game-keys2-select): { kind: 'hostile' | 'friendly', id, name, unit (a ship; null for an outpost), post (the outpost's entry; null for a ship) }, or null. What the target box, the bracket and the order keys read
+//   campFriList(C)              the stops of O and P: the ships you protect, then the outposts, each nearest the cruiser first: [{ id, kind: 'ward'|'post', unit (null for a post), name, x, y, r }]
+//   campFriNow(C) / campFriStep(C, dir) / campFriClear(C)   the friendly now (or null); P (1) and O (-1) the next and the last, round at the ends; none
+//   campPicksClear(C)           X: no target, WHO back on All pilots; true when there was something to let go
 //   campSelUnits(C)             { hostile, friendly, friendlyPost, who, whoShips }: the ships picked now (each a unit or null; friendlyPost is the entry of an outpost, which is no unit; who is the one ship of a pilot, null for All pilots; whoShips every ship WHO is: the three for All pilots); what the camera, the brackets and the displays read (src/campselzoom.js, src/camptargetdraw.js, src/camptdisp.js)
 //   campSelRowFor(C, kind)      the pick a W row acts on (card space-game-w-uses-selection): 'hostile' the enemy, 'friend' the friendly: { id, name, unit } or { code: 'nohostile' | 'nofriend' };   campSelWho(C)   'Kara' or 'all squads': who takes the order
 //   campSelOrder(C, verb, how, dry)   E is 'engage' (campWingOrder): the group is WHO's squad (a pilot), else all three; an enemy picked: attack it; a friendly picked: guard it; none: form up on the cruiser ({ verb: 'attack'|'guard', formup }); 'attack' and 'guard' alone are its halves (the target boxes' dry runs)
@@ -41,11 +42,11 @@ function campTgtNow(C) {
 function campTgtStep(C, dir) {
   const list = campTgtList(C); if (!list.length) { if (C) C.tgt = ''; return null; }
   const at = list.findIndex(u => u.id === C.tgt), d = dir < 0 ? -1 : 1, i = at < 0 ? (d > 0 ? 0 : list.length - 1) : (at + d + list.length) % list.length;
-  C.tgt = list[i].id; return list[i];
+  C.tgt = list[i].id; C.fsel = ''; return list[i]; // one target: the friendly is let go
 }
 function campTgtNearest(C) {
   const list = campTgtList(C); if (!list.length) { if (C) C.tgt = ''; return null; }
-  C.tgt = list[0].id; return list[0];
+  C.tgt = list[0].id; C.fsel = ''; return list[0]; // one target: the friendly is let go
 }
 function campTgtClear(C) { const had = !!(C && C.tgt); if (C) C.tgt = ''; return had; }
 function campTgtName(C) { const u = campTgtNow(C); return u ? campNavUnitName(u) : ''; }
@@ -99,7 +100,7 @@ function campSelStep(C, dir) { // D (1) and A (-1): the next or the last who, ro
   C.sel = list[i].id; return list[i];
 }
 function campSelClear(C) { const had = !!(C && C.sel && C.sel !== CAMP_SELALL); if (C) C.sel = CAMP_SELALL; return had; } // WHO back to All pilots
-function campFriList(C) { // the stops of , and .: the ships you protect (the transport, a miner, a hauler), then the outposts, each nearest the cruiser first: [{ id, kind: 'ward'|'post', unit (a ship; null for a post), name, x, y, r }]
+function campFriList(C) { // the stops of O and P: the ships you protect (the transport, a miner, a hauler), then the outposts, each nearest the cruiser first: [{ id, kind: 'ward'|'post', unit (a ship; null for a post), name, x, y, r }]
   if (!C || !C.carrier || typeof campPickGuardees !== 'function') return [];
   return campPickGuardees(C).map(i => ({ id: i.id, kind: i.what === 'post' ? 'post' : 'ward', unit: i.what === 'post' ? null : C.by[i.id] || null, name: i.name, x: i.x, y: i.y, r: i.r })).filter(e => e.kind === 'post' || (e.unit && e.unit.hp > 0));
 }
@@ -109,18 +110,22 @@ function campFriNow(C) { // the friendly now, an entry of that list, or null (on
   if (!e) { C.fsel = ''; return null; }
   return e;
 }
-function campFriStep(C, dir) { // . (1) and , (-1): the friendly after or before, round at the ends; with none, . takes the first and , the last
+function campFriStep(C, dir) { // P (1) and O (-1): the friendly after or before, round at the ends; with none, P takes the first and O the last. One target: the enemy is let go
   const list = campFriList(C); if (!list.length) { if (C) C.fsel = ''; return null; }
   const at = list.findIndex(e => e.id === C.fsel), d = dir < 0 ? -1 : 1, i = at < 0 ? (d > 0 ? 0 : list.length - 1) : (at + d + list.length) % list.length;
-  C.fsel = list[i].id; return list[i];
+  C.fsel = list[i].id; C.tgt = ''; return list[i];
 }
 function campFriClear(C) { const had = !!(C && C.fsel); if (C) C.fsel = ''; return had; }
 function campPicksClear(C) { const had = !!(C && (C.tgt || C.fsel || (C.sel && C.sel !== CAMP_SELALL))); campTgtClear(C); campFriClear(C); campSelClear(C); return had; } // X: no enemy, no friendly, WHO is All pilots again
+function campHeldNow(C) { // the ONE target held now: the enemy (C.tgt) or the friendly (C.fsel); null when there is none. A dead enemy or a lost friendly is let go by the readers it calls
+  const h = campTgtNow(C); if (h) return { kind: 'hostile', id: h.id, name: campNavUnitName(h), unit: h, post: null };
+  const f = campFriNow(C); return f ? { kind: 'friendly', id: f.id, name: f.name, unit: f.unit || null, post: f.kind === 'post' ? f : null } : null;
+}
 function campSelUnits(C) { // the ships picked now: hostile (the enemy), friendly (a ship you protect, null for an outpost: friendlyPost is it), who (the one pilot's ship; null for All pilots), whoShips (the ships WHO is: the three for All pilots)
   const w = campSelNow(C), f = campFriNow(C);
   return { hostile: campTgtNow(C), friendly: f ? f.unit : null, friendlyPost: f && f.kind === 'post' ? f : null, who: w && w.kind === 'pilot' ? w.unit : null, whoShips: w ? w.units : [] };
 }
-// the pick a row of the W list acts on (card space-game-w-uses-selection): kind 'hostile' is the enemy [ ] \ picked, 'friend' the friendly , . picked; { id, name, unit } (unit: a ship, or the outpost's place) or { code: 'nohostile' | 'nofriend' } (the refusal) when there is none
+// the pick a row of the W list acts on (card space-game-w-uses-selection): kind 'hostile' is the enemy [ ] \ picked, 'friend' the friendly O P picked; { id, name, unit } (unit: a ship, or the outpost's place) or { code: 'nohostile' | 'nofriend' } (the refusal) when there is none
 function campSelRowFor(C, kind) {
   if (kind === 'hostile') { const u = campTgtNow(C); return u ? { id: u.id, name: campNavUnitName(u), unit: u } : { code: 'nohostile' }; }
   const f = campFriNow(C); return f ? { id: f.id, name: f.name, unit: f.unit || { x: f.x, y: f.y, r: f.r } } : { code: 'nofriend' };
