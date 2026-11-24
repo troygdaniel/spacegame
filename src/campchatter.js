@@ -3,7 +3,7 @@
 // placeholder, so the voice pack can record each line once), said by one of a few pilots, each a callsign and an Aura voice of his own (never the computer's, never a bar character's).
 // QUIET by default (Settings > Sound > Chatter: On, Quiet, Off): in Quiet the radio carries one line in 8 seconds and the same kind of call is not made twice in 24 s; On is livelier (3 s,
 // 10 s). Nothing is queued: a call that cannot be said when it falls due (the ship's computer spoke in the last 2.5 s, a line is playing, a warning) is dropped. The words are shown
-// bottom left, just above the FLEET corner and growing upward (card space-game-talk-over-fleet-corner), with the callsign, and said with voiceSay at prio 0: it never waits behind the computer and never talks over it or a warning.
+// bottom left, above the key line and growing upward (cards space-game-talk-over-fleet-corner and space-game-keys5-corners), with the callsign, and said with voiceSay at prio 0: it never waits behind the computer and never talks over it or a warning.
 // Everything here is plain numbers and strings (no Phaser), so tests/campchatter.mjs runs it in Node:
 //   chatterEventOf(C, e)    PURE: which call a sim event is (src/campaign.js events, C.events), or null
 //   chatterNew()            a fresh radio state S: { last, hold, at, q, pilot, line }
