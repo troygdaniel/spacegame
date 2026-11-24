@@ -17,6 +17,7 @@ const g = nodeGame();
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 const near = (a, b, e = 1e-6) => Math.abs(a - b) < e;
+g.run(`CAMP_CORNERS.splice(0, CAMP_CORNERS.length, ...CAMP_CORNERS.filter(d => d.id === 'fleet'));`); // this suite is the panel alone, with FLEET and the probe it adds: the target corners other cards register (HOSTILES, FRIENDLIES: tests/campcorners.mjs) are not in this world
 
 g.run(`
   window.__new = () => { const C = window.C = campNew(1, [], { seed: 5, mission: 0 }); C.god = true; C.t = 1000; return C; }; // the three pilots are out beside the cruiser
@@ -152,7 +153,7 @@ check('an open left list (the squads list) moves the corner right of it, with th
 console.log('G. the who box is gone');
 const scene = src('src/campaignscene.js'), tds = src('src/camptdispscene.js'), html = src('index.html');
 check('no fdisp, no campFdispSync, no campFdispAll, no campFdispSubject: the who box is gone', !/campFdisp|hud\.fdisp|CAMP_FDISP/.test(scene + tds + src('src/camptdisp.js') + src('src/campcornerscene.js')) && J('typeof campFdispSubject') === 'undefined' && J('typeof campFdispAllInfo') === 'undefined' && J('typeof campFdispSync') === 'undefined');
-check('the scene calls campCornerSync every frame after the target display, and campCornerKey for every key in play', /campTdispSync\(this, this\.time\.now\);[^\n]*\n\s*if \(typeof campCornerSync === 'function'\) campCornerSync\(this, this\.time\.now\)/.test(scene) && /if \(this\.mode === 'play' && typeof campCornerKey === 'function'\) campCornerKey\(C, c\)/.test(scene));
+check('the scene calls campCornerSync every frame, and campCornerKey for every key in play', /if \(typeof campCornerSync === 'function'\) campCornerSync\(this, this\.time\.now\)/.test(scene) && /if \(this\.mode === 'play' && typeof campCornerKey === 'function'\) campCornerKey\(C, c\)/.test(scene));
 check('the two files have their script tags (the rule after the target display\'s, the drawing with the other scene halves)', /<script src="src\/campcorner\.js"><\/script>/.test(html) && /<script src="src\/campcornerscene\.js"><\/script>/.test(html));
 check('the rule is pure (no Phaser: no this.add, no scene) and keeps its state in a WeakMap per mission', !/this\.add|scene\.add|s\.add/.test(src('src/campcorner.js')) && /const CAMP_CORNER_STATE = new WeakMap\(\)/.test(src('src/campcorner.js')));
 

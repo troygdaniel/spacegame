@@ -9,6 +9,8 @@
 //   campTdispName(C, u)          the name the lists give it ("Skiff 3", "Hauler 2", "Transport convoy"; a pilot's ship: the pilot's name, "Wedge")
 //   campTdispPostInfo(C, e)      what an outpost shows when it is the target held: its name, "Friendly post", how far; no bars, no picture (the key line is the box's)
 //   campTdispOrder(C, verb)      the key line at the foot of the target box (Attack for an enemy, Guard for a friendly): { verb, key, label, ok }: the key from the key table (CAMP_KEYS[verb].k), the word, and ok when the order can be given now (campSelOrder, a dry run: nothing moves)
+//   campTcornerHold(C, P, now, which)  the two target corners (card space-game-layout-targets; Troy, 24 Nov 2026): 'host' = [ ] HOSTILES (top right), 'fri' = O P FRIENDLIES (bottom right): { which, side, keys (the chips), titleKey and title ('HOSTILES' | 'NO HOSTILES' | 'FRIENDLIES' | 'NO FRIENDLIES'), name (the target held here: written beside the title, never fades; '' for none), empty, held, subject (what the details show: campTdispSubject when it is on this side, else null) }; only ONE target is held, so at most one corner has a name
+//   campTcornerKeys(which)        the chips of a corner's title, from the key table
 const campTdispName = u => {
   if (u.kind === 'fighter' && u.team === 'earth' && typeof campPilotName === 'function' && campPilotName(u)) return campPilotName(u); // Wedge, Kara, Apollo (card space-game-three-pilots)
   if (u.kind === 'freighter' || (u.kind === 'miner' && u.team === 'neutral')) return u.kind === 'freighter' && !u.named ? campConvoyName(u) + ' convoy' : (u.kind === 'freighter' ? campConvoyName(u) : (u.cname || campNavUnitName(u))); // as the Escort sub-list names it (campPickEscorts)
@@ -31,6 +33,18 @@ function campTdispPostInfo(C, e) {
 function campTdispOrder(C, verb) {
   const r = typeof campSelOrder === 'function' ? campSelOrder(C, verb, 'key', true) : null, k = typeof CAMP_KEYS === 'object' ? ((CAMP_KEYS.engage || CAMP_KEYS[verb] || {}).k || '') : ''; // E is the one order key (CAMP_KEYS.engage, card space-game-keys2-orders); before that, the verb's own
   return { verb, key: Array.isArray(k) ? String(k[0] || '') : String(k || ''), label: uiText('camp.tdisp.key.' + verb), ok: !!(r && r.ok) };
+}
+const campTcornerKeyCap = id => { const v = typeof CAMP_KEYS === 'object' && CAMP_KEYS[id] ? CAMP_KEYS[id].k : ''; return Array.isArray(v) ? String(v[0] || '') : String(v || ''); }; // a key of the table, as its chip says it
+function campTcornerKeys(which) { return (which === 'host' ? [campTcornerKeyCap('last'), campTcornerKeyCap('next')] : [campTcornerKeyCap('flast'), campTcornerKeyCap('fnext')]).filter(Boolean); } // the key chips in a corner's title: [ ] for the hostiles, O P for the friendlies, from the key table (src/data_controls.js)
+function campTcornerHold(C, P, now, which) { // one of the two target corners (card space-game-layout-targets): HOSTILES top right ('host', [ ]) or FRIENDLIES bottom right ('fri', O P); the one target is held in one of them
+  const host = which === 'host';
+  if (!C || !C.carrier) return { which, side: host ? 'hostile' : 'friend', keys: campTcornerKeys(which), titleKey: '', title: '', name: '', empty: true, held: false, subject: null };
+  const held = typeof campHeldNow === 'function' ? campHeldNow(C) : null, mine = held && (held.kind === 'hostile') === host ? held : null; // the target held, when it is on this side
+  const sub = campTdispSubject(C, P, now), here = sub && (sub.side === 'hostile') === host ? sub : null; // what the details show: the target held on this side, or the ship an order's list is on
+  const n = host ? (typeof campTgtList === 'function' ? campTgtList(C).length : 0) : (typeof campFriList === 'function' ? campFriList(C).length : 0);
+  const empty = !n && !mine; // nothing here to pick: no hostile alive, or no ship you protect and no place held (a map-clicked outpost or planet is a friendly held)
+  const titleKey = empty ? 'camp.tdisp.corner.no' + (host ? 'hostiles' : 'friendlies') : 'camp.corner.' + (host ? 'hostiles' : 'friendlies'); // the corner panel's own HOSTILES and FRIENDLIES (content/text/campcorner.md), and ours for the empty state
+  return { which, side: host ? 'hostile' : 'friend', keys: campTcornerKeys(which), titleKey, title: uiText(titleKey), name: mine ? mine.name : '', empty, held: !!mine, subject: here };
 }
 // the ship a hostile is going for, as the AIs pick it (campAlienAI for an alien, campPirateTarget for a pirate and a torpedo boat); the carrier (or Earth) when nothing nearer is
 function campTdispFoe(C, u) {

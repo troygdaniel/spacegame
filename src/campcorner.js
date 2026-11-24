@@ -7,7 +7,7 @@
 //     campCornerAdd({ id: 'fleet',                   its name (CAMP.corner.at has the four places by 'at')
 //                     at: 'bl',                      'tl' | 'bl' | 'tr' | 'br': which corner
 //                     keys: ['wlast', 'wnext'],      the chips, in order: an id of CAMP_KEYS (its cap is CAMP_KEYS[id].k, and those keys open the details), or { cap: 'S', codes: ['KeyS'] } for a key that is not in the table
-//                     title: 'camp.corner.fleet',    the words of the title (src/contenttables.js, content/text/campcorner.md has the four)
+//                     title: 'camp.corner.fleet',    the words of the title (src/contenttables.js, content/text/campcorner.md has the four); or C => key when the title changes with the game (NO HOSTILES: card space-game-layout-targets)
 //                     selection: C => 'Kara',        the text written beside the title, never fades ('' for none)
 //                     rows: C => [item, ...],        the details, asked for only while they are open (see the items below)
 //                     hit: (C, mem) => bool })       optional: true when the details should come back by themselves for CAMP.corner.hit ms (FLEET: a pilot was hit). mem is the corner's own {} (per mission), to remember what it saw last
@@ -44,7 +44,7 @@ function campCornerNow(C, id) {
   const d = campCornerDef(id); if (!d || !C) return null;
   const st = campCornerState(C); if (d.hit && d.hit(C, st.mem[id] || (st.mem[id] = {}))) campCornerOpen(C, id, CAMP.corner.hit); // it was hit: the details come back for a while
   const open = campCornerStrength(C, id);
-  return { id, at: d.at, chips: campCornerKeyList(d).map(k => k.cap), title: uiText(d.title), selection: d.selection ? String(d.selection(C) || '') : '', items: open > 0 && d.rows ? d.rows(C) || [] : [], open };
+  return { id, at: d.at, chips: campCornerKeyList(d).map(k => k.cap), title: uiText(typeof d.title === 'function' ? d.title(C) : d.title), selection: d.selection ? String(d.selection(C) || '') : '', items: open > 0 && d.rows ? d.rows(C) || [] : [], open };
 }
 // ---- FLEET, bottom left: Q W (card space-game-layout-fleet): the selection is All pilots or the one pilot; the details are the pilots' names and hull bars, and they come back for 4 s when a pilot is hit ----
 campCornerAdd({
