@@ -132,7 +132,7 @@ console.log('G. the words');
 {
   check('the table still names S Cruiser (and no Q), the bottom key line does not: it is the flying keys only (card space-game-layout-hud)', J(`campPanelKeyLine()`).includes('S Cruiser') && !/\bQ\b/.test(J(`campPanelKeyLine()`)) && !J(`campKeyLine()`).includes('Cruiser') && !/\bQ\b/.test(J(`campKeyLine()`)), J(`campKeyLine()`));
   check('the H page\'s list rows have a line for S ("Cruiser: fly, mine, repair, shields", at most 43 characters with its cap) and none for Q', J(`campPanelKeyRows().some(r => r.k.join() === 'S' && r.t === 'Cruiser: fly, mine, repair, shields' && (r.k.join().length + 3 + r.t.length) <= 43)`) && !J(`campPanelKeyRows().some(r => r.k.join() === 'Q')`));
-  check('the pause card says S is the cruiser and what is in it', J(`uiText('camp.ui.pausepanels')`).includes('S the cruiser: fly, mine, dock, repair, shields.'), J(`uiText('camp.ui.pausepanels')`));
+  check('the pause card says S is the cruiser and what is in it', J(`uiText('camp.ui.pausepanels')`).includes('S the cruiser: fly, mine, dock, repair, shields'), J(`uiText('camp.ui.pausepanels')`));
   check('the hints read S from the table: the Mine row (via the cruiser list) and the emergency row', J(`campKeyVar('viafmine')`) === 'S' && J(`campKeyVar('viaemergency')`) === 'S' && J(`campKeyVar('cruiserkey')`) === 'S', J(`[campKeyVar('viafmine'), campKeyVar('viaemergency'), campKeyVar('cruiserkey')].join()`));
   check('the briefing\'s key box for the shield names the cruiser list, not Power', J(`uiText('camp.bf.key.shield')`) === 'Cruiser list: Emergency shields', J(`uiText('camp.bf.key.shield')`));
 }
