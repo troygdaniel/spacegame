@@ -595,7 +595,7 @@ const UI_TEXT = {
   'camp.ui.tune.row.wavetime': 'Wave timing (times the mission\'s)',
   'camp.ui.tune.row.startzoom': 'Starting zoom (presses of minus)',
   'camp.ui.tune.row.leastfighter': 'Least fighter size on screen',
-  'camp.ui.tune.row.leastcruiser': 'Least cruiser size on screen',
+  'camp.ui.tune.row.leastclass': 'Cruiser size, times a fighter\'s',
   'camp.ui.tune.row.miningrate': 'Mining rate of a mining ship',
   'camp.ui.tune.row.distress': 'The distress call of mission 1.1',
   'camp.ui.tune.row.tboats': 'Enemy torpedo boats',

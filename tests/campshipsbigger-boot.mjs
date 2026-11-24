@@ -1,5 +1,5 @@
 // not in the smoke: a look at the Campaign's ships at three zooms, run by hand (one Chrome, muted, through the test lock; card space-game-ships-bigger)
-// The rule is tests/campshipsbigger.mjs (plain Node). This boots the real game once (level 1) and reads what the scene DRAWS: at the default zoom (0.335) the cruiser's hull is 44 px long on the screen and a fighter's 16 (the hull: CAMP.size.len times the zoom times how many times the picture is drawn up); zoomed all the way out
+// The rule is tests/campshipsbigger.mjs (plain Node). This boots the real game once (level 1) and reads what the scene DRAWS: at the default zoom (0.335) the cruiser's hull is 52 px long on the screen and a fighter's 16 (3.25 times: card space-game-ships-bigger-proportions) (the hull: CAMP.size.len times the zoom times how many times the picture is drawn up); zoomed all the way out
 // they are the same (they do not shrink); zoomed in to 1.6 they are their own size (the pictures 110 and 26 wide, a little over the hulls), nothing held up. A picture is taken at each (twice: the first capture after a step can be a frame behind).
 //   node tests/campshipsbigger-boot.mjs
 // Pictures go to the folder in SHIPS_SHOTS (default ~/dev/spacegame-night/shots/ships-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
@@ -24,9 +24,9 @@ try {
   const onScreen = kind => j(`(() => { const s = ${SC}, z = s.cameras.main.zoom, u = s.camp.ships.find(q => q.kind === '${kind}' && q.hp > 0), sp = u && s.sp[u.id]; return u && sp ? { z, len: CAMP.size['${kind}'].len * z * (sp._k || 1), own: sp.displayWidth / (sp._k || 1), k: sp._k || 1 } : null; })()`);
   const at = async (zoom, name) => { await t.ev(`(() => { CAMZOOM.want = ${zoom}; return 1; })()`); await t.run(2200); const c = await onScreen('carrier'), f = await onScreen('fighter'); await snap(t, name); return { c, f }; };
   const d = await at(0.335, 'default');
-  check('at the default zoom the cruiser is about 44 px long on the screen (it was 33) and a fighter about 16 (it was 7)', d.c && d.f && Math.abs(d.c.len - 44) < 1.5 && Math.abs(d.f.len - 16) < 1, JSON.stringify(d));
+  check('at the default zoom the cruiser is about 52 px long on the screen (it was 33) and a fighter about 16 (it was 7), the cruiser at least 3 times a fighter', d.c && d.f && Math.abs(d.c.len - 52) < 1.5 && Math.abs(d.f.len - 16) < 1 && d.c.len >= 3 * d.f.len, JSON.stringify(d));
   const far = await at(0.0001, 'far');
-  check('zoomed all the way out they are the same: 44 and 16 (they do not shrink)', far.c && far.f && Math.abs(far.c.len - 44) < 1.5 && Math.abs(far.f.len - 16) < 1 && far.c.z < 0.2, JSON.stringify(far));
+  check('zoomed all the way out they are the same: 52 and 16 (they do not shrink)', far.c && far.f && Math.abs(far.c.len - 52) < 1.5 && Math.abs(far.f.len - 16) < 1 && far.c.len >= 3 * far.f.len && far.c.z < 0.2, JSON.stringify(far));
   const near = await at(1.6, 'close');
   check('zoomed in to 1.6 they are their own size, nothing held up: the pictures 110 and 26 wide', near.c && near.f && Math.abs(near.c.own - 110) < 1 && Math.abs(near.f.own - 26) < 1 && near.c.k === 1 && near.f.k === 1, JSON.stringify(near));
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
