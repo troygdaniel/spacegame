@@ -214,9 +214,9 @@ try {
     await t.run(400); await panelShot('panels-02c-refused', 'squads'); await keyOn('Escape'); await t.run(200);
     await order('launch'); note('launch', JSON.stringify(await st())); await t.run(2500);
     await keyOn('KeyP'); await t.run(400); note('P', JSON.stringify(await st())); await snap('panels-04-ship-list'); await panelShot('panels-04b-ship', 'ship'); await keyOn('KeyP'); await t.run(300);
-    // a hostile put in reach (staged): D picks it with no list open, the line under the radar names it, the bracket is round it; the fighters list's Attack row (E) goes at it
+    // a hostile put in reach (staged): ] picks it with no list open, the line under the radar names it, the bracket is round it; the fighters list's Attack row (E) goes at it
     await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; campSpawn(C, 'raider', c.x + 520, c.y - 180); return 1; })()`); await t.run(300);
-    await keyOn('KeyD'); await t.run(400); note('D', JSON.stringify(await st())); await snap('panels-05-target'); await boxShot('panels-05a-target-line', await tgtBox());
+    await keyOn('BracketRight'); await t.run(400); note(']', JSON.stringify(await st())); await snap('panels-05-target'); await boxShot('panels-05a-target-line', await tgtBox());
     await goTo('attack'); await t.run(400); await panelShot('panels-05b-fighters-target', (await wayTo('attack')).list); await keyOn('Escape'); await t.run(200);
     await keyOn('KeyX'); await t.run(200);
     for (let i = 0; i < 3; i++) await keyOn('Equal'); await t.run(900); await snap('panels-06-zoomed-in');

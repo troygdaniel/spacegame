@@ -15,7 +15,7 @@ const { launch } = await import('./cdp.mjs');
 const OUT = process.env.PICK_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { KeyQ: 81, KeyE: 69, KeyW: 87, KeyD: 68, KeyX: 88, BracketRight: 221, Enter: 13, Escape: 27, ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39 };
+const VK = { KeyQ: 81, KeyE: 69, KeyW: 87, KeyX: 88, BracketRight: 221, Enter: 13, Escape: 27, ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39 };
 
 async function key(t, code, extra = {}, wait = 40) { // a real key: down, a few frames, up (the game clock is stepped, so waits are game milliseconds)
   const k = Object.assign({ windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: /^(Enter|Arrow|Escape)/.test(code) ? code : code.replace(/^Key/, '').toLowerCase() }, extra);
@@ -81,8 +81,8 @@ try {
   // (the three pilots flew at the first target and it is gone by now: pick the nearest hostile again, and the checks below use that one)
   await key(t, 'BracketRight', { key: ']' }); await t.run(300);
   const near2 = await j(`${SC}.camp.tgt`);
-  await key(t, 'KeyD'); await t.run(300);
-  check('D picks a pilot as the friend (the first, Red); the hostile is still the target', !!near2 && (await j(`${SC}.camp.sel`)) === 'pilot:red' && (await j(`${SC}.camp.tgt`)) === near2);
+  await t.ev('(() => { campFleetListSet(false); return 1; })()'); await key(t, 'KeyW'); await t.run(300); await t.ev('(() => { campFleetListSet(true); return 1; })()'); // W picks who (card space-game-keys3-select): with the old fleet list ON W would open its list, so it is off for the press
+  check('W picks a pilot as who (the first, Red); the hostile is still the target', !!near2 && (await j(`${SC}.camp.sel`)) === 'pilot:red' && (await j(`${SC}.camp.tgt`)) === near2);
   await key(t, 'KeyE'); await t.run(300);
   check('E with a pilot picked sends that pilot alone: Red attacks, the others stay on guard', (await j(`campWing(${SC}.camp, 'fighter').filter(u => u.squad === 'red').every(u => u.order && u.order.type === 'attack' && u.order.target === '${near2}')`)) && (await j(`campWing(${SC}.camp, 'fighter').filter(u => u.squad !== 'red').every(u => !(u.order && u.order.type === 'attack'))`)));
   await key(t, 'KeyX'); await t.run(300);

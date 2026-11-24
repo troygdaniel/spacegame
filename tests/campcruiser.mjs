@@ -1,8 +1,8 @@
-// smoke: S opens the cruiser's list (Fly to the goal, Fly to the target, Mine ore, Dock and repair, Emergency shields, the warp blink with its tech) and it fades when untouched; Q opens nothing; Fly to the goal burns by itself on a long clear leg; Emergency shields fills the shield for ore with a cooldown (plain Node, no Chrome)
+// smoke: S opens the cruiser's list (Fly to the goal, Fly to the target, Mine ore, Dock and repair, Emergency shields, the warp blink with its tech) and it fades when untouched; Q opens no list (it picks who); Fly to the goal burns by itself on a long clear leg; Emergency shields fills the shield for ore with a cooldown (plain Node, no Chrome)
 // Card space-game-keys2-cruiser (Troy, 23 Nov 2026, through ORCH: "S centres on the cruiser and opens its list, fading after a few seconds; Q and the autopilot key go; fast drive folds into Fly to goal"). The table, the switches and the wiring are src/data_controls.js
 // (campCruiserWire), the fade src/camppanel.js (campPanelFade), the burn src/campnav.js (campNavAuto), the order src/campmend.js (campEmergency), the numbers CAMP.nav.auto and CAMP.emergency (src/campaign.js), both on the N panel (emergency).
 //   A. the table as the game has it: S is the cruiser list's key, Q is nobody's, the rows and their order, the old lists keep only what is theirs
-//   B. the keys: S opens the list on Fly to the goal and closes it, Q opens nothing, Esc closes, Enter on Dock and repair goes into the dock list
+//   B. the keys: S opens the list on Fly to the goal and closes it, Q opens no list (it picks who), Esc closes, Enter on Dock and repair goes into the dock list
 //   C. the old lists on: every row goes back where it was (the autopilot list's first two, the power list's emergency row, the blink to the ship list or the power list), and off again puts them in the cruiser list
 //   D. the fade: a key or a click keeps the list, 4 s of nothing dims it, 4.5 s closes it; the dock list reached from it fades too; a list that does not fade never does
 //   E. Emergency shields: the shield is filled at once for 50 ore, refused with its reason (cooling, full, no ore), ready again after 20 s; the N panel has both numbers
@@ -42,7 +42,7 @@ console.log('B. the keys');
   g.run(`var r2 = __key(P1, C1, 'KeyS', 200);`);
   check('S again closes it', J(`[campPanelOpen(P1), r2.used].join()`) === ',true');
   g.run(`var r3 = __key(P1, C1, 'KeyQ', 300);`);
-  check('Q opens nothing (the key is free)', J(`[campPanelOpen(P1), r3.used].join()`) === ',false');
+  check('Q opens no list: it is the who key now (card space-game-keys3-select): the key is used, no list opens and no order is given', J(`[campPanelOpen(P1), r3.used, r3.ran].join()`) === ',true,false');
   g.run(`__key(P1, C1, 'KeyS', 400); __key(P1, C1, 'Escape', 500);`);
   check('Esc closes it', J(`campPanelOpen(P1)`) === '');
   g.run(`__key(P1, C1, 'KeyS', 600); for (let i = 0; i < 3; i++) __key(P1, C1, 'ArrowDown', 700 + i); var r4 = __key(P1, C1, 'Enter', 800);`);

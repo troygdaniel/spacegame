@@ -301,6 +301,7 @@ function campMapClick(s, px, py) {
   mp.lastClick = row && !hit ? { x: px, y: py } : null;
   if (!row) return false;
   mp.selId = row.id; mp.userSel = true;
+  if (row.kind === 'place' && s.camp && typeof campFriHold === 'function') campFriHold(s.camp, row.id); // an outpost or a planet clicked on the map is the held target (card space-game-keys3-select): Fly to the target goes there, E guards it, the target box shows it
   if (mp.setId === row.id && !cycled) campMapFly(s, row, false); else { mp.setId = row.id; mp.dirty = true; } // a second click on the same lone mark: regular speed; on a stack it takes the next one
   return true;
 }
