@@ -97,7 +97,7 @@ console.log('E. the promotion: the debrief, the scene, the save');
   check('campRankPromoted says when a mission took the pilot up: from the rank it was to the rank it is, and nothing when it did not', JSON.stringify(J('campRankPromoted(0, __P(1000))')) === '{"from":0,"to":1}' && J('campRankPromoted(0, __P(999))') === null && J('campRankPromoted(1, __P(1500))') === null && JSON.stringify(J('campRankPromoted(0, __P(7000))')) === '{"from":0,"to":3}' && J('campRankPromoted(3, __P(100))') === null);
   g.run(`window.__PP = __P(1200); __PP.promo = { from: 0, to: 1 }`);
   const line = J('campRankLine(__PP, {})');
-  check('the debrief line of a promotion: PROMOTED, the new rank, the bay it brings, and the rank\'s own line under it', /^PROMOTED: Ensign\. The wing is 9 fighters strong\.\nCommand has noticed the way you fly\.$/.test(line), line);
+  check('the debrief line of a promotion: PROMOTED, the new rank, what it brings (stronger ships for the three pilots, no count of fighters), and the rank\'s own line under it', /^PROMOTED: Ensign\. Your pilots fly stronger ships\.\nCommand has noticed the way you fly\.$/.test(line), line);
   g.run(`window.__PP = __P(4200)`);
   check('with no promotion it says the rank, the points (with a comma) and what the next one needs', J('campRankLine(__PP, {})') === 'Rank: Lieutenant   4,200 points   next: Commander at 6,500', J('campRankLine(__PP, {})'));
   check('at the top it says so', J('campRankLine(__P(15500), {})') === 'Rank: Commodore   15,500 points   the highest rank', J('campRankLine(__P(15500), {})'));
