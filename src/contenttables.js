@@ -1233,6 +1233,7 @@ const UI_TEXT = {
   'camp.hint.l1p.rear': 'The last hauler is alone. Send a squad back to her.',
   'camp.hint.l1p.contact': 'Not pirates. Pick one ({keynear}), then engage: {keyorder}.',
   'camp.say.stray': '{name} is {km} km off, alone. {viagoal}: "{rowgoal}".',
+  'camp.hint.go': 'Stay with the transport: {viagoal}, "{rowgoal}".',
   'camp.say.miner.short': '{name} away at the miner. We are short here.',
   'camp.say.miner.all': 'All pilots away at the miner. The transport has only us.',
   'camp.say.miner.bait': 'Torpedo boats on the transport. The call was bait.',
