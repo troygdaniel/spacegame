@@ -182,7 +182,7 @@ const CAMP = {
     fade: 600,                             // ms the details take to fade out
     title: { h: 26, chipW: 22, chipH: 18, chipGap: 3, pad: 8, gap: 8 }, // the title row: its height, a key-cap chip's size and the space between two, the space at the left, and between the chips, the title and the selection
     gap: 4, pad: 8,                        // px between the title row and its details, and inside the details' frame
-    item: { bar: 46, text: 20, key: 26 },  // px: the height of a detail line by its kind: a name with a number and a bar, a line of text, a key chip and its word
+    item: { bar: 46, text: 20, key: 26, pic: 80 },  // px: the height of a detail line by its kind: a name with a number and a bar, a line of text, a key chip and its word, a picture row (src/camptcornerscene.js: the ship's picture, its type and its distance)
     bar: { dy: 22, h: 9 },                 // px: a bar's top below its item's top, and its height
     chip: 0x7fe9ff,                        // the key-cap chips' fill (the friend's cyan, as the order key's)
     at: {                                  // where each corner's title row sits (x: its left edge; y: the edge of the row at the screen's edge side, the bottom edge for a bottom corner; dir: 1 the details open downward, -1 upward). Left and right are what you command and everything else
