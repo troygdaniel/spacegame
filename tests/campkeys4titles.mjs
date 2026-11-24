@@ -3,8 +3,8 @@
 // title, same chip column so titles still start at the same x. The order chip in the details reads W Attack or W Guard." The keys are 2-GEN's (card space-game-keys4-onekey): who Q, order W, friendlies [, hostiles ], near \.
 //   A  the table: the four corners have one key each, and the chips are those keys' caps from the table
 //   B  the titles with something to pick and with nothing: ] HOSTILES / ] NO HOSTILES, [ FRIENDLIES / [ NO FRIENDLIES
-//   C  one chip column: every title starts at the same distance from its frame's left edge, the chip on the same baseline
-//   D  the order chip in the details: W Attack for an enemy held, W Guard for a friendly, bright when the order can be given
+//   C  one chip column: the titles of S CRUISER, HOSTILES and FRIENDLIES start at the same distance from their frame's left edge, every chip on the same baseline (FLEET is a line)
+//   D  the order chip is not in the details of the target corners any more (card space-game-fleet-sentence: it is in the FLEET row)
 //   E  the old keys are nowhere on a chip or in the table of the corners: no O P, no Q W pair, no [ ] pair
 // Run: node tests/campkeys4titles.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -68,25 +68,22 @@ g.run('__new(); __scene(); campTcornerLook(P, 0); campCornerSync(S, 0);');
 {
   const K = J('CAMP.corner'), at = K.at, X = (id, what) => J(`S.hud.corner.${id}.${what}`), want = K.title.pad + K.title.chips * (K.title.chipW + K.title.chipGap) - K.title.chipGap + K.title.gap;
   check('CAMP.corner.title.chips is 1: one chip each', K.title.chips === 1);
-  const rows = [['cruiser', 'tl'], ['fleet', 'bl'], ['hostiles', 'tr'], ['friendlies', 'br']];
-  check('every title starts at the same distance from its frame\'s left edge (the chip column, ' + want + ' px), S CRUISER\'s chip included', rows.every(([id, pos]) => X(id, 'title.x') - at[pos].x === want), JSON.stringify(rows.map(([id, pos]) => [id, X(id, 'title.x') - at[pos].x])));
-  check('the chips are the same distance from the frame, and as high in their rows', rows.every(([id, pos]) => X(id, 'chips.length') === 1 && X(id, 'chips[0].x') - at[pos].x === K.title.pad + K.title.chipW / 2) && new Set(rows.map(([id, pos]) => Math.round((X(id, 'chips[0].y') - (at[pos].dir > 0 ? at[pos].y : at[pos].y - K.title.h)) * 100))).size === 1);
-  check('the four titles read FLEET, CRUISER, HOSTILES and NO HOSTILES or FRIENDLIES as drawn', ['cruiser', 'fleet', 'hostiles', 'friendlies'].map(id => X(id, 'title.text')).join() === 'CRUISER,FLEET,NO HOSTILES,FRIENDLIES', J('["cruiser","fleet","hostiles","friendlies"].map(id => S.hud.corner[id].title.text).join()'));
+  const rows = [['cruiser', 'tl'], ['hostiles', 'tr'], ['friendlies', 'br']];
+  check('the titles of S CRUISER, ] HOSTILES and [ FRIENDLIES start at the same distance from their frame\'s left edge (the chip column, ' + want + ' px)', rows.every(([id, pos]) => X(id, 'title.x') - at[pos].x === want), JSON.stringify(rows.map(([id, pos]) => [id, X(id, 'title.x') - at[pos].x])));
+  check('their chips are the same distance from the frame, and as high in their rows; the FLEET row (a line, card space-game-fleet-sentence) starts its chip at the same place', rows.concat([['fleet', 'bl']]).every(([id, pos]) => X(id, 'chips[0].x') - at[pos].x === K.title.pad + K.title.chipW / 2) && new Set(rows.concat([['fleet', 'bl']]).map(([id, pos]) => Math.round((X(id, 'chips[0].y') - (at[pos].dir > 0 ? at[pos].y : at[pos].y - K.title.h)) * 100))).size === 1);
+  check('the three titles read CRUISER, NO HOSTILES and FRIENDLIES as drawn; FLEET has no title word (its row is the line: tests/campfleetsentence.mjs)', ['cruiser', 'hostiles', 'friendlies'].map(id => X(id, 'title.text')).join() === 'CRUISER,NO HOSTILES,FRIENDLIES' && X('fleet', 'title.vis') === false, J('["cruiser","hostiles","friendlies"].map(id => S.hud.corner[id].title.text).join()'));
 }
 
-// ---- D. the order chip ----
+// ---- D. the order chip is not in the details ----
 console.log('D. the order chip');
 {
   g.run('__new(); window.R1 = __foe("raider", 900, 0); campTgtStep(C, 1); campTcornerLook(P, 0);');
-  const k = J('NOW("hostiles").items.find(i => i.kind === "key")');
-  check('an enemy held: the details end with the chip W and the word Attack', k && k.cap === 'W' && k.label === 'Attack', JSON.stringify(k));
-  check('the chip is bright when the order can be given (WHO is all pilots and one is out), and the table\'s own answer agrees', k && k.ok === J('campTdispOrder(C, "attack").ok') && J('campTdispOrder(C, "attack").key') === 'W');
+  check('an enemy held: the details of ] HOSTILES have no key row (the W chip left them: it is in the FLEET row)', J('NOW("hostiles").items.length') > 0 && !J('NOW("hostiles").items.some(i => i.kind === "key")'));
   g.run('__new(); campFriStep(C, 1); campTcornerLook(P, 0);');
-  const f = J('NOW("friendlies").items.find(i => i.kind === "key")');
-  check('a friendly held: the chip W and the word Guard', f && f.cap === 'W' && f.label === 'Guard' && J('campTdispOrder(C, "guard").key') === 'W', JSON.stringify(f));
-  check('the chip is the order key of the table, not a letter written in the corner code (move the key: the chip moves)', (() => {
+  check('a friendly held: the details of [ FRIENDLIES have none either', J('NOW("friendlies").items.length') > 0 && !J('NOW("friendlies").items.some(i => i.kind === "key")'));
+  check('the order key the FLEET row reads is the table\'s: campTdispOrder says W for both halves, and moves with the key', (() => {
     g.run(`window.__w = CAMP_KEYS.order.k; CAMP_KEYS.order.k = 'V';`); const a = J('campTdispOrder(C, "guard").key'); g.run(`CAMP_KEYS.order.k = __w;`);
-    return a === 'V' && J('campTdispOrder(C, "guard").key') === 'W';
+    return a === 'V' && J('campTdispOrder(C, "guard").key') === 'W' && J('campTdispOrder(C, "attack").key') === 'W';
   })());
 }
 

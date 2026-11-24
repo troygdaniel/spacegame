@@ -10,7 +10,8 @@
 //                     title: 'camp.corner.fleet',    the words of the title (src/contenttables.js, content/text/campcorner.md has the four); or C => key when the title changes with the game (NO HOSTILES: card space-game-layout-targets)
 //                     selection: C => 'Kara',        the text written beside the title, never fades ('' for none)
 //                     rows: C => [item, ...],        the details, asked for only while they are open (see the items below)
-//                     hit: (C, mem) => bool })       optional: true when the details should come back by themselves for CAMP.corner.hit ms (FLEET: a pilot was hit). mem is the corner's own {} (per mission), to remember what it saw last
+//                     hit: (C, mem) => bool,         optional: true when the details should come back by themselves for CAMP.corner.hit ms (FLEET: a pilot was hit). mem is the corner's own {} (per mission), to remember what it saw last
+//                     line: C => [segment, ...] })   optional (card space-game-fleet-sentence): the title row as a LINE that never fades, instead of the chip, the title and the selection: { key: 'who' } a key-cap chip from the table (ok: false greys it), { text, ink, bold, size, fit } words (fit: cut short with an ellipsis to fit the room; the words after it keep theirs). FLEET reads Q Kara  W Attack Raider 9
 //   THE ITEMS rows(C) returns, from the top of the details down:
 //     { kind: 'bar', name, num, share, color, sel }  a name at the left, its number at the right and a bar under it (share 0..1, color a number like 0x6dff9c, sel true: the name is lit)
 //     { kind: 'text', text, ink }                    a line of text (ink '#9fbdd1' by default)
@@ -21,6 +22,7 @@
 //     campCornerNow(C, id)        what the scene draws now: { id, at, chips: ['Q', 'W'], title, selection, items (empty when closed), open (0..1) }
 //     campCornerGeom(pos, itemsH, dx)   the two rectangles { title, det } of a corner (det is null with no items); dx moves both sideways (out of an open list's way)
 //     campCornerItemsH(items)     the height of the items
+//     campCornerLineLayout(segs, T0, measure)   where a line's chips and words stand: { chips: [{ x, cap, ok }], words: [{ x, text, ink, bold, size }] } (measure(text, segment) gives a width in px)
 //     campCornerFit(text, room, width)   the text cut short with an ellipsis until width(text) is at most room px (the selection beside a title: card space-game-layout-align)
 const CAMP_CORNERS = []; // the registered corners, in the order they were added
 const CAMP_CORNER_STATE = new WeakMap(); // C -> { open: { id: { at, ms } }, mem: { id: {} } }: a new C (the next mission) starts with every corner closed
@@ -46,15 +48,34 @@ function campCornerFit(text, room, width) { // text cut short with an ellipsis u
   for (let n = t.length - 1; n > 0; n--) { const c = t.slice(0, n).replace(/\s+$/, '') + '\u2026'; if (width(c) <= room) return c; }
   return '\u2026';
 }
+const campCornerCap = k => { if (k && typeof k === 'object') return String(k.cap || ''); const v = typeof CAMP_KEYS === 'object' && CAMP_KEYS[k] ? CAMP_KEYS[k].k : ''; return Array.isArray(v) ? String(v[0] || '') : String(v || ''); }; // a segment's key: an id of the table, or { cap }
+function campCornerLineLayout(segs, T0, measure) { // left to right from the frame's inner edge: a chip, a gap, a word, a gap; the word marked fit is cut short to the room left (to the inner right edge, less the segments after it)
+  const T = CAMP.corner.title, right = T0.x + T0.w - T.pad, chips = [], words = []; let x = T0.x + T.pad;
+  (segs || []).forEach((sg, i) => {
+    if (sg.key) { chips.push({ x, cap: campCornerCap(sg.key), ok: sg.ok !== false }); x += T.chipW + T.gap; return; }
+    const rest = (segs || []).slice(i + 1).reduce((w, s2) => w + (s2.key ? T.chipW : measure(String(s2.text || ''), s2)) + T.gap, 0), text = sg.fit ? campCornerFit(sg.text, right - x - rest, t => measure(t, sg)) : String(sg.text || '');
+    words.push({ x, text, ink: sg.ink || '#ffffff', bold: !!sg.bold, size: sg.size || 14 }); x += measure(text, sg) + T.gap;
+  });
+  return { chips, words };
+}
 function campCornerNow(C, id) {
   const d = campCornerDef(id); if (!d || !C) return null;
   const st = campCornerState(C); if (d.hit && d.hit(C, st.mem[id] || (st.mem[id] = {}))) campCornerOpen(C, id, CAMP.corner.hit); // it was hit: the details come back for a while
   const open = campCornerStrength(C, id);
-  return { id, at: d.at, chips: campCornerKeyList(d).map(k => k.cap), title: uiText(typeof d.title === 'function' ? d.title(C) : d.title), selection: d.selection ? String(d.selection(C) || '') : '', items: open > 0 && d.rows ? d.rows(C) || [] : [], open };
+  return { id, at: d.at, chips: campCornerKeyList(d).map(k => k.cap), title: uiText(typeof d.title === 'function' ? d.title(C) : d.title), selection: d.selection ? String(d.selection(C) || '') : '', line: d.line ? d.line(C) || null : null, items: open > 0 && d.rows ? d.rows(C) || [] : [], open };
 }
-// ---- FLEET, bottom left: Q W (card space-game-layout-fleet): the selection is All pilots or the one pilot; the details are the pilots' names and hull bars, and they come back for 4 s when a pilot is hit ----
+// ---- FLEET, bottom left (card space-game-layout-fleet, then space-game-fleet-sentence): the selection is All pilots or the one pilot; the details are the pilots' names and hull bars, and they come back for 4 s when a pilot is hit ----
+// the FLEET row as one line (card space-game-fleet-sentence; Troy, 24 Nov 2026: "the order has no permanent home: make the Q FLEET corner read as one line that never fades: who, the W chip, the order and the target"): Q Kara  W Attack Raider 9, Q All pilots  W Guard Transport, W Form up with nothing held;
+// the W part is grey, and says why, when the order cannot be given (W Attack, no pilot out). The target held is the one corner that holds it; the order and its reason are campTdispOrder's dry run.
+function campFleetLine(C) {
+  const f = typeof campSelNow === 'function' ? campSelNow(C) : null, who = f ? (f.kind === 'pilot' ? f.name : uiText('camp.sel.all')) : '';
+  const h = typeof campHeldNow === 'function' ? campHeldNow(C) : null, verb = h && h.kind === 'hostile' ? 'attack' : 'guard', ord = typeof campTdispOrder === 'function' ? campTdispOrder(C, verb) : { ok: true, code: '', label: '' };
+  const word = h ? uiText('camp.corner.' + verb, { name: h.name }) : uiText('camp.corner.formup');
+  const why = ord.ok ? '' : uiText('camp.corner.why.' + ({ nofighters: 1, launching: 1, nofoe: 1, over: 1 }[ord.code] ? ord.code : 'else')), what = h ? ord.label : uiText('camp.corner.formup'); // blocked: the order's word alone and the reason (the target is in its own corner)
+  return [{ key: 'who' }, { text: who, ink: '#ffffff', bold: true, size: 14 }, { key: 'order', ok: ord.ok }, ord.ok ? { text: word, ink: '#e8f6ff', size: 13, fit: true } : { text: uiText('camp.corner.blocked', { what, why }), ink: '#7f95a8', size: 13, fit: true }];
+}
 campCornerAdd({
-  id: 'fleet', at: 'bl', keys: ['who'], title: 'camp.corner.fleet',
+  id: 'fleet', at: 'bl', keys: ['who'], title: 'camp.corner.fleet', line: campFleetLine,
   selection: C => { const f = typeof campSelNow === 'function' ? campSelNow(C) : null; return f ? (f.kind === 'pilot' ? f.name : uiText('camp.sel.all')) : ''; },
   rows: C => (typeof campSelList === 'function' ? campSelList(C) : []).filter(e => e.kind === 'pilot').map(e => {
     const u = e.unit, lit = C.sel === e.id || !C.sel || C.sel === 'all', live = u && u.hp > 0 && !u.gone;
