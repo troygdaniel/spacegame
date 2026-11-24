@@ -24,7 +24,7 @@ run(`window.__new = (seed) => { window.C = campNew('home', [], { seed: seed || 5
 // ---- A. the table
 console.log('A. the table');
 const K = J('CAMP.repair'), CAMP_REPAIR_ORE = K.ore;
-check('CAMP.repair: fighters break off under 30 percent, within 15 s of flight, mended for 10 s, a fight is 1800 px, a radio line is not repeated within 5 s', K && JSON.stringify(K.kinds) === '["fighter"]' && K.below === 0.3 && K.within === 15 && K.time === 10 && K.fight === 1800 && K.sayEvery === 5, JSON.stringify(K));
+check('CAMP.repair: fighters break off under 25 percent, within 15 s of flight, mended for 20 s at no ore (card space-game-keys2-orders; it was 30 percent, 10 s, 5 ore, and a fight of 1800 px that decided whether a mended one went out), a radio line is not repeated within 5 s', K && JSON.stringify(K.kinds) === '["fighter"]' && K.below === 0.25 && K.within === 15 && K.time === 20 && K.ore === 0 && !('fight' in K) && K.sayEvery === 5, JSON.stringify(K));
 check('every number of it is a finite number', Object.values(K).every(v => Array.isArray(v) || (typeof v === 'number' && isFinite(v))));
 check('the functions are there: campRepairRun, campRepairTick, campRepairing, campRepairState, and campLaunch takes a mended ship', ['campRepairRun', 'campRepairTick', 'campRepairing', 'campRepairState', 'campRepairSay'].every(f => J(`typeof ${f}`) === 'function') && /function campLaunch\(C, again, order, squad\)/.test(read('src/campaign.js')));
 check('a new battle has an empty repair list', J('__new().repairs.length') === 0 && J('campRepairing(C)') === 0);
@@ -32,11 +32,11 @@ check('a new battle has an empty repair list', J('__new().repairs.length') === 0
 // ---- B. who breaks off
 console.log('B. who breaks off');
 run('__new();');
-check('a fighter at 29 percent hull breaks off: its flag is set, the radio says so, the sim has an event', (() => { run('__hurt(__F(0), 0.29); campStep(C, 1 / 30);'); return J('__F(0).repair') === true && J('__says()').indexOf('camp.say.repairoff') >= 0 && J('C.events.some(e => e.type === "repairoff")'); })());
+check('a fighter at 24 percent hull breaks off: its flag is set, the radio says so, the sim has an event', (() => { run('__hurt(__F(0), 0.24); campStep(C, 1 / 30);'); return J('__F(0).repair') === true && J('__says()').indexOf('camp.say.repairoff') >= 0 && J('C.events.some(e => e.type === "repairoff")'); })());
 run('__new();');
-check('a fighter at 31 percent fights on', (() => { run('__hurt(__F(0), 0.31); campStep(C, 1 / 30);'); return !J('__F(0).repair') && J('__says()').indexOf('camp.say.repairoff') < 0; })());
+check('a fighter at 26 percent fights on', (() => { run('__hurt(__F(0), 0.26); campStep(C, 1 / 30);'); return !J('__F(0).repair') && J('__says()').indexOf('camp.say.repairoff') < 0; })());
 run('__new();');
-check('at exactly 30 percent it fights on (under, not at)', (() => { run('__F(0).hp = __F(0).maxHp * 0.3; campStep(C, 1 / 30);'); return !J('__F(0).repair'); })());
+check('at exactly 25 percent it fights on (under, not at)', (() => { run('__F(0).hp = __F(0).maxHp * 0.25; campStep(C, 1 / 30);'); return !J('__F(0).repair'); })());
 run('__new();');
 check('a fighter 8000 px from the cruiser (over 15 s of flight at 430 px/s) fights on, and breaks off when the cruiser comes within reach', (() => {
   run('const u = __F(0); u.x = C.carrier.x + 8000; u.y = C.carrier.y; __hurt(u, 0.2); u.order = { type: "guard", at: { kind: "point", x: u.x, y: u.y } }; campStep(C, 1 / 30);');
@@ -54,40 +54,40 @@ const d0 = J('campDist(U, C.carrier)');
 run('__go(0.5);');
 check('it flies home: the way to the cruiser shortens', J('campDist(U, C.carrier)') < d0 || J('U.repair') === true, d0 + ' -> ' + J('campDist(U, C.carrier)'));
 run('for (let i = 0; i < 400 && C.repairs.length === 0; i++) campStep(C, 1 / 30); window.LANDED = C.t;');
-check('it lands on the cruiser: one in the repair list, until 10 s from now, with the order it had', J('C.repairs.length') === 1 && Math.abs(J('C.repairs[0].until') - J('LANDED') - 10000) < 40 && J('C.repairs[0].order.type') === 'attack' && J('C.repairs[0].stay') === false, J('JSON.stringify(C.repairs)'));
+check('it lands on the cruiser: one in the repair list, until 20 s from now, with the order it had', J('C.repairs.length') === 1 && Math.abs(J('C.repairs[0].until') - J('LANDED') - 20000) < 40 && J('C.repairs[0].order.type') === 'attack' && J('C.repairs[0].stay') === false, J('JSON.stringify(C.repairs)'));
 check('it is out of the sim (no longer in the ships), not counted as out, not lost, and the dock is told', J('C.by[U.id] === undefined') && J('campWing(C, "fighter").length') === J('HP0') - 1 && J('C.lostShips') === J('LOST') && J('C.events.some(e => e.type === "dock" && e.repair && e.id === U.id)') !== false);
   check('it is still the wing\'s: "no ships left" does not say so, the ship computer says it is being mended', (() => {
     run('C.bay.fighters = 0; C.launchQ.length = 0; for (const u of campWing(C)) u.hp = 0;');
     return J('campRepairing(C, "fighter")') === 1 && J('campNoShips(C)') === false && /1 being mended/.test(J('campSummary(C)')); })());
 check('with no repair in the list the same state IS "no ships left"', J('(() => { C.repairs.length = 0; return campNoShips(C); })()') === true);
-check('the landing costs 5 ore (card space-game-repair-with-ore): the first mend of a fresh battle takes it from the store', (() => { run('__new(); window.__O = C.ore; window.U = __hurt(__F(0), 0.2); for (let i = 0; i < 400 && C.repairs.length === 0; i++) campStep(C, 1 / 30);'); return J('__O - C.ore') === CAMP_REPAIR_ORE; })());
+check('the landing costs no ore now (card space-game-keys2-orders; card space-game-repair-with-ore had it at 5): the first mend of a fresh battle leaves the store as it was', (() => { run('__new(); window.__O = C.ore; window.U = __hurt(__F(0), 0.2); for (let i = 0; i < 400 && C.repairs.length === 0; i++) campStep(C, 1 / 30);'); return J('__O - C.ore') === CAMP_REPAIR_ORE; })());
 
 // ---- D. mended
 console.log('D. mended');
 const land = (order, extra) => run(`__new(); window.U = __hurt(__F(0), 0.2); U.order = ${order}; ${extra || ''} for (let i = 0; i < 400 && C.repairs.length === 0; i++) campStep(C, 1 / 30); window.LANDED = C.t; C.events.length = 0;`);
 land('{ type: "attack", target: "" }');
-run('window.COUNT = campWing(C, "fighter").length; __go(9.5);');
-check('9.5 s after landing it is still being mended', J('C.repairs.length') === 1 && J('campWing(C, "fighter").length') === J('COUNT'));
+run('window.COUNT = campWing(C, "fighter").length; __go(19.5);');
+check('19.5 s after landing it is still being mended', J('C.repairs.length') === 1 && J('campWing(C, "fighter").length') === J('COUNT'));
 run('__go(1);');
-check('10 s after landing, with the wing out and fighting, it goes out at once: a new fighter at full hull, with the order it had, and the radio says so', J('C.repairs.length') === 0 && J('campWing(C, "fighter").length') === J('COUNT') + 1 && J('campWing(C, "fighter").every(u => u.hp === u.maxHp || u.hp > 0)') && J('__says()').indexOf('camp.say.repairback') >= 0 && J('C.mended') === 1);
+check('20 s after landing it goes out at once: a new fighter at full hull, with the order it had, and the radio says so', J('C.repairs.length') === 0 && J('campWing(C, "fighter").length') === J('COUNT') + 1 && J('campWing(C, "fighter").every(u => u.hp === u.maxHp || u.hp > 0)') && J('__says()').indexOf('camp.say.repairback') >= 0 && J('C.mended') === 1);
 check('the one that went out has the full hull and the attack order', (() => { const f = J('campWing(C, "fighter").filter(u => u.hp === u.maxHp && u.order && u.order.type === "attack").length'); return f >= 1; })());
 land('{ type: "guard", at: { kind: "carrier" } }', 'for (const u of campWing(C)) u.order = { type: "recall" };');
-run('__go(11);');
+run('__go(21);');
 check('with the whole wing recalled while it was mended it stays aboard: in the bay, whole, one more in the bay, the radio says "in the bay"', J('C.repairs.length') === 0 && J('C.bay.fighters') >= 1 && J('__says()').indexOf('camp.say.repairdone') >= 0 && J('campWing(C, "fighter").filter(u => u.order && u.order.type !== "recall").length') === 0);
 land('{ type: "guard", at: { kind: "carrier" } }', 'for (const u of campWing(C)) { if (u.id !== U.id) u.hp = 0; } C.ships = C.ships.filter(u => u.hp > 0); C.launchQ.length = 0; for (const u of C.ships) if (u.kind === "carrier") u.hp = u.hp;');
-run('__go(11);');
-check('with no ship of the wing out and no alien near the cruiser it is in the bay, not launched into nothing', J('C.repairs.length') === 0 && J('C.bay.fighters') === 1 && J('campWing(C).length') === 0, J('JSON.stringify({ b: C.bay, w: campWing(C).length })'));
+run('__go(21);');
+check('with no ship of the wing out and no alien near the cruiser it goes out again alone all the same (card space-game-keys2-orders: the pilots stay out all mission; it used to wait in the bay for a Launch)', J('C.repairs.length') === 0 && J('C.bay.fighters') === 0 && J('campWing(C, "fighter").length') === 1, J('JSON.stringify({ b: C.bay, w: campWing(C).length })'));
 land('{ type: "guard", at: { kind: "carrier" } }', 'for (const u of campWing(C)) { if (u.id !== U.id) u.hp = 0; } C.ships = C.ships.filter(u => u.hp > 0); C.launchQ.length = 0;');
-run('campSpawn(C, "raider", C.carrier.x + 900, C.carrier.y).goal = "carrier"; __go(11);');
-check('with no ship out but an alien within 1800 px of the cruiser it goes out again alone', J('C.repairs.length') === 0 && J('campWing(C, "fighter").length') === 1 && J('C.bay.fighters') === 0);
+run('campSpawn(C, "raider", C.carrier.x + 900, C.carrier.y).goal = "carrier"; __go(21);');
+check('with no ship out and an alien near the cruiser it goes out again alone too', J('C.repairs.length') === 0 && J('campWing(C, "fighter").length') === 1 && J('C.bay.fighters') === 0);
 land('{ type: "guard", at: { kind: "carrier" } }');
-run('C.repairs[0].stay = true; __go(11);');
-check('a repair marked "stay" goes to the bay even in a fight', J('C.repairs.length') === 0 && J('C.bay.fighters') >= 1);
+run('C.repairs[0].stay = true; __go(21);');
+check('a repair marked "stay" (the Fast burn recalled the wing) goes to the bay', J('C.repairs.length') === 0 && J('C.bay.fighters') >= 1);
 land('{ type: "guard", at: { kind: "carrier" } }');
 run('window.B0 = C.bay.fighters; campOrder(C, "recall"); window.RS = C.repairs[0].stay; for (const u of campWing(C)) u.hp = 0; C.ships = C.ships.filter(u => u.hp > 0); C.launchQ.length = 0; C.bay.fighters = 1; campOrder(C, "launch"); window.LS = C.repairs[0].stay;');
 check('a Recall marks the fighter being mended "stay"; a Launch takes it back, so it goes out when it is whole', J('RS') === true && J('LS') === false);
 land('{ type: "guard", at: { kind: "carrier" } }');
-run('C.nextLaunch = C.t + 1e6; __go(11);');
+run('C.nextLaunch = C.t + 1e6; __go(21);');
 check('when the bay mouth is busy the mended fighter waits for the next tick, it is not lost', J('C.repairs.length') === 1);
 run('C.nextLaunch = 0; __go(0.1);');
 check('and goes out when the mouth is free', J('C.repairs.length') === 0);
@@ -101,7 +101,7 @@ check('it lands, and it goes out with the Attack', J('C.repairs.length') === 1 &
 run('__new(); window.U = __hurt(__F(0), 0.2); campStep(C, 1 / 30); campOrder(C, "recall"); for (let i = 0; i < 400 && C.repairs.length === 0; i++) campStep(C, 1 / 30);');
 check('a Recall given to it is kept: it lands to be mended (not the old instant landing) and stays aboard', J('C.repairs.length') === 1 && J('C.repairs[0].stay') === true);
 run('__new(); window.U = __hurt(__F(0), 0.5); campOrder(C, "recall"); for (let i = 0; i < 400 && !U.docked; i++) campStep(C, 1 / 30);');
-check('a fighter ABOVE 30 percent that is recalled lands as it always did: whole at once, in the bay, nothing to mend', J('U.docked') === true && J('C.repairs.length') === 0 && J('C.bay.fighters') >= 1);
+check('a fighter ABOVE 25 percent that is recalled lands as it always did: whole at once, in the bay, nothing to mend', J('U.docked') === true && J('C.repairs.length') === 0 && J('C.bay.fighters') >= 1);
 
 // ---- F. the radio
 console.log('F. the radio');

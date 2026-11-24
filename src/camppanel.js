@@ -125,11 +125,11 @@ function campPanelKey(P, C, code, now) {
     if (tk === 'clear') { campPicksClear(C); campSquadsFree(P); } else if (tk === 'near') campTgtNearest(C); else if (tk === 'wnext' || tk === 'wlast') campSelStep(C, tk === 'wnext' ? 1 : -1); else if (tk === 'fnext' || tk === 'flast') campFriStep(C, tk === 'fnext' ? 1 : -1); else campTgtStep(C, tk === 'next' ? 1 : -1);
     res.tgt = C.tgt || ''; res.sel = C.sel || ''; res.fsel = C.fsel || ''; return res;
   }
-  const ok = typeof campSelOrder === 'function' ? ['attack', 'guard', 'recall'].find(id => campKeyIs(id, code)) : '';
-  if (ok) { // E R T: the pilots attack the hostile, guard the friend, fly home; a selected pilot takes the order alone (src/camptarget.js campSelOrder)
+  const ok = typeof campSelOrder === 'function' && campKeyIs('engage', code) ? 'engage' : '';
+  if (ok) { // E: the pilots attack the enemy, guard the friend, or form up on the cruiser, by what is picked; a selected pilot takes the order alone (src/camptarget.js campSelOrder; card space-game-keys2-orders)
     res.used = true; if (!C) return res;
     const f = campSelNow(C), r = campSelOrder(C, ok, 'key');
-    res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = ok; res.fleet = true;
+    res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = r && r.verb || ok; res.fleet = true;
     if (res.ok) campSquadsKeep(P, f && f.kind === 'pilot' ? f.squad : 'squads', now); // the pilot (or all three) keep the ring a while
     return res;
   }
