@@ -169,7 +169,7 @@ async function campaign() {
     const spawned = await j(`(() => { const C = ${SC}.camp, c = C.carrier, u = campSpawn(C, 'raider', c.x + 500, c.y - 200); return !!u; })()`).catch(() => false);
     if (spawned) {
       await press(t, 'BracketRight', 20); await t.run(300);
-      check('] picks the hostile as the target with no list open, and [ ] HOSTILES on the right shows it: its name beside the title, its picture in the details', !!(await j(`${SC}.camp.tgt`)) && (await isOpen()) === '' && (await j(`${SC}.hud.corner.hostiles.sel.visible`)) === true && (await j(`${SC}.hud.tcorner.hostiles.pic.visible`)) === true, await j(`${SC}.hud.corner.hostiles.sel.text`));
+      check('] picks the hostile as the target with no list open, and ] HOSTILES at the top right shows it: its name beside the title, its picture in the details', !!(await j(`${SC}.camp.tgt`)) && (await isOpen()) === '' && (await j(`${SC}.hud.corner.hostiles.sel.visible`)) === true && (await j(`${SC}.hud.tcorner.hostiles.pic.visible`)) === true, await j(`${SC}.hud.corner.hostiles.sel.text`));
       await snap(t, 'target');
       await press(t, 'KeyX', 20); await t.run(300);
       check('X clears it, and the picture is gone (the title stays)', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.hud.tcorner.hostiles.pic.visible`)) === false);

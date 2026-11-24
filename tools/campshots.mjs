@@ -44,12 +44,12 @@ const goTo = async row => { // the list open with the highlight on the row (not 
   if ((await j(`${SC}.mode`)) !== 'play') return false; // a card has the keys
   const way = await wayTo(row); if (!way) { note('(the row ' + row + ' is left out of this mission\'s list)'); return false; }
   for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): pressed until every list is closed (it pauses only when none is open)
-  for (const [code, downs] of way.keys) { await keyOn(code); const cur = await j(`${SC}.pn.at`), n = await j(`(() => { const o = campPanelOpen(${SC}.pn); return o ? campPanelList(${SC}.camp, o).length : 0; })()`); for (let i = 0, d = n ? ((downs - cur) % n + n) % n : 0; i < d; i++) await keyOn('ArrowDown'); } // a list can open with its highlight on its first usable row (start: 'usable', All squads): Down only the difference
+  NUM = 0; for (const [code, downs] of way.keys) { await keyOn(code); if (await j(`campPanelNumbered(${SC}.pn)`)) { NUM = downs + 1; continue; } const cur = await j(`${SC}.pn.at`), n = await j(`(() => { const o = campPanelOpen(${SC}.pn); return o ? campPanelList(${SC}.camp, o).length : 0; })()`); for (let i = 0, d = n ? ((downs - cur) % n + n) % n : 0; i < d; i++) await keyOn('ArrowDown'); } // a list can open with its highlight on its first usable row (start: 'usable', All squads): Down only the difference
   return true;
 };
 // Three orders are no row of a list in the game now (the key rounds of 23 Nov 2026: the fleet and all-squads lists are switched off, cards space-game-keys-orders and space-game-keys2-orders). While the table has no keyed row for them:
 //   launch: the pilots start the mission out, so nothing is pressed; after a recall they are sent out by the order the strip's word gives (no key gives it)
-//   attack: the backslash picks the nearest threat and E, the one order key, sends all pilots at it (both read from the key table)
+//   attack: the backslash picks the nearest threat and the one order key (W since card space-game-keys4-onekey) sends all pilots at it (both read from the key table)
 //   recall: no key and no row (a badly hurt pilot flies home by itself): the order the strip's word gives, for the pictures of the landing
 // With the old lists switched on in the page (the panels part) the rows are there again and are given through their list, as before.
 const noRow = async row => {
@@ -61,10 +61,11 @@ const noRow = async row => {
 const shut = async () => { for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); }; // every list closed (Esc goes back one step; it is pressed only while a list is open, so it never pauses)
 // S resets the zoom AND opens the cruiser list (card space-game-keys2-cruiser); over the open map it closes the map first (a list's key does). For a picture of the zoom alone: S, the list closed again, and the map opened again when it was up
 const zreset = async map => { await keyOn('KeyS'); await shut(); if (map && !(await j(`!!${SC}.mp`))) { await t.key('TAB'); await t.run(300); } };
+let NUM = 0; // the digit of the row the last list walk went to, when its list is a numbered one (0: a list with a highlight)
 const order = async row => {
   if ((await j(`${SC}.mode`)) === 'play' && !(await wayTo(row)) && (await noRow(row))) return true;
-  if (!(await goTo(row))) return false; await keyOn('Enter');
-  if (await j(`!!${SC}.pn.pick`)) await keyOn('Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
+  if (!(await goTo(row))) return false; await keyOn(NUM ? 'Digit' + NUM : 'Enter'); // a NUMBERED list (the S list: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would fire a missile
+  if (await j(`!!${SC}.pn.pick`)) await keyOn(NUM ? 'Digit1' : 'Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
   for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); // an order that is refused leaves the list open, and so does a power row: Esc until it is closed, the keys go back to the ship
   return true;
 };
@@ -211,7 +212,7 @@ try {
     await t.ev('(() => { campFleetListSet(true); campShipListSet(true); campPowerSet(true); return 1; })()'); /* (the pips are off in the game, card space-game-power-removed: these pictures of the lists include the power list) */ // these pictures are of the order lists, which the game keeps off (CAMP_FLEET_LIST, CAMP_SHIP_LIST: cards space-game-q-selects-all, space-game-p-opens-power); on here as the node suites and the boots have them, with the old keys (Q W E R, P O I U)
     const onPage = rect => j(`(() => { const R = ${rect}, r = game.canvas.getBoundingClientRect(), k = r.width / 1280; return { x: r.left + R.x * k, y: r.top + R.y * k, w: R.w * k, h: R.h * k }; })()`); // a rectangle of the game's screen, on the page (the canvas is scaled to fit the window)
     const box = id => onPage(`campPanelsGeometry(CAMP_PANELS.panels.find(p => p.id === '${id}'), campPanelList(${SC}.camp, '${id}').length)`); // a list's place: it is as tall as its rows in this mission
-    const tgtBox = () => onPage('campTdispBox(false)'); // the target display's box (bottom right: it replaced the radar and its line; src/camptdispscene.js)
+    const tgtBox = () => onPage('(() => { const K = CAMP.corner, a = K.at.tr; return { x: a.x, y: a.y, w: K.w, h: 190 }; })()'); // the HOSTILES corner, top right: its title row and the details under it (the target box at the bottom right is gone: cards space-game-layout-targets, space-game-layout-align; src/campcorner.js)
     const boxShot = async (name, b, pad = 6) => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png', clip: { x: b.x - pad, y: b.y - pad, width: b.w + 2 * pad, height: b.h + 2 * pad, scale: 2 } }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(34); } note('crop', name); };
     const panelShot = async (name, id, pad = 6) => boxShot(name, await box(id), pad);
     const clipShot = async (name, x, y, w, h) => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png', clip: { x, y, width: w, height: h, scale: 2 } }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(34); } note('crop', name); };
@@ -231,7 +232,7 @@ try {
     await t.run(400); await panelShot('panels-02c-refused', 'squads'); await keyOn('Escape'); await t.run(200);
     await order('launch'); note('launch', JSON.stringify(await st())); await t.run(2500);
     await keyOn('KeyP'); await t.run(400); note('P', JSON.stringify(await st())); await snap('panels-04-ship-list'); await panelShot('panels-04b-ship', 'ship'); await keyOn('KeyP'); await t.run(300);
-    // a hostile put in reach (staged): ] picks it with no list open (the next enemy: the brackets are the enemies' keys, read from the key table), the line under the radar names it, the bracket is round it; the fighters list's Attack row (E) goes at it
+    // a hostile put in reach (staged): ] picks it with no list open (the hostiles key, read from the key table), the HOSTILES corner at the top right names it, the bracket is round it; the fighters list's Attack row (E) goes at it
     await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; campSpawn(C, 'raider', c.x + 520, c.y - 180); return 1; })()`); await t.run(300);
     await keyOn(await j(`campKeyCodes('hostiles')[0]`)); await t.run(400); note('] (the next enemy)', JSON.stringify(await st())); await snap('panels-05-target'); await boxShot('panels-05a-target-line', await tgtBox());
     await goTo('attack'); await t.run(400); await panelShot('panels-05b-fighters-target', (await wayTo('attack')).list); await keyOn('Escape'); await t.run(200);
