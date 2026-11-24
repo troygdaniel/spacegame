@@ -174,6 +174,24 @@ const CAMP = {
     ink: { hostile: '#ff9aae', friend: '#9fe9ff' },  // the name and the line of what it is doing
     depth: 64                              // the draw order: over the edge arrows (62), under the lists (160)
   },
+  corner: {                                // the four corner panels (card space-game-layout-fleet; Troy, 24 Nov 2026: "four corners, each a small title that never leaves, starting with its keys as plain key-cap chips; the details under a title open when its keys are used and fade after a few seconds; the current selection is written beside the title and never fades"): top left S CRUISER, bottom left Q W FLEET, top right [ ] HOSTILES, bottom right O P FRIENDLIES. src/campcorner.js (the rule and the registry), src/campcornerscene.js (the drawing)
+    w: 200,                                // px: a panel's width (its title row and its details)
+    depth: 64,                             // the draw order: over the edge arrows (62), under the lists (160)
+    show: 4000,                            // ms the details stay open at full strength after the corner's keys are used (or campCornerOpen is called), then they fade
+    hit: 4000,                             // ms they stay open after the corner says it was hit (FLEET: a pilot's hull went down)
+    fade: 600,                             // ms the details take to fade out
+    title: { h: 26, chipW: 22, chipH: 18, chipGap: 3, pad: 8, gap: 8 }, // the title row: its height, a key-cap chip's size and the space between two, the space at the left, and between the chips, the title and the selection
+    gap: 4, pad: 8,                        // px between the title row and its details, and inside the details' frame
+    item: { bar: 46, text: 20, key: 26 },  // px: the height of a detail line by its kind: a name with a number and a bar, a line of text, a key chip and its word
+    bar: { dy: 22, h: 9 },                 // px: a bar's top below its item's top, and its height
+    chip: 0x7fe9ff,                        // the key-cap chips' fill (the friend's cyan, as the order key's)
+    at: {                                  // where each corner's title row sits (x: its left edge; y: the edge of the row at the screen's edge side, the bottom edge for a bottom corner; dir: 1 the details open downward, -1 upward). Left and right are what you command and everything else
+      tl: { x: 18, y: 150, dir: 1 },       // S CRUISER (a card of its own sets the place: the lines of text at the top left end at y 132)
+      bl: { x: 18, y: 630, dir: -1 },      // Q W FLEET: the row ends where the who box used to (y 630), the MISSILES count is under it (CAMP.tdisp.count)
+      tr: { x: 1062, y: 150, dir: 1 },     // [ ] HOSTILES (a card of its own sets the place)
+      br: { x: 1062, y: 630, dir: -1 }     // O P FRIENDLIES (a card of its own sets the place)
+    }
+  },
   mark: {                                  // the squares come and go (cards space-game-pilot-squares-fade; Troy, 24 Nov 2026: "have the reticle squares disappear from the pilots after a few seconds", and the same for the selected targets; src/camptarget.js campMarkNow, src/camptargetdraw.js): the squares on the pilots WHO is show when WHO is picked, an order is given or the mission begins; the square on the target held (the enemy's or the friend's) shows when it is picked, and an order shows both; then they go
     show: 3000,                            // ms (the game's own clock, so a pause does not eat it) a square stays at full strength after it was brought back
     fade: 600,                             // ms it then takes to fade out (the target stays held, the target box at the bottom right and the who box at the bottom left stay)
