@@ -99,6 +99,7 @@ class Campaign extends Phaser.Scene {
     this.hud.chat = this.add.text(CAMP.corner.edge - CAMP.corner.ink, CAMP.corner.at.bl.y - CAMP.corner.title.h - CAMP.corner.gap, '', uiFont(15, '#ffd37a', { stroke: '#02060d', strokeThickness: 3, wordWrap: { width: 330 } })).setOrigin(0, 1).setScrollFactor(0).setDepth(101).setAlpha(0); // bottom left, just above the Q W FLEET corner and growing upward (placed each frame by chatterSpot, src/campchatter.js: it was drawn over the corner's title, card space-game-talk-over-fleet-corner)
     this.input.keyboard.on('keydown', e => this.onKey(e));
     if (typeof campPanelsInstall === 'function') campPanelsInstall(this); // the order lists: W the all-squads orders at the left, P the power list at the right (and O the autopilot, U the dock), hidden until asked for (src/camppanel.js, src/campanelsdraw.js)
+    if (typeof campPanelHold === 'function' && this.pn) campPanelHold(this.pn, (this.time && this.time.now) || 0); // a battle begins on the press that launched it (the briefing's Enter or click): it fires nothing for CAMP.card.lock ms
     if (typeof campFocusInstall === 'function') campFocusInstall(this); // F glides the camera to the selected ship and follows it (src/campfocus.js)
     if (typeof campDragInstall === 'function') campDragInstall(this); // press and drag pans the flight view and the map, with a RECENTRE mark and the way back (src/campdrag.js)
     if (typeof campMapInstall === 'function') campMapInstall(this); // Tab: the map of the level, over the battle, which goes on behind it (src/campmap.js, src/campmapdraw.js)
@@ -173,7 +174,7 @@ class Campaign extends Phaser.Scene {
     o.forEach(x => x.setScrollFactor(0).setDepth(200));
     this.card = o; this.panel = true;
   }
-  hideCard() { if (this.card) this.card.forEach(x => x.destroy()); this.card = null; this.panel = false; }
+  hideCard() { if (this.card) { this.card.forEach(x => x.destroy()); if (typeof campPanelHold === 'function' && this.pn) campPanelHold(this.pn, (this.time && this.time.now) || 0); } this.card = null; this.panel = false; } // a card closing holds the missile key for CAMP.card.lock ms (campPanelHold: the Enter that closed it is not also a missile)
   flash(id) { const sp = this.sp[id]; if (!sp) return; sp.setTint(0xff8a8a); this.time.delayedCall(90, () => { if (sp.active !== false) sp.clearTint(); }); } // the hull took a hit: the carrier blinks red for 90 ms (the blind critic: nothing but a red bar said so)
   say(lines) { if (typeof shipcompSay === 'function') lines.forEach(l => { if (l) shipcompSay(l); }); } // the ship's voice, as much as Settings > Sound allows: each line on its own, because Short speaks only the first sentence or two of what it is given and one joined text lost the line that says what to do (docs/night/ux.md 1)
   // a mission: the BRIEFING (its title, the objectives in plain words, the bonus objectives), the flight, the DEBRIEF (what it earned). A row with no objectives (an old-style level) has neither.
@@ -329,6 +330,7 @@ class Campaign extends Phaser.Scene {
   shipClick(px, py, button) {
     const C = this.camp; if (!C || this.mode !== 'play' || this.mp || this.leaving || typeof campClickAct !== 'function') return false;
     if (typeof campPanelOpen === 'function' && campPanelOpen(this.pn)) return false; // a list is open: the keys are its, and a click does not reach under it
+    if (typeof campPanelHeld === 'function' && campPanelHeld(this.pn, (this.time && this.time.now) || 0)) return false; // a card has just closed: the click that closed it does nothing in the flight view (campPanelHold)
     const cam = this.cameras.main, w = campClickWorld(cam, px, py), r = campClickAct(this.pn, C, campClickHit(C, w.x, w.y, cam.zoom), button, (this.time && this.time.now) || 0);
     if (r.ran) toast(this, r.say, r.ok ? '#9fe9ff' : '#ffb454'); // the order's answer, as the key's toast
     return !!r.used;
