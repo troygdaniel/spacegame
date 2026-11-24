@@ -43,10 +43,10 @@ console.log('the keep-out rectangles hold the target display and the left HUD ro
   const BX = J('campTdispBox()'), K = J('CAMP.nav.arrow.keep');
   check('the target display (in the corner the radar had: its box, campTdispBox) is inside a keep rectangle, so no label is put on it', K.some(r => BX.x >= r[0] && BX.x + BX.w <= r[2] && BX.y >= r[1] && BX.y + BX.h <= r[3]) && J('typeof campPanelsKeep') === 'undefined', JSON.stringify([BX, K]));
   check('no list is kept out of: the lists are hidden until Q or P opens one (an open list is drawn over the label), so the places of the lists are free for the label while none is open', (() => { const heads = J('CAMP_PANELS.panels.map(d => campPanelsGeometry(d).list)'); return heads.every(t => !K.some(r => t.x >= r[0] && t.x + t.w <= r[2] && t.y >= r[1] && t.y + t.h <= r[3])) && J('Campaign.prototype.arrowKeep.call({}).length') === K.length; })());
-  check('the left HUD\'s objective line (y 152) and the autopilot line (y 174, 14 px type) are inside the first rectangle', K.some(r => r[0] === 0 && r[1] === 0 && r[3] >= 174 + 18));
+  check('the left HUD\'s busiest column (card space-game-hud-topleft-trim: Earth with its bar, the wave, the objective, the repair line and the outpost hint, 14 px type from y 14) is inside the first rectangle', (() => { const T = J('CAMP.hud.text'); return K.some(r => r[0] === 0 && r[1] === 0 && r[3] >= T.y + 12 + 4 * T.pitch + 18); })());
   const W = 1280, H = 720, L = (x, y) => J(`campNavLabelAt(${x}, ${y}, 190, 18, ${JSON.stringify(K)}, ${W}, ${H})`), hit = (p, r) => p.x + 95 > r[0] && p.x - 95 < r[2] && p.y + 9 > r[1] && p.y - 9 < r[3];
-  const a = L(1144, 222), b = L(85, 164), c = L(BX.x + BX.w / 2, BX.y + BX.h / 2);
-  check('the label wanted at the top right (2.3 and 3.3 starts), on the target display, or on the AUTOPILOT line (1.2) ends out of every rectangle, and on the screen', [a, b, c].every(p => !K.some(r => hit(p, r)) && p.x - 95 >= 0 && p.x + 95 <= W && p.y - 9 >= 0 && p.y + 9 <= H), JSON.stringify([a, b, c]));
+  const a = L(1144, 222), b = L(85, 60), c = L(BX.x + BX.w / 2, BX.y + BX.h / 2);
+  check('the label wanted at the top right (2.3 and 3.3 starts), on the target display, or on the objective line (1.2) ends out of every rectangle, and on the screen', [a, b, c].every(p => !K.some(r => hit(p, r)) && p.x - 95 >= 0 && p.x + 95 <= W && p.y - 9 >= 0 && p.y + 9 <= H), JSON.stringify([a, b, c]));
 }
 
 console.log('the list');
