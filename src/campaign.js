@@ -198,6 +198,9 @@ const CAMP = {
     fade: 600,                             // ms it then takes to fade out (the target stays held, the target box at the bottom right and the who box at the bottom left stay)
     verbs: ['launch', 'attack', 'escort', 'guard', 'recall', 'mine']   // the counters of C.orders that are the pilots' orders and bring both squares back (a missile, a power change and the convoy's orders do not)
   },
+  target: {                                // the hostiles' key (card space-game-keys4-onekey; src/camptarget.js campTgtCycle)
+    restart: 2000                          // ms (the game's own clock) with no press of ] or \ after which the next ] starts again from the nearest hostile; a press within it steps on to the next one
+  },
   charge: {                                // the health bar on every ship you protect (cards space-game-protected-health and space-game-health-bar-quiet; Troy, 22 Nov 2026: bars on the transport, the haulers and the miners, a thin line until the ship is under attack; src/campcharge.js, src/campchargescene.js)
     amber: 0.6,                            // the hull share at or under which the bar turns from green to amber
     red: 0.3,                              // the hull share at or under which the bar turns red (a ship that is nearly lost)

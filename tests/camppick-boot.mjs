@@ -70,7 +70,7 @@ try {
     await key(t, 'Escape'); await t.run(300);
   } else console.log('  skip   the Mine ore sub-list (this mission has one rock field)');
   await t.ev('(() => { campFleetListSet(false); return 1; })()'); // the game's own keys from here: no fleet list and no all-squads list, so the who keys are free
-  const WHO = await j(`campKeyCodes('wnext')[0] || ''`), WHOCAP = await j(`CAMP_KEYS.wnext.k`); // the next who: read from the key table, never a letter written here
+  const WHO = await j(`campKeyCodes('who')[0] || ''`), WHOCAP = await j(`CAMP_KEYS.who.k`); // the next who: read from the key table, never a letter written here
   await key(t, 'KeyX'); await t.run(300);
   check('X lets the target go and puts who back on All pilots: no enemy, no friendly, no list open', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.camp.fsel || ''`)) === '' && (await j(`${SC}.camp.sel`)) === 'all' && (await j(`${SC}.pn.open`)) === '', JSON.stringify(await j(`[${SC}.camp.tgt, ${SC}.camp.fsel, ${SC}.camp.sel]`)));
   await t.ev(`campWingOrder(${SC}.camp, 'fighters', 'guard', null, 'key')`); await t.run(300);
@@ -78,8 +78,8 @@ try {
   await key(t, 'BracketRight', { key: ']' }); await t.run(300);
   check('] picks the nearest hostile (the target), opens no list, and the bracket layer is there', (await j(`${SC}.camp.tgt`)) === near && (await j(`${SC}.pn.open`)) === '' && !!(await j(`!!${SC}.tgtG`)));
   await snap(t, '4-bracket-picked');
-  await key(t, 'KeyE'); await t.run(300);
-  check('E sends all three pilots at it, with no list opened (an order key, not a list)', (await j(`campWing(${SC}.camp, 'fighter').every(u => u.order && u.order.type === 'attack' && u.order.target === '${near}')`)) && (await j(`${SC}.pn.open`)) === '');
+  await key(t, 'KeyW'); await t.run(300);
+  check('W sends all three pilots at it, with no list opened (an order key, not a list)', (await j(`campWing(${SC}.camp, 'fighter').every(u => u.order && u.order.type === 'attack' && u.order.target === '${near}')`)) && (await j(`${SC}.pn.open`)) === '');
   await t.ev(`campWingOrder(${SC}.camp, 'fighters', 'guard', null, 'key')`); await t.run(300);
   // (the three pilots flew at the first target and it is gone by now: pick the nearest hostile again, and the checks below use that one)
   await key(t, 'BracketRight', { key: ']' }); await t.run(300);
@@ -87,8 +87,8 @@ try {
   check('the key table has a key for the next who, and this boot can press it', !!WHO && !!VK[WHO], WHO);
   await key(t, WHO); await t.run(300);
   check(WHOCAP + ' picks a pilot as who (the first, Red); the hostile is still the target', !!near2 && (await j(`${SC}.camp.sel`)) === 'pilot:red' && (await j(`${SC}.camp.tgt`)) === near2, JSON.stringify(await j(`[${SC}.camp.sel, ${SC}.camp.tgt]`)));
-  await key(t, 'KeyE'); await t.run(300);
-  check('E with a pilot picked sends that pilot alone: Red attacks, the others stay on guard', (await j(`campWing(${SC}.camp, 'fighter').filter(u => u.squad === 'red').every(u => u.order && u.order.type === 'attack' && u.order.target === '${near2}')`)) && (await j(`campWing(${SC}.camp, 'fighter').filter(u => u.squad !== 'red').every(u => !(u.order && u.order.type === 'attack'))`)));
+  await key(t, 'KeyW'); await t.run(300);
+  check('W with a pilot picked sends that pilot alone: Red attacks, the others stay on guard', (await j(`campWing(${SC}.camp, 'fighter').filter(u => u.squad === 'red').every(u => u.order && u.order.type === 'attack' && u.order.target === '${near2}')`)) && (await j(`campWing(${SC}.camp, 'fighter').filter(u => u.squad !== 'red').every(u => !(u.order && u.order.type === 'attack'))`)));
   await key(t, 'KeyX'); await t.run(300);
   await t.ev('(() => { campFleetListSet(true); return 1; })()'); // the old lists again, for the walk back through them
   await key(t, 'KeyQ'); await t.run(200);
