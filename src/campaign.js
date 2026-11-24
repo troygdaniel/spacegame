@@ -118,7 +118,7 @@ const CAMP = {
   missile: {                               // the missile launcher (F, or the order "missiles"): a homing missile for the mothership and the other big ships (card space-game-campaign-missiles)
     magazine: 6,                           // missiles you start with, and the full rack: the most R can queue is the empty slots of it
     max: 12,                               // the most the magazine can ever hold (C.missiles, a plain number: the ore code adds to it with campMissileAdd)
-    reload: 15000,                         // ms a missile takes to BUILD (the old reload time; card space-game-missiles-cost-ore: the magazine no longer fills itself, src/campmissilebuild.js)
+    reload: 10000,                         // ms a missile takes to BUILD (15000 until card space-game-missile-build-10s, Troy, 24 Nov 2026; the N panel's row Missile build time moves it; card space-game-missiles-cost-ore: the magazine no longer fills itself, src/campmissilebuild.js)
     cost: 20,                              // ore a missile costs to build, paid when its build starts (card space-game-missiles-cost-ore; Troy, 24 Nov 2026). The ship builds ONE by itself only at 0 missiles, each press of R queues one (card space-game-missile-queue); 0 makes them free again
     delay: 700,                            // ms between two launches (the launcher cycles)
     lock: 2400,                            // px: a big ship this close to the carrier can be locked (the mothership first, else the nearest tower or gunship)

@@ -27,7 +27,7 @@ g.run(`
 // ---- A. the table and the words ----
 {
   const K = J('CAMP.missile');
-  check('the price is 20 ore a missile and the build time is the old reload time (15 s); the rack is six', K.cost === 20 && K.reload === 15000 && K.magazine === 6, JSON.stringify(K));
+  check('the price is 20 ore a missile and the build time is 10 s (15 until card space-game-missile-build-10s); the rack is six', K.cost === 20 && K.reload === 10000 && K.magazine === 6, JSON.stringify(K));
   check('R is a key of the table (CAMP_KEYS.reload), the key cap says R and the code is KeyR', J('CAMP_KEYS.reload.k') === 'R' && J('CAMP_KEYS.reload.codes.join()') === 'KeyR');
   check('the order is "reload" and a battle starts with no build and an empty queue: reloadAt 0, queued 0', (g.run('__m(100)'), J('C.reloadAt') === 0 && J('C.queued') === 0 && J('C.rackOn') === null)); // (no flag of the old whole-rack run is left)
   const words = ['camp.cruiser.missiles', 'camp.cruiser.building', 'camp.cruiser.noore', 'camp.say.reload', 'camp.say.rackdry', 'camp.no.rackfull', 'camp.no.reloading'];
@@ -52,10 +52,10 @@ g.run(`
 {
   g.run('__m(100, 0); __run(0.1)');
   check('at zero with 100 ore: a build starts at once, 20 ore are paid at its start, and none is in the rack yet', J('C.reloadAt') > 0 && J('Math.floor(C.ore)') === 80 && J('C.missiles') === 0, J('[C.reloadAt, C.ore, C.missiles]'));
-  g.run('__run(14)');
-  check('14 s later the missile is not done (the build takes 15 s)', J('C.missiles') === 0 && J('C.reloadAt') > 0);
+  g.run('__run(9)');
+  check('9 s later the missile is not done (the build takes 10 s)', J('C.missiles') === 0 && J('C.reloadAt') > 0);
   g.run('__run(2)');
-  check('after 15 s it is in the rack: one missile, nothing building, 80 ore left', J('C.missiles') === 1 && J('C.reloadAt') === 0 && J('Math.floor(C.ore)') === 80 && J('__ev("mbuilt")') === 1, J('[C.missiles, C.reloadAt, C.ore]'));
+  check('after 10 s it is in the rack: one missile, nothing building, 80 ore left', J('C.missiles') === 1 && J('C.reloadAt') === 0 && J('Math.floor(C.ore)') === 80 && J('__ev("mbuilt")') === 1, J('[C.missiles, C.reloadAt, C.ore]'));
   g.run('__run(60)');
   check('with one in the rack the ship builds no second one by itself, however long it waits', J('C.missiles') === 1 && J('C.reloadAt') === 0 && J('Math.floor(C.ore)') === 80);
   g.run('__m(100, 1); __fire = () => campOrder(C, "missiles", "", "key"); C.nextRocket = 0; campFire(C, null); __run(0.1)');
@@ -82,11 +82,11 @@ g.run(`
   check('a third press: 3 more, 40 ore still to pay (the two slots left after the build under way: three of six, one building, two waiting)', three.ok && three.say === 'Reloading: 3 more, 40 ore.' && J('C.queued') === 2 && J('campMissileState(C).pending') === 3, JSON.stringify(three));
   const four = J('__R()');
   check('a fourth press: every empty slot has a missile on its way: refused in words, nothing more is queued or paid', !four.ok && four.code === 'reloading' && four.say === 'Already building the rack, pilot.' && J('C.queued') === 2 && J('Math.floor(C.ore)') === 80, JSON.stringify(four));
-  g.run('__run(15.2)');
+  g.run('__run(10.2)');
   check('after one build time: four missiles, the next build has started and is paid (60 ore left), one waits', J('C.missiles') === 4 && J('C.reloadAt') > 0 && J('C.queued') === 1 && J('Math.floor(C.ore)') === 60, J('[C.missiles, C.queued, C.ore]'));
-  g.run('__run(15)');
+  g.run('__run(10)');
   check('after two: five, the last one is building (40 ore left), nothing waits', J('C.missiles') === 5 && J('C.queued') === 0 && J('C.reloadAt') > 0 && J('Math.floor(C.ore)') === 40);
-  g.run('__run(15)');
+  g.run('__run(10)');
   check('after three: six, the rack is full and nothing more is built; 3 x 20 = 60 ore in all', J('C.missiles') === 6 && J('C.queued') === 0 && J('C.reloadAt') === 0 && J('Math.floor(C.ore)') === 40, J('[C.missiles, C.queued, C.ore]'));
   g.run('__run(60)');
   check('and it stays six a minute later', J('C.missiles') === 6 && J('Math.floor(C.ore)') === 40);
@@ -97,17 +97,17 @@ g.run(`
   check('R with 10 ore: refused with the need and what is in the store (the ore codes\' own words), nothing is queued', !poor.ok && poor.code === 'noore2' && /20 needed/.test(poor.say) && /10 in the store/.test(poor.say) && J('C.queued') === 0, JSON.stringify(poor));
   g.run('__m(50, 3)'); g.run('__R()'); const second = J('__R()'), third = J('__R()');
   check('50 ore, three missing: the first press pays 20 and starts, the second queues (20 of the 30 left will pay it), the third is refused: it needs 40 and the store has 30', second.ok && !third.ok && third.code === 'noore2' && /40 needed/.test(third.say) && /30 in the store/.test(third.say) && J('C.queued') === 1, JSON.stringify([second, third]));
-  g.run('__run(15.2)');
-  check('the two are built: four, then (after another build time) five, 10 ore left, nothing is said', (g.run('__run(15)'), J('C.missiles') === 5) && J('Math.floor(C.ore)') === 10 && J('C.queued') === 0 && J('C.events.filter(e => e.type === "say" && e.key === "camp.say.rackdry").length') === 0);
-  g.run('__m(100, 3); __R(); __R(); __R(); C.ore = 5; __run(15.2)');
+  g.run('__run(10.2)');
+  check('the two are built: four, then (after another build time) five, 10 ore left, nothing is said', (g.run('__run(10)'), J('C.missiles') === 5) && J('Math.floor(C.ore)') === 10 && J('C.queued') === 0 && J('C.events.filter(e => e.type === "say" && e.key === "camp.say.rackdry").length') === 0);
+  g.run('__m(100, 3); __R(); __R(); __R(); C.ore = 5; __run(10.2)');
   check('ore spent elsewhere while it is queued: the one building lands (four), the next cannot start: the queue stops where it is and the radio says so once ("The rack stops at 4")', J('C.missiles') === 4 && J('C.queued') === 0 && J('C.reloadAt') === 0 && J('C.events.filter(e => e.type === "say" && e.key === "camp.say.rackdry").length') === 1 && J('C.events.find(e => e.key === "camp.say.rackdry").vars.n') === 4, J('C.events.filter(e => e.type === "say").map(e => e.key).join()'));
   g.run('__m(100, 3); __R(); __R(); __R(); campMissileAdd(C, 2); __run(0.1)');
   check('loot fills the rack while it is queued (three plus two = five, one building): the queue is cut to the slots left (none), the build under way lands', J('C.missiles') === 5 && J('C.queued') === 0 && J('C.reloadAt') > 0, J('[C.missiles, C.queued, C.reloadAt]'));
-  g.run('__m(100, 3); __R(); C.nextRocket = 0; campFire(C, null); campFire(C, null); __run(15.2)');
+  g.run('__m(100, 3); __R(); C.nextRocket = 0; campFire(C, null); campFire(C, null); __run(10.2)');
   check('missiles fired while one is being built: the build goes on and lands (one fired twice from three: one left, then two)', J('C.missiles') === 2 && J('C.reloadAt') === 0, J('[C.missiles, C.reloadAt]'));
   g.run('__m(100, 0); __run(0.1)');
   const mid = J('__R()');
-  check('R at zero while the ship is already building its one: it queues one more (2 on their way; paid when its build starts: 80 now, 60 after the first)', mid.ok && mid.say === 'Reloading: 2 more, 20 ore.' && J('C.queued') === 1 && J('C.reloadAt') > 0 && J('Math.floor(C.ore)') === 80 && (g.run('__run(15.2)'), J('C.missiles') === 1 && J('Math.floor(C.ore)') === 60 && J('C.queued') === 0 && J('C.reloadAt') > 0), JSON.stringify(mid));
+  check('R at zero while the ship is already building its one: it queues one more (2 on their way; paid when its build starts: 80 now, 60 after the first)', mid.ok && mid.say === 'Reloading: 2 more, 20 ore.' && J('C.queued') === 1 && J('C.reloadAt') > 0 && J('Math.floor(C.ore)') === 80 && (g.run('__run(10.2)'), J('C.missiles') === 1 && J('Math.floor(C.ore)') === 60 && J('C.queued') === 0 && J('C.reloadAt') > 0), JSON.stringify(mid));
   g.run('__m(0, 0); __run(1)');
   check('R at zero with no ore and nothing building: refused (no ore), and nothing is queued', !J('__R()').ok && J('C.queued') === 0);
   check('a battle that is over takes no order', (g.run('__m(100, 3); C.result = "won"'), J('__R().code') === 'over'));
@@ -122,7 +122,7 @@ g.run(`
   g.run('__R(); __R()');
   check('state: with two presses the first is building and one waits: pending 2, queued 1', J('campMissileState(C).state') === 'building' && J('campMissileState(C).pending') === 2 && J('campMissileState(C).queued') === 1 && J('campMissileState(C).rack') === true);
   g.run('__m(100, 0); __run(0.1)');
-  check('state: a build under way is "building" with the seconds left (15, rounded up)', J('campMissileState(C).state') === 'building' && J('campMissileState(C).secs') === 15, J('campMissileState(C)'));
+  check('state: a build under way is "building" with the seconds left (10, rounded up)', J('campMissileState(C).state') === 'building' && J('campMissileState(C).secs') === 10, J('campMissileState(C)'));
   g.run('__m(5, 0); __run(0.1)');
   check('state: at zero with too little ore and nothing building is "noore"', J('campMissileState(C).state') === 'noore');
   g.run('__m(5, 2)');
@@ -138,10 +138,10 @@ g.run(`
   check('the line says "MISSILES  3/6"; ready says nothing on the right', J('campCruiserMissileLine(campCruiserStatus(C))') === 'MISSILES  3/6' && J('campCruiserMissileWhy(campCruiserStatus(C))') === '');
   g.run('__m(100, 3); __R(); __R(); __R()');
   check('with three presses the line shows what is on its way after the count: "MISSILES  3/6 +3" (the one building and the two waiting), and says building on the right', J('campCruiserMissileLine(campCruiserStatus(C))') === 'MISSILES  3/6 +3' && /^building \d+ s$/.test(J('campCruiserMissileWhy(campCruiserStatus(C))')), J('campCruiserMissileLine(campCruiserStatus(C))'));
-  g.run('__m(100, 3); __R(); __run(15.2)');
-  check('when the queue has landed the +n goes: nothing on its way, no plus', (g.run('__m(100, 5); __R(); __run(15.2)'), J('campCruiserMissileLine(campCruiserStatus(C))') === 'MISSILES  6/6'));
+  g.run('__m(100, 3); __R(); __run(10.2)');
+  check('when the queue has landed the +n goes: nothing on its way, no plus', (g.run('__m(100, 5); __R(); __run(10.2)'), J('campCruiserMissileLine(campCruiserStatus(C))') === 'MISSILES  6/6'));
   g.run('__m(100, 0); __run(0.1)');
-  check('building says "building 15 s" on the right', J('campCruiserMissileWhy(campCruiserStatus(C))') === 'building 15 s');
+  check('building says "building 10 s" on the right', J('campCruiserMissileWhy(campCruiserStatus(C))') === 'building 10 s');
   g.run('__m(0, 0); __run(0.1)');
   check('at zero with no ore it says "no ore" on the right, and the line says 0/6', J('campCruiserMissileWhy(campCruiserStatus(C))') === 'no ore' && J('campCruiserMissileLine(campCruiserStatus(C))') === 'MISSILES  0/6');
   const Z = J('campCruiserHudGeom()'), T = J('CAMP.corner.at'), Th = J('CAMP.corner.title.h'), K = J('CAMPCRUISERHUD');
