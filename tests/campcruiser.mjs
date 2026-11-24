@@ -45,8 +45,8 @@ console.log('B. the keys');
   check('Q opens no list: it is the who key now (card space-game-keys3-select): the key is used, no list opens and no order is given', J(`[campPanelOpen(P1), r3.used, r3.ran].join()`) === ',true,false');
   g.run(`__key(P1, C1, 'KeyS', 400); __key(P1, C1, 'Escape', 500);`);
   check('Esc closes it', J(`campPanelOpen(P1)`) === '');
-  g.run(`__key(P1, C1, 'KeyS', 600); for (let i = 0; i < 4; i++) __key(P1, C1, 'ArrowDown', 700 + i); var r4 = __key(P1, C1, 'Enter', 800);`);
-  check('Down four times is Repair hull: with the hull whole Enter is refused in words, and the list stays open on it (no row of the list opens another list: Dock and repair is switched off)', r4_ok(), J(`[campPanelOpen(P1), r4.row, r4.ok, P1.at].join()`));
+  g.run(`__key(P1, C1, 'KeyS', 600); var r4 = __key(P1, C1, 'Digit5', 800);`);
+  check('Digit 5 is Repair hull (card space-game-s-list-numbers: the list is the digits\'; it was Down four times and Enter): with the hull whole Enter is refused in words, and the list stays open on it (no row of the list opens another list: Dock and repair is switched off)', r4_ok(), J(`[campPanelOpen(P1), r4.row, r4.ok, P1.at].join()`));
   function r4_ok() { return J(`[campPanelOpen(P1), r4.row, r4.ok, P1.at].join()`) === 'cruiser,srepair,false,4' && J(`campPanelList(C1, 'cruiser').every(r => !r.open)`); }
   const scene = readFileSync(new URL('../src/campaignscene.js', import.meta.url), 'utf8');
   check('in the scene S is the zoom\'s reset and then goes on to the list (the other zoom keys and a held S stop at the zoom)', /campZoomPress\(this, zk, e\.repeat\); if \(!zk\.reset \|\| e\.repeat\) return;/.test(scene));
