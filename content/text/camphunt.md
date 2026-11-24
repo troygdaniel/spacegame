@@ -11,4 +11,4 @@ The words of the night hunt's small fixes on the Campaign (card space-game-night
 | camp.o.deliverleft | Haulers home: {n}. Still flying: {left}. |
 | camp.o.deliver.transport | Transport arrived: {got} of {need}. |
 | camp.lose.convoy.transport | The transport is lost. |
-| camp.lose.tip.convoy.transport | Guard the transport: pick it ({keyflast} {keyfnext}), then {keyguard}. |
+| camp.lose.tip.convoy.transport | Guard the transport: pick it ({keyflast} {keyfnext}), then {keyengage}. |

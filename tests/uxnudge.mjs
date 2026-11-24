@@ -1,6 +1,6 @@
 // smoke: the Campaign's first-minute hint: pick a hostile and press E (the pilots start out, so there is no launch hint), once, level 1 only (plain Node, no Chrome)
 // Card space-game-night-ux, finding 6 (docs/night/ux.md; src/campnudge.js, update in src/campaignscene.js). The pilots start each mission out beside the cruiser (card space-game-keys-orders) so the old launch hint is gone; the one hint left is at 26 s, with aliens about:
-// 'Enemies. Pick one with the backslash, then E: the pilots attack.' It is shown once, never if the player has already given an attack, and only in level 1. The keys in it are the key table's ({keynear}, {keyattack} of src/data_controls.js).
+// 'Enemies. Pick one with the backslash, then E: the pilots attack.' It is shown once, never if the player has already given an attack, and only in level 1. The keys in it are the key table's ({keynear}, {keyengage} of src/data_controls.js).
 // The player here does what it says: the pick key, then E.
 // Run: node tests/uxnudge.mjs   (exit code 1 on a failed check)
 import { readFileSync as __rf } from 'node:fs';
@@ -24,7 +24,7 @@ g.run(`
   window.__tick = s => { for (let i = 0; i < s * 30; i++) F.update(0, 1000 / 30); };
 `);
 const ATTACK = 'Enemies. Pick one with \\, then E: the pilots attack.';
-check('the hint reads its keys from the key table and says them by their letters, not "then Enter": the pick key ({keynear}) and the order key ({keyattack}); the launch hint is gone with the Launch key (the pilots start out)', J(`uiText('camp.nudge.attack')`) === ATTACK && J(`'Enemies. Pick one with ' + campKeyVar('keynear') + ', then ' + campKeyVar('keyattack') + ': the pilots attack.'`) === ATTACK && J(`UI_TEXT['camp.nudge.attack'].includes('{keyattack}') && UI_TEXT['camp.nudge.attack'].includes('{keynear}')`) && J(`UI_TEXT['camp.nudge.launch'] === undefined && UI_TEXT['camp.help.goalbay'] === undefined`) && J(`CAMPNUDGE.map(h => h.id).join()`) === 'attack', J(`uiText('camp.nudge.attack')`));
+check('the hint reads its keys from the key table and says them by their letters, not "then Enter": the pick key ({keynear}) and the order key ({keyengage}); the launch hint is gone with the Launch key (the pilots start out)', J(`uiText('camp.nudge.attack')`) === ATTACK && J(`'Enemies. Pick one with ' + campKeyVar('keynear') + ', then ' + campKeyVar('keyengage') + ': the pilots attack.'`) === ATTACK && J(`UI_TEXT['camp.nudge.attack'].includes('{keyengage}') && UI_TEXT['camp.nudge.attack'].includes('{keynear}')`) && J(`UI_TEXT['camp.nudge.launch'] === undefined && UI_TEXT['camp.help.goalbay'] === undefined`) && J(`CAMPNUDGE.map(h => h.id).join()`) === 'attack', J(`uiText('camp.nudge.attack')`));
 // a player who does nothing: the pilots are out from the first second
 g.run(`window.F = __fake(1); __tick(5.5);`);
 check('nothing is said in the first 5 seconds, and the three pilots are already out', J('__toasts.length') === 0 && J(`campWing(F.camp, 'fighter').length`) === 3 && J('F.camp.bay.fighters') === 0);

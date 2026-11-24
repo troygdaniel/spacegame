@@ -17,8 +17,8 @@ const CAMPL1HINTS = [
   { id: 'l1p-split', mid: 'mine', hint: 'split', when: C => campL1Alive(C, 1) && campL1Told(C, 2) },
   // 1.2, beat 3: torpedo boats for the miners. Under the cruiser's shield a miner is safe from a torpedo; a squad on the boats stops it being fired
   { id: 'l1p-boats', mid: 'mine', hint: 'boats', when: C => campL1Told(C, 3) && campL1Boats(C) && !campL1Tucked(C) },
-  // 1.2, before the heavy raid: the quiet is for mending (a hurt fighter is mended in the bay: src/camprepair.js)
-  { id: 'l1p-mend', mid: 'mine', hint: 'mend', when: C => !!(C.waves[3] && C.waves[3].started) && !campAliens(C).length && !(C.waves[4] && C.waves[4].started) && campWing(C, 'fighter').some(u => u.hp <= u.maxHp * 0.6) },
+  // 1.2, before the heavy raid: the quiet is for mending (a hurt pilot flies home by itself and is mended in the bay: src/camprepair.js; there is no recall key)
+  { id: 'l1p-mend', mid: 'mine', hint: 'mend', when: C => !!(C.waves[3] && C.waves[3].started) && !campAliens(C).length && !(C.waves[4] && C.waves[4].started) && ((C.repairs || []).length > 0 || campWing(C, 'fighter').some(u => u.repair)) },
   // 1.3, beat 2: torpedo boats on a convoy 1,500 px long: the shield covers only the haulers beside the cruiser
   { id: 'l1p-haulboats', mid: 'haulers', hint: 'haulboats', when: C => campL1Told(C, 1) && campL1Boats(C) && !campL1Tucked(C) },
   // 1.3, beats 3 and 5: the raid on the last hauler, far behind the cruiser
