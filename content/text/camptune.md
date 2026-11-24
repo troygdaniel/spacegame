@@ -42,7 +42,8 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.turretreach | Turret reach |
 | camp.ui.tune.row.sensorrange | Sensor range (hostiles seen) |
 | camp.ui.tune.row.missilecount | Missiles at the start |
-| camp.ui.tune.row.missilereload | Missile reload time |
+| camp.ui.tune.row.missilereload | Missile build time |
+| camp.ui.tune.row.missilecost | Ore for a missile |
 | camp.ui.tune.row.lasertank | Laser tank size |
 | camp.ui.tune.row.laserrefill | Laser refill |
 | camp.ui.tune.row.fighterhull | Fighter hull |
@@ -55,6 +56,7 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.pace | Battle pace (1 is Normal) |
 | camp.ui.tune.row.fightpace | Fight pace (1 is as fast as travel) |
 | camp.ui.tune.row.marktime | Pilot and target squares stay |
+| camp.ui.tune.row.targetrestart | Enemy pick starts over |
 | camp.ui.tune.row.wavetime | Wave timing (times the mission's) |
 | camp.ui.tune.row.startzoom | Starting zoom (presses of minus) |
 | camp.ui.tune.row.miningrate | Mining rate of a mining ship |

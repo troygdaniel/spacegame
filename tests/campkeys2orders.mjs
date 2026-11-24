@@ -1,7 +1,7 @@
-// smoke: E is the one order key (attack, guard, form up), G and R are free, there is no recall, a badly hurt pilot returns by itself and comes back repaired (plain Node, no Chrome)
+// smoke: W is the one order key (attack, guard, form up; it was E until card space-game-keys4-onekey), E, G and R are free, there is no recall, a badly hurt pilot returns by itself and comes back repaired (plain Node, no Chrome)
 // Card space-game-keys2-orders (Troy, 23 Nov 2026: "E is the one order key and does the fitting thing for who is picked: attack if the target is an enemy, guard if it is a friendly, form up on the cruiser if nothing is picked. G and R are freed. No recall: pilots stay out all mission. A badly hurt pilot breaks off and returns to the cruiser by itself, then comes back out repaired").
-// src/data_controls.js (the table: CAMP_KEYS.engage), src/camptarget.js (campSelOrder 'engage'), src/camppanel.js (the key), src/camprepair.js (the return), src/camptune.js (the two numbers on the N panel).
-//   A. the table: E is CAMP_KEYS.engage; attack, guard and recall are gone from it; G and R mean nothing in a battle
+// src/data_controls.js (the table: CAMP_KEYS.order), src/camptarget.js (campSelOrder 'engage'), src/camppanel.js (the key), src/camprepair.js (the return), src/camptune.js (the two numbers on the N panel).
+//   A. the table: W is CAMP_KEYS.order; attack, guard and recall are gone from it; G and R mean nothing in a battle
 //   B. E with an enemy picked attacks it; with a friendly picked guards it; with nothing picked forms up on the cruiser (the dry run says so, and moves nothing); one pilot picked takes it alone
 //   C. a pilot in the bay (being mended, or landed for the Fast burn) is launched by E, as any order does
 //   D. no recall: the key does nothing, the pilots stay out; the Fast burn still pulls them in (campNavOut)
@@ -27,9 +27,9 @@ g.run(`
 `);
 
 sec('A. the table', () => {
-  check('E is the one order key: CAMP_KEYS.engage is E (KeyE); recall is not in the table; attack and guard are only the letter the target boxes read (E, no code: they take no key)', J(`CAMP_KEYS.engage.k`) === 'E' && J(`CAMP_KEYS.engage.codes.join()`) === 'KeyE' && J(`!!CAMP_KEYS.recall`) === false && J(`['attack', 'guard'].every(id => CAMP_KEYS[id].k === 'E' && CAMP_KEYS[id].codes.length === 0)`) === true);
-  check('G and R are on no key of the table (they are free)', J(`Object.keys(CAMP_KEYS).every(id => !CAMP_KEYS[id].codes.some(c => c === 'KeyG' || c === 'KeyR'))`) === true);
-  check('{keyengage} is E in the hints (no text names {keyattack}, {keyguard} or {keyrecall} any more: build-content and the suites read them)', J(`campKeyVar('keyengage')`) === 'E' && J(`campKeyVar('keyrecall')`) === '');
+  check('W is the one order key: CAMP_KEYS.order is W (KeyW; the old engage is gone); recall is not in the table; attack and guard are only the letter the target boxes read (W, no code: they take no key)', J(`CAMP_KEYS.order.k`) === 'W' && J(`CAMP_KEYS.order.codes.join()`) === 'KeyW' && J(`!CAMP_KEYS.engage`) && J(`!!CAMP_KEYS.recall`) === false && J(`['attack', 'guard'].every(id => CAMP_KEYS[id].k === 'W' && CAMP_KEYS[id].codes.length === 0)`) === true);
+  check('G is on no key of the table (it is free); R is the missiles\' (card space-game-missiles-cost-ore: only CAMP_KEYS.reload has it)', J(`Object.keys(CAMP_KEYS).every(id => !CAMP_KEYS[id].codes.some(c => c === 'KeyG'))`) === true && J(`Object.keys(CAMP_KEYS).filter(id => CAMP_KEYS[id].codes.some(c => c === 'KeyR')).join()`) === 'reload');
+  check('{keyorder} is W in the hints (no text names {keyengage}, {keyattack}, {keyguard} or {keyrecall} any more: build-content and the suites read them)', J(`campKeyVar('keyorder')`) === 'W' && J(`campKeyVar('keyengage')`) === '' && J(`campKeyVar('keyrecall')`) === '');
 });
 
 sec('B. E does the fitting order', () => {
@@ -59,8 +59,8 @@ sec('B. E does the fitting order', () => {
   check('one pilot picked (Kara): she alone attacks, the other two keep guarding the cruiser', d.ok === true && J(`__out().filter(u => u.order.type === 'attack').map(u => campPilotName(u)).join()`) === 'Kara' && J(`__out().filter(u => u.order.type === 'guard').length`) === 2);
   // the key itself
   g.run('C.sel = "all"; C.tgt = ""; C.fsel = ""; __pn();');
-  const e = J(`__k('KeyE')`);
-  check('the key E in the panel code gives the order (form up with nothing picked)', e.used === true && e.ran === true && e.ok === true, JSON.stringify(e));
+  const e = J(`__k('KeyW')`), e0 = J(`__k('KeyE')`);
+  check('the key W in the panel code gives the order (form up with nothing picked; E is free: it is used by nothing)', e.used === true && e.ran === true && e.ok === true && e0.used === false && e0.ran === false, JSON.stringify(e));
 });
 
 sec('C. a pilot in the bay is launched by E', () => {
@@ -76,7 +76,7 @@ sec('C. a pilot in the bay is launched by E', () => {
 sec('D. no recall', () => {
   g.run('__new(); __pn();');
   const rr = J(`__k('KeyR')`), gg = J(`__k('KeyG')`);
-  check('R and G do nothing in a battle: no key used, no order given, the pilots are still out', !rr.used && !rr.ran && !gg.used && !gg.ran && J('__out().length') === 3 && J('C.bay.fighters') === 0, JSON.stringify([rr, gg]));
+  check('G does nothing in a battle and R is the missiles\' (a full rack: refused in words, no order to the pilots); the pilots are still out', rr.used && rr.ran && rr.row === 'sreload' && !gg.used && !gg.ran && J('__out().length') === 3 && J('C.bay.fighters') === 0, JSON.stringify([rr, gg]));
   check('campSelOrder has no recall verb any more (it asks what to do)', J(`campSelOrder(C, 'recall', 'key').ok`) === false && J('__out().length') === 3);
   g.run('__run(20)');
   check('twenty seconds on, the pilots are still out (nothing sends them home)', J('__out().length') === 3 && J('C.bay.fighters') === 0);

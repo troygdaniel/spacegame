@@ -6,7 +6,7 @@
 //   A CORNER is registered once, at the foot of the file that knows what it shows:
 //     campCornerAdd({ id: 'fleet',                   its name (CAMP.corner.at has the four places by 'at')
 //                     at: 'bl',                      'tl' | 'bl' | 'tr' | 'br': which corner
-//                     keys: ['wlast', 'wnext'],      the chips, in order: an id of CAMP_KEYS (its cap is CAMP_KEYS[id].k, and those keys open the details), or { cap: 'S', codes: ['KeyS'] } for a key that is not in the table
+//                     keys: ['who'],                   the chips, in order: an id of CAMP_KEYS (its cap is CAMP_KEYS[id].k, and those keys open the details), or { cap: 'S', codes: ['KeyS'] } for a key that is not in the table
 //                     title: 'camp.corner.fleet',    the words of the title (src/contenttables.js, content/text/campcorner.md has the four); or C => key when the title changes with the game (NO HOSTILES: card space-game-layout-targets)
 //                     selection: C => 'Kara',        the text written beside the title, never fades ('' for none)
 //                     rows: C => [item, ...],        the details, asked for only while they are open (see the items below)
@@ -54,7 +54,7 @@ function campCornerNow(C, id) {
 }
 // ---- FLEET, bottom left: Q W (card space-game-layout-fleet): the selection is All pilots or the one pilot; the details are the pilots' names and hull bars, and they come back for 4 s when a pilot is hit ----
 campCornerAdd({
-  id: 'fleet', at: 'bl', keys: ['wlast', 'wnext'], title: 'camp.corner.fleet',
+  id: 'fleet', at: 'bl', keys: ['who'], title: 'camp.corner.fleet',
   selection: C => { const f = typeof campSelNow === 'function' ? campSelNow(C) : null; return f ? (f.kind === 'pilot' ? f.name : uiText('camp.sel.all')) : ''; },
   rows: C => (typeof campSelList === 'function' ? campSelList(C) : []).filter(e => e.kind === 'pilot').map(e => {
     const u = e.unit, lit = C.sel === e.id || !C.sel || C.sel === 'all', live = u && u.hp > 0 && !u.gone;

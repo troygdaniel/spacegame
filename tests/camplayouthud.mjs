@@ -44,7 +44,7 @@ console.log('C. the scene');
   check('nothing of the HUD is written at the top left any more: no text is made at x 24 near the top (the S CRUISER corner has it)', !/\bt\(24, \d+,/.test(scene) && !/\bmid\(\d+, 14, '#[0-9a-f]+'\)\.setX/.test(scene));
   check('flowHud orders wave, obj, earth, repair, post', /ids = \['wave', 'obj', 'earth', 'repair', 'post'\]/.test(scene));
   check('the mothership\'s bar is drawn 20 px under the column (this.hudBelow), and its name 2 px under', /bar\(W \/ 2 - 150, \(this\.hudBelow \|\| 0\) \+ 20, 300, m\.hp \/ m\.maxHp, 0xc9a0ff\)/.test(scene) && /H\.mother\.setY\(F\.bottom \+ 2\)/.test(scene));
-  check('the missile count stays where it was: bottom left, above the key line, at x CAMP.corner.edge - CAMP.corner.ink (the corner frames\' left edge: card space-game-layout-align) and H - CAMP.tdisp.count', /this\.hud\.missiles = this\.add\.text\(CAMP\.corner\.edge - CAMP\.corner\.ink, H - CAMP\.tdisp\.count,/.test(scene));
+  check('the missile count is not bottom left any more: it is the status block\'s fourth line at the top left (card space-game-missiles-cost-ore): no text of it in the scene, the HUD has crMis', !/hud\.missiles|H - CAMP\.tdisp\.count/.test(scene) && /crMis: mk\(/.test(readFileSync(new URL('../src/campcruiserhud.js', import.meta.url), 'utf8')));
   check('the bars\' animation is kept for the power list\'s rows', /this\.gaugeAnim = campGaugeAnimNew\(this\.camp\.power\.p\)/.test(scene) && /campGaugeAnim\(this\.gaugeAnim/.test(scene));
 }
 

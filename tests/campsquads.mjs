@@ -94,30 +94,32 @@ console.log('D. the keys and the lists');
 {
   const T = J('CAMP_PANELS.panels.map(p => ({ id: p.id, key: p.key, parent: p.parent || "", rows: p.rows.map(r => r.id) }))');
   const by = id => T.find(p => p.id === id);
-  check('W is the all-squads list, a part of the fleet list, and the convoy has no key of its own; the squads have no lists of their own now (E is the one order key: card space-game-keys2-orders)', by('squads').key === 'W' && by('squads').parent === 'fleet' && by('convoy').key === '' && by('convoy').parent === 'fleet' && !by('red') && !by('green') && !by('yellow') && J(`[campKeyIs('engage', 'KeyE'), campKeyIs('engage', 'KeyG'), campKeyIs('engage', 'KeyR')].join()`) === 'true,false,false');
+  check('W is the all-squads list, a part of the fleet list, and the convoy has no key of its own; the squads have no lists of their own now (W is the one order key when the old lists are off: card space-game-keys4-onekey)', by('squads').key === 'W' && by('squads').parent === 'fleet' && by('convoy').key === '' && by('convoy').parent === 'fleet' && !by('red') && !by('green') && !by('yellow') && J(`[campKeyIs('order', 'KeyW'), campKeyIs('order', 'KeyG'), campKeyIs('order', 'KeyR'), campKeyIs('order', 'KeyE')].join()`) === 'true,false,false,false');
   check('the all-squads list starts with Launch the wing (so Q, Enter, Enter launches everything): Launch, Attack, Escort, Guard, Guard the target, Recall, Mine; it opens on its first row that can be given (start: usable)', by('squads').rows.join() === 'launch,attack,escort,fguard,fguardt,frecall,fmine' && J(`campPanelDef('squads').start`) === 'usable');
   check('the Q list is the parts of the wing and nothing else, so nothing is listed twice: All squads first, then the convoy, every row a part that opens its list; Launch, Guard, Mine and Recall are not in it (they are in All squads)', by('fleet').rows.join() === 'gsquads,gconvoy' && J(`campPanelDef('fleet').rows.every(r => r.open)`) === true && J(`campPanelDef('fleet').rows[0].open`) === 'squads' && J('CAMP_PANELS.show') >= 2);
   g.run('__out(1); window.__PP = campPanelNew();');
   const key = c => J(`(() => { const r = campPanelKey(__PP, C, '${c}', 0); return { used: r.used, ran: r.ran, ok: r.ok, row: r.row, fleet: r.fleet, open: r.open, say: r.say }; })()`);
+  const ord = () => { g.run('campFleetListSet(false)'); const r = key('KeyW'); g.run('campFleetListSet(true)'); return r; }; // the order key is W: with the old squads list on W opens that list first, so the order is given with the old lists off
   g.run('window.__a = __foe(900, 0); campTgtNearest(C);');
   const tg = J('C.tgt');
   g.run('campFleetListSet(false)'); // Q and W are who here (card space-game-keys3-select): with the old fleet list on they would open its lists first, so the keys of who are tried with it off
-  const s1 = (key('KeyW'), J('C.sel')), s2 = (key('KeyW'), J('C.sel')), s3 = (key('KeyW'), J('C.sel')), s4 = (key('KeyQ'), J('C.sel'));
-  check('W picks who in turn from All pilots (the default): the pilots red, green, yellow, and Q goes back one; none of them is an order and none opens a list', s1 === 'pilot:red' && s2 === 'pilot:green' && s3 === 'pilot:yellow' && s4 === 'pilot:green' && J('campPanelOpen(__PP)') === '' && J('C.orders.attack | 0') === 0);
-  const e0 = key('KeyE');
-  check('E with the green pilot picked: the green squad attacks the picked target (a fleet order) and only the green squad', e0.ran && e0.ok && e0.row === 'attack' && e0.open === '' && e0.fleet === true && J('__ord("green")') === R3('attack:' + tg) && J('__ord("red")').startsWith('guard') && J('__ord("yellow")').startsWith('guard'), JSON.stringify(e0));
-  g.run(`C.sel = ''; campPanelKey(__PP, C, 'KeyW', 0);`);
-  const r0 = key('KeyE');
-  g.run(`C.sel = ''; campPanelKey(__PP, C, 'KeyW', 0); campPanelKey(__PP, C, 'KeyW', 0); campPanelKey(__PP, C, 'KeyW', 0);`);
-  const t0 = key('KeyE');
-  check('E with the red pilot picked, then the yellow one: each goes at the target alone, so all three are on it', r0.ok && t0.ok && J('__ord("red")') === R3('attack:' + tg) && J('__ord("yellow")') === R2('attack:' + tg) && J('__ord("green")') === R3('attack:' + tg));
+  const s1 = (key('KeyQ'), J('C.sel')), s2 = (key('KeyQ'), J('C.sel')), s3 = (key('KeyQ'), J('C.sel')), s4 = (key('KeyQ'), J('C.sel'));
+  check('Q picks who in turn from All pilots (the default): the pilots red, green, yellow and round to All pilots again, one way; it is no order and opens no list', s1 === 'pilot:red' && s2 === 'pilot:green' && s3 === 'pilot:yellow' && s4 === 'all' && J('campPanelOpen(__PP)') === '' && J('C.orders.attack | 0') === 0);
+  g.run(`C.sel = 'pilot:green';`);
+  const e0 = key('KeyW');
+  check('W with the green pilot picked: the green squad attacks the picked target (a fleet order) and only the green squad', e0.ran && e0.ok && e0.row === 'attack' && e0.open === '' && e0.fleet === true && J('__ord("green")') === R3('attack:' + tg) && J('__ord("red")').startsWith('guard') && J('__ord("yellow")').startsWith('guard'), JSON.stringify(e0));
+  g.run(`C.sel = ''; campPanelKey(__PP, C, 'KeyQ', 0);`);
+  const r0 = key('KeyW');
+  g.run(`C.sel = ''; campPanelKey(__PP, C, 'KeyQ', 0); campPanelKey(__PP, C, 'KeyQ', 0); campPanelKey(__PP, C, 'KeyQ', 0);`);
+  const t0 = key('KeyW');
+  check('W with the red pilot picked, then the yellow one: each goes at the target alone, so all three are on it', r0.ok && t0.ok && J('__ord("red")') === R3('attack:' + tg) && J('__ord("yellow")') === R2('attack:' + tg) && J('__ord("green")') === R3('attack:' + tg));
   g.run('campFleetListSet(true)'); // the old lists are back for the rest of the suite
   g.run(`C.sel = 'pilot:red';`);
   const e2 = key('KeyR');
-  check('R is a free key (card space-game-keys2-orders): with the red pilot picked it is used by nothing and all three stay on their attack', !e2.used && !e2.ran && J('__ord("red")').startsWith('attack') && J('__ord("green")').startsWith('attack') && J('__ord("yellow")').startsWith('attack'));
+  check('R is the missiles\' key (card space-game-missiles-cost-ore; it was free): with the red pilot picked it builds missiles, not an order to a squad, and all three stay on their attack', e2.used && e2.row === 'sreload' && J('__ord("red")').startsWith('attack') && J('__ord("green")').startsWith('attack') && J('__ord("yellow")').startsWith('attack'));
   g.run(`campPanelKey(__PP, C, 'KeyX', 0);`);
-  const rg = key('KeyE');
-  check('X lets the enemy and the friendly go and puts who back on All pilots; E with none picked forms all three squads up on the cruiser', J('C.sel') === 'all' && J('C.fsel') === '' && J('C.tgt') === '' && rg.ran && rg.ok && rg.row === 'guard' && J(`campWing(C, 'fighter').every(u => u.order.type === 'guard')`));
+  const rg = ord();
+  check('X lets the enemy and the friendly go and puts who back on All pilots; W with none picked forms all three squads up on the cruiser', J('C.sel') === 'all' && J('C.fsel') === '' && J('C.tgt') === '' && rg.ran && rg.ok && rg.row === 'guard' && J(`campWing(C, 'fighter').every(u => u.order.type === 'guard')`));
   g.run(`campPanelClose(__PP); campPanelKey(__PP, C, 'KeyW', 0);`);
   const w = J(`(() => { campPanelClose(__PP); campPanelKey(__PP, C, 'KeyW', 0); for (let k = 0; k < 10 && campPanelList(C, 'squads')[__PP.at].id !== 'fguard'; k++) campPanelKey(__PP, C, 'ArrowDown', 0); const r = campPanelKey(__PP, C, 'Enter', 0); return { open: campPanelOpen(__PP), row: r.row, ok: r.ok, ran: r.ran, fleet: r.fleet }; })()`);
   check('W, Down to Guard the cruiser, Enter is Guard the cruiser for all squads (the list is still the way to the wide orders): every fighter', w.ran && w.ok && w.row === 'fguard' && J(`campWing(C, 'fighter').every(u => u.order.type === 'guard')`), JSON.stringify(w));
@@ -130,7 +132,7 @@ console.log('D. the keys and the lists');
   g.run('campPanelClose(__PP);');
   const old = ['KeyE', 'KeyR', 'KeyT'].map(c => J(`(() => { campPanelClose(__PP); return campPanelKey(__PP, C, '${c}', 0).open; })()`)).join();
   check('E, R and T open no list any more: they give an order (or are refused in words) and the panel stays shut', old === ',,', old);
-  check('the key line, the H page and the hints say the keys (Q Fleet  W All with the old switches on), read from the table: the order key is a direct key, in the texts as {keyengage}, who as {keywlast} {keywnext} and the friendlies\' as {keyflast} {keyfnext}', J('campPanelKeyLine()') === 'Q Fleet  W All    P Ship  O Power  I Autopilot  U Dock' && J('campPanelKeyRows().slice(0, 2).map(r => r.k[0]).join("")') === 'QW' && J(`campKeyVar('squadskey')`) === 'W' && J(`['keyengage', 'keywlast', 'keywnext', 'keyflast', 'keyfnext', 'keylast', 'keynext'].map(campKeyVar).join('')`) === 'EQWOP[]');
+  check('the key line, the H page and the hints say the keys (Q Fleet  W All with the old switches on), read from the table: the order key is a direct key, in the texts as {keyorder}, who as {keywho} and the friendlies\' as {keyfriendlies}', J('campPanelKeyLine()') === 'Q Fleet  W All    P Ship  O Power  I Autopilot  U Dock' && J('campPanelKeyRows().slice(0, 2).map(r => r.k[0]).join("")') === 'QW' && J(`campKeyVar('squadskey')`) === 'W' && J(`['keyorder', 'keywho', 'keyfriendlies', 'keyhostiles'].map(campKeyVar).join('')`) === 'WQ[]');
 }
 
 console.log('E. the words');
@@ -149,7 +151,7 @@ console.log('E. the words');
   check('"all squads recall" brings every fighter home, "cancel the red squad" is a plain Guard for Red', ['red', 'green', 'yellow'].every(k => J(`__ord('${k}')`).startsWith('recall')) && (g.run(`campWingText(C, 'cancel the red squad');`), J('__ord("red")').startsWith('guard')));
   const bad = J(`campWingText(C, 'purple squad attack')`);
   check('a squad that does not exist is no group: it says so in words (the words of the old group unchanged: "fighters attack" still works; the escorts group is gone)', bad.ok === false && J(`campWingText(C, 'fighters attack the raider', true).ok`) === true && !J(`campWingText(C, 'escorts guard', true).ok`));
-  check('the ship computer is told the squads in its list of actions and in the lists as they are (the game\'s: Q the cruiser list; E is the order key)', /one squad of the fighters: red, green or yellow/.test(src('src/shipcomputer.js')) && /S opens the cruiser list/.test(J('shipcompSystem({ scene: { key: "Campaign" }, camp: C })') || '') && /E gives the order that fits the pick/.test(J('shipcompSystem({ scene: { key: "Campaign" }, camp: C })') || ''));
+  check('the ship computer is told the squads in its list of actions and in the lists as they are (the game\'s: S the cruiser list; W is the order key)', /one squad of the fighters: red, green or yellow/.test(src('src/shipcomputer.js')) && /S opens the cruiser list/.test(J('shipcompSystem({ scene: { key: "Campaign" }, camp: C })') || '') && /W gives the order that fits the pick/.test(J('shipcompSystem({ scene: { key: "Campaign" }, camp: C })') || ''));
 }
 
 console.log('F. the map and the colours (card space-game-squad-rings: a squad has a coloured mark only while it is in focus)');
@@ -212,9 +214,9 @@ console.log('G. the square marks: the fighters are all one colour, the friend\'s
   // the kept ring, through the keys
   const kp = J(`(() => { const { P, r } = __keepP(), a = __shown(P, 1000); const o = { ok: r.ok, row: r.row, closed: campPanelOpen(P) === '', a, b: __shown(P, 1001), c: __shown(P, 8999), d: __shown(P, 9000), e: __shown(P, 9001), keep: CAMP.wing.ringKeep }; return o; })()`);
   check('an order from the all-squads list (W, Down to Guard the cruiser, Enter) closes the list and the squads KEEP their rings: on right after, still on a moment before CAMP.wing.ringKeep (8 s) is up, off at 8 s and after', kp.ok && kp.row === 'fguard' && kp.closed && kp.a === 'red+green+yellow' && kp.b === 'red+green+yellow' && kp.c === 'red+green+yellow' && kp.d === '' && kp.e === '' && kp.keep === 8000, JSON.stringify(kp));
-  check('another squad in focus takes the ring over: after the order, W picks the red pilot: red only; X clears the selection and the kept ring: nothing (the ring does not come back)', J(`(() => { const { P } = __keepP(); campFleetListSet(false); __k(P, 'KeyW', 2000); const a = __shown(P, 2000); __k(P, 'KeyX', 2100); campFleetListSet(true); return [a, __shown(P, 2200)].join('|'); })()`) === 'red|');
+  check('another squad in focus takes the ring over: after the order, W picks the red pilot: red only; X clears the selection and the kept ring: nothing (the ring does not come back)', J(`(() => { const { P } = __keepP(); campFleetListSet(false); __k(P, 'KeyQ', 2000); const a = __shown(P, 2000); __k(P, 'KeyX', 2100); campFleetListSet(true); return [a, __shown(P, 2200)].join('|'); })()`) === 'red|');
   check('X (clear both selections) lets the kept ring go at once', J(`(() => { const { P } = __keepP(); const a = __shown(P, 2000); __k(P, 'KeyX', 2100); return [a, __shown(P, 2100)].join('|'); })()`) === 'red+green+yellow|');
-  check('Esc out of the list with no order given keeps nothing, and a refused order keeps nothing (E with no fighter out and the bay empty is refused)', J(`(() => { const P = campPanelNew(); __k(P, 'KeyW', 1000); __k(P, 'Escape', 1100); const a = __shown(P, 1200); C.ships = C.ships.filter(u => u.kind !== 'fighter'); C.bay.fighters = 0; const Q = campPanelNew(); const r = __k(Q, 'KeyE', 1000); return [a, r.ran, r.ok, __shown(Q, 1200)].join('|'); })()`) === '|true|false|');
+  check('Esc out of the list with no order given keeps nothing, and a refused order keeps nothing (W with no fighter out and the bay empty is refused)', J(`(() => { const P = campPanelNew(); __k(P, 'KeyW', 1000); __k(P, 'Escape', 1100); const a = __shown(P, 1200); C.ships = C.ships.filter(u => u.kind !== 'fighter'); C.bay.fighters = 0; const Q = campPanelNew(); campFleetListSet(false); const r = __k(Q, 'KeyW', 1000); campFleetListSet(true); return [a, r.ran, r.ok, __shown(Q, 1200)].join('|'); })()`) === '|true|false|');
   g.run('__out(1);'); // the wing back (the check above emptied it)
   check('W, Enter on its first row that can be given keeps all three rings; an order from a list that is no squad\'s (the power list) neither gives nor takes a ring: a kept red ring is still there after it', J(`(() => { const P = campPanelNew(); __k(P, 'KeyW', 1000); const r = __k(P, 'Enter', 1000); const a = __shown(P, 1001); const Q = __keepP().P; campPanelGo(Q, C, 'power'); const e = __k(Q, 'Enter', 2000); return [r.ok, a, e.ran && e.ok, __shown(Q, 2001)].join('|'); })()`) === 'true|red+green+yellow|true|red+green+yellow');
   g.run(`__foe(900, 0); __foe(-900, 200);`);
