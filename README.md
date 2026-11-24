@@ -2,7 +2,7 @@
 
 A browser 2D top-down space game with two modes on one title screen, in plain JavaScript on Phaser 3. **No build step, no network, no image or sound files**: every ship, station and planet is drawn in code and every sound is synthesized.
 
-- **The Campaign** is where the work is now: a **Homeworld-style commander game** with **X-Wing's scripted missions and power management**. You fly Earth's cruiser, a big slow carrier, and direct its small ships. Three levels, nine missions, a story about an alien outpost.
+- **The Campaign** is where the work is now: a **Homeworld-style commander game** with **X-Wing's scripted missions**. You fly Earth's cruiser, a big slow carrier, and direct its small ships. Three levels, nine missions, a story about an alien outpost.
 - **Long Haul** is the first game, an Elite-flavoured trader and rescue game: walk a station, take a call from the board, fly out, fight pirates, land on a planet, bring someone home and get paid. It is finished and shares the engine.
 
 Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.md`).
@@ -28,7 +28,7 @@ Licence: MIT (see `LICENSE`; the one bundled library is listed in `THIRD-PARTY.m
 
 **The ideas that make it a commander game.**
 
-- **Power management.** Six pips shared between weapons, shields and engines (like X-Wing's); shields mend by themselves at a rate the shield pips set; three gauges at the top right show where the energy goes, and the power list (`P`, or `O`) opens right under them with the same pip bars on its rows.
+- **Power management is gone** (card `space-game-power-removed`, Troy, 23 Nov 2026: "he never uses it"). Weapons, shields and engines run at the balanced setting; the shield (150 points) still mends by itself, 3 a second after 3 seconds with no hit. The three gauges at the top right (shields, speed, lasers) are plain dials with no pip bars. The code is kept behind the switch `CAMP_POWER` in `src/data_controls.js` (`campPowerSet`), and the tests of it run switched on.
 - **No pilot pop-ups.** Nothing asks you for orders: the miner's call in 1.1 is one plain radio line, and you send squads with the ordinary order keys.
 - **A mission is a sequence of questions.** Mission 1.1 is the finished example: a patrol turns back, a distress call, an ambush with torpedo boats, a pirate leader who duels your cruiser. Something happens about every minute.
 - **Objectives and bonuses**, a score, and ranks that grow your wing.
@@ -53,7 +53,7 @@ One list per hand, and one order key. **`S` puts the view back on the cruiser an
 | Key | What it does |
 |---|---|
 | `S` | the view back on the cruiser (and the zoom reset), and the **cruiser** list: Fly to the goal (it burns by itself on a long leg with no hostile near and the wing aboard, and drops out when one comes near), Fly to the target, Mine ore (the pilots mine; with several rock fields it asks which), Dock and repair (opens the dock list: Dock at the outpost where there is one, Repair the hull, Repair a ship we protect), Emergency shields (fills the shields at once for 50 ore, ready again after 20 s), Warp blink ahead (with that tech). The list closes by itself after four seconds untouched |
-| (no key) | **power** and **autopilot**: the two lists are still in the game but no key opens them (`O` and `P` are the friendlies' now; cards remove the lists). Power has `J` `K` `L`; the autopilot list keeps only its two fast burns (Fly to the goal burns by itself from the cruiser list now), and the map (`Tab`, `Enter` flies there) is the way to fly |
+| (no key) | **power** and **autopilot**: the two lists are still in the game but no key opens them (`O` and `P` are the friendlies' now; the power list, its pips and `J` `K` `L` are switched off for good: card `space-game-power-removed`). The autopilot list keeps only its two fast burns (Fly to the goal burns by itself from the cruiser list now), and the map (`Tab`, `Enter` flies there) is the way to fly |
 | `Up` `Down` `Enter` | in an open list: move the highlight, give the order (the list closes when the order is taken). On a row that opens a part, `Enter` or `Right` opens it |
 | `Left` | in a part's list: back to the list it is a part of (the dock list goes back to the cruiser list) |
 | Arrow keys | fly the cruiser: Up thrust, Left and Right turn, Down brake (while a list is open the ship coasts) |
@@ -64,7 +64,6 @@ One list per hand, and one order key. **`S` puts the view back on the cruiser an
 | `O` `P` | the **friendly** you have picked: the last or next **ship** you protect (the transport, a miner, a hauler; no outpost or planet is in this cycle: click one on the `Tab` map to hold it). **Only one target is held at a time:** picking a friendly lets the enemy go, and picking an enemy lets the friendly go |
 | `E` | the one order key, given by who you picked: an **enemy** picked, **attack** it; a **friendly** picked (a ship you protect, or an outpost or planet you clicked on the map), **guard** it: they fly beside it; **nothing** picked, **form up** on the cruiser. With a pilot picked the order goes to that pilot alone, with All pilots to all three. **An order to a pilot in the bay launches that pilot.** `G` and `R` are free: there is no recall (the pilots stay out; a badly hurt one returns by itself and comes back mended) |
 | `X` | let go of the target (enemy or friendly), and put who back on All pilots |
-| `J` `K` `L` | power, directly, one pip a press: a pip to the shields, the engines, the weapons (Balance, back to 2, 2, 2, has no key now: it is an order for the strip) |
 | `Tab` | the map of the level: `Up` `Down` step the marks, `Enter` flies there (`Shift+Enter` fast), a click sets a mark (an outpost or a planet clicked is also the one target held: Fly to the target goes there), `X` clears the trip |
 | `-` `=` `S`, mouse wheel | zoom out, zoom in, reset the zoom and bring the view back to the cruiser (the view or the map) |
 | mouse drag (left button) | pan the flight view away from the cruiser, or the Tab map; the RECENTRE mark, `S`, or an arrow held bring it back |

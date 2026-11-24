@@ -74,8 +74,8 @@ function campPanelsPaint(s, now) {
     o.name.setVisible(true).setPosition(nx, y + B.row / 2).setText(st.label + (st.more ? '  >' : '')).setColor(ink);
     let sx = G.x + G.w - 12;
     if (st.pip >= 0 && s.gaugeAnim) { // a power row: that system's pip bar at its right, the twin of the gauge's (the same animation and flash: both light together when Enter gives a pip), under the weapons gauge's bar; its key and its reason stand left of it
-      const Z = campHudGeom().cells[2].bar, d = CAMP_DIAL_PIPS.indexOf(st.pip), emer = C.t < C.power.until && st.pip === 1, by = y + (B.row - (Z.y1 - Z.y0)) / 2;
-      campBarDraw(g, { bar: { x0: Z.x0, y0: by, x1: Z.x1, y1: by + Z.y1 - Z.y0 } }, s.gaugeAnim.shown[st.pip], s.gaugeAnim.flash[st.pip], emer ? 0xffffff : [CAMP_GAUGE.colors.shields, CAMP_GAUGE.colors.speed, CAMP_GAUGE.colors.lasers][d]);
+      const Z = campHudGeom().cells[2].bar, d = CAMP_DIAL_PIPS.indexOf(st.pip), by = y + (B.row - (Z.y1 - Z.y0)) / 2;
+      campBarDraw(g, { bar: { x0: Z.x0, y0: by, x1: Z.x1, y1: by + Z.y1 - Z.y0 } }, s.gaugeAnim.shown[st.pip], s.gaugeAnim.flash[st.pip], [CAMP_GAUGE.colors.shields, CAMP_GAUGE.colors.speed, CAMP_GAUGE.colors.lasers][d]);
       sx = Z.x0 - 10;
     }
     if (st.hull >= 0) { const Q = CAMP.charge.list, bx = sx - Q.w, by = y + (B.row - Q.h) / 2; g.fillStyle(0x02060d, 0.85).fillRect(bx - 1, by - 1, Q.w + 2, Q.h + 2); g.fillStyle(0x16293d, 1).fillRect(bx, by, Q.w, Q.h); g.fillStyle(CAMP.charge.color[st.band], 1).fillRect(bx, by, Math.max(1, Math.round(Q.w * st.hull)), Q.h); sx = bx - 10; } // a ship you protect: its hull as a bar at the right of its row, its km and percent left of it (card space-game-protected-health)

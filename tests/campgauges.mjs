@@ -16,6 +16,7 @@ import { nodeGame, ROOT } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const g = nodeGame();
+g.run('campPowerSet(true)'); // the pips are OFF in the game (card space-game-power-removed; CAMP_POWER in src/data_controls.js): this suite is about them (the list, J K L, the bars, the pip orders), so it switches them on. The game as it is now: tests/powerremoved.mjs
 g.run('campFleetListSet(true)'); // this suite is about the lists' code, Q's pop-up included: it is switched off in the game (CAMP_FLEET_LIST, card space-game-q-selects-all) and on here; tests/campselect.mjs has the game's own state
 g.run('campShipListSet(true)'); // and the ship list too: it is switched off in the game (CAMP_SHIP_LIST, card space-game-p-opens-power: P opens power) and on here; tests/campselect.mjs has the game's own state
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
@@ -53,7 +54,7 @@ console.log('A. the turrets\' charge');
   g.run('__fight([0, 3, 3], 100); __run(40)');
   const say = g.run('__says.filter(k => k === "camp.say.lasersdry").length');
   check('a tank that runs low says so once (not on every shot)', say === 1, say);
-  check('the words are in the game: the line is "Lasers are running dry. More power to weapons."', J('uiText("camp.say.lasersdry")') === 'Lasers are running dry. More power to weapons.');
+  check('the words are in the game: the line is "Lasers are running dry."', J('uiText("camp.say.lasersdry")') === 'Lasers are running dry.');
   g.run('__fight([2, 2, 2], 100); C.input.fire = false; C.charge = 5; C.chargeLow = true; __run(1)');
   const lowAt1 = J('C.chargeLow'); g.run('__run(5)');
   check('it says so again only after the tank has mended past twice the mark: still flagged at 13 (a second), flag put back at 53 (six seconds)', lowAt1 === true && J('C.chargeLow') === false && J('C.charge') > 40, J('[C.chargeLow, C.charge]'));

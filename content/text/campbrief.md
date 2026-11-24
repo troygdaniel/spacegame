@@ -30,7 +30,6 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.ready.bay | Wing: Wedge, Kara, Apollo, {f} fighters strong |
 | camp.bf.ready.rank | Rank: {name} |
 | camp.bf.ready.stock | Missiles {missiles}    Ore {ore} |
-| camp.bf.ready.power | Power: weapons {w}, shields {s}, engines {e} |
 | camp.bf.ready.shield | Shield: full, {cap} points |
 | camp.bf.route | Route {km} km: {regular} s regular, {fast} s on Fast. |
 | camp.bf.routenear | You start at the mission place. |
