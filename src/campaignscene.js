@@ -89,6 +89,7 @@ class Campaign extends Phaser.Scene {
     this.hud = { earth: mid(14, 14, '#9fe9ff'), wave: mid(6, 14, '#ffd37a'), mother: t(W / 2 - 150, this.hudBelow, 14, '#ff9ec0'),
       obj: mid(28, 14, '#ffffff'), post: mid(102, 14, '#ffb454'), arrow: t(0, 0, 13, '#ffd37a').setOrigin(0.5), keys: this.add.text(24, H - 44, campKeyLine(), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
     this.gaugeAnim = campGaugeAnimNew(this.camp.power.p); this.gaugeAt = performance.now(); // the bars' animation: only the power list's rows draw bars now (src/camphud.js; the three gauges are gone, card space-game-layout-hud)
+    if (typeof campCruiserHudMake === 'function') Object.assign(this.hud, campCruiserHudMake(this, uiFont)); // the cruiser's status at the top left, over the S CRUISER title: SHIELD and HULL bars and the ORE line (src/campcruiserhud.js; card space-game-layout-cruiser): five texts in the HUD, so a result card hides them with the rest
     this.powerKey = this.camp.power.base.join(); // the setting as it was saved: a change of it is saved when it is made (update)
     this.hud.repair = mid(80, 14, '#9fe9ff'); // the fighters being mended in the bay (card space-game-fighter-repair): "REPAIR 2  7 s"
     this.radio = chatterNew(); this.orderSeen = Object.assign({}, this.camp.orders); this.chatUntil = 0; // the wing's radio (src/campchatter.js): its state, the orders seen so far, when its line goes
@@ -291,6 +292,7 @@ class Campaign extends Phaser.Scene {
     const c = e.code, C = this.camp;
     if (e.repeat && !(this.mode === 'play' && (c === 'ArrowUp' || c === 'ArrowDown') && this.pn && typeof campPanelOpen === 'function' && campPanelOpen(this.pn))) return; // a held key is one press, but for Up and Down in an open list: the highlight keeps moving
     if (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) { if (c === 'KeyH' || c === 'Escape') this.closeKeys(); return; } // the H page of every key (src/campkeys.js) has the keys while it is open
+    if (this.mode === 'play' && typeof campCornerKey === 'function') campCornerKey(C, c); // a key of a corner panel opens its details (src/campcorner.js: Q W FLEET, and the keys of the corners other cards add)
     if (this.mode === 'intro') { if (c === 'Enter') { this.hideCard(); this.afterIntro(); } return; }
     if (this.mode === 'brief') { if (c === 'Enter') { this.hideCard(); this.mode = 'play'; } return; }
     if (this.mode === 'debrief') { if (c === 'Enter') { this.hideCard(); if (this.mdone) this.showWon(); else this.nextMission(); } return; }
@@ -391,8 +393,9 @@ class Campaign extends Phaser.Scene {
     if (typeof campTgtPaint === 'function') campTgtPaint(this); // the brackets round the enemy [ ] \ picked, the pilot Q W picked and the friendly O P picked (src/camptargetdraw.js)
     if (typeof campSelZoom === 'function') campSelZoom(this); // a ship selected with [ ] O P or Q W (one pilot) zooms the view out until it and the cruiser are on the screen (src/campselzoom.js)
     if (typeof campPickPaint === 'function') campPickPaint(this); // the candidate a target sub-list is on, shown in the flight view (and the zoom out to it; src/camppickdraw.js)
-    if (typeof campTdispSync === 'function') campTdispSync(this, this.time.now); // the target display in the bottom right corner: the target, or the ship an order's list is on (src/camptdispscene.js)
-    if (typeof campFdispSync === 'function') campFdispSync(this, this.time.now); // the who display in the bottom left corner: the pilot A or D picked, or All pilots (card space-game-friendly-display; the same file)
+    if (typeof campTcornerLook === 'function') campTcornerLook(this.pn, this.time.now); // what the target corners read besides the game: the panels' state (the ship an order's list is on) and the clock (src/camptcorner.js)
+    if (typeof campCornerSync === 'function') campCornerSync(this, this.time.now); // the corner panels: Q W FLEET at the bottom left (and the ones other cards add): the title and the selection stay, the details open on use and fade (src/campcorner.js, src/campcornerscene.js)
+    if (typeof campTcornerSync === 'function') campTcornerSync(this, this.time.now); // the ship's picture in the details of [ ] HOSTILES and O P FRIENDLIES (src/camptcornerscene.js)
     if (typeof campTorpedoSync === 'function') campTorpedoSync(this, Math.min(dt, 100)); // the torpedoes and the boats that arm (src/camptorpedoscene.js)
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
     if (typeof campChargeSync === 'function') campChargeSync(this); // the health bars of the ships you protect, over them (src/campchargescene.js), once their sprites are in place
@@ -563,6 +566,7 @@ class Campaign extends Phaser.Scene {
     const C = this.camp, g = this.hudG, c = C.carrier, bar = (x, y, w, f, color) => { g.fillStyle(0x04101c, 0.8).fillRect(x, y, w, 12); g.fillStyle(color, 1).fillRect(x + 1, y + 1, Math.max(0, (w - 2) * Math.max(0, Math.min(1, f))), 10); g.lineStyle(1, 0x38e1ff, 0.5).strokeRect(x, y, w, 12); };
     g.clear();
     if (this.gaugeAnim) { const nowMs = performance.now(); campGaugeAnim(this.gaugeAnim, C.power.p, Math.min(100, nowMs - (this.gaugeAt || nowMs))); this.gaugeAt = nowMs; } // the bars of the power list's rows ease to the pips (src/campanelsdraw.js)
+    if (typeof campCruiserHudPaint === 'function') campCruiserHudPaint(g, this.hud, C); // the plate, the shield and hull bars and the ore line at the top left (src/campcruiserhud.js)
     if (typeof campRivalHud === 'function') campRivalHud(this, g, bar); // a rival ship's name, shield and hull and the warning of its phase (src/camprivaldraw.js)
     const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
     if (m) bar(W / 2 - 150, (this.hudBelow || 0) + 20, 300, m.hp / m.maxHp, 0xc9a0ff); // under the column of lines: the name 2 px under it, the bar under the name

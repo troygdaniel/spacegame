@@ -3,6 +3,7 @@
 // or a ship list at the right (P, or a part of it: O I U), right UNDER the gauges at the top right (card space-game-power-presets: the power list's three rows each carry their system's pip bar, the twin of the gauge's, and the highlighted row frames its gauge).
 // a row that opens a part of the list shows that part's KEY in a cap at its left and an arrow at its right; the highlighted row has a bright bar; the one in force (a stance, a convoy order) is marked.
 // A list longer than CAMP_PANELS.show rows scrolls with the highlight, and says how many rows are below. The foot of the list names its keys (Up Down, Enter, Left back, Esc), read from the key table.
+// A CORNER LIST (the cruiser's: `corner: 'tl'` in the table, card space-game-layout-cruiser) opens right under its corner's title row (src/campcorner.js) with no heading and no 1 / 7 counter: the corner's title is above it; a caption band returns only while it picks a target.
 // The target (A D S X, with no list open) is shown by the target display in the bottom right corner (src/camptdispscene.js), which took over the target's line that was here (card space-game-target-display).
 // The words are the table's (CAMP_PANELS in src/data_controls.js), so a row or a list added by data is drawn without a line of code. The scene calls these:
 //   campPanelsInstall(s)       once, in create: s.pn is the state (campPanelNew), s.pnl the objects (made once, shown and moved after that); the pointer is listened for and given back when the scene shuts down
@@ -10,7 +11,7 @@
 //   campPanelsClose(s)         a card coming up, the map, the end: the list closes
 // Everything is on the screen's own camera (scroll factor 0), so the zoom (src/camzoom.js) never scales it. tests/campanelsui.mjs checks the states on stand-ins.
 const CAMPPANELS_LOOK = {
-  box: { w: 360, head: 30, row: 24, gap: 2, pad: 6, foot: 44 }, // px: the list's width, its heading's height, a row's height, the gap between rows, the gap under the heading, the foot (what is off the screen, and the keys)
+  box: { w: 360, head: 30, capt: 22, row: 24, gap: 2, pad: 6, foot: 44 }, // px: the list's width, its heading's height (capt: the caption of a corner list while it picks a target: PICK A TARGET), a row's height, the gap between rows, the gap under the heading, the foot (what is off the screen, and the keys)
   top: 150, topRight: 104, edge: 24, edgeRight: 4, depth: 160, every: 250, // the list's y: a left list under the lines of text in the top left corner (at most five lines of 22 px from y 14: card space-game-hud-topleft-trim moved it up from 262), a right list right under the gauges (the gauges end at about y 96); its distance from the screen's edge (a right list ends 4 px from it, like the weapons gauge's bar that its pip bars sit under), the depth (over the map, 150 to 156), ms between the words being made live
   color: { left: CYAN, right: AMBER }, ink: { left: '#7fe9ff', right: '#ffd37a' },
   rowInk: { ok: '#e8f6ff', no: '#7f95a8', suffix: '#8fb4c8', why: '#ff9e7a', at: '#02101c' }, flash: 0xffffff,
@@ -18,10 +19,12 @@ const CAMPPANELS_LOOK = {
 };
 
 // where a list is: x, y, w, h of the whole of it, and the rows' places. rows: how many rows the list has in this mission: it is as tall as they are, up to CAMP_PANELS.show (a longer one scrolls and does not jump); none given: the full height
-function campPanelsGeometry(def, rows) {
+function campPanelsGeometry(def, rows, capt) { // capt: the list is picking a target (a corner list has a caption then, and no heading otherwise)
   const K = CAMPPANELS_LOOK, B = K.box, right = def.side === 'right', n = Math.max(1, Math.min(CAMP_PANELS.show | 0, rows > 0 ? rows : CAMP_PANELS.show | 0));
-  const x = right ? W - K.edgeRight - B.w : K.edge, top = right ? K.topRight : K.top, ry = top + B.head + B.pad, lh = n * (B.row + B.gap) - B.gap;
-  return { x, y: top, w: B.w, h: B.head + B.pad + lh + B.pad + B.foot, n, head: { x, y: top, w: B.w, h: B.head }, rowH: B.row, rowY: i => ry + i * (B.row + B.gap), foot: { x, y: ry + lh + B.pad, w: B.w, h: B.foot }, list: { x, y: ry, w: B.w, h: lh } };
+  let x = right ? W - K.edgeRight - B.w : K.edge, top = right ? K.topRight : K.top, hh = B.head;
+  if (def.corner && typeof campCornerGeom === 'function') { const T = campCornerGeom(def.corner, 0, 0).title; x = T.x; top = T.y + T.h + CAMP.corner.gap; hh = capt ? B.capt : 0; } // a CORNER list (S CRUISER, card space-game-layout-cruiser) opens right under its corner's title row (src/campcorner.js): no heading of its own, no counter
+  const ry = top + hh + B.pad, lh = n * (B.row + B.gap) - B.gap;
+  return { x, y: top, w: B.w, h: hh + B.pad + lh + B.pad + B.foot, n, head: { x, y: top, w: B.w, h: hh }, rowH: B.row, rowY: i => ry + i * (B.row + B.gap), foot: { x, y: ry + lh + B.pad, w: B.w, h: B.foot }, list: { x, y: ry, w: B.w, h: lh } };
 }
 function campPanelsInstall(s) {
   const K = CAMPPANELS_LOOK, n = Math.max(1, CAMP_PANELS.show | 0);
@@ -50,13 +53,12 @@ function campPanelsPaint(s, now) {
   const col = K.color[def.side], key = id + ':' + P.at + ':' + P.top + ':' + (P.pick ? 'p' + P.pick.sel + ':' + P.pick.at + ':' + P.pick.top : '') + ':' + (P.trail || []).join() + ':' + Object.keys(P.lit || {}).map(k => P.lit[k]).join(); // (an order just given is in the key too: a power row stays open, and its pips are right at once; so is the target sub-list's highlight)
   if (L.live < 0 || now - L.live >= K.every || L.key !== key) { L.live = now; L.key = key; L.view = campPanelView(P, C); } // the words are live: made when the list opens or the highlight moves, and four times a second
   const V = L.view; if (!V) return;
-  const G = campPanelsGeometry(def, V.total);
+  const G = campPanelsGeometry(def, V.total, V.pick), heading = !def.corner || V.pick; // a corner list has no heading of its own (its corner's title row is above it), only a caption while it picks
   g.fillStyle(0x04101c, 0.9); g.fillRoundedRect(G.x, G.y, G.w, G.h, 7);
   g.lineStyle(2, col, 0.9); g.strokeRoundedRect(G.x, G.y, G.w, G.h, 7);
-  g.fillStyle(col, 0.22); g.fillRoundedRect(G.x, G.y, G.w, B.head, 7);
-  L.title.setVisible(true).setPosition(G.x + 12, G.y + B.head / 2).setText((def.key ? def.key + '   ' : '') + V.title).setColor(K.ink[def.side]); // (V.title: the list's, or what is being picked)
+  if (heading) { g.fillStyle(col, 0.22); g.fillRoundedRect(G.x, G.y, G.w, G.head.h, 7); L.title.setVisible(true).setPosition(G.x + 12, G.y + G.head.h / 2).setText((def.key && !def.corner ? def.key + '   ' : '') + V.title).setColor(K.ink[def.side]); } // (V.title: the list's, or what is being picked)
   const caps = V.rows.some(r => r.more), nx = G.x + 14 + (caps ? K.cap.w + K.cap.gap : 0); // a list with parts: every row's words start after the cap's place, so they line up
-  L.count.setVisible(true).setPosition(G.x + G.w - 12, G.y + B.head / 2).setText((V.first + V.at + 1) + ' / ' + V.total);
+  if (!def.corner) L.count.setVisible(true).setPosition(G.x + G.w - 12, G.y + B.head / 2).setText((V.first + V.at + 1) + ' / ' + V.total); // (a corner list has no 1 / 7 counter: card space-game-layout-cruiser)
   V.rows.forEach((st, i) => { // a row: its words, and at the right what it will do or why it cannot; the highlighted one has a bright bar
     const o = L.rows[i]; if (!o) return;
     const y = G.rowY(i), at = i === V.at, lit = P.lit && P.lit[st.id] != null && now - P.lit[st.id] < CAMP_PANELS.anim.flash ? 0.5 - 0.5 * Math.cos(4 * Math.PI * (now - P.lit[st.id]) / CAMP_PANELS.anim.flash) : 0;
@@ -87,13 +89,13 @@ function campPanelsOver(s, px, py) {
   const P = s.pn; if (!P || typeof P !== 'object' || !campPanelsOn(s)) return false;
   const def = campPanelDef(campPanelOpen(P)); if (!def) return false;
   const V = campPanelView(P, s.camp); if (!V) return false;
-  const G = campPanelsGeometry(def, V.total); return px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h;
+  const G = campPanelsGeometry(def, V.total, V.pick); return px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h;
 }
 function campPanelsClick(s, px, py) {
   const P = s.pn, L = s.pnl; if (!P || !L || !campPanelsOn(s)) return false;
   const def = campPanelDef(campPanelOpen(P)); if (!def) return false;
   const V = campPanelView(P, s.camp); if (!V) return false; // the rows on the screen: the list's, or the candidates of a target sub-list
-  const G = campPanelsGeometry(def, V.total), now = (s.time && s.time.now) || 0; if (!(px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h)) return false;
+  const G = campPanelsGeometry(def, V.total, V.pick), now = (s.time && s.time.now) || 0; if (!(px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h)) return false;
   P.touch = now; // a click on the list is a touch: it does not fade while it is used (campPanelFade)
   let i = -1; for (let k = 0; k < G.n; k++) if (py >= G.rowY(k) - 1 && py < G.rowY(k) + G.rowH + 1) i = k;
   if (P.pick) { // a candidate: highlighted and chosen, the order is given at it

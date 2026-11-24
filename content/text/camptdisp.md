@@ -54,3 +54,5 @@ The words of the target display (card space-game-target-display; Troy, 22 Nov 20
 | camp.tdisp.do.stay | working where it is |
 | camp.tdisp.do.patrol | on patrol |
 | camp.tdisp.do.idle | no orders |
+| camp.tdisp.corner.nohostiles | NO HOSTILES |
+| camp.tdisp.corner.nofriendlies | NO FRIENDLIES |

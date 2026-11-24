@@ -161,11 +161,10 @@ const CAMP = {
   },
   tdisp: {                                 // the target display, in the corner the radar had (card space-game-target-display; Troy, 22 Nov 2026: "the bottom right mini map can go away, to make way to show the target selected"; src/camptdisp.js, src/camptdispscene.js)
     right: 18,                             // px from the right edge of the screen to the box
-    left: 18,                              // px from the left edge to the friend display's box (card space-game-friendly-display: the same box, in the bottom left corner)
-    beside: 12,                            // px between an open list and a display's box when the box steps out of its way (right of a left list for the who box, left of a right list for the target box; card space-game-w-list-covers-friend-box)
+    beside: 12,                            // px between an open list and a display's box when the box steps out of its way (right of a left list for the FLEET corner, left of a right list for the target box; card space-game-w-list-covers-friend-box)
     line: 26,                              // px: the order-key line at the foot of the target box ("E  Attack" for an enemy, "E  Guard" for a friendly, lit or grey; cards space-game-keys-panels, space-game-keys2-panels): it is this much taller than the who box
     bottom: 64,                            // px from the bottom edge to the box (the key line's strip is under it)
-    count: 72,                             // px from the bottom edge to the top of the MISSILES count (bottom left): the who box ends CAMP.tdisp.line px above the target box's foot, so this strip under it is free (card space-game-missiles-line-overlap: the count sat on the box's bottom edge)
+    count: 72,                             // px from the bottom edge to the top of the MISSILES count (bottom left): the FLEET corner (CAMP.corner.at.bl) ends at y 630, so this strip under it is free (cards space-game-missiles-line-overlap, space-game-layout-fleet)
     w: 200, h: 200,                        // px: the box, about the radar's size (its disc was 196 across)
     every: 250,                            // ms between two readings of the ship: the numbers and the words are live four times a second (a new ship is read at once)
     pic: 76,                               // px: the picture's frame; the ship is drawn to fit it
@@ -173,6 +172,24 @@ const CAMP = {
     color: { hostile: 0xff4d6d, friend: 0x7fe9ff }, // the frame: a hostile's red (the target's bracket), the fleet lists' cyan for a ship of yours or a neutral you are picking
     ink: { hostile: '#ff9aae', friend: '#9fe9ff' },  // the name and the line of what it is doing
     depth: 64                              // the draw order: over the edge arrows (62), under the lists (160)
+  },
+  corner: {                                // the four corner panels (card space-game-layout-fleet; Troy, 24 Nov 2026: "four corners, each a small title that never leaves, starting with its keys as plain key-cap chips; the details under a title open when its keys are used and fade after a few seconds; the current selection is written beside the title and never fades"): top left S CRUISER, bottom left Q W FLEET, top right [ ] HOSTILES, bottom right O P FRIENDLIES. src/campcorner.js (the rule and the registry), src/campcornerscene.js (the drawing)
+    w: 200,                                // px: a panel's width (its title row and its details)
+    depth: 64,                             // the draw order: over the edge arrows (62), under the lists (160)
+    show: 4000,                            // ms the details stay open at full strength after the corner's keys are used (or campCornerOpen is called), then they fade
+    hit: 4000,                             // ms they stay open after the corner says it was hit (FLEET: a pilot's hull went down)
+    fade: 600,                             // ms the details take to fade out
+    title: { h: 26, chipW: 22, chipH: 18, chipGap: 3, pad: 8, gap: 8 }, // the title row: its height, a key-cap chip's size and the space between two, the space at the left, and between the chips, the title and the selection
+    gap: 4, pad: 8,                        // px between the title row and its details, and inside the details' frame
+    item: { bar: 46, text: 20, key: 26, pic: 80 },  // px: the height of a detail line by its kind: a name with a number and a bar, a line of text, a key chip and its word, a picture row (src/camptcornerscene.js: the ship's picture, its type and its distance)
+    bar: { dy: 22, h: 9 },                 // px: a bar's top below its item's top, and its height
+    chip: 0x7fe9ff,                        // the key-cap chips' fill (the friend's cyan, as the order key's)
+    at: {                                  // where each corner's title row sits (x: its left edge; y: the edge of the row at the screen's edge side, the bottom edge for a bottom corner; dir: 1 the details open downward, -1 upward). Left and right are what you command and everything else
+      tl: { x: 18, y: 62, dir: 1 },        // S CRUISER (card space-game-layout-cruiser): under its status (SHIELD and HULL bars and the ORE line, src/campcruiserhud.js: they end 4 px above this row), at the top of the screen; the S list opens under the row
+      bl: { x: 18, y: 630, dir: -1 },      // Q W FLEET: the row ends where the who box used to (y 630), the MISSILES count is under it (CAMP.tdisp.count)
+      tr: { x: 1062, y: 150, dir: 1 },     // [ ] HOSTILES (a card of its own sets the place)
+      br: { x: 1062, y: 630, dir: -1 }     // O P FRIENDLIES (a card of its own sets the place)
+    }
   },
   mark: {                                  // the squares come and go (cards space-game-pilot-squares-fade; Troy, 24 Nov 2026: "have the reticle squares disappear from the pilots after a few seconds", and the same for the selected targets; src/camptarget.js campMarkNow, src/camptargetdraw.js): the squares on the pilots WHO is show when WHO is picked, an order is given or the mission begins; the square on the target held (the enemy's or the friend's) shows when it is picked, and an order shows both; then they go
     show: 3000,                            // ms (the game's own clock, so a pause does not eat it) a square stays at full strength after it was brought back
@@ -369,7 +386,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 150], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 430, 1280, 664], [0, 430, 224, 664]] // (the target box, campTdispBox(false) in src/camptdispscene.js, is inside the fourth one, where the radar was, and the who box, campTdispBox(true), inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 150], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 366, 1280, 664], [1056, 150, 1280, 180], [0, 430, 224, 664]] // (the target corners, card space-game-layout-targets: O P FRIENDLIES, its title up from y 630 and its details above it, are inside the fifth one, where the radar was; the title row of [ ] HOSTILES is the sixth (its details open under it when the target held is a hostile: a label may sit on them for a few seconds, as on any list that opens); campTdispBox(false) in src/camptdispscene.js is the fifth's bottom part and the FLEET corner's room, campTdispBox(true), is inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {

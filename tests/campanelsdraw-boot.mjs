@@ -57,7 +57,7 @@ async function campaign() {
     const foot = (text, k) => j(`uiText(${JSON.stringify(text)}, { key: ${JSON.stringify(k)} })`); // the foot's key line as the game says it
     const fits = () => j(`(() => { const K = CAMPPANELS_LOOK, rows = ${PL}.rows.filter(r => r.name.visible), cap = rows.some(r => r.cap.visible) ? K.cap.w + K.cap.gap : 0; return rows.every(r => 14 + cap + r.name.width + 8 + r.suffix.width + 12 <= K.box.w); })()`);
     check('nothing is drawn until a list\'s key is pressed: no list is open, no heading and no row is on the screen', (await isOpen()) === '' && (await j(`!${PL}.title.visible && ${PL}.rows.every(r => !r.name.visible && !r.suffix.visible && !r.cap.visible) && !${PL}.keys.visible`)) === true);
-    check('with no list open and nothing picked the bottom right corner is empty: the target display is not there (the radar and the target\'s line are gone)', (await j(`!${SC}.hud.tdisp || (!${SC}.hud.tdisp.id && !${SC}.hud.tdisp.pic.visible)`)) === true);
+    check('with no list open and nothing picked the right corners show no picture (HOSTILES and FRIENDLIES are titles only: the radar and the target\'s line are gone)', (await j(`(!${SC}.hud.tcorner || (!${SC}.hud.tcorner.hostiles.pic.visible && !${SC}.hud.tcorner.friendlies.pic.visible))`)) === true);
     await snap(t, 'start');
     // flight: the arrows turn and thrust the cruiser; A, W and the other letters do not (A is no key now, W is the all-squads list's key here), and a digit is no key at all
     const rot0 = await j(`${SC}.camp.carrier.rot`); wing0 = await launchedNow();
@@ -131,7 +131,7 @@ async function campaign() {
     check('W from the fleet list opens the all-squads list on its first row that can be given (wherever the highlight was), and W again closes everything', (await isOpen()) === 'squads' && (await j(`${P}.at`)) === (await firstGiven()) && (await press(t, 'KeyW', 20), await t.run(200), await isOpen()) === '' && (await j(`${PL}.title.visible`)) === false);
     // Attack the target acts on the hostile that is PICKED ([ ] S; card space-game-w-uses-selection: no sub-list any more): with hostiles about and none picked the row is grey and Enter on it refuses; ] picks the nearest one and the row names it; Enter gives the order at it
     await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; campSpawn(C, 'raider', c.x + 520, c.y - 200); campSpawn(C, 'raider', c.x + 900, c.y + 330); return 1; })()`); await press(t, 'KeyX', 20); await t.run(300);
-    check('no target is picked, and the target display is not there', (await j(`${SC}.camp.tgt`)) === '' && (await isOpen()) === '' && (await j(`!${SC}.hud.tdisp || !${SC}.hud.tdisp.pic.visible`)) === true);
+    check('no target is picked, and no target picture is shown', (await j(`${SC}.camp.tgt`)) === '' && (await isOpen()) === '' && (await j(`(!${SC}.hud.tcorner || (!${SC}.hud.tcorner.hostiles.pic.visible && !${SC}.hud.tcorner.friendlies.pic.visible))`)) === true);
     const attackRow = () => j(`campPanelRows(${SC}.camp, 'squads').find(r => r.id === 'attack')`);
     if ((await goTo('attack')) === true) {
       const a0 = await attackRow(), o0 = await j(`${SC}.camp.orders.attack | 0`);
@@ -169,10 +169,10 @@ async function campaign() {
     const spawned = await j(`(() => { const C = ${SC}.camp, c = C.carrier, u = campSpawn(C, 'raider', c.x + 500, c.y - 200); return !!u; })()`).catch(() => false);
     if (spawned) {
       await press(t, 'BracketRight', 20); await t.run(300);
-      check('] picks the hostile as the target with no list open, and the target display in the bottom right corner shows it: its name, its picture', !!(await j(`${SC}.camp.tgt`)) && (await isOpen()) === '' && (await j(`${SC}.hud.tdisp.id`)) === (await j(`${SC}.camp.tgt`)) && (await j(`${SC}.hud.tdisp.pic.visible`)) === true, await j(`${SC}.hud.tdisp.info && ${SC}.hud.tdisp.info.name`));
+      check('] picks the hostile as the target with no list open, and [ ] HOSTILES on the right shows it: its name beside the title, its picture in the details', !!(await j(`${SC}.camp.tgt`)) && (await isOpen()) === '' && (await j(`${SC}.hud.corner.hostiles.sel.visible`)) === true && (await j(`${SC}.hud.tcorner.hostiles.pic.visible`)) === true, await j(`${SC}.hud.corner.hostiles.sel.text`));
       await snap(t, 'target');
       await press(t, 'KeyX', 20); await t.run(300);
-      check('X clears it, and the display is gone: the corner is empty', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.hud.tdisp.pic.visible`)) === false);
+      check('X clears it, and the picture is gone (the title stays)', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.hud.tcorner.hostiles.pic.visible`)) === false);
     }
     // the strip: the slash opens it (the chat key is stubbed: the strip needs one), the keys typed in it are not the game's, Esc closes it and does not pause; hold to speak has no key (CAMP_VOICE is off)
     await t.ev(`(() => { shipcompAvailable = () => true; return 1; })()`);
