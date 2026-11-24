@@ -27,9 +27,9 @@ g.run(`
 console.log('A. the table as the game has it');
 {
   check('S (KeyS) is the cruiser list\'s key, the list is on and fades; no list has a key on KeyQ', J(`(() => { const c = campKeyList('cruiser'); return [c.key, c.code, !!c.off, !!c.fades, CAMP_PANELS.panels.some(p => p.code === 'KeyQ')].join() })()`) === 'S,KeyS,false,true,false');
-  check('its rows, top to bottom: Fly to the goal, Fly to the target, Mine ore, Dock at the outpost, Repair hull, Dock and repair (switched off), Emergency shields, the warp blink', J(`__ids('cruiser')`) === 'goal,target,fmine,dock,srepair,gdock,emergency,blink');
+  check('its rows, top to bottom: Fly to the goal, Fly to the target, Mine ore, Dock at the outpost, Repair hull, Dock and repair (switched off), Emergency shields, the warp blink', J(`__ids('cruiser')`) === 'goal,target,fmine,dock,srepair,sreload,gdock,emergency,blink');
   check('their words: Fly to the goal, Fly to the target, Mine ore, Dock at the outpost, Repair hull', J(`campKeyList('cruiser').rows.slice(0, 5).map(r => r.label).join('|')`) === 'Fly to the goal|Fly to the target|Mine ore|Dock at the outpost|Repair hull');
-  check('without the warp tech the blink row is left out of the mission\'s list; with it, it is the last row', J(`campPanelList(__new(2, 0), 'cruiser').map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,emergency' && J(`campPanelList(__new(2, 0, ['blink']), 'cruiser').map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,emergency,blink');
+  check('without the warp tech the blink row is left out of the mission\'s list; with it, it is the last row', J(`campPanelList(__new(2, 0), 'cruiser').map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,sreload,emergency' && J(`campPanelList(__new(2, 0, ['blink']), 'cruiser').map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,sreload,emergency,blink');
   check('the autopilot list has only the burn rows left (it has no way in: the fast drive is Fly to the goal\'s), the power list has neither the emergency row nor the blink', J(`__ids('nav')`) === 'burn,burntarget' && !/emergency|blink/.test(J(`__ids('power')`)), J(`__ids('nav')`) + ' / ' + J(`__ids('power')`));
   check('a row\'s list is found by its id: the goal, the target, the emergency row and the blink are the cruiser list\'s, reached by S', J(`['goal', 'target', 'emergency', 'blink', 'fmine'].map(id => campKeyVia(id).id).join()`) === 'cruiser,cruiser,cruiser,cruiser,cruiser' && J(`campKeyOpens('cruiser')`) === 'S');
   check('only the goal row burns by itself (fast: auto); the target row does not', J(`campKeyList('cruiser').rows.map(r => r.id + ':' + (r.fast || '')).slice(0, 2).join()`) === 'goal:auto,target:');
@@ -62,12 +62,12 @@ console.log('C. the old lists on and off again');
   g.run(`campShipListSet(false);`);
   check('the fleet list on, the ship list off: the autopilot list has its first two, the power list its emergency row and the blink', /nav=goal,target,burn,burntarget/.test(rows()) && /power=shields,engines,weapons,balance,emergency,blink/.test(rows()), rows());
   g.run(`campFleetListSet(false); campShipListSet(true);`);
-  check('the fleet list off, the ship list on: the cruiser list is the game\'s S list with Mine and Dock only, the other rows are with their old lists', /cruiser=fmine,srepair,gdock/.test(rows()) && /nav=goal,target,burn,burntarget/.test(rows()) && /power=.*emergency/.test(rows()) && /ship=gpower,gnav,gyard,blink/.test(rows()), rows());
+  check('the fleet list off, the ship list on: the cruiser list is the game\'s S list with Mine and Dock only, the other rows are with their old lists', /cruiser=fmine,srepair,sreload,gdock/.test(rows()) && /nav=goal,target,burn,burntarget/.test(rows()) && /power=.*emergency/.test(rows()) && /ship=gpower,gnav,gyard,blink/.test(rows()), rows());
   g.run(`campShipListSet(false);`);
   check('both off again: all six rows are the cruiser list\'s in their order, the autopilot list has the burn rows, and again after another round of the switches', __ids_ok());
   g.run(`campFleetListSet(true); campFleetListSet(false); campShipListSet(true); campShipListSet(false);`);
   check('the same after a second round: no row lost, none twice', __ids_ok());
-  function __ids_ok() { return J(`__ids('cruiser')`) === 'goal,target,fmine,dock,srepair,gdock,emergency,blink' && J(`__ids('nav')`) === 'burn,burntarget' && J(`campKeyList('cruiser').rows.find(r => r.id === 'goal').fast`) === 'auto'; }
+  function __ids_ok() { return J(`__ids('cruiser')`) === 'goal,target,fmine,dock,srepair,sreload,gdock,emergency,blink' && J(`__ids('nav')`) === 'burn,burntarget' && J(`campKeyList('cruiser').rows.find(r => r.id === 'goal').fast`) === 'auto'; }
 }
 
 console.log('D. the fade');
@@ -139,7 +139,7 @@ console.log('G. the words');
 
 console.log('H. Repair hull replaces Dock and repair (card space-game-keys3-repair)');
 {
-  check('the table keeps Dock and repair, switched off (`off`), beside the new Repair hull row (the S list\'s own, the ore repair of the dock list): in the game the S list shows Repair hull and Dock at the outpost, never Dock and repair', J(`__ids('cruiser')`) === 'goal,target,fmine,dock,srepair,gdock,emergency,blink' && J(`campKeyList('cruiser').rows.filter(r => r.off).map(r => r.id).join()`) === 'gdock' && J(`campKeyList('cruiser').rows.find(r => r.id === 'srepair').label`) === 'Repair hull' && !J(`campPanelList(__new(2, 0), 'cruiser').some(r => r.id === 'gdock')`), J(`__ids('cruiser')`));
+  check('the table keeps Dock and repair, switched off (`off`), beside the new Repair hull row (the S list\'s own, the ore repair of the dock list): in the game the S list shows Repair hull and Dock at the outpost, never Dock and repair', J(`__ids('cruiser')`) === 'goal,target,fmine,dock,srepair,sreload,gdock,emergency,blink' && J(`campKeyList('cruiser').rows.filter(r => r.off).map(r => r.id).join()`) === 'gdock' && J(`campKeyList('cruiser').rows.find(r => r.id === 'srepair').label`) === 'Repair hull' && !J(`campPanelList(__new(2, 0), 'cruiser').some(r => r.id === 'gdock')`), J(`__ids('cruiser')`));
   check('the dock list has no way in (nothing opens it) but keeps its rows (the Dock row is the S list\'s now, the repair and the ward row stay there)', J(`__ids('yard')`) === 'repairhull,repairward' && J(`campKeyList('yard').key`) === '' && J(`campKeyVia('dock').id`) === 'cruiser');
   g.run(`var H1 = __new(3, 0); H1.carrier.hp = H1.carrier.maxHp - 100; H1.ore = 200; var hrow = __rowof(H1, 'srepair'), hrun = campPanelRun(H1, campPanelList(H1, 'cruiser').find(r => r.id === 'srepair'), 'key');`);
   check('a hurt hull with the ore: the row is lit and says what it costs (ore and seconds); Enter pays the ore and starts the mend, anywhere in space', J(`[hrow.ok, /^\\d+ ore, \\d+ s$/.test(hrow.state), /^\\d+ ore$/.test(hrow.short)].join()`) === 'true,true,true' && J(`[hrun.ok, H1.ore < 200, H1.mends.length].join()`) === 'true,true,1', J(`[hrow.state, hrow.short, hrun.say].join('|')`));
@@ -149,7 +149,7 @@ console.log('H. Repair hull replaces Dock and repair (card space-game-keys3-repa
   g.run(`var H4 = __new(2, 0); var gr4 = campPanelList(H4, 'cruiser').find(r => r.id === 'goal'); campPanelRun(H4, gr4, 'key'); var says4 = __rowof(H4, 'goal').state, tr4 = __rowof(H4, 'target').state;`);
   check('the top-left HUD no longer says where the autopilot is going (card space-game-hud-topleft-trim), so the goal row says it: ", flying there" while the trip is on', /, flying there$/.test(J(`says4`)), J(`says4`));
   g.run(`campFleetListSet(true); campShipListSet(true); var yr = __ids('yard'), cr2 = __ids('cruiser'); campFleetListSet(false); campShipListSet(false);`);
-  check('with the old lists on every row is where it was: the dock list has Dock first, Dock and repair is the cruiser list\'s only row (with Mine, if the squads list is off), Repair hull is off', J(`yr`) === 'dock,repairhull,repairward' && J(`cr2`) === 'srepair,gdock', J(`[yr, cr2].join(' / ')`));
+  check('with the old lists on every row is where it was: the dock list has Dock first, Dock and repair is the cruiser list\'s only row (with Mine, if the squads list is off), Repair hull is off', J(`yr`) === 'dock,repairhull,repairward' && J(`cr2`) === 'srepair,sreload,gdock', J(`[yr, cr2].join(' / ')`));
   check('the ids of the two rows are unique in the table (srepair is the S list\'s, repairhull the dock list\'s): the old suites can still name each', J(`new Set(CAMP_PANELS.panels.flatMap(p => p.rows.map(r => r.id))).size === CAMP_PANELS.panels.flatMap(p => p.rows).length`));
 }
 

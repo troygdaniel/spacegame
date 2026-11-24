@@ -116,7 +116,7 @@ console.log('D. the keys and the lists');
   g.run('campFleetListSet(true)'); // the old lists are back for the rest of the suite
   g.run(`C.sel = 'pilot:red';`);
   const e2 = key('KeyR');
-  check('R is a free key (card space-game-keys2-orders): with the red pilot picked it is used by nothing and all three stay on their attack', !e2.used && !e2.ran && J('__ord("red")').startsWith('attack') && J('__ord("green")').startsWith('attack') && J('__ord("yellow")').startsWith('attack'));
+  check('R is the missiles\' key (card space-game-missiles-cost-ore; it was free): with the red pilot picked it builds missiles, not an order to a squad, and all three stay on their attack', e2.used && e2.row === 'sreload' && J('__ord("red")').startsWith('attack') && J('__ord("green")').startsWith('attack') && J('__ord("yellow")').startsWith('attack'));
   g.run(`campPanelKey(__PP, C, 'KeyX', 0);`);
   const rg = ord();
   check('X lets the enemy and the friendly go and puts who back on All pilots; W with none picked forms all three squads up on the cruiser', J('C.sel') === 'all' && J('C.fsel') === '' && J('C.tgt') === '' && rg.ran && rg.ok && rg.row === 'guard' && J(`campWing(C, 'fighter').every(u => u.order.type === 'guard')`));

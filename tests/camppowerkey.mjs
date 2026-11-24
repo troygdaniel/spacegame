@@ -50,9 +50,9 @@ console.log('B. the keys');
 console.log('C. the warp blink');
 {
   g.run(`window.C2 = __new(['blink']); window.P2 = campPanelNew();`);
-  check('with the blink tech the cruiser list shows the row last, "Warp blink ahead" (it says ready)', J(`campPanelRows(C2, 'cruiser').map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,emergency,blink' && J(`campPanelRows(C2, 'cruiser').pop().state`) === 'ready');
+  check('with the blink tech the cruiser list shows the row last, "Warp blink ahead" (it says ready)', J(`campPanelRows(C2, 'cruiser').map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,sreload,emergency,blink' && J(`campPanelRows(C2, 'cruiser').pop().state`) === 'ready');
   check('the cruiser list, Up (round to the last row) and Enter asks for the hop and closes the list; the row says it cooled after', (() => { g.run(`__key(P2, C2, 'KeyS'); __key(P2, C2, 'ArrowUp'); window.rb = __key(P2, C2, 'Enter', 200);`); return J('rb.ran') === true && J('rb.ok') === true && J('rb.row') === 'blink' && J('C2.input.blink') === true && J('campPanelOpen(P2)') === ''; })());
-  check('without the tech the row is left out of the cruiser list (a row that can never be used is not there)', J(`campPanelList(__new(), 'cruiser').map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,emergency');
+  check('without the tech the row is left out of the cruiser list (a row that can never be used is not there)', J(`campPanelList(__new(), 'cruiser').map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,sreload,emergency');
 }
 
 console.log('D. the words');

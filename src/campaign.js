@@ -116,9 +116,10 @@ const CAMP = {
     alienLaser: 0                          // 1: a plain turret shot at an alien (a kind 'alien' beam in C.lasers) hums too, over its pew; 0: it keeps its pew only, and the hum is for rocks and the Beam turrets
   },
   missile: {                               // the missile launcher (F, or the order "missiles"): a homing missile for the mothership and the other big ships (card space-game-campaign-missiles)
-    magazine: 6,                           // missiles you start with, and how many the slow reload fills the magazine to
+    magazine: 6,                           // missiles you start with, and the full rack: how many R builds the magazine up to
     max: 12,                               // the most the magazine can ever hold (C.missiles, a plain number: the ore code adds to it with campMissileAdd)
-    reload: 15000,                         // ms until one missile is back in the magazine while it is below `magazine`
+    reload: 15000,                         // ms a missile takes to BUILD (the old reload time; card space-game-missiles-cost-ore: the magazine no longer fills itself, src/campmissilebuild.js)
+    cost: 20,                              // ore a missile costs to build, paid when its build starts (card space-game-missiles-cost-ore; Troy, 24 Nov 2026). The ship builds ONE by itself only at 0 missiles, R builds up to the full rack; 0 makes them free again
     delay: 700,                            // ms between two launches (the launcher cycles)
     lock: 2400,                            // px: a big ship this close to the carrier can be locked (the mothership first, else the nearest tower or gunship)
     bigKinds: ['mother', 'tower', 'gunship', 'pirateleader'], // the ships that count as big: the missile aims at them, its fuze goes off on them, they take `big`
@@ -164,7 +165,6 @@ const CAMP = {
     beside: 12,                            // px between an open list and a display's box when the box steps out of its way (right of a left list for the FLEET corner, left of a right list for the target box; card space-game-w-list-covers-friend-box)
     line: 26,                              // px: the order-key line at the foot of the target box ("E  Attack" for an enemy, "E  Guard" for a friendly, lit or grey; cards space-game-keys-panels, space-game-keys2-panels): it is this much taller than the who box
     bottom: 64,                            // px from the bottom edge to the box (the key line's strip is under it)
-    count: 72,                             // px from the bottom edge to the top of the MISSILES count (bottom left): the FLEET corner (CAMP.corner.at.bl) ends at y 630, so this strip under it is free (cards space-game-missiles-line-overlap, space-game-layout-fleet)
     w: 260, h: 200,                        // px: the box (its width is the corner panel's, CAMP.corner.w; the target corners' room), about the radar's height
     every: 250,                            // ms between two readings of the ship: the numbers and the words are live four times a second (a new ship is read at once)
     pic: 76,                               // px: the picture's frame; the ship is drawn to fit it
@@ -187,10 +187,10 @@ const CAMP = {
     bar: { dy: 22, h: 9 },                 // px: a bar's top below its item's top, and its height
     chip: 0x7fe9ff,                        // the key-cap chips' fill (the friend's cyan, as the order key's)
     at: {                                  // where each corner's title row sits (x: its left edge; y: the edge of the row at the screen's edge side, the bottom edge for a bottom corner; dir: 1 the details open downward, -1 upward). Left and right are what you command and everything else
-      tl: { x: 18, y: 62, dir: 1 },        // S CRUISER (card space-game-layout-cruiser): under its status (SHIELD and HULL bars and the ORE line, src/campcruiserhud.js: they end 4 px above this row), at the top of the screen; the S list opens under the row
-      bl: { x: 18, y: 630, dir: -1 },      // Q W FLEET: the row ends where the who box used to (y 630), the MISSILES count is under it (CAMP.tdisp.count)
-      tr: { x: 1002, y: 62, dir: 1 },      // [ ] HOSTILES: its title row level with S CRUISER's (it was 88 px lower: card space-game-layout-align); x is W - edge - w, the left margin mirrored
-      br: { x: 1002, y: 630, dir: -1 }     // O P FRIENDLIES: level with FLEET's row (the bottom pair end at 630, the top pair start at 62)
+      tl: { x: 18, y: 78, dir: 1 },        // S CRUISER (card space-game-layout-cruiser): under its status (the SHIELD and HULL bars, the ORE and MISSILES lines, src/campcruiserhud.js: they end 4 px above this row), at the top of the screen; the S list opens under the row. 78 since card space-game-missiles-cost-ore (it was 62: the fourth line)
+      bl: { x: 18, y: 630, dir: -1 },      // Q W FLEET: the row ends where the who box used to (y 630), nothing is under it now: the MISSILES count is in the status block at the top left since card space-game-missiles-cost-ore
+      tr: { x: 1002, y: 78, dir: 1 },      // [ ] HOSTILES: its title row level with S CRUISER's (it was 88 px lower: card space-game-layout-align); x is W - edge - w, the left margin mirrored
+      br: { x: 1002, y: 630, dir: -1 }     // O P FRIENDLIES: level with FLEET's row (the bottom pair end at 630, the top pair start at 78)
     }
   },
   mark: {                                  // the squares come and go (cards space-game-pilot-squares-fade; Troy, 24 Nov 2026: "have the reticle squares disappear from the pilots after a few seconds", and the same for the selected targets; src/camptarget.js campMarkNow, src/camptargetdraw.js): the squares on the pilots WHO is show when WHO is picked, an order is given or the mission begins; the square on the target held (the enemy's or the friend's) shows when it is picked, and an order shows both; then they go
@@ -842,7 +842,7 @@ function campNew(level, techs, opts) {
   C.rank = Math.max(0, Math.min(CAMP.ranks.length - 1, opts.rank | 0)); // the rank of the pilot (src/campranks.js: from the scores of the missions flown): its extras make the three pilots stronger
   { const rk = CAMP.ranks[C.rank]; C.strength += rk.fighters; }
   C.pilotStr = campPilotStrengths(C.strength);
-  Object.assign(C, { missiles: CAMP.missile.magazine, magazine: CAMP.missile.magazine, turretMul: 1, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0 }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks
+  Object.assign(C, { missiles: CAMP.missile.magazine, magazine: CAMP.missile.magazine, turretMul: 1, rockets: [], rocketId: 0, nextRocket: 0, reloadAt: 0, rackOn: false }); C.orders.missiles = 0; // the launcher: the magazine (a plain number), the missiles in flight, its clocks; reloadAt: when the missile being built is done (0: none), rackOn: R is building up to the full rack (src/campmissilebuild.js)
   if (typeof campBeatsNew === 'function') campBeatsNew(C); // the beats of the mission (src/campbeats.js)
   C.route = null; if (typeof campRouteNew === 'function') campRouteNew(C); // a fork in the road (src/camproute.js): C.route, and the lanes' caches in C.caches
   Object.assign(C, { cues: {}, piratesEscaped: 0, neutralsLost: 0 }); // the named cues a script has fired (campCue), the pirates that broke off and got away, the neutral ships lost (src/camppirates.js)
@@ -1021,6 +1021,7 @@ function campDo(C, name, arg, dry, how) {
   if (name === 'guard') return campWingOrder(C, null, 'guard', t && t.kind === 'place' ? 'place:' + t.id : t && t.kind === 'convoy' ? t.id : null, how, dry);
   if (name === 'recall') return campWingOrder(C, null, 'recall', null, how, dry);
   if (name === 'wing') return campWingText(C, arg, dry); // a group, a verb and a target in words: "fighters at the mothership", "all guard Ceres"
+  if (name === 'reload') return campReloadDo(C, dry); // R: build missiles up to the full rack, for ore (src/campmissilebuild.js)
   if (name === 'missiles') { // the launcher: the mothership if you name it (or if it is in reach), else the nearest big ship in reach
     if (C.missiles <= 0) return campNo('nomissiles');
     if (C.t < C.nextRocket) return campNo('missilewait');
@@ -1068,6 +1069,7 @@ function campIntent(text) {
   q = q.replace(/^(?:the |our )?(?:fighters?|wing|squadron|ships)\s+(?=(?:attack|engage|guard|defend|protect|launch|recall|return|escort)\b)/, '');
   let m;
   if ((m = /^(?:(?:take|use|pick|choose|go|fly|run|send (?:her|it|them|the transport|the convoy|the haulers))\s+(?:by |along |down |via |on |through |over )?)?(?:the |our )?([a-z]+(?: [a-z]+)?)\s+(?:lane|route)$/.exec(q))) return { act: 'fleet_lane', arg: m[1] }; // "take the long lane", "go by the short lane", "long lane": the pick at a fork in the road (card space-game-scout-route)
+  if (/^(?:reload|rearm|restock|rebuild|build|make)(?: (?:the|our|all|some|more|new))*(?: (?:missiles?|rockets?|rack|magazine|launcher|tubes?))?$/.test(q) && !/^(?:build|make|rebuild)$/.test(q)) return { act: 'fleet_reload', arg: '' }; // "reload", "reload missiles", "build more missiles": the rack is built up for ore (before the missiles line below: "reload missiles" fired one)
   if (/\b(?:missiles?|rockets?|torpedoe?s?)\b/.test(q)) return { act: 'fleet_missiles', arg: q.replace(/\b(?:fire|launch|shoot|send|loose|use|the|our|all|some|a|one|missiles?|rockets?|torpedoe?s?|with|at|on|to)\b/g, ' ').replace(/\s+/g, ' ').trim() }; // "fire missiles", "missiles at the mothership": before "launch", which is the bay
   if (/^(?:launch|scramble|deploy|open the bay|open the bay doors|bay doors|send out the (?:wing|fighters|ships|fleet)|launch the (?:wing|fighters|ships|fleet)|get them out)(?: now)?$/.test(q) || /^launch\b/.test(q)) return { act: 'fleet_launch', arg: '' };
   if ((m = /^(?:dock|land|put in|moor|berth)\s+(?:at|in|on|with|to)\s+(.+)$/.exec(q)) && !/^(?:the )?(?:carrier|cruiser|ship|base|bay)$/.test(m[1])) return { act: 'fleet_dock', arg: m[1].replace(/^(?:the |an? )/, '').replace(/^(?:outpost|station)$/, '') }; // "dock at Luna", "land at the lunar base", "dock at an outpost": the CARRIER docks at an outpost (card space-game-campaign-outposts); a bare "dock" or "land" is the wing's, below
@@ -1629,7 +1631,7 @@ function campBullets(C, dt) {
 }
 
 // ---------- the missile launcher (card space-game-campaign-missiles; the numbers are CAMP.missile) ----------
-// C.missiles is the magazine: a plain number. The slow reload brings it back up to CAMP.missile.magazine, one every `reload` ms; campMissileAdd (the ore code) can fill it up to `max`.
+// C.missiles is the magazine: a plain number. It does NOT fill itself: a missile is built for CAMP.missile.cost ore, by itself at 0 and up to the full rack on R (src/campmissilebuild.js); campMissileAdd (the loot) can fill it up to `max`.
 // A missile goes for its target, turning at most `turn` rad/s; when the target is gone it takes the mothership or the nearest big ship in reach, else it flies on until its fuel is out.
 // Its fuze goes off near a big ship (never a raider or a drone on the way), and every alien within `blast` is hurt: a big ship `big`, any other `small`.
 const campBig = u => CAMP.missile.bigKinds.indexOf(u.kind) >= 0;
@@ -1639,21 +1641,18 @@ function campMissileTarget(C, from) { // the mothership if it is in reach, else 
 }
 function campFire(C, tg) { // one missile out of the tube: the magazine is a missile less, the launcher cycles
   const k = CAMP.missile, c = C.carrier;
-  C.missiles--; C.nextRocket = C.t + k.delay; if (!C.reloadAt) C.reloadAt = C.t + campReload(C);
+  C.missiles--; C.nextRocket = C.t + k.delay; // (the magazine does not fill itself any more: at 0 the ship builds one for ore, R builds the rack; src/campmissilebuild.js)
   const m = { id: 'missile-' + (++C.rocketId), x: c.x + Math.cos(c.rot) * c.r, y: c.y + Math.sin(c.rot) * c.r, rot: c.rot, sp: k.launch, vx: 0, vy: 0, life: k.life, target: tg ? tg.id : '' };
   C.rockets.push(m); C.events.push({ type: 'missile', x: m.x, y: m.y, id: m.id });
   return m;
 }
 function campMissileAdd(C, n) { // the ore code: n more missiles into the magazine, up to `max`; how many went in
   const k = CAMP.missile, was = C.missiles; C.missiles = Math.max(0, Math.min(k.max, was + Math.floor(n || 0)));
-  if (C.missiles >= C.magazine) C.reloadAt = 0; // a full magazine has nothing to reload
-  return C.missiles - was;
+  return C.missiles - was; // (a build already paid for goes on and lands in the rack: campMissileStep)
 }
 function campMissiles(C, dt) {
   const k = CAMP.missile;
-  if (C.missiles >= C.magazine) C.reloadAt = 0; // the reload clock runs only while the magazine is below its full
-  else if (!C.reloadAt) C.reloadAt = C.t + campReload(C);
-  else if (C.t >= C.reloadAt) { C.missiles++; C.reloadAt = C.missiles >= C.magazine ? 0 : C.t + campReload(C); }
+  campMissileStep(C); // the build and the rack: a missile costs ore, and the magazine does not fill itself (card space-game-missiles-cost-ore; src/campmissilebuild.js)
   C.rockets.forEach(m => {
     if (m.dead) return;
     m.life -= dt * 1000;
