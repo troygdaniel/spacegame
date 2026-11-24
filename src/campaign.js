@@ -186,7 +186,7 @@ const CAMP = {
     bar: { dy: 22, h: 9 },                 // px: a bar's top below its item's top, and its height
     chip: 0x7fe9ff,                        // the key-cap chips' fill (the friend's cyan, as the order key's)
     at: {                                  // where each corner's title row sits (x: its left edge; y: the edge of the row at the screen's edge side, the bottom edge for a bottom corner; dir: 1 the details open downward, -1 upward). Left and right are what you command and everything else
-      tl: { x: 18, y: 150, dir: 1 },       // S CRUISER (a card of its own sets the place: the lines of text at the top left end at y 132)
+      tl: { x: 18, y: 62, dir: 1 },        // S CRUISER (card space-game-layout-cruiser): under its status (SHIELD and HULL bars and the ORE line, src/campcruiserhud.js: they end 4 px above this row), at the top of the screen; the S list opens under the row
       bl: { x: 18, y: 630, dir: -1 },      // Q W FLEET: the row ends where the who box used to (y 630), the MISSILES count is under it (CAMP.tdisp.count)
       tr: { x: 1062, y: 150, dir: 1 },     // [ ] HOSTILES (a card of its own sets the place)
       br: { x: 1062, y: 630, dir: -1 }     // O P FRIENDLIES (a card of its own sets the place)

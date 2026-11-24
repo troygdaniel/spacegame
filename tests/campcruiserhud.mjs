@@ -1,11 +1,12 @@
-// smoke: the cruiser's status at the top left (SHIELD bar, HULL bar, ORE line over the S CRUISER title): its numbers, places, words and drawing on stand-ins (plain Node, no Chrome)
+// smoke: the S CRUISER corner at the top left: the status over its title (SHIELD bar, HULL bar, ORE line), the corner's title row, and the S list opening under it with no heading and no counter (plain Node, no Chrome)
 // Card space-game-layout-cruiser (ORCH for Troy, 24 Nov 2026: "top left is what I command": the S list becomes the S CRUISER corner, and above its title sit a shield bar, a hull bar and the ore count, moved from the
 // round gauges and the ore line at the top right). The code is src/campcruiserhud.js (own numbers, own words camp.cruiser.*, nothing from src/camphud.js), hooked in src/campaignscene.js.
-//   A. the numbers: shield and hull as a share of their top, red at or under the low mark, the ore line with the credits and the ships being mended
-//   B. the places: inside the screen, as wide as the S list's box, lines one under another, the title's place (bottom) under the last line
+//   A. the numbers: shield and hull as a share of their top, red at or under the low mark, the ore line, and the credits and the ships being mended
+//   B. the places: inside the screen, as wide as a corner panel, lines one under another, the corner's title row right under the last line
 //   C. the words: four keys in a words file and in the table, a voicepack rule, the script loaded once
 //   D. the drawing on stand-ins: a plate, two bars of the right widths and colours, the texts say the numbers; plain rectangles only; nothing drawn by a scene with no texts
 //   E. the scene: it makes the texts into its HUD and paints them every frame; nothing of src/camphud.js is called from the new file
+//   F. the corner: registered at the top left with the S chip and CRUISER; the S list opens under its title row, has no heading and no 1 / 7 counter, keeps a caption while it picks a target
 // Run: node tests/campcruiserhud.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
@@ -19,7 +20,7 @@ g.run(`
   window.__new = () => campNew('home', [], { seed: 1, god: true });
   window.__stand = () => { const calls = [], rec = k => (...a) => { calls.push([k].concat(a)); return gg; }, gg = { calls, fillStyle: rec('fillStyle'), fillRect: rec('fillRect'), lineStyle: rec('lineStyle'), strokeRect: rec('strokeRect'), fillRoundedRect: rec('fillRoundedRect'), strokeRoundedRect: rec('strokeRoundedRect') };
     const tx = () => { const t = { text: '', color: '', setText(v) { t.text = String(v); return t; }, setColor(c) { t.color = c; return t; } }; return t; };
-    return { gg, H: { crShieldL: tx(), crShieldN: tx(), crHullL: tx(), crHullN: tx(), crOre: tx() } }; };
+    return { gg, H: { crShieldL: tx(), crShieldN: tx(), crHullL: tx(), crHullN: tx(), crOre: tx(), crCash: tx() } }; };
 `);
 
 // ---- A. the numbers ----
@@ -37,9 +38,11 @@ g.run(`
   const Z = J('campCruiserStatus(C1)');
   check('a shield or hull under zero reads 0, never a negative bar or number', Z.shield.frac === 0 && Z.hull.frac === 0 && Z.shield.n === 0 && Z.hull.n === 0, JSON.stringify(Z));
   g.run(`C1.ore = 87.9; C1.cash = 0; C1.mends = [];`);
-  check('the ore line is the ore (whole) over the cap, with no credits and no mends when there are none', J('campCruiserOreLine(campCruiserStatus(C1))') === 'ORE  87/' + J('CAMP.ore.cap'), J('campCruiserOreLine(campCruiserStatus(C1))'));
+  check('the ore line is the ore (whole) over the cap; with no credits and no mends the right side says nothing', J('campCruiserOreLine(campCruiserStatus(C1))') === 'ORE  87/' + J('CAMP.ore.cap') && J('campCruiserCashLine(campCruiserStatus(C1))') === '', J('campCruiserOreLine(campCruiserStatus(C1))'));
   g.run(`C1.cash = 40.6; C1.mends = [{}, {}];`);
-  check('with credits and two ships being mended: the credits, then +2', J('campCruiserOreLine(campCruiserStatus(C1))') === 'ORE  87/' + J('CAMP.ore.cap') + '   CREDITS  40  +2', J('campCruiserOreLine(campCruiserStatus(C1))'));
+  check('with credits and two ships being mended: the credits, then +2, on the right', J('campCruiserCashLine(campCruiserStatus(C1))') === 'CREDITS  40  +2', J('campCruiserCashLine(campCruiserStatus(C1))'));
+  g.run(`C1.cash = 0; C1.mends = [{}];`);
+  check('ships being mended with no credits: just +1', J('campCruiserCashLine(campCruiserStatus(C1))') === '+1');
   g.run(`C1.ore = CAMP.ore.cap;`);
   check('a full hold is marked full (the line turns amber)', J('campCruiserStatus(C1).ore.full') === true);
   g.run(`C1.ore = 10;`);
@@ -48,14 +51,15 @@ g.run(`
 
 // ---- B. the places ----
 {
-  const Z = J('campCruiserHudGeom()'), K = J('CAMPCRUISERHUD'), W = J('W'), box = J('CAMPPANELS_LOOK.box');
-  check('the block is in the top left corner, inside the screen', Z.x0 >= 0 && Z.y0 >= 0 && Z.x1 <= W / 2 && Z.y1 < 120, JSON.stringify(Z));
-  check('it is as wide as the S list\'s box, so the corner is one column', Z.x1 - Z.x0 === box.w, Z.x1 - Z.x0 + ' vs ' + box.w);
+  const Z = J('campCruiserHudGeom()'), K = J('CAMPCRUISERHUD'), W = J('W'), T = J('CAMP.corner.at.tl'), cw = J('CAMP.corner.w'), Th = J('CAMP.corner.title.h');
+  check('the block is in the top left corner, inside the screen, at the corner\'s left edge', Z.x0 === T.x && Z.y0 >= 0 && Z.x1 <= W / 2 && Z.y1 < 120, JSON.stringify(Z));
+  check('it is as wide as a corner panel (its title row), so the corner is one column', Z.x1 - Z.x0 === cw, Z.x1 - Z.x0 + ' vs ' + cw);
   check('the shield line is above the hull line, the ore line under both, each one line apart', Z.rows[0].id === 'shield' && Z.rows[1].id === 'hull' && Z.rows[1].label.y - Z.rows[0].label.y === K.row && Z.ore.y - Z.rows[1].label.y === K.row);
-  check('a bar is inside the plate, with room for its word at the left and its number at the right, and is at least 120 px long', Z.rows.every(r => r.bar.x0 >= Z.x0 + K.pad + K.label && r.bar.x1 <= Z.x1 - K.pad - K.num && r.bar.x1 - r.bar.x0 >= 120 && r.bar.y1 - r.bar.y0 === K.bar), JSON.stringify(Z.rows));
-  check('the plate covers the three lines', Z.plate.x === Z.x0 && Z.plate.y <= Z.rows[0].bar.y0 && Z.plate.y + Z.plate.h >= Z.ore.y + K.row / 2 - 1, JSON.stringify(Z.plate));
-  check('the title\'s place (bottom) is under the last line and leaves the gap', Z.bottom === Z.y1 + K.gap && Z.bottom > Z.ore.y, Z.bottom);
-}
+  check('a bar is inside the plate, with room for its word at the left and its number at the right, and is at least 90 px long', Z.rows.every(r => r.bar.x0 >= Z.x0 + K.pad + K.label && r.bar.x1 <= Z.x1 - K.pad - K.num && r.bar.x1 - r.bar.x0 >= 90 && r.bar.y1 - r.bar.y0 === K.bar), JSON.stringify(Z.rows));
+  check('the plate covers the three lines', Z.plate.x === Z.x0 && Z.plate.w === cw && Z.plate.y <= Z.rows[0].bar.y0 && Z.plate.y + Z.plate.h >= Z.ore.y + K.row / 2 - 1, JSON.stringify(Z.plate));
+  check('the corner\'s title row starts right under the last line (the gap between): CAMP.corner.at.tl.y is the one number', Z.bottom === T.y && Z.y1 + K.gap === T.y && Z.bottom > Z.ore.y, Z.bottom + ' vs ' + T.y);
+  check('the ore on the left and the credits on the right fit one line of the block without meeting (the longest: "ORE  300/300" and "CREDITS  9999  +9"; a character is 0.48 of its font size: the old ore line was 236 px for 35 characters at 14 px)', (() => { const per = 0.48, l = 'ORE  300/300'.length * per * 13, r = 'CREDITS  9999  +9'.length * per * 12; return Z.ore.x + l + 8 < Z.cash.x - r; })(), JSON.stringify([Z.ore, Z.cash]));
+  }
 
 // ---- C. the words and the files ----
 {
@@ -76,7 +80,7 @@ g.run(`
   const sh = Z.rows[0].bar, w = sh.x1 - sh.x0;
   check('the shield fill is half the bar wide, from the bar\'s left', rects[2][1] === sh.x0 && Math.abs(rects[2][3] - w * 0.5) < 1e-6, JSON.stringify(rects));
   check('the hull is full: its fill is the whole bar', Math.abs(rects[4][3] - (Z.rows[1].bar.x1 - Z.rows[1].bar.x0)) < 1e-6, JSON.stringify(rects[4]));
-  check('the texts say the numbers: shield, hull, and the ore line', H.crShieldN.text === String(Math.round(J('C2.shield'))) && H.crHullN.text === String(Math.round(J('C2.carrier.hp'))) && H.crOre.text === 'ORE  55/' + J('CAMP.ore.cap'), JSON.stringify(H));
+  check('the texts say the numbers: shield, hull, and the ore line', H.crShieldN.text === String(Math.round(J('C2.shield'))) && H.crHullN.text === String(Math.round(J('C2.carrier.hp'))) && H.crOre.text === 'ORE  55/' + J('CAMP.ore.cap') && H.crCash.text === '', JSON.stringify(H));
   check('a bar in warning is drawn red and its number is red', (() => { g.run(`C2.carrier.hp = C2.carrier.maxHp * 0.1; ST = __stand(); campCruiserHudPaint(ST.gg, ST.H, C2);`); const cs = J('ST.gg.calls').filter(c => c[0] === 'fillStyle'); return cs.some(c => c[1] === K.color.warn) && J('ST.H.crHullN.color') === K.ink.warn && J('ST.H.crShieldN.color') === K.ink.num; })());
   check('no rounded frame is drawn (a rounded rectangle is triangulated again on every render)', !J('ST.gg.calls').some(c => /Rounded/.test(c[0])) && !/Rounded/.test(src('src/campcruiserhud.js').replace(/\/\/.*$/gm, '')));
   check('a scene with none of the texts draws nothing and does not throw', (() => { g.run(`ST = __stand(); campCruiserHudPaint(ST.gg, {}, C2); campCruiserHudPaint(ST.gg, null, C2);`); return J('ST.gg.calls').length === 0; })());
@@ -87,7 +91,44 @@ g.run(`
   const own = src('src/campcruiserhud.js').replace(/\/\/.*$/gm, ''), sc = src('src/campaignscene.js');
   check('the new file calls nothing of src/camphud.js (campHudGeom, campGauges, campHullBar, CAMP_GAUGE, hud.ore): the gauges can go without it', !/campHudGeom|campGauges|campHullBar|CAMP_GAUGE|CAMP\.hud\.ore|hud\.ore/.test(own));
   check('the scene makes the texts into its HUD (so a result card hides them) and paints them every frame', /Object\.assign\(this\.hud, campCruiserHudMake\(this, uiFont\)\)/.test(sc) && /campCruiserHudPaint\(g, this\.hud, C\)/.test(sc));
-  check('the five texts are the HUD\'s own keys, none of the keys the HUD already has', (() => { const k = ['crShieldL', 'crShieldN', 'crHullL', 'crHullN', 'crOre']; return k.every(x => (sc.match(new RegExp('\\b' + x + '\\b', 'g')) || []).length === 0) && /crShieldL.*crShieldN.*crHullL.*crHullN.*crOre/s.test(src('src/campcruiserhud.js')); })());
+  check('the six texts are the HUD\'s own keys, none of the keys the HUD already has', (() => { const k = ['crShieldL', 'crShieldN', 'crHullL', 'crHullN', 'crOre', 'crCash']; return k.every(x => (sc.match(new RegExp('\\b' + x + '\\b', 'g')) || []).length === 0) && /crShieldL.*crShieldN.*crHullL.*crHullN.*crOre.*crCash/s.test(src('src/campcruiserhud.js')); })());
+}
+// ---- F. the corner and the S list under it ----
+g.run(`
+  window.__all = [];
+  window.__mkobj = (kind, x, y, t) => { const o = { kind, x, y, t: t == null ? '' : t, gone: false, color: '', width: 100, height: 20, visible: true };
+    const px = new Proxy(o, { get: (tg, k) => (k in tg ? tg[k] : typeof k === 'symbol' || k === 'then' ? undefined : () => px) });
+    o.setText = v => { o.t = v; return px; }; o.setColor = v => { o.color = v; return px; }; o.destroy = () => { o.gone = true; }; o.setPosition = (a, b) => { o.x = a; o.y = b; return px; }; o.setVisible = v => { o.visible = v; return px; };
+    __all.push(px); return px; };
+  window.__scene = () => { const s = { camp: campNew('home', [], { seed: 1, god: true }), time: { now: 0 }, add: { rectangle: (x, y) => __mkobj('rect', x, y), graphics: () => __mkobj('g'), text: (x, y, t) => __mkobj('text', x, y, t) },
+    input: { handlers: [], on(e, f) { this.handlers.push([e, f]); }, off() {} }, events: { once() {} } }; s.camp.ships = s.camp.ships.filter(u => u.team !== 'alien'); return s; };
+`);
+{
+  const T = J('CAMP.corner.at.tl'), Th = J('CAMP.corner.title.h'), gap = J('CAMP.corner.gap'), B = J('CAMPPANELS_LOOK.box');
+  const def = J('campCornerDef("cruiser")');
+  check('the cruiser corner is registered once, at the top left, with CRUISER for its title', def && def.at === 'tl' && def.title === 'camp.corner.cruiser' && J('CAMP_CORNERS.filter(d => d.id === "cruiser").length') === 1 && J('uiText("camp.corner.cruiser")') === 'CRUISER', JSON.stringify(def));
+  const N = J('campCornerNow(campNew("home", [], { seed: 1, god: true }), "cruiser")');
+  check('its title row has the S chip (the zoom-reset key\'s cap from the key table), the title CRUISER, no selection and no details of its own', N && N.chips.join() === J('CAMP_KEYS.zoomreset.k') && N.chips.join() === 'S' && N.title === 'CRUISER' && N.selection === '' && N.items.length === 0, JSON.stringify(N));
+  check('the S key opens the corner (campCornerKey) and the S list: the same key, the one table', J('CAMP_KEYS.zoomreset.codes.includes("KeyS")') && J('campPanelDef("cruiser").code') === 'KeyS' && J('campPanelDef("cruiser").corner') === 'tl');
+  const G = J('campPanelsGeometry(campPanelDef("cruiser"), 5)');
+  check('the S list opens right under the corner\'s title row (its gap), at the title row\'s left, with no heading', G.x === T.x && G.y === T.y + Th + gap && G.head.h === 0 && G.w === B.w, JSON.stringify(G));
+  const G0 = J('(() => { const q = campPanelsGeometry(campPanelDef("cruiser"), 5); return { r0: q.rowY(0), list: q.list, y: q.y }; })()');
+  check('rows start CAMPPANELS_LOOK.box.pad under the box\'s top; the box is as tall as its rows, pads and foot', G0.r0 === G0.y + B.pad && J('campPanelsGeometry(campPanelDef("cruiser"), 5).h') === B.pad + 5 * (B.row + B.gap) - B.gap + B.pad + B.foot, JSON.stringify(G0));
+  const Gp = J('campPanelsGeometry(campPanelDef("cruiser"), 5, true)');
+  check('while it picks a target the caption band comes back (PICK A TARGET), and the rows go down by it', Gp.head.h === B.capt && Gp.h === G.h + B.capt && Gp.y === G.y, JSON.stringify([G.h, Gp.h]));
+  const Gr = J('campPanelsGeometry(campPanelDef("power"), 5)'), Gf = J('campPanelsGeometry(campPanelDef("fleet"), 5)');
+  check('the other lists keep their own places and headings (the power list at the right under the top, the fleet list at the left edge)', Gr.head.h === B.head && Gf.head.h === B.head && Gf.y === J('CAMPPANELS_LOOK.top') && Gf.x === J('CAMPPANELS_LOOK.edge'), JSON.stringify([Gr.head, Gf.head]));
+  g.run(`window.S = __scene(); campPanelsInstall(S); S.mode = 'play'; campPanelsPaint(S, 1000);`);
+  check('with no key pressed the list is not drawn at all (the corner\'s title row is the corner panel\'s)', J('S.pnl.title.visible') === false && J('S.pnl.count.visible') === false && J('S.pnl.rows.every(r => !r.name.visible)'));
+  g.run(`campPanelKey(S.pn, S.camp, 'KeyS', 1000); campPanelsPaint(S, 1000);`);
+  check('S opens the list: its rows are drawn, with no heading text and no 1 / 7 counter', J('campPanelOpen(S.pn)') === 'cruiser' && J('S.pnl.rows.filter(r => r.name.visible).length') >= 3 && J('S.pnl.title.visible') === false && J('S.pnl.count.visible') === false, J('S.pnl.rows.filter(r => r.name.visible).map(r => r.name.t).join("|")'));
+  const rows = J('S.pnl.rows.filter(r => r.name.visible).map(r => r.name.y)');
+  check('the first row is drawn inside the box, under the title row', rows[0] > T.y + Th + gap && rows[0] < T.y + Th + gap + B.pad + B.row, JSON.stringify([rows[0], T.y + Th]));
+  check('a click on a row of the list is still the list\'s (over, click)', J('campPanelsOver(S, ' + (T.x + 40) + ', ' + (Math.round(rows[0])) + ')') === true && J('campPanelsOver(S, ' + (T.x + 40) + ', ' + (T.y + 4) + ')') === false);
+  const BX = J('campBoxDx(S, true)');
+  check('the bottom left corner needs no step aside: the list ends well above it', BX === 0, BX);
+  g.run(`S.pn.touch = 0; campPanelsPaint(S, 1000 + CAMP_PANELS.anim.idle + CAMP_PANELS.anim.out + 10);`);
+  check('untouched, the list fades and closes: back to the title row alone', J('campPanelOpen(S.pn)') === '' && J('S.pnl.rows.every(r => !r.name.visible)'));
 }
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nCRUISER STATUS HUD FAIL (${failed} of ${n})` : `\nCRUISER STATUS HUD PASS (${n} checks)`);

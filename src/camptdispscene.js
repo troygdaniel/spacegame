@@ -33,7 +33,7 @@ function campTdispDraw(V, info) { // the frame, the picture's frame and the two 
 function campBoxDx(s, left) {
   const P = s.pn, K = CAMP.tdisp; if (!P || typeof campPanelOpen !== 'function' || typeof campPanelDef !== 'function' || typeof campPanelsGeometry !== 'function') return 0;
   const id = campPanelOpen(P), def = id ? campPanelDef(id) : null; if (!def || (def.side === 'right') === !!left) return 0; // a left list moves the left box, a right list the right ones
-  const G = campPanelsGeometry(def, s.pnl && s.pnl.view ? s.pnl.view.total : 0), B = campTdispBox(left, 0);
+  const G = campPanelsGeometry(def, s.pnl && s.pnl.view ? s.pnl.view.total : 0, s.pnl && s.pnl.view ? s.pnl.view.pick : false), B = campTdispBox(left, 0);
   if (!(G.x < B.x + B.w && G.x + G.w > B.x && G.y < B.y + B.h && G.y + G.h > B.y)) return 0;
   return left ? G.x + G.w + K.beside - B.x : G.x - K.beside - B.w - B.x;
 }
