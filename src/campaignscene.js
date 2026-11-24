@@ -568,8 +568,18 @@ class Campaign extends Phaser.Scene {
     if (C.earth && F.ys.earth !== undefined) bar(W / 2 - 110, F.ys.earth + 18, 220, C.earth.shield / C.earth.max, 0x38e1ff);
     this.hudBelow = F.bottom;
     if (H.mother && H.mother.setY) H.mother.setY(F.bottom + 2);
+    if (this.hudStackBottom) this.hudStack = this.hudStackBottom(F.bottom); // (a stand-in scene in a test has none) where everything at the top centre ends: a toast starts under it (toastTop)
     if (this.hudBack && this.hudBack.setSize) this.hudBack.setSize(CAMP.hud.plate.w, Math.max(CAMP.hud.plate.min, F.bottom + CAMP.hud.plate.pad - (CAMP.hud.text.y - 6))); // the dim plate under the column follows its length
   }
+  // where everything stacked at the top centre ends: the column (col), the mothership's name and bar 2 and 20 px under it (the bar is 12 high), or the rival's bars and its phase line under it (src/camprivaldraw.js)
+  hudStackBottom(col) {
+    const H = this.hud || {}, D = typeof CAMP_RIVAL_DRAW === 'object' ? CAMP_RIVAL_DRAW.hud : null; let b = col;
+    if (H.mother && H.mother.text) b = Math.max(b, col + 20 + 12);
+    if (D && H.rivalName && H.rivalName.text) b = Math.max(b, col + 2 + D.hullY + 12, H.rivalPhase && H.rivalPhase.text ? col + 2 + D.phaseY + 20 : 0);
+    return b;
+  }
+  // the y a toast starts at (src/common.js toast and toastKeep): the band's own top, or under the HUD lines at the top centre when they reach further (card space-game-toast-over-topcentre)
+  toastTop() { return Math.max(TOAST.top, Math.ceil((this.hudStack || 0) + CAMP.hud.toastGap)); }
   // the goal's arrow and the lines of text (the gauges are gone: card space-game-layout-hud; the radar that was in the bottom right corner is the target display now: src/camptdispscene.js)
   paintHud() {
     const C = this.camp, g = this.hudG, c = C.carrier, bar = (x, y, w, f, color) => { g.fillStyle(0x04101c, 0.8).fillRect(x, y, w, 12); g.fillStyle(color, 1).fillRect(x + 1, y + 1, Math.max(0, (w - 2) * Math.max(0, Math.min(1, f))), 10); g.lineStyle(1, 0x38e1ff, 0.5).strokeRect(x, y, w, 12); };
@@ -591,6 +601,7 @@ class Campaign extends Phaser.Scene {
       this.hud.post.setText(rt ? rt.line : nr).setColor(rt ? '#ff9ec0' : '#ffb454');
     }
     if (this.flowHud) this.flowHud(bar); // (a stand-in scene in a test has none) the lines under the gauges, each where the lines above it end (and Earth's bar under its line)
+    if (typeof toastKeep === 'function' && this.toastTop) toastKeep(this, this.toastTop()); // a toast that is up follows the column's end
     if (this.hud.arrow) {
       const cam = this.cameras && this.cameras.main, ar = cam && typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: cam.scrollX, y: cam.scrollY }, W, H, cam.zoom) : null; // a stand-in scene in a test has no camera
       if (!ar) this.hud.arrow.setVisible(false);
