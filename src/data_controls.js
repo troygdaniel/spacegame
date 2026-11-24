@@ -217,11 +217,13 @@ campPowerSet(CAMP_POWER);
 campVoiceSet(CAMP_VOICE);
 const campKeyCodes = id => (CAMP_KEYS[id] || { codes: [] }).codes;
 const campKeyIs = (id, code) => campKeyCodes(id).indexOf(code) >= 0;
+// the most rows a list can have (the rows not switched off, whatever the level or the tech; 9 at most: the digits stop there). The H page's chip and the pause card say a numbered list's digits from this, not from a number typed in (card space-game-s-list-eight-rows: they said 1-7 while the S list had eight rows, the warp blink the eighth). The foot says the live length (the view's `last`: a level with no outpost or no blink tech has fewer).
+const campPanelMost = id => { const p = CAMP_PANELS.panels.find(x => x.id === id); return p ? Math.min(9, p.rows.filter(r => !r.off).length) : 0; };
 // the rows the H page and Settings list for the lists: each list's key and what it is, then the keys every open list shares
 function campPanelKeyRows() {
   const sub = 'THE ORDER LISTS', what = { fleet: 'Fleet orders, and the lists below', cruiser: 'Cruiser: fly, mine, repair, shields', convoy: 'Convoy: tuck in, run, hold, carry on', squads: 'All squads: launch, attack, recall', ship: 'Ship orders, and the lists below', nav: 'Autopilot: the two fast burns', power: 'Power: pips and balance', yard: 'Dock, repair the hull and our ships' };
-  const on = CAMP_PANELS.panels.filter(p => p.key), nums = on.some(p => p.numbers), plain = on.some(p => !p.numbers); // a numbered list (the S list, card space-game-s-list-numbers) is driven by its digits and takes neither Up, Down, Left, Right nor Enter: the rows for those are only said while a list that takes them is on
-  return on.map(p => ({ k: [p.key], t: what[p.id] || p.title, sub })).concat(nums ? [{ k: ['1-7'], t: 'Cruiser list: its digit does a row', sub }] : [], plain ? [
+  const on = CAMP_PANELS.panels.filter(p => p.key), numd = on.find(p => p.numbers), nums = !!numd, plain = on.some(p => !p.numbers); // a numbered list (the S list, card space-game-s-list-numbers) is driven by its digits and takes neither Up, Down, Left, Right nor Enter: the rows for those are only said while a list that takes them is on
+  return on.map(p => ({ k: [p.key], t: what[p.id] || p.title, sub })).concat(nums ? [{ k: ['1-' + campPanelMost(numd.id)], t: 'Cruiser list: its digit does a row', sub }] : [], plain ? [
     { k: [CAMP_KEYS.up.k, CAMP_KEYS.down.k], t: 'In a list: move the highlight', sub }, { k: [CAMP_KEYS.pick.k], t: 'In a list: give the order', sub }, { k: ['Left', 'Right'], t: 'In a list: back, or into a part', sub }] : [], [{ k: [CAMP_KEYS.pause.k], t: 'Back a step, or close the list', sub }]);
 }
 
@@ -230,6 +232,7 @@ function campPanelKeyRows() {
 //                      {fleetkey} {fighterskey} {convoykey} {shipkey} {navkey} {powerkey} {yardkey} the key that opens a list (its id + "key");
 //                      {keymap} {keyfly} {keymissile} {keyshields} ... a direct key of CAMP_KEYS ("key" + its id);
 //                      {rowlaunch} {rowdock} ... the words of a row ("row" + its id);   {vialaunch} {viaattack} ... the way to the list that row is in ("via" + its id: its key, or 'Q, Convoy' when the list has none), for "Press {viaattack}, pick {rowattack}";
+//                      {cruiserlast} the last digit of a numbered list (its most rows: 8 for the S list, campPanelMost), for "1 to {cruiserlast} does a row";
 //                      {panels} what Q and P are;   '' when the name is none of these (the text keeps its braces)
 //   campKeyCaps(list)  the key cap of a list as the briefing's boxes draw it: ['Q'] for 'fleet'; [] when there is no such list or it has no key
 //   campKeyVia(row)    the list a row is in, or null;   campKeyOpens(list)  the key that reaches a list: its own, else its parent's;   campKeyPath(list)  the way there in words: 'E', or 'Q, Convoy' for a list with no key
@@ -238,7 +241,7 @@ function campKeyRow(id) {
   return null;
 }
 const campKeyVia = id => CAMP_PANELS.panels.find(p => p.rows.some(x => x.id === id)) || null;
-// THE NUMBER KEYS OF A NUMBERED LIST (card space-game-s-list-numbers; Troy, 24 Nov 2026: the S list fought with flying: it used Up, Down and Enter, and the arrows steer and Enter fires a missile): a list marked `numbers: 1` (the cruiser's) shows a number chip on each row and takes the digits 1 to 9 (Digit or Numpad) as its rows, in the order they stand: S, then 1 to 7 (8 with the warp tech) does the row at once. It does NOT take Up, Down, Left, Right or Enter: while it is open the arrows fly and Enter fires a missile. Esc and the fade close it. campKeyDigit gives the number of a digit key code, 0 for any other.
+// THE NUMBER KEYS OF A NUMBERED LIST (card space-game-s-list-numbers; Troy, 24 Nov 2026: the S list fought with flying: it used Up, Down and Enter, and the arrows steer and Enter fires a missile): a list marked `numbers: 1` (the cruiser's) shows a number chip on each row and takes the digits 1 to 9 (Digit or Numpad) as its rows, in the order they stand: S, then 1 to its last row (7 rows, 8 with the warp blink tech, 6 in a level with no outpost: campPanelMost says the most, 8) does the row at once. It does NOT take Up, Down, Left, Right or Enter: while it is open the arrows fly and Enter fires a missile. Esc and the fade close it. campKeyDigit gives the number of a digit key code, 0 for any other.
 const campKeyDigit = code => { const m = /^(?:Digit|Numpad)([1-9])$/.exec(String(code || '')); return m ? +m[1] : 0; };
 const campKeyList = id => CAMP_PANELS.panels.find(p => p.id === id) || null;
 const campKeyOpens = id => { let p = campKeyList(id); while (p && !p.key && p.parent) p = campKeyList(p.parent); return p ? p.key : ''; };
@@ -261,6 +264,8 @@ function campKeyVar(name) {
   if (m) { const p = campKeyVia(m[1]); return p ? campKeyPath(p.id) : ''; }
   m = /^key([a-z]+)$/.exec(name);
   if (m) { const k = CAMP_KEYS[m[1]]; return k ? k.k : ''; }
+  m = /^([a-z]+)last$/.exec(name);
+  if (m) { const p = campKeyList(m[1]); return p && p.numbers ? String(campPanelMost(p.id)) : ''; } // {cruiserlast}: the last digit of a numbered list, 8 for the S list (its most rows)
   return '';
 }
 function campKeyCaps(listId) { const k = campKeyOpens(listId); return k ? [k] : []; }
