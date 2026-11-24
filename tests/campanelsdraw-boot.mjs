@@ -63,7 +63,7 @@ async function campaign() {
     const wOpen = await isOpen(), wTitle = await j(`${PL}.title.visible && ${PL}.title.text`);
     await press(t, 'KeyW', 400); const wShut = await isOpen();
     await press(t, 'KeyD', 400); await press(t, 'KeyS', 400);
-    check('W A S D do not fly the cruiser: no turn, no thrust (A and D step the friend and S picks the nearest threat: none of them moves the ship)', Math.abs((await j(`${SC}.camp.carrier.rot`)) - rot0) < 1e-6 && (await j(`Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy)`)) < 1);
+    check('W A S D do not fly the cruiser: no turn, no thrust (A and D are free keys now, and S resets the view: none of them moves the ship)', Math.abs((await j(`${SC}.camp.carrier.rot`)) - rot0) < 1e-6 && (await j(`Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy)`)) < 1);
     check('W is the all-squads list\'s key: it opens that list directly (headed W   ALL SQUADS), and W again closes it', wOpen === 'squads' && wTitle === (await j(`(() => { const p = campKeyList('squads'); return p.key + '   ' + p.title; })()`)) && wTitle === 'W   ALL SQUADS' && wShut === '', wOpen + ' | ' + wTitle + ' | ' + wShut);
     await press(t, 'Digit1', 20); await press(t, 'Digit2', 20); await press(t, 'KeyG', 20); await press(t, 'KeyZ', 20); await press(t, 'KeyY', 20); await press(t, 'KeyV', 20); await t.run(300);
     check('a digit or a letter that is no key of the table (1 2 G Z Y V) does nothing in flight: nothing launched, no list opened', (await j(`${SC}.camp.launchQ.length + ${SC}.camp.launched`)) === 0 && (await isOpen()) === '');
@@ -174,8 +174,8 @@ async function campaign() {
     await t.ev(`(() => { shipcompAvailable = () => true; return 1; })()`);
     await press(t, 'Slash', 40); await t.run(300);
     check('/ opens the command strip: its input has the focus', (await j(`document.activeElement && document.activeElement.tagName`)) === 'INPUT');
-    await press(t, 'KeyD', 40); await press(t, 'KeyQ', 40); await t.run(100);
-    check('the keys typed in the strip are the strip\'s, not the game\'s: D picks no pilot and no target, and Q opens no list', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.camp.sel`)) === 'all' && (await isOpen()) === '');
+    await press(t, 'KeyW', 40); await press(t, 'KeyQ', 40); await t.run(100);
+    check('the keys typed in the strip are the strip\'s, not the game\'s: W picks no pilot and opens no list, no target is picked, and Q opens no list', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.camp.sel`)) === 'all' && (await isOpen()) === '');
     await press(t, 'Escape', 40); await t.run(300);
     check('Esc closes the strip and does not pause the battle', (await j(`document.activeElement && document.activeElement.tagName`)) !== 'INPUT' && (await j(`${SC}.mode`)) === 'play');
     check('hold to speak is off in the Campaign (CAMP_VOICE, card space-game-keys-select): the listener has no key there and follows the scene', (await j(`(() => { listenKeysSync(game); return [LISTEN.code === undefined, LISTEN.cap].join(); })()`)) === 'true,');

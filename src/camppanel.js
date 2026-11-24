@@ -5,7 +5,7 @@
 // ESC GOES BACK ONE STEP, TO WHERE YOU CAME FROM (card space-game-order-target-pick; Troy, 22 Nov 2026): a target sub-list (src/camppick.js) goes back to the list it was opened from; a list opened from a part's row (Q, then Squads) goes back to that list (Q);
 // a list opened by its own key (Q, or W E R T, O U, and I with the ship list on) is closed; with nothing open Esc pauses (the scene). P.trail is the lists we came through by rows, the last one first to go back to.
 // An order that is taken closes the list (a power row leaves it open: a pip is given again and again); one that is refused leaves it open and says why.
-// No key is reused: the direct keys (A D S X the target, J K L ; the power, Enter a missile while no list is open) mean the same whether a list is open or not; only the arrows and Enter are the open list's.
+// No key is reused: the direct keys (Q W [ ] O P X the target, J K L ; the power, Enter a missile while no list is open) mean the same whether a list is open or not; only the arrows and Enter are the open list's.
 // The lists, their rows and their words are CAMP_PANELS and CAMP_KEYS (src/data_controls.js): this file only reads them. It is plain data and functions, no Phaser (tests/campanels.mjs runs it in Node); src/campanelsdraw.js draws
 // the open list and src/campaignscene.js gives it the keys and the clicks. The target is src/camptarget.js.
 //   campPanelNew()                   the state the scene keeps: { open: '' or a list's id, at: the highlighted row, top: the first row on the screen, lit: { row id: when Enter last gave it }, trail: [the lists we came through by rows], pick: the target sub-list or null, seen: the candidate an order was just given at, ring: the squads whose ring stays on after an order (src/campwing.js campSquadsShown) }
@@ -121,7 +121,7 @@ function campPanelKey(P, C, code, now) {
     campSelAll(C); res.sel = C.sel || ''; res.tgt = C.tgt || ''; res.fsel = C.fsel || ''; return res;
   }
   const tk = typeof campTgtStep === 'function' ? (campKeyIs('next', code) ? 'next' : campKeyIs('last', code) ? 'last' : campKeyIs('wnext', code) ? 'wnext' : campKeyIs('wlast', code) ? 'wlast' : campKeyIs('fnext', code) ? 'fnext' : campKeyIs('flast', code) ? 'flast' : campKeyIs('near', code) ? 'near' : campKeyIs('clear', code) ? 'clear' : '') : '';
-  if (tk) { // [ ] the enemy, \ the nearest threat, A D who, O P the friendly, X all of it (src/camptarget.js: the three picks)
+  if (tk) { // [ ] the enemy, \ the nearest threat, Q W who, O P the friendly, X all of it (src/camptarget.js: the three picks)
     res.used = true; res.fleet = true; if (!C) return res;
     if (tk === 'clear') { campPicksClear(C); campSquadsFree(P); } else if (tk === 'near') campTgtNearest(C); else if (tk === 'wnext' || tk === 'wlast') campSelStep(C, tk === 'wnext' ? 1 : -1); else if (tk === 'fnext' || tk === 'flast') campFriStep(C, tk === 'fnext' ? 1 : -1); else campTgtStep(C, tk === 'next' ? 1 : -1);
     res.tgt = C.tgt || ''; res.sel = C.sel || ''; res.fsel = C.fsel || ''; return res;
@@ -174,8 +174,8 @@ function campPanelRun(C, row, how, item) {
   else if (row.pick === 'enemy' && !campTgtNow(C) && !campTgtList(C).length) { const dry = row.wing ? campWingOrder(C, row.wing[0], row.wing[1], null, how || 'key', true) : campCheck(C, row.order, ''); return dry.ok ? campNo('nofoe') : dry; } // Attack with no hostile and no target: nothing to attack (an order's own refusal, no fighters out, is said first)
   if (row.wing) return campWingOrder(C, row.wing[0], row.wing[1], campPanelWingTarget(C, row), how || 'key');
   if (row.blink) { const bw = typeof campBlinkWhy === 'function' ? campBlinkWhy(C) : ''; if (!bw) C.input.blink = true; return { ok: !bw, say: bw }; } // the warp blink: without the technology, or while it cools, the row says so
-  if (row.fly === 'target') { // the autopilot to the target (burn: fast, which needs the wing aboard)
-    const tr = typeof campTgtRow === 'function' ? campTgtRow(C) : null; if (!tr) return campNo('notarget');
+  if (row.fly === 'target') { // the autopilot to the target (burn: fast, which needs the wing aboard): the one target held, an enemy, a ship you protect or a place clicked on the map
+    const tr = typeof campHeldRow === 'function' ? campHeldRow(C) : null; if (!tr) return campNo('notarget');
     const t = campNavTarget(C, tr) || tr, d = Math.hypot(t.x - C.carrier.x, t.y - C.carrier.y);
     if (!tr.moving && d - campNavStop(tr.kind, t) <= CAMP.nav.arrive) return { ok: false, say: uiText('camp.nav.there', { name: tr.name }) };
     const r = campNavFly(C, tr, !!row.burn, how || 'key'); return r.ok ? { ok: true, say: uiText('camp.nav.say', { name: tr.name, km: campNavKm(d) }) } : r;
@@ -286,7 +286,7 @@ function campPanelRowState(C, row) {
     return campNavCheck(C, (row.burn ? 'fast ' : '') + 'the objective').ok ? ok() : no('there');
   }
   if (row.fly === 'target') {
-    const tr = typeof campTgtRow === 'function' ? campTgtRow(C) : null; if (!tr) return no('notarget');
+    const tr = typeof campHeldRow === 'function' ? campHeldRow(C) : null; if (!tr) return no('notarget');
     const t = campNavTarget(C, tr) || tr; if (!tr.moving && Math.hypot(t.x - C.carrier.x, t.y - C.carrier.y) - campNavStop(tr.kind, t) <= CAMP.nav.arrive) return no('there');
     return ok();
   }

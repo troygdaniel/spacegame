@@ -28,9 +28,10 @@ console.log('A. the table as the game has it');
 
 console.log('B. the keys');
 {
-  g.run(`window.C1 = __new(); window.P1 = campPanelNew();`);
+  g.run(`window.__ward = (C, id, dx) => { const f = campSpawn(C, 'freighter', C.carrier.x + dx, C.carrier.y); f.id = 'freighter-' + id; C.by[f.id] = f; f.dest = { x: C.carrier.x + 9000, y: C.carrier.y }; f.cname = 'Ward ' + id; f.named = true; return f; };`); // a ship to protect: O and P cycle ships only (card space-game-keys3-select), the home level has none of its own
+  g.run(`window.C1 = __new(); window.P1 = campPanelNew(); __ward(C1, 't1', 500); __ward(C1, 't2', 900);`);
   const p1 = J(`__key(P1, C1, 'KeyP')`), o1 = J(`__key(P1, C1, 'KeyO')`);
-  check('P and O open no list: each is used (the friendlies\' keys: C.fsel is picked) and no list is open', p1.used === true && p1.open === '' && o1.used === true && o1.open === '' && J(`campPanelOpen(P1)`) === '' && J('C1.fsel') !== '' && J('C1.tgt') === '');
+  check('P and O open no list: each is used (the friendlies\' keys: C.fsel is a ship you protect, never a place) and no list is open', p1.used === true && p1.open === '' && o1.used === true && o1.open === '' && J(`campPanelOpen(P1)`) === '' && /^freighter-/.test(J('C1.fsel')) && J('C1.tgt') === '');
   g.run(`campPanelGo(P1, C1, 'power');`);
   const sh = J(`campPanelView(P1, C1)`);
   check('the power list opens (campPanelGo) on its first row (shields), no ship list in between, and its view has no key', J('campPanelOpen(P1)') === 'power' && sh.id === 'power' && sh.rows[0].id === 'shields' && sh.title === 'POWER' && !sh.key, JSON.stringify([sh.id, sh.title, sh.key]));
@@ -87,7 +88,7 @@ console.log('F. through the scene');
       f.init({ level }); f.camp = campNew(f.level, f.P.techs, f.opts); f.sp = {}; f.bsp = []; f.csp = f.camp.caches.map(() => document); f.sync = () => {}; return f; };
     toast = () => {}; shipcompSay = () => true; window.F = __fake('home'); F.onKey({ code: 'Enter' }); F.onKey({ code: 'Enter' }); F.update(0, 33);
   `);
-  check('P and O through Campaign.onKey pick friendlies and open no list; the mode stays play (nothing pauses)', (() => { g.run(`F.onKey({ code: 'KeyP' })`); const a = J('campPanelOpen(F.pn)'), f1 = J('F.camp.fsel'); g.run(`F.onKey({ code: 'KeyO' })`); const c = J('campPanelOpen(F.pn)'); return a === '' && c === '' && f1 !== '' && J('F.mode') !== 'pause'; })());
+  check('P and O through Campaign.onKey pick friendlies and open no list; the mode stays play (nothing pauses)', (() => { g.run(`__ward(F.camp, 'hx', 500); F.onKey({ code: 'KeyP' })`); const a = J('campPanelOpen(F.pn)'), f1 = J('F.camp.fsel'); g.run(`F.onKey({ code: 'KeyO' })`); const c = J('campPanelOpen(F.pn)'); return a === '' && c === '' && f1 !== '' && J('F.mode') !== 'pause'; })());
   check('with the list open the arrows are the list\'s: Enter through the scene gives the shields a pip, no missile', (() => { g.run(`campPanelsClose(F); campPanelGo(F.pn, F.camp, 'power'); window.pa = F.camp.power.p.join(); window.ms = F.camp.missiles ? F.camp.missiles.length : 0; F.onKey({ code: 'Enter' });`); return J('F.camp.power.p.join()') !== J('pa') && J('campPanelOpen(F.pn)') === 'power'; })());
   check('a list\'s key over the open map closes the map and opens that list (S the cruiser list; S resets the map\'s zoom first)', (() => { g.run(`campPanelsClose(F); campMapOpen(F);`); const m1 = J('!!F.mp'); g.run(`F.onKey({ code: 'KeyS' });`); const r1 = [J('!!F.mp'), J('campPanelOpen(F.pn)')]; return m1 === true && r1.join() === 'false,cruiser'; })());
 }

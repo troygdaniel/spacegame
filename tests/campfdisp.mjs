@@ -195,7 +195,7 @@ console.log('H. the one target box and its order-key line (cards space-game-keys
   check('both are inside a rectangle the edge arrows keep out of (the right one now runs from the target box\'s top, not up to the friendly\'s old place)', [Tb, Wh].every(b => keep.some(r => b.x >= r[0] && b.y >= r[1] && b.x + b.w <= r[2] && b.y + b.h <= r[3])) && !keep.some(r => r[0] >= 1000 && r[1] < Tb.y - 10 && r[1] > 150));
   check('there is no stacked friendly box any more: no campGdispSync, no gdisp, no stack number', J(`typeof campGdispSync`) === 'undefined' && J(`typeof campGdispSubject`) === 'undefined' && K.stack === undefined && !/gdisp|campGdispSync/.test(src('src/campaignscene.js') + src('src/camptdispscene.js')));
   check('nothing held: nothing is shown', J('campTdispSubject(C, P, 0)') === null);
-  g.run(`window.W1 = campFriList(C).find(e => e.kind === 'ward'); window.P1 = campFriList(C).find(e => e.kind === 'post'); C.fsel = W1.id;`);
+  g.run(`window.W1 = campFriList(C).find(e => e.kind === 'ward'); window.P1 = campFriPlace(C, 'place:luna'); /* an outpost: held by a map click now, not in the O P cycle (card space-game-keys3-select) */ C.fsel = W1.id;`);
   const sub = J(`(() => { const s = campTdispSubject(C, P, 0); return s && { id: s.u.id, side: s.side, held: s.held }; })()`);
   check('a friendly ship held (O P): the one target box shows it, as a friend, held', sub && sub.id === J('W1.id') && sub.side === 'friend' && sub.held === true, JSON.stringify(sub));
   g.run(`C.fsel = P1.id;`);
@@ -214,7 +214,7 @@ console.log('H. the one target box and its order-key line (cards space-game-keys
   g.run('__out()'); g.run('window.S = __scene()');
   g.run(`campPickOpen(P, { id: 'escort', pick: 'escort' }, campPickItems(C, 'escort')); campTdispSync(S, 3000);`);
   check('a friendly ship that an order\'s list is on shows in the box as before, and has no order line (the line is the target held\'s)', J(`${T}.side`) === 'friend' && J(`${T}.info.order`) === null && !J(`${T}.keyCap.vis`) && !J(`${T}.keyLabel.vis`));
-  g.run(`P.pick = null; P.seen = null; window.P1 = campFriList(C).find(e => e.kind === 'post'); C.fsel = P1.id; campTdispSync(S, 4000);`);
+  g.run(`P.pick = null; P.seen = null; window.P1 = campFriPlace(C, 'place:luna'); /* an outpost: held by a map click now, not in the O P cycle (card space-game-keys3-select) */ C.fsel = P1.id; campTdispSync(S, 4000);`);
   check('an outpost held: its name, "Friendly post" and how far; no picture, hull, shield or order it is on; the key line "Guard" is there', J(`${T}.name.text`) === J('P1.name') && J(`${T}.type.text`) === 'Friendly post' && J(`${T}.km.vis`) && !J(`${T}.pic.vis`) && !J(`${T}.hullN.vis`) && !J(`${T}.shN.vis`) && !J(`${T}.doing.vis`) && J(`${T}.keyLabel.text`) === 'Guard' && J(`${T}.keyCap.vis`));
   g.run(`C.fsel = campFriList(C).find(e => e.kind === 'ward').id; campTdispSync(S, 4500);`);
   check('and back to a ship: the picture, hull and order come back', J(`${T}.pic.vis && ${T}.hullN.vis && ${T}.doing.vis`) && !/post/i.test(J(`${T}.type.text`)));
