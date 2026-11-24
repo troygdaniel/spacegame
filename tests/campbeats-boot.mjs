@@ -17,19 +17,19 @@ const snap = async (t, name) => { for (let i = 0; i < 2; i++) { const r = await 
 const t = await launch('?campaign=1', ROOT);
 try {
   const SC = `game.scene.getScene('Campaign')`, j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`));
-  // the sim forward to a share of the road, the transport made tough (the test is about the beats, not the fight) and the carrier put beside her, the wing out
+  // the sim forward to a share of the road, the transport made tough (the test is about the beats, not the fight) and the carrier put beside her (the wing is out from the first second: card space-game-keys-orders)
   const toShare = async share => j(`(() => { const C = ${SC}.camp; let n = 0; while ((C.lane.t1 || 0) < ${share} && !C.result && n++ < 90000) { campConvoys(C).forEach(f => { f.hp = f.maxHp = 1e6; }); campStep(C, 1 / 30); C.events.length = 0; } const f = campConvoys(C)[0]; if (f) { C.carrier.x = f.x - 300; C.carrier.y = f.y - 260; C.carrier.vx = C.carrier.vy = 0; C.nav = null; } return +(C.lane.t1 || 0).toFixed(3); })()`);
   await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
   for (let i = 0; i < 4 && (await j(`${SC}.mode`)) !== 'play'; i++) { await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', repeat: false }); return 1; })()`); await t.run(300); }
   check('the flight has started, on the rim run, with the beats in its row', (await j(`${SC}.mode`)) === 'play' && (await j(`${SC}.camp.L.mid === 'escort' && ${SC}.camp.L.rivals.length === 1 && ${SC}.camp.L.traffic.length === 2`)));
-  await t.ev(`(() => { const C = ${SC}.camp; campOrder(C, 'launch'); return 1; })()`); await t.run(5000);
+  await t.ev(`(() => { const C = ${SC}.camp; if (C.bay.fighters > 0) campOrder(C, 'launch'); return 1; })()`); await t.run(5000); // (the pilots start out beside the cruiser; the Launch order is for a bay that has ships)
   check('beat 1: two patrol ships are about, neutral, on the map list', (await j(`${SC}.camp.ships.filter(u => u.kind === 'patrol').length`)) === 2);
   await snap(t, 'patrol');
   // beat 2: the distress call
   await toShare(0.315); await t.run(2500);
   check('beat 2: the miner is under attack and the radio said so in one plain line; nothing asks for orders (no call, no plate)', (await j(`typeof campCallView`)) === 'undefined' && (await j(`!${SC}.callUi`)) === true && (await j(`${SC}.camp.ships.some(u => u.team === 'alien' && u.prey === 'miners' && u.hp > 0)`)) === true);
   await snap(t, 'call');
-  // the player sends help with the ordinary squad order (what the squad list's Attack row gives): the Red squad at a pirate that is on the miner
+  // the player sends help with the ordinary squad order (the one E gives a pilot picked by A D, or all three): the Red squad at a pirate that is on the miner
   await j(`(() => { const foe = ${SC}.camp.ships.find(u => u.team === 'alien' && u.prey === 'miners' && u.hp > 0); return foe ? campWingOrder(${SC}.camp, 'red', 'attack', foe.id, 'key').ok : false; })()`);
   await t.run(3000);
   check('the red squad is on the pirates', (await j(`${SC}.camp.ships.filter(u => u.team === 'earth' && u.kind === 'fighter' && u.squad === 'red').every(u => u.order && u.order.type === 'attack')`)) === true);

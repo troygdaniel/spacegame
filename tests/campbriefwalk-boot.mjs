@@ -1,6 +1,6 @@
 // not in the smoke: a boot of the briefing's walk, run by hand (one Chrome, muted, through the test lock; card space-game-briefing-map-walk)
 // The rules are in tests/campbriefwalk.mjs (plain Node). This boots the real game on the real rim run (level 1, mission 1.1 next), opens the ready room with K, opens the briefing with Enter on the board and Enter on the mission, and
-// reads the walk: the map on the first page with the whole road, the walk playing on by itself to the end of the page, Enter to the next page (zoomed to where the stop is), the strip of each page, + - and Backspace on a page that is not the
+// reads the walk: the map on the first page with the whole road, the walk playing on by itself to the end of the page, Enter to the next page (zoomed to where the stop is), the strip of each page, + - and S on a page that is not the
 // first, Left back, the last stop's Enter launching the mission, Esc closing. Mission 1.2 still has the three screens.
 //   node tests/campbriefwalk-boot.mjs
 // Pictures go to the folder in BRIEF_SHOTS (default ~/dev/spacegame-night/shots/briefwalk-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.

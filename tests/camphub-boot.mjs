@@ -51,7 +51,7 @@ try {
   check('4: the pilot walks to the pad and its sentence says what launching does', arrived && (await shown()).some(x => /Take the cruiser out on mission 2 of 3/.test(x)), await j(`JSON.stringify([${HUB}.player.x, ${HUB}.player.y])`));
   await key('KeyL');
   check('L launches: the Campaign scene starts on mission 2 via the hub, and goes straight to the flight (no second briefing)', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.camp`) && await j(`${CAMPS}.via === 'hub' && ${CAMPS}.mi === 1 && ${CAMPS}.level === 1`) && await settle(`${CAMPS}.mode === 'play'`), await j(`${CAMPS}.mode`));
-  check('the wing is the one bought in the room: still the three pilots in the bay, with a strength of 11 fighters\' worth at the start (8 and the 3 bought: card space-game-three-pilots)', await j(`${CAMPS}.camp.bay.fighters === 3 && ${CAMPS}.camp.strength === 11`), await j(`JSON.stringify({ bay: ${CAMPS}.camp.bay, strength: ${CAMPS}.camp.strength })`));
+  check('the wing is the one bought in the room: the three pilots are out beside the cruiser from the first second (card space-game-keys-orders), none left in the bay, with a strength of 11 fighters\' worth at the start (8 and the 3 bought: card space-game-three-pilots)', await j(`campWing(${CAMPS}.camp).length === 3 && ${CAMPS}.camp.bay.fighters === 0 && ${CAMPS}.camp.strength === 11`), await j(`JSON.stringify({ out: campWing(${CAMPS}.camp).length, bay: ${CAMPS}.camp.bay, strength: ${CAMPS}.camp.strength })`));
   await t.run(1500); await snap('6-flight');
   // the mission is won: the debrief, and Enter returns to the room
   await t.ev(`(() => { const s = ${CAMPS}; campEnd(s.camp, 'won', 'test'); return 1; })()`); await t.run(2600);

@@ -1,6 +1,6 @@
 // not in the smoke: a boot of the big briefing, run by hand (one Chrome, muted, through the test lock; card space-game-campaign-briefing)
 // The rules are in tests/campbrief.mjs (plain Node). This boots the real game with a campaign in progress (belt missions 1 and 2 done, 3 next), opens the ready room with K, picks the next mission with Enter and reads the
-// big briefing (three screens: where and why, what to do, how; card space-game-briefing-walkthrough), zooms its map with + - 0 and M (the sound is NOT muted by it), walks through the screens with Right and Left, closes it with Esc (the pause menu does not open), picks a replay with A and R, and launches it from the last screen with Enter.
+// big briefing (three screens: where and why, what to do, how; card space-game-briefing-walkthrough), zooms its map with + - 0 and M (the sound is NOT muted by it), walks through the screens with Right and Left, closes it with Esc (the pause menu does not open), picks a replay with Up and R, and launches it from the last screen with Enter.
 //   node tests/campbrief-boot.mjs
 // Pictures go to the folder in BRIEF_SHOTS (default ~/dev/spacegame-night/shots/brief-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -60,11 +60,12 @@ try {
   await key('Enter'); await t.run(400); await snap('6-replay-what-to-do'); await key('Enter'); await t.run(300); await snap('7-replay-how');
   await key('Escape'); await key('ArrowUp'); await key('KeyR'); await t.run(600);
   const m1 = await bf(), note = () => j(`${HUB}.bf.text.filter(o => o.text).map(o => o.text).filter(x => /^SHIP:/.test(x))`);
-  check('mission 1 (the belt survey) carries the ship\'s lines over its three screens, the basics in the story\'s voice: the map and the rings, the scan, then fly, the fleet list and a pilot\'s call', (await note()).some(x => /Welcome aboard, Commander/.test(x)));
+  check('mission 1 (the belt survey) carries the ship\'s lines over its three screens, the basics in the story\'s voice: the map and the rings, the scan, then fly, who takes the order and the one order key', (await note()).some(x => /Welcome aboard, Commander/.test(x)));
   await snap('8-tutorial-1');
   await key('Enter'); await t.run(300); await snap('8-tutorial-2'); const n2 = await note();
   await key('Enter'); await t.run(300); await snap('8-tutorial-3'); const n3 = await note();
-  check('the second screen says how a ring is scanned and the third the keys: the arrows, Space, Q (all three pilots) and the list of the wing, Tab (the belt fixture\'s own lines)', n2.some(x => /inside a ring scans it/.test(x)) && n3.some(x => /arrow keys fly the cruiser/.test(x) && /Space/.test(x) && /Q picks all three pilots/.test(x) && /Tab/.test(x) && !/1 launches/.test(x)), n3.join(' | ')); // (one list per hand: card one-list-keys; the words are camp.bf.1.1.n3)
+  const kw = await j(`['keywlast', 'keywnext', 'keyengage'].map(campKeyVar)`); // the keys are read from the key table, never a letter written here: A D pick who and E gives the order (the belt fixture's own line says {keywlast} {keywnext} pick who, {keyengage} gives the order; the key rounds of 23 Nov 2026 move them again)
+  check('the second screen says how a ring is scanned and the third the keys: the arrows, Space, who (the keys that pick who) and the one order key, Tab (the belt fixture\'s own lines)', n2.some(x => /inside a ring scans it/.test(x)) && n3.some(x => /arrow keys fly the cruiser/.test(x) && /Space/.test(x) && x.indexOf(kw[0] + ' ' + kw[1] + ' pick who, ' + kw[2] + ' gives the order') >= 0 && kw.every(k => k) && /Tab/.test(x) && !/1 launches/.test(x)), JSON.stringify(kw) + ' ' + n3.join(' | ')); // (the words are camp.bf.1.1.n3)
   await key('Enter');
   check('Enter on the last screen launches the replay: the Campaign scene is on belt mission 1 as a replay and goes to the flight', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.camp && ${CAMPS}.mode === 'play'`) && await j(`${CAMPS}.replay === true && ${CAMPS}.mi === 0`));
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
