@@ -37,6 +37,7 @@ const campPanelKeyLine = () => ['left', 'right'].map(side => CAMP_PANELS.panels.
 const campKeyLine = () => uiText('camp.ui.keys', { panels: campPanelKeyLine() });
 // a row that can never be used in this mission is not in its list: the convoy's part with no convoy to give orders to, the blink without its tech, the dock where there is no outpost
 function campPanelWhen(C, row) {
+  if (row.off) return false; // a row switched off (the S list's Dock and repair, card space-game-keys3-repair: it stays in the table)
   if (!row.when || !C) return true;
   if (row.when === 'convoy') return campFlag('convoyorders') && !!((C.L && C.L.convoys && C.L.convoys.length) || (typeof campConvoyShips === 'function' && campConvoyShips(C).length));
   if (row.when === 'blink') return campHas(C, 'blink');
@@ -227,8 +228,8 @@ function campPanelState(C, row) {
     case 'ctuck': case 'chold': case 'crun': case 'ccarry': return campPanelConvoyMarked(C, row) ? 'in force' : campPanelShips(campConvoyShips(C).length); // the convoy orders: the one in force is marked (src/campconvoy.js)
     case 'emergency': return CAMP.emergency.ore + ' ore: the shields fill at once';
     case 'dock': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? 'dock at ' + n.o.name : ''; } // the outpost in range
-    case 'goal': case 'burn': { const g = campNavGoal(C); if (!g) return ''; const d = Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y), far = row.fast === 'auto' && d >= CAMP.nav.auto.leg && !campNavHostileNear(C); return g.name + '  ' + campNavKm(d) + ' km' + (far ? (campNavOut(C) ? ', no burn: wing out' : ', burns') : ''); } // the cruiser list's goal row says whether it will burn by itself: on a long clear leg it does, with the wing aboard
-    case 'target': case 'burntarget': { const tg = campPanelTarget(C); return tg ? tg.name + '  ' + tg.km + ' km' : ''; }
+    case 'goal': case 'burn': { const g = campNavGoal(C); if (!g) return ''; const d = Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y), far = row.fast === 'auto' && d >= CAMP.nav.auto.leg && !campNavHostileNear(C); return g.name + '  ' + campNavKm(d) + ' km' + (C.nav && C.nav.on && C.nav.name === g.name ? ', flying there' : far ? (campNavOut(C) ? ', no burn: wing out' : ', burns') : ''); } // the cruiser list's goal row says whether it will burn by itself: on a long clear leg it does, with the wing aboard
+    case 'target': case 'burntarget': { const tg = campPanelTarget(C); return tg ? tg.name + '  ' + tg.km + ' km' + (C.nav && C.nav.on && C.nav.name === tg.name ? ', flying there' : '') : ''; } // (card space-game-keys3-repair: the autopilot's line left the top left of the screen, so the rows say it)
     case 'blink': return campPanelBlinkWord(C);
   }
   return '';
