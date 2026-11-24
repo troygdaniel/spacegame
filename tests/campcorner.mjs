@@ -17,7 +17,7 @@ const g = nodeGame();
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 const near = (a, b, e = 1e-6) => Math.abs(a - b) < e;
-g.run(`CAMP_CORNERS.splice(0, CAMP_CORNERS.length, ...CAMP_CORNERS.filter(d => d.id === 'fleet'));`); // this suite is the panel alone, with FLEET and the probe it adds: the target corners other cards register (HOSTILES, FRIENDLIES: tests/campcorners.mjs) are not in this world
+g.run(`CAMP_CORNERS.splice(0, CAMP_CORNERS.length, ...CAMP_CORNERS.filter(d => d.id === 'fleet' || d.id === 'cruiser'));`); // this suite is the panel with FLEET, S CRUISER (card space-game-layout-cruiser, src/campcruiserhud.js) and the probe it adds: the target corners other cards register (HOSTILES, FRIENDLIES: tests/campcorners.mjs) are not in this world
 
 g.run(`
   window.__new = () => { const C = window.C = campNew(1, [], { seed: 5, mission: 0 }); C.god = true; C.t = 1000; return C; }; // the three pilots are out beside the cruiser
@@ -118,7 +118,7 @@ check('the room the corner takes is inside a rectangle the edge arrows\' labels 
 console.log('F. the drawing');
 g.run(`__new(); __scene(); campCornerSync(S, 0);`);
 const shown0 = J('__shown()');
-check('closed: the chips Q and W, the title FLEET and the selection All pilots are drawn, and nothing else', shown0.join('|') === 'FLEET|All pilots|Q|W' || (shown0.length === 4 && ['FLEET', 'All pilots', 'Q', 'W'].every(t => shown0.includes(t))), JSON.stringify(shown0));
+check('closed: the chips Q and W, the title FLEET and the selection All pilots are drawn, and the S CRUISER corner (card space-game-layout-cruiser: chip S, title CRUISER, no selection), and nothing else', shown0.length === 6 && ['FLEET', 'All pilots', 'Q', 'W', 'CRUISER', 'S'].every(t => shown0.includes(t)), JSON.stringify(shown0));
 g.run(`window.__PROBE = { id: 'probe', at: 'tr', keys: ['last', 'next', { cap: 'S', codes: ['KeyS'] }], title: 'camp.corner.hostiles', selection: C => 'Raider 9', rows: C => [{ kind: 'bar', name: 'Raider 9', num: '30 / 40', share: 0.75, color: 0xffb454 }, { kind: 'text', text: 'attacking Kara' }, { kind: 'key', cap: 'E', label: 'Attack', ok: true }] }; campCornerAdd(__PROBE); campCornerSync(S, 0);`);
 check('a corner another card adds is drawn by the same code, at its own corner (top right here: its title is on the right half of the screen) with its own chips, title and selection', ['HOSTILES', 'Raider 9', '[', ']', 'S'].every(t => J('__shown()').includes(t)) && J('S.hud.corner.probe.title.x') > 640 && J('S.hud.corner.probe.title.y') >= J('CAMP.corner.at.tr.y'));
 g.run(`campCornerKey(C, 'KeyS'); campCornerSync(S, 0);`);

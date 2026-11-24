@@ -130,6 +130,7 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.tdisp\./, why: 'the target display\'s words: the box\'s names (hull, shield), a ship\'s type, how far, and the line of what it is doing; shown, never said (a line of the radio would crowd the pilots)' },
   { re: /^camp\.corner\./, why: 'the four corner panels\' titles (CRUISER, FLEET, HOSTILES, FRIENDLIES) and the word for a pilot in the bay: drawn in the corners beside their key chips, never said (the radio and the ship speak through camp.say)' },
   { re: /^camp\.sight\./, why: 'the sensors\' fragments: the edge arrow\'s label and the words (a count, a kind, a compass point) that fill the radio\'s call, camp.say.sight; shown, never said alone' },
+  { re: /^camp\.cruiser\./, why: 'the cruiser corner\'s status words (SHIELD, HULL, ORE, CREDITS): drawn above the S CRUISER title at the top left, not said' },
   { re: /^camp\.gauge\./, why: 'the three gauges\' words (SHIELDS, SPEED, LASERS, HULL): drawn inside the dials at the top left of the HUD, not said' },
   { re: /^camp\.pow\./, why: 'the power setting\'s three labels on the ship panel: shown (the ship answers the setting itself with camp.say lines)' },
   { re: /^camp\.pace\./, why: 'the battle pace setting\'s line, toast, key hint and notes: on the card and the pause screen, not said' },

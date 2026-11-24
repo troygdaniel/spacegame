@@ -87,6 +87,7 @@ class Campaign extends Phaser.Scene {
     this.hud = { ore: t(campHudGeom().ore.x, campHudGeom().ore.y, 14, '#ffd37a').setOrigin(1, 0), earth: t(24, 14, 14, '#9fe9ff'), wave: t(24, 36, 14, '#ffd37a'), mother: t(W / 2 - 150, 18, 14, '#ff9ec0'), // ore: under the speed and laser dials; the lines at the top left (CAMP.hud.text) are put by flowHud, each where the lines above it end (card space-game-hud-topleft-trim: the BAY, BLINK and AUTOPILOT lines are gone)
       obj: t(24, 58, 14, '#ffffff'), post: t(24, 102, 14, '#ffb454'), arrow: t(0, 0, 13, '#ffd37a').setOrigin(0.5), keys: this.add.text(24, H - 44, campKeyLine(), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
     if (typeof campGaugesMake === 'function') { this.hud.gauges = campGaugesMake(this, uiFont); this.gaugeAnim = campGaugeAnimNew(this.camp.power.p); this.gaugeAt = performance.now(); } // the three gauges (card space-game-systems-gauges, src/camphud.js): SHIELDS (the hull under it), SPEED, LASERS, a bar of power segments beside each; they replace the W S E pips
+    if (typeof campCruiserHudMake === 'function') Object.assign(this.hud, campCruiserHudMake(this, uiFont)); // the cruiser's status at the top left, over the S CRUISER title: SHIELD and HULL bars and the ORE line (src/campcruiserhud.js; card space-game-layout-cruiser): five texts in the HUD, so a result card hides them with the rest
     this.powerKey = this.camp.power.base.join(); // the setting as it was saved: a change of it is saved when it is made (update)
     this.hud.repair = t(24, 80, 14, '#9fe9ff'); // the fighters being mended in the bay (card space-game-fighter-repair): "REPAIR 2  7 s"
     this.radio = chatterNew(); this.orderSeen = Object.assign({}, this.camp.orders); this.chatUntil = 0; // the wing's radio (src/campchatter.js): its state, the orders seen so far, when its line goes
@@ -565,6 +566,7 @@ class Campaign extends Phaser.Scene {
       const nowMs = performance.now(); campGaugeAnim(this.gaugeAnim, C.power.p, Math.min(100, nowMs - (this.gaugeAt || nowMs))); this.gaugeAt = nowMs;
       campGaugesPaint(g, this.hud.gauges, C, this.gaugeAnim, nowMs, typeof campPanelPowerHi === 'function' ? campPanelPowerHi(this) : -1); // (the dial of the highlighted row of the power list gets a frame: src/campanelsdraw.js)
     }
+    if (typeof campCruiserHudPaint === 'function') campCruiserHudPaint(g, this.hud, C); // the plate, the shield and hull bars and the ore line at the top left (src/campcruiserhud.js)
     if (typeof campRivalHud === 'function') campRivalHud(this, g, bar); // a rival ship's name, shield and hull and the warning of its phase (src/camprivaldraw.js)
     const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
     if (m) bar(W / 2 - 150, 36, 300, m.hp / m.maxHp, 0xc9a0ff);
