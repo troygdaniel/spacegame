@@ -123,6 +123,41 @@ In the order I would do them. The gain is what the measurement above allows me t
 
 Order of the runs: alloc off, alloc on, live off, live on, live on, live off (pairs back to back, the second pair swapped), 09:24 to 09:27. The player's frame rate was 60 either way on a quiet Mac, so what PR 5 buys here is a lower allocation and a smaller own part of the frame, not a frame rate you can see on a quiet Mac (the garbage collector was 1.8% of a frame before it, so it is headroom on a busy machine, not a fix for a hitch we saw).
 
+## What the keys changes cost, and what was fixed (card `space-game-perf-after-keys`, 23 Nov 2026)
+
+8-GEN's batch after the day's key changes: still 60 fps and no frame over 33 ms, but the game's own part of a frame went from about 1 ms to 2.8 ms and the allocation from 294 to 609 KB a frame (`3d6bdbb3` to `ec3bc15b`). This is the bisect and the fix, `busy1`, headless Chrome with the GPU, this Mac (load 4 to 7), runs of the commands in "Measuring again", old and new back to back in the same sitting.
+
+**What it was.** Not the simulation: `node tools/perfcampaign.mjs sim busy1` is 0.44 ms a step at both commits. It is what the scene draws. Switching one part of a frame off inside one page (`PERF_PATCH`, below) priced each part: nothing else the day changed (the S list, the target box's text, the pause band, the plain gauges, the lists) shows. Two things are on from the first frame now, which they were not before (a pilot starts out, and All pilots is the default who):
+
+| Part of a frame (busy1) | Allocation a frame | What it was |
+|---|---|---|
+| The WHO box, bottom left, All pilots: its frame is `fillRoundedRect` and `strokeRoundedRect` | **about 250 KB**, and most of the added draw time | Phaser makes a rounded rectangle a path of arcs and triangulates it again at every render; the box is steady (it is drawn again only when a number changes) but the render is not. Every Graphics' circle was already a polygon (`src/campcircles.js`); its rounded rectangles were not |
+| The three pilots' squares (`campTgtCorners`: eight `lineBetween` strokes each, 24 a frame) | about 65 KB as lines (about 30 KB as rectangles) | the same: a path per line, built again at every render |
+| `campNavEdge` (the arrow at the screen edge, and the sight arrows) | about 25 to 50 KB | when the point lands in a keep rectangle it walks the border in steps of 8 px: up to 500 two-number lists a frame; not new, but busy1 hits it more now |
+| the rest of the day's changes | 17 KB at most | 272 KB with the box and the squares both off against 255 KB at `3d6bdbb3` |
+
+**What was fixed** (all in the Campaign scenes; no picture changes: the corner and the line are the ones they were):
+
+1. `src/campcircles.js`: in a Campaign scene `fillRoundedRect` is a fan of triangles and `strokeRoundedRect` a closed line through the corners (3 to 8 pieces to a quarter circle by the radius; the edge strays under a quarter of a pixel). A radius that is an object, a rectangle with no size and Long Haul's scenes are Phaser's own.
+2. `src/camptargetdraw.js`: each arm of a pilot's square is a thin filled rectangle with the geometry of the line it replaces (the arms run along the axes, so butt ends and all), not a `lineBetween`.
+3. `src/campnav.js`: `campNavEdge` walks the border through one shared list, not a list a step. Same answers: 200,000 random inputs compared against the old function, 0 differences.
+
+| busy1, stepped (`frames,alloc,profile`, three runs each, interleaved) | `3d6bdbb3` (morning) | `ec3bc15b` (before) | this change |
+|---|---|---|---|
+| Allocation a frame (sampled) | 254 to 257 KB | **620 to 626 KB** | **337 to 338 KB** |
+| Frame of JavaScript, mean (update + render) | 0.37 to 0.44 ms | 0.55 to 0.60 ms | 0.50 to 0.51 ms |
+| of which drawing (render) | 0.10 to 0.16 | 0.23 to 0.25 | 0.15 to 0.17 |
+| CPU profile, self time a frame | 0.44 to 0.55 ms | 0.81 to 0.85 ms | 0.68 to 0.71 ms |
+| Display list | 237 | 261 | 261 |
+
+So about three quarters of the added allocation and about half of the added frame time are gone. **What is left is the two things themselves, on from the first frame by design:** 82 KB and 0.1 ms a frame over the morning's build, which `PERF_PATCH` splits as the WHO box (the frame as polygons: 28 KB and 0.05 ms in drawing, seven texts and the bars) and the three squares (24 filled rectangles, about 30 KB), the rest being the texts' `setText` checks. With the box and the squares both off the fight is at the morning's numbers (272 KB, 0.43 ms).
+
+**Tried and dropped: the box as a texture.** The same trick as the gauges (`src/campgaugecache.js`): draw the frame and bars into a Graphics that is not on the screen and show them through a `RenderTexture`, redrawn only when a number changes. Drawing fell to the morning's level (0.10 ms) and the allocation to 310 KB, but the update rose from 0.25 to 0.41 ms: in a fight the pilots' hulls change several times a second, and each redraw clears and draws a render texture, which switches the framebuffer and flushes the batch. The frame total was no better (0.55 ms against 0.50). It would pay in a calm scene and lose in a fight, which is where the cost matters, so it is not in. (One thing it taught: the frame's 2 px line is centred on the box's edge, so a texture the box's own size cuts half of it off; a texture needs a margin.)
+
+**The "own part of a frame" of the real loop does not separate these builds** at load 4 to 7: `live busy1 20` gave a median of 1.5 to 2.3 ms for the build before the fix, 2.3 for the fixed one and 0.6 and 2.2 for the morning's, from the same machine in the same ten minutes. It includes the wait for the GPU and the compositor. Use the stepped runs (`frames`, `alloc`, `profile`) to compare two builds, and the real loop only to see that 60 fps holds (it did in every run: 60.0 fps, 0 frames over 33 ms). 8-GEN's 2.8 ms in the batch is the same number read at a busier moment.
+
+**To price a part of a frame** (added by this card): `PERF_PATCH='window.campTgtPaint = () => {}' node tools/perfcampaign.mjs frames,alloc,profile busy1` runs the code after the fight is set up and before anything is measured. `window.campFdispSync = () => {}` switches the WHO box off, `window.campTdispSync = () => {}` the target box, `Campaign.prototype.paintHud = () => {}` the HUD, `window.campPanelsPaint = () => {}` the lists, `window.campNavEdge = () => null` the arrow at the edge. Nothing is saved. `PERF_ROOT=<a checkout of another commit>` runs the same tool on that code, to set two builds side by side.
+
 ## Measuring again
 
 ```

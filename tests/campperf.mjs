@@ -17,6 +17,7 @@ const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   
 const g = nodeGame();
 g.run('campPowerSet(true)'); // the pips are OFF in the game (card space-game-power-removed; CAMP_POWER in src/data_controls.js): this suite is about them (the list, J K L, the bars, the pip orders), so it switches them on. The game as it is now: tests/powerremoved.mjs
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
+const campSides = r => J(`campRoundRectSides(${r})`); // corners to a quarter circle of radius r (card space-game-perf-after-keys)
 const src = f => readFileSync(join(ROOT, f), 'utf8');
 
 console.log('A. circles');
@@ -40,6 +41,30 @@ console.log('A. circles');
 { // the same two shapes by name, for new drawing (squad rings, health bars): any Graphics, any scene
   const r = J(`(() => { const o = new __G('Space'); campDisc(o, 5, 5, 3); const fan = o.calls.slice(); o.calls.length = 0; campRing(o, 5, 5, 3); const ring = o.calls.slice(); o.calls.length = 0; campDisc(o, 0, 0, 0); campRing(o, 0, 0, -1); return { fan, ring, none: o.calls.length, back: campDisc(o, 1, 1, 1) === o && campRing(o, 1, 1, 1) === o, nil: campDisc(null, 0, 0, 1) }; })()`);
   check('campDisc and campRing draw the cheap circle on any Graphics, whatever its scene: a fan of triangles, a closed line; a circle of no size draws nothing; each answers the Graphics so a chain goes on', r.fan.join() === Array(8).fill('tri').join() && r.ring.join() === 'strokePoints10closedend' && r.none === 0 && r.back === true && r.nil === null, JSON.stringify(r));
+}
+
+console.log('A2. rounded rectangles and the squares (card space-game-perf-after-keys)');
+{ // the All pilots box is on from the first frame now, and its frame was a rounded rectangle Phaser triangulates again at every render: 250 KB a frame. In a Campaign scene a rounded rectangle is a polygon.
+  check('a corner gets 3 to 8 pieces by its radius (radius 4, 7 and 20 are 3, 4 and 6), and a radius of nothing is the four corners of a plain rectangle', J('[0, 4, 7, 20, 400].map(campRoundRectSides)').join() === '3,3,4,6,8' && J('campRoundRectPoints(10, 20, 100, 50, 0).length') === 4);
+  check('the points lie round the rectangle: all inside it, the four sides touched, every corner on its quarter circle, and the edge never more than a quarter of a pixel inside the true arc', J(`(() => { let ok = true; for (const [w, h, r] of [[220, 150, 7], [60, 20, 5], [100, 100, 20], [28, 18, 4], [200, 40, 30]]) { const x = 30, y = 40, p = campRoundRectPoints(x, y, w, h, r).map(q => [q.x, q.y]), rr = Math.min(r, w / 2, h / 2); const n = campRoundRectSides(rr);
+    ok = ok && p.length === 4 * (n + 1) && p.every(q => q[0] >= x - 1e-9 && q[0] <= x + w + 1e-9 && q[1] >= y - 1e-9 && q[1] <= y + h + 1e-9) && Math.min(...p.map(q => q[0])) === x && Math.max(...p.map(q => q[0])) === x + w && Math.min(...p.map(q => q[1])) === y && Math.max(...p.map(q => q[1])) === y + h;
+    const cs = [[x + w - rr, y + rr], [x + w - rr, y + h - rr], [x + rr, y + h - rr], [x + rr, y + rr]]; p.forEach((q, i) => { const c = cs[Math.floor(i / (n + 1))]; ok = ok && Math.abs(Math.hypot(q[0] - c[0], q[1] - c[1]) - rr) < 1e-6; });
+    const sag = rr * (1 - Math.cos(Math.PI / 4 / n)); ok = ok && sag < 0.25; } return ok; })()`));
+  check('a radius larger than half the shorter side is held to it (a pill), and a negative or missing size draws nothing', J(`(() => { const p = campRoundRectPoints(0, 0, 100, 20, 50), ys = p.map(q => q.y); return Math.min(...ys) === 0 && Math.max(...ys) === 20 && p.every(q => q.x >= 0 && q.x <= 100); })()`) && J(`(() => { const o = { n: 0, fillTriangle() { o.n++; return o; }, strokePoints() { o.n++; return o; } }; campRoundRect(o, 0, 0, -5, 10, 4); campRoundRect(o, 0, 0, 10, 0, 4); campRoundRectLine(o, 0, 0, 0, 10, 4); return o.n; })()`) === 0);
+  g.run(`(() => { function G(key) { this.scene = { sys: { settings: { key } } }; this.calls = []; }
+    G.prototype.fillCircle = function () { this.calls.push('ARC-FILL'); return this; }; G.prototype.strokeCircle = function () { this.calls.push('ARC-STROKE'); return this; };
+    G.prototype.fillRoundedRect = function () { this.calls.push('RRECT-FILL'); return this; }; G.prototype.strokeRoundedRect = function () { this.calls.push('RRECT-STROKE'); return this; };
+    G.prototype.fillTriangle = function () { this.calls.push('tri'); return this; }; G.prototype.strokePoints = function (p, a, b) { this.calls.push('strokePoints' + p.length + (a ? 'closed' : '') + (b ? 'end' : '')); return this; };
+    const Phaser = { GameObjects: { Graphics: G } }; ${src('src/campcircles.js')}; window.__G2 = G; })()`);
+  const rr = (key, call) => J(`(() => { const o = new __G2(${JSON.stringify(key)}); o.${call}; return o.calls; })()`);
+  check('in the Campaign a filled rounded rectangle is a fan of triangles (corners less two), with no path to triangulate, and its outline is one closed line through the corners', rr('Campaign', 'fillRoundedRect(0, 0, 200, 150, 7)').join() === Array(4 * 5 - 2).fill('tri').join() && rr('Campaign', 'strokeRoundedRect(0, 0, 200, 150, 7)').join() === 'strokePoints20closedend');
+  check('the ready room and the warp are the Campaign\'s too; Long Haul\'s scenes, a Graphics with no scene, a radius that is an object (one for each corner) and a rectangle with no size are Phaser\'s own', ['CampHub', 'CampWarp'].every(k => rr(k, 'fillRoundedRect(0, 0, 10, 10, 4)')[0] === 'tri') && ['Space', 'Station', 'Title'].every(k => rr(k, 'fillRoundedRect(0, 0, 10, 10, 4)').join() === 'RRECT-FILL' && rr(k, 'strokeRoundedRect(0, 0, 10, 10, 4)').join() === 'RRECT-STROKE') && rr('Campaign', 'fillRoundedRect(0, 0, 10, 10, { tl: 4, tr: 2 })').join() === 'RRECT-FILL' && rr('Campaign', 'strokeRoundedRect(0, 0, 0, 10, 4)').join() === 'RRECT-STROKE' && J(`(() => { const o = new __G2('Campaign'); o.scene = null; o.fillRoundedRect(0, 0, 10, 10, 4); return o.calls.join(); })()`) === 'RRECT-FILL');
+  check('no radius given is Phaser\'s 20, held to half the shorter side like any other', rr('Campaign', 'fillRoundedRect(0, 0, 200, 150)').length === 4 * (campSides(20) + 1) - 2 && rr('Campaign', 'fillRoundedRect(0, 0, 30, 30)').length === 4 * (campSides(15) + 1) - 2);
+  // the square round a ship (campTgtCorners): its eight arms are thin rectangles with the geometry the eight lines had
+  check('a square\'s eight arms are filled rectangles (one fill style, the pulse\'s alpha), each the line it replaces: the same ends, the same width, butt ends', J(`(() => { const o = { st: [], r: [], fillStyle(c, a) { o.st.push([c, a]); return o; }, fillRect(x, y, w, h) { o.r.push([x, y, w, h]); return o; }, lineStyle() { throw new Error('a line style'); }, lineBetween() { throw new Error('a line'); } };
+    const v = { x: 1000, y: -400, r: 30 }, z = 0.335; campTgtCorners(o, v, 0x7dffa0, z, 0.8); const K = CAMPTGT, h = Math.max(v.r + K.pad, K.minScreen / 2 / z), a = h * K.arm, w = K.line / z; const want = [];
+    [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sy]) => { const x = v.x + sx * h, y = v.y + sy * h; want.push([Math.min(x, x - sx * a), y - w / 2, a, w], [x - w / 2, Math.min(y, y - sy * a), w, a]); });
+    return o.st.length === 1 && o.st[0][0] === 0x7dffa0 && o.st[0][1] === 0.8 && o.r.length === 8 && o.r.every((q, i) => q.every((n, j) => Math.abs(n - want[i][j]) < 1e-9)); })()`));
 }
 
 console.log('B. labels');

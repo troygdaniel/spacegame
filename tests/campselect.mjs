@@ -173,7 +173,7 @@ console.log('G. through the scene');
     return off && on && J(`campKeyCodes('voice').length`) === 0 && !J(`controlsGroup('campaign').rows.some(r => r.voice)`);
   })());
   // the brackets: a red one round the enemy, a green one round the pilot picked and one round the friendly ship (src/camptargetdraw.js)
-  g.run(`window.__lines = []; F.tgtG = { active: true, scene: {}, clear() { __lines.length = 0; return F.tgtG; }, lineStyle(w, c, a) { window.__col = c; return F.tgtG; }, lineBetween() { __lines.push(window.__col); return F.tgtG; } }; F.mode = 'play'; F.mp = null; F.cameras = { main: { zoom: 1 } };`);
+  g.run(`window.__lines = []; F.tgtG = { active: true, scene: {}, clear() { __lines.length = 0; return F.tgtG; }, fillStyle(c, a) { window.__col = c; return F.tgtG; }, fillRect() { __lines.push(window.__col); return F.tgtG; } }; F.mode = 'play'; F.mp = null; F.cameras = { main: { zoom: 1 } };`);
   g.run(`F.camp.tgt = RX.id; F.camp.sel = 'pilot:red'; F.camp.fsel = ''; campTgtPaint(F);`);
   check('both brackets are drawn for an enemy and a pilot: eight corner strokes, four in the enemy\'s red and four in the pilot\'s green', J('__lines.length') === 16 && J('__lines.filter(c => c === CAMPTGT.color).length') === 8 && J('__lines.filter(c => c === CAMPTGT.friend).length') === 8 && J('CAMPTGT.friend') !== J('CAMPTGT.color'), JSON.stringify(J('__lines')));
   g.run(`F.camp.tgt = ''; F.camp.sel = 'all'; campTgtPaint(F);`);
