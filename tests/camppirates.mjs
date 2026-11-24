@@ -265,13 +265,15 @@ console.log('I. the colour of their shots');
   const col = J('CAMP_SHOT'), hsv = c => { const r = (c >> 16 & 255) / 255, gg = (c >> 8 & 255) / 255, b = (c & 255) / 255, mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), d = mx - mn; let h = 0; if (d) h = mx === r ? ((gg - b) / d + 6) % 6 : mx === gg ? (b - r) / d + 2 : (r - gg) / d + 4; return { h: h * 60, s: mx ? d / mx : 0 }; };
   const ph = hsv(col.pirate), nh = hsv(col.neutral);
   check('a pirate\'s shot is amber: orange hue, not red (the aliens\'), not pale yellow (your guns\')', ph.h >= 25 && ph.h <= 45 && ph.s > 0.7, JSON.stringify(ph));
-  check('a neutral\'s shot is cyan, not green (the wing\'s)', nh.h >= 170 && nh.h <= 200, JSON.stringify(nh));
+  check('a neutral\'s shot is cyan, not green (the Earth side\'s)', nh.h >= 170 && nh.h <= 200, JSON.stringify(nh));
+  const eh = hsv(col.earth);
+  check('the Earth side\'s shot is green: green hue, clear of the patrol\'s cyan, bright, and the wing\'s green of the Tab map (card space-game-fleet-lasers-green)', eh.h >= 110 && eh.h <= 160 && eh.s > 0.5 && eh.h < nh.h - 25 && col.earth === J('CAMPMAP.color.wing'), JSON.stringify(eh));
   const scene = src('src/campaignscene.js'), fire = src('src/campmapfire.js');
-  check('the scene picks the texture by team and fac (shot-neutral, shot-pirate; the alien keeps ebullet)', /b\.team === 'neutral' \? 'shot-neutral' : b\.fac === 'pirate' \? 'shot-pirate' : 'ebullet'/.test(scene));
+  check('the scene picks the texture by team and fac (shot-earth, shot-neutral, shot-pirate; the alien keeps ebullet)', /b\.team === 'earth' \? 'shot-earth' : b\.team === 'neutral' \? 'shot-neutral' : b\.fac === 'pirate' \? 'shot-pirate' : 'ebullet'/.test(scene));
   check('the textures are made when the scene is created', /campShotTextures\(this\)/.test(scene) && /function campShotTextures/.test(scene));
   check('the Tab map draws the same: a neutral\'s bullet teal, a pirate\'s yellow, an alien\'s red', /b\.team === 'neutral' \? K\.patrol : b\.fac === 'pirate' \? K\.pirate : K\.alien/.test(fire));
   const tex = J(`(() => { const made = {}; const sc = { textures: { exists: k => !!made[k] }, make: { graphics: () => { const g = new Proxy({}, { get: (t, n) => n === 'generateTexture' ? (k, w, h) => { made[k] = [w, h]; } : () => g }); return g; } } }; campShotTextures(sc); campShotTextures(sc); return made })()`);
-  check('campShotTextures makes shot-pirate and shot-neutral, 14 by 4, once', tex['shot-pirate'] && tex['shot-pirate'].join() === '14,4' && tex['shot-neutral'] && tex['shot-neutral'].join() === '14,4' && Object.keys(tex).length === 2, JSON.stringify(tex));
+  check('campShotTextures makes shot-pirate, shot-neutral and shot-earth, 14 by 4, once', tex['shot-pirate'] && tex['shot-pirate'].join() === '14,4' && tex['shot-neutral'] && tex['shot-neutral'].join() === '14,4' && tex['shot-earth'] && tex['shot-earth'].join() === '14,4' && Object.keys(tex).length === 3, JSON.stringify(tex));
 }
 
 // ---------- H. their own pictures (src/camppirateart.js) ----------
