@@ -128,6 +128,7 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.w\./, why: 'the W list\'s rows named after the selection ("Attack Raider 3"), who takes the order and the hint of the keys that pick one: shown in the list, never said (the refusals are camp.no)' },
   { re: /^camp\.sel\./, why: 'the friend selection\'s words ("All pilots", Q): the friend display\'s title; shown, never said' },
   { re: /^camp\.tdisp\./, why: 'the target display\'s words: the box\'s names (hull, shield), a ship\'s type, how far, and the line of what it is doing; shown, never said (a line of the radio would crowd the pilots)' },
+  { re: /^camp\.corner\./, why: 'the four corner panels\' titles (CRUISER, FLEET, HOSTILES, FRIENDLIES) and the word for a pilot in the bay: drawn in the corners beside their key chips, never said (the radio and the ship speak through camp.say)' },
   { re: /^camp\.sight\./, why: 'the sensors\' fragments: the edge arrow\'s label and the words (a count, a kind, a compass point) that fill the radio\'s call, camp.say.sight; shown, never said alone' },
   { re: /^camp\.gauge\./, why: 'the three gauges\' words (SHIELDS, SPEED, LASERS, HULL): drawn inside the dials at the top left of the HUD, not said' },
   { re: /^camp\.pow\./, why: 'the power setting\'s three labels on the ship panel: shown (the ship answers the setting itself with camp.say lines)' },
