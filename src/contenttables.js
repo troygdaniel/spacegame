@@ -1168,7 +1168,7 @@ const UI_TEXT = {
   'camp.keys.debug': 'DEBUG KEYS (THE TUNE KIT)',
   'title.camp.keys': 'H  all the keys',
   'camp.sel.all': 'All pilots',
-  'camp.ui.pausepanels': '{keywho} picks who, {keyhostiles} an enemy, {keyfriendlies} a friendly, {keyorder} gives the order. {cruiserkey} the cruiser: fly, mine, dock, repair, shields; then 1 to 7 does a row. {keyfocus} looks at it. H lists every key.',
+  'camp.ui.pausepanels': '{keywho} picks who, {keyhostiles} an enemy, {keyfriendlies} a friendly, {keyorder} gives the order. {cruiserkey} the cruiser: fly, mine, dock, repair, shields; then 1 to {cruiserlast} does a row. {keyfocus} looks at it. H lists every key.',
   'camp.map.local': 'AREA  {km} km across',
   'camp.map.whole': 'SYSTEM  {km} km across',
   'camp.nav.burnfoe': 'Hostiles near: burn off.',
