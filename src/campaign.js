@@ -336,7 +336,7 @@ const CAMP = {
     r: 22, bar: { w: 10, h: 9, gap: 2 },   // the dial's radius (its bezel is 12 px outside it) and a power segment; the bar sits to the right of the dial, level with its middle
     hullBar: { y: 78, h: 7 },              // the thin hull bar under the shield dial (and its bar): its top, relative to the cell's top, and its height
     ore: { y: 74 },                        // the ore line (and the cash), under the speed and laser dials, its right end at the gauges' right edge
-    text: { x: 24, y: 96, pitch: 22 },     // the lines of text under the gauges: the first one's y, and the step to the next (a line that has nothing to say gives its place back)
+    text: { x: 24, y: 14, pitch: 22 },     // the lines of text in the top left corner (Earth's shield, the wave, the objective, the fighters being mended, the outpost hint): the first one's y, and the step to the next (a line that has nothing to say gives its place back; card space-game-hud-topleft-trim: the BAY, BLINK and AUTOPILOT lines are gone and the column starts in the corner)
     plate: { w: 372, min: 90, pad: 4 }     // the dim plate under the column: its width, its least height, and how far it reaches past the last line
   },
   nav: {                                   // the carrier's autopilot, the map's list and picking, and the arrow at the screen edge (src/campnav.js); the rule is the Long Haul autopilot's (src/autopilot.js AUTO)
@@ -364,7 +364,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 238], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 430, 1280, 664], [0, 450, 224, 664]] // (the target box, campTdispBox(false) in src/camptdispscene.js, is inside the fourth one, where the radar was, and the who box, campTdispBox(true), inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 150], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 430, 1280, 664], [0, 450, 224, 664]] // (the target box, campTdispBox(false) in src/camptdispscene.js, is inside the fourth one, where the radar was, and the who box, campTdispBox(true), inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {

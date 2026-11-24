@@ -40,7 +40,7 @@ console.log('A. where things are');
   const G = J(`campPanelsGeometry(campPanelDef('power'), 5)`), Gs = J(`campPanelsGeometry(campPanelDef('ship'), 3)`);
   check('the power list (and the ship list) open right UNDER the gauges: their top is below the block\'s bottom and within 12 px of it, they end 4 px from the right edge, and the gauges are not covered', G.y >= Z.block.y1 + 2 && G.y - Z.block.y1 <= 12 && Gs.y === G.y && G.x + G.w === W - 4 && Z.cells.every(c => c.dial.y1 <= G.y && c.bar.y1 <= G.y), JSON.stringify([G, Z.block]));
   check('the target display is at the bottom right, below the lists; the top right under the lists holds nothing else (the toast, the lines of text and the rival\'s bars are at the middle and the left)', box.y > G.y + G.h && box.y + box.h < J('H') - 40 && box.x + box.w <= W, JSON.stringify([box, G.y + G.h]));
-  check('the lines of text at the left start where the gauges used to end (CAMP.hud.text.y), the dim plate behind them starts there too: the top left is free', H.text.y === 96 && J('CAMP.hud.right') === 8 && src('src/campaignscene.js').indexOf('this.add.rectangle(0, CAMP.hud.text.y - 6') > 0 && !/CAMP\.hud\.x\b/.test(src('src/campaignscene.js') + src('src/camphud.js')));
+  check('the lines of text at the left start in the corner (CAMP.hud.text.y 14: card space-game-hud-topleft-trim; they began where the gauges used to end, y 96), the dim plate behind them starts there too', H.text.y === 14 && J('CAMP.hud.right') === 8 && src('src/campaignscene.js').indexOf('this.add.rectangle(0, CAMP.hud.text.y - 6') > 0 && !/CAMP\.hud\.x\b/.test(src('src/campaignscene.js') + src('src/camphud.js')));
 }
 
 {
