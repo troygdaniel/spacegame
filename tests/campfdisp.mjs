@@ -10,7 +10,6 @@ let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame();
 g.run('campPowerSet(true)'); // the pips are OFF in the game (card space-game-power-removed; CAMP_POWER in src/data_controls.js): this suite is about the lists and the keys as they were, with the power list, so it switches them on. The game as it is now: tests/powerremoved.mjs
-g.run('campFleetListSet(true); // this suite is about the all-squads list (W) over the corner box: it is switched off in the game with the old fleet switch (card space-game-keys-orders; CAMP_FLEET_LIST) and on here');
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
@@ -40,14 +39,14 @@ console.log('H. the one target box and its order-key line (cards space-game-keys
   const en = J(`(() => { const s = campTdispSubject(C, P, 0); return s && { id: s.u.id, side: s.side, held: s.held }; })()`);
   check('an enemy held ([ ] backslash): the same box shows it, as a hostile, held', en && en.id === J('R1.id') && en.side === 'hostile' && en.held === true, JSON.stringify(en));
   // the scene half of the box (its frame, texts, picture, the key line, the steady cost, the map and card hiding) is the target corners' now: tests/campcorners.mjs sections G, H and I
-  g.run(`C.tgt = ''; C.fsel = ''; window.R = { pn: Object.assign(campPanelNew(), { open: 'power' }), pnl: { view: { total: 5 } } };`);
+  g.run(`C.tgt = ''; C.fsel = ''; window.R = { pn: Object.assign(campPanelNew(), { open: 'yard' }), pnl: { view: { total: 5 } } };`);
   check('the power list (right, five rows, to y 318) does not reach the bottom right room (it starts at y ' + Tb.y + '): it stays', J('campBoxDx(R, false)') === 0);
-  g.run(`campPanelClose(P); window.R = { pn: Object.assign(campPanelNew(), { open: 'ship' }), pnl: { view: { total: 11 } } };`); // (the ship list is parked: no key opens it and it has few rows now, so the panel state and its eleven rows are set by hand to try the rule)
-  const Sh = J(`(() => { const G = campPanelsGeometry(campPanelDef('ship'), 11); return { x: G.x, y: G.y, w: G.w, h: G.h }; })()`), dx = J('campBoxDx(R, false)'), TNow = J(`campTdispBox(false, ${dx})`);
+  g.run(`campPanelClose(P); window.R = { pn: Object.assign(campPanelNew(), { open: 'yard' }), pnl: { view: { total: 11 } } };`); // (a list at the right: no key opens the dock list now and it has few rows, so the panel state and its eleven rows are set by hand to try the rule)
+  const Sh = J(`(() => { const G = campPanelsGeometry(campPanelDef('yard'), 11); return { x: G.x, y: G.y, w: G.w, h: G.h }; })()`), dx = J('campBoxDx(R, false)'), TNow = J(`campTdispBox(false, ${dx})`);
   check('the ship list (right, eleven rows, to y 474) reaches it: the right corners step left of the list, CAMP.tdisp.beside px from its edge, and they do not touch', Sh.y + Sh.h > Tb.y && dx < 0 && TNow.x + TNow.w + K.beside === Sh.x, JSON.stringify([Sh, TNow]));
   g.run(`window.R = { pn: campPanelNew(), pnl: null };`);
   check('the list closes: no step aside', J('campBoxDx(R, false)') === 0);
-  check('a left list moves the left corner and never the right ones; a right list the right ones and never the left', J(`(() => { const L = { pn: Object.assign(campPanelNew(), { open: 'squads' }), pnl: null }, R = { pn: Object.assign(campPanelNew(), { open: 'ship' }), pnl: null }; return [campBoxDx(L, true) > 0, campBoxDx(L, false) === 0, campBoxDx(R, false) < 0, campBoxDx(R, true) === 0].every(Boolean); })()`));
+  check('a left list moves the left corner and never the right ones; a right list the right ones and never the left', J(`(() => { const L = { pn: Object.assign(campPanelNew(), { open: 'cruiser' }), pnl: null }, R = { pn: Object.assign(campPanelNew(), { open: 'yard' }), pnl: null }; return [campBoxDx(L, true) > 0, campBoxDx(L, false) === 0, campBoxDx(R, false) < 0, campBoxDx(R, true) === 0].every(Boolean); })()`));
   const scene = src('src/campaignscene.js');
   check('the scene calls the corner panels and the target corners\' picture every frame (the old target box and the who box are gone), in files that have their script tags', /campTcornerLook\(this\.pn, this\.time\.now\);[^\n]*\n\s*if \(typeof campCornerSync === 'function'\) campCornerSync\(this, this\.time\.now\);[^\n]*\n\s*if \(typeof campTcornerSync === 'function'\) campTcornerSync\(this, this\.time\.now\)/.test(scene) && !/campTdispSync/.test(scene) && ['campcorner.js', 'campcornerscene.js', 'camptcorner.js', 'camptcornerscene.js'].every(f => src('index.html').indexOf('src/' + f) > 0));
   check('the words: Attack, Guard and Friendly post are content (no bare key at run time) and the voice pack\'s tdisp family covers them', ['camp.tdisp.key.attack', 'camp.tdisp.key.guard', 'camp.tdisp.type.post'].every(k => J(`uiText(${JSON.stringify(k)})`) !== k) && /camp\\\.tdisp\\\./.test(src('src/voicepack.js')));

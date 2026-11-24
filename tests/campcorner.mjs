@@ -143,9 +143,9 @@ g.run(`S.mode = 'play'; campCornerSync(S, 0);`);
 check('and it is back when the map is closed (a corner the game opened is still open)', J('__shown()').includes('Form up'));
 g.run(`C.sel = 'pilot:green'; campCornerSync(S, 0);`);
 check('the selection is redrawn when the pick changes: Kara', J('__shown()').includes('Kara') && !J('__shown()').includes('All pilots'));
-check('an open left list (the squads list) moves the corner right of it, with the same gap as the boxes always had; the corner goes back when it closes', (() => {
-  g.run(`S.pn = Object.assign(campPanelNew(), { open: 'squads' }); S.pnl = null; campCornerSync(S, 0);`);
-  const moved = J('S.hud.corner.fleet.words[0].x'), dx = J('campBoxDx(S, true)'), G = J('(() => { const G = campPanelsGeometry(campPanelDef("squads"), 0); return G.x + G.w; })()');
+check('an open left list (the convoy list: data, no key opens it) moves the corner right of it, with the same gap as the boxes always had; the corner goes back when it closes', (() => {
+  g.run(`S.pn = Object.assign(campPanelNew(), { open: 'convoy' }); S.pnl = null; campCornerSync(S, 0);`);
+  const moved = J('S.hud.corner.fleet.words[0].x'), dx = J('campBoxDx(S, true)'), G = J('(() => { const G = campPanelsGeometry(campPanelDef("convoy"), 0); return G.x + G.w; })()');
   g.run(`S.pn = campPanelNew(); campCornerSync(S, 0);`);
   return dx > 0 && J('S.hud.corner.fleet.chips[0].x') < moved + 20 && G + J('CAMP.tdisp.beside') === 18 + dx && J('S.hud.corner.fleet.chips[0].x') === J('CAMP.corner.at.bl.x') + J('CAMP.corner.title.pad') + J('CAMP.corner.title.chipW') / 2;
 })());

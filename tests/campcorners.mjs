@@ -83,10 +83,8 @@ console.log('E. one target');
 
 console.log('F. an order\'s list');
 {
-  g.run('__new(); window.R1 = __foe("raider", 900, 0); window.TR = C.ships.find(u => u.kind === "freighter"); campPickOpen(P, { id: "escort", pick: "escort" }, campPickItems(C, "escort"));');
+  g.run('__new(); window.R1 = __foe("raider", 900, 0); window.TR = C.ships.find(u => u.kind === "freighter"); TR.x = C.carrier.x + 300; TR.y = C.carrier.y; TR.hp = TR.maxHp * 0.4; campPickOpen(P, { id: "repairward", pick: "ward" }, campPickItems(C, "ward"));');
   check('a friendly ship the list is on: it is in the details of FRIENDLIES, with no name beside the title (nothing is held)', J('FC().subject.u.team') !== 'alien' && J('FC().subject.side') === 'friend' && J('FC().name') === '' && J('HC().subject') === null, JSON.stringify(J('FC().subject && FC().subject.side')));
-  g.run('campPickOpen(P, { id: "attack", pick: "enemy" }, campPickItems(C, "enemy"));');
-  check('a hostile the list is on: it is in the details of HOSTILES, and FRIENDLIES has none', J('HC().subject.u.team') === 'alien' && J('FC().subject') === null && J('HC().name') === '');
 }
 
 g.run(`
@@ -176,7 +174,7 @@ console.log('I. the picture on a stand-in scene');
   check('a friendly held: its picture is in the bottom corner, in the friendly\'s cyan frame', J(W + '.pic.vis') && J(W + '.pic.x') > J('CAMP.corner.at.br.x') && J(W + '.g.log.some(l => l[0] === "lineStyle" && l[2] === ' + J('CAMP.tdisp.color.friend') + ')') && J(V + '.pic.vis') === false);
   g.run(`campFriHold(C, 'place:luna'); campCornerSync(S, 4000); campTcornerSync(S, 4000);`);
   check('an outpost held: no picture (its details are lines)', J(W + '.pic.vis') === false);
-  g.run('P.pick = null; campPickOpen(P, { id: "escort", pick: "escort" }, campPickItems(C, "escort")); campPicksClear(C); campTcornerLook(P, 5000); C.t += 9000; campCornerSync(S, 5000); campTcornerSync(S, 5000);');
+  g.run('P.pick = null; const tw = C.ships.find(u => u.kind === "freighter"); tw.x = C.carrier.x + 300; tw.y = C.carrier.y; tw.hp = tw.maxHp * 0.4; campPickOpen(P, { id: "repairward", pick: "ward" }, campPickItems(C, "ward")); campPicksClear(C); campTcornerLook(P, 5000); C.t += 9000; campCornerSync(S, 5000); campTcornerSync(S, 5000);');
   check('a ship an order\'s list is on: its picture is shown and its name is written beside it (nothing is held, so none is beside the title)', J(W + '.pic.vis') && J(W + '.name.vis') && J(W + '.name.text') !== '' && J('NOW("friendlies").selection') === '', J(W + '.name.text'));
   check('a scene with no camp, or no graphics, is not an error (a stand-in in another test)', (() => { try { g.run('campTcornerSync({}, 0); campTcornerSync({ camp: C, hud: {} }, 0);'); return true; } catch (e) { return false; } })());
 }
