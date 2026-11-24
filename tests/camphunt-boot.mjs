@@ -55,11 +55,11 @@ try {
   const ck = id => j(`campKeyCodes(${JSON.stringify(id)})[0] || ''`);
   const closeLists = async () => { for (let n = 0; n < 6 && (await j(`campPanelOpen(${S}.pn)`)); n++) await key('Escape'); }; // Esc is pressed only while a list is open: with none open it would pause
   // Orders that are no row of a list in the game now (the key rounds of 23 Nov 2026, cards space-game-keys-orders to space-game-keys3-select: the fleet, all-squads, ship, power, autopilot lists are switched off; the one list is the cruiser's, on S):
-  //   launch: nothing to press (the pilots start the mission out);   attack: the backslash picks the nearest threat, E sends all pilots at it;   burn, burntarget: the Fly rows of the cruiser list (Fly to the goal burns by itself on a long clear leg);
+  //   launch: nothing to press (the pilots start the mission out);   attack: the backslash picks the nearest threat, the order key (W since card space-game-keys4-onekey) sends all pilots at it;   burn, burntarget: the Fly rows of the cruiser list (Fly to the goal burns by itself on a long clear leg);
   //   dock: while no keyed list has its row, the order as the strip's word gives it (said in a note).   Anything else with no row: left out, false
   const noRow = async row => {
     if (row === 'launch') return true;
-    if (row === 'attack') { const near = await ck('near'), eng = await ck('engage'); if (!near || !eng) return false; await closeLists(); await key(near); await key(eng); return true; }
+    if (row === 'attack') { const near = await ck('near'), eng = await ck('order'); if (!near || !eng) return false; await closeLists(); await key(near); await key(eng); return true; }
     if (row === 'burn' || row === 'burntarget') return (await listWay(row === 'burn' ? 'goal' : 'target')) ? listOrder(row === 'burn' ? 'goal' : 'target') : false;
     if (row === 'dock') { const r = await j(`campOrder(${S}.camp, 'dock', '', 'strip')`); note('(the dock has no key and no row now: the order was given as the strip gives it: ' + JSON.stringify(r).slice(0, 160) + ')'); return !!(r && r.ok); }
     return false;
@@ -123,11 +123,11 @@ try {
     // every key of the flight and every row of the lists the game has now, once: the cruiser list's rows (S), the target keys (the backslash, the brackets), who, the friendlies, E after each kind of pick, X, the power keys while the table has them.
     // A list of [what to do, what it is]: a string is a direct key (its code read from the key table), [row] is an order given through the list it is in (or as noRow gives it)
     const via = async row => { const w = await listWay(row); return w ? w.keys.map(k => k[0].replace(/^Key/, '') + (k[1] ? ', Down x ' + k[1] : '')).join(', ') + ', Enter' : '(no row: see the notes)'; }; // the keys of an order as they were pressed
-    const CK = {}; for (const id of ['near', 'next', 'last', 'wnext', 'wlast', 'fnext', 'flast', 'clear', 'engage', 'shields', 'engines', 'weapons']) CK[id] = await ck(id);
+    const CK = {}; for (const id of ['near', 'hostiles', 'who', 'friendlies', 'clear', 'order', 'shields', 'engines', 'weapons']) CK[id] = await ck(id); // one key each (card space-game-keys4-onekey): Q who, W the order, [ the friendlies, ] the hostiles; none steps back, and E O P are free
     note('keys from the table: ' + JSON.stringify(CK));
-    check('the key table has the target keys, who, the friendlies, clear and the one order key, and this walk can press them', ['near', 'next', 'last', 'wnext', 'wlast', 'fnext', 'flast', 'clear', 'engage'].every(id => CK[id] && VK[CK[id]]), JSON.stringify(CK));
-    const done = [], acts = [[['fmine'], 'mine ore'], [CK.near, 'the nearest threat'], [CK.engage, 'E with an enemy picked: attack it'], [CK.next, 'the next enemy'], [CK.last, 'the last enemy'], [CK.wnext, 'the next who (a pilot)'], [CK.engage, 'E with one pilot as who'], [CK.wlast, 'the last who (All pilots again)'],
-      [CK.fnext, 'the next friendly (it replaces the enemy: one target is held)'], [CK.engage, 'E with a friendly picked: guard it'], [CK.flast, 'the last friendly'], [['target'], 'fly to the target'], [CK.clear, 'X clears the target and puts who on All pilots'], [CK.engage, 'E with nothing picked: form up on the cruiser'],
+    check('the key table has the nearest threat, the hostiles, who, the friendlies, clear and the one order key, and this walk can press them', ['near', 'hostiles', 'who', 'friendlies', 'clear', 'order'].every(id => CK[id] && VK[CK[id]]), JSON.stringify(CK));
+    const done = [], acts = [[['fmine'], 'mine ore'], [CK.near, 'the nearest threat'], [CK.order, 'the order key with an enemy picked: attack it'], [CK.hostiles, 'the hostiles key: the nearest enemy first'], [CK.hostiles, 'the hostiles key again: the next one out'], [CK.who, 'the who key (a pilot)'], [CK.order, 'the order key with one pilot as who'], [CK.who, 'the who key again (the next pilot)'],
+      [CK.friendlies, 'the friendlies key (it replaces the enemy: one target is held)'], [CK.order, 'the order key with a friendly picked: guard it'], [CK.friendlies, 'the friendlies key again'], [['target'], 'fly to the target'], [CK.clear, 'X clears the target and puts who on All pilots'], [CK.order, 'the order key with nothing picked: form up on the cruiser'],
       [['emergency'], 'emergency shields'], [['blink'], 'the warp blink'], [['dock'], 'dock (away from it)']]
       .concat(CK.shields ? [[CK.shields, 'a pip to the shields'], [CK.engines, 'a pip to the engines'], [CK.weapons, 'a pip to the weapons']] : [])
       .concat([['Digit1', '1 (no key of the flight)'], ['KeyG', 'G (no key of the flight: there is no guard key)'], ['KeyR', 'R (no key of the flight: there is no recall)']]);

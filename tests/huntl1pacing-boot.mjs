@@ -1,5 +1,5 @@
 // not in the smoke: missions 1.2 and 1.3 flown as a player in the real game, beat by beat (one Chrome, muted, through the test lock; card space-game-hunt-l1-pacing)
-// It is tests/huntfleet-boot.mjs with another player: the three pilots are ordered apart (the who key steps to a pilot, the backslash and ] pick the enemy, E sends that pilot; then who goes back to All pilots), the miners or the
+// It is tests/huntfleet-boot.mjs with another player: the three pilots are ordered apart (the who key steps to a pilot, the backslash and ] pick the enemy, W sends that pilot; then who goes back to All pilots), the miners or the
 // haulers are tucked in when torpedo boats come (the convoy's order: it has no key and no row now, so it is given as the strip gives it and said so), the power goes to the shields for the heavy raid and first contact while the key
 // table still has power keys (card space-game-power-removed takes them out), a missile goes at the big ships. There is no recall and no launch: the pilots start out, and a badly hurt one flies home and comes back by itself.
 // It writes down every beat (BEAT: a wave that came, a wave that is gone, a call, a quiet stretch of 40 s or more) and every order it gave (DECIDE), with the mission clock.
@@ -58,13 +58,13 @@ try {
   const closeLists = async () => { for (let n = 0; n < 6 && (await listOpen()); n++) await key(K.esc); }; // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): until every list is closed (it pauses only when none is open)
   // An order as a player gives it in the game NOW (the key rounds of 23 Nov 2026, cards space-game-keys-orders to space-game-keys3-select; the old lists, fleet, all squads, ship, power, autopilot, are switched off and this walk leaves them off):
   //   a row of the cruiser list (S: Fly to the goal, Fly to the target, Mine ore, Emergency shields ...): the key of the list the row is in, Down to the row, Enter, read from the table as before
-  //   E, the one order key: an enemy picked, the pilots attack it (the caller picks it: the backslash); nothing picked (X first), they form up on the cruiser; a friendly picked (X, then P), they guard it
+  //   W, the one order key: an enemy picked, the pilots attack it (the caller picks it: the backslash); nothing picked (X first), they form up on the cruiser; a friendly picked (X, then [), they guard it
   //   no key and no row at all: the launch (the pilots start the mission out), and the convoy's orders and the dock while the table has no keyed row for them: given as the order the strip's words give, and said so in a note
-  const KEYED = { attack: () => [K.engage], fguard: () => [K.clear, K.engage], escort: () => [K.clear, K.fnext, K.engage] };
+  const KEYED = { attack: () => [K.order], fguard: () => [K.clear, K.order], escort: () => [K.clear, K.friendlies, K.order] };
   const WORDS = { ctuck: ['convoy', 'tuck in'], crun: ['convoy', 'run for it'], chold: ['convoy', 'hold here'], ccarry: ['convoy', 'carry on'], dock: ['dock', ''] };
   const ALIAS = { burn: 'goal' }; // the fast burn rows have no way in: Fly to the goal burns by itself on a long clear leg (card space-game-keys2-cruiser)
   let lastSay = '';
-  const who = async squad => { const want = squad === 'all' ? 'all' : 'pilot:' + squad; for (let i = 0; i < 5 && (await j(`${S}.camp.sel || 'all'`)) !== want; i++) { if (!K.wnext) return false; await key(K.wnext); } return (await j(`${S}.camp.sel || 'all'`)) === want; }; // WHO takes the order (C.sel): All pilots, then the pilots, round
+  const who = async squad => { const want = squad === 'all' ? 'all' : 'pilot:' + squad; for (let i = 0; i < 5 && (await j(`${S}.camp.sel || 'all'`)) !== want; i++) { if (!K.who) return false; await key(K.who); } return (await j(`${S}.camp.sel || 'all'`)) === want; }; // WHO takes the order (C.sel): All pilots, then the pilots, round
   const press = async (id, wait = 50) => { // an order: a direct key, the order key, or a row of a list (the key of the list it is in, Down to the row, Enter)
     lastSay = '';
     if ((await j(`${S}.mode`)) !== 'play') return false; // a card has the keys
@@ -75,11 +75,11 @@ try {
       await closeLists();
       await key(c, wait); return true;
     }
-    const one = /^(red|green|yellow)(attack|recall)$/.exec(id); // an order to ONE pilot: who is stepped to that pilot (the who key), E, then who goes back to All pilots
+    const one = /^(red|green|yellow)(attack|recall)$/.exec(id); // an order to ONE pilot: who is stepped to that pilot (the who key), W, then who goes back to All pilots
     if (one) {
       if (one[2] === 'recall') { note(`(no recall now: a badly hurt pilot flies home by itself and comes out again mended, card space-game-keys2-orders; nothing pressed for ${id})`); return false; }
-      if (!K.wnext || !K.engage) { note(`(no key for ${id}: the table has none)`); return false; }
-      await closeLists(); const got = await who(one[1]); if (got) await key(K.engage, wait); else note(`(${one[1]} is not a stop of the who key now: lost, or none of that squad)`); await who('all'); return got;
+      if (!K.who || !K.order) { note(`(no key for ${id}: the table has none)`); return false; }
+      await closeLists(); const got = await who(one[1]); if (got) await key(K.order, wait); else note(`(${one[1]} is not a stop of the who key now: lost, or none of that squad)`); await who('all'); return got;
     }
     if (KEYED[id]) { await who('all'); const ks = KEYED[id](); if (ks.some(c => !c)) { note(`(no key for ${id}: the table has none)`); return false; } await closeLists(); for (const c of ks) await key(c, wait); return true; }
     const way = await wayTo(id);
@@ -102,14 +102,14 @@ try {
   const res = { score: 2000, bonuses: ['swift'], t: 100, hull: 800, lost: 0, tries: 1 }, results = {};
   for (let m = 1; m < MISSION; m++) results['1.' + m] = res;
   await t.ev(`localStorage.setItem('longhaul.campaign', ${JSON.stringify(JSON.stringify({ level: 1, mission: MISSION - 1, techs: [], ore: ORE, bonus: { fighters: 0, escorts: 0 }, results }))})`);
-  K.title = await ctl(/Title, from the pause/); K.map = await ck('map'); K.fire = await ck('fire'); K.next = await ck('next'); K.last = await ck('last'); K.near = await ck('near'); K.clear = await ck('clear'); K.minus = await ck('zoomout'); K.zero = await ck('zoomreset');
+  K.title = await ctl(/Title, from the pause/); K.map = await ck('map'); K.fire = await ck('fire'); K.hostiles = await ck('hostiles'); K.near = await ck('near'); K.clear = await ck('clear'); K.minus = await ck('zoomout'); K.zero = await ck('zoomreset');
   K.scout = await ctl(/V scouts/, 0); // (the map's T took a lane at the fork of 1.1; the fork was cut, card space-game-cut-lane-fork: no K.take)
-  K.up = await ck('up'); K.down = await ck('down'); K.pick = await ck('pick'); K.esc = await ck('pause'); K.shields = await ck('shields'); K.engines = await ck('engines'); K.weapons = await ck('weapons'); K.even = await ck('balance'); K.missile = await ck('missile'); K.engage = await ck('engage'); K.wnext = await ck('wnext'); K.wlast = await ck('wlast'); K.fnext = await ck('fnext'); K.flast = await ck('flast');
+  K.up = await ck('up'); K.down = await ck('down'); K.pick = await ck('pick'); K.esc = await ck('pause'); K.shields = await ck('shields'); K.engines = await ck('engines'); K.weapons = await ck('weapons'); K.even = await ck('balance'); K.missile = await ck('missile'); K.order = await ck('order'); K.who = await ck('who'); K.friendlies = await ck('friendlies'); // one key each (card space-game-keys4-onekey): Q who, W the order, [ the friendlies, ] the hostiles; no key steps back
   K.lists = await j(`(() => { const o = {}; CAMP_PANELS.panels.forEach(p => { o[p.id] = p.code; }); return o; })()`); // the key that opens each list ('' for a list with no key of its own: the stances)
   K.rows = {}; for (const id of ['launch', 'attack', 'fguard', 'frecall', 'fmine', 'ctuck', 'crun', 'chold', 'ccarry', 'goal', 'target', 'burn', 'dock', 'emergency']) K.rows[id] = await rk(id); // the list each row is in
   K.listDown = K.down; // the map's list is stepped with Down too (A and D are the target's keys, not the map's)
   note('keys from the table: ' + JSON.stringify(K));
-  check('every key the walk needs is in the key table (the power keys are not needed: card space-game-power-removed takes them out)', ['title', 'map', 'fire', 'next', 'near', 'clear', 'engage', 'wnext', 'fnext', 'minus', 'zero', 'up', 'down', 'pick', 'esc', 'missile'].every(k => K[k]) && !!K.lists.cruiser && ['goal', 'target', 'fmine', 'emergency'].every(k => K.rows[k] === 'cruiser'), JSON.stringify(Object.keys(K).filter(k => !K[k]).concat(Object.keys(K.rows).filter(k => K.rows[k] !== 'cruiser').map(k => k + ':' + K.rows[k]))));
+  check('every key the walk needs is in the key table (the power keys are not needed: card space-game-power-removed takes them out)', ['title', 'map', 'fire', 'hostiles', 'near', 'clear', 'order', 'who', 'friendlies', 'minus', 'zero', 'up', 'down', 'pick', 'esc', 'missile'].every(k => K[k]) && !!K.lists.cruiser && ['goal', 'target', 'fmine', 'emergency'].every(k => K.rows[k] === 'cruiser'), JSON.stringify(Object.keys(K).filter(k => !K[k]).concat(Object.keys(K.rows).filter(k => K.rows[k] !== 'cruiser').map(k => k + ':' + K.rows[k]))));
   check('no row of a list has a key of its own, and no digit is a key of the flight', await j(`CAMP_PANELS.panels.every(p => p.rows.every(r => !('k' in r) && !('code' in r))) && Object.keys(CAMP_KEYS).every(id => CAMP_KEYS[id].codes.every(c => !/^(Digit|Numpad)[0-9]$/.test(c)))`));
   await key('KeyK'); // the title's own key for the Campaign (not in the Campaign group)
   check('K on the title opens the ready room', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`));
@@ -157,7 +157,7 @@ try {
   // the one target, as a player picks it: S (the nearest threat), then D (the next) until the bracket is on a ship of the wave (and kind) wanted
   const aim = async (wave, kind) => {
     await closeLists(); await key(K.near);
-    for (let i = 0; i < 14; i++) { const tg = await j(`(() => { const C = ${C}, u = C.tgt && C.by[C.tgt]; return u ? { wave: u.wave, kind: u.kind, run: !!u.running } : null; })()`); if (tg && tg.wave === wave && !tg.run && (!kind || tg.kind === kind)) return true; await key(K.next); }
+    for (let i = 0; i < 14; i++) { const tg = await j(`(() => { const C = ${C}, u = C.tgt && C.by[C.tgt]; return u ? { wave: u.wave, kind: u.kind, run: !!u.running } : null; })()`); if (tg && tg.wave === wave && !tg.run && (!kind || tg.kind === kind)) return true; await key(K.hostiles); }
     return false;
   };
   const did = {}; let quietFrom = -1, lastAny = 0, seen = [], cleared = [], reAt = {}, recallAt = -99, mineAt = -99, flew = -99, docked = false, sold = false;
@@ -192,7 +192,7 @@ try {
       }
       if (did.tuck && !did.carry && cleared[3]) { did.carry = true; const n0 = await j('window.__log.length'); await press('ccarry'); await t.run(300); say(clock, 'the boats are gone: Carry on: ' + lastSay + ' ' + (await toasts(n0)).filter(x => /TOAST/.test(x)).join(' | ').slice(0, 200)); }
       if (live.indexOf(4) >= 0) {
-        if (!did.heavy) { did.heavy = true; if (K.shields) { await key(K.shields); await key(K.shields); } say(clock, 'the heavy raid: ' + (K.shields ? 'two pips to the shields, ' : '') + 'all pilots at it (the backslash, E)'); await snap('heavy'); }
+        if (!did.heavy) { did.heavy = true; if (K.shields) { await key(K.shields); await key(K.shields); } say(clock, 'the heavy raid: ' + (K.shields ? 'two pips to the shields, ' : '') + 'all pilots at it (the backslash, W)'); await snap('heavy'); }
         if (again('w4', 9)) await send(clock, 'all', 4);
         if (q.missiles > 0 && again('msl', 12) && (await aim(4, 'brute'))) { if (await press('missile')) say(clock, 'a missile at a brute (Enter)'); }
       }
@@ -207,7 +207,7 @@ try {
       }
     }
     if (MISSION === 3) {
-      if (!did.escort && clock > 6) { did.escort = true; const n0 = await j('window.__log.length'); await press('escort'); await t.run(300); say(clock, 'all pilots guard the first ship we protect (X, P, E): ' + (await toasts(n0)).filter(x => /TOAST/.test(x)).join(' | ').slice(0, 160)); }
+      if (!did.escort && clock > 6) { did.escort = true; const n0 = await j('window.__log.length'); await press('escort'); await t.run(300); say(clock, 'all pilots guard the first ship we protect (X, [, W): ' + (await toasts(n0)).filter(x => /TOAST/.test(x)).join(' | ').slice(0, 160)); }
       if (!q.nav && clock % 5 === 0) await press('goal'); // the cruiser on the autopilot beside the convoy
       if (live.indexOf(0) >= 0 && again('w0', 9)) await send(clock, 'red', 0); // the probe at the lead hauler: red forward
       if (live.indexOf(1) >= 0) {
@@ -220,7 +220,7 @@ try {
       if (live.indexOf(3) >= 0 && again('w3', 9)) { await send(clock, 'red', 3); if (!did.y3) { did.y3 = true; await send(clock, 'yellow', 3); } } // the front again: red and yellow
       if (live.indexOf(4) >= 0 && again('w4', 9)) await send(clock, 'green', 4); // the back again: green
       if (live.indexOf(5) >= 0) {
-        if (!did.contact) { did.contact = true; if (K.shields) { await key(K.shields); await key(K.shields); } say(clock, 'first contact: ' + (K.shields ? 'two pips to the shields, ' : '') + 'all pilots at them (the backslash, E)'); await snap('contact'); }
+        if (!did.contact) { did.contact = true; if (K.shields) { await key(K.shields); await key(K.shields); } say(clock, 'first contact: ' + (K.shields ? 'two pips to the shields, ' : '') + 'all pilots at them (the backslash, W)'); await snap('contact'); }
         if (again('w5', 9)) await send(clock, 'all', 5);
         if (q.missiles > 0 && again('msl', 12) && (await aim(5, 'gunship'))) { if (await press('missile')) say(clock, 'a missile at a gunship (Enter)'); }
         if (q.shield < 30 && !did.emer) { did.emer = true; const n0 = await j('window.__log.length'); await press('emergency'); await t.run(200); say(clock, 'the shield is down: O, Emergency shields: ' + (await toasts(n0)).filter(x => /TOAST/.test(x)).join(' | ').slice(0, 160)); }

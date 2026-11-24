@@ -1,6 +1,6 @@
 // not in the smoke: the Campaign's ship systems in a real fight, one picture, run by hand (one Chrome, muted, through the test lock; card space-game-campaign-systems)
-// The rules are in the plain Node suites (tests/campcruiser.mjs for the emergency shields). This boots level 1 and looks at what is left of the ship's systems in the game: the three gauges on the HUD, no power list and no ship list (O and P pick
-// friendlies: card space-game-keys2-select), and Emergency shields as a row of the cruiser list (S, Down to its row, Enter: card space-game-keys2-cruiser): the shield fills at once for ore, the row cools down and refuses meanwhile.
+// The rules are in the plain Node suites (tests/campcruiser.mjs for the emergency shields). This boots level 1 and looks at what is left of the ship's systems in the game: the cruiser's status at the top left (SHIELD, HULL, ORE: card space-game-layout-cruiser; the three round gauges are gone), no power list and no ship list (O and P are
+// free keys: card space-game-keys4-onekey), and Emergency shields as a row of the cruiser list (S, Down to its row, Enter: card space-game-keys2-cruiser): the shield fills at once for ore, the row cools down and refuses meanwhile.
 // The power keys (J K L) are pressed only while the key table still has them (card space-game-power-removed takes them out). Pictures: the open cruiser list, the HUD after the emergency, the cooling row, the H page.
 //   node tests/campsystems-boot.mjs
 // The pictures go to the folder in SYSTEMS_SHOTS (default ~/dev/spacegame-night/shots/systems-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
@@ -41,9 +41,10 @@ try {
   await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
   for (let i = 0; i < 4 && (await j(`${SC}.mode`)) !== 'play'; i++) { await key('Enter'); await t.run(300); } // the intro card, and the missions' briefing after it
   check('the battle is on (the cards are out of the way)', (await j(`${SC}.mode`)) === 'play', await j(`${SC}.mode`));
-  // What is left of the ship's systems in the game (cards space-game-keys2-select, space-game-keys2-cruiser, space-game-power-removed): no power list and no ship list (O and P pick friendlies), the three gauges on the HUD,
+  // What is left of the ship's systems in the game (cards space-game-keys2-select, space-game-keys2-cruiser, space-game-power-removed): no power list and no ship list (O and P are free keys), the cruiser's status at the top left (SHIELD and HULL bars and the ORE line, src/campcruiserhud.js: the round gauges went with card space-game-layout-hud),
   // and Emergency shields as a row of the cruiser list (S): the shield is filled at once for ore, and the row cools down. The power keys (J K L) are pressed only while the key table still has them.
-  check('the three gauges are on the HUD (SHIELDS, SPEED, LASERS)', await j(`!!${SC}.hud.gauges && ${SC}.hud.gauges.l.map(t => t.text).join() === 'SHIELDS,SPEED,LASERS'`), JSON.stringify(await j(`${SC}.hud.gauges ? ${SC}.hud.gauges.l.map(t => t.text) : null`)));
+  await t.run(200); const CR = await j(`(() => { const H = ${SC}.hud; return H.crShieldL ? { l: [H.crShieldL.text, H.crHullL.text], n: [H.crShieldN.text, H.crHullN.text], ore: H.crOre.text, vis: H.crShieldL.visible && H.crOre.visible, want: [uiText('camp.cruiser.shield'), uiText('camp.cruiser.hull'), uiText('camp.cruiser.ore')], gauges: !!H.gauges } : null; })()`);
+  check('the cruiser\'s status is at the top left (SHIELD and HULL with their numbers, the ORE line) and the round gauges are gone', !!CR && CR.vis && CR.l.join() === CR.want.slice(0, 2).join() && CR.n.every(s => /^\d+$/.test(s)) && CR.ore.indexOf(CR.want[2]) === 0 && !CR.gauges, JSON.stringify(CR));
   await t.run(500);
   check('no list is on the screen at the start, and Emergency shields is a row of the cruiser list, which has a key of its own', await j(`campPanelOpen(${SC}.pn) === '' && !${SC}.pnl.title.visible && ${SC}.pnl.rows.every(r => !r.name.visible) && campKeyVia('emergency').id === 'cruiser' && !!campKeyList('cruiser').code && !campKeyRow('emergency').stay`), JSON.stringify(await j(`[campKeyVia('emergency').id, campKeyList('cruiser').key]`)));
   const PK = await j(`['shields', 'engines', 'weapons'].map(id => campKeyCodes(id)[0] || '')`);
@@ -51,8 +52,8 @@ try {
     const p0 = await j(`${SC}.camp.power.p.slice()`); await key(PK[0]); await t.run(300); const p1 = await j(`${SC}.camp.power.p.slice()`);
     check('the shields\' power key gives the shields a pip and opens no list', p1[1] === p0[1] + 1 && (await j(`campPanelOpen(${SC}.pn)`)) === '', JSON.stringify([p0, p1]));
     await t.ev(`(() => { campOrder(${SC}.camp, 'balance', '', 'key'); return 1; })()`); await t.run(200);
-  } else console.log('  note   the key table has no power keys (card space-game-power-removed): the gauges are plain readouts');
-  check('O and P open no list (they pick the friendlies; the power list and the ship list have no key in the game)', (await key('KeyO'), await t.run(150), await j(`campPanelOpen(${SC}.pn)`)) === '' && (await key('KeyP'), await t.run(150), await j(`campPanelOpen(${SC}.pn)`)) === '');
+  } else console.log('  note   the key table has no power keys (card space-game-power-removed): the shield and hull bars are plain readouts');
+  check('O and P open no list (they are free keys; the power list and the ship list have no key in the game)', (await key('KeyO'), await t.run(150), await j(`campPanelOpen(${SC}.pn)`)) === '' && (await key('KeyP'), await t.run(150), await j(`campPanelOpen(${SC}.pn)`)) === '');
   // the emergency: the shield is knocked down and there is ore to pay with
   const E = await j(`({ ore: CAMP.emergency.ore, cool: CAMP.emergency.cooldown, max: campShieldMax(${SC}.camp) })`);
   await t.ev(`(() => { const C = ${SC}.camp; C.god = true; C.shield = campShieldMax(C) * 0.25; C.ore = ${E.ore} + 30; return 1; })()`); await t.run(100);
