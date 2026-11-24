@@ -53,7 +53,7 @@ One list per hand, and three order keys. **`Q` opens the cruiser list** at the l
 | Key | What it does |
 |---|---|
 | `Q` | **cruiser** list: Mine ore (the pilots mine; with several rock fields it asks which), Dock and repair (opens the dock list: Dock at the outpost where there is one, Repair the hull, Repair a ship we protect) |
-| (no key) | **power** and **autopilot**: the two lists are still in the game but no key opens them (`O` and `P` are the friendlies' now; cards remove the lists). Power has `J` `K` `L`; the autopilot is the map (`Tab`, `Enter` flies there) |
+| (no key) | **power** and **autopilot**: the two lists are still in the game but no key opens them (`O` and `P` are the friendlies' now). The power list, its pips and `J` `K` `L` are switched off for good (card `space-game-power-removed`); the autopilot is the map (`Tab`, `Enter` flies there) |
 | `Up` `Down` `Enter` | in an open list: move the highlight, give the order (the list closes when the order is taken). On a row that opens a part, `Enter` or `Right` opens it |
 | `Left` | in a part's list: back to the list it is a part of (the dock list goes back to the cruiser list) |
 | Arrow keys | fly the cruiser: Up thrust, Left and Right turn, Down brake (while a list is open the ship coasts) |

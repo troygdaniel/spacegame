@@ -25,7 +25,7 @@ const SNAP = `JSON.stringify([CAMP_KEYS.shields, CAMP_KEYS.engines, CAMP_KEYS.we
 const off0 = g.run(SNAP);
 g.run('campPowerSet(true)');
 const on = JSON.parse(g.run(SNAP));
-check('campPowerSet(true) brings the old world back: J K L, the power list with a key, the H page row, CAMP.power.on', on[0].k === 'J' && on[1].k === 'K' && on[2].k === 'L' && on[3].find(p => p[0] === 'power')[1] !== '' && on[3].find(p => p[0] === 'power')[3] === false && J("controlsGroup('campaign').rows.some(r => r.k.join() === 'J,K,L')") && J('CAMP.power.on') === true && on[5].KeyJ === 'shields');
+check('campPowerSet(true) brings the old world back: J K L, the power list no longer off (it has no key since card space-game-keys2-select: P and O pick friendlies, so only a mod or a test opens it by code), the H page row, CAMP.power.on', on[0].k === 'J' && on[1].k === 'K' && on[2].k === 'L' && on[3].find(p => p[0] === 'power')[3] === false && J("controlsGroup('campaign').rows.some(r => r.k.join() === 'J,K,L')") && J('CAMP.power.on') === true && on[5].KeyJ === 'shields');
 g.run('campPowerSet(false)');
 check('and campPowerSet(false) takes it all away again, byte for byte', g.run(SNAP) === off0);
 
