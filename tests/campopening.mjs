@@ -1,4 +1,4 @@
-// smoke: the opening of an escort mission: Fly to the goal works from the first second (the goal is the transport at her berth), and a cruiser left behind is told so on the radio (plain Node, no Chrome)
+// smoke: the opening of an escort mission: a hint says how to stay with the transport, Fly to the goal works from the first second (the goal is the transport at her berth), and a cruiser left behind is told so on the radio (plain Node, no Chrome)
 // Found by flying mission 1.1 in a browser (24 Nov 2026): "Fly to the goal" given in the first seconds was refused ("There is no goal to fly to yet"), the cruiser sat at Luna, the transport flew off and was lost
 // 940 km away at 3:02, and the only sign was a small label at the screen's edge. The rules: src/campnav.js (campNavBerth, the goal of a deliver mission) and src/campstray.js.
 //   A. the goal before the transport leaves, and the trip that follows her
@@ -50,6 +50,14 @@ console.log('C. the words');
   check('the line has the list\'s key and the row\'s words from the key table, and is curt (12 words or fewer)', T[0].indexOf(J(`campKeyVar('viagoal')`)) > 0 && T[0].indexOf(J(`campKeyVar('rowgoal')`)) > 0 && T[0].split(/\s+/).length <= 12 && !/[{}]/.test(T[0]), T[0]);
   check('the briefing of 1.1 no longer sends a squad ahead (squads and scouting are gone)', !/squad|ahead/i.test(T[1]), T[1]);
   check('the win card and the briefing no longer count fighters beside three named pilots', !/fighters? strong|\d/.test(T[2]) && !/fighters|\d/.test(T[3]) && /Wedge, Kara, Apollo/.test(T[3]), T[2] + ' / ' + T[3]);
+}
+console.log('D. the hint at the start of 1.1');
+{
+  const H = J(`(() => { const C = campNew(1, [], { mission: 0, seed: 1 }), shown = {}, got = []; for (let i = 0; i < 60 * 20; i++) { campTick(C, 1 / 60); const h = campBeatNudge(C, shown); if (h) got.push([Math.round(C.t / 1000), h]); } return got; })()`);
+  check('a cruiser that sits still is told how to stay with her, once, 6 to 12 s in: the list\'s key and the row\'s words, both from the key table', H.length === 1 && H[0][0] >= 6 && H[0][0] <= 12 && H[0][1].indexOf(J(`campKeyVar('viagoal')`)) >= 0 && H[0][1].indexOf(J(`campKeyVar('rowgoal')`)) > 0 && !/[{}]/.test(H[0][1]) && H[0][1].split(/\s+/).length <= 12, JSON.stringify(H));
+  const N = J(`(() => { const C = campNew(1, [], { mission: 0, seed: 1 }), shown = {}, got = []; campNavFly(C, campNavFind(C, 'the objective').row, false); for (let i = 0; i < 60 * 60; i++) { campTick(C, 1 / 60); const h = campBeatNudge(C, shown); if (h) got.push(h); } return [got, !!shown['b-go']]; })()`);
+  check('a player who gave the order at the start is never shown it (and after 45 s it is retired)', N[0].every(h => h.indexOf(J(`campKeyVar('rowgoal')`)) < 0) && N[1] === true, JSON.stringify(N));
+  check('it is the first row of the 1.1 hints and only for 1.1 (campBeatNudge gives nothing in 1.3)', J('CAMPBEATHINTS[0].id') === 'b-go' && J(`(() => { const C = campNew(1, [], { mission: 2, seed: 1 }), shown = {}; let got = 0; for (let i = 0; i < 60 * 20; i++) { campTick(C, 1 / 60); if (campBeatNudge(C, shown)) got++; } return got; })()`) === 0);
 }
 console.log(`\n${n - failed} of ${n} checks passed`);
 process.exit(failed ? 1 : 0);
