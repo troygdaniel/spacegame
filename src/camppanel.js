@@ -81,6 +81,9 @@ function campPanelChoose(P, C, now, how, def) {
   if (out.ok) { P.seen = { kind: pk.kind, id: it.id, until: now + CAMP_PICK.seen }; campPanelClose(P); }
   out.open = campPanelOpen(P); return out;
 }
+// the hold after a card (card space-game-enter-card-fires-missile; Troy, 24 Nov 2026: the Enter that closes the story card or the briefing also fired a missile, and a missile costs ore now): the scene calls campPanelHold(P, now) when a card closes and when a battle begins; for CAMP.card.lock ms after that campPanelHeld says true, and the missile key (and a click on a ship, shipClick) does nothing. The arrows, Space and the turrets are held-key reads (`isDown`), not presses, and the battle does not run under a card, so nothing else needs the hold.
+const campPanelHold = (P, now) => { if (P && typeof now === 'number') P.hold = now + CAMP.card.lock; };
+const campPanelHeld = (P, now) => !!P && typeof now === 'number' && typeof P.hold === 'number' && now < P.hold;
 function campPanelKey(P, C, code, now) {
   const res = { used: false, ran: false, ok: false, say: '', row: '', tgt: '', fleet: false, open: campPanelOpen(P) }; // fleet: an order of the left hand or a pick of the target (a label for the tests and the radio; nothing slows the battle for it: card space-game-no-command-slowdown)
   if (typeof now === 'number' && campPanelOpen(P)) P.touch = now; // a key in an open list is a touch: the fade starts again (campPanelFade)
@@ -145,7 +148,7 @@ function campPanelKey(P, C, code, now) {
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = 'sreload'; if (typeof now === 'number' && P && P.lit) P.lit.sreload = now; return res;
   }
   if ((!open || nums) && campKeyIs('missile', code)) { // Enter with no list open (or a numbered one: it does not take Enter): a homing missile at the target
-    res.used = true; if (!C) return res;
+    res.used = true; if (!C || campPanelHeld(P, now)) return res; // a card has just closed (campPanelHold): the press that closed it, or a second one at once, fires nothing and says nothing
     const r = campOrder(C, 'missiles', campPanelTargetArg(C, { order: 'missiles' }), 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = 'missile'; return res;
   }

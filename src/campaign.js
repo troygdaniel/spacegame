@@ -173,6 +173,7 @@ const CAMP = {
     ink: { hostile: '#ff9aae', friend: '#9fe9ff' },  // the name and the line of what it is doing
     depth: 64                              // the draw order: over the edge arrows (62), under the lists (160)
   },
+  card: { lock: 400 },                     // ms: after a card closes (the story, the briefing, a result, the pause) the missile key and a click on a ship do nothing for this long, and so does the first part of a new battle: the Enter that closed the card is not also a missile (card space-game-enter-card-fires-missile; missiles cost ore now). campPanelHold, src/camppanel.js
   corner: {                                // the four corner panels (card space-game-layout-fleet; Troy, 24 Nov 2026: "four corners, each a small title that never leaves, starting with its keys as plain key-cap chips; the details under a title open when its keys are used and fade after a few seconds; the current selection is written beside the title and never fades"): top left S CRUISER, bottom left Q W FLEET, top right [ ] HOSTILES, bottom right O P FRIENDLIES. src/campcorner.js (the rule and the registry), src/campcornerscene.js (the drawing)
     edge: 18,                              // px: THE margin: from the screen's left and right edges to the corners' frames (the right ones end this far from the right edge: at.tr.x and at.br.x are W - edge - w), and where the glyphs of the bottom left texts start (the key line, the MISSILES count, the radio: x = edge - ink); card space-game-layout-align, Troy, 24 Nov 2026: the left corners and the bottom key strip shared no left edge
     ink: 2,                                // px: a text with a 3 or 4 px stroke draws its first letter this far right of its x (half the stroke and the letter's side)
@@ -197,6 +198,12 @@ const CAMP = {
     show: 3000,                            // ms (the game's own clock, so a pause does not eat it) a square stays at full strength after it was brought back
     fade: 600,                             // ms it then takes to fade out (the target stays held, the target box at the bottom right and the who box at the bottom left stay)
     verbs: ['launch', 'attack', 'escort', 'guard', 'recall', 'mine']   // the counters of C.orders that are the pilots' orders and bring both squares back (a missile, a power change and the convoy's orders do not)
+  },
+  peek: {                                  // a pick that is off the screen glides the camera to it, holds, and glides back by itself (card space-game-pick-peek; Troy, 24 Nov 2026; src/campselzoom.js). All three are on the N panel (the `time` group)
+    hold: 1500,                            // ms the camera stays on the picked ship once it is there
+    glide: 400,                            // ms each way: out to the ship and back to the cruiser (eased, by time, so the same at any frame rate)
+    zoom: 0.8,                             // the zoom a peek needs at least, so the ship is readable (a player already zoomed in farther keeps his); the zoom he had is given back after
+    view: { left: 40, right: 40, top: 90, bottom: 80 } // px of the screen's edge a pick must be inside to count as ON the screen: clear of the edge, the status block above and the key line below
   },
   click: {                                 // the mouse on the flight view (card space-game-click-target; src/campclick.js)
     hit: 28                                // px on the SCREEN: the radius of the circle a click hits around a ship (a ship's own radius is never smaller), so it grows in the world as the view zooms out and a small far ship can be hit
@@ -369,6 +376,7 @@ const CAMP = {
     ore: { y: 74 },                        // the old ore line's place (not drawn)
     text: { x: 640, y: 6, pitch: 18 },     // the lines of text at the TOP CENTRE, each centred on x (card space-game-layout-hud; they were a column at the top left): the wave, the goal, Earth's shield, the fighters being mended, the outpost hint: the first one's y, and the step to the next (a line that has nothing to say gives its place back). The mothership's name and bar and the rival's bars stand under the last of them
     plate: { w: 560, min: 40, pad: 4 },    // the dim plate under the column: its width (centred on text.x), its least height, and how far it reaches past the last line
+    noWave: ['escort'],                    // the kinds of mission (C.L.kind) whose HUD has no WAVE n OF m line: in an escort the goal line says it all and a wave count tells nothing (card space-game-escort-no-wave-line; ORCH, 24 Nov 2026); the line gives its place back, so the goal stands first
     toastGap: 6                            // px: a toast starts this far under the last thing at the top centre (the column of lines, or the mothership's or the rival's bars under it), src/campaignscene.js toastTop; card space-game-toast-over-topcentre: the column ended at y 108 with Earth, repair and the outpost line showing, and a toast at 86 covered its last line
   },
   nav: {                                   // the carrier's autopilot, the map's list and picking, and the arrow at the screen edge (src/campnav.js); the rule is the Long Haul autopilot's (src/autopilot.js AUTO)

@@ -46,6 +46,8 @@ function campHudGeom() {
   const hy = H.y + H.hullBar.y;
   return { cells, hull: { x0: cells[0].x0, y0: hy, x1: CAMP.power.on ? cells[0].bar.x1 : cells[0].x0 + 2 * R, y1: hy + H.hullBar.h }, bottom: H.text.y, ore: { x: gx + 3 * cw, y: H.ore.y }, block: { x0: gx, y0: H.y, x1: gx + 3 * cw, y1: H.y + H.hullBar.y + H.hullBar.h + 6 } }; // (the hull bar is under the shield dial: as wide as the dial and its bar, or the dial alone)
 }
+// whether the WAVE n OF m line is shown in this mission: not in the kinds CAMP.hud.noWave names (an escort: card space-game-escort-no-wave-line), decided from the mission's kind and nothing else
+const campWaveLineOn = C => !!C && CAMP.hud.noWave.indexOf(C.L && C.L.kind) < 0;
 // the lines of text under the gauges, top to bottom: each one that shows takes its pitch (and `h` more, a line with a bar under it), the others none
 function campHudFlow(items) {
   const T = CAMP.hud.text, ys = {}; let y = T.y;

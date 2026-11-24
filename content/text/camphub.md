@@ -36,7 +36,7 @@ The words of the Campaign's ready room, the hub between missions (card space-gam
 | camp.hub.brief.best | Best so far: {score} points, flown {n} |
 | camp.hub.brief.new | Not flown yet. |
 | camp.hub.refit.ore | Credits: {credits}     Ore in the store: {ore} |
-| camp.hub.refit.wing | Wing for the next mission: {f} fighters strong |
+| camp.hub.refit.wing | Wing strength for the next mission: {f} |
 | camp.hub.boughtf | A fighter joins the wing. {credits} credits and {ore} ore left. |
 | camp.hub.soldf | A fighter given back. {credits} credits and {ore} ore. |
 | camp.hub.noore | Not enough: {need} needed, {have} in credits and ore. |
