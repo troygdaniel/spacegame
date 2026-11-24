@@ -865,6 +865,8 @@ const UI_TEXT = {
   'camp.tdisp.do.stay': 'working where it is',
   'camp.tdisp.do.patrol': 'on patrol',
   'camp.tdisp.do.idle': 'no orders',
+  'camp.tdisp.corner.nohostiles': 'NO HOSTILES',
+  'camp.tdisp.corner.nofriendlies': 'NO FRIENDLIES',
   'camp.sight.kind.one': '{n} {kind}',
   'camp.sight.kind.many': '{n} {kind}s',
   'camp.sight.dir.north': 'north',

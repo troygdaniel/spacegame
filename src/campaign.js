@@ -181,7 +181,7 @@ const CAMP = {
     fade: 600,                             // ms the details take to fade out
     title: { h: 26, chipW: 22, chipH: 18, chipGap: 3, pad: 8, gap: 8 }, // the title row: its height, a key-cap chip's size and the space between two, the space at the left, and between the chips, the title and the selection
     gap: 4, pad: 8,                        // px between the title row and its details, and inside the details' frame
-    item: { bar: 46, text: 20, key: 26 },  // px: the height of a detail line by its kind: a name with a number and a bar, a line of text, a key chip and its word
+    item: { bar: 46, text: 20, key: 26, pic: 80 },  // px: the height of a detail line by its kind: a name with a number and a bar, a line of text, a key chip and its word, a picture row (src/camptcornerscene.js: the ship's picture, its type and its distance)
     bar: { dy: 22, h: 9 },                 // px: a bar's top below its item's top, and its height
     chip: 0x7fe9ff,                        // the key-cap chips' fill (the friend's cyan, as the order key's)
     at: {                                  // where each corner's title row sits (x: its left edge; y: the edge of the row at the screen's edge side, the bottom edge for a bottom corner; dir: 1 the details open downward, -1 upward). Left and right are what you command and everything else
@@ -386,7 +386,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 150], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 430, 1280, 664], [0, 430, 224, 664]] // (the target box, campTdispBox(false) in src/camptdispscene.js, is inside the fourth one, where the radar was, and the who box, campTdispBox(true), inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 150], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 366, 1280, 664], [1056, 150, 1280, 180], [0, 430, 224, 664]] // (the target corners, card space-game-layout-targets: O P FRIENDLIES, its title up from y 630 and its details above it, are inside the fifth one, where the radar was; the title row of [ ] HOSTILES is the sixth (its details open under it when the target held is a hostile: a label may sit on them for a few seconds, as on any list that opens); campTdispBox(false) in src/camptdispscene.js is the fifth's bottom part and the FLEET corner's room, campTdispBox(true), is inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {
