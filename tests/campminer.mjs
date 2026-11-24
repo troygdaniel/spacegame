@@ -22,10 +22,10 @@ const line = (r, key) => r.says.filter(s => s[1] === key);
 console.log('A. the price line');
 {
   const K = J('CAMPMINER'), i = runs.plaini[0], o = runs.plaing[0], a = runs.plaina[0];
-  check('the numbers: a pilot 1,200 px from the cruiser and nearer the miner than she is counts as away; the line waits 1.5 s', K.gone === 1200 && K.wait === 1.5, JSON.stringify(K));
+  check('the numbers: a pilot 1,200 px from the cruiser and within 1,300 px of the miner counts as away; the line waits 1.5 s', K.gone === 1200 && K.near === 1300 && K.wait === 1.5, JSON.stringify(K));
   check('the call itself is one plain line, in every flight', [i, o, a].every(r => line(r, 'camp.say.distress').length === 1), JSON.stringify(i.says));
-  check('nobody sent: no price line', runs.plaini.every(r => !r.says.some(s => /miner\.(short|all)/.test(s[1]))), JSON.stringify(i.says));
-  check('one pilot sent: "Kara is away at the miner", once, within 12 s of the call', runs.plaing.every(r => { const s = line(r, 'camp.say.miner.short'), c = line(r, 'camp.say.distress')[0]; return s.length === 1 && /^Kara is away/.test(s[0][2]) && s[0][0] - c[0] <= 12 && !line(r, 'camp.say.miner.all').length; }), JSON.stringify(o.says));
+  check('nobody sent at the call: no price line in the 25 s after it (later the bot\'s own attack order may take pilots to his pirates, and then the line is true)', runs.plaini.every(r => { const c = line(r, 'camp.say.distress')[0]; return !r.says.some(s => /miner\.(short|all)/.test(s[1]) && s[0] - c[0] <= 25); }), JSON.stringify(i.says));
+  check('one pilot sent: "Kara away at the miner", once, within 12 s of the call', runs.plaing.every(r => { const s = line(r, 'camp.say.miner.short'), c = line(r, 'camp.say.distress')[0]; return s.length === 1 && /^Kara away at the miner/.test(s[0][2]) && s[0][0] - c[0] <= 12 && !line(r, 'camp.say.miner.all').length; }), JSON.stringify(o.says));
   check('all three sent: "All pilots away", once, and not the other line as well', runs.plaina.every(r => line(r, 'camp.say.miner.all').length === 1 && !line(r, 'camp.say.miner.short').length), JSON.stringify(a.says));
   check('the lines are curt (12 words or fewer) and name no key', J(`['camp.say.miner.short', 'camp.say.miner.all', 'camp.say.miner.bait'].map(k => uiText(k, { name: 'Kara' }))`).every(t => t.split(/\s+/).length <= 12 && !/[{}]/.test(t)));
   check('away is empty before the call and after it (the miner saved or lost)', J(`campMinerAway(campNew(1, [], { mission: 0, seed: 1 })).length`) === 0 && J('campMinerAway(window.C).length') === 0);

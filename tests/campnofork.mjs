@@ -31,9 +31,9 @@ check('A  1.1\'s row has no route', row.route === 'none' || row.route === null, 
 check('A  no wave of the row belongs to a lane', row.lanes === 0, JSON.stringify(row.waves));
 const amb = row.waves.find(w => w.ambush);
 check('A  the ambush is a plain wave of the row: 4 skiffs and 2 torpedo boats at 0.52 of the road, with its own line', !!amb && amb.ships.skiff === 4 && amb.ships.tboat === 2 && amb.on.lane === 0.52 && amb.say === 'camp.say.rimambush', JSON.stringify(amb));
-check('A  the row has two waves, the miner\'s skiffs and the ambush, in that order (the long lane\'s two raids went with the lane)', row.waves.length === 2 && row.waves[0].on.lane === 0.31 && row.waves[1].ambush, JSON.stringify(row.waves));
+check('A  the row has the miner\'s skiffs and the ambush, in that order, and after them the group that goes for the transport after the call (card l1-miner-choice: it had two waves) (the long lane\'s two raids went with the lane)', row.waves.length === 3 && row.waves[0].on.lane === 0.31 && row.waves[1].ambush && row.waves[2].on.lane === 0.34, JSON.stringify(row.waves));
 const en = J('campBriefEnemies(1, 0)'), sk = en.list.find(e => e.kind === 'skiff'), tb = en.list.find(e => e.kind === 'tboat');
-check('A  the briefing counts what 1.1 sends: 8 skiffs and 2 torpedo boats (as it did for the default lane)', sk && sk.n === 8 && tb && tb.n === 2, en.line);
+check('A  the briefing counts what 1.1 sends: 10 skiffs and 5 torpedo boats (8 and 2 before card l1-miner-choice) (as it did for the default lane)', sk && sk.n === 10 && tb && tb.n === 5, en.line);
 check('A  the route system is still in the code: a row with a route still gets its lanes (campRouteRow)', J('(() => { const r = campRouteRow({ route: { lanes: [{ id: "a", hides: { waves: [{ ships: { skiff: 1 } }] } }] }, waves: [] }); return r.waves.length === 1 && r.waves[0].lane === "a"; })()') === true);
 
 // ---- B. the sim ----

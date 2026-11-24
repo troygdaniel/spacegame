@@ -262,3 +262,32 @@ Card `space-game-map-click-fly` (Troy, 20 Nov 2026). In the Campaign's Tab map a
 | Long Haul | the autopilot's **local leg only**, at the ship's own top speed: no cruise, and no flying clear of a mass first (`autopilotGo(s, body, order, false)`) | the autopilot as it always was: a leg longer than 3,500 px cruises in the middle (8,000 px/s), the rest is local. On a short leg Fast is Fly and the button says "too near to cruise" |
 
 The words are in `content/text/mapfly.md` (Campaign) and in `src/map.js` (Long Haul). The Long Haul N list's Enter, P, C and the ship computer are unchanged (they pass no speed, so they go as they always did).
+
+## The miner's call (mission 1.1; card l1-miner-choice, 24 Nov 2026)
+
+The owner's test for a beat: what does the player decide, and what does it cost? On main `4e02059` the miner's call had a reward and no price. Ignored, the miner was lost. Any order saved him. The transport was never at risk, because the cruiser's own turrets shot down what two torpedo boats fired later, and pilots sent to the miner were back long before the ambush.
+
+**The one lever: a group goes for the transport while the pilots are away.** Moving the ambush forward was tried first and did not separate the answers (the turrets shoot down two torpedoes), and it left more than two minutes of empty road before the leader.
+
+| Number | Old (main `4e02059`) | New |
+|---|---|---|
+| Waves in the 1.1 row | 2 (the call at 31 percent of the road, the ambush at 52) | 3: one more at **34 percent** (about 10 s after the call), **3 torpedo boats and 2 skiffs**, 1,700 px ahead of the transport, for the transport |
+| Pirates the 1.1 briefing counts | 8 skiffs, 2 torpedo boats | 10 skiffs, 5 torpedo boats |
+
+Nothing else in the row moved: the call (31 percent, 2 skiffs), the ambush (52 percent, 4 skiffs and 2 boats) and the leader (75 percent) are as they were. The new wave is the last in the row's list, so the waves before it keep their numbers. It is not on the `N` panel (that file is the local team's).
+
+The three answers, flown by the bots `plaini`, `plaing` and `plaina` (`tools/campaign-bot.mjs`), seeds 1, 2 and 3. Every flight is won in 306 s with no pilot lost.
+
+| Answer | | Miner's hull at the end (of 24; 0 is lost) | Torpedo hits on the transport | Transport's hull at the end (of 200) | Ore at the end | Cruiser's hull (of 600) |
+|---|---|---|---|---|---|---|
+| Ignore the call | before | 0, 0, 0 | 1, 0, 0 | 125, 185, 200 | 112, 112, 124 | 580, 557, 575 |
+| | after | 0, 0, 0 | 0, 0, 0 | 185, 190, 180 | 160, 160, 154 | 552, 571, 583 |
+| Send one pilot to guard him | before | 7, 9, 6 | 0, 0, 0 | 195, 195, 175 | 146, 146, 146 | 586, 556, 569 |
+| | after | 7, 6, 0 | 0, 0, 0 | 180, 170, 200 | 168, 218, 160 | 600, 600, 554 |
+| Send all three | before | 4, 17, 8 | 1, 0, 0 | 95, 190, 180 | 138, 152, 152 | 585, 554, 600 |
+| | after | 8, 17, 6 | 1, 1, 1 | 120, 115, 125 | 206, 134, 182 | 582, 585, 600 |
+
+After the change no row is best at everything: ignoring loses the miner and his bonus; sending all three saves him and takes a torpedo every time (the "no torpedo hits" bonus is lost and the transport ends about 65 hull lower); sending one keeps the transport clean but one pilot against two skiffs does not always save him. The plain bot (which attacks whatever is nearest) still wins all five seeds: its quiet time fell from 126 s to 104 s of 306, its kills rose from 11 to 16, and the cruiser's hull at the end fell from 580 to 555.
+
+One older pin changed meaning and was moved, not loosened: in `tests/campbeats.mjs` one pilot sent to **attack** the miner's pirates used to save him in 45 s; with the boats on the transport he is too slow, so that check now sends all three (the three answers are pinned in `tests/campminer.mjs`).
+

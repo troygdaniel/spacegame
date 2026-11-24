@@ -6,6 +6,6 @@ The words of the miner's call in mission 1.1 (card l1-miner-choice): the radio's
 ## Strings
 | key | text |
 |---|---|
-| camp.say.miner.short | {name} is away at the miner. We are short here. |
+| camp.say.miner.short | {name} away at the miner. We are short here. |
 | camp.say.miner.all | All pilots away at the miner. The transport has only us. |
 | camp.say.miner.bait | Torpedo boats on the transport. The call was bait. |
